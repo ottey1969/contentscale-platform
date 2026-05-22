@@ -27228,6 +27228,60 @@ app.get('/boost/admin/broadcast-list', asyncHandler(async (req, res) => {
   res.json({ users: r.rows });
 }));
 
+
+// ═══════════════════════════════════════════════════════════════════════════
+// USER BACKUP / RESTORE SYSTEM
+// ═══════════════════════════════════════════════════════════════════════════
+
+// ── EXPORT ALL USERS + REGISTRATIONS ─────────────────────────────────────
+app.get('/boost/admin/export-users', asyncHandler(async (req, res) => {
+  const users = await pool.query(
+    'SELECT * FROM boost_users ORDER BY created_at ASC'
+  );
+  const regs = await pool.query(
+    'SELECT * FROM boost_registrations ORDER BY created_at ASC'
+  );
+  const licenses = await pool.query(
+    'SELECT * FROM linkedpod_licenses ORDER BY created_at ASC'
+  ).catch(() => ({ rows: [] }));
+
+  const backup = {
+    exported_at: new Date().toISOString(),
+    users: users.rows,
+    registrations: regs.rows,
+    licenses: licenses.rows,
+  };
+
+  res.setHeader('Content-Disposition', `attachment; filename="linkedpod-backup-${new Date().toISOString().slice(0,10)}.json"`);
+  res.setHeader('Content-Type', 'application/json');
+  res.json(backup);
+}));
+
+// ── RESTORE USER (re-insert from backup) ─────────────────────────────────
+app.post('/boost/admin/restore-user', asyncHandler(async (req, res) => {
+  const { name, token, email, tier, credits, linkedin_url, whatsapp, notes, approval_status } = req.body;
+  if (!name || !token) return res.status(400).json({ error: 'name and token required' });
+
+  try {
+    await pool.query(
+      `INSERT INTO boost_users (name, token, email, tier, credits, linkedin_url, whatsapp, notes, approval_status, active)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,TRUE)
+       ON CONFLICT (token) DO UPDATE SET
+         name=EXCLUDED.name, tier=EXCLUDED.tier, credits=EXCLUDED.credits,
+         linkedin_url=EXCLUDED.linkedin_url, whatsapp=EXCLUDED.whatsapp,
+         notes=EXCLUDED.notes, active=TRUE`,
+      [name, token, email||null, tier||'free', credits||10, linkedin_url||null, whatsapp||null, notes||null, approval_status||'approved']
+    );
+    console.log('[Backup] User restored:', name, token);
+    res.json({ success: true });
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
+}));
+
+console.log('[ContentScale] Backup routes loaded ✅');
+// ═══════════════════════════════════════════════════════════════════════════
+
 // Start scheduler after DB is ready (called from startServer)
 setTimeout(() => { if(pool) startTrackerScheduler(); }, 10000);
 
