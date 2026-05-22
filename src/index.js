@@ -4387,6 +4387,19 @@ async function migrateTrackerPageProfiles() {
 }
 
 async function startServer() {
+  // Auto-create boost_settings table if missing
+  if (pool) {
+    try {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS boost_settings (
+          key TEXT PRIMARY KEY,
+          value TEXT NOT NULL DEFAULT '',
+          updated_at TIMESTAMP DEFAULT NOW()
+        )
+      `);
+    } catch(e) { console.warn('[Settings] Table check:', e.message); }
+  }
+
 console.log('🚀 =====================================');
 console.log('🚀  CONTENTSCALE ELITE SERVER v4 (GEMINI AUTO-MODEL)');
 console.log('🚀  FIX: activated_until alias in users SELECT');
