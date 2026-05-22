@@ -108,6 +108,14 @@ textarea.form-input{height:90px;resize:vertical}
 @keyframes spin{to{transform:rotate(360deg)}}
 
 @media(max-width:360px){.tab{font-size:10px;padding:10px 2px}}
+
+/* URGENCY TIMER */
+.urgency-bar{border-radius:6px;padding:8px 12px;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:13px;font-weight:700}
+.urgency-gold{background:linear-gradient(135deg,rgba(239,68,68,.15),rgba(245,158,11,.1));border:1px solid rgba(239,68,68,.4);color:#ef4444;animation:urgency-pulse 2s ease-in-out infinite}
+.urgency-active{background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.3);color:#10b981}
+.urgency-late{background:rgba(107,114,128,.08);border:1px solid rgba(107,114,128,.2);color:var(--muted)}
+@keyframes urgency-pulse{0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,.3)}50%{box-shadow:0 0 0 6px rgba(239,68,68,0)}}
+.countdown{font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:900}
 </style>
 </head>
 <body>
@@ -349,10 +357,13 @@ async function pollForNew() {
     if (newOnes.length > 0 && knownSessionIds.size > 0) {
       const n = newOnes[0];
       const isOwn = n.created_by_token === myToken;
-      if (!isOwn) {
+      const ageMin = Math.floor((new Date() - new Date(n.created_at)) / 60000);
+      if (!isOwn && ageMin < 60) {
+        startAlarm(`🔥 Golden hour! "${(n.post_text||'').substring(0,50)}..."`);
+      } else if (!isOwn) {
         startAlarm(`🔔 New boost: "${(n.post_text||'').substring(0,50)}..."`);
-        renderCommunity(fresh, data.myEngagements);
       }
+      renderCommunity(fresh, data.myEngagements);
     }
     fresh.forEach(s => knownSessionIds.add(s.id));
   } catch {}
@@ -382,6 +393,7 @@ function renderCommunity(sess, engs) {
   // Generate personal comments for sessions that need engagement
   sess.filter(s => s.active && !myEngaged.has(s.id) && s.created_by_token !== myToken)
       .forEach(s => setTimeout(() => getPersonalComment(s.id), 300));
+  startCountdowns();
 }
 
 function sessionCard(s) {
@@ -393,6 +405,7 @@ function sessionCard(s) {
   return `<div class="session${isNew?' new-session':''}">
     <div class="s-client">${s.client_name||'ContentScale'}</div>
     <div class="s-text">${esc((s.post_text||'').substring(0,200))}${s.post_text?.length>200?'…':''}</div>
+    ${getUrgencyBar(s)}
     <div class="s-meta">
       ${done ? '<span class="badge b-gray">✅ Done</span>' : '<span class="badge b-green">Needs you</span>'}
       <span class="badge b-blue">${s.engagement_count||0} engaged</span>
@@ -410,6 +423,61 @@ function sessionCard(s) {
       </div>
     ` : done ? '<p style="font-size:13px;color:var(--green);font-weight:600;">✅ You boosted this! Thank you.</p>' : ''}
   </div>`;
+}
+
+// ── URGENCY TIMER SYSTEM ─────────────────────────────────────────────────
+function getUrgencyBar(s) {
+  const created   = new Date(s.created_at);
+  const now       = new Date();
+  const ageMs     = now - created;
+  const ageMin    = Math.floor(ageMs / 60000);
+  const goldenEnd = 60;   // minutes
+  const activeEnd = 360;  // 6 hours
+  const closeEnd  = 1440; // 24 hours
+
+  if (ageMin < goldenEnd) {
+    const left = goldenEnd - ageMin;
+    return `<div class="urgency-bar urgency-gold">
+      <span>🔥 GOLDEN HOUR — post is live!</span>
+      <span class="countdown" id="cd-${s.id}">${formatMin(left)}</span>
+    </div>`;
+  } else if (ageMin < activeEnd) {
+    const left = activeEnd - ageMin;
+    return `<div class="urgency-bar urgency-active">
+      <span>⚡ Still active — post in feed</span>
+      <span class="countdown">${formatMin(left)} left</span>
+    </div>`;
+  } else if (ageMin < closeEnd) {
+    return `<div class="urgency-bar urgency-late">
+      <span>📋 Late boost — social proof only</span>
+    </div>`;
+  }
+  return '';
+}
+
+function formatMin(mins) {
+  if (mins >= 60) return Math.floor(mins/60) + 'h ' + (mins%60) + 'm';
+  return mins + ' min';
+}
+
+// Live countdown for golden hour sessions
+function startCountdowns() {
+  clearInterval(window._cdTimer);
+  window._cdTimer = setInterval(() => {
+    document.querySelectorAll('[id^="cd-"]').forEach(el => {
+      const sid = el.id.replace('cd-','');
+      const sess = sessions.find(s => s.id === sid);
+      if (!sess) return;
+      const ageMin = Math.floor((new Date() - new Date(sess.created_at)) / 60000);
+      const left   = 60 - ageMin;
+      if (left <= 0) {
+        loadCommunity(); // refresh — golden hour ended
+        clearInterval(window._cdTimer);
+      } else {
+        el.textContent = formatMin(left);
+      }
+    });
+  }, 30000); // update every 30s
 }
 
 function copyOpt(sid, idx) {
