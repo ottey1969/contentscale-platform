@@ -706,6 +706,17 @@ app.get('/admin', (req, res) => {
   res.send(_ADMIN_DASHBOARD_HTML);
 });
 
+
+// ── HTML EXTENSION REDIRECT — must be BEFORE express.static ──────────────
+app.use((req, res, next) => {
+  if (req.path.endsWith('.html')) {
+    const clean = req.path.slice(0, -5); // strip .html
+    const query = req.url.includes('?') ? req.url.slice(req.url.indexOf('?')) : '';
+    return res.redirect(301, clean + query);
+  }
+  next();
+});
+
 app.use(express.static('public', { maxAge: '1y', etag: true }));
 // ── Favicon & manifest ──────────────────────────────────────────────────────
 app.get('/site.webmanifest', (req, res) => {
