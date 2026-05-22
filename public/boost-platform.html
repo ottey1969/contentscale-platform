@@ -454,7 +454,24 @@ input,textarea,select{font-size:16px!important}
       <h3>LinkedIn URL</h3>
       <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">Add your LinkedIn so others know you're real.</p>
       <input class="form-input" type="url" id="linkedinInput" placeholder="https://linkedin.com/in/yourname">
-      <button class="btn btn-blue" style="margin-top:10px;width:auto;padding:9px 20px;" onclick="saveLinkedIn()">Save</button>
+      <button class="btn btn-blue" style="margin-top:10px;width:auto;padding:9px 20px;" onclick="saveProfile()">Save</button>
+    </div>
+
+    <div class="form-card" style="border:1.5px solid rgba(37,211,102,.3);background:#f0fdf4;">
+      <h3 style="color:#15803d;">🔔 WhatsApp Notifications</h3>
+      <p style="font-size:12px;color:#374151;margin-bottom:12px;line-height:1.65;">
+        Get a WhatsApp when someone creates a new boost session — even when the app is closed.
+      </p>
+      <div style="background:#fff;border:1px solid #bbf7d0;border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:12px;color:#15803d;line-height:1.7;">
+        <strong>Setup (1 min, free):</strong><br>
+        1. Open WhatsApp → message <strong>+34 644 64 79 16</strong><br>
+        2. Send: <code style="background:#dcfce7;padding:1px 6px;border-radius:4px;">I allow callmebot to send me messages</code><br>
+        3. You'll receive your API key — paste it below
+      </div>
+      <label class="form-label">Your CallMeBot API Key</label>
+      <input class="form-input" type="text" id="callmebotKey" placeholder="e.g. 1234567">
+      <button class="btn btn-green" style="margin-top:10px;width:100%;background:#15803d;" onclick="saveProfile()">✅ Enable WhatsApp Notifications</button>
+      <div id="notifStatus" style="display:none;margin-top:8px;font-size:12px;color:#15803d;font-weight:600;text-align:center;"></div>
     </div>
     <div class="form-card" style="text-align:center;">
       <p style="font-size:13px;color:var(--muted);margin-bottom:12px;">Want more sessions or clients?</p>
@@ -912,13 +929,25 @@ function updateProfile() {
   if (user.linkedin_url) document.getElementById('linkedinInput').value = user.linkedin_url;
 }
 
-async function saveLinkedIn() {
-  const url = document.getElementById('linkedinInput').value.trim();
-  await fetch('/boost/update-profile', {
+async function saveLinkedIn() { saveProfile(); }
+
+async function saveProfile() {
+  const linkedinUrl = document.getElementById('linkedinInput').value.trim();
+  const callmebotKey = document.getElementById('callmebotKey')?.value.trim() || '';
+  const r = await fetch('/boost/update-profile', {
     method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({ token: myToken, linkedinUrl: url })
+    body: JSON.stringify({ token: myToken, linkedinUrl, callmebotKey })
   });
-  toast('Saved ✅');
+  const data = await r.json();
+  if (data.success) {
+    toast('Saved ✅');
+    if (callmebotKey) {
+      const notifEl = document.getElementById('notifStatus');
+      if (notifEl) { notifEl.style.display='block'; notifEl.textContent='✅ WhatsApp notifications enabled!'; }
+    }
+  } else {
+    toast('Error saving', true);
+  }
 }
 
 // ── HELPERS ───────────────────────────────────────────────────────────────
