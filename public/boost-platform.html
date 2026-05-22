@@ -295,6 +295,65 @@ input,textarea,select{font-size:16px!important}
 </head>
 <body>
 
+<!-- ── LINKEDPOD ANNOUNCEMENT BANNER ── -->
+<div id="lpBanner" style="display:none;position:sticky;top:0;z-index:1000;overflow:hidden;background:linear-gradient(135deg,#7c3aed,#0a66c2);color:#fff;height:38px;align-items:center;">
+  <div style="display:flex;align-items:center;flex-shrink:0;padding:0 16px;height:100%;background:rgba(0,0,0,.15);font-size:11px;font-weight:800;letter-spacing:.1em;white-space:nowrap;">
+    📢 ANNOUNCEMENT
+  </div>
+  <div style="flex:1;overflow:hidden;position:relative;height:100%;">
+    <div id="lpBannerTrack" style="display:flex;align-items:center;height:100%;white-space:nowrap;font-size:13px;font-weight:600;animation:lpScroll 18s linear infinite;">
+      <span id="lpBannerText1" style="padding-right:80px;"></span>
+      <span id="lpBannerText2" style="padding-right:80px;"></span>
+      <span id="lpBannerText3" style="padding-right:80px;"></span>
+    </div>
+  </div>
+  <button onclick="document.getElementById('lpBanner').style.display='none'" style="background:rgba(0,0,0,.2);border:none;color:#fff;padding:0 14px;height:100%;font-size:16px;cursor:pointer;flex-shrink:0;">✕</button>
+</div>
+<style>
+@keyframes lpScroll {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-33.333%); }
+}
+#lpBanner { display: none !important; }
+#lpBanner.active { display: flex !important; }
+</style>
+<script>
+(function() {
+  var BANNER_CACHE_KEY = 'lpBannerText';
+  var BANNER_POLL_MS   = 60000; // check every 60s
+
+  function showBanner(text) {
+    if (!text) { document.getElementById('lpBanner').classList.remove('active'); return; }
+    // Triple the text for seamless loop
+    ['lpBannerText1','lpBannerText2','lpBannerText3'].forEach(function(id) {
+      document.getElementById(id).textContent = text;
+    });
+    document.getElementById('lpBanner').classList.add('active');
+  }
+
+  function fetchBanner() {
+    fetch('/boost/banner')
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        localStorage.setItem(BANNER_CACHE_KEY, data.text || '');
+        showBanner(data.text || '');
+      })
+      .catch(function() {
+        // Show cached version if server unreachable
+        var cached = localStorage.getItem(BANNER_CACHE_KEY) || '';
+        showBanner(cached);
+      });
+  }
+
+  // Show immediately from cache, then fetch fresh
+  var cached = localStorage.getItem(BANNER_CACHE_KEY) || '';
+  if (cached) showBanner(cached);
+  fetchBanner();
+  setInterval(fetchBanner, BANNER_POLL_MS);
+})();
+</script>
+
+
 <div id="toast"></div>
 <div id="loadingOverlay"><div class="spinner"></div><span>Generating comments...</span></div>
 

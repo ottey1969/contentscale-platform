@@ -194,6 +194,65 @@ textarea{height:80px;resize:vertical}
   </style>
 </head>
 <body>
+
+<!-- ── LINKEDPOD ANNOUNCEMENT BANNER ── -->
+<div id="lpBanner" style="display:none;position:sticky;top:0;z-index:1000;overflow:hidden;background:linear-gradient(135deg,#7c3aed,#0a66c2);color:#fff;height:38px;align-items:center;">
+  <div style="display:flex;align-items:center;flex-shrink:0;padding:0 16px;height:100%;background:rgba(0,0,0,.15);font-size:11px;font-weight:800;letter-spacing:.1em;white-space:nowrap;">
+    📢 ANNOUNCEMENT
+  </div>
+  <div style="flex:1;overflow:hidden;position:relative;height:100%;">
+    <div id="lpBannerTrack" style="display:flex;align-items:center;height:100%;white-space:nowrap;font-size:13px;font-weight:600;animation:lpScroll 18s linear infinite;">
+      <span id="lpBannerText1" style="padding-right:80px;"></span>
+      <span id="lpBannerText2" style="padding-right:80px;"></span>
+      <span id="lpBannerText3" style="padding-right:80px;"></span>
+    </div>
+  </div>
+  <button onclick="document.getElementById('lpBanner').style.display='none'" style="background:rgba(0,0,0,.2);border:none;color:#fff;padding:0 14px;height:100%;font-size:16px;cursor:pointer;flex-shrink:0;">✕</button>
+</div>
+<style>
+@keyframes lpScroll {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-33.333%); }
+}
+#lpBanner { display: none !important; }
+#lpBanner.active { display: flex !important; }
+</style>
+<script>
+(function() {
+  var BANNER_CACHE_KEY = 'lpBannerText';
+  var BANNER_POLL_MS   = 60000; // check every 60s
+
+  function showBanner(text) {
+    if (!text) { document.getElementById('lpBanner').classList.remove('active'); return; }
+    // Triple the text for seamless loop
+    ['lpBannerText1','lpBannerText2','lpBannerText3'].forEach(function(id) {
+      document.getElementById(id).textContent = text;
+    });
+    document.getElementById('lpBanner').classList.add('active');
+  }
+
+  function fetchBanner() {
+    fetch('/boost/banner')
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        localStorage.setItem(BANNER_CACHE_KEY, data.text || '');
+        showBanner(data.text || '');
+      })
+      .catch(function() {
+        // Show cached version if server unreachable
+        var cached = localStorage.getItem(BANNER_CACHE_KEY) || '';
+        showBanner(cached);
+      });
+  }
+
+  // Show immediately from cache, then fetch fresh
+  var cached = localStorage.getItem(BANNER_CACHE_KEY) || '';
+  if (cached) showBanner(cached);
+  fetchBanner();
+  setInterval(fetchBanner, BANNER_POLL_MS);
+})();
+</script>
+
 <div id="toast"></div>
 
 <!-- REGISTRATION ALERT BANNER -->
@@ -236,13 +295,30 @@ textarea{height:80px;resize:vertical}
     <div class="stat"><strong id="stPending">—</strong><span>Pending</span></div>
   </div>
 
+  <!-- BANNER CONTROL -->
+  <div class="card" style="border:2px solid rgba(124,58,237,.3);background:linear-gradient(135deg,rgba(124,58,237,.05),rgba(10,102,194,.03));">
+    <h2 style="display:flex;align-items:center;gap:8px;">
+      📢 Announcement Banner
+      <span id="bannerStatus" style="font-size:11px;font-weight:400;text-transform:none;padding:2px 8px;border-radius:4px;background:#f3f4f6;color:#6b7280;">Loading...</span>
+    </h2>
+    <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">Appears as a scrolling ticker on ALL LinkedPod pages. Leave empty to hide.</p>
+    <div style="display:flex;gap:8px;align-items:flex-start;">
+      <input type="text" id="bannerText" placeholder="e.g. 🚀 LinkedPod is now live on AppSumo — grab your lifetime deal!" style="flex:1;padding:10px 14px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;outline:none;">
+      <button class="btn btn-primary btn-sm" onclick="setBanner()">Publish</button>
+      <button class="btn btn-ghost btn-sm" onclick="clearBanner()" style="white-space:nowrap;">Clear</button>
+    </div>
+    <div id="bannerPreview" style="display:none;margin-top:8px;background:linear-gradient(135deg,#7c3aed,#0a66c2);border-radius:6px;padding:8px 14px;font-size:12px;color:#fff;font-weight:600;">
+      📢 PREVIEW: <span id="bannerPreviewText"></span>
+    </div>
+  </div>
+
   <!-- SETTINGS -->
   <div class="card">
     <h2>Settings</h2>
     <div class="grid2">
-      <div>
-        <label>Claude API Key</label>
-        <input type="password" id="apiKey" placeholder="sk-ant-api03-...">
+      <div style="grid-column:1/-1;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:10px 14px;display:flex;align-items:center;gap:10px;">
+        <span style="width:10px;height:10px;border-radius:50%;background:#10b981;flex-shrink:0;"></span>
+        <span style="font-size:13px;color:#15803d;font-weight:600;">Claude Sonnet via Railway — no key needed</span>
       </div>
       <div>
         <label>Server URL</label>
@@ -407,16 +483,12 @@ textarea{height:80px;resize:vertical}
 const ADMIN_TOKEN = 'ottmar-admin-2026';
 // Use relative URLs so it always works regardless of domain
 let srv = localStorage.getItem('boostSrv') || '';
-let apiKey = localStorage.getItem('boostAdminKey') || '';
-if (apiKey) document.getElementById('apiKey').value = apiKey;
-// Default server input to current origin
+let apiKey = ''; // Not needed — server uses ANTHROPIC_API_KEY env var
 document.getElementById('serverUrl').value = srv || window.location.origin;
-srv = srv || '';  // empty = use relative paths
+srv = srv || '';
 
 function saveSettings() {
-  apiKey = document.getElementById('apiKey').value.trim();
-  srv    = document.getElementById('serverUrl').value.trim();
-  localStorage.setItem('boostAdminKey', apiKey);
+  srv = document.getElementById('serverUrl').value.trim() || window.location.origin;
   localStorage.setItem('boostSrv', srv);
   toast('Saved ✅');
   loadAll();
@@ -594,16 +666,13 @@ async function toggleU(token, active) {
 async function createBoost() {
   const postText = document.getElementById('postText').value.trim();
   if (!postText) { toast('Paste post text', true); return; }
-  if (!apiKey) { toast('Enter Claude API key', true); return; }
-
   document.getElementById('overlay').style.display = 'flex';
   const r = await fetch(`${srv}/boost/create`, {
     method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({
       postText, postUrl: document.getElementById('postUrl').value.trim(),
       clientName: document.getElementById('clientName').value.trim(),
-      tone: document.getElementById('postTone').value.trim(),
-      apiKey
+      tone: document.getElementById('postTone').value.trim()
     })
   });
   const data = await r.json();
@@ -640,7 +709,10 @@ async function loadSessions() {
       </div>
       <div class="row-actions">
         <button class="btn btn-ghost btn-sm" onclick="copyText('${srv}/boost-platform')">Link</button>
-        ${s.active?`<button class="btn btn-red btn-sm" onclick="closeS('${s.id}')">Close</button>`:''}
+        ${s.active?`
+          <button class="btn btn-sm" style="background:#25D366;color:#fff;" onclick="openBroadcast('${s.id}','${(s.preview||'').replace(/'/g,''').substring(0,60)}')">📢 Broadcast</button>
+          <button class="btn btn-red btn-sm" onclick="closeS('${s.id}')">Close</button>
+        `:''}
       </div>
     </div>
   `).join('') || '<div style="color:var(--muted);font-size:13px;">No sessions.</div>';
@@ -870,11 +942,233 @@ async function pollRegistrations() {
   } catch {}
 }
 
-function loadAll() { loadRegistrations(); loadUsers(); loadSessions(); }
+// ── BANNER FUNCTIONS ──────────────────────────────────────────────────────
+async function loadBanner() {
+  try {
+    const r = await fetch(`${srv}/boost/banner`);
+    const data = await r.json();
+    const status = document.getElementById('bannerStatus');
+    const input  = document.getElementById('bannerText');
+    const preview = document.getElementById('bannerPreview');
+    const previewText = document.getElementById('bannerPreviewText');
+
+    if (data.text) {
+      input.value = data.text;
+      status.textContent = '● LIVE';
+      status.style.cssText = 'font-size:11px;font-weight:700;text-transform:none;padding:2px 10px;border-radius:20px;background:#dcfce7;color:#15803d;';
+      preview.style.display = 'block';
+      previewText.textContent = data.text;
+    } else {
+      input.value = '';
+      status.textContent = 'Inactive';
+      status.style.cssText = 'font-size:11px;font-weight:400;text-transform:none;padding:2px 8px;border-radius:4px;background:#f3f4f6;color:#6b7280;';
+      preview.style.display = 'none';
+    }
+  } catch { }
+}
+
+async function setBanner() {
+  const text = document.getElementById('bannerText').value.trim();
+  if (!text) { toast('Enter banner text first', true); return; }
+  const r = await fetch(`${srv}/boost/admin/set-banner`, {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ text })
+  });
+  const data = await r.json();
+  if (data.success) { toast('Banner live on all pages! 🚀'); loadBanner(); }
+  else toast('Error setting banner', true);
+}
+
+async function clearBanner() {
+  await fetch(`${srv}/boost/admin/set-banner`, {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ text: '' })
+  });
+  toast('Banner cleared');
+  document.getElementById('bannerText').value = '';
+  document.getElementById('bannerPreview').style.display = 'none';
+  loadBanner();
+}
+
+// Live preview as you type
+document.addEventListener('DOMContentLoaded', () => {
+  const input = document.getElementById('bannerText');
+  if (input) {
+    input.addEventListener('input', () => {
+      const preview = document.getElementById('bannerPreview');
+      const previewText = document.getElementById('bannerPreviewText');
+      if (input.value.trim()) {
+        preview.style.display = 'block';
+        previewText.textContent = input.value;
+      } else {
+        preview.style.display = 'none';
+      }
+    });
+  }
+});
+
+function loadAll() { loadRegistrations(); loadUsers(); loadSessions(); loadBanner(); }
 loadAll();
 pollRegistrations(); // first check (silent, sets baseline)
 adminPollTimer = setInterval(pollRegistrations, 30000);
 
+
+// ── BROADCAST SYSTEM ──────────────────────────────────────────────────────
+let bcUsers = [];
+let bcSentSet = new Set();
+let bcSessionId = '';
+let bcSessionUrl = '';
+
+async function openBroadcast(sessionId, sessionPreview) {
+  bcSessionId = sessionId;
+  bcSentSet = new Set();
+  bcSessionUrl = `${srv || window.location.origin}/boost-platform`;
+
+  // Default message
+  const msg = `🚀 New boost session live!\n\n"${sessionPreview}"\n\nOpen LinkedPod, pick your unique comment, paste on LinkedIn. +2 credits!\n👉 ${bcSessionUrl}`;
+  document.getElementById('bcMessage').value = msg;
+  document.getElementById('bcSubtitle').textContent = `"${sessionPreview.substring(0,50)}..."`;
+  document.getElementById('broadcastModal').style.display = 'flex';
+
+  // Load users
+  try {
+    const r = await fetch(`${srv}/boost/admin/broadcast-list`);
+    const data = await r.json();
+    bcUsers = data.users || [];
+    renderBcUsers();
+  } catch {
+    bcUsers = [];
+    renderBcUsers();
+  }
+}
+
+function renderBcUsers() {
+  const list  = document.getElementById('bcUserList');
+  const empty = document.getElementById('bcNoUsers');
+  const count = document.getElementById('bcUserCount');
+
+  count.textContent = bcUsers.length;
+
+  if (!bcUsers.length) {
+    list.style.display = 'none';
+    empty.style.display = 'block';
+    document.getElementById('bcFooter').style.display = 'none';
+    return;
+  }
+
+  list.style.display = 'flex';
+  empty.style.display = 'none';
+  document.getElementById('bcFooter').style.display = 'flex';
+
+  list.innerHTML = bcUsers.map((u, i) => {
+    const num  = (u.whatsapp||'').replace(/[^0-9]/g,'');
+    const sent = bcSentSet.has(u.whatsapp);
+    return `
+      <div id="bcRow-${i}" style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid ${sent?'#bbf7d0':'#e5e7eb'};border-radius:8px;background:${sent?'#f0fdf4':'#fff'};transition:all .2s;">
+        <div style="flex:1;">
+          <div style="font-size:13px;font-weight:600;color:#111;">${u.name}</div>
+          <div style="font-size:11px;color:#6b7280;">${u.whatsapp} · <span style="text-transform:capitalize;">${u.tier}</span></div>
+        </div>
+        <span style="font-size:11px;font-weight:700;color:${sent?'#15803d':'#9ca3af'};">${sent?'✅ Sent':''}</span>
+        <a href="${buildWaUrl(num, i)}" target="_blank" onclick="markSent(${i},'${u.whatsapp}')"
+           style="background:${sent?'#e5e7eb':'#25D366'};color:${sent?'#6b7280':'#fff'};border-radius:8px;padding:8px 14px;font-size:12px;font-weight:700;text-decoration:none;white-space:nowrap;">
+          ${sent?'Resend':'💬 Send'}
+        </a>
+      </div>`;
+  }).join('');
+}
+
+function buildWaUrl(num, idx) {
+  const msg = encodeURIComponent(document.getElementById('bcMessage').value.trim());
+  return `https://wa.me/${num}?text=${msg}`;
+}
+
+function markSent(idx, whatsapp) {
+  bcSentSet.add(whatsapp);
+  setTimeout(() => {
+    renderBcUsers();
+    document.getElementById('bcSentCount').textContent = `${bcSentSet.size} sent this session`;
+  }, 500);
+}
+
+function copyBcMessage() {
+  const msg = document.getElementById('bcMessage').value.trim();
+  navigator.clipboard?.writeText(msg).catch(() => {
+    const ta = document.createElement('textarea');
+    ta.value = msg; document.body.appendChild(ta); ta.select();
+    document.execCommand('copy'); document.body.removeChild(ta);
+  });
+  toast('Message copied! Paste in your WhatsApp group 📋');
+}
+
+function openAllWa() {
+  bcUsers.forEach((u, i) => {
+    const num = (u.whatsapp||'').replace(/[^0-9]/g,'');
+    if (!num) return;
+    setTimeout(() => {
+      window.open(buildWaUrl(num, i), '_blank');
+      markSent(i, u.whatsapp);
+    }, i * 800); // stagger 800ms to avoid popup blocker
+  });
+}
+
+function closeBroadcast() {
+  document.getElementById('broadcastModal').style.display = 'none';
+}
+
+// Close on backdrop click
+document.getElementById('broadcastModal').addEventListener('click', function(e) {
+  if (e.target === this) closeBroadcast();
+});
+
 </script>
+
+<!-- ── BROADCAST MODAL ── -->
+<div id="broadcastModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;align-items:center;justify-content:center;padding:16px;">
+  <div style="background:#fff;border-radius:16px;max-width:560px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 24px 60px rgba(0,0,0,.3);">
+
+    <!-- Header -->
+    <div style="background:linear-gradient(135deg,#7c3aed,#0a66c2);padding:20px 24px;border-radius:16px 16px 0 0;display:flex;justify-content:space-between;align-items:center;">
+      <div>
+        <h3 style="color:#fff;font-size:16px;font-weight:700;margin-bottom:2px;">📢 WhatsApp Broadcast</h3>
+        <p style="color:rgba(255,255,255,.7);font-size:12px;" id="bcSubtitle">Send boost session to your members</p>
+      </div>
+      <button onclick="closeBroadcast()" style="background:rgba(255,255,255,.2);border:none;color:#fff;border-radius:8px;padding:8px 12px;cursor:pointer;font-size:16px;">✕</button>
+    </div>
+
+    <div style="padding:20px 24px;">
+
+      <!-- Message editor -->
+      <div style="margin-bottom:16px;">
+        <label style="font-size:12px;font-weight:700;color:#6b7280;display:block;margin-bottom:6px;text-transform:uppercase;letter-spacing:.08em;">Message (editable)</label>
+        <textarea id="bcMessage" style="width:100%;height:100px;padding:12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;font-family:inherit;resize:vertical;outline:none;line-height:1.6;"></textarea>
+      </div>
+
+      <!-- Copy for group -->
+      <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:12px 16px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;gap:10px;">
+        <div>
+          <div style="font-size:12px;font-weight:700;color:#15803d;margin-bottom:2px;">📋 WhatsApp Group</div>
+          <div style="font-size:11px;color:#6b7280;">Copy message → paste in your LinkedPod group</div>
+        </div>
+        <button onclick="copyBcMessage()" style="background:#15803d;color:#fff;border:none;border-radius:8px;padding:9px 18px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;">Copy Message</button>
+      </div>
+
+      <!-- Individual users -->
+      <div>
+        <div style="font-size:12px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;">Send individually — <span id="bcUserCount">0</span> members with WhatsApp</div>
+        <div id="bcUserList" style="display:flex;flex-direction:column;gap:8px;max-height:280px;overflow-y:auto;"></div>
+        <div id="bcNoUsers" style="display:none;text-align:center;padding:20px;color:#9ca3af;font-size:13px;">No members have a WhatsApp number yet.<br>Add numbers when approving registrations.</div>
+      </div>
+
+      <!-- Select all / stats -->
+      <div id="bcFooter" style="margin-top:14px;padding-top:14px;border-top:1px solid #e5e7eb;display:flex;justify-content:space-between;align-items:center;font-size:12px;color:#6b7280;">
+        <span id="bcSentCount">0 sent this session</span>
+        <button onclick="openAllWa()" style="background:#25D366;color:#fff;border:none;border-radius:8px;padding:9px 18px;font-size:13px;font-weight:700;cursor:pointer;">Open All WhatsApp ↗</button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
