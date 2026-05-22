@@ -27035,6 +27035,199 @@ async function autoCloseSessions() {
 setInterval(autoCloseSessions, 30 * 60 * 1000);
 setTimeout(autoCloseSessions, 5000); // run once on startup
 
+
+// ═══════════════════════════════════════════════════════════════════════════
+// LINKEDIN EXTENSION — CLAUDE PROXY ROUTES
+// Called by the Chrome extension sidepanel.js
+// ═══════════════════════════════════════════════════════════════════════════
+
+// ── CORS for extension ────────────────────────────────────────────────────
+app.use('/ai/', (req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type');
+  if (req.method === 'OPTIONS') return res.sendStatus(200);
+  next();
+});
+
+// ── STRATEGY: Comment / Reply / DM ───────────────────────────────────────
+app.post('/ai/linkedin-strategy', asyncHandler(async (req, res) => {
+  const { postText, leadContext, userBio, tone, clientProfile } = req.body;
+  if (!postText) return res.status(400).json({ error: 'postText required' });
+
+  const claudeKey = process.env.ANTHROPIC_API_KEY;
+  if (!claudeKey) return res.status(500).json({ error: 'API key not configured on server' });
+
+  const toneNote = tone && tone !== 'auto' ? `\nTone override: Write in a ${tone} style.` : '';
+
+  const clientCtx = clientProfile ? `
+== ACTIVE CLIENT PROFILE ==
+Name: ${clientProfile.name}
+Niche: ${clientProfile.niche || ''}
+Website: ${clientProfile.website || ''}
+${clientProfile.phone ? 'Phone: ' + clientProfile.phone : ''}
+USP: ${clientProfile.usp || ''}
+Audience: ${clientProfile.audience || ''}
+Tone: ${clientProfile.tone || ''}
+` : '';
+
+  const prompt = `You are Ottmar Francisca, SEO Systems Architect and founder of ContentScale.
+
+== WHO I AM ==
+ContentScale (contentscale.site) — AI-powered SEO audit and content intelligence platform. 200+ businesses, 47+ countries. GRAAF Framework creator. 78% average traffic growth in 90 days.
+
+My tools:
+1. Content Engine (contentscale.site/content-engine) — free. Scans & scores content. ContentScore/100.
+2. PULSE + NEXUS Research — done-for-you deep research.
+3. Traffic Recovery — done-for-you SEO from €250/month.
+${clientCtx}${userBio ? '\n== EXTRA CONTEXT ==\n' + userBio : ''}
+
+== LEAD CONTEXT ==
+${leadContext || 'B2B audience dealing with SEO, content performance, or traffic loss.'}
+
+== POST / THREAD (may contain replies from others) ==
+${postText}
+${toneNote}
+
+== TASK ==
+Write 3 outputs in the EXACT SAME LANGUAGE as the post.
+
+CRITICAL RULES:
+- NEVER start with "That's exactly", "Great point", "This resonates", "That resonates", "Really resonates", "That observation", "Absolutely", "So true", "I love this", "This is so true", "Well said", "Great insight" — or ANY opener that validates before contributing. Start with the substance directly.
+- NEVER repeat, echo, or paraphrase content already in the post. Add something NEW.
+- NEVER mention more than ONE tool/framework per output.
+- The post may contain replies from others — respond AS OTTMAR with new insights, never mirror what's already written.
+
+1. PUBLIC COMMENT (from Ottmar): 2-4 sentences. Sharp, specific insight that ADDS to the conversation. No hashtags, no emojis, no generic praise.
+
+2. YOUR REPLY (what Ottmar writes back): 1-3 sentences. Pick the MOST SPECIFIC point and add a new angle. No promotion. Do NOT start with a validation phrase.
+
+3. DM: Reference one specific thing from the post, connect to their pain point, recommend ONE solution with its URL. Max 5 sentences. Never sound like a vendor.
+
+Format (text only, no bracket labels):
+1.
+2.
+3.`;
+
+  const r = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-api-key': claudeKey, 'anthropic-version': '2023-06-01' },
+    body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 800, messages: [{ role: 'user', content: prompt }] })
+  });
+
+  const json = await r.json();
+  if (!r.ok) return res.status(500).json({ error: json.error?.message || 'Claude API error' });
+  const text = json.content?.[0]?.text?.trim() || '';
+  res.json({ text });
+}));
+
+// ── SMART REPLY: Thread response ──────────────────────────────────────────
+app.post('/ai/linkedin-reply', asyncHandler(async (req, res) => {
+  const { myComment, theirReply, theirName, replyTone, userBio } = req.body;
+  if (!theirReply) return res.status(400).json({ error: 'theirReply required' });
+
+  const claudeKey = process.env.ANTHROPIC_API_KEY;
+  if (!claudeKey) return res.status(500).json({ error: 'API key not configured on server' });
+
+  const toneMap = {
+    engaging:       'Keep it warm, conversational and genuinely curious.',
+    insightful:     'Add a data point, framework mention or contrarian angle.',
+    question:       'End with one sharp, thought-provoking question.',
+    'agree+expand': 'Agree with their point, then add a new dimension they haven't considered.',
+    challenge:      'Respectfully push back. Be direct but not confrontational.',
+  };
+
+  const prompt = `You are Ottmar Francisca, SEO Systems Architect, founder of ContentScale (contentscale.site). GRAAF Framework creator. 200+ clients, 47 countries.
+${userBio ? 'Extra context: ' + userBio : ''}
+
+== THREAD ==
+MY ORIGINAL COMMENT:
+"${myComment || 'Not available'}"
+
+THEIR REPLY (from ${theirName || 'them'}):
+"${theirReply}"
+
+== TASK ==
+Write 4 outputs in the SAME LANGUAGE as "${theirReply}":
+
+REPLY_A: Short & Sharp (1-2 sentences). ${toneMap[replyTone] || toneMap.engaging} NEVER start with "That's exactly", "Great", "This resonates", "That observation", "Absolutely" or any validation. Start with substance.
+
+REPLY_B: Add Value (2-3 sentences). Add ONE new layer not mentioned. Reference GRAAF or ContentScore ONCE only if truly relevant. Be a peer, not a vendor.
+
+REPLY_C: Move to DM (1-2 sentences). Reference ONE specific thing they said. Suggest DMs because there's something specific worth sharing.
+
+DM: Follow-up (3-4 sentences). Start with their specific point. Connect to their SEO/content situation. Recommend ONE solution:
+- Content Engine: contentscale.site/content-engine
+- Traffic recovery: contentscale.site/services
+- PULSE+NEXUS: contentscale.site
+Never pitch cold. Sound like a peer.
+
+Format EXACTLY:
+REPLY_A: [text]
+REPLY_B: [text]
+REPLY_C: [text]
+DM: [text]`;
+
+  const r = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-api-key': claudeKey, 'anthropic-version': '2023-06-01' },
+    body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 800, messages: [{ role: 'user', content: prompt }] })
+  });
+
+  const json = await r.json();
+  if (!r.ok) return res.status(500).json({ error: json.error?.message || 'Claude API error' });
+  const text = json.content?.[0]?.text?.trim() || '';
+  res.json({ text });
+}));
+
+console.log('[ContentScale] LinkedIn Extension Claude proxy routes loaded ✅');
+// ═══════════════════════════════════════════════════════════════════════════
+
+
+// ═══════════════════════════════════════════════════════════════════════════
+// LINKEDPOD ANNOUNCEMENT BANNER — visible on all pages
+// ═══════════════════════════════════════════════════════════════════════════
+
+// ── GET BANNER ────────────────────────────────────────────────────────────
+app.get('/boost/banner', asyncHandler(async (req, res) => {
+  try {
+    const r = await pool.query(
+      "SELECT value FROM boost_settings WHERE key='announcement_banner' LIMIT 1"
+    );
+    const text = r.rows[0]?.value || '';
+    res.json({ text, active: text.length > 0 });
+  } catch {
+    res.json({ text: '', active: false });
+  }
+}));
+
+// ── SET BANNER (admin) ────────────────────────────────────────────────────
+app.post('/boost/admin/set-banner', asyncHandler(async (req, res) => {
+  const { text } = req.body;
+  await pool.query(
+    `INSERT INTO boost_settings (key, value) VALUES ('announcement_banner', $1)
+     ON CONFLICT (key) DO UPDATE SET value=$1, updated_at=NOW()`,
+    [text || '']
+  );
+  console.log('[Banner] Set to:', text ? text.substring(0,50) : '(cleared)');
+  res.json({ success: true });
+}));
+
+console.log('[ContentScale] Banner routes loaded ✅');
+// ═══════════════════════════════════════════════════════════════════════════
+
+
+// ── BROADCAST: get all users with WhatsApp for admin ─────────────────────
+app.get('/boost/admin/broadcast-list', asyncHandler(async (req, res) => {
+  const r = await pool.query(
+    `SELECT name, whatsapp, token, tier, active
+     FROM boost_users
+     WHERE active=TRUE AND whatsapp IS NOT NULL AND whatsapp != ''
+     ORDER BY name ASC`
+  );
+  res.json({ users: r.rows });
+}));
+
 // Start scheduler after DB is ready (called from startServer)
 setTimeout(() => { if(pool) startTrackerScheduler(); }, 10000);
 
