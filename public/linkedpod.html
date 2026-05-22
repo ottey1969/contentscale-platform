@@ -99,8 +99,8 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
 .feature p{font-size:13px;color:rgba(255,255,255,.5);line-height:1.65}
 
 /* ── PRICING ────────────────────────────────────────────────────── */
-.pricing{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;margin-top:48px;align-items:start}
-.price-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:32px;transition:all .3s;position:relative}
+.pricing{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;margin-top:48px;align-items:stretch}
+.price-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:32px;transition:all .3s;position:relative;display:flex;flex-direction:column}.price-card .btn-price{margin-top:auto}
 .price-card.featured{background:linear-gradient(135deg,rgba(124,58,237,.15),rgba(10,102,194,.1));border-color:rgba(124,58,237,.4);box-shadow:0 0 60px rgba(124,58,237,.15)}
 .price-card.featured .price-badge{position:absolute;top:-12px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,var(--purple),var(--blue));color:#fff;font-size:11px;font-weight:700;padding:4px 16px;border-radius:20px;white-space:nowrap;letter-spacing:.06em;text-transform:uppercase}
 .price-tier{font-size:12px;font-weight:700;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.1em;margin-bottom:12px}
@@ -395,6 +395,12 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
   <div class="hero-actions">
     <a href="/boost-register" class="btn-hero btn-hero-primary">🚀 Request Access</a>
     <a href="#how" class="btn-hero btn-hero-ghost">How it works ↓</a>
+  </div>
+  <div style="margin-top:28px;margin-bottom:-20px;animation:fadeUp .7s .5s ease both;">
+    <img src="https://app.contentscale.site/blog/images/LinkedPod.jpg"
+         alt="LinkedPod — Viral Boost Network by ContentScale"
+         style="max-width:680px;width:100%;border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,.5);border:1px solid rgba(255,255,255,.1);"
+         onerror="this.style.display='none'">
   </div>
   <div class="hero-trust">
     <span class="trust-item">No LinkedIn login required</span>
@@ -723,8 +729,20 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
 
 <!-- ── FOOTER ── -->
 <footer class="footer">
-  <p>LinkedPod by <a href="https://contentscale.site">ContentScale.site</a> · Ottmar J.G. Francisca · Amsterdam · © 2026</p>
-  <p style="margin-top:8px;"><a href="/boost-platform">Platform</a> · <a href="/boost-register">Register</a> · <a href="/boost-admin">Admin</a> · <a href="https://contentscale.site/privacy-policy/">Privacy</a></p>
+  <p style="margin-bottom:16px;">
+    Designed &amp; built by
+    <a href="https://wa.me/31628073996" target="_blank" style="color:#a78bfa;font-weight:700;">Ottmar Francisca</a>
+    · Amsterdam <span style="font-size:10px;">NL</span>
+  </p>
+  <div style="display:flex;gap:20px;justify-content:center;flex-wrap:wrap;margin-bottom:16px;">
+    <a href="https://contentscale.site/content-engine" target="_blank" style="color:rgba(255,255,255,.5);text-decoration:none;font-size:12px;transition:color .2s;" onmouseover="this.style.color='#a78bfa'" onmouseout="this.style.color='rgba(255,255,255,.5)'">ContentScale Engine</a>
+    <a href="https://contentscale.site" target="_blank" style="color:rgba(255,255,255,.5);text-decoration:none;font-size:12px;transition:color .2s;" onmouseover="this.style.color='#a78bfa'" onmouseout="this.style.color='rgba(255,255,255,.5)'">GRAAF SEO ContentScore</a>
+    <a href="https://app.contentscale.site/lead-crawler" target="_blank" style="color:rgba(255,255,255,.5);text-decoration:none;font-size:12px;transition:color .2s;" onmouseover="this.style.color='#a78bfa'" onmouseout="this.style.color='rgba(255,255,255,.5)'">Lead Crawler</a>
+    <a href="/boost-platform" style="color:rgba(255,255,255,.5);text-decoration:none;font-size:12px;">Platform</a>
+    <a href="/boost-register" style="color:rgba(255,255,255,.5);text-decoration:none;font-size:12px;">Join</a>
+    <a href="https://contentscale.site/privacy-policy/" target="_blank" style="color:rgba(255,255,255,.5);text-decoration:none;font-size:12px;">Privacy</a>
+  </div>
+  <p style="font-size:11px;color:rgba(255,255,255,.2);">© 2026 LinkedPod · by ContentScale.site · All rights reserved</p>
 </footer>
 
 <script>
@@ -765,5 +783,82 @@ function toggleFaq(btn) {
 }
 
 </script>
+
+<!-- ── COOKIE CONSENT ── -->
+<div id="cookieBanner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9998;background:rgba(10,10,20,.97);border-top:1px solid rgba(255,255,255,.1);backdrop-filter:blur(20px);padding:16px 24px;">
+  <div style="max-width:900px;margin:0 auto;display:flex;align-items:center;gap:16px;flex-wrap:wrap;justify-content:space-between;">
+    <div style="flex:1;min-width:200px;">
+      <p style="font-size:13px;color:rgba(255,255,255,.8);line-height:1.6;margin:0;">
+        🍪 We use cookies to improve your experience. We don't sell your data.
+        <a href="https://contentscale.site/privacy-policy/" target="_blank" style="color:#a78bfa;text-decoration:none;">Privacy Policy</a>
+      </p>
+    </div>
+    <div style="display:flex;gap:8px;flex-shrink:0;">
+      <button onclick="declineCookies()" style="background:transparent;border:1px solid rgba(255,255,255,.2);color:rgba(255,255,255,.5);padding:8px 16px;border-radius:7px;font-size:12px;cursor:pointer;">Decline</button>
+      <button onclick="acceptCookies()" style="background:linear-gradient(135deg,#7c3aed,#0a66c2);border:none;color:#fff;padding:8px 20px;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer;">Accept</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  var consent = localStorage.getItem('lpCookieConsent');
+  if (!consent) {
+    setTimeout(function() {
+      document.getElementById('cookieBanner').style.display = 'block';
+    }, 1500);
+  }
+})();
+
+function acceptCookies() {
+  localStorage.setItem('lpCookieConsent', 'accepted');
+  document.getElementById('cookieBanner').style.display = 'none';
+}
+
+function declineCookies() {
+  localStorage.setItem('lpCookieConsent', 'declined');
+  document.getElementById('cookieBanner').style.display = 'none';
+}
+</script>
+
+<!-- ── CHAT WIDGET PLACEHOLDER ── -->
+<!-- Replace this comment with your Ada/Tawk.to/Crisp embed code -->
+
+
+<!-- Start of Tawk.to Script -->
+<script type="text/javascript">
+   var Tawk_API=Tawk_API||{}, Tawk_LoadStart=new Date();
+   (function(){
+     var s1=document.createElement("script"),s0=document.getElementsByTagName("script")[0];
+     s1.async=true;
+     s1.src='https://embed.tawk.to/68cac7f84318b419244f3308/default';
+     s1.charset='UTF-8';
+     s1.setAttribute('crossorigin','*');
+     s0.parentNode.insertBefore(s1,s0);
+   })();
+</script>
+<!-- End of Tawk.to Script -->
+
+<!-- Floating Headshot -->
+<div style="position:fixed;bottom:90px;right:20px;z-index:9997;">
+  <img alt="Ottmar Francisca — Founder ContentScale & LinkedPod"
+       src="https://raw.githubusercontent.com/ottey1969/contentscale-platform/main/public/blog/images/ottmar-francisca.jpg"
+       width="52" height="52"
+       style="width:52px;height:52px;border-radius:50%;object-fit:cover;border:2px solid #7c3aed;box-shadow:0 4px 16px rgba(0,0,0,0.5);"
+       onerror="this.style.display='none'">
+</div>
+
+<!-- AdaBundle Accessibility Widget -->
+<script>
+   (function(){
+     var e = document.createElement("script");
+     e.type = "text/javascript";
+     e.async = true;
+     e.setAttribute("embed-id", "b127ec6d-4baa-4d2e-ab77-a77289634ffb");
+     e.src = "https://embed.adabundle.com/embed-scripts/b127ec6d-4baa-4d2e-ab77-a77289634ffb";
+     document.getElementsByTagName("body")[0].appendChild(e);
+   })();
+</script>
+
 </body>
 </html>
