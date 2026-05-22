@@ -284,7 +284,20 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
       align-items: center !important;
       justify-content: center !important;
     }
-  </style>
+  
+/* ── FAQ ── */
+.faq-list{display:flex;flex-direction:column;gap:2px}
+.faq-item{border:1px solid var(--border);border-radius:10px;overflow:hidden;transition:border-color .2s}
+.faq-item:hover{border-color:rgba(124,58,237,.3)}
+.faq-q{width:100%;background:var(--card);border:none;padding:18px 20px;text-align:left;font-size:15px;font-weight:600;color:#f0ede8;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:16px;transition:background .2s;font-family:inherit;line-height:1.4}
+.faq-q:hover{background:rgba(124,58,237,.06)}
+.faq-icon{font-size:20px;color:rgba(124,58,237,.7);flex-shrink:0;transition:transform .25s;font-weight:300;line-height:1}
+.faq-a{background:rgba(255,255,255,.02);padding:0 20px;max-height:0;overflow:hidden;transition:max-height .35s ease,padding .35s ease;font-size:14px;color:rgba(255,255,255,.55);line-height:1.75}
+.faq-item.open .faq-a{max-height:300px;padding:0 20px 18px}
+.faq-item.open .faq-icon{transform:rotate(45deg);color:#a78bfa}
+.faq-item.open .faq-q{background:rgba(124,58,237,.06)}
+@media(max-width:768px){.faq-q{font-size:14px;padding:15px 16px}.faq-a{font-size:13px}.faq-item.open .faq-a{padding:0 16px 16px}}
+</style>
 </head>
 <body>
 
@@ -301,6 +314,7 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
     <a href="#how" class="nav-link">How it works</a>
     <a href="#features" class="nav-link">Features</a>
     <a href="#pricing" class="nav-link">Pricing</a>
+    <a href="#faq" class="nav-link">FAQ</a>
     <a href="#links" class="nav-link">All links</a>
     <a href="/boost-register" class="nav-cta">Request Access →</a>
   </div>
@@ -525,6 +539,108 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
   </div>
 </section>
 
+
+<!-- ── FAQ ── -->
+<section class="section" id="faq" style="padding-top:20px;">
+  <div class="reveal">
+    <div class="section-label">FAQ</div>
+    <h2 class="section-title">Real questions,<br>straight answers</h2>
+  </div>
+  <div class="faq-list reveal" style="margin-top:40px;max-width:720px;">
+
+    <div class="faq-item">
+      <button class="faq-q" onclick="toggleFaq(this)">
+        Does LinkedPod connect to my LinkedIn account? <span class="faq-icon">+</span>
+      </button>
+      <div class="faq-a">
+        No. LinkedPod never connects to your LinkedIn account. No login, no OAuth, no API access, no permissions. You copy the AI-generated comment, open LinkedIn yourself in your browser, and paste it manually. We only store your name and LinkedIn profile URL — nothing else.
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <button class="faq-q" onclick="toggleFaq(this)">
+        Can LinkedIn ban my account for using this? <span class="faq-icon">+</span>
+      </button>
+      <div class="faq-a">
+        No. LinkedIn bans automation — bots that like, comment, or connect on your behalf. LinkedPod is the opposite: you manually paste a comment from your own browser, on your own schedule. That is exactly how LinkedIn is designed to be used. Engagement pods have existed since 2017 and are widely used by LinkedIn creators, agencies, and marketers.
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <button class="faq-q" onclick="toggleFaq(this)">
+        Why would I comment on someone else's post? What's in it for me? <span class="faq-icon">+</span>
+      </button>
+      <div class="faq-a">
+        Every comment you post earns you +2 credits. You need 5 credits to launch your own boost session. So commenting on 3 posts gives you enough to boost your own — and the community returns the favour. The more you give, the faster you grow. It's a genuine exchange, not a favour.
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <button class="faq-q" onclick="toggleFaq(this)">
+        Won't all the comments look the same? Won't LinkedIn detect that? <span class="faq-icon">+</span>
+      </button>
+      <div class="faq-a">
+        No — that's exactly what we solved. Every member gets a unique AI-generated comment based on their name, background, and LinkedIn profile. Nobody ever posts the same text. LinkedIn sees 10 different people writing 10 different things from 10 different accounts. That's organic engagement by definition.
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <button class="faq-q" onclick="toggleFaq(this)">
+        How fast does it work? Does timing matter? <span class="faq-icon">+</span>
+      </button>
+      <div class="faq-a">
+        The first 60 minutes after publishing are the most important — LinkedIn's algorithm weighs early engagement heavily to decide whether to push the post further. LinkedPod shows a live countdown and plays a sound alert the moment a new session goes live. Sessions posted in the golden hour consistently outperform those boosted later.
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <button class="faq-q" onclick="toggleFaq(this)">
+        I bought the AppSumo deal. What do I get exactly? <span class="faq-icon">+</span>
+      </button>
+      <div class="faq-a">
+        You get lifetime access to LinkedPod — no monthly fees, ever. Plan A gives you 1 boost session per week and the ability to participate in all community sessions. Plan B (Pro) removes all limits. Plan C (Agency) adds multi-client support so you can boost posts for your clients too. Activate your license at app.contentscale.site/linkedpod/activate.
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <button class="faq-q" onclick="toggleFaq(this)">
+        What if I run out of credits? <span class="faq-icon">+</span>
+      </button>
+      <div class="faq-a">
+        Just boost a few posts from other members — each one earns you +2 credits. You can also message Ottmar directly via WhatsApp for a manual credit top-up. Pro and Agency users have unlimited credits and never need to worry about this.
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <button class="faq-q" onclick="toggleFaq(this)">
+        Can I use this for my clients, not just my own posts? <span class="faq-icon">+</span>
+      </button>
+      <div class="faq-a">
+        Yes — on Pro and Agency tiers you can create sessions for any client. The session shows their name to participants. Each client post gets unique personalised comments from real community members. This is included in the Agency AppSumo tier and can be unlocked by messaging Ottmar.
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <button class="faq-q" onclick="toggleFaq(this)">
+        How is this different from just buying LinkedIn engagement? <span class="faq-icon">+</span>
+      </button>
+      <div class="faq-a">
+        Bought engagement comes from fake or offshore accounts with no relevance to your niche — LinkedIn's algorithm detects and discounts it fast. LinkedPod is real professionals in your industry, posting genuine comments from real accounts with real history. The engagement signals are authentic. That's what the algorithm rewards.
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <button class="faq-q" onclick="toggleFaq(this)">
+        Who built this and can I trust it? <span class="faq-icon">+</span>
+      </button>
+      <div class="faq-a">
+        LinkedPod is built by Ottmar Francisca — founder of ContentScale, creator of the GRAAF Framework, 24+ years in operations and SEO. ContentScale has helped 200+ businesses across 47 countries recover and grow organic traffic. Ottmar is reachable directly on WhatsApp at any time. This is not a faceless SaaS — there's a real person behind it.
+      </div>
+    </div>
+
+  </div>
+</section>
+
 <!-- ── CTA ── -->
 <div class="cta-section reveal">
   <h2>Ready to go <span style="background:linear-gradient(135deg,#a78bfa,#34d399);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">viral?</span></h2>
@@ -573,6 +689,14 @@ document.addEventListener('mousemove', e => {
   });
   ticking = true;
 });
+
+function toggleFaq(btn) {
+  const item = btn.closest('.faq-item');
+  const wasOpen = item.classList.contains('open');
+  document.querySelectorAll('.faq-item.open').forEach(el => el.classList.remove('open'));
+  if (!wasOpen) item.classList.add('open');
+}
+
 </script>
 </body>
 </html>
