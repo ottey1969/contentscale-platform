@@ -27133,7 +27133,7 @@ app.post('/ai/linkedin-reply', asyncHandler(async (req, res) => {
     engaging:       'Keep it warm, conversational and genuinely curious.',
     insightful:     'Add a data point, framework mention or contrarian angle.',
     question:       'End with one sharp, thought-provoking question.',
-    'agree+expand': 'Agree with their point, then add a new dimension they haven't considered.',
+    'agree+expand': "Agree with their point, then add a new dimension they haven\'t considered.",
     challenge:      'Respectfully push back. Be direct but not confrontational.',
   };
 
