@@ -766,38 +766,42 @@ document.getElementById('adminSoundBtn').textContent = adminSoundOn ? '🔔 Aler
 
 function getAdminAudio() {
   if (!adminAudioCtx) adminAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if (adminAudioCtx.state === 'suspended') adminAudioCtx.resume().catch(() => {});
   return adminAudioCtx;
 }
 
+// Unlock on any gesture
+function unlockAdminAudio() {
+  if (adminAudioCtx && adminAudioCtx.state === 'suspended') adminAudioCtx.resume().catch(() => {});
+  else if (!adminAudioCtx) getAdminAudio();
+}
+document.addEventListener('touchstart', unlockAdminAudio, { passive: true });
+document.addEventListener('click',      unlockAdminAudio, { passive: true });
+
 function playAdminAlert() {
-  // Different from platform: deep descending two-tone + pulse
   try {
     const ctx = getAdminAudio();
-    // First: low "bong" - 440Hz triangle wave
-    const osc1  = ctx.createOscillator();
-    const gain1 = ctx.createGain();
+    if (!ctx) return;
+    // Deep bong 440Hz triangle
+    const osc1 = ctx.createOscillator(); const gain1 = ctx.createGain();
     osc1.connect(gain1); gain1.connect(ctx.destination);
-    osc1.type = 'triangle';
-    osc1.frequency.value = 440;
+    osc1.type = 'triangle'; osc1.frequency.value = 440;
     gain1.gain.setValueAtTime(0, ctx.currentTime);
     gain1.gain.linearRampToValueAtTime(0.4, ctx.currentTime + 0.05);
     gain1.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.8);
-    osc1.start(ctx.currentTime);
-    osc1.stop(ctx.currentTime + 0.8);
-
-    // Second: higher "ping" at 660Hz
-    const osc2  = ctx.createOscillator();
-    const gain2 = ctx.createGain();
+    osc1.start(ctx.currentTime); osc1.stop(ctx.currentTime + 0.8);
+    // Ping 660Hz sine
+    const osc2 = ctx.createOscillator(); const gain2 = ctx.createGain();
     osc2.connect(gain2); gain2.connect(ctx.destination);
-    osc2.type = 'sine';
-    osc2.frequency.value = 660;
+    osc2.type = 'sine'; osc2.frequency.value = 660;
     gain2.gain.setValueAtTime(0, ctx.currentTime + 0.15);
     gain2.gain.linearRampToValueAtTime(0.3, ctx.currentTime + 0.2);
     gain2.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.9);
-    osc2.start(ctx.currentTime + 0.15);
-    osc2.stop(ctx.currentTime + 0.9);
+    osc2.start(ctx.currentTime + 0.15); osc2.stop(ctx.currentTime + 0.9);
   } catch(e) {}
 }
+
+let adminAlarmActive = false;
 
 function startAdminAlarm(count) {
   const banner = document.getElementById('regAlert');
@@ -805,15 +809,36 @@ function startAdminAlarm(count) {
   text.textContent = count === 1 ? '1 new registration waiting!' : `${count} new registrations waiting!`;
   banner.style.display = 'flex';
   document.title = `🔔 (${count}) New Registration — Boost Admin`;
+  adminAlarmActive = true;
 
-  if (adminSoundOn) {
-    playAdminAlert();
-    if (adminAlertTimer) clearInterval(adminAlertTimer);
-    adminAlertTimer = setInterval(() => { if (adminSoundOn) playAdminAlert(); }, 2000);
-  }
+  if (adminAlertTimer) clearInterval(adminAlertTimer);
+  if (adminSoundOn) playAdminAlert();
+
+  adminAlertTimer = setInterval(() => {
+    if (!adminAlarmActive) { clearInterval(adminAlertTimer); adminAlertTimer = null; return; }
+    if (adminSoundOn) {
+      if (adminAudioCtx && adminAudioCtx.state === 'suspended') {
+        adminAudioCtx.resume().then(() => playAdminAlert()).catch(() => {});
+      } else {
+        playAdminAlert();
+      }
+    }
+  }, 2000);
 }
 
+// Resume on tab focus
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden && adminAlarmActive && adminSoundOn) {
+    if (adminAudioCtx && adminAudioCtx.state === 'suspended') {
+      adminAudioCtx.resume().then(() => playAdminAlert()).catch(() => {});
+    } else {
+      playAdminAlert();
+    }
+  }
+});
+
 function dismissRegAlert() {
+  adminAlarmActive = false;
   document.getElementById('regAlert').style.display = 'none';
   document.title = 'Boost Admin — ContentScale';
   if (adminAlertTimer) { clearInterval(adminAlertTimer); adminAlertTimer = null; }

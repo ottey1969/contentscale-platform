@@ -394,19 +394,38 @@ input,textarea,select{font-size:16px!important}
 </div>
 
 <script>
-// ── SOUND SYSTEM ─────────────────────────────────────────────────────────
+// ── SOUND SYSTEM — CONTINUOUS, MOBILE + DESKTOP ──────────────────────────
 let soundOn = localStorage.getItem('boostSound') !== 'off';
+let alarmActive = false;
 let alarmInterval = null;
 let audioCtx = null;
 
 function getAudioCtx() {
-  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if (!audioCtx) {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+  // Always resume — mobile suspends AudioContext automatically
+  if (audioCtx.state === 'suspended') {
+    audioCtx.resume().catch(() => {});
+  }
   return audioCtx;
 }
+
+// Unlock AudioContext on first user gesture (required on iOS/Android)
+function unlockAudio() {
+  if (audioCtx && audioCtx.state === 'suspended') {
+    audioCtx.resume().catch(() => {});
+  } else if (!audioCtx) {
+    getAudioCtx();
+  }
+}
+document.addEventListener('touchstart', unlockAudio, { once: false, passive: true });
+document.addEventListener('click',      unlockAudio, { once: false, passive: true });
 
 function playChime() {
   try {
     const ctx = getAudioCtx();
+    if (!ctx) return;
     const notes = [880, 1100, 1320];
     notes.forEach((freq, i) => {
       const osc  = ctx.createOscillator();
@@ -426,18 +445,34 @@ function playChime() {
 }
 
 function startAlarm(msg) {
-  if (!soundOn) return;
   document.getElementById('alertText').textContent = msg || '🔔 New boost session available!';
   document.getElementById('alertBanner').classList.add('visible');
   document.title = '🔔 NEW BOOST! — ContentScale';
-  playChime();
+  alarmActive = true;
+
+  // Clear any existing interval
   if (alarmInterval) clearInterval(alarmInterval);
-  alarmInterval = setInterval(() => { if (soundOn) playChime(); }, 2000);
+
+  // Play immediately if sound on
+  if (soundOn) playChime();
+
+  // Continuous loop every 2s — always reschedules itself
+  alarmInterval = setInterval(() => {
+    if (!alarmActive) { clearInterval(alarmInterval); alarmInterval = null; return; }
+    if (soundOn) {
+      // Always try to resume AudioContext (mobile may have suspended it)
+      if (audioCtx && audioCtx.state === 'suspended') {
+        audioCtx.resume().then(() => playChime()).catch(() => {});
+      } else {
+        playChime();
+      }
+    }
+  }, 2000);
 }
 
 function dismissAlert() {
-  clearInterval(alarmInterval);
-  alarmInterval = null;
+  alarmActive = false;
+  if (alarmInterval) { clearInterval(alarmInterval); alarmInterval = null; }
   document.getElementById('alertBanner').classList.remove('visible');
   document.title = 'ContentScale Boost';
 }
@@ -446,9 +481,20 @@ function toggleSound() {
   soundOn = !soundOn;
   localStorage.setItem('boostSound', soundOn ? 'on' : 'off');
   document.getElementById('soundBtn').textContent = soundOn ? '🔔 ON' : '🔕 OFF';
-  if (!soundOn && alarmInterval) { clearInterval(alarmInterval); alarmInterval = null; }
-  else if (soundOn) playChime();
+  if (soundOn && alarmActive) playChime();
 }
+
+// Page Visibility API — restart alarm when tab becomes visible again
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden && alarmActive && soundOn) {
+    // Tab came back to foreground — resume AudioContext and play
+    if (audioCtx && audioCtx.state === 'suspended') {
+      audioCtx.resume().then(() => playChime()).catch(() => {});
+    } else {
+      playChime();
+    }
+  }
+});
 
 document.getElementById('soundBtn').textContent = soundOn ? '🔔 ON' : '🔕 OFF';
 
