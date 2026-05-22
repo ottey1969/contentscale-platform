@@ -410,8 +410,11 @@ textarea{height:80px;resize:vertical}
       <div style="font-size:11px;color:var(--muted);margin-top:5px;line-height:1.6;">
         📌 On your post → click <strong>···</strong> → <strong>Copy link to post</strong>
       </div>
-      <label>Post Text</label>
-      <textarea id="postText" placeholder="Paste your LinkedIn post..."></textarea>
+      <label>Post Text <span style="color:var(--red);font-size:11px;">* required</span></label>
+      <textarea id="postText" placeholder="Paste your full LinkedIn post text here..." required></textarea>
+      <div style="font-size:11px;color:var(--muted);margin-top:5px;line-height:1.6;">
+        🤖 AI generates a unique personal comment for each member — they copy and paste it on LinkedIn in 30 seconds.
+      </div>
       <label>Client Name</label>
       <input type="text" id="clientName" value="Ottmar Francisca — ContentScale">
       <label>Tone / Language hint (optional)</label>

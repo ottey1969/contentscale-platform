@@ -424,8 +424,11 @@ input,textarea,select{font-size:16px!important}
       <div style="font-size:11px;color:var(--muted);margin-top:5px;line-height:1.6;">
         📌 On your LinkedIn post → click <strong>···</strong> (three dots) → <strong>Copy link to post</strong>
       </div>
-      <label class="form-label">Post text (paste full post)</label>
-      <textarea class="form-input" id="newText" placeholder="Paste your LinkedIn post here..."></textarea>
+      <label class="form-label">Post text <span style="color:var(--red);font-size:11px;">* required</span></label>
+      <textarea class="form-input" id="newText" placeholder="Paste your full LinkedIn post text here..." required></textarea>
+      <div style="font-size:11px;color:var(--muted);margin-top:5px;line-height:1.6;">
+        🤖 AI reads your post and writes a <strong>unique personal comment</strong> for each member. They copy it and paste on LinkedIn — takes 30 seconds.
+      </div>
       <label class="form-label">Language / tone hint (optional)</label>
       <input class="form-input" type="text" id="newTone" placeholder="e.g. Dutch, roofing industry, urgent">
       <p style="font-size:11px;color:var(--muted);margin-top:8px;">Creating costs 5 credits. You earn 2 per post you boost.</p>
