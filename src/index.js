@@ -26998,6 +26998,28 @@ app.post('/appsumo/webhook', asyncHandler(async (req,res) => {
 console.log('[LinkedPod] AppSumo routes loaded ✅');
 // ═══════════════════════════════════════════════════════════════════════════
 
+
+// ── AUTO-CLOSE BOOST SESSIONS AFTER 24H ──────────────────────────────────
+async function autoCloseSessions() {
+  if (!pool) return;
+  try {
+    const r = await pool.query(
+      `UPDATE boost_sessions SET active=FALSE
+       WHERE active=TRUE AND created_at < NOW() - INTERVAL '24 hours'
+       RETURNING id, client_name`
+    );
+    if (r.rows.length > 0) {
+      console.log('[Boost] Auto-closed', r.rows.length, 'sessions after 24h');
+    }
+  } catch(e) {
+    console.warn('[Boost] Auto-close error:', e.message);
+  }
+}
+
+// Run every 30 minutes
+setInterval(autoCloseSessions, 30 * 60 * 1000);
+setTimeout(autoCloseSessions, 5000); // run once on startup
+
 // Start scheduler after DB is ready (called from startServer)
 setTimeout(() => { if(pool) startTrackerScheduler(); }, 10000);
 
