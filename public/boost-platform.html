@@ -457,8 +457,10 @@ input,textarea,select{font-size:16px!important}
     </div>
     <div class="form-card">
       <h3>LinkedIn URL</h3>
-      <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">Required — so members know you're a real person with a real LinkedIn account.</p>
-      <input class="form-input" type="url" id="linkedinInput" placeholder="https://linkedin.com/in/yourname" required>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:10px;line-height:1.6;">
+        Add your LinkedIn to comment on posts and earn credits. No LinkedIn? You can still join and help in other ways.
+      </p>
+      <input class="form-input" type="url" id="linkedinInput" placeholder="https://linkedin.com/in/yourname">
       <button class="btn btn-blue" style="margin-top:10px;width:100%;padding:11px;" onclick="saveProfile()">💾 Save Profile</button>
     </div>
 
@@ -939,11 +941,7 @@ async function saveLinkedIn() { saveProfile(); }
 async function saveProfile() {
   const linkedinUrl = document.getElementById('linkedinInput').value.trim();
   const callmebotKey = document.getElementById('callmebotKey')?.value.trim() || '';
-  if (!linkedinUrl || !linkedinUrl.includes('linkedin.com')) {
-    toast('Enter your LinkedIn profile URL first', true);
-    document.getElementById('linkedinInput').focus();
-    return;
-  }
+  // LinkedIn URL is optional
   const r = await fetch('/boost/update-profile', {
     method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({ token: myToken, linkedinUrl, callmebotKey })
