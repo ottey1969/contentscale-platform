@@ -68,6 +68,117 @@ input::placeholder{color:rgba(255,255,255,.2)}
   .plans{grid-template-columns:1fr}
 }
 </style>
+
+  <!-- MOBILE UNIVERSAL FIX -->
+  <meta name="theme-color" content="#050510">
+  <style>
+    /* ── UNIVERSAL MOBILE RESET ── */
+    html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+    * { -webkit-tap-highlight-color: transparent; }
+
+    /* Prevent iOS zoom on input focus */
+    input, textarea, select, button {
+      font-size: 16px !important;
+      -webkit-appearance: none;
+      border-radius: 0;
+    }
+    input { border-radius: 8px !important; }
+    textarea { border-radius: 8px !important; }
+    select { border-radius: 8px !important; }
+    button { border-radius: inherit !important; }
+
+    @media (max-width: 768px) {
+      /* Navigation */
+      .nav { padding: 12px 16px !important; flex-wrap: wrap; gap: 8px; }
+      .nav-links .nav-link { display: none !important; }
+      .nav-cta { font-size: 13px !important; padding: 9px 16px !important; }
+
+      /* Hero */
+      .hero { padding: 60px 16px 40px !important; }
+      .hero h1 { font-size: clamp(1.8rem, 7vw, 3rem) !important; }
+      .hero-sub { font-size: 15px !important; }
+      .hero-actions { flex-direction: column !important; align-items: stretch !important; }
+      .btn-hero { justify-content: center !important; width: 100% !important; padding: 14px 20px !important; }
+      .hero-trust { flex-direction: column !important; align-items: center !important; gap: 8px !important; }
+
+      /* Counter strip */
+      .counter-strip { display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 16px !important; padding: 20px !important; }
+      .counter-num { font-size: 1.8rem !important; }
+
+      /* Sections */
+      .section { padding: 48px 16px !important; }
+      .section-title { font-size: clamp(1.5rem, 5vw, 2rem) !important; }
+
+      /* Steps */
+      .steps { grid-template-columns: 1fr !important; gap: 8px !important; }
+      .step { border-radius: 12px !important; padding: 24px 20px !important; }
+      .step-arrow { display: none !important; }
+
+      /* Features + Pricing */
+      .features { grid-template-columns: 1fr !important; }
+      .pricing { grid-template-columns: 1fr !important; }
+      .price-card.featured { order: -1 !important; }
+
+      /* Links grid */
+      .links-grid { grid-template-columns: 1fr !important; }
+
+      /* CTA */
+      .cta-section { padding: 48px 16px 60px !important; }
+      .cta-section .btn-hero { display: block !important; text-align: center !important; }
+
+      /* PLATFORM specific */
+      .header { padding: 10px 14px !important; }
+      .header h1 { font-size: 15px !important; }
+      .tabs { position: sticky !important; top: 50px !important; z-index: 98 !important; }
+      .tab { font-size: 11px !important; padding: 10px 3px !important; }
+      .stats { padding: 10px 12px 0 !important; gap: 8px !important; }
+      .stat-n { font-size: 20px !important; }
+      .stat-l { font-size: 10px !important; }
+      .content { padding: 10px 12px !important; }
+      .session { padding: 14px !important; }
+      .comment-opt { padding: 12px !important; }
+      .opt-actions { flex-direction: column !important; }
+      .opt-actions .btn { width: 100% !important; flex: none !important; }
+      .urgency-bar { padding: 8px 12px !important; font-size: 12px !important; }
+      .countdown { font-size: 14px !important; }
+
+      /* ADMIN specific */
+      .grid2 { grid-template-columns: 1fr !important; }
+      .grid4 { grid-template-columns: 1fr 1fr !important; }
+      .wrap { padding: 12px !important; }
+      .card { padding: 16px !important; }
+      .row { flex-direction: column !important; align-items: flex-start !important; }
+      .row-actions { width: 100% !important; justify-content: flex-start !important; }
+      .stat { padding: 10px !important; }
+      .stat strong { font-size: 20px !important; }
+
+      /* REGISTER + ACTIVATE */
+      .hero { padding: 28px 16px !important; }
+      .login-card, .card { padding: 24px 18px !important; }
+      .btn-hero, .btn, .btn-price { min-height: 50px !important; }
+    }
+
+    @media (max-width: 400px) {
+      .counter-strip { grid-template-columns: 1fr !important; }
+      .grid4 { grid-template-columns: 1fr 1fr !important; }
+      .tab { font-size: 10px !important; padding: 9px 2px !important; }
+      .nav-cta { display: none !important; }
+      .header-left { gap: 6px !important; }
+    }
+
+    /* Touch targets min 44px */
+    .btn, .tab, .nav-cta, .btn-hero, .btn-price, button {
+      min-height: 44px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    a.btn-hero, a.btn-price, a.nav-cta, a.btn-access {
+      display: inline-flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+    }
+  </style>
 </head>
 <body>
 <div class="bg-orbs"><div class="orb orb1"></div><div class="orb orb2"></div></div>
