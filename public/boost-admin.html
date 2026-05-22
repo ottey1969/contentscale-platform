@@ -325,7 +325,6 @@ textarea{height:80px;resize:vertical}
         <input type="text" id="serverUrl" value="https://app.contentscale.site">
       </div>
     </div>
-    <button class="btn btn-blue" style="margin-top:10px;" onclick="saveSettings()">Save Settings</button>
   </div>
 
   <!-- TABS -->
@@ -548,16 +547,13 @@ textarea{height:80px;resize:vertical}
 <script>
 const ADMIN_TOKEN = 'ottmar-admin-2026';
 // Use relative URLs so it always works regardless of domain
-let srv = localStorage.getItem('boostSrv') || '';
+let srv = localStorage.getItem('boostSrv') || window.location.origin;
 let apiKey = ''; // Not needed — server uses ANTHROPIC_API_KEY env var
-document.getElementById('serverUrl').value = srv || window.location.origin;
-srv = srv || '';
+document.getElementById('serverUrl').value = srv;
 
 function saveSettings() {
-  srv = document.getElementById('serverUrl').value.trim() || window.location.origin;
+  srv = window.location.origin;
   localStorage.setItem('boostSrv', srv);
-  toast('Saved ✅');
-  loadAll();
 }
 
 // switchTab defined below with AppSumo support
@@ -776,7 +772,7 @@ async function loadSessions() {
       <div class="row-actions">
         <button class="btn btn-ghost btn-sm" onclick="copyText('${srv}/boost-platform')">Link</button>
         ${s.active?`
-          <button class="btn btn-sm" style="background:#25D366;color:#fff;" onclick="openBroadcast('${s.id}','${(s.preview||'').replace(/'/g,''').substring(0,60)}')">📢 Broadcast</button>
+          <button class="btn btn-sm" style="background:#25D366;color:#fff;" onclick="openBroadcast('${s.id}',this)" data-preview="${(s.preview||'').substring(0,60).replace(/"/g,'&quot;')}">📢 Broadcast</button>
           <button class="btn btn-red btn-sm" onclick="closeS('${s.id}')">Close</button>
         `:''}
       </div>
@@ -1153,7 +1149,8 @@ let bcSentSet = new Set();
 let bcSessionId = '';
 let bcSessionUrl = '';
 
-async function openBroadcast(sessionId, sessionPreview) {
+async function openBroadcast(sessionId, btnEl) {
+  const sessionPreview = btnEl?.dataset?.preview || '';
   bcSessionId = sessionId;
   bcSentSet = new Set();
   bcSessionUrl = `${srv || window.location.origin}/boost-platform`;
