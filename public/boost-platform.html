@@ -415,7 +415,7 @@ input,textarea,select{font-size:16px!important}
   </div>
 
   <!-- COMMUNITY -->
-  <div id="tabCommunity" class="content">
+  <div id="tabCommunity" class="content" style="display:none;">
     <div id="communityList"><div class="empty"><h3>Loading...</h3></div></div>
   </div>
 
@@ -447,7 +447,7 @@ input,textarea,select{font-size:16px!important}
   </div>
 
   <!-- PROFILE -->
-  <div id="tabProfile" class="content" style="display:none;">
+  <div id="tabProfile" class="content">
     <div class="form-card">
       <h3>My Profile</h3>
       <div class="p-row"><span class="p-label">Name</span><strong id="pName">—</strong></div>
@@ -648,9 +648,9 @@ function showMain() {
   document.getElementById('userPill').style.display = 'flex';
   updateHeader();
   updateProfile();
-  loadCommunity();
   loadMySessions();
   startPolling();
+  switchTab('profile');
 }
 
 // ── POLLING FOR NEW SESSIONS ─────────────────────────────────────────────
