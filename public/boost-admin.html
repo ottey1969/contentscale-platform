@@ -430,6 +430,15 @@ textarea{height:80px;resize:vertical}
 
     <div class="card">
       <h2>All Users <span id="userCount" style="font-weight:400;text-transform:none;"></span></h2>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;padding:8px 12px;background:rgba(255,255,255,.03);border-radius:8px;border:1px solid var(--border);">
+        <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;">
+          <input type="checkbox" id="selectAllUsers" onchange="toggleSelectAll(this.checked)" style="accent-color:#7c3aed;">
+          <span style="color:var(--muted);">Select all</span>
+        </label>
+        <span style="color:var(--border);margin:0 4px;">|</span>
+        <button class="btn btn-sm" style="background:rgba(239,68,68,.1);color:#ef4444;border:1px solid rgba(239,68,68,.3);font-size:11px;" onclick="deleteSelected()">🗑 Delete selected</button>
+        <span id="selectedCount" style="font-size:11px;color:var(--muted);margin-left:4px;"></span>
+      </div>
       <div id="usersList"><div style="color:var(--muted);font-size:13px;">Loading...</div></div>
     </div>
   </div>
@@ -756,7 +765,10 @@ async function loadUsers() {
   document.getElementById('userCount').textContent = `(${users.length})`;
 
   document.getElementById('usersList').innerHTML = users.map(u => `
-    <div class="row" style="flex-wrap:wrap;gap:8px;">
+    <div class="row" style="flex-wrap:wrap;gap:8px;align-items:flex-start;">
+      <label style="padding-top:4px;cursor:pointer;flex-shrink:0;">
+        <input type="checkbox" class="user-checkbox" value="${u.token}" onchange="updateSelectedCount()" style="accent-color:#7c3aed;">
+      </label>
       <div class="row-info" style="flex:1;min-width:0;">
         <strong>${u.name}</strong>
         <span class="badge tier-${u.tier}" style="margin-left:6px;">${u.tier}</span>
@@ -781,6 +793,7 @@ async function loadUsers() {
           data-country="${u.country||''}"
           data-linkedin="${u.linkedin_url||''}"
           onclick="editUser(this.dataset.token,this.dataset.name,this.dataset.whatsapp,this.dataset.country,this.dataset.linkedin)">✎ Edit</button>
+        <button class="btn btn-sm" style="background:rgba(239,68,68,.1);color:#ef4444;border:1px solid rgba(239,68,68,.3);" onclick="deleteUser('${u.token}','${u.name.replace(/'/g,"\\'")}')">🗑</button>
         ${u.whatsapp ? `<a href="https://wa.me/${u.whatsapp.replace(/[^0-9]/g,'')}?text=${encodeURIComponent('Hi '+u.name+'! Your Boost link: '+srv+'/boost-platform?token='+u.token)}" target="_blank" class="btn btn-green btn-sm" style="text-decoration:none;">WA</a>` : ''}
         <button class="btn btn-sm ${u.active?'btn-ghost':'btn-green'}" onclick="toggleU('${u.token}',${u.active})">${u.active?'Disable':'Enable'}</button>
       </div>
@@ -789,6 +802,44 @@ async function loadUsers() {
 }
 
 // ── EDIT USER MODAL ──────────────────────────────────────────────────────
+function toggleSelectAll(checked) {
+  document.querySelectorAll('.user-checkbox').forEach(cb => cb.checked = checked);
+  updateSelectedCount();
+}
+
+function updateSelectedCount() {
+  const checked = document.querySelectorAll('.user-checkbox:checked').length;
+  const total   = document.querySelectorAll('.user-checkbox').length;
+  const el = document.getElementById('selectedCount');
+  if (el) el.textContent = checked > 0 ? `${checked} of ${total} selected` : '';
+  const selectAll = document.getElementById('selectAllUsers');
+  if (selectAll) selectAll.checked = checked === total && total > 0;
+}
+
+async function deleteUser(token, name) {
+  if (!confirm(`Delete user "${name}"? This cannot be undone.`)) return;
+  const r = await fetch(`${srv}/boost/admin/delete-user`, {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ adminToken: ADMIN_TOKEN, token })
+  });
+  const d = await r.json();
+  if (d.success) { toast('Deleted ✅'); loadUsers(); }
+  else toast('Error: ' + (d.error||'failed'), true);
+}
+
+async function deleteSelected() {
+  const checked = [...document.querySelectorAll('.user-checkbox:checked')].map(cb => cb.value);
+  if (!checked.length) { toast('Select users first', true); return; }
+  if (!confirm(`Delete ${checked.length} user(s)? This cannot be undone.`)) return;
+  for (const token of checked) {
+    await fetch(`${srv}/boost/admin/delete-user`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ adminToken: ADMIN_TOKEN, token })
+    });
+  }
+  toast(`Deleted ${checked.length} user(s) ✅`); loadUsers();
+}
+
 function editUser(token, name, whatsapp, country, linkedin) {
   const countries = ['Netherlands','Belgium','Germany','United Kingdom','United States','Canada','Australia','France','Spain','Italy','Portugal','Sweden','Norway','Denmark','Finland','Switzerland','South Africa','Nigeria','Kenya','India','Philippines','Singapore','Malaysia','Indonesia','Brazil','Mexico','UAE','Other'];
   const countryOpts = countries.map(c => `<option value="${c}" ${c===country?'selected':''}>${c}</option>`).join('');
