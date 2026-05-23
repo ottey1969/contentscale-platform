@@ -26902,14 +26902,15 @@ app.post('/boost/admin/create-user', asyncHandler(async (req,res) => {
 }));
 
 app.post('/boost/admin/update-user', asyncHandler(async (req,res) => {
-  const {token,tier,active,credits,name,whatsapp,country} = req.body;
+  const {token,tier,active,credits,name,whatsapp,country,linkedinUrl} = req.body;
   const updates=[]; const vals=[]; let i=1;
-  if (tier!==undefined)       {updates.push(`tier=$${i++}`);       vals.push(tier);}
-  if (active!==undefined)     {updates.push(`active=$${i++}`);     vals.push(active);}
-  if (credits!==undefined)    {updates.push(`credits=$${i++}`);    vals.push(credits);}
-  if (name!==undefined)       {updates.push(`name=$${i++}`);       vals.push(name);}
-  if (whatsapp!==undefined)   {updates.push(`whatsapp=$${i++}`);   vals.push(whatsapp||null);}
-  if (country!==undefined)    {updates.push(`country=$${i++}`);    vals.push(country||null);}
+  if (tier!==undefined)        {updates.push(`tier=$${i++}`);         vals.push(tier);}
+  if (active!==undefined)      {updates.push(`active=$${i++}`);       vals.push(active);}
+  if (credits!==undefined)     {updates.push(`credits=$${i++}`);      vals.push(credits);}
+  if (name!==undefined)        {updates.push(`name=$${i++}`);         vals.push(name);}
+  if (whatsapp!==undefined)    {updates.push(`whatsapp=$${i++}`);     vals.push(whatsapp||null);}
+  if (country!==undefined)     {updates.push(`country=$${i++}`);      vals.push(country||null);}
+  if (linkedinUrl!==undefined) {updates.push(`linkedin_url=$${i++}`); vals.push(linkedinUrl||null);}
   if (req.body.expires_at!==undefined) {updates.push(`expires_at=$${i++}`); vals.push(req.body.expires_at||null);}
   if (!updates.length) return res.status(400).json({error:'Nothing to update'});
   vals.push(token);
