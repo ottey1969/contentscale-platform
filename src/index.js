@@ -24754,7 +24754,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
         }
 
         async function toggleEngineCode(id,newState){await apiCall('/api/admin/engine-codes/'+id,'PATCH',{is_active:newState});loadEngineCodes();}
-        async function togglePlatformKeys(id,newState){await apiCall('/api/admin/engine-codes/'+id,'PATCH',{use_platform_keys:newState,api_key_mode:newState?'platform':'byok'});loadEngineCodes();toast(newState?'Platform API ON ✅':'Own keys mode');}
+        async function togglePlatformKeys(id,newState){await apiCall('/api/admin/engine-codes/'+id,'PATCH',{use_platform_keys:newState,api_key_mode:newState?'platform':'byok'});loadEngineCodes();}
         async function deleteEngineCode(id){if(!confirm('Delete this engine code?'))return;await apiCall('/api/admin/engine-codes/'+id,'DELETE');loadEngineCodes();}
         function copyEngineCode(code){navigator.clipboard.writeText(code).then(()=>alert('Code copied: '+code));}
 
