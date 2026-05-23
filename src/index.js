@@ -26588,8 +26588,17 @@ async function getBoostUser(token, ip) {
   return u;
 }
 
-const ADMIN_TOKENS = ['ottmar-admin-2026'];
+const ADMIN_TOKENS = [process.env.ADMIN_TOKEN || 'ottmar-admin-2026'];
 function isAdmin(u) { return u && (u.tier==='admin' || ADMIN_TOKENS.includes(u.token)); }
+
+function checkAdminToken(req, res) {
+  const token = req.body?.adminToken || req.query?.adminToken;
+  if (!ADMIN_TOKENS.includes(token)) {
+    res.status(401).json({ error: 'Unauthorized' });
+    return false;
+  }
+  return true;
+}
 
 
 
@@ -26661,7 +26670,7 @@ app.post('/boost/auth', asyncHandler(async (req,res) => {
   const u = await getBoostUser(token, ip);
   if (!u) return res.status(401).json({error:'Invalid or inactive token. Contact Ottmar for access.'});
   if (name && name !== u.name) await pool.query('UPDATE boost_users SET name=$1 WHERE id=$2',[name,u.id]);
-  res.json({user:{id:u.id,name:u.name,tier:u.tier,credits:u.credits,linkedin_url:u.linkedin_url}});
+  res.json({user:{id:u.id,name:u.name,tier:u.tier,credits:u.credits,linkedin_url:u.linkedin_url,country:u.country||null,callmebot_key:u.callmebot_key||null,whatsapp:u.whatsapp||null}});
 }));
 
 // ── SESSIONS LIST ────────────────────────────────────────────────────────
@@ -26856,11 +26865,13 @@ app.post('/boost/:id/close', asyncHandler(async (req,res) => {
 
 // ── ADMIN: REGISTRATIONS ──────────────────────────────────────────────────
 app.get('/boost/admin/registrations', asyncHandler(async (req,res) => {
+  if (!checkAdminToken(req,res)) return;
   const r = await pool.query('SELECT * FROM boost_registrations ORDER BY created_at DESC LIMIT 100');
   res.json({registrations:r.rows});
 }));
 
 app.post('/boost/admin/approve-registration', asyncHandler(async (req,res) => {
+  if (!checkAdminToken(req,res)) return;
   const {regId, tier} = req.body;
   const reg = await pool.query('SELECT * FROM boost_registrations WHERE id=$1',[regId]);
   if (!reg.rows.length) return res.status(404).json({error:'Not found'});
@@ -26876,17 +26887,20 @@ app.post('/boost/admin/approve-registration', asyncHandler(async (req,res) => {
 }));
 
 app.post('/boost/admin/reject-registration', asyncHandler(async (req,res) => {
+  if (!checkAdminToken(req,res)) return;
   await pool.query('UPDATE boost_registrations SET status=\'rejected\',reviewed_at=NOW() WHERE id=$1',[req.body.regId]);
   res.json({success:true});
 }));
 
 // ── ADMIN: USERS ──────────────────────────────────────────────────────────
 app.get('/boost/admin/users', asyncHandler(async (req,res) => {
+  if (!checkAdminToken(req,res)) return;
   const r = await pool.query('SELECT * FROM boost_users ORDER BY created_at DESC');
   res.json({users:r.rows});
 }));
 
 app.post('/boost/admin/create-user', asyncHandler(async (req,res) => {
+  if (!checkAdminToken(req,res)) return;
   const {name,token,email,tier,notes,whatsapp,country} = req.body;
   if (!name||!token) return res.status(400).json({error:'name and token required'});
   try {
@@ -26902,6 +26916,7 @@ app.post('/boost/admin/create-user', asyncHandler(async (req,res) => {
 }));
 
 app.post('/boost/admin/update-user', asyncHandler(async (req,res) => {
+  if (!checkAdminToken(req,res)) return;
   const {token,tier,active,credits,name,whatsapp,country,linkedinUrl} = req.body;
   const updates=[]; const vals=[]; let i=1;
   if (tier!==undefined)        {updates.push(`tier=$${i++}`);         vals.push(tier);}
@@ -26919,6 +26934,7 @@ app.post('/boost/admin/update-user', asyncHandler(async (req,res) => {
 }));
 
 app.post('/boost/admin/add-credits', asyncHandler(async (req,res) => {
+  if (!checkAdminToken(req,res)) return;
   const {token,amount} = req.body;
   await pool.query('UPDATE boost_users SET credits=credits+$1 WHERE token=$2',[amount,token]);
   res.json({success:true});
