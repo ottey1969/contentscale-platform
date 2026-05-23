@@ -3090,44 +3090,76 @@ async function copyMasterBrief() {
     var scanUrl = _context.url || window._lastSpyUrl || '';
     var score   = _context.score || 0;
     parts.push(sep);
-    parts.push('CONTENTSCORE SCAN' + (scanUrl ? ' -- ' + scanUrl : '') + (score ? '  Score: ' + score + '/100' : ''));
-    parts.push('Target: 85+ ContentScore. Apply ALL items below in your HTML before publishing.');
+    parts.push('GRAAF CONTENTSCORE REQUIREMENTS' + (scanUrl ? ' -- ' + scanUrl : '') + (score ? '  Current Score: ' + score + '/100' : ''));
     parts.push(sep);
+    parts.push('INSTRUCTION FOR EXTERNAL AI:');
+    parts.push('You MUST address EVERY item listed below. Do not skip any. Do not summarise.');
+    parts.push('Work through them one by one. When done, confirm each fix was applied.');
+    parts.push('Target score: 85+/100. Each item below directly impacts ranking and AI citation eligibility.');
+    parts.push('');
     var high = (_context.recs||[]).filter(function(r){return r.priority==='high';});
     var med  = (_context.recs||[]).filter(function(r){return r.priority==='medium';});
+    var low  = (_context.recs||[]).filter(function(r){return r.priority==='low';});
     if (high.length) {
-      parts.push('[HIGH PRIORITY] Fix These First:');
+      parts.push('━━ HIGH PRIORITY — Fix First (' + high.length + ' items) ━━');
+      parts.push('These are blocking your ranking. All must be resolved before publishing.');
+      parts.push('');
       high.forEach(function(r, i) {
-        parts.push((i+1) + '. ' + (r.title||r.description||''));
-        if (r.action)   parts.push('   ACTION: ' + r.action);
-        if (r.learning) parts.push('   WHY: '    + r.learning);
-        if (r.target)   parts.push('   TARGET: ' + r.target);
+        parts.push('H' + (i+1) + '. ' + (r.title||r.description||''));
+        if (r.action)   parts.push('   → DO THIS: ' + r.action);
+        if (r.learning) parts.push('   → WHY: '     + r.learning);
+        if (r.target)   parts.push('   → TARGET: '  + r.target);
         parts.push('');
       });
     }
     if (med.length) {
-      parts.push('[MEDIUM PRIORITY]:');
+      parts.push('━━ MEDIUM PRIORITY — Required (' + med.length + ' items) ━━');
+      parts.push('Do not skip these. They directly affect E-E-A-T and citation eligibility.');
+      parts.push('');
       med.forEach(function(r, i) {
-        parts.push((i+1) + '. ' + (r.title||r.description||''));
-        if (r.action)   parts.push('   ACTION: ' + r.action);
-        if (r.learning) parts.push('   WHY: '    + r.learning);
+        parts.push('M' + (i+1) + '. ' + (r.title||r.description||''));
+        if (r.action)   parts.push('   → DO THIS: ' + r.action);
+        if (r.learning) parts.push('   → WHY: '     + r.learning);
+        if (r.target)   parts.push('   → TARGET: '  + r.target);
         parts.push('');
       });
     }
+    if (low.length) {
+      parts.push('━━ QUICK WINS — Do If Possible (' + low.length + ' items) ━━');
+      parts.push('');
+      low.forEach(function(r, i) {
+        parts.push('Q' + (i+1) + '. ' + (r.title||r.description||''));
+        if (r.action) parts.push('   → DO THIS: ' + r.action);
+        parts.push('');
+      });
+    }
+    parts.push('━━ CONFIRMATION REQUIRED ━━');
+    parts.push('After completing the content, list each H, M, Q item and confirm: DONE or SKIPPED (with reason).');
   } else {
     var scanUrl2 = window._lastSpyUrl || (_context && _context.url) || '';
+    var manualGraaf = (document.getElementById('graafManualInput') || {}).value || '';
     parts.push(sep);
-    parts.push('CONTENTSCORE -- SCAN REQUIRED BEFORE WRITING HTML');
+    parts.push('GRAAF CONTENTSCORE REQUIREMENTS — MANUAL INPUT');
     parts.push(sep);
-    if (scanUrl2) {
-      parts.push('[STOP] Do not write HTML without ContentScore requirements.');
-      parts.push('1. Go to https://app.contentscale.site');
-      parts.push('2. Scan: ' + scanUrl2);
-      parts.push('3. Copy High + Medium priority recommendations');
-      parts.push('4. Paste below this brief');
-      parts.push('5. Paste everything into Claude.ai / ChatGPT together');
+    if (manualGraaf.trim()) {
+      parts.push('INSTRUCTION FOR EXTERNAL AI:');
+      parts.push('You MUST address EVERY item listed below. Do not skip any. Work through them one by one.');
+      parts.push('Confirm each fix was applied when done. Target score: 85+/100.');
+      parts.push('');
+      parts.push(manualGraaf.trim());
+      parts.push('');
+      parts.push('━━ CONFIRMATION REQUIRED ━━');
+      parts.push('After completing, confirm each item above as: DONE or SKIPPED (with reason).');
+    } else if (scanUrl2) {
+      parts.push('[ACTION REQUIRED] Run GRAAF scan before writing HTML:');
+      parts.push('1. Open: https://app.contentscale.site/?url=' + encodeURIComponent(scanUrl2));
+      parts.push('2. Copy all High + Medium + Low recommendations');
+      parts.push('3. Paste into the GRAAF Recommendations field in the Brief Builder');
+      parts.push('4. Click Copy Master Brief again');
+      parts.push('');
+      parts.push('Do NOT ask Claude/ChatGPT to write without these requirements.');
     } else {
-      parts.push('New page -- no URL yet. After publishing: scan at app.contentscale.site');
+      parts.push('Paste GRAAF recommendations in the field below the brief, then copy again.');
     }
   }
 
@@ -7041,15 +7073,20 @@ async function runSerpSpy() {
         '<button onclick="spySendToAgentWithHtml()" style="padding:8px 14px;border-radius:7px;border:1px solid rgba(245,109,0,.3);background:rgba(245,109,0,.08);color:#f56d00;font-size:11px;cursor:pointer;">🔬 Get Deeper Suggestions</button>' +
         '<button onclick="closeSerpSpy()" style="padding:8px 12px;border-radius:7px;border:1px solid rgba(255,255,255,.1);background:transparent;color:#9ca3af;font-size:11px;cursor:pointer;">✕ Close</button>' +
         '<div style="width:100%;margin-top:10px;">' +
-          '<div style="font-size:9px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:#4b5563;margin-bottom:5px;font-family:DM Mono,monospace;">📊 ContentScore — Separate from Spy Brief</div>' +
+          '<div style="font-size:9px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:#4b5563;margin-bottom:5px;font-family:DM Mono,monospace;">📊 GRAAF ContentScore — Separate from Spy</div>' +
           '<div style="padding:8px 10px;background:' + (_scanInBrief ? 'rgba(16,185,129,.06)' : 'rgba(245,109,0,.06)') + ';border:1px solid ' + (_scanInBrief ? 'rgba(16,185,129,.2)' : 'rgba(245,109,0,.2)') + ';border-radius:6px;font-size:10px;color:' + (_scanInBrief ? '#34d399' : '#f56d00') + ';">' +
           (_scanInBrief
-            ? '✅ ContentScore scan included — brief contains ' + (_context.recs.filter(function(r){return r.priority==="high"||r.priority==="medium";}).length) + ' structural requirements. Ready to copy.'
+            ? '✅ GRAAF scan included — ALL ' + (_context.recs||[]).length + ' requirements in brief. External AI must address every item.'
             : (url
-                ? '⚠️ Existing page — scan it first for structural requirements. ContentScore only works on live URLs. <a onclick="closeSerpSpy()" style="color:#f56d00;text-decoration:underline;cursor:pointer;">Close → scan at app.contentscale.site → re-open spy</a>'
-                : 'ℹ️ New page — ContentScore scan not possible yet (no live URL). After publishing, scan the page and fix failing signals.'
+                ? '⚠️ No GRAAF scan yet. <a href="https://app.contentscale.site/?url=' + encodeURIComponent(url) + '" target="_blank" style="color:#f56d00;text-decoration:underline;">Open GRAAF scan →</a> then paste recommendations below.'
+                : 'ℹ️ New page — paste GRAAF recommendations below after scanning.'
               )
-          ) + '</div></div>' +
+          ) + '</div>' +
+          '<div style="margin-top:8px;">' +
+            '<div style="font-size:9px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#6b5fa0;margin-bottom:4px;font-family:DM Mono,monospace;">✎ PASTE GRAAF RECOMMENDATIONS (optional — adds to brief)</div>' +
+            '<textarea id="graafManualInput" placeholder="Paste GRAAF recommendations here from app.contentscale.site scan...&#10;All pasted items will be included in Master Brief with mandatory instruction for external AI to fix ALL of them." style="width:100%;height:80px;background:#0a0a14;border:1px solid #2d1b69;border-radius:6px;padding:8px;font-size:10px;color:#c084fc;font-family:DM Mono,monospace;resize:vertical;box-sizing:border-box;"></textarea>' +
+          '</div>' +
+        '</div>' +
         (_spyRec ? '<div style="width:100%;font-size:10px;color:#9ca3af;margin-top:4px;padding:6px 8px;background:rgba(255,255,255,.03);border-radius:5px;">💡 ' + escHtml(_spyRec) + '</div>' : '');
       result.appendChild(actDiv);
       // Store spy data for button handlers
