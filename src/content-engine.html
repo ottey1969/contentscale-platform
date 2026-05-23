@@ -356,29 +356,49 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'DM San
 
     <!-- Tools removed — everything lives in Tracker now -->
 
-    <!-- AI Keys (BYOK) -->
+    <!-- AI Keys -->
     <div class="sidebar-section" id="aiKeysSection" style="display:none;">
-      <div class="sidebar-label">⚙️ AI Keys</div>
-      <div id="aiKeyStatus" style="font-size:10px;color:var(--muted);margin-bottom:6px;line-height:1.4;">
+      <div class="sidebar-label">⚙️ AI Engine</div>
+      <div id="aiKeyStatus" style="font-size:10px;color:var(--muted);margin-bottom:8px;line-height:1.4;">
         Loading key status…
       </div>
-      <button class="sidebar-btn" onclick="toggleAiKeysPanel()" style="font-size:10px;padding:5px;margin-top:0;">🔑 Manage Keys</button>
-      <div id="aiKeysPanel" style="display:none;margin-top:8px;">
-        <div style="font-size:10px;color:var(--muted);margin-bottom:6px;">
-          Your keys are stored encrypted on our server. They are never exposed in the browser.
-        </div>
+
+      <!-- KEY MODE TOGGLE — prominent choice -->
+      <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:10px;">
+
+        <label style="display:flex;align-items:flex-start;gap:8px;padding:8px 10px;border-radius:8px;border:1.5px solid rgba(16,185,129,.3);background:rgba(16,185,129,.06);cursor:pointer;" id="platformKeyOption">
+          <input type="radio" name="keyMode" value="platform" id="keyModePlatform" style="margin-top:2px;accent-color:#10b981;" onchange="switchKeyMode('platform')">
+          <div>
+            <div style="font-size:11px;font-weight:700;color:#34d399;">✅ Use ContentScale API</div>
+            <div style="font-size:10px;color:#6b7280;margin-top:1px;">Ottmar's key — no setup needed</div>
+          </div>
+        </label>
+
+        <label style="display:flex;align-items:flex-start;gap:8px;padding:8px 10px;border-radius:8px;border:1.5px solid rgba(255,255,255,.08);background:rgba(255,255,255,.02);cursor:pointer;" id="byokKeyOption">
+          <input type="radio" name="keyMode" value="byok" id="keyModeByok" style="margin-top:2px;accent-color:#7c3aed;" onchange="switchKeyMode('byok')">
+          <div>
+            <div style="font-size:11px;font-weight:700;color:#a78bfa;">🔑 Use my own API key</div>
+            <div style="font-size:10px;color:#6b7280;margin-top:1px;">Bring your own Anthropic key</div>
+          </div>
+        </label>
+
+      </div>
+
+      <!-- BYOK fields — shown only when own key selected -->
+      <div id="byokFields" style="display:none;">
         <label style="font-size:10px;color:var(--muted);display:block;margin-bottom:2px;">Claude (Anthropic) Key</label>
         <input class="token-input" id="clientClaudeKey" placeholder="sk-ant-…" type="password" style="font-size:10px;padding:5px;margin-bottom:6px;">
         <label style="font-size:10px;color:var(--muted);display:block;margin-bottom:2px;">Gemini Key (optional)</label>
         <input class="token-input" id="clientGeminiKey" placeholder="AIza…" type="password" style="font-size:10px;padding:5px;margin-bottom:8px;">
-        <label style="font-size:10px;color:var(--muted);display:block;margin-bottom:4px;">Key Mode</label>
-        <select id="clientKeyMode" style="width:100%;background:var(--bg);border:1px solid var(--border2);border-radius:6px;padding:5px 8px;color:var(--text);font-size:10px;font-family:'DM Mono',monospace;margin-bottom:8px;">
-          <option value="byok">Use my own keys (BYOK)</option>
-          <option value="platform">Use platform keys (if available)</option>
-        </select>
         <button class="sidebar-btn primary" onclick="saveClientKeys()" style="font-size:10px;padding:5px;">💾 Save Keys</button>
         <div id="aiKeySaveMsg" style="font-size:10px;margin-top:4px;min-height:16px;"></div>
       </div>
+
+      <!-- Hidden select for compatibility with existing code -->
+      <select id="clientKeyMode" style="display:none;">
+        <option value="platform">platform</option>
+        <option value="byok">byok</option>
+      </select>
     </div>
 
     <!-- Context only -->
@@ -2821,6 +2841,39 @@ function removeProgress(id) {
 // Global action handler registry for quick buttons
 var _actionRegistry = {};
 var _actionIdCounter = 0;
+
+// ── KEY MODE SWITCHER ────────────────────────────────────────────────────
+function switchKeyMode(mode) {
+  document.getElementById('clientKeyMode').value = mode;
+  const byokFields = document.getElementById('byokFields');
+  const platformOpt = document.getElementById('platformKeyOption');
+  const byokOpt = document.getElementById('byokKeyOption');
+  if (mode === 'platform') {
+    byokFields.style.display = 'none';
+    platformOpt.style.borderColor = 'rgba(16,185,129,.5)';
+    platformOpt.style.background = 'rgba(16,185,129,.08)';
+    byokOpt.style.borderColor = 'rgba(255,255,255,.08)';
+    byokOpt.style.background = 'rgba(255,255,255,.02)';
+    toast('Using ContentScale API key ✅', 2000, 'ok');
+  } else {
+    byokFields.style.display = 'block';
+    byokOpt.style.borderColor = 'rgba(124,58,237,.5)';
+    byokOpt.style.background = 'rgba(124,58,237,.06)';
+    platformOpt.style.borderColor = 'rgba(255,255,255,.08)';
+    platformOpt.style.background = 'rgba(255,255,255,.02)';
+  }
+  // Save preference
+  try { localStorage.setItem('keyMode', mode); } catch(e) {}
+}
+
+// Restore key mode on load
+(function() {
+  var saved = localStorage.getItem('keyMode') || 'platform';
+  setTimeout(function() {
+    var el = document.getElementById('keyMode' + saved.charAt(0).toUpperCase() + saved.slice(1));
+    if (el) { el.checked = true; switchKeyMode(saved); }
+  }, 500);
+})();
 
 // ── Copy Master Brief to clipboard ─────────────────────────────────────────
 // ── Video Intelligence Brief ─────────────────────────────────────────────────
@@ -5526,7 +5579,7 @@ document.addEventListener('click', function(e) {
     if (btn) {
       btn.textContent = 'Reconnecting…';
       connect().catch(function() {
-        try { localStorage.removeItem('nexus_engine_token'); } catch(e) {}
+        // Keep token in field so user can see what failed — don't auto-remove
         if (btn) { btn.textContent = 'Connect →'; btn.disabled = false; }
       });
     }
