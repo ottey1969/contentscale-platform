@@ -257,6 +257,9 @@ textarea{height:80px;resize:vertical}
 <div class="wrap">
 
   <div id="formCard" class="card">
+    <div id="refBanner" style="display:none;background:linear-gradient(135deg,rgba(124,58,237,0.15),rgba(37,99,235,0.15));border:1px solid rgba(124,58,237,0.3);border-radius:8px;padding:10px 14px;margin-bottom:16px;font-size:12px;color:#a78bfa;text-align:center;">
+      🎁 You were invited! You'll receive <strong>10 bonus credits</strong> when your account is approved.
+    </div>
     <h2>Request Access</h2>
 
     <label>Your full name</label>
@@ -355,8 +358,17 @@ textarea{height:80px;resize:vertical}
 </div>
 
 <script>
+// Show referral banner if invited
+const _urlP = new URLSearchParams(window.location.search);
+if (_urlP.get('ref')) {
+  const rb = document.getElementById('refBanner');
+  if (rb) rb.style.display = 'block';
+}
+
 async function submit() {
   const name     = document.getElementById('name').value.trim();
+  const urlParams = new URLSearchParams(window.location.search);
+  const refToken  = urlParams.get('ref') || '';
   const linkedin = document.getElementById('linkedin').value.trim();
   const whatsapp = document.getElementById('whatsapp').value.trim();
   const reason   = document.getElementById('reason').value.trim();
@@ -381,7 +393,7 @@ async function submit() {
     const r = await fetch('/boost/register', {
       method: 'POST',
       headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ name, linkedinUrl: linkedin, whatsapp, country, reason })
+      body: JSON.stringify({ name, linkedinUrl: linkedin, whatsapp, country, reason, refToken })
     });
     const data = await r.json();
     if (data.error) { showErr(data.error); btn.disabled=false; btn.textContent='Request Access'; return; }

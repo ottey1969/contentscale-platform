@@ -519,6 +519,21 @@ input,textarea,select{font-size:16px!important}
       <button class="btn btn-green" style="margin-top:10px;width:100%;background:#15803d;" onclick="saveProfile()">✅ Enable WhatsApp Notifications</button>
       <div id="notifStatus" style="display:none;margin-top:8px;font-size:12px;color:#15803d;font-weight:600;text-align:center;"></div>
     </div>
+    <div class="form-card" style="background:linear-gradient(135deg,rgba(124,58,237,0.08),rgba(37,99,235,0.08));border:1.5px solid rgba(124,58,237,0.3);">
+      <h3 style="color:#a78bfa;">🎁 Invite & Earn</h3>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:14px;line-height:1.6;">
+        Share your personal invite link. When someone joins through your link and gets approved — you earn <strong style="color:#a78bfa;">+10 bonus credits</strong>.
+      </p>
+      <div style="background:rgba(0,0,0,0.2);border:1px solid rgba(124,58,237,0.2);border-radius:8px;padding:10px 14px;font-size:11px;font-family:monospace;color:#c4b5fd;word-break:break-all;margin-bottom:10px;" id="refLinkDisplay">
+        Loading your invite link...
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-primary" style="flex:1;font-size:12px;" onclick="copyRefLink()">📋 Copy link</button>
+        <button class="btn btn-ghost" style="flex:1;font-size:12px;" onclick="shareRefWhatsApp()">💬 Share WhatsApp</button>
+      </div>
+      <div id="refStats" style="margin-top:12px;font-size:11px;color:var(--muted);text-align:center;"></div>
+    </div>
+
     <div class="form-card" style="text-align:center;">
       <p style="font-size:13px;color:var(--muted);margin-bottom:12px;">Want more sessions or clients?</p>
       <a href="https://wa.me/31628073996?text=Hi Ottmar! I want to upgrade my Boost account." target="_blank" class="btn btn-primary" style="width:100%;text-decoration:none;">💬 Message Ottmar to upgrade</a>
@@ -947,6 +962,30 @@ async function loadMySessions() {
   } catch {}
 }
 
+function copyRefLink() {
+  const link = document.getElementById('refLinkDisplay')?.textContent || '';
+  navigator.clipboard.writeText(link).then(() => toast('Invite link copied! 🎁'));
+}
+
+function shareRefWhatsApp() {
+  const link = document.getElementById('refLinkDisplay')?.textContent || '';
+  const msg = encodeURIComponent(`Join me on LinkedPod — the LinkedIn boost network where real people help each other get more reach.\n\nSign up with my invite link (you'll get 10 bonus credits when approved):\n${link}`);
+  window.open(`https://wa.me/?text=${msg}`, '_blank');
+}
+
+async function loadRefStats() {
+  try {
+    const r = await fetch(`/boost/referral-stats?token=${myToken}`);
+    const d = await r.json();
+    const el = document.getElementById('refStats');
+    if (el && d.count !== undefined) {
+      el.textContent = d.count > 0
+        ? `✅ ${d.count} person${d.count>1?'s':''} joined via your link · +${d.count*10} credits earned`
+        : 'No referrals yet — share your link to earn credits';
+    }
+  } catch(e) {}
+}
+
 function shareSession(id) {
   const url = `${location.origin}/boost-platform`;
   const msg = encodeURIComponent(`🚀 Help boost my LinkedIn post!\n${url}\n\nPick a comment, paste on LinkedIn. Takes 2 min. +2 credits for you! 🙏`);
@@ -985,6 +1024,12 @@ function updateProfile() {
   // Show subtle warning if no callmebot key
   const banner = document.getElementById('notifBanner');
   if (banner) banner.style.display = user.callmebot_key ? 'none' : 'block';
+  // Set referral link
+  const refLink = `${location.origin}/boost-register?ref=${myToken}`;
+  const refDisplay = document.getElementById('refLinkDisplay');
+  if (refDisplay) refDisplay.textContent = refLink;
+  // Load referral stats
+  loadRefStats();
 }
 
 async function saveLinkedIn() { saveProfile(); }
