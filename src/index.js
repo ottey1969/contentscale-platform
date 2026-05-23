@@ -146,13 +146,13 @@ const PORT = process.env.PORT || 3000;
 // Kiest automatisch beste flash model
 // Nooit meer handmatig aanpassen
 // ============================================
-let GEMINI_MODEL = 'gemini-2.5-flash'; // postpay default — works on billing-enabled accounts
+let GEMINI_MODEL = 'gemini-2.5-flash-lite'; // primary — cheapest, least busy
 
 async function detectBestGeminiModel(apiKey) {
   if (!apiKey) return;
   // Priority: cheapest postpay models first (billing enabled account)
   // gemini-2.0-flash = $0.075/1M tokens — best price/quality for postpay
-  const PRIORITY = ['gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-2.0-flash-lite', 'gemini-1.5-flash-001'];
+  const PRIORITY = ['gemini-2.5-flash-lite', 'gemini-2.5-flash', 'gemini-2.0-flash-lite', 'gemini-1.5-flash-001'];
   try {
     const resp = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`,
@@ -183,9 +183,9 @@ async function detectBestGeminiModel(apiKey) {
 
 // Call Gemini with automatic fallback to a secondary model on overload/quota errors.
 // Returns: { ok, status, data, modelUsed, errorMessage }
-// Strategy: retry primary up to 3× with exponential backoff → fallback Gemini model → Claude cross-provider fallback
+// Strategy: Flash-Lite primary → Flash secondary → Perplexity Sonar → Claude last resort
 async function callGeminiWithFallback(apiKey, body, primaryModel, fallbackModel, maxRetries = 3) {
-  const FALLBACK = fallbackModel || 'gemini-2.5-flash-lite';
+  const FALLBACK = fallbackModel || 'gemini-2.5-flash';
   const primary = primaryModel || GEMINI_MODEL;
   const shouldRetry = (status, errMsg) => {
     if (status === 0 || status === 408 || status === 503 || status === 429 || status === 500 || status === 502) return true; // 0 = network/fetch error
@@ -239,22 +239,46 @@ async function callGeminiWithFallback(apiKey, body, primaryModel, fallbackModel,
     console.warn(`⚠️ Gemini fallback (${FALLBACK}) also failed: "${fb.errorMessage || fb.status}"`);
   }
 
-  // PHASE 3: Cross-provider fallback to Claude (Anthropic) — for write operations
-  const claudeKey = process.env.ANTHROPIC_API_KEY;
+  // PHASE 3: Cross-provider fallback to Perplexity Sonar — for research/analysis
+  const perplexityKey = process.env.PERPLEXITY_API_KEY;
   const userPrompt = body?.contents?.[0]?.parts?.[0]?.text || '';
+  if (perplexityKey && userPrompt.length > 50) {
+    console.warn(`🔄 Cross-provider fallback: trying Perplexity Sonar...`);
+    try {
+      const pxRes = await fetch('https://api.perplexity.ai/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${perplexityKey}` },
+        body: JSON.stringify({
+          model: 'sonar',
+          messages: [{ role: 'user', content: userPrompt }],
+          max_tokens: 4000
+        })
+      });
+      if (pxRes.ok) {
+        const pxJson = await pxRes.json();
+        const pxText = pxJson.choices?.[0]?.message?.content || '';
+        if (pxText.length > 100) {
+          console.log(`✅ Perplexity fallback succeeded (${pxText.length} chars)`);
+          // Normalize to Gemini format
+          return { ok: true, status: 200, data: { candidates: [{ content: { parts: [{ text: pxText }] } }] }, modelUsed: 'perplexity-sonar', errorMessage: '' };
+        }
+      }
+    } catch(pxErr) {
+      console.warn(`⚠️ Perplexity fallback also failed: ${pxErr.message}`);
+    }
+  }
+
+  // PHASE 4: Last resort — Claude
+  const claudeKey = process.env.ANTHROPIC_API_KEY;
   if (claudeKey && userPrompt.length > 50) {
-    console.warn(`🔄 Cross-provider fallback: trying Claude Sonnet 4...`);
+    console.warn(`🔄 Last resort fallback: trying Claude Sonnet 4...`);
     try {
       const claudeText = await callClaudeForWrite(
-        'You are an elite SEO content architect. Write complete HTML articles. Output ONLY valid HTML. No markdown.',
-        userPrompt,
-        8000,
-        claudeKey,
-        'claude-sonnet-4-20250514'
+        'You are an expert SEO analyst. Respond with detailed JSON analysis.',
+        userPrompt, 4000, claudeKey, 'claude-sonnet-4-20250514'
       );
-      if (claudeText && claudeText.length > 200) {
-        console.log(`✅ Claude fallback succeeded (${claudeText.length} chars)`);
-        // Normalize Claude output to Gemini format
+      if (claudeText && claudeText.length > 100) {
+        console.log(`✅ Claude last-resort fallback succeeded`);
         return { ok: true, status: 200, data: { candidates: [{ content: { parts: [{ text: claudeText }] } }] }, modelUsed: 'claude-sonnet-4-20250514', errorMessage: '' };
       }
     } catch(claudeErr) {
@@ -263,7 +287,7 @@ async function callGeminiWithFallback(apiKey, body, primaryModel, fallbackModel,
   }
 
   // All providers exhausted
-  return { ok: false, status: 503, data: {}, modelUsed: 'all-exhausted', errorMessage: 'All AI providers (Gemini primary + fallback, Claude) are currently experiencing high demand. Please wait 30-60 seconds and retry.' };
+  return { ok: false, status: 503, data: {}, modelUsed: 'all-exhausted', errorMessage: 'All AI providers (Gemini → Perplexity → Claude) are currently busy. Wait 30-60 seconds and retry.' };
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
