@@ -259,6 +259,13 @@ async function callGeminiWithFallback(apiKey, body, primaryModel, fallbackModel,
         const pxText = pxJson.choices?.[0]?.message?.content || '';
         if (pxText.length > 100) {
           console.log(`✅ Perplexity fallback succeeded (${pxText.length} chars)`);
+          // Track Perplexity cost
+          const pxUsage = pxJson.usage || {};
+          const pxCost = (pxUsage.prompt_tokens||0) * 1e-6 + (pxUsage.completion_tokens||0) * 1e-6;
+          if (pxCost > 0) {
+            const codeId = body?._codeId;
+            if (codeId) trackApiCost(codeId, 'fallback-perplexity', 'perplexity-sonar', pxUsage.prompt_tokens||0, pxUsage.completion_tokens||0, 'Perplexity fallback').catch(()=>{});
+          }
           // Normalize to Gemini format
           return { ok: true, status: 200, data: { candidates: [{ content: { parts: [{ text: pxText }] } }] }, modelUsed: 'perplexity-sonar', errorMessage: '' };
         }
@@ -275,7 +282,7 @@ async function callGeminiWithFallback(apiKey, body, primaryModel, fallbackModel,
     try {
       const claudeText = await callClaudeForWrite(
         'You are an expert SEO analyst. Respond with detailed JSON analysis.',
-        userPrompt, 4000, claudeKey, 'claude-sonnet-4-20250514'
+        userPrompt, 4000, claudeKey, 'claude-haiku-4-5-20251001'
       );
       if (claudeText && claudeText.length > 100) {
         console.log(`✅ Claude last-resort fallback succeeded`);
@@ -11718,6 +11725,9 @@ const COST_RATES = {
   'gemini-2.0-flash': { input: 0.075e-6, output: 0.30e-6 },
   'gemini-1.5-flash-001': { input: 0.075e-6, output: 0.30e-6 },
   'claude-sonnet-4-20250514': { input: 3.00e-6, output: 15.00e-6 },
+  'claude-haiku-4-5-20251001': { input: 1.00e-6, output: 5.00e-6 },
+  'perplexity-sonar':     { input: 1.00e-6, output: 1.00e-6 },
+  'perplexity-sonar-pro': { input: 3.00e-6, output: 15.00e-6 },
 };
 function estimateApiCost(model, inputTokens, outputTokens) {
   const rate = COST_RATES[model] || COST_RATES['gemini-2.5-flash'];
