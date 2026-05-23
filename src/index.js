@@ -11550,12 +11550,20 @@ REQUIREMENTS:
 
 const resolveGeminiKey = (req) => req.headers['x-gemini-key'] || process.env.GEMINI_API_KEY;
 const resolveClaudeKey = (req) => {
-  // Priority: per-code key (client BYOK) > platform env > null
-  // NOTE: x-claude-key header removed — keys must be stored server-side per code
-  const codeKey = req.engineUser && req.engineUser.code ? req.engineUser.code.claude_key : null;
+  const code    = req.engineUser && req.engineUser.code ? req.engineUser.code : null;
+  const codeKey = code ? code.claude_key : null;
+  const mode    = code ? (code.api_key_mode || (code.use_platform_keys ? 'platform' : 'byok')) : 'platform';
   const envKey  = process.env.ANTHROPIC_API_KEY;
-  if (codeKey) { console.log('[keys] Claude: using per-code key for code', req.engineUser.codeId); return codeKey; }
-  if (envKey)  { console.log('[keys] Claude: using platform env key'); return envKey; }
+
+  if (mode === 'byok') {
+    // Client must provide their own key — never fall back to platform
+    if (codeKey) { console.log('[keys] Claude: BYOK per-code key'); return codeKey; }
+    console.log('[keys] Claude: BYOK mode but no client key set');
+    return null;
+  }
+  // Platform mode: use platform env key (client uses Ottmar's API)
+  if (codeKey) { console.log('[keys] Claude: per-code key (platform mode)'); return codeKey; }
+  if (envKey)  { console.log('[keys] Claude: platform env key'); return envKey; }
   console.log('[keys] Claude: NO KEY FOUND');
   return null;
 };
@@ -12074,10 +12082,10 @@ app.patch('/api/admin/engine-codes/:id', verifyAdmin, async (req, res) => {
     if (platform_credits!==undefined){fields.push(`platform_credits=$${i++}`);vals.push(platform_credits===null?null:parseInt(platform_credits));}
     if (reset_used){fields.push(`credits_used=$${i++}`);vals.push(0);fields.push(`monthly_cost_used=0, cost_reset_at=NOW()`);}
     if (deal_type!==undefined){fields.push(`deal_type=$${i++}`);vals.push(deal_type||null);}
-    if (deal_label!==undefined){fields.push(`deal_label=${i++}`);vals.push(deal_label||null);}
+    if (deal_label!==undefined){fields.push(`deal_label=$${i++}`);vals.push(deal_label||null);}
     if (serpapi_key!==undefined){fields.push(`serpapi_key=$${i++}`);vals.push(serpapi_key||null);}
-    if (perplexity_key!==undefined){fields.push(`perplexity_key=${i++}`);vals.push(perplexity_key||null);}
-    if (you_api_key!==undefined){fields.push(`you_api_key=${i++}`);vals.push(you_api_key||null);}
+    if (perplexity_key!==undefined){fields.push(`perplexity_key=$${i++}`);vals.push(perplexity_key||null);}
+    if (you_api_key!==undefined){fields.push(`you_api_key=$${i++}`);vals.push(you_api_key||null);}
     if (api_key_mode!==undefined){fields.push(`api_key_mode=$${i++}`);vals.push(api_key_mode);}
     if (monthly_cost_limit!==undefined){fields.push(`monthly_cost_limit=$${i++}`);vals.push(monthly_cost_limit);}
     if (!fields.length) return res.status(400).json({ success: false, error: 'Nothing to update' });
@@ -24690,7 +24698,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
         }
 
         async function toggleEngineCode(id,newState){await apiCall('/api/admin/engine-codes/'+id,'PATCH',{is_active:newState});loadEngineCodes();}
-        async function togglePlatformKeys(id,newState){await apiCall('/api/admin/engine-codes/'+id,'PATCH',{use_platform_keys:newState});loadEngineCodes();}
+        async function togglePlatformKeys(id,newState){await apiCall('/api/admin/engine-codes/'+id,'PATCH',{use_platform_keys:newState,api_key_mode:newState?'platform':'byok'});loadEngineCodes();toast(newState?'Platform API ON ✅':'Own keys mode');}
         async function deleteEngineCode(id){if(!confirm('Delete this engine code?'))return;await apiCall('/api/admin/engine-codes/'+id,'DELETE');loadEngineCodes();}
         function copyEngineCode(code){navigator.clipboard.writeText(code).then(()=>alert('Code copied: '+code));}
 
