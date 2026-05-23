@@ -27066,17 +27066,21 @@ CRITICAL RULES:
 
 3. MY POST — A complete, publishable LinkedIn post written AS OTTMAR. Rules:
 - ALWAYS IN ENGLISH regardless of the original post language.
-- DIFFERENT ANGLE: Same topic, completely different hook and structure. Not a copy.
-- RESEARCH FIRST: Use web_search to find 1-2 real, current statistics or studies relevant to the topic. ALWAYS include the source name + year inline, e.g. "(Semrush, 2025)" or "(BrightEdge, 2024)". If you cannot find a verified stat, use first-person data clearly labeled ("From auditing 200+ sites..." / "In my experience with clients across 47 countries..."). NEVER invent numbers. NEVER use a stat without naming the source.
-- TOOL MENTION (choose based on topic):
-  * Post about LinkedIn reach / engagement / visibility / content distribution → mention LinkedPod at the end: "If this topic deserves more reach without ads — I built LinkedPod for exactly that. app.contentscale.site/linkedpod"
-  * Post about SEO / Google / website traffic / content quality / AI rankings → mention ContentScale GRAAF scan or Content Engine: "contentscale.site/content-engine"
-  * Post about business / leadership / HR / mindset → mention LinkedPod only if the post is genuinely valuable and deserves more reach.
-- STRUCTURE: 1-line scroll-stopping opener → specific researched insight with source → contrarian or deeper angle → concrete takeaway → tool mention (1-2 sentences max) → sharp closing question (NOT "What do you think?")
-- LENGTH: 150-250 words. Short paragraphs. Line breaks between each thought.
-- VOICE: Systems thinker. Direct. Data-driven. No fluff. No motivational filler.
 
-Format (text only, no bracket labels):
+- RESEARCH FIRST — MANDATORY: Use web_search to find 2-3 statistics on the same topic. IGNORE all stats from the original post. Find BETTER sources: Bain, McKinsey, Semrush, BrightEdge, HubSpot, Gartner, SparkToro, Ahrefs, Google, Reuters, Harvard, MIT. Cite inline every time: "(Bain & Company, 2025)". NEVER use a stat without source. NEVER invent numbers.
+
+- COMPLETELY NEW STORY: Same topic and angle — entirely new narrative, new hook, new structure, new examples. The reader must not recognise a single sentence from the original post. Build from scratch.
+
+- CITATION-READY: Every factual claim must be verifiable and attributed. Write as if it will be fact-checked.
+
+- TOOL MENTION (choose based on topic):
+  * LinkedIn reach / engagement / visibility → LinkedPod: "app.contentscale.site/linkedpod"
+  * SEO / Google / content / AI rankings → Content Engine: "contentscale.site/content-engine"
+
+- STRUCTURE: scroll-stopping opener (bold claim or uncomfortable truth — never a stat as opening word) → 2 researched insights with sources → deeper systems angle → concrete takeaway → tool mention → sharp closing question (NOT "What do you think?")
+- LENGTH: 200-280 words. Short paragraphs. Line break between every thought.
+- VOICE: Systems thinker. Direct. Data-driven. No fluff. No validation openers. No motivational filler.
+
 1.
 2.
 3.`;
