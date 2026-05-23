@@ -183,7 +183,7 @@ async function detectBestGeminiModel(apiKey) {
 
 // Call Gemini with automatic fallback to a secondary model on overload/quota errors.
 // Returns: { ok, status, data, modelUsed, errorMessage }
-// Strategy: Flash-Lite primary → Flash secondary → Perplexity Sonar → Claude last resort
+// Strategy: Flash-Lite → Flash → Perplexity Sonar → Claude Sonnet (best quality) → Claude Haiku (last resort)
 async function callGeminiWithFallback(apiKey, body, primaryModel, fallbackModel, maxRetries = 3) {
   const FALLBACK = fallbackModel || 'gemini-2.5-flash';
   const primary = primaryModel || GEMINI_MODEL;
@@ -275,26 +275,63 @@ async function callGeminiWithFallback(apiKey, body, primaryModel, fallbackModel,
     }
   }
 
-  // PHASE 4: Last resort — Claude
+  // PHASE 4: Claude Sonnet — best quality Claude fallback with web search
   const claudeKey = process.env.ANTHROPIC_API_KEY;
   if (claudeKey && userPrompt.length > 50) {
-    console.warn(`🔄 Last resort fallback: trying Claude Sonnet 4...`);
+    console.warn(`🔄 Phase 4: Claude Sonnet with web search...`);
     try {
-      const claudeText = await callClaudeForWrite(
-        'You are an expert SEO analyst. Respond with detailed JSON analysis.',
-        userPrompt, 4000, claudeKey, 'claude-haiku-4-5-20251001'
-      );
-      if (claudeText && claudeText.length > 100) {
-        console.log(`✅ Claude last-resort fallback succeeded`);
-        return { ok: true, status: 200, data: { candidates: [{ content: { parts: [{ text: claudeText }] } }] }, modelUsed: 'claude-sonnet-4-20250514', errorMessage: '' };
+      const sonnet4Res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-api-key': claudeKey, 'anthropic-version': '2023-06-01', 'anthropic-beta': 'web-search-2025-03-05' },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 4000,
+          tools: [{ type: 'web_search_20250305', name: 'web_search' }],
+          messages: [{ role: 'user', content: userPrompt }]
+        })
+      });
+      if (sonnet4Res.ok) {
+        const s4Json = await sonnet4Res.json();
+        const s4Text = (s4Json.content || []).filter(b => b.type === 'text').map(b => b.text).join('\n').trim();
+        if (s4Text.length > 100) {
+          console.log(`✅ Claude Sonnet phase 4 succeeded`);
+          return { ok: true, status: 200, data: { candidates: [{ content: { parts: [{ text: s4Text }] } }] }, modelUsed: 'claude-sonnet-4-20250514', errorMessage: '' };
+        }
       }
-    } catch(claudeErr) {
-      console.warn(`⚠️ Claude fallback also failed: ${claudeErr.message}`);
+    } catch(e) {
+      console.warn(`⚠️ Claude Sonnet phase 4 failed: ${e.message}`);
+    }
+  }
+
+  // PHASE 5: Last resort — Claude Haiku with web search
+  if (claudeKey && userPrompt.length > 50) {
+    console.warn(`🔄 Phase 5 fallback: Claude Sonnet with web search...`);
+    try {
+      const sonnetRes = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-api-key': claudeKey, 'anthropic-version': '2023-06-01', 'anthropic-beta': 'web-search-2025-03-05' },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 4000,
+          tools: [{ type: 'web_search_20250305', name: 'web_search' }],
+          messages: [{ role: 'user', content: userPrompt }]
+        })
+      });
+      if (sonnetRes.ok) {
+        const sonnetJson = await sonnetRes.json();
+        const sonnetText = (sonnetJson.content || []).filter(b => b.type === 'text').map(b => b.text).join('\n').trim();
+        if (sonnetText.length > 100) {
+          console.log(`✅ Claude Sonnet phase 5 fallback succeeded`);
+          return { ok: true, status: 200, data: { candidates: [{ content: { parts: [{ text: sonnetText }] } }] }, modelUsed: 'claude-haiku-4-5-20251001', errorMessage: '' };
+        }
+      }
+    } catch(e) {
+      console.warn(`⚠️ Claude Haiku last resort also failed: ${e.message}`);
     }
   }
 
   // All providers exhausted
-  return { ok: false, status: 503, data: {}, modelUsed: 'all-exhausted', errorMessage: 'All AI providers (Gemini → Perplexity → Claude) are currently busy. Wait 30-60 seconds and retry.' };
+  return { ok: false, status: 503, data: {}, modelUsed: 'all-exhausted', errorMessage: 'All AI providers (Gemini Flash-Lite → Flash → Perplexity → Haiku → Sonnet) are busy. Wait 30-60 seconds and retry.' };
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
