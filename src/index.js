@@ -26887,12 +26887,12 @@ app.get('/boost/admin/users', asyncHandler(async (req,res) => {
 }));
 
 app.post('/boost/admin/create-user', asyncHandler(async (req,res) => {
-  const {name,token,email,tier,notes,whatsapp} = req.body;
+  const {name,token,email,tier,notes,whatsapp,country} = req.body;
   if (!name||!token) return res.status(400).json({error:'name and token required'});
   try {
     const r = await pool.query(
-      'INSERT INTO boost_users (name,token,email,tier,notes,whatsapp,credits) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *',
-      [name,token,email||null,tier||'free',notes||null,whatsapp||null,tier==='pro'?999:10]
+      'INSERT INTO boost_users (name,token,email,tier,notes,whatsapp,credits,country) VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *',
+      [name,token,email||null,tier||'free',notes||null,whatsapp||null,tier==='pro'?999:10,country||null]
     );
     res.json({success:true, user:r.rows[0]});
   } catch(e) {
