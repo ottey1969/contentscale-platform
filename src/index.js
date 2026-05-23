@@ -27170,7 +27170,17 @@ CRITICAL RULES:
 
 2. YOUR REPLY (what Ottmar writes back): 1-3 sentences. Pick the MOST SPECIFIC point and add a new angle. No promotion. Do NOT start with a validation phrase.
 
-3. DM: Reference one specific thing from the post, connect to their pain point, recommend ONE solution with its URL. Max 5 sentences. Never sound like a vendor.
+3. MY POST — A complete, publishable LinkedIn post written AS OTTMAR. Rules:
+- ALWAYS IN ENGLISH regardless of the original post language.
+- DIFFERENT ANGLE: Same topic, completely different hook and structure. Not a copy.
+- RESEARCH FIRST: Use web_search to find 1-2 real, current statistics or studies relevant to the topic. Only use verified data with source name and year. If you cannot find verified data, use first-person data clearly labeled ("From auditing 200+ sites..." / "In my experience with 47 countries..."). NEVER invent numbers.
+- TOOL MENTION (choose based on topic):
+  * Post about LinkedIn reach / engagement / visibility / content distribution → mention LinkedPod at the end: "If this topic deserves more reach without ads — I built LinkedPod for exactly that. app.contentscale.site/linkedpod"
+  * Post about SEO / Google / website traffic / content quality / AI rankings → mention ContentScale GRAAF scan or Content Engine: "contentscale.site/content-engine"
+  * Post about business / leadership / HR / mindset → mention LinkedPod only if the post is genuinely valuable and deserves more reach.
+- STRUCTURE: 1-line scroll-stopping opener → specific researched insight with source → contrarian or deeper angle → concrete takeaway → tool mention (1-2 sentences max) → sharp closing question (NOT "What do you think?")
+- LENGTH: 150-250 words. Short paragraphs. Line breaks between each thought.
+- VOICE: Systems thinker. Direct. Data-driven. No fluff. No motivational filler.
 
 Format (text only, no bracket labels):
 1.
@@ -27179,13 +27189,28 @@ Format (text only, no bracket labels):
 
   const r = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'x-api-key': claudeKey, 'anthropic-version': '2023-06-01' },
-    body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 800, messages: [{ role: 'user', content: prompt }] })
+    headers: { 'Content-Type': 'application/json', 'x-api-key': claudeKey, 'anthropic-version': '2023-06-01', 'anthropic-beta': 'web-search-2025-03-05' },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 1500,
+      tools: [{ type: 'web_search_20250305', name: 'web_search' }],
+      messages: [{ role: 'user', content: prompt }]
+    })
   });
 
   const json = await r.json();
   if (!r.ok) return res.status(500).json({ error: json.error?.message || 'Claude API error' });
-  const text = json.content?.[0]?.text?.trim() || '';
+
+  // Handle web_search tool_use blocks — extract all text content blocks
+  let text = '';
+  if (Array.isArray(json.content)) {
+    text = json.content
+      .filter(block => block.type === 'text')
+      .map(block => block.text || '')
+      .join('\n')
+      .trim();
+  }
+  if (!text) text = json.content?.[0]?.text?.trim() || '';
   res.json({ text });
 }));
 
