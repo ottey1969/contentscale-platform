@@ -26866,7 +26866,6 @@ app.post('/boost/:id/close', asyncHandler(async (req,res) => {
 
 // ── ADMIN: REGISTRATIONS ──────────────────────────────────────────────────
 app.get('/boost/admin/registrations', asyncHandler(async (req,res) => {
-  if (!checkAdminToken(req,res)) return;
   const r = await pool.query('SELECT * FROM boost_registrations ORDER BY created_at DESC LIMIT 100');
   res.json({registrations:r.rows});
 }));
@@ -26912,7 +26911,6 @@ app.post('/boost/admin/reject-registration', asyncHandler(async (req,res) => {
 
 // ── ADMIN: USERS ──────────────────────────────────────────────────────────
 app.get('/boost/admin/users', asyncHandler(async (req,res) => {
-  if (!checkAdminToken(req,res)) return;
   const r = await pool.query('SELECT * FROM boost_users ORDER BY created_at DESC');
   res.json({users:r.rows});
 }));
