@@ -12265,7 +12265,19 @@ app.get('/api/content/profiles', async (req, res, next) => {
   return res.status(401).json({ success: false, error: 'Auth required' });
 }, async (req, res) => {
   try {
-    const r = await pool.query(`SELECT cp.*, COALESCE(json_agg(cl ORDER BY cl.sort_order) FILTER (WHERE cl.id IS NOT NULL), '[]') AS locations FROM content_profiles cp LEFT JOIN content_locations cl ON cl.profile_id = cp.id GROUP BY cp.id ORDER BY cp.created_at DESC`);
+    const isAdmin = req.headers['x-admin-key'];
+    const codeId  = req.engineUser?.codeId;
+    let r;
+    if (isAdmin) {
+      // Admin sees all profiles
+      r = await pool.query(`SELECT cp.*, COALESCE(json_agg(cl ORDER BY cl.sort_order) FILTER (WHERE cl.id IS NOT NULL), '[]') AS locations FROM content_profiles cp LEFT JOIN content_locations cl ON cl.profile_id = cp.id GROUP BY cp.id ORDER BY cp.created_at DESC`);
+    } else {
+      // Engine users see only their own profiles (filtered by owner_code_id)
+      r = await pool.query(
+        `SELECT cp.*, COALESCE(json_agg(cl ORDER BY cl.sort_order) FILTER (WHERE cl.id IS NOT NULL), '[]') AS locations FROM content_profiles cp LEFT JOIN content_locations cl ON cl.profile_id = cp.id WHERE cp.owner_code_id = $1 GROUP BY cp.id ORDER BY cp.created_at DESC`,
+        [codeId]
+      );
+    }
     res.json({ success: true, profiles: r.rows });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
@@ -13874,7 +13886,17 @@ app.get('/content-engine', (req, res) => {
   res.setHeader('Pragma', 'no-cache');
   res.setHeader('Expires', '0');
   res.setHeader('Vary', '*');
-  const html = require('fs').readFileSync(require('path').join(__dirname, 'content-engine.html'), 'utf8');
+  let html = require('fs').readFileSync(require('path').join(__dirname, 'content-engine.html'), 'utf8');
+  // Auto-inject engine code from URL param into localStorage and auto-connect
+  const code = req.query.code || req.query.token || '';
+  if (code && /^ENG-[A-Z0-9]+$/i.test(code)) {
+    const autoScript = `<script>
+      (function(){
+        try { localStorage.setItem('nexus_engine_token', '${code.replace(/'/g,"\'")}'); } catch(e) {}
+      })();
+    </script>`;
+    html = html.replace('</head>', autoScript + '</head>');
+  }
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
   res.send(html);
 });
