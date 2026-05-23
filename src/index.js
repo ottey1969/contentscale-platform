@@ -26865,6 +26865,21 @@ app.post('/boost/:id/close', asyncHandler(async (req,res) => {
   res.json({success:true});
 }));
 
+app.post('/boost/:id/delete', asyncHandler(async (req,res) => {
+  const {token} = req.body;
+  const u = await getBoostUser(token, null);
+  if (!u) return res.status(401).json({error:'Invalid token'});
+  // Only creator or admin can delete
+  const s = await pool.query('SELECT * FROM boost_sessions WHERE id=$1',[req.params.id]);
+  if (!s.rows.length) return res.status(404).json({error:'Session not found'});
+  if (s.rows[0].created_by_token !== token && u.tier !== 'admin') {
+    return res.status(403).json({error:'Not your session'});
+  }
+  await pool.query('DELETE FROM boost_engagements WHERE session_id=$1',[req.params.id]);
+  await pool.query('DELETE FROM boost_sessions WHERE id=$1',[req.params.id]);
+  res.json({success:true});
+}));
+
 // ── ADMIN: REGISTRATIONS ──────────────────────────────────────────────────
 app.get('/boost/admin/registrations', asyncHandler(async (req,res) => {
   const r = await pool.query('SELECT * FROM boost_registrations ORDER BY created_at DESC LIMIT 100');
