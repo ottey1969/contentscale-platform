@@ -281,8 +281,13 @@ textarea{height:80px;resize:vertical}
 <div id="overlay" style="display:none"> style="display:none;"><div class="spinner"></div><span style="color:var(--purple);font-weight:700;">Generating comments...</span></div>
 
 <div class="header">
-  <h1 style="font-size:15px;font-weight:700;">🚀 Boost Admin — Ottmar</h1>
-  <button class="btn btn-ghost btn-sm" style="color:#fff;border-color:rgba(255,255,255,.3);" onclick="loadAll()">↻ Refresh</button>
+  <div style="display:flex;align-items:center;gap:10px;">
+    <h1 style="font-size:15px;font-weight:700;">🚀 Boost Admin — Ottmar</h1>
+  </div>
+  <div style="display:flex;gap:8px;align-items:center;">
+    <a href="/boost-platform?token=ottmar-admin-2026" class="btn btn-ghost btn-sm" style="color:#a78bfa;border-color:rgba(124,58,237,.4);text-decoration:none;">← My Boost</a>
+    <button class="btn btn-ghost btn-sm" style="color:#fff;border-color:rgba(255,255,255,.3);" onclick="loadAll()">↻ Refresh</button>
+  </div>
 </div>
 
 <div class="wrap">
