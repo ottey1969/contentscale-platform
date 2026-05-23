@@ -14122,12 +14122,13 @@ app.post('/api/content/video-rewrite', verifyEngineAccess, async (req, res) => {
   try {
     const { video_id, video_url, video_title, profile_id, use_template = true } = req.body;
     if (!video_id && !video_url) return res.status(400).json({ success: false, error: 'video_id or video_url required' });
-    if (!profile_id) return res.status(400).json({ success: false, error: 'profile_id required' });
 
-    const profileR = await pool.query('SELECT * FROM content_profiles WHERE id=$1', [profile_id]);
-    if (!profileR.rows.length) return res.status(404).json({ success: false, error: 'Profile not found' });
-    const profile = profileR.rows[0];
-    safeProfileLocations(profile);
+    // Profile is optional for video brief
+    let profile = null;
+    if (profile_id) {
+      const profileR = await pool.query('SELECT * FROM content_profiles WHERE id=$1', [profile_id]);
+      if (profileR.rows.length) { profile = profileR.rows[0]; safeProfileLocations(profile); }
+    }
 
     const ytKey = process.env.YOUTUBE_API_KEY || '';
     let transcript = '';
@@ -14329,409 +14330,72 @@ app.post('/api/content/video-rewrite', verifyEngineAccess, async (req, res) => {
       ? `INTERNAL LINKS — use 3-5 of these naturally with descriptive anchor text (never bare URLs):\n${effectiveSitemapUrls.map(u=>`- ${u}`).join('\n')}`
       : 'No sitemap configured — go to Profiles → click 🗺️ Sitemap button to add one. Do not invent URLs.';
 
+    // Generate BRIEF using Gemini (no writing — external AI writes)
     const geminiKey = resolveGeminiKey(req) || process.env.GEMINI_API_KEY;
-    const claudeKey = resolveClaudeKey(req);
-    if (!claudeKey && !geminiKey) return res.status(500).json({ success: false, error: 'No AI key available. Add Claude or Gemini key to your engine code.' });
+    if (!geminiKey) return res.status(500).json({ success: false, error: 'Gemini API key required for brief generation.' });
 
-    // Fetch money pages for CTA strategy
-    const mpVideoR = await pool.query('SELECT * FROM content_money_pages WHERE profile_id=$1 AND is_active=TRUE ORDER BY sort_order LIMIT 6', [profile_id]);
-    const videoMoneyPages = mpVideoR.rows.map(p => `${p.title||p.url}: ${p.url} (keyword: ${p.primary_keyword||''})`).join('\n') || '';
-
-    // Dates: video original publish date for datePublished, today for dateModified
-    const videoPublishedDate = req._videoPublishedAt
-      || (req.body.published ? new Date(req.body.published).toISOString().slice(0,10) : null)
-      || new Date().toISOString().slice(0,10);
-    const videoDateModified = new Date().toISOString().slice(0,10);
-
-    // Check if profile has a template and user wants to use it
-    const hasVideoTemplate = use_template && profile.html_template && profile.html_template.trim().length > 50;
-
-    let writePrompt, sys;
-
-    if (hasVideoTemplate) {
-      // MODE: Fill template with video content
-      writePrompt = `You are an expert SEO content writer. Fill this HTML template with a complete article based on the YouTube video below. Keep ALL HTML structure, CSS classes, IDs and layout EXACTLY — only replace text content.
-
-LANGUAGE: Write ALL text in ${langName}.
+    const briefPrompt = `You are an SEO content strategist. Based on the YouTube video transcript below, generate a complete SEO content brief. Do NOT write the article — only the brief that guides a writer.
 
 VIDEO: ${actualTitle}
 CHANNEL: ${channelName}
-SOURCE: ${sourceUrl}
-BUSINESS: ${profile.name} — ${profile.niche || ''}
-TARGET AUDIENCE: ${profile.target_audience || ''}
+URL: ${sourceUrl}
+BUSINESS: ${profile ? profile.name + ' — ' + (profile.niche||'') : 'Unknown'}
+AUDIENCE: ${profile ? (profile.target_audience||'general') : 'general'}
+LANGUAGE: ${langName}
 
-VIDEO TRANSCRIPT (extract the best insights, key facts, specific examples, and notable statements — use these as the backbone of the article):
-${transcript.substring(0, 8000)}
+TRANSCRIPT (${transcript.length} chars):
+${transcript.substring(0, 6000)}
 
-PARAGRAPH RULE: Keep ALL paragraphs SHORT — maximum 2-3 sentences each. Never write a paragraph longer than 60 words. Break up long explanations into multiple short paragraphs. This is non-negotiable.
+Generate a structured brief with these sections:
 
-PLACEHOLDER REPLACEMENT — CRITICAL:
-The template contains placeholders like [AI: ...], [TITLE], [FOCUS KEYWORD], [CONTENT HERE], [INSERT ...], etc.
-Replace ALL of them with real content based on the video. Leave NO placeholder unreplaced.
-Examples:
-- [AI: Keyword First — Power Word + Number | Topic] → real SEO title based on video
-- [FOCUS KEYWORD] → the main keyword for this article
-- [AI: write intro paragraph here] → actual intro paragraph
-- [INSERT STAT] → real stat from the video or your knowledge
+## 1. RECOMMENDED TITLE (SEO-optimised, 55-60 chars)
+## 2. META DESCRIPTION (150-160 chars)
+## 3. FOCUS KEYWORD + 5 SECONDARY KEYWORDS
+## 4. SEARCH INTENT (informational / commercial / transactional)
+## 5. CONTENT ANGLE (what makes this unique vs competitors)
+## 6. RECOMMENDED STRUCTURE (H2s and H3s outline only)
+## 7. KEY INSIGHTS FROM VIDEO (5-8 bullet points — specific facts, stats, quotes worth including)
+## 8. GRAAF CHECKLIST
+   - Genuinely Credible: [what to cite/include]
+   - Relevant: [exact match to search intent]
+   - Actionable: [what takeaway the reader gets]
+   - Accurate: [facts to verify]
+   - Fresh: [what to update/add beyond the video]
+## 9. INTERNAL LINKS TO USE (from: ${internalLinks.substring(0, 500)})
+## 10. RECOMMENDED WORD COUNT + CONTENT TYPE
 
-CONTENT REQUIREMENTS:
-1. Extract the BEST insights from the transcript — key facts, specific numbers, notable quotes, concrete examples
-2. Add your own expertise and context around those insights — do not just paraphrase
-3. Every H2 answers a specific question a reader would ask
-4. Include: direct answer in first 2 sentences, TL;DR, TOC, 5-question FAQ
-5. Add: <a href="${sourceUrl}" rel="noopener" target="_blank">Watch the original video →</a>
-6. Update Article + FAQPage JSON-LD schema with datePublished="${videoPublishedDate}" and dateModified="${videoDateModified}"
+Output clean markdown. No HTML. No preamble.`;
 
-${internalLinks}
-
-
-CTA STRATEGY — CRITICAL:
-ContentScale-specific services to weave in naturally (pick 3-4 most relevant to article topic):
-- GRAAF Framework (content quality scoring) → https://contentscale.site/graaf-framework/
-- CRAFT Framework (content structure) → https://contentscale.site/craft-framework/
-- Traffic Drop Recovery → https://contentscale.site/traffic-drop-recovery/
-- Google Update Recovery → https://contentscale.site/google-update-recovery/
-- 90-Day Recovery Timeline → https://contentscale.site/90-day-recovery-timeline/
-- AI Overview Optimization → https://contentscale.site/ai-overview-trigger-patterns/
-- Free ContentScore Scan → https://app.contentscale.site
-- DIY vs Agency Recovery → https://contentscale.site/diy-vs-agency-recovery/
-
-Use descriptive anchor text — never bare URLs. Link 3-5 pages naturally in the article body.
-After TL;DR: one sentence connecting topic specifically to ContentScale's GRAAF Framework or ContentScore.
-In 2 H2 sections: mention the specific ContentScale service most relevant to that section — not generic language.
-Mid-article case-card: specific tool or service with real link.
-Final case-card: free ContentScore scan offer → https://app.contentscale.site
-${videoMoneyPages ? '\n' + videoMoneyPages : ''}
-
-═══════════════════════════════════════
-THE TEMPLATE — FILL ALL PLACEHOLDERS, DO NOT CHANGE HTML STRUCTURE
-═══════════════════════════════════════
-${profile.html_template}
-
-Return ONLY the filled template HTML. No markdown, no explanation. End with <!-- word_count: X -->.`;
-      sys = 'You are an expert SEO content writer filling HTML templates with video-based content. Preserve ALL HTML structure exactly. Return only the filled HTML. Short paragraphs — max 2-3 sentences each.';
-
-    } else {
-      // MODE: Free write
-      writePrompt = `You are an expert SEO content writer converting a YouTube video into a high-quality, original SEO article.
-
-LANGUAGE: Write the ENTIRE article in ${langName}. All headings, body, FAQ — everything in ${langName}.
-
-VIDEO: ${actualTitle}
-CHANNEL: ${channelName}
-SOURCE: ${sourceUrl}
-BUSINESS: ${profile.name} — ${profile.niche || ''}
-TARGET AUDIENCE: ${profile.target_audience || ''}
-PRIMARY GOAL: ${profile.primary_goal || 'leads'}
-
-VIDEO TRANSCRIPT (extract the BEST from this — key insights, specific facts, real examples, notable statements):
-${transcript.substring(0, 8000)}
-
-
-═══════════════════════════════════════
-CONTENT ARCHITECTURE — APPLY TO ALL SECTIONS
-═══════════════════════════════════════
-TITLE TAG: Focus Keyword in first 3 words + one number + one power word (Proven/Ultimate/Breakthrough/Expert/Essential) + 50-60 chars total
-H1: Include focus keyword + number + power word — can be longer than title
-META DESCRIPTION: 140-155 chars — keyword + stat/number + CTA verb at end (Try/Get/Learn/Discover)
-
-STRUCTURAL SIGNALS (all required):
-- DIRECT ANSWER BOX: 15-30 words, green gradient — optimised for featured snippets
-- TL;DR BOX: 5-7 bullets, max 12 words each — purple gradient
-- TABLE OF CONTENTS: anchor links to every H2
-- KEY TAKEAWAYS BOX: summary for skimmers before FAQ
-- AUTHOR BIO: must include "Founder", certifications, years experience, LinkedIn link — E-E-A-T signal
-- "Last reviewed: [date]" freshness badge in author bio
-
-CONVERSION (minimum per article):
-- CTA after Direct Answer box
-- CTA after TL;DR  
-- CTA inside at least 2 H2 sections
-- CTA in author bio
-- Final CTA block before footer
-Total: minimum 5 CTAs per article
-
-SCHEMA SYNC RULE: FAQ body Q&A must match FAQPage schema word-for-word — Google compares and penalises mismatches
-
-DATA INTEGRITY — NON-NEGOTIABLE:
-- NEVER invent statistics, quotes, or claims
-- If a stat cannot be verified from a real named source → write [STAT NEEDED] instead
-- Format: (Source Name, Year) — never "studies show" without naming source
-- If no real source found: leave [SOURCE NEEDED] — do NOT invent one
-
-═══════════════════════════════════════
-PARAGRAPH RULE — ABSOLUTE HARD LIMIT
-═══════════════════════════════════════
-Every <p> tag = maximum 2 sentences. Never 3. Never more.
-Count sentences before closing </p>. If you have 3 sentences: split into two <p> tags.
-A sentence ends with . or ! or ?
-
-═══════════════════════════════════════
-CONTENT REQUIREMENTS
-═══════════════════════════════════════
-1. Extract and USE the best insights from the transcript — specific facts, numbers, quotes, examples — these are the backbone
-2. Add your own expertise around those insights — do not just paraphrase the transcript
-3. Structure: H1 → direct answer (2 short sentences) → TL;DR bullets → TOC → H2 sections → FAQ (5 Q&As) → CTA
-4. Every H2 answers a specific question from the transcript content
-5. Include a VIDEO EMBED BLOCK after the TL;DR — use this exact HTML pattern:
-<div class="highlight-box" style="margin:20px 0;">
-<h3>🎬 Watch This Video Free on YouTube</h3>
-<p style="color:#d1d5db;font-size:14px;line-height:1.75;margin-bottom:14px;">The full video is available free on YouTube. Watch it alongside this article for the complete insights.</p>
-<div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;border-radius:10px;border:2px solid #4c1d95;">
-  <iframe src="https://www.youtube.com/embed/VIDEOID"
-    title="${actualTitle}"
-    style="position:absolute;top:0;left:0;width:100%;height:100%;border:0;"
-    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-    allowfullscreen loading="lazy">
-  </iframe>
-</div>
-<p style="font-size:12px;color:#6b7280;margin-top:8px;text-align:center;">
-  <a href="${sourceUrl}" rel="noopener" target="_blank" style="color:#a78bfa;">Open in YouTube →</a>
-</p>
-</div>
-IMPORTANT: Extract the YouTube video ID from this URL: ${sourceUrl} — put it in the iframe src as: https://www.youtube.com/embed/[VIDEO_ID]
-6. Also include: <a href="${sourceUrl}" rel="noopener" target="_blank">Watch the original video →</a> at end of article
-6. Minimum 1500 words
-7. No generic openers ("In today's world...", "In an era of..."), no empty jargon
-
-${internalLinks}
-
-CTA STRATEGY — CRITICAL — people find this via Google, convert them to ContentScale leads:
-
-ContentScale's specific services to mention naturally (pick the most relevant 3-4 based on the article topic):
-- GRAAF Framework (content quality scoring) → https://contentscale.site/graaf-framework/
-- CRAFT Framework (content structure) → https://contentscale.site/craft-framework/
-- Traffic Drop Recovery → https://contentscale.site/traffic-drop-recovery/
-- Google Update Recovery → https://contentscale.site/google-update-recovery/
-- 90-Day Recovery Timeline → https://contentscale.site/90-day-recovery-timeline/
-- AI Overview Optimization → https://contentscale.site/ai-overview-trigger-patterns/
-- ContentScore Free Scan → https://app.contentscale.site
-- DIY vs Agency Recovery → https://contentscale.site/diy-vs-agency-recovery/
-- B2B SaaS Traffic Recovery → https://contentscale.site/b2b-saas-traffic-recovery/
-- YMYL AI Optimization → https://contentscale.site/ymyl-ai-optimization/
-
-INTERNAL LINK RULES:
-- Use ONLY the URLs listed above — never invent URLs
-- Link 3-5 of them naturally within the article body using descriptive anchor text
-- Do NOT use "[contentscale.site/page]" as anchor text — use descriptive text like "the GRAAF Framework" or "content recovery process"
-
-CTA PLACEMENT:
-1. After TL;DR: one specific sentence connecting the video topic to ContentScale's GRAAF Framework or content scoring
-2. In 2 H2 sections: a short paragraph specifically mentioning the ContentScale service most relevant to that section — not generic "we help businesses" language
-3. Mid-article case-card CTA: reference a specific ContentScale tool or service with a real link
-4. Final case-card: strong closing with ContentScale's free scan offer → https://app.contentscale.site
-${videoMoneyPages ? '\nMONEY PAGES (also link to these if relevant):\n' + videoMoneyPages : ''}
-
-REQUIRED JSON-LD (add before </article>):
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"[ACTUAL H1]","datePublished":"${videoPublishedDate}","dateModified":"${videoDateModified}","author":{"@type":"Organization","name":"${profile.name}"}}</script>
-
-Return ONLY clean HTML starting with <article>. No markdown, no code fences. End with <!-- word_count: X -->.`;
-      sys = 'You are an elite SEO Content Architect. Engineer traffic, not just content. CRITICAL: Every <p> = MAXIMUM 2 sentences. Use structured signals: Direct Answer box, TL;DR, TOC, Key Takeaways, Author Bio with E-E-A-T. Minimum 5 CTAs. NEVER invent stats — use [STAT NEEDED] if unverifiable. Return only clean HTML.';
-    }
-    // Template mode needs much higher token limit — template is 70kb+
-    // Strategy: write article content first (compact HTML), then inject into template
-    let rawHtml;
-    if (hasVideoTemplate) {
-      // Step 1: Write compact article content without the full template
-      const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-      const contentOnlyPrompt = writePrompt.replace(
-        /═══════════════════════════════════════\nTHE TEMPLATE.*$/s,
-        `MINIMUM 1500 WORDS — this is a hard requirement. If the transcript is short, expand each section with additional expert context, examples, and insights. Never produce less than 1500 words.
-
-═══════════════════════════════════════
-PARAGRAPH RULE — ABSOLUTE NON-NEGOTIABLE
-═══════════════════════════════════════
-Every single <p> tag must contain MAXIMUM 2 sentences.
-Never write more than 2 sentences in one paragraph.
-If you have more to say: start a new <p> tag.
-Count your sentences before closing </p>.
-This is the single most important formatting rule.
-
-Return a complete article as COMPACT HTML — NO <html>, <head>, <body>, <style> tags — just the article body elements starting directly with content.
-DO NOT wrap in <article class="blog-content"> — the template already has that wrapper.
-
-STRUCTURE (all required):
-- <div class="cat-badge cat-guide">Category</div>
-- <h1 class="article-h1">Title</h1>
-- <div class="direct-answer"><div class="da-label">Direct Answer</div><p>...</p></div>
-- <div class="tldr-box"><div class="tldr-label">TL;DR</div><ul>5 bullet points</ul></div>
-- <div class="toc"><h3>Table of Contents</h3><ol>anchor links</ol></div>
-- Minimum 6 H2 sections (each 200+ words)
-- At least 1 <div class="stats-box"> with 4+ stat-rows
-- At least 2 <blockquote> with <cite>
-- At least 2 <div class="case-card"> with ContentScale CTA
-- VIDEO EMBED BLOCK — insert after the TL;DR box (required in every video article):
-<div class="highlight-box" style="margin:20px 0;">
-<h3>🎬 Watch "${actualTitle}" Free on YouTube</h3>
-<p style="color:#d1d5db;font-size:14px;line-height:1.75;margin-bottom:14px;">The full video is available free on YouTube. Watch it to get the complete insights covered in this article.</p>
-<div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;border-radius:10px;border:2px solid #4c1d95;">
-  <iframe src="https://www.youtube.com/embed/VIDEOID"
-    title="${actualTitle}"
-    style="position:absolute;top:0;left:0;width:100%;height:100%;border:0;"
-    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-    allowfullscreen loading="lazy">
-  </iframe>
-</div>
-<p style="font-size:12px;color:#6b7280;margin-top:8px;text-align:center;">
-  <a href="${sourceUrl}" rel="noopener" target="_blank" style="color:#a78bfa;">Open in YouTube →</a>
-</p>
-</div>
-IMPORTANT: Replace VIDEOID in the iframe src with the actual YouTube video ID extracted from the source URL.
-- <h2>Frequently Asked Questions</h2> with 10 faq-items
-- <p><a href="${sourceUrl}" rel="noopener" target="_blank">Watch the original video →</a></p>
-- Final <div class="case-card"> CTA for ContentScale
-
-CSS CLASSES TO USE: direct-answer, da-label, tldr-box, tldr-label, toc, stats-box, stat-row, stat-num, stat-text, case-card, faq-item, faq-q, faq-a, highlight-box, warning-box, result-grid, result-row
-
-FILL THIS PLACEHOLDER in the author bio area if it appears: [AI: fill with publish date] → replace with: ${today}
-
-End with <!-- word_count: X --> where X is the actual word count.`
-      );
-      const articleContent = await callAiForWrite(sys, contentOnlyPrompt, 16000, claudeKey, geminiKey);
-      const cleanContent = articleContent.replace(/^\`\`\`html\n?/i,'').replace(/^\`\`\`/,'').replace(/\`\`\`$/,'').trim();
-
-      // Step 2: Inject content into template — find the main content placeholder
-      const template = profile.html_template;
-      // Look for common content injection points in the template
-      const injectionPatterns = [
-        /(<main[^>]*>)([\s\S]*?)(<\/main>)/i,
-        /(<article[^>]*>)([\s\S]*?)(<\/article>)/i,
-        /(<div[^>]*class="[^"]*blog-content[^"]*"[^>]*>)([\s\S]*?)(<\/div>)/i,
-        /(<div[^>]*class="[^"]*page-outer[^"]*"[^>]*>)([\s\S]*?)(<\/div>)/i,
-        /(<!--\s*CONTENT START\s*-->)([\s\S]*?)(<!--\s*CONTENT END\s*-->)/i,
-        /(\[CONTENT HERE\]|\[INSERT CONTENT\]|\[AI: write.*?here\])/i
-      ];
-
-      let injected = false;
-      for (const pattern of injectionPatterns) {
-        if (pattern.test(template)) {
-          if (pattern.source.includes('CONTENT START') || pattern.source.includes('CONTENT HERE')) {
-            rawHtml = template.replace(pattern, cleanContent);
-          } else {
-            rawHtml = template.replace(pattern, (m, open, inner, close) => open + '\n' + cleanContent + '\n' + (close||''));
-          }
-          injected = true;
-          console.log('[video-rewrite] template injection via pattern:', pattern.source.substring(0,40));
-          break;
-        }
-      }
-
-      // Post-process: fix double article tags, fill publish date placeholder
-      if (rawHtml) {
-        const todayStr = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-        // Fix double opening article tags
-        rawHtml = rawHtml.replace(/<article([^>]*)>\s*<article([^>]*)>/gi, '<article$1>');
-        // Fix double closing article tags  
-        rawHtml = rawHtml.replace(/<\/article>\s*<\/article>/gi, '</article>');
-        // Fill publish date placeholder in author bio
-        rawHtml = rawHtml.replace(/\[AI: fill with publish date[^\]]*\]/gi, todayStr);
-        rawHtml = rawHtml.replace(/\[AI: fill.*?publish.*?date[^\]]*\]/gi, todayStr);
-        // Fill any remaining simple placeholders that weren't filled
-        rawHtml = rawHtml.replace(/YYYY-MM-DDT00:00:00\+00:00/g, videoPublishedDate + 'T00:00:00+00:00');
-      }
-
-      if (!injected) {
-        // Fallback: ask Claude to do the injection with higher token limit
-        const injectPrompt = `You have a complete HTML template and article content to inject into it.
-
-TASK: Replace all placeholder text in the template with the article content. Fill ALL [AI:...] placeholders, [TITLE], [CONTENT] etc.
-Keep ALL HTML structure, CSS, scripts exactly as-is.
-
-ARTICLE CONTENT TO INJECT:
-\${cleanContent.substring(0, 6000)}
-
-TEMPLATE:
-\${template}
-
-Return ONLY the complete filled template. No explanation.`;
-        rawHtml = await callAiForWrite('You are an HTML injection specialist. Fill templates with content exactly. Return complete HTML only.', injectPrompt, 16000, claudeKey, geminiKey);
-      }
-    } else {
-      rawHtml = await callAiForWrite(sys, writePrompt, 12000, claudeKey, geminiKey);
-    }
-
-    rawHtml = (rawHtml||'').replace(/^\`\`\`html\n?/i,'').replace(/^\`\`\`/,'').replace(/\`\`\`$/,'').trim();
-
-    // Global post-process — fix structural issues regardless of mode
-    if (rawHtml) {
-      const todayFinal = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-      // Fix double opening/closing article tags
-      rawHtml = rawHtml.replace(/<article([^>]*)>\s*<article([^>]*blog-content[^>]*)>/gi, '<article$2>');
-      rawHtml = rawHtml.replace(/<\/article>\s*<\/article>/gi, '</article>');
-      // Fill publish date placeholder in author bio
-      rawHtml = rawHtml.replace(/\[AI: fill with publish date[^\]]*\]/gi, todayFinal);
-      // Fill YYYY-MM-DD placeholders with video date
-      rawHtml = rawHtml.replace(/YYYY-MM-DDT00:00:00\+00:00/g, videoPublishedDate + 'T00:00:00+00:00');
-      // Replace VIDEOID placeholder with actual YouTube video ID
-      if (vid) {
-        rawHtml = rawHtml.replace(/embed\/VIDEOID/g, `embed/${vid}`);
-        rawHtml = rawHtml.replace(/\/embed\/VIDEOID/g, `/embed/${vid}`);
-      }
-      // If Claude didn't include an embed at all, inject one after the TL;DR box
-      if (vid && !rawHtml.includes('youtube.com/embed/')) {
-        const embedBlock = `
-<div class="highlight-box" style="margin:20px 0;">
-<h3>🎬 Watch This Video Free on YouTube</h3>
-<p style="color:#d1d5db;font-size:14px;line-height:1.75;margin-bottom:14px;">The full video is available free on YouTube. Watch it alongside this article for the complete insights.</p>
-<div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;border-radius:10px;border:2px solid #4c1d95;">
-  <iframe src="https://www.youtube.com/embed/${vid}"
-    title="${actualTitle.replace(/"/g,'&quot;')}"
-    style="position:absolute;top:0;left:0;width:100%;height:100%;border:0;"
-    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-    allowfullscreen loading="lazy">
-  </iframe>
-</div>
-<p style="font-size:12px;color:#6b7280;margin-top:8px;text-align:center;">
-  <a href="${sourceUrl}" rel="noopener" target="_blank" style="color:#a78bfa;">Open in YouTube →</a>
-</p>
-</div>`;
-        // Insert after closing </div> of tldr-box, or after TOC, or after first H2
-        if (rawHtml.includes('tldr-box')) {
-          rawHtml = rawHtml.replace(/(<\/div>\s*)((?=<div class="toc"|<h2))/i, `$1${embedBlock}\n$2`);
-        } else {
-          // Fallback: insert after first H2
-          rawHtml = rawHtml.replace(/(<\/h2>)/, `$1\n${embedBlock}`);
-        }
-        console.log(`[video-rewrite] Auto-injected YouTube embed for ${vid}`);
-      }
-      // Extract slug from canonical tag and fill all slug placeholders
-      const canonicalMatch = rawHtml.match(/<link rel="canonical" href="https?:\/\/[^/]+\/([^/"]+)\/?"/i);
-      const extractedSlug = canonicalMatch ? canonicalMatch[1] : (actualTitle || 'article').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').substring(0,75);
-      const slugUrl = `https://contentscale.site/${extractedSlug}/`;
-      rawHtml = rawHtml.replace(/\[AI: same slug as canonical tag\]/gi, extractedSlug);
-      rawHtml = rawHtml.replace(/https:\/\/contentscale\.site\/\[AI: same slug as canonical tag\]\//gi, slugUrl);
-      rawHtml = rawHtml.replace(/https:\/\/contentscale\.site\/\[focus-keyword-slug\]\//gi, slugUrl);
-      rawHtml = rawHtml.replace(/contentscale\.site\/\[focus-keyword-slug\]/gi, `contentscale.site/${extractedSlug}`);
-      // Fill breadcrumb page title short form if unfilled
-      const h1Match = rawHtml.match(/<h1[^>]*>([^<]{10,60})<\/h1>/i);
-      const shortTitle = h1Match ? h1Match[1].substring(0,40) : (actualTitle || '').substring(0,40);
-      rawHtml = rawHtml.replace(/\[AI: page title short form[^\]]*\]/gi, shortTitle);
-    }
-
-    if (!rawHtml) return res.status(502).json({ success: false, error: 'Claude returned empty article' });
-
-    const scrub = stripAiPlaceholders(rawHtml);
-    // Auto-split long paragraphs — enforces max 2 sentences per <p> regardless of what Claude wrote
-    const splitLongParagraphs = (html) => {
-      return html.replace(/<p([^>]*)>([\s\S]*?)<\/p>/gi, (match, attrs, content) => {
-        // Skip if content has block-level HTML inside
-        if (/<(?:div|ul|ol|li|table|blockquote|h[1-6])/i.test(content)) return match;
-        // Split on sentence boundaries — period/!/? followed by space and capital
-        const sentences = content.match(/[^.!?]+[.!?]+(?:\s|$)/g) || [content];
-        if (sentences.length <= 2) return match;
-        // Group into pairs of 2 sentences
-        const groups = [];
-        for (let i = 0; i < sentences.length; i += 2) {
-          groups.push(sentences.slice(i, i + 2).join('').trim());
-        }
-        return groups.map(g => `<p${attrs}>${g}</p>`).join('\n');
-      });
+    const briefBody = {
+      contents: [{ role: 'user', parts: [{ text: briefPrompt }] }],
+      generationConfig: { maxOutputTokens: 3000, temperature: 0.4 }
     };
-    const html = splitLongParagraphs(scrub.html);
-    const wc = html.replace(/<[^>]+>/g,'').split(/\s+/).length;
+
+    const briefResult = await callGeminiWithFallback(geminiKey, briefBody, GEMINI_MODEL, 'gemini-2.5-flash');
+    if (!briefResult.ok) {
+      return res.status(500).json({ success: false, error: 'Brief generation failed: ' + briefResult.errorMessage });
+    }
+
+    const briefText = briefResult.data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+
+    // Track cost
+    const codeId = req.engineUser?.codeId;
+    if (codeId) {
+      const usage = briefResult.data?.usageMetadata || {};
+      trackApiCost(codeId, 'video-brief', briefResult.modelUsed || GEMINI_MODEL, usage.promptTokenCount || Math.round(briefPrompt.length/4), usage.candidatesTokenCount || Math.round(briefText.length/4), `Video brief: ${actualTitle}`).catch(()=>{});
+    }
 
     clearInterval(keepAlive);
-    res.json({ success: true, html, title: actualTitle, word_count: wc, transcript_chars: transcript.length, source_url: sourceUrl, channel: channelName, detected_language: detectedLang });
+    res.json({
+      success: true,
+      brief: briefText,
+      title: actualTitle,
+      channel: channelName,
+      source_url: sourceUrl,
+      transcript_chars: transcript.length,
+      detected_language: detectedLang,
+      published: req._videoPublishedAt || null
+    });
   } catch(e) {
     clearInterval(keepAlive);
     const errMsg = e.name === 'AbortError' || e.message?.includes('aborted')
@@ -14742,7 +14406,7 @@ Return ONLY the complete filled template. No explanation.`;
   }
 });
 
-// ── Rewrite Analysis ──────────────────────────────────────────
+
 app.post('/api/content/analyse-rewrite', verifyEngineAccess, requireCredits('analyse-rewrite'), async (req, res) => {
   try {
     const {
