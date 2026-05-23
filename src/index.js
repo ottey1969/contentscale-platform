@@ -26834,11 +26834,13 @@ app.post('/boost/update-profile', asyncHandler(async (req,res) => {
   if (!u) return res.status(401).json({error:'Invalid token'});
   const linkedinUrl2 = req.body.linkedinUrl;
   const callmebotKey = req.body.callmebotKey;
+  const country      = req.body.country;
   const updates = [];
   const vals = [];
   let pi = 1;
   if (linkedinUrl2 !== undefined) { updates.push(`linkedin_url=$${pi++}`); vals.push(linkedinUrl2); }
   if (callmebotKey !== undefined) { updates.push(`callmebot_key=$${pi++}`); vals.push(callmebotKey||null); }
+  if (country !== undefined)      { updates.push(`country=$${pi++}`);       vals.push(country||null); }
   if (updates.length) {
     vals.push(u.id);
     await pool.query(`UPDATE boost_users SET ${updates.join(',')} WHERE id=$${pi}`, vals);
@@ -26866,8 +26868,8 @@ app.post('/boost/admin/approve-registration', asyncHandler(async (req,res) => {
 
   const token = r.name.toLowerCase().replace(/\s+/g,'-') + '-' + Date.now().toString().slice(-4);
   await pool.query(
-    'INSERT INTO boost_users (name,token,linkedin_url,whatsapp,tier,credits,approval_status) VALUES ($1,$2,$3,$4,$5,$6,\'approved\')',
-    [r.name, token, r.linkedin_url, r.whatsapp, tier||'free', tier==='pro'?999:10]
+    'INSERT INTO boost_users (name,token,linkedin_url,whatsapp,tier,credits,approval_status,country) VALUES ($1,$2,$3,$4,$5,$6,\'approved\',$7)',
+    [r.name, token, r.linkedin_url, r.whatsapp, tier||'free', tier==='pro'?999:10, r.country||null]
   );
   await pool.query('UPDATE boost_registrations SET status=\'approved\',token=$1,reviewed_at=NOW() WHERE id=$2',[token,regId]);
   res.json({success:true, token, name:r.name, whatsapp:r.whatsapp});
@@ -26900,11 +26902,14 @@ app.post('/boost/admin/create-user', asyncHandler(async (req,res) => {
 }));
 
 app.post('/boost/admin/update-user', asyncHandler(async (req,res) => {
-  const {token,tier,active,credits} = req.body;
+  const {token,tier,active,credits,name,whatsapp,country} = req.body;
   const updates=[]; const vals=[]; let i=1;
   if (tier!==undefined)       {updates.push(`tier=$${i++}`);       vals.push(tier);}
   if (active!==undefined)     {updates.push(`active=$${i++}`);     vals.push(active);}
   if (credits!==undefined)    {updates.push(`credits=$${i++}`);    vals.push(credits);}
+  if (name!==undefined)       {updates.push(`name=$${i++}`);       vals.push(name);}
+  if (whatsapp!==undefined)   {updates.push(`whatsapp=$${i++}`);   vals.push(whatsapp||null);}
+  if (country!==undefined)    {updates.push(`country=$${i++}`);    vals.push(country||null);}
   if (req.body.expires_at!==undefined) {updates.push(`expires_at=$${i++}`); vals.push(req.body.expires_at||null);}
   if (!updates.length) return res.status(400).json({error:'Nothing to update'});
   vals.push(token);
