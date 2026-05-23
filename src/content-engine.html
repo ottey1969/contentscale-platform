@@ -267,9 +267,10 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'DM San
         <span>Active Profile</span>
         <span id="profileCountLabel" style="font-size:9px;color:var(--muted);"></span>
       </div>
-      <select id="profileSelect" onchange="onProfileSwitch()" style="width:100%;background:var(--bg);border:1px solid var(--border2);border-radius:6px;padding:8px 10px;color:var(--text);font-size:12px;font-family:'DM Mono',monospace;outline:none;cursor:pointer;margin-bottom:8px;">
-        <option value="">Loading...</option>
+      <select id="profileSelect" onchange="onProfileSwitch()" style="width:100%;background:#1a1a2e;border:1px solid rgba(167,139,250,.3);border-radius:6px;padding:8px 10px;color:#e0e0e0;font-size:12px;font-family:'DM Mono',monospace;outline:none;cursor:pointer;margin-bottom:8px;-webkit-appearance:auto;appearance:auto;">
+        <option value="" style="background:#1a1a2e;color:#9ca3af;">Loading...</option>
       </select>
+      <style>#profileSelect option{background:#1a1a2e;color:#e0e0e0;}#profileSelect option:checked{background:#5b21b6;color:#fff;}</style>
       <button class="sidebar-btn" onclick="toggleBusinessInfo()" id="bizInfoBtn" style="font-size:10px;padding:5px;margin-top:0;">🏢 View Business Info</button>
     </div>
 
@@ -641,20 +642,17 @@ async function connect() {
       localStorage.setItem('nexus_engine_token', token);
     } catch(e) {}
 
-    // Load profiles — DON'T auto-select first one
+    // Load profiles — always show section
     var pr = await api('/api/content/profiles');
-    if (pr.profiles && pr.profiles.length) {
-      _allProfiles = pr.profiles;
-      renderProfileSelector(pr.profiles, true); // true = show placeholder
-      document.getElementById('profileSection').style.display = 'block';
-      document.getElementById('aiKeysSection').style.display = 'block';
-      loadAiKeyStatus();
-
-      // Don't auto-restore previously selected profile — user must explicitly select one
-      _profile = null;
-      _context.profileId = null;
-      document.getElementById('profileSelect').value = '';
-    }
+    _allProfiles = pr.profiles || [];
+    renderProfileSelector(_allProfiles, true); // true = show placeholder
+    document.getElementById('profileSection').style.display = 'block';
+    document.getElementById('aiKeysSection').style.display = 'block';
+    loadAiKeyStatus();
+    // Don't auto-select — user must pick
+    _profile = null;
+    _context.profileId = null;
+    document.getElementById('profileSelect').value = '';
 
     // Open Tracker first — it's the workflow starting point
     switchView('tracker');
@@ -1263,15 +1261,17 @@ function renderProfileSelector(profiles, showPlaceholder) {
   var lbl = document.getElementById('profileCountLabel');
   if (!sel) return;
   var html = '';
-  if (showPlaceholder) {
+  if (showPlaceholder || !profiles.length) {
     html += '<option value="" disabled selected>-- Select a profile --</option>';
   }
   html += profiles.map(function(p) {
-    return '<option value="' + p.id + '">' + p.name + (p.domain ? ' (' + p.domain + ')' : '') + '</option>';
+    return '<option value="' + p.id + '">' + escHtml(p.name) + (p.domain ? ' · ' + p.domain : '') + '</option>';
   }).join('');
   sel.innerHTML = html;
-  if (!showPlaceholder && profiles[0]) sel.value = profiles[0].id;
   if (lbl) lbl.textContent = profiles.length + ' profile' + (profiles.length !== 1 ? 's' : '');
+  // Show section even if 0 profiles — so user can create one
+  var section = document.getElementById('profileSection');
+  if (section) section.style.display = 'block';
 }
 
 function onProfileSwitch() {
@@ -5454,7 +5454,7 @@ async function saveProfile() {
     // Preserve existing business_info fields
     try {
       var d0 = await api('/api/content/profiles');
-      var ex = parseRecs(d0.profiles).find(function(x){return String(x.id)===String(_editingProfileId);});
+      var ex = (d0.profiles||[]).find(function(x){return String(x.id)===String(_editingProfileId);});
       if (ex && ex.business_info) biBase = typeof ex.business_info==='string'?JSON.parse(ex.business_info):ex.business_info;
     } catch(e) {}
   }
@@ -5567,9 +5567,9 @@ async function reloadAllProfiles() {
   try {
     var d = await api('/api/content/profiles');
     _allProfiles = d.profiles || [];
-    renderProfileSelector(_allProfiles);
-    // Show the profile section whenever we have at least one profile
-    if (_allProfiles.length) {
+    renderProfileSelector(_allProfiles, _allProfiles.length === 0);
+    // Show the profile section always after load
+    if (true) {
       var ps = document.getElementById('profileSection');
       var ks = document.getElementById('aiKeysSection');
       if (ps) ps.style.display = 'block';
