@@ -27173,7 +27173,7 @@ CRITICAL RULES:
 3. MY POST — A complete, publishable LinkedIn post written AS OTTMAR. Rules:
 - ALWAYS IN ENGLISH regardless of the original post language.
 - DIFFERENT ANGLE: Same topic, completely different hook and structure. Not a copy.
-- RESEARCH FIRST: Use web_search to find 1-2 real, current statistics or studies relevant to the topic. Only use verified data with source name and year. If you cannot find verified data, use first-person data clearly labeled ("From auditing 200+ sites..." / "In my experience with 47 countries..."). NEVER invent numbers.
+- RESEARCH FIRST: Use web_search to find 1-2 real, current statistics or studies relevant to the topic. ALWAYS include the source name + year inline, e.g. "(Semrush, 2025)" or "(BrightEdge, 2024)". If you cannot find a verified stat, use first-person data clearly labeled ("From auditing 200+ sites..." / "In my experience with clients across 47 countries..."). NEVER invent numbers. NEVER use a stat without naming the source.
 - TOOL MENTION (choose based on topic):
   * Post about LinkedIn reach / engagement / visibility / content distribution → mention LinkedPod at the end: "If this topic deserves more reach without ads — I built LinkedPod for exactly that. app.contentscale.site/linkedpod"
   * Post about SEO / Google / website traffic / content quality / AI rankings → mention ContentScale GRAAF scan or Content Engine: "contentscale.site/content-engine"
@@ -27192,7 +27192,7 @@ Format (text only, no bracket labels):
     headers: { 'Content-Type': 'application/json', 'x-api-key': claudeKey, 'anthropic-version': '2023-06-01', 'anthropic-beta': 'web-search-2025-03-05' },
     body: JSON.stringify({
       model: 'claude-sonnet-4-20250514',
-      max_tokens: 1500,
+      max_tokens: 2500,
       tools: [{ type: 'web_search_20250305', name: 'web_search' }],
       messages: [{ role: 'user', content: prompt }]
     })
