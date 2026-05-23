@@ -401,7 +401,7 @@ input,textarea,select{font-size:16px!important}
 
 <!-- MAIN -->
 <div id="mainScreen" style="display:none;">
-  <div class="tabs">
+    <div class="tabs">
     <button class="tab active" onclick="switchTab('profile')">Profile</button>
     <button class="tab" onclick="switchTab('create')">+ Create</button>
     <button class="tab" onclick="switchTab('mine')">Mine</button>
@@ -454,9 +454,15 @@ input,textarea,select{font-size:16px!important}
       <div class="p-row"><span class="p-label">Tier</span><span class="tier-badge t-free" id="pTier">free</span></div>
       <div class="p-row"><span class="p-label">Credits</span><strong id="pCredits">—</strong></div>
       <div class="p-row"><span class="p-label">Posts boosted</span><strong id="pEngaged">—</strong></div>
+      <div class="p-row"><span class="p-label">Country</span><strong id="pCountry" style="color:#6b5fa0;">—</strong></div>
+      <div class="p-row"><span class="p-label">LinkedIn</span><strong id="pLinkedin" style="font-size:11px;word-break:break-all;">—</strong></div>
+      <div id="notifBanner" style="display:none;margin-top:10px;padding:10px 12px;background:#fff7ed;border:1px solid #f97316;border-radius:8px;font-size:12px;color:#c2410c;">
+        🔔 <strong>WhatsApp alerts not set up</strong> — you may miss boost sessions.<br>
+        <span style="color:#9a3412;">Scroll down to set up in 1 minute.</span>
+      </div>
     </div>
     <div class="form-card">
-      <h3>LinkedIn URL</h3>
+      <h3>Edit Profile</h3>
       <p style="font-size:12px;color:var(--muted);margin-bottom:10px;line-height:1.6;">
         Add your LinkedIn to comment on posts and earn credits. No LinkedIn? You can still join and help in other ways.
       </p>
@@ -967,7 +973,18 @@ function updateProfile() {
   t.textContent = user.tier;
   t.className = `tier-badge t-${user.tier}`;
   if (user.linkedin_url) document.getElementById('linkedinInput').value = user.linkedin_url;
-  if (user.country) { const sel = document.getElementById('countryInput'); if (sel) sel.value = user.country; }
+  if (user.country) {
+    const sel = document.getElementById('countryInput');
+    if (sel) sel.value = user.country;
+    const pCountry = document.getElementById('pCountry');
+    if (pCountry) pCountry.textContent = user.country;
+  }
+  const pLinkedin = document.getElementById('pLinkedin');
+  if (pLinkedin) pLinkedin.textContent = user.linkedin_url || '—';
+  if (user.callmebot_key) document.getElementById('callmebotKey').value = user.callmebot_key;
+  // Show subtle warning if no callmebot key
+  const banner = document.getElementById('notifBanner');
+  if (banner) banner.style.display = user.callmebot_key ? 'none' : 'block';
 }
 
 async function saveLinkedIn() { saveProfile(); }
