@@ -379,8 +379,36 @@ textarea{height:80px;resize:vertical}
           </select>
         </div>
       </div>
-      <label>Notes</label>
-      <input type="text" id="invNotes" placeholder="Client name, company...">
+      <div class="grid2" style="margin-top:8px;">
+        <div>
+          <label>Country <span style="color:#ef4444;">*</span></label>
+          <select id="invCountry" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:8px;background:var(--card);color:var(--text);font-size:13px;">
+            <option value="">-- Country --</option>
+            <option value="Netherlands">🇳🇱 Netherlands</option>
+            <option value="Belgium">🇧🇪 Belgium</option>
+            <option value="Germany">🇩🇪 Germany</option>
+            <option value="United Kingdom">🇬🇧 United Kingdom</option>
+            <option value="United States">🇺🇸 United States</option>
+            <option value="Canada">🇨🇦 Canada</option>
+            <option value="Australia">🇦🇺 Australia</option>
+            <option value="France">🇫🇷 France</option>
+            <option value="Spain">🇪🇸 Spain</option>
+            <option value="Italy">🇮🇹 Italy</option>
+            <option value="Philippines">🇵🇭 Philippines</option>
+            <option value="India">🇮🇳 India</option>
+            <option value="Singapore">🇸🇬 Singapore</option>
+            <option value="Nigeria">🇳🇬 Nigeria</option>
+            <option value="South Africa">🇿🇦 South Africa</option>
+            <option value="Brazil">🇧🇷 Brazil</option>
+            <option value="UAE">🇦🇪 UAE</option>
+            <option value="Other">🌐 Other</option>
+          </select>
+        </div>
+        <div>
+          <label>Notes</label>
+          <input type="text" id="invNotes" placeholder="Client name, company...">
+        </div>
+      </div>
       <div style="display:flex;gap:8px;margin-top:12px;">
         <button class="btn btn-primary" onclick="createUser()">Create User</button>
         <button class="btn btn-ghost" onclick="genToken()">Auto-generate token</button>
@@ -681,12 +709,14 @@ async function createUser() {
   const token = document.getElementById('invToken').value.trim();
   const whatsapp = document.getElementById('invWhatsapp').value.trim();
   const tier = document.getElementById('invTier').value;
-  const notes = document.getElementById('invNotes').value.trim();
+  const notes   = document.getElementById('invNotes').value.trim();
+  const country = document.getElementById('invCountry').value.trim();
   if (!name||!token) { toast('Name and token required', true); return; }
+  if (!country) { toast('Select a country', true); return; }
 
   const r = await fetch(`${srv}/boost/admin/create-user`, {
     method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({ adminToken: ADMIN_TOKEN, name, token, whatsapp, tier, notes })
+    body: JSON.stringify({ adminToken: ADMIN_TOKEN, name, token, whatsapp, tier, notes, country })
   });
   const data = await r.json();
   if (data.error) { toast(data.error, true); return; }
