@@ -12628,7 +12628,7 @@ async function _runResearchJob(jobId, profile_id, seed_keyword) {
     _researchJobs.set(jobId, { status: 'researching', step: 'sitemap', message: 'Fetching sitemap...' });
     let sitemapLinks = [];
     try {
-      if (profile.sitemap_url) {
+      if (profile && profile.sitemap_url) {
         const ctrl = new AbortController(); const t = setTimeout(()=>ctrl.abort(),5000);
         const r = await fetch(profile.sitemap_url, { headers:{'User-Agent':'CSBot/1.0'}, signal:ctrl.signal });
         clearTimeout(t);
@@ -14312,13 +14312,13 @@ app.post('/api/content/video-rewrite', verifyEngineAccess, async (req, res) => {
     // Detect language
     const detectedLang = detectContentLanguage(transcript);
     const langNames = { en:'English', nl:'Dutch/Nederlands', de:'German/Deutsch', fr:'French/Français', es:'Spanish/Español', it:'Italian/Italiano', pt:'Portuguese/Português' };
-    const langName = langNames[profile.content_language || detectedLang] || 'English';
+    const langName = langNames[(profile && (profile && profile.content_language || detectedLang)) || detectedLang] || 'English';
 
     // Sitemap for internal links
     let sitemapUrls = [];
-    if (profile.sitemap_url) {
+    if (profile && (profile && profile.sitemap_url)) {
       try {
-        const sr = await fetch(profile.sitemap_url, { signal: AbortSignal.timeout(15000) });
+        const sr = await fetch((profile && profile.sitemap_url), { signal: AbortSignal.timeout(15000) });
         if (sr.ok) {
           const sx = await sr.text();
           sitemapUrls = (sx.match(/<loc>(.*?)<\/loc>/g)||[]).map(m=>m.replace(/<\/?loc>/g,'')).filter(u=>!u.match(/\.(jpg|png|gif|xml)$/i)).slice(0,20);
@@ -14339,8 +14339,8 @@ app.post('/api/content/video-rewrite', verifyEngineAccess, async (req, res) => {
 VIDEO: ${actualTitle}
 CHANNEL: ${channelName}
 URL: ${sourceUrl}
-BUSINESS: ${profile ? profile.name + ' — ' + (profile.niche||'') : 'Unknown'}
-AUDIENCE: ${profile ? (profile.target_audience||'general') : 'general'}
+BUSINESS: ${profile ? (profile && profile.name || 'Unknown') + ' — ' + ((profile && profile.niche || '')||'') : 'Unknown'}
+AUDIENCE: ${profile ? ((profile && profile.target_audience || 'general')||'general') : 'general'}
 LANGUAGE: ${langName}
 
 TRANSCRIPT (${transcript.length} chars):
@@ -16294,7 +16294,7 @@ Preview: ${(c.textPreview||'').slice(0,800)}`).join('\n')
 
     // Fetch sitemap for internal links
     let writeSitemapUrls = [];
-    if (profile.sitemap_url) {
+    if (profile && profile.sitemap_url) {
       try {
         const sr = await fetch(profile.sitemap_url, { signal: AbortSignal.timeout(15000) });
         if (sr.ok) {
