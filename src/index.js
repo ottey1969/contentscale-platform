@@ -27096,11 +27096,24 @@ setTimeout(autoCloseSessions, 5000); // run once on startup
 // Called by the Chrome extension sidepanel.js
 // ═══════════════════════════════════════════════════════════════════════════
 
-// ── CORS for extension ────────────────────────────────────────────────────
+// ── CORS for Chrome extension — explicit OPTIONS preflight ───────────────
+app.options('/ai/linkedin-strategy', (req, res) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.sendStatus(200);
+});
+app.options('/ai/linkedin-reply', (req, res) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.sendStatus(200);
+});
 app.use('/ai/', (req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Content-Type');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.header('Access-Control-Max-Age', '86400');
   if (req.method === 'OPTIONS') return res.sendStatus(200);
   next();
 });
