@@ -724,7 +724,12 @@ async function loadUsers() {
         ${u.tier==='free' ? `<button class="btn btn-sm" style="background:#ede9fe;color:#6b21a8;" onclick="changeT('${u.token}','pro')">→ Pro</button>` : ''}
         ${u.tier==='pro'  ? `<button class="btn btn-ghost btn-sm" onclick="changeT('${u.token}','free')">→ Free</button>` : ''}
         <button class="btn btn-ghost btn-sm" onclick="addCr('${u.token}')">+Credits</button>
-        <button class="btn btn-sm" style="background:#1e3a5f;color:#60a5fa;" onclick="editUser('${u.token}','${u.name.replace(/'/g,'\\'')}','${u.whatsapp||''}','${u.country||''}')">✎ Edit</button>
+        <button class="btn btn-sm" style="background:#1e3a5f;color:#60a5fa;"
+          data-token="${u.token}"
+          data-name="${u.name.replace(/"/g,'&quot;')}"
+          data-whatsapp="${u.whatsapp||''}"
+          data-country="${u.country||''}"
+          onclick="editUser(this.dataset.token,this.dataset.name,this.dataset.whatsapp,this.dataset.country)">✎ Edit</button>
         ${u.whatsapp ? `<a href="https://wa.me/${u.whatsapp.replace(/[^0-9]/g,'')}?text=${encodeURIComponent('Hi '+u.name+'! Your Boost link: '+srv+'/boost-platform?token='+u.token)}" target="_blank" class="btn btn-green btn-sm" style="text-decoration:none;">WA</a>` : ''}
         <button class="btn btn-sm ${u.active?'btn-ghost':'btn-green'}" onclick="toggleU('${u.token}',${u.active})">${u.active?'Disable':'Enable'}</button>
       </div>
