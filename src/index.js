@@ -24745,7 +24745,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 const newCode = data.code.code;
                 navigator.clipboard.writeText(newCode).catch(()=>{});
                 const usesPlatform = document.getElementById('ecUsePlatformKeys').checked;
-                alert('Code created! \n\nCode: ' + newCode + '\n\nShare with client: app.contentscale.site/content-engine\n\n' + (usesPlatform ? 'Platform API: client uses YOUR key (budget: 5/mo)' : 'Own Keys: client must enter their Gemini + Claude keys in the engine'));
+                alert('Code created! Code: ' + newCode + ' | Share: app.contentscale.site/content-engine | ' + (usesPlatform ? 'Platform API active (budget: 5/mo)' : 'Own Keys mode'));
                 document.getElementById('createEngineCodeForm').style.display='none';
                 document.getElementById('ecUsePlatformKeys').checked=false;
                 toggleEcKeyFields(false);
