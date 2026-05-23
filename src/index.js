@@ -24628,7 +24628,15 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     '<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;">' +
                     '<div style="flex:1;min-width:0;"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px;"><span style="font-family:monospace;font-size:1.1rem;font-weight:700;color:#a78bfa;">'+c.code+'</span>' +
                     '<span style="font-size:0.75rem;padding:2px 8px;border-radius:9999px;background:'+(c.is_active?'#052e16':'#1f2937')+';color:'+(c.is_active?'#4ade80':'#9ca3af')+';">'+(c.is_active?'● Active':'○ Revoked')+'</span>'+pkBadge+'</div>' +
-                    '<div style="font-weight:600;">'+c.client_name+(c.profile_count>0?' <span style="font-size:11px;color:#64748b;">('+c.profile_count+' profiles)</span>':'')+'</div>'+keyInfo+creditBar+'</div>' +
+                    '<div style="font-weight:600;">'+c.client_name+(c.profile_count>0?' <span style="font-size:11px;color:#64748b;">('+c.profile_count+' profiles)</span>':'')+'</div>' +
+                    '<div style="font-size:10px;color:#475569;margin-top:2px;">Created: '+(c.created_at?new Date(c.created_at).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}):'—')+'</div>' +
+                    '<div style="margin-top:8px;padding:8px 10px;background:#0f172a;border:1px dashed #334155;border-radius:6px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">' +
+                    '<span style="font-size:10px;color:#64748b;">📋 Share with client:</span>' +
+                    '<code style="font-size:12px;font-weight:700;color:#a78bfa;letter-spacing:.05em;">'+c.code+'</code>' +
+                    '<button onclick="copyEngineCode(''+c.code+'')" style="font-size:10px;padding:3px 10px;background:#334155;color:#94a3b8;border:none;border-radius:4px;cursor:pointer;">Copy</button>' +
+                    '<a href="https://app.contentscale.site/content-engine" target="_blank" style="font-size:10px;color:#38bdf8;text-decoration:none;">→ content-engine</a>' +
+                    '</div>' +
+                    keyInfo+creditBar+'</div>' +
                     '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-start;">' +
                     '<button onclick="togglePlatformKeys('+c.id+','+!c.use_platform_keys+')" class="btn" style="font-size:0.75rem;background:'+(c.use_platform_keys?'#0c4a6e':'#1e293b')+';color:'+(c.use_platform_keys?'#38bdf8':'#94a3b8')+';border:1px solid '+(c.use_platform_keys?'#0284c7':'#334155')+';">'+(c.use_platform_keys?'🔑 Platform ON':'🔑 Platform Keys')+'</button>' +
                     '<button onclick="copyEngineCode(&apos;'+c.code+'&apos;)" class="btn btn-info" style="font-size:0.75rem;">📋 Copy</button>' +
@@ -24710,7 +24718,18 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     deal_label:dealLabel||null
                 });
                 if(!data.success){alert('Error: '+data.error);return;}
-                alert('✅ Code created: '+data.code.code);document.getElementById('createEngineCodeForm').style.display='none';document.getElementById('ecUsePlatformKeys').checked=false;toggleEcKeyFields(false);loadEngineCodes();
+                const newCode = data.code.code;
+                navigator.clipboard.writeText(newCode).catch(()=>{});
+                const usesPlatform = document.getElementById('ecUsePlatformKeys').checked;
+                alert('✅ Code created & copied!\n\n' +
+                  'Code: ' + newCode + '\n\n' +
+                  'Share this code with your client.\n' +
+                  'They enter it at: app.contentscale.site/content-engine\n\n' +
+                  (usesPlatform ? '🔑 Platform API: client uses YOUR API key (budget: €5/mo default)' : '🔑 Own Keys: client must enter their own Gemini + Claude keys in the engine'));
+                document.getElementById('createEngineCodeForm').style.display='none';
+                document.getElementById('ecUsePlatformKeys').checked=false;
+                toggleEcKeyFields(false);
+                loadEngineCodes();
             }catch(e){alert('Error: '+e.message);}
         }
 
