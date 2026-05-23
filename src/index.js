@@ -26958,6 +26958,14 @@ app.post('/boost/admin/add-credits', asyncHandler(async (req,res) => {
   res.json({success:true});
 }));
 
+app.post('/boost/admin/delete-user', asyncHandler(async (req,res) => {
+  if (!checkAdminToken(req,res)) return;
+  const {token} = req.body;
+  if (!token) return res.status(400).json({error:'token required'});
+  await pool.query('DELETE FROM boost_users WHERE token=$1',[token]);
+  res.json({success:true});
+}));
+
 app.get('/boost/api/sessions', asyncHandler(async (req,res) => {
   const r = await pool.query(
     `SELECT s.id,s.post_url,LEFT(s.post_text,100) as preview,s.client_name,s.created_at,s.active,COUNT(e.id) as engagement_count
