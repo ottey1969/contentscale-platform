@@ -781,6 +781,7 @@ function sessionCard(s) {
       <span class="badge b-blue">${s.engagement_count||0} engaged</span>
       ${isOwn ? '<span class="badge b-amber">Your post</span>' : ''}
       ${s.post_url ? `<a href="${esc(s.post_url)}" target="_blank" style="font-size:11px;color:var(--blue);">Open LinkedIn ↗</a>` : ''}
+      ${isOwn && s.active ? `<button class="btn btn-ghost btn-sm" style="color:var(--red);font-size:10px;padding:2px 8px;" onclick="deleteSession('${s.id}')">🗑 Delete</button>` : ''}
     </div>
     ${!done && !isOwn ? `
       <div class="comment-opt" id="personal-${s.id}">
@@ -990,6 +991,17 @@ function shareSession(id) {
   const url = `${location.origin}/boost-platform`;
   const msg = encodeURIComponent(`🚀 Help boost my LinkedIn post!\n${url}\n\nPick a comment, paste on LinkedIn. Takes 2 min. +2 credits for you! 🙏`);
   window.open(`https://wa.me/?text=${msg}`, '_blank');
+}
+
+async function deleteSession(id) {
+  if (!confirm('Delete this session permanently? This cannot be undone.')) return;
+  const r = await fetch(`/boost/${id}/delete`, {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ token: myToken })
+  });
+  const d = await r.json();
+  if (d.success) { toast('Session deleted'); loadSessions(); loadMine(); }
+  else toast(d.error || 'Error deleting', true);
 }
 
 async function closeSession(id) {
