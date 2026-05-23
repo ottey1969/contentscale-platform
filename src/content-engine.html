@@ -621,8 +621,18 @@ async function connect() {
     _connected = true;
     setStatus('live', 'connected');
     document.getElementById('sendBtn').disabled = false;
-    btn.textContent = '✓ Connected'; btn.style.background = 'rgba(52,211,153,.15)';
+    // Show client name if returned
+    var clientName = d.client_name || d.clientName || '';
+    var welcomeMsg = clientName ? 'Welcome, ' + clientName + ' ✓' : '✓ Connected';
+    btn.textContent = welcomeMsg;
+    btn.style.background = 'rgba(52,211,153,.15)';
     btn.style.color = 'var(--green)'; btn.style.border = '1px solid rgba(52,211,153,.3)';
+    btn.title = clientName ? 'Connected as: ' + clientName : 'Connected';
+    // Store client name for session
+    try { if (clientName) localStorage.setItem('nexus_client_name', clientName); } catch(e) {}
+    // Show in sidebar label
+    var engLabel = document.getElementById('engineAccessLabel');
+    if (engLabel && clientName) { engLabel.textContent = '⚡ ENGINE — ' + clientName.toUpperCase(); }
     // Show forget link
     var forgetEl = document.getElementById('forgetLink');
     if (forgetEl) forgetEl.style.display = 'block';
