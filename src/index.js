@@ -26642,9 +26642,10 @@ app.post('/boost/register', asyncHandler(async (req,res) => {
   const {name, linkedinUrl, whatsapp, reason} = req.body;
   if (!name || !linkedinUrl || !whatsapp) return res.status(400).json({error:'Name, LinkedIn URL and WhatsApp required'});
 
+  const refToken = req.body.refToken || null;
   const r = await pool.query(
-    'INSERT INTO boost_registrations (name,linkedin_url,whatsapp,reason) VALUES ($1,$2,$3,$4) RETURNING id',
-    [name, linkedinUrl, whatsapp, reason||'']
+    'INSERT INTO boost_registrations (name,linkedin_url,whatsapp,reason,ref_token) VALUES ($1,$2,$3,$4,$5) RETURNING id',
+    [name, linkedinUrl, whatsapp, reason||'', refToken]
   );
   console.log('[Boost] New registration:', name, whatsapp);
 
@@ -26870,6 +26871,17 @@ app.get('/boost/admin/registrations', asyncHandler(async (req,res) => {
   res.json({registrations:r.rows});
 }));
 
+// ── REFERRAL STATS ───────────────────────────────────────────────────────
+app.get('/boost/referral-stats', asyncHandler(async (req,res) => {
+  const {token} = req.query;
+  if (!token) return res.status(400).json({error:'token required'});
+  const r = await pool.query(
+    "SELECT COUNT(*) as count FROM boost_registrations WHERE ref_token=$1 AND status='approved'",
+    [token]
+  );
+  res.json({count: parseInt(r.rows[0].count) || 0});
+}));
+
 app.post('/boost/admin/approve-registration', asyncHandler(async (req,res) => {
   if (!checkAdminToken(req,res)) return;
   const {regId, tier} = req.body;
@@ -26883,6 +26895,12 @@ app.post('/boost/admin/approve-registration', asyncHandler(async (req,res) => {
     [r.name, token, r.linkedin_url, r.whatsapp, tier||'free', tier==='pro'?999:10, r.country||null]
   );
   await pool.query('UPDATE boost_registrations SET status=\'approved\',token=$1,reviewed_at=NOW() WHERE id=$2',[token,regId]);
+  // Award referral bonus to referrer
+  if (r.ref_token) {
+    await pool.query('UPDATE boost_users SET credits=credits+10 WHERE token=$1',[r.ref_token]).catch(()=>{});
+    // Award bonus to new user too
+    await pool.query('UPDATE boost_users SET credits=credits+10 WHERE token=$1',[token]).catch(()=>{});
+  }
   res.json({success:true, token, name:r.name, whatsapp:r.whatsapp});
 }));
 
