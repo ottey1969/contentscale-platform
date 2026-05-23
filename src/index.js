@@ -14099,6 +14099,20 @@ app.post('/api/content/video-search', verifyEngineAccess, async (req, res) => {
 });
 
 // ── Fetch transcript + rewrite video as SEO article ────────────────────────
+// Helper: write with Claude if available, else Gemini
+async function callAiForWrite(sys, prompt, maxTokens, claudeKey, geminiKey) {
+  if (claudeKey) {
+    return await callClaudeForWrite(sys, prompt, maxTokens, claudeKey, 'claude-sonnet-4-20250514');
+  }
+  if (geminiKey) {
+    const body = { contents: [{ role: 'user', parts: [{ text: sys + '\n\n' + prompt }] }], generationConfig: { maxOutputTokens: maxTokens || 8000, temperature: 0.7 } };
+    const r = await callGeminiWithFallback(geminiKey, body, GEMINI_MODEL, 'gemini-2.5-flash');
+    if (r.ok) return r.data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    throw new Error('Gemini write failed: ' + r.errorMessage);
+  }
+  throw new Error('No AI key available for writing');
+}
+
 app.post('/api/content/video-rewrite', verifyEngineAccess, async (req, res) => {
   req.setTimeout(180000); // 3 minutes
   res.setHeader('X-Accel-Buffering', 'no');
@@ -14315,9 +14329,9 @@ app.post('/api/content/video-rewrite', verifyEngineAccess, async (req, res) => {
       ? `INTERNAL LINKS — use 3-5 of these naturally with descriptive anchor text (never bare URLs):\n${effectiveSitemapUrls.map(u=>`- ${u}`).join('\n')}`
       : 'No sitemap configured — go to Profiles → click 🗺️ Sitemap button to add one. Do not invent URLs.';
 
-    const geminiKey = process.env.GEMINI_API_KEY;
+    const geminiKey = resolveGeminiKey(req) || process.env.GEMINI_API_KEY;
     const claudeKey = resolveClaudeKey(req);
-    if (!claudeKey) return res.status(500).json({ success: false, error: 'Claude API key required for writing' });
+    if (!claudeKey && !geminiKey) return res.status(500).json({ success: false, error: 'No AI key available. Add Claude or Gemini key to your engine code.' });
 
     // Fetch money pages for CTA strategy
     const mpVideoR = await pool.query('SELECT * FROM content_money_pages WHERE profile_id=$1 AND is_active=TRUE ORDER BY sort_order LIMIT 6', [profile_id]);
@@ -14573,7 +14587,7 @@ FILL THIS PLACEHOLDER in the author bio area if it appears: [AI: fill with publi
 
 End with <!-- word_count: X --> where X is the actual word count.`
       );
-      const articleContent = await callClaudeForWrite(sys, contentOnlyPrompt, 16000, claudeKey);
+      const articleContent = await callAiForWrite(sys, contentOnlyPrompt, 16000, claudeKey, geminiKey);
       const cleanContent = articleContent.replace(/^\`\`\`html\n?/i,'').replace(/^\`\`\`/,'').replace(/\`\`\`$/,'').trim();
 
       // Step 2: Inject content into template — find the main content placeholder
@@ -14630,15 +14644,10 @@ TEMPLATE:
 \${template}
 
 Return ONLY the complete filled template. No explanation.`;
-        rawHtml = await callClaudeForWrite(
-          'You are an HTML injection specialist. Fill templates with content exactly. Return complete HTML only.',
-          injectPrompt,
-          16000,
-          claudeKey
-        );
+        rawHtml = await callAiForWrite('You are an HTML injection specialist. Fill templates with content exactly. Return complete HTML only.', injectPrompt, 16000, claudeKey, geminiKey);
       }
     } else {
-      rawHtml = await callClaudeForWrite(sys, writePrompt, 12000, claudeKey);
+      rawHtml = await callAiForWrite(sys, writePrompt, 12000, claudeKey, geminiKey);
     }
 
     rawHtml = (rawHtml||'').replace(/^\`\`\`html\n?/i,'').replace(/^\`\`\`/,'').replace(/\`\`\`$/,'').trim();
@@ -14725,8 +14734,11 @@ Return ONLY the complete filled template. No explanation.`;
     res.json({ success: true, html, title: actualTitle, word_count: wc, transcript_chars: transcript.length, source_url: sourceUrl, channel: channelName, detected_language: detectedLang });
   } catch(e) {
     clearInterval(keepAlive);
-    console.error('[video-rewrite]', e.message);
-    res.status(500).json({ success: false, error: e.message });
+    const errMsg = e.name === 'AbortError' || e.message?.includes('aborted')
+      ? 'Request timed out fetching video data. Try again — YouTube can be slow from the server region.'
+      : e.message;
+    console.error('[video-rewrite]', e.name, e.message);
+    if (!res.headersSent) res.status(500).json({ success: false, error: errMsg });
   }
 });
 
