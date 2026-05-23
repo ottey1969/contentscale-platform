@@ -293,14 +293,64 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'DM San
     </div>
 
     <!-- How it works — between profile and tools -->
-    <div class="sidebar-section" style="padding-bottom:4px;">
-      <div class="sidebar-label">How it works</div>
-      <div id="workflowGuide" style="font-size:10px;color:var(--sub);line-height:1.5;">
-        <div id="wfStep1" style="padding:4px 0 4px 10px;border-left:2px solid #374151;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">① Engine code → Connect</div>
-        <div id="wfStep2" style="padding:4px 0 4px 10px;border-left:2px solid #374151;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">② Tracker → profile → Import GSC</div>
-        <div id="wfStep3" style="padding:4px 0 4px 10px;border-left:2px solid #374151;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">③ 🔍 Spy on page → competitors</div>
-        <div id="wfStep4" style="padding:4px 0 4px 10px;border-left:2px solid #374151;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">④ Rewrite → AI beats rank 1</div>
-        <div id="wfStep5" style="padding:4px 0 4px 10px;border-left:2px solid #374151;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">⑤ Publish → Tracker monitors</div>
+    <div class="sidebar-section" style="padding-bottom:8px;">
+      <div class="sidebar-label">HOW IT WORKS</div>
+      <div id="workflowGuide" style="font-size:10px;color:var(--sub);line-height:1.6;">
+
+        <!-- Step 1: GRAAF Scan — animated block -->
+        <style>
+          @keyframes graafPulse {
+            0%,100% { box-shadow: 0 0 0 0 rgba(124,58,237,0), inset 0 0 0 0 rgba(124,58,237,0); border-color:#7c3aed; }
+            50%      { box-shadow: 0 0 12px 3px rgba(124,58,237,0.45), inset 0 0 8px 0 rgba(124,58,237,0.08); border-color:#a78bfa; }
+          }
+          @keyframes graafShimmer {
+            0%   { background-position: -200% center; }
+            100% { background-position:  200% center; }
+          }
+          @keyframes graafArrow {
+            0%,100% { transform: translateX(0); }
+            50%      { transform: translateX(3px); }
+          }
+          @keyframes graafDot {
+            0%,100% { opacity:1; transform:scale(1); }
+            50%      { opacity:0.4; transform:scale(0.7); }
+          }
+          #wfStep0 { animation: graafPulse 2.4s ease-in-out infinite; }
+          #wfStep0 .graaf-label {
+            background: linear-gradient(90deg, #a78bfa, #e879f9, #a78bfa);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: graafShimmer 2.8s linear infinite;
+          }
+          #wfStep0 .graaf-arrow { animation: graafArrow 1s ease-in-out infinite; display:inline-block; }
+          #wfStep0 .graaf-dot   { animation: graafDot 1.4s ease-in-out infinite; display:inline-block; }
+        </style>
+
+        <div id="wfStep0" style="padding:8px 10px;border:1px solid #7c3aed;border-left:3px solid #a78bfa;margin-bottom:6px;background:rgba(124,58,237,0.07);border-radius:0 8px 8px 0;position:relative;overflow:hidden;">
+          <!-- shimmer sweep overlay -->
+          <div style="position:absolute;inset:0;background:linear-gradient(105deg,transparent 40%,rgba(167,139,250,0.06) 50%,transparent 60%);background-size:200% 100%;animation:graafShimmer 2.8s linear infinite;pointer-events:none;"></div>
+
+          <div style="display:flex;align-items:center;gap:5px;margin-bottom:3px;">
+            <span class="graaf-dot" style="width:6px;height:6px;border-radius:50%;background:#a78bfa;flex-shrink:0;"></span>
+            <span class="graaf-label" style="font-weight:800;font-size:10px;letter-spacing:.06em;font-family:DM Mono,monospace;">1. GRAAF SEO CONTENTSCORE — EXISTING PAGE</span>
+          </div>
+          <div style="color:#6b5fa0;font-size:9px;margin-bottom:6px;line-height:1.5;">
+            Scan the page you will work on.<br>Get all requirements before Spy, Brief or External AI Agent.
+          </div>
+          <a href="https://app.contentscale.site" target="_blank"
+             style="display:inline-flex;align-items:center;gap:5px;background:linear-gradient(135deg,#5b21b6,#7c3aed);color:#fff;font-size:9px;font-weight:800;padding:5px 12px;border-radius:5px;text-decoration:none;font-family:DM Mono,monospace;letter-spacing:.06em;text-transform:uppercase;">
+            <span>📊 Open GRAAF Scan</span>
+            <span class="graaf-arrow">→</span>
+          </a>
+        </div>
+
+        <div id="wfStep1" style="padding:4px 0 4px 10px;border-left:2px solid #374151;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">2. Tracker → profile → Import GSC</div>
+        <div id="wfStep2" style="padding:4px 0 4px 10px;border-left:2px solid #374151;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">3. 🔍 Spy on page → competitors</div>
+        <div id="wfStep3" style="padding:4px 0 4px 10px;border-left:2px solid #374151;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">④ Paste GRAAF recs → Copy Master Brief</div>
+        <div id="wfStep4" style="padding:4px 0 4px 10px;border-left:2px solid #374151;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">5. External AI Agent fixes ALL</div>
+        <div id="wfStep5" style="padding:4px 0 4px 10px;border-left:2px solid #374151;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">6. Publish → Tracker monitors</div>
       </div>
     </div>
 
