@@ -11548,23 +11548,40 @@ REQUIREMENTS:
   }
 });
 
-const resolveGeminiKey = (req) => req.headers['x-gemini-key'] || process.env.GEMINI_API_KEY;
-const resolveClaudeKey = (req) => {
-  const code    = req.engineUser && req.engineUser.code ? req.engineUser.code : null;
-  const codeKey = code ? code.claude_key : null;
-  const mode    = code ? (code.api_key_mode || (code.use_platform_keys ? 'platform' : 'byok')) : 'platform';
-  const envKey  = process.env.ANTHROPIC_API_KEY;
+const resolveGeminiKey = (req) => {
+  const code      = req.engineUser && req.engineUser.code ? req.engineUser.code : null;
+  const codeKey   = code ? code.gemini_key : null;          // Ottmar pre-filled per engine code
+  const headerKey = req.headers['x-gemini-key'] || null;   // Client entered in sidebar
+  const mode      = code ? (code.api_key_mode || (code.use_platform_keys ? 'platform' : 'byok')) : 'platform';
+  const envKey    = process.env.GEMINI_API_KEY;
+
+  // If Ottmar pre-filled a Gemini key for this engine code — always use it
+  if (codeKey) { return codeKey; }
 
   if (mode === 'byok') {
-    // Client must provide their own key — never fall back to platform
-    if (codeKey) { console.log('[keys] Claude: BYOK per-code key'); return codeKey; }
-    console.log('[keys] Claude: BYOK mode but no client key set');
+    return headerKey || null; // BYOK: client key only
+  }
+  return envKey || null; // Platform: Ottmar's Railway key
+};
+const resolveClaudeKey = (req) => {
+  const code       = req.engineUser && req.engineUser.code ? req.engineUser.code : null;
+  const codeKey    = code ? code.claude_key : null;           // Ottmar pre-filled per engine code
+  const headerKey  = req.headers['x-claude-key'] || null;    // Client entered in Content Engine sidebar
+  const mode       = code ? (code.api_key_mode || (code.use_platform_keys ? 'platform' : 'byok')) : 'platform';
+  const envKey     = process.env.ANTHROPIC_API_KEY;
+
+  // If Ottmar pre-filled a Claude key for this engine code — always use it
+  if (codeKey) { console.log('[keys] Claude: engine-code key'); return codeKey; }
+
+  if (mode === 'byok') {
+    // BYOK: client must provide their own key via sidebar or header
+    if (headerKey) { console.log('[keys] Claude: BYOK client header key'); return headerKey; }
+    console.log('[keys] Claude: BYOK mode — no key available');
     return null;
   }
-  // Platform mode: use platform env key (client uses Ottmar's API)
-  if (codeKey) { console.log('[keys] Claude: per-code key (platform mode)'); return codeKey; }
-  if (envKey)  { console.log('[keys] Claude: platform env key'); return envKey; }
-  console.log('[keys] Claude: NO KEY FOUND');
+
+  // Platform mode: use Ottmar's Railway key
+  if (envKey) { console.log('[keys] Claude: platform env key'); return envKey; }
   return null;
 };
 const resolveSerpapiKey = (req) => {
@@ -11649,7 +11666,7 @@ function requireCredits(action) {
         await pool.query(`UPDATE engine_access_codes SET monthly_cost_used=0, cost_reset_at=NOW() WHERE id=$1`, [eu.codeId]).catch(()=>{});
         eu.code.monthly_cost_used = 0;
       }
-      const limit = parseFloat(eu.code.monthly_cost_limit) || 50;
+      const limit = parseFloat(eu.code.monthly_cost_limit) || 5;
       const used = parseFloat(eu.code.monthly_cost_used) || 0;
       if (used >= limit) {
         return res.status(402).json({
@@ -11705,7 +11722,7 @@ app.get('/api/engine/billing', verifyEngineAccess, async (req, res) => {
   let resetAt = null;
   let mode = code.api_key_mode || 'unknown';
   try {
-    monthlyLimit = parseFloat(code.monthly_cost_limit) || 50;
+    monthlyLimit = parseFloat(code.monthly_cost_limit) || 5;
     monthlyUsed = parseFloat(code.monthly_cost_used) || 0;
     resetAt = code.cost_reset_at;
     const now = new Date();
@@ -11771,7 +11788,7 @@ app.get('/api/engine/credits', verifyEngineAccess, async (req, res) => {
     message: code.api_key_mode === 'byok'
       ? 'BYOK — you pay Google/Anthropic directly'
       : code.api_key_mode === 'platform'
-        ? `Platform API — $${parseFloat(code.monthly_cost_used||0).toFixed(2)} / $${parseFloat(code.monthly_cost_limit||50).toFixed(2)} this month`
+        ? `Platform API — $${parseFloat(code.monthly_cost_used||0).toFixed(2)} / $${parseFloat(code.monthly_cost_limit||5).toFixed(2)} this month`
         : 'API mode not set',
     mode: code.api_key_mode,
     monthly_cost_limit: parseFloat(code.monthly_cost_limit) || 50,
@@ -24590,7 +24607,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     const keyInfo=c.gemini_key||c.claude_key?'<div style="font-size:11px;color:#64748b;margin-top:4px;">'+(c.gemini_key?'Gemini: '+c.gemini_key+' ':'')+( c.claude_key?'Claude: '+c.claude_key:'')+'</div>':'';
                     // ── API Cost Budget Display ───────────────────────────
                     let creditBar = '';
-                    const costLimit = parseFloat(c.monthly_cost_limit) || 50;
+                    const costLimit = parseFloat(c.monthly_cost_limit) || 5;
                     const costUsed = parseFloat(c.monthly_cost_used) || 0;
                     const costPct = costLimit > 0 ? Math.min(100, Math.round((costUsed / costLimit) * 100)) : 0;
                     const costColor = costPct >= 100 ? '#ef4444' : costPct >= 80 ? '#f59e0b' : costPct >= 50 ? '#fbbf24' : '#22c55e';
