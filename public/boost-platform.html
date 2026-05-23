@@ -977,6 +977,9 @@ async function saveProfile() {
   const callmebotKey = document.getElementById('callmebotKey')?.value.trim() || '';
   const country      = document.getElementById('countryInput')?.value.trim() || '';
   if (!country) { toast('Please select your country — it is required', true); return; }
+  if (linkedinUrl && !linkedinUrl.match(/linkedin\.com\/in\//i)) {
+    toast('LinkedIn URL must contain linkedin.com/in/ — e.g. https://linkedin.com/in/yourname', true); return;
+  }
   const r = await fetch('/boost/update-profile', {
     method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({ token: myToken, linkedinUrl, callmebotKey, country })

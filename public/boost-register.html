@@ -263,7 +263,7 @@ textarea{height:80px;resize:vertical}
     <input type="text" id="name" placeholder="e.g. Sarah Johnson" maxlength="60">
 
     <label>LinkedIn profile URL</label>
-    <input type="url" id="linkedin" placeholder="https://www.linkedin.com/in/yourname">
+    <input type="url" id="linkedin" placeholder="https://linkedin.com/in/yourname" title="Must contain linkedin.com/in/">
 
     <label>Country <span style="color:#ef4444;">*</span></label>
     <select id="country" style="width:100%;padding:11px 14px;border:1px solid var(--border);border-radius:8px;font-size:14px;font-family:inherit;outline:none;background:var(--card);color:var(--text);">
@@ -365,8 +365,12 @@ async function submit() {
   errEl.style.display = 'none';
 
   const country  = document.getElementById('country').value.trim();
+  const linkedin = document.getElementById('linkedin').value.trim();
   if (!name)     { showErr('Enter your name'); return; }
   if (!country)  { showErr('Select your country — this is required'); return; }
+  if (linkedin && !linkedin.match(/linkedin\.com\/in\//i)) {
+    showErr('LinkedIn URL must look like: https://linkedin.com/in/yourname'); return;
+  }
   if (!whatsapp) { showErr('Enter your WhatsApp number — we need this to send your access link'); return; }
 
   const btn = document.getElementById('btnSubmit');

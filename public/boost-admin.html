@@ -747,6 +747,7 @@ async function loadUsers() {
           Credits: ${u.tier==='admin'?'∞':u.credits} · Token: <code>${u.token}</code>
           ${u.whatsapp ? ` · 📱 ${u.whatsapp}` : ''}
           ${u.country  ? ` · 🌍 ${u.country}` : ' · <span style="color:#ef4444;font-size:10px;">⚠ no country</span>'}
+          ${u.linkedin_url ? ` · <a href="${u.linkedin_url}" target="_blank" style="color:#60a5fa;">🔗 LinkedIn</a>` : ' · <span style="color:#ef4444;font-size:10px;">⚠ no LinkedIn</span>'}
           ${u.notes ? ` · ${u.notes}` : ''}
         </div>
       </div>
@@ -759,7 +760,8 @@ async function loadUsers() {
           data-name="${u.name.replace(/"/g,'&quot;')}"
           data-whatsapp="${u.whatsapp||''}"
           data-country="${u.country||''}"
-          onclick="editUser(this.dataset.token,this.dataset.name,this.dataset.whatsapp,this.dataset.country)">✎ Edit</button>
+          data-linkedin="${u.linkedin_url||''}"
+          onclick="editUser(this.dataset.token,this.dataset.name,this.dataset.whatsapp,this.dataset.country,this.dataset.linkedin)">✎ Edit</button>
         ${u.whatsapp ? `<a href="https://wa.me/${u.whatsapp.replace(/[^0-9]/g,'')}?text=${encodeURIComponent('Hi '+u.name+'! Your Boost link: '+srv+'/boost-platform?token='+u.token)}" target="_blank" class="btn btn-green btn-sm" style="text-decoration:none;">WA</a>` : ''}
         <button class="btn btn-sm ${u.active?'btn-ghost':'btn-green'}" onclick="toggleU('${u.token}',${u.active})">${u.active?'Disable':'Enable'}</button>
       </div>
@@ -768,7 +770,7 @@ async function loadUsers() {
 }
 
 // ── EDIT USER MODAL ──────────────────────────────────────────────────────
-function editUser(token, name, whatsapp, country) {
+function editUser(token, name, whatsapp, country, linkedin) {
   const countries = ['Netherlands','Belgium','Germany','United Kingdom','United States','Canada','Australia','France','Spain','Italy','Portugal','Sweden','Norway','Denmark','Finland','Switzerland','South Africa','Nigeria','Kenya','India','Philippines','Singapore','Malaysia','Indonesia','Brazil','Mexico','UAE','Other'];
   const countryOpts = countries.map(c => `<option value="${c}" ${c===country?'selected':''}>${c}</option>`).join('');
   
@@ -780,6 +782,8 @@ function editUser(token, name, whatsapp, country) {
       <h3 style="margin-bottom:16px;font-size:16px;">✎ Edit User: ${name}</h3>
       <label style="font-size:12px;color:#9ca3af;display:block;margin-bottom:4px;">Name</label>
       <input id="editName" type="text" value="${name}" style="width:100%;padding:9px 12px;border:1px solid #374151;border-radius:8px;background:#1f2937;color:#fff;font-size:13px;margin-bottom:12px;box-sizing:border-box;">
+      <label style="font-size:12px;color:#9ca3af;display:block;margin-bottom:4px;">LinkedIn URL</label>
+      <input id="editLinkedin" type="url" value="${linkedin||''}" placeholder="https://linkedin.com/in/username" style="width:100%;padding:9px 12px;border:1px solid #374151;border-radius:8px;background:#1f2937;color:#fff;font-size:13px;margin-bottom:12px;box-sizing:border-box;">
       <label style="font-size:12px;color:#9ca3af;display:block;margin-bottom:4px;">WhatsApp</label>
       <input id="editWhatsapp" type="tel" value="${whatsapp}" placeholder="+31 6 12345678" style="width:100%;padding:9px 12px;border:1px solid #374151;border-radius:8px;background:#1f2937;color:#fff;font-size:13px;margin-bottom:12px;box-sizing:border-box;">
       <label style="font-size:12px;color:#9ca3af;display:block;margin-bottom:4px;">Country <span style="color:#ef4444;">*</span></label>
@@ -797,13 +801,17 @@ function editUser(token, name, whatsapp, country) {
 }
 
 async function saveUserEdit(token) {
-  const name     = document.getElementById('editName').value.trim();
-  const whatsapp = document.getElementById('editWhatsapp').value.trim();
-  const country  = document.getElementById('editCountry').value.trim();
+  const name      = document.getElementById('editName').value.trim();
+  const whatsapp  = document.getElementById('editWhatsapp').value.trim();
+  const country   = document.getElementById('editCountry').value.trim();
+  const linkedin  = document.getElementById('editLinkedin').value.trim();
   if (!country) { toast('Country is required', true); return; }
+  if (linkedin && !linkedin.match(/linkedin\.com\/in\//i)) {
+    toast('LinkedIn URL must contain linkedin.com/in/', true); return;
+  }
   const r = await fetch(`${srv}/boost/admin/update-user`, {
     method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({ adminToken: ADMIN_TOKEN, token, name, whatsapp, country })
+    body: JSON.stringify({ adminToken: ADMIN_TOKEN, token, name, whatsapp, country, linkedinUrl: linkedin })
   });
   const d = await r.json();
   if (d.success) {
