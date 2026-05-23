@@ -27182,8 +27182,30 @@ app.use('/ai/', (req, res, next) => {
 
 // ── STRATEGY: Comment / Reply / DM ───────────────────────────────────────
 app.post('/ai/linkedin-strategy', asyncHandler(async (req, res) => {
-  const { postText, leadContext, userBio, tone, clientProfile } = req.body;
+  const { postText, leadContext, userBio, tone, clientProfile, customPrompt } = req.body;
   if (!postText) return res.status(400).json({ error: 'postText required' });
+
+  // If a custom prompt is provided (e.g. carousel from Write tab), use it directly
+  if (customPrompt) {
+    const claudeKey = process.env.ANTHROPIC_API_KEY;
+    const r = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': claudeKey, 'anthropic-version': '2023-06-01', 'anthropic-beta': 'web-search-2025-03-05' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 2500,
+        tools: [{ type: 'web_search_20250305', name: 'web_search' }],
+        messages: [{ role: 'user', content: customPrompt }]
+      })
+    });
+    const json = await r.json();
+    if (!r.ok) return res.status(500).json({ error: json.error?.message || 'Claude API error' });
+    let text = '';
+    if (Array.isArray(json.content)) {
+      text = json.content.filter(b => b.type === 'text').map(b => b.text || '').join('\n').trim();
+    }
+    return res.json({ text });
+  }
 
   const claudeKey = process.env.ANTHROPIC_API_KEY;
   if (!claudeKey) return res.status(500).json({ error: 'API key not configured on server' });
