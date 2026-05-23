@@ -24657,7 +24657,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     '<div style="margin-top:8px;padding:8px 10px;background:#0f172a;border:1px dashed #334155;border-radius:6px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">' +
                     '<span style="font-size:10px;color:#64748b;">📋 Share with client:</span>' +
                     '<code style="font-size:12px;font-weight:700;color:#a78bfa;letter-spacing:.05em;">'+c.code+'</code>' +
-                    '<button onclick="copyEngineCode(''+c.code+'')" style="font-size:10px;padding:3px 10px;background:#334155;color:#94a3b8;border:none;border-radius:4px;cursor:pointer;">Copy</button>' +
+                    '<button onclick="copyEngineCode(&apos;"+c.code+"&apos;)" style="font-size:10px;padding:3px 10px;background:#334155;color:#94a3b8;border:none;border-radius:4px;cursor:pointer;">Copy</button>' +
                     '<a href="https://app.contentscale.site/content-engine" target="_blank" style="font-size:10px;color:#38bdf8;text-decoration:none;">→ content-engine</a>' +
                     '</div>' +
                     keyInfo+creditBar+'</div>' +
