@@ -26546,27 +26546,28 @@ function startTrackerScheduler() {
 
 // ── GENERATE COMMENTS ────────────────────────────────────────────────────
 async function generateBoostComments(postText, clientName, tone, claudeKey) {
-  const prompt = `Generate 6 diverse LinkedIn comments for this post.
+  const prompt = `Write ONE excellent LinkedIn comment for this post. It should work for anyone — regardless of their background or industry.
 
 Post: "${postText.substring(0,800)}"
-Author: ${clientName||'ContentScale'}
 ${tone ? 'Tone/language hint: ' + tone : ''}
 
 Rules:
-- 6 completely different angles, lengths, voices
-- Written as: marketer, founder, consultant, analyst, manager, entrepreneur
-- NEVER start with "Great post", "Love this", "This resonates", "That's exactly", "So true", "Absolutely", "That observation"
+- ONE comment only. Make it genuinely good.
+- Adds a real insight, observation, or question — not just agreement.
+- 2-3 sentences. No more.
+- Sounds like a thoughtful professional, not a bot.
+- NEVER start with: "Great post", "Love this", "This resonates", "So true", "Absolutely", "Spot on", "That's exactly"
 - No hashtags. No emojis. No generic openers.
-- 1-3 sentences max each. Add real value.
 - Same language as the post.
+- Universal — anyone in any role can post this without it feeling off.
 
-Return ONLY a valid JSON array of exactly 6 strings, no markdown:
-["comment1","comment2","comment3","comment4","comment5","comment6"]`;
+Return ONLY a valid JSON array with exactly 1 string, no markdown:
+["your comment here"]`;
 
   const r = await fetch('https://api.anthropic.com/v1/messages', {
     method:'POST',
     headers:{'Content-Type':'application/json','x-api-key':claudeKey,'anthropic-version':'2023-06-01'},
-    body: JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1200,messages:[{role:'user',content:prompt}]})
+    body: JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:400,messages:[{role:'user',content:prompt}]})
   });
   const json = await r.json();
   const raw = json.content?.[0]?.text?.trim()||'';
