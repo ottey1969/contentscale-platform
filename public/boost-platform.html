@@ -461,6 +461,39 @@ input,textarea,select{font-size:16px!important}
         Add your LinkedIn to comment on posts and earn credits. No LinkedIn? You can still join and help in other ways.
       </p>
       <input class="form-input" type="url" id="linkedinInput" placeholder="https://linkedin.com/in/yourname">
+      
+      <label class="form-label" style="margin-top:14px;display:block;">Country <span style="color:#ef4444;">*</span></label>
+      <select id="countryInput" class="form-input" style="width:100%;padding:11px 14px;border:1px solid var(--border);border-radius:8px;font-size:14px;font-family:inherit;background:var(--card);color:var(--text);">
+        <option value="">-- Select your country --</option>
+        <option value="Netherlands">🇳🇱 Netherlands</option>
+        <option value="Belgium">🇧🇪 Belgium</option>
+        <option value="Germany">🇩🇪 Germany</option>
+        <option value="United Kingdom">🇬🇧 United Kingdom</option>
+        <option value="United States">🇺🇸 United States</option>
+        <option value="Canada">🇨🇦 Canada</option>
+        <option value="Australia">🇦🇺 Australia</option>
+        <option value="France">🇫🇷 France</option>
+        <option value="Spain">🇪🇸 Spain</option>
+        <option value="Italy">🇮🇹 Italy</option>
+        <option value="Portugal">🇵🇹 Portugal</option>
+        <option value="Sweden">🇸🇪 Sweden</option>
+        <option value="Norway">🇳🇴 Norway</option>
+        <option value="Denmark">🇩🇰 Denmark</option>
+        <option value="Finland">🇫🇮 Finland</option>
+        <option value="Switzerland">🇨🇭 Switzerland</option>
+        <option value="South Africa">🇿🇦 South Africa</option>
+        <option value="Nigeria">🇳🇬 Nigeria</option>
+        <option value="Kenya">🇰🇪 Kenya</option>
+        <option value="India">🇮🇳 India</option>
+        <option value="Philippines">🇵🇭 Philippines</option>
+        <option value="Singapore">🇸🇬 Singapore</option>
+        <option value="Malaysia">🇲🇾 Malaysia</option>
+        <option value="Indonesia">🇮🇩 Indonesia</option>
+        <option value="Brazil">🇧🇷 Brazil</option>
+        <option value="Mexico">🇲🇽 Mexico</option>
+        <option value="UAE">🇦🇪 UAE</option>
+        <option value="Other">🌐 Other</option>
+      </select>
       <button class="btn btn-blue" style="margin-top:10px;width:100%;padding:11px;" onclick="saveProfile()">💾 Save Profile</button>
     </div>
 
@@ -934,17 +967,19 @@ function updateProfile() {
   t.textContent = user.tier;
   t.className = `tier-badge t-${user.tier}`;
   if (user.linkedin_url) document.getElementById('linkedinInput').value = user.linkedin_url;
+  if (user.country) { const sel = document.getElementById('countryInput'); if (sel) sel.value = user.country; }
 }
 
 async function saveLinkedIn() { saveProfile(); }
 
 async function saveProfile() {
-  const linkedinUrl = document.getElementById('linkedinInput').value.trim();
+  const linkedinUrl  = document.getElementById('linkedinInput').value.trim();
   const callmebotKey = document.getElementById('callmebotKey')?.value.trim() || '';
-  // LinkedIn URL is optional
+  const country      = document.getElementById('countryInput')?.value.trim() || '';
+  if (!country) { toast('Please select your country — it is required', true); return; }
   const r = await fetch('/boost/update-profile', {
     method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({ token: myToken, linkedinUrl, callmebotKey })
+    body: JSON.stringify({ token: myToken, linkedinUrl, callmebotKey, country })
   });
   const data = await r.json();
   if (data.success) {

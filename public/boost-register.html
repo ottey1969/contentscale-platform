@@ -265,7 +265,44 @@ textarea{height:80px;resize:vertical}
     <label>LinkedIn profile URL</label>
     <input type="url" id="linkedin" placeholder="https://www.linkedin.com/in/yourname">
 
-    <label>WhatsApp number (to receive your access link)</label>
+    <label>Country <span style="color:#ef4444;">*</span></label>
+    <select id="country" style="width:100%;padding:11px 14px;border:1px solid var(--border);border-radius:8px;font-size:14px;font-family:inherit;outline:none;background:var(--card);color:var(--text);">
+      <option value="">-- Select your country --</option>
+      <option value="Netherlands">🇳🇱 Netherlands</option>
+      <option value="Belgium">🇧🇪 Belgium</option>
+      <option value="Germany">🇩🇪 Germany</option>
+      <option value="United Kingdom">🇬🇧 United Kingdom</option>
+      <option value="United States">🇺🇸 United States</option>
+      <option value="Canada">🇨🇦 Canada</option>
+      <option value="Australia">🇦🇺 Australia</option>
+      <option value="France">🇫🇷 France</option>
+      <option value="Spain">🇪🇸 Spain</option>
+      <option value="Italy">🇮🇹 Italy</option>
+      <option value="Portugal">🇵🇹 Portugal</option>
+      <option value="Sweden">🇸🇪 Sweden</option>
+      <option value="Norway">🇳🇴 Norway</option>
+      <option value="Denmark">🇩🇰 Denmark</option>
+      <option value="Finland">🇫🇮 Finland</option>
+      <option value="Switzerland">🇨🇭 Switzerland</option>
+      <option value="Austria">🇦🇹 Austria</option>
+      <option value="Poland">🇵🇱 Poland</option>
+      <option value="South Africa">🇿🇦 South Africa</option>
+      <option value="Nigeria">🇳🇬 Nigeria</option>
+      <option value="Kenya">🇰🇪 Kenya</option>
+      <option value="India">🇮🇳 India</option>
+      <option value="Philippines">🇵🇭 Philippines</option>
+      <option value="Singapore">🇸🇬 Singapore</option>
+      <option value="Malaysia">🇲🇾 Malaysia</option>
+      <option value="Indonesia">🇮🇩 Indonesia</option>
+      <option value="Brazil">🇧🇷 Brazil</option>
+      <option value="Mexico">🇲🇽 Mexico</option>
+      <option value="Argentina">🇦🇷 Argentina</option>
+      <option value="UAE">🇦🇪 UAE</option>
+      <option value="Israel">🇮🇱 Israel</option>
+      <option value="Other">🌐 Other</option>
+    </select>
+
+    <label>WhatsApp number (to receive your access link) <span style="color:#ef4444;">*</span></label>
     <input type="tel" id="whatsapp" placeholder="+31 6 12345678">
 
     <label>Why do you want to join? (optional)</label>
@@ -327,8 +364,9 @@ async function submit() {
   const errEl = document.getElementById('error');
   errEl.style.display = 'none';
 
+  const country  = document.getElementById('country').value.trim();
   if (!name)     { showErr('Enter your name'); return; }
-  if (!linkedin) { showErr('Enter your LinkedIn URL'); return; }
+  if (!country)  { showErr('Select your country — this is required'); return; }
   if (!whatsapp) { showErr('Enter your WhatsApp number — we need this to send your access link'); return; }
 
   const btn = document.getElementById('btnSubmit');
@@ -339,7 +377,7 @@ async function submit() {
     const r = await fetch('/boost/register', {
       method: 'POST',
       headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ name, linkedinUrl: linkedin, whatsapp, reason })
+      body: JSON.stringify({ name, linkedinUrl: linkedin, whatsapp, country, reason })
     });
     const data = await r.json();
     if (data.error) { showErr(data.error); btn.disabled=false; btn.textContent='Request Access'; return; }

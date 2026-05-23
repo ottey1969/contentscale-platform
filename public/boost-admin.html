@@ -708,26 +708,75 @@ async function loadUsers() {
   document.getElementById('userCount').textContent = `(${users.length})`;
 
   document.getElementById('usersList').innerHTML = users.map(u => `
-    <div class="row">
-      <div class="row-info">
+    <div class="row" style="flex-wrap:wrap;gap:8px;">
+      <div class="row-info" style="flex:1;min-width:0;">
         <strong>${u.name}</strong>
         <span class="badge tier-${u.tier}" style="margin-left:6px;">${u.tier}</span>
         ${!u.active ? '<span class="badge b-red" style="margin-left:4px;">disabled</span>' : ''}
-        <div style="font-size:11px;color:var(--muted);margin-top:2px;">
+        <div style="font-size:11px;color:var(--muted);margin-top:2px;line-height:1.7;">
           Credits: ${u.tier==='admin'?'∞':u.credits} · Token: <code>${u.token}</code>
           ${u.whatsapp ? ` · 📱 ${u.whatsapp}` : ''}
+          ${u.country  ? ` · 🌍 ${u.country}` : ' · <span style="color:#ef4444;font-size:10px;">⚠ no country</span>'}
           ${u.notes ? ` · ${u.notes}` : ''}
         </div>
       </div>
-      <div class="row-actions">
+      <div class="row-actions" style="flex-wrap:wrap;gap:4px;">
         ${u.tier==='free' ? `<button class="btn btn-sm" style="background:#ede9fe;color:#6b21a8;" onclick="changeT('${u.token}','pro')">→ Pro</button>` : ''}
         ${u.tier==='pro'  ? `<button class="btn btn-ghost btn-sm" onclick="changeT('${u.token}','free')">→ Free</button>` : ''}
         <button class="btn btn-ghost btn-sm" onclick="addCr('${u.token}')">+Credits</button>
+        <button class="btn btn-sm" style="background:#1e3a5f;color:#60a5fa;" onclick="editUser('${u.token}','${u.name.replace(/'/g,'\\'')}','${u.whatsapp||''}','${u.country||''}')">✎ Edit</button>
         ${u.whatsapp ? `<a href="https://wa.me/${u.whatsapp.replace(/[^0-9]/g,'')}?text=${encodeURIComponent('Hi '+u.name+'! Your Boost link: '+srv+'/boost-platform?token='+u.token)}" target="_blank" class="btn btn-green btn-sm" style="text-decoration:none;">WA</a>` : ''}
         <button class="btn btn-sm ${u.active?'btn-ghost':'btn-green'}" onclick="toggleU('${u.token}',${u.active})">${u.active?'Disable':'Enable'}</button>
       </div>
     </div>
   `).join('') || '<div style="color:var(--muted);font-size:13px;">No users yet.</div>';
+}
+
+// ── EDIT USER MODAL ──────────────────────────────────────────────────────
+function editUser(token, name, whatsapp, country) {
+  const countries = ['Netherlands','Belgium','Germany','United Kingdom','United States','Canada','Australia','France','Spain','Italy','Portugal','Sweden','Norway','Denmark','Finland','Switzerland','South Africa','Nigeria','Kenya','India','Philippines','Singapore','Malaysia','Indonesia','Brazil','Mexico','UAE','Other'];
+  const countryOpts = countries.map(c => `<option value="${c}" ${c===country?'selected':''}>${c}</option>`).join('');
+  
+  const modal = document.createElement('div');
+  modal.id = 'editUserModal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:9999;padding:16px;';
+  modal.innerHTML = `
+    <div style="background:#111827;border:1px solid #374151;border-radius:14px;padding:24px;width:100%;max-width:420px;">
+      <h3 style="margin-bottom:16px;font-size:16px;">✎ Edit User: ${name}</h3>
+      <label style="font-size:12px;color:#9ca3af;display:block;margin-bottom:4px;">Name</label>
+      <input id="editName" type="text" value="${name}" style="width:100%;padding:9px 12px;border:1px solid #374151;border-radius:8px;background:#1f2937;color:#fff;font-size:13px;margin-bottom:12px;box-sizing:border-box;">
+      <label style="font-size:12px;color:#9ca3af;display:block;margin-bottom:4px;">WhatsApp</label>
+      <input id="editWhatsapp" type="tel" value="${whatsapp}" placeholder="+31 6 12345678" style="width:100%;padding:9px 12px;border:1px solid #374151;border-radius:8px;background:#1f2937;color:#fff;font-size:13px;margin-bottom:12px;box-sizing:border-box;">
+      <label style="font-size:12px;color:#9ca3af;display:block;margin-bottom:4px;">Country <span style="color:#ef4444;">*</span></label>
+      <select id="editCountry" style="width:100%;padding:9px 12px;border:1px solid #374151;border-radius:8px;background:#1f2937;color:#fff;font-size:13px;margin-bottom:20px;box-sizing:border-box;">
+        <option value="">-- Select country --</option>
+        ${countryOpts}
+      </select>
+      <div style="display:flex;gap:10px;">
+        <button onclick="saveUserEdit('${token}')" style="flex:1;padding:10px;background:linear-gradient(135deg,#7c3aed,#be185d);border:none;border-radius:8px;color:#fff;font-weight:700;cursor:pointer;">💾 Save</button>
+        <button onclick="document.getElementById('editUserModal').remove()" style="padding:10px 16px;background:#374151;border:none;border-radius:8px;color:#9ca3af;cursor:pointer;">Cancel</button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+  modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+}
+
+async function saveUserEdit(token) {
+  const name     = document.getElementById('editName').value.trim();
+  const whatsapp = document.getElementById('editWhatsapp').value.trim();
+  const country  = document.getElementById('editCountry').value.trim();
+  if (!country) { toast('Country is required', true); return; }
+  const r = await fetch(`${srv}/boost/admin/update-user`, {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ adminToken: ADMIN_TOKEN, token, name, whatsapp, country })
+  });
+  const d = await r.json();
+  if (d.success) {
+    document.getElementById('editUserModal')?.remove();
+    toast('✅ User updated'); loadUsers();
+  } else {
+    toast('Error: ' + (d.error || 'failed'), true);
+  }
 }
 
 async function changeT(token, tier) {
