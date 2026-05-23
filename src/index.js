@@ -26588,7 +26588,7 @@ async function getBoostUser(token, ip) {
   return u;
 }
 
-const ADMIN_TOKENS = [process.env.ADMIN_TOKEN || 'ottmarJGfrancisca-boost-admin-9274', 'ottmar-admin-2026'];
+const ADMIN_TOKENS = ['ottmar-admin-2026', 'ottmarJGfrancisca-boost-admin-9274', process.env.ADMIN_TOKEN].filter(Boolean);
 function isAdmin(u) { return u && (u.tier==='admin' || ADMIN_TOKENS.includes(u.token)); }
 
 function checkAdminToken(req, res) {
