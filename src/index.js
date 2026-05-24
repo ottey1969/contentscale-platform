@@ -12319,11 +12319,24 @@ app.get('/api/content/profiles', async (req, res, next) => {
       // Admin sees all profiles
       r = await pool.query(`SELECT cp.*, COALESCE(json_agg(cl ORDER BY cl.sort_order) FILTER (WHERE cl.id IS NOT NULL), '[]') AS locations FROM content_profiles cp LEFT JOIN content_locations cl ON cl.profile_id = cp.id GROUP BY cp.id ORDER BY cp.created_at DESC`);
     } else {
-      // Engine users see only their own profiles (filtered by owner_code_id)
-      r = await pool.query(
-        `SELECT cp.*, COALESCE(json_agg(cl ORDER BY cl.sort_order) FILTER (WHERE cl.id IS NOT NULL), '[]') AS locations FROM content_profiles cp LEFT JOIN content_locations cl ON cl.profile_id = cp.id WHERE cp.owner_code_id = $1 OR cp.owner_code_id IS NULL GROUP BY cp.id ORDER BY cp.created_at DESC`,
-        [codeId]
-      );
+      // Strict isolation: each engine code only sees its own profiles
+      // Exception: profiles with owner_code_id=NULL are "legacy" — auto-assign them to this code on first access
+      // Step 1: auto-assign any NULL profiles to the FIRST (oldest) engine code only
+      if (codeId) {
+        const firstCode = await pool.query('SELECT id FROM engine_access_codes ORDER BY created_at ASC LIMIT 1');
+        const firstCodeId = firstCode.rows[0]?.id;
+        if (String(codeId) === String(firstCodeId)) {
+          // This is Ottmar's original code — claim all unassigned profiles
+          await pool.query('UPDATE content_profiles SET owner_code_id = $1 WHERE owner_code_id IS NULL', [codeId]).catch(()=>{});
+        }
+        // Now fetch only this code's profiles — strict
+        r = await pool.query(
+          `SELECT cp.*, COALESCE(json_agg(cl ORDER BY cl.sort_order) FILTER (WHERE cl.id IS NOT NULL), '[]') AS locations FROM content_profiles cp LEFT JOIN content_locations cl ON cl.profile_id = cp.id WHERE cp.owner_code_id = $1 GROUP BY cp.id ORDER BY cp.created_at DESC`,
+          [codeId]
+        );
+      } else {
+        r = { rows: [] };
+      }
     }
     res.json({ success: true, profiles: r.rows });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
