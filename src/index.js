@@ -27043,11 +27043,15 @@ Positioning: "Hope is not a strategy." Data-driven, systems-first, outcome-obses
 Reach: 200+ businesses, 47+ countries, Amsterdam-based, international.
 Results: 78% avg traffic recovery, 90-day avg time to result.
 
-== TOOLS (add only when natural and relevant — never force) ==
-1. PULSE + NEXUS (app.contentscale.site/content-engine) — two-engine intelligence system built on GRAAF Framework. PULSE reads your pages, GSC data, competitors in real time. NEXUS decodes what Google and AI Overviews actually reward. → Use for posts about SEO, rankings, content quality, AI search, Google.
-2. Free ContentScore Scan (app.contentscale.site) — Structure, E-E-A-T, Schema scored before Google sees it. → Same topics as above.
-3. LinkedPod (app.contentscale.site/linkedpod) — organised LinkedIn/X/Instagram boost network. Not solo posting — networked reach. → Use for posts about LinkedIn visibility, content reach, engagement, networking.
+== TOOLS (add only when natural and relevant — never force — max 1 per output) ==
+1. PULSE + NEXUS (app.contentscale.site/content-engine) — two-engine intelligence system built on GRAAF Framework. PULSE reads your pages, GSC data, competitors in real time. NEXUS decodes what Google and AI Overviews actually reward. Use for: SEO, rankings, content quality, AI search, Google.
+2. LeadCrawler PRO (app.contentscale.site/lead-crawler) — AI-powered B2B lead generation. Any city, 37 industries, leads bucketed by content desperation with pitch angle ready. Use for: lead generation, B2B outreach, prospecting.
+3. Free ContentScore Scan (app.contentscale.site) — Structure, E-E-A-T, Schema scored before Google sees it. ContentScore/100. Use for: same as PULSE + NEXUS above.
+4. LinkedPod (app.contentscale.site/linkedpod) — organised LinkedIn/X/Instagram boost network. Not solo posting — networked reach. Use for: LinkedIn visibility, content reach, engagement, going viral, networking.
 RULE: Maximum ONE tool mention per output. Only if it genuinely fits the topic.
+
+== LANGUAGE ==
+Always write in American English (US). Use standard American spelling: optimize, analyze, color, behavior, center, organize, recognize.
 ${clientCtx}${userBio ? '\n== EXTRA CONTEXT ==\n' + userBio : ''}
 
 == LEAD CONTEXT ==
@@ -27058,7 +27062,7 @@ ${postText}
 ${toneNote}
 
 == TASK ==
-Write 3 outputs in the EXACT SAME LANGUAGE as the post.
+Write 3 outputs in the DOMINANT LANGUAGE of the post. Determine the language by the OPENING and CLOSING sentence — not by embedded statistics or quoted data. If the post opens in Dutch and closes in Dutch, write entirely in Dutch even if English stats are quoted inside. Never mix languages.
 
 CRITICAL RULES:
 - NEVER start with validation openers: "That's exactly", "Great point", "This resonates", "Absolutely", "So true", "Well said", "Great insight", "This is so true" — start with substance directly.
