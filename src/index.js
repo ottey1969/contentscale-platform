@@ -26594,6 +26594,8 @@ app.post('/boost/create', asyncHandler(async (req,res) => {
   );
   // Notify Ottmar to broadcast
   notifyOttmarWhatsApp(`🚀 Admin boost session ready!\n\n📝 "${postText.substring(0,80)}..."\n\n👉 Broadcast now: https://app.contentscale.site/boost-admin`).catch(()=>{});
+  const sessionLinkAdmin = `https://app.contentscale.site/boost-platform`;
+  notifyAllUsers(`🚀 New boost session!\n\nContentScale posted:\n"${postText.substring(0,80)}..."\n\n👉 Open LinkedPod, pick your comment, earn +2 credits:\n${sessionLinkAdmin}`).catch(()=>{});
 
   res.json({success:true, sessionId:r.rows[0].id, boostUrl:'/boost-platform', comments});
 }));
@@ -26762,6 +26764,11 @@ app.post('/boost/admin/approve-registration', asyncHandler(async (req,res) => {
     // Award bonus to new user too
     await pool.query('UPDATE boost_users SET credits=credits+10 WHERE token=$1',[token]).catch(()=>{});
   }
+  // Notify new user via CallMeBot if they have whatsapp
+  if (r.whatsapp) {
+    const welcomeMsg = `✅ LinkedPod toegang goedgekeurd!\n\n👋 Hallo ${r.name},\nJe toegang tot LinkedPod is goedgekeurd.\n\n🎯 Jouw token: ${token}\n🔗 Log in: https://app.contentscale.site/boost-platform\n\nVragen? WhatsApp Ottmar: +31628073996`;
+    notifyOttmarWhatsApp(`✅ LinkedPod approved: ${r.name} (${r.whatsapp}) — token: ${token}`).catch(()=>{});
+  }
   res.json({success:true, token, name:r.name, whatsapp:r.whatsapp});
 }));
 
@@ -26786,6 +26793,7 @@ app.post('/boost/admin/create-user', asyncHandler(async (req,res) => {
       'INSERT INTO boost_users (name,token,email,tier,notes,whatsapp,credits,country) VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *',
       [name,token,email||null,tier||'free',notes||null,whatsapp||null,tier==='pro'?999:10,country||null]
     );
+    notifyOttmarWhatsApp(`👤 LinkedPod user aangemaakt:\n\n${name}\n${whatsapp||'geen WhatsApp'}\nToken: ${token}\nTier: ${tier||'free'}`).catch(()=>{});
     res.json({success:true, user:r.rows[0]});
   } catch(e) {
     if (e.code==='23505') return res.status(409).json({error:'Token already exists'});
