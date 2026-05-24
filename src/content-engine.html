@@ -1607,6 +1607,12 @@ function buildSystemPrompt() {
   if (_context.recs && _context.recs.length) {
     contextStr += '\nTop recommendations from GRAAF scan:\n' + parseRecs(_context.recs).slice(0,5).map(function(r){ return '- ['+r.priority+'] ' + (r.title||r.description||''); }).join('\n');
   }
+  // Also include manually pasted GRAAF recommendations
+  var _manualRecs = (document.getElementById('graafManualInput') || {}).value || '';
+  if (_manualRecs.trim().length > 20) {
+    contextStr += '\n\nMANUALLY PASTED GRAAF RECOMMENDATIONS (from ContentScore scan — these are MANDATORY fixes):\n' + _manualRecs.trim().substring(0, 3000);
+    contextStr += '\n\nINSTRUCTION: Address every item in the GRAAF recommendations above. Prioritise HIGH items first, then MEDIUM. Confirm each as addressed in your plan.';
+  }
 
   return `You are a senior SEO strategist embedded in ContentScale. You think like the best consultant a client has ever had — someone who has seen thousands of pages, knows what actually moves rankings, and has no patience for generic advice.
 
@@ -2948,6 +2954,18 @@ function selectVideo(idx) {
   toast('Video selected \u2014 click \ud83d\udccb Build Brief', 2500, 'ok');
 }
 
+function onGraafRecsPasted() {
+  var val = (document.getElementById('graafManualInput') || {}).value || '';
+  var warning = document.getElementById('graafScanWarning');
+  if (warning) {
+    warning.style.display = val.trim().length > 50 ? 'none' : '';
+  }
+  // Mark context as having recs so brief copy doesn't warn
+  if (val.trim().length > 50 && _context) {
+    _context._pastedRecs = val.trim();
+  }
+}
+
 function previewVideo() {
   var url = (document.getElementById('videoUrlInput')||{}).value.trim();
   if (!url) { toast('Paste a YouTube URL first', 'err'); return; }
@@ -3048,10 +3066,11 @@ function sendVideoBriefToAgent() {
 async function copyMasterBrief() {
   var parts   = [];
   var sep     = new Array(66).join('\u2501');
-  var hasScan = _context && _context.recs && _context.recs.length > 0;
+  var pastedGraaf = (document.getElementById('graafManualInput') || {}).value || '';
+  var hasScan = (_context && _context.recs && _context.recs.length > 0) || pastedGraaf.trim().length > 50;
   var hasUrl  = !!(window._lastSpyUrl || (_context && _context.url));
 
-  // SCAN GATE
+  // SCAN GATE — bypass if user pasted GRAAF recs manually
   if (hasUrl && !hasScan) {
     var proceed = confirm(
       'ContentScore scan MISSING\n\n' +
@@ -7195,7 +7214,7 @@ async function runSerpSpy() {
       var _spyRec = window._serpSpyRecommended || '';
       var _scanInBrief = _context && _context.recs && _context.recs.length > 0;
       actDiv.innerHTML =
-        '<button onclick="' + (_scanInBrief || !url ? 'copyMasterBrief()' : 'if(!confirm(\'Run ContentScore scan first for best results. Copy anyway?\')) return; copyMasterBrief()') + '" style="padding:8px 18px;border-radius:7px;border:none;background:' + (_scanInBrief ? 'linear-gradient(135deg,#059669,#10b981)' : 'linear-gradient(135deg,#7c3aed,#be185d)') + ';color:#fff;font-size:12px;font-weight:800;cursor:pointer;">' + (_scanInBrief ? '✅ Copy Master Brief (Spy + Agent + Scan)' : '🌐 Copy Master Brief → External AI') + '</button>' +
+        '<button onclick="' + (_scanInBrief || !url ? 'copyMasterBrief()' : 'var _pr=(document.getElementById(\'graafRecsInput\')||{}).value||\'\';if(_pr.trim().length>50||confirm(\'Run ContentScore scan first for best results. Copy anyway?\'))copyMasterBrief()') + '" style="padding:8px 18px;border-radius:7px;border:none;background:' + (_scanInBrief ? 'linear-gradient(135deg,#059669,#10b981)' : 'linear-gradient(135deg,#7c3aed,#be185d)') + ';color:#fff;font-size:12px;font-weight:800;cursor:pointer;">' + (_scanInBrief ? '✅ Copy Master Brief (Spy + Agent + Scan)' : '🌐 Copy Master Brief → External AI') + '</button>' +
         '<button onclick="spySendToAgentWithHtml()" style="padding:8px 14px;border-radius:7px;border:1px solid rgba(245,109,0,.3);background:rgba(245,109,0,.08);color:#f56d00;font-size:11px;cursor:pointer;">🔬 Get Deeper Suggestions</button>' +
         '<button onclick="closeSerpSpy()" style="padding:8px 12px;border-radius:7px;border:1px solid rgba(255,255,255,.1);background:transparent;color:#9ca3af;font-size:11px;cursor:pointer;">✕ Close</button>' +
         '<div style="width:100%;margin-top:10px;">' +
@@ -7210,7 +7229,7 @@ async function runSerpSpy() {
           ) + '</div>' +
           '<div style="margin-top:8px;">' +
             '<div style="font-size:9px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#6b5fa0;margin-bottom:4px;font-family:DM Mono,monospace;">✎ PASTE GRAAF RECOMMENDATIONS (optional — adds to brief)</div>' +
-            '<textarea id="graafManualInput" placeholder="Paste GRAAF recommendations here from app.contentscale.site scan...&#10;All pasted items will be included in Master Brief with mandatory instruction for external AI to fix ALL of them." style="width:100%;height:80px;background:#0a0a14;border:1px solid #2d1b69;border-radius:6px;padding:8px;font-size:10px;color:#c084fc;font-family:DM Mono,monospace;resize:vertical;box-sizing:border-box;"></textarea>' +
+            '<textarea id="graafManualInput" oninput="onGraafRecsPasted()" placeholder="Paste GRAAF recommendations here from app.contentscale.site scan...&#10;All pasted items will be included in Master Brief with mandatory instruction for external AI to fix ALL of them." style="width:100%;height:80px;background:#0a0a14;border:1px solid #2d1b69;border-radius:6px;padding:8px;font-size:10px;color:#c084fc;font-family:DM Mono,monospace;resize:vertical;box-sizing:border-box;"></textarea>' +
           '</div>' +
         '</div>' +
         (_spyRec ? '<div style="width:100%;font-size:10px;color:#9ca3af;margin-top:4px;padding:6px 8px;background:rgba(255,255,255,.03);border-radius:5px;">💡 ' + escHtml(_spyRec) + '</div>' : '');

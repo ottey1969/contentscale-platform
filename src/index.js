@@ -3150,7 +3150,30 @@ const html = `<!DOCTYPE html>
          </div>
          <a href="https://contentscale.site" style="color:#a855f7;font-size:12px;font-weight:700;text-decoration:none;">contentscale.site</a>
       </div>
-      <div class="no-print" style="text-align:center;padding:20px;"><button onclick="window.print()" style="background:linear-gradient(135deg,#7e22ce,#4f46e5);color:white;border:none;padding:12px 32px;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer;">🖨️ Print / Save PDF</button></div>
+      <div class="no-print" style="text-align:center;padding:20px;display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
+        <button onclick="copyAllRecommendations()" style="background:linear-gradient(135deg,#be185d,#7c3aed);color:white;border:none;padding:12px 32px;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer;">📋 Copy Recs → Content Engine</button>
+        <button onclick="window.print()" style="background:linear-gradient(135deg,#7e22ce,#4f46e5);color:white;border:none;padding:12px 32px;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer;">🖨️ Print / Save PDF</button>
+      </div>
+      <script>
+      function copyAllRecommendations() {
+        var parts = [];
+        // Grab all recommendation rows
+        document.querySelectorAll('.rec-row, .signal-fail, [class*="rec-"], .audit-item').forEach(function(el) {
+          var t = el.innerText.trim();
+          if (t.length > 10) parts.push(t);
+        });
+        // Fallback: full results text
+        if (!parts.length) {
+          var r = document.getElementById('scanResults') || document.querySelector('.results-wrap') || document.body;
+          parts.push(r.innerText.substring(0, 8000));
+        }
+        navigator.clipboard.writeText(parts.join('\n\n')).then(function() {
+          alert('✅ Recommendations copied!\n\nNow paste into the GRAAF Recs field in the Content Engine Spy panel.');
+        }).catch(function() {
+          prompt('Copy this text:', parts.join('\n\n').substring(0, 5000));
+        });
+      }
+      </script>
    </body>
 </html>
 `;
