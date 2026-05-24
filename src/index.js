@@ -12321,7 +12321,7 @@ app.get('/api/content/profiles', async (req, res, next) => {
     } else {
       // Engine users see only their own profiles (filtered by owner_code_id)
       r = await pool.query(
-        `SELECT cp.*, COALESCE(json_agg(cl ORDER BY cl.sort_order) FILTER (WHERE cl.id IS NOT NULL), '[]') AS locations FROM content_profiles cp LEFT JOIN content_locations cl ON cl.profile_id = cp.id WHERE cp.owner_code_id = $1 GROUP BY cp.id ORDER BY cp.created_at DESC`,
+        `SELECT cp.*, COALESCE(json_agg(cl ORDER BY cl.sort_order) FILTER (WHERE cl.id IS NOT NULL), '[]') AS locations FROM content_profiles cp LEFT JOIN content_locations cl ON cl.profile_id = cp.id WHERE cp.owner_code_id = $1 OR cp.owner_code_id IS NULL GROUP BY cp.id ORDER BY cp.created_at DESC`,
         [codeId]
       );
     }
