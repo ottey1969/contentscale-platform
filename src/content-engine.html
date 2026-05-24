@@ -2756,6 +2756,12 @@ async function cmdAnalyse(url, keyword) {
 // DISPLAY FUNCTIONS
 // ══════════════════════════════════════════════════════════════
 function addAgentMessage(text) {
+  // Strip stray markdown artifacts before rendering
+  text = (text||'')
+    .replace(/(?<![a-zA-Z0-9])\*\*(?![\s])(.*?)\*\*/g, '$1')  // **bold** → plain
+    .replace(/^\*\*([^*]+)\*\*$/gm, '$1')                       // line-level **bold**
+    .replace(/^\*\*\s*$/gm, '')                                   // lone **
+    .trim();
   var msgs = document.getElementById('messages');
   var div = document.createElement('div');
   div.className = 'msg agent';
@@ -3311,7 +3317,22 @@ async function copyMasterBrief() {
   parts.push(''); parts.push(sep);
   if (parts.length < 5) { parts.push('No brief yet. Run Spy + Get Deeper Suggestions first.'); }
 
-  var briefText = parts.join('\n');
+  // Strip markdown artifacts that bleed through from AI responses
+  var briefText = parts.join('\n')
+    .replace(/\*\*/g, '')
+    .replace(/^#{1,6}\s+/gm, '')
+    .replace(/^\*\s+/gm, '- ')
+    .trim();
+
+  // Ensure GRAAF recs are LAST — move them to end if not already
+  var graafMarker = 'GRAAF CONTENTSCORE REQUIREMENTS';
+  var graafIdx = briefText.indexOf(graafMarker);
+  if (graafIdx > 0 && graafIdx < briefText.length - 500) {
+    var beforeGraaf = briefText.substring(0, graafIdx).trim();
+    var graafSection = briefText.substring(graafIdx).trim();
+    briefText = beforeGraaf + '\n\n' + graafSection;
+  }
+
   try {
     await navigator.clipboard.writeText(briefText);
     updateWorkflowStep(5);
