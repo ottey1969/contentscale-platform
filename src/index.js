@@ -23332,6 +23332,16 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                             <div style="font-size:11px;font-weight:700;color:#38bdf8;margin-top:4px;">Live sources</div>
                             <div style="font-size:10px;color:#6b7280;">Gemini found</div>
                         </div>
+                        <div style="background:#0a1628;border:1px solid #1f2937;border-radius:8px;padding:12px;text-align:center;">
+                            <div style="font-size:1.4rem;">\${(brief.passages_to_add||[]).length}</div>
+                            <div style="font-size:11px;font-weight:700;color:#fbbf24;margin-top:4px;">Passages to add</div>
+                            <div style="font-size:10px;color:#6b7280;">Extracted from AIO</div>
+                        </div>
+                        <div style="background:#0a1628;border:1px solid #1f2937;border-radius:8px;padding:12px;text-align:center;">
+                            <div style="font-size:1.4rem;">\${(brief.structural_fixes||[]).length}</div>
+                            <div style="font-size:11px;font-weight:700;color:#38bdf8;margin-top:4px;">Structural fixes</div>
+                            <div style="font-size:10px;color:#6b7280;">Format changes</div>
+                        </div>
                     </div>\`;
 
                     // ── Freshness warning ─────────────────────────────────────────
@@ -23358,17 +23368,6 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                             \${groundingSources.slice(0,5).map((s,i) => '<div style="font-size:11px;padding:4px 0;border-bottom:1px solid #1f2937;color:#9ca3af;"><span style="color:#38bdf8;font-weight:700;">'+(i===0?'→ ':'  ')+'</span><a href="'+s.url+'" target="_blank" style="color:#38bdf8;word-break:break-all;">'+s.url.replace(/^https?:\\/\\//,'').substring(0,70)+'</a> <span style="color:#374151;">'+s.title+'</span></div>').join('')}
                         </div>\`;
                     }
-                        <div style="background:#0a1628;border:1px solid #1f2937;border-radius:8px;padding:12px;text-align:center;">
-                            <div style="font-size:1.4rem;">\${(brief.passages_to_add||[]).length}</div>
-                            <div style="font-size:11px;font-weight:700;color:#fbbf24;margin-top:4px;">Passages to add</div>
-                            <div style="font-size:10px;color:#6b7280;">Extracted from AIO</div>
-                        </div>
-                        <div style="background:#0a1628;border:1px solid #1f2937;border-radius:8px;padding:12px;text-align:center;">
-                            <div style="font-size:1.4rem;">\${(brief.structural_fixes||[]).length}</div>
-                            <div style="font-size:11px;font-weight:700;color:#38bdf8;margin-top:4px;">Structural fixes</div>
-                            <div style="font-size:10px;color:#6b7280;">Format changes</div>
-                        </div>
-                    </div>\`;
 
                     // ── AI Overview text ─────────────────────────────────────────
                     if (aio.text) {
