@@ -1071,6 +1071,8 @@ const title = (html.match(/<title>([^<]+)<\/title>/) || [])[1]?.replace(/ — Co
    await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS serp_spy JSONB`).catch(()=>{});
    await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS serp_spy_at TIMESTAMPTZ`).catch(()=>{});
    await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS import_batch VARCHAR(50)`).catch(()=>{});
+  await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS html_source VARCHAR(20) DEFAULT 'live'`).catch(()=>{});
+  await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS html_pasted_at TIMESTAMPTZ`).catch(()=>{});
 
    await client.query(`CREATE TABLE IF NOT EXISTS tracker_snapshots (
      id SERIAL PRIMARY KEY,
@@ -1099,6 +1101,7 @@ const title = (html.match(/<title>([^<]+)<\/title>/) || [])[1]?.replace(/ — Co
    await client.query(`ALTER TABLE tracker_snapshots ADD COLUMN IF NOT EXISTS graaf_recommendations JSONB`).catch(()=>{});
    // Content change detection
    await client.query(`ALTER TABLE tracker_snapshots ADD COLUMN IF NOT EXISTS content_changed BOOLEAN DEFAULT FALSE`).catch(()=>{});
+  await client.query(`ALTER TABLE tracker_snapshots ADD COLUMN IF NOT EXISTS content_diff JSONB`).catch(()=>{});
 
    await client.query(`CREATE TABLE IF NOT EXISTS tracker_changes (
      id SERIAL PRIMARY KEY,
@@ -23102,6 +23105,160 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                         </div>
                     </div>
                 </div>
+
+                <!-- ── CITATION BRIEF MODAL ──────────────────────────────────────── -->
+                <div id="trCitationModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:10000;align-items:center;justify-content:center;" onclick="if(event.target===this)closeCitationModal()">
+                    <div style="background:#0d1117;border:1px solid #1f2937;border-radius:16px;padding:0;width:min(820px,97vw);max-height:92vh;overflow:hidden;display:flex;flex-direction:column;" onclick="event.stopPropagation()">
+                        <!-- Header -->
+                        <div style="padding:20px 24px;border-bottom:1px solid #1f2937;display:flex;justify-content:space-between;align-items:center;background:#111827;flex-shrink:0;">
+                            <div>
+                                <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.12em;color:#a78bfa;margin-bottom:4px;">🎯 AI CITATION BRIEF</div>
+                                <h3 id="trCitationTitle" style="font-weight:700;font-size:1rem;color:#f1f5f9;">Loading…</h3>
+                            </div>
+                            <button onclick="closeCitationModal()" style="background:none;border:none;color:#6b7280;font-size:1.4rem;cursor:pointer;">✕</button>
+                        </div>
+                        <!-- Body -->
+                        <div id="trCitationBody" style="overflow-y:auto;padding:24px;flex:1;">
+                            <div style="text-align:center;padding:60px 0;color:#6b7280;">
+                                <div style="font-size:2rem;margin-bottom:12px;">⚙️</div>
+                                <div>Loading citation brief…</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <script>
+                // ── Citation Brief ────────────────────────────────────────────────
+                function openCitationBrief(pageId, url, keyword) {
+                    const modal = document.getElementById('trCitationModal');
+                    const title = document.getElementById('trCitationTitle');
+                    const body  = document.getElementById('trCitationBody');
+                    title.textContent = keyword + ' — ' + url.replace(/^https?:\\/\\//, '').split('/').slice(0,2).join('/');
+                    body.innerHTML = \`<div style="text-align:center;padding:60px 0;color:#6b7280;"><div style="font-size:2rem;margin-bottom:12px;animation:spin 1s linear infinite;">⚙️</div><div style="margin-top:8px;font-size:13px;">Fetching AI Overview · Scraping competitors · Generating citation brief…</div><div style="font-size:11px;color:#4b5563;margin-top:6px;">This takes 15–30 seconds</div></div>
+                    <style>@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}</style>\`;
+                    modal.style.display = 'flex';
+
+                    const adminToken = localStorage.getItem('admin_token') || '';
+                    fetch('/api/tracker/pages/' + pageId + '/citation-brief', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'x-admin-token': adminToken }
+                    })
+                    .then(r => r.json())
+                    .then(data => {
+                        if (!data.success) {
+                            body.innerHTML = \`<div style="color:#f87171;padding:20px;">\${data.error || 'Failed to generate citation brief'}</div>\`;
+                            return;
+                        }
+                        renderCitationBrief(data, body);
+                    })
+                    .catch(e => {
+                        body.innerHTML = \`<div style="color:#f87171;padding:20px;">Error: \${e.message}</div>\`;
+                    });
+                }
+
+                function closeCitationModal() {
+                    document.getElementById('trCitationModal').style.display = 'none';
+                }
+
+                function renderCitationBrief(data, container) {
+                    const brief = data.brief || {};
+                    const aio = data.ai_overview || {};
+                    const competitors = data.competitors || [];
+
+                    let html = '';
+
+                    // ── AI Overview Status ────────────────────────────────────────
+                    const aioFound = aio.found;
+                    const aioCited = aio.cited;
+                    html += \`<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:20px;">
+                        <div style="background:#0a1628;border:1px solid \${aioFound?'#1e3a5f':'#1f2937'};border-radius:8px;padding:12px;text-align:center;">
+                            <div style="font-size:1.4rem;">\${aioFound?(aioCited?'✅':'⚠️'):'❌'}</div>
+                            <div style="font-size:11px;font-weight:700;color:\${aioCited?'#4ade80':aioFound?'#fbbf24':'#f87171'};margin-top:4px;">AI Overview</div>
+                            <div style="font-size:10px;color:#6b7280;">\${aioCited?'Cited':'Not cited'}</div>
+                        </div>
+                        <div style="background:#0a1628;border:1px solid #1f2937;border-radius:8px;padding:12px;text-align:center;">
+                            <div style="font-size:1.4rem;">\${data.google_position ? '#'+data.google_position : '—'}</div>
+                            <div style="font-size:11px;font-weight:700;color:#a78bfa;margin-top:4px;">Google Pos</div>
+                            <div style="font-size:10px;color:#6b7280;">Current ranking</div>
+                        </div>
+                        <div style="background:#0a1628;border:1px solid #1f2937;border-radius:8px;padding:12px;text-align:center;">
+                            <div style="font-size:1.4rem;">\${(brief.passages_to_add||[]).length}</div>
+                            <div style="font-size:11px;font-weight:700;color:#fbbf24;margin-top:4px;">Passages to add</div>
+                            <div style="font-size:10px;color:#6b7280;">Extracted from AIO</div>
+                        </div>
+                        <div style="background:#0a1628;border:1px solid #1f2937;border-radius:8px;padding:12px;text-align:center;">
+                            <div style="font-size:1.4rem;">\${(brief.structural_fixes||[]).length}</div>
+                            <div style="font-size:11px;font-weight:700;color:#38bdf8;margin-top:4px;">Structural fixes</div>
+                            <div style="font-size:10px;color:#6b7280;">Format changes</div>
+                        </div>
+                    </div>\`;
+
+                    // ── AI Overview text ─────────────────────────────────────────
+                    if (aio.text) {
+                        html += \`<div style="background:#0c1a0c;border:1px solid #166534;border-radius:8px;padding:16px;margin-bottom:20px;">
+                            <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:#4ade80;margin-bottom:8px;">📋 CURRENT AI OVERVIEW TEXT (what Google is showing)</div>
+                            <div style="font-size:13px;color:#d1fae5;line-height:1.7;white-space:pre-wrap;">\${aio.text}</div>
+                            \${aio.source_url ? \`<div style="font-size:11px;color:#6b7280;margin-top:8px;">Source cited: <a href="\${aio.source_url}" target="_blank" style="color:#38bdf8;">\${aio.source_url}</a></div>\` : ''}
+                        </div>\`;
+                    }
+
+                    // ── Passages to add ──────────────────────────────────────────
+                    if ((brief.passages_to_add||[]).length) {
+                        html += \`<div style="margin-bottom:20px;">
+                            <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:#fbbf24;margin-bottom:12px;">✍️ PASSAGES TO ADD TO YOUR HTML</div>
+                            <div style="font-size:11px;color:#6b7280;margin-bottom:10px;">These passages were extracted from the AI Overview or top-cited competitor. Add them verbatim or improved to your page — in a direct answer box, FAQ, or as a dedicated paragraph.</div>\`;
+                        (brief.passages_to_add||[]).forEach((p,i) => {
+                            html += \`<div style="background:#111827;border:1px solid #374151;border-left:3px solid #fbbf24;border-radius:0 8px 8px 0;padding:14px;margin-bottom:10px;">
+                                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                                    <span style="font-size:10px;font-weight:700;color:#fbbf24;text-transform:uppercase;">Passage \${i+1} · \${p.type||'content'}</span>
+                                    <span style="font-size:10px;color:#6b7280;">Where: <span style="color:#a78bfa;">\${p.placement||'after H1'}</span></span>
+                                </div>
+                                <div style="font-size:13px;color:#e5e7eb;line-height:1.7;margin-bottom:10px;background:#0d1117;padding:10px 12px;border-radius:6px;font-style:italic;">\${p.passage}</div>
+                                \${p.why ? \`<div style="font-size:11px;color:#9ca3af;">💡 Why: \${p.why}</div>\` : ''}
+                                \${p.improved_version ? \`<div style="font-size:11px;color:#4ade80;margin-top:8px;font-weight:600;">✅ Improved version (use this):</div><div style="font-size:13px;color:#d1fae5;background:#052e16;padding:10px 12px;border-radius:6px;margin-top:4px;line-height:1.7;">\${p.improved_version}</div>\` : ''}
+                            </div>\`;
+                        });
+                        html += '</div>';
+                    }
+
+                    // ── Structural fixes ─────────────────────────────────────────
+                    if ((brief.structural_fixes||[]).length) {
+                        html += \`<div style="margin-bottom:20px;">
+                            <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:#38bdf8;margin-bottom:12px;">🔧 STRUCTURAL FIXES (format changes that trigger AI extraction)</div>\`;
+                        (brief.structural_fixes||[]).forEach(f => {
+                            html += \`<div style="background:#111827;border:1px solid #1f2937;border-left:3px solid #38bdf8;border-radius:0 8px 8px 0;padding:12px 14px;margin-bottom:8px;">
+                                <div style="font-size:12px;font-weight:700;color:#e5e7eb;margin-bottom:4px;">\${f.fix}</div>
+                                <div style="font-size:11px;color:#9ca3af;">\${f.reason}</div>
+                                \${f.example ? \`<div style="font-size:11px;color:#6b7280;margin-top:6px;font-family:monospace;background:#0d1117;padding:8px;border-radius:4px;">\${f.example}</div>\` : ''}
+                            </div>\`;
+                        });
+                        html += '</div>';
+                    }
+
+                    // ── Competitor source ────────────────────────────────────────
+                    if (brief.citation_source) {
+                        html += \`<div style="background:#1a0a2e;border:1px solid #4c1d95;border-radius:8px;padding:14px;margin-bottom:20px;">
+                            <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:#a78bfa;margin-bottom:8px;">🏆 PAGE BEING CITED INSTEAD OF YOU</div>
+                            <div style="font-size:13px;color:#e5e7eb;">\${brief.citation_source.domain}</div>
+                            <div style="font-size:11px;color:#6b7280;margin-top:4px;">\${brief.citation_source.why_cited||''}</div>
+                            <div style="font-size:11px;color:#9ca3af;margin-top:8px;">Key difference: <span style="color:#c4b5fd;">\${brief.citation_source.key_difference||''}</span></div>
+                        </div>\`;
+                    }
+
+                    // ── Copy all passages button ─────────────────────────────────
+                    const allPassages = (brief.passages_to_add||[]).map((p,i) =>
+                        '--- PASSAGE ' + (i+1) + ' (' + (p.placement||'after H1') + ') ---\\n' +
+                        (p.improved_version || p.passage) + '\\n'
+                    ).join('\\n');
+                    if (allPassages) {
+                        html += \`<div style="text-align:center;padding-top:8px;">
+                            <button onclick="navigator.clipboard.writeText(\\\`\${allPassages.replace(/\`/g,"'")}\\\`).then(()=>this.textContent='✅ Copied!').catch(()=>this.textContent='Copy failed')" class="tr-btn primary" style="font-size:12px;">📋 Copy All Passages to Clipboard</button>
+                        </div>\`;
+                    }
+
+                    container.innerHTML = html;
+                }
+                </script>
             </div>
 
             <!-- ENGINE ACCESS CODES -->
@@ -24174,6 +24331,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 +changesBtn
                 +'<button onclick="runManualCheck('+p.id+')" class="tr-btn green" id="trCheckBtn_'+p.id+'">Check now</button>'
                 +'<button onclick="openHtmlModal('+p.id+')" class="tr-btn">Update HTML</button>'
+                +'<button onclick="openCitationBrief('+p.id+','+JSON.stringify(p.url||'')+','+JSON.stringify(p.keyword||'')+')" class="tr-btn" style="border-color:#a78bfa;color:#a78bfa;" title="Reverse-engineer AI Overview and get exact passages to add">🎯 Citation</button>'
                 +'<button onclick="deleteTrackerPage('+p.id+')" class="tr-btn danger">✕</button>'
                 +'</div>'
                 +'<div style="font-size:11px;color:#6b7280;text-align:right;">'
@@ -24782,6 +24940,230 @@ Return ONLY a JSON object:
 });
 
 // ── Push to Rewrite (pre-fills Rewrite tab with current data) ────────────────
+// ── POST /api/tracker/pages/:id/citation-brief ───────────────────────────────
+// Reverse-engineers AI Overview and generates exact passages to add to HTML
+app.post('/api/tracker/pages/:id/citation-brief', verifyEngineAccess, async (req, res) => {
+  try {
+    const eu = req.engineUser;
+    const pageId = parseInt(req.params.id);
+    let r;
+    if (eu.isAdmin) {
+      r = await pool.query('SELECT * FROM tracker_pages WHERE id=$1', [pageId]);
+    } else {
+      r = await pool.query('SELECT * FROM tracker_pages WHERE id=$1 AND engine_code_id=$2', [pageId, eu.codeId]);
+    }
+    if (!r.rows.length) return res.status(404).json({ success: false, error: 'Page not found' });
+    const page = r.rows[0];
+
+    // Get latest snapshot for AI Overview data
+    const snapR = await pool.query(
+      `SELECT * FROM tracker_snapshots WHERE page_id=$1 ORDER BY checked_at DESC LIMIT 1`, [pageId]
+    );
+    const snap = snapR.rows[0] || {};
+
+    const keyword = page.keyword || '';
+    const pageUrl = page.url || '';
+    const serperKey = process.env.SERPAPI_KEY || '';
+    const anthropicKey = process.env.ANTHROPIC_API_KEY || '';
+
+    if (!anthropicKey) return res.status(503).json({ success: false, error: 'ANTHROPIC_API_KEY not configured' });
+    if (!keyword) return res.status(400).json({ success: false, error: 'No keyword set for this page' });
+
+    // ── Step 1: Fetch fresh AI Overview from Serper ───────────────────────────
+    let aioText = snap.ai_google_overview_text || '';
+    let aioFound = snap.ai_google_overview_found || false;
+    let aioCited = snap.ai_google_overview_cited || false;
+    let aioSourceUrl = '';
+    let googlePosition = snap.google_position || null;
+    let serpCompetitors = [];
+    const domain = pageUrl.replace(/^https?:\/\//, '').split('/')[0].replace(/^www\./, '');
+
+    if (serperKey) {
+      try {
+        const ctrl = new AbortController(); setTimeout(() => ctrl.abort(), 15000);
+        const sResp = await fetch('https://google.serper.dev/search', {
+          method: 'POST',
+          headers: { 'X-API-KEY': serperKey, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ q: keyword, num: 10, hl: 'en', gl: 'us' }),
+          signal: ctrl.signal
+        });
+        if (sResp.ok) {
+          const sData = await sResp.json();
+          const organic = sData.organic || [];
+          const ab = sData.answerBox || null;
+          // Position
+          for (let i = 0; i < organic.length; i++) {
+            const link = (organic[i].link || '').replace(/^https?:\/\//, '').replace(/\/$/, '');
+            if (link.includes(domain)) { googlePosition = organic[i].position || i + 1; break; }
+          }
+          // AI Overview text
+          if (ab) {
+            aioFound = true;
+            aioText = ab.answer || ab.snippet || ab.title || JSON.stringify(ab).substring(0, 600);
+            aioSourceUrl = ab.link || (ab.sitelinks && ab.sitelinks[0] && ab.sitelinks[0].link) || '';
+            aioCited = (JSON.stringify(ab)).includes(domain);
+          }
+          // Top 5 competitors
+          serpCompetitors = organic.slice(0, 5).map(r => ({
+            url: r.link, domain: (r.link||'').replace(/^https?:\/\//,'').split('/')[0].replace(/^www\./,''),
+            title: r.title, snippet: r.snippet || '', position: r.position
+          }));
+        }
+      } catch(e) { console.warn('[citation-brief] Serper failed:', e.message); }
+    }
+
+    // ── Step 2: Scrape cited source page if found ────────────────────────────
+    let citedPageText = '';
+    if (aioSourceUrl && aioSourceUrl.length > 10 && !aioSourceUrl.includes(domain)) {
+      try {
+        const sc = await scrapeBodyText(aioSourceUrl, 5000);
+        citedPageText = sc.text || '';
+      } catch(e) {}
+    } else if (serpCompetitors.length) {
+      // Try to scrape the #1 competitor
+      try {
+        const top = serpCompetitors.find(c => !c.url.includes(domain));
+        if (top) {
+          const sc = await scrapeBodyText(top.url, 5000);
+          citedPageText = sc.text || '';
+        }
+      } catch(e) {}
+    }
+
+    // ── Step 3: Get our current page content ─────────────────────────────────
+    let ourPageText = '';
+    if (page.html_content) {
+      ourPageText = page.html_content
+        .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+        .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+        .replace(/<[^>]+>/g, ' ')
+        .replace(/\s+/g, ' ').trim().substring(0, 4000);
+    }
+
+    // ── Step 4: Claude generates citation brief ──────────────────────────────
+    const prompt = `You are an AI citation specialist. Your job: reverse-engineer exactly why the AI Overview exists and what our page must contain to be cited instead.
+
+KEYWORD: "${keyword}"
+OUR URL: ${pageUrl}
+OUR POSITION: ${googlePosition ? '#' + googlePosition : 'not in top 10'}
+CITED IN AI OVERVIEW: ${aioCited ? 'YES (good!)' : 'NO'}
+
+${aioText ? `CURRENT AI OVERVIEW TEXT (what Google is displaying right now):
+"${aioText}"
+
+SOURCE BEING CITED: ${aioSourceUrl || 'unknown'}` : 'NO AI OVERVIEW EXISTS YET for this keyword.'}
+
+${citedPageText ? `COMPETITOR/CITED PAGE CONTENT (what the cited source contains):
+${citedPageText.substring(0, 2500)}` : ''}
+
+COMPETITOR SNIPPETS IN SERP:
+${serpCompetitors.slice(0,3).map((c,i) => `#${c.position} ${c.domain}: "${c.snippet}"`).join('\n')}
+
+OUR CURRENT PAGE CONTENT:
+${ourPageText || '(no HTML stored — paste HTML first for accurate analysis)'}
+
+YOUR TASK:
+1. Extract the exact passages/sentences from the AI Overview or cited page that Google used to build its answer
+2. For each passage: write an IMPROVED version that is more extractable, more specific, and better structured for AI citation
+3. Identify structural changes our HTML needs (direct answer box, FAQ schema, speakable schema, etc.)
+4. Identify the #1 reason we are not being cited
+5. If no AI Overview exists: analyze what format/content would trigger one
+
+Return ONLY valid JSON:
+{
+  "citation_source": {
+    "domain": "domain being cited",
+    "why_cited": "one sentence why Google chose this page",
+    "key_difference": "the main structural/content difference vs our page"
+  },
+  "passages_to_add": [
+    {
+      "type": "direct_answer|statistic|definition|how_to|faq_answer",
+      "passage": "exact passage extracted from AI Overview or competitor",
+      "improved_version": "our better version — more specific, same answer, stronger E-E-A-T signals",
+      "placement": "immediately after H1|in FAQ section|as H2 answer paragraph|in TL;DR",
+      "why": "why this passage triggers AI citation (what signal it provides)"
+    }
+  ],
+  "structural_fixes": [
+    {
+      "fix": "specific HTML/structural change",
+      "reason": "why this change makes content more extractable by AI systems",
+      "example": "exact HTML example if applicable"
+    }
+  ],
+  "primary_reason_not_cited": "the single most important reason",
+  "confidence": "high|medium|low",
+  "estimated_impact": "description of expected citation improvement"
+}`;
+
+    const ctrl2 = new AbortController(); setTimeout(() => ctrl2.abort(), 55000);
+    const aResp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': anthropicKey, 'anthropic-version': '2023-06-01' },
+      body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 4000, messages: [{ role: 'user', content: prompt }] }),
+      signal: ctrl2.signal
+    });
+    const aData = await aResp.json().catch(() => ({}));
+    if (!aResp.ok) return res.status(502).json({ success: false, error: (aData.error && aData.error.message) || 'Claude error ' + aResp.status });
+
+    const rawText = (aData.content || []).filter(b => b.type === 'text').map(b => b.text).join('');
+    let brief = null;
+    try {
+      const m = rawText.match(/\{[\s\S]*\}/);
+      if (m) brief = JSON.parse(m[0]);
+    } catch(e) { brief = { raw: rawText.substring(0, 1000) }; }
+
+    // Save brief to page record for future reference
+    await pool.query(
+      `UPDATE tracker_pages SET serp_spy = COALESCE(serp_spy, '{}'::jsonb) || $1::jsonb WHERE id=$2`,
+      [JSON.stringify({ citation_brief: brief, citation_brief_at: new Date().toISOString() }), pageId]
+    ).catch(() => {});
+
+    res.json({
+      success: true,
+      page_id: pageId,
+      keyword,
+      url: pageUrl,
+      google_position: googlePosition,
+      ai_overview: { found: aioFound, cited: aioCited, text: aioText, source_url: aioSourceUrl },
+      competitors: serpCompetitors,
+      brief
+    });
+  } catch(e) {
+    console.error('[citation-brief]', e);
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// ── GET /api/tracker/domains — distinct domains for filter dropdown ─────────app.get('/api/tracker/domains', verifyEngineAccess, async (req, res) => {
+  try {
+    const eu = req.engineUser;
+    let q, params = [];
+    if (eu.isAdmin) {
+      q = `SELECT DISTINCT
+             regexp_replace(regexp_replace(url, '^https?://', ''), '/.*$', '') AS domain,
+             COUNT(*) as page_count,
+             ec.client_name
+           FROM tracker_pages p
+           LEFT JOIN engine_access_codes ec ON ec.id = p.engine_code_id
+           GROUP BY domain, ec.client_name
+           ORDER BY page_count DESC`;
+    } else {
+      q = `SELECT DISTINCT
+             regexp_replace(regexp_replace(url, '^https?://', ''), '/.*$', '') AS domain,
+             COUNT(*) as page_count
+           FROM tracker_pages
+           WHERE engine_code_id = $1
+           GROUP BY domain
+           ORDER BY page_count DESC`;
+      params = [eu.codeId];
+    }
+    const r = await pool.query(q, params);
+    res.json({ success: true, domains: r.rows });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
 app.get('/api/tracker/pages', verifyEngineAccess, async (req, res) => {
   try {
     // Guard: check if tracker_pages table exists
@@ -24798,6 +25180,8 @@ app.get('/api/tracker/pages', verifyEngineAccess, async (req, res) => {
       throw tableErr;
     }
     const profileId = req.query.profile_id;
+    const domainFilter = req.query.domain || null;      // e.g. "contentscale.site"
+    const clientFilter = req.query.client_name || null; // admin: filter by engine_client_name
     const eu = req.engineUser;
     const isAdmin = eu && eu.isAdmin;
     const codeId = eu && eu.codeId;
@@ -24809,9 +25193,15 @@ app.get('/api/tracker/pages', verifyEngineAccess, async (req, res) => {
     const ADMIN_COLS = COLS + `, ec.client_name AS engine_client_name, ec.code AS engine_code`;
     let q, params = [];
     if (isAdmin) {
-      // Admin sees all pages with client name, optionally filtered by profile
-      if (profileId) { q = `SELECT ${ADMIN_COLS} FROM tracker_pages p LEFT JOIN engine_access_codes ec ON ec.id=p.engine_code_id WHERE p.profile_id=$1 ORDER BY p.created_at DESC`; params = [profileId]; }
-      else { q = `SELECT ${ADMIN_COLS} FROM tracker_pages p LEFT JOIN engine_access_codes ec ON ec.id=p.engine_code_id ORDER BY p.created_at DESC`; }
+      // Admin sees all pages with client name, optionally filtered by profile/domain/client
+      const whereClauses = [];
+      const adminParams = [];
+      if (profileId) { adminParams.push(profileId); whereClauses.push(`p.profile_id=$${adminParams.length}`); }
+      if (domainFilter) { adminParams.push('%' + domainFilter + '%'); whereClauses.push(`p.url ILIKE $${adminParams.length}`); }
+      if (clientFilter) { adminParams.push('%' + clientFilter + '%'); whereClauses.push(`ec.client_name ILIKE $${adminParams.length}`); }
+      const whereStr = whereClauses.length ? 'WHERE ' + whereClauses.join(' AND ') : '';
+      q = `SELECT ${ADMIN_COLS} FROM tracker_pages p LEFT JOIN engine_access_codes ec ON ec.id=p.engine_code_id ${whereStr} ORDER BY p.created_at DESC`;
+      params = adminParams;
     } else {
       // Engine users see only their own pages
       // profile_id filter: match exact profile_id OR pages with no profile assigned (backward compat)
@@ -24856,18 +25246,21 @@ app.post('/api/tracker/pages', verifyEngineAccess, async (req, res) => {
     const codeId = (eu && !eu.isAdmin) ? eu.codeId : null;
     const cleanUrl = url.startsWith('http') ? url : 'https://' + url;
     const derivedSlug = slug || cleanUrl.split('/').filter(Boolean).pop() || '/';
+    const htmlSourceType = html_content && html_content.trim().length > 200 ? 'manual' : 'live';
 
     let r, isUpdate = false;
     try {
       // Try INSERT first
       r = await pool.query(
-        `INSERT INTO tracker_pages (engine_code_id, profile_id, url, slug, title, keyword, html_content, check_frequency, next_check_at, gsc_impressions, gsc_clicks, gsc_position, gsc_ctr, gsc_queries, gsc_pages, gsc_keyword)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8, NOW(), $9,$10,$11,$12,$13,$14,$15) RETURNING *`,
+        `INSERT INTO tracker_pages (engine_code_id, profile_id, url, slug, title, keyword, html_content, check_frequency, next_check_at, gsc_impressions, gsc_clicks, gsc_position, gsc_ctr, gsc_queries, gsc_pages, gsc_keyword, html_source, html_pasted_at)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8, NOW(), $9,$10,$11,$12,$13,$14,$15,$16,$17) RETURNING *`,
         [codeId, profile_id||null, cleanUrl, derivedSlug, title||null, keyword||null, html_content||null, check_frequency,
          parseInt(gsc_impressions) || null, parseInt(gsc_clicks) || null, parseFloat(gsc_position) || null, parseFloat(gsc_ctr) || null,
          gsc_queries ? JSON.stringify(gsc_queries) : null,
          gsc_pages ? JSON.stringify(gsc_pages) : null,
-         gsc_keyword || null]
+         gsc_keyword || null,
+         htmlSourceType,
+         htmlSourceType === 'manual' ? new Date() : null]
       );
     } catch(insertErr) {
       // Unique constraint — URL already exists for this engine. Update instead.
@@ -24888,6 +25281,8 @@ app.post('/api/tracker/pages', verifyEngineAccess, async (req, res) => {
              gsc_queries = COALESCE($11, gsc_queries),
              gsc_pages = COALESCE($12, gsc_pages),
              gsc_keyword = COALESCE($13, gsc_keyword),
+             html_source = CASE WHEN $5 IS NOT NULL THEN $16 ELSE html_source END,
+             html_pasted_at = CASE WHEN $5 IS NOT NULL AND $16 = 'manual' THEN NOW() ELSE html_pasted_at END,
              updated_at = NOW()
            WHERE (engine_code_id = $14 OR ($14 IS NULL AND engine_code_id IS NULL))
              AND url = $15
@@ -24897,7 +25292,7 @@ app.post('/api/tracker/pages', verifyEngineAccess, async (req, res) => {
            gsc_queries ? JSON.stringify(gsc_queries) : null,
            gsc_pages ? JSON.stringify(gsc_pages) : null,
            gsc_keyword || null,
-           codeId, cleanUrl]
+           codeId, cleanUrl, htmlSourceType]
         );
       } else {
         throw insertErr;
@@ -25063,10 +25458,20 @@ app.get('/api/tracker/pages/:id/changes', verifyEngineAccess, async (req, res) =
       if (!own.rows.length) return res.status(403).json({ success: false, error: 'Not found or access denied' });
     }
     const r = await pool.query(
-      `SELECT * FROM tracker_changes WHERE page_id=$1 ORDER BY changed_at DESC LIMIT 100`,
+      `SELECT tc.*, ts.content_diff, ts.html_hash, ts.score as snapshot_score
+       FROM tracker_changes tc
+       LEFT JOIN tracker_snapshots ts ON ts.id = tc.snapshot_id
+       WHERE tc.page_id=$1 ORDER BY tc.changed_at DESC LIMIT 100`,
       [req.params.id]
     );
-    res.json({ success: true, changes: r.rows });
+    // Also fetch the two most recent snapshots for a direct diff view
+    const snapshots = await pool.query(
+      `SELECT id, checked_at, html_hash, score, content_changed, content_diff, google_position,
+              ai_google_overview_cited, ai_perplexity_cited
+       FROM tracker_snapshots WHERE page_id=$1 ORDER BY checked_at DESC LIMIT 2`,
+      [req.params.id]
+    );
+    res.json({ success: true, changes: r.rows, recent_snapshots: snapshots.rows });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
@@ -25160,6 +25565,34 @@ app.get('/api/tracker/pages/:id/check-status', verifyEngineAccess, async (req, r
 });
 
 // ── Manual check trigger ──────────────────────────────────────────────────────
+
+
+// ── PATCH /api/tracker/pages/:id/html — paste updated HTML, always sticky ──
+app.patch('/api/tracker/pages/:id/html', verifyEngineAccess, async (req, res) => {
+  try {
+    const eu = req.engineUser;
+    const pageId = parseInt(req.params.id);
+    if (!eu.isAdmin) {
+      const own = await pool.query('SELECT id FROM tracker_pages WHERE id=$1 AND engine_code_id=$2', [pageId, eu.codeId]);
+      if (!own.rows.length) return res.status(403).json({ success: false, error: 'Not found or access denied' });
+    }
+    const { html_content } = req.body;
+    if (!html_content || html_content.trim().length < 100) {
+      return res.status(400).json({ success: false, error: 'html_content required (min 100 chars)' });
+    }
+    const crypto = require('crypto');
+    const newHash = crypto.createHash('sha256').update(html_content).digest('hex').substring(0, 16);
+    const r = await pool.query(
+      `UPDATE tracker_pages
+       SET html_content=$1, html_source='manual', html_pasted_at=NOW(),
+           last_page_hash=$2, updated_at=NOW()
+       WHERE id=$3 RETURNING id, url, html_source, html_pasted_at`,
+      [html_content, newHash, pageId]
+    );
+    if (!r.rows.length) return res.status(404).json({ success: false, error: 'Page not found' });
+    res.json({ success: true, page: r.rows[0], hash: newHash, message: 'HTML saved as manual baseline — will not be overwritten by live fetch' });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
 
 app.post('/api/tracker/pages/:id/check', verifyEngineAccess, async (req, res) => {
   try {
@@ -25931,11 +26364,15 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
     snapshot.graaf_recommendations = graafRecs;
 
     // Bewaar de html_content ALLEEN als het betrouwbaar is, of als er niets beters is.
-    // Handmatig geplakte HTML wordt NIET overschreven door een suspicious fetch.
+    // FIX: Handmatig geplakte HTML (html_source='manual') wordt NOOIT overschreven door een live fetch.
+    // Een gebruiker die HTML plakt bedoelt die te bewaren als baseline voor change detection.
+    const isManualHtml = page.html_source === 'manual';
     const shouldSaveHtml = (
-      fetchReliable ||                     // goede fetch → altijd opslaan
-      !page.html_content ||                // geen cache → sla toch op
-      (effectiveHtml === page.html_content) // al dezelfde → niets veranderd
+      !isManualHtml && (                   // nooit overschrijven als handmatig geplakt
+        fetchReliable ||                   // goede fetch → opslaan
+        !page.html_content ||              // geen cache → sla toch op
+        (effectiveHtml === page.html_content) // al dezelfde → niets veranderd
+      )
     );
     if (shouldSaveHtml) {
       await pool.query(
@@ -26238,10 +26675,16 @@ Zero generic advice. Skip anything our content already clearly has.`;
   // 6. Save snapshot
   // Content change detection: did hash change since last check?
   let contentChanged = false;
+  let contentDiff = null;
   if (effectiveHash && page.last_page_hash) {
     contentChanged = effectiveHash !== page.last_page_hash;
+    // If content changed, compute text diff vs previous html_content
+    if (contentChanged && page.html_content && effectiveHtml && effectiveHtml !== page.html_content) {
+      try { contentDiff = computeTextDiff(page.html_content, effectiveHtml); } catch(e) {}
+    }
   }
   snapshot.content_changed = contentChanged;
+  snapshot.content_diff = contentDiff;
 
   _trSetStep(pageId, 'save', 'running', 'Saving results to database…');
   // Safely stringify JSONB fields — prevents "invalid input syntax for type json"
@@ -26257,8 +26700,8 @@ Zero generic advice. Skip anything our content already clearly has.`;
     `INSERT INTO tracker_snapshots
       (page_id,checked_at,google_position,ai_google_overview_found,ai_google_overview_cited,ai_google_overview_text,
        ai_perplexity_found,ai_perplexity_cited,ai_perplexity_text,ai_bing_found,ai_bing_cited,ai_bing_text,
-       recommendations,html_hash,score,graaf_breakdown,graaf_recommendations,content_changed)
-     VALUES ($1,NOW(),$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17) RETURNING *`,
+       recommendations,html_hash,score,graaf_breakdown,graaf_recommendations,content_changed,content_diff)
+     VALUES ($1,NOW(),$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18) RETURNING *`,
     [page.id, snapshot.google_position, snapshot.ai_google_overview_found, snapshot.ai_google_overview_cited,
      snapshot.ai_google_overview_text, snapshot.ai_perplexity_found, snapshot.ai_perplexity_cited,
      snapshot.ai_perplexity_text, snapshot.ai_bing_found, snapshot.ai_bing_cited, snapshot.ai_bing_text,
@@ -26267,7 +26710,8 @@ Zero generic advice. Skip anything our content already clearly has.`;
      snapshot.score,
      safeJSONB(snapshot.graaf_breakdown),
      safeJSONB(snapshot.graaf_recommendations),
-     contentChanged]
+     contentChanged,
+     safeJSONB(contentDiff)]
   );
   const snapId = snapR.rows[0].id;
   _trSetStep(pageId, 'save', 'done', 'Snapshot #' + snapId + ' saved');
@@ -26343,6 +26787,38 @@ Zero generic advice. Skip anything our content already clearly has.`;
 
   _trSetStep(pageId, 'complete', 'done', 'Check finished — pos:' + (snapshot.google_position||'—') + ' · GRAAF:' + (snapshot.score||'—') + '/100 · AIO:' + (snapshot.ai_google_overview_cited?'✅':'❌') + ' · Perplexity:' + (snapshot.ai_perplexity_cited?'✅':'❌') + ' · You.com:' + (snapshot.ai_bing_cited?'✅':'❌'));
   console.log(`[tracker] Check complete for ${page.url} — position:${snapshot.google_position}, GRAAF:${snapshot.score}, AI Overview:${snapshot.ai_google_overview_cited}`);
+}
+
+
+// ── Simple text diff for content change detection ────────────────────────────
+function computeTextDiff(oldHtml, newHtml) {
+  if (!oldHtml || !newHtml) return null;
+  function extractText(html) {
+    return html
+      .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+      .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/\s+/g, ' ').trim();
+  }
+  const oldText = extractText(oldHtml);
+  const newText = extractText(newHtml);
+  const oldWords = new Set(oldText.toLowerCase().split(/\s+/).filter(w => w.length > 4));
+  const newWords = new Set(newText.toLowerCase().split(/\s+/).filter(w => w.length > 4));
+  const added = [...newWords].filter(w => !oldWords.has(w)).slice(0, 20);
+  const removed = [...oldWords].filter(w => !newWords.has(w)).slice(0, 20);
+  const oldLen = oldText.split(/\s+/).length;
+  const newLen = newText.split(/\s+/).length;
+  const wordCountDelta = newLen - oldLen;
+  const changePct = oldLen > 0 ? Math.round(Math.abs(wordCountDelta) / oldLen * 100) : 0;
+  return {
+    words_added: added,
+    words_removed: removed,
+    word_count_before: oldLen,
+    word_count_after: newLen,
+    word_count_delta: wordCountDelta,
+    change_percent: changePct,
+    significant: changePct >= 10 || added.length >= 10 || removed.length >= 10
+  };
 }
 
 // ── Automated scheduler — adaptive, runs every 15min, respects classification ───
