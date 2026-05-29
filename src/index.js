@@ -23277,6 +23277,15 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     document.getElementById('trCitationModal').style.display = 'none';
                 }
 
+                function copyAllPassages(btn) {
+                    const text = window._citationPassages || '';
+                    if (!text) return;
+                    navigator.clipboard.writeText(text).then(function() {
+                        btn.textContent = '✅ Copied!';
+                        setTimeout(function() { btn.textContent = '📋 Copy All Passages to Clipboard'; }, 2000);
+                    }).catch(function() { btn.textContent = 'Copy failed'; });
+                }
+
                 function renderCitationBrief(data, container) {
                     const brief = data.brief || {};
                     const aio = data.ai_overview || {};
@@ -23452,10 +23461,8 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                         (p.improved_version || p.passage) + '\\n'
                     ).join('\\n');
                     if (allPassages) {
-                        const escapedPassages = allPassages.replace(/'/g, "\\'");
-                        html += '<div style="text-align:center;padding-top:8px;">'
-                            + '<button onclick="navigator.clipboard.writeText(\'' + escapedPassages + '\').then(function(){this.textContent=\'✅ Copied!\';}).catch(function(){this.textContent=\'Copy failed\'})" class="tr-btn primary" style="font-size:12px;">📋 Copy All Passages to Clipboard</button>'
-                            + '</div>';
+                        window._citationPassages = allPassages;
+                        html += '<div style="text-align:center;padding-top:8px;"><button onclick="copyAllPassages(this)" class="tr-btn primary" style="font-size:12px;">📋 Copy All Passages to Clipboard</button></div>';
                     }
 
                     container.innerHTML = html;
