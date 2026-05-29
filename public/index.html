@@ -4282,7 +4282,7 @@
          if (section === 'experts') loadFreelancers();
          if (section === 'templates') loadUserTemplates();
          const main = document.getElementById('main-content');
-         if (main) main.scrollIntoView({ behavior: 'smooth', block: 'start' });
+         // No auto-scroll — user keeps their position when switching sections
          }
          async function submitFreelancer() {
          const name = document.getElementById('freelancerName').value;
