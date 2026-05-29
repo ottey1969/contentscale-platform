@@ -382,31 +382,7 @@ function _trackAiCall(provider, model, success, errorMsg, durationMs) {
   if (_aiProviderHistory.length > 50) _aiProviderHistory.pop();
 }
 
-// Admin endpoint — provider status dashboard
-app.get('/api/admin/ai-status', verifyAdmin, (req, res) => {
-  const status = {};
-  for (const [key, s] of Object.entries(_aiProviderStatus)) {
-    const minsSinceOk = s.lastOkAt ? Math.round((Date.now() - s.lastOkAt) / 60000) : null;
-    const minsSinceError = s.lastErrorAt ? Math.round((Date.now() - new Date(s.lastErrorAt).getTime()) / 60000) : null;
-    status[key] = {
-      ...s,
-      health: s.ok ? (s.consecutiveErrors > 0 ? 'degraded' : 'healthy') : 'down',
-      minsSinceLastOk: minsSinceOk,
-      minsSinceLastError: minsSinceError,
-    };
-  }
-  // Add key configuration status — which APIs are actually set up
-  const keyStatus = {
-    gemini:      !!process.env.GEMINI_API_KEY,
-    anthropic:   !!process.env.ANTHROPIC_API_KEY,
-    serper:      !!process.env.SERPAPI_KEY,
-    perplexity:  !!process.env.PERPLEXITY_API_KEY,
-    bing:        !!process.env.BING_SEARCH_API_KEY,
-    brave:       !!process.env.BRAVE_SEARCH_API_KEY,
-    you:         !!process.env.YOU_API_KEY,
-  };
-  res.json({ success: true, status, history: _aiProviderHistory.slice(0, 20), key_status: keyStatus });
-});
+
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // callClaudeForWrite — ALL writing goes through Claude
@@ -2205,6 +2181,32 @@ if (!sessionToken) {
 res.json({ success: true, admin_id: sessionToken });
 } catch (e) { res.status(500).json({ success: false, error: 'Server error' }); }
 });
+// Admin endpoint — provider status dashboard
+app.get('/api/admin/ai-status', verifyAdmin, (req, res) => {
+  const status = {};
+  for (const [key, s] of Object.entries(_aiProviderStatus)) {
+    const minsSinceOk = s.lastOkAt ? Math.round((Date.now() - s.lastOkAt) / 60000) : null;
+    const minsSinceError = s.lastErrorAt ? Math.round((Date.now() - new Date(s.lastErrorAt).getTime()) / 60000) : null;
+    status[key] = {
+      ...s,
+      health: s.ok ? (s.consecutiveErrors > 0 ? 'degraded' : 'healthy') : 'down',
+      minsSinceLastOk: minsSinceOk,
+      minsSinceLastError: minsSinceError,
+    };
+  }
+  // Add key configuration status — which APIs are actually set up
+  const keyStatus = {
+    gemini:      !!process.env.GEMINI_API_KEY,
+    anthropic:   !!process.env.ANTHROPIC_API_KEY,
+    serper:      !!process.env.SERPAPI_KEY,
+    perplexity:  !!process.env.PERPLEXITY_API_KEY,
+    bing:        !!process.env.BING_SEARCH_API_KEY,
+    brave:       !!process.env.BRAVE_SEARCH_API_KEY,
+    you:         !!process.env.YOU_API_KEY,
+  };
+  res.json({ success: true, status, history: _aiProviderHistory.slice(0, 20), key_status: keyStatus });
+});
+
 app.post('/api/admin/logout', verifyAdmin, async (req, res) => {
   try {
     await pool.query('UPDATE super_admins SET session_token = NULL WHERE id = $1', [req.admin.id]);
