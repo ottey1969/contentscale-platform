@@ -342,6 +342,8 @@ const _aiProviderStatus = {
   perplexity:     { ok: true, lastError: null, lastErrorAt: null, errorCount: 0, lastOkAt: Date.now(), consecutiveErrors: 0 },
   claude:         { ok: true, lastError: null, lastErrorAt: null, errorCount: 0, lastOkAt: Date.now(), consecutiveErrors: 0 },
   serper:         { ok: true, lastError: null, lastErrorAt: null, errorCount: 0, lastOkAt: Date.now(), consecutiveErrors: 0 },
+  bing:           { ok: true, lastError: null, lastErrorAt: null, errorCount: 0, lastOkAt: Date.now(), consecutiveErrors: 0 },
+  brave:          { ok: true, lastError: null, lastErrorAt: null, errorCount: 0, lastOkAt: Date.now(), consecutiveErrors: 0 },
 };
 const _aiProviderHistory = []; // last 50 calls
 
@@ -350,6 +352,10 @@ function _trackAiCall(provider, model, success, errorMsg, durationMs) {
     : model && (model.includes('gemini') || model.includes('Gemini')) ? 'gemini_primary'
     : model && model.includes('perplexity') ? 'perplexity'
     : model && model.includes('claude') ? 'claude'
+    : model && model.includes('bing') ? 'bing'
+    : model && model.includes('brave') ? 'brave'
+    : provider === 'bing' ? 'bing'
+    : provider === 'brave' ? 'brave'
     : provider || 'gemini_primary';
 
   const s = _aiProviderStatus[key] || _aiProviderStatus['gemini_primary'];
@@ -389,7 +395,17 @@ app.get('/api/admin/ai-status', verifyAdmin, (req, res) => {
       minsSinceLastError: minsSinceError,
     };
   }
-  res.json({ success: true, status, history: _aiProviderHistory.slice(0, 20) });
+  // Add key configuration status — which APIs are actually set up
+  const keyStatus = {
+    gemini:      !!process.env.GEMINI_API_KEY,
+    anthropic:   !!process.env.ANTHROPIC_API_KEY,
+    serper:      !!process.env.SERPAPI_KEY,
+    perplexity:  !!process.env.PERPLEXITY_API_KEY,
+    bing:        !!process.env.BING_SEARCH_API_KEY,
+    brave:       !!process.env.BRAVE_SEARCH_API_KEY,
+    you:         !!process.env.YOU_API_KEY,
+  };
+  res.json({ success: true, status, history: _aiProviderHistory.slice(0, 20), key_status: keyStatus });
 });
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -23085,14 +23101,17 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                         if (!pills) return;
                         const labels = {
                             gemini_primary: 'Gemini Pro', gemini_flash: 'Gemini Flash',
-                            perplexity: 'Perplexity', claude: 'Claude', serper: 'Serper'
+                            perplexity: 'Perplexity', claude: 'Claude (AI)',
+                            serper: 'Serper/Google', bing: 'Bing/Copilot', brave: 'Brave/Claude'
                         };
-                        const colors = { healthy: '#166534', degraded: '#854d0e', down: '#7f1d1d' };
-                        const textColors = { healthy: '#4ade80', degraded: '#fbbf24', down: '#f87171' };
+                        const keyMap = { gemini_primary: 'gemini', gemini_flash: 'gemini', perplexity: 'perplexity', claude: 'anthropic', serper: 'serper', bing: 'bing', brave: 'brave' };
+                        const colors = { healthy: '#166534', degraded: '#854d0e', down: '#7f1d1d', unconfigured: '#1f2937' };
+                        const textColors = { healthy: '#4ade80', degraded: '#fbbf24', down: '#f87171', unconfigured: '#4b5563' };
                         pills.innerHTML = Object.entries(data.status || {}).map(([key, s]) => {
-                            const health = s.health || (s.ok ? 'healthy' : 'down');
-                            const icon = health === 'healthy' ? '●' : health === 'degraded' ? '◐' : '○';
-                            const tip = s.lastError ? s.lastError.substring(0,80) : 'OK';
+                            const configured = data.key_status && data.key_status[keyMap[key]];
+                            const health = !configured ? 'unconfigured' : (s.health || (s.ok ? 'healthy' : 'down'));
+                            const icon = health === 'healthy' ? '●' : health === 'unconfigured' ? '○' : health === 'degraded' ? '◐' : '✕';
+                            const tip = !configured ? 'Not configured — add key to Railway' : (s.lastError ? s.lastError.substring(0,80) : 'OK');
                             return \`<span title="\${tip}" style="font-size:10px;font-weight:700;padding:3px 8px;border-radius:4px;background:\${colors[health]||'#374151'};color:\${textColors[health]||'#9ca3af'};cursor:default;">\${icon} \${labels[key]||key}</span>\`;
                         }).join('');
                     } catch(e) {}
@@ -23253,23 +23272,84 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     const brief = data.brief || {};
                     const aio = data.ai_overview || {};
                     const competitors = data.competitors || [];
+                    const aioStatus = brief._aio_status || {};
+                    const freshness = brief._freshness || {};
+                    const introWeight = brief._intro_weight || {};
+                    const groundingSources = brief._grounding_sources || [];
 
                     let html = '';
+
+                    // ── Model used banner ─────────────────────────────────────────
+                    if (data.model_used) {
+                        const isGrounded = data.model_used.includes('two-step') || data.model_used.includes('grounding');
+                        html += \`<div style="font-size:10px;font-weight:700;padding:4px 10px;border-radius:4px;background:\${isGrounded?'#052e16':'#1a0a2e'};color:\${isGrounded?'#4ade80':'#a78bfa'};display:inline-block;margin-bottom:14px;">\${isGrounded?'🔍 Gemini searched Google live (Search Grounding)':'⚡ '+data.model_used}</div>\`;
+                    }
 
                     // ── AI Overview Status ────────────────────────────────────────
                     const aioFound = aio.found;
                     const aioCited = aio.cited;
+
+                    // Show clear status for no AIO
+                    if (!aioFound) {
+                        html += \`<div style="background:#1c1009;border:1px solid #78350f;border-radius:8px;padding:14px 16px;margin-bottom:16px;">
+                            <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:#f59e0b;margin-bottom:6px;">⚠️ NO AI OVERVIEW DETECTED AT THIS MOMENT</div>
+                            <div style="font-size:12px;color:#d97706;line-height:1.6;">\${aioStatus.note||'AI Overviews appear on ~15-48% of queries and change ~12x per month. This is normal.'}</div>
+                            <div style="font-size:11px;color:#92400e;margin-top:6px;">\${aioStatus.action||'The brief below is based on competitor analysis — implement it to be ready when the AIO appears.'}</div>
+                        </div>\`;
+                    }
+
                     html += \`<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:20px;">
                         <div style="background:#0a1628;border:1px solid \${aioFound?'#1e3a5f':'#1f2937'};border-radius:8px;padding:12px;text-align:center;">
                             <div style="font-size:1.4rem;">\${aioFound?(aioCited?'✅':'⚠️'):'❌'}</div>
-                            <div style="font-size:11px;font-weight:700;color:\${aioCited?'#4ade80':aioFound?'#fbbf24':'#f87171'};margin-top:4px;">AI Overview</div>
-                            <div style="font-size:10px;color:#6b7280;">\${aioCited?'Cited':'Not cited'}</div>
+                            <div style="font-size:11px;font-weight:700;color:\${aioCited?'#4ade80':aioFound?'#fbbf24':'#6b7280'};margin-top:4px;">AI Overview</div>
+                            <div style="font-size:10px;color:#6b7280;">\${aioCited?'Cited':aioFound?'Not cited':'Not found'}</div>
                         </div>
                         <div style="background:#0a1628;border:1px solid #1f2937;border-radius:8px;padding:12px;text-align:center;">
                             <div style="font-size:1.4rem;">\${data.google_position ? '#'+data.google_position : '—'}</div>
                             <div style="font-size:11px;font-weight:700;color:#a78bfa;margin-top:4px;">Google Pos</div>
                             <div style="font-size:10px;color:#6b7280;">Current ranking</div>
                         </div>
+                        <div style="background:#0a1628;border:1px solid \${freshness.at_risk?'#7f1d1d':'#1f2937'};border-radius:8px;padding:12px;text-align:center;">
+                            <div style="font-size:1.4rem;">\${freshness.content_age_days ? freshness.content_age_days+'d' : '?'}</div>
+                            <div style="font-size:11px;font-weight:700;color:\${freshness.at_risk?'#f87171':'#6b7280'};margin-top:4px;">Content Age</div>
+                            <div style="font-size:10px;color:#6b7280;">\${freshness.at_risk?'⚠️ Citation risk':'Within window'}</div>
+                        </div>
+                        <div style="background:#0a1628;border:1px solid #1f2937;border-radius:8px;padding:12px;text-align:center;">
+                            <div style="font-size:1.4rem;">\${(brief.passages_to_add||[]).length}</div>
+                            <div style="font-size:11px;font-weight:700;color:#fbbf24;margin-top:4px;">Passages to add</div>
+                            <div style="font-size:10px;color:#6b7280;">Extracted from AIO</div>
+                        </div>
+                        <div style="background:#0a1628;border:1px solid #1f2937;border-radius:8px;padding:12px;text-align:center;">
+                            <div style="font-size:1.4rem;">\${groundingSources.length || '—'}</div>
+                            <div style="font-size:11px;font-weight:700;color:#38bdf8;margin-top:4px;">Live sources</div>
+                            <div style="font-size:10px;color:#6b7280;">Gemini found</div>
+                        </div>
+                    </div>\`;
+
+                    // ── Freshness warning ─────────────────────────────────────────
+                    if (freshness.at_risk) {
+                        html += \`<div style="background:#2d0a0a;border:1px solid #7f1d1d;border-left:3px solid #f87171;border-radius:0 8px 8px 0;padding:12px 14px;margin-bottom:16px;">
+                            <div style="font-size:11px;font-weight:700;color:#f87171;margin-bottom:4px;">⏰ FRESHNESS WARNING</div>
+                            <div style="font-size:12px;color:#fca5a5;">\${freshness.message}</div>
+                        </div>\`;
+                    }
+
+                    // ── Intro weight warning ──────────────────────────────────────
+                    if (introWeight.note && !introWeight.has_direct_answer_in_intro) {
+                        html += \`<div style="background:#1c1009;border:1px solid #92400e;border-left:3px solid #fbbf24;border-radius:0 8px 8px 0;padding:12px 14px;margin-bottom:16px;">
+                            <div style="font-size:11px;font-weight:700;color:#fbbf24;margin-bottom:4px;">📍 INTRO WEIGHT ISSUE</div>
+                            <div style="font-size:12px;color:#fcd34d;">\${introWeight.note}</div>
+                        </div>\`;
+                    }
+
+                    // ── Grounding sources ─────────────────────────────────────────
+                    if (groundingSources.length) {
+                        html += \`<div style="background:#0a1628;border:1px solid #1e3a5f;border-radius:8px;padding:14px;margin-bottom:16px;">
+                            <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:#38bdf8;margin-bottom:8px;">🔍 URLS GEMINI RETRIEVED FROM GOOGLE SEARCH</div>
+                            <div style="font-size:11px;color:#6b7280;margin-bottom:8px;">\${brief._grounding_note||''}</div>
+                            \${groundingSources.slice(0,5).map((s,i) => '<div style="font-size:11px;padding:4px 0;border-bottom:1px solid #1f2937;color:#9ca3af;"><span style="color:#38bdf8;font-weight:700;">'+(i===0?'→ ':'  ')+'</span><a href="'+s.url+'" target="_blank" style="color:#38bdf8;word-break:break-all;">'+s.url.replace(/^https?:\\/\\//,'').substring(0,70)+'</a> <span style="color:#374151;">'+s.title+'</span></div>').join('')}
+                        </div>\`;
+                    }
                         <div style="background:#0a1628;border:1px solid #1f2937;border-radius:8px;padding:12px;text-align:center;">
                             <div style="font-size:1.4rem;">\${(brief.passages_to_add||[]).length}</div>
                             <div style="font-size:11px;font-weight:700;color:#fbbf24;margin-top:4px;">Passages to add</div>
@@ -23297,10 +23377,21 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                             <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:#fbbf24;margin-bottom:12px;">✍️ PASSAGES TO ADD TO YOUR HTML</div>
                             <div style="font-size:11px;color:#6b7280;margin-bottom:10px;">These passages were extracted from the AI Overview or top-cited competitor. Add them verbatim or improved to your page — in a direct answer box, FAQ, or as a dedicated paragraph.</div>\`;
                         (brief.passages_to_add||[]).forEach((p,i) => {
+                            const platformTags = (p.platforms||[]).map(pl =>
+                                '<span style="font-size:9px;font-weight:700;padding:1px 6px;border-radius:3px;margin-right:3px;background:' +
+                                (pl==='google'?'#1e3a5f':pl==='perplexity'?'#1e1b4b':'#052e16') + ';color:' +
+                                (pl==='google'?'#38bdf8':pl==='perplexity'?'#a78bfa':'#4ade80') + ';">' + pl.toUpperCase() + '</span>'
+                            ).join('');
                             html += \`<div style="background:#111827;border:1px solid #374151;border-left:3px solid #fbbf24;border-radius:0 8px 8px 0;padding:14px;margin-bottom:10px;">
-                                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-                                    <span style="font-size:10px;font-weight:700;color:#fbbf24;text-transform:uppercase;">Passage \${i+1} · \${p.type||'content'}</span>
-                                    <span style="font-size:10px;color:#6b7280;">Where: <span style="color:#a78bfa;">\${p.placement||'after H1'}</span></span>
+                                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:6px;">
+                                    <div style="display:flex;align-items:center;gap:6px;">
+                                        <span style="font-size:10px;font-weight:700;color:#fbbf24;text-transform:uppercase;">Passage \${i+1} · \${p.type||'content'}</span>
+                                        \${platformTags}
+                                    </div>
+                                    <div style="display:flex;gap:8px;align-items:center;">
+                                        \${p.word_count_target ? '<span style="font-size:10px;color:#6b7280;">Target: <span style="color:#fbbf24;">'+p.word_count_target+' words</span></span>' : ''}
+                                        <span style="font-size:10px;color:#6b7280;">Where: <span style="color:#a78bfa;">\${p.placement||'after H1'}</span></span>
+                                    </div>
                                 </div>
                                 <div style="font-size:13px;color:#e5e7eb;line-height:1.7;margin-bottom:10px;background:#0d1117;padding:10px 12px;border-radius:6px;font-style:italic;">\${p.passage}</div>
                                 \${p.why ? \`<div style="font-size:11px;color:#9ca3af;">💡 Why: \${p.why}</div>\` : ''}
@@ -23324,13 +23415,26 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                         html += '</div>';
                     }
 
-                    // ── Competitor source ────────────────────────────────────────
+                    // ── Citation source ──────────────────────────────────────
                     if (brief.citation_source) {
-                        html += \`<div style="background:#1a0a2e;border:1px solid #4c1d95;border-radius:8px;padding:14px;margin-bottom:20px;">
+                        html += \`<div style="background:#1a0a2e;border:1px solid #4c1d95;border-radius:8px;padding:14px;margin-bottom:16px;">
                             <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:#a78bfa;margin-bottom:8px;">🏆 PAGE BEING CITED INSTEAD OF YOU</div>
                             <div style="font-size:13px;color:#e5e7eb;">\${brief.citation_source.domain}</div>
                             <div style="font-size:11px;color:#6b7280;margin-top:4px;">\${brief.citation_source.why_cited||''}</div>
                             <div style="font-size:11px;color:#9ca3af;margin-top:8px;">Key difference: <span style="color:#c4b5fd;">\${brief.citation_source.key_difference||''}</span></div>
+                        </div>\`;
+                    }
+
+                    // ── Platform gaps ─────────────────────────────────────────
+                    if (brief.platform_gaps) {
+                        const gaps = brief.platform_gaps;
+                        html += \`<div style="background:#111827;border:1px solid #1f2937;border-radius:8px;padding:14px;margin-bottom:16px;">
+                            <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:#6b7280;margin-bottom:10px;">🎯 WHY YOU'RE NOT CITED — PER PLATFORM</div>
+                            \${gaps.google_aio ? '<div style="display:flex;gap:8px;margin-bottom:8px;"><span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:3px;background:#1e3a5f;color:#38bdf8;white-space:nowrap;">Google AIO</span><span style="font-size:12px;color:#9ca3af;">'+gaps.google_aio+'</span></div>' : ''}
+                            \${gaps.chatgpt ? '<div style="display:flex;gap:8px;margin-bottom:8px;"><span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:3px;background:#1e3a5f;color:#60a5fa;white-space:nowrap;">ChatGPT</span><span style="font-size:12px;color:#9ca3af;">'+gaps.chatgpt+'</span></div>' : ''}
+                            \${gaps.perplexity ? '<div style="display:flex;gap:8px;margin-bottom:8px;"><span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:3px;background:#1e1b4b;color:#a78bfa;white-space:nowrap;">Perplexity</span><span style="font-size:12px;color:#9ca3af;">'+gaps.perplexity+'</span></div>' : ''}
+                            \${gaps.copilot_bing ? '<div style="display:flex;gap:8px;margin-bottom:8px;"><span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:3px;background:#0c2340;color:#38bdf8;white-space:nowrap;">Copilot/Bing</span><span style="font-size:12px;color:#9ca3af;">'+gaps.copilot_bing+'</span></div>' : ''}
+                            \${gaps.claude_brave ? '<div style="display:flex;gap:8px;"><span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:3px;background:#1a0a0a;color:#f87171;white-space:nowrap;">Claude/Brave</span><span style="font-size:12px;color:#9ca3af;">'+gaps.claude_brave+'</span></div>' : ''}
                         </div>\`;
                     }
 
@@ -25115,110 +25219,262 @@ app.post('/api/tracker/pages/:id/citation-brief', verifyEngineAccess, async (req
       try { const sc = await scrapeBodyText(citedUrl, 4000); citedPageText = sc.text || ''; } catch(e) {}
     }
 
+    // ── Step 3b: Perplexity live citation check ───────────────────────────────
+    let perplexityCited = snap.ai_perplexity_cited || false;
+    let perplexityText = snap.ai_perplexity_text || '';
+    let perplexityCitations = [];
+    const perplexityKey = resolvePerplexityKey(req) || process.env.PERPLEXITY_API_KEY || '';
+    if (perplexityKey) {
+      try {
+        const t_px = Date.now();
+        const pxResp = await fetch('https://api.perplexity.ai/chat/completions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + perplexityKey },
+          body: JSON.stringify({ model: 'sonar', messages: [{ role: 'user', content: keyword }], max_tokens: 800, return_citations: true }),
+          signal: AbortSignal.timeout(20000)
+        });
+        _trackAiCall('perplexity', 'perplexity-sonar', pxResp.ok, pxResp.ok ? null : 'HTTP '+pxResp.status, Date.now()-t_px);
+        if (pxResp.ok) {
+          const pxData = await pxResp.json();
+          perplexityCitations = pxData.citations || [];
+          const answerText = pxData.choices?.[0]?.message?.content || '';
+          perplexityCited = perplexityCitations.some(c => (c||'').includes(domain)) || answerText.includes(domain);
+          perplexityText = answerText.substring(0, 500);
+        }
+      } catch(e) { _trackAiCall('perplexity', 'perplexity-sonar', false, e.message, 0); }
+    }
+
+    // ── Step 3c: Bing Search API — covers Microsoft Copilot ──────────────────
+    // ChatGPT Plus now uses Google (same as Serper above), Copilot uses Bing
+    let copilotCited = false;
+    let copilotText = '';
+    let copilotCitations = [];
+    const bingApiKey = process.env.BING_SEARCH_API_KEY || '';
+    if (bingApiKey) {
+      try {
+        const t_bing = Date.now();
+        const bResp = await fetch(
+          'https://api.bing.microsoft.com/v7.0/search?q=' + encodeURIComponent(keyword) + '&count=10&mkt=en-US',
+          { headers: { 'Ocp-Apim-Subscription-Key': bingApiKey }, signal: AbortSignal.timeout(10000) }
+        );
+        _trackAiCall('bing', 'bing-api', bResp.ok, bResp.ok ? null : 'HTTP '+bResp.status, Date.now()-t_bing);
+        if (bResp.ok) {
+          const bData = await bResp.json();
+          const webPages = (bData.webPages && bData.webPages.value) || [];
+          copilotCitations = webPages.map(p => p.url || '').filter(Boolean);
+          copilotCited = copilotCitations.some(u => u.includes(domain));
+          // Check if domain appears in top 5 Bing results
+          const top5 = webPages.slice(0, 5).map(p => p.url || '');
+          copilotText = 'Bing top results: ' + top5.slice(0, 3).map(u => u.replace(/^https?:\/\//, '').split('/')[0]).join(', ');
+          console.log('[citation-brief] Bing/Copilot: cited=' + copilotCited + ', results=' + webPages.length);
+        }
+      } catch(e) { console.warn('[citation-brief] Bing API failed:', e.message); }
+    }
+
+    // ── Step 3d: Brave Search API — covers Claude (Anthropic uses Brave) ─────
+    let claudeCited = false;
+    let claudeText = '';
+    let claudeCitations = [];
+    const braveKey = process.env.BRAVE_SEARCH_API_KEY || '';
+    if (braveKey) {
+      try {
+        const t_brave = Date.now();
+        const brResp = await fetch(
+          'https://api.search.brave.com/res/v1/web/search?q=' + encodeURIComponent(keyword) + '&count=10',
+          { headers: { 'Accept': 'application/json', 'Accept-Encoding': 'gzip', 'X-Subscription-Token': braveKey }, signal: AbortSignal.timeout(10000) }
+        );
+        _trackAiCall('brave', 'brave-api', brResp.ok, brResp.ok ? null : 'HTTP '+brResp.status, Date.now()-t_brave);
+        if (brResp.ok) {
+          const brData = await brResp.json();
+          const results = (brData.web && brData.web.results) || [];
+          claudeCitations = results.map(r => r.url || '').filter(Boolean);
+          claudeCited = claudeCitations.some(u => u.includes(domain));
+          claudeText = 'Brave top results: ' + claudeCitations.slice(0, 3).map(u => u.replace(/^https?:\/\//, '').split('/')[0]).join(', ');
+          console.log('[citation-brief] Brave/Claude: cited=' + claudeCited + ', results=' + results.length);
+        }
+      } catch(e) { console.warn('[citation-brief] Brave API failed:', e.message); }
+    }
+
     // ── Step 4a: Gemini 2.5 Pro with Google Search Grounding ─────────────────
-    // Gemini can search Google natively — no Serper needed for the analysis
     let brief = null;
     let modelUsed = null;
 
-    const briefPrompt = `You are an AI citation specialist. Analyze why this page is NOT appearing in Google AI Overviews and generate exact passages to add.
+    const briefPrompt = `You are an AI citation specialist. Your goal: reverse-engineer why this page is NOT cited across Google AI Overview, Perplexity, and ChatGPT/Bing — and generate exact passages to add.
 
 KEYWORD: "${keyword}"
 OUR URL: ${pageUrl}
 OUR POSITION: ${googlePosition ? '#' + googlePosition : 'not in top 10'}
-CITED IN AI OVERVIEW: ${aioCited ? 'YES' : 'NO'}
-${aioText ? 'CURRENT AI OVERVIEW TEXT: "' + aioText + '"' : 'NO AI OVERVIEW EXISTS YET.'}
-${aioSourceUrl ? 'SOURCE BEING CITED INSTEAD: ' + aioSourceUrl : ''}
 
-COMPETITOR SNIPPETS:
+CITATION STATUS ACROSS ALL AI PLATFORMS:
+- Google AI Overview: ${aioCited ? '✅ CITED' : aioFound ? '⚠️ Overview exists — NOT cited' : '❌ No AI Overview detected'}
+- Perplexity: ${perplexityCited ? '✅ CITED' : perplexityKey ? '❌ NOT cited' : '⚠️ No key configured'}
+- ChatGPT Plus (Google): ${aioCited ? '✅ Likely cited (uses Google)' : '❌ Likely not cited (uses Google index)'}
+- Copilot/Bing: ${copilotCited ? '✅ CITED' : bingApiKey ? '❌ NOT in Bing top 10' : '⚠️ No Bing API key'}
+- Claude (Brave): ${claudeCited ? '✅ CITED' : braveKey ? '❌ NOT in Brave top 10' : '⚠️ No Brave API key'}
+
+${aioText ? 'GOOGLE AI OVERVIEW TEXT: "' + aioText + '"' : ''}
+${aioSourceUrl ? 'GOOGLE CITING: ' + aioSourceUrl : ''}
+${perplexityText ? 'PERPLEXITY ANSWER: "' + perplexityText + '"' : ''}
+${perplexityCitations.length ? 'PERPLEXITY CITING: ' + perplexityCitations.slice(0,3).join(', ') : ''}
+${copilotText ? 'BING/COPILOT: ' + copilotText : ''}
+${claudeText ? 'BRAVE/CLAUDE: ' + claudeText : ''}
+
+COMPETITOR SNIPPETS (Google SERP):
 ${serpCompetitors.slice(0,3).map(c => '#' + c.position + ' ' + c.domain + ': "' + c.snippet + '"').join('\n')}
 
 OUR CURRENT CONTENT:
 ${ourPageText || '(no HTML stored — paste HTML first)'}
 
-${citedPageText ? 'CITED COMPETITOR CONTENT:\n' + citedPageText.substring(0, 2000) : ''}
+${citedPageText ? 'TOP CITED COMPETITOR CONTENT:\n' + citedPageText.substring(0, 2000) : ''}
 
-TASK: Use Google Search to find the current AI Overview for "${keyword}" and analyze what content triggered it.
+KEY CITATION FACTS:
+- 44% of AI citations come from first 30% of page text — front-load the answer
+- Optimal passage: 134-167 words, self-contained, direct answer format
+- Content under 90 days = 3x more likely to be cited
+- Perplexity prefers specific data + expert attribution
+- ChatGPT/Bing prefer clear entity definitions + structured content
 
-Return ONLY valid JSON:
+TASK: Use Google Search to check current AI Overview for "${keyword}". Generate passages that work across ALL THREE platforms.
+
+Return ONLY valid JSON — no markdown:
 {
-  "citation_source": {
-    "domain": "domain being cited",
-    "why_cited": "one sentence why Google chose this page",
-    "key_difference": "main structural/content difference vs our page"
+  "citation_source": {"domain":"","why_cited":"","key_difference":""},
+  "platform_gaps": {
+    "google_aio": "specific reason not in Google AI Overview",
+    "perplexity": "specific reason not in Perplexity",
+    "chatgpt": "ChatGPT uses Google — same as Google AIO gap",
+    "copilot_bing": "specific reason not in Bing top 10 / Copilot",
+    "claude_brave": "specific reason not in Brave top 10 / Claude"
   },
   "passages_to_add": [
     {
       "type": "direct_answer|statistic|definition|how_to|faq_answer",
-      "passage": "exact passage from AI Overview or competitor",
-      "improved_version": "our better version — more specific, stronger E-E-A-T",
+      "passage": "exact passage from AI Overview or top cited source",
+      "improved_version": "our 134-167 word self-contained version — works for all 3 platforms",
       "placement": "immediately after H1|in FAQ section|as H2 answer paragraph|in TL;DR",
-      "why": "why this triggers AI citation"
+      "why": "why this triggers citation across Google + Perplexity + ChatGPT",
+      "word_count_target": 150,
+      "platforms": ["google","perplexity","chatgpt"]
     }
   ],
   "structural_fixes": [
-    {
-      "fix": "specific HTML/structural change",
-      "reason": "why this makes content extractable by AI",
-      "example": "HTML example"
-    }
+    {"fix":"","reason":"","example":"","platforms":["google","perplexity","chatgpt"]}
   ],
-  "primary_reason_not_cited": "single most important reason",
+  "primary_reason_not_cited": "",
+  "freshness_recommendation": "",
   "confidence": "high|medium|low",
-  "estimated_impact": "expected citation improvement",
+  "estimated_impact": "",
   "model_searched_google": true
 }`;
 
+    // ── TWO-STEP GEMINI: Step 1 = plain text with Search Grounding (preserves grounding_metadata)
+    //                    Step 2 = convert that text to structured JSON
+    // This is required because grounding_metadata citations are LOST when you ask for JSON directly.
+    // Source: https://www.cennest.com/making-sense-of-the-gemini-2-5-flash-with-google-grounding-source-urls/
+
+    let groundingChunks = [];  // real URLs Gemini found via Google Search
+    let groundingText = '';    // plain text analysis from step 1
+
     if (geminiKey) {
+
+      // ── STEP 4a-1: Gemini 2.5 Pro + Search Grounding → plain text ──────────
+      const step1Prompt = briefPrompt + '\n\nIMPORTANT: Respond in plain text/markdown only. DO NOT output JSON yet. Be specific about which pages Google currently cites for this keyword and why. Include direct quotes from the AI Overview if found.';
+
       try {
         const t2 = Date.now();
-        // Try Gemini 2.5 Pro with Google Search Grounding first
-        const gemResp = await fetch(
+        const gemResp1 = await fetch(
           'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=' + geminiKey,
           {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              contents: [{ role: 'user', parts: [{ text: briefPrompt }] }],
+              contents: [{ role: 'user', parts: [{ text: step1Prompt }] }],
               tools: [{ google_search: {} }],
-              generationConfig: { temperature: 0.2, maxOutputTokens: 4000 }
+              generationConfig: { temperature: 0.2, maxOutputTokens: 3000 }
             }),
             signal: AbortSignal.timeout(45000)
           }
         );
         const dur2 = Date.now() - t2;
-        if (gemResp.ok) {
-          const gemData = await gemResp.json();
-          const rawText = gemData.candidates?.[0]?.content?.parts?.filter(p => p.text).map(p => p.text).join('') || '';
-          const m = rawText.match(/\{[\s\S]*\}/);
-          if (m) { try { brief = JSON.parse(m[0]); brief.model_searched_google = true; } catch(e) {} }
-          modelUsed = 'gemini-2.5-pro-search-grounding';
-          _trackAiCall('gemini', 'gemini-2.5-pro', !!brief, brief ? null : 'JSON parse failed', dur2);
+        if (gemResp1.ok) {
+          const gemData1 = await gemResp1.json();
+          groundingText = gemData1.candidates?.[0]?.content?.parts?.filter(p => p.text).map(p => p.text).join('') || '';
+          // Extract grounding_metadata — real URLs Gemini actually searched
+          const gm = gemData1.candidates?.[0]?.groundingMetadata || {};
+          groundingChunks = (gm.groundingChunks || []).map(c => ({
+            url: c.web?.uri || '',
+            title: c.web?.title || ''
+          })).filter(c => c.url);
+          _trackAiCall('gemini', 'gemini-2.5-pro', groundingText.length > 100, groundingText.length > 100 ? null : 'empty response', dur2);
+          console.log('[citation-brief] Gemini Step1: ' + groundingText.length + ' chars, ' + groundingChunks.length + ' grounding sources');
         } else {
-          const errData = await gemResp.json().catch(() => ({}));
-          const errMsg = errData?.error?.message || 'HTTP ' + gemResp.status;
+          const errData = await gemResp1.json().catch(() => ({}));
+          const errMsg = errData?.error?.message || 'HTTP ' + gemResp1.status;
           _trackAiCall('gemini', 'gemini-2.5-pro', false, errMsg, dur2);
-          console.warn('[citation-brief] Gemini 2.5 Pro failed:', errMsg);
+          console.warn('[citation-brief] Gemini Step1 failed:', errMsg);
         }
       } catch(e) {
         _trackAiCall('gemini', 'gemini-2.5-pro', false, e.message, 0);
-        console.warn('[citation-brief] Gemini 2.5 Pro error:', e.message);
+        console.warn('[citation-brief] Gemini Step1 error:', e.message);
       }
 
-      // Step 4b: Fallback to Gemini Flash (no Search Grounding — uses Serper data) ─
-      if (!brief) {
+      // ── STEP 4a-2: Convert plain text analysis to structured JSON ───────────
+      if (groundingText.length > 100) {
+        const step2Prompt = 'Convert this citation analysis into the exact JSON format below. Use the analysis text as your source of truth.\n\nANALYSIS:\n' + groundingText + '\n\nGROUNDING SOURCES FOUND:\n' + groundingChunks.map((c,i) => (i+1)+'. '+c.url+' — '+c.title).join('\n') + '\n\nReturn ONLY this JSON (no markdown, no explanation):\n' + '{"citation_source":{"domain":"","why_cited":"","key_difference":""},"passages_to_add":[{"type":"direct_answer|statistic|definition|how_to|faq_answer","passage":"exact passage from AI Overview or top cited source","improved_version":"our better 134-167 word version","placement":"immediately after H1|in FAQ section|as H2 answer paragraph","why":"why this triggers AI citation","word_count_target":150}],"structural_fixes":[{"fix":"","reason":"","example":""}],"primary_reason_not_cited":"","freshness_issue":true,"intro_weight_issue":true,"confidence":"high|medium|low","estimated_impact":"","grounding_sources":["url1","url2"],"model_searched_google":true}';
+
         try {
           const t3 = Date.now();
+          const gemResp2 = await fetch(
+            'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + geminiKey,
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                contents: [{ role: 'user', parts: [{ text: step2Prompt }] }],
+                generationConfig: { temperature: 0.1, maxOutputTokens: 3000, responseMimeType: 'application/json' }
+              }),
+              signal: AbortSignal.timeout(30000)
+            }
+          );
+          const dur3 = Date.now() - t3;
+          if (gemResp2.ok) {
+            const gemData2 = await gemResp2.json();
+            const rawJson = gemData2.candidates?.[0]?.content?.parts?.[0]?.text || '';
+            try {
+              brief = JSON.parse(rawJson);
+              // Inject real grounding sources
+              if (groundingChunks.length) brief.grounding_sources = groundingChunks.map(c => c.url);
+              brief.model_searched_google = true;
+              modelUsed = 'gemini-2.5-pro+flash-two-step';
+              _trackAiCall('gemini', 'gemini-2.5-flash', true, null, dur3);
+            } catch(parseErr) {
+              // Try to extract JSON from the response
+              const m = rawJson.match(/\{[\s\S]*\}/);
+              if (m) { try { brief = JSON.parse(m[0]); brief.grounding_sources = groundingChunks.map(c => c.url); brief.model_searched_google = true; modelUsed = 'gemini-two-step'; } catch(e2) {} }
+              _trackAiCall('gemini', 'gemini-2.5-flash', !!brief, brief ? null : 'JSON parse failed', dur3);
+            }
+          }
+        } catch(e) {
+          _trackAiCall('gemini', 'gemini-2.5-flash', false, e.message, 0);
+          console.warn('[citation-brief] Gemini Step2 error:', e.message);
+        }
+      }
+
+      // ── STEP 4b: Fallback — Gemini Flash single-step (no Search Grounding) ──
+      if (!brief) {
+        try {
+          const t4 = Date.now();
           const flashResp = await callGeminiWithFallback(geminiKey, {
             contents: [{ role: 'user', parts: [{ text: briefPrompt }] }],
             generationConfig: { temperature: 0.2, maxOutputTokens: 4000 }
           }, 'gemini-2.5-flash', 'gemini-1.5-flash');
-          const dur3 = Date.now() - t3;
+          const dur4 = Date.now() - t4;
           if (flashResp.ok) {
             const rawText = flashResp.data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
             const m = rawText.match(/\{[\s\S]*\}/);
             if (m) { try { brief = JSON.parse(m[0]); } catch(e) {} }
-            modelUsed = flashResp.modelUsed || 'gemini-flash';
-            _trackAiCall('gemini', modelUsed, !!brief, brief ? null : 'JSON parse failed', dur3);
+            modelUsed = (flashResp.modelUsed || 'gemini-flash') + '-fallback';
+            _trackAiCall('gemini', modelUsed, !!brief, brief ? null : 'JSON parse failed', dur4);
           }
         } catch(e) {
           _trackAiCall('gemini', 'gemini-flash', false, e.message, 0);
@@ -25255,6 +25511,54 @@ Return ONLY valid JSON:
 
     if (!brief) {
       return res.status(502).json({ success: false, error: 'All AI providers failed. Check /api/admin/ai-status for details.' });
+    }
+
+    // ── Post-process brief: add research-based signals ────────────────────────
+    // 1. Freshness signal — content older than 90 days = citation cliff risk
+    const lastChecked = snap.checked_at ? new Date(snap.checked_at) : null;
+    const contentAgeDays = lastChecked ? Math.round((Date.now() - lastChecked.getTime()) / 86400000) : null;
+    brief._freshness = {
+      content_age_days: contentAgeDays,
+      at_risk: contentAgeDays !== null && contentAgeDays > 90,
+      message: contentAgeDays > 90
+        ? 'Content is ' + contentAgeDays + ' days old — 3x citation drop risk after 90 days. Add updated timestamp and refresh key statistics.'
+        : contentAgeDays !== null ? 'Content is ' + contentAgeDays + ' days old — within citation window.' : 'Age unknown — paste HTML to enable freshness detection.'
+    };
+
+    // 2. No AI Overview status — clear communication
+    if (!aioFound) {
+      brief._aio_status = {
+        found: false,
+        reason: 'No AI Overview detected for "' + keyword + '" at this moment.',
+        note: 'AI Overviews appear on ~15-48% of queries and change ~12x per month per keyword. This is normal — the brief is based on competitor analysis and what Google would likely cite. Run again in 24h to check if an AIO has appeared.',
+        action: 'The passages and structural fixes below are based on what top-ranking competitors have. Implement them to be ready when the AIO appears.'
+      };
+    } else {
+      brief._aio_status = {
+        found: true,
+        cited: aioCited,
+        source_url: aioSourceUrl,
+        note: aioCited
+          ? 'Your page IS cited in the current AI Overview. Monitor for changes — AIO citations change ~12x/month per keyword.'
+          : 'AI Overview exists but your page is NOT cited. The passages below are extracted from what Google is currently showing.'
+      };
+    }
+
+    // 3. Intro weight flag — 44% of citations come from first 30% of text
+    if (ourPageText) {
+      const words = ourPageText.split(/\s+/);
+      const first30pct = words.slice(0, Math.round(words.length * 0.3)).join(' ').toLowerCase();
+      const kw = (keyword || '').toLowerCase().split(' ')[0];
+      brief._intro_weight = {
+        has_direct_answer_in_intro: kw && first30pct.includes(kw) && first30pct.length > 200,
+        note: '44% of all AI citations come from the first 30% of page text. Your strongest claim and direct answer must be in the opening paragraphs.'
+      };
+    }
+
+    // 4. Grounding sources display
+    if (groundingChunks.length) {
+      brief._grounding_sources = groundingChunks;
+      brief._grounding_note = 'These are the URLs Gemini actually retrieved from Google Search when analyzing this keyword. The top source is likely what Google AI Overview is currently citing.';
     }
 
     // Save brief + which model was used
