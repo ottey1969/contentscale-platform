@@ -24353,7 +24353,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
             if(domSel) {
                 const domains = {};
                 allTrackerPages.forEach(function(p) {
-                    const d = (p.url||'').replace(/^https?:\/\//,'').split('/')[0].replace(/^www\./,'');
+                    const d = (p.url||'').split('//').pop().split('/')[0].replace('www.','');
                     if(d) domains[d] = (domains[d]||0) + 1;
                 });
                 const prevDom = domSel.value;
@@ -24446,7 +24446,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
             // Apply client + domain filter
             let filtered = allTrackerPages;
             if(_trClientFilter) filtered = filtered.filter(function(p){ return (p.engine_client_name||'__admin__') === _trClientFilter; });
-            if(_trDomainFilter) filtered = filtered.filter(function(p){ return (p.url||'').replace(/^https?:\/\//,'').split('/')[0].replace(/^www\./,'') === _trDomainFilter; });
+            if(_trDomainFilter) filtered = filtered.filter(function(p){ return (p.url||'').split('//').pop().split('/')[0].replace('www.','') === _trDomainFilter; });
             const countEl = document.getElementById('trFilterCount');
             const activeFilters = [_trClientFilter, _trDomainFilter].filter(Boolean).length;
             if(countEl) countEl.textContent = activeFilters ? 'Showing ' + filtered.length + ' of ' + allTrackerPages.length + ' pages' : '';
