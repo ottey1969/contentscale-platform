@@ -26636,7 +26636,15 @@ async function runTrackerCheck(page, geminiKey, keys, forceRescan = false) {
     score: null
   };
 
-  const keyword   = page.keyword;
+  // Derive keyword — priority: manual keyword > GSC keyword > URL slug > title
+  let keyword = page.keyword || page.gsc_keyword || '';
+  if (!keyword && page.url) {
+    const slug = page.url.replace(/\/$/, '').split('/').pop() || '';
+    keyword = slug.replace(/[-_]/g, ' ').replace(/\.(html?|php|aspx?)$/i, '').trim();
+  }
+  if (!keyword) keyword = page.title || '';
+  // Never pass 'unknown' as a keyword — confuses AI analysis
+  if (keyword.toLowerCase() === 'unknown') keyword = page.gsc_keyword || page.title || '';
   const pageUrl   = page.url;
   const domain    = pageUrl.replace(/^https?:\/\//, '').split('/')[0]; // e.g. example.com
   const cleanHost = pageUrl.replace(/^https?:\/\//, '').replace(/\/$/, '');
@@ -27029,7 +27037,14 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
   _trSetStep(pageId, 'recommendations', 'running', 'Analysing gaps vs. top results…');
   if(geminiKey) {
     try {
-      const kw = page.keyword || 'unknown';
+      // Derive keyword — priority: manual > GSC > URL slug > title
+      let kw = page.keyword || page.gsc_keyword || '';
+      if (!kw && page.url) {
+        const slug = page.url.replace(/\/$/, '').split('/').pop() || '';
+        kw = slug.replace(/[-_]/g, ' ').replace(/\.(html?|php|aspx?)$/i, '').trim();
+      }
+      if (!kw) kw = page.title || page.url || 'content optimization';
+      if (kw.toLowerCase() === 'unknown') kw = page.gsc_keyword || page.title || page.url || '';
 
       // Our page — strip HTML to readable text
       let ourContent = '';
