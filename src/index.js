@@ -23095,8 +23095,9 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 // ── AI Provider Status Pills ──────────────────────────────────
                 async function loadAiStatus() {
                     try {
-                        const token = localStorage.getItem('admin_token') || '';
-                        const r = await fetch('/api/admin/ai-status', { headers: { 'x-admin-token': token } });
+                        const token = localStorage.getItem('admin_id') || '';
+                        if (!token) return;
+                        const r = await fetch('/api/admin/ai-status', { headers: { 'x-admin-key': token } });
                         if (!r.ok) return;
                         const data = await r.json();
                         const pills = document.getElementById('aiStatusPills');
@@ -23254,10 +23255,10 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     <style>@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}</style>\`;
                     modal.style.display = 'flex';
 
-                    const adminToken = localStorage.getItem('admin_token') || '';
+                    const adminToken = localStorage.getItem('admin_id') || '';
                     fetch('/api/tracker/pages/' + pageId + '/citation-brief', {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json', 'x-admin-token': adminToken }
+                        headers: { 'Content-Type': 'application/json', 'x-admin-key': adminToken }
                     })
                     .then(r => r.json())
                     .then(data => {
@@ -23365,7 +23366,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                         html += \`<div style="background:#0a1628;border:1px solid #1e3a5f;border-radius:8px;padding:14px;margin-bottom:16px;">
                             <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:#38bdf8;margin-bottom:8px;">🔍 URLS GEMINI RETRIEVED FROM GOOGLE SEARCH</div>
                             <div style="font-size:11px;color:#6b7280;margin-bottom:8px;">\${brief._grounding_note||''}</div>
-                            \${groundingSources.slice(0,5).map((s,i) => '<div style="font-size:11px;padding:4px 0;border-bottom:1px solid #1f2937;color:#9ca3af;"><span style="color:#38bdf8;font-weight:700;">'+(i===0?'→ ':'  ')+'</span><a href="'+s.url+'" target="_blank" style="color:#38bdf8;word-break:break-all;">'+s.url.replace(/^https?:\\/\\//,'').substring(0,70)+'</a> <span style="color:#374151;">'+s.title+'</span></div>').join('')}
+                            \${groundingSources.slice(0,5).map((s,i) => '<div style="font-size:11px;padding:4px 0;border-bottom:1px solid #1f2937;color:#9ca3af;"><span style="color:#38bdf8;font-weight:700;">'+(i===0?'→ ':'  ')+'</span><a href="'+s.url+'" target="_blank" style="color:#38bdf8;word-break:break-all;">'+s.url.split('//').pop().substring(0,70)+'</a> <span style="color:#374151;">'+s.title+'</span></div>').join('')}
                         </div>\`;
                     }
 
@@ -23451,9 +23452,10 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                         (p.improved_version || p.passage) + '\\n'
                     ).join('\\n');
                     if (allPassages) {
-                        html += \`<div style="text-align:center;padding-top:8px;">
-                            <button onclick="navigator.clipboard.writeText(\\\`\${allPassages.replace(/\`/g,"'")}\\\`).then(()=>this.textContent='✅ Copied!').catch(()=>this.textContent='Copy failed')" class="tr-btn primary" style="font-size:12px;">📋 Copy All Passages to Clipboard</button>
-                        </div>\`;
+                        const escapedPassages = allPassages.replace(/'/g, "\\'");
+                        html += '<div style="text-align:center;padding-top:8px;">'
+                            + '<button onclick="navigator.clipboard.writeText(\'' + escapedPassages + '\').then(function(){this.textContent=\'✅ Copied!\';}).catch(function(){this.textContent=\'Copy failed\'})" class="tr-btn primary" style="font-size:12px;">📋 Copy All Passages to Clipboard</button>'
+                            + '</div>';
                     }
 
                     container.innerHTML = html;
