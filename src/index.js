@@ -23127,19 +23127,25 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:20px;">
                     <div class="tr-stat"><div class="val" id="trStatPages">—</div><div class="lbl">Tracked pages</div></div>
                     <div class="tr-stat"><div class="val" id="trStatAvgPosGain" style="color:#e5e7eb;">—</div><div class="lbl">Avg position gain</div></div>
-                    <div class="tr-stat"><div class="val" id="trStatCitedGoogle" style="color:#38bdf8;">—</div><div class="lbl">AI Overview cited</div></div>
+                    <div class="tr-stat"><div class="val" id="trStatCitedGoogle" style="color:#38bdf8;">—</div><div class="lbl">Google AIO cited</div></div>
                     <div class="tr-stat"><div class="val" id="trStatCitedPerplexity" style="color:#a78bfa;">—</div><div class="lbl">Perplexity cited</div></div>
+                    <div class="tr-stat"><div class="val" id="trStatCitedCopilot" style="color:#60a5fa;">—</div><div class="lbl">Copilot/Bing cited</div></div>
+                    <div class="tr-stat"><div class="val" id="trStatCitedClaude" style="color:#f87171;">—</div><div class="lbl">Claude/Brave cited</div></div>
                     <div class="tr-stat"><div class="val" id="trStatCitationRate" style="color:#e5e7eb;">—</div><div class="lbl">AI citation rate</div></div>
                     <div class="tr-stat"><div class="val" id="trStatCheckedToday" style="color:#4ade80;">—</div><div class="lbl">Checked today</div></div>
                     <div class="tr-stat"><div class="val" id="trStatPendingChanges" style="color:#fbbf24;">—</div><div class="lbl">Pending changes</div></div>
                     <div class="tr-stat"><div class="val" id="trStatAvgGraaf" style="color:#e5e7eb;">—</div><div class="lbl">Avg GRAAF score</div></div>
                 </div>
 
-                <!-- Client filter -->
+                <!-- Filters -->
                 <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap;">
                     <label style="font-size:12px;color:#6b7280;white-space:nowrap;">Filter by client:</label>
                     <select id="trClientFilter" class="tr-select" onchange="filterTrackerByClient()" style="min-width:180px;">
                         <option value="">All clients</option>
+                    </select>
+                    <label style="font-size:12px;color:#6b7280;white-space:nowrap;">Domain:</label>
+                    <select id="trDomainFilter" class="tr-select" onchange="filterTrackerByDomain()" style="min-width:200px;">
+                        <option value="">All domains</option>
                     </select>
                     <span id="trFilterCount" style="font-size:12px;color:#6b7280;"></span>
                 </div>
@@ -24322,26 +24328,43 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
             }
         }
 
+        let _trDomainFilter = '';
+
         function populateClientFilter() {
             const sel = document.getElementById('trClientFilter');
             if(!sel) return;
-            // Collect unique clients
             const clients = {};
             allTrackerPages.forEach(function(p) {
                 const key = p.engine_client_name || '__admin__';
-                const label = p.engine_client_name || 'Admin';
-                clients[key] = label;
+                clients[key] = p.engine_client_name || 'Admin';
             });
             const prev = sel.value;
             sel.innerHTML = '<option value="">All clients (' + allTrackerPages.length + ' pages)</option>';
             Object.keys(clients).sort().forEach(function(k) {
                 const count = allTrackerPages.filter(function(p){ return (p.engine_client_name||'__admin__') === k; }).length;
                 const opt = document.createElement('option');
-                opt.value = k;
-                opt.textContent = clients[k] + ' (' + count + ')';
+                opt.value = k; opt.textContent = clients[k] + ' (' + count + ')';
                 sel.appendChild(opt);
             });
             sel.value = prev || '';
+
+            // Populate domain filter
+            const domSel = document.getElementById('trDomainFilter');
+            if(domSel) {
+                const domains = {};
+                allTrackerPages.forEach(function(p) {
+                    const d = (p.url||'').replace(/^https?:\/\//,'').split('/')[0].replace(/^www\./,'');
+                    if(d) domains[d] = (domains[d]||0) + 1;
+                });
+                const prevDom = domSel.value;
+                domSel.innerHTML = '<option value="">All domains (' + allTrackerPages.length + ' pages)</option>';
+                Object.keys(domains).sort().forEach(function(d) {
+                    const opt = document.createElement('option');
+                    opt.value = d; opt.textContent = d + ' (' + domains[d] + ')';
+                    domSel.appendChild(opt);
+                });
+                domSel.value = prevDom || '';
+            }
         }
 
         function filterTrackerByClient() {
@@ -24350,11 +24373,18 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
             renderTrackerPages();
         }
 
+        function filterTrackerByDomain() {
+            const sel = document.getElementById('trDomainFilter');
+            _trDomainFilter = sel ? sel.value : '';
+            renderTrackerPages();
+        }
+
         function renderTrackerStats() {
             const pages = allTrackerPages;
             const withLatest = pages.filter(p => p.latest_snapshot);
             const citedG = withLatest.filter(p => p.latest_snapshot?.ai_google_overview_cited).length;
             const citedP = withLatest.filter(p => p.latest_snapshot?.ai_perplexity_cited).length;
+            const citedB = withLatest.filter(p => p.latest_snapshot?.ai_bing_cited).length; // Copilot/Bing
             const today = new Date().toDateString();
             const checkedToday = pages.filter(p => p.last_checked_at && new Date(p.last_checked_at).toDateString()===today).length;
             const pending = pages.reduce((a,p) => a + parseInt(p.pending_changes||0), 0);
@@ -24362,6 +24392,8 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
             if(el('trStatPages')) el('trStatPages').textContent = pages.length;
             if(el('trStatCitedGoogle')) el('trStatCitedGoogle').textContent = citedG;
             if(el('trStatCitedPerplexity')) el('trStatCitedPerplexity').textContent = citedP;
+            if(el('trStatCitedCopilot')) el('trStatCitedCopilot').textContent = citedB;
+            if(el('trStatCitedClaude')) el('trStatCitedClaude').textContent = '—'; // Brave/Claude added later
             if(el('trStatCheckedToday')) el('trStatCheckedToday').textContent = checkedToday;
             if(el('trStatPendingChanges')) el('trStatPendingChanges').textContent = pending;
 
@@ -24411,14 +24443,15 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 el.innerHTML = '<div style="text-align:center;padding:60px 20px;color:#6b7280;"><div style="font-size:2rem;margin-bottom:12px;">📡</div><div style="font-weight:600;color:#9ca3af;margin-bottom:6px;">No pages tracked yet</div><div style="font-size:13px;">Add your published URLs to start tracking Google position and AI citations</div></div>';
                 return;
             }
-            // Apply client filter
-            const filtered = _trClientFilter
-                ? allTrackerPages.filter(function(p){ return (p.engine_client_name||'__admin__') === _trClientFilter; })
-                : allTrackerPages;
+            // Apply client + domain filter
+            let filtered = allTrackerPages;
+            if(_trClientFilter) filtered = filtered.filter(function(p){ return (p.engine_client_name||'__admin__') === _trClientFilter; });
+            if(_trDomainFilter) filtered = filtered.filter(function(p){ return (p.url||'').replace(/^https?:\/\//,'').split('/')[0].replace(/^www\./,'') === _trDomainFilter; });
             const countEl = document.getElementById('trFilterCount');
-            if(countEl) countEl.textContent = _trClientFilter ? 'Showing ' + filtered.length + ' of ' + allTrackerPages.length + ' pages' : '';
+            const activeFilters = [_trClientFilter, _trDomainFilter].filter(Boolean).length;
+            if(countEl) countEl.textContent = activeFilters ? 'Showing ' + filtered.length + ' of ' + allTrackerPages.length + ' pages' : '';
             if(!filtered.length) {
-                el.innerHTML = '<div style="text-align:center;padding:40px;color:#6b7280;">No pages for this client.</div>';
+                el.innerHTML = '<div style="text-align:center;padding:40px;color:#6b7280;">No pages match this filter.</div>';
                 return;
             }
             el.innerHTML = filtered.map(p => renderTrackerPageCard(p)).join('');
@@ -24550,7 +24583,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     +'<div style="font-size:11px;color:#6b7280;margin-top:2px;">'+(r.action||'')+'</div>'
                     +'</div></div>';
             }).join('');
-            const moreRow = recs.length > 3 ? '<div style="font-size:11px;color:#6b7280;margin-top:6px;">+'+(recs.length-3)+' more — click See changes to view all</div>' : '';
+            const moreRow = recs.length > 3 ? '<div onclick="openChangesModalById('+pageId+')" style="font-size:11px;color:#a78bfa;margin-top:6px;cursor:pointer;text-decoration:underline;">+'+(recs.length-3)+' more recommendations — click to view all</div>' : '';
             return '<div style="margin-top:14px;padding:12px 14px;background:#0d1117;border-radius:8px;border:1px solid #1f2937;">'
                 +'<div style="font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;">Latest Recommendations</div>'
                 +rows+moreRow+'</div>';
