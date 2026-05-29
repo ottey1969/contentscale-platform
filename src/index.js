@@ -25136,33 +25136,31 @@ Return ONLY valid JSON:
   }
 });
 
-// ── GET /api/tracker/domains — distinct domains for filter dropdown ─────────app.get('/api/tracker/domains', verifyEngineAccess, async (req, res) => {
-  try {
-    const eu = req.engineUser;
-    let q, params = [];
-    if (eu.isAdmin) {
-      q = `SELECT DISTINCT
-             regexp_replace(regexp_replace(url, '^https?://', ''), '/.*$', '') AS domain,
-             COUNT(*) as page_count,
-             ec.client_name
-           FROM tracker_pages p
-           LEFT JOIN engine_access_codes ec ON ec.id = p.engine_code_id
-           GROUP BY domain, ec.client_name
-           ORDER BY page_count DESC`;
-    } else {
-      q = `SELECT DISTINCT
-             regexp_replace(regexp_replace(url, '^https?://', ''), '/.*$', '') AS domain,
-             COUNT(*) as page_count
-           FROM tracker_pages
-           WHERE engine_code_id = $1
-           GROUP BY domain
-           ORDER BY page_count DESC`;
-      params = [eu.codeId];
-    }
-    const r = await pool.query(q, params);
-    res.json({ success: true, domains: r.rows });
-  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
-});
+// ── GET /api/tracker/domains — distinct domains for filter dropdown ─────────app.get('/api/tracker/domains', verifyEngineAccess, asyncHandler(async (req, res) => {
+  const eu = req.engineUser;
+  let q, params = [];
+  if (eu.isAdmin) {
+    q = `SELECT DISTINCT
+           regexp_replace(regexp_replace(url, '^https?://', ''), '/.*$', '') AS domain,
+           COUNT(*) as page_count,
+           ec.client_name
+         FROM tracker_pages p
+         LEFT JOIN engine_access_codes ec ON ec.id = p.engine_code_id
+         GROUP BY domain, ec.client_name
+         ORDER BY page_count DESC`;
+  } else {
+    q = `SELECT DISTINCT
+           regexp_replace(regexp_replace(url, '^https?://', ''), '/.*$', '') AS domain,
+           COUNT(*) as page_count
+         FROM tracker_pages
+         WHERE engine_code_id = $1
+         GROUP BY domain
+         ORDER BY page_count DESC`;
+    params = [eu.codeId];
+  }
+  const r = await pool.query(q, params);
+  res.json({ success: true, domains: r.rows });
+}));
 
 app.get('/api/tracker/pages', verifyEngineAccess, async (req, res) => {
   try {
