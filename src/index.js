@@ -334,6 +334,64 @@ async function callGeminiWithFallback(apiKey, body, primaryModel, fallbackModel,
   return { ok: false, status: 503, data: {}, modelUsed: 'all-exhausted', errorMessage: 'All AI providers (Gemini Flash-Lite → Flash → Perplexity → Haiku → Sonnet) are busy. Wait 30-60 seconds and retry.' };
 }
 
+// ── Gemini & AI Provider Status Monitor ─────────────────────────────────────
+// Tracks rate limits, errors, and availability across all AI providers in real-time
+const _aiProviderStatus = {
+  gemini_primary: { ok: true, lastError: null, lastErrorAt: null, errorCount: 0, lastOkAt: Date.now(), consecutiveErrors: 0 },
+  gemini_flash:   { ok: true, lastError: null, lastErrorAt: null, errorCount: 0, lastOkAt: Date.now(), consecutiveErrors: 0 },
+  perplexity:     { ok: true, lastError: null, lastErrorAt: null, errorCount: 0, lastOkAt: Date.now(), consecutiveErrors: 0 },
+  claude:         { ok: true, lastError: null, lastErrorAt: null, errorCount: 0, lastOkAt: Date.now(), consecutiveErrors: 0 },
+  serper:         { ok: true, lastError: null, lastErrorAt: null, errorCount: 0, lastOkAt: Date.now(), consecutiveErrors: 0 },
+};
+const _aiProviderHistory = []; // last 50 calls
+
+function _trackAiCall(provider, model, success, errorMsg, durationMs) {
+  const key = model && model.includes('flash') ? 'gemini_flash'
+    : model && (model.includes('gemini') || model.includes('Gemini')) ? 'gemini_primary'
+    : model && model.includes('perplexity') ? 'perplexity'
+    : model && model.includes('claude') ? 'claude'
+    : provider || 'gemini_primary';
+
+  const s = _aiProviderStatus[key] || _aiProviderStatus['gemini_primary'];
+  const now = Date.now();
+  if (success) {
+    s.ok = true; s.consecutiveErrors = 0; s.lastOkAt = now;
+    s.lastError = null;
+  } else {
+    s.consecutiveErrors = (s.consecutiveErrors || 0) + 1;
+    s.errorCount = (s.errorCount || 0) + 1;
+    s.lastError = errorMsg || 'unknown error';
+    s.lastErrorAt = new Date().toISOString();
+    // Mark as down after 3 consecutive errors
+    if (s.consecutiveErrors >= 3) s.ok = false;
+  }
+
+  // Keep last 50 call history
+  _aiProviderHistory.unshift({
+    provider: key, model: model || key, success,
+    error: success ? null : (errorMsg || '').substring(0, 100),
+    durationMs: durationMs || 0,
+    at: new Date().toISOString()
+  });
+  if (_aiProviderHistory.length > 50) _aiProviderHistory.pop();
+}
+
+// Admin endpoint — provider status dashboard
+app.get('/api/admin/ai-status', verifyAdmin, (req, res) => {
+  const status = {};
+  for (const [key, s] of Object.entries(_aiProviderStatus)) {
+    const minsSinceOk = s.lastOkAt ? Math.round((Date.now() - s.lastOkAt) / 60000) : null;
+    const minsSinceError = s.lastErrorAt ? Math.round((Date.now() - new Date(s.lastErrorAt).getTime()) / 60000) : null;
+    status[key] = {
+      ...s,
+      health: s.ok ? (s.consecutiveErrors > 0 ? 'degraded' : 'healthy') : 'down',
+      minsSinceLastOk: minsSinceOk,
+      minsSinceLastError: minsSinceError,
+    };
+  }
+  res.json({ success: true, status, history: _aiProviderHistory.slice(0, 20) });
+});
+
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // callClaudeForWrite — ALL writing goes through Claude
 // Gemini = research/JSON only · Claude = every HTML output
@@ -23007,11 +23065,42 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                         <h2 style="font-size:1.25rem;font-weight:700;color:#f1f5f9;">Content Lifecycle Tracker</h2>
                         <p style="font-size:12px;color:#6b7280;margin-top:3px;">Track Google position, AI Overview citations, and content changes over time</p>
                     </div>
-                    <div style="display:flex;gap:8px;">
+                    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                        <!-- AI Provider Status Pills -->
+                        <div id="aiStatusPills" style="display:flex;gap:5px;flex-wrap:wrap;"></div>
                         <button onclick="loadTrackerPages()" class="tr-btn" id="trRefreshBtn"><i class="fas fa-sync-alt" style="margin-right:5px;"></i>Refresh</button>
                         <button onclick="openAddPageModal()" class="tr-btn primary">+ Add URL</button>
                     </div>
                 </div>
+
+                <script>
+                // ── AI Provider Status Pills ──────────────────────────────────
+                async function loadAiStatus() {
+                    try {
+                        const token = localStorage.getItem('admin_token') || '';
+                        const r = await fetch('/api/admin/ai-status', { headers: { 'x-admin-token': token } });
+                        if (!r.ok) return;
+                        const data = await r.json();
+                        const pills = document.getElementById('aiStatusPills');
+                        if (!pills) return;
+                        const labels = {
+                            gemini_primary: 'Gemini Pro', gemini_flash: 'Gemini Flash',
+                            perplexity: 'Perplexity', claude: 'Claude', serper: 'Serper'
+                        };
+                        const colors = { healthy: '#166534', degraded: '#854d0e', down: '#7f1d1d' };
+                        const textColors = { healthy: '#4ade80', degraded: '#fbbf24', down: '#f87171' };
+                        pills.innerHTML = Object.entries(data.status || {}).map(([key, s]) => {
+                            const health = s.health || (s.ok ? 'healthy' : 'down');
+                            const icon = health === 'healthy' ? '●' : health === 'degraded' ? '◐' : '○';
+                            const tip = s.lastError ? s.lastError.substring(0,80) : 'OK';
+                            return \`<span title="\${tip}" style="font-size:10px;font-weight:700;padding:3px 8px;border-radius:4px;background:\${colors[health]||'#374151'};color:\${textColors[health]||'#9ca3af'};cursor:default;">\${icon} \${labels[key]||key}</span>\`;
+                        }).join('');
+                    } catch(e) {}
+                }
+                // Load on tab switch and every 60 seconds
+                loadAiStatus();
+                setInterval(loadAiStatus, 60000);
+                </script>
 
                 <!-- Stats -->
                 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:20px;">
@@ -24941,45 +25030,49 @@ Return ONLY a JSON object:
 
 // ── Push to Rewrite (pre-fills Rewrite tab with current data) ────────────────
 // ── POST /api/tracker/pages/:id/citation-brief ───────────────────────────────
-// Reverse-engineers AI Overview and generates exact passages to add to HTML
+// Reverse-engineers AI Overview via Gemini Search Grounding + Serper fallback
+// Generates exact passages to add + structural fixes for AI citation
 app.post('/api/tracker/pages/:id/citation-brief', verifyEngineAccess, async (req, res) => {
+  const eu = req.engineUser;
+  const pageId = parseInt(req.params.id);
   try {
-    const eu = req.engineUser;
-    const pageId = parseInt(req.params.id);
     let r;
-    if (eu.isAdmin) {
-      r = await pool.query('SELECT * FROM tracker_pages WHERE id=$1', [pageId]);
-    } else {
-      r = await pool.query('SELECT * FROM tracker_pages WHERE id=$1 AND engine_code_id=$2', [pageId, eu.codeId]);
-    }
+    if (eu.isAdmin) { r = await pool.query('SELECT * FROM tracker_pages WHERE id=$1', [pageId]); }
+    else { r = await pool.query('SELECT * FROM tracker_pages WHERE id=$1 AND engine_code_id=$2', [pageId, eu.codeId]); }
     if (!r.rows.length) return res.status(404).json({ success: false, error: 'Page not found' });
     const page = r.rows[0];
 
-    // Get latest snapshot for AI Overview data
-    const snapR = await pool.query(
-      `SELECT * FROM tracker_snapshots WHERE page_id=$1 ORDER BY checked_at DESC LIMIT 1`, [pageId]
-    );
+    const snapR = await pool.query(`SELECT * FROM tracker_snapshots WHERE page_id=$1 ORDER BY checked_at DESC LIMIT 1`, [pageId]);
     const snap = snapR.rows[0] || {};
 
     const keyword = page.keyword || '';
     const pageUrl = page.url || '';
-    const serperKey = process.env.SERPAPI_KEY || '';
-    const anthropicKey = process.env.ANTHROPIC_API_KEY || '';
-
-    if (!anthropicKey) return res.status(503).json({ success: false, error: 'ANTHROPIC_API_KEY not configured' });
     if (!keyword) return res.status(400).json({ success: false, error: 'No keyword set for this page' });
 
-    // ── Step 1: Fetch fresh AI Overview from Serper ───────────────────────────
+    const geminiKey = resolveGeminiKey(req) || process.env.GEMINI_API_KEY;
+    const serperKey = resolveSerpapiKey(req) || process.env.SERPAPI_KEY || '';
+    const anthropicKey = process.env.ANTHROPIC_API_KEY || '';
+    const domain = pageUrl.replace(/^https?:\/\//, '').split('/')[0].replace(/^www\./, '');
+
+    // ── Step 1: Our page content ─────────────────────────────────────────────
+    let ourPageText = '';
+    if (page.html_content) {
+      ourPageText = page.html_content
+        .replace(/<script[\s\S]*?<\/script>/gi, ' ').replace(/<style[\s\S]*?<\/style>/gi, ' ')
+        .replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().substring(0, 4000);
+    }
+
+    // ── Step 2: Serper — get AI Overview text + competitors (always run) ─────
     let aioText = snap.ai_google_overview_text || '';
     let aioFound = snap.ai_google_overview_found || false;
     let aioCited = snap.ai_google_overview_cited || false;
     let aioSourceUrl = '';
     let googlePosition = snap.google_position || null;
     let serpCompetitors = [];
-    const domain = pageUrl.replace(/^https?:\/\//, '').split('/')[0].replace(/^www\./, '');
 
     if (serperKey) {
       try {
+        const t1 = Date.now();
         const ctrl = new AbortController(); setTimeout(() => ctrl.abort(), 15000);
         const sResp = await fetch('https://google.serper.dev/search', {
           method: 'POST',
@@ -24987,148 +25080,198 @@ app.post('/api/tracker/pages/:id/citation-brief', verifyEngineAccess, async (req
           body: JSON.stringify({ q: keyword, num: 10, hl: 'en', gl: 'us' }),
           signal: ctrl.signal
         });
+        _trackAiCall('serper', 'serper', sResp.ok, sResp.ok ? null : 'HTTP '+sResp.status, Date.now()-t1);
         if (sResp.ok) {
           const sData = await sResp.json();
           const organic = sData.organic || [];
           const ab = sData.answerBox || null;
-          // Position
           for (let i = 0; i < organic.length; i++) {
-            const link = (organic[i].link || '').replace(/^https?:\/\//, '').replace(/\/$/, '');
-            if (link.includes(domain)) { googlePosition = organic[i].position || i + 1; break; }
+            if ((organic[i].link||'').replace(/^https?:\/\//, '').includes(domain)) {
+              googlePosition = organic[i].position || i + 1; break;
+            }
           }
-          // AI Overview text
           if (ab) {
             aioFound = true;
             aioText = ab.answer || ab.snippet || ab.title || JSON.stringify(ab).substring(0, 600);
             aioSourceUrl = ab.link || (ab.sitelinks && ab.sitelinks[0] && ab.sitelinks[0].link) || '';
-            aioCited = (JSON.stringify(ab)).includes(domain);
+            aioCited = JSON.stringify(ab).includes(domain);
           }
-          // Top 5 competitors
-          serpCompetitors = organic.slice(0, 5).map(r => ({
-            url: r.link, domain: (r.link||'').replace(/^https?:\/\//,'').split('/')[0].replace(/^www\./,''),
-            title: r.title, snippet: r.snippet || '', position: r.position
+          serpCompetitors = organic.slice(0, 5).map(r2 => ({
+            url: r2.link, domain: (r2.link||'').replace(/^https?:\/\//, '').split('/')[0].replace(/^www\./, ''),
+            title: r2.title, snippet: r2.snippet || '', position: r2.position
           }));
         }
-      } catch(e) { console.warn('[citation-brief] Serper failed:', e.message); }
+      } catch(e) {
+        _trackAiCall('serper', 'serper', false, e.message, 0);
+        console.warn('[citation-brief] Serper failed:', e.message);
+      }
     }
 
-    // ── Step 2: Scrape cited source page if found ────────────────────────────
+    // ── Step 3: Scrape cited source ──────────────────────────────────────────
     let citedPageText = '';
-    if (aioSourceUrl && aioSourceUrl.length > 10 && !aioSourceUrl.includes(domain)) {
-      try {
-        const sc = await scrapeBodyText(aioSourceUrl, 5000);
-        citedPageText = sc.text || '';
-      } catch(e) {}
-    } else if (serpCompetitors.length) {
-      // Try to scrape the #1 competitor
-      try {
-        const top = serpCompetitors.find(c => !c.url.includes(domain));
-        if (top) {
-          const sc = await scrapeBodyText(top.url, 5000);
-          citedPageText = sc.text || '';
-        }
-      } catch(e) {}
+    const citedUrl = aioSourceUrl && !aioSourceUrl.includes(domain) ? aioSourceUrl
+      : (serpCompetitors.find(c => !c.url.includes(domain)) || {}).url || '';
+    if (citedUrl) {
+      try { const sc = await scrapeBodyText(citedUrl, 4000); citedPageText = sc.text || ''; } catch(e) {}
     }
 
-    // ── Step 3: Get our current page content ─────────────────────────────────
-    let ourPageText = '';
-    if (page.html_content) {
-      ourPageText = page.html_content
-        .replace(/<script[\s\S]*?<\/script>/gi, ' ')
-        .replace(/<style[\s\S]*?<\/style>/gi, ' ')
-        .replace(/<[^>]+>/g, ' ')
-        .replace(/\s+/g, ' ').trim().substring(0, 4000);
-    }
+    // ── Step 4a: Gemini 2.5 Pro with Google Search Grounding ─────────────────
+    // Gemini can search Google natively — no Serper needed for the analysis
+    let brief = null;
+    let modelUsed = null;
 
-    // ── Step 4: Claude generates citation brief ──────────────────────────────
-    const prompt = `You are an AI citation specialist. Your job: reverse-engineer exactly why the AI Overview exists and what our page must contain to be cited instead.
+    const briefPrompt = `You are an AI citation specialist. Analyze why this page is NOT appearing in Google AI Overviews and generate exact passages to add.
 
 KEYWORD: "${keyword}"
 OUR URL: ${pageUrl}
 OUR POSITION: ${googlePosition ? '#' + googlePosition : 'not in top 10'}
-CITED IN AI OVERVIEW: ${aioCited ? 'YES (good!)' : 'NO'}
+CITED IN AI OVERVIEW: ${aioCited ? 'YES' : 'NO'}
+${aioText ? 'CURRENT AI OVERVIEW TEXT: "' + aioText + '"' : 'NO AI OVERVIEW EXISTS YET.'}
+${aioSourceUrl ? 'SOURCE BEING CITED INSTEAD: ' + aioSourceUrl : ''}
 
-${aioText ? `CURRENT AI OVERVIEW TEXT (what Google is displaying right now):
-"${aioText}"
+COMPETITOR SNIPPETS:
+${serpCompetitors.slice(0,3).map(c => '#' + c.position + ' ' + c.domain + ': "' + c.snippet + '"').join('\n')}
 
-SOURCE BEING CITED: ${aioSourceUrl || 'unknown'}` : 'NO AI OVERVIEW EXISTS YET for this keyword.'}
+OUR CURRENT CONTENT:
+${ourPageText || '(no HTML stored — paste HTML first)'}
 
-${citedPageText ? `COMPETITOR/CITED PAGE CONTENT (what the cited source contains):
-${citedPageText.substring(0, 2500)}` : ''}
+${citedPageText ? 'CITED COMPETITOR CONTENT:\n' + citedPageText.substring(0, 2000) : ''}
 
-COMPETITOR SNIPPETS IN SERP:
-${serpCompetitors.slice(0,3).map((c,i) => `#${c.position} ${c.domain}: "${c.snippet}"`).join('\n')}
-
-OUR CURRENT PAGE CONTENT:
-${ourPageText || '(no HTML stored — paste HTML first for accurate analysis)'}
-
-YOUR TASK:
-1. Extract the exact passages/sentences from the AI Overview or cited page that Google used to build its answer
-2. For each passage: write an IMPROVED version that is more extractable, more specific, and better structured for AI citation
-3. Identify structural changes our HTML needs (direct answer box, FAQ schema, speakable schema, etc.)
-4. Identify the #1 reason we are not being cited
-5. If no AI Overview exists: analyze what format/content would trigger one
+TASK: Use Google Search to find the current AI Overview for "${keyword}" and analyze what content triggered it.
 
 Return ONLY valid JSON:
 {
   "citation_source": {
     "domain": "domain being cited",
     "why_cited": "one sentence why Google chose this page",
-    "key_difference": "the main structural/content difference vs our page"
+    "key_difference": "main structural/content difference vs our page"
   },
   "passages_to_add": [
     {
       "type": "direct_answer|statistic|definition|how_to|faq_answer",
-      "passage": "exact passage extracted from AI Overview or competitor",
-      "improved_version": "our better version — more specific, same answer, stronger E-E-A-T signals",
+      "passage": "exact passage from AI Overview or competitor",
+      "improved_version": "our better version — more specific, stronger E-E-A-T",
       "placement": "immediately after H1|in FAQ section|as H2 answer paragraph|in TL;DR",
-      "why": "why this passage triggers AI citation (what signal it provides)"
+      "why": "why this triggers AI citation"
     }
   ],
   "structural_fixes": [
     {
       "fix": "specific HTML/structural change",
-      "reason": "why this change makes content more extractable by AI systems",
-      "example": "exact HTML example if applicable"
+      "reason": "why this makes content extractable by AI",
+      "example": "HTML example"
     }
   ],
-  "primary_reason_not_cited": "the single most important reason",
+  "primary_reason_not_cited": "single most important reason",
   "confidence": "high|medium|low",
-  "estimated_impact": "description of expected citation improvement"
+  "estimated_impact": "expected citation improvement",
+  "model_searched_google": true
 }`;
 
-    const ctrl2 = new AbortController(); setTimeout(() => ctrl2.abort(), 55000);
-    const aResp = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-api-key': anthropicKey, 'anthropic-version': '2023-06-01' },
-      body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 4000, messages: [{ role: 'user', content: prompt }] }),
-      signal: ctrl2.signal
-    });
-    const aData = await aResp.json().catch(() => ({}));
-    if (!aResp.ok) return res.status(502).json({ success: false, error: (aData.error && aData.error.message) || 'Claude error ' + aResp.status });
+    if (geminiKey) {
+      try {
+        const t2 = Date.now();
+        // Try Gemini 2.5 Pro with Google Search Grounding first
+        const gemResp = await fetch(
+          'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=' + geminiKey,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [{ role: 'user', parts: [{ text: briefPrompt }] }],
+              tools: [{ google_search: {} }],
+              generationConfig: { temperature: 0.2, maxOutputTokens: 4000 }
+            }),
+            signal: AbortSignal.timeout(45000)
+          }
+        );
+        const dur2 = Date.now() - t2;
+        if (gemResp.ok) {
+          const gemData = await gemResp.json();
+          const rawText = gemData.candidates?.[0]?.content?.parts?.filter(p => p.text).map(p => p.text).join('') || '';
+          const m = rawText.match(/\{[\s\S]*\}/);
+          if (m) { try { brief = JSON.parse(m[0]); brief.model_searched_google = true; } catch(e) {} }
+          modelUsed = 'gemini-2.5-pro-search-grounding';
+          _trackAiCall('gemini', 'gemini-2.5-pro', !!brief, brief ? null : 'JSON parse failed', dur2);
+        } else {
+          const errData = await gemResp.json().catch(() => ({}));
+          const errMsg = errData?.error?.message || 'HTTP ' + gemResp.status;
+          _trackAiCall('gemini', 'gemini-2.5-pro', false, errMsg, dur2);
+          console.warn('[citation-brief] Gemini 2.5 Pro failed:', errMsg);
+        }
+      } catch(e) {
+        _trackAiCall('gemini', 'gemini-2.5-pro', false, e.message, 0);
+        console.warn('[citation-brief] Gemini 2.5 Pro error:', e.message);
+      }
 
-    const rawText = (aData.content || []).filter(b => b.type === 'text').map(b => b.text).join('');
-    let brief = null;
-    try {
-      const m = rawText.match(/\{[\s\S]*\}/);
-      if (m) brief = JSON.parse(m[0]);
-    } catch(e) { brief = { raw: rawText.substring(0, 1000) }; }
+      // Step 4b: Fallback to Gemini Flash (no Search Grounding — uses Serper data) ─
+      if (!brief) {
+        try {
+          const t3 = Date.now();
+          const flashResp = await callGeminiWithFallback(geminiKey, {
+            contents: [{ role: 'user', parts: [{ text: briefPrompt }] }],
+            generationConfig: { temperature: 0.2, maxOutputTokens: 4000 }
+          }, 'gemini-2.5-flash', 'gemini-1.5-flash');
+          const dur3 = Date.now() - t3;
+          if (flashResp.ok) {
+            const rawText = flashResp.data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+            const m = rawText.match(/\{[\s\S]*\}/);
+            if (m) { try { brief = JSON.parse(m[0]); } catch(e) {} }
+            modelUsed = flashResp.modelUsed || 'gemini-flash';
+            _trackAiCall('gemini', modelUsed, !!brief, brief ? null : 'JSON parse failed', dur3);
+          }
+        } catch(e) {
+          _trackAiCall('gemini', 'gemini-flash', false, e.message, 0);
+        }
+      }
+    }
 
-    // Save brief to page record for future reference
+    // Step 4c: Final fallback — Claude Sonnet ───────────────────────────────
+    if (!brief && anthropicKey) {
+      try {
+        const t4 = Date.now();
+        const ctrl4 = new AbortController(); setTimeout(() => ctrl4.abort(), 55000);
+        const aResp = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-api-key': anthropicKey, 'anthropic-version': '2023-06-01' },
+          body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 4000, messages: [{ role: 'user', content: briefPrompt }] }),
+          signal: ctrl4.signal
+        });
+        const dur4 = Date.now() - t4;
+        const aData = await aResp.json().catch(() => ({}));
+        if (aResp.ok) {
+          const rawText = (aData.content || []).filter(b => b.type === 'text').map(b => b.text).join('');
+          const m = rawText.match(/\{[\s\S]*\}/);
+          if (m) { try { brief = JSON.parse(m[0]); } catch(e) {} }
+          modelUsed = 'claude-sonnet-fallback';
+          _trackAiCall('claude', 'claude-sonnet', !!brief, brief ? null : 'JSON parse failed', dur4);
+        } else {
+          _trackAiCall('claude', 'claude-sonnet', false, (aData.error && aData.error.message) || 'HTTP '+aResp.status, dur4);
+        }
+      } catch(e) {
+        _trackAiCall('claude', 'claude-sonnet', false, e.message, 0);
+      }
+    }
+
+    if (!brief) {
+      return res.status(502).json({ success: false, error: 'All AI providers failed. Check /api/admin/ai-status for details.' });
+    }
+
+    // Save brief + which model was used
     await pool.query(
       `UPDATE tracker_pages SET serp_spy = COALESCE(serp_spy, '{}'::jsonb) || $1::jsonb WHERE id=$2`,
-      [JSON.stringify({ citation_brief: brief, citation_brief_at: new Date().toISOString() }), pageId]
+      [JSON.stringify({ citation_brief: brief, citation_brief_at: new Date().toISOString(), citation_brief_model: modelUsed }), pageId]
     ).catch(() => {});
 
     res.json({
-      success: true,
-      page_id: pageId,
-      keyword,
-      url: pageUrl,
+      success: true, page_id: pageId, keyword, url: pageUrl,
       google_position: googlePosition,
       ai_overview: { found: aioFound, cited: aioCited, text: aioText, source_url: aioSourceUrl },
       competitors: serpCompetitors,
-      brief
+      brief, model_used: modelUsed,
+      ai_provider_status: Object.fromEntries(
+        Object.entries(_aiProviderStatus).map(([k,v]) => [k, { ok: v.ok, health: v.ok ? (v.consecutiveErrors > 0 ? 'degraded' : 'healthy') : 'down' }])
+      )
     });
   } catch(e) {
     console.error('[citation-brief]', e);
@@ -25136,7 +25279,8 @@ Return ONLY valid JSON:
   }
 });
 
-// ── GET /api/tracker/domains — distinct domains for filter dropdown ─────────app.get('/api/tracker/domains', verifyEngineAccess, asyncHandler(async (req, res) => {
+// ── GET /api/tracker/domains// ── GET /api/tracker/domains — distinct domains for filter dropdown ─────────
+app.get('/api/tracker/domains', verifyEngineAccess, asyncHandler(async (req, res) => {
   const eu = req.engineUser;
   let q, params = [];
   if (eu.isAdmin) {
