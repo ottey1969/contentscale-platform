@@ -27627,79 +27627,91 @@ app.post('/api/tracker/pages/:id/check', verifyEngineAccess, async (req, res) =>
         if(st) { st.running = false; st.finishedAt = new Date().toISOString(); }
         const domainFin = (page.url||'').replace(/^https?:\/\//, '').split('/')[0];
 
-        // Send email notification if this is a tracker client page with results
+        // Send email notification if this is a tracker client page — only when something changed
         if (page.tracker_client_id) {
           try {
             const snap2 = await pool.query(
-              `SELECT s.*, p.url, p.keyword, p.gsc_keyword 
-               FROM tracker_snapshots s 
+              `SELECT s.*, p.url, p.keyword, p.gsc_keyword
+               FROM tracker_snapshots s
                JOIN tracker_pages p ON p.id = s.page_id
-               WHERE s.page_id=$1 ORDER BY s.checked_at DESC LIMIT 1`,
+               WHERE s.page_id=$1 ORDER BY s.checked_at DESC LIMIT 2`,
               [page.id]
             );
-            const s = snap2.rows[0];
-            if (s) {
-              const pos = s.google_position;
-              const aio = s.ai_google_overview_cited;
-              const perp = s.ai_perplexity_cited;
-              const bing = s.ai_bing_cited;
-              const brave = s.ai_brave_cited;
-              const score = s.score;
-              const pageUrl = s.url || page.url || '';
-              const kw = s.keyword || s.gsc_keyword || page.keyword || page.gsc_keyword || domainFin;
+            if (!snap2.rows.length) return;
+            const curr = snap2.rows[0];
+            const prev = snap2.rows[1] || null;
+            const isFirst = !prev;
 
-              const posColor = pos ? (pos <= 3 ? '#16a34a' : pos <= 10 ? '#f59e0b' : '#ef4444') : '#94a3b8';
-              const posVal = pos ? '#' + Math.round(pos) : 'N/A';
+            const posChanged = prev && curr.google_position && prev.google_position && Math.abs(curr.google_position - prev.google_position) >= 1;
+            const aioGained = prev && curr.ai_google_overview_cited && !prev.ai_google_overview_cited;
+            const aioLost = prev && !curr.ai_google_overview_cited && prev.ai_google_overview_cited;
+            const perpGained = prev && curr.ai_perplexity_cited && !prev.ai_perplexity_cited;
+            const bingGained = prev && curr.ai_bing_cited && !prev.ai_bing_cited;
+            const braveGained = prev && curr.ai_brave_cited && !prev.ai_brave_cited;
+            const scoreChanged = prev && curr.score && prev.score && Math.abs(curr.score - prev.score) >= 5;
+            const shouldEmail = isFirst || posChanged || aioGained || aioLost || perpGained || bingGained || braveGained || scoreChanged;
+            if (!shouldEmail) return;
 
-              const subject = aio
-                ? 'Cited in Google AI Overview — ' + domainFin
-                : 'Your tracker scan is complete — ' + domainFin;
+            const pos = curr.google_position;
+            const aio = curr.ai_google_overview_cited;
+            const perp = curr.ai_perplexity_cited;
+            const bing = curr.ai_bing_cited;
+            const brave = curr.ai_brave_cited;
+            const score = curr.score;
+            const pageUrl = curr.url || page.url || '';
+            const kw = curr.keyword || curr.gsc_keyword || page.keyword || page.gsc_keyword || domainFin;
 
-              function statCell(label, val, color) {
-                return '<td style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px 6px;text-align:center;">'
-                  + '<div style="font-size:16px;font-weight:900;color:' + color + ';">' + val + '</div>'
-                  + '<div style="font-size:9px;color:#64748b;text-transform:uppercase;letter-spacing:.05em;margin-top:3px;line-height:1.3;">' + label + '</div>'
-                  + '</td> ';
-              }
+            let subject;
+            if (isFirst) subject = 'Your first scan is complete — ' + domainFin;
+            else if (aioGained) subject = 'You are now cited in Google AI Overview — ' + domainFin;
+            else if (aioLost) subject = 'Citation lost in Google AI Overview — ' + domainFin;
+            else if (perpGained) subject = 'New citation in Perplexity — ' + domainFin;
+            else if (braveGained) subject = 'New citation in Claude/Brave — ' + domainFin;
+            else if (bingGained) subject = 'New citation in Copilot/Bing — ' + domainFin;
+            else if (posChanged) { const diff = Math.round(prev.google_position - curr.google_position); subject = (diff > 0 ? 'Position up ' + diff + ' places' : 'Position down ' + Math.abs(diff) + ' places') + ' — ' + domainFin; }
+            else subject = 'Tracker update — ' + domainFin;
 
-              // Get tracker URL for this client
-              const clientR = await pool.query('SELECT token FROM tracker_clients WHERE id=$1', [page.tracker_client_id]);
-              const clientTrackUrl = (process.env.APP_URL || 'https://app.contentscale.site') + '/track/' + (clientR.rows[0] ? clientR.rows[0].token : '');
+            const clientR = await pool.query('SELECT token FROM tracker_clients WHERE id=$1', [page.tracker_client_id]);
+            const clientTrackUrl = (process.env.APP_URL || 'https://app.contentscale.site') + '/track/' + (clientR.rows[0] ? clientR.rows[0].token : '');
 
-              const bodyHtml = '<h2 style="font-size:17px;font-weight:800;color:#0f172a;margin-bottom:10px;">Your scan is complete</h2>'
+            const posColor = pos ? (pos <= 3 ? '#16a34a' : pos <= 10 ? '#f59e0b' : '#ef4444') : '#94a3b8';
+            const posVal = pos ? '#' + Math.round(pos) : 'N/A';
 
-                // Page scanned box
-                + '<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px 16px;margin-bottom:16px;">'
-                + '<div style="font-size:9px;color:#94a3b8;text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px;">Page scanned</div>'
-                + '<div style="font-size:12px;color:#7c3aed;font-family:monospace;word-break:break-all;margin-bottom:4px;">' + pageUrl + '</div>'
-                + (kw ? '<div style="font-size:11px;color:#64748b;">Keyword: <strong style="color:#1e293b;">' + kw + '</strong></div>' : '')
-                + '</div>'
-
-                // Stats table — 6 columns
-                + '<table width="100%" style="border-spacing:4px;border-collapse:separate;margin-bottom:16px;">'
-                + '<tr>'
-                + statCell('Position', posVal, posColor)
-                + statCell('Google AIO', aio ? 'Cited' : 'No', aio ? '#16a34a' : '#94a3b8')
-                + statCell('Perplexity', perp ? 'Cited' : 'No', perp ? '#7c3aed' : '#94a3b8')
-                + statCell('Copilot', bing ? 'Cited' : 'No', bing ? '#2563eb' : '#94a3b8')
-                + statCell('Claude', brave ? 'Cited' : 'No', brave ? '#dc2626' : '#94a3b8')
-                + statCell('GRAAF', score ? score + '/100' : 'N/A', score >= 70 ? '#16a34a' : score >= 50 ? '#f59e0b' : '#ef4444')
-                + '</tr></table>'
-
-                // Alert
-                + (aio
-                  ? '<div style="background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:12px 16px;margin-bottom:14px;font-size:13px;color:#166534;"><strong>Cited in Google AI Overview</strong> for &ldquo;' + kw + '&rdquo;. Great result!</div>'
-                  : '<div style="background:#fefce8;border:1px solid #fde047;border-radius:8px;padding:12px 16px;margin-bottom:14px;font-size:13px;color:#854d0e;"><strong>Not yet cited</strong> in Google AI Overview for &ldquo;' + kw + '&rdquo;. Use the Citation Brief in your tracker to get exact passages to add.</div>'
-                )
-
-                // Tracker link
-                + '<div style="background:#f5f3ff;border:1px solid #ddd6fe;border-radius:8px;padding:12px 16px;margin-bottom:4px;">'
-                + '<div style="font-size:11px;color:#7c3aed;font-weight:700;margin-bottom:4px;">Your personal tracker link</div>'
-                + '<div style="font-size:11px;color:#1e293b;font-family:monospace;word-break:break-all;">' + clientTrackUrl + '</div>'
-                + '<div style="font-size:10px;color:#94a3b8;margin-top:4px;">Bookmark this — it is your permanent tracker page.</div>'
-                + '</div>';
-              await sendTrackerEmail(page.tracker_client_id, subject, bodyHtml);
+            let changeSummary = '';
+            if (!isFirst) {
+              const changes = [];
+              if (posChanged) { const diff = Math.round(prev.google_position - curr.google_position); changes.push((diff > 0 ? '<span style="color:#16a34a;">+' + diff + ' positions</span>' : '<span style="color:#ef4444;">' + diff + ' positions</span>') + ' on Google'); }
+              if (aioGained) changes.push('<span style="color:#16a34a;">New citation</span> in Google AI Overview');
+              if (aioLost) changes.push('<span style="color:#ef4444;">Lost citation</span> in Google AI Overview');
+              if (perpGained) changes.push('<span style="color:#16a34a;">New citation</span> in Perplexity');
+              if (bingGained) changes.push('<span style="color:#16a34a;">New citation</span> in Copilot/Bing');
+              if (braveGained) changes.push('<span style="color:#16a34a;">New citation</span> in Claude/Brave');
+              if (scoreChanged) { const diff = curr.score - prev.score; changes.push('GRAAF score ' + (diff > 0 ? '<span style="color:#16a34a;">+' + diff + '</span>' : '<span style="color:#ef4444;">' + diff + '</span>') + ' (' + curr.score + '/100)'); }
+              if (changes.length) changeSummary = '<div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:12px 16px;margin-bottom:14px;"><div style="font-size:10px;color:#0369a1;font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;">What changed</div>' + changes.map(function(c){ return '<div style="font-size:13px;color:#1e293b;margin-bottom:3px;">' + c + '</div>'; }).join('') + '</div>';
             }
+
+            function statCellE(label, val, color) {
+              return '<td style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px 6px;text-align:center;">'
+                + '<div style="font-size:16px;font-weight:900;color:' + color + ';">' + val + '</div>'
+                + '<div style="font-size:9px;color:#64748b;text-transform:uppercase;letter-spacing:.05em;margin-top:3px;line-height:1.3;">' + label + '</div>'
+                + '</td> ';
+            }
+
+            const bodyHtml = '<h2 style="font-size:17px;font-weight:800;color:#0f172a;margin-bottom:10px;">' + (isFirst ? 'Your first scan is complete' : 'Your tracker has an update') + '</h2>'
+              + '<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px 16px;margin-bottom:14px;"><div style="font-size:9px;color:#94a3b8;text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px;">Page</div><div style="font-size:12px;color:#7c3aed;font-family:monospace;word-break:break-all;margin-bottom:4px;">' + pageUrl + '</div>' + (kw ? '<div style="font-size:11px;color:#64748b;">Keyword: <strong style="color:#1e293b;">' + kw + '</strong></div>' : '') + '</div>'
+              + changeSummary
+              + '<table width="100%" style="border-spacing:4px;border-collapse:separate;margin-bottom:14px;"><tr>'
+              + statCellE('Position', posVal, posColor)
+              + statCellE('Google AIO', aio ? 'Cited' : 'No', aio ? '#16a34a' : '#94a3b8')
+              + statCellE('Perplexity', perp ? 'Cited' : 'No', perp ? '#7c3aed' : '#94a3b8')
+              + statCellE('Copilot', bing ? 'Cited' : 'No', bing ? '#2563eb' : '#94a3b8')
+              + statCellE('Claude', brave ? 'Cited' : 'No', brave ? '#dc2626' : '#94a3b8')
+              + statCellE('GRAAF', score ? score + '/100' : 'N/A', score >= 70 ? '#16a34a' : score >= 50 ? '#f59e0b' : '#ef4444')
+              + '</tr></table>'
+              + (aio ? '<div style="background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:12px 16px;margin-bottom:12px;font-size:13px;color:#166534;"><strong>Cited in Google AI Overview</strong> for &ldquo;' + kw + '&rdquo;.</div>' : (!isFirst && !aioLost ? '' : '<div style="background:#fefce8;border:1px solid #fde047;border-radius:8px;padding:12px 16px;margin-bottom:12px;font-size:13px;color:#854d0e;"><strong>Not yet cited</strong> in Google AI Overview. Use the Citation Brief in your tracker.</div>'))
+              + '<div style="background:#f5f3ff;border:1px solid #ddd6fe;border-radius:8px;padding:12px 16px;"><div style="font-size:10px;color:#7c3aed;font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px;">Your tracker</div><div style="font-size:11px;font-family:monospace;color:#1e293b;word-break:break-all;margin-bottom:4px;">' + clientTrackUrl + '</div><div style="font-size:10px;color:#94a3b8;">Bookmark this link.</div></div>';
+
+            await sendTrackerEmail(page.tracker_client_id, subject, bodyHtml);
           } catch(e) { console.warn('[tracker-email] Post-check email failed:', e.message); }
         }
 
