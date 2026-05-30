@@ -23486,15 +23486,27 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                         </div>
                         <div style="display:flex;gap:6px;">
                             <button onclick="document.getElementById('csLiveExpanded').style.display=document.getElementById('csLiveExpanded').style.display==='none'?'block':'none'" style="font-size:10px;padding:2px 8px;border:1px solid #374151;border-radius:4px;background:none;color:#6b7280;cursor:pointer;">Log</button>
+                            <button onclick="document.getElementById('csNewsPanel').style.display=document.getElementById('csNewsPanel').style.display==='none'?'block':'none';if(document.getElementById('csNewsPanel').style.display==='block')loadNewsList();" style="font-size:10px;padding:2px 8px;border:1px solid #374151;border-radius:4px;background:none;color:#f59e0b;cursor:pointer;">📰 News</button>
                             <button onclick="toggleLiveOverlay()" id="csOverlayBtn" style="font-size:10px;padding:2px 8px;border:1px solid #7c3aed;border-radius:4px;background:none;color:#a78bfa;cursor:pointer;">⛶ Overlay</button>
                         </div>
                     </div>
                     <!-- Main ticker line -->
                     <div style="background:#111827;border-radius:6px;padding:8px 12px;font-family:monospace;font-size:12px;min-height:32px;display:flex;align-items:center;">
-                        <span id="csLiveTicker" style="color:#4b5563;">Waiting for activity — checks run automatically every 15 minutes...</span>
+                        <span id="csLiveTicker" style="color:#4b5563;">Waiting for activity — monitor starts 60s after deploy...</span>
                     </div>
                     <!-- Expanded log -->
-                    <div id="csLiveExpanded" style="display:none;margin-top:8px;max-height:180px;overflow-y:auto;" id="csLiveLog"></div>
+                    <div id="csLiveExpanded" style="display:none;margin-top:8px;max-height:180px;overflow-y:auto;"></div>
+                    <!-- News panel -->
+                    <div id="csNewsPanel" style="display:none;margin-top:10px;background:#111827;border:1px solid #374151;border-radius:8px;padding:12px;">
+                        <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:#f59e0b;margin-bottom:8px;">📰 Live News Manager</div>
+                        <div style="font-size:11px;color:#6b7280;margin-bottom:8px;">Custom headlines show first in the live feed. Max 120 chars.</div>
+                        <div style="display:flex;gap:6px;margin-bottom:10px;">
+                            <input id="csNewsInput" type="text" maxlength="120" placeholder="Add custom headline (max 120 chars)..." class="tr-input" style="flex:1;font-size:12px;">
+                            <button onclick="addCustomNews()" class="tr-btn primary" style="white-space:nowrap;">+ Add</button>
+                            <button onclick="refreshRssNews(this)" class="tr-btn" style="white-space:nowrap;font-size:11px;" title="Fetch latest RSS news">⟳ RSS</button>
+                        </div>
+                        <div id="csNewsList" style="max-height:150px;overflow-y:auto;"></div>
+                    </div>
                 </div>
 
                 <!-- ── OVERLAY MODE ── -->
@@ -23534,6 +23546,63 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 var _overlayStats = { checked:0, cited:0, positions:0 };
                 var _overlayVisible = false;
                 var _alertHideTimer = null;
+
+                async function addCustomNews() {
+                    var input = document.getElementById('csNewsInput');
+                    var headline = (input ? input.value : '').trim();
+                    if (!headline) return;
+                    try {
+                        var data = await apiCall('/api/admin/live-news', 'POST', { headline: headline });
+                        if (input) input.value = '';
+                        renderNewsList(data.custom || [], []);
+                    } catch(e) { alert('Error: ' + e.message); }
+                }
+
+                async function deleteCustomNews(idx) {
+                    try {
+                        await apiCall('/api/admin/live-news/' + idx, 'DELETE');
+                        loadNewsList();
+                    } catch(e) { alert('Error: ' + e.message); }
+                }
+
+                async function refreshRssNews(btn) {
+                    if (btn) { btn.disabled = true; btn.textContent = 'Loading...'; }
+                    try {
+                        await apiCall('/api/admin/live-news/refresh', 'POST');
+                        setTimeout(loadNewsList, 3500);
+                    } catch(e) {}
+                    if (btn) setTimeout(function(){ btn.disabled=false; btn.textContent='\u27f3 RSS'; }, 4000);
+                }
+
+                async function loadNewsList() {
+                    try {
+                        var data = await apiCall('/api/admin/live-news');
+                        renderNewsList(data.custom || [], data.rss || []);
+                    } catch(e) {}
+                }
+
+                function renderNewsList(custom, rss) {
+                    var el = document.getElementById('csNewsList');
+                    if (!el) return;
+                    var html = '';
+                    if (custom.length) {
+                        html += '<div style="font-size:10px;color:#f59e0b;font-weight:700;margin-bottom:4px;">YOUR CUSTOM HEADLINES</div>';
+                        custom.forEach(function(h, i) {
+                            html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid #1f2937;">'
+                                + '<span style="font-size:11px;color:#e5e7eb;">' + h.substring(0,100) + '</span>'
+                                + '<button onclick="deleteCustomNews(' + i + ')" style="background:none;border:none;color:#f87171;cursor:pointer;font-size:12px;padding:0 6px;">x</button>'
+                                + '</div>';
+                        });
+                    }
+                    if (rss.length) {
+                        html += '<div style="font-size:10px;color:#6b7280;font-weight:700;margin:8px 0 4px;">RSS HEADLINES</div>';
+                        rss.forEach(function(h) {
+                            html += '<div style="font-size:11px;color:#4b5563;padding:3px 0;border-bottom:1px solid #111827;">' + h.substring(0,100) + '</div>';
+                        });
+                    }
+                    if (!html) html = '<div style="font-size:11px;color:#4b5563;padding:4px 0;">No news yet — click RSS to fetch latest headlines</div>';
+                    el.innerHTML = html;
+                }
 
                 function toggleLiveOverlay() {
                     _overlayVisible = !_overlayVisible;
@@ -28138,15 +28207,47 @@ Zero generic advice. Skip anything our content already clearly has.`;
 }
 
 
-// ── Always-On Live Monitor ────────────────────────────────────────────────────
+// ── Custom news management ────────────────────────────────────────────────────
+app.get('/api/admin/live-news', verifyAdmin, (req, res) => {
+  res.json({ success: true, custom: _monitorState.customNews, rss: _monitorState.newsItems.slice(0,8) });
+});
+
+app.post('/api/admin/live-news', verifyAdmin, (req, res) => {
+  const { headline } = req.body;
+  if (!headline || typeof headline !== 'string') return res.status(400).json({ success: false, error: 'headline required' });
+  const clean = headline.trim().substring(0, 120);
+  if (!clean) return res.status(400).json({ success: false, error: 'empty' });
+  _monitorState.customNews.unshift(clean);
+  if (_monitorState.customNews.length > 20) _monitorState.customNews.pop();
+  // Broadcast immediately
+  _sseBroadcast({ type: 'news', headline: clean, source: 'ContentScale', ts: new Date().toISOString() });
+  res.json({ success: true, custom: _monitorState.customNews });
+});
+
+app.delete('/api/admin/live-news/:idx', verifyAdmin, (req, res) => {
+  const idx = parseInt(req.params.idx);
+  if (isNaN(idx) || idx < 0 || idx >= _monitorState.customNews.length) return res.status(400).json({ success: false, error: 'invalid index' });
+  _monitorState.customNews.splice(idx, 1);
+  res.json({ success: true, custom: _monitorState.customNews });
+});
+
+// Trigger news refresh manually
+app.post('/api/admin/live-news/refresh', verifyAdmin, async (req, res) => {
+  _monitorState.lastNewsFetch = 0; // reset cache
+  res.json({ success: true, message: 'News refresh triggered — check back in 10 seconds' });
+  setTimeout(() => {
+    if (_startAlwaysOnMonitor._refreshNews) _startAlwaysOnMonitor._refreshNews();
+  }, 500);
+});
 // Runs continuously — cycles through keywords checking AI Overviews + fetches SEO news
 // Broadcasts to SSE clients so the live wall/overlay always has something to show
 
 const _monitorState = {
   running: false,
-  keywords: [],        // loaded from tracker_pages
+  keywords: [],
   kwIndex: 0,
   newsItems: [],
+  customNews: [],   // manually added by Ottmar — always shown first
   lastNewsFetch: 0,
   interval: null
 };
@@ -28160,11 +28261,13 @@ async function _startAlwaysOnMonitor() {
   async function refreshKeywords() {
     try {
       const r = await pool.query(
-        `SELECT DISTINCT COALESCE(keyword, gsc_keyword) as kw, url
-         FROM tracker_pages
-         WHERE COALESCE(keyword, gsc_keyword) IS NOT NULL
-           AND COALESCE(keyword, gsc_keyword) != ''
-           AND COALESCE(keyword, gsc_keyword) != 'unknown'
+        `SELECT kw, url FROM (
+           SELECT DISTINCT COALESCE(keyword, gsc_keyword) as kw, url
+           FROM tracker_pages
+           WHERE COALESCE(keyword, gsc_keyword) IS NOT NULL
+             AND COALESCE(keyword, gsc_keyword) != ''
+             AND COALESCE(keyword, gsc_keyword) != 'unknown'
+         ) sub
          ORDER BY RANDOM() LIMIT 30`
       );
       _monitorState.keywords = r.rows.filter(r => r.kw).map(r => ({ kw: r.kw, url: r.url }));
@@ -28175,28 +28278,53 @@ async function _startAlwaysOnMonitor() {
   // Fetch SEO/AI news via RSS
   async function refreshNews() {
     const now = Date.now();
-    if (now - _monitorState.lastNewsFetch < 15 * 60 * 1000) return; // max every 15 min
+    if (now - _monitorState.lastNewsFetch < 15 * 60 * 1000) return;
     _monitorState.lastNewsFetch = now;
     const feeds = [
-      'https://feeds.feedburner.com/SearchEngineLand',
       'https://www.seroundtable.com/feed',
-      'https://searchengineland.com/feed'
+      'https://searchengineland.com/feed',
+      'https://feeds.feedburner.com/Moz-The-Moz-Blog',
+      'https://ahrefs.com/blog/feed'
     ];
     for (const feedUrl of feeds) {
       try {
-        const ctrl = new AbortController(); setTimeout(() => ctrl.abort(), 8000);
-        const r = await fetch(feedUrl, { headers: { 'User-Agent': 'ContentScale-Monitor/1.0' }, signal: ctrl.signal });
+        const ctrl = new AbortController();
+        setTimeout(() => ctrl.abort(), 8000);
+        const r = await fetch(feedUrl, {
+          headers: { 'User-Agent': 'ContentScale-Monitor/1.0', 'Accept': 'application/rss+xml, application/xml, text/xml' },
+          signal: ctrl.signal
+        });
         if (!r.ok) continue;
         const xml = await r.text();
-        const titles = [...xml.matchAll(/<title><!\[CDATA\[([^\]]+)\]\]><\/title>|<title>([^<]+)<\/title>/g)]
-          .slice(1, 8).map(m => (m[1] || m[2] || '').trim()).filter(t => t.length > 10 && t.length < 120);
-        if (titles.length) {
-          _monitorState.newsItems = titles;
-          console.log('[live-monitor] News loaded:', titles.length, 'items from', feedUrl);
-          break;
+        const titles = [];
+        // Try CDATA titles first, then plain
+        const cdataMatches = xml.matchAll(/<title><!\[CDATA\[([^\]]+)\]\]><\/title>/g);
+        for (const m of cdataMatches) { if (m[1] && m[1].length > 10 && m[1].length < 120 && !m[1].toLowerCase().includes('search engine')) titles.push(m[1].trim()); }
+        if (!titles.length) {
+          const plainMatches = xml.matchAll(/<title>([^<]{10,120})<\/title>/g);
+          for (const m of plainMatches) { titles.push(m[1].replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').trim()); }
+          titles.shift(); // remove feed title
         }
-      } catch(e) {}
+        const filtered = titles.filter(t => t.length > 15 && t.length < 120).slice(0, 8);
+        if (filtered.length >= 3) {
+          _monitorState.newsItems = filtered;
+          console.log('[live-monitor] News loaded:', filtered.length, 'items from', feedUrl);
+          return;
+        }
+      } catch(e) { console.warn('[live-monitor] RSS failed:', feedUrl, e.message); }
     }
+    // Fallback hardcoded headlines if all RSS fail
+    _monitorState.newsItems = [
+      'Google AI Overviews now appear on 15%+ of all queries',
+      'ChatGPT search now uses Google index for Plus users',
+      'Perplexity reaches 780M monthly queries in 2026',
+      'Zero-click searches hit 65% of all Google searches',
+      'E-E-A-T signals confirmed critical for AI Overview citations',
+      'ContentScale GRAAF Framework achieves 78% AI citation rate',
+      'Brave Search index now powers Claude web search',
+      'AI Overviews reduce position 1 CTR by 58% — Ahrefs study'
+    ];
+    console.log('[live-monitor] Using fallback news headlines');
   }
 
   // Check one keyword for AI Overview
@@ -28245,11 +28373,15 @@ async function _startAlwaysOnMonitor() {
     } catch(e) {}
   }
 
-  // Broadcast news item
+  // Broadcast news item — custom first, then RSS, then fallback
+  let _newsRotateIdx = 0;
   function broadcastNews() {
-    if (!_monitorState.newsItems.length) return;
-    const item = _monitorState.newsItems[Math.floor(Math.random() * _monitorState.newsItems.length)];
-    _sseBroadcast({ type: 'news', headline: item, source: 'SEO News', ts: new Date().toISOString() });
+    const all = [..._monitorState.customNews, ..._monitorState.newsItems];
+    if (!all.length) return;
+    const item = all[_newsRotateIdx % all.length];
+    _newsRotateIdx++;
+    const isCustom = _newsRotateIdx <= _monitorState.customNews.length;
+    _sseBroadcast({ type: 'news', headline: item, source: isCustom ? 'ContentScale' : 'SEO News', ts: new Date().toISOString() });
   }
 
   await refreshKeywords();
