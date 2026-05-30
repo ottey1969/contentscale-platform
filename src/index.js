@@ -848,32 +848,28 @@ async function sendTrackerEmail(clientId, subject, htmlBody) {
 
     const fullHtml = `<!DOCTYPE html>
 <html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-<body style="margin:0;padding:0;background:#f8fafc;font-family:Verdana,Geneva,sans-serif;">
+<body style="margin:0;padding:0;background:#f1f5f9;font-family:Verdana,Geneva,sans-serif;">
 <div style="max-width:600px;margin:0 auto;padding:32px 16px;">
-  <!-- Header -->
   <div style="background:#0f172a;border-radius:12px 12px 0 0;padding:24px 32px;text-align:center;">
-    <div style="font-size:20px;font-weight:800;color:#ffffff;letter-spacing:-.02em;">ContentScale</div>
-    <div style="font-size:11px;color:#94a3b8;margin-top:4px;text-transform:uppercase;letter-spacing:.1em;">AI Citation Tracker</div>
+    <div style="font-size:20px;font-weight:800;color:#ffffff;">ContentScale</div>
+    <div style="font-size:10px;color:#64748b;margin-top:4px;text-transform:uppercase;letter-spacing:.1em;">AI Citation Tracker</div>
   </div>
-  <!-- Body -->
   <div style="background:#ffffff;padding:32px;border-left:1px solid #e2e8f0;border-right:1px solid #e2e8f0;">
     ${htmlBody}
-    <!-- CTA -->
     <div style="margin-top:32px;text-align:center;">
-      <a href="${trackUrl}" style="display:inline-block;background:#7c3aed;color:#ffffff;text-decoration:none;padding:12px 28px;border-radius:8px;font-weight:700;font-size:14px;">View Your Tracker →</a>
+      <a href="${trackUrl}" style="display:inline-block;background:#7c3aed;color:#ffffff;text-decoration:none;padding:12px 28px;border-radius:8px;font-weight:700;font-size:14px;">View Your Tracker</a>
     </div>
   </div>
-  <!-- Calendly promo -->
-  <div style="background:#f5f3ff;border:1px solid #ddd6fe;border-radius:8px;padding:20px 32px;margin-top:2px;text-align:center;">
+  <div style="background:#f5f3ff;border:1px solid #ddd6fe;padding:20px 32px;text-align:center;">
     <div style="font-size:13px;font-weight:700;color:#1e293b;margin-bottom:6px;">Want Ottmar to implement these changes for you?</div>
     <div style="font-size:12px;color:#64748b;margin-bottom:12px;">Book a free strategy call — ContentScale offers done-for-you AI citation optimization.</div>
-    <a href="https://calendly.com/aioeditors" style="display:inline-block;background:#0f172a;color:#ffffff;text-decoration:none;padding:10px 20px;border-radius:6px;font-size:12px;font-weight:700;">📅 Book Free Strategy Call</a>
+    <a href="https://calendly.com/aioeditors" style="display:inline-block;background:#0f172a;color:#ffffff;text-decoration:none;padding:10px 20px;border-radius:6px;font-size:12px;font-weight:700;">Book Free Strategy Call</a>
   </div>
-  <!-- Footer -->
-  <div style="padding:20px 32px;text-align:center;border-left:1px solid #e2e8f0;border-right:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0;border-radius:0 0 12px 12px;background:#f8fafc;">
-    <div style="font-size:11px;color:#94a3b8;">
-      ContentScale · Amsterdam · <a href="https://contentscale.site" style="color:#7c3aed;text-decoration:none;">contentscale.site</a><br>
-      <a href="${unsubUrl}" style="color:#94a3b8;text-decoration:underline;font-size:10px;">Unsubscribe from tracker updates</a>
+  <div style="background:#f8fafc;border:1px solid #e2e8f0;border-top:none;border-radius:0 0 12px 12px;padding:20px 32px;text-align:center;">
+    <div style="font-size:11px;color:#94a3b8;line-height:1.8;">
+      ContentScale &middot; Amsterdam &middot; <a href="https://contentscale.site" style="color:#7c3aed;text-decoration:none;">contentscale.site</a><br>
+      You are receiving this because you registered a free tracker for <strong>${client.domain}</strong>.<br>
+      <a href="${unsubUrl}" style="color:#cbd5e1;text-decoration:underline;font-size:10px;">Unsubscribe from tracker updates</a>
     </div>
   </div>
 </div>
@@ -892,7 +888,12 @@ async function sendTrackerEmail(clientId, subject, htmlBody) {
         content: [{ type: 'text/html', value: fullHtml }]
       })
     });
-    console.log('[tracker-email] Sent to', client.email, '→', resp.status);
+    if (!resp.ok) {
+      const err = await resp.text().catch(()=>'');
+      console.warn('[tracker-email] SendGrid error', resp.status, err.substring(0,200));
+    } else {
+      console.log('[tracker-email] Sent to', client.email, 'status:', resp.status);
+    }
   } catch(e) { console.warn('[tracker-email] Failed:', e.message); }
 }
 
@@ -27627,35 +27628,52 @@ app.post('/api/tracker/pages/:id/check', verifyEngineAccess, async (req, res) =>
         // Send email notification if this is a tracker client page with results
         if (page.tracker_client_id) {
           try {
-            const snap2 = await pool.query('SELECT * FROM tracker_snapshots WHERE page_id=$1 ORDER BY checked_at DESC LIMIT 1', [page.id]);
+            const snap2 = await pool.query(
+              `SELECT s.*, p.url, p.keyword, p.gsc_keyword 
+               FROM tracker_snapshots s 
+               JOIN tracker_pages p ON p.id = s.page_id
+               WHERE s.page_id=$1 ORDER BY s.checked_at DESC LIMIT 1`,
+              [page.id]
+            );
             const s = snap2.rows[0];
             if (s) {
               const pos = s.google_position;
               const aio = s.ai_google_overview_cited;
+              const perp = s.ai_perplexity_cited;
+              const bing = s.ai_bing_cited;
               const score = s.score;
               const kw = page.keyword || page.gsc_keyword || domainFin;
+
+              const posColor = pos ? (pos <= 3 ? '#16a34a' : pos <= 10 ? '#f59e0b' : '#ef4444') : '#94a3b8';
+              const posVal = pos ? '#' + Math.round(pos) : 'N/A';
+
               const subject = aio
-                ? `✅ ${domainFin} is now cited in Google AI Overview for "${kw}"`
-                : `Your tracker results for ${domainFin}`;
-              const bodyHtml = `
-                <h2 style="font-size:18px;font-weight:800;color:#0f172a;margin-bottom:8px;">Your first scan is complete</h2>
-                <p style="font-size:14px;color:#64748b;margin-bottom:24px;">Here are the results for <strong>${page.url}</strong></p>
-                <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:24px;">
-                  <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:16px 20px;flex:1;min-width:120px;text-align:center;">
-                    <div style="font-size:24px;font-weight:900;color:${pos ? (pos <= 10 ? '#16a34a' : '#f59e0b') : '#94a3b8'};">${pos ? '#' + pos : '—'}</div>
-                    <div style="font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:.06em;margin-top:4px;">Google Position</div>
-                  </div>
-                  <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:16px 20px;flex:1;min-width:120px;text-align:center;">
-                    <div style="font-size:24px;font-weight:900;color:${aio ? '#16a34a' : '#94a3b8'};">${aio ? '✅' : '❌'}</div>
-                    <div style="font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:.06em;margin-top:4px;">AI Overview</div>
-                  </div>
-                  <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:16px 20px;flex:1;min-width:120px;text-align:center;">
-                    <div style="font-size:24px;font-weight:900;color:${score >= 70 ? '#16a34a' : '#f59e0b'};">${score ? score + '/100' : '—'}</div>
-                    <div style="font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:.06em;margin-top:4px;">GRAAF Score</div>
-                  </div>
-                </div>
-                ${!aio ? '<div style="background:#fef9c3;border:1px solid #fde047;border-radius:8px;padding:16px;margin-bottom:16px;font-size:13px;color:#854d0e;">Your page is <strong>not yet cited</strong> in Google AI Overview for "' + kw + '". Use the Citation Brief button in your tracker to get exact passages to add.</div>' : ''}
-                <p style="font-size:13px;color:#64748b;">Open your tracker to see full recommendations and generate a Citation Brief.</p>`;
+                ? 'Cited in Google AI Overview — ' + domainFin
+                : 'Your tracker scan is complete — ' + domainFin;
+
+              // Helper: stat cell
+              function statCell(label, val, color) {
+                return '<td style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px 8px;text-align:center;width:20%;">'
+                  + '<div style="font-size:18px;font-weight:900;color:' + color + ';">' + val + '</div>'
+                  + '<div style="font-size:9px;color:#64748b;text-transform:uppercase;letter-spacing:.06em;margin-top:4px;line-height:1.3;">' + label + '</div>'
+                  + '</td>';
+              }
+
+              const bodyHtml = '<h2 style="font-size:17px;font-weight:800;color:#0f172a;margin-bottom:6px;">Scan complete</h2>'
+                + '<p style="font-size:12px;color:#64748b;margin-bottom:18px;"><strong>' + page.url + '</strong><br>Keyword: <strong>' + kw + '</strong></p>'
+                + '<table width="100%" style="border-spacing:6px;border-collapse:separate;margin-bottom:18px;">'
+                + '<tr>'
+                + statCell('Google Position', posVal, posColor)
+                + statCell('Google AIO', aio ? 'Cited' : 'No', aio ? '#16a34a' : '#94a3b8')
+                + statCell('Perplexity', perp ? 'Cited' : 'No', perp ? '#7c3aed' : '#94a3b8')
+                + statCell('Copilot/Bing', bing ? 'Cited' : 'No', bing ? '#2563eb' : '#94a3b8')
+                + statCell('GRAAF Score', score ? score + '/100' : 'N/A', score >= 70 ? '#16a34a' : score >= 50 ? '#f59e0b' : '#ef4444')
+                + '</tr></table>'
+                + (aio
+                  ? '<div style="background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:12px 16px;margin-bottom:14px;font-size:13px;color:#166534;"><strong>Cited in Google AI Overview</strong> for &ldquo;' + kw + '&rdquo;. Great result!</div>'
+                  : '<div style="background:#fefce8;border:1px solid #fde047;border-radius:8px;padding:12px 16px;margin-bottom:14px;font-size:13px;color:#854d0e;"><strong>Not yet cited</strong> in Google AI Overview for &ldquo;' + kw + '&rdquo;. Use the Citation Brief in your tracker to get exact passages to add.</div>'
+                )
+                + '<p style="font-size:12px;color:#94a3b8;">Claude/Brave and ChatGPT citations are available in your full tracker report.</p>';
               await sendTrackerEmail(page.tracker_client_id, subject, bodyHtml);
             }
           } catch(e) { console.warn('[tracker-email] Post-check email failed:', e.message); }
