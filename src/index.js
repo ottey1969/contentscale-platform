@@ -820,7 +820,83 @@ function checkOttoLimit(req, res) {
 // will be fully initialised before any request arrives.
 // ── /live — Public livestream overlay page ────────────────────────────────
 // Access: /live?token=STREAM_TOKEN  (set STREAM_TOKEN in Railway env)
-// ── Self-service tracker client registration ──────────────────────────────────
+// ── Unsubscribe route ─────────────────────────────────────────────────────────
+app.get('/unsubscribe/:token', async (req, res) => {
+  try {
+    const r = await pool.query('UPDATE tracker_clients SET email_unsubscribed=TRUE WHERE unsubscribe_token=$1 RETURNING domain', [req.params.token]);
+    if (!r.rows.length) return res.send('<html><body style="font-family:sans-serif;text-align:center;padding:60px;"><h2>Link not found or already unsubscribed.</h2></body></html>');
+    res.send('<html><body style="font-family:sans-serif;text-align:center;padding:60px;background:#f8fafc;"><div style="max-width:400px;margin:0 auto;background:#fff;border-radius:12px;padding:40px;box-shadow:0 4px 24px rgba(0,0,0,.08);"><div style="font-size:2rem;margin-bottom:16px;">✅</div><h2 style="color:#0f172a;margin-bottom:8px;">Unsubscribed</h2><p style="color:#64748b;">You have been unsubscribed from ContentScale tracker updates for <strong>' + r.rows[0].domain + '</strong>.</p><p style="color:#94a3b8;font-size:12px;margin-top:16px;">You can still access your tracker at any time using your personal link.</p></div></body></html>');
+  } catch(e) { res.status(500).send('Error'); }
+});
+
+// ── Tracker client email notifications ────────────────────────────────────────
+async function sendTrackerEmail(clientId, subject, htmlBody) {
+  try {
+    const cr = await pool.query('SELECT * FROM tracker_clients WHERE id=$1 AND email_unsubscribed=FALSE AND email IS NOT NULL', [clientId]);
+    if (!cr.rows.length) return;
+    const client = cr.rows[0];
+
+    // Generate unsubscribe token if not set
+    let unsubToken = client.unsubscribe_token;
+    if (!unsubToken) {
+      unsubToken = require('crypto').randomBytes(20).toString('hex');
+      await pool.query('UPDATE tracker_clients SET unsubscribe_token=$1 WHERE id=$2', [unsubToken, clientId]);
+    }
+
+    const unsubUrl = (process.env.APP_URL || 'https://app.contentscale.site') + '/unsubscribe/' + unsubToken;
+    const trackUrl = (process.env.APP_URL || 'https://app.contentscale.site') + '/track/' + client.token;
+
+    const fullHtml = `<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f8fafc;font-family:Verdana,Geneva,sans-serif;">
+<div style="max-width:600px;margin:0 auto;padding:32px 16px;">
+  <!-- Header -->
+  <div style="background:#0f172a;border-radius:12px 12px 0 0;padding:24px 32px;text-align:center;">
+    <div style="font-size:20px;font-weight:800;color:#ffffff;letter-spacing:-.02em;">ContentScale</div>
+    <div style="font-size:11px;color:#94a3b8;margin-top:4px;text-transform:uppercase;letter-spacing:.1em;">AI Citation Tracker</div>
+  </div>
+  <!-- Body -->
+  <div style="background:#ffffff;padding:32px;border-left:1px solid #e2e8f0;border-right:1px solid #e2e8f0;">
+    ${htmlBody}
+    <!-- CTA -->
+    <div style="margin-top:32px;text-align:center;">
+      <a href="${trackUrl}" style="display:inline-block;background:#7c3aed;color:#ffffff;text-decoration:none;padding:12px 28px;border-radius:8px;font-weight:700;font-size:14px;">View Your Tracker →</a>
+    </div>
+  </div>
+  <!-- Calendly promo -->
+  <div style="background:#f5f3ff;border:1px solid #ddd6fe;border-radius:8px;padding:20px 32px;margin-top:2px;text-align:center;">
+    <div style="font-size:13px;font-weight:700;color:#1e293b;margin-bottom:6px;">Want Ottmar to implement these changes for you?</div>
+    <div style="font-size:12px;color:#64748b;margin-bottom:12px;">Book a free strategy call — ContentScale offers done-for-you AI citation optimization.</div>
+    <a href="https://calendly.com/aioeditors" style="display:inline-block;background:#0f172a;color:#ffffff;text-decoration:none;padding:10px 20px;border-radius:6px;font-size:12px;font-weight:700;">📅 Book Free Strategy Call</a>
+  </div>
+  <!-- Footer -->
+  <div style="padding:20px 32px;text-align:center;border-left:1px solid #e2e8f0;border-right:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0;border-radius:0 0 12px 12px;background:#f8fafc;">
+    <div style="font-size:11px;color:#94a3b8;">
+      ContentScale · Amsterdam · <a href="https://contentscale.site" style="color:#7c3aed;text-decoration:none;">contentscale.site</a><br>
+      <a href="${unsubUrl}" style="color:#94a3b8;text-decoration:underline;font-size:10px;">Unsubscribe from tracker updates</a>
+    </div>
+  </div>
+</div>
+</body></html>`;
+
+    const sgKey = process.env.SENDGRID_API_KEY || '';
+    if (!sgKey) { console.warn('[tracker-email] No SendGrid key'); return; }
+
+    const resp = await fetch('https://api.sendgrid.com/v3/mail/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + sgKey },
+      body: JSON.stringify({
+        personalizations: [{ to: [{ email: client.email }] }],
+        from: { email: 'info@contentscale.site', name: 'ContentScale Tracker' },
+        subject: subject,
+        content: [{ type: 'text/html', value: fullHtml }]
+      })
+    });
+    console.log('[tracker-email] Sent to', client.email, '→', resp.status);
+  } catch(e) { console.warn('[tracker-email] Failed:', e.message); }
+}
+
+// ── GET /api/tracker-client/register ─────────────────────────────────────────
 
 function generateClientToken() {
   return require('crypto').randomBytes(24).toString('hex');
@@ -1335,6 +1411,8 @@ app.patch('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
     updated_at TIMESTAMPTZ DEFAULT NOW()
   )`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS max_pages INTEGER DEFAULT 25`).catch(()=>{});
+  await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS unsubscribe_token VARCHAR(64)`).catch(()=>{});
+  await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS email_unsubscribed BOOLEAN DEFAULT FALSE`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS tracker_client_id INTEGER REFERENCES tracker_clients(id) ON DELETE SET NULL`).catch(()=>{});
   await client.query(`CREATE INDEX IF NOT EXISTS tracker_pages_client_idx ON tracker_pages(tracker_client_id) WHERE tracker_client_id IS NOT NULL`).catch(()=>{});
 
@@ -27523,6 +27601,43 @@ app.post('/api/tracker/pages/:id/check', verifyEngineAccess, async (req, res) =>
         const st = _trackerCheckStatus.get(pageId);
         if(st) { st.running = false; st.finishedAt = new Date().toISOString(); }
         const domainFin = (page.url||'').replace(/^https?:\/\//, '').split('/')[0];
+
+        // Send email notification if this is a tracker client page with results
+        if (page.tracker_client_id) {
+          try {
+            const snap2 = await pool.query('SELECT * FROM tracker_snapshots WHERE page_id=$1 ORDER BY checked_at DESC LIMIT 1', [page.id]);
+            const s = snap2.rows[0];
+            if (s) {
+              const pos = s.google_position;
+              const aio = s.ai_google_overview_cited;
+              const score = s.score;
+              const kw = page.keyword || page.gsc_keyword || domainFin;
+              const subject = aio
+                ? `✅ ${domainFin} is now cited in Google AI Overview for "${kw}"`
+                : `Your tracker results for ${domainFin}`;
+              const bodyHtml = `
+                <h2 style="font-size:18px;font-weight:800;color:#0f172a;margin-bottom:8px;">Your first scan is complete</h2>
+                <p style="font-size:14px;color:#64748b;margin-bottom:24px;">Here are the results for <strong>${page.url}</strong></p>
+                <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:24px;">
+                  <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:16px 20px;flex:1;min-width:120px;text-align:center;">
+                    <div style="font-size:24px;font-weight:900;color:${pos ? (pos <= 10 ? '#16a34a' : '#f59e0b') : '#94a3b8'};">${pos ? '#' + pos : '—'}</div>
+                    <div style="font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:.06em;margin-top:4px;">Google Position</div>
+                  </div>
+                  <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:16px 20px;flex:1;min-width:120px;text-align:center;">
+                    <div style="font-size:24px;font-weight:900;color:${aio ? '#16a34a' : '#94a3b8'};">${aio ? '✅' : '❌'}</div>
+                    <div style="font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:.06em;margin-top:4px;">AI Overview</div>
+                  </div>
+                  <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:16px 20px;flex:1;min-width:120px;text-align:center;">
+                    <div style="font-size:24px;font-weight:900;color:${score >= 70 ? '#16a34a' : '#f59e0b'};">${score ? score + '/100' : '—'}</div>
+                    <div style="font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:.06em;margin-top:4px;">GRAAF Score</div>
+                  </div>
+                </div>
+                ${!aio ? '<div style="background:#fef9c3;border:1px solid #fde047;border-radius:8px;padding:16px;margin-bottom:16px;font-size:13px;color:#854d0e;">Your page is <strong>not yet cited</strong> in Google AI Overview for "' + kw + '". Use the Citation Brief button in your tracker to get exact passages to add.</div>' : ''}
+                <p style="font-size:13px;color:#64748b;">Open your tracker to see full recommendations and generate a Citation Brief.</p>`;
+              await sendTrackerEmail(page.tracker_client_id, subject, bodyHtml);
+            }
+          } catch(e) { console.warn('[tracker-email] Post-check email failed:', e.message); }
+        }
 
         // Check for notable changes to broadcast as alerts
         try {
