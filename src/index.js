@@ -24534,7 +24534,11 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
             } else if (p.gsc_keyword) {
                 kwHtml = '<span style="font-size:11px;color:#6b7280;margin-left:4px;">keyword: <span style="color:#60a5fa;">'+p.gsc_keyword+'</span> <span style="color:#374151;font-size:10px;">(GSC)</span></span>';
             } else {
-                var slug = (p.url||'').replace(/\/$/, '').split('/').pop().replace(/[-_]/g,' ').replace(/\.(html?|php)$/i,'').trim();
+                var rawSlug = (p.url||'');
+                if (rawSlug.charAt(rawSlug.length-1) === '/') rawSlug = rawSlug.slice(0,-1);
+                rawSlug = rawSlug.split('/').pop() || '';
+                rawSlug = rawSlug.split('.')[0]; // remove extension
+                var slug = rawSlug.split('').map(function(c){ return (c==='-'||c==='_')?' ':c; }).join('').trim();
                 if (slug) {
                     kwHtml = '<span style="font-size:11px;color:#6b7280;margin-left:4px;">keyword: <span style="color:#fbbf24;">'+slug+'</span> <span style="background:#2d1f00;color:#fbbf24;font-size:9px;padding:1px 5px;border-radius:3px;cursor:pointer;" onclick="openHtmlModal('+p.id+')" title="Slug used as keyword — click to set manually">⚠️ slug</span></span>';
                 } else {
