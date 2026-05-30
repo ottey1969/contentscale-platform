@@ -24148,7 +24148,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     if (ev.type === 'monitor_aio') return (ev.cited ? 'CITED ' : 'AIO found: ') + '"' + ev.kw + '" — ' + (ev.aio_text||'').substring(0,60);
                     if (ev.type === 'monitor_no_aio') return 'No AIO: "' + ev.kw + '"';
                     if (ev.type === 'monitor_position') return '#' + ev.position + ' in Google: "' + ev.kw + '" (' + ev.domain + ')';
-                    if (ev.type === 'news') { var h = ev.headline || ''; return 'NEWS: ' + (h.length > 80 ? h.substring(0,77) + '...' : h); }
+                    if (ev.type === 'news') { var h = ev.headline || ''; var src2 = ev.source ? ' [' + ev.source + ']' : ''; return '📰 ' + (h.length > 80 ? h.substring(0,77) + '...' : h) + src2; }
                     if (ev.type === 'connected') return 'Live feed connected';
                     return ev.msg || '';
                 }
@@ -28802,12 +28802,14 @@ async function _startAlwaysOnMonitor() {
     const now = Date.now();
     if (now - _monitorState.lastNewsFetch < 15 * 60 * 1000) return;
     _monitorState.lastNewsFetch = now;
+
     const feeds = [
-      'https://www.seroundtable.com/feed',
       'https://searchengineland.com/feed',
-      'https://feeds.feedburner.com/Moz-The-Moz-Blog',
-      'https://ahrefs.com/blog/feed'
+      'https://www.seroundtable.com/feed',
+      'https://ahrefs.com/blog/feed',
+      'https://moz.com/blog/feed'
     ];
+
     for (const feedUrl of feeds) {
       try {
         const ctrl = new AbortController();
@@ -28818,35 +28820,43 @@ async function _startAlwaysOnMonitor() {
         });
         if (!r.ok) continue;
         const xml = await r.text();
-        const titles = [];
-        // Try CDATA titles first, then plain
-        const cdataMatches = xml.matchAll(/<title><!\[CDATA\[([^\]]+)\]\]><\/title>/g);
-        for (const m of cdataMatches) { if (m[1] && m[1].length > 10 && m[1].length < 120 && !m[1].toLowerCase().includes('search engine')) titles.push(m[1].trim()); }
-        if (!titles.length) {
-          const plainMatches = xml.matchAll(/<title>([^<]{10,120})<\/title>/g);
-          for (const m of plainMatches) { titles.push(m[1].replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').trim()); }
-          titles.shift(); // remove feed title
+
+        // Parse items with dates
+        const items = [];
+        const itemMatches = xml.matchAll(/<item>([\s\S]*?)<\/item>/g);
+        for (const m of itemMatches) {
+          const block = m[1];
+          // Get title
+          const titleMatch = block.match(/<title><!\[CDATA\[([^\]]+)\]\]><\/title>/) || block.match(/<title>([^<]{10,120})<\/title>/);
+          if (!titleMatch) continue;
+          const title = titleMatch[1].replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').trim();
+          // Get date
+          const dateMatch = block.match(/<pubDate>([^<]+)<\/pubDate>/);
+          const pubDate = dateMatch ? new Date(dateMatch[1]) : null;
+          // Only items from last 14 days
+          if (pubDate && (now - pubDate.getTime()) > 14 * 24 * 60 * 60 * 1000) continue;
+          if (title.length > 15 && title.length < 100) items.push(title);
+          if (items.length >= 8) break;
         }
-        const filtered = titles.filter(t => t.length > 15 && t.length < 120).slice(0, 8);
-        if (filtered.length >= 3) {
-          _monitorState.newsItems = filtered;
-          console.log('[live-monitor] News loaded:', filtered.length, 'items from', feedUrl);
+
+        if (items.length >= 3) {
+          _monitorState.newsItems = items;
+          console.log('[live-monitor] News loaded:', items.length, 'items from', feedUrl);
           return;
         }
       } catch(e) { console.warn('[live-monitor] RSS failed:', feedUrl, e.message); }
     }
-    // Fallback hardcoded headlines if all RSS fail
+
+    // Fallback — only use if RSS completely fails
+    console.log('[live-monitor] All RSS feeds failed — using fallback headlines');
     _monitorState.newsItems = [
-      'Google AI Overviews now appear on 15%+ of all queries',
-      'ChatGPT search now uses Google index for Plus users',
+      'Google AI Overviews now appear on 15-48% of all queries',
       'Perplexity reaches 780M monthly queries in 2026',
       'Zero-click searches hit 65% of all Google searches',
-      'E-E-A-T signals confirmed critical for AI Overview citations',
-      'ContentScale GRAAF Framework achieves 78% AI citation rate',
+      'E-E-A-T signals critical for AI Overview citations',
       'Brave Search index now powers Claude web search',
-      'AI Overviews reduce position 1 CTR by 58% — Ahrefs study'
+      'AI Overviews reduce position 1 CTR by 58%'
     ];
-    console.log('[live-monitor] Using fallback news headlines');
   }
 
   // Check one keyword for AI Overview
@@ -28903,7 +28913,8 @@ async function _startAlwaysOnMonitor() {
     const item = all[_newsRotateIdx % all.length];
     _newsRotateIdx++;
     const isCustom = _newsRotateIdx <= _monitorState.customNews.length;
-    _sseBroadcast({ type: 'news', headline: item, source: isCustom ? 'ContentScale' : 'SEO News', ts: new Date().toISOString() });
+    const today = new Date().toLocaleDateString('en-GB', { day:'numeric', month:'short' });
+    _sseBroadcast({ type: 'news', headline: item, source: isCustom ? 'ContentScale' : today + ' — SEO News', ts: new Date().toISOString() });
   }
 
   await refreshKeywords();
