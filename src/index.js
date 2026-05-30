@@ -23246,11 +23246,16 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
 
                 <script>
                 // ── Citation Brief ────────────────────────────────────────────
-                function openCitationBrief(pageId, url, keyword) {
+                function openCitationBrief(pageId) {
+                    var page = (allTrackerPages||[]).find(function(p){ return p.id == pageId; }) || {};
+                    var url = page.url || '';
+                    var keyword = page.keyword || page.gsc_keyword || '';
                     var modal = document.getElementById('trCitationModal');
                     var title = document.getElementById('trCitationTitle');
                     var body  = document.getElementById('trCitationBody');
-                    var urlClean = url.indexOf('//') > -1 ? url.split('//')[1] : url; var urlParts = urlClean.split('/'); title.textContent = keyword + ' — ' + urlParts.slice(0,2).join('/');
+                    var urlClean = url.indexOf('//') > -1 ? url.split('//')[1] : url;
+                    var urlParts = urlClean.split('/');
+                    title.textContent = (keyword || 'Citation Brief') + ' — ' + urlParts.slice(0,2).join('/');
                     body.innerHTML = '<div style="text-align:center;padding:60px 0;color:#6b7280;"><div style="font-size:2rem;margin-bottom:12px;">⚙️</div><div style="margin-top:8px;font-size:13px;">Fetching AI Overview · Scraping competitors · Generating citation brief…</div><div style="font-size:11px;color:#4b5563;margin-top:6px;">This takes 15–30 seconds</div></div>';
                     modal.style.display = 'flex';
                     var token = localStorage.getItem('admin_id') || '';
@@ -24541,7 +24546,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 +changesBtn
                 +'<button onclick="runManualCheck('+p.id+')" class="tr-btn green" id="trCheckBtn_'+p.id+'">Check now</button>'
                 +'<button onclick="openHtmlModal('+p.id+')" class="tr-btn">Update HTML</button>'
-                +'<button onclick="openCitationBrief('+p.id+','+JSON.stringify(p.url||'')+','+JSON.stringify(p.keyword||'')+')" class="tr-btn" style="border-color:#a78bfa;color:#a78bfa;" title="Reverse-engineer AI Overview and get exact passages to add">🎯 Citation</button>'
+                +'<button onclick="openCitationBrief('+p.id+')" class="tr-btn" style="border-color:#a78bfa;color:#a78bfa;" title="Citation Brief">🎯 Citation</button>'
                 +'<button onclick="deleteTrackerPage('+p.id+')" class="tr-btn danger">✕</button>'
                 +'</div>'
                 +'<div style="font-size:11px;color:#6b7280;text-align:right;">'
