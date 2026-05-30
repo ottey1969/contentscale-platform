@@ -23106,42 +23106,39 @@ body{background:#0a0a0f;color:#f1f5f9;font-family:'Segoe UI',system-ui,sans-seri
     <div class="stat"><div class="val" id="statCitedC" style="color:#f87171;">—</div><div class="lbl">Claude/Brave</div></div>
     <div class="stat"><div class="val" id="statAvgScore" style="color:#fbbf24;">—</div><div class="lbl">Avg GRAAF</div></div>
     <div class="stat"><div class="val" id="statRemaining" style="color:#4ade80;">—</div><div class="lbl">Slots left</div></div>
-  </div>
 
   <!-- Action bar -->
-  <div style="display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap;">
-    <button class="btn primary" onclick="showAddModal()">+ Add URL</button>
-    <button class="btn" onclick="loadPages()" title="Refresh"><i class="fas fa-sync-alt"></i> Refresh</button>
+  <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
+    <div style="display:flex;gap:6px;flex-wrap:wrap;">
+      <button class="btn primary" onclick="showAddModal()" style="font-size:12px;padding:7px 14px;">+ Add URL</button>
+      <button class="btn" onclick="loadPages()" title="Refresh" style="font-size:12px;padding:7px 12px;"><i class="fas fa-sync-alt"></i> Refresh</button>
+      <button class="btn" onclick="showImportModal()" style="font-size:12px;padding:7px 14px;border-color:#38bdf8;color:#38bdf8;"><i class="fas fa-cloud-download-alt"></i> Import GSC</button>
+    </div>
+    <div style="font-size:11px;color:#4b5563;" id="pageCountLabel"></div>
+  </div>
 
-  <!-- Live Activity Feed for this domain -->
-  <div id="clientLiveWall" style="background:#0d1117;border:1px solid #1f2937;border-radius:8px;padding:10px 14px;margin-bottom:16px;">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+  <!-- Live Activity Feed -->
+  <div style="background:#0a0f1a;border:1px solid #1a2540;border-radius:10px;margin-bottom:20px;overflow:hidden;">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px;cursor:pointer;" onclick="var f=document.getElementById('clientLiveFeed');var a=document.getElementById('clientLiveArrow');f.style.display=f.style.display===String.fromCharCode(110,111,110,101)?'block':'none';a.textContent=f.style.display===String.fromCharCode(110,111,110,101)?'+':'-';">
       <div style="display:flex;align-items:center;gap:8px;">
-        <span id="clientLiveDot" style="width:7px;height:7px;border-radius:50%;background:#374151;display:inline-block;"></span>
-        <span style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:#4b5563;">Live Activity</span>
-        <span id="clientLiveStatus" style="font-size:10px;color:#4b5563;"></span>
+        <span id="clientLiveDot" style="width:7px;height:7px;border-radius:50%;background:#374151;display:inline-block;flex-shrink:0;"></span>
+        <span style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.12em;color:#4b5563;">Live Activity</span>
+        <span id="clientLiveStatus" style="font-size:10px;color:#374151;"></span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span style="font-size:9px;color:#1f2937;text-transform:uppercase;letter-spacing:.08em;">Updates every 8s</span>
+        <span id="clientLiveArrow" style="font-size:14px;color:#374151;font-weight:700;line-height:1;">-</span>
       </div>
     </div>
-    <div id="clientLiveFeed" style="background:#0a0a12;border-radius:6px;padding:8px 10px;min-height:36px;max-height:160px;overflow-y:auto;font-family:monospace;font-size:11px;">
-      <div style="color:#374151;">Connecting to live feed...</div>
+    <div id="clientLiveFeed" style="padding:8px 14px;min-height:44px;max-height:180px;overflow-y:auto;font-family:monospace;font-size:11px;line-height:1.6;">
+      <div style="color:#1f2937;padding:4px 0;">Connecting...</div>
     </div>
   </div>
 
-    <button class="btn" onclick="showImportModal()" style="border-color:#38bdf8;color:#38bdf8;"><i class="fas fa-cloud-download-alt"></i> Import from GSC</button>
-  </div>
 
-  <!-- How it works (first time) -->
-  <div id="howItWorks" style="display:none;background:#1a0a2e;border:1px solid #4c1d95;border-radius:10px;padding:20px;margin-bottom:20px;">
-    <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:#a78bfa;margin-bottom:12px;">How your tracker works</div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;">
-      <div><div style="font-size:1.2rem;margin-bottom:6px;">📍</div><div style="font-size:12px;font-weight:700;color:#e5e7eb;margin-bottom:4px;">Track your pages</div><div style="font-size:11px;color:#6b7280;">Add your most important URLs. We check Google position, AI Overview citations, and content quality.</div></div>
-      <div><div style="font-size:1.2rem;margin-bottom:6px;">🤖</div><div style="font-size:12px;font-weight:700;color:#e5e7eb;margin-bottom:4px;">AI Citation Briefs</div><div style="font-size:11px;color:#6b7280;">See exactly why you are not cited in Google AI Overview, Perplexity, and ChatGPT — and get exact passages to add.</div></div>
-      <div><div style="font-size:1.2rem;margin-bottom:6px;">📱</div><div style="font-size:12px;font-weight:700;color:#e5e7eb;margin-bottom:4px;">WhatsApp updates</div><div style="font-size:11px;color:#6b7280;">Get notified when something changes — position drops, new citations, content opportunities.</div></div>
-    </div>
-  </div>
 
   <!-- Pages list -->
-  <div class="section-title">Your tracked pages <span id="pageCountLabel" style="color:#374151;"></span></div>
+  <div class="section-title">Your tracked pages</div>
   <div id="pagesList"></div>
 
   <!-- Upsell -->
@@ -23256,7 +23253,7 @@ function renderStats(data) {
   document.getElementById('statAvgScore').textContent = avgScore ? avgScore+'/100' : '-';
   document.getElementById('statRemaining').textContent = MAX_PAGES - pages.length;
   document.getElementById('pageCountLabel').textContent = '(' + pages.length + ' of ' + MAX_PAGES + ')';
-  if (!pages.length) document.getElementById('howItWorks').style.display = 'block';
+
 }
 
 function renderPages() {
@@ -23373,14 +23370,18 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
     var status = document.getElementById('clientLiveStatus');
     var feed = document.getElementById('clientLiveFeed');
 
-    function addLine(text, color) {
+    function addLine(text, color, url) {
       if (!feed) return;
       var line = document.createElement('div');
-      line.style.cssText = 'padding:2px 0;border-bottom:1px solid #0d1117;color:' + (color||'#6b7280') + ';';
+      line.style.cssText = 'padding:3px 0;border-bottom:1px solid #0a0f1a;line-height:1.5;';
       var ts = new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
-      line.textContent = ts + '  ' + text;
-      // Insert at top, keep max 15 lines
-      if (feed.firstChild && feed.firstChild.style && feed.firstChild.style.color === '#374151') feed.innerHTML = '';
+      var tsSpan = '<span style="color:#1f2937;margin-right:8px;font-size:10px;">' + ts + '</span>';
+      if (url) {
+        line.innerHTML = tsSpan + '<a href="' + url + '" target="_blank" rel="noopener" style="color:' + (color||'#6b7280') + ';text-decoration:none;">' + text + '</a>';
+      } else {
+        line.innerHTML = tsSpan + '<span style="color:' + (color||'#6b7280') + ';">' + text + '</span>';
+      }
+      if (feed.firstChild && feed.firstChild.style && feed.firstChild.style.color === '#1f2937') feed.innerHTML = '';
       feed.insertBefore(line, feed.firstChild);
       while (feed.children.length > 15) feed.removeChild(feed.lastChild);
     }
@@ -23399,12 +23400,14 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
             data.events.forEach(function(ev) {
               var text = '';
               var color = '#6b7280';
+              var isLink = false;
+              var linkUrl = '';
               if (ev.type === 'check_done') { text = 'Scan complete: ' + (ev.url||''); color = '#4ade80'; }
               else if (ev.type === 'citation_gained') { text = 'Citation gained in ' + (ev.platform||'AI') + ': ' + (ev.url||''); color = '#4ade80'; }
               else if (ev.type === 'position_up') { text = 'Position up to #' + ev.new_pos + ': ' + (ev.url||''); color = '#a3e635'; }
               else if (ev.type === 'score_up') { text = 'GRAAF score improved: ' + (ev.url||''); color = '#fbbf24'; }
-              else if (ev.type === 'news') { text = 'SEO News: ' + (ev.headline||'').substring(0,60); color = '#f59e0b'; }
-              if (text) addLine(text, color);
+              else if (ev.type === 'news') { isLink = !!(ev.url); linkUrl = ev.url||''; text = 'SEO: ' + (ev.headline||''); color = '#f59e0b'; }
+              if (text) addLine(text, color, isLink ? linkUrl : null);
             });
           }
         })
@@ -24409,7 +24412,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     if (ev.type === 'monitor_aio') return (ev.cited ? 'CITED ' : 'AIO found: ') + '"' + ev.kw + '" - ' + (ev.aio_text||'').substring(0,60);
                     if (ev.type === 'monitor_no_aio') return 'No AIO: "' + ev.kw + '"';
                     if (ev.type === 'monitor_position') return '#' + ev.position + ' in Google: "' + ev.kw + '" (' + ev.domain + ')';
-                    if (ev.type === 'news') { var h = ev.headline || ''; var src2 = ev.source ? ' [' + ev.source + ']' : ''; return '📰 ' + (h.length > 80 ? h.substring(0,77) + '...' : h) + src2; }
+                    if (ev.type === 'news') { var h = ev.headline || ''; var src2 = ev.source ? ' [' + ev.source + ']' : ''; return '📰 ' + ( + src2; }
                     if (ev.type === 'connected') return 'Live feed connected';
                     return ev.msg || '';
                 }
@@ -24440,8 +24443,10 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     // Add new line at top
                     var line = document.createElement('div');
                     line.style.cssText = 'display:flex;gap:8px;padding:3px 0;border-bottom:1px solid #0d1117;';
-                    line.innerHTML = '<span style="color:#374151;white-space:nowrap;flex-shrink:0;font-size:10px;">' + ts + '</span>'
-                        + '<span style="color:' + color + ';line-height:1.4;">' + text + '</span>';
+                    var textHtml = ev.url && ev.type === 'news'
+                        ? '<a href="' + ev.url + '" target="_blank" rel="noopener" style="color:' + color + ';text-decoration:none;line-height:1.4;">' + text + '</a>'
+                        : '<span style="color:' + color + ';line-height:1.4;">' + text + '</span>';
+                    line.innerHTML = '<span style="color:#374151;white-space:nowrap;flex-shrink:0;font-size:10px;">' + ts + '</span>' + textHtml;
 
                     // Remove placeholder if present
                     if (el.firstChild && el.firstChild.querySelector && !el.firstChild.querySelector('span[style*="374151"]')) {
@@ -29435,12 +29440,15 @@ async function _startAlwaysOnMonitor() {
           const titleMatch = block.match(/<title><!\[CDATA\[([^\]]+)\]\]><\/title>/) || block.match(/<title>([^<]{10,120})<\/title>/);
           if (!titleMatch) continue;
           const title = titleMatch[1].replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').trim();
+          // Get URL
+          const linkMatch = block.match(/<link>([^<]+)<\/link>/) || block.match(/<guid[^>]*>([^<]+)<\/guid>/);
+          const url = linkMatch ? linkMatch[1].trim() : null;
           // Get date
           const dateMatch = block.match(/<pubDate>([^<]+)<\/pubDate>/);
           const pubDate = dateMatch ? new Date(dateMatch[1]) : null;
           // Only items from last 14 days
           if (pubDate && (now - pubDate.getTime()) > 14 * 24 * 60 * 60 * 1000) continue;
-          if (title.length > 15 && title.length < 100) items.push(title);
+          if (title.length > 15 && title.length < 200) items.push({ title, url });
           if (items.length >= 8) break;
         }
 
@@ -29455,12 +29463,12 @@ async function _startAlwaysOnMonitor() {
     // Fallback — only use if RSS completely fails
     console.log('[live-monitor] All RSS feeds failed — using fallback headlines');
     _monitorState.newsItems = [
-      'Google AI Overviews now appear on 15-48% of all queries',
-      'Perplexity reaches 780M monthly queries in 2026',
-      'Zero-click searches hit 65% of all Google searches',
-      'E-E-A-T signals critical for AI Overview citations',
-      'Brave Search index now powers Claude web search',
-      'AI Overviews reduce position 1 CTR by 58%'
+      { title: 'Google AI Overviews now appear on 15-48% of all queries', url: 'https://searchengineland.com' },
+      { title: 'Perplexity reaches 780M monthly queries in 2026', url: 'https://searchengineland.com' },
+      { title: 'Zero-click searches hit 65% of all Google searches', url: 'https://www.seroundtable.com' },
+      { title: 'E-E-A-T signals critical for AI Overview citations', url: 'https://searchengineland.com' },
+      { title: 'Brave Search index now powers Claude web search', url: 'https://www.seroundtable.com' },
+      { title: 'AI Overviews reduce position 1 CTR by 58%', url: 'https://ahrefs.com/blog' }
     ];
   }
 
@@ -29519,7 +29527,9 @@ async function _startAlwaysOnMonitor() {
     _newsRotateIdx++;
     const isCustom = _newsRotateIdx <= _monitorState.customNews.length;
     const today = new Date().toLocaleDateString('en-GB', { day:'numeric', month:'short' });
-    _sseBroadcast({ type: 'news', headline: item, source: isCustom ? 'ContentScale' : today + ' — SEO News', ts: new Date().toISOString() });
+    const headline = typeof item === 'object' ? item.title : item;
+    const url = typeof item === 'object' ? item.url : null;
+    _sseBroadcast({ type: 'news', headline, url, source: isCustom ? 'ContentScale' : today + ' — SEO News', ts: new Date().toISOString() });
   }
 
   await refreshKeywords();
