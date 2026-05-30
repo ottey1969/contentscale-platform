@@ -597,35 +597,51 @@
                </div>
                <div id="singleMode">
                   <div class="card max-w-3xl mx-auto">
-                     <!-- Paste HTML Only — URL scan hidden for cleaner UX -->
-                     <!-- Instructions -->
-                     <div style="background:rgba(79,70,229,0.1);border:1px solid rgba(99,102,241,0.3);border-radius:10px;padding:14px 16px;margin-bottom:16px;">
-                        <div style="font-size:0.82rem;font-weight:800;color:#a5b4fc;margin-bottom:8px;">📋 How to get your page source</div>
-                        <ol style="font-size:0.82rem;color:#d1d5db;line-height:2;margin:0;padding-left:18px;">
-                           <li>Open your page in the browser</li>
-                           <li>Right-click anywhere on the page</li>
-                           <li>Click <strong style="color:#a5b4fc;">View Page Source</strong></li>
-                           <li>Press <strong style="color:#a5b4fc;">Ctrl+A</strong> (select all) then <strong style="color:#a5b4fc;">Ctrl+C</strong> (copy)</li>
-                           <li>Paste below and click <strong style="color:#a5b4fc;">Scan</strong></li>
-                        </ol>
-                        <div style="margin-top:10px;padding:8px 12px;background:rgba(16,185,129,0.08);border-left:3px solid #10b981;border-radius:0 6px 6px 0;font-size:0.78rem;color:#6ee7b7;">
-                           ✅ <strong>Why page source?</strong> This is exactly what Google reads — more accurate than a URL scan which may be affected by caching or server configuration.
-                        </div>
-                     </div>
-                     <!-- URL Input (hidden) -->
-                     <div id="singleUrlWrap" style="display:none;">
-                        <div class="flex flex-col sm:flex-row gap-3">
-                           <input type="text" id="singleUrlInput" placeholder="https://business-website.com" class="flex-1 p-3 rounded">
-                           <button onclick="scanSingleURL()" id="singleScanBtn" class="btn btn-primary"><i class="fas fa-search"></i> Start Scan</button>
-                        </div>
-                     </div>
-                     <!-- Paste HTML Input (always visible) -->
-                     <div id="singlePasteWrap">
-                        <textarea id="singlePasteInput" aria-label="Paste your page source HTML here" rows="6" style="width:100%;box-sizing:border-box;" placeholder="Paste your page source here...&#10;&#10;How? Open your page → Right-click → View Page Source → Ctrl+A → Ctrl+C → Ctrl+V here" class="w-full p-3 rounded text-sm" style="font-family:monospace;font-size:0.78rem;line-height:1.6;width:100%;display:block;"></textarea>
-                        <input type="text" id="singlePasteUrl" aria-label="Page URL for report label" placeholder="https://example.com (optional — for report label)" style="width:100%;margin-top:10px;padding:12px;border-radius:8px;font-size:0.85rem;display:block;box-sizing:border-box;">
-                        <button onclick="scanPastedHTML()" id="singlePasteBtn" class="btn btn-primary" style="background:linear-gradient(135deg,#7e22ce,#be185d);width:100%;margin-top:10px;padding:16px;font-size:1.1rem;font-weight:800;border-radius:10px;display:block;text-align:center;">
-                           <i class="fas fa-search"></i>&nbsp; Scan My Page
+
+                     <!-- Scan method toggle -->
+                     <div style="display:flex;gap:0;background:#1f2937;border-radius:10px;padding:4px;margin-bottom:16px;border:1px solid #374151;">
+                        <button id="methodHtmlBtn" onclick="setScanMethod('html')" style="flex:1;padding:10px 14px;border-radius:7px;font-size:0.85rem;font-weight:700;border:none;cursor:pointer;background:linear-gradient(135deg,#7e22ce,#be185d);color:white;transition:all .2s;">
+                           📋 Paste HTML <span style="font-size:0.7rem;opacity:.85;margin-left:4px;">— recommended</span>
                         </button>
+                        <button id="methodUrlBtn" onclick="setScanMethod('url')" style="flex:1;padding:10px 14px;border-radius:7px;font-size:0.85rem;font-weight:700;border:none;cursor:pointer;background:none;color:#9ca3af;transition:all .2s;">
+                           🔗 Scan by URL
+                        </button>
+                     </div>
+
+                     <!-- HTML paste method (default) -->
+                     <div id="methodHtmlPanel">
+                        <div style="background:rgba(79,70,229,0.1);border:1px solid rgba(99,102,241,0.3);border-radius:10px;padding:14px 16px;margin-bottom:16px;">
+                           <div style="font-size:0.82rem;font-weight:800;color:#a5b4fc;margin-bottom:8px;">📋 How to get your page source</div>
+                           <ol style="font-size:0.82rem;color:#d1d5db;line-height:2;margin:0;padding-left:18px;">
+                              <li>Open your page in the browser</li>
+                              <li>Right-click anywhere → <strong style="color:#a5b4fc;">View Page Source</strong></li>
+                              <li>Press <strong style="color:#a5b4fc;">Ctrl+A</strong> then <strong style="color:#a5b4fc;">Ctrl+C</strong></li>
+                              <li>Paste below and click <strong style="color:#a5b4fc;">Scan</strong></li>
+                           </ol>
+                           <div style="margin-top:10px;padding:8px 12px;background:rgba(16,185,129,0.08);border-left:3px solid #10b981;border-radius:0 6px 6px 0;font-size:0.78rem;color:#6ee7b7;">
+                              ✅ <strong>Most accurate</strong> — this is exactly what Google reads, unaffected by caching or server config.
+                           </div>
+                        </div>
+                        <div id="singlePasteWrap">
+                           <textarea id="singlePasteInput" aria-label="Paste your page source HTML here" rows="6" style="width:100%;box-sizing:border-box;font-family:monospace;font-size:0.78rem;line-height:1.6;" placeholder="Paste your page source here...&#10;&#10;How? Open your page → Right-click → View Page Source → Ctrl+A → Ctrl+C → Ctrl+V here" class="w-full p-3 rounded text-sm"></textarea>
+                           <input type="text" id="singlePasteUrl" aria-label="Page URL for report label" placeholder="https://example.com (optional — for report label)" style="width:100%;margin-top:10px;padding:12px;border-radius:8px;font-size:0.85rem;display:block;box-sizing:border-box;">
+                           <button onclick="scanPastedHTML()" id="singlePasteBtn" class="btn btn-primary" style="background:linear-gradient(135deg,#7e22ce,#be185d);width:100%;margin-top:10px;padding:16px;font-size:1.1rem;font-weight:800;border-radius:10px;display:block;text-align:center;">
+                              <i class="fas fa-search"></i>&nbsp; Scan My Page
+                           </button>
+                        </div>
+                     </div>
+
+                     <!-- URL method -->
+                     <div id="methodUrlPanel" style="display:none;">
+                        <div style="background:rgba(251,191,36,0.07);border:1px solid rgba(251,191,36,0.25);border-left:4px solid #fbbf24;border-radius:0 10px 10px 0;padding:12px 16px;margin-bottom:16px;font-size:0.82rem;color:#fde68a;">
+                           ⚠️ <strong>Note:</strong> URL scanning is less accurate than pasting HTML. Results may differ from what Google sees due to JavaScript rendering, caching, or server configuration. <strong>For best results, use Paste HTML.</strong>
+                        </div>
+                        <div id="singleUrlWrap">
+                           <input type="text" id="singleUrlInput" aria-label="Enter website URL to scan" placeholder="https://your-website.com/page-to-scan" style="width:100%;padding:14px;border-radius:8px;font-size:0.95rem;box-sizing:border-box;margin-bottom:10px;">
+                           <button onclick="scanSingleURL()" id="singleScanBtn" class="btn btn-primary" style="background:linear-gradient(135deg,#7e22ce,#be185d);width:100%;padding:16px;font-size:1.1rem;font-weight:800;border-radius:10px;">
+                              <i class="fas fa-search"></i>&nbsp; Scan URL
+                           </button>
+                        </div>
                      </div>
                      <div id="singleProgress" class="hidden mt-4">
                         <div class="progress-bar">
@@ -2279,6 +2295,22 @@
          window.setBulkMode = function(m) { document._setBulkMode && document._setBulkMode(m); };
          window.switchPageSection = function(s) { document._switchPageSection && document._switchPageSection(s); };
          window.cancelBulkJob = function() { document._cancelBulkJob && document._cancelBulkJob(); };
+         window.setScanMethod = function(method) {
+           var htmlPanel = document.getElementById('methodHtmlPanel');
+           var urlPanel = document.getElementById('methodUrlPanel');
+           var htmlBtn = document.getElementById('methodHtmlBtn');
+           var urlBtn = document.getElementById('methodUrlBtn');
+           if (!htmlPanel || !urlPanel) return;
+           if (method === 'html') {
+             htmlPanel.style.display = 'block'; urlPanel.style.display = 'none';
+             htmlBtn.style.background = 'linear-gradient(135deg,#7e22ce,#be185d)'; htmlBtn.style.color = 'white';
+             urlBtn.style.background = 'none'; urlBtn.style.color = '#9ca3af';
+           } else {
+             htmlPanel.style.display = 'none'; urlPanel.style.display = 'block';
+             urlBtn.style.background = 'linear-gradient(135deg,#7e22ce,#be185d)'; urlBtn.style.color = 'white';
+             htmlBtn.style.background = 'none'; htmlBtn.style.color = '#9ca3af';
+           }
+         };
       </script>
       <script>
          let userId = null;
