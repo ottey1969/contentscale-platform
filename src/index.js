@@ -24800,7 +24800,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
             // Find pages that have gsc_keyword but no manual keyword
             const pages = (allTrackerPages||[]).filter(function(p){ return !p.keyword && p.gsc_keyword; });
             if (!pages.length) return alert('No pages found with GSC keyword but no manual keyword set.');
-            if (!confirm('Set GSC keyword as manual keyword for ' + pages.length + ' pages?\n\nThis lets you edit them individually later.')) return;
+            if (!confirm('Set GSC keyword as manual keyword for ' + pages.length + ' pages? This lets you edit them individually later.')) return;
             let done = 0, failed = 0;
             for (const p of pages) {
                 try {
