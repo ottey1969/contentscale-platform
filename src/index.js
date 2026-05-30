@@ -24228,32 +24228,40 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     if (_overlayVisible) _renderOverlayLog();
                 }
 
+                var _pollInterval = null;
+                var _pollLastTs = null;
+
                 function connectSSE() {
                     var token = localStorage.getItem('admin_id') || '';
                     if (!token) { setTimeout(connectSSE, 2000); return; }
-                    if (_wallEs) { try { _wallEs.close(); } catch(e) {} _wallEs = null; }
-                    _wallEs = new EventSource('/api/tracker/live-feed?token=' + encodeURIComponent(token));
                     var dot = document.getElementById('csLiveDot');
                     var status = document.getElementById('csLiveStatus');
-                    _wallEs.onmessage = function(e) {
-                        try { _handleWallEvent(JSON.parse(e.data)); } catch(err) {}
-                    };
-                    _wallEs.onerror = function() {
-                        if (dot) { dot.style.background = '#f87171'; dot.style.animation = 'none'; }
-                        if (status) { status.textContent = 'Reconnecting...'; status.style.color = '#f87171'; }
-                        // Close existing connection before reconnecting
-                        try { _wallEs.close(); } catch(e) {}
-                        _wallEs = null;
-                        // Exponential backoff - max 60s
-                        _sseRetryDelay = Math.min((_sseRetryDelay || 10000) * 1.5, 120000);
-                        setTimeout(connectSSE, _sseRetryDelay);
-                    };
-                    _wallEs.onopen = function() {
-                        _sseRetryDelay = 5000; // reset on success
-                        if (dot) { dot.style.background = '#4ade80'; dot.style.animation = 'cs-pulse 1.5s ease-in-out infinite'; }
-                        if (status) { status.textContent = '* Live'; status.style.color = '#4ade80'; }
-                    };
+
+                    function doPoll() {
+                        var url = '/api/tracker/live-events?token=' + encodeURIComponent(token);
+                        if (_pollLastTs) url += '&since=' + encodeURIComponent(_pollLastTs);
+                        fetch(url)
+                            .then(function(r){ return r.json(); })
+                            .then(function(data) {
+                                if (!data.success) return;
+                                if (dot) { dot.style.background='#4ade80'; dot.style.animation='cs-pulse 1.5s ease-in-out infinite'; }
+                                if (status) { status.textContent='* Live'; status.style.color='#4ade80'; }
+                                _pollLastTs = data.ts;
+                                if (data.events && data.events.length) {
+                                    data.events.forEach(function(ev){ _handleWallEvent(ev); });
+                                }
+                            })
+                            .catch(function() {
+                                if (dot) { dot.style.background='#f87171'; dot.style.animation='none'; }
+                                if (status) { status.textContent='Reconnecting...'; status.style.color='#f87171'; }
+                            });
+                    }
+
+                    doPoll();
+                    if (_pollInterval) clearInterval(_pollInterval);
+                    _pollInterval = setInterval(doPoll, 5000);
                 }
+
 
                 function _handleWallEvent(ev) {
                     _wallEvents.unshift(ev);
@@ -24433,7 +24441,16 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     <select id="trDomainFilter" class="tr-select" onchange="filterTrackerByDomain()" style="min-width:200px;">
                         <option value="">All domains</option>
                     </select>
+                    <button onclick="deleteFilteredDomain()" class="tr-btn danger" title="Delete all pages for selected domain" style="font-size:11px;padding:5px 10px;white-space:nowrap;">&#x1f5d1; Delete domain</button>
                     <span id="trFilterCount" style="font-size:12px;color:#6b7280;"></span>
+                </div>
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;" id="trBulkBar">
+                    <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:#9ca3af;cursor:pointer;">
+                        <input type="checkbox" id="trSelectAll" onchange="toggleSelectAllPages(this.checked)" style="cursor:pointer;">
+                        Select all
+                    </label>
+                    <span id="trSelectedCount" style="font-size:12px;color:#6b7280;"></span>
+                    <button onclick="deleteSelectedPages()" class="tr-btn danger" style="font-size:11px;padding:4px 12px;display:none;" id="trBulkDeleteBtn">&#x1f5d1; Delete selected</button>
                 </div>
 
                 <!-- Pages list -->
@@ -25798,6 +25815,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
             const freqLabels = {'1day':'Daily','3days':'3 days','1week':'Weekly','2weeks':'2 weeks','weekly':'Weekly','monthly':'Monthly'};
             const nextCheck = p.next_check_at ? getTimeAgo(new Date(p.next_check_at)) : '-';
             const lastCheck = p.last_checked_at ? getTimeAgo(new Date(p.last_checked_at)) : 'Never checked';
+            const checkboxHtml = '<input type="checkbox" class="tr-page-cb" data-id="'+p.id+'" onchange="updateBulkBar()" style="margin-right:8px;cursor:pointer;flex-shrink:0;">';
 
             // Position pill - #4 means Google ranking position
             let posPill = '<span style="color:#6b7280;font-size:13px;">Not ranked</span>';
@@ -25889,7 +25907,9 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
             let _recs = snap && snap.recommendations ? snap.recommendations : null;
             if(_recs && typeof _recs === 'string') { try { _recs = JSON.parse(_recs); } catch(e) { _recs = null; } }
             const recsHtml = Array.isArray(_recs) && _recs.length ? renderTrackerRecommendations(_recs, p.id) : '';
-            return '<div class="tr-card" style="border-left:3px solid '+borderColor+';">'
+            return '<div class="tr-card" style="border-left:3px solid '+borderColor+';position:relative;">'\
+                + '<div style="position:absolute;top:14px;left:14px;">'+checkboxHtml+'</div>'\
+                + '<div style="padding-left:24px;">'
                 +'<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;">'
                 +'<div style="flex:1;min-width:0;">'
                 +'<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px;">'
@@ -25916,7 +25936,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 +'</div>'
                 +'<div style="font-size:11px;color:#6b7280;text-align:right;">'
                 +'Last checked: '+lastCheck+' . Next: '+nextCheck+' . '+(p.snapshot_count||0)+' snapshots'
-                +'</div></div></div>'
+                +'</div></div></div></div>'
                 +recsHtml
                 +'</div>';
         }
@@ -26244,15 +26264,69 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
             loadTrackerPages();
         }
 
+        function toggleSelectAllPages(checked) {
+            document.querySelectorAll('.tr-page-cb').forEach(function(cb){ cb.checked = checked; });
+            updateBulkBar();
+        }
+
+        function updateBulkBar() {
+            var cbs = document.querySelectorAll('.tr-page-cb:checked');
+            var total = document.querySelectorAll('.tr-page-cb');
+            var countEl = document.getElementById('trSelectedCount');
+            var deleteBtn = document.getElementById('trBulkDeleteBtn');
+            var selectAll = document.getElementById('trSelectAll');
+            if (countEl) countEl.textContent = cbs.length ? cbs.length + ' selected' : '';
+            if (deleteBtn) deleteBtn.style.display = cbs.length ? 'inline-flex' : 'none';
+            if (selectAll) selectAll.indeterminate = cbs.length > 0 && cbs.length < total.length;
+            if (selectAll && cbs.length === total.length && total.length > 0) selectAll.checked = true;
+        }
+
+        async function deleteSelectedPages() {
+            var cbs = document.querySelectorAll('.tr-page-cb:checked');
+            if (!cbs.length) return;
+            if (!confirm('Delete ' + cbs.length + ' selected pages? This cannot be undone.')) return;
+            var ids = Array.from(cbs).map(function(cb){ return cb.dataset.id; });
+            var deleted = 0; var failed = 0;
+            for (var i = 0; i < ids.length; i++) {
+                try {
+                    await apiCall('/api/tracker/pages/' + ids[i], 'DELETE');
+                    deleted++;
+                } catch(e) { failed++; }
+            }
+            var countEl = document.getElementById('trSelectedCount');
+            var deleteBtn = document.getElementById('trBulkDeleteBtn');
+            var selectAll = document.getElementById('trSelectAll');
+            if (countEl) countEl.textContent = '';
+            if (deleteBtn) deleteBtn.style.display = 'none';
+            if (selectAll) selectAll.checked = false;
+            loadTrackerPages();
+        }
+
+        async function deleteFilteredDomain() {
+            var sel = document.getElementById('trDomainFilter');
+            var domain = sel ? sel.value : '';
+            if (!domain) { alert('Select a domain first from the Domain filter'); return; }
+            var pages = allTrackerPages.filter(function(p){ return (p.url||'').indexOf(domain) > -1; });
+            if (!pages.length) { alert('No pages found for ' + domain); return; }
+            if (!confirm('Delete ALL ' + pages.length + ' pages for domain "' + domain + '"? This cannot be undone.')) return;
+            var deleted = 0; var failed = 0;
+            for (var i = 0; i < pages.length; i++) {
+                try {
+                    await apiCall('/api/tracker/pages/' + pages[i].id, 'DELETE');
+                    deleted++;
+                } catch(e) { failed++; }
+            }
+            alert('Deleted ' + deleted + ' pages' + (failed ? ', ' + failed + ' failed' : ''));
+            loadTrackerPages();
+        }
+
         async function deleteTrackerPage(pageId) {
             if(!confirm('Remove this page from tracking?')) return;
             try {
                 await apiCall('/api/tracker/pages/'+pageId,'DELETE');
-                // Remove from local array immediately
-                allTrackerPages = allTrackerPages.filter(function(p){ return p.id !== pageId; });
+                allTrackerPages = allTrackerPages.filter(function(p){ return parseInt(p.id) !== parseInt(pageId); });
                 renderTrackerStats();
                 renderTrackerPages();
-                // Full reload after 1s to sync with server
                 setTimeout(loadTrackerPages, 1000);
             } catch(e) { alert('Error: '+e.message); }
         }
@@ -27676,6 +27750,20 @@ function _sseBroadcast(event) {
     try { client.write(data); } catch(e) { _sseClients.delete(client); }
   }
 }
+
+// ── Polling fallback for live feed (Railway HTTP/2 SSE issues) ───────────────
+app.get('/api/tracker/live-events', async (req, res) => {
+  const token = req.query.token || req.headers['x-admin-key'] || '';
+  if (!token) return res.status(401).json({ error: 'Auth required' });
+  try {
+    const r = await pool.query('SELECT * FROM super_admins WHERE session_token=$1 AND is_active=TRUE', [token]).catch(() => ({ rows: [] }));
+    if (!r.rows.length) return res.status(401).json({ error: 'Invalid token' });
+  } catch(e) { return res.status(500).json({ error: e.message }); }
+  // Return last N events since a given timestamp
+  const since = req.query.since ? new Date(req.query.since).getTime() : Date.now() - 30000;
+  const events = _liveEvents.filter(e => new Date(e.ts||0).getTime() > since).slice(0, 20);
+  res.json({ success: true, events, ts: new Date().toISOString() });
+});
 
 app.get('/api/tracker/live-feed', async (req, res) => {
   const token = req.query.token || req.headers['x-admin-key'] || '';
