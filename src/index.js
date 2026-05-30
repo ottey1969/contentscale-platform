@@ -22938,9 +22938,14 @@ function evToText(ev) {
   if (ev.type === 'check_done') return 'Check complete: ' + ev.domain;
   if (ev.type === 'citation_gained') return '🎉 CITED IN AI OVERVIEW: ' + ev.domain + ' [' + (ev.keyword||'') + ']';
   if (ev.type === 'position_up') return '📈 Position up #' + ev.old_pos + ' → #' + ev.new_pos + ': ' + ev.domain;
-  if (ev.type === 'score_up') return '⬆️ Score +' + ev.gain + ': ' + ev.domain + ' (' + ev.old_score + ' → ' + ev.new_score + ')';
-  if (ev.type === 'step') return ev.label + (ev.detail ? ' — ' + ev.detail : '') + ' (' + ev.domain + ')';
-  if (ev.type === 'connected') return '📡 Connected to ContentScale live feed';
+  if (ev.type === 'score_up') return 'Score +' + ev.gain + ': ' + ev.domain;
+  if (ev.type === 'step') return (ev.label||ev.name||'') + (ev.detail ? ' — ' + ev.detail : '') + ' (' + ev.domain + ')';
+  if (ev.type === 'monitor_check') return 'Scanning: "' + ev.kw + '"';
+  if (ev.type === 'monitor_aio') return (ev.cited ? 'CITED: ' : 'AIO found: ') + '"' + ev.kw + '" — ' + (ev.aio_text||'').substring(0,80);
+  if (ev.type === 'monitor_no_aio') return 'No AI Overview: "' + ev.kw + '"';
+  if (ev.type === 'monitor_position') return '#' + ev.position + ' in Google: "' + ev.kw + '"';
+  if (ev.type === 'news') return 'NEWS: ' + ev.headline;
+  if (ev.type === 'connected') return 'Live feed connected';
   return ev.msg || '';
 }
 
@@ -23471,111 +23476,6 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 setInterval(loadAiStatus, 60000);
                 </script>
 
-                <!-- Stats -->
-                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:20px;">
-                    <div class="tr-stat"><div class="val" id="trStatPages">—</div><div class="lbl">Tracked pages</div></div>
-                    <div class="tr-stat"><div class="val" id="trStatAvgPosGain" style="color:#e5e7eb;">—</div><div class="lbl">Avg position gain</div></div>
-                    <div class="tr-stat" onclick="filterByCitation('google')" title="Click to show only Google AIO cited pages" style="cursor:pointer;"><div class="val" id="trStatCitedGoogle" style="color:#38bdf8;">—</div><div class="lbl">Google AIO cited</div></div>
-                    <div class="tr-stat" onclick="filterByCitation('perplexity')" title="Click to show only Perplexity cited pages" style="cursor:pointer;"><div class="val" id="trStatCitedPerplexity" style="color:#a78bfa;">—</div><div class="lbl">Perplexity cited</div></div>
-                    <div class="tr-stat"><div class="val" id="trStatCitedCopilot" style="color:#60a5fa;">—</div><div class="lbl">Copilot/Bing cited</div></div>
-                    <div class="tr-stat"><div class="val" id="trStatCitedClaude" style="color:#f87171;">—</div><div class="lbl">Claude/Brave cited</div></div>
-                    <div class="tr-stat"><div class="val" id="trStatCitationRate" style="color:#e5e7eb;">—</div><div class="lbl">AI citation rate</div></div>
-                    <div class="tr-stat"><div class="val" id="trStatCheckedToday" style="color:#4ade80;">—</div><div class="lbl">Checked today</div></div>
-                    <div class="tr-stat"><div class="val" id="trStatPendingChanges" style="color:#fbbf24;">—</div><div class="lbl">Pending changes</div></div>
-                    <div class="tr-stat"><div class="val" id="trStatAvgGraaf" style="color:#e5e7eb;">—</div><div class="lbl">Avg GRAAF score</div></div>
-                </div>
-
-                <!-- Filters -->
-                <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap;">
-                    <label style="font-size:12px;color:#6b7280;white-space:nowrap;">Filter by client:</label>
-                    <select id="trClientFilter" class="tr-select" onchange="filterTrackerByClient()" style="min-width:180px;">
-                        <option value="">All clients</option>
-                    </select>
-                    <label style="font-size:12px;color:#6b7280;white-space:nowrap;">Domain:</label>
-                    <select id="trDomainFilter" class="tr-select" onchange="filterTrackerByDomain()" style="min-width:200px;">
-                        <option value="">All domains</option>
-                    </select>
-                    <span id="trFilterCount" style="font-size:12px;color:#6b7280;"></span>
-                </div>
-
-                <!-- Pages list -->
-                <div id="trPagesList"></div>
-
-                <!-- Add URL modal -->
-                <div id="trAddModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9999;align-items:center;justify-content:center;" onclick="if(event.target===this)closeAddPageModal()">
-                    <div style="background:#111827;border:1px solid #374151;border-radius:14px;padding:28px;width:min(580px,95vw);max-height:90vh;overflow-y:auto;" onclick="event.stopPropagation()">
-                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
-                            <h3 style="font-weight:700;font-size:1rem;">Add URL to Tracker</h3>
-                            <button onclick="closeAddPageModal()" style="background:none;border:none;color:#9ca3af;font-size:1.3rem;cursor:pointer;">✕</button>
-                        </div>
-                        <div style="display:flex;flex-direction:column;gap:14px;">
-                            <div>
-                                <label style="font-size:11px;color:#9ca3af;text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:5px;">URL (with slug) *</label>
-                                <input id="trAddUrl" type="url" class="tr-input" placeholder="https://yoursite.com/blog/your-article">
-                            </div>
-                            <div>
-                                <label style="font-size:11px;color:#9ca3af;text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:5px;">Target Keyword *</label>
-                                <input id="trAddKeyword" type="text" class="tr-input" placeholder="e.g. best SEO tools 2025">
-                            </div>
-                            <div>
-                                <label style="font-size:11px;color:#9ca3af;text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:5px;">Page Title</label>
-                                <input id="trAddTitle" type="text" class="tr-input" placeholder="Optional — auto-detected if empty">
-                            </div>
-                            <div>
-                                <label style="font-size:11px;color:#9ca3af;text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:5px;">Check Frequency</label>
-                                <select id="trAddFreq" class="tr-select" style="width:100%;">
-                                    <option value="1day">Daily (heavy usage)</option>
-                                    <option value="3days" selected>Every 3 days ← recommended</option>
-                                    <option value="1week">Weekly</option>
-                                    <option value="2weeks">Every 2 weeks (stable pages)</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label style="font-size:11px;color:#9ca3af;text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:5px;">Paste Current HTML (optional — enables change detection)</label>
-                                <textarea id="trAddHtml" class="tr-input" rows="4" placeholder="Paste the current published HTML of this page..." style="resize:vertical;font-size:11px;font-family:monospace;"></textarea>
-                            </div>
-                            <div style="display:flex;gap:10px;margin-top:4px;">
-                                <button onclick="submitAddPage()" class="tr-btn primary" id="trAddSubmitBtn">Add & Run First Check</button>
-                                <button onclick="closeAddPageModal()" class="tr-btn">Cancel</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Changes popup -->
-                <div id="trChangesModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9999;align-items:center;justify-content:center;" onclick="if(event.target===this)document.getElementById('trChangesModal').style.display='none'">
-                    <div style="background:#111827;border:1px solid #374151;border-radius:14px;padding:28px;width:min(680px,95vw);max-height:85vh;overflow-y:auto;" onclick="event.stopPropagation()">
-                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
-                            <h3 id="trChangesTitle" style="font-weight:700;">Changes & Recommendations</h3>
-                            <button onclick="document.getElementById('trChangesModal').style.display='none'" style="background:none;border:none;color:#9ca3af;font-size:1.3rem;cursor:pointer;">✕</button>
-                        </div>
-                        <div id="trChangesBody"></div>
-                    </div>
-                </div>
-
-                <!-- HTML update modal -->
-                <div id="trHtmlModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9999;align-items:center;justify-content:center;" onclick="if(event.target===this)document.getElementById('trHtmlModal').style.display='none'">
-                    <div style="background:#111827;border:1px solid #374151;border-radius:14px;padding:28px;width:min(680px,95vw);max-height:85vh;overflow-y:auto;" onclick="event.stopPropagation()">
-                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-                            <h3 style="font-weight:700;">Update Page</h3>
-                            <button onclick="document.getElementById('trHtmlModal').style.display='none'" style="background:none;border:none;color:#9ca3af;font-size:1.3rem;cursor:pointer;">✕</button>
-                        </div>
-                        <input type="hidden" id="trHtmlPageId">
-                        <div style="margin-bottom:12px;">
-                            <label style="font-size:12px;color:#9ca3af;display:block;margin-bottom:4px;">Keyword <span style="color:#6b7280;">(used for Citation Brief + recommendations — leave blank to use URL slug)</span></label>
-                            <input id="trKeywordInput" type="text" class="tr-input" placeholder="e.g. site speed optimization" style="font-size:13px;">
-                        </div>
-                        <div>
-                            <label style="font-size:12px;color:#9ca3af;display:block;margin-bottom:4px;">Page HTML <span style="color:#6b7280;">(optional — enables change detection and GRAAF scoring)</span></label>
-                            <textarea id="trHtmlContent" class="tr-input" rows="8" placeholder="Paste HTML here..." style="resize:vertical;font-size:11px;font-family:monospace;"></textarea>
-                        </div>
-                        <div style="display:flex;gap:10px;margin-top:14px;">
-                            <button onclick="submitHtmlUpdate()" class="tr-btn primary">Save & Re-check</button>
-                            <button onclick="document.getElementById('trHtmlModal').style.display='none'" class="tr-btn">Cancel</button>
-                        </div>
-                    </div>
-                </div>
-
                 <!-- ── LIVE ACTIVITY WALL ─────────────────────────────────── -->
                 <div id="csLiveWall" style="background:#0d1117;border:1px solid #1f2937;border-radius:10px;padding:12px 16px;margin-bottom:16px;position:relative;">
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
@@ -23691,6 +23591,11 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     if (ev.type === 'position_up') return 'Position #' + ev.old_pos + ' to #' + ev.new_pos + ': ' + ev.domain;
                     if (ev.type === 'score_up') return 'Score +' + ev.gain + ': ' + ev.domain + ' (' + ev.old_score + ' to ' + ev.new_score + ')';
                     if (ev.type === 'step') return (ev.label||ev.name) + (ev.detail ? ' — ' + ev.detail : '') + ' (' + ev.domain + ')';
+                    if (ev.type === 'monitor_check') return 'Scanning: "' + ev.kw + '"';
+                    if (ev.type === 'monitor_aio') return (ev.cited ? 'CITED ' : 'AIO found: ') + '"' + ev.kw + '" — ' + (ev.aio_text||'').substring(0,60);
+                    if (ev.type === 'monitor_no_aio') return 'No AIO: "' + ev.kw + '"';
+                    if (ev.type === 'monitor_position') return '#' + ev.position + ' in Google: "' + ev.kw + '" (' + ev.domain + ')';
+                    if (ev.type === 'news') return 'NEWS: ' + ev.headline;
                     if (ev.type === 'connected') return 'Live feed connected';
                     return ev.msg || '';
                 }
@@ -23699,6 +23604,11 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     if (ev.type === 'citation_gained') return '#4ade80';
                     if (ev.type === 'position_up') return '#a78bfa';
                     if (ev.type === 'score_up') return '#fbbf24';
+                    if (ev.type === 'monitor_aio') return ev.cited ? '#4ade80' : '#fbbf24';
+                    if (ev.type === 'monitor_no_aio') return '#4b5563';
+                    if (ev.type === 'monitor_check') return '#374151';
+                    if (ev.type === 'monitor_position') return '#60a5fa';
+                    if (ev.type === 'news') return '#f59e0b';
                     if (ev.status === 'done' || ev.type === 'check_done') return '#4ade80';
                     if (ev.status === 'error') return '#f87171';
                     if (ev.status === 'running' || ev.type === 'check_start') return '#fbbf24';
@@ -23792,6 +23702,111 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 @keyframes cs-pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.4;transform:scale(.8)} }
                 @keyframes confettiDrop { 0%{transform:translateY(0) rotate(0deg);opacity:1} 100%{transform:translateY(100vh) rotate(720deg);opacity:0} }
                 </style>
+
+                <!-- Stats -->
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:20px;">
+                    <div class="tr-stat"><div class="val" id="trStatPages">—</div><div class="lbl">Tracked pages</div></div>
+                    <div class="tr-stat"><div class="val" id="trStatAvgPosGain" style="color:#e5e7eb;">—</div><div class="lbl">Avg position gain</div></div>
+                    <div class="tr-stat" onclick="filterByCitation('google')" title="Click to show only Google AIO cited pages" style="cursor:pointer;"><div class="val" id="trStatCitedGoogle" style="color:#38bdf8;">—</div><div class="lbl">Google AIO cited</div></div>
+                    <div class="tr-stat" onclick="filterByCitation('perplexity')" title="Click to show only Perplexity cited pages" style="cursor:pointer;"><div class="val" id="trStatCitedPerplexity" style="color:#a78bfa;">—</div><div class="lbl">Perplexity cited</div></div>
+                    <div class="tr-stat"><div class="val" id="trStatCitedCopilot" style="color:#60a5fa;">—</div><div class="lbl">Copilot/Bing cited</div></div>
+                    <div class="tr-stat"><div class="val" id="trStatCitedClaude" style="color:#f87171;">—</div><div class="lbl">Claude/Brave cited</div></div>
+                    <div class="tr-stat"><div class="val" id="trStatCitationRate" style="color:#e5e7eb;">—</div><div class="lbl">AI citation rate</div></div>
+                    <div class="tr-stat"><div class="val" id="trStatCheckedToday" style="color:#4ade80;">—</div><div class="lbl">Checked today</div></div>
+                    <div class="tr-stat"><div class="val" id="trStatPendingChanges" style="color:#fbbf24;">—</div><div class="lbl">Pending changes</div></div>
+                    <div class="tr-stat"><div class="val" id="trStatAvgGraaf" style="color:#e5e7eb;">—</div><div class="lbl">Avg GRAAF score</div></div>
+                </div>
+
+                <!-- Filters -->
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap;">
+                    <label style="font-size:12px;color:#6b7280;white-space:nowrap;">Filter by client:</label>
+                    <select id="trClientFilter" class="tr-select" onchange="filterTrackerByClient()" style="min-width:180px;">
+                        <option value="">All clients</option>
+                    </select>
+                    <label style="font-size:12px;color:#6b7280;white-space:nowrap;">Domain:</label>
+                    <select id="trDomainFilter" class="tr-select" onchange="filterTrackerByDomain()" style="min-width:200px;">
+                        <option value="">All domains</option>
+                    </select>
+                    <span id="trFilterCount" style="font-size:12px;color:#6b7280;"></span>
+                </div>
+
+                <!-- Pages list -->
+                <div id="trPagesList"></div>
+
+                <!-- Add URL modal -->
+                <div id="trAddModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9999;align-items:center;justify-content:center;" onclick="if(event.target===this)closeAddPageModal()">
+                    <div style="background:#111827;border:1px solid #374151;border-radius:14px;padding:28px;width:min(580px,95vw);max-height:90vh;overflow-y:auto;" onclick="event.stopPropagation()">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+                            <h3 style="font-weight:700;font-size:1rem;">Add URL to Tracker</h3>
+                            <button onclick="closeAddPageModal()" style="background:none;border:none;color:#9ca3af;font-size:1.3rem;cursor:pointer;">✕</button>
+                        </div>
+                        <div style="display:flex;flex-direction:column;gap:14px;">
+                            <div>
+                                <label style="font-size:11px;color:#9ca3af;text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:5px;">URL (with slug) *</label>
+                                <input id="trAddUrl" type="url" class="tr-input" placeholder="https://yoursite.com/blog/your-article">
+                            </div>
+                            <div>
+                                <label style="font-size:11px;color:#9ca3af;text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:5px;">Target Keyword *</label>
+                                <input id="trAddKeyword" type="text" class="tr-input" placeholder="e.g. best SEO tools 2025">
+                            </div>
+                            <div>
+                                <label style="font-size:11px;color:#9ca3af;text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:5px;">Page Title</label>
+                                <input id="trAddTitle" type="text" class="tr-input" placeholder="Optional — auto-detected if empty">
+                            </div>
+                            <div>
+                                <label style="font-size:11px;color:#9ca3af;text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:5px;">Check Frequency</label>
+                                <select id="trAddFreq" class="tr-select" style="width:100%;">
+                                    <option value="1day">Daily (heavy usage)</option>
+                                    <option value="3days" selected>Every 3 days ← recommended</option>
+                                    <option value="1week">Weekly</option>
+                                    <option value="2weeks">Every 2 weeks (stable pages)</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label style="font-size:11px;color:#9ca3af;text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:5px;">Paste Current HTML (optional — enables change detection)</label>
+                                <textarea id="trAddHtml" class="tr-input" rows="4" placeholder="Paste the current published HTML of this page..." style="resize:vertical;font-size:11px;font-family:monospace;"></textarea>
+                            </div>
+                            <div style="display:flex;gap:10px;margin-top:4px;">
+                                <button onclick="submitAddPage()" class="tr-btn primary" id="trAddSubmitBtn">Add & Run First Check</button>
+                                <button onclick="closeAddPageModal()" class="tr-btn">Cancel</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Changes popup -->
+                <div id="trChangesModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9999;align-items:center;justify-content:center;" onclick="if(event.target===this)document.getElementById('trChangesModal').style.display='none'">
+                    <div style="background:#111827;border:1px solid #374151;border-radius:14px;padding:28px;width:min(680px,95vw);max-height:85vh;overflow-y:auto;" onclick="event.stopPropagation()">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+                            <h3 id="trChangesTitle" style="font-weight:700;">Changes & Recommendations</h3>
+                            <button onclick="document.getElementById('trChangesModal').style.display='none'" style="background:none;border:none;color:#9ca3af;font-size:1.3rem;cursor:pointer;">✕</button>
+                        </div>
+                        <div id="trChangesBody"></div>
+                    </div>
+                </div>
+
+                <!-- HTML update modal -->
+                <div id="trHtmlModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9999;align-items:center;justify-content:center;" onclick="if(event.target===this)document.getElementById('trHtmlModal').style.display='none'">
+                    <div style="background:#111827;border:1px solid #374151;border-radius:14px;padding:28px;width:min(680px,95vw);max-height:85vh;overflow-y:auto;" onclick="event.stopPropagation()">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+                            <h3 style="font-weight:700;">Update Page</h3>
+                            <button onclick="document.getElementById('trHtmlModal').style.display='none'" style="background:none;border:none;color:#9ca3af;font-size:1.3rem;cursor:pointer;">✕</button>
+                        </div>
+                        <input type="hidden" id="trHtmlPageId">
+                        <div style="margin-bottom:12px;">
+                            <label style="font-size:12px;color:#9ca3af;display:block;margin-bottom:4px;">Keyword <span style="color:#6b7280;">(used for Citation Brief + recommendations — leave blank to use URL slug)</span></label>
+                            <input id="trKeywordInput" type="text" class="tr-input" placeholder="e.g. site speed optimization" style="font-size:13px;">
+                        </div>
+                        <div>
+                            <label style="font-size:12px;color:#9ca3af;display:block;margin-bottom:4px;">Page HTML <span style="color:#6b7280;">(optional — enables change detection and GRAAF scoring)</span></label>
+                            <textarea id="trHtmlContent" class="tr-input" rows="8" placeholder="Paste HTML here..." style="resize:vertical;font-size:11px;font-family:monospace;"></textarea>
+                        </div>
+                        <div style="display:flex;gap:10px;margin-top:14px;">
+                            <button onclick="submitHtmlUpdate()" class="tr-btn primary">Save & Re-check</button>
+                            <button onclick="document.getElementById('trHtmlModal').style.display='none'" class="tr-btn">Cancel</button>
+                        </div>
+                    </div>
+                </div>
 
                 <!-- ── LIVE ACTIVITY FEED (corner) ───────────────────────── -->
                 <div id="csActivityFeed" style="display:none;position:fixed;bottom:24px;right:24px;width:340px;background:#0d1117;border:1px solid #1f2937;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,.6);z-index:9998;flex-direction:column;overflow:hidden;">
@@ -28122,6 +28137,138 @@ Zero generic advice. Skip anything our content already clearly has.`;
   console.log(`[tracker] Check complete for ${page.url} — position:${snapshot.google_position}, GRAAF:${snapshot.score}, AI Overview:${snapshot.ai_google_overview_cited}`);
 }
 
+
+// ── Always-On Live Monitor ────────────────────────────────────────────────────
+// Runs continuously — cycles through keywords checking AI Overviews + fetches SEO news
+// Broadcasts to SSE clients so the live wall/overlay always has something to show
+
+const _monitorState = {
+  running: false,
+  keywords: [],        // loaded from tracker_pages
+  kwIndex: 0,
+  newsItems: [],
+  lastNewsFetch: 0,
+  interval: null
+};
+
+async function _startAlwaysOnMonitor() {
+  if (_monitorState.running) return;
+  _monitorState.running = true;
+  console.log('[live-monitor] Starting always-on monitor');
+
+  // Load keywords from tracker pages every 10 minutes
+  async function refreshKeywords() {
+    try {
+      const r = await pool.query(
+        `SELECT DISTINCT COALESCE(keyword, gsc_keyword) as kw, url
+         FROM tracker_pages
+         WHERE COALESCE(keyword, gsc_keyword) IS NOT NULL
+           AND COALESCE(keyword, gsc_keyword) != ''
+           AND COALESCE(keyword, gsc_keyword) != 'unknown'
+         ORDER BY RANDOM() LIMIT 30`
+      );
+      _monitorState.keywords = r.rows.filter(r => r.kw).map(r => ({ kw: r.kw, url: r.url }));
+      console.log('[live-monitor] Loaded', _monitorState.keywords.length, 'keywords');
+    } catch(e) { console.warn('[live-monitor] Keyword refresh failed:', e.message); }
+  }
+
+  // Fetch SEO/AI news via RSS
+  async function refreshNews() {
+    const now = Date.now();
+    if (now - _monitorState.lastNewsFetch < 15 * 60 * 1000) return; // max every 15 min
+    _monitorState.lastNewsFetch = now;
+    const feeds = [
+      'https://feeds.feedburner.com/SearchEngineLand',
+      'https://www.seroundtable.com/feed',
+      'https://searchengineland.com/feed'
+    ];
+    for (const feedUrl of feeds) {
+      try {
+        const ctrl = new AbortController(); setTimeout(() => ctrl.abort(), 8000);
+        const r = await fetch(feedUrl, { headers: { 'User-Agent': 'ContentScale-Monitor/1.0' }, signal: ctrl.signal });
+        if (!r.ok) continue;
+        const xml = await r.text();
+        const titles = [...xml.matchAll(/<title><!\[CDATA\[([^\]]+)\]\]><\/title>|<title>([^<]+)<\/title>/g)]
+          .slice(1, 8).map(m => (m[1] || m[2] || '').trim()).filter(t => t.length > 10 && t.length < 120);
+        if (titles.length) {
+          _monitorState.newsItems = titles;
+          console.log('[live-monitor] News loaded:', titles.length, 'items from', feedUrl);
+          break;
+        }
+      } catch(e) {}
+    }
+  }
+
+  // Check one keyword for AI Overview
+  async function checkNextKeyword() {
+    if (!_monitorState.keywords.length) return;
+    const item = _monitorState.keywords[_monitorState.kwIndex % _monitorState.keywords.length];
+    _monitorState.kwIndex++;
+
+    _sseBroadcast({ type: 'monitor_check', kw: item.kw, domain: (item.url||'').replace(/^https?:\/\//,'').split('/')[0], ts: new Date().toISOString() });
+
+    const serperKey = process.env.SERPAPI_KEY || '';
+    if (!serperKey) return;
+
+    try {
+      const ctrl = new AbortController(); setTimeout(() => ctrl.abort(), 10000);
+      const sr = await fetch('https://google.serper.dev/search', {
+        method: 'POST',
+        headers: { 'X-API-KEY': serperKey, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ q: item.kw, num: 5, hl: 'en', gl: 'us' }),
+        signal: ctrl.signal
+      });
+      if (!sr.ok) return;
+      const sd = await sr.json();
+      const ab = sd.answerBox || null;
+      const organic = sd.organic || [];
+      const pos = organic.findIndex(r => r.link && (r.link.includes((item.url||'').replace(/^https?:\/\//,'').split('/')[0])));
+
+      if (ab) {
+        const aioText = (ab.answer || ab.snippet || ab.title || '').substring(0, 120);
+        const cited = JSON.stringify(ab).includes((item.url||'').replace(/^https?:\/\//,'').split('/')[0]);
+        _sseBroadcast({
+          type: 'monitor_aio',
+          kw: item.kw,
+          domain: (item.url||'').replace(/^https?:\/\//,'').split('/')[0],
+          aio_text: aioText,
+          cited,
+          ts: new Date().toISOString()
+        });
+      } else {
+        _sseBroadcast({ type: 'monitor_no_aio', kw: item.kw, ts: new Date().toISOString() });
+      }
+
+      if (pos >= 0) {
+        _sseBroadcast({ type: 'monitor_position', kw: item.kw, domain: (item.url||'').replace(/^https?:\/\//,'').split('/')[0], position: pos + 1, ts: new Date().toISOString() });
+      }
+    } catch(e) {}
+  }
+
+  // Broadcast news item
+  function broadcastNews() {
+    if (!_monitorState.newsItems.length) return;
+    const item = _monitorState.newsItems[Math.floor(Math.random() * _monitorState.newsItems.length)];
+    _sseBroadcast({ type: 'news', headline: item, source: 'SEO News', ts: new Date().toISOString() });
+  }
+
+  await refreshKeywords();
+  await refreshNews();
+
+  let tick = 0;
+  _monitorState.interval = setInterval(async () => {
+    tick++;
+    // Every 45s: check a keyword
+    if (tick % 3 === 0) await checkNextKeyword();
+    // Every 2 min: broadcast news
+    if (tick % 8 === 0) broadcastNews();
+    // Every 10 min: refresh keywords
+    if (tick % 40 === 0) { await refreshKeywords(); await refreshNews(); }
+  }, 15000); // every 15 seconds
+}
+
+// Start monitor after DB is ready — 60s delay
+setTimeout(_startAlwaysOnMonitor, 60000);
 
 // ── Simple text diff for content change detection ────────────────────────────
 function computeTextDiff(oldHtml, newHtml) {
