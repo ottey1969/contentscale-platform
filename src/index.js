@@ -23316,7 +23316,7 @@ const _LIVE_OVERLAY_HTML = `<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>ContentScale — Live</title>
+<title>ContentScale - Live</title>
 <style>
 * { margin:0;padding:0;box-sizing:border-box; }
 body { background:#0a0a0f;color:#f1f5f9;font-family:'Segoe UI',system-ui,sans-serif;overflow:hidden;height:100vh;width:100vw; }
@@ -23478,7 +23478,7 @@ body { background:#0a0a0f;color:#f1f5f9;font-family:'Segoe UI',system-ui,sans-se
     <div class="stat-lbl">Scores improved</div>
   </div>
   <div style="flex:1;text-align:right;">
-    <div style="font-size:10px;color:#374151;" id="lastEvent">—</div>
+    <div style="font-size:10px;color:#374151;" id="lastEvent">-</div>
   </div>
 </div>
 
@@ -23542,11 +23542,11 @@ function evToText(ev) {
   if (ev.type === 'check_start') return 'Checking ' + ev.domain + (ev.keyword ? ' [' + ev.keyword + ']' : '');
   if (ev.type === 'check_done') return 'Check complete: ' + ev.domain;
   if (ev.type === 'citation_gained') return '🎉 CITED IN AI OVERVIEW: ' + ev.domain + ' [' + (ev.keyword||'') + ']';
-  if (ev.type === 'position_up') return '📈 Position up #' + ev.old_pos + ' → #' + ev.new_pos + ': ' + ev.domain;
+  if (ev.type === 'position_up') return '📈 Position up #' + ev.old_pos + ' -> #' + ev.new_pos + ': ' + ev.domain;
   if (ev.type === 'score_up') return 'Score +' + ev.gain + ': ' + ev.domain;
-  if (ev.type === 'step') return (ev.label||ev.name||'') + (ev.detail ? ' — ' + ev.detail : '') + ' (' + ev.domain + ')';
+  if (ev.type === 'step') return (ev.label||ev.name||'') + (ev.detail ? ' - ' + ev.detail : '') + ' (' + ev.domain + ')';
   if (ev.type === 'monitor_check') return 'Scanning: "' + ev.kw + '"';
-  if (ev.type === 'monitor_aio') return (ev.cited ? 'CITED: ' : 'AIO found: ') + '"' + ev.kw + '" — ' + (ev.aio_text||'').substring(0,80);
+  if (ev.type === 'monitor_aio') return (ev.cited ? 'CITED: ' : 'AIO found: ') + '"' + ev.kw + '" - ' + (ev.aio_text||'').substring(0,80);
   if (ev.type === 'monitor_no_aio') return 'No AI Overview: "' + ev.kw + '"';
   if (ev.type === 'monitor_position') return '#' + ev.position + ' in Google: "' + ev.kw + '"';
   if (ev.type === 'news') { var hn = ev.headline || ''; return 'NEWS: ' + (hn.length > 80 ? hn.substring(0,77) + '...' : hn); }
@@ -23580,7 +23580,7 @@ function showCitationAlert(ev) {
   document.getElementById('alertIcon').textContent = '🎉';
   document.getElementById('alertTitle').textContent = 'NOW CITED IN AI OVERVIEW';
   document.getElementById('alertSub').textContent = (ev.keyword ? '"' + ev.keyword + '"' : 'New AI citation detected');
-  document.getElementById('alertNumbers').innerHTML = '<span style="color:#4ade80;font-size:3rem;">✅</span>';
+  document.getElementById('alertNumbers').innerHTML = '<span style="color:#4ade80;font-size:3rem;">OK</span>';
   document.getElementById('alertDomain').textContent = ev.domain;
   showAlert();
   launchConfetti();
@@ -23594,7 +23594,7 @@ function showPositionAlert(ev) {
   document.getElementById('alertSub').textContent = (ev.keyword ? '"' + ev.keyword + '"' : ev.domain);
   document.getElementById('alertNumbers').innerHTML =
     '<span style="color:#6b7280;">#' + ev.old_pos + '</span>' +
-    '<span class="alert-arrow">→</span>' +
+    '<span class="alert-arrow">-></span>' +
     '<span style="color:#a78bfa;">#' + ev.new_pos + '</span>';
   document.getElementById('alertDomain').textContent = ev.domain;
   showAlert();
@@ -23626,7 +23626,7 @@ function launchConfetti() {
     })(i);
   }
 }
-</script>
+<\/script>
 </body>
 </html>`;
 
@@ -23771,7 +23771,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     var time = getTime(z.tz);
                     var bg  = open ? 'rgba(74,222,128,.12)' : 'rgba(248,113,113,.08)';
                     var col = open ? '#4ade80' : '#f87171';
-                    var dot = open ? '●' : '○';
+                    var dot = open ? '*' : 'o';
                     return '<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:4px;border:1px solid ' + (open ? 'rgba(74,222,128,.25)' : 'rgba(248,113,113,.2)') + ';background:' + bg + ';color:' + col + ';flex-shrink:0;">' +
                         '<span style="font-size:8px;">' + dot + '</span>' +
                         '<span style="color:#9ca3af;">' + z.label + '</span>' +
@@ -23782,7 +23782,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
             render();
             setInterval(render, 30000);
         })();
-        </script>
+        <\/script>
 
         <style>
             /* ── SIDEBAR LAYOUT ────────────────────────────────── */
@@ -24052,7 +24052,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 </div>
 
                 <script>
-                // ── AI Provider Status Pills ──────────────────────────────────
+                // -- AI Provider Status Pills ----------------------------------
                 async function loadAiStatus() {
                     try {
                         const token = localStorage.getItem('admin_id') || '';
@@ -24073,8 +24073,8 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                         pills.innerHTML = Object.entries(data.status || {}).map(([key, s]) => {
                             const configured = data.key_status && data.key_status[keyMap[key]];
                             const health = !configured ? 'unconfigured' : (s.health || (s.ok ? 'healthy' : 'down'));
-                            const icon = health === 'healthy' ? '●' : health === 'unconfigured' ? '○' : health === 'degraded' ? '◐' : '✕';
-                            const tip = !configured ? 'Not configured — add key to Railway' : (s.lastError ? s.lastError.substring(0,80) : 'OK');
+                            const icon = health === 'healthy' ? '*' : health === 'unconfigured' ? 'o' : health === 'degraded' ? 'o' : 'x';
+                            const tip = !configured ? 'Not configured - add key to Railway' : (s.lastError ? s.lastError.substring(0,80) : 'OK');
                             return \`<span title="\${tip}" style="font-size:10px;font-weight:700;padding:3px 8px;border-radius:4px;background:\${colors[health]||'#374151'};color:\${textColors[health]||'#9ca3af'};cursor:default;">\${icon} \${labels[key]||key}</span>\`;
                         }).join('');
                     } catch(e) {}
@@ -24082,7 +24082,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 // Load on tab switch and every 60 seconds
                 loadAiStatus();
                 setInterval(loadAiStatus, 60000);
-                </script>
+                <\/script>
 
                 <!-- ── LIVE ACTIVITY WALL ─────────────────────────────────── -->
                 <div id="csLiveWall" style="background:#0d1117;border:2px solid #1f2937;border-radius:10px;padding:12px 16px;margin-bottom:16px;position:relative;animation:csWallIdle 3s ease-in-out infinite;">
@@ -24217,14 +24217,14 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                             html += '<div style="font-size:11px;color:#4b5563;padding:3px 0;border-bottom:1px solid #111827;">' + h.substring(0,100) + '</div>';
                         });
                     }
-                    if (!html) html = '<div style="font-size:11px;color:#4b5563;padding:4px 0;">No news yet — click RSS to fetch latest headlines</div>';
+                    if (!html) html = '<div style="font-size:11px;color:#4b5563;padding:4px 0;">No news yet - click RSS to fetch latest headlines</div>';
                     el.innerHTML = html;
                 }
 
                 function toggleLiveOverlay() {
                     _overlayVisible = !_overlayVisible;
                     document.getElementById('csLiveOverlay').style.display = _overlayVisible ? 'block' : 'none';
-                    document.getElementById('csOverlayBtn').textContent = _overlayVisible ? '⛶ Close' : '⛶ Overlay';
+                    document.getElementById('csOverlayBtn').textContent = _overlayVisible ? '[] Close' : '[] Overlay';
                     if (_overlayVisible) _renderOverlayLog();
                 }
 
@@ -24244,14 +24244,14 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                         // Close existing connection before reconnecting
                         try { _wallEs.close(); } catch(e) {}
                         _wallEs = null;
-                        // Exponential backoff — max 60s
+                        // Exponential backoff - max 60s
                         _sseRetryDelay = Math.min((_sseRetryDelay || 10000) * 1.5, 120000);
                         setTimeout(connectSSE, _sseRetryDelay);
                     };
                     _wallEs.onopen = function() {
                         _sseRetryDelay = 5000; // reset on success
                         if (dot) { dot.style.background = '#4ade80'; dot.style.animation = 'cs-pulse 1.5s ease-in-out infinite'; }
-                        if (status) { status.textContent = '● Live'; status.style.color = '#4ade80'; }
+                        if (status) { status.textContent = '* Live'; status.style.color = '#4ade80'; }
                     };
                 }
 
@@ -24280,9 +24280,9 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     if (ev.type === 'citation_gained') return 'NOW CITED: ' + ev.domain + (ev.keyword ? ' [' + ev.keyword + ']' : '');
                     if (ev.type === 'position_up') return 'Position #' + ev.old_pos + ' to #' + ev.new_pos + ': ' + ev.domain;
                     if (ev.type === 'score_up') return 'Score +' + ev.gain + ': ' + ev.domain + ' (' + ev.old_score + ' to ' + ev.new_score + ')';
-                    if (ev.type === 'step') return (ev.label||ev.name) + (ev.detail ? ' — ' + ev.detail : '') + ' (' + ev.domain + ')';
+                    if (ev.type === 'step') return (ev.label||ev.name) + (ev.detail ? ' - ' + ev.detail : '') + ' (' + ev.domain + ')';
                     if (ev.type === 'monitor_check') return 'Scanning: "' + ev.kw + '"';
-                    if (ev.type === 'monitor_aio') return (ev.cited ? 'CITED ' : 'AIO found: ') + '"' + ev.kw + '" — ' + (ev.aio_text||'').substring(0,60);
+                    if (ev.type === 'monitor_aio') return (ev.cited ? 'CITED ' : 'AIO found: ') + '"' + ev.kw + '" - ' + (ev.aio_text||'').substring(0,60);
                     if (ev.type === 'monitor_no_aio') return 'No AIO: "' + ev.kw + '"';
                     if (ev.type === 'monitor_position') return '#' + ev.position + ' in Google: "' + ev.kw + '" (' + ev.domain + ')';
                     if (ev.type === 'news') { var h = ev.headline || ''; var src2 = ev.source ? ' [' + ev.source + ']' : ''; return '📰 ' + (h.length > 80 ? h.substring(0,77) + '...' : h) + src2; }
@@ -24375,7 +24375,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     alertEl.style.border = '2px solid ' + (isCitation ? '#4ade80' : '#a78bfa');
                     alertEl.innerHTML = '<div style="font-size:3rem;margin-bottom:12px;">' + (isCitation ? 'CITED' : 'POSITION UP') + '</div>'
                         + '<div style="font-size:1.4rem;font-weight:900;color:' + (isCitation ? '#4ade80' : '#a78bfa') + ';margin-bottom:8px;">'
-                        + (isCitation ? ev.keyword || ev.domain : '#' + ev.old_pos + ' → #' + ev.new_pos) + '</div>'
+                        + (isCitation ? ev.keyword || ev.domain : '#' + ev.old_pos + ' -> #' + ev.new_pos) + '</div>'
                         + '<div style="font-size:13px;color:#9ca3af;">' + ev.domain + '</div>';
                     clearTimeout(_alertHideTimer);
                     _alertHideTimer = setTimeout(function(){ alertEl.style.display = 'none'; }, 6000);
@@ -24402,7 +24402,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 }
 
                 setTimeout(connectSSE, 500);
-                </script>
+                <\/script>
                 <style>
                 @keyframes cs-pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.4;transform:scale(.8)} }
                 @keyframes confettiDrop { 0%{transform:translateY(0) rotate(0deg);opacity:1} 100%{transform:translateY(100vh) rotate(720deg);opacity:0} }
@@ -24549,7 +24549,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 </div>
 
                 <script>
-                // ── Citation Brief ────────────────────────────────────────────
+                // -- Citation Brief --------------------------------------------
                 function openCitationBrief(pageId) {
                     var page = (allTrackerPages||[]).find(function(p){ return p.id == pageId; }) || {};
                     var url = page.url || '';
@@ -24560,9 +24560,9 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     var body  = document.getElementById('trCitationBody');
                     var urlClean = url.indexOf('//') > -1 ? url.split('//')[1] : url;
                     var urlParts = urlClean.split('/');
-                    title.textContent = (keyword || 'Citation Brief') + ' — ' + urlParts.slice(0,2).join('/');
-                    _activityAdd('🎯 Generating Citation Brief for ' + domain, 'citation');
-                    body.innerHTML = '<style>@keyframes csspin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}@keyframes csprog{0%{margin-left:-60%}100%{margin-left:110%}}</style><div style="text-align:center;padding:60px 20px;"><div style="font-size:2.5rem;display:inline-block;animation:csspin 1.5s linear infinite;margin-bottom:20px;">⚙️</div><div style="font-size:14px;color:#a78bfa;font-weight:700;margin-bottom:8px;">Generating Citation Brief</div><div style="font-size:12px;color:#6b7280;margin-bottom:20px;">Fetching AI Overview · Scraping competitors · Analysing your content</div><div style="background:#1f2937;border-radius:99px;height:4px;width:220px;margin:0 auto;overflow:hidden;"><div style="height:100%;width:60%;background:linear-gradient(90deg,#7c3aed,#a78bfa);border-radius:99px;animation:csprog 1.8s ease-in-out infinite;"></div></div><div style="font-size:11px;color:#374151;margin-top:12px;">15–30 seconds</div></div>';
+                    title.textContent = (keyword || 'Citation Brief') + ' - ' + urlParts.slice(0,2).join('/');
+                    _activityAdd(' Generating Citation Brief for ' + domain, 'citation');
+                    body.innerHTML = '<style>@keyframes csspin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}@keyframes csprog{0%{margin-left:-60%}100%{margin-left:110%}}</style><div style="text-align:center;padding:60px 20px;"><div style="font-size:2.5rem;display:inline-block;animation:csspin 1.5s linear infinite;margin-bottom:20px;"></div><div style="font-size:14px;color:#a78bfa;font-weight:700;margin-bottom:8px;">Generating Citation Brief</div><div style="font-size:12px;color:#6b7280;margin-bottom:20px;">Fetching AI Overview . Scraping competitors . Analysing your content</div><div style="background:#1f2937;border-radius:99px;height:4px;width:220px;margin:0 auto;overflow:hidden;"><div style="height:100%;width:60%;background:linear-gradient(90deg,#7c3aed,#a78bfa);border-radius:99px;animation:csprog 1.8s ease-in-out infinite;"></div></div><div style="font-size:11px;color:#374151;margin-top:12px;">15-30 seconds</div></div>';
                     modal.style.display = 'flex';
                     var token = localStorage.getItem('admin_id') || '';
                     fetch('/api/tracker/pages/' + pageId + '/citation-brief', {
@@ -24577,7 +24577,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                         }
                         renderCitationBrief(data, body, page);
                         var domain2 = (page.url||'').split('//').pop().split('/')[0];
-                        _activityAdd('✅ Citation Brief ready for ' + domain2 + ' — ' + (data.brief && data.brief.passages_to_add ? data.brief.passages_to_add.length : 0) + ' passages', 'done');
+                        _activityAdd('OK Citation Brief ready for ' + domain2 + ' - ' + (data.brief && data.brief.passages_to_add ? data.brief.passages_to_add.length : 0) + ' passages', 'done');
                     })
                     .catch(function(e) {
                         body.innerHTML = '<div style="color:#f87171;padding:20px;">Error: ' + e.message + '</div>';
@@ -24592,8 +24592,8 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     var text = window._citationPassages || '';
                     if (!text) return;
                     navigator.clipboard.writeText(text).then(function() {
-                        btn.textContent = '✅ Copied!';
-                        setTimeout(function() { btn.textContent = '📋 Copy All Passages'; }, 2000);
+                        btn.textContent = 'OK Copied!';
+                        setTimeout(function() { btn.textContent = ' Copy All Passages'; }, 2000);
                     }).catch(function() { btn.textContent = 'Copy failed'; });
                 }
 
@@ -24617,13 +24617,13 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                         var modelLabel = data.model_used || '';
                         var isGrounded = modelLabel.indexOf('two-step') > -1 || modelLabel.indexOf('grounding') > -1;
                         var isClaude = modelLabel.indexOf('claude') > -1;
-                        html += div('font-size:10px;font-weight:700;padding:4px 10px;border-radius:4px;background:' + (isGrounded?'#052e16':isClaude?'#2d0a0a':'#1a0a2e') + ';color:' + (isGrounded?'#4ade80':isClaude?'#f87171':'#a78bfa') + ';display:inline-block;margin-bottom:14px;', (isGrounded ? '🔍 Gemini searched Google live' : isClaude ? '⚠️ Claude fallback — check Gemini quota' : '⚡ ' + modelLabel));
+                        html += div('font-size:10px;font-weight:700;padding:4px 10px;border-radius:4px;background:' + (isGrounded?'#052e16':isClaude?'#2d0a0a':'#1a0a2e') + ';color:' + (isGrounded?'#4ade80':isClaude?'#f87171':'#a78bfa') + ';display:inline-block;margin-bottom:14px;', (isGrounded ? ' Gemini searched Google live' : isClaude ? '! Claude fallback - check Gemini quota' : ' ' + modelLabel));
                     }
 
                     // No AIO warning
                     if (!aioFound) {
                         html += div('background:#1c1009;border:1px solid #78350f;border-radius:8px;padding:14px 16px;margin-bottom:16px;',
-                            div('font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:#f59e0b;margin-bottom:6px;', '⚠️ NO AI OVERVIEW DETECTED AT THIS MOMENT') +
+                            div('font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:#f59e0b;margin-bottom:6px;', '! NO AI OVERVIEW DETECTED AT THIS MOMENT') +
                             div('font-size:12px;color:#d97706;line-height:1.6;', (aioStatus.note || 'AI Overviews appear on ~15-48% of queries and change ~12x per month. This is normal.')) +
                             div('font-size:11px;color:#92400e;margin-top:6px;', (aioStatus.action || 'The brief below is based on competitor analysis.'))
                         );
@@ -24632,23 +24632,23 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     // Stats grid
                     html += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:20px;">';
                     html += div('background:#0a1628;border:1px solid ' + (aioFound?'#1e3a5f':'#1f2937') + ';border-radius:8px;padding:12px;text-align:center;',
-                        div('font-size:1.4rem;', aioFound ? (aioCited ? '✅' : '⚠️') : '❌') +
+                        div('font-size:1.4rem;', aioFound ? (aioCited ? 'OK' : '!') : 'NO') +
                         div('font-size:11px;font-weight:700;color:' + (aioCited?'#4ade80':aioFound?'#fbbf24':'#6b7280') + ';margin-top:4px;', 'Google AIO') +
-                        div('font-size:10px;color:#6b7280;', aioCited ? 'Cited ✅' : aioFound ? 'Not cited' : 'Not found'));
+                        div('font-size:10px;color:#6b7280;', aioCited ? 'Cited OK' : aioFound ? 'Not cited' : 'Not found'));
                     html += div('background:#0a1628;border:1px solid #1f2937;border-radius:8px;padding:12px;text-align:center;',
-                        div('font-size:1.4rem;', (data.google_position || (page && page.latest_snapshot && page.latest_snapshot.google_position)) ? '#' + (data.google_position || page.latest_snapshot.google_position) : '—') +
+                        div('font-size:1.4rem;', (data.google_position || (page && page.latest_snapshot && page.latest_snapshot.google_position)) ? '#' + (data.google_position || page.latest_snapshot.google_position) : '-') +
                         div('font-size:11px;font-weight:700;color:#a78bfa;margin-top:4px;', 'Google Pos') +
                         div('font-size:10px;color:#6b7280;', 'Live ranking'));
                     html += div('background:#0a1628;border:1px solid ' + (freshness.at_risk?'#7f1d1d':'#1f2937') + ';border-radius:8px;padding:12px;text-align:center;',
                         div('font-size:1.4rem;', freshness.content_age_days ? freshness.content_age_days + 'd' : '?') +
                         div('font-size:11px;font-weight:700;color:' + (freshness.at_risk?'#f87171':'#6b7280') + ';margin-top:4px;', 'Content Age') +
-                        div('font-size:10px;color:#6b7280;', freshness.at_risk ? '⚠️ Citation risk' : 'OK'));
+                        div('font-size:10px;color:#6b7280;', freshness.at_risk ? '! Citation risk' : 'OK'));
                     html += div('background:#0a1628;border:1px solid #1f2937;border-radius:8px;padding:12px;text-align:center;',
                         div('font-size:1.4rem;', (brief.passages_to_add||[]).length) +
                         div('font-size:11px;font-weight:700;color:#fbbf24;margin-top:4px;', 'Passages to add') +
                         div('font-size:10px;color:#6b7280;', 'Extracted from AIO'));
                     html += div('background:#0a1628;border:1px solid #1f2937;border-radius:8px;padding:12px;text-align:center;',
-                        div('font-size:1.4rem;', groundingSources.length || '—') +
+                        div('font-size:1.4rem;', groundingSources.length || '-') +
                         div('font-size:11px;font-weight:700;color:#38bdf8;margin-top:4px;', 'Live sources') +
                         div('font-size:10px;color:#6b7280;', 'Gemini found'));
                     html += '</div>';
@@ -24656,7 +24656,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     // Freshness warning
                     if (freshness.at_risk) {
                         html += div('background:#2d0a0a;border:1px solid #7f1d1d;border-left:3px solid #f87171;border-radius:0 8px 8px 0;padding:12px 14px;margin-bottom:16px;',
-                            div('font-size:11px;font-weight:700;color:#f87171;margin-bottom:4px;', '⏰ FRESHNESS WARNING') +
+                            div('font-size:11px;font-weight:700;color:#f87171;margin-bottom:4px;', ' FRESHNESS WARNING') +
                             div('font-size:12px;color:#fca5a5;', freshness.message || ''));
                     }
 
@@ -24666,12 +24666,12 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                             var u = (s.url||s||'');
                             var t = s.title || '';
                             return div('font-size:11px;padding:4px 0;border-bottom:1px solid #1f2937;color:#9ca3af;',
-                                span('color:#38bdf8;font-weight:700;', i===0 ? '→ ' : '  ') +
+                                span('color:#38bdf8;font-weight:700;', i===0 ? '-> ' : '  ') +
                                 '<a href="' + u + '" target="_blank" style="color:#38bdf8;word-break:break-all;">' + u.split('//').pop().substring(0,70) + '</a> ' +
                                 span('color:#374151;', t));
                         }).join('');
                         html += div('background:#0a1628;border:1px solid #1e3a5f;border-radius:8px;padding:14px;margin-bottom:16px;',
-                            div('font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:#38bdf8;margin-bottom:8px;', '🔍 URLS GEMINI RETRIEVED FROM GOOGLE SEARCH') +
+                            div('font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:#38bdf8;margin-bottom:8px;', ' URLS GEMINI RETRIEVED FROM GOOGLE SEARCH') +
                             div('font-size:11px;color:#6b7280;margin-bottom:8px;', brief._grounding_note || '') +
                             srcHtml);
                     }
@@ -24679,7 +24679,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     // AIO text
                     if (aio.text) {
                         html += div('background:#0c1a0c;border:1px solid #166534;border-radius:8px;padding:16px;margin-bottom:16px;',
-                            div('font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:#4ade80;margin-bottom:8px;', '📋 CURRENT AI OVERVIEW TEXT') +
+                            div('font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:#4ade80;margin-bottom:8px;', ' CURRENT AI OVERVIEW TEXT') +
                             div('font-size:13px;color:#d1fae5;line-height:1.7;white-space:pre-wrap;', aio.text) +
                             (aio.source_url ? div('font-size:11px;color:#6b7280;margin-top:8px;', 'Source: <a href="' + aio.source_url + '" target="_blank" style="color:#38bdf8;">' + aio.source_url + '</a>') : ''));
                     }
@@ -24711,8 +24711,8 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     var passages = brief.passages_to_add || [];
                     if (passages.length) {
                         html += div('margin-bottom:20px;',
-                            div('font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:#fbbf24;margin-bottom:12px;', '✍️ PASSAGES TO ADD TO YOUR HTML') +
-                            div('font-size:11px;color:#6b7280;margin-bottom:10px;', 'Add these to your page — in a direct answer box, FAQ, or dedicated paragraph.'));
+                            div('font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:#fbbf24;margin-bottom:12px;', ' PASSAGES TO ADD TO YOUR HTML') +
+                            div('font-size:11px;color:#6b7280;margin-bottom:10px;', 'Add these to your page - in a direct answer box, FAQ, or dedicated paragraph.'));
                         var allPassageText = '';
                         passages.forEach(function(p, i) {
                             var platforms = (p.platforms||[]).map(function(pl) {
@@ -24721,12 +24721,12 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                                 return span('font-size:9px;font-weight:700;padding:1px 6px;border-radius:3px;margin-right:3px;background:'+bg+';color:'+co+';', pl.toUpperCase());
                             }).join('');
                             var cardHtml = div('display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:6px;',
-                                div('display:flex;align-items:center;gap:6px;', span('font-size:10px;font-weight:700;color:#fbbf24;text-transform:uppercase;', 'Passage ' + (i+1) + ' · ' + (p.type||'content')) + platforms) +
+                                div('display:flex;align-items:center;gap:6px;', span('font-size:10px;font-weight:700;color:#fbbf24;text-transform:uppercase;', 'Passage ' + (i+1) + ' . ' + (p.type||'content')) + platforms) +
                                 div('', (p.word_count_target ? span('font-size:10px;color:#6b7280;', 'Target: ' + span('color:#fbbf24;', p.word_count_target + ' words')) : '') + ' ' + span('font-size:10px;color:#6b7280;', 'Where: ' + span('color:#a78bfa;', p.placement||'after H1'))));
                             cardHtml += div('font-size:13px;color:#e5e7eb;line-height:1.7;margin-bottom:10px;background:#0d1117;padding:10px 12px;border-radius:6px;font-style:italic;', p.passage||'');
                             if (p.why) cardHtml += div('font-size:11px;color:#9ca3af;', '💡 Why: ' + p.why);
                             if (p.improved_version) {
-                                cardHtml += div('font-size:11px;color:#4ade80;margin-top:8px;font-weight:600;', '✅ Improved version (use this):');
+                                cardHtml += div('font-size:11px;color:#4ade80;margin-top:8px;font-weight:600;', 'OK Improved version (use this):');
                                 cardHtml += div('font-size:13px;color:#d1fae5;background:#052e16;padding:10px 12px;border-radius:6px;margin-top:4px;line-height:1.7;', p.improved_version);
                             }
                             html += div('background:#111827;border:1px solid #374151;border-left:3px solid #fbbf24;border-radius:0 8px 8px 0;padding:14px;margin-bottom:10px;', cardHtml);
@@ -24748,22 +24748,22 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                         });
                     }
 
-                    // Copy button — after both passages and structural fixes
+                    // Copy button - after both passages and structural fixes
                     if (allPassageText) {
                         window._citationPassages = allPassageText;
-                        html += div('text-align:center;padding:12px 0 8px;', '<button onclick="copyAllPassages(this)" class="tr-btn primary" style="font-size:12px;">📋 Copy All Passages + Fixes to Clipboard</button>');
+                        html += div('text-align:center;padding:12px 0 8px;', '<button onclick="copyAllPassages(this)" class="tr-btn primary" style="font-size:12px;"> Copy All Passages + Fixes to Clipboard</button>');
                     }
 
                     // Primary reason
                     if (brief.primary_reason_not_cited) {
                         html += div('background:#1a0a2e;border:1px solid #4c1d95;border-radius:8px;padding:14px;margin-bottom:16px;',
-                            div('font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:#a78bfa;margin-bottom:6px;', '🎯 PRIMARY REASON NOT CITED') +
+                            div('font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:#a78bfa;margin-bottom:6px;', ' PRIMARY REASON NOT CITED') +
                             div('font-size:13px;color:#e5e7eb;', brief.primary_reason_not_cited));
                     }
 
                     container.innerHTML = html;
                 }
-                </script>
+                <\/script>
             </div>
 
             <!-- TRACKER CLIENTS -->
@@ -24999,7 +24999,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
         ];
         const FLAGS = {NL:'🇳🇱',BE:'🇧🇪',US:'🇺🇸',UK:'🇬🇧',DE:'🇩🇪',FR:'🇫🇷',ES:'🇪🇸',IT:'🇮🇹',AU:'🇦🇺',CA:'🇨🇦',IE:'🇮🇪',SE:'🇸🇪',NO:'🇳🇴',DK:'🇩🇰',FI:'🇫🇮',CH:'🇨🇭',AT:'🇦🇹',PT:'🇵🇹',PL:'🇵🇱',IN:'🇮🇳',SG:'🇸🇬',JP:'🇯🇵',BR:'🇧🇷',MX:'🇲🇽',AE:'🇦🇪',ZA:'🇿🇦'};
 
-        // Check DB status on page load — show warning if tables not ready
+        // Check DB status on page load - show warning if tables not ready
         async function checkDbStatus() {
             try {
                 const res = await fetch('/api/init');
@@ -25007,7 +25007,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 if (data.needs_init) {
                     const el = document.getElementById('db-status');
                     const form = document.getElementById('login-form');
-                    if (el) { el.classList.remove('hidden'); el.innerHTML = '<i class="fas fa-exclamation-triangle mr-2"></i> Database initializing — ' + data.missing.length + ' tables missing. Please wait 30 seconds...'; }
+                    if (el) { el.classList.remove('hidden'); el.innerHTML = '<i class="fas fa-exclamation-triangle mr-2"></i> Database initializing - ' + data.missing.length + ' tables missing. Please wait 30 seconds...'; }
                     if (form) form.style.opacity = '0.5';
                     // Retry every 10 seconds
                     setTimeout(() => { checkDbStatus(); }, 10000);
@@ -25132,8 +25132,8 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     (e.is_opted_out?'<div style="font-size:9px;background:#ef4444;color:#fff;border-radius:4px;padding:2px 6px;display:inline-block;margin-bottom:4px;">OPTED OUT</div>':(!e.score?'<div style="font-size:9px;background:#6b7280;color:#fff;border-radius:4px;padding:2px 6px;display:inline-block;margin-bottom:4px;">NO SCORE</div>':'')) +
                     '<div style="font-size:3rem;">'+(i===0?'🥇':i===1?'🥈':'🥉')+'</div>' +
                     '<h3 style="font-weight:700;font-size:1.1rem;margin:8px 0;">'+(e.company_name||extractDomain(e.url))+'</h3>' +
-                    '<div style="font-size:2.5rem;font-weight:900;">'+(e.score||'—')+'/100</div>' +
-                    '<div style="margin:8px 0;">'+getFlag(e.country)+' '+(e.country||'—')+'</div>' +
+                    '<div style="font-size:2.5rem;font-weight:900;">'+(e.score||'-')+'/100</div>' +
+                    '<div style="margin:8px 0;">'+getFlag(e.country)+' '+(e.country||'-')+'</div>' +
                     '<button onclick="editLeaderboard('+e.id+')" style="width:100%;background:#2563eb;color:white;border:none;border-radius:8px;padding:8px;cursor:pointer;margin-bottom:6px;"><i class="fas fa-edit"></i> Edit</button>' +
                     '<button onclick="deleteItem(&apos;leaderboard&apos;,'+e.id+')" style="width:100%;background:#dc2626;color:white;border:none;border-radius:8px;padding:8px;cursor:pointer;"><i class="fas fa-trash"></i> Delete</button></div>').join('');
                 document.getElementById('rankings4to15Grid').innerHTML = window.allLeaderboard.slice(3,15).map((e,i) =>
@@ -25210,7 +25210,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 window.allFreelancers = data.freelancers||[];
                 document.getElementById('freelancersGrid').innerHTML = window.allFreelancers.map(f =>
                     '<div class="card"><div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">' +
-                    '<h3 style="font-weight:700;font-size:1.1rem;">'+f.name+'</h3>'+(f.is_featured?'<span style="color:#fbbf24;font-size:0.75rem;">⭐ Featured</span>':'')+'</div>' +
+                    '<h3 style="font-weight:700;font-size:1.1rem;">'+f.name+'</h3>'+(f.is_featured?'<span style="color:#fbbf24;font-size:0.75rem;">* Featured</span>':'')+'</div>' +
                     '<p style="font-size:0.875rem;color:#9ca3af;margin-bottom:16px;">'+(f.title||'Specialist')+'</p>' +
                     '<div style="display:flex;gap:8px;margin-bottom:8px;">' +
                     '<button onclick="editFreelancer('+f.id+')" class="btn btn-info" style="flex:1;font-size:0.75rem;"><i class="fas fa-edit mr-1"></i> Edit</button>' +
@@ -25261,7 +25261,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 document.getElementById('stat-human-users').textContent = humans;
                 renderUsers();
             } catch(e) {
-                document.getElementById('usersContainer').innerHTML = '<tr><td colspan="10" style="text-align:center;color:#f87171;padding:40px;">Failed to load users — '+e.message+'</td></tr>';
+                document.getElementById('usersContainer').innerHTML = '<tr><td colspan="10" style="text-align:center;color:#f87171;padding:40px;">Failed to load users - '+e.message+'</td></tr>';
             } finally {
                 if(btn){btn.disabled=false;btn.innerHTML='<i class="fas fa-sync-alt" style="margin-right:5px;"></i>Refresh';}
             }
@@ -25312,17 +25312,17 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 else statusBadge = '<span class="ut-badge" style="background:#1f2937;color:#6b7280;">Inactive</span>';
 
                 // Type badge
-                const ua = u._ua || {is_bot:true, label:'Unknown', icon:'❓'};
+                const ua = u._ua || {is_bot:true, label:'Unknown', icon:'?'};
                 const typeBadge = ua.is_bot
                     ? '<span class="ut-badge" style="background:#2d0a0a;color:#f87171;">'+ua.icon+' '+ua.label+'</span>'
                     : '<span class="ut-badge" style="background:#1e1b4b;color:#a78bfa;">'+ua.icon+' '+ua.label+'</span>';
 
                 // Country flag (using flag emoji from country code)
                 const flag = u.country_code ? String.fromCodePoint(...[...u.country_code.toUpperCase()].map(c=>0x1F1E6+c.charCodeAt(0)-65)) : '';
-                const country = u.country ? flag+' '+u.country : '<span style="color:#4b5563;">—</span>';
+                const country = u.country ? flag+' '+u.country : '<span style="color:#4b5563;">-</span>';
 
                 // Browser extract from UA
-                let browser = '—';
+                let browser = '-';
                 if(u.user_agent) {
                     const ua2 = u.user_agent;
                     if(ua2.includes('Edg/')) browser = 'Edge';
@@ -25332,16 +25332,16 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     else if(ua2.includes('curl')) browser = 'curl';
                     else if(ua2.includes('python')) browser = 'Python';
                     else if(ua2.includes('bot')||ua2.includes('Bot')) browser = ua2.substring(0,30);
-                    else browser = ua2.substring(0,30)+'…';
+                    else browser = ua2.substring(0,30)+'...';
                     // Mobile OS
-                    if(ua2.includes('Android')) browser += ' · Android';
-                    else if(ua2.includes('iPhone')||ua2.includes('iPad')) browser += ' · iOS';
-                    else if(ua2.includes('Windows')) browser += ' · Win';
-                    else if(ua2.includes('Mac')) browser += ' · Mac';
+                    if(ua2.includes('Android')) browser += ' . Android';
+                    else if(ua2.includes('iPhone')||ua2.includes('iPad')) browser += ' . iOS';
+                    else if(ua2.includes('Windows')) browser += ' . Win';
+                    else if(ua2.includes('Mac')) browser += ' . Mac';
                 }
 
                 // Last seen
-                const lastSeen = u.last_seen_at ? getTimeAgo(new Date(u.last_seen_at)) : (u.last_scan_at ? getTimeAgo(new Date(u.last_scan_at)) : '—');
+                const lastSeen = u.last_seen_at ? getTimeAgo(new Date(u.last_seen_at)) : (u.last_scan_at ? getTimeAgo(new Date(u.last_scan_at)) : '-');
                 const joined = new Date(u.created_at).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
 
                 // Actions
@@ -25352,7 +25352,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 return '<tr>'
                     +'<td><input type="checkbox" onchange="toggleSelection(&apos;users&apos;,&apos;'+u.id+'&apos;)" '+(selectedIds.users.has(u.id)?'checked':'')+'></td>'
                     +'<td>'+typeBadge+'</td>'
-                    +'<td style="font-family:monospace;font-size:12px;color:#60a5fa;">'+( u.ip_address||'—')+'</td>'
+                    +'<td style="font-family:monospace;font-size:12px;color:#60a5fa;">'+( u.ip_address||'-')+'</td>'
                     +'<td style="font-size:12px;white-space:nowrap;">'+country+'</td>'
                     +'<td style="font-size:11px;color:#9ca3af;max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="'+(u.user_agent||'')+'">'+browser+'</td>'
                     +'<td>'+statusBadge+'</td>'
@@ -25361,7 +25361,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     +'<td style="font-size:12px;color:#6b7280;white-space:nowrap;">'+joined+'</td>'
                     +'<td style="display:flex;gap:6px;align-items:center;">'+actionBtn
                         +'<button onclick="openMessageModal(&apos;single&apos;,&apos;'+u.id+'&apos;)" class="ut-action" title="Message"><i class="fas fa-envelope"></i></button>'
-                        +'<button onclick="deleteSingleUser(&apos;'+u.id+'&apos;)" class="ut-action red" title="Delete">✕</button>'
+                        +'<button onclick="deleteSingleUser(&apos;'+u.id+'&apos;)" class="ut-action red" title="Delete">x</button>'
                     +'</td>'
                     +'</tr>';
             }).join('');
@@ -25428,9 +25428,9 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     '<a href="'+p.url+'" target="_blank" style="color:#60a5fa;font-size:0.8rem;">'+p.url+'</a>' +
                     '<div style="font-size:1.5rem;font-weight:900;color:'+(p.score>=70?'#4ade80':p.score>=50?'#fbbf24':'#f87171')+';">'+p.score+'/100</div>' +
                     '<div style="display:flex;gap:8px;margin-top:12px;">' +
-                    '<button onclick="approveLB('+p.id+')" class="btn btn-success" style="flex:1;">✅ Approve</button>' +
-                    '<button onclick="apiCall(&apos;/api/admin/leaderboard/'+p.id+'/reject&apos;,&apos;POST&apos;).then(()=>loadPendingData())" class="btn btn-danger">✗ Reject</button>' +
-                    '</div></div>').join('') : '<p style="color:#9ca3af;">✅ No pending submissions</p>';
+                    '<button onclick="approveLB('+p.id+')" class="btn btn-success" style="flex:1;">OK Approve</button>' +
+                    '<button onclick="apiCall(&apos;/api/admin/leaderboard/'+p.id+'/reject&apos;,&apos;POST&apos;).then(()=>loadPendingData())" class="btn btn-danger">x Reject</button>' +
+                    '</div></div>').join('') : '<p style="color:#9ca3af;">OK No pending submissions</p>';
                 document.getElementById('pending-freelancers-container').innerHTML = frData.pending.length ? frData.pending.map(p =>
                     '<div style="background:linear-gradient(135deg,#1e293b,#0f172a);border:1px solid #f59e0b;border-radius:1rem;padding:1.5rem;margin-bottom:1rem;">' +
                     '<h4 style="font-weight:700;">'+p.name+'</h4><p style="font-size:0.875rem;color:#9ca3af;">'+p.email+'</p>' +
@@ -25444,7 +25444,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
         function approveLB(id) { apiCall('/api/admin/leaderboard/'+id+'/approve','POST',{final_country:null,city:null,niche:null}).then(()=>{ loadPendingData(); loadLeaderboard(); }); }
         function deleteItem(type, id) { if (!confirm('Delete this item permanently?')) return; apiCall(type==='leaderboard'?'/api/admin/leaderboard/'+id:'/api/admin/freelancers/'+id,'DELETE').then(()=>loadAllData()).catch(e=>alert(e.message)); }
         function closeModal(id) { document.getElementById(id).classList.remove('active'); }
-        function toggleRankings() { const el=document.getElementById('rankingsContainer'); const h=el.classList.toggle('hidden'); document.getElementById('rankingsToggleText').textContent=h?'📊 Show Rankings 16+':'📊 Hide Rankings 16+'; document.getElementById('rankingsToggleArrow').textContent=h?'▼':'▲'; }
+        function toggleRankings() { const el=document.getElementById('rankingsContainer'); const h=el.classList.toggle('hidden'); document.getElementById('rankingsToggleText').textContent=h?' Show Rankings 16+':' Hide Rankings 16+'; document.getElementById('rankingsToggleArrow').textContent=h?'v':'^'; }
 
         // Scan log state
         let allScanLogs = [], filteredScanLogs = [], selectedScanIds = new Set();
@@ -25464,7 +25464,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     if(brand_new.length&&silent&&nb){nb.textContent='+'+brand_new.length+' new';nb.style.display='inline';setTimeout(()=>nb.style.display='none',8000);}
                 }
             } catch(e) {
-                document.getElementById('scanLogBody').innerHTML='<tr><td colspan="10" style="text-align:center;color:#f87171;padding:40px;">Failed to load — '+e.message+'</td></tr>';
+                document.getElementById('scanLogBody').innerHTML='<tr><td colspan="10" style="text-align:center;color:#f87171;padding:40px;">Failed to load - '+e.message+'</td></tr>';
             } finally {
                 const btn=document.getElementById('slRefreshBtn');if(btn){btn.disabled=false;btn.innerHTML='<i class="fas fa-sync-alt" style="margin-right:5px;"></i>Refresh';}
             }
@@ -25481,7 +25481,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
             const el=id=>document.getElementById(id);
             if(el('slStatTotal'))el('slStatTotal').textContent=s.length.toLocaleString();
             if(el('slStatEmails'))el('slStatEmails').textContent=withEmail.toLocaleString();
-            if(el('slStatAvgScore'))el('slStatAvgScore').textContent=avg||'—';
+            if(el('slStatAvgScore'))el('slStatAvgScore').textContent=avg||'-';
             if(el('slStatToday'))el('slStatToday').textContent=todayCount.toLocaleString();
             if(el('slStatBulk'))el('slStatBulk').textContent=bulkCount+' / '+(s.length-bulkCount);
             if(el('scanLogCount'))el('scanLogCount').textContent=s.length+' scans';
@@ -25532,12 +25532,12 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 const fullDate=dt.toLocaleString('en-GB',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
                 const sv=s.score;
                 const [scoreColor,scoreBg]=sv===null?['#6b7280','#1f2937']:sv>=85?['#4ade80','#052e16']:sv>=70?['#a3e635','#1a2e05']:sv>=50?['#fbbf24','#2d1f00']:['#f87171','#2d0a0a'];
-                const score=sv!==null?'<span class="sl-score-pill" style="color:'+scoreColor+';background:'+scoreBg+';">'+sv+'</span>':'<span style="color:#4b5563;">—</span>';
+                const score=sv!==null?'<span class="sl-score-pill" style="color:'+scoreColor+';background:'+scoreBg+';">'+sv+'</span>':'<span style="color:#4b5563;">-</span>';
                 const src=s.source||'single';
                 const srcColor=src==='bulk'?'#93c5fd':src==='discover'?'#86efac':'#c4b5fd';
                 const srcBg=src==='bulk'?'#0c2340':src==='discover'?'#0a2010':'#1e1b4b';
-                const emailBadge=s.email_status==='has_email'?'<span style="color:#4ade80;font-size:12px;">'+( s.email_found||'Found')+'</span>':'<span style="color:#4b5563;font-size:12px;">—</span>';
-                const loc=[s.city,s.country].filter(Boolean).join(', ')||'—';
+                const emailBadge=s.email_status==='has_email'?'<span style="color:#4ade80;font-size:12px;">'+( s.email_found||'Found')+'</span>':'<span style="color:#4b5563;font-size:12px;">-</span>';
+                const loc=[s.city,s.country].filter(Boolean).join(', ')||'-';
                 const urlShort=s.business_url?s.business_url.replace(/^https?:[\/][\/](www\.)?/,'').split('/')[0]:'';
                 return '<tr class="'+(isNew?'sl-new':'')+'" style="border-bottom:1px solid #0d1117;">'
                     +'<td style="padding:10px 12px;"><input type="checkbox" '+(selectedScanIds.has(String(s.id))?'checked':'')+' onchange="toggleScanRow('+s.id+',this.checked)"></td>'
@@ -25547,18 +25547,18 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                         +'<div style="font-size:11px;color:#6b7280;">'+dt.toLocaleDateString('en-GB',{day:'2-digit',month:'short'})+'</div></td>'
                     +'<td style="padding:10px 12px;"><span class="sl-src-badge" style="color:'+srcColor+';background:'+srcBg+';">'+src+'</span></td>'
                     +'<td style="padding:10px 12px;max-width:220px;">'
-                        +'<div style="font-weight:600;font-size:13px;color:#f1f5f9;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+(s.business_name||'<span style="color:#4b5563;">—</span>')+'</div>'
+                        +'<div style="font-weight:600;font-size:13px;color:#f1f5f9;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+(s.business_name||'<span style="color:#4b5563;">-</span>')+'</div>'
                         +(urlShort?'<a href="'+s.business_url+'" target="_blank" style="font-size:11px;color:#60a5fa;text-decoration:none;opacity:.8;">'+urlShort+'</a>':'')+'</td>'
                     +'<td style="padding:10px 12px;">'+score+'</td>'
                     +'<td style="padding:10px 12px;font-size:12px;color:#9ca3af;white-space:nowrap;">'+loc+'</td>'
                     +'<td style="padding:10px 12px;">'+emailBadge+'</td>'
-                    +'<td style="padding:10px 12px;font-size:11px;color:#6b7280;">'+(s.niche||'—')+'</td>'
-                    +'<td style="padding:10px 12px;"><button onclick="deleteSingleScan('+s.id+',this)" class="sl-action-btn danger" style="padding:4px 8px;font-size:11px;">✕</button></td>'
+                    +'<td style="padding:10px 12px;font-size:11px;color:#6b7280;">'+(s.niche||'-')+'</td>'
+                    +'<td style="padding:10px 12px;"><button onclick="deleteSingleScan('+s.id+',this)" class="sl-action-btn danger" style="padding:4px 8px;font-size:11px;">x</button></td>'
                     +'</tr>';
             }).join('');
             const total=filteredScanLogs.length, pages=Math.ceil(total/slPageSize);
             const pag=document.getElementById('slPagination');
-            if(pag){pag.innerHTML=pages>1?'<span>Showing '+(start+1)+'–'+Math.min(start+slPageSize,total)+' of '+total+'</span><div style="display:flex;gap:6px;">'+(slPage>0?'<button onclick="slChangePage(-1)" class="sl-action-btn" style="padding:3px 10px;">← Prev</button>':'')+'<span style="align-self:center;">Page '+(slPage+1)+'/'+pages+'</span>'+(slPage<pages-1?'<button onclick="slChangePage(1)" class="sl-action-btn" style="padding:3px 10px;">Next →</button>':'')+'</div>':'';}
+            if(pag){pag.innerHTML=pages>1?'<span>Showing '+(start+1)+'-'+Math.min(start+slPageSize,total)+' of '+total+'</span><div style="display:flex;gap:6px;">'+(slPage>0?'<button onclick="slChangePage(-1)" class="sl-action-btn" style="padding:3px 10px;"><- Prev</button>':'')+'<span style="align-self:center;">Page '+(slPage+1)+'/'+pages+'</span>'+(slPage<pages-1?'<button onclick="slChangePage(1)" class="sl-action-btn" style="padding:3px 10px;">Next -></button>':'')+'</div>':'';}
         }
 
         function slChangePage(dir){slPage=Math.max(0,slPage+dir);renderScanLogPage();}
@@ -25583,24 +25583,24 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 const dt=new Date(s.created_at);
                 rows.push([fn,s.business_name||'',s.email_found||'',s.business_url||'',s.score||'',s.city||'',s.country||'',s.niche||'',s.source||'single',dt.toLocaleDateString('en-GB'),dt.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})]);
             });
-            const csv=rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\\n');
+            const csv=rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join(String.fromCharCode(10));
             const a=document.createElement('a');a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);a.download='scans-'+new Date().toISOString().split('T')[0]+'.csv';a.click();
         }
 
         async function bulkDeleteScans(){
             const ids=Array.from(selectedScanIds);if(!ids.length){alert('Select scans first.');return;}if(!confirm('Delete '+ids.length+' scan(s)?'))return;
-            try{const r=await fetch('/api/admin/scan-log/bulk-delete',{method:'POST',headers:{'Content-Type':'application/json','x-admin-key':currentAdminId},body:JSON.stringify({ids})});const data=await r.json();if(!data.success)throw new Error(data.error||'Delete failed');selectedScanIds.clear();updateScanExportBtn();loadScanLog();}catch(e){alert('❌ '+e.message);}
+            try{const r=await fetch('/api/admin/scan-log/bulk-delete',{method:'POST',headers:{'Content-Type':'application/json','x-admin-key':currentAdminId},body:JSON.stringify({ids})});const data=await r.json();if(!data.success)throw new Error(data.error||'Delete failed');selectedScanIds.clear();updateScanExportBtn();loadScanLog();}catch(e){alert('NO '+e.message);}
         }
 
         async function deleteSingleScan(id,btn){
             if(!confirm('Delete this scan?'))return;if(btn){btn.disabled=true;btn.textContent='...';}
             try{const r=await fetch('/api/admin/scan-log/bulk-delete',{method:'POST',headers:{'Content-Type':'application/json','x-admin-key':currentAdminId},body:JSON.stringify({ids:[id]})});const d=await r.json();
-            if(d.success){selectedScanIds.delete(String(id));allScanLogs=allScanLogs.filter(s=>s.id!==id);filterScanLog();updateSlStats();}else{alert('Delete failed: '+d.error);if(btn){btn.disabled=false;btn.textContent='✕';}}}catch(e){alert('Error: '+e.message);if(btn){btn.disabled=false;btn.textContent='✕';}}
+            if(d.success){selectedScanIds.delete(String(id));allScanLogs=allScanLogs.filter(s=>s.id!==id);filterScanLog();updateSlStats();}else{alert('Delete failed: '+d.error);if(btn){btn.disabled=false;btn.textContent='x';}}}catch(e){alert('Error: '+e.message);if(btn){btn.disabled=false;btn.textContent='x';}}
         }
 
         async function deleteAllScans(){
             if(!confirm('Delete ALL scans permanently?'))return;
-            try{const r=await fetch('/api/admin/scan-log/delete-all',{method:'DELETE',headers:{'x-admin-key':currentAdminId}});const data=await r.json();if(!data.success)throw new Error(data.error||'Delete failed');allScanLogs=[];filteredScanLogs=[];selectedScanIds.clear();updateScanExportBtn();filterScanLog();updateSlStats();}catch(e){alert('❌ '+e.message);}
+            try{const r=await fetch('/api/admin/scan-log/delete-all',{method:'DELETE',headers:{'x-admin-key':currentAdminId}});const data=await r.json();if(!data.success)throw new Error(data.error||'Delete failed');allScanLogs=[];filteredScanLogs=[];selectedScanIds.clear();updateScanExportBtn();filterScanLog();updateSlStats();}catch(e){alert('NO '+e.message);}
         }
 
         function startScanLogAutoRefresh(){
@@ -25623,22 +25623,22 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
         async function adminRunScan(){
             const url=document.getElementById('adminScanUrl').value.trim();if(!url)return;
             const btn=document.getElementById('adminScanBtn'),prog=document.getElementById('adminScanProgress'),res=document.getElementById('adminScanResults');
-            btn.disabled=true;btn.textContent='⏳ Scanning...';prog.style.display='block';res.style.display='none';
+            btn.disabled=true;btn.textContent=' Scanning...';prog.style.display='block';res.style.display='none';
             let pct=0;const interval=setInterval(()=>{pct=Math.min(pct+Math.random()*12,90);document.getElementById('adminScanBar').style.width=pct+'%';},600);
             try{
                 const r=await fetch('/api/scan',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url})});
                 const data=await r.json();clearInterval(interval);document.getElementById('adminScanBar').style.width='100%';
                 if(!data.success)throw new Error(data.error||'Scan failed');
                 adminLastScanResult=data;
-                setTimeout(()=>{prog.style.display='none';btn.disabled=false;btn.textContent='🔍 Scan';res.style.display='block';
+                setTimeout(()=>{prog.style.display='none';btn.disabled=false;btn.textContent=' Scan';res.style.display='block';
                     res.innerHTML='<div style="background:#0f172a;border-radius:16px;border:2px solid #4c1d95;padding:28px;text-align:center;"><div style="font-size:5rem;font-weight:900;color:'+(data.score>=85?'#4ade80':data.score>=70?'#fbbf24':'#f87171')+';">'+data.score+'</div><div style="color:#6b7280;">/ 100</div><p style="color:#e5e7eb;margin-top:12px;">'+data.url+'</p></div>';},400);
-            }catch(e){clearInterval(interval);prog.style.display='none';btn.disabled=false;btn.textContent='🔍 Scan';alert('Scan failed: '+e.message);}
+            }catch(e){clearInterval(interval);prog.style.display='none';btn.disabled=false;btn.textContent=' Scan';alert('Scan failed: '+e.message);}
         }
 
         async function loadCampaignsList(){} // removed
 
 
-        // ── CONTENT LIFECYCLE TRACKER JS ────────────────────────────────────────
+        // -- CONTENT LIFECYCLE TRACKER JS ----------------------------------------
         let allTrackerPages = [];
         let _trProfileId = null;
         let _trClientFilter = '';
@@ -25653,7 +25653,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 renderTrackerStats();
                 renderTrackerPages();
             } catch(e) {
-                document.getElementById('trPagesList').innerHTML = '<div style="text-align:center;color:#f87171;padding:40px;">Failed to load — '+e.message+'</div>';
+                document.getElementById('trPagesList').innerHTML = '<div style="text-align:center;color:#f87171;padding:40px;">Failed to load - '+e.message+'</div>';
             } finally {
                 if(btn){btn.disabled=false;btn.innerHTML='<i class="fas fa-sync-alt" style="margin-right:5px;"></i>Refresh';}
             }
@@ -25729,7 +25729,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
             if(el('trStatCheckedToday')) el('trStatCheckedToday').textContent = checkedToday;
             if(el('trStatPendingChanges')) el('trStatPendingChanges').textContent = pending;
 
-            // ── New aggregate KPIs ────────────────────────────────────────────────────
+            // -- New aggregate KPIs ----------------------------------------------------
             let pagesWithPos = 0, totalPosGain = 0;
             let totalGraaf = 0, pagesWithGraaf = 0;
             let citedCount = 0;
@@ -25753,7 +25753,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     el('trStatAvgPosGain').textContent = (gainNum > 0 ? '+' : '') + avgPosGain;
                     el('trStatAvgPosGain').style.color = gainNum > 0 ? '#4ade80' : gainNum < 0 ? '#f87171' : '#e5e7eb';
                 } else {
-                    el('trStatAvgPosGain').textContent = '—';
+                    el('trStatAvgPosGain').textContent = '-';
                     el('trStatAvgPosGain').style.color = '#e5e7eb';
                 }
             }
@@ -25762,7 +25762,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     el('trStatAvgGraaf').textContent = avgGraaf + '/100';
                     el('trStatAvgGraaf').style.color = avgGraaf >= 70 ? '#4ade80' : avgGraaf >= 50 ? '#fbbf24' : '#f87171';
                 } else {
-                    el('trStatAvgGraaf').textContent = '—';
+                    el('trStatAvgGraaf').textContent = '-';
                     el('trStatAvgGraaf').style.color = '#e5e7eb';
                 }
             }
@@ -25784,7 +25784,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
             if(_trCitationFilter === 'copilot') filtered = filtered.filter(function(p){ return p.latest_snapshot && p.latest_snapshot.ai_bing_cited; });
             const activeFilters = [_trClientFilter, _trDomainFilter, _trCitationFilter].filter(Boolean).length;
             const countEl = document.getElementById('trFilterCount');
-            if(countEl) countEl.textContent = activeFilters ? 'Showing ' + filtered.length + ' of ' + allTrackerPages.length + ' pages' + (_trCitationFilter ? ' — cited in ' + _trCitationFilter : '') : '';
+            if(countEl) countEl.textContent = activeFilters ? 'Showing ' + filtered.length + ' of ' + allTrackerPages.length + ' pages' + (_trCitationFilter ? ' - cited in ' + _trCitationFilter : '') : '';
             if(!filtered.length) {
                 el.innerHTML = '<div style="text-align:center;padding:40px;color:#6b7280;">No pages match this filter.</div>';
                 return;
@@ -25796,10 +25796,10 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
             const snap = p.latest_snapshot;
             const pending = parseInt(p.pending_changes||0);
             const freqLabels = {'1day':'Daily','3days':'3 days','1week':'Weekly','2weeks':'2 weeks','weekly':'Weekly','monthly':'Monthly'};
-            const nextCheck = p.next_check_at ? getTimeAgo(new Date(p.next_check_at)) : '—';
+            const nextCheck = p.next_check_at ? getTimeAgo(new Date(p.next_check_at)) : '-';
             const lastCheck = p.last_checked_at ? getTimeAgo(new Date(p.last_checked_at)) : 'Never checked';
 
-            // Position pill — #4 means Google ranking position
+            // Position pill - #4 means Google ranking position
             let posPill = '<span style="color:#6b7280;font-size:13px;">Not ranked</span>';
             if(snap?.google_position) {
                 const pos = snap.google_position;
@@ -25810,12 +25810,12 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
 
             // GRAAF score badge
             const graafBadge = (snap?.score)
-                ? '<span class="tr-badge" style="background:#2e1065;color:#a78bfa;margin-left:6px;">🎯 '+snap.score+'/100</span>'
+                ? '<span class="tr-badge" style="background:#2e1065;color:#a78bfa;margin-left:6px;"> '+snap.score+'/100</span>'
                 : '';
 
             // GSC baseline badge
             const gscBadge = (p.gsc_impressions || p.gsc_clicks || p.gsc_position)
-                ? '<span class="tr-badge" style="background:#0c2340;color:#60a5fa;margin-left:6px;">📊 GSC</span>'
+                ? '<span class="tr-badge" style="background:#0c2340;color:#60a5fa;margin-left:6px;"> GSC</span>'
                 : '';
 
             // Classification badge
@@ -25823,34 +25823,34 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
             if (p.latest_classification) {
                 const cls = p.latest_classification;
                 const clsColor = cls.status === 'healthy' ? '#4ade80' : cls.status === 'attention' ? '#fbbf24' : cls.status === 'opportunity' ? '#60a5fa' : '#f87171';
-                const clsEmoji = cls.status === 'healthy' ? '🟢' : cls.status === 'attention' ? '🟡' : cls.status === 'opportunity' ? '💡' : '🔴';
+                const clsEmoji = cls.status === 'healthy' ? '' : cls.status === 'attention' ? '' : cls.status === 'opportunity' ? '💡' : '';
                 const clsLabel = cls.status === 'healthy' ? 'HEALTHY' : cls.status === 'attention' ? 'NEEDS REFRESH' : cls.status === 'opportunity' ? 'OPPORTUNITY' : 'NEEDS REWRITE';
                 clsBadge = '<span class="tr-badge" style="background:'+clsColor+'22;color:'+clsColor+';border:1px solid '+clsColor+'44;margin-left:6px;">'+clsEmoji+' '+clsLabel+' '+(cls.score||0)+'/100</span>';
             }
 
             // Fetch reliability warning
             const fetchWarning = (p.fetch_reliable === false)
-                ? '<span class="tr-badge" style="background:#2d1f00;color:#fbbf24;margin-left:6px;">⚠️ fetch unreliable</span>'
+                ? '<span class="tr-badge" style="background:#2d1f00;color:#fbbf24;margin-left:6px;">! fetch unreliable</span>'
                 : '';
 
-            // AI citation badges — green = cited, red = not cited, grey = no overview
+            // AI citation badges - green = cited, red = not cited, grey = no overview
             const gBadge = snap
                 ? (snap.ai_google_overview_cited
-                    ? '<span class="tr-badge" style="background:#052e16;color:#4ade80;border:1px solid #16a34a;">✅ Google AIO cited</span>'
+                    ? '<span class="tr-badge" style="background:#052e16;color:#4ade80;border:1px solid #16a34a;">OK Google AIO cited</span>'
                     : snap.ai_google_overview_found
-                        ? '<span class="tr-badge" style="background:#2d0a0a;color:#f87171;border:1px solid #b91c1c;">❌ AIO exists — not cited</span>'
+                        ? '<span class="tr-badge" style="background:#2d0a0a;color:#f87171;border:1px solid #b91c1c;">NO AIO exists - not cited</span>'
                         : '<span class="tr-badge" style="background:#1f2937;color:#6b7280;">No AI Overview</span>')
                 : '<span class="tr-badge notcited">Not checked</span>';
 
             const pBadge = snap
                 ? (snap.ai_perplexity_cited
-                    ? '<span class="tr-badge" style="background:#1e1b4b;color:#a78bfa;border:1px solid #7c3aed;">✅ Perplexity cited</span>'
-                    : '<span class="tr-badge" style="background:#1f2937;color:#6b7280;">Perplexity — not cited</span>')
+                    ? '<span class="tr-badge" style="background:#1e1b4b;color:#a78bfa;border:1px solid #7c3aed;">OK Perplexity cited</span>'
+                    : '<span class="tr-badge" style="background:#1f2937;color:#6b7280;">Perplexity - not cited</span>')
                 : '';
 
             const bBadge = snap
                 ? (snap.ai_bing_cited
-                    ? '<span class="tr-badge" style="background:#0c2340;color:#60a5fa;border:1px solid #1d4ed8;">✅ Copilot cited</span>'
+                    ? '<span class="tr-badge" style="background:#0c2340;color:#60a5fa;border:1px solid #1d4ed8;">OK Copilot cited</span>'
                     : '')
                 : '';
 
@@ -25861,14 +25861,14 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
 
             // Manual HTML paste CTA for unreliable pages
             const manualCta = (p.fetch_reliable === false && (!p.html_content || p.html_content.length < 500))
-                ? '<div style="margin-top:8px;"><button onclick="openHtmlModal('+p.id+')" class="tr-btn" style="border-color:#fbbf24;color:#fef9c3;">📋 Paste HTML manually for GRAAF scan</button></div>'
+                ? '<div style="margin-top:8px;"><button onclick="openHtmlModal('+p.id+')" class="tr-btn" style="border-color:#fbbf24;color:#fef9c3;"> Paste HTML manually for GRAAF scan</button></div>'
                 : '';
 
             const borderColor = p.is_active ? '#7e22ce' : '#374151';
             const dotHtml = p.is_active
                 ? '<span class="tr-change-dot tr-pulse" style="background:#7e22ce;"></span>'
                 : '<span class="tr-change-dot" style="background:#374151;"></span>';
-            // Keyword badge — shows source and warns if using slug fallback
+            // Keyword badge - shows source and warns if using slug fallback
             let kwHtml = '';
             if (p.keyword) {
                 kwHtml = '<span style="font-size:11px;color:#6b7280;margin-left:4px;">keyword: <span style="color:#a78bfa;">'+p.keyword+'</span></span>';
@@ -25881,9 +25881,9 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 rawSlug = rawSlug.split('.')[0]; // remove extension
                 var slug = rawSlug.split('').map(function(c){ return (c==='-'||c==='_')?' ':c; }).join('').trim();
                 if (slug) {
-                    kwHtml = '<span style="font-size:11px;color:#6b7280;margin-left:4px;">keyword: <span style="color:#fbbf24;">'+slug+'</span> <span style="background:#2d1f00;color:#fbbf24;font-size:9px;padding:1px 5px;border-radius:3px;cursor:pointer;" onclick="openHtmlModal('+p.id+')" title="Slug used as keyword — click to set manually">⚠️ slug</span></span>';
+                    kwHtml = '<span style="font-size:11px;color:#6b7280;margin-left:4px;">keyword: <span style="color:#fbbf24;">'+slug+'</span> <span style="background:#2d1f00;color:#fbbf24;font-size:9px;padding:1px 5px;border-radius:3px;cursor:pointer;" onclick="openHtmlModal('+p.id+')" title="Slug used as keyword - click to set manually">! slug</span></span>';
                 } else {
-                    kwHtml = '<span style="font-size:11px;background:#2d0a0a;color:#f87171;margin-left:4px;padding:1px 6px;border-radius:3px;cursor:pointer;" onclick="openHtmlModal('+p.id+')" title="No keyword — click to set">⚠️ no keyword</span>';
+                    kwHtml = '<span style="font-size:11px;background:#2d0a0a;color:#f87171;margin-left:4px;padding:1px 6px;border-radius:3px;cursor:pointer;" onclick="openHtmlModal('+p.id+')" title="No keyword - click to set">! no keyword</span>';
                 }
             }
             let _recs = snap && snap.recommendations ? snap.recommendations : null;
@@ -25896,7 +25896,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 +dotHtml
                 +'<span style="font-weight:600;font-size:13px;color:#f1f5f9;">'+(p.title||'Untitled page')+'</span>'
                 +graafBadge+gscBadge+clsBadge+fetchWarning
-                +'<span style="font-size:11px;color:#6b7280;">· '+(freqLabels[p.check_frequency]||p.check_frequency)+'</span>'
+                +'<span style="font-size:11px;color:#6b7280;">. '+(freqLabels[p.check_frequency]||p.check_frequency)+'</span>'
                 +'</div>'
                 +'<div style="margin-bottom:8px;">'
                 +'<a href="'+p.url+'" target="_blank" style="font-size:12px;color:#60a5fa;text-decoration:none;">'+p.url+'</a>'
@@ -25909,13 +25909,13 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 +'<div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">'
                 +'<div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;">'
                 +changesBtn
-                +'<button onclick="openHtmlModal('+p.id+')" class="tr-btn" title="Step 1: Set keyword and paste HTML (optional — system auto-fetches if empty)"><span style="font-size:9px;background:#374151;border-radius:3px;padding:1px 4px;margin-right:3px;">1</span>Keyword / HTML</button>'
+                +'<button onclick="openHtmlModal('+p.id+')" class="tr-btn" title="Step 1: Set keyword and paste HTML (optional - system auto-fetches if empty)"><span style="font-size:9px;background:#374151;border-radius:3px;padding:1px 4px;margin-right:3px;">1</span>Keyword / HTML</button>'
                 +'<button onclick="runManualCheck('+p.id+')" class="tr-btn green" id="trCheckBtn_'+p.id+'" title="Step 2: Check Google position, AI Overview citations, and generate recommendations"><span style="font-size:9px;background:#166534;border-radius:3px;padding:1px 4px;margin-right:3px;">2</span>Check now</button>'
-                +'<button onclick="openCitationBrief('+p.id+')" class="tr-btn" style="border-color:#a78bfa;color:#a78bfa;" title="Step 3: Generate AI Citation Brief — exact passages to add for Google AIO, Perplexity, Copilot, Claude"><span style="font-size:9px;background:#4c1d95;border-radius:3px;padding:1px 4px;margin-right:3px;color:#fff;">3</span>🎯 Citation</button>'
-                +'<button onclick="deleteTrackerPage('+p.id+')" class="tr-btn danger">✕</button>'
+                +'<button onclick="openCitationBrief('+p.id+')" class="tr-btn" style="border-color:#a78bfa;color:#a78bfa;" title="Step 3: Generate AI Citation Brief - exact passages to add for Google AIO, Perplexity, Copilot, Claude"><span style="font-size:9px;background:#4c1d95;border-radius:3px;padding:1px 4px;margin-right:3px;color:#fff;">3</span> Citation</button>'
+                +'<button onclick="deleteTrackerPage('+p.id+')" class="tr-btn danger">x</button>'
                 +'</div>'
                 +'<div style="font-size:11px;color:#6b7280;text-align:right;">'
-                +'Last checked: '+lastCheck+' · Next: '+nextCheck+' · '+(p.snapshot_count||0)+' snapshots'
+                +'Last checked: '+lastCheck+' . Next: '+nextCheck+' . '+(p.snapshot_count||0)+' snapshots'
                 +'</div></div></div>'
                 +recsHtml
                 +'</div>';
@@ -25935,13 +25935,13 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     +'<div style="font-size:11px;color:#6b7280;margin-top:2px;">'+(r.action||'')+'</div>'
                     +'</div></div>';
             }).join('');
-            const moreRow = recs.length > 3 ? '<div onclick="openChangesModalById('+pageId+')" style="font-size:11px;color:#a78bfa;margin-top:6px;cursor:pointer;text-decoration:underline;">+'+(recs.length-3)+' more recommendations — click to view all</div>' : '';
+            const moreRow = recs.length > 3 ? '<div onclick="openChangesModalById('+pageId+')" style="font-size:11px;color:#a78bfa;margin-top:6px;cursor:pointer;text-decoration:underline;">+'+(recs.length-3)+' more recommendations - click to view all</div>' : '';
             return '<div style="margin-top:14px;padding:12px 14px;background:#0d1117;border-radius:8px;border:1px solid #1f2937;">'
                 +'<div style="font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;">Latest Recommendations</div>'
                 +rows+moreRow+'</div>';
         }
 
-        // ── Live Activity Feed ─────────────────────────────────────────────
+        // -- Live Activity Feed ---------------------------------------------
         var _activityLog = [];
         var _activityVisible = false;
 
@@ -25985,11 +25985,11 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
             var btn = document.getElementById('trCheckBtn_'+pageId);
             if(btn){btn.disabled=true;btn.innerHTML='<i class="fas fa-spinner fa-spin" style="margin-right:4px;"></i>Checking...';}
 
-            _activityAdd('▶ Starting check for ' + domain, 'running');
+            _activityAdd('> Starting check for ' + domain, 'running');
 
             try {
                 await apiCall('/api/tracker/pages/'+pageId+'/check','POST');
-                _activityAdd('⚙️ Check running — fetching live data...', 'running');
+                _activityAdd(' Check running - fetching live data...', 'running');
 
                 // Poll check-status for live steps
                 var polls = 0;
@@ -26006,7 +26006,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                             // Show new steps as they come in
                             for (var si = lastStepCount; si < steps.length; si++) {
                                 var step = steps[si];
-                                var icon = step.status === 'done' ? '✅' : step.status === 'error' ? '❌' : '⚙️';
+                                var icon = step.status === 'done' ? 'OK' : step.status === 'error' ? 'NO' : '';
                                 var type = step.status === 'done' ? 'done' : step.status === 'error' ? 'error' : 'running';
                                 var label = {
                                     html_hash: 'Fetching page HTML',
@@ -26017,7 +26017,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                                     recommendations: 'Generating recommendations',
                                     save: 'Saving results'
                                 }[step.name] || step.name;
-                                _activityAdd(icon + ' ' + label + (step.detail ? ' — ' + step.detail.substring(0,60) : ''), type);
+                                _activityAdd(icon + ' ' + label + (step.detail ? ' - ' + step.detail.substring(0,60) : ''), type);
                             }
                             lastStepCount = steps.length;
                             if (!sData.running) { clearInterval(statusPoll); }
@@ -26049,7 +26049,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     }
                 }, 8000);
             } catch(e) {
-                _activityAdd('❌ Check failed: ' + e.message, 'error');
+                _activityAdd('NO Check failed: ' + e.message, 'error');
                 if(btn){btn.disabled=false;btn.innerHTML='<span style="font-size:9px;background:#166534;border-radius:3px;padding:1px 4px;margin-right:3px;">2</span>Check now';}
             }
         }
@@ -26061,7 +26061,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
         }
 
         async function openChangesModal(pageId, title) {
-            document.getElementById('trChangesTitle').textContent = 'Changes — '+title;
+            document.getElementById('trChangesTitle').textContent = 'Changes - '+title;
             document.getElementById('trChangesBody').innerHTML = '<div style="text-align:center;padding:30px;color:#6b7280;"><i class="fas fa-spinner fa-spin"></i> Loading...</div>';
             document.getElementById('trChangesModal').style.display = 'flex';
             try {
@@ -26095,14 +26095,14 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     const prev = snaps[i+1];
                     const posChange = (prev && prev.google_position && s.google_position) ? (prev.google_position - s.google_position) : null;
                     const posArrow = posChange === null ? '' : posChange > 0
-                        ? '<span style="color:#4ade80;margin-left:4px;">↑'+posChange+'</span>'
-                        : posChange < 0 ? '<span style="color:#f87171;margin-left:4px;">↓'+Math.abs(posChange)+'</span>' : '';
+                        ? '<span style="color:#4ade80;margin-left:4px;">^'+posChange+'</span>'
+                        : posChange < 0 ? '<span style="color:#f87171;margin-left:4px;">v'+Math.abs(posChange)+'</span>' : '';
                     return '<tr style="border-bottom:1px solid #0d1117;">'
                         +'<td style="padding:7px 10px;color:#9ca3af;">'+new Date(s.checked_at).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'})+'</td>'
-                        +'<td style="padding:7px 10px;font-weight:600;">'+(s.google_position?'#'+s.google_position:'—')+posArrow+'</td>'
-                        +'<td style="padding:7px 10px;">'+(s.ai_google_overview_cited?'<span style="color:#38bdf8;">✦ Cited</span>':s.ai_google_overview_found?'<span style="color:#6b7280;">Found</span>':'<span style="color:#374151;">—</span>')+'</td>'
-                        +'<td style="padding:7px 10px;">'+(s.ai_perplexity_cited?'<span style="color:#a78bfa;">✦ Cited</span>':'<span style="color:#374151;">—</span>')+'</td>'
-                        +'<td style="padding:7px 10px;">'+(s.ai_bing_cited?'<span style="color:#60a5fa;">✦ Cited</span>':'<span style="color:#374151;">—</span>')+'</td>'
+                        +'<td style="padding:7px 10px;font-weight:600;">'+(s.google_position?'#'+s.google_position:'-')+posArrow+'</td>'
+                        +'<td style="padding:7px 10px;">'+(s.ai_google_overview_cited?'<span style="color:#38bdf8;">* Cited</span>':s.ai_google_overview_found?'<span style="color:#6b7280;">Found</span>':'<span style="color:#374151;">-</span>')+'</td>'
+                        +'<td style="padding:7px 10px;">'+(s.ai_perplexity_cited?'<span style="color:#a78bfa;">* Cited</span>':'<span style="color:#374151;">-</span>')+'</td>'
+                        +'<td style="padding:7px 10px;">'+(s.ai_bing_cited?'<span style="color:#60a5fa;">* Cited</span>':'<span style="color:#374151;">-</span>')+'</td>'
                         +'</tr>';
                 }).join('');
                 html += '<div style="margin-bottom:20px;">'
@@ -26124,9 +26124,9 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     const borderColor = isGood?'#4ade80':'#f87171';
                     const doneBtn = !c.applied
                         ? '<button onclick="markChangeApplied('+c.id+')" class="tr-btn" style="font-size:11px;padding:3px 10px;">Mark done</button>'
-                        : '<span style="font-size:11px;color:#4ade80;">✓ Applied</span>';
+                        : '<span style="font-size:11px;color:#4ade80;">v Applied</span>';
                     return '<div style="padding:10px 12px;background:#0d1117;border-radius:6px;border-left:3px solid '+borderColor+';margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;">'
-                        +'<div><div style="font-size:12px;font-weight:600;color:#e5e7eb;">'+c.field_name.replace(/_/g,' ')+' — '+c.value_before+' → '+c.value_after+'</div>'
+                        +'<div><div style="font-size:12px;font-weight:600;color:#e5e7eb;">'+c.field_name.replace(/_/g,' ')+' - '+c.value_before+' -> '+c.value_after+'</div>'
                         +'<div style="font-size:11px;color:#6b7280;margin-top:2px;">'+new Date(c.changed_at).toLocaleDateString('en-GB')+'</div></div>'
                         +doneBtn+'</div>';
                 }).join('');
@@ -26266,46 +26266,46 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 el.innerHTML=codes.map(c=>{
                     const isLifetime = c.deal_type === 'lifetime';
                     const pkBadge = isLifetime
-                        ? '<span style="font-size:0.7rem;padding:2px 8px;border-radius:9999px;background:#064e3b;color:#4ade80;margin-left:6px;">♾️ Lifetime'+(c.deal_label?' · '+c.deal_label:'')+'</span>'
+                        ? '<span style="font-size:0.7rem;padding:2px 8px;border-radius:9999px;background:#064e3b;color:#4ade80;margin-left:6px;"> Lifetime'+(c.deal_label?' . '+c.deal_label:'')+'</span>'
                         : c.use_platform_keys
                             ? '<span style="font-size:0.7rem;padding:2px 8px;border-radius:9999px;background:#0c4a6e;color:#38bdf8;margin-left:6px;">🔑 Platform Keys</span>'
                             : '<span style="font-size:0.7rem;padding:2px 8px;border-radius:9999px;background:#1e293b;color:#94a3b8;margin-left:6px;">Own Keys</span>';
                     const keyInfo=c.gemini_key||c.claude_key?'<div style="font-size:11px;color:#64748b;margin-top:4px;">'+(c.gemini_key?'Gemini: '+c.gemini_key+' ':'')+( c.claude_key?'Claude: '+c.claude_key:'')+'</div>':'';
-                    // ── API Cost Budget Display ───────────────────────────
+                    // -- API Cost Budget Display ---------------------------
                     let creditBar = '';
                     const costLimit = parseFloat(c.monthly_cost_limit) || 5;
                     const costUsed = parseFloat(c.monthly_cost_used) || 0;
                     const costPct = costLimit > 0 ? Math.min(100, Math.round((costUsed / costLimit) * 100)) : 0;
                     const costColor = costPct >= 100 ? '#ef4444' : costPct >= 80 ? '#f59e0b' : costPct >= 50 ? '#fbbf24' : '#22c55e';
-                    const modeLabel = c.api_key_mode === 'byok' ? '🔑 BYOK' : c.api_key_mode === 'platform' ? '🖥️ Platform' : '❓ Not set';
+                    const modeLabel = c.api_key_mode === 'byok' ? '🔑 BYOK' : c.api_key_mode === 'platform' ? '🖥 Platform' : '? Not set';
                     creditBar = '<div style="margin-top:10px;padding:10px 12px;background:#0a1628;border-radius:8px;border:1px solid #1e3a5f;">' +
                         '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">' +
                         '<span style="font-size:11px;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:.05em;">' + modeLabel + ' Budget</span>' +
-                        '<span style="font-size:12px;font-weight:700;color:' + costColor + ';">€' + costUsed.toFixed(2) + ' / €' + costLimit.toFixed(2) + '</span>' +
+                        '<span style="font-size:12px;font-weight:700;color:' + costColor + ';">EUR' + costUsed.toFixed(2) + ' / EUR' + costLimit.toFixed(2) + '</span>' +
                         '</div>' +
                         '<div style="background:#1e293b;border-radius:99px;height:6px;overflow:hidden;"><div style="height:6px;border-radius:99px;background:' + costColor + ';width:' + costPct + '%;transition:width .3s;"></div></div>' +
                         '<div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;">' +
-                        '<input type="number" id="setlimit_' + c.id + '" placeholder="Set € budget" min="1" step="0.01" style="width:120px;font-size:12px;padding:4px 8px;border-radius:4px;">' +
-                        '<button onclick="setCostLimit(' + c.id + ')" style="font-size:11px;padding:4px 10px;background:#0891b2;color:#fff;border:none;border-radius:4px;cursor:pointer;">✓ Set Budget</button>' +
+                        '<input type="number" id="setlimit_' + c.id + '" placeholder="Set EUR budget" min="1" step="0.01" style="width:120px;font-size:12px;padding:4px 8px;border-radius:4px;">' +
+                        '<button onclick="setCostLimit(' + c.id + ')" style="font-size:11px;padding:4px 10px;background:#0891b2;color:#fff;border:none;border-radius:4px;cursor:pointer;">v Set Budget</button>' +
                         '<button onclick="resetCostUsed(' + c.id + ')" style="font-size:11px;padding:4px 10px;background:#1e293b;color:#94a3b8;border:1px solid #334155;border-radius:4px;cursor:pointer;">Reset Used</button>' +
-                        '<button onclick="showCostLog(' + c.id + ')" style="font-size:11px;padding:4px 10px;background:#0c4a6e;color:#38bdf8;border:1px solid #0284c7;border-radius:4px;cursor:pointer;">📋 Cost Log</button>' +
+                        '<button onclick="showCostLog(' + c.id + ')" style="font-size:11px;padding:4px 10px;background:#0c4a6e;color:#38bdf8;border:1px solid #0284c7;border-radius:4px;cursor:pointer;"> Cost Log</button>' +
                         '</div></div>';
                     return '<div class="card" style="border-left:3px solid '+(c.is_active?'#a78bfa':'#6b7280')+';">' +
                     '<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;">' +
                     '<div style="flex:1;min-width:0;"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px;"><span style="font-family:monospace;font-size:1.1rem;font-weight:700;color:#a78bfa;">'+c.code+'</span>' +
-                    '<span style="font-size:0.75rem;padding:2px 8px;border-radius:9999px;background:'+(c.is_active?'#052e16':'#1f2937')+';color:'+(c.is_active?'#4ade80':'#9ca3af')+';">'+(c.is_active?'● Active':'○ Revoked')+'</span>'+pkBadge+'</div>' +
+                    '<span style="font-size:0.75rem;padding:2px 8px;border-radius:9999px;background:'+(c.is_active?'#052e16':'#1f2937')+';color:'+(c.is_active?'#4ade80':'#9ca3af')+';">'+(c.is_active?'* Active':'o Revoked')+'</span>'+pkBadge+'</div>' +
                     '<div style="font-weight:600;">'+c.client_name+(c.profile_count>0?' <span style="font-size:11px;color:#64748b;">('+c.profile_count+' profiles)</span>':'')+'</div>' +
-                    '<div style="font-size:10px;color:#475569;margin-top:2px;">Created: '+(c.created_at?new Date(c.created_at).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}):'—')+'</div>' +
+                    '<div style="font-size:10px;color:#475569;margin-top:2px;">Created: '+(c.created_at?new Date(c.created_at).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}):'-')+'</div>' +
                     '<div style="margin-top:8px;padding:8px 10px;background:#0f172a;border:1px dashed #334155;border-radius:6px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">' +
-                    '<span style="font-size:10px;color:#64748b;">📋 Share with client:</span>' +
+                    '<span style="font-size:10px;color:#64748b;"> Share with client:</span>' +
                     '<code style="font-size:12px;font-weight:700;color:#a78bfa;letter-spacing:.05em;">'+c.code+'</code>' +
                     '<button onclick="copyEngineCode(&apos;'+c.code+'&apos;)" style="font-size:10px;padding:3px 10px;background:#334155;color:#94a3b8;border:none;border-radius:4px;cursor:pointer;">Copy</button>' +
-                    '<a href="https://app.contentscale.site/content-engine" target="_blank" style="font-size:10px;color:#38bdf8;text-decoration:none;">→ content-engine</a>' +
+                    '<a href="https://app.contentscale.site/content-engine" target="_blank" style="font-size:10px;color:#38bdf8;text-decoration:none;">-> content-engine</a>' +
                     '</div>' +
                     keyInfo+creditBar+'</div>' +
                     '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-start;">' +
                     '<button onclick="togglePlatformKeys('+c.id+','+!c.use_platform_keys+')" class="btn" style="font-size:0.75rem;background:'+(c.use_platform_keys?'#0c4a6e':'#1e293b')+';color:'+(c.use_platform_keys?'#38bdf8':'#94a3b8')+';border:1px solid '+(c.use_platform_keys?'#0284c7':'#334155')+';">'+(c.use_platform_keys?'🔑 Platform ON':'🔑 Platform Keys')+'</button>' +
-                    '<button onclick="copyEngineCode(&apos;'+c.code+'&apos;)" class="btn btn-info" style="font-size:0.75rem;">📋 Copy</button>' +
+                    '<button onclick="copyEngineCode(&apos;'+c.code+'&apos;)" class="btn btn-info" style="font-size:0.75rem;"> Copy</button>' +
                     '<button onclick="toggleEngineCode('+c.id+','+!c.is_active+')" class="btn '+(c.is_active?'btn-warning':'btn-success')+'" style="font-size:0.75rem;">'+(c.is_active?'Revoke':'Reactivate')+'</button>' +
                     '<button onclick="deleteEngineCode('+c.id+')" class="btn btn-danger" style="font-size:0.75rem;">Delete</button>' +
                     '</div></div></div>';}).join('');
@@ -26458,7 +26458,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
             if(newPw.length<8)return showMsg('Min. 8 characters',false);
             if(newPw!==conf)return showMsg('Passwords do not match',false);
             try{const res=await fetch('/api/admin/change-password',{method:'POST',headers:{'Content-Type':'application/json','x-admin-key':currentAdminId},body:JSON.stringify({current_password:current,new_password:newPw})});const data=await res.json();
-            if(data.success){showMsg('✅ Password updated! Logging out...',true);setTimeout(()=>logout(),2000);}else{showMsg(data.error||'Failed',false);}}catch(e){showMsg('Connection error: '+e.message,false);}
+            if(data.success){showMsg('OK Password updated! Logging out...',true);setTimeout(()=>logout(),2000);}else{showMsg(data.error||'Failed',false);}}catch(e){showMsg('Connection error: '+e.message,false);}
         }
 
         async function loadGiveAccess(){
@@ -26469,22 +26469,22 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 return '<div style="background:#0f172a;border:1px solid #1e293b;border-left:4px solid #0f766e;border-radius:10px;padding:18px 20px;margin-bottom:12px;">' +
                     '<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;">' +
                     '<div><span style="font-family:monospace;font-size:1.1rem;font-weight:800;color:#34d399;">'+c.code+'</span>' +
-                    '<span style="background:#064e3b;color:#6ee7b7;border-radius:99px;padding:2px 10px;font-size:0.72rem;margin-left:8px;">● Active</span>' +
+                    '<span style="background:#064e3b;color:#6ee7b7;border-radius:99px;padding:2px 10px;font-size:0.72rem;margin-left:8px;">* Active</span>' +
                     '<div style="font-weight:700;color:#f1f5f9;margin-top:4px;">'+c.client_name+'</div>' +
                     '<div style="margin-top:8px;font-family:monospace;font-size:0.72rem;color:#64748b;">🔗 '+loginUrl+'</div></div>' +
                     '<div style="display:flex;flex-direction:column;gap:8px;">' +
-                    '<button onclick="gaCopyLoginUrl(&apos;'+c.code+'&apos;)" style="background:#0f766e;color:#fff;border:none;border-radius:6px;padding:9px 16px;cursor:pointer;">📋 Copy Login URL</button>' +
-                    '<button onclick="gaRevoke('+c.id+')" style="background:#1c0a0a;color:#f87171;border:1px solid #7f1d1d;border-radius:6px;padding:9px 16px;cursor:pointer;">✕ Revoke Access</button>' +
+                    '<button onclick="gaCopyLoginUrl(&apos;'+c.code+'&apos;)" style="background:#0f766e;color:#fff;border:none;border-radius:6px;padding:9px 16px;cursor:pointer;"> Copy Login URL</button>' +
+                    '<button onclick="gaRevoke('+c.id+')" style="background:#1c0a0a;color:#f87171;border:1px solid #7f1d1d;border-radius:6px;padding:9px 16px;cursor:pointer;">x Revoke Access</button>' +
                     '</div></div></div>';}).join('');}catch(e){el.innerHTML='<div style="color:#f87171;">Error: '+e.message+'</div>';}
         }
 
-        function gaCopyLoginUrl(code){const url=window.location.origin+'/engine-login?code='+code;navigator.clipboard.writeText(url).then(()=>{const t=document.createElement('div');t.textContent='✅ Login URL copied';t.style.cssText='position:fixed;bottom:24px;right:24px;background:#0f766e;color:#fff;padding:12px 20px;border-radius:10px;z-index:9999;';document.body.appendChild(t);setTimeout(()=>t.remove(),3000);});}
+        function gaCopyLoginUrl(code){const url=window.location.origin+'/engine-login?code='+code;navigator.clipboard.writeText(url).then(()=>{const t=document.createElement('div');t.textContent='OK Login URL copied';t.style.cssText='position:fixed;bottom:24px;right:24px;background:#0f766e;color:#fff;padding:12px 20px;border-radius:10px;z-index:9999;';document.body.appendChild(t);setTimeout(()=>t.remove(),3000);});}
 
         async function gaRevoke(id){if(!confirm('Revoke this access code?'))return;try{await apiCall('/api/admin/engine-codes/'+id,'PATCH',{is_active:false});loadGiveAccess();loadEngineCodes();}catch(e){alert('Error: '+e.message);}}
 
         async function gaCreateCode(){
             const name=document.getElementById('gaClientName').value.trim();if(!name){alert('Enter a client name');return;}
-            const btn=document.getElementById('gaCreateBtn');btn.disabled=true;btn.textContent='⏳ Creating...';
+            const btn=document.getElementById('gaCreateBtn');btn.disabled=true;btn.textContent=' Creating...';
             const use_platform_keys=document.getElementById('gaUsePlatformKeys').checked;
             try{const pc=document.getElementById('gaPlatformCredits').value.trim();
             const dealType=document.getElementById('gaDealType').value;
@@ -26512,12 +26512,12 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 const pc=document.getElementById('gaPlatformCredits').value.trim();
                 const dealLabel=document.getElementById('gaDealLabel')?.value.trim();
                 if(dealType==='lifetime'){
-                    keyTypeEl.innerHTML='♾️ <strong style="color:#4ade80;">Lifetime Deal</strong>'+(dealLabel?' — '+dealLabel:'')+' · Own API keys · Never expires · Zero cost to you';
+                    keyTypeEl.innerHTML=' <strong style="color:#4ade80;">Lifetime Deal</strong>'+(dealLabel?' - '+dealLabel:'')+' . Own API keys . Never expires . Zero cost to you';
                 } else {
-                    keyTypeEl.innerHTML='🔑 <strong style="color:#38bdf8;">Platform API Keys</strong> — ' + (pc?'<strong style="color:#4ade80;">'+pc+' credits</strong> assigned':'<strong style="color:#38bdf8;">Unlimited credits</strong>');
+                    keyTypeEl.innerHTML='🔑 <strong style="color:#38bdf8;">Platform API Keys</strong> - ' + (pc?'<strong style="color:#4ade80;">'+pc+' credits</strong> assigned':'<strong style="color:#38bdf8;">Unlimited credits</strong>');
                 }
             } else {
-                keyTypeEl.innerHTML='🔑 <strong style="color:#a78bfa;">Own API Keys</strong> — no credit system, client uses their own Gemini/Claude keys';
+                keyTypeEl.innerHTML='🔑 <strong style="color:#a78bfa;">Own API Keys</strong> - no credit system, client uses their own Gemini/Claude keys';
             }
             document.getElementById('gaSuccessPanel').style.display='block';document.getElementById('gaCreateForm').style.display='none';loadGiveAccess();
             }catch(e){alert('Error: '+e.message);}finally{btn.disabled=false;btn.textContent='🔑 Create & Get Login URL';}
@@ -26528,7 +26528,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
 
         console.log('\u2705 Admin Dashboard v2 loaded \u2014 all tabs ready');
 
-        // ── Tracker Clients ───────────────────────────────────────────────────
+        // -- Tracker Clients ---------------------------------------------------
         var _tcClients = [];
 
         async function loadTrackerClients() {
