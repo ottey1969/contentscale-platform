@@ -1213,6 +1213,15 @@ app.get('/api/admin/tracker-clients', verifyAdmin, async (req, res) => {
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
+// Admin: delete tracker client
+app.delete('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
+  try {
+    await pool.query('UPDATE tracker_pages SET is_active=FALSE WHERE tracker_client_id=$1', [req.params.id]);
+    await pool.query('DELETE FROM tracker_clients WHERE id=$1', [req.params.id]);
+    res.json({ success: true });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
 // Admin: update client max_pages + override IP
 app.patch('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
   try {
@@ -24819,8 +24828,42 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                         el.innerHTML = '<div style="text-align:center;padding:40px;color:#6b7280;">No clients registered yet</div>';
                         return;
                     }
-                    var html = '<table style="width:100%;border-collapse:collapse;">'
-                        + '<thead><tr style="border-bottom:1px solid #1f2937;font-size:10px;color:#6b7280;text-transform:uppercase;letter-spacing:.06em;">'
+                    var rows = clients.map(function(c) {
+                        var date = c.created_at ? new Date(c.created_at).toLocaleDateString('en-GB') : '-';
+                        var trackUrl = 'https://app.contentscale.site/track/' + c.token;
+                        var tokenShort = c.token ? c.token.substring(0,8) + '...' : '-';
+                        var statusLabel = (c.status || 'active').toUpperCase();
+                        var statusColor = c.status === 'active' ? '#4ade80' : '#f87171';
+                        var toggleLabel = c.status === 'active' ? 'Disable' : 'Enable';
+                        var d = document.createElement('tr');
+                        d.className = 'tc-row';
+                        d.innerHTML =
+                            '<td style="padding:10px 12px;font-weight:700;color:#e5e7eb;">' + (c.domain||'-') + '</td>'
+                            + '<td style="padding:10px 12px;">'
+                            + '<div style="color:#9ca3af;">' + (c.name||'-') + '</div>'
+                            + (c.email ? '<div style="color:#38bdf8;font-size:11px;">' + c.email + '</div>' : '')
+                            + (c.whatsapp ? '<div style="color:#4ade80;font-size:11px;">' + c.whatsapp + '</div>' : '')
+                            + '</td>'
+                            + '<td style="padding:10px 12px;text-align:center;color:#a78bfa;">' + (c.page_count||0) + '</td>'
+                            + '<td style="padding:10px 12px;text-align:center;">'
+                            + '<input type="number" value="' + (c.max_pages||10) + '" min="1" max="200" data-id="' + c.id + '" onchange="updateTcClient(parseInt(this.dataset.id),{max_pages:parseInt(this.value)})" style="width:55px;background:#0d1117;border:1px solid #374151;border-radius:4px;padding:3px 6px;color:#e5e7eb;font-size:12px;">'
+                            + '</td>'
+                            + '<td style="padding:10px 12px;text-align:center;"><span style="font-size:10px;font-weight:700;color:' + statusColor + ';">' + statusLabel + '</span></td>'
+                            + '<td style="padding:10px 12px;color:#6b7280;">' + date + (c.registered_ip ? '<div style="font-size:10px;color:#374151;">' + c.registered_ip + '</div>' : '') + '</td>'
+                            + '<td style="padding:10px 12px;"><a href="' + trackUrl + '" target="_blank" style="font-size:11px;color:#7c3aed;text-decoration:none;font-family:monospace;">/track/' + tokenShort + '</a></td>'
+                            + '<td style="padding:10px 12px;text-align:center;">'
+                            + '<div style="display:flex;gap:4px;justify-content:center;flex-wrap:wrap;">'
+                            + '<button data-id="' + c.id + '" data-status="' + (c.status==='active'?'disabled':'active') + '" onclick="updateTcClient(parseInt(this.dataset.id),{status:this.dataset.status})" class="tr-btn" style="font-size:10px;padding:3px 8px;" title="' + toggleLabel + '">' + (c.status==='active'?'&#9646;':'&#9654;') + '</button>'
+                            + '<button data-id="' + c.id + '" onclick="resetTcIp(parseInt(this.dataset.id))" class="tr-btn" style="font-size:10px;padding:3px 8px;" title="Reset IP">IP</button>'
+                            + '<button data-url="' + trackUrl + '" onclick="navigator.clipboard.writeText(this.dataset.url).then(function(){alert('Copied!')})" class="tr-btn" style="font-size:10px;padding:3px 8px;" title="Copy link">Link</button>'
+                            + '<button data-id="' + c.id + '" onclick="deleteTcClient(parseInt(this.dataset.id))" class="tr-btn danger" style="font-size:10px;padding:3px 8px;" title="Delete">Del</button>'
+                            + '</div></td>';
+                        return d;
+                    });
+                    var table = document.createElement('table');
+                    table.style.cssText = 'width:100%;border-collapse:collapse;';
+                    var thead = document.createElement('thead');
+                    thead.innerHTML = '<tr style="border-bottom:1px solid #1f2937;font-size:10px;color:#6b7280;text-transform:uppercase;letter-spacing:.06em;">'
                         + '<th style="padding:8px 12px;text-align:left;">Domain</th>'
                         + '<th style="padding:8px 12px;text-align:left;">Contact</th>'
                         + '<th style="padding:8px 12px;text-align:center;">Pages</th>'
@@ -24829,53 +24872,23 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                         + '<th style="padding:8px 12px;text-align:left;">Registered</th>'
                         + '<th style="padding:8px 12px;text-align:left;">Tracker</th>'
                         + '<th style="padding:8px 12px;text-align:center;">Actions</th>'
-                        + '</tr></thead><tbody>';
-
-                    clients.forEach(function(c) {
-                        var date = new Date(c.created_at).toLocaleDateString('en-GB');
-                        var trackUrl = 'https://app.contentscale.site/track/' + c.token;
-                        var statusColor = c.status === 'active' ? '#4ade80' : '#f87171';
-                        html += '<tr class="tc-row">'
-                            + '<td style="padding:10px 12px;font-weight:700;color:#e5e7eb;">' + (c.domain||'—') + '</td>'
-                            + '<td style="padding:10px 12px;"><div style="color:#9ca3af;">' + (c.name||'—') + '</div>'
-                            + (c.email ? '<div style="color:#38bdf8;font-size:11px;">' + c.email + '</div>' : '')
-                            + (c.whatsapp ? '<div style="color:#4ade80;font-size:11px;">' + c.whatsapp + '</div>' : '')
-                            + '</td>'
-                            + '<td style="padding:10px 12px;text-align:center;color:#a78bfa;">' + (c.page_count||0) + '</td>'
-                            + '<td style="padding:10px 12px;text-align:center;">'
-                            + '<input type="number" value="' + (c.max_pages||10) + '" min="1" max="200" style="width:55px;background:#0d1117;border:1px solid #374151;border-radius:4px;padding:3px 6px;color:#e5e7eb;font-size:12px;" onchange="updateTcClient(' + c.id + ',{max_pages:parseInt(this.value)})">'
-                            + '</td>'
-                            + '<td style="padding:10px 12px;text-align:center;"><span style="font-size:10px;font-weight:700;color:' + statusColor + ';">' + (c.status||'active').toUpperCase() + '</span></td>'
-                            + '<td style="padding:10px 12px;color:#6b7280;">' + date + '</td>'
-                            + '<td style="padding:10px 12px;"><a href="' + trackUrl + '" target="_blank" style="font-size:11px;color:#7c3aed;text-decoration:none;font-family:monospace;">/track/' + c.token.substring(0,8) + '...</a></td>'
-                            + '<td style="padding:10px 12px;text-align:center;">'
-                            + '<div style="display:flex;gap:4px;justify-content:center;">'
-                            + '<button onclick="updateTcClient(' + c.id + ',{status:\'' + (c.status==='active'?'disabled':'active') + '\'})" class="tr-btn" style="font-size:10px;padding:3px 8px;" title="' + (c.status==='active'?'Disable':'Enable') + '">' + (c.status==='active'?'⏸':'▶') + '</button>'
-                            + '<button onclick="resetTcIp(' + c.id + ')" class="tr-btn" style="font-size:10px;padding:3px 8px;" title="Reset IP restriction">🔓 IP</button>'
-                            + '<button onclick="copyToClipboard(\'' + trackUrl + '\')" class="tr-btn" style="font-size:10px;padding:3px 8px;" title="Copy tracker link">📋</button>'
-                            + '</div></td>'
-                            + '</tr>';
-                    });
-
-                    html += '</tbody></table>';
-                    el.innerHTML = html;
+                        + '</tr>';
+                    var tbody = document.createElement('tbody');
+                    rows.forEach(function(r){ tbody.appendChild(r); });
+                    table.appendChild(thead);
+                    table.appendChild(tbody);
+                    el.innerHTML = '';
+                    el.appendChild(table);
                 }
 
-                async function updateTcClient(id, data) {
+                async function deleteTcClient(id) {
+                    if (!confirm('Delete this client and all their tracked pages? This cannot be undone.')) return;
                     try {
-                        await apiCall('/api/admin/tracker-clients/' + id, 'PATCH', data);
+                        await apiCall('/api/admin/tracker-clients/' + id, 'DELETE');
                         loadTrackerClients();
                     } catch(e) { alert('Error: ' + e.message); }
                 }
 
-                async function resetTcIp(id) {
-                    if (!confirm('Reset IP restriction for this client?')) return;
-                    await updateTcClient(id, { reset_ip: true });
-                }
-
-                function copyToClipboard(text) {
-                    navigator.clipboard.writeText(text).then(function(){ alert('Copied!'); });
-                }
                 </script>
             </div>
 
