@@ -23414,7 +23414,8 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                                 cardHtml += div('font-size:13px;color:#d1fae5;background:#052e16;padding:10px 12px;border-radius:6px;margin-top:4px;line-height:1.7;', p.improved_version);
                             }
                             html += div('background:#111827;border:1px solid #374151;border-left:3px solid #fbbf24;border-radius:0 8px 8px 0;padding:14px;margin-bottom:10px;', cardHtml);
-                            allPassageText += '--- PASSAGE ' + (i+1) + ' (' + (p.placement||'after H1') + ') ---' + String.fromCharCode(10) + (p.improved_version||p.passage||'') + String.fromCharCode(10) + String.fromCharCode(10);         });
+                            allPassageText += '--- PASSAGE ' + (i+1) + ' (' + (p.placement||'after H1') + ') ---' + String.fromCharCode(10) + (p.improved_version||p.passage||'') + String.fromCharCode(10) + String.fromCharCode(10);
+                        });
                         window._citationPassages = allPassageText;
                         html += div('text-align:center;padding-top:8px;', '<button onclick="copyAllPassages(this)" class="tr-btn primary" style="font-size:12px;">📋 Copy All Passages to Clipboard</button>');
                     }
