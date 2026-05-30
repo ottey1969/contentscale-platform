@@ -955,22 +955,38 @@ app.post('/api/tracker-client/register', async (req, res) => {
 app.get('/api/tracker-client/:token', async (req, res) => {
   try {
     const cr = await pool.query('SELECT * FROM tracker_clients WHERE token=$1 AND status=$2', [req.params.token, 'active']);
-    if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
+    if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Tracker not found. Check your link is correct.' });
     const client = cr.rows[0];
 
+    // Ensure tracker_client_id column exists before querying
     const pagesR = await pool.query(
-      `SELECT p.*, s.google_position, s.ai_google_overview_cited, s.ai_perplexity_cited, s.score as graaf_score, s.checked_at as last_checked
+      `SELECT p.id, p.url, p.keyword, p.gsc_keyword, p.created_at, p.next_check_at, p.last_checked_at,
+              s.google_position, s.ai_google_overview_cited, s.ai_perplexity_cited,
+              s.score as graaf_score, s.checked_at as last_checked
        FROM tracker_pages p
        LEFT JOIN LATERAL (
          SELECT * FROM tracker_snapshots WHERE page_id = p.id ORDER BY checked_at DESC LIMIT 1
        ) s ON true
-       WHERE p.tracker_client_id = $1 AND p.is_active = TRUE
+       WHERE p.tracker_client_id = $1 AND (p.is_active = TRUE OR p.is_active IS NULL)
        ORDER BY p.created_at DESC LIMIT $2`,
       [client.id, client.max_pages || 10]
     );
 
-    res.json({ success: true, client: { domain: client.domain, name: client.name, max_pages: client.max_pages||10, created_at: client.created_at }, pages: pagesR.rows, page_count: pagesR.rows.length });
-  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+    res.json({
+      success: true,
+      client: {
+        domain: client.domain,
+        name: client.name,
+        max_pages: client.max_pages || 10,
+        created_at: client.created_at
+      },
+      pages: pagesR.rows,
+      page_count: pagesR.rows.length
+    });
+  } catch(e) {
+    console.error('[tracker-client GET]', e.message);
+    res.status(500).json({ success: false, error: e.message });
+  }
 });
 
 // POST /api/tracker-client/:token/pages — add URL to track
@@ -981,7 +997,7 @@ app.post('/api/tracker-client/:token/pages', async (req, res) => {
     const client = cr.rows[0];
 
     // Check page limit
-    const countR = await pool.query('SELECT COUNT(*) FROM tracker_pages WHERE tracker_client_id=$1 AND is_active=TRUE', [client.id]);
+    const countR = await pool.query('SELECT COUNT(*) FROM tracker_pages WHERE tracker_client_id=$1 AND (is_active=TRUE OR is_active IS NULL)', [client.id]);
     const count = parseInt(countR.rows[0].count);
     const maxPages = client.max_pages || 10;
     if (count >= maxPages) return res.status(400).json({ success: false, error: `Maximum of ${maxPages} pages reached. Contact Ottmar to increase your limit.` });
@@ -1449,6 +1465,7 @@ app.patch('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS unsubscribe_token VARCHAR(64)`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS email_unsubscribed BOOLEAN DEFAULT FALSE`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS tracker_client_id INTEGER REFERENCES tracker_clients(id) ON DELETE SET NULL`).catch(()=>{});
+  await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE`).catch(()=>{});
   await client.query(`CREATE INDEX IF NOT EXISTS tracker_pages_client_idx ON tracker_pages(tracker_client_id) WHERE tracker_client_id IS NOT NULL`).catch(()=>{});
 
    await client.query(`CREATE TABLE IF NOT EXISTS tracker_snapshots (
