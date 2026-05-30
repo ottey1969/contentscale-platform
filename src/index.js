@@ -23155,7 +23155,7 @@ async function addPage() {
 
 async function importPages() {
   var raw = (document.getElementById('importUrls').value||'').trim();
-  varvar urls = raw.split('\n').join(',').split(',').map(function(u){
+  var urls = raw.split('\n').join(',').split(',').map(function(u){ return u.trim(); }).filter(function(u){ return u.startsWith('http'); });
   if (!urls.length) return toast('No valid URLs found — paste one URL per line starting with http', '#f87171');
   var btn = document.querySelector('#importModal .btn.primary');
   if (btn) { btn.disabled = true; btn.textContent = 'Importing...'; }
