@@ -998,11 +998,15 @@ app.get('/api/live-feed', async (req, res) => {
   res.setHeader('Connection', 'keep-alive');
   res.setHeader('X-Accel-Buffering', 'no');
   res.flushHeaders();
-  const recent = _liveEvents.slice(0,20).reverse();
+  const recent = _liveEvents.slice(0,10).reverse();
   for (const e of recent) res.write('data: ' + JSON.stringify(e) + '\n\n');
   res.write('data: ' + JSON.stringify({ type: 'connected', ts: new Date().toISOString() }) + '\n\n');
   _sseClients.add(res);
-  req.on('close', () => { _sseClients.delete(res); });
+  const hb = setInterval(() => {
+    try { res.write(':hb\n\n'); }
+    catch(e) { clearInterval(hb); _sseClients.delete(res); }
+  }, 25000);
+  req.on('close', () => { clearInterval(hb); _sseClients.delete(res); });
 });
 
 app.get('/admin', (req, res) => {
@@ -24022,6 +24026,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 var _overlayStats = { checked:0, cited:0, positions:0 };
                 var _overlayVisible = false;
                 var _alertHideTimer = null;
+                var _sseRetryDelay = 5000;
 
                 async function addCustomNews() {
                     var input = document.getElementById('csNewsInput');
@@ -24090,23 +24095,27 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 function connectSSE() {
                     var token = localStorage.getItem('admin_id') || '';
                     if (!token) { setTimeout(connectSSE, 2000); return; }
-                    if (_wallEs) try { _wallEs.close(); } catch(e) {}
+                    if (_wallEs) { try { _wallEs.close(); } catch(e) {} _wallEs = null; }
                     _wallEs = new EventSource('/api/tracker/live-feed?token=' + encodeURIComponent(token));
                     var dot = document.getElementById('csLiveDot');
-                    var ovDot = document.getElementById('csOvDot');
                     var status = document.getElementById('csLiveStatus');
-                    _wallEs.onopen = function() {
-                        if (dot) { dot.style.background = '#4ade80'; dot.style.animation = 'cs-pulse 1.5s ease-in-out infinite'; }
-                        if (status) status.textContent = '● Live';
-                        if (status) status.style.color = '#4ade80';
-                    };
                     _wallEs.onmessage = function(e) {
                         try { _handleWallEvent(JSON.parse(e.data)); } catch(err) {}
                     };
                     _wallEs.onerror = function() {
                         if (dot) { dot.style.background = '#f87171'; dot.style.animation = 'none'; }
                         if (status) { status.textContent = 'Reconnecting...'; status.style.color = '#f87171'; }
-                        setTimeout(connectSSE, 5000);
+                        // Close existing connection before reconnecting
+                        try { _wallEs.close(); } catch(e) {}
+                        _wallEs = null;
+                        // Exponential backoff — max 60s
+                        _sseRetryDelay = Math.min((_sseRetryDelay || 5000) * 1.5, 60000);
+                        setTimeout(connectSSE, _sseRetryDelay);
+                    };
+                    _wallEs.onopen = function() {
+                        _sseRetryDelay = 5000; // reset on success
+                        if (dot) { dot.style.background = '#4ade80'; dot.style.animation = 'cs-pulse 1.5s ease-in-out infinite'; }
+                        if (status) { status.textContent = '● Live'; status.style.color = '#4ade80'; }
                     };
                 }
 
@@ -27343,7 +27352,6 @@ function _sseBroadcast(event) {
 }
 
 app.get('/api/tracker/live-feed', async (req, res) => {
-  // EventSource can't set headers — accept token via query param
   const token = req.query.token || req.headers['x-admin-key'] || '';
   if (!token) return res.status(401).json({ error: 'Auth required' });
   try {
@@ -27351,16 +27359,32 @@ app.get('/api/tracker/live-feed', async (req, res) => {
     if (!r.rows.length) return res.status(401).json({ error: 'Invalid token' });
   } catch(e) { return res.status(500).json({ error: e.message }); }
 
+  // Limit to 5 concurrent SSE connections
+  if (_sseClients.size >= 5) {
+    const oldest = _sseClients.values().next().value;
+    try { oldest.end(); } catch(e) {}
+    _sseClients.delete(oldest);
+  }
+
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
   res.setHeader('Connection', 'keep-alive');
   res.setHeader('X-Accel-Buffering', 'no');
   res.flushHeaders();
-  const recent = _liveEvents.slice(0,20).reverse();
+
+  const recent = _liveEvents.slice(0,10).reverse();
   for (const e of recent) res.write('data: ' + JSON.stringify(e) + '\n\n');
-  res.write('data: ' + JSON.stringify({ type: 'connected', msg: 'Live feed connected', ts: new Date().toISOString() }) + '\n\n');
+  res.write('data: ' + JSON.stringify({ type: 'connected', ts: new Date().toISOString() }) + '\n\n');
+
   _sseClients.add(res);
-  req.on('close', () => { _sseClients.delete(res); });
+
+  // Heartbeat every 25s — keeps connection alive, detects dead clients
+  const hb = setInterval(() => {
+    try { res.write(':hb\n\n'); }
+    catch(e) { clearInterval(hb); _sseClients.delete(res); }
+  }, 25000);
+
+  req.on('close', () => { clearInterval(hb); _sseClients.delete(res); });
 });
 
 function _trSetStep(pageId, name, status, detail) {
