@@ -140,7 +140,7 @@
          @keyframes spin { to { transform: rotate(360deg); } }
       </style>
       <style>
-         body { visibility: visible; opacity: 1; font-family: system-ui, -apple-system, sans-serif; background: #030712; color: white; }
+         body { visibility: visible; opacity: 1; font-family: system-ui, -apple-system, sans-serif; background: #030712; color: white; overflow-x: hidden; }
          /* Touch targets: WCAG 2.5.5 minimum 44×44px */
          a, button { min-height: 44px; }
          nav a, .page-tab, .mode-toggle { min-height: 44px; display: inline-flex; align-items: center; }
@@ -188,8 +188,15 @@
          .nav-desktop { display: flex; gap: 1.5rem; align-items: center; }
          .nav-desktop a { color: #d1d5db !important; text-decoration: none; font-size: 0.95rem; transition: color 0.15s; }
          .nav-desktop a:hover { color: #ffffff !important; }
-         .hamburger { display: none; flex-direction: column; gap: 5px; cursor: pointer; background: none; border: none; padding: 6px; }
-         .hamburger span { width: 24px; height: 2px; background: white; display: block; border-radius: 2px; }
+         .hamburger { display: none; flex-direction: column; gap: 5px; cursor: pointer; background: none; border: none; padding: 6px; min-height: 44px; justify-content: center; }
+         .hamburger span { width: 24px; height: 2px; background: white; display: block; border-radius: 2px; transition: all .2s; }
+         @media (max-width: 768px) {
+           .hamburger { display: flex !important; }
+           .nav-desktop { display: none !important; }
+         }
+         @media (min-width: 769px) {
+           #mobileMenu { display: none !important; }
+         }
          @media (max-width: 767px) { .nav-desktop { display: none !important; } .hamburger { display: flex !important; } }
          .mobile-menu { display: none; flex-direction: column; background: #030712; border-bottom: 2px solid #7e22ce; }
          .mobile-menu.open { display: flex; }
@@ -405,22 +412,45 @@
          .share-btn:hover { background:rgba(139,92,246,.2); color:#c4b5fd; border-color:#6d28d9; }
          .skeleton { background:linear-gradient(90deg,#1e293b 25%,#334155 50%,#1e293b 75%); background-size:200% 100%; animation:shimmer 1.4s infinite; border-radius:8px; }
          @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
-         @media(max-width:640px) { .nav-link { padding:10px; font-size:.8rem; } }
+         @media(max-width:640px) { 
+           .nav-link { padding:10px; font-size:.8rem; }
+           main.max-w-7xl { padding-left:12px!important;padding-right:12px!important; }
+           .bg-gradient-to-br.rounded-2xl { padding:16px!important;border-radius:12px!important; }
+           .mode-toggle { font-size:0.8rem!important;padding:10px 12px!important;min-width:100px!important; }
+           #singlePasteBtn { width:100%!important;font-size:1rem!important;padding:14px!important; }
+           #singlePasteUrl { width:100%!important; }
+           #singlePasteInput { font-size:0.75rem!important; }
+         }
       </style>
       <!-- ↑ blog/nav CSS moved here from duplicate </head><body> — now valid -->
       <div id="share-toast">🔗 Link copied to clipboard!</div>
       <nav class="nav-bar">
          <div class="max-w-6xl mx-auto px-6">
-            <div class="flex items-center justify-between flex-wrap gap-2 py-2">
-               <a href="/" style="font-size:1.4rem;font-weight:800;background:linear-gradient(90deg,#a78bfa,#60a5fa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;text-decoration:none">ContentScale</a>
-               <div class="flex flex-wrap items-center gap-1">
-                  <a href="/"             class="nav-link active">🏠 Home</a>
-                  <a href="/#leaderboard"     class="nav-link">🔍 Scanner</a>
-                  <a href="/#leaderboard" class="nav-link">🏆 Leaderboard</a>
-                  <a href="/blog"         class="nav-link">📝 Blog</a>
-                  <a href="https://wa.me/31628073996?text=Hi%20Ottmar!" target="_blank" rel="noopener" style="margin-left:4px;background:linear-gradient(90deg,#15803d,#16a34a);color:white;padding:8px 16px;border-radius:8px;font-size:.82rem;font-weight:700;text-decoration:none">💬 WhatsApp</a>
-                  <a href="https://app.contentscale.site/#leaderboard" style="margin-left:8px;background:linear-gradient(90deg,#c8440a,#f97316);color:white;padding:8px 16px;border-radius:8px;font-size:.82rem;font-weight:700;text-decoration:none">🚀 Free Scan</a>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;gap:8px;">
+               <a href="/" style="font-size:1.4rem;font-weight:800;background:linear-gradient(90deg,#a78bfa,#60a5fa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;text-decoration:none;flex-shrink:0;">ContentScale</a>
+               <!-- Desktop nav -->
+               <div class="nav-desktop" id="navDesktop">
+                  <a href="/" class="nav-link active">Home</a>
+                  <a href="#leaderboard" class="nav-link">Scanner</a>
+                  <a href="#leaderboard" class="nav-link">Leaderboard</a>
+                  <a href="/blog" class="nav-link">Blog</a>
+                  <a href="https://wa.me/31628073996?text=Hi%20Ottmar!" target="_blank" rel="noopener" style="background:linear-gradient(90deg,#15803d,#16a34a);color:white!important;padding:8px 14px;border-radius:8px;font-size:.82rem;font-weight:700;text-decoration:none;">WhatsApp</a>
                </div>
+               <!-- Always visible scan CTA + hamburger -->
+               <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+                  <a href="#leaderboard" style="background:linear-gradient(90deg,#c8440a,#f97316);color:white!important;padding:8px 14px;border-radius:8px;font-size:.82rem;font-weight:700;text-decoration:none;white-space:nowrap;">Free Scan</a>
+                  <button class="hamburger" id="hamburger" onclick="var m=document.getElementById('mobileMenu');m.style.display=m.style.display==='flex'?'none':'flex';" aria-label="Menu">
+                     <span></span><span></span><span></span>
+                  </button>
+               </div>
+            </div>
+            <!-- Mobile menu -->
+            <div id="mobileMenu" style="display:none;flex-direction:column;gap:4px;padding-bottom:12px;border-top:1px solid #374151;margin-top:4px;">
+               <a href="/" style="color:#d1d5db!important;padding:10px 4px;font-size:.9rem;font-weight:600;text-decoration:none;border-bottom:1px solid #1f2937;">Home</a>
+               <a href="#leaderboard" style="color:#d1d5db!important;padding:10px 4px;font-size:.9rem;font-weight:600;text-decoration:none;border-bottom:1px solid #1f2937;" onclick="document.getElementById('mobileMenu').style.display='none'">Scanner</a>
+               <a href="#leaderboard" style="color:#d1d5db!important;padding:10px 4px;font-size:.9rem;font-weight:600;text-decoration:none;border-bottom:1px solid #1f2937;" onclick="document.getElementById('mobileMenu').style.display='none'">Leaderboard</a>
+               <a href="/blog" style="color:#d1d5db!important;padding:10px 4px;font-size:.9rem;font-weight:600;text-decoration:none;border-bottom:1px solid #1f2937;">Blog</a>
+               <a href="https://wa.me/31628073996?text=Hi%20Ottmar!" target="_blank" rel="noopener" style="background:linear-gradient(90deg,#15803d,#16a34a);color:white!important;padding:10px 14px;border-radius:8px;font-size:.9rem;font-weight:700;text-decoration:none;text-align:center;margin-top:4px;">WhatsApp Ottmar</a>
             </div>
          </div>
       </nav>
@@ -555,14 +585,14 @@
                   </div>
                </div>
                <div class="mode-toggle-container flex flex-wrap justify-center gap-3 mb-8" style="max-width:680px;margin-left:auto;margin-right:auto;">
-                  <button id="modeSingleBtn" onclick="switchMode('single')" class="mode-toggle active">
-                  <i class="fas fa-search mr-2"></i> Scan a Website
+                  <button id="modeSingleBtn" onclick="switchMode('single')" class="mode-toggle active" style="flex:1;min-width:120px;">
+                  <i class="fas fa-search mr-2"></i> Scan a Page
                   </button>
-                  <button id="modeBulkBtn" onclick="switchMode('bulk')" class="mode-toggle">
-                  <i class="fas fa-list mr-2"></i> I Have a List
+                  <button id="modeBulkBtn" onclick="switchMode('bulk')" class="mode-toggle" style="flex:1;min-width:120px;">
+                  <i class="fas fa-list mr-2"></i> Bulk / List
                   </button>
-                  <button id="modeDiscoverBtn" onclick="switchMode('discover')" class="mode-toggle">
-                  <i class="fas fa-robot mr-2"></i> Find Me Leads
+                  <button id="modeDiscoverBtn" onclick="switchMode('discover')" class="mode-toggle" style="flex:1;min-width:120px;">
+                  <i class="fas fa-robot mr-2"></i> Find Leads
                   </button>
                </div>
                <div id="singleMode">
@@ -591,11 +621,11 @@
                      </div>
                      <!-- Paste HTML Input (always visible) -->
                      <div id="singlePasteWrap">
-                        <textarea id="singlePasteInput" rows="8" placeholder="Paste your page source here...   How? Go to your_domain_name.com, Press Ctrl+U (View Source), Ctrl+A (Select All) → Ctrl+C (Copy), Ctrl+V (Paste) into this text area" class="w-full p-3 rounded text-sm" style="font-family:monospace;font-size:0.78rem;line-height:1.6;"></textarea>
-                        <div class="flex gap-3 mt-3">
-                           <input type="text" id="singlePasteUrl" placeholder="https://example.com (optional — for report label)" class="flex-1 p-3 rounded text-sm">
-                           <button onclick="scanPastedHTML()" id="singlePasteBtn" class="btn btn-primary" style="background:linear-gradient(135deg,#7e22ce,#be185d);"><i class="fas fa-search"></i> Scan</button>
-                        </div>
+                        <textarea id="singlePasteInput" aria-label="Paste your page source HTML here" rows="6" style="width:100%;box-sizing:border-box;" placeholder="Paste your page source here...&#10;&#10;How? Open your page → Right-click → View Page Source → Ctrl+A → Ctrl+C → Ctrl+V here" class="w-full p-3 rounded text-sm" style="font-family:monospace;font-size:0.78rem;line-height:1.6;width:100%;display:block;"></textarea>
+                        <input type="text" id="singlePasteUrl" aria-label="Page URL for report label" placeholder="https://example.com (optional — for report label)" style="width:100%;margin-top:10px;padding:12px;border-radius:8px;font-size:0.85rem;display:block;box-sizing:border-box;">
+                        <button onclick="scanPastedHTML()" id="singlePasteBtn" class="btn btn-primary" style="background:linear-gradient(135deg,#7e22ce,#be185d);width:100%;margin-top:10px;padding:16px;font-size:1.1rem;font-weight:800;border-radius:10px;display:block;text-align:center;">
+                           <i class="fas fa-search"></i>&nbsp; Scan My Page
+                        </button>
                      </div>
                      <div id="singleProgress" class="hidden mt-4">
                         <div class="progress-bar">
@@ -859,7 +889,7 @@
                  
 
 <!-- ══ LEAD CRAWLER REDIRECT PLACEHOLDER ══ -->
-<div id="discoverMode" class="hidden">
+<div id="discoverMode2" class="hidden">
   <div class="max-w-4xl mx-auto">
     <div class="card" style="border:2px solid #f59e0b;background:linear-gradient(135deg,#1c0a00,#0f172a);padding:60px 32px;text-align:center;">
       <div style="font-size:4rem;margin-bottom:16px;">🚀</div>
@@ -1401,7 +1431,7 @@
 <h3>GRAAF vs CRAFT: How They Work Together</h3>
 <p>The CRAFT Framework by Julia McCoy ensures your content is well-edited (30 points). The GRAAF Framework ensures it will rank and get cited (50 points). Technical SEO covers the infrastructure (20 points). Together they create the 100-point ContentScore.</p>
 
-<img alt="Content at Scale scoring — GRAAF 50 points CRAFT 30 points Technical SEO 20 points equals 100 ContentScore" src="https://contentscale.site/wp-content/uploads/2025/06/graaf-craft-technical-breakdown.png" loading="lazy">
+<img width="800" height="450" alt="Content at Scale scoring — GRAAF 50 points CRAFT 30 points Technical SEO 20 points equals 100 ContentScore" src="https://contentscale.site/wp-content/uploads/2025/06/graaf-craft-technical-breakdown.png" loading="lazy">
 
 <table>
   <thead>
@@ -4663,8 +4693,7 @@
       el.style.cssText += 'background:rgba(52,211,153,0.06);border:1px solid rgba(52,211,153,0.2);border-radius:12px;padding:22px;margin:20px 0;';
     });
 
-    console.log('[ContentScale] #csa styles force-applied to ' +
-      csa.querySelectorAll('*').length + ' elements');
+    // styles applied
   }
 
   if (document.readyState === 'loading') {
