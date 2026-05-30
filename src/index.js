@@ -26075,7 +26075,12 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
             if(!confirm('Remove this page from tracking?')) return;
             try {
                 await apiCall('/api/tracker/pages/'+pageId,'DELETE');
-                loadTrackerPages();
+                // Remove from local array immediately
+                allTrackerPages = allTrackerPages.filter(function(p){ return p.id !== pageId; });
+                renderTrackerStats();
+                renderTrackerPages();
+                // Full reload after 1s to sync with server
+                setTimeout(loadTrackerPages, 1000);
             } catch(e) { alert('Error: '+e.message); }
         }
 
