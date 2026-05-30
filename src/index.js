@@ -23967,17 +23967,14 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                             <span id="csLiveStatus" style="font-size:10px;color:#4b5563;">Connecting...</span>
                         </div>
                         <div style="display:flex;gap:6px;">
-                            <button onclick="document.getElementById('csLiveExpanded').style.display=document.getElementById('csLiveExpanded').style.display==='none'?'block':'none'" style="font-size:10px;padding:2px 8px;border:1px solid #374151;border-radius:4px;background:none;color:#6b7280;cursor:pointer;">Log</button>
                             <button onclick="document.getElementById('csNewsPanel').style.display=document.getElementById('csNewsPanel').style.display==='none'?'block':'none';if(document.getElementById('csNewsPanel').style.display==='block')loadNewsList();" style="font-size:10px;padding:2px 8px;border:1px solid #374151;border-radius:4px;background:none;color:#f59e0b;cursor:pointer;">📰 News</button>
                             <button onclick="toggleLiveOverlay()" id="csOverlayBtn" style="font-size:10px;padding:2px 8px;border:1px solid #7c3aed;border-radius:4px;background:none;color:#a78bfa;cursor:pointer;">⛶ Overlay</button>
                         </div>
                     </div>
-                    <!-- Main ticker line -->
-                    <div style="background:#111827;border-radius:6px;padding:8px 12px;font-family:monospace;font-size:12px;min-height:32px;display:flex;align-items:center;">
-                        <span id="csLiveTicker" style="color:#4b5563;">Waiting for activity — monitor starts 60s after deploy...</span>
+                    <!-- Main live log — max 15 lines always visible -->
+                    <div id="csLiveTicker" style="background:#111827;border-radius:6px;padding:8px 12px;min-height:48px;max-height:240px;overflow-y:auto;font-family:monospace;font-size:11px;">
+                        <div style="color:#4b5563;">Waiting for activity — monitor starts 60s after deploy...</div>
                     </div>
-                    <!-- Expanded log -->
-                    <div id="csLiveExpanded" style="display:none;margin-top:8px;max-height:180px;overflow-y:auto;"></div>
                     <!-- News panel -->
                     <div id="csNewsPanel" style="display:none;margin-top:10px;background:#111827;border:1px solid #374151;border-radius:8px;padding:12px;">
                         <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:#f59e0b;margin-bottom:8px;">📰 Live News Manager</div>
@@ -24175,8 +24172,25 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     var el = document.getElementById('csLiveTicker');
                     if (!el) return;
                     var ts = new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
-                    el.style.color = _evColor(ev);
-                    el.textContent = ts + '  ' + _evToText(ev);
+                    var color = _evColor(ev);
+                    var text = _evToText(ev);
+                    if (!text || text === 'Live feed connected') return;
+
+                    // Add new line at top
+                    var line = document.createElement('div');
+                    line.style.cssText = 'display:flex;gap:8px;padding:3px 0;border-bottom:1px solid #0d1117;';
+                    line.innerHTML = '<span style="color:#374151;white-space:nowrap;flex-shrink:0;font-size:10px;">' + ts + '</span>'
+                        + '<span style="color:' + color + ';line-height:1.4;">' + text + '</span>';
+
+                    // Remove placeholder if present
+                    if (el.firstChild && el.firstChild.querySelector && !el.firstChild.querySelector('span[style*="374151"]')) {
+                        el.innerHTML = '';
+                    }
+                    el.insertBefore(line, el.firstChild);
+
+                    // Keep max 15 lines
+                    while (el.children.length > 15) el.removeChild(el.lastChild);
+
                     // Flash wall active
                     var wall = document.getElementById('csLiveWall');
                     if (wall) {
@@ -24193,17 +24207,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     el.textContent = _evToText(ev);
                 }
 
-                function _renderLog() {
-                    var log = document.getElementById('csLiveExpanded');
-                    if (!log || log.style.display === 'none') return;
-                    log.innerHTML = _wallEvents.slice(0,15).map(function(ev) {
-                        var ts = new Date(ev.ts||Date.now()).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
-                        return '<div style="display:flex;gap:8px;padding:3px 0;border-bottom:1px solid #1f2937;">'
-                            + '<span style="font-size:9px;color:#4b5563;white-space:nowrap;margin-top:2px;">' + ts + '</span>'
-                            + '<span style="font-size:11px;color:' + _evColor(ev) + ';font-family:monospace;">' + _evToText(ev) + '</span>'
-                            + '</div>';
-                    }).join('');
-                }
+                function _renderLog() { /* handled inline by _updateTicker */ }
 
                 function _renderOverlayLog() {
                     var log = document.getElementById('csOvLog');
@@ -24216,6 +24220,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                             + '</div>';
                     }).join('');
                 }
+
 
                 function _updateOverlayStats() {
                     var el = function(id){ return document.getElementById(id); };
@@ -24264,6 +24269,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 <style>
                 @keyframes cs-pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.4;transform:scale(.8)} }
                 @keyframes confettiDrop { 0%{transform:translateY(0) rotate(0deg);opacity:1} 100%{transform:translateY(100vh) rotate(720deg);opacity:0} }
+                @keyframes csLineIn { from{opacity:0;transform:translateX(-6px)} to{opacity:1;transform:translateX(0)} }
                 </style>
 
                 <!-- Stats -->
