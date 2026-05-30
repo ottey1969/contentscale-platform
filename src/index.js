@@ -23475,8 +23475,8 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:20px;">
                     <div class="tr-stat"><div class="val" id="trStatPages">—</div><div class="lbl">Tracked pages</div></div>
                     <div class="tr-stat"><div class="val" id="trStatAvgPosGain" style="color:#e5e7eb;">—</div><div class="lbl">Avg position gain</div></div>
-                    <div class="tr-stat"><div class="val" id="trStatCitedGoogle" style="color:#38bdf8;">—</div><div class="lbl">Google AIO cited</div></div>
-                    <div class="tr-stat"><div class="val" id="trStatCitedPerplexity" style="color:#a78bfa;">—</div><div class="lbl">Perplexity cited</div></div>
+                    <div class="tr-stat" onclick="filterByCitation('google')" title="Click to show only Google AIO cited pages" style="cursor:pointer;"><div class="val" id="trStatCitedGoogle" style="color:#38bdf8;">—</div><div class="lbl">Google AIO cited</div></div>
+                    <div class="tr-stat" onclick="filterByCitation('perplexity')" title="Click to show only Perplexity cited pages" style="cursor:pointer;"><div class="val" id="trStatCitedPerplexity" style="color:#a78bfa;">—</div><div class="lbl">Perplexity cited</div></div>
                     <div class="tr-stat"><div class="val" id="trStatCitedCopilot" style="color:#60a5fa;">—</div><div class="lbl">Copilot/Bing cited</div></div>
                     <div class="tr-stat"><div class="val" id="trStatCitedClaude" style="color:#f87171;">—</div><div class="lbl">Claude/Brave cited</div></div>
                     <div class="tr-stat"><div class="val" id="trStatCitationRate" style="color:#e5e7eb;">—</div><div class="lbl">AI citation rate</div></div>
@@ -25024,13 +25024,16 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 el.innerHTML = '<div style="text-align:center;padding:60px 20px;color:#6b7280;"><div style="font-size:2rem;margin-bottom:12px;">📡</div><div style="font-weight:600;color:#9ca3af;margin-bottom:6px;">No pages tracked yet</div><div style="font-size:13px;">Add your published URLs to start tracking Google position and AI citations</div></div>';
                 return;
             }
-            // Apply client + domain filter
+            // Apply client + domain + citation filter
             let filtered = allTrackerPages;
             if(_trClientFilter) filtered = filtered.filter(function(p){ return (p.engine_client_name||'__admin__') === _trClientFilter; });
             if(_trDomainFilter) filtered = filtered.filter(function(p){ return (p.url||'').split('//').pop().split('/')[0].replace('www.','') === _trDomainFilter; });
+            if(_trCitationFilter === 'google') filtered = filtered.filter(function(p){ return p.latest_snapshot && p.latest_snapshot.ai_google_overview_cited; });
+            if(_trCitationFilter === 'perplexity') filtered = filtered.filter(function(p){ return p.latest_snapshot && p.latest_snapshot.ai_perplexity_cited; });
+            if(_trCitationFilter === 'copilot') filtered = filtered.filter(function(p){ return p.latest_snapshot && p.latest_snapshot.ai_bing_cited; });
+            const activeFilters = [_trClientFilter, _trDomainFilter, _trCitationFilter].filter(Boolean).length;
             const countEl = document.getElementById('trFilterCount');
-            const activeFilters = [_trClientFilter, _trDomainFilter].filter(Boolean).length;
-            if(countEl) countEl.textContent = activeFilters ? 'Showing ' + filtered.length + ' of ' + allTrackerPages.length + ' pages' : '';
+            if(countEl) countEl.textContent = activeFilters ? 'Showing ' + filtered.length + ' of ' + allTrackerPages.length + ' pages' + (_trCitationFilter ? ' — cited in ' + _trCitationFilter : '') : '';
             if(!filtered.length) {
                 el.innerHTML = '<div style="text-align:center;padding:40px;color:#6b7280;">No pages match this filter.</div>';
                 return;
@@ -25466,6 +25469,12 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 document.getElementById('trHtmlModal').style.display='none';
                 setTimeout(loadTrackerPages, html ? 3000 : 500);
             } catch(e) { alert('Error: '+e.message); }
+        }
+
+        var _trCitationFilter = '';
+        function filterByCitation(platform) {
+            _trCitationFilter = (_trCitationFilter === platform) ? '' : platform;
+            renderTrackerPages();
         }
 
         async function bulkSetGscKeywords() {
