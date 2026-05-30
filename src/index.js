@@ -23050,7 +23050,7 @@ const _CLIENT_TRACKER_HTML = `<!DOCTYPE html>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
-body { background:#f8fafc; color:#1e293b; font-family:Verdana,Geneva,sans-serif; min-height:100vh; }
+body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif; min-height:100vh; }
 
 /* Header */
 .cs-header { background:#0f172a; padding:14px 24px; display:flex; align-items:center; justify-content:space-between; }
@@ -23062,15 +23062,15 @@ body { background:#f8fafc; color:#1e293b; font-family:Verdana,Geneva,sans-serif;
 
 /* Stats */
 .cs-stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(100px,1fr)); gap:8px; margin-bottom:20px; }
-.cs-stat { background:#ffffff; border:1px solid #e2e8f0; border-radius:8px; padding:12px; text-align:center; }
+.cs-stat { background:#111827; border:1px solid #1f2937; border-radius:8px; padding:12px; text-align:center; }
 .cs-stat .val { font-size:1.3rem; font-weight:900; color:#7c3aed; margin-bottom:2px; }
-.cs-stat .lbl { font-size:9px; color:#94a3b8; text-transform:uppercase; letter-spacing:.06em; }
+.cs-stat .lbl { font-size:9px; color:#6b7280; text-transform:uppercase; letter-spacing:.06em; }
 
 /* Toolbar */
 .cs-toolbar { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:14px; flex-wrap:wrap; }
 .cs-btns { display:flex; gap:6px; flex-wrap:wrap; }
-.cs-btn { display:inline-flex; align-items:center; gap:5px; padding:7px 13px; border-radius:6px; font-size:12px; font-weight:600; cursor:pointer; border:1px solid #e2e8f0; background:#ffffff; color:#64748b; font-family:Verdana,sans-serif; text-decoration:none; transition:all .15s; }
-.cs-btn:hover { border-color:#7c3aed; color:#7c3aed; }
+.cs-btn { display:inline-flex; align-items:center; gap:5px; padding:7px 13px; border-radius:6px; font-size:12px; font-weight:600; cursor:pointer; border:1px solid #374151; background:#111827; color:#9ca3af; font-family:Verdana,sans-serif; text-decoration:none; transition:all .15s; }
+.cs-btn:hover { border-color:#7c3aed; color:#a78bfa; }
 .cs-btn.primary { background:#7c3aed; border-color:#7c3aed; color:#ffffff; }
 .cs-btn.primary:hover { background:#6d28d9; }
 
@@ -23080,17 +23080,17 @@ body { background:#f8fafc; color:#1e293b; font-family:Verdana,Geneva,sans-serif;
 .cs-live-feed { padding:8px 14px; min-height:40px; max-height:160px; overflow-y:auto; font-family:monospace; font-size:11px; line-height:1.6; }
 
 /* Section title */
-.cs-section { font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:.1em; color:#94a3b8; margin:16px 0 10px; }
+.cs-section { font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:.1em; color:#6b7280; margin:16px 0 10px; }
 
 /* Page card */
-.cs-page-card { background:#ffffff; border:1px solid #e2e8f0; border-left:3px solid #e2e8f0; border-radius:8px; padding:14px 16px; margin-bottom:10px; }
+.cs-page-card { background:#111827; border:1px solid #1f2937; border-left:3px solid #374151; border-radius:8px; padding:14px 16px; margin-bottom:10px; }
 .cs-page-card.cited { border-left-color:#16a34a; }
 .cs-badge { display:inline-block; font-size:10px; font-weight:700; padding:2px 8px; border-radius:3px; margin-right:4px; }
-.cs-badge.green { background:#f0fdf4; color:#16a34a; border:1px solid #86efac; }
-.cs-badge.grey { background:#f8fafc; color:#94a3b8; border:1px solid #e2e8f0; }
-.cs-badge.blue { background:#eff6ff; color:#2563eb; border:1px solid #bfdbfe; }
-.cs-badge.purple { background:#faf5ff; color:#7c3aed; border:1px solid #ddd6fe; }
-.cs-badge.yellow { background:#fefce8; color:#ca8a04; border:1px solid #fde047; }
+.cs-badge.green { background:#052e16; color:#4ade80; }
+.cs-badge.grey { background:#1f2937; color:#6b7280; }
+.cs-badge.blue { background:#0c2340; color:#60a5fa; }
+.cs-badge.purple { background:#1e1b4b; color:#a78bfa; }
+.cs-badge.yellow { background:#2d1f00; color:#fbbf24; }
 
 /* Empty */
 .cs-empty { text-align:center; padding:48px 20px; color:#94a3b8; }
@@ -23098,15 +23098,15 @@ body { background:#f8fafc; color:#1e293b; font-family:Verdana,Geneva,sans-serif;
 /* Modal */
 .cs-modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:999; align-items:center; justify-content:center; }
 .cs-modal.show { display:flex; }
-.cs-modal-box { background:#ffffff; border:1px solid #e2e8f0; border-radius:12px; padding:24px; width:min(480px,95vw); box-shadow:0 20px 60px rgba(0,0,0,.15); }
-.cs-input { width:100%; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; padding:9px 12px; color:#1e293b; font-size:13px; font-family:Verdana,sans-serif; outline:none; }
+.cs-modal-box { background:#111827; border:1px solid #374151; border-radius:12px; padding:24px; width:min(480px,95vw); box-shadow:0 20px 60px rgba(0,0,0,.15); }
+.cs-input { width:100%; background:#0d1117; border:1px solid #374151; border-radius:6px; padding:9px 12px; color:#f1f5f9; font-size:13px; font-family:Verdana,sans-serif; outline:none; }
 .cs-input:focus { border-color:#7c3aed; }
 
 /* Toast */
-.cs-toast { position:fixed; bottom:24px; right:24px; background:#0f172a; border-radius:8px; padding:12px 20px; font-size:13px; color:#f1f5f9; z-index:9999; display:none; }
+.cs-toast { position:fixed; bottom:24px; right:24px; background:#111827; border-radius:8px; padding:12px 20px; font-size:13px; color:#f1f5f9; z-index:9999; display:none; }
 
 /* Upsell */
-.cs-upsell { background:#f5f3ff; border:1px solid #ddd6fe; border-radius:10px; padding:20px; margin-top:24px; text-align:center; }
+.cs-upsell { background:#1a1040; border:1px solid #4c1d95; border-radius:10px; padding:20px; margin-top:24px; text-align:center; }
 .cs-wa-btn { display:inline-flex; align-items:center; gap:8px; background:#16a34a; border-radius:8px; padding:10px 20px; color:#ffffff; font-size:13px; font-weight:700; text-decoration:none; font-family:Verdana,sans-serif; }
 </style>
 </head>
@@ -23117,7 +23117,7 @@ body { background:#f8fafc; color:#1e293b; font-family:Verdana,Geneva,sans-serif;
   <div class="cs-logo">ContentScale Tracker</div>
   <div style="display:flex;align-items:center;gap:10px;">
     <div class="cs-domain">__DOMAIN__</div>
-    <a href="https://contentscale.site" target="_blank" style="font-size:11px;color:#475569;text-decoration:none;">contentscale.site</a>
+    <a href="https://contentscale.site" target="_blank" style="font-size:11px;color:#4b5563;text-decoration:none;">contentscale.site</a>
   </div>
 </div>
 
@@ -23141,7 +23141,7 @@ body { background:#f8fafc; color:#1e293b; font-family:Verdana,Geneva,sans-serif;
       <button class="cs-btn" onclick="loadPages()"><i class="fas fa-sync-alt"></i> Refresh</button>
       <button class="cs-btn" onclick="showImportModal()" style="border-color:#0284c7;color:#0284c7;"><i class="fas fa-cloud-download-alt"></i> Import GSC</button>
     </div>
-    <div style="font-size:11px;color:#94a3b8;" id="pageCountLabel"></div>
+    <div style="font-size:11px;color:#6b7280;" id="pageCountLabel"></div>
   </div>
 
   <!-- Live feed -->
@@ -23165,8 +23165,8 @@ body { background:#f8fafc; color:#1e293b; font-family:Verdana,Geneva,sans-serif;
 
   <!-- Upsell -->
   <div class="cs-upsell">
-    <div style="font-size:13px;font-weight:700;color:#1e293b;margin-bottom:6px;">Want Ottmar to implement these changes for you?</div>
-    <div style="font-size:12px;color:#64748b;margin-bottom:14px;">ContentScale offers done-for-you AI citation optimization.</div>
+    <div style="font-size:13px;font-weight:700;color:#e5e7eb;margin-bottom:6px;">Want Ottmar to implement these changes for you?</div>
+    <div style="font-size:12px;color:#9ca3af;margin-bottom:14px;">ContentScale offers done-for-you AI citation optimization.</div>
     <a href="https://wa.me/34644204756?text=Hi+Ottmar,+I+want+help+with+AI+citation+optimization+for+__DOMAIN__" target="_blank" class="cs-wa-btn">
       <i class="fab fa-whatsapp"></i> Contact Ottmar on WhatsApp
     </a>
@@ -23178,15 +23178,15 @@ body { background:#f8fafc; color:#1e293b; font-family:Verdana,Geneva,sans-serif;
 <div class="cs-modal" id="addModal">
   <div class="cs-modal-box" onclick="event.stopPropagation()">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-      <h3 style="font-size:15px;font-weight:800;color:#0f172a;">Add URL to track</h3>
+      <h3 style="font-size:15px;font-weight:800;color:#f1f5f9;">Add URL to track</h3>
       <button onclick="hideModal('addModal')" style="background:none;border:none;color:#94a3b8;cursor:pointer;font-size:1.2rem;">&#x2715;</button>
     </div>
     <div style="margin-bottom:12px;">
-      <label style="font-size:11px;color:#64748b;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.06em;">Page URL</label>
+      <label style="font-size:11px;color:#9ca3af;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.06em;">Page URL</label>
       <input id="addUrl" type="url" class="cs-input" placeholder="https://__DOMAIN__/your-page/">
     </div>
     <div style="margin-bottom:16px;">
-      <label style="font-size:11px;color:#64748b;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.06em;">Target keyword <span style="color:#cbd5e1;font-weight:400;text-transform:none;">(optional)</span></label>
+      <label style="font-size:11px;color:#9ca3af;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.06em;">Target keyword <span style="color:#cbd5e1;font-weight:400;text-transform:none;">(optional)</span></label>
       <input id="addKeyword" type="text" class="cs-input" placeholder="e.g. seo tips amsterdam">
     </div>
     <div style="display:flex;gap:8px;">
@@ -23200,10 +23200,10 @@ body { background:#f8fafc; color:#1e293b; font-family:Verdana,Geneva,sans-serif;
 <div class="cs-modal" id="importModal">
   <div class="cs-modal-box" onclick="event.stopPropagation()">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-      <h3 style="font-size:15px;font-weight:800;color:#0f172a;">Import from Google Search Console</h3>
+      <h3 style="font-size:15px;font-weight:800;color:#f1f5f9;">Import from Google Search Console</h3>
       <button onclick="hideModal('importModal')" style="background:none;border:none;color:#94a3b8;cursor:pointer;font-size:1.2rem;">&#x2715;</button>
     </div>
-    <p style="font-size:12px;color:#64748b;margin-bottom:14px;">Go to GSC &rarr; Performance &rarr; Pages &rarr; copy the URLs and paste below.</p>
+    <p style="font-size:12px;color:#6b7280;margin-bottom:14px;">Go to GSC &rarr; Performance &rarr; Pages &rarr; copy the URLs and paste below.</p>
     <textarea id="importUrls" class="cs-input" rows="8" placeholder="https://__DOMAIN__/page-1/&#10;https://__DOMAIN__/page-2/" style="resize:vertical;font-family:monospace;font-size:11px;"></textarea>
     <div style="display:flex;gap:8px;margin-top:12px;">
       <button class="cs-btn primary" onclick="importPages()" style="flex:1;">Import pages</button>
