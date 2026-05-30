@@ -23137,33 +23137,42 @@ function renderRecs(p) {
 }
 
 async function addPage() {
-  var url = document.getElementById('addUrl').value.trim();
-  var keyword = document.getElementById('addKeyword').value.trim();
+  var url = (document.getElementById('addUrl').value||'').trim();
+  var keyword = (document.getElementById('addKeyword').value||'').trim();
   if (!url) return toast('Enter a URL first', '#f87171');
-  var data = await api('/pages', 'POST', { url: url, keyword: keyword||undefined });
-  if (!data.success) return toast(data.error || 'Failed', '#f87171');
-  toast('Page added! Running first check...');
-  hideModal('addModal');
-  document.getElementById('addUrl').value = '';
-  document.getElementById('addKeyword').value = '';
-  loadPages();
-  // Trigger first check
-  if (data.page_id) api('/check/' + data.page_id, 'POST').catch(function(){});
+  if (!url.startsWith('http')) url = 'https://' + url;
+  try {
+    var data = await api('/pages', 'POST', { url: url, keyword: keyword||undefined });
+    if (!data.success) return toast(data.error || 'Failed to add page', '#f87171');
+    toast('Page added! Running first check...');
+    hideModal('addModal');
+    document.getElementById('addUrl').value = '';
+    document.getElementById('addKeyword').value = '';
+    loadPages();
+    if (data.page_id) api('/check/' + data.page_id, 'POST').catch(function(){});
+  } catch(e) { toast('Error: ' + e.message, '#f87171'); }
 }
 
 async function importPages() {
-  var raw = document.getElementById('importUrls').value.trim();
-  var urls = raw.split(/[\n,]+/).map(function(u){ return u.trim(); }).filter(function(u){ return u.startsWith('http'); });
-  if (!urls.length) return toast('No valid URLs found', '#f87171');
-  var added = 0; var failed = 0;
+  var raw = (document.getElementById('importUrls').value||'').trim();
+  var urls = raw.split(/[\n,\s]+/).map(function(u){ return u.trim(); }).filter(function(u){ return u.startsWith('http'); });
+  if (!urls.length) return toast('No valid URLs found — paste one URL per line starting with http', '#f87171');
+  var btn = document.querySelector('#importModal .btn.primary');
+  if (btn) { btn.disabled = true; btn.textContent = 'Importing...'; }
+  var added = 0; var failed = 0; var errors = [];
   for (var i = 0; i < Math.min(urls.length, MAX_PAGES); i++) {
-    var data = await api('/pages', 'POST', { url: urls[i] }).catch(function(){ return { success: false }; });
-    if (data.success) added++;
-    else failed++;
+    try {
+      var data = await api('/pages', 'POST', { url: urls[i] });
+      if (data.success) added++;
+      else { failed++; errors.push(data.error); }
+    } catch(e) { failed++; errors.push(e.message); }
   }
-  toast('Imported ' + added + ' pages' + (failed ? ', ' + failed + ' failed' : ''));
-  hideModal('importModal');
-  loadPages();
+  if (btn) { btn.disabled = false; btn.textContent = 'Import pages'; }
+  var msg = 'Imported ' + added + ' pages';
+  if (failed) msg += ', ' + failed + ' failed';
+  if (errors.length) msg += ' (' + errors[0] + ')';
+  toast(msg, added > 0 ? '#4ade80' : '#f87171');
+  if (added > 0) { hideModal('importModal'); loadPages(); }
 }
 
 async function checkPage(pageId) {
@@ -23183,7 +23192,7 @@ async function deletePage(pageId) {
 
 loadPages();
 setInterval(loadPages, 120000); // auto-refresh every 2 min
-</script>
+<\/script>
 </body>
 </html>`;
 
