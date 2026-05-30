@@ -818,6 +818,36 @@ function checkOttoLimit(req, res) {
 // server-rendered template (express.static wins over later route definitions).
 // _ADMIN_DASHBOARD_HTML and verifyAdmin are both defined at module scope and
 // will be fully initialised before any request arrives.
+// ── /live — Public livestream overlay page ────────────────────────────────
+// Access: /live?token=STREAM_TOKEN  (set STREAM_TOKEN in Railway env)
+app.get('/live', (req, res) => {
+  const token = req.query.token || '';
+  const validToken = process.env.STREAM_TOKEN || process.env.ADMIN_PASSWORD || 'contentscale';
+  if (token !== validToken) {
+    return res.status(401).send('<html><body style="background:#000;color:#f87171;font-family:monospace;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;"><div style="text-align:center;"><div style="font-size:2rem;margin-bottom:12px;">🔒</div><div>Invalid stream token</div><div style="font-size:12px;color:#4b5563;margin-top:8px;">Add ?token=YOUR_TOKEN to the URL</div></div></body></html>');
+  }
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.send(_LIVE_OVERLAY_HTML.replace('__STREAM_TOKEN__', token));
+});
+
+// ── Live overlay SSE (no auth required — uses stream token) ───────────────
+app.get('/api/live-feed', async (req, res) => {
+  const token = req.query.token || '';
+  const validToken = process.env.STREAM_TOKEN || process.env.ADMIN_PASSWORD || 'contentscale';
+  if (token !== validToken) return res.status(401).end();
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no');
+  res.flushHeaders();
+  const recent = _liveEvents.slice(0,20).reverse();
+  for (const e of recent) res.write('data: ' + JSON.stringify(e) + '\n\n');
+  res.write('data: ' + JSON.stringify({ type: 'connected', ts: new Date().toISOString() }) + '\n\n');
+  _sseClients.add(res);
+  req.on('close', () => { _sseClients.delete(res); });
+});
+
 app.get('/admin', (req, res) => {
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
   res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
@@ -22674,6 +22704,322 @@ if(domains.length>0){
 // ============================================
 // ADMIN DASHBOARD (Unified Interface)
 // ============================================
+
+// ── Live Overlay HTML ─────────────────────────────────────────────────────
+const _LIVE_OVERLAY_HTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ContentScale — Live</title>
+<style>
+* { margin:0;padding:0;box-sizing:border-box; }
+body { background:#0a0a0f;color:#f1f5f9;font-family:'Segoe UI',system-ui,sans-serif;overflow:hidden;height:100vh;width:100vw; }
+
+/* ── Background grid ── */
+.bg-grid {
+  position:fixed;inset:0;
+  background-image: linear-gradient(rgba(124,58,237,.05) 1px,transparent 1px), linear-gradient(90deg,rgba(124,58,237,.05) 1px,transparent 1px);
+  background-size: 40px 40px;
+  pointer-events:none;
+}
+
+/* ── Header bar ── */
+.header {
+  position:fixed;top:0;left:0;right:0;
+  padding:14px 24px;
+  display:flex;align-items:center;justify-content:space-between;
+  background:linear-gradient(180deg,rgba(10,10,15,.95),transparent);
+  z-index:100;
+}
+.logo { font-size:1.1rem;font-weight:900;color:#a78bfa;letter-spacing:-.02em; }
+.live-badge {
+  display:flex;align-items:center;gap:6px;
+  background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.3);
+  border-radius:99px;padding:4px 12px;
+}
+.live-dot { width:8px;height:8px;border-radius:50%;background:#ef4444;animation:pulse 1.2s ease-in-out infinite; }
+.live-text { font-size:11px;font-weight:800;color:#ef4444;letter-spacing:.12em; }
+
+/* ── Stats bar ── */
+.stats-bar {
+  position:fixed;bottom:0;left:0;right:0;
+  padding:12px 24px;
+  display:flex;align-items:center;gap:32px;
+  background:linear-gradient(0deg,rgba(10,10,15,.95),transparent);
+}
+.stat-item { text-align:center; }
+.stat-val { font-size:1.4rem;font-weight:900;color:#a78bfa;line-height:1; }
+.stat-lbl { font-size:10px;color:#4b5563;text-transform:uppercase;letter-spacing:.08em;margin-top:2px; }
+
+/* ── Activity ticker ── */
+.ticker-wrap {
+  position:fixed;top:60px;left:0;right:0;
+  padding:8px 24px;
+  background:rgba(17,24,39,.8);
+  border-bottom:1px solid rgba(124,58,237,.2);
+}
+.ticker-inner { font-size:12px;font-family:monospace;color:#6b7280;white-space:nowrap;overflow:hidden; }
+.ticker-inner span { color:#a78bfa; }
+
+/* ── Alert overlay ── */
+.alert-overlay {
+  position:fixed;inset:0;
+  display:flex;align-items:center;justify-content:center;
+  z-index:1000;pointer-events:none;
+}
+.alert-card {
+  background:linear-gradient(135deg,#052e16,#166534);
+  border:2px solid #4ade80;
+  border-radius:20px;
+  padding:40px 60px;
+  text-align:center;
+  transform:scale(0);opacity:0;
+  transition:transform .4s cubic-bezier(.34,1.56,.64,1), opacity .3s;
+  max-width:600px;width:90%;
+  box-shadow:0 0 80px rgba(74,222,128,.3), 0 20px 60px rgba(0,0,0,.6);
+}
+.alert-card.show { transform:scale(1);opacity:1; }
+.alert-card.citation { background:linear-gradient(135deg,#052e16,#166534);border-color:#4ade80; }
+.alert-card.position { background:linear-gradient(135deg,#1e1b4b,#312e81);border-color:#a78bfa; }
+.alert-card.score { background:linear-gradient(135deg,#1c1009,#92400e);border-color:#fbbf24; }
+
+.alert-icon { font-size:4rem;margin-bottom:16px;display:block; }
+.alert-title { font-size:1.6rem;font-weight:900;margin-bottom:8px; }
+.alert-sub { font-size:1rem;opacity:.8;margin-bottom:16px; }
+.alert-domain { font-size:.85rem;color:#9ca3af;font-family:monospace; }
+.alert-numbers {
+  display:flex;align-items:center;justify-content:center;gap:20px;
+  margin:20px 0;font-size:2.5rem;font-weight:900;
+}
+.alert-arrow { font-size:2rem;opacity:.6; }
+
+/* ── Confetti ── */
+.confetti-piece {
+  position:fixed;width:10px;height:10px;border-radius:2px;
+  animation:confetti-fall 2.5s ease-in forwards;
+  pointer-events:none;z-index:2000;
+}
+@keyframes confetti-fall {
+  0% { transform:translateY(-20px) rotate(0deg);opacity:1; }
+  100% { transform:translateY(100vh) rotate(720deg);opacity:0; }
+}
+
+/* ── Recent events list ── */
+.events-list {
+  position:fixed;right:24px;top:100px;
+  width:280px;
+  display:flex;flex-direction:column;gap:6px;
+}
+.event-item {
+  background:rgba(17,24,39,.85);
+  border:1px solid rgba(55,65,81,.5);
+  border-radius:8px;
+  padding:8px 12px;
+  font-size:11px;
+  border-left:3px solid #374151;
+  animation:slideIn .3s ease;
+  backdrop-filter:blur(8px);
+}
+.event-item.done { border-left-color:#4ade80; }
+.event-item.running { border-left-color:#fbbf24; }
+.event-item.citation { border-left-color:#4ade80;background:rgba(5,46,22,.5); }
+.event-item.position { border-left-color:#a78bfa;background:rgba(30,27,75,.5); }
+.event-item.score { border-left-color:#fbbf24;background:rgba(28,16,9,.5); }
+.event-domain { color:#9ca3af;font-family:monospace; }
+.event-detail { color:#e5e7eb;margin-top:2px; }
+
+@keyframes slideIn { from{opacity:0;transform:translateX(20px)} to{opacity:1;transform:translateX(0)} }
+@keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(.8)} }
+</style>
+</head>
+<body>
+
+<div class="bg-grid"></div>
+
+<!-- Header -->
+<div class="header">
+  <div class="logo">ContentScale</div>
+  <div style="display:flex;align-items:center;gap:16px;">
+    <div id="connStatus" style="font-size:11px;color:#4b5563;">Connecting...</div>
+    <div class="live-badge">
+      <div class="live-dot"></div>
+      <div class="live-text">LIVE</div>
+    </div>
+  </div>
+</div>
+
+<!-- Ticker -->
+<div class="ticker-wrap">
+  <div class="ticker-inner" id="tickerText">⚙️ Connecting to live feed...</div>
+</div>
+
+<!-- Stats bar -->
+<div class="stats-bar">
+  <div class="stat-item">
+    <div class="stat-val" id="statChecked">0</div>
+    <div class="stat-lbl">Checked today</div>
+  </div>
+  <div class="stat-item">
+    <div class="stat-val" id="statCitations" style="color:#4ade80;">0</div>
+    <div class="stat-lbl">AI Cited</div>
+  </div>
+  <div class="stat-item">
+    <div class="stat-val" id="statPositionUps" style="color:#a78bfa;">0</div>
+    <div class="stat-lbl">Positions up</div>
+  </div>
+  <div class="stat-item">
+    <div class="stat-val" id="statScoreUps" style="color:#fbbf24;">0</div>
+    <div class="stat-lbl">Scores improved</div>
+  </div>
+  <div style="flex:1;text-align:right;">
+    <div style="font-size:10px;color:#374151;" id="lastEvent">—</div>
+  </div>
+</div>
+
+<!-- Events list (right side) -->
+<div class="events-list" id="eventsList"></div>
+
+<!-- Alert overlay -->
+<div class="alert-overlay" id="alertOverlay">
+  <div class="alert-card" id="alertCard">
+    <span class="alert-icon" id="alertIcon">✅</span>
+    <div class="alert-title" id="alertTitle">Title</div>
+    <div class="alert-sub" id="alertSub">Sub</div>
+    <div class="alert-numbers" id="alertNumbers"></div>
+    <div class="alert-domain" id="alertDomain">domain</div>
+  </div>
+</div>
+
+<script>
+var _stats = { checked: 0, citations: 0, positionsUp: 0, scoresUp: 0 };
+var _events = [];
+var _alertTimer = null;
+
+var es = new EventSource('/api/live-feed?token=__STREAM_TOKEN__');
+
+es.onopen = function() {
+  document.getElementById('connStatus').textContent = 'Live';
+  document.getElementById('connStatus').style.color = '#4ade80';
+};
+
+es.onmessage = function(e) {
+  var ev = JSON.parse(e.data);
+  handleEvent(ev);
+};
+
+es.onerror = function() {
+  document.getElementById('connStatus').textContent = 'Reconnecting...';
+  document.getElementById('connStatus').style.color = '#f87171';
+};
+
+function handleEvent(ev) {
+  document.getElementById('lastEvent').textContent = new Date().toLocaleTimeString();
+
+  // Update ticker
+  var tickerColors = { done:'#4ade80', running:'#fbbf24', error:'#f87171', citation_gained:'#4ade80', position_up:'#a78bfa', score_up:'#fbbf24' };
+  var tickerMsg = evToText(ev);
+  var tickerEl = document.getElementById('tickerText');
+  tickerEl.style.color = tickerColors[ev.status || ev.type] || '#9ca3af';
+  tickerEl.textContent = new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',second:'2-digit'}) + '  ' + tickerMsg;
+
+  // Add to events list
+  addEventItem(ev);
+
+  // Handle special events
+  if (ev.type === 'check_done') { _stats.checked++; updateStats(); }
+  if (ev.type === 'citation_gained') { _stats.citations++; updateStats(); showCitationAlert(ev); }
+  if (ev.type === 'position_up') { _stats.positionsUp++; updateStats(); showPositionAlert(ev); }
+  if (ev.type === 'score_up') { _stats.scoresUp++; updateStats(); }
+}
+
+function evToText(ev) {
+  if (ev.type === 'check_start') return 'Checking ' + ev.domain + (ev.keyword ? ' [' + ev.keyword + ']' : '');
+  if (ev.type === 'check_done') return 'Check complete: ' + ev.domain;
+  if (ev.type === 'citation_gained') return '🎉 CITED IN AI OVERVIEW: ' + ev.domain + ' [' + (ev.keyword||'') + ']';
+  if (ev.type === 'position_up') return '📈 Position up #' + ev.old_pos + ' → #' + ev.new_pos + ': ' + ev.domain;
+  if (ev.type === 'score_up') return '⬆️ Score +' + ev.gain + ': ' + ev.domain + ' (' + ev.old_score + ' → ' + ev.new_score + ')';
+  if (ev.type === 'step') return ev.label + (ev.detail ? ' — ' + ev.detail : '') + ' (' + ev.domain + ')';
+  if (ev.type === 'connected') return '📡 Connected to ContentScale live feed';
+  return ev.msg || '';
+}
+
+function addEventItem(ev) {
+  _events.unshift(ev);
+  if (_events.length > 8) _events.pop();
+  var list = document.getElementById('eventsList');
+  var type = ev.type === 'citation_gained' ? 'citation' : ev.type === 'position_up' ? 'position' : ev.type === 'score_up' ? 'score' : (ev.status === 'done' ? 'done' : 'running');
+  var item = document.createElement('div');
+  item.className = 'event-item ' + type;
+  item.innerHTML = '<div class="event-domain">' + (ev.domain || '') + '</div><div class="event-detail">' + evToText(ev) + '</div>';
+  if (list.firstChild) list.insertBefore(item, list.firstChild);
+  else list.appendChild(item);
+  while (list.children.length > 8) list.removeChild(list.lastChild);
+}
+
+function updateStats() {
+  document.getElementById('statChecked').textContent = _stats.checked;
+  document.getElementById('statCitations').textContent = _stats.citations;
+  document.getElementById('statPositionUps').textContent = _stats.positionsUp;
+  document.getElementById('statScoreUps').textContent = _stats.scoresUp;
+}
+
+function showCitationAlert(ev) {
+  var card = document.getElementById('alertCard');
+  card.className = 'alert-card citation';
+  document.getElementById('alertIcon').textContent = '🎉';
+  document.getElementById('alertTitle').textContent = 'NOW CITED IN AI OVERVIEW';
+  document.getElementById('alertSub').textContent = (ev.keyword ? '"' + ev.keyword + '"' : 'New AI citation detected');
+  document.getElementById('alertNumbers').innerHTML = '<span style="color:#4ade80;font-size:3rem;">✅</span>';
+  document.getElementById('alertDomain').textContent = ev.domain;
+  showAlert();
+  launchConfetti();
+}
+
+function showPositionAlert(ev) {
+  var card = document.getElementById('alertCard');
+  card.className = 'alert-card position';
+  document.getElementById('alertIcon').textContent = '📈';
+  document.getElementById('alertTitle').textContent = 'POSITION UP';
+  document.getElementById('alertSub').textContent = (ev.keyword ? '"' + ev.keyword + '"' : ev.domain);
+  document.getElementById('alertNumbers').innerHTML =
+    '<span style="color:#6b7280;">#' + ev.old_pos + '</span>' +
+    '<span class="alert-arrow">→</span>' +
+    '<span style="color:#a78bfa;">#' + ev.new_pos + '</span>';
+  document.getElementById('alertDomain').textContent = ev.domain;
+  showAlert();
+  if (ev.gain >= 3) launchConfetti();
+}
+
+function showAlert() {
+  var card = document.getElementById('alertCard');
+  card.classList.add('show');
+  clearTimeout(_alertTimer);
+  _alertTimer = setTimeout(function() { card.classList.remove('show'); }, 5000);
+}
+
+function launchConfetti() {
+  var colors = ['#4ade80','#a78bfa','#fbbf24','#38bdf8','#f472b6'];
+  for (var i = 0; i < 60; i++) {
+    (function(i) {
+      setTimeout(function() {
+        var el = document.createElement('div');
+        el.className = 'confetti-piece';
+        el.style.left = Math.random() * 100 + 'vw';
+        el.style.background = colors[Math.floor(Math.random() * colors.length)];
+        el.style.animationDuration = (1.5 + Math.random()) + 's';
+        el.style.animationDelay = (Math.random() * .5) + 's';
+        el.style.width = el.style.height = (6 + Math.random() * 8) + 'px';
+        document.body.appendChild(el);
+        setTimeout(function() { el.remove(); }, 3000);
+      }, i * 30);
+    })(i);
+  }
+}
+</script>
+</body>
+</html>`;
+
 const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
 <!-- v2 build 2026-04-19 08:56 -->
 <html lang="en">
@@ -23230,7 +23576,113 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     </div>
                 </div>
 
-                <!-- ── CITATION BRIEF MODAL ──────────────────────────────────────── -->
+                <!-- ── LIVE ACTIVITY WALL ─────────────────────────────────── -->
+                <div id="csLiveWall" style="background:#0d1117;border:1px solid #1f2937;border-radius:10px;padding:12px 16px;margin-bottom:16px;min-height:60px;position:relative;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+                        <div style="display:flex;align-items:center;gap:8px;">
+                            <span id="csLiveDot" style="width:8px;height:8px;border-radius:50%;background:#374151;display:inline-block;"></span>
+                            <span style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:#6b7280;">Live System Activity</span>
+                        </div>
+                        <span id="csLiveStatus" style="font-size:10px;color:#4b5563;">Connecting...</span>
+                    </div>
+                    <div id="csLiveScroll" style="overflow:hidden;height:32px;position:relative;">
+                        <div id="csLiveTicker" style="position:absolute;white-space:nowrap;font-size:13px;font-family:monospace;color:#9ca3af;transition:all .4s ease;"></div>
+                    </div>
+                    <div id="csLiveLog" style="margin-top:10px;display:none;max-height:200px;overflow-y:auto;"></div>
+                    <button onclick="document.getElementById('csLiveLog').style.display=document.getElementById('csLiveLog').style.display==='none'?'block':'none'" style="position:absolute;top:12px;right:60px;background:none;border:1px solid #374151;color:#6b7280;font-size:10px;padding:2px 8px;border-radius:4px;cursor:pointer;">Log</button>
+                </div>
+
+                <script>
+                (function() {
+                    var es = null;
+                    var _wallEvents = [];
+                    var _tickerIdx = 0;
+                    var _tickerTimer = null;
+
+                    function connectSSE() {
+                        var token = localStorage.getItem('admin_id') || '';
+                        if (!token) return;
+                        es = new EventSource('/api/tracker/live-feed?token=' + token);
+                        var dot = document.getElementById('csLiveDot');
+                        var status = document.getElementById('csLiveStatus');
+
+                        es.onopen = function() {
+                            if (dot) { dot.style.background = '#4ade80'; dot.style.animation = 'cs-pulse 1.5s ease-in-out infinite'; }
+                            if (status) status.textContent = 'Connected';
+                        };
+
+                        es.onmessage = function(e) {
+                            try {
+                                var ev = JSON.parse(e.data);
+                                _wallEvents.unshift(ev);
+                                if (_wallEvents.length > 50) _wallEvents.pop();
+                                _renderLog();
+                                _updateTicker(ev);
+                            } catch(err) {}
+                        };
+
+                        es.onerror = function() {
+                            if (dot) dot.style.background = '#f87171';
+                            if (status) status.textContent = 'Reconnecting...';
+                            setTimeout(connectSSE, 5000);
+                        };
+                    }
+
+                    function _evToText(ev) {
+                        if (ev.type === 'check_start') return '▶ Checking ' + ev.domain + (ev.keyword ? ' [' + ev.keyword + ']' : '');
+                        if (ev.type === 'check_done') return '🏁 Done: ' + ev.domain;
+                        if (ev.type === 'step') return ev.label + (ev.detail ? ' — ' + ev.detail : '') + ' (' + ev.domain + ')';
+                        if (ev.type === 'connected') return '📡 Live feed connected';
+                        return ev.msg || JSON.stringify(ev);
+                    }
+
+                    function _evColor(ev) {
+                        if (ev.status === 'done' || ev.type === 'check_done') return '#4ade80';
+                        if (ev.status === 'error') return '#f87171';
+                        if (ev.status === 'running' || ev.type === 'check_start') return '#fbbf24';
+                        if (ev.type === 'connected') return '#60a5fa';
+                        return '#9ca3af';
+                    }
+
+                    function _updateTicker(ev) {
+                        var ticker = document.getElementById('csLiveTicker');
+                        if (!ticker) return;
+                        var ts = new Date(ev.ts||Date.now()).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+                        ticker.style.color = _evColor(ev);
+                        ticker.textContent = ts + '  ' + _evToText(ev);
+                    }
+
+                    function _renderLog() {
+                        var log = document.getElementById('csLiveLog');
+                        if (!log || log.style.display === 'none') return;
+                        log.innerHTML = _wallEvents.slice(0,20).map(function(ev) {
+                            var ts = new Date(ev.ts||Date.now()).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+                            return '<div style="display:flex;gap:8px;padding:3px 0;border-bottom:1px solid #1f2937;">'
+                                + '<span style="font-size:9px;color:#4b5563;white-space:nowrap;margin-top:2px;">' + ts + '</span>'
+                                + '<span style="font-size:11px;color:' + _evColor(ev) + ';font-family:monospace;">' + _evToText(ev) + '</span>'
+                                + '</div>';
+                        }).join('');
+                    }
+
+                    // Start connecting when tracker tab is active
+                    setTimeout(connectSSE, 1000);
+                })();
+                </script>
+
+                <!-- ── LIVE ACTIVITY FEED (corner) ───────────────────────── -->
+                <div id="csActivityFeed" style="display:none;position:fixed;bottom:24px;right:24px;width:340px;background:#0d1117;border:1px solid #1f2937;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,.6);z-index:9998;flex-direction:column;overflow:hidden;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:#111827;border-bottom:1px solid #1f2937;">
+                        <div style="display:flex;align-items:center;gap:8px;">
+                            <span style="width:8px;height:8px;border-radius:50%;background:#4ade80;display:inline-block;animation:cs-pulse 1.5s ease-in-out infinite;"></span>
+                            <span style="font-size:11px;font-weight:700;color:#f1f5f9;text-transform:uppercase;letter-spacing:.06em;">Live Activity</span>
+                        </div>
+                        <button onclick="_activityHide()" style="background:none;border:none;color:#6b7280;cursor:pointer;font-size:14px;padding:2px 6px;">✕</button>
+                    </div>
+                    <div id="csActivityList" style="padding:8px 14px;max-height:280px;overflow-y:auto;font-family:monospace;"></div>
+                </div>
+                <style>
+                @keyframes cs-pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.4;transform:scale(0.8)} }
+                </style>
                 <div id="trCitationModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:10000;align-items:center;justify-content:center;" onclick="if(event.target===this)closeCitationModal()">
                     <div style="background:#0d1117;border:1px solid #1f2937;border-radius:16px;padding:0;width:min(820px,97vw);max-height:92vh;overflow:hidden;display:flex;flex-direction:column;" onclick="event.stopPropagation()">
                         <!-- Header -->
@@ -23257,13 +23709,15 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     var page = (allTrackerPages||[]).find(function(p){ return p.id == pageId; }) || {};
                     var url = page.url || '';
                     var keyword = page.keyword || page.gsc_keyword || '';
+                    var domain = url.split('//').pop().split('/')[0];
                     var modal = document.getElementById('trCitationModal');
                     var title = document.getElementById('trCitationTitle');
                     var body  = document.getElementById('trCitationBody');
                     var urlClean = url.indexOf('//') > -1 ? url.split('//')[1] : url;
                     var urlParts = urlClean.split('/');
                     title.textContent = (keyword || 'Citation Brief') + ' — ' + urlParts.slice(0,2).join('/');
-                    body.innerHTML = '<div style="text-align:center;padding:60px 0;color:#6b7280;"><div style="font-size:2rem;margin-bottom:12px;">⚙️</div><div style="margin-top:8px;font-size:13px;">Fetching AI Overview · Scraping competitors · Generating citation brief…</div><div style="font-size:11px;color:#4b5563;margin-top:6px;">This takes 15–30 seconds</div></div>';
+                    _activityAdd('🎯 Generating Citation Brief for ' + domain, 'citation');
+                    body.innerHTML = '<style>@keyframes csspin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}@keyframes csprog{0%{margin-left:-60%}100%{margin-left:110%}}</style><div style="text-align:center;padding:60px 20px;"><div style="font-size:2.5rem;display:inline-block;animation:csspin 1.5s linear infinite;margin-bottom:20px;">⚙️</div><div style="font-size:14px;color:#a78bfa;font-weight:700;margin-bottom:8px;">Generating Citation Brief</div><div style="font-size:12px;color:#6b7280;margin-bottom:20px;">Fetching AI Overview · Scraping competitors · Analysing your content</div><div style="background:#1f2937;border-radius:99px;height:4px;width:220px;margin:0 auto;overflow:hidden;"><div style="height:100%;width:60%;background:linear-gradient(90deg,#7c3aed,#a78bfa);border-radius:99px;animation:csprog 1.8s ease-in-out infinite;"></div></div><div style="font-size:11px;color:#374151;margin-top:12px;">15–30 seconds</div></div>';
                     modal.style.display = 'flex';
                     var token = localStorage.getItem('admin_id') || '';
                     fetch('/api/tracker/pages/' + pageId + '/citation-brief', {
@@ -23276,7 +23730,9 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                             body.innerHTML = '<div style="color:#f87171;padding:20px;">' + (data.error || 'Failed') + '</div>';
                             return;
                         }
-                        renderCitationBrief(data, body);
+                        renderCitationBrief(data, body, page);
+                        var domain2 = (page.url||'').split('//').pop().split('/')[0];
+                        _activityAdd('✅ Citation Brief ready for ' + domain2 + ' — ' + (data.brief && data.brief.passages_to_add ? data.brief.passages_to_add.length : 0) + ' passages', 'done');
                     })
                     .catch(function(e) {
                         body.innerHTML = '<div style="color:#f87171;padding:20px;">Error: ' + e.message + '</div>';
@@ -23299,7 +23755,8 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 function div(style, content) { return '<div style="' + style + '">' + content + '</div>'; }
                 function span(style, content) { return '<span style="' + style + '">' + content + '</span>'; }
 
-                function renderCitationBrief(data, container) {
+                function renderCitationBrief(data, container, page) {
+                    page = page || {};
                     var brief = data.brief || {};
                     var aio = data.ai_overview || {};
                     var aioStatus = brief._aio_status || {};
@@ -23332,9 +23789,9 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                         div('font-size:11px;font-weight:700;color:' + (aioCited?'#4ade80':aioFound?'#fbbf24':'#6b7280') + ';margin-top:4px;', 'Google AIO') +
                         div('font-size:10px;color:#6b7280;', aioCited ? 'Cited ✅' : aioFound ? 'Not cited' : 'Not found'));
                     html += div('background:#0a1628;border:1px solid #1f2937;border-radius:8px;padding:12px;text-align:center;',
-                        div('font-size:1.4rem;', data.google_position ? '#' + data.google_position : '—') +
+                        div('font-size:1.4rem;', (data.google_position || (page && page.latest_snapshot && page.latest_snapshot.google_position)) ? '#' + (data.google_position || page.latest_snapshot.google_position) : '—') +
                         div('font-size:11px;font-weight:700;color:#a78bfa;margin-top:4px;', 'Google Pos') +
-                        div('font-size:10px;color:#6b7280;', 'Current ranking'));
+                        div('font-size:10px;color:#6b7280;', 'Live ranking'));
                     html += div('background:#0a1628;border:1px solid ' + (freshness.at_risk?'#7f1d1d':'#1f2937') + ';border-radius:8px;padding:12px;text-align:center;',
                         div('font-size:1.4rem;', freshness.content_age_days ? freshness.content_age_days + 'd' : '?') +
                         div('font-size:11px;font-weight:700;color:' + (freshness.at_risk?'#f87171':'#6b7280') + ';margin-top:4px;', 'Content Age') +
@@ -23428,20 +23885,26 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                             html += div('background:#111827;border:1px solid #374151;border-left:3px solid #fbbf24;border-radius:0 8px 8px 0;padding:14px;margin-bottom:10px;', cardHtml);
                             allPassageText += '--- PASSAGE ' + (i+1) + ' (' + (p.placement||'after H1') + ') ---' + String.fromCharCode(10) + (p.improved_version||p.passage||'') + String.fromCharCode(10) + String.fromCharCode(10);
                         });
-                        window._citationPassages = allPassageText;
-                        html += div('text-align:center;padding-top:8px;', '<button onclick="copyAllPassages(this)" class="tr-btn primary" style="font-size:12px;">📋 Copy All Passages to Clipboard</button>');
                     }
 
                     // Structural fixes
                     var fixes = brief.structural_fixes || [];
                     if (fixes.length) {
                         html += div('margin-bottom:20px;', div('font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:#38bdf8;margin-bottom:12px;', '🔧 STRUCTURAL FIXES'));
-                        fixes.forEach(function(f) {
+                        allPassageText += String.fromCharCode(10) + '--- STRUCTURAL FIXES ---' + String.fromCharCode(10);
+                        fixes.forEach(function(f,fi) {
                             var fHtml = div('font-size:12px;font-weight:700;color:#e5e7eb;margin-bottom:4px;', f.fix||'') +
                                 div('font-size:11px;color:#9ca3af;', f.reason||'');
                             if (f.example) fHtml += div('font-size:11px;color:#6b7280;margin-top:6px;font-family:monospace;background:#0d1117;padding:8px;border-radius:4px;', f.example);
                             html += div('background:#111827;border:1px solid #1f2937;border-left:3px solid #38bdf8;border-radius:0 8px 8px 0;padding:12px 14px;margin-bottom:8px;', fHtml);
+                            allPassageText += 'FIX ' + (fi+1) + ': ' + (f.fix||'') + String.fromCharCode(10) + 'WHY: ' + (f.reason||'') + String.fromCharCode(10) + (f.example ? 'EXAMPLE: ' + f.example + String.fromCharCode(10) : '') + String.fromCharCode(10);
                         });
+                    }
+
+                    // Copy button — after both passages and structural fixes
+                    if (allPassageText) {
+                        window._citationPassages = allPassageText;
+                        html += div('text-align:center;padding:12px 0 8px;', '<button onclick="copyAllPassages(this)" class="tr-btn primary" style="font-size:12px;">📋 Copy All Passages + Fixes to Clipboard</button>');
                     }
 
                     // Primary reason
@@ -24568,9 +25031,9 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 +'<div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">'
                 +'<div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;">'
                 +changesBtn
-                +'<button onclick="runManualCheck('+p.id+')" class="tr-btn green" id="trCheckBtn_'+p.id+'">Check now</button>'
-                +'<button onclick="openHtmlModal('+p.id+')" class="tr-btn">Update HTML</button>'
-                +'<button onclick="openCitationBrief('+p.id+')" class="tr-btn" style="border-color:#a78bfa;color:#a78bfa;" title="Citation Brief">🎯 Citation</button>'
+                +'<button onclick="openHtmlModal('+p.id+')" class="tr-btn" title="Step 1: Set keyword and paste HTML (optional — system auto-fetches if empty)"><span style="font-size:9px;background:#374151;border-radius:3px;padding:1px 4px;margin-right:3px;">1</span>Keyword / HTML</button>'
+                +'<button onclick="runManualCheck('+p.id+')" class="tr-btn green" id="trCheckBtn_'+p.id+'" title="Step 2: Check Google position, AI Overview citations, and generate recommendations"><span style="font-size:9px;background:#166534;border-radius:3px;padding:1px 4px;margin-right:3px;">2</span>Check now</button>'
+                +'<button onclick="openCitationBrief('+p.id+')" class="tr-btn" style="border-color:#a78bfa;color:#a78bfa;" title="Step 3: Generate AI Citation Brief — exact passages to add for Google AIO, Perplexity, Copilot, Claude"><span style="font-size:9px;background:#4c1d95;border-radius:3px;padding:1px 4px;margin-right:3px;color:#fff;">3</span>🎯 Citation</button>'
                 +'<button onclick="deleteTrackerPage('+p.id+')" class="tr-btn danger">✕</button>'
                 +'</div>'
                 +'<div style="font-size:11px;color:#6b7280;text-align:right;">'
@@ -24600,31 +25063,116 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 +rows+moreRow+'</div>';
         }
 
+        // ── Live Activity Feed ─────────────────────────────────────────────
+        var _activityLog = [];
+        var _activityVisible = false;
+
+        function _activityAdd(msg, type) {
+            var ts = new Date().toLocaleTimeString('en-GB', {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+            _activityLog.unshift({ ts: ts, msg: msg, type: type || 'info' });
+            if (_activityLog.length > 30) _activityLog.pop();
+            _activityRender();
+            // Auto-show on first activity
+            if (!_activityVisible) _activityShow();
+        }
+
+        function _activityShow() {
+            _activityVisible = true;
+            var feed = document.getElementById('csActivityFeed');
+            if (feed) feed.style.display = 'flex';
+        }
+
+        function _activityHide() {
+            _activityVisible = false;
+            var feed = document.getElementById('csActivityFeed');
+            if (feed) feed.style.display = 'none';
+        }
+
+        function _activityRender() {
+            var list = document.getElementById('csActivityList');
+            if (!list) return;
+            var colors = { info: '#9ca3af', done: '#4ade80', error: '#f87171', running: '#fbbf24', citation: '#a78bfa' };
+            list.innerHTML = _activityLog.slice(0,12).map(function(e) {
+                return '<div style="display:flex;gap:8px;align-items:flex-start;padding:5px 0;border-bottom:1px solid #1f2937;">'
+                    + '<span style="font-size:9px;color:#4b5563;white-space:nowrap;margin-top:1px;">' + e.ts + '</span>'
+                    + '<span style="font-size:11px;color:' + (colors[e.type]||'#9ca3af') + ';line-height:1.4;">' + e.msg + '</span>'
+                    + '</div>';
+            }).join('');
+        }
+
         async function runManualCheck(pageId) {
-            const btn = document.getElementById('trCheckBtn_'+pageId);
+            var page = (allTrackerPages||[]).find(function(p){ return p.id == pageId; }) || {};
+            var url = page.url || 'page';
+            var domain = url.split('//').pop().split('/')[0];
+            var btn = document.getElementById('trCheckBtn_'+pageId);
             if(btn){btn.disabled=true;btn.innerHTML='<i class="fas fa-spinner fa-spin" style="margin-right:4px;"></i>Checking...';}
+
+            _activityAdd('▶ Starting check for ' + domain, 'running');
+
             try {
                 await apiCall('/api/tracker/pages/'+pageId+'/check','POST');
-                // Show running indicator — poll for result
-                let polls = 0;
-                const poll = setInterval(async () => {
+                _activityAdd('⚙️ Check running — fetching live data...', 'running');
+
+                // Poll check-status for live steps
+                var polls = 0;
+                var statusPolls = 0;
+                var lastStepCount = 0;
+
+                var statusPoll = setInterval(async function() {
+                    statusPolls++;
+                    if (statusPolls > 30) { clearInterval(statusPoll); return; }
+                    try {
+                        var sData = await apiCall('/api/tracker/pages/'+pageId+'/check-status');
+                        if (sData && sData.steps) {
+                            var steps = sData.steps;
+                            // Show new steps as they come in
+                            for (var si = lastStepCount; si < steps.length; si++) {
+                                var step = steps[si];
+                                var icon = step.status === 'done' ? '✅' : step.status === 'error' ? '❌' : '⚙️';
+                                var type = step.status === 'done' ? 'done' : step.status === 'error' ? 'error' : 'running';
+                                var label = {
+                                    html_hash: 'Fetching page HTML',
+                                    graaf_score: 'Scanning GRAAF score',
+                                    serp: 'Checking Google position',
+                                    ai_overview: 'Checking AI Overview',
+                                    perplexity: 'Checking Perplexity',
+                                    recommendations: 'Generating recommendations',
+                                    save: 'Saving results'
+                                }[step.name] || step.name;
+                                _activityAdd(icon + ' ' + label + (step.detail ? ' — ' + step.detail.substring(0,60) : ''), type);
+                            }
+                            lastStepCount = steps.length;
+                            if (!sData.running) { clearInterval(statusPoll); }
+                        }
+                    } catch(e) {}
+                }, 2000);
+
+                // Poll for completion
+                var poll = setInterval(async function() {
                     polls++;
-                    if(polls > 12) { clearInterval(poll); if(btn){btn.disabled=false;btn.textContent='Check now';} return; }
-                    const data = await apiCall('/api/tracker/pages?profile_id='+(_trProfileId||'')).catch(()=>null);
-                    if(data?.pages) {
-                        const updated = data.pages.find(p=>p.id===pageId);
-                        if(updated?.last_checked_at && new Date(updated.last_checked_at) > new Date(Date.now()-120000)) {
+                    if(polls > 15) {
+                        clearInterval(poll);
+                        clearInterval(statusPoll);
+                        if(btn){btn.disabled=false;btn.innerHTML='<span style="font-size:9px;background:#166534;border-radius:3px;padding:1px 4px;margin-right:3px;">2</span>Check now';}
+                        return;
+                    }
+                    var data = await apiCall('/api/tracker/pages?profile_id='+(_trProfileId||'')).catch(function(){ return null; });
+                    if(data && data.pages) {
+                        var updated = data.pages.find(function(p){ return p.id === pageId; });
+                        if(updated && updated.last_checked_at && new Date(updated.last_checked_at) > new Date(Date.now()-120000)) {
                             clearInterval(poll);
+                            clearInterval(statusPoll);
                             allTrackerPages = data.pages;
                             renderTrackerStats();
                             renderTrackerPages();
-                            if(btn){btn.disabled=false;btn.textContent='Check now';}
+                            if(btn){btn.disabled=false;btn.innerHTML='<span style="font-size:9px;background:#166534;border-radius:3px;padding:1px 4px;margin-right:3px;">2</span>Check now';}
+                            _activityAdd('🏁 Check complete for ' + domain, 'done');
                         }
                     }
-                }, 10000);
+                }, 8000);
             } catch(e) {
-                alert('Check failed: '+e.message);
-                if(btn){btn.disabled=false;btn.textContent='Check now';}
+                _activityAdd('❌ Check failed: ' + e.message, 'error');
+                if(btn){btn.disabled=false;btn.innerHTML='<span style="font-size:9px;background:#166534;border-radius:3px;padding:1px 4px;margin-right:3px;">2</span>Check now';}
             }
         }
 
@@ -25842,7 +26390,12 @@ app.patch('/api/tracker/pages/:id', verifyEngineAccess, async (req, res) => {
     if(url!==undefined){fields.push(`url=$${i++}`);vals.push(url);}
     if(title!==undefined){fields.push(`title=$${i++}`);vals.push(title);}
     if(keyword!==undefined){fields.push(`keyword=$${i++}`);vals.push(keyword);}
-    if(html_content!==undefined){fields.push(`html_content=$${i++}`);vals.push(html_content);}
+    if(html_content!==undefined){
+      fields.push(`html_content=$${i++}`);vals.push(html_content);
+      // Mark as manual so live fetch never overwrites it
+      fields.push(`html_source=$${i++}`);vals.push(html_content ? 'manual' : 'live');
+      if(html_content) { fields.push(`html_pasted_at=$${i++}`); vals.push(new Date()); }
+    }
     if(check_frequency!==undefined){fields.push(`check_frequency=$${i++}`);vals.push(check_frequency);}
     if(is_active!==undefined){fields.push(`is_active=$${i++}`);vals.push(!!is_active);}
     if(gsc_connected!==undefined){fields.push(`gsc_connected=$${i++}`);vals.push(!!gsc_connected);}
@@ -26076,6 +26629,40 @@ app.post('/api/tracker/pages/:id/push-to-rewrite', verifyEngineAccess, async (re
 
 // ── Live check status map ────────────────────────────────────────────────────
 const _trackerCheckStatus = new Map();
+// ── SSE Live Feed ─────────────────────────────────────────────────────────────
+const _sseClients = new Set();
+const _liveEvents = []; // last 50 events for new connections
+
+function _sseBroadcast(event) {
+  _liveEvents.unshift(event);
+  if (_liveEvents.length > 50) _liveEvents.pop();
+  const data = 'data: ' + JSON.stringify(event) + '\n\n';
+  for (const client of _sseClients) {
+    try { client.write(data); } catch(e) { _sseClients.delete(client); }
+  }
+}
+
+app.get('/api/tracker/live-feed', async (req, res) => {
+  // EventSource can't set headers — accept token via query param
+  const token = req.query.token || req.headers['x-admin-key'] || '';
+  if (!token) return res.status(401).json({ error: 'Auth required' });
+  try {
+    const r = await pool.query('SELECT * FROM super_admins WHERE session_token=$1 AND is_active=TRUE', [token]).catch(() => ({ rows: [] }));
+    if (!r.rows.length) return res.status(401).json({ error: 'Invalid token' });
+  } catch(e) { return res.status(500).json({ error: e.message }); }
+
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no');
+  res.flushHeaders();
+  const recent = _liveEvents.slice(0,20).reverse();
+  for (const e of recent) res.write('data: ' + JSON.stringify(e) + '\n\n');
+  res.write('data: ' + JSON.stringify({ type: 'connected', msg: 'Live feed connected', ts: new Date().toISOString() }) + '\n\n');
+  _sseClients.add(res);
+  req.on('close', () => { _sseClients.delete(res); });
+});
+
 function _trSetStep(pageId, name, status, detail) {
   detail = detail || '';
   const state = _trackerCheckStatus.get(pageId);
@@ -26083,6 +26670,33 @@ function _trSetStep(pageId, name, status, detail) {
   const step = state.steps.find(function(s){ return s.name===name; });
   if(step) { step.status = status; step.detail = detail; }
   else state.steps.push({ name, status, detail });
+
+  // Broadcast to SSE clients
+  const labels = {
+    html_hash: 'Fetching page',
+    graaf_score: 'GRAAF scan',
+    serp: 'Google position',
+    ai_overview: 'AI Overview check',
+    perplexity: 'Perplexity check',
+    bing: 'Copilot/Bing check',
+    recommendations: 'AI recommendations',
+    save: 'Saving results'
+  };
+  const icons = {
+    running: '⚙️', done: '✅', error: '❌', skipped: '⏭️'
+  };
+  const pageUrl = (state.url || '');
+  const domain = pageUrl.replace(/^https?:\/\//, '').split('/')[0] || ('page #' + pageId);
+  _sseBroadcast({
+    type: 'step',
+    pageId,
+    domain,
+    name,
+    status,
+    label: (icons[status]||'⚙️') + ' ' + (labels[name]||name),
+    detail: detail.substring(0, 80),
+    ts: new Date().toISOString()
+  });
 }
 
 app.get('/api/tracker/pages/:id/check-status', verifyEngineAccess, async (req, res) => {
@@ -26137,7 +26751,10 @@ app.post('/api/tracker/pages/:id/check', verifyEngineAccess, async (req, res) =>
     const forceRescan = req.body && req.body.force === true;
     const existing = _trackerCheckStatus.get(pageId);
     if(existing && existing.running) return res.json({ success: true, message: 'Already running', page_id: pageId, already_running: true });
-    _trackerCheckStatus.set(pageId, { running: true, steps: [], startedAt: new Date().toISOString(), finishedAt: null });
+    _trackerCheckStatus.set(pageId, { running: true, steps: [], startedAt: new Date().toISOString(), finishedAt: null, url: page.url });
+    // Broadcast check start to SSE clients
+    const domain = (page.url||'').replace(/^https?:\/\//, '').split('/')[0];
+    _sseBroadcast({ type: 'check_start', pageId, domain, url: page.url, keyword: page.keyword || page.gsc_keyword || '', ts: new Date().toISOString() });
     res.json({ success: true, message: 'Check started', page_id: pageId });
     const _checkKeys = { gemini: resolveGeminiKey(req), serpapiKey: resolveSerpapiKey(req), youKey: resolveYouApiKey(req), perplexityKey: resolvePerplexityKey(req) };
     setImmediate(async () => {
@@ -26146,6 +26763,42 @@ app.post('/api/tracker/pages/:id/check', verifyEngineAccess, async (req, res) =>
       finally {
         const st = _trackerCheckStatus.get(pageId);
         if(st) { st.running = false; st.finishedAt = new Date().toISOString(); }
+        const domainFin = (page.url||'').replace(/^https?:\/\//, '').split('/')[0];
+
+        // Check for notable changes to broadcast as alerts
+        try {
+          const snapR2 = await pool.query(
+            `SELECT s1.*, s2.google_position as prev_position, s2.ai_google_overview_cited as prev_cited, s2.score as prev_score
+             FROM tracker_snapshots s1
+             LEFT JOIN tracker_snapshots s2 ON s2.page_id = s1.page_id AND s2.checked_at < s1.checked_at
+             WHERE s1.page_id = $1
+             ORDER BY s1.checked_at DESC, s2.checked_at DESC LIMIT 1`, [pageId]
+          );
+          if (snapR2.rows.length) {
+            const snap = snapR2.rows[0];
+            // Citation gained
+            if (snap.ai_google_overview_cited && !snap.prev_cited) {
+              _sseBroadcast({ type: 'citation_gained', pageId, domain: domainFin, url: page.url,
+                keyword: page.keyword || page.gsc_keyword || '', ts: new Date().toISOString() });
+            }
+            // Position improved
+            if (snap.google_position && snap.prev_position && snap.google_position < snap.prev_position) {
+              _sseBroadcast({ type: 'position_up', pageId, domain: domainFin, url: page.url,
+                keyword: page.keyword || page.gsc_keyword || '',
+                old_pos: snap.prev_position, new_pos: snap.google_position,
+                gain: snap.prev_position - snap.google_position,
+                ts: new Date().toISOString() });
+            }
+            // Score improved
+            if (snap.score && snap.prev_score && snap.score > snap.prev_score) {
+              _sseBroadcast({ type: 'score_up', pageId, domain: domainFin, url: page.url,
+                old_score: snap.prev_score, new_score: snap.score,
+                gain: snap.score - snap.prev_score, ts: new Date().toISOString() });
+            }
+          }
+        } catch(e) {}
+
+        _sseBroadcast({ type: 'check_done', pageId, domain: domainFin, ts: new Date().toISOString() });
         setTimeout(function(){ _trackerCheckStatus.delete(pageId); }, 5*60*1000);
       }
     });
