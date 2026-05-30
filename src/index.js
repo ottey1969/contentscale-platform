@@ -23049,150 +23049,174 @@ const _CLIENT_TRACKER_HTML = `<!DOCTYPE html>
 <title>ContentScale Tracker — __DOMAIN__</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <style>
-*{margin:0;padding:0;box-sizing:border-box;}
-body{background:#0a0a0f;color:#f1f5f9;font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;}
-.header{background:#111827;border-bottom:1px solid #1f2937;padding:14px 24px;display:flex;align-items:center;justify-content:space-between;}
-.logo{font-size:1rem;font-weight:900;color:#a78bfa;letter-spacing:-.02em;}
-.domain-badge{background:#1f2937;border:1px solid #374151;border-radius:6px;padding:4px 12px;font-size:12px;color:#9ca3af;font-family:monospace;}
-.container{max-width:1100px;margin:0 auto;padding:24px 16px;}
-.stat-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:20px;}
-.stat{background:#111827;border:1px solid #1f2937;border-radius:8px;padding:14px;text-align:center;}
-.stat .val{font-size:1.5rem;font-weight:900;color:#a78bfa;}
-.stat .lbl{font-size:10px;color:#4b5563;text-transform:uppercase;letter-spacing:.06em;margin-top:4px;}
-.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid #374151;background:none;color:#9ca3af;transition:all .2s;}
-.btn:hover{border-color:#7c3aed;color:#a78bfa;}
-.btn.primary{background:#7c3aed;border-color:#7c3aed;color:#fff;}
-.btn.primary:hover{background:#6d28d9;}
-.btn.danger{border-color:#7f1d1d;color:#f87171;}
-.input{width:100%;background:#111827;border:1px solid #374151;border-radius:6px;padding:8px 12px;color:#f1f5f9;font-size:13px;outline:none;}
-.input:focus{border-color:#7c3aed;}
-.page-card{background:#111827;border:1px solid #1f2937;border-left:3px solid #374151;border-radius:8px;padding:14px 16px;margin-bottom:10px;}
-.page-card.cited{border-left-color:#4ade80;}
-.page-card.aio{border-left-color:#38bdf8;}
-.badge{display:inline-block;font-size:10px;font-weight:700;padding:2px 8px;border-radius:3px;margin-right:4px;}
-.badge.green{background:#052e16;color:#4ade80;}
-.badge.blue{background:#1e3a5f;color:#38bdf8;}
-.badge.purple{background:#1e1b4b;color:#a78bfa;}
-.badge.grey{background:#1f2937;color:#6b7280;}
-.badge.red{background:#2d0a0a;color:#f87171;}
-.badge.yellow{background:#2d1f00;color:#fbbf24;}
-.section-title{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:#6b7280;margin:20px 0 10px;}
-.empty{text-align:center;padding:60px 20px;color:#4b5563;}
-.empty-icon{font-size:2.5rem;margin-bottom:12px;}
-.modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:999;align-items:center;justify-content:center;}
-.modal.show{display:flex;}
-.modal-box{background:#111827;border:1px solid #374151;border-radius:12px;padding:24px;width:min(480px,95vw);}
-.toast{position:fixed;bottom:24px;right:24px;background:#111827;border:1px solid #374151;border-radius:8px;padding:12px 20px;font-size:13px;z-index:9999;display:none;animation:slideUp .3s ease;}
-@keyframes slideUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:#f8fafc; color:#1e293b; font-family:Verdana,Geneva,sans-serif; min-height:100vh; }
+
+/* Header */
+.cs-header { background:#0f172a; padding:14px 24px; display:flex; align-items:center; justify-content:space-between; }
+.cs-logo { font-size:15px; font-weight:800; color:#ffffff; letter-spacing:-.02em; }
+.cs-domain { background:#1e293b; border:1px solid #334155; border-radius:6px; padding:4px 12px; font-size:11px; color:#94a3b8; font-family:monospace; }
+
+/* Container */
+.cs-container { max-width:900px; margin:0 auto; padding:24px 16px; }
+
+/* Stats */
+.cs-stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(100px,1fr)); gap:8px; margin-bottom:20px; }
+.cs-stat { background:#ffffff; border:1px solid #e2e8f0; border-radius:8px; padding:12px; text-align:center; }
+.cs-stat .val { font-size:1.3rem; font-weight:900; color:#7c3aed; margin-bottom:2px; }
+.cs-stat .lbl { font-size:9px; color:#94a3b8; text-transform:uppercase; letter-spacing:.06em; }
+
+/* Toolbar */
+.cs-toolbar { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:14px; flex-wrap:wrap; }
+.cs-btns { display:flex; gap:6px; flex-wrap:wrap; }
+.cs-btn { display:inline-flex; align-items:center; gap:5px; padding:7px 13px; border-radius:6px; font-size:12px; font-weight:600; cursor:pointer; border:1px solid #e2e8f0; background:#ffffff; color:#64748b; font-family:Verdana,sans-serif; text-decoration:none; transition:all .15s; }
+.cs-btn:hover { border-color:#7c3aed; color:#7c3aed; }
+.cs-btn.primary { background:#7c3aed; border-color:#7c3aed; color:#ffffff; }
+.cs-btn.primary:hover { background:#6d28d9; }
+
+/* Live feed */
+.cs-live { background:#0f172a; border-radius:10px; margin-bottom:20px; overflow:hidden; }
+.cs-live-header { display:flex; align-items:center; justify-content:space-between; padding:10px 16px; }
+.cs-live-feed { padding:8px 14px; min-height:40px; max-height:160px; overflow-y:auto; font-family:monospace; font-size:11px; line-height:1.6; }
+
+/* Section title */
+.cs-section { font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:.1em; color:#94a3b8; margin:16px 0 10px; }
+
+/* Page card */
+.cs-page-card { background:#ffffff; border:1px solid #e2e8f0; border-left:3px solid #e2e8f0; border-radius:8px; padding:14px 16px; margin-bottom:10px; }
+.cs-page-card.cited { border-left-color:#16a34a; }
+.cs-badge { display:inline-block; font-size:10px; font-weight:700; padding:2px 8px; border-radius:3px; margin-right:4px; }
+.cs-badge.green { background:#f0fdf4; color:#16a34a; border:1px solid #86efac; }
+.cs-badge.grey { background:#f8fafc; color:#94a3b8; border:1px solid #e2e8f0; }
+.cs-badge.blue { background:#eff6ff; color:#2563eb; border:1px solid #bfdbfe; }
+.cs-badge.purple { background:#faf5ff; color:#7c3aed; border:1px solid #ddd6fe; }
+.cs-badge.yellow { background:#fefce8; color:#ca8a04; border:1px solid #fde047; }
+
+/* Empty */
+.cs-empty { text-align:center; padding:48px 20px; color:#94a3b8; }
+
+/* Modal */
+.cs-modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:999; align-items:center; justify-content:center; }
+.cs-modal.show { display:flex; }
+.cs-modal-box { background:#ffffff; border:1px solid #e2e8f0; border-radius:12px; padding:24px; width:min(480px,95vw); box-shadow:0 20px 60px rgba(0,0,0,.15); }
+.cs-input { width:100%; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; padding:9px 12px; color:#1e293b; font-size:13px; font-family:Verdana,sans-serif; outline:none; }
+.cs-input:focus { border-color:#7c3aed; }
+
+/* Toast */
+.cs-toast { position:fixed; bottom:24px; right:24px; background:#0f172a; border-radius:8px; padding:12px 20px; font-size:13px; color:#f1f5f9; z-index:9999; display:none; }
+
+/* Upsell */
+.cs-upsell { background:#f5f3ff; border:1px solid #ddd6fe; border-radius:10px; padding:20px; margin-top:24px; text-align:center; }
+.cs-wa-btn { display:inline-flex; align-items:center; gap:8px; background:#16a34a; border-radius:8px; padding:10px 20px; color:#ffffff; font-size:13px; font-weight:700; text-decoration:none; font-family:Verdana,sans-serif; }
 </style>
 </head>
 <body>
 
-<div class="header">
-  <div class="logo">ContentScale <span style="color:#374151;font-weight:400;">Tracker</span></div>
+<!-- Header -->
+<div class="cs-header">
+  <div class="cs-logo">ContentScale Tracker</div>
   <div style="display:flex;align-items:center;gap:10px;">
-    <div class="domain-badge">__DOMAIN__</div>
-    <a href="https://contentscale.site" target="_blank" style="font-size:11px;color:#4b5563;text-decoration:none;">About ContentScale →</a>
+    <div class="cs-domain">__DOMAIN__</div>
+    <a href="https://contentscale.site" target="_blank" style="font-size:11px;color:#475569;text-decoration:none;">contentscale.site</a>
   </div>
 </div>
 
-<div class="container">
+<div class="cs-container">
+
   <!-- Stats -->
-  <div class="stat-row" id="statsRow">
-    <div class="stat"><div class="val" id="statTotal">—</div><div class="lbl">Tracked pages</div></div>
-    <div class="stat"><div class="val" id="statCitedG" style="color:#38bdf8;">—</div><div class="lbl">Google AIO</div></div>
-    <div class="stat"><div class="val" id="statCitedP" style="color:#a78bfa;">—</div><div class="lbl">Perplexity</div></div>
-    <div class="stat"><div class="val" id="statCitedB" style="color:#60a5fa;">—</div><div class="lbl">Copilot/Bing</div></div>
-    <div class="stat"><div class="val" id="statCitedC" style="color:#f87171;">—</div><div class="lbl">Claude/Brave</div></div>
-    <div class="stat"><div class="val" id="statAvgScore" style="color:#fbbf24;">—</div><div class="lbl">Avg GRAAF</div></div>
-    <div class="stat"><div class="val" id="statRemaining" style="color:#4ade80;">—</div><div class="lbl">Slots left</div></div>
-
-  <!-- Action bar -->
-  <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
-    <div style="display:flex;gap:6px;flex-wrap:wrap;">
-      <button class="btn primary" onclick="showAddModal()" style="font-size:12px;padding:7px 14px;">+ Add URL</button>
-      <button class="btn" onclick="loadPages()" title="Refresh" style="font-size:12px;padding:7px 12px;"><i class="fas fa-sync-alt"></i> Refresh</button>
-      <button class="btn" onclick="showImportModal()" style="font-size:12px;padding:7px 14px;border-color:#38bdf8;color:#38bdf8;"><i class="fas fa-cloud-download-alt"></i> Import GSC</button>
-    </div>
-    <div style="font-size:11px;color:#4b5563;" id="pageCountLabel"></div>
+  <div class="cs-stats" id="statsRow">
+    <div class="cs-stat"><div class="val" id="statTotal">—</div><div class="lbl">Pages</div></div>
+    <div class="cs-stat"><div class="val" id="statCitedG" style="color:#0284c7;">—</div><div class="lbl">Google AIO</div></div>
+    <div class="cs-stat"><div class="val" id="statCitedP" style="color:#7c3aed;">—</div><div class="lbl">Perplexity</div></div>
+    <div class="cs-stat"><div class="val" id="statCitedB" style="color:#2563eb;">—</div><div class="lbl">Copilot</div></div>
+    <div class="cs-stat"><div class="val" id="statCitedC" style="color:#dc2626;">—</div><div class="lbl">Claude</div></div>
+    <div class="cs-stat"><div class="val" id="statAvgScore" style="color:#ca8a04;">—</div><div class="lbl">GRAAF</div></div>
+    <div class="cs-stat"><div class="val" id="statRemaining" style="color:#16a34a;">—</div><div class="lbl">Slots left</div></div>
   </div>
 
-  <!-- Live Activity Feed -->
-  <div style="background:#0a0f1a;border:1px solid #1a2540;border-radius:10px;margin-bottom:20px;overflow:hidden;">
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px;cursor:pointer;" onclick="var f=document.getElementById('clientLiveFeed');var a=document.getElementById('clientLiveArrow');f.style.display=f.style.display===String.fromCharCode(110,111,110,101)?'block':'none';a.textContent=f.style.display===String.fromCharCode(110,111,110,101)?'+':'-';">
-      <div style="display:flex;align-items:center;gap:8px;">
-        <span id="clientLiveDot" style="width:7px;height:7px;border-radius:50%;background:#374151;display:inline-block;flex-shrink:0;"></span>
-        <span style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.12em;color:#4b5563;">Live Activity</span>
-        <span id="clientLiveStatus" style="font-size:10px;color:#374151;"></span>
-      </div>
-      <div style="display:flex;align-items:center;gap:8px;">
-        <span style="font-size:9px;color:#1f2937;text-transform:uppercase;letter-spacing:.08em;">Updates every 8s</span>
-        <span id="clientLiveArrow" style="font-size:14px;color:#374151;font-weight:700;line-height:1;">-</span>
-      </div>
+  <!-- Toolbar -->
+  <div class="cs-toolbar">
+    <div class="cs-btns">
+      <button class="cs-btn primary" onclick="showAddModal()">+ Add URL</button>
+      <button class="cs-btn" onclick="loadPages()"><i class="fas fa-sync-alt"></i> Refresh</button>
+      <button class="cs-btn" onclick="showImportModal()" style="border-color:#0284c7;color:#0284c7;"><i class="fas fa-cloud-download-alt"></i> Import GSC</button>
     </div>
-    <div id="clientLiveFeed" style="padding:8px 14px;min-height:44px;max-height:180px;overflow-y:auto;font-family:monospace;font-size:11px;line-height:1.6;">
-      <div style="color:#1f2937;padding:4px 0;">Connecting...</div>
+    <div style="font-size:11px;color:#94a3b8;" id="pageCountLabel"></div>
+  </div>
+
+  <!-- Live feed -->
+  <div class="cs-live">
+    <div class="cs-live-header">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span id="clientLiveDot" style="width:7px;height:7px;border-radius:50%;background:#334155;display:inline-block;"></span>
+        <span style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:#475569;">Live Activity</span>
+        <span id="clientLiveStatus" style="font-size:10px;color:#334155;"></span>
+      </div>
+      <span style="font-size:9px;color:#1e293b;letter-spacing:.06em;">auto-updates every 8s</span>
+    </div>
+    <div id="clientLiveFeed" class="cs-live-feed">
+      <div style="color:#334155;padding:4px 0;">Connecting...</div>
     </div>
   </div>
 
-
-
-  <!-- Pages list -->
-  <div class="section-title">Your tracked pages</div>
+  <!-- Pages -->
+  <div class="cs-section">Your tracked pages <span id="pageCountLabel2" style="color:#cbd5e1;"></span></div>
   <div id="pagesList"></div>
 
   <!-- Upsell -->
-  <div style="background:#111827;border:1px solid #374151;border-radius:10px;padding:20px;margin-top:24px;text-align:center;">
-    <div style="font-size:13px;font-weight:700;color:#e5e7eb;margin-bottom:8px;">Want Ottmar to implement the Citation Briefs for you?</div>
-    <div style="font-size:12px;color:#6b7280;margin-bottom:14px;">ContentScale offers done-for-you AI citation optimization. Ottmar analyses your pages, implements the passages, and tracks the results.</div>
-    <a href="https://wa.me/34644204756?text=Hi+Ottmar,+I+want+help+with+AI+citation+optimization+for+__DOMAIN__" target="_blank" class="btn primary" style="text-decoration:none;font-size:13px;padding:10px 20px;">
+  <div class="cs-upsell">
+    <div style="font-size:13px;font-weight:700;color:#1e293b;margin-bottom:6px;">Want Ottmar to implement these changes for you?</div>
+    <div style="font-size:12px;color:#64748b;margin-bottom:14px;">ContentScale offers done-for-you AI citation optimization.</div>
+    <a href="https://wa.me/34644204756?text=Hi+Ottmar,+I+want+help+with+AI+citation+optimization+for+__DOMAIN__" target="_blank" class="cs-wa-btn">
       <i class="fab fa-whatsapp"></i> Contact Ottmar on WhatsApp
     </a>
   </div>
+
 </div>
 
 <!-- Add URL modal -->
-<div class="modal" id="addModal">
-  <div class="modal-box" onclick="event.stopPropagation()">
+<div class="cs-modal" id="addModal">
+  <div class="cs-modal-box" onclick="event.stopPropagation()">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-      <h3 style="font-weight:700;">Add URL to track</h3>
-      <button onclick="hideModal('addModal')" style="background:none;border:none;color:#6b7280;cursor:pointer;font-size:1.2rem;">✕</button>
+      <h3 style="font-size:15px;font-weight:800;color:#0f172a;">Add URL to track</h3>
+      <button onclick="hideModal('addModal')" style="background:none;border:none;color:#94a3b8;cursor:pointer;font-size:1.2rem;">&#x2715;</button>
     </div>
     <div style="margin-bottom:12px;">
-      <label style="font-size:12px;color:#9ca3af;display:block;margin-bottom:4px;">Page URL</label>
-      <input id="addUrl" type="url" class="input" placeholder="https://__DOMAIN__/your-page/">
+      <label style="font-size:11px;color:#64748b;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.06em;">Page URL</label>
+      <input id="addUrl" type="url" class="cs-input" placeholder="https://__DOMAIN__/your-page/">
     </div>
     <div style="margin-bottom:16px;">
-      <label style="font-size:12px;color:#9ca3af;display:block;margin-bottom:4px;">Target keyword <span style="color:#4b5563;">(optional — we will detect from GSC)</span></label>
-      <input id="addKeyword" type="text" class="input" placeholder="e.g. site speed optimization">
+      <label style="font-size:11px;color:#64748b;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.06em;">Target keyword <span style="color:#cbd5e1;font-weight:400;text-transform:none;">(optional)</span></label>
+      <input id="addKeyword" type="text" class="cs-input" placeholder="e.g. seo tips amsterdam">
     </div>
     <div style="display:flex;gap:8px;">
-      <button class="btn primary" onclick="addPage()" style="flex:1;">Add & start tracking</button>
-      <button class="btn" onclick="hideModal('addModal')">Cancel</button>
+      <button class="cs-btn primary" onclick="addPage()" style="flex:1;">Add &amp; start tracking</button>
+      <button class="cs-btn" onclick="hideModal('addModal')">Cancel</button>
     </div>
   </div>
 </div>
 
 <!-- GSC Import modal -->
-<div class="modal" id="importModal">
-  <div class="modal-box" onclick="event.stopPropagation()">
+<div class="cs-modal" id="importModal">
+  <div class="cs-modal-box" onclick="event.stopPropagation()">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-      <h3 style="font-weight:700;">Import from Google Search Console</h3>
-      <button onclick="hideModal('importModal')" style="background:none;border:none;color:#6b7280;cursor:pointer;font-size:1.2rem;">✕</button>
+      <h3 style="font-size:15px;font-weight:800;color:#0f172a;">Import from Google Search Console</h3>
+      <button onclick="hideModal('importModal')" style="background:none;border:none;color:#94a3b8;cursor:pointer;font-size:1.2rem;">&#x2715;</button>
     </div>
-    <p style="font-size:12px;color:#6b7280;margin-bottom:16px;">Paste your top pages from GSC. Go to GSC → Performance → Pages → Export → Copy the URLs.</p>
-    <textarea id="importUrls" class="input" rows="8" placeholder="https://__DOMAIN__/page-1/&#10;https://__DOMAIN__/page-2/&#10;https://__DOMAIN__/page-3/" style="resize:vertical;font-family:monospace;font-size:11px;"></textarea>
+    <p style="font-size:12px;color:#64748b;margin-bottom:14px;">Go to GSC &rarr; Performance &rarr; Pages &rarr; copy the URLs and paste below.</p>
+    <textarea id="importUrls" class="cs-input" rows="8" placeholder="https://__DOMAIN__/page-1/&#10;https://__DOMAIN__/page-2/" style="resize:vertical;font-family:monospace;font-size:11px;"></textarea>
     <div style="display:flex;gap:8px;margin-top:12px;">
-      <button class="btn primary" onclick="importPages()" style="flex:1;">Import pages</button>
-      <button class="btn" onclick="hideModal('importModal')">Cancel</button>
+      <button class="cs-btn primary" onclick="importPages()" style="flex:1;">Import pages</button>
+      <button class="cs-btn" onclick="hideModal('importModal')">Cancel</button>
     </div>
   </div>
 </div>
 
 <!-- Toast -->
-<div class="toast" id="toast"></div>
+<div class="cs-toast" id="toast"></div>
 
 <script>
+
 var TOKEN = '__TOKEN__';
 var DOMAIN = '__DOMAIN__';
 var MAX_PAGES = __MAX_PAGES__;
@@ -23271,15 +23295,15 @@ function renderPages() {
     var urlShort = p.url.split('//').pop().split('www.').pop()
     var posColor = pos <= 3 ? '#4ade80' : pos <= 10 ? '#a3e635' : pos <= 20 ? '#fbbf24' : '#f87171';
 
-    return '<div class="page-card' + (cited ? ' cited' : '') + '">'
+    return '<div class="cs-page-card' + (cited ? ' cited' : '') + '">'
       + '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;">'
       + '<div style="flex:1;min-width:0;">'
       + '<div style="font-size:13px;color:#e5e7eb;font-family:monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:6px;">' + urlShort + '</div>'
       + '<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:6px;">'
-      + (pos ? '<span class="badge" style="color:'+posColor+';background:#0d1117;">#'+pos+'</span>' : '<span class="badge grey">Not ranked</span>')
-      + (cited ? '<span class="badge green">&#10003; Google AIO</span>' : '<span class="badge grey">No AIO</span>')
-      + (p.ai_perplexity_cited ? '<span class="badge purple">&#10003; Perplexity</span>' : '')
-      + (score ? '<span class="badge yellow">'+score+'/100</span>' : '')
+      + (pos ? '<span class="cs-badge" style="color:'+posColor+';background:#0d1117;">#'+pos+'</span>' : '<span class="cs-cs-badge grey">Not ranked</span>')
+      + (cited ? '<span class="cs-cs-badge green">&#10003; Google AIO</span>' : '<span class="cs-cs-badge grey">No AIO</span>')
+      + (p.ai_perplexity_cited ? '<span class="cs-cs-badge purple">&#10003; Perplexity</span>' : '')
+      + (score ? '<span class="cs-cs-badge yellow">'+score+'/100</span>' : '')
       + (kw ? '<span style="font-size:10px;color:#4b5563;padding:2px 6px;">'+kw+'</span>' : '')
       + '</div>'
       + '<div style="font-size:10px;color:#374151;">Last checked: ' + checked + '</div>'
@@ -23394,7 +23418,7 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
         .then(function(data) {
           if (!data.success) return;
           if (dot) { dot.style.background = '#4ade80'; }
-          if (status) { status.textContent = '● Live'; status.style.color = '#4ade80'; }
+          if (status) { status.textContent = '* Live'; status.style.color = '#4ade80'; }
           _clientPollLastTs = data.ts;
           if (data.events && data.events.length) {
             data.events.forEach(function(ev) {
@@ -23424,6 +23448,7 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
 
   // Start after pages load
   setTimeout(startClientLiveFeed, 1000);
+
 
 <\/script>
 </body>
