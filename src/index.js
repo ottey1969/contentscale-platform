@@ -23250,7 +23250,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     var modal = document.getElementById('trCitationModal');
                     var title = document.getElementById('trCitationTitle');
                     var body  = document.getElementById('trCitationBody');
-                    title.textContent = keyword + ' — ' + url.replace(/^https?:\/\//, '').split('/').slice(0,2).join('/');
+                    var urlClean = url.indexOf('//') > -1 ? url.split('//')[1] : url; var urlParts = urlClean.split('/'); title.textContent = keyword + ' — ' + urlParts.slice(0,2).join('/');
                     body.innerHTML = '<div style="text-align:center;padding:60px 0;color:#6b7280;"><div style="font-size:2rem;margin-bottom:12px;">⚙️</div><div style="margin-top:8px;font-size:13px;">Fetching AI Overview · Scraping competitors · Generating citation brief…</div><div style="font-size:11px;color:#4b5563;margin-top:6px;">This takes 15–30 seconds</div></div>';
                     modal.style.display = 'flex';
                     var token = localStorage.getItem('admin_id') || '';
