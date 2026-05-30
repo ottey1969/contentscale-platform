@@ -962,6 +962,7 @@ app.get('/api/tracker-client/:token', async (req, res) => {
     const pagesR = await pool.query(
       `SELECT p.id, p.url, p.keyword, p.gsc_keyword, p.created_at, p.next_check_at, p.last_checked_at,
               s.google_position, s.ai_google_overview_cited, s.ai_perplexity_cited,
+              s.ai_bing_cited, s.ai_brave_cited,
               s.score as graaf_score, s.checked_at as last_checked
        FROM tracker_pages p
        LEFT JOIN LATERAL (
@@ -987,6 +988,24 @@ app.get('/api/tracker-client/:token', async (req, res) => {
     console.error('[tracker-client GET]', e.message);
     res.status(500).json({ success: false, error: e.message });
   }
+});
+
+// GET /api/tracker-client/:token/live-events — domain-filtered live events
+app.get('/api/tracker-client/:token/live-events', async (req, res) => {
+  try {
+    const cr = await pool.query('SELECT domain FROM tracker_clients WHERE token=$1 AND status=$2', [req.params.token, 'active']);
+    if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
+    const domain = cr.rows[0].domain;
+    const since = req.query.since ? new Date(req.query.since).getTime() : Date.now() - 60000;
+    // Filter events relevant to this domain
+    const events = _liveEvents.filter(function(e) {
+      if (new Date(e.ts||0).getTime() <= since) return false;
+      if (e.type === 'news') return true; // show news to everyone
+      const url = e.url || e.page_url || '';
+      return url.includes(domain);
+    }).slice(0, 15);
+    res.json({ success: true, events, ts: new Date().toISOString(), domain });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
 // POST /api/tracker-client/:token/pages — add URL to track
@@ -23081,16 +23100,33 @@ body{background:#0a0a0f;color:#f1f5f9;font-family:'Segoe UI',system-ui,sans-seri
   <!-- Stats -->
   <div class="stat-row" id="statsRow">
     <div class="stat"><div class="val" id="statTotal">—</div><div class="lbl">Tracked pages</div></div>
-    <div class="stat"><div class="val" id="statCitedG" style="color:#38bdf8;">—</div><div class="lbl">Google AIO cited</div></div>
-    <div class="stat"><div class="val" id="statCitedP" style="color:#a78bfa;">—</div><div class="lbl">Perplexity cited</div></div>
-    <div class="stat"><div class="val" id="statAvgScore" style="color:#fbbf24;">—</div><div class="lbl">Avg GRAAF score</div></div>
-    <div class="stat"><div class="val" id="statRemaining" style="color:#4ade80;">—</div><div class="lbl">Slots remaining</div></div>
+    <div class="stat"><div class="val" id="statCitedG" style="color:#38bdf8;">—</div><div class="lbl">Google AIO</div></div>
+    <div class="stat"><div class="val" id="statCitedP" style="color:#a78bfa;">—</div><div class="lbl">Perplexity</div></div>
+    <div class="stat"><div class="val" id="statCitedB" style="color:#60a5fa;">—</div><div class="lbl">Copilot/Bing</div></div>
+    <div class="stat"><div class="val" id="statCitedC" style="color:#f87171;">—</div><div class="lbl">Claude/Brave</div></div>
+    <div class="stat"><div class="val" id="statAvgScore" style="color:#fbbf24;">—</div><div class="lbl">Avg GRAAF</div></div>
+    <div class="stat"><div class="val" id="statRemaining" style="color:#4ade80;">—</div><div class="lbl">Slots left</div></div>
   </div>
 
   <!-- Action bar -->
   <div style="display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap;">
     <button class="btn primary" onclick="showAddModal()">+ Add URL</button>
     <button class="btn" onclick="loadPages()" title="Refresh"><i class="fas fa-sync-alt"></i> Refresh</button>
+
+  <!-- Live Activity Feed for this domain -->
+  <div id="clientLiveWall" style="background:#0d1117;border:1px solid #1f2937;border-radius:8px;padding:10px 14px;margin-bottom:16px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span id="clientLiveDot" style="width:7px;height:7px;border-radius:50%;background:#374151;display:inline-block;"></span>
+        <span style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:#4b5563;">Live Activity</span>
+        <span id="clientLiveStatus" style="font-size:10px;color:#4b5563;"></span>
+      </div>
+    </div>
+    <div id="clientLiveFeed" style="background:#0a0a12;border-radius:6px;padding:8px 10px;min-height:36px;max-height:160px;overflow-y:auto;font-family:monospace;font-size:11px;">
+      <div style="color:#374151;">Connecting to live feed...</div>
+    </div>
+  </div>
+
     <button class="btn" onclick="showImportModal()" style="border-color:#38bdf8;color:#38bdf8;"><i class="fas fa-cloud-download-alt"></i> Import from GSC</button>
   </div>
 
@@ -23208,11 +23244,15 @@ function renderStats(data) {
   var pages = data.pages || [];
   var citedG = pages.filter(function(p){ return p.ai_google_overview_cited; }).length;
   var citedP = pages.filter(function(p){ return p.ai_perplexity_cited; }).length;
+  var citedB = pages.filter(function(p){ return p.ai_bing_cited; }).length;
+  var citedC = pages.filter(function(p){ return p.ai_brave_cited; }).length;
   var scores = pages.filter(function(p){ return p.graaf_score; }).map(function(p){ return p.graaf_score; });
   var avgScore = scores.length ? Math.round(scores.reduce(function(a,b){ return a+b; },0)/scores.length) : 0;
   document.getElementById('statTotal').textContent = pages.length;
   document.getElementById('statCitedG').textContent = citedG;
   document.getElementById('statCitedP').textContent = citedP;
+  var elB = document.getElementById('statCitedB'); if(elB) elB.textContent = citedB;
+  var elC = document.getElementById('statCitedC'); if(elC) elC.textContent = citedC;
   document.getElementById('statAvgScore').textContent = avgScore ? avgScore+'/100' : '-';
   document.getElementById('statRemaining').textContent = MAX_PAGES - pages.length;
   document.getElementById('pageCountLabel').textContent = '(' + pages.length + ' of ' + MAX_PAGES + ')';
@@ -23323,6 +23363,65 @@ async function deletePage(pageId) {
 
 loadPages();
 setInterval(loadPages, 120000); // auto-refresh every 2 min
+
+  // Live feed polling for this domain
+  var _clientPollInterval = null;
+  var _clientPollLastTs = null;
+
+  function startClientLiveFeed() {
+    var dot = document.getElementById('clientLiveDot');
+    var status = document.getElementById('clientLiveStatus');
+    var feed = document.getElementById('clientLiveFeed');
+
+    function addLine(text, color) {
+      if (!feed) return;
+      var line = document.createElement('div');
+      line.style.cssText = 'padding:2px 0;border-bottom:1px solid #0d1117;color:' + (color||'#6b7280') + ';';
+      var ts = new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+      line.textContent = ts + '  ' + text;
+      // Insert at top, keep max 15 lines
+      if (feed.firstChild && feed.firstChild.style && feed.firstChild.style.color === '#374151') feed.innerHTML = '';
+      feed.insertBefore(line, feed.firstChild);
+      while (feed.children.length > 15) feed.removeChild(feed.lastChild);
+    }
+
+    function poll() {
+      var url = 'https://app.contentscale.site/api/tracker-client/' + TOKEN + '/live-events';
+      if (_clientPollLastTs) url += '?since=' + encodeURIComponent(_clientPollLastTs);
+      fetch(url)
+        .then(function(r){ return r.json(); })
+        .then(function(data) {
+          if (!data.success) return;
+          if (dot) { dot.style.background = '#4ade80'; }
+          if (status) { status.textContent = '● Live'; status.style.color = '#4ade80'; }
+          _clientPollLastTs = data.ts;
+          if (data.events && data.events.length) {
+            data.events.forEach(function(ev) {
+              var text = '';
+              var color = '#6b7280';
+              if (ev.type === 'check_done') { text = 'Scan complete: ' + (ev.url||''); color = '#4ade80'; }
+              else if (ev.type === 'citation_gained') { text = 'Citation gained in ' + (ev.platform||'AI') + ': ' + (ev.url||''); color = '#4ade80'; }
+              else if (ev.type === 'position_up') { text = 'Position up to #' + ev.new_pos + ': ' + (ev.url||''); color = '#a3e635'; }
+              else if (ev.type === 'score_up') { text = 'GRAAF score improved: ' + (ev.url||''); color = '#fbbf24'; }
+              else if (ev.type === 'news') { text = 'SEO News: ' + (ev.headline||'').substring(0,60); color = '#f59e0b'; }
+              if (text) addLine(text, color);
+            });
+          }
+        })
+        .catch(function() {
+          if (dot) { dot.style.background = '#f87171'; }
+          if (status) { status.textContent = ''; }
+        });
+    }
+
+    poll();
+    if (_clientPollInterval) clearInterval(_clientPollInterval);
+    _clientPollInterval = setInterval(poll, 8000);
+  }
+
+  // Start after pages load
+  setTimeout(startClientLiveFeed, 1000);
+
 <\/script>
 </body>
 </html>`;
