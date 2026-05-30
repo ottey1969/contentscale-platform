@@ -23048,18 +23048,29 @@ function showImportModal() { document.getElementById('importModal').classList.ad
 function hideModal(id) { document.getElementById(id).classList.remove('show'); }
 
 async function api(path, method, body) {
+  var base = window.location.origin.indexOf('app.contentscale.site') > -1
+    ? '' : 'https://app.contentscale.site';
   var opts = { method: method||'GET', headers: { 'Content-Type': 'application/json' } };
   if (body) opts.body = JSON.stringify(body);
-  var r = await fetch('/api/tracker-client/' + TOKEN + path, opts);
+  var r = await fetch(base + '/api/tracker-client/' + TOKEN + path, opts);
+  if (!r.ok) {
+    var err = await r.json().catch(function(){ return { error: 'HTTP ' + r.status }; });
+    throw new Error(err.error || 'HTTP ' + r.status);
+  }
   return r.json();
 }
 
 async function loadPages() {
-  var data = await api('').catch(function(){ return null; });
-  if (!data || !data.success) { document.getElementById('pagesList').innerHTML = '<div class="empty"><div class="empty-icon">⚠️</div><div>Could not load pages</div></div>'; return; }
-  _pages = data.pages || [];
-  renderStats(data);
-  renderPages();
+  var el = document.getElementById('pagesList');
+  try {
+    var data = await api('');
+    if (!data || !data.success) throw new Error(data && data.error || 'Failed to load');
+    _pages = data.pages || [];
+    renderStats(data);
+    renderPages();
+  } catch(e) {
+    el.innerHTML = '<div class="empty"><div class="empty-icon">⚠️</div><div style="color:#ef4444;">Could not load pages: ' + e.message + '</div><div style="font-size:11px;margin-top:8px;color:#94a3b8;">Check your tracker link is correct</div></div>';
+  }
 }
 
 function renderStats(data) {
