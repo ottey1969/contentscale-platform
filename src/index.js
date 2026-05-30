@@ -908,6 +908,9 @@ app.post('/api/tracker-client/register', async (req, res) => {
     const { domain, name, email, whatsapp } = req.body;
     if (!domain) return res.status(400).json({ success: false, error: 'Domain required' });
 
+    // Get client IP
+    const clientIp = (req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0].trim();
+
     // Clean domain
     const cleanDomain = domain.replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0].toLowerCase().trim();
     if (!cleanDomain || !cleanDomain.includes('.')) return res.status(400).json({ success: false, error: 'Invalid domain' });
@@ -915,18 +918,34 @@ app.post('/api/tracker-client/register', async (req, res) => {
     // Check if domain already registered
     const existing = await pool.query('SELECT id, token FROM tracker_clients WHERE domain=$1', [cleanDomain]);
     if (existing.rows.length) {
-      // Return existing token — idempotent
       return res.json({ success: true, token: existing.rows[0].token, domain: cleanDomain, existing: true,
-        url: process.env.APP_URL || 'https://app.contentscale.site' + '/track/' + existing.rows[0].token });
+        url: (process.env.APP_URL || 'https://app.contentscale.site') + '/track/' + existing.rows[0].token });
+    }
+
+    // IP restriction — max 1 registration per IP
+    if (clientIp) {
+      const ipCheck = await pool.query('SELECT COUNT(*) FROM tracker_clients WHERE registered_ip=$1', [clientIp]);
+      if (parseInt(ipCheck.rows[0].count) >= 1) {
+        return res.status(429).json({ success: false, error: 'One free tracker per device. Contact Ottmar at wa.me/34644204756 to register additional domains.' });
+      }
     }
 
     const token = generateClientToken();
     await pool.query(
-      `INSERT INTO tracker_clients (token, domain, name, email, whatsapp, max_pages) VALUES ($1,$2,$3,$4,$5,25)`,
-      [token, cleanDomain, name||null, email||null, whatsapp||null]
+      `INSERT INTO tracker_clients (token, domain, name, email, whatsapp, max_pages, registered_ip) VALUES ($1,$2,$3,$4,$5,10,$6)`,
+      [token, cleanDomain, name||null, email||null, whatsapp||null, clientIp||null]
     );
 
     const trackUrl = (process.env.APP_URL || 'https://app.contentscale.site') + '/track/' + token;
+
+    // Notify Ottmar via CallMeBot
+    const cbPhone = process.env.CALLMEBOT_PHONE;
+    const cbKey = process.env.CALLMEBOT_KEY;
+    if (cbPhone && cbKey) {
+      const msg = `New ContentScale tracker: ${cleanDomain} (${name||'anon'}) — ${trackUrl}`;
+      fetch(`https://api.callmebot.com/whatsapp.php?phone=${cbPhone}&text=${encodeURIComponent(msg)}&apikey=${cbKey}`).catch(()=>{});
+    }
+
     res.json({ success: true, token, domain: cleanDomain, url: trackUrl, existing: false });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
@@ -946,10 +965,10 @@ app.get('/api/tracker-client/:token', async (req, res) => {
        ) s ON true
        WHERE p.tracker_client_id = $1 AND p.is_active = TRUE
        ORDER BY p.created_at DESC LIMIT $2`,
-      [client.id, client.max_pages || 25]
+      [client.id, client.max_pages || 10]
     );
 
-    res.json({ success: true, client: { domain: client.domain, name: client.name, max_pages: client.max_pages||25, created_at: client.created_at }, pages: pagesR.rows, page_count: pagesR.rows.length });
+    res.json({ success: true, client: { domain: client.domain, name: client.name, max_pages: client.max_pages||10, created_at: client.created_at }, pages: pagesR.rows, page_count: pagesR.rows.length });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
@@ -963,7 +982,7 @@ app.post('/api/tracker-client/:token/pages', async (req, res) => {
     // Check page limit
     const countR = await pool.query('SELECT COUNT(*) FROM tracker_pages WHERE tracker_client_id=$1 AND is_active=TRUE', [client.id]);
     const count = parseInt(countR.rows[0].count);
-    const maxPages = client.max_pages || 25;
+    const maxPages = client.max_pages || 10;
     if (count >= maxPages) return res.status(400).json({ success: false, error: `Maximum of ${maxPages} pages reached. Contact Ottmar to increase your limit.` });
 
     const { url, keyword } = req.body;
@@ -1022,7 +1041,7 @@ app.get('/track/:token', async (req, res) => {
     res.send(_CLIENT_TRACKER_HTML
       .replace(/__TOKEN__/g, req.params.token)
       .replace(/__DOMAIN__/g, client.domain)
-      .replace(/__MAX_PAGES__/g, String(client.max_pages || 25))
+      .replace(/__MAX_PAGES__/g, String(client.max_pages || 10))
       .replace(/__CLIENT_NAME__/g, client.name || client.domain)
     );
   } catch(e) { res.status(500).send('Server error'); }
@@ -1191,13 +1210,14 @@ app.get('/api/admin/tracker-clients', verifyAdmin, async (req, res) => {
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
-// Admin: update client max_pages
+// Admin: update client max_pages + override IP
 app.patch('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
   try {
-    const { max_pages, status } = req.body;
+    const { max_pages, status, reset_ip } = req.body;
     const updates = []; const vals = []; let i = 1;
     if (max_pages !== undefined) { updates.push(`max_pages=$${i++}`); vals.push(max_pages); }
     if (status !== undefined) { updates.push(`status=$${i++}`); vals.push(status); }
+    if (reset_ip) { updates.push(`registered_ip=NULL`); }
     if (!updates.length) return res.status(400).json({ success: false, error: 'Nothing to update' });
     vals.push(req.params.id);
     await pool.query(`UPDATE tracker_clients SET ${updates.join(',')} WHERE id=$${i}`, vals);
@@ -1406,11 +1426,13 @@ app.patch('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
     status VARCHAR(20) DEFAULT 'active',
     last_notified_at TIMESTAMPTZ,
     notify_frequency INTEGER DEFAULT 7,
-    max_pages INTEGER DEFAULT 25,
+    max_pages INTEGER DEFAULT 10,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
   )`).catch(()=>{});
-  await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS max_pages INTEGER DEFAULT 25`).catch(()=>{});
+  await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS max_pages INTEGER DEFAULT 10`).catch(()=>{});
+  await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS registered_ip VARCHAR(45)`).catch(()=>{});
+  await client.query(`CREATE INDEX IF NOT EXISTS tracker_clients_ip_idx ON tracker_clients(registered_ip) WHERE registered_ip IS NOT NULL`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS unsubscribe_token VARCHAR(64)`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS email_unsubscribed BOOLEAN DEFAULT FALSE`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS tracker_client_id INTEGER REFERENCES tracker_clients(id) ON DELETE SET NULL`).catch(()=>{});
