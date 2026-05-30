@@ -23087,6 +23087,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                         <!-- AI Provider Status Pills -->
                         <div id="aiStatusPills" style="display:flex;gap:5px;flex-wrap:wrap;"></div>
                         <button onclick="loadTrackerPages()" class="tr-btn" id="trRefreshBtn"><i class="fas fa-sync-alt" style="margin-right:5px;"></i>Refresh</button>
+                        <button onclick="bulkSetGscKeywords()" class="tr-btn" title="Set GSC keyword for all pages that have GSC data but no manual keyword" style="border-color:#60a5fa;color:#60a5fa;">📊 Apply GSC Keywords</button>
                         <button onclick="openAddPageModal()" class="tr-btn primary">+ Add URL</button>
                     </div>
                 </div>
@@ -23210,12 +23211,18 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 <div id="trHtmlModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9999;align-items:center;justify-content:center;" onclick="if(event.target===this)document.getElementById('trHtmlModal').style.display='none'">
                     <div style="background:#111827;border:1px solid #374151;border-radius:14px;padding:28px;width:min(680px,95vw);max-height:85vh;overflow-y:auto;" onclick="event.stopPropagation()">
                         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-                            <h3 style="font-weight:700;">Update Page HTML</h3>
+                            <h3 style="font-weight:700;">Update Page</h3>
                             <button onclick="document.getElementById('trHtmlModal').style.display='none'" style="background:none;border:none;color:#9ca3af;font-size:1.3rem;cursor:pointer;">✕</button>
                         </div>
-                        <p style="font-size:12px;color:#6b7280;margin-bottom:14px;">Paste the updated published HTML. The system will detect what changed and generate new recommendations.</p>
                         <input type="hidden" id="trHtmlPageId">
-                        <textarea id="trHtmlContent" class="tr-input" rows="10" placeholder="Paste new HTML here..." style="resize:vertical;font-size:11px;font-family:monospace;"></textarea>
+                        <div style="margin-bottom:12px;">
+                            <label style="font-size:12px;color:#9ca3af;display:block;margin-bottom:4px;">Keyword <span style="color:#6b7280;">(used for Citation Brief + recommendations — leave blank to use URL slug)</span></label>
+                            <input id="trKeywordInput" type="text" class="tr-input" placeholder="e.g. site speed optimization" style="font-size:13px;">
+                        </div>
+                        <div>
+                            <label style="font-size:12px;color:#9ca3af;display:block;margin-bottom:4px;">Page HTML <span style="color:#6b7280;">(optional — enables change detection and GRAAF scoring)</span></label>
+                            <textarea id="trHtmlContent" class="tr-input" rows="8" placeholder="Paste HTML here..." style="resize:vertical;font-size:11px;font-family:monospace;"></textarea>
+                        </div>
                         <div style="display:flex;gap:10px;margin-top:14px;">
                             <button onclick="submitHtmlUpdate()" class="tr-btn primary">Save & Re-check</button>
                             <button onclick="document.getElementById('trHtmlModal').style.display='none'" class="tr-btn">Cancel</button>
@@ -24520,7 +24527,20 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
             const dotHtml = p.is_active
                 ? '<span class="tr-change-dot tr-pulse" style="background:#7e22ce;"></span>'
                 : '<span class="tr-change-dot" style="background:#374151;"></span>';
-            const kwHtml = p.keyword ? '<span style="font-size:11px;color:#6b7280;margin-left:8px;">keyword: '+p.keyword+'</span>' : '';
+            // Keyword badge — shows source and warns if using slug fallback
+            let kwHtml = '';
+            if (p.keyword) {
+                kwHtml = '<span style="font-size:11px;color:#6b7280;margin-left:4px;">keyword: <span style="color:#a78bfa;">'+p.keyword+'</span></span>';
+            } else if (p.gsc_keyword) {
+                kwHtml = '<span style="font-size:11px;color:#6b7280;margin-left:4px;">keyword: <span style="color:#60a5fa;">'+p.gsc_keyword+'</span> <span style="color:#374151;font-size:10px;">(GSC)</span></span>';
+            } else {
+                var slug = (p.url||'').replace(/\/$/, '').split('/').pop().replace(/[-_]/g,' ').replace(/\.(html?|php)$/i,'').trim();
+                if (slug) {
+                    kwHtml = '<span style="font-size:11px;color:#6b7280;margin-left:4px;">keyword: <span style="color:#fbbf24;">'+slug+'</span> <span style="background:#2d1f00;color:#fbbf24;font-size:9px;padding:1px 5px;border-radius:3px;cursor:pointer;" onclick="openHtmlModal('+p.id+')" title="Slug used as keyword — click to set manually">⚠️ slug</span></span>';
+                } else {
+                    kwHtml = '<span style="font-size:11px;background:#2d0a0a;color:#f87171;margin-left:4px;padding:1px 6px;border-radius:3px;cursor:pointer;" onclick="openHtmlModal('+p.id+')" title="No keyword — click to set">⚠️ no keyword</span>';
+                }
+            }
             let _recs = snap && snap.recommendations ? snap.recommendations : null;
             if(_recs && typeof _recs === 'string') { try { _recs = JSON.parse(_recs); } catch(e) { _recs = null; } }
             const recsHtml = Array.isArray(_recs) && _recs.length ? renderTrackerRecommendations(_recs, p.id) : '';
@@ -24744,22 +24764,48 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
             finally { btn.disabled=false; btn.textContent='Add & Run First Check'; }
         }
 
-        function openHtmlModal(pageId, currentHtml) {
+        function openHtmlModal(pageId) {
+            var page = (allTrackerPages||[]).find(function(p){ return p.id == pageId; }) || {};
             document.getElementById('trHtmlPageId').value = pageId;
             document.getElementById('trHtmlContent').value = '';
+            document.getElementById('trKeywordInput').value = page.keyword || page.gsc_keyword || '';
             document.getElementById('trHtmlModal').style.display = 'flex';
+            // Focus keyword field if empty
+            if (!page.keyword && !page.gsc_keyword) {
+                setTimeout(function(){ document.getElementById('trKeywordInput').focus(); }, 100);
+            }
         }
 
         async function submitHtmlUpdate() {
             const pageId = document.getElementById('trHtmlPageId').value;
             const html = document.getElementById('trHtmlContent').value.trim();
-            if(!html) return alert('Paste your updated HTML first');
+            const keyword = document.getElementById('trKeywordInput').value.trim();
+            const payload = {};
+            if (html) payload.html_content = html;
+            if (keyword) payload.keyword = keyword;
+            if (!html && !keyword) return alert('Enter a keyword or paste HTML first');
             try {
-                await apiCall('/api/tracker/pages/'+pageId,'PATCH',{ html_content: html });
-                await apiCall('/api/tracker/pages/'+pageId+'/check','POST');
+                await apiCall('/api/tracker/pages/'+pageId,'PATCH', payload);
+                if (html) await apiCall('/api/tracker/pages/'+pageId+'/check','POST');
                 document.getElementById('trHtmlModal').style.display='none';
-                setTimeout(loadTrackerPages, 3000);
+                setTimeout(loadTrackerPages, html ? 3000 : 500);
             } catch(e) { alert('Error: '+e.message); }
+        }
+
+        async function bulkSetGscKeywords() {
+            // Find pages that have gsc_keyword but no manual keyword
+            const pages = (allTrackerPages||[]).filter(function(p){ return !p.keyword && p.gsc_keyword; });
+            if (!pages.length) return alert('No pages found with GSC keyword but no manual keyword set.');
+            if (!confirm('Set GSC keyword as manual keyword for ' + pages.length + ' pages?\n\nThis lets you edit them individually later.')) return;
+            let done = 0, failed = 0;
+            for (const p of pages) {
+                try {
+                    await apiCall('/api/tracker/pages/'+p.id, 'PATCH', { keyword: p.gsc_keyword });
+                    done++;
+                } catch(e) { failed++; }
+            }
+            alert('Done: ' + done + ' updated' + (failed ? ', ' + failed + ' failed' : '') + '.');
+            loadTrackerPages();
         }
 
         async function deleteTrackerPage(pageId) {
@@ -25171,9 +25217,17 @@ app.post('/api/tracker/pages/:id/citation-brief', verifyEngineAccess, async (req
     const snapR = await pool.query(`SELECT * FROM tracker_snapshots WHERE page_id=$1 ORDER BY checked_at DESC LIMIT 1`, [pageId]);
     const snap = snapR.rows[0] || {};
 
-    const keyword = page.keyword || '';
+    // Keyword priority: manual > GSC keyword > URL slug > title
+    let keyword = page.keyword || page.gsc_keyword || '';
+    if (!keyword && page.url) {
+      const slug = page.url.replace(/\/$/, '').split('/').pop() || '';
+      keyword = slug.replace(/[-_]/g, ' ').replace(/\.(html?|php)$/i, '').trim();
+    }
+    if (!keyword) keyword = page.title || '';
+    if (keyword.toLowerCase() === 'unknown') keyword = page.gsc_keyword || page.title || '';
+
     const pageUrl = page.url || '';
-    if (!keyword) return res.status(400).json({ success: false, error: 'No keyword set for this page' });
+    if (!keyword) return res.status(400).json({ success: false, error: 'No keyword set for this page — please add a keyword manually in the tracker' });
 
     const geminiKey = resolveGeminiKey(req) || process.env.GEMINI_API_KEY;
     const serperKey = resolveSerpapiKey(req) || process.env.SERPAPI_KEY || '';
@@ -26658,15 +26712,13 @@ async function runTrackerCheck(page, geminiKey, keys, forceRescan = false) {
     score: null
   };
 
-  // Derive keyword — priority: manual keyword > GSC keyword > URL slug > title
+  // Derive keyword — priority: manual keyword > GSC keyword ONLY
+  // URL slug is NOT used for AI recommendations — too unreliable
   let keyword = page.keyword || page.gsc_keyword || '';
-  if (!keyword && page.url) {
-    const slug = page.url.replace(/\/$/, '').split('/').pop() || '';
-    keyword = slug.replace(/[-_]/g, ' ').replace(/\.(html?|php|aspx?)$/i, '').trim();
-  }
-  if (!keyword) keyword = page.title || '';
-  // Never pass 'unknown' as a keyword — confuses AI analysis
-  if (keyword.toLowerCase() === 'unknown') keyword = page.gsc_keyword || page.title || '';
+  if (keyword.toLowerCase() === 'unknown') keyword = '';
+  const _keywordSource = page.keyword ? 'manual' : page.gsc_keyword ? 'gsc' : 'none';
+  const _hasValidKeyword = _keywordSource !== 'none' && !!keyword;
+
   const pageUrl   = page.url;
   const domain    = pageUrl.replace(/^https?:\/\//, '').split('/')[0]; // e.g. example.com
   const cleanHost = pageUrl.replace(/^https?:\/\//, '').replace(/\/$/, '');
@@ -27058,15 +27110,20 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
   // 5. Generate recommendations via Gemini — gap analysis vs. what's winning in Google + AI systems
   _trSetStep(pageId, 'recommendations', 'running', 'Analysing gaps vs. top results…');
   if(geminiKey) {
+    // Skip recommendations if no valid keyword — slug fallback produces garbage
+    if (!_hasValidKeyword) {
+      snapshot.recommendations = [{
+        title: 'Set a keyword to enable AI recommendations',
+        priority: 'high',
+        description: 'No manual keyword or GSC keyword found for this page. AI recommendations require a keyword to compare against competitors and AI Overviews.',
+        action: 'Click "Update HTML" → enter the target keyword for this page → Save.',
+        learning: 'Without a keyword, the system cannot check your Google ranking, AI Overview status, or generate meaningful content recommendations.',
+        target: 'Set keyword manually via Update HTML button'
+      }];
+      console.log('[tracker] Skipping Gemini recs — no valid keyword for page', pageId);
+    } else {
     try {
-      // Derive keyword — priority: manual > GSC > URL slug > title
-      let kw = page.keyword || page.gsc_keyword || '';
-      if (!kw && page.url) {
-        const slug = page.url.replace(/\/$/, '').split('/').pop() || '';
-        kw = slug.replace(/[-_]/g, ' ').replace(/\.(html?|php|aspx?)$/i, '').trim();
-      }
-      if (!kw) kw = page.title || page.url || 'content optimization';
-      if (kw.toLowerCase() === 'unknown') kw = page.gsc_keyword || page.title || page.url || '';
+      const kw = keyword; // already derived above — manual or GSC only
 
       // Our page — strip HTML to readable text
       let ourContent = '';
@@ -27153,6 +27210,7 @@ Zero generic advice. Skip anything our content already clearly has.`;
         _trSetStep(pageId, 'recommendations', 'error', 'Gemini API ' + resp.status + ': ' + (resp.errorMessage||'').substring(0,80));
       }
     } catch(e) { _trSetStep(pageId, 'recommendations', 'error', e.message); console.warn('[tracker] Gemini recommendations failed:', e.message); }
+    } // end if (_hasValidKeyword)
   } else {
     _trSetStep(pageId, 'recommendations', 'error', 'GEMINI_API_KEY not set — skipped');
   }
