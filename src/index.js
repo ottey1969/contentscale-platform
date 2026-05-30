@@ -24767,6 +24767,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
             </div>
 
             <!-- TRACKER CLIENTS -->
+            <!-- TRACKER CLIENTS -->
             <div id="tab-tracker-clients" class="tab-content hidden">
                 <div style="padding:8px;">
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
@@ -24779,118 +24780,17 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                             <button onclick="loadTrackerClients()" class="tr-btn"><i class="fas fa-sync-alt"></i></button>
                         </div>
                     </div>
-
-                    <!-- Stats -->
-                    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:20px;" id="tcStats">
-                        <div class="tr-stat"><div class="val" id="tcStatTotal">—</div><div class="lbl">Total clients</div></div>
-                        <div class="tr-stat"><div class="val" id="tcStatActive" style="color:#4ade80;">—</div><div class="lbl">Active</div></div>
-                        <div class="tr-stat"><div class="val" id="tcStatPages" style="color:#a78bfa;">—</div><div class="lbl">Total pages</div></div>
-                        <div class="tr-stat"><div class="val" id="tcStatWithEmail" style="color:#38bdf8;">—</div><div class="lbl">With email</div></div>
-                        <div class="tr-stat"><div class="val" id="tcStatWithWa" style="color:#4ade80;">—</div><div class="lbl">With WhatsApp</div></div>
+                    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:20px;">
+                        <div class="tr-stat"><div class="val" id="tcStatTotal">0</div><div class="lbl">Total clients</div></div>
+                        <div class="tr-stat"><div class="val" id="tcStatActive" style="color:#4ade80;">0</div><div class="lbl">Active</div></div>
+                        <div class="tr-stat"><div class="val" id="tcStatPages" style="color:#a78bfa;">0</div><div class="lbl">Total pages</div></div>
+                        <div class="tr-stat"><div class="val" id="tcStatWithEmail" style="color:#38bdf8;">0</div><div class="lbl">With email</div></div>
+                        <div class="tr-stat"><div class="val" id="tcStatWithWa" style="color:#4ade80;">0</div><div class="lbl">With WhatsApp</div></div>
                     </div>
-
-                    <!-- Table -->
-                    <div id="tcList" style="font-size:12px;"></div>
+                    <div id="tcList"></div>
                 </div>
-
-                <script>
-                var _tcClients = [];
-
-                async function loadTrackerClients() {
-                    document.getElementById('tcList').innerHTML = '<div style="color:#6b7280;padding:20px;">Loading...</div>';
-                    try {
-                        var data = await apiCall('/api/admin/tracker-clients');
-                        _tcClients = data.clients || [];
-                        renderTrackerClients(_tcClients);
-                        var active = _tcClients.filter(function(c){ return c.status === 'active'; }).length;
-                        var pages = _tcClients.reduce(function(a,c){ return a + parseInt(c.page_count||0); }, 0);
-                        var withEmail = _tcClients.filter(function(c){ return c.email; }).length;
-                        var withWa = _tcClients.filter(function(c){ return c.whatsapp; }).length;
-                        document.getElementById('tcStatTotal').textContent = _tcClients.length;
-                        document.getElementById('tcStatActive').textContent = active;
-                        document.getElementById('tcStatPages').textContent = pages;
-                        document.getElementById('tcStatWithEmail').textContent = withEmail;
-                        document.getElementById('tcStatWithWa').textContent = withWa;
-                    } catch(e) {
-                        document.getElementById('tcList').innerHTML = '<div style="color:#f87171;padding:20px;">Error: ' + e.message + '</div>';
-                    }
-                }
-
-                function filterTrackerClients() {
-                    var q = (document.getElementById('tcSearch').value||'').toLowerCase();
-                    var filtered = q ? _tcClients.filter(function(c){ return (c.domain||'').toLowerCase().includes(q) || (c.name||'').toLowerCase().includes(q) || (c.email||'').toLowerCase().includes(q); }) : _tcClients;
-                    renderTrackerClients(filtered);
-                }
-
-                function renderTrackerClients(clients) {
-                    var el = document.getElementById('tcList');
-                    if (!clients.length) {
-                        el.innerHTML = '<div style="text-align:center;padding:40px;color:#6b7280;">No clients registered yet</div>';
-                        return;
-                    }
-                    var rows = clients.map(function(c) {
-                        var date = c.created_at ? new Date(c.created_at).toLocaleDateString('en-GB') : '-';
-                        var trackUrl = 'https://app.contentscale.site/track/' + c.token;
-                        var tokenShort = c.token ? c.token.substring(0,8) + '...' : '-';
-                        var statusLabel = (c.status || 'active').toUpperCase();
-                        var statusColor = c.status === 'active' ? '#4ade80' : '#f87171';
-                        var toggleLabel = c.status === 'active' ? 'Disable' : 'Enable';
-                        var d = document.createElement('tr');
-                        d.className = 'tc-row';
-                        d.innerHTML =
-                            '<td style="padding:10px 12px;font-weight:700;color:#e5e7eb;">' + (c.domain||'-') + '</td>'
-                            + '<td style="padding:10px 12px;">'
-                            + '<div style="color:#9ca3af;">' + (c.name||'-') + '</div>'
-                            + (c.email ? '<div style="color:#38bdf8;font-size:11px;">' + c.email + '</div>' : '')
-                            + (c.whatsapp ? '<div style="color:#4ade80;font-size:11px;">' + c.whatsapp + '</div>' : '')
-                            + '</td>'
-                            + '<td style="padding:10px 12px;text-align:center;color:#a78bfa;">' + (c.page_count||0) + '</td>'
-                            + '<td style="padding:10px 12px;text-align:center;">'
-                            + '<input type="number" value="' + (c.max_pages||10) + '" min="1" max="200" data-id="' + c.id + '" onchange="updateTcClient(parseInt(this.dataset.id),{max_pages:parseInt(this.value)})" style="width:55px;background:#0d1117;border:1px solid #374151;border-radius:4px;padding:3px 6px;color:#e5e7eb;font-size:12px;">'
-                            + '</td>'
-                            + '<td style="padding:10px 12px;text-align:center;"><span style="font-size:10px;font-weight:700;color:' + statusColor + ';">' + statusLabel + '</span></td>'
-                            + '<td style="padding:10px 12px;color:#6b7280;">' + date + (c.registered_ip ? '<div style="font-size:10px;color:#374151;">' + c.registered_ip + '</div>' : '') + '</td>'
-                            + '<td style="padding:10px 12px;"><a href="' + trackUrl + '" target="_blank" style="font-size:11px;color:#7c3aed;text-decoration:none;font-family:monospace;">/track/' + tokenShort + '</a></td>'
-                            + '<td style="padding:10px 12px;text-align:center;">'
-                            + '<div style="display:flex;gap:4px;justify-content:center;flex-wrap:wrap;">'
-                            + '<button data-id="' + c.id + '" data-status="' + (c.status==='active'?'disabled':'active') + '" onclick="updateTcClient(parseInt(this.dataset.id),{status:this.dataset.status})" class="tr-btn" style="font-size:10px;padding:3px 8px;" title="' + toggleLabel + '">' + (c.status==='active'?'&#9646;':'&#9654;') + '</button>'
-                            + '<button data-id="' + c.id + '" onclick="resetTcIp(parseInt(this.dataset.id))" class="tr-btn" style="font-size:10px;padding:3px 8px;" title="Reset IP">IP</button>'
-                            + '<button data-url="' + trackUrl + '" onclick="navigator.clipboard.writeText(this.dataset.url).then(function(){alert('Copied!')})" class="tr-btn" style="font-size:10px;padding:3px 8px;" title="Copy link">Link</button>'
-                            + '<button data-id="' + c.id + '" onclick="deleteTcClient(parseInt(this.dataset.id))" class="tr-btn danger" style="font-size:10px;padding:3px 8px;" title="Delete">Del</button>'
-                            + '</div></td>';
-                        return d;
-                    });
-                    var table = document.createElement('table');
-                    table.style.cssText = 'width:100%;border-collapse:collapse;';
-                    var thead = document.createElement('thead');
-                    thead.innerHTML = '<tr style="border-bottom:1px solid #1f2937;font-size:10px;color:#6b7280;text-transform:uppercase;letter-spacing:.06em;">'
-                        + '<th style="padding:8px 12px;text-align:left;">Domain</th>'
-                        + '<th style="padding:8px 12px;text-align:left;">Contact</th>'
-                        + '<th style="padding:8px 12px;text-align:center;">Pages</th>'
-                        + '<th style="padding:8px 12px;text-align:center;">Max</th>'
-                        + '<th style="padding:8px 12px;text-align:center;">Status</th>'
-                        + '<th style="padding:8px 12px;text-align:left;">Registered</th>'
-                        + '<th style="padding:8px 12px;text-align:left;">Tracker</th>'
-                        + '<th style="padding:8px 12px;text-align:center;">Actions</th>'
-                        + '</tr>';
-                    var tbody = document.createElement('tbody');
-                    rows.forEach(function(r){ tbody.appendChild(r); });
-                    table.appendChild(thead);
-                    table.appendChild(tbody);
-                    el.innerHTML = '';
-                    el.appendChild(table);
-                }
-
-                async function deleteTcClient(id) {
-                    if (!confirm('Delete this client and all their tracked pages? This cannot be undone.')) return;
-                    try {
-                        await apiCall('/api/admin/tracker-clients/' + id, 'DELETE');
-                        loadTrackerClients();
-                    } catch(e) { alert('Error: ' + e.message); }
-                }
-
-                </script>
             </div>
+
 
             <!-- ENGINE ACCESS CODES -->
             <div id="tab-enginecodes" class="tab-content hidden">
@@ -26627,6 +26527,152 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
         function pushToInstantly(){alert('Select Instantly API key and campaign in the Scan Log settings panel.');}
 
         console.log('\u2705 Admin Dashboard v2 loaded \u2014 all tabs ready');
+
+        // ── Tracker Clients ───────────────────────────────────────────────────
+        var _tcClients = [];
+
+        async function loadTrackerClients() {
+            var el = document.getElementById('tcList');
+            if (!el) return;
+            el.innerHTML = '<div style="color:#6b7280;padding:20px;text-align:center;">Loading...</div>';
+            try {
+                var data = await apiCall('/api/admin/tracker-clients');
+                _tcClients = data.clients || [];
+                renderTrackerClients(_tcClients);
+                var active = _tcClients.filter(function(c){ return c.status === 'active'; }).length;
+                var pages = _tcClients.reduce(function(a,c){ return a + parseInt(c.page_count||0); }, 0);
+                var withEmail = _tcClients.filter(function(c){ return c.email; }).length;
+                var withWa = _tcClients.filter(function(c){ return c.whatsapp; }).length;
+                var s = function(id, v){ var e = document.getElementById(id); if(e) e.textContent = v; };
+                s('tcStatTotal', _tcClients.length);
+                s('tcStatActive', active);
+                s('tcStatPages', pages);
+                s('tcStatWithEmail', withEmail);
+                s('tcStatWithWa', withWa);
+            } catch(e) {
+                el.innerHTML = '<div style="color:#f87171;padding:20px;">Error: ' + e.message + '</div>';
+            }
+        }
+
+        function filterTrackerClients() {
+            var q = (document.getElementById('tcSearch').value||'').toLowerCase();
+            var filtered = q ? _tcClients.filter(function(c){
+                return (c.domain||'').toLowerCase().indexOf(q) > -1
+                    || (c.name||'').toLowerCase().indexOf(q) > -1
+                    || (c.email||'').toLowerCase().indexOf(q) > -1;
+            }) : _tcClients;
+            renderTrackerClients(filtered);
+        }
+
+        function renderTrackerClients(clients) {
+            var el = document.getElementById('tcList');
+            if (!el) return;
+            if (!clients.length) {
+                el.innerHTML = '<div style="text-align:center;padding:40px;color:#6b7280;">No clients registered yet</div>';
+                return;
+            }
+            var table = document.createElement('table');
+            table.style.cssText = 'width:100%;border-collapse:collapse;font-size:12px;';
+            var thead = document.createElement('thead');
+            thead.innerHTML = '<tr style="border-bottom:1px solid #1f2937;"><th style="padding:8px 10px;text-align:left;font-size:10px;color:#6b7280;text-transform:uppercase;">Domain</th><th style="padding:8px 10px;text-align:left;font-size:10px;color:#6b7280;text-transform:uppercase;">Contact</th><th style="padding:8px 10px;text-align:center;font-size:10px;color:#6b7280;text-transform:uppercase;">Pages</th><th style="padding:8px 10px;text-align:center;font-size:10px;color:#6b7280;text-transform:uppercase;">Max</th><th style="padding:8px 10px;text-align:center;font-size:10px;color:#6b7280;text-transform:uppercase;">Status</th><th style="padding:8px 10px;text-align:left;font-size:10px;color:#6b7280;text-transform:uppercase;">Registered</th><th style="padding:8px 10px;text-align:center;font-size:10px;color:#6b7280;text-transform:uppercase;">Actions</th></tr>';
+            var tbody = document.createElement('tbody');
+
+            clients.forEach(function(c) {
+                var tr = document.createElement('tr');
+                tr.style.cssText = 'border-bottom:1px solid #0d1117;';
+                tr.onmouseover = function(){ this.style.background='#0d1117'; };
+                tr.onmouseout = function(){ this.style.background=''; };
+
+                var date = c.created_at ? new Date(c.created_at).toLocaleDateString('en-GB') : '-';
+                var trackUrl = 'https://app.contentscale.site/track/' + c.token;
+                var tokenShort = c.token ? c.token.substring(0,8) + '...' : '-';
+                var isActive = c.status !== 'disabled';
+                var statusColor = isActive ? '#4ade80' : '#f87171';
+
+                var maxInput = document.createElement('input');
+                maxInput.type = 'number';
+                maxInput.value = c.max_pages || 10;
+                maxInput.min = 1; maxInput.max = 200;
+                maxInput.style.cssText = 'width:50px;background:#0d1117;border:1px solid #374151;border-radius:4px;padding:3px 6px;color:#e5e7eb;font-size:12px;';
+                maxInput.onchange = (function(id){ return function(){ updateTcClient(id, {max_pages: parseInt(this.value)}); }; })(c.id);
+
+                var toggleBtn = document.createElement('button');
+                toggleBtn.className = 'tr-btn';
+                toggleBtn.textContent = isActive ? 'Off' : 'On';
+                toggleBtn.title = isActive ? 'Disable' : 'Enable';
+                toggleBtn.style.cssText = 'font-size:10px;padding:3px 8px;margin-right:3px;';
+                toggleBtn.onclick = (function(id, newStatus){ return function(){ updateTcClient(id, {status: newStatus}); }; })(c.id, isActive ? 'disabled' : 'active');
+
+                var ipBtn = document.createElement('button');
+                ipBtn.className = 'tr-btn';
+                ipBtn.textContent = 'IP';
+                ipBtn.title = 'Reset IP: ' + (c.registered_ip || 'none');
+                ipBtn.style.cssText = 'font-size:10px;padding:3px 8px;margin-right:3px;';
+                ipBtn.onclick = (function(id){ return function(){ resetTcIp(id); }; })(c.id);
+
+                var linkBtn = document.createElement('button');
+                linkBtn.className = 'tr-btn';
+                linkBtn.textContent = 'Link';
+                linkBtn.title = trackUrl;
+                linkBtn.style.cssText = 'font-size:10px;padding:3px 8px;margin-right:3px;';
+                linkBtn.onclick = (function(url){ return function(){ navigator.clipboard.writeText(url).then(function(){ alert('Link copied'); }); }; })(trackUrl);
+
+                var delBtn = document.createElement('button');
+                delBtn.className = 'tr-btn danger';
+                delBtn.textContent = 'Del';
+                delBtn.title = 'Delete client';
+                delBtn.style.cssText = 'font-size:10px;padding:3px 8px;';
+                delBtn.onclick = (function(id){ return function(){ deleteTcClient(id); }; })(c.id);
+
+                var actionsDiv = document.createElement('div');
+                actionsDiv.style.cssText = 'display:flex;gap:3px;justify-content:center;flex-wrap:wrap;';
+                actionsDiv.appendChild(toggleBtn);
+                actionsDiv.appendChild(ipBtn);
+                actionsDiv.appendChild(linkBtn);
+                actionsDiv.appendChild(delBtn);
+
+                tr.innerHTML =
+                    '<td style="padding:10px 10px;font-weight:700;color:#e5e7eb;">' + (c.domain||'-') + '</td>'
+                    + '<td style="padding:10px 10px;"><div style="color:#9ca3af;">' + (c.name||'-') + '</div>'
+                    + (c.email ? '<div style="color:#38bdf8;font-size:11px;">' + c.email + '</div>' : '')
+                    + (c.whatsapp ? '<div style="color:#4ade80;font-size:11px;">' + c.whatsapp + '</div>' : '')
+                    + '</td>'
+                    + '<td style="padding:10px 10px;text-align:center;color:#a78bfa;">' + (c.page_count||0) + '</td>'
+                    + '<td style="padding:10px 10px;text-align:center;" class="tc-max-cell"></td>'
+                    + '<td style="padding:10px 10px;text-align:center;"><span style="font-size:10px;font-weight:700;color:' + statusColor + ';">' + (c.status||'active').toUpperCase() + '</span></td>'
+                    + '<td style="padding:10px 10px;color:#6b7280;">' + date + (c.registered_ip ? '<div style="font-size:10px;color:#374151;">' + c.registered_ip + '</div>' : '') + '</td>'
+                    + '<td style="padding:10px 10px;text-align:center;" class="tc-actions-cell"></td>';
+
+                tr.querySelector('.tc-max-cell').appendChild(maxInput);
+                tr.querySelector('.tc-actions-cell').appendChild(actionsDiv);
+                tbody.appendChild(tr);
+            });
+
+            table.appendChild(thead);
+            table.appendChild(tbody);
+            el.innerHTML = '';
+            el.appendChild(table);
+        }
+
+        async function updateTcClient(id, data) {
+            try {
+                await apiCall('/api/admin/tracker-clients/' + id, 'PATCH', data);
+                loadTrackerClients();
+            } catch(e) { alert('Error: ' + e.message); }
+        }
+
+        async function resetTcIp(id) {
+            if (!confirm('Reset IP restriction for this client? They can register again from a new IP.')) return;
+            await updateTcClient(id, { reset_ip: true });
+        }
+
+        async function deleteTcClient(id) {
+            if (!confirm('Delete this client and all their tracked pages? This cannot be undone.')) return;
+            try {
+                await apiCall('/api/admin/tracker-clients/' + id, 'DELETE');
+                loadTrackerClients();
+            } catch(e) { alert('Error: ' + e.message); }
+        }
     <\/script>
 </body>
 </html>`;
