@@ -23067,8 +23067,7 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
 .cs-stat .lbl { font-size:9px; color:#6b7280; text-transform:uppercase; letter-spacing:.06em; }
 
 /* Toolbar */
-.cs-toolbar { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:14px; flex-wrap:wrap; }
-.cs-btns { display:flex; gap:6px; flex-wrap:wrap; }
+
 .cs-btn { display:inline-flex; align-items:center; gap:5px; padding:7px 13px; border-radius:6px; font-size:12px; font-weight:600; cursor:pointer; border:1px solid #374151; background:#111827; color:#9ca3af; font-family:Verdana,sans-serif; text-decoration:none; transition:all .15s; }
 .cs-btn:hover { border-color:#7c3aed; color:#a78bfa; }
 .cs-btn.primary { background:#7c3aed; border-color:#7c3aed; color:#ffffff; }
@@ -23135,13 +23134,11 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
   </div>
 
   <!-- Toolbar -->
-  <div class="cs-toolbar">
-    <div class="cs-btns">
-      <button class="cs-btn primary" onclick="showAddModal()">+ Add URL</button>
-      <button class="cs-btn" onclick="loadPages()"><i class="fas fa-sync-alt"></i> Refresh</button>
-      <button class="cs-btn" onclick="showImportModal()" style="border-color:#0284c7;color:#0284c7;"><i class="fas fa-cloud-download-alt"></i> Import GSC</button>
-    </div>
-    <div style="font-size:11px;color:#6b7280;" id="pageCountLabel"></div>
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap;">
+    <button class="cs-btn primary" onclick="showAddModal()">+ Add URL</button>
+    <button class="cs-btn" onclick="loadPages()"><i class="fas fa-sync-alt"></i> Refresh</button>
+    <button class="cs-btn" onclick="showImportModal()" style="border-color:#38bdf8;color:#38bdf8;"><i class="fas fa-cloud-download-alt"></i> Import GSC</button>
+    <span style="font-size:11px;color:#6b7280;margin-left:auto;" id="pageCountLabel"></span>
   </div>
 
   <!-- Live feed -->
@@ -23283,7 +23280,7 @@ function renderStats(data) {
 function renderPages() {
   var el = document.getElementById('pagesList');
   if (!_pages.length) {
-    el.innerHTML = '<div class="empty"><div class="empty-icon">&#128225;</div><div style="font-weight:600;color:#9ca3af;margin-bottom:6px;">No pages tracked yet</div><div style="font-size:12px;">Add your first URL above to start tracking Google position and AI citations.</div></div>';
+    el.innerHTML = '<div style="background:#111827;border:1px solid #1f2937;border-radius:8px;padding:32px 24px;text-align:center;"><div style="font-size:32px;margin-bottom:12px;">&#128225;</div><div style="font-size:14px;font-weight:700;color:#9ca3af;margin-bottom:6px;">No pages tracked yet</div><div style="font-size:12px;color:#4b5563;">Click + Add URL to start tracking Google position and AI citations.</div></div>';
     return;
   }
   el.innerHTML = _pages.map(function(p) {
