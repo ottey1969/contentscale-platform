@@ -24021,6 +24021,8 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     @keyframes tr-blink { 0%,100%{opacity:1} 50%{opacity:.3} }
                     .tr-timeline { border-left:2px solid #1f2937; margin-left:12px; padding-left:18px; }
                     .tr-timeline-item { position:relative; padding:10px 0; }
+                    .tc-row { border-bottom:1px solid #0d1117; transition:background .15s; }
+                    .tc-row:hover { background:#0d1117; }
                     .tr-timeline-item::before { content:''; position:absolute; left:-23px; top:14px; width:8px; height:8px; border-radius:50%; background:#374151; }
                     .tr-timeline-item.sig::before { background:#a78bfa; }
                 </style>
@@ -24833,7 +24835,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                         var date = new Date(c.created_at).toLocaleDateString('en-GB');
                         var trackUrl = 'https://app.contentscale.site/track/' + c.token;
                         var statusColor = c.status === 'active' ? '#4ade80' : '#f87171';
-                        html += '<tr style="border-bottom:1px solid #0d1117;transition:background .15s;" onmouseover="this.style.background=\'#0d1117\'" onmouseout="this.style.background=\'none\'">'
+                        html += '<tr class="tc-row">'
                             + '<td style="padding:10px 12px;font-weight:700;color:#e5e7eb;">' + (c.domain||'—') + '</td>'
                             + '<td style="padding:10px 12px;"><div style="color:#9ca3af;">' + (c.name||'—') + '</div>'
                             + (c.email ? '<div style="color:#38bdf8;font-size:11px;">' + c.email + '</div>' : '')
@@ -25187,7 +25189,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
             if (tab==='freelancers') loadFreelancers();
             if (tab==='users') loadUsers();
             if (tab==='tracker') loadTrackerPages();
-            if (tab==='tracker-clients') loadTrackerClients();
+            if (tab==='tracker-clients') { if (typeof loadTrackerClients === 'function') loadTrackerClients(); else setTimeout(function(){ if (typeof loadTrackerClients === 'function') loadTrackerClients(); }, 500); }
             if (tab==='pending') loadPendingData();
             if (tab==='enginecodes') loadEngineCodes();
             if (tab==='giveaccess') loadGiveAccess();
