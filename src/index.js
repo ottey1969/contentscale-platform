@@ -23100,7 +23100,7 @@ function renderPages() {
     var score = p.graaf_score;
     var kw = p.keyword || p.gsc_keyword || '';
     var checked = p.last_checked ? new Date(p.last_checked).toLocaleDateString() : 'Not yet';
-    var urlShort = p.url.replace(/^https?:\/\//, '').replace(/^www\./, '');
+    var urlShort = p.url.split('//').pop().split('www.').pop()
     var posColor = pos <= 3 ? '#4ade80' : pos <= 10 ? '#a3e635' : pos <= 20 ? '#fbbf24' : '#f87171';
 
     return '<div class="page-card' + (cited ? ' cited' : '') + '">'
@@ -23155,7 +23155,7 @@ async function addPage() {
 
 async function importPages() {
   var raw = (document.getElementById('importUrls').value||'').trim();
-  var urls = raw.split(/[\n,\s]+/).map(function(u){ return u.trim(); }).filter(function(u){ return u.startsWith('http'); });
+  varvar urls = raw.split('\n').join(',').split(',').map(function(u){
   if (!urls.length) return toast('No valid URLs found — paste one URL per line starting with http', '#f87171');
   var btn = document.querySelector('#importModal .btn.primary');
   if (btn) { btn.disabled = true; btn.textContent = 'Importing...'; }
