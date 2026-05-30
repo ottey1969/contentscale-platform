@@ -23415,7 +23415,7 @@ function evToText(ev) {
   if (ev.type === 'monitor_aio') return (ev.cited ? 'CITED: ' : 'AIO found: ') + '"' + ev.kw + '" — ' + (ev.aio_text||'').substring(0,80);
   if (ev.type === 'monitor_no_aio') return 'No AI Overview: "' + ev.kw + '"';
   if (ev.type === 'monitor_position') return '#' + ev.position + ' in Google: "' + ev.kw + '"';
-  if (ev.type === 'news') return 'NEWS: ' + ev.headline;
+  if (ev.type === 'news') { var hn = ev.headline || ''; return 'NEWS: ' + (hn.length > 80 ? hn.substring(0,77) + '...' : hn); }
   if (ev.type === 'connected') return 'Live feed connected';
   return ev.msg || '';
 }
@@ -24148,7 +24148,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     if (ev.type === 'monitor_aio') return (ev.cited ? 'CITED ' : 'AIO found: ') + '"' + ev.kw + '" — ' + (ev.aio_text||'').substring(0,60);
                     if (ev.type === 'monitor_no_aio') return 'No AIO: "' + ev.kw + '"';
                     if (ev.type === 'monitor_position') return '#' + ev.position + ' in Google: "' + ev.kw + '" (' + ev.domain + ')';
-                    if (ev.type === 'news') return 'NEWS: ' + ev.headline;
+                    if (ev.type === 'news') { var h = ev.headline || ''; return 'NEWS: ' + (h.length > 80 ? h.substring(0,77) + '...' : h); }
                     if (ev.type === 'connected') return 'Live feed connected';
                     return ev.msg || '';
                 }
@@ -24477,8 +24477,10 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
 
                     // Model badge
                     if (data.model_used) {
-                        var isGrounded = data.model_used.indexOf('two-step') > -1 || data.model_used.indexOf('grounding') > -1;
-                        html += div('font-size:10px;font-weight:700;padding:4px 10px;border-radius:4px;background:' + (isGrounded?'#052e16':'#1a0a2e') + ';color:' + (isGrounded?'#4ade80':'#a78bfa') + ';display:inline-block;margin-bottom:14px;', (isGrounded ? '🔍 Gemini searched Google live' : '⚡ ' + data.model_used));
+                        var modelLabel = data.model_used || '';
+                        var isGrounded = modelLabel.indexOf('two-step') > -1 || modelLabel.indexOf('grounding') > -1;
+                        var isClaude = modelLabel.indexOf('claude') > -1;
+                        html += div('font-size:10px;font-weight:700;padding:4px 10px;border-radius:4px;background:' + (isGrounded?'#052e16':isClaude?'#2d0a0a':'#1a0a2e') + ';color:' + (isGrounded?'#4ade80':isClaude?'#f87171':'#a78bfa') + ';display:inline-block;margin-bottom:14px;', (isGrounded ? '🔍 Gemini searched Google live' : isClaude ? '⚠️ Claude fallback — check Gemini quota' : '⚡ ' + modelLabel));
                     }
 
                     // No AIO warning
