@@ -23577,97 +23577,221 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 </div>
 
                 <!-- ── LIVE ACTIVITY WALL ─────────────────────────────────── -->
-                <div id="csLiveWall" style="background:#0d1117;border:1px solid #1f2937;border-radius:10px;padding:12px 16px;margin-bottom:16px;min-height:60px;position:relative;">
-                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+                <div id="csLiveWall" style="background:#0d1117;border:1px solid #1f2937;border-radius:10px;padding:12px 16px;margin-bottom:16px;position:relative;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
                         <div style="display:flex;align-items:center;gap:8px;">
-                            <span id="csLiveDot" style="width:8px;height:8px;border-radius:50%;background:#374151;display:inline-block;"></span>
+                            <span id="csLiveDot" style="width:8px;height:8px;border-radius:50%;background:#374151;display:inline-block;flex-shrink:0;"></span>
                             <span style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:#6b7280;">Live System Activity</span>
+                            <span id="csLiveStatus" style="font-size:10px;color:#4b5563;">Connecting...</span>
                         </div>
-                        <span id="csLiveStatus" style="font-size:10px;color:#4b5563;">Connecting...</span>
+                        <div style="display:flex;gap:6px;">
+                            <button onclick="document.getElementById('csLiveExpanded').style.display=document.getElementById('csLiveExpanded').style.display==='none'?'block':'none'" style="font-size:10px;padding:2px 8px;border:1px solid #374151;border-radius:4px;background:none;color:#6b7280;cursor:pointer;">Log</button>
+                            <button onclick="toggleLiveOverlay()" id="csOverlayBtn" style="font-size:10px;padding:2px 8px;border:1px solid #7c3aed;border-radius:4px;background:none;color:#a78bfa;cursor:pointer;">⛶ Overlay</button>
+                        </div>
                     </div>
-                    <div id="csLiveScroll" style="overflow:hidden;height:32px;position:relative;">
-                        <div id="csLiveTicker" style="position:absolute;white-space:nowrap;font-size:13px;font-family:monospace;color:#9ca3af;transition:all .4s ease;"></div>
+                    <!-- Main ticker line -->
+                    <div style="background:#111827;border-radius:6px;padding:8px 12px;font-family:monospace;font-size:12px;min-height:32px;display:flex;align-items:center;">
+                        <span id="csLiveTicker" style="color:#4b5563;">Waiting for activity — checks run automatically every 15 minutes...</span>
                     </div>
-                    <div id="csLiveLog" style="margin-top:10px;display:none;max-height:200px;overflow-y:auto;"></div>
-                    <button onclick="document.getElementById('csLiveLog').style.display=document.getElementById('csLiveLog').style.display==='none'?'block':'none'" style="position:absolute;top:12px;right:60px;background:none;border:1px solid #374151;color:#6b7280;font-size:10px;padding:2px 8px;border-radius:4px;cursor:pointer;">Log</button>
+                    <!-- Expanded log -->
+                    <div id="csLiveExpanded" style="display:none;margin-top:8px;max-height:180px;overflow-y:auto;" id="csLiveLog"></div>
+                </div>
+
+                <!-- ── OVERLAY MODE ── -->
+                <div id="csLiveOverlay" style="display:none;position:fixed;inset:0;background:rgba(5,5,10,.92);z-index:9990;backdrop-filter:blur(4px);">
+                    <div style="position:absolute;top:16px;right:16px;">
+                        <button onclick="toggleLiveOverlay()" style="background:#1f2937;border:1px solid #374151;color:#9ca3af;padding:8px 16px;border-radius:6px;cursor:pointer;font-size:12px;">✕ Close overlay</button>
+                    </div>
+                    <!-- Header -->
+                    <div style="text-align:center;padding-top:40px;margin-bottom:24px;">
+                        <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.2em;color:#7c3aed;margin-bottom:8px;">ContentScale</div>
+                        <div style="display:inline-flex;align-items:center;gap:8px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:99px;padding:6px 16px;">
+                            <span id="csOvDot" style="width:8px;height:8px;border-radius:50%;background:#ef4444;animation:cs-pulse 1.2s ease-in-out infinite;"></span>
+                            <span style="font-size:11px;font-weight:800;color:#ef4444;letter-spacing:.12em;">LIVE</span>
+                        </div>
+                    </div>
+                    <!-- Big ticker -->
+                    <div style="text-align:center;padding:0 40px;margin-bottom:32px;min-height:60px;">
+                        <div id="csOvTicker" style="font-size:1.3rem;font-family:monospace;color:#a78bfa;transition:all .3s;">Waiting for activity...</div>
+                    </div>
+                    <!-- Alert area -->
+                    <div id="csOvAlert" style="display:none;margin:0 auto 32px;max-width:560px;border-radius:16px;padding:32px 40px;text-align:center;"></div>
+                    <!-- Stats row -->
+                    <div style="display:flex;justify-content:center;gap:40px;margin-bottom:32px;">
+                        <div style="text-align:center;"><div id="csOvChecked" style="font-size:2rem;font-weight:900;color:#a78bfa;">0</div><div style="font-size:10px;color:#4b5563;text-transform:uppercase;letter-spacing:.08em;margin-top:4px;">Checked today</div></div>
+                        <div style="text-align:center;"><div id="csOvCited" style="font-size:2rem;font-weight:900;color:#4ade80;">0</div><div style="font-size:10px;color:#4b5563;text-transform:uppercase;letter-spacing:.08em;margin-top:4px;">AI Citations</div></div>
+                        <div style="text-align:center;"><div id="csOvPositions" style="font-size:2rem;font-weight:900;color:#fbbf24;">0</div><div style="font-size:10px;color:#4b5563;text-transform:uppercase;letter-spacing:.08em;margin-top:4px;">Positions up</div></div>
+                    </div>
+                    <!-- Live log in overlay -->
+                    <div style="max-width:700px;margin:0 auto;padding:0 24px;">
+                        <div id="csOvLog" style="max-height:220px;overflow-y:auto;"></div>
+                    </div>
                 </div>
 
                 <script>
-                (function() {
-                    var es = null;
-                    var _wallEvents = [];
-                    var _tickerIdx = 0;
-                    var _tickerTimer = null;
+                var _wallEs = null;
+                var _wallEvents = [];
+                var _overlayStats = { checked:0, cited:0, positions:0 };
+                var _overlayVisible = false;
+                var _alertHideTimer = null;
 
-                    function connectSSE() {
-                        var token = localStorage.getItem('admin_id') || '';
-                        if (!token) return;
-                        es = new EventSource('/api/tracker/live-feed?token=' + token);
-                        var dot = document.getElementById('csLiveDot');
-                        var status = document.getElementById('csLiveStatus');
+                function toggleLiveOverlay() {
+                    _overlayVisible = !_overlayVisible;
+                    document.getElementById('csLiveOverlay').style.display = _overlayVisible ? 'block' : 'none';
+                    document.getElementById('csOverlayBtn').textContent = _overlayVisible ? '⛶ Close' : '⛶ Overlay';
+                    if (_overlayVisible) _renderOverlayLog();
+                }
 
-                        es.onopen = function() {
-                            if (dot) { dot.style.background = '#4ade80'; dot.style.animation = 'cs-pulse 1.5s ease-in-out infinite'; }
-                            if (status) status.textContent = 'Connected';
-                        };
+                function connectSSE() {
+                    var token = localStorage.getItem('admin_id') || '';
+                    if (!token) { setTimeout(connectSSE, 2000); return; }
+                    if (_wallEs) try { _wallEs.close(); } catch(e) {}
+                    _wallEs = new EventSource('/api/tracker/live-feed?token=' + encodeURIComponent(token));
+                    var dot = document.getElementById('csLiveDot');
+                    var ovDot = document.getElementById('csOvDot');
+                    var status = document.getElementById('csLiveStatus');
+                    _wallEs.onopen = function() {
+                        if (dot) { dot.style.background = '#4ade80'; dot.style.animation = 'cs-pulse 1.5s ease-in-out infinite'; }
+                        if (status) status.textContent = '● Live';
+                        if (status) status.style.color = '#4ade80';
+                    };
+                    _wallEs.onmessage = function(e) {
+                        try { _handleWallEvent(JSON.parse(e.data)); } catch(err) {}
+                    };
+                    _wallEs.onerror = function() {
+                        if (dot) { dot.style.background = '#f87171'; dot.style.animation = 'none'; }
+                        if (status) { status.textContent = 'Reconnecting...'; status.style.color = '#f87171'; }
+                        setTimeout(connectSSE, 5000);
+                    };
+                }
 
-                        es.onmessage = function(e) {
-                            try {
-                                var ev = JSON.parse(e.data);
-                                _wallEvents.unshift(ev);
-                                if (_wallEvents.length > 50) _wallEvents.pop();
-                                _renderLog();
-                                _updateTicker(ev);
-                            } catch(err) {}
-                        };
-
-                        es.onerror = function() {
-                            if (dot) dot.style.background = '#f87171';
-                            if (status) status.textContent = 'Reconnecting...';
-                            setTimeout(connectSSE, 5000);
-                        };
+                function _handleWallEvent(ev) {
+                    _wallEvents.unshift(ev);
+                    if (_wallEvents.length > 50) _wallEvents.pop();
+                    _updateTicker(ev);
+                    _renderLog();
+                    if (_overlayVisible) {
+                        _renderOverlayTicker(ev);
+                        _renderOverlayLog();
                     }
-
-                    function _evToText(ev) {
-                        if (ev.type === 'check_start') return '▶ Checking ' + ev.domain + (ev.keyword ? ' [' + ev.keyword + ']' : '');
-                        if (ev.type === 'check_done') return '🏁 Done: ' + ev.domain;
-                        if (ev.type === 'step') return ev.label + (ev.detail ? ' — ' + ev.detail : '') + ' (' + ev.domain + ')';
-                        if (ev.type === 'connected') return '📡 Live feed connected';
-                        return ev.msg || JSON.stringify(ev);
+                    // Stats
+                    if (ev.type === 'check_done') { _overlayStats.checked++; _updateOverlayStats(); }
+                    if (ev.type === 'citation_gained') { _overlayStats.cited++; _updateOverlayStats(); _showOverlayAlert(ev); }
+                    if (ev.type === 'position_up') { _overlayStats.positions++; _updateOverlayStats(); _showOverlayAlert(ev); }
+                    // Also show in activity feed
+                    if (typeof _activityAdd === 'function' && (ev.type === 'citation_gained' || ev.type === 'position_up' || ev.type === 'check_done')) {
+                        _activityAdd(_evToText(ev), ev.type === 'citation_gained' ? 'done' : ev.type === 'position_up' ? 'citation' : 'info');
                     }
+                }
 
-                    function _evColor(ev) {
-                        if (ev.status === 'done' || ev.type === 'check_done') return '#4ade80';
-                        if (ev.status === 'error') return '#f87171';
-                        if (ev.status === 'running' || ev.type === 'check_start') return '#fbbf24';
-                        if (ev.type === 'connected') return '#60a5fa';
-                        return '#9ca3af';
-                    }
+                function _evToText(ev) {
+                    if (ev.type === 'check_start') return 'Checking ' + ev.domain + (ev.keyword ? ' [' + ev.keyword + ']' : '');
+                    if (ev.type === 'check_done') return 'Done: ' + ev.domain;
+                    if (ev.type === 'citation_gained') return 'NOW CITED: ' + ev.domain + (ev.keyword ? ' [' + ev.keyword + ']' : '');
+                    if (ev.type === 'position_up') return 'Position #' + ev.old_pos + ' to #' + ev.new_pos + ': ' + ev.domain;
+                    if (ev.type === 'score_up') return 'Score +' + ev.gain + ': ' + ev.domain + ' (' + ev.old_score + ' to ' + ev.new_score + ')';
+                    if (ev.type === 'step') return (ev.label||ev.name) + (ev.detail ? ' — ' + ev.detail : '') + ' (' + ev.domain + ')';
+                    if (ev.type === 'connected') return 'Live feed connected';
+                    return ev.msg || '';
+                }
 
-                    function _updateTicker(ev) {
-                        var ticker = document.getElementById('csLiveTicker');
-                        if (!ticker) return;
+                function _evColor(ev) {
+                    if (ev.type === 'citation_gained') return '#4ade80';
+                    if (ev.type === 'position_up') return '#a78bfa';
+                    if (ev.type === 'score_up') return '#fbbf24';
+                    if (ev.status === 'done' || ev.type === 'check_done') return '#4ade80';
+                    if (ev.status === 'error') return '#f87171';
+                    if (ev.status === 'running' || ev.type === 'check_start') return '#fbbf24';
+                    return '#6b7280';
+                }
+
+                function _updateTicker(ev) {
+                    var el = document.getElementById('csLiveTicker');
+                    if (!el) return;
+                    var ts = new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+                    el.style.color = _evColor(ev);
+                    el.textContent = ts + '  ' + _evToText(ev);
+                }
+
+                function _renderOverlayTicker(ev) {
+                    var el = document.getElementById('csOvTicker');
+                    if (!el) return;
+                    el.style.color = _evColor(ev);
+                    el.textContent = _evToText(ev);
+                }
+
+                function _renderLog() {
+                    var log = document.getElementById('csLiveExpanded');
+                    if (!log || log.style.display === 'none') return;
+                    log.innerHTML = _wallEvents.slice(0,15).map(function(ev) {
                         var ts = new Date(ev.ts||Date.now()).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
-                        ticker.style.color = _evColor(ev);
-                        ticker.textContent = ts + '  ' + _evToText(ev);
-                    }
+                        return '<div style="display:flex;gap:8px;padding:3px 0;border-bottom:1px solid #1f2937;">'
+                            + '<span style="font-size:9px;color:#4b5563;white-space:nowrap;margin-top:2px;">' + ts + '</span>'
+                            + '<span style="font-size:11px;color:' + _evColor(ev) + ';font-family:monospace;">' + _evToText(ev) + '</span>'
+                            + '</div>';
+                    }).join('');
+                }
 
-                    function _renderLog() {
-                        var log = document.getElementById('csLiveLog');
-                        if (!log || log.style.display === 'none') return;
-                        log.innerHTML = _wallEvents.slice(0,20).map(function(ev) {
-                            var ts = new Date(ev.ts||Date.now()).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
-                            return '<div style="display:flex;gap:8px;padding:3px 0;border-bottom:1px solid #1f2937;">'
-                                + '<span style="font-size:9px;color:#4b5563;white-space:nowrap;margin-top:2px;">' + ts + '</span>'
-                                + '<span style="font-size:11px;color:' + _evColor(ev) + ';font-family:monospace;">' + _evToText(ev) + '</span>'
-                                + '</div>';
-                        }).join('');
-                    }
+                function _renderOverlayLog() {
+                    var log = document.getElementById('csOvLog');
+                    if (!log) return;
+                    log.innerHTML = _wallEvents.slice(0,12).map(function(ev) {
+                        var ts = new Date(ev.ts||Date.now()).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+                        return '<div style="display:flex;gap:10px;padding:4px 0;border-bottom:1px solid #1f2937;">'
+                            + '<span style="font-size:10px;color:#374151;white-space:nowrap;margin-top:2px;font-family:monospace;">' + ts + '</span>'
+                            + '<span style="font-size:12px;color:' + _evColor(ev) + ';font-family:monospace;">' + _evToText(ev) + '</span>'
+                            + '</div>';
+                    }).join('');
+                }
 
-                    // Start connecting when tracker tab is active
-                    setTimeout(connectSSE, 1000);
-                })();
+                function _updateOverlayStats() {
+                    var el = function(id){ return document.getElementById(id); };
+                    if(el('csOvChecked')) el('csOvChecked').textContent = _overlayStats.checked;
+                    if(el('csOvCited')) el('csOvCited').textContent = _overlayStats.cited;
+                    if(el('csOvPositions')) el('csOvPositions').textContent = _overlayStats.positions;
+                }
+
+                function _showOverlayAlert(ev) {
+                    var alertEl = document.getElementById('csOvAlert');
+                    if (!alertEl) return;
+                    var isCitation = ev.type === 'citation_gained';
+                    alertEl.style.display = 'block';
+                    alertEl.style.background = isCitation ? 'linear-gradient(135deg,#052e16,#166534)' : 'linear-gradient(135deg,#1e1b4b,#312e81)';
+                    alertEl.style.border = '2px solid ' + (isCitation ? '#4ade80' : '#a78bfa');
+                    alertEl.innerHTML = '<div style="font-size:3rem;margin-bottom:12px;">' + (isCitation ? 'CITED' : 'POSITION UP') + '</div>'
+                        + '<div style="font-size:1.4rem;font-weight:900;color:' + (isCitation ? '#4ade80' : '#a78bfa') + ';margin-bottom:8px;">'
+                        + (isCitation ? ev.keyword || ev.domain : '#' + ev.old_pos + ' → #' + ev.new_pos) + '</div>'
+                        + '<div style="font-size:13px;color:#9ca3af;">' + ev.domain + '</div>';
+                    clearTimeout(_alertHideTimer);
+                    _alertHideTimer = setTimeout(function(){ alertEl.style.display = 'none'; }, 6000);
+                    // Confetti
+                    _launchConfetti(isCitation ? '#4ade80' : '#a78bfa');
+                }
+
+                function _launchConfetti(color) {
+                    if (!_overlayVisible) return;
+                    var colors = [color, '#ffffff', '#fbbf24', color];
+                    for (var i = 0; i < 50; i++) {
+                        (function(i) {
+                            setTimeout(function() {
+                                var el = document.createElement('div');
+                                el.style.cssText = 'position:fixed;width:8px;height:8px;border-radius:2px;pointer-events:none;z-index:9999;'
+                                    + 'left:' + (Math.random()*100) + 'vw;top:-10px;'
+                                    + 'background:' + colors[Math.floor(Math.random()*colors.length)] + ';'
+                                    + 'animation:confettiDrop ' + (1.5+Math.random()) + 's ease-in forwards;';
+                                document.body.appendChild(el);
+                                setTimeout(function(){ el.remove(); }, 3000);
+                            }, i * 40);
+                        })(i);
+                    }
+                }
+
+                setTimeout(connectSSE, 500);
                 </script>
+                <style>
+                @keyframes cs-pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.4;transform:scale(.8)} }
+                @keyframes confettiDrop { 0%{transform:translateY(0) rotate(0deg);opacity:1} 100%{transform:translateY(100vh) rotate(720deg);opacity:0} }
+                </style>
 
                 <!-- ── LIVE ACTIVITY FEED (corner) ───────────────────────── -->
                 <div id="csActivityFeed" style="display:none;position:fixed;bottom:24px;right:24px;width:340px;background:#0d1117;border:1px solid #1f2937;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,.6);z-index:9998;flex-direction:column;overflow:hidden;">
