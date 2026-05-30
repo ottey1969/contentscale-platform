@@ -820,6 +820,163 @@ function checkOttoLimit(req, res) {
 // will be fully initialised before any request arrives.
 // ── /live — Public livestream overlay page ────────────────────────────────
 // Access: /live?token=STREAM_TOKEN  (set STREAM_TOKEN in Railway env)
+// ── Self-service tracker client registration ──────────────────────────────────
+
+function generateClientToken() {
+  return require('crypto').randomBytes(24).toString('hex');
+}
+
+// POST /api/tracker-client/register — create new client tracker
+app.post('/api/tracker-client/register', async (req, res) => {
+  try {
+    const { domain, name, email, whatsapp } = req.body;
+    if (!domain) return res.status(400).json({ success: false, error: 'Domain required' });
+
+    // Clean domain
+    const cleanDomain = domain.replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0].toLowerCase().trim();
+    if (!cleanDomain || !cleanDomain.includes('.')) return res.status(400).json({ success: false, error: 'Invalid domain' });
+
+    // Check if domain already registered
+    const existing = await pool.query('SELECT id, token FROM tracker_clients WHERE domain=$1', [cleanDomain]);
+    if (existing.rows.length) {
+      // Return existing token — idempotent
+      return res.json({ success: true, token: existing.rows[0].token, domain: cleanDomain, existing: true,
+        url: process.env.APP_URL || 'https://app.contentscale.site' + '/track/' + existing.rows[0].token });
+    }
+
+    const token = generateClientToken();
+    await pool.query(
+      `INSERT INTO tracker_clients (token, domain, name, email, whatsapp, max_pages) VALUES ($1,$2,$3,$4,$5,25)`,
+      [token, cleanDomain, name||null, email||null, whatsapp||null]
+    );
+
+    const trackUrl = (process.env.APP_URL || 'https://app.contentscale.site') + '/track/' + token;
+    res.json({ success: true, token, domain: cleanDomain, url: trackUrl, existing: false });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// GET /api/tracker-client/:token — get client data + pages
+app.get('/api/tracker-client/:token', async (req, res) => {
+  try {
+    const cr = await pool.query('SELECT * FROM tracker_clients WHERE token=$1 AND status=$2', [req.params.token, 'active']);
+    if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
+    const client = cr.rows[0];
+
+    const pagesR = await pool.query(
+      `SELECT p.*, s.google_position, s.ai_google_overview_cited, s.ai_perplexity_cited, s.score as graaf_score, s.checked_at as last_checked
+       FROM tracker_pages p
+       LEFT JOIN LATERAL (
+         SELECT * FROM tracker_snapshots WHERE page_id = p.id ORDER BY checked_at DESC LIMIT 1
+       ) s ON true
+       WHERE p.tracker_client_id = $1 AND p.is_active = TRUE
+       ORDER BY p.created_at DESC LIMIT $2`,
+      [client.id, client.max_pages || 25]
+    );
+
+    res.json({ success: true, client: { domain: client.domain, name: client.name, max_pages: client.max_pages||25, created_at: client.created_at }, pages: pagesR.rows, page_count: pagesR.rows.length });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// POST /api/tracker-client/:token/pages — add URL to track
+app.post('/api/tracker-client/:token/pages', async (req, res) => {
+  try {
+    const cr = await pool.query('SELECT * FROM tracker_clients WHERE token=$1 AND status=$2', [req.params.token, 'active']);
+    if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
+    const client = cr.rows[0];
+
+    // Check page limit
+    const countR = await pool.query('SELECT COUNT(*) FROM tracker_pages WHERE tracker_client_id=$1 AND is_active=TRUE', [client.id]);
+    const count = parseInt(countR.rows[0].count);
+    const maxPages = client.max_pages || 25;
+    if (count >= maxPages) return res.status(400).json({ success: false, error: `Maximum of ${maxPages} pages reached. Contact Ottmar to increase your limit.` });
+
+    const { url, keyword } = req.body;
+    if (!url) return res.status(400).json({ success: false, error: 'URL required' });
+
+    // Verify URL belongs to client domain
+    const urlDomain = url.replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0].toLowerCase();
+    if (!urlDomain.includes(client.domain) && !client.domain.includes(urlDomain)) {
+      return res.status(400).json({ success: false, error: `URL must belong to domain: ${client.domain}` });
+    }
+
+    // Check duplicate
+    const dupR = await pool.query('SELECT id FROM tracker_pages WHERE tracker_client_id=$1 AND url=$2', [client.id, url]);
+    if (dupR.rows.length) return res.status(400).json({ success: false, error: 'URL already tracked' });
+
+    const pr = await pool.query(
+      `INSERT INTO tracker_pages (tracker_client_id, url, keyword, check_frequency, next_check_at, is_active)
+       VALUES ($1,$2,$3,'weekly',NOW(),TRUE) RETURNING id`,
+      [client.id, url, keyword||null]
+    );
+
+    res.json({ success: true, page_id: pr.rows[0].id, remaining: maxPages - count - 1 });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// DELETE /api/tracker-client/:token/pages/:pageId
+app.delete('/api/tracker-client/:token/pages/:pageId', async (req, res) => {
+  try {
+    const cr = await pool.query('SELECT id FROM tracker_clients WHERE token=$1', [req.params.token]);
+    if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
+    await pool.query('UPDATE tracker_pages SET is_active=FALSE WHERE id=$1 AND tracker_client_id=$2', [req.params.pageId, cr.rows[0].id]);
+    res.json({ success: true });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// POST /api/tracker-client/:token/check/:pageId — trigger manual check
+app.post('/api/tracker-client/:token/check/:pageId', async (req, res) => {
+  try {
+    const cr = await pool.query('SELECT id FROM tracker_clients WHERE token=$1 AND status=$2', [req.params.token, 'active']);
+    if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
+    const own = await pool.query('SELECT id FROM tracker_pages WHERE id=$1 AND tracker_client_id=$2', [req.params.pageId, cr.rows[0].id]);
+    if (!own.rows.length) return res.status(403).json({ success: false, error: 'Not your page' });
+    runTrackerCheck(parseInt(req.params.pageId)).catch(e => console.warn('[client-check]', e.message));
+    res.json({ success: true, message: 'Check started' });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// Admin: list all clients
+app.get('/api/admin/tracker-clients', verifyAdmin, async (req, res) => {
+  try {
+    const r = await pool.query(`
+      SELECT c.*, COUNT(p.id) as page_count
+      FROM tracker_clients c
+      LEFT JOIN tracker_pages p ON p.tracker_client_id = c.id AND p.is_active = TRUE
+      GROUP BY c.id ORDER BY c.created_at DESC`);
+    res.json({ success: true, clients: r.rows });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// Admin: update client max_pages
+app.patch('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
+  try {
+    const { max_pages, status } = req.body;
+    const updates = []; const vals = []; let i = 1;
+    if (max_pages !== undefined) { updates.push(`max_pages=$${i++}`); vals.push(max_pages); }
+    if (status !== undefined) { updates.push(`status=$${i++}`); vals.push(status); }
+    if (!updates.length) return res.status(400).json({ success: false, error: 'Nothing to update' });
+    vals.push(req.params.id);
+    await pool.query(`UPDATE tracker_clients SET ${updates.join(',')} WHERE id=$${i}`, vals);
+    res.json({ success: true });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// GET /track/:token — client tracker page
+app.get('/track/:token', async (req, res) => {
+  try {
+    const cr = await pool.query('SELECT * FROM tracker_clients WHERE token=$1 AND status=$2', [req.params.token, 'active']);
+    if (!cr.rows.length) return res.status(404).send('<html><body style="background:#0a0a0f;color:#f87171;font-family:monospace;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;text-align:center;"><div><div style="font-size:2rem;margin-bottom:12px;">🔒</div><div>Invalid or expired tracker link</div><div style="font-size:12px;color:#4b5563;margin-top:8px;">Contact ContentScale to get your tracking link</div></div></body></html>');
+    const client = cr.rows[0];
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.send(_CLIENT_TRACKER_HTML
+      .replace(/__TOKEN__/g, req.params.token)
+      .replace(/__DOMAIN__/g, client.domain)
+      .replace(/__MAX_PAGES__/g, String(client.max_pages || 25))
+      .replace(/__CLIENT_NAME__/g, client.name || client.domain)
+    );
+  } catch(e) { res.status(500).send('Server error'); }
+});
+
 app.get('/live', (req, res) => {
   const token = req.query.token || '';
   const validToken = process.env.STREAM_TOKEN || process.env.ADMIN_PASSWORD || 'contentscale';
@@ -1153,6 +1310,27 @@ const title = (html.match(/<title>([^<]+)<\/title>/) || [])[1]?.replace(/ — Co
    await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS import_batch VARCHAR(50)`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS html_source VARCHAR(20) DEFAULT 'live'`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS html_pasted_at TIMESTAMPTZ`).catch(()=>{});
+
+  // ── Tracker clients — self-service users (WhatsApp flow) ─────────────────
+  await client.query(`CREATE TABLE IF NOT EXISTS tracker_clients (
+    id SERIAL PRIMARY KEY,
+    token VARCHAR(64) UNIQUE NOT NULL,
+    domain TEXT NOT NULL,
+    whatsapp VARCHAR(30),
+    email VARCHAR(200),
+    name VARCHAR(200),
+    gsc_connected BOOLEAN DEFAULT FALSE,
+    gsc_property TEXT,
+    status VARCHAR(20) DEFAULT 'active',
+    last_notified_at TIMESTAMPTZ,
+    notify_frequency INTEGER DEFAULT 7,
+    max_pages INTEGER DEFAULT 25,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+  )`).catch(()=>{});
+  await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS max_pages INTEGER DEFAULT 25`).catch(()=>{});
+  await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS tracker_client_id INTEGER REFERENCES tracker_clients(id) ON DELETE SET NULL`).catch(()=>{});
+  await client.query(`CREATE INDEX IF NOT EXISTS tracker_pages_client_idx ON tracker_pages(tracker_client_id) WHERE tracker_client_id IS NOT NULL`).catch(()=>{});
 
    await client.query(`CREATE TABLE IF NOT EXISTS tracker_snapshots (
      id SERIAL PRIMARY KEY,
@@ -22705,6 +22883,293 @@ if(domains.length>0){
 // ADMIN DASHBOARD (Unified Interface)
 // ============================================
 
+
+// ── Client Tracker HTML ───────────────────────────────────────────────────────
+const _CLIENT_TRACKER_HTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ContentScale Tracker — __DOMAIN__</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:#0a0a0f;color:#f1f5f9;font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;}
+.header{background:#111827;border-bottom:1px solid #1f2937;padding:14px 24px;display:flex;align-items:center;justify-content:space-between;}
+.logo{font-size:1rem;font-weight:900;color:#a78bfa;letter-spacing:-.02em;}
+.domain-badge{background:#1f2937;border:1px solid #374151;border-radius:6px;padding:4px 12px;font-size:12px;color:#9ca3af;font-family:monospace;}
+.container{max-width:1100px;margin:0 auto;padding:24px 16px;}
+.stat-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:20px;}
+.stat{background:#111827;border:1px solid #1f2937;border-radius:8px;padding:14px;text-align:center;}
+.stat .val{font-size:1.5rem;font-weight:900;color:#a78bfa;}
+.stat .lbl{font-size:10px;color:#4b5563;text-transform:uppercase;letter-spacing:.06em;margin-top:4px;}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid #374151;background:none;color:#9ca3af;transition:all .2s;}
+.btn:hover{border-color:#7c3aed;color:#a78bfa;}
+.btn.primary{background:#7c3aed;border-color:#7c3aed;color:#fff;}
+.btn.primary:hover{background:#6d28d9;}
+.btn.danger{border-color:#7f1d1d;color:#f87171;}
+.input{width:100%;background:#111827;border:1px solid #374151;border-radius:6px;padding:8px 12px;color:#f1f5f9;font-size:13px;outline:none;}
+.input:focus{border-color:#7c3aed;}
+.page-card{background:#111827;border:1px solid #1f2937;border-left:3px solid #374151;border-radius:8px;padding:14px 16px;margin-bottom:10px;}
+.page-card.cited{border-left-color:#4ade80;}
+.page-card.aio{border-left-color:#38bdf8;}
+.badge{display:inline-block;font-size:10px;font-weight:700;padding:2px 8px;border-radius:3px;margin-right:4px;}
+.badge.green{background:#052e16;color:#4ade80;}
+.badge.blue{background:#1e3a5f;color:#38bdf8;}
+.badge.purple{background:#1e1b4b;color:#a78bfa;}
+.badge.grey{background:#1f2937;color:#6b7280;}
+.badge.red{background:#2d0a0a;color:#f87171;}
+.badge.yellow{background:#2d1f00;color:#fbbf24;}
+.section-title{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:#6b7280;margin:20px 0 10px;}
+.empty{text-align:center;padding:60px 20px;color:#4b5563;}
+.empty-icon{font-size:2.5rem;margin-bottom:12px;}
+.modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:999;align-items:center;justify-content:center;}
+.modal.show{display:flex;}
+.modal-box{background:#111827;border:1px solid #374151;border-radius:12px;padding:24px;width:min(480px,95vw);}
+.toast{position:fixed;bottom:24px;right:24px;background:#111827;border:1px solid #374151;border-radius:8px;padding:12px 20px;font-size:13px;z-index:9999;display:none;animation:slideUp .3s ease;}
+@keyframes slideUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">ContentScale <span style="color:#374151;font-weight:400;">Tracker</span></div>
+  <div style="display:flex;align-items:center;gap:10px;">
+    <div class="domain-badge">__DOMAIN__</div>
+    <a href="https://contentscale.site" target="_blank" style="font-size:11px;color:#4b5563;text-decoration:none;">About ContentScale →</a>
+  </div>
+</div>
+
+<div class="container">
+  <!-- Stats -->
+  <div class="stat-row" id="statsRow">
+    <div class="stat"><div class="val" id="statTotal">—</div><div class="lbl">Tracked pages</div></div>
+    <div class="stat"><div class="val" id="statCitedG" style="color:#38bdf8;">—</div><div class="lbl">Google AIO cited</div></div>
+    <div class="stat"><div class="val" id="statCitedP" style="color:#a78bfa;">—</div><div class="lbl">Perplexity cited</div></div>
+    <div class="stat"><div class="val" id="statAvgScore" style="color:#fbbf24;">—</div><div class="lbl">Avg GRAAF score</div></div>
+    <div class="stat"><div class="val" id="statRemaining" style="color:#4ade80;">—</div><div class="lbl">Slots remaining</div></div>
+  </div>
+
+  <!-- Action bar -->
+  <div style="display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap;">
+    <button class="btn primary" onclick="showAddModal()">+ Add URL</button>
+    <button class="btn" onclick="loadPages()" title="Refresh"><i class="fas fa-sync-alt"></i> Refresh</button>
+    <button class="btn" onclick="showImportModal()" style="border-color:#38bdf8;color:#38bdf8;"><i class="fas fa-cloud-download-alt"></i> Import from GSC</button>
+  </div>
+
+  <!-- How it works (first time) -->
+  <div id="howItWorks" style="display:none;background:#1a0a2e;border:1px solid #4c1d95;border-radius:10px;padding:20px;margin-bottom:20px;">
+    <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:#a78bfa;margin-bottom:12px;">How your tracker works</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;">
+      <div><div style="font-size:1.2rem;margin-bottom:6px;">📍</div><div style="font-size:12px;font-weight:700;color:#e5e7eb;margin-bottom:4px;">Track your pages</div><div style="font-size:11px;color:#6b7280;">Add your most important URLs. We check Google position, AI Overview citations, and content quality.</div></div>
+      <div><div style="font-size:1.2rem;margin-bottom:6px;">🤖</div><div style="font-size:12px;font-weight:700;color:#e5e7eb;margin-bottom:4px;">AI Citation Briefs</div><div style="font-size:11px;color:#6b7280;">See exactly why you are not cited in Google AI Overview, Perplexity, and ChatGPT — and get exact passages to add.</div></div>
+      <div><div style="font-size:1.2rem;margin-bottom:6px;">📱</div><div style="font-size:12px;font-weight:700;color:#e5e7eb;margin-bottom:4px;">WhatsApp updates</div><div style="font-size:11px;color:#6b7280;">Get notified when something changes — position drops, new citations, content opportunities.</div></div>
+    </div>
+  </div>
+
+  <!-- Pages list -->
+  <div class="section-title">Your tracked pages <span id="pageCountLabel" style="color:#374151;"></span></div>
+  <div id="pagesList"></div>
+
+  <!-- Upsell -->
+  <div style="background:#111827;border:1px solid #374151;border-radius:10px;padding:20px;margin-top:24px;text-align:center;">
+    <div style="font-size:13px;font-weight:700;color:#e5e7eb;margin-bottom:8px;">Want Ottmar to implement the Citation Briefs for you?</div>
+    <div style="font-size:12px;color:#6b7280;margin-bottom:14px;">ContentScale offers done-for-you AI citation optimization. Ottmar analyses your pages, implements the passages, and tracks the results.</div>
+    <a href="https://wa.me/34644204756?text=Hi+Ottmar,+I+want+help+with+AI+citation+optimization+for+__DOMAIN__" target="_blank" class="btn primary" style="text-decoration:none;font-size:13px;padding:10px 20px;">
+      <i class="fab fa-whatsapp"></i> Contact Ottmar on WhatsApp
+    </a>
+  </div>
+</div>
+
+<!-- Add URL modal -->
+<div class="modal" id="addModal">
+  <div class="modal-box" onclick="event.stopPropagation()">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <h3 style="font-weight:700;">Add URL to track</h3>
+      <button onclick="hideModal('addModal')" style="background:none;border:none;color:#6b7280;cursor:pointer;font-size:1.2rem;">✕</button>
+    </div>
+    <div style="margin-bottom:12px;">
+      <label style="font-size:12px;color:#9ca3af;display:block;margin-bottom:4px;">Page URL</label>
+      <input id="addUrl" type="url" class="input" placeholder="https://__DOMAIN__/your-page/">
+    </div>
+    <div style="margin-bottom:16px;">
+      <label style="font-size:12px;color:#9ca3af;display:block;margin-bottom:4px;">Target keyword <span style="color:#4b5563;">(optional — we will detect from GSC)</span></label>
+      <input id="addKeyword" type="text" class="input" placeholder="e.g. site speed optimization">
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button class="btn primary" onclick="addPage()" style="flex:1;">Add & start tracking</button>
+      <button class="btn" onclick="hideModal('addModal')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- GSC Import modal -->
+<div class="modal" id="importModal">
+  <div class="modal-box" onclick="event.stopPropagation()">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <h3 style="font-weight:700;">Import from Google Search Console</h3>
+      <button onclick="hideModal('importModal')" style="background:none;border:none;color:#6b7280;cursor:pointer;font-size:1.2rem;">✕</button>
+    </div>
+    <p style="font-size:12px;color:#6b7280;margin-bottom:16px;">Paste your top pages from GSC. Go to GSC → Performance → Pages → Export → Copy the URLs.</p>
+    <textarea id="importUrls" class="input" rows="8" placeholder="https://__DOMAIN__/page-1/&#10;https://__DOMAIN__/page-2/&#10;https://__DOMAIN__/page-3/" style="resize:vertical;font-family:monospace;font-size:11px;"></textarea>
+    <div style="display:flex;gap:8px;margin-top:12px;">
+      <button class="btn primary" onclick="importPages()" style="flex:1;">Import pages</button>
+      <button class="btn" onclick="hideModal('importModal')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+var TOKEN = '__TOKEN__';
+var DOMAIN = '__DOMAIN__';
+var MAX_PAGES = __MAX_PAGES__;
+var _pages = [];
+
+function toast(msg, color) {
+  var el = document.getElementById('toast');
+  el.textContent = msg;
+  el.style.color = color || '#4ade80';
+  el.style.display = 'block';
+  clearTimeout(el._t);
+  el._t = setTimeout(function(){ el.style.display='none'; }, 3500);
+}
+
+function showAddModal() { document.getElementById('addModal').classList.add('show'); }
+function showImportModal() { document.getElementById('importModal').classList.add('show'); }
+function hideModal(id) { document.getElementById(id).classList.remove('show'); }
+
+async function api(path, method, body) {
+  var opts = { method: method||'GET', headers: { 'Content-Type': 'application/json' } };
+  if (body) opts.body = JSON.stringify(body);
+  var r = await fetch('/api/tracker-client/' + TOKEN + path, opts);
+  return r.json();
+}
+
+async function loadPages() {
+  var data = await api('').catch(function(){ return null; });
+  if (!data || !data.success) { document.getElementById('pagesList').innerHTML = '<div class="empty"><div class="empty-icon">⚠️</div><div>Could not load pages</div></div>'; return; }
+  _pages = data.pages || [];
+  renderStats(data);
+  renderPages();
+}
+
+function renderStats(data) {
+  var pages = data.pages || [];
+  var citedG = pages.filter(function(p){ return p.ai_google_overview_cited; }).length;
+  var citedP = pages.filter(function(p){ return p.ai_perplexity_cited; }).length;
+  var scores = pages.filter(function(p){ return p.graaf_score; }).map(function(p){ return p.graaf_score; });
+  var avgScore = scores.length ? Math.round(scores.reduce(function(a,b){ return a+b; },0)/scores.length) : 0;
+  document.getElementById('statTotal').textContent = pages.length;
+  document.getElementById('statCitedG').textContent = citedG;
+  document.getElementById('statCitedP').textContent = citedP;
+  document.getElementById('statAvgScore').textContent = avgScore ? avgScore+'/100' : '—';
+  document.getElementById('statRemaining').textContent = MAX_PAGES - pages.length;
+  document.getElementById('pageCountLabel').textContent = '(' + pages.length + ' of ' + MAX_PAGES + ')';
+  if (!pages.length) document.getElementById('howItWorks').style.display = 'block';
+}
+
+function renderPages() {
+  var el = document.getElementById('pagesList');
+  if (!_pages.length) {
+    el.innerHTML = '<div class="empty"><div class="empty-icon">📡</div><div style="font-weight:600;color:#9ca3af;margin-bottom:6px;">No pages tracked yet</div><div style="font-size:12px;">Add your first URL above to start tracking Google position and AI citations.</div></div>';
+    return;
+  }
+  el.innerHTML = _pages.map(function(p) {
+    var cited = p.ai_google_overview_cited;
+    var pos = p.google_position;
+    var score = p.graaf_score;
+    var kw = p.keyword || p.gsc_keyword || '';
+    var checked = p.last_checked ? new Date(p.last_checked).toLocaleDateString() : 'Not yet';
+    var urlShort = p.url.replace(/^https?:\/\//, '').replace(/^www\./, '');
+    var posColor = pos <= 3 ? '#4ade80' : pos <= 10 ? '#a3e635' : pos <= 20 ? '#fbbf24' : '#f87171';
+
+    return '<div class="page-card' + (cited ? ' cited' : '') + '">'
+      + '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;">'
+      + '<div style="flex:1;min-width:0;">'
+      + '<div style="font-size:13px;color:#e5e7eb;font-family:monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:6px;">' + urlShort + '</div>'
+      + '<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:6px;">'
+      + (pos ? '<span class="badge" style="color:'+posColor+';background:#0d1117;">#'+pos+'</span>' : '<span class="badge grey">Not ranked</span>')
+      + (cited ? '<span class="badge green">✅ Google AIO</span>' : '<span class="badge grey">No AIO</span>')
+      + (p.ai_perplexity_cited ? '<span class="badge purple">✅ Perplexity</span>' : '')
+      + (score ? '<span class="badge yellow">'+score+'/100</span>' : '')
+      + (kw ? '<span style="font-size:10px;color:#4b5563;padding:2px 6px;">'+kw+'</span>' : '')
+      + '</div>'
+      + '<div style="font-size:10px;color:#374151;">Last checked: ' + checked + '</div>'
+      + '</div>'
+      + '<div style="display:flex;gap:6px;flex-shrink:0;">'
+      + '<button onclick="checkPage('+p.id+')" class="btn" style="font-size:11px;padding:5px 10px;" title="Run check now"><i class="fas fa-sync-alt"></i></button>'
+      + '<button onclick="deletePage('+p.id+')" class="btn danger" style="font-size:11px;padding:5px 10px;" title="Remove">✕</button>'
+      + '</div>'
+      + '</div>'
+      + (p.recommendations ? '<div style="margin-top:10px;font-size:11px;color:#6b7280;border-top:1px solid #1f2937;padding-top:8px;">' + renderRecs(p) + '</div>' : '')
+      + '</div>';
+  }).join('');
+}
+
+function renderRecs(p) {
+  try {
+    var recs = typeof p.recommendations === 'string' ? JSON.parse(p.recommendations) : p.recommendations;
+    if (!Array.isArray(recs) || !recs.length) return '';
+    return recs.slice(0,2).map(function(r) {
+      return '<div style="margin-bottom:4px;"><span style="font-size:9px;font-weight:700;padding:1px 5px;border-radius:2px;background:#2d1f00;color:#fbbf24;margin-right:4px;">' + (r.priority||'').toUpperCase() + '</span>' + (r.title||'') + '</div>';
+    }).join('');
+  } catch(e) { return ''; }
+}
+
+async function addPage() {
+  var url = document.getElementById('addUrl').value.trim();
+  var keyword = document.getElementById('addKeyword').value.trim();
+  if (!url) return toast('Enter a URL first', '#f87171');
+  var data = await api('/pages', 'POST', { url: url, keyword: keyword||undefined });
+  if (!data.success) return toast(data.error || 'Failed', '#f87171');
+  toast('Page added! Running first check...');
+  hideModal('addModal');
+  document.getElementById('addUrl').value = '';
+  document.getElementById('addKeyword').value = '';
+  loadPages();
+  // Trigger first check
+  if (data.page_id) api('/check/' + data.page_id, 'POST').catch(function(){});
+}
+
+async function importPages() {
+  var raw = document.getElementById('importUrls').value.trim();
+  var urls = raw.split(/[\n,]+/).map(function(u){ return u.trim(); }).filter(function(u){ return u.startsWith('http'); });
+  if (!urls.length) return toast('No valid URLs found', '#f87171');
+  var added = 0; var failed = 0;
+  for (var i = 0; i < Math.min(urls.length, MAX_PAGES); i++) {
+    var data = await api('/pages', 'POST', { url: urls[i] }).catch(function(){ return { success: false }; });
+    if (data.success) added++;
+    else failed++;
+  }
+  toast('Imported ' + added + ' pages' + (failed ? ', ' + failed + ' failed' : ''));
+  hideModal('importModal');
+  loadPages();
+}
+
+async function checkPage(pageId) {
+  toast('Check started...');
+  var data = await api('/check/' + pageId, 'POST').catch(function(){ return { success: false }; });
+  if (!data.success) return toast('Check failed', '#f87171');
+  setTimeout(loadPages, 8000);
+}
+
+async function deletePage(pageId) {
+  if (!confirm('Remove this page from tracking?')) return;
+  var data = await api('/pages/' + pageId, 'DELETE').catch(function(){ return { success: false }; });
+  if (!data.success) return toast('Failed', '#f87171');
+  toast('Page removed');
+  loadPages();
+}
+
+loadPages();
+setInterval(loadPages, 120000); // auto-refresh every 2 min
+</script>
+</body>
+</html>`;
+
 // ── Live Overlay HTML ─────────────────────────────────────────────────────
 const _LIVE_OVERLAY_HTML = `<!DOCTYPE html>
 <html lang="en">
@@ -23477,7 +23942,18 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 </script>
 
                 <!-- ── LIVE ACTIVITY WALL ─────────────────────────────────── -->
-                <div id="csLiveWall" style="background:#0d1117;border:1px solid #1f2937;border-radius:10px;padding:12px 16px;margin-bottom:16px;position:relative;">
+                <div id="csLiveWall" style="background:#0d1117;border:2px solid #1f2937;border-radius:10px;padding:12px 16px;margin-bottom:16px;position:relative;animation:csWallIdle 3s ease-in-out infinite;">
+                <style>
+                @keyframes csWallIdle {
+                    0%,100% { border-color:#1f2937;box-shadow:none; }
+                    50% { border-color:#4c1d95;box-shadow:0 0 12px rgba(124,58,237,.25); }
+                }
+                @keyframes csWallActive {
+                    0%,100% { border-color:#7c3aed;box-shadow:0 0 20px rgba(124,58,237,.4); }
+                    50% { border-color:#a78bfa;box-shadow:0 0 30px rgba(167,139,250,.5); }
+                }
+                #csLiveWall.active { animation:csWallActive 1s ease-in-out infinite !important; }
+                </style>
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
                         <div style="display:flex;align-items:center;gap:8px;">
                             <span id="csLiveDot" style="width:8px;height:8px;border-radius:50%;background:#374151;display:inline-block;flex-shrink:0;"></span>
@@ -23690,6 +24166,13 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     var ts = new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
                     el.style.color = _evColor(ev);
                     el.textContent = ts + '  ' + _evToText(ev);
+                    // Flash wall active
+                    var wall = document.getElementById('csLiveWall');
+                    if (wall) {
+                        wall.classList.add('active');
+                        clearTimeout(wall._activeTimer);
+                        wall._activeTimer = setTimeout(function(){ wall.classList.remove('active'); }, 4000);
+                    }
                 }
 
                 function _renderOverlayTicker(ev) {
@@ -23714,7 +24197,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 function _renderOverlayLog() {
                     var log = document.getElementById('csOvLog');
                     if (!log) return;
-                    log.innerHTML = _wallEvents.slice(0,12).map(function(ev) {
+                    log.innerHTML = _wallEvents.slice(0,15).map(function(ev) {
                         var ts = new Date(ev.ts||Date.now()).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
                         return '<div style="display:flex;gap:10px;padding:4px 0;border-bottom:1px solid #1f2937;">'
                             + '<span style="font-size:10px;color:#374151;white-space:nowrap;margin-top:2px;font-family:monospace;">' + ts + '</span>'
@@ -28393,7 +28876,7 @@ async function _startAlwaysOnMonitor() {
     // Every 45s: check a keyword
     if (tick % 3 === 0) await checkNextKeyword();
     // Every 2 min: broadcast news
-    if (tick % 8 === 0) broadcastNews();
+    broadcastNews(); // every 15 seconds
     // Every 10 min: refresh keywords
     if (tick % 40 === 0) { await refreshKeywords(); await refreshNews(); }
   }, 15000); // every 15 seconds
