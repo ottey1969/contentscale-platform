@@ -1064,13 +1064,15 @@ app.get('/api/live-feed', async (req, res) => {
   const token = req.query.token || '';
   const validToken = process.env.STREAM_TOKEN || process.env.ADMIN_PASSWORD || 'contentscale';
   if (token !== validToken) return res.status(401).end();
+  res.socket.setNoDelay(true);
   res.setHeader('Content-Type', 'text/event-stream');
-  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Cache-Control', 'no-cache, no-transform');
   res.setHeader('Connection', 'keep-alive');
   res.setHeader('X-Accel-Buffering', 'no');
+  res.setHeader('Transfer-Encoding', 'identity');
   res.flushHeaders();
   const recent = _liveEvents.slice(0,10).reverse();
-  for (const e of recent) res.write('data: ' + JSON.stringify(e) + '\n\n');
+  for (const e of recent) { try { res.write('data: ' + JSON.stringify(e) + '\n\n'); } catch(e){} }
   res.write('data: ' + JSON.stringify({ type: 'connected', ts: new Date().toISOString() }) + '\n\n');
   _sseClients.add(res);
   const hb = setInterval(() => {
@@ -24149,7 +24151,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 var _overlayStats = { checked:0, cited:0, positions:0 };
                 var _overlayVisible = false;
                 var _alertHideTimer = null;
-                var _sseRetryDelay = 5000;
+                var _sseRetryDelay = 10000; // start at 10s, max 120s
 
                 async function addCustomNews() {
                     var input = document.getElementById('csNewsInput');
@@ -24232,7 +24234,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                         try { _wallEs.close(); } catch(e) {}
                         _wallEs = null;
                         // Exponential backoff — max 60s
-                        _sseRetryDelay = Math.min((_sseRetryDelay || 5000) * 1.5, 60000);
+                        _sseRetryDelay = Math.min((_sseRetryDelay || 10000) * 1.5, 120000);
                         setTimeout(connectSSE, _sseRetryDelay);
                     };
                     _wallEs.onopen = function() {
@@ -27629,19 +27631,21 @@ app.get('/api/tracker/live-feed', async (req, res) => {
     _sseClients.delete(oldest);
   }
 
+  // Force HTTP/1.1 — Railway HTTP/2 breaks SSE
+  res.socket.setNoDelay(true);
   res.setHeader('Content-Type', 'text/event-stream');
-  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Cache-Control', 'no-cache, no-transform');
   res.setHeader('Connection', 'keep-alive');
   res.setHeader('X-Accel-Buffering', 'no');
+  res.setHeader('Transfer-Encoding', 'identity');
   res.flushHeaders();
 
   const recent = _liveEvents.slice(0,10).reverse();
-  for (const e of recent) res.write('data: ' + JSON.stringify(e) + '\n\n');
+  for (const e of recent) { try { res.write('data: ' + JSON.stringify(e) + '\n\n'); } catch(e){} }
   res.write('data: ' + JSON.stringify({ type: 'connected', ts: new Date().toISOString() }) + '\n\n');
 
   _sseClients.add(res);
 
-  // Heartbeat every 25s — keeps connection alive, detects dead clients
   const hb = setInterval(() => {
     try { res.write(':hb\n\n'); }
     catch(e) { clearInterval(hb); _sseClients.delete(res); }
