@@ -23069,7 +23069,7 @@ async function loadPages() {
     renderStats(data);
     renderPages();
   } catch(e) {
-    el.innerHTML = '<div class="empty"><div class="empty-icon">⚠️</div><div style="color:#ef4444;">Could not load pages: ' + e.message + '</div><div style="font-size:11px;margin-top:8px;color:#94a3b8;">Check your tracker link is correct</div></div>';
+    el.innerHTML = '<div class="empty"><div class="empty-icon">&#9888;</div><div style="color:#ef4444;">Could not load pages: ' + e.message + '</div><div style="font-size:11px;margin-top:8px;color:#94a3b8;">Check your tracker link is correct</div></div>';
   }
 }
 
@@ -23082,7 +23082,7 @@ function renderStats(data) {
   document.getElementById('statTotal').textContent = pages.length;
   document.getElementById('statCitedG').textContent = citedG;
   document.getElementById('statCitedP').textContent = citedP;
-  document.getElementById('statAvgScore').textContent = avgScore ? avgScore+'/100' : '—';
+  document.getElementById('statAvgScore').textContent = avgScore ? avgScore+'/100' : '-';
   document.getElementById('statRemaining').textContent = MAX_PAGES - pages.length;
   document.getElementById('pageCountLabel').textContent = '(' + pages.length + ' of ' + MAX_PAGES + ')';
   if (!pages.length) document.getElementById('howItWorks').style.display = 'block';
@@ -23091,7 +23091,7 @@ function renderStats(data) {
 function renderPages() {
   var el = document.getElementById('pagesList');
   if (!_pages.length) {
-    el.innerHTML = '<div class="empty"><div class="empty-icon">📡</div><div style="font-weight:600;color:#9ca3af;margin-bottom:6px;">No pages tracked yet</div><div style="font-size:12px;">Add your first URL above to start tracking Google position and AI citations.</div></div>';
+    el.innerHTML = '<div class="empty"><div class="empty-icon">&#128225;</div><div style="font-weight:600;color:#9ca3af;margin-bottom:6px;">No pages tracked yet</div><div style="font-size:12px;">Add your first URL above to start tracking Google position and AI citations.</div></div>';
     return;
   }
   el.innerHTML = _pages.map(function(p) {
@@ -23109,8 +23109,8 @@ function renderPages() {
       + '<div style="font-size:13px;color:#e5e7eb;font-family:monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:6px;">' + urlShort + '</div>'
       + '<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:6px;">'
       + (pos ? '<span class="badge" style="color:'+posColor+';background:#0d1117;">#'+pos+'</span>' : '<span class="badge grey">Not ranked</span>')
-      + (cited ? '<span class="badge green">✅ Google AIO</span>' : '<span class="badge grey">No AIO</span>')
-      + (p.ai_perplexity_cited ? '<span class="badge purple">✅ Perplexity</span>' : '')
+      + (cited ? '<span class="badge green">&#10003; Google AIO</span>' : '<span class="badge grey">No AIO</span>')
+      + (p.ai_perplexity_cited ? '<span class="badge purple">&#10003; Perplexity</span>' : '')
       + (score ? '<span class="badge yellow">'+score+'/100</span>' : '')
       + (kw ? '<span style="font-size:10px;color:#4b5563;padding:2px 6px;">'+kw+'</span>' : '')
       + '</div>'
@@ -23118,7 +23118,7 @@ function renderPages() {
       + '</div>'
       + '<div style="display:flex;gap:6px;flex-shrink:0;">'
       + '<button onclick="checkPage('+p.id+')" class="btn" style="font-size:11px;padding:5px 10px;" title="Run check now"><i class="fas fa-sync-alt"></i></button>'
-      + '<button onclick="deletePage('+p.id+')" class="btn danger" style="font-size:11px;padding:5px 10px;" title="Remove">✕</button>'
+      + '<button onclick="deletePage('+p.id+')" class="btn danger" style="font-size:11px;padding:5px 10px;" title="Remove">&#10005;</button>'
       + '</div>'
       + '</div>'
       + (p.recommendations ? '<div style="margin-top:10px;font-size:11px;color:#6b7280;border-top:1px solid #1f2937;padding-top:8px;">' + renderRecs(p) + '</div>' : '')
@@ -23155,8 +23155,8 @@ async function addPage() {
 
 async function importPages() {
   var raw = (document.getElementById('importUrls').value||'').trim();
-  var urls = raw.split('\n').join(',').split(',').map(function(u){ return u.trim(); }).filter(function(u){ return u.startsWith('http'); });
-  if (!urls.length) return toast('No valid URLs found — paste one URL per line starting with http', '#f87171');
+  var _nl = String.fromCharCode(10); var urls = raw.split(_nl).concat(raw.split(',')).map(function(u){ return u.trim(); }).filter(function(u){ return u.indexOf('http') === 0; });
+  if (!urls.length) return toast('No valid URLs found - paste one URL per line starting with http', '#f87171');
   var btn = document.querySelector('#importModal .btn.primary');
   if (btn) { btn.disabled = true; btn.textContent = 'Importing...'; }
   var added = 0; var failed = 0; var errors = [];
