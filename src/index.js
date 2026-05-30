@@ -23388,7 +23388,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                         if (g.copilot_bing) gHtml += div('display:flex;gap:8px;margin-bottom:8px;', span('font-size:10px;font-weight:700;padding:2px 7px;border-radius:3px;background:#0c2340;color:#38bdf8;white-space:nowrap;', 'Copilot/Bing') + span('font-size:12px;color:#9ca3af;', g.copilot_bing));
                         if (g.claude_brave) gHtml += div('display:flex;gap:8px;', span('font-size:10px;font-weight:700;padding:2px 7px;border-radius:3px;background:#1a0a0a;color:#f87171;white-space:nowrap;', 'Claude/Brave') + span('font-size:12px;color:#9ca3af;', g.claude_brave));
                         if (gHtml) html += div('background:#111827;border:1px solid #1f2937;border-radius:8px;padding:14px;margin-bottom:16px;',
-                            div('font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:#6b7280;margin-bottom:10px;', '🎯 WHY YOU\'RE NOT CITED — PER PLATFORM') + gHtml);
+                            div('font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:#6b7280;margin-bottom:10px;', '\uD83C\uDFAF WHY YOU ARE NOT CITED \u2014 PER PLATFORM') + gHtml);
                     }
 
                     // Passages to add
