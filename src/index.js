@@ -935,31 +935,6 @@ app.post('/api/tracker-client/:token/check/:pageId', async (req, res) => {
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
-// Admin: list all clients
-app.get('/api/admin/tracker-clients', verifyAdmin, async (req, res) => {
-  try {
-    const r = await pool.query(`
-      SELECT c.*, COUNT(p.id) as page_count
-      FROM tracker_clients c
-      LEFT JOIN tracker_pages p ON p.tracker_client_id = c.id AND p.is_active = TRUE
-      GROUP BY c.id ORDER BY c.created_at DESC`);
-    res.json({ success: true, clients: r.rows });
-  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
-});
-
-// Admin: update client max_pages
-app.patch('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
-  try {
-    const { max_pages, status } = req.body;
-    const updates = []; const vals = []; let i = 1;
-    if (max_pages !== undefined) { updates.push(`max_pages=$${i++}`); vals.push(max_pages); }
-    if (status !== undefined) { updates.push(`status=$${i++}`); vals.push(status); }
-    if (!updates.length) return res.status(400).json({ success: false, error: 'Nothing to update' });
-    vals.push(req.params.id);
-    await pool.query(`UPDATE tracker_clients SET ${updates.join(',')} WHERE id=$${i}`, vals);
-    res.json({ success: true });
-  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
-});
 
 // GET /track/:token — client tracker page
 app.get('/track/:token', async (req, res) => {
@@ -1127,6 +1102,33 @@ const title = (html.match(/<title>([^<]+)<\/title>/) || [])[1]?.replace(/ — Co
    if (!adminKey) return res.status(401).json({ success: false, error: 'Admin auth required' });
    if (!pool) return res.status(503).json({ success: false, error: 'DB unavailable' });
    try {
+
+// Admin: list all clients
+app.get('/api/admin/tracker-clients', verifyAdmin, async (req, res) => {
+  try {
+    const r = await pool.query(`
+      SELECT c.*, COUNT(p.id) as page_count
+      FROM tracker_clients c
+      LEFT JOIN tracker_pages p ON p.tracker_client_id = c.id AND p.is_active = TRUE
+      GROUP BY c.id ORDER BY c.created_at DESC`);
+    res.json({ success: true, clients: r.rows });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// Admin: update client max_pages
+app.patch('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
+  try {
+    const { max_pages, status } = req.body;
+    const updates = []; const vals = []; let i = 1;
+    if (max_pages !== undefined) { updates.push(`max_pages=$${i++}`); vals.push(max_pages); }
+    if (status !== undefined) { updates.push(`status=$${i++}`); vals.push(status); }
+    if (!updates.length) return res.status(400).json({ success: false, error: 'Nothing to update' });
+    vals.push(req.params.id);
+    await pool.query(`UPDATE tracker_clients SET ${updates.join(',')} WHERE id=$${i}`, vals);
+    res.json({ success: true });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
    let result;
    // Query 1: try with is_active (normal case)
    try {
