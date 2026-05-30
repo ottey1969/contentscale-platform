@@ -23245,31 +23245,29 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 </div>
 
                 <script>
-                // ── Citation Brief ────────────────────────────────────────────────
+                // ── Citation Brief ────────────────────────────────────────────
                 function openCitationBrief(pageId, url, keyword) {
-                    const modal = document.getElementById('trCitationModal');
-                    const title = document.getElementById('trCitationTitle');
-                    const body  = document.getElementById('trCitationBody');
-                    title.textContent = keyword + ' — ' + url.replace(/^https?:\\/\\//, '').split('/').slice(0,2).join('/');
-                    body.innerHTML = \`<div style="text-align:center;padding:60px 0;color:#6b7280;"><div style="font-size:2rem;margin-bottom:12px;animation:spin 1s linear infinite;">⚙️</div><div style="margin-top:8px;font-size:13px;">Fetching AI Overview · Scraping competitors · Generating citation brief…</div><div style="font-size:11px;color:#4b5563;margin-top:6px;">This takes 15–30 seconds</div></div>
-                    <style>@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}</style>\`;
+                    var modal = document.getElementById('trCitationModal');
+                    var title = document.getElementById('trCitationTitle');
+                    var body  = document.getElementById('trCitationBody');
+                    title.textContent = keyword + ' — ' + url.replace(/^https?:\/\//, '').split('/').slice(0,2).join('/');
+                    body.innerHTML = '<div style="text-align:center;padding:60px 0;color:#6b7280;"><div style="font-size:2rem;margin-bottom:12px;">⚙️</div><div style="margin-top:8px;font-size:13px;">Fetching AI Overview · Scraping competitors · Generating citation brief…</div><div style="font-size:11px;color:#4b5563;margin-top:6px;">This takes 15–30 seconds</div></div>';
                     modal.style.display = 'flex';
-
-                    const adminToken = localStorage.getItem('admin_id') || '';
+                    var token = localStorage.getItem('admin_id') || '';
                     fetch('/api/tracker/pages/' + pageId + '/citation-brief', {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json', 'x-admin-key': adminToken }
+                        headers: { 'Content-Type': 'application/json', 'x-admin-key': token }
                     })
-                    .then(r => r.json())
-                    .then(data => {
+                    .then(function(r) { return r.json(); })
+                    .then(function(data) {
                         if (!data.success) {
-                            body.innerHTML = \`<div style="color:#f87171;padding:20px;">\${data.error || 'Failed to generate citation brief'}</div>\`;
+                            body.innerHTML = '<div style="color:#f87171;padding:20px;">' + (data.error || 'Failed') + '</div>';
                             return;
                         }
                         renderCitationBrief(data, body);
                     })
-                    .catch(e => {
-                        body.innerHTML = \`<div style="color:#f87171;padding:20px;">Error: \${e.message}</div>\`;
+                    .catch(function(e) {
+                        body.innerHTML = '<div style="color:#f87171;padding:20px;">Error: ' + e.message + '</div>';
                     });
                 }
 
@@ -23278,191 +23276,167 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 }
 
                 function copyAllPassages(btn) {
-                    const text = window._citationPassages || '';
+                    var text = window._citationPassages || '';
                     if (!text) return;
                     navigator.clipboard.writeText(text).then(function() {
                         btn.textContent = '✅ Copied!';
-                        setTimeout(function() { btn.textContent = '📋 Copy All Passages to Clipboard'; }, 2000);
+                        setTimeout(function() { btn.textContent = '📋 Copy All Passages'; }, 2000);
                     }).catch(function() { btn.textContent = 'Copy failed'; });
                 }
 
+                function div(style, content) { return '<div style="' + style + '">' + content + '</div>'; }
+                function span(style, content) { return '<span style="' + style + '">' + content + '</span>'; }
+
                 function renderCitationBrief(data, container) {
-                    const brief = data.brief || {};
-                    const aio = data.ai_overview || {};
-                    const competitors = data.competitors || [];
-                    const aioStatus = brief._aio_status || {};
-                    const freshness = brief._freshness || {};
-                    const introWeight = brief._intro_weight || {};
-                    const groundingSources = brief._grounding_sources || [];
+                    var brief = data.brief || {};
+                    var aio = data.ai_overview || {};
+                    var aioStatus = brief._aio_status || {};
+                    var freshness = brief._freshness || {};
+                    var introWeight = brief._intro_weight || {};
+                    var groundingSources = brief._grounding_sources || [];
+                    var aioFound = aio.found;
+                    var aioCited = aio.cited;
+                    var html = '';
 
-                    let html = '';
-
-                    // ── Model used banner ─────────────────────────────────────────
+                    // Model badge
                     if (data.model_used) {
-                        const isGrounded = data.model_used.includes('two-step') || data.model_used.includes('grounding');
-                        html += \`<div style="font-size:10px;font-weight:700;padding:4px 10px;border-radius:4px;background:\${isGrounded?'#052e16':'#1a0a2e'};color:\${isGrounded?'#4ade80':'#a78bfa'};display:inline-block;margin-bottom:14px;">\${isGrounded?'🔍 Gemini searched Google live (Search Grounding)':'⚡ '+data.model_used}</div>\`;
+                        var isGrounded = data.model_used.indexOf('two-step') > -1 || data.model_used.indexOf('grounding') > -1;
+                        html += div('font-size:10px;font-weight:700;padding:4px 10px;border-radius:4px;background:' + (isGrounded?'#052e16':'#1a0a2e') + ';color:' + (isGrounded?'#4ade80':'#a78bfa') + ';display:inline-block;margin-bottom:14px;', (isGrounded ? '🔍 Gemini searched Google live' : '⚡ ' + data.model_used));
                     }
 
-                    // ── AI Overview Status ────────────────────────────────────────
-                    const aioFound = aio.found;
-                    const aioCited = aio.cited;
-
-                    // Show clear status for no AIO
+                    // No AIO warning
                     if (!aioFound) {
-                        html += \`<div style="background:#1c1009;border:1px solid #78350f;border-radius:8px;padding:14px 16px;margin-bottom:16px;">
-                            <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:#f59e0b;margin-bottom:6px;">⚠️ NO AI OVERVIEW DETECTED AT THIS MOMENT</div>
-                            <div style="font-size:12px;color:#d97706;line-height:1.6;">\${aioStatus.note||'AI Overviews appear on ~15-48% of queries and change ~12x per month. This is normal.'}</div>
-                            <div style="font-size:11px;color:#92400e;margin-top:6px;">\${aioStatus.action||'The brief below is based on competitor analysis — implement it to be ready when the AIO appears.'}</div>
-                        </div>\`;
+                        html += div('background:#1c1009;border:1px solid #78350f;border-radius:8px;padding:14px 16px;margin-bottom:16px;',
+                            div('font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:#f59e0b;margin-bottom:6px;', '⚠️ NO AI OVERVIEW DETECTED AT THIS MOMENT') +
+                            div('font-size:12px;color:#d97706;line-height:1.6;', (aioStatus.note || 'AI Overviews appear on ~15-48% of queries and change ~12x per month. This is normal.')) +
+                            div('font-size:11px;color:#92400e;margin-top:6px;', (aioStatus.action || 'The brief below is based on competitor analysis.'))
+                        );
                     }
 
-                    html += \`<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:20px;">
-                        <div style="background:#0a1628;border:1px solid \${aioFound?'#1e3a5f':'#1f2937'};border-radius:8px;padding:12px;text-align:center;">
-                            <div style="font-size:1.4rem;">\${aioFound?(aioCited?'✅':'⚠️'):'❌'}</div>
-                            <div style="font-size:11px;font-weight:700;color:\${aioCited?'#4ade80':aioFound?'#fbbf24':'#6b7280'};margin-top:4px;">AI Overview</div>
-                            <div style="font-size:10px;color:#6b7280;">\${aioCited?'Cited':aioFound?'Not cited':'Not found'}</div>
-                        </div>
-                        <div style="background:#0a1628;border:1px solid #1f2937;border-radius:8px;padding:12px;text-align:center;">
-                            <div style="font-size:1.4rem;">\${data.google_position ? '#'+data.google_position : '—'}</div>
-                            <div style="font-size:11px;font-weight:700;color:#a78bfa;margin-top:4px;">Google Pos</div>
-                            <div style="font-size:10px;color:#6b7280;">Current ranking</div>
-                        </div>
-                        <div style="background:#0a1628;border:1px solid \${freshness.at_risk?'#7f1d1d':'#1f2937'};border-radius:8px;padding:12px;text-align:center;">
-                            <div style="font-size:1.4rem;">\${freshness.content_age_days ? freshness.content_age_days+'d' : '?'}</div>
-                            <div style="font-size:11px;font-weight:700;color:\${freshness.at_risk?'#f87171':'#6b7280'};margin-top:4px;">Content Age</div>
-                            <div style="font-size:10px;color:#6b7280;">\${freshness.at_risk?'⚠️ Citation risk':'Within window'}</div>
-                        </div>
-                        <div style="background:#0a1628;border:1px solid #1f2937;border-radius:8px;padding:12px;text-align:center;">
-                            <div style="font-size:1.4rem;">\${(brief.passages_to_add||[]).length}</div>
-                            <div style="font-size:11px;font-weight:700;color:#fbbf24;margin-top:4px;">Passages to add</div>
-                            <div style="font-size:10px;color:#6b7280;">Extracted from AIO</div>
-                        </div>
-                        <div style="background:#0a1628;border:1px solid #1f2937;border-radius:8px;padding:12px;text-align:center;">
-                            <div style="font-size:1.4rem;">\${groundingSources.length || '—'}</div>
-                            <div style="font-size:11px;font-weight:700;color:#38bdf8;margin-top:4px;">Live sources</div>
-                            <div style="font-size:10px;color:#6b7280;">Gemini found</div>
-                        </div>
-                        <div style="background:#0a1628;border:1px solid #1f2937;border-radius:8px;padding:12px;text-align:center;">
-                            <div style="font-size:1.4rem;">\${(brief.passages_to_add||[]).length}</div>
-                            <div style="font-size:11px;font-weight:700;color:#fbbf24;margin-top:4px;">Passages to add</div>
-                            <div style="font-size:10px;color:#6b7280;">Extracted from AIO</div>
-                        </div>
-                        <div style="background:#0a1628;border:1px solid #1f2937;border-radius:8px;padding:12px;text-align:center;">
-                            <div style="font-size:1.4rem;">\${(brief.structural_fixes||[]).length}</div>
-                            <div style="font-size:11px;font-weight:700;color:#38bdf8;margin-top:4px;">Structural fixes</div>
-                            <div style="font-size:10px;color:#6b7280;">Format changes</div>
-                        </div>
-                    </div>\`;
+                    // Stats grid
+                    html += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:20px;">';
+                    html += div('background:#0a1628;border:1px solid ' + (aioFound?'#1e3a5f':'#1f2937') + ';border-radius:8px;padding:12px;text-align:center;',
+                        div('font-size:1.4rem;', aioFound ? (aioCited ? '✅' : '⚠️') : '❌') +
+                        div('font-size:11px;font-weight:700;color:' + (aioCited?'#4ade80':aioFound?'#fbbf24':'#6b7280') + ';margin-top:4px;', 'Google AIO') +
+                        div('font-size:10px;color:#6b7280;', aioCited ? 'Cited ✅' : aioFound ? 'Not cited' : 'Not found'));
+                    html += div('background:#0a1628;border:1px solid #1f2937;border-radius:8px;padding:12px;text-align:center;',
+                        div('font-size:1.4rem;', data.google_position ? '#' + data.google_position : '—') +
+                        div('font-size:11px;font-weight:700;color:#a78bfa;margin-top:4px;', 'Google Pos') +
+                        div('font-size:10px;color:#6b7280;', 'Current ranking'));
+                    html += div('background:#0a1628;border:1px solid ' + (freshness.at_risk?'#7f1d1d':'#1f2937') + ';border-radius:8px;padding:12px;text-align:center;',
+                        div('font-size:1.4rem;', freshness.content_age_days ? freshness.content_age_days + 'd' : '?') +
+                        div('font-size:11px;font-weight:700;color:' + (freshness.at_risk?'#f87171':'#6b7280') + ';margin-top:4px;', 'Content Age') +
+                        div('font-size:10px;color:#6b7280;', freshness.at_risk ? '⚠️ Citation risk' : 'OK'));
+                    html += div('background:#0a1628;border:1px solid #1f2937;border-radius:8px;padding:12px;text-align:center;',
+                        div('font-size:1.4rem;', (brief.passages_to_add||[]).length) +
+                        div('font-size:11px;font-weight:700;color:#fbbf24;margin-top:4px;', 'Passages to add') +
+                        div('font-size:10px;color:#6b7280;', 'Extracted from AIO'));
+                    html += div('background:#0a1628;border:1px solid #1f2937;border-radius:8px;padding:12px;text-align:center;',
+                        div('font-size:1.4rem;', groundingSources.length || '—') +
+                        div('font-size:11px;font-weight:700;color:#38bdf8;margin-top:4px;', 'Live sources') +
+                        div('font-size:10px;color:#6b7280;', 'Gemini found'));
+                    html += '</div>';
 
-                    // ── Freshness warning ─────────────────────────────────────────
+                    // Freshness warning
                     if (freshness.at_risk) {
-                        html += \`<div style="background:#2d0a0a;border:1px solid #7f1d1d;border-left:3px solid #f87171;border-radius:0 8px 8px 0;padding:12px 14px;margin-bottom:16px;">
-                            <div style="font-size:11px;font-weight:700;color:#f87171;margin-bottom:4px;">⏰ FRESHNESS WARNING</div>
-                            <div style="font-size:12px;color:#fca5a5;">\${freshness.message}</div>
-                        </div>\`;
+                        html += div('background:#2d0a0a;border:1px solid #7f1d1d;border-left:3px solid #f87171;border-radius:0 8px 8px 0;padding:12px 14px;margin-bottom:16px;',
+                            div('font-size:11px;font-weight:700;color:#f87171;margin-bottom:4px;', '⏰ FRESHNESS WARNING') +
+                            div('font-size:12px;color:#fca5a5;', freshness.message || ''));
                     }
 
-                    // ── Intro weight warning ──────────────────────────────────────
-                    if (introWeight.note && !introWeight.has_direct_answer_in_intro) {
-                        html += \`<div style="background:#1c1009;border:1px solid #92400e;border-left:3px solid #fbbf24;border-radius:0 8px 8px 0;padding:12px 14px;margin-bottom:16px;">
-                            <div style="font-size:11px;font-weight:700;color:#fbbf24;margin-bottom:4px;">📍 INTRO WEIGHT ISSUE</div>
-                            <div style="font-size:12px;color:#fcd34d;">\${introWeight.note}</div>
-                        </div>\`;
-                    }
-
-                    // ── Grounding sources ─────────────────────────────────────────
+                    // Grounding sources
                     if (groundingSources.length) {
-                        html += \`<div style="background:#0a1628;border:1px solid #1e3a5f;border-radius:8px;padding:14px;margin-bottom:16px;">
-                            <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:#38bdf8;margin-bottom:8px;">🔍 URLS GEMINI RETRIEVED FROM GOOGLE SEARCH</div>
-                            <div style="font-size:11px;color:#6b7280;margin-bottom:8px;">\${brief._grounding_note||''}</div>
-                            \${groundingSources.slice(0,5).map((s,i) => '<div style="font-size:11px;padding:4px 0;border-bottom:1px solid #1f2937;color:#9ca3af;"><span style="color:#38bdf8;font-weight:700;">'+(i===0?'→ ':'  ')+'</span><a href="'+s.url+'" target="_blank" style="color:#38bdf8;word-break:break-all;">'+s.url.split('//').pop().substring(0,70)+'</a> <span style="color:#374151;">'+s.title+'</span></div>').join('')}
-                        </div>\`;
+                        var srcHtml = groundingSources.slice(0,5).map(function(s,i) {
+                            var u = (s.url||s||'');
+                            var t = s.title || '';
+                            return div('font-size:11px;padding:4px 0;border-bottom:1px solid #1f2937;color:#9ca3af;',
+                                span('color:#38bdf8;font-weight:700;', i===0 ? '→ ' : '  ') +
+                                '<a href="' + u + '" target="_blank" style="color:#38bdf8;word-break:break-all;">' + u.split('//').pop().substring(0,70) + '</a> ' +
+                                span('color:#374151;', t));
+                        }).join('');
+                        html += div('background:#0a1628;border:1px solid #1e3a5f;border-radius:8px;padding:14px;margin-bottom:16px;',
+                            div('font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:#38bdf8;margin-bottom:8px;', '🔍 URLS GEMINI RETRIEVED FROM GOOGLE SEARCH') +
+                            div('font-size:11px;color:#6b7280;margin-bottom:8px;', brief._grounding_note || '') +
+                            srcHtml);
                     }
 
-                    // ── AI Overview text ─────────────────────────────────────────
+                    // AIO text
                     if (aio.text) {
-                        html += \`<div style="background:#0c1a0c;border:1px solid #166534;border-radius:8px;padding:16px;margin-bottom:20px;">
-                            <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:#4ade80;margin-bottom:8px;">📋 CURRENT AI OVERVIEW TEXT (what Google is showing)</div>
-                            <div style="font-size:13px;color:#d1fae5;line-height:1.7;white-space:pre-wrap;">\${aio.text}</div>
-                            \${aio.source_url ? \`<div style="font-size:11px;color:#6b7280;margin-top:8px;">Source cited: <a href="\${aio.source_url}" target="_blank" style="color:#38bdf8;">\${aio.source_url}</a></div>\` : ''}
-                        </div>\`;
+                        html += div('background:#0c1a0c;border:1px solid #166534;border-radius:8px;padding:16px;margin-bottom:16px;',
+                            div('font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:#4ade80;margin-bottom:8px;', '📋 CURRENT AI OVERVIEW TEXT') +
+                            div('font-size:13px;color:#d1fae5;line-height:1.7;white-space:pre-wrap;', aio.text) +
+                            (aio.source_url ? div('font-size:11px;color:#6b7280;margin-top:8px;', 'Source: <a href="' + aio.source_url + '" target="_blank" style="color:#38bdf8;">' + aio.source_url + '</a>') : ''));
                     }
 
-                    // ── Passages to add ──────────────────────────────────────────
-                    if ((brief.passages_to_add||[]).length) {
-                        html += \`<div style="margin-bottom:20px;">
-                            <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:#fbbf24;margin-bottom:12px;">✍️ PASSAGES TO ADD TO YOUR HTML</div>
-                            <div style="font-size:11px;color:#6b7280;margin-bottom:10px;">These passages were extracted from the AI Overview or top-cited competitor. Add them verbatim or improved to your page — in a direct answer box, FAQ, or as a dedicated paragraph.</div>\`;
-                        (brief.passages_to_add||[]).forEach((p,i) => {
-                            const platformTags = (p.platforms||[]).map(pl =>
-                                '<span style="font-size:9px;font-weight:700;padding:1px 6px;border-radius:3px;margin-right:3px;background:' +
-                                (pl==='google'?'#1e3a5f':pl==='perplexity'?'#1e1b4b':'#052e16') + ';color:' +
-                                (pl==='google'?'#38bdf8':pl==='perplexity'?'#a78bfa':'#4ade80') + ';">' + pl.toUpperCase() + '</span>'
-                            ).join('');
-                            html += \`<div style="background:#111827;border:1px solid #374151;border-left:3px solid #fbbf24;border-radius:0 8px 8px 0;padding:14px;margin-bottom:10px;">
-                                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:6px;">
-                                    <div style="display:flex;align-items:center;gap:6px;">
-                                        <span style="font-size:10px;font-weight:700;color:#fbbf24;text-transform:uppercase;">Passage \${i+1} · \${p.type||'content'}</span>
-                                        \${platformTags}
-                                    </div>
-                                    <div style="display:flex;gap:8px;align-items:center;">
-                                        \${p.word_count_target ? '<span style="font-size:10px;color:#6b7280;">Target: <span style="color:#fbbf24;">'+p.word_count_target+' words</span></span>' : ''}
-                                        <span style="font-size:10px;color:#6b7280;">Where: <span style="color:#a78bfa;">\${p.placement||'after H1'}</span></span>
-                                    </div>
-                                </div>
-                                <div style="font-size:13px;color:#e5e7eb;line-height:1.7;margin-bottom:10px;background:#0d1117;padding:10px 12px;border-radius:6px;font-style:italic;">\${p.passage}</div>
-                                \${p.why ? \`<div style="font-size:11px;color:#9ca3af;">💡 Why: \${p.why}</div>\` : ''}
-                                \${p.improved_version ? \`<div style="font-size:11px;color:#4ade80;margin-top:8px;font-weight:600;">✅ Improved version (use this):</div><div style="font-size:13px;color:#d1fae5;background:#052e16;padding:10px 12px;border-radius:6px;margin-top:4px;line-height:1.7;">\${p.improved_version}</div>\` : ''}
-                            </div>\`;
-                        });
-                        html += '</div>';
-                    }
-
-                    // ── Structural fixes ─────────────────────────────────────────
-                    if ((brief.structural_fixes||[]).length) {
-                        html += \`<div style="margin-bottom:20px;">
-                            <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:#38bdf8;margin-bottom:12px;">🔧 STRUCTURAL FIXES (format changes that trigger AI extraction)</div>\`;
-                        (brief.structural_fixes||[]).forEach(f => {
-                            html += \`<div style="background:#111827;border:1px solid #1f2937;border-left:3px solid #38bdf8;border-radius:0 8px 8px 0;padding:12px 14px;margin-bottom:8px;">
-                                <div style="font-size:12px;font-weight:700;color:#e5e7eb;margin-bottom:4px;">\${f.fix}</div>
-                                <div style="font-size:11px;color:#9ca3af;">\${f.reason}</div>
-                                \${f.example ? \`<div style="font-size:11px;color:#6b7280;margin-top:6px;font-family:monospace;background:#0d1117;padding:8px;border-radius:4px;">\${f.example}</div>\` : ''}
-                            </div>\`;
-                        });
-                        html += '</div>';
-                    }
-
-                    // ── Citation source ──────────────────────────────────────
+                    // Citation source
                     if (brief.citation_source) {
-                        html += \`<div style="background:#1a0a2e;border:1px solid #4c1d95;border-radius:8px;padding:14px;margin-bottom:16px;">
-                            <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:#a78bfa;margin-bottom:8px;">🏆 PAGE BEING CITED INSTEAD OF YOU</div>
-                            <div style="font-size:13px;color:#e5e7eb;">\${brief.citation_source.domain}</div>
-                            <div style="font-size:11px;color:#6b7280;margin-top:4px;">\${brief.citation_source.why_cited||''}</div>
-                            <div style="font-size:11px;color:#9ca3af;margin-top:8px;">Key difference: <span style="color:#c4b5fd;">\${brief.citation_source.key_difference||''}</span></div>
-                        </div>\`;
+                        var cs = brief.citation_source;
+                        html += div('background:#1a0a2e;border:1px solid #4c1d95;border-radius:8px;padding:14px;margin-bottom:16px;',
+                            div('font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:#a78bfa;margin-bottom:8px;', '🏆 PAGE BEING CITED INSTEAD OF YOU') +
+                            div('font-size:13px;color:#e5e7eb;', cs.domain || '') +
+                            div('font-size:11px;color:#6b7280;margin-top:4px;', cs.why_cited || '') +
+                            div('font-size:11px;color:#9ca3af;margin-top:8px;', 'Key difference: ' + span('color:#c4b5fd;', cs.key_difference || '')));
                     }
 
-                    // ── Platform gaps ─────────────────────────────────────────
+                    // Platform gaps
                     if (brief.platform_gaps) {
-                        const gaps = brief.platform_gaps;
-                        html += \`<div style="background:#111827;border:1px solid #1f2937;border-radius:8px;padding:14px;margin-bottom:16px;">
-                            <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:#6b7280;margin-bottom:10px;">🎯 WHY YOU'RE NOT CITED — PER PLATFORM</div>
-                            \${gaps.google_aio ? '<div style="display:flex;gap:8px;margin-bottom:8px;"><span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:3px;background:#1e3a5f;color:#38bdf8;white-space:nowrap;">Google AIO</span><span style="font-size:12px;color:#9ca3af;">'+gaps.google_aio+'</span></div>' : ''}
-                            \${gaps.chatgpt ? '<div style="display:flex;gap:8px;margin-bottom:8px;"><span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:3px;background:#1e3a5f;color:#60a5fa;white-space:nowrap;">ChatGPT</span><span style="font-size:12px;color:#9ca3af;">'+gaps.chatgpt+'</span></div>' : ''}
-                            \${gaps.perplexity ? '<div style="display:flex;gap:8px;margin-bottom:8px;"><span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:3px;background:#1e1b4b;color:#a78bfa;white-space:nowrap;">Perplexity</span><span style="font-size:12px;color:#9ca3af;">'+gaps.perplexity+'</span></div>' : ''}
-                            \${gaps.copilot_bing ? '<div style="display:flex;gap:8px;margin-bottom:8px;"><span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:3px;background:#0c2340;color:#38bdf8;white-space:nowrap;">Copilot/Bing</span><span style="font-size:12px;color:#9ca3af;">'+gaps.copilot_bing+'</span></div>' : ''}
-                            \${gaps.claude_brave ? '<div style="display:flex;gap:8px;"><span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:3px;background:#1a0a0a;color:#f87171;white-space:nowrap;">Claude/Brave</span><span style="font-size:12px;color:#9ca3af;">'+gaps.claude_brave+'</span></div>' : ''}
-                        </div>\`;
+                        var g = brief.platform_gaps;
+                        var gHtml = '';
+                        if (g.google_aio) gHtml += div('display:flex;gap:8px;margin-bottom:8px;', span('font-size:10px;font-weight:700;padding:2px 7px;border-radius:3px;background:#1e3a5f;color:#38bdf8;white-space:nowrap;', 'Google AIO') + span('font-size:12px;color:#9ca3af;', g.google_aio));
+                        if (g.perplexity) gHtml += div('display:flex;gap:8px;margin-bottom:8px;', span('font-size:10px;font-weight:700;padding:2px 7px;border-radius:3px;background:#1e1b4b;color:#a78bfa;white-space:nowrap;', 'Perplexity') + span('font-size:12px;color:#9ca3af;', g.perplexity));
+                        if (g.chatgpt) gHtml += div('display:flex;gap:8px;margin-bottom:8px;', span('font-size:10px;font-weight:700;padding:2px 7px;border-radius:3px;background:#1e3a5f;color:#60a5fa;white-space:nowrap;', 'ChatGPT') + span('font-size:12px;color:#9ca3af;', g.chatgpt));
+                        if (g.copilot_bing) gHtml += div('display:flex;gap:8px;margin-bottom:8px;', span('font-size:10px;font-weight:700;padding:2px 7px;border-radius:3px;background:#0c2340;color:#38bdf8;white-space:nowrap;', 'Copilot/Bing') + span('font-size:12px;color:#9ca3af;', g.copilot_bing));
+                        if (g.claude_brave) gHtml += div('display:flex;gap:8px;', span('font-size:10px;font-weight:700;padding:2px 7px;border-radius:3px;background:#1a0a0a;color:#f87171;white-space:nowrap;', 'Claude/Brave') + span('font-size:12px;color:#9ca3af;', g.claude_brave));
+                        if (gHtml) html += div('background:#111827;border:1px solid #1f2937;border-radius:8px;padding:14px;margin-bottom:16px;',
+                            div('font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:#6b7280;margin-bottom:10px;', '🎯 WHY YOU\'RE NOT CITED — PER PLATFORM') + gHtml);
                     }
 
-                    // ── Copy all passages button ─────────────────────────────────
-                    const allPassages = (brief.passages_to_add||[]).map((p,i) =>
-                        '--- PASSAGE ' + (i+1) + ' (' + (p.placement||'after H1') + ') ---\\n' +
-                        (p.improved_version || p.passage) + '\\n'
-                    ).join('\\n');
-                    if (allPassages) {
-                        window._citationPassages = allPassages;
-                        html += '<div style="text-align:center;padding-top:8px;"><button onclick="copyAllPassages(this)" class="tr-btn primary" style="font-size:12px;">📋 Copy All Passages to Clipboard</button></div>';
+                    // Passages to add
+                    var passages = brief.passages_to_add || [];
+                    if (passages.length) {
+                        html += div('margin-bottom:20px;',
+                            div('font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:#fbbf24;margin-bottom:12px;', '✍️ PASSAGES TO ADD TO YOUR HTML') +
+                            div('font-size:11px;color:#6b7280;margin-bottom:10px;', 'Add these to your page — in a direct answer box, FAQ, or dedicated paragraph.'));
+                        var allPassageText = '';
+                        passages.forEach(function(p, i) {
+                            var platforms = (p.platforms||[]).map(function(pl) {
+                                var bg = pl==='google'?'#1e3a5f':pl==='perplexity'?'#1e1b4b':'#052e16';
+                                var co = pl==='google'?'#38bdf8':pl==='perplexity'?'#a78bfa':'#4ade80';
+                                return span('font-size:9px;font-weight:700;padding:1px 6px;border-radius:3px;margin-right:3px;background:'+bg+';color:'+co+';', pl.toUpperCase());
+                            }).join('');
+                            var cardHtml = div('display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:6px;',
+                                div('display:flex;align-items:center;gap:6px;', span('font-size:10px;font-weight:700;color:#fbbf24;text-transform:uppercase;', 'Passage ' + (i+1) + ' · ' + (p.type||'content')) + platforms) +
+                                div('', (p.word_count_target ? span('font-size:10px;color:#6b7280;', 'Target: ' + span('color:#fbbf24;', p.word_count_target + ' words')) : '') + ' ' + span('font-size:10px;color:#6b7280;', 'Where: ' + span('color:#a78bfa;', p.placement||'after H1'))));
+                            cardHtml += div('font-size:13px;color:#e5e7eb;line-height:1.7;margin-bottom:10px;background:#0d1117;padding:10px 12px;border-radius:6px;font-style:italic;', p.passage||'');
+                            if (p.why) cardHtml += div('font-size:11px;color:#9ca3af;', '💡 Why: ' + p.why);
+                            if (p.improved_version) {
+                                cardHtml += div('font-size:11px;color:#4ade80;margin-top:8px;font-weight:600;', '✅ Improved version (use this):');
+                                cardHtml += div('font-size:13px;color:#d1fae5;background:#052e16;padding:10px 12px;border-radius:6px;margin-top:4px;line-height:1.7;', p.improved_version);
+                            }
+                            html += div('background:#111827;border:1px solid #374151;border-left:3px solid #fbbf24;border-radius:0 8px 8px 0;padding:14px;margin-bottom:10px;', cardHtml);
+                            allPassageText += '--- PASSAGE ' + (i+1) + ' (' + (p.placement||'after H1') + ') ---\n' + (p.improved_version||p.passage||'') + '\n\n';
+                        });
+                        window._citationPassages = allPassageText;
+                        html += div('text-align:center;padding-top:8px;', '<button onclick="copyAllPassages(this)" class="tr-btn primary" style="font-size:12px;">📋 Copy All Passages to Clipboard</button>');
+                    }
+
+                    // Structural fixes
+                    var fixes = brief.structural_fixes || [];
+                    if (fixes.length) {
+                        html += div('margin-bottom:20px;', div('font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:#38bdf8;margin-bottom:12px;', '🔧 STRUCTURAL FIXES'));
+                        fixes.forEach(function(f) {
+                            var fHtml = div('font-size:12px;font-weight:700;color:#e5e7eb;margin-bottom:4px;', f.fix||'') +
+                                div('font-size:11px;color:#9ca3af;', f.reason||'');
+                            if (f.example) fHtml += div('font-size:11px;color:#6b7280;margin-top:6px;font-family:monospace;background:#0d1117;padding:8px;border-radius:4px;', f.example);
+                            html += div('background:#111827;border:1px solid #1f2937;border-left:3px solid #38bdf8;border-radius:0 8px 8px 0;padding:12px 14px;margin-bottom:8px;', fHtml);
+                        });
+                    }
+
+                    // Primary reason
+                    if (brief.primary_reason_not_cited) {
+                        html += div('background:#1a0a2e;border:1px solid #4c1d95;border-radius:8px;padding:14px;margin-bottom:16px;',
+                            div('font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:#a78bfa;margin-bottom:6px;', '🎯 PRIMARY REASON NOT CITED') +
+                            div('font-size:13px;color:#e5e7eb;', brief.primary_reason_not_cited));
                     }
 
                     container.innerHTML = html;
@@ -24472,13 +24446,13 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
             const nextCheck = p.next_check_at ? getTimeAgo(new Date(p.next_check_at)) : '—';
             const lastCheck = p.last_checked_at ? getTimeAgo(new Date(p.last_checked_at)) : 'Never checked';
 
-            // Position pill
+            // Position pill — #4 means Google ranking position
             let posPill = '<span style="color:#6b7280;font-size:13px;">Not ranked</span>';
             if(snap?.google_position) {
                 const pos = snap.google_position;
                 const posColor = pos<=3?'#4ade80':pos<=10?'#a3e635':pos<=20?'#fbbf24':'#f87171';
                 const posBg = pos<=3?'#052e16':pos<=10?'#1a2e05':pos<=20?'#2d1f00':'#2d0a0a';
-                posPill = '<span class="tr-badge" style="color:'+posColor+';background:'+posBg+';font-size:13px;padding:3px 12px;">#'+pos+'</span>';
+                posPill = '<span class="tr-badge" title="Google ranking position #'+pos+' for keyword: '+(p.keyword||p.gsc_keyword||'unknown')+'" style="color:'+posColor+';background:'+posBg+';font-size:13px;padding:3px 12px;cursor:help;">#'+pos+'</span>';
             }
 
             // GRAAF score badge
@@ -24506,24 +24480,24 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 ? '<span class="tr-badge" style="background:#2d1f00;color:#fbbf24;margin-left:6px;">⚠️ fetch unreliable</span>'
                 : '';
 
-            // AI citation badges
+            // AI citation badges — green = cited, red = not cited, grey = no overview
             const gBadge = snap
                 ? (snap.ai_google_overview_cited
-                    ? '<span class="tr-badge cited">✦ AI Overview cited</span>'
+                    ? '<span class="tr-badge" style="background:#052e16;color:#4ade80;border:1px solid #16a34a;">✅ Google AIO cited</span>'
                     : snap.ai_google_overview_found
-                        ? '<span class="tr-badge notcited">AI Overview — not cited</span>'
-                        : '<span class="tr-badge notcited">No AI Overview</span>')
+                        ? '<span class="tr-badge" style="background:#2d0a0a;color:#f87171;border:1px solid #b91c1c;">❌ AIO exists — not cited</span>'
+                        : '<span class="tr-badge" style="background:#1f2937;color:#6b7280;">No AI Overview</span>')
                 : '<span class="tr-badge notcited">Not checked</span>';
 
             const pBadge = snap
                 ? (snap.ai_perplexity_cited
-                    ? '<span class="tr-badge" style="background:#1e1b4b;color:#a78bfa;">✦ Perplexity cited</span>'
-                    : '<span class="tr-badge notcited">Perplexity — not cited</span>')
+                    ? '<span class="tr-badge" style="background:#1e1b4b;color:#a78bfa;border:1px solid #7c3aed;">✅ Perplexity cited</span>'
+                    : '<span class="tr-badge" style="background:#1f2937;color:#6b7280;">Perplexity — not cited</span>')
                 : '';
 
             const bBadge = snap
                 ? (snap.ai_bing_cited
-                    ? '<span class="tr-badge" style="background:#0c2340;color:#60a5fa;">✦ Bing cited</span>'
+                    ? '<span class="tr-badge" style="background:#0c2340;color:#60a5fa;border:1px solid #1d4ed8;">✅ Copilot cited</span>'
                     : '')
                 : '';
 
@@ -25869,11 +25843,13 @@ app.put('/api/tracker/pages/:id/gsc', verifyEngineAccess, asyncHandler(async (re
 app.delete('/api/tracker/pages/:id', verifyEngineAccess, async (req, res) => {
   try {
     const eu = req.engineUser;
-    if (!eu.isAdmin) {
+    if (eu.isAdmin) {
+      await pool.query('DELETE FROM tracker_pages WHERE id=$1', [req.params.id]);
+    } else {
       const own = await pool.query('SELECT id FROM tracker_pages WHERE id=$1 AND engine_code_id=$2', [req.params.id, eu.codeId]);
       if (!own.rows.length) return res.status(403).json({ success: false, error: 'Not found or access denied' });
+      await pool.query('DELETE FROM tracker_pages WHERE id=$1 AND engine_code_id=$2', [req.params.id, eu.codeId]);
     }
-    await pool.query('DELETE FROM tracker_pages WHERE id=$1 AND engine_code_id=$2', [req.params.id, eu.codeId]);
     res.json({ success: true });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
