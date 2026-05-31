@@ -961,9 +961,11 @@ app.get('/api/tracker-client/:token', async (req, res) => {
     // Ensure tracker_client_id column exists before querying
     const pagesR = await pool.query(
       `SELECT p.id, p.url, p.keyword, p.gsc_keyword, p.created_at, p.next_check_at, p.last_checked_at,
+              p.is_done, p.fetch_reliable,
               s.google_position, s.ai_google_overview_cited, s.ai_perplexity_cited,
               s.ai_bing_cited, s.ai_brave_cited,
-              s.score as graaf_score, s.checked_at as last_checked
+              s.score as graaf_score, s.checked_at as last_checked,
+              s.recommendations
        FROM tracker_pages p
        LEFT JOIN LATERAL (
          SELECT * FROM tracker_snapshots WHERE page_id = p.id ORDER BY checked_at DESC LIMIT 1
@@ -1036,6 +1038,37 @@ app.get('/api/tracker-client/:token/fetch-sitemap', async (req, res) => {
     const xml = await r.text();
     const urls = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map(m => m[1].trim()).filter(u => u.startsWith('http')).slice(0, 100);
     res.json({ success: true, urls, count: urls.length });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// PATCH /api/tracker-client/:token/pages/:pageId/html — update html_content + keyword
+app.patch('/api/tracker-client/:token/pages/:pageId/html', async (req, res) => {
+  try {
+    const cr = await pool.query('SELECT id FROM tracker_clients WHERE token=$1 AND status=$2', [req.params.token, 'active']);
+    if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
+    const own = await pool.query('SELECT id FROM tracker_pages WHERE id=$1 AND tracker_client_id=$2', [req.params.pageId, cr.rows[0].id]);
+    if (!own.rows.length) return res.status(403).json({ success: false, error: 'Not your page' });
+    const { html_content, keyword } = req.body;
+    const fields = ['html_source=$1', 'html_pasted_at=NOW()'];
+    const vals = ['manual'];
+    if (html_content) { fields.push(`html_content=$${vals.length+1}`); vals.push(html_content.substring(0,500000)); }
+    if (keyword) { fields.push(`keyword=$${vals.length+1}`); vals.push(keyword.trim()); }
+    vals.push(req.params.pageId);
+    await pool.query(`UPDATE tracker_pages SET ${fields.join(',')} WHERE id=$${vals.length}`, vals);
+    res.json({ success: true });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// PATCH /api/tracker-client/:token/pages/:pageId/done — mark page done/undone
+app.patch('/api/tracker-client/:token/pages/:pageId/done', async (req, res) => {
+  try {
+    const cr = await pool.query('SELECT id FROM tracker_clients WHERE token=$1 AND status=$2', [req.params.token, 'active']);
+    if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
+    const own = await pool.query('SELECT id FROM tracker_pages WHERE id=$1 AND tracker_client_id=$2', [req.params.pageId, cr.rows[0].id]);
+    if (!own.rows.length) return res.status(403).json({ success: false, error: 'Not your page' });
+    const { is_done } = req.body;
+    await pool.query('UPDATE tracker_pages SET is_done=$1 WHERE id=$2', [!!is_done, req.params.pageId]);
+    res.json({ success: true });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
@@ -5854,9 +5887,10 @@ res.json({ success: true });
 // ── ContentScore Badge API ────────────────────────────────────────────────────
 app.get('/api/score', async (req, res) => {
 res.setHeader('Access-Control-Allow-Origin', '*');
-// Allow CDN/proxy caching for 5 minutes — scores don't change frequently.
-// The badge-loader.js has its own 5-minute client-side cache as backup.
-res.setHeader('Cache-Control', 'public, max-age=300, s-maxage=300, stale-while-revalidate=600');
+// No server-side caching — badge must always show latest score
+res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+res.setHeader('Pragma', 'no-cache');
+res.setHeader('Expires', '0');
 res.setHeader('Vary', 'Accept-Encoding');
 const { url } = req.query;
 if (!url) return res.json({ success: false, error: 'url required' });
@@ -5970,7 +6004,7 @@ var badges = document.querySelectorAll('[data-cs-badge]');
 if (!badges.length) return;
 var pageUrl = window.location.href.replace(/#.*$/, '').replace(/\\?.*$/, '');
 var CACHE_KEY = 'cs_badge_' + pageUrl;
-var CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+var CACHE_TTL = 30 * 1000; // 30 seconds — always fresh after new scan
 function getTier(s) {
 if (s >= 90) return { label:'ELITE',       color:'#16a34a', bg:'#14532d', text:'#4ade80', bars:3 };
 if (s >= 80) return { label:'STRONG',      color:'#2563eb', bg:'#1e3a8a', text:'#93c5fd', bars:3 };
@@ -23453,6 +23487,27 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
 </div></div>
 </div>
 
+
+<!-- HTML Upload Modal -->
+<div class="cs-modal" id="htmlUploadModal">
+  <div class="cs-modal-box" onclick="event.stopPropagation()" style="max-width:540px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+      <h3 style="font-size:15px;font-weight:800;color:#f1f5f9;">Paste page HTML</h3>
+      <button onclick="hideModal('htmlUploadModal')" style="background:none;border:none;color:#94a3b8;cursor:pointer;font-size:1.2rem;">&#x2715;</button>
+    </div>
+    <p style="font-size:12px;color:#6b7280;margin-bottom:12px;">Open your page in browser &rarr; right-click &rarr; View Page Source &rarr; Ctrl+A &rarr; Ctrl+C &rarr; paste below. This gives the most accurate GRAAF scan.</p>
+    <div style="margin-bottom:10px;">
+      <label style="font-size:11px;color:#9ca3af;display:block;margin-bottom:4px;">Keyword (optional)</label>
+      <input id="htmlUploadKeyword" type="text" class="cs-input" placeholder="e.g. seo content strategy">
+    </div>
+    <textarea id="htmlUploadContent" class="cs-input" rows="10" placeholder="Paste full page HTML here..." style="resize:vertical;font-family:monospace;font-size:11px;margin-bottom:12px;"></textarea>
+    <div style="display:flex;gap:8px;">
+      <button class="cs-btn primary" onclick="submitHtmlUpload()" style="flex:1;">Save &amp; scan</button>
+      <button class="cs-btn" onclick="hideModal('htmlUploadModal')">Cancel</button>
+    </div>
+  </div>
+</div>
+
 <!-- Toast -->
 <div class="cs-toast" id="toast"></div>
 
@@ -23523,41 +23578,76 @@ function renderStats(data) {
 
 function renderPages() {
   var el = document.getElementById('pagesList');
+  var countEl = document.getElementById('pageCountLabel');
+  if (countEl) countEl.textContent = _pages.length + ' pages tracked';
   if (!_pages.length) {
-    el.innerHTML = '<div style="background:#111827;border:1px solid #1f2937;border-radius:8px;padding:32px 24px;text-align:center;"><div style="font-size:32px;margin-bottom:12px;">&#128225;</div><div style="font-size:14px;font-weight:700;color:#9ca3af;margin-bottom:6px;">No pages tracked yet</div><div style="font-size:12px;color:#4b5563;">Click + Add URL to start tracking Google position and AI citations.</div></div>';
+    el.innerHTML = '<div style="background:#111827;border:1px solid #1f2937;border-radius:8px;padding:32px 24px;text-align:center;"><div style="font-size:32px;margin-bottom:12px;">&#128225;</div><div style="font-size:14px;font-weight:700;color:#9ca3af;margin-bottom:6px;">No pages tracked yet</div><div style="font-size:12px;color:#4b5563;">Click + Add URL to start tracking.</div></div>';
     return;
   }
   el.innerHTML = _pages.map(function(p) {
-    var cited = p.ai_google_overview_cited;
     var pos = p.google_position;
     var score = p.graaf_score;
     var kw = p.keyword || p.gsc_keyword || '';
-    var checked = p.last_checked ? new Date(p.last_checked).toLocaleDateString() : 'Not yet';
-    var urlShort = p.url.split('//').pop().split('www.').pop()
-    var posColor = pos <= 3 ? '#4ade80' : pos <= 10 ? '#a3e635' : pos <= 20 ? '#fbbf24' : '#f87171';
+    var posColor = !pos ? '#6b7280' : pos<=3 ? '#4ade80' : pos<=10 ? '#a3e635' : pos<=20 ? '#fbbf24' : '#f87171';
+    var lastChecked = p.last_checked ? new Date(p.last_checked).toLocaleDateString('nl-NL') : 'Not yet';
+    var nextCheck = p.next_check_at ? 'Next: ' + new Date(p.next_check_at).toLocaleDateString('nl-NL') : '';
+    var urlShort = p.url ? p.url.replace(/^https?:\/\//, '').replace(/^www\./, '') : p.url;
+    var isDone = !!p.is_done;
 
-    return '<div class="cs-page-card' + (cited ? ' cited' : '') + '">'
+    // Citation badges
+    var badges = '';
+    if (pos) badges += '<span class="cs-badge" style="color:' + posColor + ';background:#0d1117;border:1px solid ' + posColor + '44;">#' + pos + '</span> ';
+    else badges += '<span class="cs-cs-badge grey">Not ranked</span> ';
+    badges += p.ai_google_overview_cited ? '<span class="cs-cs-badge green">&#10003; Google AIO</span> ' : '<span class="cs-cs-badge grey">No AIO</span> ';
+    if (p.ai_perplexity_cited) badges += '<span class="cs-cs-badge purple">&#10003; Perplexity</span> ';
+    if (p.ai_bing_cited) badges += '<span class="cs-cs-badge" style="background:#0c2340;color:#60a5fa;">&#10003; Copilot</span> ';
+    if (p.ai_brave_cited) badges += '<span class="cs-cs-badge" style="background:#1a0e2e;color:#c4b5fd;">&#10003; Claude</span> ';
+    if (score) badges += '<span class="cs-cs-badge yellow">' + score + '/100</span> ';
+    if (p.fetch_reliable === false) badges += '<span class="cs-cs-badge" style="background:#2d1f00;color:#fbbf24;">! fetch issue</span> ';
+
+    // Recommendations
+    var recsHtml = '';
+    if (p.recommendations && p.recommendations.length) {
+      var recs = p.recommendations;
+      if (typeof recs === 'string') { try { recs = JSON.parse(recs); } catch(e) { recs = []; } }
+      if (Array.isArray(recs) && recs.length) {
+        var colors = { high:'#f87171', medium:'#fbbf24', low:'#4ade80' };
+        recsHtml = '<div style="margin-top:10px;padding:10px 12px;background:#0d1117;border-radius:6px;border:1px solid #1f2937;">'
+          + '<div style="font-size:10px;color:#4b5563;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">Recommendations</div>'
+          + recs.slice(0,3).map(function(r) {
+              var c = colors[r.priority] || '#6b7280';
+              return '<div style="display:flex;gap:8px;padding:5px 0;border-bottom:1px solid #1f2937;font-size:11px;">'
+                + '<span style="color:' + c + ';font-weight:700;white-space:nowrap;min-width:38px;">' + (r.priority||'').toUpperCase() + '</span>'
+                + '<span style="color:#9ca3af;">' + (r.title||'') + '</span></div>';
+            }).join('')
+          + (recs.length > 3 ? '<div style="font-size:10px;color:#4b5563;margin-top:4px;">+' + (recs.length-3) + ' more</div>' : '')
+          + '</div>';
+      }
+    }
+
+    return '<div class="cs-page-card' + (isDone ? ' done' : '') + '" style="' + (isDone ? 'opacity:.65;' : '') + '">'
       + '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;">'
       + '<div style="flex:1;min-width:0;">'
-      + '<div style="font-size:13px;color:#e5e7eb;font-family:monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:6px;">' + urlShort + '</div>'
-      + '<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:6px;">'
-      + (pos ? '<span class="cs-badge" style="color:'+posColor+';background:#0d1117;">#'+pos+'</span>' : '<span class="cs-cs-badge grey">Not ranked</span>')
-      + (cited ? '<span class="cs-cs-badge green">&#10003; Google AIO</span>' : '<span class="cs-cs-badge grey">No AIO</span>')
-      + (p.ai_perplexity_cited ? '<span class="cs-cs-badge purple">&#10003; Perplexity</span>' : '')
-      + (score ? '<span class="cs-cs-badge yellow">'+score+'/100</span>' : '')
-      + (kw ? '<span style="font-size:10px;color:#4b5563;padding:2px 6px;">'+kw+'</span> <button onclick="editKeyword('+p.id+',this)" style="font-size:9px;background:none;border:none;color:#4b5563;cursor:pointer;text-decoration:underline;">edit</button>' : '<button onclick="editKeyword('+p.id+',this)" style="font-size:9px;background:none;border:none;color:#4b5563;cursor:pointer;">+keyword</button>')
-      + '</div>'
-      + '<div style="font-size:10px;color:#374151;">Last checked: ' + checked + '</div>'
-      + '</div>'
-      + '<div style="display:flex;gap:6px;flex-shrink:0;">'
-      + '<button onclick="checkPage('+p.id+')" class="btn" style="font-size:11px;padding:5px 10px;" title="Run check now"><i class="fas fa-sync-alt"></i></button>'
-      + '<button onclick="deletePage('+p.id+')" class="btn danger" style="font-size:11px;padding:5px 10px;" title="Remove">&#10005;</button>'
+      + '<div style="font-size:12px;color:#e5e7eb;font-family:monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:6px;" title="' + p.url + '">' + urlShort + '</div>'
+      + '<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:6px;">' + badges + '</div>'
+      + '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">'
+      + (kw ? '<span style="font-size:10px;color:#4b5563;">kw: <span style="color:#a78bfa;">' + kw + '</span></span><button onclick="editKeyword(' + p.id + ',this)" style="font-size:9px;background:none;border:none;color:#374151;cursor:pointer;text-decoration:underline;">edit</button>'
+            : '<button onclick="editKeyword(' + p.id + ',this)" style="font-size:9px;background:none;border:none;color:#4b5563;cursor:pointer;">+keyword</button>')
+      + '<span style="font-size:10px;color:#374151;">Checked: ' + lastChecked + (nextCheck ? ' · ' + nextCheck : '') + '</span>'
       + '</div>'
       + '</div>'
-      + (p.recommendations ? '<div style="margin-top:10px;font-size:11px;color:#6b7280;border-top:1px solid #1f2937;padding-top:8px;">' + renderRecs(p) + '</div>' : '')
+      + '<div style="display:flex;gap:5px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">'
+      + '<button onclick="checkPage(' + p.id + ')" class="btn" style="font-size:11px;padding:5px 10px;" title="Check now"><i class="fas fa-sync-alt"></i></button>'
+      + '<button onclick="openHtmlUpload(' + p.id + ')" class="btn" style="font-size:11px;padding:5px 10px;border-color:#fbbf24;color:#fbbf24;" title="Paste HTML for GRAAF scan">HTML</button>'
+      + '<button onclick="markDone(' + p.id + ',this,' + isDone + ')" class="btn" style="font-size:11px;padding:5px 10px;border-color:' + (isDone?'#4ade80':'#374151') + ';color:' + (isDone?'#4ade80':'#6b7280') + ';" title="Mark done">' + (isDone?'&#10003; Done':'Mark done') + '</button>'
+      + '<button onclick="deletePage(' + p.id + ')" class="btn danger" style="font-size:11px;padding:5px 10px;" title="Remove">&#10005;</button>'
+      + '</div>'
+      + '</div>'
+      + recsHtml
       + '</div>';
   }).join('');
 }
+
 
 function renderRecs(p) {
   try {
@@ -23608,11 +23698,39 @@ async function importPages() {
   if (added > 0) { hideModal('importModal'); loadPages(); }
 }
 
+async function markDone(pageId, btn, currentDone) {
+  var newDone = !currentDone;
+  try {
+    var data = await api('/pages/' + pageId + '/done', 'PATCH', { is_done: newDone });
+    if (data.success) {
+      toast(newDone ? 'Marked as done' : 'Unmarked', '#4ade80');
+      if (btn) {
+        btn.textContent = newDone ? 'Done' : 'Mark done';
+        btn.style.borderColor = newDone ? '#4ade80' : '#374151';
+        btn.style.color = newDone ? '#4ade80' : '#6b7280';
+        btn.onclick = function() { markDone(pageId, btn, newDone); };
+      }
+    } else { toast(data.error || 'Failed', '#f87171'); }
+  } catch(e) { toast('Error: ' + e.message, '#f87171'); }
+}
+
 async function checkPage(pageId) {
-  toast('Check started...');
-  var data = await api('/check/' + pageId, 'POST').catch(function(){ return { success: false }; });
-  if (!data.success) return toast('Check failed', '#f87171');
-  setTimeout(loadPages, 8000);
+  toast('Check started...', '#60a5fa');
+  var btn = document.querySelector('[onclick*="checkPage(' + pageId + ')"]');
+  if (btn) { btn.disabled = true; btn.textContent = 'Checking...'; }
+  try {
+    var data = await api('/check/' + pageId, 'POST');
+    if (data.success) {
+      toast('Check running - results in ~30s', '#4ade80');
+      setTimeout(loadPages, 8000);
+    } else {
+      toast(data.error || 'Check failed', '#f87171');
+    }
+  } catch(e) {
+    toast('Error: ' + e.message, '#f87171');
+  } finally {
+    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-sync-alt"></i>'; }
+  }
 }
 
 async function deletePage(pageId) {
@@ -23905,7 +24023,7 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
   function setImportMode(mode) {
     var panels = ['paste','sitemap','gsc'];
     panels.forEach(function(m) {
-      var panel = document.getElementById('importPanel' + (m === 'paste' ? 'Paste' : m === 'sitemap' ? 'Sitemap' : 'Gsc'));
+      var panel = document.getElementById('import' + (m === 'paste' ? 'Paste' : m === 'sitemap' ? 'Sitemap' : 'Gsc') + 'Panel');
       var tab = document.getElementById('importTab' + (m === 'paste' ? 'Paste' : m === 'sitemap' ? 'Sitemap' : 'Gsc'));
       if (!panel || !tab) return;
       var active = m === mode;
@@ -24155,6 +24273,37 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
       }
     } catch(e) {}
   })();
+
+
+  // ── HTML upload ───────────────────────────────────────────────────────────
+  var _htmlUploadPageId = null;
+  function openHtmlUpload(pageId) {
+    _htmlUploadPageId = pageId;
+    var page = (_pages||[]).find(function(p){ return p.id == pageId; }) || {};
+    document.getElementById('htmlUploadKeyword').value = page.keyword || '';
+    document.getElementById('htmlUploadContent').value = '';
+    document.getElementById('htmlUploadModal').classList.add('show');
+    setTimeout(function(){ document.getElementById('htmlUploadContent').focus(); }, 100);
+  }
+  async function submitHtmlUpload() {
+    var pageId = _htmlUploadPageId;
+    if (!pageId) return;
+    var html = document.getElementById('htmlUploadContent').value.trim();
+    var kw = document.getElementById('htmlUploadKeyword').value.trim();
+    if (!html && !kw) { toast('Paste HTML or enter a keyword', '#f87171'); return; }
+    var payload = {};
+    if (html) payload.html_content = html;
+    if (kw) payload.keyword = kw;
+    try {
+      var d = await api('/pages/' + pageId + '/html', 'PATCH', payload);
+      if (d.success) {
+        toast('Saved' + (html ? ' - scanning...' : ''), '#4ade80');
+        hideModal('htmlUploadModal');
+        if (html) setTimeout(function(){ checkPage(pageId); }, 600);
+        setTimeout(loadPages, html ? 5000 : 500);
+      } else { toast(d.error || 'Failed', '#f87171'); }
+    } catch(e) { toast('Error: ' + e.message, '#f87171'); }
+  }
 
 <\/script>
 
@@ -26881,6 +27030,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 +'<button onclick="openHtmlModal('+p.id+')" class="tr-btn" title="Step 1: Set keyword and paste HTML (optional - system auto-fetches if empty)"><span style="font-size:9px;background:#374151;border-radius:3px;padding:1px 4px;margin-right:3px;">1</span>Keyword / HTML</button>'
                 +'<button onclick="runManualCheck('+p.id+')" class="tr-btn green" id="trCheckBtn_'+p.id+'" title="Step 2: Check Google position, AI Overview citations, and generate recommendations"><span style="font-size:9px;background:#166534;border-radius:3px;padding:1px 4px;margin-right:3px;">2</span>Check now</button>'
                 +'<button onclick="openCitationBrief('+p.id+')" class="tr-btn" style="border-color:#a78bfa;color:#a78bfa;" title="Step 3: Generate AI Citation Brief - exact passages to add for Google AIO, Perplexity, Copilot, Claude"><span style="font-size:9px;background:#4c1d95;border-radius:3px;padding:1px 4px;margin-right:3px;color:#fff;">3</span> Citation</button>'
+                +'<button onclick="markTrackerPageDone('+p.id+',this)" class="tr-btn" style="'+(p.is_done?'border-color:#4ade80;color:#4ade80;background:#052e1655;':'border-color:#374151;color:#6b7280;')+'" title="Mark as done / implemented">'+(p.is_done?'✓ Done':'Mark done')+'</button>'
                 +'<button onclick="deleteTrackerPage('+p.id+')" class="tr-btn danger">x</button>'
                 +'</div>'
                 +'<div style="font-size:11px;color:#6b7280;text-align:right;">'
@@ -27267,6 +27417,29 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
             }
             alert('Deleted ' + deleted + ' pages' + (failed ? ', ' + failed + ' failed' : ''));
             loadTrackerPages();
+        }
+
+        async function markTrackerPageDone(pageId, btn) {
+            var isDone = btn && btn.textContent.trim() === 'Mark done' ? true : false;
+            try {
+                var r = await fetch('/api/tracker/pages/'+pageId, {
+                    method:'PATCH',
+                    headers:{'Content-Type':'application/json','Authorization':'Bearer '+adminToken},
+                    body: JSON.stringify({ is_done: isDone })
+                });
+                var d = await r.json();
+                if (d.success) {
+                    if (btn) {
+                        btn.textContent = isDone ? '✓ Done' : 'Mark done';
+                        btn.style.borderColor = isDone ? '#4ade80' : '#374151';
+                        btn.style.color = isDone ? '#4ade80' : '#6b7280';
+                        btn.style.background = isDone ? '#052e1655' : '';
+                    }
+                    showToast(isDone ? 'Marked as done' : 'Unmarked', '#4ade80');
+                } else {
+                    showToast(d.error||'Failed', '#f87171');
+                }
+            } catch(e) { showToast('Error: '+e.message, '#f87171'); }
         }
 
         async function deleteTrackerPage(pageId) {
