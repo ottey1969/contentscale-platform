@@ -1436,6 +1436,8 @@ app.patch('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
    await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS country VARCHAR(100)`).catch(()=>{});
    await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS country_code VARCHAR(10)`).catch(()=>{});
    await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS last_seen_at TIMESTAMPTZ`).catch(()=>{});
+   await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS time_on_site INTEGER DEFAULT 0`).catch(()=>{});
+   await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS last_scanned_url TEXT`).catch(()=>{});
 
    // ── PARENT TABLES (must exist before child tables) ─────────────────────────
    // engine_access_codes: parent of tracker_pages, credit_log, api_cost_log
@@ -2284,6 +2286,27 @@ app.patch('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
      }
    });
 
+   // Heartbeat — tracks time on site and last scanned URL
+   app.post('/api/heartbeat', async (req, res) => {
+     try {
+       const { userId, seconds, scannedUrl } = req.body;
+       if (!userId) return res.json({ success: false });
+       const updates = ['last_seen_at=NOW()'];
+       const params = [];
+       if (seconds && Number.isInteger(seconds) && seconds > 0 && seconds < 86400) {
+         params.push(seconds);
+         updates.push(`time_on_site=COALESCE(time_on_site,0)+$${params.length}`);
+       }
+       if (scannedUrl && scannedUrl.startsWith('http')) {
+         params.push(scannedUrl.substring(0, 500));
+         updates.push(`last_scanned_url=$${params.length}`);
+       }
+       params.push(userId);
+       await pool.query(`UPDATE users SET ${updates.join(',')} WHERE id=$${params.length}`, params).catch(()=>{});
+       res.json({ success: true });
+     } catch(e) { res.json({ success: false }); }
+   });
+
    app.post('/api/user/register', async (req, res) => {
    try {
    const userId = crypto.randomUUID();
@@ -2959,6 +2982,10 @@ reportUrl
 ]
 );
 const scanLogId = insertResult.rows[0]?.id || null;
+// Update user's last scanned URL
+if (user_id && business_url) {
+  pool.query('UPDATE users SET last_scanned_url=$1, last_seen_at=NOW() WHERE id=$2', [business_url.substring(0,500), user_id]).catch(()=>{});
+}
 await pool.query(
 `INSERT INTO scan_reports (id, scan_log_id, business_url, business_name, score, niche, city, country, email_found, recommendations)
 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
@@ -23887,7 +23914,7 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
       var span = document.createElement('span');
       span.style.cssText = 'color:#9ca3af;font-family:monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;';
       span.title = labelFn(item);
-      span.textContent = labelFn(item).replace(/^https?:\/\/[^/]+/, '') || labelFn(item);
+      span.textContent = (function(u){ try { return new URL(u).pathname || u; } catch(e){ return u; } })(labelFn(item)) || labelFn(item);
       label.appendChild(cb);
       label.appendChild(span);
       containerEl.appendChild(label);
@@ -23973,7 +24000,7 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
     var list = document.getElementById('gscList');
     list.style.display = 'block';
     renderCheckList(pairs, container, 'gsc-cb',
-      function(p) { return p.url.replace(/^https?:\/\/[^/]+/, '') + (p.keyword ? '  [' + p.keyword + ']' : ''); },
+      function(p) { var path = (function(u){ try { return new URL(u).pathname; } catch(e){ return u; } })(p.url); return (path||p.url) + (p.keyword ? '  [' + p.keyword + ']' : ''); },
       countEl, MAX_PAGES
     );
     document.getElementById('importGscBtn').style.display = 'block';
@@ -24840,7 +24867,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 </div>
                 <!-- Filters -->
                 <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;align-items:center;">
-                    <input type="text" id="utSearch" class="ut-filter" placeholder="Search IP, country, user agent..." style="flex:1;min-width:200px;" oninput="renderUsers()">
+                    <input type="text" id="utSearch" class="ut-filter" placeholder="Search IP, country..." style="flex:1;min-width:200px;" oninput="renderUsers()">
                     <select id="utFilterStatus" class="ut-filter" onchange="renderUsers()">
                         <option value="">All status</option>
                         <option value="active">Active</option>
@@ -24862,7 +24889,8 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                                 <th>Type</th>
                                 <th>IP Address</th>
                                 <th>Country</th>
-                                <th>Browser / Agent</th>
+                                <th>Time on site</th>
+                                <th>URL scanned</th>
                                 <th>Status</th>
                                 <th>Scans</th>
                                 <th>Last seen</th>
@@ -26203,7 +26231,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
 
             const tbody = document.getElementById('usersContainer');
             if(!filtered.length) {
-                tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;color:#6b7280;padding:40px;">No users match your filters</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;color:#6b7280;padding:40px;">No users match your filters</td></tr>';
                 return;
             }
 
@@ -26256,14 +26284,20 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     ? '<button onclick="extendUserAccess(&apos;'+u.id+'&apos;)" class="ut-action">Extend</button>'
                     : '<button onclick="activateSingleUser(&apos;'+u.id+'&apos;)" class="ut-action green">Activate</button>';
 
+                // Time on site
+                const timeOnSite = u.time_on_site ? (u.time_on_site < 60 ? u.time_on_site+'s' : Math.round(u.time_on_site/60)+'m') : '-';
+                // Last scanned URL
+                const scanUrl = u.last_scanned_url ? '<span style="font-family:monospace;font-size:10px;color:#7c3aed;" title="'+u.last_scanned_url+'">'+u.last_scanned_url.replace(/^https?:\/\/[^/]+/,'').substring(0,30)+'...</span>' : '<span style="color:#374151;">-</span>';
+
                 return '<tr>'
                     +'<td><input type="checkbox" onchange="toggleSelection(&apos;users&apos;,&apos;'+u.id+'&apos;)" '+(selectedIds.users.has(u.id)?'checked':'')+'></td>'
                     +'<td>'+typeBadge+'</td>'
-                    +'<td style="font-family:monospace;font-size:12px;color:#60a5fa;">'+( u.ip_address||'-')+'</td>'
+                    +'<td style="font-family:monospace;font-size:12px;color:#60a5fa;">'+(u.ip_address||'-')+'</td>'
                     +'<td style="font-size:12px;white-space:nowrap;">'+country+'</td>'
-                    +'<td style="font-size:11px;color:#9ca3af;max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="'+(u.user_agent||'')+'">'+browser+'</td>'
                     +'<td>'+statusBadge+'</td>'
                     +'<td style="font-size:12px;color:#9ca3af;text-align:center;">'+(u.scan_count||0)+'</td>'
+                    +'<td style="font-size:12px;color:#4ade80;text-align:center;">'+timeOnSite+'</td>'
+                    +'<td style="font-size:11px;">'+scanUrl+'</td>'
                     +'<td style="font-size:12px;color:#9ca3af;white-space:nowrap;">'+lastSeen+'</td>'
                     +'<td style="font-size:12px;color:#6b7280;white-space:nowrap;">'+joined+'</td>'
                     +'<td style="display:flex;gap:6px;align-items:center;">'+actionBtn
