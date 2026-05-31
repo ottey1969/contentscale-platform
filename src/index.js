@@ -27770,7 +27770,150 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
             var table = document.createElement('table');
             table.style.cssText = 'width:100%;border-collapse:collapse;font-size:12px;';
             var thead = document.createElement('thead');
-            thead.innerHTML = '<tr style="border-bottom:1px solid #1f2937;"><th style="padding:8px 10px;text-align:left;font-size:10px;color:#6b7280;text-transform:uppercase;">Domain</th><th style="padding:8px 10px;text-align:left;font-size:10px;color:#6b7280;text-transform:uppercase;">Contact</th><th style="padding:8px 10px;text-align:center;font-size:10px;color:#6b7280;text-transform:uppercase;">Pages</th><th style="padding:8px 10px;text-align:center;font-size:10px;color:#6b7280;text-transform:uppercase;">Max</th><th style="padding:8px 10px;text-align:center;font-size:10px;color:#6b7280;text-transform:uppercase;">Status</th><th style="padding:8px 10px;text-align:left;font-size:10px;color:#6b7280;text-transform:uppercase;">Registered</th><th style="padding:8px 10px;text-align:center;font-size:10px;color:#6b7280;text-transform:uppercase;">Actions</th></tr>';
+            thead.innerHTML = '<tr style="border-bottom:1px solid #1f2937;">'
+                + '<th style="padding:8px 10px;text-align:left;font-size:10px;color:#6b7280;text-transform:uppercase;">Contact</th>'
+                + '<th style="padding:8px 10px;text-align:left;font-size:10px;color:#6b7280;text-transform:uppercase;">Domain + Share URL</th>'
+                + '<th style="padding:8px 10px;text-align:center;font-size:10px;color:#6b7280;text-transform:uppercase;">Pages</th>'
+                + '<th style="padding:8px 10px;text-align:center;font-size:10px;color:#6b7280;text-transform:uppercase;">Max</th>'
+                + '<th style="padding:8px 10px;text-align:center;font-size:10px;color:#6b7280;text-transform:uppercase;">Status</th>'
+                + '<th style="padding:8px 10px;text-align:left;font-size:10px;color:#6b7280;text-transform:uppercase;">Registered</th>'
+                + '<th style="padding:8px 10px;text-align:center;font-size:10px;color:#6b7280;text-transform:uppercase;">Actions</th>'
+                + '</tr>';
+            var tbody = document.createElement('tbody');
+
+            clients.forEach(function(c) {
+                var tr = document.createElement('tr');
+                tr.className = 'tc-row';
+
+                var date = c.created_at ? new Date(c.created_at).toLocaleDateString('en-GB') : '-';
+                var trackUrl = 'https://app.contentscale.site/track/' + c.token;
+                var isActive = c.status !== 'disabled';
+                var statusColor = isActive ? '#4ade80' : '#f87171';
+
+                // ── Max pages selector with quick presets ──
+                var maxCell = document.createElement('td');
+                maxCell.style.cssText = 'padding:8px 10px;text-align:center;';
+                var maxWrap = document.createElement('div');
+                maxWrap.style.cssText = 'display:flex;flex-direction:column;gap:3px;align-items:center;';
+                var maxInput = document.createElement('input');
+                maxInput.type = 'number';
+                maxInput.value = c.max_pages || 10;
+                maxInput.min = 1; maxInput.max = 500;
+                maxInput.style.cssText = 'width:54px;background:#0d1117;border:1px solid #374151;border-radius:4px;padding:3px 6px;color:#e5e7eb;font-size:12px;text-align:center;';
+                maxInput.onchange = (function(id){ return function(){ updateTcClient(id, {max_pages: parseInt(this.value)||10}); }; })(c.id);
+                var presets = document.createElement('div');
+                presets.style.cssText = 'display:flex;gap:2px;';
+                [10,25,50,100].forEach(function(n) {
+                    var btn = document.createElement('button');
+                    btn.textContent = n;
+                    btn.style.cssText = 'font-size:9px;padding:1px 5px;background:' + ((c.max_pages||10)==n?'#374151':'none') + ';border:1px solid #374151;border-radius:3px;color:#9ca3af;cursor:pointer;';
+                    btn.onclick = (function(id, val, inp, pBtns){ return function(){
+                        inp.value = val;
+                        updateTcClient(id, {max_pages: val});
+                        pBtns.querySelectorAll('button').forEach(function(b){ b.style.background='none'; });
+                        this.style.background = '#374151';
+                    }; })(c.id, n, maxInput, presets);
+                    presets.appendChild(btn);
+                });
+                maxWrap.appendChild(maxInput);
+                maxWrap.appendChild(presets);
+                maxCell.appendChild(maxWrap);
+
+                // ── Actions ──
+                var actionsDiv = document.createElement('div');
+                actionsDiv.style.cssText = 'display:flex;gap:3px;justify-content:center;flex-wrap:wrap;';
+
+                var toggleBtn = document.createElement('button');
+                toggleBtn.className = 'tr-btn' + (isActive ? '' : ' green');
+                toggleBtn.textContent = isActive ? 'Disable' : 'Enable';
+                toggleBtn.title = isActive ? 'Disable this client' : 'Re-enable this client';
+                toggleBtn.style.cssText = 'font-size:10px;padding:3px 8px;';
+                toggleBtn.onclick = (function(id, newStatus){ return function(){ updateTcClient(id, {status: newStatus}); loadTrackerClients(); }; })(c.id, isActive ? 'disabled' : 'active');
+
+                var ipBtn = document.createElement('button');
+                ipBtn.className = 'tr-btn';
+                ipBtn.textContent = 'Reset IP';
+                ipBtn.title = 'Registered IP: ' + (c.registered_ip || 'none');
+                ipBtn.style.cssText = 'font-size:10px;padding:3px 8px;';
+                ipBtn.onclick = (function(id){ return function(){ resetTcIp(id); }; })(c.id);
+
+                var copyBtn = document.createElement('button');
+                copyBtn.className = 'tr-btn';
+                copyBtn.textContent = 'Copy link';
+                copyBtn.title = 'Copy share URL to clipboard';
+                copyBtn.style.cssText = 'font-size:10px;padding:3px 8px;';
+                copyBtn.onclick = (function(url, btn){ return function(){
+                    navigator.clipboard.writeText(url).then(function(){
+                        btn.textContent = 'Copied!';
+                        setTimeout(function(){ btn.textContent = 'Copy link'; }, 2000);
+                    });
+                }; })(trackUrl, copyBtn);
+
+                var delBtn = document.createElement('button');
+                delBtn.className = 'tr-btn danger';
+                delBtn.textContent = 'Delete';
+                delBtn.title = 'Delete client + all pages';
+                delBtn.style.cssText = 'font-size:10px;padding:3px 8px;';
+                delBtn.onclick = (function(id){ return function(){ deleteTcClient(id); }; })(c.id);
+
+                actionsDiv.appendChild(toggleBtn);
+                actionsDiv.appendChild(ipBtn);
+                actionsDiv.appendChild(delBtn);
+
+                // ── Share URL cell — domain + full URL + copy ──
+                var urlCell = document.createElement('td');
+                urlCell.style.cssText = 'padding:8px 10px;';
+
+                var domainDiv = document.createElement('div');
+                domainDiv.style.cssText = 'font-size:12px;font-weight:700;color:#e5e7eb;margin-bottom:3px;';
+                domainDiv.textContent = c.domain || '-';
+
+                var urlLink = document.createElement('a');
+                urlLink.href = trackUrl;
+                urlLink.target = '_blank';
+                urlLink.rel = 'noopener';
+                urlLink.style.cssText = 'font-size:10px;font-family:monospace;color:#7c3aed;text-decoration:none;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:220px;margin-bottom:4px;';
+                urlLink.textContent = trackUrl;
+                urlLink.title = trackUrl;
+
+                var copyInlineBtn = document.createElement('button');
+                copyInlineBtn.className = 'tr-btn';
+                copyInlineBtn.textContent = 'Copy link';
+                copyInlineBtn.style.cssText = 'font-size:9px;padding:2px 7px;';
+                copyInlineBtn.onclick = (function(url, btn){ return function(e){
+                    e.preventDefault();
+                    navigator.clipboard.writeText(url).then(function(){
+                        btn.textContent = 'Copied!';
+                        setTimeout(function(){ btn.textContent = 'Copy link'; }, 2000);
+                    });
+                }; })(trackUrl, copyInlineBtn);
+
+                urlCell.appendChild(domainDiv);
+                urlCell.appendChild(urlLink);
+                urlCell.appendChild(copyInlineBtn);
+
+                tr.innerHTML =
+                    '<td style="padding:8px 10px;"><div style="color:#9ca3af;">' + (c.name||'-') + '</div>'
+                    + (c.email ? '<div style="color:#38bdf8;font-size:11px;">' + c.email + '</div>' : '')
+                    + (c.whatsapp ? '<div style="color:#4ade80;font-size:11px;">' + c.whatsapp + '</div>' : '')
+                    + '</td>'
+                    + '<td class="tc-url-cell" style="padding:8px 10px;max-width:240px;"></td>'
+                    + '<td style="padding:8px 10px;text-align:center;color:#a78bfa;">' + (c.page_count||0) + '</td>'
+                    + '<td class="tc-max-cell" style="padding:8px 10px;text-align:center;"></td>'
+                    + '<td style="padding:8px 10px;text-align:center;"><span style="font-size:10px;font-weight:700;color:' + statusColor + ';">' + (c.status||'active').toUpperCase() + '</span></td>'
+                    + '<td style="padding:8px 10px;color:#6b7280;">' + date + (c.registered_ip ? '<div style="font-size:10px;color:#374151;">' + c.registered_ip + '</div>' : '') + '</td>'
+                    + '<td style="padding:8px 10px;text-align:center;" class="tc-actions-cell"></td>';
+
+                tr.querySelector('.tc-url-cell').appendChild(urlSpan);
+                tr.querySelector('.tc-max-cell').appendChild(maxWrap);
+                tr.querySelector('.tc-actions-cell').appendChild(actionsDiv);
+                tbody.appendChild(tr);
+            });
+            table.appendChild(thead);
+            table.appendChild(tbody);
+            el.innerHTML = '';
+            el.appendChild(table);
+        }
             var tbody = document.createElement('tbody');
 
             clients.forEach(function(c) {
@@ -30615,11 +30758,12 @@ function startTrackerScheduler() {
   _trackerSchedulerTimer = setInterval(async () => {
     if(!pool) return;
     try {
+      // Pick pages from BOTH engine tracker (engine_code_id) AND client tracker (tracker_client_id)
       const due = await pool.query(
         `SELECT p.* FROM tracker_pages p
          WHERE (p.next_check_at <= NOW() OR p.next_check_at IS NULL)
-         AND p.is_done IS NOT TRUE
-         AND p.engine_code_id IS NOT NULL
+         AND (p.is_active = TRUE OR p.is_active IS NULL)
+         AND (p.engine_code_id IS NOT NULL OR p.tracker_client_id IS NOT NULL)
          ORDER BY
            CASE p.check_frequency
              WHEN 'daily' THEN 1
@@ -30633,14 +30777,16 @@ function startTrackerScheduler() {
          LIMIT 10`
       );
       for(const page of due.rows) {
-        console.log('[tracker-scheduler] Running check for:', page.url, '| freq:', page.check_frequency);
+        const source = page.tracker_client_id ? 'client' : 'engine';
+        console.log('[tracker-scheduler] Running check for:', page.url, '| source:', source, '| freq:', page.check_frequency);
         const _sk = { gemini: process.env.GEMINI_API_KEY, serpapiKey: process.env.SERPAPI_KEY, youKey: process.env.YOU_API_KEY, perplexityKey: process.env.PERPLEXITY_API_KEY };
         await runTrackerCheck(page, _sk.gemini, _sk).catch(e => console.warn('[tracker-scheduler]', e.message));
+        // runTrackerCheck already handles email for client tracker pages internally
         await new Promise(r => setTimeout(r, 5000));
       }
     } catch(e) { console.warn('[tracker-scheduler]', e.message); }
   }, 15 * 60 * 1000);
-  console.log('[tracker-scheduler] Started (adaptive, every 15min)');
+  console.log('[tracker-scheduler] Started (engine + client tracker, every 15min)');
 }
 
 
