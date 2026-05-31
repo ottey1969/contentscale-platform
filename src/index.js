@@ -27043,7 +27043,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
 
             // Clean URL - strip anchor fragments (#section etc)
             const rawUrl = p.url || '';
-            const urlClean = rawUrl.replace(/#.*$/, '').replace(/\/$/, '');
+            const urlClean = rawUrl.replace(/#.*$/, '').replace(/[/]$/, '');
 
             // Position pill
             let posPill = '<span style="color:#6b7280;font-size:13px;">Not ranked</span>';
