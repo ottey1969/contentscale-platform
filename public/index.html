@@ -2378,6 +2378,21 @@
       <script>
          let userId = null;
          let sendgridConfigured = false;
+
+         // Heartbeat — tracks time on site every 30s
+         var _heartbeatStart = Date.now();
+         var _lastScannedUrl = null;
+         function sendHeartbeat() {
+           if (!userId) return;
+           var seconds = Math.round((Date.now() - _heartbeatStart) / 1000);
+           _heartbeatStart = Date.now();
+           if (seconds < 5 || seconds > 300) return;
+           var body = { userId: userId, seconds: seconds };
+           if (_lastScannedUrl) body.scannedUrl = _lastScannedUrl;
+           fetch('/api/heartbeat', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) }).catch(function(){});
+         }
+         setInterval(sendHeartbeat, 30000);
+         window.addEventListener('beforeunload', sendHeartbeat);
          let userTemplates = {};
          let bulkResults = [];
          let isScanning = false;
@@ -2845,8 +2860,9 @@
          const progressBar = document.getElementById('singleProgressBar');
          const progressText = document.getElementById('singleProgressText');
          let url = input.value.trim();
-         if (!url) { alert('❌ Enter URL'); return; }
+         if (!url) { alert('Enter URL'); return; }
          if (!url.startsWith('http')) url = 'https://' + url;
+         _lastScannedUrl = url; // track for heartbeat
          button.disabled = true;
          button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Scanning...';
          progress.classList.remove('hidden');
