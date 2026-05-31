@@ -23327,7 +23327,7 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
 
 /* Welcome agent */
 .wl-overlay { position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.75);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:16px; }
-.wl-card { background:#0d1117;border:1px solid #1f2937;border-radius:20px;width:100%;max-width:520px;overflow:hidden;box-shadow:0 0 80px rgba(124,58,237,.3);animation:wlIn .6s cubic-bezier(.16,1,.3,1); }
+.wl-card { background:#0d1117;border:1px solid #1f2937;border-radius:20px;width:100%;max-width:520px;max-height:90vh;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 0 80px rgba(124,58,237,.3);animation:wlIn .6s cubic-bezier(.16,1,.3,1); }
 @keyframes wlIn { from{opacity:0;transform:translateY(30px) scale(.96)} to{opacity:1;transform:none} }
 .wl-top { background:linear-gradient(135deg,#1e1b4b 0%,#312e81 50%,#4c1d95 100%);padding:32px 28px 24px;text-align:center;position:relative; }
 .wl-avatar { width:72px;height:72px;border-radius:50%;border:3px solid rgba(255,255,255,.3);margin:0 auto 14px;display:block;object-fit:cover; }
@@ -23336,7 +23336,7 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
 @keyframes wlPulse { 0%,100%{opacity:1} 50%{opacity:.3} }
 .wl-name { font-size:1rem;font-weight:900;color:#f1f5f9;margin-bottom:4px; }
 .wl-role { font-size:11px;color:#a78bfa; }
-.wl-body { padding:24px 28px; }
+.wl-body { padding:24px 28px;overflow-y:auto;flex:1; }
 .wl-msg { font-size:13px;color:#9ca3af;line-height:1.75;margin-bottom:20px; }
 .wl-domain-box { background:#0a0a12;border:1px solid #7c3aed;border-radius:10px;padding:14px 18px;margin-bottom:20px;display:flex;align-items:center;gap:12px; }
 .wl-domain-icon { width:36px;height:36px;border-radius:8px;background:linear-gradient(135deg,#7c3aed,#4f46e5);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0; }
