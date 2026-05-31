@@ -26896,6 +26896,8 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
             _trDomainFilter = sel ? sel.value : '';
             renderTrackerPages();
         }
+
+        function populateClientFilter() {
             const sel = document.getElementById('trClientFilter');
             if(!sel) return;
             const clients = {};
@@ -26930,18 +26932,6 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 });
                 domSel.value = prevDom || '';
             }
-        }
-
-        function filterTrackerByClient() {
-            const sel = document.getElementById('trClientFilter');
-            _trClientFilter = sel ? sel.value : '';
-            renderTrackerPages();
-        }
-
-        function filterTrackerByDomain() {
-            const sel = document.getElementById('trDomainFilter');
-            _trDomainFilter = sel ? sel.value : '';
-            renderTrackerPages();
         }
 
         function renderTrackerStats() {
