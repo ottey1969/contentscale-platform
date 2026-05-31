@@ -30269,15 +30269,16 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
           console.log(`[tracker] Serper: position=${snapshot.google_position}, AIO=${snapshot.ai_google_overview_found}, cited=${snapshot.ai_google_overview_cited}`);
         } else {
           const err = await sResp.text().catch(()=>'');
-          _trSetStep(pageId, 'google', 'error', `Serper ${sResp.status}: ${err.substring(0,200)}`);
-          console.warn('[tracker] Serper error:', sResp.status, err.substring(0,200));
+          const quotaMsg = sResp.status === 429 ? 'Serper quota exhausted — upgrade at serper.dev or wait until monthly reset' : `Serper ${sResp.status}: ${err.substring(0,120)}`;
+          _trSetStep(pageId, 'google', 'error', quotaMsg);
+          console.warn('[tracker] Serper error:', sResp.status, err.substring(0,120));
         }
       } catch(e) {
         _trSetStep(pageId, 'google', 'error', e.message);
         console.warn('[tracker] Serper failed:', e.message);
       }
     } else {
-      _trSetStep(pageId, 'google', 'error', 'SERPAPI_KEY not set — add it to Railway env vars (free at serper.dev)');
+      _trSetStep(pageId, 'google', 'error', 'SERPAPI_KEY not set — add it to Railway env vars (free at serper.dev, 2,500/mo)');
     }
 
     // ── 3. Perplexity citation via Sonar API ─────────────────────────────────
