@@ -23494,7 +23494,7 @@ function renderPages() {
       + (cited ? '<span class="cs-cs-badge green">&#10003; Google AIO</span>' : '<span class="cs-cs-badge grey">No AIO</span>')
       + (p.ai_perplexity_cited ? '<span class="cs-cs-badge purple">&#10003; Perplexity</span>' : '')
       + (score ? '<span class="cs-cs-badge yellow">'+score+'/100</span>' : '')
-      + (kw ? \'<span style="font-size:10px;color:#4b5563;padding:2px 6px;">\'+kw+\'</span> <button onclick="editKeyword(\'+p.id+\',\'\'+kw.replace(/\'/g,\"\")+\'\')" style="font-size:9px;background:none;border:none;color:#4b5563;cursor:pointer;text-decoration:underline;">edit</button>\' : \'<button onclick="editKeyword(\'+p.id+\',\'\')" style="font-size:9px;background:none;border:none;color:#4b5563;cursor:pointer;">+keyword</button>\')
+      + (kw ? '<span style="font-size:10px;color:#4b5563;padding:2px 6px;">'+kw+'</span> <button onclick="editKeyword('+p.id+',this)" style="font-size:9px;background:none;border:none;color:#4b5563;cursor:pointer;text-decoration:underline;">edit</button>' : '<button onclick="editKeyword('+p.id+',this)" style="font-size:9px;background:none;border:none;color:#4b5563;cursor:pointer;">+keyword</button>')
       + '</div>'
       + '<div style="font-size:10px;color:#374151;">Last checked: ' + checked + '</div>'
       + '</div>'
@@ -24066,9 +24066,17 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
   }
 
   // -- Keyword editing --------------------------------------------------------
-  function editKeyword(pageId, currentKw) {
-    var newKw = prompt('Edit keyword for this page:', currentKw || '');
-    if (newKw === null) return; // cancelled
+  function editKeyword(pageId, el) {
+    var currentKw = '';
+    if (typeof el === 'string') {
+      currentKw = el;
+    } else if (el && el.previousSibling) {
+      // Get keyword from the span before this button
+      var prev = el.previousElementSibling;
+      currentKw = prev ? prev.textContent : '';
+    }
+    var newKw = prompt('Edit keyword for this page:', currentKw);
+    if (newKw === null) return;
     api('/pages/' + pageId + '/keyword', 'PATCH', { keyword: newKw.trim() })
       .then(function(data) {
         if (data.success) { toast('Keyword updated', '#4ade80'); loadPages(); }
