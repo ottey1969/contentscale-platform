@@ -23379,7 +23379,7 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
     <div class="cs-stat"><div class="val" id="statCitedG" style="color:#0284c7;">&mdash;</div><div class="lbl">Google AIO</div></div>
     <div class="cs-stat"><div class="val" id="statCitedP" style="color:#7c3aed;">&mdash;</div><div class="lbl">Perplexity</div></div>
     <div class="cs-stat"><div class="val" id="statCitedB" style="color:#2563eb;">&mdash;</div><div class="lbl">Copilot</div></div>
-    <div class="cs-stat"><div class="val" id="statCitedC" style="color:#dc2626;">&mdash;</div><div class="lbl">Claude</div></div>
+    <div class="cs-stat"><div class="val" id="statCitedC" style="color:#dc2626;">&mdash;</div><div class="lbl">Brave</div></div>
     <div class="cs-stat"><div class="val" id="statAvgScore" style="color:#ca8a04;">&mdash;</div><div class="lbl">GRAAF</div></div>
     <div class="cs-stat"><div class="val" id="statRemaining" style="color:#16a34a;">&mdash;</div><div class="lbl">Slots left</div></div>
   </div>
@@ -23518,8 +23518,15 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
       <label style="font-size:11px;color:#9ca3af;display:block;margin-bottom:4px;">Keyword (optional)</label>
       <input id="htmlUploadKeyword" type="text" class="cs-input" placeholder="e.g. seo content strategy">
     </div>
-    <textarea id="htmlUploadContent" class="cs-input" rows
+    <textarea id="htmlUploadContent" class="cs-input" rows="10" placeholder="Paste full page HTML here..." style="resize:vertical;font-family:monospace;font-size:11px;margin-bottom:12px;"></textarea>
+    <div style="display:flex;gap:8px;">
+      <button class="cs-btn primary" onclick="submitHtmlUpload()" style="flex:1;">Save &amp; scan</button>
+      <button class="cs-btn" onclick="hideModal('htmlUploadModal')">Cancel</button>
+    </div>
+  </div>
+</div>
 
+<script>
 var TOKEN = '__TOKEN__';
 var DOMAIN = '__DOMAIN__';
 var MAX_PAGES = __MAX_PAGES__;
@@ -24414,8 +24421,8 @@ eyword = kw;
       <div class="wl-features">
         <div class="wl-feature"><span class="wl-feature-dot"></span>Google AI Overview</div>
         <div class="wl-feature"><span class="wl-feature-dot"></span>Perplexity</div>
-        <div class="wl-feature"><span class="wl-feature-dot"></span>Microsoft Copilot / Bing</div>
-        <div class="wl-feature"><span class="wl-feature-dot"></span>Claude / Brave Search</div>
+        <div class="wl-feature"><span class="wl-feature-dot"></span>Copilot</div>
+        <div class="wl-feature"><span class="wl-feature-dot"></span>Brave Search</div>
         <div class="wl-feature"><span class="wl-feature-dot"></span>ChatGPT Search</div>
         <div class="wl-feature"><span class="wl-feature-dot"></span>GRAAF content scoring</div>
         <div class="wl-feature"><span class="wl-feature-dot"></span>Live Citation Briefs</div>
@@ -24448,15 +24455,7 @@ eyword = kw;
 </div>
 
 </body>
-</html
-@media (max-width: 900px) {
-  .cs-stats { grid-template-columns: repeat(4,1fr) !important; }
-}
-@media (max-width: 480px) {
-  .cs-stats { grid-template-columns: repeat(2,1fr) !important; }
-  .cs-container { padding: 12px !important; }
-}
->`;
+</html>`;
 
 // ── Live Overlay HTML ─────────────────────────────────────────────────────
 const _LIVE_OVERLAY_HTML = `<!DOCTYPE html>
@@ -26956,7 +26955,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
             if(_trDomainFilter) filtered = filtered.filter(function(p){ return (p.url||'').split('//').pop().split('/')[0].replace('www.','') === _trDomainFilter; });
             if(_trCitationFilter === 'google') filtered = filtered.filter(function(p){ return p.latest_snapshot && p.latest_snapshot.ai_google_overview_cited; });
             if(_trCitationFilter === 'perplexity') filtered = filtered.filter(function(p){ return p.latest_snapshot && p.latest_snapshot.ai_perplexity_cited; });
-            if(_trCitationFilter === 'copilot') filtered = filtered.filter(function(p){ return p.latest_snapshot && p.latest_snapshot.ai_bing_cited; });
+            if(_trCitationFilter === 'youcom') filtered = filtered.filter(function(p){ return p.latest_snapshot && p.latest_snapshot.ai_bing_cited; });
             const activeFilters = [_trClientFilter, _trDomainFilter, _trCitationFilter].filter(Boolean).length;
             const countEl = document.getElementById('trFilterCount');
             if(countEl) countEl.textContent = activeFilters ? 'Showing ' + filtered.length + ' of ' + allTrackerPages.length + ' pages' + (_trCitationFilter ? ' - cited in ' + _trCitationFilter : '') : '';
@@ -27090,7 +27089,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 +'<button onclick="openHtmlModal('+p.id+')" class="tr-btn" title="Step 1: Set keyword and paste HTML (optional - system auto-fetches if empty)"><span style="font-size:9px;background:#374151;border-radius:3px;padding:1px 4px;margin-right:3px;">1</span>Keyword / HTML</button>'
                 +'<button onclick="runManualCheck('+p.id+')" class="tr-btn green" id="trCheckBtn_'+p.id+'" title="Step 2: Check Google position, AI Overview citations, and generate recommendations"><span style="font-size:9px;background:#166534;border-radius:3px;padding:1px 4px;margin-right:3px;">2</span>Check now</button>'
                 +'<button onclick="openCitationBrief('+p.id+')" class="tr-btn" style="border-color:#a78bfa;color:#a78bfa;" title="Step 3: Generate AI Citation Brief - exact passages to add for Google AIO, Perplexity, Copilot, Claude"><span style="font-size:9px;background:#4c1d95;border-radius:3px;padding:1px 4px;margin-right:3px;color:#fff;">3</span> Citation</button>'
-                +'<button onclick="markTrackerPageDone('+p.id+',this)" class="tr-btn" style="'+(p.is_done?'border-color:#4ade80;color:#4ade80;background:#052e1655;':'border-color:#374151;color:#6b7280;')+'" title="Mark as done / implemented">'+(p.is_done?'✓ Done':'Mark done')+'</button>'
+                +'<button onclick="markTrackerPageDone('+p.id+',this)" class="tr-btn" style="'+(p.is_done?'border-color:#4ade80;color:#4ade80;background:#052e1655;':'border-color:#374151;color:#6b7280;')+'" title="Mark as done / implemented">'+(p.is_done?'v Done':'Mark done')+'</button>'
                 +'<button onclick="deleteTrackerPage('+p.id+')" class="tr-btn danger">x</button>'
                 +'</div>'
                 +'<div style="font-size:11px;color:#6b7280;text-align:right;">'
@@ -27490,7 +27489,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 var d = await r.json();
                 if (d.success) {
                     if (btn) {
-                        btn.textContent = isDone ? '✓ Done' : 'Mark done';
+                        btn.textContent = isDone ? 'v Done' : 'Mark done';
                         btn.style.borderColor = isDone ? '#4ade80' : '#374151';
                         btn.style.color = isDone ? '#4ade80' : '#6b7280';
                         btn.style.background = isDone ? '#052e1655' : '';
@@ -27850,7 +27849,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 var isActive = c.status !== 'disabled';
                 var statusColor = isActive ? '#4ade80' : '#f87171';
 
-                // ── Max pages selector with quick presets ──
+                // -- Max pages selector with quick presets --
                 var maxCell = document.createElement('td');
                 maxCell.style.cssText = 'padding:8px 10px;text-align:center;';
                 var maxWrap = document.createElement('div');
@@ -27879,7 +27878,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 maxWrap.appendChild(presets);
                 maxCell.appendChild(maxWrap);
 
-                // ── Actions ──
+                // -- Actions --
                 var actionsDiv = document.createElement('div');
                 actionsDiv.style.cssText = 'display:flex;gap:3px;justify-content:center;flex-wrap:wrap;';
 
@@ -27920,7 +27919,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 actionsDiv.appendChild(ipBtn);
                 actionsDiv.appendChild(delBtn);
 
-                // ── Share URL cell — domain + full URL + copy ──
+                // -- Share URL cell - domain + full URL + copy --
                 var urlCell = document.createElement('td');
                 urlCell.style.cssText = 'padding:8px 10px;';
 
@@ -30285,20 +30284,14 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
     }
 
     // ── 4. You.com Smart API citation ────────────────────────────────────────
-    // You.com Smart API — get key at app.you.com/api-dashboard (free tier)
-    // Correct auth: X-API-Key header only (no Bearer prefix)
-    // Endpoints to try in order:
-    //   1. https://api.ydc-index.io/search  (web search, returns hits[])
-    //   2. https://api.ydc-index.io/rag     (AI answer, returns answer + sources[])
+    // ── 4. You.com AI Search citation ─────────────────────────────────────────
     _trSetStep(pageId, 'youcom', 'running', 'Checking You.com AI Search: ' + keyword);
     if(_yk) { const youKey = _yk;
       try {
-        // Primary: web search endpoint — X-API-Key only
         let yResp = await fetch(
           `https://api.ydc-index.io/search?query=${encodeURIComponent(keyword)}&num_web_results=10`,
           { headers: { 'X-API-Key': youKey }, signal: AbortSignal.timeout(12000) }
         ).catch(() => null);
-        // Fallback: RAG endpoint (returns AI answer + sources)
         if(!yResp || (!yResp.ok && (yResp.status === 403 || yResp.status === 404 || yResp.status === 401))) {
           yResp = await fetch(
             `https://api.ydc-index.io/rag?query=${encodeURIComponent(keyword)}`,
@@ -30307,13 +30300,10 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
         }
         if(yResp && yResp.ok) {
           const yData = await yResp.json();
-          // /search endpoint: hits[] each with {url, title, snippets[]}
-          // /rag endpoint:    answer (string) + sources[] each with {url, snippet}
           const hits = yData.hits || yData.results || [];
           const sources = yData.sources || [];
           const allUrls = [...hits, ...sources].map(function(h){ return (h.url||''); });
           const inResults = allUrls.some(function(u){ return u.replace(/^https?:\/\//, '').startsWith(domain); });
-          // AI answer text — check if domain is mentioned
           const aiAnswer = yData.answer || '';
           const aiSnippets = yData.ai_snippets || [];
           const inAI = aiAnswer.includes(domain)
@@ -30321,8 +30311,8 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
             || sources.some(function(s){ return (s.url||'').includes(domain); });
           snapshot.ai_bing_found = hits.length > 0;
           snapshot.ai_bing_cited = inResults || inAI;
-          if(inResults || inAI) snapshot.ai_bing_text = inAI ? 'Cited in You.com AI answer' : 'Found in You.com top results';
-          const label = inAI ? '✅ Cited in AI answer' : (inResults ? '⚠️ In results (not in AI answer)' : '❌ Not found');
+          if(inResults || inAI) snapshot.ai_bing_text = inAI ? 'Cited in You.com AI answer' : 'Found in You.com results';
+          const label = inAI ? 'Cited in AI answer' : (inResults ? 'In results (not in AI answer)' : 'Not found');
           _trSetStep(pageId, 'youcom', 'done', label);
         } else {
           const status = yResp ? yResp.status : 'timeout';
@@ -30334,12 +30324,62 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
         console.warn('[tracker] You.com failed:', e.message);
       }
     } else {
-      _trSetStep(pageId, 'youcom', 'error', 'You.com key not set — add YOU_API_KEY to Railway or engine settings');
+      _trSetStep(pageId, 'youcom', 'error', 'YOU_API_KEY not set');
     }
+
+    // ── 4b. Brave Search citation ──────────────────────────────────────────────
+    // Brave Search API — independent index, used by Claude/Brave browser
+    // Get key at brave.com/search/api — free tier available
+    // Add BRAVE_SEARCH_API_KEY to Railway env vars
+    _trSetStep(pageId, 'brave', 'running', 'Checking Brave Search / Claude: ' + keyword);
+    const _bk = keys.braveKey || process.env.BRAVE_SEARCH_API_KEY || '';
+    if(_bk) {
+      try {
+        const bResp = await fetch(
+          `https://api.search.brave.com/res/v1/web/search?q=${encodeURIComponent(keyword)}&count=10&result_filter=web`,
+          {
+            headers: {
+              'Accept': 'application/json',
+              'Accept-Encoding': 'gzip',
+              'X-Subscription-Token': _bk
+            },
+            signal: AbortSignal.timeout(12000)
+          }
+        );
+        if(bResp.ok) {
+          const bData = await bResp.json();
+          const results = (bData.web && bData.web.results) || [];
+          const inResults = results.some(function(r){
+            return (r.url||'').replace(/^https?:\/\//, '').startsWith(domain);
+          });
+          // Also check if domain appears in any result descriptions (soft citation)
+          const inSnippets = results.some(function(r){
+            return (r.description||r.extra_snippets||[]).toString().includes(domain);
+          });
+          snapshot.ai_brave_cited = inResults || inSnippets;
+          snapshot.ai_brave_found = results.length > 0;
+          if(inResults) snapshot.ai_bing_text = (snapshot.ai_bing_text ? snapshot.ai_bing_text + ' | ' : '') + 'Found in Brave Search';
+          const label = inResults ? 'Cited in Brave Search index' : (inSnippets ? 'Mentioned in snippets' : 'Not found in Brave');
+          _trSetStep(pageId, 'brave', 'done', label);
+          console.log('[tracker] Brave Search: inResults=' + inResults + ', position=' + (results.findIndex(function(r){ return (r.url||'').includes(domain); })+1));
+        } else {
+          const err = await bResp.text().catch(()=>'');
+          _trSetStep(pageId, 'brave', 'error', 'Brave API ' + bResp.status + ': ' + err.substring(0,80));
+        }
+      } catch(e) {
+        _trSetStep(pageId, 'brave', 'error', e.message);
+        console.warn('[tracker] Brave Search failed:', e.message);
+      }
+    } else {
+      _trSetStep(pageId, 'brave', 'error', 'BRAVE_SEARCH_API_KEY not set — add to Railway env vars');
+      snapshot.ai_brave_cited = false;
+    }
+
   } else {
     _trSetStep(pageId, 'google', 'error', 'No keyword set — add a target keyword to this page');
     _trSetStep(pageId, 'perplexity', 'error', 'No keyword — skipped');
     _trSetStep(pageId, 'youcom', 'error', 'No keyword — skipped');
+    _trSetStep(pageId, 'brave', 'error', 'No keyword — skipped');
   }
 
   // 5. Generate recommendations via Gemini — gap analysis vs. what's winning in Google + AI systems
@@ -30478,11 +30518,13 @@ Zero generic advice. Skip anything our content already clearly has.`;
     `INSERT INTO tracker_snapshots
       (page_id,checked_at,google_position,ai_google_overview_found,ai_google_overview_cited,ai_google_overview_text,
        ai_perplexity_found,ai_perplexity_cited,ai_perplexity_text,ai_bing_found,ai_bing_cited,ai_bing_text,
+       ai_brave_found,ai_brave_cited,
        recommendations,html_hash,score,graaf_breakdown,graaf_recommendations,content_changed,content_diff)
-     VALUES ($1,NOW(),$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18) RETURNING *`,
+     VALUES ($1,NOW(),$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20) RETURNING *`,
     [page.id, snapshot.google_position, snapshot.ai_google_overview_found, snapshot.ai_google_overview_cited,
      snapshot.ai_google_overview_text, snapshot.ai_perplexity_found, snapshot.ai_perplexity_cited,
      snapshot.ai_perplexity_text, snapshot.ai_bing_found, snapshot.ai_bing_cited, snapshot.ai_bing_text,
+     !!snapshot.ai_brave_found, !!snapshot.ai_brave_cited,
      safeJSONB(snapshot.recommendations),
      snapshot.html_hash,
      snapshot.score,
