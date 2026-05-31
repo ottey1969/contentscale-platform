@@ -23112,10 +23112,10 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
 .cs-domain { background:#1e293b; border:1px solid #334155; border-radius:6px; padding:4px 12px; font-size:11px; color:#94a3b8; font-family:monospace; }
 
 /* Container */
-.cs-container { max-width:900px; margin:0 auto; padding:24px 16px; }
+.cs-container { max-width:1200px; margin:0 auto; padding:24px 24px; }
 
 /* Stats */
-.cs-stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(100px,1fr)); gap:8px; margin-bottom:20px; }
+.cs-stats { display:grid; grid-template-columns:repeat(7,1fr); gap:8px; margin-bottom:20px; }
 .cs-stat { background:#111827; border:1px solid #1f2937; border-radius:8px; padding:12px; text-align:center; }
 .cs-stat .val { font-size:1.3rem; font-weight:900; color:#7c3aed; margin-bottom:2px; }
 .cs-stat .lbl { font-size:9px; color:#6b7280; text-transform:uppercase; letter-spacing:.06em; }
@@ -23128,7 +23128,7 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
 .cs-btn.primary:hover { background:#6d28d9; }
 
 /* Live feed */
-.cs-live { background:#0f172a; border-radius:10px; margin-bottom:20px; overflow:hidden; }
+.cs-live { background:#0f172a; border-radius:10px; margin-bottom:20px; overflow:hidden; max-height:200px; }
 .cs-live-header { display:flex; align-items:center; justify-content:space-between; padding:10px 16px; }
 .cs-live-feed { padding:8px 14px; min-height:40px; max-height:160px; overflow-y:auto; font-family:monospace; font-size:11px; line-height:1.6; }
 
@@ -23785,7 +23785,15 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
 </div>
 
 </body>
-</html>`;
+</html
+@media (max-width: 900px) {
+  .cs-stats { grid-template-columns: repeat(4,1fr) !important; }
+}
+@media (max-width: 480px) {
+  .cs-stats { grid-template-columns: repeat(2,1fr) !important; }
+  .cs-container { padding: 12px !important; }
+}
+>`;
 
 // ── Live Overlay HTML ─────────────────────────────────────────────────────
 const _LIVE_OVERLAY_HTML = `<!DOCTYPE html>
