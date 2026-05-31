@@ -23595,7 +23595,14 @@ function renderPages() {
   var countEl = document.getElementById('pageCountLabel');
   if (countEl) countEl.textContent = _pages.length + ' pages tracked';
   if (!_pages.length) {
-    el.innerHTML = '<div style="background:#0d1117;border:2px dashed #1f2937;border-radius:12px;padding:40px 28px;text-align:center;"><div style="font-size:40px;margin-bottom:16px;">&#128203;</div><div style="font-size:16px;font-weight:800;color:#e5e7eb;margin-bottom:8px;">Start tracking your pages</div><div style="font-size:13px;color:#6b7280;line-height:1.7;margin-bottom:20px;max-width:420px;margin-left:auto;margin-right:auto;">Add URLs one by one, import from your sitemap, or paste from Google Search Console. The system checks automatically.</div><div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;"><button class=\"cs-btn primary\" onclick=\"showAddModal()\" style=\"font-size:13px;padding:10px 20px;\">+ Add first URL</button><button class=\"cs-btn\" onclick=\"showImportModal('sitemap')\" style=\"font-size:13px;padding:10px 20px;border-color:#38bdf8;color:#38bdf8;\">Import from sitemap</button></div></div>';
+    el.innerHTML = '<div style="background:#0d1117;border:2px dashed #1f2937;border-radius:12px;padding:40px 28px;text-align:center;">'
+      + '<div style="font-size:40px;margin-bottom:16px;">&#128203;</div>'
+      + '<div style="font-size:16px;font-weight:800;color:#e5e7eb;margin-bottom:8px;">Start tracking your pages</div>'
+      + '<div style="font-size:13px;color:#6b7280;line-height:1.7;margin-bottom:20px;max-width:420px;margin-left:auto;margin-right:auto;">Add URLs one by one, import from your sitemap, or paste from Google Search Console. The system checks automatically.</div>'
+      + '<div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">'
+      + '<button class="cs-btn primary" onclick="showAddModal()" style="font-size:13px;padding:10px 20px;">+ Add first URL</button>'
+      + '<button class="cs-btn" onclick="showImportModal(&quot;sitemap&quot;)" style="font-size:13px;padding:10px 20px;border-color:#38bdf8;color:#38bdf8;">Import from sitemap</button>'
+      + \'</div></div>\';
     return;
   }
   el.innerHTML = _pages.map(function(p) {
@@ -25441,7 +25448,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     if (ev.type === 'monitor_aio') return (ev.cited ? 'CITED ' : 'AIO found: ') + '"' + ev.kw + '" - ' + (ev.aio_text||'').substring(0,60);
                     if (ev.type === 'monitor_no_aio') return 'No AIO: "' + ev.kw + '"';
                     if (ev.type === 'monitor_position') return '#' + ev.position + ' in Google: "' + ev.kw + '" (' + ev.domain + ')';
-                    if (ev.type === 'news') { var h = ev.headline || ''; var src2 = ev.source ? ' [' + ev.source + ']' : ''; return '📰 ' + ( + src2; }
+                    if (ev.type === 'news') { var h = ev.headline || ''; var src2 = ev.source ? ' [' + ev.source + ']' : ''; return '📰 ' + h + src2; }
                     if (ev.type === 'connected') return 'Live feed connected';
                     return ev.msg || '';
                 }
@@ -27968,84 +27975,6 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 tr.querySelector('.tc-actions-cell').appendChild(actionsDiv);
                 tbody.appendChild(tr);
             });
-            table.appendChild(thead);
-            table.appendChild(tbody);
-            el.innerHTML = '';
-            el.appendChild(table);
-        }
-            var tbody = document.createElement('tbody');
-
-            clients.forEach(function(c) {
-                var tr = document.createElement('tr');
-                tr.style.cssText = 'border-bottom:1px solid #0d1117;';
-                tr.onmouseover = function(){ this.style.background='#0d1117'; };
-                tr.onmouseout = function(){ this.style.background=''; };
-
-                var date = c.created_at ? new Date(c.created_at).toLocaleDateString('en-GB') : '-';
-                var trackUrl = 'https://app.contentscale.site/track/' + c.token;
-                var tokenShort = c.token ? c.token.substring(0,8) + '...' : '-';
-                var isActive = c.status !== 'disabled';
-                var statusColor = isActive ? '#4ade80' : '#f87171';
-
-                var maxInput = document.createElement('input');
-                maxInput.type = 'number';
-                maxInput.value = c.max_pages || 10;
-                maxInput.min = 1; maxInput.max = 200;
-                maxInput.style.cssText = 'width:50px;background:#0d1117;border:1px solid #374151;border-radius:4px;padding:3px 6px;color:#e5e7eb;font-size:12px;';
-                maxInput.onchange = (function(id){ return function(){ updateTcClient(id, {max_pages: parseInt(this.value)}); }; })(c.id);
-
-                var toggleBtn = document.createElement('button');
-                toggleBtn.className = 'tr-btn';
-                toggleBtn.textContent = isActive ? 'Off' : 'On';
-                toggleBtn.title = isActive ? 'Disable' : 'Enable';
-                toggleBtn.style.cssText = 'font-size:10px;padding:3px 8px;margin-right:3px;';
-                toggleBtn.onclick = (function(id, newStatus){ return function(){ updateTcClient(id, {status: newStatus}); }; })(c.id, isActive ? 'disabled' : 'active');
-
-                var ipBtn = document.createElement('button');
-                ipBtn.className = 'tr-btn';
-                ipBtn.textContent = 'IP';
-                ipBtn.title = 'Reset IP: ' + (c.registered_ip || 'none');
-                ipBtn.style.cssText = 'font-size:10px;padding:3px 8px;margin-right:3px;';
-                ipBtn.onclick = (function(id){ return function(){ resetTcIp(id); }; })(c.id);
-
-                var linkBtn = document.createElement('button');
-                linkBtn.className = 'tr-btn';
-                linkBtn.textContent = 'Link';
-                linkBtn.title = trackUrl;
-                linkBtn.style.cssText = 'font-size:10px;padding:3px 8px;margin-right:3px;';
-                linkBtn.onclick = (function(url){ return function(){ navigator.clipboard.writeText(url).then(function(){ alert('Link copied'); }); }; })(trackUrl);
-
-                var delBtn = document.createElement('button');
-                delBtn.className = 'tr-btn danger';
-                delBtn.textContent = 'Del';
-                delBtn.title = 'Delete client';
-                delBtn.style.cssText = 'font-size:10px;padding:3px 8px;';
-                delBtn.onclick = (function(id){ return function(){ deleteTcClient(id); }; })(c.id);
-
-                var actionsDiv = document.createElement('div');
-                actionsDiv.style.cssText = 'display:flex;gap:3px;justify-content:center;flex-wrap:wrap;';
-                actionsDiv.appendChild(toggleBtn);
-                actionsDiv.appendChild(ipBtn);
-                actionsDiv.appendChild(linkBtn);
-                actionsDiv.appendChild(delBtn);
-
-                tr.innerHTML =
-                    '<td style="padding:10px 10px;font-weight:700;color:#e5e7eb;">' + (c.domain||'-') + '</td>'
-                    + '<td style="padding:10px 10px;"><div style="color:#9ca3af;">' + (c.name||'-') + '</div>'
-                    + (c.email ? '<div style="color:#38bdf8;font-size:11px;">' + c.email + '</div>' : '')
-                    + (c.whatsapp ? '<div style="color:#4ade80;font-size:11px;">' + c.whatsapp + '</div>' : '')
-                    + '</td>'
-                    + '<td style="padding:10px 10px;text-align:center;color:#a78bfa;">' + (c.page_count||0) + '</td>'
-                    + '<td style="padding:10px 10px;text-align:center;" class="tc-max-cell"></td>'
-                    + '<td style="padding:10px 10px;text-align:center;"><span style="font-size:10px;font-weight:700;color:' + statusColor + ';">' + (c.status||'active').toUpperCase() + '</span></td>'
-                    + '<td style="padding:10px 10px;color:#6b7280;">' + date + (c.registered_ip ? '<div style="font-size:10px;color:#374151;">' + c.registered_ip + '</div>' : '') + '</td>'
-                    + '<td style="padding:10px 10px;text-align:center;" class="tc-actions-cell"></td>';
-
-                tr.querySelector('.tc-max-cell').appendChild(maxInput);
-                tr.querySelector('.tc-actions-cell').appendChild(actionsDiv);
-                tbody.appendChild(tr);
-            });
-
             table.appendChild(thead);
             table.appendChild(tbody);
             el.innerHTML = '';
