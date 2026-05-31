@@ -23214,7 +23214,7 @@ const _CLIENT_TRACKER_HTML = `<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>ContentScale Tracker — __DOMAIN__</title>
+<title>ContentScale Tracker &mdash; __DOMAIN__</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
@@ -23253,8 +23253,18 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
 .cs-section { font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:.1em; color:#6b7280; margin:16px 0 10px; }
 
 /* Page card */
-.cs-page-card { background:#111827; border:1px solid #1f2937; border-left:3px solid #374151; border-radius:8px; padding:14px 16px; margin-bottom:10px; }
-.cs-page-card.cited { border-left-color:#16a34a; }
+.cs-page-card { background:#111827; border:1px solid #1f2937; border-left:3px solid #374151; border-radius:8px; padding:14px 16px; margin-bottom:10px; transition:border-color .15s,background .15s; }
+.cs-page-card:hover { background:#131d2e; border-color:#1e3a5f; }
+.cs-page-card.cited { border-left-color:#16a34a; background:#0a1a0f; }
+.cs-page-card.cited:hover { background:#0d2214; }
+.cs-page-card.done { opacity:.55; filter:grayscale(.3); }
+/* Small action buttons inside page cards */
+.btn { display:inline-flex; align-items:center; gap:4px; padding:5px 10px; border-radius:5px; font-size:11px; font-weight:600; cursor:pointer; border:1px solid #374151; background:#111827; color:#9ca3af; transition:all .15s; white-space:nowrap; font-family:Verdana,sans-serif; }
+.btn:hover { border-color:#6b7280; color:#e5e7eb; background:#1f2937; }
+.btn:disabled { opacity:.45; cursor:not-allowed; }
+.btn.danger { border-color:#7f1d1d; color:#f87171; }
+.btn.danger:hover { background:#2d0a0a; border-color:#b91c1c; }
+
 .cs-badge { display:inline-block; font-size:10px; font-weight:700; padding:2px 8px; border-radius:3px; margin-right:4px; }
 .cs-badge.green { background:#052e16; color:#4ade80; }
 .cs-badge.grey { background:#1f2937; color:#6b7280; }
@@ -23340,6 +23350,11 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
 .wl-start:hover { opacity:.9; }
 .wl-footer { font-size:10px;color:#374151;text-align:center;margin-top:10px; }
 
+.cs-cs-badge{display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;letter-spacing:.03em;}
+.cs-cs-badge.green{background:#052e16;color:#4ade80;border:1px solid #166534;}
+.cs-cs-badge.grey{background:#1f2937;color:#6b7280;border:1px solid #374151;}
+.cs-cs-badge.purple{background:#2e1065;color:#a78bfa;border:1px solid #4c1d95;}
+.cs-cs-badge.yellow{background:#2d1f00;color:#fbbf24;border:1px solid #78350f;}
 </style>
 </head>
 <body>
@@ -23357,22 +23372,22 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
 
   <!-- Stats -->
   <div class="cs-stats" id="statsRow">
-    <div class="cs-stat"><div class="val" id="statTotal">—</div><div class="lbl">Pages</div></div>
-    <div class="cs-stat"><div class="val" id="statCitedG" style="color:#0284c7;">—</div><div class="lbl">Google AIO</div></div>
-    <div class="cs-stat"><div class="val" id="statCitedP" style="color:#7c3aed;">—</div><div class="lbl">Perplexity</div></div>
-    <div class="cs-stat"><div class="val" id="statCitedB" style="color:#2563eb;">—</div><div class="lbl">Copilot</div></div>
-    <div class="cs-stat"><div class="val" id="statCitedC" style="color:#dc2626;">—</div><div class="lbl">Claude</div></div>
-    <div class="cs-stat"><div class="val" id="statAvgScore" style="color:#ca8a04;">—</div><div class="lbl">GRAAF</div></div>
-    <div class="cs-stat"><div class="val" id="statRemaining" style="color:#16a34a;">—</div><div class="lbl">Slots left</div></div>
+    <div class="cs-stat"><div class="val" id="statTotal">&mdash;</div><div class="lbl">Pages</div></div>
+    <div class="cs-stat"><div class="val" id="statCitedG" style="color:#0284c7;">&mdash;</div><div class="lbl">Google AIO</div></div>
+    <div class="cs-stat"><div class="val" id="statCitedP" style="color:#7c3aed;">&mdash;</div><div class="lbl">Perplexity</div></div>
+    <div class="cs-stat"><div class="val" id="statCitedB" style="color:#2563eb;">&mdash;</div><div class="lbl">Copilot</div></div>
+    <div class="cs-stat"><div class="val" id="statCitedC" style="color:#dc2626;">&mdash;</div><div class="lbl">Claude</div></div>
+    <div class="cs-stat"><div class="val" id="statAvgScore" style="color:#ca8a04;">&mdash;</div><div class="lbl">GRAAF</div></div>
+    <div class="cs-stat"><div class="val" id="statRemaining" style="color:#16a34a;">&mdash;</div><div class="lbl">Slots left</div></div>
   </div>
 
   <!-- Toolbar -->
   <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap;">
     <button class="cs-btn primary" onclick="showAddModal()">+ Add URL</button>
-    <button class="cs-btn" onclick="loadPages()"><i class="fas fa-sync-alt"></i> Refresh</button>
-    <button class="cs-btn" onclick="showImportModal('paste')" style="border-color:#6b7280;color:#6b7280;">Paste URLs</button>
-    <button class="cs-btn" onclick="showImportModal('sitemap')" style="border-color:#38bdf8;color:#38bdf8;">Sitemap</button>
-    <button class="cs-btn" onclick="showImportModal('gsc')" style="border-color:#a78bfa;color:#a78bfa;">GSC Keywords</button>
+    <button class="cs-btn" onclick="showImportModal('sitemap')" style="border-color:#38bdf8;color:#38bdf8;"><i class="fas fa-map"></i> Sitemap</button>
+    <button class="cs-btn" onclick="showImportModal('gsc')" style="border-color:#a78bfa;color:#a78bfa;"><i class="fas fa-chart-line"></i> GSC</button>
+    <button class="cs-btn" onclick="showImportModal('paste')" style="border-color:#6b7280;color:#6b7280;"><i class="fas fa-paste"></i> Paste</button>
+    <button class="cs-btn" onclick="loadPages()" style="margin-left:4px;" title="Refresh"><i class="fas fa-sync-alt"></i></button>
     <span style="font-size:11px;color:#6b7280;margin-left:auto;" id="pageCountLabel"></span>
   </div>
 
@@ -23500,18 +23515,7 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
       <label style="font-size:11px;color:#9ca3af;display:block;margin-bottom:4px;">Keyword (optional)</label>
       <input id="htmlUploadKeyword" type="text" class="cs-input" placeholder="e.g. seo content strategy">
     </div>
-    <textarea id="htmlUploadContent" class="cs-input" rows="10" placeholder="Paste full page HTML here..." style="resize:vertical;font-family:monospace;font-size:11px;margin-bottom:12px;"></textarea>
-    <div style="display:flex;gap:8px;">
-      <button class="cs-btn primary" onclick="submitHtmlUpload()" style="flex:1;">Save &amp; scan</button>
-      <button class="cs-btn" onclick="hideModal('htmlUploadModal')">Cancel</button>
-    </div>
-  </div>
-</div>
-
-<!-- Toast -->
-<div class="cs-toast" id="toast"></div>
-
-<script>
+    <textarea id="htmlUploadContent" class="cs-input" rows
 
 var TOKEN = '__TOKEN__';
 var DOMAIN = '__DOMAIN__';
@@ -23581,7 +23585,7 @@ function renderPages() {
   var countEl = document.getElementById('pageCountLabel');
   if (countEl) countEl.textContent = _pages.length + ' pages tracked';
   if (!_pages.length) {
-    el.innerHTML = '<div style="background:#111827;border:1px solid #1f2937;border-radius:8px;padding:32px 24px;text-align:center;"><div style="font-size:32px;margin-bottom:12px;">&#128225;</div><div style="font-size:14px;font-weight:700;color:#9ca3af;margin-bottom:6px;">No pages tracked yet</div><div style="font-size:12px;color:#4b5563;">Click + Add URL to start tracking.</div></div>';
+    el.innerHTML = '<div style="background:#0d1117;border:2px dashed #1f2937;border-radius:12px;padding:40px 28px;text-align:center;"><div style="font-size:40px;margin-bottom:16px;">&#128203;</div><div style="font-size:16px;font-weight:800;color:#e5e7eb;margin-bottom:8px;">Start tracking your pages</div><div style="font-size:13px;color:#6b7280;line-height:1.7;margin-bottom:20px;max-width:420px;margin-left:auto;margin-right:auto;">Add URLs one by one, import from your sitemap, or paste from Google Search Console. The system checks automatically.</div><div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;"><button class=\"cs-btn primary\" onclick=\"showAddModal()\" style=\"font-size:13px;padding:10px 20px;\">+ Add first URL</button><button class=\"cs-btn\" onclick=\"showImportModal('sitemap')\" style=\"font-size:13px;padding:10px 20px;border-color:#38bdf8;color:#38bdf8;\">Import from sitemap</button></div></div>';
     return;
   }
   el.innerHTML = _pages.map(function(p) {
@@ -23633,7 +23637,7 @@ function renderPages() {
       + '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">'
       + (kw ? '<span style="font-size:10px;color:#4b5563;">kw: <span style="color:#a78bfa;">' + kw + '</span></span><button onclick="editKeyword(' + p.id + ',this)" style="font-size:9px;background:none;border:none;color:#374151;cursor:pointer;text-decoration:underline;">edit</button>'
             : '<button onclick="editKeyword(' + p.id + ',this)" style="font-size:9px;background:none;border:none;color:#4b5563;cursor:pointer;">+keyword</button>')
-      + '<span style="font-size:10px;color:#374151;">Checked: ' + lastChecked + (nextCheck ? ' · ' + nextCheck : '') + '</span>'
+      + '<span style="font-size:10px;color:#374151;">Checked: ' + lastChecked + (nextCheck ? ' . ' + nextCheck : '') + '</span>'
       + '</div>'
       + '</div>'
       + '<div style="display:flex;gap:5px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">'
@@ -24275,7 +24279,7 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
   })();
 
 
-  // ── HTML upload ───────────────────────────────────────────────────────────
+  // -- HTML upload -----------------------------------------------------------
   var _htmlUploadPageId = null;
   function openHtmlUpload(pageId) {
     _htmlUploadPageId = pageId;
@@ -24294,6 +24298,18 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
     var payload = {};
     if (html) payload.html_content = html;
     if (kw) payload.keyword = kw;
+    try {
+      var d = await api('/pages/' + pageId + '/html', 'PATCH', payload);
+      if (d.success) {
+        toast('Saved' + (html ? ' - scanning...' : ''), '#4ade80');
+        hideModal('htmlUploadModal');
+        if (html) setTimeout(function(){ checkPage(pageId); }, 600);
+        setTimeout(loadPages, html ? 5000 : 500);
+      } else { toast(d.error || 'Failed', '#f87171'); }
+    } catch(e) { toast('Error: ' + e.message, '#f87171'); }
+  }
+
+eyword = kw;
     try {
       var d = await api('/pages/' + pageId + '/html', 'PATCH', payload);
       if (d.success) {
@@ -24357,8 +24373,9 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
     <div class="wl-body">
       <p class="wl-msg" id="wlMsg">
         Hello &mdash; I am the AI research system of <strong style="color:#e5e7eb;">Ottmar Francisca</strong>.<br><br>
-        I monitor the internet in real time to track where AI systems like Google, Perplexity, Copilot, and Claude cite your content as a trusted source.
+        I monitor the internet in real time and track where AI systems like Google, Perplexity, Copilot, and Claude cite your content as a trusted source.
       </p>
+
       <div class="wl-domain-box">
         <div class="wl-domain-icon">&#127760;</div>
         <div>
@@ -24366,6 +24383,31 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
           <div class="wl-domain-sub">Your domain &mdash; actively monitored</div>
         </div>
       </div>
+
+      <!-- STEP 1 - critical onboarding -->
+      <div style="background:linear-gradient(135deg,rgba(251,191,36,.08),rgba(217,119,6,.04));border:1px solid rgba(251,191,36,.3);border-radius:10px;padding:14px 16px;margin-bottom:16px;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+          <div style="background:#fbbf24;color:#0a0a12;font-size:10px;font-weight:800;padding:2px 8px;border-radius:99px;letter-spacing:.06em;flex-shrink:0;">STEP 1</div>
+          <span style="font-size:13px;font-weight:700;color:#fde68a;">Do not skip this if you are serious</span>
+        </div>
+        <p style="font-size:12px;color:#fcd34d;line-height:1.7;margin:0 0 10px;">
+          Paste the HTML of each page you want to track. Without the HTML, the system cannot perform a GRAAF scan &mdash; it can only check your position and AI citations, but not <em>why</em> you are not cited or what to fix.
+        </p>
+        <div style="background:#0a0a12;border:1px solid rgba(251,191,36,.2);border-radius:6px;padding:10px 12px;margin-bottom:8px;">
+          <div style="font-size:10px;color:#92400e;font-family:monospace;letter-spacing:.06em;margin-bottom:4px;">HOW TO GET YOUR PAGE HTML</div>
+          <ol style="font-size:11px;color:#fcd34d;line-height:2;margin:0;padding-left:16px;">
+            <li>Open your page in Chrome or Firefox</li>
+            <li>Right-click anywhere &rarr; <strong>View Page Source</strong></li>
+            <li>Press <code style="background:#1f2937;padding:1px 5px;border-radius:3px;">Ctrl+A</code> then <code style="background:#1f2937;padding:1px 5px;border-radius:3px;">Ctrl+C</code></li>
+            <li>Click the <strong style="color:#fbbf24;">HTML</strong> button on your page card &rarr; paste</li>
+          </ol>
+        </div>
+        <div style="font-size:11px;color:#92400e;line-height:1.6;">
+          You only need to do this once per page. After that, the system auto-fetches updates.
+        </div>
+      </div>
+
+      <!-- What is tracked -->
       <div class="wl-features">
         <div class="wl-feature"><span class="wl-feature-dot"></span>Google AI Overview</div>
         <div class="wl-feature"><span class="wl-feature-dot"></span>Perplexity</div>
@@ -24376,11 +24418,26 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
         <div class="wl-feature"><span class="wl-feature-dot"></span>Live Citation Briefs</div>
         <div class="wl-feature"><span class="wl-feature-dot"></span>Email alerts on changes</div>
       </div>
+
+      <!-- Platform URL -->
+      <div style="background:#0a0a12;border:1px solid #1f2937;border-radius:8px;padding:12px 14px;margin-bottom:14px;">
+        <div style="font-size:11px;color:#9ca3af;line-height:1.7;margin-bottom:10px;">
+          The structure of this tracker &mdash; direct answers, author credentials, case studies, short paragraphs &mdash; is exactly what makes AI systems cite a page. Apply the same to your pages. Scan and follow the recommendations.
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
+          <div>
+            <div style="font-size:10px;color:#4b5563;letter-spacing:.08em;text-transform:uppercase;margin-bottom:3px;">Live example &amp; free scanner</div>
+            <a href="https://app.contentscale.site" target="_blank" rel="noopener" style="font-size:11px;font-family:monospace;color:#7c3aed;text-decoration:none;">app.contentscale.site</a>
+          </div>
+          <a href="https://app.contentscale.site" target="_blank" rel="noopener" style="font-size:10px;font-family:monospace;color:#a78bfa;text-decoration:none;border:1px solid #4c1d95;border-radius:4px;padding:5px 12px;white-space:nowrap;background:rgba(124,58,237,.1);">Scan my pages &rarr;</a>
+        </div>
+      </div>
+
       <a href="https://wa.me/31628073996?text=Hi%20Ottmar!%20I%20want%20a%20done-for-you%20citation%20plan%20for%20__DOMAIN__" target="_blank" rel="noopener" class="wl-wa">
         <i class="fab fa-whatsapp"></i> Let Ottmar do this for you
       </a>
       <button class="wl-start" onclick="closeWelcome()">
-        Start monitoring &rarr;
+        I understand &mdash; start monitoring &rarr;
       </button>
       <div class="wl-footer">One of the most advanced AI citation monitoring systems available today</div>
     </div>
