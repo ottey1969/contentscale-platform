@@ -27145,9 +27145,9 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
             if(_recs && typeof _recs === 'string') { try { _recs = JSON.parse(_recs); } catch(e) { _recs = null; } }
             const recsHtml = Array.isArray(_recs) && _recs.length ? renderTrackerRecommendations(_recs, p.id) : '';
 
-            return '<div class="tr-card" style="border-left:3px solid '+borderColor+';position:relative;' + (isDone ? 'opacity:.65;' : '') + '">'\
-                + (isDone ? '<div style="display:flex;align-items:center;gap:6px;padding:5px 14px;background:rgba(74,222,128,.06);border-bottom:1px solid #166534;font-size:10px;color:#4ade80;letter-spacing:.06em;"><span>v</span> DONE &mdash; marked as implemented. Tracking continues.</div>' : '')\
-                + '<div style="position:absolute;top:' + (isDone ? '38' : '14') + 'px;left:14px;">'+checkboxHtml+'</div>'\
+            return '<div class="tr-card" style="border-left:3px solid '+borderColor+';position:relative;' + (isDone ? 'opacity:.65;' : '') + '">'
+                + (isDone ? '<div style="display:flex;align-items:center;gap:6px;padding:5px 14px;background:rgba(74,222,128,.06);border-bottom:1px solid #166534;font-size:10px;color:#4ade80;letter-spacing:.06em;"><span>v</span> DONE &mdash; marked as implemented. Tracking continues.</div>' : '')
+                + '<div style="position:absolute;top:' + (isDone ? '38' : '14') + 'px;left:14px;">'+checkboxHtml+'</div>'
                 + '<div style="padding-left:24px;">'
                 +'<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;">'
                 +'<div style="flex:1;min-width:0;">'
