@@ -23214,7 +23214,7 @@ const _CLIENT_TRACKER_HTML = `<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>ContentScale Tracker &mdash; __DOMAIN__</title>
+<title>Free AI Citations Tracker &mdash; __DOMAIN__</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
@@ -23361,7 +23361,10 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
 
 <!-- Header -->
 <div class="cs-header">
-  <div class="cs-logo">ContentScale Tracker</div>
+  <div>
+    <div class="cs-logo">Free AI Citations Tracker</div>
+    <div style="font-size:10px;color:#475569;letter-spacing:.04em;margin-top:1px;">by ContentScale</div>
+  </div>
   <div style="display:flex;align-items:center;gap:10px;">
     <div class="cs-domain">__DOMAIN__</div>
     <a href="https://contentscale.site" target="_blank" style="font-size:11px;color:#4b5563;text-decoration:none;">contentscale.site</a>
@@ -24367,8 +24370,8 @@ eyword = kw;
       <img src="https://contentscale.site/wp-content/uploads/2025/11/ottmar-francisca-headshot.png"
            alt="Ottmar Francisca" class="wl-avatar">
       <div class="wl-badge"><span class="wl-badge-dot"></span> AI System Online</div>
-      <div class="wl-name">ContentScale Citation Tracker</div>
-      <div class="wl-role">Powered by Ottmar Francisca &mdash; Amsterdam</div>
+      <div class="wl-name">Free AI Citations Tracker</div>
+      <div class="wl-role">by ContentScale &mdash; Ottmar Francisca, Amsterdam</div>
     </div>
     <div class="wl-body">
       <p class="wl-msg" id="wlMsg">
