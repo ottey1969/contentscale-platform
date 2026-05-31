@@ -1022,6 +1022,36 @@ app.get('/api/tracker-client/:token/briefs/:pageId/:briefId', async (req, res) =
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
+// GET /api/tracker-client/:token/fetch-sitemap — fetch URLs from sitemap
+app.get('/api/tracker-client/:token/fetch-sitemap', async (req, res) => {
+  try {
+    const cr = await pool.query('SELECT domain FROM tracker_clients WHERE token=$1 AND status=$2', [req.params.token, 'active']);
+    if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
+    const sitemapUrl = req.query.url;
+    if (!sitemapUrl) return res.status(400).json({ success: false, error: 'URL required' });
+    const ctrl = new AbortController();
+    setTimeout(() => ctrl.abort(), 10000);
+    const r = await fetch(sitemapUrl, { headers: { 'User-Agent': 'ContentScale-Bot/1.0' }, signal: ctrl.signal });
+    if (!r.ok) return res.status(400).json({ success: false, error: 'Could not fetch sitemap: HTTP ' + r.status });
+    const xml = await r.text();
+    const urls = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map(m => m[1].trim()).filter(u => u.startsWith('http')).slice(0, 100);
+    res.json({ success: true, urls, count: urls.length });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// PATCH /api/tracker-client/:token/pages/:pageId/keyword — update keyword
+app.patch('/api/tracker-client/:token/pages/:pageId/keyword', async (req, res) => {
+  try {
+    const cr = await pool.query('SELECT id FROM tracker_clients WHERE token=$1 AND status=$2', [req.params.token, 'active']);
+    if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
+    const own = await pool.query('SELECT id FROM tracker_pages WHERE id=$1 AND tracker_client_id=$2', [req.params.pageId, cr.rows[0].id]);
+    if (!own.rows.length) return res.status(403).json({ success: false, error: 'Not your page' });
+    const { keyword } = req.body;
+    await pool.query('UPDATE tracker_pages SET keyword=$1 WHERE id=$2', [keyword||null, req.params.pageId]);
+    res.json({ success: true });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
 // POST /api/tracker-client/:token/live-events — internal: save brief after check
 app.get('/api/tracker-client/:token/live-events', async (req, res) => {
   try {
@@ -23199,6 +23229,32 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
 .cb-history-btn { display:inline-flex; align-items:center; gap:5px; font-size:11px; font-weight:700; color:#6b7280; background:#0d1117; border:1px solid #1f2937; border-radius:6px; padding:4px 10px; cursor:pointer; font-family:Verdana,sans-serif; position:relative; }
 .cb-history-btn.has-new { color:#a78bfa; border-color:#7c3aed; }
 
+
+/* Welcome agent */
+.wl-overlay { position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.75);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:16px; }
+.wl-card { background:#0d1117;border:1px solid #1f2937;border-radius:20px;width:100%;max-width:520px;overflow:hidden;box-shadow:0 0 80px rgba(124,58,237,.3);animation:wlIn .6s cubic-bezier(.16,1,.3,1); }
+@keyframes wlIn { from{opacity:0;transform:translateY(30px) scale(.96)} to{opacity:1;transform:none} }
+.wl-top { background:linear-gradient(135deg,#1e1b4b 0%,#312e81 50%,#4c1d95 100%);padding:32px 28px 24px;text-align:center;position:relative; }
+.wl-avatar { width:72px;height:72px;border-radius:50%;border:3px solid rgba(255,255,255,.3);margin:0 auto 14px;display:block;object-fit:cover; }
+.wl-badge { display:inline-flex;align-items:center;gap:6px;background:rgba(74,222,128,.15);border:1px solid rgba(74,222,128,.3);border-radius:99px;padding:4px 12px;font-size:10px;font-weight:800;color:#4ade80;text-transform:uppercase;letter-spacing:.1em;margin-bottom:14px; }
+.wl-badge-dot { width:6px;height:6px;border-radius:50%;background:#4ade80;animation:wlPulse 1.5s ease-in-out infinite; }
+@keyframes wlPulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+.wl-name { font-size:1rem;font-weight:900;color:#f1f5f9;margin-bottom:4px; }
+.wl-role { font-size:11px;color:#a78bfa; }
+.wl-body { padding:24px 28px; }
+.wl-msg { font-size:13px;color:#9ca3af;line-height:1.75;margin-bottom:20px; }
+.wl-domain-box { background:#0a0a12;border:1px solid #7c3aed;border-radius:10px;padding:14px 18px;margin-bottom:20px;display:flex;align-items:center;gap:12px; }
+.wl-domain-icon { width:36px;height:36px;border-radius:8px;background:linear-gradient(135deg,#7c3aed,#4f46e5);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0; }
+.wl-domain-text { font-size:13px;font-weight:700;color:#f1f5f9;font-family:monospace; }
+.wl-domain-sub { font-size:10px;color:#4b5563;margin-top:2px; }
+.wl-features { display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:20px; }
+.wl-feature { background:#0a0a12;border:1px solid #1f2937;border-radius:8px;padding:10px 12px;font-size:11px;color:#6b7280;display:flex;align-items:flex-start;gap:8px; }
+.wl-feature-dot { width:4px;height:4px;border-radius:50%;background:#7c3aed;margin-top:4px;flex-shrink:0; }
+.wl-wa { display:flex;align-items:center;justify-content:center;gap:8px;background:linear-gradient(135deg,#15803d,#16a34a);color:white;border-radius:10px;padding:10px 18px;font-size:12px;font-weight:700;text-decoration:none;margin-bottom:12px; }
+.wl-start { width:100%;padding:14px;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:white;border:none;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer;font-family:Verdana,sans-serif;transition:opacity .15s; }
+.wl-start:hover { opacity:.9; }
+.wl-footer { font-size:10px;color:#374151;text-align:center;margin-top:10px; }
+
 </style>
 </head>
 <body>
@@ -23229,7 +23285,9 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
   <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap;">
     <button class="cs-btn primary" onclick="showAddModal()">+ Add URL</button>
     <button class="cs-btn" onclick="loadPages()"><i class="fas fa-sync-alt"></i> Refresh</button>
-    <button class="cs-btn" onclick="showImportModal()" style="border-color:#38bdf8;color:#38bdf8;"><i class="fas fa-cloud-download-alt"></i> Import GSC</button>
+    <button class="cs-btn" onclick="showImportModal('paste')" style="border-color:#6b7280;color:#6b7280;">Paste URLs</button>
+    <button class="cs-btn" onclick="showImportModal('sitemap')" style="border-color:#38bdf8;color:#38bdf8;">Sitemap</button>
+    <button class="cs-btn" onclick="showImportModal('gsc')" style="border-color:#a78bfa;color:#a78bfa;">GSC Keywords</button>
     <span style="font-size:11px;color:#6b7280;margin-left:auto;" id="pageCountLabel"></span>
   </div>
 
@@ -23285,20 +23343,63 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
   </div>
 </div>
 
-<!-- GSC Import modal -->
+<!-- Import modal -->
 <div class="cs-modal" id="importModal">
-  <div class="cs-modal-box" onclick="event.stopPropagation()">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-      <h3 style="font-size:15px;font-weight:800;color:#f1f5f9;">Import from Google Search Console</h3>
+  <div class="cs-modal-box" onclick="event.stopPropagation()" style="max-width:520px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+      <h3 style="font-size:15px;font-weight:800;color:#f1f5f9;">Add pages to track</h3>
       <button onclick="hideModal('importModal')" style="background:none;border:none;color:#94a3b8;cursor:pointer;font-size:1.2rem;">&#x2715;</button>
     </div>
-    <p style="font-size:12px;color:#6b7280;margin-bottom:14px;">Go to GSC &rarr; Performance &rarr; Pages &rarr; copy the URLs and paste below.</p>
-    <textarea id="importUrls" class="cs-input" rows="8" placeholder="https://__DOMAIN__/page-1/&#10;https://__DOMAIN__/page-2/" style="resize:vertical;font-family:monospace;font-size:11px;"></textarea>
-    <div style="display:flex;gap:8px;margin-top:12px;">
-      <button class="cs-btn primary" onclick="importPages()" style="flex:1;">Import pages</button>
-      <button class="cs-btn" onclick="hideModal('importModal')">Cancel</button>
+    <div style="display:flex;gap:2px;background:#0d1117;border-radius:8px;padding:3px;margin-bottom:14px;">
+      <button onclick="setImportMode('paste')" id="importTabPaste" style="flex:1;padding:7px;border-radius:6px;border:none;cursor:pointer;font-size:11px;font-weight:700;background:#374151;color:#f1f5f9;font-family:Verdana,sans-serif;">Paste URLs</button>
+      <button onclick="setImportMode('sitemap')" id="importTabSitemap" style="flex:1;padding:7px;border-radius:6px;border:none;cursor:pointer;font-size:11px;font-weight:700;background:none;color:#6b7280;font-family:Verdana,sans-serif;">Sitemap</button>
+      <button onclick="setImportMode('gsc')" id="importTabGsc" style="flex:1;padding:7px;border-radius:6px;border:none;cursor:pointer;font-size:11px;font-weight:700;background:none;color:#6b7280;font-family:Verdana,sans-serif;">GSC Keywords</button>
+    </div>
+    <div id="importPastePanel">
+      <p style="font-size:12px;color:#6b7280;margin-bottom:10px;">Paste one URL per line.</p>
+      <textarea id="importUrls" class="cs-input" rows="7" placeholder="https://__DOMAIN__/page-1/" style="resize:vertical;font-family:monospace;font-size:11px;"></textarea>
+      <div style="display:flex;gap:8px;margin-top:12px;">
+        <button class="cs-btn primary" onclick="importPages()" style="flex:1;">Import</button>
+        <button class="cs-btn" onclick="hideModal('importModal')">Cancel</button>
+      </div>
+    </div>
+    <div id="importSitemapPanel" style="display:none;">
+      <p style="font-size:12px;color:#6b7280;margin-bottom:10px;">Enter your sitemap URL. We fetch all URLs and let you pick up to __MAX_PAGES__.</p>
+      <input id="sitemapUrl" type="url" class="cs-input" placeholder="https://__DOMAIN__/sitemap.xml" style="margin-bottom:10px;">
+      <button class="cs-btn primary" onclick="fetchSitemap()" style="width:100%;margin-bottom:12px;">Fetch sitemap</button>
+      <div id="sitemapList" style="max-height:220px;overflow-y:auto;">
+        <div id="sitemapHeader" style="display:none;display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+          <span style="font-size:11px;color:#6b7280;" id="sitemapCount"></span>
+          <div style="display:flex;gap:6px;">
+            <button onclick="selectAllSitemap(true)" style="font-size:10px;background:none;border:1px solid #374151;border-radius:4px;color:#9ca3af;cursor:pointer;padding:2px 8px;">All</button>
+            <button onclick="selectAllSitemap(false)" style="font-size:10px;background:none;border:1px solid #374151;border-radius:4px;color:#9ca3af;cursor:pointer;padding:2px 8px;">None</button>
+          </div>
+        </div>
+        <div id="sitemapItems"></div>
+      </div>
+      <button class="cs-btn primary" onclick="importSelectedSitemap()" id="importSitemapBtn" style="width:100%;margin-top:10px;display:none;">Import selected</button>
+    </div>
+    <div id="importGscPanel" style="display:none;">
+      <p style="font-size:12px;color:#6b7280;margin-bottom:10px;">Paste GSC export (CSV or URL | keyword per line) &rarr; select the best pages to track.</p>
+      <textarea id="importGscData" class="cs-input" rows="5" placeholder="https://__DOMAIN__/page/ | seo tips amsterdam&#10;https://__DOMAIN__/blog/ | ai citation tracker" style="resize:vertical;font-family:monospace;font-size:11px;margin-bottom:8px;"></textarea>
+      <button class="cs-btn primary" onclick="parseGscData()" style="width:100%;margin-bottom:10px;">Parse &amp; Preview</button>
+      <div id="gscList" style="max-height:220px;overflow-y:auto;display:none;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+          <span style="font-size:11px;color:#6b7280;" id="gscCount"></span>
+          <div style="display:flex;gap:6px;">
+            <button onclick="selectAllGsc(true)" style="font-size:10px;background:none;border:1px solid #374151;border-radius:4px;color:#9ca3af;cursor:pointer;padding:2px 8px;">All</button>
+            <button onclick="selectAllGsc(false)" style="font-size:10px;background:none;border:1px solid #374151;border-radius:4px;color:#9ca3af;cursor:pointer;padding:2px 8px;">None</button>
+          </div>
+        </div>
+        <div id="gscItems"></div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:10px;">
+        <button class="cs-btn primary" onclick="importGscKeywords()" id="importGscBtn" style="flex:1;display:none;">Import selected</button>
+        <button class="cs-btn" onclick="hideModal('importModal')">Cancel</button>
+      </div>
     </div>
   </div>
+</div></div>
 </div>
 
 <!-- Toast -->
@@ -23393,7 +23494,7 @@ function renderPages() {
       + (cited ? '<span class="cs-cs-badge green">&#10003; Google AIO</span>' : '<span class="cs-cs-badge grey">No AIO</span>')
       + (p.ai_perplexity_cited ? '<span class="cs-cs-badge purple">&#10003; Perplexity</span>' : '')
       + (score ? '<span class="cs-cs-badge yellow">'+score+'/100</span>' : '')
-      + (kw ? '<span style="font-size:10px;color:#4b5563;padding:2px 6px;">'+kw+'</span>' : '')
+      + (kw ? \'<span style="font-size:10px;color:#4b5563;padding:2px 6px;">\'+kw+\'</span> <button onclick="editKeyword(\'+p.id+\',\'\'+kw.replace(/\'/g,\"\")+\'\')" style="font-size:9px;background:none;border:none;color:#4b5563;cursor:pointer;text-decoration:underline;">edit</button>\' : \'<button onclick="editKeyword(\'+p.id+\',\'\')" style="font-size:9px;background:none;border:none;color:#4b5563;cursor:pointer;">+keyword</button>\')
       + '</div>'
       + '<div style="font-size:10px;color:#374151;">Last checked: ' + checked + '</div>'
       + '</div>'
@@ -23541,7 +23642,7 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
 
 
 
-  // ── Citation Brief Card ──────────────────────────────────────────────────
+  // -- Citation Brief Card --------------------------------------------------
   var _cbTimer = null;
   var _cbSecondsLeft = 60;
   var _cbKept = false;
@@ -23748,6 +23849,254 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
     if (_origHandleWallEvent) _origHandleWallEvent(ev);
   }
 
+
+  // -- Import modes ----------------------------------------------------------
+  function setImportMode(mode) {
+    var panels = ['paste','sitemap','gsc'];
+    panels.forEach(function(m) {
+      var panel = document.getElementById('importPanel' + (m === 'paste' ? 'Paste' : m === 'sitemap' ? 'Sitemap' : 'Gsc'));
+      var tab = document.getElementById('importTab' + (m === 'paste' ? 'Paste' : m === 'sitemap' ? 'Sitemap' : 'Gsc'));
+      if (!panel || !tab) return;
+      var active = m === mode;
+      panel.style.display = active ? 'block' : 'none';
+      tab.style.background = active ? '#374151' : 'none';
+      tab.style.color = active ? '#f1f5f9' : '#6b7280';
+    });
+  }
+
+  function showImportModal(mode) {
+    document.getElementById('importModal').classList.add('show');
+    setImportMode(mode || 'paste');
+  }
+
+  // -- Sitemap fetch ----------------------------------------------------------
+  function renderCheckList(items, containerEl, cbClass, labelFn, countEl, maxN) {
+    containerEl.innerHTML = '';
+    if (countEl) countEl.textContent = items.length + ' found - select up to ' + maxN + ':';
+    items.forEach(function(item, idx) {
+      var checked = idx < maxN;
+      var label = document.createElement('label');
+      label.style.cssText = 'display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #1f2937;font-size:11px;cursor:pointer;';
+      var cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.className = cbClass;
+      cb.checked = checked;
+      cb.style.cursor = 'pointer';
+      cb.value = typeof item === 'object' ? JSON.stringify(item) : item;
+      cb.onchange = function() { updateSelectCount(cbClass, maxN); };
+      var span = document.createElement('span');
+      span.style.cssText = 'color:#9ca3af;font-family:monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;';
+      span.title = labelFn(item);
+      span.textContent = labelFn(item).replace(/^https?:\/\/[^/]+/, '') || labelFn(item);
+      label.appendChild(cb);
+      label.appendChild(span);
+      containerEl.appendChild(label);
+    });
+    updateSelectCount(cbClass, maxN);
+  }
+
+  function updateSelectCount(cbClass, maxN) {
+    var checked = document.querySelectorAll('.' + cbClass + ':checked').length;
+    // Update relevant import button
+    if (cbClass === 'sitemap-cb') {
+      var btn = document.getElementById('importSitemapBtn');
+      if (btn) btn.textContent = 'Import ' + checked + ' selected (max ' + maxN + ')';
+      if (checked > maxN) { document.querySelectorAll('.' + cbClass + ':checked')[checked-1].checked = false; }
+    }
+    if (cbClass === 'gsc-cb') {
+      var btn = document.getElementById('importGscBtn');
+      if (btn) btn.textContent = 'Import ' + checked + ' selected (max ' + maxN + ')';
+    }
+  }
+
+  function selectAllSitemap(val) {
+    var cbs = document.querySelectorAll('.sitemap-cb');
+    var count = 0;
+    cbs.forEach(function(cb) {
+      if (val && count < MAX_PAGES) { cb.checked = true; count++; }
+      else cb.checked = false;
+    });
+    updateSelectCount('sitemap-cb', MAX_PAGES);
+  }
+
+  function selectAllGsc(val) {
+    var cbs = document.querySelectorAll('.gsc-cb');
+    var count = 0;
+    cbs.forEach(function(cb) {
+      if (val && count < MAX_PAGES) { cb.checked = true; count++; }
+      else cb.checked = false;
+    });
+    updateSelectCount('gsc-cb', MAX_PAGES);
+  }
+
+  async function fetchSitemap() {
+    var url = document.getElementById('sitemapUrl').value.trim();
+    if (!url) { toast('Enter a sitemap URL', '#f87171'); return; }
+    var btn = document.querySelector('[onclick="fetchSitemap()"]');
+    if (btn) { btn.textContent = 'Fetching...'; btn.disabled = true; }
+    try {
+      var r = await fetch('https://app.contentscale.site/api/tracker-client/' + TOKEN + '/fetch-sitemap?url=' + encodeURIComponent(url));
+      var data = await r.json();
+      if (!data.success) { toast(data.error || 'Failed to fetch sitemap', '#f87171'); return; }
+      var urls = data.urls || [];
+      if (!urls.length) { toast('No URLs found in sitemap', '#f87171'); return; }
+      var container = document.getElementById('sitemapItems');
+      var countEl = document.getElementById('sitemapCount');
+      var header = document.getElementById('sitemapHeader');
+      if (header) header.style.display = 'flex';
+      renderCheckList(urls, container, 'sitemap-cb', function(u){ return u; }, countEl, MAX_PAGES);
+      document.getElementById('importSitemapBtn').style.display = 'block';
+    } catch(e) { toast('Error: ' + e.message, '#f87171'); }
+    if (btn) { btn.textContent = 'Fetch sitemap'; btn.disabled = false; }
+  }
+
+  function parseGscData() {
+    var raw = document.getElementById('importGscData').value.trim();
+    if (!raw) { toast('Paste GSC data first', '#f87171'); return; }
+    var nl = String.fromCharCode(10);
+    var lines = raw.split(nl).filter(function(l) { return l.trim() && l.indexOf('http') > -1; });
+    var pairs = [];
+    lines.forEach(function(line) {
+      var parts = line.split(/[|,\t]/).map(function(p) { return p.trim(); });
+      // Skip header rows
+      if (parts[0].toLowerCase() === 'page' || parts[0].toLowerCase() === 'top pages') return;
+      var url = '', kw = '';
+      parts.forEach(function(p) {
+        if (p.indexOf('http') === 0) url = p;
+        else if (!kw && p.length > 2 && p.indexOf('.') < 0) kw = p;
+      });
+      if (url) pairs.push({ url: url, keyword: kw });
+    });
+    if (!pairs.length) { toast('No valid URLs found. Format: URL | keyword', '#f87171'); return; }
+    var container = document.getElementById('gscItems');
+    var countEl = document.getElementById('gscCount');
+    var list = document.getElementById('gscList');
+    list.style.display = 'block';
+    renderCheckList(pairs, container, 'gsc-cb',
+      function(p) { return p.url.replace(/^https?:\/\/[^/]+/, '') + (p.keyword ? '  [' + p.keyword + ']' : ''); },
+      countEl, MAX_PAGES
+    );
+    document.getElementById('importGscBtn').style.display = 'block';
+  }
+
+  async function importGscKeywords() {
+    var cbs = document.querySelectorAll('.gsc-cb:checked');
+    if (!cbs.length) { toast('Select at least one', '#f87171'); return; }
+    var pairs = Array.from(cbs).map(function(cb) { return JSON.parse(cb.value); }).slice(0, MAX_PAGES);
+    var added = 0; var updated = 0; var failed = 0;
+    for (var i = 0; i < pairs.length; i++) {
+      try {
+        var existing = _pages ? _pages.find(function(p) { return p.url === pairs[i].url; }) : null;
+        if (existing && pairs[i].keyword) {
+          var upd = await api('/pages/' + existing.id + '/keyword', 'PATCH', { keyword: pairs[i].keyword });
+          if (upd.success) updated++; else failed++;
+        } else {
+          var d = await api('/pages', 'POST', { url: pairs[i].url, keyword: pairs[i].keyword || undefined });
+          if (d.success) added++; else failed++;
+        }
+      } catch(e) { failed++; }
+    }
+    var msg = (added ? added + ' added. ' : '') + (updated ? updated + ' keywords updated. ' : '') + (failed ? failed + ' failed.' : '');
+    toast(msg || 'Done', added + updated > 0 ? '#4ade80' : '#f87171');
+    if (added + updated > 0) { hideModal('importModal'); loadPages(); }
+  }
+
+
+  function updateSitemapCount() {
+    var checked = document.querySelectorAll('.sitemap-cb:checked').length;
+    var btn = document.getElementById('importSitemapBtn');
+    if (btn) btn.textContent = 'Import ' + checked + ' selected';
+    if (checked > MAX_PAGES) { toast('Max ' + MAX_PAGES + ' pages', '#f87171'); }
+  }
+
+  async function importSelectedSitemap() {
+    var cbs = document.querySelectorAll('.sitemap-cb:checked');
+    if (!cbs.length) { toast('Select at least one URL', '#f87171'); return; }
+    var urls = Array.from(cbs).map(function(cb) { return cb.value; }).slice(0, MAX_PAGES);
+    var added = 0; var failed = 0;
+    for (var i = 0; i < urls.length; i++) {
+      try {
+        var data = await api('/pages', 'POST', { url: urls[i] });
+        if (data.success) added++;
+        else failed++;
+      } catch(e) { failed++; }
+    }
+    toast('Imported ' + added + ' pages' + (failed ? ', ' + failed + ' failed' : ''), added > 0 ? '#4ade80' : '#f87171');
+    if (added > 0) { hideModal('importModal'); loadPages(); }
+  }
+
+  // -- GSC keyword import ----------------------------------------------------
+  async function importGscKeywords() {
+    var raw = document.getElementById('importGscData').value.trim();
+    if (!raw) { toast('Paste GSC data first', '#f87171'); return; }
+    var nl = String.fromCharCode(10);
+    var lines = raw.split(nl).filter(function(l) { return l.trim(); });
+    var pairs = [];
+    lines.forEach(function(line) {
+      // Support: URL | keyword  or  URL,keyword  or  CSV with URL in col1 query in col2
+      var parts = line.split(/[|,	]/).map(function(p) { return p.trim(); });
+      var url = parts[0];
+      var kw = parts[1] || '';
+      if (url && url.indexOf('http') === 0) pairs.push({ url: url, keyword: kw });
+      else if (kw && kw.indexOf('http') === 0) pairs.push({ url: kw, keyword: url }); // reversed
+    });
+    if (!pairs.length) { toast('No valid URL/keyword pairs found', '#f87171'); return; }
+    var added = 0; var updated = 0; var failed = 0;
+    for (var i = 0; i < Math.min(pairs.length, MAX_PAGES); i++) {
+      try {
+        // Check if URL already tracked
+        var existing = _pages.find(function(p) { return p.url === pairs[i].url; });
+        if (existing && pairs[i].keyword) {
+          // Update keyword
+          var upd = await api('/pages/' + existing.id + '/keyword', 'PATCH', { keyword: pairs[i].keyword });
+          if (upd.success) updated++;
+        } else {
+          var data = await api('/pages', 'POST', { url: pairs[i].url, keyword: pairs[i].keyword || undefined });
+          if (data.success) added++;
+          else failed++;
+        }
+      } catch(e) { failed++; }
+    }
+    var msg = '';
+    if (added) msg += added + ' pages added. ';
+    if (updated) msg += updated + ' keywords updated. ';
+    if (failed) msg += failed + ' failed.';
+    toast(msg || 'Done', added + updated > 0 ? '#4ade80' : '#f87171');
+    if (added + updated > 0) { hideModal('importModal'); loadPages(); }
+  }
+
+  // -- Keyword editing --------------------------------------------------------
+  function editKeyword(pageId, currentKw) {
+    var newKw = prompt('Edit keyword for this page:', currentKw || '');
+    if (newKw === null) return; // cancelled
+    api('/pages/' + pageId + '/keyword', 'PATCH', { keyword: newKw.trim() })
+      .then(function(data) {
+        if (data.success) { toast('Keyword updated', '#4ade80'); loadPages(); }
+        else toast(data.error || 'Failed', '#f87171');
+      }).catch(function(e) { toast('Error: ' + e.message, '#f87171'); });
+  }
+
+  // -- Welcome agent ----------------------------------------------------------
+  function closeWelcome() {
+    var el = document.getElementById('welcomeOverlay');
+    if (!el) return;
+    el.style.transition = 'opacity .4s ease';
+    el.style.opacity = '0';
+    setTimeout(function() { el.style.display = 'none'; }, 400);
+    // Remember for this session
+    try { sessionStorage.setItem('wl_seen_' + TOKEN, '1'); } catch(e) {}
+  }
+
+  // Show on load unless already seen this session
+  (function() {
+    try {
+      if (sessionStorage.getItem('wl_seen_' + TOKEN)) {
+        var el = document.getElementById('welcomeOverlay');
+        if (el) el.style.display = 'none';
+      }
+    } catch(e) {}
+  })();
+
 <\/script>
 
 <!-- Citation Brief Overlay -->
@@ -23782,6 +24131,50 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
     <div class="cb-footer">
       <div class="cb-countdown" id="cbCountdown"></div>
       <button class="cb-keep-btn" onclick="keepCbOpen()" id="cbKeepBtn" style="display:none;">Keep open</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- Welcome Agent -->
+<div class="wl-overlay" id="welcomeOverlay">
+  <div class="wl-card">
+    <div class="wl-top">
+      <img src="https://contentscale.site/wp-content/uploads/2025/11/ottmar-francisca-headshot.png"
+           alt="Ottmar Francisca" class="wl-avatar">
+      <div class="wl-badge"><span class="wl-badge-dot"></span> AI System Online</div>
+      <div class="wl-name">ContentScale Citation Tracker</div>
+      <div class="wl-role">Powered by Ottmar Francisca &mdash; Amsterdam</div>
+    </div>
+    <div class="wl-body">
+      <p class="wl-msg" id="wlMsg">
+        Hello &mdash; I am the AI research system of <strong style="color:#e5e7eb;">Ottmar Francisca</strong>.<br><br>
+        I monitor the internet in real time to track where AI systems like Google, Perplexity, Copilot, and Claude cite your content as a trusted source.
+      </p>
+      <div class="wl-domain-box">
+        <div class="wl-domain-icon">&#127760;</div>
+        <div>
+          <div class="wl-domain-text" id="wlDomain">__DOMAIN__</div>
+          <div class="wl-domain-sub">Your domain &mdash; actively monitored</div>
+        </div>
+      </div>
+      <div class="wl-features">
+        <div class="wl-feature"><span class="wl-feature-dot"></span>Google AI Overview</div>
+        <div class="wl-feature"><span class="wl-feature-dot"></span>Perplexity</div>
+        <div class="wl-feature"><span class="wl-feature-dot"></span>Microsoft Copilot / Bing</div>
+        <div class="wl-feature"><span class="wl-feature-dot"></span>Claude / Brave Search</div>
+        <div class="wl-feature"><span class="wl-feature-dot"></span>ChatGPT Search</div>
+        <div class="wl-feature"><span class="wl-feature-dot"></span>GRAAF content scoring</div>
+        <div class="wl-feature"><span class="wl-feature-dot"></span>Live Citation Briefs</div>
+        <div class="wl-feature"><span class="wl-feature-dot"></span>Email alerts on changes</div>
+      </div>
+      <a href="https://wa.me/31628073996?text=Hi%20Ottmar!%20I%20want%20a%20done-for-you%20citation%20plan%20for%20__DOMAIN__" target="_blank" rel="noopener" class="wl-wa">
+        <i class="fab fa-whatsapp"></i> Let Ottmar do this for you
+      </a>
+      <button class="wl-start" onclick="closeWelcome()">
+        Start monitoring &rarr;
+      </button>
+      <div class="wl-footer">One of the most advanced AI citation monitoring systems available today</div>
     </div>
   </div>
 </div>
