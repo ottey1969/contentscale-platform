@@ -29975,12 +29975,24 @@ async function runTrackerCheck(page, geminiKey, keys, forceRescan = false) {
     score: null
   };
 
-  // Derive keyword — priority: manual keyword > GSC keyword ONLY
+  // Derive keyword — priority: manual keyword > GSC keyword > auto-extract from page title
   // URL slug is NOT used for AI recommendations — too unreliable
   let keyword = page.keyword || page.gsc_keyword || '';
   if (keyword.toLowerCase() === 'unknown') keyword = '';
-  const _keywordSource = page.keyword ? 'manual' : page.gsc_keyword ? 'gsc' : 'none';
-  const _hasValidKeyword = _keywordSource !== 'none' && !!keyword;
+  const _keywordSource = page.keyword ? 'manual' : page.gsc_keyword ? 'gsc' : 'auto';
+  // If still no keyword, try to extract from cached HTML (title tag or first H1)
+  if (!keyword && page.html_content) {
+    const titleMatch = page.html_content.match(/<title[^>]*>([^<]{3,120})<\/title>/i);
+    const h1Match = page.html_content.match(/<h1[^>]*>([^<]{3,120})<\/h1>/i);
+    const metaDesc = page.html_content.match(/<meta[^>]*name=["']description["'][^>]*content=["']([^"']{10,160})["']/i);
+    const rawTitle = (h1Match && h1Match[1]) || (titleMatch && titleMatch[1]) || '';
+    if (rawTitle) {
+      // Clean: strip site name suffix (e.g. "Home | ContentScale" -> "ContentScale")
+      keyword = rawTitle.replace(/\s*[\|\-–—]\s*.{2,40}$/, '').trim().substring(0, 80);
+      console.log(`[tracker] Auto-extracted keyword from HTML: "${keyword}" for ${page.url}`);
+    }
+  }
+  const _hasValidKeyword = !!keyword;
 
   const pageUrl   = page.url;
   const domain    = pageUrl.replace(/^https?:\/\//, '').split('/')[0]; // e.g. example.com
@@ -30458,13 +30470,15 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
         snapshot.ai_bing_cited ? '✅ We ARE cited in You.com AI' : '❌ We are NOT cited in You.com AI',
       ].join('\n');
 
+      const kwSource = page.keyword ? 'manually set' : page.gsc_keyword ? 'from Google Search Console' : 'auto-extracted from page title';
       const prompt = `You are a content strategist specializing in AI citation optimization and Google AI Overview inclusion.
 
 Your goal: analyze why this page is NOT appearing in Google AI Overview, Perplexity, and You.com AI — and give specific content changes that would get it there AND push it to #1 in Google.
 
-KEYWORD: "${kw}"
+KEYWORD: "${kw}" (${kwSource})
 OUR PAGE: ${page.url}
 TITLE: ${page.title||'(not set)'}
+IMPORTANT: Base all recommendations on the actual page content and URL above. The keyword is a search query — not a topic to explain. Focus on what THIS page is missing vs competitors.
 
 CURRENT SITUATION:
 ${status}${aioText}
@@ -30490,7 +30504,7 @@ TASK:
 Return ONLY a JSON array, no markdown:
 [{"title":"specific gap max 10 words","priority":"high"|"medium"|"low","action":"exactly what to write or restructure — be specific about the gap vs competitors","expected_impact":"Google AI Overview / Perplexity / You.com / Google #1 — and the mechanism why"}]
 
-Zero generic advice. Skip anything our content already clearly has.`;
+Zero generic advice. Skip anything our content already clearly has. Never write recommendations explaining what the keyword means as a concept.`;
 
       const resp = await callGeminiWithFallback(geminiKey, {
         contents: [{ role: 'user', parts: [{ text: prompt }] }],
