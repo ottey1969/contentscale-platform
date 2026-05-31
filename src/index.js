@@ -933,7 +933,7 @@ app.post('/api/tracker-client/register', async (req, res) => {
 
     const token = generateClientToken();
     await pool.query(
-      `INSERT INTO tracker_clients (token, domain, name, email, whatsapp, max_pages, registered_ip) VALUES ($1,$2,$3,$4,$5,10,$6)`,
+      `INSERT INTO tracker_clients (token, domain, name, email, whatsapp, max_pages, registered_ip) VALUES ($1,$2,$3,$4,$5,3,$6)`,
       [token, cleanDomain, name||null, email||null, whatsapp||null, clientIp||null]
     );
 
@@ -972,7 +972,7 @@ app.get('/api/tracker-client/:token', async (req, res) => {
        ) s ON true
        WHERE p.tracker_client_id = $1 AND (p.is_active = TRUE OR p.is_active IS NULL)
        ORDER BY p.created_at DESC LIMIT $2`,
-      [client.id, client.max_pages || 10]
+      [client.id, client.max_pages || 3]
     );
 
     res.json({
@@ -980,7 +980,7 @@ app.get('/api/tracker-client/:token', async (req, res) => {
       client: {
         domain: client.domain,
         name: client.name,
-        max_pages: client.max_pages || 10,
+        max_pages: client.max_pages || 3,
         created_at: client.created_at
       },
       pages: pagesR.rows,
@@ -1113,16 +1113,18 @@ app.post('/api/tracker-client/:token/pages', async (req, res) => {
     // Check page limit
     const countR = await pool.query('SELECT COUNT(*) FROM tracker_pages WHERE tracker_client_id=$1 AND (is_active=TRUE OR is_active IS NULL)', [client.id]);
     const count = parseInt(countR.rows[0].count);
-    const maxPages = client.max_pages || 10;
-    if (count >= maxPages) return res.status(400).json({ success: false, error: `Maximum of ${maxPages} pages reached. Contact Ottmar to increase your limit.` });
+    const maxPages = client.max_pages || 3;
+    if (count >= maxPages) return res.status(400).json({ success: false, error: `Free tracker limit: ${maxPages} pages maximum. Contact Ottmar at contentscale.site to upgrade.` });
 
     const { url, keyword } = req.body;
     if (!url) return res.status(400).json({ success: false, error: 'URL required' });
 
-    // Verify URL belongs to client domain
+    // Verify URL belongs to any of the client's allowed domains
     const urlDomain = url.replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0].toLowerCase();
-    if (!urlDomain.includes(client.domain) && !client.domain.includes(urlDomain)) {
-      return res.status(400).json({ success: false, error: `URL must belong to domain: ${client.domain}` });
+    const allowedDomains = [client.domain, ...(client.extra_domains || '').split(',').map(d => d.trim()).filter(Boolean)];
+    const domainOk = allowedDomains.some(d => urlDomain.includes(d) || d.includes(urlDomain));
+    if (!domainOk) {
+      return res.status(400).json({ success: false, error: `URL must belong to one of your domains: ${allowedDomains.join(', ')}` });
     }
 
     // Check duplicate
@@ -1189,7 +1191,7 @@ app.get('/track/:token', async (req, res) => {
     res.send(_CLIENT_TRACKER_HTML
       .replace(/__TOKEN__/g, req.params.token)
       .replace(/__DOMAIN__/g, client.domain)
-      .replace(/__MAX_PAGES__/g, String(client.max_pages || 10))
+      .replace(/__MAX_PAGES__/g, String(client.max_pages || 3))
       .replace(/__CLIENT_NAME__/g, client.name || client.domain)
     );
   } catch(e) { res.status(500).send('Server error'); }
@@ -1375,6 +1377,7 @@ app.patch('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
     const { max_pages, status, reset_ip } = req.body;
     const updates = []; const vals = []; let i = 1;
     if (max_pages !== undefined) { updates.push(`max_pages=$${i++}`); vals.push(max_pages); }
+    if (req.body.extra_domains !== undefined) { updates.push(`extra_domains=$${i++}`); vals.push(req.body.extra_domains || ''); }
     if (status !== undefined) { updates.push(`status=$${i++}`); vals.push(status); }
     if (reset_ip) { updates.push(`registered_ip=NULL`); }
     if (!updates.length) return res.status(400).json({ success: false, error: 'Nothing to update' });
@@ -1592,14 +1595,15 @@ app.patch('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
     status VARCHAR(20) DEFAULT 'active',
     last_notified_at TIMESTAMPTZ,
     notify_frequency INTEGER DEFAULT 7,
-    max_pages INTEGER DEFAULT 10,
+    max_pages INTEGER DEFAULT 3,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
   )`).catch(()=>{});
-  await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS max_pages INTEGER DEFAULT 10`).catch(()=>{});
-  await client.query(`UPDATE tracker_clients SET max_pages=10 WHERE max_pages=25 OR max_pages IS NULL`).catch(()=>{});
+  await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS max_pages INTEGER DEFAULT 3`).catch(()=>{});
+  await client.query(`UPDATE tracker_clients SET max_pages=3 WHERE max_pages IS NULL`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS registered_ip VARCHAR(45)`).catch(()=>{});
   await client.query(`CREATE INDEX IF NOT EXISTS tracker_clients_ip_idx ON tracker_clients(registered_ip) WHERE registered_ip IS NOT NULL`).catch(()=>{});
+  await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS extra_domains TEXT DEFAULT ''`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS unsubscribe_token VARCHAR(64)`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS email_unsubscribed BOOLEAN DEFAULT FALSE`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS tracker_client_id INTEGER REFERENCES tracker_clients(id) ON DELETE SET NULL`).catch(()=>{});
@@ -23381,7 +23385,7 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
     <div class="cs-stat"><div class="val" id="statCitedB" style="color:#2563eb;">&mdash;</div><div class="lbl">Copilot</div></div>
     <div class="cs-stat"><div class="val" id="statCitedC" style="color:#dc2626;">&mdash;</div><div class="lbl">Brave</div></div>
     <div class="cs-stat"><div class="val" id="statAvgScore" style="color:#ca8a04;">&mdash;</div><div class="lbl">GRAAF</div></div>
-    <div class="cs-stat"><div class="val" id="statRemaining" style="color:#16a34a;">&mdash;</div><div class="lbl">Slots left</div></div>
+    <div class="cs-stat"><div class="val" id="statRemaining" style="color:#16a34a;">&mdash;</div><div class="lbl">Slots left (max 3)</div></div>
   </div>
 
   <!-- Toolbar -->
@@ -23601,7 +23605,7 @@ function renderPages() {
     el.innerHTML = '<div style="background:#0d1117;border:2px dashed #1f2937;border-radius:12px;padding:40px 28px;text-align:center;">'
       + '<div style="font-size:40px;margin-bottom:16px;">&#128203;</div>'
       + '<div style="font-size:16px;font-weight:800;color:#e5e7eb;margin-bottom:8px;">Start tracking your pages</div>'
-      + '<div style="font-size:13px;color:#6b7280;line-height:1.7;margin-bottom:20px;max-width:420px;margin-left:auto;margin-right:auto;">Add URLs one by one, import from your sitemap, or paste from Google Search Console. The system checks automatically.</div>'
+      + '<div style="font-size:13px;color:#6b7280;line-height:1.7;margin-bottom:20px;max-width:420px;margin-left:auto;margin-right:auto;">Add URLs one by one, import from your sitemap, or paste from Google Search Console. The system checks automatically. Free plan: 3 pages, 1 domain.</div>'
       + '<div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">'
       + '<button class="cs-btn primary" onclick="showAddModal()" style="font-size:13px;padding:10px 20px;">+ Add first URL</button>'
       + '<button class="cs-btn" onclick="showImportModal(&quot;sitemap&quot;)" style="font-size:13px;padding:10px 20px;border-color:#38bdf8;color:#38bdf8;">Import from sitemap</button>'
@@ -27958,7 +27962,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 maxWrap.style.cssText = 'display:flex;flex-direction:column;gap:3px;align-items:center;';
                 var maxInput = document.createElement('input');
                 maxInput.type = 'number';
-                maxInput.value = c.max_pages || 10;
+                maxInput.value = c.max_pages || 3;
                 maxInput.min = 1; maxInput.max = 500;
                 maxInput.style.cssText = 'width:54px;background:#0d1117;border:1px solid #374151;border-radius:4px;padding:3px 6px;color:#e5e7eb;font-size:12px;text-align:center;';
                 maxInput.onchange = (function(id){ return function(){ updateTcClient(id, {max_pages: parseInt(this.value)||10}); }; })(c.id);
@@ -27991,6 +27995,19 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 toggleBtn.style.cssText = 'font-size:10px;padding:3px 8px;';
                 toggleBtn.onclick = (function(id, newStatus){ return function(){ updateTcClient(id, {status: newStatus}); loadTrackerClients(); }; })(c.id, isActive ? 'disabled' : 'active');
 
+                // ── Extra domains button ──
+                var domainsBtn = document.createElement('button');
+                domainsBtn.className = 'tr-btn';
+                domainsBtn.textContent = c.extra_domains ? '+ domains (' + c.extra_domains.split(',').filter(Boolean).length + ')' : '+ domain';
+                domainsBtn.title = 'Add extra domains this client can track (comma separated)';
+                domainsBtn.style.cssText = 'font-size:10px;padding:3px 8px;border-color:#38bdf8;color:#38bdf8;';
+                domainsBtn.onclick = (function(id, current){ return function(){
+                    var val = prompt('Extra domains for this client (comma separated, no https://):\nCurrent: ' + (current||'none'), current||'');
+                    if (val === null) return;
+                    updateTcClient(id, {extra_domains: val.trim()});
+                    setTimeout(loadTrackerClients, 500);
+                }; })(c.id, c.extra_domains || '');
+
                 var ipBtn = document.createElement('button');
                 ipBtn.className = 'tr-btn';
                 ipBtn.textContent = 'Reset IP';
@@ -28018,6 +28035,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 delBtn.onclick = (function(id){ return function(){ deleteTcClient(id); }; })(c.id);
 
                 actionsDiv.appendChild(toggleBtn);
+                actionsDiv.appendChild(domainsBtn);
                 actionsDiv.appendChild(ipBtn);
                 actionsDiv.appendChild(delBtn);
 
@@ -28052,6 +28070,16 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 urlCell.appendChild(domainDiv);
                 urlCell.appendChild(urlLink);
                 urlCell.appendChild(copyInlineBtn);
+                // Show extra domains if any
+                if (c.extra_domains) {
+                    var extraDoms = c.extra_domains.split(',').map(function(d){ return d.trim(); }).filter(Boolean);
+                    if (extraDoms.length) {
+                        var extDiv = document.createElement('div');
+                        extDiv.style.cssText = 'font-size:10px;color:#4b5563;margin-top:3px;';
+                        extDiv.textContent = 'also: ' + extraDoms.join(', ');
+                        urlCell.appendChild(extDiv);
+                    }
+                }
 
                 tr.innerHTML =
                     '<td style="padding:8px 10px;"><div style="color:#9ca3af;">' + (c.name||'-') + '</div>'
