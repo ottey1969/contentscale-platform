@@ -1096,14 +1096,31 @@ app.post('/api/tracker-client/:token/pages', async (req, res) => {
     const dupR = await pool.query('SELECT id FROM tracker_pages WHERE tracker_client_id=$1 AND url=$2', [client.id, url]);
     if (dupR.rows.length) return res.status(400).json({ success: false, error: 'URL already tracked' });
 
-    const pr = await pool.query(
-      `INSERT INTO tracker_pages (tracker_client_id, url, keyword, check_frequency, next_check_at, is_active)
-       VALUES ($1,$2,$3,'weekly',NOW(),TRUE) RETURNING id`,
-      [client.id, url, keyword||null]
-    );
+    let pr;
+    try {
+      pr = await pool.query(
+        `INSERT INTO tracker_pages (tracker_client_id, url, keyword, check_frequency, next_check_at, is_active)
+         VALUES ($1,$2,$3,'weekly',NOW(),TRUE) RETURNING id`,
+        [client.id, url, keyword||null]
+      );
+    } catch(insertErr) {
+      // Fallback if is_active column doesn't exist yet
+      if (insertErr.message.includes('is_active') || insertErr.message.includes('column')) {
+        pr = await pool.query(
+          `INSERT INTO tracker_pages (tracker_client_id, url, keyword, check_frequency, next_check_at)
+           VALUES ($1,$2,$3,'weekly',NOW()) RETURNING id`,
+          [client.id, url, keyword||null]
+        );
+      } else {
+        throw insertErr;
+      }
+    }
 
     res.json({ success: true, page_id: pr.rows[0].id, remaining: maxPages - count - 1 });
-  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+  } catch(e) {
+    console.error('[POST tracker pages]', e.message, e.detail || '');
+    res.status(500).json({ success: false, error: e.message, detail: e.detail || null });
+  }
 });
 
 // DELETE /api/tracker-client/:token/pages/:pageId
@@ -1502,8 +1519,13 @@ app.patch('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
    )`).catch(() => {});
    // Migration: add engine_code_id to existing tracker_pages if missing
    await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS engine_code_id INTEGER REFERENCES engine_access_codes(id) ON DELETE SET NULL`).catch(()=>{});
-   await client.query(`CREATE UNIQUE INDEX IF NOT EXISTS tracker_pages_engine_url_idx ON tracker_pages(engine_code_id, url) WHERE engine_code_id IS NOT NULL`).catch(()=>{});
-   await client.query(`CREATE UNIQUE INDEX IF NOT EXISTS tracker_pages_null_engine_url_idx ON tracker_pages(url) WHERE engine_code_id IS NULL`).catch(()=>{});
+   await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS tracker_client_id INTEGER REFERENCES tracker_clients(id) ON DELETE SET NULL`).catch(()=>{});
+   await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE`).catch(()=>{});
+   // Drop global unique index - same URL can be tracked by multiple clients
+   await client.query(`DROP INDEX IF EXISTS tracker_pages_null_engine_url_idx`).catch(()=>{});
+   await client.query(`DROP INDEX IF EXISTS tracker_pages_engine_url_idx`).catch(()=>{});
+   // Correct unique index: per client per URL
+   await client.query(`CREATE UNIQUE INDEX IF NOT EXISTS tracker_pages_client_url_idx ON tracker_pages(tracker_client_id, url) WHERE tracker_client_id IS NOT NULL`).catch(()=>{});
 
    // ── GSC baseline data migration ────────────────────────────────────────────
    await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS gsc_impressions INTEGER`).catch(()=>{});
