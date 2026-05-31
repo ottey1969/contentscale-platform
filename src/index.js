@@ -23391,7 +23391,8 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
     <button class="cs-btn" onclick="showImportModal('gsc')" style="border-color:#a78bfa;color:#a78bfa;"><i class="fas fa-chart-line"></i> GSC</button>
     <button class="cs-btn" onclick="showImportModal('paste')" style="border-color:#6b7280;color:#6b7280;"><i class="fas fa-paste"></i> Paste</button>
     <button class="cs-btn" onclick="loadPages()" style="margin-left:4px;" title="Refresh"><i class="fas fa-sync-alt"></i></button>
-    <span style="font-size:11px;color:#6b7280;margin-left:auto;" id="pageCountLabel"></span>
+    <input id="ctSearch" type="text" class="cs-input" placeholder="Search..." oninput="filterPages(this.value)" style="width:160px;padding:5px 10px;font-size:11px;margin-left:auto;">
+    <span style="font-size:11px;color:#6b7280;" id="pageCountLabel"></span>
   </div>
 
   <!-- Live feed -->
@@ -23558,7 +23559,10 @@ async function api(path, method, body) {
   return r.json();
 }
 
-async function loadPages() {
+var _ctSearchQuery = '';
+  function filterPages(q) { _ctSearchQuery = (q||'').toLowerCase().trim(); renderPages(); }
+
+  async function loadPages() {
   var el = document.getElementById('pagesList');
   try {
     var data = await api('');
@@ -23593,7 +23597,6 @@ function renderStats(data) {
 function renderPages() {
   var el = document.getElementById('pagesList');
   var countEl = document.getElementById('pageCountLabel');
-  if (countEl) countEl.textContent = _pages.length + ' pages tracked';
   if (!_pages.length) {
     el.innerHTML = '<div style="background:#0d1117;border:2px dashed #1f2937;border-radius:12px;padding:40px 28px;text-align:center;">'
       + '<div style="font-size:40px;margin-bottom:16px;">&#128203;</div>'
@@ -23605,14 +23608,40 @@ function renderPages() {
       + \'</div></div>\';
     return;
   }
-  el.innerHTML = _pages.map(function(p) {
+  var displayPages = _ctSearchQuery ? _pages.filter(function(p){
+    var hay = [(p.url||''),(p.keyword||'')].join(' ').toLowerCase();
+    return hay.indexOf(_ctSearchQuery) > -1;
+  }) : _pages;
+  if (countEl) countEl.textContent = displayPages.length + (_ctSearchQuery ? ' of '+_pages.length : '') + ' pages tracked';
+
+  // Sort by GSC priority: pages with impressions/clicks first
+  var sorted = displayPages.slice().sort(function(a,b) {
+    // Done pages go last
+    if (a.is_done && !b.is_done) return 1;
+    if (!a.is_done && b.is_done) return -1;
+    // Then by GSC clicks desc
+    var aClicks = a.gsc_clicks || 0;
+    var bClicks = b.gsc_clicks || 0;
+    if (bClicks !== aClicks) return bClicks - aClicks;
+    // Then by position asc (lower = better)
+    var aPos = a.google_position || 999;
+    var bPos = b.google_position || 999;
+    return aPos - bPos;
+  });
+  el.innerHTML = sorted.map(function(p, pageIdx) {
     var pos = p.google_position;
     var score = p.graaf_score;
     var kw = p.keyword || p.gsc_keyword || '';
     var posColor = !pos ? '#6b7280' : pos<=3 ? '#4ade80' : pos<=10 ? '#a3e635' : pos<=20 ? '#fbbf24' : '#f87171';
-    var lastChecked = p.last_checked ? new Date(p.last_checked).toLocaleDateString('nl-NL') : 'Not yet';
-    var nextCheck = p.next_check_at ? 'Next: ' + new Date(p.next_check_at).toLocaleDateString('nl-NL') : '';
-    var urlShort = p.url ? p.url.replace(/^https?:\/\//, '').replace(/^www\./, '') : p.url;
+    var lastChecked = p.last_checked ? new Date(p.last_checked).toLocaleDateString() : 'Not yet';
+    var nextCheck = p.next_check_at ? 'Next: ' + new Date(p.next_check_at).toLocaleDateString() : '';
+    // Clean URL - remove protocol, www, and fix anchor slugs (#section)
+    var rawUrl = p.url || '';
+    var urlClean = rawUrl.replace(/^https?:\/\//, '').replace(/^www\./, '');
+    // Remove anchor fragments with weird chars like #audiencekeyword
+    var urlShort = urlClean.replace(/#.*$/, '').replace(/\/$/, '') || urlClean;
+    // Page number (1-based)
+    var pageNum = pageIdx + 1;
     var isDone = !!p.is_done;
 
     // Citation badges
@@ -23646,10 +23675,12 @@ function renderPages() {
       }
     }
 
-    return '<div class="cs-page-card' + (isDone ? ' done' : '') + '" style="' + (isDone ? 'opacity:.65;' : '') + '">'
+    return '<div class="cs-page-card' + (isDone ? ' done' : '') + '">'
+      + (isDone ? '<div style="display:flex;align-items:center;gap:6px;padding:5px 14px;background:rgba(74,222,128,.06);border-bottom:1px solid #166534;font-size:10px;color:#4ade80;letter-spacing:.06em;"><span>v</span> DONE &mdash; marked as implemented. Tracking continues.</div>' : '')
+      + '<div style="padding:14px 16px;' + (isDone ? 'opacity:.6;' : '') + '">\'
       + '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;">'
       + '<div style="flex:1;min-width:0;">'
-      + '<div style="font-size:12px;color:#e5e7eb;font-family:monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:6px;" title="' + p.url + '">' + urlShort + '</div>'
+      + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;"><span style="font-size:10px;font-weight:700;color:#4b5563;background:#1f2937;border-radius:4px;padding:1px 7px;flex-shrink:0;">#' + pageNum + '</span><div style="font-size:12px;' + (isDone ? 'text-decoration:line-through;color:#4b5563;' : 'color:#e5e7eb;') + 'font-family:monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;" title="' + rawUrl + '">' + urlShort + '</div></div>'
       + '<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:6px;">' + badges + '</div>'
       + '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">'
       + (kw ? '<span style="font-size:10px;color:#4b5563;">kw: <span style="color:#a78bfa;">' + kw + '</span></span><button onclick="editKeyword(' + p.id + ',this)" style="font-size:9px;background:none;border:none;color:#374151;cursor:pointer;text-decoration:underline;">edit</button>'
@@ -23665,7 +23696,7 @@ function renderPages() {
       + '</div>'
       + '</div>'
       + recsHtml
-      + '</div>';
+      + '</div>'\n      + '</div>';
   }).join('');
 }
 
@@ -25590,7 +25621,8 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
 
                 <!-- Filters -->
                 <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap;">
-                    <label style="font-size:12px;color:#6b7280;white-space:nowrap;">Filter by client:</label>
+                    <input id="trSearchInput" type="text" class="tr-select" placeholder="Search URL or keyword..." oninput="filterTrackerBySearch()" style="min-width:220px;font-size:12px;padding:6px 12px;">
+                    <label style="font-size:12px;color:#6b7280;white-space:nowrap;">Client:</label>
                     <select id="trClientFilter" class="tr-select" onchange="filterTrackerByClient()" style="min-width:180px;">
                         <option value="">All clients</option>
                     </select>
@@ -26276,7 +26308,11 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
             if (tab==='freelancers') loadFreelancers();
             if (tab==='users') loadUsers();
             if (tab==='tracker') loadTrackerPages();
-            if (tab==='tracker-clients') { if (typeof loadTrackerClients === 'function') loadTrackerClients(); else setTimeout(function(){ if (typeof loadTrackerClients === 'function') loadTrackerClients(); }, 500); }
+            if (tab==='messages') loadMessages();
+            if (tab==='tracker-clients') {
+                if (typeof loadTrackerClients === 'function') loadTrackerClients();
+                else setTimeout(function(){ if (typeof loadTrackerClients === 'function') loadTrackerClients(); }, 500);
+            }
             if (tab==='pending') loadPendingData();
             if (tab==='enginecodes') loadEngineCodes();
             if (tab==='giveaccess') loadGiveAccess();
@@ -26841,8 +26877,25 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
         }
 
         let _trDomainFilter = '';
+        let _trSearchQuery = '';
 
-        function populateClientFilter() {
+        function filterTrackerBySearch() {
+            const el = document.getElementById('trSearchInput');
+            _trSearchQuery = el ? el.value.toLowerCase().trim() : '';
+            renderTrackerPages();
+        }
+
+        function filterTrackerByClient() {
+            const sel = document.getElementById('trClientFilter');
+            _trClientFilter = sel ? sel.value : '';
+            renderTrackerPages();
+        }
+
+        function filterTrackerByDomain() {
+            const sel = document.getElementById('trDomainFilter');
+            _trDomainFilter = sel ? sel.value : '';
+            renderTrackerPages();
+        }
             const sel = document.getElementById('trClientFilter');
             if(!sel) return;
             const clients = {};
@@ -26963,6 +27016,21 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
             if(_trCitationFilter === 'google') filtered = filtered.filter(function(p){ return p.latest_snapshot && p.latest_snapshot.ai_google_overview_cited; });
             if(_trCitationFilter === 'perplexity') filtered = filtered.filter(function(p){ return p.latest_snapshot && p.latest_snapshot.ai_perplexity_cited; });
             if(_trCitationFilter === 'youcom') filtered = filtered.filter(function(p){ return p.latest_snapshot && p.latest_snapshot.ai_bing_cited; });
+            // Search filter
+            if(_trSearchQuery) filtered = filtered.filter(function(p) {
+                var hay = [(p.url||''), (p.keyword||''), (p.gsc_keyword||''), (p.title||'')].join(' ').toLowerCase();
+                return hay.indexOf(_trSearchQuery) > -1;
+            });
+            filtered = filtered.slice().sort(function(a,b) {
+                if (a.is_done && !b.is_done) return 1;
+                if (!a.is_done && b.is_done) return -1;
+                var aClicks = a.gsc_clicks || 0;
+                var bClicks = b.gsc_clicks || 0;
+                if (bClicks !== aClicks) return bClicks - aClicks;
+                var aPos = (a.latest_snapshot && a.latest_snapshot.google_position) || 999;
+                var bPos = (b.latest_snapshot && b.latest_snapshot.google_position) || 999;
+                return aPos - bPos;
+            });
             const activeFilters = [_trClientFilter, _trDomainFilter, _trCitationFilter].filter(Boolean).length;
             const countEl = document.getElementById('trFilterCount');
             if(countEl) countEl.textContent = activeFilters ? 'Showing ' + filtered.length + ' of ' + allTrackerPages.length + ' pages' + (_trCitationFilter ? ' - cited in ' + _trCitationFilter : '') : '';
@@ -26970,18 +27038,24 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 el.innerHTML = '<div style="text-align:center;padding:40px;color:#6b7280;">No pages match this filter.</div>';
                 return;
             }
-            el.innerHTML = filtered.map(p => renderTrackerPageCard(p)).join('');
+            el.innerHTML = filtered.map(function(p, pageIdx) { return renderTrackerPageCard(p, pageIdx); }).join('');
         }
 
-        function renderTrackerPageCard(p) {
+        function renderTrackerPageCard(p, pageIdx) {
+            const pageNum = (pageIdx !== undefined ? pageIdx : 0) + 1;
             const snap = p.latest_snapshot;
             const pending = parseInt(p.pending_changes||0);
             const freqLabels = {'1day':'Daily','3days':'3 days','1week':'Weekly','2weeks':'2 weeks','weekly':'Weekly','monthly':'Monthly'};
             const nextCheck = p.next_check_at ? getTimeAgo(new Date(p.next_check_at)) : '-';
             const lastCheck = p.last_checked_at ? getTimeAgo(new Date(p.last_checked_at)) : 'Never checked';
             const checkboxHtml = '<input type="checkbox" class="tr-page-cb" data-id="'+p.id+'" onchange="updateBulkBar()" style="margin-right:8px;cursor:pointer;flex-shrink:0;">';
+            const isDone = !!p.is_done;
 
-            // Position pill - #4 means Google ranking position
+            // Clean URL - strip anchor fragments (#section etc)
+            const rawUrl = p.url || '';
+            const urlClean = rawUrl.replace(/#.*$/, '').replace(/\/$/, '');
+
+            // Position pill
             let posPill = '<span style="color:#6b7280;font-size:13px;">Not ranked</span>';
             if(snap?.google_position) {
                 const pos = snap.google_position;
@@ -27015,7 +27089,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 ? '<span class="tr-badge" style="background:#2d1f00;color:#fbbf24;margin-left:6px;">! fetch unreliable</span>'
                 : '';
 
-            // AI citation badges - green = cited, red = not cited, grey = no overview
+            // AI citation badges
             const gBadge = snap
                 ? (snap.ai_google_overview_cited
                     ? '<span class="tr-badge" style="background:#052e16;color:#4ade80;border:1px solid #16a34a;">OK Google AIO cited</span>'
@@ -27036,6 +27110,12 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     : '')
                 : '';
 
+            const brBadge = snap
+                ? (snap.ai_brave_cited
+                    ? '<span class="tr-badge" style="background:#1a0e2e;color:#c4b5fd;border:1px solid #7c3aed;">OK Brave cited</span>'
+                    : '')
+                : '';
+
             // Pending changes button
             const changesBtn = pending > 0
                 ? '<button onclick="openChangesModalById('+p.id+')" class="tr-btn" style="border-color:#f59e0b;color:#fbbf24;position:relative;">See changes <span style="background:#f59e0b;color:#000;border-radius:99px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:4px;">'+pending+'</span></button>'
@@ -27046,21 +27126,23 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 ? '<div style="margin-top:8px;"><button onclick="openHtmlModal('+p.id+')" class="tr-btn" style="border-color:#fbbf24;color:#fef9c3;"> Paste HTML manually for GRAAF scan</button></div>'
                 : '';
 
-            const borderColor = p.is_active ? '#7e22ce' : '#374151';
-            const dotHtml = p.is_active
+            const borderColor = isDone ? '#374151' : (p.is_active ? '#7e22ce' : '#374151');
+            const dotHtml = p.is_active && !isDone
                 ? '<span class="tr-change-dot tr-pulse" style="background:#7e22ce;"></span>'
                 : '<span class="tr-change-dot" style="background:#374151;"></span>';
-            // Keyword badge - shows source and warns if using slug fallback
+
+            // Keyword badge - fix slug display
             let kwHtml = '';
             if (p.keyword) {
                 kwHtml = '<span style="font-size:11px;color:#6b7280;margin-left:4px;">keyword: <span style="color:#a78bfa;">'+p.keyword+'</span></span>';
             } else if (p.gsc_keyword) {
                 kwHtml = '<span style="font-size:11px;color:#6b7280;margin-left:4px;">keyword: <span style="color:#60a5fa;">'+p.gsc_keyword+'</span> <span style="color:#374151;font-size:10px;">(GSC)</span></span>';
             } else {
-                var rawSlug = (p.url||'');
+                // Extract slug from clean URL (no anchors)
+                var rawSlug = urlClean;
                 if (rawSlug.charAt(rawSlug.length-1) === '/') rawSlug = rawSlug.slice(0,-1);
                 rawSlug = rawSlug.split('/').pop() || '';
-                rawSlug = rawSlug.split('.')[0]; // remove extension
+                rawSlug = rawSlug.split('.')[0];
                 var slug = rawSlug.split('').map(function(c){ return (c==='-'||c==='_')?' ':c; }).join('').trim();
                 if (slug) {
                     kwHtml = '<span style="font-size:11px;color:#6b7280;margin-left:4px;">keyword: <span style="color:#fbbf24;">'+slug+'</span> <span style="background:#2d1f00;color:#fbbf24;font-size:9px;padding:1px 5px;border-radius:3px;cursor:pointer;" onclick="openHtmlModal('+p.id+')" title="Slug used as keyword - click to set manually">! slug</span></span>';
@@ -27068,39 +27150,43 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     kwHtml = '<span style="font-size:11px;background:#2d0a0a;color:#f87171;margin-left:4px;padding:1px 6px;border-radius:3px;cursor:pointer;" onclick="openHtmlModal('+p.id+')" title="No keyword - click to set">! no keyword</span>';
                 }
             }
+
             let _recs = snap && snap.recommendations ? snap.recommendations : null;
             if(_recs && typeof _recs === 'string') { try { _recs = JSON.parse(_recs); } catch(e) { _recs = null; } }
             const recsHtml = Array.isArray(_recs) && _recs.length ? renderTrackerRecommendations(_recs, p.id) : '';
-            return '<div class="tr-card" style="border-left:3px solid '+borderColor+';position:relative;">'\
-                + '<div style="position:absolute;top:14px;left:14px;">'+checkboxHtml+'</div>'\
+
+            return '<div class="tr-card" style="border-left:3px solid '+borderColor+';position:relative;' + (isDone ? 'opacity:.65;' : '') + '">'\
+                + (isDone ? '<div style="display:flex;align-items:center;gap:6px;padding:5px 14px;background:rgba(74,222,128,.06);border-bottom:1px solid #166534;font-size:10px;color:#4ade80;letter-spacing:.06em;"><span>v</span> DONE &mdash; marked as implemented. Tracking continues.</div>' : '')\
+                + '<div style="position:absolute;top:' + (isDone ? '38' : '14') + 'px;left:14px;">'+checkboxHtml+'</div>'\
                 + '<div style="padding-left:24px;">'
                 +'<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;">'
                 +'<div style="flex:1;min-width:0;">'
                 +'<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px;">'
+                +'<span style="font-size:10px;font-weight:700;color:#4b5563;background:#1f2937;border-radius:4px;padding:1px 7px;flex-shrink:0;">#'+pageNum+'</span>'
                 +dotHtml
-                +'<span style="font-weight:600;font-size:13px;color:#f1f5f9;">'+(p.title||'Untitled page')+'</span>'
+                +'<span style="font-weight:600;font-size:13px;color:#f1f5f9;' + (isDone ? 'text-decoration:line-through;color:#4b5563;' : '') + '">'+(p.title||'Untitled page')+'</span>'
                 +graafBadge+gscBadge+clsBadge+fetchWarning
-                +'<span style="font-size:11px;color:#6b7280;">. '+(freqLabels[p.check_frequency]||p.check_frequency)+'</span>'
+                +'<span style="font-size:11px;color:#6b7280;">· '+(freqLabels[p.check_frequency]||p.check_frequency)+'</span>'
                 +'</div>'
                 +'<div style="margin-bottom:8px;">'
-                +'<a href="'+p.url+'" target="_blank" style="font-size:12px;color:#60a5fa;text-decoration:none;">'+p.url+'</a>'
+                +'<a href="'+urlClean+'" target="_blank" style="font-size:12px;color:#60a5fa;text-decoration:none;' + (isDone ? 'text-decoration:line-through;color:#374151;' : '') + '">'+urlClean+'</a>'
                 +kwHtml
                 +'</div>'
                 +manualCta
                 +'<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">'
-                +posPill+gBadge+pBadge+bBadge
+                +posPill+gBadge+pBadge+bBadge+brBadge
                 +'</div></div>'
                 +'<div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">'
                 +'<div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;">'
                 +changesBtn
-                +'<button onclick="openHtmlModal('+p.id+')" class="tr-btn" title="Step 1: Set keyword and paste HTML (optional - system auto-fetches if empty)"><span style="font-size:9px;background:#374151;border-radius:3px;padding:1px 4px;margin-right:3px;">1</span>Keyword / HTML</button>'
-                +'<button onclick="runManualCheck('+p.id+')" class="tr-btn green" id="trCheckBtn_'+p.id+'" title="Step 2: Check Google position, AI Overview citations, and generate recommendations"><span style="font-size:9px;background:#166534;border-radius:3px;padding:1px 4px;margin-right:3px;">2</span>Check now</button>'
-                +'<button onclick="openCitationBrief('+p.id+')" class="tr-btn" style="border-color:#a78bfa;color:#a78bfa;" title="Step 3: Generate AI Citation Brief - exact passages to add for Google AIO, Perplexity, Copilot, Claude"><span style="font-size:9px;background:#4c1d95;border-radius:3px;padding:1px 4px;margin-right:3px;color:#fff;">3</span> Citation</button>'
-                +'<button onclick="markTrackerPageDone('+p.id+',this)" class="tr-btn" style="'+(p.is_done?'border-color:#4ade80;color:#4ade80;background:#052e1655;':'border-color:#374151;color:#6b7280;')+'" title="Mark as done / implemented">'+(p.is_done?'v Done':'Mark done')+'</button>'
+                +'<button onclick="openHtmlModal('+p.id+')" class="tr-btn" title="Step 1: Set keyword and paste HTML"><span style="font-size:9px;background:#374151;border-radius:3px;padding:1px 4px;margin-right:3px;">1</span>Keyword / HTML</button>'
+                +'<button onclick="runManualCheck('+p.id+')" class="tr-btn green" id="trCheckBtn_'+p.id+'" title="Step 2: Check now"><span style="font-size:9px;background:#166534;border-radius:3px;padding:1px 4px;margin-right:3px;">2</span>Check now</button>'
+                +'<button onclick="openCitationBrief('+p.id+')" class="tr-btn" style="border-color:#a78bfa;color:#a78bfa;" title="Step 3: Citation Brief"><span style="font-size:9px;background:#4c1d95;border-radius:3px;padding:1px 4px;margin-right:3px;color:#fff;">3</span> Citation</button>'
+                +'<button onclick="markTrackerPageDone('+p.id+',this)" class="tr-btn" style="'+(isDone?'border-color:#4ade80;color:#4ade80;background:#052e1655;':'border-color:#374151;color:#6b7280;')+'" title="Mark as done / implemented">'+(isDone?'v Done':'Mark done')+'</button>'
                 +'<button onclick="deleteTrackerPage('+p.id+')" class="tr-btn danger">x</button>'
                 +'</div>'
                 +'<div style="font-size:11px;color:#6b7280;text-align:right;">'
-                +'Last checked: '+lastCheck+' . Next: '+nextCheck+' . '+(p.snapshot_count||0)+' snapshots'
+                +'Last checked: '+lastCheck+' · Next: '+nextCheck+' · '+(p.snapshot_count||0)+' snapshots'
                 +'</div></div></div></div>'
                 +recsHtml
                 +'</div>';
@@ -27793,6 +27879,25 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
         // -- Tracker Clients ---------------------------------------------------
         var _tcClients = [];
 
+        async function loadMessages() {
+            try {
+                const data = await apiCall('/api/admin/messages');
+                const el = document.getElementById('tab-messages') || document.getElementById('messagesTab');
+                if (!el) return;
+                const msgs = data.messages || data || [];
+                if (!msgs.length) { el.innerHTML = '<div style="padding:40px;text-align:center;color:#6b7280;">No messages yet</div>'; return; }
+                el.innerHTML = msgs.map(function(m) {
+                    return '<div style="background:#111827;border:1px solid #1f2937;border-radius:8px;padding:14px 18px;margin-bottom:8px;">'
+                        + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">'
+                        + '<span style="font-size:12px;font-weight:700;color:#e5e7eb;">' + (m.sender_email||m.email||'Unknown') + '</span>'
+                        + '<span style="font-size:11px;color:#6b7280;">' + (m.created_at ? new Date(m.created_at).toLocaleDateString() : '') + '</span>'
+                        + '</div>'
+                        + '<div style="font-size:13px;color:#9ca3af;line-height:1.6;">' + (m.message||m.content||'') + '</div>'
+                        + '</div>';
+                }).join('');
+            } catch(e) { console.warn('loadMessages error:', e.message); }
+        }
+
         async function loadTrackerClients() {
             var el = document.getElementById('tcList');
             if (!el) return;
@@ -27970,7 +28075,12 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     + '<td style="padding:8px 10px;color:#6b7280;">' + date + (c.registered_ip ? '<div style="font-size:10px;color:#374151;">' + c.registered_ip + '</div>' : '') + '</td>'
                     + '<td style="padding:8px 10px;text-align:center;" class="tc-actions-cell"></td>';
 
-                tr.querySelector('.tc-url-cell').appendChild(urlSpan);
+                var tc_url_td = tr.querySelector('.tc-url-cell');
+                if (tc_url_td) {
+                    tc_url_td.appendChild(domainDiv);
+                    tc_url_td.appendChild(urlLink);
+                    tc_url_td.appendChild(copyInlineBtn);
+                }
                 tr.querySelector('.tc-max-cell').appendChild(maxWrap);
                 tr.querySelector('.tc-actions-cell').appendChild(actionsDiv);
                 tbody.appendChild(tr);
