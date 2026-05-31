@@ -2706,9 +2706,11 @@ SELECT
   u.*,
   u.activation_expires AS activated_until,
   CASE WHEN u.activation_expires > NOW() THEN TRUE ELSE FALSE END AS is_activated,
+  COALESCE(u.time_on_site, 0) AS time_on_site,
+  u.last_scanned_url,
   COUNT(s.id) AS scan_count,
   MAX(s.created_at) AS last_scan_at,
-  (SELECT s2.business_url FROM scan_log s2 WHERE s2.user_id = u.id ORDER BY s2.created_at DESC LIMIT 1) AS last_scanned_url,
+  (SELECT s2.business_url FROM scan_log s2 WHERE s2.user_id = u.id ORDER BY s2.created_at DESC LIMIT 1) AS last_scanned_url_from_log,
   (SELECT s3.score FROM scan_log s3 WHERE s3.user_id = u.id ORDER BY s3.created_at DESC LIMIT 1) AS last_scan_score
 FROM users u
 LEFT JOIN scan_log s ON s.user_id = u.id
@@ -26286,8 +26288,9 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
 
                 // Time on site
                 const timeOnSite = u.time_on_site ? (u.time_on_site < 60 ? u.time_on_site+'s' : Math.round(u.time_on_site/60)+'m') : '-';
-                // Last scanned URL
-                const scanUrl = u.last_scanned_url ? '<span style="font-family:monospace;font-size:10px;color:#7c3aed;" title="'+u.last_scanned_url+'">'+u.last_scanned_url.replace(/^https?:\/\/[^/]+/,'').substring(0,30)+'...</span>' : '<span style="color:#374151;">-</span>';
+                // Last scanned URL - prefer direct tracking, fallback to scan_log
+                const rawUrl = u.last_scanned_url || u.last_scanned_url_from_log || '';
+                const scanUrl = rawUrl ? '<span style="font-family:monospace;font-size:10px;color:#7c3aed;" title="'+rawUrl+'">' + rawUrl.replace('https://','').replace('http://','').substring(0,35) + (rawUrl.length > 35 ? '...' : '') + '</span>' : '<span style="color:#374151;">-</span>';
 
                 return '<tr>'
                     +'<td><input type="checkbox" onchange="toggleSelection(&apos;users&apos;,&apos;'+u.id+'&apos;)" '+(selectedIds.users.has(u.id)?'checked':'')+'></td>'
