@@ -990,7 +990,39 @@ app.get('/api/tracker-client/:token', async (req, res) => {
   }
 });
 
-// GET /api/tracker-client/:token/live-events — domain-filtered live events
+// GET /api/tracker-client/:token/briefs/:pageId — list briefs for a page
+app.get('/api/tracker-client/:token/briefs/:pageId', async (req, res) => {
+  try {
+    const cr = await pool.query('SELECT id FROM tracker_clients WHERE token=$1 AND status=$2', [req.params.token, 'active']);
+    if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
+    const own = await pool.query('SELECT id FROM tracker_pages WHERE id=$1 AND tracker_client_id=$2', [req.params.pageId, cr.rows[0].id]);
+    if (!own.rows.length) return res.status(403).json({ success: false, error: 'Not your page' });
+    const briefs = await pool.query(
+      `SELECT id, keyword, url, position, aio_cited, perp_cited, bing_cited, brave_cited, score, passages, recommendations, created_at
+       FROM tracker_citation_briefs WHERE page_id=$1 ORDER BY created_at DESC LIMIT 20`,
+      [req.params.pageId]
+    );
+    res.json({ success: true, briefs: briefs.rows });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// GET /api/tracker-client/:token/briefs/:pageId/:briefId — get single brief
+app.get('/api/tracker-client/:token/briefs/:pageId/:briefId', async (req, res) => {
+  try {
+    const cr = await pool.query('SELECT id FROM tracker_clients WHERE token=$1 AND status=$2', [req.params.token, 'active']);
+    if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
+    const brief = await pool.query(
+      `SELECT b.* FROM tracker_citation_briefs b
+       JOIN tracker_pages p ON p.id = b.page_id
+       WHERE b.id=$1 AND p.tracker_client_id=$2`,
+      [req.params.briefId, cr.rows[0].id]
+    );
+    if (!brief.rows.length) return res.status(404).json({ success: false, error: 'Brief not found' });
+    res.json({ success: true, brief: brief.rows[0] });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// POST /api/tracker-client/:token/live-events — internal: save brief after check
 app.get('/api/tracker-client/:token/live-events', async (req, res) => {
   try {
     const cr = await pool.query('SELECT domain FROM tracker_clients WHERE token=$1 AND status=$2', [req.params.token, 'active']);
@@ -1486,6 +1518,27 @@ app.patch('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
   await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS tracker_client_id INTEGER REFERENCES tracker_clients(id) ON DELETE SET NULL`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE`).catch(()=>{});
   await client.query(`CREATE INDEX IF NOT EXISTS tracker_pages_client_idx ON tracker_pages(tracker_client_id) WHERE tracker_client_id IS NOT NULL`).catch(()=>{});
+
+  // ── Citation Briefs storage ────────────────────────────────────────────────
+  await client.query(`CREATE TABLE IF NOT EXISTS tracker_citation_briefs (
+    id SERIAL PRIMARY KEY,
+    page_id INTEGER REFERENCES tracker_pages(id) ON DELETE CASCADE,
+    tracker_client_id INTEGER REFERENCES tracker_clients(id) ON DELETE CASCADE,
+    keyword TEXT,
+    url TEXT,
+    position INTEGER,
+    aio_cited BOOLEAN DEFAULT FALSE,
+    perp_cited BOOLEAN DEFAULT FALSE,
+    bing_cited BOOLEAN DEFAULT FALSE,
+    brave_cited BOOLEAN DEFAULT FALSE,
+    score INTEGER,
+    brief_json JSONB,
+    passages JSONB,
+    recommendations JSONB,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+  )`).catch(()=>{});
+  await client.query(`CREATE INDEX IF NOT EXISTS tcb_page_idx ON tracker_citation_briefs(page_id)`).catch(()=>{});
+  await client.query(`CREATE INDEX IF NOT EXISTS tcb_client_idx ON tracker_citation_briefs(tracker_client_id)`).catch(()=>{});
 
    await client.query(`CREATE TABLE IF NOT EXISTS tracker_snapshots (
      id SERIAL PRIMARY KEY,
@@ -23042,7 +23095,8 @@ if(domains.length>0){
 
 // ── Client Tracker HTML ───────────────────────────────────────────────────────
 const _CLIENT_TRACKER_HTML = `<!DOCTYPE html>
-<html lang="en">
+<html lang="en"
+      + '<button class="cb-history-btn" data-page-id="'+p.id+'" onclick="openBriefHistory('+p.id+')" style="font-size:11px;padding:5px 10px;background:#0a0a12;border:1px solid #374151;border-radius:6px;color:#6b7280;cursor:pointer;">&#128203; Briefs</button>'>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -23107,6 +23161,42 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
 /* Upsell */
 .cs-upsell { background:#1a1040; border:1px solid #4c1d95; border-radius:10px; padding:20px; margin-top:24px; text-align:center; }
 .cs-wa-btn { display:inline-flex; align-items:center; gap:8px; background:#16a34a; border-radius:8px; padding:10px 20px; color:#ffffff; font-size:13px; font-weight:700; text-decoration:none; font-family:Verdana,sans-serif; }
+
+/* Citation Brief card */
+.cb-overlay { position:fixed; inset:0; z-index:9000; pointer-events:none; display:flex; align-items:flex-end; justify-content:center; padding:0 16px 24px; }
+.cb-card { background:#0d1117; border:1px solid #7c3aed; border-radius:16px; width:100%; max-width:680px; box-shadow:0 0 60px rgba(124,58,237,.4); pointer-events:all; transform:translateY(120%); transition:transform .5s cubic-bezier(.16,1,.3,1); overflow:hidden; }
+.cb-card.show { transform:translateY(0); }
+.cb-card.hide { transform:translateY(120%); transition:transform .4s cubic-bezier(.7,0,.8,1); }
+.cb-header { background:linear-gradient(135deg,#1e1b4b,#4c1d95); padding:16px 20px; display:flex; align-items:center; justify-content:space-between; }
+.cb-title { font-size:12px; font-weight:800; text-transform:uppercase; letter-spacing:.12em; color:#a78bfa; }
+.cb-url { font-size:11px; color:#6b7280; font-family:monospace; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:400px; }
+.cb-body { padding:20px; }
+.cb-step { display:flex; align-items:center; gap:10px; margin-bottom:10px; font-size:12px; color:#6b7280; }
+.cb-step.done { color:#e5e7eb; }
+.cb-step.active { color:#a78bfa; }
+.cb-step-icon { width:18px; height:18px; border-radius:50%; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:10px; }
+.cb-step-icon.pending { background:#1f2937; border:1px solid #374151; }
+.cb-step-icon.spinning { background:#1e1b4b; border:1px solid #7c3aed; animation:cbSpin 1s linear infinite; }
+.cb-step-icon.done { background:#052e16; border:1px solid #166534; color:#4ade80; }
+@keyframes cbSpin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
+.cb-progress { height:3px; background:#1f2937; border-radius:99px; margin:16px 0; overflow:hidden; }
+.cb-progress-bar { height:100%; background:linear-gradient(90deg,#7c3aed,#4ade80); border-radius:99px; width:0%; transition:width .5s ease; }
+.cb-result { display:none; }
+.cb-result.show { display:block; }
+.cb-passage { background:#0a0a12; border:1px solid #1f2937; border-left:3px solid #7c3aed; border-radius:0 8px 8px 0; padding:14px 16px; margin-bottom:10px; font-size:12px; color:#9ca3af; line-height:1.7; font-family:Verdana,sans-serif; }
+.cb-stat-row { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px; }
+.cb-stat { background:#0a0a12; border:1px solid #1f2937; border-radius:8px; padding:8px 12px; text-align:center; flex:1; min-width:80px; }
+.cb-stat .v { font-size:16px; font-weight:900; }
+.cb-stat .l { font-size:9px; color:#4b5563; text-transform:uppercase; letter-spacing:.06em; margin-top:2px; }
+.cb-footer { padding:12px 20px; border-top:1px solid #1f2937; display:flex; align-items:center; justify-content:space-between; background:#0a0a12; }
+.cb-countdown { font-size:11px; color:#4b5563; font-family:monospace; }
+.cb-keep-btn { font-size:11px; font-weight:700; color:#7c3aed; background:none; border:1px solid #7c3aed; border-radius:6px; padding:5px 12px; cursor:pointer; font-family:Verdana,sans-serif; }
+.cb-keep-btn:hover { background:#1e1b4b; }
+.cb-new-dot { display:inline-block; width:8px; height:8px; background:#7c3aed; border-radius:50%; margin-left:4px; animation:cbPulse 1s ease-in-out infinite; }
+@keyframes cbPulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.4;transform:scale(.7)} }
+.cb-history-btn { display:inline-flex; align-items:center; gap:5px; font-size:11px; font-weight:700; color:#6b7280; background:#0d1117; border:1px solid #1f2937; border-radius:6px; padding:4px 10px; cursor:pointer; font-family:Verdana,sans-serif; position:relative; }
+.cb-history-btn.has-new { color:#a78bfa; border-color:#7c3aed; }
+
 </style>
 </head>
 <body>
@@ -23419,6 +23509,7 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
           _clientPollLastTs = data.ts;
           if (data.events && data.events.length) {
             data.events.forEach(function(ev) {
+              if (ev.type === 'brief_ready' && ev.domain === DOMAIN) { showCitationBrief(ev); return; }
               var text = '';
               var color = '#6b7280';
               var isLink = false;
@@ -23447,7 +23538,252 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
   setTimeout(startClientLiveFeed, 1000);
 
 
+
+  // ── Citation Brief Card ──────────────────────────────────────────────────
+  var _cbTimer = null;
+  var _cbSecondsLeft = 60;
+  var _cbKept = false;
+  var _cbPageBriefs = {}; // pageId -> [{brief data}]
+
+  function showCitationBrief(data) {
+    var card = document.getElementById('cbCard');
+    var overlay = document.getElementById('cbOverlay');
+    if (!card) return;
+
+    // Reset
+    _cbKept = false;
+    _cbSecondsLeft = 60;
+    document.getElementById('cbUrl').textContent = data.url || '';
+    document.getElementById('cbKw').textContent = data.keyword ? 'Keyword: ' + data.keyword : '';
+    document.getElementById('cbProgressBar').style.width = '0%';
+    document.getElementById('cbResult').classList.remove('show');
+    document.getElementById('cbKeepBtn').style.display = 'none';
+    document.getElementById('cbCountdown').textContent = '';
+    document.getElementById('cbStatRow').innerHTML = '';
+    document.getElementById('cbPassages').innerHTML = '';
+
+    // Reset steps
+    for (var s = 1; s <= 4; s++) {
+      var step = document.getElementById('cbStep' + s);
+      var icon = document.getElementById('cbStep' + s + 'Icon');
+      if (step) { step.className = 'cb-step'; }
+      if (icon) { icon.className = 'cb-step-icon pending'; icon.textContent = ''; }
+    }
+
+    // Show card
+    card.classList.remove('hide');
+    card.classList.add('show');
+
+    // Animate steps
+    var delays = [0, 3000, 6000, 10000];
+    var completions = [2500, 5500, 9000, 14000];
+    var progress = [20, 40, 65, 90];
+
+    for (var si = 1; si <= 4; si++) {
+      (function(idx) {
+        setTimeout(function() {
+          var step = document.getElementById('cbStep' + idx);
+          var icon = document.getElementById('cbStep' + idx + 'Icon');
+          if (step) { step.className = 'cb-step active'; }
+          if (icon) { icon.className = 'cb-step-icon spinning'; icon.textContent = '...'; }
+        }, delays[idx-1]);
+        setTimeout(function() {
+          var step = document.getElementById('cbStep' + idx);
+          var icon = document.getElementById('cbStep' + idx + 'Icon');
+          if (step) { step.className = 'cb-step done'; }
+          if (icon) { icon.className = 'cb-step-icon done'; icon.textContent = 'v'; }
+          document.getElementById('cbProgressBar').style.width = progress[idx-1] + '%';
+        }, completions[idx-1]);
+      })(si);
+    }
+
+    // Show results after animation
+    setTimeout(function() {
+      document.getElementById('cbProgressBar').style.width = '100%';
+      // Stats
+      var statRow = document.getElementById('cbStatRow');
+      var pos = data.position;
+      var posColor = pos ? (pos <= 3 ? '#4ade80' : pos <= 10 ? '#fbbf24' : '#f87171') : '#4b5563';
+      statRow.innerHTML =
+        '<div class="cb-stat"><div class="v" style="color:' + posColor + ';">' + (pos ? '#' + pos : 'N/A') + '</div><div class="l">Position</div></div>' +
+        '<div class="cb-stat"><div class="v" style="color:' + (data.aio_cited ? '#4ade80' : '#4b5563') + ';">' + (data.aio_cited ? 'Cited' : 'No') + '</div><div class="l">Google AIO</div></div>' +
+        '<div class="cb-stat"><div class="v" style="color:' + (data.perp_cited ? '#a78bfa' : '#4b5563') + ';">' + (data.perp_cited ? 'Cited' : 'No') + '</div><div class="l">Perplexity</div></div>' +
+        '<div class="cb-stat"><div class="v" style="color:' + (data.bing_cited ? '#60a5fa' : '#4b5563') + ';">' + (data.bing_cited ? 'Cited' : 'No') + '</div><div class="l">Copilot</div></div>' +
+        '<div class="cb-stat"><div class="v" style="color:' + (data.brave_cited ? '#f87171' : '#4b5563') + ';">' + (data.brave_cited ? 'Cited' : 'No') + '</div><div class="l">Claude</div></div>' +
+        (data.score ? '<div class="cb-stat"><div class="v" style="color:#fbbf24;">' + data.score + '</div><div class="l">GRAAF</div></div>' : '');
+
+      // Passages - type them in
+      var passages = data.passages || data.recommendations;
+      if (passages && Array.isArray(passages)) {
+        var passDiv = document.getElementById('cbPassages');
+        passages.slice(0, 3).forEach(function(p, idx) {
+          setTimeout(function() {
+            var text = p.passage || p.action || p.title || JSON.stringify(p);
+            var el = document.createElement('div');
+            el.className = 'cb-passage';
+            el.style.opacity = '0';
+            el.style.transition = 'opacity .5s ease';
+            passDiv.appendChild(el);
+            setTimeout(function() { el.style.opacity = '1'; }, 50);
+            // Type the text
+            var charIdx = 0;
+            var typeInterval = setInterval(function() {
+              el.textContent = text.substring(0, charIdx);
+              charIdx += 3;
+              if (charIdx > text.length) {
+                el.textContent = text;
+                clearInterval(typeInterval);
+              }
+            }, 20);
+          }, idx * 800);
+        });
+      } else {
+        document.getElementById('cbPassages').innerHTML = '<div class="cb-passage">Your Citation Brief has been generated and sent to your email. Open your tracker to see the full recommendations.</div>';
+      }
+
+      document.getElementById('cbResult').classList.add('show');
+      document.getElementById('cbKeepBtn').style.display = 'block';
+
+      // Store brief for history
+      if (data.page_id) {
+        if (!_cbPageBriefs[data.page_id]) _cbPageBriefs[data.page_id] = [];
+        _cbPageBriefs[data.page_id].unshift(data);
+        _cbPageBriefs[data.page_id] = _cbPageBriefs[data.page_id].slice(0, 20);
+        updateBriefButtons();
+      }
+
+      // Countdown
+      _cbSecondsLeft = 60;
+      document.getElementById('cbCountdown').textContent = 'Closing in 60s...';
+      if (_cbTimer) clearInterval(_cbTimer);
+      _cbTimer = setInterval(function() {
+        if (_cbKept) { clearInterval(_cbTimer); document.getElementById('cbCountdown').textContent = ''; return; }
+        _cbSecondsLeft--;
+        document.getElementById('cbCountdown').textContent = 'Closing in ' + _cbSecondsLeft + 's...';
+        if (_cbSecondsLeft <= 0) {
+          clearInterval(_cbTimer);
+          hideCitationBrief(data.page_id);
+        }
+      }, 1000);
+
+    }, 16000);
+  }
+
+  function keepCbOpen() {
+    _cbKept = true;
+    clearInterval(_cbTimer);
+    document.getElementById('cbCountdown').textContent = '';
+    document.getElementById('cbKeepBtn').style.display = 'none';
+  }
+
+  function hideCitationBrief(pageId) {
+    var card = document.getElementById('cbCard');
+    if (card) { card.classList.remove('show'); card.classList.add('hide'); }
+    // Show blinking button on page row
+    if (pageId) {
+      setTimeout(function() { showBriefNewDot(pageId); }, 500);
+    }
+  }
+
+  function showBriefNewDot(pageId) {
+    var btn = document.querySelector('.cb-history-btn[data-page-id="' + pageId + '"]');
+    if (btn) { btn.classList.add('has-new'); }
+  }
+
+  function updateBriefButtons() {
+    document.querySelectorAll('.cb-history-btn').forEach(function(btn) {
+      var pid = btn.dataset.pageId;
+      if (_cbPageBriefs[pid] && _cbPageBriefs[pid].length > 0) {
+        var count = _cbPageBriefs[pid].length;
+        btn.innerHTML = '&#128203; ' + count + ' Brief' + (count > 1 ? 's' : '') + (btn.classList.contains('has-new') ? '<span class="cb-new-dot"></span>' : '');
+      }
+    });
+  }
+
+  async function openBriefHistory(pageId) {
+    var briefs = _cbPageBriefs[pageId];
+    if (!briefs || !briefs.length) {
+      // Try fetch from API
+      try {
+        var data = await api('/briefs/' + pageId);
+        if (data.success && data.briefs.length) {
+          _cbPageBriefs[pageId] = data.briefs;
+          briefs = data.briefs;
+        }
+      } catch(e) {}
+    }
+    if (!briefs || !briefs.length) { toast('No briefs yet for this page', '#f87171'); return; }
+    // Show most recent
+    var brief = briefs[0];
+    brief.page_id = pageId;
+    // Remove dot
+    var btn = document.querySelector('.cb-history-btn[data-page-id="' + pageId + '"]');
+    if (btn) btn.classList.remove('has-new');
+    showCitationBrief(brief);
+    // Skip animation - show result immediately
+    _cbKept = true;
+    document.getElementById('cbProgressBar').style.width = '100%';
+    for (var s = 1; s <= 4; s++) {
+      var step = document.getElementById('cbStep' + s);
+      var icon = document.getElementById('cbStep' + s + 'Icon');
+      if (step) step.className = 'cb-step done';
+      if (icon) { icon.className = 'cb-step-icon done'; icon.textContent = 'v'; }
+    }
+    document.getElementById('cbResult').classList.add('show');
+    document.getElementById('cbCountdown').textContent = '';
+    document.getElementById('cbKeepBtn').style.display = 'none';
+  }
+
+  // Hook into live feed events
+  var _origHandleWallEvent = typeof _handleWallEvent === 'function' ? _handleWallEvent : null;
+  function handleCbEvents(ev) {
+    if (ev.type === 'brief_ready') {
+      // Only show if this brief belongs to our domain
+      if (ev.domain && ev.domain === DOMAIN) {
+        showCitationBrief(ev);
+      }
+    }
+    if (_origHandleWallEvent) _origHandleWallEvent(ev);
+  }
+
 <\/script>
+
+<!-- Citation Brief Overlay -->
+<div class="cb-overlay" id="cbOverlay">
+  <div class="cb-card" id="cbCard">
+    <div class="cb-header">
+      <div>
+        <div class="cb-title">&#127919; AI Citation Brief</div>
+        <div class="cb-url" id="cbUrl"></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span style="font-size:10px;color:#4b5563;" id="cbKw"></span>
+        <button onclick="keepCbOpen()" style="background:none;border:none;color:#4b5563;cursor:pointer;font-size:16px;padding:4px;">&#x2715;</button>
+      </div>
+    </div>
+    <div class="cb-body">
+      <!-- Steps -->
+      <div id="cbSteps">
+        <div class="cb-step" id="cbStep1"><div class="cb-step-icon pending" id="cbStep1Icon"></div><span>Fetching Google AI Overview...</span></div>
+        <div class="cb-step" id="cbStep2"><div class="cb-step-icon pending" id="cbStep2Icon"></div><span>Analysing competitor content...</span></div>
+        <div class="cb-step" id="cbStep3"><div class="cb-step-icon pending" id="cbStep3Icon"></div><span>Checking citations across 5 platforms...</span></div>
+        <div class="cb-step" id="cbStep4"><div class="cb-step-icon pending" id="cbStep4Icon"></div><span>Generating Citation Brief passages...</span></div>
+      </div>
+      <div class="cb-progress"><div class="cb-progress-bar" id="cbProgressBar"></div></div>
+      <!-- Result -->
+      <div class="cb-result" id="cbResult">
+        <div class="cb-stat-row" id="cbStatRow"></div>
+        <div id="cbPassages"></div>
+        <div style="font-size:11px;color:#4ade80;margin-top:8px;">&#10003; Brief sent to your email</div>
+      </div>
+    </div>
+    <div class="cb-footer">
+      <div class="cb-countdown" id="cbCountdown"></div>
+      <button class="cb-keep-btn" onclick="keepCbOpen()" id="cbKeepBtn" style="display:none;">Keep open</button>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>`;
 
@@ -28133,6 +28469,31 @@ app.post('/api/tracker/pages/:id/check', verifyEngineAccess, async (req, res) =>
               + '<div style="background:#f5f3ff;border:1px solid #ddd6fe;border-radius:8px;padding:12px 16px;"><div style="font-size:10px;color:#7c3aed;font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px;">Your tracker</div><div style="font-size:11px;font-family:monospace;color:#1e293b;word-break:break-all;margin-bottom:4px;">' + clientTrackUrl + '</div><div style="font-size:10px;color:#94a3b8;">Bookmark this link.</div></div>';
 
             await sendTrackerEmail(page.tracker_client_id, subject, bodyHtml);
+
+            // Save citation brief to DB for client to view
+            try {
+              const recs = curr.recommendations ? (typeof curr.recommendations === 'string' ? JSON.parse(curr.recommendations) : curr.recommendations) : null;
+              await pool.query(
+                `INSERT INTO tracker_citation_briefs (page_id, tracker_client_id, keyword, url, position, aio_cited, perp_cited, bing_cited, brave_cited, score, recommendations, created_at)
+                 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,NOW())`,
+                [page.id, page.tracker_client_id, kw, pageUrl, pos, aio, perp, bing, brave, score, recs ? JSON.stringify(recs) : null]
+              );
+              // Broadcast brief_ready event to client live feed
+              _sseBroadcast({
+                type: 'brief_ready',
+                page_id: page.id,
+                url: pageUrl,
+                keyword: kw,
+                position: pos,
+                aio_cited: aio,
+                perp_cited: perp,
+                bing_cited: bing,
+                brave_cited: brave,
+                score: score,
+                domain: domainFin,
+                ts: new Date().toISOString()
+              });
+            } catch(e) { console.warn('[brief-save]', e.message); }
           } catch(e) { console.warn('[tracker-email] Post-check email failed:', e.message); }
         }
 
