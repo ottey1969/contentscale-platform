@@ -23095,8 +23095,7 @@ if(domains.length>0){
 
 // ── Client Tracker HTML ───────────────────────────────────────────────────────
 const _CLIENT_TRACKER_HTML = `<!DOCTYPE html>
-<html lang="en"
-      + '<button class="cb-history-btn" data-page-id="'+p.id+'" onclick="openBriefHistory('+p.id+')" style="font-size:11px;padding:5px 10px;background:#0a0a12;border:1px solid #374151;border-radius:6px;color:#6b7280;cursor:pointer;">&#128203; Briefs</button>'>
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -23104,7 +23103,10 @@ const _CLIENT_TRACKER_HTML = `<!DOCTYPE html>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
-body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif; min-height:100vh; }
+html, body { width:100%; min-height:100vh; }
+body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif; min-height:100vh; overflow-x:hidden; }
+.cs-header { width:100%; }
+.cs-container { width:100%; max-width:1400px; margin:0 auto; padding:24px; box-sizing:border-box; }
 
 /* Header */
 .cs-header { background:#0f172a; padding:14px 24px; display:flex; align-items:center; justify-content:space-between; }
