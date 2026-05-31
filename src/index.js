@@ -25261,7 +25261,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                             const health = !configured ? 'unconfigured' : (s.health || (s.ok ? 'healthy' : 'down'));
                             const icon = health === 'healthy' ? '*' : health === 'unconfigured' ? 'o' : health === 'degraded' ? 'o' : 'x';
                             const tip = !configured ? 'Not configured - add key to Railway' : (s.lastError ? s.lastError.substring(0,80) : 'OK');
-                            return \`<span title="\${tip}" style="font-size:10px;font-weight:700;padding:3px 8px;border-radius:4px;background:\${colors[health]||'#374151'};color:\${textColors[health]||'#9ca3af'};cursor:default;">\${icon} \${labels[key]||key}</span>\`;
+                            return '<span title="' + tip + '" style="font-size:10px;font-weight:700;padding:3px 8px;border-radius:4px;background:' + (colors[health]||'#374151') + ';color:' + (textColors[health]||'#9ca3af') + ';cursor:default;">' + icon + ' ' + (labels[key]||key) + '</span>';
                         }).join('');
                     } catch(e) {}
                 }
