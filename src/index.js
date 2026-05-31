@@ -23417,7 +23417,7 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
     <div id="importSitemapPanel" style="display:none;">
       <p style="font-size:12px;color:#6b7280;margin-bottom:10px;">Enter your sitemap URL. We fetch all URLs and let you pick up to __MAX_PAGES__.</p>
       <input id="sitemapUrl" type="url" class="cs-input" placeholder="https://__DOMAIN__/sitemap.xml" style="margin-bottom:10px;">
-      <button class="cs-btn primary" onclick="fetchSitemap()" style="width:100%;margin-bottom:12px;">Fetch sitemap</button>
+      <button class="cs-btn primary" id="fetchSitemapBtn" onclick="fetchSitemap()" style="width:100%;margin-bottom:12px;">Fetch sitemap</button>
       <div id="sitemapList" style="max-height:220px;overflow-y:auto;">
         <div id="sitemapHeader" style="display:none;display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
           <span style="font-size:11px;color:#6b7280;" id="sitemapCount"></span>
@@ -23473,7 +23473,7 @@ function toast(msg, color) {
 }
 
 function showAddModal() { document.getElementById('addModal').classList.add('show'); }
-function showImportModal() { document.getElementById('importModal').classList.add('show'); }
+function showImportModal(mode) { document.getElementById('importModal').classList.add('show'); setImportMode(mode || 'paste'); if (mode === 'sitemap') { var si = document.getElementById('sitemapUrl'); if (si && !si.value) si.value = 'https://' + DOMAIN + '/sitemap.xml'; } }
 function hideModal(id) { document.getElementById(id).classList.remove('show'); }
 
 async function api(path, method, body) {
