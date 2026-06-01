@@ -1604,7 +1604,7 @@ app.patch('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
     updated_at TIMESTAMPTZ DEFAULT NOW()
   )`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS max_pages INTEGER DEFAULT 3`).catch(()=>{});
-  await client.query(`UPDATE tracker_clients SET max_pages=3 WHERE max_pages IS NULL`).catch(()=>{});
+  await client.query(`UPDATE tracker_clients SET max_pages=3 WHERE max_pages IS NULL OR max_pages=10`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS registered_ip VARCHAR(45)`).catch(()=>{});
   await client.query(`CREATE INDEX IF NOT EXISTS tracker_clients_ip_idx ON tracker_clients(registered_ip) WHERE registered_ip IS NOT NULL`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS extra_domains TEXT DEFAULT ''`).catch(()=>{});
@@ -28004,7 +28004,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 maxInput.value = c.max_pages || 3;
                 maxInput.min = 1; maxInput.max = 500;
                 maxInput.style.cssText = 'width:54px;background:#0d1117;border:1px solid #374151;border-radius:4px;padding:3px 6px;color:#e5e7eb;font-size:12px;text-align:center;';
-                maxInput.onchange = (function(id){ return function(){ updateTcClient(id, {max_pages: parseInt(this.value)||10}); }; })(c.id);
+                maxInput.onchange = (function(id){ return function(){ updateTcClient(id, {max_pages: parseInt(this.value)||3}); }; })(c.id);
                 var presets = document.createElement('div');
                 presets.style.cssText = 'display:flex;gap:2px;';
                 [10,25,50,100].forEach(function(n) {
@@ -28083,8 +28083,20 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 urlCell.style.cssText = 'padding:8px 10px;';
 
                 var domainDiv = document.createElement('div');
-                domainDiv.style.cssText = 'font-size:12px;font-weight:700;color:#e5e7eb;margin-bottom:3px;';
+                domainDiv.style.cssText = 'font-size:13px;font-weight:700;color:#e5e7eb;margin-bottom:3px;';
                 domainDiv.textContent = c.domain || '-';
+
+                // Show extra domains if any
+                var extraDomsDiv = null;
+                if (c.extra_domains) {
+                    var extraDoms = c.extra_domains.split(',').map(function(d){ return d.trim(); }).filter(Boolean);
+                    if (extraDoms.length) {
+                        extraDomsDiv = document.createElement('div');
+                        extraDomsDiv.style.cssText = 'font-size:10px;color:#38bdf8;margin-bottom:3px;';
+                        extraDomsDiv.textContent = '+ ' + extraDoms.join(', ');
+                        extraDomsDiv.title = 'Extra domains added by admin';
+                    }
+                }
 
                 var urlLink = document.createElement('a');
                 urlLink.href = trackUrl;
@@ -28107,18 +28119,9 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 }; })(trackUrl, copyInlineBtn);
 
                 urlCell.appendChild(domainDiv);
+                if (extraDomsDiv) urlCell.appendChild(extraDomsDiv);
                 urlCell.appendChild(urlLink);
                 urlCell.appendChild(copyInlineBtn);
-                // Show extra domains if any
-                if (c.extra_domains) {
-                    var extraDoms = c.extra_domains.split(',').map(function(d){ return d.trim(); }).filter(Boolean);
-                    if (extraDoms.length) {
-                        var extDiv = document.createElement('div');
-                        extDiv.style.cssText = 'font-size:10px;color:#4b5563;margin-top:3px;';
-                        extDiv.textContent = 'also: ' + extraDoms.join(', ');
-                        urlCell.appendChild(extDiv);
-                    }
-                }
 
                 tr.innerHTML =
                     '<td style="padding:8px 10px;"><div style="color:#9ca3af;">' + (c.name||'-') + '</div>'
