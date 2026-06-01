@@ -24398,6 +24398,55 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
     doNext(0);
   }
 
+  // ── HTML upload ─────────────────────────────────────────────────────────────
+  var _htmlUploadPageId = null;
+  function openHtmlUpload(pageId) {
+    _htmlUploadPageId = pageId;
+    var page = (_pages||[]).find(function(p){ return p.id == pageId; }) || {};
+    document.getElementById('htmlUploadKeyword').value = page.keyword || '';
+    document.getElementById('htmlUploadContent').value = '';
+    document.getElementById('htmlUploadModal').classList.add('show');
+    setTimeout(function(){ document.getElementById('htmlUploadContent').focus(); }, 100);
+  }
+  async function submitHtmlUpload() {
+    var pageId = _htmlUploadPageId;
+    if (!pageId) return;
+    var html = document.getElementById('htmlUploadContent').value.trim();
+    var kw = document.getElementById('htmlUploadKeyword').value.trim();
+    if (!html && !kw) { toast('Paste HTML or enter a keyword', '#f87171'); return; }
+    var payload = {};
+    if (html) payload.html_content = html;
+    if (kw) payload.keyword = kw;
+    try {
+      var d = await api('/pages/' + pageId + '/html', 'PATCH', payload);
+      if (d.success) {
+        toast('Saved' + (html ? ' - scanning...' : ''), '#4ade80');
+        hideModal('htmlUploadModal');
+        if (html) setTimeout(function(){ checkPage(pageId); }, 600);
+        setTimeout(loadPages, html ? 5000 : 500);
+      } else { toast(d.error || 'Failed', '#f87171'); }
+    } catch(e) { toast('Error: ' + e.message, '#f87171'); }
+  }
+
+  // ── Edit keyword inline ──────────────────────────────────────────────────────
+  function editKeyword(pageId, btnEl) {
+    var page = (_pages||[]).find(function(p){ return p.id == pageId; }) || {};
+    var current = page.keyword || page.gsc_keyword || '';
+    var newKw = prompt('Set keyword for this page (used for SERP + AI checks):', current);
+    if (newKw === null) return;
+    newKw = newKw.trim();
+    api('/pages/' + pageId + '/keyword', 'PATCH', { keyword: newKw })
+      .then(function(d) {
+        if (d.success) {
+          toast('Keyword updated', '#4ade80');
+          setTimeout(loadPages, 400);
+        } else {
+          toast(d.error || 'Failed', '#f87171');
+        }
+      })
+      .catch(function(e) { toast('Error: ' + e.message, '#f87171'); });
+  }
+
   // ── Welcome overlay ────────────────────────────────────────────────────────
   function closeWelcome() {
     var el = document.getElementById('welcomeOverlay');
@@ -28037,8 +28086,9 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 // ── Extra domains button ──
                 var domainsBtn = document.createElement('button');
                 domainsBtn.className = 'tr-btn';
-                domainsBtn.textContent = c.extra_domains ? '+ domains (' + c.extra_domains.split(',').filter(Boolean).length + ')' : '+ domain';
-                domainsBtn.title = 'Add extra domains this client can track (comma separated)';
+                var extraDomList = (c.extra_domains || '').split(',').map(function(d){ return d.trim(); }).filter(Boolean);
+                domainsBtn.textContent = extraDomList.length ? '+ domains (' + extraDomList.length + ')' : '+ domain';
+                domainsBtn.title = extraDomList.length ? 'Extra domains: ' + extraDomList.join(', ') + ' (click to edit)' : 'Add extra domains this client can track';
                 domainsBtn.style.cssText = 'font-size:10px;padding:3px 8px;border-color:#38bdf8;color:#38bdf8;';
                 domainsBtn.onclick = (function(id, current){ return function(){
                     var val = prompt('Extra domains (comma separated, no https or www). Current: ' + (current||'none'), current||'');
@@ -28083,18 +28133,23 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 urlCell.style.cssText = 'padding:8px 10px;';
 
                 var domainDiv = document.createElement('div');
-                domainDiv.style.cssText = 'font-size:13px;font-weight:700;color:#e5e7eb;margin-bottom:3px;';
+                domainDiv.style.cssText = 'font-size:13px;font-weight:700;color:#e5e7eb;margin-bottom:2px;';
                 domainDiv.textContent = c.domain || '-';
 
-                // Show extra domains if any
+                // Show extra domains prominently if any
                 var extraDomsDiv = null;
                 if (c.extra_domains) {
                     var extraDoms = c.extra_domains.split(',').map(function(d){ return d.trim(); }).filter(Boolean);
                     if (extraDoms.length) {
                         extraDomsDiv = document.createElement('div');
-                        extraDomsDiv.style.cssText = 'font-size:10px;color:#38bdf8;margin-bottom:3px;';
-                        extraDomsDiv.textContent = '+ ' + extraDoms.join(', ');
-                        extraDomsDiv.title = 'Extra domains added by admin';
+                        extraDomsDiv.style.cssText = 'margin-bottom:4px;';
+                        extraDoms.forEach(function(d) {
+                            var tag = document.createElement('span');
+                            tag.style.cssText = 'display:inline-block;font-size:10px;color:#38bdf8;background:#0c2340;border:1px solid #1d4ed8;border-radius:4px;padding:1px 6px;margin-right:3px;margin-bottom:2px;';
+                            tag.textContent = d;
+                            tag.title = 'Extra domain added by admin';
+                            extraDomsDiv.appendChild(tag);
+                        });
                     }
                 }
 
