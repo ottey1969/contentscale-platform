@@ -1111,10 +1111,20 @@ app.post('/api/tracker-client/:token/pages', async (req, res) => {
     const client = cr.rows[0];
 
     // Check page limit
-    const countR = await pool.query('SELECT COUNT(*) FROM tracker_pages WHERE tracker_client_id=$1 AND (is_active=TRUE OR is_active IS NULL)', [client.id]);
+    // Count pages for THIS specific domain only (not all domains combined)
+    const urlDomainClean = urlDomain;
+    const countR = await pool.query(
+      `SELECT COUNT(*) FROM tracker_pages p
+       WHERE p.tracker_client_id=$1 AND (p.is_active=TRUE OR p.is_active IS NULL)
+       AND (
+         LOWER(REGEXP_REPLACE(p.url, '^https?://(www\\.)?', '')) LIKE $2
+         OR LOWER(REGEXP_REPLACE(p.url, '^https?://(www\\.)?', '')) LIKE $3
+       )`,
+      [client.id, urlDomainClean + '/%', urlDomainClean]
+    );
     const count = parseInt(countR.rows[0].count);
     const maxPages = client.max_pages || 3;
-    if (count >= maxPages) return res.status(400).json({ success: false, error: `Free tracker limit: ${maxPages} pages maximum. Contact Ottmar at contentscale.site to upgrade.` });
+    if (count >= maxPages) return res.status(400).json({ success: false, error: `Free tracker limit: ${maxPages} pages maximum per domain. Contact Ottmar at contentscale.site to upgrade.` });
 
     const { url, keyword } = req.body;
     if (!url) return res.status(400).json({ success: false, error: 'URL required' });
@@ -23612,8 +23622,14 @@ function renderStats(data) {
   var elB = document.getElementById('statCitedB'); if(elB) elB.textContent = citedB;
   var elC = document.getElementById('statCitedC'); if(elC) elC.textContent = citedC;
   document.getElementById('statAvgScore').textContent = avgScore ? avgScore+'/100' : '-';
-  document.getElementById('statRemaining').textContent = MAX_PAGES - pages.length;
-  document.getElementById('pageCountLabel').textContent = '(' + pages.length + ' of ' + MAX_PAGES + ')';
+  // Count per domain - DOMAIN is the primary domain
+  var domainPages = pages.filter(function(p){
+    var d = (p.url||'').replace(/^https?:[/][/]/,'').replace(/^www[.]/,'').split('/')[0];
+    return d === DOMAIN || d.endsWith('.' + DOMAIN);
+  });
+  var remainingForDomain = Math.max(0, MAX_PAGES - domainPages.length);
+  document.getElementById('statRemaining').textContent = remainingForDomain;
+  document.getElementById('pageCountLabel').textContent = '(' + pages.length + ' pages tracked)';
 
 }
 
@@ -23672,7 +23688,7 @@ function renderPages() {
     if (pos) badges += '<span class="cs-badge" style="color:' + posColor + ';background:#0d1117;border:1px solid ' + posColor + '44;">#' + pos + '</span> ';
     else badges += '<span class="cs-cs-badge grey">Not ranked</span> ';
     badges += p.ai_google_overview_cited ? '<span class="cs-cs-badge green">&#10003; Google AIO</span> ' : '<span class="cs-cs-badge grey">No AIO</span> ';
-    if (p.ai_perplexity_cited) badges += '<span class="cs-cs-badge purple">&#10003; Perplexity</span> ';
+    badges += p.ai_perplexity_cited ? '<span class="cs-cs-badge purple" style="border:1px solid #7c3aed;">&#10003; Perplexity</span> ' : '<span class="cs-cs-badge grey">No Perplexity</span> ';
     badges += p.ai_bing_cited ? '<span class="cs-cs-badge" style="background:#0c2340;color:#60a5fa;border:1px solid #1d4ed8;">&#10003; Copilot</span> ' : '<span class="cs-cs-badge grey">No Copilot</span> ';
     badges += p.ai_brave_cited ? '<span class="cs-cs-badge" style="background:#1a0e2e;color:#c4b5fd;border:1px solid #6d28d9;">&#10003; Claude</span> ' : '<span class="cs-cs-badge grey">No Claude</span> ';
     if (score) badges += '<span class="cs-cs-badge yellow">' + score + '/100</span> ';
@@ -23698,7 +23714,7 @@ function renderPages() {
       }
     }
 
-    return '<div class="cs-page-card' + (isDone ? ' done' : '') + '">'
+    return '<div class="cs-page-card' + (isDone ? ' done' : '') + '" data-page-id="' + p.id + '">'
       + (isDone ? '<div style="display:flex;align-items:center;gap:6px;padding:5px 14px;background:rgba(74,222,128,.06);border-bottom:1px solid #166534;font-size:10px;color:#4ade80;letter-spacing:.06em;"><span>v</span> DONE &mdash; marked as implemented. Tracking continues.</div>' : '')
       + '<div style="padding:14px 16px;' + (isDone ? 'opacity:.6;' : '') + '">\'
       + '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;">'
@@ -23712,7 +23728,7 @@ function renderPages() {
       + '</div>'
       + '</div>'
       + '<div style="display:flex;gap:5px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">'
-      + '<button onclick="checkPage(' + p.id + ')" class="btn" style="font-size:11px;padding:5px 10px;" title="Check now"><i class="fas fa-sync-alt"></i></button>'
+      + '<button onclick="checkPage(' + p.id + ')" data-check-btn="' + p.id + '" class="btn" style="font-size:11px;padding:5px 12px;border-color:#16a34a;color:#4ade80;font-weight:600;" title="Run check: Google position + AI citations + recommendations"><i class="fas fa-sync-alt" style="margin-right:5px;"></i>Check now</button>'
       + '<button onclick="openHtmlUpload(' + p.id + ')" class="btn" style="font-size:11px;padding:5px 10px;border-color:#fbbf24;color:#fbbf24;" title="Paste HTML for GRAAF scan">HTML</button>'
       + '<button onclick="markDone(' + p.id + ',this,' + isDone + ')" class="btn" style="font-size:11px;padding:5px 10px;border-color:' + (isDone?'#4ade80':'#374151') + ';color:' + (isDone?'#4ade80':'#6b7280') + ';" title="Mark done">' + (isDone?'&#10003; Done':'Mark done') + '</button>'
       + '<button onclick="deletePage(' + p.id + ')" class="btn danger" style="font-size:11px;padding:5px 10px;" title="Remove">&#10005;</button>'
@@ -23789,24 +23805,121 @@ async function markDone(pageId, btn, currentDone) {
   } catch(e) { toast('Error: ' + e.message, '#f87171'); }
 }
 
-async function checkPage(pageId) {
-  toast('Check started...', '#60a5fa');
-  var btn = document.querySelector('[onclick*="checkPage(' + pageId + ')"]');
-  if (btn) { btn.disabled = true; btn.textContent = 'Checking...'; }
-  try {
-    var data = await api('/check/' + pageId, 'POST');
-    if (data.success) {
-      toast('Check running - results in ~30s', '#4ade80');
-      setTimeout(loadPages, 8000);
-    } else {
-      toast(data.error || 'Check failed', '#f87171');
+// Track active checks per page
+  var _checkAnimations = {};
+
+  async function checkPage(pageId) {
+    // Find the card for this page
+    var card = document.querySelector('.cs-page-card[data-page-id="' + pageId + '"]');
+    var btn = document.querySelector('[data-check-btn="' + pageId + '"]');
+
+    // Show inline progress on the card
+    if (card) {
+      var existing = card.querySelector('.check-progress');
+      if (existing) existing.remove();
+      var prog = document.createElement('div');
+      prog.className = 'check-progress';
+      prog.style.cssText = 'background:#0d1117;border:1px solid #1f2937;border-radius:8px;padding:10px 14px;margin-top:10px;font-size:11px;font-family:monospace;';
+      prog.innerHTML = '<div style="color:#4b5563;margin-bottom:6px;font-size:10px;letter-spacing:.06em;">RUNNING CHECK</div>'
+        + '<div id="cpSteps_' + pageId + '" style="display:flex;flex-direction:column;gap:4px;"></div>';
+      card.appendChild(prog);
     }
-  } catch(e) {
-    toast('Error: ' + e.message, '#f87171');
-  } finally {
-    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-sync-alt"></i>'; }
+
+    var steps = [
+      { id: 'html',      label: 'Fetching page HTML' },
+      { id: 'graaf',     label: 'GRAAF content scan' },
+      { id: 'google',    label: 'Google position + AIO' },
+      { id: 'perplexity',label: 'Perplexity citation' },
+      { id: 'youcom',    label: 'Copilot citation' },
+      { id: 'brave',     label: 'Claude / Brave citation' },
+      { id: 'gemini',    label: 'AI recommendations' },
+    ];
+
+    function setStep(stepId, state, msg) {
+      var container = document.getElementById('cpSteps_' + pageId);
+      if (!container) return;
+      var existing = container.querySelector('[data-step="' + stepId + '"]');
+      var icons = { pending: '○', running: '◌', done: '✓', error: '✗' };
+      var colors = { pending: '#374151', running: '#60a5fa', done: '#4ade80', error: '#f87171' };
+      var html = '<span style="color:' + colors[state] + ';margin-right:6px;">' + icons[state] + '</span>'
+        + '<span style="color:' + (state === 'running' ? '#e5e7eb' : state === 'done' ? '#4ade80' : state === 'error' ? '#f87171' : '#6b7280') + ';">'
+        + msg + '</span>';
+      if (existing) {
+        existing.innerHTML = html;
+      } else {
+        var div = document.createElement('div');
+        div.setAttribute('data-step', stepId);
+        div.style.cssText = 'transition:color .3s;';
+        div.innerHTML = html;
+        container.appendChild(div);
+      }
+    }
+
+    // Show all steps as pending
+    steps.forEach(function(s) { setStep(s.id, 'pending', s.label); });
+
+    // Animate steps based on expected timing
+    var timings = [0, 1000, 3000, 8000, 12000, 15000, 18000];
+    var durations = [900, 1800, 4500, 3500, 3000, 3000, 5000];
+    _checkAnimations[pageId] = true;
+
+    steps.forEach(function(s, idx) {
+      if (!_checkAnimations[pageId]) return;
+      setTimeout(function() {
+        if (!_checkAnimations[pageId]) return;
+        setStep(s.id, 'running', s.label + '...');
+        setTimeout(function() {
+          if (!_checkAnimations[pageId]) return;
+          setStep(s.id, 'done', s.label);
+        }, durations[idx]);
+      }, timings[idx]);
+    });
+
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i>'; }
+
+    try {
+      var data = await api('/check/' + pageId, 'POST');
+      if (!data.success) {
+        toast(data.error || 'Check failed', '#f87171');
+        _checkAnimations[pageId] = false;
+        var container = document.getElementById('cpSteps_' + pageId);
+        if (container) container.innerHTML += '<div style="color:#f87171;margin-top:4px;">✗ ' + (data.error||'Failed') + '</div>';
+      } else {
+        // Poll for results
+        var pollCount = 0;
+        var pollInterval = setInterval(function() {
+          pollCount++;
+          if (pollCount > 12) {
+            clearInterval(pollInterval);
+            _checkAnimations[pageId] = false;
+            loadPages();
+            return;
+          }
+          api('/pages/' + pageId).then(function(d) {
+            if (d.success && d.page && d.page.last_checked_at) {
+              var checkTime = new Date(d.page.last_checked_at).getTime();
+              if (Date.now() - checkTime < 120000) {
+                clearInterval(pollInterval);
+                _checkAnimations[pageId] = false;
+                // Final results
+                var prog = document.querySelector('.cs-page-card[data-page-id="' + pageId + '"] .check-progress');
+                if (prog) {
+                  prog.innerHTML = '<div style="color:#4ade80;font-size:11px;">✓ Check complete — loading results...</div>';
+                  setTimeout(function(){ prog.remove(); }, 2000);
+                }
+                loadPages();
+              }
+            }
+          }).catch(function(){});
+        }, 5000);
+      }
+    } catch(e) {
+      toast('Error: ' + e.message, '#f87171');
+      _checkAnimations[pageId] = false;
+    } finally {
+      if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-sync-alt"></i>'; }
+    }
   }
-}
 
 async function deletePage(pageId) {
   if (!confirm('Remove this page from tracking?')) return;
