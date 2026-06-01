@@ -1119,12 +1119,16 @@ app.post('/api/tracker-client/:token/pages', async (req, res) => {
     const { url, keyword } = req.body;
     if (!url) return res.status(400).json({ success: false, error: 'URL required' });
 
-    // Verify URL belongs to any of the client's allowed domains
-    const urlDomain = url.replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0].toLowerCase();
-    const allowedDomains = [client.domain, ...(client.extra_domains || '').split(',').map(d => d.trim()).filter(Boolean)];
-    const domainOk = allowedDomains.some(d => urlDomain.includes(d) || d.includes(urlDomain));
+    // Verify URL belongs to client domain or its subdomains (or admin-added extra domains)
+    const urlDomain = url.replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0].toLowerCase().split(':')[0];
+    const allowedDomains = [client.domain, ...(client.extra_domains || '').split(',').map(d => d.trim().replace(/^www\./, '')).filter(Boolean)];
+    const domainOk = allowedDomains.some(d => {
+      const clean = d.toLowerCase().replace(/^www\./, '');
+      // Exact match OR subdomain match (e.g. blog.contentscale.site matches contentscale.site)
+      return urlDomain === clean || urlDomain.endsWith('.' + clean);
+    });
     if (!domainOk) {
-      return res.status(400).json({ success: false, error: `URL must belong to one of your domains: ${allowedDomains.join(', ')}` });
+      return res.status(400).json({ success: false, error: `URL must belong to ${allowedDomains[0]}${allowedDomains.length > 1 ? ' or ' + allowedDomains.slice(1).join(', ') : ''}` });
     }
 
     // Check duplicate
@@ -24393,6 +24397,18 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
     }
     doNext(0);
   }
+
+  // ── Welcome overlay ────────────────────────────────────────────────────────
+  function closeWelcome() {
+    var el = document.getElementById('welcomeOverlay');
+    if (el) el.style.display = 'none';
+    try { sessionStorage.setItem('wl_seen_' + TOKEN, '1'); } catch(e) {}
+  }
+  function openWelcome() {
+    var el = document.getElementById('welcomeOverlay');
+    if (el) el.style.display = 'flex';
+  }
+
 <\/script>
 
 <!-- Citation Brief Overlay -->
