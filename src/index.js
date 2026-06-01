@@ -24302,19 +24302,19 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
     var container = document.getElementById('gscItems');
     var countEl = document.getElementById('gscCount');
     var list = document.getElementById('gscList');
-    list.style.display = 'block';
+    if (list) list.style.display = 'block';
+    var maxSel = Math.min(MAX_PAGES, pairs.length);
     renderCheckList(pairs, container, 'gsc-cb',
       function(p) {
         var path = '';
         try { path = new URL(p.url).pathname; } catch(e) { path = p.url; }
         if (path === '/') path = '(homepage)';
-        return (p.isQueryOnly ? '[keyword] ' : '') + path + (p.keyword ? ' — ' + p.keyword : '') + (p.clicks ? ' (' + p.clicks + ' clicks)' : '');
-      }
+        return (p.isQueryOnly ? '[keyword] ' : '') + path + (p.keyword ? ' - ' + p.keyword : '') + (p.clicks ? ' (' + p.clicks + ' clicks)' : '');
+      },
+      countEl,
+      maxSel
     );
-    var total = pairs.length;
-    var maxSel = Math.min(MAX_PAGES, total);
-    if (countEl) countEl.textContent = total + ' rows found — select up to ' + maxSel + ' to import';
-    updateSelectCount('gsc-cb', 'gscCount', MAX_PAGES);
+    updateSelectCount('gsc-cb', maxSel);
   }
 
   function updateSitemapCount() {
