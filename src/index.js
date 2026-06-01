@@ -23495,8 +23495,8 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
         <span style="color:#4b5563;">Option C:</span> Type: <code style="background:#1f2937;padding:1px 5px;border-radius:3px;">URL | keyword</code> one per line
       </div>
       <div id="gscDropZone" ondragover="event.preventDefault();this.style.borderColor='#7c3aed'" ondragleave="this.style.borderColor='#374151'" ondrop="handleGscDrop(event)" style="border:2px dashed #374151;border-radius:8px;padding:12px;text-align:center;font-size:11px;color:#6b7280;margin-bottom:8px;cursor:pointer;transition:border-color .15s;" onclick="document.getElementById('gscFileInput').click()">
-        <div>&#128196; Drop CSV file here or click to browse</div>
-        <input type="file" id="gscFileInput" accept=".csv,.txt" style="display:none" onchange="handleGscFile(this.files[0])">
+        <div>&#128196; Drop one or more CSV files here, or click to browse</div>
+        <input type="file" id="gscFileInput" accept=".csv,.txt" multiple style="display:none" onchange="handleGscFile(this)">
       </div>
       <textarea id="importGscData" class="cs-input" rows="5" placeholder="Top queries,Clicks,Impressions,CTR,Position&#10;seo content strategy,45,1200,3.8%,4.2&#10;ai citations tracker,12,340,3.5%,6.1&#10;&#10;Or paste: https://domain.com/page | keyword" style="resize:vertical;font-family:monospace;font-size:11px;margin-bottom:8px;"></textarea>
       <button class="cs-btn primary" onclick="parseGscData()" style="width:100%;margin-bottom:10px;">Parse &amp; Preview</button>
@@ -24194,17 +24194,36 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
   function handleGscDrop(e) {
     e.preventDefault();
     document.getElementById('gscDropZone').style.borderColor = '#374151';
-    var file = e.dataTransfer.files[0];
-    if (file) handleGscFile(file);
+    var files = Array.from(e.dataTransfer.files).filter(function(f){ return f.name.match(/[.](csv|txt)$/i); });
+    if (!files.length) { toast('Drop CSV or TXT files', '#f87171'); return; }
+    handleGscFiles(files);
   }
-  function handleGscFile(file) {
-    if (!file) return;
-    var reader = new FileReader();
-    reader.onload = function(e) {
-      document.getElementById('importGscData').value = e.target.result;
-      parseGscData();
-    };
-    reader.readAsText(file, 'UTF-8');
+  function handleGscFile(input) {
+    var files = input.files ? Array.from(input.files) : (input ? [input] : []);
+    if (files.length) handleGscFiles(files);
+  }
+  function handleGscFiles(files) {
+    var results = [];
+    var remaining = files.length;
+    files.forEach(function(file) {
+      var reader = new FileReader();
+      reader.onload = function(e) {
+        results.push(e.target.result);
+        remaining--;
+        if (remaining === 0) {
+          // Combine all files, skip duplicate headers
+          var combined = results.map(function(content, idx) {
+            var lines = content.split(String.fromCharCode(10));
+            // Skip header line for files after the first
+            return idx === 0 ? lines.join(String.fromCharCode(10)) : lines.slice(1).join(String.fromCharCode(10));
+          }).join(String.fromCharCode(10));
+          document.getElementById('importGscData').value = combined;
+          toast('Loaded ' + files.length + ' file' + (files.length > 1 ? 's' : '') + ' — parsing...', '#60a5fa');
+          parseGscData();
+        }
+      };
+      reader.readAsText(file, 'UTF-8');
+    });
   }
 
   function parseGscData() {
