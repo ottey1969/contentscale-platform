@@ -23488,8 +23488,17 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
       <button class="cs-btn primary" onclick="importSelectedSitemap()" id="importSitemapBtn" style="width:100%;margin-top:10px;display:none;">Import selected</button>
     </div>
     <div id="importGscPanel" style="display:none;">
-      <p style="font-size:12px;color:#6b7280;margin-bottom:10px;">Paste GSC export (CSV or URL | keyword per line) &rarr; select the best pages to track.</p>
-      <textarea id="importGscData" class="cs-input" rows="5" placeholder="https://__DOMAIN__/page/ | seo tips amsterdam&#10;https://__DOMAIN__/blog/ | ai citation tracker" style="resize:vertical;font-family:monospace;font-size:11px;margin-bottom:8px;"></textarea>
+      <div style="background:#0d1117;border:1px solid #1f2937;border-radius:8px;padding:10px 14px;margin-bottom:10px;font-size:11px;color:#6b7280;line-height:1.7;">
+        <strong style="color:#e5e7eb;">GSC export &rarr; drop or paste CSV:</strong><br>
+        <span style="color:#4b5563;">Option A:</span> GSC &rarr; Performance &rarr; Queries tab &rarr; Export CSV &rarr; paste here<br>
+        <span style="color:#4b5563;">Option B:</span> GSC &rarr; Performance &rarr; Pages tab &rarr; Export CSV &rarr; paste here<br>
+        <span style="color:#4b5563;">Option C:</span> Type: <code style="background:#1f2937;padding:1px 5px;border-radius:3px;">URL | keyword</code> one per line
+      </div>
+      <div id="gscDropZone" ondragover="event.preventDefault();this.style.borderColor='#7c3aed'" ondragleave="this.style.borderColor='#374151'" ondrop="handleGscDrop(event)" style="border:2px dashed #374151;border-radius:8px;padding:12px;text-align:center;font-size:11px;color:#6b7280;margin-bottom:8px;cursor:pointer;transition:border-color .15s;" onclick="document.getElementById('gscFileInput').click()">
+        <div>&#128196; Drop CSV file here or click to browse</div>
+        <input type="file" id="gscFileInput" accept=".csv,.txt" style="display:none" onchange="handleGscFile(this.files[0])">
+      </div>
+      <textarea id="importGscData" class="cs-input" rows="5" placeholder="Top queries,Clicks,Impressions,CTR,Position&#10;seo content strategy,45,1200,3.8%,4.2&#10;ai citations tracker,12,340,3.5%,6.1&#10;&#10;Or paste: https://domain.com/page | keyword" style="resize:vertical;font-family:monospace;font-size:11px;margin-bottom:8px;"></textarea>
       <button class="cs-btn primary" onclick="parseGscData()" style="width:100%;margin-bottom:10px;">Parse &amp; Preview</button>
       <div id="gscList" style="max-height:220px;overflow-y:auto;display:none;">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
@@ -23539,6 +23548,12 @@ var _pages = [];
 
 function toast(msg, color) {
   var el = document.getElementById('toast');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'toast';
+    el.className = 'cs-toast';
+    document.body.appendChild(el);
+  }
   el.textContent = msg;
   el.style.color = color || '#4ade80';
   el.style.display = 'block';
@@ -24175,57 +24190,113 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
     if (btn) { btn.textContent = 'Fetch sitemap'; btn.disabled = false; }
   }
 
+  // ── GSC drag/drop handlers ─────────────────────────────────────────────────
+  function handleGscDrop(e) {
+    e.preventDefault();
+    document.getElementById('gscDropZone').style.borderColor = '#374151';
+    var file = e.dataTransfer.files[0];
+    if (file) handleGscFile(file);
+  }
+  function handleGscFile(file) {
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      document.getElementById('importGscData').value = e.target.result;
+      parseGscData();
+    };
+    reader.readAsText(file, 'UTF-8');
+  }
+
   function parseGscData() {
     var raw = document.getElementById('importGscData').value.trim();
-    if (!raw) { toast('Paste GSC data first', '#f87171'); return; }
+    if (!raw) { toast('Paste or drop GSC data first', '#f87171'); return; }
     var nl = String.fromCharCode(10);
-    var lines = raw.split(nl).filter(function(l) { return l.trim() && l.indexOf('http') > -1; });
+    var lines = raw.split(nl).map(function(l){ return l.trim(); }).filter(Boolean);
     var pairs = [];
-    lines.forEach(function(line) {
-      var parts = line.split(/[|,\t]/).map(function(p) { return p.trim(); });
-      // Skip header rows
-      if (parts[0].toLowerCase() === 'page' || parts[0].toLowerCase() === 'top pages') return;
-      var url = '', kw = '';
-      parts.forEach(function(p) {
-        if (p.indexOf('http') === 0) url = p;
-        else if (!kw && p.length > 2 && p.indexOf('.') < 0) kw = p;
-      });
-      if (url) pairs.push({ url: url, keyword: kw });
+    var domain = DOMAIN || '';
+
+    // Detect format:
+    // A) GSC Queries CSV: "Top queries,Clicks,Impressions,CTR,Position"
+    //    -> no URL, only query — we pair with domain homepage as placeholder
+    // B) GSC Pages CSV: "Top pages,Clicks,Impressions,CTR,Position"  
+    //    -> URL present, no keyword — use slug as keyword
+    // C) URL | keyword format
+    // D) Mixed CSV with both URL and query columns
+
+    var isQueriesCSV = lines[0] && (lines[0].toLowerCase().startsWith('top queries') || lines[0].toLowerCase().startsWith('query,') || lines[0].toLowerCase().startsWith('"top queries"'));
+    var isPagesCSV = lines[0] && (lines[0].toLowerCase().startsWith('top pages') || lines[0].toLowerCase().startsWith('"top pages"'));
+
+    lines.forEach(function(line, idx) {
+      if (idx === 0 && (isQueriesCSV || isPagesCSV)) return; // skip header
+
+      // Strip BOM and quotes
+      line = line.replace(/^﻿/, '').replace(/^"|"$/g, '');
+
+      // Split on comma or tab
+      var parts = line.split(/[,	]/).map(function(p){ return p.replace(/^"|"$/g,'').trim(); });
+
+      if (isQueriesCSV) {
+        // Format: query, clicks, impressions, CTR, position
+        var query = parts[0];
+        if (!query || query.length < 2) return;
+        // Skip header-like rows
+        if (query.toLowerCase() === 'top queries' || query.toLowerCase() === 'query') return;
+        // Create a URL hint — user will confirm which URL this maps to
+        pairs.push({ url: 'https://' + domain + '/', keyword: query, isQueryOnly: true });
+
+      } else if (isPagesCSV) {
+        // Format: URL, clicks, impressions, CTR, position
+        var url = parts[0];
+        if (!url || url.indexOf('http') !== 0) return;
+        // Extract slug as keyword
+        var slug = url.replace(/^https?:[/][/]/, '').replace(/^www[.]/, '').split('/').filter(Boolean).pop() || '';
+        var kw = slug.replace(/[-_]/g, ' ').replace(/[.][a-z]+$/, '').trim();
+        pairs.push({ url: url, keyword: kw, clicks: parseInt(parts[1])||0 });
+
+      } else if (line.indexOf('|') > -1) {
+        // Format: URL | keyword
+        var split = line.split('|').map(function(p){ return p.trim(); });
+        var url = split[0], kw = split[1] || '';
+        if (url && url.indexOf('http') === 0) pairs.push({ url: url, keyword: kw });
+
+      } else {
+        // Auto-detect: look for URL in any column
+        var url = '', kw = '';
+        parts.forEach(function(p) {
+          if (p.indexOf('http') === 0) url = p;
+          else if (!kw && p.length > 2 && p.indexOf('.') < 0 && isNaN(p) && !p.includes('%')) kw = p;
+        });
+        if (url) pairs.push({ url: url, keyword: kw, clicks: parseInt(parts[1])||0 });
+      }
     });
-    if (!pairs.length) { toast('No valid URLs found. Format: URL | keyword', '#f87171'); return; }
+
+    if (!pairs.length) { toast('No valid data found. Try: GSC Queries CSV, Pages CSV, or URL | keyword format', '#f87171'); return; }
+
+    // Sort by clicks desc (GSC priority)
+    pairs.sort(function(a,b){ return (b.clicks||0) - (a.clicks||0); });
+
+    // If queries-only, show info
+    if (pairs[0] && pairs[0].isQueryOnly) {
+      toast('Queries CSV detected — ' + pairs.length + ' keywords found. URLs will be set to your homepage. Edit per page after import.', '#fbbf24');
+    }
+
     var container = document.getElementById('gscItems');
     var countEl = document.getElementById('gscCount');
     var list = document.getElementById('gscList');
     list.style.display = 'block';
     renderCheckList(pairs, container, 'gsc-cb',
-      function(p) { var path = (function(u){ try { return new URL(u).pathname; } catch(e){ return u; } })(p.url); return (path||p.url) + (p.keyword ? '  [' + p.keyword + ']' : ''); },
-      countEl, MAX_PAGES
+      function(p) {
+        var path = '';
+        try { path = new URL(p.url).pathname; } catch(e) { path = p.url; }
+        if (path === '/') path = '(homepage)';
+        return (p.isQueryOnly ? '[keyword] ' : '') + path + (p.keyword ? ' — ' + p.keyword : '') + (p.clicks ? ' (' + p.clicks + ' clicks)' : '');
+      }
     );
-    document.getElementById('importGscBtn').style.display = 'block';
+    var total = pairs.length;
+    var maxSel = Math.min(MAX_PAGES, total);
+    if (countEl) countEl.textContent = total + ' rows found — select up to ' + maxSel + ' to import';
+    updateSelectCount('gsc-cb', 'gscCount', MAX_PAGES);
   }
-
-  async function importGscKeywords() {
-    var cbs = document.querySelectorAll('.gsc-cb:checked');
-    if (!cbs.length) { toast('Select at least one', '#f87171'); return; }
-    var pairs = Array.from(cbs).map(function(cb) { return JSON.parse(cb.value); }).slice(0, MAX_PAGES);
-    var added = 0; var updated = 0; var failed = 0;
-    for (var i = 0; i < pairs.length; i++) {
-      try {
-        var existing = _pages ? _pages.find(function(p) { return p.url === pairs[i].url; }) : null;
-        if (existing && pairs[i].keyword) {
-          var upd = await api('/pages/' + existing.id + '/keyword', 'PATCH', { keyword: pairs[i].keyword });
-          if (upd.success) updated++; else failed++;
-        } else {
-          var d = await api('/pages', 'POST', { url: pairs[i].url, keyword: pairs[i].keyword || undefined });
-          if (d.success) added++; else failed++;
-        }
-      } catch(e) { failed++; }
-    }
-    var msg = (added ? added + ' added. ' : '') + (updated ? updated + ' keywords updated. ' : '') + (failed ? failed + ' failed.' : '');
-    toast(msg || 'Done', added + updated > 0 ? '#4ade80' : '#f87171');
-    if (added + updated > 0) { hideModal('importModal'); loadPages(); }
-  }
-
 
   function updateSitemapCount() {
     var checked = document.querySelectorAll('.sitemap-cb:checked').length;
@@ -24484,6 +24555,7 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
   </div>
 </div>
 
+<div id="toast" class="cs-toast" style="display:none;"></div>
 </body>
 </html>`;
 
