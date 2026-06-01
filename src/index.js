@@ -24137,15 +24137,19 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
 
   function updateSelectCount(cbClass, maxN) {
     var checked = document.querySelectorAll('.' + cbClass + ':checked').length;
-    // Update relevant import button
     if (cbClass === 'sitemap-cb') {
       var btn = document.getElementById('importSitemapBtn');
-      if (btn) btn.textContent = 'Import ' + checked + ' selected (max ' + maxN + ')';
-      if (checked > maxN) { document.querySelectorAll('.' + cbClass + ':checked')[checked-1].checked = false; }
+      if (btn) {
+        btn.style.display = checked > 0 ? 'block' : 'none';
+        btn.textContent = 'Import ' + checked + ' page' + (checked !== 1 ? 's' : '') + ' into tracker';
+      }
     }
     if (cbClass === 'gsc-cb') {
       var btn = document.getElementById('importGscBtn');
-      if (btn) btn.textContent = 'Import ' + checked + ' selected (max ' + maxN + ')';
+      if (btn) {
+        btn.style.display = checked > 0 ? 'flex' : 'none';
+        btn.textContent = 'Import ' + checked + ' keyword' + (checked !== 1 ? 's' : '') + ' into tracker';
+      }
     }
   }
 
@@ -24342,115 +24346,53 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
 
   // -- GSC keyword import ----------------------------------------------------
   async function importGscKeywords() {
-    var raw = document.getElementById('importGscData').value.trim();
-    if (!raw) { toast('Paste GSC data first', '#f87171'); return; }
-    var nl = String.fromCharCode(10);
-    var lines = raw.split(nl).filter(function(l) { return l.trim(); });
-    var pairs = [];
-    lines.forEach(function(line) {
-      // Support: URL | keyword  or  URL,keyword  or  CSV with URL in col1 query in col2
-      var parts = line.split(/[|,	]/).map(function(p) { return p.trim(); });
-      var url = parts[0];
-      var kw = parts[1] || '';
-      if (url && url.indexOf('http') === 0) pairs.push({ url: url, keyword: kw });
-      else if (kw && kw.indexOf('http') === 0) pairs.push({ url: kw, keyword: url }); // reversed
-    });
-    if (!pairs.length) { toast('No valid URL/keyword pairs found', '#f87171'); return; }
-    var added = 0; var updated = 0; var failed = 0;
-    for (var i = 0; i < Math.min(pairs.length, MAX_PAGES); i++) {
+    // Read from checked checkboxes (set by renderCheckList)
+    var cbs = document.querySelectorAll('.gsc-cb:checked');
+    if (!cbs || !cbs.length) { toast('Select at least one item', '#f87171'); return; }
+    var selected = [];
+    cbs.forEach(function(cb) {
       try {
-        // Check if URL already tracked
-        var existing = _pages.find(function(p) { return p.url === pairs[i].url; });
-        if (existing && pairs[i].keyword) {
-          // Update keyword
-          var upd = await api('/pages/' + existing.id + '/keyword', 'PATCH', { keyword: pairs[i].keyword });
-          if (upd.success) updated++;
-        } else {
-          var data = await api('/pages', 'POST', { url: pairs[i].url, keyword: pairs[i].keyword || undefined });
-          if (data.success) added++;
-          else failed++;
-        }
-      } catch(e) { failed++; }
-    }
-    var msg = '';
-    if (added) msg += added + ' pages added. ';
-    if (updated) msg += updated + ' keywords updated. ';
-    if (failed) msg += failed + ' failed.';
-    toast(msg || 'Done', added + updated > 0 ? '#4ade80' : '#f87171');
-    if (added + updated > 0) { hideModal('importModal'); loadPages(); }
-  }
-
-  // -- Keyword editing --------------------------------------------------------
-  function editKeyword(pageId, el) {
-    var currentKw = '';
-    if (typeof el === 'string') {
-      currentKw = el;
-    } else if (el && el.previousSibling) {
-      // Get keyword from the span before this button
-      var prev = el.previousElementSibling;
-      currentKw = prev ? prev.textContent : '';
-    }
-    var newKw = prompt('Edit keyword for this page:', currentKw);
-    if (newKw === null) return;
-    api('/pages/' + pageId + '/keyword', 'PATCH', { keyword: newKw.trim() })
-      .then(function(data) {
-        if (data.success) { toast('Keyword updated', '#4ade80'); loadPages(); }
-        else toast(data.error || 'Failed', '#f87171');
-      }).catch(function(e) { toast('Error: ' + e.message, '#f87171'); });
-  }
-
-  // -- Welcome agent ----------------------------------------------------------
-  function closeWelcome() {
-    var el = document.getElementById('welcomeOverlay');
-    if (!el) return;
-    el.style.transition = 'opacity .4s ease';
-    el.style.opacity = '0';
-    setTimeout(function() { el.style.display = 'none'; }, 400);
-    // Remember for this session
-    try { sessionStorage.setItem('wl_seen_' + TOKEN, '1'); } catch(e) {}
-  }
-
-  // Show on load unless already seen this session
-  (function() {
-    try {
-      if (sessionStorage.getItem('wl_seen_' + TOKEN)) {
-        var el = document.getElementById('welcomeOverlay');
-        if (el) el.style.display = 'none';
+        var val = JSON.parse(cb.value);
+        selected.push(val);
+      } catch(e) {
+        selected.push({ url: cb.value, keyword: '' });
       }
-    } catch(e) {}
-  })();
-
-
-  // -- HTML upload -----------------------------------------------------------
-  var _htmlUploadPageId = null;
-  function openHtmlUpload(pageId) {
-    _htmlUploadPageId = pageId;
-    var page = (_pages||[]).find(function(p){ return p.id == pageId; }) || {};
-    document.getElementById('htmlUploadKeyword').value = page.keyword || '';
-    document.getElementById('htmlUploadContent').value = '';
-    document.getElementById('htmlUploadModal').classList.add('show');
-    setTimeout(function(){ document.getElementById('htmlUploadContent').focus(); }, 100);
+    });
+    // Filter: only items with a URL (skip queries-only unless we have domain)
+    var toImport = selected.filter(function(p) {
+      return p.url && p.url.indexOf('http') === 0;
+    });
+    // For queries-only items (no proper URL), use homepage
+    var queriesOnly = selected.filter(function(p) {
+      return !p.url || p.url.indexOf('http') !== 0;
+    });
+    queriesOnly.forEach(function(p) {
+      toImport.push({ url: 'https://' + DOMAIN + '/', keyword: p.keyword || p.url });
+    });
+    if (!toImport.length) { toast('No valid URLs to import', '#f87171'); return; }
+    var bt = document.getElementById('importGscBtn');
+    if (bt) { bt.disabled = true; bt.textContent = 'Importing...'; }
+    var done = 0;
+    var errors = 0;
+    var total = toImport.length;
+    function doNext(idx) {
+      if (idx >= total) {
+        toast('Imported ' + done + ' page' + (done !== 1 ? 's' : '') + (errors ? ', ' + errors + ' failed' : ''), done > 0 ? '#4ade80' : '#f87171');
+        hideModal('importModal');
+        setTimeout(loadPages, 800);
+        if (bt) { bt.disabled = false; bt.textContent = 'Import'; }
+        return;
+      }
+      var p = toImport[idx];
+      api('/pages', 'POST', { url: p.url, keyword: p.keyword || '' })
+        .then(function(d) {
+          if (d.success) done++; else errors++;
+          doNext(idx + 1);
+        })
+        .catch(function() { errors++; doNext(idx + 1); });
+    }
+    doNext(0);
   }
-  async function submitHtmlUpload() {
-    var pageId = _htmlUploadPageId;
-    if (!pageId) return;
-    var html = document.getElementById('htmlUploadContent').value.trim();
-    var kw = document.getElementById('htmlUploadKeyword').value.trim();
-    if (!html && !kw) { toast('Paste HTML or enter a keyword', '#f87171'); return; }
-    var payload = {};
-    if (html) payload.html_content = html;
-    if (kw) payload.keyword = kw;
-    try {
-      var d = await api('/pages/' + pageId + '/html', 'PATCH', payload);
-      if (d.success) {
-        toast('Saved' + (html ? ' - scanning...' : ''), '#4ade80');
-        hideModal('htmlUploadModal');
-        if (html) setTimeout(function(){ checkPage(pageId); }, 600);
-        setTimeout(loadPages, html ? 5000 : 500);
-      } else { toast(d.error || 'Failed', '#f87171'); }
-    } catch(e) { toast('Error: ' + e.message, '#f87171'); }
-  }
-
 <\/script>
 
 <!-- Citation Brief Overlay -->
