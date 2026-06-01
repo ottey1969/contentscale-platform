@@ -23383,7 +23383,7 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
     <div class="cs-stat"><div class="val" id="statCitedG" style="color:#0284c7;">&mdash;</div><div class="lbl">Google AIO</div></div>
     <div class="cs-stat"><div class="val" id="statCitedP" style="color:#7c3aed;">&mdash;</div><div class="lbl">Perplexity</div></div>
     <div class="cs-stat"><div class="val" id="statCitedB" style="color:#2563eb;">&mdash;</div><div class="lbl">Copilot</div></div>
-    <div class="cs-stat"><div class="val" id="statCitedC" style="color:#dc2626;">&mdash;</div><div class="lbl">Brave</div></div>
+    <div class="cs-stat"><div class="val" id="statCitedC" style="color:#dc2626;">&mdash;</div><div class="lbl">Claude</div></div>
     <div class="cs-stat"><div class="val" id="statAvgScore" style="color:#ca8a04;">&mdash;</div><div class="lbl">GRAAF</div></div>
     <div class="cs-stat"><div class="val" id="statRemaining" style="color:#16a34a;">&mdash;</div><div class="lbl">Slots left (max 3)</div></div>
   </div>
@@ -23641,9 +23641,9 @@ function renderPages() {
     var nextCheck = p.next_check_at ? 'Next: ' + new Date(p.next_check_at).toLocaleDateString() : '';
     // Clean URL - remove protocol, www, and fix anchor slugs (#section)
     var rawUrl = p.url || '';
-    var urlClean = rawUrl.replace(/^https?:\/\//, '').replace(/^www\./, '');
+    var urlClean = rawUrl.replace(/^https?:[/][/]/, '').replace(/^www[.]/, '');
     // Remove anchor fragments with weird chars like #audiencekeyword
-    var urlShort = urlClean.replace(/#.*$/, '').replace(/\/$/, '') || urlClean;
+    var urlShort = urlClean.replace(/#.*$/, '').replace(/[/]$/, '') || urlClean;
     // Page number (1-based)
     var pageNum = pageIdx + 1;
     var isDone = !!p.is_done;
@@ -23654,8 +23654,8 @@ function renderPages() {
     else badges += '<span class="cs-cs-badge grey">Not ranked</span> ';
     badges += p.ai_google_overview_cited ? '<span class="cs-cs-badge green">&#10003; Google AIO</span> ' : '<span class="cs-cs-badge grey">No AIO</span> ';
     if (p.ai_perplexity_cited) badges += '<span class="cs-cs-badge purple">&#10003; Perplexity</span> ';
-    if (p.ai_bing_cited) badges += '<span class="cs-cs-badge" style="background:#0c2340;color:#60a5fa;">&#10003; Copilot</span> ';
-    if (p.ai_brave_cited) badges += '<span class="cs-cs-badge" style="background:#1a0e2e;color:#c4b5fd;">&#10003; Claude</span> ';
+    badges += p.ai_bing_cited ? '<span class="cs-cs-badge" style="background:#0c2340;color:#60a5fa;border:1px solid #1d4ed8;">&#10003; Copilot</span> ' : '<span class="cs-cs-badge grey">No Copilot</span> ';
+    badges += p.ai_brave_cited ? '<span class="cs-cs-badge" style="background:#1a0e2e;color:#c4b5fd;border:1px solid #6d28d9;">&#10003; Claude</span> ' : '<span class="cs-cs-badge grey">No Claude</span> ';
     if (score) badges += '<span class="cs-cs-badge yellow">' + score + '/100</span> ';
     if (p.fetch_reliable === false) badges += '<span class="cs-cs-badge" style="background:#2d1f00;color:#fbbf24;">! fetch issue</span> ';
 
@@ -24361,18 +24361,6 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
     } catch(e) { toast('Error: ' + e.message, '#f87171'); }
   }
 
-eyword = kw;
-    try {
-      var d = await api('/pages/' + pageId + '/html', 'PATCH', payload);
-      if (d.success) {
-        toast('Saved' + (html ? ' - scanning...' : ''), '#4ade80');
-        hideModal('htmlUploadModal');
-        if (html) setTimeout(function(){ checkPage(pageId); }, 600);
-        setTimeout(loadPages, html ? 5000 : 500);
-      } else { toast(d.error || 'Failed', '#f87171'); }
-    } catch(e) { toast('Error: ' + e.message, '#f87171'); }
-  }
-
 <\/script>
 
 <!-- Citation Brief Overlay -->
@@ -24464,7 +24452,7 @@ eyword = kw;
         <div class="wl-feature"><span class="wl-feature-dot"></span>Google AI Overview</div>
         <div class="wl-feature"><span class="wl-feature-dot"></span>Perplexity</div>
         <div class="wl-feature"><span class="wl-feature-dot"></span>Copilot</div>
-        <div class="wl-feature"><span class="wl-feature-dot"></span>Brave Search</div>
+        <div class="wl-feature"><span class="wl-feature-dot"></span>Claude (Brave Search)</div>
         <div class="wl-feature"><span class="wl-feature-dot"></span>ChatGPT Search</div>
         <div class="wl-feature"><span class="wl-feature-dot"></span>GRAAF content scoring</div>
         <div class="wl-feature"><span class="wl-feature-dot"></span>Live Citation Briefs</div>
@@ -25616,7 +25604,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     <div class="tr-stat" onclick="filterByCitation('google')" title="Click to show only Google AIO cited pages" style="cursor:pointer;"><div class="val" id="trStatCitedGoogle" style="color:#38bdf8;">—</div><div class="lbl">Google AIO cited</div></div>
                     <div class="tr-stat" onclick="filterByCitation('perplexity')" title="Click to show only Perplexity cited pages" style="cursor:pointer;"><div class="val" id="trStatCitedPerplexity" style="color:#a78bfa;">—</div><div class="lbl">Perplexity cited</div></div>
                     <div class="tr-stat"><div class="val" id="trStatCitedCopilot" style="color:#60a5fa;">—</div><div class="lbl">Copilot/Bing cited</div></div>
-                    <div class="tr-stat"><div class="val" id="trStatCitedClaude" style="color:#f87171;">—</div><div class="lbl">Claude/Brave cited</div></div>
+                    <div class="tr-stat"><div class="val" id="trStatCitedClaude" style="color:#f87171;">—</div><div class="lbl">Claude cited</div></div>
                     <div class="tr-stat"><div class="val" id="trStatCitationRate" style="color:#e5e7eb;">—</div><div class="lbl">AI citation rate</div></div>
                     <div class="tr-stat"><div class="val" id="trStatCheckedToday" style="color:#4ade80;">—</div><div class="lbl">Checked today</div></div>
                     <div class="tr-stat"><div class="val" id="trStatPendingChanges" style="color:#fbbf24;">—</div><div class="lbl">Pending changes</div></div>
@@ -27101,13 +27089,13 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
             const bBadge = snap
                 ? (snap.ai_bing_cited
                     ? '<span class="tr-badge" style="background:#0c2340;color:#60a5fa;border:1px solid #1d4ed8;">OK Copilot cited</span>'
-                    : '')
+                    : '<span class="tr-badge" style="background:#1f2937;color:#4b5563;">Copilot - not cited</span>')
                 : '';
 
             const brBadge = snap
                 ? (snap.ai_brave_cited
-                    ? '<span class="tr-badge" style="background:#1a0e2e;color:#c4b5fd;border:1px solid #7c3aed;">OK Brave cited</span>'
-                    : '')
+                    ? '<span class="tr-badge" style="background:#1a0e2e;color:#c4b5fd;border:1px solid #6d28d9;">OK Claude cited</span>'
+                    : '<span class="tr-badge" style="background:#1f2937;color:#4b5563;">Claude - not cited</span>')
                 : '';
 
             // Pending changes button
@@ -27365,9 +27353,10 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     return '<tr style="border-bottom:1px solid #0d1117;">'
                         +'<td style="padding:7px 10px;color:#9ca3af;">'+new Date(s.checked_at).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'})+'</td>'
                         +'<td style="padding:7px 10px;font-weight:600;">'+(s.google_position?'#'+s.google_position:'-')+posArrow+'</td>'
-                        +'<td style="padding:7px 10px;">'+(s.ai_google_overview_cited?'<span style="color:#38bdf8;">* Cited</span>':s.ai_google_overview_found?'<span style="color:#6b7280;">Found</span>':'<span style="color:#374151;">-</span>')+'</td>'
-                        +'<td style="padding:7px 10px;">'+(s.ai_perplexity_cited?'<span style="color:#a78bfa;">* Cited</span>':'<span style="color:#374151;">-</span>')+'</td>'
-                        +'<td style="padding:7px 10px;">'+(s.ai_bing_cited?'<span style="color:#60a5fa;">* Cited</span>':'<span style="color:#374151;">-</span>')+'</td>'
+                        +'<td style="padding:7px 10px;">'+(s.ai_google_overview_cited?'<span style="color:#38bdf8;">v Cited</span>':s.ai_google_overview_found?'<span style="color:#6b7280;">Found</span>':'<span style="color:#374151;">-</span>')+'</td>'
+                        +'<td style="padding:7px 10px;">'+(s.ai_perplexity_cited?'<span style="color:#a78bfa;">v Cited</span>':'<span style="color:#374151;">-</span>')+'</td>'
+                        +'<td style="padding:7px 10px;">'+(s.ai_bing_cited?'<span style="color:#60a5fa;">v Cited</span>':'<span style="color:#374151;">-</span>')+'</td>'
+                        +'<td style="padding:7px 10px;">'+(s.ai_brave_cited?'<span style="color:#c4b5fd;">v Cited</span>':'<span style="color:#374151;">-</span>')+'</td>'
                         +'</tr>';
                 }).join('');
                 html += '<div style="margin-bottom:20px;">'
@@ -27378,7 +27367,8 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     +'<th style="padding:6px 10px;text-align:left;">Position</th>'
                     +'<th style="padding:6px 10px;text-align:left;">Google AI</th>'
                     +'<th style="padding:6px 10px;text-align:left;">Perplexity</th>'
-                    +'<th style="padding:6px 10px;text-align:left;">Bing</th>'
+                    +'<th style="padding:6px 10px;text-align:left;">Copilot</th>'
+                    +'<th style="padding:6px 10px;text-align:left;">Claude</th>'
                     +'</tr></thead><tbody>'+rows+'</tbody></table></div></div>';
             }
 
@@ -28002,7 +27992,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 domainsBtn.title = 'Add extra domains this client can track (comma separated)';
                 domainsBtn.style.cssText = 'font-size:10px;padding:3px 8px;border-color:#38bdf8;color:#38bdf8;';
                 domainsBtn.onclick = (function(id, current){ return function(){
-                    var val = prompt('Extra domains for this client (comma separated, no https://):\nCurrent: ' + (current||'none'), current||'');
+                    var val = prompt('Extra domains (comma separated, no https or www). Current: ' + (current||'none'), current||'');
                     if (val === null) return;
                     updateTcClient(id, {extra_domains: val.trim()});
                     setTimeout(loadTrackerClients, 500);
@@ -30354,59 +30344,58 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
     }
 
     // ── 4. You.com Smart API citation ────────────────────────────────────────
-    // ── 4. You.com AI Search citation ─────────────────────────────────────────
-    _trSetStep(pageId, 'youcom', 'running', 'Checking You.com AI Search: ' + keyword);
-    if(_yk) { const youKey = _yk;
+    // ── 4. Microsoft Bing / Copilot citation ───────────────────────────────────
+    // Uses Bing Web Search API (Azure) — free tier 1000 calls/mo
+    // Add BING_SEARCH_API_KEY to Railway (get at portal.azure.com → Bing Search v7)
+    _trSetStep(pageId, 'youcom', 'running', 'Checking Bing / Copilot index: ' + keyword);
+    const _bingKey = keys.bingKey || process.env.BING_SEARCH_API_KEY || process.env.YOU_API_KEY || '';
+    if(_bingKey) {
       try {
-        let yResp = await fetch(
-          `https://api.ydc-index.io/search?query=${encodeURIComponent(keyword)}&num_web_results=10`,
-          { headers: { 'X-API-Key': youKey }, signal: AbortSignal.timeout(12000) }
-        ).catch(() => null);
-        if(!yResp || (!yResp.ok && (yResp.status === 403 || yResp.status === 404 || yResp.status === 401))) {
-          yResp = await fetch(
-            `https://api.ydc-index.io/rag?query=${encodeURIComponent(keyword)}`,
-            { headers: { 'X-API-Key': youKey }, signal: AbortSignal.timeout(15000) }
-          ).catch(() => null);
-        }
-        if(yResp && yResp.ok) {
-          const yData = await yResp.json();
-          const hits = yData.hits || yData.results || [];
-          const sources = yData.sources || [];
-          const allUrls = [...hits, ...sources].map(function(h){ return (h.url||''); });
-          const inResults = allUrls.some(function(u){ return u.replace(/^https?:\/\//, '').startsWith(domain); });
-          const aiAnswer = yData.answer || '';
-          const aiSnippets = yData.ai_snippets || [];
-          const inAI = aiAnswer.includes(domain)
-            || (Array.isArray(aiSnippets) && aiSnippets.some(function(s){ return (s.url||s.snippet||'').includes(domain); }))
-            || sources.some(function(s){ return (s.url||'').includes(domain); });
-          snapshot.ai_bing_found = hits.length > 0;
-          snapshot.ai_bing_cited = inResults || inAI;
-          if(inResults || inAI) snapshot.ai_bing_text = inAI ? 'Cited in You.com AI answer' : 'Found in You.com results';
-          const label = inAI ? 'Cited in AI answer' : (inResults ? 'In results (not in AI answer)' : 'Not found');
+        const bingResp = await fetch(
+          `https://api.bing.microsoft.com/v7.0/search?q=${encodeURIComponent(keyword)}&count=10&mkt=en-US`,
+          {
+            headers: { 'Ocp-Apim-Subscription-Key': _bingKey },
+            signal: AbortSignal.timeout(10000)
+          }
+        );
+        if(bingResp.ok) {
+          const bingData = await bingResp.json();
+          const webResults = (bingData.webPages && bingData.webPages.value) || [];
+          const inResults = webResults.some(function(r){
+            return (r.url||'').replace(/^https?:\/\//, '').startsWith(domain);
+          });
+          const inSnippets = webResults.some(function(r){
+            return (r.snippet||'').includes(domain);
+          });
+          snapshot.ai_bing_found = webResults.length > 0;
+          snapshot.ai_bing_cited = inResults || inSnippets;
+          const pos = webResults.findIndex(function(r){ return (r.url||'').includes(domain); });
+          const label = inResults ? `Cited in Bing #${pos+1}` : (inSnippets ? 'Mentioned in snippet' : 'Not found in Bing');
           _trSetStep(pageId, 'youcom', 'done', label);
         } else {
-          const status = yResp ? yResp.status : 'timeout';
-          const err = yResp ? await yResp.text().catch(()=>'') : 'Request failed';
-          _trSetStep(pageId, 'youcom', 'error', `You.com API ${status}: ${err.substring(0,120)}`);
+          const errTxt = await bingResp.text().catch(()=>'');
+          // Fallback: if Bing key is actually a You.com key (old setup), skip gracefully
+          const msg = bingResp.status === 401 ? 'BING_SEARCH_API_KEY invalid — get free key at portal.azure.com' : `Bing API ${bingResp.status}: ${errTxt.substring(0,80)}`;
+          _trSetStep(pageId, 'youcom', 'error', msg);
+          snapshot.ai_bing_cited = false;
         }
       } catch(e) {
         _trSetStep(pageId, 'youcom', 'error', e.message);
-        console.warn('[tracker] You.com failed:', e.message);
+        console.warn('[tracker] Bing failed:', e.message);
       }
     } else {
-      _trSetStep(pageId, 'youcom', 'error', 'YOU_API_KEY not set');
+      _trSetStep(pageId, 'youcom', 'error', 'BING_SEARCH_API_KEY not set — free at portal.azure.com (1000 calls/mo)');
+      snapshot.ai_bing_cited = false;
     }
 
     // ── 4b. Brave Search citation ──────────────────────────────────────────────
-    // Brave Search API — independent index, used by Claude/Brave browser
-    // Get key at brave.com/search/api — free tier available
-    // Add BRAVE_SEARCH_API_KEY to Railway env vars
-    _trSetStep(pageId, 'brave', 'running', 'Checking Brave Search / Claude: ' + keyword);
+    _trSetStep(pageId, 'brave', 'running', 'Checking Brave Search (Claude index): ' + keyword);
     const _bk = keys.braveKey || process.env.BRAVE_SEARCH_API_KEY || '';
     if(_bk) {
       try {
+        // Brave Search API v1 — only q and count are required params
         const bResp = await fetch(
-          `https://api.search.brave.com/res/v1/web/search?q=${encodeURIComponent(keyword)}&count=10&result_filter=web`,
+          `https://api.search.brave.com/res/v1/web/search?q=${encodeURIComponent(keyword)}&count=10`,
           {
             headers: {
               'Accept': 'application/json',
@@ -30422,23 +30411,21 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
           const inResults = results.some(function(r){
             return (r.url||'').replace(/^https?:\/\//, '').startsWith(domain);
           });
-          // Also check if domain appears in any result descriptions (soft citation)
           const inSnippets = results.some(function(r){
-            return (r.description||r.extra_snippets||[]).toString().includes(domain);
+            return (r.description||'').includes(domain);
           });
           snapshot.ai_brave_cited = inResults || inSnippets;
           snapshot.ai_brave_found = results.length > 0;
-          if(inResults) snapshot.ai_bing_text = (snapshot.ai_bing_text ? snapshot.ai_bing_text + ' | ' : '') + 'Found in Brave Search';
-          const label = inResults ? 'Cited in Brave Search index' : (inSnippets ? 'Mentioned in snippets' : 'Not found in Brave');
+          const bPos = results.findIndex(function(r){ return (r.url||'').includes(domain); });
+          const label = inResults ? `Cited in Brave #${bPos+1}` : (inSnippets ? 'Mentioned in snippet' : 'Not found in Brave');
           _trSetStep(pageId, 'brave', 'done', label);
-          console.log('[tracker] Brave Search: inResults=' + inResults + ', position=' + (results.findIndex(function(r){ return (r.url||'').includes(domain); })+1));
         } else {
           const err = await bResp.text().catch(()=>'');
           _trSetStep(pageId, 'brave', 'error', 'Brave API ' + bResp.status + ': ' + err.substring(0,80));
         }
       } catch(e) {
         _trSetStep(pageId, 'brave', 'error', e.message);
-        console.warn('[tracker] Brave Search failed:', e.message);
+        console.warn('[tracker] Brave failed:', e.message);
       }
     } else {
       _trSetStep(pageId, 'brave', 'error', 'BRAVE_SEARCH_API_KEY not set — add to Railway env vars');
