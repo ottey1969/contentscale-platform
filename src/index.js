@@ -29817,7 +29817,7 @@ app.post('/api/tracker/pages/:id/check', verifyEngineAccess, async (req, res) =>
             }
 
             const bodyHtml = '<h2 style="font-size:17px;font-weight:800;color:#0f172a;margin-bottom:10px;">' + (isFirst ? 'Your first Citation Brief is ready' : 'Your Citation Brief has been updated') + '</h2>'
-              + (isMerged ? '<div style="background:#fef3c7;border:1px solid #fde68a;border-radius:8px;padding:12px 16px;margin-bottom:14px;font-size:13px;color:#92400e;"><strong>Note:</strong> Your brief from yesterday was not marked done, so we merged it with today\'s new findings. You are seeing one combined brief with everything still relevant. <strong>Press Done as soon as you have implemented this brief</strong> — so the brief can restart its automatic search. If you only have 1 day to implement, don\'t worry: all items you haven\'t done before pressing Done will carry forward automatically.</div>' : '')
+              + (isMerged ? '<div style="background:#fef3c7;border:1px solid #fde68a;border-radius:8px;padding:12px 16px;margin-bottom:14px;font-size:13px;color:#92400e;"><strong>Note:</strong> You did not press Done on your last brief, so we merged it with today\'s new findings into one updated brief. We will keep merging every day until you press Done after finishing implementation. <strong>Press Done as soon as you have implemented everything</strong> — the Citation Brief will then reset and restart fresh for the next round.</div>' : '')
               + '<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px 16px;margin-bottom:14px;"><div style="font-size:9px;color:#94a3b8;text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px;">Page</div><div style="font-size:12px;color:#7c3aed;font-family:monospace;word-break:break-all;margin-bottom:4px;">' + pageUrl + '</div>' + (kw ? '<div style="font-size:11px;color:#64748b;">Keyword: <strong style="color:#1e293b;">' + kw + '</strong></div>' : '') + '</div>'
               + changeSummary
               + '<table width="100%" style="border-spacing:4px;border-collapse:separate;margin-bottom:14px;"><tr>'
@@ -29828,8 +29828,37 @@ app.post('/api/tracker/pages/:id/check', verifyEngineAccess, async (req, res) =>
               + statCellE('Claude', brave ? 'Cited' : 'No', brave ? '#dc2626' : '#94a3b8')
               + statCellE('GRAAF', score ? score + '/100' : 'N/A', score >= 70 ? '#16a34a' : score >= 50 ? '#f59e0b' : '#ef4444')
               + '</tr></table>'
-              + (aio ? '<div style="background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:12px 16px;margin-bottom:12px;font-size:13px;color:#166534;"><strong>Cited in Google AI Overview</strong> for &ldquo;' + kw + '&rdquo;.</div>' : (!isFirst && !aioLost ? '' : '<div style="background:#fefce8;border:1px solid #fde047;border-radius:8px;padding:12px 16px;margin-bottom:12px;font-size:13px;color:#854d0e;"><strong>Not yet cited</strong> in Google AI Overview. Use the Citation Brief in your tracker.</div>'))
-              + '<div style="background:#f5f3ff;border:1px solid #ddd6fe;border-radius:8px;padding:12px 16px;"><div style="font-size:10px;color:#7c3aed;font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px;">Your tracker</div><div style="font-size:11px;font-family:monospace;color:#1e293b;word-break:break-all;margin-bottom:4px;">' + clientTrackUrl + '</div><div style="font-size:10px;color:#94a3b8;">Bookmark this link.</div></div>';
+              + (aio ? '<div style="background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:12px 16px;margin-bottom:12px;font-size:13px;color:#166534;"><strong>Cited in Google AI Overview</strong> for &ldquo;' + kw + '&rdquo;.</div>' : (!isFirst && !aioLost ? '' : '<div style="background:#fefce8;border:1px solid #fde047;border-radius:8px;padding:12px 16px;margin-bottom:12px;font-size:13px;color:#854d0e;"><strong>Not yet cited</strong> in Google AI Overview. Use the Citation Brief below.</div>'))
+              + (function() {
+                  // Add recommendations to email
+                  const emailRecs = curr.recommendations ? (typeof curr.recommendations === 'string' ? (function(){ try { return JSON.parse(curr.recommendations); } catch(e) { return []; } })() : curr.recommendations) : [];
+                  if (!Array.isArray(emailRecs) || !emailRecs.length) return '';
+                  const colors = { high: '#dc2626', medium: '#d97706', low: '#16a34a' };
+                  const bgs = { high: '#fff1f2', medium: '#fffbeb', low: '#f0fdf4' };
+                  const borders = { high: '#fecaca', medium: '#fde68a', low: '#86efac' };
+                  let recsHtml = '<div style="margin-bottom:14px;"><div style="font-size:11px;font-weight:700;color:#7c3aed;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">&#10024; Citation Brief — what to add to get cited</div>';
+                  emailRecs.forEach(function(r) {
+                    const pri = (r.priority || r.p || 'low').toLowerCase();
+                    const c = colors[pri] || colors.low;
+                    const bg = bgs[pri] || bgs.low;
+                    const bd = borders[pri] || borders.low;
+                    const label = pri === 'high' ? 'HIGH' : pri === 'medium' || pri === 'med' ? 'MED' : 'LOW';
+                    const title = r.title || r.t || '';
+                    const action = r.action || '';
+                    const impact = r.expected_impact || r.impact || '';
+                    recsHtml += '<div style="background:' + bg + ';border:1px solid ' + bd + ';border-left:4px solid ' + c + ';border-radius:6px;padding:10px 14px;margin-bottom:8px;">';
+                    recsHtml += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;"><span style="font-size:9px;font-weight:700;color:' + c + ';background:white;border:1px solid ' + c + ';border-radius:3px;padding:1px 5px;">' + label + '</span>';
+                    if (title) recsHtml += '<span style="font-size:12px;font-weight:700;color:#1e293b;">' + title + '</span>';
+                    recsHtml += '</div>';
+                    if (action) recsHtml += '<div style="font-size:12px;color:#374151;line-height:1.6;margin-bottom:4px;">' + action + '</div>';
+                    if (impact) recsHtml += '<div style="font-size:11px;color:#64748b;font-style:italic;">&#8594; ' + impact + '</div>';
+                    recsHtml += '</div>';
+                  });
+                  recsHtml += '</div>';
+                  return recsHtml;
+                })()
+              + '<div style="background:#f5f3ff;border:1px solid #ddd6fe;border-radius:8px;padding:12px 16px;margin-bottom:10px;"><div style="font-size:10px;color:#7c3aed;font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px;">Your tracker</div><div style="font-size:11px;font-family:monospace;color:#1e293b;word-break:break-all;margin-bottom:8px;">' + clientTrackUrl + '</div><a href="' + clientTrackUrl + '" style="display:inline-block;background:#7c3aed;color:white;text-decoration:none;padding:8px 18px;border-radius:6px;font-size:12px;font-weight:700;">Open tracker &rarr;</a></div>'
+              + '<div style="font-size:11px;color:#94a3b8;text-align:center;padding-top:8px;">Press <strong>Done</strong> in your tracker after implementing — the brief will reset and restart fresh.</div>';
 
             await sendTrackerEmail(page.tracker_client_id, subject, bodyHtml);
 
