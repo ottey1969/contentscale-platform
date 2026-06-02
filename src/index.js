@@ -23732,26 +23732,15 @@ function renderPages() {
     if (p.fetch_reliable === false) badges += '<span class="cs-cs-badge" style="background:#2d1f00;color:#fbbf24;">! fetch issue</span> ';
 
     // Recommendations
-    var recsHtml = '';
-    if (p.recommendations && p.recommendations.length) {
-      var recs = p.recommendations;
-      if (typeof recs === 'string') { try { recs = JSON.parse(recs); } catch(e) { recs = []; } }
-      if (Array.isArray(recs) && recs.length) {
-        var colors = { high:'#f87171', medium:'#fbbf24', low:'#4ade80' };
-        recsHtml = '<div style="margin-top:10px;padding:10px 12px;background:#0d1117;border-radius:6px;border:1px solid #1f2937;">'
-          + '<div style="font-size:10px;color:#4b5563;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">Recommendations</div>'
-          + recs.slice(0,3).map(function(r) {
-              var c = colors[r.priority] || '#6b7280';
-              return '<div style="display:flex;gap:8px;padding:5px 0;border-bottom:1px solid #1f2937;font-size:11px;">'
-                + '<span style="color:' + c + ';font-weight:700;white-space:nowrap;min-width:38px;">' + (r.priority||'').toUpperCase() + '</span>'
-                + '<span style="color:#9ca3af;">' + (r.title||'') + '</span></div>';
-            }).join('')
-          + (recs.length > 3 ? '<div style="font-size:10px;color:#4b5563;margin-top:4px;">+' + (recs.length-3) + ' more</div>' : '')
-          + '</div>';
-      }
-    }
+    var recsHtml = renderRecs(p);
+
+    // Pending first check banner
+    var pendingBanner = (!p.last_checked && !isDone)
+      ? '<div style="display:flex;align-items:center;gap:8px;padding:6px 14px;background:rgba(96,165,250,.06);border-bottom:1px solid rgba(96,165,250,.15);font-size:11px;color:#60a5fa;"><span style="animation:blink 2s infinite;display:inline-block">&#9679;</span> First check starting automatically in ~1 minute...</div>'
+      : '';
 
     return '<div class="cs-page-card' + (isDone ? ' done' : '') + '" data-page-id="' + p.id + '">'
+      + pendingBanner
       + (isDone ? '<div style="display:flex;align-items:center;gap:6px;padding:5px 14px;background:rgba(74,222,128,.06);border-bottom:1px solid #166534;font-size:10px;color:#4ade80;letter-spacing:.06em;"><span>v</span> DONE &mdash; marked as implemented. Tracking continues.</div>' : '')
       + '<div style="padding:14px 16px;' + (isDone ? 'opacity:.6;' : '') + '">\'
       + '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;">'
@@ -23884,12 +23873,14 @@ async function addPage() {
   try {
     var data = await api('/pages', 'POST', { url: url, keyword: keyword||undefined });
     if (!data.success) return toast(data.error || 'Failed to add page', '#f87171');
-    toast('Page added! Running first check...');
     hideModal('addModal');
     document.getElementById('addUrl').value = '';
     document.getElementById('addKeyword').value = '';
     loadPages();
-    if (data.page_id) api('/check/' + data.page_id, 'POST').catch(function(){});
+    // Show friendly message - first check is automatic after 1 minute
+    setTimeout(function() {
+      toast('Page added — first check starts automatically in ~1 minute', '#4ade80');
+    }, 300);
   } catch(e) { toast('Error: ' + e.message, '#f87171'); }
 }
 
