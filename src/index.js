@@ -1192,11 +1192,11 @@ app.post('/api/tracker-client/:token/pages', async (req, res) => {
 
     // First check auto-starts after 1 minute
     setTimeout(function() {
-      pool.query('SELECT id FROM tracker_pages WHERE id=$1 AND is_active=TRUE', [newPageId])
+      pool.query('SELECT * FROM tracker_pages WHERE id=$1 AND is_active=TRUE', [newPageId])
         .then(function(r) {
           if (r.rows.length) {
             console.log('[tracker] Auto first-check for new page:', newPageId);
-            runTrackerCheck(newPageId).catch(function(e){ console.warn('[tracker] First check failed:', e.message); });
+            runTrackerCheck(r.rows[0]).catch(function(e){ console.warn('[tracker] First check failed:', e.message); });
           }
         }).catch(function(){});
     }, 60 * 1000);
@@ -1221,9 +1221,10 @@ app.post('/api/tracker-client/:token/check/:pageId', async (req, res) => {
   try {
     const cr = await pool.query('SELECT id FROM tracker_clients WHERE token=$1 AND status=$2', [req.params.token, 'active']);
     if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
-    const own = await pool.query('SELECT id FROM tracker_pages WHERE id=$1 AND tracker_client_id=$2', [req.params.pageId, cr.rows[0].id]);
+    const own = await pool.query('SELECT * FROM tracker_pages WHERE id=$1 AND tracker_client_id=$2', [req.params.pageId, cr.rows[0].id]);
     if (!own.rows.length) return res.status(403).json({ success: false, error: 'Not your page' });
-    runTrackerCheck(parseInt(req.params.pageId)).catch(e => console.warn('[client-check]', e.message));
+    const page = own.rows[0];
+    runTrackerCheck(page).catch(e => console.warn('[client-check]', e.message));
     res.json({ success: true, message: 'Check started' });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
@@ -23344,22 +23345,22 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
 .cb-inline-hdr { background:linear-gradient(135deg,#1a0e2e,#0f172a); padding:10px 14px; display:flex; align-items:center; gap:8px; border-bottom:1px solid #2d1f4e; }
 .cb-inline-title { font-size:13px; font-weight:600; color:#e9d5ff; display:flex; align-items:center; gap:6px; }
 .cb-inline-icon { font-size:14px; }
-.cb-inline-meta { font-size:11px; color:#4b5563; flex:1; }
-.cb-copy-btn { background:none; border:1px solid #374151; border-radius:4px; color:#6b7280; cursor:pointer; font-size:10px; padding:3px 8px; font-family:inherit; }
+.cb-inline-meta { font-size:11px; color:#a78bfa; flex:1; }
+.cb-copy-btn { background:none; border:1px solid #4b5563; border-radius:4px; color:#9ca3af; cursor:pointer; font-size:10px; padding:3px 8px; font-family:inherit; }
 .cb-copy-btn:hover { border-color:#6b7280; color:#e5e7eb; }
 .cb-inline-stats { display:grid; grid-template-columns:repeat(6,1fr); gap:1px; background:#1f2937; border-bottom:1px solid #1f2937; }
 .cb-istat { background:#0d1117; padding:8px 4px; text-align:center; }
 .cb-isv { font-size:14px; font-weight:600; }
-.cb-isl { font-size:9px; color:#4b5563; margin-top:2px; letter-spacing:.03em; }
-.cb-inline-phd { font-size:10px; font-weight:700; color:#6b7280; letter-spacing:.06em; padding:10px 14px 6px; text-transform:uppercase; }
+.cb-isl { font-size:9px; color:#6b7280; margin-top:2px; letter-spacing:.03em; }
+.cb-inline-phd { font-size:10px; font-weight:700; color:#a78bfa; letter-spacing:.06em; padding:10px 14px 6px; text-transform:uppercase; }
 .cb-inline-rec { padding:10px 14px; border-bottom:1px solid #111827; }
 .cb-inline-rec:last-child { border-bottom:none; }
 .cb-inline-rec-hd { display:flex; align-items:center; gap:7px; margin-bottom:6px; }
 .cb-rec-bullet { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
 .cb-rec-label { font-size:10px; font-weight:700; flex-shrink:0; letter-spacing:.04em; }
-.cb-rec-title { font-size:12px; font-weight:600; color:#f1f5f9; }
-.cb-rec-action { font-size:12px; color:#9ca3af; line-height:1.65; padding-left:14px; }
-.cb-rec-impact { font-size:10px; color:#4b5563; font-style:italic; padding-left:14px; margin-top:4px; }
+.cb-rec-title { font-size:12px; font-weight:700; color:#e9d5ff; }
+.cb-rec-action { font-size:12px; color:#d1d5db; line-height:1.65; padding-left:14px; }
+.cb-rec-impact { font-size:10px; color:#7c3aed; font-style:italic; padding-left:14px; margin-top:4px; }
 .cs-toast { position:fixed; bottom:24px; right:24px; background:#111827; border-radius:8px; padding:12px 20px; font-size:13px; color:#f1f5f9; z-index:9999; display:none; }
 
 /* Upsell */
@@ -23391,9 +23392,9 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
 .cb-stat-row { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px; }
 .cb-stat { background:#0a0a12; border:1px solid #1f2937; border-radius:8px; padding:8px 12px; text-align:center; flex:1; min-width:80px; }
 .cb-stat .v { font-size:16px; font-weight:900; }
-.cb-stat .l { font-size:9px; color:#4b5563; text-transform:uppercase; letter-spacing:.06em; margin-top:2px; }
+.cb-stat .l { font-size:9px; color:#6b7280; text-transform:uppercase; letter-spacing:.06em; margin-top:2px; }
 .cb-footer { padding:12px 20px; border-top:1px solid #1f2937; display:flex; align-items:center; justify-content:space-between; background:#0a0a12; }
-.cb-countdown { font-size:11px; color:#4b5563; font-family:monospace; }
+.cb-countdown { font-size:11px; color:#6b7280; font-family:monospace; }
 .cb-keep-btn { font-size:11px; font-weight:700; color:#7c3aed; background:none; border:1px solid #7c3aed; border-radius:6px; padding:5px 12px; cursor:pointer; font-family:Verdana,sans-serif; }
 .cb-keep-btn:hover { background:#1e1b4b; }
 .cb-new-dot { display:inline-block; width:8px; height:8px; background:#7c3aed; border-radius:50%; margin-left:4px; animation:cbPulse 1s ease-in-out infinite; }
@@ -23425,7 +23426,7 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
 .wl-wa { display:flex;align-items:center;justify-content:center;gap:8px;background:linear-gradient(135deg,#15803d,#16a34a);color:white;border-radius:10px;padding:10px 18px;font-size:12px;font-weight:700;text-decoration:none;margin-bottom:12px; }
 .wl-start { width:100%;padding:14px;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:white;border:none;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer;font-family:Verdana,sans-serif;transition:opacity .15s; }
 .wl-start:hover { opacity:.9; }
-.wl-footer { font-size:10px;color:#374151;text-align:center;margin-top:10px; }
+.wl-footer { font-size:10px;color:#6b7280;text-align:center;margin-top:10px; }
 
 .cited-blink{animation:citedPulse 2.5s ease-in-out 3;}@keyframes citedPulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.75;transform:scale(1.06)}}
 .cs-cs-badge{display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;letter-spacing:.03em;}
@@ -23774,7 +23775,7 @@ function renderPages() {
       + '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">'
       + (kw ? '<span style="font-size:10px;color:#4b5563;">kw: <span style="color:#a78bfa;">' + kw + '</span></span><button onclick="editKeyword(' + p.id + ',this)" style="font-size:9px;background:none;border:none;color:#374151;cursor:pointer;text-decoration:underline;">edit</button>'
             : '<button onclick="editKeyword(' + p.id + ',this)" style="font-size:9px;background:none;border:none;color:#4b5563;cursor:pointer;">+keyword</button>')
-      + '<span style="font-size:10px;color:#374151;">Checked: ' + lastChecked + (nextCheck ? ' . ' + nextCheck : '') + '</span>'
+      + '<span style="font-size:10px;color:#6b7280;">Checked: ' + lastChecked + (nextCheck ? ' . ' + nextCheck : '') + '</span>'
       + '</div>'
       + '</div>'
       + '<div style="display:flex;gap:5px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">'
