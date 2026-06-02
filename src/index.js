@@ -862,7 +862,7 @@ async function sendTrackerEmail(clientId, subject, htmlBody) {
   </div>
   <div style="background:#f5f3ff;border:1px solid #ddd6fe;padding:20px 32px;text-align:center;">
     <div style="font-size:13px;font-weight:700;color:#1e293b;margin-bottom:6px;">Want Ottmar to implement these changes for you?</div>
-    <div style="font-size:12px;color:#64748b;margin-bottom:12px;">Book a free strategy call — ContentScale offers done-for-you AI citation optimization.</div>
+    <div style="font-size:12px;color:#64748b;margin-bottom:12px;">Book a free strategy call — Done-for-you AI citation optimization &mdash; GRAAF score 90+ guaranteed.</div>
     <a href="https://calendly.com/aioeditors" style="display:inline-block;background:#0f172a;color:#ffffff;text-decoration:none;padding:10px 20px;border-radius:6px;font-size:12px;font-weight:700;">Book Free Strategy Call</a>
   </div>
   <div style="background:#f8fafc;border:1px solid #e2e8f0;border-top:none;border-radius:0 0 12px 12px;padding:20px 32px;text-align:center;">
@@ -23503,7 +23503,7 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
   <!-- Upsell -->
   <div class="cs-upsell">
     <div style="font-size:13px;font-weight:700;color:#e5e7eb;margin-bottom:6px;">Want Ottmar to &ldquo;babysit&rdquo; your domain?</div>
-    <div style="font-size:12px;color:#9ca3af;margin-bottom:14px;">Done-for-you AI citation optimization &mdash; Ottmar implements the briefs for you.</div>
+    <div style="font-size:12px;color:#9ca3af;margin-bottom:14px;">Done-for-you AI citation optimization &mdash; Ottmar implements every Citation Brief for you. Plus the GRAAF SEO content score 90+ guaranteed.</div>
     <a href="https://wa.me/34644204756?text=Hi+Ottmar,+I+want+you+to+babysit+my+domain+__DOMAIN__+for+AI+citations" target="_blank" class="cs-wa-btn">
       <i class="fab fa-whatsapp"></i> Let Ottmar babysit your domain
     </a>
@@ -23614,7 +23614,6 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
 </div>
 
 <script>
-var TOK
 var TOKEN = '__TOKEN__';
 var DOMAIN = '__DOMAIN__';
 var MAX_PAGES = __MAX_PAGES__;
@@ -23740,8 +23739,16 @@ function renderPages() {
     var score = p.graaf_score;
     var kw = p.keyword || p.gsc_keyword || '';
     var posColor = !pos ? '#6b7280' : pos<=3 ? '#4ade80' : pos<=10 ? '#a3e635' : pos<=20 ? '#fbbf24' : '#f87171';
-    var lastChecked = p.last_checked ? new Date(p.last_checked).toLocaleDateString() : 'Not yet';
-    var nextCheck = p.next_check_at ? 'Next: ' + new Date(p.next_check_at).toLocaleDateString() : '';
+    var lastChecked = p.last_checked ? new Date(p.last_checked).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}) : null;
+    // Calculate next check based on frequency if not set yet
+    var nextCheckDate = p.next_check_at ? new Date(p.next_check_at) : null;
+    if (!nextCheckDate && p.last_checked) {
+      var d = new Date(p.last_checked);
+      var freqDays = p.check_frequency === '1day' ? 1 : p.check_frequency === '3days' ? 3 : p.check_frequency === 'monthly' ? 30 : 7;
+      d.setDate(d.getDate() + freqDays);
+      nextCheckDate = d;
+    }
+    var nextCheck = nextCheckDate ? 'Next: ' + nextCheckDate.toLocaleDateString('en-GB',{day:'2-digit',month:'short'}) : '';
     var freqLabel = p.check_frequency === '1day' ? 'daily' : p.check_frequency === '3days' ? 'every 3 days' : p.check_frequency === 'weekly' ? 'weekly' : p.check_frequency === 'monthly' ? 'monthly' : 'weekly';
     // Clean URL - remove protocol, www, and fix anchor slugs (#section)
     var rawUrl = p.url || '';
@@ -23782,7 +23789,7 @@ function renderPages() {
       + '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">'
       + (kw ? '<span style="font-size:10px;color:#4b5563;">kw: <span style="color:#a78bfa;">' + kw + '</span></span><button onclick="editKeyword(' + p.id + ',this)" style="font-size:9px;background:none;border:none;color:#374151;cursor:pointer;text-decoration:underline;">edit</button>'
             : '<button onclick="editKeyword(' + p.id + ',this)" style="font-size:9px;background:none;border:none;color:#4b5563;cursor:pointer;">+keyword</button>')
-      + '<span style="font-size:10px;color:#6b7280;">Checked: ' + lastChecked + (nextCheck ? ' . ' + nextCheck : '') + '</span>'
+      + (lastChecked ? '<span style="font-size:10px;color:#6b7280;">Checked: ' + lastChecked + (nextCheck ? ' &middot; ' + nextCheck : '') + '</span>' : '<span style="font-size:10px;color:#4b5563;">' + freqLabel + ' auto-check</span>')
       + '</div>'
       + '</div>'
       + '<div style="display:flex;gap:5px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">'
@@ -24118,7 +24125,7 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
       var line = document.createElement('div');
       line.style.cssText = 'padding:3px 0;border-bottom:1px solid #0a0f1a;line-height:1.5;';
       var ts = new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
-      var tsSpan = '<span style="color:#1f2937;margin-right:8px;font-size:10px;">' + ts + '</span>';
+      var tsSpan = '<span style="color:#6b7280;margin-right:8px;font-size:10px;">' + ts + '</span>';
       if (url) {
         line.innerHTML = tsSpan + '<a href="' + url + '" target="_blank" rel="noopener" style="color:' + (color||'#6b7280') + ';text-decoration:none;">' + text + '</a>';
       } else {
@@ -24755,6 +24762,7 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
     var el = document.getElementById('welcomeOverlay');
     if (el) el.style.display = 'flex';
   }
+
 
 
 <\/script>
@@ -25908,7 +25916,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     var textHtml = ev.url && ev.type === 'news'
                         ? '<a href="' + ev.url + '" target="_blank" rel="noopener" style="color:' + color + ';text-decoration:none;line-height:1.4;">' + text + '</a>'
                         : '<span style="color:' + color + ';line-height:1.4;">' + text + '</span>';
-                    line.innerHTML = '<span style="color:#374151;white-space:nowrap;flex-shrink:0;font-size:10px;">' + ts + '</span>' + textHtml;
+                    line.innerHTML = '<span style="color:#6b7280;white-space:nowrap;flex-shrink:0;font-size:10px;">' + ts + '</span>' + textHtml;
 
                     // Remove placeholder if present
                     if (el.firstChild && el.firstChild.querySelector && !el.firstChild.querySelector('span[style*="374151"]')) {
