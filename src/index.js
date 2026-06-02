@@ -23427,6 +23427,7 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
 .wl-start:hover { opacity:.9; }
 .wl-footer { font-size:10px;color:#374151;text-align:center;margin-top:10px; }
 
+.cited-blink{animation:citedPulse 2.5s ease-in-out 3;}@keyframes citedPulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.75;transform:scale(1.06)}}
 .cs-cs-badge{display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;letter-spacing:.03em;}
 .cs-cs-badge.green{background:#052e16;color:#4ade80;border:1px solid #166534;}
 .cs-cs-badge.grey{background:#1f2937;color:#6b7280;border:1px solid #374151;}
