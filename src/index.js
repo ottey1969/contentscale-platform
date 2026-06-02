@@ -962,7 +962,7 @@ app.get('/api/tracker-client/:token', async (req, res) => {
     const pagesR = await pool.query(
       `SELECT p.id, p.url, p.keyword, p.gsc_keyword, p.created_at, p.next_check_at, p.last_checked_at,
               p.is_done, p.fetch_reliable, p.check_frequency, p.gsc_clicks, p.gsc_impressions, p.gsc_position,
-              p.ranking_brief,
+              p.ranking_brief, p.needs_html,
               s.google_position, s.ai_google_overview_cited, s.ai_perplexity_cited,
               s.ai_bing_cited, s.ai_brave_cited,
               s.score as graaf_score, s.checked_at as last_checked,
@@ -1060,6 +1060,27 @@ app.patch('/api/tracker-client/:token/pages/:pageId/html', async (req, res) => {
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
+// GET /api/tracker-client/:token/pages/:pageId — get single page with latest snapshot
+app.get('/api/tracker-client/:token/pages/:pageId', async (req, res) => {
+  try {
+    const cr = await pool.query('SELECT id FROM tracker_clients WHERE token=$1 AND status=$2', [req.params.token, 'active']);
+    if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
+    const r = await pool.query(`
+      SELECT p.*, p.check_frequency,
+             s.google_position, s.ai_google_overview_cited, s.ai_perplexity_cited,
+             s.ai_bing_cited, s.ai_brave_cited, s.score as graaf_score,
+             s.checked_at as last_checked, s.recommendations
+      FROM tracker_pages p
+      LEFT JOIN LATERAL (
+        SELECT * FROM tracker_snapshots WHERE page_id = p.id ORDER BY checked_at DESC LIMIT 1
+      ) s ON true
+      WHERE p.id=$1 AND p.tracker_client_id=$2`,
+      [req.params.pageId, cr.rows[0].id]);
+    if (!r.rows.length) return res.status(404).json({ success: false, error: 'Page not found' });
+    res.json({ success: true, page: r.rows[0] });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
 // PATCH /api/tracker-client/:token/pages/:pageId/frequency
 app.patch('/api/tracker-client/:token/pages/:pageId/frequency', async (req, res) => {
   try {
@@ -1082,16 +1103,48 @@ app.patch('/api/tracker-client/:token/pages/:pageId/done', async (req, res) => {
     if (!own.rows.length) return res.status(403).json({ success: false, error: 'Not your page' });
     const { is_done } = req.body;
     if (is_done) {
-      // Done pressed — reset brief so next check starts fresh
+      // Done pressed — reset brief + flag that new HTML is needed
       await pool.query(
-        `UPDATE tracker_pages SET is_done=TRUE, brief_content=NULL, brief_started_at=NULL, brief_done_at=NOW(), brief_check_count=0 WHERE id=$1`,
+        `UPDATE tracker_pages SET is_done=TRUE, brief_content=NULL, brief_started_at=NULL, brief_done_at=NOW(), brief_check_count=0, needs_html=TRUE WHERE id=$1`,
         [req.params.pageId]
       );
+      res.json({ success: true });
+
+      // Send reminder email + WhatsApp after done
+      setImmediate(async () => {
+        try {
+          const clientR = await pool.query('SELECT * FROM tracker_clients WHERE id=$1', [cr.rows[0].id]);
+          const pageR = await pool.query('SELECT url FROM tracker_pages WHERE id=$1', [req.params.pageId]);
+          const client = clientR.rows[0];
+          const pageUrl = pageR.rows[0]?.url || '';
+          const trackerUrl = (process.env.APP_URL || 'https://app.contentscale.site') + '/track/' + client.token;
+
+          // Email reminder
+          if (client.email) {
+            const subject = 'Action needed: paste your updated HTML — ' + (client.domain || pageUrl);
+            const htmlBody = '<h2 style="font-size:17px;font-weight:800;color:#0f172a;margin-bottom:10px;">Great — Done pressed! One more step.</h2>'
+              + '<p style="font-size:14px;color:#374151;line-height:1.7;margin-bottom:14px;">You marked your implementation as done. Now the system needs the <strong>updated HTML of your page</strong> to measure the improvements you just made and start the next Citation Brief cycle.</p>'
+              + '<div style="background:#fefce8;border:1px solid #fde047;border-radius:8px;padding:14px 16px;margin-bottom:16px;">'
+              + '<div style="font-size:12px;font-weight:700;color:#854d0e;margin-bottom:6px;">&#9888; Required: paste new HTML</div>'
+              + '<div style="font-size:13px;color:#854d0e;line-height:1.6;">1. Open <strong>' + pageUrl + '</strong> in Chrome<br>2. Right-click &rarr; View Page Source<br>3. Ctrl+A &rarr; Ctrl+C<br>4. Go to your tracker &rarr; click <strong>Paste new HTML</strong></div>'
+              + '</div>'
+              + '<a href="' + trackerUrl + '" style="display:inline-block;background:#7c3aed;color:white;text-decoration:none;padding:10px 22px;border-radius:6px;font-size:13px;font-weight:700;">Open tracker &rarr;</a>'
+              + '<p style="font-size:11px;color:#94a3b8;margin-top:14px;">Without the new HTML, the system cannot measure your improvements or generate the next Citation Brief.</p>';
+            await sendTrackerEmail(cr.rows[0].id, subject, htmlBody);
+          }
+
+          // WhatsApp reminder if client has callmebot key
+          if (client.whatsapp && client.callmebot_key) {
+            const msg = encodeURIComponent('✅ Done pressed for ' + pageUrl + ' — now paste the updated HTML in your tracker so the system can measure your improvements and start the next Citation Brief. ' + trackerUrl);
+            await fetch('https://api.callmebot.com/whatsapp.php?phone=' + client.whatsapp + '&text=' + msg + '&apikey=' + client.callmebot_key).catch(() => {});
+          }
+        } catch(e) { console.warn('[done-reminder]', e.message); }
+      });
     } else {
-      // Undone — just clear is_done flag, keep brief
-      await pool.query('UPDATE tracker_pages SET is_done=FALSE WHERE id=$1', [req.params.pageId]);
+      // Undone — just clear is_done flag
+      await pool.query('UPDATE tracker_pages SET is_done=FALSE, needs_html=FALSE WHERE id=$1', [req.params.pageId]);
+      res.json({ success: true });
     }
-    res.json({ success: true });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
@@ -1410,7 +1463,8 @@ const title = (html.match(/<title>([^<]+)<\/title>/) || [])[1]?.replace(/ — Co
 app.get('/api/admin/tracker-clients', verifyAdmin, async (req, res) => {
   try {
     const r = await pool.query(`
-      SELECT c.*, COUNT(p.id) as page_count
+      SELECT c.*, COUNT(p.id) as page_count,
+        (SELECT p2.check_frequency FROM tracker_pages p2 WHERE p2.tracker_client_id = c.id AND p2.is_active = TRUE AND p2.check_frequency IS NOT NULL ORDER BY p2.created_at DESC LIMIT 1) as scan_frequency
       FROM tracker_clients c
       LEFT JOIN tracker_pages p ON p.tracker_client_id = c.id AND p.is_active = TRUE
       GROUP BY c.id ORDER BY c.created_at DESC`);
@@ -1434,7 +1488,11 @@ app.patch('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
     const updates = []; const vals = []; let i = 1;
     if (max_pages !== undefined) { updates.push(`max_pages=$${i++}`); vals.push(max_pages); }
     if (req.body.extra_domains !== undefined) { updates.push(`extra_domains=$${i++}`); vals.push(req.body.extra_domains || ''); }
-    if (status !== undefined) { updates.push(`status=$${i++}`); vals.push(status); }
+    if (status !== undefined) {
+      updates.push(`status=$${i++}`);
+      vals.push(status);
+      if (status === 'active') { updates.push(`paused_at=NULL`); }
+    }
     if (reset_ip) { updates.push(`registered_ip=NULL`); }
     if (!updates.length) return res.status(400).json({ success: false, error: 'Nothing to update' });
     vals.push(req.params.id);
@@ -1664,6 +1722,8 @@ app.patch('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
   await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS brief_done_at TIMESTAMPTZ`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS brief_check_count INTEGER DEFAULT 0`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS ranking_brief JSONB`).catch(()=>{});
+  await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS needs_html BOOLEAN DEFAULT FALSE`).catch(()=>{});
+  await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS paused_at TIMESTAMPTZ`).catch(()=>{});
   await client.query(`CREATE INDEX IF NOT EXISTS tracker_clients_ip_idx ON tracker_clients(registered_ip) WHERE registered_ip IS NOT NULL`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS extra_domains TEXT DEFAULT ''`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS unsubscribe_token VARCHAR(64)`).catch(()=>{});
@@ -23445,7 +23505,8 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
 .wl-start:hover { opacity:.9; }
 .wl-footer { font-size:10px;color:#6b7280;text-align:center;margin-top:10px; }
 
-.cited-blink{animation:citedPulse 2.5s ease-in-out 3;}@keyframes citedPulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.75;transform:scale(1.06)}}
+.cited-blink{animation:citedPulse 2.5s ease-in-out 3;}
+@keyframes htmlNeeded{0%,100%{border-color:#f59e0b;color:#fbbf24;box-shadow:none}50%{border-color:#f59e0b;color:#fff;box-shadow:0 0 8px rgba(245,158,11,.6)}}@keyframes citedPulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.75;transform:scale(1.06)}}
 .brief-blink{animation:briefBlink 1.2s ease-in-out 4;}@keyframes briefBlink{0%,100%{opacity:1;transform:scale(1)}40%{opacity:.4;transform:scale(1.12)}70%{opacity:1;transform:scale(1.06)}}
 .cs-cs-badge{display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;letter-spacing:.03em;}
 .cs-cs-badge.green{background:#052e16;color:#4ade80;border:1px solid #166534;}
@@ -23789,8 +23850,14 @@ function renderPages() {
       ? '<div style="display:flex;align-items:center;gap:8px;padding:6px 14px;background:rgba(96,165,250,.06);border-bottom:1px solid rgba(96,165,250,.15);font-size:11px;color:#60a5fa;"><span style="animation:blink 2s infinite;display:inline-block">&#9679;</span> First check starting automatically in ~1 minute...</div>'
       : '';
 
+    // Needs HTML banner — shown after Done is pressed
+    var needsHtmlBanner = (p.needs_html && !p.last_checked === false)
+      ? '<div style="display:flex;align-items:center;gap:8px;padding:8px 14px;background:rgba(245,158,11,.08);border-bottom:1px solid rgba(245,158,11,.25);font-size:11px;color:#fbbf24;"><span style="font-size:14px;">&#9888;</span> The system needs your updated page HTML to measure the improvements you just made. Click <strong style="margin:0 3px;">&#9888; Paste new HTML</strong> to continue.</div>'
+      : '';
+
     return '<div class="cs-page-card' + (isDone ? ' done' : '') + '" data-page-id="' + p.id + '">'
       + pendingBanner
+      + needsHtmlBanner
       + (isDone ? '<div style="display:flex;align-items:center;gap:6px;padding:5px 14px;background:rgba(74,222,128,.06);border-bottom:1px solid #166534;font-size:10px;color:#4ade80;letter-spacing:.06em;"><span>v</span> DONE &mdash; marked as implemented. Tracking continues.</div>' : '')
       + '<div style="padding:14px 16px;' + (isDone ? 'opacity:.6;' : '') + '">\'
       + '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;">'
@@ -23804,11 +23871,13 @@ function renderPages() {
       + '</div>'
       + '</div>'
       + '<div style="display:flex;gap:5px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">'
-      + '<button onclick="checkPage(' + p.id + ')" data-check-btn="' + p.id + '" class="btn" style="font-size:11px;padding:5px 12px;border-color:#16a34a;color:#4ade80;font-weight:600;" title="Run check: Google position + AI citations + recommendations"><i class="fas fa-sync-alt" style="margin-right:5px;"></i>Check now</button>'
-      + '<select onchange="changeFreq(' + p.id + ',this.value)" class="cs-input" style="font-size:10px;padding:4px 6px;margin-left:2px;border-color:#1f2937;color:#4b5563;background:#111827;border-radius:5px;cursor:pointer;"><option value="3days"' + (p.check_frequency==="3days"?' selected':'') + '>3 days</option><option value="weekly"' + ((!p.check_frequency||p.check_frequency==="weekly")?" selected":'') + '>Weekly</option><option value="monthly"' + (p.check_frequency==="monthly"?' selected':'') + '>Monthly</option></select>'
-      + '<button onclick="openHtmlUpload(' + p.id + ')" class="btn" style="font-size:11px;padding:5px 10px;border-color:#fbbf24;color:#fbbf24;" title="Paste HTML for GRAAF scan">HTML</button>'
-      + '<button onclick="markDone(' + p.id + ',this,' + isDone + ')" class="btn" style="font-size:11px;padding:5px 10px;border-color:' + (isDone?'#4ade80':'#374151') + ';color:' + (isDone?'#4ade80':'#6b7280') + ';" title="Mark done">' + (isDone?'&#10003; Done':'Mark done') + '</button>'
-      + '<button onclick="deletePage(' + p.id + ')" class="btn danger" style="font-size:11px;padding:5px 10px;" title="Remove">&#10005;</button>'
+      + (!lastChecked
+        ? '<select onchange="changeFreq(' + p.id + ',this.value)" class="cs-input" style="font-size:10px;padding:4px 6px;border-color:#1f2937;color:#6b7280;background:#111827;border-radius:5px;cursor:pointer;" title="How often to auto-check"><option value="3days"' + (p.check_frequency==="3days"?' selected':'') + '>Every 3 days</option><option value="weekly"' + ((!p.check_frequency||p.check_frequency==="weekly")?" selected":'') + '>Weekly</option><option value="monthly"' + (p.check_frequency==="monthly"?' selected':'') + '>Monthly</option></select>'
+          + '<button onclick="checkPage(' + p.id + ')" data-check-btn="' + p.id + '" class="btn" style="font-size:11px;padding:5px 12px;border-color:#16a34a;color:#4ade80;font-weight:600;" title="Start first check"><i class="fas fa-sync-alt" style="margin-right:5px;"></i>Check now</button>'
+        : ''
+      )
+      + '<button onclick="openHtmlUpload(' + p.id + ')" class="btn' + (p.needs_html ? ' html-needed' : '') + '" style="font-size:11px;padding:5px 10px;border-color:' + (p.needs_html ? '#f59e0b' : '#374151') + ';color:' + (p.needs_html ? '#fbbf24' : '#6b7280') + ';' + (p.needs_html ? 'animation:htmlNeeded 1s ease-in-out infinite;' : '') + '" title="Paste updated HTML for GRAAF scan">' + (p.needs_html ? '&#9888; Paste new HTML' : 'HTML') + '</button>'
+      + '<button onclick="markDone(' + p.id + ',this,' + isDone + ')" class="btn" style="font-size:11px;padding:5px 10px;border-color:' + (isDone?'#4ade80':'#374151') + ';color:' + (isDone?'#4ade80':'#6b7280') + ';" title="Mark done when implemented">' + (isDone?'&#10003; Done':'Mark done') + '</button>'
       + '</div>'
       + '</div>'
       + recsHtml
@@ -24004,12 +24073,15 @@ async function markDone(pageId, btn, currentDone) {
   try {
     var data = await api('/pages/' + pageId + '/done', 'PATCH', { is_done: newDone });
     if (data.success) {
-      toast(newDone ? 'Marked as done' : 'Unmarked', '#4ade80');
-      if (btn) {
-        btn.textContent = newDone ? 'Done' : 'Mark done';
-        btn.style.borderColor = newDone ? '#4ade80' : '#374151';
-        btn.style.color = newDone ? '#4ade80' : '#6b7280';
-        btn.onclick = function() { markDone(pageId, btn, newDone); };
+      if (newDone) {
+        // Mark page as needing new HTML
+        var p = (_pages||[]).find(function(x){ return x.id == pageId; });
+        if (p) p.needs_html = true;
+        toast('Done marked! The system now needs your updated page HTML to measure improvements.', '#4ade80');
+        setTimeout(loadPages, 400);
+      } else {
+        toast('Unmarked', '#9ca3af');
+        setTimeout(loadPages, 400);
       }
     } else { toast(data.error || 'Failed', '#f87171'); }
   } catch(e) { toast('Error: ' + e.message, '#f87171'); }
@@ -24019,6 +24091,13 @@ async function markDone(pageId, btn, currentDone) {
   var _checkAnimations = {};
 
   async function checkPage(pageId) {
+    // Default frequency to 3days on first check if not set
+    var p = (_pages||[]).find(function(x){ return x.id == pageId; });
+    if (p && !p.last_checked && !p.check_frequency) {
+      var sel = document.querySelector('select[onchange*="changeFreq(' + pageId + '"]');
+      var freq = sel ? sel.value : '3days';
+      if (freq) api('/pages/' + pageId + '/frequency', 'PATCH', { frequency: freq }).catch(function(){});
+    }
     // Find the card for this page
     var card = document.querySelector('.cs-page-card[data-page-id="' + pageId + '"]');
     var btn = document.querySelector('[data-check-btn="' + pageId + '"]');
@@ -28390,6 +28469,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 + '<th style="padding:8px 10px;text-align:left;font-size:10px;color:#6b7280;text-transform:uppercase;">Contact</th>'
                 + '<th style="padding:8px 10px;text-align:left;font-size:10px;color:#6b7280;text-transform:uppercase;">Domain + Share URL</th>'
                 + '<th style="padding:8px 10px;text-align:center;font-size:10px;color:#6b7280;text-transform:uppercase;">Pages</th>'
+                + '<th style="padding:8px 10px;text-align:center;font-size:10px;color:#6b7280;text-transform:uppercase;">Scan freq</th>'
                 + '<th style="padding:8px 10px;text-align:center;font-size:10px;color:#6b7280;text-transform:uppercase;">Max</th>'
                 + '<th style="padding:8px 10px;text-align:center;font-size:10px;color:#6b7280;text-transform:uppercase;">Status</th>'
                 + '<th style="padding:8px 10px;text-align:left;font-size:10px;color:#6b7280;text-transform:uppercase;">Registered</th>'
@@ -28541,6 +28621,17 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 urlCell.appendChild(urlLink);
                 urlCell.appendChild(copyInlineBtn);
 
+                var isPaused = c.status === 'paused';
+                var isDisabled = c.status === 'disabled';
+                var isActive = !isPaused && !isDisabled;
+                var statusColor = isActive ? '#4ade80' : isPaused ? '#f59e0b' : '#f87171';
+                var statusLabel = isActive ? 'ACTIVE' : isPaused ? 'PAUSED' : 'DISABLED';
+
+                // Scan frequency from pages
+                var freqMap = { '3days': '3 days', 'weekly': 'Weekly', '1week': 'Weekly', 'monthly': 'Monthly', '1day': 'Daily' };
+                var freqDisplay = c.scan_frequency ? (freqMap[c.scan_frequency] || c.scan_frequency) : '—';
+                var freqColor = c.scan_frequency === '3days' ? '#4ade80' : c.scan_frequency === 'weekly' || c.scan_frequency === '1week' ? '#60a5fa' : c.scan_frequency === 'monthly' ? '#a78bfa' : '#6b7280';
+
                 tr.innerHTML =
                     '<td style="padding:8px 10px;"><div style="color:#9ca3af;">' + (c.name||'-') + '</div>'
                     + (c.email ? '<div style="color:#38bdf8;font-size:11px;">' + c.email + '</div>' : '')
@@ -28548,10 +28639,23 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     + '</td>'
                     + '<td class="tc-url-cell" style="padding:8px 10px;max-width:240px;"></td>'
                     + '<td style="padding:8px 10px;text-align:center;color:#a78bfa;">' + (c.page_count||0) + '</td>'
+                    + '<td style="padding:8px 10px;text-align:center;"><span style="font-size:11px;font-weight:700;color:' + freqColor + ';">' + freqDisplay + '</span></td>'
                     + '<td class="tc-max-cell" style="padding:8px 10px;text-align:center;"></td>'
-                    + '<td style="padding:8px 10px;text-align:center;"><span style="font-size:10px;font-weight:700;color:' + statusColor + ';">' + (c.status||'active').toUpperCase() + '</span></td>'
+                    + '<td style="padding:8px 10px;text-align:center;"><span style="font-size:10px;font-weight:700;color:' + statusColor + ';">' + statusLabel + '</span>'
+                    + (isPaused ? '<div style="font-size:9px;color:#6b7280;margin-top:2px;">auto-paused</div>' : '') + '</td>'
                     + '<td style="padding:8px 10px;color:#6b7280;">' + date + (c.registered_ip ? '<div style="font-size:10px;color:#374151;">' + c.registered_ip + '</div>' : '') + '</td>'
                     + '<td style="padding:8px 10px;text-align:center;" class="tc-actions-cell"></td>';
+
+                // Activate button (for paused or disabled)
+                if (!isActive) {
+                    var activateBtn = document.createElement('button');
+                    activateBtn.className = 'tr-btn green';
+                    activateBtn.textContent = isPaused ? 'Activate' : 'Enable';
+                    activateBtn.title = isPaused ? 'Reactivate paused account' : 'Re-enable disabled account';
+                    activateBtn.style.cssText = 'font-size:10px;padding:3px 8px;border-color:#4ade80;color:#4ade80;font-weight:600;';
+                    activateBtn.onclick = (function(id){ return function(){ updateTcClient(id, {status: 'active'}); }; })(c.id);
+                    actionsDiv.insertBefore(activateBtn, actionsDiv.firstChild);
+                }
 
                 var tc_url_td = tr.querySelector('.tc-url-cell');
                 if (tc_url_td) {
@@ -29708,7 +29812,7 @@ app.patch('/api/tracker/pages/:id/html', verifyEngineAccess, async (req, res) =>
     const r = await pool.query(
       `UPDATE tracker_pages
        SET html_content=$1, html_source='manual', html_pasted_at=NOW(),
-           last_page_hash=$2, updated_at=NOW()
+           last_page_hash=$2, updated_at=NOW(), needs_html=FALSE
        WHERE id=$3 RETURNING id, url, html_source, html_pasted_at`,
       [html_content, newHash, pageId]
     );
@@ -31549,7 +31653,235 @@ function computeTextDiff(oldHtml, newHtml) {
   };
 }
 
-// ── Automated scheduler — adaptive, runs every 15min, respects classification ───
+// ── Paused account follow-up scheduler — runs every 24h ──────────────────────
+function startPausedFollowupScheduler() {
+  setTimeout(async function runPausedFollowup() {
+    if (!pool) { setTimeout(runPausedFollowup, 24 * 60 * 60 * 1000); return; }
+    try {
+      console.log('[paused-followup] Checking paused accounts...');
+
+      const clients = await pool.query(`
+        SELECT c.*, p.url as page_url, p.brief_content, p.brief_done_at
+        FROM tracker_clients c
+        LEFT JOIN LATERAL (
+          SELECT url, brief_content, brief_done_at FROM tracker_pages
+          WHERE tracker_client_id = c.id AND is_active = TRUE
+          ORDER BY created_at DESC LIMIT 1
+        ) p ON true
+        WHERE c.status = 'paused'
+        AND c.email IS NOT NULL
+        AND c.paused_at IS NOT NULL
+      `);
+
+      for (const c of clients.rows) {
+        const pausedDays = Math.floor((Date.now() - new Date(c.paused_at || c.updated_at).getTime()) / (1000 * 60 * 60 * 24));
+        const trackerUrl = (process.env.APP_URL || 'https://app.contentscale.site') + '/track/' + c.token;
+        const ottmarWa = 'https://wa.me/31628073996?text=Hi+Ottmar,+I+want+to+reactivate+my+tracker+for+' + encodeURIComponent(c.domain || '');
+
+        // DAY 3 — "here's what you missed"
+        if (pausedDays >= 3 && pausedDays < 4) {
+          const recs = c.brief_content ? (function(){ try { const b = typeof c.brief_content === 'string' ? JSON.parse(c.brief_content) : c.brief_content; return b.items || []; } catch(e){ return []; } })() : [];
+          let recsHtml = '';
+          if (recs.length) {
+            recsHtml = '<div style="background:#f5f3ff;border:1px solid #ddd6fe;border-radius:8px;padding:14px 16px;margin-bottom:16px;">'
+              + '<div style="font-size:11px;font-weight:700;color:#7c3aed;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;">Your last Citation Brief</div>';
+            recs.slice(0,3).forEach(function(r) {
+              const pri = (r.priority||'').toLowerCase();
+              const color = pri==='high'?'#dc2626':pri==='medium'||pri==='med'?'#d97706':'#16a34a';
+              recsHtml += '<div style="border-left:3px solid ' + color + ';padding:6px 10px;margin-bottom:7px;background:#0d1117;border-radius:0 5px 5px 0;">'
+                + '<div style="font-size:11px;font-weight:700;color:' + color + ';margin-bottom:3px;">' + (r.title||'') + '</div>'
+                + '<div style="font-size:12px;color:#9ca3af;line-height:1.55;">' + (r.action||'') + '</div>'
+                + '</div>';
+            });
+            recsHtml += '</div>';
+          }
+
+          await sendTrackerEmail(c.id,
+            'Your tracker is paused — here\'s what you missed for ' + c.domain,
+            '<h2 style="font-size:17px;font-weight:800;color:#0f172a;margin-bottom:10px;">Your tracker has been paused for 3 days</h2>'
+            + '<p style="font-size:14px;color:#374151;line-height:1.7;margin-bottom:14px;">Your domain <strong>' + c.domain + '</strong> is no longer being monitored for AI citations. Here\'s what was in your last Citation Brief before it paused:</p>'
+            + recsHtml
+            + '<p style="font-size:14px;color:#374151;line-height:1.7;margin-bottom:16px;">To reactivate, contact Ottmar directly:</p>'
+            + '<a href="' + ottmarWa + '" style="display:inline-block;background:#16a34a;color:white;text-decoration:none;padding:10px 22px;border-radius:6px;font-size:13px;font-weight:700;">WhatsApp Ottmar to reactivate &rarr;</a>'
+          ).catch(()=>{});
+
+          if (c.whatsapp && c.callmebot_key) {
+            const msg = encodeURIComponent('📋 Your ContentScale tracker for ' + c.domain + ' has been paused for 3 days. Your Citation Brief recommendations are waiting. Contact Ottmar to reactivate: ' + ottmarWa);
+            await fetch('https://api.callmebot.com/whatsapp.php?phone=' + c.whatsapp + '&text=' + msg + '&apikey=' + c.callmebot_key).catch(()=>{});
+          }
+          console.log('[paused-followup] Day 3 email sent to', c.email);
+        }
+
+        // DAY 7 — "Ottmar can do it for you"
+        if (pausedDays >= 7 && pausedDays < 8) {
+          await sendTrackerEmail(c.id,
+            'Let Ottmar implement your Citation Brief for ' + c.domain,
+            '<h2 style="font-size:17px;font-weight:800;color:#0f172a;margin-bottom:10px;">Your tracker has been paused for a week</h2>'
+            + '<p style="font-size:14px;color:#374151;line-height:1.7;margin-bottom:14px;">No worries — implementing SEO recommendations takes time. That\'s exactly why Ottmar offers a done-for-you service.</p>'
+            + '<div style="background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:16px;margin-bottom:16px;">'
+            + '<div style="font-size:14px;font-weight:700;color:#166534;margin-bottom:8px;">&#128161; Let Ottmar babysit your domain</div>'
+            + '<div style="font-size:13px;color:#166534;line-height:1.7;margin-bottom:12px;">Ottmar implements every Citation Brief for you. Plus the GRAAF SEO content score 90+ guaranteed.</div>'
+            + '<a href="' + ottmarWa + '" style="display:inline-block;background:#16a34a;color:white;text-decoration:none;padding:10px 22px;border-radius:6px;font-size:13px;font-weight:700;">WhatsApp Ottmar &rarr;</a>'
+            + '</div>'
+            + '<p style="font-size:12px;color:#94a3b8;">Your tracker will be deleted in 23 days if not reactivated.</p>'
+          ).catch(()=>{});
+
+          if (c.whatsapp && c.callmebot_key) {
+            const msg = encodeURIComponent('💡 Your tracker for ' + c.domain + ' has been paused 7 days. Let Ottmar implement your Citation Brief for you — done-for-you AI citation optimization, GRAAF score 90+ guaranteed. ' + ottmarWa);
+            await fetch('https://api.callmebot.com/whatsapp.php?phone=' + c.whatsapp + '&text=' + msg + '&apikey=' + c.callmebot_key).catch(()=>{});
+          }
+          console.log('[paused-followup] Day 7 email sent to', c.email);
+        }
+
+        // DAY 30 — delete account + final email
+        if (pausedDays >= 30) {
+          // Final email before deletion
+          await sendTrackerEmail(c.id,
+            'Your ContentScale tracker has been deleted — ' + c.domain,
+            '<h2 style="font-size:17px;font-weight:800;color:#dc2626;margin-bottom:10px;">Your tracker data has been deleted</h2>'
+            + '<p style="font-size:14px;color:#374151;line-height:1.7;margin-bottom:14px;">Your tracker for <strong>' + c.domain + '</strong> has been automatically deleted after 30 days of inactivity.</p>'
+            + '<p style="font-size:14px;color:#374151;line-height:1.7;margin-bottom:16px;">If you want to start fresh, contact Ottmar to set up a new tracker:</p>'
+            + '<a href="' + ottmarWa + '" style="display:inline-block;background:#7c3aed;color:white;text-decoration:none;padding:10px 22px;border-radius:6px;font-size:13px;font-weight:700;">Start fresh with Ottmar &rarr;</a>'
+          ).catch(()=>{});
+
+          // Delete pages + client
+          await pool.query('UPDATE tracker_pages SET is_active=FALSE WHERE tracker_client_id=$1', [c.id]).catch(()=>{});
+          await pool.query('UPDATE tracker_clients SET status=$1 WHERE id=$2', ['deleted', c.id]).catch(()=>{});
+          console.log('[paused-followup] Day 30 — deleted account', c.id, c.domain);
+        }
+
+        await new Promise(r => setTimeout(r, 2000));
+      }
+    } catch(e) { console.warn('[paused-followup]', e.message); }
+
+    setTimeout(runPausedFollowup, 24 * 60 * 60 * 1000);
+  }, 7 * 60 * 1000); // first run 7 min after start
+  console.log('[paused-followup] Paused account follow-up scheduler started');
+}
+
+startPausedFollowupScheduler();
+
+// ── Daily HTML reminder + auto-pause — frequency-aware ─────────────────────────
+function startHtmlReminderScheduler() {
+  setTimeout(async function runHtmlReminder() {
+    if (!pool) { setTimeout(runHtmlReminder, 24 * 60 * 60 * 1000); return; }
+    try {
+      console.log('[html-reminder] Running frequency-aware reminder check...');
+
+      // For each frequency, calculate when 2nd scan has passed without Done
+      // 3days: 2nd scan = day 6, warn day 6, pause day 10
+      // weekly: 2nd scan = day 14, warn day 14, pause day 18
+      // monthly: 2nd scan = day 60, warn day 60, pause day 64
+      const freqConfig = {
+        '3days':   { warnAfter: 6,  pauseAfter: 10 },
+        'weekly':  { warnAfter: 14, pauseAfter: 18 },
+        '1week':   { warnAfter: 14, pauseAfter: 18 },
+        'monthly': { warnAfter: 60, pauseAfter: 64 },
+      };
+      const defaultConfig = { warnAfter: 14, pauseAfter: 18 };
+
+      const pages = await pool.query(`
+        SELECT p.*, tc.email, tc.name, tc.whatsapp, tc.callmebot_key, tc.token, tc.domain, tc.status as client_status
+        FROM tracker_pages p
+        JOIN tracker_clients tc ON tc.id = p.tracker_client_id
+        WHERE p.tracker_client_id IS NOT NULL
+        AND (p.is_active = TRUE OR p.is_active IS NULL)
+        AND tc.status = 'active'
+        AND p.brief_started_at IS NOT NULL
+        AND (p.is_done = FALSE OR p.is_done IS NULL)
+        AND p.brief_content IS NOT NULL
+        AND tc.email IS NOT NULL
+      `);
+
+      console.log('[html-reminder] Checking', pages.rows.length, 'active briefs');
+
+      // Group by client to avoid spamming
+      const clientsSentTo = new Set();
+
+      for (const p of pages.rows) {
+        const cfg = freqConfig[p.check_frequency] || defaultConfig;
+        const briefAgeDays = Math.floor((Date.now() - new Date(p.brief_started_at).getTime()) / (1000 * 60 * 60 * 24));
+        const trackerUrl = (process.env.APP_URL || 'https://app.contentscale.site') + '/track/' + p.token;
+        const clientKey = p.tracker_client_id;
+
+        // AUTO-PAUSE: brief age >= pauseAfter
+        if (briefAgeDays >= cfg.pauseAfter) {
+          console.log('[html-reminder] Auto-pausing client', p.tracker_client_id, '— brief age:', briefAgeDays, 'days');
+          await pool.query(`UPDATE tracker_clients SET status='paused', paused_at=NOW() WHERE id=$1`, [p.tracker_client_id]).catch(()=>{});
+
+          if (!clientsSentTo.has(clientKey)) {
+            clientsSentTo.add(clientKey);
+            const subject = 'Your ContentScale tracker has been paused — ' + p.domain;
+            const htmlBody = '<h2 style="font-size:17px;font-weight:800;color:#dc2626;margin-bottom:10px;">Your tracker has been automatically paused</h2>'
+              + '<p style="font-size:14px;color:#374151;line-height:1.7;margin-bottom:14px;">Your Citation Brief for <strong>' + p.url + '</strong> has been active for <strong>' + briefAgeDays + ' days</strong> without being marked as done.</p>'
+              + '<p style="font-size:14px;color:#374151;line-height:1.7;margin-bottom:14px;">To reactivate your tracker, contact Ottmar directly.</p>'
+              + '<a href="https://wa.me/31628073996?text=Hi+Ottmar,+I+want+to+reactivate+my+tracker+for+' + encodeURIComponent(p.domain) + '" style="display:inline-block;background:#16a34a;color:white;text-decoration:none;padding:10px 22px;border-radius:6px;font-size:13px;font-weight:700;">WhatsApp Ottmar to reactivate &rarr;</a>'
+              + '<p style="font-size:11px;color:#94a3b8;margin-top:12px;">Or let Ottmar implement everything for you — GRAAF score 90+ guaranteed.</p>';
+            await sendTrackerEmail(p.tracker_client_id, subject, htmlBody).catch(()=>{});
+
+            if (p.whatsapp && p.callmebot_key) {
+              const msg = encodeURIComponent('⏸️ Your ContentScale tracker for ' + p.domain + ' has been automatically paused — your Citation Brief was not marked done after ' + briefAgeDays + ' days. Contact Ottmar to reactivate: https://wa.me/31628073996');
+              await fetch('https://api.callmebot.com/whatsapp.php?phone=' + p.whatsapp + '&text=' + msg + '&apikey=' + p.callmebot_key).catch(()=>{});
+            }
+          }
+          continue;
+        }
+
+        // WARNING: brief age >= warnAfter (2nd scan passed, 4 days until pause)
+        if (briefAgeDays >= cfg.warnAfter && !clientsSentTo.has(clientKey)) {
+          clientsSentTo.add(clientKey);
+          const daysLeft = cfg.pauseAfter - briefAgeDays;
+          console.log('[html-reminder] Warning client', p.tracker_client_id, '—', daysLeft, 'days until pause');
+
+          const subject = '⚠️ Your tracker pauses in ' + daysLeft + ' days — ' + p.domain;
+          const htmlBody = '<h2 style="font-size:17px;font-weight:800;color:#d97706;margin-bottom:10px;">Action needed — tracker pauses in ' + daysLeft + ' days</h2>'
+            + '<p style="font-size:14px;color:#374151;line-height:1.7;margin-bottom:14px;">Your Citation Brief for <strong>' + p.url + '</strong> has been active for <strong>' + briefAgeDays + ' days</strong> without being marked as done. If no action is taken, your tracker will be automatically paused.</p>'
+            + '<div style="background:#fef3c7;border:1px solid #fde68a;border-radius:8px;padding:14px 16px;margin-bottom:16px;font-size:13px;color:#92400e;">'
+            + '<strong>To keep your tracker active:</strong><br>1. Implement at least the HIGH priority recommendation<br>2. Press <strong>Done</strong> in your tracker<br>3. Paste your updated page HTML'
+            + '</div>'
+            + '<a href="' + trackerUrl + '" style="display:inline-block;background:#7c3aed;color:white;text-decoration:none;padding:10px 22px;border-radius:6px;font-size:13px;font-weight:700;margin-right:10px;">Open tracker &rarr;</a>'
+            + '<a href="https://wa.me/31628073996?text=Hi+Ottmar,+please+implement+my+Citation+Brief+for+' + encodeURIComponent(p.url) + '" style="display:inline-block;background:#16a34a;color:white;text-decoration:none;padding:10px 22px;border-radius:6px;font-size:13px;font-weight:700;">Let Ottmar do it for me &rarr;</a>'
+            + '<p style="font-size:11px;color:#94a3b8;margin-top:14px;">Done-for-you AI citation optimization — GRAAF score 90+ guaranteed.</p>';
+          await sendTrackerEmail(p.tracker_client_id, subject, htmlBody).catch(()=>{});
+
+          if (p.whatsapp && p.callmebot_key) {
+            const msg = encodeURIComponent('⚠️ Your ContentScale tracker for ' + p.domain + ' pauses in ' + daysLeft + ' days. Your Citation Brief has been waiting ' + briefAgeDays + ' days — implement the HIGH priority recommendation, press Done, paste new HTML. Or let Ottmar do it: https://wa.me/31628073996');
+            await fetch('https://api.callmebot.com/whatsapp.php?phone=' + p.whatsapp + '&text=' + msg + '&apikey=' + p.callmebot_key).catch(()=>{});
+          }
+          await new Promise(r => setTimeout(r, 2000));
+          continue;
+        }
+
+        // REMINDER: needs_html=TRUE (Done pressed, HTML not pasted)
+        if (p.needs_html && !clientsSentTo.has(clientKey)) {
+          clientsSentTo.add(clientKey);
+          const subject = 'Reminder: paste your updated HTML — ' + p.domain;
+          const htmlBody = '<h2 style="font-size:17px;font-weight:800;color:#0f172a;margin-bottom:10px;">Your tracker is waiting for new HTML</h2>'
+            + '<p style="font-size:14px;color:#374151;line-height:1.7;margin-bottom:14px;">You pressed Done — great! The system now needs the <strong>updated HTML</strong> of <strong>' + p.url + '</strong> to measure your improvements and generate the next Citation Brief.</p>'
+            + '<div style="background:#fefce8;border:1px solid #fde047;border-radius:8px;padding:14px 16px;margin-bottom:16px;font-size:13px;color:#854d0e;">'
+            + '1. Open <strong>' + p.url + '</strong> in Chrome &rarr; Right-click &rarr; View Page Source<br>'
+            + '2. Ctrl+A &rarr; Ctrl+C &rarr; Go to tracker &rarr; click <strong>Paste new HTML</strong>'
+            + '</div>'
+            + '<a href="' + trackerUrl + '" style="display:inline-block;background:#7c3aed;color:white;text-decoration:none;padding:10px 22px;border-radius:6px;font-size:13px;font-weight:700;">Open tracker &rarr;</a>';
+          await sendTrackerEmail(p.tracker_client_id, subject, htmlBody).catch(()=>{});
+
+          if (p.whatsapp && p.callmebot_key) {
+            const msg = encodeURIComponent('⚠️ Paste updated HTML for ' + p.url + ' — the system needs it to measure your improvements and start the next Citation Brief. ' + trackerUrl);
+            await fetch('https://api.callmebot.com/whatsapp.php?phone=' + p.whatsapp + '&text=' + msg + '&apikey=' + p.callmebot_key).catch(()=>{});
+          }
+          await new Promise(r => setTimeout(r, 2000));
+        }
+      }
+
+      console.log('[html-reminder] Done. Sent to', clientsSentTo.size, 'clients.');
+    } catch(e) { console.warn('[html-reminder]', e.message); }
+
+    setTimeout(runHtmlReminder, 24 * 60 * 60 * 1000);
+  }, 5 * 60 * 1000);
+  console.log('[html-reminder] Frequency-aware reminder + auto-pause scheduler started');
+}
+
+startHtmlReminderScheduler();
 
 let _trackerSchedulerTimer = null;
 function startTrackerScheduler() {
