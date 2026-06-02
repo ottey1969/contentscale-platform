@@ -80,7 +80,7 @@ const puppeteer = require('puppeteer');
 const bcrypt = require('bcryptjs');
 const rateLimit = require('express-rate-limit');
 const compression = require('compression');
-const sgMail = require('@sendgrid/mail');
+// SendGrid removed — using Brevo
 const axios = require('axios');
 const multer = require('multer');
 const upload = multer({ storage: multer.memoryStorage() });
@@ -453,7 +453,7 @@ function stripAiPlaceholders(html) {
 
 console.log('🌍 Environment:', process.env.NODE_ENV || 'development');
 console.log('📊 Database URL:', process.env.DATABASE_URL ? '✅ GEVONDEN' : '❌ NIET GEVONDEN');
-console.log('📧 SendGrid Key:', process.env.SENDGRID_API_KEY ? '✅ GEVONDEN' : '❌ NIET GEVONDEN');
+console.log(`📧 Email: ${process.env.BREVO_API_KEY ? '✅ Brevo' : process.env.SENDGRID_API_KEY ? '✅ SendGrid (legacy)' : '❌ No email key set'}`);
 // ============================================
 // DATABASE CONFIGURATIE
 // ============================================
@@ -875,24 +875,24 @@ async function sendTrackerEmail(clientId, subject, htmlBody) {
 </div>
 </body></html>`;
 
-    const sgKey = process.env.SENDGRID_API_KEY || '';
-    if (!sgKey) { console.warn('[tracker-email] No SendGrid key'); return; }
+    const brevoKey = process.env.BREVO_API_KEY || '';
+    if (!brevoKey) { console.warn('[tracker-email] No email API key (BREVO_API_KEY)'); return; }
 
-    const resp = await fetch('https://api.sendgrid.com/v3/mail/send', {
+    const resp = await fetch('https://api.brevo.com/v3/smtp/email', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + sgKey },
+      headers: { 'Content-Type': 'application/json', 'api-key': brevoKey },
       body: JSON.stringify({
-        personalizations: [{ to: [{ email: client.email }] }],
-        from: { email: 'info@contentscale.site', name: 'ContentScale Tracker' },
+        to: [{ email: client.email, name: client.name || client.email }],
+        sender: { email: 'info@contentscale.site', name: 'ContentScale Tracker' },
         subject: subject,
-        content: [{ type: 'text/html', value: fullHtml }]
+        htmlContent: fullHtml
       })
     });
     if (!resp.ok) {
       const err = await resp.text().catch(()=>'');
-      console.warn('[tracker-email] SendGrid error', resp.status, err.substring(0,200));
+      console.warn('[tracker-email] Brevo error', resp.status, err.substring(0,200));
     } else {
-      console.log('[tracker-email] Sent to', client.email, 'status:', resp.status);
+      console.log('[tracker-email] Sent via Brevo to', client.email);
     }
   } catch(e) { console.warn('[tracker-email] Failed:', e.message); }
 }
@@ -961,7 +961,8 @@ app.get('/api/tracker-client/:token', async (req, res) => {
     // Ensure tracker_client_id column exists before querying
     const pagesR = await pool.query(
       `SELECT p.id, p.url, p.keyword, p.gsc_keyword, p.created_at, p.next_check_at, p.last_checked_at,
-              p.is_done, p.fetch_reliable,
+              p.is_done, p.fetch_reliable, p.check_frequency, p.gsc_clicks, p.gsc_impressions, p.gsc_position,
+              p.ranking_brief,
               s.google_position, s.ai_google_overview_cited, s.ai_perplexity_cited,
               s.ai_bing_cited, s.ai_brave_cited,
               s.score as graaf_score, s.checked_at as last_checked,
@@ -1662,6 +1663,7 @@ app.patch('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
   await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS brief_started_at TIMESTAMPTZ`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS brief_done_at TIMESTAMPTZ`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS brief_check_count INTEGER DEFAULT 0`).catch(()=>{});
+  await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS ranking_brief JSONB`).catch(()=>{});
   await client.query(`CREATE INDEX IF NOT EXISTS tracker_clients_ip_idx ON tracker_clients(registered_ip) WHERE registered_ip IS NOT NULL`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS extra_domains TEXT DEFAULT ''`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS unsubscribe_token VARCHAR(64)`).catch(()=>{});
@@ -2647,7 +2649,7 @@ if (sup.rows.length > 0) return res.json({ success: false, suppressed: true, err
 }
 let apiKeyToUse = null;
 if (process.env.SENDGRID_API_KEY) {
-apiKeyToUse = process.env.SENDGRID_API_KEY;
+apiKeyToUse = process.env.BREVO_API_KEY;
 } else if (userId && pool) {
 try {
 const result = await pool.query("SELECT api_key, daily_limit, used_today FROM user_api_keys WHERE user_id = $1 AND service_name = 'sendgrid'", [userId]);
@@ -2675,13 +2677,21 @@ return res.json({ success: false, limit_reached: true, error: `Daily limit of ${
 } catch (e) { console.warn('Daily limit check failed:', e.message); }
 }
 try {
-sgMail.setApiKey(apiKeyToUse);
-await sgMail.send({
-to: to_email,
-from: process.env.SENDGRID_FROM_EMAIL || 'noreply@contentscale.site',
-subject,
-html
+const brevoKey = process.env.BREVO_API_KEY || apiKeyToUse;
+const emailResp = await fetch('https://api.brevo.com/v3/smtp/email', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json', 'api-key': brevoKey },
+  body: JSON.stringify({
+    to: [{ email: to_email }],
+    sender: { email: process.env.FROM_EMAIL || 'noreply@contentscale.site', name: 'ContentScale' },
+    subject,
+    htmlContent: html
+  })
 });
+if (!emailResp.ok) {
+  const errText = await emailResp.text().catch(()=>'');
+  throw new Error('Brevo ' + emailResp.status + ': ' + errText.substring(0,200));
+}
 if (pool) {
 await pool.query(
 `INSERT INTO email_queue (user_id, to_email, subject, body, status, sent_at, business_url, business_name, score, template_type) VALUES ($1, $2, $3, $4, 'sent', NOW(), $5, $6, $7, $8)`,
@@ -5057,7 +5067,7 @@ leaderboardApproved = parseInt(lbApproved.rows[0].count) || 0;
 freelancerTotal = parseInt(flAll.rows[0].count) || 0;
 } catch (e) {}
 }
-res.json({ status: 'running', database: db, puppeteer: browserInstance ? 'ready' : 'not started', version: 'elite-v4-fixed-v3', sendgrid: process.env.SENDGRID_API_KEY ? 'configured' : 'not configured', counts: { leaderboardTotal, leaderboardApproved, freelancerTotal } });
+res.json({ status: 'running', database: db, puppeteer: browserInstance ? 'ready' : 'not started', version: 'elite-v4-fixed-v3', email: process.env.BREVO_API_KEY ? 'brevo' : 'not configured', counts: { leaderboardTotal, leaderboardApproved, freelancerTotal } });
 });
 app.use((err, req, res, next) => {
 console.error('Server Error:', err.message);
@@ -5207,7 +5217,7 @@ const dbConnected = await waitForDatabase();
 httpServer.listen(PORT, () => {
 console.log(`📍 Server: http://localhost:${PORT}`);
 console.log(`📊 DB:     ${dbConnected ? '✅ Connected' : '❌ Disconnected — auto-reconnect active'}`);
-console.log(`📧 Email:  ${process.env.SENDGRID_API_KEY ? '✅ SendGrid ready' : '❌ SENDGRID_API_KEY not set'}`);
+console.log(`📧 Email:  ${process.env.BREVO_API_KEY ? '✅ Brevo ready' : '❌ BREVO_API_KEY not set'}`);
 console.log(`🔍 Web Search: ${process.env.SERPAPI_KEY ? '✅ SerpAPI (real Google results)' : '⚠️ DuckDuckGo fallback (set SERPAPI_KEY for better results)'}`);
 console.log('\n✅ Elite scanner ready\n');
 });
@@ -23347,6 +23357,7 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
 .cs-input:focus { border-color:#7c3aed; }
 
 /* Toast */
+.cb-ranking-brief { background:#0a0f1a; border:1px solid #1d4ed8; border-radius:10px; overflow:hidden; margin-top:8px; }
 .cb-inline { background:#0d1117; border:1px solid #4c1d95; border-radius:10px; overflow:hidden; margin-top:10px; }
 .cb-inline-hdr { background:linear-gradient(135deg,#1a0e2e,#0f172a); padding:10px 14px; display:flex; align-items:center; gap:8px; border-bottom:1px solid #2d1f4e; }
 .cb-inline-title { font-size:13px; font-weight:600; color:#e9d5ff; display:flex; align-items:center; gap:6px; }
@@ -23866,6 +23877,45 @@ function renderRecs(p) {
     });
 
     html += '</div>';
+
+    // ── GOOGLE RANKING BRIEF — only shown if GSC data exists ─────────────────
+    var rb = p.ranking_brief;
+    if (typeof rb === 'string') { try { rb = JSON.parse(rb); } catch(e) { rb = null; } }
+    if (rb && rb.items && rb.items.length && (p.gsc_clicks || p.gsc_impressions || p.gsc_position)) {
+      var gscPos = p.gsc_position ? '#' + p.gsc_position : null;
+      var livePos = pos ? '#' + pos : null;
+      html += '<div class="cb-ranking-brief">';
+      html += '<div class="cb-inline-hdr" style="background:linear-gradient(135deg,#0c1a2e,#0f172a);border-top:1px solid #1f2937;">';
+      html += '<div class="cb-inline-title" style="color:#38bdf8"><span style="font-size:14px;">&#128200;</span> Google Ranking Brief</div>';
+      html += '<div class="cb-inline-meta" style="color:#60a5fa">';
+      if (livePos) html += 'Live: <strong>' + livePos + '</strong>';
+      if (gscPos) html += (livePos ? ' &middot; ' : '') + 'GSC avg: ' + gscPos;
+      if (p.gsc_clicks) html += ' &middot; ' + p.gsc_clicks + ' clicks';
+      html += '</div>';
+      html += '</div>';
+      html += '<div class="cb-inline-phd" style="color:#38bdf8;">&#128247; What to fix for Google position #1</div>';
+      rb.items.forEach(function(r) {
+        var pri = (r.priority || '').toLowerCase();
+        var isHigh = pri === 'high';
+        var isMed = pri === 'medium' || pri === 'med';
+        var color = isHigh ? '#ef4444' : isMed ? '#f59e0b' : '#22c55e';
+        var label = isHigh ? 'HIGH' : isMed ? 'MED' : 'LOW';
+        var title = r.title || r.t || '';
+        var action = r.action || '';
+        var impact = r.expected_impact || r.impact || '';
+        html += '<div class="cb-inline-rec">';
+        html += '<div class="cb-inline-rec-hd">';
+        html += '<span class="cb-rec-bullet" style="background:' + color + '"></span>';
+        html += '<span class="cb-rec-label" style="color:' + color + '">' + label + '</span>';
+        if (title) html += '<span class="cb-rec-title">' + title + '</span>';
+        html += '</div>';
+        if (action) html += '<div class="cb-rec-action">' + action + '</div>';
+        if (impact) html += '<div class="cb-rec-impact">&#8594; ' + impact + '</div>';
+        html += '</div>';
+      });
+      html += '</div>';
+    }
+
     return html;
   } catch(e) { return ''; }
 }
@@ -29870,7 +29920,63 @@ Return ONLY a JSON array, no markdown:
                 );
               }
 
-              // Broadcast brief_ready event to client live feed
+              // ── GOOGLE RANKING BRIEF (only if GSC data available) ────────────
+              if (geminiKey && (page.gsc_clicks || page.gsc_impressions || page.gsc_position)) {
+                try {
+                  const gscPos = page.gsc_position ? `#${page.gsc_position}` : 'unknown';
+                  const gscClicks = page.gsc_clicks || 0;
+                  const gscImpressions = page.gsc_impressions || 0;
+                  const gscCtr = gscImpressions ? ((gscClicks / gscImpressions) * 100).toFixed(1) + '%' : 'unknown';
+                  const currentPos = pos ? `#${pos}` : 'not in top 100';
+
+                  const rankingPrompt = `You are a Google SEO specialist. Your goal: get this specific page to position #1 in Google for its target keyword.
+
+PAGE: ${pageUrl}
+KEYWORD: "${kw}"
+CURRENT GOOGLE POSITION: ${currentPos} (live via Serper)
+GSC DATA: Position ${gscPos} avg · ${gscClicks} clicks · ${gscImpressions} impressions · ${gscCtr} CTR
+
+COMPETITOR CONTENT (pages ranking above this one):
+${competitorBlock || 'No competitor data available'}
+
+OUR PAGE CONTENT:
+${ourContent ? ourContent.substring(0, 3000) : '(not available)'}
+
+TASK: Give 3-5 specific actions to move this page to Google position #1.
+Focus ONLY on Google organic ranking factors:
+- Title tag and meta description optimization
+- Content gaps vs competitors (missing topics, word count, headings)
+- Internal linking opportunities
+- Page speed / Core Web Vitals signals
+- Schema markup for rich snippets
+- E-E-A-T signals (author, date, credentials)
+- CTR optimization (if CTR below 3% — current: ${gscCtr})
+
+DO NOT give AI citation advice — that is handled separately.
+DO NOT be generic. Every action must reference the actual keyword "${kw}" and actual competitor gaps.
+
+Return ONLY a JSON array, no markdown:
+[{"title":"specific gap max 8 words","priority":"high"|"medium"|"low","action":"exact change to make — copy-paste ready, min 25 words","expected_impact":"estimated position improvement and why"}]`;
+
+                  const gRankResp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ contents: [{ parts: [{ text: rankingPrompt }] }], generationConfig: { temperature: 0.3, maxOutputTokens: 800 } })
+                  });
+                  if (gRankResp.ok) {
+                    const gRankData = await gRankResp.json();
+                    const gRankText = gRankData.candidates?.[0]?.content?.parts?.[0]?.text || '';
+                    const rankingRecs = JSON.parse(gRankText.replace(/```json|```/g, '').trim());
+                    await pool.query(
+                      `UPDATE tracker_pages SET ranking_brief=$1 WHERE id=$2`,
+                      [JSON.stringify({ items: rankingRecs, position: pos, gsc_position: page.gsc_position, gsc_clicks: gscClicks, updated_at: new Date().toISOString() }), page.id]
+                    );
+                    console.log(`[ranking-brief] Generated ${rankingRecs.length} ranking recommendations for page ${page.id}`);
+                  }
+                } catch(rankErr) {
+                  console.warn('[ranking-brief] Failed:', rankErr.message);
+                }
+              }
               _sseBroadcast({
                 type: 'brief_ready',
                 page_id: page.id,
