@@ -23502,10 +23502,10 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
 
   <!-- Upsell -->
   <div class="cs-upsell">
-    <div style="font-size:13px;font-weight:700;color:#e5e7eb;margin-bottom:6px;">Want Ottmar to implement these changes for you?</div>
-    <div style="font-size:12px;color:#9ca3af;margin-bottom:14px;">ContentScale offers done-for-you AI citation optimization.</div>
-    <a href="https://wa.me/34644204756?text=Hi+Ottmar,+I+want+help+with+AI+citation+optimization+for+__DOMAIN__" target="_blank" class="cs-wa-btn">
-      <i class="fab fa-whatsapp"></i> Contact Ottmar on WhatsApp
+    <div style="font-size:13px;font-weight:700;color:#e5e7eb;margin-bottom:6px;">Want Ottmar to &ldquo;babysit&rdquo; your domain?</div>
+    <div style="font-size:12px;color:#9ca3af;margin-bottom:14px;">Done-for-you AI citation optimization &mdash; Ottmar implements the briefs for you.</div>
+    <a href="https://wa.me/34644204756?text=Hi+Ottmar,+I+want+you+to+babysit+my+domain+__DOMAIN__+for+AI+citations" target="_blank" class="cs-wa-btn">
+      <i class="fab fa-whatsapp"></i> Let Ottmar babysit your domain
     </a>
   </div>
 
@@ -24876,7 +24876,7 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
       </div>
 
       <a href="https://wa.me/31628073996?text=Hi%20Ottmar!%20I%20want%20a%20done-for-you%20citation%20plan%20for%20__DOMAIN__" target="_blank" rel="noopener" class="wl-wa">
-        <i class="fab fa-whatsapp"></i> Let Ottmar do this for you
+        <i class="fab fa-whatsapp"></i> Let Ottmar &ldquo;babysit&rdquo; your domain &mdash; done for you
       </a>
       <button class="wl-start" onclick="closeWelcome()">
         I understand &mdash; start monitoring &rarr;
