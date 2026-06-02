@@ -23506,7 +23506,7 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
 .wl-footer { font-size:10px;color:#6b7280;text-align:center;margin-top:10px; }
 
 .cited-blink{animation:citedPulse 2.5s ease-in-out 3;}
-@keyframes htmlNeeded{0%,100%{border-color:#f59e0b;color:#fbbf24;box-shadow:none}50%{border-color:#f59e0b;color:#fff;box-shadow:0 0 8px rgba(245,158,11,.6)}}@keyframes citedPulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.75;transform:scale(1.06)}}
+@keyframes htmlNeeded{0%,100%{opacity:1;background:rgba(245,158,11,.08)}50%{opacity:.35;background:rgba(245,158,11,.18)}}@keyframes citedPulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.75;transform:scale(1.06)}}
 .brief-blink{animation:briefBlink 1.2s ease-in-out 4;}@keyframes briefBlink{0%,100%{opacity:1;transform:scale(1)}40%{opacity:.4;transform:scale(1.12)}70%{opacity:1;transform:scale(1.06)}}
 .cs-cs-badge{display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;letter-spacing:.03em;}
 .cs-cs-badge.green{background:#052e16;color:#4ade80;border:1px solid #166534;}
@@ -23676,12 +23676,18 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
 
 <!-- HTML Upload Modal -->
 <div class="cs-modal" id="htmlUploadModal">
-  <div class="cs-modal-box" onclick="event.stopPropagation()" style="max-width:540px;">
+  <div class="cs-modal-box" onclick="event.stopPropagation()" style="max-width:580px;">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
       <h3 style="font-size:15px;font-weight:800;color:#f1f5f9;">Paste page HTML</h3>
       <button onclick="hideModal('htmlUploadModal')" style="background:none;border:none;color:#94a3b8;cursor:pointer;font-size:1.2rem;">&#x2715;</button>
     </div>
-    <p style="font-size:12px;color:#6b7280;margin-bottom:12px;">Open your page in Chrome, right-click &rarr; View Page Source, select all, paste here. Or use the browser extension.</p>
+    <p style="font-size:12px;color:#6b7280;margin-bottom:12px;">Open your page in Chrome, right-click &rarr; View Page Source, select all (Ctrl+A), copy (Ctrl+C) and paste below.</p>
+    <input type="text" id="htmlUploadKeyword" placeholder="Keyword (optional)" class="cs-input" style="margin-bottom:10px;width:100%;">
+    <textarea id="htmlUploadContent" placeholder="Paste full page HTML here..." class="cs-input" rows="8" style="width:100%;font-family:monospace;font-size:11px;resize:vertical;"></textarea>
+    <div style="display:flex;gap:8px;margin-top:12px;justify-content:flex-end;">
+      <button onclick="hideModal('htmlUploadModal')" class="cs-btn" style="border-color:#374151;color:#6b7280;">Cancel</button>
+      <button onclick="submitHtmlUpload()" class="cs-btn" style="border-color:#7c3aed;color:#a78bfa;font-weight:600;">Save HTML</button>
+    </div>
   </div>
 </div>
 
@@ -23829,7 +23835,7 @@ function renderPages() {
     var urlShort = urlClean.replace(/#.*$/, '').replace(/[/]$/, '') || urlClean;
     // Page number (1-based)
     var pageNum = pageIdx + 1;
-    var isDone = !!p.is_done;
+    var isDone = p.is_done === true || p.is_done === 't' || p.is_done === 'true' || p.is_done === 1;
 
     // Citation badges
     var badges = '';
@@ -23850,9 +23856,10 @@ function renderPages() {
       ? '<div style="display:flex;align-items:center;gap:8px;padding:6px 14px;background:rgba(96,165,250,.06);border-bottom:1px solid rgba(96,165,250,.15);font-size:11px;color:#60a5fa;"><span style="animation:blink 2s infinite;display:inline-block">&#9679;</span> First check starting automatically in ~1 minute...</div>'
       : '';
 
-    // Needs HTML banner — shown after Done is pressed
-    var needsHtmlBanner = (p.needs_html && !p.last_checked === false)
-      ? '<div style="display:flex;align-items:center;gap:8px;padding:8px 14px;background:rgba(245,158,11,.08);border-bottom:1px solid rgba(245,158,11,.25);font-size:11px;color:#fbbf24;"><span style="font-size:14px;">&#9888;</span> The system needs your updated page HTML to measure the improvements you just made. Click <strong style="margin:0 3px;">&#9888; Paste new HTML</strong> to continue.</div>'
+    // Needs HTML banner — shown after Done is pressed, persists from DB
+    var needsHtml = p.needs_html === true || p.needs_html === 't' || p.needs_html === 'true' || p.needs_html === 1;
+    var needsHtmlBanner = needsHtml
+      ? '<div style="display:flex;align-items:center;gap:8px;padding:8px 14px;background:rgba(245,158,11,.08);border-bottom:1px solid rgba(245,158,11,.25);font-size:11px;color:#fbbf24;animation:htmlNeeded 1.4s ease-in-out infinite;">&#9888; The system needs your updated page HTML to measure the improvements you just made. Click <strong style="margin:0 3px;text-decoration:underline;cursor:pointer;" onclick="openHtmlUpload(' + p.id + ')">&#9888; Paste new HTML</strong> to continue.</div>'
       : '';
 
     return '<div class="cs-page-card' + (isDone ? ' done' : '') + '" data-page-id="' + p.id + '">'
@@ -23876,7 +23883,7 @@ function renderPages() {
           + '<button onclick="checkPage(' + p.id + ')" data-check-btn="' + p.id + '" class="btn" style="font-size:11px;padding:5px 12px;border-color:#16a34a;color:#4ade80;font-weight:600;" title="Start first check"><i class="fas fa-sync-alt" style="margin-right:5px;"></i>Check now</button>'
         : ''
       )
-      + '<button onclick="openHtmlUpload(' + p.id + ')" class="btn' + (p.needs_html ? ' html-needed' : '') + '" style="font-size:11px;padding:5px 10px;border-color:' + (p.needs_html ? '#f59e0b' : '#374151') + ';color:' + (p.needs_html ? '#fbbf24' : '#6b7280') + ';' + (p.needs_html ? 'animation:htmlNeeded 1s ease-in-out infinite;' : '') + '" title="Paste updated HTML for GRAAF scan">' + (p.needs_html ? '&#9888; Paste new HTML' : 'HTML') + '</button>'
+      + '<button onclick="openHtmlUpload(' + p.id + ')" class="btn' + (needsHtml ? ' html-needed' : '') + '" style="font-size:11px;padding:5px 10px;border-color:' + (needsHtml ? '#f59e0b' : '#374151') + ';color:' + (needsHtml ? '#fbbf24' : '#6b7280') + ';' + (needsHtml ? 'animation:htmlNeeded 1s ease-in-out infinite;' : '') + '" title="Paste updated HTML for GRAAF scan">' + (needsHtml ? '&#9888; Paste new HTML' : 'HTML') + '</button>'
       + '<button onclick="markDone(' + p.id + ',this,' + isDone + ')" class="btn" style="font-size:11px;padding:5px 10px;border-color:' + (isDone?'#4ade80':'#374151') + ';color:' + (isDone?'#4ade80':'#6b7280') + ';" title="Mark done when implemented">' + (isDone?'&#10003; Done':'Mark done') + '</button>'
       + '</div>'
       + '</div>'
@@ -24824,14 +24831,14 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
   function openHtmlUpload(pageId) {
     _htmlUploadPageId = pageId;
     var page = (_pages||[]).find(function(p){ return p.id == pageId; }) || {};
+    var mEl = document.getElementById('htmlUploadModal');
+    if (!mEl) { toast('HTML upload panel not available', '#f87171'); return; }
     var kEl = document.getElementById('htmlUploadKeyword');
     var cEl = document.getElementById('htmlUploadContent');
-    var mEl = document.getElementById('htmlUploadModal');
-    if (!kEl || !cEl || !mEl) { toast('HTML upload panel not found', '#f87171'); return; }
-    kEl.value = page.keyword || '';
-    cEl.value = '';
+    if (kEl) kEl.value = page.keyword || page.gsc_keyword || '';
+    if (cEl) cEl.value = '';
     mEl.classList.add('show');
-    setTimeout(function(){ cEl.focus(); }, 100);
+    setTimeout(function(){ if (cEl) cEl.focus(); }, 100);
   }
   async function submitHtmlUpload() {
     var pageId = _htmlUploadPageId;
