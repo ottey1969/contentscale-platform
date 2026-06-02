@@ -23429,6 +23429,7 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
 .wl-footer { font-size:10px;color:#6b7280;text-align:center;margin-top:10px; }
 
 .cited-blink{animation:citedPulse 2.5s ease-in-out 3;}@keyframes citedPulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.75;transform:scale(1.06)}}
+.brief-blink{animation:briefBlink 1.2s ease-in-out 4;}@keyframes briefBlink{0%,100%{opacity:1;transform:scale(1)}40%{opacity:.4;transform:scale(1.12)}70%{opacity:1;transform:scale(1.06)}}
 .cs-cs-badge{display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;letter-spacing:.03em;}
 .cs-cs-badge.green{background:#052e16;color:#4ade80;border:1px solid #166534;}
 .cs-cs-badge.grey{background:#1f2937;color:#6b7280;border:1px solid #374151;}
@@ -23797,30 +23798,33 @@ function renderRecs(p) {
     var recs = typeof p.recommendations === 'string' ? JSON.parse(p.recommendations) : p.recommendations;
     if (!Array.isArray(recs) || !recs.length) return '';
     var pageId = p.id || '';
-    var pos = p.latest_snapshot && p.latest_snapshot.google_position;
-    var aio = p.latest_snapshot && p.latest_snapshot.ai_google_overview_cited;
-    var perp = p.latest_snapshot && p.latest_snapshot.ai_perplexity_cited;
-    var cop = p.latest_snapshot && p.latest_snapshot.ai_bing_cited;
-    var cl = p.latest_snapshot && p.latest_snapshot.ai_brave_cited;
-    var score = p.latest_snapshot && p.latest_snapshot.score;
+    // Read from flat page fields (API returns these directly) with fallback to latest_snapshot
+    var snap = p.latest_snapshot || p;
+    var pos = p.google_position || (snap && snap.google_position);
+    var aio = p.ai_google_overview_cited || (snap && snap.ai_google_overview_cited);
+    var perp = p.ai_perplexity_cited || (snap && snap.ai_perplexity_cited);
+    var cop = p.ai_bing_cited || (snap && snap.ai_bing_cited);
+    var cl = p.ai_brave_cited || (snap && snap.ai_brave_cited);
+    var score = p.graaf_score || (snap && snap.score);
     var posColor = pos ? (pos<=3?'#22c55e':pos<=10?'#f59e0b':'#ef4444') : '#4b5563';
+    var posBlink = pos ? ' style="animation:briefBlink 1.2s ease-in-out 4"' : '';
 
     var html = '<div class="cb-inline" id="cbInline_' + pageId + '">';
 
-    // Header - gradient like TV moment
+    // Header
     html += '<div class="cb-inline-hdr">';
     html += '<div class="cb-inline-title"><span class="cb-inline-icon">&#127919;</span> Citation Brief</div>';
-    html += '<div class="cb-inline-meta">' + (p.keyword ? 'keyword: <span style="color:#a78bfa">' + p.keyword + '</span>' : '') + '</div>';
+    html += '<div class="cb-inline-meta">' + ((p.keyword||p.kw) ? 'keyword: <span style="color:#a78bfa">' + (p.keyword||p.kw||'') + '</span>' : '') + '</div>';
     html += '<button onclick="copyBrief(' + pageId + ')" class="cb-copy-btn" title="Copy full brief">Copy</button>';
     html += '</div>';
 
-    // Stat row
+    // Stat row - cited items blink
     html += '<div class="cb-inline-stats">';
-    html += '<div class="cb-istat"><div class="cb-isv" style="color:' + posColor + '">' + (pos ? '#'+pos : '—') + '</div><div class="cb-isl">Position</div></div>';
-    html += '<div class="cb-istat"><div class="cb-isv" style="color:' + (aio?'#22c55e':'#374151') + '">' + (aio?'✓':'—') + '</div><div class="cb-isl">Google AIO</div></div>';
-    html += '<div class="cb-istat"><div class="cb-isv" style="color:' + (perp?'#818cf8':'#374151') + '">' + (perp?'✓':'—') + '</div><div class="cb-isl">Perplexity</div></div>';
-    html += '<div class="cb-istat"><div class="cb-isv" style="color:' + (cop?'#60a5fa':'#374151') + '">' + (cop?'✓':'—') + '</div><div class="cb-isl">Copilot</div></div>';
-    html += '<div class="cb-istat"><div class="cb-isv" style="color:' + (cl?'#a78bfa':'#374151') + '">' + (cl?'✓':'—') + '</div><div class="cb-isl">Claude</div></div>';
+    html += '<div class="cb-istat"' + posBlink + '><div class="cb-isv" style="color:' + posColor + '">' + (pos ? '#'+pos : '&#8212;') + '</div><div class="cb-isl">Position</div></div>';
+    html += '<div class="cb-istat"' + (aio ? ' style="animation:briefBlink 1.2s ease-in-out 4"' : '') + '><div class="cb-isv" style="color:' + (aio?'#22c55e':'#374151') + '">' + (aio?'&#10003;':'&#8212;') + '</div><div class="cb-isl">Google AIO</div></div>';
+    html += '<div class="cb-istat"' + (perp ? ' style="animation:briefBlink 1.2s ease-in-out 4"' : '') + '><div class="cb-isv" style="color:' + (perp?'#818cf8':'#374151') + '">' + (perp?'&#10003;':'&#8212;') + '</div><div class="cb-isl">Perplexity</div></div>';
+    html += '<div class="cb-istat"' + (cop ? ' style="animation:briefBlink 1.2s ease-in-out 4"' : '') + '><div class="cb-isv" style="color:' + (cop?'#60a5fa':'#374151') + '">' + (cop?'&#10003;':'&#8212;') + '</div><div class="cb-isl">Copilot</div></div>';
+    html += '<div class="cb-istat"' + (cl ? ' style="animation:briefBlink 1.2s ease-in-out 4"' : '') + '><div class="cb-isv" style="color:' + (cl?'#a78bfa':'#374151') + '">' + (cl?'&#10003;':'&#8212;') + '</div><div class="cb-isl">Claude</div></div>';
     if (score) html += '<div class="cb-istat"><div class="cb-isv" style="color:#f59e0b">' + score + '</div><div class="cb-isl">GRAAF</div></div>';
     html += '</div>';
 
