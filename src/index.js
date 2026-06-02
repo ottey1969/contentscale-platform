@@ -962,7 +962,7 @@ app.get('/api/tracker-client/:token', async (req, res) => {
     const pagesR = await pool.query(
       `SELECT p.id, p.url, p.keyword, p.gsc_keyword, p.created_at, p.next_check_at, p.last_checked_at,
               p.is_done, p.fetch_reliable, p.check_frequency, p.gsc_clicks, p.gsc_impressions, p.gsc_position,
-              p.ranking_brief, p.needs_html,
+              p.ranking_brief, p.needs_html, p.brief_started_at,
               s.google_position, s.ai_google_overview_cited, s.ai_perplexity_cited,
               s.ai_bing_cited, s.ai_brave_cited,
               s.score as graaf_score, s.checked_at as last_checked,
@@ -1225,15 +1225,14 @@ app.post('/api/tracker-client/:token/pages', async (req, res) => {
     try {
       pr = await pool.query(
         `INSERT INTO tracker_pages (tracker_client_id, url, keyword, check_frequency, next_check_at, is_active)
-         VALUES ($1,$2,$3,'weekly',NOW(),TRUE) RETURNING id`,
+         VALUES ($1,$2,$3,'3days',NOW(),TRUE) RETURNING id`,
         [client.id, url, keyword||null]
       );
     } catch(insertErr) {
-      // Fallback if is_active column doesn't exist yet
       if (insertErr.message.includes('is_active') || insertErr.message.includes('column')) {
         pr = await pool.query(
           `INSERT INTO tracker_pages (tracker_client_id, url, keyword, check_frequency, next_check_at)
-           VALUES ($1,$2,$3,'weekly',NOW()) RETURNING id`,
+           VALUES ($1,$2,$3,'3days',NOW()) RETURNING id`,
           [client.id, url, keyword||null]
         );
       } else {
@@ -1482,6 +1481,17 @@ app.delete('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
 });
 
 // Admin: update client max_pages + override IP
+// PATCH /api/admin/tracker-clients/:id/frequency — change frequency for all client pages
+app.patch('/api/admin/tracker-clients/:id/frequency', verifyAdmin, async (req, res) => {
+  try {
+    const { frequency } = req.body;
+    const allowed = ['1day','3days','weekly','monthly'];
+    if (!allowed.includes(frequency)) return res.status(400).json({ success: false, error: 'Invalid frequency' });
+    await pool.query('UPDATE tracker_pages SET check_frequency= WHERE tracker_client_id= AND (is_active=TRUE OR is_active IS NULL)', [frequency, req.params.id]);
+    res.json({ success: true });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
 app.patch('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
   try {
     const { max_pages, status, reset_ip } = req.body;
@@ -23879,7 +23889,7 @@ function renderPages() {
       + '</div>'
       + '<div style="display:flex;gap:5px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">'
       + (!lastChecked
-        ? '<select onchange="changeFreq(' + p.id + ',this.value)" class="cs-input" style="font-size:10px;padding:4px 6px;border-color:#1f2937;color:#6b7280;background:#111827;border-radius:5px;cursor:pointer;" title="How often to auto-check"><option value="3days"' + (p.check_frequency==="3days"?' selected':'') + '>Every 3 days</option><option value="weekly"' + ((!p.check_frequency||p.check_frequency==="weekly")?" selected":'') + '>Weekly</option><option value="monthly"' + (p.check_frequency==="monthly"?' selected':'') + '>Monthly</option></select>'
+        ? '<select onchange="changeFreq(' + p.id + ',this.value)" class="cs-input" style="font-size:10px;padding:4px 6px;border-color:#1f2937;color:#6b7280;background:#111827;border-radius:5px;cursor:pointer;" title="How often to auto-check"><option value="3days"' + ((!p.check_frequency||p.check_frequency==="3days")?' selected':'') + '>Every 3 days</option><option value="weekly"' + (p.check_frequency==="weekly"?" selected":'') + '>Weekly</option><option value="monthly"' + (p.check_frequency==="monthly"?' selected':'') + '>Monthly</option></select>'
           + '<button onclick="checkPage(' + p.id + ')" data-check-btn="' + p.id + '" class="btn" style="font-size:11px;padding:5px 12px;border-color:#16a34a;color:#4ade80;font-weight:600;" title="Start first check"><i class="fas fa-sync-alt" style="margin-right:5px;"></i>Check now</button>'
         : ''
       )
@@ -23898,22 +23908,27 @@ function renderRecs(p) {
     var recs = typeof p.recommendations === 'string' ? JSON.parse(p.recommendations) : p.recommendations;
     if (!Array.isArray(recs) || !recs.length) return '';
     var pageId = p.id || '';
-    // Read from flat page fields (API returns these directly) with fallback to latest_snapshot
-    var snap = p.latest_snapshot || p;
-    var pos = p.google_position || (snap && snap.google_position);
-    var aio = p.ai_google_overview_cited || (snap && snap.ai_google_overview_cited);
-    var perp = p.ai_perplexity_cited || (snap && snap.ai_perplexity_cited);
-    var cop = p.ai_bing_cited || (snap && snap.ai_bing_cited);
-    var cl = p.ai_brave_cited || (snap && snap.ai_brave_cited);
-    var score = p.graaf_score || (snap && snap.score);
+    // Read from flat page fields (API returns these with snapshot JOIN aliases)
+    var snap = p.latest_snapshot || {};
+    var pos = p.google_position || snap.google_position || null;
+    var aio = !!(p.ai_google_overview_cited || snap.ai_google_overview_cited);
+    var perp = !!(p.ai_perplexity_cited || snap.ai_perplexity_cited);
+    var cop = !!(p.ai_bing_cited || snap.ai_bing_cited);
+    var cl = !!(p.ai_brave_cited || snap.ai_brave_cited);
+    var score = p.graaf_score || snap.score || snap.graaf_score || null;
     var posColor = pos ? (pos<=3?'#22c55e':pos<=10?'#f59e0b':'#ef4444') : '#4b5563';
     var posBlink = pos ? ' style="animation:briefBlink 1.2s ease-in-out 4"' : '';
+
+    var briefAge = p.brief_started_at ? Math.floor((Date.now() - new Date(p.brief_started_at).getTime()) / (1000*60*60)) : null;
+    var isNewBrief = briefAge !== null && briefAge < 3;
 
     var html = '<div class="cb-inline" id="cbInline_' + pageId + '">';
 
     // Header
     html += '<div class="cb-inline-hdr">';
-    html += '<div class="cb-inline-title"><span class="cb-inline-icon">&#127919;</span> Citation Brief</div>';
+    html += '<div class="cb-inline-title"><span class="cb-inline-icon">&#127919;</span> Citation Brief'
+      + (isNewBrief ? ' <span style="font-size:9px;font-weight:700;background:#052e16;color:#4ade80;border:1px solid #166534;border-radius:4px;padding:1px 7px;margin-left:6px;animation:citedPulse 2s ease-in-out 4;">NEW</span>' : '')
+      + '</div>';
     html += '<div class="cb-inline-meta">' + ((p.keyword||p.kw) ? 'keyword: <span style="color:#a78bfa">' + (p.keyword||p.kw||'') + '</span>' : '') + '</div>';
     html += '<button onclick="copyBrief(' + pageId + ')" class="cb-copy-btn" title="Copy full brief">Copy</button>';
     html += '</div>';
@@ -24454,10 +24469,11 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
   function hideCitationBrief(pageId) {
     var card = document.getElementById('cbCard');
     if (card) { card.classList.remove('show'); card.classList.add('hide'); }
-    // Show blinking button on page row
-    if (pageId) {
-      setTimeout(function() { showBriefNewDot(pageId); }, 500);
-    }
+    // Reload pages so inline Citation Brief shows with fresh data + NEW badge
+    setTimeout(function() {
+      loadPages();
+      if (pageId) { setTimeout(function() { showBriefNewDot(pageId); }, 300); }
+    }, 400);
   }
 
   function showBriefNewDot(pageId) {
@@ -24852,7 +24868,10 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
     try {
       var d = await api('/pages/' + pageId + '/html', 'PATCH', payload);
       if (d.success) {
-        toast('Saved' + (html ? ' - scanning...' : ''), '#4ade80');
+        // Clear needs_html locally so banner stops immediately
+        var p = (_pages||[]).find(function(x){ return x.id == pageId; });
+        if (p) { p.needs_html = false; renderPages(); }
+        toast('HTML saved' + (html ? ' — scanning...' : ''), '#4ade80');
         hideModal('htmlUploadModal');
         if (html) setTimeout(function(){ checkPage(pageId); }, 600);
         setTimeout(loadPages, html ? 5000 : 500);
@@ -28522,9 +28541,32 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 maxWrap.appendChild(presets);
                 maxCell.appendChild(maxWrap);
 
-                // -- Actions --
-                var actionsDiv = document.createElement('div');
-                actionsDiv.style.cssText = 'display:flex;gap:3px;justify-content:center;flex-wrap:wrap;';
+                // ── Frequency selector ──
+                var freqSelect = document.createElement('select');
+                freqSelect.className = 'tr-btn';
+                freqSelect.title = 'Change auto-check frequency for all pages of this client';
+                freqSelect.style.cssText = 'font-size:10px;padding:3px 6px;border-color:#818cf8;color:#818cf8;background:#0d1117;cursor:pointer;border-radius:4px;border:1px solid #818cf8;';
+                [['3days','3 days'],['weekly','Weekly'],['monthly','Monthly']].forEach(function(opt) {
+                    var o = document.createElement('option');
+                    o.value = opt[0];
+                    o.textContent = opt[1];
+                    if (c.scan_frequency === opt[0]) o.selected = true;
+                    freqSelect.appendChild(o);
+                });
+                freqSelect.onchange = (function(id){ return function() {
+                    var freq = this.value;
+                    // Update all pages for this client
+                    fetch('/api/admin/tracker-clients/' + id + '/frequency', {
+                        method: 'PATCH',
+                        headers: {'Content-Type':'application/json', 'Authorization': 'Bearer ' + _adminToken},
+                        body: JSON.stringify({frequency: freq})
+                    }).then(function(r){ return r.json(); }).then(function(d){
+                        if (d.success) showToast('Frequency updated to ' + freq, '#818cf8');
+                        else showToast(d.error || 'Failed', '#f87171');
+                        setTimeout(loadTrackerClients, 400);
+                    });
+                }; })(c.id);
+                actionsDiv.appendChild(freqSelect);
 
                 var toggleBtn = document.createElement('button');
                 toggleBtn.className = 'tr-btn' + (isActive ? '' : ' green');
