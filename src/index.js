@@ -1067,7 +1067,16 @@ app.patch('/api/tracker-client/:token/pages/:pageId/done', async (req, res) => {
     const own = await pool.query('SELECT id FROM tracker_pages WHERE id=$1 AND tracker_client_id=$2', [req.params.pageId, cr.rows[0].id]);
     if (!own.rows.length) return res.status(403).json({ success: false, error: 'Not your page' });
     const { is_done } = req.body;
-    await pool.query('UPDATE tracker_pages SET is_done=$1 WHERE id=$2', [!!is_done, req.params.pageId]);
+    if (is_done) {
+      // Done pressed — reset brief so next check starts fresh
+      await pool.query(
+        `UPDATE tracker_pages SET is_done=TRUE, brief_content=NULL, brief_started_at=NULL, brief_done_at=NOW(), brief_check_count=0 WHERE id=$1`,
+        [req.params.pageId]
+      );
+    } else {
+      // Undone — just clear is_done flag, keep brief
+      await pool.query('UPDATE tracker_pages SET is_done=FALSE WHERE id=$1', [req.params.pageId]);
+    }
     res.json({ success: true });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
@@ -1165,7 +1174,19 @@ app.post('/api/tracker-client/:token/pages', async (req, res) => {
       }
     }
 
-    res.json({ success: true, page_id: pr.rows[0].id, remaining: maxPages - count - 1 });
+    const newPageId = pr.rows[0].id;
+    res.json({ success: true, page_id: newPageId, remaining: maxPages - count - 1 });
+
+    // First check auto-starts after 1 minute
+    setTimeout(function() {
+      pool.query('SELECT id FROM tracker_pages WHERE id=$1 AND is_active=TRUE', [newPageId])
+        .then(function(r) {
+          if (r.rows.length) {
+            console.log('[tracker] Auto first-check for new page:', newPageId);
+            runTrackerCheck(newPageId).catch(function(e){ console.warn('[tracker] First check failed:', e.message); });
+          }
+        }).catch(function(){});
+    }, 60 * 1000);
   } catch(e) {
     console.error('[POST tracker pages]', e.message, e.detail || '');
     res.status(500).json({ success: false, error: e.message, detail: e.detail || null });
@@ -1616,6 +1637,11 @@ app.patch('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS max_pages INTEGER DEFAULT 3`).catch(()=>{});
   await client.query(`UPDATE tracker_clients SET max_pages=3 WHERE max_pages IS NULL OR max_pages=10`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS registered_ip VARCHAR(45)`).catch(()=>{});
+  // Brief merge system
+  await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS brief_content JSONB`).catch(()=>{});
+  await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS brief_started_at TIMESTAMPTZ`).catch(()=>{});
+  await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS brief_done_at TIMESTAMPTZ`).catch(()=>{});
+  await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS brief_check_count INTEGER DEFAULT 0`).catch(()=>{});
   await client.query(`CREATE INDEX IF NOT EXISTS tracker_clients_ip_idx ON tracker_clients(registered_ip) WHERE registered_ip IS NOT NULL`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS extra_domains TEXT DEFAULT ''`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS unsubscribe_token VARCHAR(64)`).catch(()=>{});
@@ -23301,6 +23327,26 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
 .cs-input:focus { border-color:#7c3aed; }
 
 /* Toast */
+.cb-inline { background:#0d1117; border:1px solid #4c1d95; border-radius:10px; overflow:hidden; margin-top:10px; }
+.cb-inline-hdr { background:linear-gradient(135deg,#1a0e2e,#0f172a); padding:10px 14px; display:flex; align-items:center; gap:8px; border-bottom:1px solid #2d1f4e; }
+.cb-inline-title { font-size:13px; font-weight:600; color:#e9d5ff; display:flex; align-items:center; gap:6px; }
+.cb-inline-icon { font-size:14px; }
+.cb-inline-meta { font-size:11px; color:#4b5563; flex:1; }
+.cb-copy-btn { background:none; border:1px solid #374151; border-radius:4px; color:#6b7280; cursor:pointer; font-size:10px; padding:3px 8px; font-family:inherit; }
+.cb-copy-btn:hover { border-color:#6b7280; color:#e5e7eb; }
+.cb-inline-stats { display:grid; grid-template-columns:repeat(6,1fr); gap:1px; background:#1f2937; border-bottom:1px solid #1f2937; }
+.cb-istat { background:#0d1117; padding:8px 4px; text-align:center; }
+.cb-isv { font-size:14px; font-weight:600; }
+.cb-isl { font-size:9px; color:#4b5563; margin-top:2px; letter-spacing:.03em; }
+.cb-inline-phd { font-size:10px; font-weight:700; color:#6b7280; letter-spacing:.06em; padding:10px 14px 6px; text-transform:uppercase; }
+.cb-inline-rec { padding:10px 14px; border-bottom:1px solid #111827; }
+.cb-inline-rec:last-child { border-bottom:none; }
+.cb-inline-rec-hd { display:flex; align-items:center; gap:7px; margin-bottom:6px; }
+.cb-rec-bullet { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
+.cb-rec-label { font-size:10px; font-weight:700; flex-shrink:0; letter-spacing:.04em; }
+.cb-rec-title { font-size:12px; font-weight:600; color:#f1f5f9; }
+.cb-rec-action { font-size:12px; color:#9ca3af; line-height:1.65; padding-left:14px; }
+.cb-rec-impact { font-size:10px; color:#4b5563; font-style:italic; padding-left:14px; margin-top:4px; }
 .cs-toast { position:fixed; bottom:24px; right:24px; background:#111827; border-radius:8px; padding:12px 20px; font-size:13px; color:#f1f5f9; z-index:9999; display:none; }
 
 /* Upsell */
@@ -23541,20 +23587,7 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
       <h3 style="font-size:15px;font-weight:800;color:#f1f5f9;">Paste page HTML</h3>
       <button onclick="hideModal('htmlUploadModal')" style="background:none;border:none;color:#94a3b8;cursor:pointer;font-size:1.2rem;">&#x2715;</button>
     </div>
-    <p style="font-size:12px;color:#6b7280;margin-bottom:12px;">Open your page in browser &rarr; right-click &rarr; View Page Source &rarr; Ctrl+A &rarr; Ctrl+C &rarr; paste below. This gives the most accurate GRAAF scan.</p>
-    <div style="margin-bottom:10px;">
-      <label style="font-size:11px;color:#9ca3af;display:block;margin-bottom:4px;">Keyword (optional)</label>
-      <input id="htmlUploadKeyword" type="text" class="cs-input" placeholder="e.g. seo content strategy">
-    </div>
-    <textarea id="htmlUploadContent" class="cs-input" rows="10" placeholder="Paste full page HTML here..." style="resize:vertical;font-family:monospace;font-size:11px;margin-bottom:12px;"></textarea>
-    <div style="display:flex;gap:8px;">
-      <button class="cs-btn primary" onclick="submitHtmlUpload()" style="flex:1;">Save &amp; scan</button>
-      <button class="cs-btn" onclick="hideModal('htmlUploadModal')">Cancel</button>
-    </div>
-  </div>
-</div>
-
-<script>
+    <p style="font-size:12px;color:#6b7280;margin-bottom:12px;">Open you
 var TOKEN = '__TOKEN__';
 var DOMAIN = '__DOMAIN__';
 var MAX_PAGES = __MAX_PAGES__;
@@ -23744,10 +23777,99 @@ function renderRecs(p) {
   try {
     var recs = typeof p.recommendations === 'string' ? JSON.parse(p.recommendations) : p.recommendations;
     if (!Array.isArray(recs) || !recs.length) return '';
-    return recs.slice(0,2).map(function(r) {
-      return '<div style="margin-bottom:4px;"><span style="font-size:9px;font-weight:700;padding:1px 5px;border-radius:2px;background:#2d1f00;color:#fbbf24;margin-right:4px;">' + (r.priority||'').toUpperCase() + '</span>' + (r.title||'') + '</div>';
-    }).join('');
+    var pageId = p.id || '';
+    var pos = p.latest_snapshot && p.latest_snapshot.google_position;
+    var aio = p.latest_snapshot && p.latest_snapshot.ai_google_overview_cited;
+    var perp = p.latest_snapshot && p.latest_snapshot.ai_perplexity_cited;
+    var cop = p.latest_snapshot && p.latest_snapshot.ai_bing_cited;
+    var cl = p.latest_snapshot && p.latest_snapshot.ai_brave_cited;
+    var score = p.latest_snapshot && p.latest_snapshot.score;
+    var posColor = pos ? (pos<=3?'#22c55e':pos<=10?'#f59e0b':'#ef4444') : '#4b5563';
+
+    var html = '<div class="cb-inline" id="cbInline_' + pageId + '">';
+
+    // Header - gradient like TV moment
+    html += '<div class="cb-inline-hdr">';
+    html += '<div class="cb-inline-title"><span class="cb-inline-icon">&#127919;</span> Citation Brief</div>';
+    html += '<div class="cb-inline-meta">' + (p.keyword ? 'keyword: <span style="color:#a78bfa">' + p.keyword + '</span>' : '') + '</div>';
+    html += '<button onclick="copyBrief(' + pageId + ')" class="cb-copy-btn" title="Copy full brief">Copy</button>';
+    html += '</div>';
+
+    // Stat row
+    html += '<div class="cb-inline-stats">';
+    html += '<div class="cb-istat"><div class="cb-isv" style="color:' + posColor + '">' + (pos ? '#'+pos : '—') + '</div><div class="cb-isl">Position</div></div>';
+    html += '<div class="cb-istat"><div class="cb-isv" style="color:' + (aio?'#22c55e':'#374151') + '">' + (aio?'✓':'—') + '</div><div class="cb-isl">Google AIO</div></div>';
+    html += '<div class="cb-istat"><div class="cb-isv" style="color:' + (perp?'#818cf8':'#374151') + '">' + (perp?'✓':'—') + '</div><div class="cb-isl">Perplexity</div></div>';
+    html += '<div class="cb-istat"><div class="cb-isv" style="color:' + (cop?'#60a5fa':'#374151') + '">' + (cop?'✓':'—') + '</div><div class="cb-isl">Copilot</div></div>';
+    html += '<div class="cb-istat"><div class="cb-isv" style="color:' + (cl?'#a78bfa':'#374151') + '">' + (cl?'✓':'—') + '</div><div class="cb-isl">Claude</div></div>';
+    if (score) html += '<div class="cb-istat"><div class="cb-isv" style="color:#f59e0b">' + score + '</div><div class="cb-isl">GRAAF</div></div>';
+    html += '</div>';
+
+    // What to add label
+    html += '<div class="cb-inline-phd">&#10024; What to add to get cited</div>';
+
+    // Recommendations
+    recs.forEach(function(r) {
+      var pri = (r.priority || r.p || '').toLowerCase();
+      var isHigh = pri === 'high';
+      var isMed = pri === 'medium' || pri === 'med';
+      var color = isHigh ? '#ef4444' : isMed ? '#f59e0b' : '#22c55e';
+      var label = isHigh ? 'HIGH' : isMed ? 'MED' : 'LOW';
+      var title = r.title || r.t || '';
+      var action = r.action || '';
+      var impact = r.expected_impact || r.impact || '';
+      html += '<div class="cb-inline-rec">';
+      html += '<div class="cb-inline-rec-hd">';
+      html += '<span class="cb-rec-bullet" style="background:' + color + '"></span>';
+      html += '<span class="cb-rec-label" style="color:' + color + '">' + label + '</span>';
+      if (title) html += '<span class="cb-rec-title">' + title + '</span>';
+      html += '</div>';
+      if (action) html += '<div class="cb-rec-action">' + action + '</div>';
+      if (impact) html += '<div class="cb-rec-impact">&#8594; ' + impact + '</div>';
+      html += '</div>';
+    });
+
+    html += '</div>';
+    return html;
   } catch(e) { return ''; }
+}
+
+function copyBrief(pageId) {
+  var p = (_pages||[]).find(function(x){ return x.id == pageId; });
+  if (!p) return;
+  var recs = typeof p.recommendations === 'string' ? JSON.parse(p.recommendations) : p.recommendations;
+  if (!Array.isArray(recs)) return;
+  var lines = ['CITATION BRIEF — ' + (p.url||''), ''];
+  recs.forEach(function(r, i) {
+    var pri = (r.priority||r.p||'').toUpperCase();
+    var title = r.title || r.t || '';
+    var action = r.action || '';
+    var impact = r.expected_impact || '';
+    lines.push((i+1) + '. [' + pri + '] ' + title);
+    if (action) lines.push(action);
+    if (impact) lines.push('Impact: ' + impact);
+    lines.push('');
+  });
+  var text = lines.join(String.fromCharCode(10));
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(text).then(function(){
+      toast('Brief copied to clipboard', '#4ade80');
+    }).catch(function(){
+      promptCopy(text);
+    });
+  } else {
+    promptCopy(text);
+  }
+}
+
+function promptCopy(text) {
+  var ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.cssText = 'position:fixed;top:-9999px;left:-9999px';
+  document.body.appendChild(ta);
+  ta.select();
+  try { document.execCommand('copy'); toast('Brief copied', '#4ade80'); } catch(e) { toast('Select text manually', '#f87171'); }
+  document.body.removeChild(ta);
 }
 
 async function addPage() {
@@ -23889,7 +24011,7 @@ async function markDone(pageId, btn, currentDone) {
         var pollCount = 0;
         var pollInterval = setInterval(function() {
           pollCount++;
-          if (pollCount > 12) {
+          if (pollCount > 15) {
             clearInterval(pollInterval);
             _checkAnimations[pageId] = false;
             loadPages();
@@ -23898,20 +24020,39 @@ async function markDone(pageId, btn, currentDone) {
           api('/pages/' + pageId).then(function(d) {
             if (d.success && d.page && d.page.last_checked_at) {
               var checkTime = new Date(d.page.last_checked_at).getTime();
-              if (Date.now() - checkTime < 120000) {
+              if (Date.now() - checkTime < 180000) {
                 clearInterval(pollInterval);
                 _checkAnimations[pageId] = false;
-                // Final results
                 var prog = document.querySelector('.cs-page-card[data-page-id="' + pageId + '"] .check-progress');
                 if (prog) {
-                  prog.innerHTML = '<div style="color:#4ade80;font-size:11px;">✓ Check complete — loading results...</div>';
-                  setTimeout(function(){ prog.remove(); }, 2000);
+                  prog.innerHTML = '<div style="color:#4ade80;font-size:11px;">v Check complete</div>';
                 }
+                // Reload cards with fresh badges
                 loadPages();
+                // Fire Citation Brief with fresh data
+                var p = d.page;
+                var snap = p.latest_snapshot || p;
+                var briefData = {
+                  page_id: pageId,
+                  url: p.url,
+                  keyword: p.keyword || p.gsc_keyword || '',
+                  domain: DOMAIN,
+                  position: snap.google_position || null,
+                  aio_cited: !!(snap.ai_google_overview_cited),
+                  perp_cited: !!(snap.ai_perplexity_cited),
+                  bing_cited: !!(snap.ai_bing_cited),
+                  brave_cited: !!(snap.ai_brave_cited),
+                  score: snap.score || snap.graaf_score || null,
+                  passages: Array.isArray(snap.recommendations) ? snap.recommendations : [],
+                  type: 'brief_ready'
+                };
+                setTimeout(function() {
+                  if (typeof showCitationBrief === 'function') showCitationBrief(briefData);
+                }, 1500);
               }
             }
           }).catch(function(){});
-        }, 5000);
+        }, 4000);
       }
     } catch(e) {
       toast('Error: ' + e.message, '#f87171');
@@ -24546,6 +24687,32 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
     var page = (_pages||[]).find(function(p){ return p.id == pageId; }) || {};
     var current = page.keyword || page.gsc_keyword || '';
     var newKw = prompt('Set keyword for this page (used for SERP + AI checks):', current);
+    if (newKw === null) return;
+    newKw = newKw.trim();
+    api('/pages/' + pageId + '/keyword', 'PATCH', { keyword: newKw })
+      .then(function(d) {
+        if (d.success) {
+          toast('Keyword updated', '#4ade80');
+          setTimeout(loadPages, 400);
+        } else {
+          toast(d.error || 'Failed', '#f87171');
+        }
+      })
+      .catch(function(e) { toast('Error: ' + e.message, '#f87171'); });
+  }
+
+  // ── Welcome overlay ────────────────────────────────────────────────────────
+  function closeWelcome() {
+    var el = document.getElementById('welcomeOverlay');
+    if (el) el.style.display = 'none';
+    try { sessionStorage.setItem('wl_seen_' + TOKEN, '1'); } catch(e) {}
+  }
+  function openWelcome() {
+    var el = document.getElementById('welcomeOverlay');
+    if (el) el.style.display = 'flex';
+  }
+
+ this page (used for SERP + AI checks):', current);
     if (newKw === null) return;
     newKw = newKw.trim();
     api('/pages/' + pageId + '/keyword', 'PATCH', { keyword: newKw })
@@ -29566,7 +29733,8 @@ app.post('/api/tracker/pages/:id/check', verifyEngineAccess, async (req, res) =>
                 + '</td> ';
             }
 
-            const bodyHtml = '<h2 style="font-size:17px;font-weight:800;color:#0f172a;margin-bottom:10px;">' + (isFirst ? 'Your first scan is complete' : 'Your tracker has an update') + '</h2>'
+            const bodyHtml = '<h2 style="font-size:17px;font-weight:800;color:#0f172a;margin-bottom:10px;">' + (isFirst ? 'Your first Citation Brief is ready' : 'Your Citation Brief has been updated') + '</h2>'
+              + (isMerged ? '<div style="background:#fef3c7;border:1px solid #fde68a;border-radius:8px;padding:12px 16px;margin-bottom:14px;font-size:13px;color:#92400e;"><strong>Note:</strong> Your brief from yesterday was not marked done, so we merged it with today\'s new findings. You are seeing one combined brief with everything still relevant. <strong>Press Done as soon as you have implemented this brief</strong> — so the brief can restart its automatic search. If you only have 1 day to implement, don\'t worry: all items you haven\'t done before pressing Done will carry forward automatically.</div>' : '')
               + '<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px 16px;margin-bottom:14px;"><div style="font-size:9px;color:#94a3b8;text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px;">Page</div><div style="font-size:12px;color:#7c3aed;font-family:monospace;word-break:break-all;margin-bottom:4px;">' + pageUrl + '</div>' + (kw ? '<div style="font-size:11px;color:#64748b;">Keyword: <strong style="color:#1e293b;">' + kw + '</strong></div>' : '') + '</div>'
               + changeSummary
               + '<table width="100%" style="border-spacing:4px;border-collapse:separate;margin-bottom:14px;"><tr>'
@@ -29590,6 +29758,84 @@ app.post('/api/tracker/pages/:id/check', verifyEngineAccess, async (req, res) =>
                  VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,NOW())`,
                 [page.id, page.tracker_client_id, kw, pageUrl, pos, aio, perp, bing, brave, score, recs ? JSON.stringify(recs) : null]
               );
+
+              // ── BRIEF MERGE SYSTEM ────────────────────────────────────────────
+              // Load existing brief_content for this page
+              const pageRow = await pool.query(`SELECT brief_content, brief_started_at, brief_check_count FROM tracker_pages WHERE id=$1`, [page.id]);
+              const existingBrief = pageRow.rows[0]?.brief_content;
+              const briefStarted = pageRow.rows[0]?.brief_started_at;
+              const checkCount = (pageRow.rows[0]?.brief_check_count || 0) + 1;
+              const isFirstBrief = !existingBrief;
+
+              let mergedBrief = null;
+              let mergeNote = null;
+
+              if (recs && recs.length) {
+                if (isFirstBrief) {
+                  // First brief — store as-is
+                  mergedBrief = { items: recs, position: pos, aio, perp, bing_cited: bing, brave_cited: brave, score };
+                } else {
+                  // Merge: use Gemini to combine old + new
+                  try {
+                    const gemKey = process.env.GEMINI_API_KEY || '';
+                    if (gemKey) {
+                      const mergePrompt = `You are merging two AI citation briefs for the same page into one.
+
+PAGE: ${pageUrl}
+KEYWORD: "${kw}"
+
+CURRENT STATUS (today's check):
+- Google position: ${pos ? '#' + pos : 'not ranked'}
+- Google AIO cited: ${aio ? 'YES' : 'NO'}
+- Perplexity cited: ${perp ? 'YES' : 'NO'}
+- Copilot cited: ${bing ? 'YES' : 'NO'}
+- Claude cited: ${brave ? 'YES' : 'NO'}
+- GRAAF score: ${score || 'N/A'}/100
+
+PREVIOUS BRIEF (from last check, NOT yet marked done by user):
+${JSON.stringify(existingBrief?.items || [], null, 2)}
+
+NEW RECOMMENDATIONS (from today's check):
+${JSON.stringify(recs, null, 2)}
+
+TASK: Create ONE merged brief.
+- Remove items that are now resolved (e.g. if AIO is now cited, remove "get cited in AIO" items)
+- Keep items from previous brief that are still relevant and not done
+- Add new items that weren't in the previous brief
+- If an item appears in both, keep the clearest version
+- Maximum 5 items total, sorted by priority (HIGH first)
+
+Return ONLY a JSON array, no markdown:
+[{"title":"gap in max 6 words","priority":"high"|"medium"|"low","action":"EXACT copy-paste ready instruction — minimum 30 words, tell the user exactly what sentence/paragraph/FAQ to add or change","expected_impact":"which AI system and why"}]
+
+                      const gResp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${gemKey}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ contents: [{ parts: [{ text: mergePrompt }] }], generationConfig: { temperature: 0.3, maxOutputTokens: 800 } })
+                      });
+                      if (gResp.ok) {
+                        const gData = await gResp.json();
+                        const gText = gData.candidates?.[0]?.content?.parts?.[0]?.text || '';
+                        const cleaned = gText.replace(/```json|```/g, '').trim();
+                        const merged = JSON.parse(cleaned);
+                        mergedBrief = { items: merged, position: pos, aio, perp, bing_cited: bing, brave_cited: brave, score, merged: true };
+                        mergeNote = 'Merged with previous brief';
+                      }
+                    }
+                  } catch(mergeErr) {
+                    console.warn('[brief-merge] Gemini merge failed, using new only:', mergeErr.message);
+                    mergedBrief = { items: recs, position: pos, aio, perp, bing_cited: bing, brave_cited: brave, score };
+                  }
+                }
+              }
+
+              if (mergedBrief) {
+                await pool.query(
+                  `UPDATE tracker_pages SET brief_content=$1, brief_started_at=COALESCE(brief_started_at, NOW()), brief_check_count=$2 WHERE id=$3`,
+                  [JSON.stringify(mergedBrief), checkCount, page.id]
+                );
+              }
+
               // Broadcast brief_ready event to client live feed
               _sseBroadcast({
                 type: 'brief_ready',
@@ -29603,6 +29849,9 @@ app.post('/api/tracker/pages/:id/check', verifyEngineAccess, async (req, res) =>
                 brave_cited: brave,
                 score: score,
                 domain: domainFin,
+                merged: !isFirstBrief,
+                merge_note: mergeNote,
+                brief_content: mergedBrief,
                 ts: new Date().toISOString()
               });
             } catch(e) { console.warn('[brief-save]', e.message); }
@@ -30737,9 +30986,9 @@ TASK:
 3. Give 3-5 actions that directly target getting into Google AI Overview, Perplexity, and You.com
 
 Return ONLY a JSON array, no markdown:
-[{"title":"specific gap max 10 words","priority":"high"|"medium"|"low","action":"exactly what to write or restructure — be specific about the gap vs competitors","expected_impact":"Google AI Overview / Perplexity / You.com / Google #1 — and the mechanism why"}]
+[{"title":"gap in max 6 words","priority":"high"|"medium"|"low","action":"EXACT copy-paste ready instruction — e.g. 'Add this sentence to your intro: ...' or 'Replace your H2 with: ...' or 'Add this FAQ block: Q: ... A: ...' — minimum 30 words, maximum 80 words","expected_impact":"Google AI Overview / Perplexity / Copilot / Claude — and specifically why"}]
 
-Zero generic advice. Skip anything our content already clearly has. Never write recommendations explaining what the keyword means as a concept.`;
+Zero generic advice. Every action must be so specific the user can implement it immediately without thinking.`;
 
       const resp = await callGeminiWithFallback(geminiKey, {
         contents: [{ role: 'user', parts: [{ text: prompt }] }],
