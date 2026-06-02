@@ -23587,7 +23587,11 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
       <h3 style="font-size:15px;font-weight:800;color:#f1f5f9;">Paste page HTML</h3>
       <button onclick="hideModal('htmlUploadModal')" style="background:none;border:none;color:#94a3b8;cursor:pointer;font-size:1.2rem;">&#x2715;</button>
     </div>
-    <p style="font-size:12px;color:#6b7280;margin-bottom:12px;">Open you
+    <p style="font-size:12px;color:#6b7280;margin-bottom:12px;">Open your page in Chrome, right-click &rarr; View Page Source, select all, paste here. Or use the browser extension.</p>
+  </div>
+</div>
+
+<script>
 var TOKEN = '__TOKEN__';
 var DOMAIN = '__DOMAIN__';
 var MAX_PAGES = __MAX_PAGES__;
@@ -24710,21 +24714,6 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
   function openWelcome() {
     var el = document.getElementById('welcomeOverlay');
     if (el) el.style.display = 'flex';
-  }
-
- this page (used for SERP + AI checks):', current);
-    if (newKw === null) return;
-    newKw = newKw.trim();
-    api('/pages/' + pageId + '/keyword', 'PATCH', { keyword: newKw })
-      .then(function(d) {
-        if (d.success) {
-          toast('Keyword updated', '#4ade80');
-          setTimeout(loadPages, 400);
-        } else {
-          toast(d.error || 'Failed', '#f87171');
-        }
-      })
-      .catch(function(e) { toast('Error: ' + e.message, '#f87171'); });
   }
 
   // ── Welcome overlay ────────────────────────────────────────────────────────
@@ -29807,6 +29796,7 @@ TASK: Create ONE merged brief.
 
 Return ONLY a JSON array, no markdown:
 [{"title":"gap in max 6 words","priority":"high"|"medium"|"low","action":"EXACT copy-paste ready instruction — minimum 30 words, tell the user exactly what sentence/paragraph/FAQ to add or change","expected_impact":"which AI system and why"}]
+`;
 
                       const gResp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${gemKey}`, {
                         method: 'POST',
