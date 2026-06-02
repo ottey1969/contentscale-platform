@@ -1240,6 +1240,12 @@ app.get('/track/:token', async (req, res) => {
     res.send(_CLIENT_TRACKER_HTML
       .replace(/__TOKEN__/g, req.params.token)
       .replace(/__DOMAIN__/g, client.domain)
+      .replace(/__EXTRA_DOMAINS_HTML__/g, (client.extra_domains && client.extra_domains.trim())
+        ? client.extra_domains.split(',').map(d => d.trim()).filter(Boolean)
+            .map(d => `<span style="display:inline-block;font-size:10px;color:#38bdf8;background:#0c2340;border:1px solid #1d4ed8;border-radius:4px;padding:1px 7px;margin-top:4px;margin-right:4px;">${d}</span>`)
+            .join('')
+        : ''
+      )
       .replace(/__MAX_PAGES__/g, String(client.max_pages || 3))
       .replace(/__CLIENT_NAME__/g, client.name || client.domain)
     );
@@ -23405,7 +23411,7 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
 
 /* Welcome agent */
 .wl-overlay { position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.75);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:16px; }
-.wl-card { background:#0d1117;border:1px solid #1f2937;border-radius:20px;width:100%;max-width:520px;max-height:90vh;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 0 80px rgba(124,58,237,.3);animation:wlIn .6s cubic-bezier(.16,1,.3,1); }
+.wl-card { background:#0d1117;border:1px solid #1f2937;border-radius:20px;width:100%;max-width:640px;max-height:90vh;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 0 80px rgba(124,58,237,.3);animation:wlIn .6s cubic-bezier(.16,1,.3,1); }
 @keyframes wlIn { from{opacity:0;transform:translateY(30px) scale(.96)} to{opacity:1;transform:none} }
 .wl-top { background:linear-gradient(135deg,#1e1b4b 0%,#312e81 50%,#4c1d95 100%);padding:32px 28px 24px;text-align:center;position:relative; }
 .wl-avatar { width:72px;height:72px;border-radius:50%;border:3px solid rgba(255,255,255,.3);margin:0 auto 14px;display:block;object-fit:cover; }
@@ -23419,7 +23425,7 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
 .wl-domain-box { background:#0a0a12;border:1px solid #7c3aed;border-radius:10px;padding:14px 18px;margin-bottom:20px;display:flex;align-items:center;gap:12px; }
 .wl-domain-icon { width:36px;height:36px;border-radius:8px;background:linear-gradient(135deg,#7c3aed,#4f46e5);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0; }
 .wl-domain-text { font-size:13px;font-weight:700;color:#f1f5f9;font-family:monospace; }
-.wl-domain-sub { font-size:10px;color:#4b5563;margin-top:2px; }
+.wl-domain-sub { font-size:10px;color:#6b7280;margin-top:2px; }
 .wl-features { display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:20px; }
 .wl-feature { background:#0a0a12;border:1px solid #1f2937;border-radius:8px;padding:10px 12px;font-size:11px;color:#6b7280;display:flex;align-items:flex-start;gap:8px; }
 .wl-feature-dot { width:4px;height:4px;border-radius:50%;background:#7c3aed;margin-top:4px;flex-shrink:0; }
@@ -24808,9 +24814,10 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
 
       <div class="wl-domain-box">
         <div class="wl-domain-icon">&#127760;</div>
-        <div>
+        <div style="flex:1">
           <div class="wl-domain-text" id="wlDomain">__DOMAIN__</div>
           <div class="wl-domain-sub">Your domain &mdash; actively monitored</div>
+          __EXTRA_DOMAINS_HTML__
         </div>
       </div>
 
