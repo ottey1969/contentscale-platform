@@ -1059,6 +1059,19 @@ app.patch('/api/tracker-client/:token/pages/:pageId/html', async (req, res) => {
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
+// PATCH /api/tracker-client/:token/pages/:pageId/frequency
+app.patch('/api/tracker-client/:token/pages/:pageId/frequency', async (req, res) => {
+  try {
+    const cr = await pool.query('SELECT id FROM tracker_clients WHERE token=$1 AND status=$2', [req.params.token, 'active']);
+    if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
+    const { frequency } = req.body;
+    const allowed = ['1day','3days','weekly','monthly'];
+    if (!allowed.includes(frequency)) return res.status(400).json({ success: false, error: 'Invalid frequency' });
+    await pool.query('UPDATE tracker_pages SET check_frequency=$1 WHERE id=$2 AND tracker_client_id=$3', [frequency, req.params.pageId, cr.rows[0].id]);
+    res.json({ success: true });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
 // PATCH /api/tracker-client/:token/pages/:pageId/done — mark page done/undone
 app.patch('/api/tracker-client/:token/pages/:pageId/done', async (req, res) => {
   try {
@@ -23445,7 +23458,7 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
     <div class="cs-stat"><div class="val" id="statCitedB" style="color:#2563eb;">&mdash;</div><div class="lbl">Copilot</div></div>
     <div class="cs-stat"><div class="val" id="statCitedC" style="color:#dc2626;">&mdash;</div><div class="lbl">Claude</div></div>
     <div class="cs-stat"><div class="val" id="statAvgScore" style="color:#ca8a04;">&mdash;</div><div class="lbl">GRAAF</div></div>
-    <div class="cs-stat"><div class="val" id="statRemaining" style="color:#16a34a;">&mdash;</div><div class="lbl">Slots left (max 3)</div></div>
+    <div class="cs-stat"><div class="val" id="statRemaining" style="color:#16a34a;">&mdash;</div><div class="lbl">Slots left</div></div>
   </div>
 
   <!-- Toolbar -->
@@ -23592,6 +23605,7 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
 </div>
 
 <script>
+var TOK
 var TOKEN = '__TOKEN__';
 var DOMAIN = '__DOMAIN__';
 var MAX_PAGES = __MAX_PAGES__;
@@ -23660,11 +23674,19 @@ function renderStats(data) {
   var elC = document.getElementById('statCitedC'); if(elC) elC.textContent = citedC;
   document.getElementById('statAvgScore').textContent = avgScore ? avgScore+'/100' : '-';
   // Count per domain - DOMAIN is the primary domain
-  var domainPages = pages.filter(function(p){
+  // Slots left = total allowed across all domains minus pages tracked
+  // Each domain gets MAX_PAGES slots, count unique domains being tracked
+  var uniqueDomains = {};
+  pages.forEach(function(p){
     var d = (p.url||'').replace(/^https?:[/][/]/,'').replace(/^www[.]/,'').split('/')[0];
-    return d === DOMAIN || d.endsWith('.' + DOMAIN);
+    var base = d.split('.').slice(-2).join('.');
+    if (!uniqueDomains[base]) uniqueDomains[base] = 0;
+    uniqueDomains[base]++;
   });
-  var remainingForDomain = Math.max(0, MAX_PAGES - domainPages.length);
+  var domainCount = Object.keys(uniqueDomains).length || 1;
+  var totalSlots = domainCount * MAX_PAGES;
+  var usedSlots = pages.length;
+  var remainingForDomain = Math.max(0, totalSlots - usedSlots);
   document.getElementById('statRemaining').textContent = remainingForDomain;
   document.getElementById('pageCountLabel').textContent = '(' + pages.length + ' pages tracked)';
 
@@ -23711,6 +23733,7 @@ function renderPages() {
     var posColor = !pos ? '#6b7280' : pos<=3 ? '#4ade80' : pos<=10 ? '#a3e635' : pos<=20 ? '#fbbf24' : '#f87171';
     var lastChecked = p.last_checked ? new Date(p.last_checked).toLocaleDateString() : 'Not yet';
     var nextCheck = p.next_check_at ? 'Next: ' + new Date(p.next_check_at).toLocaleDateString() : '';
+    var freqLabel = p.check_frequency === '1day' ? 'daily' : p.check_frequency === '3days' ? 'every 3 days' : p.check_frequency === 'weekly' ? 'weekly' : p.check_frequency === 'monthly' ? 'monthly' : 'weekly';
     // Clean URL - remove protocol, www, and fix anchor slugs (#section)
     var rawUrl = p.url || '';
     var urlClean = rawUrl.replace(/^https?:[/][/]/, '').replace(/^www[.]/, '');
@@ -23755,6 +23778,7 @@ function renderPages() {
       + '</div>'
       + '<div style="display:flex;gap:5px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">'
       + '<button onclick="checkPage(' + p.id + ')" data-check-btn="' + p.id + '" class="btn" style="font-size:11px;padding:5px 12px;border-color:#16a34a;color:#4ade80;font-weight:600;" title="Run check: Google position + AI citations + recommendations"><i class="fas fa-sync-alt" style="margin-right:5px;"></i>Check now</button>'
+      + '<select onchange="changeFreq(' + p.id + ',this.value)" class="cs-input" style="font-size:10px;padding:4px 6px;margin-left:2px;border-color:#1f2937;color:#4b5563;background:#111827;border-radius:5px;cursor:pointer;"><option value="3days"' + (p.check_frequency==="3days"?' selected':'') + '>3 days</option><option value="weekly"' + ((!p.check_frequency||p.check_frequency==="weekly")?" selected":'') + '>Weekly</option><option value="monthly"' + (p.check_frequency==="monthly"?' selected':'') + '>Monthly</option></select>'
       + '<button onclick="openHtmlUpload(' + p.id + ')" class="btn" style="font-size:11px;padding:5px 10px;border-color:#fbbf24;color:#fbbf24;" title="Paste HTML for GRAAF scan">HTML</button>'
       + '<button onclick="markDone(' + p.id + ',this,' + isDone + ')" class="btn" style="font-size:11px;padding:5px 10px;border-color:' + (isDone?'#4ade80':'#374151') + ';color:' + (isDone?'#4ade80':'#6b7280') + ';" title="Mark done">' + (isDone?'&#10003; Done':'Mark done') + '</button>'
       + '<button onclick="deletePage(' + p.id + ')" class="btn danger" style="font-size:11px;padding:5px 10px;" title="Remove">&#10005;</button>'
@@ -24652,10 +24676,14 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
   function openHtmlUpload(pageId) {
     _htmlUploadPageId = pageId;
     var page = (_pages||[]).find(function(p){ return p.id == pageId; }) || {};
-    document.getElementById('htmlUploadKeyword').value = page.keyword || '';
-    document.getElementById('htmlUploadContent').value = '';
-    document.getElementById('htmlUploadModal').classList.add('show');
-    setTimeout(function(){ document.getElementById('htmlUploadContent').focus(); }, 100);
+    var kEl = document.getElementById('htmlUploadKeyword');
+    var cEl = document.getElementById('htmlUploadContent');
+    var mEl = document.getElementById('htmlUploadModal');
+    if (!kEl || !cEl || !mEl) { toast('HTML upload panel not found', '#f87171'); return; }
+    kEl.value = page.keyword || '';
+    cEl.value = '';
+    mEl.classList.add('show');
+    setTimeout(function(){ cEl.focus(); }, 100);
   }
   async function submitHtmlUpload() {
     var pageId = _htmlUploadPageId;
@@ -24678,6 +24706,15 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
   }
 
   // ── Edit keyword inline ──────────────────────────────────────────────────────
+  function changeFreq(pageId, freq) {
+    api('/pages/' + pageId + '/frequency', 'PATCH', { frequency: freq })
+      .then(function(d){
+        if (d.success) toast('Auto-check: ' + freq, '#4ade80');
+        else toast(d.error||'Failed', '#f87171');
+        setTimeout(loadPages, 400);
+      }).catch(function(e){ toast('Error: '+e.message, '#f87171'); });
+  }
+
   function editKeyword(pageId, btnEl) {
     var page = (_pages||[]).find(function(p){ return p.id == pageId; }) || {};
     var current = page.keyword || page.gsc_keyword || '';
@@ -24707,16 +24744,6 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
     if (el) el.style.display = 'flex';
   }
 
-  // ── Welcome overlay ────────────────────────────────────────────────────────
-  function closeWelcome() {
-    var el = document.getElementById('welcomeOverlay');
-    if (el) el.style.display = 'none';
-    try { sessionStorage.setItem('wl_seen_' + TOKEN, '1'); } catch(e) {}
-  }
-  function openWelcome() {
-    var el = document.getElementById('welcomeOverlay');
-    if (el) el.style.display = 'flex';
-  }
 
 <\/script>
 
@@ -24799,8 +24826,13 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
             <li>Click the <strong style="color:#fbbf24;">HTML</strong> button on your page card &rarr; paste</li>
           </ol>
         </div>
-        <div style="font-size:11px;color:#92400e;line-height:1.6;">
+        <div style="font-size:11px;color:#92400e;line-height:1.6;margin-bottom:10px;">
           You only need to do this once per page. After that, the system auto-fetches updates.
+        </div>
+        <div style="background:#0a0a12;border:1px solid rgba(124,58,237,.3);border-radius:6px;padding:10px 12px;font-size:11px;color:#a78bfa;line-height:1.7;">
+          The structure of this tracker &#8212; direct answers, author credentials, case studies, short paragraphs &#8212; is exactly what makes AI systems cite a page. Apply the same to your pages. Scan and follow the recommendations.<br>
+          <a href="https://app.contentscale.site" target="_blank" style="color:#7c3aed;font-weight:700;text-decoration:none;margin-top:6px;display:inline-block;">app.contentscale.site</a> &nbsp;&#8594;&nbsp;
+          <a href="https://app.contentscale.site" target="_blank" style="color:#a78bfa;text-decoration:none;">Scan my pages &#8594;</a>
         </div>
       </div>
 
