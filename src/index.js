@@ -1839,6 +1839,9 @@ app.get('/api/telegram/register-webhook', async (req, res) => {
     });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
+
+// GET /api/admin/telegram-status
+app.get('/api/admin/telegram-status', async (req, res) => {
   try {
     const botToken = process.env.TELEGRAM_BOT_TOKEN;
     const appUrl = process.env.APP_URL;
