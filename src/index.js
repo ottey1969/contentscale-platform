@@ -25126,11 +25126,6 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
   function openWaSettings() {
     var modal = document.getElementById('waSettingsModal');
     if (!modal) return;
-    // Pre-fill if available
-    var phoneEl = document.getElementById('waPhone');
-    if (phoneEl && _pages && _pages[0]) {
-      // Try to get from page data — not stored client-side normally
-    }
     modal.style.display = 'flex';
   }
 
@@ -25279,23 +25274,24 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
 </div>
 
 <!-- WA Settings Modal -->
-<div id="waSettingsModal" class="cs-modal-overlay" onclick="hideModal('waSettingsModal')" style="display:none;">
-  <div class="cs-modal-box" onclick="event.stopPropagation()" style="max-width:440px;">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+<div id="waSettingsModal" onclick="hideModal('waSettingsModal')" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.75);align-items:center;justify-content:center;padding:20px;">
+  <div onclick="event.stopPropagation()" style="background:#0d1117;border:1px solid #374151;border-radius:12px;padding:24px;max-width:420px;width:100%;position:relative;box-shadow:0 20px 60px rgba(0,0,0,.6);">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
       <h3 style="font-size:15px;font-weight:800;color:#f1f5f9;">&#128242; WhatsApp Alerts Setup</h3>
-      <button onclick="hideModal('waSettingsModal')" style="background:none;border:none;color:#94a3b8;cursor:pointer;font-size:1.2rem;">&#x2715;</button>
+      <button onclick="hideModal('waSettingsModal')" style="background:none;border:none;color:#94a3b8;cursor:pointer;font-size:1.4rem;line-height:1;padding:0 4px;">&#x2715;</button>
     </div>
-    <p style="font-size:12px;color:#6b7280;margin-bottom:14px;">Get Citation Brief alerts via WhatsApp. Requires a free CallMeBot API key.</p>
-    <div style="background:#111827;border:1px solid #374151;border-radius:6px;padding:10px 14px;margin-bottom:12px;font-size:11px;color:#9ca3af;">
-      1. Add CallMeBot on WhatsApp: <strong style="color:#f1f5f9;">+34 644 20 47 56</strong><br>
-      2. Send: <strong style="color:#4ade80;">I allow callmebot to send me messages</strong><br>
-      3. You receive your API key by WhatsApp
+    <p style="font-size:12px;color:#6b7280;margin-bottom:14px;line-height:1.6;">Get Citation Brief alerts directly on WhatsApp after every scan. Free via CallMeBot.</p>
+    <div style="background:#111827;border:1px solid #1f2937;border-radius:6px;padding:12px 14px;margin-bottom:14px;font-size:11px;color:#9ca3af;line-height:1.9;">
+      <strong style="color:#f1f5f9;">Step 1.</strong> Add <strong style="color:#25d366;">+34 644 20 47 56</strong> to your WhatsApp contacts<br>
+      <strong style="color:#f1f5f9;">Step 2.</strong> Send: <strong style="color:#4ade80;">I allow callmebot to send me messages</strong><br>
+      <strong style="color:#f1f5f9;">Step 3.</strong> You receive your free API key by WhatsApp<br>
+      <strong style="color:#f1f5f9;">Step 4.</strong> Enter your number + key below
     </div>
     <input type="tel" id="waPhone" placeholder="Your WhatsApp number (e.g. 31628073996)" class="cs-input" style="margin-bottom:8px;width:100%;">
-    <input type="text" id="waKey" placeholder="CallMeBot API key" class="cs-input" style="margin-bottom:12px;width:100%;">
+    <input type="text" id="waKey" placeholder="CallMeBot API key" class="cs-input" style="margin-bottom:16px;width:100%;">
     <div style="display:flex;gap:8px;justify-content:flex-end;">
       <button onclick="hideModal('waSettingsModal')" class="cs-btn" style="border-color:#374151;color:#6b7280;">Cancel</button>
-      <button onclick="saveWaSettings()" class="cs-btn" style="border-color:#4ade80;color:#4ade80;font-weight:600;">Save &amp; Enable</button>
+      <button onclick="saveWaSettings()" class="cs-btn" style="border-color:#25d366;color:#25d366;font-weight:700;">&#128242; Save &amp; Enable</button>
     </div>
   </div>
 </div>
