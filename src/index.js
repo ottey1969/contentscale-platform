@@ -1748,7 +1748,27 @@ app.patch('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
     const { max_pages, status, reset_ip } = req.body;
     const updates = []; const vals = []; let i = 1;
     if (max_pages !== undefined) { updates.push(`max_pages=$${i++}`); vals.push(max_pages); }
-    if (req.body.extra_domains !== undefined) { updates.push(`extra_domains=$${i++}`); vals.push(req.body.extra_domains || ''); }
+    if (req.body.extra_domains !== undefined) {
+      updates.push(`extra_domains=$${i++}`);
+      vals.push(req.body.extra_domains || '');
+      // Auto-calculate max_pages: 3 per domain (1 primary + extra domains)
+      // Only auto-update if max_pages not explicitly set in this request
+      if (max_pages === undefined) {
+        const extraList = (req.body.extra_domains || '').split(',').map(d => d.trim()).filter(Boolean);
+        const domainCount = 1 + extraList.length; // primary + extras
+        // Get current base max_pages to preserve Dealify stacking
+        const curR = await pool.query('SELECT max_pages, dealify_codes FROM tracker_clients WHERE id=$1', [req.params.id]);
+        if (curR.rows.length) {
+          const cur = curR.rows[0];
+          const dealifyBonus = cur.dealify_codes ? (cur.dealify_codes.split(',').filter(c => c.trim()).length * 10) : 0;
+          const basePages = dealifyBonus > 0 ? dealifyBonus : 3; // Dealify clients get 10/code, free clients get 3
+          const newMax = domainCount * basePages;
+          updates.push(`max_pages=$${i++}`);
+          vals.push(newMax);
+          console.log(`[admin] Auto-updated max_pages: ${domainCount} domains × ${basePages} = ${newMax}`);
+        }
+      }
+    }
     if (req.body.gsc_enabled !== undefined) { updates.push(`gsc_enabled=$${i++}`); vals.push(!!req.body.gsc_enabled); }
     if (status !== undefined) {
       updates.push(`status=$${i++}`);
@@ -24086,14 +24106,13 @@ function renderStats(data) {
   var elC = document.getElementById('statCitedC'); if(elC) elC.textContent = citedC;
   document.getElementById('statAvgScore').textContent = avgScore ? avgScore+'/100' : '-';
 
-  // Slots left — calculated per primary domain (DOMAIN variable)
-  // MAX_PAGES is the total allowed for this account (not per domain)
+  // Slots left — MAX_PAGES is total across all domains
+  // Show: used/total and per-domain breakdown if multiple domains
   var usedSlots = pages.length;
   var remaining = Math.max(0, MAX_PAGES - usedSlots);
   var slotEl = document.getElementById('statRemaining');
   var slotParent = slotEl ? slotEl.closest('.cs-stat') : null;
   if (slotEl) {
-    // Hide slots counter entirely if MAX_PAGES is very large (admin/unlimited)
     if (MAX_PAGES >= 100) {
       if (slotParent) slotParent.style.display = 'none';
     } else {
@@ -24101,7 +24120,17 @@ function renderStats(data) {
       slotEl.textContent = remaining;
     }
   }
-  document.getElementById('pageCountLabel').textContent = '(' + pages.length + (MAX_PAGES < 100 ? '/' + MAX_PAGES : '') + ' pages tracked)';
+  // Page count label — show domain count if multiple
+  var domainSet = {};
+  pages.forEach(function(p){
+    var d = (p.url||'').split('//').pop().replace('www.','').split('/')[0].split('.').slice(-2).join('.');
+    domainSet[d] = (domainSet[d]||0) + 1;
+  });
+  var domainCount = Object.keys(domainSet).length;
+  var pageLabel = '(' + pages.length + (MAX_PAGES < 100 ? '/' + MAX_PAGES : '') + ' pages tracked';
+  if (domainCount > 1) pageLabel += ' · ' + domainCount + ' domains';
+  pageLabel += ')';
+  document.getElementById('pageCountLabel').textContent = pageLabel;
 
 }
 
