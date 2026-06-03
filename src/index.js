@@ -1103,7 +1103,8 @@ app.get('/api/tracker-client/:token', async (req, res) => {
         domain: client.domain,
         name: client.name,
         max_pages: client.max_pages || 3,
-        created_at: client.created_at
+        created_at: client.created_at,
+        telegram_linked: !!client.telegram_chat_id
       },
       pages: pagesR.rows,
       page_count: pagesR.rows.length
@@ -1451,16 +1452,23 @@ app.post('/api/tracker-client/:token/pages', async (req, res) => {
     const newPageId = pr.rows[0].id;
     res.json({ success: true, page_id: newPageId, remaining: maxPages - count - 1 });
 
-    // First check auto-starts after 1 minute
+    // First check auto-starts after 10 seconds
     setTimeout(function() {
-      pool.query('SELECT * FROM tracker_pages WHERE id=$1 AND is_active=TRUE', [newPageId])
+      pool.query('SELECT * FROM tracker_pages WHERE id=$1 AND (is_active=TRUE OR is_active IS NULL)', [newPageId])
         .then(function(r) {
           if (r.rows.length) {
-            console.log('[tracker] Auto first-check for new page:', newPageId);
-            runTrackerCheck(r.rows[0]).catch(function(e){ console.warn('[tracker] First check failed:', e.message); });
+            console.log('[tracker] Auto first-check for new page:', newPageId, r.rows[0].url);
+            const keys = {
+              gemini: process.env.GEMINI_API_KEY,
+              serperKey: process.env.SERPER_API_KEY || process.env.SERPAPI_KEY,
+              perplexityKey: process.env.PERPLEXITY_API_KEY,
+              braveKey: process.env.BRAVE_SEARCH_API_KEY
+            };
+            runTrackerCheck(r.rows[0], process.env.GEMINI_API_KEY, keys, true)
+              .catch(function(e){ console.warn('[tracker] First check failed:', e.message); });
           }
-        }).catch(function(){});
-    }, 60 * 1000);
+        }).catch(function(e){ console.warn('[tracker] First check query failed:', e.message); });
+    }, 10 * 1000); // 10 seconds — fast first scan
   } catch(e) {
     console.error('[POST tracker pages]', e.message, e.detail || '');
     res.status(500).json({ success: false, error: e.message, detail: e.detail || null });
@@ -24065,7 +24073,7 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
 .wl-footer { font-size:10px;color:#6b7280;text-align:center;margin-top:10px; }
 
 .cited-blink{animation:citedPulse 2.5s ease-in-out 3;}
-@keyframes htmlNeeded{0%,100%{opacity:1;background:rgba(245,158,11,.08)}50%{opacity:.35;background:rgba(245,158,11,.18)}}@keyframes citedPulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.75;transform:scale(1.06)}}
+@keyframes htmlNeeded{0%,100%{opacity:1;background:rgba(245,158,11,.08)}50%{opacity:.35;background:rgba(245,158,11,.18)}}@keyframes citedPulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.75;transform:scale(1.06)}}@keyframes tgPulse{0%,100%{box-shadow:0 0 0 0 rgba(42,171,238,.4);border-color:#2AABEE}50%{box-shadow:0 0 0 6px rgba(42,171,238,0);border-color:#38bdf8}}
 .brief-blink{animation:briefBlink 1.2s ease-in-out 4;}@keyframes briefBlink{0%,100%{opacity:1;transform:scale(1)}40%{opacity:.4;transform:scale(1.12)}70%{opacity:1;transform:scale(1.06)}}
 .cs-cs-badge{display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;letter-spacing:.03em;}
 .cs-cs-badge.green{background:#052e16;color:#4ade80;border:1px solid #166534;}
@@ -24110,7 +24118,7 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
     <button class="cs-btn" onclick="showImportModal('sitemap')" style="border-color:#38bdf8;color:#38bdf8;" title="Import from sitemap"><i class="fas fa-list"></i> Sitemap</button>
     <button class="cs-btn" onclick="openSitemapLinks()" style="border-color:#a78bfa;color:#a78bfa;" title="Internal linking suggestions"><i class="fas fa-sitemap"></i> Links</button>
     <button class="cs-btn" onclick="loadPages()" style="margin-left:4px;" title="Refresh"><i class="fas fa-sync-alt"></i></button>
-    <button class="cs-btn" onclick="openTelegramSetup()" style="border-color:#2AABEE;color:#2AABEE;" title="Enable Telegram alerts"><i class="fab fa-telegram"></i> Telegram</button>
+    <button class="cs-btn" onclick="openTelegramSetup()" style="border-color:#2AABEE;color:#2AABEE;background:rgba(42,171,238,.08);font-weight:700;animation:tgPulse 2s ease-in-out infinite;" title="Enable Telegram alerts — get notified after every scan"><i class="fab fa-telegram"></i> Enable Telegram</button>
     <input id="ctSearch" type="text" class="cs-input" placeholder="Search..." oninput="filterPages(this.value)" style="width:160px;padding:5px 10px;font-size:11px;margin-left:auto;">
     <span style="font-size:11px;color:#6b7280;" id="pageCountLabel"></span>
   </div>
@@ -24285,7 +24293,12 @@ function toast(msg, color) {
 
 function showAddModal() { document.getElementById('addModal').classList.add('show'); }
 function showImportModal(mode) { document.getElementById('importModal').classList.add('show'); setImportMode(mode || 'paste'); if (mode === 'sitemap') { var si = document.getElementById('sitemapUrl'); if (si && !si.value) si.value = 'https://' + DOMAIN + '/sitemap.xml'; } }
-function hideModal(id) { document.getElementById(id).classList.remove('show'); }
+function hideModal(id) {
+  var el = document.getElementById(id);
+  if (!el) return;
+  el.classList.remove('show');
+  el.style.display = 'none';
+}
 
 async function api(path, method, body) {
   var base = window.location.origin.indexOf('app.contentscale.site') > -1
@@ -24311,6 +24324,8 @@ var _ctSearchQuery = '';
     _pages = data.pages || [];
     renderStats(data);
     renderPages();
+    // Mark Telegram as linked if already set
+    if (data.client && data.client.telegram_linked) markTelegramLinked();
     // Auto-show TV Brief if a page has brief_content but hasn't been shown this session
     _pages.forEach(function(p) {
       if (!p.brief_content) return;
@@ -24464,7 +24479,7 @@ function renderPages() {
 
     // Pending first check banner
     var pendingBanner = (!p.last_checked && !isDone)
-      ? '<div style="display:flex;align-items:center;gap:8px;padding:6px 14px;background:rgba(96,165,250,.06);border-bottom:1px solid rgba(96,165,250,.15);font-size:11px;color:#60a5fa;"><span style="animation:blink 2s infinite;display:inline-block">&#9679;</span> First check starting automatically in ~1 minute...</div>'
+      ? '<div style="display:flex;align-items:center;gap:8px;padding:6px 14px;background:rgba(96,165,250,.06);border-bottom:1px solid rgba(96,165,250,.15);font-size:11px;color:#60a5fa;"><span style="animation:blink 2s infinite;display:inline-block">&#9679;</span> First check starting in ~10 seconds — refresh to see results</div>'
       : '';
 
     // Needs HTML banner — shown after Done is pressed, persists from DB
@@ -24495,7 +24510,7 @@ function renderPages() {
       + '<div style="display:flex;gap:5px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">'
       + (!lastChecked
         ? '<select onchange="changeFreq(' + p.id + ',this.value)" class="cs-input" style="font-size:10px;padding:4px 6px;border-color:#1f2937;color:#6b7280;background:#111827;border-radius:5px;cursor:pointer;" title="How often to auto-check"><option value="3days"' + ((!p.check_frequency||p.check_frequency==="3days")?' selected':'') + '>Every 3 days</option><option value="weekly"' + (p.check_frequency==="weekly"?" selected":'') + '>Weekly</option><option value="monthly"' + (p.check_frequency==="monthly"?' selected':'') + '>Monthly</option></select>'
-          + '<button onclick="checkPage(' + p.id + ')" data-check-btn="' + p.id + '" class="btn" style="font-size:11px;padding:5px 12px;border-color:#16a34a;color:#4ade80;font-weight:600;" title="Start first check"><i class="fas fa-sync-alt" style="margin-right:5px;"></i>Check now</button>'
+          + (p.last_checked ? '<button onclick="checkPage(' + p.id + ')" data-check-btn="' + p.id + '" class="btn" style="font-size:11px;padding:5px 12px;border-color:#16a34a;color:#4ade80;font-weight:600;" title="Run check now"><i class="fas fa-sync-alt" style="margin-right:5px;"></i>Check now</button>' : '<span style="font-size:11px;color:#6b7280;">Scanning soon...</span>')
         : ''
       )
       + '<button onclick="openHtmlUpload(' + p.id + ')" class="btn' + (needsHtml ? ' html-needed' : '') + '" style="font-size:11px;padding:5px 10px;border-color:' + (needsHtml ? '#f59e0b' : '#374151') + ';color:' + (needsHtml ? '#fbbf24' : '#6b7280') + ';' + (needsHtml ? 'animation:htmlNeeded 1s ease-in-out infinite;' : '') + '" title="Paste updated HTML for GRAAF scan">' + (needsHtml ? '&#9888; Paste new HTML' : 'HTML') + '</button>'
@@ -24668,7 +24683,10 @@ async function addPage() {
     loadPages();
     // Show friendly message - first check is automatic after 1 minute
     setTimeout(function() {
-      toast('Page added — first check starts automatically in ~1 minute', '#4ade80');
+      toast('Page added — first check starts in ~10 seconds', '#4ade80');
+      // Auto-refresh after 20 seconds to show scan results
+      setTimeout(function(){ loadPages(); }, 20000);
+      setTimeout(function(){ loadPages(); }, 35000);
     }, 300);
   } catch(e) { toast('Error: ' + e.message, '#f87171'); }
 }
@@ -25165,7 +25183,7 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
   // -- Sitemap fetch ----------------------------------------------------------
   function renderCheckList(items, containerEl, cbClass, labelFn, countEl, maxN) {
     containerEl.innerHTML = '';
-    if (countEl) countEl.textContent = items.length + ' found - select up to ' + maxN + ':';
+    if (countEl) countEl.textContent = items.length + ' found — ' + maxN + ' slots available (Select All picks top ' + maxN + ')';
     items.forEach(function(item, idx) {
       var checked = idx < maxN;
       var label = document.createElement('label');
@@ -25221,9 +25239,15 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
     var count = 0;
     cbs.forEach(function(cb) {
       if (val && count < MAX_PAGES) { cb.checked = true; count++; }
-      else cb.checked = false;
+      else if (!val) { cb.checked = false; }
+      // If val=true and count >= MAX_PAGES, uncheck remaining
+      else { cb.checked = false; }
     });
     updateSelectCount('gsc-cb', MAX_PAGES);
+    // Show warning if more pages than allowed
+    if (val && cbs.length > MAX_PAGES) {
+      toast('Showing top ' + MAX_PAGES + ' pages (your limit). Upgrade for more.', '#f59e0b');
+    }
   }
 
   async function fetchSitemap() {
@@ -25545,6 +25569,17 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
     var link = document.getElementById('telegramBotLink');
     if (link) link.href = 'https://t.me/' + botName + '?start=' + TOKEN;
     modal.style.display = 'flex';
+  }
+
+  function markTelegramLinked() {
+    // Stop pulse animation on button once linked
+    var btn = document.querySelector('[onclick="openTelegramSetup()"]');
+    if (btn) {
+      btn.style.animation = 'none';
+      btn.style.borderColor = '#4ade80';
+      btn.style.color = '#4ade80';
+      btn.innerHTML = '<i class="fab fa-telegram"></i> Telegram ✓';
+    }
   }
 
   function openSitemapLinks() {
