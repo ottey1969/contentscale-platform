@@ -28699,6 +28699,10 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 maxWrap.appendChild(presets);
                 maxCell.appendChild(maxWrap);
 
+                // -- Actions --
+                var actionsDiv = document.createElement('div');
+                actionsDiv.style.cssText = 'display:flex;gap:3px;justify-content:center;flex-wrap:wrap;';
+
                 // ── Frequency selector ──
                 var freqSelect = document.createElement('select');
                 freqSelect.className = 'tr-btn';
