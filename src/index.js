@@ -481,7 +481,7 @@ function stripAiPlaceholders(html) {
 
 console.log('🌍 Environment:', process.env.NODE_ENV || 'development');
 console.log('📊 Database URL:', process.env.DATABASE_URL ? '✅ GEVONDEN' : '❌ NIET GEVONDEN');
-console.log(`📧 Email: ${process.env.BREVO_API_KEY ? '✅ Brevo' : process.env.SENDGRID_API_KEY ? '✅ SendGrid (legacy)' : '❌ No email key set'}`);
+console.log(`📧 Email: ${process.env.BREVO_API_KEY ? '✅ Brevo' : process.env.SENDGRID_API_KEY ? '✅ SendGrid (legacy)' : '❌ No email key set'} | From: ${process.env.FROM_EMAIL || 'info@contentscale.site (default)'}`);
 // ============================================
 // DATABASE CONFIGURATIE
 // ============================================
@@ -937,7 +937,7 @@ async function sendTrackerEmail(clientId, subject, htmlBody) {
       headers: { 'Content-Type': 'application/json', 'api-key': brevoKey },
       body: JSON.stringify({
         to: [{ email: client.email, name: client.name || client.email }],
-        sender: { email: 'info@contentscale.site', name: 'ContentScale Tracker' },
+        sender: { email: process.env.FROM_EMAIL || 'info@contentscale.site', name: process.env.SENDER_NAME || 'ContentScale Tracker' },
         subject: subject,
         htmlContent: fullHtml
       })
@@ -1889,6 +1889,33 @@ app.get('/api/telegram/register-webhook', async (req, res) => {
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
+// GET + POST /api/admin/settings — manage contact email and other settings
+app.get('/api/admin/settings', verifyAdmin, async (req, res) => {
+  try {
+    const r = await pool.query('SELECT key, value FROM app_settings').catch(()=>({rows:[]}));
+    const settings = {};
+    r.rows.forEach(row => settings[row.key] = row.value);
+    settings.contact_email = settings.contact_email || process.env.FROM_EMAIL || 'info@contentscale.site';
+    settings.sender_name = settings.sender_name || process.env.SENDER_NAME || 'ContentScale Tracker';
+    res.json({ success: true, settings });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+app.post('/api/admin/settings', verifyAdmin, async (req, res) => {
+  try {
+    const { contact_email, sender_name } = req.body;
+    if (contact_email) {
+      await pool.query(`INSERT INTO app_settings (key, value, updated_at) VALUES ('contact_email', $1, NOW()) ON CONFLICT (key) DO UPDATE SET value=$1, updated_at=NOW()`, [contact_email]);
+      process.env.FROM_EMAIL = contact_email; // update immediately
+    }
+    if (sender_name) {
+      await pool.query(`INSERT INTO app_settings (key, value, updated_at) VALUES ('sender_name', $1, NOW()) ON CONFLICT (key) DO UPDATE SET value=$1, updated_at=NOW()`, [sender_name]);
+      process.env.SENDER_NAME = sender_name;
+    }
+    res.json({ success: true });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
 // GET /api/admin/telegram-status
 app.get('/api/admin/telegram-status', async (req, res) => {
   try {
@@ -2319,6 +2346,16 @@ app.patch('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS telegram_chat_id VARCHAR(64)`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS email_unsubscribed BOOLEAN DEFAULT FALSE`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS unsubscribe_token VARCHAR(64)`).catch(()=>{});
+
+  // App settings table — stores contact_email and other admin settings
+  await client.query(`CREATE TABLE IF NOT EXISTS app_settings (key VARCHAR(100) PRIMARY KEY, value TEXT, updated_at TIMESTAMPTZ DEFAULT NOW())`).catch(()=>{});
+  // Load contact email from settings into env
+  try {
+    const settingR = await client.query("SELECT value FROM app_settings WHERE key='contact_email'");
+    if (settingR.rows.length && settingR.rows[0].value) {
+      process.env.FROM_EMAIL = settingR.rows[0].value;
+    }
+  } catch(e) {}
   await client.query(`CREATE INDEX IF NOT EXISTS tracker_clients_ip_idx ON tracker_clients(registered_ip) WHERE registered_ip IS NOT NULL`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS extra_domains TEXT DEFAULT ''`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS unsubscribe_token VARCHAR(64)`).catch(()=>{});
@@ -26466,6 +26503,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 <button onclick="switchTab('tracker-clients')" id="tabTrackerClientsBtn" class="sidebar-btn"><i class="fas fa-users"></i><span>Tracker Clients</span></button>
                 <button onclick="switchTab('enginecodes')" id="tabEnginecodesBtn" class="sidebar-btn"><i class="fas fa-key"></i><span>Engine Access</span></button>
                 <button onclick="switchTab('giveaccess')" id="tabGiveaccessBtn" class="sidebar-btn"><i class="fas fa-share-alt"></i><span>Give Access</span></button>
+                <button onclick="switchTab('admin-settings');loadAdminSettings();" id="tabAdminSettingsBtn" class="sidebar-btn"><i class="fas fa-cog"></i><span>Settings</span></button>
 
 
             </nav>
@@ -27449,6 +27487,33 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
 
 
             <!-- ENGINE ACCESS CODES -->
+            <div id="tab-admin-settings" class="tab-content hidden">
+                <div style="padding:24px;max-width:600px;">
+                    <h2 style="font-size:18px;font-weight:800;color:#f1f5f9;margin-bottom:4px;">⚙️ Settings</h2>
+                    <p style="font-size:12px;color:#6b7280;margin-bottom:24px;">Admin settings — stored in database, survive deploys</p>
+
+                    <div style="background:#0d1117;border:1px solid #1f2937;border-radius:10px;padding:20px;margin-bottom:16px;">
+                        <div style="font-size:13px;font-weight:700;color:#f1f5f9;margin-bottom:14px;">📧 Email Settings</div>
+                        <div style="margin-bottom:12px;">
+                            <label style="display:block;font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;">From / Contact Email</label>
+                            <input id="settingContactEmail" type="email" class="tr-input" style="width:100%;max-width:360px;" placeholder="info@contentscale.site">
+                            <div style="font-size:11px;color:#4b5563;margin-top:4px;">Used as sender in all tracker emails (Citation Brief, reminders, welcome)</div>
+                        </div>
+                        <div style="margin-bottom:16px;">
+                            <label style="display:block;font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;">Sender Name</label>
+                            <input id="settingSenderName" type="text" class="tr-input" style="width:100%;max-width:360px;" placeholder="ContentScale Tracker">
+                        </div>
+                        <button onclick="saveAdminSettings()" class="tr-btn" style="border-color:#4ade80;color:#4ade80;font-weight:700;">Save Email Settings</button>
+                        <span id="settingsSaved" style="display:none;font-size:12px;color:#4ade80;margin-left:10px;">✓ Saved</span>
+                    </div>
+
+                    <div style="background:#0d1117;border:1px solid #1f2937;border-radius:10px;padding:20px;">
+                        <div style="font-size:13px;font-weight:700;color:#f1f5f9;margin-bottom:10px;">🔑 Environment (read-only)</div>
+                        <div id="settingsEnvInfo" style="font-size:11px;color:#6b7280;font-family:monospace;line-height:2;"></div>
+                    </div>
+                </div>
+            </div>
+
             <div id="tab-enginecodes" class="tab-content hidden">
                 <div class="bg-gradient-to-br from-gray-900 to-gray-800 rounded-xl p-6 border border-gray-700">
                     <div class="flex justify-between items-center mb-6">
@@ -29338,6 +29403,35 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                         + '</div>';
                 }).join('');
             } catch(e) { console.warn('loadMessages error:', e.message); }
+        }
+
+        async function loadAdminSettings() {
+            try {
+                var d = await apiCall('/api/admin/settings');
+                if (!d.success) return;
+                var s = d.settings;
+                document.getElementById('settingContactEmail').value = s.contact_email || '';
+                document.getElementById('settingSenderName').value = s.sender_name || '';
+                var envEl = document.getElementById('settingsEnvInfo');
+                if (envEl) envEl.innerHTML =
+                    'FROM_EMAIL: ' + (s.contact_email || 'not set') + '<br>' +
+                    'SENDER_NAME: ' + (s.sender_name || 'not set') + '<br>' +
+                    'BREVO: configured via Railway env var<br>' +
+                    'TELEGRAM_BOT_TOKEN: configured via Railway env var';
+            } catch(e) { console.warn('Settings load failed:', e.message); }
+        }
+
+        async function saveAdminSettings() {
+            var email = document.getElementById('settingContactEmail').value.trim();
+            var name = document.getElementById('settingSenderName').value.trim();
+            if (!email) { alert('Enter an email address'); return; }
+            try {
+                var d = await apiCall('/api/admin/settings', 'POST', { contact_email: email, sender_name: name });
+                if (d.success) {
+                    var saved = document.getElementById('settingsSaved');
+                    if (saved) { saved.style.display='inline'; setTimeout(function(){ saved.style.display='none'; }, 3000); }
+                } else { alert('Error: ' + (d.error||'Failed')); }
+            } catch(e) { alert('Error: ' + e.message); }
         }
 
         async function recalcMaxPages() {
