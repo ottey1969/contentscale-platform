@@ -1793,8 +1793,52 @@ app.post('/api/admin/tracker-clients/create-own', verifyAdmin, async (req, res) 
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
-// GET /api/admin/telegram-status — check Telegram webhook status (no auth for easy testing)
-app.get('/api/admin/telegram-status', async (req, res) => {
+// GET /api/telegram/test-start/:trackerToken — check if tracker is linked to Telegram
+app.get('/api/telegram/test-start/:trackerToken', async (req, res) => {
+  try {
+    const botToken = process.env.TELEGRAM_BOT_TOKEN;
+    if (!botToken) return res.json({ error: 'TELEGRAM_BOT_TOKEN not set' });
+    const cr = await pool.query('SELECT id, domain, telegram_chat_id FROM tracker_clients WHERE token=$1', [req.params.trackerToken]);
+    if (!cr.rows.length) return res.json({ error: 'Tracker not found' });
+    const client = cr.rows[0];
+    res.json({
+      domain: client.domain,
+      telegram_chat_id: client.telegram_chat_id || 'NOT LINKED',
+      linked: !!client.telegram_chat_id,
+      bot_link: 'https://t.me/ContentScaleTrackerBot?start=' + req.params.trackerToken
+    });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+// GET /api/telegram/register-webhook — register webhook manually (call once after deploy)
+app.get('/api/telegram/register-webhook', async (req, res) => {
+  const botToken = process.env.TELEGRAM_BOT_TOKEN;
+  const appUrl = process.env.APP_URL || 'https://app.contentscale.site';
+  if (!botToken) return res.json({ success: false, error: 'TELEGRAM_BOT_TOKEN not set in Railway' });
+  try {
+    const webhookUrl = appUrl + '/api/telegram/webhook';
+    const resp = await fetch(`https://api.telegram.org/bot${botToken}/setWebhook`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url: webhookUrl, allowed_updates: ['message'] })
+    });
+    const data = await resp.json();
+    // Also get current webhook info
+    const info = await fetch(`https://api.telegram.org/bot${botToken}/getWebhookInfo`).then(r => r.json());
+    // Get bot info
+    const bot = await fetch(`https://api.telegram.org/bot${botToken}/getMe`).then(r => r.json());
+    res.json({
+      register_result: data,
+      webhook_url_set: webhookUrl,
+      current_webhook: info.result?.url,
+      bot_username: bot.result?.username,
+      bot_name: bot.result?.first_name,
+      last_error: info.result?.last_error_message || 'none',
+      pending_updates: info.result?.pending_update_count || 0,
+      ok: data.ok && info.result?.url === webhookUrl
+    });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
   try {
     const botToken = process.env.TELEGRAM_BOT_TOKEN;
     const appUrl = process.env.APP_URL;
@@ -32691,12 +32735,17 @@ app.post('/api/telegram/webhook', async (req, res) => {
   res.json({ ok: true }); // Always respond quickly
   try {
     const update = req.body;
+    console.log('[telegram-webhook] Received update:', JSON.stringify(update).substring(0, 300));
     const msg = update.message;
-    if (!msg || !msg.text) return;
+    if (!msg || !msg.text) {
+      console.log('[telegram-webhook] No message/text in update');
+      return;
+    }
 
     const chatId = String(msg.chat.id);
     const text = msg.text.trim();
     const botToken = process.env.TELEGRAM_BOT_TOKEN;
+    console.log('[telegram-webhook] chatId:', chatId, 'text:', text, 'hasToken:', !!botToken);
     if (!botToken) return;
 
     // /start command — may include tracker token as parameter
