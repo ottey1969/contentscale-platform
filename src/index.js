@@ -29132,12 +29132,19 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 domainsBtn.textContent = extraDomList.length ? '+ domains (' + extraDomList.length + ')' : '+ domain';
                 domainsBtn.title = extraDomList.length ? 'Extra domains: ' + extraDomList.join(', ') + ' (click to edit)' : 'Add extra domains this client can track';
                 domainsBtn.style.cssText = 'font-size:10px;padding:3px 8px;border-color:#38bdf8;color:#38bdf8;';
-                domainsBtn.onclick = (function(id, current){ return function(){
-                    var val = prompt('Extra domains (comma separated, no https or www). Current: ' + (current||'none'), current||'');
+                domainsBtn.onclick = (function(id, current, totalMax, dealifyCodes){ return function(){
+                    var currentExtras = (current||'').split(',').map(function(d){ return d.trim(); }).filter(Boolean);
+                    var currentDomains = 1 + currentExtras.length;
+                    var basePerDomain = Math.round(totalMax / currentDomains); // e.g. 3/1=3, 10/1=10, 20/2=10
+                    var val = prompt('Extra domains (comma-separated, no https or www). Current: ' + (current||'none') + '. Each domain gives ' + basePerDomain + ' extra page slots.', current||'');
                     if (val === null) return;
+                    var newExtras = val.trim().split(',').map(function(d){ return d.trim(); }).filter(Boolean);
+                    var newDomains = 1 + newExtras.length;
+                    var newMax = newDomains * basePerDomain;
+                    if (!confirm('Domains: ' + newDomains + ' — Pages per domain: ' + basePerDomain + ' — New max pages: ' + newMax + '. Confirm?')) return;
                     updateTcClient(id, {extra_domains: val.trim()});
                     setTimeout(loadTrackerClients, 500);
-                }; })(c.id, c.extra_domains || '');
+                }; })(c.id, c.extra_domains || '', c.max_pages || 3, c.dealify_codes || '');
 
                 var ipBtn = document.createElement('button');
                 ipBtn.className = 'tr-btn';
