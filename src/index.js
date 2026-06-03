@@ -1793,6 +1793,104 @@ app.post('/api/admin/tracker-clients/create-own', verifyAdmin, async (req, res) 
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
+// GET /api/admin/telegram-status — check Telegram webhook status (no auth for easy testing)
+app.get('/api/admin/telegram-status', async (req, res) => {
+  try {
+    const botToken = process.env.TELEGRAM_BOT_TOKEN;
+    const appUrl = process.env.APP_URL;
+    if (!botToken) return res.json({ success: false, error: 'TELEGRAM_BOT_TOKEN not set in Railway env vars' });
+
+    // Check webhook info
+    const wResp = await fetch(`https://api.telegram.org/bot${botToken}/getWebhookInfo`);
+    const wData = await wResp.json();
+
+    // Check bot info
+    const bResp = await fetch(`https://api.telegram.org/bot${botToken}/getMe`);
+    const bData = await bResp.json();
+
+    res.json({
+      success: true,
+      bot: bData.result ? { username: bData.result.username, name: bData.result.first_name } : 'error',
+      webhook: {
+        url: wData.result?.url || 'NOT SET',
+        expected: (appUrl || 'APP_URL not set') + '/api/telegram/webhook',
+        pending_update_count: wData.result?.pending_update_count || 0,
+        last_error: wData.result?.last_error_message || 'none',
+        correct: wData.result?.url === (appUrl + '/api/telegram/webhook')
+      },
+      env: {
+        TELEGRAM_BOT_TOKEN: 'set (' + botToken.substring(0,8) + '...)',
+        APP_URL: appUrl || 'NOT SET'
+      }
+    });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// GET /api/admin/tracker-clients/debug-pages — show all clients with domain/pages status
+app.get('/api/admin/tracker-clients/debug-pages', verifyAdmin, async (req, res) => {
+  try {
+    const clients = await pool.query(`
+      SELECT tc.id, tc.domain, tc.extra_domains, tc.max_pages, tc.dealify_codes,
+             COUNT(tp.id) as actual_pages
+      FROM tracker_clients tc
+      LEFT JOIN tracker_pages tp ON tp.tracker_client_id = tc.id AND (tp.is_active=TRUE OR tp.is_active IS NULL)
+      WHERE tc.status != 'deleted'
+      GROUP BY tc.id
+      ORDER BY tc.domain
+    `);
+
+    const report = clients.rows.map(c => {
+      const extraList = (c.extra_domains||'').split(',').map(d => d.trim()).filter(Boolean);
+      const domainCount = 1 + extraList.length;
+      const dealifyCount = c.dealify_codes ? c.dealify_codes.split(',').filter(x => x.trim()).length : 0;
+      const basePerDomain = dealifyCount > 0 ? dealifyCount * 10 : 3;
+      const correctMax = domainCount * basePerDomain;
+      const isWrong = c.max_pages !== correctMax;
+      return {
+        domain: c.domain,
+        extra_domains: c.extra_domains || 'none',
+        domain_count: domainCount,
+        base_per_domain: basePerDomain,
+        current_max_pages: c.max_pages,
+        correct_max_pages: correctMax,
+        actual_pages_tracked: parseInt(c.actual_pages),
+        status: isWrong ? '❌ WRONG — should be ' + correctMax : '✅ OK',
+        dealify: dealifyCount > 0 ? dealifyCount + ' codes' : 'none'
+      };
+    });
+
+    const wrongCount = report.filter(r => r.status.startsWith('❌')).length;
+    res.json({
+      success: true,
+      summary: wrongCount + ' clients need fixing out of ' + report.length + ' total',
+      clients: report
+    });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// POST /api/admin/tracker-clients/recalc-max-pages — fix max_pages for all clients with extra_domains
+app.post('/api/admin/tracker-clients/recalc-max-pages', verifyAdmin, async (req, res) => {
+  try {
+    const clients = await pool.query('SELECT id, domain, extra_domains, max_pages, dealify_codes FROM tracker_clients WHERE status != $1', ['deleted']);
+    let fixed = 0;
+    for (const c of clients.rows) {
+      if (!c.extra_domains || !c.extra_domains.trim()) continue;
+      const extraList = c.extra_domains.split(',').map(d => d.trim()).filter(Boolean);
+      const domainCount = 1 + extraList.length;
+      // Determine base pages per domain
+      const dealifyCount = c.dealify_codes ? c.dealify_codes.split(',').filter(x => x.trim()).length : 0;
+      const basePerDomain = dealifyCount > 0 ? dealifyCount * 10 : 3;
+      const correctMax = domainCount * basePerDomain;
+      if (c.max_pages !== correctMax) {
+        await pool.query('UPDATE tracker_clients SET max_pages=$1 WHERE id=$2', [correctMax, c.id]);
+        console.log(`[recalc] ${c.domain}: ${c.max_pages} → ${correctMax} (${domainCount} domains × ${basePerDomain})`);
+        fixed++;
+      }
+    }
+    res.json({ success: true, fixed, total: clients.rows.length });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
 // POST /api/admin/tracker-clients/merge-duplicates
 app.post('/api/admin/tracker-clients/merge-duplicates', verifyAdmin, async (req, res) => {
   try {
@@ -27179,6 +27277,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                             <button onclick="filterTcType('dealify')" id="tcTypeDealify" class="tr-btn" style="font-size:10px;border-color:#f59e0b;color:#f59e0b;">🎯 Dealify</button>
                             <button onclick="loadTrackerClients()" class="tr-btn"><i class="fas fa-sync-alt"></i></button>
                             <button onclick="mergeDuplicateTrackers()" class="tr-btn" style="border-color:#f59e0b;color:#f59e0b;" title="Merge duplicate domains">&#9889; Merge</button>
+                            <button onclick="recalcMaxPages()" class="tr-btn" style="border-color:#38bdf8;color:#38bdf8;" title="Recalculate max_pages for all clients with extra domains">&#9881; Fix Pages</button>
                         </div>
                     </div>
                     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:20px;">
@@ -29083,6 +29182,22 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                         + '</div>';
                 }).join('');
             } catch(e) { console.warn('loadMessages error:', e.message); }
+        }
+
+        async function recalcMaxPages() {
+            try {
+                var dbg = await apiCall('/api/admin/tracker-clients/debug-pages', 'GET');
+                if (!dbg.success) { alert('Error: ' + dbg.error); return; }
+                var wrong = dbg.clients.filter(function(c){ return c.status.indexOf('WRONG') > -1; });
+                var msg = dbg.summary + '. Wrong clients: ';
+                wrong.forEach(function(c){ msg += c.domain + ' (' + c.current_max_pages + '->' + c.correct_max_pages + ') '; });
+                if (!confirm(msg + ' -- Fix now?')) return;
+                var d = await apiCall('/api/admin/tracker-clients/recalc-max-pages', 'POST', {});
+                if (d.success) {
+                    alert('Fixed ' + d.fixed + ' client(s). Reload to see updated values.');
+                    setTimeout(loadTrackerClients, 400);
+                } else { alert('Error: ' + (d.error||'Failed')); }
+            } catch(e) { alert('Error: ' + e.message); }
         }
 
         async function mergeDuplicateTrackers() {
