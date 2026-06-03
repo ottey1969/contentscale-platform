@@ -1019,7 +1019,7 @@ app.post('/api/tracker-client/register', async (req, res) => {
     if (!isDealify && clientIp) {
       const ipCheck = await pool.query('SELECT COUNT(*) FROM tracker_clients WHERE registered_ip=$1', [clientIp]);
       if (parseInt(ipCheck.rows[0].count) >= 1) {
-        return res.status(429).json({ success: false, error: 'One free tracker per device. Want to track more pages? <a href="#dealify" style="color:#7c3aed;">Get lifetime access →</a>' });
+        return res.status(429).json({ success: false, error: 'One free tracker per device. Want more pages? Get lifetime access at contentscale.site/tracker' });
       }
     }
 
@@ -1309,6 +1309,50 @@ app.patch('/api/tracker-client/:token/pages/:pageId/frequency', async (req, res)
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
+// DELETE /api/tracker-client/:token/pages/:pageId — delete single page
+app.delete('/api/tracker-client/:token/pages/:pageId', async (req, res) => {
+  try {
+    const cr = await pool.query('SELECT id FROM tracker_clients WHERE token=$1', [req.params.token]);
+    if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
+    await pool.query('UPDATE tracker_pages SET is_active=FALSE WHERE id=$1 AND tracker_client_id=$2', [req.params.pageId, cr.rows[0].id]);
+    res.json({ success: true });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// POST /api/tracker-client/:token/pages/bulk-delete — delete multiple pages
+app.post('/api/tracker-client/:token/pages/bulk-delete', async (req, res) => {
+  try {
+    const cr = await pool.query('SELECT id FROM tracker_clients WHERE token=$1', [req.params.token]);
+    if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
+    const { page_ids } = req.body;
+    if (!Array.isArray(page_ids) || !page_ids.length) return res.status(400).json({ success: false, error: 'page_ids required' });
+    await pool.query('UPDATE tracker_pages SET is_active=FALSE WHERE id=ANY($1) AND tracker_client_id=$2', [page_ids, cr.rows[0].id]);
+    res.json({ success: true, deleted: page_ids.length });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// POST /api/tracker-client/:token/scan-all — scan all pages one by one
+app.post('/api/tracker-client/:token/scan-all', async (req, res) => {
+  try {
+    const cr = await pool.query('SELECT id FROM tracker_clients WHERE token=$1', [req.params.token]);
+    if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
+    const pages = await pool.query('SELECT * FROM tracker_pages WHERE tracker_client_id=$1 AND (is_active=TRUE OR is_active IS NULL) ORDER BY created_at ASC', [cr.rows[0].id]);
+    res.json({ success: true, queued: pages.rows.length, message: 'Scanning ' + pages.rows.length + ' pages one by one' });
+    // Scan sequentially with 3s delay between each
+    const checkKeys = {
+      serpapiKey:    process.env.SERPAPI_KEY || process.env.SERPER_API_KEY,
+      perplexityKey: process.env.PERPLEXITY_API_KEY,
+      braveKey:      process.env.BRAVE_SEARCH_API_KEY,
+      youKey:        process.env.YOU_API_KEY
+    };
+    for (let i = 0; i < pages.rows.length; i++) {
+      await new Promise(r => setTimeout(r, i === 0 ? 100 : 3000));
+      runTrackerCheck(pages.rows[i], process.env.GEMINI_API_KEY, checkKeys, true)
+        .catch(e => console.warn('[scan-all] page', pages.rows[i].id, e.message));
+    }
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
 // PATCH /api/tracker-client/:token/pages/:pageId/done — mark page done/undone
 app.patch('/api/tracker-client/:token/pages/:pageId/done', async (req, res) => {
   try {
@@ -1461,10 +1505,10 @@ app.post('/api/tracker-client/:token/pages', async (req, res) => {
           if (r.rows.length) {
             console.log('[tracker] Auto first-check for new page:', newPageId, r.rows[0].url);
             const keys = {
-              gemini: process.env.GEMINI_API_KEY,
-              serperKey: process.env.SERPER_API_KEY || process.env.SERPAPI_KEY,
+              serpapiKey:    process.env.SERPAPI_KEY || process.env.SERPER_API_KEY,
               perplexityKey: process.env.PERPLEXITY_API_KEY,
-              braveKey: process.env.BRAVE_SEARCH_API_KEY
+              braveKey:      process.env.BRAVE_SEARCH_API_KEY,
+              youKey:        process.env.YOU_API_KEY
             };
             runTrackerCheck(r.rows[0], process.env.GEMINI_API_KEY, keys, true)
               .catch(function(e){ console.warn('[tracker] First check failed:', e.message); });
@@ -1495,7 +1539,13 @@ app.post('/api/tracker-client/:token/check/:pageId', async (req, res) => {
     const own = await pool.query('SELECT * FROM tracker_pages WHERE id=$1 AND tracker_client_id=$2', [req.params.pageId, cr.rows[0].id]);
     if (!own.rows.length) return res.status(403).json({ success: false, error: 'Not your page' });
     const page = own.rows[0];
-    runTrackerCheck(page).catch(e => console.warn('[client-check]', e.message));
+    const checkKeys = {
+      serpapiKey:    process.env.SERPAPI_KEY || process.env.SERPER_API_KEY,
+      perplexityKey: process.env.PERPLEXITY_API_KEY,
+      braveKey:      process.env.BRAVE_SEARCH_API_KEY,
+      youKey:        process.env.YOU_API_KEY
+    };
+    runTrackerCheck(page, process.env.GEMINI_API_KEY, checkKeys, true).catch(e => console.warn('[client-check]', e.message));
     res.json({ success: true, message: 'Check started' });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
@@ -24037,7 +24087,7 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
 .cs-section { font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:.1em; color:#6b7280; margin:16px 0 10px; }
 
 /* Page card */
-.cs-page-card { background:#111827; border:1px solid #1f2937; border-left:3px solid #374151; border-radius:8px; padding:14px 16px; margin-bottom:10px; transition:border-color .15s,background .15s; }
+.cs-page-card { background:#0d1117; border:1px solid #1f2937; border-radius:10px; margin-bottom:12px; overflow:hidden; width:100%; box-sizing:border-box; }
 .cs-page-card:hover { background:#131d2e; border-color:#1e3a5f; }
 .cs-page-card.cited { border-left-color:#16a34a; background:#0a1a0f; }
 .cs-page-card.cited:hover { background:#0d2214; }
@@ -24201,6 +24251,8 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
     <button class="cs-btn" onclick="showImportModal('sitemap')" style="border-color:#38bdf8;color:#38bdf8;" title="Import from sitemap"><i class="fas fa-list"></i> Sitemap</button>
     <button class="cs-btn" onclick="openSitemapLinks()" style="border-color:#a78bfa;color:#a78bfa;" title="Internal linking suggestions"><i class="fas fa-sitemap"></i> Links</button>
     <button class="cs-btn" onclick="loadPages()" style="margin-left:4px;" title="Refresh"><i class="fas fa-sync-alt"></i></button>
+    <button class="cs-btn" onclick="scanAllPages()" style="border-color:#4ade80;color:#4ade80;font-weight:700;" title="Scan all pages one by one">⚡ Scan All</button>
+    <button id="bulkDeleteBtn" class="cs-btn" style="border-color:#ef4444;color:#ef4444;display:none;" onclick="bulkDeleteSelected()">🗑 Delete selected</button>
     <button class="cs-btn" onclick="openTelegramSetup()" style="border-color:#2AABEE;color:#2AABEE;background:rgba(42,171,238,.08);font-weight:700;animation:tgPulse 2s ease-in-out infinite;" title="Enable Telegram alerts — get notified after every scan"><i class="fab fa-telegram"></i> Enable Telegram</button>
     <input id="ctSearch" type="text" class="cs-input" placeholder="Search..." oninput="filterPages(this.value)" style="width:160px;padding:5px 10px;font-size:11px;margin-left:auto;">
     <span style="font-size:11px;color:#6b7280;" id="pageCountLabel"></span>
@@ -24223,7 +24275,7 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
 
   <!-- Pages -->
   <div class="cs-section">Your tracked pages <span id="pageCountLabel2" style="color:#cbd5e1;"></span></div>
-  <div id="pagesList"></div>
+  <div id="pagesList" style="width:100%;"></div>
 
   <!-- Upsell -->
   <div class="cs-upsell">
@@ -24585,12 +24637,14 @@ function renderPages() {
         + '</div>'
       : '';
 
-    return '<div class="cs-page-card' + (isDone ? ' done' : '') + '" data-page-id="' + p.id + '">'
+    return '<div class="cs-page-card' + (isDone ? ' done' : '') + '" data-page-id="' + p.id + '" style="background:#0d1117;border:1px solid #1f2937;border-radius:10px;margin-bottom:12px;overflow:hidden;">'
       + pendingBanner
       + needsHtmlBanner
-      + (isDone ? '<div style="display:flex;align-items:center;gap:6px;padding:5px 14px;background:rgba(74,222,128,.06);border-bottom:1px solid #166534;font-size:10px;color:#4ade80;letter-spacing:.06em;"><span>v</span> DONE &mdash; marked as implemented. Tracking continues.</div>' : '')
-      + '<div style="padding:14px 16px;' + (isDone ? 'opacity:.6;' : '') + '">\'
+      + (isDone ? '<div style="display:flex;align-items:center;gap:6px;padding:5px 14px;background:rgba(74,222,128,.06);border-bottom:1px solid #166534;font-size:10px;color:#4ade80;letter-spacing:.06em;"><span>✓</span> DONE &mdash; marked as implemented. Tracking continues.</div>' : '')
+      + '<div style="padding:14px 16px;' + (isDone ? 'opacity:.6;' : '') + '">'
       + '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;">'
+      + '<div style="display:flex;align-items:flex-start;gap:8px;flex:1;min-width:0;">'
+      + '<input type="checkbox" class="page-select-cb" data-id="' + p.id + '" onchange="updateBulkBar()" style="width:14px;height:14px;margin-top:3px;accent-color:#ef4444;cursor:pointer;flex-shrink:0;">'
       + '<div style="flex:1;min-width:0;">'
       + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;"><span style="font-size:10px;font-weight:700;color:#4b5563;background:#1f2937;border-radius:4px;padding:1px 7px;flex-shrink:0;">#' + pageNum + '</span><div style="font-size:12px;' + (isDone ? 'text-decoration:line-through;color:#4b5563;' : 'color:#e5e7eb;') + 'font-family:monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;" title="' + rawUrl + '">' + urlShort + '</div></div>'
       + '<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:6px;">' + badges + '</div>'
@@ -24600,11 +24654,9 @@ function renderPages() {
       + (lastChecked ? '<span style="font-size:10px;color:#6b7280;">Checked: ' + lastChecked + (nextCheck ? ' &middot; ' + nextCheck : '') + '</span>' : '<span style="font-size:10px;color:#4b5563;">' + freqLabel + ' auto-check</span>')
       + '</div>'
       + '</div>'
-      + '<div style="display:flex;gap:5px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">'
-      + (!hasBeenScanned
-        ? '' // nothing — HTML banner handles the CTA
-        : ''
-      )
+      + '</div>'
+      + '<div style="display:flex;gap:5px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;align-items:flex-start;">'
+      + '<button onclick="deletePage(' + p.id + ')" style="background:none;border:1px solid #374151;border-radius:5px;color:#6b7280;cursor:pointer;font-size:12px;padding:4px 8px;" title="Delete page">🗑</button>'
       + '</div>'
       + '</div>'
       + recsHtml
@@ -25671,6 +25723,43 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
   }
 
   function openWaSettings() { openTelegramSetup(); } // legacy redirect
+
+  function updateBulkBar() {
+    var cbs = document.querySelectorAll('.page-select-cb:checked');
+    var btn = document.getElementById('bulkDeleteBtn');
+    if (btn) btn.style.display = cbs.length > 0 ? 'inline-flex' : 'none';
+    if (btn && cbs.length > 0) btn.textContent = '🗑 Delete ' + cbs.length + ' selected';
+  }
+
+  async function deletePage(pageId) {
+    if (!confirm('Delete this page from tracker? All scan history will be removed.')) return;
+    var d = await fetch('/api/tracker-client/' + TOKEN + '/pages/' + pageId, { method: 'DELETE' }).then(r => r.json()).catch(() => ({success:false}));
+    if (d.success) { toast('Page deleted', '#4ade80'); setTimeout(loadPages, 300); }
+    else toast(d.error || 'Failed', '#f87171');
+  }
+
+  async function bulkDeleteSelected() {
+    var cbs = document.querySelectorAll('.page-select-cb:checked');
+    if (!cbs.length) return;
+    if (!confirm('Delete ' + cbs.length + ' pages? This cannot be undone.')) return;
+    var ids = Array.from(cbs).map(function(cb){ return parseInt(cb.dataset.id); });
+    var d = await fetch('/api/tracker-client/' + TOKEN + '/pages/bulk-delete', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ page_ids: ids })
+    }).then(r => r.json()).catch(() => ({success:false}));
+    if (d.success) { toast('Deleted ' + d.deleted + ' pages', '#4ade80'); setTimeout(loadPages, 300); }
+    else toast(d.error || 'Failed', '#f87171');
+  }
+
+  async function scanAllPages() {
+    var d = await fetch('/api/tracker-client/' + TOKEN + '/scan-all', { method: 'POST' }).then(r => r.json()).catch(() => ({success:false}));
+    if (d.success) {
+      toast('Scanning ' + d.queued + ' pages — results load automatically', '#4ade80');
+      // Auto-refresh every 15s while scanning
+      var scanRefresh = setInterval(function(){ loadPages(); }, 15000);
+      setTimeout(function(){ clearInterval(scanRefresh); }, d.queued * 15000 + 30000);
+    } else toast(d.error || 'Failed', '#f87171');
+  }
 
   function openTelegramSetup() {
     var modal = document.getElementById('telegramModal');
@@ -31949,7 +32038,7 @@ function detectContentLanguage(html) {
 
 async function runTrackerCheck(page, geminiKey, keys, forceRescan = false) {
   keys = keys || {};
-  const _sk  = keys.serpapiKey    || process.env.SERPAPI_KEY            || '';
+  const _sk  = keys.serpapiKey    || process.env.SERPAPI_KEY || process.env.SERPER_API_KEY || '';
   const _yk  = keys.youKey        || process.env.YOU_API_KEY            || '';
   const _pk  = keys.perplexityKey || process.env.PERPLEXITY_API_KEY     || '';
   geminiKey  = geminiKey || process.env.GEMINI_API_KEY;
@@ -33368,6 +33457,7 @@ function startTrackerScheduler() {
     } catch(e) { console.warn('[tracker-scheduler]', e.message); }
   }, 15 * 60 * 1000);
   console.log('[tracker-scheduler] Started (engine + client tracker, every 15min)');
+  console.log('[tracker-keys] SERPAPI_KEY:', !!process.env.SERPAPI_KEY, '| SERPER_API_KEY:', !!process.env.SERPER_API_KEY, '| GEMINI:', !!process.env.GEMINI_API_KEY, '| PERPLEXITY:', !!process.env.PERPLEXITY_API_KEY);
 }
 
 
