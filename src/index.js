@@ -1019,7 +1019,7 @@ app.post('/api/tracker-client/register', async (req, res) => {
     if (!isDealify && clientIp) {
       const ipCheck = await pool.query('SELECT COUNT(*) FROM tracker_clients WHERE registered_ip=$1', [clientIp]);
       if (parseInt(ipCheck.rows[0].count) >= 1) {
-        return res.status(429).json({ success: false, error: 'One free tracker per device. Have a Dealify code? Enter it above for full access.' });
+        return res.status(429).json({ success: false, error: 'One free tracker per device. Want to track more pages? <a href="#dealify" style="color:#7c3aed;">Get lifetime access →</a>' });
       }
     }
 
