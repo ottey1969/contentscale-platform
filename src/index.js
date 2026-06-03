@@ -23700,11 +23700,11 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
     <div class="cs-stat"><div class="val" id="statRemaining" style="color:#16a34a;">&mdash;</div><div class="lbl">Slots left</div></div>
   </div>
 
+
   <!-- Toolbar -->
   <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap;">
     <button class="cs-btn primary" onclick="showAddModal()">+ Add URL</button>
-    
-    ' + (GSC_ENABLED ? '<button class="cs-btn" onclick="showImportModal(\'gsc\')" style="border-color:#a78bfa;color:#a78bfa;"><i class="fas fa-chart-line"></i> GSC</button>' : '') + '
+    <button id="gscBtn" class="cs-btn" onclick="showImportModal('gsc')" style="border-color:#a78bfa;color:#a78bfa;display:none;"><i class="fas fa-chart-line"></i> GSC</button>
     <button class="cs-btn" onclick="showImportModal('paste')" style="border-color:#6b7280;color:#6b7280;"><i class="fas fa-paste"></i> Paste</button>
     <button class="cs-btn" onclick="loadPages()" style="margin-left:4px;" title="Refresh"><i class="fas fa-sync-alt"></i></button>
     <button class="cs-btn" onclick="openWaSettings()" style="border-color:#25d366;color:#25d366;" title="Set up WhatsApp alerts"><i class="fab fa-whatsapp"></i> WA Alerts</button>
@@ -23856,6 +23856,14 @@ var DOMAIN = '__DOMAIN__';
 var GSC_ENABLED = __GSC_ENABLED__;
 var MAX_PAGES = __MAX_PAGES__;
 var _pages = [];
+
+// Show GSC button if enabled
+if (GSC_ENABLED) {
+  document.addEventListener('DOMContentLoaded', function() {
+    var btn = document.getElementById('gscBtn');
+    if (btn) btn.style.display = '';
+  });
+}
 
 function toast(msg, color) {
   var el = document.getElementById('toast');
