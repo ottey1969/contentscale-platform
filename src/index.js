@@ -906,7 +906,7 @@ function generateClientToken() {
 // POST /api/tracker-client/register — create new client tracker
 app.post('/api/tracker-client/register', async (req, res) => {
   try {
-    const { domain, name, email, whatsapp } = req.body;
+    const { domain, name, email, whatsapp, dealify_code } = req.body;
     if (!domain) return res.status(400).json({ success: false, error: 'Domain required' });
 
     // Get client IP
@@ -923,31 +923,72 @@ app.post('/api/tracker-client/register', async (req, res) => {
         url: (process.env.APP_URL || 'https://app.contentscale.site') + '/track/' + existing.rows[0].token });
     }
 
-    // IP restriction — max 1 registration per IP
-    if (clientIp) {
+    // Dealify code validation — format: DEALIFY-XXXXX (1-5 codes allowed)
+    let maxPages = 3; // default free
+    let dealifyCodesCount = 0;
+    let isDealify = false;
+    if (dealify_code) {
+      // Accept comma-separated codes: "DEALIFY-ABC12, DEALIFY-DEF34"
+      const codes = dealify_code.split(',').map(c => c.trim().toUpperCase()).filter(c => c.startsWith('DEALIFY-') || c.startsWith('CS-'));
+      dealifyCodesCount = Math.min(codes.length, 5); // max 5 codes
+      if (dealifyCodesCount > 0) {
+        maxPages = dealifyCodesCount * 10; // 1 code = 10 pages, 2 = 20, etc.
+        isDealify = true;
+      }
+    }
+
+    // IP restriction — only for non-Dealify free registrations
+    if (!isDealify && clientIp) {
       const ipCheck = await pool.query('SELECT COUNT(*) FROM tracker_clients WHERE registered_ip=$1', [clientIp]);
       if (parseInt(ipCheck.rows[0].count) >= 1) {
-        return res.status(429).json({ success: false, error: 'One free tracker per device. Contact Ottmar at wa.me/34644204756 to register additional domains.' });
+        return res.status(429).json({ success: false, error: 'One free tracker per device. Have a Dealify code? Enter it above for full access.' });
       }
     }
 
     const token = generateClientToken();
     await pool.query(
-      `INSERT INTO tracker_clients (token, domain, name, email, whatsapp, max_pages, registered_ip) VALUES ($1,$2,$3,$4,$5,3,$6)`,
-      [token, cleanDomain, name||null, email||null, whatsapp||null, clientIp||null]
-    );
+      `INSERT INTO tracker_clients (token, domain, name, email, whatsapp, max_pages, registered_ip, dealify_codes) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
+      [token, cleanDomain, name||null, email||null, whatsapp||null, maxPages, clientIp||null, isDealify ? dealify_code : null]
+    ).catch(async () => {
+      // Fallback if dealify_codes column doesn't exist yet
+      await pool.query(
+        `INSERT INTO tracker_clients (token, domain, name, email, whatsapp, max_pages, registered_ip) VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+        [token, cleanDomain, name||null, email||null, whatsapp||null, maxPages, clientIp||null]
+      );
+    });
 
     const trackUrl = (process.env.APP_URL || 'https://app.contentscale.site') + '/track/' + token;
+    const appUrl = process.env.APP_URL || 'https://app.contentscale.site';
 
-    // Notify Ottmar via CallMeBot
+    // Send welcome email with tracker URL
+    if (email) {
+      const welcomeHtml = '<h2 style="font-size:17px;font-weight:800;color:#0f172a;margin-bottom:10px;">Your AI Citations Tracker is ready</h2>'
+        + '<p style="font-size:14px;color:#374151;line-height:1.7;margin-bottom:14px;">Hi ' + (name || 'there') + ',<br><br>Your tracker for <strong>' + cleanDomain + '</strong> has been set up. Bookmark this link — it\'s your personal tracker URL:</p>'
+        + '<div style="background:#f5f3ff;border:1px solid #ddd6fe;border-radius:8px;padding:14px 16px;margin-bottom:16px;">'
+        + '<div style="font-size:11px;font-family:monospace;color:#7c3aed;word-break:break-all;margin-bottom:10px;">' + trackUrl + '</div>'
+        + '<a href="' + trackUrl + '" style="display:inline-block;background:#7c3aed;color:white;text-decoration:none;padding:10px 22px;border-radius:6px;font-size:13px;font-weight:700;">Open My Tracker &rarr;</a>'
+        + '</div>'
+        + '<p style="font-size:14px;color:#374151;line-height:1.7;margin-bottom:14px;"><strong>What happens next:</strong><br>'
+        + '1. Add your pages and keywords in the tracker<br>'
+        + '2. Your first check runs automatically in ~1 minute<br>'
+        + '3. Paste your page HTML for a full GRAAF score<br>'
+        + '4. Your Citation Brief arrives by email</p>'
+        + (isDealify ? '<p style="font-size:13px;color:#6b7280;margin-bottom:14px;">&#127881; Dealify activation: <strong>' + dealifyCodesCount + ' code' + (dealifyCodesCount>1?'s':'') + '</strong> &rarr; <strong>' + maxPages + ' pages</strong> tracked.</p>' : '')
+        + '<p style="font-size:13px;color:#374151;line-height:1.7;">Questions? WhatsApp Ottmar directly: <a href="https://wa.me/31628073996" style="color:#7c3aed;">wa.me/31628073996</a></p>';
+
+      const clientId = (await pool.query('SELECT id FROM tracker_clients WHERE token=$1', [token])).rows[0]?.id;
+      if (clientId) await sendTrackerEmail(clientId, 'Your AI Citations Tracker is ready — ' + cleanDomain, welcomeHtml).catch(() => {});
+    }
+
+    // Notify Ottmar via WA
     const cbPhone = process.env.CALLMEBOT_PHONE;
     const cbKey = process.env.CALLMEBOT_KEY;
     if (cbPhone && cbKey) {
-      const msg = `New ContentScale tracker: ${cleanDomain} (${name||'anon'}) — ${trackUrl}`;
+      const msg = `New tracker: ${cleanDomain} (${name||'anon'}) ${isDealify ? '🎯 Dealify '+dealifyCodesCount+' codes / '+maxPages+' pages' : '🆓 free'} — ${trackUrl}`;
       fetch(`https://api.callmebot.com/whatsapp.php?phone=${cbPhone}&text=${encodeURIComponent(msg)}&apikey=${cbKey}`).catch(()=>{});
     }
 
-    res.json({ success: true, token, domain: cleanDomain, url: trackUrl, existing: false });
+    res.json({ success: true, token, domain: cleanDomain, url: trackUrl, existing: false, max_pages: maxPages, dealify: isDealify });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
@@ -1301,6 +1342,7 @@ app.get('/track/:token', async (req, res) => {
       )
       .replace(/__MAX_PAGES__/g, String(client.max_pages || 3))
       .replace(/__CLIENT_NAME__/g, client.name || client.domain)
+      .replace(/__GSC_ENABLED__/g, client.gsc_enabled ? 'true' : 'false')
     );
   } catch(e) { res.status(500).send('Server error'); }
 });
@@ -1498,6 +1540,7 @@ app.patch('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
     const updates = []; const vals = []; let i = 1;
     if (max_pages !== undefined) { updates.push(`max_pages=$${i++}`); vals.push(max_pages); }
     if (req.body.extra_domains !== undefined) { updates.push(`extra_domains=$${i++}`); vals.push(req.body.extra_domains || ''); }
+    if (req.body.gsc_enabled !== undefined) { updates.push(`gsc_enabled=$${i++}`); vals.push(!!req.body.gsc_enabled); }
     if (status !== undefined) {
       updates.push(`status=$${i++}`);
       vals.push(status);
@@ -1734,6 +1777,8 @@ app.patch('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
   await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS ranking_brief JSONB`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS needs_html BOOLEAN DEFAULT FALSE`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS paused_at TIMESTAMPTZ`).catch(()=>{});
+  await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS dealify_codes VARCHAR(500)`).catch(()=>{});
+  await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS gsc_enabled BOOLEAN DEFAULT FALSE`).catch(()=>{});
   await client.query(`CREATE INDEX IF NOT EXISTS tracker_clients_ip_idx ON tracker_clients(registered_ip) WHERE registered_ip IS NOT NULL`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS extra_domains TEXT DEFAULT ''`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS unsubscribe_token VARCHAR(64)`).catch(()=>{});
@@ -23555,8 +23600,8 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
   <!-- Toolbar -->
   <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap;">
     <button class="cs-btn primary" onclick="showAddModal()">+ Add URL</button>
-    <button class="cs-btn" onclick="showImportModal('sitemap')" style="border-color:#38bdf8;color:#38bdf8;"><i class="fas fa-map"></i> Sitemap</button>
-    <button class="cs-btn" onclick="showImportModal('gsc')" style="border-color:#a78bfa;color:#a78bfa;"><i class="fas fa-chart-line"></i> GSC</button>
+    
+    ' + (GSC_ENABLED ? '<button class="cs-btn" onclick="showImportModal(\'gsc\')" style="border-color:#a78bfa;color:#a78bfa;"><i class="fas fa-chart-line"></i> GSC</button>' : '') + '
     <button class="cs-btn" onclick="showImportModal('paste')" style="border-color:#6b7280;color:#6b7280;"><i class="fas fa-paste"></i> Paste</button>
     <button class="cs-btn" onclick="loadPages()" style="margin-left:4px;" title="Refresh"><i class="fas fa-sync-alt"></i></button>
     <input id="ctSearch" type="text" class="cs-input" placeholder="Search..." oninput="filterPages(this.value)" style="width:160px;padding:5px 10px;font-size:11px;margin-left:auto;">
@@ -23704,6 +23749,13 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
 <script>
 var TOKEN = '__TOKEN__';
 var DOMAIN = '__DOMAIN__';
+var MAX_PAGES = __MAX_PAGES__;
+var _pages = [];
+
+function toa
+var TOKEN = '__TOKEN__';
+var DOMAIN = '__DOMAIN__';
+var GSC_ENABLED = __GSC_ENABLED__;
 var MAX_PAGES = __MAX_PAGES__;
 var _pages = [];
 
@@ -24967,11 +25019,7 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
 
 
 
-<\/script>
-
-<!-- Citation Brief Overlay -->
-<div class="cb-overlay" id="cbOverlay">
-  <div class="cb-card" id="cbCard">
+ard">
     <div class="cb-header">
       <div>
         <div class="cb-title">&#127919; AI Citation Brief</div>
@@ -28622,7 +28670,18 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 toggleBtn.style.cssText = 'font-size:10px;padding:3px 8px;';
                 toggleBtn.onclick = (function(id, newStatus){ return function(){ updateTcClient(id, {status: newStatus}); loadTrackerClients(); }; })(c.id, isActive ? 'disabled' : 'active');
 
-                // ── Extra domains button ──
+                // ── GSC toggle ──
+                var gscBtn = document.createElement('button');
+                gscBtn.className = 'tr-btn';
+                gscBtn.textContent = c.gsc_enabled ? 'GSC ✓' : 'GSC off';
+                gscBtn.title = c.gsc_enabled ? 'GSC enabled — click to disable' : 'Enable GSC for this client (Tier 2)';
+                gscBtn.style.cssText = 'font-size:10px;padding:3px 8px;border-color:' + (c.gsc_enabled ? '#4ade80' : '#374151') + ';color:' + (c.gsc_enabled ? '#4ade80' : '#6b7280') + ';';
+                gscBtn.onclick = (function(id, current){ return function(){
+                    var newVal = !current;
+                    updateTcClient(id, {gsc_enabled: newVal});
+                    setTimeout(loadTrackerClients, 400);
+                }; })(c.id, !!c.gsc_enabled);
+                actionsDiv.appendChild(gscBtn);
                 var domainsBtn = document.createElement('button');
                 domainsBtn.className = 'tr-btn';
                 var extraDomList = (c.extra_domains || '').split(',').map(function(d){ return d.trim(); }).filter(Boolean);
@@ -28722,6 +28781,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 var isActive = !isPaused && !isDisabled;
                 var statusColor = isActive ? '#4ade80' : isPaused ? '#f59e0b' : '#f87171';
                 var statusLabel = isActive ? 'ACTIVE' : isPaused ? 'PAUSED' : 'DISABLED';
+                var dealifyBadge = c.dealify_codes ? '<div style="font-size:9px;color:#f59e0b;margin-top:2px;">🎯 Dealify</div>' : '';
 
                 // Scan frequency from pages
                 var freqMap = { '3days': '3 days', 'weekly': 'Weekly', '1week': 'Weekly', 'monthly': 'Monthly', '1day': 'Daily' };
@@ -28738,7 +28798,8 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     + '<td style="padding:8px 10px;text-align:center;"><span style="font-size:11px;font-weight:700;color:' + freqColor + ';">' + freqDisplay + '</span></td>'
                     + '<td class="tc-max-cell" style="padding:8px 10px;text-align:center;"></td>'
                     + '<td style="padding:8px 10px;text-align:center;"><span style="font-size:10px;font-weight:700;color:' + statusColor + ';">' + statusLabel + '</span>'
-                    + (isPaused ? '<div style="font-size:9px;color:#6b7280;margin-top:2px;">auto-paused</div>' : '') + '</td>'
+                    + (isPaused ? '<div style="font-size:9px;color:#6b7280;margin-top:2px;">auto-paused</div>' : '')
+                    + dealifyBadge + '</td>'
                     + '<td style="padding:8px 10px;color:#6b7280;">' + date + (c.registered_ip ? '<div style="font-size:10px;color:#374151;">' + c.registered_ip + '</div>' : '') + '</td>'
                     + '<td style="padding:8px 10px;text-align:center;" class="tc-actions-cell"></td>';
 
