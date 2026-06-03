@@ -24859,8 +24859,8 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
   async function submitHtmlUpload() {
     var pageId = _htmlUploadPageId;
     if (!pageId) return;
-    var html = document.getElementById('htmlUploadContent').value.trim();
-    var kw = document.getElementById('htmlUploadKeyword').value.trim();
+    var html = document.getElementById('htmlUploadContent') ? document.getElementById('htmlUploadContent').value.trim() : '';
+    var kw = document.getElementById('htmlUploadKeyword') ? document.getElementById('htmlUploadKeyword').value.trim() : '';
     if (!html && !kw) { toast('Paste HTML or enter a keyword', '#f87171'); return; }
     var payload = {};
     if (html) payload.html_content = html;
@@ -24868,13 +24868,17 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
     try {
       var d = await api('/pages/' + pageId + '/html', 'PATCH', payload);
       if (d.success) {
-        // Clear needs_html locally so banner stops immediately
+        // Clear needs_html locally — banner stops immediately
         var p = (_pages||[]).find(function(x){ return x.id == pageId; });
-        if (p) { p.needs_html = false; renderPages(); }
-        toast('HTML saved' + (html ? ' — scanning...' : ''), '#4ade80');
+        if (p) { p.needs_html = false; }
+        // Show confirmation — NO immediate scan, wait for scheduled date
+        var nextDate = p && p.next_check_at
+          ? new Date(p.next_check_at).toLocaleDateString('en-GB',{day:'2-digit',month:'short'})
+          : 'next scheduled date';
+        toast('HTML saved. System will scan on ' + nextDate + ' and compare with your live page.', '#4ade80');
         hideModal('htmlUploadModal');
-        if (html) setTimeout(function(){ checkPage(pageId); }, 600);
-        setTimeout(loadPages, html ? 5000 : 500);
+        // Reload to clear banner and update card
+        setTimeout(loadPages, 400);
       } else { toast(d.error || 'Failed', '#f87171'); }
     } catch(e) { toast('Error: ' + e.message, '#f87171'); }
   }
@@ -31960,8 +31964,67 @@ function startTrackerScheduler() {
         const source = page.tracker_client_id ? 'client' : 'engine';
         console.log('[tracker-scheduler] Running check for:', page.url, '| source:', source, '| freq:', page.check_frequency);
         const _sk = { gemini: process.env.GEMINI_API_KEY, serpapiKey: process.env.SERPAPI_KEY, youKey: process.env.YOU_API_KEY, perplexityKey: process.env.PERPLEXITY_API_KEY };
+
+        // ── HTML freshness check for client tracker pages ─────────────────
+        if (page.tracker_client_id && page.html_content && page.last_page_hash) {
+          try {
+            const liveResp = await fetch(page.url, { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(10000) });
+            if (liveResp.ok) {
+              const liveHtml = await liveResp.text();
+              // Simple hash: length + first 500 chars + last 200 chars
+              const liveHash = liveHtml.length + '_' + liveHtml.substring(0, 500) + liveHtml.substring(Math.max(0, liveHtml.length - 200));
+              const crypto = require('crypto');
+              const liveHashMd5 = crypto.createHash('md5').update(liveHash).digest('hex');
+              const storedHash = page.last_page_hash;
+
+              if (liveHashMd5 !== storedHash) {
+                console.log('[tracker-scheduler] HTML mismatch for', page.url, '— live page differs from stored HTML');
+                // Send reminder to client
+                const clientR = await pool.query('SELECT * FROM tracker_clients WHERE id=$1', [page.tracker_client_id]);
+                const client = clientR.rows[0];
+                if (client && client.email) {
+                  const trackerUrl = (process.env.APP_URL || 'https://app.contentscale.site') + '/track/' + client.token;
+                  await sendTrackerEmail(page.tracker_client_id,
+                    'Update needed: your page HTML has changed — ' + client.domain,
+                    '<h2 style="font-size:17px;font-weight:800;color:#0f172a;margin-bottom:10px;">Your page has changed since you last pasted HTML</h2>'
+                    + '<p style="font-size:14px;color:#374151;line-height:1.7;margin-bottom:14px;">The system is about to scan <strong>' + page.url + '</strong>, but the live page looks different from the HTML you uploaded last time. This usually means you made content changes.</p>'
+                    + '<div style="background:#fefce8;border:1px solid #fde047;border-radius:8px;padding:14px 16px;margin-bottom:16px;font-size:13px;color:#854d0e;">'
+                    + '<strong>For the most accurate GRAAF scan:</strong><br>'
+                    + '1. Open <strong>' + page.url + '</strong> in Chrome<br>'
+                    + '2. Right-click &rarr; View Page Source<br>'
+                    + '3. Ctrl+A &rarr; Ctrl+C<br>'
+                    + '4. Go to your tracker &rarr; click <strong>HTML</strong> &rarr; paste'
+                    + '</div>'
+                    + '<p style="font-size:13px;color:#374151;margin-bottom:16px;">The scan will run either way — but if you paste the latest HTML first, the GRAAF scan will reflect your actual current content.</p>'
+                    + '<a href="' + trackerUrl + '" style="display:inline-block;background:#7c3aed;color:white;text-decoration:none;padding:10px 22px;border-radius:6px;font-size:13px;font-weight:700;">Update HTML &rarr;</a>'
+                  ).catch(() => {});
+
+                  // WhatsApp reminder
+                  if (client.whatsapp && client.callmebot_key) {
+                    const msg = encodeURIComponent('⚠️ Your page ' + page.url + ' has changed since you last pasted HTML. Please paste the latest HTML in your tracker before the scan: ' + trackerUrl);
+                    await fetch('https://api.callmebot.com/whatsapp.php?phone=' + client.whatsapp + '&text=' + msg + '&apikey=' + client.callmebot_key).catch(() => {});
+                  }
+
+                  // Mark page as needing fresh HTML
+                  await pool.query('UPDATE tracker_pages SET needs_html=TRUE WHERE id=$1', [page.id]).catch(() => {});
+
+                  // Wait 2 hours for client to update before scanning
+                  // Skip this scan cycle — reschedule for 2h from now
+                  await pool.query('UPDATE tracker_pages SET next_check_at=NOW() + INTERVAL \'2 hours\' WHERE id=$1', [page.id]).catch(() => {});
+                  console.log('[tracker-scheduler] Scan postponed 2h for', page.url, '— client notified to update HTML');
+                  await new Promise(r => setTimeout(r, 2000));
+                  continue;
+                }
+              } else {
+                console.log('[tracker-scheduler] HTML matches for', page.url, '— proceeding with scan');
+              }
+            }
+          } catch(hashErr) {
+            console.warn('[tracker-scheduler] Hash check failed for', page.url, ':', hashErr.message, '— proceeding with scan anyway');
+          }
+        }
+
         await runTrackerCheck(page, _sk.gemini, _sk).catch(e => console.warn('[tracker-scheduler]', e.message));
-        // runTrackerCheck already handles email for client tracker pages internally
         await new Promise(r => setTimeout(r, 5000));
       }
     } catch(e) { console.warn('[tracker-scheduler]', e.message); }
