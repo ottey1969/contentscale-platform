@@ -7434,22 +7434,27 @@ function openInPulseNexus(url, keyword, pos, impr, ctr) {
 </script>
 </body></html>`;
 
-    if (process.env.SENDGRID_API_KEY) {
+    const brevoKeyAudit = process.env.BREVO_API_KEY;
+    if (brevoKeyAudit) {
       try {
-        sgMail.setApiKey(process.env.SENDGRID_API_KEY);
-        await sgMail.send({
-          to:      'info@contentscale.site',
-          from:    process.env.SENDGRID_FROM_EMAIL || 'noreply@contentscale.site',
-          replyTo: b.email || 'noreply@contentscale.site',
-          subject: `${isEmergency ? '⚡ EMERGENCY — ' : '🔍 '}Audit: ${b.keyword} — ${b.name}`,
-          html:    emailHtml,
-          attachments: allFiles.map(f => ({
-            content: f.buffer.toString('base64'), filename: f.originalname,
-            type: f.mimetype, disposition: 'attachment',
-          })),
+        const auditEmailResp = await fetch('https://api.brevo.com/v3/smtp/email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'api-key': brevoKeyAudit },
+          body: JSON.stringify({
+            to: [{ email: 'info@contentscale.site' }],
+            sender: { email: process.env.FROM_EMAIL || 'noreply@contentscale.site', name: 'ContentScale Audit' },
+            replyTo: { email: b.email || 'noreply@contentscale.site' },
+            subject: `${isEmergency ? '⚡ EMERGENCY — ' : '🔍 '}Audit: ${b.keyword} — ${b.name}`,
+            htmlContent: emailHtml,
+            attachment: allFiles.map(f => ({
+              content: f.buffer.toString('base64'),
+              name: f.originalname,
+            })),
+          })
         });
-        console.log(`[audit-intake] ✅ Email sent → info@contentscale.site`);
-      } catch (e) { console.error('[audit-intake] SendGrid error:', e.message); }
+        if (auditEmailResp.ok) console.log(`[audit-intake] ✅ Email sent via Brevo → info@contentscale.site`);
+        else console.error('[audit-intake] Brevo error:', auditEmailResp.status);
+      } catch (e) { console.error('[audit-intake] Email error:', e.message); }
     }
 
     if (pool) {
@@ -25011,9 +25016,11 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
     if (el) el.style.display = 'flex';
   }
 
+<\/script>
 
-
-ard">
+<!-- Citation Brief Overlay -->
+<div class="cb-overlay" id="cbOverlay">
+<div class="cb-card" id="cbCard">
     <div class="cb-header">
       <div>
         <div class="cb-title">&#127919; AI Citation Brief</div>
@@ -29959,7 +29966,7 @@ app.patch('/api/tracker/pages/:id/html', verifyEngineAccess, async (req, res) =>
       return res.status(400).json({ success: false, error: 'html_content required (min 100 chars)' });
     }
     const crypto = require('crypto');
-    const newHash = crypto.createHash('sha256').update(html_content).digest('hex').substring(0, 16);
+    const newHash = crypto.createHash('md5').update(html_content).digest('hex');
     const r = await pool.query(
       `UPDATE tracker_pages
        SET html_content=$1, html_source='manual', html_pasted_at=NOW(),
@@ -32069,10 +32076,8 @@ function startTrackerScheduler() {
             const liveResp = await fetch(page.url, { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(10000) });
             if (liveResp.ok) {
               const liveHtml = await liveResp.text();
-              // Simple hash: length + first 500 chars + last 200 chars
-              const liveHash = liveHtml.length + '_' + liveHtml.substring(0, 500) + liveHtml.substring(Math.max(0, liveHtml.length - 200));
               const crypto = require('crypto');
-              const liveHashMd5 = crypto.createHash('md5').update(liveHash).digest('hex');
+              const liveHashMd5 = crypto.createHash('md5').update(liveHtml).digest('hex');
               const storedHash = page.last_page_hash;
 
               if (liveHashMd5 !== storedHash) {
