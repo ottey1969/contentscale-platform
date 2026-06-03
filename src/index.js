@@ -991,7 +991,9 @@ app.post('/api/tracker-client/register', async (req, res) => {
     let isDealify = false;
     if (dealify_code) {
       // Accept comma-separated codes: "DEALIFY-ABC12, DEALIFY-DEF34"
-      const codes = dealify_code.split(',').map(c => c.trim().toUpperCase()).filter(c => c.startsWith('DEALIFY-') || c.startsWith('CS-'));
+      // Accepted code prefixes per platform
+      const VALID_PREFIXES = ['DEALIFY-', 'CS-', 'APPSUMO-', 'AS-', 'PG-', 'PITCHGROUND-', 'SM-', 'SAASMANTRA-', 'LTD-', 'PRIME-'];
+      const codes = dealify_code.split(',').map(c => c.trim().toUpperCase()).filter(c => VALID_PREFIXES.some(p => c.startsWith(p)));
       dealifyCodesCount = Math.min(codes.length, 5); // max 5 codes
       if (dealifyCodesCount > 0) {
         maxPages = dealifyCodesCount * 10; // 1 code = 10 pages, 2 = 20, etc.
@@ -1046,7 +1048,11 @@ app.post('/api/tracker-client/register', async (req, res) => {
     const cbPhone = process.env.CALLMEBOT_PHONE;
     const cbKey = process.env.CALLMEBOT_KEY;
     if (cbPhone && cbKey) {
-      const msg = `New tracker: ${cleanDomain} (${name||'anon'}) ${isDealify ? '🎯 Dealify '+dealifyCodesCount+' codes / '+maxPages+' pages' : '🆓 free'} — ${trackUrl}`;
+      // Detect platform from code prefix
+      const platformMap = { 'APPSUMO-': 'AppSumo', 'AS-': 'AppSumo', 'PG-': 'PitchGround', 'PITCHGROUND-': 'PitchGround', 'SM-': 'SaasMantra', 'SAASMANTRA-': 'SaasMantra', 'DEALIFY-': 'Dealify', 'CS-': 'Direct', 'LTD-': 'LTD', 'PRIME-': 'Prime' };
+      const detectedPlatform = codes.length > 0 ? (Object.entries(platformMap).find(([p]) => codes[0].startsWith(p)) || ['','Direct'])[1] : 'Direct';
+
+      const msg = `New tracker: ${cleanDomain} (${name||'anon'}) ${isDealify ? '🎯 ' + detectedPlatform + ' ' + dealifyCodesCount + ' codes / ' + maxPages + ' pages' : '🆓 free'} — ${trackUrl}`;
       fetch(`https://api.callmebot.com/whatsapp.php?phone=${cbPhone}&text=${encodeURIComponent(msg)}&apikey=${cbKey}`).catch(()=>{});
     }
 
@@ -1685,6 +1691,57 @@ app.delete('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
 });
 
 // Admin: update client max_pages + override IP
+// POST /api/admin/tracker-clients/create-own — admin creates tracker for paying client
+app.post('/api/admin/tracker-clients/create-own', verifyAdmin, async (req, res) => {
+  try {
+    const { domain, name, email, max_pages, source } = req.body;
+    if (!domain) return res.status(400).json({ success: false, error: 'Domain required' });
+    const cleanDomain = domain.replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0].toLowerCase().trim();
+
+    // Check existing
+    const existing = await pool.query('SELECT id, token FROM tracker_clients WHERE domain=$1 AND status != $2', [cleanDomain, 'deleted']);
+    if (existing.rows.length) {
+      const existingUrl = (process.env.APP_URL || 'https://app.contentscale.site') + '/track/' + existing.rows[0].token;
+      return res.json({ success: true, token: existing.rows[0].token, url: existingUrl, existing: true });
+    }
+
+    const token = generateClientToken();
+    const maxPg = parseInt(max_pages) || 10;
+    await pool.query(
+      `INSERT INTO tracker_clients (token, domain, name, email, max_pages, status) VALUES ($1,$2,$3,$4,$5,'active')`,
+      [token, cleanDomain, name||null, email||null, maxPg]
+    );
+
+    const trackUrl = (process.env.APP_URL || 'https://app.contentscale.site') + '/track/' + token;
+
+    // Send welcome email
+    if (email) {
+      const clientId = (await pool.query('SELECT id FROM tracker_clients WHERE token=$1', [token])).rows[0]?.id;
+      if (clientId) {
+        const welcomeHtml = '<h2 style="font-size:17px;font-weight:800;color:#0f172a;margin-bottom:10px;">Your AI Citations Tracker is ready</h2>'
+          + '<p style="font-size:14px;color:#374151;line-height:1.7;margin-bottom:14px;">Hi ' + (name||'there') + ',<br><br>Your personal tracker for <strong>' + cleanDomain + '</strong> has been set up. Bookmark this link:</p>'
+          + '<div style="background:#f5f3ff;border:1px solid #ddd6fe;border-radius:8px;padding:14px 16px;margin-bottom:16px;">'
+          + '<div style="font-size:11px;font-family:monospace;color:#7c3aed;word-break:break-all;margin-bottom:10px;">' + trackUrl + '</div>'
+          + '<a href="' + trackUrl + '" style="display:inline-block;background:#7c3aed;color:white;text-decoration:none;padding:10px 22px;border-radius:6px;font-size:13px;font-weight:700;">Open My Tracker &rarr;</a>'
+          + '</div>'
+          + '<p style="font-size:14px;color:#374151;line-height:1.7;margin-bottom:14px;"><strong>What happens next:</strong><br>'
+          + '1. Add your pages and keywords<br>2. First scan runs in ~1 minute<br>3. Paste your page HTML for GRAAF score<br>4. Citation Brief arrives by email</p>'
+          + '<p style="font-size:13px;color:#374151;">Questions? WhatsApp Ottmar: <a href="https://wa.me/31628073996" style="color:#7c3aed;">wa.me/31628073996</a></p>';
+        await sendTrackerEmail(clientId, 'Your AI Citations Tracker is ready — ' + cleanDomain, welcomeHtml).catch(()=>{});
+      }
+    }
+
+    // Notify Ottmar
+    const cbPhone = process.env.CALLMEBOT_PHONE;
+    const cbKey = process.env.CALLMEBOT_KEY;
+    if (cbPhone && cbKey) {
+      fetch(`https://api.callmebot.com/whatsapp.php?phone=${cbPhone}&text=${encodeURIComponent('⭐ Own client added: ' + cleanDomain + ' / ' + (name||'anon') + ' / ' + maxPg + ' pages — ' + trackUrl)}&apikey=${cbKey}`).catch(()=>{});
+    }
+
+    res.json({ success: true, token, url: trackUrl });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
 // POST /api/admin/tracker-clients/merge-duplicates
 app.post('/api/admin/tracker-clients/merge-duplicates', verifyAdmin, async (req, res) => {
   try {
@@ -27060,10 +27117,15 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                             <h2 style="font-size:1.1rem;font-weight:800;color:#f1f5f9;">Tracker Clients</h2>
                             <p style="font-size:12px;color:#6b7280;margin-top:2px;">Self-service users registered via the free tracker</p>
                         </div>
-                        <div style="display:flex;gap:8px;">
-                            <input id="tcSearch" type="text" placeholder="Search domain..." class="tr-input" style="width:200px;" oninput="filterTrackerClients()">
+                        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                            <button onclick="openNewOwnClient()" class="tr-btn" style="border-color:#4ade80;color:#4ade80;font-weight:700;">+ New Client</button>
+                            <input id="tcSearch" type="text" placeholder="Search domain..." class="tr-input" style="width:140px;" oninput="filterTrackerClients()">
+                            <button onclick="filterTcType('all')" id="tcTypeAll" class="tr-btn" style="font-size:10px;border-color:#374151;color:#9ca3af;background:#374151;">All</button>
+                            <button onclick="filterTcType('free')" id="tcTypeFree" class="tr-btn" style="font-size:10px;border-color:#6b7280;color:#6b7280;">🆓 Free</button>
+                            <button onclick="filterTcType('own')" id="tcTypeOwn" class="tr-btn" style="font-size:10px;border-color:#a78bfa;color:#a78bfa;">⭐ Own</button>
+                            <button onclick="filterTcType('dealify')" id="tcTypeDealify" class="tr-btn" style="font-size:10px;border-color:#f59e0b;color:#f59e0b;">🎯 Dealify</button>
                             <button onclick="loadTrackerClients()" class="tr-btn"><i class="fas fa-sync-alt"></i></button>
-                            <button onclick="mergeDuplicateTrackers()" class="tr-btn" style="border-color:#f59e0b;color:#f59e0b;" title="Find and merge duplicate domains">&#9889; Merge Duplicates</button>
+                            <button onclick="mergeDuplicateTrackers()" class="tr-btn" style="border-color:#f59e0b;color:#f59e0b;" title="Merge duplicate domains">&#9889; Merge</button>
                         </div>
                     </div>
                     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:20px;">
@@ -28995,24 +29057,65 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 var pages = _tcClients.reduce(function(a,c){ return a + parseInt(c.page_count||0); }, 0);
                 var withEmail = _tcClients.filter(function(c){ return c.email; }).length;
                 var withWa = _tcClients.filter(function(c){ return c.whatsapp; }).length;
+                var dealifyCount = _tcClients.filter(function(c){ return !!c.dealify_codes; }).length;
+                var freeCount = _tcClients.filter(function(c){ return !c.dealify_codes && (c.max_pages||3) <= 3; }).length;
+                var ownCount = _tcClients.filter(function(c){ return !c.dealify_codes && (c.max_pages||3) > 3; }).length;
                 var s = function(id, v){ var e = document.getElementById(id); if(e) e.textContent = v; };
                 s('tcStatTotal', _tcClients.length);
                 s('tcStatActive', active);
                 s('tcStatPages', pages);
                 s('tcStatWithEmail', withEmail);
                 s('tcStatWithWa', withWa);
+                // Type breakdown in title attributes
+                var totalEl = document.getElementById('tcStatTotal');
+                if (totalEl) totalEl.title = 'Free: ' + freeCount + ' · Own: ' + ownCount + ' · Dealify: ' + dealifyCount;
             } catch(e) {
                 el.innerHTML = '<div style="color:#f87171;padding:20px;">Error: ' + e.message + '</div>';
             }
         }
 
+        var _tcTypeFilter = 'all';
+        function openNewOwnClient() {
+            var name = prompt('Client name:');
+            if (name === null) return;
+            var domain = prompt('Domain (without https/www):');
+            if (!domain) return;
+            var email = prompt('Email address:');
+            var tier = prompt('Tier: 1=Tier1 (10 pages, €97) · 2=Tier2 (20 pages, €297) · or enter custom number:', '1');
+            if (tier === null) return;
+            var maxPages = tier === '1' ? 10 : tier === '2' ? 20 : (parseInt(tier) || 10);
+            if (!confirm('Create: ' + domain + ' · ' + name + ' · ' + email + ' · ' + maxPages + ' pages · Welcome email: yes')) return;
+            apiCall('/api/admin/tracker-clients/create-own', 'POST', {
+                domain: domain.trim(), name: name.trim(), email: (email||'').trim(), max_pages: maxPages, source: 'own'
+            }).then(function(d) {
+                if (d.success) {
+                    alert('Client created! URL: ' + d.url + ' — Welcome email sent to: ' + (email||'no email'));
+                    loadTrackerClients();
+                } else { alert('Error: ' + (d.error||'Failed')); }
+            }).catch(function(e){ alert('Error: ' + e.message); });
+        }
+        function filterTcType(type) {
+            _tcTypeFilter = type;
+            ['all','free','own','dealify'].forEach(function(t) {
+                var btn = document.getElementById('tcType' + t.charAt(0).toUpperCase() + t.slice(1));
+                if (btn) btn.style.background = t === type ? (t==='all'?'#374151':t==='dealify'?'rgba(245,158,11,.15)':t==='own'?'rgba(167,139,250,.15)':'rgba(107,114,128,.15)') : '';
+            });
+            filterTrackerClients();
+        }
+
         function filterTrackerClients() {
             var q = (document.getElementById('tcSearch').value||'').toLowerCase();
-            var filtered = q ? _tcClients.filter(function(c){
-                return (c.domain||'').toLowerCase().indexOf(q) > -1
+            var filtered = _tcClients.filter(function(c){
+                var matchQ = !q || (c.domain||'').toLowerCase().indexOf(q) > -1
                     || (c.name||'').toLowerCase().indexOf(q) > -1
                     || (c.email||'').toLowerCase().indexOf(q) > -1;
-            }) : _tcClients;
+                var matchType = _tcTypeFilter === 'all' ? true
+                    : _tcTypeFilter === 'dealify' ? !!c.dealify_codes
+                    : _tcTypeFilter === 'own' ? (!c.dealify_codes && (c.max_pages||3) > 3)
+                    : _tcTypeFilter === 'free' ? (!c.dealify_codes && (c.max_pages||3) <= 3)
+                    : true;
+                return matchQ && matchType;
+            });
             renderTrackerClients(filtered);
         }
 
@@ -29029,6 +29132,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
             thead.innerHTML = '<tr style="border-bottom:1px solid #1f2937;">'
                 + '<th style="padding:8px 10px;text-align:left;font-size:10px;color:#6b7280;text-transform:uppercase;">Contact</th>'
                 + '<th style="padding:8px 10px;text-align:left;font-size:10px;color:#6b7280;text-transform:uppercase;">Domain + Share URL</th>'
+                + '<th style="padding:8px 10px;text-align:center;font-size:10px;color:#6b7280;text-transform:uppercase;">Type</th>'
                 + '<th style="padding:8px 10px;text-align:center;font-size:10px;color:#6b7280;text-transform:uppercase;">Pages</th>'
                 + '<th style="padding:8px 10px;text-align:center;font-size:10px;color:#6b7280;text-transform:uppercase;">Scan freq</th>'
                 + '<th style="padding:8px 10px;text-align:center;font-size:10px;color:#6b7280;text-transform:uppercase;">Max</th>'
@@ -29232,7 +29336,22 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 var isActive = !isPaused && !isDisabled;
                 var statusColor = isActive ? '#4ade80' : isPaused ? '#f59e0b' : '#f87171';
                 var statusLabel = isActive ? 'ACTIVE' : isPaused ? 'PAUSED' : 'DISABLED';
-                var dealifyBadge = c.dealify_codes ? '<div style="font-size:9px;color:#f59e0b;margin-top:2px;">🎯 Dealify</div>' : '';
+
+                // Client type badge
+                var isDealify = !!c.dealify_codes;
+                var isOwnClient = !isDealify && (c.max_pages || 3) > 3;
+                var clientTypeBadge, clientTypeColor;
+                if (isDealify) {
+                    var codeCount = c.dealify_codes.split(',').filter(function(x){ return x.trim(); }).length;
+                    clientTypeBadge = '🎯 Dealify ×' + codeCount;
+                    clientTypeColor = '#f59e0b';
+                } else if (isOwnClient) {
+                    clientTypeBadge = '⭐ Own client';
+                    clientTypeColor = '#a78bfa';
+                } else {
+                    clientTypeBadge = '🆓 Free';
+                    clientTypeColor = '#6b7280';
+                }
 
                 // Scan frequency from pages
                 var freqMap = { '3days': '3 days', 'weekly': 'Weekly', '1week': 'Weekly', 'monthly': 'Monthly', '1day': 'Daily' };
@@ -29245,12 +29364,13 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     + (c.whatsapp ? '<div style="color:#4ade80;font-size:11px;">' + c.whatsapp + '</div>' : '')
                     + '</td>'
                     + '<td class="tc-url-cell" style="padding:8px 10px;max-width:240px;"></td>'
+                    + '<td style="padding:8px 10px;text-align:center;"><span style="font-size:11px;font-weight:700;color:' + clientTypeColor + ';">' + clientTypeBadge + '</span></td>'
                     + '<td style="padding:8px 10px;text-align:center;color:#a78bfa;">' + (c.page_count||0) + '</td>'
                     + '<td style="padding:8px 10px;text-align:center;"><span style="font-size:11px;font-weight:700;color:' + freqColor + ';">' + freqDisplay + '</span></td>'
                     + '<td class="tc-max-cell" style="padding:8px 10px;text-align:center;"></td>'
                     + '<td style="padding:8px 10px;text-align:center;"><span style="font-size:10px;font-weight:700;color:' + statusColor + ';">' + statusLabel + '</span>'
                     + (isPaused ? '<div style="font-size:9px;color:#6b7280;margin-top:2px;">auto-paused</div>' : '')
-                    + dealifyBadge + '</td>'
+                    + '</td>'
                     + '<td style="padding:8px 10px;color:#6b7280;">' + date + (c.registered_ip ? '<div style="font-size:10px;color:#374151;">' + c.registered_ip + '</div>' : '') + '</td>'
                     + '<td style="padding:8px 10px;text-align:center;" class="tc-actions-cell"></td>';
 
