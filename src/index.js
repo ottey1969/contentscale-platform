@@ -1104,6 +1104,80 @@ app.get('/api/tracker-client/:token/fetch-sitemap', async (req, res) => {
 });
 
 // PATCH /api/tracker-client/:token/pages/:pageId/html — update html_content + keyword
+// POST /api/tracker-client/:token/sitemap-links — internal linking analysis
+app.post('/api/tracker-client/:token/sitemap-links', async (req, res) => {
+  try {
+    const cr = await pool.query('SELECT * FROM tracker_clients WHERE token=$1', [req.params.token]);
+    if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
+    const client = cr.rows[0];
+    const { sitemap_url } = req.body;
+    if (!sitemap_url) return res.status(400).json({ success: false, error: 'sitemap_url required' });
+
+    // Fetch sitemap
+    const sitemapResp = await fetch(sitemap_url, { headers: {'User-Agent':'Mozilla/5.0'}, signal: AbortSignal.timeout(10000) });
+    if (!sitemapResp.ok) return res.status(400).json({ success: false, error: 'Could not fetch sitemap: ' + sitemapResp.status });
+    const sitemapXml = await sitemapResp.text();
+
+    // Extract URLs from sitemap
+    const urlMatches = sitemapXml.match(/<loc>(.*?)<\/loc>/g) || [];
+    const sitemapPages = urlMatches
+      .map(m => m.replace(/<\/?loc>/g, '').trim())
+      .filter(u => u.startsWith('http'))
+      .slice(0, 100); // max 100 pages
+
+    // Get tracked pages for this client
+    const trackedR = await pool.query('SELECT url, keyword FROM tracker_pages WHERE tracker_client_id=$1 AND (is_active=TRUE OR is_active IS NULL)', [client.id]);
+    const trackedPages = trackedR.rows;
+
+    if (!trackedPages.length) return res.json({ success: true, pages: sitemapPages, suggestions: [], ai_prompt: '', message: 'No tracked pages yet. Add pages to tracker first.' });
+
+    // Build context for Gemini
+    const geminiKey = process.env.GEMINI_API_KEY;
+    if (!geminiKey) return res.json({ success: true, pages: sitemapPages, suggestions: [], ai_prompt: buildLinkPrompt(trackedPages, sitemapPages) });
+
+    const prompt = `You are an internal linking specialist. Analyse this website's pages and suggest missing internal links.
+
+TRACKED PAGES (pages I want to improve):
+${trackedPages.map((p, i) => `${i+1}. ${p.url} [keyword: ${p.keyword || 'unknown'}]`).join('\n')}
+
+ALL PAGES ON SITE (from sitemap):
+${sitemapPages.slice(0, 50).join('\n')}
+
+TASK: For each tracked page, suggest 1-3 pages from the sitemap it should link TO (one-directional: tracked page → sitemap page).
+Only suggest links that make topical sense. Do NOT suggest linking back.
+
+Return ONLY a JSON array:
+[{
+  "from_page": "tracked page URL",
+  "to_page": "sitemap page URL to link to",
+  "anchor_text": "exact anchor text (3-6 words, natural)",
+  "where_to_add": "brief description of where in the content",
+  "priority": "high|medium|low",
+  "reason": "one sentence why this link helps"
+}]`;
+
+    const gResp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { temperature: 0.3, maxOutputTokens: 1000 } })
+    });
+
+    let suggestions = [];
+    if (gResp.ok) {
+      const gData = await gResp.json();
+      const gText = gData.candidates?.[0]?.content?.parts?.[0]?.text || '';
+      try { suggestions = JSON.parse(gText.replace(/```json|```/g, '').trim()); } catch(e) { suggestions = []; }
+    }
+
+    const aiPrompt = buildLinkPrompt(trackedPages, sitemapPages);
+    res.json({ success: true, pages: sitemapPages, suggestions, ai_prompt: aiPrompt });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+function buildLinkPrompt(trackedPages, sitemapPages) {
+  return `I have a website and want to improve internal linking. Here are the pages I want to add links FROM:\n\n${trackedPages.map(p => '- ' + p.url + (p.keyword ? ' (keyword: ' + p.keyword + ')' : '')).join('\n')}\n\nAll pages on my site:\n${sitemapPages.slice(0,50).join('\n')}\n\nFor each page I track, suggest 2-3 internal links I should ADD to that page, pointing to relevant other pages on my site. Give exact anchor text and where in the content to add each link. Focus on topically related pages only.`;
+}
+
 // PATCH /api/tracker-client/:token/settings — update client whatsapp + callmebot_key
 app.patch('/api/tracker-client/:token/settings', async (req, res) => {
   try {
@@ -23706,6 +23780,7 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
     <button class="cs-btn primary" onclick="showAddModal()">+ Add URL</button>
     <button id="gscBtn" class="cs-btn" onclick="showImportModal('gsc')" style="border-color:#a78bfa;color:#a78bfa;display:none;"><i class="fas fa-chart-line"></i> GSC</button>
     <button class="cs-btn" onclick="showImportModal('paste')" style="border-color:#6b7280;color:#6b7280;"><i class="fas fa-paste"></i> Paste</button>
+    <button class="cs-btn" onclick="openSitemapLinks()" style="border-color:#38bdf8;color:#38bdf8;" title="Internal linking suggestions from sitemap"><i class="fas fa-sitemap"></i> Links</button>
     <button class="cs-btn" onclick="loadPages()" style="margin-left:4px;" title="Refresh"><i class="fas fa-sync-alt"></i></button>
     <button class="cs-btn" onclick="openWaSettings()" style="border-color:#25d366;color:#25d366;" title="Set up WhatsApp alerts"><i class="fab fa-whatsapp"></i> WA Alerts</button>
     <input id="ctSearch" type="text" class="cs-input" placeholder="Search..." oninput="filterPages(this.value)" style="width:160px;padding:5px 10px;font-size:11px;margin-left:auto;">
@@ -25129,6 +25204,102 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
     modal.style.display = 'flex';
   }
 
+  function openSitemapLinks() {
+    var modal = document.getElementById('sitemapLinksModal');
+    if (!modal) return;
+    // Pre-fill sitemap URL
+    var inp = document.getElementById('slSitemapUrl');
+    if (inp && !inp.value) inp.value = 'https://' + DOMAIN + '/sitemap.xml';
+    document.getElementById('slStep1').style.display = 'block';
+    document.getElementById('slLoading').style.display = 'none';
+    document.getElementById('slResults').style.display = 'none';
+    modal.style.display = 'flex';
+  }
+
+  async function runSitemapLinks() {
+    var sitemapUrl = (document.getElementById('slSitemapUrl') || {}).value || '';
+    if (!sitemapUrl) { toast('Enter your sitemap URL', '#f87171'); return; }
+    document.getElementById('slStep1').style.display = 'none';
+    document.getElementById('slLoading').style.display = 'block';
+    document.getElementById('slResults').style.display = 'none';
+
+    var steps = ['Fetching sitemap...', 'Parsing pages...', 'Comparing with tracked pages...', 'Generating link suggestions...'];
+    var stepIdx = 0;
+    var stepTimer = setInterval(function() {
+      if (stepIdx < steps.length) {
+        var el = document.getElementById('slLoadingText');
+        if (el) el.textContent = steps[stepIdx++];
+      }
+    }, 1800);
+
+    try {
+      var d = await fetch('/api/tracker-client/' + TOKEN + '/sitemap-links', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ sitemap_url: sitemapUrl })
+      }).then(function(r){ return r.json(); });
+
+      clearInterval(stepTimer);
+      document.getElementById('slLoading').style.display = 'none';
+      document.getElementById('slResults').style.display = 'block';
+
+      if (!d.success) {
+        document.getElementById('slResults').innerHTML = '<div style="color:#f87171;font-size:13px;">Error: ' + (d.error || 'Failed') + '</div>';
+        return;
+      }
+
+      var pages = d.pages || [];
+      var suggestions = d.suggestions || [];
+      var aiPrompt = d.ai_prompt || '';
+
+      var html = '<div style="margin-bottom:14px;">';
+      html += '<div style="font-size:11px;color:#38bdf8;font-family:monospace;margin-bottom:8px;">Found ' + pages.length + ' pages in sitemap · ' + suggestions.length + ' link opportunities</div>';
+
+      if (suggestions.length === 0) {
+        html += '<div style="font-size:13px;color:#4ade80;">&#10003; No obvious missing internal links found.</div>';
+      } else {
+        suggestions.forEach(function(s) {
+          var pri = (s.priority || 'medium').toLowerCase();
+          var c = pri === 'high' ? '#ef4444' : pri === 'medium' ? '#f59e0b' : '#22c55e';
+          html += '<div style="background:#111827;border:1px solid #1f2937;border-left:3px solid ' + c + ';border-radius:0 8px 8px 0;padding:12px 14px;margin-bottom:10px;">';
+          html += '<div style="font-size:11px;font-weight:700;color:' + c + ';margin-bottom:4px;">' + (pri.toUpperCase()) + ' · ' + (s.from_page || '') + '</div>';
+          html += '<div style="font-size:12px;color:#d1d5db;margin-bottom:4px;">Add link to: <strong style="color:#38bdf8;">' + (s.to_page || '') + '</strong></div>';
+          html += '<div style="font-size:12px;color:#9ca3af;">Anchor text: <em style="color:#f1f5f9;">"' + (s.anchor_text || '') + '"</em></div>';
+          if (s.where_to_add) html += '<div style="font-size:11px;color:#6b7280;margin-top:4px;">Where: ' + s.where_to_add + '</div>';
+          html += '</div>';
+        });
+      }
+
+      // AI prompt copy section
+      if (aiPrompt) {
+        html += '<div style="margin-top:16px;background:#0a0f1a;border:1px solid #1d4ed8;border-radius:8px;padding:14px;">';
+        html += '<div style="font-size:11px;font-weight:700;color:#60a5fa;margin-bottom:8px;">&#129760; Copy to Claude / ChatGPT</div>';
+        html += '<div style="font-size:11px;color:#6b7280;margin-bottom:8px;">Paste this prompt into AI to get more detailed suggestions:</div>';
+        html += '<textarea readonly style="width:100%;height:80px;background:#0d1117;border:1px solid #374151;border-radius:6px;padding:8px;font-size:11px;color:#9ca3af;resize:none;font-family:monospace;" id="slPromptText">' + aiPrompt.replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</textarea>';
+        html += '<button onclick="copySlPrompt()" class="cs-btn" style="margin-top:8px;border-color:#3b82f6;color:#60a5fa;font-size:11px;">&#128203; Copy AI Prompt</button>';
+        html += '</div>';
+      }
+
+      html += '</div>';
+      document.getElementById('slResults').innerHTML = html;
+      document.getElementById('slStep1').style.display = 'block';
+    } catch(e) {
+      clearInterval(stepTimer);
+      document.getElementById('slLoading').style.display = 'none';
+      document.getElementById('slResults').style.display = 'block';
+      document.getElementById('slResults').innerHTML = '<div style="color:#f87171;font-size:13px;">Error: ' + e.message + '</div>';
+      document.getElementById('slStep1').style.display = 'block';
+    }
+  }
+
+  function copySlPrompt() {
+    var t = document.getElementById('slPromptText');
+    if (!t) return;
+    t.select();
+    try { document.execCommand('copy'); } catch(e) { navigator.clipboard.writeText(t.value).catch(function(){}); }
+    toast('AI prompt copied — paste into Claude or ChatGPT', '#60a5fa');
+  }
+
   async function saveWaSettings() {
     var phone = (document.getElementById('waPhone') || {}).value || '';
     phone = phone.replace(/\D/g,'');
@@ -25270,6 +25441,25 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
       </button>
       <div class="wl-footer">One of the most advanced AI citation monitoring systems available today</div>
     </div>
+  </div>
+</div>
+
+<!-- Sitemap Internal Links Modal -->
+<div id="sitemapLinksModal" onclick="hideModal('sitemapLinksModal')" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.8);align-items:center;justify-content:center;padding:20px;">
+  <div onclick="event.stopPropagation()" style="background:#0d1117;border:1px solid #374151;border-radius:12px;padding:24px;max-width:560px;width:100%;max-height:85vh;overflow-y:auto;position:relative;box-shadow:0 20px 60px rgba(0,0,0,.6);">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <h3 style="font-size:15px;font-weight:800;color:#38bdf8;">&#128279; Internal Linking Analysis</h3>
+      <button onclick="hideModal('sitemapLinksModal')" style="background:none;border:none;color:#94a3b8;cursor:pointer;font-size:1.4rem;line-height:1;padding:0 4px;">&#x2715;</button>
+    </div>
+    <p style="font-size:12px;color:#6b7280;line-height:1.65;margin-bottom:14px;">Paste your sitemap URL. The system finds all your pages, compares them with the pages you track, and suggests missing internal links — with exact anchor text to add.</p>
+    <div id="slStep1">
+      <input type="url" id="slSitemapUrl" class="cs-input" placeholder="https://yoursite.com/sitemap.xml" style="width:100%;margin-bottom:10px;">
+      <button onclick="runSitemapLinks()" class="cs-btn" style="width:100%;border-color:#38bdf8;color:#38bdf8;font-weight:700;padding:10px;">&#128269; Analyse Internal Links</button>
+    </div>
+    <div id="slLoading" style="display:none;text-align:center;padding:20px 0;">
+      <div style="font-size:12px;color:#38bdf8;font-family:monospace;" id="slLoadingText">Fetching sitemap...</div>
+    </div>
+    <div id="slResults" style="display:none;margin-top:16px;"></div>
   </div>
 </div>
 
