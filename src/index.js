@@ -1340,9 +1340,8 @@ app.get('/track/:token', async (req, res) => {
             .join('')
         : ''
       )
-      .replace(/__MAX_PAGES__/g, String(client.max_pages || 3))
-      .replace(/__CLIENT_NAME__/g, client.name || client.domain)
       .replace(/__GSC_ENABLED__/g, client.gsc_enabled ? 'true' : 'false')
+      .replace(/__CLIENT_NAME__/g, client.name || client.domain)
     );
   } catch(e) { res.status(500).send('Server error'); }
 });
@@ -1778,6 +1777,7 @@ app.patch('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
   await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS needs_html BOOLEAN DEFAULT FALSE`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS paused_at TIMESTAMPTZ`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS dealify_codes VARCHAR(500)`).catch(()=>{});
+  await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS gsc_enabled BOOLEAN DEFAULT FALSE`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS gsc_enabled BOOLEAN DEFAULT FALSE`).catch(()=>{});
   await client.query(`CREATE INDEX IF NOT EXISTS tracker_clients_ip_idx ON tracker_clients(registered_ip) WHERE registered_ip IS NOT NULL`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS extra_domains TEXT DEFAULT ''`).catch(()=>{});
@@ -23747,12 +23747,6 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
 </div>
 
 <script>
-var TOKEN = '__TOKEN__';
-var DOMAIN = '__DOMAIN__';
-var MAX_PAGES = __MAX_PAGES__;
-var _pages = [];
-
-function toa
 var TOKEN = '__TOKEN__';
 var DOMAIN = '__DOMAIN__';
 var GSC_ENABLED = __GSC_ENABLED__;
