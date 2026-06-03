@@ -24485,9 +24485,9 @@ function renderPages() {
     // Needs HTML banner
     var needsHtml = p.needs_html === true || p.needs_html === 't' || p.needs_html === 'true' || p.needs_html === 1;
     var isFirstHtml = !p.brief_check_count || p.brief_check_count == 0;
-    var hasBeenScanned = !!p.last_checked;
-    // Show HTML banner: after first scan (has position data) but no HTML yet
-    var showHtmlBanner = needsHtml || (isFirstHtml && hasBeenScanned && !isDone);
+    var hasBeenScanned = !!p.last_checked || !!p.google_position || p.ai_google_overview_cited !== undefined || p.ai_perplexity_cited !== undefined;
+    // Show HTML banner: always for new pages, or after Done pressed
+    var showHtmlBanner = needsHtml || (isFirstHtml && !isDone);
 
     var needsHtmlBanner = showHtmlBanner
       ? '<div onclick="openHtmlUpload(' + p.id + ')" style="cursor:pointer;display:flex;align-items:center;gap:10px;padding:12px 16px;background:linear-gradient(90deg,rgba(245,158,11,.15),rgba(245,158,11,.05));border-bottom:2px solid #f59e0b;animation:htmlNeeded 1.2s ease-in-out infinite;">'
@@ -24516,9 +24516,8 @@ function renderPages() {
       + '</div>'
       + '</div>'
       + '<div style="display:flex;gap:5px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">'
-      + (!lastChecked
-        ? '<select onchange="changeFreq(' + p.id + ',this.value)" class="cs-input" style="font-size:10px;padding:4px 6px;border-color:#1f2937;color:#6b7280;background:#111827;border-radius:5px;cursor:pointer;" title="How often to auto-check"><option value="3days"' + ((!p.check_frequency||p.check_frequency==="3days")?' selected':'') + '>Every 3 days</option><option value="weekly"' + (p.check_frequency==="weekly"?" selected":'') + '>Weekly</option><option value="monthly"' + (p.check_frequency==="monthly"?' selected':'') + '>Monthly</option></select>'
-          + (p.last_checked ? '<button onclick="checkPage(' + p.id + ')" data-check-btn="' + p.id + '" class="btn" style="font-size:11px;padding:5px 12px;border-color:#16a34a;color:#4ade80;font-weight:600;" title="Run check now"><i class="fas fa-sync-alt" style="margin-right:5px;"></i>Check now</button>' : '<span style="font-size:11px;color:#6b7280;">Scanning soon...</span>')
+      + (!hasBeenScanned
+        ? '' // nothing — HTML banner handles the CTA
         : ''
       )
       + '<button onclick="openHtmlUpload(' + p.id + ')" class="btn" style="font-size:11px;padding:5px 10px;border-color:' + (showHtmlBanner ? '#f59e0b' : '#374151') + ';color:' + (showHtmlBanner ? '#fbbf24' : '#6b7280') + ';font-weight:' + (showHtmlBanner ? '700' : '400') + ';' + (showHtmlBanner ? 'animation:htmlNeeded 1s ease-in-out infinite;' : '') + '" title="Paste HTML for GRAAF scan">📋 ' + (showHtmlBanner ? 'Paste HTML' : 'HTML') + '</button>'
