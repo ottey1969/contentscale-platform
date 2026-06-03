@@ -962,7 +962,7 @@ app.get('/api/tracker-client/:token', async (req, res) => {
     const pagesR = await pool.query(
       `SELECT p.id, p.url, p.keyword, p.gsc_keyword, p.created_at, p.next_check_at, p.last_checked_at,
               p.is_done, p.fetch_reliable, p.check_frequency, p.gsc_clicks, p.gsc_impressions, p.gsc_position,
-              p.ranking_brief, p.needs_html, p.brief_started_at,
+              p.ranking_brief, p.needs_html, p.brief_started_at, p.brief_content, p.brief_check_count,
               s.google_position, s.ai_google_overview_cited, s.ai_perplexity_cited,
               s.ai_bing_cited, s.ai_brave_cited,
               s.score as graaf_score, s.checked_at as last_checked,
@@ -23750,6 +23750,36 @@ var _ctSearchQuery = '';
     _pages = data.pages || [];
     renderStats(data);
     renderPages();
+    // Auto-show TV Brief if a page has brief_content but hasn't been shown this session
+    _pages.forEach(function(p) {
+      if (!p.brief_content) return;
+      if (p.is_done) return;
+      var sessionKey = 'cb_shown_' + p.id + '_' + (p.brief_started_at || '');
+      try {
+        if (sessionStorage.getItem(sessionKey)) return; // already shown
+        sessionStorage.setItem(sessionKey, '1');
+      } catch(e) {}
+      // Show TV Brief for this page
+      var brief = typeof p.brief_content === 'string' ? JSON.parse(p.brief_content) : p.brief_content;
+      if (!brief) return;
+      setTimeout(function() {
+        var briefData = {
+          page_id: p.id,
+          url: p.url,
+          keyword: p.keyword || p.gsc_keyword || '',
+          domain: DOMAIN,
+          position: p.google_position || null,
+          aio_cited: !!(p.ai_google_overview_cited),
+          perp_cited: !!(p.ai_perplexity_cited),
+          bing_cited: !!(p.ai_bing_cited),
+          brave_cited: !!(p.ai_brave_cited),
+          score: p.graaf_score || null,
+          passages: Array.isArray(brief.items) ? brief.items : [],
+          type: 'brief_ready'
+        };
+        if (typeof showCitationBrief === 'function') showCitationBrief(briefData);
+      }, 1500);
+    });
   } catch(e) {
     el.innerHTML = '<div class="empty"><div class="empty-icon">&#9888;</div><div style="color:#ef4444;">Could not load pages: ' + e.message + '</div><div style="font-size:11px;margin-top:8px;color:#94a3b8;">Check your tracker link is correct</div></div>';
   }
@@ -23868,8 +23898,12 @@ function renderPages() {
 
     // Needs HTML banner — shown after Done is pressed, persists from DB
     var needsHtml = p.needs_html === true || p.needs_html === 't' || p.needs_html === 'true' || p.needs_html === 1;
+    var isFirstHtml = !p.brief_check_count || p.brief_check_count == 0;
+    var htmlBannerText = isFirstHtml
+      ? '&#9888; Paste your page HTML to start your first full GRAAF scan and get your Citation Brief.'
+      : '&#9888; The system needs your updated page HTML to measure the improvements you just made. Click <strong style="margin:0 3px;text-decoration:underline;cursor:pointer;" onclick="openHtmlUpload(' + p.id + ')">&#9888; Paste new HTML</strong> to continue.';
     var needsHtmlBanner = needsHtml
-      ? '<div style="display:flex;align-items:center;gap:8px;padding:8px 14px;background:rgba(245,158,11,.08);border-bottom:1px solid rgba(245,158,11,.25);font-size:11px;color:#fbbf24;animation:htmlNeeded 1.4s ease-in-out infinite;">&#9888; The system needs your updated page HTML to measure the improvements you just made. Click <strong style="margin:0 3px;text-decoration:underline;cursor:pointer;" onclick="openHtmlUpload(' + p.id + ')">&#9888; Paste new HTML</strong> to continue.</div>'
+      ? '<div style="display:flex;align-items:center;gap:8px;padding:8px 14px;background:rgba(245,158,11,.08);border-bottom:1px solid rgba(245,158,11,.25);font-size:11px;color:#fbbf24;animation:htmlNeeded 1.4s ease-in-out infinite;" onclick="openHtmlUpload(' + p.id + ')" style="cursor:pointer;">' + htmlBannerText + '</div>'
       : '';
 
     return '<div class="cs-page-card' + (isDone ? ' done' : '') + '" data-page-id="' + p.id + '">'
@@ -24871,14 +24905,23 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
         // Clear needs_html locally — banner stops immediately
         var p = (_pages||[]).find(function(x){ return x.id == pageId; });
         if (p) { p.needs_html = false; }
-        // Show confirmation — NO immediate scan, wait for scheduled date
-        var nextDate = p && p.next_check_at
-          ? new Date(p.next_check_at).toLocaleDateString('en-GB',{day:'2-digit',month:'short'})
-          : 'next scheduled date';
-        toast('HTML saved. System will scan on ' + nextDate + ' and compare with your live page.', '#4ade80');
-        hideModal('htmlUploadModal');
-        // Reload to clear banner and update card
-        setTimeout(loadPages, 400);
+        // Is this the FIRST HTML paste? (brief_check_count = 0 means no GRAAF scan yet)
+        var isFirstHtml = !p || !p.brief_check_count || p.brief_check_count == 0;
+        if (isFirstHtml && html) {
+          // First time HTML → scan immediately to generate first full GRAAF brief
+          toast('HTML saved — starting your first full GRAAF scan...', '#4ade80');
+          hideModal('htmlUploadModal');
+          setTimeout(function(){ checkPage(pageId); }, 600);
+          setTimeout(loadPages, 5000);
+        } else {
+          // Subsequent HTML paste → wait for scheduled scan date
+          var nextDate = p && p.next_check_at
+            ? new Date(p.next_check_at).toLocaleDateString('en-GB',{day:'2-digit',month:'short'})
+            : 'next scheduled date';
+          toast('HTML saved. System will verify and scan on ' + nextDate + '.', '#4ade80');
+          hideModal('htmlUploadModal');
+          setTimeout(loadPages, 400);
+        }
       } else { toast(d.error || 'Failed', '#f87171'); }
     } catch(e) { toast('Error: ' + e.message, '#f87171'); }
   }
