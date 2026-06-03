@@ -28575,11 +28575,11 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                         btn.style.color = isDone ? '#4ade80' : '#6b7280';
                         btn.style.background = isDone ? '#052e1655' : '';
                     }
-                    showToast(isDone ? 'Marked as done' : 'Unmarked', '#4ade80');
+                    alert(isDone ? 'Marked as done' : 'Unmarked');
                 } else {
-                    showToast(d.error||'Failed', '#f87171');
+                    alert(d.error||'Failed');
                 }
-            } catch(e) { showToast('Error: '+e.message, '#f87171'); }
+            } catch(e) { alert('Error: '+e.message); }
         }
 
         async function deleteTrackerPage(pageId) {
@@ -28891,12 +28891,12 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
             try {
                 var d = await apiCall('/api/admin/tracker-clients/merge-duplicates', 'POST', {});
                 if (d.success) {
-                    showToast((d.merged || 0) + ' duplicate(s) merged. ' + (d.details || ''), '#f59e0b');
+                    alert('Merged: ' + (d.merged || 0) + ' duplicate(s). ' + (d.details || 'No duplicates found'));
                     setTimeout(loadTrackerClients, 600);
                 } else {
-                    showToast(d.error || 'Failed', '#f87171');
+                    alert('Error: ' + (d.error || 'Failed'));
                 }
-            } catch(e) { showToast('Error: ' + e.message, '#f87171'); }
+            } catch(e) { alert('Error: ' + e.message); }
         }
 
         async function loadTrackerClients() {
@@ -29016,8 +29016,8 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                         headers: {'Content-Type':'application/json', 'Authorization': 'Bearer ' + _adminToken},
                         body: JSON.stringify({frequency: freq})
                     }).then(function(r){ return r.json(); }).then(function(d){
-                        if (d.success) showToast('Frequency updated to ' + freq, '#818cf8');
-                        else showToast(d.error || 'Failed', '#f87171');
+                        if (d.success) alert('Frequency updated to ' + freq);
+                        else alert(d.error || 'Failed');
                         setTimeout(loadTrackerClients, 400);
                     });
                 }; })(c.id);
