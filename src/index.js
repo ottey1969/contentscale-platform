@@ -1528,30 +1528,18 @@ app.post('/api/tracker-client/:token/merge-pages', async (req, res) => {
     if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
     const clientId = cr.rows[0].id;
 
-    // Simple query — avoid columns that may not exist
-    const pages = await pool.query(
-      `SELECT id, url, keyword, last_checked, google_position, brief_check_count
-       FROM tracker_pages
-       WHERE tracker_client_id=$1 AND (is_active=TRUE OR is_active IS NULL)
-       ORDER BY
-         CASE WHEN google_position IS NOT NULL THEN google_position ELSE 9999 END ASC,
-         CASE WHEN brief_check_count IS NOT NULL THEN brief_check_count ELSE 0 END DESC,
-         last_checked DESC NULLS LAST,
-         id ASC`,
+    // Get all active pages — simplest possible query
+    const pagesR = await pool.query(
+      'SELECT id, url FROM tracker_pages WHERE tracker_client_id=$1 AND is_active=TRUE ORDER BY id ASC',
       [clientId]
     );
 
     const seen = {};
     let merged = 0;
-    for (const p of pages.rows) {
-      // Normalise: strip protocol, www, trailing slash, query string, fragment
-      const norm = (p.url||'')
-        .toLowerCase()
-        .replace(/^https?:\/\//,'')
-        .replace(/^www\./,'')
-        .replace(/\/$/,'')
-        .split('?')[0]
-        .split('#')[0];
+    for (const p of pagesR.rows) {
+      const norm = (p.url||'').toLowerCase()
+        .replace(/^https?:\/\//,'').replace(/^www\./,'')
+        .replace(/\/$/,'').split('?')[0].split('#')[0];
       if (seen[norm]) {
         await pool.query('UPDATE tracker_pages SET is_active=FALSE WHERE id=$1', [p.id]);
         merged++;
@@ -1561,7 +1549,7 @@ app.post('/api/tracker-client/:token/merge-pages', async (req, res) => {
     }
     res.json({ success: true, merged, kept: Object.keys(seen).length });
   } catch(e) {
-    console.error('[merge-pages]', e.message);
+    console.error('[merge-pages] ERROR:', e.message, e.stack);
     res.status(500).json({ success: false, error: e.message });
   }
 });
