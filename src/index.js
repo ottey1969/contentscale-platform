@@ -1521,6 +1521,48 @@ app.post('/api/tracker-client/:token/pages', async (req, res) => {
   }
 });
 
+// POST /api/tracker-client/:token/merge-pages — merge duplicate URLs, keep best
+app.post('/api/tracker-client/:token/merge-pages', async (req, res) => {
+  try {
+    const cr = await pool.query('SELECT id FROM tracker_clients WHERE token=$1', [req.params.token]);
+    if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
+    const clientId = cr.rows[0].id;
+    const pages = await pool.query(`
+      SELECT id, url, keyword, gsc_keyword, last_checked, google_position, brief_check_count, graaf_score
+      FROM tracker_pages
+      WHERE tracker_client_id=$1 AND (is_active=TRUE OR is_active IS NULL)
+      ORDER BY COALESCE(google_position,9999) ASC, COALESCE(brief_check_count,0) DESC, COALESCE(graaf_score,0) DESC, last_checked DESC NULLS LAST
+    `, [clientId]);
+    const seen = {};
+    let merged = 0;
+    for (const p of pages.rows) {
+      const norm = (p.url||'').replace(/^https?:\/\/(www\.)?/,'').replace(/\/$/,'').toLowerCase().split('?')[0].split('#')[0];
+      if (seen[norm]) { await pool.query('UPDATE tracker_pages SET is_active=FALSE WHERE id=$1', [p.id]); merged++; }
+      else seen[norm] = p.id;
+    }
+    res.json({ success: true, merged, kept: Object.keys(seen).length });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// POST /api/tracker-client/:token/clean-pages — remove image/asset URLs
+app.post('/api/tracker-client/:token/clean-pages', async (req, res) => {
+  try {
+    const cr = await pool.query('SELECT id FROM tracker_clients WHERE token=$1', [req.params.token]);
+    if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
+    const clientId = cr.rows[0].id;
+    const pages = await pool.query('SELECT id, url FROM tracker_pages WHERE tracker_client_id=$1 AND (is_active=TRUE OR is_active IS NULL)', [clientId]);
+    const badExt = ['.jpg','.jpeg','.png','.gif','.webp','.svg','.ico','.pdf','.zip','.mp4','.mp3','.wav','.css','.js','.woff','.woff2','.ttf','.eot'];
+    const badPat = ['wp-content/uploads','wp-includes','/feed','/amp/','wp-json','?replytocom','xmlrpc.php','/page/2','/page/3'];
+    let cleaned = 0;
+    for (const p of pages.rows) {
+      const u = (p.url||'').toLowerCase().split('?')[0];
+      const bad = badExt.some(e => u.endsWith(e)) || badPat.some(b => u.includes(b));
+      if (bad) { await pool.query('UPDATE tracker_pages SET is_active=FALSE WHERE id=$1', [p.id]); cleaned++; }
+    }
+    res.json({ success: true, cleaned, total: pages.rows.length });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
 // DELETE /api/tracker-client/:token/pages/:pageId
 app.delete('/api/tracker-client/:token/pages/:pageId', async (req, res) => {
   try {
@@ -2061,6 +2103,53 @@ app.post('/api/admin/tracker-clients/recalc-max-pages', verifyAdmin, async (req,
       }
     }
     res.json({ success: true, fixed, total: clients.rows.length });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// POST /api/admin/tracker-clients/:id/clean-pages — remove image/asset URLs + merge duplicates
+app.post('/api/admin/tracker-clients/:id/clean-pages', verifyAdmin, async (req, res) => {
+  try {
+    const clientId = req.params.id;
+
+    // 1. Remove non-content pages (images, assets, feeds, etc)
+    const badExtensions = ['.jpg','.jpeg','.png','.gif','.webp','.svg','.ico','.pdf','.zip','.mp4','.mp3','.css','.js','.woff','.woff2','.ttf','.eot','.xml','.json','.txt','.csv'];
+    const badPatterns = ['wp-content/uploads','wp-includes','/feed/','/feed','/amp/','/amp','?replytocom=','#','wp-json'];
+
+    const pages = await pool.query('SELECT id, url FROM tracker_pages WHERE tracker_client_id=$1 AND (is_active=TRUE OR is_active IS NULL)', [clientId]);
+    let cleaned = 0;
+    let merged = 0;
+
+    for (const p of pages.rows) {
+      const url = (p.url || '').toLowerCase();
+      const isBadExt = badExtensions.some(ext => url.split('?')[0].endsWith(ext));
+      const isBadPattern = badPatterns.some(pat => url.includes(pat));
+      if (isBadExt || isBadPattern) {
+        await pool.query('UPDATE tracker_pages SET is_active=FALSE WHERE id=$1', [p.id]);
+        cleaned++;
+      }
+    }
+
+    // 2. Merge duplicate URLs — keep the one with best data
+    const activePagesR = await pool.query(`
+      SELECT id, url, keyword, last_checked, google_position, brief_check_count, graaf_score
+      FROM tracker_pages
+      WHERE tracker_client_id=$1 AND is_active=TRUE
+      ORDER BY url, COALESCE(google_position, 999) ASC, brief_check_count DESC NULLS LAST
+    `, [clientId]);
+
+    const seen = {};
+    for (const p of activePagesR.rows) {
+      const normalUrl = p.url.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '').toLowerCase();
+      if (seen[normalUrl]) {
+        // Duplicate — keep the first (best) one, disable this
+        await pool.query('UPDATE tracker_pages SET is_active=FALSE WHERE id=$1', [p.id]);
+        merged++;
+      } else {
+        seen[normalUrl] = p.id;
+      }
+    }
+
+    res.json({ success: true, cleaned, merged, total: pages.rows.length });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
@@ -24252,6 +24341,8 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
     <button class="cs-btn" onclick="openSitemapLinks()" style="border-color:#a78bfa;color:#a78bfa;" title="Internal linking suggestions"><i class="fas fa-sitemap"></i> Links</button>
     <button class="cs-btn" onclick="loadPages()" style="margin-left:4px;" title="Refresh"><i class="fas fa-sync-alt"></i></button>
     <button class="cs-btn" onclick="scanAllPages()" style="border-color:#4ade80;color:#4ade80;font-weight:700;" title="Scan all pages one by one">⚡ Scan All</button>
+    <button class="cs-btn" onclick="mergePages()" style="border-color:#38bdf8;color:#38bdf8;" title="Merge duplicate URLs — keep best">⊕ Merge</button>
+    <button class="cs-btn" onclick="cleanPages()" style="border-color:#f59e0b;color:#f59e0b;" title="Remove image/asset URLs (.jpg, .png, .pdf etc)">🧹 Clean</button>
     <button id="bulkDeleteBtn" class="cs-btn" style="border-color:#ef4444;color:#ef4444;display:none;" onclick="bulkDeleteSelected()">🗑 Delete selected</button>
     <button class="cs-btn" onclick="openTelegramSetup()" style="border-color:#2AABEE;color:#2AABEE;background:rgba(42,171,238,.08);font-weight:700;animation:tgPulse 2s ease-in-out infinite;" title="Enable Telegram alerts — get notified after every scan"><i class="fab fa-telegram"></i> Enable Telegram</button>
     <input id="ctSearch" type="text" class="cs-input" placeholder="Search..." oninput="filterPages(this.value)" style="width:160px;padding:5px 10px;font-size:11px;margin-left:auto;">
@@ -25723,6 +25814,22 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
   }
 
   function openWaSettings() { openTelegramSetup(); } // legacy redirect
+
+  async function mergePages() {
+    var d = await fetch('/api/tracker-client/' + TOKEN + '/merge-pages', { method: 'POST' }).then(function(r){ return r.json(); }).catch(function(){ return {success:false}; });
+    if (d.success) {
+      if (d.merged === 0) toast('No duplicates found', '#60a5fa');
+      else { toast('Merged ' + d.merged + ' duplicates — ' + d.kept + ' pages kept', '#4ade80'); setTimeout(loadPages, 400); }
+    } else toast(d.error || 'Merge failed', '#f87171');
+  }
+
+  async function cleanPages() {
+    var d = await fetch('/api/tracker-client/' + TOKEN + '/clean-pages', { method: 'POST' }).then(function(r){ return r.json(); }).catch(function(){ return {success:false}; });
+    if (d.success) {
+      if (d.cleaned === 0) toast('No asset URLs found', '#60a5fa');
+      else { toast('Removed ' + d.cleaned + ' asset/image URLs', '#4ade80'); setTimeout(loadPages, 400); }
+    } else toast(d.error || 'Clean failed', '#f87171');
+  }
 
   function updateBulkBar() {
     var cbs = document.querySelectorAll('.page-select-cb:checked');
@@ -29787,6 +29894,21 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                         }).catch(function(e){ alert('Error: ' + e.message); });
                 }; })(c.id, c.domain, c.email || '');
 
+                var cleanBtn = document.createElement('button');
+                cleanBtn.className = 'tr-btn';
+                cleanBtn.textContent = '🧹 Clean';
+                cleanBtn.title = 'Remove image/asset URLs and merge duplicate pages';
+                cleanBtn.style.cssText = 'font-size:10px;padding:3px 8px;border-color:#38bdf8;color:#38bdf8;';
+                cleanBtn.onclick = (function(id, domain){ return function(){
+                    apiCall('/api/admin/tracker-clients/' + id + '/clean-pages', 'POST', {})
+                        .then(function(d) {
+                            if (d.success) {
+                                alert('Clean done for ' + domain + ': ' + d.cleaned + ' removed, ' + d.merged + ' merged');
+                                loadTrackerClients();
+                            } else { alert('Error: ' + (d.error||'Failed')); }
+                        }).catch(function(e){ alert('Error: ' + e.message); });
+                }; })(c.id, c.domain);
+
                 var copyBtn = document.createElement('button');
                 copyBtn.className = 'tr-btn';
                 copyBtn.textContent = 'Copy link';
@@ -29810,6 +29932,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 actionsDiv.appendChild(domainsBtn);
                 actionsDiv.appendChild(ipBtn);
                 actionsDiv.appendChild(regenBtn);
+                actionsDiv.appendChild(cleanBtn);
                 actionsDiv.appendChild(copyBtn);
                 actionsDiv.appendChild(delBtn);
 
