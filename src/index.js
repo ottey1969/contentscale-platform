@@ -916,8 +916,18 @@ app.post('/api/tracker-client/register', async (req, res) => {
     const cleanDomain = domain.replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0].toLowerCase().trim();
     if (!cleanDomain || !cleanDomain.includes('.')) return res.status(400).json({ success: false, error: 'Invalid domain' });
 
-    // Check if domain already registered — return existing tracker URL
-    const existing = await pool.query('SELECT id, token, email, name FROM tracker_clients WHERE domain=$1 AND status != $2', [cleanDomain, 'deleted']);
+    // Check if domain already registered — bulletproof: strip www, check base domain
+    // Also check variations: www.domain, domain, https://domain
+    const baseDomain = cleanDomain.replace(/^www\./, '');
+    const existing = await pool.query(
+      `SELECT id, token, email, name FROM tracker_clients 
+       WHERE (
+         LOWER(REGEXP_REPLACE(domain, '^www\\.', '')) = $1
+         OR LOWER(domain) = $1
+         OR LOWER(domain) = $2
+       ) AND status != $3`,
+      [baseDomain, 'www.' + baseDomain, 'deleted']
+    );
     if (existing.rows.length) {
       const ex = existing.rows[0];
       const existingUrl = (process.env.APP_URL || 'https://app.contentscale.site') + '/track/' + ex.token;
@@ -1563,6 +1573,53 @@ app.delete('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
 });
 
 // Admin: update client max_pages + override IP
+// POST /api/admin/tracker-clients/merge-duplicates
+app.post('/api/admin/tracker-clients/merge-duplicates', verifyAdmin, async (req, res) => {
+  try {
+    // Find all domains that appear more than once (normalised: strip www)
+    const dupes = await pool.query(`
+      SELECT LOWER(REGEXP_REPLACE(domain, '^www\\.', '')) as base_domain, 
+             array_agg(id ORDER BY created_at ASC) as ids,
+             COUNT(*) as cnt
+      FROM tracker_clients
+      WHERE status != 'deleted'
+      GROUP BY LOWER(REGEXP_REPLACE(domain, '^www\\.', ''))
+      HAVING COUNT(*) > 1
+    `);
+
+    let mergedCount = 0;
+    const details = [];
+
+    for (const row of dupes.rows) {
+      const ids = row.ids; // sorted oldest first
+      const keepId = ids[0]; // keep oldest
+      const removeIds = ids.slice(1); // remove newer duplicates
+
+      // Move all pages from duplicate accounts to the keeper
+      for (const dupId of removeIds) {
+        await pool.query('UPDATE tracker_pages SET tracker_client_id=$1 WHERE tracker_client_id=$2', [keepId, dupId]);
+        // Copy email/whatsapp if keeper has none
+        const dupClient = await pool.query('SELECT email, whatsapp, name, max_pages FROM tracker_clients WHERE id=$1', [dupId]);
+        const keepClient = await pool.query('SELECT email, whatsapp, name, max_pages FROM tracker_clients WHERE id=$1', [keepId]);
+        const dup = dupClient.rows[0]; const keep = keepClient.rows[0];
+        const updates = [];
+        if (!keep.email && dup.email) updates.push(`email='${dup.email.replace(/'/g,"''")}'`);
+        if (!keep.whatsapp && dup.whatsapp) updates.push(`whatsapp='${dup.whatsapp.replace(/'/g,"''")}'`);
+        if (!keep.name && dup.name) updates.push(`name='${dup.name.replace(/'/g,"''")}'`);
+        const newMax = Math.max(keep.max_pages || 3, dup.max_pages || 3);
+        updates.push(`max_pages=${newMax}`);
+        if (updates.length) await pool.query(`UPDATE tracker_clients SET ${updates.join(',')} WHERE id=$1`, [keepId]);
+        // Mark duplicate as deleted
+        await pool.query("UPDATE tracker_clients SET status='deleted' WHERE id=$1", [dupId]);
+        mergedCount++;
+      }
+      details.push(row.base_domain + ' (' + ids.length + ' → 1)');
+    }
+
+    res.json({ success: true, merged: mergedCount, details: details.join(', ') || 'No duplicates found' });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
 // PATCH /api/admin/tracker-clients/:id/frequency — change frequency for all client pages
 app.patch('/api/admin/tracker-clients/:id/frequency', verifyAdmin, async (req, res) => {
   try {
@@ -26728,6 +26785,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                         <div style="display:flex;gap:8px;">
                             <input id="tcSearch" type="text" placeholder="Search domain..." class="tr-input" style="width:200px;" oninput="filterTrackerClients()">
                             <button onclick="loadTrackerClients()" class="tr-btn"><i class="fas fa-sync-alt"></i></button>
+                            <button onclick="mergeDuplicateTrackers()" class="tr-btn" style="border-color:#f59e0b;color:#f59e0b;" title="Find and merge duplicate domains">&#9889; Merge Duplicates</button>
                         </div>
                     </div>
                     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:20px;">
@@ -28632,6 +28690,19 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                         + '</div>';
                 }).join('');
             } catch(e) { console.warn('loadMessages error:', e.message); }
+        }
+
+        async function mergeDuplicateTrackers() {
+            if (!confirm('This will find all duplicate domains and merge them into one account (keeping the oldest). Continue?')) return;
+            try {
+                var d = await apiCall('/api/admin/tracker-clients/merge-duplicates', 'POST', {});
+                if (d.success) {
+                    showToast((d.merged || 0) + ' duplicate(s) merged. ' + (d.details || ''), '#f59e0b');
+                    setTimeout(loadTrackerClients, 600);
+                } else {
+                    showToast(d.error || 'Failed', '#f87171');
+                }
+            } catch(e) { showToast('Error: ' + e.message, '#f87171'); }
         }
 
         async function loadTrackerClients() {
