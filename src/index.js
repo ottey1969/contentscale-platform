@@ -24482,14 +24482,22 @@ function renderPages() {
       ? '<div style="display:flex;align-items:center;gap:8px;padding:6px 14px;background:rgba(96,165,250,.06);border-bottom:1px solid rgba(96,165,250,.15);font-size:11px;color:#60a5fa;"><span style="animation:blink 2s infinite;display:inline-block">&#9679;</span> First check starting in ~10 seconds — refresh to see results</div>'
       : '';
 
-    // Needs HTML banner — shown after Done is pressed, persists from DB
+    // Needs HTML banner
     var needsHtml = p.needs_html === true || p.needs_html === 't' || p.needs_html === 'true' || p.needs_html === 1;
     var isFirstHtml = !p.brief_check_count || p.brief_check_count == 0;
-    var htmlBannerText = isFirstHtml
-      ? '&#9888; Paste your page HTML to start your first full GRAAF scan and get your Citation Brief.'
-      : '&#9888; The system needs your updated page HTML to measure the improvements you just made. Click <strong style="margin:0 3px;text-decoration:underline;cursor:pointer;" onclick="openHtmlUpload(' + p.id + ')">&#9888; Paste new HTML</strong> to continue.';
-    var needsHtmlBanner = needsHtml
-      ? '<div style="display:flex;align-items:center;gap:8px;padding:8px 14px;background:rgba(245,158,11,.08);border-bottom:1px solid rgba(245,158,11,.25);font-size:11px;color:#fbbf24;animation:htmlNeeded 1.4s ease-in-out infinite;" onclick="openHtmlUpload(' + p.id + ')" style="cursor:pointer;">' + htmlBannerText + '</div>'
+    var hasBeenScanned = !!p.last_checked;
+    // Show HTML banner: after first scan (has position data) but no HTML yet
+    var showHtmlBanner = needsHtml || (isFirstHtml && hasBeenScanned && !isDone);
+
+    var needsHtmlBanner = showHtmlBanner
+      ? '<div onclick="openHtmlUpload(' + p.id + ')" style="cursor:pointer;display:flex;align-items:center;gap:10px;padding:12px 16px;background:linear-gradient(90deg,rgba(245,158,11,.15),rgba(245,158,11,.05));border-bottom:2px solid #f59e0b;animation:htmlNeeded 1.2s ease-in-out infinite;">'
+        + '<span style="font-size:1.3rem;flex-shrink:0;">📋</span>'
+        + '<div style="flex:1;">'
+        + '<div style="font-size:12px;font-weight:800;color:#fbbf24;margin-bottom:2px;">' + (isFirstHtml ? 'PASTE YOUR HTML — Start GRAAF scan' : 'PASTE UPDATED HTML — Resume scan cycle') + '</div>'
+        + '<div style="font-size:11px;color:#d97706;">' + (isFirstHtml ? 'Right-click your page → View Source → copy all → paste here. Takes 30 seconds.' : 'Paste the updated HTML of your page so the system can measure your improvements.') + '</div>'
+        + '</div>'
+        + '<span style="font-size:11px;font-weight:700;color:#f59e0b;background:rgba(245,158,11,.2);border:1px solid #f59e0b;border-radius:5px;padding:4px 10px;flex-shrink:0;white-space:nowrap;">Paste HTML →</span>'
+        + '</div>'
       : '';
 
     return '<div class="cs-page-card' + (isDone ? ' done' : '') + '" data-page-id="' + p.id + '">'
@@ -24513,7 +24521,7 @@ function renderPages() {
           + (p.last_checked ? '<button onclick="checkPage(' + p.id + ')" data-check-btn="' + p.id + '" class="btn" style="font-size:11px;padding:5px 12px;border-color:#16a34a;color:#4ade80;font-weight:600;" title="Run check now"><i class="fas fa-sync-alt" style="margin-right:5px;"></i>Check now</button>' : '<span style="font-size:11px;color:#6b7280;">Scanning soon...</span>')
         : ''
       )
-      + '<button onclick="openHtmlUpload(' + p.id + ')" class="btn' + (needsHtml ? ' html-needed' : '') + '" style="font-size:11px;padding:5px 10px;border-color:' + (needsHtml ? '#f59e0b' : '#374151') + ';color:' + (needsHtml ? '#fbbf24' : '#6b7280') + ';' + (needsHtml ? 'animation:htmlNeeded 1s ease-in-out infinite;' : '') + '" title="Paste updated HTML for GRAAF scan">' + (needsHtml ? '&#9888; Paste new HTML' : 'HTML') + '</button>'
+      + '<button onclick="openHtmlUpload(' + p.id + ')" class="btn" style="font-size:11px;padding:5px 10px;border-color:' + (showHtmlBanner ? '#f59e0b' : '#374151') + ';color:' + (showHtmlBanner ? '#fbbf24' : '#6b7280') + ';font-weight:' + (showHtmlBanner ? '700' : '400') + ';' + (showHtmlBanner ? 'animation:htmlNeeded 1s ease-in-out infinite;' : '') + '" title="Paste HTML for GRAAF scan">📋 ' + (showHtmlBanner ? 'Paste HTML' : 'HTML') + '</button>'
       + '<button onclick="markDone(' + p.id + ',this,' + isDone + ')" class="btn" style="font-size:11px;padding:5px 10px;border-color:' + (isDone?'#4ade80':'#374151') + ';color:' + (isDone?'#4ade80':'#6b7280') + ';" title="Mark done when implemented">' + (isDone?'&#10003; Done':'Mark done') + '</button>'
       + '</div>'
       + '</div>'
