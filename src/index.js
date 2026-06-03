@@ -971,55 +971,32 @@ app.post('/api/tracker-client/register', async (req, res) => {
     if (!cleanDomain || !cleanDomain.includes('.')) return res.status(400).json({ success: false, error: 'Invalid domain' });
 
     // Check if domain already registered — bulletproof: strip www, check base domain
-    // Also check variations: www.domain, domain, https://domain
+    // Check if domain already registered — block ALL including deleted
     const baseDomain = cleanDomain.replace(/^www\./, '');
     const existing = await pool.query(
-      `SELECT id, token, email, name FROM tracker_clients 
+      `SELECT id, token, email, name, status FROM tracker_clients
        WHERE (
          LOWER(REGEXP_REPLACE(domain, '^www\\.', '')) = $1
          OR LOWER(domain) = $1
          OR LOWER(domain) = $2
-       ) AND status != $3`,
-      [baseDomain, 'www.' + baseDomain, 'deleted']
+       )
+       ORDER BY CASE WHEN status='active' THEN 0 WHEN status='paused' THEN 1 ELSE 2 END
+       LIMIT 1`,
+      [baseDomain, 'www.' + baseDomain]
     );
     if (existing.rows.length) {
-      const ex = existing.rows[0];
-      const existingUrl = (process.env.APP_URL || 'https://app.contentscale.site') + '/track/' + ex.token;
-
-      // Security: only resend link if email matches the account
-      const emailMatches = email && ex.email && ex.email.toLowerCase() === email.toLowerCase();
-      const noEmailOnFile = !ex.email; // account has no email set — allow resend
-
-      if (emailMatches || noEmailOnFile) {
-        // Email matches — safe to resend link
-        if (email) {
-          const welcomeHtml = '<h2 style="font-size:17px;font-weight:800;color:#0f172a;margin-bottom:10px;">Your tracker link</h2>'
-            + '<p style="font-size:14px;color:#374151;line-height:1.7;margin-bottom:14px;">A tracker for <strong>' + cleanDomain + '</strong> already exists. Here is your personal link:</p>'
-            + '<div style="background:#f5f3ff;border:1px solid #ddd6fe;border-radius:8px;padding:14px 16px;margin-bottom:16px;">'
-            + '<div style="font-size:11px;font-family:monospace;color:#7c3aed;word-break:break-all;margin-bottom:10px;">' + existingUrl + '</div>'
-            + '<a href="' + existingUrl + '" style="display:inline-block;background:#7c3aed;color:white;text-decoration:none;padding:10px 22px;border-radius:6px;font-size:13px;font-weight:700;">Open My Tracker &rarr;</a>'
-            + '</div>'
-            + '<p style="font-size:13px;color:#374151;">Bookmark this link — it is your permanent tracker URL.</p>';
-          await sendTrackerEmail(ex.id, 'Your ContentScale tracker link — ' + cleanDomain, welcomeHtml).catch(()=>{});
-        }
-        return res.json({
-          success: true, token: ex.token, domain: cleanDomain,
-          existing: true, url: existingUrl,
-          message: 'Tracker found. Your link has been sent to your email.'
-        });
-      } else {
-        // Email does not match — do NOT reveal the URL
-        // Notify Ottmar so he can verify and help
-        const cbPhone = process.env.CALLMEBOT_PHONE;
-        const cbKey = process.env.CALLMEBOT_KEY;
-        if (cbPhone && cbKey) {
-          fetch(`https://api.callmebot.com/whatsapp.php?phone=${cbPhone}&text=${encodeURIComponent('⚠️ Access attempt: ' + cleanDomain + ' tried with email: ' + (email||'none') + ' — account email: ' + (ex.email||'none'))}&apikey=${cbKey}`).catch(()=>{});
-        }
-        return res.status(403).json({
-          success: false,
-          error: 'A tracker for ' + cleanDomain + ' already exists but the email does not match. Contact Ottmar at wa.me/31628073996 to recover access.'
-        });
+      // Never return existing tracker URL on public registration
+      // Always direct to Ottmar — he handles it via admin
+      const cbPhone = process.env.CALLMEBOT_PHONE;
+      const cbKey = process.env.CALLMEBOT_KEY;
+      if (cbPhone && cbKey) {
+        const ex = existing.rows[0];
+        fetch(`https://api.callmebot.com/whatsapp.php?phone=${cbPhone}&text=${encodeURIComponent('⚠️ Re-registration attempt: ' + cleanDomain + ' (status: ' + ex.status + ') — email: ' + (email||'none'))}&apikey=${cbKey}`).catch(()=>{});
       }
+      return res.status(409).json({
+        success: false,
+        error: 'A tracker for ' + cleanDomain + ' already exists. Contact Ottmar to recover or reset your tracker: wa.me/31628073996'
+      });
     }
 
     // Dealify code validation — format: DEALIFY-XXXXX (1-5 codes allowed)
@@ -1716,21 +1693,35 @@ const title = (html.match(/<title>([^<]+)<\/title>/) || [])[1]?.replace(/ — Co
 // Admin: list all clients
 app.get('/api/admin/tracker-clients', verifyAdmin, async (req, res) => {
   try {
+    const includeDeleted = req.query.include_deleted === '1';
     const r = await pool.query(`
       SELECT c.*, COUNT(p.id) as page_count,
         (SELECT p2.check_frequency FROM tracker_pages p2 WHERE p2.tracker_client_id = c.id AND p2.is_active = TRUE AND p2.check_frequency IS NOT NULL ORDER BY p2.created_at DESC LIMIT 1) as scan_frequency
       FROM tracker_clients c
       LEFT JOIN tracker_pages p ON p.tracker_client_id = c.id AND p.is_active = TRUE
+      ${includeDeleted ? '' : "WHERE c.status != 'deleted'"}
       GROUP BY c.id ORDER BY c.created_at DESC`);
     res.json({ success: true, clients: r.rows });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// POST /api/admin/tracker-clients/:id/restore — restore deleted tracker
+app.post('/api/admin/tracker-clients/:id/restore', verifyAdmin, async (req, res) => {
+  try {
+    await pool.query("UPDATE tracker_clients SET status='active' WHERE id=$1", [req.params.id]);
+    await pool.query("UPDATE tracker_pages SET is_active=TRUE WHERE tracker_client_id=$1", [req.params.id]);
+    const cr = await pool.query('SELECT token, domain FROM tracker_clients WHERE id=$1', [req.params.id]);
+    const appUrl = process.env.APP_URL || 'https://app.contentscale.site';
+    const url = appUrl + '/track/' + cr.rows[0]?.token;
+    res.json({ success: true, url, domain: cr.rows[0]?.domain });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
 // Admin: delete tracker client
 app.delete('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
   try {
-    await pool.query('UPDATE tracker_pages SET is_active=FALSE WHERE tracker_client_id=$1', [req.params.id]);
-    await pool.query('DELETE FROM tracker_clients WHERE id=$1', [req.params.id]);
+    // Soft delete — keep all data, just mark as deleted
+    await pool.query("UPDATE tracker_clients SET status='deleted' WHERE id=$1", [req.params.id]);
     res.json({ success: true });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
@@ -1772,6 +1763,31 @@ app.get('/api/admin/test-notify/:clientId', verifyAdmin, async (req, res) => {
     results.telegram_token = process.env.TELEGRAM_BOT_TOKEN ? 'set' : 'NOT SET';
 
     res.json({ success: true, results });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// POST /api/admin/tracker-clients/:id/regenerate-token
+app.post('/api/admin/tracker-clients/:id/regenerate-token', verifyAdmin, async (req, res) => {
+  try {
+    const newToken = require('crypto').randomBytes(24).toString('hex');
+    await pool.query('UPDATE tracker_clients SET token=$1 WHERE id=$2', [newToken, req.params.id]);
+    const appUrl = process.env.APP_URL || 'https://app.contentscale.site';
+    const newUrl = appUrl + '/track/' + newToken;
+
+    // Get client info to resend email
+    const cr = await pool.query('SELECT * FROM tracker_clients WHERE id=$1', [req.params.id]);
+    const client = cr.rows[0];
+    if (client && client.email) {
+      const html = '<h2 style="font-size:17px;font-weight:800;color:#0f172a;margin-bottom:10px;">Your tracker link has been updated</h2>'
+        + '<p style="font-size:14px;color:#374151;line-height:1.7;margin-bottom:14px;">Your previous link has been deactivated. Here is your new personal tracker link for <strong>' + client.domain + '</strong>:</p>'
+        + '<div style="background:#f5f3ff;border:1px solid #ddd6fe;border-radius:8px;padding:14px 16px;margin-bottom:16px;">'
+        + '<div style="font-size:11px;font-family:monospace;color:#7c3aed;word-break:break-all;margin-bottom:10px;">' + newUrl + '</div>'
+        + '<a href="' + newUrl + '" style="display:inline-block;background:#7c3aed;color:white;text-decoration:none;padding:10px 22px;border-radius:6px;font-size:13px;font-weight:700;">Open My Tracker &rarr;</a>'
+        + '</div>'
+        + '<p style="font-size:13px;color:#374151;">All your pages, scans, and Citation Briefs are still there — nothing was lost. Bookmark this new link.</p>';
+      await sendTrackerEmail(client.id, 'Your tracker link has been updated — ' + client.domain, html).catch(()=>{});
+    }
+    res.json({ success: true, new_url: newUrl, token: newToken });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
@@ -27416,7 +27432,8 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                             <button onclick="filterTcType('dealify')" id="tcTypeDealify" class="tr-btn" style="font-size:10px;border-color:#f59e0b;color:#f59e0b;">🎯 Dealify</button>
                             <button onclick="loadTrackerClients()" class="tr-btn"><i class="fas fa-sync-alt"></i></button>
                             <button onclick="mergeDuplicateTrackers()" class="tr-btn" style="border-color:#f59e0b;color:#f59e0b;" title="Merge duplicate domains">&#9889; Merge</button>
-                            <button onclick="recalcMaxPages()" class="tr-btn" style="border-color:#38bdf8;color:#38bdf8;" title="Recalculate max_pages for all clients with extra domains">&#9881; Fix Pages</button>
+                            <button onclick="recalcMaxPages()" class="tr-btn" style="border-color:#38bdf8;color:#38bdf8;" title="Recalculate max_pages">&#9881; Fix Pages</button>
+                            <button onclick="_showDeleted=!_showDeleted;this.style.background=_showDeleted?'rgba(239,68,68,.15)':'';loadTrackerClients();" class="tr-btn" style="border-color:#ef4444;color:#ef4444;" title="Show deleted trackers">&#128465; Deleted</button>
                         </div>
                     </div>
                     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:20px;">
@@ -29352,12 +29369,15 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
             } catch(e) { alert('Error: ' + e.message); }
         }
 
+        var _showDeleted = false;
+
         async function loadTrackerClients() {
             var el = document.getElementById('tcList');
             if (!el) return;
             el.innerHTML = '<div style="color:#6b7280;padding:20px;text-align:center;">Loading...</div>';
             try {
-                var data = await apiCall('/api/admin/tracker-clients');
+                var url = '/api/admin/tracker-clients' + (_showDeleted ? '?include_deleted=1' : '');
+                var data = await apiCall(url);
                 _tcClients = data.clients || [];
                 renderTrackerClients(_tcClients);
                 var active = _tcClients.filter(function(c){ return c.status === 'active'; }).length;
@@ -29564,6 +29584,26 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 ipBtn.style.cssText = 'font-size:10px;padding:3px 8px;';
                 ipBtn.onclick = (function(id){ return function(){ resetTcIp(id); }; })(c.id);
 
+                var regenBtn = document.createElement('button');
+                regenBtn.className = 'tr-btn';
+                regenBtn.textContent = 'New link';
+                regenBtn.title = 'Generate new tracker URL (old link stops working, all data kept, email sent to client)';
+                regenBtn.style.cssText = 'font-size:10px;padding:3px 8px;border-color:#a78bfa;color:#a78bfa;';
+                regenBtn.onclick = (function(id, domain, email){ return function(){
+                    if (!confirm('Generate new URL for ' + domain + '? Old URL stops working. All data kept. ' + (email ? 'New link sent to: ' + email : 'No email — copy manually.'))) return;
+                    apiCall('/api/admin/tracker-clients/' + id + '/regenerate-token', 'POST', {})
+                        .then(function(d) {
+                            if (d.success) {
+                                navigator.clipboard.writeText(d.new_url).then(function(){
+                                    alert('New link: ' + d.new_url + (email ? ' — sent to: ' + email : ' — no email, copy manually'));
+                                }).catch(function(){
+                                    alert('New link: ' + d.new_url + (email ? ' — sent to: ' + email : ''));
+                                });
+                                loadTrackerClients();
+                            } else { alert('Error: ' + (d.error||'Failed')); }
+                        }).catch(function(e){ alert('Error: ' + e.message); });
+                }; })(c.id, c.domain, c.email || '');
+
                 var copyBtn = document.createElement('button');
                 copyBtn.className = 'tr-btn';
                 copyBtn.textContent = 'Copy link';
@@ -29586,6 +29626,8 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 actionsDiv.appendChild(toggleBtn);
                 actionsDiv.appendChild(domainsBtn);
                 actionsDiv.appendChild(ipBtn);
+                actionsDiv.appendChild(regenBtn);
+                actionsDiv.appendChild(copyBtn);
                 actionsDiv.appendChild(delBtn);
 
                 // -- Share URL cell - domain + full URL + copy --
@@ -29690,6 +29732,27 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     activateBtn.style.cssText = 'font-size:10px;padding:3px 8px;border-color:#4ade80;color:#4ade80;font-weight:600;';
                     activateBtn.onclick = (function(id){ return function(){ updateTcClient(id, {status: 'active'}); }; })(c.id);
                     actionsDiv.insertBefore(activateBtn, actionsDiv.firstChild);
+                }
+
+                // Restore button for deleted clients
+                if (c.status === 'deleted') {
+                    var restoreBtn = document.createElement('button');
+                    restoreBtn.className = 'tr-btn';
+                    restoreBtn.textContent = '↩ Restore';
+                    restoreBtn.title = 'Restore this deleted tracker — all data recovered';
+                    restoreBtn.style.cssText = 'font-size:10px;padding:3px 8px;border-color:#4ade80;color:#4ade80;font-weight:700;';
+                    restoreBtn.onclick = (function(id, domain){ return function(){
+                        if (!confirm('Restore tracker for ' + domain + '? All pages and scan data will be recovered.')) return;
+                        apiCall('/api/admin/tracker-clients/' + id + '/restore', 'POST', {})
+                            .then(function(d) {
+                                if (d.success) {
+                                    navigator.clipboard.writeText(d.url).catch(()=>{});
+                                    alert('Restored! URL: ' + d.url + ' (copied to clipboard)');
+                                    loadTrackerClients();
+                                } else { alert('Error: ' + (d.error||'Failed')); }
+                            }).catch(function(e){ alert('Error: ' + e.message); });
+                    }; })(c.id, c.domain);
+                    actionsDiv.insertBefore(restoreBtn, actionsDiv.firstChild);
                 }
 
                 var tc_url_td = tr.querySelector('.tc-url-cell');
