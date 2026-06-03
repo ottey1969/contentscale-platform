@@ -1084,6 +1084,23 @@ app.get('/api/tracker-client/:token/fetch-sitemap', async (req, res) => {
 });
 
 // PATCH /api/tracker-client/:token/pages/:pageId/html — update html_content + keyword
+// PATCH /api/tracker-client/:token/settings — update client whatsapp + callmebot_key
+app.patch('/api/tracker-client/:token/settings', async (req, res) => {
+  try {
+    const cr = await pool.query('SELECT id FROM tracker_clients WHERE token=$1 AND status=$2', [req.params.token, 'active']);
+    if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
+    const { whatsapp, callmebot_key, name } = req.body;
+    const updates = []; const vals = []; let i = 1;
+    if (whatsapp !== undefined) { updates.push(`whatsapp=$${i++}`); vals.push(whatsapp || null); }
+    if (callmebot_key !== undefined) { updates.push(`callmebot_key=$${i++}`); vals.push(callmebot_key || null); }
+    if (name !== undefined) { updates.push(`name=$${i++}`); vals.push(name || null); }
+    if (!updates.length) return res.json({ success: true });
+    vals.push(cr.rows[0].id);
+    await pool.query(`UPDATE tracker_clients SET ${updates.join(',')} WHERE id=$${i}`, vals);
+    res.json({ success: true });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
 app.patch('/api/tracker-client/:token/pages/:pageId/html', async (req, res) => {
   try {
     const cr = await pool.query('SELECT id FROM tracker_clients WHERE token=$1 AND status=$2', [req.params.token, 'active']);
@@ -1779,7 +1796,7 @@ app.patch('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS paused_at TIMESTAMPTZ`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS dealify_codes VARCHAR(500)`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS gsc_enabled BOOLEAN DEFAULT FALSE`).catch(()=>{});
-  await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS gsc_enabled BOOLEAN DEFAULT FALSE`).catch(()=>{});
+  await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS callmebot_key VARCHAR(64)`).catch(()=>{});
   await client.query(`CREATE INDEX IF NOT EXISTS tracker_clients_ip_idx ON tracker_clients(registered_ip) WHERE registered_ip IS NOT NULL`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS extra_domains TEXT DEFAULT ''`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS unsubscribe_token VARCHAR(64)`).catch(()=>{});
@@ -23610,6 +23627,7 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
     ' + (GSC_ENABLED ? '<button class="cs-btn" onclick="showImportModal(\'gsc\')" style="border-color:#a78bfa;color:#a78bfa;"><i class="fas fa-chart-line"></i> GSC</button>' : '') + '
     <button class="cs-btn" onclick="showImportModal('paste')" style="border-color:#6b7280;color:#6b7280;"><i class="fas fa-paste"></i> Paste</button>
     <button class="cs-btn" onclick="loadPages()" style="margin-left:4px;" title="Refresh"><i class="fas fa-sync-alt"></i></button>
+    <button class="cs-btn" onclick="openWaSettings()" style="border-color:#25d366;color:#25d366;" title="Set up WhatsApp alerts"><i class="fab fa-whatsapp"></i> WA Alerts</button>
     <input id="ctSearch" type="text" class="cs-input" placeholder="Search..." oninput="filterPages(this.value)" style="width:160px;padding:5px 10px;font-size:11px;margin-left:auto;">
     <span style="font-size:11px;color:#6b7280;" id="pageCountLabel"></span>
   </div>
@@ -25017,6 +25035,27 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
     if (el) el.style.display = 'flex';
   }
 
+  function openWaSettings() {
+    var modal = document.getElementById('waSettingsModal');
+    if (!modal) return;
+    modal.style.display = 'flex';
+  }
+
+  async function saveWaSettings() {
+    var phone = (document.getElementById('waPhone') || {}).value || '';
+    var key = (document.getElementById('waKey') || {}).value || '';
+    if (!phone || !key) { toast('Enter your WhatsApp number and API key', '#f87171'); return; }
+    var d = await fetch('/api/tracker-client/' + TOKEN + '/settings', {
+      method: 'PATCH',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ whatsapp: phone.replace(/\D/g,''), callmebot_key: key })
+    }).then(function(r){ return r.json(); });
+    if (d.success) {
+      toast('WhatsApp alerts enabled!', '#4ade80');
+      hideModal('waSettingsModal');
+    } else { toast(d.error || 'Failed', '#f87171'); }
+  }
+
 <\/script>
 
 <!-- Citation Brief Overlay -->
@@ -25142,6 +25181,28 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
         I understand &mdash; start monitoring &rarr;
       </button>
       <div class="wl-footer">One of the most advanced AI citation monitoring systems available today</div>
+    </div>
+  </div>
+</div>
+
+<!-- WA Settings Modal -->
+<div id="waSettingsModal" class="cs-modal-overlay" onclick="hideModal('waSettingsModal')" style="display:none;">
+  <div class="cs-modal-box" onclick="event.stopPropagation()" style="max-width:440px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+      <h3 style="font-size:15px;font-weight:800;color:#f1f5f9;">&#128242; WhatsApp Alerts Setup</h3>
+      <button onclick="hideModal('waSettingsModal')" style="background:none;border:none;color:#94a3b8;cursor:pointer;font-size:1.2rem;">&#x2715;</button>
+    </div>
+    <p style="font-size:12px;color:#6b7280;margin-bottom:14px;">Get Citation Brief alerts via WhatsApp. Requires a free CallMeBot API key.</p>
+    <div style="background:#111827;border:1px solid #374151;border-radius:6px;padding:10px 14px;margin-bottom:12px;font-size:11px;color:#9ca3af;">
+      1. Add CallMeBot on WhatsApp: <strong style="color:#f1f5f9;">+34 644 20 47 56</strong><br>
+      2. Send: <strong style="color:#4ade80;">I allow callmebot to send me messages</strong><br>
+      3. You receive your API key by WhatsApp
+    </div>
+    <input type="tel" id="waPhone" placeholder="Your WhatsApp number (e.g. 31628073996)" class="cs-input" style="margin-bottom:8px;width:100%;">
+    <input type="text" id="waKey" placeholder="CallMeBot API key" class="cs-input" style="margin-bottom:12px;width:100%;">
+    <div style="display:flex;gap:8px;justify-content:flex-end;">
+      <button onclick="hideModal('waSettingsModal')" class="cs-btn" style="border-color:#374151;color:#6b7280;">Cancel</button>
+      <button onclick="saveWaSettings()" class="cs-btn" style="border-color:#4ade80;color:#4ade80;font-weight:600;">Save &amp; Enable</button>
     </div>
   </div>
 </div>
