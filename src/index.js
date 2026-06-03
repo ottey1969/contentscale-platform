@@ -985,26 +985,41 @@ app.post('/api/tracker-client/register', async (req, res) => {
     if (existing.rows.length) {
       const ex = existing.rows[0];
       const existingUrl = (process.env.APP_URL || 'https://app.contentscale.site') + '/track/' + ex.token;
-      // Always resend welcome email if email provided
-      if (email) {
-        const clientId = ex.id;
-        const welcomeHtml = '<h2 style="font-size:17px;font-weight:800;color:#0f172a;margin-bottom:10px;">Your tracker link</h2>'
-          + '<p style="font-size:14px;color:#374151;line-height:1.7;margin-bottom:14px;">A tracker for <strong>' + cleanDomain + '</strong> already exists. Here is your personal link:</p>'
-          + '<div style="background:#f5f3ff;border:1px solid #ddd6fe;border-radius:8px;padding:14px 16px;margin-bottom:16px;">'
-          + '<div style="font-size:11px;font-family:monospace;color:#7c3aed;word-break:break-all;margin-bottom:10px;">' + existingUrl + '</div>'
-          + '<a href="' + existingUrl + '" style="display:inline-block;background:#7c3aed;color:white;text-decoration:none;padding:10px 22px;border-radius:6px;font-size:13px;font-weight:700;">Open My Tracker &rarr;</a>'
-          + '</div>'
-          + '<p style="font-size:13px;color:#374151;">Bookmark this link — it is your permanent tracker URL. Questions? <a href="https://wa.me/31628073996" style="color:#7c3aed;">WhatsApp Ottmar</a></p>';
-        await sendTrackerEmail(clientId, 'Your ContentScale tracker link — ' + cleanDomain, welcomeHtml).catch(()=>{});
+
+      // Security: only resend link if email matches the account
+      const emailMatches = email && ex.email && ex.email.toLowerCase() === email.toLowerCase();
+      const noEmailOnFile = !ex.email; // account has no email set — allow resend
+
+      if (emailMatches || noEmailOnFile) {
+        // Email matches — safe to resend link
+        if (email) {
+          const welcomeHtml = '<h2 style="font-size:17px;font-weight:800;color:#0f172a;margin-bottom:10px;">Your tracker link</h2>'
+            + '<p style="font-size:14px;color:#374151;line-height:1.7;margin-bottom:14px;">A tracker for <strong>' + cleanDomain + '</strong> already exists. Here is your personal link:</p>'
+            + '<div style="background:#f5f3ff;border:1px solid #ddd6fe;border-radius:8px;padding:14px 16px;margin-bottom:16px;">'
+            + '<div style="font-size:11px;font-family:monospace;color:#7c3aed;word-break:break-all;margin-bottom:10px;">' + existingUrl + '</div>'
+            + '<a href="' + existingUrl + '" style="display:inline-block;background:#7c3aed;color:white;text-decoration:none;padding:10px 22px;border-radius:6px;font-size:13px;font-weight:700;">Open My Tracker &rarr;</a>'
+            + '</div>'
+            + '<p style="font-size:13px;color:#374151;">Bookmark this link — it is your permanent tracker URL.</p>';
+          await sendTrackerEmail(ex.id, 'Your ContentScale tracker link — ' + cleanDomain, welcomeHtml).catch(()=>{});
+        }
+        return res.json({
+          success: true, token: ex.token, domain: cleanDomain,
+          existing: true, url: existingUrl,
+          message: 'Tracker found. Your link has been sent to your email.'
+        });
+      } else {
+        // Email does not match — do NOT reveal the URL
+        // Notify Ottmar so he can verify and help
+        const cbPhone = process.env.CALLMEBOT_PHONE;
+        const cbKey = process.env.CALLMEBOT_KEY;
+        if (cbPhone && cbKey) {
+          fetch(`https://api.callmebot.com/whatsapp.php?phone=${cbPhone}&text=${encodeURIComponent('⚠️ Access attempt: ' + cleanDomain + ' tried with email: ' + (email||'none') + ' — account email: ' + (ex.email||'none'))}&apikey=${cbKey}`).catch(()=>{});
+        }
+        return res.status(403).json({
+          success: false,
+          error: 'A tracker for ' + cleanDomain + ' already exists but the email does not match. Contact Ottmar at wa.me/31628073996 to recover access.'
+        });
       }
-      return res.json({
-        success: true,
-        token: ex.token,
-        domain: cleanDomain,
-        existing: true,
-        url: existingUrl,
-        message: 'A tracker for ' + cleanDomain + ' already exists. Your personal link has been sent to your email.'
-      });
     }
 
     // Dealify code validation — format: DEALIFY-XXXXX (1-5 codes allowed)
