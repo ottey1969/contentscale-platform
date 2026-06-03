@@ -874,15 +874,27 @@ async function notifyClient(clientId, subject, htmlBody, telegramText) {
 
 async function sendTrackerEmail(clientId, subject, htmlBody) {
   try {
-    const cr = await pool.query('SELECT * FROM tracker_clients WHERE id=$1 AND email_unsubscribed=FALSE AND email IS NOT NULL', [clientId]);
-    if (!cr.rows.length) return;
-    const client = cr.rows[0];
+    // Robust query — handle missing columns gracefully
+    let client;
+    try {
+      const cr = await pool.query('SELECT * FROM tracker_clients WHERE id=$1 AND (email_unsubscribed IS NULL OR email_unsubscribed=FALSE) AND email IS NOT NULL', [clientId]);
+      if (!cr.rows.length) {
+        console.warn('[tracker-email] No client found or unsubscribed for id:', clientId);
+        return;
+      }
+      client = cr.rows[0];
+    } catch(qErr) {
+      // Fallback if email_unsubscribed column doesn't exist
+      const cr2 = await pool.query('SELECT * FROM tracker_clients WHERE id=$1 AND email IS NOT NULL', [clientId]);
+      if (!cr2.rows.length) { console.warn('[tracker-email] No client with email for id:', clientId); return; }
+      client = cr2.rows[0];
+    }
 
     // Generate unsubscribe token if not set
-    let unsubToken = client.unsubscribe_token;
+    let unsubToken = client.unsubscribe_token || null;
     if (!unsubToken) {
       unsubToken = require('crypto').randomBytes(20).toString('hex');
-      await pool.query('UPDATE tracker_clients SET unsubscribe_token=$1 WHERE id=$2', [unsubToken, clientId]);
+      try { await pool.query('UPDATE tracker_clients SET unsubscribe_token=$1 WHERE id=$2', [unsubToken, clientId]); } catch(e) {}
     }
 
     const unsubUrl = (process.env.APP_URL || 'https://app.contentscale.site') + '/unsubscribe/' + unsubToken;
@@ -1691,6 +1703,45 @@ app.delete('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
 });
 
 // Admin: update client max_pages + override IP
+// GET /api/admin/test-notify/:clientId — test email + Telegram for a client
+app.get('/api/admin/test-notify/:clientId', verifyAdmin, async (req, res) => {
+  try {
+    const clientId = req.params.clientId;
+    const cr = await pool.query('SELECT * FROM tracker_clients WHERE id=$1', [clientId]);
+    if (!cr.rows.length) return res.json({ success: false, error: 'Client not found' });
+    const c = cr.rows[0];
+
+    const results = { email: null, telegram: null, client: { id: c.id, domain: c.domain, email: c.email, telegram_chat_id: c.telegram_chat_id } };
+
+    // Test email
+    if (c.email) {
+      try {
+        await sendTrackerEmail(clientId, 'Test notification — ContentScale Tracker',
+          '<h3>Test notification</h3><p>This is a test email from your ContentScale AI Citations Tracker. If you received this, email notifications are working correctly.</p>');
+        results.email = 'sent to ' + c.email;
+      } catch(e) { results.email = 'ERROR: ' + e.message; }
+    } else {
+      results.email = 'no email on file';
+    }
+
+    // Test Telegram
+    if (c.telegram_chat_id) {
+      try {
+        const ok = await sendTelegramNotification(c.telegram_chat_id, '✅ <b>Test notification</b> from ContentScale Tracker\n\nTelegram alerts are working for <b>' + c.domain + '</b>.');
+        results.telegram = ok ? 'sent to chat ' + c.telegram_chat_id : 'failed';
+      } catch(e) { results.telegram = 'ERROR: ' + e.message; }
+    } else {
+      results.telegram = 'no telegram_chat_id — client has not linked Telegram yet';
+    }
+
+    // Check Brevo key
+    results.brevo_key = process.env.BREVO_API_KEY ? 'set (' + process.env.BREVO_API_KEY.substring(0,12) + '...)' : 'NOT SET';
+    results.telegram_token = process.env.TELEGRAM_BOT_TOKEN ? 'set' : 'NOT SET';
+
+    res.json({ success: true, results });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
 // POST /api/admin/tracker-clients/create-own — admin creates tracker for paying client
 app.post('/api/admin/tracker-clients/create-own', verifyAdmin, async (req, res) => {
   try {
@@ -2067,6 +2118,8 @@ app.patch('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS gsc_enabled BOOLEAN DEFAULT FALSE`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS callmebot_key VARCHAR(64)`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS telegram_chat_id VARCHAR(64)`).catch(()=>{});
+  await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS email_unsubscribed BOOLEAN DEFAULT FALSE`).catch(()=>{});
+  await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS unsubscribe_token VARCHAR(64)`).catch(()=>{});
   await client.query(`CREATE INDEX IF NOT EXISTS tracker_clients_ip_idx ON tracker_clients(registered_ip) WHERE registered_ip IS NOT NULL`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS extra_domains TEXT DEFAULT ''`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS unsubscribe_token VARCHAR(64)`).catch(()=>{});
