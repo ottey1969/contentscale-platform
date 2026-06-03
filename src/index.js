@@ -89,6 +89,34 @@ const WebSocket = require('ws');
 const rewriterHelpers = require('./rewriter-helpers');
 const app = express();
 
+// ── API Response Cache — saves Serper + Gemini costs ─────────────────────────
+// Simple in-memory cache with TTL. Resets on restart (Railway deploy).
+const _apiCache = new Map();
+function _cacheGet(key) {
+  const entry = _apiCache.get(key);
+  if (!entry) return null;
+  if (Date.now() > entry.expires) { _apiCache.delete(key); return null; }
+  return entry.data;
+}
+function _cacheSet(key, data, ttlMs) {
+  _apiCache.set(key, { data, expires: Date.now() + ttlMs });
+  // Cleanup old entries periodically
+  if (_apiCache.size > 500) {
+    const now = Date.now();
+    for (const [k, v] of _apiCache.entries()) {
+      if (now > v.expires) _apiCache.delete(k);
+    }
+  }
+}
+// TTLs
+const CACHE_TTL = {
+  serper:     6  * 60 * 60 * 1000, // 6 hours — SERP changes slowly
+  perplexity: 12 * 60 * 60 * 1000, // 12 hours — citation status stable
+  brave:      12 * 60 * 60 * 1000, // 12 hours
+  gemini:     24 * 60 * 60 * 1000, // 24 hours — briefs valid 1 day
+  bing:       12 * 60 * 60 * 1000, // 12 hours
+};
+
 // ══ GLOBAL MIDDLEWARE ═══════════════════════════════════════════════════════
 // Request timeout — prevents connections hanging forever
 app.use((req, res, next) => {
@@ -11855,6 +11883,11 @@ app.get('/api/serp/competitors', verifyEngineAccess, async (req, res) => {
       related_searches: related,
       total_results: data.search_information?.total_results || 'unknown'
     });
+    // Cache the result
+    _cacheSet('serp:' + keyword.toLowerCase().trim() + ':' + glParam + ':' + locationStr, {
+      success: true, keyword, top5, people_also_ask: ppa, ai_overview: aiOverview, related_searches: related,
+      total_results: data.search_information?.total_results || 'unknown'
+    }, CACHE_TTL.serper);
   } catch(e) {
     console.error('[serp competitors]', e.message);
     res.status(500).json({ success: false, error: e.message });
@@ -11877,6 +11910,14 @@ app.get('/api/serp/intelligence', verifyEngineAccess, async (req, res) => {
   const glParam = req.query.gl || 'us';
 
   try {
+    // Check cache first — SERP results valid for 6 hours
+    const cacheKey = 'serp:' + keyword.toLowerCase().trim() + ':' + glParam + ':' + locationStr;
+    const cached = _cacheGet(cacheKey);
+    if (cached) {
+      console.log('[serp-intelligence] Cache hit for:', keyword);
+      return res.json({ ...cached, _cached: true });
+    }
+
     // 1. Fetch top 10 Google results
     const serpParams = { engine: 'google', q: keyword, api_key: serpKey, num: '10', hl: 'en', gl: glParam };
     if (locationStr) serpParams.location = locationStr;
@@ -29379,7 +29420,7 @@ app.post('/api/tracker/pages/:id/citation-brief', verifyEngineAccess, async (req
         .replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().substring(0, 4000);
     }
 
-    // ── Step 2: Serper — get AI Overview text + competitors (always run) ─────
+    // ── Step 2: Serper — get AI Overview text + competitors ──────────────────
     let aioText = snap.ai_google_overview_text || '';
     let aioFound = snap.ai_google_overview_found || false;
     let aioCited = snap.ai_google_overview_cited || false;
@@ -29388,6 +29429,12 @@ app.post('/api/tracker/pages/:id/citation-brief', verifyEngineAccess, async (req
     let serpCompetitors = [];
 
     if (serperKey) {
+      const serperCacheKey = 'serper:cb:' + keyword.toLowerCase().trim();
+      const serperCached = _cacheGet(serperCacheKey);
+      if (serperCached) {
+        ({ aioText, aioFound, aioCited, aioSourceUrl, googlePosition, serpCompetitors } = serperCached);
+        _trackAiCall('serper', 'serper-cache', true, null, 0);
+      } else
       try {
         const t1 = Date.now();
         const ctrl = new AbortController(); setTimeout(() => ctrl.abort(), 15000);
@@ -29417,6 +29464,8 @@ app.post('/api/tracker/pages/:id/citation-brief', verifyEngineAccess, async (req
             url: r2.link, domain: (r2.link||'').replace(/^https?:\/\//, '').split('/')[0].replace(/^www\./, ''),
             title: r2.title, snippet: r2.snippet || '', position: r2.position
           }));
+          // Cache Serper results
+          _cacheSet(serperCacheKey, { aioText, aioFound, aioCited, aioSourceUrl, googlePosition, serpCompetitors }, CACHE_TTL.serper);
         }
       } catch(e) {
         _trackAiCall('serper', 'serper', false, e.message, 0);
@@ -29438,6 +29487,13 @@ app.post('/api/tracker/pages/:id/citation-brief', verifyEngineAccess, async (req
     let perplexityCitations = [];
     const perplexityKey = resolvePerplexityKey(req) || process.env.PERPLEXITY_API_KEY || '';
     if (perplexityKey) {
+      // Check cache first — Perplexity results valid 12h
+      const pxCacheKey = 'perplexity:' + keyword.toLowerCase().trim() + ':' + domain;
+      const pxCached = _cacheGet(pxCacheKey);
+      if (pxCached) {
+        ({ perplexityCited, perplexityText, perplexityCitations } = pxCached);
+        _trackAiCall('perplexity', 'perplexity-cache', true, null, 0);
+      } else
       try {
         const t_px = Date.now();
         const pxResp = await fetch('https://api.perplexity.ai/chat/completions', {
@@ -29453,17 +29509,24 @@ app.post('/api/tracker/pages/:id/citation-brief', verifyEngineAccess, async (req
           const answerText = pxData.choices?.[0]?.message?.content || '';
           perplexityCited = perplexityCitations.some(c => (c||'').includes(domain)) || answerText.includes(domain);
           perplexityText = answerText.substring(0, 500);
+          // Cache result
+          _cacheSet(pxCacheKey, { perplexityCited, perplexityText, perplexityCitations }, CACHE_TTL.perplexity);
         }
       } catch(e) { _trackAiCall('perplexity', 'perplexity-sonar', false, e.message, 0); }
     }
 
     // ── Step 3c: Bing Search API — covers Microsoft Copilot ──────────────────
-    // ChatGPT Plus now uses Google (same as Serper above), Copilot uses Bing
     let copilotCited = false;
     let copilotText = '';
     let copilotCitations = [];
     const bingApiKey = process.env.BING_SEARCH_API_KEY || '';
     if (bingApiKey) {
+      const bingCacheKey = 'bing:' + keyword.toLowerCase().trim() + ':' + domain;
+      const bingCached = _cacheGet(bingCacheKey);
+      if (bingCached) {
+        ({ copilotCited, copilotText } = bingCached);
+        _trackAiCall('bing', 'bing-cache', true, null, 0);
+      } else
       try {
         const t_bing = Date.now();
         const bResp = await fetch(
@@ -29490,6 +29553,12 @@ app.post('/api/tracker/pages/:id/citation-brief', verifyEngineAccess, async (req
     let claudeCitations = [];
     const braveKey = process.env.BRAVE_SEARCH_API_KEY || '';
     if (braveKey) {
+      const braveCacheKey = 'brave:' + keyword.toLowerCase().trim() + ':' + domain;
+      const braveCached = _cacheGet(braveCacheKey);
+      if (braveCached) {
+        ({ claudeCited, claudeText, claudeCitations } = braveCached);
+        _trackAiCall('brave', 'brave-cache', true, null, 0);
+      } else
       try {
         const t_brave = Date.now();
         const brResp = await fetch(
@@ -29503,6 +29572,8 @@ app.post('/api/tracker/pages/:id/citation-brief', verifyEngineAccess, async (req
           claudeCitations = results.map(r => r.url || '').filter(Boolean);
           claudeCited = claudeCitations.some(u => u.includes(domain));
           claudeText = 'Brave top results: ' + claudeCitations.slice(0, 3).map(u => u.replace(/^https?:\/\//, '').split('/')[0]).join(', ');
+          // Cache result
+          _cacheSet(braveCacheKey, { claudeCited, claudeText, claudeCitations }, CACHE_TTL.brave);
           console.log('[citation-brief] Brave/Claude: cited=' + claudeCited + ', results=' + results.length);
         }
       } catch(e) { console.warn('[citation-brief] Brave API failed:', e.message); }
@@ -29589,6 +29660,13 @@ Return ONLY valid JSON — no markdown:
     let groundingText = '';    // plain text analysis from step 1
 
     if (geminiKey) {
+      // Check Gemini cache — brief valid 24h per keyword+url combo
+      const gemCacheKey = 'gemini:brief:' + keyword.toLowerCase().trim() + ':' + pageUrl;
+      const gemCached = _cacheGet(gemCacheKey);
+      if (gemCached && !req.query.force) {
+        console.log('[citation-brief] Gemini cache hit for:', keyword);
+        return res.json({ ...gemCached, _cached: true, cached_at: new Date().toISOString() });
+      }
 
       // ── STEP 4a-1: Gemini 2.5 Pro + Search Grounding → plain text ──────────
       const step1Prompt = briefPrompt + '\n\nIMPORTANT: Respond in plain text/markdown only. DO NOT output JSON yet. Be specific about which pages Google currently cites for this keyword and why. Include direct quotes from the AI Overview if found.';
@@ -29780,7 +29858,7 @@ Return ONLY valid JSON — no markdown:
       [JSON.stringify({ citation_brief: brief, citation_brief_at: new Date().toISOString(), citation_brief_model: modelUsed }), pageId]
     ).catch(() => {});
 
-    res.json({
+    const finalResult = {
       success: true, page_id: pageId, keyword, url: pageUrl,
       google_position: googlePosition,
       ai_overview: { found: aioFound, cited: aioCited, text: aioText, source_url: aioSourceUrl },
@@ -29789,7 +29867,10 @@ Return ONLY valid JSON — no markdown:
       ai_provider_status: Object.fromEntries(
         Object.entries(_aiProviderStatus).map(([k,v]) => [k, { ok: v.ok, health: v.ok ? (v.consecutiveErrors > 0 ? 'degraded' : 'healthy') : 'down' }])
       )
-    });
+    };
+    // Cache the full brief result for 24h
+    if (brief) _cacheSet(gemCacheKey, finalResult, CACHE_TTL.gemini);
+    res.json(finalResult);
   } catch(e) {
     console.error('[citation-brief]', e);
     res.status(500).json({ success: false, error: e.message });
@@ -31502,6 +31583,13 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
     // Add SERPAPI_KEY to Railway env vars.
     _trSetStep(pageId, 'google', 'running', 'Searching Google via Serper: ' + keyword);
     if(_sk) {
+      const skCacheKey = 'serper:tracker:' + keyword.toLowerCase().trim();
+      const skCached = _cacheGet(skCacheKey);
+      if (skCached) {
+        // Use cached result
+        Object.assign(snapshot, skCached);
+        _trSetStep(pageId, 'google', 'done', '✅ Cached: pos #' + (skCached.google_position||'?') + (skCached.ai_google_overview_cited ? ' · AIO ✓' : ''));
+      } else
       try {
         const sResp = await fetch('https://google.serper.dev/search', {
           method: 'POST',
@@ -31566,6 +31654,14 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
           const posLabel = snapshot.google_position ? '#' + snapshot.google_position : 'not in top 10';
           const aiLabel  = snapshot.ai_google_overview_cited ? '✅ AI Overview cited' : (snapshot.ai_google_overview_found ? '⚠️ AI Overview exists (not cited)' : '❌ No AI Overview');
           _trSetStep(pageId, 'google', 'done', `Position: ${posLabel} · ${aiLabel}`);
+          // Cache Serper result — Google position changes slowly
+          _cacheSet(skCacheKey, {
+            google_position: snapshot.google_position,
+            ai_google_overview_found: snapshot.ai_google_overview_found,
+            ai_google_overview_cited: snapshot.ai_google_overview_cited,
+            ai_google_overview_text: snapshot.ai_google_overview_text,
+            _competitors: snapshot._competitors
+          }, CACHE_TTL.serper);
           console.log(`[tracker] Serper: position=${snapshot.google_position}, AIO=${snapshot.ai_google_overview_found}, cited=${snapshot.ai_google_overview_cited}`);
         } else {
           const err = await sResp.text().catch(()=>'');
@@ -31582,7 +31678,32 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
     }
 
     // ── 3. Perplexity citation via Sonar API ─────────────────────────────────
-    _trSetStep(pageId, 'perplexity', 'running', 'Asking Perplexity Sonar: ' + keyword);
+    // OPTIMISATION: skip Perplexity every other scan to save API costs
+    // Only run on even scan counts (0, 2, 4...) or if never run before
+    const prevSnapR = await pool.query(
+      `SELECT ai_perplexity_cited, ai_bing_cited, ai_brave_cited, google_position, ai_google_overview_cited, brief_check_count
+       FROM tracker_snapshots WHERE page_id=$1 ORDER BY checked_at DESC LIMIT 2`,
+      [pageId]
+    );
+    const prevSnap = prevSnapR.rows[0] || null;
+    const prevPrevSnap = prevSnapR.rows[1] || null;
+    const scanCount = page.brief_check_count || 0;
+    const runPerplexity = !prevSnap || scanCount % 2 === 0; // every other scan
+    const runBrave = !prevSnap || scanCount % 2 === 0;      // every other scan
+
+    // OPTIMISATION: skip Gemini brief if results unchanged vs previous scan
+    const resultsChanged = !prevSnap ||
+      prevSnap.ai_google_overview_cited !== snapshot.ai_google_overview_cited ||
+      prevSnap.google_position !== snapshot.google_position ||
+      Math.abs((prevSnap.google_position||99) - (snapshot.google_position||99)) >= 2;
+
+    _trSetStep(pageId, 'perplexity', 'running', runPerplexity ? 'Asking Perplexity Sonar: ' + keyword : 'Skipped (using cached result)');
+    if (!runPerplexity && prevSnap) {
+      // Use previous Perplexity result — no API call
+      snapshot.ai_perplexity_cited = prevSnap.ai_perplexity_cited;
+      snapshot.ai_perplexity_found = true;
+      _trSetStep(pageId, 'perplexity', 'done', (prevSnap.ai_perplexity_cited ? '✅' : '❌') + ' Cached result (scan ' + scanCount + ')');
+    } else
     if(_pk) { const perplexityKey = _pk;
       try {
         const pResp = await fetch('https://api.perplexity.ai/chat/completions', {
@@ -31591,7 +31712,7 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
           body: JSON.stringify({
             model: 'sonar',
             messages: [{ role: 'user', content: keyword }],
-            max_tokens: 800,
+            max_tokens: 400,
             return_citations: true,
             return_related_questions: false
           }),
@@ -31611,6 +31732,11 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
           }
           const label = cited ? '✅ Cited (' + citations.length + ' citations)' : ('❌ Not cited (' + citations.length + ' citations found)');
           _trSetStep(pageId, 'perplexity', 'done', label);
+          // Cache Perplexity result
+          _cacheSet('perplexity:tracker:' + keyword.toLowerCase().trim() + ':' + domain,
+            { ai_perplexity_cited: cited, ai_perplexity_found: snapshot.ai_perplexity_found, ai_perplexity_text: snapshot.ai_perplexity_text },
+            CACHE_TTL.perplexity
+          );
         } else {
           const err = await pResp.text().catch(()=>'');
           _trSetStep(pageId, 'perplexity', 'error', `Perplexity API ${pResp.status}: ${err.substring(0,120)}`);
@@ -31630,6 +31756,12 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
     _trSetStep(pageId, 'youcom', 'running', 'Checking Bing / Copilot index: ' + keyword);
     const _bingKey = keys.bingKey || process.env.BING_SEARCH_API_KEY || process.env.YOU_API_KEY || '';
     if(_bingKey) {
+      const bingCacheKey2 = 'bing:tracker:' + keyword.toLowerCase().trim() + ':' + domain;
+      const bingCached2 = _cacheGet(bingCacheKey2);
+      if (bingCached2) {
+        Object.assign(snapshot, bingCached2);
+        _trSetStep(pageId, 'youcom', 'done', (snapshot.ai_bing_cited ? '✅' : '❌') + ' Bing cached');
+      } else
       try {
         const bingResp = await fetch(
           `https://api.bing.microsoft.com/v7.0/search?q=${encodeURIComponent(keyword)}&count=10&mkt=en-US`,
@@ -31652,6 +31784,8 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
           const pos = webResults.findIndex(function(r){ return (r.url||'').includes(domain); });
           const label = inResults ? `Cited in Bing #${pos+1}` : (inSnippets ? 'Mentioned in snippet' : 'Not found in Bing');
           _trSetStep(pageId, 'youcom', 'done', label);
+          // Cache Bing result
+          _cacheSet(bingCacheKey2, { ai_bing_found: snapshot.ai_bing_found, ai_bing_cited: snapshot.ai_bing_cited }, CACHE_TTL.bing);
         } else {
           const errTxt = await bingResp.text().catch(()=>'');
           // Fallback: if Bing key is actually a You.com key (old setup), skip gracefully
@@ -31669,6 +31803,10 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
     }
 
     // ── 4b. Brave Search citation ──────────────────────────────────────────────
+    if (!runBrave && prevSnap) {
+      snapshot.ai_brave_cited = prevSnap.ai_brave_cited;
+      _trSetStep(pageId, 'brave', 'done', (prevSnap.ai_brave_cited ? '✅' : '❌') + ' Cached result (scan ' + scanCount + ')');
+    } else {
     _trSetStep(pageId, 'brave', 'running', 'Checking Brave Search (Claude index): ' + keyword);
     const _bk = keys.braveKey || process.env.BRAVE_SEARCH_API_KEY || '';
     if(_bk) {
@@ -31711,6 +31849,7 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
       _trSetStep(pageId, 'brave', 'error', 'BRAVE_SEARCH_API_KEY not set — add to Railway env vars');
       snapshot.ai_brave_cited = false;
     }
+    } // end brave else block
 
   } else {
     _trSetStep(pageId, 'google', 'error', 'No keyword set — add a target keyword to this page');
@@ -31722,6 +31861,14 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
   // 5. Generate recommendations via Gemini — gap analysis vs. what's winning in Google + AI systems
   _trSetStep(pageId, 'recommendations', 'running', 'Analysing gaps vs. top results…');
   if(geminiKey) {
+    // OPTIMISATION: skip Gemini if results unchanged AND we have a recent brief
+    const hasCachedBrief = page.brief_content && page.brief_check_count > 0;
+    const skipGemini = !resultsChanged && hasCachedBrief;
+    if (skipGemini) {
+      snapshot.recommendations = page.brief_content;
+      _trSetStep(pageId, 'recommendations', 'done', '✅ Results unchanged — using cached Citation Brief (saves API call)');
+      console.log('[tracker] Gemini skipped for page', pageId, '— results unchanged');
+    } else
     // Skip recommendations if no valid keyword — slug fallback produces garbage
     if (!_hasValidKeyword) {
       snapshot.recommendations = [{
