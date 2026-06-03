@@ -1285,10 +1285,9 @@ app.patch('/api/tracker-client/:token/pages/:pageId/done', async (req, res) => {
             await sendTrackerEmail(cr.rows[0].id, subject, htmlBody);
           }
 
-          // WhatsApp reminder if client has callmebot key
-          if (client.whatsapp && client.callmebot_key) {
-            const msg = encodeURIComponent('✅ Done pressed for ' + pageUrl + ' — now paste the updated HTML in your tracker so the system can measure your improvements and start the next Citation Brief. ' + trackerUrl);
-            await fetch('https://api.callmebot.com/whatsapp.php?phone=' + client.whatsapp + '&text=' + msg + '&apikey=' + client.callmebot_key).catch(() => {});
+          // Telegram reminder
+          if (client.telegram_chat_id) {
+            await sendTelegramNotification(client.telegram_chat_id, '✅ <b>Done pressed!</b> Now paste the updated HTML in your tracker so the system can measure your improvements.\n\n<a href="' + trackerUrl + '">Open tracker →</a>');
           }
         } catch(e) { console.warn('[done-reminder]', e.message); }
       });
@@ -1951,6 +1950,7 @@ app.patch('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS dealify_codes VARCHAR(500)`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS gsc_enabled BOOLEAN DEFAULT FALSE`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS callmebot_key VARCHAR(64)`).catch(()=>{});
+  await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS telegram_chat_id VARCHAR(64)`).catch(()=>{});
   await client.query(`CREATE INDEX IF NOT EXISTS tracker_clients_ip_idx ON tracker_clients(registered_ip) WHERE registered_ip IS NOT NULL`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS extra_domains TEXT DEFAULT ''`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS unsubscribe_token VARCHAR(64)`).catch(()=>{});
@@ -23782,7 +23782,7 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
     <button class="cs-btn" onclick="showImportModal('paste')" style="border-color:#6b7280;color:#6b7280;"><i class="fas fa-paste"></i> Paste</button>
     <button class="cs-btn" onclick="openSitemapLinks()" style="border-color:#38bdf8;color:#38bdf8;" title="Internal linking suggestions from sitemap"><i class="fas fa-sitemap"></i> Links</button>
     <button class="cs-btn" onclick="loadPages()" style="margin-left:4px;" title="Refresh"><i class="fas fa-sync-alt"></i></button>
-    <button class="cs-btn" onclick="openWaSettings()" style="border-color:#25d366;color:#25d366;" title="Set up WhatsApp alerts"><i class="fab fa-whatsapp"></i> WA Alerts</button>
+    <button class="cs-btn" onclick="openTelegramSetup()" style="border-color:#2AABEE;color:#2AABEE;" title="Enable Telegram alerts"><i class="fab fa-telegram"></i> Telegram</button>
     <input id="ctSearch" type="text" class="cs-input" placeholder="Search..." oninput="filterPages(this.value)" style="width:160px;padding:5px 10px;font-size:11px;margin-left:auto;">
     <span style="font-size:11px;color:#6b7280;" id="pageCountLabel"></span>
   </div>
@@ -25198,9 +25198,14 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
     if (el) el.style.display = 'flex';
   }
 
-  function openWaSettings() {
-    var modal = document.getElementById('waSettingsModal');
+  function openWaSettings() { openTelegramSetup(); } // legacy redirect
+
+  function openTelegramSetup() {
+    var modal = document.getElementById('telegramModal');
     if (!modal) return;
+    var botName = 'ContentScaleTrackerBot';
+    var link = document.getElementById('telegramBotLink');
+    if (link) link.href = 'https://t.me/' + botName + '?start=' + TOKEN;
     modal.style.display = 'flex';
   }
 
@@ -25300,19 +25305,16 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
     toast('AI prompt copied — paste into Claude or ChatGPT', '#60a5fa');
   }
 
+  function copySlPrompt() {
+    var t = document.getElementById('slPromptText');
+    if (!t) return;
+    try { t.select(); document.execCommand('copy'); } catch(e) { navigator.clipboard && navigator.clipboard.writeText(t.value); }
+    toast('AI prompt copied — paste into Claude or ChatGPT', '#60a5fa');
+  }
+
   async function saveWaSettings() {
-    var phone = (document.getElementById('waPhone') || {}).value || '';
-    phone = phone.replace(/\D/g,'');
-    if (!phone || phone.length < 8) { toast('Enter a valid WhatsApp number', '#f87171'); return; }
-    var d = await fetch('/api/tracker-client/' + TOKEN + '/settings', {
-      method: 'PATCH',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ whatsapp: phone })
-    }).then(function(r){ return r.json(); });
-    if (d.success) {
-      toast('WhatsApp alerts enabled for +' + phone, '#4ade80');
-      hideModal('waSettingsModal');
-    } else { toast(d.error || 'Failed', '#f87171'); }
+    // Replaced by Telegram
+    toast('Use the Telegram button for notifications.', '#6b7280');
   }
 
 <\/script>
@@ -25463,25 +25465,24 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
   </div>
 </div>
 
-<!-- WA Settings Modal -->
-<div id="waSettingsModal" onclick="hideModal('waSettingsModal')" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.75);align-items:center;justify-content:center;padding:20px;">
+<!-- Telegram Setup Modal -->
+<div id="telegramModal" onclick="hideModal('telegramModal')" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.8);align-items:center;justify-content:center;padding:20px;">
   <div onclick="event.stopPropagation()" style="background:#0d1117;border:1px solid #374151;border-radius:12px;padding:24px;max-width:420px;width:100%;position:relative;box-shadow:0 20px 60px rgba(0,0,0,.6);">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-      <h3 style="font-size:15px;font-weight:800;color:#f1f5f9;">&#128242; WhatsApp Alerts Setup</h3>
-      <button onclick="hideModal('waSettingsModal')" style="background:none;border:none;color:#94a3b8;cursor:pointer;font-size:1.4rem;line-height:1;padding:0 4px;">&#x2715;</button>
+      <h3 style="font-size:15px;font-weight:800;color:#2AABEE;">&#128240; Enable Telegram Alerts</h3>
+      <button onclick="hideModal('telegramModal')" style="background:none;border:none;color:#94a3b8;cursor:pointer;font-size:1.4rem;line-height:1;padding:0 4px;">&#x2715;</button>
     </div>
-    <p style="font-size:12px;color:#6b7280;margin-bottom:14px;line-height:1.6;">Get Citation Brief alerts directly on WhatsApp after every scan. Free via CallMeBot.</p>
-    <div style="background:#111827;border:1px solid #1f2937;border-radius:6px;padding:12px 14px;margin-bottom:14px;font-size:11px;color:#9ca3af;line-height:1.9;">
-      <strong style="color:#f1f5f9;">Step 1.</strong> Add <strong style="color:#25d366;">+34 644 20 47 56</strong> to your WhatsApp contacts<br>
-      <strong style="color:#f1f5f9;">Step 2.</strong> Send: <strong style="color:#4ade80;">I allow callmebot to send me messages</strong><br>
-      <strong style="color:#f1f5f9;">Step 3.</strong> You receive your free API key by WhatsApp<br>
-      <strong style="color:#f1f5f9;">Step 4.</strong> Enter your number + key below
+    <p style="font-size:12px;color:#6b7280;line-height:1.65;margin-bottom:16px;">Get Citation Brief alerts directly in Telegram after every scan. Free, instant, no setup required.</p>
+    <div style="background:#111827;border:1px solid #1f2937;border-radius:8px;padding:14px;margin-bottom:16px;text-align:center;">
+      <div style="font-size:13px;color:#f1f5f9;margin-bottom:12px;">One click to enable:</div>
+      <a id="telegramBotLink" href="#" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:8px;background:#2AABEE;color:#fff;text-decoration:none;padding:12px 24px;border-radius:8px;font-size:14px;font-weight:700;">
+        &#128240; Open ContentScale Bot
+      </a>
+      <div style="font-size:11px;color:#6b7280;margin-top:10px;">Click → Telegram opens → press Start → done</div>
     </div>
-    <input type="tel" id="waPhone" placeholder="Your WhatsApp number (e.g. 31628073996)" class="cs-input" style="margin-bottom:8px;width:100%;">
-    <input type="text" id="waKey" placeholder="CallMeBot API key" class="cs-input" style="margin-bottom:16px;width:100%;">
-    <div style="display:flex;gap:8px;justify-content:flex-end;">
-      <button onclick="hideModal('waSettingsModal')" class="cs-btn" style="border-color:#374151;color:#6b7280;">Cancel</button>
-      <button onclick="saveWaSettings()" class="cs-btn" style="border-color:#25d366;color:#25d366;font-weight:700;">&#128242; Save &amp; Enable</button>
+    <div style="font-size:11px;color:#4b5563;line-height:1.7;">
+      ✓ Free &nbsp;·&nbsp; ✓ Instant &nbsp;·&nbsp; ✓ No API key needed<br>
+      ✓ Works on any device with Telegram
     </div>
   </div>
 </div>
@@ -32170,6 +32171,109 @@ function computeTextDiff(oldHtml, newHtml) {
   };
 }
 
+
+// ── Telegram notification helper ─────────────────────────────────────────────
+async function sendTelegramNotification(chatId, message) {
+  const botToken = process.env.TELEGRAM_BOT_TOKEN;
+  if (!botToken || !chatId) return false;
+  try {
+    const resp = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        chat_id: chatId,
+        text: message,
+        parse_mode: 'HTML',
+        disable_web_page_preview: true
+      })
+    });
+    const data = await resp.json();
+    if (!data.ok) console.warn('[telegram] Send failed:', data.description);
+    return data.ok;
+  } catch(e) {
+    console.warn('[telegram] Error:', e.message);
+    return false;
+  }
+}
+// ── Telegram webhook — /start handler ────────────────────────────────────────
+app.post('/api/telegram/webhook', async (req, res) => {
+  res.json({ ok: true }); // Always respond quickly
+  try {
+    const update = req.body;
+    const msg = update.message;
+    if (!msg || !msg.text) return;
+
+    const chatId = String(msg.chat.id);
+    const text = msg.text.trim();
+    const botToken = process.env.TELEGRAM_BOT_TOKEN;
+    if (!botToken) return;
+
+    // /start command — may include tracker token as parameter
+    if (text.startsWith('/start')) {
+      const parts = text.split(' ');
+      const trackerToken = parts[1] || null;
+
+      if (trackerToken) {
+        // Link this Telegram chat to the tracker account
+        const cr = await pool.query('SELECT id, domain FROM tracker_clients WHERE token=$1', [trackerToken]);
+        if (cr.rows.length) {
+          await pool.query('UPDATE tracker_clients SET telegram_chat_id=$1 WHERE id=$2', [chatId, cr.rows[0].id]);
+          // Welcome message
+          await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              chat_id: chatId,
+              text: `✅ <b>Telegram alerts enabled!</b>\n\nYou'll now receive Citation Brief updates for <b>${cr.rows[0].domain}</b> here.\n\nNo action needed — the system will notify you automatically after every scan.`,
+              parse_mode: 'HTML'
+            })
+          });
+          console.log('[telegram] Linked chat', chatId, 'to tracker', cr.rows[0].domain);
+        } else {
+          await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              chat_id: chatId,
+              text: '⚠️ Tracker not found. Please use the link from your tracker page.',
+              parse_mode: 'HTML'
+            })
+          });
+        }
+      } else {
+        // Generic start without token
+        await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            chat_id: chatId,
+            text: '👋 <b>Welcome to ContentScale Tracker Bot!</b>\n\nTo enable alerts for your tracker, click the "Enable Telegram" button in your tracker page.',
+            parse_mode: 'HTML'
+          })
+        });
+      }
+    }
+  } catch(e) { console.warn('[telegram-webhook]', e.message); }
+});
+
+// Register Telegram webhook on startup
+async function registerTelegramWebhook() {
+  const botToken = process.env.TELEGRAM_BOT_TOKEN;
+  const appUrl = process.env.APP_URL;
+  if (!botToken || !appUrl) return;
+  try {
+    const resp = await fetch(`https://api.telegram.org/bot${botToken}/setWebhook`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url: appUrl + '/api/telegram/webhook' })
+    });
+    const data = await resp.json();
+    if (data.ok) console.log('[telegram] Webhook registered:', appUrl + '/api/telegram/webhook');
+    else console.warn('[telegram] Webhook registration failed:', data.description);
+  } catch(e) { console.warn('[telegram] Webhook error:', e.message); }
+}
+setTimeout(registerTelegramWebhook, 5000);
+
 // ── Paused account follow-up scheduler — runs every 24h ──────────────────────
 function startPausedFollowupScheduler() {
   setTimeout(async function runPausedFollowup() {
@@ -32222,9 +32326,8 @@ function startPausedFollowupScheduler() {
             + '<a href="' + ottmarWa + '" style="display:inline-block;background:#16a34a;color:white;text-decoration:none;padding:10px 22px;border-radius:6px;font-size:13px;font-weight:700;">WhatsApp Ottmar to reactivate &rarr;</a>'
           ).catch(()=>{});
 
-          if (c.whatsapp && c.callmebot_key) {
-            const msg = encodeURIComponent('📋 Your ContentScale tracker for ' + c.domain + ' has been paused for 3 days. Your Citation Brief recommendations are waiting. Contact Ottmar to reactivate: ' + ottmarWa);
-            await fetch('https://api.callmebot.com/whatsapp.php?phone=' + c.whatsapp + '&text=' + msg + '&apikey=' + c.callmebot_key).catch(()=>{});
+          if (c.telegram_chat_id) {
+            await sendTelegramNotification(c.telegram_chat_id, '📋 Your ContentScale tracker for ').catch(()=>{});
           }
           console.log('[paused-followup] Day 3 email sent to', c.email);
         }
@@ -32243,9 +32346,8 @@ function startPausedFollowupScheduler() {
             + '<p style="font-size:12px;color:#94a3b8;">Your tracker will be deleted in 23 days if not reactivated.</p>'
           ).catch(()=>{});
 
-          if (c.whatsapp && c.callmebot_key) {
-            const msg = encodeURIComponent('💡 Your tracker for ' + c.domain + ' has been paused 7 days. Let Ottmar implement your Citation Brief for you — done-for-you AI citation optimization, GRAAF score 90+ guaranteed. ' + ottmarWa);
-            await fetch('https://api.callmebot.com/whatsapp.php?phone=' + c.whatsapp + '&text=' + msg + '&apikey=' + c.callmebot_key).catch(()=>{});
+          if (c.telegram_chat_id) {
+            await sendTelegramNotification(c.telegram_chat_id, '💡 Your tracker for ').catch(()=>{});
           }
           console.log('[paused-followup] Day 7 email sent to', c.email);
         }
@@ -32336,10 +32438,9 @@ function startHtmlReminderScheduler() {
               + '<p style="font-size:11px;color:#94a3b8;margin-top:12px;">Or let Ottmar implement everything for you — GRAAF score 90+ guaranteed.</p>';
             await sendTrackerEmail(p.tracker_client_id, subject, htmlBody).catch(()=>{});
 
-            if (p.whatsapp && p.callmebot_key) {
-              const msg = encodeURIComponent('⏸️ Your ContentScale tracker for ' + p.domain + ' has been automatically paused — your Citation Brief was not marked done after ' + briefAgeDays + ' days. Contact Ottmar to reactivate: https://wa.me/31628073996');
-              await fetch('https://api.callmebot.com/whatsapp.php?phone=' + p.whatsapp + '&text=' + msg + '&apikey=' + p.callmebot_key).catch(()=>{});
-            }
+            if (p.telegram_chat_id) {
+            await sendTelegramNotification(p.telegram_chat_id, '⏸️ Your ContentScale tracker for ').catch(()=>{});
+          }
           }
           continue;
         }
@@ -32361,9 +32462,8 @@ function startHtmlReminderScheduler() {
             + '<p style="font-size:11px;color:#94a3b8;margin-top:14px;">Done-for-you AI citation optimization — GRAAF score 90+ guaranteed.</p>';
           await sendTrackerEmail(p.tracker_client_id, subject, htmlBody).catch(()=>{});
 
-          if (p.whatsapp && p.callmebot_key) {
-            const msg = encodeURIComponent('⚠️ Your ContentScale tracker for ' + p.domain + ' pauses in ' + daysLeft + ' days. Your Citation Brief has been waiting ' + briefAgeDays + ' days — implement the HIGH priority recommendation, press Done, paste new HTML. Or let Ottmar do it: https://wa.me/31628073996');
-            await fetch('https://api.callmebot.com/whatsapp.php?phone=' + p.whatsapp + '&text=' + msg + '&apikey=' + p.callmebot_key).catch(()=>{});
+          if (p.telegram_chat_id) {
+            await sendTelegramNotification(p.telegram_chat_id, '⚠️ Your ContentScale tracker for ').catch(()=>{});
           }
           await new Promise(r => setTimeout(r, 2000));
           continue;
@@ -32382,9 +32482,8 @@ function startHtmlReminderScheduler() {
             + '<a href="' + trackerUrl + '" style="display:inline-block;background:#7c3aed;color:white;text-decoration:none;padding:10px 22px;border-radius:6px;font-size:13px;font-weight:700;">Open tracker &rarr;</a>';
           await sendTrackerEmail(p.tracker_client_id, subject, htmlBody).catch(()=>{});
 
-          if (p.whatsapp && p.callmebot_key) {
-            const msg = encodeURIComponent('⚠️ Paste updated HTML for ' + p.url + ' — the system needs it to measure your improvements and start the next Citation Brief. ' + trackerUrl);
-            await fetch('https://api.callmebot.com/whatsapp.php?phone=' + p.whatsapp + '&text=' + msg + '&apikey=' + p.callmebot_key).catch(()=>{});
+          if (p.telegram_chat_id) {
+            await sendTelegramNotification(p.telegram_chat_id, '⚠️ Paste updated HTML for ').catch(()=>{});
           }
           await new Promise(r => setTimeout(r, 2000));
         }
@@ -32461,10 +32560,9 @@ function startTrackerScheduler() {
                     + '<a href="' + trackerUrl + '" style="display:inline-block;background:#7c3aed;color:white;text-decoration:none;padding:10px 22px;border-radius:6px;font-size:13px;font-weight:700;">Update HTML &rarr;</a>'
                   ).catch(() => {});
 
-                  // WhatsApp reminder
-                  if (client.whatsapp && client.callmebot_key) {
-                    const msg = encodeURIComponent('⚠️ Your page ' + page.url + ' has changed since you last pasted HTML. Please paste the latest HTML in your tracker before the scan: ' + trackerUrl);
-                    await fetch('https://api.callmebot.com/whatsapp.php?phone=' + client.whatsapp + '&text=' + msg + '&apikey=' + client.callmebot_key).catch(() => {});
+                  // Telegram notification
+                  if (client.telegram_chat_id) {
+                    await sendTelegramNotification(client.telegram_chat_id, '⚠️ Your page <b>' + page.url + '</b> has changed since you last pasted HTML. Please paste the latest HTML in your tracker before the scan.\n\n<a href="' + trackerUrl + '">Update HTML →</a>').catch(() => {});
                   }
 
                   // Mark page as needing fresh HTML
