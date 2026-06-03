@@ -1344,13 +1344,23 @@ app.post('/api/tracker-client/:token/check/:pageId', async (req, res) => {
 // GET /track/:token — client tracker page
 app.get('/track/:token', async (req, res) => {
   try {
-    const cr = await pool.query('SELECT * FROM tracker_clients WHERE token=$1 AND status=$2', [req.params.token, 'active']);
-    if (!cr.rows.length) return res.status(404).send('<html><body style="background:#0a0a0f;color:#f87171;font-family:monospace;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;text-align:center;"><div><div style="font-size:2rem;margin-bottom:12px;">🔒</div><div>Invalid or expired tracker link</div><div style="font-size:12px;color:#4b5563;margin-top:8px;">Contact ContentScale to get your tracking link</div></div></body></html>');
+    // Try with status check first, fallback without if column issues
+    let cr;
+    try {
+      cr = await pool.query('SELECT * FROM tracker_clients WHERE token=$1 AND (status=$2 OR status IS NULL)', [req.params.token, 'active']);
+    } catch(qErr) {
+      // Fallback: query without status filter if column missing
+      cr = await pool.query('SELECT * FROM tracker_clients WHERE token=$1', [req.params.token]);
+    }
+    if (!cr.rows.length) return res.status(404).send(`<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ContentScale Tracker</title></head><body style="background:#0a0a0f;color:#f1f5f9;font-family:system-ui,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;padding:20px;box-sizing:border-box;"><div style="text-align:center;max-width:400px;"><div style="font-size:3rem;margin-bottom:16px;">🔒</div><h1 style="font-size:20px;font-weight:800;color:#f1f5f9;margin-bottom:8px;">Tracker link not found</h1><p style="font-size:14px;color:#6b7280;line-height:1.7;margin-bottom:28px;">This link has expired or is incorrect. Contact Ottmar to get your personal tracker link — usually within a few minutes.</p><div style="display:flex;flex-direction:column;gap:10px;"><a href="https://wa.me/31628073996?text=Hi%20Ottmar%2C%20I%20need%20my%20ContentScale%20tracker%20link" style="display:block;background:#25d366;color:#fff;text-decoration:none;padding:12px 20px;border-radius:8px;font-size:14px;font-weight:700;">💬 WhatsApp Ottmar — get my link</a><a href="mailto:info@contentscale.site?subject=My%20tracker%20link&body=Hi%20Ottmar%2C%20I%20need%20my%20ContentScale%20tracker%20link." style="display:block;background:#0d1117;border:1px solid #374151;color:#9ca3af;text-decoration:none;padding:12px 20px;border-radius:8px;font-size:14px;">✉️ Email info@contentscale.site</a><a href="https://contentscale.site/tracker" style="display:block;background:#0d1117;border:1px solid #374151;color:#9ca3af;text-decoration:none;padding:12px 20px;border-radius:8px;font-size:14px;">🆕 Register a new tracker</a></div><p style="font-size:11px;color:#374151;margin-top:20px;">ContentScale · contentscale.site</p></div></body></html>`);
     const client = cr.rows[0];
+    // If explicitly deleted/disabled, show appropriate message
+    if (client.status === 'deleted') return res.status(410).send('<html><body style="background:#0a0a0f;color:#f87171;font-family:monospace;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;text-align:center;"><div><div style="font-size:2rem;margin-bottom:12px;">🔒</div><div>This tracker has been deactivated</div><div style="font-size:12px;color:#4b5563;margin-top:8px;"><a href="https://wa.me/31628073996" style="color:#7c3aed;">Contact Ottmar to reactivate</a></div></div></body></html>');
+    if (client.status === 'paused') return res.send('<html><body style="background:#0a0a0f;color:#fbbf24;font-family:monospace;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;text-align:center;"><div><div style="font-size:2rem;margin-bottom:12px;">⏸️</div><div>Your tracker is paused</div><div style="font-size:12px;color:#6b7280;margin-top:8px;">Contact Ottmar to reactivate: <a href="https://wa.me/31628073996" style="color:#7c3aed;">wa.me/31628073996</a></div></div></body></html>');
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     res.send(_CLIENT_TRACKER_HTML
       .replace(/__TOKEN__/g, req.params.token)
-      .replace(/__DOMAIN__/g, client.domain)
+      .replace(/__DOMAIN__/g, client.domain || '')
       .replace(/__EXTRA_DOMAINS_HTML__/g, (client.extra_domains && client.extra_domains.trim())
         ? client.extra_domains.split(',').map(d => d.trim()).filter(Boolean)
             .map(d => `<span style="display:inline-block;font-size:10px;color:#38bdf8;background:#0c2340;border:1px solid #1d4ed8;border-radius:4px;padding:1px 7px;margin-top:4px;margin-right:4px;">${d}</span>`)
@@ -1358,10 +1368,13 @@ app.get('/track/:token', async (req, res) => {
         : ''
       )
       .replace(/__MAX_PAGES__/g, String(client.max_pages || 3))
-      .replace(/__CLIENT_NAME__/g, (client.name || client.domain || '').replace(/'/g, "\\'"))
+      .replace(/__CLIENT_NAME__/g, (client.name || client.domain || '').replace(/[`'\\]/g, ''))
       .replace(/__GSC_ENABLED__/g, client.gsc_enabled ? 'true' : 'false')
     );
-  } catch(e) { res.status(500).send('Server error'); }
+  } catch(e) {
+    console.error('[track] Error:', e.message);
+    res.status(500).send('<html><body style="background:#0a0a0f;color:#f87171;font-family:monospace;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;text-align:center;"><div><div style="font-size:2rem;margin-bottom:12px;">⚠️</div><div>Server error loading tracker</div><div style="font-size:12px;color:#4b5563;margin-top:8px;">' + e.message + '</div></div></body></html>');
+  }
 });
 
 app.get('/live', (req, res) => {
@@ -25038,20 +25051,25 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
   function openWaSettings() {
     var modal = document.getElementById('waSettingsModal');
     if (!modal) return;
+    // Pre-fill if available
+    var phoneEl = document.getElementById('waPhone');
+    if (phoneEl && _pages && _pages[0]) {
+      // Try to get from page data — not stored client-side normally
+    }
     modal.style.display = 'flex';
   }
 
   async function saveWaSettings() {
     var phone = (document.getElementById('waPhone') || {}).value || '';
-    var key = (document.getElementById('waKey') || {}).value || '';
-    if (!phone || !key) { toast('Enter your WhatsApp number and API key', '#f87171'); return; }
+    phone = phone.replace(/\D/g,'');
+    if (!phone || phone.length < 8) { toast('Enter a valid WhatsApp number', '#f87171'); return; }
     var d = await fetch('/api/tracker-client/' + TOKEN + '/settings', {
       method: 'PATCH',
       headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ whatsapp: phone.replace(/\D/g,''), callmebot_key: key })
+      body: JSON.stringify({ whatsapp: phone })
     }).then(function(r){ return r.json(); });
     if (d.success) {
-      toast('WhatsApp alerts enabled!', '#4ade80');
+      toast('WhatsApp alerts enabled for +' + phone, '#4ade80');
       hideModal('waSettingsModal');
     } else { toast(d.error || 'Failed', '#f87171'); }
   }
