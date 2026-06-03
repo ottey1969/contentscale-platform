@@ -830,6 +830,20 @@ app.get('/unsubscribe/:token', async (req, res) => {
 });
 
 // ── Tracker client email notifications ────────────────────────────────────────
+// ── notifyClient — sends email + Telegram for every tracker notification ─────
+async function notifyClient(clientId, subject, htmlBody, telegramText) {
+  // Always send email
+  await sendTrackerEmail(clientId, subject, htmlBody).catch(e => console.warn('[notify] email:', e.message));
+  // Also send Telegram if client has linked their account
+  if (telegramText) {
+    try {
+      const cr = await pool.query('SELECT telegram_chat_id FROM tracker_clients WHERE id=$1', [clientId]);
+      const chatId = cr.rows[0]?.telegram_chat_id;
+      if (chatId) await sendTelegramNotification(chatId, telegramText).catch(()=>{});
+    } catch(e) { console.warn('[notify] telegram:', e.message); }
+  }
+}
+
 async function sendTrackerEmail(clientId, subject, htmlBody) {
   try {
     const cr = await pool.query('SELECT * FROM tracker_clients WHERE id=$1 AND email_unsubscribed=FALSE AND email IS NOT NULL', [clientId]);
@@ -1282,6 +1296,10 @@ app.patch('/api/tracker-client/:token/pages/:pageId/done', async (req, res) => {
               + '</div>'
               + '<a href="' + trackerUrl + '" style="display:inline-block;background:#7c3aed;color:white;text-decoration:none;padding:10px 22px;border-radius:6px;font-size:13px;font-weight:700;">Open tracker &rarr;</a>'
               + '<p style="font-size:11px;color:#94a3b8;margin-top:14px;">Without the new HTML, the system cannot measure your improvements or generate the next Citation Brief.</p>';
+            // Get telegram for done reminder
+            const doneClientR = await pool.query('SELECT telegram_chat_id FROM tracker_clients WHERE id=$1', [cr.rows[0].id]);
+            const doneTgId = doneClientR.rows[0]?.telegram_chat_id;
+            if (doneTgId) await sendTelegramNotification(doneTgId, '⚠️ <b>Action needed:</b> Paste your updated HTML in the tracker to continue your Citation Brief cycle.\n\n<a href="' + trackerUrl + '">Open tracker →</a>').catch(()=>{});
             await sendTrackerEmail(cr.rows[0].id, subject, htmlBody);
           }
 
@@ -30476,7 +30494,14 @@ app.post('/api/tracker/pages/:id/check', verifyEngineAccess, async (req, res) =>
               + '<div style="background:#f5f3ff;border:1px solid #ddd6fe;border-radius:8px;padding:12px 16px;margin-bottom:10px;"><div style="font-size:10px;color:#7c3aed;font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px;">Your tracker</div><div style="font-size:11px;font-family:monospace;color:#1e293b;word-break:break-all;margin-bottom:8px;">' + clientTrackUrl + '</div><a href="' + clientTrackUrl + '" style="display:inline-block;background:#7c3aed;color:white;text-decoration:none;padding:8px 18px;border-radius:6px;font-size:12px;font-weight:700;">Open tracker &rarr;</a></div>'
               + '<div style="font-size:11px;color:#94a3b8;text-align:center;padding-top:8px;">Press <strong>Done</strong> in your tracker after implementing — the brief will reset and restart fresh.</div>';
 
-            await sendTrackerEmail(page.tracker_client_id, subject, bodyHtml);
+            // Send email + Telegram
+            const tgText = '📋 <b>Citation Brief ready</b> for ' + (kw ? '<b>' + kw + '</b>' : pageUrl) + '\n\n'
+              + (pos ? '📍 Position: #' + pos + '\n' : '')
+              + (aio ? '✅ Google AIO: Cited\n' : '❌ Google AIO: Not cited\n')
+              + (perp ? '✅ Perplexity: Cited\n' : '❌ Perplexity: Not cited\n')
+              + (score ? '📊 GRAAF: ' + score + '/100\n' : '')
+              + '\n<a href="' + clientTrackUrl + '">View Citation Brief →</a>';
+            await notifyClient(page.tracker_client_id, subject, bodyHtml, tgText);
 
             // Save citation brief to DB for client to view
             try {
@@ -32311,7 +32336,7 @@ function startPausedFollowupScheduler() {
             recsHtml += '</div>';
           }
 
-          await sendTrackerEmail(c.id,
+          await notifyClient(c.id,
             'Your tracker is paused — here\'s what you missed for ' + c.domain,
             '<h2 style="font-size:17px;font-weight:800;color:#0f172a;margin-bottom:10px;">Your tracker has been paused for 3 days</h2>'
             + '<p style="font-size:14px;color:#374151;line-height:1.7;margin-bottom:14px;">Your domain <strong>' + c.domain + '</strong> is no longer being monitored for AI citations. Here\'s what was in your last Citation Brief before it paused:</p>'
@@ -32328,7 +32353,7 @@ function startPausedFollowupScheduler() {
 
         // DAY 7 — "Ottmar can do it for you"
         if (pausedDays >= 7 && pausedDays < 8) {
-          await sendTrackerEmail(c.id,
+          await notifyClient(c.id,
             'Let Ottmar implement your Citation Brief for ' + c.domain,
             '<h2 style="font-size:17px;font-weight:800;color:#0f172a;margin-bottom:10px;">Your tracker has been paused for a week</h2>'
             + '<p style="font-size:14px;color:#374151;line-height:1.7;margin-bottom:14px;">No worries — implementing SEO recommendations takes time. That\'s exactly why Ottmar offers a done-for-you service.</p>'
@@ -32349,7 +32374,7 @@ function startPausedFollowupScheduler() {
         // DAY 30 — delete account + final email
         if (pausedDays >= 30) {
           // Final email before deletion
-          await sendTrackerEmail(c.id,
+          await notifyClient(c.id,
             'Your ContentScale tracker has been deleted — ' + c.domain,
             '<h2 style="font-size:17px;font-weight:800;color:#dc2626;margin-bottom:10px;">Your tracker data has been deleted</h2>'
             + '<p style="font-size:14px;color:#374151;line-height:1.7;margin-bottom:14px;">Your tracker for <strong>' + c.domain + '</strong> has been automatically deleted after 30 days of inactivity.</p>'
@@ -32430,7 +32455,7 @@ function startHtmlReminderScheduler() {
               + '<p style="font-size:14px;color:#374151;line-height:1.7;margin-bottom:14px;">To reactivate your tracker, contact Ottmar directly.</p>'
               + '<a href="https://wa.me/31628073996?text=Hi+Ottmar,+I+want+to+reactivate+my+tracker+for+' + encodeURIComponent(p.domain) + '" style="display:inline-block;background:#16a34a;color:white;text-decoration:none;padding:10px 22px;border-radius:6px;font-size:13px;font-weight:700;">WhatsApp Ottmar to reactivate &rarr;</a>'
               + '<p style="font-size:11px;color:#94a3b8;margin-top:12px;">Or let Ottmar implement everything for you — GRAAF score 90+ guaranteed.</p>';
-            await sendTrackerEmail(p.tracker_client_id, subject, htmlBody).catch(()=>{});
+            await notifyClient(p.tracker_client_id, subject, htmlBody, subject + '\n\n<a href="' + trackerUrl + '">Open tracker →</a>').catch(()=>{});
 
             if (p.telegram_chat_id) {
             await sendTelegramNotification(p.telegram_chat_id, '⏸️ Your ContentScale tracker for ').catch(()=>{});
@@ -32454,7 +32479,7 @@ function startHtmlReminderScheduler() {
             + '<a href="' + trackerUrl + '" style="display:inline-block;background:#7c3aed;color:white;text-decoration:none;padding:10px 22px;border-radius:6px;font-size:13px;font-weight:700;margin-right:10px;">Open tracker &rarr;</a>'
             + '<a href="https://wa.me/31628073996?text=Hi+Ottmar,+please+implement+my+Citation+Brief+for+' + encodeURIComponent(p.url) + '" style="display:inline-block;background:#16a34a;color:white;text-decoration:none;padding:10px 22px;border-radius:6px;font-size:13px;font-weight:700;">Let Ottmar do it for me &rarr;</a>'
             + '<p style="font-size:11px;color:#94a3b8;margin-top:14px;">Done-for-you AI citation optimization — GRAAF score 90+ guaranteed.</p>';
-          await sendTrackerEmail(p.tracker_client_id, subject, htmlBody).catch(()=>{});
+          await notifyClient(p.tracker_client_id, subject, htmlBody, subject + '\n\n<a href="' + trackerUrl + '">Open tracker →</a>').catch(()=>{});
 
           if (p.telegram_chat_id) {
             await sendTelegramNotification(p.telegram_chat_id, '⚠️ Your ContentScale tracker for ').catch(()=>{});
@@ -32474,7 +32499,7 @@ function startHtmlReminderScheduler() {
             + '2. Ctrl+A &rarr; Ctrl+C &rarr; Go to tracker &rarr; click <strong>Paste new HTML</strong>'
             + '</div>'
             + '<a href="' + trackerUrl + '" style="display:inline-block;background:#7c3aed;color:white;text-decoration:none;padding:10px 22px;border-radius:6px;font-size:13px;font-weight:700;">Open tracker &rarr;</a>';
-          await sendTrackerEmail(p.tracker_client_id, subject, htmlBody).catch(()=>{});
+          await notifyClient(p.tracker_client_id, subject, htmlBody, subject + '\n\n<a href="' + trackerUrl + '">Open tracker →</a>').catch(()=>{});
 
           if (p.telegram_chat_id) {
             await sendTelegramNotification(p.telegram_chat_id, '⚠️ Paste updated HTML for ').catch(()=>{});
