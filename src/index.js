@@ -23791,7 +23791,8 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
     <button class="cs-btn primary" onclick="showAddModal()">+ Add URL</button>
     <button id="gscBtn" class="cs-btn" onclick="showImportModal('gsc')" style="border-color:#a78bfa;color:#a78bfa;display:none;"><i class="fas fa-chart-line"></i> GSC</button>
     <button class="cs-btn" onclick="showImportModal('paste')" style="border-color:#6b7280;color:#6b7280;"><i class="fas fa-paste"></i> Paste</button>
-    <button class="cs-btn" onclick="openSitemapLinks()" style="border-color:#38bdf8;color:#38bdf8;" title="Internal linking suggestions from sitemap"><i class="fas fa-sitemap"></i> Links</button>
+    <button class="cs-btn" onclick="showImportModal('sitemap')" style="border-color:#38bdf8;color:#38bdf8;" title="Import from sitemap"><i class="fas fa-list"></i> Sitemap</button>
+    <button class="cs-btn" onclick="openSitemapLinks()" style="border-color:#a78bfa;color:#a78bfa;" title="Internal linking suggestions"><i class="fas fa-sitemap"></i> Links</button>
     <button class="cs-btn" onclick="loadPages()" style="margin-left:4px;" title="Refresh"><i class="fas fa-sync-alt"></i></button>
     <button class="cs-btn" onclick="openTelegramSetup()" style="border-color:#2AABEE;color:#2AABEE;" title="Enable Telegram alerts"><i class="fab fa-telegram"></i> Telegram</button>
     <input id="ctSearch" type="text" class="cs-input" placeholder="Search..." oninput="filterPages(this.value)" style="width:160px;padding:5px 10px;font-size:11px;margin-left:auto;">
