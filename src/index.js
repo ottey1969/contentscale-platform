@@ -985,16 +985,26 @@ app.post('/api/tracker-client/register', async (req, res) => {
     if (existing.rows.length) {
       const ex = existing.rows[0];
       const existingUrl = (process.env.APP_URL || 'https://app.contentscale.site') + '/track/' + ex.token;
-      // Resend welcome email if email provided matches or no email on file
-      if (email && ex.email === email) {
+      // Always resend welcome email if email provided
+      if (email) {
         const clientId = ex.id;
         const welcomeHtml = '<h2 style="font-size:17px;font-weight:800;color:#0f172a;margin-bottom:10px;">Your tracker link</h2>'
-          + '<p style="font-size:14px;color:#374151;line-height:1.7;margin-bottom:14px;">A tracker for <strong>' + cleanDomain + '</strong> already exists. Here is your link:</p>'
+          + '<p style="font-size:14px;color:#374151;line-height:1.7;margin-bottom:14px;">A tracker for <strong>' + cleanDomain + '</strong> already exists. Here is your personal link:</p>'
+          + '<div style="background:#f5f3ff;border:1px solid #ddd6fe;border-radius:8px;padding:14px 16px;margin-bottom:16px;">'
+          + '<div style="font-size:11px;font-family:monospace;color:#7c3aed;word-break:break-all;margin-bottom:10px;">' + existingUrl + '</div>'
           + '<a href="' + existingUrl + '" style="display:inline-block;background:#7c3aed;color:white;text-decoration:none;padding:10px 22px;border-radius:6px;font-size:13px;font-weight:700;">Open My Tracker &rarr;</a>'
-          + '<p style="font-size:12px;color:#94a3b8;margin-top:14px;">Bookmark this link. Questions? <a href="https://wa.me/31628073996" style="color:#7c3aed;">WhatsApp Ottmar</a></p>';
+          + '</div>'
+          + '<p style="font-size:13px;color:#374151;">Bookmark this link — it is your permanent tracker URL. Questions? <a href="https://wa.me/31628073996" style="color:#7c3aed;">WhatsApp Ottmar</a></p>';
         await sendTrackerEmail(clientId, 'Your ContentScale tracker link — ' + cleanDomain, welcomeHtml).catch(()=>{});
       }
-      return res.json({ success: true, token: ex.token, domain: cleanDomain, existing: true, url: existingUrl, message: 'A tracker for this domain already exists. Your link has been resent to your email.' });
+      return res.json({
+        success: true,
+        token: ex.token,
+        domain: cleanDomain,
+        existing: true,
+        url: existingUrl,
+        message: 'A tracker for ' + cleanDomain + ' already exists. Your personal link has been sent to your email.'
+      });
     }
 
     // Dealify code validation — format: DEALIFY-XXXXX (1-5 codes allowed)
@@ -2269,7 +2279,12 @@ app.patch('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS paused_at TIMESTAMPTZ`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS dealify_codes VARCHAR(500)`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS gsc_enabled BOOLEAN DEFAULT FALSE`).catch(()=>{});
-  await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS callmebot_key VARCHAR(64)`).catch(()=>{});
+  // Fix invalid check_frequency values in DB
+  await client.query(`
+    UPDATE tracker_pages SET check_frequency='3days'
+    WHERE check_frequency IS NULL
+       OR check_frequency NOT IN ('1day','3days','weekly','1week','2weeks','monthly')
+  `).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS telegram_chat_id VARCHAR(64)`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS email_unsubscribed BOOLEAN DEFAULT FALSE`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS unsubscribe_token VARCHAR(64)`).catch(()=>{});
@@ -24073,7 +24088,7 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
 .wl-footer { font-size:10px;color:#6b7280;text-align:center;margin-top:10px; }
 
 .cited-blink{animation:citedPulse 2.5s ease-in-out 3;}
-@keyframes htmlNeeded{0%,100%{opacity:1;background:rgba(245,158,11,.08)}50%{opacity:.35;background:rgba(245,158,11,.18)}}@keyframes citedPulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.75;transform:scale(1.06)}}@keyframes tgPulse{0%,100%{box-shadow:0 0 0 0 rgba(42,171,238,.4);border-color:#2AABEE}50%{box-shadow:0 0 0 6px rgba(42,171,238,0);border-color:#38bdf8}}
+@keyframes htmlNeeded{0%,100%{opacity:1;background:rgba(245,158,11,.08)}50%{opacity:.35;background:rgba(245,158,11,.18)}}@keyframes citedPulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.75;transform:scale(1.06)}}@keyframes tgPulse{0%,100%{box-shadow:0 0 0 0 rgba(42,171,238,.4);border-color:#2AABEE}50%{box-shadow:0 0 0 6px rgba(42,171,238,0);border-color:#38bdf8}}@keyframes donePulse{0%,100%{background:linear-gradient(90deg,rgba(74,222,128,.08),rgba(74,222,128,.02))}50%{background:linear-gradient(90deg,rgba(74,222,128,.14),rgba(74,222,128,.04))}}
 .brief-blink{animation:briefBlink 1.2s ease-in-out 4;}@keyframes briefBlink{0%,100%{opacity:1;transform:scale(1)}40%{opacity:.4;transform:scale(1.12)}70%{opacity:1;transform:scale(1.06)}}
 .cs-cs-badge{display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;letter-spacing:.03em;}
 .cs-cs-badge.green{background:#052e16;color:#4ade80;border:1px solid #166534;}
@@ -24448,12 +24463,12 @@ function renderPages() {
     var nextCheckDate = p.next_check_at ? new Date(p.next_check_at) : null;
     if (!nextCheckDate && p.last_checked) {
       var d = new Date(p.last_checked);
-      var freqDays = p.check_frequency === '1day' ? 1 : p.check_frequency === '3days' ? 3 : p.check_frequency === 'monthly' ? 30 : 7;
+    var freqDays = p.check_frequency === '1day' ? 1 : p.check_frequency === '3days' ? 3 : p.check_frequency === 'weekly' || p.check_frequency === '1week' ? 7 : p.check_frequency === 'monthly' ? 30 : 3;
       d.setDate(d.getDate() + freqDays);
       nextCheckDate = d;
     }
     var nextCheck = nextCheckDate ? 'Next: ' + nextCheckDate.toLocaleDateString('en-GB',{day:'2-digit',month:'short'}) : '';
-    var freqLabel = p.check_frequency === '1day' ? 'daily' : p.check_frequency === '3days' ? 'every 3 days' : p.check_frequency === 'weekly' ? 'weekly' : p.check_frequency === 'monthly' ? 'monthly' : 'weekly';
+    var freqLabel = p.check_frequency === '1day' ? 'daily' : p.check_frequency === '3days' ? 'every 3 days' : p.check_frequency === 'weekly' || p.check_frequency === '1week' ? 'weekly' : p.check_frequency === 'monthly' ? 'monthly' : 'every 3 days';
     // Clean URL - remove protocol, www, and fix anchor slugs (#section)
     var rawUrl = p.url || '';
     var urlClean = rawUrl.replace(/^https?:[/][/]/, '').replace(/^www[.]/, '');
@@ -24478,16 +24493,18 @@ function renderPages() {
     var recsHtml = renderRecs(p);
 
     // Pending first check banner
-    var pendingBanner = (!p.last_checked && !isDone)
-      ? '<div style="display:flex;align-items:center;gap:8px;padding:6px 14px;background:rgba(96,165,250,.06);border-bottom:1px solid rgba(96,165,250,.15);font-size:11px;color:#60a5fa;"><span style="animation:blink 2s infinite;display:inline-block">&#9679;</span> Scanning in progress — paste your HTML below to start your GRAAF scan</div>'
+    var pendingBanner = (!p.last_checked && !isDone && !showHtmlBanner)
+      ? '<div style="display:flex;align-items:center;gap:8px;padding:6px 14px;background:rgba(96,165,250,.06);border-bottom:1px solid rgba(96,165,250,.15);font-size:11px;color:#60a5fa;"><span style="animation:blink 2s infinite;display:inline-block">&#9679;</span> First scan running automatically...</div>'
       : '';
 
     // Needs HTML banner
     var needsHtml = p.needs_html === true || p.needs_html === 't' || p.needs_html === 'true' || p.needs_html === 1;
     var isFirstHtml = !p.brief_check_count || p.brief_check_count == 0;
     var hasBeenScanned = !!p.last_checked || !!p.google_position || p.ai_google_overview_cited !== undefined || p.ai_perplexity_cited !== undefined;
-    // Show HTML banner: always for new pages, or after Done pressed
-    var showHtmlBanner = needsHtml || (isFirstHtml && !isDone);
+    var hasBrief = !!(p.brief_content) && !isDone; // Citation Brief exists and not yet actioned
+    // Show HTML banner: only when needs_html=true OR never had HTML scan yet
+    var hasHtml = (p.brief_check_count > 0) || (p.graaf_score > 0);
+    var showHtmlBanner = needsHtml || (isFirstHtml && !isDone && !hasHtml);
 
     var needsHtmlBanner = showHtmlBanner
       ? '<div onclick="openHtmlUpload(' + p.id + ')" style="cursor:pointer;display:flex;align-items:center;gap:10px;padding:12px 16px;background:linear-gradient(90deg,rgba(245,158,11,.15),rgba(245,158,11,.05));border-bottom:2px solid #f59e0b;animation:htmlNeeded 1.2s ease-in-out infinite;">'
@@ -24520,11 +24537,26 @@ function renderPages() {
         ? '' // nothing — HTML banner handles the CTA
         : ''
       )
-      + '<button onclick="markDone(' + p.id + ',this,' + isDone + ')" class="btn" style="font-size:11px;padding:5px 10px;border-color:' + (isDone?'#4ade80':'#374151') + ';color:' + (isDone?'#4ade80':'#6b7280') + ';" title="Mark done when implemented">' + (isDone?'&#10003; Done':'Mark done') + '</button>'
       + '</div>'
       + '</div>'
       + recsHtml
-      + '</div>'\n      + '</div>';
+      + ((!isDone && hasBrief)
+        ? '<div onclick="markDone(' + p.id + ',this,false)" style="cursor:pointer;display:flex;align-items:center;gap:10px;padding:12px 16px;background:linear-gradient(90deg,rgba(74,222,128,.08),rgba(74,222,128,.02));border-top:1px solid #1f2937;animation:donePulse 2s ease-in-out infinite;">'
+          + '<span style="font-size:1.3rem;flex-shrink:0;">✅</span>'
+          + '<div style="flex:1;">'
+          + '<div style="font-size:12px;font-weight:800;color:#4ade80;margin-bottom:2px;">MARK AS DONE — I implemented the recommendations</div>'
+          + '<div style="font-size:11px;color:#6b7280;">Press when you have added all recommended content to your page</div>'
+          + '</div>'
+          + '<span style="font-size:11px;font-weight:700;color:#4ade80;background:rgba(74,222,128,.12);border:1px solid #4ade80;border-radius:5px;padding:4px 10px;flex-shrink:0;white-space:nowrap;">Done →</span>'
+          + '</div>'
+        : isDone
+          ? '<div style="display:flex;align-items:center;gap:8px;padding:10px 16px;background:rgba(74,222,128,.06);border-top:1px solid #166534;font-size:12px;color:#4ade80;cursor:pointer;" onclick="markDone(' + p.id + ',this,true)">'
+            + '<span>✓</span><span style="font-weight:700;">DONE — marked as implemented</span>'
+            + '<span style="margin-left:auto;font-size:11px;color:#374151;">click to undo</span>'
+            + '</div>'
+          : ''
+        )
+      + '</div>';
   }).join('');
 }
 
@@ -33127,42 +33159,28 @@ function startTrackerScheduler() {
               const storedHash = page.last_page_hash;
 
               if (liveHashMd5 !== storedHash) {
-                console.log('[tracker-scheduler] HTML mismatch for', page.url, '— live page differs from stored HTML');
-                // Send reminder to client
-                const clientR = await pool.query('SELECT * FROM tracker_clients WHERE id=$1', [page.tracker_client_id]);
-                const client = clientR.rows[0];
-                if (client && client.email) {
-                  const trackerUrl = (process.env.APP_URL || 'https://app.contentscale.site') + '/track/' + client.token;
+                console.log('[tracker-scheduler] HTML mismatch for', page.url, '— using live HTML for scan');
+                // Store live HTML for scan — update hash and html_content
+                await pool.query('UPDATE tracker_pages SET html_content=$1, last_page_hash=$2, needs_html=FALSE WHERE id=$3', [liveHtml, liveHashMd5, page.id]).catch(()=>{});
+                // Update page object with live HTML
+                page.html_content = liveHtml;
+                page.last_page_hash = liveHashMd5;
+
+                // Notify client that we used live HTML
+                const clientR2 = await pool.query('SELECT * FROM tracker_clients WHERE id=$1', [page.tracker_client_id]);
+                const client2 = clientR2.rows[0];
+                if (client2 && client2.email) {
+                  const trackerUrl2 = (process.env.APP_URL || 'https://app.contentscale.site') + '/track/' + client2.token;
                   await sendTrackerEmail(page.tracker_client_id,
-                    'Update needed: your page HTML has changed — ' + client.domain,
-                    '<h2 style="font-size:17px;font-weight:800;color:#0f172a;margin-bottom:10px;">Your page has changed since you last pasted HTML</h2>'
-                    + '<p style="font-size:14px;color:#374151;line-height:1.7;margin-bottom:14px;">The system is about to scan <strong>' + page.url + '</strong>, but the live page looks different from the HTML you uploaded last time. This usually means you made content changes.</p>'
-                    + '<div style="background:#fefce8;border:1px solid #fde047;border-radius:8px;padding:14px 16px;margin-bottom:16px;font-size:13px;color:#854d0e;">'
-                    + '<strong>For the most accurate GRAAF scan:</strong><br>'
-                    + '1. Open <strong>' + page.url + '</strong> in Chrome<br>'
-                    + '2. Right-click &rarr; View Page Source<br>'
-                    + '3. Ctrl+A &rarr; Ctrl+C<br>'
-                    + '4. Go to your tracker &rarr; click <strong>HTML</strong> &rarr; paste'
-                    + '</div>'
-                    + '<p style="font-size:13px;color:#374151;margin-bottom:16px;">The scan will run either way — but if you paste the latest HTML first, the GRAAF scan will reflect your actual current content.</p>'
-                    + '<a href="' + trackerUrl + '" style="display:inline-block;background:#7c3aed;color:white;text-decoration:none;padding:10px 22px;border-radius:6px;font-size:13px;font-weight:700;">Update HTML &rarr;</a>'
-                  ).catch(() => {});
-
-                  // Telegram notification
-                  if (client.telegram_chat_id) {
-                    await sendTelegramNotification(client.telegram_chat_id, '⚠️ Your page <b>' + page.url + '</b> has changed since you last pasted HTML. Please paste the latest HTML in your tracker before the scan.\n\n<a href="' + trackerUrl + '">Update HTML →</a>').catch(() => {});
+                    'Page updated — scan running with latest HTML — ' + client2.domain,
+                    '<p style="font-size:14px;color:#374151;line-height:1.7;margin-bottom:14px;">Your page <strong>' + page.url + '</strong> has changed since you last pasted HTML. The system automatically fetched your latest live page and is running the scan now.</p>'
+                    + '<a href="' + trackerUrl2 + '" style="display:inline-block;background:#7c3aed;color:white;text-decoration:none;padding:10px 22px;border-radius:6px;font-size:13px;font-weight:700;">View Results →</a>'
+                  ).catch(()=>{});
+                  if (client2.telegram_chat_id) {
+                    await sendTelegramNotification(client2.telegram_chat_id, '🔄 Page changed detected for <b>' + page.url + '</b> — scanning with latest live content automatically.').catch(()=>{});
                   }
-
-                  // Mark page as needing fresh HTML
-                  await pool.query('UPDATE tracker_pages SET needs_html=TRUE WHERE id=$1', [page.id]).catch(() => {});
-
-                  // Wait 2 hours for client to update before scanning
-                  // Skip this scan cycle — reschedule for 2h from now
-                  await pool.query('UPDATE tracker_pages SET next_check_at=NOW() + INTERVAL \'2 hours\' WHERE id=$1', [page.id]).catch(() => {});
-                  console.log('[tracker-scheduler] Scan postponed 2h for', page.url, '— client notified to update HTML');
-                  await new Promise(r => setTimeout(r, 2000));
-                  continue;
                 }
+                console.log('[tracker-scheduler] Using live HTML for scan:', page.url);
               } else {
                 console.log('[tracker-scheduler] HTML matches for', page.url, '— proceeding with scan');
               }
