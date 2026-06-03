@@ -1337,21 +1337,14 @@ app.post('/api/tracker-client/:token/pages', async (req, res) => {
     if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
     const client = cr.rows[0];
 
-    // Check page limit
-    // Count pages for THIS specific domain only (not all domains combined)
-    const urlDomainClean = urlDomain;
+    // Check total page limit across all domains for this client
     const countR = await pool.query(
-      `SELECT COUNT(*) FROM tracker_pages p
-       WHERE p.tracker_client_id=$1 AND (p.is_active=TRUE OR p.is_active IS NULL)
-       AND (
-         LOWER(REGEXP_REPLACE(p.url, '^https?://(www\\.)?', '')) LIKE $2
-         OR LOWER(REGEXP_REPLACE(p.url, '^https?://(www\\.)?', '')) LIKE $3
-       )`,
-      [client.id, urlDomainClean + '/%', urlDomainClean]
+      `SELECT COUNT(*) FROM tracker_pages WHERE tracker_client_id=$1 AND (is_active=TRUE OR is_active IS NULL)`,
+      [client.id]
     );
     const count = parseInt(countR.rows[0].count);
     const maxPages = client.max_pages || 3;
-    if (count >= maxPages) return res.status(400).json({ success: false, error: `Free tracker limit: ${maxPages} pages maximum per domain. Contact Ottmar at contentscale.site to upgrade.` });
+    if (count >= maxPages) return res.status(400).json({ success: false, error: `Tracker limit reached: ${count}/${maxPages} pages used. Contact Ottmar to upgrade your plan.` });
 
     const { url, keyword } = req.body;
     if (!url) return res.status(400).json({ success: false, error: 'URL required' });
@@ -24032,22 +24025,23 @@ function renderStats(data) {
   var elB = document.getElementById('statCitedB'); if(elB) elB.textContent = citedB;
   var elC = document.getElementById('statCitedC'); if(elC) elC.textContent = citedC;
   document.getElementById('statAvgScore').textContent = avgScore ? avgScore+'/100' : '-';
-  // Count per domain - DOMAIN is the primary domain
-  // Slots left = total allowed across all domains minus pages tracked
-  // Each domain gets MAX_PAGES slots, count unique domains being tracked
-  var uniqueDomains = {};
-  pages.forEach(function(p){
-    var d = (p.url||'').replace(/^https?:[/][/]/,'').replace(/^www[.]/,'').split('/')[0];
-    var base = d.split('.').slice(-2).join('.');
-    if (!uniqueDomains[base]) uniqueDomains[base] = 0;
-    uniqueDomains[base]++;
-  });
-  var domainCount = Object.keys(uniqueDomains).length || 1;
-  var totalSlots = domainCount * MAX_PAGES;
+
+  // Slots left — calculated per primary domain (DOMAIN variable)
+  // MAX_PAGES is the total allowed for this account (not per domain)
   var usedSlots = pages.length;
-  var remainingForDomain = Math.max(0, totalSlots - usedSlots);
-  document.getElementById('statRemaining').textContent = remainingForDomain;
-  document.getElementById('pageCountLabel').textContent = '(' + pages.length + ' pages tracked)';
+  var remaining = Math.max(0, MAX_PAGES - usedSlots);
+  var slotEl = document.getElementById('statRemaining');
+  var slotParent = slotEl ? slotEl.closest('.cs-stat') : null;
+  if (slotEl) {
+    // Hide slots counter entirely if MAX_PAGES is very large (admin/unlimited)
+    if (MAX_PAGES >= 100) {
+      if (slotParent) slotParent.style.display = 'none';
+    } else {
+      if (slotParent) slotParent.style.display = '';
+      slotEl.textContent = remaining;
+    }
+  }
+  document.getElementById('pageCountLabel').textContent = '(' + pages.length + (MAX_PAGES < 100 ? '/' + MAX_PAGES : '') + ' pages tracked)';
 
 }
 
