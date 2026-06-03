@@ -916,11 +916,21 @@ app.post('/api/tracker-client/register', async (req, res) => {
     const cleanDomain = domain.replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0].toLowerCase().trim();
     if (!cleanDomain || !cleanDomain.includes('.')) return res.status(400).json({ success: false, error: 'Invalid domain' });
 
-    // Check if domain already registered
-    const existing = await pool.query('SELECT id, token FROM tracker_clients WHERE domain=$1', [cleanDomain]);
+    // Check if domain already registered — return existing tracker URL
+    const existing = await pool.query('SELECT id, token, email, name FROM tracker_clients WHERE domain=$1 AND status != $2', [cleanDomain, 'deleted']);
     if (existing.rows.length) {
-      return res.json({ success: true, token: existing.rows[0].token, domain: cleanDomain, existing: true,
-        url: (process.env.APP_URL || 'https://app.contentscale.site') + '/track/' + existing.rows[0].token });
+      const ex = existing.rows[0];
+      const existingUrl = (process.env.APP_URL || 'https://app.contentscale.site') + '/track/' + ex.token;
+      // Resend welcome email if email provided matches or no email on file
+      if (email && ex.email === email) {
+        const clientId = ex.id;
+        const welcomeHtml = '<h2 style="font-size:17px;font-weight:800;color:#0f172a;margin-bottom:10px;">Your tracker link</h2>'
+          + '<p style="font-size:14px;color:#374151;line-height:1.7;margin-bottom:14px;">A tracker for <strong>' + cleanDomain + '</strong> already exists. Here is your link:</p>'
+          + '<a href="' + existingUrl + '" style="display:inline-block;background:#7c3aed;color:white;text-decoration:none;padding:10px 22px;border-radius:6px;font-size:13px;font-weight:700;">Open My Tracker &rarr;</a>'
+          + '<p style="font-size:12px;color:#94a3b8;margin-top:14px;">Bookmark this link. Questions? <a href="https://wa.me/31628073996" style="color:#7c3aed;">WhatsApp Ottmar</a></p>';
+        await sendTrackerEmail(clientId, 'Your ContentScale tracker link — ' + cleanDomain, welcomeHtml).catch(()=>{});
+      }
+      return res.json({ success: true, token: ex.token, domain: cleanDomain, existing: true, url: existingUrl, message: 'A tracker for this domain already exists. Your link has been resent to your email.' });
     }
 
     // Dealify code validation — format: DEALIFY-XXXXX (1-5 codes allowed)
@@ -1352,7 +1362,7 @@ app.get('/track/:token', async (req, res) => {
       // Fallback: query without status filter if column missing
       cr = await pool.query('SELECT * FROM tracker_clients WHERE token=$1', [req.params.token]);
     }
-    if (!cr.rows.length) return res.status(404).send(`<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ContentScale Tracker</title></head><body style="background:#0a0a0f;color:#f1f5f9;font-family:system-ui,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;padding:20px;box-sizing:border-box;"><div style="text-align:center;max-width:400px;"><div style="font-size:3rem;margin-bottom:16px;">🔒</div><h1 style="font-size:20px;font-weight:800;color:#f1f5f9;margin-bottom:8px;">Tracker link not found</h1><p style="font-size:14px;color:#6b7280;line-height:1.7;margin-bottom:28px;">This link has expired or is incorrect. Contact Ottmar to get your personal tracker link — usually within a few minutes.</p><div style="display:flex;flex-direction:column;gap:10px;"><a href="https://wa.me/31628073996?text=Hi%20Ottmar%2C%20I%20need%20my%20ContentScale%20tracker%20link" style="display:block;background:#25d366;color:#fff;text-decoration:none;padding:12px 20px;border-radius:8px;font-size:14px;font-weight:700;">💬 WhatsApp Ottmar — get my link</a><a href="mailto:info@contentscale.site?subject=My%20tracker%20link&body=Hi%20Ottmar%2C%20I%20need%20my%20ContentScale%20tracker%20link." style="display:block;background:#0d1117;border:1px solid #374151;color:#9ca3af;text-decoration:none;padding:12px 20px;border-radius:8px;font-size:14px;">✉️ Email info@contentscale.site</a><a href="https://contentscale.site/tracker" style="display:block;background:#0d1117;border:1px solid #374151;color:#9ca3af;text-decoration:none;padding:12px 20px;border-radius:8px;font-size:14px;">🆕 Register a new tracker</a></div><p style="font-size:11px;color:#374151;margin-top:20px;">ContentScale · contentscale.site</p></div></body></html>`);
+    if (!cr.rows.length) return res.status(404).send(`<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ContentScale Tracker</title></head><body style="background:#0a0a0f;color:#f1f5f9;font-family:system-ui,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;padding:20px;box-sizing:border-box;"><div style="text-align:center;max-width:400px;"><div style="font-size:3rem;margin-bottom:16px;">🔒</div><h1 style="font-size:20px;font-weight:800;color:#f1f5f9;margin-bottom:8px;">Tracker link not found</h1><p style="font-size:14px;color:#6b7280;line-height:1.7;margin-bottom:28px;">This link has expired or is incorrect. Contact Ottmar to get your personal tracker link — usually within a few minutes.</p><div style="display:flex;flex-direction:column;gap:10px;"><a href="https://wa.me/31628073996?text=Hi%20Ottmar%2C%20I%20need%20my%20ContentScale%20tracker%20link" style="display:block;background:#25d366;color:#fff;text-decoration:none;padding:12px 20px;border-radius:8px;font-size:14px;font-weight:700;">💬 WhatsApp Ottmar — get my link</a><a href="mailto:info@contentscale.site?subject=My%20tracker%20link&body=Hi%20Ottmar%2C%20I%20need%20my%20ContentScale%20tracker%20link." style="display:block;background:#0d1117;border:1px solid #374151;color:#9ca3af;text-decoration:none;padding:12px 20px;border-radius:8px;font-size:14px;">✉️ Email info@contentscale.site</a></div><p style="font-size:11px;color:#374151;margin-top:20px;">ContentScale · contentscale.site</p></div></body></html>`);
     const client = cr.rows[0];
     // If explicitly deleted/disabled, show appropriate message
     if (client.status === 'deleted') return res.status(410).send('<html><body style="background:#0a0a0f;color:#f87171;font-family:monospace;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;text-align:center;"><div><div style="font-size:2rem;margin-bottom:12px;">🔒</div><div>This tracker has been deactivated</div><div style="font-size:12px;color:#4b5563;margin-top:8px;"><a href="https://wa.me/31628073996" style="color:#7c3aed;">Contact Ottmar to reactivate</a></div></div></body></html>');
