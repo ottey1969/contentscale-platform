@@ -1340,8 +1340,9 @@ app.get('/track/:token', async (req, res) => {
             .join('')
         : ''
       )
+      .replace(/__MAX_PAGES__/g, String(client.max_pages || 3))
+      .replace(/__CLIENT_NAME__/g, (client.name || client.domain || '').replace(/'/g, "\\'"))
       .replace(/__GSC_ENABLED__/g, client.gsc_enabled ? 'true' : 'false')
-      .replace(/__CLIENT_NAME__/g, client.name || client.domain)
     );
   } catch(e) { res.status(500).send('Server error'); }
 });
