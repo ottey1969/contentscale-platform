@@ -1527,21 +1527,43 @@ app.post('/api/tracker-client/:token/merge-pages', async (req, res) => {
     const cr = await pool.query('SELECT id FROM tracker_clients WHERE token=$1', [req.params.token]);
     if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
     const clientId = cr.rows[0].id;
-    const pages = await pool.query(`
-      SELECT id, url, keyword, gsc_keyword, last_checked, google_position, brief_check_count, graaf_score
-      FROM tracker_pages
-      WHERE tracker_client_id=$1 AND (is_active=TRUE OR is_active IS NULL)
-      ORDER BY COALESCE(google_position,9999) ASC, COALESCE(brief_check_count,0) DESC, COALESCE(graaf_score,0) DESC, last_checked DESC NULLS LAST
-    `, [clientId]);
+
+    // Simple query — avoid columns that may not exist
+    const pages = await pool.query(
+      `SELECT id, url, keyword, last_checked, google_position, brief_check_count
+       FROM tracker_pages
+       WHERE tracker_client_id=$1 AND (is_active=TRUE OR is_active IS NULL)
+       ORDER BY
+         CASE WHEN google_position IS NOT NULL THEN google_position ELSE 9999 END ASC,
+         CASE WHEN brief_check_count IS NOT NULL THEN brief_check_count ELSE 0 END DESC,
+         last_checked DESC NULLS LAST,
+         id ASC`,
+      [clientId]
+    );
+
     const seen = {};
     let merged = 0;
     for (const p of pages.rows) {
-      const norm = (p.url||'').replace(/^https?:\/\/(www\.)?/,'').replace(/\/$/,'').toLowerCase().split('?')[0].split('#')[0];
-      if (seen[norm]) { await pool.query('UPDATE tracker_pages SET is_active=FALSE WHERE id=$1', [p.id]); merged++; }
-      else seen[norm] = p.id;
+      // Normalise: strip protocol, www, trailing slash, query string, fragment
+      const norm = (p.url||'')
+        .toLowerCase()
+        .replace(/^https?:\/\//,'')
+        .replace(/^www\./,'')
+        .replace(/\/$/,'')
+        .split('?')[0]
+        .split('#')[0];
+      if (seen[norm]) {
+        await pool.query('UPDATE tracker_pages SET is_active=FALSE WHERE id=$1', [p.id]);
+        merged++;
+      } else {
+        seen[norm] = p.id;
+      }
     }
     res.json({ success: true, merged, kept: Object.keys(seen).length });
-  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+  } catch(e) {
+    console.error('[merge-pages]', e.message);
+    res.status(500).json({ success: false, error: e.message });
+  }
 });
 
 // POST /api/tracker-client/:token/clean-pages — remove image/asset URLs
@@ -1550,17 +1572,24 @@ app.post('/api/tracker-client/:token/clean-pages', async (req, res) => {
     const cr = await pool.query('SELECT id FROM tracker_clients WHERE token=$1', [req.params.token]);
     if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
     const clientId = cr.rows[0].id;
-    const pages = await pool.query('SELECT id, url FROM tracker_pages WHERE tracker_client_id=$1 AND (is_active=TRUE OR is_active IS NULL)', [clientId]);
+    const pagesR = await pool.query('SELECT id, url FROM tracker_pages WHERE tracker_client_id=$1 AND (is_active=TRUE OR is_active IS NULL)', [clientId]);
     const badExt = ['.jpg','.jpeg','.png','.gif','.webp','.svg','.ico','.pdf','.zip','.mp4','.mp3','.wav','.css','.js','.woff','.woff2','.ttf','.eot'];
     const badPat = ['wp-content/uploads','wp-includes','/feed','/amp/','wp-json','?replytocom','xmlrpc.php','/page/2','/page/3'];
     let cleaned = 0;
-    for (const p of pages.rows) {
-      const u = (p.url||'').toLowerCase().split('?')[0];
-      const bad = badExt.some(e => u.endsWith(e)) || badPat.some(b => u.includes(b));
-      if (bad) { await pool.query('UPDATE tracker_pages SET is_active=FALSE WHERE id=$1', [p.id]); cleaned++; }
+    for (const row of pagesR.rows) {
+      const u = (row.url||'').toLowerCase().split('?')[0];
+      const isBadExt = badExt.some(ext => u.endsWith(ext));
+      const isBadPat = badPat.some(pat => (row.url||'').toLowerCase().includes(pat));
+      if (isBadExt || isBadPat) {
+        await pool.query('UPDATE tracker_pages SET is_active=FALSE WHERE id=$1', [row.id]);
+        cleaned++;
+      }
     }
-    res.json({ success: true, cleaned, total: pages.rows.length });
-  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+    res.json({ success: true, cleaned, total: pagesR.rows.length });
+  } catch(e) {
+    console.error('[clean-pages]', e.message);
+    res.status(500).json({ success: false, error: e.message });
+  }
 });
 
 // DELETE /api/tracker-client/:token/pages/:pageId
