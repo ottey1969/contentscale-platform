@@ -24479,7 +24479,7 @@ function renderPages() {
 
     // Pending first check banner
     var pendingBanner = (!p.last_checked && !isDone)
-      ? '<div style="display:flex;align-items:center;gap:8px;padding:6px 14px;background:rgba(96,165,250,.06);border-bottom:1px solid rgba(96,165,250,.15);font-size:11px;color:#60a5fa;"><span style="animation:blink 2s infinite;display:inline-block">&#9679;</span> First check starting in ~10 seconds — refresh to see results</div>'
+      ? '<div style="display:flex;align-items:center;gap:8px;padding:6px 14px;background:rgba(96,165,250,.06);border-bottom:1px solid rgba(96,165,250,.15);font-size:11px;color:#60a5fa;"><span style="animation:blink 2s infinite;display:inline-block">&#9679;</span> Scanning in progress — paste your HTML below to start your GRAAF scan</div>'
       : '';
 
     // Needs HTML banner
@@ -24520,7 +24520,6 @@ function renderPages() {
         ? '' // nothing — HTML banner handles the CTA
         : ''
       )
-      + '<button onclick="openHtmlUpload(' + p.id + ')" class="btn" style="font-size:11px;padding:5px 10px;border-color:' + (showHtmlBanner ? '#f59e0b' : '#374151') + ';color:' + (showHtmlBanner ? '#fbbf24' : '#6b7280') + ';font-weight:' + (showHtmlBanner ? '700' : '400') + ';' + (showHtmlBanner ? 'animation:htmlNeeded 1s ease-in-out infinite;' : '') + '" title="Paste HTML for GRAAF scan">📋 ' + (showHtmlBanner ? 'Paste HTML' : 'HTML') + '</button>'
       + '<button onclick="markDone(' + p.id + ',this,' + isDone + ')" class="btn" style="font-size:11px;padding:5px 10px;border-color:' + (isDone?'#4ade80':'#374151') + ';color:' + (isDone?'#4ade80':'#6b7280') + ';" title="Mark done when implemented">' + (isDone?'&#10003; Done':'Mark done') + '</button>'
       + '</div>'
       + '</div>'
@@ -24690,10 +24689,14 @@ async function addPage() {
     loadPages();
     // Show friendly message - first check is automatic after 1 minute
     setTimeout(function() {
-      toast('Page added — first check starts in ~10 seconds', '#4ade80');
-      // Auto-refresh after 20 seconds to show scan results
-      setTimeout(function(){ loadPages(); }, 20000);
-      setTimeout(function(){ loadPages(); }, 35000);
+      toast('Page added — first scan starts in ~10 seconds', '#4ade80');
+      // Fully automatic refresh — no manual action needed
+      var refreshCount = 0;
+      var autoRefresh = setInterval(function() {
+        refreshCount++;
+        loadPages();
+        if (refreshCount >= 6) clearInterval(autoRefresh); // stop after 60s
+      }, 10000);
     }, 300);
   } catch(e) { toast('Error: ' + e.message, '#f87171'); }
 }
