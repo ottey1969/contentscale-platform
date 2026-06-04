@@ -24894,7 +24894,7 @@ function renderPages() {
       + '</div>'
       + '</div>'
       + '<div style="display:flex;gap:5px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;align-items:flex-start;">'
-      + '<button onclick="openHtmlUpload(' + p.id + ')" style="background:none;border:1px solid ' + (htmlNeeded ? '#f59e0b' : '#374151') + ';border-radius:5px;color:' + (htmlNeeded ? '#fbbf24' : '#4b5563') + ';cursor:pointer;font-size:11px;padding:3px 10px;font-weight:' + (htmlNeeded ? '700' : '400') + ';" title="' + (htmlNeeded ? 'Add HTML to start GRAAF scan' : 'Update HTML') + '">📋 ' + (htmlNeeded ? 'Add HTML' : 'HTML') + '</button>'
+      + '<button onclick="openHtmlUpload(' + p.id + ')" style="background:none;border:1px solid ' + (htmlNeeded ? '#f59e0b' : '#374151') + ';border-radius:5px;color:' + (htmlNeeded ? '#fbbf24' : '#4b5563') + ';cursor:pointer;font-size:11px;padding:3px 10px;font-weight:' + (htmlNeeded ? '700' : '400') + ';' + (htmlNeeded ? 'animation:htmlNeeded 1.2s ease-in-out infinite;' : '') + '" title="' + (htmlNeeded ? 'Add HTML to start GRAAF scan' : 'Update HTML') + '">📋 ' + (htmlNeeded ? 'Add HTML' : 'HTML') + '</button>'
       + (lastChecked ? '<button onclick="checkPage(' + p.id + ')" style="background:none;border:1px solid #374151;border-radius:5px;color:#6b7280;cursor:pointer;font-size:11px;padding:3px 8px;" title="Rescan now">↻</button>' : '')
       + '<button onclick="deletePage(' + p.id + ')" style="background:none;border:1px solid #374151;border-radius:5px;color:#374151;cursor:pointer;font-size:12px;padding:4px 8px;" title="Delete page">🗑</button>'
       + '</div>'
