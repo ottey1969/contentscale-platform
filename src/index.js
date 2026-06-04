@@ -24523,8 +24523,46 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
 .wl-footer { font-size:10px;color:#6b7280;text-align:center;margin-top:10px; }
 
 .cited-blink{animation:citedPulse 2.5s ease-in-out 3;}
-@keyframes htmlNeeded{0%,100%{opacity:1;background:rgba(245,158,11,.08)}50%{opacity:.35;background:rgba(245,158,11,.18)}}@keyframes citedPulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.75;transform:scale(1.06)}}@keyframes tgPulse{0%,100%{box-shadow:0 0 0 0 rgba(42,171,238,.4);border-color:#2AABEE}50%{box-shadow:0 0 0 6px rgba(42,171,238,0);border-color:#38bdf8}}@keyframes donePulse{0%,100%{background:linear-gradient(90deg,rgba(74,222,128,.08),rgba(74,222,128,.02))}50%{background:linear-gradient(90deg,rgba(74,222,128,.14),rgba(74,222,128,.04))}}
+@keyframes htmlNeeded{0%,100%{opacity:1;border-color:#f59e0b;color:#fbbf24;box-shadow:0 0 8px rgba(245,158,11,.3)}25%{opacity:.7;border-color:#fbbf24;color:#fcd34d;box-shadow:0 0 16px rgba(245,158,11,.5)}50%{opacity:1;border-color:#f59e0b;color:#fbbf24;box-shadow:0 0 8px rgba(245,158,11,.3)}75%{opacity:.7;border-color:#fbbf24;color:#fcd34d;box-shadow:0 0 16px rgba(245,158,11,.5)}}
+@keyframes citedPulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.75;transform:scale(1.06)}}@keyframes tgPulse{0%,100%{box-shadow:0 0 0 0 rgba(42,171,238,.4);border-color:#2AABEE}50%{box-shadow:0 0 0 6px rgba(42,171,238,0);border-color:#38bdf8}}@keyframes donePulse{0%,100%{background:linear-gradient(90deg,rgba(74,222,128,.08),rgba(74,222,128,.02))}50%{background:linear-gradient(90deg,rgba(74,222,128,.14),rgba(74,222,128,.04))}}
 .brief-blink{animation:briefBlink 1.2s ease-in-out 4;}@keyframes briefBlink{0%,100%{opacity:1;transform:scale(1)}40%{opacity:.4;transform:scale(1.12)}70%{opacity:1;transform:scale(1.06)}}
+
+/* ═══ LIVE SCAN ANIMATIONS FOR VIEWERS ═══ */
+@keyframes scanPulse{0%,100%{box-shadow:0 0 0 0 rgba(124,58,237,.4),inset 0 0 0 0 rgba(124,58,237,0)}50%{box-shadow:0 0 20px 4px rgba(124,58,237,.3),inset 0 0 10px 0 rgba(124,58,237,.1)}}
+@keyframes scanRadar{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
+@keyframes scanLine{0%{top:0%;opacity:0}10%{opacity:1}90%{opacity:1}100%{top:100%;opacity:0}}
+@keyframes scanGlow{0%,100%{border-color:rgba(124,58,237,.3);box-shadow:0 0 10px rgba(124,58,237,.1)}50%{border-color:rgba(124,58,237,.8);box-shadow:0 0 25px rgba(124,58,237,.3),0 0 60px rgba(124,58,237,.15)}}
+@keyframes scanDot{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.6);opacity:.6}}
+@keyframes scanComplete{0%{transform:scale(1)}50%{transform:scale(1.02)}100%{transform:scale(1)}}
+@keyframes confettiDrop{0%{transform:translateY(-20px) rotate(0deg);opacity:1}100%{transform:translateY(100px) rotate(720deg);opacity:0}}
+@keyframes slideUpIn{0%{opacity:0;transform:translateY(40px) scale(.95)}100%{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes heroPulse{0%,100%{box-shadow:0 0 0 0 rgba(124,58,237,0)}50%{box-shadow:0 0 30px 8px rgba(124,58,237,.25)}}
+
+.scan-active{animation:scanGlow 2s ease-in-out infinite;border:1px solid rgba(124,58,237,.5)!important;position:relative;overflow:hidden}
+.scan-active::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,#7c3aed,transparent);animation:scanLine 2s ease-in-out infinite;z-index:10;pointer-events:none}
+.scan-active::after{content:'';position:absolute;top:50%;left:50%;width:60px;height:60px;margin:-30px 0 0 -30px;border:2px solid rgba(124,58,237,.2);border-top-color:#7c3aed;border-radius:50%;animation:scanRadar 1.5s linear infinite;pointer-events:none;opacity:.6}
+
+.scan-header-live{display:flex;align-items:center;gap:8px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.12em;color:#7c3aed;margin-bottom:10px}
+.scan-header-live .dot{width:8px;height:8px;border-radius:50%;background:#7c3aed;animation:scanDot 1s ease-in-out infinite;display:inline-block}
+.scan-header-live .dot.done{background:#4ade80;animation:none}
+
+/* Citation Brief copy section */
+.cb-copy-section{background:#0a0a12;border:1px solid #1f2937;border-radius:8px;padding:12px 16px;margin-top:12px}
+.cb-copy-title{font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px}
+.cb-copy-textarea{width:100%;min-height:60px;background:#0d1117;border:1px solid #374151;border-radius:6px;padding:8px 10px;color:#9ca3af;font-size:11px;font-family:monospace;resize:vertical;line-height:1.6}
+.cb-copy-row{display:flex;gap:8px;margin-top:8px}
+.cb-copy-btn-action{background:#1e1b4b;border:1px solid #7c3aed;border-radius:6px;color:#a78bfa;font-size:11px;font-weight:700;padding:6px 14px;cursor:pointer;font-family:Verdana,sans-serif;transition:all .15s}
+.cb-copy-btn-action:hover{background:#2e1065;color:#e9d5ff}
+
+/* GSC section in brief — optional, collapsed by default */
+.cb-gsc-toggle{background:#0a0a12;border:1px solid #1f2937;border-radius:8px;padding:10px 14px;margin-top:10px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;transition:all .15s}
+.cb-gsc-toggle:hover{border-color:#374151}
+.cb-gsc-toggle-label{font-size:11px;font-weight:700;color:#6b7280;display:flex;align-items:center;gap:6px}
+.cb-gsc-toggle-label .badge{font-size:9px;background:#1e1b4b;color:#a78bfa;border:1px solid #4c1d95;border-radius:4px;padding:1px 6px}
+.cb-gsc-panel{display:none;padding:12px 16px;border:1px solid #1f2937;border-top:none;border-radius:0 0 8px 8px;background:#0a0a12}
+.cb-gsc-panel.open{display:block;animation:slideUpIn .3s ease}
+.cb-gsc-stat{display:flex;gap:12px;flex-wrap:wrap;font-size:11px}
+.cb-gsc-stat span{display:flex;align-items:center;gap:4px}
 .cs-cs-badge{display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;letter-spacing:.03em;}
 .cs-cs-badge.green{background:#052e16;color:#4ade80;border:1px solid #166534;}
 .cs-cs-badge.grey{background:#1f2937;color:#6b7280;border:1px solid #374151;}
@@ -25266,79 +25304,16 @@ async function markDone(pageId, btn, currentDone) {
       var freq = sel ? sel.value : '3days';
       if (freq) api('/pages/' + pageId + '/frequency', 'PATCH', { frequency: freq }).catch(function(){});
     }
-    // Find the card for this page
-    var card = document.querySelector('.cs-page-card[data-page-id="' + pageId + '"]');
     var btn = document.querySelector('[data-check-btn="' + pageId + '"]');
-
-    // Show inline progress on the card
-    if (card) {
-      var existing = card.querySelector('.check-progress');
-      if (existing) existing.remove();
-      var prog = document.createElement('div');
-      prog.className = 'check-progress';
-      prog.style.cssText = 'background:#0d1117;border:1px solid #1f2937;border-radius:8px;padding:10px 14px;margin-top:10px;font-size:11px;font-family:monospace;';
-      prog.innerHTML = '<div style="color:#4b5563;margin-bottom:6px;font-size:10px;letter-spacing:.06em;">RUNNING CHECK</div>'
-        + '<div id="cpSteps_' + pageId + '" style="display:flex;flex-direction:column;gap:4px;"></div>';
-      card.appendChild(prog);
-    }
-
-    var steps = [
-      { id: 'html',      label: 'Fetching page HTML' },
-      { id: 'graaf',     label: 'GRAAF content scan' },
-      { id: 'google',    label: 'Google position + AIO' },
-      { id: 'perplexity',label: 'Perplexity citation' },
-      { id: 'youcom',    label: 'Copilot citation' },
-      { id: 'brave',     label: 'Claude / Brave citation' },
-      { id: 'gemini',    label: 'AI recommendations' },
-    ];
-
-    function setStep(stepId, state, msg) {
-      var container = document.getElementById('cpSteps_' + pageId);
-      if (!container) return;
-      var existing = container.querySelector('[data-step="' + stepId + '"]');
-      var icons = { pending: '○', running: '◌', done: '✓', error: '✗' };
-      var colors = { pending: '#374151', running: '#60a5fa', done: '#4ade80', error: '#f87171' };
-      var html = '<span style="color:' + colors[state] + ';margin-right:6px;">' + icons[state] + '</span>'
-        + '<span style="color:' + (state === 'running' ? '#e5e7eb' : state === 'done' ? '#4ade80' : state === 'error' ? '#f87171' : '#6b7280') + ';">'
-        + msg + '</span>';
-      if (existing) {
-        existing.innerHTML = html;
-      } else {
-        var div = document.createElement('div');
-        div.setAttribute('data-step', stepId);
-        div.style.cssText = 'transition:color .3s;';
-        div.innerHTML = html;
-        container.appendChild(div);
-      }
-    }
-
-    // Show all steps as pending
-    steps.forEach(function(s) { setStep(s.id, 'pending', s.label); });
-
-    // Animate steps based on expected timing
-    var timings = [0, 1000, 3000, 8000, 12000, 15000, 18000];
-    var durations = [900, 1800, 4500, 3500, 3000, 3000, 5000];
-    _checkAnimations[pageId] = true;
-
-    steps.forEach(function(s, idx) {
-      if (!_checkAnimations[pageId]) return;
-      setTimeout(function() {
-        if (!_checkAnimations[pageId]) return;
-        setStep(s.id, 'running', s.label + '...');
-        setTimeout(function() {
-          if (!_checkAnimations[pageId]) return;
-          setStep(s.id, 'done', s.label);
-        }, durations[idx]);
-      }, timings[idx]);
-    });
-
     if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i>'; }
+
+    // Use shared scan animation — visually stunning for live viewers
+    startScanAnimation(pageId);
 
     try {
       var data = await api('/check/' + pageId, 'POST');
       if (!data.success) {
         toast(data.error || 'Check failed', '#f87171');
-        _checkAnimations[pageId] = false;
         var container = document.getElementById('cpSteps_' + pageId);
         if (container) container.innerHTML += '<div style="color:#f87171;margin-top:4px;">✗ ' + (data.error||'Failed') + '</div>';
       } else {
@@ -25348,7 +25323,7 @@ async function markDone(pageId, btn, currentDone) {
           pollCount++;
           if (pollCount > 15) {
             clearInterval(pollInterval);
-            _checkAnimations[pageId] = false;
+            clearScanAnimation(pageId);
             loadPages();
             return;
           }
@@ -25357,20 +25332,14 @@ async function markDone(pageId, btn, currentDone) {
               var checkTime = new Date(d.page.last_checked_at).getTime();
               if (Date.now() - checkTime < 180000) {
                 clearInterval(pollInterval);
-                _checkAnimations[pageId] = false;
-                var prog = document.querySelector('.cs-page-card[data-page-id="' + pageId + '"] .check-progress');
-                if (prog) {
-                  prog.innerHTML = '<div style="color:#4ade80;font-size:11px;">v Check complete</div>';
-                }
-                // Reload cards with fresh badges
                 loadPages();
-                // Fire Citation Brief with fresh data
-                var p = d.page;
-                var snap = p.latest_snapshot || p;
+                // Fire Citation Brief with fresh data + GSC
+                var pg = d.page;
+                var snap = pg.latest_snapshot || pg;
                 var briefData = {
                   page_id: pageId,
-                  url: p.url,
-                  keyword: p.keyword || p.gsc_keyword || '',
+                  url: pg.url,
+                  keyword: pg.keyword || pg.gsc_keyword || '',
                   domain: DOMAIN,
                   position: snap.google_position || null,
                   aio_cited: !!(snap.ai_google_overview_cited),
@@ -25378,10 +25347,17 @@ async function markDone(pageId, btn, currentDone) {
                   bing_cited: !!(snap.ai_bing_cited),
                   brave_cited: !!(snap.ai_brave_cited),
                   score: snap.score || snap.graaf_score || null,
-                  passages: Array.isArray(snap.recommendations) ? snap.recommendations : [],
+                  gsc_clicks: snap.gsc_clicks || null,
+                  gsc_impressions: snap.gsc_impressions || null,
+                  gsc_position: snap.gsc_position || null,
+                  gsc_ctr: snap.gsc_ctr || null,
+                  gsc_keyword: snap.gsc_keyword || null,
+                  recommendations: Array.isArray(snap.recommendations) ? snap.recommendations : [],
+                  brief_content: d.page.brief_content,
                   type: 'brief_ready'
                 };
                 setTimeout(function() {
+                  clearScanAnimation(pageId);
                   if (typeof showCitationBrief === 'function') showCitationBrief(briefData);
                 }, 1500);
               }
@@ -25391,7 +25367,6 @@ async function markDone(pageId, btn, currentDone) {
       }
     } catch(e) {
       toast('Error: ' + e.message, '#f87171');
-      _checkAnimations[pageId] = false;
     } finally {
       if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-sync-alt"></i>'; }
     }
@@ -25499,10 +25474,97 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
   var _briefIsOpen = false; // blocks new scans while brief is showing
   var _pendingScanAfterBrief = null; // pageId to scan after brief closes
 
+  // Toggle GSC panel in brief
+  function toggleGscPanel() {
+    var panel = document.getElementById('cbGscPanel');
+    var toggle = document.getElementById('cbGscToggle');
+    if (!panel) return;
+    var isOpen = panel.classList.contains('open');
+    if (isOpen) {
+      panel.classList.remove('open');
+      if (toggle) toggle.querySelector('span:last-child').innerHTML = '&#9660;';
+    } else {
+      panel.classList.add('open');
+      if (toggle) toggle.querySelector('span:last-child').innerHTML = '&#9650;';
+    }
+  }
+
+  // Build plain-text brief for copying
+  function buildBriefText(data, passages, isMarkdown) {
+    var md = isMarkdown;
+    var h2 = md ? '## ' : '';
+    var h3 = md ? '### ' : '';
+    var b = md ? '**' : '';
+    var nl = '\n';
+    var lines = [];
+    lines.push(h2 + 'AI Citation Brief — ' + (data.url || '') + nl);
+    if (data.keyword) lines.push('Keyword: ' + data.keyword + nl);
+    lines.push(nl + h3 + 'AI Citation Results' + nl);
+    lines.push('- Google AIO: ' + (data.aio_cited ? 'CITED ✓' : 'Not cited') + nl);
+    lines.push('- Perplexity: ' + (data.perp_cited ? 'CITED ✓' : 'Not cited') + nl);
+    lines.push('- Copilot: ' + (data.bing_cited ? 'CITED ✓' : 'Not cited') + nl);
+    lines.push('- Claude: ' + (data.brave_cited ? 'CITED ✓' : 'Not cited') + nl);
+    if (data.position) lines.push('- Google Position: #' + data.position + nl);
+    if (data.score) lines.push('- GRAAF Score: ' + data.score + '/100' + nl);
+    // GSC data if available
+    if (data.gsc_clicks || data.gsc_impressions || data.gsc_position) {
+      lines.push(nl + h3 + 'Google Search Console Data' + nl);
+      if (data.gsc_clicks) lines.push('- Clicks: ' + data.gsc_clicks + nl);
+      if (data.gsc_impressions) lines.push('- Impressions: ' + data.gsc_impressions + nl);
+      if (data.gsc_position) lines.push('- Position: ' + parseFloat(data.gsc_position).toFixed(1) + nl);
+      if (data.gsc_ctr) lines.push('- CTR: ' + data.gsc_ctr + nl);
+      if (data.gsc_keyword) lines.push('- Top Keyword: ' + data.gsc_keyword + nl);
+    }
+    if (passages && passages.length) {
+      lines.push(nl + h3 + 'Recommendations' + nl);
+      passages.forEach(function(p, i) {
+        var title = p.title || p.t || '';
+        var action = p.action || p.passage || '';
+        var impact = p.expected_impact || p.impact || '';
+        var pri = (p.priority || p.p || '').toUpperCase();
+        lines.push((i+1) + '. [' + pri + '] ' + title + nl);
+        if (action) lines.push(action + nl);
+        if (impact) lines.push('→ Impact: ' + impact + nl);
+        lines.push('');
+      });
+    }
+    lines.push(nl + '---' + nl + 'Generated by ContentScale AI Citations Tracker' + nl);
+    return lines.join('');
+  }
+
+  function copyBriefToClipboard() {
+    var text = document.getElementById('cbCopyText') ? document.getElementById('cbCopyText').value : '';
+    if (!text) return;
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(text).then(function() { toast('Brief copied to clipboard', '#4ade80'); }).catch(function() { fallbackCopy(text); });
+    } else { fallbackCopy(text); }
+  }
+
+  function copyBriefMarkdown() {
+    var md = document.getElementById('cbCopyText') ? document.getElementById('cbCopyText').dataset.markdown : '';
+    if (!md) return;
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(md).then(function() { toast('Markdown copied', '#4ade80'); }).catch(function() { fallbackCopy(md); });
+    } else { fallbackCopy(md); }
+  }
+
+  function fallbackCopy(text) {
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.cssText = 'position:fixed;top:-9999px;left:-9999px';
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand('copy'); toast('Copied', '#4ade80'); } catch(e) { toast('Copy failed — select manually', '#f87171'); }
+    document.body.removeChild(ta);
+  }
+
+  // Current brief data for copying
+  var _currentBriefData = null;
+
   function showCitationBrief(data) {
     var card = document.getElementById('cbCard');
-    var overlay = document.getElementById('cbOverlay');
     if (!card) return;
+    _currentBriefData = data;
 
     // Reset
     _cbKept = false;
@@ -25512,9 +25574,21 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
     document.getElementById('cbProgressBar').style.width = '0%';
     document.getElementById('cbResult').classList.remove('show');
     document.getElementById('cbKeepBtn').style.display = 'none';
+    document.getElementById('cbQuickCopyBtn').style.display = 'none';
     document.getElementById('cbCountdown').textContent = '';
     document.getElementById('cbStatRow').innerHTML = '';
     document.getElementById('cbPassages').innerHTML = '';
+    document.getElementById('cbCopySection').style.display = 'none';
+    document.getElementById('cbGscSection').style.display = 'none';
+    document.getElementById('cbGscStats').innerHTML = '';
+    // Reset GSC toggle
+    var gscPanel = document.getElementById('cbGscPanel');
+    if (gscPanel) gscPanel.classList.remove('open');
+    var gscToggleArrow = document.getElementById('cbGscToggle');
+    if (gscToggleArrow) {
+      var arrow = gscToggleArrow.querySelector('span:last-child');
+      if (arrow) arrow.innerHTML = '&#9660;';
+    }
 
     // Reset steps
     for (var s = 1; s <= 4; s++) {
@@ -25529,10 +25603,10 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
     card.classList.remove('hide');
     card.classList.add('show');
 
-    // Animate steps
-    var delays = [0, 3000, 6000, 10000];
-    var completions = [2500, 5500, 9000, 14000];
-    var progress = [20, 40, 65, 90];
+    // Animate steps — entertaining for live viewers
+    var delays = [0, 2500, 5000, 8500];
+    var completions = [2000, 4500, 7500, 12000];
+    var progress = [20, 45, 70, 92];
 
     for (var si = 1; si <= 4; si++) {
       (function(idx) {
@@ -25555,67 +25629,78 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
     // Show results after animation
     setTimeout(function() {
       document.getElementById('cbProgressBar').style.width = '100%';
-      // Stats
+
+      // ═══ AI CITATION STATS — ALWAYS SHOWN ═══
       var statRow = document.getElementById('cbStatRow');
       var pos = data.position;
       var posColor = pos ? (pos <= 3 ? '#4ade80' : pos <= 10 ? '#fbbf24' : '#f87171') : '#4b5563';
-      statRow.innerHTML =
-        '<div class="cb-stat"><div class="v" style="color:' + posColor + ';">' + (pos ? '#' + pos : 'N/A') + '</div><div class="l">Position</div></div>' +
-        '<div class="cb-stat"><div class="v" style="color:' + (data.aio_cited ? '#4ade80' : '#4b5563') + ';">' + (data.aio_cited ? 'Cited' : 'No') + '</div><div class="l">Google AIO</div></div>' +
-        '<div class="cb-stat"><div class="v" style="color:' + (data.perp_cited ? '#a78bfa' : '#4b5563') + ';">' + (data.perp_cited ? 'Cited' : 'No') + '</div><div class="l">Perplexity</div></div>' +
-        '<div class="cb-stat"><div class="v" style="color:' + (data.bing_cited ? '#60a5fa' : '#4b5563') + ';">' + (data.bing_cited ? 'Cited' : 'No') + '</div><div class="l">Copilot</div></div>' +
-        '<div class="cb-stat"><div class="v" style="color:' + (data.brave_cited ? '#f87171' : '#4b5563') + ';">' + (data.brave_cited ? 'Cited' : 'No') + '</div><div class="l">Claude</div></div>' +
-        (data.score ? '<div class="cb-stat"><div class="v" style="color:#fbbf24;">' + data.score + '</div><div class="l">GRAAF</div></div>' : '');
+      var hasAnyCitation = data.aio_cited || data.perp_cited || data.bing_cited || data.brave_cited;
 
-      // GSC row — only if data available
-      var brief = (typeof data.brief_content === 'string') ? JSON.parse(data.brief_content) : (data.brief_content || {});
-      var gscClicks = brief.gsc_clicks || data.gsc_clicks;
-      var gscImpr = brief.gsc_impressions || data.gsc_impressions;
-      var gscPos = brief.gsc_position || data.gsc_position;
-      var gscKw = brief.gsc_keyword || data.gsc_keyword;
-      if (gscClicks || gscImpr || gscPos) {
-        var gscCtr = (gscClicks && gscImpr) ? ((gscClicks/gscImpr)*100).toFixed(1)+'%' : null;
-        var gscRow = document.createElement('div');
-        gscRow.style.cssText = 'display:flex;gap:14px;flex-wrap:wrap;padding:8px 20px;background:rgba(74,222,128,.04);border-top:1px solid #1f2937;font-size:11px;align-items:center;';
-        gscRow.innerHTML = '<span style="color:#374151;font-weight:700;letter-spacing:.08em;text-transform:uppercase;">GSC</span>'
-          + (gscClicks ? '<span style="color:#4ade80;">&#8595; ' + gscClicks.toLocaleString() + ' clicks</span>' : '')
-          + (gscImpr ? '<span style="color:#60a5fa;">' + gscImpr.toLocaleString() + ' impr</span>' : '')
-          + (gscCtr ? '<span style="color:#a78bfa;">CTR ' + gscCtr + '</span>' : '')
-          + (gscPos ? '<span style="color:#f59e0b;">pos ' + parseFloat(gscPos).toFixed(1) + '</span>' : '')
-          + (gscKw ? '<span style="color:#4b5563;font-style:italic;">' + gscKw + '</span>' : '')
-          + '<span style="margin-left:auto;color:#4ade80;font-weight:700;">Goal: Rank #1</span>';
-        statRow.parentNode.insertBefore(gscRow, statRow.nextSibling);
+      statRow.innerHTML =
+        '<div class="cb-stat" style="animation:slideUpIn .4s ease ' + (hasAnyCitation ? '0s' : '') + '"><div class="v" style="color:' + posColor + ';">' + (pos ? '#' + pos : 'N/A') + '</div><div class="l">Position</div></div>' +
+        '<div class="cb-stat" style="animation:slideUpIn .4s ease .05s both"><div class="v" style="color:' + (data.aio_cited ? '#4ade80' : '#4b5563') + ';">' + (data.aio_cited ? '&#10003; Cited' : 'No') + '</div><div class="l">Google AIO</div></div>' +
+        '<div class="cb-stat" style="animation:slideUpIn .4s ease .1s both"><div class="v" style="color:' + (data.perp_cited ? '#a78bfa' : '#4b5563') + ';">' + (data.perp_cited ? '&#10003; Cited' : 'No') + '</div><div class="l">Perplexity</div></div>' +
+        '<div class="cb-stat" style="animation:slideUpIn .4s ease .15s both"><div class="v" style="color:' + (data.bing_cited ? '#60a5fa' : '#4b5563') + ';">' + (data.bing_cited ? '&#10003; Cited' : 'No') + '</div><div class="l">Copilot</div></div>' +
+        '<div class="cb-stat" style="animation:slideUpIn .4s ease .2s both"><div class="v" style="color:' + (data.brave_cited ? '#f87171' : '#4b5563') + ';">' + (data.brave_cited ? '&#10003; Cited' : 'No') + '</div><div class="l">Claude</div></div>' +
+        (data.score ? '<div class="cb-stat" style="animation:slideUpIn .4s ease .25s both"><div class="v" style="color:#fbbf24;">' + data.score + '</div><div class="l">GRAAF</div></div>' : '');
+
+      // ═══ GSC SECTION — OPTIONAL, COLLAPSED BY DEFAULT ═══
+      var hasGsc = !!(data.gsc_clicks || data.gsc_impressions || data.gsc_position || data.gsc_ctr);
+      if (hasGsc) {
+        var gscSection = document.getElementById('cbGscSection');
+        var gscStats = document.getElementById('cbGscStats');
+        if (gscSection) gscSection.style.display = 'block';
+        var gscItems = [];
+        if (data.gsc_clicks !== null && data.gsc_clicks !== undefined) gscItems.push('<span style="color:#4ade80;">&#8595; ' + Number(data.gsc_clicks).toLocaleString() + ' clicks</span>');
+        if (data.gsc_impressions !== null && data.gsc_impressions !== undefined) gscItems.push('<span style="color:#60a5fa;">' + Number(data.gsc_impressions).toLocaleString() + ' impr</span>');
+        if (data.gsc_ctr) gscItems.push('<span style="color:#a78bfa;">CTR ' + data.gsc_ctr + '</span>');
+        if (data.gsc_position) gscItems.push('<span style="color:#f59e0b;">pos ' + parseFloat(data.gsc_position).toFixed(1) + '</span>');
+        if (data.gsc_keyword) gscItems.push('<span style="color:#4b5563;font-style:italic;">' + data.gsc_keyword + '</span>');
+        gscItems.push('<span style="margin-left:auto;color:#4ade80;font-weight:700;font-size:10px;">Goal: Rank #1</span>');
+        gscStats.innerHTML = gscItems.join('');
       }
 
-      // Passages - type them in
+      // ═══ PASSAGES — TYPE IN EFFECT ═══
       var passages = data.passages || data.recommendations;
-      if (passages && Array.isArray(passages)) {
+      if (passages && Array.isArray(passages) && passages.length) {
         var passDiv = document.getElementById('cbPassages');
-        passages.slice(0, 3).forEach(function(p, idx) {
+        passDiv.innerHTML = '<div style="font-size:10px;font-weight:700;color:#a78bfa;text-transform:uppercase;letter-spacing:.08em;margin:14px 0 8px;">&#10024; What to add to get cited</div>';
+        passages.slice(0, 4).forEach(function(p, idx) {
           setTimeout(function() {
             var text = p.passage || p.action || p.title || JSON.stringify(p);
             var el = document.createElement('div');
             el.className = 'cb-passage';
             el.style.opacity = '0';
-            el.style.transition = 'opacity .5s ease';
+            el.style.transform = 'translateY(10px)';
+            el.style.transition = 'all .5s ease';
             passDiv.appendChild(el);
-            setTimeout(function() { el.style.opacity = '1'; }, 50);
-            // Type the text
+            setTimeout(function() { el.style.opacity = '1'; el.style.transform = 'translateY(0)'; }, 50);
+            // Typewriter effect
             var charIdx = 0;
             var typeInterval = setInterval(function() {
               el.textContent = text.substring(0, charIdx);
               charIdx += 3;
-              if (charIdx > text.length) {
-                el.textContent = text;
-                clearInterval(typeInterval);
-              }
-            }, 20);
-          }, idx * 800);
+              if (charIdx > text.length) { el.textContent = text; clearInterval(typeInterval); }
+            }, 18);
+          }, idx * 700);
         });
       } else {
-        document.getElementById('cbPassages').innerHTML = '<div class="cb-passage">Your Citation Brief has been generated and sent to your email. Open your tracker to see the full recommendations.</div>';
+        document.getElementById('cbPassages').innerHTML = '<div class="cb-passage" style="animation:slideUpIn .5s ease;">Your Citation Brief has been generated. Copy it below to share with your content team or AI assistant.</div>';
       }
 
+      // ═══ COPY SECTION ═══
+      var plainText = buildBriefText(data, passages, false);
+      var markdownText = buildBriefText(data, passages, true);
+      var copyTextarea = document.getElementById('cbCopyText');
+      if (copyTextarea) {
+        copyTextarea.value = plainText;
+        copyTextarea.dataset.markdown = markdownText;
+      }
+      document.getElementById('cbCopySection').style.display = 'block';
+      document.getElementById('cbCopySection').style.animation = 'slideUpIn .5s ease .3s both';
+      document.getElementById('cbQuickCopyBtn').style.display = 'inline-block';
+
+      // ═══ SHOW RESULT ═══
       document.getElementById('cbResult').classList.add('show');
       document.getElementById('cbKeepBtn').style.display = 'block';
 
@@ -25627,7 +25712,7 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
         updateBriefButtons();
       }
 
-      // Countdown
+      // Countdown auto-close
       _cbSecondsLeft = 60;
       document.getElementById('cbCountdown').textContent = 'Closing in 60s...';
       if (_cbTimer) clearInterval(_cbTimer);
@@ -25635,13 +25720,10 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
         if (_cbKept) { clearInterval(_cbTimer); document.getElementById('cbCountdown').textContent = ''; return; }
         _cbSecondsLeft--;
         document.getElementById('cbCountdown').textContent = 'Closing in ' + _cbSecondsLeft + 's...';
-        if (_cbSecondsLeft <= 0) {
-          clearInterval(_cbTimer);
-          hideCitationBrief(data.page_id);
-        }
+        if (_cbSecondsLeft <= 0) { clearInterval(_cbTimer); hideCitationBrief(data.page_id); }
       }, 1000);
 
-    }, 16000);
+    }, 14000);
   }
 
   function keepCbOpen() {
@@ -26066,7 +26148,101 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
     doNext(0);
   }
 
-  // ── HTML upload ─────────────────────────────────────────────────────────────
+  // ═══ SHARED SCAN ANIMATION — visually stunning for live viewers ═══
+  function startScanAnimation(pageId) {
+    var card = document.querySelector('.cs-page-card[data-page-id="' + pageId + '"]');
+    if (!card) return;
+    // Remove old progress
+    var existing = card.querySelector('.check-progress');
+    if (existing) existing.remove();
+    // Remove scan-active class if present
+    card.classList.remove('scan-active');
+    void card.offsetWidth; // force reflow
+    card.classList.add('scan-active');
+
+    var prog = document.createElement('div');
+    prog.className = 'check-progress';
+    prog.id = 'scanProgress_' + pageId;
+    prog.style.cssText = 'background:#0d1117;border:1px solid #1f2937;border-radius:8px;padding:12px 14px;margin-top:10px;font-size:11px;font-family:monospace;position:relative;overflow:hidden;';
+    prog.innerHTML = '<div class="scan-header-live" id="scanHdr_' + pageId + '"><span class="dot" id="scanDot_' + pageId + '"></span><span id="scanLbl_' + pageId + '">LIVE SCAN IN PROGRESS</span></div>'
+      + '<div id="cpSteps_' + pageId + '" style="display:flex;flex-direction:column;gap:5px;"></div>'
+      + '<div id="cpStatus_' + pageId + '" style="margin-top:8px;padding-top:8px;border-top:1px solid #1f2937;color:#6b7280;font-size:10px;letter-spacing:.03em;">Initializing...</div>';
+    card.appendChild(prog);
+
+    var steps = [
+      { id: 'html',       label: 'Fetching page HTML' },
+      { id: 'graaf',      label: 'GRAAF content scan — AI + GSC analysis' },
+      { id: 'google',     label: 'Google position + AIO citation check' },
+      { id: 'perplexity', label: 'Perplexity citation check' },
+      { id: 'youcom',     label: 'Copilot citation check' },
+      { id: 'brave',      label: 'Claude / Brave citation check' },
+      { id: 'gemini',     label: 'AI recommendations generation' },
+    ];
+
+    var container = document.getElementById('cpSteps_' + pageId);
+    var statusEl = document.getElementById('cpStatus_' + pageId);
+    var dotEl = document.getElementById('scanDot_' + pageId);
+    var lblEl = document.getElementById('scanLbl_' + pageId);
+
+    function setStatus(msg, color) {
+      if (statusEl) { statusEl.textContent = msg; statusEl.style.color = color || '#6b7280'; }
+    }
+
+    // Create step elements
+    steps.forEach(function(s) {
+      var div = document.createElement('div');
+      div.setAttribute('data-step', s.id);
+      div.style.cssText = 'transition:all .3s ease;color:#374151;';
+      div.innerHTML = '<span style="color:#374151;margin-right:6px;">&#9675;</span><span style="color:#374151;">' + s.label + '</span>';
+      container.appendChild(div);
+    });
+
+    // Schedule: [delay, duration] in ms
+    var schedule = [
+      [0,     900],   // HTML fetch
+      [900,   1800],  // GRAAF
+      [3000,  2500],  // Google AIO
+      [6000,  2500],  // Perplexity
+      [9000,  2200],  // Copilot
+      [11500, 2200],  // Claude
+      [14000, 4000],  // AI Recs
+    ];
+
+    steps.forEach(function(s, idx) {
+      var delay = schedule[idx][0];
+      var duration = schedule[idx][1];
+      setTimeout(function() {
+        var el = container.querySelector('[data-step="' + s.id + '"]');
+        if (el) el.innerHTML = '<span style="color:#a78bfa;margin-right:6px;">&#9680;</span><span style="color:#e5e7eb;">' + s.label + '...</span>';
+        setStatus(s.label + '...', '#a78bfa');
+      }, delay);
+      setTimeout(function() {
+        var el = container.querySelector('[data-step="' + s.id + '"]');
+        if (el) el.innerHTML = '<span style="color:#4ade80;margin-right:6px;">&#10003;</span><span style="color:#4ade80;">' + s.label + '</span>';
+        setStatus(s.label + ' done', '#4ade80');
+      }, delay + duration);
+    });
+
+    // Complete
+    setTimeout(function() {
+      setStatus('Scan complete — building Citation Brief...', '#4ade80');
+      if (dotEl) dotEl.classList.add('done');
+      if (lblEl) { lblEl.textContent = 'SCAN COMPLETE'; lblEl.style.color = '#4ade80'; }
+      // Remove scan glow after brief delay
+      setTimeout(function() {
+        card.classList.remove('scan-active');
+      }, 2000);
+    }, 18500);
+  }
+
+  function clearScanAnimation(pageId) {
+    var prog = document.getElementById('scanProgress_' + pageId);
+    if (prog) prog.remove();
+    var card = document.querySelector('.cs-page-card[data-page-id="' + pageId + '"]');
+    if (card) card.classList.remove('scan-active');
+  }
+
+  // ═══ HTML UPLOAD — with live scan animation ═══
   var _htmlUploadPageId = null;
   function openHtmlUpload(pageId) {
     _htmlUploadPageId = pageId;
@@ -26080,6 +26256,7 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
     mEl.classList.add('show');
     setTimeout(function(){ if (cEl) cEl.focus(); }, 100);
   }
+
   async function submitHtmlUpload() {
     var pageId = _htmlUploadPageId;
     if (!pageId) return;
@@ -26094,38 +26271,64 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
       if (d.success) {
         var p = (_pages||[]).find(function(x){ return x.id == pageId; });
         if (p) { p.needs_html = false; p.html_source = 'manual'; p.has_html_content = true; }
-        toast('HTML saved — scan starting...', '#4ade80');
+        toast('HTML saved — starting scan...', '#4ade80');
         hideModal('htmlUploadModal');
-        // Server triggers scan via _triggerPageScan — just poll for results
+
+        // Scroll to card + highlight for live viewers
+        var card = document.querySelector('.cs-page-card[data-page-id="' + pageId + '"]');
+        if (card) {
+          card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          card.style.animation = 'scanComplete .6s ease';
+          setTimeout(function() { card.style.animation = ''; }, 600);
+        }
+
+        // Start the visual scan animation
+        startScanAnimation(pageId);
+
+        // Poll for results — show Citation Brief when ready
         var pollCount = 0;
         var htmlPollInterval = setInterval(function() {
           pollCount++;
-          if (pollCount > 24) { clearInterval(htmlPollInterval); loadPages(); return; } // 2 min max
+          if (pollCount > 30) {
+            clearInterval(htmlPollInterval);
+            clearScanAnimation(pageId);
+            loadPages();
+            return;
+          }
           api('/pages/' + pageId).then(function(d2) {
             if (d2.success && d2.page && d2.page.last_checked_at) {
               var t = new Date(d2.page.last_checked_at).getTime();
-              if (Date.now() - t < 300000) { // within 5 min
+              if (Date.now() - t < 300000) {
                 clearInterval(htmlPollInterval);
                 loadPages();
-                // Show Citation Brief if brief_content exists
-                if (d2.page.brief_content) {
-                  var snap = d2.page;
-                  setTimeout(function() {
-                    showCitationBrief({
-                      page_id: pageId, url: d2.page.url,
-                      keyword: d2.page.keyword || d2.page.gsc_keyword || '',
-                      domain: DOMAIN,
-                      position: snap.google_position || null,
-                      aio_cited: !!(snap.ai_google_overview_cited),
-                      perp_cited: !!(snap.ai_perplexity_cited),
-                      bing_cited: !!(snap.ai_bing_cited),
-                      brave_cited: !!(snap.ai_brave_cited),
-                      score: snap.score || snap.graaf_score || null,
-                      brief_content: d2.page.brief_content,
-                      type: 'brief_ready'
-                    });
-                  }, 800);
-                }
+                var snap = d2.page;
+                var briefData = {
+                  page_id: pageId,
+                  url: d2.page.url,
+                  keyword: d2.page.keyword || d2.page.gsc_keyword || '',
+                  domain: DOMAIN,
+                  position: snap.google_position || null,
+                  aio_cited: !!(snap.ai_google_overview_cited),
+                  perp_cited: !!(snap.ai_perplexity_cited),
+                  bing_cited: !!(snap.ai_bing_cited),
+                  brave_cited: !!(snap.ai_brave_cited),
+                  score: snap.score || snap.graaf_score || null,
+                  // GSC data (only shown if enabled)
+                  gsc_clicks: snap.gsc_clicks || null,
+                  gsc_impressions: snap.gsc_impressions || null,
+                  gsc_position: snap.gsc_position || null,
+                  gsc_ctr: snap.gsc_ctr || null,
+                  gsc_keyword: snap.gsc_keyword || null,
+                  recommendations: Array.isArray(snap.recommendations) ? snap.recommendations : [],
+                  brief_content: d2.page.brief_content,
+                  type: 'brief_ready'
+                };
+                // Show brief after scan animation completes (~18s)
+                var remainingAnim = Math.max(1500, 19000 - pollCount * 5000);
+                setTimeout(function() {
+                  clearScanAnimation(pageId);
+                  if (typeof showCitationBrief === 'function') showCitationBrief(briefData);
+                }, remainingAnim);
               }
             }
           }).catch(function(){});
@@ -26401,14 +26604,42 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
       <div class="cb-progress"><div class="cb-progress-bar" id="cbProgressBar"></div></div>
       <!-- Result -->
       <div class="cb-result" id="cbResult">
+        <!-- AI Citation Stats -->
+        <div style="font-size:10px;font-weight:700;color:#7c3aed;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">AI Citation Results</div>
         <div class="cb-stat-row" id="cbStatRow"></div>
+        <!-- GSC Section — optional, collapsed by default -->
+        <div id="cbGscSection" style="display:none;">
+          <div class="cb-gsc-toggle" onclick="toggleGscPanel()" id="cbGscToggle">
+            <span class="cb-gsc-toggle-label">&#128200; Google Search Console Data <span class="badge">Optional</span></span>
+            <span style="font-size:11px;color:#6b7280;">&#9660;</span>
+          </div>
+          <div class="cb-gsc-panel" id="cbGscPanel">
+            <div class="cb-gsc-stat" id="cbGscStats"></div>
+          </div>
+        </div>
+        <!-- Passages -->
         <div id="cbPassages"></div>
-        <div style="font-size:11px;color:#4ade80;margin-top:8px;">&#10003; Brief sent to your email</div>
+        <!-- Copy Section -->
+        <div class="cb-copy-section" id="cbCopySection" style="display:none;">
+          <div class="cb-copy-title">&#128203; Copy Brief — Share with AI or Specialist</div>
+          <textarea class="cb-copy-textarea" id="cbCopyText" readonly></textarea>
+          <div class="cb-copy-row">
+            <button class="cb-copy-btn-action" onclick="copyBriefToClipboard()">Copy to Clipboard</button>
+            <button class="cb-copy-btn-action" onclick="copyBriefMarkdown()" style="border-color:#38bdf8;color:#60a5fa;background:#0c2340;">Copy as Markdown</button>
+          </div>
+        </div>
+        <div style="font-size:11px;color:#4ade80;margin-top:12px;display:flex;align-items:center;gap:6px;">
+          <span style="width:6px;height:6px;border-radius:50%;background:#4ade80;display:inline-block;"></span>
+          Brief saved — next scan scheduled
+        </div>
       </div>
     </div>
     <div class="cb-footer">
       <div class="cb-countdown" id="cbCountdown"></div>
-      <button class="cb-keep-btn" onclick="keepCbOpen()" id="cbKeepBtn" style="display:none;">Keep open</button>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <button class="cb-copy-btn-action" onclick="copyBriefToClipboard()" id="cbQuickCopyBtn" style="display:none;font-size:10px;padding:4px 10px;">&#128203; Copy</button>
+        <button class="cb-keep-btn" onclick="keepCbOpen()" id="cbKeepBtn" style="display:none;">Keep open</button>
+      </div>
     </div>
   </div>
 </div>
