@@ -1473,32 +1473,46 @@ app.get('/api/tracker-client/:token/live-events', async (req, res) => {
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
+// ── Scan queue — max 1 concurrent scan ───────────────────────────────────────
+const _scanQueue = [];
+let _scanRunning = false;
+
+function _processScanQueue() {
+  if (_scanRunning || _scanQueue.length === 0) return;
+  _scanRunning = true;
+  const pageId = _scanQueue.shift();
+  pool.query('SELECT * FROM tracker_pages WHERE id=$1 AND (is_active=TRUE OR is_active IS NULL)', [pageId])
+    .then(function(r) {
+      if (!r.rows.length) { _scanRunning = false; setTimeout(_processScanQueue, 500); return; }
+      const pg = r.rows[0];
+      const pgId = pg.id;
+      const ex = _trackerCheckStatus.get(pgId);
+      if (ex && ex.running) { _scanRunning = false; setTimeout(_processScanQueue, 500); return; }
+      _trackerCheckStatus.set(pgId, { running: true, steps: [], startedAt: new Date().toISOString(), finishedAt: null, url: pg.url });
+      const pgDomain = (pg.url||'').replace(/^https?:\/\//, '').split('/')[0];
+      _sseBroadcast({ type: 'check_start', pageId: pgId, domain: pgDomain, url: pg.url, keyword: pg.keyword || pg.gsc_keyword || '', ts: new Date().toISOString() });
+      console.log('[tracker] _triggerPageScan:', pgId, pg.url);
+      const keys = { serpapiKey: process.env.SERPAPI_KEY || process.env.SERPER_API_KEY, perplexityKey: process.env.PERPLEXITY_API_KEY, braveKey: process.env.BRAVE_SEARCH_API_KEY, youKey: process.env.YOU_API_KEY };
+      setImmediate(async () => {
+        try { await runTrackerCheck(pg, process.env.GEMINI_API_KEY, keys, true); }
+        catch(e) { console.warn('[trigger-scan]', e.message); }
+        finally {
+          const st = _trackerCheckStatus.get(pgId);
+          if (st) { st.running = false; st.finishedAt = new Date().toISOString(); }
+          _sseBroadcast({ type: 'check_done', pageId: pgId, domain: pgDomain, url: pg.url, ts: new Date().toISOString() });
+          _scanRunning = false;
+          setTimeout(_processScanQueue, 2000); // 2s between scans
+        }
+      });
+    }).catch(e => { console.warn('[trigger-scan-query]', e.message); _scanRunning = false; setTimeout(_processScanQueue, 500); });
+}
+
 // ── Helper: trigger a scan for a tracker page by ID ──────────────────────────
 function _triggerPageScan(pageId, delayMs) {
-  delayMs = delayMs || 2000;
+  delayMs = delayMs || 500;
   setTimeout(function() {
-    pool.query('SELECT * FROM tracker_pages WHERE id=$1 AND (is_active=TRUE OR is_active IS NULL)', [pageId])
-      .then(function(r) {
-        if (!r.rows.length) return;
-        const pg = r.rows[0];
-        const pgId = pg.id;
-        const ex = _trackerCheckStatus.get(pgId);
-        if (ex && ex.running) { console.log('[trigger-scan] already running for', pgId); return; }
-        _trackerCheckStatus.set(pgId, { running: true, steps: [], startedAt: new Date().toISOString(), finishedAt: null, url: pg.url });
-        const pgDomain = (pg.url||'').replace(/^https?:\/\//, '').split('/')[0];
-        _sseBroadcast({ type: 'check_start', pageId: pgId, domain: pgDomain, url: pg.url, keyword: pg.keyword || pg.gsc_keyword || '', ts: new Date().toISOString() });
-        console.log('[tracker] _triggerPageScan:', pgId, pg.url);
-        const keys = { serpapiKey: process.env.SERPAPI_KEY || process.env.SERPER_API_KEY, perplexityKey: process.env.PERPLEXITY_API_KEY, braveKey: process.env.BRAVE_SEARCH_API_KEY, youKey: process.env.YOU_API_KEY };
-        setImmediate(async () => {
-          try { await runTrackerCheck(pg, process.env.GEMINI_API_KEY, keys, true); }
-          catch(e) { console.warn('[trigger-scan]', e.message); }
-          finally {
-            const st = _trackerCheckStatus.get(pgId);
-            if (st) { st.running = false; st.finishedAt = new Date().toISOString(); }
-            _sseBroadcast({ type: 'check_done', pageId: pgId, domain: pgDomain, url: pg.url, ts: new Date().toISOString() });
-          }
-        });
-      }).catch(e => console.warn('[trigger-scan-query]', e.message));
+    if (!_scanQueue.includes(pageId)) _scanQueue.push(pageId);
+    _processScanQueue();
   }, delayMs);
 }
 
@@ -1554,8 +1568,6 @@ app.post('/api/tracker-client/:token/pages', async (req, res) => {
         await pool.query(`UPDATE tracker_pages SET ${updates.join(',')} WHERE id=$${i}`, vals).catch(()=>{});
       }
       res.json({ success: true, page_id: pageId, updated: true });
-      // Also trigger scan for existing page — GSC data updated, rescan needed
-      _triggerPageScan(pageId);
       return;
     }
 
