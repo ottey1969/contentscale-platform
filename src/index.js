@@ -1559,17 +1559,30 @@ app.post('/api/tracker-client/:token/pages', async (req, res) => {
     setTimeout(function() {
       pool.query('SELECT * FROM tracker_pages WHERE id=$1 AND (is_active=TRUE OR is_active IS NULL)', [newPageId])
         .then(function(r) {
-          if (r.rows.length) {
-            console.log('[tracker] Auto first-check for new page:', newPageId, r.rows[0].url);
-            const keys = {
-              serpapiKey:    process.env.SERPAPI_KEY || process.env.SERPER_API_KEY,
-              perplexityKey: process.env.PERPLEXITY_API_KEY,
-              braveKey:      process.env.BRAVE_SEARCH_API_KEY,
-              youKey:        process.env.YOU_API_KEY
-            };
-            runTrackerCheck(r.rows[0], process.env.GEMINI_API_KEY, keys, true)
-              .catch(function(e){ console.warn('[tracker] First check failed:', e.message); });
-          }
+          if (!r.rows.length) return;
+          const pg = r.rows[0];
+          const pgId = pg.id;
+          // Block if already running
+          const ex = _trackerCheckStatus.get(pgId);
+          if (ex && ex.running) return;
+          _trackerCheckStatus.set(pgId, { running: true, steps: [], startedAt: new Date().toISOString(), finishedAt: null, url: pg.url });
+          const pgDomain = (pg.url||'').replace(/^https?:\/\//, '').split('/')[0];
+          _sseBroadcast({ type: 'check_start', pageId: pgId, domain: pgDomain, url: pg.url, keyword: pg.keyword || pg.gsc_keyword || '', ts: new Date().toISOString() });
+          console.log('[tracker] Auto first-check for new page:', pgId, pg.url);
+          const keys = {
+            serpapiKey:    process.env.SERPAPI_KEY || process.env.SERPER_API_KEY,
+            perplexityKey: process.env.PERPLEXITY_API_KEY,
+            braveKey:      process.env.BRAVE_SEARCH_API_KEY,
+            youKey:        process.env.YOU_API_KEY
+          };
+          setImmediate(async () => {
+            try { await runTrackerCheck(pg, process.env.GEMINI_API_KEY, keys, true); }
+            catch(e) { console.warn('[tracker] First check failed:', e.message); }
+            finally {
+              const st = _trackerCheckStatus.get(pgId);
+              if (st) { st.running = false; st.finishedAt = new Date().toISOString(); }
+            }
+          });
         }).catch(function(e){ console.warn('[tracker] First check query failed:', e.message); });
     }, 10 * 1000); // 10 seconds — fast first scan
   } catch(e) {
@@ -1715,15 +1728,68 @@ app.post('/api/tracker-client/:token/check/:pageId', async (req, res) => {
     const own = await pool.query('SELECT * FROM tracker_pages WHERE id=$1 AND tracker_client_id=$2', [req.params.pageId, cr.rows[0].id]);
     if (!own.rows.length) return res.status(403).json({ success: false, error: 'Not your page' });
     const page = own.rows[0];
+    const pageId = page.id;
+
+    // Block if already running
+    const existing = _trackerCheckStatus.get(pageId);
+    if (existing && existing.running) return res.json({ success: true, message: 'Already running', page_id: pageId, already_running: true });
+
+    // Initialize status — same as engine route
+    _trackerCheckStatus.set(pageId, { running: true, steps: [], startedAt: new Date().toISOString(), finishedAt: null, url: page.url });
+
+    // Broadcast check start to SSE so client UI updates
+    const domain = (page.url||'').replace(/^https?:\/\//, '').split('/')[0];
+    _sseBroadcast({ type: 'check_start', pageId, domain, url: page.url, keyword: page.keyword || page.gsc_keyword || '', ts: new Date().toISOString() });
+
+    res.json({ success: true, message: 'Check started', page_id: pageId });
+
     const checkKeys = {
       serpapiKey:    process.env.SERPAPI_KEY || process.env.SERPER_API_KEY,
       perplexityKey: process.env.PERPLEXITY_API_KEY,
       braveKey:      process.env.BRAVE_SEARCH_API_KEY,
       youKey:        process.env.YOU_API_KEY
     };
-    runTrackerCheck(page, process.env.GEMINI_API_KEY, checkKeys, true).catch(e => console.warn('[client-check]', e.message));
-    res.json({ success: true, message: 'Check started' });
-  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+
+    setImmediate(async () => {
+      try {
+        await runTrackerCheck(page, process.env.GEMINI_API_KEY, checkKeys, true);
+      } catch(e) {
+        console.warn('[client-check]', e.message);
+      } finally {
+        const st = _trackerCheckStatus.get(pageId);
+        if (st) { st.running = false; st.finishedAt = new Date().toISOString(); }
+        // Broadcast completion
+        try {
+          const snap2 = await pool.query(
+            `SELECT s.*, p.url, p.keyword, p.gsc_keyword, p.brief_content
+             FROM tracker_snapshots s JOIN tracker_pages p ON p.id=s.page_id
+             WHERE s.page_id=$1 ORDER BY s.checked_at DESC LIMIT 1`,
+            [pageId]
+          );
+          if (snap2.rows.length) {
+            const s = snap2.rows[0];
+            _sseBroadcast({
+              type: 'check_done',
+              pageId,
+              domain,
+              url: s.url,
+              keyword: s.keyword || s.gsc_keyword || '',
+              position: s.google_position,
+              aio_cited: s.ai_google_overview_cited,
+              perp_cited: s.ai_perplexity_cited,
+              bing_cited: s.ai_bing_cited,
+              brave_cited: s.ai_brave_cited,
+              score: s.score,
+              ts: new Date().toISOString()
+            });
+          }
+        } catch(e2) { console.warn('[client-check-done]', e2.message); }
+      }
+    });
+  } catch(e) {
+    console.error('[client-check]', e.message);
+    res.status(500).json({ success: false, error: e.message });
+  }
 });
 
 
