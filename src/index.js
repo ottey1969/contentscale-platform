@@ -1267,21 +1267,26 @@ app.patch('/api/tracker-client/:token/pages/:pageId/html', async (req, res) => {
     const own = await pool.query('SELECT id FROM tracker_pages WHERE id=$1 AND tracker_client_id=$2', [req.params.pageId, cr.rows[0].id]);
     if (!own.rows.length) return res.status(403).json({ success: false, error: 'Not your page' });
     const { html_content, keyword } = req.body;
-    const fields = ['html_source=$1', 'needs_html=FALSE'];
+
+    // Ensure columns exist
+    await pool.query('ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS html_pasted_at TIMESTAMPTZ').catch(()=>{});
+    await pool.query('ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS html_source TEXT').catch(()=>{});
+    await pool.query('ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS needs_html BOOLEAN DEFAULT FALSE').catch(()=>{});
+
+    // Build update
+    const fields = ['html_source=$1', 'needs_html=FALSE', 'html_pasted_at=NOW()'];
     const vals = ['manual'];
     if (html_content) { fields.push(`html_content=$${vals.length+1}`); vals.push(html_content.substring(0,500000)); }
     if (keyword) { fields.push(`keyword=$${vals.length+1}`); vals.push(keyword.trim()); }
     vals.push(req.params.pageId);
-    try {
-      await pool.query(`UPDATE tracker_pages SET ${fields.join(',')},html_pasted_at=NOW() WHERE id=$${vals.length}`, vals);
-    } catch(e) {
-      // html_pasted_at column may not exist yet — retry without it
-      await pool.query(`UPDATE tracker_pages SET ${fields.join(',')} WHERE id=$${vals.length}`, vals);
-    }
+    await pool.query(`UPDATE tracker_pages SET ${fields.join(',')} WHERE id=$${vals.length}`, vals);
+
     res.json({ success: true });
-    // Trigger scan after HTML paste — this is what starts the GRAAF scan
     _triggerPageScan(parseInt(req.params.pageId), 1000);
-  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+  } catch(e) {
+    console.error('[html-patch]', e.message);
+    res.status(500).json({ success: false, error: e.message });
+  }
 });
 
 // GET /api/tracker-client/:token/pages/:pageId — get single page with latest snapshot
@@ -24950,17 +24955,16 @@ function renderPages() {
     var isFirstHtml = !p.brief_check_count || p.brief_check_count == 0;
     var hasBeenScanned = !!p.last_checked || !!p.google_position || p.ai_google_overview_cited !== undefined || p.ai_perplexity_cited !== undefined;
     var hasBrief = !!(p.brief_content) && !isDone;
-    // hasHtml = true means HTML has been pasted at least once
+    // hasHtml = true means HTML has actually been pasted or scanned
     var hasHtml = (p.brief_check_count > 0) || (p.graaf_score > 0)
       || !!p.html_pasted_at
       || (p.html_source === 'manual')
-      || (p.has_html_content === true || p.has_html_content === 't')
-      || (p.needs_html === false || p.needs_html === 'f' || p.needs_html === 'false');
+      || (p.has_html_content === true || p.has_html_content === 't');
 
-    // htmlNeeded: pulse the button when:
-    // A) needs_html explicitly set to TRUE (after Done) OR
-    // B) brand new page — never had HTML (no brief, no scan, no html_content)
+    // explicitly needs HTML = Done was pressed (needs_html set to TRUE by server)
     var explicitlyNeeds = (p.needs_html === true || p.needs_html === 't' || p.needs_html === 'true' || p.needs_html === 1);
+
+    // Button pulses orange when: explicitly needs new HTML OR never had HTML at all
     var htmlNeeded = explicitlyNeeds || (!hasHtml && !isDone);
     // No flashing banner — just a button state
     var needsHtmlBanner = '';
@@ -25433,7 +25437,7 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
           _clientPollLastTs = data.ts;
           if (data.events && data.events.length) {
             data.events.forEach(function(ev) {
-              if (ev.type === 'brief_ready' && ev.domain === DOMAIN) { showCitationBrief(ev); return; }
+              if (ev.type === 'brief_ready' && (ev.domain === DOMAIN || (ev.url && ev.url.includes(DOMAIN)))) { showCitationBrief(ev); return; }
               if (ev.type === 'check_done') {
                 // Reload pages so card updates with new scan data
                 setTimeout(loadPages, 500);
@@ -33313,9 +33317,17 @@ Zero generic advice. Every action must be so specific the user can implement it 
   const domain2 = pageUrl.replace(/^https?:\/\//, '').split('/')[0];
   const recs2 = snapshot.recommendations;
 
-  if (geminiKey && Array.isArray(recs2) && recs2.length) {
+  if (geminiKey) {
     try {
-      const pageRow2 = await pool.query('SELECT brief_content, brief_check_count FROM tracker_pages WHERE id=$1', [page.id]);
+      const pageRow2 = await pool.query(
+        `SELECT brief_content,
+                COALESCE(brief_check_count, 0) as brief_check_count
+         FROM tracker_pages WHERE id=$1`, [page.id]
+      ).catch(async () => {
+        // brief_check_count column missing — add it and retry
+        await pool.query('ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS brief_check_count INTEGER DEFAULT 0').catch(()=>{});
+        return pool.query('SELECT brief_content, 0 as brief_check_count FROM tracker_pages WHERE id=$1', [page.id]);
+      });
       const existingBrief2 = pageRow2.rows[0]?.brief_content;
       const checkCount2 = (pageRow2.rows[0]?.brief_check_count || 0) + 1;
       const isFirst2 = !existingBrief2;
@@ -33323,9 +33335,12 @@ Zero generic advice. Every action must be so specific the user can implement it 
         ? `\nGSC: ${page.gsc_clicks||0} clicks, ${page.gsc_impressions||0} impressions, pos ${page.gsc_position||'?'}, top kw: ${page.gsc_keyword||kw2}`
         : '';
 
+      // Use existing recs or generate basic ones from scan status
+      const recsToUse = (Array.isArray(recs2) && recs2.length) ? recs2 : [];
+
       let brief2 = null;
-      if (isFirst2) {
-        brief2 = { items: recs2, position: pos2, aio: aio2, perp: perp2, bing_cited: bing2, brave_cited: brave2, score: score2,
+      if (isFirst2 || !recsToUse.length) {
+        brief2 = { items: recsToUse, position: pos2, aio: aio2, perp: perp2, bing_cited: bing2, brave_cited: brave2, score: score2,
           gsc_clicks: page.gsc_clicks, gsc_impressions: page.gsc_impressions, gsc_position: page.gsc_position, gsc_keyword: page.gsc_keyword };
       } else {
         try {
@@ -33333,7 +33348,7 @@ Zero generic advice. Every action must be so specific the user can implement it 
 Status: pos=${pos2||'unranked'}, AIO=${aio2}, Perplexity=${perp2}, Copilot=${bing2}, Claude=${brave2}, GRAAF=${score2||'?'}/100${gscCtx}
 Goal: rank #1 and be cited in all AI systems.
 PREVIOUS: ${JSON.stringify((existingBrief2?.items||[]).slice(0,3))}
-NEW: ${JSON.stringify(recs2.slice(0,3))}
+NEW: ${JSON.stringify(recsToUse.slice(0,3))}
 Return ONLY JSON array (max 5 items): [{"title":"max 6 words","priority":"high"|"medium"|"low","action":"exact 30+ word instruction","expected_impact":"ranking/AI impact"}]`;
           const gResp2 = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey}`, {
             method: 'POST', headers: {'Content-Type':'application/json'},
@@ -33348,15 +33363,20 @@ Return ONLY JSON array (max 5 items): [{"title":"max 6 words","priority":"high"|
           }
         } catch(mergeErr2) {
           console.warn('[brief-merge2]', mergeErr2.message);
-          brief2 = { items: recs2, position: pos2, aio: aio2, perp: perp2, bing_cited: bing2, brave_cited: brave2, score: score2 };
+          brief2 = { items: recsToUse, position: pos2, aio: aio2, perp: perp2, bing_cited: bing2, brave_cited: brave2, score: score2 };
         }
       }
 
       if (brief2) {
         await pool.query(
-          'UPDATE tracker_pages SET brief_content=$1, brief_started_at=COALESCE(brief_started_at,NOW()), brief_check_count=$2 WHERE id=$3',
-          [JSON.stringify(brief2), checkCount2, page.id]
+          'UPDATE tracker_pages SET brief_content=$1, brief_started_at=COALESCE(brief_started_at,NOW()) WHERE id=$2',
+          [JSON.stringify(brief2), page.id]
         ).catch(e => console.warn('[brief-save2]', e.message));
+        // Try to update brief_check_count separately — column may not exist yet
+        await pool.query(
+          'UPDATE tracker_pages SET brief_check_count=COALESCE(brief_check_count,0)+1 WHERE id=$1',
+          [page.id]
+        ).catch(()=>{});
 
         // Broadcast brief_ready so client TV modal fires
         _sseBroadcast({
