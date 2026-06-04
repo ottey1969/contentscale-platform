@@ -24482,7 +24482,7 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
 .cb-progress-bar { height:100%; background:linear-gradient(90deg,#7c3aed,#4ade80); border-radius:99px; width:0%; transition:width .5s ease; }
 .cb-result { display:none; }
 .cb-result.show { display:block; }
-.cb-passage { background:#0a0a12; border:1px solid #1f2937; border-left:3px solid #7c3aed; border-radius:0 8px 8px 0; padding:14px 16px; margin-bottom:10px; font-size:12px; color:#9ca3af; line-height:1.7; font-family:Verdana,sans-serif; }
+.cb-passage { background:#0a0a12; border:1px solid #1f2937; border-left:3px solid #7c3aed; border-radius:0 8px 8px 0; padding:14px 16px; margin-bottom:10px; font-size:12px; color:#9ca3af; line-height:1.7; font-family:Verdana,sans-serif; user-select:text; -webkit-user-select:text; cursor:text; }
 .cb-stat-row { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px; }
 .cb-stat { background:#0a0a12; border:1px solid #1f2937; border-radius:8px; padding:8px 12px; text-align:center; flex:1; min-width:80px; }
 .cb-stat .v { font-size:16px; font-weight:900; }
@@ -25191,7 +25191,8 @@ function renderPages() {
       + '</div>'
       + '</div>'
       + '<div style="display:flex;gap:5px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;align-items:flex-start;">'
-      + '<button onclick="openHtmlUpload(' + p.id + ')" style="background:none;border:1px solid ' + (htmlNeeded ? '#f59e0b' : '#374151') + ';border-radius:5px;color:' + (htmlNeeded ? '#fbbf24' : '#4b5563') + ';cursor:pointer;font-size:11px;padding:3px 10px;font-weight:' + (htmlNeeded ? '700' : '400') + ';' + (htmlNeeded ? 'animation:htmlNeeded 1.2s ease-in-out infinite;' : '') + '" title="' + (htmlNeeded ? 'Add HTML to start GRAAF scan' : 'Update HTML') + '">📋 ' + (htmlNeeded ? 'Add HTML' : 'HTML') + '</button>'
+      + (_lastBriefData[p.id] ? '<button onclick="viewLastBrief(' + p.id + ')" style="background:none;border:1px solid #7c3aed;border-radius:5px;color:#a78bfa;cursor:pointer;font-size:11px;padding:3px 10px;font-weight:600;animation:soDotPulse 2s ease-in-out infinite;" title="View the last Citation Brief">📄 Brief</button>' : '')
+      + '<button onclick="openHtmlUpload(' + p.id + ')" style="background:none;border:1px solid ' + (htmlNeeded ? '#f59e0b' : '#374151') + ';border-radius:5px;color:' + (htmlNeeded ? '#fbbf24' : '#4b5563') + ';cursor:pointer;font-size:11px;padding:3px 10px;font-weight:' + (htmlNeeded ? '700' : '400') + ';' + (htmlNeeded ? 'animation:htmlNeeded 1.2s ease-in-out infinite;' : '') + '" title="' + (htmlNeeded ? 'Paste updated HTML for next scan' : 'Update HTML') + '">📋 ' + (htmlNeeded ? 'Add HTML' : 'HTML') + '</button>'
       + (lastChecked ? '<button onclick="checkPage(' + p.id + ')" style="background:none;border:1px solid #374151;border-radius:5px;color:#6b7280;cursor:pointer;font-size:11px;padding:3px 8px;" title="Rescan now">↻</button>' : '')
       + '<button onclick="deletePage(' + p.id + ')" style="background:none;border:1px solid #374151;border-radius:5px;color:#374151;cursor:pointer;font-size:12px;padding:4px 8px;" title="Delete page">🗑</button>'
       + '</div>'
@@ -25444,8 +25445,7 @@ async function markDone(pageId, btn, currentDone) {
 
   async function checkPage(pageId) {
     if (_briefIsOpen) {
-      _pendingScanAfterBrief = pageId;
-      toast('Scan queued — will start after brief closes', '#60a5fa');
+      toast('Finish the current brief first — then scan this page', '#f59e0b');
       return;
     }
     var p = (_pages||[]).find(function(x){ return x.id == pageId; });
@@ -25568,11 +25568,12 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
 
   // -- Citation Brief Card --------------------------------------------------
   var _cbTimer = null;
-  var _cbSecondsLeft = 60;
+  var _cbSecondsLeft = 30;
   var _cbKept = false;
   var _cbPageBriefs = {}; // pageId -> [{brief data}]
+  var _lastBriefData = {}; // pageId -> last brief data (for "View Last Brief")
   var _briefIsOpen = false; // blocks new scans while brief is showing
-  var _pendingScanAfterBrief = null; // pageId to scan after brief closes
+  var _currentBriefPageId = null; // pageId of currently showing brief
 
   function showCitationBrief(data) {
     var card = document.getElementById('cbCard');
@@ -25581,7 +25582,10 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
 
     // Reset
     _cbKept = false;
-    _cbSecondsLeft = 60;
+    _cbSecondsLeft = 30;
+    _currentBriefPageId = data.page_id || null;
+    // Store brief data so "View Last Brief" button works
+    if (data.page_id) _lastBriefData[data.page_id] = data;
     document.getElementById('cbUrl').textContent = data.url || '';
     document.getElementById('cbKw').textContent = data.keyword ? 'Keyword: ' + data.keyword : '';
     document.getElementById('cbProgressBar').style.width = '0%';
@@ -25754,13 +25758,13 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
         updateBriefButtons();
       }
 
-      _cbSecondsLeft = 60;
-      document.getElementById('cbCountdown').textContent = 'Closing in 60s...';
+      _cbSecondsLeft = 30;
+      document.getElementById('cbCountdown').textContent = 'Closing in 30s — click Keep open to stay';
       if (_cbTimer) clearInterval(_cbTimer);
       _cbTimer = setInterval(function() {
         if (_cbKept) { clearInterval(_cbTimer); document.getElementById('cbCountdown').textContent = ''; return; }
         _cbSecondsLeft--;
-        document.getElementById('cbCountdown').textContent = 'Closing in ' + _cbSecondsLeft + 's...';
+        document.getElementById('cbCountdown').textContent = 'Closing in ' + _cbSecondsLeft + 's — click Keep open to stay';
         if (_cbSecondsLeft <= 0) {
           clearInterval(_cbTimer);
           hideCitationBrief(data.page_id);
@@ -25773,7 +25777,7 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
   function keepCbOpen() {
     _cbKept = true;
     clearInterval(_cbTimer);
-    document.getElementById('cbCountdown').textContent = '';
+    document.getElementById('cbCountdown').textContent = 'Brief stays open — close when done';
     document.getElementById('cbKeepBtn').style.display = 'none';
   }
 
@@ -25781,16 +25785,24 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
     var card = document.getElementById('cbCard');
     if (card) { card.classList.remove('show'); card.classList.add('hide'); }
     _briefIsOpen = false;
-    // If a scan was queued while brief was open — start it now
-    var pendingScan = _pendingScanAfterBrief;
-    _pendingScanAfterBrief = null;
+    var closedPageId = pageId || _currentBriefPageId;
+    _currentBriefPageId = null;
+    // Mark page as needing fresh HTML so button blinks orange
+    if (closedPageId) {
+      var p = (_pages||[]).find(function(x){ return x.id == closedPageId; });
+      if (p) p.needs_html = true;
+    }
     setTimeout(function() {
       loadPages();
-      if (pageId) { setTimeout(function() { showBriefNewDot(pageId); }, 300); }
-      if (pendingScan) {
-        setTimeout(function() { checkPage(pendingScan); }, 800);
-      }
+      if (closedPageId) { setTimeout(function() { showBriefNewDot(closedPageId); }, 300); }
     }, 400);
+  }
+
+  // Re-open last brief for a page ("View Last Brief" button)
+  function viewLastBrief(pageId) {
+    var data = _lastBriefData[pageId];
+    if (!data) { toast('No brief available yet — run a scan first', '#f59e0b'); return; }
+    showCitationBrief(data);
   }
 
   // Toggle GSC panel in brief
@@ -35331,4 +35343,3 @@ app.post('/boost/:id/engage', asyncHandler(async (req, res) => {
   );
   res.json({ success: true });
 }));
-
