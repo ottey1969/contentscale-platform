@@ -24482,7 +24482,7 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
 .cb-progress-bar { height:100%; background:linear-gradient(90deg,#7c3aed,#4ade80); border-radius:99px; width:0%; transition:width .5s ease; }
 .cb-result { display:none; }
 .cb-result.show { display:block; }
-.cb-passage { background:#0a0a12; border:1px solid #1f2937; border-left:3px solid #7c3aed; border-radius:0 8px 8px 0; padding:14px 16px; margin-bottom:10px; font-size:12px; color:#9ca3af; line-height:1.7; font-family:Verdana,sans-serif; user-select:text; -webkit-user-select:text; cursor:text; }
+.cb-passage { background:#0a0a12; border:1px solid #1f2937; border-left:3px solid #7c3aed; border-radius:0 8px 8px 0; padding:14px 16px; margin-bottom:10px; font-size:12px; color:#9ca3af; line-height:1.7; font-family:Verdana,sans-serif; }
 .cb-stat-row { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px; }
 .cb-stat { background:#0a0a12; border:1px solid #1f2937; border-radius:8px; padding:8px 12px; text-align:center; flex:1; min-width:80px; }
 .cb-stat .v { font-size:16px; font-weight:900; }
@@ -24531,9 +24531,7 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
 .cs-cs-badge.purple{background:#2e1065;color:#a78bfa;border:1px solid #4c1d95;}
 .cs-cs-badge.yellow{background:#2d1f00;color:#fbbf24;border:1px solid #78350f;}
 
-/* ═══════════════════════════════════════════════════════════════════════════
-   CINEMATIC SCAN OVERLAY — Full viewport, live demo experience
-   ═══════════════════════════════════════════════════════════════════════════ */
+/* ═══ CINEMATIC SCAN OVERLAY ═══ */
 @keyframes soFadeIn{from{opacity:0}to{opacity:1}}
 @keyframes soFadeOut{from{opacity:1}to{opacity:0}}
 @keyframes soGlow{0%,100%{box-shadow:0 0 20px rgba(124,58,237,.15),inset 0 0 20px rgba(124,58,237,.02)}50%{box-shadow:0 0 60px rgba(124,58,237,.35),inset 0 0 40px rgba(124,58,237,.08)}}
@@ -24546,92 +24544,51 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
 @keyframes soShimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
 @keyframes soDotPulse{0%,100%{box-shadow:0 0 0 0 rgba(124,58,237,.4)}50%{box-shadow:0 0 0 8px rgba(124,58,237,0)}}
 @keyframes soComplete{0%{transform:scale(1)}50%{transform:scale(1.02)}100%{transform:scale(1)}}
-@keyframes soUrlGlow{0%,100%{border-color:rgba(124,58,237,.3)}50%{border-color:rgba(124,58,237,.7)}}
 
 .so-overlay{position:fixed;inset:0;z-index:20000;background:rgba(6,6,14,.95);backdrop-filter:blur(12px);display:none;align-items:center;justify-content:center;animation:soFadeIn .5s ease}
 .so-overlay.show{display:flex}
 .so-overlay.hiding{animation:soFadeOut .4s ease forwards}
 .so-box{position:relative;width:min(560px,92vw);background:#0d1117;border:1px solid #1f2937;border-radius:20px;padding:clamp(24px,4vw,40px);overflow:hidden;animation:soGlow 3s ease-in-out infinite}
 .so-box::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,#7c3aed,#a78bfa,#4ade80,transparent);background-size:200% 100%;animation:soShimmer 3s linear infinite;z-index:5}
-.so-box::after{content:'';position:absolute;inset:0;border-radius:20px;border:1px solid transparent;animation:soUrlGlow 2s ease-in-out infinite;pointer-events:none;z-index:4}
-
-.so-ring-wrap{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:280px;height:280px;pointer-events:none;z-index:0;opacity:.15}
+.so-ring-wrap{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:280px;height:280px;pointer-events:none;z-index:0;opacity:.12}
 .so-ring{position:absolute;inset:0;border:1px solid rgba(124,58,237,.3);border-radius:50%}
 .so-ring:nth-child(1){animation:soRing 8s linear infinite}
 .so-ring:nth-child(2){inset:20px;border-color:rgba(124,58,237,.2);animation:soRing 6s linear infinite reverse}
 .so-ring:nth-child(3){inset:40px;border-color:rgba(167,139,250,.15);animation:soRing 4s linear infinite}
 .so-ring-dot{position:absolute;top:-3px;left:50%;width:6px;height:6px;background:#7c3aed;border-radius:50%;transform:translateX(-50%);box-shadow:0 0 8px rgba(124,58,237,.6)}
-
 .so-header{display:flex;align-items:center;gap:10px;margin-bottom:6px;position:relative;z-index:2}
 .so-header-dot{width:10px;height:10px;border-radius:50%;background:#7c3aed;display:inline-block;animation:soDotPulse 1.5s ease-in-out infinite}
 .so-header-dot.done{background:#4ade80;animation:none}
 .so-header-title{font-size:11px;font-weight:800;color:#7c3aed;text-transform:uppercase;letter-spacing:.14em}
 .so-header-title.done{color:#4ade80}
-
-.so-url{font-size:11px;color:#475569;font-family:monospace;text-align:center;margin-bottom:20px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;position:relative;z-index:2;padding:6px 12px;background:rgba(124,58,237,.05);border:1px solid rgba(124,58,237,.15);border-radius:8px;animation:soUrlGlow 2s ease-in-out infinite}
-
-.so-progress-wrap{height:4px;background:#1f2937;border-radius:99px;margin-bottom:24px;overflow:hidden;position:relative;z-index:2}
-.so-progress-bar{height:100%;background:linear-gradient(90deg,#7c3aed,#a78bfa,#4ade80);border-radius:99px;width:0%;transition:width .6s cubic-bezier(.16,1,.3,1)}
-
+.so-url{font-size:11px;color:#475569;font-family:monospace;text-align:center;margin-bottom:20px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;position:relative;z-index:2;padding:6px 12px;background:rgba(124,58,237,.05);border:1px solid rgba(124,58,237,.15);border-radius:8px}
+.so-progress-wrap{height:4px;background:#1f2937;border-radius:2px;margin-bottom:24px;overflow:hidden;position:relative;z-index:2}
+.so-progress-bar{height:100%;background:linear-gradient(90deg,#7c3aed,#a78bfa,#4ade80);border-radius:2px;width:0%;transition:width .6s cubic-bezier(.16,1,.3,1)}
 .so-steps{display:flex;flex-direction:column;gap:6px;position:relative;z-index:2;margin-bottom:16px}
 .so-step{display:flex;align-items:center;gap:12px;font-size:12px;padding:6px 0;transition:all .3s ease;opacity:.4}
 .so-step.active{opacity:1}
 .so-step.done{opacity:1}
-.so-step-icon{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0;transition:all .3s ease}
+.so-step-icon{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0;transition:all .3s ease}
 .so-step-icon.pending{background:#1f2937;color:#4b5563;border:1px solid #374151}
 .so-step-icon.running{background:linear-gradient(135deg,#1e1b4b,#2e1065);color:#a78bfa;border:1px solid #7c3aed;animation:soDotPulse 1.2s ease-in-out infinite}
 .so-step-icon.done{background:linear-gradient(135deg,#052e16,#14532d);color:#4ade80;border:1px solid #16a34a}
 .so-step-label{flex:1;transition:color .3s ease}
 .so-step.active .so-step-label{color:#e5e7eb;font-weight:600}
 .so-step.done .so-step-label{color:#4ade80}
-
 .so-status{text-align:center;font-size:11px;color:#6b7280;padding-top:12px;border-top:1px solid #1f2937;position:relative;z-index:2;letter-spacing:.02em}
 .so-status.complete{color:#4ade80;font-weight:700}
 
-/* ═══════════════════════════════════════════════════════════════════════════
-   ENHANCED PAGE CARDS — Animated entrance, glow effects
-   ═══════════════════════════════════════════════════════════════════════════ */
-@keyframes cardEnter{0%{opacity:0;transform:translateY(20px) scale(.98)}100%{opacity:1;transform:translateY(0) scale(1)}}
-@keyframes cardGlow{0%,100%{border-color:#1f2937}50%{border-color:#2d1f4e}}
-@keyframes htmlBtnBlink{0%,100%{border-color:#f59e0b;color:#fbbf24;box-shadow:0 0 6px rgba(245,158,11,.15)}50%{border-color:#fbbf24;color:#fcd34d;box-shadow:0 0 18px rgba(245,158,11,.4)}}
-@keyframes scanBtnPulse{0%,100%{box-shadow:0 0 0 0 rgba(124,58,237,.3)}50%{box-shadow:0 0 0 6px rgba(124,58,237,0)}}
-
-.cs-page-card{animation:cardEnter .4s ease both}
-.cs-page-card:nth-child(1){animation-delay:0s}
-.cs-page-card:nth-child(2){animation-delay:.05s}
-.cs-page-card:nth-child(3){animation-delay:.1s}
-.cs-page-card:nth-child(4){animation-delay:.15s}
-.cs-page-card:nth-child(5){animation-delay:.2s}
-.cs-page-card:nth-child(6){animation-delay:.25s}
-.cs-page-card:nth-child(7){animation-delay:.3s}
-.cs-page-card:nth-child(8){animation-delay:.35s}
-.cs-page-card:nth-child(9){animation-delay:.4s}
-.cs-page-card:nth-child(10){animation-delay:.45s}
-
-.html-needed-btn{border-color:#f59e0b !important;color:#fbbf24 !important;font-weight:700 !important;animation:htmlBtnBlink 1.8s ease-in-out infinite !important;position:relative;overflow:hidden}
-.html-needed-btn::after{content:'';position:absolute;top:0;left:-100%;width:40%;height:100%;background:linear-gradient(90deg,transparent,rgba(245,158,11,.12),transparent);animation:soShimmer 2.5s ease-in-out infinite}
-
-.scan-running-btn{border-color:#7c3aed !important;color:#a78bfa !important;animation:scanBtnPulse 1.5s ease-in-out infinite !important}
-
-/* ═══════════════════════════════════════════════════════════════════════════
-   ENHANCED CITATION BRIEF — Glassmorphism, animated counters
-   ═══════════════════════════════════════════════════════════════════════════ */
-@keyframes briefSlideUp{0%{opacity:0;transform:translateY(40px)}100%{opacity:1;transform:translateY(0)}}
-@keyframes statCounter{0%{opacity:0;transform:scale(.5)}100%{opacity:1;transform:scale(1)}}
-@keyframes gscToggleOpen{0%{opacity:0;max-height:0}100%{opacity:1;max-height:300px}}
-
-.cb-stat-row .cb-stat{animation:statCounter .4s ease both}
-.cb-passage{animation:briefSlideUp .5s ease both;border-left-width:3px !important}
-
+/* GSC toggle in brief */
 .cb-gsc-toggle{background:#0a0a12;border:1px solid #1f2937;border-radius:10px;padding:12px 16px;margin-top:12px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;transition:all .2s}
 .cb-gsc-toggle:hover{border-color:#374151;background:#111827}
 .cb-gsc-toggle-label{font-size:11px;font-weight:700;color:#6b7280;display:flex;align-items:center;gap:8px}
 .cb-gsc-toggle-label .badge{font-size:9px;background:#1e1b4b;color:#a78bfa;border:1px solid #4c1d95;border-radius:4px;padding:2px 8px;font-weight:700}
 .cb-gsc-panel{display:none;overflow:hidden}
-.cb-gsc-panel.open{display:block;animation:gscToggleOpen .4s ease}
+.cb-gsc-panel.open{display:block;animation:soStepIn .4s ease}
 .cb-gsc-stat{display:flex;gap:14px;flex-wrap:wrap;font-size:11px;padding:12px 16px;background:#0a0a12;border:1px solid #1f2937;border-top:none;border-radius:0 0 10px 10px}
 .cb-gsc-stat span{display:flex;align-items:center;gap:4px}
 
+/* Copy section */
 .cb-copy-section{background:#0a0a12;border:1px solid #1f2937;border-radius:10px;padding:14px 16px;margin-top:14px}
 .cb-copy-title{font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;display:flex;align-items:center;gap:6px}
 .cb-copy-textarea{width:100%;min-height:70px;background:#0d1117;border:1px solid #374151;border-radius:8px;padding:10px 12px;color:#9ca3af;font-size:11px;font-family:monospace;resize:vertical;line-height:1.6;outline:none}
@@ -24639,49 +24596,21 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
 .cb-copy-row{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
 .cb-copy-btn-action{background:linear-gradient(135deg,#1e1b4b,#2e1065);border:1px solid #7c3aed;border-radius:8px;color:#a78bfa;font-size:11px;font-weight:700;padding:7px 16px;cursor:pointer;font-family:Verdana,sans-serif;transition:all .15s}
 .cb-copy-btn-action:hover{background:#3b1f70;color:#e9d5ff;transform:translateY(-1px);box-shadow:0 4px 12px rgba(124,58,237,.2)}
-.cb-copy-btn-action:active{transform:translateY(0)}
 
-/* ═══════════════════════════════════════════════════════════════════════════
-   WELCOME SCREEN — Professional, animated
-   ═══════════════════════════════════════════════════════════════════════════ */
-@keyframes welcomeCardIn{0%{opacity:0;transform:translateY(40px) scale(.97)}100%{opacity:1;transform:translateY(0) scale(1)}}
-@keyframes welcomeGlow{0%,100%{box-shadow:0 0 40px rgba(124,58,237,.1)}50%{box-shadow:0 0 80px rgba(124,58,237,.25)}}
-@keyframes welcomeStepIn{0%{opacity:0;transform:translateX(-20px)}100%{opacity:1;transform:translateX(0)}}
-.welcome-card{animation:welcomeCardIn .7s cubic-bezier(.16,1,.3,1),welcomeGlow 4s ease-in-out infinite}
-.welcome-step{display:flex;align-items:flex-start;gap:12px;margin-bottom:12px;padding:10px 14px;background:rgba(124,58,237,.04);border-radius:10px;border-left:3px solid #7c3aed;animation:welcomeStepIn .4s ease both;transition:all .2s}
-.welcome-step:hover{background:rgba(124,58,237,.08);transform:translateX(4px)}
-.welcome-step-num{width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 2px 8px rgba(124,58,237,.3)}
-.welcome-step-text{font-size:12px;color:#cbd5e1;line-height:1.6}
-.welcome-step-text strong{color:#e5e7eb}
+/* Selectable passages */
+.cb-passage{background:#0a0a12;border:1px solid #1f2937;border-left:3px solid #7c3aed;border-radius:0 8px 8px 0;padding:14px 16px;margin-bottom:10px;font-size:12px;color:#9ca3af;line-height:1.7;font-family:Verdana,sans-serif;user-select:text;-webkit-user-select:text;cursor:text}
 
-/* ═══════════════════════════════════════════════════════════════════════════
-   MOBILE RESPONSIVE
-   ═══════════════════════════════════════════════════════════════════════════ */
+/* Mobile responsive */
 @media(max-width:768px){
-  .cs-stats{grid-template-columns:repeat(4,1fr) !important}
-  .cs-stats .cs-stat:nth-child(5),.cs-stats .cs-stat:nth-child(6),.cs-stats .cs-stat:nth-child(7){display:none}
-  .cs-container{padding:12px !important}
-  .cs-btn{font-size:11px;padding:6px 10px}
   .so-box{width:96vw;padding:20px;border-radius:16px}
   .so-ring-wrap{width:200px;height:200px}
-  .so-step{font-size:11px}
-  .so-step-icon{width:22px;height:22px;font-size:10px}
   .cb-card{max-width:100%;border-radius:12px 12px 0 0;margin:0}
-  .cb-overlay{padding:0 !important;align-items:flex-end !important}
-  .wl-card{max-width:100%;border-radius:16px;max-height:95vh}
-  .wl-top{padding:24px 20px 20px}
-  .wl-body{padding:20px}
-  .wl-features{grid-template-columns:1fr !important}
-  .cb-stat{min-width:60px;padding:6px 8px}
-  .cb-stat .v{font-size:14px}
+  .cb-overlay{padding:0!important;align-items:flex-end!important}
 }
 @media(max-width:480px){
-  .cs-stats{grid-template-columns:repeat(3,1fr) !important}
-  .cs-logo{font-size:13px}
-  .cs-domain{font-size:10px;padding:3px 8px}
   .so-box{padding:16px}
-  .so-header-title{font-size:10px;letter-spacing:.1em}
-  .so-url{font-size:10px}
+  .so-step{font-size:11px}
+  .so-step-icon{width:22px;height:22px;font-size:10px}
   .cb-copy-row{flex-direction:column}
   .cb-copy-btn-action{width:100%;text-align:center}
 }
@@ -24762,37 +24691,31 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
 
 </div>
 
-<!-- ═══ CINEMATIC SCAN OVERLAY ═══ -->
+<!-- Cinematic Scan Overlay -->
 <div class="so-overlay" id="soOverlay">
   <div class="so-box">
-    <!-- Background rings -->
     <div class="so-ring-wrap">
       <div class="so-ring"><div class="so-ring-dot"></div></div>
       <div class="so-ring"><div class="so-ring-dot" style="background:#a78bfa;"></div></div>
       <div class="so-ring"><div class="so-ring-dot" style="background:#4ade80;"></div></div>
     </div>
-    <!-- Header -->
     <div class="so-header">
       <span class="so-header-dot" id="soHeaderDot"></span>
       <span class="so-header-title" id="soHeaderTitle">Live Scan in Progress</span>
     </div>
-    <!-- URL -->
     <div class="so-url" id="soUrl"></div>
-    <!-- Progress -->
     <div class="so-progress-wrap">
       <div class="so-progress-bar" id="soProgressBar"></div>
     </div>
-    <!-- Steps -->
     <div class="so-steps" id="soSteps">
       <div class="so-step" id="soStep_html"><span class="so-step-icon pending" id="soIcon_html">&#9675;</span><span class="so-step-label" id="soLabel_html">Fetching page HTML</span></div>
-      <div class="so-step" id="soStep_graaf"><span class="so-step-icon pending" id="soIcon_graaf">&#9675;</span><span class="so-step-label" id="soLabel_graaf">GRAAF content scan — AI + GSC analysis</span></div>
-      <div class="so-step" id="soStep_google"><span class="so-step-icon pending" id="soIcon_google">&#9675;</span><span class="so-step-label" id="soLabel_google">Google position + AIO citation check</span></div>
+      <div class="so-step" id="soStep_graaf"><span class="so-step-icon pending" id="soIcon_graaf">&#9675;</span><span class="so-step-label" id="soLabel_graaf">GRAAF content scan</span></div>
+      <div class="so-step" id="soStep_google"><span class="so-step-icon pending" id="soIcon_google">&#9675;</span><span class="so-step-label" id="soLabel_google">Google position + AIO check</span></div>
       <div class="so-step" id="soStep_perplexity"><span class="so-step-icon pending" id="soIcon_perplexity">&#9675;</span><span class="so-step-label" id="soLabel_perplexity">Perplexity citation check</span></div>
       <div class="so-step" id="soStep_copilot"><span class="so-step-icon pending" id="soIcon_copilot">&#9675;</span><span class="so-step-label" id="soLabel_copilot">Copilot citation check</span></div>
       <div class="so-step" id="soStep_brave"><span class="so-step-icon pending" id="soIcon_brave">&#9675;</span><span class="so-step-label" id="soLabel_brave">Claude / Brave citation check</span></div>
       <div class="so-step" id="soStep_ai"><span class="so-step-icon pending" id="soIcon_ai">&#9675;</span><span class="so-step-label" id="soLabel_ai">AI recommendations generation</span></div>
     </div>
-    <!-- Status -->
     <div class="so-status" id="soStatus">Initializing scan...</div>
   </div>
 </div>
@@ -25191,7 +25114,7 @@ function renderPages() {
       + '</div>'
       + '</div>'
       + '<div style="display:flex;gap:5px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;align-items:flex-start;">'
-      + (_lastBriefData[p.id] ? '<button onclick="viewLastBrief(' + p.id + ')" style="background:none;border:1px solid #7c3aed;border-radius:5px;color:#a78bfa;cursor:pointer;font-size:11px;padding:3px 10px;font-weight:600;animation:soDotPulse 2s ease-in-out infinite;" title="View the last Citation Brief">📄 Brief</button>' : '')
+      + (_lastBriefData[p.id] ? '<button onclick="viewLastBrief(' + p.id + ')" style="background:none;border:1px solid #7c3aed;border-radius:5px;color:#a78bfa;cursor:pointer;font-size:11px;padding:3px 10px;font-weight:600;" title="View last Citation Brief">📄 Brief</button>' : '')
       + '<button onclick="openHtmlUpload(' + p.id + ')" style="background:none;border:1px solid ' + (htmlNeeded ? '#f59e0b' : '#374151') + ';border-radius:5px;color:' + (htmlNeeded ? '#fbbf24' : '#4b5563') + ';cursor:pointer;font-size:11px;padding:3px 10px;font-weight:' + (htmlNeeded ? '700' : '400') + ';' + (htmlNeeded ? 'animation:htmlNeeded 1.2s ease-in-out infinite;' : '') + '" title="' + (htmlNeeded ? 'Paste updated HTML for next scan' : 'Update HTML') + '">📋 ' + (htmlNeeded ? 'Add HTML' : 'HTML') + '</button>'
       + (lastChecked ? '<button onclick="checkPage(' + p.id + ')" style="background:none;border:1px solid #374151;border-radius:5px;color:#6b7280;cursor:pointer;font-size:11px;padding:3px 8px;" title="Rescan now">↻</button>' : '')
       + '<button onclick="deletePage(' + p.id + ')" style="background:none;border:1px solid #374151;border-radius:5px;color:#374151;cursor:pointer;font-size:12px;padding:4px 8px;" title="Delete page">🗑</button>'
@@ -25456,12 +25379,9 @@ async function markDone(pageId, btn, currentDone) {
     }
     var btn = document.querySelector('[data-check-btn="' + pageId + '"]');
     if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i>'; }
-
-    // Full-screen cinematic scan animation
     runScanAnimation(p ? p.url : '', function() {
       pollAndShowBrief(pageId, 15, 4000);
     });
-
     try {
       var data = await api('/check/' + pageId, 'POST');
       if (!data.success) toast(data.error || 'Check failed', '#f87171');
@@ -25570,10 +25490,10 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
   var _cbTimer = null;
   var _cbSecondsLeft = 30;
   var _cbKept = false;
-  var _cbPageBriefs = {}; // pageId -> [{brief data}]
-  var _lastBriefData = {}; // pageId -> last brief data (for "View Last Brief")
-  var _briefIsOpen = false; // blocks new scans while brief is showing
-  var _currentBriefPageId = null; // pageId of currently showing brief
+  var _cbPageBriefs = {};
+  var _lastBriefData = {};
+  var _briefIsOpen = false;
+  var _currentBriefPageId = null;
 
   function showCitationBrief(data) {
     var card = document.getElementById('cbCard');
@@ -25584,7 +25504,6 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
     _cbKept = false;
     _cbSecondsLeft = 30;
     _currentBriefPageId = data.page_id || null;
-    // Store brief data so "View Last Brief" button works
     if (data.page_id) _lastBriefData[data.page_id] = data;
     document.getElementById('cbUrl').textContent = data.url || '';
     document.getElementById('cbKw').textContent = data.keyword ? 'Keyword: ' + data.keyword : '';
@@ -25758,13 +25677,14 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
         updateBriefButtons();
       }
 
+      // Countdown — 30 seconds
       _cbSecondsLeft = 30;
-      document.getElementById('cbCountdown').textContent = 'Closing in 30s — click Keep open to stay';
+      document.getElementById('cbCountdown').textContent = 'Closing in 30s — the HTML button will blink orange for your next scan';
       if (_cbTimer) clearInterval(_cbTimer);
       _cbTimer = setInterval(function() {
-        if (_cbKept) { clearInterval(_cbTimer); document.getElementById('cbCountdown').textContent = ''; return; }
+        if (_cbKept) { clearInterval(_cbTimer); document.getElementById('cbCountdown').textContent = 'Paste new HTML when ready — your HTML button will blink orange'; return; }
         _cbSecondsLeft--;
-        document.getElementById('cbCountdown').textContent = 'Closing in ' + _cbSecondsLeft + 's — click Keep open to stay';
+        document.getElementById('cbCountdown').textContent = 'Closing in ' + _cbSecondsLeft + 's — HTML button will blink orange for next scan';
         if (_cbSecondsLeft <= 0) {
           clearInterval(_cbTimer);
           hideCitationBrief(data.page_id);
@@ -25777,7 +25697,7 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
   function keepCbOpen() {
     _cbKept = true;
     clearInterval(_cbTimer);
-    document.getElementById('cbCountdown').textContent = 'Brief stays open — close when done';
+    document.getElementById('cbCountdown').textContent = 'Paste new HTML when ready — your HTML button will blink orange';
     document.getElementById('cbKeepBtn').style.display = 'none';
   }
 
@@ -25787,7 +25707,6 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
     _briefIsOpen = false;
     var closedPageId = pageId || _currentBriefPageId;
     _currentBriefPageId = null;
-    // Mark page as needing fresh HTML so button blinks orange
     if (closedPageId) {
       var p = (_pages||[]).find(function(x){ return x.id == closedPageId; });
       if (p) p.needs_html = true;
@@ -25798,14 +25717,12 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
     }, 400);
   }
 
-  // Re-open last brief for a page ("View Last Brief" button)
   function viewLastBrief(pageId) {
     var data = _lastBriefData[pageId];
     if (!data) { toast('No brief available yet — run a scan first', '#f59e0b'); return; }
     showCitationBrief(data);
   }
 
-  // Toggle GSC panel in brief
   function toggleGscPanel() {
     var panel = document.getElementById('cbGscPanel');
     var arrow = document.getElementById('cbGscArrow');
@@ -25820,7 +25737,6 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
     }
   }
 
-  // Copy brief to clipboard
   function copyBriefToClipboard() {
     var text = document.getElementById('cbCopyText') ? document.getElementById('cbCopyText').value : '';
     if (!text) return;
@@ -26252,7 +26168,7 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
     mEl.classList.add('show');
     setTimeout(function(){ if (cEl) cEl.focus(); }, 100);
   }
-  // ═══ CINEMATIC SCAN ANIMATION ═══
+  // Cinematic scan animation overlay
   function runScanAnimation(url, onComplete) {
     var overlay = document.getElementById('soOverlay');
     var urlEl = document.getElementById('soUrl');
@@ -26261,8 +26177,6 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
     var title = document.getElementById('soHeaderTitle');
     var statusEl = document.getElementById('soStatus');
     if (!overlay) { if (onComplete) onComplete(); return; }
-
-    // Reset
     var stepIds = ['html','graaf','google','perplexity','copilot','brave','ai'];
     stepIds.forEach(function(sid) {
       var step = document.getElementById('soStep_' + sid);
@@ -26277,10 +26191,8 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
     if (dot) { dot.className = 'so-header-dot'; }
     if (title) { title.textContent = 'Live Scan in Progress'; title.className = 'so-header-title'; }
     if (statusEl) { statusEl.textContent = 'Initializing scan...'; statusEl.className = 'so-status'; }
-
     overlay.classList.remove('hiding');
     overlay.classList.add('show');
-
     var steps = [
       { id: 'html',       label: 'Fetching page HTML',            pct: 10 },
       { id: 'graaf',      label: 'GRAAF content scan',            pct: 25 },
@@ -26290,10 +26202,8 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
       { id: 'brave',      label: 'Claude / Brave citation check', pct: 84 },
       { id: 'ai',         label: 'AI recommendations',            pct: 95 },
     ];
-
     var timings = [0, 1000, 2800, 5000, 7200, 9200, 11200];
     var durations = [800, 1600, 2000, 2000, 1800, 1800, 2500];
-
     steps.forEach(function(s, idx) {
       setTimeout(function() {
         var step = document.getElementById('soStep_' + s.id);
@@ -26313,8 +26223,6 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
         if (statusEl) { statusEl.textContent = s.label + ' done'; statusEl.style.color = '#4ade80'; }
       }, timings[idx] + durations[idx]);
     });
-
-    // Complete
     setTimeout(function() {
       if (bar) bar.style.width = '100%';
       if (dot) dot.className = 'so-header-dot done';
@@ -26331,7 +26239,17 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
     }, 14000);
   }
 
-  // Poll for scan results, then show brief
+  function hideScanOverlay() {
+    var overlay = document.getElementById('soOverlay');
+    if (!overlay) return;
+    overlay.classList.add('hiding');
+    setTimeout(function() {
+      overlay.classList.remove('show');
+      overlay.classList.remove('hiding');
+    }, 400);
+  }
+
+  // Shared: poll for results then show Citation Brief
   function pollAndShowBrief(pageId, maxPolls, intervalMs) {
     var pollCount = 0;
     var timer = setInterval(function() {
@@ -26385,7 +26303,6 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
         var pageUrl = p ? (p.url || '') : '';
         if (p) { p.needs_html = false; p.html_source = 'manual'; p.has_html_content = true; }
         hideModal('htmlUploadModal');
-        // Start cinematic full-screen scan animation
         runScanAnimation(pageUrl, function() {
           pollAndShowBrief(pageId, 30, 5000);
         });
@@ -26663,7 +26580,7 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
         <div style="font-size:10px;font-weight:800;color:#7c3aed;text-transform:uppercase;letter-spacing:.1em;margin-bottom:10px;">AI Citation Results</div>
         <div class="cb-stat-row" id="cbStatRow"></div>
 
-        <!-- GSC Section — optional, collapsed -->
+        <!-- GSC Section -->
         <div id="cbGscSection" style="display:none;margin-bottom:8px;">
           <div class="cb-gsc-toggle" onclick="toggleGscPanel()">
             <span class="cb-gsc-toggle-label">&#128200; Google Search Console <span class="badge">Optional</span></span>
@@ -26687,7 +26604,7 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
 
         <div style="font-size:11px;color:#4ade80;margin-top:14px;display:flex;align-items:center;gap:8px;padding:10px 14px;background:rgba(74,222,128,.04);border-radius:8px;">
           <span style="width:8px;height:8px;border-radius:50%;background:#4ade80;display:inline-block;animation:soDotPulse 2s ease-in-out infinite;"></span>
-          Brief saved — next scan scheduled
+          Brief saved — paste new HTML for your next scan
         </div>
       </div>
     </div>
@@ -26703,16 +26620,13 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
 <div class="wl-overlay" id="welcomeOverlay">
   <div class="wl-card">
     <div class="wl-top">
-      <img src="https://contentscale.site/wp-content/uploads/2025/11/ottmar-francisca-headshot.png"
-           alt="Ottmar Francisca" class="wl-avatar">
-      <div class="wl-badge"><span class="wl-badge-dot"></span> AI System Online</div>
-      <div class="wl-name">Free AI Citations Tracker</div>
-      <div class="wl-role">by ContentScale &mdash; Ottmar Francisca, Amsterdam</div>
+      <div class="wl-badge" style="margin-top:4px;"><span class="wl-badge-dot"></span> AI System Online</div>
+      <div class="wl-name" style="margin-top:10px;font-size:1.15rem;">Free AI Citations Tracker</div>
+      <div class="wl-role" style="color:#a78bfa;margin-bottom:4px;">by ContentScale &mdash; Ottmar Francisca, Amsterdam</div>
     </div>
     <div class="wl-body">
       <p class="wl-msg" id="wlMsg">
-        Hello &mdash; I am the AI research system of <strong style="color:#e5e7eb;">Ottmar Francisca</strong>.<br><br>
-        I monitor the internet in real time and track where AI systems like Google, Perplexity, Copilot, and Claude cite your content as a trusted source.
+        I monitor the internet in real time and track where AI systems like <strong style="color:#e5e7eb;">Google AI Overview, Perplexity, Copilot, and Claude</strong> cite your content as a trusted source. The moment you lose or gain a citation, you will know.
       </p>
 
       <div class="wl-domain-box">
@@ -26724,14 +26638,44 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
         </div>
       </div>
 
-      <!-- STEP 1 - critical onboarding -->
+      <!-- How It Works -->
+      <div style="background:linear-gradient(135deg,rgba(124,58,237,.08),rgba(76,29,149,.04));border:1px solid rgba(124,58,237,.25);border-radius:12px;padding:16px 18px;margin-bottom:16px;">
+        <div style="font-size:12px;font-weight:800;color:#a78bfa;margin-bottom:12px;text-transform:uppercase;letter-spacing:.06em;">How It Works</div>
+
+        <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:10px;padding:8px 12px;background:rgba(124,58,237,.04);border-radius:8px;border-left:3px solid #7c3aed;">
+          <div style="width:22px;height:22px;border-radius:50%;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">1</div>
+          <div style="font-size:12px;color:#cbd5e1;line-height:1.5;"><strong style="color:#e5e7eb;">Add your page URL</strong> &mdash; the system starts tracking it automatically</div>
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:10px;padding:8px 12px;background:rgba(245,158,11,.06);border-radius:8px;border-left:3px solid #f59e0b;">
+          <div style="width:22px;height:22px;border-radius:50%;background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">2</div>
+          <div style="font-size:12px;color:#cbd5e1;line-height:1.5;"><strong style="color:#fbbf24;">Paste your page HTML</strong> &mdash; click the orange blinking HTML button. Without HTML, the scan cannot tell you <em style="color:#fbbf24;">why</em> you are not cited or what to fix</div>
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:10px;padding:8px 12px;background:rgba(124,58,237,.04);border-radius:8px;border-left:3px solid #7c3aed;">
+          <div style="width:22px;height:22px;border-radius:50%;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">3</div>
+          <div style="font-size:12px;color:#cbd5e1;line-height:1.5;"><strong style="color:#e5e7eb;">Watch the scan</strong> &mdash; a full-screen animation shows the analysis across all AI platforms</div>
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:10px;padding:8px 12px;background:rgba(124,58,237,.04);border-radius:8px;border-left:3px solid #7c3aed;">
+          <div style="width:22px;height:22px;border-radius:50%;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">4</div>
+          <div style="font-size:12px;color:#cbd5e1;line-height:1.5;"><strong style="color:#e5e7eb;">Read your Citation Brief</strong> &mdash; recommendations sorted by priority (easy fixes first)</div>
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:10px;padding:8px 12px;background:rgba(124,58,237,.04);border-radius:8px;border-left:3px solid #7c3aed;">
+          <div style="width:22px;height:22px;border-radius:50%;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">5</div>
+          <div style="font-size:12px;color:#cbd5e1;line-height:1.5;"><strong style="color:#e5e7eb;">Click Done</strong> when finished &mdash; the system will ask for fresh HTML to measure your improvements</div>
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:12px;padding:8px 12px;background:rgba(124,58,237,.04);border-radius:8px;border-left:3px solid #7c3aed;">
+          <div style="width:22px;height:22px;border-radius:50%;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">6</div>
+          <div style="font-size:12px;color:#cbd5e1;line-height:1.5;"><strong style="color:#e5e7eb;">Next scan runs automatically</strong> on your schedule (3 days, 1 week, or 1 month). Upload new HTML anytime before then for a fresh scan</div>
+        </div>
+      </div>
+
+      <!-- HTML Step -->
       <div style="background:linear-gradient(135deg,rgba(251,191,36,.08),rgba(217,119,6,.04));border:1px solid rgba(251,191,36,.3);border-radius:10px;padding:14px 16px;margin-bottom:16px;">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
-          <div style="background:#fbbf24;color:#0a0a12;font-size:10px;font-weight:800;padding:2px 8px;border-radius:99px;letter-spacing:.06em;flex-shrink:0;">STEP 1</div>
-          <span style="font-size:13px;font-weight:700;color:#fde68a;">Do not skip this if you are serious</span>
+          <div style="background:#fbbf24;color:#0a0a12;font-size:10px;font-weight:800;padding:2px 8px;border-radius:99px;letter-spacing:.06em;flex-shrink:0;">HTML</div>
+          <span style="font-size:13px;font-weight:700;color:#fde68a;">This is the most important step</span>
         </div>
         <p style="font-size:12px;color:#fcd34d;line-height:1.7;margin:0 0 10px;">
-          Paste the HTML of each page you want to track. Without the HTML, the system cannot perform a GRAAF scan &mdash; it can only check your position and AI citations, but not <em>why</em> you are not cited or what to fix.
+          The orange <strong style="color:#fbbf24;">HTML</strong> button on your page card will blink until you paste your HTML. Without it, the system cannot perform a GRAAF scan &mdash; it can only check your position and AI citations, but not <em>why</em> you are not cited or what to fix.
         </p>
         <div style="background:#0a0a12;border:1px solid rgba(251,191,36,.2);border-radius:6px;padding:10px 12px;margin-bottom:8px;">
           <div style="font-size:10px;color:#92400e;font-family:monospace;letter-spacing:.06em;margin-bottom:4px;">HOW TO GET YOUR PAGE HTML</div>
@@ -26739,16 +26683,11 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
             <li>Open your page in Chrome or Firefox</li>
             <li>Right-click anywhere &rarr; <strong>View Page Source</strong></li>
             <li>Press <code style="background:#1f2937;padding:1px 5px;border-radius:3px;">Ctrl+A</code> then <code style="background:#1f2937;padding:1px 5px;border-radius:3px;">Ctrl+C</code></li>
-            <li>Click the <strong style="color:#fbbf24;">HTML</strong> button on your page card &rarr; paste</li>
+            <li>Click the blinking <strong style="color:#fbbf24;">HTML</strong> button on your page card &rarr; paste &rarr; Save</li>
           </ol>
         </div>
-        <div style="font-size:11px;color:#92400e;line-height:1.6;margin-bottom:10px;">
-          You only need to do this once per page. After that, the system auto-fetches updates.
-        </div>
-        <div style="background:#0a0a12;border:1px solid rgba(124,58,237,.3);border-radius:6px;padding:10px 12px;font-size:11px;color:#a78bfa;line-height:1.7;">
-          The structure of this tracker &#8212; direct answers, author credentials, case studies, short paragraphs &#8212; is exactly what makes AI systems cite a page. Apply the same to your pages. Scan and follow the recommendations.<br>
-          <a href="https://app.contentscale.site" target="_blank" style="color:#7c3aed;font-weight:700;text-decoration:none;margin-top:6px;display:inline-block;">app.contentscale.site</a> &nbsp;&#8594;&nbsp;
-          <a href="https://app.contentscale.site" target="_blank" style="color:#a78bfa;text-decoration:none;">Scan my pages &#8594;</a>
+        <div style="font-size:11px;color:#92400e;line-height:1.6;">
+          You only need to do this once per page. After that, the system auto-fetches updates on your scheduled scan dates. Upload new HTML anytime for a fresh scan.
         </div>
       </div>
 
@@ -35343,3 +35282,4 @@ app.post('/boost/:id/engage', asyncHandler(async (req, res) => {
   );
   res.json({ success: true });
 }));
+
