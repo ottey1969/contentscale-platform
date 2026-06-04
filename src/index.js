@@ -25305,23 +25305,24 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
       while (feed.children.length > 15) feed.removeChild(feed.lastChild);
     }
 
+    var _pollErrors = 0;
+    var _pollTimer = null;
+
     function poll() {
-      var url = 'https://app.contentscale.site/api/tracker-client/' + TOKEN + '/live-events';
+      var url = '/api/tracker-client/' + TOKEN + '/live-events';
       if (_clientPollLastTs) url += '?since=' + encodeURIComponent(_clientPollLastTs);
       fetch(url)
         .then(function(r){ return r.json(); })
         .then(function(data) {
+          _pollErrors = 0; // reset on success
           if (!data.success) return;
-          if (dot) { dot.style.background = '#4ade80'; }
+          if (dot) dot.style.background = '#4ade80';
           if (status) { status.textContent = '* Live'; status.style.color = '#4ade80'; }
           _clientPollLastTs = data.ts;
           if (data.events && data.events.length) {
             data.events.forEach(function(ev) {
               if (ev.type === 'brief_ready' && ev.domain === DOMAIN) { showCitationBrief(ev); return; }
-              var text = '';
-              var color = '#6b7280';
-              var isLink = false;
-              var linkUrl = '';
+              var text = '', color = '#6b7280', isLink = false, linkUrl = '';
               if (ev.type === 'check_done') { text = 'Scan complete: ' + (ev.url||''); color = '#4ade80'; }
               else if (ev.type === 'citation_gained') { text = 'Citation gained in ' + (ev.platform||'AI') + ': ' + (ev.url||''); color = '#4ade80'; }
               else if (ev.type === 'position_up') { text = 'Position up to #' + ev.new_pos + ': ' + (ev.url||''); color = '#a3e635'; }
@@ -25332,14 +25333,23 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
           }
         })
         .catch(function() {
-          if (dot) { dot.style.background = '#f87171'; }
-          if (status) { status.textContent = ''; }
+          _pollErrors++;
+          if (dot) dot.style.background = _pollErrors > 3 ? '#f87171' : '#f59e0b';
+          if (status) status.textContent = _pollErrors > 3 ? '* Offline' : '';
+          // Exponential backoff: 8s, 16s, 32s, max 60s
+          if (_pollTimer) clearInterval(_pollTimer);
+          var delay = Math.min(8000 * Math.pow(2, _pollErrors - 1), 60000);
+          _pollTimer = setTimeout(function() {
+            _pollTimer = setInterval(poll, 8000);
+            poll();
+          }, delay);
         });
     }
 
     poll();
     if (_clientPollInterval) clearInterval(_clientPollInterval);
-    _clientPollInterval = setInterval(poll, 8000);
+    _pollTimer = setInterval(poll, 8000);
+    _clientPollInterval = _pollTimer;
   }
 
   // Start after pages load
