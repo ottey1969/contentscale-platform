@@ -1524,7 +1524,7 @@ app.post('/api/tracker-client/:token/pages', async (req, res) => {
       pr = await pool.query(
         `INSERT INTO tracker_pages (tracker_client_id, url, keyword, gsc_clicks, gsc_impressions, gsc_position, gsc_ctr, gsc_keyword, check_frequency, next_check_at, is_active)
          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'3days',NOW(),TRUE)
-         ON CONFLICT ON CONSTRAINT tracker_pages_client_url_idx
+         ON CONFLICT (tracker_client_id, url)
          DO UPDATE SET
            gsc_clicks = EXCLUDED.gsc_clicks,
            gsc_impressions = EXCLUDED.gsc_impressions,
@@ -1532,22 +1532,22 @@ app.post('/api/tracker-client/:token/pages', async (req, res) => {
            gsc_ctr = EXCLUDED.gsc_ctr,
            gsc_keyword = COALESCE(EXCLUDED.gsc_keyword, tracker_pages.gsc_keyword),
            is_active = TRUE
-         RETURNING id, (xmax = 0) as inserted`,
+         RETURNING id`,
         [client.id, url, keyword||null, gsc_clicks||null, gsc_impressions||null, gsc_position||null, gsc_ctr||null, gsc_keyword||null]
       );
     } catch(insertErr) {
-      // Fallback without GSC columns if they don't exist yet
+      console.error('[add-page] insert error:', insertErr.message);
+      // Fallback: simple insert without GSC columns
       try {
         pr = await pool.query(
           `INSERT INTO tracker_pages (tracker_client_id, url, keyword, check_frequency, next_check_at, is_active)
            VALUES ($1,$2,$3,'3days',NOW(),TRUE)
-           ON CONFLICT ON CONSTRAINT tracker_pages_client_url_idx
-           DO UPDATE SET is_active = TRUE
+           ON CONFLICT (tracker_client_id, url) DO UPDATE SET is_active=TRUE
            RETURNING id`,
           [client.id, url, keyword||null]
         );
       } catch(e2) {
-        console.error('[add-page] insert failed:', e2.message);
+        console.error('[add-page] fallback insert error:', e2.message);
         return res.status(500).json({ success: false, error: e2.message });
       }
     }
