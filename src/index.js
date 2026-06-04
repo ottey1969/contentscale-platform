@@ -1484,27 +1484,32 @@ app.post('/api/tracker-client/:token/pages', async (req, res) => {
       return urlDomain === clean || urlDomain.endsWith('.' + clean);
     });
     if (!domainOk) {
-      return res.status(400).json({ success: false, error: `URL must belong to ${allowedDomains[0]}${allowedDomains.length > 1 ? ' or ' + allowedDomains.slice(1).join(', ') : ''}` });
+      return res.json({ success: false, skipped: true, error: `URL skipped — belongs to different domain` });
     }
 
-    // Check duplicate — if exists, update GSC data and return
-    const dupR = await pool.query('SELECT id FROM tracker_pages WHERE tracker_client_id=$1 AND url=$2', [client.id, url]);
+    // Check duplicate — if exists, always update GSC data and keyword
+    const dupR = await pool.query(
+      'SELECT id FROM tracker_pages WHERE tracker_client_id=$1 AND (url=$2 OR url=$3) AND (is_active=TRUE OR is_active IS NULL)',
+      [client.id, url, url.replace(/\/$/, '')]
+    );
     if (dupR.rows.length) {
-      // Update GSC data on existing page
-      if (gsc_clicks || gsc_impressions || gsc_position) {
-        await pool.query(
-          `UPDATE tracker_pages SET
-            gsc_clicks = COALESCE($1, gsc_clicks),
-            gsc_impressions = COALESCE($2, gsc_impressions),
-            gsc_position = COALESCE($3, gsc_position),
-            gsc_ctr = COALESCE($4, gsc_ctr),
-            gsc_keyword = COALESCE($5, gsc_keyword)
-           WHERE id=$6`,
-          [gsc_clicks||null, gsc_impressions||null, gsc_position||null, gsc_ctr||null, gsc_keyword||null, dupR.rows[0].id]
-        ).catch(()=>{});
-        return res.json({ success: true, page_id: dupR.rows[0].id, updated: true });
+      const pageId = dupR.rows[0].id;
+      const updates = [];
+      const vals = [];
+      let i = 1;
+      // Always overwrite GSC data when importing — it changes every week
+      if (gsc_clicks !== undefined && gsc_clicks !== null) { updates.push(`gsc_clicks=$${i++}`); vals.push(gsc_clicks); }
+      if (gsc_impressions !== undefined && gsc_impressions !== null) { updates.push(`gsc_impressions=$${i++}`); vals.push(gsc_impressions); }
+      if (gsc_position !== undefined && gsc_position !== null) { updates.push(`gsc_position=$${i++}`); vals.push(gsc_position); }
+      if (gsc_ctr !== undefined && gsc_ctr !== null) { updates.push(`gsc_ctr=$${i++}`); vals.push(gsc_ctr); }
+      if (gsc_keyword) { updates.push(`gsc_keyword=$${i++}`); vals.push(gsc_keyword); }
+      // Update keyword only if not already manually set
+      if (keyword && !gsc_keyword) { updates.push(`keyword=COALESCE(keyword,$${i++})`); vals.push(keyword); }
+      if (updates.length) {
+        vals.push(pageId);
+        await pool.query(`UPDATE tracker_pages SET ${updates.join(',')} WHERE id=$${i}`, vals).catch(()=>{});
       }
-      return res.status(400).json({ success: false, error: 'URL already tracked' });
+      return res.json({ success: true, page_id: pageId, updated: true });
     }
 
     let pr;
@@ -25876,10 +25881,22 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
         gsc_keyword: p.keyword || null
       })
         .then(function(d) {
-          if (d.success) done++; else errors++;
-          doNext(idx + 1);
+          if (d.success || d.already_tracked) { done++; doNext(idx + 1); }
+          else if (d.skipped) { doNext(idx + 1); } // silently skip domain mismatches
+          else {
+            errors++;
+            console.warn('[importGsc] page', idx, 'failed:', d.error, 'url:', p.url);
+            if (d.error && (d.error.indexOf('limit') > -1 || d.error.indexOf('maximum') > -1 || d.error.indexOf('full') > -1)) {
+              toast('Page limit reached (' + done + ' imported). Upgrade for more pages.', '#f59e0b');
+              hideModal('importModal');
+              setTimeout(loadPages, 800);
+              if (bt) { bt.disabled = false; bt.textContent = 'Import'; }
+              return;
+            }
+            doNext(idx + 1);
+          }
         })
-        .catch(function() { errors++; doNext(idx + 1); });
+        .catch(function(e) { errors++; console.warn('[importGsc] catch', e); doNext(idx + 1); });
     }
     doNext(0);
   }
