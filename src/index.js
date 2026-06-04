@@ -24599,12 +24599,19 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
 .cb-copy-btn-action{background:linear-gradient(135deg,#1e1b4b,#2e1065);border:1px solid #7c3aed;border-radius:8px;color:#a78bfa;font-size:11px;font-weight:700;padding:7px 16px;cursor:pointer;font-family:Verdana,sans-serif;transition:all .15s}
 .cb-copy-btn-action:hover{background:#3b1f70;color:#e9d5ff;transform:translateY(-1px);box-shadow:0 4px 12px rgba(124,58,237,.2)}
 
-/* ═══ BRIEF PASSAGES — readable, copy-friendly ═══ */
-.cb-passage{background:#0a0a12;border:1px solid #1f2937;border-left:3px solid #7c3aed;border-radius:0 8px 8px 0;padding:16px 18px;margin-bottom:12px;font-size:13px;color:#cbd5e1;line-height:1.7;font-family:system-ui,-apple-system,sans-serif;user-select:text;-webkit-user-select:text;cursor:text;transition:background .2s,border-color .2s}
+/* ═══ BRIEF PASSAGES — example format: priority badge + title + action + impact ═══ */
+.cb-passage{background:#0d0d1a;border:1px solid #1e2536;border-left:4px solid #7c3aed;border-radius:0 10px 10px 0;padding:18px 20px;margin-bottom:14px;font-family:system-ui,-apple-system,sans-serif;user-select:text;-webkit-user-select:text;cursor:text;transition:background .2s,border-color .2s}
 .cb-passage:hover{background:#111827;border-color:#374151}
-.cb-passage .rec-title{font-size:14px;font-weight:700;color:#e5e7eb;margin-bottom:6px;display:block}
-.cb-passage .rec-action{font-size:13px;color:#9ca3af;line-height:1.7;margin-bottom:6px}
-.cb-passage .rec-impact{font-size:12px;color:#7c3aed;font-style:italic;margin-top:6px}
+.cb-passage .pri-row{display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap}
+.cb-passage .pri-badge{font-size:10px;font-weight:900;padding:3px 10px;border-radius:4px;letter-spacing:.08em;flex-shrink:0;text-transform:uppercase}
+.cb-passage .pri-badge.high{color:#ef4444;background:#ef444415;border:1px solid #ef444430}
+.cb-passage .pri-badge.medium{color:#f59e0b;background:#f59e0b15;border:1px solid #f59e0b30}
+.cb-passage .pri-badge.low{color:#22c55e;background:#22c55e15;border:1px solid #22c55e30}
+.cb-passage .sys-badge{font-size:10px;font-weight:700;color:#a78bfa;background:#7c3aed18;border:1px solid #7c3aed30;padding:2px 8px;border-radius:4px;flex-shrink:0}
+.cb-passage .rec-title{font-size:15px;font-weight:700;color:#f1f5f9;line-height:1.3;display:block;margin-bottom:10px}
+.cb-passage .rec-action{font-size:13px;color:#cbd5e1;line-height:1.8;display:block;margin-bottom:10px;padding:10px 14px;background:#060610;border-radius:6px;border:1px solid #1e2536;white-space:pre-wrap;word-break:break-word}
+.cb-passage .rec-impact{font-size:12px;color:#a78bfa;font-weight:600;margin-top:2px;display:flex;align-items:center;gap:6px}
+.cb-passage .rec-impact::before{content:'→';color:#7c3aed;font-weight:900}
 
 /* ═══ PERSISTENT STARS — pure CSS, no JS needed ═══ */
 @keyframes twinkle{0%,100%{opacity:.15}50%{opacity:1}}
@@ -25639,9 +25646,7 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
       }
 
       // Recommendations — by priority, large readable text
-      // Extract from all possible locations: passages, recommendations, or brief_content.items
-      var _briefObj = data.brief_content ? (typeof data.brief_content === 'string' ? JSON.parse(data.brief_content) : data.brief_content) : null;
-      var passages = data.passages || data.recommendations || (_briefObj && Array.isArray(_briefObj.items) ? _briefObj.items : null);
+      var passages = data.passages || data.recommendations;
       if (passages && Array.isArray(passages) && passages.length) {
         var priOrder = { high: 0, h: 0, medium: 1, med: 1, m: 1, low: 2, l: 2 };
         passages.sort(function(a, b) {
@@ -25650,28 +25655,34 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
           return (priOrder[pa] || 2) - (priOrder[pb] || 2);
         });
         var passDiv = document.getElementById('cbPassages');
-        passDiv.innerHTML = '<div style="font-size:11px;font-weight:800;color:#7c3aed;text-transform:uppercase;letter-spacing:.08em;margin:18px 0 12px;">\u2728 What to do next — ranked by impact</div>';
+        passDiv.innerHTML = '<div style="font-size:11px;font-weight:800;color:#7c3aed;text-transform:uppercase;letter-spacing:.08em;margin:18px 0 14px;">\u2728 What to do next \u2014 ranked by impact</div>';
         passages.slice(0, 5).forEach(function(p, idx) {
           setTimeout(function() {
-            var pri = (p.priority || p.p || '').toLowerCase();
-            var isH = pri === 'high' || pri === 'h';
-            var isM = pri === 'medium' || pri === 'med' || pri === 'm';
-            var priColor = isH ? '#ef4444' : isM ? '#f59e0b' : '#22c55e';
-            var priLabel = isH ? 'HIGH' : isM ? 'MED' : 'LOW';
+            var pri = (p.priority || p.p || 'low').toLowerCase();
+            var priKey = (pri === 'high' || pri === 'h') ? 'high' : (pri === 'medium' || pri === 'med' || pri === 'm') ? 'medium' : 'low';
+            var priLabel = priKey === 'high' ? 'HIGH' : priKey === 'medium' ? 'MEDIUM' : 'LOW';
+            var priColor = priKey === 'high' ? '#ef4444' : priKey === 'medium' ? '#f59e0b' : '#22c55e';
             var title = p.title || p.t || '';
+            var system = p.system || p.sys || '';
             var action = p.action || p.passage || '';
             var impact = p.expected_impact || p.impact || '';
+            var trigger = p.trigger || '';
+            var effort = p.effort || '';
             var el = document.createElement('div');
             el.className = 'cb-passage';
-            el.style.borderLeft = '3px solid ' + priColor;
-            el.innerHTML = '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap;">' +
-              '<span style="font-size:10px;font-weight:800;color:' + priColor + ';background:' + priColor + '14;padding:3px 8px;border-radius:4px;letter-spacing:.04em;flex-shrink:0;">' + priLabel + '</span>' +
-              (title ? '<span class="rec-title">' + title + '</span>' : '') +
+            el.style.borderLeftColor = priColor;
+            el.innerHTML =
+              '<div class="pri-row">' +
+                '<span class="pri-badge ' + priKey + '">' + priLabel + '</span>' +
+                (system ? '<span class="sys-badge">' + system + '</span>' : '') +
+                (effort ? '<span class="sys-badge" style="color:#4ade80;background:#4ade8018;border-color:#4ade8030;">' + effort.replace('_',' ') + '</span>' : '') +
               '</div>' +
+              (title ? '<span class="rec-title">' + title + '</span>' : '') +
+              (trigger ? '<div style="font-size:11px;color:#6b7280;margin-bottom:8px;">&#128202; Signal: ' + trigger + '</div>' : '') +
               (action ? '<span class="rec-action">' + action + '</span>' : '') +
-              (impact ? '<span class="rec-impact">\u2192 Impact: ' + impact + '</span>' : '');
+              (impact ? '<span class="rec-impact">' + impact + '</span>' : '');
             passDiv.appendChild(el);
-          }, idx * 400);
+          }, idx * 300);
         });
       } else {
         document.getElementById('cbPassages').innerHTML = '<div class="cb-passage" style="animation:soStatPop .5s ease;font-size:13px;">Your Citation Brief has been generated. Copy it below to share with your team or AI assistant.</div>';
@@ -25823,9 +25834,8 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
       }
     }
 
-    // Recommendations — extract from all possible locations
-    var _bcObj = data.brief_content ? (typeof data.brief_content === 'string' ? JSON.parse(data.brief_content) : data.brief_content) : null;
-    var passages = data.passages || data.recommendations || (_bcObj && Array.isArray(_bcObj.items) ? _bcObj.items : null);
+    // Recommendations
+    var passages = data.passages || data.recommendations;
     var passDiv = document.getElementById('cbPassages');
     if (passages && Array.isArray(passages) && passages.length) {
       var priOrder = { high: 0, h: 0, medium: 1, med: 1, m: 1, low: 2, l: 2 };
@@ -25834,25 +25844,31 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
         var pb = (b.priority || b.p || 'low').toLowerCase();
         return (priOrder[pa] || 2) - (priOrder[pb] || 2);
       });
-      passDiv.innerHTML = '<div style="font-size:11px;font-weight:800;color:#7c3aed;text-transform:uppercase;letter-spacing:.08em;margin:18px 0 12px;">\u2728 What to do next — ranked by impact</div>';
+      passDiv.innerHTML = '<div style="font-size:11px;font-weight:800;color:#7c3aed;text-transform:uppercase;letter-spacing:.08em;margin:18px 0 14px;">\u2728 What to do next \u2014 ranked by impact</div>';
       passages.slice(0, 5).forEach(function(p) {
-        var pri = (p.priority || p.p || '').toLowerCase();
-        var isH = pri === 'high' || pri === 'h';
-        var isM = pri === 'medium' || pri === 'med' || pri === 'm';
-        var priColor = isH ? '#ef4444' : isM ? '#f59e0b' : '#22c55e';
-        var priLabel = isH ? 'HIGH' : isM ? 'MED' : 'LOW';
+        var pri = (p.priority || p.p || 'low').toLowerCase();
+        var priKey = (pri === 'high' || pri === 'h') ? 'high' : (pri === 'medium' || pri === 'med' || pri === 'm') ? 'medium' : 'low';
+        var priLabel = priKey === 'high' ? 'HIGH' : priKey === 'medium' ? 'MEDIUM' : 'LOW';
+        var priColor = priKey === 'high' ? '#ef4444' : priKey === 'medium' ? '#f59e0b' : '#22c55e';
         var title = p.title || p.t || '';
+        var system = p.system || p.sys || '';
         var action = p.action || p.passage || '';
         var impact = p.expected_impact || p.impact || '';
+        var trigger = p.trigger || '';
+        var effort = p.effort || '';
         var el = document.createElement('div');
         el.className = 'cb-passage';
-        el.style.borderLeft = '3px solid ' + priColor;
-        el.innerHTML = '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap;">' +
-          '<span style="font-size:10px;font-weight:800;color:' + priColor + ';background:' + priColor + '14;padding:3px 8px;border-radius:4px;letter-spacing:.04em;flex-shrink:0;">' + priLabel + '</span>' +
-          (title ? '<span class="rec-title">' + title + '</span>' : '') +
+        el.style.borderLeftColor = priColor;
+        el.innerHTML =
+          '<div class="pri-row">' +
+            '<span class="pri-badge ' + priKey + '">' + priLabel + '</span>' +
+            (system ? '<span class="sys-badge">' + system + '</span>' : '') +
+            (effort ? '<span class="sys-badge" style="color:#4ade80;background:#4ade8018;border-color:#4ade8030;">' + effort.replace('_',' ') + '</span>' : '') +
           '</div>' +
+          (title ? '<span class="rec-title">' + title + '</span>' : '') +
+          (trigger ? '<div style="font-size:11px;color:#6b7280;margin-bottom:8px;">&#128202; Signal: ' + trigger + '</div>' : '') +
           (action ? '<span class="rec-action">' + action + '</span>' : '') +
-          (impact ? '<span class="rec-impact">\u2192 Impact: ' + impact + '</span>' : '');
+          (impact ? '<span class="rec-impact">' + impact + '</span>' : '');
         passDiv.appendChild(el);
       });
     } else {
@@ -32247,39 +32263,23 @@ app.post('/api/tracker/pages/:id/check', verifyEngineAccess, async (req, res) =>
                   try {
                     const gemKey = process.env.GEMINI_API_KEY || '';
                     if (gemKey) {
-                      const mergePrompt = `You are merging two AI citation briefs for the same page into one.
-
-PAGE: ${pageUrl}
-KEYWORD: "${kw}"
-
-CURRENT STATUS (today's check):
-- Google position: ${pos ? '#' + pos : 'not ranked'}
-- Google AIO cited: ${aio ? 'YES' : 'NO'}
-- Perplexity cited: ${perp ? 'YES' : 'NO'}
-- Copilot cited: ${bing ? 'YES' : 'NO'}
-- Claude cited: ${brave ? 'YES' : 'NO'}
-- GRAAF score: ${score || 'N/A'}/100
-${gscContext}
-
-GOAL: Get this page to rank #1 AND get cited in all AI systems.
-
-PREVIOUS BRIEF (from last check, NOT yet marked done by user):
-${JSON.stringify(existingBrief?.items || [], null, 2)}
-
-NEW RECOMMENDATIONS (from today's check):
-${JSON.stringify(recs, null, 2)}
-
-TASK: Create ONE merged brief focused on ranking #1 and AI citations.
-- Remove items that are now resolved
-- Keep items from previous brief still relevant
-- Add new items not in previous brief
-- If GSC data shows low CTR (below 3%), add a title/meta optimization action
-- If position is 4-10, add a specific content depth action to reach #1
-- Maximum 5 items total, sorted by priority (HIGH first)
-
-Return ONLY a JSON array, no markdown:
-[{"title":"gap in max 6 words","priority":"high"|"medium"|"low","action":"EXACT copy-paste ready instruction — minimum 30 words","expected_impact":"which AI system and/or ranking improvement"}]
-`;
+                      const mergePrompt = 'You are upgrading a Citation Brief. Merge old + new actions into the best 5 for this page.\n\n' +
+                        'PAGE: ' + pageUrl + '\n' +
+                        'KEYWORD: "' + kw + '"\n' +
+                        'STATUS: pos=' + (pos||'unranked') + ', AIO=' + (aio?'YES':'NO') + ', Perplexity=' + (perp?'YES':'NO') + ', Copilot=' + (bing?'YES':'NO') + ', Claude=' + (brave?'YES':'NO') + ', GRAAF=' + (score||'?') + '/100\n' +
+                        (gscContext ? gscContext + '\n' : '') +
+                        '\nPREVIOUS BRIEF (keep if still relevant):\n' + JSON.stringify((existingBrief?.items||[]).slice(0,3)) + '\n' +
+                        '\nNEW BRIEF (higher priority — generated today):\n' + JSON.stringify(recs.slice(0,5)) + '\n\n' +
+                        'MERGE RULES:\n' +
+                        '1. Drop actions for systems now showing YES above\n' +
+                        '2. Drop previous actions superseded by newer ones\n' +
+                        '3. Max 5 items, HIGH first\n' +
+                        '4. Every action must be EXACT copy-paste text — no vague suggestions\n' +
+                        '5. Add system field: Google AIO | Perplexity | Copilot | Claude | Ranking\n\n' +
+                        'CORRECT action format example:\n' +
+                        '{"title":"Add definition after H1","priority":"high","system":"Google AIO","action":"Add this exact sentence immediately after your H1: \"[keyword] is [specific 40-word definition based on page content].\" This triggers AIO because it provides a quotable definition in the first 100 words.","expected_impact":"Google AIO cites pages with definitions in first 100 words — this puts you in that category"}\n\n' +
+                        'Return ONLY valid JSON array, no markdown:\n' +
+                        '[{"title":"max 6 words","priority":"high|medium|low","system":"Google AIO|Perplexity|Copilot|Claude|Ranking","action":"EXACT text min 50 words","expected_impact":"[System] cites/ranks because [specific reason]"}]';
 
                       const gResp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${gemKey}`, {
                         method: 'POST',
@@ -32383,12 +32383,6 @@ Return ONLY a JSON array, no markdown:
                 merged: !isFirstBrief,
                 merge_note: mergeNote,
                 brief_content: mergedBrief,
-                passages: mergedBrief ? (mergedBrief.items || []) : [],
-                gsc_clicks: page.gsc_clicks || null,
-                gsc_impressions: page.gsc_impressions || null,
-                gsc_position: page.gsc_position || null,
-                gsc_ctr: page.gsc_ctr || null,
-                gsc_keyword: page.gsc_keyword || null,
                 ts: new Date().toISOString()
               });
             } catch(e) { console.warn('[brief-save]', e.message); }
@@ -33530,12 +33524,15 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
       console.log('[tracker] Skipping Gemini recs — no valid keyword for page', pageId);
     } else {
     try {
-      const kw = keyword; // already derived above — manual or GSC only
+      const kw = keyword;
 
-      // Our page — strip HTML to readable text
-      let ourContent = '';
+      // HTML: raw first 5000 chars for structural analysis
       const rawHtml = page.html_content || '';
-      if(rawHtml) {
+      const htmlExcerpt = rawHtml.substring(0, 5000);
+
+      // Stripped text for content comparison
+      let ourContent = '';
+      if (rawHtml) {
         ourContent = rawHtml
           .replace(/<script[\s\S]*?<\/script>/gi, ' ')
           .replace(/<style[\s\S]*?<\/style>/gi, ' ')
@@ -33545,86 +33542,139 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
           .substring(0, 2000);
       }
 
-      // Top competitor snippets from Serper
+      // Competitors from Serper
       const competitors = (snapshot._competitors || []).filter(function(c){ return c.snippet; });
+      const competitor1 = competitors[0] || null;
       const competitorBlock = competitors.length
-        ? competitors.map(function(c,i){ return `#${c.position||i+1} ${c.url}\nTitle: ${c.title}\nSnippet: ${c.snippet}`; }).join('\n\n')
-        : '(No competitor data — Serper key not set or no results)';
+        ? competitors.slice(0,3).map(function(c,i){ return '#' + (c.position||i+1) + ' ' + c.url + '\nTitle: ' + c.title + '\nSnippet: ' + c.snippet; }).join('\n\n')
+        : '(No competitor data)';
 
-      const aioText = snapshot.ai_google_overview_text ? `\nWHAT GOOGLE AI OVERVIEW CURRENTLY SAYS:\n${snapshot.ai_google_overview_text}` : '';
+      const aioText = snapshot.ai_google_overview_text ? '\nGOOGLE AI OVERVIEW CURRENTLY SAYS:\n' + snapshot.ai_google_overview_text : '';
+      const kwSource = page.keyword ? 'manually set' : page.gsc_keyword ? 'from GSC' : 'auto';
 
-      const status = [
-        snapshot.google_position ? `Our page is at position #${snapshot.google_position} in Google` : 'Our page is NOT in Google top 10',
-        snapshot.ai_google_overview_cited ? '✅ We ARE in Google AI Overview' : (snapshot.ai_google_overview_found ? '❌ Google AI Overview exists but we are NOT in it' : '❌ No Google AI Overview for this keyword yet'),
-        snapshot.ai_perplexity_cited ? '✅ We ARE cited in Perplexity' : '❌ We are NOT cited in Perplexity',
-        snapshot.ai_bing_cited ? '✅ We ARE cited in You.com AI' : '❌ We are NOT cited in You.com AI',
-      ].join('\n');
+      // GSC opportunity math
+      const gscImpr = page.gsc_impressions || 0;
+      const gscClicks = page.gsc_clicks || 0;
+      const gscCtr = page.gsc_ctr || 0;
+      const gscPos = page.gsc_position || snapshot.google_position || null;
+      const oppClicks = gscImpr ? Math.round(gscImpr * 28 / 100) : 0;
+      const clickGap = oppClicks > gscClicks ? oppClicks - gscClicks : 0;
+      const gscOpp = gscImpr
+        ? 'GSC: ' + gscImpr + ' impressions x ' + gscCtr + '% CTR = ' + gscClicks + ' clicks. At rank #1 (28% CTR) = ' + oppClicks + ' clicks (+' + clickGap + '/month).'
+        : '';
 
-      const kwSource = page.keyword ? 'manually set' : page.gsc_keyword ? 'from Google Search Console' : 'auto-extracted from page title';
-            const gscBlock = page.gsc_clicks ? `
-GSC DATA: Clicks ${page.gsc_clicks} | Impressions ${page.gsc_impressions} | CTR ${page.gsc_ctr}% | Position ${page.gsc_position}` : '';
+      // ── CALL 1: Citation Brief ─────────────────────────────────────────
+      const citationPrompt = 'You are an AI Citation Strategist. Create a Citation Brief: tell the content owner EXACTLY what to add so Google AI Overview, Perplexity, Microsoft Copilot, and Claude all cite this page.\n\n' +
+'INPUT:\n' +
+'- URL: ' + page.url + '\n' +
+'- Keyword: "' + kw + '" (' + kwSource + ')\n' +
+'- Title: ' + (page.title||'(not set)') + '\n' +
+'- Google position: ' + (snapshot.google_position || 'not ranked') + '\n' +
+'- Google AI Overview cited: ' + (snapshot.ai_google_overview_cited ? 'YES — skip AIO actions' : 'NO') + '\n' +
+'- Perplexity cited: ' + (snapshot.ai_perplexity_cited ? 'YES — skip Perplexity actions' : 'NO') + '\n' +
+'- Microsoft Copilot cited: ' + (snapshot.ai_bing_cited ? 'YES — skip Copilot actions' : 'NO') + '\n' +
+'- Claude/Brave cited: ' + (snapshot.ai_brave_cited ? 'YES — skip Claude actions' : 'NO') + '\n' +
+'- GRAAF score: ' + (snapshot.score||'?') + '/100\n' +
+(aioText ? aioText + '\n' : '') +
+'\nPAGE HTML (first 5000 chars — use this to write additions referencing actual structure):\n' +
+(htmlExcerpt || '(no HTML)') + '\n\n' +
+'COMPETITOR #1 BEATING US:\n' +
+(competitor1 ? 'URL: ' + competitor1.url + '\nTitle: ' + competitor1.title + '\nSnippet: ' + competitor1.snippet : '(no data)') + '\n\n' +
+'WHAT EACH AI SYSTEM NEEDS:\n' +
+'Google AIO: quotable definition in first 100 words + FAQ/HowTo schema + exact query answered\n' +
+'Perplexity: author credentials with specifics (years, clients) + statistics + outbound authority links + numbered steps\n' +
+'Copilot: H2/H3 matching search queries + 50-80 word summary near top + keyword in H1, first paragraph, meta title\n' +
+'Claude/Brave: verifiable facts with source attribution + clear About The Author section\n\n' +
+'TASK:\n' +
+'1. Read the HTML — find where each addition goes (e.g. "after the H1", "before first H2")\n' +
+'2. Write the EXACT text for each action — minimum 50 words per action\n' +
+'3. Compare our content vs competitor #1 — name the specific gap\n' +
+'4. Skip any system already showing YES\n\n' +
+'EXAMPLE of a correct action:\n' +
+'{"title":"Add definition after H1","priority":"high","system":"Google AIO","action":"Add this exact paragraph immediately after your H1 heading: \\"' + kw + ' is a [specific definition based on your page content]. Unlike [what competitors offer], this approach [specific differentiator from your HTML]. Used by [audience] to [specific outcome].\\" This triggers Google AIO because it provides a direct quotable definition in the first 100 words — the #1 requirement for AI Overview inclusion.","expected_impact":"Google AIO will cite this page within 2-3 crawl cycles because AIO extracts verbatim definitions from first-paragraph text."}\n\n' +
+'FAIL EXAMPLES — never write these:\n' +
+'"Improve your introduction for AI citations" — too vague\n' +
+'"Add more author credentials" — write the exact byline\n' +
+'"Optimize your title tag" — write the exact new title\n\n' +
+'Return ONLY valid JSON array, no markdown, no preamble:\n' +
+'[{"title":"max 6 words","priority":"high|medium|low","system":"Google AIO|Perplexity|Copilot|Claude|Ranking","action":"EXACT copy-paste text minimum 50 words — quote exact location in HTML","expected_impact":"[System] will cite this because [specific technical reason]"}]';
 
-      const prompt = `You are an AI Citation Strategist. Create a Citation Brief telling the content owner EXACTLY what to change so Google AI Overview, Perplexity, Copilot, and Claude all cite this page.
+      // ── CALL 2: GSC Ranking Brief ──────────────────────────────────────
+      const gscPrompt = 'You are a Google Search Console Analyst. Create a GSC Brief: 4 data-driven actions to move this page to rank #1.\n\n' +
+'INPUT:\n' +
+'- URL: ' + page.url + '\n' +
+'- Keyword: "' + kw + '"\n' +
+'- GSC Clicks: ' + (gscClicks||'n/a') + '\n' +
+'- GSC Impressions: ' + (gscImpr||'n/a') + '\n' +
+'- GSC CTR: ' + (gscCtr||'n/a') + '%\n' +
+'- GSC Position: ' + (gscPos||'n/a') + '\n' +
+'- Live Google position: ' + (snapshot.google_position||'not ranked') + '\n' +
+'- GRAAF score: ' + (snapshot.score||'?') + '/100\n' +
+(gscOpp ? '- ' + gscOpp + '\n' : '') +
+'\nCOMPETITOR #1:\n' +
+(competitor1 ? 'URL: ' + competitor1.url + '\nTitle: ' + competitor1.title + '\nSnippet: ' + competitor1.snippet : '(no data)') + '\n\n' +
+'PAGE HTML (first 5000 chars):\n' +
+(htmlExcerpt || '(no HTML)') + '\n\n' +
+'GSC SIGNALS:\n' +
+'- Impressions >1000 + CTR <3% = title/meta problem → rewrite title\n' +
+'- Position 4-10 with decent CTR = one content gap blocking #1 → find it in competitor snippet\n' +
+'- Position >20 = fundamental relevance gap → rewrite intro + H1\n' +
+'- CTR <1% = severe title mismatch → complete title overhaul\n\n' +
+'EXAMPLE of a correct action:\n' +
+'{"title":"Rewrite title for CTR","priority":"high","trigger":"' + (gscImpr||'X') + ' impressions at ' + (gscCtr||'Y') + '% CTR = title mismatch — expected CTR at position ' + (snapshot.google_position||'?') + ' is 8-12%","action":"Replace your current title tag with: \\"' + kw + ': [Specific benefit] — [Year] Guide\\". Change this in your WordPress SEO plugin (Yoast/RankMath) title field. Current title loses clicks because it lacks the year and primary benefit. New title targets 8%+ CTR.","expected_impact":"Position ' + (snapshot.google_position||'?') + ' → ' + Math.max(1,(snapshot.google_position||10)-4) + ' within 3-4 weeks after Google recrawls","effort":"quick_win"}\n\n' +
+'FAIL EXAMPLES — never write these:\n' +
+'"Improve your content" — write the actual content\n' +
+'"Add more internal links" — write the exact anchor text and which page\n' +
+'"Optimize meta description" — write the exact new meta description\n\n' +
+'REQUIRED: include 1 quick_win (under 5 min), 1 content gap vs competitor #1, 1 freshness action.\n\n' +
+'Return ONLY valid JSON array, no markdown:\n' +
+'[{"title":"max 6 words","priority":"high|medium|low","trigger":"exact GSC signal: X impressions, Y% CTR = problem type","action":"EXACT implementation — write the title, paragraph, schema verbatim","expected_impact":"Position X \u2192 Y within Z weeks","effort":"quick_win|content|technical"}]';
 
-INPUT:
-- URL: ${page.url}
-- Keyword: "${kw}" (${kwSource})
-- Title: ${page.title||'(not set)'}
-- Position: ${snapshot.google_position || 'not ranked'}
-- AIO cited: ${snapshot.ai_google_overview_cited ? 'YES' : 'NO'}
-- Perplexity cited: ${snapshot.ai_perplexity_cited ? 'YES' : 'NO'}
-- Copilot cited: ${snapshot.ai_bing_cited ? 'YES' : 'NO'}
-- Claude cited: ${snapshot.ai_brave_cited ? 'YES' : 'NO'}
-${gscBlock}
-${aioText}
+      // Run both in parallel
+      const [citResp, gscResp] = await Promise.all([
+        callGeminiWithFallback(geminiKey, {
+          contents: [{ role: 'user', parts: [{ text: citationPrompt }] }],
+          generationConfig: { temperature: 0.3, maxOutputTokens: 2000 }
+        }),
+        callGeminiWithFallback(geminiKey, {
+          contents: [{ role: 'user', parts: [{ text: gscPrompt }] }],
+          generationConfig: { temperature: 0.2, maxOutputTokens: 1500 }
+        })
+      ]);
 
-PAGE CONTENT:
-${ourContent ? ourContent + '...' : '(No HTML content)'}
-
-COMPETITORS:
-${competitorBlock}
-
-CITATION REQUIREMENTS:
-- Google AIO: direct quotable definition in first 100 words, structured data, answers exact query
-- Perplexity: author E-E-A-T credentials, specific data/statistics, outbound authority links, numbered lists
-- Copilot: clear H2/H3 matching queries, 50-80 word summary near top, keyword in H1/first paragraph/meta
-- Claude/Brave: factual verifiable claims with sources, About author section, fast mobile pages
-
-TASK:
-1. Compare our content vs competitors — what specific facts, phrases, structures do they have that we don't?
-2. If AIO text exists: what format triggered it? How to match/exceed it?
-3. Create exactly 5 actions targeting ONE system each
-4. Skip systems that already cite us (YES above)
-5. Write EXACT copy-paste text — not suggestions, the actual sentences
-
-QUALITY: Every action must be implementable in under 10 minutes. "Improve your intro" = FAIL. Write the intro FOR them.
-
-Return ONLY JSON, no markdown:
-[{"title":"6 words max","priority":"high|medium|low","system":"Google AIO|Perplexity|Copilot|Claude|Ranking","action":"EXACT 40-80 word copy-paste text","expected_impact":"System + specific why"}]`;
-
-      const resp = await callGeminiWithFallback(geminiKey, {
-        contents: [{ role: 'user', parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0.3, maxOutputTokens: 1500 }
-      });
-      if(resp.ok) {
-        let recs = resp.data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-        // Strip markdown fences and extract JSON array robustly
+      // Parse Citation Brief
+      if (citResp.ok) {
+        let recs = citResp.data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
         recs = recs.replace(/^```json\n?/i,'').replace(/```\s*$/,'').trim();
-        // Extract first [...] block if there's extra text
         const arrMatch = recs.match(/\[\s*\{[\s\S]*\}\s*\]/);
-        if(arrMatch) recs = arrMatch[0];
+        if (arrMatch) recs = arrMatch[0];
         try {
           snapshot.recommendations = JSON.parse(recs);
-          _trSetStep(pageId, 'recommendations', 'done', (snapshot.recommendations||[]).length + ' recommendations generated');
         } catch(e) {
-          // Gemini returned non-JSON — store as a single text recommendation
-          snapshot.recommendations = [{ title: 'AI Recommendation', priority: 'medium', action: recs.substring(0,800), expected_impact: 'See full text above' }];
-          _trSetStep(pageId, 'recommendations', 'done', '1 recommendation (text)');
+          snapshot.recommendations = [{ title: 'Citation Brief', priority: 'medium', system: 'All', action: recs.substring(0,800), expected_impact: 'See above' }];
         }
       } else {
-        _trSetStep(pageId, 'recommendations', 'error', 'Gemini API ' + resp.status + ': ' + (resp.errorMessage||'').substring(0,80));
+        _trSetStep(pageId, 'recommendations', 'error', 'Citation Brief — Gemini ' + citResp.status);
       }
-    } catch(e) { _trSetStep(pageId, 'recommendations', 'error', e.message); console.warn('[tracker] Gemini recommendations failed:', e.message); }
+
+      // Parse GSC Brief
+      if (gscResp.ok) {
+        let gscRecs = gscResp.data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+        gscRecs = gscRecs.replace(/^```json\n?/i,'').replace(/```\s*$/,'').trim();
+        const gscMatch = gscRecs.match(/\[\s*\{[\s\S]*\}\s*\]/);
+        if (gscMatch) gscRecs = gscMatch[0];
+        try {
+          snapshot.gsc_brief = JSON.parse(gscRecs);
+        } catch(e) {
+          snapshot.gsc_brief = [{ title: 'GSC Brief', priority: 'medium', trigger: 'See text', action: gscRecs.substring(0,800), expected_impact: 'Ranking improvement', effort: 'content' }];
+        }
+      }
+
+      const citCount = (snapshot.recommendations||[]).length;
+      const gscCount = (snapshot.gsc_brief||[]).length;
+      _trSetStep(pageId, 'recommendations', 'done', citCount + ' citation + ' + gscCount + ' ranking actions');
+
+    } catch(e) { _trSetStep(pageId, 'recommendations', 'error', e.message); console.warn('[tracker] Gemini failed:', e.message); }
     } // end if (_hasValidKeyword)
   } else {
     _trSetStep(pageId, 'recommendations', 'error', 'GEMINI_API_KEY not set — skipped');
@@ -33654,18 +33704,21 @@ Return ONLY JSON, no markdown:
     }
     try { return JSON.stringify(val); } catch(e) { return null; }
   }
+  // Add gsc_brief column if not exists
+  await pool.query('ALTER TABLE tracker_snapshots ADD COLUMN IF NOT EXISTS gsc_brief JSONB').catch(()=>{});
   const snapR = await pool.query(
     `INSERT INTO tracker_snapshots
       (page_id,checked_at,google_position,ai_google_overview_found,ai_google_overview_cited,ai_google_overview_text,
        ai_perplexity_found,ai_perplexity_cited,ai_perplexity_text,ai_bing_found,ai_bing_cited,ai_bing_text,
        ai_brave_found,ai_brave_cited,
-       recommendations,html_hash,score,graaf_breakdown,graaf_recommendations,content_changed,content_diff)
-     VALUES ($1,NOW(),$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20) RETURNING *`,
+       recommendations,gsc_brief,html_hash,score,graaf_breakdown,graaf_recommendations,content_changed,content_diff)
+     VALUES ($1,NOW(),$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21) RETURNING *`,
     [page.id, snapshot.google_position, snapshot.ai_google_overview_found, snapshot.ai_google_overview_cited,
      snapshot.ai_google_overview_text, snapshot.ai_perplexity_found, snapshot.ai_perplexity_cited,
      snapshot.ai_perplexity_text, snapshot.ai_bing_found, snapshot.ai_bing_cited, snapshot.ai_bing_text,
      !!snapshot.ai_brave_found, !!snapshot.ai_brave_cited,
      safeJSONB(snapshot.recommendations),
+     safeJSONB(snapshot.gsc_brief),
      snapshot.html_hash,
      snapshot.score,
      safeJSONB(snapshot.graaf_breakdown),
