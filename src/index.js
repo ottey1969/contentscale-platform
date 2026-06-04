@@ -25639,7 +25639,9 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
       }
 
       // Recommendations — by priority, large readable text
-      var passages = data.passages || data.recommendations;
+      // Extract from all possible locations: passages, recommendations, or brief_content.items
+      var _briefObj = data.brief_content ? (typeof data.brief_content === 'string' ? JSON.parse(data.brief_content) : data.brief_content) : null;
+      var passages = data.passages || data.recommendations || (_briefObj && Array.isArray(_briefObj.items) ? _briefObj.items : null);
       if (passages && Array.isArray(passages) && passages.length) {
         var priOrder = { high: 0, h: 0, medium: 1, med: 1, m: 1, low: 2, l: 2 };
         passages.sort(function(a, b) {
@@ -25821,8 +25823,9 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
       }
     }
 
-    // Recommendations
-    var passages = data.passages || data.recommendations;
+    // Recommendations — extract from all possible locations
+    var _bcObj = data.brief_content ? (typeof data.brief_content === 'string' ? JSON.parse(data.brief_content) : data.brief_content) : null;
+    var passages = data.passages || data.recommendations || (_bcObj && Array.isArray(_bcObj.items) ? _bcObj.items : null);
     var passDiv = document.getElementById('cbPassages');
     if (passages && Array.isArray(passages) && passages.length) {
       var priOrder = { high: 0, h: 0, medium: 1, med: 1, m: 1, low: 2, l: 2 };
@@ -32380,6 +32383,12 @@ Return ONLY a JSON array, no markdown:
                 merged: !isFirstBrief,
                 merge_note: mergeNote,
                 brief_content: mergedBrief,
+                passages: mergedBrief ? (mergedBrief.items || []) : [],
+                gsc_clicks: page.gsc_clicks || null,
+                gsc_impressions: page.gsc_impressions || null,
+                gsc_position: page.gsc_position || null,
+                gsc_ctr: page.gsc_ctr || null,
+                gsc_keyword: page.gsc_keyword || null,
                 ts: new Date().toISOString()
               });
             } catch(e) { console.warn('[brief-save]', e.message); }
@@ -33523,12 +33532,9 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
     try {
       const kw = keyword; // already derived above — manual or GSC only
 
-      // Our page — keep first 5000 chars of raw HTML for structural analysis
-      const rawHtml = page.html_content || '';
-      const htmlExcerpt = rawHtml.substring(0, 5000);
-
-      // Stripped readable text for content comparison (2000 chars)
+      // Our page — strip HTML to readable text
       let ourContent = '';
+      const rawHtml = page.html_content || '';
       if(rawHtml) {
         ourContent = rawHtml
           .replace(/<script[\s\S]*?<\/script>/gi, ' ')
@@ -33541,138 +33547,83 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
 
       // Top competitor snippets from Serper
       const competitors = (snapshot._competitors || []).filter(function(c){ return c.snippet; });
-      const competitor1 = competitors[0] || null;
       const competitorBlock = competitors.length
-        ? competitors.slice(0,3).map(function(c,i){ return '#' + (c.position||i+1) + ' ' + c.url + '\nTitle: ' + c.title + '\nSnippet: ' + c.snippet; }).join('\n\n')
+        ? competitors.map(function(c,i){ return `#${c.position||i+1} ${c.url}\nTitle: ${c.title}\nSnippet: ${c.snippet}`; }).join('\n\n')
         : '(No competitor data — Serper key not set or no results)';
 
-      const aioText = snapshot.ai_google_overview_text ? '\nWHAT GOOGLE AI OVERVIEW CURRENTLY SAYS:\n' + snapshot.ai_google_overview_text : '';
+      const aioText = snapshot.ai_google_overview_text ? `\nWHAT GOOGLE AI OVERVIEW CURRENTLY SAYS:\n${snapshot.ai_google_overview_text}` : '';
+
+      const status = [
+        snapshot.google_position ? `Our page is at position #${snapshot.google_position} in Google` : 'Our page is NOT in Google top 10',
+        snapshot.ai_google_overview_cited ? '✅ We ARE in Google AI Overview' : (snapshot.ai_google_overview_found ? '❌ Google AI Overview exists but we are NOT in it' : '❌ No Google AI Overview for this keyword yet'),
+        snapshot.ai_perplexity_cited ? '✅ We ARE cited in Perplexity' : '❌ We are NOT cited in Perplexity',
+        snapshot.ai_bing_cited ? '✅ We ARE cited in You.com AI' : '❌ We are NOT cited in You.com AI',
+      ].join('\n');
+
       const kwSource = page.keyword ? 'manually set' : page.gsc_keyword ? 'from Google Search Console' : 'auto-extracted from page title';
+            const gscBlock = page.gsc_clicks ? `
+GSC DATA: Clicks ${page.gsc_clicks} | Impressions ${page.gsc_impressions} | CTR ${page.gsc_ctr}% | Position ${page.gsc_position}` : '';
 
-      // GSC opportunity math
-      const gscImpr = page.gsc_impressions || 0;
-      const gscClicks = page.gsc_clicks || 0;
-      const gscCtr = page.gsc_ctr || 0;
-      const gscPos = page.gsc_position || snapshot.google_position || null;
-      const targetCtr = 28; // approx CTR at rank #1 for informational keywords
-      const opportunityClicks = gscImpr ? Math.round(gscImpr * targetCtr / 100) : null;
-      const clickGap = opportunityClicks && gscClicks ? opportunityClicks - gscClicks : null;
-      const gscOpportunity = (gscImpr && clickGap)
-        ? 'GSC OPPORTUNITY: ' + gscImpr + ' impressions × ' + gscCtr + '% CTR = ' + gscClicks + ' clicks now. At #1 (28% CTR) = ' + opportunityClicks + ' clicks (+' + clickGap + '/month).'
-        : (gscImpr ? 'GSC: ' + gscImpr + ' impressions, ' + gscClicks + ' clicks, pos ' + (gscPos||'?') : '');
+      const prompt = `You are an AI Citation Strategist. Create a Citation Brief telling the content owner EXACTLY what to change so Google AI Overview, Perplexity, Copilot, and Claude all cite this page.
 
-      // ── CALL 1: Citation Brief ────────────────────────────────────────────────
-      const citationPrompt = 'You are an AI Citation Strategist. Create a Citation Brief telling the content owner EXACTLY what to add so Google AI Overview, Perplexity, Microsoft Copilot, and Claude all cite this page.\n\n' +
-'INPUT:\n' +
-'- URL: ' + page.url + '\n' +
-'- Keyword: "' + kw + '" (' + kwSource + ')\n' +
-'- Title: ' + (page.title||'(not set)') + '\n' +
-'- Google position: ' + (snapshot.google_position || 'not ranked') + '\n' +
-'- Google AI Overview cited: ' + (snapshot.ai_google_overview_cited ? 'YES' : 'NO') + '\n' +
-'- Perplexity cited: ' + (snapshot.ai_perplexity_cited ? 'YES' : 'NO') + '\n' +
-'- Microsoft Copilot cited: ' + (snapshot.ai_bing_cited ? 'YES' : 'NO') + '\n' +
-'- Claude/Brave cited: ' + (snapshot.ai_brave_cited ? 'YES' : 'NO') + '\n' +
-'- GRAAF score: ' + (snapshot.score||'?') + '/100\n' +
-(aioText ? aioText + '\n' : '') +
-'\nPAGE HTML (first 5000 chars — use this to write EXACT additions referencing actual structure):\n' +
-(htmlExcerpt || '(No HTML content)') + '\n' +
-'\nCOMPETITOR #1 (what is beating us):\n' +
-(competitor1 ? 'URL: ' + competitor1.url + '\nTitle: ' + competitor1.title + '\nSnippet: ' + competitor1.snippet : '(no competitor data)') + '\n' +
-'\nCITATION SYSTEM REQUIREMENTS:\n' +
-'Google AIO: needs a direct quotable definition in first 100 words + FAQ/HowTo schema + exact question answered.\n' +
-'Perplexity: needs author credentials with specifics (years, clients, data) + statistics + outbound links to authoritative sources + numbered lists.\n' +
-'Copilot: needs H2/H3 headings that match search queries + 50-80 word summary paragraph near top + keyword in H1, first paragraph, and meta title.\n' +
-'Claude/Brave: needs factual verifiable claims with source attributions + clear About The Author section + consistent publishing history.\n' +
-'\nTASK:\n' +
-'1. Read the HTML excerpt — identify the EXACT location where each addition goes (after H1, before first H2, etc)\n' +
-'2. For each uncited system: write the EXACT text/HTML/schema the user must copy-paste\n' +
-'3. Compare our snippet vs competitor #1 — what specific phrase, data point, or structure gives them the edge?\n' +
-'4. If AIO text exists: identify what format triggered it and how we match or exceed it\n' +
-'5. Skip any system already showing YES above\n' +
-'\nQUALITY BAR: Every action = copy-paste ready. "Add this EXACT sentence after your H1: [sentence]". If you write "improve your introduction" you have failed. Write the introduction FOR them.\n' +
-'\nReturn ONLY this JSON, no markdown, no preamble:\n' +
-'[{"title":"6 words max","priority":"high|medium|low","system":"Google AIO|Perplexity|Copilot|Claude|Ranking","action":"EXACT copy-paste text or HTML — minimum 50 words — reference actual page location","expected_impact":"[System] will cite this page because [specific technical reason]"}]';
+INPUT:
+- URL: ${page.url}
+- Keyword: "${kw}" (${kwSource})
+- Title: ${page.title||'(not set)'}
+- Position: ${snapshot.google_position || 'not ranked'}
+- AIO cited: ${snapshot.ai_google_overview_cited ? 'YES' : 'NO'}
+- Perplexity cited: ${snapshot.ai_perplexity_cited ? 'YES' : 'NO'}
+- Copilot cited: ${snapshot.ai_bing_cited ? 'YES' : 'NO'}
+- Claude cited: ${snapshot.ai_brave_cited ? 'YES' : 'NO'}
+${gscBlock}
+${aioText}
 
-      // ── CALL 2: GSC Ranking Brief ─────────────────────────────────────────────
-      const gscPrompt = 'You are a Google Search Console Analyst. Create a GSC Brief — a data-driven action plan to move this page to rank #1.\n\n' +
-'INPUT:\n' +
-'- URL: ' + page.url + '\n' +
-'- Keyword: "' + kw + '"\n' +
-'- GSC Clicks: ' + (gscClicks||'n/a') + '\n' +
-'- GSC Impressions: ' + (gscImpr||'n/a') + '\n' +
-'- GSC CTR: ' + (gscCtr||'n/a') + '%\n' +
-'- GSC Position: ' + (gscPos||'n/a') + '\n' +
-'- Live Google position: ' + (snapshot.google_position||'not ranked') + '\n' +
-'- GRAAF score: ' + (snapshot.score||'?') + '/100\n' +
-(gscOpportunity ? '- ' + gscOpportunity + '\n' : '') +
-'\nCOMPETITOR #1:\n' +
-(competitor1 ? 'URL: ' + competitor1.url + '\nTitle: ' + competitor1.title + '\nSnippet: ' + competitor1.snippet : '(no competitor data)') + '\n' +
-'\nPAGE HTML (first 5000 chars):\n' +
-(htmlExcerpt || '(No HTML content)') + '\n' +
-'\nGSC INTERPRETATION RULES:\n' +
-'Impressions > 1000 but CTR < 3%: title/meta problem — rewrite title.\n' +
-'Position 4-10 with decent CTR: one content gap is blocking #1 — find it in competitor snippet.\n' +
-'Position > 20: fundamental relevance or authority gap.\n' +
-'CTR < 1%: severe title mismatch with search intent.\n' +
-'\nWHAT DRIVES RANK #1 IN 2026:\n' +
-'1. Content that directly answers the query better than current #1\n' +
-'2. E-E-A-T: real experience signals, specific credentials, original data\n' +
-'3. Keyword in title tag, H1, first 100 words, URL slug\n' +
-'4. Schema markup enabling rich snippets (FAQ, HowTo, Article)\n' +
-'5. Internal linking authority from strongest pages\n' +
-'6. Content freshness: updated date, new statistics, new examples\n' +
-'\nTASK:\n' +
-'1. State the specific GSC signal triggering each action (e.g. "9,196 impressions at 2.7% CTR = title mismatch")\n' +
-'2. Write the EXACT new title tag, new paragraph, new schema block — not a suggestion, the actual text\n' +
-'3. Calculate expected position improvement (e.g. pos 14 → 8)\n' +
-'4. Include one Quick Win (under 5 minutes), one Content Gap vs competitor #1, one Freshness action if no recent update\n' +
-'\nReturn ONLY this JSON, no markdown:\n' +
-'[{"title":"6 words max","priority":"high|medium|low","trigger":"specific GSC signal that caused this action","action":"EXACT implementation — write the new title, paragraph, or schema verbatim","expected_impact":"Position X → Y within Z weeks","effort":"quick_win|content|technical"}]';
+PAGE CONTENT:
+${ourContent ? ourContent + '...' : '(No HTML content)'}
 
-      // Run both calls in parallel
-      const [citResp, gscResp] = await Promise.all([
-        callGeminiWithFallback(geminiKey, {
-          contents: [{ role: 'user', parts: [{ text: citationPrompt }] }],
-          generationConfig: { temperature: 0.3, maxOutputTokens: 2000 }
-        }),
-        callGeminiWithFallback(geminiKey, {
-          contents: [{ role: 'user', parts: [{ text: gscPrompt }] }],
-          generationConfig: { temperature: 0.2, maxOutputTokens: 1500 }
-        })
-      ]);
+COMPETITORS:
+${competitorBlock}
 
-      // Parse Citation Brief
-      if(citResp.ok) {
-        let recs = citResp.data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+CITATION REQUIREMENTS:
+- Google AIO: direct quotable definition in first 100 words, structured data, answers exact query
+- Perplexity: author E-E-A-T credentials, specific data/statistics, outbound authority links, numbered lists
+- Copilot: clear H2/H3 matching queries, 50-80 word summary near top, keyword in H1/first paragraph/meta
+- Claude/Brave: factual verifiable claims with sources, About author section, fast mobile pages
+
+TASK:
+1. Compare our content vs competitors — what specific facts, phrases, structures do they have that we don't?
+2. If AIO text exists: what format triggered it? How to match/exceed it?
+3. Create exactly 5 actions targeting ONE system each
+4. Skip systems that already cite us (YES above)
+5. Write EXACT copy-paste text — not suggestions, the actual sentences
+
+QUALITY: Every action must be implementable in under 10 minutes. "Improve your intro" = FAIL. Write the intro FOR them.
+
+Return ONLY JSON, no markdown:
+[{"title":"6 words max","priority":"high|medium|low","system":"Google AIO|Perplexity|Copilot|Claude|Ranking","action":"EXACT 40-80 word copy-paste text","expected_impact":"System + specific why"}]`;
+
+      const resp = await callGeminiWithFallback(geminiKey, {
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        generationConfig: { temperature: 0.3, maxOutputTokens: 1500 }
+      });
+      if(resp.ok) {
+        let recs = resp.data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+        // Strip markdown fences and extract JSON array robustly
         recs = recs.replace(/^```json\n?/i,'').replace(/```\s*$/,'').trim();
+        // Extract first [...] block if there's extra text
         const arrMatch = recs.match(/\[\s*\{[\s\S]*\}\s*\]/);
         if(arrMatch) recs = arrMatch[0];
         try {
           snapshot.recommendations = JSON.parse(recs);
+          _trSetStep(pageId, 'recommendations', 'done', (snapshot.recommendations||[]).length + ' recommendations generated');
         } catch(e) {
-          snapshot.recommendations = [{ title: 'Citation Brief', priority: 'medium', system: 'All', action: recs.substring(0,800), expected_impact: 'See full text above' }];
+          // Gemini returned non-JSON — store as a single text recommendation
+          snapshot.recommendations = [{ title: 'AI Recommendation', priority: 'medium', action: recs.substring(0,800), expected_impact: 'See full text above' }];
+          _trSetStep(pageId, 'recommendations', 'done', '1 recommendation (text)');
         }
       } else {
-        _trSetStep(pageId, 'recommendations', 'error', 'Citation Brief — Gemini ' + citResp.status + ': ' + (citResp.errorMessage||'').substring(0,60));
+        _trSetStep(pageId, 'recommendations', 'error', 'Gemini API ' + resp.status + ': ' + (resp.errorMessage||'').substring(0,80));
       }
-
-      // Parse GSC Brief
-      if(gscResp.ok) {
-        let gscRecs = gscResp.data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-        gscRecs = gscRecs.replace(/^```json\n?/i,'').replace(/```\s*$/,'').trim();
-        const gscMatch = gscRecs.match(/\[\s*\{[\s\S]*\}\s*\]/);
-        if(gscMatch) gscRecs = gscMatch[0];
-        try {
-          snapshot.gsc_brief = JSON.parse(gscRecs);
-        } catch(e) {
-          snapshot.gsc_brief = [{ title: 'GSC Brief', priority: 'medium', trigger: 'See full text', action: gscRecs.substring(0,800), expected_impact: 'Ranking improvement', effort: 'content' }];
-        }
-      }
-
-      const citCount = (snapshot.recommendations||[]).length;
-      const gscCount = (snapshot.gsc_brief||[]).length;
-      _trSetStep(pageId, 'recommendations', 'done', citCount + ' citation actions + ' + gscCount + ' ranking actions generated');
-
     } catch(e) { _trSetStep(pageId, 'recommendations', 'error', e.message); console.warn('[tracker] Gemini recommendations failed:', e.message); }
     } // end if (_hasValidKeyword)
   } else {
@@ -33703,21 +33654,18 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
     }
     try { return JSON.stringify(val); } catch(e) { return null; }
   }
-  // Add gsc_brief column if not exists
-  await pool.query('ALTER TABLE tracker_snapshots ADD COLUMN IF NOT EXISTS gsc_brief JSONB').catch(()=>{});
   const snapR = await pool.query(
     `INSERT INTO tracker_snapshots
       (page_id,checked_at,google_position,ai_google_overview_found,ai_google_overview_cited,ai_google_overview_text,
        ai_perplexity_found,ai_perplexity_cited,ai_perplexity_text,ai_bing_found,ai_bing_cited,ai_bing_text,
        ai_brave_found,ai_brave_cited,
-       recommendations,gsc_brief,html_hash,score,graaf_breakdown,graaf_recommendations,content_changed,content_diff)
-     VALUES ($1,NOW(),$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21) RETURNING *`,
+       recommendations,html_hash,score,graaf_breakdown,graaf_recommendations,content_changed,content_diff)
+     VALUES ($1,NOW(),$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20) RETURNING *`,
     [page.id, snapshot.google_position, snapshot.ai_google_overview_found, snapshot.ai_google_overview_cited,
      snapshot.ai_google_overview_text, snapshot.ai_perplexity_found, snapshot.ai_perplexity_cited,
      snapshot.ai_perplexity_text, snapshot.ai_bing_found, snapshot.ai_bing_cited, snapshot.ai_bing_text,
      !!snapshot.ai_brave_found, !!snapshot.ai_brave_cited,
      safeJSONB(snapshot.recommendations),
-     safeJSONB(snapshot.gsc_brief),
      snapshot.html_hash,
      snapshot.score,
      safeJSONB(snapshot.graaf_breakdown),
@@ -33831,66 +33779,33 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
 
       // Use existing recs or generate basic ones from scan status
       const recsToUse = (Array.isArray(recs2) && recs2.length) ? recs2 : [];
-      const gscBriefToUse = (Array.isArray(snapshot.gsc_brief) && snapshot.gsc_brief.length) ? snapshot.gsc_brief : [];
 
       let brief2 = null;
       if (isFirst2 || !recsToUse.length) {
-        brief2 = { items: recsToUse, gsc_items: gscBriefToUse, position: pos2, aio: aio2, perp: perp2, bing_cited: bing2, brave_cited: brave2, score: score2,
+        brief2 = { items: recsToUse, position: pos2, aio: aio2, perp: perp2, bing_cited: bing2, brave_cited: brave2, score: score2,
           gsc_clicks: page.gsc_clicks, gsc_impressions: page.gsc_impressions, gsc_position: page.gsc_position, gsc_keyword: page.gsc_keyword };
       } else {
         try {
-          // Compute GSC opportunity math for merge context
-          const _impr = page.gsc_impressions || 0;
-          const _ctr = page.gsc_ctr || 0;
-          const _clicks = page.gsc_clicks || 0;
-          const _oppClicks = _impr ? Math.round(_impr * 28 / 100) : 0;
-          const _gscOpp = _impr
-            ? 'GSC: ' + _impr + ' impressions x ' + _ctr + '% CTR = ' + _clicks + ' clicks. At #1 (28% CTR) = ' + _oppClicks + ' clicks (+' + (_oppClicks - _clicks) + '/month).'
-            : '';
-
-          // Get competitor #1 from snapshot
-          const _comp1 = (snapshot._competitors || [])[0] || null;
-          const _comp1Block = _comp1
-            ? 'Competitor #1: ' + _comp1.url + ' | Title: ' + _comp1.title + ' | Snippet: ' + _comp1.snippet
-            : '(no competitor data)';
-
-          // HTML excerpt for structural context
-          const _htmlCtx = (page.html_content || '').substring(0, 3000);
-
-          const mergePrompt2 = 'You are an AI Citation + Ranking Strategist. Merge and upgrade a Citation Brief for this page.\n\n' +
-            'PAGE: ' + pageUrl + '\n' +
-            'KEYWORD: "' + kw2 + '"\n' +
-            'STATUS: pos=' + (pos2||'unranked') + ', AIO=' + aio2 + ', Perplexity=' + perp2 + ', Copilot=' + bing2 + ', Claude=' + brave2 + ', GRAAF=' + (score2||'?') + '/100\n' +
-            (_gscOpp ? _gscOpp + '\n' : '') +
-            (_comp1Block ? _comp1Block + '\n' : '') +
-            '\nPAGE HTML (first 3000 chars):\n' + (_htmlCtx || '(no HTML)') + '\n\n' +
-            'PREVIOUS BRIEF (keep if still relevant, discard if resolved):\n' + JSON.stringify((existingBrief2?.items||[]).slice(0,3)) + '\n\n' +
-            'NEW BRIEF (higher priority):\n' + JSON.stringify(recsToUse.slice(0,5)) + '\n\n' +
-            'MERGE RULES:\n' +
-            '1. Remove actions for systems already TRUE above\n' +
-            '2. Remove previous actions superseded by new brief\n' +
-            '3. Max 5 items sorted HIGH to LOW\n' +
-            '4. Every action: EXACT copy-paste text -- not a suggestion\n' +
-            '5. Reference actual HTML structure when possible\n' +
-            '6. system field: Google AIO | Perplexity | Copilot | Claude | Ranking\n\n' +
-            'Return ONLY JSON array, no markdown:\n' +
-            '[{"title":"6 words max","priority":"high|medium|low","system":"Google AIO|Perplexity|Copilot|Claude|Ranking","action":"EXACT copy-paste text min 50 words","expected_impact":"[System] cites/ranks because [specific reason]"}]';
-          const gResp2 = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' + geminiKey, {
+          const mergePrompt2 = `Merge these two AI citation briefs for ${pageUrl} (keyword: "${kw2}").
+Status: pos=${pos2||'unranked'}, AIO=${aio2}, Perplexity=${perp2}, Copilot=${bing2}, Claude=${brave2}, GRAAF=${score2||'?'}/100${gscCtx}
+Goal: rank #1 and be cited in all AI systems.
+PREVIOUS: ${JSON.stringify((existingBrief2?.items||[]).slice(0,3))}
+NEW: ${JSON.stringify(recsToUse.slice(0,3))}
+Return ONLY JSON array (max 5 items): [{"title":"max 6 words","priority":"high"|"medium"|"low","action":"exact 30+ word instruction","expected_impact":"ranking/AI impact"}]`;
+          const gResp2 = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey}`, {
             method: 'POST', headers: {'Content-Type':'application/json'},
-            body: JSON.stringify({ contents: [{ parts: [{ text: mergePrompt2 }] }], generationConfig: { temperature: 0.3, maxOutputTokens: 1200 } })
+            body: JSON.stringify({ contents: [{ parts: [{ text: mergePrompt2 }] }], generationConfig: { temperature: 0.3, maxOutputTokens: 600 } })
           });
           if (gResp2.ok) {
             const gData2 = await gResp2.json();
             const gText2 = gData2.candidates?.[0]?.content?.parts?.[0]?.text || '';
-            const cleanText2 = gText2.replace(/```json|```/g, '').trim();
-            const arrMatch2 = cleanText2.match(/\[\s*\{[\s\S]*\}\s*\]/);
-            const merged2 = JSON.parse(arrMatch2 ? arrMatch2[0] : cleanText2);
-            brief2 = { items: merged2, gsc_items: gscBriefToUse, position: pos2, aio: aio2, perp: perp2, bing_cited: bing2, brave_cited: brave2, score: score2,
+            const merged2 = JSON.parse(gText2.replace(/```json|```/g, '').trim());
+            brief2 = { items: merged2, position: pos2, aio: aio2, perp: perp2, bing_cited: bing2, brave_cited: brave2, score: score2,
               gsc_clicks: page.gsc_clicks, gsc_impressions: page.gsc_impressions, gsc_position: page.gsc_position, gsc_keyword: page.gsc_keyword, merged: true };
           }
         } catch(mergeErr2) {
           console.warn('[brief-merge2]', mergeErr2.message);
-          brief2 = { items: recsToUse, gsc_items: gscBriefToUse, position: pos2, aio: aio2, perp: perp2, bing_cited: bing2, brave_cited: brave2, score: score2 };
+          brief2 = { items: recsToUse, position: pos2, aio: aio2, perp: perp2, bing_cited: bing2, brave_cited: brave2, score: score2 };
         }
       }
 
