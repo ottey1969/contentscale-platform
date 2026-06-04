@@ -20931,7 +20931,9 @@ body{background:var(--bg);color:var(--ink);font-family:'DM Sans',sans-serif;min-
 .filter-bar input:focus,.filter-bar select:focus{border-color:var(--gold);color:var(--ink);}
 
 /* Page cards */
-.pages-list{display:flex;flex-direction:column;gap:8px;}
+.pages-list{display:flex;flex-direction:column;gap:8px;padding-bottom:0;margin-bottom:0;}
+.pages-list > div:last-child{margin-bottom:0!important;}
+.check-progress{animation:soStepIn .3s ease;}
 .page-card{background:var(--card);border:1px solid var(--border);border-radius:10px;overflow:hidden;}
 .page-card.s-done{border-left:3px solid var(--green);}
 .page-card.s-inprogress{border-left:3px solid var(--gold);}
@@ -25708,6 +25710,8 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
     var closedPageId = pageId || _currentBriefPageId;
     _currentBriefPageId = null;
     if (closedPageId) {
+      // Mark page as needing fresh HTML on the SERVER so orange blink persists
+      api('/pages/' + closedPageId + '/needs-html', 'POST', { needs_html: true }).catch(function(){});
       var p = (_pages||[]).find(function(x){ return x.id == closedPageId; });
       if (p) p.needs_html = true;
     }
@@ -26228,13 +26232,10 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
       if (dot) dot.className = 'so-header-dot done';
       if (title) { title.textContent = 'Scan Complete'; title.className = 'so-header-title done'; }
       if (statusEl) { statusEl.textContent = 'Opening Citation Brief...'; statusEl.className = 'so-status complete'; }
+      // Overlay stays visible — do NOT hide it here
+      // onComplete (pollAndShowBrief) will update status and hide overlay when data arrives
       setTimeout(function() {
-        overlay.classList.add('hiding');
-        setTimeout(function() {
-          overlay.classList.remove('show');
-          overlay.classList.remove('hiding');
-          if (onComplete) onComplete();
-        }, 400);
+        if (onComplete) onComplete();
       }, 1200);
     }, 14000);
   }
@@ -26249,38 +26250,69 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
     }, 400);
   }
 
-  // Shared: poll for results then show Citation Brief
+  // Shared: poll for results then show Citation Brief — ALWAYS opens brief
   function pollAndShowBrief(pageId, maxPolls, intervalMs) {
     var pollCount = 0;
+    var statusEl = document.getElementById('soStatus');
+    var titleEl = document.getElementById('soHeaderTitle');
+    var dotEl = document.getElementById('soHeaderDot');
+    if (statusEl) { statusEl.textContent = 'Waiting for server scan to complete...'; statusEl.style.color = '#a78bfa'; }
+    if (titleEl) { titleEl.textContent = 'Processing on Server'; }
+    if (dotEl) dotEl.className = 'so-header-dot';
+
+    function openBrief(pageData) {
+      hideScanOverlay();
+      loadPages();
+      var snap = pageData || {};
+      showCitationBrief({
+        page_id: pageId,
+        url: snap.url || '',
+        keyword: snap.keyword || snap.gsc_keyword || '',
+        domain: DOMAIN,
+        position: snap.google_position || null,
+        aio_cited: !!(snap.ai_google_overview_cited),
+        perp_cited: !!(snap.ai_perplexity_cited),
+        bing_cited: !!(snap.ai_bing_cited),
+        brave_cited: !!(snap.ai_brave_cited),
+        score: snap.score || snap.graaf_score || null,
+        gsc_clicks: snap.gsc_clicks || null,
+        gsc_impressions: snap.gsc_impressions || null,
+        gsc_position: snap.gsc_position || null,
+        gsc_ctr: snap.gsc_ctr || null,
+        gsc_keyword: snap.gsc_keyword || null,
+        recommendations: Array.isArray(snap.recommendations) ? snap.recommendations : [],
+        brief_content: snap.brief_content || null,
+        type: 'brief_ready'
+      });
+    }
+
     var timer = setInterval(function() {
       pollCount++;
-      if (pollCount > maxPolls) { clearInterval(timer); loadPages(); return; }
+      if (pollCount > maxPolls) {
+        clearInterval(timer);
+        // Timeout — still open brief with whatever data we have
+        api('/pages/' + pageId).then(function(d2) {
+          if (d2.success && d2.page) {
+            openBrief(d2.page);
+            toast('Brief opened — scan may still be running', '#f59e0b');
+          } else {
+            hideScanOverlay();
+            loadPages();
+            toast('Scan is taking longer — check back soon', '#f59e0b');
+          }
+        }).catch(function() {
+          hideScanOverlay();
+          toast('Connection issue — try again', '#f87171');
+        });
+        return;
+      }
+      if (statusEl) statusEl.textContent = 'Waiting for server scan... (' + pollCount + '/' + maxPolls + ')';
       api('/pages/' + pageId).then(function(d2) {
         if (d2.success && d2.page && d2.page.last_checked_at) {
           var t = new Date(d2.page.last_checked_at).getTime();
           if (Date.now() - t < 300000) {
             clearInterval(timer);
-            loadPages();
-            var snap = d2.page;
-            showCitationBrief({
-              page_id: pageId, url: d2.page.url,
-              keyword: d2.page.keyword || d2.page.gsc_keyword || '',
-              domain: DOMAIN,
-              position: snap.google_position || null,
-              aio_cited: !!(snap.ai_google_overview_cited),
-              perp_cited: !!(snap.ai_perplexity_cited),
-              bing_cited: !!(snap.ai_bing_cited),
-              brave_cited: !!(snap.ai_brave_cited),
-              score: snap.score || snap.graaf_score || null,
-              gsc_clicks: snap.gsc_clicks || null,
-              gsc_impressions: snap.gsc_impressions || null,
-              gsc_position: snap.gsc_position || null,
-              gsc_ctr: snap.gsc_ctr || null,
-              gsc_keyword: snap.gsc_keyword || null,
-              recommendations: Array.isArray(snap.recommendations) ? snap.recommendations : [],
-              brief_content: d2.page.brief_content,
-              type: 'brief_ready'
-            });
+            openBrief(d2.page);
           }
         }
       }).catch(function(){});
