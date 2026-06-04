@@ -1457,7 +1457,7 @@ app.post('/api/tracker-client/:token/pages', async (req, res) => {
     const maxPages = client.max_pages || 3;
     if (count >= maxPages) return res.status(400).json({ success: false, error: `Tracker limit reached: ${count}/${maxPages} pages used. Contact Ottmar to upgrade your plan.` });
 
-    const { url, keyword } = req.body;
+    const { url, keyword, gsc_clicks, gsc_impressions, gsc_position, gsc_ctr, gsc_keyword } = req.body;
     if (!url) return res.status(400).json({ success: false, error: 'URL required' });
 
     // Verify URL belongs to client domain or its subdomains (or admin-added extra domains)
@@ -1465,34 +1465,46 @@ app.post('/api/tracker-client/:token/pages', async (req, res) => {
     const allowedDomains = [client.domain, ...(client.extra_domains || '').split(',').map(d => d.trim().replace(/^www\./, '')).filter(Boolean)];
     const domainOk = allowedDomains.some(d => {
       const clean = d.toLowerCase().replace(/^www\./, '');
-      // Exact match OR subdomain match (e.g. blog.contentscale.site matches contentscale.site)
       return urlDomain === clean || urlDomain.endsWith('.' + clean);
     });
     if (!domainOk) {
       return res.status(400).json({ success: false, error: `URL must belong to ${allowedDomains[0]}${allowedDomains.length > 1 ? ' or ' + allowedDomains.slice(1).join(', ') : ''}` });
     }
 
-    // Check duplicate
+    // Check duplicate — if exists, update GSC data and return
     const dupR = await pool.query('SELECT id FROM tracker_pages WHERE tracker_client_id=$1 AND url=$2', [client.id, url]);
-    if (dupR.rows.length) return res.status(400).json({ success: false, error: 'URL already tracked' });
+    if (dupR.rows.length) {
+      // Update GSC data on existing page
+      if (gsc_clicks || gsc_impressions || gsc_position) {
+        await pool.query(
+          `UPDATE tracker_pages SET
+            gsc_clicks = COALESCE($1, gsc_clicks),
+            gsc_impressions = COALESCE($2, gsc_impressions),
+            gsc_position = COALESCE($3, gsc_position),
+            gsc_ctr = COALESCE($4, gsc_ctr),
+            gsc_keyword = COALESCE($5, gsc_keyword)
+           WHERE id=$6`,
+          [gsc_clicks||null, gsc_impressions||null, gsc_position||null, gsc_ctr||null, gsc_keyword||null, dupR.rows[0].id]
+        ).catch(()=>{});
+        return res.json({ success: true, page_id: dupR.rows[0].id, updated: true });
+      }
+      return res.status(400).json({ success: false, error: 'URL already tracked' });
+    }
 
     let pr;
     try {
+      pr = await pool.query(
+        `INSERT INTO tracker_pages (tracker_client_id, url, keyword, gsc_clicks, gsc_impressions, gsc_position, gsc_ctr, gsc_keyword, check_frequency, next_check_at, is_active)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'3days',NOW(),TRUE) RETURNING id`,
+        [client.id, url, keyword||null, gsc_clicks||null, gsc_impressions||null, gsc_position||null, gsc_ctr||null, gsc_keyword||null]
+      );
+    } catch(insertErr) {
+      // Fallback without GSC columns if they don't exist yet
       pr = await pool.query(
         `INSERT INTO tracker_pages (tracker_client_id, url, keyword, check_frequency, next_check_at, is_active)
          VALUES ($1,$2,$3,'3days',NOW(),TRUE) RETURNING id`,
         [client.id, url, keyword||null]
       );
-    } catch(insertErr) {
-      if (insertErr.message.includes('is_active') || insertErr.message.includes('column')) {
-        pr = await pool.query(
-          `INSERT INTO tracker_pages (tracker_client_id, url, keyword, check_frequency, next_check_at)
-           VALUES ($1,$2,$3,'3days',NOW()) RETURNING id`,
-          [client.id, url, keyword||null]
-        );
-      } else {
-        throw insertErr;
-      }
     }
 
     const newPageId = pr.rows[0].id;
@@ -1519,6 +1531,44 @@ app.post('/api/tracker-client/:token/pages', async (req, res) => {
     console.error('[POST tracker pages]', e.message, e.detail || '');
     res.status(500).json({ success: false, error: e.message, detail: e.detail || null });
   }
+});
+
+// POST /api/tracker-client/:token/refresh-gsc — refresh GSC data for all pages
+app.post('/api/tracker-client/:token/refresh-gsc', async (req, res) => {
+  try {
+    const cr = await pool.query('SELECT * FROM tracker_clients WHERE token=$1', [req.params.token]);
+    if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
+    if (!cr.rows[0].gsc_enabled) return res.status(403).json({ success: false, error: 'GSC not enabled for this tracker' });
+
+    const pages = await pool.query(
+      'SELECT id, url FROM tracker_pages WHERE tracker_client_id=$1 AND (is_active=TRUE OR is_active IS NULL)',
+      [cr.rows[0].id]
+    );
+
+    res.json({ success: true, queued: pages.rows.length, message: 'Refreshing GSC data for ' + pages.rows.length + ' pages' });
+
+    // Background: fetch GSC data for each page
+    for (const page of pages.rows) {
+      try {
+        const gscResp = await fetch((process.env.APP_URL || 'https://app.contentscale.site') + '/api/gsc/auto-fill', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ pageUrl: page.url })
+        });
+        if (gscResp.ok) {
+          const gscData = await gscResp.json();
+          if (gscData.success && gscData.data) {
+            const d = gscData.data;
+            await pool.query(
+              `UPDATE tracker_pages SET gsc_clicks=$1, gsc_impressions=$2, gsc_position=$3, gsc_ctr=$4, gsc_keyword=$5 WHERE id=$6`,
+              [d.clicks||null, d.impressions||null, d.position||null, d.ctr||null, d.keyword||null, page.id]
+            ).catch(()=>{});
+          }
+        }
+        await new Promise(r => setTimeout(r, 500)); // rate limit
+      } catch(e) { console.warn('[refresh-gsc] page', page.id, e.message); }
+    }
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
 // POST /api/tracker-client/:token/merge-pages — merge duplicate URLs, keep best
@@ -24360,6 +24410,7 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
     <button class="cs-btn" onclick="scanAllPages()" style="border-color:#4ade80;color:#4ade80;font-weight:700;" title="Scan all pages one by one">⚡ Scan All</button>
     <button class="cs-btn" onclick="mergePages()" style="border-color:#38bdf8;color:#38bdf8;" title="Merge duplicate URLs — keep best">⊕ Merge</button>
     <button class="cs-btn" onclick="cleanPages()" style="border-color:#f59e0b;color:#f59e0b;" title="Remove image/asset URLs (.jpg, .png, .pdf etc)">🧹 Clean</button>
+    <button id="gscRefreshBtn" class="cs-btn" style="border-color:#34d399;color:#34d399;display:none;" onclick="refreshGscData()" title="Refresh GSC data for all pages">📊 GSC</button>
     <button id="bulkDeleteBtn" class="cs-btn" style="border-color:#ef4444;color:#ef4444;display:none;" onclick="bulkDeleteSelected()">🗑 Delete selected</button>
     <button class="cs-btn" onclick="openTelegramSetup()" style="border-color:#2AABEE;color:#2AABEE;background:rgba(42,171,238,.08);font-weight:700;animation:tgPulse 2s ease-in-out infinite;" title="Enable Telegram alerts — get notified after every scan"><i class="fab fa-telegram"></i> Enable Telegram</button>
     <input id="ctSearch" type="text" class="cs-input" placeholder="Search..." oninput="filterPages(this.value)" style="width:160px;padding:5px 10px;font-size:11px;margin-left:auto;">
@@ -24516,6 +24567,8 @@ if (GSC_ENABLED) {
   document.addEventListener('DOMContentLoaded', function() {
     var btn = document.getElementById('gscBtn');
     if (btn) btn.style.display = '';
+    var refreshBtn = document.getElementById('gscRefreshBtn');
+    if (refreshBtn) refreshBtn.style.display = '';
   });
 }
 
@@ -24717,6 +24770,20 @@ function renderPages() {
     if (score) badges += '<span class="cs-cs-badge yellow">' + score + '/100</span> ';
     if (p.fetch_reliable === false) badges += '<span class="cs-cs-badge" style="background:#2d1f00;color:#fbbf24;">! fetch issue</span> ';
 
+    // GSC data row
+    var gscHtml = '';
+    if (p.gsc_clicks || p.gsc_impressions || p.gsc_position) {
+      var ctr = (p.gsc_clicks && p.gsc_impressions) ? ((p.gsc_clicks / p.gsc_impressions) * 100).toFixed(1) + '%' : '—';
+      gscHtml = '<div style="display:flex;gap:12px;flex-wrap:wrap;padding:6px 0;border-top:1px solid #1f2937;margin-top:6px;">'
+        + '<span style="font-size:10px;color:#6b7280;">GSC: </span>'
+        + (p.gsc_clicks !== null && p.gsc_clicks !== undefined ? '<span style="font-size:11px;color:#4ade80;">&#8592; ' + p.gsc_clicks + ' clicks</span>' : '')
+        + (p.gsc_impressions ? '<span style="font-size:11px;color:#60a5fa;">' + p.gsc_impressions + ' impressions</span>' : '')
+        + '<span style="font-size:11px;color:#9ca3af;">CTR: ' + ctr + '</span>'
+        + (p.gsc_position ? '<span style="font-size:11px;color:#a78bfa;">pos ' + parseFloat(p.gsc_position).toFixed(1) + '</span>' : '')
+        + (p.gsc_keyword ? '<span style="font-size:11px;color:#6b7280;">top kw: <em>' + p.gsc_keyword + '</em></span>' : '')
+        + '</div>';
+    }
+
     // Recommendations
     var recsHtml = renderRecs(p);
 
@@ -24755,7 +24822,8 @@ function renderPages() {
       + '<input type="checkbox" class="page-select-cb" data-id="' + p.id + '" onchange="updateBulkBar()" style="width:14px;height:14px;margin-top:3px;accent-color:#ef4444;cursor:pointer;flex-shrink:0;">'
       + '<div style="flex:1;min-width:0;">'
       + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;"><span style="font-size:10px;font-weight:700;color:#4b5563;background:#1f2937;border-radius:4px;padding:1px 7px;flex-shrink:0;">#' + pageNum + '</span><div style="font-size:12px;' + (isDone ? 'text-decoration:line-through;color:#4b5563;' : 'color:#e5e7eb;') + 'font-family:monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;" title="' + rawUrl + '">' + urlShort + '</div></div>'
-      + '<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:6px;">' + badges + '</div>'
+      + '<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:4px;">' + badges + '</div>'
+      + gscHtml
       + '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">'
       + (kw ? '<span style="font-size:10px;color:#4b5563;">kw: <span style="color:#a78bfa;">' + kw + '</span></span><button onclick="editKeyword(' + p.id + ',this)" style="font-size:9px;background:none;border:none;color:#374151;cursor:pointer;text-decoration:underline;">edit</button>'
             : '<button onclick="editKeyword(' + p.id + ',this)" style="font-size:9px;background:none;border:none;color:#4b5563;cursor:pointer;">+keyword</button>')
@@ -25731,7 +25799,15 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
         return;
       }
       var p = toImport[idx];
-      api('/pages', 'POST', { url: p.url, keyword: p.keyword || '' })
+      api('/pages', 'POST', {
+        url: p.url,
+        keyword: p.keyword || '',
+        gsc_clicks: p.clicks || null,
+        gsc_impressions: p.impressions || null,
+        gsc_position: p.position || null,
+        gsc_ctr: p.ctr || null,
+        gsc_keyword: p.keyword || null
+      })
         .then(function(d) {
           if (d.success) done++; else errors++;
           doNext(idx + 1);
@@ -25831,6 +25907,19 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
   }
 
   function openWaSettings() { openTelegramSetup(); } // legacy redirect
+
+  async function refreshGscData() {
+    var btn = document.getElementById('gscRefreshBtn');
+    if (btn) { btn.textContent = '📊 Refreshing...'; btn.disabled = true; }
+    var d = await fetch('/api/tracker-client/' + TOKEN + '/refresh-gsc', { method: 'POST' }).then(function(r){ return r.json(); }).catch(function(){ return {success:false}; });
+    if (d.success) {
+      toast('Refreshing GSC data for ' + d.queued + ' pages — reloading in 10s', '#34d399');
+      setTimeout(loadPages, 10000);
+    } else {
+      toast(d.error || 'GSC refresh failed', '#f87171');
+    }
+    if (btn) { btn.textContent = '📊 GSC'; btn.disabled = false; }
+  }
 
   async function mergePages() {
     var d = await fetch('/api/tracker-client/' + TOKEN + '/merge-pages', { method: 'POST' }).then(function(r){ return r.json(); }).catch(function(){ return {success:false}; });
