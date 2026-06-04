@@ -1086,7 +1086,8 @@ app.get('/api/tracker-client/:token', async (req, res) => {
       `SELECT p.id, p.url, p.keyword, p.gsc_keyword, p.created_at, p.next_check_at, p.last_checked_at,
               p.is_done, p.fetch_reliable, p.check_frequency, p.gsc_clicks, p.gsc_impressions, p.gsc_position,
               p.ranking_brief, p.needs_html, p.brief_started_at, p.brief_content, p.brief_check_count,
-              p.html_pasted_at,
+              p.html_pasted_at, p.html_source,
+              (p.html_content IS NOT NULL AND p.html_content != '') as has_html_content,
               s.google_position, s.ai_google_overview_cited, s.ai_perplexity_cited,
               s.ai_bing_cited, s.ai_brave_cited,
               s.score as graaf_score, s.checked_at as last_checked,
@@ -1450,6 +1451,8 @@ app.patch('/api/tracker-client/:token/pages/:pageId/keyword', async (req, res) =
 // POST /api/tracker-client/:token/live-events — internal: save brief after check
 app.get('/api/tracker-client/:token/live-events', async (req, res) => {
   try {
+    res.set('Connection', 'keep-alive');
+    res.set('Keep-Alive', 'timeout=30');
     const cr = await pool.query('SELECT domain FROM tracker_clients WHERE token=$1 AND status=$2', [req.params.token, 'active']);
     if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
     const domain = cr.rows[0].domain;
@@ -1484,7 +1487,11 @@ function _triggerPageScan(pageId, delayMs) {
         setImmediate(async () => {
           try { await runTrackerCheck(pg, process.env.GEMINI_API_KEY, keys, true); }
           catch(e) { console.warn('[trigger-scan]', e.message); }
-          finally { const st = _trackerCheckStatus.get(pgId); if (st) { st.running = false; st.finishedAt = new Date().toISOString(); } }
+          finally {
+            const st = _trackerCheckStatus.get(pgId);
+            if (st) { st.running = false; st.finishedAt = new Date().toISOString(); }
+            _sseBroadcast({ type: 'check_done', pageId: pgId, domain: pgDomain, url: pg.url, ts: new Date().toISOString() });
+          }
         });
       }).catch(e => console.warn('[trigger-scan-query]', e.message));
   }, delayMs);
@@ -24943,10 +24950,18 @@ function renderPages() {
     var isFirstHtml = !p.brief_check_count || p.brief_check_count == 0;
     var hasBeenScanned = !!p.last_checked || !!p.google_position || p.ai_google_overview_cited !== undefined || p.ai_perplexity_cited !== undefined;
     var hasBrief = !!(p.brief_content) && !isDone;
-    var hasHtml = (p.brief_check_count > 0) || (p.graaf_score > 0) || (p.score > 0)
+    // hasHtml = true means HTML has been pasted at least once
+    var hasHtml = (p.brief_check_count > 0) || (p.graaf_score > 0)
       || !!p.html_pasted_at
-      || (p.needs_html === false) || (p.needs_html === 'f') || (p.needs_html === 'false');
-    var htmlNeeded = needsHtml || (isFirstHtml && !isDone && !hasHtml);
+      || (p.html_source === 'manual')
+      || (p.has_html_content === true || p.has_html_content === 't')
+      || (p.needs_html === false || p.needs_html === 'f' || p.needs_html === 'false');
+
+    // htmlNeeded: pulse the button when:
+    // A) needs_html explicitly set to TRUE (after Done) OR
+    // B) brand new page — never had HTML (no brief, no scan, no html_content)
+    var explicitlyNeeds = (p.needs_html === true || p.needs_html === 't' || p.needs_html === 'true' || p.needs_html === 1);
+    var htmlNeeded = explicitlyNeeds || (!hasHtml && !isDone);
     // No flashing banner — just a button state
     var needsHtmlBanner = '';
 
@@ -25419,8 +25434,14 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
           if (data.events && data.events.length) {
             data.events.forEach(function(ev) {
               if (ev.type === 'brief_ready' && ev.domain === DOMAIN) { showCitationBrief(ev); return; }
+              if (ev.type === 'check_done') {
+                // Reload pages so card updates with new scan data
+                setTimeout(loadPages, 500);
+                addLine('Scan complete: ' + (ev.url||''), '#4ade80', null);
+                return;
+              }
               var text = '', color = '#6b7280', isLink = false, linkUrl = '';
-              if (ev.type === 'check_done') { text = 'Scan complete: ' + (ev.url||''); color = '#4ade80'; }
+              if (ev.type === 'check_start') { text = 'Scanning: ' + (ev.url||ev.domain||''); color = '#60a5fa'; }
               else if (ev.type === 'citation_gained') { text = 'Citation gained in ' + (ev.platform||'AI') + ': ' + (ev.url||''); color = '#4ade80'; }
               else if (ev.type === 'position_up') { text = 'Position up to #' + ev.new_pos + ': ' + (ev.url||''); color = '#a3e635'; }
               else if (ev.type === 'score_up') { text = 'GRAAF score improved: ' + (ev.url||''); color = '#fbbf24'; }
@@ -25445,7 +25466,7 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
 
     poll();
     if (_clientPollInterval) clearInterval(_clientPollInterval);
-    _pollTimer = setInterval(poll, 8000);
+    _pollTimer = setInterval(poll, 5000);
     _clientPollInterval = _pollTimer;
   }
 
@@ -31949,7 +31970,7 @@ Return ONLY a JSON array, no markdown:
           }
         } catch(e) {}
 
-        _sseBroadcast({ type: 'check_done', pageId, domain: domainFin, ts: new Date().toISOString() });
+        _sseBroadcast({ type: 'check_done', pageId, domain: domainFin, url: page.url, ts: new Date().toISOString() });
         setTimeout(function(){ _trackerCheckStatus.delete(pageId); }, 5*60*1000);
       }
     });
