@@ -33329,17 +33329,17 @@ Zero generic advice. Every action must be so specific the user can implement it 
   const domain2 = pageUrl.replace(/^https?:\/\//, '').split('/')[0];
   const recs2 = snapshot.recommendations;
 
-  if (geminiKey) {
-    try {
-      const pageRow2 = await pool.query(
-        `SELECT brief_content,
-                COALESCE(brief_check_count, 0) as brief_check_count
-         FROM tracker_pages WHERE id=$1`, [page.id]
-      ).catch(async () => {
-        // brief_check_count column missing — add it and retry
-        await pool.query('ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS brief_check_count INTEGER DEFAULT 0').catch(()=>{});
-        return pool.query('SELECT brief_content, 0 as brief_check_count FROM tracker_pages WHERE id=$1', [page.id]);
-      });
+  // ── Generate Citation Brief ───────────────────────────────────────────────
+  try {
+    // Ensure columns exist first
+    await pool.query('ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS brief_check_count INTEGER DEFAULT 0').catch(()=>{});
+    await pool.query('ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS brief_content JSONB').catch(()=>{});
+    await pool.query('ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS brief_started_at TIMESTAMPTZ').catch(()=>{});
+
+    const pageRow2 = await pool.query(
+      'SELECT brief_content, COALESCE(brief_check_count, 0) as brief_check_count FROM tracker_pages WHERE id=$1',
+      [page.id]
+    );
       const existingBrief2 = pageRow2.rows[0]?.brief_content;
       const checkCount2 = (pageRow2.rows[0]?.brief_check_count || 0) + 1;
       const isFirst2 = !existingBrief2;
@@ -33412,7 +33412,6 @@ Return ONLY JSON array (max 5 items): [{"title":"max 6 words","priority":"high"|
     } catch(briefErr) {
       console.warn('[brief-gen]', briefErr.message);
     }
-  }
 }
 
 
