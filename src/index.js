@@ -1487,10 +1487,11 @@ app.post('/api/tracker-client/:token/pages', async (req, res) => {
       return res.json({ success: false, skipped: true, error: `URL skipped — belongs to different domain` });
     }
 
-    // Check duplicate — if exists, always update GSC data and keyword
+    // Check duplicate — normalize URL to match all variants
+    const normalUrl = url.replace(/\/$/, ''); // strip trailing slash
     const dupR = await pool.query(
-      'SELECT id FROM tracker_pages WHERE tracker_client_id=$1 AND (url=$2 OR url=$3) AND (is_active=TRUE OR is_active IS NULL)',
-      [client.id, url, url.replace(/\/$/, '')]
+      `SELECT id FROM tracker_pages WHERE tracker_client_id=$1 AND (url=$2 OR url=$3 OR url=$4 OR url=$5)`,
+      [client.id, url, normalUrl, normalUrl + '/', url.replace(/^https?:\/\/www\./, 'https://')]
     );
     if (dupR.rows.length) {
       const pageId = dupR.rows[0].id;
@@ -1516,16 +1517,33 @@ app.post('/api/tracker-client/:token/pages', async (req, res) => {
     try {
       pr = await pool.query(
         `INSERT INTO tracker_pages (tracker_client_id, url, keyword, gsc_clicks, gsc_impressions, gsc_position, gsc_ctr, gsc_keyword, check_frequency, next_check_at, is_active)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'3days',NOW(),TRUE) RETURNING id`,
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'3days',NOW(),TRUE)
+         ON CONFLICT ON CONSTRAINT tracker_pages_client_url_idx
+         DO UPDATE SET
+           gsc_clicks = EXCLUDED.gsc_clicks,
+           gsc_impressions = EXCLUDED.gsc_impressions,
+           gsc_position = EXCLUDED.gsc_position,
+           gsc_ctr = EXCLUDED.gsc_ctr,
+           gsc_keyword = COALESCE(EXCLUDED.gsc_keyword, tracker_pages.gsc_keyword),
+           is_active = TRUE
+         RETURNING id, (xmax = 0) as inserted`,
         [client.id, url, keyword||null, gsc_clicks||null, gsc_impressions||null, gsc_position||null, gsc_ctr||null, gsc_keyword||null]
       );
     } catch(insertErr) {
       // Fallback without GSC columns if they don't exist yet
-      pr = await pool.query(
-        `INSERT INTO tracker_pages (tracker_client_id, url, keyword, check_frequency, next_check_at, is_active)
-         VALUES ($1,$2,$3,'3days',NOW(),TRUE) RETURNING id`,
-        [client.id, url, keyword||null]
-      );
+      try {
+        pr = await pool.query(
+          `INSERT INTO tracker_pages (tracker_client_id, url, keyword, check_frequency, next_check_at, is_active)
+           VALUES ($1,$2,$3,'3days',NOW(),TRUE)
+           ON CONFLICT ON CONSTRAINT tracker_pages_client_url_idx
+           DO UPDATE SET is_active = TRUE
+           RETURNING id`,
+          [client.id, url, keyword||null]
+        );
+      } catch(e2) {
+        console.error('[add-page] insert failed:', e2.message);
+        return res.status(500).json({ success: false, error: e2.message });
+      }
     }
 
     const newPageId = pr.rows[0].id;
