@@ -26076,26 +26076,44 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
     try {
       var d = await api('/pages/' + pageId + '/html', 'PATCH', payload);
       if (d.success) {
-        // Clear needs_html locally — banner stops immediately
         var p = (_pages||[]).find(function(x){ return x.id == pageId; });
-        if (p) { p.needs_html = false; }
-        // Is this the FIRST HTML paste? (brief_check_count = 0 means no GRAAF scan yet)
-        var isFirstHtml = !p || !p.brief_check_count || p.brief_check_count == 0;
-        if (isFirstHtml && html) {
-          // First time HTML → scan immediately to generate first full GRAAF brief
-          toast('HTML saved — starting your first full GRAAF scan...', '#4ade80');
-          hideModal('htmlUploadModal');
-          setTimeout(function(){ checkPage(pageId); }, 600);
-          setTimeout(loadPages, 5000);
-        } else {
-          // Subsequent HTML paste → wait for scheduled scan date
-          var nextDate = p && p.next_check_at
-            ? new Date(p.next_check_at).toLocaleDateString('en-GB',{day:'2-digit',month:'short'})
-            : 'next scheduled date';
-          toast('HTML saved. System will verify and scan on ' + nextDate + '.', '#4ade80');
-          hideModal('htmlUploadModal');
-          setTimeout(loadPages, 400);
-        }
+        if (p) { p.needs_html = false; p.html_source = 'manual'; p.has_html_content = true; }
+        toast('HTML saved — scan starting...', '#4ade80');
+        hideModal('htmlUploadModal');
+        // Server triggers scan via _triggerPageScan — just poll for results
+        var pollCount = 0;
+        var htmlPollInterval = setInterval(function() {
+          pollCount++;
+          if (pollCount > 24) { clearInterval(htmlPollInterval); loadPages(); return; } // 2 min max
+          api('/pages/' + pageId).then(function(d2) {
+            if (d2.success && d2.page && d2.page.last_checked_at) {
+              var t = new Date(d2.page.last_checked_at).getTime();
+              if (Date.now() - t < 300000) { // within 5 min
+                clearInterval(htmlPollInterval);
+                loadPages();
+                // Show Citation Brief if brief_content exists
+                if (d2.page.brief_content) {
+                  var snap = d2.page;
+                  setTimeout(function() {
+                    showCitationBrief({
+                      page_id: pageId, url: d2.page.url,
+                      keyword: d2.page.keyword || d2.page.gsc_keyword || '',
+                      domain: DOMAIN,
+                      position: snap.google_position || null,
+                      aio_cited: !!(snap.ai_google_overview_cited),
+                      perp_cited: !!(snap.ai_perplexity_cited),
+                      bing_cited: !!(snap.ai_bing_cited),
+                      brave_cited: !!(snap.ai_brave_cited),
+                      score: snap.score || snap.graaf_score || null,
+                      brief_content: d2.page.brief_content,
+                      type: 'brief_ready'
+                    });
+                  }, 800);
+                }
+              }
+            }
+          }).catch(function(){});
+        }, 5000);
       } else { toast(d.error || 'Failed', '#f87171'); }
     } catch(e) { toast('Error: ' + e.message, '#f87171'); }
   }
