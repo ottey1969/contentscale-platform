@@ -1266,12 +1266,17 @@ app.patch('/api/tracker-client/:token/pages/:pageId/html', async (req, res) => {
     const own = await pool.query('SELECT id FROM tracker_pages WHERE id=$1 AND tracker_client_id=$2', [req.params.pageId, cr.rows[0].id]);
     if (!own.rows.length) return res.status(403).json({ success: false, error: 'Not your page' });
     const { html_content, keyword } = req.body;
-    const fields = ['html_source=$1', 'html_pasted_at=NOW()', 'needs_html=FALSE'];
+    const fields = ['html_source=$1', 'needs_html=FALSE'];
     const vals = ['manual'];
     if (html_content) { fields.push(`html_content=$${vals.length+1}`); vals.push(html_content.substring(0,500000)); }
     if (keyword) { fields.push(`keyword=$${vals.length+1}`); vals.push(keyword.trim()); }
     vals.push(req.params.pageId);
-    await pool.query(`UPDATE tracker_pages SET ${fields.join(',')} WHERE id=$${vals.length}`, vals);
+    try {
+      await pool.query(`UPDATE tracker_pages SET ${fields.join(',')},html_pasted_at=NOW() WHERE id=$${vals.length}`, vals);
+    } catch(e) {
+      // html_pasted_at column may not exist yet — retry without it
+      await pool.query(`UPDATE tracker_pages SET ${fields.join(',')} WHERE id=$${vals.length}`, vals);
+    }
     res.json({ success: true });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
@@ -2559,6 +2564,8 @@ app.patch('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
    // ── GSC baseline data migration ────────────────────────────────────────────
    await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS gsc_impressions INTEGER`).catch(()=>{});
    await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS gsc_clicks INTEGER`).catch(()=>{});
+   await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS needs_html BOOLEAN DEFAULT FALSE`).catch(()=>{});
+   await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS html_pasted_at TIMESTAMPTZ`).catch(()=>{});
    await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS gsc_position NUMERIC(6,1)`).catch(()=>{});
    await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS gsc_ctr NUMERIC(5,2)`).catch(()=>{});
    await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS gsc_queries JSONB`).catch(()=>{});
