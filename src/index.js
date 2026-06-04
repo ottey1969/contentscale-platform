@@ -1587,6 +1587,28 @@ app.post('/api/tracker-client/:token/refresh-gsc', async (req, res) => {
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
+// GET /api/tracker-client/:token/debug-pages — check what data exists per page
+app.get('/api/tracker-client/:token/debug-pages', async (req, res) => {
+  try {
+    const cr = await pool.query('SELECT id FROM tracker_clients WHERE token=$1', [req.params.token]);
+    if (!cr.rows.length) return res.status(404).json({ error: 'Not found' });
+    const r = await pool.query(`
+      SELECT p.id, p.url, p.keyword, p.last_checked_at, p.brief_check_count,
+             p.gsc_clicks, p.gsc_impressions, p.gsc_position, p.gsc_keyword,
+             s.checked_at as snap_checked_at, s.google_position as snap_pos,
+             s.ai_google_overview_cited, s.ai_perplexity_cited,
+             s.score as snap_score
+      FROM tracker_pages p
+      LEFT JOIN LATERAL (
+        SELECT * FROM tracker_snapshots WHERE page_id = p.id ORDER BY checked_at DESC LIMIT 1
+      ) s ON true
+      WHERE p.tracker_client_id=$1 AND (p.is_active=TRUE OR p.is_active IS NULL)
+      ORDER BY p.id ASC LIMIT 10
+    `, [cr.rows[0].id]);
+    res.json({ success: true, pages: r.rows });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
 // POST /api/tracker-client/:token/merge-pages — merge duplicate URLs, keep best
 app.post('/api/tracker-client/:token/merge-pages', async (req, res) => {
   try {
@@ -24786,17 +24808,23 @@ function renderPages() {
     if (score) badges += '<span class="cs-cs-badge yellow">' + score + '/100</span> ';
     if (p.fetch_reliable === false) badges += '<span class="cs-cs-badge" style="background:#2d1f00;color:#fbbf24;">! fetch issue</span> ';
 
-    // GSC data row
+    // GSC data row — always show if available
     var gscHtml = '';
-    if (p.gsc_clicks || p.gsc_impressions || p.gsc_position) {
-      var ctr = (p.gsc_clicks && p.gsc_impressions) ? ((p.gsc_clicks / p.gsc_impressions) * 100).toFixed(1) + '%' : '—';
-      gscHtml = '<div style="display:flex;gap:12px;flex-wrap:wrap;padding:6px 0;border-top:1px solid #1f2937;margin-top:6px;">'
-        + '<span style="font-size:10px;color:#6b7280;">GSC: </span>'
-        + (p.gsc_clicks !== null && p.gsc_clicks !== undefined ? '<span style="font-size:11px;color:#4ade80;">&#8592; ' + p.gsc_clicks + ' clicks</span>' : '')
-        + (p.gsc_impressions ? '<span style="font-size:11px;color:#60a5fa;">' + p.gsc_impressions + ' impressions</span>' : '')
-        + '<span style="font-size:11px;color:#9ca3af;">CTR: ' + ctr + '</span>'
-        + (p.gsc_position ? '<span style="font-size:11px;color:#a78bfa;">pos ' + parseFloat(p.gsc_position).toFixed(1) + '</span>' : '')
-        + (p.gsc_keyword ? '<span style="font-size:11px;color:#6b7280;">top kw: <em>' + p.gsc_keyword + '</em></span>' : '')
+    if (p.gsc_clicks !== null && p.gsc_clicks !== undefined
+     || p.gsc_impressions !== null && p.gsc_impressions !== undefined
+     || p.gsc_position !== null && p.gsc_position !== undefined) {
+      var gscClicks = p.gsc_clicks || 0;
+      var gscImpr = p.gsc_impressions || 0;
+      var gscPos = p.gsc_position ? parseFloat(p.gsc_position).toFixed(1) : null;
+      var gscCtr = (gscClicks && gscImpr) ? ((gscClicks / gscImpr) * 100).toFixed(1) + '%' : null;
+      var gscKw = p.gsc_keyword || null;
+      gscHtml = '<div style="display:flex;gap:14px;flex-wrap:wrap;padding:6px 16px;background:#060d0a;border-top:1px solid #1f2937;align-items:center;">'
+        + '<span style="font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#374151;flex-shrink:0;">GSC</span>'
+        + '<span style="font-size:12px;color:#4ade80;font-weight:600;">&#8595; ' + gscClicks.toLocaleString() + ' clicks</span>'
+        + '<span style="font-size:12px;color:#60a5fa;">' + gscImpr.toLocaleString() + ' impr</span>'
+        + (gscCtr ? '<span style="font-size:12px;color:#a78bfa;">CTR ' + gscCtr + '</span>' : '')
+        + (gscPos ? '<span style="font-size:12px;color:#f59e0b;">pos ' + gscPos + '</span>' : '')
+        + (gscKw ? '<span style="font-size:11px;color:#4b5563;font-style:italic;">top kw: ' + gscKw + '</span>' : '')
         + '</div>';
     }
 
@@ -24808,7 +24836,7 @@ function renderPages() {
       || p.ai_google_overview_cited !== null && p.ai_google_overview_cited !== undefined
       || (p.gsc_clicks > 0) || (p.brief_check_count > 0) || (p.graaf_score > 0);
     var pendingBanner = (!hasAnyData && !isDone && !showHtmlBanner)
-      ? '<div style="display:flex;align-items:center;gap:8px;padding:6px 14px;background:rgba(96,165,250,.06);border-bottom:1px solid rgba(96,165,250,.15);font-size:11px;color:#60a5fa;"><span style="animation:blink 2s infinite;display:inline-block">&#9679;</span> First scan running automatically...</div>'
+      ? '<div style="display:flex;align-items:center;gap:8px;padding:6px 14px;background:rgba(96,165,250,.06);border-bottom:1px solid rgba(96,165,250,.15);font-size:11px;color:#60a5fa;"><span style="animation:blink 2s infinite;display:inline-block">&#9679;</span> First scan will start automatically after pasting HTML or clicking Scan All</div>'
       : '';
 
     // Needs HTML banner
@@ -24844,7 +24872,7 @@ function renderPages() {
       + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;"><span style="font-size:10px;font-weight:700;color:#4b5563;background:#1f2937;border-radius:4px;padding:1px 7px;flex-shrink:0;">#' + pageNum + '</span><div style="font-size:12px;' + (isDone ? 'text-decoration:line-through;color:#4b5563;' : 'color:#e5e7eb;') + 'font-family:monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;" title="' + rawUrl + '">' + urlShort + '</div></div>'
       + '<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:4px;">' + badges + '</div>'
       + gscHtml
-      + '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">'
+      + '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:4px;">'
       + (kw ? '<span style="font-size:10px;color:#4b5563;">kw: <span style="color:#a78bfa;">' + kw + '</span></span><button onclick="editKeyword(' + p.id + ',this)" style="font-size:9px;background:none;border:none;color:#374151;cursor:pointer;text-decoration:underline;">edit</button>'
             : '<button onclick="editKeyword(' + p.id + ',this)" style="font-size:9px;background:none;border:none;color:#4b5563;cursor:pointer;">+keyword</button>')
       + (lastChecked ? '<span style="font-size:10px;color:#6b7280;">Checked: ' + lastChecked + (nextCheck ? ' &middot; ' + nextCheck : '') + '</span>' : '<span style="font-size:10px;color:#4b5563;">' + freqLabel + ' auto-check</span>')
