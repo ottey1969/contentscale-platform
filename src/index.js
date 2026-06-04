@@ -24858,7 +24858,7 @@ function renderPages() {
     var hasAnyData = !!lastCheckedRaw || p.google_position !== null && p.google_position !== undefined
       || p.ai_google_overview_cited !== null && p.ai_google_overview_cited !== undefined
       || (p.gsc_clicks > 0) || (p.brief_check_count > 0) || (p.graaf_score > 0);
-    var pendingBanner = (!hasAnyData && !isDone && !showHtmlBanner)
+    var pendingBanner = (!hasAnyData && !isDone && !htmlNeeded)
       ? '<div style="display:flex;align-items:center;gap:8px;padding:6px 14px;background:rgba(96,165,250,.06);border-bottom:1px solid rgba(96,165,250,.15);font-size:11px;color:#60a5fa;"><span style="animation:blink 2s infinite;display:inline-block">&#9679;</span> First scan will start automatically after pasting HTML or clicking Scan All</div>'
       : '';
 
