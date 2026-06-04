@@ -1086,6 +1086,7 @@ app.get('/api/tracker-client/:token', async (req, res) => {
       `SELECT p.id, p.url, p.keyword, p.gsc_keyword, p.created_at, p.next_check_at, p.last_checked_at,
               p.is_done, p.fetch_reliable, p.check_frequency, p.gsc_clicks, p.gsc_impressions, p.gsc_position,
               p.ranking_brief, p.needs_html, p.brief_started_at, p.brief_content, p.brief_check_count,
+              p.html_pasted_at,
               s.google_position, s.ai_google_overview_cited, s.ai_perplexity_cited,
               s.ai_bing_cited, s.ai_brave_cited,
               s.score as graaf_score, s.checked_at as last_checked,
@@ -1265,7 +1266,7 @@ app.patch('/api/tracker-client/:token/pages/:pageId/html', async (req, res) => {
     const own = await pool.query('SELECT id FROM tracker_pages WHERE id=$1 AND tracker_client_id=$2', [req.params.pageId, cr.rows[0].id]);
     if (!own.rows.length) return res.status(403).json({ success: false, error: 'Not your page' });
     const { html_content, keyword } = req.body;
-    const fields = ['html_source=$1', 'html_pasted_at=NOW()'];
+    const fields = ['html_source=$1', 'html_pasted_at=NOW()', 'needs_html=FALSE'];
     const vals = ['manual'];
     if (html_content) { fields.push(`html_content=$${vals.length+1}`); vals.push(html_content.substring(0,500000)); }
     if (keyword) { fields.push(`keyword=$${vals.length+1}`); vals.push(keyword.trim()); }
@@ -24868,7 +24869,8 @@ function renderPages() {
     var hasBrief = !!(p.brief_content) && !isDone; // Citation Brief exists and not yet actioned
     // Show HTML banner: only when needs_html=true OR never had HTML scan yet
     var hasHtml = (p.brief_check_count > 0) || (p.graaf_score > 0) || (p.score > 0)
-      || (p.last_checked && p.google_position !== undefined); // scanned but no HTML yet is OK — don't nag
+      || !!p.html_pasted_at  // HTML was pasted before
+      || (p.needs_html === false) || (p.needs_html === 'f') || (p.needs_html === 'false');
     var showHtmlBanner = needsHtml || (isFirstHtml && !isDone && !hasHtml);
 
     var needsHtmlBanner = showHtmlBanner
@@ -25153,6 +25155,12 @@ async function markDone(pageId, btn, currentDone) {
   var _checkAnimations = {};
 
   async function checkPage(pageId) {
+    // If Citation Brief is currently showing — queue scan for after brief closes
+    if (_briefIsOpen) {
+      _pendingScanAfterBrief = pageId;
+      toast('Scan queued — will start after brief closes', '#60a5fa');
+      return;
+    }
     // Default frequency to 3days on first check if not set
     var p = (_pages||[]).find(function(x){ return x.id == pageId; });
     if (p && !p.last_checked && !p.check_frequency) {
@@ -25384,6 +25392,8 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
   var _cbSecondsLeft = 60;
   var _cbKept = false;
   var _cbPageBriefs = {}; // pageId -> [{brief data}]
+  var _briefIsOpen = false; // blocks new scans while brief is showing
+  var _pendingScanAfterBrief = null; // pageId to scan after brief closes
 
   function showCitationBrief(data) {
     var card = document.getElementById('cbCard');
@@ -25411,6 +25421,7 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
     }
 
     // Show card
+    _briefIsOpen = true;
     card.classList.remove('hide');
     card.classList.add('show');
 
@@ -25451,6 +25462,26 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
         '<div class="cb-stat"><div class="v" style="color:' + (data.bing_cited ? '#60a5fa' : '#4b5563') + ';">' + (data.bing_cited ? 'Cited' : 'No') + '</div><div class="l">Copilot</div></div>' +
         '<div class="cb-stat"><div class="v" style="color:' + (data.brave_cited ? '#f87171' : '#4b5563') + ';">' + (data.brave_cited ? 'Cited' : 'No') + '</div><div class="l">Claude</div></div>' +
         (data.score ? '<div class="cb-stat"><div class="v" style="color:#fbbf24;">' + data.score + '</div><div class="l">GRAAF</div></div>' : '');
+
+      // GSC row — only if data available
+      var brief = (typeof data.brief_content === 'string') ? JSON.parse(data.brief_content) : (data.brief_content || {});
+      var gscClicks = brief.gsc_clicks || data.gsc_clicks;
+      var gscImpr = brief.gsc_impressions || data.gsc_impressions;
+      var gscPos = brief.gsc_position || data.gsc_position;
+      var gscKw = brief.gsc_keyword || data.gsc_keyword;
+      if (gscClicks || gscImpr || gscPos) {
+        var gscCtr = (gscClicks && gscImpr) ? ((gscClicks/gscImpr)*100).toFixed(1)+'%' : null;
+        var gscRow = document.createElement('div');
+        gscRow.style.cssText = 'display:flex;gap:14px;flex-wrap:wrap;padding:8px 20px;background:rgba(74,222,128,.04);border-top:1px solid #1f2937;font-size:11px;align-items:center;';
+        gscRow.innerHTML = '<span style="color:#374151;font-weight:700;letter-spacing:.08em;text-transform:uppercase;">GSC</span>'
+          + (gscClicks ? '<span style="color:#4ade80;">&#8595; ' + gscClicks.toLocaleString() + ' clicks</span>' : '')
+          + (gscImpr ? '<span style="color:#60a5fa;">' + gscImpr.toLocaleString() + ' impr</span>' : '')
+          + (gscCtr ? '<span style="color:#a78bfa;">CTR ' + gscCtr + '</span>' : '')
+          + (gscPos ? '<span style="color:#f59e0b;">pos ' + parseFloat(gscPos).toFixed(1) + '</span>' : '')
+          + (gscKw ? '<span style="color:#4b5563;font-style:italic;">' + gscKw + '</span>' : '')
+          + '<span style="margin-left:auto;color:#4ade80;font-weight:700;">Goal: Rank #1</span>';
+        statRow.parentNode.insertBefore(gscRow, statRow.nextSibling);
+      }
 
       // Passages - type them in
       var passages = data.passages || data.recommendations;
@@ -25519,10 +25550,16 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
   function hideCitationBrief(pageId) {
     var card = document.getElementById('cbCard');
     if (card) { card.classList.remove('show'); card.classList.add('hide'); }
-    // Reload pages so inline Citation Brief shows with fresh data + NEW badge
+    _briefIsOpen = false;
+    // If a scan was queued while brief was open — start it now
+    var pendingScan = _pendingScanAfterBrief;
+    _pendingScanAfterBrief = null;
     setTimeout(function() {
       loadPages();
       if (pageId) { setTimeout(function() { showBriefNewDot(pageId); }, 300); }
+      if (pendingScan) {
+        setTimeout(function() { checkPage(pendingScan); }, 800);
+      }
     }, 400);
   }
 
@@ -26073,6 +26110,7 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
   }
 
   async function scanAllPages() {
+    if (_briefIsOpen) { toast('Close the Citation Brief first before scanning', '#f59e0b'); return; }
     var choice = confirm('Scan unscanned pages only? OK = only new pages (faster). Cancel = rescan all pages.');
     var d = await fetch('/api/tracker-client/' + TOKEN + '/scan-all', {
       method: 'POST',
@@ -31653,13 +31691,17 @@ app.post('/api/tracker/pages/:id/check', verifyEngineAccess, async (req, res) =>
               const checkCount = (pageRow.rows[0]?.brief_check_count || 0) + 1;
               const isFirstBrief = !existingBrief;
 
+              const gscContext = (page.gsc_clicks || page.gsc_impressions || page.gsc_position)
+                ? `\nGSC DATA (from Google Search Console):\n- Clicks (last 28 days): ${page.gsc_clicks || 0}\n- Impressions: ${page.gsc_impressions || 0}\n- CTR: ${page.gsc_ctr ? (page.gsc_ctr * 100).toFixed(1) + '%' : 'n/a'}\n- Average position: ${page.gsc_position ? '#' + parseFloat(page.gsc_position).toFixed(1) : 'n/a'}\n- Top GSC keyword: ${page.gsc_keyword || kw}`
+                : '';
+
               let mergedBrief = null;
               let mergeNote = null;
 
               if (recs && recs.length) {
                 if (isFirstBrief) {
-                  // First brief — store as-is
-                  mergedBrief = { items: recs, position: pos, aio, perp, bing_cited: bing, brave_cited: brave, score };
+                  mergedBrief = { items: recs, position: pos, aio, perp, bing_cited: bing, brave_cited: brave, score,
+                    gsc_clicks: page.gsc_clicks, gsc_impressions: page.gsc_impressions, gsc_position: page.gsc_position, gsc_keyword: page.gsc_keyword };
                 } else {
                   // Merge: use Gemini to combine old + new
                   try {
@@ -31677,6 +31719,9 @@ CURRENT STATUS (today's check):
 - Copilot cited: ${bing ? 'YES' : 'NO'}
 - Claude cited: ${brave ? 'YES' : 'NO'}
 - GRAAF score: ${score || 'N/A'}/100
+${gscContext}
+
+GOAL: Get this page to rank #1 AND get cited in all AI systems.
 
 PREVIOUS BRIEF (from last check, NOT yet marked done by user):
 ${JSON.stringify(existingBrief?.items || [], null, 2)}
@@ -31684,15 +31729,16 @@ ${JSON.stringify(existingBrief?.items || [], null, 2)}
 NEW RECOMMENDATIONS (from today's check):
 ${JSON.stringify(recs, null, 2)}
 
-TASK: Create ONE merged brief.
-- Remove items that are now resolved (e.g. if AIO is now cited, remove "get cited in AIO" items)
-- Keep items from previous brief that are still relevant and not done
-- Add new items that weren't in the previous brief
-- If an item appears in both, keep the clearest version
+TASK: Create ONE merged brief focused on ranking #1 and AI citations.
+- Remove items that are now resolved
+- Keep items from previous brief still relevant
+- Add new items not in previous brief
+- If GSC data shows low CTR (below 3%), add a title/meta optimization action
+- If position is 4-10, add a specific content depth action to reach #1
 - Maximum 5 items total, sorted by priority (HIGH first)
 
 Return ONLY a JSON array, no markdown:
-[{"title":"gap in max 6 words","priority":"high"|"medium"|"low","action":"EXACT copy-paste ready instruction — minimum 30 words, tell the user exactly what sentence/paragraph/FAQ to add or change","expected_impact":"which AI system and why"}]
+[{"title":"gap in max 6 words","priority":"high"|"medium"|"low","action":"EXACT copy-paste ready instruction — minimum 30 words","expected_impact":"which AI system and/or ranking improvement"}]
 `;
 
                       const gResp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${gemKey}`, {
@@ -31705,7 +31751,9 @@ Return ONLY a JSON array, no markdown:
                         const gText = gData.candidates?.[0]?.content?.parts?.[0]?.text || '';
                         const cleaned = gText.replace(/```json|```/g, '').trim();
                         const merged = JSON.parse(cleaned);
-                        mergedBrief = { items: merged, position: pos, aio, perp, bing_cited: bing, brave_cited: brave, score, merged: true };
+                        mergedBrief = { items: merged, position: pos, aio, perp, bing_cited: bing, brave_cited: brave, score,
+                          gsc_clicks: page.gsc_clicks, gsc_impressions: page.gsc_impressions, gsc_position: page.gsc_position, gsc_keyword: page.gsc_keyword,
+                          merged: true };
                         mergeNote = 'Merged with previous brief';
                       }
                     }
