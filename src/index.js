@@ -24593,7 +24593,7 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
 /* Copy section */
 .cb-copy-section{background:#0a0a12;border:1px solid #1f2937;border-radius:10px;padding:14px 16px;margin-top:14px}
 .cb-copy-title{font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;display:flex;align-items:center;gap:6px}
-.cb-copy-textarea{width:100%;min-height:70px;background:#0d1117;border:1px solid #374151;border-radius:8px;padding:10px 12px;color:#9ca3af;font-size:11px;font-family:monospace;resize:vertical;line-height:1.6;outline:none}
+.cb-copy-textarea{width:100%;min-height:200px;max-height:400px;background:#0d1117;border:1px solid #374151;border-radius:8px;padding:12px 14px;color:#e5e7eb;font-size:12px;font-family:system-ui,-apple-system,sans-serif;resize:vertical;line-height:1.7;outline:none;overflow-y:auto}
 .cb-copy-textarea:focus{border-color:#7c3aed}
 .cb-copy-row{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
 .cb-copy-btn-action{background:linear-gradient(135deg,#1e1b4b,#2e1065);border:1px solid #7c3aed;border-radius:8px;color:#a78bfa;font-size:11px;font-weight:700;padding:7px 16px;cursor:pointer;font-family:Verdana,sans-serif;transition:all .15s}
@@ -24606,27 +24606,43 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
 .cb-passage .rec-action{font-size:13px;color:#9ca3af;line-height:1.7;margin-bottom:6px}
 .cb-passage .rec-impact{font-size:12px;color:#7c3aed;font-style:italic;margin-top:6px}
 
-/* ═══ STAR FIELD — cards + welcome ═══ */
-@keyframes twinkle{0%,100%{opacity:0;transform:scale(0)}50%{opacity:1;transform:scale(1)}}
-@keyframes starFloat{0%{transform:translateY(0) rotate(0deg)}100%{transform:translateY(-100vh) rotate(360deg)}}
-@keyframes nebulaDrift{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
+/* ═══ PERSISTENT STARS — pure CSS, no JS needed ═══ */
+@keyframes twinkle{0%,100%{opacity:.15}50%{opacity:1}}
 
-.star-field{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:0}
-.star{position:absolute;width:2px;height:2px;background:#a78bfa;border-radius:50%;animation:twinkle var(--dur,3s) ease-in-out infinite;opacity:0}
-.star:nth-child(3n){background:#7c3aed}
-.star:nth-child(5n){background:#4ade80;width:1.5px;height:1.5px}
-.star:nth-child(7n){background:#fbbf24;width:1px;height:1px;--dur:5s}
+/* Stars on page cards */
+.cs-page-card::before{
+  content:'';position:absolute;top:8px;right:12px;width:2px;height:2px;border-radius:50%;
+  background:#a78bfa;animation:twinkle 2.5s ease-in-out infinite;z-index:1;pointer-events:none;
+  box-shadow:20px 15px 0 #7c3aed,40px 5px 0 #a78bfa,60px 25px 0 #4ade80,
+             80px 10px 0 #fbbf24,100px 20px 0 #7c3aed,120px 8px 0 #a78bfa,
+             30px 30px 0 #4ade80,70px 35px 0 #fbbf24,90px 30px 0 #a78bfa
+}
 
-.cs-page-card{position:relative;overflow:hidden}
-.cs-page-card .star-field{opacity:.3}
+/* Brief card stars */
+.cb-card::before{
+  content:'';position:absolute;top:12px;right:16px;width:2px;height:2px;border-radius:50%;
+  background:#a78bfa;animation:twinkle 2s ease-in-out infinite;z-index:0;pointer-events:none;
+  box-shadow:25px 10px 0 #7c3aed,50px 20px 0 #4ade80,75px 5px 0 #fbbf24,
+             100px 15px 0 #a78bfa,30px 40px 0 #7c3aed,60px 35px 0 #fbbf24,
+             85px 30px 0 #4ade80
+}
 
-/* Brief overlay nebula glow */
-.cb-card{position:relative;overflow:hidden}
-.cb-card::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 20% 20%,rgba(124,58,237,.08) 0%,transparent 50%),radial-gradient(ellipse at 80% 80%,rgba(76,29,149,.06) 0%,transparent 50%);pointer-events:none;z-index:0;animation:nebulaDrift 8s ease-in-out infinite}
+/* Welcome card stars */
+.wl-card::before{
+  content:'';position:absolute;top:10px;right:14px;width:2px;height:2px;border-radius:50%;
+  background:#a78bfa;animation:twinkle 3s ease-in-out infinite;z-index:0;pointer-events:none;
+  box-shadow:20px 20px 0 #7c3aed,40px 8px 0 #4ade80,60px 30px 0 #fbbf24,
+             80px 18px 0 #a78bfa,100px 35px 0 #7c3aed,30px 50px 0 #4ade80,
+             70px 45px 0 #fbbf24,90px 55px 0 #a78bfa,120px 25px 0 #4ade80
+}
 
-/* ═══ CLAUDE / BRAVE — see image badge ═══ */
-.cited-badge{position:relative}
-.cited-badge[data-img="true"]::after{content:'\u200B';position:absolute;top:-6px;right:-6px;font-size:9px;background:#0a0a12;border:1px solid #1f2937;border-radius:3px;padding:1px 3px;z-index:5}
+/* Scan overlay stars */
+.so-box::after{
+  content:'';position:absolute;top:16px;right:20px;width:2px;height:2px;border-radius:50%;
+  background:#a78bfa;animation:twinkle 2s ease-in-out infinite .5s;z-index:6;pointer-events:none;
+  box-shadow:30px 20px 0 #7c3aed,60px 10px 0 #4ade80,90px 25px 0 #fbbf24,
+             120px 15px 0 #a78bfa,40px 50px 0 #7c3aed,80px 40px 0 #4ade80
+}
 
 /* Mobile responsive */
 @media(max-width:768px){
@@ -24921,7 +24937,6 @@ var _ctSearchQuery = '';
     _pages = data.pages || [];
     renderStats(data);
     renderPages();
-    injectStarsIntoCards();
     // Mark Telegram as linked if already set
     if (data.client && data.client.telegram_linked) markTelegramLinked();
     // Auto-show TV Brief if a page has brief_content but hasn't been shown this session
@@ -25178,7 +25193,7 @@ function renderRecs(p) {
     var pageId = p.id || '';
     // Read from flat page fields (API returns these with snapshot JOIN aliases)
     var snap = p.latest_snapshot || {};
-    var pos = p.google_position || snap.google_position || null;
+    var pos = p.google_position || snap.google_position || p.gsc_position || null;
     var aio = !!(p.ai_google_overview_cited || snap.ai_google_overview_cited);
     var perp = !!(p.ai_perplexity_cited || snap.ai_perplexity_cited);
     var cop = !!(p.ai_bing_cited || snap.ai_bing_cited);
@@ -26441,7 +26456,12 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
       url: snap.url || '',
       keyword: snap.keyword || snap.gsc_keyword || '',
       domain: DOMAIN,
-      position: snap.google_position || null,
+      position: snap.google_position || snap.gsc_position || null,
+      gsc_clicks: snap.gsc_clicks || null,
+      gsc_impressions: snap.gsc_impressions || null,
+      gsc_position: snap.gsc_position || null,
+      gsc_ctr: snap.gsc_ctr || null,
+      gsc_keyword: snap.gsc_keyword || null,
       aio_cited: !!(snap.ai_google_overview_cited),
       perp_cited: !!(snap.ai_perplexity_cited),
       bing_cited: !!(snap.ai_bing_cited),
@@ -26456,36 +26476,6 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
       brief_content: snap.brief_content || null,
       type: 'brief_ready'
     });
-  }
-
-  // ═══ STAR FIELD — inject twinkling stars into any element ═══
-  function injectStars(container, count) {
-    if (!container || container.querySelector('.star-field')) return;
-    var field = document.createElement('div');
-    field.className = 'star-field';
-    for (var i = 0; i < count; i++) {
-      var star = document.createElement('div');
-      star.className = 'star';
-      star.style.left = Math.random() * 100 + '%';
-      star.style.top = Math.random() * 100 + '%';
-      star.style.setProperty('--dur', (2 + Math.random() * 4) + 's');
-      star.style.animationDelay = (Math.random() * 5) + 's';
-      field.appendChild(star);
-    }
-    container.style.position = 'relative';
-    container.insertBefore(field, container.firstChild);
-  }
-
-  // Inject stars after pages render
-  function injectStarsIntoCards() {
-    var cards = document.querySelectorAll('.cs-page-card');
-    cards.forEach(function(card) { injectStars(card, 8); });
-  }
-
-  // Inject stars into welcome overlay
-  function injectStarsIntoWelcome() {
-    var overlay = document.getElementById('welcomeOverlay');
-    if (overlay) injectStars(overlay.querySelector('.wl-card') || overlay, 15);
   }
 
   async function submitHtmlUpload() {
@@ -26547,7 +26537,7 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
   }
   function openWelcome() {
     var el = document.getElementById('welcomeOverlay');
-    if (el) { el.style.display = 'flex'; injectStarsIntoWelcome(); }
+    if (el) el.style.display = 'flex';
   }
 
   function openWaSettings() { openTelegramSetup(); } // legacy redirect
@@ -33562,40 +33552,46 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
       ].join('\n');
 
       const kwSource = page.keyword ? 'manually set' : page.gsc_keyword ? 'from Google Search Console' : 'auto-extracted from page title';
-      const prompt = `You are a content strategist specializing in AI citation optimization and Google AI Overview inclusion.
+            const gscBlock = page.gsc_clicks ? `
+GSC DATA: Clicks ${page.gsc_clicks} | Impressions ${page.gsc_impressions} | CTR ${page.gsc_ctr}% | Position ${page.gsc_position}` : '';
 
-Your goal: analyze why this page is NOT appearing in Google AI Overview, Perplexity, and You.com AI — and give specific content changes that would get it there AND push it to #1 in Google.
+      const prompt = `You are an AI Citation Strategist. Create a Citation Brief telling the content owner EXACTLY what to change so Google AI Overview, Perplexity, Copilot, and Claude all cite this page.
 
-KEYWORD: "${kw}" (${kwSource})
-OUR PAGE: ${page.url}
-TITLE: ${page.title||'(not set)'}
-IMPORTANT: Base all recommendations on the actual page content and URL above. The keyword is a search query — not a topic to explain. Focus on what THIS page is missing vs competitors.
+INPUT:
+- URL: ${page.url}
+- Keyword: "${kw}" (${kwSource})
+- Title: ${page.title||'(not set)'}
+- Position: ${snapshot.google_position || 'not ranked'}
+- AIO cited: ${snapshot.ai_google_overview_cited ? 'YES' : 'NO'}
+- Perplexity cited: ${snapshot.ai_perplexity_cited ? 'YES' : 'NO'}
+- Copilot cited: ${snapshot.ai_bing_cited ? 'YES' : 'NO'}
+- Claude cited: ${snapshot.ai_brave_cited ? 'YES' : 'NO'}
+${gscBlock}
+${aioText}
 
-CURRENT SITUATION:
-${status}${aioText}
+PAGE CONTENT:
+${ourContent ? ourContent + '...' : '(No HTML content)'}
 
-OUR PAGE CONTENT:
-${ourContent ? ourContent + '...' : '(No content stored — base analysis on keyword and competitor data only)'}
-
-PAGES CURRENTLY BEATING US in Google for "${kw}":
+COMPETITORS:
 ${competitorBlock}
 
-HOW TO GET INTO AI OVERVIEW & AI CITATIONS (apply this knowledge):
-- Google AI Overview picks pages that open with a direct, factual 1-2 sentence answer to the exact query
-- Perplexity and You.com prefer pages with specific data, numbers, named examples, clear H2 structure, and internal Q&A
-- All AI systems favor pages that answer follow-up questions on the same page (what is X, how much does X cost, who does X in [city])
-- Schema markup (FAQ, HowTo, Article) signals crawlable structure to AI systems
-- Pages that get cited tend to have one clear unique claim or statistic no competitor has
+CITATION REQUIREMENTS:
+- Google AIO: direct quotable definition in first 100 words, structured data, answers exact query
+- Perplexity: author E-E-A-T credentials, specific data/statistics, outbound authority links, numbered lists
+- Copilot: clear H2/H3 matching queries, 50-80 word summary near top, keyword in H1/first paragraph/meta
+- Claude/Brave: factual verifiable claims with sources, About author section, fast mobile pages
 
 TASK:
-1. Compare our content vs. what competitors are saying — what specific facts, phrases, or structures do they have that we don’t?
-2. If AI Overview text is shown: what exact format triggered it? How do we match or exceed that?
-3. Give 3-5 actions that directly target getting into Google AI Overview, Perplexity, and You.com
+1. Compare our content vs competitors — what specific facts, phrases, structures do they have that we don't?
+2. If AIO text exists: what format triggered it? How to match/exceed it?
+3. Create exactly 5 actions targeting ONE system each
+4. Skip systems that already cite us (YES above)
+5. Write EXACT copy-paste text — not suggestions, the actual sentences
 
-Return ONLY a JSON array, no markdown:
-[{"title":"gap in max 6 words","priority":"high"|"medium"|"low","action":"EXACT copy-paste ready instruction — e.g. 'Add this sentence to your intro: ...' or 'Replace your H2 with: ...' or 'Add this FAQ block: Q: ... A: ...' — minimum 30 words, maximum 80 words","expected_impact":"Google AI Overview / Perplexity / Copilot / Claude — and specifically why"}]
+QUALITY: Every action must be implementable in under 10 minutes. "Improve your intro" = FAIL. Write the intro FOR them.
 
-Zero generic advice. Every action must be so specific the user can implement it immediately without thinking.`;
+Return ONLY JSON, no markdown:
+[{"title":"6 words max","priority":"high|medium|low","system":"Google AIO|Perplexity|Copilot|Claude|Ranking","action":"EXACT 40-80 word copy-paste text","expected_impact":"System + specific why"}]`;
 
       const resp = await callGeminiWithFallback(geminiKey, {
         contents: [{ role: 'user', parts: [{ text: prompt }] }],
