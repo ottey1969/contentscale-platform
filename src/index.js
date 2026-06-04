@@ -1278,6 +1278,8 @@ app.patch('/api/tracker-client/:token/pages/:pageId/html', async (req, res) => {
       await pool.query(`UPDATE tracker_pages SET ${fields.join(',')} WHERE id=$${vals.length}`, vals);
     }
     res.json({ success: true });
+    // Trigger scan after HTML paste — this is what starts the GRAAF scan
+    _triggerPageScan(parseInt(req.params.pageId), 1000);
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
@@ -1463,6 +1465,31 @@ app.get('/api/tracker-client/:token/live-events', async (req, res) => {
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
+// ── Helper: trigger a scan for a tracker page by ID ──────────────────────────
+function _triggerPageScan(pageId, delayMs) {
+  delayMs = delayMs || 2000;
+  setTimeout(function() {
+    pool.query('SELECT * FROM tracker_pages WHERE id=$1 AND (is_active=TRUE OR is_active IS NULL)', [pageId])
+      .then(function(r) {
+        if (!r.rows.length) return;
+        const pg = r.rows[0];
+        const pgId = pg.id;
+        const ex = _trackerCheckStatus.get(pgId);
+        if (ex && ex.running) { console.log('[trigger-scan] already running for', pgId); return; }
+        _trackerCheckStatus.set(pgId, { running: true, steps: [], startedAt: new Date().toISOString(), finishedAt: null, url: pg.url });
+        const pgDomain = (pg.url||'').replace(/^https?:\/\//, '').split('/')[0];
+        _sseBroadcast({ type: 'check_start', pageId: pgId, domain: pgDomain, url: pg.url, keyword: pg.keyword || pg.gsc_keyword || '', ts: new Date().toISOString() });
+        console.log('[tracker] _triggerPageScan:', pgId, pg.url);
+        const keys = { serpapiKey: process.env.SERPAPI_KEY || process.env.SERPER_API_KEY, perplexityKey: process.env.PERPLEXITY_API_KEY, braveKey: process.env.BRAVE_SEARCH_API_KEY, youKey: process.env.YOU_API_KEY };
+        setImmediate(async () => {
+          try { await runTrackerCheck(pg, process.env.GEMINI_API_KEY, keys, true); }
+          catch(e) { console.warn('[trigger-scan]', e.message); }
+          finally { const st = _trackerCheckStatus.get(pgId); if (st) { st.running = false; st.finishedAt = new Date().toISOString(); } }
+        });
+      }).catch(e => console.warn('[trigger-scan-query]', e.message));
+  }, delayMs);
+}
+
 // POST /api/tracker-client/:token/pages — add URL to track
 app.post('/api/tracker-client/:token/pages', async (req, res) => {
   try {
@@ -1504,19 +1531,20 @@ app.post('/api/tracker-client/:token/pages', async (req, res) => {
       const updates = [];
       const vals = [];
       let i = 1;
-      // Always overwrite GSC data when importing — it changes every week
       if (gsc_clicks !== undefined && gsc_clicks !== null) { updates.push(`gsc_clicks=$${i++}`); vals.push(gsc_clicks); }
       if (gsc_impressions !== undefined && gsc_impressions !== null) { updates.push(`gsc_impressions=$${i++}`); vals.push(gsc_impressions); }
       if (gsc_position !== undefined && gsc_position !== null) { updates.push(`gsc_position=$${i++}`); vals.push(gsc_position); }
       if (gsc_ctr !== undefined && gsc_ctr !== null) { updates.push(`gsc_ctr=$${i++}`); vals.push(gsc_ctr); }
       if (gsc_keyword) { updates.push(`gsc_keyword=$${i++}`); vals.push(gsc_keyword); }
-      // Update keyword only if not already manually set
       if (keyword && !gsc_keyword) { updates.push(`keyword=COALESCE(keyword,$${i++})`); vals.push(keyword); }
       if (updates.length) {
         vals.push(pageId);
         await pool.query(`UPDATE tracker_pages SET ${updates.join(',')} WHERE id=$${i}`, vals).catch(()=>{});
       }
-      return res.json({ success: true, page_id: pageId, updated: true });
+      res.json({ success: true, page_id: pageId, updated: true });
+      // Also trigger scan for existing page — GSC data updated, rescan needed
+      _triggerPageScan(pageId);
+      return;
     }
 
     let pr;
@@ -1537,7 +1565,6 @@ app.post('/api/tracker-client/:token/pages', async (req, res) => {
       );
     } catch(insertErr) {
       console.error('[add-page] insert error:', insertErr.message);
-      // Fallback: simple insert without GSC columns
       try {
         pr = await pool.query(
           `INSERT INTO tracker_pages (tracker_client_id, url, keyword, check_frequency, next_check_at, is_active)
@@ -1552,39 +1579,15 @@ app.post('/api/tracker-client/:token/pages', async (req, res) => {
       }
     }
 
+    if (!pr || !pr.rows || !pr.rows.length) {
+      return res.status(500).json({ success: false, error: 'Insert returned no row' });
+    }
+
     const newPageId = pr.rows[0].id;
     res.json({ success: true, page_id: newPageId, remaining: maxPages - count - 1 });
 
     // First check auto-starts after 10 seconds
-    setTimeout(function() {
-      pool.query('SELECT * FROM tracker_pages WHERE id=$1 AND (is_active=TRUE OR is_active IS NULL)', [newPageId])
-        .then(function(r) {
-          if (!r.rows.length) return;
-          const pg = r.rows[0];
-          const pgId = pg.id;
-          // Block if already running
-          const ex = _trackerCheckStatus.get(pgId);
-          if (ex && ex.running) return;
-          _trackerCheckStatus.set(pgId, { running: true, steps: [], startedAt: new Date().toISOString(), finishedAt: null, url: pg.url });
-          const pgDomain = (pg.url||'').replace(/^https?:\/\//, '').split('/')[0];
-          _sseBroadcast({ type: 'check_start', pageId: pgId, domain: pgDomain, url: pg.url, keyword: pg.keyword || pg.gsc_keyword || '', ts: new Date().toISOString() });
-          console.log('[tracker] Auto first-check for new page:', pgId, pg.url);
-          const keys = {
-            serpapiKey:    process.env.SERPAPI_KEY || process.env.SERPER_API_KEY,
-            perplexityKey: process.env.PERPLEXITY_API_KEY,
-            braveKey:      process.env.BRAVE_SEARCH_API_KEY,
-            youKey:        process.env.YOU_API_KEY
-          };
-          setImmediate(async () => {
-            try { await runTrackerCheck(pg, process.env.GEMINI_API_KEY, keys, true); }
-            catch(e) { console.warn('[tracker] First check failed:', e.message); }
-            finally {
-              const st = _trackerCheckStatus.get(pgId);
-              if (st) { st.running = false; st.finishedAt = new Date().toISOString(); }
-            }
-          });
-        }).catch(function(e){ console.warn('[tracker] First check query failed:', e.message); });
-    }, 10 * 1000); // 10 seconds — fast first scan
+    _triggerPageScan(newPageId, 10000);
   } catch(e) {
     console.error('[POST tracker pages]', e.message, e.detail || '');
     res.status(500).json({ success: false, error: e.message, detail: e.detail || null });
