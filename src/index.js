@@ -2702,6 +2702,7 @@ app.patch('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
   await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS brief_check_count INTEGER DEFAULT 0`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS ranking_brief JSONB`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS needs_html BOOLEAN DEFAULT FALSE`).catch(()=>{});
+  await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS html_mismatch_notified_at TIMESTAMPTZ`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS paused_at TIMESTAMPTZ`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS dealify_codes VARCHAR(500)`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS gsc_enabled BOOLEAN DEFAULT FALSE`).catch(()=>{});
@@ -33320,7 +33321,7 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
     // OPTIMISATION: skip Perplexity every other scan to save API costs
     // Only run on even scan counts (0, 2, 4...) or if never run before
     const prevSnapR = await pool.query(
-      `SELECT ai_perplexity_cited, ai_bing_cited, ai_brave_cited, google_position, ai_google_overview_cited, brief_check_count
+      `SELECT ai_perplexity_cited, ai_bing_cited, ai_brave_cited, google_position, ai_google_overview_cited
        FROM tracker_snapshots WHERE page_id=$1 ORDER BY checked_at DESC LIMIT 2`,
       [pageId]
     );
@@ -34499,51 +34500,72 @@ function startTrackerScheduler() {
       );
       for(const page of due.rows) {
         const source = page.tracker_client_id ? 'client' : 'engine';
-        console.log('[tracker-scheduler] Running check for:', page.url, '| source:', source, '| freq:', page.check_frequency);
         const _sk = { gemini: process.env.GEMINI_API_KEY, serpapiKey: process.env.SERPAPI_KEY, youKey: process.env.YOU_API_KEY, perplexityKey: process.env.PERPLEXITY_API_KEY };
 
-        // ── HTML freshness check for client tracker pages ─────────────────
-        if (page.tracker_client_id && page.html_content && page.last_page_hash) {
-          try {
-            const liveResp = await fetch(page.url, { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(10000) });
-            if (liveResp.ok) {
-              const liveHtml = await liveResp.text();
-              const crypto = require('crypto');
-              const liveHashMd5 = crypto.createHash('md5').update(liveHtml).digest('hex');
-              const storedHash = page.last_page_hash;
+        // ── CLIENT TRACKER: respect needs_html flag ──────────────────────
+        if (page.tracker_client_id) {
+          // If user needs to provide new HTML, skip scan and push next_check out
+          if (page.needs_html === true || page.needs_html === 't' || page.needs_html === 1) {
+            console.log('[tracker-scheduler] Skipping scan for', page.url, '— needs fresh HTML from user (needs_html=true)');
+            // Push next check out by one frequency period so we don't keep trying
+            const freqHours = { daily: 24, '1day': 24, '3days': 72, weekly: 168, '1week': 168 };
+            const hours = freqHours[page.check_frequency] || 72;
+            await pool.query('UPDATE tracker_pages SET next_check_at = NOW() + INTERVAL \'' + hours + ' hours\' WHERE id=$1', [page.id]).catch(()=>{});
+            continue;
+          }
 
-              if (liveHashMd5 !== storedHash) {
-                console.log('[tracker-scheduler] HTML mismatch for', page.url, '— using live HTML for scan');
-                // Store live HTML for scan — update hash and html_content
-                await pool.query('UPDATE tracker_pages SET html_content=$1, last_page_hash=$2, needs_html=FALSE WHERE id=$3', [liveHtml, liveHashMd5, page.id]).catch(()=>{});
-                // Update page object with live HTML
-                page.html_content = liveHtml;
-                page.last_page_hash = liveHashMd5;
+          // If no HTML content at all, skip scan
+          if (!page.html_content) {
+            console.log('[tracker-scheduler] Skipping scan for', page.url, '— no HTML content available');
+            continue;
+          }
 
-                // Notify client that we used live HTML
-                const clientR2 = await pool.query('SELECT * FROM tracker_clients WHERE id=$1', [page.tracker_client_id]);
-                const client2 = clientR2.rows[0];
-                if (client2 && client2.email) {
-                  const trackerUrl2 = (process.env.APP_URL || 'https://app.contentscale.site') + '/track/' + client2.token;
-                  await sendTrackerEmail(page.tracker_client_id,
-                    'Page updated — scan running with latest HTML — ' + client2.domain,
-                    '<p style="font-size:14px;color:#374151;line-height:1.7;margin-bottom:14px;">Your page <strong>' + page.url + '</strong> has changed since you last pasted HTML. The system automatically fetched your latest live page and is running the scan now.</p>'
-                    + '<a href="' + trackerUrl2 + '" style="display:inline-block;background:#7c3aed;color:white;text-decoration:none;padding:10px 22px;border-radius:6px;font-size:13px;font-weight:700;">View Results →</a>'
-                  ).catch(()=>{});
-                  if (client2.telegram_chat_id) {
-                    await sendTelegramNotification(client2.telegram_chat_id, '🔄 Page changed detected for <b>' + page.url + '</b> — scanning with latest live content automatically.').catch(()=>{});
+          // ── HTML freshness check: detect changes, notify, but DON'T auto-scan ──
+          if (page.last_page_hash) {
+            try {
+              const liveResp = await fetch(page.url, { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(10000) });
+              if (liveResp.ok) {
+                const liveHtml = await liveResp.text();
+                const crypto = require('crypto');
+                const liveHashMd5 = crypto.createHash('md5').update(liveHtml).digest('hex');
+
+                if (liveHashMd5 !== page.last_page_hash) {
+                  console.log('[tracker-scheduler] HTML change detected for', page.url, '— marking needs_html=true');
+                  // Mark as needing fresh HTML — DON'T auto-fetch and scan
+                  await pool.query('UPDATE tracker_pages SET needs_html=TRUE, next_check_at = NOW() + INTERVAL \'72 hours\' WHERE id=$1', [page.id]).catch(()=>{});
+                  // Notify user ONCE (max once per 24h)
+                  const clientR2 = await pool.query('SELECT * FROM tracker_clients WHERE id=$1', [page.tracker_client_id]);
+                  const client2 = clientR2.rows[0];
+                  if (client2) {
+                    const lastNotify = page.html_mismatch_notified_at;
+                    const oneDayAgo = new Date(Date.now() - 86400000);
+                    if (!lastNotify || new Date(lastNotify) < oneDayAgo) {
+                      await pool.query('UPDATE tracker_pages SET html_mismatch_notified_at = NOW() WHERE id=$1', [page.id]).catch(()=>{});
+                      const trackerUrl2 = (process.env.APP_URL || 'https://app.contentscale.site') + '/track/' + client2.token;
+                      if (client2.email) {
+                        await sendTrackerEmail(page.tracker_client_id,
+                          'Your page changed — paste new HTML for next scan — ' + client2.domain,
+                          '<p style="font-size:14px;color:#374151;line-height:1.7;margin-bottom:14px;">Your page <strong>' + page.url + '</strong> has changed online. To get an accurate scan, please paste your updated page HTML into the tracker.</p><p style="font-size:13px;color:#6b7280;line-height:1.6;margin-bottom:14px;">The orange <strong>HTML</strong> button on your page card is now blinking — click it to paste your fresh HTML.</p>'
+                          + '<a href="' + trackerUrl2 + '" style="display:inline-block;background:#f59e0b;color:#0a0a12;text-decoration:none;padding:10px 22px;border-radius:6px;font-size:13px;font-weight:700;">Paste New HTML →</a>'
+                        ).catch(()=>{});
+                      }
+                      if (client2.telegram_chat_id) {
+                        await sendTelegramNotification(client2.telegram_chat_id, '🔄 <b>' + page.url + '</b> changed online. Paste fresh HTML in your tracker for the next scan.').catch(()=>{});
+                      }
+                    }
                   }
+                  continue; // SKIP scan — wait for user to provide new HTML
+                } else {
+                  console.log('[tracker-scheduler] HTML unchanged for', page.url, '— proceeding with scan');
                 }
-                console.log('[tracker-scheduler] Using live HTML for scan:', page.url);
-              } else {
-                console.log('[tracker-scheduler] HTML matches for', page.url, '— proceeding with scan');
               }
+            } catch(hashErr) {
+              console.warn('[tracker-scheduler] Hash check failed for', page.url, ':', hashErr.message);
             }
-          } catch(hashErr) {
-            console.warn('[tracker-scheduler] Hash check failed for', page.url, ':', hashErr.message, '— proceeding with scan anyway');
           }
         }
 
+        console.log('[tracker-scheduler] Running check for:', page.url, '| source:', source, '| freq:', page.check_frequency);
         await runTrackerCheck(page, _sk.gemini, _sk).catch(e => console.warn('[tracker-scheduler]', e.message));
         await new Promise(r => setTimeout(r, 5000));
       }
