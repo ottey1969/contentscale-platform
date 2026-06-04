@@ -33301,6 +33301,86 @@ Zero generic advice. Every action must be so specific the user can implement it 
 
   _trSetStep(pageId, 'complete', 'done', 'Check finished — pos:' + (snapshot.google_position||'—') + ' · GRAAF:' + (snapshot.score||'—') + '/100 · AIO:' + (snapshot.ai_google_overview_cited?'✅':'❌') + ' · Perplexity:' + (snapshot.ai_perplexity_cited?'✅':'❌') + ' · You.com:' + (snapshot.ai_bing_cited?'✅':'❌'));
   console.log(`[tracker] Check complete for ${page.url} — position:${snapshot.google_position}, GRAAF:${snapshot.score}, AI Overview:${snapshot.ai_google_overview_cited}`);
+
+  // ── Generate Citation Brief (always, regardless of calling route) ─────────
+  const pos2  = snapshot.google_position;
+  const aio2  = !!snapshot.ai_google_overview_cited;
+  const perp2 = !!snapshot.ai_perplexity_cited;
+  const bing2 = !!snapshot.ai_bing_cited;
+  const brave2= !!snapshot.ai_brave_cited;
+  const score2= snapshot.score;
+  const kw2   = keyword || page.gsc_keyword || '';
+  const domain2 = pageUrl.replace(/^https?:\/\//, '').split('/')[0];
+  const recs2 = snapshot.recommendations;
+
+  if (geminiKey && Array.isArray(recs2) && recs2.length) {
+    try {
+      const pageRow2 = await pool.query('SELECT brief_content, brief_check_count FROM tracker_pages WHERE id=$1', [page.id]);
+      const existingBrief2 = pageRow2.rows[0]?.brief_content;
+      const checkCount2 = (pageRow2.rows[0]?.brief_check_count || 0) + 1;
+      const isFirst2 = !existingBrief2;
+      const gscCtx = (page.gsc_clicks || page.gsc_impressions || page.gsc_position)
+        ? `\nGSC: ${page.gsc_clicks||0} clicks, ${page.gsc_impressions||0} impressions, pos ${page.gsc_position||'?'}, top kw: ${page.gsc_keyword||kw2}`
+        : '';
+
+      let brief2 = null;
+      if (isFirst2) {
+        brief2 = { items: recs2, position: pos2, aio: aio2, perp: perp2, bing_cited: bing2, brave_cited: brave2, score: score2,
+          gsc_clicks: page.gsc_clicks, gsc_impressions: page.gsc_impressions, gsc_position: page.gsc_position, gsc_keyword: page.gsc_keyword };
+      } else {
+        try {
+          const mergePrompt2 = `Merge these two AI citation briefs for ${pageUrl} (keyword: "${kw2}").
+Status: pos=${pos2||'unranked'}, AIO=${aio2}, Perplexity=${perp2}, Copilot=${bing2}, Claude=${brave2}, GRAAF=${score2||'?'}/100${gscCtx}
+Goal: rank #1 and be cited in all AI systems.
+PREVIOUS: ${JSON.stringify((existingBrief2?.items||[]).slice(0,3))}
+NEW: ${JSON.stringify(recs2.slice(0,3))}
+Return ONLY JSON array (max 5 items): [{"title":"max 6 words","priority":"high"|"medium"|"low","action":"exact 30+ word instruction","expected_impact":"ranking/AI impact"}]`;
+          const gResp2 = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey}`, {
+            method: 'POST', headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({ contents: [{ parts: [{ text: mergePrompt2 }] }], generationConfig: { temperature: 0.3, maxOutputTokens: 600 } })
+          });
+          if (gResp2.ok) {
+            const gData2 = await gResp2.json();
+            const gText2 = gData2.candidates?.[0]?.content?.parts?.[0]?.text || '';
+            const merged2 = JSON.parse(gText2.replace(/```json|```/g, '').trim());
+            brief2 = { items: merged2, position: pos2, aio: aio2, perp: perp2, bing_cited: bing2, brave_cited: brave2, score: score2,
+              gsc_clicks: page.gsc_clicks, gsc_impressions: page.gsc_impressions, gsc_position: page.gsc_position, gsc_keyword: page.gsc_keyword, merged: true };
+          }
+        } catch(mergeErr2) {
+          console.warn('[brief-merge2]', mergeErr2.message);
+          brief2 = { items: recs2, position: pos2, aio: aio2, perp: perp2, bing_cited: bing2, brave_cited: brave2, score: score2 };
+        }
+      }
+
+      if (brief2) {
+        await pool.query(
+          'UPDATE tracker_pages SET brief_content=$1, brief_started_at=COALESCE(brief_started_at,NOW()), brief_check_count=$2 WHERE id=$3',
+          [JSON.stringify(brief2), checkCount2, page.id]
+        ).catch(e => console.warn('[brief-save2]', e.message));
+
+        // Broadcast brief_ready so client TV modal fires
+        _sseBroadcast({
+          type: 'brief_ready',
+          page_id: page.id,
+          url: pageUrl,
+          keyword: kw2,
+          position: pos2,
+          aio_cited: aio2,
+          perp_cited: perp2,
+          bing_cited: bing2,
+          brave_cited: brave2,
+          score: score2,
+          domain: domain2,
+          brief_content: brief2,
+          passages: brief2.items || [],
+          ts: new Date().toISOString()
+        });
+        console.log(`[tracker] Brief generated and broadcast for ${pageUrl}`);
+      }
+    } catch(briefErr) {
+      console.warn('[brief-gen]', briefErr.message);
+    }
+  }
 }
 
 
