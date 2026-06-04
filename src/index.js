@@ -1336,9 +1336,24 @@ app.post('/api/tracker-client/:token/scan-all', async (req, res) => {
   try {
     const cr = await pool.query('SELECT id FROM tracker_clients WHERE token=$1', [req.params.token]);
     if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
-    const pages = await pool.query('SELECT * FROM tracker_pages WHERE tracker_client_id=$1 AND (is_active=TRUE OR is_active IS NULL) ORDER BY created_at ASC', [cr.rows[0].id]);
-    res.json({ success: true, queued: pages.rows.length, message: 'Scanning ' + pages.rows.length + ' pages one by one' });
-    // Scan sequentially with 3s delay between each
+    const unscannedOnly = req.body && req.body.unscanned_only === true;
+
+    // If unscanned_only, only pick pages with no snapshot
+    let pages;
+    if (unscannedOnly) {
+      pages = await pool.query(`
+        SELECT p.* FROM tracker_pages p
+        LEFT JOIN tracker_snapshots s ON s.page_id = p.id
+        WHERE p.tracker_client_id=$1 AND (p.is_active=TRUE OR p.is_active IS NULL)
+        AND s.id IS NULL
+        ORDER BY p.created_at ASC
+      `, [cr.rows[0].id]);
+    } else {
+      pages = await pool.query('SELECT * FROM tracker_pages WHERE tracker_client_id=$1 AND (is_active=TRUE OR is_active IS NULL) ORDER BY created_at ASC', [cr.rows[0].id]);
+    }
+
+    res.json({ success: true, queued: pages.rows.length, message: 'Scanning ' + pages.rows.length + ' ' + (unscannedOnly ? 'unscanned ' : '') + 'pages one by one (~' + Math.ceil(pages.rows.length * 3 / 60) + ' min)' });
+
     const checkKeys = {
       serpapiKey:    process.env.SERPAPI_KEY || process.env.SERPER_API_KEY,
       perplexityKey: process.env.PERPLEXITY_API_KEY,
@@ -1347,6 +1362,7 @@ app.post('/api/tracker-client/:token/scan-all', async (req, res) => {
     };
     for (let i = 0; i < pages.rows.length; i++) {
       await new Promise(r => setTimeout(r, i === 0 ? 100 : 3000));
+      console.log('[scan-all] scanning page', i+1, '/', pages.rows.length, pages.rows[i].url);
       runTrackerCheck(pages.rows[i], process.env.GEMINI_API_KEY, checkKeys, true)
         .catch(e => console.warn('[scan-all] page', pages.rows[i].id, e.message));
     }
@@ -13277,15 +13293,14 @@ const resolveClaudeKey = (req) => {
   return null;
 };
 const resolveSerpapiKey = (req) => {
-  // Priority: header > per-code key (from engineUser) > platform env
   const headerKey = req.headers['x-serpapi-key'];
   const codeKey = req.engineUser && req.engineUser.code ? req.engineUser.code.serpapi_key : null;
-  const envKey = process.env.SERPAPI_KEY;
+  const envKey = process.env.SERPAPI_KEY || process.env.SERPER_API_KEY; // support both names
 
   if (headerKey) { console.log('[keys] SerpAPI: using header key'); return headerKey; }
-  if (codeKey) { console.log('[keys] SerpAPI: using per-code key for code', req.engineUser.codeId); return codeKey; }
-  if (envKey) { console.log('[keys] SerpAPI: using platform env key'); return envKey; }
-  console.log('[keys] SerpAPI: NO KEY FOUND');
+  if (codeKey) { console.log('[keys] SerpAPI: using per-code key'); return codeKey; }
+  if (envKey) { console.log('[keys] SerpAPI: using env key (' + (process.env.SERPAPI_KEY ? 'SERPAPI_KEY' : 'SERPER_API_KEY') + ')'); return envKey; }
+  console.log('[keys] SerpAPI: NO KEY FOUND — set SERPAPI_KEY or SERPER_API_KEY in Railway');
   return null;
 };
 const resolveYouApiKey       = (req) => req.headers['x-you-api-key']        || process.env.YOU_API_KEY;
@@ -24739,7 +24754,8 @@ function renderPages() {
     var score = p.graaf_score;
     var kw = p.keyword || p.gsc_keyword || '';
     var posColor = !pos ? '#6b7280' : pos<=3 ? '#4ade80' : pos<=10 ? '#a3e635' : pos<=20 ? '#fbbf24' : '#f87171';
-    var lastChecked = p.last_checked ? new Date(p.last_checked).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}) : null;
+    var lastCheckedRaw = p.last_checked || p.last_checked_at; // snapshot OR page timestamp
+    var lastChecked = lastCheckedRaw ? new Date(lastCheckedRaw).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}) : null;
     // Calculate next check based on frequency if not set yet
     var nextCheckDate = p.next_check_at ? new Date(p.next_check_at) : null;
     if (!nextCheckDate && p.last_checked) {
@@ -24787,8 +24803,11 @@ function renderPages() {
     // Recommendations
     var recsHtml = renderRecs(p);
 
-    // Pending first check banner
-    var pendingBanner = (!p.last_checked && !isDone && !showHtmlBanner)
+    // Pending first check banner — only show if NO data whatsoever
+    var hasAnyData = !!lastCheckedRaw || p.google_position !== null && p.google_position !== undefined
+      || p.ai_google_overview_cited !== null && p.ai_google_overview_cited !== undefined
+      || (p.gsc_clicks > 0) || (p.brief_check_count > 0) || (p.graaf_score > 0);
+    var pendingBanner = (!hasAnyData && !isDone && !showHtmlBanner)
       ? '<div style="display:flex;align-items:center;gap:8px;padding:6px 14px;background:rgba(96,165,250,.06);border-bottom:1px solid rgba(96,165,250,.15);font-size:11px;color:#60a5fa;"><span style="animation:blink 2s infinite;display:inline-block">&#9679;</span> First scan running automatically...</div>'
       : '';
 
@@ -24798,7 +24817,8 @@ function renderPages() {
     var hasBeenScanned = !!p.last_checked || !!p.google_position || p.ai_google_overview_cited !== undefined || p.ai_perplexity_cited !== undefined;
     var hasBrief = !!(p.brief_content) && !isDone; // Citation Brief exists and not yet actioned
     // Show HTML banner: only when needs_html=true OR never had HTML scan yet
-    var hasHtml = (p.brief_check_count > 0) || (p.graaf_score > 0);
+    var hasHtml = (p.brief_check_count > 0) || (p.graaf_score > 0) || (p.score > 0)
+      || (p.last_checked && p.google_position !== undefined); // scanned but no HTML yet is OK — don't nag
     var showHtmlBanner = needsHtml || (isFirstHtml && !isDone && !hasHtml);
 
     var needsHtmlBanner = showHtmlBanner
@@ -24832,6 +24852,7 @@ function renderPages() {
       + '</div>'
       + '</div>'
       + '<div style="display:flex;gap:5px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;align-items:flex-start;">'
+      + (lastChecked ? '<button onclick="checkPage(' + p.id + ')" style="background:none;border:1px solid #374151;border-radius:5px;color:#6b7280;cursor:pointer;font-size:11px;padding:3px 8px;" title="Rescan now">↻</button>' : '')
       + '<button onclick="deletePage(' + p.id + ')" style="background:none;border:1px solid #374151;border-radius:5px;color:#6b7280;cursor:pointer;font-size:12px;padding:4px 8px;" title="Delete page">🗑</button>'
       + '</div>'
       + '</div>'
@@ -25011,21 +25032,29 @@ async function addPage() {
   try {
     var data = await api('/pages', 'POST', { url: url, keyword: keyword||undefined });
     if (!data.success) return toast(data.error || 'Failed to add page', '#f87171');
+    var newPageId = data.page_id;
     hideModal('addModal');
     document.getElementById('addUrl').value = '';
     document.getElementById('addKeyword').value = '';
     loadPages();
-    // Show friendly message - first check is automatic after 1 minute
-    setTimeout(function() {
-      toast('Page added — first scan starts in ~10 seconds', '#4ade80');
-      // Fully automatic refresh — no manual action needed
-      var refreshCount = 0;
-      var autoRefresh = setInterval(function() {
-        refreshCount++;
-        loadPages();
-        if (refreshCount >= 6) clearInterval(autoRefresh); // stop after 60s
-      }, 10000);
-    }, 300);
+    toast('Page added — first scan starts in ~10 seconds', '#4ade80');
+
+    // Auto-refresh cycle
+    var refreshCount = 0;
+    var autoRefresh = setInterval(function() {
+      refreshCount++;
+      loadPages();
+      // After 20s, if page still has no data, trigger scan from client side
+      if (refreshCount === 2 && newPageId) {
+        var pg = (_pages||[]).find(function(x){ return x.id == newPageId; });
+        var hasData = pg && (pg.last_checked || pg.google_position !== undefined || pg.last_checked_at);
+        if (!hasData) {
+          console.log('[addPage] Server scan may not have fired — triggering client-side scan for page', newPageId);
+          fetch('/api/tracker-client/' + TOKEN + '/check/' + newPageId, { method: 'POST' }).catch(function(){});
+        }
+      }
+      if (refreshCount >= 8) clearInterval(autoRefresh);
+    }, 10000);
   } catch(e) { toast('Error: ' + e.message, '#f87171'); }
 }
 
@@ -25965,12 +25994,17 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
   }
 
   async function scanAllPages() {
-    var d = await fetch('/api/tracker-client/' + TOKEN + '/scan-all', { method: 'POST' }).then(r => r.json()).catch(() => ({success:false}));
+    var choice = confirm('Scan unscanned pages only? OK = only new pages (faster). Cancel = rescan all pages.');
+    var d = await fetch('/api/tracker-client/' + TOKEN + '/scan-all', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ unscanned_only: choice })
+    }).then(r => r.json()).catch(() => ({success:false}));
     if (d.success) {
-      toast('Scanning ' + d.queued + ' pages — results load automatically', '#4ade80');
-      // Auto-refresh every 15s while scanning
+      if (d.queued === 0) { toast('No unscanned pages found — all pages have data', '#60a5fa'); return; }
+      toast(d.message || 'Scanning ' + d.queued + ' pages — results load automatically', '#4ade80');
       var scanRefresh = setInterval(function(){ loadPages(); }, 15000);
-      setTimeout(function(){ clearInterval(scanRefresh); }, d.queued * 15000 + 30000);
+      setTimeout(function(){ clearInterval(scanRefresh); }, Math.max(d.queued * 15000, 60000) + 30000);
     } else toast(d.error || 'Failed', '#f87171');
   }
 
@@ -32519,8 +32553,8 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
     // AI Overview comes back as answerBox with type:"ai_overview" (or similar).
     // Sign up at serper.dev — 2,500 free searches/month.
     // Add SERPAPI_KEY to Railway env vars.
-    _trSetStep(pageId, 'google', 'running', 'Searching Google via Serper: ' + keyword);
-    if(_sk) {
+    _trSetStep(pageId, 'google', 'running', 'Searching Google via Serper: ' + (keyword || '(no keyword set)'));
+    if(_sk && keyword) {
       const skCacheKey = 'serper:tracker:' + keyword.toLowerCase().trim();
       const skCached = _cacheGet(skCacheKey);
       if (skCached) {
@@ -32635,7 +32669,10 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
       prevSnap.google_position !== snapshot.google_position ||
       Math.abs((prevSnap.google_position||99) - (snapshot.google_position||99)) >= 2;
 
-    _trSetStep(pageId, 'perplexity', 'running', runPerplexity ? 'Asking Perplexity Sonar: ' + keyword : 'Skipped (using cached result)');
+    _trSetStep(pageId, 'perplexity', 'running', keyword ? (runPerplexity ? 'Asking Perplexity Sonar: ' + keyword : 'Skipped (using cached result)') : 'Skipped (no keyword)');
+    if (!keyword) {
+      _trSetStep(pageId, 'perplexity', 'done', 'Skipped — set a keyword to enable');
+    } else
     if (!runPerplexity && prevSnap) {
       // Use previous Perplexity result — no API call
       snapshot.ai_perplexity_cited = prevSnap.ai_perplexity_cited;
