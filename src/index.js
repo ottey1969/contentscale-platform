@@ -1086,7 +1086,7 @@ app.get('/api/tracker-client/:token', async (req, res) => {
       `SELECT p.id, p.url, p.keyword, p.gsc_keyword, p.created_at, p.next_check_at, p.last_checked_at,
               p.is_done, p.fetch_reliable, p.check_frequency, p.gsc_clicks, p.gsc_impressions, p.gsc_position,
               p.ranking_brief, p.needs_html, p.brief_started_at, p.brief_content, p.brief_check_count,
-              p.html_pasted_at, p.html_source,
+              p.html_pasted_at, p.html_source, p.last_graaf_score,
               (p.html_content IS NOT NULL AND p.html_content != '') as has_html_content,
               s.google_position, s.ai_google_overview_cited, s.ai_perplexity_cited,
               s.ai_bing_cited, s.ai_brave_cited,
@@ -24599,8 +24599,34 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
 .cb-copy-btn-action{background:linear-gradient(135deg,#1e1b4b,#2e1065);border:1px solid #7c3aed;border-radius:8px;color:#a78bfa;font-size:11px;font-weight:700;padding:7px 16px;cursor:pointer;font-family:Verdana,sans-serif;transition:all .15s}
 .cb-copy-btn-action:hover{background:#3b1f70;color:#e9d5ff;transform:translateY(-1px);box-shadow:0 4px 12px rgba(124,58,237,.2)}
 
-/* Selectable passages */
-.cb-passage{background:#0a0a12;border:1px solid #1f2937;border-left:3px solid #7c3aed;border-radius:0 8px 8px 0;padding:14px 16px;margin-bottom:10px;font-size:12px;color:#9ca3af;line-height:1.7;font-family:Verdana,sans-serif;user-select:text;-webkit-user-select:text;cursor:text}
+/* ═══ BRIEF PASSAGES — readable, copy-friendly ═══ */
+.cb-passage{background:#0a0a12;border:1px solid #1f2937;border-left:3px solid #7c3aed;border-radius:0 8px 8px 0;padding:16px 18px;margin-bottom:12px;font-size:13px;color:#cbd5e1;line-height:1.7;font-family:system-ui,-apple-system,sans-serif;user-select:text;-webkit-user-select:text;cursor:text;transition:background .2s,border-color .2s}
+.cb-passage:hover{background:#111827;border-color:#374151}
+.cb-passage .rec-title{font-size:14px;font-weight:700;color:#e5e7eb;margin-bottom:6px;display:block}
+.cb-passage .rec-action{font-size:13px;color:#9ca3af;line-height:1.7;margin-bottom:6px}
+.cb-passage .rec-impact{font-size:12px;color:#7c3aed;font-style:italic;margin-top:6px}
+
+/* ═══ STAR FIELD — cards + welcome ═══ */
+@keyframes twinkle{0%,100%{opacity:0;transform:scale(0)}50%{opacity:1;transform:scale(1)}}
+@keyframes starFloat{0%{transform:translateY(0) rotate(0deg)}100%{transform:translateY(-100vh) rotate(360deg)}}
+@keyframes nebulaDrift{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
+
+.star-field{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:0}
+.star{position:absolute;width:2px;height:2px;background:#a78bfa;border-radius:50%;animation:twinkle var(--dur,3s) ease-in-out infinite;opacity:0}
+.star:nth-child(3n){background:#7c3aed}
+.star:nth-child(5n){background:#4ade80;width:1.5px;height:1.5px}
+.star:nth-child(7n){background:#fbbf24;width:1px;height:1px;--dur:5s}
+
+.cs-page-card{position:relative;overflow:hidden}
+.cs-page-card .star-field{opacity:.3}
+
+/* Brief overlay nebula glow */
+.cb-card{position:relative;overflow:hidden}
+.cb-card::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 20% 20%,rgba(124,58,237,.08) 0%,transparent 50%),radial-gradient(ellipse at 80% 80%,rgba(76,29,149,.06) 0%,transparent 50%);pointer-events:none;z-index:0;animation:nebulaDrift 8s ease-in-out infinite}
+
+/* ═══ CLAUDE / BRAVE — see image badge ═══ */
+.cited-badge{position:relative}
+.cited-badge[data-img="true"]::after{content:'\u200B';position:absolute;top:-6px;right:-6px;font-size:9px;background:#0a0a12;border:1px solid #1f2937;border-radius:3px;padding:1px 3px;z-index:5}
 
 /* Mobile responsive */
 @media(max-width:768px){
@@ -24895,6 +24921,7 @@ var _ctSearchQuery = '';
     _pages = data.pages || [];
     renderStats(data);
     renderPages();
+    injectStarsIntoCards();
     // Mark Telegram as linked if already set
     if (data.client && data.client.telegram_linked) markTelegramLinked();
     // Auto-show TV Brief if a page has brief_content but hasn't been shown this session
@@ -25156,7 +25183,7 @@ function renderRecs(p) {
     var perp = !!(p.ai_perplexity_cited || snap.ai_perplexity_cited);
     var cop = !!(p.ai_bing_cited || snap.ai_bing_cited);
     var cl = !!(p.ai_brave_cited || snap.ai_brave_cited);
-    var score = p.graaf_score || snap.score || snap.graaf_score || null;
+    var score = p.graaf_score || snap.score || snap.graaf_score || p.last_graaf_score || null;
     var posColor = pos ? (pos<=3?'#22c55e':pos<=10?'#f59e0b':'#ef4444') : '#4b5563';
     var posBlink = pos ? ' style="animation:briefBlink 1.2s ease-in-out 4"' : '';
 
@@ -25181,7 +25208,7 @@ function renderRecs(p) {
     html += '<div class="cb-istat"' + (perp ? ' style="animation:briefBlink 1.2s ease-in-out 4"' : '') + '><div class="cb-isv" style="color:' + (perp?'#818cf8':'#374151') + '">' + (perp?'&#10003;':'&#8212;') + '</div><div class="cb-isl">Perplexity</div></div>';
     html += '<div class="cb-istat"' + (cop ? ' style="animation:briefBlink 1.2s ease-in-out 4"' : '') + '><div class="cb-isv" style="color:' + (cop?'#60a5fa':'#374151') + '">' + (cop?'&#10003;':'&#8212;') + '</div><div class="cb-isl">Copilot</div></div>';
     html += '<div class="cb-istat"' + (cl ? ' style="animation:briefBlink 1.2s ease-in-out 4"' : '') + '><div class="cb-isv" style="color:' + (cl?'#a78bfa':'#374151') + '">' + (cl?'&#10003;':'&#8212;') + '</div><div class="cb-isl">Claude</div></div>';
-    if (score) html += '<div class="cb-istat"><div class="cb-isv" style="color:#f59e0b">' + score + '</div><div class="cb-isl">GRAAF</div></div>';
+    html += '<div class="cb-istat"><div class="cb-isv" style="color:#f59e0b">' + (score || '&#8212;') + '</div><div class="cb-isl">GRAAF</div></div>';
     html += '</div>';
 
     // What to add label
@@ -25355,7 +25382,7 @@ async function markDone(pageId, btn, currentDone) {
         // Mark page as needing new HTML
         var p = (_pages||[]).find(function(x){ return x.id == pageId; });
         if (p) p.needs_html = true;
-        toast('Done marked! The system now needs your updated page HTML to measure improvements.', '#4ade80');
+        toast('Done! Paste new HTML whenever you are ready for the next scan.', '#4ade80');
         setTimeout(loadPages, 400);
       } else {
         toast('Unmarked', '#9ca3af');
@@ -25509,6 +25536,7 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
     if (data.page_id) _lastBriefData[data.page_id] = data;
     document.getElementById('cbUrl').textContent = data.url || '';
     document.getElementById('cbKw').textContent = data.keyword ? 'Keyword: ' + data.keyword : '';
+    document.getElementById('cbSteps').style.display = '';
     document.getElementById('cbProgressBar').style.width = '0%';
     document.getElementById('cbResult').classList.remove('show');
     document.getElementById('cbKeepBtn').style.display = 'none';
@@ -25575,8 +25603,8 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
         '<div class="cb-stat" style="animation:soStatPop .4s ease .06s both"><div class="v" style="color:' + (data.aio_cited ? '#4ade80' : '#4b5563') + ';">' + (data.aio_cited ? '\u2713 Cited' : 'No') + '</div><div class="l">Google AIO</div></div>' +
         '<div class="cb-stat" style="animation:soStatPop .4s ease .12s both"><div class="v" style="color:' + (data.perp_cited ? '#a78bfa' : '#4b5563') + ';">' + (data.perp_cited ? '\u2713 Cited' : 'No') + '</div><div class="l">Perplexity</div></div>' +
         '<div class="cb-stat" style="animation:soStatPop .4s ease .18s both"><div class="v" style="color:' + (data.bing_cited ? '#60a5fa' : '#4b5563') + ';">' + (data.bing_cited ? '\u2713 Cited' : 'No') + '</div><div class="l">Copilot</div></div>' +
-        '<div class="cb-stat" style="animation:soStatPop .4s ease .24s both"><div class="v" style="color:' + (data.brave_cited ? '#f87171' : '#4b5563') + ';">' + (data.brave_cited ? '\u2713 Cited' : 'No') + '</div><div class="l">Claude</div></div>' +
-        (data.score ? '<div class="cb-stat" style="animation:soStatPop .4s ease .3s both"><div class="v" style="color:#fbbf24;">' + data.score + '</div><div class="l">GRAAF</div></div>' : '');
+        '<div class="cb-stat" style="animation:soStatPop .4s ease .24s both;position:relative;"><div class="v" style="color:' + (data.brave_cited ? '#f87171' : '#4b5563') + ';">' + (data.brave_cited ? '\u2713 Cited' : 'No') + '</div><div class="l">Claude</div>' + (data.brave_cited ? '<span style="position:absolute;top:-4px;right:-4px;font-size:8px;background:#0a0a12;border:1px solid #1f2937;border-radius:3px;padding:0 3px;color:#6b7280;white-space:nowrap;">\u1F441; see img</span>' : '') + '</div>' +
+        '<div class="cb-stat" style="animation:soStatPop .4s ease .3s both"><div class="v" style="color:#fbbf24;">' + (data.score || '—') + '</div><div class="l">GRAAF</div></div>';
 
       // GSC section — optional, collapsed
       var hasGsc = !!(data.gsc_clicks || data.gsc_impressions || data.gsc_position || data.gsc_ctr);
@@ -25595,7 +25623,7 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
         }
       }
 
-      // Recommendations — by priority
+      // Recommendations — by priority, large readable text
       var passages = data.passages || data.recommendations;
       if (passages && Array.isArray(passages) && passages.length) {
         var priOrder = { high: 0, h: 0, medium: 1, med: 1, m: 1, low: 2, l: 2 };
@@ -25605,7 +25633,7 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
           return (priOrder[pa] || 2) - (priOrder[pb] || 2);
         });
         var passDiv = document.getElementById('cbPassages');
-        passDiv.innerHTML = '<div style="font-size:10px;font-weight:800;color:#7c3aed;text-transform:uppercase;letter-spacing:.08em;margin:16px 0 10px;">\u2728 Recommendations — by priority</div>';
+        passDiv.innerHTML = '<div style="font-size:11px;font-weight:800;color:#7c3aed;text-transform:uppercase;letter-spacing:.08em;margin:18px 0 12px;">\u2728 What to do next — ranked by impact</div>';
         passages.slice(0, 5).forEach(function(p, idx) {
           setTimeout(function() {
             var pri = (p.priority || p.p || '').toLowerCase();
@@ -25619,17 +25647,17 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
             var el = document.createElement('div');
             el.className = 'cb-passage';
             el.style.borderLeft = '3px solid ' + priColor;
-            el.innerHTML = '<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;">' +
-              '<span style="font-size:9px;font-weight:800;color:' + priColor + ';background:' + priColor + '14;padding:2px 7px;border-radius:4px;letter-spacing:.04em;">' + priLabel + '</span>' +
-              (title ? '<span style="font-weight:700;color:#e5e7eb;font-size:12px;">' + title + '</span>' : '') +
+            el.innerHTML = '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap;">' +
+              '<span style="font-size:10px;font-weight:800;color:' + priColor + ';background:' + priColor + '14;padding:3px 8px;border-radius:4px;letter-spacing:.04em;flex-shrink:0;">' + priLabel + '</span>' +
+              (title ? '<span class="rec-title">' + title + '</span>' : '') +
               '</div>' +
-              (action ? '<div style="color:#9ca3af;font-size:11px;line-height:1.65;">' + action + '</div>' : '') +
-              (impact ? '<div style="color:#7c3aed;font-size:10px;margin-top:5px;font-style:italic;">\u2192 ' + impact + '</div>' : '');
+              (action ? '<span class="rec-action">' + action + '</span>' : '') +
+              (impact ? '<span class="rec-impact">\u2192 Impact: ' + impact + '</span>' : '');
             passDiv.appendChild(el);
           }, idx * 400);
         });
       } else {
-        document.getElementById('cbPassages').innerHTML = '<div class="cb-passage" style="animation:soStatPop .5s ease;">Your Citation Brief has been generated. Copy it below to share with your team or AI assistant.</div>';
+        document.getElementById('cbPassages').innerHTML = '<div class="cb-passage" style="animation:soStatPop .5s ease;font-size:13px;">Your Citation Brief has been generated. Copy it below to share with your team or AI assistant.</div>';
       }
 
       // Copy section
@@ -25710,8 +25738,6 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
     var closedPageId = pageId || _currentBriefPageId;
     _currentBriefPageId = null;
     if (closedPageId) {
-      // Mark page as needing fresh HTML on the SERVER so orange blink persists
-      api('/pages/' + closedPageId + '/needs-html', 'POST', { needs_html: true }).catch(function(){});
       var p = (_pages||[]).find(function(x){ return x.id == closedPageId; });
       if (p) p.needs_html = true;
     }
@@ -25721,10 +25747,139 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
     }, 400);
   }
 
+  // Show saved brief instantly — no animation, immediate display
   function viewLastBrief(pageId) {
     var data = _lastBriefData[pageId];
     if (!data) { toast('No brief available yet — run a scan first', '#f59e0b'); return; }
-    showCitationBrief(data);
+    var card = document.getElementById('cbCard');
+    if (!card) return;
+
+    _briefIsOpen = true;
+    _currentBriefPageId = pageId;
+
+    // Show card immediately
+    card.classList.remove('hide');
+    card.classList.add('show');
+
+    // Reset
+    _cbKept = true; // Don't auto-close since user clicked to view
+    document.getElementById('cbUrl').textContent = data.url || '';
+    document.getElementById('cbKw').textContent = data.keyword ? 'Keyword: ' + data.keyword : '';
+
+    // Hide steps, show results directly
+    document.getElementById('cbSteps').style.display = 'none';
+    document.getElementById('cbProgressBar').style.width = '100%';
+
+    var gscS = document.getElementById('cbGscSection');
+    var gscP = document.getElementById('cbGscPanel');
+    var gscA = document.getElementById('cbGscArrow');
+    if (gscS) gscS.style.display = 'none';
+    if (gscP) gscP.classList.remove('open');
+    if (gscA) gscA.style.transform = 'rotate(0deg)';
+
+    // Stats
+    var statRow = document.getElementById('cbStatRow');
+    var pos = data.position;
+    var posColor = pos ? (pos <= 3 ? '#4ade80' : pos <= 10 ? '#fbbf24' : '#f87171') : '#4b5563';
+    statRow.innerHTML =
+      '<div class="cb-stat" style="animation:soStatPop .3s ease both"><div class="v" style="color:' + posColor + ';">' + (pos ? '#' + pos : 'N/A') + '</div><div class="l">Position</div></div>' +
+      '<div class="cb-stat" style="animation:soStatPop .3s ease .05s both"><div class="v" style="color:' + (data.aio_cited ? '#4ade80' : '#4b5563') + ';">' + (data.aio_cited ? '\u2713 Cited' : 'No') + '</div><div class="l">Google AIO</div></div>' +
+      '<div class="cb-stat" style="animation:soStatPop .3s ease .1s both"><div class="v" style="color:' + (data.perp_cited ? '#a78bfa' : '#4b5563') + ';">' + (data.perp_cited ? '\u2713 Cited' : 'No') + '</div><div class="l">Perplexity</div></div>' +
+      '<div class="cb-stat" style="animation:soStatPop .3s ease .15s both"><div class="v" style="color:' + (data.bing_cited ? '#60a5fa' : '#4b5563') + ';">' + (data.bing_cited ? '\u2713 Cited' : 'No') + '</div><div class="l">Copilot</div></div>' +
+      '<div class="cb-stat" style="animation:soStatPop .3s ease .2s both"><div class="v" style="color:' + (data.brave_cited ? '#f87171' : '#4b5563') + ';">' + (data.brave_cited ? '\u2713 Cited' : 'No') + '</div><div class="l">Claude</div></div>' +
+      '<div class="cb-stat" style="animation:soStatPop .3s ease .25s both"><div class="v" style="color:#fbbf24;">' + (data.score || '—') + '</div><div class="l">GRAAF</div></div>';
+
+    // GSC
+    var hasGsc = !!(data.gsc_clicks || data.gsc_impressions || data.gsc_position || data.gsc_ctr);
+    if (hasGsc && gscS) {
+      gscS.style.display = 'block';
+      var gscStats = document.getElementById('cbGscStats');
+      if (gscStats) {
+        var items = [];
+        if (data.gsc_clicks != null) items.push('<span style="color:#4ade80;font-weight:600;">\u2193 ' + Number(data.gsc_clicks).toLocaleString() + ' clicks</span>');
+        if (data.gsc_impressions != null) items.push('<span style="color:#60a5fa;">' + Number(data.gsc_impressions).toLocaleString() + ' impr</span>');
+        if (data.gsc_ctr) items.push('<span style="color:#a78bfa;">CTR ' + data.gsc_ctr + '</span>');
+        if (data.gsc_position) items.push('<span style="color:#f59e0b;font-weight:600;">pos ' + parseFloat(data.gsc_position).toFixed(1) + '</span>');
+        if (data.gsc_keyword) items.push('<span style="color:#4b5563;font-style:italic;">' + data.gsc_keyword + '</span>');
+        items.push('<span style="margin-left:auto;color:#4ade80;font-weight:700;font-size:10px;">Goal: #1</span>');
+        gscStats.innerHTML = items.join('');
+      }
+    }
+
+    // Recommendations
+    var passages = data.passages || data.recommendations;
+    var passDiv = document.getElementById('cbPassages');
+    if (passages && Array.isArray(passages) && passages.length) {
+      var priOrder = { high: 0, h: 0, medium: 1, med: 1, m: 1, low: 2, l: 2 };
+      passages.sort(function(a, b) {
+        var pa = (a.priority || a.p || 'low').toLowerCase();
+        var pb = (b.priority || b.p || 'low').toLowerCase();
+        return (priOrder[pa] || 2) - (priOrder[pb] || 2);
+      });
+      passDiv.innerHTML = '<div style="font-size:11px;font-weight:800;color:#7c3aed;text-transform:uppercase;letter-spacing:.08em;margin:18px 0 12px;">\u2728 What to do next — ranked by impact</div>';
+      passages.slice(0, 5).forEach(function(p) {
+        var pri = (p.priority || p.p || '').toLowerCase();
+        var isH = pri === 'high' || pri === 'h';
+        var isM = pri === 'medium' || pri === 'med' || pri === 'm';
+        var priColor = isH ? '#ef4444' : isM ? '#f59e0b' : '#22c55e';
+        var priLabel = isH ? 'HIGH' : isM ? 'MED' : 'LOW';
+        var title = p.title || p.t || '';
+        var action = p.action || p.passage || '';
+        var impact = p.expected_impact || p.impact || '';
+        var el = document.createElement('div');
+        el.className = 'cb-passage';
+        el.style.borderLeft = '3px solid ' + priColor;
+        el.innerHTML = '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap;">' +
+          '<span style="font-size:10px;font-weight:800;color:' + priColor + ';background:' + priColor + '14;padding:3px 8px;border-radius:4px;letter-spacing:.04em;flex-shrink:0;">' + priLabel + '</span>' +
+          (title ? '<span class="rec-title">' + title + '</span>' : '') +
+          '</div>' +
+          (action ? '<span class="rec-action">' + action + '</span>' : '') +
+          (impact ? '<span class="rec-impact">\u2192 Impact: ' + impact + '</span>' : '');
+        passDiv.appendChild(el);
+      });
+    } else {
+      passDiv.innerHTML = '<div class="cb-passage">No recommendations yet — run a scan first.</div>';
+    }
+
+    // Copy section
+    var cpS = document.getElementById('cbCopySection');
+    var cpT = document.getElementById('cbCopyText');
+    if (cpS && cpT) {
+      var _n = String.fromCharCode(10);
+      var lines = ['AI Citation Brief \u2014 ' + (data.url || ''), ''];
+      if (data.keyword) lines.push('Keyword: ' + data.keyword);
+      lines.push('AI Citation Results:');
+      lines.push('- Google AIO: ' + (data.aio_cited ? 'CITED' : 'Not cited'));
+      lines.push('- Perplexity: ' + (data.perp_cited ? 'CITED' : 'Not cited'));
+      lines.push('- Copilot: ' + (data.bing_cited ? 'CITED' : 'Not cited'));
+      lines.push('- Claude: ' + (data.brave_cited ? 'CITED' : 'Not cited'));
+      if (data.position) lines.push('- Google Position: #' + data.position);
+      if (data.score) lines.push('- GRAAF Score: ' + data.score + '/100');
+      if (hasGsc) {
+        lines.push('', 'Google Search Console Data:');
+        if (data.gsc_clicks != null) lines.push('- Clicks: ' + data.gsc_clicks);
+        if (data.gsc_impressions != null) lines.push('- Impressions: ' + data.gsc_impressions);
+        if (data.gsc_position) lines.push('- Position: ' + parseFloat(data.gsc_position).toFixed(1));
+        if (data.gsc_ctr) lines.push('- CTR: ' + data.gsc_ctr);
+      }
+      if (passages && passages.length) {
+        lines.push('', 'Recommendations (by priority):');
+        passages.forEach(function(p, i) {
+          var pri = (p.priority || p.p || '').toUpperCase();
+          var t = p.title || p.t || '';
+          var a = p.action || p.passage || '';
+          lines.push((i+1) + '. [' + pri + '] ' + t);
+          if (a) lines.push('   ' + a);
+        });
+      }
+      lines.push('', '---', 'Generated by ContentScale AI Citations Tracker');
+      cpT.value = lines.join(_n);
+      cpS.style.display = 'block';
+    }
+
+    document.getElementById('cbResult').classList.add('show');
+    document.getElementById('cbKeepBtn').style.display = 'none';
+    document.getElementById('cbCountdown').textContent = 'Click \u2715 to close';
   }
 
   function toggleGscPanel() {
@@ -26198,16 +26353,17 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
     overlay.classList.remove('hiding');
     overlay.classList.add('show');
     var steps = [
-      { id: 'html',       label: 'Fetching page HTML',            pct: 10 },
-      { id: 'graaf',      label: 'GRAAF content scan',            pct: 25 },
-      { id: 'google',     label: 'Google position + AIO check',   pct: 45 },
-      { id: 'perplexity', label: 'Perplexity citation check',     pct: 60 },
-      { id: 'copilot',    label: 'Copilot citation check',        pct: 72 },
-      { id: 'brave',      label: 'Claude / Brave citation check', pct: 84 },
-      { id: 'ai',         label: 'AI recommendations',            pct: 95 },
+      { id: 'html',       label: 'Fetching page HTML',            pct: 8  },
+      { id: 'graaf',      label: 'GRAAF content scan',            pct: 22 },
+      { id: 'google',     label: 'Google position + AIO check',   pct: 40 },
+      { id: 'perplexity', label: 'Perplexity citation check',     pct: 55 },
+      { id: 'copilot',    label: 'Copilot citation check',        pct: 68 },
+      { id: 'brave',      label: 'Claude / Brave citation check', pct: 80 },
+      { id: 'ai',         label: 'AI recommendations',            pct: 92 },
     ];
-    var timings = [0, 1000, 2800, 5000, 7200, 9200, 11200];
-    var durations = [800, 1600, 2000, 2000, 1800, 1800, 2500];
+    // Realistic timing — total ~35s so animation overlaps server work
+    var timings = [0, 1500, 5000, 10000, 16000, 22000, 28000];
+    var durations = [1200, 3000, 4000, 4500, 4500, 4500, 5000];
     steps.forEach(function(s, idx) {
       setTimeout(function() {
         var step = document.getElementById('soStep_' + s.id);
@@ -26231,13 +26387,13 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
       if (bar) bar.style.width = '100%';
       if (dot) dot.className = 'so-header-dot done';
       if (title) { title.textContent = 'Scan Complete'; title.className = 'so-header-title done'; }
-      if (statusEl) { statusEl.textContent = 'Opening Citation Brief...'; statusEl.className = 'so-status complete'; }
-      // Overlay stays visible — do NOT hide it here
-      // onComplete (pollAndShowBrief) will update status and hide overlay when data arrives
+      if (statusEl) { statusEl.textContent = 'Building your Citation Brief...'; statusEl.className = 'so-status complete'; }
+      // If server is still busy, show "Building brief..." instead of "Waiting"
+      // Brief opens as soon as data arrives via pollAndShowBrief
       setTimeout(function() {
         if (onComplete) onComplete();
       }, 1200);
-    }, 14000);
+    }, 34000);
   }
 
   function hideScanOverlay() {
@@ -26250,73 +26406,86 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
     }, 400);
   }
 
-  // Shared: poll for results then show Citation Brief — ALWAYS opens brief
+  // Poll for server results — brief opens as soon as data is ready
   function pollAndShowBrief(pageId, maxPolls, intervalMs) {
     var pollCount = 0;
-    var statusEl = document.getElementById('soStatus');
-    var titleEl = document.getElementById('soHeaderTitle');
-    var dotEl = document.getElementById('soHeaderDot');
-    if (statusEl) { statusEl.textContent = 'Waiting for server scan to complete...'; statusEl.style.color = '#a78bfa'; }
-    if (titleEl) { titleEl.textContent = 'Processing on Server'; }
-    if (dotEl) dotEl.className = 'so-header-dot';
-
-    function openBrief(pageData) {
-      hideScanOverlay();
-      loadPages();
-      var snap = pageData || {};
-      showCitationBrief({
-        page_id: pageId,
-        url: snap.url || '',
-        keyword: snap.keyword || snap.gsc_keyword || '',
-        domain: DOMAIN,
-        position: snap.google_position || null,
-        aio_cited: !!(snap.ai_google_overview_cited),
-        perp_cited: !!(snap.ai_perplexity_cited),
-        bing_cited: !!(snap.ai_bing_cited),
-        brave_cited: !!(snap.ai_brave_cited),
-        score: snap.score || snap.graaf_score || null,
-        gsc_clicks: snap.gsc_clicks || null,
-        gsc_impressions: snap.gsc_impressions || null,
-        gsc_position: snap.gsc_position || null,
-        gsc_ctr: snap.gsc_ctr || null,
-        gsc_keyword: snap.gsc_keyword || null,
-        recommendations: Array.isArray(snap.recommendations) ? snap.recommendations : [],
-        brief_content: snap.brief_content || null,
-        type: 'brief_ready'
-      });
-    }
-
     var timer = setInterval(function() {
       pollCount++;
       if (pollCount > maxPolls) {
         clearInterval(timer);
-        // Timeout — still open brief with whatever data we have
+        // Timeout — open brief with whatever data we have
         api('/pages/' + pageId).then(function(d2) {
-          if (d2.success && d2.page) {
-            openBrief(d2.page);
-            toast('Brief opened — scan may still be running', '#f59e0b');
-          } else {
-            hideScanOverlay();
-            loadPages();
-            toast('Scan is taking longer — check back soon', '#f59e0b');
-          }
-        }).catch(function() {
-          hideScanOverlay();
-          toast('Connection issue — try again', '#f87171');
-        });
+          if (d2.success && d2.page) { openBriefFromPoll(d2.page); }
+          else { hideScanOverlay(); loadPages(); toast('Scan complete — brief ready', '#4ade80'); }
+        }).catch(function() { hideScanOverlay(); toast('Connection issue', '#f87171'); });
         return;
       }
-      if (statusEl) statusEl.textContent = 'Waiting for server scan... (' + pollCount + '/' + maxPolls + ')';
       api('/pages/' + pageId).then(function(d2) {
         if (d2.success && d2.page && d2.page.last_checked_at) {
           var t = new Date(d2.page.last_checked_at).getTime();
           if (Date.now() - t < 300000) {
             clearInterval(timer);
-            openBrief(d2.page);
+            openBriefFromPoll(d2.page);
           }
         }
       }).catch(function(){});
     }, intervalMs);
+  }
+
+  function openBriefFromPoll(pageData) {
+    hideScanOverlay();
+    loadPages();
+    var snap = pageData || {};
+    showCitationBrief({
+      page_id: snap.id || pageData.page_id,
+      url: snap.url || '',
+      keyword: snap.keyword || snap.gsc_keyword || '',
+      domain: DOMAIN,
+      position: snap.google_position || null,
+      aio_cited: !!(snap.ai_google_overview_cited),
+      perp_cited: !!(snap.ai_perplexity_cited),
+      bing_cited: !!(snap.ai_bing_cited),
+      brave_cited: !!(snap.ai_brave_cited),
+      score: snap.score || snap.graaf_score || snap.last_graaf_score || null,
+      gsc_clicks: snap.gsc_clicks || null,
+      gsc_impressions: snap.gsc_impressions || null,
+      gsc_position: snap.gsc_position || null,
+      gsc_ctr: snap.gsc_ctr || null,
+      gsc_keyword: snap.gsc_keyword || null,
+      recommendations: Array.isArray(snap.recommendations) ? snap.recommendations : [],
+      brief_content: snap.brief_content || null,
+      type: 'brief_ready'
+    });
+  }
+
+  // ═══ STAR FIELD — inject twinkling stars into any element ═══
+  function injectStars(container, count) {
+    if (!container || container.querySelector('.star-field')) return;
+    var field = document.createElement('div');
+    field.className = 'star-field';
+    for (var i = 0; i < count; i++) {
+      var star = document.createElement('div');
+      star.className = 'star';
+      star.style.left = Math.random() * 100 + '%';
+      star.style.top = Math.random() * 100 + '%';
+      star.style.setProperty('--dur', (2 + Math.random() * 4) + 's');
+      star.style.animationDelay = (Math.random() * 5) + 's';
+      field.appendChild(star);
+    }
+    container.style.position = 'relative';
+    container.insertBefore(field, container.firstChild);
+  }
+
+  // Inject stars after pages render
+  function injectStarsIntoCards() {
+    var cards = document.querySelectorAll('.cs-page-card');
+    cards.forEach(function(card) { injectStars(card, 8); });
+  }
+
+  // Inject stars into welcome overlay
+  function injectStarsIntoWelcome() {
+    var overlay = document.getElementById('welcomeOverlay');
+    if (overlay) injectStars(overlay.querySelector('.wl-card') || overlay, 15);
   }
 
   async function submitHtmlUpload() {
@@ -26378,7 +26547,7 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
   }
   function openWelcome() {
     var el = document.getElementById('welcomeOverlay');
-    if (el) el.style.display = 'flex';
+    if (el) { el.style.display = 'flex'; injectStarsIntoWelcome(); }
   }
 
   function openWaSettings() { openTelegramSetup(); } // legacy redirect
