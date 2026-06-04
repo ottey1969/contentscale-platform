@@ -24452,7 +24452,6 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
     <button class="cs-btn" onclick="scanAllPages()" style="border-color:#4ade80;color:#4ade80;font-weight:700;" title="Scan all pages one by one">⚡ Scan All</button>
     <button class="cs-btn" onclick="mergePages()" style="border-color:#38bdf8;color:#38bdf8;" title="Merge duplicate URLs — keep best">⊕ Merge</button>
     <button class="cs-btn" onclick="cleanPages()" style="border-color:#f59e0b;color:#f59e0b;" title="Remove image/asset URLs (.jpg, .png, .pdf etc)">🧹 Clean</button>
-    <button id="gscRefreshBtn" class="cs-btn" style="border-color:#34d399;color:#34d399;display:none;" onclick="refreshGscData()" title="Refresh GSC data for all pages">📊 GSC</button>
     <button id="bulkDeleteBtn" class="cs-btn" style="border-color:#ef4444;color:#ef4444;display:none;" onclick="bulkDeleteSelected()">🗑 Delete selected</button>
     <button class="cs-btn" onclick="openTelegramSetup()" style="border-color:#2AABEE;color:#2AABEE;background:rgba(42,171,238,.08);font-weight:700;animation:tgPulse 2s ease-in-out infinite;" title="Enable Telegram alerts — get notified after every scan"><i class="fab fa-telegram"></i> Enable Telegram</button>
     <input id="ctSearch" type="text" class="cs-input" placeholder="Search..." oninput="filterPages(this.value)" style="width:160px;padding:5px 10px;font-size:11px;margin-left:auto;">
@@ -25758,10 +25757,15 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
         // Format: URL, clicks, impressions, CTR, position
         var url = parts[0];
         if (!url || url.indexOf('http') !== 0) return;
-        // Extract slug as keyword
         var slug = url.replace(/^https?:[/][/]/, '').replace(/^www[.]/, '').split('/').filter(Boolean).pop() || '';
         var kw = slug.replace(/[-_]/g, ' ').replace(/[.][a-z]+$/, '').trim();
-        pairs.push({ url: url, keyword: kw, clicks: parseInt(parts[1])||0 });
+        // Parse numbers — GSC uses commas in large numbers e.g. "1,234"
+        var parseNum = function(s) { return parseFloat((s||'0').replace(/,/g,'')) || 0; };
+        var clicks = parseNum(parts[1]);
+        var impressions = parseNum(parts[2]);
+        var ctr = parseFloat((parts[3]||'0').replace('%','').replace(',','.')) || 0;
+        var position = parseNum(parts[4]);
+        pairs.push({ url: url, keyword: kw, clicks: clicks, impressions: impressions, ctr: ctr, position: position });
 
       } else if (line.indexOf('|') > -1) {
         // Format: URL | keyword
@@ -25770,13 +25774,15 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
         if (url && url.indexOf('http') === 0) pairs.push({ url: url, keyword: kw });
 
       } else {
-        // Auto-detect: look for URL in any column
         var url = '', kw = '';
         parts.forEach(function(p) {
           if (p.indexOf('http') === 0) url = p;
           else if (!kw && p.length > 2 && p.indexOf('.') < 0 && isNaN(p) && !p.includes('%')) kw = p;
         });
-        if (url) pairs.push({ url: url, keyword: kw, clicks: parseInt(parts[1])||0 });
+        if (url) {
+          var parseNum = function(s) { return parseFloat((s||'0').replace(/,/g,'')) || 0; };
+          pairs.push({ url: url, keyword: kw, clicks: parseNum(parts[1]), impressions: parseNum(parts[2]), position: parseNum(parts[4]) });
+        }
       }
     });
 
