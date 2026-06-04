@@ -24866,23 +24866,13 @@ function renderPages() {
     var needsHtml = p.needs_html === true || p.needs_html === 't' || p.needs_html === 'true' || p.needs_html === 1;
     var isFirstHtml = !p.brief_check_count || p.brief_check_count == 0;
     var hasBeenScanned = !!p.last_checked || !!p.google_position || p.ai_google_overview_cited !== undefined || p.ai_perplexity_cited !== undefined;
-    var hasBrief = !!(p.brief_content) && !isDone; // Citation Brief exists and not yet actioned
-    // Show HTML banner: only when needs_html=true OR never had HTML scan yet
+    var hasBrief = !!(p.brief_content) && !isDone;
     var hasHtml = (p.brief_check_count > 0) || (p.graaf_score > 0) || (p.score > 0)
-      || !!p.html_pasted_at  // HTML was pasted before
+      || !!p.html_pasted_at
       || (p.needs_html === false) || (p.needs_html === 'f') || (p.needs_html === 'false');
-    var showHtmlBanner = needsHtml || (isFirstHtml && !isDone && !hasHtml);
-
-    var needsHtmlBanner = showHtmlBanner
-      ? '<div onclick="openHtmlUpload(' + p.id + ')" style="cursor:pointer;display:flex;align-items:center;gap:10px;padding:12px 16px;background:linear-gradient(90deg,rgba(245,158,11,.15),rgba(245,158,11,.05));border-bottom:2px solid #f59e0b;animation:htmlNeeded 1.2s ease-in-out infinite;">'
-        + '<span style="font-size:1.3rem;flex-shrink:0;">📋</span>'
-        + '<div style="flex:1;">'
-        + '<div style="font-size:12px;font-weight:800;color:#fbbf24;margin-bottom:2px;">' + (isFirstHtml ? 'PASTE YOUR HTML — Start GRAAF scan' : 'PASTE UPDATED HTML — Resume scan cycle') + '</div>'
-        + '<div style="font-size:11px;color:#d97706;">' + (isFirstHtml ? 'Right-click your page → View Source → copy all → paste here. Takes 30 seconds.' : 'Paste the updated HTML of your page so the system can measure your improvements.') + '</div>'
-        + '</div>'
-        + '<span style="font-size:11px;font-weight:700;color:#f59e0b;background:rgba(245,158,11,.2);border:1px solid #f59e0b;border-radius:5px;padding:4px 10px;flex-shrink:0;white-space:nowrap;">Paste HTML →</span>'
-        + '</div>'
-      : '';
+    var htmlNeeded = needsHtml || (isFirstHtml && !isDone && !hasHtml);
+    // No flashing banner — just a button state
+    var needsHtmlBanner = '';
 
     return '<div class="cs-page-card' + (isDone ? ' done' : '') + '" data-page-id="' + p.id + '" style="background:#0d1117;border:1px solid #1f2937;border-radius:10px;margin-bottom:12px;overflow:hidden;">'
       + pendingBanner
@@ -24904,8 +24894,9 @@ function renderPages() {
       + '</div>'
       + '</div>'
       + '<div style="display:flex;gap:5px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;align-items:flex-start;">'
+      + '<button onclick="openHtmlUpload(' + p.id + ')" style="background:none;border:1px solid ' + (htmlNeeded ? '#f59e0b' : '#374151') + ';border-radius:5px;color:' + (htmlNeeded ? '#fbbf24' : '#4b5563') + ';cursor:pointer;font-size:11px;padding:3px 10px;font-weight:' + (htmlNeeded ? '700' : '400') + ';" title="' + (htmlNeeded ? 'Add HTML to start GRAAF scan' : 'Update HTML') + '">📋 ' + (htmlNeeded ? 'Add HTML' : 'HTML') + '</button>'
       + (lastChecked ? '<button onclick="checkPage(' + p.id + ')" style="background:none;border:1px solid #374151;border-radius:5px;color:#6b7280;cursor:pointer;font-size:11px;padding:3px 8px;" title="Rescan now">↻</button>' : '')
-      + '<button onclick="deletePage(' + p.id + ')" style="background:none;border:1px solid #374151;border-radius:5px;color:#6b7280;cursor:pointer;font-size:12px;padding:4px 8px;" title="Delete page">🗑</button>'
+      + '<button onclick="deletePage(' + p.id + ')" style="background:none;border:1px solid #374151;border-radius:5px;color:#374151;cursor:pointer;font-size:12px;padding:4px 8px;" title="Delete page">🗑</button>'
       + '</div>'
       + '</div>'
       + recsHtml
