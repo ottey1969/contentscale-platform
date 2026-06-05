@@ -25124,16 +25124,15 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
     <div class="cs-logo">Free AI Citations Tracker</div>
     <div style="font-size:10px;color:#475569;letter-spacing:.04em;margin-top:1px;">by ContentScale</div>
   </div>
-  <div style="display:flex;align-items:center;gap:10px;">
-    <a href="/track/__TOKEN__/live" target="_blank" style="display:flex;align-items:center;gap:5px;font-size:10px;font-weight:700;color:#ef4444;text-decoration:none;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);border-radius:6px;padding:4px 10px;text-transform:uppercase;letter-spacing:.06em;" title="Open Live Brief Wall">
+  <div style="display:flex;align-items:center;gap:8px;">
+    <a href="/track/__TOKEN__/live" target="_blank" style="display:flex;align-items:center;gap:4px;font-size:10px;font-weight:700;color:#ef4444;text-decoration:none;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);border-radius:6px;padding:3px 8px;text-transform:uppercase;letter-spacing:.06em;white-space:nowrap;" title="Open Live Brief Wall">
       <span style="width:6px;height:6px;border-radius:50%;background:#ef4444;display:inline-block;animation:cs-pulse 1.2s ease-in-out infinite;"></span>Live
     </a>
-    <div class="cs-domain">__DOMAIN__</div>
-    <button onclick="toggleNotifPanel()" style="position:relative;background:none;border:none;cursor:pointer;padding:6px;font-size:16px;color:#6b7280;" title="Notifications">
+    <div class="cs-domain" style="max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">__DOMAIN__</div>
+    <button onclick="toggleNotifPanel()" style="position:relative;background:none;border:none;cursor:pointer;padding:4px;font-size:16px;color:#6b7280;flex-shrink:0;" title="Notifications">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
       <span id="notifBadge" style="display:none;position:absolute;top:2px;right:2px;background:#ef4444;color:#fff;font-size:9px;font-weight:800;width:14px;height:14px;border-radius:50%;align-items:center;justify-content:center;">0</span>
     </button>
-    <a href="https://contentscale.site" target="_blank" style="font-size:11px;color:#4b5563;text-decoration:none;">contentscale.site</a>
   </div>
 </div>
 
@@ -26067,13 +26066,15 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
     function addLine(text, color, url) {
       if (!feed) return;
       var line = document.createElement('div');
-      line.style.cssText = 'padding:3px 0;border-bottom:1px solid #0a0f1a;line-height:1.5;';
+      line.style.cssText = 'padding:3px 0;border-bottom:1px solid #0a0f1a;line-height:1.5;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
       var ts = new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
-      var tsSpan = '<span style="color:#6b7280;margin-right:8px;font-size:10px;">' + ts + '</span>';
+      var tsSpan = '<span style="color:#6b7280;margin-right:8px;font-size:10px;white-space:nowrap;flex-shrink:0;">' + ts + '</span>';
+      line.style.display = 'flex';
+      line.style.alignItems = 'center';
       if (url) {
-        line.innerHTML = tsSpan + '<a href="' + url + '" target="_blank" rel="noopener" style="color:' + (color||'#6b7280') + ';text-decoration:none;">' + text + '</a>';
+        line.innerHTML = tsSpan + '<a href="' + url + '" target="_blank" rel="noopener" style="color:' + (color||'#6b7280') + ';text-decoration:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;">' + text + '</a>';
       } else {
-        line.innerHTML = tsSpan + '<span style="color:' + (color||'#6b7280') + ';">' + text + '</span>';
+        line.innerHTML = tsSpan + '<span style="color:' + (color||'#6b7280') + ';overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;">' + text + '</span>';
       }
       if (feed.firstChild && feed.firstChild.style && feed.firstChild.style.color === '#1f2937') feed.innerHTML = '';
       feed.insertBefore(line, feed.firstChild);
