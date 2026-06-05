@@ -1095,7 +1095,8 @@ app.get('/api/tracker-client/:token', async (req, res) => {
               s.google_position, s.ai_google_overview_cited, s.ai_perplexity_cited,
               s.ai_bing_cited, s.ai_brave_cited,
               s.score as graaf_score, s.checked_at as last_checked,
-              s.recommendations
+              s.recommendations, s.source_suggestions, s.discovered_sources,
+              s.gsc_brief, s.author_trust_score, s.author_trust_findings
        FROM tracker_pages p
        LEFT JOIN LATERAL (
          SELECT * FROM tracker_snapshots WHERE page_id = p.id ORDER BY checked_at DESC LIMIT 1
@@ -25662,6 +25663,36 @@ function renderPages() {
   el.innerHTML = sorted.map(function(p, pageIdx) {
     var pos = p.google_position;
     var score = p.graaf_score;
+    // Populate brief cache from saved page data so the 📄 Brief button + popup work
+    (function(){
+      var _r = typeof p.recommendations === 'string' ? (function(){try{return JSON.parse(p.recommendations);}catch(e){return [];}})() : (p.recommendations || []);
+      if (Array.isArray(_r) && _r.length) {
+        _lastBriefData[p.id] = {
+          page_id: p.id,
+          url: p.url || '',
+          keyword: p.keyword || p.gsc_keyword || '',
+          domain: DOMAIN,
+          position: p.google_position || p.gsc_position || null,
+          aio_cited: !!p.ai_google_overview_cited,
+          perp_cited: !!p.ai_perplexity_cited,
+          bing_cited: !!p.ai_bing_cited,
+          brave_cited: !!p.ai_brave_cited,
+          score: p.graaf_score || p.last_graaf_score || null,
+          passages: _r,
+          gsc_brief: Array.isArray(p.gsc_brief) ? p.gsc_brief : [],
+          source_suggestions: Array.isArray(p.source_suggestions) ? p.source_suggestions : [],
+          discovered_sources: Array.isArray(p.discovered_sources) ? p.discovered_sources : [],
+          author_trust_score: p.author_trust_score || 0,
+          author_trust_findings: Array.isArray(p.author_trust_findings) ? p.author_trust_findings : [],
+          gsc_clicks: p.gsc_clicks != null ? p.gsc_clicks : null,
+          gsc_impressions: p.gsc_impressions != null ? p.gsc_impressions : null,
+          gsc_position: p.gsc_position != null ? p.gsc_position : null,
+          gsc_keyword: p.gsc_keyword || null,
+          _gsc_enabled: GSC_ENABLED || (p.gsc_clicks != null) || (p.gsc_impressions != null) || (p.gsc_position != null),
+          type: 'brief_ready'
+        };
+      }
+    })();
     var kw = p.keyword || p.gsc_keyword || '';
     var posColor = !pos ? '#6b7280' : pos<=3 ? '#4ade80' : pos<=10 ? '#a3e635' : pos<=20 ? '#fbbf24' : '#f87171';
     var lastCheckedRaw = p.last_checked || p.last_checked_at; // snapshot OR page timestamp
