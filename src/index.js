@@ -25119,16 +25119,16 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
 </div>
 
 <!-- Header -->
-<div class="cs-header">
-  <div>
-    <div class="cs-logo">Free AI Citations Tracker</div>
-    <div style="font-size:10px;color:#475569;letter-spacing:.04em;margin-top:1px;">by ContentScale</div>
+<div class="cs-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:nowrap;white-space:nowrap;overflow:hidden;">
+  <div style="flex-shrink:0;min-width:0;overflow:hidden;text-overflow:ellipsis;">
+    <div class="cs-logo" style="white-space:nowrap;">Free AI Citations Tracker</div>
+    <div style="font-size:10px;color:#475569;letter-spacing:.04em;margin-top:1px;white-space:nowrap;">by ContentScale</div>
   </div>
-  <div style="display:flex;align-items:center;gap:8px;">
-    <a href="/track/__TOKEN__/live" target="_blank" style="display:flex;align-items:center;gap:4px;font-size:10px;font-weight:700;color:#ef4444;text-decoration:none;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);border-radius:6px;padding:3px 8px;text-transform:uppercase;letter-spacing:.06em;white-space:nowrap;" title="Open Live Brief Wall">
-      <span style="width:6px;height:6px;border-radius:50%;background:#ef4444;display:inline-block;animation:cs-pulse 1.2s ease-in-out infinite;"></span>Live
+  <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;margin-left:12px;">
+    <a href="/track/__TOKEN__/live" target="_blank" style="display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:700;color:#ef4444;text-decoration:none;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);border-radius:6px;padding:3px 8px;text-transform:uppercase;letter-spacing:.06em;white-space:nowrap;flex-shrink:0;" title="Open Live Brief Wall">
+      <span style="width:6px;height:6px;border-radius:50%;background:#ef4444;display:inline-block;animation:cs-pulse 1.2s ease-in-out infinite;flex-shrink:0;"></span>Live
     </a>
-    <div class="cs-domain" style="max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">__DOMAIN__</div>
+    <div class="cs-domain" style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex-shrink:0;">__DOMAIN__</div>
     <button onclick="toggleNotifPanel()" style="position:relative;background:none;border:none;cursor:pointer;padding:4px;font-size:16px;color:#6b7280;flex-shrink:0;" title="Notifications">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
       <span id="notifBadge" style="display:none;position:absolute;top:2px;right:2px;background:#ef4444;color:#fff;font-size:9px;font-weight:800;width:14px;height:14px;border-radius:50%;align-items:center;justify-content:center;">0</span>
@@ -26057,6 +26057,11 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
   // Live feed polling for this domain
   var _clientPollInterval = null;
   var _clientPollLastTs = null;
+  var _seenEventIds = new Set();
+
+  function _makeEventId(ev) {
+    return (ev.type||'') + '|' + (ev.url||ev.domain||'') + '|' + (ev.headline||ev.page_id||'') + '|' + (ev.ts||'');
+  }
 
   function startClientLiveFeed() {
     var dot = document.getElementById('clientLiveDot');
@@ -26083,30 +26088,37 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
 
     var _pollErrors = 0;
     var _pollTimer = null;
+    var _isPolling = false;
 
     function poll() {
+      if (_isPolling) return;
+      _isPolling = true;
       var url = '/api/tracker-client/' + TOKEN + '/live-events';
       if (_clientPollLastTs) url += '?since=' + encodeURIComponent(_clientPollLastTs);
       fetch(url)
         .then(function(r){ return r.json(); })
         .then(function(data) {
-          _pollErrors = 0; // reset on success
+          _isPolling = false;
+          _pollErrors = 0;
           if (!data.success) return;
           if (dot) dot.style.background = '#4ade80';
           if (status) { status.textContent = '* Live'; status.style.color = '#4ade80'; }
           _clientPollLastTs = data.ts;
           if (data.events && data.events.length) {
             data.events.forEach(function(ev) {
+              // Deduplicate: skip events we've already shown
+              var eid = _makeEventId(ev);
+              if (_seenEventIds.has(eid)) return;
+              _seenEventIds.add(eid);
+              if (_seenEventIds.size > 200) {
+                var it = _seenEventIds.values().next().value;
+                if (it) _seenEventIds.delete(it);
+              }
               if (ev.type === 'brief_ready' && (ev.domain === DOMAIN || (ev.url && ev.url.includes(DOMAIN)))) {
-                // Store brief data so user can view it via "📄 Brief" button
                 if (ev.page_id) _lastBriefData[ev.page_id] = ev;
                 showNotification('Citation Brief ready for ' + (ev.url||''), 'brief', '#7c3aed');
-                // Only auto-open overlay if inline brief is NOT already showing data
-                // (prevents double-brief overlay over existing content)
                 var inlineBriefHasData = !!(ev.passages && ev.passages.length);
-                if (!inlineBriefHasData) {
-                  showCitationBrief(ev);
-                }
+                if (!inlineBriefHasData) showCitationBrief(ev);
                 return;
               }
               if (ev.type === 'email_sent' && (ev.domain === DOMAIN || (ev.url && ev.url.includes(DOMAIN)))) {
@@ -26114,7 +26126,6 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
                 return;
               }
               if (ev.type === 'check_done') {
-                // Reload pages so card updates with new scan data
                 setTimeout(loadPages, 500);
                 showNotification('Scan complete: ' + (ev.url||''), 'scan', '#4ade80');
                 addLine('Scan complete: ' + (ev.url||''), '#4ade80', null);
@@ -26131,11 +26142,11 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
           }
         })
         .catch(function() {
+          _isPolling = false;
           _pollErrors++;
           if (dot) dot.style.background = _pollErrors > 3 ? '#f87171' : '#f59e0b';
           if (status) status.textContent = _pollErrors > 3 ? '* Offline' : '';
-          // Exponential backoff: 8s, 16s, 32s, max 60s
-          if (_pollTimer) clearInterval(_pollTimer);
+          if (_pollTimer) { clearInterval(_pollTimer); clearTimeout(_pollTimer); }
           var delay = Math.min(8000 * Math.pow(2, _pollErrors - 1), 60000);
           _pollTimer = setTimeout(function() {
             _pollTimer = setInterval(poll, 8000);
@@ -26144,10 +26155,11 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
         });
     }
 
-    poll();
-    if (_clientPollInterval) clearInterval(_clientPollInterval);
-    _pollTimer = setInterval(poll, 5000);
+    if (_pollTimer) { clearInterval(_pollTimer); clearTimeout(_pollTimer); }
+    if (_clientPollInterval) { clearInterval(_clientPollInterval); }
+    _pollTimer = setInterval(poll, 8000);
     _clientPollInterval = _pollTimer;
+    poll();
   }
 
   // Start after pages load
