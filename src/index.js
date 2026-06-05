@@ -1081,7 +1081,7 @@ app.post('/api/tracker-client/register', async (req, res) => {
 // GET /api/tracker-client/:token — get client data + pages
 app.get('/api/tracker-client/:token', async (req, res) => {
   try {
-    const cr = await pool.query('SELECT * FROM tracker_clients WHERE token=$1 AND (status=$2 OR status IS NULL)', [req.params.token, 'active']);
+    const cr = await pool.query('SELECT * FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status != $2)', [req.params.token, 'deleted']);
     if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Tracker not found. Check your link is correct.' });
     const client = cr.rows[0];
 
@@ -1127,7 +1127,7 @@ app.get('/api/tracker-client/:token', async (req, res) => {
 // GET /api/tracker-client/:token/briefs/:pageId — list briefs for a page
 app.get('/api/tracker-client/:token/briefs/:pageId', async (req, res) => {
   try {
-    const cr = await pool.query('SELECT id FROM tracker_clients WHERE token=$1 AND (status=$2 OR status IS NULL)', [req.params.token, 'active']);
+    const cr = await pool.query('SELECT id FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status != $2)', [req.params.token, 'deleted']);
     if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
     const own = await pool.query('SELECT id FROM tracker_pages WHERE id=$1 AND tracker_client_id=$2', [req.params.pageId, cr.rows[0].id]);
     if (!own.rows.length) return res.status(403).json({ success: false, error: 'Not your page' });
@@ -1143,7 +1143,7 @@ app.get('/api/tracker-client/:token/briefs/:pageId', async (req, res) => {
 // GET /api/tracker-client/:token/briefs/:pageId/:briefId — get single brief
 app.get('/api/tracker-client/:token/briefs/:pageId/:briefId', async (req, res) => {
   try {
-    const cr = await pool.query('SELECT id FROM tracker_clients WHERE token=$1 AND (status=$2 OR status IS NULL)', [req.params.token, 'active']);
+    const cr = await pool.query('SELECT id FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status != $2)', [req.params.token, 'deleted']);
     if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
     const brief = await pool.query(
       `SELECT b.* FROM tracker_citation_briefs b
@@ -1159,7 +1159,7 @@ app.get('/api/tracker-client/:token/briefs/:pageId/:briefId', async (req, res) =
 // GET /api/tracker-client/:token/fetch-sitemap — fetch URLs from sitemap
 app.get('/api/tracker-client/:token/fetch-sitemap', async (req, res) => {
   try {
-    const cr = await pool.query('SELECT domain FROM tracker_clients WHERE token=$1 AND (status=$2 OR status IS NULL)', [req.params.token, 'active']);
+    const cr = await pool.query('SELECT domain FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status != $2)', [req.params.token, 'deleted']);
     if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
     const sitemapUrl = req.query.url;
     if (!sitemapUrl) return res.status(400).json({ success: false, error: 'URL required' });
@@ -1251,7 +1251,7 @@ function buildLinkPrompt(trackedPages, sitemapPages) {
 // PATCH /api/tracker-client/:token/settings — update client whatsapp + callmebot_key
 app.patch('/api/tracker-client/:token/settings', async (req, res) => {
   try {
-    const cr = await pool.query('SELECT id FROM tracker_clients WHERE token=$1 AND (status=$2 OR status IS NULL)', [req.params.token, 'active']);
+    const cr = await pool.query('SELECT id FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status != $2)', [req.params.token, 'deleted']);
     if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
     const { whatsapp, callmebot_key, name } = req.body;
     const updates = []; const vals = []; let i = 1;
@@ -1267,7 +1267,7 @@ app.patch('/api/tracker-client/:token/settings', async (req, res) => {
 
 app.post('/api/tracker-client/:token/pages/:pageId/html', async (req, res) => {
   try {
-    const cr = await pool.query('SELECT id FROM tracker_clients WHERE token=$1 AND (status=$2 OR status IS NULL)', [req.params.token, 'active']);
+    const cr = await pool.query('SELECT id FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status != $2)', [req.params.token, 'deleted']);
     if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
     const own = await pool.query('SELECT id FROM tracker_pages WHERE id=$1 AND tracker_client_id=$2', [req.params.pageId, cr.rows[0].id]);
     if (!own.rows.length) return res.status(403).json({ success: false, error: 'Not your page' });
@@ -1297,7 +1297,7 @@ app.post('/api/tracker-client/:token/pages/:pageId/html', async (req, res) => {
 // GET /api/tracker-client/:token/pages/:pageId — get single page with latest snapshot
 app.get('/api/tracker-client/:token/pages/:pageId', async (req, res) => {
   try {
-    const cr = await pool.query('SELECT id FROM tracker_clients WHERE token=$1 AND (status=$2 OR status IS NULL)', [req.params.token, 'active']);
+    const cr = await pool.query('SELECT id FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status != $2)', [req.params.token, 'deleted']);
     if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
     const r = await pool.query(`
       SELECT p.*, p.check_frequency,
@@ -1318,7 +1318,7 @@ app.get('/api/tracker-client/:token/pages/:pageId', async (req, res) => {
 // PATCH /api/tracker-client/:token/pages/:pageId/frequency
 app.patch('/api/tracker-client/:token/pages/:pageId/frequency', async (req, res) => {
   try {
-    const cr = await pool.query('SELECT id FROM tracker_clients WHERE token=$1 AND (status=$2 OR status IS NULL)', [req.params.token, 'active']);
+    const cr = await pool.query('SELECT id FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status != $2)', [req.params.token, 'deleted']);
     if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
     const { frequency } = req.body;
     const allowed = ['1day','3days','weekly','monthly'];
@@ -1391,7 +1391,7 @@ app.post('/api/tracker-client/:token/scan-all', async (req, res) => {
 // PATCH /api/tracker-client/:token/pages/:pageId/done — mark page done/undone
 app.patch('/api/tracker-client/:token/pages/:pageId/done', async (req, res) => {
   try {
-    const cr = await pool.query('SELECT id FROM tracker_clients WHERE token=$1 AND (status=$2 OR status IS NULL)', [req.params.token, 'active']);
+    const cr = await pool.query('SELECT id FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status != $2)', [req.params.token, 'deleted']);
     if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
     const own = await pool.query('SELECT id FROM tracker_pages WHERE id=$1 AND tracker_client_id=$2', [req.params.pageId, cr.rows[0].id]);
     if (!own.rows.length) return res.status(403).json({ success: false, error: 'Not your page' });
@@ -1448,7 +1448,7 @@ app.patch('/api/tracker-client/:token/pages/:pageId/done', async (req, res) => {
 // PATCH /api/tracker-client/:token/pages/:pageId/keyword — update keyword
 app.patch('/api/tracker-client/:token/pages/:pageId/keyword', async (req, res) => {
   try {
-    const cr = await pool.query('SELECT id FROM tracker_clients WHERE token=$1 AND (status=$2 OR status IS NULL)', [req.params.token, 'active']);
+    const cr = await pool.query('SELECT id FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status != $2)', [req.params.token, 'deleted']);
     if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
     const own = await pool.query('SELECT id FROM tracker_pages WHERE id=$1 AND tracker_client_id=$2', [req.params.pageId, cr.rows[0].id]);
     if (!own.rows.length) return res.status(403).json({ success: false, error: 'Not your page' });
@@ -1463,7 +1463,7 @@ app.get('/api/tracker-client/:token/live-events', async (req, res) => {
   try {
     res.set('Connection', 'keep-alive');
     res.set('Keep-Alive', 'timeout=30');
-    const cr = await pool.query('SELECT domain FROM tracker_clients WHERE token=$1 AND (status=$2 OR status IS NULL)', [req.params.token, 'active']);
+    const cr = await pool.query('SELECT domain FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status != $2)', [req.params.token, 'deleted']);
     if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
     const domain = cr.rows[0].domain;
     const since = req.query.since ? new Date(req.query.since).getTime() : Date.now() - 60000;
@@ -1524,7 +1524,7 @@ function _triggerPageScan(pageId, delayMs) {
 // POST /api/tracker-client/:token/pages — add URL to track
 app.post('/api/tracker-client/:token/pages', async (req, res) => {
   try {
-    const cr = await pool.query('SELECT * FROM tracker_clients WHERE token=$1 AND (status=$2 OR status IS NULL)', [req.params.token, 'active']);
+    const cr = await pool.query('SELECT * FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status != $2)', [req.params.token, 'deleted']);
     if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
     const client = cr.rows[0];
 
@@ -1746,7 +1746,7 @@ app.post('/api/tracker-client/:token/clean-pages', async (req, res) => {
 // POST /api/tracker-client/:token/check/:pageId — trigger manual check
 app.post('/api/tracker-client/:token/check/:pageId', async (req, res) => {
   try {
-    const cr = await pool.query('SELECT id FROM tracker_clients WHERE token=$1 AND (status=$2 OR status IS NULL)', [req.params.token, 'active']);
+    const cr = await pool.query('SELECT id FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status != $2)', [req.params.token, 'deleted']);
     if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
     const own = await pool.query('SELECT * FROM tracker_pages WHERE id=$1 AND tracker_client_id=$2', [req.params.pageId, cr.rows[0].id]);
     if (!own.rows.length) return res.status(403).json({ success: false, error: 'Not your page' });
@@ -1821,7 +1821,7 @@ app.get('/track/:token/live', async (req, res) => {
   try {
     let cr;
     try {
-      cr = await pool.query('SELECT * FROM tracker_clients WHERE token=$1 AND (status=$2 OR status IS NULL)', [req.params.token, 'active']);
+      cr = await pool.query('SELECT * FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status != $2)', [req.params.token, 'deleted']);
     } catch(qErr) {
       cr = await pool.query('SELECT * FROM tracker_clients WHERE token=$1', [req.params.token]);
     }
@@ -2097,18 +2097,14 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
 
 app.get('/track/:token', async (req, res) => {
   try {
-    // Try with status check first, fallback without if column issues
-    let cr;
-    try {
-      cr = await pool.query('SELECT * FROM tracker_clients WHERE token=$1 AND (status=$2 OR status IS NULL)', [req.params.token, 'active']);
-    } catch(qErr) {
-      // Fallback: query without status filter if column missing
-      cr = await pool.query('SELECT * FROM tracker_clients WHERE token=$1', [req.params.token]);
+    // Find client by token — accept any status except explicitly deleted
+    const cr = await pool.query('SELECT * FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status != $2)', [req.params.token, 'deleted']);
+    if (!cr.rows.length) {
+      // Debug: log which token was not found
+      console.warn('[track] Client not found for token:', req.params.token.substring(0,16)+'...');
+      return res.status(404).send(`<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ContentScale Tracker</title></head><body style="background:#0a0a0f;color:#f1f5f9;font-family:system-ui,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;padding:20px;box-sizing:border-box;"><div style="text-align:center;max-width:400px;"><div style="font-size:3rem;margin-bottom:16px;">🔒</div><h1 style="font-size:20px;font-weight:800;color:#f1f5f9;margin-bottom:8px;">Tracker link not found</h1><p style="font-size:14px;color:#6b7280;line-height:1.7;margin-bottom:28px;">This link has expired or is incorrect. Contact Ottmar to get your personal tracker link — usually within a few minutes.</p><div style="display:flex;flex-direction:column;gap:10px;"><a href="https://wa.me/31628073996?text=Hi%20Ottmar%2C%20I%20need%20my%20ContentScale%20tracker%20link" style="display:block;background:#25d366;color:#fff;text-decoration:none;padding:12px 20px;border-radius:8px;font-size:14px;font-weight:700;">💬 WhatsApp Ottmar — get my link</a><a href="mailto:info@contentscale.site?subject=My%20tracker%20link&body=Hi%20Ottmar%2C%20I%20need%20my%20ContentScale%20tracker%20link." style="display:block;background:#0d1117;border:1px solid #374151;color:#9ca3af;text-decoration:none;padding:12px 20px;border-radius:8px;font-size:14px;">✉️ Email info@contentscale.site</a></div><p style="font-size:11px;color:#374151;margin-top:20px;">ContentScale · contentscale.site</p></div></body></html>`);
     }
-    if (!cr.rows.length) return res.status(404).send(`<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ContentScale Tracker</title></head><body style="background:#0a0a0f;color:#f1f5f9;font-family:system-ui,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;padding:20px;box-sizing:border-box;"><div style="text-align:center;max-width:400px;"><div style="font-size:3rem;margin-bottom:16px;">🔒</div><h1 style="font-size:20px;font-weight:800;color:#f1f5f9;margin-bottom:8px;">Tracker link not found</h1><p style="font-size:14px;color:#6b7280;line-height:1.7;margin-bottom:28px;">This link has expired or is incorrect. Contact Ottmar to get your personal tracker link — usually within a few minutes.</p><div style="display:flex;flex-direction:column;gap:10px;"><a href="https://wa.me/31628073996?text=Hi%20Ottmar%2C%20I%20need%20my%20ContentScale%20tracker%20link" style="display:block;background:#25d366;color:#fff;text-decoration:none;padding:12px 20px;border-radius:8px;font-size:14px;font-weight:700;">💬 WhatsApp Ottmar — get my link</a><a href="mailto:info@contentscale.site?subject=My%20tracker%20link&body=Hi%20Ottmar%2C%20I%20need%20my%20ContentScale%20tracker%20link." style="display:block;background:#0d1117;border:1px solid #374151;color:#9ca3af;text-decoration:none;padding:12px 20px;border-radius:8px;font-size:14px;">✉️ Email info@contentscale.site</a></div><p style="font-size:11px;color:#374151;margin-top:20px;">ContentScale · contentscale.site</p></div></body></html>`);
     const client = cr.rows[0];
-    // If explicitly deleted/disabled, show appropriate message
-    if (client.status === 'deleted') return res.status(410).send('<html><body style="background:#0a0a0f;color:#f87171;font-family:monospace;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;text-align:center;"><div><div style="font-size:2rem;margin-bottom:12px;">🔒</div><div>This tracker has been deactivated</div><div style="font-size:12px;color:#4b5563;margin-top:8px;"><a href="https://wa.me/31628073996" style="color:#7c3aed;">Contact Ottmar to reactivate</a></div></div></body></html>');
     if (client.status === 'paused') return res.send('<html><body style="background:#0a0a0f;color:#fbbf24;font-family:monospace;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;text-align:center;"><div><div style="font-size:2rem;margin-bottom:12px;">⏸️</div><div>Your tracker is paused</div><div style="font-size:12px;color:#6b7280;margin-top:8px;">Contact Ottmar to reactivate: <a href="https://wa.me/31628073996" style="color:#7c3aed;">wa.me/31628073996</a></div></div></body></html>');
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     res.send(_CLIENT_TRACKER_HTML
@@ -2150,7 +2146,7 @@ app.get('/api/live-feed', async (req, res) => {
     const r = await pool.query('SELECT * FROM super_admins WHERE session_token=$1 AND is_active=TRUE', [token]).catch(() => ({ rows: [] }));
     if (!r.rows.length) {
       // Also accept tracker client token
-      const cr = await pool.query('SELECT id FROM tracker_clients WHERE token=$1 AND (status=$2 OR status IS NULL)', [token, 'active']).catch(() => ({ rows: [] }));
+      const cr = await pool.query('SELECT id FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status != $2)', [token, 'deleted']).catch(() => ({ rows: [] }));
       if (!cr.rows.length) return res.status(401).json({ error: 'Invalid token' });
     }
   } catch(e) { return res.status(500).json({ error: e.message }); }
@@ -32540,7 +32536,7 @@ app.get('/api/tracker/live-feed', async (req, res) => {
 // ── Live Wall SSE endpoint (per tracker client) ──────────────────────────────
 app.get('/api/tracker-client/:token/live-wall-stream', async (req, res) => {
   try {
-    const cr = await pool.query('SELECT id, token, domain, live_wall_enabled FROM tracker_clients WHERE token=$1 AND (status=$2 OR status IS NULL)', [req.params.token, 'active']);
+    const cr = await pool.query('SELECT id, token, domain, live_wall_enabled FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status != $2)', [req.params.token, 'deleted']);
     if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
     if (!cr.rows[0].live_wall_enabled) return res.status(403).json({ success: false, error: 'Live wall disabled' });
   } catch(e) { return res.status(500).json({ success: false, error: e.message }); }
