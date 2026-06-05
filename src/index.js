@@ -26770,7 +26770,7 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
       </div>
       <div style="display:flex;align-items:center;gap:8px;">
         <span style="font-size:10px;color:#4b5563;" id="cbKw"></span>
-        <button onclick="keepCbOpen()" style="background:none;border:none;color:#4b5563;cursor:pointer;font-size:16px;padding:4px;">&#x2715;</button>
+        <button onclick="hideCitationBrief()" style="background:none;border:none;color:#6b7280;cursor:pointer;font-size:18px;padding:4px;line-height:1;" title="Close brief">&#x2715;</button>
       </div>
     </div>
     <div class="cb-body">
