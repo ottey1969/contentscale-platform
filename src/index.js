@@ -2085,6 +2085,65 @@ app.get('/api/admin/test-notify/:clientId', verifyAdmin, async (req, res) => {
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
+// GET /api/admin/brevo-status — check Brevo account: verified domains, quota, recent sends
+app.get('/api/admin/brevo-status', verifyAdmin, async (req, res) => {
+  try {
+    const brevoKey = process.env.BREVO_API_KEY || '';
+    if (!brevoKey) return res.json({ success: true, configured: false, reason: 'BREVO_API_KEY not set in Railway env vars' });
+
+    const results = { configured: true, api_key_prefix: brevoKey.substring(0, 8) + '...', from_email: process.env.FROM_EMAIL || 'not set', sender_name: process.env.SENDER_NAME || 'not set', account: null, domains: [], recent_sends: [], quota: null, errors: [] };
+
+    // 1. Account info (plan, quota)
+    try {
+      const accResp = await fetch('https://api.brevo.com/v3/account', { headers: { 'api-key': brevoKey, 'Accept': 'application/json' } });
+      if (accResp.ok) {
+        const acc = await accResp.json();
+        results.account = { email: acc.email, first_name: acc.firstName, last_name: acc.lastName, company: acc.companyName, plan: acc.plan || 'unknown' };
+        results.quota = acc.relay || acc.plan || null;
+      } else {
+        const errText = await accResp.text().catch(() => '');
+        results.errors.push('Account API: HTTP ' + accResp.status + ' — ' + errText.substring(0, 200));
+        if (accResp.status === 401) results.reason = 'Invalid BREVO_API_KEY (401 Unauthorized)';
+      }
+    } catch(e) { results.errors.push('Account fetch failed: ' + e.message); }
+
+    // 2. Verified sender domains
+    try {
+      const domainResp = await fetch('https://api.brevo.com/v3/senders/domains', { headers: { 'api-key': brevoKey, 'Accept': 'application/json' } });
+      if (domainResp.ok) {
+        const dData = await domainResp.json();
+        results.domains = (dData || []).map(function(d) { return { domain: d.domain_name || d.name, verified: d.verified || false, authenticated: d.authenticated || false }; });
+      } else {
+        results.errors.push('Domains API: HTTP ' + domainResp.status);
+      }
+    } catch(e) { results.errors.push('Domains fetch failed: ' + e.message); }
+
+    // 3. Recent transactional sends (last 24h)
+    try {
+      const since = new Date(Date.now() - 86400000).toISOString().split('.')[0] + '+00:00';
+      const eventsResp = await fetch('https://api.brevo.com/v3/smtp/statistics/events?limit=20&startDate=' + encodeURIComponent(since) + '&event=delivered,bounced,blocked,spam', { headers: { 'api-key': brevoKey, 'Accept': 'application/json' } });
+      if (eventsResp.ok) {
+        const ev = await eventsResp.json();
+        results.recent_sends = (ev.events || []).map(function(e) { return { to: e.to, date: e.date, event: e.event, subject: e.subject ? e.subject.substring(0, 60) : '', message_id: e.messageId }; });
+        results.recent_summary = { delivered: ev.events ? ev.events.filter(function(x){ return x.event === 'delivered'; }).length : 0, bounced: ev.events ? ev.events.filter(function(x){ return x.event === 'bounced'; }).length : 0, blocked: ev.events ? ev.events.filter(function(x){ return x.event === 'blocked'; }).length : 0, spam: ev.events ? ev.events.filter(function(x){ return x.event === 'spam'; }).length : 0 };
+      } else {
+        results.errors.push('Events API: HTTP ' + eventsResp.status);
+      }
+    } catch(e) { results.errors.push('Events fetch failed: ' + e.message); }
+
+    // 4. Check if FROM_EMAIL domain matches a verified domain
+    const fromDomain = (process.env.FROM_EMAIL || '').split('@')[1];
+    if (fromDomain && results.domains.length) {
+      const matched = results.domains.find(function(d) { return d.domain === fromDomain && d.verified; });
+      results.from_domain_verified = !!matched;
+      results.from_domain = fromDomain;
+      if (!matched) results.errors.push('Sender domain "' + fromDomain + '" is NOT verified in Brevo. Emails will be silently dropped.');
+    }
+
+    res.json({ success: true, results });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
 // POST /api/admin/tracker-clients/:id/regenerate-token
 app.post('/api/admin/tracker-clients/:id/regenerate-token', verifyAdmin, async (req, res) => {
   try {
@@ -28511,6 +28570,8 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                         </div>
                         <button onclick="saveAdminSettings()" class="tr-btn" style="border-color:#4ade80;color:#4ade80;font-weight:700;">Save Email Settings</button>
                         <span id="settingsSaved" style="display:none;font-size:12px;color:#4ade80;margin-left:10px;">✓ Saved</span>
+                        <button onclick="checkBrevoStatus()" class="tr-btn" style="border-color:#38bdf8;color:#38bdf8;margin-left:10px;" title="Check Brevo account: verified domains, recent sends, quota">🔍 Check Brevo Status</button>
+                        <div id="brevoStatusResult" style="display:none;margin-top:16px;font-size:11px;font-family:monospace;line-height:1.8;color:#9ca3af;background:#0a0a0a;border:1px solid #1f2937;border-radius:8px;padding:14px;max-height:400px;overflow-y:auto;"></div>
                     </div>
 
                     <div style="background:#0d1117;border:1px solid #1f2937;border-radius:10px;padding:20px;">
@@ -30425,6 +30486,56 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     'BREVO: configured via Railway env var<br>' +
                     'TELEGRAM_BOT_TOKEN: configured via Railway env var';
             } catch(e) { console.warn('Settings load failed:', e.message); }
+        }
+
+        async function checkBrevoStatus() {
+            var resultEl = document.getElementById('brevoStatusResult');
+            resultEl.style.display = 'block';
+            resultEl.innerHTML = '<span style="color:#38bdf8;">Loading Brevo status...</span>';
+            try {
+                var d = await apiCall('/api/admin/brevo-status');
+                if (!d.success) { resultEl.innerHTML = '<span style="color:#ef4444;">Error: ' + (d.error || 'Failed') + '</span>'; return; }
+                var r = d.results;
+                var html = '';
+                if (!r.configured) { html = '<span style="color:#f59e0b;">⚠️ Brevo NOT configured: ' + r.reason + '</span>'; resultEl.innerHTML = html; return; }
+                html += '<div style="color:#4ade80;font-weight:700;margin-bottom:6px;">✅ Brevo API key connected</div>';
+                html += '<div>API key: ' + r.api_key_prefix + '</div>';
+                html += '<div>FROM_EMAIL: ' + (r.from_email || 'not set') + '</div>';
+                html += '<div>Sender name: ' + (r.sender_name || 'not set') + '</div>';
+                if (r.account) html += '<div>Account: ' + (r.account.first_name || '') + ' ' + (r.account.last_name || '') + ' (' + (r.account.email || '?') + ') — Plan: ' + (r.account.plan || '?') + '</div>';
+                html += '<div style="margin-top:10px;font-weight:700;color:#f1f5f9;">🔐 Verified Domains (' + r.domains.length + '):</div>';
+                if (r.domains.length === 0) { html += '<div style="color:#ef4444;">❌ NO verified domains — emails will be silently dropped!</div>'; }
+                else {
+                    r.domains.forEach(function(d) {
+                        var color = d.verified ? '#4ade80' : '#f59e0b';
+                        var icon = d.verified ? '✅' : '⚠️';
+                        html += '<div style="color:' + color + ';">' + icon + ' ' + d.domain + ' — verified:' + d.verified + ' authenticated:' + d.authenticated + '</div>';
+                    });
+                }
+                if (r.from_domain) {
+                    var fdColor = r.from_domain_verified ? '#4ade80' : '#ef4444';
+                    var fdIcon = r.from_domain_verified ? '✅' : '❌';
+                    html += '<div style="margin-top:6px;color:' + fdColor + ';font-weight:700;">' + fdIcon + ' FROM_EMAIL domain "' + r.from_domain + '" ' + (r.from_domain_verified ? 'IS verified' : 'is NOT verified — add & verify in Brevo') + '</div>';
+                }
+                if (r.recent_summary) {
+                    html += '<div style="margin-top:10px;font-weight:700;color:#f1f5f9;">📬 Last 24h sends:</div>';
+                    html += '<div>Delivered: <span style="color:#4ade80;">' + r.recent_summary.delivered + '</span> | Bounced: <span style="color:#f59e0b;">' + r.recent_summary.bounced + '</span> | Blocked: <span style="color:#ef4444;">' + r.recent_summary.blocked + '</span> | Spam: <span style="color:#dc2626;">' + r.recent_summary.spam + '</span></div>';
+                }
+                if (r.recent_sends && r.recent_sends.length > 0) {
+                    html += '<div style="margin-top:8px;">Recent emails:</div>';
+                    r.recent_sends.slice(0, 10).forEach(function(s) {
+                        var evColor = s.event === 'delivered' ? '#4ade80' : s.event === 'bounced' ? '#f59e0b' : s.event === 'blocked' ? '#ef4444' : '#9ca3af';
+                        html += '<div style="color:' + evColor + ';padding-left:8px;border-left:2px solid ' + evColor + ';margin:2px 0;">' + s.event.toUpperCase() + ' → ' + (s.to || '?') + ' — ' + (s.subject || '(no subject)') + '</div>';
+                    });
+                } else if (r.recent_summary && r.recent_summary.delivered === 0) {
+                    html += '<div style="color:#6b7280;margin-top:6px;">No emails sent in last 24h</div>';
+                }
+                if (r.errors && r.errors.length > 0) {
+                    html += '<div style="margin-top:10px;font-weight:700;color:#ef4444;">⚠️ Issues found:</div>';
+                    r.errors.forEach(function(e) { html += '<div style="color:#ef4444;padding-left:8px;">• ' + e + '</div>'; });
+                }
+                resultEl.innerHTML = html;
+            } catch(e) { resultEl.innerHTML = '<span style="color:#ef4444;">Error: ' + e.message + '</span>'; }
         }
 
         async function saveAdminSettings() {
