@@ -25184,7 +25184,7 @@ function renderPages() {
       + '<div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">'
       + '<button class="cs-btn primary" onclick="showAddModal()" style="font-size:13px;padding:10px 20px;">+ Add first URL</button>'
       + '<button class="cs-btn" onclick="showImportModal(&quot;sitemap&quot;)" style="font-size:13px;padding:10px 20px;border-color:#38bdf8;color:#38bdf8;">Import from sitemap</button>'
-      + \'</div></div>\';
+      + '</div></div>';
     return;
   }
   var displayPages = _ctSearchQuery ? _pages.filter(function(p){
@@ -26804,7 +26804,8 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
     if (overlay) overlay.style.display = 'flex';
   }
 
-  /* ── Header bar ── */
+<\/script>
+<style>/* ── Header bar ── */
 .header {
   position:fixed;top:0;left:0;right:0;
   padding:14px 24px;
@@ -26970,6 +26971,8 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
     <div class="alert-domain" id="alertDomain">domain</div>
   </div>
 </div>
+</style>
+<\/script>
 
 <script>
 var _stats = { checked: 0, citations: 0, positionsUp: 0, scoresUp: 0 };
