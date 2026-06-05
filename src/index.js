@@ -33214,6 +33214,9 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
     }
   }
 
+  // Hoisted — used in recommendations section outside if(keyword) block
+  let resultsChanged = true;
+
   if(keyword) {
 
     // ── 2. Google: position + AI Overview via Serper.dev ───────────────────
@@ -33332,7 +33335,7 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
     const runBrave = !prevSnap || scanCount % 2 === 0;      // every other scan
 
     // OPTIMISATION: skip Gemini brief if results unchanged vs previous scan
-    const resultsChanged = !prevSnap ||
+    resultsChanged = !prevSnap ||
       prevSnap.ai_google_overview_cited !== snapshot.ai_google_overview_cited ||
       prevSnap.google_position !== snapshot.google_position ||
       Math.abs((prevSnap.google_position||99) - (snapshot.google_position||99)) >= 2;
@@ -33565,72 +33568,123 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
         : '';
 
       // ── CALL 1: Citation Brief ─────────────────────────────────────────
-      const citationPrompt = 'You are an AI Citation Strategist. Create a Citation Brief: tell the content owner EXACTLY what to add so Google AI Overview, Perplexity, Microsoft Copilot, and Claude all cite this page.\n\n' +
-'INPUT:\n' +
-'- URL: ' + page.url + '\n' +
-'- Keyword: "' + kw + '" (' + kwSource + ')\n' +
-'- Title: ' + (page.title||'(not set)') + '\n' +
-'- Google position: ' + (snapshot.google_position || 'not ranked') + '\n' +
-'- Google AI Overview cited: ' + (snapshot.ai_google_overview_cited ? 'YES — skip AIO actions' : 'NO') + '\n' +
-'- Perplexity cited: ' + (snapshot.ai_perplexity_cited ? 'YES — skip Perplexity actions' : 'NO') + '\n' +
-'- Microsoft Copilot cited: ' + (snapshot.ai_bing_cited ? 'YES — skip Copilot actions' : 'NO') + '\n' +
-'- Claude/Brave cited: ' + (snapshot.ai_brave_cited ? 'YES — skip Claude actions' : 'NO') + '\n' +
-'- GRAAF score: ' + (snapshot.score||'?') + '/100\n' +
-(aioText ? aioText + '\n' : '') +
-'\nPAGE HTML (first 5000 chars — use this to write additions referencing actual structure):\n' +
-(htmlExcerpt || '(no HTML)') + '\n\n' +
-'COMPETITOR #1 BEATING US:\n' +
-(competitor1 ? 'URL: ' + competitor1.url + '\nTitle: ' + competitor1.title + '\nSnippet: ' + competitor1.snippet : '(no data)') + '\n\n' +
-'WHAT EACH AI SYSTEM NEEDS:\n' +
-'Google AIO: quotable definition in first 100 words + FAQ/HowTo schema + exact query answered\n' +
-'Perplexity: author credentials with specifics (years, clients) + statistics + outbound authority links + numbered steps\n' +
-'Copilot: H2/H3 matching search queries + 50-80 word summary near top + keyword in H1, first paragraph, meta title\n' +
-'Claude/Brave: verifiable facts with source attribution + clear About The Author section\n\n' +
-'TASK:\n' +
-'1. Read the HTML — find where each addition goes (e.g. "after the H1", "before first H2")\n' +
-'2. Write the EXACT text for each action — minimum 50 words per action\n' +
-'3. Compare our content vs competitor #1 — name the specific gap\n' +
-'4. Skip any system already showing YES\n\n' +
-'EXAMPLE of a correct action:\n' +
-'{"title":"Add definition after H1","priority":"high","system":"Google AIO","action":"Add this exact paragraph immediately after your H1 heading: \\"' + kw + ' is a [specific definition based on your page content]. Unlike [what competitors offer], this approach [specific differentiator from your HTML]. Used by [audience] to [specific outcome].\\" This triggers Google AIO because it provides a direct quotable definition in the first 100 words — the #1 requirement for AI Overview inclusion.","expected_impact":"Google AIO will cite this page within 2-3 crawl cycles because AIO extracts verbatim definitions from first-paragraph text."}\n\n' +
-'FAIL EXAMPLES — never write these:\n' +
-'"Improve your introduction for AI citations" — too vague\n' +
-'"Add more author credentials" — write the exact byline\n' +
-'"Optimize your title tag" — write the exact new title\n\n' +
-'Return ONLY valid JSON array, no markdown, no preamble:\n' +
-'[{"title":"max 6 words","priority":"high|medium|low","system":"Google AIO|Perplexity|Copilot|Claude|Ranking","action":"EXACT copy-paste text minimum 50 words — quote exact location in HTML","expected_impact":"[System] will cite this because [specific technical reason]"}]';
+      const citationPrompt = `You are an AI Citation Strategist. Your job is to create an actionable Citation Brief for a single web page.
 
+A Citation Brief tells the content owner EXACTLY what to change so that Google AI Overview, Perplexity, Microsoft Copilot, and Claude all cite this page in their answers.
+
+INPUT DATA:
+- Page URL: ${pageUrl}
+- Target keyword: "${kw}"
+- Google position: ${snapshot.google_position || 'not ranked'}
+- Google AI Overview cited: ${snapshot.ai_google_overview_cited ? 'YES' : 'NO'}
+- Perplexity cited: ${snapshot.ai_perplexity_cited ? 'YES' : 'NO'}
+- Microsoft Copilot cited: ${snapshot.ai_bing_cited ? 'YES' : 'NO'}
+- Claude/Brave cited: ${snapshot.ai_brave_cited ? 'YES' : 'NO'}
+- GRAAF score: ${snapshot.score || '?'}/100
+- Page HTML content (first 3000 chars): ${htmlExcerpt.substring(0,3000) || '(no HTML)'}
+- Previous brief actions (if any): ${JSON.stringify((page.brief_content?.items || []).slice(0,3))}
+- Competitor #1: ${competitor1 ? competitor1.url + ' — ' + competitor1.title : 'no data'}
+
+CITATION SYSTEM REQUIREMENTS (use these to write actions):
+
+Google AI Overview:
+- Needs a direct, quotable definition in first 100 words
+- Needs structured data (FAQ, HowTo, or Article schema)
+- Needs the exact question answered that users search for
+- Prefers pages already ranking in top 10
+
+Perplexity:
+- Needs clear author credentials and E-E-A-T signals with specifics (years, clients count, notable results)
+- Needs specific data points, statistics, or original research
+- Needs outbound links to authoritative sources
+- Loves numbered lists and step-by-step formats
+
+Microsoft Copilot:
+- Needs clear H2/H3 structure matching search queries
+- Needs a concise summary paragraph (50-80 words) near top
+-干实事 Needs the keyword in H1, first paragraph, and meta title
+- Pulls from Bing index — needs Bing-optimized meta tags
+
+Claude/Brave:
+- Needs factual, verifiable claims with sources
+- Needs a clear "About the author" section
+- Needs the page to load fast and be mobile-optimized
+- Prefers pages with consistent publishing history
+
+TASK:
+Analyze the input data and create a Citation Brief with exactly 5 actions. Each action must be:
+1. Specific to ONE citation system (or ranking)
+2. Copy-paste ready — give the EXACT sentence, paragraph, schema code, or HTML the user needs to add
+3. Prioritized: HIGH (blocks all citations), MEDIUM (improves 1-2 systems), LOW (incremental gain)
+4. Measurable: state which AI system will cite the page and why, based on the specific requirement above
+
+ACTIONS THAT ARE ALREADY RESOLVED — DO NOT INCLUDE THESE:`
++ (snapshot.ai_google_overview_cited ? '\n- AIO cites this page → SKIP all Google AIO actions' : '')
++ (snapshot.ai_perplexity_cited ? '\n- Perplexity cites this page → SKIP all Perplexity actions' : '')
++ (snapshot.ai_bing_cited ? '\n- Copilot cites this page → SKIP all Copilot actions' : '')
++ (snapshot.ai_brave_cited ? '\n- Claude/Brave cites this page → SKIP all Claude actions' : '')
++ (snapshot.google_position && snapshot.google_position <= 3 ? '\n- Position #'+snapshot.google_position+' → SKIP basic ranking actions' : '')
++ `\n- Remove any actions from previous brief that are now done
+
+OUTPUT FORMAT — return ONLY this JSON, no markdown, no explanation, no preamble:
+[{"title":"6 words max describing the gap","priority":"high","system":"Google AIO","action":"Add this exact text after your H1 heading: '[EXACT 40-60 word paragraph they should copy-paste]'. This triggers Google AI Overview because [specific reason based on AIO requirements above].","expected_impact":"Google AIO will cite this page within 2-3 crawl cycles because [specific technical reason]"}]
+
+QUALITY BAR: Every action must be so specific that the user can implement it in under 10 minutes without asking any follow-up questions. If you write "improve your introduction" you have failed. Write the introduction FOR them.`;
       // ── CALL 2: GSC Ranking Brief ──────────────────────────────────────
-      const gscPrompt = 'You are a Google Search Console Analyst. Create a GSC Brief: 4 data-driven actions to move this page to rank #1.\n\n' +
-'INPUT:\n' +
-'- URL: ' + page.url + '\n' +
-'- Keyword: "' + kw + '"\n' +
-'- GSC Clicks: ' + (gscClicks||'n/a') + '\n' +
-'- GSC Impressions: ' + (gscImpr||'n/a') + '\n' +
-'- GSC CTR: ' + (gscCtr||'n/a') + '%\n' +
-'- GSC Position: ' + (gscPos||'n/a') + '\n' +
-'- Live Google position: ' + (snapshot.google_position||'not ranked') + '\n' +
-'- GRAAF score: ' + (snapshot.score||'?') + '/100\n' +
-(gscOpp ? '- ' + gscOpp + '\n' : '') +
-'\nCOMPETITOR #1:\n' +
-(competitor1 ? 'URL: ' + competitor1.url + '\nTitle: ' + competitor1.title + '\nSnippet: ' + competitor1.snippet : '(no data)') + '\n\n' +
-'PAGE HTML (first 5000 chars):\n' +
-(htmlExcerpt || '(no HTML)') + '\n\n' +
-'GSC SIGNALS:\n' +
-'- Impressions >1000 + CTR <3% = title/meta problem → rewrite title\n' +
-'- Position 4-10 with decent CTR = one content gap blocking #1 → find it in competitor snippet\n' +
-'- Position >20 = fundamental relevance gap → rewrite intro + H1\n' +
-'- CTR <1% = severe title mismatch → complete title overhaul\n\n' +
-'EXAMPLE of a correct action:\n' +
-'{"title":"Rewrite title for CTR","priority":"high","trigger":"' + (gscImpr||'X') + ' impressions at ' + (gscCtr||'Y') + '% CTR = title mismatch — expected CTR at position ' + (snapshot.google_position||'?') + ' is 8-12%","action":"Replace your current title tag with: \\"' + kw + ': [Specific benefit] — [Year] Guide\\". Change this in your WordPress SEO plugin (Yoast/RankMath) title field. Current title loses clicks because it lacks the year and primary benefit. New title targets 8%+ CTR.","expected_impact":"Position ' + (snapshot.google_position||'?') + ' → ' + Math.max(1,(snapshot.google_position||10)-4) + ' within 3-4 weeks after Google recrawls","effort":"quick_win"}\n\n' +
-'FAIL EXAMPLES — never write these:\n' +
-'"Improve your content" — write the actual content\n' +
-'"Add more internal links" — write the exact anchor text and which page\n' +
-'"Optimize meta description" — write the exact new meta description\n\n' +
-'REQUIRED: include 1 quick_win (under 5 min), 1 content gap vs competitor #1, 1 freshness action.\n\n' +
-'Return ONLY valid JSON array, no markdown:\n' +
-'[{"title":"max 6 words","priority":"high|medium|low","trigger":"exact GSC signal: X impressions, Y% CTR = problem type","action":"EXACT implementation — write the title, paragraph, schema verbatim","expected_impact":"Position X \u2192 Y within Z weeks","effort":"quick_win|content|technical"}]';
+      const gscPrompt = `You are a Google Search Console Analyst and SEO Strategist. Your job is to create a GSC Brief — a data-driven action plan to move a page from its current position to RANK #1.
 
+INPUT DATA:
+- Page URL: ${pageUrl}
+- Target keyword: "${kw}"
+- GSC Clicks (last 28 days): ${gscClicks || 'n/a'}
+- GSC Impressions (last 28 days): ${gscImpr || 'n/a'}
+- GSC CTR: ${gscCtr || 'n/a'}%
+- GSC Average position: ${gscPos || 'n/a'}
+- Live Google position: ${snapshot.google_position || 'not ranked'}
+- GRAAF score: ${snapshot.score || '?'}/100
+- Page HTML content (first 3000 chars): ${htmlExcerpt.substring(0,3000) || '(no HTML)'}
+- Competitor #1 URL: ${competitor1 ? competitor1.url : 'no data'}
+- Competitor #1 title: ${competitor1 ? competitor1.title : 'no data'}
+- Competitor #1 snippet: ${competitor1 ? competitor1.snippet : 'no data'}
+
+GSC INTERPRETATION RULES:
+- Impressions > 1000 but CTR < 3%: title/meta problem → rewrite title
+- Impressions > 1000 but position > 10: content depth problem → expand content
+- Position 4-10 with good CTR: one strong content gap blocking #1 → find it
+- Position > 20: fundamental relevance or authority problem → rewrite + backlinks
+- CTR < 1%: severe title mismatch with search intent → complete title overhaul
+- Clicks but position dropping: freshness signal needed → update content
+
+WHAT DRIVES RANK #1 IN 2025-2026:
+1. Content that directly answers the query better than #1
+2. E-E-A-T: real experience signals, not just expertise claims
+3. Page speed and Core Web Vitals
+4. Internal linking authority from strongest pages
+5. Schema markup that enables rich snippets
+6. Content freshness: updated date, new data, new examples
+7. Keyword in title tag, H1, first 100 words, URL slug
+8. Outbound links to authoritative sources (signals trust)
+
+TASK:
+Analyze the GSC data and create a GSC Brief with exactly 4 actions to reach rank #1 for "${kw}".
+
+Each action must include:
+1. The specific GSC signal that triggered this recommendation (e.g. "CTR of 2.7% at position 14 = title problem")
+2. The exact change to make — write the new title tag, the new paragraph, the schema block, the internal link anchor text — NOT a suggestion, the actual text
+3. The expected position improvement (e.g. "position 14 → 8")
+4. The timeframe (e.g. "within 2-4 weeks after Google recrawl")
+
+REQUIRED ACTION TYPES:
+- One "Quick Win" action completable in under 5 minutes
+- One "Content Gap" action based on what competitor #1 has that this page lacks
+- A freshness recommendation if the page content appears dated
+
+OUTPUT FORMAT — return ONLY this JSON, no markdown:
+[{"title":"6 words max","priority":"high","trigger":"Specific GSC signal that triggered this (e.g. '9,196 impressions, 2.7% CTR = title mismatch')","action":"Exact implementation: [copy-paste ready text, code, or HTML]","expected_impact":"Position {current} → {target} within {timeframe}","effort":"quick_win"}]
+
+QUALITY BAR: A user with zero SEO knowledge must be able to implement every action. Write the new title tag. Write the new paragraph. Write the schema. If you say "add more content" without writing the content, you have failed.
+
+GOAL: Rank #1 for "${kw}" and capture the maximum clicks from ${gscImpr || 'the available'} monthly impressions.`;
       // Run both in parallel
       const [citResp, gscResp] = await Promise.all([
         callGeminiWithFallback(geminiKey, {
