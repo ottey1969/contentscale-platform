@@ -1303,7 +1303,9 @@ app.get('/api/tracker-client/:token/pages/:pageId', async (req, res) => {
       SELECT p.*, p.check_frequency,
              s.google_position, s.ai_google_overview_cited, s.ai_perplexity_cited,
              s.ai_bing_cited, s.ai_brave_cited, s.score as graaf_score,
-             s.checked_at as last_checked, s.recommendations
+             s.checked_at as last_checked, s.recommendations,
+             s.source_suggestions, s.discovered_sources, s.gsc_brief,
+             s.author_trust_score, s.author_trust_findings
       FROM tracker_pages p
       LEFT JOIN LATERAL (
         SELECT * FROM tracker_snapshots WHERE page_id = p.id ORDER BY checked_at DESC LIMIT 1
@@ -27342,7 +27344,18 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
       bing_cited: !!(snap.ai_bing_cited),
       brave_cited: !!(snap.ai_brave_cited),
       score: snap.score || snap.graaf_score || snap.last_graaf_score || null,
-      passages: Array.isArray(snap.recommendations) ? snap.recommendations : []
+      passages: Array.isArray(snap.recommendations) ? snap.recommendations : [],
+      gsc_brief: Array.isArray(snap.gsc_brief) ? snap.gsc_brief : [],
+      source_suggestions: Array.isArray(snap.source_suggestions) ? snap.source_suggestions : [],
+      discovered_sources: Array.isArray(snap.discovered_sources) ? snap.discovered_sources : [],
+      author_trust_score: snap.author_trust_score || 0,
+      author_trust_findings: Array.isArray(snap.author_trust_findings) ? snap.author_trust_findings : [],
+      gsc_clicks: snap.gsc_clicks != null ? snap.gsc_clicks : null,
+      gsc_impressions: snap.gsc_impressions != null ? snap.gsc_impressions : null,
+      gsc_position: snap.gsc_position != null ? snap.gsc_position : null,
+      gsc_keyword: snap.gsc_keyword || null,
+      _gsc_enabled: GSC_ENABLED || (snap.gsc_clicks != null) || (snap.gsc_impressions != null) || (snap.gsc_position != null),
+      type: 'brief_ready'
     };
     return; // EXIT — no overlay, inline brief shows data
   }
