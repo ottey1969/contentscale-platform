@@ -1855,8 +1855,6 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
 .lw-domain{font-size:12px;color:#6b7280}
 .lw-clock{font-size:14px;font-weight:700;color:#a78bfa;font-variant-numeric:tabular-nums}
 .lw-container{max-width:900px;margin:0 auto;padding:80px 16px 40px}
-.lw-empty{text-align:center;padding:60px 20px;color:#4b5563;font-size:14px}
-.lw-empty-icon{font-size:3rem;margin-bottom:12px;opacity:.5}
 .lw-card{background:#0d1117;border:1px solid #1f2937;border-radius:14px;margin-bottom:16px;overflow:hidden;animation:lwCardIn .6s cubic-bezier(.16,1,.3,1);position:relative}
 @keyframes lwCardIn{from{opacity:0;transform:translateY(40px) scale(.96)}to{opacity:1;transform:translateY(0) scale(1)}}
 .lw-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#7c3aed,#4ade80,#fbbf24,#ef4444);opacity:.6}
@@ -1883,10 +1881,27 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
 .lw-scroll-hint.show{opacity:1}
 .lw-new-badge{position:absolute;top:10px;right:10px;background:#ef4444;color:#fff;font-size:9px;font-weight:800;padding:2px 8px;border-radius:10px;animation:lwBadgeIn .5s ease}
 @keyframes lwBadgeIn{from{transform:scale(0)}to{transform:scale(1)}}
-@media(max-width:640px){.lw-container{padding:70px 8px 30px}.lw-card-stats{gap:6px}.lw-stat{min-width:60px;padding:6px 8px}}
+/* Screensaver */
+.lw-saver{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:50;transition:opacity .8s ease}
+.lw-saver.hidden{opacity:0;pointer-events:none}
+.lw-saver-clock{font-size:clamp(4rem,12vw,10rem);font-weight:900;color:#1f2937;line-height:1;letter-spacing:-.04em;font-variant-numeric:tabular-nums;animation:lwClockPulse 3s ease-in-out infinite}
+@keyframes lwClockPulse{0%,100%{color:#1f2937}50%{color:#374151}}
+.lw-saver-label{font-size:13px;color:#4b5563;margin-top:16px;letter-spacing:.15em;text-transform:uppercase}
+.lw-saver-tips{max-width:520px;text-align:center;margin-top:32px;padding:0 20px}
+.lw-saver-tip{font-size:14px;color:#6b7280;line-height:1.7;animation:lwTipFade 6s ease-in-out infinite}
+@keyframes lwTipFade{0%,100%{opacity:0;transform:translateY(8px)}15%,85%{opacity:1;transform:translateY(0)}}
+.lw-particles{position:fixed;inset:0;pointer-events:none;z-index:1;overflow:hidden}
+.lw-particle{position:absolute;width:3px;height:3px;border-radius:50%;background:rgba(124,58,237,.25);animation:lwFloat linear infinite}
+@keyframes lwFloat{0%{transform:translateY(100vh) scale(0);opacity:0}10%{opacity:1}90%{opacity:1}100%{transform:translateY(-10vh) scale(1);opacity:0}}
+.lw-stats-bar{position:fixed;bottom:0;left:0;right:0;background:rgba(6,6,15,.95);border-top:1px solid #1f2937;padding:10px 20px;display:flex;justify-content:center;gap:32px;z-index:100;font-size:11px}
+.lw-sb-item{text-align:center}
+.lw-sb-num{font-size:16px;font-weight:800;font-variant-numeric:tabular-nums}
+.lw-sb-lbl{font-size:9px;color:#6b7280;text-transform:uppercase;letter-spacing:.08em;margin-top:2px}
+@media(max-width:640px){.lw-container{padding:70px 8px 30px}.lw-card-stats{gap:6px}.lw-stat{min-width:60px;padding:6px 8px}.lw-stats-bar{gap:16px;padding:8px 10px}}
 </style>
 </head>
 <body>
+<div class="lw-particles" id="lwParticles"></div>
 <div class="lw-header">
   <div class="lw-header-left">
     <div class="lw-dot"></div>
@@ -1897,29 +1912,79 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
   </div>
   <div class="lw-clock" id="lwClock">--:--:--</div>
 </div>
-<div class="lw-container" id="lwContainer">
-  <div class="lw-empty" id="lwEmpty">
-    <div class="lw-empty-icon">📡</div>
-    <div>Waiting for scans...</div>
-    <div style="font-size:12px;margin-top:8px">When a scan completes, the brief will appear here automatically.</div>
+
+<div class="lw-saver" id="lwSaver">
+  <div class="lw-saver-clock" id="lwSaverClock">00:00</div>
+  <div class="lw-saver-label">Waiting for next scan</div>
+  <div class="lw-saver-tips">
+    <div class="lw-saver-tip" id="lwTip">Pages scanned by AI are analyzed for Google, Perplexity, Copilot &amp; Claude citations</div>
   </div>
 </div>
+
+<div class="lw-container" id="lwContainer"></div>
+
+<div class="lw-stats-bar" id="lwStatsBar" style="display:none;">
+  <div class="lw-sb-item"><div class="lw-sb-num" id="lwSbBriefs" style="color:#a78bfa">0</div><div class="lw-sb-lbl">Briefs</div></div>
+  <div class="lw-sb-item"><div class="lw-sb-num" id="lwSbScans" style="color:#38bdf8">0</div><div class="lw-sb-lbl">Scans</div></div>
+  <div class="lw-sb-item"><div class="lw-sb-num" id="lwSbCited" style="color:#4ade80">0</div><div class="lw-sb-lbl">AI Cited</div></div>
+  <div class="lw-sb-item"><div class="lw-sb-num" id="lwSbPos" style="color:#fbbf24">0</div><div class="lw-sb-lbl">Avg Pos</div></div>
+</div>
+
 <div class="lw-scroll-hint" id="lwScrollHint">⬇ New brief — scrolling down</div>
 <script>
 (function(){
   var container = document.getElementById('lwContainer');
-  var emptyEl = document.getElementById('lwEmpty');
+  var saverEl = document.getElementById('lwSaver');
+  var saverClock = document.getElementById('lwSaverClock');
+  var tipEl = document.getElementById('lwTip');
   var scrollHint = document.getElementById('lwScrollHint');
   var clockEl = document.getElementById('lwClock');
+  var statsBar = document.getElementById('lwStatsBar');
+  var sbBriefs = document.getElementById('lwSbBriefs');
+  var sbScans = document.getElementById('lwSbScans');
+  var sbCited = document.getElementById('lwSbCited');
+  var sbPos = document.getElementById('lwSbPos');
   var briefCount = 0;
+  var scanCount = 0;
+  var totalPos = 0;
   var isAutoScrolling = false;
+  var hasBriefs = false;
+
+  var tips = [
+    'Pages scanned by AI are analyzed for Google, Perplexity, Copilot & Claude citations',
+    'Add FAQ schema to increase chances of being cited in Google AI Overview',
+    'Pages with definitions in the first 100 words get cited more often',
+    'Include author bios with credentials to boost E-E-A-T trust signals',
+    'Internal links help AI systems understand your content structure',
+    'Update old content regularly — freshness is a ranking signal',
+    'Add comparison tables — AI systems love structured data',
+    'Include statistics with sources to make claims verifiable'
+  ];
+  var tipIdx = 0;
+  setInterval(function(){
+    tipIdx = (tipIdx + 1) % tips.length;
+    tipEl.textContent = tips[tipIdx];
+  }, 6000);
 
   function updateClock() {
     var now = new Date();
     clockEl.textContent = now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    saverClock.textContent = now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
   }
   setInterval(updateClock, 1000);
   updateClock();
+
+  var particles = document.getElementById('lwParticles');
+  for(var i=0;i<30;i++){
+    var p = document.createElement('div');
+    p.className = 'lw-particle';
+    p.style.left = Math.random()*100+'%';
+    p.style.animationDuration = (12+Math.random()*20)+'s';
+    p.style.animationDelay = (Math.random()*15)+'s';
+    p.style.width = p.style.height = (2+Math.random()*3)+'px';
+    p.style.background = ['rgba(124,58,237,.2)','rgba(74,222,128,.15)','rgba(251,191,36,.15)','rgba(56,189,248,.15)'][Math.floor(Math.random()*4)];
+    particles.appendChild(p);
+  }
 
   function showScrollHint() {
     scrollHint.classList.add('show');
@@ -1933,33 +1998,34 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
     var end = document.body.scrollHeight - window.innerHeight;
     var duration = 1500;
     var startTime = null;
-
     function step(timestamp) {
       if (!startTime) startTime = timestamp;
       var progress = Math.min((timestamp - startTime) / duration, 1);
       var ease = 1 - Math.pow(1 - progress, 3);
       window.scrollTo(0, start + (end - start) * ease);
-      if (progress < 1) {
-        requestAnimationFrame(step);
-      } else {
-        isAutoScrolling = false;
-      }
+      if (progress < 1) { requestAnimationFrame(step); } else { isAutoScrolling = false; }
     }
     requestAnimationFrame(step);
   }
 
   function createBriefCard(data) {
     briefCount++;
-    if (emptyEl) emptyEl.style.display = 'none';
+    if (!hasBriefs) {
+      hasBriefs = true;
+      saverEl.classList.add('hidden');
+      statsBar.style.display = 'flex';
+    }
 
     var card = document.createElement('div');
     card.className = 'lw-card';
 
-    var pos = data.position || 'N/A';
+    var pos = data.position || data.pos || 'N/A';
     var posColor = pos <= 3 ? '#4ade80' : pos <= 10 ? '#fbbf24' : '#f87171';
+    var posNum = parseInt(pos, 10);
+    if (!isNaN(posNum)) { totalPos += posNum; }
 
     var actionsHtml = '';
-    var passages = data.passages || data.recommendations || [];
+    var passages = data.passages || data.recommendations || (data.brief_content && data.brief_content.items) || [];
     if (passages.length) {
       passages.slice(0, 4).forEach(function(p) {
         var pri = (p.priority || 'low').toLowerCase();
@@ -1982,50 +2048,57 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
     card.innerHTML =
       '<div class="lw-new-badge">NEW</div>' +
       '<div class="lw-card-header">' +
-        '<div class="lw-card-url">' + (data.url || '') + '</div>' +
+        '<div class="lw-card-url">' + (data.url || data.domain || '') + '</div>' +
         '<div class="lw-card-time">' + timeStr + '</div>' +
       '</div>' +
       '<div class="lw-card-stats">' +
-        '<div class="lw-stat"><div class="lw-stat-val" style="color:' + posColor + '">' + (pos ? '#' + pos : 'N/A') + '</div><div class="lw-stat-lbl">Position</div></div>' +
-        '<div class="lw-stat"><div class="lw-stat-val" style="color:' + (data.aio_cited ? '#4ade80' : '#4b5563') + '">' + (data.aio_cited ? '✓' : '✗') + '</div><div class="lw-stat-lbl">AIO</div></div>' +
-        '<div class="lw-stat"><div class="lw-stat-val" style="color:' + (data.perp_cited ? '#a78bfa' : '#4b5563') + '">' + (data.perp_cited ? '✓' : '✗') + '</div><div class="lw-stat-lbl">Perplexity</div></div>' +
-        '<div class="lw-stat"><div class="lw-stat-val" style="color:' + (data.bing_cited ? '#60a5fa' : '#4b5563') + '">' + (data.bing_cited ? '✓' : '✗') + '</div><div class="lw-stat-lbl">Copilot</div></div>' +
-        '<div class="lw-stat"><div class="lw-stat-val" style="color:' + (data.brave_cited ? '#f87171' : '#4b5563') + '">' + (data.brave_cited ? '✓' : '✗') + '</div><div class="lw-stat-lbl">Claude</div></div>' +
+        '<div class="lw-stat"><div class="lw-stat-val" style="color:' + posColor + '">' + (pos && pos !== 'N/A' ? '#' + pos : 'N/A') + '</div><div class="lw-stat-lbl">Position</div></div>' +
+        '<div class="lw-stat"><div class="lw-stat-val" style="color:' + (data.aio_cited ? '#4ade80' : '#4b5563') + '">' + (data.aio_cited ? 'YES' : 'NO') + '</div><div class="lw-stat-lbl">AIO</div></div>' +
+        '<div class="lw-stat"><div class="lw-stat-val" style="color:' + (data.perp_cited ? '#a78bfa' : '#4b5563') + '">' + (data.perp_cited ? 'YES' : 'NO') + '</div><div class="lw-stat-lbl">Perplexity</div></div>' +
+        '<div class="lw-stat"><div class="lw-stat-val" style="color:' + (data.bing_cited ? '#60a5fa' : '#4b5563') + '">' + (data.bing_cited ? 'YES' : 'NO') + '</div><div class="lw-stat-lbl">Copilot</div></div>' +
+        '<div class="lw-stat"><div class="lw-stat-val" style="color:' + (data.brave_cited ? '#f87171' : '#4b5563') + '">' + (data.brave_cited ? 'YES' : 'NO') + '</div><div class="lw-stat-lbl">Claude</div></div>' +
         '<div class="lw-stat"><div class="lw-stat-val" style="color:#fbbf24">' + (data.score || '—') + '</div><div class="lw-stat-lbl">GRAAF</div></div>' +
       '</div>' +
       '<div class="lw-card-actions">' + actionsHtml + '</div>';
 
     container.appendChild(card);
 
-    // Smooth scroll to new card
+    sbBriefs.textContent = briefCount;
+    sbScans.textContent = ++scanCount;
+    sbCited.textContent = (data.aio_cited||data.perp_cited||data.bing_cited||data.brave_cited) ? (parseInt(sbCited.textContent)||0)+1 : (parseInt(sbCited.textContent)||0);
+    sbPos.textContent = totalPos ? Math.round(totalPos / briefCount) : '—';
+
     setTimeout(smoothScrollToBottom, 100);
 
-    // Remove old cards (keep max 20)
     var cards = container.querySelectorAll('.lw-card');
     if (cards.length > 20) {
       cards[0].style.opacity = '0';
       cards[0].style.transform = 'translateY(-20px)';
       cards[0].style.transition = 'all .5s ease';
-      setTimeout(function() { if (cards[0].parentNode) cards[0].parentNode.removeChild(cards[0]); }, 500);
+      setTimeout(function() { if (cards[0] && cards[0].parentNode) cards[0].parentNode.removeChild(cards[0]); }, 500);
     }
   }
 
-  // Connect to SSE
-  var evtSource = new EventSource('/api/tracker-client/${req.params.token}/live-events');
+  var evtSource = new EventSource('/api/tracker-client/${req.params.token}/live-wall-stream');
   evtSource.addEventListener('brief_ready', function(ev) {
     try {
       var data = JSON.parse(ev.data);
+      console.log('[live-wall] brief_ready received:', data.url || data.domain || 'unknown');
       createBriefCard(data);
     } catch(e) { console.error('Live wall parse error:', e); }
   });
-  evtSource.onerror = function() {
-    console.log('Live wall SSE error — reconnecting...');
+  evtSource.addEventListener('check_start', function(ev) {
+    try { var data = JSON.parse(ev.data); console.log('[live-wall] check_start:', data.domain || data.url || 'unknown'); } catch(e) {}
+  });
+  evtSource.onerror = function(err) {
+    console.log('Live wall SSE error — reconnecting...', err);
   };
-
-  // Heartbeat to keep connection alive
+  evtSource.onopen = function() {
+    console.log('[live-wall] SSE connected');
+  };
   evtSource.addEventListener('ping', function() {});
 })();
-</script>
+\x3c/script>
 </body>
 </html>`);
   } catch(e) { res.status(500).send('Error'); }
@@ -28093,12 +28166,13 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 </div>
 
                 <!-- ── OVERLAY MODE ── -->
-                <div id="csLiveOverlay" style="display:none;position:fixed;inset:0;background:rgba(5,5,10,.92);z-index:9990;backdrop-filter:blur(4px);">
-                    <div style="position:absolute;top:16px;right:16px;">
+                <div id="csLiveOverlay" style="display:none;position:fixed;inset:0;background:rgba(5,5,10,.92);z-index:9990;backdrop-filter:blur(4px);overflow-y:auto;">
+                    <div style="position:absolute;top:16px;right:16px;z-index:9991;">
                         <button onclick="toggleLiveOverlay()" style="background:#1f2937;border:1px solid #374151;color:#9ca3af;padding:8px 16px;border-radius:6px;cursor:pointer;font-size:12px;">✕ Close overlay</button>
                     </div>
+                    <div style="min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 20px;">
                     <!-- Header -->
-                    <div style="text-align:center;padding-top:40px;margin-bottom:24px;">
+                    <div style="text-align:center;margin-bottom:24px;">
                         <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.2em;color:#7c3aed;margin-bottom:8px;">ContentScale</div>
                         <div style="display:inline-flex;align-items:center;gap:8px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:99px;padding:6px 16px;">
                             <span id="csOvDot" style="width:8px;height:8px;border-radius:50%;background:#ef4444;animation:cs-pulse 1.2s ease-in-out infinite;"></span>
@@ -28112,21 +28186,23 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     <!-- Alert area -->
                     <div id="csOvAlert" style="display:none;margin:0 auto 32px;max-width:560px;border-radius:16px;padding:32px 40px;text-align:center;"></div>
                     <!-- Stats row -->
-                    <div style="display:flex;justify-content:center;gap:40px;margin-bottom:32px;">
-                        <div style="text-align:center;"><div id="csOvChecked" style="font-size:2rem;font-weight:900;color:#a78bfa;">0</div><div style="font-size:10px;color:#4b5563;text-transform:uppercase;letter-spacing:.08em;margin-top:4px;">Checked today</div></div>
-                        <div style="text-align:center;"><div id="csOvCited" style="font-size:2rem;font-weight:900;color:#4ade80;">0</div><div style="font-size:10px;color:#4b5563;text-transform:uppercase;letter-spacing:.08em;margin-top:4px;">AI Citations</div></div>
-                        <div style="text-align:center;"><div id="csOvPositions" style="font-size:2rem;font-weight:900;color:#fbbf24;">0</div><div style="font-size:10px;color:#4b5563;text-transform:uppercase;letter-spacing:.08em;margin-top:4px;">Positions up</div></div>
+                    <div style="display:flex;justify-content:center;align-items:center;gap:clamp(24px,5vw,48px);margin-bottom:32px;flex-wrap:wrap;padding:0 20px;">
+                        <div style="text-align:center;min-width:80px;"><div id="csOvChecked" style="font-size:clamp(1.5rem,3vw,2rem);font-weight:900;color:#a78bfa;">0</div><div style="font-size:10px;color:#4b5563;text-transform:uppercase;letter-spacing:.08em;margin-top:4px;">Checked</div></div>
+                        <div style="text-align:center;min-width:80px;"><div id="csOvCited" style="font-size:clamp(1.5rem,3vw,2rem);font-weight:900;color:#4ade80;">0</div><div style="font-size:10px;color:#4b5563;text-transform:uppercase;letter-spacing:.08em;margin-top:4px;">AI Citations</div></div>
+                        <div style="text-align:center;min-width:80px;"><div id="csOvPositions" style="font-size:clamp(1.5rem,3vw,2rem);font-weight:900;color:#fbbf24;">0</div><div style="font-size:10px;color:#4b5563;text-transform:uppercase;letter-spacing:.08em;margin-top:4px;">Positions Up</div></div>
+                        <div style="text-align:center;min-width:80px;"><div id="csOvScores" style="font-size:clamp(1.5rem,3vw,2rem);font-weight:900;color:#f472b6;">0</div><div style="font-size:10px;color:#4b5563;text-transform:uppercase;letter-spacing:.08em;margin-top:4px;">Scores Up</div></div>
                     </div>
                     <!-- Live log in overlay -->
-                    <div style="max-width:700px;margin:0 auto;padding:0 24px;">
+                    <div style="max-width:700px;margin:0 auto;padding:0 24px;width:100%;">
                         <div id="csOvLog" style="max-height:220px;overflow-y:auto;"></div>
                     </div>
+                    </div><!-- /flex center container -->
                 </div>
 
                 <script>
                 var _wallEs = null;
                 var _wallEvents = [];
-                var _overlayStats = { checked:0, cited:0, positions:0 };
+                var _overlayStats = { checked:0, cited:0, positions:0, scores:0 };
                 var _overlayVisible = false;
                 var _alertHideTimer = null;
                 var _sseRetryDelay = 10000; // start at 10s, max 120s
@@ -28243,6 +28319,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     if (ev.type === 'check_done') { _overlayStats.checked++; _updateOverlayStats(); }
                     if (ev.type === 'citation_gained') { _overlayStats.cited++; _updateOverlayStats(); _showOverlayAlert(ev); }
                     if (ev.type === 'position_up') { _overlayStats.positions++; _updateOverlayStats(); _showOverlayAlert(ev); }
+                    if (ev.type === 'score_up') { _overlayStats.scores++; _updateOverlayStats(); }
                     // Also show in activity feed
                     if (typeof _activityAdd === 'function' && (ev.type === 'citation_gained' || ev.type === 'position_up' || ev.type === 'check_done')) {
                         _activityAdd(_evToText(ev), ev.type === 'citation_gained' ? 'done' : ev.type === 'position_up' ? 'citation' : 'info');
@@ -28341,6 +28418,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     if(el('csOvChecked')) el('csOvChecked').textContent = _overlayStats.checked;
                     if(el('csOvCited')) el('csOvCited').textContent = _overlayStats.cited;
                     if(el('csOvPositions')) el('csOvPositions').textContent = _overlayStats.positions;
+                    if(el('csOvScores')) el('csOvScores').textContent = _overlayStats.scores;
                 }
 
                 function _showOverlayAlert(ev) {
@@ -30728,6 +30806,48 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
             } catch(e) { console.warn('loadMessages error:', e.message); }
         }
 
+        async function toggleLiveWall() {
+            var cb = document.getElementById('settingLiveWall');
+            var status = document.getElementById('liveWallStatus');
+            var urlBox = document.getElementById('liveWallUrl');
+            var enabled = cb.checked;
+            try {
+                status.style.display = 'block';
+                status.textContent = enabled ? 'Enabling...' : 'Disabling...';
+                status.style.color = '#fbbf24';
+                var clientList = await apiCall('/api/admin/tracker-clients');
+                if (!clientList.success || !clientList.clients || !clientList.clients.length) {
+                    status.textContent = 'No tracker clients found. Create one first.';
+                    status.style.color = '#f59e0b';
+                    cb.checked = !enabled;
+                    return;
+                }
+                var client = clientList.clients[0];
+                var d = await apiCall('/api/admin/tracker-clients/' + client.id + '/live-wall', 'POST', { enabled: enabled });
+                if (d.success) {
+                    status.textContent = enabled ? '✅ Live Wall enabled!' : '⏹️ Live Wall disabled.';
+                    status.style.color = enabled ? '#4ade80' : '#6b7280';
+                    if (enabled) {
+                        urlBox.style.display = 'block';
+                        var base = window.location.origin;
+                        urlBox.innerHTML = '<div style="margin-bottom:4px;font-weight:700;">🔗 Live Wall URL:</div>' +
+                            '<a href="' + base + '/track/' + client.token + '/live" target="_blank" style="color:#4ade80;text-decoration:none;">' + base + '/track/' + client.token + '/live</a>' +
+                            '<div style="margin-top:6px;font-size:10px;color:#6b7280;">Open this URL on a TV or second screen</div>';
+                    } else {
+                        urlBox.style.display = 'none';
+                    }
+                } else {
+                    status.textContent = 'Error: ' + (d.error || 'Failed');
+                    status.style.color = '#ef4444';
+                    cb.checked = !enabled;
+                }
+            } catch(e) {
+                status.textContent = 'Error: ' + e.message;
+                status.style.color = '#ef4444';
+                cb.checked = !enabled;
+            }
+        }
+
         async function loadAdminSettings() {
             try {
                 var d = await apiCall('/api/admin/settings');
@@ -30741,6 +30861,25 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     'SENDER_NAME: ' + (s.sender_name || 'not set') + '<br>' +
                     'BREVO: configured via Railway env var<br>' +
                     'TELEGRAM_BOT_TOKEN: configured via Railway env var';
+                // Load live wall status
+                try {
+                    var cl = await apiCall('/api/admin/tracker-clients');
+                    if (cl.success && cl.clients && cl.clients.length) {
+                        var c = cl.clients[0];
+                        var cb = document.getElementById('settingLiveWall');
+                        var urlBox = document.getElementById('liveWallUrl');
+                        if (cb) cb.checked = !!c.live_wall_enabled;
+                        if (urlBox && c.live_wall_enabled) {
+                            urlBox.style.display = 'block';
+                            var base = window.location.origin;
+                            urlBox.innerHTML = '<div style="margin-bottom:4px;font-weight:700;">🔗 Live Wall URL:</div>' +
+                                '<a href="' + base + '/track/' + c.token + '/live" target="_blank" style="color:#4ade80;text-decoration:none;">' + base + '/track/' + c.token + '/live</a>' +
+                                '<div style="margin-top:6px;font-size:10px;color:#6b7280;">Open this URL on a TV or second screen</div>';
+                        } else if (urlBox) {
+                            urlBox.style.display = 'none';
+                        }
+                    }
+                } catch(e2) { /* ignore */ }
             } catch(e) { console.warn('Settings load failed:', e.message); }
         }
 
@@ -30833,48 +30972,6 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     resultEl.innerHTML = '<span style="color:#f59e0b;">⚠️ ' + (r.email || 'Brevo key: ' + r.brevo_key) + '</span>';
                 }
             } catch(e) { resultEl.innerHTML = '<span style="color:#ef4444;">Error: ' + e.message + '</span>'; }
-        }
-
-        async function toggleLiveWall() {
-            var cb = document.getElementById('settingLiveWall');
-            var status = document.getElementById('liveWallStatus');
-            var urlBox = document.getElementById('liveWallUrl');
-            var enabled = cb.checked;
-            try {
-                status.style.display = 'block';
-                status.textContent = enabled ? 'Enabling...' : 'Disabling...';
-                status.style.color = '#fbbf24';
-                var clientList = await apiCall('/api/admin/tracker-clients');
-                if (!clientList.success || !clientList.clients || !clientList.clients.length) {
-                    status.textContent = 'No tracker clients found. Create one first.';
-                    status.style.color = '#f59e0b';
-                    cb.checked = !enabled;
-                    return;
-                }
-                var client = clientList.clients[0];
-                var d = await apiCall('/api/admin/tracker-clients/' + client.id + '/live-wall', 'POST', { enabled: enabled });
-                if (d.success) {
-                    status.textContent = enabled ? '✅ Live Wall enabled!' : '⏹️ Live Wall disabled.';
-                    status.style.color = enabled ? '#4ade80' : '#6b7280';
-                    if (enabled) {
-                        urlBox.style.display = 'block';
-                        var base = window.location.origin;
-                        urlBox.innerHTML = '<div style="margin-bottom:4px;font-weight:700;">🔗 Live Wall URL:</div>' +
-                            '<a href="' + base + '/track/' + client.token + '/live" target="_blank" style="color:#4ade80;text-decoration:none;">' + base + '/track/' + client.token + '/live</a>' +
-                            '<div style="margin-top:6px;font-size:10px;color:#6b7280;">Open this URL on a TV or second screen</div>';
-                    } else {
-                        urlBox.style.display = 'none';
-                    }
-                } else {
-                    status.textContent = 'Error: ' + (d.error || 'Failed');
-                    status.style.color = '#ef4444';
-                    cb.checked = !enabled;
-                }
-            } catch(e) {
-                status.textContent = 'Error: ' + e.message;
-                status.style.color = '#ef4444';
-                cb.checked = !enabled;
-            }
         }
 
         async function saveAdminSettings() {
@@ -32419,6 +32516,20 @@ function _sseBroadcast(event) {
   }
 }
 
+// ── Live Wall SSE — per-token broadcast ──────────────────────────────────────
+const _liveWallClients = new Map(); // token -> Set of res
+
+function _liveWallBroadcast(token, event) {
+  const clients = _liveWallClients.get(token);
+  if (!clients) return;
+  const dead = [];
+  const data = 'event: ' + (event.type || 'message') + '\ndata: ' + JSON.stringify(event) + '\n\n';
+  for (const res of clients) {
+    try { res.write(data); } catch(e) { dead.push(res); }
+  }
+  for (const d of dead) clients.delete(d);
+}
+
 // ── Polling fallback for live feed (Railway HTTP/2 SSE issues) ───────────────
 app.get('/api/tracker/live-events', async (req, res) => {
   const token = req.query.token || req.headers['x-admin-key'] || '';
@@ -32469,6 +32580,47 @@ app.get('/api/tracker/live-feed', async (req, res) => {
   }, 25000);
 
   req.on('close', () => { clearInterval(hb); _sseClients.delete(res); });
+});
+
+// ── Live Wall SSE endpoint (per tracker client) ──────────────────────────────
+app.get('/api/tracker-client/:token/live-wall-stream', async (req, res) => {
+  try {
+    const cr = await pool.query('SELECT id, token, domain, live_wall_enabled FROM tracker_clients WHERE token=$1 AND status=$2', [req.params.token, 'active']);
+    if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
+    if (!cr.rows[0].live_wall_enabled) return res.status(403).json({ success: false, error: 'Live wall disabled' });
+  } catch(e) { return res.status(500).json({ success: false, error: e.message }); }
+
+  const token = req.params.token;
+
+  res.socket.setNoDelay(true);
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache, no-transform');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no');
+  res.setHeader('Transfer-Encoding', 'identity');
+  res.flushHeaders();
+
+  // Register client
+  if (!_liveWallClients.has(token)) _liveWallClients.set(token, new Set());
+  _liveWallClients.get(token).add(res);
+
+  // Send initial connected event
+  res.write('event: connected\ndata: ' + JSON.stringify({ type: 'connected', ts: new Date().toISOString() }) + '\n\n');
+
+  const hb = setInterval(() => {
+    try { res.write(':hb\n\n'); }
+    catch(e) {
+      clearInterval(hb);
+      const set = _liveWallClients.get(token);
+      if (set) { set.delete(res); if (!set.size) _liveWallClients.delete(token); }
+    }
+  }, 25000);
+
+  req.on('close', () => {
+    clearInterval(hb);
+    const set = _liveWallClients.get(token);
+    if (set) { set.delete(res); if (!set.size) _liveWallClients.delete(token); }
+  });
 });
 
 function _trSetStep(pageId, name, status, detail) {
@@ -32834,7 +32986,7 @@ Return ONLY a JSON array, no markdown:
                   console.warn('[ranking-brief] Failed:', rankErr.message);
                 }
               }
-              _sseBroadcast({
+              const _briefPayload1 = {
                 type: 'brief_ready',
                 page_id: page.id,
                 url: pageUrl,
@@ -32850,7 +33002,9 @@ Return ONLY a JSON array, no markdown:
                 merge_note: mergeNote,
                 brief_content: mergedBrief,
                 ts: new Date().toISOString()
-              });
+              };
+              _sseBroadcast(_briefPayload1);
+              if (_clientToken) _liveWallBroadcast(_clientToken, _briefPayload1);
             } catch(e) { console.warn('[brief-save]', e.message); }
           } catch(e) { console.warn('[tracker-email] Post-check email failed:', e.message); }
         }
@@ -33790,6 +33944,25 @@ async function runTrackerCheck(page, geminiKey, keys, forceRescan = false) {
   const pageUrl   = page.url;
   const domain    = pageUrl.replace(/^https?:\/\//, '').split('/')[0]; // e.g. example.com
   const cleanHost = pageUrl.replace(/^https?:\/\//, '').replace(/\/$/, '');
+
+  // Look up client token for live wall broadcast
+  let _clientToken = '';
+  try {
+    if (page.tracker_client_id) {
+      const _ctr = await pool.query('SELECT token, live_wall_enabled FROM tracker_clients WHERE id=$1', [page.tracker_client_id]);
+      if (_ctr.rows.length) {
+        _clientToken = _ctr.rows[0].token;
+        if (!_ctr.rows[0].live_wall_enabled) _clientToken = ''; // wall disabled
+      }
+    }
+    // Fallback: derive client from page URL domain if no tracker_client_id
+    if (!_clientToken && page.url) {
+      const pageDomain = page.url.replace(/^https?:\/\//, '').split('/')[0];
+      const _ctr2 = await pool.query('SELECT token FROM tracker_clients WHERE domain=$1 OR $2 LIKE \'%\' || domain || \'%\' ORDER BY created_at DESC LIMIT 1', [pageDomain, page.url]);
+      if (_ctr2.rows.length) _clientToken = _ctr2.rows[0].token;
+    }
+  } catch(e) { console.warn('[live-wall] token lookup error:', e.message); }
+  if (_clientToken) console.log('[live-wall] client token resolved:', _clientToken.substring(0,8)+'...');
 
   // Auto-detect locale from domain TLD for all search APIs
   var _scanLocale = 'us';
@@ -34841,7 +35014,7 @@ Return ONLY JSON array (max 5 items): [{"title":"max 6 words","priority":"high"|
         ).catch(()=>{});
 
         // Broadcast brief_ready so client TV modal fires
-        _sseBroadcast({
+        const _briefPayload2 = {
           type: 'brief_ready',
           page_id: page.id,
           url: pageUrl,
@@ -34866,7 +35039,9 @@ Return ONLY JSON array (max 5 items): [{"title":"max 6 words","priority":"high"|
           gsc_keyword: page.gsc_keyword,
           _gsc_enabled: !!(page.gsc_clicks || page.gsc_impressions || page.gsc_position),
           ts: new Date().toISOString()
-        });
+        };
+        _sseBroadcast(_briefPayload2);
+        if (_clientToken) _liveWallBroadcast(_clientToken, _briefPayload2);
         console.log(`[tracker] Brief generated and broadcast for ${pageUrl}`);
       }
     } catch(briefErr) {
