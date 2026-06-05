@@ -1879,6 +1879,9 @@ app.get('/api/live-feed', async (req, res) => {
   const streamToken = process.env.STREAM_TOKEN || process.env.ADMIN_PASSWORD || 'contentscale';
   if (token === streamToken) {
     // OK — stream token
+  } else if (!pool) {
+    // DB not available — accept any non-empty token as tracker token
+    if (!token) return res.status(401).end();
   } else {
     // Check if it's a valid tracker client token
     try {
@@ -24475,7 +24478,7 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
 .cs-container { max-width:1200px; margin:0 auto; padding:24px 24px; }
 
 /* Stats */
-.cs-stats { display:grid; grid-template-columns:repeat(7,1fr); gap:8px; margin-bottom:20px; }
+.cs-stats { display:grid; grid-template-columns:repeat(5,1fr); gap:8px; margin-bottom:20px; }
 .cs-stat { background:#111827; border:1px solid #1f2937; border-radius:8px; padding:12px; text-align:center; }
 .cs-stat .val { font-size:1.3rem; font-weight:900; color:#7c3aed; margin-bottom:2px; }
 .cs-stat .lbl { font-size:9px; color:#6b7280; text-transform:uppercase; letter-spacing:.06em; }
@@ -25245,6 +25248,12 @@ var _ctSearchQuery = '';
         passages: Array.isArray(brief.items) ? brief.items : [],
         gsc_brief: brief.gsc_brief || [],
         source_suggestions: brief.source_suggestions || [],
+        gsc_clicks: p.gsc_clicks || null,
+        gsc_impressions: p.gsc_impressions || null,
+        gsc_position: p.gsc_position || null,
+        gsc_ctr: p.gsc_ctr || null,
+        gsc_keyword: p.gsc_keyword || null,
+        _gsc_enabled: !!(p.gsc_clicks || p.gsc_impressions || p.gsc_position),
         type: 'brief_ready'
       };
       _lastBriefData[p.id] = briefData;
