@@ -947,6 +947,10 @@ async function sendTrackerEmail(clientId, subject, htmlBody) {
       console.warn('[tracker-email] Brevo error', resp.status, err.substring(0,200));
     } else {
       console.log('[tracker-email] Sent via Brevo to', client.email);
+      // Broadcast email_sent event so client sees in-app notification
+      if (typeof _sseBroadcast === 'function') {
+        _sseBroadcast({ type: 'email_sent', clientId: clientId, domain: client.domain || '', email: client.email, subject: subject, ts: new Date().toISOString() });
+      }
     }
   } catch(e) { console.warn('[tracker-email] Failed:', e.message); }
 }
@@ -24482,7 +24486,7 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
 .cs-section { font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:.1em; color:#6b7280; margin:16px 0 10px; }
 
 /* Page card */
-.cs-page-card { background:#0d1117; border:1px solid #1f2937; border-radius:10px; margin-bottom:12px; overflow:hidden; width:100%; box-sizing:border-box; }
+.cs-page-card { position:relative; background:#0d1117; border:1px solid #1f2937; border-radius:10px; margin-bottom:12px; overflow:hidden; width:100%; box-sizing:border-box; }
 .cs-page-card:hover { background:#131d2e; border-color:#1e3a5f; }
 .cs-page-card.cited { border-left-color:#16a34a; background:#0a1a0f; }
 .cs-page-card.cited:hover { background:#0d2214; }
@@ -24541,7 +24545,7 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
 
 /* Citation Brief card */
 .cb-overlay { position:fixed; inset:0; z-index:9000; pointer-events:none; display:flex; align-items:flex-end; justify-content:center; padding:0 16px 24px; }
-.cb-card { background:#0d1117; border:1px solid #7c3aed; border-radius:16px; width:100%; max-width:680px; box-shadow:0 0 60px rgba(124,58,237,.4); pointer-events:all; transform:translateY(120%); transition:transform .5s cubic-bezier(.16,1,.3,1); overflow:hidden; }
+.cb-card { position:relative; background:#0d1117; border:1px solid #7c3aed; border-radius:16px; width:100%; max-width:680px; box-shadow:0 0 60px rgba(124,58,237,.4); pointer-events:all; transform:translateY(120%); transition:transform .5s cubic-bezier(.16,1,.3,1); overflow:hidden; }
 .cb-card.show { transform:translateY(0); }
 .cb-card.hide { transform:translateY(120%); transition:transform .4s cubic-bezier(.7,0,.8,1); }
 .cb-header { background:linear-gradient(135deg,#1e1b4b,#4c1d95); padding:16px 20px; display:flex; align-items:center; justify-content:space-between; }
@@ -24577,7 +24581,7 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
 
 /* Welcome agent */
 .wl-overlay { position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.75);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:16px; }
-.wl-card { background:#0d1117;border:1px solid #1f2937;border-radius:20px;width:100%;max-width:640px;max-height:90vh;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 0 80px rgba(124,58,237,.3);animation:wlIn .6s cubic-bezier(.16,1,.3,1); }
+.wl-card { position:relative; background:#0d1117;border:1px solid #1f2937;border-radius:20px;width:100%;max-width:640px;max-height:90vh;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 0 80px rgba(124,58,237,.3);animation:wlIn .6s cubic-bezier(.16,1,.3,1); }
 @keyframes wlIn { from{opacity:0;transform:translateY(30px) scale(.96)} to{opacity:1;transform:none} }
 .wl-top { background:linear-gradient(135deg,#1e1b4b 0%,#312e81 50%,#4c1d95 100%);padding:32px 28px 24px;text-align:center;position:relative; }
 .wl-avatar { width:72px;height:72px;border-radius:50%;border:3px solid rgba(255,255,255,.3);margin:0 auto 14px;display:block;object-fit:cover; }
@@ -24694,37 +24698,40 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
 
 /* Stars on page cards */
 .cs-page-card::before{
-  content:'';position:absolute;top:8px;right:12px;width:2px;height:2px;border-radius:50%;
-  background:#a78bfa;animation:twinkle 2.5s ease-in-out infinite;z-index:1;pointer-events:none;
-  box-shadow:20px 15px 0 #7c3aed,40px 5px 0 #a78bfa,60px 25px 0 #4ade80,
-             80px 10px 0 #fbbf24,100px 20px 0 #7c3aed,120px 8px 0 #a78bfa,
-             30px 30px 0 #4ade80,70px 35px 0 #fbbf24,90px 30px 0 #a78bfa
+  content:'';position:absolute;top:8px;right:12px;width:3px;height:3px;border-radius:50%;
+  background:#c4b5fd;animation:twinkle 2.5s ease-in-out infinite;z-index:1;pointer-events:none;
+  box-shadow:20px 15px 0 #a78bfa,40px 5px 0 #c4b5fd,60px 25px 0 #4ade80,
+             80px 10px 0 #fbbf24,100px 20px 0 #a78bfa,120px 8px 0 #c4b5fd,
+             30px 30px 0 #4ade80,70px 35px 0 #fbbf24,90px 30px 0 #c4b5fd,
+             15px 40px 0 #7c3aed,50px 45px 0 #fbbf24,110px 35px 0 #4ade80
 }
 
 /* Brief card stars */
 .cb-card::before{
-  content:'';position:absolute;top:12px;right:16px;width:2px;height:2px;border-radius:50%;
-  background:#a78bfa;animation:twinkle 2s ease-in-out infinite;z-index:0;pointer-events:none;
-  box-shadow:25px 10px 0 #7c3aed,50px 20px 0 #4ade80,75px 5px 0 #fbbf24,
-             100px 15px 0 #a78bfa,30px 40px 0 #7c3aed,60px 35px 0 #fbbf24,
-             85px 30px 0 #4ade80
+  content:'';position:absolute;top:12px;right:16px;width:3px;height:3px;border-radius:50%;
+  background:#c4b5fd;animation:twinkle 2s ease-in-out infinite;z-index:0;pointer-events:none;
+  box-shadow:25px 10px 0 #a78bfa,50px 20px 0 #4ade80,75px 5px 0 #fbbf24,
+             100px 15px 0 #c4b5fd,30px 40px 0 #a78bfa,60px 35px 0 #fbbf24,
+             85px 30px 0 #4ade80,15px 25px 0 #7c3aed,55px 5px 0 #fbbf24
 }
 
 /* Welcome card stars */
 .wl-card::before{
-  content:'';position:absolute;top:10px;right:14px;width:2px;height:2px;border-radius:50%;
-  background:#a78bfa;animation:twinkle 3s ease-in-out infinite;z-index:0;pointer-events:none;
-  box-shadow:20px 20px 0 #7c3aed,40px 8px 0 #4ade80,60px 30px 0 #fbbf24,
-             80px 18px 0 #a78bfa,100px 35px 0 #7c3aed,30px 50px 0 #4ade80,
-             70px 45px 0 #fbbf24,90px 55px 0 #a78bfa,120px 25px 0 #4ade80
+  content:'';position:absolute;top:10px;right:14px;width:3px;height:3px;border-radius:50%;
+  background:#c4b5fd;animation:twinkle 3s ease-in-out infinite;z-index:0;pointer-events:none;
+  box-shadow:20px 20px 0 #a78bfa,40px 8px 0 #4ade80,60px 30px 0 #fbbf24,
+             80px 18px 0 #c4b5fd,100px 35px 0 #a78bfa,30px 50px 0 #4ade80,
+             70px 45px 0 #fbbf24,90px 55px 0 #c4b5fd,120px 25px 0 #4ade80,
+             15px 35px 0 #7c3aed,55px 15px 0 #fbbf24,110px 50px 0 #a78bfa
 }
 
 /* Scan overlay stars */
 .so-box::after{
-  content:'';position:absolute;top:16px;right:20px;width:2px;height:2px;border-radius:50%;
-  background:#a78bfa;animation:twinkle 2s ease-in-out infinite .5s;z-index:6;pointer-events:none;
-  box-shadow:30px 20px 0 #7c3aed,60px 10px 0 #4ade80,90px 25px 0 #fbbf24,
-             120px 15px 0 #a78bfa,40px 50px 0 #7c3aed,80px 40px 0 #4ade80
+  content:'';position:absolute;top:16px;right:20px;width:3px;height:3px;border-radius:50%;
+  background:#c4b5fd;animation:twinkle 2s ease-in-out infinite .5s;z-index:6;pointer-events:none;
+  box-shadow:30px 20px 0 #a78bfa,60px 10px 0 #4ade80,90px 25px 0 #fbbf24,
+             120px 15px 0 #c4b5fd,40px 50px 0 #a78bfa,80px 40px 0 #4ade80,
+             20px 35px 0 #7c3aed,70px 55px 0 #fbbf24,100px 45px 0 #a78bfa
 }
 
 /* Mobile responsive */
@@ -24753,7 +24760,22 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
   </div>
   <div style="display:flex;align-items:center;gap:10px;">
     <div class="cs-domain">__DOMAIN__</div>
+    <button onclick="toggleNotifPanel()" style="position:relative;background:none;border:none;cursor:pointer;padding:6px;font-size:16px;color:#6b7280;" title="Notifications">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+      <span id="notifBadge" style="display:none;position:absolute;top:2px;right:2px;background:#ef4444;color:#fff;font-size:9px;font-weight:800;width:14px;height:14px;border-radius:50%;align-items:center;justify-content:center;">0</span>
+    </button>
     <a href="https://contentscale.site" target="_blank" style="font-size:11px;color:#4b5563;text-decoration:none;">contentscale.site</a>
+  </div>
+</div>
+
+<!-- Notification Panel -->
+<div id="notifPanel" style="display:none;position:fixed;top:60px;right:16px;width:320px;max-height:400px;background:#0d1117;border:1px solid #1f2937;border-radius:12px;z-index:9999;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.5);">
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid #1f2937;">
+    <span style="font-size:12px;font-weight:700;color:#f1f5f9;">Notifications</span>
+    <button onclick="markNotifsRead();document.getElementById('notifPanel').style.display='none';" style="background:none;border:none;color:#6b7280;cursor:pointer;font-size:11px;">Mark all read</button>
+  </div>
+  <div id="notifList" style="overflow-y:auto;max-height:340px;padding:8px;">
+    <div style="padding:20px;text-align:center;color:#4b5563;font-size:11px;">No notifications yet</div>
   </div>
 </div>
 
@@ -24984,6 +25006,46 @@ function toast(msg, color) {
   el.style.display = 'block';
   clearTimeout(el._t);
   el._t = setTimeout(function(){ el.style.display='none'; }, 3500);
+}
+
+// In-app notification system — shows a persistent notification badge
+var _notifications = [];
+var _notifUnread = 0;
+function showNotification(msg, type, color) {
+  // Add to notification history
+  _notifications.unshift({ msg: msg, type: type || 'info', color: color || '#4ade80', ts: new Date().toISOString() });
+  if (_notifications.length > 20) _notifications.pop();
+  _notifUnread++;
+  // Update notification badge if it exists
+  var badge = document.getElementById('notifBadge');
+  if (badge) { badge.textContent = _notifUnread; badge.style.display = 'inline-flex'; }
+  // Also show a toast
+  var icon = type === 'brief' ? '\u{1F3AF}' : type === 'email' ? '\u{1F4E7}' : type === 'scan' ? '\u{26A1}' : '\u{1F514}';
+  toast(icon + ' ' + msg, color);
+}
+function markNotifsRead() {
+  _notifUnread = 0;
+  var badge = document.getElementById('notifBadge');
+  if (badge) badge.style.display = 'none';
+}
+function getNotifications() { return _notifications; }
+function toggleNotifPanel() {
+  var panel = document.getElementById('notifPanel');
+  var list = document.getElementById('notifList');
+  if (!panel || !list) return;
+  if (panel.style.display === 'block') { panel.style.display = 'none'; return; }
+  // Build notification list
+  if (_notifications.length === 0) {
+    list.innerHTML = '<div style="padding:20px;text-align:center;color:#4b5563;font-size:11px;">No notifications yet</div>';
+  } else {
+    list.innerHTML = _notifications.map(function(n) {
+      var icon = n.type === 'brief' ? '\u{1F3AF}' : n.type === 'email' ? '\u{1F4E7}' : n.type === 'scan' ? '\u{26A1}' : '\u{1F514}';
+      var time = new Date(n.ts).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+      return '<div style="padding:8px 10px;border-radius:6px;margin-bottom:4px;background:#111827;font-size:11px;color:#d1d5db;line-height:1.5;"><span style="margin-right:6px;">' + icon + '</span><span style="color:' + (n.color || '#4ade80') + ';">' + n.msg + '</span><div style="font-size:9px;color:#4b5563;margin-top:2px;">' + time + '</div></div>';
+    }).join('');
+  }
+  panel.style.display = 'block';
+  markNotifsRead();
 }
 
 function showAddModal() { document.getElementById('addModal').classList.add('show'); }
@@ -25567,10 +25629,19 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
           _clientPollLastTs = data.ts;
           if (data.events && data.events.length) {
             data.events.forEach(function(ev) {
-              if (ev.type === 'brief_ready' && (ev.domain === DOMAIN || (ev.url && ev.url.includes(DOMAIN)))) { showCitationBrief(ev); return; }
+              if (ev.type === 'brief_ready' && (ev.domain === DOMAIN || (ev.url && ev.url.includes(DOMAIN)))) {
+                showNotification('Citation Brief ready for ' + (ev.url||''), 'brief', '#7c3aed');
+                showCitationBrief(ev);
+                return;
+              }
+              if (ev.type === 'email_sent' && (ev.domain === DOMAIN || (ev.url && ev.url.includes(DOMAIN)))) {
+                showNotification('Email sent: ' + (ev.subject||'Tracker update'), 'email', '#38bdf8');
+                return;
+              }
               if (ev.type === 'check_done') {
                 // Reload pages so card updates with new scan data
                 setTimeout(loadPages, 500);
+                showNotification('Scan complete: ' + (ev.url||''), 'scan', '#4ade80');
                 addLine('Scan complete: ' + (ev.url||''), '#4ade80', null);
                 return;
               }
