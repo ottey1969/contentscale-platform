@@ -25388,7 +25388,7 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
         <div id="cbCopySection" style="display:none;margin-top:16px;">
           <div style="font-size:11px;font-weight:700;color:#7c3aed;margin-bottom:6px;">📋 Copy Brief</div>
           <textarea id="cbCopyText" readonly style="width:100%;height:120px;background:#0a0a12;border:1px solid #1f2937;border-radius:8px;padding:10px;font-size:11px;color:#9ca3af;font-family:monospace;resize:vertical;"></textarea>
-          <button onclick="copyBriefFromOverlay()" class="cs-btn" style="margin-top:8px;border-color:#7c3aed;color:#7c3aed;font-size:11px;">Copy to Clipboard</button>
+          <button onclick="copyBriefToClipboard()" class="cs-btn" style="margin-top:8px;border-color:#7c3aed;color:#7c3aed;font-size:11px;">Copy to Clipboard</button>
         </div>
       </div>
     </div>
