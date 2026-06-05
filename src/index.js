@@ -24724,6 +24724,7 @@ const _CLIENT_TRACKER_HTML = `<!DOCTYPE html>
 * { margin:0; padding:0; box-sizing:border-box; }
 html, body { width:100%; min-height:100vh; }
 body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif; min-height:100vh; overflow-x:hidden; }
+@keyframes cs-pulse { 0%,100% { opacity:1; box-shadow:0 0 0 0 rgba(239,68,68,.35); } 50% { opacity:.7; box-shadow:0 0 0 4px rgba(239,68,68,0); } }
 .cs-header { width:100%; }
 .cs-container { width:100%; max-width:1400px; margin:0 auto; padding:24px; box-sizing:border-box; }
 
@@ -25124,6 +25125,9 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
     <div style="font-size:10px;color:#475569;letter-spacing:.04em;margin-top:1px;">by ContentScale</div>
   </div>
   <div style="display:flex;align-items:center;gap:10px;">
+    <a href="/track/__TOKEN__/live" target="_blank" style="display:flex;align-items:center;gap:5px;font-size:10px;font-weight:700;color:#ef4444;text-decoration:none;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);border-radius:6px;padding:4px 10px;text-transform:uppercase;letter-spacing:.06em;" title="Open Live Brief Wall">
+      <span style="width:6px;height:6px;border-radius:50%;background:#ef4444;display:inline-block;animation:cs-pulse 1.2s ease-in-out infinite;"></span>Live
+    </a>
     <div class="cs-domain">__DOMAIN__</div>
     <button onclick="toggleNotifPanel()" style="position:relative;background:none;border:none;cursor:pointer;padding:6px;font-size:16px;color:#6b7280;" title="Notifications">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
@@ -27186,6 +27190,9 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
 
   // ── HTML upload ─────────────────────────────────────────────────────────────
   var _htmlUploadPageId = null;
+  function closeHtmlUpload() {
+    hideModal('htmlUploadModal');
+  }
   function openHtmlUpload(pageId) {
     _htmlUploadPageId = pageId;
     var page = (_pages||[]).find(function(p){ return p.id == pageId; }) || {};
