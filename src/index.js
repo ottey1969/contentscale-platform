@@ -24544,14 +24544,14 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
 .cs-wa-btn { display:inline-flex; align-items:center; gap:8px; background:#16a34a; border-radius:8px; padding:10px 20px; color:#ffffff; font-size:13px; font-weight:700; text-decoration:none; font-family:Verdana,sans-serif; }
 
 /* Citation Brief card */
-.cb-overlay { position:fixed; inset:0; z-index:9000; pointer-events:none; display:flex; align-items:flex-end; justify-content:center; padding:0 16px 24px; }
-.cb-card { position:relative; background:#0d1117; border:1px solid #7c3aed; border-radius:16px; width:100%; max-width:680px; box-shadow:0 0 60px rgba(124,58,237,.4); pointer-events:all; transform:translateY(120%); transition:transform .5s cubic-bezier(.16,1,.3,1); overflow:hidden; }
+.cb-overlay { position:fixed; inset:0; z-index:9000; pointer-events:none; display:flex; align-items:center; justify-content:center; padding:24px 16px; }
+.cb-card { position:relative; background:#0d1117; border:1px solid #7c3aed; border-radius:16px; width:100%; max-width:680px; max-height:90vh; box-shadow:0 0 60px rgba(124,58,237,.4); pointer-events:all; transform:translateY(120%); transition:transform .5s cubic-bezier(.16,1,.3,1); overflow:hidden; display:flex; flex-direction:column; }
 .cb-card.show { transform:translateY(0); }
 .cb-card.hide { transform:translateY(120%); transition:transform .4s cubic-bezier(.7,0,.8,1); }
-.cb-header { background:linear-gradient(135deg,#1e1b4b,#4c1d95); padding:16px 20px; display:flex; align-items:center; justify-content:space-between; }
+.cb-header { background:linear-gradient(135deg,#1e1b4b,#4c1d95); padding:16px 20px; display:flex; align-items:center; justify-content:space-between; flex-shrink:0; }
 .cb-title { font-size:12px; font-weight:800; text-transform:uppercase; letter-spacing:.12em; color:#a78bfa; }
 .cb-url { font-size:11px; color:#6b7280; font-family:monospace; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:400px; }
-.cb-body { padding:20px; }
+.cb-body { padding:20px; overflow-y:auto; flex:1; min-height:0; }
 .cb-step { display:flex; align-items:center; gap:10px; margin-bottom:10px; font-size:12px; color:#6b7280; }
 .cb-step.done { color:#e5e7eb; }
 .cb-step.active { color:#a78bfa; }
@@ -24696,42 +24696,53 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
 /* ═══ PERSISTENT STARS — pure CSS, no JS needed ═══ */
 @keyframes twinkle{0%,100%{opacity:.15}50%{opacity:1}}
 
-/* Stars on page cards */
+/* ═══ PERSISTENT STARS — bigger, brighter, multi-layered ═══ */
+@keyframes twinkle{0%,100%{opacity:.25;transform:scale(1)}50%{opacity:1;transform:scale(1.4)}}
+
+/* Stars on page cards — top-right cluster */
 .cs-page-card::before{
-  content:'';position:absolute;top:8px;right:12px;width:3px;height:3px;border-radius:50%;
-  background:#c4b5fd;animation:twinkle 2.5s ease-in-out infinite;z-index:1;pointer-events:none;
-  box-shadow:20px 15px 0 #a78bfa,40px 5px 0 #c4b5fd,60px 25px 0 #4ade80,
-             80px 10px 0 #fbbf24,100px 20px 0 #a78bfa,120px 8px 0 #c4b5fd,
-             30px 30px 0 #4ade80,70px 35px 0 #fbbf24,90px 30px 0 #c4b5fd,
-             15px 40px 0 #7c3aed,50px 45px 0 #fbbf24,110px 35px 0 #4ade80
+  content:'';position:absolute;top:6px;right:8px;width:4px;height:4px;border-radius:50%;
+  background:#e0d7ff;animation:twinkle 2.5s ease-in-out infinite;z-index:2;pointer-events:none;
+  box-shadow:
+    18px 10px 0 #a78bfa, 35px 4px 0 #c4b5fd, 55px 18px 0 #4ade80,
+    72px 8px 0 #fbbf24, 90px 22px 0 #a78bfa, 12px 28px 0 #c4b5fd,
+    30px 35px 0 #4ade80, 50px 30px 0 #fbbf24, 68px 38px 0 #7c3aed,
+    85px 42px 0 #c4b5fd, 25px 50px 0 #a78bfa, 45px 55px 0 #4ade80,
+    -8px 15px 0 #fbbf24, -5px 45px 0 #c4b5fd, 100px 12px 0 #4ade80
 }
 
 /* Brief card stars */
 .cb-card::before{
-  content:'';position:absolute;top:12px;right:16px;width:3px;height:3px;border-radius:50%;
-  background:#c4b5fd;animation:twinkle 2s ease-in-out infinite;z-index:0;pointer-events:none;
-  box-shadow:25px 10px 0 #a78bfa,50px 20px 0 #4ade80,75px 5px 0 #fbbf24,
-             100px 15px 0 #c4b5fd,30px 40px 0 #a78bfa,60px 35px 0 #fbbf24,
-             85px 30px 0 #4ade80,15px 25px 0 #7c3aed,55px 5px 0 #fbbf24
+  content:'';position:absolute;top:10px;right:12px;width:4px;height:4px;border-radius:50%;
+  background:#e0d7ff;animation:twinkle 2s ease-in-out infinite;z-index:2;pointer-events:none;
+  box-shadow:
+    20px 12px 0 #a78bfa, 40px 6px 0 #c4b5fd, 60px 20px 0 #4ade80,
+    80px 10px 0 #fbbf24, 15px 30px 0 #a78bfa, 35px 38px 0 #c4b5fd,
+    55px 32px 0 #4ade80, 75px 40px 0 #7c3aed, 95px 28px 0 #fbbf24,
+    -5px 20px 0 #c4b5fd, 100px 45px 0 #a78bfa, 20px 50px 0 #4ade80
 }
 
 /* Welcome card stars */
 .wl-card::before{
-  content:'';position:absolute;top:10px;right:14px;width:3px;height:3px;border-radius:50%;
-  background:#c4b5fd;animation:twinkle 3s ease-in-out infinite;z-index:0;pointer-events:none;
-  box-shadow:20px 20px 0 #a78bfa,40px 8px 0 #4ade80,60px 30px 0 #fbbf24,
-             80px 18px 0 #c4b5fd,100px 35px 0 #a78bfa,30px 50px 0 #4ade80,
-             70px 45px 0 #fbbf24,90px 55px 0 #c4b5fd,120px 25px 0 #4ade80,
-             15px 35px 0 #7c3aed,55px 15px 0 #fbbf24,110px 50px 0 #a78bfa
+  content:'';position:absolute;top:8px;right:10px;width:4px;height:4px;border-radius:50%;
+  background:#e0d7ff;animation:twinkle 3s ease-in-out infinite;z-index:2;pointer-events:none;
+  box-shadow:
+    18px 18px 0 #a78bfa, 38px 8px 0 #4ade80, 58px 28px 0 #fbbf24,
+    78px 16px 0 #c4b5fd, 12px 42px 0 #a78bfa, 32px 50px 0 #4ade80,
+    55px 45px 0 #fbbf24, 78px 55px 0 #c4b5fd, 100px 35px 0 #a78bfa,
+    -5px 30px 0 #c4b5fd, 95px 50px 0 #4ade80, 22px 60px 0 #7c3aed,
+    48px 65px 0 #fbbf24, 110px 22px 0 #c4b5fd
 }
 
 /* Scan overlay stars */
 .so-box::after{
-  content:'';position:absolute;top:16px;right:20px;width:3px;height:3px;border-radius:50%;
-  background:#c4b5fd;animation:twinkle 2s ease-in-out infinite .5s;z-index:6;pointer-events:none;
-  box-shadow:30px 20px 0 #a78bfa,60px 10px 0 #4ade80,90px 25px 0 #fbbf24,
-             120px 15px 0 #c4b5fd,40px 50px 0 #a78bfa,80px 40px 0 #4ade80,
-             20px 35px 0 #7c3aed,70px 55px 0 #fbbf24,100px 45px 0 #a78bfa
+  content:'';position:absolute;top:14px;right:16px;width:4px;height:4px;border-radius:50%;
+  background:#e0d7ff;animation:twinkle 2s ease-in-out infinite .5s;z-index:6;pointer-events:none;
+  box-shadow:
+    25px 18px 0 #a78bfa, 50px 10px 0 #4ade80, 75px 28px 0 #fbbf24,
+    100px 16px 0 #c4b5fd, 30px 48px 0 #a78bfa, 60px 42px 0 #4ade80,
+    85px 55px 0 #fbbf24, 18px 38px 0 #7c3aed, 110px 38px 0 #c4b5fd,
+    -5px 25px 0 #fbbf24, 120px 50px 0 #a78bfa
 }
 
 /* Mobile responsive */
@@ -24739,7 +24750,7 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
   .so-box{width:96vw;padding:20px;border-radius:16px}
   .so-ring-wrap{width:200px;height:200px}
   .cb-card{max-width:100%;border-radius:12px 12px 0 0;margin:0}
-  .cb-overlay{padding:0!important;align-items:flex-end!important}
+  .cb-overlay{padding:0 0 16px 0!important;align-items:flex-end!important}
 }
 @media(max-width:480px){
   .so-box{padding:16px}
@@ -25279,7 +25290,7 @@ function renderPages() {
     // No flashing banner — just a button state
     var needsHtmlBanner = '';
 
-    return '<div class="cs-page-card' + (isDone ? ' done' : '') + '" data-page-id="' + p.id + '" style="background:#0d1117;border:1px solid #1f2937;border-radius:10px;margin-bottom:12px;overflow:hidden;">'
+    return '<div class="cs-page-card' + (isDone ? ' done' : '') + '" data-page-id="' + p.id + '" style="position:relative;background:#0d1117;border:1px solid #1f2937;border-radius:10px;margin-bottom:12px;overflow:hidden;">'
       + pendingBanner
       + needsHtmlBanner
       + (isDone ? '<div style="display:flex;align-items:center;gap:6px;padding:5px 14px;background:rgba(74,222,128,.06);border-bottom:1px solid #166534;font-size:10px;color:#4ade80;letter-spacing:.06em;"><span>✓</span> DONE &mdash; marked as implemented. Tracking continues.</div>' : '')
