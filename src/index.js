@@ -25415,6 +25415,11 @@ if (GSC_ENABLED) {
   });
 }
 
+// Escape AI/user text before innerHTML so tags like <head>/<script> stay visible
+function _escHtml(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+// Escape, then render backtick-wrapped spans as visible code blocks
+function _fmtAction(s) { return _escHtml(s).replace(/\`([^\`]+)\`/g, '<code style="background:#0a0a12;border:1px solid #1f2937;border-radius:3px;padding:1px 5px;font-family:monospace;font-size:11px;color:#a5b4fc;white-space:pre-wrap;word-break:break-word;">$1</code>'); }
+
 function toast(msg, color) {
   var el = document.getElementById('toast');
   if (!el) {
@@ -26344,6 +26349,8 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
           var impact = p.expected_impact || p.impact || '';
           var trigger = p.trigger || '';
           var effort = p.effort || '';
+          title = _escHtml(title); trigger = _escHtml(trigger); impact = _escHtml(impact); system = _escHtml(system);
+          action = _fmtAction(action);
           var el = document.createElement('div');
           el.className = 'cb-passage';
           el.style.borderLeftColor = priColor;
@@ -26639,6 +26646,8 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
         var impact = p.expected_impact || p.impact || '';
         var trigger = p.trigger || '';
         var effort = p.effort || '';
+        title = _escHtml(title); trigger = _escHtml(trigger); impact = _escHtml(impact); system = _escHtml(system);
+        action = _fmtAction(action);
         var el = document.createElement('div');
         el.className = 'cb-passage';
         el.style.borderLeftColor = priColor;
