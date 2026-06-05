@@ -1112,7 +1112,8 @@ app.get('/api/tracker-client/:token', async (req, res) => {
         name: client.name,
         max_pages: client.max_pages || 3,
         created_at: client.created_at,
-        telegram_linked: !!client.telegram_chat_id
+        telegram_linked: !!client.telegram_chat_id,
+        live_wall_enabled: !!client.live_wall_enabled
       },
       pages: pagesR.rows,
       page_count: pagesR.rows.length
@@ -1825,6 +1826,211 @@ app.post('/api/tracker-client/:token/check/:pageId', async (req, res) => {
 
 
 // GET /track/:token — client tracker page
+app.get('/track/:token/live', async (req, res) => {
+  try {
+    let cr;
+    try {
+      cr = await pool.query('SELECT * FROM tracker_clients WHERE token=$1 AND (status=$2 OR status IS NULL)', [req.params.token, 'active']);
+    } catch(qErr) {
+      cr = await pool.query('SELECT * FROM tracker_clients WHERE token=$1', [req.params.token]);
+    }
+    if (!cr.rows.length) return res.status(404).send('Not found');
+    const client = cr.rows[0];
+    if (!client.live_wall_enabled) return res.status(403).send('<html><body style="background:#0a0a0f;color:#fbbf24;font-family:monospace;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;text-align:center;"><div><div style="font-size:3rem;margin-bottom:16px;">📺</div><h1 style="font-size:18px;color:#f1f5f9;margin-bottom:8px;">Live Wall Disabled</h1><p style="font-size:13px;color:#6b7280;max-width:400px;">Ask Ottmar to enable the live wall for your tracker.</p></div></body></html>');
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.send(`<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🔴 Live — ${client.domain || 'ContentScale'}</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;overflow-x:hidden}
+.lw-header{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(6,6,15,.92);backdrop-filter:blur(12px);border-bottom:1px solid #1f2937;padding:12px 20px;display:flex;align-items:center;justify-content:space-between}
+.lw-header-left{display:flex;align-items:center;gap:12px}
+.lw-dot{width:10px;height:10px;border-radius:50%;background:#ef4444;animation:lwPulse 2s ease-in-out infinite}
+@keyframes lwPulse{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(239,68,68,.4)}50%{opacity:.8;box-shadow:0 0 0 8px rgba(239,68,68,0)}}
+.lw-title{font-size:15px;font-weight:800;color:#f1f5f9;letter-spacing:-.02em}
+.lw-domain{font-size:12px;color:#6b7280}
+.lw-clock{font-size:14px;font-weight:700;color:#a78bfa;font-variant-numeric:tabular-nums}
+.lw-container{max-width:900px;margin:0 auto;padding:80px 16px 40px}
+.lw-empty{text-align:center;padding:60px 20px;color:#4b5563;font-size:14px}
+.lw-empty-icon{font-size:3rem;margin-bottom:12px;opacity:.5}
+.lw-card{background:#0d1117;border:1px solid #1f2937;border-radius:14px;margin-bottom:16px;overflow:hidden;animation:lwCardIn .6s cubic-bezier(.16,1,.3,1);position:relative}
+@keyframes lwCardIn{from{opacity:0;transform:translateY(40px) scale(.96)}to{opacity:1;transform:translateY(0) scale(1)}}
+.lw-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#7c3aed,#4ade80,#fbbf24,#ef4444);opacity:.6}
+.lw-card-header{padding:14px 18px 10px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #1f2937}
+.lw-card-url{font-size:12px;font-weight:700;color:#f1f5f9;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:70%}
+.lw-card-time{font-size:10px;color:#4b5563;font-variant-numeric:tabular-nums}
+.lw-card-stats{padding:12px 18px;display:flex;gap:10px;flex-wrap:wrap}
+.lw-stat{background:#111827;border:1px solid #1f2937;border-radius:8px;padding:8px 12px;text-align:center;min-width:70px}
+.lw-stat-val{font-size:16px;font-weight:800}
+.lw-stat-lbl{font-size:9px;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;margin-top:2px}
+.lw-card-actions{padding:0 18px 14px}
+.lw-action{display:flex;gap:10px;padding:10px 0;border-bottom:1px solid #1f2937}
+.lw-action:last-child{border-bottom:none}
+.lw-action-priority{width:6px;border-radius:3px;flex-shrink:0;margin-top:4px}
+.lw-action-priority.high{background:#ef4444}
+.lw-action-priority.med{background:#f59e0b}
+.lw-action-priority.medium{background:#f59e0b}
+.lw-action-priority.low{background:#22c55e}
+.lw-action-body{flex:1}
+.lw-action-title{font-size:12px;font-weight:700;color:#e5e7eb;margin-bottom:3px}
+.lw-action-text{font-size:11px;color:#9ca3af;line-height:1.6}
+.lw-action-impact{font-size:10px;color:#7c3aed;margin-top:4px;font-style:italic}
+.lw-scroll-hint{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:rgba(124,58,237,.15);border:1px solid rgba(124,58,237,.3);color:#a78bfa;padding:6px 16px;border-radius:20px;font-size:11px;opacity:0;transition:opacity .5s;pointer-events:none;z-index:90}
+.lw-scroll-hint.show{opacity:1}
+.lw-new-badge{position:absolute;top:10px;right:10px;background:#ef4444;color:#fff;font-size:9px;font-weight:800;padding:2px 8px;border-radius:10px;animation:lwBadgeIn .5s ease}
+@keyframes lwBadgeIn{from{transform:scale(0)}to{transform:scale(1)}}
+@media(max-width:640px){.lw-container{padding:70px 8px 30px}.lw-card-stats{gap:6px}.lw-stat{min-width:60px;padding:6px 8px}}
+</style>
+</head>
+<body>
+<div class="lw-header">
+  <div class="lw-header-left">
+    <div class="lw-dot"></div>
+    <div>
+      <div class="lw-title">Live Brief Wall</div>
+      <div class="lw-domain">${client.domain || 'ContentScale'}</div>
+    </div>
+  </div>
+  <div class="lw-clock" id="lwClock">--:--:--</div>
+</div>
+<div class="lw-container" id="lwContainer">
+  <div class="lw-empty" id="lwEmpty">
+    <div class="lw-empty-icon">📡</div>
+    <div>Waiting for scans...</div>
+    <div style="font-size:12px;margin-top:8px">When a scan completes, the brief will appear here automatically.</div>
+  </div>
+</div>
+<div class="lw-scroll-hint" id="lwScrollHint">⬇ New brief — scrolling down</div>
+<script>
+(function(){
+  var container = document.getElementById('lwContainer');
+  var emptyEl = document.getElementById('lwEmpty');
+  var scrollHint = document.getElementById('lwScrollHint');
+  var clockEl = document.getElementById('lwClock');
+  var briefCount = 0;
+  var isAutoScrolling = false;
+
+  function updateClock() {
+    var now = new Date();
+    clockEl.textContent = now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  }
+  setInterval(updateClock, 1000);
+  updateClock();
+
+  function showScrollHint() {
+    scrollHint.classList.add('show');
+    setTimeout(function() { scrollHint.classList.remove('show'); }, 3000);
+  }
+
+  function smoothScrollToBottom() {
+    isAutoScrolling = true;
+    showScrollHint();
+    var start = window.scrollY;
+    var end = document.body.scrollHeight - window.innerHeight;
+    var duration = 1500;
+    var startTime = null;
+
+    function step(timestamp) {
+      if (!startTime) startTime = timestamp;
+      var progress = Math.min((timestamp - startTime) / duration, 1);
+      var ease = 1 - Math.pow(1 - progress, 3);
+      window.scrollTo(0, start + (end - start) * ease);
+      if (progress < 1) {
+        requestAnimationFrame(step);
+      } else {
+        isAutoScrolling = false;
+      }
+    }
+    requestAnimationFrame(step);
+  }
+
+  function createBriefCard(data) {
+    briefCount++;
+    if (emptyEl) emptyEl.style.display = 'none';
+
+    var card = document.createElement('div');
+    card.className = 'lw-card';
+
+    var pos = data.position || 'N/A';
+    var posColor = pos <= 3 ? '#4ade80' : pos <= 10 ? '#fbbf24' : '#f87171';
+
+    var actionsHtml = '';
+    var passages = data.passages || data.recommendations || [];
+    if (passages.length) {
+      passages.slice(0, 4).forEach(function(p) {
+        var pri = (p.priority || 'low').toLowerCase();
+        var priClass = pri === 'high' || pri === 'h' ? 'high' : pri === 'medium' || pri === 'med' || pri === 'm' ? 'medium' : 'low';
+        actionsHtml +=
+          '<div class="lw-action">' +
+            '<div class="lw-action-priority ' + priClass + '"></div>' +
+            '<div class="lw-action-body">' +
+              '<div class="lw-action-title">' + (p.title || '') + '</div>' +
+              '<div class="lw-action-text">' + (p.action || p.passage || '').substring(0, 200) + (p.action && p.action.length > 200 ? '...' : '') + '</div>' +
+              '<div class="lw-action-impact">' + (p.expected_impact || p.impact || '') + '</div>' +
+            '</div>' +
+          '</div>';
+      });
+    }
+
+    var now = new Date();
+    var timeStr = now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+
+    card.innerHTML =
+      '<div class="lw-new-badge">NEW</div>' +
+      '<div class="lw-card-header">' +
+        '<div class="lw-card-url">' + (data.url || '') + '</div>' +
+        '<div class="lw-card-time">' + timeStr + '</div>' +
+      '</div>' +
+      '<div class="lw-card-stats">' +
+        '<div class="lw-stat"><div class="lw-stat-val" style="color:' + posColor + '">' + (pos ? '#' + pos : 'N/A') + '</div><div class="lw-stat-lbl">Position</div></div>' +
+        '<div class="lw-stat"><div class="lw-stat-val" style="color:' + (data.aio_cited ? '#4ade80' : '#4b5563') + '">' + (data.aio_cited ? '✓' : '✗') + '</div><div class="lw-stat-lbl">AIO</div></div>' +
+        '<div class="lw-stat"><div class="lw-stat-val" style="color:' + (data.perp_cited ? '#a78bfa' : '#4b5563') + '">' + (data.perp_cited ? '✓' : '✗') + '</div><div class="lw-stat-lbl">Perplexity</div></div>' +
+        '<div class="lw-stat"><div class="lw-stat-val" style="color:' + (data.bing_cited ? '#60a5fa' : '#4b5563') + '">' + (data.bing_cited ? '✓' : '✗') + '</div><div class="lw-stat-lbl">Copilot</div></div>' +
+        '<div class="lw-stat"><div class="lw-stat-val" style="color:' + (data.brave_cited ? '#f87171' : '#4b5563') + '">' + (data.brave_cited ? '✓' : '✗') + '</div><div class="lw-stat-lbl">Claude</div></div>' +
+        '<div class="lw-stat"><div class="lw-stat-val" style="color:#fbbf24">' + (data.score || '—') + '</div><div class="lw-stat-lbl">GRAAF</div></div>' +
+      '</div>' +
+      '<div class="lw-card-actions">' + actionsHtml + '</div>';
+
+    container.appendChild(card);
+
+    // Smooth scroll to new card
+    setTimeout(smoothScrollToBottom, 100);
+
+    // Remove old cards (keep max 20)
+    var cards = container.querySelectorAll('.lw-card');
+    if (cards.length > 20) {
+      cards[0].style.opacity = '0';
+      cards[0].style.transform = 'translateY(-20px)';
+      cards[0].style.transition = 'all .5s ease';
+      setTimeout(function() { if (cards[0].parentNode) cards[0].parentNode.removeChild(cards[0]); }, 500);
+    }
+  }
+
+  // Connect to SSE
+  var evtSource = new EventSource('/api/tracker-client/${req.params.token}/live-events');
+  evtSource.addEventListener('brief_ready', function(ev) {
+    try {
+      var data = JSON.parse(ev.data);
+      createBriefCard(data);
+    } catch(e) { console.error('Live wall parse error:', e); }
+  });
+  evtSource.onerror = function() {
+    console.log('Live wall SSE error — reconnecting...');
+  };
+
+  // Heartbeat to keep connection alive
+  evtSource.addEventListener('ping', function() {});
+})();
+</script>
+</body>
+</html>`);
+  } catch(e) { res.status(500).send('Error'); }
+});
+
 app.get('/track/:token', async (req, res) => {
   try {
     // Try with status check first, fallback without if column issues
@@ -2174,6 +2380,15 @@ app.get('/api/admin/brevo-status', verifyAdmin, async (req, res) => {
     }
 
     res.json({ success: true, results });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// POST /api/admin/tracker-clients/:id/live-wall — enable/disable live wall
+app.post('/api/admin/tracker-clients/:id/live-wall', verifyAdmin, async (req, res) => {
+  try {
+    const enabled = req.body.enabled === true || req.body.enabled === 'true';
+    await pool.query('UPDATE tracker_clients SET live_wall_enabled = $1 WHERE id = $2', [enabled, req.params.id]);
+    res.json({ success: true, live_wall_enabled: enabled });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
@@ -2795,6 +3010,7 @@ app.patch('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
   await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS ranking_brief JSONB`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS needs_html BOOLEAN DEFAULT FALSE`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS html_mismatch_notified_at TIMESTAMPTZ`).catch(()=>{});
+  await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS live_wall_enabled BOOLEAN DEFAULT FALSE`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS paused_at TIMESTAMPTZ`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS dealify_codes VARCHAR(500)`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS gsc_enabled BOOLEAN DEFAULT FALSE`).catch(()=>{});
@@ -25083,6 +25299,58 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
   </div>
 </div>
 
+<!-- ═══ Citation Brief Overlay ═══ -->
+<div id="cbOverlay" class="cb-overlay" style="display:none;">
+  <div id="cbCard" class="cb-card hide">
+    <div class="cb-header">
+      <div>
+        <div style="font-size:13px;font-weight:700;color:#f1f5f9;">🎯 Citation Brief</div>
+        <div id="cbUrl" class="cb-url"></div>
+        <div id="cbKw" style="font-size:10px;color:#6b7280;margin-top:2px;"></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <button onclick="keepCbOpen()" id="cbKeepBtn" style="display:none;background:none;border:1px solid #7c3aed;color:#7c3aed;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:Verdana,sans-serif;">Keep open</button>
+        <button onclick="hideCitationBrief()" style="background:none;border:none;color:#9ca3af;cursor:pointer;font-size:16px;padding:4px;">&#x2715;</button>
+      </div>
+    </div>
+    <div class="cb-body">
+      <!-- Progress steps -->
+      <div id="cbSteps">
+        <div class="cb-step" id="cbStep1"><span class="cb-step-icon pending" id="cbStep1Icon"></span><span>Checking Google position &amp; AI Overview…</span></div>
+        <div class="cb-step" id="cbStep2"><span class="cb-step-icon pending" id="cbStep2Icon"></span><span>Scanning Perplexity &amp; Copilot citations…</span></div>
+        <div class="cb-step" id="cbStep3"><span class="cb-step-icon pending" id="cbStep3Icon"></span><span>Analyzing Claude/Brave citations…</span></div>
+        <div class="cb-step" id="cbStep4"><span class="cb-step-icon pending" id="cbStep4Icon"></span><span>Generating your Citation Brief…</span></div>
+        <div class="cb-progress"><div class="cb-progress-bar" id="cbProgressBar"></div></div>
+      </div>
+      <!-- Results -->
+      <div id="cbResult" class="cb-result">
+        <div class="cb-stat-row" id="cbStatRow"></div>
+        <!-- GSC section -->
+        <div id="cbGscSection" style="display:none;margin-bottom:14px;">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;cursor:pointer;" onclick="toggleGscPanel()">
+            <span style="font-size:11px;font-weight:700;color:#4ade80;">📊 Google Search Console</span>
+            <span id="cbGscArrow" style="font-size:10px;color:#6b7280;transition:transform .2s;">&#9660;</span>
+          </div>
+          <div id="cbGscPanel" style="display:none;">
+            <div id="cbGscStats" style="display:flex;flex-wrap:wrap;gap:8px;font-size:11px;margin-bottom:8px;"></div>
+          </div>
+        </div>
+        <!-- Passages -->
+        <div id="cbPassages"></div>
+        <!-- Copy section -->
+        <div id="cbCopySection" style="display:none;margin-top:16px;">
+          <div style="font-size:11px;font-weight:700;color:#7c3aed;margin-bottom:6px;">📋 Copy Brief</div>
+          <textarea id="cbCopyText" readonly style="width:100%;height:120px;background:#0a0a12;border:1px solid #1f2937;border-radius:8px;padding:10px;font-size:11px;color:#9ca3af;font-family:monospace;resize:vertical;"></textarea>
+          <button onclick="copyBriefFromOverlay()" class="cs-btn" style="margin-top:8px;border-color:#7c3aed;color:#7c3aed;font-size:11px;">Copy to Clipboard</button>
+        </div>
+      </div>
+    </div>
+    <div class="cb-footer">
+      <div id="cbCountdown" class="cb-countdown"></div>
+    </div>
+  </div>
+</div>
+
 <script>
 var TOKEN = '__TOKEN__';
 var DOMAIN = '__DOMAIN__';
@@ -26111,6 +26379,47 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
       srcDiv.appendChild(verifiedMsg);
     }
 
+    // Discovered Sources — Auto-Source Discovery
+    var discoveredSources = data.discovered_sources || [];
+    if (discoveredSources.length > 0) {
+      var dsDiv = document.getElementById('cbPassages');
+      var dsHeader = document.createElement('div');
+      dsHeader.style.cssText = 'font-size:11px;font-weight:800;color:#22c55e;text-transform:uppercase;letter-spacing:.08em;margin:20px 0 12px;padding-top:16px;border-top:1px solid #1f2937;';
+      dsHeader.innerHTML = '\u{1F50D} Sources Found on Your Site';
+      dsDiv.appendChild(dsHeader);
+      
+      var foundSources = discoveredSources.filter(function(ds) { return ds.found_where !== 'not_found'; });
+      var missingSources = discoveredSources.filter(function(ds) { return ds.found_where === 'not_found'; });
+      
+      foundSources.forEach(function(ds) {
+        var dsEl = document.createElement('div');
+        dsEl.style.cssText = 'background:#052e16;border:1px solid #166534;border-radius:8px;padding:10px 12px;margin-bottom:8px;font-size:11px;';
+        var icon = ds.found_where === 'schema_markup' ? '\u{1F4CB}' : 
+                   ds.found_where === 'case_study_page' ? '\u{1F4C8}' : 
+                   ds.found_where === 'current_page' ? '\u{1F4DD}' : '\u{1F517}';
+        dsEl.innerHTML =
+          '<div style="color:#4ade80;font-weight:700;margin-bottom:3px;">' + icon + ' "' + (ds.claim || '') + '"</div>' +
+          '<div style="color:#86efac;">' + (ds.evidence || '') + '</div>' +
+          (ds.source_url ? '<a href="' + ds.source_url + '" target="_blank" style="color:#60a5fa;font-size:10px;text-decoration:none;margin-top:4px;display:inline-block;">View source →</a>' : '');
+        dsDiv.appendChild(dsEl);
+      });
+      
+      if (missingSources.length > 0) {
+        var msHeader = document.createElement('div');
+        msHeader.style.cssText = 'font-size:11px;font-weight:800;color:#f59e0b;text-transform:uppercase;letter-spacing:.08em;margin:16px 0 10px;';
+        msHeader.innerHTML = '\u{26A0} Claims Needing a Source';
+        dsDiv.appendChild(msHeader);
+        missingSources.forEach(function(ms) {
+          var msEl = document.createElement('div');
+          msEl.style.cssText = 'background:#451a03;border:1px solid #92400e;border-radius:8px;padding:10px 12px;margin-bottom:8px;font-size:11px;';
+          msEl.innerHTML =
+            '<div style="color:#fbbf24;font-weight:700;margin-bottom:3px;">"' + (ms.claim || '') + '"</div>' +
+            '<div style="color:#fcd34d;">' + (ms.context || 'Add a case study or methodology page to your site') + '</div>';
+          dsDiv.appendChild(msEl);
+        });
+      }
+    }
+
     document.getElementById('cbResult').classList.add('show');
     document.getElementById('cbKeepBtn').style.display = 'block';
 
@@ -26296,6 +26605,46 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
           srcList;
         passDiv.appendChild(sEl);
       });
+    }
+
+    // Discovered Sources — Auto-Source Discovery
+    var discoveredSources = data.discovered_sources || [];
+    if (discoveredSources.length > 0) {
+      var dsHeader = document.createElement('div');
+      dsHeader.style.cssText = 'font-size:11px;font-weight:800;color:#22c55e;text-transform:uppercase;letter-spacing:.08em;margin:20px 0 12px;padding-top:16px;border-top:1px solid #1f2937;';
+      dsHeader.innerHTML = '\u{1F50D} Sources Found on Your Site';
+      passDiv.appendChild(dsHeader);
+      
+      var foundSources = discoveredSources.filter(function(ds) { return ds.found_where !== 'not_found'; });
+      var missingSources = discoveredSources.filter(function(ds) { return ds.found_where === 'not_found'; });
+      
+      foundSources.forEach(function(ds) {
+        var dsEl = document.createElement('div');
+        dsEl.style.cssText = 'background:#052e16;border:1px solid #166534;border-radius:8px;padding:10px 12px;margin-bottom:8px;font-size:11px;';
+        var icon = ds.found_where === 'schema_markup' ? '\u{1F4CB}' : 
+                   ds.found_where === 'case_study_page' ? '\u{1F4C8}' : 
+                   ds.found_where === 'current_page' ? '\u{1F4DD}' : '\u{1F517}';
+        dsEl.innerHTML =
+          '<div style="color:#4ade80;font-weight:700;margin-bottom:3px;">' + icon + ' "' + (ds.claim || '') + '"</div>' +
+          '<div style="color:#86efac;">' + (ds.evidence || '') + '</div>' +
+          (ds.source_url ? '<a href="' + ds.source_url + '" target="_blank" style="color:#60a5fa;font-size:10px;text-decoration:none;margin-top:4px;display:inline-block;">View source →</a>' : '');
+        passDiv.appendChild(dsEl);
+      });
+      
+      if (missingSources.length > 0) {
+        var msHeader = document.createElement('div');
+        msHeader.style.cssText = 'font-size:11px;font-weight:800;color:#f59e0b;text-transform:uppercase;letter-spacing:.08em;margin:16px 0 10px;';
+        msHeader.innerHTML = '\u{26A0} Claims Needing a Source';
+        passDiv.appendChild(msHeader);
+        missingSources.forEach(function(ms) {
+          var msEl = document.createElement('div');
+          msEl.style.cssText = 'background:#451a03;border:1px solid #92400e;border-radius:8px;padding:10px 12px;margin-bottom:8px;font-size:11px;';
+          msEl.innerHTML =
+            '<div style="color:#fbbf24;font-weight:700;margin-bottom:3px;">"' + (ms.claim || '') + '"</div>' +
+            '<div style="color:#fcd34d;">' + (ms.context || 'Add a case study or methodology page to your site') + '</div>';
+          passDiv.appendChild(msEl);
+        });
+      }
     }
 
     // Copy section
@@ -28463,7 +28812,25 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                         <div id="testEmailResult" style="display:none;margin-top:10px;font-size:12px;padding:10px;border-radius:6px;"></div>
                     </div>
 
-                    <div style="background:#0d1117;border:1px solid #1f2937;border-radius:10px;padding:20px;">
+                    <!-- Live Wall Toggle -->
+                    <div style="background:#0d1117;border:1px solid #1f2937;border-radius:10px;padding:20px;margin-top:16px;">
+                        <div style="font-size:13px;font-weight:700;color:#f1f5f9;margin-bottom:14px;">📺 Live Brief Wall</div>
+                        <div style="font-size:11px;color:#6b7280;margin-bottom:14px;line-height:1.6;">
+                            When enabled, a live wall is available at <code style="background:#111827;padding:2px 6px;border-radius:4px;color:#a78bfa;">/track/TOKEN/live</code>. 
+                            Briefs appear automatically as scans complete, with smooth scroll animation.
+                            Perfect for live demos or office displays.
+                        </div>
+                        <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+                            <label class="tr-toggle" style="display:flex;align-items:center;gap:10px;cursor:pointer;">
+                                <input type="checkbox" id="settingLiveWall" onchange="toggleLiveWall()" style="width:18px;height:18px;accent-color:#7c3aed;">
+                                <span style="font-size:13px;color:#e5e7eb;">Enable Live Brief Wall</span>
+                            </label>
+                        </div>
+                        <div id="liveWallUrl" style="display:none;font-size:11px;color:#4ade80;background:#052e16;border:1px solid #166534;border-radius:6px;padding:10px 12px;font-family:monospace;"></div>
+                        <div id="liveWallStatus" style="display:none;margin-top:10px;font-size:11px;padding:8px;border-radius:6px;"></div>
+                    </div>
+
+                    <div style="background:#0d1117;border:1px solid #1f2937;border-radius:10px;padding:20px;margin-top:16px;">
                         <div style="font-size:13px;font-weight:700;color:#f1f5f9;margin-bottom:10px;">🔑 Environment (read-only)</div>
                         <div id="settingsEnvInfo" style="font-size:11px;color:#6b7280;font-family:monospace;line-height:2;"></div>
                     </div>
@@ -30466,6 +30833,48 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     resultEl.innerHTML = '<span style="color:#f59e0b;">⚠️ ' + (r.email || 'Brevo key: ' + r.brevo_key) + '</span>';
                 }
             } catch(e) { resultEl.innerHTML = '<span style="color:#ef4444;">Error: ' + e.message + '</span>'; }
+        }
+
+        async function toggleLiveWall() {
+            var cb = document.getElementById('settingLiveWall');
+            var status = document.getElementById('liveWallStatus');
+            var urlBox = document.getElementById('liveWallUrl');
+            var enabled = cb.checked;
+            try {
+                status.style.display = 'block';
+                status.textContent = enabled ? 'Enabling...' : 'Disabling...';
+                status.style.color = '#fbbf24';
+                var clientList = await apiCall('/api/admin/tracker-clients');
+                if (!clientList.success || !clientList.clients || !clientList.clients.length) {
+                    status.textContent = 'No tracker clients found. Create one first.';
+                    status.style.color = '#f59e0b';
+                    cb.checked = !enabled;
+                    return;
+                }
+                var client = clientList.clients[0];
+                var d = await apiCall('/api/admin/tracker-clients/' + client.id + '/live-wall', 'POST', { enabled: enabled });
+                if (d.success) {
+                    status.textContent = enabled ? '✅ Live Wall enabled!' : '⏹️ Live Wall disabled.';
+                    status.style.color = enabled ? '#4ade80' : '#6b7280';
+                    if (enabled) {
+                        urlBox.style.display = 'block';
+                        var base = window.location.origin;
+                        urlBox.innerHTML = '<div style="margin-bottom:4px;font-weight:700;">🔗 Live Wall URL:</div>' +
+                            '<a href="' + base + '/track/' + client.token + '/live" target="_blank" style="color:#4ade80;text-decoration:none;">' + base + '/track/' + client.token + '/live</a>' +
+                            '<div style="margin-top:6px;font-size:10px;color:#6b7280;">Open this URL on a TV or second screen</div>';
+                    } else {
+                        urlBox.style.display = 'none';
+                    }
+                } else {
+                    status.textContent = 'Error: ' + (d.error || 'Failed');
+                    status.style.color = '#ef4444';
+                    cb.checked = !enabled;
+                }
+            } catch(e) {
+                status.textContent = 'Error: ' + e.message;
+                status.style.color = '#ef4444';
+                cb.checked = !enabled;
+            }
         }
 
         async function saveAdminSettings() {
@@ -32833,6 +33242,222 @@ function graafScanHtml(html, pageUrl) {
   };
 }
 
+// ── Auto-Source Discovery ──────────────────────────────────────────────────
+// Scans the site's own pages for evidence that supports claims made in the
+// Citation Brief. Finds: case studies, testimonials, about page credentials,
+// schema markup, and other on-site proof.
+async function discoverSourcesForClaims(pageUrl, recommendations, htmlContent, pool) {
+  const sources = [];
+  const domain = pageUrl.replace(/^https?:\/\//, '').split('/')[0];
+  const baseUrl = pageUrl.match(/^https?:\/\/[^\/]+/)?.[0] || ('https://' + domain);
+  
+  // 1. Extract claims from recommendations (numbers, percentages, specific facts)
+  const claims = [];
+  recommendations.forEach(function(rec) {
+    const text = (rec.action || rec.passage || '');
+    // Find: percentages (78%), numbers (200+), dollar amounts, dates
+    const percentageMatches = text.match(/(\d+(?:\.\d+)?%)\s+(?:traffic|recovery|improvement|increase|growth|conversion|CTR|bounce)/gi);
+    const numberMatches = text.match(/(\d+(?:\+)?)\s+(?:sites?|clients?|countries?|pages?|users?|customers?)/gi);
+    const superlativeMatches = text.match(/(?:leading|top rated|best|#1|first|only|largest|most)\s+[^.]{10,80}/gi);
+    
+    if (percentageMatches) {
+      percentageMatches.forEach(function(m) {
+        claims.push({ type: 'percentage', text: m, context: text.substring(0, 120) });
+      });
+    }
+    if (numberMatches) {
+      numberMatches.forEach(function(m) {
+        claims.push({ type: 'number', text: m, context: text.substring(0, 120) });
+      });
+    }
+    if (superlativeMatches) {
+      superlativeMatches.forEach(function(m) {
+        claims.push({ type: 'superlative', text: m, context: text.substring(0, 120) });
+      });
+    }
+  });
+  
+  // Deduplicate claims
+  const uniqueClaims = [];
+  const seen = new Set();
+  claims.forEach(function(c) {
+    const key = c.text.toLowerCase().trim();
+    if (!seen.has(key)) {
+      seen.add(key);
+      uniqueClaims.push(c);
+    }
+  });
+  
+  if (!uniqueClaims.length) return sources;
+  
+  // 2. Try to fetch sitemap.xml
+  let sitePages = [];
+  try {
+    const sitemapUrl = baseUrl + '/sitemap.xml';
+    const sitemapResp = await fetch(sitemapUrl, { 
+      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; ContentScale/1.0)' },
+      signal: AbortSignal.timeout(8000)
+    });
+    if (sitemapResp.ok) {
+      const sitemapText = await sitemapResp.text();
+      // Extract URLs from sitemap
+      const urlMatches = sitemapText.match(/<loc>([^<]+)<\/loc>/gi);
+      if (urlMatches) {
+        sitePages = urlMatches.map(function(m) {
+          return m.replace(/<\/?loc>/gi, '');
+        }).filter(function(u) {
+          // Exclude the current page and common non-content URLs
+          return u !== pageUrl && 
+                 !u.match(/\.(jpg|jpeg|png|gif|css|js|pdf|xml|json)$/i) &&
+                 !u.includes('/wp-json/') &&
+                 !u.includes('/feed/') &&
+                 !u.includes('/tag/') &&
+                 !u.includes('/category/');
+        }).slice(0, 10); // Check max 10 pages
+      }
+    }
+  } catch(e) { /* sitemap not available */ }
+  
+  // 3. For each claim, search the site
+  for (var ci = 0; ci < uniqueClaims.length; ci++) {
+    var claim = uniqueClaims[ci];
+    var claimFound = false;
+    var searchTerm = claim.text.replace(/\+/g, '\\+');
+    
+    // A. Check current page HTML for surrounding context
+    if (htmlContent) {
+      const claimIdx = htmlContent.toLowerCase().indexOf(claim.text.toLowerCase().replace(/\\+/g, '+'));
+      if (claimIdx > -1) {
+        // Get surrounding context (200 chars before/after)
+        const context = htmlContent.substring(
+          Math.max(0, claimIdx - 200),
+          Math.min(htmlContent.length, claimIdx + claim.text.length + 200)
+        ).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+        
+        // Check if there's a source nearby (parentheses, brackets, links)
+        if (context.match(/\([^)]*(?:study|report|data|audit|survey|research|source|https?)[^)]*\)/i) ||
+            context.match(/href="[^"]+".*(?:study|report|case|methodology)/i)) {
+          sources.push({
+            claim: claim.text,
+            found_where: 'current_page',
+            source_url: pageUrl,
+            evidence: 'Source mention found near claim on this page',
+            context: context.substring(0, 200),
+            type: claim.type
+          });
+          claimFound = true;
+        }
+      }
+    }
+    
+    if (claimFound) continue;
+    
+    // B. Check other pages on the site
+    for (var pi = 0; pi < sitePages.length; pi++) {
+      try {
+        const pageResp = await fetch(sitePages[pi], {
+          headers: { 'User-Agent': 'Mozilla/5.0 (compatible; ContentScale/1.0)' },
+          signal: AbortSignal.timeout(5000)
+        });
+        if (!pageResp.ok) continue;
+        
+        const pageText = await pageResp.text();
+        const stripped = pageText.replace(/<script[\s\S]*?<\/script>/gi, ' ')
+          .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+          .replace(/<[^>]+>/g, ' ')
+          .replace(/\s+/g, ' ')
+          .toLowerCase();
+        
+        // Check if this page contains the claim or related evidence
+        if (stripped.includes(claim.text.toLowerCase().replace(/\\+/g, '+').replace(/%/g, '')) ||
+            stripped.includes(claim.text.toLowerCase().replace(/\\+/g, ' '))) {
+          // Get a snippet of context
+          const idx = stripped.indexOf(claim.text.toLowerCase().replace(/\\+/g, '+').replace(/%/g, ''));
+          const snippet = stripped.substring(
+            Math.max(0, idx - 100),
+            Math.min(stripped.length, idx + 200)
+          );
+          
+          sources.push({
+            claim: claim.text,
+            found_where: 'other_page',
+            source_url: sitePages[pi],
+            evidence: 'Found on: ' + sitePages[pi],
+            context: snippet,
+            type: claim.type
+          });
+          claimFound = true;
+          break; // Found on this page, stop searching
+        }
+        
+        // Also check for evidence types (testimonials, case studies, etc.)
+        const pageLower = sitePages[pi].toLowerCase();
+        if (pageLower.includes('case') || pageLower.includes('testimonial') || 
+            pageLower.includes('about') || pageLower.includes('methodology') ||
+            pageLower.includes('result') || pageLower.includes('audit')) {
+          
+          // Check if page has numbers/percentages that could support claims
+          if (claim.type === 'percentage' && stripped.match(/\d+(?:\.\d+)?%\s+(?:traffic|recovery|improvement)/i)) {
+            sources.push({
+              claim: claim.text,
+              found_where: 'case_study_page',
+              source_url: sitePages[pi],
+              evidence: 'Case study/testimonial page found: ' + sitePages[pi],
+              context: stripped.match(/\d+(?:\.\d+)?%\s+(?:traffic|recovery|improvement)[^.]{0,100}/i)?.[0] || '',
+              type: claim.type
+            });
+            claimFound = true;
+            break;
+          }
+        }
+      } catch(e) { /* skip failed page */ }
+    }
+    
+    if (claimFound) continue;
+    
+    // C. Check schema markup on current page
+    if (htmlContent) {
+      // Look for Review, AggregateRating, or Organization schema
+      const schemaMatch = htmlContent.match(/<script[^>]*type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/gi);
+      if (schemaMatch) {
+        for (var si = 0; si < schemaMatch.length; si++) {
+          const schemaText = schemaMatch[si].replace(/<\/?script[^>]*>/gi, '');
+          if (schemaText.toLowerCase().includes('review') ||
+              schemaText.toLowerCase().includes('rating') ||
+              schemaText.toLowerCase().includes('aggregate') ||
+              schemaText.toLowerCase().includes('aggregateRating')) {
+            sources.push({
+              claim: claim.text,
+              found_where: 'schema_markup',
+              source_url: pageUrl,
+              evidence: 'Schema.org structured data found with ratings/reviews',
+              context: schemaText.substring(0, 200),
+              type: claim.type
+            });
+            claimFound = true;
+            break;
+          }
+        }
+      }
+    }
+    
+    // D. Not found — add as missing with suggestion
+    if (!claimFound) {
+      sources.push({
+        claim: claim.text,
+        found_where: 'not_found',
+        source_url: null,
+        evidence: 'No source found on your site or in sitemap',
+        context: 'Suggestion: Add a case study page at ' + baseUrl + '/case-studies or add methodology section to this page',
+        type: claim.type,
+        missing: true
+      });
+    }
+  }
+  
+  return sources;
+}
+
 // ── Author Trust Score analysis ─────────────────────────────────────────────
 // Scans HTML for E-E-A-T signals that AI systems use to determine credibility.
 // Returns score (0-100) + detailed findings for the Citation Brief.
@@ -34023,13 +34648,14 @@ If no unanchored claims found, return empty array: []`;
   await pool.query('ALTER TABLE tracker_snapshots ADD COLUMN IF NOT EXISTS source_suggestions JSONB').catch(()=>{});
   await pool.query('ALTER TABLE tracker_snapshots ADD COLUMN IF NOT EXISTS author_trust_score INTEGER').catch(()=>{});
   await pool.query('ALTER TABLE tracker_snapshots ADD COLUMN IF NOT EXISTS author_trust_findings JSONB').catch(()=>{});
+  await pool.query('ALTER TABLE tracker_snapshots ADD COLUMN IF NOT EXISTS discovered_sources JSONB').catch(()=>{});
   const snapR = await pool.query(
     `INSERT INTO tracker_snapshots
       (page_id,checked_at,google_position,ai_google_overview_found,ai_google_overview_cited,ai_google_overview_text,
        ai_perplexity_found,ai_perplexity_cited,ai_perplexity_text,ai_bing_found,ai_bing_cited,ai_bing_text,
        ai_brave_found,ai_brave_cited,
-       recommendations,gsc_brief,source_suggestions,author_trust_score,author_trust_findings,html_hash,score,graaf_breakdown,graaf_recommendations,content_changed,content_diff)
-     VALUES ($1,NOW(),$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24) RETURNING *`,
+       recommendations,gsc_brief,source_suggestions,author_trust_score,author_trust_findings,discovered_sources,html_hash,score,graaf_breakdown,graaf_recommendations,content_changed,content_diff)
+     VALUES ($1,NOW(),$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25) RETURNING *`,
     [page.id, snapshot.google_position, snapshot.ai_google_overview_found, snapshot.ai_google_overview_cited,
      snapshot.ai_google_overview_text, snapshot.ai_perplexity_found, snapshot.ai_perplexity_cited,
      snapshot.ai_perplexity_text, snapshot.ai_bing_found, snapshot.ai_bing_cited, snapshot.ai_bing_text,
@@ -34039,6 +34665,7 @@ If no unanchored claims found, return empty array: []`;
      safeJSONB(snapshot.source_suggestions),
      snapshot.author_trust_score || 0,
      safeJSONB(snapshot.author_trust_findings),
+     safeJSONB(snapshot.discovered_sources),
      snapshot.html_hash,
      snapshot.score,
      safeJSONB(snapshot.graaf_breakdown),
@@ -34048,6 +34675,20 @@ If no unanchored claims found, return empty array: []`;
   );
   const snapId = snapR.rows[0].id;
   _trSetStep(pageId, 'save', 'done', 'Snapshot #' + snapId + ' saved');
+
+  // 6b. Auto-Source Discovery — find evidence for claims on the site + online
+  _trSetStep(pageId, 'source_discovery', 'running', 'Searching your site for evidence...');
+  try {
+    const discoveredSources = await discoverSourcesForClaims(
+      page.url, snapshot.recommendations || [], page.html_content, pool
+    );
+    snapshot.discovered_sources = discoveredSources;
+    _trSetStep(pageId, 'source_discovery', 'done', 
+      discoveredSources.length + ' sources found on your site');
+  } catch(e) {
+    console.warn('[source-discovery]', e.message);
+    snapshot.discovered_sources = [];
+  }
 
   // 7. Compare with previous snapshot — detect significant changes
   const prevR = await pool.query(
@@ -34218,6 +34859,7 @@ Return ONLY JSON array (max 5 items): [{"title":"max 6 words","priority":"high"|
           source_suggestions: (snapshot.source_suggestions || []),
           author_trust_score: snapshot.author_trust_score || 0,
           author_trust_findings: (snapshot.author_trust_findings || []),
+          discovered_sources: (snapshot.discovered_sources || []),
           gsc_clicks: page.gsc_clicks,
           gsc_impressions: page.gsc_impressions,
           gsc_position: page.gsc_position,
