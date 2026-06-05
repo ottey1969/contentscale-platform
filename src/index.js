@@ -31328,6 +31328,25 @@ app.post('/api/tracker/pages/:id/citation-brief', verifyEngineAccess, async (req
     const anthropicKey = process.env.ANTHROPIC_API_KEY || '';
     const domain = pageUrl.replace(/^https?:\/\//, '').split('/')[0].replace(/^www\./, '');
 
+    // Auto-detect locale from domain TLD
+    var _cbBingMkt = 'en-US';
+    var _cbDomainTld = domain.toLowerCase();
+    if (_cbDomainTld.endsWith('.nl')) _cbBingMkt = 'nl-NL';
+    else if (_cbDomainTld.endsWith('.de')) _cbBingMkt = 'de-DE';
+    else if (_cbDomainTld.endsWith('.co.uk') || _cbDomainTld.endsWith('.uk')) _cbBingMkt = 'en-GB';
+    else if (_cbDomainTld.endsWith('.fr')) _cbBingMkt = 'fr-FR';
+    else if (_cbDomainTld.endsWith('.es')) _cbBingMkt = 'es-ES';
+    else if (_cbDomainTld.endsWith('.au')) _cbBingMkt = 'en-AU';
+    else if (_cbDomainTld.endsWith('.ca')) _cbBingMkt = 'en-CA';
+    else if (_cbDomainTld.endsWith('.it')) _cbBingMkt = 'it-IT';
+    else if (_cbDomainTld.endsWith('.pl')) _cbBingMkt = 'pl-PL';
+    else if (_cbDomainTld.endsWith('.br')) _cbBingMkt = 'pt-BR';
+    else if (_cbDomainTld.endsWith('.in')) _cbBingMkt = 'en-IN';
+    else if (_cbDomainTld.endsWith('.jp')) _cbBingMkt = 'ja-JP';
+    else if (_cbDomainTld.endsWith('.se')) _cbBingMkt = 'sv-SE';
+    else if (_cbDomainTld.endsWith('.no')) _cbBingMkt = 'nb-NO';
+    else if (_cbDomainTld.endsWith('.dk')) _cbBingMkt = 'da-DK';
+
     // ── Step 1: Our page content ─────────────────────────────────────────────
     let ourPageText = '';
     if (page.html_content) {
@@ -31446,7 +31465,7 @@ app.post('/api/tracker/pages/:id/citation-brief', verifyEngineAccess, async (req
       try {
         const t_bing = Date.now();
         const bResp = await fetch(
-          'https://api.bing.microsoft.com/v7.0/search?q=' + encodeURIComponent(keyword) + '&count=10&mkt=en-US',
+          'https://api.bing.microsoft.com/v7.0/search?q=' + encodeURIComponent(keyword) + '&count=10&mkt=' + _cbBingMkt,
           { headers: { 'Ocp-Apim-Subscription-Key': bingApiKey }, signal: AbortSignal.timeout(10000) }
         );
         _trackAiCall('bing', 'bing-api', bResp.ok, bResp.ok ? null : 'HTTP '+bResp.status, Date.now()-t_bing);
@@ -33287,6 +33306,27 @@ async function runTrackerCheck(page, geminiKey, keys, forceRescan = false) {
   const domain    = pageUrl.replace(/^https?:\/\//, '').split('/')[0]; // e.g. example.com
   const cleanHost = pageUrl.replace(/^https?:\/\//, '').replace(/\/$/, '');
 
+  // Auto-detect locale from domain TLD for all search APIs
+  var _scanLocale = 'us';
+  var _scanLang = 'en';
+  var _bingMkt = 'en-US';
+  var _domainTld = domain.toLowerCase();
+  if (_domainTld.endsWith('.nl')) { _scanLocale = 'nl'; _scanLang = 'nl'; _bingMkt = 'nl-NL'; }
+  else if (_domainTld.endsWith('.de')) { _scanLocale = 'de'; _scanLang = 'de'; _bingMkt = 'de-DE'; }
+  else if (_domainTld.endsWith('.co.uk') || _domainTld.endsWith('.uk')) { _scanLocale = 'gb'; _scanLang = 'en'; _bingMkt = 'en-GB'; }
+  else if (_domainTld.endsWith('.fr')) { _scanLocale = 'fr'; _scanLang = 'fr'; _bingMkt = 'fr-FR'; }
+  else if (_domainTld.endsWith('.es')) { _scanLocale = 'es'; _scanLang = 'es'; _bingMkt = 'es-ES'; }
+  else if (_domainTld.endsWith('.au')) { _scanLocale = 'au'; _scanLang = 'en'; _bingMkt = 'en-AU'; }
+  else if (_domainTld.endsWith('.ca')) { _scanLocale = 'ca'; _scanLang = 'en'; _bingMkt = 'en-CA'; }
+  else if (_domainTld.endsWith('.it')) { _scanLocale = 'it'; _scanLang = 'it'; _bingMkt = 'it-IT'; }
+  else if (_domainTld.endsWith('.pl')) { _scanLocale = 'pl'; _scanLang = 'pl'; _bingMkt = 'pl-PL'; }
+  else if (_domainTld.endsWith('.br')) { _scanLocale = 'br'; _scanLang = 'pt'; _bingMkt = 'pt-BR'; }
+  else if (_domainTld.endsWith('.in')) { _scanLocale = 'in'; _scanLang = 'en'; _bingMkt = 'en-IN'; }
+  else if (_domainTld.endsWith('.jp')) { _scanLocale = 'jp'; _scanLang = 'ja'; _bingMkt = 'ja-JP'; }
+  else if (_domainTld.endsWith('.se')) { _scanLocale = 'se'; _scanLang = 'sv'; _bingMkt = 'sv-SE'; }
+  else if (_domainTld.endsWith('.no')) { _scanLocale = 'no'; _scanLang = 'no'; _bingMkt = 'nb-NO'; }
+  else if (_domainTld.endsWith('.dk')) { _scanLocale = 'dk'; _scanLang = 'da'; _bingMkt = 'da-DK'; }
+
   // ── 1. Fetch live HTML ──────────────────────────────────────────────────────
   // ALTIJD proberen te fetchen. Als het resultaat suspicious is (JS-shell, bot-block),
   // behoud de cached html_content (bv. handmatig geplakt). Pas als de fetch GOED is,
@@ -33504,10 +33544,11 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
         _trSetStep(pageId, 'google', 'done', '✅ Cached: pos #' + (skCached.google_position||'?') + (skCached.ai_google_overview_cited ? ' · AIO ✓' : ''));
       } else
       try {
+        _trSetStep(pageId, 'google', 'running', 'Searching Google (' + _scanLocale.toUpperCase() + '): ' + keyword);
         const sResp = await fetch('https://google.serper.dev/search', {
           method: 'POST',
           headers: { 'X-API-KEY': _sk, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ q: keyword, num: 10, hl: 'en', gl: 'us' }),
+          body: JSON.stringify({ q: keyword, num: 10, hl: _scanLang, gl: _scanLocale }),
           signal: AbortSignal.timeout(15000)
         });
         if(sResp.ok) {
@@ -33680,7 +33721,7 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
       } else
       try {
         const bingResp = await fetch(
-          `https://api.bing.microsoft.com/v7.0/search?q=${encodeURIComponent(keyword)}&count=10&mkt=en-US`,
+          `https://api.bing.microsoft.com/v7.0/search?q=${encodeURIComponent(keyword)}&count=10&mkt=${_bingMkt}`,
           {
             headers: { 'Ocp-Apim-Subscription-Key': _bingKey },
             signal: AbortSignal.timeout(10000)
