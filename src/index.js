@@ -25748,7 +25748,7 @@ function renderPages() {
     }
 
     // Recommendations
-    var recsHtml = renderRecs(p);
+    var recsHtml = ''; // inline brief removed — brief now opens in the popup via the Brief button
 
     // Pending first check banner — only show if NO data whatsoever
     var hasAnyData = !!lastCheckedRaw || p.google_position !== null && p.google_position !== undefined
@@ -25797,7 +25797,7 @@ function renderPages() {
       + '</div>'
       + '</div>'
       + '<div style="display:flex;gap:5px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;align-items:flex-start;">'
-      + (_lastBriefData[p.id] ? '<button onclick="viewLastBrief(' + p.id + ')" style="background:none;border:1px solid #7c3aed;border-radius:5px;color:#a78bfa;cursor:pointer;font-size:11px;padding:3px 10px;font-weight:600;" title="View last Citation Brief">📄 Brief</button>' : '')
+      + (_lastBriefData[p.id] ? '<button onclick="viewLastBrief(' + p.id + ')" style="background:#7c3aed;border:1px solid #8b5cf6;border-radius:6px;color:#fff;cursor:pointer;font-size:12px;padding:6px 14px;font-weight:700;box-shadow:0 2px 10px rgba(124,58,237,.45);" title="View Citation Brief">📄 View Brief</button>' : '')
       + '<button onclick="openHtmlUpload(' + p.id + ')" style="background:none;border:1px solid ' + (htmlNeeded ? '#f59e0b' : '#374151') + ';border-radius:5px;color:' + (htmlNeeded ? '#fbbf24' : '#4b5563') + ';cursor:pointer;font-size:11px;padding:3px 10px;font-weight:' + (htmlNeeded ? '700' : '400') + ';' + (htmlNeeded ? 'animation:htmlNeeded 1.2s ease-in-out infinite;' : '') + '" title="' + (htmlNeeded ? 'Paste updated HTML for next scan' : 'Update HTML') + '">📋 ' + (htmlNeeded ? 'Add HTML' : 'HTML') + '</button>'
       + (lastChecked ? '<button onclick="checkPage(' + p.id + ')" style="background:none;border:1px solid #374151;border-radius:5px;color:#6b7280;cursor:pointer;font-size:11px;padding:3px 8px;" title="Rescan now">↻</button>' : '')
       + '<button onclick="deletePage(' + p.id + ')" style="background:none;border:1px solid #374151;border-radius:5px;color:#374151;cursor:pointer;font-size:12px;padding:4px 8px;" title="Delete page">🗑</button>'
