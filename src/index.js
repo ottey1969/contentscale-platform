@@ -24691,7 +24691,6 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
     <div class="cs-stat"><div class="val" id="statCitedP" style="color:#7c3aed;">&mdash;</div><div class="lbl">Perplexity</div></div>
     <div class="cs-stat"><div class="val" id="statCitedB" style="color:#2563eb;">&mdash;</div><div class="lbl">Copilot</div></div>
     <div class="cs-stat"><div class="val" id="statCitedC" style="color:#dc2626;">&mdash;</div><div class="lbl">Claude</div></div>
-    <div class="cs-stat"><div class="val" id="statAvgScore" style="color:#ca8a04;">&mdash;</div><div class="lbl">GRAAF</div></div>
     <div class="cs-stat"><div class="val" id="statRemaining" style="color:#16a34a;">&mdash;</div><div class="lbl">Slots left</div></div>
   </div>
 
@@ -24988,14 +24987,11 @@ function renderStats(data) {
   var citedP = pages.filter(function(p){ return p.ai_perplexity_cited; }).length;
   var citedB = pages.filter(function(p){ return p.ai_bing_cited; }).length;
   var citedC = pages.filter(function(p){ return p.ai_brave_cited; }).length;
-  var scores = pages.filter(function(p){ return p.graaf_score; }).map(function(p){ return p.graaf_score; });
-  var avgScore = scores.length ? Math.round(scores.reduce(function(a,b){ return a+b; },0)/scores.length) : 0;
   document.getElementById('statTotal').textContent = pages.length;
   document.getElementById('statCitedG').textContent = citedG;
   document.getElementById('statCitedP').textContent = citedP;
   var elB = document.getElementById('statCitedB'); if(elB) elB.textContent = citedB;
   var elC = document.getElementById('statCitedC'); if(elC) elC.textContent = citedC;
-  document.getElementById('statAvgScore').textContent = avgScore ? avgScore+'/100' : '-';
 
   // Slots left — MAX_PAGES is total across all domains
   // Show: used/total and per-domain breakdown if multiple domains
