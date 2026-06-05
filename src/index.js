@@ -25561,6 +25561,7 @@ var _ctSearchQuery = '';
         passages: Array.isArray(brief.items) ? brief.items : [],
         gsc_brief: brief.gsc_brief || [],
         source_suggestions: brief.source_suggestions || [],
+        discovered_sources: brief.discovered_sources || [],
         gsc_clicks: p.gsc_clicks || null,
         gsc_impressions: p.gsc_impressions || null,
         gsc_position: p.gsc_position || null,
@@ -26281,7 +26282,7 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
       '<div class="cb-stat" style="animation:soStatPop .4s ease .3s both"><div class="v" style="color:#fbbf24;">' + (data.score || '—') + '</div><div class="l">GRAAF</div></div>';
 
     // GSC section — show if GSC is connected (even if values are 0)
-    var hasGsc = data._gsc_enabled || (data.gsc_clicks != null) || (data.gsc_impressions != null) || (data.gsc_position != null);
+    var hasGsc = GSC_ENABLED || data._gsc_enabled || (data.gsc_clicks != null) || (data.gsc_impressions != null) || (data.gsc_position != null);
     if (hasGsc && gscS) {
       gscS.style.display = 'block';
       var gscStats = document.getElementById('cbGscStats');
@@ -26306,7 +26307,7 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
       allItems = allItems.concat(passages);
     }
     var gscBriefItems = data.gsc_brief || [];
-    var isGscEnabled = data._gsc_enabled || !!(data.gsc_clicks || data.gsc_impressions || data.gsc_position);
+    var isGscEnabled = GSC_ENABLED || data._gsc_enabled || !!(data.gsc_clicks || data.gsc_impressions || data.gsc_position);
     if (isGscEnabled && gscBriefItems.length) {
       gscBriefItems.forEach(function(g) {
         allItems.push({
@@ -26588,7 +26589,7 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
       '<div class="cb-stat" style="animation:soStatPop .3s ease .25s both"><div class="v" style="color:#fbbf24;">' + (data.score || '—') + '</div><div class="l">GRAAF</div></div>';
 
     // GSC — show if connected (even with 0 values)
-    var hasGsc = data._gsc_enabled || (data.gsc_clicks != null) || (data.gsc_impressions != null) || (data.gsc_position != null);
+    var hasGsc = GSC_ENABLED || data._gsc_enabled || (data.gsc_clicks != null) || (data.gsc_impressions != null) || (data.gsc_position != null);
     if (hasGsc && gscS) {
       gscS.style.display = 'block';
       var gscStats = document.getElementById('cbGscStats');
@@ -26608,7 +26609,7 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
     // Recommendations — Citation Brief + GSC Brief combined
     var passages = data.passages || data.recommendations;
     var gscBriefItems = data.gsc_brief || [];
-    var isGscEnabled = data._gsc_enabled || !!(data.gsc_clicks || data.gsc_impressions || data.gsc_position);
+    var isGscEnabled = GSC_ENABLED || data._gsc_enabled || !!(data.gsc_clicks || data.gsc_impressions || data.gsc_position);
     var allItems = [];
     if (passages && Array.isArray(passages)) allItems = allItems.concat(passages);
     if (isGscEnabled && gscBriefItems.length) {
@@ -27373,6 +27374,15 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
   }
 
 <\/script>
+</body>
+</html>`;
+
+const _LIVE_OVERLAY_HTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ContentScale — Live Feed</title>
 <style>/* ── Header bar ── */
 .header {
   position:fixed;top:0;left:0;right:0;
@@ -32894,6 +32904,9 @@ app.post('/api/tracker/pages/:id/check', verifyEngineAccess, async (req, res) =>
               }
 
               if (mergedBrief) {
+                mergedBrief.source_suggestions = curr.source_suggestions || [];
+                mergedBrief.discovered_sources = curr.discovered_sources || [];
+                mergedBrief.gsc_brief = curr.gsc_brief || [];
                 await pool.query(
                   `UPDATE tracker_pages SET brief_content=$1, brief_started_at=COALESCE(brief_started_at, NOW()), brief_check_count=$2 WHERE id=$3`,
                   [JSON.stringify(mergedBrief), checkCount, page.id]
@@ -32972,6 +32985,17 @@ Return ONLY a JSON array, no markdown:
                 merged: !isFirstBrief,
                 merge_note: mergeNote,
                 brief_content: mergedBrief,
+                passages: mergedBrief ? (mergedBrief.items || []) : [],
+                gsc_brief: curr.gsc_brief || [],
+                source_suggestions: curr.source_suggestions || [],
+                discovered_sources: curr.discovered_sources || [],
+                author_trust_score: curr.author_trust_score || 0,
+                author_trust_findings: curr.author_trust_findings || [],
+                gsc_clicks: page.gsc_clicks,
+                gsc_impressions: page.gsc_impressions,
+                gsc_position: page.gsc_position,
+                gsc_keyword: page.gsc_keyword,
+                _gsc_enabled: (page.gsc_clicks != null) || (page.gsc_impressions != null) || (page.gsc_position != null),
                 ts: new Date().toISOString()
               };
               _sseBroadcast(_briefPayload1);
