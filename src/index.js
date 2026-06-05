@@ -25666,6 +25666,18 @@ function renderPages() {
     // Populate brief cache from saved page data so the 📄 Brief button + popup work
     (function(){
       var _r = typeof p.recommendations === 'string' ? (function(){try{return JSON.parse(p.recommendations);}catch(e){return [];}})() : (p.recommendations || []);
+      // Fallback: pull from saved brief_content when the latest snapshot has no recommendations
+      if ((!Array.isArray(_r) || !_r.length) && p.brief_content) {
+        try {
+          var _bc = typeof p.brief_content === 'string' ? JSON.parse(p.brief_content) : p.brief_content;
+          if (_bc) {
+            _r = _bc.items || _bc.passages || _bc.recommendations || [];
+            if ((!p.source_suggestions || !p.source_suggestions.length) && _bc.source_suggestions) p.source_suggestions = _bc.source_suggestions;
+            if ((!p.discovered_sources || !p.discovered_sources.length) && _bc.discovered_sources) p.discovered_sources = _bc.discovered_sources;
+            if ((!p.gsc_brief || !p.gsc_brief.length) && _bc.gsc_brief) p.gsc_brief = _bc.gsc_brief;
+          }
+        } catch(e) {}
+      }
       if (Array.isArray(_r) && _r.length) {
         _lastBriefData[p.id] = {
           page_id: p.id,
