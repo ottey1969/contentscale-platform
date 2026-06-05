@@ -25813,8 +25813,7 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
       '<div class="cb-stat" style="animation:soStatPop .4s ease .12s both"><div class="v" style="color:' + (data.perp_cited ? '#a78bfa' : '#4b5563') + ';">' + (data.perp_cited ? '✓ Cited' : 'No') + '</div><div class="l">Perplexity</div></div>' +
       '<div class="cb-stat" style="animation:soStatPop .4s ease .18s both"><div class="v" style="color:' + (data.bing_cited ? '#60a5fa' : '#4b5563') + ';">' + (data.bing_cited ? '✓ Cited' : 'No') + '</div><div class="l">Copilot</div></div>' +
       '<div class="cb-stat" style="animation:soStatPop .4s ease .24s both;position:relative;"><div class="v" style="color:' + (data.brave_cited ? '#f87171' : '#4b5563') + ';">' + (data.brave_cited ? '✓ Cited' : 'No') + '</div><div class="l">Claude</div>' + (data.brave_cited ? '<span style="position:absolute;top:-4px;right:-4px;font-size:8px;background:#0a0a12;border:1px solid #1f2937;border-radius:3px;padding:0 3px;color:#6b7280;white-space:nowrap;">ὄ1; see img</span>' : '') + '</div>' +
-      '<div class="cb-stat" style="animation:soStatPop .4s ease .3s both"><div class="v" style="color:#fbbf24;">' + (data.score || '—') + '</div><div class="l">GRAAF</div></div>' +
-      '<div class="cb-stat" style="animation:soStatPop .4s ease .36s both"><div class="v" style="color:#38bdf8;">' + (data.author_trust_score || '—') + '</div><div class="l">Author Trust</div></div>';
+      '<div class="cb-stat" style="animation:soStatPop .4s ease .3s both"><div class="v" style="color:#fbbf24;">' + (data.score || '—') + '</div><div class="l">GRAAF</div></div>';
 
     // GSC section — optional, collapsed
     var hasGsc = !!(data.gsc_clicks || data.gsc_impressions || data.gsc_position || data.gsc_ctr);
@@ -25933,31 +25932,7 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
       cpS.style.display = 'block';
     }
 
-    // Author Trust — E-E-A-T actions
-    var authorTrustFindings = data.author_trust_findings || [];
-    if (authorTrustFindings.length > 0) {
-      var atDiv = document.getElementById('cbPassages');
-      var atHeader = document.createElement('div');
-      atHeader.style.cssText = 'font-size:11px;font-weight:800;color:#38bdf8;text-transform:uppercase;letter-spacing:.08em;margin:24px 0 14px;';
-      atHeader.innerHTML = '\u{1F464} Author Trust — E-E-A-T Score: ' + (data.author_trust_score || 0) + '/100';
-      atDiv.appendChild(atHeader);
-      authorTrustFindings.slice(0, 4).forEach(function(f) {
-        var atEl = document.createElement('div');
-        atEl.className = 'cb-passage';
-        atEl.style.borderLeftColor = f.priority === 'high' ? '#ef4444' : '#f59e0b';
-        atEl.innerHTML =
-          '<div class="pri-row">' +
-            '<span class="pri-badge ' + (f.priority || 'medium') + '">' + (f.priority || 'MEDIUM').toUpperCase() + '</span>' +
-            '<span class="sys-badge" style="color:#38bdf8;background:#38bdf818;border-color:#38bdf830;">Author Trust</span>' +
-          '</div>' +
-          '<span class="rec-title">' + (f.title || 'Improve author credibility') + '</span>' +
-          '<span class="rec-action">' + (f.action || '') + '</span>' +
-          '<span class="rec-impact">' + (f.expected_impact || 'Improves E-E-A-T signals for AI citation systems') + '</span>';
-        atDiv.appendChild(atEl);
-      });
-    }
-
-    // Source Suggestions — Verified Claims
+    // Source Suggestions — Verified Claims (show only if issues found)
     var sourceSuggestions = data.source_suggestions || [];
     if (sourceSuggestions.length > 0) {
       var srcDiv = document.getElementById('cbPassages');
@@ -26086,8 +26061,7 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
       '<div class="cb-stat" style="animation:soStatPop .3s ease .1s both"><div class="v" style="color:' + (data.perp_cited ? '#a78bfa' : '#4b5563') + ';">' + (data.perp_cited ? '\u2713 Cited' : 'No') + '</div><div class="l">Perplexity</div></div>' +
       '<div class="cb-stat" style="animation:soStatPop .3s ease .15s both"><div class="v" style="color:' + (data.bing_cited ? '#60a5fa' : '#4b5563') + ';">' + (data.bing_cited ? '\u2713 Cited' : 'No') + '</div><div class="l">Copilot</div></div>' +
       '<div class="cb-stat" style="animation:soStatPop .3s ease .2s both"><div class="v" style="color:' + (data.brave_cited ? '#f87171' : '#4b5563') + ';">' + (data.brave_cited ? '\u2713 Cited' : 'No') + '</div><div class="l">Claude</div></div>' +
-      '<div class="cb-stat" style="animation:soStatPop .3s ease .25s both"><div class="v" style="color:#fbbf24;">' + (data.score || '—') + '</div><div class="l">GRAAF</div></div>' +
-      '<div class="cb-stat" style="animation:soStatPop .3s ease .3s both"><div class="v" style="color:#38bdf8;">' + (data.author_trust_score || '—') + '</div><div class="l">Author Trust</div></div>';
+      '<div class="cb-stat" style="animation:soStatPop .3s ease .25s both"><div class="v" style="color:#fbbf24;">' + (data.score || '—') + '</div><div class="l">GRAAF</div></div>';
 
     // GSC
     var hasGsc = !!(data.gsc_clicks || data.gsc_impressions || data.gsc_position || data.gsc_ctr);
@@ -26156,30 +26130,7 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
       passDiv.innerHTML = '<div class="cb-passage">No recommendations yet — run a scan first.</div>';
     }
 
-    // Author Trust — E-E-A-T actions (also in viewLastBrief)
-    var authorTrustFindings = data.author_trust_findings || [];
-    if (authorTrustFindings.length > 0) {
-      var atHeader = document.createElement('div');
-      atHeader.style.cssText = 'font-size:11px;font-weight:800;color:#38bdf8;text-transform:uppercase;letter-spacing:.08em;margin:24px 0 14px;';
-      atHeader.innerHTML = '\u{1F464} Author Trust — E-E-A-T Score: ' + (data.author_trust_score || 0) + '/100';
-      passDiv.appendChild(atHeader);
-      authorTrustFindings.slice(0, 4).forEach(function(f) {
-        var atEl = document.createElement('div');
-        atEl.className = 'cb-passage';
-        atEl.style.borderLeftColor = f.priority === 'high' ? '#ef4444' : '#f59e0b';
-        atEl.innerHTML =
-          '<div class="pri-row">' +
-            '<span class="pri-badge ' + (f.priority || 'medium') + '">' + (f.priority || 'MEDIUM').toUpperCase() + '</span>' +
-            '<span class="sys-badge" style="color:#38bdf8;background:#38bdf818;border-color:#38bdf830;">Author Trust</span>' +
-          '</div>' +
-          '<span class="rec-title">' + (f.title || 'Improve author credibility') + '</span>' +
-          '<span class="rec-action">' + (f.action || '') + '</span>' +
-          '<span class="rec-impact">' + (f.expected_impact || 'Improves E-E-A-T signals for AI citation systems') + '</span>';
-        passDiv.appendChild(atEl);
-      });
-    }
-
-    // Source Suggestions — Verified Claims (also in viewLastBrief)
+    // Source Suggestions — Verified Claims (show only if issues found)
     var sourceSuggestions = data.source_suggestions || [];
     if (sourceSuggestions.length > 0) {
       var srcHeader = document.createElement('div');
@@ -26337,7 +26288,11 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
     if (ev.type === 'brief_ready') {
       // Only show if this brief belongs to our domain
       if (ev.domain && ev.domain === DOMAIN) {
-        showCitationBrief(ev);
+        // Don't auto-open if inline brief already has data
+        var hasInlineData = !!(ev.passages && ev.passages.length) || !!(ev.recommendations && ev.recommendations.length);
+        if (!hasInlineData) {
+          showCitationBrief(ev);
+        }
       }
     }
     if (_origHandleWallEvent) _origHandleWallEvent(ev);
@@ -26803,32 +26758,24 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
   function openBriefFromPoll(pageData) {
     hideScanOverlay();
     loadPages();
+    // Don't open overlay — inline brief already shows the data
+    // User can click "📄 Brief" button to view overlay if needed
     var snap = pageData || {};
-    showCitationBrief({
+    // Store data for button click
+    _lastBriefData[snap.id || pageData.page_id] = {
       page_id: snap.id || pageData.page_id,
       url: snap.url || '',
       keyword: snap.keyword || snap.gsc_keyword || '',
       domain: DOMAIN,
       position: snap.google_position || snap.gsc_position || null,
-      gsc_clicks: snap.gsc_clicks || null,
-      gsc_impressions: snap.gsc_impressions || null,
-      gsc_position: snap.gsc_position || null,
-      gsc_ctr: snap.gsc_ctr || null,
-      gsc_keyword: snap.gsc_keyword || null,
       aio_cited: !!(snap.ai_google_overview_cited),
       perp_cited: !!(snap.ai_perplexity_cited),
       bing_cited: !!(snap.ai_bing_cited),
       brave_cited: !!(snap.ai_brave_cited),
       score: snap.score || snap.graaf_score || snap.last_graaf_score || null,
-      gsc_clicks: snap.gsc_clicks || null,
-      gsc_impressions: snap.gsc_impressions || null,
-      gsc_position: snap.gsc_position || null,
-      gsc_ctr: snap.gsc_ctr || null,
-      gsc_keyword: snap.gsc_keyword || null,
-      recommendations: Array.isArray(snap.recommendations) ? snap.recommendations : [],
-      brief_content: snap.brief_content || null,
-      type: 'brief_ready'
-    });
+      passages: Array.isArray(snap.recommendations) ? snap.recommendations : []
+    };
+    return; // EXIT — no overlay, inline brief shows data
   }
 
   async function submitHtmlUpload() {
@@ -26841,502 +26788,23 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
     if (html) payload.html_content = html;
     if (kw) payload.keyword = kw;
     try {
-      var d = await api('/pages/' + pageId + '/html', 'PATCH', payload);
-      if (d.success) {
-        var p = (_pages||[]).find(function(x){ return x.id == pageId; });
-        var pageUrl = p ? (p.url || '') : '';
-        if (p) { p.needs_html = false; p.html_source = 'manual'; p.has_html_content = true; }
-        hideModal('htmlUploadModal');
-        runScanAnimation(pageUrl, function() {
-          pollAndShowBrief(pageId, 30, 5000);
-        });
-      } else { toast(d.error || 'Failed', '#f87171'); }
+      var r = await api('/pages/' + pageId + '/html', 'POST', payload);
+      if (r.success) {
+        toast('HTML saved. Scanning now...', '#4ade80');
+        closeHtmlUpload();
+        var p = (_pages || []).find(function(x) { return x.id == pageId; });
+        if (p) { p.needs_html = false; loadPages(); }
+        setTimeout(function() { runScanAnimation(p ? p.url : '', function() { pollAndShowBrief(pageId, 60, 5000); }); }, 300);
+      } else { toast(r.error || 'Failed to save', '#f87171'); }
     } catch(e) { toast('Error: ' + e.message, '#f87171'); }
   }
 
-  // ── Edit keyword inline ──────────────────────────────────────────────────────
-  function changeFreq(pageId, freq) {
-    api('/pages/' + pageId + '/frequency', 'PATCH', { frequency: freq })
-      .then(function(d){
-        if (d.success) toast('Auto-check: ' + freq, '#4ade80');
-        else toast(d.error||'Failed', '#f87171');
-        setTimeout(loadPages, 400);
-      }).catch(function(e){ toast('Error: '+e.message, '#f87171'); });
+  function showScanOverlay() {
+    var overlay = document.getElementById('soOverlay');
+    if (overlay) overlay.style.display = 'flex';
   }
 
-  function editKeyword(pageId, btnEl) {
-    var page = (_pages||[]).find(function(p){ return p.id == pageId; }) || {};
-    var current = page.keyword || page.gsc_keyword || '';
-    var newKw = prompt('Set keyword for this page (used for SERP + AI checks):', current);
-    if (newKw === null) return;
-    newKw = newKw.trim();
-    api('/pages/' + pageId + '/keyword', 'PATCH', { keyword: newKw })
-      .then(function(d) {
-        if (d.success) {
-          toast('Keyword updated', '#4ade80');
-          setTimeout(loadPages, 400);
-        } else {
-          toast(d.error || 'Failed', '#f87171');
-        }
-      })
-      .catch(function(e) { toast('Error: ' + e.message, '#f87171'); });
-  }
-
-  // ── Welcome overlay ────────────────────────────────────────────────────────
-  function closeWelcome() {
-    var el = document.getElementById('welcomeOverlay');
-    if (el) el.style.display = 'none';
-    try { sessionStorage.setItem('wl_seen_' + TOKEN, '1'); } catch(e) {}
-  }
-  function openWelcome() {
-    var el = document.getElementById('welcomeOverlay');
-    if (el) el.style.display = 'flex';
-  }
-
-  function openWaSettings() { openTelegramSetup(); } // legacy redirect
-
-  async function refreshGscData() {
-    var btn = document.getElementById('gscRefreshBtn');
-    if (btn) { btn.textContent = '📊 Refreshing...'; btn.disabled = true; }
-    var d = await fetch('/api/tracker-client/' + TOKEN + '/refresh-gsc', { method: 'POST' }).then(function(r){ return r.json(); }).catch(function(){ return {success:false}; });
-    if (d.success) {
-      toast('Refreshing GSC data for ' + d.queued + ' pages — reloading in 10s', '#34d399');
-      setTimeout(loadPages, 10000);
-    } else {
-      toast(d.error || 'GSC refresh failed', '#f87171');
-    }
-    if (btn) { btn.textContent = '📊 GSC'; btn.disabled = false; }
-  }
-
-  async function mergePages() {
-    var d = await fetch('/api/tracker-client/' + TOKEN + '/merge-pages', { method: 'POST' }).then(function(r){ return r.json(); }).catch(function(){ return {success:false}; });
-    if (d.success) {
-      if (d.merged === 0) toast('No duplicates found', '#60a5fa');
-      else { toast('Merged ' + d.merged + ' duplicates — ' + d.kept + ' pages kept', '#4ade80'); setTimeout(loadPages, 400); }
-    } else toast(d.error || 'Merge failed', '#f87171');
-  }
-
-  async function cleanPages() {
-    var d = await fetch('/api/tracker-client/' + TOKEN + '/clean-pages', { method: 'POST' }).then(function(r){ return r.json(); }).catch(function(){ return {success:false}; });
-    if (d.success) {
-      if (d.cleaned === 0) toast('No asset URLs found', '#60a5fa');
-      else { toast('Removed ' + d.cleaned + ' asset/image URLs', '#4ade80'); setTimeout(loadPages, 400); }
-    } else toast(d.error || 'Clean failed', '#f87171');
-  }
-
-  function updateBulkBar() {
-    var cbs = document.querySelectorAll('.page-select-cb:checked');
-    var btn = document.getElementById('bulkDeleteBtn');
-    if (btn) btn.style.display = cbs.length > 0 ? 'inline-flex' : 'none';
-    if (btn && cbs.length > 0) btn.textContent = '🗑 Delete ' + cbs.length + ' selected';
-  }
-
-  async function deletePage(pageId) {
-    if (!confirm('Delete this page from tracker? All scan history will be removed.')) return;
-    var d = await fetch('/api/tracker-client/' + TOKEN + '/pages/' + pageId, { method: 'DELETE' }).then(r => r.json()).catch(() => ({success:false}));
-    if (d.success) { toast('Page deleted', '#4ade80'); setTimeout(loadPages, 300); }
-    else toast(d.error || 'Failed', '#f87171');
-  }
-
-  async function bulkDeleteSelected() {
-    var cbs = document.querySelectorAll('.page-select-cb:checked');
-    if (!cbs.length) return;
-    if (!confirm('Delete ' + cbs.length + ' pages? This cannot be undone.')) return;
-    var ids = Array.from(cbs).map(function(cb){ return parseInt(cb.dataset.id); });
-    var d = await fetch('/api/tracker-client/' + TOKEN + '/pages/bulk-delete', {
-      method: 'POST', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ page_ids: ids })
-    }).then(r => r.json()).catch(() => ({success:false}));
-    if (d.success) { toast('Deleted ' + d.deleted + ' pages', '#4ade80'); setTimeout(loadPages, 300); }
-    else toast(d.error || 'Failed', '#f87171');
-  }
-
-  async function scanAllPages() {
-    if (_briefIsOpen) { toast('Close the Citation Brief first before scanning', '#f59e0b'); return; }
-    var choice = confirm('Scan unscanned pages only? OK = only new pages (faster). Cancel = rescan all pages.');
-    var d = await fetch('/api/tracker-client/' + TOKEN + '/scan-all', {
-      method: 'POST',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ unscanned_only: choice })
-    }).then(r => r.json()).catch(() => ({success:false}));
-    if (d.success) {
-      if (d.queued === 0) { toast('No unscanned pages found — all pages have data', '#60a5fa'); return; }
-      toast(d.message || 'Scanning ' + d.queued + ' pages — results load automatically', '#4ade80');
-      var scanRefresh = setInterval(function(){ loadPages(); }, 15000);
-      setTimeout(function(){ clearInterval(scanRefresh); }, Math.max(d.queued * 15000, 60000) + 30000);
-    } else toast(d.error || 'Failed', '#f87171');
-  }
-
-  function openTelegramSetup() {
-    var modal = document.getElementById('telegramModal');
-    if (!modal) return;
-    var botName = 'ContentScaleTrackerBot';
-    var link = document.getElementById('telegramBotLink');
-    if (link) link.href = 'https://t.me/' + botName + '?start=' + TOKEN;
-    modal.style.display = 'flex';
-  }
-
-  function markTelegramLinked() {
-    // Stop pulse animation on button once linked
-    var btn = document.querySelector('[onclick="openTelegramSetup()"]');
-    if (btn) {
-      btn.style.animation = 'none';
-      btn.style.borderColor = '#4ade80';
-      btn.style.color = '#4ade80';
-      btn.innerHTML = '<i class="fab fa-telegram"></i> Telegram ✓';
-    }
-  }
-
-  function openSitemapLinks() {
-    var modal = document.getElementById('sitemapLinksModal');
-    if (!modal) return;
-    // Pre-fill sitemap URL
-    var inp = document.getElementById('slSitemapUrl');
-    if (inp && !inp.value) inp.value = 'https://' + DOMAIN + '/sitemap.xml';
-    document.getElementById('slStep1').style.display = 'block';
-    document.getElementById('slLoading').style.display = 'none';
-    document.getElementById('slResults').style.display = 'none';
-    modal.style.display = 'flex';
-  }
-
-  async function runSitemapLinks() {
-    var sitemapUrl = (document.getElementById('slSitemapUrl') || {}).value || '';
-    if (!sitemapUrl) { toast('Enter your sitemap URL', '#f87171'); return; }
-    document.getElementById('slStep1').style.display = 'none';
-    document.getElementById('slLoading').style.display = 'block';
-    document.getElementById('slResults').style.display = 'none';
-
-    var steps = ['Fetching sitemap...', 'Parsing pages...', 'Comparing with tracked pages...', 'Generating link suggestions...'];
-    var stepIdx = 0;
-    var stepTimer = setInterval(function() {
-      if (stepIdx < steps.length) {
-        var el = document.getElementById('slLoadingText');
-        if (el) el.textContent = steps[stepIdx++];
-      }
-    }, 1800);
-
-    try {
-      var d = await fetch('/api/tracker-client/' + TOKEN + '/sitemap-links', {
-        method: 'POST',
-        headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({ sitemap_url: sitemapUrl })
-      }).then(function(r){ return r.json(); });
-
-      clearInterval(stepTimer);
-      document.getElementById('slLoading').style.display = 'none';
-      document.getElementById('slResults').style.display = 'block';
-
-      if (!d.success) {
-        document.getElementById('slResults').innerHTML = '<div style="color:#f87171;font-size:13px;">Error: ' + (d.error || 'Failed') + '</div>';
-        return;
-      }
-
-      var pages = d.pages || [];
-      var suggestions = d.suggestions || [];
-      var aiPrompt = d.ai_prompt || '';
-
-      var html = '<div style="margin-bottom:14px;">';
-      html += '<div style="font-size:11px;color:#38bdf8;font-family:monospace;margin-bottom:8px;">Found ' + pages.length + ' pages in sitemap · ' + suggestions.length + ' link opportunities</div>';
-
-      if (suggestions.length === 0) {
-        html += '<div style="font-size:13px;color:#4ade80;">&#10003; No obvious missing internal links found.</div>';
-      } else {
-        suggestions.forEach(function(s) {
-          var pri = (s.priority || 'medium').toLowerCase();
-          var c = pri === 'high' ? '#ef4444' : pri === 'medium' ? '#f59e0b' : '#22c55e';
-          html += '<div style="background:#111827;border:1px solid #1f2937;border-left:3px solid ' + c + ';border-radius:0 8px 8px 0;padding:12px 14px;margin-bottom:10px;">';
-          html += '<div style="font-size:11px;font-weight:700;color:' + c + ';margin-bottom:4px;">' + (pri.toUpperCase()) + ' · ' + (s.from_page || '') + '</div>';
-          html += '<div style="font-size:12px;color:#d1d5db;margin-bottom:4px;">Add link to: <strong style="color:#38bdf8;">' + (s.to_page || '') + '</strong></div>';
-          html += '<div style="font-size:12px;color:#9ca3af;">Anchor text: <em style="color:#f1f5f9;">"' + (s.anchor_text || '') + '"</em></div>';
-          if (s.where_to_add) html += '<div style="font-size:11px;color:#6b7280;margin-top:4px;">Where: ' + s.where_to_add + '</div>';
-          html += '</div>';
-        });
-      }
-
-      // AI prompt copy section
-      if (aiPrompt) {
-        html += '<div style="margin-top:16px;background:#0a0f1a;border:1px solid #1d4ed8;border-radius:8px;padding:14px;">';
-        html += '<div style="font-size:11px;font-weight:700;color:#60a5fa;margin-bottom:8px;">&#129760; Copy to Claude / ChatGPT</div>';
-        html += '<div style="font-size:11px;color:#6b7280;margin-bottom:8px;">Paste this prompt into AI to get more detailed suggestions:</div>';
-        html += '<textarea readonly style="width:100%;height:80px;background:#0d1117;border:1px solid #374151;border-radius:6px;padding:8px;font-size:11px;color:#9ca3af;resize:none;font-family:monospace;" id="slPromptText">' + aiPrompt.replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</textarea>';
-        html += '<button onclick="copySlPrompt()" class="cs-btn" style="margin-top:8px;border-color:#3b82f6;color:#60a5fa;font-size:11px;">&#128203; Copy AI Prompt</button>';
-        html += '</div>';
-      }
-
-      html += '</div>';
-      document.getElementById('slResults').innerHTML = html;
-      document.getElementById('slStep1').style.display = 'block';
-    } catch(e) {
-      clearInterval(stepTimer);
-      document.getElementById('slLoading').style.display = 'none';
-      document.getElementById('slResults').style.display = 'block';
-      document.getElementById('slResults').innerHTML = '<div style="color:#f87171;font-size:13px;">Error: ' + e.message + '</div>';
-      document.getElementById('slStep1').style.display = 'block';
-    }
-  }
-
-  function copySlPrompt() {
-    var t = document.getElementById('slPromptText');
-    if (!t) return;
-    t.select();
-    try { document.execCommand('copy'); } catch(e) { navigator.clipboard.writeText(t.value).catch(function(){}); }
-    toast('AI prompt copied — paste into Claude or ChatGPT', '#60a5fa');
-  }
-
-  function copySlPrompt() {
-    var t = document.getElementById('slPromptText');
-    if (!t) return;
-    try { t.select(); document.execCommand('copy'); } catch(e) { navigator.clipboard && navigator.clipboard.writeText(t.value); }
-    toast('AI prompt copied — paste into Claude or ChatGPT', '#60a5fa');
-  }
-
-  async function saveWaSettings() {
-    // Replaced by Telegram
-    toast('Use the Telegram button for notifications.', '#6b7280');
-  }
-
-<\/script>
-
-<!-- Citation Brief Overlay -->
-<div class="cb-overlay" id="cbOverlay">
-<div class="cb-card" id="cbCard">
-    <div class="cb-header">
-      <div>
-        <div class="cb-title">&#127919; AI Citation Brief</div>
-        <div class="cb-url" id="cbUrl"></div>
-      </div>
-      <div style="display:flex;align-items:center;gap:8px;">
-        <span style="font-size:10px;color:#4b5563;" id="cbKw"></span>
-        <button onclick="hideCitationBrief()" style="background:none;border:none;color:#6b7280;cursor:pointer;font-size:18px;padding:4px;line-height:1;" title="Close brief">&#x2715;</button>
-      </div>
-    </div>
-    <div class="cb-body">
-      <!-- Steps -->
-      <div id="cbSteps">
-        <div class="cb-step" id="cbStep1"><div class="cb-step-icon pending" id="cbStep1Icon"></div><span>Fetching Google AI Overview...</span></div>
-        <div class="cb-step" id="cbStep2"><div class="cb-step-icon pending" id="cbStep2Icon"></div><span>Analysing competitor content...</span></div>
-        <div class="cb-step" id="cbStep3"><div class="cb-step-icon pending" id="cbStep3Icon"></div><span>Checking citations across 5 platforms...</span></div>
-        <div class="cb-step" id="cbStep4"><div class="cb-step-icon pending" id="cbStep4Icon"></div><span>Generating Citation Brief passages...</span></div>
-      </div>
-      <div class="cb-progress"><div class="cb-progress-bar" id="cbProgressBar"></div></div>
-      <!-- Result -->
-      <div class="cb-result" id="cbResult">
-        <div style="font-size:10px;font-weight:800;color:#7c3aed;text-transform:uppercase;letter-spacing:.1em;margin-bottom:10px;">AI Citation Results</div>
-        <div class="cb-stat-row" id="cbStatRow"></div>
-
-        <!-- GSC Section -->
-        <div id="cbGscSection" style="display:none;margin-bottom:8px;">
-          <div class="cb-gsc-toggle" onclick="toggleGscPanel()">
-            <span class="cb-gsc-toggle-label">&#128200; Google Search Console <span class="badge">Optional</span></span>
-            <span id="cbGscArrow" style="font-size:11px;color:#6b7280;transition:transform .3s;">&#9660;</span>
-          </div>
-          <div class="cb-gsc-panel" id="cbGscPanel">
-            <div class="cb-gsc-stat" id="cbGscStats"></div>
-          </div>
-        </div>
-
-        <div id="cbPassages"></div>
-
-        <!-- Copy Section -->
-        <div class="cb-copy-section" id="cbCopySection" style="display:none;">
-          <div class="cb-copy-title">&#128203; Copy Brief</div>
-          <textarea class="cb-copy-textarea" id="cbCopyText" readonly></textarea>
-          <div class="cb-copy-row">
-            <button class="cb-copy-btn-action" onclick="copyBriefToClipboard()">Copy to Clipboard</button>
-          </div>
-        </div>
-
-        <div style="font-size:11px;color:#4ade80;margin-top:14px;display:flex;align-items:center;gap:8px;padding:10px 14px;background:rgba(74,222,128,.04);border-radius:8px;">
-          <span style="width:8px;height:8px;border-radius:50%;background:#4ade80;display:inline-block;animation:soDotPulse 2s ease-in-out infinite;"></span>
-          Brief saved — paste new HTML for your next scan
-        </div>
-      </div>
-    </div>
-    <div class="cb-footer">
-      <div class="cb-countdown" id="cbCountdown"></div>
-      <button class="cb-keep-btn" onclick="keepCbOpen()" id="cbKeepBtn" style="display:none;">Keep open</button>
-    </div>
-  </div>
-</div>
-
-
-<!-- Welcome Agent -->
-<div class="wl-overlay" id="welcomeOverlay">
-  <div class="wl-card">
-    <div class="wl-top">
-      <div class="wl-badge" style="margin-top:4px;"><span class="wl-badge-dot"></span> AI System Online</div>
-      <div class="wl-name" style="margin-top:10px;font-size:1.15rem;">Free AI Citations Tracker</div>
-      <div class="wl-role" style="color:#a78bfa;margin-bottom:4px;">by ContentScale &mdash; Ottmar Francisca, Amsterdam</div>
-    </div>
-    <div class="wl-body">
-      <p class="wl-msg" id="wlMsg">
-        I monitor the internet in real time and track where AI systems like <strong style="color:#e5e7eb;">Google AI Overview, Perplexity, Copilot, and Claude</strong> cite your content as a trusted source. The moment you lose or gain a citation, you will know.
-      </p>
-
-      <div class="wl-domain-box">
-        <div class="wl-domain-icon">&#127760;</div>
-        <div style="flex:1">
-          <div class="wl-domain-text" id="wlDomain">__DOMAIN__</div>
-          <div class="wl-domain-sub">Your domain &mdash; actively monitored</div>
-          __EXTRA_DOMAINS_HTML__
-        </div>
-      </div>
-
-      <!-- How It Works -->
-      <div style="background:linear-gradient(135deg,rgba(124,58,237,.08),rgba(76,29,149,.04));border:1px solid rgba(124,58,237,.25);border-radius:12px;padding:16px 18px;margin-bottom:16px;">
-        <div style="font-size:12px;font-weight:800;color:#a78bfa;margin-bottom:12px;text-transform:uppercase;letter-spacing:.06em;">How It Works</div>
-
-        <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:10px;padding:8px 12px;background:rgba(124,58,237,.04);border-radius:8px;border-left:3px solid #7c3aed;">
-          <div style="width:22px;height:22px;border-radius:50%;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">1</div>
-          <div style="font-size:12px;color:#cbd5e1;line-height:1.5;"><strong style="color:#e5e7eb;">Add your page URL</strong> &mdash; the system starts tracking it automatically</div>
-        </div>
-        <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:10px;padding:8px 12px;background:rgba(245,158,11,.06);border-radius:8px;border-left:3px solid #f59e0b;">
-          <div style="width:22px;height:22px;border-radius:50%;background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">2</div>
-          <div style="font-size:12px;color:#cbd5e1;line-height:1.5;"><strong style="color:#fbbf24;">Paste your page HTML</strong> &mdash; click the orange blinking HTML button. Without HTML, the scan cannot tell you <em style="color:#fbbf24;">why</em> you are not cited or what to fix</div>
-        </div>
-        <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:10px;padding:8px 12px;background:rgba(124,58,237,.04);border-radius:8px;border-left:3px solid #7c3aed;">
-          <div style="width:22px;height:22px;border-radius:50%;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">3</div>
-          <div style="font-size:12px;color:#cbd5e1;line-height:1.5;"><strong style="color:#e5e7eb;">Watch the scan</strong> &mdash; a full-screen animation shows the analysis across all AI platforms</div>
-        </div>
-        <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:10px;padding:8px 12px;background:rgba(124,58,237,.04);border-radius:8px;border-left:3px solid #7c3aed;">
-          <div style="width:22px;height:22px;border-radius:50%;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">4</div>
-          <div style="font-size:12px;color:#cbd5e1;line-height:1.5;"><strong style="color:#e5e7eb;">Read your Citation Brief</strong> &mdash; recommendations sorted by priority (easy fixes first)</div>
-        </div>
-        <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:10px;padding:8px 12px;background:rgba(124,58,237,.04);border-radius:8px;border-left:3px solid #7c3aed;">
-          <div style="width:22px;height:22px;border-radius:50%;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">5</div>
-          <div style="font-size:12px;color:#cbd5e1;line-height:1.5;"><strong style="color:#e5e7eb;">Click Done</strong> when finished &mdash; the system will ask for fresh HTML to measure your improvements</div>
-        </div>
-        <div style="display:flex;align-items:flex-start;gap:12px;padding:8px 12px;background:rgba(124,58,237,.04);border-radius:8px;border-left:3px solid #7c3aed;">
-          <div style="width:22px;height:22px;border-radius:50%;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">6</div>
-          <div style="font-size:12px;color:#cbd5e1;line-height:1.5;"><strong style="color:#e5e7eb;">Next scan runs automatically</strong> on your schedule (3 days, 1 week, or 1 month). Upload new HTML anytime before then for a fresh scan</div>
-        </div>
-      </div>
-
-      <!-- HTML Step -->
-      <div style="background:linear-gradient(135deg,rgba(251,191,36,.08),rgba(217,119,6,.04));border:1px solid rgba(251,191,36,.3);border-radius:10px;padding:14px 16px;margin-bottom:16px;">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
-          <div style="background:#fbbf24;color:#0a0a12;font-size:10px;font-weight:800;padding:2px 8px;border-radius:99px;letter-spacing:.06em;flex-shrink:0;">HTML</div>
-          <span style="font-size:13px;font-weight:700;color:#fde68a;">This is the most important step</span>
-        </div>
-        <p style="font-size:12px;color:#fcd34d;line-height:1.7;margin:0 0 10px;">
-          The orange <strong style="color:#fbbf24;">HTML</strong> button on your page card will blink until you paste your HTML. Without it, the system cannot perform a GRAAF scan &mdash; it can only check your position and AI citations, but not <em>why</em> you are not cited or what to fix.
-        </p>
-        <div style="background:#0a0a12;border:1px solid rgba(251,191,36,.2);border-radius:6px;padding:10px 12px;margin-bottom:8px;">
-          <div style="font-size:10px;color:#92400e;font-family:monospace;letter-spacing:.06em;margin-bottom:4px;">HOW TO GET YOUR PAGE HTML</div>
-          <ol style="font-size:11px;color:#fcd34d;line-height:2;margin:0;padding-left:16px;">
-            <li>Open your page in Chrome or Firefox</li>
-            <li>Right-click anywhere &rarr; <strong>View Page Source</strong></li>
-            <li>Press <code style="background:#1f2937;padding:1px 5px;border-radius:3px;">Ctrl+A</code> then <code style="background:#1f2937;padding:1px 5px;border-radius:3px;">Ctrl+C</code></li>
-            <li>Click the blinking <strong style="color:#fbbf24;">HTML</strong> button on your page card &rarr; paste &rarr; Save</li>
-          </ol>
-        </div>
-        <div style="font-size:11px;color:#92400e;line-height:1.6;">
-          You only need to do this once per page. After that, the system auto-fetches updates on your scheduled scan dates. Upload new HTML anytime for a fresh scan.
-        </div>
-      </div>
-
-      <!-- What is tracked -->
-      <div class="wl-features">
-        <div class="wl-feature"><span class="wl-feature-dot"></span>Google AI Overview</div>
-        <div class="wl-feature"><span class="wl-feature-dot"></span>Perplexity</div>
-        <div class="wl-feature"><span class="wl-feature-dot"></span>Copilot</div>
-        <div class="wl-feature"><span class="wl-feature-dot"></span>Claude (Brave Search)</div>
-        <div class="wl-feature"><span class="wl-feature-dot"></span>ChatGPT Search</div>
-        <div class="wl-feature"><span class="wl-feature-dot"></span>GRAAF content scoring</div>
-        <div class="wl-feature"><span class="wl-feature-dot"></span>Live Citation Briefs</div>
-        <div class="wl-feature"><span class="wl-feature-dot"></span>Email alerts on changes</div>
-      </div>
-
-      <!-- Platform URL -->
-      <div style="background:#0a0a12;border:1px solid #1f2937;border-radius:8px;padding:12px 14px;margin-bottom:14px;">
-        <div style="font-size:11px;color:#9ca3af;line-height:1.7;margin-bottom:10px;">
-          The structure of this tracker &mdash; direct answers, author credentials, case studies, short paragraphs &mdash; is exactly what makes AI systems cite a page. Apply the same to your pages. Scan and follow the recommendations.
-        </div>
-        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
-          <div>
-            <div style="font-size:10px;color:#4b5563;letter-spacing:.08em;text-transform:uppercase;margin-bottom:3px;">Live example &amp; free scanner</div>
-            <a href="https://app.contentscale.site" target="_blank" rel="noopener" style="font-size:11px;font-family:monospace;color:#7c3aed;text-decoration:none;">app.contentscale.site</a>
-          </div>
-          <a href="https://app.contentscale.site" target="_blank" rel="noopener" style="font-size:10px;font-family:monospace;color:#a78bfa;text-decoration:none;border:1px solid #4c1d95;border-radius:4px;padding:5px 12px;white-space:nowrap;background:rgba(124,58,237,.1);">Scan my pages &rarr;</a>
-        </div>
-      </div>
-
-      <a href="https://wa.me/31628073996?text=Hi%20Ottmar!%20I%20want%20a%20done-for-you%20citation%20plan%20for%20__DOMAIN__" target="_blank" rel="noopener" class="wl-wa">
-        <i class="fab fa-whatsapp"></i> Let Ottmar &ldquo;babysit&rdquo; your domain &mdash; done for you
-      </a>
-      <button class="wl-start" onclick="closeWelcome()">
-        I understand &mdash; start monitoring &rarr;
-      </button>
-      <div class="wl-footer">One of the most advanced AI citation monitoring systems available today</div>
-    </div>
-  </div>
-</div>
-
-<!-- Sitemap Internal Links Modal -->
-<div id="sitemapLinksModal" onclick="hideModal('sitemapLinksModal')" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.8);align-items:center;justify-content:center;padding:20px;">
-  <div onclick="event.stopPropagation()" style="background:#0d1117;border:1px solid #374151;border-radius:12px;padding:24px;max-width:560px;width:100%;max-height:85vh;overflow-y:auto;position:relative;box-shadow:0 20px 60px rgba(0,0,0,.6);">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-      <h3 style="font-size:15px;font-weight:800;color:#38bdf8;">&#128279; Internal Linking Analysis</h3>
-      <button onclick="hideModal('sitemapLinksModal')" style="background:none;border:none;color:#94a3b8;cursor:pointer;font-size:1.4rem;line-height:1;padding:0 4px;">&#x2715;</button>
-    </div>
-    <p style="font-size:12px;color:#6b7280;line-height:1.65;margin-bottom:14px;">Paste your sitemap URL. The system finds all your pages, compares them with the pages you track, and suggests missing internal links — with exact anchor text to add.</p>
-    <div id="slStep1">
-      <input type="url" id="slSitemapUrl" class="cs-input" placeholder="https://yoursite.com/sitemap.xml" style="width:100%;margin-bottom:10px;">
-      <button onclick="runSitemapLinks()" class="cs-btn" style="width:100%;border-color:#38bdf8;color:#38bdf8;font-weight:700;padding:10px;">&#128269; Analyse Internal Links</button>
-    </div>
-    <div id="slLoading" style="display:none;text-align:center;padding:20px 0;">
-      <div style="font-size:12px;color:#38bdf8;font-family:monospace;" id="slLoadingText">Fetching sitemap...</div>
-    </div>
-    <div id="slResults" style="display:none;margin-top:16px;"></div>
-  </div>
-</div>
-
-<!-- Telegram Setup Modal -->
-<div id="telegramModal" onclick="hideModal('telegramModal')" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.8);align-items:center;justify-content:center;padding:20px;">
-  <div onclick="event.stopPropagation()" style="background:#0d1117;border:1px solid #374151;border-radius:12px;padding:24px;max-width:420px;width:100%;position:relative;box-shadow:0 20px 60px rgba(0,0,0,.6);">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-      <h3 style="font-size:15px;font-weight:800;color:#2AABEE;">&#128240; Enable Telegram Alerts</h3>
-      <button onclick="hideModal('telegramModal')" style="background:none;border:none;color:#94a3b8;cursor:pointer;font-size:1.4rem;line-height:1;padding:0 4px;">&#x2715;</button>
-    </div>
-    <p style="font-size:12px;color:#6b7280;line-height:1.65;margin-bottom:16px;">Get Citation Brief alerts directly in Telegram after every scan. Free, instant, no setup required.</p>
-    <div style="background:#111827;border:1px solid #1f2937;border-radius:8px;padding:14px;margin-bottom:16px;text-align:center;">
-      <div style="font-size:13px;color:#f1f5f9;margin-bottom:12px;">One click to enable:</div>
-      <a id="telegramBotLink" href="#" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:8px;background:#2AABEE;color:#fff;text-decoration:none;padding:12px 24px;border-radius:8px;font-size:14px;font-weight:700;">
-        &#128240; Open ContentScale Bot
-      </a>
-      <div style="font-size:11px;color:#6b7280;margin-top:10px;">Click → Telegram opens → press Start → done</div>
-    </div>
-    <div style="font-size:11px;color:#4b5563;line-height:1.7;">
-      ✓ Free &nbsp;·&nbsp; ✓ Instant &nbsp;·&nbsp; ✓ No API key needed<br>
-      ✓ Works on any device with Telegram
-    </div>
-  </div>
-</div>
-
-<div id="toast" class="cs-toast" style="display:none;"></div>
-</body>
-</html>`;
-
-// ── Live Overlay HTML ─────────────────────────────────────────────────────
-const _LIVE_OVERLAY_HTML = `<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>ContentScale - Live</title>
-<style>
-* { margin:0;padding:0;box-sizing:border-box; }
-body { background:#0a0a0f;color:#f1f5f9;font-family:'Segoe UI',system-ui,sans-serif;overflow:hidden;height:100vh;width:100vw; }
-
-/* ── Background grid ── */
-.bg-grid {
-  position:fixed;inset:0;
-  background-image: linear-gradient(rgba(124,58,237,.05) 1px,transparent 1px), linear-gradient(90deg,rgba(124,58,237,.05) 1px,transparent 1px);
-  background-size: 40px 40px;
-  pointer-events:none;
-}
-
-/* ── Header bar ── */
+  /* ── Header bar ── */
 .header {
   position:fixed;top:0;left:0;right:0;
   padding:14px 24px;
