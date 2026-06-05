@@ -1462,13 +1462,20 @@ app.patch('/api/tracker-client/:token/pages/:pageId/keyword', async (req, res) =
 });
 
 // POST /api/tracker-client/:token/live-events — internal: save brief after check
+const _clientDomainCache = new Map(); // token -> { domain, exp } — avoids a DB hit on every poll
 app.get('/api/tracker-client/:token/live-events', async (req, res) => {
   try {
-    res.set('Connection', 'keep-alive');
-    res.set('Keep-Alive', 'timeout=30');
-    const cr = await pool.query('SELECT domain FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status != $2)', [req.params.token, 'deleted']);
-    if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
-    const domain = cr.rows[0].domain;
+    const token = req.params.token;
+    let domain;
+    const cached = _clientDomainCache.get(token);
+    if (cached && cached.exp > Date.now()) {
+      domain = cached.domain;
+    } else {
+      const cr = await pool.query('SELECT domain FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status != $2)', [token, 'deleted']);
+      if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
+      domain = cr.rows[0].domain;
+      _clientDomainCache.set(token, { domain: domain, exp: Date.now() + 300000 }); // cache 5 min
+    }
     const since = req.query.since ? new Date(req.query.since).getTime() : Date.now() - 60000;
     // Filter events relevant to this domain
     const events = _liveEvents.filter(function(e) {
