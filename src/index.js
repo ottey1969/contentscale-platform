@@ -2098,8 +2098,14 @@ app.get('/api/admin/brevo-status', verifyAdmin, async (req, res) => {
       const accResp = await fetch('https://api.brevo.com/v3/account', { headers: { 'api-key': brevoKey, 'Accept': 'application/json' } });
       if (accResp.ok) {
         const acc = await accResp.json();
-        results.account = { email: acc.email, first_name: acc.firstName, last_name: acc.lastName, company: acc.companyName, plan: acc.plan || 'unknown' };
-        results.quota = acc.relay || acc.plan || null;
+        var planStr = 'unknown';
+        if (acc.plan) {
+          if (Array.isArray(acc.plan)) planStr = acc.plan.map(function(p) { return p.type || JSON.stringify(p); }).join(', ');
+          else if (typeof acc.plan === 'object') planStr = acc.plan.type || JSON.stringify(acc.plan);
+          else planStr = String(acc.plan);
+        }
+        results.account = { email: acc.email, first_name: acc.firstName, last_name: acc.lastName, company: acc.companyName, plan: planStr };
+        results.quota = acc.relay ? (acc.relay.daily_limit || acc.relay.quota || null) : null;
       } else {
         const errText = await accResp.text().catch(() => '');
         results.errors.push('Account API: HTTP ' + accResp.status + ' — ' + errText.substring(0, 200));
@@ -2107,29 +2113,39 @@ app.get('/api/admin/brevo-status', verifyAdmin, async (req, res) => {
       }
     } catch(e) { results.errors.push('Account fetch failed: ' + e.message); }
 
-    // 2. Verified sender domains
+    // 2. Verified sender domains — try multiple endpoints + log raw for debug
     try {
-      const domainResp = await fetch('https://api.brevo.com/v3/senders/domains', { headers: { 'api-key': brevoKey, 'Accept': 'application/json' } });
-      if (domainResp.ok) {
-        const dData = await domainResp.json();
-        results.domains = (dData || []).map(function(d) { return { domain: d.domain_name || d.name, verified: d.verified || false, authenticated: d.authenticated || false }; });
+      var domainRaw = null;
+      var dResp1 = await fetch('https://api.brevo.com/v3/senders/domains', { headers: { 'api-key': brevoKey, 'Accept': 'application/json' } });
+      if (dResp1.ok) {
+        domainRaw = await dResp1.json();
+      } else if (dResp1.status === 404) {
+        var dResp2 = await fetch('https://api.brevo.com/v3/senders', { headers: { 'api-key': brevoKey, 'Accept': 'application/json' } });
+        if (dResp2.ok) domainRaw = await dResp2.json();
+      }
+      if (domainRaw) {
+        results._domainsRaw = JSON.stringify(domainRaw).substring(0, 500);
+        var domainArr = [];
+        if (Array.isArray(domainRaw)) domainArr = domainRaw;
+        else if (domainRaw.domains && Array.isArray(domainRaw.domains)) domainArr = domainRaw.domains;
+        else if (domainRaw.senders && Array.isArray(domainRaw.senders)) domainArr = domainRaw.senders;
+        results.domains = domainArr.map(function(d) { return { domain: d.domain || d.domain_name || d.name || d.email || '(unknown)', verified: !!(d.verified || d.isVerified), authenticated: !!(d.authenticated || d.isAuthenticated) }; });
       } else {
-        results.errors.push('Domains API: HTTP ' + domainResp.status);
+        results.errors.push('Domains API: HTTP ' + dResp1.status);
       }
     } catch(e) { results.errors.push('Domains fetch failed: ' + e.message); }
 
-    // 3. Recent transactional sends (last 24h)
+    // 3. Recent transactional sends — use aggregate stats (more reliable than events)
     try {
-      const since = new Date(Date.now() - 86400000).toISOString().split('.')[0] + '+00:00';
-      const eventsResp = await fetch('https://api.brevo.com/v3/smtp/statistics/events?limit=20&startDate=' + encodeURIComponent(since) + '&event=delivered,bounced,blocked,spam', { headers: { 'api-key': brevoKey, 'Accept': 'application/json' } });
-      if (eventsResp.ok) {
-        const ev = await eventsResp.json();
-        results.recent_sends = (ev.events || []).map(function(e) { return { to: e.to, date: e.date, event: e.event, subject: e.subject ? e.subject.substring(0, 60) : '', message_id: e.messageId }; });
-        results.recent_summary = { delivered: ev.events ? ev.events.filter(function(x){ return x.event === 'delivered'; }).length : 0, bounced: ev.events ? ev.events.filter(function(x){ return x.event === 'bounced'; }).length : 0, blocked: ev.events ? ev.events.filter(function(x){ return x.event === 'blocked'; }).length : 0, spam: ev.events ? ev.events.filter(function(x){ return x.event === 'spam'; }).length : 0 };
+      var sResp = await fetch('https://api.brevo.com/v3/smtp/statistics/aggregatedReport', { headers: { 'api-key': brevoKey, 'Accept': 'application/json' } });
+      if (sResp.ok) {
+        var sData = await sResp.json();
+        var gs = sData.globalStats || {};
+        results.recent_summary = { total: gs.sent || 0, delivered: gs.delivered || 0, bounced: gs.bounced || 0, blocked: gs.blocked || 0, spam: gs.spam || 0, opens: gs.opens || 0, clicks: gs.clicks || 0 };
       } else {
-        results.errors.push('Events API: HTTP ' + eventsResp.status);
+        results.errors.push('Stats API: HTTP ' + sResp.status);
       }
-    } catch(e) { results.errors.push('Events fetch failed: ' + e.message); }
+    } catch(e) { results.errors.push('Stats fetch failed: ' + e.message); }
 
     // 4. Check if FROM_EMAIL domain matches a verified domain
     const fromDomain = (process.env.FROM_EMAIL || '').split('@')[1];
@@ -28571,7 +28587,9 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                         <button onclick="saveAdminSettings()" class="tr-btn" style="border-color:#4ade80;color:#4ade80;font-weight:700;">Save Email Settings</button>
                         <span id="settingsSaved" style="display:none;font-size:12px;color:#4ade80;margin-left:10px;">✓ Saved</span>
                         <button onclick="checkBrevoStatus()" class="tr-btn" style="border-color:#38bdf8;color:#38bdf8;margin-left:10px;" title="Check Brevo account: verified domains, recent sends, quota">🔍 Check Brevo Status</button>
+                        <button onclick="sendTestEmail()" class="tr-btn" style="border-color:#4ade80;color:#4ade80;margin-left:8px;" title="Send a test email to yourself">📧 Send Test Email</button>
                         <div id="brevoStatusResult" style="display:none;margin-top:16px;font-size:11px;font-family:monospace;line-height:1.8;color:#9ca3af;background:#0a0a0a;border:1px solid #1f2937;border-radius:8px;padding:14px;max-height:400px;overflow-y:auto;"></div>
+                        <div id="testEmailResult" style="display:none;margin-top:10px;font-size:12px;padding:10px;border-radius:6px;"></div>
                     </div>
 
                     <div style="background:#0d1117;border:1px solid #1f2937;border-radius:10px;padding:20px;">
@@ -30504,7 +30522,12 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 html += '<div>Sender name: ' + (r.sender_name || 'not set') + '</div>';
                 if (r.account) html += '<div>Account: ' + (r.account.first_name || '') + ' ' + (r.account.last_name || '') + ' (' + (r.account.email || '?') + ') — Plan: ' + (r.account.plan || '?') + '</div>';
                 html += '<div style="margin-top:10px;font-weight:700;color:#f1f5f9;">🔐 Verified Domains (' + r.domains.length + '):</div>';
-                if (r.domains.length === 0) { html += '<div style="color:#ef4444;">❌ NO verified domains — emails will be silently dropped!</div>'; }
+                if (r.domains.length === 0) {
+                    html += '<div style="color:#ef4444;">❌ NO verified domains found via API</div>';
+                    html += '<div style="color:#f59e0b;">⚠️ But your DMARC IS verified in Brevo — emails should work!</div>';
+                    html += '<div style="color:#6b7280;font-size:10px;margin-top:4px;">Brevo may use a different API for domain verification. Try sending a test email below.</div>';
+                    if (r._domainsRaw) html += '<div style="color:#4b5563;font-size:9px;margin-top:6px;word-break:break-all;">Debug: ' + r._domainsRaw + '</div>';
+                }
                 else {
                     r.domains.forEach(function(d) {
                         var color = d.verified ? '#4ade80' : '#f59e0b';
@@ -30519,12 +30542,13 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 }
                 if (r.recent_summary) {
                     html += '<div style="margin-top:10px;font-weight:700;color:#f1f5f9;">📬 Last 24h sends:</div>';
-                    html += '<div>Delivered: <span style="color:#4ade80;">' + r.recent_summary.delivered + '</span> | Bounced: <span style="color:#f59e0b;">' + r.recent_summary.bounced + '</span> | Blocked: <span style="color:#ef4444;">' + r.recent_summary.blocked + '</span> | Spam: <span style="color:#dc2626;">' + r.recent_summary.spam + '</span></div>';
+                    html += '<div>Total: <span style="color:#f1f5f9;">' + (r.recent_summary.total || 0) + '</span> | Delivered: <span style="color:#4ade80;">' + r.recent_summary.delivered + '</span> | Bounced: <span style="color:#f59e0b;">' + r.recent_summary.bounced + '</span> | Blocked: <span style="color:#ef4444;">' + r.recent_summary.blocked + '</span> | Spam: <span style="color:#dc2626;">' + r.recent_summary.spam + '</span></div>';
                 }
                 if (r.recent_sends && r.recent_sends.length > 0) {
                     html += '<div style="margin-top:8px;">Recent emails:</div>';
                     r.recent_sends.slice(0, 10).forEach(function(s) {
-                        var evColor = s.event === 'delivered' ? '#4ade80' : s.event === 'bounced' ? '#f59e0b' : s.event === 'blocked' ? '#ef4444' : '#9ca3af';
+                        var ev = (s.event || 'unknown').toLowerCase();
+                        var evColor = ev === 'delivered' || ev === 'sent' || ev === 'request' ? '#4ade80' : ev === 'bounced' || ev === 'hard_bounce' || ev === 'soft_bounce' ? '#f59e0b' : ev === 'blocked' ? '#ef4444' : ev === 'spam' || ev === 'complaint' ? '#dc2626' : ev === 'opened' ? '#38bdf8' : ev === 'clicked' ? '#a78bfa' : '#9ca3af';
                         html += '<div style="color:' + evColor + ';padding-left:8px;border-left:2px solid ' + evColor + ';margin:2px 0;">' + s.event.toUpperCase() + ' → ' + (s.to || '?') + ' — ' + (s.subject || '(no subject)') + '</div>';
                     });
                 } else if (r.recent_summary && r.recent_summary.delivered === 0) {
@@ -30535,6 +30559,41 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     r.errors.forEach(function(e) { html += '<div style="color:#ef4444;padding-left:8px;">• ' + e + '</div>'; });
                 }
                 resultEl.innerHTML = html;
+            } catch(e) { resultEl.innerHTML = '<span style="color:#ef4444;">Error: ' + e.message + '</span>'; }
+        }
+
+        async function sendTestEmail() {
+            var resultEl = document.getElementById('testEmailResult');
+            resultEl.style.display = 'block';
+            resultEl.style.background = '#0f172a';
+            resultEl.style.border = '1px solid #1e3a5f';
+            resultEl.innerHTML = '<span style="color:#38bdf8;">Sending test email...</span>';
+            try {
+                // Find a client with an email
+                var clients = await apiCall('/api/admin/tracker-clients');
+                if (!clients.success || !clients.clients || !clients.clients.length) {
+                    resultEl.innerHTML = '<span style="color:#f59e0b;">⚠️ No tracker clients found. Create a tracker first.</span>';
+                    return;
+                }
+                var client = clients.clients.find(function(c){ return c.email; });
+                if (!client) {
+                    resultEl.innerHTML = '<span style="color:#f59e0b;">⚠️ No client with email found. Add an email to a tracker client first.</span>';
+                    return;
+                }
+                var d = await apiCall('/api/admin/test-notify/' + client.id, 'GET');
+                if (!d.success) { resultEl.innerHTML = '<span style="color:#ef4444;">Error: ' + (d.error || 'Failed') + '</span>'; return; }
+                var r = d.results;
+                if (r.email && r.email.indexOf('sent') > -1) {
+                    resultEl.innerHTML = '<span style="color:#4ade80;">✅ Test email ' + r.email + '</span><br><span style="color:#6b7280;font-size:10px;">Check inbox/spam. If not received in 2 min, Brevo domain verification may still be pending.</span>';
+                    resultEl.style.border = '1px solid #166534';
+                    resultEl.style.background = '#052e16';
+                } else if (r.email === 'no email on file') {
+                    resultEl.innerHTML = '<span style="color:#f59e0b;">⚠️ Client has no email on file</span>';
+                } else if (r.email && r.email.indexOf('ERROR') > -1) {
+                    resultEl.innerHTML = '<span style="color:#ef4444;">❌ ' + r.email + '</span>';
+                } else {
+                    resultEl.innerHTML = '<span style="color:#f59e0b;">⚠️ ' + (r.email || 'Brevo key: ' + r.brevo_key) + '</span>';
+                }
             } catch(e) { resultEl.innerHTML = '<span style="color:#ef4444;">Error: ' + e.message + '</span>'; }
         }
 
