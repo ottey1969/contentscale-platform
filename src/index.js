@@ -1081,7 +1081,7 @@ app.post('/api/tracker-client/register', async (req, res) => {
 // GET /api/tracker-client/:token — get client data + pages
 app.get('/api/tracker-client/:token', async (req, res) => {
   try {
-    const cr = await pool.query('SELECT * FROM tracker_clients WHERE token=$1 AND status=$2', [req.params.token, 'active']);
+    const cr = await pool.query('SELECT * FROM tracker_clients WHERE token=$1 AND (status=$2 OR status IS NULL)', [req.params.token, 'active']);
     if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Tracker not found. Check your link is correct.' });
     const client = cr.rows[0];
 
@@ -1127,7 +1127,7 @@ app.get('/api/tracker-client/:token', async (req, res) => {
 // GET /api/tracker-client/:token/briefs/:pageId — list briefs for a page
 app.get('/api/tracker-client/:token/briefs/:pageId', async (req, res) => {
   try {
-    const cr = await pool.query('SELECT id FROM tracker_clients WHERE token=$1 AND status=$2', [req.params.token, 'active']);
+    const cr = await pool.query('SELECT id FROM tracker_clients WHERE token=$1 AND (status=$2 OR status IS NULL)', [req.params.token, 'active']);
     if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
     const own = await pool.query('SELECT id FROM tracker_pages WHERE id=$1 AND tracker_client_id=$2', [req.params.pageId, cr.rows[0].id]);
     if (!own.rows.length) return res.status(403).json({ success: false, error: 'Not your page' });
@@ -1143,7 +1143,7 @@ app.get('/api/tracker-client/:token/briefs/:pageId', async (req, res) => {
 // GET /api/tracker-client/:token/briefs/:pageId/:briefId — get single brief
 app.get('/api/tracker-client/:token/briefs/:pageId/:briefId', async (req, res) => {
   try {
-    const cr = await pool.query('SELECT id FROM tracker_clients WHERE token=$1 AND status=$2', [req.params.token, 'active']);
+    const cr = await pool.query('SELECT id FROM tracker_clients WHERE token=$1 AND (status=$2 OR status IS NULL)', [req.params.token, 'active']);
     if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
     const brief = await pool.query(
       `SELECT b.* FROM tracker_citation_briefs b
@@ -1159,7 +1159,7 @@ app.get('/api/tracker-client/:token/briefs/:pageId/:briefId', async (req, res) =
 // GET /api/tracker-client/:token/fetch-sitemap — fetch URLs from sitemap
 app.get('/api/tracker-client/:token/fetch-sitemap', async (req, res) => {
   try {
-    const cr = await pool.query('SELECT domain FROM tracker_clients WHERE token=$1 AND status=$2', [req.params.token, 'active']);
+    const cr = await pool.query('SELECT domain FROM tracker_clients WHERE token=$1 AND (status=$2 OR status IS NULL)', [req.params.token, 'active']);
     if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
     const sitemapUrl = req.query.url;
     if (!sitemapUrl) return res.status(400).json({ success: false, error: 'URL required' });
@@ -1251,7 +1251,7 @@ function buildLinkPrompt(trackedPages, sitemapPages) {
 // PATCH /api/tracker-client/:token/settings — update client whatsapp + callmebot_key
 app.patch('/api/tracker-client/:token/settings', async (req, res) => {
   try {
-    const cr = await pool.query('SELECT id FROM tracker_clients WHERE token=$1 AND status=$2', [req.params.token, 'active']);
+    const cr = await pool.query('SELECT id FROM tracker_clients WHERE token=$1 AND (status=$2 OR status IS NULL)', [req.params.token, 'active']);
     if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
     const { whatsapp, callmebot_key, name } = req.body;
     const updates = []; const vals = []; let i = 1;
@@ -1265,9 +1265,9 @@ app.patch('/api/tracker-client/:token/settings', async (req, res) => {
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
-app.patch('/api/tracker-client/:token/pages/:pageId/html', async (req, res) => {
+app.post('/api/tracker-client/:token/pages/:pageId/html', async (req, res) => {
   try {
-    const cr = await pool.query('SELECT id FROM tracker_clients WHERE token=$1 AND status=$2', [req.params.token, 'active']);
+    const cr = await pool.query('SELECT id FROM tracker_clients WHERE token=$1 AND (status=$2 OR status IS NULL)', [req.params.token, 'active']);
     if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
     const own = await pool.query('SELECT id FROM tracker_pages WHERE id=$1 AND tracker_client_id=$2', [req.params.pageId, cr.rows[0].id]);
     if (!own.rows.length) return res.status(403).json({ success: false, error: 'Not your page' });
@@ -1297,7 +1297,7 @@ app.patch('/api/tracker-client/:token/pages/:pageId/html', async (req, res) => {
 // GET /api/tracker-client/:token/pages/:pageId — get single page with latest snapshot
 app.get('/api/tracker-client/:token/pages/:pageId', async (req, res) => {
   try {
-    const cr = await pool.query('SELECT id FROM tracker_clients WHERE token=$1 AND status=$2', [req.params.token, 'active']);
+    const cr = await pool.query('SELECT id FROM tracker_clients WHERE token=$1 AND (status=$2 OR status IS NULL)', [req.params.token, 'active']);
     if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
     const r = await pool.query(`
       SELECT p.*, p.check_frequency,
@@ -1318,7 +1318,7 @@ app.get('/api/tracker-client/:token/pages/:pageId', async (req, res) => {
 // PATCH /api/tracker-client/:token/pages/:pageId/frequency
 app.patch('/api/tracker-client/:token/pages/:pageId/frequency', async (req, res) => {
   try {
-    const cr = await pool.query('SELECT id FROM tracker_clients WHERE token=$1 AND status=$2', [req.params.token, 'active']);
+    const cr = await pool.query('SELECT id FROM tracker_clients WHERE token=$1 AND (status=$2 OR status IS NULL)', [req.params.token, 'active']);
     if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
     const { frequency } = req.body;
     const allowed = ['1day','3days','weekly','monthly'];
@@ -1391,7 +1391,7 @@ app.post('/api/tracker-client/:token/scan-all', async (req, res) => {
 // PATCH /api/tracker-client/:token/pages/:pageId/done — mark page done/undone
 app.patch('/api/tracker-client/:token/pages/:pageId/done', async (req, res) => {
   try {
-    const cr = await pool.query('SELECT id FROM tracker_clients WHERE token=$1 AND status=$2', [req.params.token, 'active']);
+    const cr = await pool.query('SELECT id FROM tracker_clients WHERE token=$1 AND (status=$2 OR status IS NULL)', [req.params.token, 'active']);
     if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
     const own = await pool.query('SELECT id FROM tracker_pages WHERE id=$1 AND tracker_client_id=$2', [req.params.pageId, cr.rows[0].id]);
     if (!own.rows.length) return res.status(403).json({ success: false, error: 'Not your page' });
@@ -1448,7 +1448,7 @@ app.patch('/api/tracker-client/:token/pages/:pageId/done', async (req, res) => {
 // PATCH /api/tracker-client/:token/pages/:pageId/keyword — update keyword
 app.patch('/api/tracker-client/:token/pages/:pageId/keyword', async (req, res) => {
   try {
-    const cr = await pool.query('SELECT id FROM tracker_clients WHERE token=$1 AND status=$2', [req.params.token, 'active']);
+    const cr = await pool.query('SELECT id FROM tracker_clients WHERE token=$1 AND (status=$2 OR status IS NULL)', [req.params.token, 'active']);
     if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
     const own = await pool.query('SELECT id FROM tracker_pages WHERE id=$1 AND tracker_client_id=$2', [req.params.pageId, cr.rows[0].id]);
     if (!own.rows.length) return res.status(403).json({ success: false, error: 'Not your page' });
@@ -1463,7 +1463,7 @@ app.get('/api/tracker-client/:token/live-events', async (req, res) => {
   try {
     res.set('Connection', 'keep-alive');
     res.set('Keep-Alive', 'timeout=30');
-    const cr = await pool.query('SELECT domain FROM tracker_clients WHERE token=$1 AND status=$2', [req.params.token, 'active']);
+    const cr = await pool.query('SELECT domain FROM tracker_clients WHERE token=$1 AND (status=$2 OR status IS NULL)', [req.params.token, 'active']);
     if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
     const domain = cr.rows[0].domain;
     const since = req.query.since ? new Date(req.query.since).getTime() : Date.now() - 60000;
@@ -1524,7 +1524,7 @@ function _triggerPageScan(pageId, delayMs) {
 // POST /api/tracker-client/:token/pages — add URL to track
 app.post('/api/tracker-client/:token/pages', async (req, res) => {
   try {
-    const cr = await pool.query('SELECT * FROM tracker_clients WHERE token=$1 AND status=$2', [req.params.token, 'active']);
+    const cr = await pool.query('SELECT * FROM tracker_clients WHERE token=$1 AND (status=$2 OR status IS NULL)', [req.params.token, 'active']);
     if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
     const client = cr.rows[0];
 
@@ -1743,19 +1743,10 @@ app.post('/api/tracker-client/:token/clean-pages', async (req, res) => {
 });
 
 // DELETE /api/tracker-client/:token/pages/:pageId
-app.delete('/api/tracker-client/:token/pages/:pageId', async (req, res) => {
-  try {
-    const cr = await pool.query('SELECT id FROM tracker_clients WHERE token=$1', [req.params.token]);
-    if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
-    await pool.query('UPDATE tracker_pages SET is_active=FALSE WHERE id=$1 AND tracker_client_id=$2', [req.params.pageId, cr.rows[0].id]);
-    res.json({ success: true });
-  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
-});
-
 // POST /api/tracker-client/:token/check/:pageId — trigger manual check
 app.post('/api/tracker-client/:token/check/:pageId', async (req, res) => {
   try {
-    const cr = await pool.query('SELECT id FROM tracker_clients WHERE token=$1 AND status=$2', [req.params.token, 'active']);
+    const cr = await pool.query('SELECT id FROM tracker_clients WHERE token=$1 AND (status=$2 OR status IS NULL)', [req.params.token, 'active']);
     if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
     const own = await pool.query('SELECT * FROM tracker_pages WHERE id=$1 AND tracker_client_id=$2', [req.params.pageId, cr.rows[0].id]);
     if (!own.rows.length) return res.status(403).json({ success: false, error: 'Not your page' });
@@ -2151,39 +2142,21 @@ app.get('/live', (req, res) => {
   res.send(_LIVE_OVERLAY_HTML.replace('__STREAM_TOKEN__', token));
 });
 
-// ── Live overlay SSE (accepts stream token OR tracker client token) ──────
+// ── Live feed — polling only (SSE disabled due to Railway HTTP/2 issues) ──
 app.get('/api/live-feed', async (req, res) => {
-  const token = req.query.token || '';
-  // Check stream token first
-  const streamToken = process.env.STREAM_TOKEN || process.env.ADMIN_PASSWORD || 'contentscale';
-  if (token === streamToken) {
-    // OK — stream token
-  } else if (!pool) {
-    // DB not available — accept any non-empty token as tracker token
-    if (!token) return res.status(401).end();
-  } else {
-    // Check if it's a valid tracker client token
-    try {
-      const cr = await pool.query('SELECT id FROM tracker_clients WHERE token = $1 AND (status IS NULL OR status != $2)', [token, 'deleted']);
-      if (!cr.rows.length) return res.status(401).end();
-    } catch(e) { return res.status(401).end(); }
-  }
-  res.socket.setNoDelay(true);
-  res.setHeader('Content-Type', 'text/event-stream');
-  res.setHeader('Cache-Control', 'no-cache, no-transform');
-  res.setHeader('Connection', 'keep-alive');
-  res.setHeader('X-Accel-Buffering', 'no');
-  res.setHeader('Transfer-Encoding', 'identity');
-  res.flushHeaders();
-  const recent = _liveEvents.slice(0,10).reverse();
-  for (const e of recent) { try { res.write('data: ' + JSON.stringify(e) + '\n\n'); } catch(e){} }
-  res.write('data: ' + JSON.stringify({ type: 'connected', ts: new Date().toISOString() }) + '\n\n');
-  _sseClients.add(res);
-  const hb = setInterval(() => {
-    try { res.write(':hb\n\n'); }
-    catch(e) { clearInterval(hb); _sseClients.delete(res); }
-  }, 25000);
-  req.on('close', () => { clearInterval(hb); _sseClients.delete(res); });
+  const token = req.query.token || req.headers['x-admin-key'] || '';
+  if (!token) return res.status(401).json({ error: 'Auth required' });
+  try {
+    const r = await pool.query('SELECT * FROM super_admins WHERE session_token=$1 AND is_active=TRUE', [token]).catch(() => ({ rows: [] }));
+    if (!r.rows.length) {
+      // Also accept tracker client token
+      const cr = await pool.query('SELECT id FROM tracker_clients WHERE token=$1 AND (status=$2 OR status IS NULL)', [token, 'active']).catch(() => ({ rows: [] }));
+      if (!cr.rows.length) return res.status(401).json({ error: 'Invalid token' });
+    }
+  } catch(e) { return res.status(500).json({ error: e.message }); }
+  const since = req.query.since ? new Date(req.query.since).getTime() : Date.now() - 30000;
+  const events = _liveEvents.filter(e => new Date(e.ts||0).getTime() > since).slice(0, 20);
+  res.json({ success: true, events, ts: new Date().toISOString() });
 });
 
 app.get('/admin', (req, res) => {
@@ -27558,22 +27531,29 @@ var _stats = { checked: 0, citations: 0, positionsUp: 0, scoresUp: 0 };
 var _events = [];
 var _alertTimer = null;
 
-var es = new EventSource('/api/live-feed?token=__STREAM_TOKEN__');
-
-es.onopen = function() {
-  document.getElementById('connStatus').textContent = 'Live';
-  document.getElementById('connStatus').style.color = '#4ade80';
-};
-
-es.onmessage = function(e) {
-  var ev = JSON.parse(e.data);
-  handleEvent(ev);
-};
-
-es.onerror = function() {
-  document.getElementById('connStatus').textContent = 'Reconnecting...';
-  document.getElementById('connStatus').style.color = '#f87171';
-};
+// Polling fallback — Railway HTTP/2 breaks SSE
+var _pollSince = null;
+function _pollLiveFeed() {
+  var url = '/api/live-feed?token=__STREAM_TOKEN__';
+  if (_pollSince) url += '&since=' + encodeURIComponent(_pollSince);
+  fetch(url)
+    .then(function(r){ return r.json(); })
+    .then(function(data) {
+      if (!data.success) return;
+      document.getElementById('connStatus').textContent = 'Live';
+      document.getElementById('connStatus').style.color = '#4ade80';
+      _pollSince = data.ts;
+      if (data.events && data.events.length) {
+        data.events.forEach(function(ev){ handleEvent(ev); });
+      }
+    })
+    .catch(function() {
+      document.getElementById('connStatus').textContent = 'Reconnecting...';
+      document.getElementById('connStatus').style.color = '#f87171';
+    });
+}
+_pollLiveFeed();
+setInterval(_pollLiveFeed, 5000);
 
 function handleEvent(ev) {
   document.getElementById('lastEvent').textContent = new Date().toLocaleTimeString();
@@ -32551,41 +32531,16 @@ app.get('/api/tracker/live-feed', async (req, res) => {
     const r = await pool.query('SELECT * FROM super_admins WHERE session_token=$1 AND is_active=TRUE', [token]).catch(() => ({ rows: [] }));
     if (!r.rows.length) return res.status(401).json({ error: 'Invalid token' });
   } catch(e) { return res.status(500).json({ error: e.message }); }
-
-  // Limit to 5 concurrent SSE connections
-  if (_sseClients.size >= 5) {
-    const oldest = _sseClients.values().next().value;
-    try { oldest.end(); } catch(e) {}
-    _sseClients.delete(oldest);
-  }
-
-  // Force HTTP/1.1 — Railway HTTP/2 breaks SSE
-  res.socket.setNoDelay(true);
-  res.setHeader('Content-Type', 'text/event-stream');
-  res.setHeader('Cache-Control', 'no-cache, no-transform');
-  res.setHeader('Connection', 'keep-alive');
-  res.setHeader('X-Accel-Buffering', 'no');
-  res.setHeader('Transfer-Encoding', 'identity');
-  res.flushHeaders();
-
-  const recent = _liveEvents.slice(0,10).reverse();
-  for (const e of recent) { try { res.write('data: ' + JSON.stringify(e) + '\n\n'); } catch(e){} }
-  res.write('data: ' + JSON.stringify({ type: 'connected', ts: new Date().toISOString() }) + '\n\n');
-
-  _sseClients.add(res);
-
-  const hb = setInterval(() => {
-    try { res.write(':hb\n\n'); }
-    catch(e) { clearInterval(hb); _sseClients.delete(res); }
-  }, 25000);
-
-  req.on('close', () => { clearInterval(hb); _sseClients.delete(res); });
+  // Polling-only — Railway HTTP/2 breaks SSE
+  const since = req.query.since ? new Date(req.query.since).getTime() : Date.now() - 30000;
+  const events = _liveEvents.filter(e => new Date(e.ts||0).getTime() > since).slice(0, 20);
+  res.json({ success: true, events, ts: new Date().toISOString() });
 });
 
 // ── Live Wall SSE endpoint (per tracker client) ──────────────────────────────
 app.get('/api/tracker-client/:token/live-wall-stream', async (req, res) => {
   try {
-    const cr = await pool.query('SELECT id, token, domain, live_wall_enabled FROM tracker_clients WHERE token=$1 AND status=$2', [req.params.token, 'active']);
+    const cr = await pool.query('SELECT id, token, domain, live_wall_enabled FROM tracker_clients WHERE token=$1 AND (status=$2 OR status IS NULL)', [req.params.token, 'active']);
     if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
     if (!cr.rows[0].live_wall_enabled) return res.status(403).json({ success: false, error: 'Live wall disabled' });
   } catch(e) { return res.status(500).json({ success: false, error: e.message }); }
