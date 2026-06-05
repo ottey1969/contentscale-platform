@@ -25106,23 +25106,27 @@ var _ctSearchQuery = '';
       // Show TV Brief for this page
       var brief = typeof p.brief_content === 'string' ? JSON.parse(p.brief_content) : p.brief_content;
       if (!brief) return;
-      setTimeout(function() {
-        var briefData = {
-          page_id: p.id,
-          url: p.url,
-          keyword: p.keyword || p.gsc_keyword || '',
-          domain: DOMAIN,
-          position: p.google_position || null,
-          aio_cited: !!(p.ai_google_overview_cited),
-          perp_cited: !!(p.ai_perplexity_cited),
-          bing_cited: !!(p.ai_bing_cited),
-          brave_cited: !!(p.ai_brave_cited),
-          score: p.graaf_score || null,
-          passages: Array.isArray(brief.items) ? brief.items : [],
-          type: 'brief_ready'
-        };
-        if (typeof showCitationBrief === 'function') showCitationBrief(briefData);
-      }, 1500);
+      // Store brief data for "📄 Brief" button, but DON'T auto-open overlay
+      // User can click "📄 Brief" to view it. This prevents spinner overlay
+      // from blocking the UI when brief content is already shown inline.
+      var briefData = {
+        page_id: p.id,
+        url: p.url,
+        keyword: p.keyword || p.gsc_keyword || '',
+        domain: DOMAIN,
+        position: p.google_position || null,
+        aio_cited: !!(p.ai_google_overview_cited),
+        perp_cited: !!(p.ai_perplexity_cited),
+        bing_cited: !!(p.ai_bing_cited),
+        brave_cited: !!(p.ai_brave_cited),
+        score: p.graaf_score || null,
+        passages: Array.isArray(brief.items) ? brief.items : [],
+        gsc_brief: brief.gsc_brief || [],
+        source_suggestions: brief.source_suggestions || [],
+        type: 'brief_ready'
+      };
+      _lastBriefData[p.id] = briefData;
+      updateBriefButtons();
     });
   } catch(e) {
     el.innerHTML = '<div class="empty"><div class="empty-icon">&#9888;</div><div style="color:#ef4444;">Could not load pages: ' + e.message + '</div><div style="font-size:11px;margin-top:8px;color:#94a3b8;">Check your tracker link is correct</div></div>';
@@ -25641,8 +25645,15 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
           if (data.events && data.events.length) {
             data.events.forEach(function(ev) {
               if (ev.type === 'brief_ready' && (ev.domain === DOMAIN || (ev.url && ev.url.includes(DOMAIN)))) {
+                // Store brief data so user can view it via "📄 Brief" button
+                if (ev.page_id) _lastBriefData[ev.page_id] = ev;
                 showNotification('Citation Brief ready for ' + (ev.url||''), 'brief', '#7c3aed');
-                showCitationBrief(ev);
+                // Only auto-open overlay if inline brief is NOT already showing data
+                // (prevents double-brief overlay over existing content)
+                var inlineBriefHasData = !!(ev.passages && ev.passages.length);
+                if (!inlineBriefHasData) {
+                  showCitationBrief(ev);
+                }
                 return;
               }
               if (ev.type === 'email_sent' && (ev.domain === DOMAIN || (ev.url && ev.url.includes(DOMAIN)))) {
@@ -25704,6 +25715,9 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
     var card = document.getElementById('cbCard');
     var overlay = document.getElementById('cbOverlay');
     if (!card) return;
+
+    // Prevent re-opening if already open with data for same page
+    if (_briefIsOpen && _currentBriefPageId === data.page_id) return;
 
     // Reset
     _cbKept = false;
@@ -25799,7 +25813,8 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
       '<div class="cb-stat" style="animation:soStatPop .4s ease .12s both"><div class="v" style="color:' + (data.perp_cited ? '#a78bfa' : '#4b5563') + ';">' + (data.perp_cited ? '✓ Cited' : 'No') + '</div><div class="l">Perplexity</div></div>' +
       '<div class="cb-stat" style="animation:soStatPop .4s ease .18s both"><div class="v" style="color:' + (data.bing_cited ? '#60a5fa' : '#4b5563') + ';">' + (data.bing_cited ? '✓ Cited' : 'No') + '</div><div class="l">Copilot</div></div>' +
       '<div class="cb-stat" style="animation:soStatPop .4s ease .24s both;position:relative;"><div class="v" style="color:' + (data.brave_cited ? '#f87171' : '#4b5563') + ';">' + (data.brave_cited ? '✓ Cited' : 'No') + '</div><div class="l">Claude</div>' + (data.brave_cited ? '<span style="position:absolute;top:-4px;right:-4px;font-size:8px;background:#0a0a12;border:1px solid #1f2937;border-radius:3px;padding:0 3px;color:#6b7280;white-space:nowrap;">ὄ1; see img</span>' : '') + '</div>' +
-      '<div class="cb-stat" style="animation:soStatPop .4s ease .3s both"><div class="v" style="color:#fbbf24;">' + (data.score || '—') + '</div><div class="l">GRAAF</div></div>';
+      '<div class="cb-stat" style="animation:soStatPop .4s ease .3s both"><div class="v" style="color:#fbbf24;">' + (data.score || '—') + '</div><div class="l">GRAAF</div></div>' +
+      '<div class="cb-stat" style="animation:soStatPop .4s ease .36s both"><div class="v" style="color:#38bdf8;">' + (data.author_trust_score || '—') + '</div><div class="l">Author Trust</div></div>';
 
     // GSC section — optional, collapsed
     var hasGsc = !!(data.gsc_clicks || data.gsc_impressions || data.gsc_position || data.gsc_ctr);
@@ -25916,6 +25931,30 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
         cpT.value = lines.join(_n);
       }
       cpS.style.display = 'block';
+    }
+
+    // Author Trust — E-E-A-T actions
+    var authorTrustFindings = data.author_trust_findings || [];
+    if (authorTrustFindings.length > 0) {
+      var atDiv = document.getElementById('cbPassages');
+      var atHeader = document.createElement('div');
+      atHeader.style.cssText = 'font-size:11px;font-weight:800;color:#38bdf8;text-transform:uppercase;letter-spacing:.08em;margin:24px 0 14px;';
+      atHeader.innerHTML = '\u{1F464} Author Trust — E-E-A-T Score: ' + (data.author_trust_score || 0) + '/100';
+      atDiv.appendChild(atHeader);
+      authorTrustFindings.slice(0, 4).forEach(function(f) {
+        var atEl = document.createElement('div');
+        atEl.className = 'cb-passage';
+        atEl.style.borderLeftColor = f.priority === 'high' ? '#ef4444' : '#f59e0b';
+        atEl.innerHTML =
+          '<div class="pri-row">' +
+            '<span class="pri-badge ' + (f.priority || 'medium') + '">' + (f.priority || 'MEDIUM').toUpperCase() + '</span>' +
+            '<span class="sys-badge" style="color:#38bdf8;background:#38bdf818;border-color:#38bdf830;">Author Trust</span>' +
+          '</div>' +
+          '<span class="rec-title">' + (f.title || 'Improve author credibility') + '</span>' +
+          '<span class="rec-action">' + (f.action || '') + '</span>' +
+          '<span class="rec-impact">' + (f.expected_impact || 'Improves E-E-A-T signals for AI citation systems') + '</span>';
+        atDiv.appendChild(atEl);
+      });
     }
 
     // Source Suggestions — Verified Claims
@@ -26047,7 +26086,8 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
       '<div class="cb-stat" style="animation:soStatPop .3s ease .1s both"><div class="v" style="color:' + (data.perp_cited ? '#a78bfa' : '#4b5563') + ';">' + (data.perp_cited ? '\u2713 Cited' : 'No') + '</div><div class="l">Perplexity</div></div>' +
       '<div class="cb-stat" style="animation:soStatPop .3s ease .15s both"><div class="v" style="color:' + (data.bing_cited ? '#60a5fa' : '#4b5563') + ';">' + (data.bing_cited ? '\u2713 Cited' : 'No') + '</div><div class="l">Copilot</div></div>' +
       '<div class="cb-stat" style="animation:soStatPop .3s ease .2s both"><div class="v" style="color:' + (data.brave_cited ? '#f87171' : '#4b5563') + ';">' + (data.brave_cited ? '\u2713 Cited' : 'No') + '</div><div class="l">Claude</div></div>' +
-      '<div class="cb-stat" style="animation:soStatPop .3s ease .25s both"><div class="v" style="color:#fbbf24;">' + (data.score || '—') + '</div><div class="l">GRAAF</div></div>';
+      '<div class="cb-stat" style="animation:soStatPop .3s ease .25s both"><div class="v" style="color:#fbbf24;">' + (data.score || '—') + '</div><div class="l">GRAAF</div></div>' +
+      '<div class="cb-stat" style="animation:soStatPop .3s ease .3s both"><div class="v" style="color:#38bdf8;">' + (data.author_trust_score || '—') + '</div><div class="l">Author Trust</div></div>';
 
     // GSC
     var hasGsc = !!(data.gsc_clicks || data.gsc_impressions || data.gsc_position || data.gsc_ctr);
@@ -26114,6 +26154,29 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
       });
     } else {
       passDiv.innerHTML = '<div class="cb-passage">No recommendations yet — run a scan first.</div>';
+    }
+
+    // Author Trust — E-E-A-T actions (also in viewLastBrief)
+    var authorTrustFindings = data.author_trust_findings || [];
+    if (authorTrustFindings.length > 0) {
+      var atHeader = document.createElement('div');
+      atHeader.style.cssText = 'font-size:11px;font-weight:800;color:#38bdf8;text-transform:uppercase;letter-spacing:.08em;margin:24px 0 14px;';
+      atHeader.innerHTML = '\u{1F464} Author Trust — E-E-A-T Score: ' + (data.author_trust_score || 0) + '/100';
+      passDiv.appendChild(atHeader);
+      authorTrustFindings.slice(0, 4).forEach(function(f) {
+        var atEl = document.createElement('div');
+        atEl.className = 'cb-passage';
+        atEl.style.borderLeftColor = f.priority === 'high' ? '#ef4444' : '#f59e0b';
+        atEl.innerHTML =
+          '<div class="pri-row">' +
+            '<span class="pri-badge ' + (f.priority || 'medium') + '">' + (f.priority || 'MEDIUM').toUpperCase() + '</span>' +
+            '<span class="sys-badge" style="color:#38bdf8;background:#38bdf818;border-color:#38bdf830;">Author Trust</span>' +
+          '</div>' +
+          '<span class="rec-title">' + (f.title || 'Improve author credibility') + '</span>' +
+          '<span class="rec-action">' + (f.action || '') + '</span>' +
+          '<span class="rec-impact">' + (f.expected_impact || 'Improves E-E-A-T signals for AI citation systems') + '</span>';
+        passDiv.appendChild(atEl);
+      });
     }
 
     // Source Suggestions — Verified Claims (also in viewLastBrief)
@@ -33161,9 +33224,102 @@ function graafScanHtml(html, pageUrl) {
   };
 }
 
-// ── Browser-based HTML analysis (same as /api/scan) ─────────────────────────
-// Takes raw HTML, loads it into a Puppeteer page, runs the same DOM analysis.
-// This ensures tracker scores match single-scan scores exactly.
+// ── Author Trust Score analysis ─────────────────────────────────────────────
+// Scans HTML for E-E-A-T signals that AI systems use to determine credibility.
+// Returns score (0-100) + detailed findings for the Citation Brief.
+function authorTrustAnalyzeHtml(html, pageUrl) {
+  if (!html) return { score: 0, findings: [] };
+  const raw = html;
+  const text = html.replace(/<script[\s\S]*?<\/script>/gi, ' ').replace(/<style[\s\S]*?<\/style>/gi, ' ').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+  const lowerText = text.toLowerCase();
+  const lowerHtml = raw.toLowerCase();
+
+  var findings = [];
+  var checks = [];
+
+  // 1. Author name present (0-10)
+  var authorPatterns = [
+    /<meta[^>]+name=["']author["'][^>]*content=["']([^"']+)["']/i,
+    /<meta[^>]+content=["']([^"']+)["'][^>]+name=["']author["']/i,
+    /(?:by|written by|authored by|article by)\s+([A-Z][a-z]+\s+[A-Z][a-z]+)/i,
+    /class=["'][^"']*author[^"']*["'][^>]*>([^<]+)/gi
+  ];
+  var authorName = '';
+  for (var pi = 0; pi < authorPatterns.length; pi++) {
+    var m = raw.match(authorPatterns[pi]);
+    if (m && m[1]) { authorName = m[1].trim(); break; }
+  }
+  checks.push({ name: 'Author name', score: authorName ? 10 : 0, max: 10, found: authorName, why: authorName ? 'Author: ' + authorName : 'No author name found in meta tags or byline' });
+
+  // 2. Author bio with credentials (0-15)
+  var hasBio = false;
+  var bioSection = '';
+  var bioMatch = raw.match(/(?:about the author|author bio|about me|written by)[\s\S]{0,500}?<p[^>]*>([\s\S]{50,500}?)<\/p>/i);
+  if (bioMatch) { hasBio = true; bioSection = bioMatch[1].replace(/<[^>]+>/g, '').trim().substring(0, 120); }
+  var credentialKeywords = ['years', 'experience', 'expert', 'specialist', 'founder', 'phd', 'mba', 'certified', 'award', 'published', 'speaker'];
+  var hasCredentials = hasBio && credentialKeywords.some(function(k) { return bioSection.toLowerCase().includes(k); });
+  checks.push({ name: 'Author bio + credentials', score: hasBio ? (hasCredentials ? 15 : 8) : 0, max: 15, found: bioSection, why: hasBio ? (hasCredentials ? 'Bio with credentials: ' + bioSection : 'Bio present but lacks specific credentials') : 'No author bio section found' });
+
+  // 3. Author photo (0-10)
+  var hasAuthorPhoto = /class=["'][^"']*author[^"']*photo|class=["'][^"']*avatar|alt=["'][^"']*author[^"']*["'][^>]*src=["'][^"']+/i.test(raw);
+  checks.push({ name: 'Author photo', score: hasAuthorPhoto ? 10 : 0, max: 10, found: hasAuthorPhoto ? 'Yes' : 'No', why: hasAuthorPhoto ? 'Author photo detected' : 'No author photo — AI systems prefer human-verified content' });
+
+  // 4. LinkedIn/social links (0-15)
+  var socialPatterns = [/linkedin\.com/i, /twitter\.com/i, /x\.com/i];
+  var foundSocial = [];
+  socialPatterns.forEach(function(re) { if (re.test(raw)) foundSocial.push(re.source.replace(/\\/g, '')); });
+  checks.push({ name: 'Social profiles', score: foundSocial.length >= 2 ? 15 : foundSocial.length === 1 ? 8 : 0, max: 15, found: foundSocial.join(', ') || 'None', why: foundSocial.length ? 'Linked social: ' + foundSocial.join(', ') : 'No LinkedIn/Twitter links — social proof missing' });
+
+  // 5. "About the Author" section (0-15)
+  var hasAboutAuthor = /about the author|about me|author profile|meet the author|written by/i.test(lowerText);
+  checks.push({ name: 'About section', score: hasAboutAuthor ? 15 : 0, max: 15, found: hasAboutAuthor ? 'Yes' : 'No', why: hasAboutAuthor ? 'Author section present' : 'No "About the Author" section — AI models use this for credibility scoring' });
+
+  // 6. Published date + last updated (0-10)
+  var hasDate = /<meta[^>]+property=["']article:published_time["']|<time[^>]*datetime=|published on|updated on|last modified/i.test(raw);
+  checks.push({ name: 'Date signals', score: hasDate ? 10 : 0, max: 10, found: hasDate ? 'Yes' : 'No', why: hasDate ? 'Publication/updated date found' : 'No date signals — freshness is a ranking factor' });
+
+  // 7. Outbound links to .edu/.gov (0-15)
+  var outboundLinks = [...raw.matchAll(/<a[^>]+href=["'](https?:\/\/[^"']+)["'][^>]*>/gi)].map(function(m) { return m[1]; });
+  var eduGovLinks = outboundLinks.filter(function(u) { return /\.edu(\/|$)|\.gov(\/|$)|\.gov\.uk|\.overheid\.nl|\.bund\.de|\.gouv\.fr|who\.int|un\.org|unesco\.org|oecd\.org|worldbank\.org|europa\.eu/i.test(u); });
+  checks.push({ name: 'Authority links', score: eduGovLinks.length >= 2 ? 15 : eduGovLinks.length === 1 ? 8 : 0, max: 15, found: eduGovLinks.length + ' links', why: eduGovLinks.length ? 'Links to ' + eduGovLinks.length + ' .edu/.gov/authority sources' : 'No outbound links to .edu/.gov/authority sources — these signal trust to AI models' });
+
+  // 8. Schema Person/Author markup (0-10)
+  var hasPersonSchema = /"@type"\s*:\s*"Person"|"@type"\s*:\s*"Author"/i.test(raw);
+  checks.push({ name: 'Author schema', score: hasPersonSchema ? 10 : 0, max: 10, found: hasPersonSchema ? 'Yes' : 'No', why: hasPersonSchema ? 'Schema.org Person markup found' : 'No Schema.org Person/Author markup — AI systems use this to identify the author' });
+
+  // Calculate total score
+  var totalScore = checks.reduce(function(sum, c) { return sum + c.score; }, 0);
+  var maxScore = checks.reduce(function(sum, c) { return sum + c.max; }, 0);
+  var normalizedScore = Math.round((totalScore / maxScore) * 100);
+
+  // Build findings list for brief (only items with issues)
+  checks.forEach(function(c) {
+    if (c.score < c.max * 0.6) {
+      findings.push({
+        title: 'Add ' + c.name.toLowerCase(),
+        priority: c.max >= 15 ? 'high' : 'medium',
+        system: 'Author Trust',
+        action: c.why + '. Fix: ' + getAuthorTrustFix(c.name),
+        expected_impact: 'Improves E-E-A-T signals that Perplexity, Claude, and Google AI Overview use to determine author credibility'
+      });
+    }
+  });
+
+  return { score: normalizedScore, findings: findings, details: checks };
+}
+
+function getAuthorTrustFix(checkName) {
+  if (checkName === 'Author name') return 'Add meta author tag to HTML head, or include byline: Written by [Name] near top.';
+  if (checkName === 'Author bio + credentials') return 'Add About the Author section with 2-3 sentences: years of experience, notable clients, expertise areas.';
+  if (checkName === 'Author photo') return 'Add author photo with descriptive alt text. AI systems associate faces with credibility.';
+  if (checkName === 'Social profiles') return 'Add LinkedIn/Twitter links near author name using rel=me links.';
+  if (checkName === 'About section') return 'Create dedicated About the Author section with background, credentials, expertise.';
+  if (checkName === 'Date signals') return 'Add article:published_time meta tag and show Last updated date visibly on page.';
+  if (checkName === 'Authority links') return 'Add 2-3 outbound links to .edu, .gov, or recognized industry research within content.';
+  if (checkName === 'Author schema') return 'Add Schema.org Person JSON-LD with name, jobTitle, url, sameAs array including LinkedIn.';
+  return 'Review and improve this E-E-A-T signal.';
+}
+
 async function browserScanHtml(html, pageUrl) {
   if (!html || html.length < 200) return null;
   let browser, page;
@@ -33910,6 +34066,19 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
     _trSetStep(pageId, 'brave', 'error', 'No keyword — skipped');
   }
 
+  // 4b. Author Trust Score — E-E-A-T signal analysis
+  _trSetStep(pageId, 'author_trust', 'running', 'Checking author credibility signals…');
+  try {
+    var authorTrust = authorTrustAnalyzeHtml(effectiveHtml, page.url || '');
+    snapshot.author_trust_score = authorTrust.score;
+    snapshot.author_trust_findings = authorTrust.findings;
+    _trSetStep(pageId, 'author_trust', 'done', 'Author Trust: ' + authorTrust.score + '/100 — ' + authorTrust.findings.length + ' improvements found');
+  } catch(e) {
+    snapshot.author_trust_score = 0;
+    snapshot.author_trust_findings = [];
+    _trSetStep(pageId, 'author_trust', 'error', 'Author trust check failed: ' + e.message);
+  }
+
   // 5. Generate recommendations via Gemini — gap analysis vs. what's winning in Google + AI systems
   _trSetStep(pageId, 'recommendations', 'running', 'Analysing gaps vs. top results…');
   if(geminiKey) {
@@ -34243,13 +34412,15 @@ If no unanchored claims found, return empty array: []`;
   // Add new JSONB columns if not exists
   await pool.query('ALTER TABLE tracker_snapshots ADD COLUMN IF NOT EXISTS gsc_brief JSONB').catch(()=>{});
   await pool.query('ALTER TABLE tracker_snapshots ADD COLUMN IF NOT EXISTS source_suggestions JSONB').catch(()=>{});
+  await pool.query('ALTER TABLE tracker_snapshots ADD COLUMN IF NOT EXISTS author_trust_score INTEGER').catch(()=>{});
+  await pool.query('ALTER TABLE tracker_snapshots ADD COLUMN IF NOT EXISTS author_trust_findings JSONB').catch(()=>{});
   const snapR = await pool.query(
     `INSERT INTO tracker_snapshots
       (page_id,checked_at,google_position,ai_google_overview_found,ai_google_overview_cited,ai_google_overview_text,
        ai_perplexity_found,ai_perplexity_cited,ai_perplexity_text,ai_bing_found,ai_bing_cited,ai_bing_text,
        ai_brave_found,ai_brave_cited,
-       recommendations,gsc_brief,source_suggestions,html_hash,score,graaf_breakdown,graaf_recommendations,content_changed,content_diff)
-     VALUES ($1,NOW(),$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22) RETURNING *`,
+       recommendations,gsc_brief,source_suggestions,author_trust_score,author_trust_findings,html_hash,score,graaf_breakdown,graaf_recommendations,content_changed,content_diff)
+     VALUES ($1,NOW(),$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24) RETURNING *`,
     [page.id, snapshot.google_position, snapshot.ai_google_overview_found, snapshot.ai_google_overview_cited,
      snapshot.ai_google_overview_text, snapshot.ai_perplexity_found, snapshot.ai_perplexity_cited,
      snapshot.ai_perplexity_text, snapshot.ai_bing_found, snapshot.ai_bing_cited, snapshot.ai_bing_text,
@@ -34257,6 +34428,8 @@ If no unanchored claims found, return empty array: []`;
      safeJSONB(snapshot.recommendations),
      safeJSONB(snapshot.gsc_brief),
      safeJSONB(snapshot.source_suggestions),
+     snapshot.author_trust_score || 0,
+     safeJSONB(snapshot.author_trust_findings),
      snapshot.html_hash,
      snapshot.score,
      safeJSONB(snapshot.graaf_breakdown),
@@ -34434,6 +34607,8 @@ Return ONLY JSON array (max 5 items): [{"title":"max 6 words","priority":"high"|
           passages: brief2.items || [],
           gsc_brief: brief2.gsc_brief || [],
           source_suggestions: (snapshot.source_suggestions || []),
+          author_trust_score: snapshot.author_trust_score || 0,
+          author_trust_findings: (snapshot.author_trust_findings || []),
           gsc_clicks: page.gsc_clicks,
           gsc_impressions: page.gsc_impressions,
           gsc_position: page.gsc_position,
