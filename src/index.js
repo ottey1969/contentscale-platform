@@ -1872,11 +1872,20 @@ app.get('/live', (req, res) => {
   res.send(_LIVE_OVERLAY_HTML.replace('__STREAM_TOKEN__', token));
 });
 
-// ── Live overlay SSE (no auth required — uses stream token) ───────────────
+// ── Live overlay SSE (accepts stream token OR tracker client token) ──────
 app.get('/api/live-feed', async (req, res) => {
   const token = req.query.token || '';
-  const validToken = process.env.STREAM_TOKEN || process.env.ADMIN_PASSWORD || 'contentscale';
-  if (token !== validToken) return res.status(401).end();
+  // Check stream token first
+  const streamToken = process.env.STREAM_TOKEN || process.env.ADMIN_PASSWORD || 'contentscale';
+  if (token === streamToken) {
+    // OK — stream token
+  } else {
+    // Check if it's a valid tracker client token
+    try {
+      const cr = await pool.query('SELECT id FROM tracker_clients WHERE token = $1 AND (status IS NULL OR status != $2)', [token, 'deleted']);
+      if (!cr.rows.length) return res.status(401).end();
+    } catch(e) { return res.status(401).end(); }
+  }
   res.socket.setNoDelay(true);
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache, no-transform');
@@ -25714,7 +25723,13 @@ async function deletePage(pageId) {
 }
 
 loadPages();
-maybeShowWelcome(); // show animated welcome on first visit
+// Show welcome on first visit (or force with ?welcome=1)
+if (window.location.search.indexOf('welcome=1') > -1) {
+  try { localStorage.removeItem('cs_welcome_seen'); } catch(e) {}
+  showWelcome();
+} else {
+  maybeShowWelcome();
+}
 setInterval(loadPages, 120000); // auto-refresh every 2 min
 
   // Live feed polling for this domain
