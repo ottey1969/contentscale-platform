@@ -1853,6 +1853,7 @@ app.get('/track/:token', async (req, res) => {
       .replace(/__MAX_PAGES__/g, String(client.max_pages || 3))
       .replace(/__CLIENT_NAME__/g, (client.name || client.domain || '').replace(/[`'\\]/g, ''))
       .replace(/__GSC_ENABLED__/g, client.gsc_enabled ? 'true' : 'false')
+      .replace(/__STREAM_TOKEN__/g, req.params.token || '')
     );
   } catch(e) {
     console.error('[track] Error:', e.message);
@@ -24696,6 +24697,35 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
 /* ═══ PERSISTENT STARS — pure CSS, no JS needed ═══ */
 @keyframes twinkle{0%,100%{opacity:.15}50%{opacity:1}}
 
+/* ═══ Animated Welcome Screen ═══ */
+.wl-overlay{position:fixed;inset:0;z-index:9999;background:rgba(6,6,14,.92);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;padding:16px;animation:wlFadeIn .5s ease}
+@keyframes wlFadeIn{from{opacity:0}to{opacity:1}}
+.wl-card{position:relative;background:#0d1117;border:1px solid #1f2937;border-radius:20px;width:100%;max-width:560px;max-height:92vh;overflow-y:auto;display:flex;flex-direction:column;box-shadow:0 0 80px rgba(124,58,237,.25),0 0 160px rgba(124,58,237,.08);animation:wlSlideUp .7s cubic-bezier(.16,1,.3,1)}
+@keyframes wlSlideUp{from{transform:translateY(60px);opacity:0}to{transform:translateY(0);opacity:1}}
+.wl-header{text-align:center;padding:32px 24px 20px;background:linear-gradient(180deg,rgba(124,58,237,.08),transparent);position:relative;overflow:hidden}
+.wl-stars{position:absolute;top:0;left:0;right:0;height:80px;pointer-events:none;overflow:hidden}
+.wl-stars::before{content:'';position:absolute;top:12px;left:20%;width:3px;height:3px;border-radius:50%;background:#c4b5fd;animation:twinkle 2.5s ease-in-out infinite;box-shadow:40px 15px 0 #a78bfa,80px 8px 0 #c4b5fd,120px 20px 0 #4ade80,160px 12px 0 #fbbf24,200px 25px 0 #a78bfa,60px 35px 0 #4ade80,100px 40px 0 #fbbf24,140px 30px 0 #c4b5fd,240px 18px 0 #7c3aed}
+.wl-icon{font-size:3rem;margin-bottom:10px;animation:wlBounce 2s ease-in-out infinite}
+@keyframes wlBounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+.wl-title{font-size:22px;font-weight:900;color:#f1f5f9;letter-spacing:-.02em;margin-bottom:4px}
+.wl-subtitle{font-size:13px;color:#6b7280}
+.wl-body{padding:0 24px 16px;flex:1}
+.wl-steps{display:flex;flex-direction:column;gap:10px;margin-bottom:20px}
+.wl-step{display:flex;align-items:flex-start;gap:14px;padding:12px 14px;background:#111827;border:1px solid #1f2937;border-radius:10px;opacity:0;animation:wlStepIn .5s ease forwards}
+@keyframes wlStepIn{from{opacity:0;transform:translateX(-20px)}to{opacity:1;transform:translateX(0)}}
+.wl-step-num{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#7c3aed,#4c1d95);color:#fff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px}
+.wl-step-content{flex:1}
+.wl-step-title{font-size:13px;font-weight:700;color:#e5e7eb;margin-bottom:3px}
+.wl-step-desc{font-size:11px;color:#6b7280;line-height:1.6}
+.wl-features{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px}
+.wl-feature{font-size:10px;color:#94a3b8;background:#0a0a12;border:1px solid #1f2937;border-radius:6px;padding:8px 10px;display:flex;align-items:center;gap:6px}
+.wl-feat-icon{font-size:14px}
+.wl-footer{padding:0 24px 24px;text-align:center}
+.wl-btn{background:linear-gradient(135deg,#7c3aed,#6d28d9);color:#fff;border:none;border-radius:10px;padding:14px 32px;font-size:14px;font-weight:700;cursor:pointer;transition:all .2s;box-shadow:0 4px 20px rgba(124,58,237,.3);font-family:Verdana,sans-serif}
+.wl-btn:hover{transform:translateY(-2px);box-shadow:0 6px 30px rgba(124,58,237,.4)}
+.wl-hint{font-size:10px;color:#4b5563;margin-top:10px}
+@media(max-width:480px){.wl-card{max-width:100%}.wl-features{grid-template-columns:1fr}.wl-title{font-size:18px}}
+
 /* ═══ PERSISTENT STARS — bigger, brighter, multi-layered ═══ */
 @keyframes twinkle{0%,100%{opacity:.25;transform:scale(1)}50%{opacity:1;transform:scale(1.4)}}
 
@@ -24762,6 +24792,60 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
 </style>
 </head>
 <body>
+
+<!-- ═══ Animated Welcome Screen ═══ -->
+<div id="wlOverlay" class="wl-overlay" style="display:none;">
+  <div class="wl-card" id="wlCard">
+    <div class="wl-header">
+      <div class="wl-stars"></div>
+      <div class="wl-icon">🎯</div>
+      <div class="wl-title">AI Citation Tracker</div>
+      <div class="wl-subtitle">Monitor where AI systems cite your content</div>
+    </div>
+    <div class="wl-body">
+      <div class="wl-steps">
+        <div class="wl-step" style="animation-delay:0s">
+          <div class="wl-step-num">1</div>
+          <div class="wl-step-content">
+            <div class="wl-step-title">Paste Your Page HTML</div>
+            <div class="wl-step-desc">Copy your page source and paste it here. The system needs your actual HTML to analyze what AI systems see.</div>
+          </div>
+        </div>
+        <div class="wl-step" style="animation-delay:0.15s">
+          <div class="wl-step-num">2</div>
+          <div class="wl-step-content">
+            <div class="wl-step-title">Run the Scan</div>
+            <div class="wl-step-desc">The system checks Google AI Overview, Perplexity, Microsoft Copilot & Claude to see if you are cited.</div>
+          </div>
+        </div>
+        <div class="wl-step" style="animation-delay:0.3s">
+          <div class="wl-step-num">3</div>
+          <div class="wl-step-content">
+            <div class="wl-step-title">Get Your Citation Brief</div>
+            <div class="wl-step-desc">Receive specific, copy-paste ready actions to get cited in all AI systems. Each action tells you exactly what to add.</div>
+          </div>
+        </div>
+        <div class="wl-step" style="animation-delay:0.45s">
+          <div class="wl-step-num">4</div>
+          <div class="wl-step-content">
+            <div class="wl-step-title">Implement & Re-scan</div>
+            <div class="wl-step-desc">Add the recommended changes, paste your updated HTML, and scan again. Track your progress over time.</div>
+          </div>
+        </div>
+      </div>
+      <div class="wl-features">
+        <div class="wl-feature"><span class="wl-feat-icon">⚡</span> Scans 4 AI systems simultaneously</div>
+        <div class="wl-feature"><span class="wl-feat-icon">📊</span> GSC integration for ranking data</div>
+        <div class="wl-feature"><span class="wl-feat-icon">🔔</span> Telegram alerts when cited</div>
+        <div class="wl-feature"><span class="wl-feat-icon">🌍</span> Multi-language & global support</div>
+      </div>
+    </div>
+    <div class="wl-footer">
+      <button class="wl-btn" onclick="closeWelcome()">Get Started <span style="margin-left:6px">→</span></button>
+      <div class="wl-hint">Press ESC or click outside to dismiss</div>
+    </div>
+  </div>
+</div>
 
 <!-- Header -->
 <div class="cs-header">
@@ -25057,6 +25141,35 @@ function toggleNotifPanel() {
   }
   panel.style.display = 'block';
   markNotifsRead();
+}
+
+// ── Welcome Screen ──
+function showWelcome() {
+  var el = document.getElementById('wlOverlay');
+  if (!el) return;
+  el.style.display = 'flex';
+  // Animate steps
+  var steps = el.querySelectorAll('.wl-step');
+  steps.forEach(function(s, i) {
+    s.style.animationDelay = (i * 0.15) + 's';
+  });
+}
+function closeWelcome() {
+  var el = document.getElementById('wlOverlay');
+  if (el) {
+    el.style.opacity = '0';
+    el.style.transition = 'opacity .3s ease';
+    setTimeout(function() { el.style.display = 'none'; el.style.opacity = '1'; }, 300);
+  }
+  try { localStorage.setItem('cs_welcome_seen', '1'); } catch(e) {}
+}
+// Show welcome on first visit (after pages load)
+function maybeShowWelcome() {
+  try {
+    if (!localStorage.getItem('cs_welcome_seen')) {
+      setTimeout(showWelcome, 800);
+    }
+  } catch(e) { showWelcome(); }
 }
 
 function showAddModal() { document.getElementById('addModal').classList.add('show'); }
@@ -25601,6 +25714,7 @@ async function deletePage(pageId) {
 }
 
 loadPages();
+maybeShowWelcome(); // show animated welcome on first visit
 setInterval(loadPages, 120000); // auto-refresh every 2 min
 
   // Live feed polling for this domain
