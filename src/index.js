@@ -25733,7 +25733,23 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
     card.classList.remove('hide');
     card.classList.add('show');
 
-    // Animate steps
+    var hasPassages = (data.passages || data.recommendations || []).length > 0;
+
+    // If brief data already available (passages exist), skip step animation and show immediately
+    if (hasPassages) {
+      // Mark all steps done immediately
+      for (var si = 1; si <= 4; si++) {
+        var step = document.getElementById('cbStep' + si);
+        var icon = document.getElementById('cbStep' + si + 'Icon');
+        if (step) { step.className = 'cb-step done'; }
+        if (icon) { icon.className = 'cb-step-icon done'; icon.textContent = 'v'; }
+      }
+      document.getElementById('cbProgressBar').style.width = '100%';
+      showBriefResult(data);
+      return;
+    }
+
+    // Animate steps (only when data not yet available)
     var delays = [0, 3000, 6000, 10000];
     var completions = [2500, 5500, 9000, 14000];
     var progress = [20, 40, 65, 90];
@@ -25757,177 +25773,215 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
     }
 
     // Show results after animation
-    setTimeout(function() {
-      document.getElementById('cbProgressBar').style.width = '100%';
+    setTimeout(function() { showBriefResult(data); }, 16000);
+  }
 
-      // Reset
-      var gscS = document.getElementById('cbGscSection');
-      var gscP = document.getElementById('cbGscPanel');
-      var gscA = document.getElementById('cbGscArrow');
-      if (gscS) gscS.style.display = 'none';
-      if (gscP) gscP.classList.remove('open');
-      if (gscA) gscA.style.transform = 'rotate(0deg)';
-      var cpS = document.getElementById('cbCopySection');
-      if (cpS) cpS.style.display = 'none';
+  function showBriefResult(data) {
+    document.getElementById('cbProgressBar').style.width = '100%';
 
-      // Stats
-      var statRow = document.getElementById('cbStatRow');
-      var pos = data.position;
-      var posColor = pos ? (pos <= 3 ? '#4ade80' : pos <= 10 ? '#fbbf24' : '#f87171') : '#4b5563';
-      statRow.innerHTML =
-        '<div class="cb-stat" style="animation:soStatPop .4s ease both"><div class="v" style="color:' + posColor + ';">' + (pos ? '#' + pos : 'N/A') + '</div><div class="l">Position</div></div>' +
-        '<div class="cb-stat" style="animation:soStatPop .4s ease .06s both"><div class="v" style="color:' + (data.aio_cited ? '#4ade80' : '#4b5563') + ';">' + (data.aio_cited ? '\u2713 Cited' : 'No') + '</div><div class="l">Google AIO</div></div>' +
-        '<div class="cb-stat" style="animation:soStatPop .4s ease .12s both"><div class="v" style="color:' + (data.perp_cited ? '#a78bfa' : '#4b5563') + ';">' + (data.perp_cited ? '\u2713 Cited' : 'No') + '</div><div class="l">Perplexity</div></div>' +
-        '<div class="cb-stat" style="animation:soStatPop .4s ease .18s both"><div class="v" style="color:' + (data.bing_cited ? '#60a5fa' : '#4b5563') + ';">' + (data.bing_cited ? '\u2713 Cited' : 'No') + '</div><div class="l">Copilot</div></div>' +
-        '<div class="cb-stat" style="animation:soStatPop .4s ease .24s both;position:relative;"><div class="v" style="color:' + (data.brave_cited ? '#f87171' : '#4b5563') + ';">' + (data.brave_cited ? '\u2713 Cited' : 'No') + '</div><div class="l">Claude</div>' + (data.brave_cited ? '<span style="position:absolute;top:-4px;right:-4px;font-size:8px;background:#0a0a12;border:1px solid #1f2937;border-radius:3px;padding:0 3px;color:#6b7280;white-space:nowrap;">\u1F441; see img</span>' : '') + '</div>' +
-        '<div class="cb-stat" style="animation:soStatPop .4s ease .3s both"><div class="v" style="color:#fbbf24;">' + (data.score || '—') + '</div><div class="l">GRAAF</div></div>';
+    // Reset
+    var gscS = document.getElementById('cbGscSection');
+    var gscP = document.getElementById('cbGscPanel');
+    var gscA = document.getElementById('cbGscArrow');
+    if (gscS) gscS.style.display = 'none';
+    if (gscP) gscP.classList.remove('open');
+    if (gscA) gscA.style.transform = 'rotate(0deg)';
+    var cpS = document.getElementById('cbCopySection');
+    if (cpS) cpS.style.display = 'none';
 
-      // GSC section — optional, collapsed
-      var hasGsc = !!(data.gsc_clicks || data.gsc_impressions || data.gsc_position || data.gsc_ctr);
-      if (hasGsc && gscS) {
-        gscS.style.display = 'block';
-        var gscStats = document.getElementById('cbGscStats');
-        if (gscStats) {
-          var items = [];
-          if (data.gsc_clicks != null) items.push('<span style="color:#4ade80;font-weight:600;">\u2193 ' + Number(data.gsc_clicks).toLocaleString() + ' clicks</span>');
-          if (data.gsc_impressions != null) items.push('<span style="color:#60a5fa;">' + Number(data.gsc_impressions).toLocaleString() + ' impr</span>');
-          if (data.gsc_ctr) items.push('<span style="color:#a78bfa;">CTR ' + data.gsc_ctr + '</span>');
-          if (data.gsc_position) items.push('<span style="color:#f59e0b;font-weight:600;">pos ' + parseFloat(data.gsc_position).toFixed(1) + '</span>');
-          if (data.gsc_keyword) items.push('<span style="color:#4b5563;font-style:italic;">' + data.gsc_keyword + '</span>');
-          items.push('<span style="margin-left:auto;color:#4ade80;font-weight:700;font-size:10px;">Goal: #1</span>');
-          gscStats.innerHTML = items.join('');
+    // Stats
+    var statRow = document.getElementById('cbStatRow');
+    var pos = data.position;
+    var posColor = pos ? (pos <= 3 ? '#4ade80' : pos <= 10 ? '#fbbf24' : '#f87171') : '#4b5563';
+    statRow.innerHTML =
+      '<div class="cb-stat" style="animation:soStatPop .4s ease both"><div class="v" style="color:' + posColor + ';">' + (pos ? '#' + pos : 'N/A') + '</div><div class="l">Position</div></div>' +
+      '<div class="cb-stat" style="animation:soStatPop .4s ease .06s both"><div class="v" style="color:' + (data.aio_cited ? '#4ade80' : '#4b5563') + ';">' + (data.aio_cited ? '✓ Cited' : 'No') + '</div><div class="l">Google AIO</div></div>' +
+      '<div class="cb-stat" style="animation:soStatPop .4s ease .12s both"><div class="v" style="color:' + (data.perp_cited ? '#a78bfa' : '#4b5563') + ';">' + (data.perp_cited ? '✓ Cited' : 'No') + '</div><div class="l">Perplexity</div></div>' +
+      '<div class="cb-stat" style="animation:soStatPop .4s ease .18s both"><div class="v" style="color:' + (data.bing_cited ? '#60a5fa' : '#4b5563') + ';">' + (data.bing_cited ? '✓ Cited' : 'No') + '</div><div class="l">Copilot</div></div>' +
+      '<div class="cb-stat" style="animation:soStatPop .4s ease .24s both;position:relative;"><div class="v" style="color:' + (data.brave_cited ? '#f87171' : '#4b5563') + ';">' + (data.brave_cited ? '✓ Cited' : 'No') + '</div><div class="l">Claude</div>' + (data.brave_cited ? '<span style="position:absolute;top:-4px;right:-4px;font-size:8px;background:#0a0a12;border:1px solid #1f2937;border-radius:3px;padding:0 3px;color:#6b7280;white-space:nowrap;">ὄ1; see img</span>' : '') + '</div>' +
+      '<div class="cb-stat" style="animation:soStatPop .4s ease .3s both"><div class="v" style="color:#fbbf24;">' + (data.score || '—') + '</div><div class="l">GRAAF</div></div>';
+
+    // GSC section — optional, collapsed
+    var hasGsc = !!(data.gsc_clicks || data.gsc_impressions || data.gsc_position || data.gsc_ctr);
+    if (hasGsc && gscS) {
+      gscS.style.display = 'block';
+      var gscStats = document.getElementById('cbGscStats');
+      if (gscStats) {
+        var items = [];
+        if (data.gsc_clicks != null) items.push('<span style="color:#4ade80;font-weight:600;">↓ ' + Number(data.gsc_clicks).toLocaleString() + ' clicks</span>');
+        if (data.gsc_impressions != null) items.push('<span style="color:#60a5fa;">' + Number(data.gsc_impressions).toLocaleString() + ' impr</span>');
+        if (data.gsc_ctr) items.push('<span style="color:#a78bfa;">CTR ' + data.gsc_ctr + '</span>');
+        if (data.gsc_position) items.push('<span style="color:#f59e0b;font-weight:600;">pos ' + parseFloat(data.gsc_position).toFixed(1) + '</span>');
+        if (data.gsc_keyword) items.push('<span style="color:#4b5563;font-style:italic;">' + data.gsc_keyword + '</span>');
+        items.push('<span style="margin-left:auto;color:#4ade80;font-weight:700;font-size:10px;">Goal: #1</span>');
+        gscStats.innerHTML = items.join('');
+      }
+    }
+
+    // Recommendations — Citation Brief + GSC Brief combined
+    var passages = data.passages || data.recommendations;
+    var passDiv = document.getElementById('cbPassages');
+    var allItems = [];
+    if (passages && Array.isArray(passages) && passages.length) {
+      allItems = allItems.concat(passages);
+    }
+    var gscBriefItems = data.gsc_brief || [];
+    var isGscEnabled = data._gsc_enabled || !!(data.gsc_clicks || data.gsc_impressions || data.gsc_position);
+    if (isGscEnabled && gscBriefItems.length) {
+      gscBriefItems.forEach(function(g) {
+        allItems.push({
+          title: g.title || '',
+          priority: g.priority || 'medium',
+          system: 'GSC Ranking',
+          action: g.action || '',
+          expected_impact: g.expected_impact || '',
+          trigger: g.trigger || '',
+          effort: g.effort || ''
+        });
+      });
+    }
+
+    if (allItems.length) {
+      var priOrder = { high: 0, h: 0, medium: 1, med: 1, m: 1, low: 2, l: 2 };
+      allItems.sort(function(a, b) {
+        var pa = (a.priority || a.p || 'low').toLowerCase();
+        var pb = (b.priority || b.p || 'low').toLowerCase();
+        return (priOrder[pa] || 2) - (priOrder[pb] || 2);
+      });
+      passDiv.innerHTML = '<div style="font-size:11px;font-weight:800;color:#7c3aed;text-transform:uppercase;letter-spacing:.08em;margin:18px 0 14px;">✨ What to do next — ranked by impact</div>';
+      allItems.slice(0, 7).forEach(function(p, idx) {
+        setTimeout(function() {
+          var pri = (p.priority || p.p || 'low').toLowerCase();
+          var priKey = (pri === 'high' || pri === 'h') ? 'high' : (pri === 'medium' || pri === 'med' || pri === 'm') ? 'medium' : 'low';
+          var priLabel = priKey === 'high' ? 'HIGH' : priKey === 'medium' ? 'MEDIUM' : 'LOW';
+          var priColor = priKey === 'high' ? '#ef4444' : priKey === 'medium' ? '#f59e0b' : '#22c55e';
+          var title = p.title || p.t || '';
+          var system = p.system || p.sys || '';
+          var action = p.action || p.passage || '';
+          var impact = p.expected_impact || p.impact || '';
+          var trigger = p.trigger || '';
+          var effort = p.effort || '';
+          var el = document.createElement('div');
+          el.className = 'cb-passage';
+          el.style.borderLeftColor = priColor;
+          el.innerHTML =
+            '<div class="pri-row">' +
+              '<span class="pri-badge ' + priKey + '">' + priLabel + '</span>' +
+              (system ? '<span class="sys-badge">' + system + '</span>' : '') +
+              (effort ? '<span class="sys-badge" style="color:#4ade80;background:#4ade8018;border-color:#4ade8030;">' + effort.replace('_',' ') + '</span>' : '') +
+            '</div>' +
+            (title ? '<span class="rec-title">' + title + '</span>' : '') +
+            (trigger ? '<div style="font-size:11px;color:#6b7280;margin-bottom:8px;">&#128202; Signal: ' + trigger + '</div>' : '') +
+            (action ? '<span class="rec-action">' + action + '</span>' : '') +
+            (impact ? '<span class="rec-impact">' + impact + '</span>' : '');
+          passDiv.appendChild(el);
+        }, idx * 300);
+      });
+    } else {
+      document.getElementById('cbPassages').innerHTML = '<div class="cb-passage" style="animation:soStatPop .5s ease;font-size:13px;">Your Citation Brief has been generated. Copy it below to share with your team or AI assistant.</div>';
+    }
+
+    // Copy section
+    if (cpS) {
+      var cpT = document.getElementById('cbCopyText');
+      if (cpT) {
+        var _n = String.fromCharCode(10);
+        var lines = ['AI Citation Brief — ' + (data.url || ''), ''];
+        if (data.keyword) lines.push('Keyword: ' + data.keyword);
+        lines.push('AI Citation Results:');
+        lines.push('- Google AIO: ' + (data.aio_cited ? 'CITED' : 'Not cited'));
+        lines.push('- Perplexity: ' + (data.perp_cited ? 'CITED' : 'Not cited'));
+        lines.push('- Copilot: ' + (data.bing_cited ? 'CITED' : 'Not cited'));
+        lines.push('- Claude: ' + (data.brave_cited ? 'CITED' : 'Not cited'));
+        if (data.position) lines.push('- Google Position: #' + data.position);
+        if (data.score) lines.push('- GRAAF Score: ' + data.score + '/100');
+        if (hasGsc) {
+          lines.push('', 'Google Search Console Data:');
+          if (data.gsc_clicks != null) lines.push('- Clicks: ' + data.gsc_clicks);
+          if (data.gsc_impressions != null) lines.push('- Impressions: ' + data.gsc_impressions);
+          if (data.gsc_position) lines.push('- Position: ' + parseFloat(data.gsc_position).toFixed(1));
+          if (data.gsc_ctr) lines.push('- CTR: ' + data.gsc_ctr);
         }
-      }
-
-      // Recommendations — by priority, large readable text
-      var passages = data.passages || data.recommendations;
-      var passDiv = document.getElementById('cbPassages');
-
-      // Build combined list: Citation Brief + GSC Brief (if available and enabled)
-      var allItems = [];
-      if (passages && Array.isArray(passages) && passages.length) {
-        allItems = allItems.concat(passages);
-      }
-      // Add GSC Brief items when GSC is enabled and data exists
-      var gscBriefItems = data.gsc_brief || [];
-      var isGscEnabled = data._gsc_enabled || !!(data.gsc_clicks || data.gsc_impressions || data.gsc_position);
-      if (isGscEnabled && gscBriefItems.length) {
-        // Mark GSC items with a system label
-        gscBriefItems.forEach(function(g) {
-          allItems.push({
-            title: g.title || '',
-            priority: g.priority || 'medium',
-            system: 'GSC Ranking',
-            action: g.action || '',
-            expected_impact: g.expected_impact || '',
-            trigger: g.trigger || '',
-            effort: g.effort || ''
+        if (passages && passages.length) {
+          lines.push('', 'Recommendations (by priority):');
+          passages.forEach(function(p, i) {
+            var pri = (p.priority || p.p || '').toUpperCase();
+            var t = p.title || p.t || '';
+            var a = p.action || p.passage || '';
+            lines.push((i+1) + '. [' + pri + '] ' + t);
+            if (a) lines.push('   ' + a);
           });
-        });
-      }
-
-      if (allItems.length) {
-        var priOrder = { high: 0, h: 0, medium: 1, med: 1, m: 1, low: 2, l: 2 };
-        allItems.sort(function(a, b) {
-          var pa = (a.priority || a.p || 'low').toLowerCase();
-          var pb = (b.priority || b.p || 'low').toLowerCase();
-          return (priOrder[pa] || 2) - (priOrder[pb] || 2);
-        });
-        passDiv.innerHTML = '<div style="font-size:11px;font-weight:800;color:#7c3aed;text-transform:uppercase;letter-spacing:.08em;margin:18px 0 14px;">\u2728 What to do next \u2014 ranked by impact</div>';
-        allItems.slice(0, 7).forEach(function(p, idx) {
-          setTimeout(function() {
-            var pri = (p.priority || p.p || 'low').toLowerCase();
-            var priKey = (pri === 'high' || pri === 'h') ? 'high' : (pri === 'medium' || pri === 'med' || pri === 'm') ? 'medium' : 'low';
-            var priLabel = priKey === 'high' ? 'HIGH' : priKey === 'medium' ? 'MEDIUM' : 'LOW';
-            var priColor = priKey === 'high' ? '#ef4444' : priKey === 'medium' ? '#f59e0b' : '#22c55e';
-            var title = p.title || p.t || '';
-            var system = p.system || p.sys || '';
-            var action = p.action || p.passage || '';
-            var impact = p.expected_impact || p.impact || '';
-            var trigger = p.trigger || '';
-            var effort = p.effort || '';
-            var el = document.createElement('div');
-            el.className = 'cb-passage';
-            el.style.borderLeftColor = priColor;
-            el.innerHTML =
-              '<div class="pri-row">' +
-                '<span class="pri-badge ' + priKey + '">' + priLabel + '</span>' +
-                (system ? '<span class="sys-badge">' + system + '</span>' : '') +
-                (effort ? '<span class="sys-badge" style="color:#4ade80;background:#4ade8018;border-color:#4ade8030;">' + effort.replace('_',' ') + '</span>' : '') +
-              '</div>' +
-              (title ? '<span class="rec-title">' + title + '</span>' : '') +
-              (trigger ? '<div style="font-size:11px;color:#6b7280;margin-bottom:8px;">&#128202; Signal: ' + trigger + '</div>' : '') +
-              (action ? '<span class="rec-action">' + action + '</span>' : '') +
-              (impact ? '<span class="rec-impact">' + impact + '</span>' : '');
-            passDiv.appendChild(el);
-          }, idx * 300);
-        });
-      } else {
-        document.getElementById('cbPassages').innerHTML = '<div class="cb-passage" style="animation:soStatPop .5s ease;font-size:13px;">Your Citation Brief has been generated. Copy it below to share with your team or AI assistant.</div>';
-      }
-
-      // Copy section
-      if (cpS) {
-        var cpT = document.getElementById('cbCopyText');
-        if (cpT) {
-          var _n = String.fromCharCode(10);
-          var lines = ['AI Citation Brief \u2014 ' + (data.url || ''), ''];
-          if (data.keyword) lines.push('Keyword: ' + data.keyword);
-          lines.push('AI Citation Results:');
-          lines.push('- Google AIO: ' + (data.aio_cited ? 'CITED' : 'Not cited'));
-          lines.push('- Perplexity: ' + (data.perp_cited ? 'CITED' : 'Not cited'));
-          lines.push('- Copilot: ' + (data.bing_cited ? 'CITED' : 'Not cited'));
-          lines.push('- Claude: ' + (data.brave_cited ? 'CITED' : 'Not cited'));
-          if (data.position) lines.push('- Google Position: #' + data.position);
-          if (data.score) lines.push('- GRAAF Score: ' + data.score + '/100');
-          if (hasGsc) {
-            lines.push('', 'Google Search Console Data:');
-            if (data.gsc_clicks != null) lines.push('- Clicks: ' + data.gsc_clicks);
-            if (data.gsc_impressions != null) lines.push('- Impressions: ' + data.gsc_impressions);
-            if (data.gsc_position) lines.push('- Position: ' + parseFloat(data.gsc_position).toFixed(1));
-            if (data.gsc_ctr) lines.push('- CTR: ' + data.gsc_ctr);
-          }
-          if (passages && passages.length) {
-            lines.push('', 'Recommendations (by priority):');
-            passages.forEach(function(p, i) {
-              var pri = (p.priority || p.p || '').toUpperCase();
-              var t = p.title || p.t || '';
-              var a = p.action || p.passage || '';
-              lines.push((i+1) + '. [' + pri + '] ' + t);
-              if (a) lines.push('   ' + a);
-            });
-          }
-          lines.push('', '---', 'Generated by ContentScale AI Citations Tracker');
-          cpT.value = lines.join(_n);
         }
-        cpS.style.display = 'block';
+        lines.push('', '---', 'Generated by ContentScale AI Citations Tracker');
+        cpT.value = lines.join(_n);
       }
+      cpS.style.display = 'block';
+    }
 
-      document.getElementById('cbResult').classList.add('show');
-      document.getElementById('cbKeepBtn').style.display = 'block';
+    // Source Suggestions — Verified Claims
+    var sourceSuggestions = data.source_suggestions || [];
+    if (sourceSuggestions.length > 0) {
+      var srcDiv = document.getElementById('cbPassages');
+      var srcHeader = document.createElement('div');
+      srcHeader.style.cssText = 'font-size:11px;font-weight:800;color:#ef4444;text-transform:uppercase;letter-spacing:.08em;margin:24px 0 14px;';
+      srcHeader.innerHTML = '⚠ Verify Your Claims — Source Needed';
+      srcDiv.appendChild(srcHeader);
 
-      if (data.page_id) {
-        if (!_cbPageBriefs[data.page_id]) _cbPageBriefs[data.page_id] = [];
-        _cbPageBriefs[data.page_id].unshift(data);
-        _cbPageBriefs[data.page_id] = _cbPageBriefs[data.page_id].slice(0, 20);
-        updateBriefButtons();
-      }
+      sourceSuggestions.slice(0, 5).forEach(function(s, idx) {
+        var sEl = document.createElement('div');
+        sEl.className = 'cb-passage';
+        sEl.style.borderLeftColor = s.priority === 'high' ? '#ef4444' : s.priority === 'medium' ? '#f59e0b' : '#22c55e';
 
-      // Countdown — 30 seconds
-      _cbSecondsLeft = 30;
-      document.getElementById('cbCountdown').textContent = 'Closing in 30s — the HTML button will blink orange for your next scan';
-      if (_cbTimer) clearInterval(_cbTimer);
-      _cbTimer = setInterval(function() {
-        if (_cbKept) { clearInterval(_cbTimer); document.getElementById('cbCountdown').textContent = 'Paste new HTML when ready — your HTML button will blink orange'; return; }
-        _cbSecondsLeft--;
-        document.getElementById('cbCountdown').textContent = 'Closing in ' + _cbSecondsLeft + 's — HTML button will blink orange for next scan';
-        if (_cbSecondsLeft <= 0) {
-          clearInterval(_cbTimer);
-          hideCitationBrief(data.page_id);
+        var srcList = '';
+        if (s.sources && s.sources.length) {
+          srcList = '<div style="margin-top:8px;">' + s.sources.map(function(src) {
+            return '<a href="' + (src.url || '#') + '" target="_blank" style="color:#60a5fa;font-size:11px;text-decoration:none;display:inline-flex;align-items:center;gap:4px;margin-right:12px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>' + (src.name || src.url) + '</a>';
+          }).join('') + '</div>';
         }
-      }, 1000);
 
-    }, 16000);
+        sEl.innerHTML =
+          '<div class="pri-row">' +
+            '<span class="pri-badge ' + (s.priority || 'medium') + '">' + (s.priority || 'MEDIUM').toUpperCase() + '</span>' +
+            '<span class="sys-badge" style="color:#ef4444;background:#ef444418;border-color:#ef444430;">Unverified Claim</span>' +
+          '</div>' +
+          '<span class="rec-title">' + (s.claim || 'Unanchored claim') + '</span>' +
+          '<div style="font-size:11px;color:#6b7280;margin-bottom:8px;">' + (s.why || 'This claim lacks a verifiable source. AI systems may treat it as unreliable.') + '</div>' +
+          '<div style="font-size:10px;color:#60a5fa;font-weight:600;margin-bottom:4px;">Suggested sources:</div>' +
+          srcList;
+        srcDiv.appendChild(sEl);
+      });
+    } else if (sourceSuggestions.length === 0 && data.score && data.score >= 80) {
+      // All claims verified — show positive message
+      var srcDiv = document.getElementById('cbPassages');
+      var verifiedMsg = document.createElement('div');
+      verifiedMsg.style.cssText = 'background:#052e16;border:1px solid #166534;border-radius:8px;padding:12px 16px;margin-top:20px;font-size:12px;color:#4ade80;';
+      verifiedMsg.innerHTML = '✅ All major claims appear to have sources. Your content has strong verification signals for AI citation systems.';
+      srcDiv.appendChild(verifiedMsg);
+    }
+
+    document.getElementById('cbResult').classList.add('show');
+    document.getElementById('cbKeepBtn').style.display = 'block';
+
+    if (data.page_id) {
+      if (!_cbPageBriefs[data.page_id]) _cbPageBriefs[data.page_id] = [];
+      _cbPageBriefs[data.page_id].unshift(data);
+      _cbPageBriefs[data.page_id] = _cbPageBriefs[data.page_id].slice(0, 20);
+      updateBriefButtons();
+    }
+
+    // Countdown — 30 seconds
+    _cbSecondsLeft = 30;
+    document.getElementById('cbCountdown').textContent = 'Closing in 30s — the HTML button will blink orange for your next scan';
+    if (_cbTimer) clearInterval(_cbTimer);
+    _cbTimer = setInterval(function() {
+      if (_cbKept) { clearInterval(_cbTimer); document.getElementById('cbCountdown').textContent = 'Paste new HTML when ready — your HTML button will blink orange'; return; }
+      _cbSecondsLeft--;
+      document.getElementById('cbCountdown').textContent = 'Closing in ' + _cbSecondsLeft + 's — HTML button will blink orange for next scan';
+      if (_cbSecondsLeft <= 0) {
+        clearInterval(_cbTimer);
+        hideCitationBrief(data.page_id);
+      }
+    }, 1000);
   }
 
   function keepCbOpen() {
@@ -26060,6 +26114,36 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
       });
     } else {
       passDiv.innerHTML = '<div class="cb-passage">No recommendations yet — run a scan first.</div>';
+    }
+
+    // Source Suggestions — Verified Claims (also in viewLastBrief)
+    var sourceSuggestions = data.source_suggestions || [];
+    if (sourceSuggestions.length > 0) {
+      var srcHeader = document.createElement('div');
+      srcHeader.style.cssText = 'font-size:11px;font-weight:800;color:#ef4444;text-transform:uppercase;letter-spacing:.08em;margin:24px 0 14px;';
+      srcHeader.innerHTML = '\u26A0 Verify Your Claims — Source Needed';
+      passDiv.appendChild(srcHeader);
+      sourceSuggestions.slice(0, 5).forEach(function(s) {
+        var sEl = document.createElement('div');
+        sEl.className = 'cb-passage';
+        sEl.style.borderLeftColor = s.priority === 'high' ? '#ef4444' : s.priority === 'medium' ? '#f59e0b' : '#22c55e';
+        var srcList = '';
+        if (s.sources && s.sources.length) {
+          srcList = '<div style="margin-top:8px;">' + s.sources.map(function(src) {
+            return '<a href="' + (src.url || '#') + '" target="_blank" style="color:#60a5fa;font-size:11px;text-decoration:none;display:inline-flex;align-items:center;gap:4px;margin-right:12px;">' + (src.name || src.url) + '</a>';
+          }).join('') + '</div>';
+        }
+        sEl.innerHTML =
+          '<div class="pri-row">' +
+            '<span class="pri-badge ' + (s.priority || 'medium') + '">' + (s.priority || 'MEDIUM').toUpperCase() + '</span>' +
+            '<span class="sys-badge" style="color:#ef4444;background:#ef444418;border-color:#ef444430;">Unverified Claim</span>' +
+          '</div>' +
+          '<span class="rec-title">' + (s.claim || 'Unanchored claim') + '</span>' +
+          '<div style="font-size:11px;color:#6b7280;margin-bottom:8px;">' + (s.why || 'This claim lacks a verifiable source. AI systems may treat it as unreliable.') + '</div>' +
+          '<div style="font-size:10px;color:#60a5fa;font-weight:600;margin-bottom:4px;">Suggested sources:</div>' +
+          srcList;
+        passDiv.appendChild(sEl);
+      });
     }
 
     // Copy section
@@ -34047,9 +34131,84 @@ GOAL: Rank #1 for "${kw}" and capture the maximum clicks from ${gscImpr || 'the 
         }
       }
 
+      // ── CALL 3: Verified Claims + Source Suggestions ─────────────────────
+      _trSetStep(pageId, 'source_check', 'running', 'Checking claims against world-wide sources…');
+      const sourcePrompt = `You are a Fact-Verification Analyst. Your job is to find unanchored claims in web page content and suggest authoritative world-wide sources to verify them.
+
+INPUT:
+- Page URL: ${pageUrl}
+- Page content (stripped text): ${ourContent.substring(0,1500)}
+- Keyword: ${kw}
+- Competitors: ${competitors.slice(0,2).map(c => c.title).join(', ')}
+
+TASK:
+1. Scan the page content for claims that NEED a source:
+   - Statistics without citation ("97% of businesses…")
+   - Superlatives without proof ("the best…", "the first…", "the only…")
+   - Specific numbers, dates, or percentages
+   - Industry claims ("leading provider", "top rated")
+   - Research findings without attribution
+
+2. For each unanchored claim, suggest 1-2 authoritative sources from this WORLD-WIDE list:
+
+ACADEMIC (world-wide):
+- .edu (any university — MIT, Stanford, Oxford, TU Delft, etc.)
+- .ac.uk (UK universities)
+- arxiv.org, pubmed.ncbi.nlm.nih.gov, researchgate.net
+- Google Scholar citations
+
+GOVERNMENT (world-wide):
+- .gov (US federal agencies)
+- .gov.uk (UK government)
+- .overheid.nl (Dutch government)
+- .bund.de (German government)
+- .gouv.fr (French government)
+- .gov.au (Australian government)
+- .go.jp (Japan government)
+- .europa.eu (European Union)
+- who.int (World Health Organization)
+- un.org, unesco.org
+- oecd.org, worldbank.org
+
+INDUSTRY/RESEARCH:
+- gartner.com, forrester.com, mckinsey.com
+- statista.com, pewresearch.org
+- reuters.com, bbc.com (for fact-checking)
+
+RULES:
+- Only flag claims that are ACTUALLY unanchored (no source nearby)
+- For each claim: write the EXACT claim text, explain why it needs a source, and provide 1-2 specific source URLs or search queries
+- Prioritize: HIGH (statistics/facts), MEDIUM (industry claims), LOW (opinion-based)
+- Sources must be geographically relevant when applicable
+
+OUTPUT — return ONLY this JSON, no markdown:
+[{"claim":"exact claim text from page","priority":"high|medium|low","why":"why this needs a source","sources":[{"name":"Source Name","url":"https://specific-url or search query"}]}]
+
+If no unanchored claims found, return empty array: []`;
+
+      let sourceResp;
+      try {
+        sourceResp = await callGeminiWithFallback(geminiKey, {
+          contents: [{ role: 'user', parts: [{ text: sourcePrompt }] }],
+          generationConfig: { temperature: 0.2, maxOutputTokens: 1500 }
+        });
+        if (sourceResp.ok) {
+          let srcRecs = sourceResp.data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+          srcRecs = srcRecs.replace(/^\`\`\`json\n?/i,'').replace(/\`\`\`\s*$/,'').trim();
+          const srcMatch = srcRecs.match(/\[\s*\{[\s\S]*\}\s*\]/);
+          if (srcMatch) srcRecs = srcMatch[0];
+          try {
+            snapshot.source_suggestions = JSON.parse(srcRecs);
+          } catch(e) {
+            snapshot.source_suggestions = [];
+          }
+        }
+      } catch(e) { snapshot.source_suggestions = []; }
+
       const citCount = (snapshot.recommendations||[]).length;
       const gscCount = (snapshot.gsc_brief||[]).length;
-      _trSetStep(pageId, 'recommendations', 'done', citCount + ' citation + ' + gscCount + ' ranking actions');
+      const srcCount = (snapshot.source_suggestions||[]).length;
+      _trSetStep(pageId, 'recommendations', 'done', citCount + ' citation + ' + gscCount + ' ranking + ' + srcCount + ' source checks');
 
     } catch(e) { _trSetStep(pageId, 'recommendations', 'error', e.message); console.warn('[tracker] Gemini failed:', e.message); }
     } // end if (_hasValidKeyword)
@@ -34081,21 +34240,23 @@ GOAL: Rank #1 for "${kw}" and capture the maximum clicks from ${gscImpr || 'the 
     }
     try { return JSON.stringify(val); } catch(e) { return null; }
   }
-  // Add gsc_brief column if not exists
+  // Add new JSONB columns if not exists
   await pool.query('ALTER TABLE tracker_snapshots ADD COLUMN IF NOT EXISTS gsc_brief JSONB').catch(()=>{});
+  await pool.query('ALTER TABLE tracker_snapshots ADD COLUMN IF NOT EXISTS source_suggestions JSONB').catch(()=>{});
   const snapR = await pool.query(
     `INSERT INTO tracker_snapshots
       (page_id,checked_at,google_position,ai_google_overview_found,ai_google_overview_cited,ai_google_overview_text,
        ai_perplexity_found,ai_perplexity_cited,ai_perplexity_text,ai_bing_found,ai_bing_cited,ai_bing_text,
        ai_brave_found,ai_brave_cited,
-       recommendations,gsc_brief,html_hash,score,graaf_breakdown,graaf_recommendations,content_changed,content_diff)
-     VALUES ($1,NOW(),$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21) RETURNING *`,
+       recommendations,gsc_brief,source_suggestions,html_hash,score,graaf_breakdown,graaf_recommendations,content_changed,content_diff)
+     VALUES ($1,NOW(),$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22) RETURNING *`,
     [page.id, snapshot.google_position, snapshot.ai_google_overview_found, snapshot.ai_google_overview_cited,
      snapshot.ai_google_overview_text, snapshot.ai_perplexity_found, snapshot.ai_perplexity_cited,
      snapshot.ai_perplexity_text, snapshot.ai_bing_found, snapshot.ai_bing_cited, snapshot.ai_bing_text,
      !!snapshot.ai_brave_found, !!snapshot.ai_brave_cited,
      safeJSONB(snapshot.recommendations),
      safeJSONB(snapshot.gsc_brief),
+     safeJSONB(snapshot.source_suggestions),
      snapshot.html_hash,
      snapshot.score,
      safeJSONB(snapshot.graaf_breakdown),
@@ -34272,6 +34433,7 @@ Return ONLY JSON array (max 5 items): [{"title":"max 6 words","priority":"high"|
           brief_content: brief2,
           passages: brief2.items || [],
           gsc_brief: brief2.gsc_brief || [],
+          source_suggestions: (snapshot.source_suggestions || []),
           gsc_clicks: page.gsc_clicks,
           gsc_impressions: page.gsc_impressions,
           gsc_position: page.gsc_position,
