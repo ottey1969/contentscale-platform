@@ -25594,7 +25594,7 @@ var _ctSearchQuery = '';
         gsc_position: p.gsc_position || null,
         gsc_ctr: p.gsc_ctr || null,
         gsc_keyword: p.gsc_keyword || null,
-        _gsc_enabled: !!(p.gsc_clicks || p.gsc_impressions || p.gsc_position),
+        _gsc_enabled: (p.gsc_clicks != null) || (p.gsc_impressions != null) || (p.gsc_position != null),
         type: 'brief_ready'
       };
       _lastBriefData[p.id] = briefData;
@@ -26294,8 +26294,8 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
       '<div class="cb-stat" style="animation:soStatPop .4s ease .24s both;position:relative;"><div class="v" style="color:' + (data.brave_cited ? '#f87171' : '#4b5563') + ';">' + (data.brave_cited ? '✓ Cited' : 'No') + '</div><div class="l">Claude</div>' + (data.brave_cited ? '<span style="position:absolute;top:-4px;right:-4px;font-size:8px;background:#0a0a12;border:1px solid #1f2937;border-radius:3px;padding:0 3px;color:#6b7280;white-space:nowrap;">ὄ1; see img</span>' : '') + '</div>' +
       '<div class="cb-stat" style="animation:soStatPop .4s ease .3s both"><div class="v" style="color:#fbbf24;">' + (data.score || '—') + '</div><div class="l">GRAAF</div></div>';
 
-    // GSC section — optional, collapsed
-    var hasGsc = !!(data.gsc_clicks || data.gsc_impressions || data.gsc_position || data.gsc_ctr);
+    // GSC section — show if GSC is connected (even if values are 0)
+    var hasGsc = data._gsc_enabled || (data.gsc_clicks != null) || (data.gsc_impressions != null) || (data.gsc_position != null);
     if (hasGsc && gscS) {
       gscS.style.display = 'block';
       var gscStats = document.getElementById('cbGscStats');
@@ -26304,8 +26304,9 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
         if (data.gsc_clicks != null) items.push('<span style="color:#4ade80;font-weight:600;">↓ ' + Number(data.gsc_clicks).toLocaleString() + ' clicks</span>');
         if (data.gsc_impressions != null) items.push('<span style="color:#60a5fa;">' + Number(data.gsc_impressions).toLocaleString() + ' impr</span>');
         if (data.gsc_ctr) items.push('<span style="color:#a78bfa;">CTR ' + data.gsc_ctr + '</span>');
-        if (data.gsc_position) items.push('<span style="color:#f59e0b;font-weight:600;">pos ' + parseFloat(data.gsc_position).toFixed(1) + '</span>');
+        if (data.gsc_position != null) items.push('<span style="color:#f59e0b;font-weight:600;">pos ' + parseFloat(data.gsc_position).toFixed(1) + '</span>');
         if (data.gsc_keyword) items.push('<span style="color:#4b5563;font-style:italic;">' + data.gsc_keyword + '</span>');
+        if (!items.length) items.push('<span style="color:#6b7280;">GSC connected — no data yet</span>');
         items.push('<span style="margin-left:auto;color:#4ade80;font-weight:700;font-size:10px;">Goal: #1</span>');
         gscStats.innerHTML = items.join('');
       }
@@ -26372,6 +26373,23 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
       });
     } else {
       document.getElementById('cbPassages').innerHTML = '<div class="cb-passage" style="animation:soStatPop .5s ease;font-size:13px;">Your Citation Brief has been generated. Copy it below to share with your team or AI assistant.</div>';
+    }
+
+    // Discovered Sources — sources found on your site to back up claims
+    var discSources = data.discovered_sources || [];
+    if (discSources.length) {
+      var srcDiv = document.createElement('div');
+      srcDiv.innerHTML = '<div style="font-size:11px;font-weight:800;color:#4ade80;text-transform:uppercase;letter-spacing:.08em;margin:18px 0 14px;">✅ Sources Found on Your Site</div>';
+      discSources.forEach(function(s) {
+        var found = s.found || s.status === 'found';
+        var el = document.createElement('div');
+        el.style.cssText = 'font-size:12px;padding:8px 12px;margin-bottom:6px;border-radius:6px;background:' + (found ? '#052e16' : '#1a0a0a') + ';border:1px solid ' + (found ? '#166534' : '#7f1d1d') + ';color:' + (found ? '#e5e7eb' : '#9ca3af') + ';';
+        el.innerHTML = '<div style="font-weight:700;color:' + (found ? '#4ade80' : '#f87171') + ';margin-bottom:2px;">' + (found ? '✓ Found' : '⚠ Missing') + ': ' + (s.claim || s.title || '') + '</div>' +
+          (s.source_url ? '<div style="font-size:10px;color:#6b7280;">Source: <a href="' + s.source_url + '" target="_blank" style="color:#a78bfa;text-decoration:none;">' + s.source_url + '</a></div>' : '') +
+          (s.suggested_text ? '<div style="font-size:10px;color:#9ca3af;margin-top:4px;padding:4px 6px;background:#0a0a12;border-radius:3px;font-family:monospace;">' + s.suggested_text.substring(0, 120) + '</div>' : '');
+        srcDiv.appendChild(el);
+      });
+      passDiv.appendChild(srcDiv);
     }
 
     // Copy section
@@ -26583,8 +26601,8 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
       '<div class="cb-stat" style="animation:soStatPop .3s ease .2s both"><div class="v" style="color:' + (data.brave_cited ? '#f87171' : '#4b5563') + ';">' + (data.brave_cited ? '\u2713 Cited' : 'No') + '</div><div class="l">Claude</div></div>' +
       '<div class="cb-stat" style="animation:soStatPop .3s ease .25s both"><div class="v" style="color:#fbbf24;">' + (data.score || '—') + '</div><div class="l">GRAAF</div></div>';
 
-    // GSC
-    var hasGsc = !!(data.gsc_clicks || data.gsc_impressions || data.gsc_position || data.gsc_ctr);
+    // GSC — show if connected (even with 0 values)
+    var hasGsc = data._gsc_enabled || (data.gsc_clicks != null) || (data.gsc_impressions != null) || (data.gsc_position != null);
     if (hasGsc && gscS) {
       gscS.style.display = 'block';
       var gscStats = document.getElementById('cbGscStats');
@@ -26593,8 +26611,9 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
         if (data.gsc_clicks != null) items.push('<span style="color:#4ade80;font-weight:600;">\u2193 ' + Number(data.gsc_clicks).toLocaleString() + ' clicks</span>');
         if (data.gsc_impressions != null) items.push('<span style="color:#60a5fa;">' + Number(data.gsc_impressions).toLocaleString() + ' impr</span>');
         if (data.gsc_ctr) items.push('<span style="color:#a78bfa;">CTR ' + data.gsc_ctr + '</span>');
-        if (data.gsc_position) items.push('<span style="color:#f59e0b;font-weight:600;">pos ' + parseFloat(data.gsc_position).toFixed(1) + '</span>');
+        if (data.gsc_position != null) items.push('<span style="color:#f59e0b;font-weight:600;">pos ' + parseFloat(data.gsc_position).toFixed(1) + '</span>');
         if (data.gsc_keyword) items.push('<span style="color:#4b5563;font-style:italic;">' + data.gsc_keyword + '</span>');
+        if (!items.length) items.push('<span style="color:#6b7280;">GSC connected — no data yet</span>');
         items.push('<span style="margin-left:auto;color:#4ade80;font-weight:700;font-size:10px;">Goal: #1</span>');
         gscStats.innerHTML = items.join('');
       }
@@ -28890,24 +28909,6 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                         <div id="testEmailResult" style="display:none;margin-top:10px;font-size:12px;padding:10px;border-radius:6px;"></div>
                     </div>
 
-                    <!-- Live Wall Toggle -->
-                    <div style="background:#0d1117;border:1px solid #1f2937;border-radius:10px;padding:20px;margin-top:16px;">
-                        <div style="font-size:13px;font-weight:700;color:#f1f5f9;margin-bottom:14px;">📺 Live Brief Wall</div>
-                        <div style="font-size:11px;color:#6b7280;margin-bottom:14px;line-height:1.6;">
-                            When enabled, a live wall is available at <code style="background:#111827;padding:2px 6px;border-radius:4px;color:#a78bfa;">/track/TOKEN/live</code>. 
-                            Briefs appear automatically as scans complete, with smooth scroll animation.
-                            Perfect for live demos or office displays.
-                        </div>
-                        <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
-                            <label class="tr-toggle" style="display:flex;align-items:center;gap:10px;cursor:pointer;">
-                                <input type="checkbox" id="settingLiveWall" onchange="toggleLiveWall()" style="width:18px;height:18px;accent-color:#7c3aed;">
-                                <span style="font-size:13px;color:#e5e7eb;">Enable Live Brief Wall</span>
-                            </label>
-                        </div>
-                        <div id="liveWallUrl" style="display:none;font-size:11px;color:#4ade80;background:#052e16;border:1px solid #166534;border-radius:6px;padding:10px 12px;font-family:monospace;"></div>
-                        <div id="liveWallStatus" style="display:none;margin-top:10px;font-size:11px;padding:8px;border-radius:6px;"></div>
-                    </div>
-
                     <div style="background:#0d1117;border:1px solid #1f2937;border-radius:10px;padding:20px;margin-top:16px;">
                         <div style="font-size:13px;font-weight:700;color:#f1f5f9;margin-bottom:10px;">🔑 Environment (read-only)</div>
                         <div id="settingsEnvInfo" style="font-size:11px;color:#6b7280;font-family:monospace;line-height:2;"></div>
@@ -30806,45 +30807,32 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
             } catch(e) { console.warn('loadMessages error:', e.message); }
         }
 
-        async function toggleLiveWall() {
-            var cb = document.getElementById('settingLiveWall');
-            var status = document.getElementById('liveWallStatus');
-            var urlBox = document.getElementById('liveWallUrl');
-            var enabled = cb.checked;
+        async function toggleLiveWall(clientId, token, checkboxEl, statusEl, urlEl) {
+            var enabled = checkboxEl.checked;
             try {
-                status.style.display = 'block';
-                status.textContent = enabled ? 'Enabling...' : 'Disabling...';
-                status.style.color = '#fbbf24';
-                var clientList = await apiCall('/api/admin/tracker-clients');
-                if (!clientList.success || !clientList.clients || !clientList.clients.length) {
-                    status.textContent = 'No tracker clients found. Create one first.';
-                    status.style.color = '#f59e0b';
-                    cb.checked = !enabled;
-                    return;
-                }
-                var client = clientList.clients[0];
-                var d = await apiCall('/api/admin/tracker-clients/' + client.id + '/live-wall', 'POST', { enabled: enabled });
+                statusEl.style.display = 'block';
+                statusEl.textContent = enabled ? 'Enabling...' : 'Disabling...';
+                statusEl.style.color = '#fbbf24';
+                var d = await apiCall('/api/admin/tracker-clients/' + clientId + '/live-wall', 'POST', { enabled: enabled });
                 if (d.success) {
-                    status.textContent = enabled ? '✅ Live Wall enabled!' : '⏹️ Live Wall disabled.';
-                    status.style.color = enabled ? '#4ade80' : '#6b7280';
-                    if (enabled) {
-                        urlBox.style.display = 'block';
+                    statusEl.textContent = enabled ? '✅ Live Wall enabled!' : '⏹️ disabled';
+                    statusEl.style.color = enabled ? '#4ade80' : '#6b7280';
+                    if (enabled && urlEl) {
+                        urlEl.style.display = 'block';
                         var base = window.location.origin;
-                        urlBox.innerHTML = '<div style="margin-bottom:4px;font-weight:700;">🔗 Live Wall URL:</div>' +
-                            '<a href="' + base + '/track/' + client.token + '/live" target="_blank" style="color:#4ade80;text-decoration:none;">' + base + '/track/' + client.token + '/live</a>' +
-                            '<div style="margin-top:6px;font-size:10px;color:#6b7280;">Open this URL on a TV or second screen</div>';
-                    } else {
-                        urlBox.style.display = 'none';
+                        urlEl.innerHTML = '<a href="' + base + '/track/' + token + '/live" target="_blank" style="color:#4ade80;text-decoration:none;font-family:monospace;">' + base + '/track/' + token + '/live</a>';
+                    } else if (urlEl) {
+                        urlEl.style.display = 'none';
                     }
                 } else {
-                    status.textContent = 'Error: ' + (d.error || 'Failed');
-                    status.style.color = '#ef4444';
-                    cb.checked = !enabled;
+                    statusEl.textContent = 'Error: ' + (d.error || 'Failed');
+                    statusEl.style.color = '#ef4444';
+                    checkboxEl.checked = !enabled;
                 }
             } catch(e) {
-                status.textContent = 'Error: ' + e.message;
-                status.style.color = '#ef4444';
-                cb.checked = !enabled;
+                statusEl.textContent = 'Error: ' + e.message;
+                statusEl.style.color = '#ef4444';
+                checkboxEl.checked = !enabled;
             }
         }
 
@@ -30861,25 +30849,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     'SENDER_NAME: ' + (s.sender_name || 'not set') + '<br>' +
                     'BREVO: configured via Railway env var<br>' +
                     'TELEGRAM_BOT_TOKEN: configured via Railway env var';
-                // Load live wall status
-                try {
-                    var cl = await apiCall('/api/admin/tracker-clients');
-                    if (cl.success && cl.clients && cl.clients.length) {
-                        var c = cl.clients[0];
-                        var cb = document.getElementById('settingLiveWall');
-                        var urlBox = document.getElementById('liveWallUrl');
-                        if (cb) cb.checked = !!c.live_wall_enabled;
-                        if (urlBox && c.live_wall_enabled) {
-                            urlBox.style.display = 'block';
-                            var base = window.location.origin;
-                            urlBox.innerHTML = '<div style="margin-bottom:4px;font-weight:700;">🔗 Live Wall URL:</div>' +
-                                '<a href="' + base + '/track/' + c.token + '/live" target="_blank" style="color:#4ade80;text-decoration:none;">' + base + '/track/' + c.token + '/live</a>' +
-                                '<div style="margin-top:6px;font-size:10px;color:#6b7280;">Open this URL on a TV or second screen</div>';
-                        } else if (urlBox) {
-                            urlBox.style.display = 'none';
-                        }
-                    }
-                } catch(e2) { /* ignore */ }
+
             } catch(e) { console.warn('Settings load failed:', e.message); }
         }
 
@@ -31204,6 +31174,36 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     setTimeout(loadTrackerClients, 400);
                 }; })(c.id, !!c.gsc_enabled);
                 actionsDiv.appendChild(gscBtn);
+
+                // ── Live Wall toggle ──
+                var lwWrap = document.createElement('div');
+                lwWrap.style.cssText = 'display:flex;align-items:center;gap:4px;';
+                var lwCb = document.createElement('input');
+                lwCb.type = 'checkbox';
+                lwCb.checked = !!c.live_wall_enabled;
+                lwCb.style.cssText = 'width:14px;height:14px;accent-color:#7c3aed;cursor:pointer;';
+                lwCb.title = 'Enable Live Brief Wall for this client';
+                var lwLbl = document.createElement('span');
+                lwLbl.textContent = 'Live';
+                lwLbl.style.cssText = 'font-size:10px;color:' + (c.live_wall_enabled ? '#a78bfa' : '#6b7280') + ';';
+                var lwStatus = document.createElement('span');
+                lwStatus.style.cssText = 'display:none;font-size:9px;padding-left:4px;';
+                var lwUrl = document.createElement('div');
+                lwUrl.style.cssText = 'display:none;font-size:9px;margin-top:2px;';
+                if (c.live_wall_enabled) {
+                    lwUrl.style.display = 'block';
+                    lwUrl.innerHTML = '<a href="/track/' + c.token + '/live" target="_blank" style="color:#4ade80;text-decoration:none;font-family:monospace;">/track/' + c.token + '/live</a>';
+                }
+                lwCb.onchange = (function(cid, token, cb, st, urlEl, lbl){ return function(){
+                    toggleLiveWall(cid, token, cb, st, urlEl);
+                    lbl.style.color = cb.checked ? '#a78bfa' : '#6b7280';
+                }; })(c.id, c.token, lwCb, lwStatus, lwUrl, lwLbl);
+                lwWrap.appendChild(lwCb);
+                lwWrap.appendChild(lwLbl);
+                lwWrap.appendChild(lwStatus);
+                actionsDiv.appendChild(lwWrap);
+                actionsDiv.appendChild(lwUrl);
+
                 var domainsBtn = document.createElement('button');
                 domainsBtn.className = 'tr-btn';
                 var extraDomList = (c.extra_domains || '').split(',').map(function(d){ return d.trim(); }).filter(Boolean);
@@ -35037,7 +35037,7 @@ Return ONLY JSON array (max 5 items): [{"title":"max 6 words","priority":"high"|
           gsc_impressions: page.gsc_impressions,
           gsc_position: page.gsc_position,
           gsc_keyword: page.gsc_keyword,
-          _gsc_enabled: !!(page.gsc_clicks || page.gsc_impressions || page.gsc_position),
+          _gsc_enabled: (page.gsc_clicks != null) || (page.gsc_impressions != null) || (page.gsc_position != null),
           ts: new Date().toISOString()
         };
         _sseBroadcast(_briefPayload2);
