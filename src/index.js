@@ -25790,16 +25790,40 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
 
       // Recommendations — by priority, large readable text
       var passages = data.passages || data.recommendations;
+      var passDiv = document.getElementById('cbPassages');
+
+      // Build combined list: Citation Brief + GSC Brief (if available and enabled)
+      var allItems = [];
       if (passages && Array.isArray(passages) && passages.length) {
+        allItems = allItems.concat(passages);
+      }
+      // Add GSC Brief items when GSC is enabled and data exists
+      var gscBriefItems = data.gsc_brief || [];
+      var isGscEnabled = data._gsc_enabled || !!(data.gsc_clicks || data.gsc_impressions || data.gsc_position);
+      if (isGscEnabled && gscBriefItems.length) {
+        // Mark GSC items with a system label
+        gscBriefItems.forEach(function(g) {
+          allItems.push({
+            title: g.title || '',
+            priority: g.priority || 'medium',
+            system: 'GSC Ranking',
+            action: g.action || '',
+            expected_impact: g.expected_impact || '',
+            trigger: g.trigger || '',
+            effort: g.effort || ''
+          });
+        });
+      }
+
+      if (allItems.length) {
         var priOrder = { high: 0, h: 0, medium: 1, med: 1, m: 1, low: 2, l: 2 };
-        passages.sort(function(a, b) {
+        allItems.sort(function(a, b) {
           var pa = (a.priority || a.p || 'low').toLowerCase();
           var pb = (b.priority || b.p || 'low').toLowerCase();
           return (priOrder[pa] || 2) - (priOrder[pb] || 2);
         });
-        var passDiv = document.getElementById('cbPassages');
         passDiv.innerHTML = '<div style="font-size:11px;font-weight:800;color:#7c3aed;text-transform:uppercase;letter-spacing:.08em;margin:18px 0 14px;">\u2728 What to do next \u2014 ranked by impact</div>';
-        passages.slice(0, 5).forEach(function(p, idx) {
+        allItems.slice(0, 7).forEach(function(p, idx) {
           setTimeout(function() {
             var pri = (p.priority || p.p || 'low').toLowerCase();
             var priKey = (pri === 'high' || pri === 'h') ? 'high' : (pri === 'medium' || pri === 'med' || pri === 'm') ? 'medium' : 'low';
@@ -25977,18 +26001,27 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
       }
     }
 
-    // Recommendations
+    // Recommendations — Citation Brief + GSC Brief combined
     var passages = data.passages || data.recommendations;
+    var gscBriefItems = data.gsc_brief || [];
+    var isGscEnabled = data._gsc_enabled || !!(data.gsc_clicks || data.gsc_impressions || data.gsc_position);
+    var allItems = [];
+    if (passages && Array.isArray(passages)) allItems = allItems.concat(passages);
+    if (isGscEnabled && gscBriefItems.length) {
+      gscBriefItems.forEach(function(g) {
+        allItems.push({ title: g.title || '', priority: g.priority || 'medium', system: 'GSC Ranking', action: g.action || '', expected_impact: g.expected_impact || '', trigger: g.trigger || '', effort: g.effort || '' });
+      });
+    }
     var passDiv = document.getElementById('cbPassages');
-    if (passages && Array.isArray(passages) && passages.length) {
+    if (allItems.length) {
       var priOrder = { high: 0, h: 0, medium: 1, med: 1, m: 1, low: 2, l: 2 };
-      passages.sort(function(a, b) {
+      allItems.sort(function(a, b) {
         var pa = (a.priority || a.p || 'low').toLowerCase();
         var pb = (b.priority || b.p || 'low').toLowerCase();
         return (priOrder[pa] || 2) - (priOrder[pb] || 2);
       });
       passDiv.innerHTML = '<div style="font-size:11px;font-weight:800;color:#7c3aed;text-transform:uppercase;letter-spacing:.08em;margin:18px 0 14px;">\u2728 What to do next \u2014 ranked by impact</div>';
-      passages.slice(0, 5).forEach(function(p) {
+      allItems.slice(0, 7).forEach(function(p) {
         var pri = (p.priority || p.p || 'low').toLowerCase();
         var priKey = (pri === 'high' || pri === 'h') ? 'high' : (pri === 'medium' || pri === 'med' || pri === 'm') ? 'medium' : 'low';
         var priLabel = priKey === 'high' ? 'HIGH' : priKey === 'medium' ? 'MEDIUM' : 'LOW';
@@ -34125,10 +34158,14 @@ GOAL: Rank #1 for "${kw}" and capture the maximum clicks from ${gscImpr || 'the 
       // Use existing recs or generate basic ones from scan status
       const recsToUse = (Array.isArray(recs2) && recs2.length) ? recs2 : [];
 
+      // Include GSC brief if available
+      const gscBriefItems = (Array.isArray(snapshot.gsc_brief) && snapshot.gsc_brief.length) ? snapshot.gsc_brief : [];
+
       let brief2 = null;
       if (isFirst2 || !recsToUse.length) {
         brief2 = { items: recsToUse, position: pos2, aio: aio2, perp: perp2, bing_cited: bing2, brave_cited: brave2, score: score2,
-          gsc_clicks: page.gsc_clicks, gsc_impressions: page.gsc_impressions, gsc_position: page.gsc_position, gsc_keyword: page.gsc_keyword };
+          gsc_clicks: page.gsc_clicks, gsc_impressions: page.gsc_impressions, gsc_position: page.gsc_position, gsc_keyword: page.gsc_keyword,
+          gsc_brief: gscBriefItems };
       } else {
         try {
           const mergePrompt2 = `Merge these two AI citation briefs for ${pageUrl} (keyword: "${kw2}").
@@ -34146,11 +34183,13 @@ Return ONLY JSON array (max 5 items): [{"title":"max 6 words","priority":"high"|
             const gText2 = gData2.candidates?.[0]?.content?.parts?.[0]?.text || '';
             const merged2 = JSON.parse(gText2.replace(/```json|```/g, '').trim());
             brief2 = { items: merged2, position: pos2, aio: aio2, perp: perp2, bing_cited: bing2, brave_cited: brave2, score: score2,
-              gsc_clicks: page.gsc_clicks, gsc_impressions: page.gsc_impressions, gsc_position: page.gsc_position, gsc_keyword: page.gsc_keyword, merged: true };
+              gsc_clicks: page.gsc_clicks, gsc_impressions: page.gsc_impressions, gsc_position: page.gsc_position, gsc_keyword: page.gsc_keyword,
+              gsc_brief: gscBriefItems, merged: true };
           }
         } catch(mergeErr2) {
           console.warn('[brief-merge2]', mergeErr2.message);
-          brief2 = { items: recsToUse, position: pos2, aio: aio2, perp: perp2, bing_cited: bing2, brave_cited: brave2, score: score2 };
+          brief2 = { items: recsToUse, position: pos2, aio: aio2, perp: perp2, bing_cited: bing2, brave_cited: brave2, score: score2,
+            gsc_brief: gscBriefItems };
         }
       }
 
@@ -34180,6 +34219,12 @@ Return ONLY JSON array (max 5 items): [{"title":"max 6 words","priority":"high"|
           domain: domain2,
           brief_content: brief2,
           passages: brief2.items || [],
+          gsc_brief: brief2.gsc_brief || [],
+          gsc_clicks: page.gsc_clicks,
+          gsc_impressions: page.gsc_impressions,
+          gsc_position: page.gsc_position,
+          gsc_keyword: page.gsc_keyword,
+          _gsc_enabled: !!(page.gsc_clicks || page.gsc_impressions || page.gsc_position),
           ts: new Date().toISOString()
         });
         console.log(`[tracker] Brief generated and broadcast for ${pageUrl}`);
