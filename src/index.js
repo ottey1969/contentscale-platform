@@ -26217,6 +26217,7 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
 
     // Show card
     _briefIsOpen = true;
+    if (overlay) overlay.style.display = 'flex';
     card.classList.remove('hide');
     card.classList.add('show');
 
@@ -26543,6 +26544,8 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
     var card = document.getElementById('cbCard');
     if (card) { card.classList.remove('show'); card.classList.add('hide'); }
     _briefIsOpen = false;
+    var overlay = document.getElementById('cbOverlay');
+    if (overlay) setTimeout(function(){ if (!_briefIsOpen) overlay.style.display = 'none'; }, 500);
     var closedPageId = pageId || _currentBriefPageId;
     _currentBriefPageId = null;
     if (closedPageId) {
@@ -26561,6 +26564,8 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
     if (!data) { toast('No brief available yet — run a scan first', '#f59e0b'); return; }
     var card = document.getElementById('cbCard');
     if (!card) return;
+    var overlay = document.getElementById('cbOverlay');
+    if (overlay) overlay.style.display = 'flex';
 
     _briefIsOpen = true;
     _currentBriefPageId = pageId;
