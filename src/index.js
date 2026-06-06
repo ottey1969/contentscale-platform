@@ -25061,7 +25061,7 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
 .so-header-dot.done{background:#4ade80;animation:none}
 .so-header-title{font-size:11px;font-weight:800;color:#7c3aed;text-transform:uppercase;letter-spacing:.14em}
 .so-header-title.done{color:#4ade80}
-.so-url{font-size:11px;color:#475569;font-family:monospace;text-align:center;margin-bottom:20px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;position:relative;z-index:2;padding:6px 12px;background:rgba(124,58,237,.05);border:1px solid rgba(124,58,237,.15);border-radius:8px}
+.so-url{font-size:12px;color:#cbd5e1;font-family:monospace;text-align:center;margin-bottom:20px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;position:relative;z-index:2;padding:6px 12px;background:rgba(124,58,237,.08);border:1px solid rgba(124,58,237,.25);border-radius:8px}
 .so-progress-wrap{height:4px;background:#1f2937;border-radius:2px;margin-bottom:24px;overflow:hidden;position:relative;z-index:2}
 .so-progress-bar{height:100%;background:linear-gradient(90deg,#7c3aed,#a78bfa,#4ade80);border-radius:2px;width:0%;transition:width .6s cubic-bezier(.16,1,.3,1)}
 .so-steps{display:flex;flex-direction:column;gap:6px;position:relative;z-index:2;margin-bottom:16px}
