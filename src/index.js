@@ -1523,30 +1523,45 @@ app.get('/api/tracker-client/:token/latest-briefs', async (req, res) => {
     const cr = await pool.query('SELECT id FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status != $2)', [req.params.token, 'deleted']);
     if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
     const r = await pool.query(
-      `SELECT url, keyword, gsc_keyword, brief_content, last_checked_at, gsc_clicks, gsc_impressions, gsc_position
-       FROM tracker_pages
-       WHERE tracker_client_id = $1 AND brief_content IS NOT NULL
-         AND (is_active IS NULL OR is_active = TRUE)
-       ORDER BY last_checked_at DESC NULLS LAST LIMIT 8`,
+      `SELECT p.url, p.keyword, p.gsc_keyword, p.brief_content, p.gsc_clicks, p.gsc_impressions, p.gsc_position,
+              s.checked_at, s.google_position, s.ai_google_overview_cited, s.ai_perplexity_cited, s.ai_bing_cited, s.ai_brave_cited,
+              s.score, s.recommendations, s.gsc_brief, s.source_suggestions
+       FROM tracker_pages p
+       LEFT JOIN LATERAL (
+         SELECT * FROM tracker_snapshots WHERE page_id = p.id ORDER BY checked_at DESC LIMIT 1
+       ) s ON true
+       WHERE p.tracker_client_id = $1 AND (p.is_active IS NULL OR p.is_active = TRUE)
+       ORDER BY s.checked_at DESC NULLS LAST LIMIT 8`,
       [cr.rows[0].id]
     );
+    function _arr(v) { if (Array.isArray(v)) return v; if (!v) return []; try { var x = typeof v === 'string' ? JSON.parse(v) : v; return Array.isArray(x) ? x : (Array.isArray(x.items) ? x.items : []); } catch(e) { return []; } }
     const briefs = r.rows.map(function(p) {
       let bc = {};
       try { bc = typeof p.brief_content === 'string' ? JSON.parse(p.brief_content) : (p.brief_content || {}); } catch(e) { bc = {}; }
+      // Prefer the stored brief; fall back to the latest snapshot so the wall fills without a rescan
+      let items = Array.isArray(bc.items) ? bc.items : [];
+      if (!items.length) items = _arr(p.recommendations);
+      let gscB = Array.isArray(bc.gsc_brief) ? bc.gsc_brief : [];
+      if (!gscB.length) gscB = _arr(p.gsc_brief);
+      let srcB = Array.isArray(bc.source_suggestions) ? bc.source_suggestions : [];
+      if (!srcB.length) srcB = _arr(p.source_suggestions);
       return {
         type: 'brief_ready',
         url: p.url,
         keyword: p.keyword || p.gsc_keyword || '',
-        position: bc.position,
-        aio_cited: bc.aio, perp_cited: bc.perp, bing_cited: bc.bing_cited, brave_cited: bc.brave_cited,
-        score: bc.score,
-        passages: Array.isArray(bc.items) ? bc.items : [],
-        gsc_brief: Array.isArray(bc.gsc_brief) ? bc.gsc_brief : [],
-        source_suggestions: Array.isArray(bc.source_suggestions) ? bc.source_suggestions : [],
+        position: bc.position != null ? bc.position : p.google_position,
+        aio_cited: bc.aio != null ? bc.aio : p.ai_google_overview_cited,
+        perp_cited: bc.perp != null ? bc.perp : p.ai_perplexity_cited,
+        bing_cited: bc.bing_cited != null ? bc.bing_cited : p.ai_bing_cited,
+        brave_cited: bc.brave_cited != null ? bc.brave_cited : p.ai_brave_cited,
+        score: bc.score != null ? bc.score : p.score,
+        passages: items,
+        gsc_brief: gscB,
+        source_suggestions: srcB,
         gsc_clicks: p.gsc_clicks, gsc_impressions: p.gsc_impressions, gsc_position: p.gsc_position,
-        ts: p.last_checked_at ? new Date(p.last_checked_at).toISOString() : ''
+        ts: p.checked_at ? new Date(p.checked_at).toISOString() : ''
       };
-    });
+    }).filter(function(b) { return b.passages.length || b.position != null || b.score != null; });
     res.json({ success: true, briefs });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
