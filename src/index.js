@@ -25514,9 +25514,11 @@ function _showLinkSuggestions(sug) {
   ov.innerHTML = '<div style="background:#06060f;border:1px solid #7c3aed;border-radius:12px;max-width:640px;width:100%;max-height:80vh;overflow-y:auto;padding:18px;">'
     + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">'
     + '<div style="font-size:14px;font-weight:800;color:#a78bfa;">\uD83D\uDD17 Internal Link Suggestions</div>'
-    + '<button onclick="document.getElementById(\'linkSugOverlay\').remove()" style="background:none;border:none;color:#9ca3af;cursor:pointer;font-size:16px;">\u2715</button>'
+    + '<button id="linkSugClose" style="background:none;border:none;color:#9ca3af;cursor:pointer;font-size:16px;">\u2715</button>'
     + '</div>' + rows + '</div>';
   document.body.appendChild(ov);
+  var _cl = document.getElementById('linkSugClose');
+  if (_cl) _cl.onclick = function(){ ov.remove(); };
 }
 
 // Escape AI/user text before innerHTML so tags like <head>/<script> stay visible
