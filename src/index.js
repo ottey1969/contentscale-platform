@@ -2100,7 +2100,7 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
     var card = document.createElement('div');
     card.className = 'lw-card';
 
-    var pos = data.position || data.pos || 'N/A';
+    var pos = data.position || data.pos || data.gsc_position || 'N/A';
     var posColor = pos <= 3 ? '#4ade80' : pos <= 10 ? '#fbbf24' : '#f87171';
     var posNum = parseInt(pos, 10);
     if (!isNaN(posNum)) { totalPos += posNum; }
