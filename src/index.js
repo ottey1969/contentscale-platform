@@ -1591,14 +1591,6 @@ app.post('/api/tracker-client/:token/pages', async (req, res) => {
       pr = await pool.query(
         `INSERT INTO tracker_pages (tracker_client_id, url, keyword, gsc_clicks, gsc_impressions, gsc_position, gsc_ctr, gsc_keyword, check_frequency, next_check_at, is_active)
          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'3days',NOW(),TRUE)
-         ON CONFLICT (tracker_client_id, url)
-         DO UPDATE SET
-           gsc_clicks = EXCLUDED.gsc_clicks,
-           gsc_impressions = EXCLUDED.gsc_impressions,
-           gsc_position = EXCLUDED.gsc_position,
-           gsc_ctr = EXCLUDED.gsc_ctr,
-           gsc_keyword = COALESCE(EXCLUDED.gsc_keyword, tracker_pages.gsc_keyword),
-           is_active = TRUE
          RETURNING id`,
         [client.id, url, keyword||null, gsc_clicks||null, gsc_impressions||null, gsc_position||null, gsc_ctr||null, gsc_keyword||null]
       );
@@ -1608,7 +1600,6 @@ app.post('/api/tracker-client/:token/pages', async (req, res) => {
         pr = await pool.query(
           `INSERT INTO tracker_pages (tracker_client_id, url, keyword, check_frequency, next_check_at, is_active)
            VALUES ($1,$2,$3,'3days',NOW(),TRUE)
-           ON CONFLICT (tracker_client_id, url) DO UPDATE SET is_active=TRUE
            RETURNING id`,
           [client.id, url, keyword||null]
         );
