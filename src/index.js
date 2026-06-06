@@ -32066,6 +32066,61 @@ app.post('/api/tracker/pages/:id/citation-brief', verifyEngineAccess, async (req
     const pageUrl = page.url || '';
     if (!keyword) return res.status(400).json({ success: false, error: 'No keyword set for this page — please add a keyword manually in the tracker' });
 
+    // ══ FALLBACK BRIEF: save immediately so user never sees empty brief ═══
+    // This ensures the brief exists in DB BEFORE slow external API calls.
+    // The AI-enhanced brief will UPDATE this record after Gemini/Claude finish.
+    const fallbackBrief = {
+      citation_source: { domain: '', why_cited: '', key_difference: '' },
+      platform_gaps: {
+        google_aio: snap.ai_google_overview_cited ? 'Page is cited' : (snap.ai_google_overview_found ? 'AI Overview exists but page not cited' : 'No AI Overview detected'),
+        perplexity: snap.ai_perplexity_cited ? 'Page is cited' : 'Citation status unknown',
+        chatgpt: 'Uses Google index — same as Google AIO',
+        copilot_bing: 'Pending Bing search results',
+        claude_brave: 'Pending Brave search results'
+      },
+      passages_to_add: [],
+      structural_fixes: [],
+      primary_reason_not_cited: 'Analysis in progress... AI providers are being queried for detailed recommendations.',
+      freshness_recommendation: '',
+      confidence: 'medium',
+      estimated_impact: 'Results pending from AI analysis',
+      model_searched_google: false,
+      _status: 'pending',
+      _fallback: true,
+      _message: 'Detailed AI recommendations are being generated. Check back in 30-60 seconds.'
+    };
+    const fallbackBriefAt = new Date().toISOString();
+    // Save fallback to tracker_citation_briefs table
+    try {
+      await pool.query(
+        `INSERT INTO tracker_citation_briefs (page_id, tracker_client_id, keyword, url, position, aio_cited, perp_cited, bing_cited, brave_cited, score, brief_json, passages, recommendations, created_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, NOW())`,
+        [
+          pageId,
+          page.tracker_client_id || null,
+          keyword,
+          pageUrl,
+          snap.google_position || null,
+          snap.ai_google_overview_cited || false,
+          snap.ai_perplexity_cited || false,
+          false, // bing — will be updated
+          false, // brave — will be updated
+          0, // score placeholder
+          JSON.stringify(fallbackBrief),
+          JSON.stringify([]),
+          JSON.stringify([{ priority: 'HIGH', section: 'AIO Brief', item: 'AI analysis in progress — detailed recommendations loading...', why: 'External AI providers are being queried. This brief will auto-update within 60 seconds.', estimated_impact: 'Waiting for AI response' }])
+        ]
+      );
+      // Also save to tracker_pages.serp_spy for immediate poll availability
+      await pool.query(
+        `UPDATE tracker_pages SET serp_spy = COALESCE(serp_spy, '{}'::jsonb) || $1::jsonb WHERE id=$2`,
+        [JSON.stringify({ citation_brief: fallbackBrief, citation_brief_at: fallbackBriefAt, citation_brief_model: 'fallback-pending', citation_brief_status: 'pending' }), pageId]
+      );
+      console.log('[citation-brief] Fallback brief saved for page', pageId, 'keyword:', keyword);
+    } catch(saveErr) {
+      console.warn('[citation-brief] Fallback save warning (non-critical):', saveErr.message);
+    }
+
     const geminiKey = resolveGeminiKey(req) || process.env.GEMINI_API_KEY;
     const serperKey = resolveSerpapiKey(req) || process.env.SERPAPI_KEY || '';
     const anthropicKey = process.env.ANTHROPIC_API_KEY || '';
@@ -32530,10 +32585,50 @@ Return ONLY valid JSON — no markdown:
       brief._grounding_note = 'These are the URLs Gemini actually retrieved from Google Search when analyzing this keyword. The top source is likely what Google AI Overview is currently citing.';
     }
 
-    // Save brief + which model was used
+    // ══ UPDATE: replace fallback brief with AI-enhanced version ═══
+    const finalBriefAt = new Date().toISOString();
+    // 1. Update tracker_citation_briefs — replace the pending fallback
+    try {
+      // Delete old fallback(s) for this page+keyword combo
+      await pool.query(
+        `DELETE FROM tracker_citation_briefs WHERE page_id=$1 AND keyword=$2 AND brief_json->>'_fallback' = 'true'`,
+        [pageId, keyword]
+      );
+      // Insert the real AI-enhanced brief
+      await pool.query(
+        `INSERT INTO tracker_citation_briefs (page_id, tracker_client_id, keyword, url, position, aio_cited, perp_cited, bing_cited, brave_cited, score, brief_json, passages, recommendations, created_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, NOW())`,
+        [
+          pageId,
+          page.tracker_client_id || null,
+          keyword,
+          pageUrl,
+          googlePosition || snap.google_position || null,
+          aioCited,
+          perplexityCited,
+          copilotCited,
+          claudeCited,
+          (brief.passages_to_add || []).length * 10 + (brief.structural_fixes || []).length * 5,
+          JSON.stringify(brief),
+          JSON.stringify(brief.passages_to_add || []),
+          JSON.stringify((brief.structural_fixes || []).map((f, i) => ({
+            priority: i === 0 ? 'HIGH' : 'MEDIUM',
+            section: 'AIO Brief',
+            item: f.fix || '',
+            why: f.reason || '',
+            example: f.example || '',
+            estimated_impact: brief.estimated_impact || ''
+          })))
+        ]
+      );
+      console.log('[citation-brief] AI-enhanced brief saved for page', pageId);
+    } catch(dbErr) {
+      console.warn('[citation-brief] DB insert warning:', dbErr.message);
+    }
+    // 2. Update tracker_pages.serp_spy
     await pool.query(
       `UPDATE tracker_pages SET serp_spy = COALESCE(serp_spy, '{}'::jsonb) || $1::jsonb WHERE id=$2`,
-      [JSON.stringify({ citation_brief: brief, citation_brief_at: new Date().toISOString(), citation_brief_model: modelUsed }), pageId]
+      [JSON.stringify({ citation_brief: brief, citation_brief_at: finalBriefAt, citation_brief_model: modelUsed, citation_brief_status: 'complete' }), pageId]
     ).catch(() => {});
 
     const finalResult = {
