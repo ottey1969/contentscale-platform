@@ -25167,7 +25167,6 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
     <button id="gscBtn" class="cs-btn" onclick="gscAction()" title="Google Search Console" style="border-color:#374151;color:#6b7280;"><i class="fas fa-chart-line"></i> GSC off</button>
     <button class="cs-btn" onclick="showImportModal('paste')" style="border-color:#6b7280;color:#6b7280;"><i class="fas fa-paste"></i> Paste</button>
     <button id="sitemapBtn" class="cs-btn" onclick="showImportModal('sitemap')" style="border-color:#38bdf8;color:#38bdf8;" title="Import from sitemap"><i class="fas fa-list"></i> Sitemap</button>
-    <button class="cs-btn" onclick="openSitemapLinks()" style="border-color:#a78bfa;color:#a78bfa;" title="Internal linking suggestions"><i class="fas fa-sitemap"></i> Links</button>
     <button class="cs-btn" onclick="loadPages()" style="margin-left:4px;" title="Refresh"><i class="fas fa-sync-alt"></i></button>
     <button class="cs-btn" onclick="scanAllPages()" style="border-color:#4ade80;color:#4ade80;font-weight:700;" title="Scan all pages one by one">⚡ Scan All</button>
     <button class="cs-btn" onclick="mergePages()" style="border-color:#38bdf8;color:#38bdf8;" title="Merge duplicate URLs — keep best">⊕ Merge</button>
@@ -34760,6 +34759,18 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
         ? 'GSC: ' + gscImpr + ' impressions x ' + gscCtr + '% CTR = ' + gscClicks + ' clicks. At rank #1 (28% CTR) = ' + oppClicks + ' clicks (+' + clickGap + '/month).'
         : '';
 
+      // Internal-link candidates: other pages this client already tracks
+      let _otherPagesList = '';
+      try {
+        if (page.tracker_client_id) {
+          const _opR = await pool.query(
+            'SELECT url, keyword, gsc_keyword FROM tracker_pages WHERE tracker_client_id=$1 AND id<>$2 AND (is_active=TRUE OR is_active IS NULL) ORDER BY created_at DESC LIMIT 30',
+            [page.tracker_client_id, page.id]
+          );
+          _otherPagesList = _opR.rows.map(function(r){ return '- ' + r.url + ((r.keyword||r.gsc_keyword) ? ' [topic: ' + (r.keyword||r.gsc_keyword) + ']' : ''); }).join('\n');
+        }
+      } catch(e) { _otherPagesList = ''; }
+
       // ── CALL 1: Citation Brief ─────────────────────────────────────────
       const citationPrompt = `You are an AI Citation Strategist. Your job is to create an actionable Citation Brief for a single web page.
 
@@ -34777,6 +34788,8 @@ INPUT DATA:
 - Page HTML content (first 3000 chars): ${htmlExcerpt.substring(0,3000) || '(no HTML)'}
 - Previous brief actions (if any): ${JSON.stringify((page.brief_content?.items || []).slice(0,3))}
 - Competitor #1: ${competitor1 ? competitor1.url + ' — ' + competitor1.title : 'no data'}
+- Other pages on this site (internal-link candidates):
+${_otherPagesList || '(none — this is the only tracked page)'}
 
 CITATION SYSTEM REQUIREMENTS (use these to write actions):
 
@@ -34818,6 +34831,10 @@ ACTIONS THAT ARE ALREADY RESOLVED — DO NOT INCLUDE THESE:`
 + (snapshot.ai_brave_cited ? '\n- Claude/Brave cites this page → SKIP all Claude actions' : '')
 + (snapshot.google_position && snapshot.google_position <= 3 ? '\n- Position #'+snapshot.google_position+' → SKIP basic ranking actions' : '')
 + `\n- Remove any actions from previous brief that are now done
+
+INTERNAL LINKING:
+- If one of the "Other pages on this site" above is genuinely topically relevant, include ONE internal-link action (system "Internal Link", priority "low" or "medium"): give the EXACT anchor text and which existing paragraph on THIS page to add it in, linking from this page TO that page's URL.
+- Only include this if it truly strengthens topical authority. If no other page is relevant, DO NOT mention internal linking at all.
 
 OUTPUT FORMAT — return ONLY this JSON, no markdown, no explanation, no preamble:
 [{"title":"6 words max describing the gap","priority":"high","system":"Google AIO","action":"Add this exact text after your H1 heading: '[EXACT 40-60 word paragraph they should copy-paste]'. This triggers Google AI Overview because [specific reason based on AIO requirements above].","expected_impact":"Google AIO will cite this page within 2-3 crawl cycles because [specific technical reason]"}]
