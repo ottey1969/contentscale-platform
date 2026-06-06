@@ -35002,6 +35002,35 @@ GOAL: Rank #1 for "${kw}" and capture the maximum clicks from ${gscImpr || 'the 
         }
       }
 
+      // FALLBACK — never leave the brief empty (e.g. if the citation AI call failed/quota).
+      // Build usable recommendations from the GSC brief + local E-E-A-T + GRAAF signals.
+      if (!Array.isArray(snapshot.recommendations) || !snapshot.recommendations.length) {
+        const _fb = [];
+        if (Array.isArray(snapshot.gsc_brief)) {
+          snapshot.gsc_brief.slice(0,3).forEach(function(g){
+            if (g && (g.action || g.title)) _fb.push({ title: g.title || 'Ranking action', priority: g.priority || 'medium', system: 'GSC Ranking', action: g.action || '', expected_impact: g.expected_impact || '' });
+          });
+        }
+        if (Array.isArray(snapshot.author_trust_findings)) {
+          snapshot.author_trust_findings.slice(0,2).forEach(function(f){
+            var a = (f && (f.fix || f.recommendation || f.action || f.detail)) || '';
+            var t = (f && (f.title || f.issue || f.label)) || 'Strengthen author trust (E-E-A-T)';
+            if (a || t) _fb.push({ title: String(t).substring(0,60), priority: (f && f.priority) || 'medium', system: 'Claude/Brave', action: a, expected_impact: 'Stronger E-E-A-T trust signals for AI citation' });
+          });
+        }
+        if (Array.isArray(snapshot.graaf_recommendations)) {
+          snapshot.graaf_recommendations.slice(0,3).forEach(function(g){
+            var t = typeof g === 'string' ? g : (g && (g.title || g.text || g.name)) || '';
+            var a = typeof g === 'string' ? g : (g && (g.action || g.fix || g.text || g.detail)) || '';
+            if (t || a) _fb.push({ title: String(t || 'Content improvement').substring(0,60), priority: (g && g.priority) || 'medium', system: 'Content Quality', action: a, expected_impact: '' });
+          });
+        }
+        if (_fb.length) {
+          snapshot.recommendations = _fb.slice(0,6);
+          _trSetStep(pageId, 'recommendations', 'done', 'Brief built from GSC + E-E-A-T + content signals (citation AI unavailable this run)');
+        }
+      }
+
       // ── CALL 3: Verified Claims + Source Suggestions ─────────────────────
       _trSetStep(pageId, 'source_check', 'running', 'Checking claims against world-wide sources…');
       const sourcePrompt = `You are a Fact-Verification Analyst. Your job is to find unanchored claims in web page content and suggest authoritative world-wide sources to verify them.
