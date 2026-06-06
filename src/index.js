@@ -1304,11 +1304,20 @@ app.post('/api/tracker-client/:token/pages/:pageId/html', async (req, res) => {
     const vals = ['manual'];
     if (html_content) { fields.push(`html_content=$${vals.length+1}`); vals.push(html_content.substring(0,500000)); }
     if (keyword) { fields.push(`keyword=$${vals.length+1}`); vals.push(keyword.trim()); }
+    // Has this page been scanned before? First HTML → scan now; later HTML → wait for the scheduled auto-check
+    const prevR = await pool.query('SELECT last_checked_at, brief_check_count, next_check_at FROM tracker_pages WHERE id=$1', [req.params.pageId]);
+    const prev = prevR.rows[0] || {};
+    const wasScanned = !!prev.last_checked_at || (parseInt(prev.brief_check_count) || 0) > 0;
+
     vals.push(req.params.pageId);
     await pool.query(`UPDATE tracker_pages SET ${fields.join(',')} WHERE id=$${vals.length}`, vals);
 
-    res.json({ success: true });
-    _triggerPageScan(parseInt(req.params.pageId), 1000);
+    if (!wasScanned) {
+      res.json({ success: true, scanning: true });
+      _triggerPageScan(parseInt(req.params.pageId), 1000);
+    } else {
+      res.json({ success: true, scanning: false, next_check_at: prev.next_check_at });
+    }
   } catch(e) {
     console.error('[html-patch]', e.message);
     res.status(500).json({ success: false, error: e.message });
@@ -24822,7 +24831,7 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
 .cs-page-card:hover { background:#131d2e; border-color:#1e3a5f; }
 .cs-page-card.cited { border-left-color:#16a34a; background:#0a1a0f; }
 .cs-page-card.cited:hover { background:#0d2214; }
-.cs-page-card.done { opacity:.55; filter:grayscale(.3); }
+.cs-page-card.done { opacity:.85; filter:grayscale(.12); }
 /* Small action buttons inside page cards */
 .btn { display:inline-flex; align-items:center; gap:4px; padding:5px 10px; border-radius:5px; font-size:11px; font-weight:600; cursor:pointer; border:1px solid #374151; background:#111827; color:#9ca3af; transition:all .15s; white-space:nowrap; font-family:Verdana,sans-serif; }
 .btn:hover { border-color:#6b7280; color:#e5e7eb; background:#1f2937; }
@@ -27724,11 +27733,18 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
     try {
       var r = await api('/pages/' + pageId + '/html', 'POST', payload);
       if (r.success) {
-        toast('HTML saved. Scanning now...', '#4ade80');
         closeHtmlUpload();
         var p = (_pages || []).find(function(x) { return x.id == pageId; });
-        if (p) { p.needs_html = false; loadPages(); }
-        setTimeout(function() { runScanAnimation(p ? p.url : '', function() { pollAndShowBrief(pageId, 60, 5000); }); }, 300);
+        if (p) p.needs_html = false;
+        if (r.scanning) {
+          toast('HTML saved. Scanning now...', '#4ade80');
+          loadPages();
+          setTimeout(function() { runScanAnimation(p ? p.url : '', function() { pollAndShowBrief(pageId, 60, 5000); }); }, 300);
+        } else {
+          var _when = r.next_check_at ? new Date(r.next_check_at).toLocaleDateString() : 'the next scheduled check';
+          toast('HTML updated — will be re-checked on ' + _when, '#38bdf8');
+          loadPages();
+        }
       } else { toast(r.error || 'Failed to save', '#f87171'); }
     } catch(e) { toast('Error: ' + e.message, '#f87171'); }
   }
