@@ -1300,7 +1300,7 @@ app.post('/api/tracker-client/:token/pages/:pageId/html', async (req, res) => {
     await pool.query('ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS needs_html BOOLEAN DEFAULT FALSE').catch(()=>{});
 
     // Build update
-    const fields = ['html_source=$1', 'needs_html=FALSE', 'html_pasted_at=NOW()'];
+    const fields = ['html_source=$1', 'needs_html=FALSE', 'is_done=FALSE', 'html_pasted_at=NOW()'];
     const vals = ['manual'];
     if (html_content) { fields.push(`html_content=$${vals.length+1}`); vals.push(html_content.substring(0,500000)); }
     if (keyword) { fields.push(`keyword=$${vals.length+1}`); vals.push(keyword.trim()); }
@@ -35135,6 +35135,29 @@ If no unanchored claims found, return empty array: []`;
   );
   const snapId = snapR.rows[0].id;
   _trSetStep(pageId, 'save', 'done', 'Snapshot #' + snapId + ' saved');
+
+  // Persist the brief to the page IMMEDIATELY so it survives reloads and stays
+  // visible until the user clicks "Done" (the only place that clears brief_content).
+  try {
+    const _briefNow = {
+      items: Array.isArray(snapshot.recommendations) ? snapshot.recommendations : [],
+      position: snapshot.google_position,
+      aio: !!snapshot.ai_google_overview_cited,
+      perp: !!snapshot.ai_perplexity_cited,
+      bing_cited: !!snapshot.ai_bing_cited,
+      brave_cited: !!snapshot.ai_brave_cited,
+      score: snapshot.score,
+      gsc_clicks: page.gsc_clicks, gsc_impressions: page.gsc_impressions,
+      gsc_position: page.gsc_position, gsc_keyword: page.gsc_keyword,
+      gsc_brief: Array.isArray(snapshot.gsc_brief) ? snapshot.gsc_brief : [],
+      source_suggestions: Array.isArray(snapshot.source_suggestions) ? snapshot.source_suggestions : [],
+      discovered_sources: Array.isArray(snapshot.discovered_sources) ? snapshot.discovered_sources : []
+    };
+    await pool.query(
+      'UPDATE tracker_pages SET brief_content=$1, brief_started_at=COALESCE(brief_started_at, NOW()) WHERE id=$2',
+      [JSON.stringify(_briefNow), page.id]
+    );
+  } catch(e) { console.error('[brief-persist-early]', e.message); }
 
   // 6b. Auto-Source Discovery — find evidence for claims on the site + online
   _trSetStep(pageId, 'source_discovery', 'running', 'Searching your site for evidence...');
