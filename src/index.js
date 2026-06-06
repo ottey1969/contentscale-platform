@@ -1903,7 +1903,7 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
 .lw-saver-tip{font-size:14px;color:#6b7280;line-height:1.7;animation:lwTipFade 6s ease-in-out infinite}
 @keyframes lwTipFade{0%,100%{opacity:0;transform:translateY(8px)}15%,85%{opacity:1;transform:translateY(0)}}
 .lw-particles{position:fixed;inset:0;pointer-events:none;z-index:1;overflow:hidden}
-.lw-particle{position:absolute;width:3px;height:3px;border-radius:50%;background:rgba(124,58,237,.25);animation:lwFloat linear infinite}
+.lw-particle{position:absolute;width:4px;height:4px;border-radius:50%;background:rgba(124,58,237,.7);box-shadow:0 0 6px 1px rgba(124,58,237,.5);animation:lwFloat linear infinite}
 @keyframes lwFloat{0%{transform:translateY(100vh) scale(0);opacity:0}10%{opacity:1}90%{opacity:1}100%{transform:translateY(-10vh) scale(1);opacity:0}}
 .lw-stats-bar{position:fixed;bottom:0;left:0;right:0;background:rgba(6,6,15,.95);border-top:1px solid #1f2937;padding:10px 20px;display:flex;justify-content:center;gap:32px;z-index:100;font-size:11px}
 .lw-sb-item{text-align:center}
@@ -1987,14 +1987,19 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
   updateClock();
 
   var particles = document.getElementById('lwParticles');
-  for(var i=0;i<30;i++){
+  var _pcolors = ['rgba(124,58,237,.75)','rgba(74,222,128,.7)','rgba(251,191,36,.7)','rgba(56,189,248,.7)'];
+  var _pglow = ['rgba(124,58,237,.55)','rgba(74,222,128,.5)','rgba(251,191,36,.5)','rgba(56,189,248,.5)'];
+  for(var i=0;i<45;i++){
     var p = document.createElement('div');
     p.className = 'lw-particle';
+    var ci = Math.floor(Math.random()*4);
+    var sz = (3+Math.random()*4);
     p.style.left = Math.random()*100+'%';
     p.style.animationDuration = (12+Math.random()*20)+'s';
     p.style.animationDelay = (Math.random()*15)+'s';
-    p.style.width = p.style.height = (2+Math.random()*3)+'px';
-    p.style.background = ['rgba(124,58,237,.2)','rgba(74,222,128,.15)','rgba(251,191,36,.15)','rgba(56,189,248,.15)'][Math.floor(Math.random()*4)];
+    p.style.width = p.style.height = sz+'px';
+    p.style.background = _pcolors[ci];
+    p.style.boxShadow = '0 0 ' + (5+sz) + 'px 1px ' + _pglow[ci];
     particles.appendChild(p);
   }
 
@@ -2018,6 +2023,16 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
       if (progress < 1) { requestAnimationFrame(step); } else { isAutoScrolling = false; }
     }
     requestAnimationFrame(step);
+  }
+
+  var _seenBriefs = {};
+  function _esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function _briefKey(d){ return (d.page_id||d.url||d.domain||'') + '|' + (d.ts||''); }
+  function handleBrief(data){
+    var k = _briefKey(data);
+    if (_seenBriefs[k]) return;   // avoid double cards from SSE + polling
+    _seenBriefs[k] = true;
+    createBriefCard(data);
   }
 
   function createBriefCard(data) {
@@ -2046,9 +2061,9 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
           '<div class="lw-action">' +
             '<div class="lw-action-priority ' + priClass + '"></div>' +
             '<div class="lw-action-body">' +
-              '<div class="lw-action-title">' + (p.title || '') + '</div>' +
-              '<div class="lw-action-text">' + (p.action || p.passage || '').substring(0, 200) + (p.action && p.action.length > 200 ? '...' : '') + '</div>' +
-              '<div class="lw-action-impact">' + (p.expected_impact || p.impact || '') + '</div>' +
+              '<div class="lw-action-title">' + _esc(p.title || '') + '</div>' +
+              '<div class="lw-action-text">' + _esc((p.action || p.passage || '').substring(0, 200)) + (p.action && p.action.length > 200 ? '...' : '') + '</div>' +
+              '<div class="lw-action-impact">' + _esc(p.expected_impact || p.impact || '') + '</div>' +
             '</div>' +
           '</div>';
       });
@@ -2060,7 +2075,7 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
     card.innerHTML =
       '<div class="lw-new-badge">NEW</div>' +
       '<div class="lw-card-header">' +
-        '<div class="lw-card-url">' + (data.url || data.domain || '') + '</div>' +
+        '<div class="lw-card-url">' + _esc(data.url || data.domain || '') + '</div>' +
         '<div class="lw-card-time">' + timeStr + '</div>' +
       '</div>' +
       '<div class="lw-card-stats">' +
@@ -2076,7 +2091,8 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
     container.appendChild(card);
 
     sbBriefs.textContent = briefCount;
-    sbScans.textContent = ++scanCount;
+    if (scanCount < briefCount) scanCount = briefCount;
+    sbScans.textContent = scanCount;
     sbCited.textContent = (data.aio_cited||data.perp_cited||data.bing_cited||data.brave_cited) ? (parseInt(sbCited.textContent)||0)+1 : (parseInt(sbCited.textContent)||0);
     sbPos.textContent = totalPos ? Math.round(totalPos / briefCount) : '—';
 
@@ -2096,19 +2112,42 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
     try {
       var data = JSON.parse(ev.data);
       console.log('[live-wall] brief_ready received:', data.url || data.domain || 'unknown');
-      createBriefCard(data);
+      handleBrief(data);
     } catch(e) { console.error('Live wall parse error:', e); }
   });
   evtSource.addEventListener('check_start', function(ev) {
-    try { var data = JSON.parse(ev.data); console.log('[live-wall] check_start:', data.domain || data.url || 'unknown'); } catch(e) {}
+    try {
+      var data = JSON.parse(ev.data);
+      scanCount++;
+      if (statsBar.style.display === 'none') statsBar.style.display = 'flex';
+      sbScans.textContent = scanCount;
+      console.log('[live-wall] check_start:', data.domain || data.url || 'unknown');
+    } catch(e) {}
   });
   evtSource.onerror = function(err) {
-    console.log('Live wall SSE error — reconnecting...', err);
+    console.log('Live wall SSE error — polling fallback active', err);
   };
   evtSource.onopen = function() {
     console.log('[live-wall] SSE connected');
   };
   evtSource.addEventListener('ping', function() {});
+
+  // Polling fallback — Railway can buffer/drop SSE, so also poll for briefs.
+  // Deduped via handleBrief, so SSE + polling never double-render.
+  var _lastPoll = new Date(Date.now() - 120000).toISOString();
+  function pollBriefs(){
+    fetch('/api/tracker-client/${req.params.token}/live-events?since=' + encodeURIComponent(_lastPoll))
+      .then(function(r){ return r.json(); })
+      .then(function(d){
+        _lastPoll = new Date().toISOString();
+        if (!d || !d.events || !d.events.length) return;
+        d.events.slice().reverse().forEach(function(ev){
+          if (ev.type === 'brief_ready') handleBrief(ev);
+        });
+      }).catch(function(){});
+  }
+  setInterval(pollBriefs, 6000);
+  pollBriefs();
 })();
 \x3c/script>
 </body>
