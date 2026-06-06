@@ -34758,11 +34758,19 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
   // 5. Generate recommendations via Gemini — gap analysis vs. what's winning in Google + AI systems
   _trSetStep(pageId, 'recommendations', 'running', 'Analysing gaps vs. top results…');
   if(geminiKey) {
-    // OPTIMISATION: skip Gemini if results unchanged AND we have a recent brief
-    const hasCachedBrief = page.brief_content && page.brief_check_count > 0;
+    // OPTIMISATION: skip Gemini if results unchanged AND we have a recent brief WITH real items
+    const _cachedItems = (function(){
+      try {
+        var b = typeof page.brief_content === 'string' ? JSON.parse(page.brief_content) : page.brief_content;
+        if (b && Array.isArray(b.items)) return b.items;
+        if (Array.isArray(b)) return b;
+        return [];
+      } catch(e) { return []; }
+    })();
+    const hasCachedBrief = _cachedItems.length > 0 && page.brief_check_count > 0;
     const skipGemini = !resultsChanged && hasCachedBrief;
     if (skipGemini) {
-      snapshot.recommendations = page.brief_content;
+      snapshot.recommendations = _cachedItems;
       _trSetStep(pageId, 'recommendations', 'done', '✅ Results unchanged — using cached Citation Brief (saves API call)');
       console.log('[tracker] Gemini skipped for page', pageId, '— results unchanged');
     } else
