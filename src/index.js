@@ -25062,6 +25062,8 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
 .so-header-title{font-size:11px;font-weight:800;color:#7c3aed;text-transform:uppercase;letter-spacing:.14em}
 .so-header-title.done{color:#4ade80}
 .so-url{font-size:12px;color:#cbd5e1;font-family:monospace;text-align:center;margin-bottom:20px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;position:relative;z-index:2;padding:6px 12px;background:rgba(124,58,237,.08);border:1px solid rgba(124,58,237,.25);border-radius:8px}
+.so-close{position:absolute;top:12px;right:12px;z-index:6;background:rgba(255,255,255,.06);border:1px solid #1f2937;color:#94a3b8;width:30px;height:30px;border-radius:8px;font-size:20px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s ease;padding:0}
+.so-close:hover{background:rgba(248,113,113,.15);color:#f87171;border-color:#f87171}
 .so-progress-wrap{height:4px;background:#1f2937;border-radius:2px;margin-bottom:24px;overflow:hidden;position:relative;z-index:2}
 .so-progress-bar{height:100%;background:linear-gradient(90deg,#7c3aed,#a78bfa,#4ade80);border-radius:2px;width:0%;transition:width .6s cubic-bezier(.16,1,.3,1)}
 .so-steps{display:flex;flex-direction:column;gap:6px;position:relative;z-index:2;margin-bottom:16px}
@@ -25360,6 +25362,7 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
       <div class="so-ring"><div class="so-ring-dot" style="background:#a78bfa;"></div></div>
       <div class="so-ring"><div class="so-ring-dot" style="background:#4ade80;"></div></div>
     </div>
+    <button id="soClose" class="so-close" type="button" title="Close">&times;</button>
     <div class="so-header">
       <span class="so-header-dot" id="soHeaderDot"></span>
       <span class="so-header-title" id="soHeaderTitle">Live Scan in Progress</span>
@@ -27736,8 +27739,10 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
     setTimeout(function() {
       overlay.classList.remove('show');
       overlay.classList.remove('hiding');
+      overlay.style.display = '';
     }, 400);
   }
+  (function(){ var _soc = document.getElementById('soClose'); if (_soc) _soc.addEventListener('click', function(){ hideScanOverlay(); if (typeof loadPages === 'function') loadPages(); }); })();
 
   // Poll for server results — brief opens as soon as data is ready
   function pollAndShowBrief(pageId, maxPolls, intervalMs) {
@@ -35171,6 +35176,7 @@ GOAL: Rank #1 for "${kw}" and capture the maximum clicks from ${gscImpr || 'the 
           snapshot.recommendations = [{ title: 'Citation Brief', priority: 'medium', system: 'All', action: recs.substring(0,800), expected_impact: 'See above' }];
         }
       } else {
+        console.warn('[tracker] Citation Gemini failed:', citResp.status, citResp.errorMessage || '');
         _trSetStep(pageId, 'recommendations', 'error', 'Citation Brief — Gemini ' + citResp.status);
       }
 
@@ -35185,6 +35191,22 @@ GOAL: Rank #1 for "${kw}" and capture the maximum clicks from ${gscImpr || 'the 
         } catch(e) {
           snapshot.gsc_brief = [{ title: 'GSC Brief', priority: 'medium', trigger: 'See text', action: gscRecs.substring(0,800), expected_impact: 'Ranking improvement', effort: 'content' }];
         }
+      } else {
+        console.warn('[tracker] GSC Gemini failed:', gscResp.status, gscResp.errorMessage || '');
+      }
+
+      // ── GUARANTEED local GSC brief — never empty when we have a keyword + position ──
+      if (!Array.isArray(snapshot.gsc_brief) || !snapshot.gsc_brief.length) {
+        const _gkw = keyword || page.keyword || page.gsc_keyword || '';
+        const _gpos = page.gsc_position || snapshot.google_position || null;
+        const _g = [];
+        if (_gkw && _gpos != null) {
+          _g.push({ title: 'Optimize title for "' + _gkw + '"', priority: 'high', trigger: 'Ranking #' + _gpos + (gscImpr ? ' with ' + gscImpr + ' impressions' : ''), action: 'Rewrite the <title> tag to lead with "' + _gkw + '" and add a clear benefit or number to lift click-through. Current rank #' + _gpos + '.', expected_impact: 'Position #' + _gpos + ' → top 3 after Google recrawl', effort: 'quick_win' });
+        }
+        if (gscImpr && (gscClicks != null)) {
+          _g.push({ title: 'Capture missed clicks', priority: 'medium', trigger: gscImpr + ' impressions, ' + gscClicks + ' clicks', action: 'Add a concise meta description and a question-style H2 matching search intent for "' + (_gkw || 'this page') + '".', expected_impact: '+' + (clickGap || 'more') + ' clicks/month', effort: 'content' });
+        }
+        if (_g.length) snapshot.gsc_brief = _g;
       }
 
       // FALLBACK — never leave the brief empty (e.g. if the citation AI call failed/quota).
@@ -35210,9 +35232,19 @@ GOAL: Rank #1 for "${kw}" and capture the maximum clicks from ${gscImpr || 'the 
             if (t || a) _fb.push({ title: String(t || 'Content improvement').substring(0,60), priority: (g && g.priority) || 'medium', system: 'Content Quality', action: a, expected_impact: '' });
           });
         }
+        // GUARANTEED citation-gap actions from local scan results (no AI needed) — fills the AIO brief
+        if (_fb.length < 3) {
+          const _ckw = keyword || page.keyword || page.gsc_keyword || 'this topic';
+          const _cpos = snapshot.google_position || page.gsc_position || null;
+          if (!snapshot.ai_google_overview_cited) _fb.push({ title: 'Win Google AI Overview citation', priority: 'high', system: 'Google AIO', action: 'Add a direct, quotable 2-3 sentence definition answering "what is ' + _ckw + '" within the first 100 words, right after the H1. AI Overviews quote concise, self-contained answers.', expected_impact: 'Eligible for AIO citation within 2-3 crawl cycles' });
+          if (!snapshot.ai_perplexity_cited) _fb.push({ title: 'Win Perplexity citation', priority: 'medium', system: 'Perplexity', action: 'Add an "About the Author" block with a named author, credentials, and 1-2 verifiable stats. Perplexity favors pages with clear E-E-A-T signals.', expected_impact: 'Stronger author trust → Perplexity citation' });
+          if (!snapshot.ai_bing_cited) _fb.push({ title: 'Win Microsoft Copilot citation', priority: 'medium', system: 'Microsoft Copilot', action: 'Add a 50-60 word summary paragraph near the top that directly matches the search query for "' + _ckw + '".', expected_impact: 'Concise top-of-page summary → Copilot citation' });
+          if (!snapshot.ai_brave_cited) _fb.push({ title: 'Win Claude / Brave citation', priority: 'low', system: 'Claude/Brave', action: 'Add verifiable facts with named sources and a clear author byline. Claude and Brave prioritize factual, well-sourced content.', expected_impact: 'Factual sourcing → Claude/Brave citation' });
+          if (_cpos != null && parseFloat(_cpos) > 3) _fb.push({ title: 'Improve Google rank for "' + _ckw + '"', priority: 'high', system: 'Google AIO', action: 'Rewrite the <title> and H1 to lead with "' + _ckw + '" plus a clear benefit. Currently ranking #' + _cpos + '.', expected_impact: 'Position #' + _cpos + ' → top 3 after recrawl' });
+        }
         if (_fb.length) {
           snapshot.recommendations = _fb.slice(0,6);
-          _trSetStep(pageId, 'recommendations', 'done', 'Brief built from GSC + E-E-A-T + content signals (citation AI unavailable this run)');
+          _trSetStep(pageId, 'recommendations', 'done', 'Brief built from local citation + ranking + content signals (citation AI unavailable this run)');
         }
       }
 
