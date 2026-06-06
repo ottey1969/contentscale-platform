@@ -27560,7 +27560,7 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
     _htmlUploadPageId = pageId;
     // Force-close any lingering overlays so nothing covers/intercepts the modal
     var _cb = document.getElementById('cbOverlay'); if (_cb) _cb.style.display = 'none';
-    var _so = document.getElementById('soOverlay'); if (_so) { _so.classList.remove('show'); _so.style.display = 'none'; }
+    var _so = document.getElementById('soOverlay'); if (_so) { _so.classList.remove('show'); _so.style.display = ''; }
     _briefIsOpen = false;
     var page = (_pages||[]).find(function(p){ return p.id == pageId; }) || {};
     var mEl = document.getElementById('htmlUploadModal');
