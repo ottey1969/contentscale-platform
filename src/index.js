@@ -1517,9 +1517,39 @@ app.get('/api/tracker-client/:token/live-events', async (req, res) => {
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
-// ── Scan queue — max 1 concurrent scan ───────────────────────────────────────
-const _scanQueue = [];
-let _scanRunning = false;
+// ── Latest briefs for a client — lets the Live Wall populate on open ─────────
+app.get('/api/tracker-client/:token/latest-briefs', async (req, res) => {
+  try {
+    const cr = await pool.query('SELECT id FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status != $2)', [req.params.token, 'deleted']);
+    if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
+    const r = await pool.query(
+      `SELECT url, keyword, gsc_keyword, brief_content, last_checked_at, gsc_clicks, gsc_impressions, gsc_position
+       FROM tracker_pages
+       WHERE tracker_client_id = $1 AND brief_content IS NOT NULL
+         AND (is_done IS NOT TRUE) AND (is_active IS NULL OR is_active = TRUE)
+       ORDER BY last_checked_at DESC NULLS LAST LIMIT 8`,
+      [cr.rows[0].id]
+    );
+    const briefs = r.rows.map(function(p) {
+      let bc = {};
+      try { bc = typeof p.brief_content === 'string' ? JSON.parse(p.brief_content) : (p.brief_content || {}); } catch(e) { bc = {}; }
+      return {
+        type: 'brief_ready',
+        url: p.url,
+        keyword: p.keyword || p.gsc_keyword || '',
+        position: bc.position,
+        aio_cited: bc.aio, perp_cited: bc.perp, bing_cited: bc.bing_cited, brave_cited: bc.brave_cited,
+        score: bc.score,
+        passages: Array.isArray(bc.items) ? bc.items : [],
+        gsc_brief: Array.isArray(bc.gsc_brief) ? bc.gsc_brief : [],
+        source_suggestions: Array.isArray(bc.source_suggestions) ? bc.source_suggestions : [],
+        gsc_clicks: p.gsc_clicks, gsc_impressions: p.gsc_impressions, gsc_position: p.gsc_position,
+        ts: p.last_checked_at ? new Date(p.last_checked_at).toISOString() : ''
+      };
+    });
+    res.json({ success: true, briefs });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
 
 function _processScanQueue() {
   if (_scanRunning || _scanQueue.length === 0) return;
@@ -1875,8 +1905,8 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
 .lw-title{font-size:15px;font-weight:800;color:#f1f5f9;letter-spacing:-.02em}
 .lw-domain{font-size:12px;color:#6b7280}
 .lw-clock{font-size:14px;font-weight:700;color:#a78bfa;font-variant-numeric:tabular-nums}
-.lw-container{max-width:900px;margin:0 auto;padding:80px 16px 40px}
-.lw-card{background:#0d1117;border:1px solid #1f2937;border-radius:14px;margin-bottom:16px;overflow:hidden;animation:lwCardIn .6s cubic-bezier(.16,1,.3,1);position:relative}
+.lw-container{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;z-index:5}
+.lw-card{position:absolute;width:min(640px,92vw);background:#0d1117;border:1px solid #1f2937;border-radius:14px;overflow:hidden;transition:transform .7s cubic-bezier(.16,1,.3,1),opacity .7s ease,filter .7s ease;transform-origin:center center;box-shadow:0 24px 60px rgba(0,0,0,.6)}
 @keyframes lwCardIn{from{opacity:0;transform:translateY(40px) scale(.96)}to{opacity:1;transform:translateY(0) scale(1)}}
 .lw-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#7c3aed,#4ade80,#fbbf24,#ef4444);opacity:.6}
 .lw-card-header{padding:14px 18px 10px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #1f2937}
@@ -2097,6 +2127,8 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
       '</div>' +
       '<div class="lw-card-actions">' + actionsHtml + '</div>';
 
+    card.style.opacity = '0';
+    card.style.transform = 'translateY(60px) scale(.9)';
     container.appendChild(card);
 
     sbBriefs.textContent = briefCount;
@@ -2105,14 +2137,35 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
     sbCited.textContent = (data.aio_cited||data.perp_cited||data.bing_cited||data.brave_cited) ? (parseInt(sbCited.textContent)||0)+1 : (parseInt(sbCited.textContent)||0);
     sbPos.textContent = totalPos ? Math.round(totalPos / briefCount) : '—';
 
-    setTimeout(smoothScrollToBottom, 100);
+    // Keep only the most recent 6 cards in the stack
+    var all = container.querySelectorAll('.lw-card');
+    while (all.length > 6) {
+      if (all[0] && all[0].parentNode) all[0].parentNode.removeChild(all[0]);
+      all = container.querySelectorAll('.lw-card');
+    }
+    requestAnimationFrame(function(){ requestAnimationFrame(relayoutStack); });
+  }
 
-    var cards = container.querySelectorAll('.lw-card');
-    if (cards.length > 20) {
-      cards[0].style.opacity = '0';
-      cards[0].style.transform = 'translateY(-20px)';
-      cards[0].style.transition = 'all .5s ease';
-      setTimeout(function() { if (cards[0] && cards[0].parentNode) cards[0].parentNode.removeChild(cards[0]); }, 500);
+  // Focus-stack: newest centered & bright, older dimmed/smaller/blurred and slightly scattered behind
+  function relayoutStack() {
+    var cards = Array.prototype.slice.call(container.querySelectorAll('.lw-card'));
+    var n = cards.length;
+    for (var i = 0; i < n; i++) {
+      var card = cards[n - 1 - i];   // i = 0 → newest (front)
+      var depth = i;
+      var scale = Math.max(0.7, 1 - depth * 0.07);
+      var ty = -depth * 42;
+      var tx = (depth % 2 === 0 ? -1 : 1) * depth * 16;
+      var rot = (depth % 2 === 0 ? -1 : 1) * Math.min(depth * 1.4, 4);
+      var opacity = depth === 0 ? 1 : Math.max(0.1, 0.55 - (depth - 1) * 0.13);
+      var blur = depth === 0 ? 0 : Math.min(5, depth * 1.3);
+      card.style.zIndex = String(2000 - depth);
+      card.style.transform = 'translate(' + tx + 'px,' + ty + 'px) scale(' + scale.toFixed(3) + ') rotate(' + rot + 'deg)';
+      card.style.opacity = String(opacity);
+      card.style.filter = blur ? ('blur(' + blur + 'px)') : 'none';
+      card.style.pointerEvents = depth === 0 ? 'auto' : 'none';
+      var badge = card.querySelector('.lw-new-badge');
+      if (badge) badge.style.display = depth === 0 ? 'block' : 'none';
     }
   }
 
@@ -2157,6 +2210,15 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
   }
   setInterval(pollBriefs, 6000);
   pollBriefs();
+
+  // Populate the wall on open with the client's existing briefs (newest last → most prominent)
+  fetch('/api/tracker-client/${req.params.token}/latest-briefs')
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      if (d && d.briefs && d.briefs.length) {
+        d.briefs.slice().reverse().forEach(function(b){ handleBrief(b); });
+      }
+    }).catch(function(){});
 })();
 \x3c/script>
 </body>
