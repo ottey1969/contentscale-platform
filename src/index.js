@@ -1169,7 +1169,27 @@ app.get('/api/tracker-client/:token/fetch-sitemap', async (req, res) => {
     const r = await fetch(sitemapUrl, { headers: { 'User-Agent': 'ContentScale-Bot/1.0' }, signal: ctrl.signal });
     if (!r.ok) return res.status(400).json({ success: false, error: 'Could not fetch sitemap: HTTP ' + r.status });
     const xml = await r.text();
-    const urls = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map(m => m[1].trim()).filter(u => u.startsWith('http')).slice(0, 100);
+    let urls = [];
+    if (/<sitemapindex/i.test(xml)) {
+      // Sitemap INDEX — follow each sub-sitemap and collect real page URLs
+      const subSitemaps = [...xml.matchAll(/<loc>(https?:\/\/[^<]+\.xml[^<]*)<\/loc>/gi)].map(m => m[1].trim()).slice(0, 20);
+      for (const sm of subSitemaps) {
+        try {
+          const ctrl2 = new AbortController();
+          setTimeout(() => ctrl2.abort(), 10000);
+          const sr = await fetch(sm, { headers: { 'User-Agent': 'ContentScale-Bot/1.0' }, signal: ctrl2.signal });
+          if (!sr.ok) continue;
+          const sx = await sr.text();
+          const subUrls = [...sx.matchAll(/<loc>(https?:\/\/[^<]+)<\/loc>/gi)].map(m => m[1].trim()).filter(u => !/\.xml(\?|$)/i.test(u));
+          urls.push(...subUrls);
+        } catch(e) {}
+        if (urls.length >= 100) break;
+      }
+    } else {
+      // Regular sitemap — extract page URLs, never the .xml files themselves
+      urls = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map(m => m[1].trim()).filter(u => u.startsWith('http') && !/\.xml(\?|$)/i.test(u));
+    }
+    urls = urls.slice(0, 100);
     res.json({ success: true, urls, count: urls.length });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
@@ -1724,7 +1744,7 @@ app.post('/api/tracker-client/:token/clean-pages', async (req, res) => {
     if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
     const clientId = cr.rows[0].id;
     const pagesR = await pool.query('SELECT id, url FROM tracker_pages WHERE tracker_client_id=$1 AND (is_active=TRUE OR is_active IS NULL)', [clientId]);
-    const badExt = ['.jpg','.jpeg','.png','.gif','.webp','.svg','.ico','.pdf','.zip','.mp4','.mp3','.wav','.css','.js','.woff','.woff2','.ttf','.eot'];
+    const badExt = ['.jpg','.jpeg','.png','.gif','.webp','.svg','.ico','.pdf','.zip','.mp4','.mp3','.wav','.css','.js','.woff','.woff2','.ttf','.eot','.xml'];
     const badPat = ['wp-content/uploads','wp-includes','/feed','/amp/','wp-json','?replytocom','xmlrpc.php','/page/2','/page/3'];
     let cleaned = 0;
     for (const row of pagesR.rows) {
