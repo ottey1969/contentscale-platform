@@ -25173,7 +25173,7 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
   <!-- Toolbar -->
   <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap;">
     <button class="cs-btn primary" onclick="showAddModal()">+ Add URL</button>
-    <button id="gscBtn" class="cs-btn" onclick="showImportModal('gsc')" style="border-color:#a78bfa;color:#a78bfa;display:none;"><i class="fas fa-chart-line"></i> GSC</button>
+    <button id="gscBtn" class="cs-btn" onclick="gscAction()" title="Google Search Console" style="border-color:#374151;color:#6b7280;"><i class="fas fa-chart-line"></i> GSC off</button>
     <button class="cs-btn" onclick="showImportModal('paste')" style="border-color:#6b7280;color:#6b7280;"><i class="fas fa-paste"></i> Paste</button>
     <button class="cs-btn" onclick="showImportModal('sitemap')" style="border-color:#38bdf8;color:#38bdf8;" title="Import from sitemap"><i class="fas fa-list"></i> Sitemap</button>
     <button class="cs-btn" onclick="openSitemapLinks()" style="border-color:#a78bfa;color:#a78bfa;" title="Internal linking suggestions"><i class="fas fa-sitemap"></i> Links</button>
@@ -25413,15 +25413,30 @@ var GSC_ENABLED = __GSC_ENABLED__;
 var MAX_PAGES = __MAX_PAGES__;
 var _pages = [];
 
-// Show GSC button if enabled
-if (GSC_ENABLED) {
-  document.addEventListener('DOMContentLoaded', function() {
-    var btn = document.getElementById('gscBtn');
-    if (btn) btn.style.display = '';
-    var refreshBtn = document.getElementById('gscRefreshBtn');
-    if (refreshBtn) refreshBtn.style.display = '';
-  });
+// GSC status indicator — lit green when enabled, grey when off
+function gscAction() {
+  if (GSC_ENABLED) { showImportModal('gsc'); }
+  else { toast('GSC is not enabled for this tracker', '#6b7280'); }
 }
+function _applyGscBtnState() {
+  var btn = document.getElementById('gscBtn');
+  if (btn) {
+    if (GSC_ENABLED) {
+      btn.style.borderColor = '#4ade80';
+      btn.style.color = '#4ade80';
+      btn.innerHTML = '<i class="fas fa-chart-line"></i> GSC \u2713';
+      btn.title = 'Google Search Console connected — click to import';
+    } else {
+      btn.style.borderColor = '#374151';
+      btn.style.color = '#6b7280';
+      btn.innerHTML = '<i class="fas fa-chart-line"></i> GSC off';
+      btn.title = 'GSC is not enabled for this tracker';
+    }
+  }
+  var refreshBtn = document.getElementById('gscRefreshBtn');
+  if (refreshBtn) refreshBtn.style.display = GSC_ENABLED ? '' : 'none';
+}
+document.addEventListener('DOMContentLoaded', _applyGscBtnState);
 
 // Escape AI/user text before innerHTML so tags like <head>/<script> stay visible
 function _escHtml(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
@@ -25670,48 +25685,9 @@ function renderPages() {
   el.innerHTML = sorted.map(function(p, pageIdx) {
     var pos = p.google_position;
     var score = p.graaf_score;
-    // Populate brief cache from saved page data so the 📄 Brief button + popup work
-    (function(){
-      var _r = typeof p.recommendations === 'string' ? (function(){try{return JSON.parse(p.recommendations);}catch(e){return [];}})() : (p.recommendations || []);
-      // Fallback: pull from saved brief_content when the latest snapshot has no recommendations
-      if ((!Array.isArray(_r) || !_r.length) && p.brief_content) {
-        try {
-          var _bc = typeof p.brief_content === 'string' ? JSON.parse(p.brief_content) : p.brief_content;
-          if (_bc) {
-            _r = _bc.items || _bc.passages || _bc.recommendations || [];
-            if ((!p.source_suggestions || !p.source_suggestions.length) && _bc.source_suggestions) p.source_suggestions = _bc.source_suggestions;
-            if ((!p.discovered_sources || !p.discovered_sources.length) && _bc.discovered_sources) p.discovered_sources = _bc.discovered_sources;
-            if ((!p.gsc_brief || !p.gsc_brief.length) && _bc.gsc_brief) p.gsc_brief = _bc.gsc_brief;
-          }
-        } catch(e) {}
-      }
-      if (Array.isArray(_r) && _r.length) {
-        _lastBriefData[p.id] = {
-          page_id: p.id,
-          url: p.url || '',
-          keyword: p.keyword || p.gsc_keyword || '',
-          domain: DOMAIN,
-          position: p.google_position || p.gsc_position || null,
-          aio_cited: !!p.ai_google_overview_cited,
-          perp_cited: !!p.ai_perplexity_cited,
-          bing_cited: !!p.ai_bing_cited,
-          brave_cited: !!p.ai_brave_cited,
-          score: p.graaf_score || p.last_graaf_score || null,
-          passages: _r,
-          gsc_brief: Array.isArray(p.gsc_brief) ? p.gsc_brief : [],
-          source_suggestions: Array.isArray(p.source_suggestions) ? p.source_suggestions : [],
-          discovered_sources: Array.isArray(p.discovered_sources) ? p.discovered_sources : [],
-          author_trust_score: p.author_trust_score || 0,
-          author_trust_findings: Array.isArray(p.author_trust_findings) ? p.author_trust_findings : [],
-          gsc_clicks: p.gsc_clicks != null ? p.gsc_clicks : null,
-          gsc_impressions: p.gsc_impressions != null ? p.gsc_impressions : null,
-          gsc_position: p.gsc_position != null ? p.gsc_position : null,
-          gsc_keyword: p.gsc_keyword || null,
-          _gsc_enabled: GSC_ENABLED || (p.gsc_clicks != null) || (p.gsc_impressions != null) || (p.gsc_position != null),
-          type: 'brief_ready'
-        };
-      }
-    })();
+    // Populate brief cache so the View Brief button + popup work (full data when available)
+    var _bd = _buildBriefData(p);
+    if (_bd) _lastBriefData[p.id] = _bd;
     var kw = p.keyword || p.gsc_keyword || '';
     var posColor = !pos ? '#6b7280' : pos<=3 ? '#4ade80' : pos<=10 ? '#a3e635' : pos<=20 ? '#fbbf24' : '#f87171';
     var lastCheckedRaw = p.last_checked || p.last_checked_at; // snapshot OR page timestamp
@@ -25816,7 +25792,7 @@ function renderPages() {
       + '</div>'
       + '</div>'
       + '<div style="display:flex;gap:5px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;align-items:flex-start;">'
-      + (_lastBriefData[p.id] ? '<button onclick="viewLastBrief(' + p.id + ')" style="background:#7c3aed;border:1px solid #8b5cf6;border-radius:6px;color:#fff;cursor:pointer;font-size:12px;padding:6px 14px;font-weight:700;box-shadow:0 2px 10px rgba(124,58,237,.45);" title="View Citation Brief">📄 View Brief</button>' : '')
+      + ((hasBrief || _lastBriefData[p.id]) ? '<button onclick="viewLastBrief(' + p.id + ')" style="background:#7c3aed;border:1px solid #8b5cf6;border-radius:6px;color:#fff;cursor:pointer;font-size:12px;padding:6px 14px;font-weight:700;box-shadow:0 2px 10px rgba(124,58,237,.45);" title="View Citation Brief">📄 View Brief</button>' : '')
       + '<button onclick="openHtmlUpload(' + p.id + ')" style="background:none;border:1px solid ' + (htmlNeeded ? '#f59e0b' : '#374151') + ';border-radius:5px;color:' + (htmlNeeded ? '#fbbf24' : '#4b5563') + ';cursor:pointer;font-size:11px;padding:3px 10px;font-weight:' + (htmlNeeded ? '700' : '400') + ';' + (htmlNeeded ? 'animation:htmlNeeded 1.2s ease-in-out infinite;' : '') + '" title="' + (htmlNeeded ? 'Paste updated HTML for next scan' : 'Update HTML') + '">📋 ' + (htmlNeeded ? 'Add HTML' : 'HTML') + '</button>'
       + (lastChecked ? '<button onclick="checkPage(' + p.id + ')" style="background:none;border:1px solid #374151;border-radius:5px;color:#6b7280;cursor:pointer;font-size:11px;padding:3px 8px;" title="Rescan now">↻</button>' : '')
       + '<button onclick="deletePage(' + p.id + ')" style="background:none;border:1px solid #374151;border-radius:5px;color:#374151;cursor:pointer;font-size:12px;padding:4px 8px;" title="Delete page">🗑</button>'
@@ -25950,6 +25926,52 @@ function renderRecs(p) {
 
     return html;
   } catch(e) { return ''; }
+}
+
+function _buildBriefData(p) {
+  if (!p) return null;
+  var recs = typeof p.recommendations === 'string' ? (function(){try{return JSON.parse(p.recommendations);}catch(e){return [];}})() : (p.recommendations || []);
+  var ss = Array.isArray(p.source_suggestions) ? p.source_suggestions : [];
+  var ds = Array.isArray(p.discovered_sources) ? p.discovered_sources : [];
+  var gb = Array.isArray(p.gsc_brief) ? p.gsc_brief : [];
+  // Fallback: pull from saved brief_content when the latest snapshot has no recommendations
+  if ((!Array.isArray(recs) || !recs.length) && p.brief_content) {
+    try {
+      var _bc = typeof p.brief_content === 'string' ? JSON.parse(p.brief_content) : p.brief_content;
+      if (_bc) {
+        recs = _bc.items || _bc.passages || _bc.recommendations || [];
+        if (!ss.length && Array.isArray(_bc.source_suggestions)) ss = _bc.source_suggestions;
+        if (!ds.length && Array.isArray(_bc.discovered_sources)) ds = _bc.discovered_sources;
+        if (!gb.length && Array.isArray(_bc.gsc_brief)) gb = _bc.gsc_brief;
+      }
+    } catch(e) {}
+  }
+  // Show a brief whenever there is one saved (brief_content) or recommendations exist
+  if ((!Array.isArray(recs) || !recs.length) && !p.brief_content) return null;
+  return {
+    page_id: p.id,
+    url: p.url || '',
+    keyword: p.keyword || p.gsc_keyword || '',
+    domain: DOMAIN,
+    position: p.google_position || p.gsc_position || null,
+    aio_cited: !!p.ai_google_overview_cited,
+    perp_cited: !!p.ai_perplexity_cited,
+    bing_cited: !!p.ai_bing_cited,
+    brave_cited: !!p.ai_brave_cited,
+    score: p.graaf_score || p.last_graaf_score || null,
+    passages: Array.isArray(recs) ? recs : [],
+    gsc_brief: gb,
+    source_suggestions: ss,
+    discovered_sources: ds,
+    author_trust_score: p.author_trust_score || 0,
+    author_trust_findings: Array.isArray(p.author_trust_findings) ? p.author_trust_findings : [],
+    gsc_clicks: p.gsc_clicks != null ? p.gsc_clicks : null,
+    gsc_impressions: p.gsc_impressions != null ? p.gsc_impressions : null,
+    gsc_position: p.gsc_position != null ? p.gsc_position : null,
+    gsc_keyword: p.gsc_keyword || null,
+    _gsc_enabled: GSC_ENABLED || (p.gsc_clicks != null) || (p.gsc_impressions != null) || (p.gsc_position != null),
+    type: 'brief_ready'
+  };
 }
 
 function copyBrief(pageId) {
@@ -26630,6 +26652,11 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
   // Show saved brief instantly — no animation, immediate display
   function viewLastBrief(pageId) {
     var data = _lastBriefData[pageId];
+    if (!data) {
+      var _p = (typeof _pages !== 'undefined' && _pages) ? _pages.find(function(x){ return x.id == pageId; }) : null;
+      data = _buildBriefData(_p);
+      if (data) _lastBriefData[pageId] = data;
+    }
     if (!data) { toast('No brief available yet — run a scan first', '#f59e0b'); return; }
     var card = document.getElementById('cbCard');
     if (!card) return;
