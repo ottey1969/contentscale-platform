@@ -29116,7 +29116,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     var urlParts = urlClean.split('/');
                     title.textContent = (keyword || 'Citation Brief') + ' - ' + urlParts.slice(0,2).join('/');
                     _activityAdd(' Generating Citation Brief for ' + domain, 'citation');
-                    body.innerHTML = '<style>@keyframes csspin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}@keyframes csprog{0%{margin-left:-60%}100%{margin-left:110%}}</style><div style="text-align:center;padding:60px 20px;"><div style="font-size:2.5rem;display:inline-block;animation:csspin 1.5s linear infinite;margin-bottom:20px;"></div><div style="font-size:14px;color:#a78bfa;font-weight:700;margin-bottom:8px;">Generating Citation Brief</div><div style="font-size:12px;color:#6b7280;margin-bottom:20px;">Fetching AI Overview . Scraping competitors . Analysing your content</div><div style="background:#1f2937;border-radius:99px;height:4px;width:220px;margin:0 auto;overflow:hidden;"><div style="height:100%;width:60%;background:linear-gradient(90deg,#7c3aed,#a78bfa);border-radius:99px;animation:csprog 1.8s ease-in-out infinite;"></div></div><div style="font-size:11px;color:#374151;margin-top:12px;">15-30 seconds</div></div>';
+                    body.innerHTML = '<style>@keyframes csspin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}@keyframes csprog{0%{margin-left:-60%}100%{margin-left:110%}}</style><div style="text-align:center;padding:60px 20px;"><div style="font-size:2.5rem;display:inline-block;animation:csspin 1.5s linear infinite;margin-bottom:20px;"></div><div style="font-size:14px;color:#a78bfa;font-weight:700;margin-bottom:8px;">Generating Citation Brief</div><div style="font-size:12px;color:#6b7280;margin-bottom:20px;">Fetching AI Overview . Scraping competitors . Analysing your content</div><div style="background:#1f2937;border-radius:99px;height:4px;width:220px;margin:0 auto;overflow:hidden;"><div style="height:100%;width:60%;background:linear-gradient(90deg,#7c3aed,#a78bfa);border-radius:99px;animation:csprog 1.8s ease-in-out infinite;"></div></div><div style="font-size:11px;color:#374151;margin-top:12px;">Loading initial data...</div></div>';
                     modal.style.display = 'flex';
                     var token = localStorage.getItem('admin_id') || '';
                     fetch('/api/tracker/pages/' + pageId + '/citation-brief', {
@@ -29129,13 +29129,55 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                             body.innerHTML = '<div style="color:#f87171;padding:20px;">' + (data.error || 'Failed') + '</div>';
                             return;
                         }
+                        // Show initial brief (fallback or complete)
                         renderCitationBrief(data, body, page);
-                        var domain2 = (page.url||'').split('//').pop().split('/')[0];
-                        _activityAdd('OK Citation Brief ready for ' + domain2 + ' - ' + (data.brief && data.brief.passages_to_add ? data.brief.passages_to_add.length : 0) + ' passages', 'done');
+                        // If still pending, start polling every 10s
+                        if (data.status === 'pending' || (data.brief && data.brief._status === 'pending')) {
+                            _pollForBriefCompletion(pageId, page, body);
+                        } else {
+                            var domain2 = (page.url||'').split('//').pop().split('/')[0];
+                            _activityAdd('OK Citation Brief ready for ' + domain2 + ' - ' + (data.brief && data.brief.passages_to_add ? data.brief.passages_to_add.length : 0) + ' passages', 'done');
+                        }
                     })
                     .catch(function(e) {
                         body.innerHTML = '<div style="color:#f87171;padding:20px;">Error: ' + e.message + '</div>';
                     });
+                }
+
+                // Poll for brief completion — background AI calls update the DB
+                function _pollForBriefCompletion(pageId, page, body) {
+                    var pollCount = 0;
+                    var maxPolls = 12; // 12 x 10s = 120s max
+                    var timer = setInterval(function() {
+                        pollCount++;
+                        if (pollCount > maxPolls) {
+                            clearInterval(timer);
+                            // Show "still processing" message in modal
+                            var statusEl = body.querySelector('[data-poll-status]');
+                            if (statusEl) statusEl.innerHTML = '<span style="color:#fbbf24;">⏱ AI analysis still running. Your brief has initial data — close and reopen to see updates.</span>';
+                            return;
+                        }
+                        fetch('/api/tracker/pages/' + pageId, { headers: { 'x-admin-key': localStorage.getItem('admin_id') || '' } })
+                            .then(function(r) { return r.json(); })
+                            .then(function(d) {
+                                if (!d.success || !d.page) return;
+                                var spy = d.page.serp_spy || {};
+                                // Check if brief is now complete
+                                if (spy.citation_brief_status === 'complete') {
+                                    clearInterval(timer);
+                                    // Re-fetch the full brief endpoint for complete data
+                                    fetch('/api/tracker/pages/' + pageId + '/citation-brief', {
+                                        method: 'POST', headers: { 'Content-Type': 'application/json', 'x-admin-key': localStorage.getItem('admin_id') || '' }
+                                    }).then(function(r2){return r2.json();}).then(function(d2){
+                                        if(d2.success && d2.brief){ renderCitationBrief(d2, body, page); }
+                                    }).catch(function(){});
+                                } else if (pollCount <= 3) {
+                                    // Show "analyzing..." indicator
+                                    var statusEl = body.querySelector('[data-poll-status]');
+                                    if (statusEl) statusEl.innerHTML = '<span style="color:#a78bfa;">⏳ Analyzing with AI... (' + (pollCount * 10) + 's)</span>';
+                                }
+                            }).catch(function(){});
+                    }, 10000);
                 }
 
                 function closeCitationModal() {
@@ -29315,7 +29357,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                             div('font-size:13px;color:#e5e7eb;', brief.primary_reason_not_cited));
                     }
 
-                    container.innerHTML = html;
+                    container.innerHTML = html + '<div data-poll-status style="margin-top:16px;padding:12px 16px;background:#111827;border:1px solid #1f2937;border-radius:8px;text-align:center;font-size:12px;min-height:20px;"></div>';
                 }
                 <\/script>
             </div>
@@ -32126,6 +32168,17 @@ app.post('/api/tracker/pages/:id/citation-brief', verifyEngineAccess, async (req
     const anthropicKey = process.env.ANTHROPIC_API_KEY || '';
     const domain = pageUrl.replace(/^https?:\/\//, '').split('/')[0].replace(/^www\./, '');
 
+    // ══ ASYNC BACKGROUND: return immediately, build brief in background ═══
+    // The client receives a pending brief instantly (from snapshot data).
+    // AI calls run in background and update the DB when complete.
+    // The client polls /api/tracker/pages/:id to detect completion.
+    let _backgroundStarted = false;
+    async function _buildBriefInBackground() {
+      if (_backgroundStarted) return;
+      _backgroundStarted = true;
+      try {
+        console.log('[citation-brief] Background build START for page', pageId, 'keyword:', keyword);
+
     // Auto-detect locale from domain TLD
     var _cbBingMkt = 'en-US';
     var _cbDomainTld = domain.toLowerCase();
@@ -32585,10 +32638,10 @@ Return ONLY valid JSON — no markdown:
       brief._grounding_note = 'These are the URLs Gemini actually retrieved from Google Search when analyzing this keyword. The top source is likely what Google AI Overview is currently citing.';
     }
 
-    // ══ UPDATE: replace fallback brief with AI-enhanced version ═══
-    const finalBriefAt = new Date().toISOString();
-    // 1. Update tracker_citation_briefs — replace the pending fallback
-    try {
+      // ══ Background: UPDATE with AI-enhanced brief ═══
+      const finalBriefAt = new Date().toISOString();
+      // 1. Update tracker_citation_briefs — replace the pending fallback
+      try {
       // Delete old fallback(s) for this page+keyword combo
       await pool.query(
         `DELETE FROM tracker_citation_briefs WHERE page_id=$1 AND keyword=$2 AND brief_json->>'_fallback' = 'true'`,
@@ -32631,19 +32684,50 @@ Return ONLY valid JSON — no markdown:
       [JSON.stringify({ citation_brief: brief, citation_brief_at: finalBriefAt, citation_brief_model: modelUsed, citation_brief_status: 'complete' }), pageId]
     ).catch(() => {});
 
-    const finalResult = {
+        // Cache the full brief result for 24h
+        const finalResult = {
+          success: true, page_id: pageId, keyword, url: pageUrl,
+          google_position: googlePosition,
+          ai_overview: { found: aioFound, cited: aioCited, text: aioText, source_url: aioSourceUrl },
+          competitors: serpCompetitors,
+          brief, model_used: modelUsed,
+          ai_provider_status: Object.fromEntries(
+            Object.entries(_aiProviderStatus).map(([k,v]) => [k, { ok: v.ok, health: v.ok ? (v.consecutiveErrors > 0 ? 'degraded' : 'healthy') : 'down' }])
+          )
+        };
+        if (brief) _cacheSet(gemCacheKey, finalResult, CACHE_TTL.gemini);
+        console.log('[citation-brief] Background build COMPLETE for page', pageId, 'model:', modelUsed);
+      } catch(bgErr) {
+        console.error('[citation-brief] Background build FAILED for page', pageId, ':', bgErr.message);
+        // Mark as failed in DB so client knows
+        try {
+          await pool.query(
+            `UPDATE tracker_pages SET serp_spy = COALESCE(serp_spy, '{}'::jsonb) || $1::jsonb WHERE id=$2`,
+            [JSON.stringify({ citation_brief_status: 'failed', citation_brief_error: bgErr.message }), pageId]
+          );
+        } catch(_) {}
+      }
+    } // END _buildBriefInBackground
+
+    // ══ IMMEDIATE RETURN: client gets fallback within <1s ═══
+    res.json({
       success: true, page_id: pageId, keyword, url: pageUrl,
-      google_position: googlePosition,
-      ai_overview: { found: aioFound, cited: aioCited, text: aioText, source_url: aioSourceUrl },
-      competitors: serpCompetitors,
-      brief, model_used: modelUsed,
-      ai_provider_status: Object.fromEntries(
-        Object.entries(_aiProviderStatus).map(([k,v]) => [k, { ok: v.ok, health: v.ok ? (v.consecutiveErrors > 0 ? 'degraded' : 'healthy') : 'down' }])
-      )
-    };
-    // Cache the full brief result for 24h
-    if (brief) _cacheSet(gemCacheKey, finalResult, CACHE_TTL.gemini);
-    res.json(finalResult);
+      status: 'pending',
+      google_position: snap.google_position || null,
+      ai_overview: {
+        found: snap.ai_google_overview_found || false,
+        cited: snap.ai_google_overview_cited || false,
+        text: snap.ai_google_overview_text || '',
+        source_url: ''
+      },
+      brief: fallbackBrief,
+      model_used: 'fallback-pending',
+      _message: 'AI analysis running in background. Brief will auto-update within 60 seconds.'
+    });
+
+    // ══ START background build (fire-and-forget) ═══
+    _buildBriefInBackground();
+
   } catch(e) {
     console.error('[citation-brief]', e);
     res.status(500).json({ success: false, error: e.message });
