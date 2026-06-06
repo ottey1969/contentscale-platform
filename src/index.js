@@ -1431,7 +1431,7 @@ app.patch('/api/tracker-client/:token/pages/:pageId/done', async (req, res) => {
     if (is_done) {
       // Done pressed — reset brief + flag that new HTML is needed
       await pool.query(
-        `UPDATE tracker_pages SET is_done=TRUE, brief_content=NULL, brief_started_at=NULL, brief_done_at=NOW(), brief_check_count=0, needs_html=TRUE WHERE id=$1`,
+        `UPDATE tracker_pages SET is_done=TRUE, brief_done_at=NOW(), needs_html=TRUE WHERE id=$1`,
         [req.params.pageId]
       );
       res.json({ success: true });
@@ -1526,7 +1526,7 @@ app.get('/api/tracker-client/:token/latest-briefs', async (req, res) => {
       `SELECT url, keyword, gsc_keyword, brief_content, last_checked_at, gsc_clicks, gsc_impressions, gsc_position
        FROM tracker_pages
        WHERE tracker_client_id = $1 AND brief_content IS NOT NULL
-         AND (is_done IS NOT TRUE) AND (is_active IS NULL OR is_active = TRUE)
+         AND (is_active IS NULL OR is_active = TRUE)
        ORDER BY last_checked_at DESC NULLS LAST LIMIT 8`,
       [cr.rows[0].id]
     );
