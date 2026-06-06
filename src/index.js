@@ -24841,7 +24841,7 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
 .cs-empty { text-align:center; padding:48px 20px; color:#94a3b8; }
 
 /* Modal */
-.cs-modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:999; align-items:center; justify-content:center; }
+.cs-modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:30000; align-items:center; justify-content:center; }
 .cs-modal.show { display:flex; }
 .cs-modal-box { background:#111827; border:1px solid #374151; border-radius:12px; padding:24px; width:min(480px,95vw); box-shadow:0 20px 60px rgba(0,0,0,.15); }
 .cs-input { width:100%; background:#0d1117; border:1px solid #374151; border-radius:6px; padding:9px 12px; color:#f1f5f9; font-size:13px; font-family:Verdana,sans-serif; outline:none; }
