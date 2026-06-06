@@ -27334,7 +27334,7 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
       } catch(e) { failed++; }
     }
     toast('Imported ' + added + ' pages' + (failed ? ', ' + failed + ' failed' : ''), added > 0 ? '#4ade80' : '#f87171');
-    if (added > 0) { hideModal('importModal'); loadPages(); }
+    if (added > 0) { hideModal('importModal'); loadPages(); markSitemapDone(); }
   }
 
   // -- GSC keyword import ----------------------------------------------------
