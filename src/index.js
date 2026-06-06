@@ -25733,7 +25733,7 @@ function renderPages() {
       var gscCtr = (gscClicks && gscImpr) ? ((gscClicks / gscImpr) * 100).toFixed(1) + '%' : null;
       var gscKw = p.gsc_keyword || null;
       gscHtml = '<div style="display:flex;gap:14px;flex-wrap:wrap;padding:6px 16px;background:#060d0a;border-top:1px solid #1f2937;align-items:center;">'
-        + '<span style="font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#374151;flex-shrink:0;">GSC</span>'
+        + '<span style="font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:' + (GSC_ENABLED ? '#4ade80' : '#374151') + ';flex-shrink:0;">GSC</span>'
         + '<span style="font-size:12px;color:#4ade80;font-weight:600;">&#8595; ' + gscClicks.toLocaleString() + ' clicks</span>'
         + '<span style="font-size:12px;color:#60a5fa;">' + gscImpr.toLocaleString() + ' impr</span>'
         + (gscCtr ? '<span style="font-size:12px;color:#a78bfa;">CTR ' + gscCtr + '</span>' : '')
