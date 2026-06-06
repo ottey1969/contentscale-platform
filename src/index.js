@@ -25166,7 +25166,7 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
     <button class="cs-btn primary" onclick="showAddModal()">+ Add URL</button>
     <button id="gscBtn" class="cs-btn" onclick="gscAction()" title="Google Search Console" style="border-color:#374151;color:#6b7280;"><i class="fas fa-chart-line"></i> GSC off</button>
     <button class="cs-btn" onclick="showImportModal('paste')" style="border-color:#6b7280;color:#6b7280;"><i class="fas fa-paste"></i> Paste</button>
-    <button class="cs-btn" onclick="showImportModal('sitemap')" style="border-color:#38bdf8;color:#38bdf8;" title="Import from sitemap"><i class="fas fa-list"></i> Sitemap</button>
+    <button id="sitemapBtn" class="cs-btn" onclick="showImportModal('sitemap')" style="border-color:#38bdf8;color:#38bdf8;" title="Import from sitemap"><i class="fas fa-list"></i> Sitemap</button>
     <button class="cs-btn" onclick="openSitemapLinks()" style="border-color:#a78bfa;color:#a78bfa;" title="Internal linking suggestions"><i class="fas fa-sitemap"></i> Links</button>
     <button class="cs-btn" onclick="loadPages()" style="margin-left:4px;" title="Refresh"><i class="fas fa-sync-alt"></i></button>
     <button class="cs-btn" onclick="scanAllPages()" style="border-color:#4ade80;color:#4ade80;font-weight:700;" title="Scan all pages one by one">⚡ Scan All</button>
@@ -25428,6 +25428,96 @@ function _applyGscBtnState() {
   if (refreshBtn) refreshBtn.style.display = GSC_ENABLED ? '' : 'none';
 }
 document.addEventListener('DOMContentLoaded', _applyGscBtnState);
+
+// ── Toolbar actions (merge / clean / telegram / internal links) ──
+function mergePages() {
+  if (!confirm('Merge duplicate URLs? Duplicate pages will be deactivated (the first one is kept).')) return;
+  api('/merge-pages', 'POST').then(function(d){
+    if (d && d.success) { toast('Merged ' + (d.merged||0) + ' duplicates \u2014 ' + (d.kept||0) + ' pages kept', '#4ade80'); loadPages(); }
+    else { toast((d && d.error) || 'Merge failed', '#f87171'); }
+  }).catch(function(e){ toast('Merge failed: ' + e.message, '#f87171'); });
+}
+
+function cleanPages() {
+  if (!confirm('Remove non-content URLs (.jpg, .png, .pdf, feeds, wp-content, etc.) from your tracked pages?')) return;
+  api('/clean-pages', 'POST').then(function(d){
+    if (d && d.success) { toast('Cleaned ' + (d.cleaned||0) + ' non-content URLs', '#4ade80'); loadPages(); }
+    else { toast((d && d.error) || 'Clean failed', '#f87171'); }
+  }).catch(function(e){ toast('Clean failed: ' + e.message, '#f87171'); });
+}
+
+function editKeyword(pageId, el) {
+  var p = (_pages||[]).find(function(x){ return x.id == pageId; });
+  var cur = (p && (p.keyword || p.gsc_keyword)) || '';
+  var kw = prompt('Set the target keyword for this page:', cur);
+  if (kw === null) return;
+  api('/pages/' + pageId + '/keyword', 'PATCH', { keyword: kw.trim() }).then(function(d){
+    if (d && d.success) { toast('Keyword updated', '#4ade80'); loadPages(); }
+    else { toast((d && d.error) || 'Update failed', '#f87171'); }
+  }).catch(function(e){ toast('Update failed: ' + e.message, '#f87171'); });
+}
+
+function scanAllPages() {
+  if (!confirm('Scan all tracked pages now? They run one by one and this can take a few minutes.')) return;
+  api('/scan-all', 'POST').then(function(d){
+    if (d && d.success) {
+      toast(d.message || ('Scanning ' + (d.queued||0) + ' pages...'), '#4ade80');
+      var n = 0;
+      var iv = setInterval(function(){ n++; loadPages(); if (n >= 12) clearInterval(iv); }, 10000);
+    } else { toast((d && d.error) || 'Scan failed to start', '#f87171'); }
+  }).catch(function(e){ toast('Scan failed: ' + e.message, '#f87171'); });
+}
+
+function openTelegramSetup() {
+  var base = (typeof location !== 'undefined') ? (location.origin || '') : '';
+  fetch(base + '/api/telegram/test-start/' + TOKEN).then(function(r){ return r.json(); }).then(function(d){
+    if (d && d.bot_link) {
+      window.open(d.bot_link, '_blank');
+      toast(d.linked ? 'Telegram already linked \u2713' : 'Opening Telegram \u2014 press Start in the bot to link alerts', '#2AABEE');
+    } else {
+      toast((d && d.error) || 'Telegram is not available right now', '#f87171');
+    }
+  }).catch(function(e){ toast('Telegram error: ' + e.message, '#f87171'); });
+}
+
+function openSitemapLinks() {
+  var guess = 'https://' + (DOMAIN || '') + '/sitemap.xml';
+  var sm = prompt('Enter your sitemap URL to get internal-link suggestions:', guess);
+  if (!sm) return;
+  toast('Analysing sitemap \u2014 this can take a moment...', '#a78bfa');
+  api('/sitemap-links', 'POST', { sitemap_url: sm }).then(function(d){
+    if (!d || !d.success) { toast((d && d.error) || 'Could not analyse sitemap', '#f87171'); return; }
+    var sug = d.suggestions || [];
+    if (!sug.length) { toast(d.message || 'No internal-link suggestions found', '#f59e0b'); return; }
+    _showLinkSuggestions(sug);
+  }).catch(function(e){ toast('Sitemap error: ' + e.message, '#f87171'); });
+}
+
+function _showLinkSuggestions(sug) {
+  var old = document.getElementById('linkSugOverlay');
+  if (old) old.remove();
+  var ov = document.createElement('div');
+  ov.id = 'linkSugOverlay';
+  ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;z-index:9999;padding:20px;';
+  ov.onclick = function(e){ if (e.target === ov) ov.remove(); };
+  var rows = sug.map(function(s){
+    var pri = (s.priority||'').toLowerCase();
+    var col = pri === 'high' ? '#ef4444' : pri === 'low' ? '#22c55e' : '#f59e0b';
+    return '<div style="border:1px solid #1f2937;border-radius:8px;padding:10px 12px;margin-bottom:8px;background:#0d1117;">'
+      + '<div style="font-size:11px;color:' + col + ';font-weight:700;text-transform:uppercase;margin-bottom:4px;">' + (s.priority||'medium') + '</div>'
+      + '<div style="font-size:12px;color:#e5e7eb;margin-bottom:3px;">' + _escHtml(s.from_page||'') + ' \u2192 ' + _escHtml(s.to_page||'') + '</div>'
+      + '<div style="font-size:12px;color:#a78bfa;margin-bottom:3px;">Anchor: \u201c' + _escHtml(s.anchor_text||'') + '\u201d</div>'
+      + (s.where_to_add ? '<div style="font-size:11px;color:#6b7280;">' + _escHtml(s.where_to_add) + '</div>' : '')
+      + (s.reason ? '<div style="font-size:11px;color:#4b5563;font-style:italic;margin-top:3px;">' + _escHtml(s.reason) + '</div>' : '')
+      + '</div>';
+  }).join('');
+  ov.innerHTML = '<div style="background:#06060f;border:1px solid #7c3aed;border-radius:12px;max-width:640px;width:100%;max-height:80vh;overflow-y:auto;padding:18px;">'
+    + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">'
+    + '<div style="font-size:14px;font-weight:800;color:#a78bfa;">\uD83D\uDD17 Internal Link Suggestions</div>'
+    + '<button onclick="document.getElementById(\'linkSugOverlay\').remove()" style="background:none;border:none;color:#9ca3af;cursor:pointer;font-size:16px;">\u2715</button>'
+    + '</div>' + rows + '</div>';
+  document.body.appendChild(ov);
+}
 
 // Escape AI/user text before innerHTML so tags like <head>/<script> stay visible
 function _escHtml(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
@@ -26075,7 +26165,16 @@ async function importPages() {
   if (failed) msg += ', ' + failed + ' failed';
   if (errors.length) msg += ' (' + errors[0] + ')';
   toast(msg, added > 0 ? '#4ade80' : '#f87171');
-  if (added > 0) { hideModal('importModal'); loadPages(); }
+  if (added > 0) { hideModal('importModal'); loadPages(); if (window._impMode === 'sitemap') markSitemapDone(); }
+}
+
+function markSitemapDone() {
+  var b = document.getElementById('sitemapBtn');
+  if (!b) return;
+  b.style.borderColor = '#4ade80';
+  b.style.color = '#4ade80';
+  b.innerHTML = '<i class="fas fa-list"></i> Sitemap \u2713';
+  b.title = 'Sitemap imported';
 }
 
 async function markDone(pageId, btn, currentDone) {
@@ -26970,6 +27069,7 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
 
   // -- Import modes ----------------------------------------------------------
   function setImportMode(mode) {
+    window._impMode = mode;
     var panels = ['paste','sitemap','gsc'];
     panels.forEach(function(m) {
       var panel = document.getElementById('import' + (m === 'paste' ? 'Paste' : m === 'sitemap' ? 'Sitemap' : 'Gsc') + 'Panel');
