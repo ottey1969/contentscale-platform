@@ -25669,12 +25669,12 @@ function maybeShowWelcome() {
 }
 
 function showAddModal() { document.getElementById('addModal').classList.add('show'); }
-function showImportModal(mode) { document.getElementById('importModal').classList.add('show'); setImportMode(mode || 'paste'); if (mode === 'sitemap') { var si = document.getElementById('sitemapUrl'); if (si && !si.value) si.value = 'https://' + DOMAIN + '/sitemap.xml'; } }
+function showImportModal(mode) { var _im = document.getElementById('importModal'); _im.classList.add('show'); _im.style.display = 'flex'; setImportMode(mode || 'paste'); if (mode === 'sitemap') { var si = document.getElementById('sitemapUrl'); if (si && !si.value) si.value = 'https://' + DOMAIN + '/sitemap.xml'; } }
 function hideModal(id) {
   var el = document.getElementById(id);
   if (!el) return;
   el.classList.remove('show');
-  el.style.display = 'none';
+  el.style.display = '';
 }
 
 async function api(path, method, body) {
@@ -27570,6 +27570,7 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
     if (kEl) kEl.value = page.keyword || page.gsc_keyword || '';
     if (cEl) cEl.value = '';
     mEl.classList.add('show');
+    mEl.style.display = 'flex';
     setTimeout(function(){ if (cEl) cEl.focus(); }, 100);
   }
   // Cinematic scan animation overlay
