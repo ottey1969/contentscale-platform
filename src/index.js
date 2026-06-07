@@ -1172,7 +1172,7 @@ app.get('/api/tracker-client/:token/fetch-sitemap', async (req, res) => {
     let urls = [];
     if (/<sitemapindex/i.test(xml)) {
       // Sitemap INDEX — follow each sub-sitemap and collect real page URLs
-      const subSitemaps = [...xml.matchAll(/<loc>(https?:\/\/[^<]+\.xml[^<]*)<\/loc>/gi)].map(m => m[1].trim()).slice(0, 20);
+      const subSitemaps = [...xml.matchAll(new RegExp('<loc>(https?://[^<]+\\.xml[^<]*)</loc>', 'gi'))].map(m => m[1].trim()).slice(0, 20);
       for (const sm of subSitemaps) {
         try {
           const ctrl2 = new AbortController();
@@ -1180,14 +1180,14 @@ app.get('/api/tracker-client/:token/fetch-sitemap', async (req, res) => {
           const sr = await fetch(sm, { headers: { 'User-Agent': 'ContentScale-Bot/1.0' }, signal: ctrl2.signal });
           if (!sr.ok) continue;
           const sx = await sr.text();
-          const subUrls = [...sx.matchAll(/<loc>(https?:\/\/[^<]+)<\/loc>/gi)].map(m => m[1].trim()).filter(u => !/\.xml(\?|$)/i.test(u));
+          const subUrls = [...sx.matchAll(new RegExp('<loc>(https?://[^<]+)</loc>', 'gi'))].map(m => m[1].trim()).filter(u => !new RegExp('\\.xml(\\?|$)', 'i').test(u));
           urls.push(...subUrls);
         } catch(e) {}
         if (urls.length >= 100) break;
       }
     } else {
       // Regular sitemap — extract page URLs, never the .xml files themselves
-      urls = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map(m => m[1].trim()).filter(u => u.startsWith('http') && !/\.xml(\?|$)/i.test(u));
+      urls = [...xml.matchAll(new RegExp('<loc>([^<]+)</loc>', 'g'))].map(m => m[1].trim()).filter(u => u.startsWith('http') && !new RegExp('\\.xml(\\?|$)', 'i').test(u));
     }
     urls = urls.slice(0, 100);
     res.json({ success: true, urls, count: urls.length });
