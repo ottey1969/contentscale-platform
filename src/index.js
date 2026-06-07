@@ -27759,9 +27759,10 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
         return;
       }
       api('/pages/' + pageId).then(function(d2) {
-        if (d2.success && d2.page && d2.page.last_checked_at) {
-          var t = new Date(d2.page.last_checked_at).getTime();
-          if (Date.now() - t < 300000) {
+        if (d2.success && d2.page) {
+          var spy = d2.page.serp_spy || {};
+          // ✅ Check citation_brief_status instead of last_checked_at
+          if (spy.citation_brief_status === 'complete' || spy.citation_brief_status === 'error') {
             clearInterval(timer);
             openBriefFromPoll(d2.page);
           }
@@ -27773,8 +27774,14 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
   function openBriefFromPoll(pageData) {
     hideScanOverlay();
     loadPages();
-    // Don't open overlay — inline brief already shows the data
-    // User can click "📄 Brief" button to view overlay if needed
+    
+    // ✅ Open the citation brief overlay automatically
+    if (pageData && pageData.id) {
+      setTimeout(function() {
+        openCitationBrief(pageData.id);
+      }, 300);
+    }
+    
     var snap = pageData || {};
     // Store data for button click
     _lastBriefData[snap.id || pageData.page_id] = {
@@ -27801,7 +27808,7 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
       _gsc_enabled: GSC_ENABLED || (snap.gsc_clicks != null) || (snap.gsc_impressions != null) || (snap.gsc_position != null),
       type: 'brief_ready'
     };
-    return; // EXIT — no overlay, inline brief shows data
+    return;
   }
 
   async function submitHtmlUpload() {
@@ -29116,29 +29123,44 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     var urlParts = urlClean.split('/');
                     title.textContent = (kw || 'Citation Brief') + ' - ' + urlParts.slice(0,2).join('/');
                     _activityAdd(' Generating Citation Brief for ' + domain, 'citation');
-                    body.innerHTML = '<style>@keyframes csspin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}@keyframes csprog{0%{margin-left:-60%}100%{margin-left:110%}}</style><div style="text-align:center;padding:60px 20px;"><div style="font-size:2.5rem;display:inline-block;animation:csspin 1.5s linear infinite;margin-bottom:20px;"></div><div style="font-size:14px;color:#a78bfa;font-weight:700;margin-bottom:8px;">Generating Citation Brief</div><div style="font-size:12px;color:#6b7280;margin-bottom:20px;">Fetching AI Overview . Scraping competitors . Analysing your content</div><div style="background:#1f2937;border-radius:99px;height:4px;width:220px;margin:0 auto;overflow:hidden;"><div style="height:100%;width:60%;background:linear-gradient(90deg,#7c3aed,#a78bfa);border-radius:99px;animation:csprog 1.8s ease-in-out infinite;"></div></div><div style="font-size:11px;color:#374151;margin-top:12px;">15-30 seconds</div></div>';
+                    body.innerHTML = '<style>@keyframes csspin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}@keyframes csprog{0%{margin-left:-60%}100%{margin-left:110%}}</style><div style="text-align:center;padding:60px 20px;"><div style="font-size:2.5rem;display:inline-block;animation:csspin 1.5s linear infinite;margin-bottom:20px;"></div><div style="font-size:14px;color:#a78bfa;font-weight:700;margin-bottom:8px;">Generating Citation Brief</div><div style="font-size:12px;color:#6b7280;margin-bottom:20px;">Fetching AI Overview . Scraping competitors . Analysing your content</div><div style="background:#1f2937;border-radius:99px;height:4px;width:220px;margin:0 auto;overflow:hidden;"><div style="height:100%;width:60%;background:linear-gradient(90deg,#7c3aed,#a78bfa);border-radius:99px;animation:csprog 1.8s ease-in-out infinite;"></div></div><div style="font-size:11px;color:#374151;margin-top:12px;">Loading initial data...</div></div>';
                     modal.style.display = 'flex';
-                    var token = localStorage.getItem('admin_id') || '';
-                    var _ctrl = new AbortController();
-                    setTimeout(function(){ _ctrl.abort(); }, 15000);
+
+                    // ✅ FIX: Auto-close modal na 90 seconden
                     setTimeout(function(){ if(modal.style.display === 'flex') modal.style.display = 'none'; }, 90000);
-                    fetch('/api/tracker/pages/' + pageId + '/citation-brief', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-admin-key': token }, signal: _ctrl.signal })
+
+                    var token = localStorage.getItem('admin_id') || '';
+
+                    // ✅ FIX: Fetch met 15s timeout via AbortController
+                    var ctrl = new AbortController();
+                    setTimeout(function(){ ctrl.abort(); }, 15000);
+
+                    fetch('/api/tracker/pages/' + pageId + '/citation-brief', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-admin-key': token }, signal: ctrl.signal })
                     .then(function(r){ return r.json(); })
                     .then(function(data){
-                        if(!data.success){ _showEmergencyBrief(pageId, page, body); return; }
+                        if(!data.success){ _renderEmergencyBrief(pageId, page, body); return; }
+
+                        // ✅ FIX: Als server pending returned, start polling
+                        if(data.status === 'pending'){
+                            body.innerHTML = '<div style="text-align:center;padding:40px;"><div style="font-size:2.5rem;display:inline-block;animation:csspin 1.5s linear infinite;margin-bottom:20px;">⏳</div><div style="font-size:14px;color:#a78bfa;font-weight:700;margin-bottom:8px;">AI Analysis in Progress</div><div style="font-size:12px;color:#6b7280;margin-bottom:20px;">Your brief is being generated. This takes 30-60 seconds.</div><div style="background:#1f2937;border-radius:99px;height:4px;width:220px;margin:0 auto;overflow:hidden;"><div style="height:100%;width:40%;background:linear-gradient(90deg,#7c3aed,#a78bfa);border-radius:99px;animation:csprog 2s ease-in-out infinite;"></div></div><div style="font-size:11px;color:#374151;margin-top:12px;">Close and reopen this modal to see results</div></div>';
+                            _pollBrief(pageId, page, body);
+                            return;
+                        }
+
                         renderCitationBrief(data, body, page);
-                        if(data.status === 'pending' || ((data.brief || {})._status) === 'pending'){ _pollBrief(pageId, page, body); }
-                        else { _activityAdd('OK Citation Brief ready for ' + domain + ' - ' + ((data.brief || {}).passages_to_add || []).length + ' passages', 'done'); }
+                        _activityAdd('OK Citation Brief ready for ' + domain + ' - ' + ((data.brief || {}).passages_to_add || []).length + ' passages', 'done');
                     })
-                    .catch(function(e){ _showEmergencyBrief(pageId, page, body); });
+                    .catch(function(e){ _renderEmergencyBrief(pageId, page, body); });
                 }
-                function _showEmergencyBrief(pageId, page, container){
+
+                // ✅ FIX: Noodbrief bij timeout of error - nooit leeg
+                function _renderEmergencyBrief(pageId, page, container){
                     var kw = page.keyword || page.gsc_keyword || '';
-                    var pos = page.google_position || page.gsc_position || null;
-                    var dom = (page.url || '').split('//').pop().split('/')[0];
-                    renderCitationBrief({ brief: { passages_to_add: [ { type: 'direct_answer', placement: 'immediately after H1', improved_version: 'Add a 134-167 word direct answer for "' + kw + '" immediately after H1. Format: "' + kw + ' is [definition]. [2-3 sentences with data]. According to [expert], [quote]. [Practical example]."', why: '44% of AI citations come from first 30% of page text. Direct answers increase citation probability by 3x.' }, { type: 'faq_schema', placement: 'before closing </body>', improved_version: 'Add JSON-LD FAQ schema with 3-5 questions about "' + kw + '".', why: 'Pages with FAQ schema are cited 3.2x more often in AI Overviews.' }, { type: 'definition', placement: 'first paragraph', improved_version: '"' + kw + '" is [clear definition in 1-2 sentences]. This [type] [does what] by [mechanism]. According to [Expert], "[quote]." For example: [example with numbers].', why: 'ChatGPT and Copilot both favor clear entity definitions in the opening.' } ], structural_fixes: [ { fix: 'Add FAQ schema (JSON-LD)', reason: 'FAQ schema is the #1 signal for AI Overview inclusion. 3.2x citation increase.', platforms: ['google', 'chatgpt'] }, { fix: 'Add direct answer after H1 (134-167 words)', reason: '44% of AI citations come from first 30% of text.', platforms: ['google', 'perplexity', 'chatgpt', 'copilot'] }, { fix: 'Add author bio with E-E-A-T', reason: 'Claude and Perplexity check author credentials. 2.1x more citations.', platforms: ['perplexity', 'claude'] }, { fix: 'Update content timestamp (<90 days)', reason: 'Content under 90 days is 3x more likely to be cited.', platforms: ['google', 'perplexity', 'chatgpt', 'copilot', 'claude'] } ], primary_reason_not_cited: 'No direct answer paragraph found. Google AI Overview cites pages with 134-167 word answers in first 30% of content. Add FAQ schema and direct answer to increase citation probability by 40-60%.', freshness_recommendation: 'Update timestamp and refresh statistics. Content under 90 days is 3x more likely to be cited.', confidence: 'medium', estimated_impact: 'Implementing these changes increases AI citation probability by 40-60% within 30-90 days.', _guaranteed: true }, ai_overview: { found: false, cited: false, text: '', source_url: '' } }, container, page);
-                    _activityAdd('Showing guaranteed brief for ' + dom + ' (server timeout or error)', 'warn');
+                    renderCitationBrief({ brief: { passages_to_add: [ { type: 'direct_answer', placement: 'immediately after H1', improved_version: 'Add a 134-167 word direct answer for "' + kw + '" immediately after H1. Format: "' + kw + ' is [definition]. [2-3 sentences with data]. According to [expert], [quote]. [Practical example]."', why: '44% of AI citations come from first 30% of page text. Direct answers increase citation probability by 3x.' }, { type: 'faq_schema', placement: 'before closing </body>', improved_version: 'Add JSON-LD FAQ schema with 3-5 questions about "' + kw + '" .', why: 'Pages with FAQ schema are cited 3.2x more often in AI Overviews.' }, { type: 'definition', placement: 'first paragraph', improved_version: '"' + kw + '" is [clear definition in 1-2 sentences]. This [type] [does what] by [mechanism]. According to [Expert], "[quote]." For example: [example with numbers].', why: 'ChatGPT and Copilot both favor clear entity definitions in the opening.' } ], structural_fixes: [ { fix: 'Add FAQ schema (JSON-LD)', reason: 'FAQ schema is the #1 signal for AI Overview inclusion. 3.2x citation increase.', platforms: ['google', 'chatgpt'] }, { fix: 'Add direct answer after H1 (134-167 words)', reason: '44% of AI citations come from first 30% of text.', platforms: ['google', 'perplexity', 'chatgpt', 'copilot'] }, { fix: 'Add author bio with E-E-A-T', reason: 'Claude and Perplexity check author credentials. 2.1x more citations.', platforms: ['perplexity', 'claude'] }, { fix: 'Update content timestamp (<90 days)', reason: 'Content under 90 days is 3x more likely to be cited.', platforms: ['google', 'perplexity', 'chatgpt', 'copilot', 'claude'] } ], primary_reason_not_cited: 'No direct answer paragraph found. Google AI Overview cites pages with 134-167 word answers in first 30% of content. Add FAQ schema and direct answer to increase citation probability by 40-60%.', freshness_recommendation: 'Update timestamp and refresh statistics. Content under 90 days is 3x more likely to be cited.', confidence: 'medium', estimated_impact: 'Implementing these changes increases AI citation probability by 40-60% within 30-90 days.', _guaranteed: true }, ai_overview: { found: false, cited: false, text: '', source_url: '' } }, container, page);
+                    _activityAdd('Showing guaranteed brief for ' + (page.url || '').split('//').pop().split('/')[0] + ' (server timeout or error)', 'warn');
                 }
+
+                // ✅ FIX: Poll voor volledige brief
                 function _pollBrief(pageId, page, body){
                     var count = 0;
                     var timer = setInterval(function(){
@@ -32096,6 +32118,18 @@ app.post('/api/tracker/pages/:id/citation-brief', verifyEngineAccess, async (req
     } catch (e) {}
     // === /FALLBACK BRIEF ===
 
+    // ✅ EARLY RETURN - send pending status immediately, run AI in background
+    res.json({ 
+      success: true, 
+      status: 'pending', 
+      message: 'Building your Citation Brief...',
+      page_id: pageId,
+      brief: _fbBrief
+    });
+
+    // ✅ Run all AI calls in background
+    setImmediate(async () => {
+    try {
     const geminiKey = resolveGeminiKey(req) || process.env.GEMINI_API_KEY;
     const serperKey = resolveSerpapiKey(req) || process.env.SERPAPI_KEY || '';
     const anthropicKey = process.env.ANTHROPIC_API_KEY || '';
@@ -32577,8 +32611,27 @@ Return ONLY valid JSON — no markdown:
       )
     };
     // Cache the full brief result for 24h
+        // Cache the full brief result for 24h
     if (brief) _cacheSet(gemCacheKey, finalResult, CACHE_TTL.gemini);
-    res.json(finalResult);
+    
+    // Update database with complete brief
+    await pool.query(
+      `UPDATE tracker_pages SET serp_spy = COALESCE(serp_spy, '{}'::jsonb) || $1::jsonb WHERE id=$2`,
+      [JSON.stringify({ citation_brief: brief, citation_brief_at: new Date().toISOString(), citation_brief_model: modelUsed, citation_brief_status: 'complete' }), pageId]
+    ).catch(() => {});
+    
+    console.log(`[citation-brief] ✅ Complete for page ${pageId}`);
+    
+    } catch(bgErr) {
+      console.error('[citation-brief] Background error:', bgErr);
+      // Update with error status
+      await pool.query(
+        `UPDATE tracker_pages SET serp_spy = COALESCE(serp_spy, '{}'::jsonb) || $1::jsonb WHERE id=$2`,
+        [JSON.stringify({ citation_brief_status: 'error', citation_brief_error: bgErr.message }), pageId]
+      ).catch(() => {});
+    }
+    }); // End setImmediate
+    
   } catch(e) {
     console.error('[citation-brief]', e);
     res.status(500).json({ success: false, error: e.message });
