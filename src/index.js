@@ -27775,11 +27775,20 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
   }
 
                 async function openCitationBrief(pageId) {
-                    const page = (allTrackerPages||[]).find(function(p){ return p.id == pageId; }) || {};
+                    // ✅ Haal page data op via API (allTrackerPages is niet altijd in scope)
                     const modal = document.getElementById('trCitationModal');
                     const contentDiv = document.getElementById('trCitationBody');
                     const title = document.getElementById('trCitationTitle');
                     if (!modal || !contentDiv) return;
+
+                    // Fetch page data first
+                    const token = localStorage.getItem('admin_id') || '';
+                    let page = { id: pageId, keyword: '', url: '' };
+                    try {
+                        const pageRes = await fetch('/api/tracker/pages/' + pageId, { headers: { 'x-admin-key': token } });
+                        const pageData = await pageRes.json();
+                        if(pageData.success && pageData.page) page = pageData.page;
+                    } catch(e) {}
 
                     var url = page.url || '';
                     var kw = page.keyword || page.gsc_keyword || '';
@@ -27791,7 +27800,6 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
                     contentDiv.innerHTML = '<style>@keyframes csspin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}@keyframes csprog{0%{margin-left:-60%}100%{margin-left:110%}}</style><div style="text-align:center;padding:50px;"><div style="font-size:2.5rem;display:inline-block;animation:csspin 1.5s linear infinite;margin-bottom:20px;">🌀</div><div style="font-size:14px;color:#a78bfa;font-weight:700;margin-bottom:8px;">Building your Citation Brief...</div><div style="font-size:12px;color:#6b7280;margin-bottom:20px;">This may take up to 60 seconds.</div><div style="background:#1f2937;border-radius:99px;height:4px;width:220px;margin:0 auto;overflow:hidden;"><div style="height:100%;width:60%;background:linear-gradient(90deg,#7c3aed,#a78bfa);border-radius:99px;animation:csprog 1.8s ease-in-out infinite;"></div></div></div>';
                     modal.style.display = 'flex';
 
-                    const token = localStorage.getItem('admin_id') || '';
                     const controller = new AbortController();
                     const timeoutId = setTimeout(function(){ controller.abort(); }, 12000);
 
