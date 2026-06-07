@@ -1583,7 +1583,10 @@ function _processScanQueue() {
       console.log('[tracker] _triggerPageScan:', pgId, pg.url);
       const keys = { serpapiKey: process.env.SERPAPI_KEY || process.env.SERPER_API_KEY, perplexityKey: process.env.PERPLEXITY_API_KEY, braveKey: process.env.BRAVE_SEARCH_API_KEY, youKey: process.env.YOU_API_KEY };
       setImmediate(async () => {
-        try { await runTrackerCheck(pg, process.env.GEMINI_API_KEY, keys, true); }
+        try { await Promise.race([
+          runTrackerCheck(pg, process.env.GEMINI_API_KEY, keys, true),
+          new Promise(function(_, rej){ setTimeout(function(){ rej(new Error('scan watchdog timeout (150s)')); }, 150000); })
+        ]); }
         catch(e) { console.warn('[trigger-scan]', e.message); }
         finally {
           const st = _trackerCheckStatus.get(pgId);
@@ -35587,7 +35590,8 @@ NEW: ${JSON.stringify(recsToUse.slice(0,3))}
 Return ONLY JSON array (max 5 items): [{"title":"max 6 words","priority":"high"|"medium"|"low","action":"exact 30+ word instruction","expected_impact":"ranking/AI impact"}]`;
           const gResp2 = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey}`, {
             method: 'POST', headers: {'Content-Type':'application/json'},
-            body: JSON.stringify({ contents: [{ parts: [{ text: mergePrompt2 }] }], generationConfig: { temperature: 0.3, maxOutputTokens: 600 } })
+            body: JSON.stringify({ contents: [{ parts: [{ text: mergePrompt2 }] }], generationConfig: { temperature: 0.3, maxOutputTokens: 600 } }),
+            signal: AbortSignal.timeout(15000)
           });
           if (gResp2.ok) {
             const gData2 = await gResp2.json();
