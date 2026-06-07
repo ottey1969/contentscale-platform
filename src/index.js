@@ -35437,15 +35437,21 @@ If no unanchored claims found, return empty array: []`;
     );
   } catch(e) { console.error('[brief-persist-early]', e.message); }
 
+  // Mark the page as checked NOW so the client poll resolves and shows the brief immediately,
+  // without waiting for the slower source-discovery / comparison steps below. The final
+  // update (with next_check_at) still runs at the end.
+  try { await pool.query('UPDATE tracker_pages SET last_checked_at=NOW() WHERE id=$1', [page.id]); } catch(e) {}
+
   // 6b. Auto-Source Discovery — find evidence for claims on the site + online
   _trSetStep(pageId, 'source_discovery', 'running', 'Searching your site for evidence...');
   try {
-    const discoveredSources = await discoverSourcesForClaims(
-      page.url, snapshot.recommendations || [], page.html_content, pool
-    );
-    snapshot.discovered_sources = discoveredSources;
+    const discoveredSources = await Promise.race([
+      discoverSourcesForClaims(page.url, snapshot.recommendations || [], page.html_content, pool),
+      new Promise(function(resolve){ setTimeout(function(){ resolve(null); }, 20000); })
+    ]);
+    snapshot.discovered_sources = Array.isArray(discoveredSources) ? discoveredSources : [];
     _trSetStep(pageId, 'source_discovery', 'done', 
-      discoveredSources.length + ' sources found on your site');
+      (snapshot.discovered_sources.length) + ' sources found on your site');
   } catch(e) {
     console.warn('[source-discovery]', e.message);
     snapshot.discovered_sources = [];
