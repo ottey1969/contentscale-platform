@@ -25925,6 +25925,7 @@ function renderPages() {
     var posColor = !pos ? '#6b7280' : pos<=3 ? '#4ade80' : pos<=10 ? '#a3e635' : pos<=20 ? '#fbbf24' : '#f87171';
     var lastCheckedRaw = p.last_checked || p.last_checked_at; // snapshot OR page timestamp
     var lastChecked = lastCheckedRaw ? new Date(lastCheckedRaw).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}) : null;
+    var hasNewHtml = !!p.html_pasted_at && (!lastCheckedRaw || new Date(p.html_pasted_at) > new Date(lastCheckedRaw));
     // Calculate next check based on frequency if not set yet
     var nextCheckDate = p.next_check_at ? new Date(p.next_check_at) : null;
     if (!nextCheckDate && p.last_checked) {
@@ -26021,7 +26022,7 @@ function renderPages() {
       + (kw ? '<span style="font-size:10px;color:#4b5563;">kw: <span style="color:#a78bfa;">' + kw + '</span></span><button onclick="editKeyword(' + p.id + ',this)" style="font-size:9px;background:none;border:none;color:#374151;cursor:pointer;text-decoration:underline;">edit</button>'
             : '<button onclick="editKeyword(' + p.id + ',this)" style="font-size:9px;background:none;border:none;color:#4b5563;cursor:pointer;">+keyword</button>')
       + (lastChecked ? '<span style="font-size:10px;color:#6b7280;">Checked: ' + lastChecked + (nextCheck ? ' &middot; ' + nextCheck : '') + '</span>' : '<span style="font-size:10px;color:#4b5563;">' + freqLabel + ' auto-check</span>')
-      + ((!!p.html_pasted_at && hasBrief && (!lastCheckedRaw || new Date(p.html_pasted_at) > new Date(lastCheckedRaw))) ? '<span style="font-size:10px;color:#38bdf8;font-weight:600;">&#128221; New HTML saved &mdash; fresh brief on next check</span>' : '')
+      + ((hasNewHtml && hasBrief) ? '<span style="font-size:10px;color:#38bdf8;font-weight:600;">&#128221; New HTML saved &mdash; fresh brief on next check</span>' : '')
       + '</div>'
       + '</div>'
       + '</div>'
@@ -26033,7 +26034,7 @@ function renderPages() {
       + '</div>'
       + '</div>'
       + recsHtml
-      + ((!isDone && hasBrief && !(p.html_pasted_at && (!lastCheckedRaw || new Date(p.html_pasted_at) > new Date(lastCheckedRaw))))
+      + ((!isDone && hasBrief && !hasNewHtml)
         ? '<div onclick="markDone(' + p.id + ',this,false)" style="cursor:pointer;display:flex;align-items:center;gap:10px;padding:12px 16px;background:linear-gradient(90deg,rgba(74,222,128,.08),rgba(74,222,128,.02));border-top:1px solid #1f2937;animation:donePulse 2s ease-in-out infinite;">"
           + '<span style="font-size:1.3rem;flex-shrink:0;">✅</span>'
           + '<div style="flex:1;">'
