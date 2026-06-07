@@ -27759,16 +27759,12 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
         return;
       }
       api('/pages/' + pageId).then(function(d2) {
-        if (!d2.success || !d2.page) return;
-        var p = d2.page;
-        // Check 1: page has been checked recently (original logic)
-        var checkedRecently = p.last_checked_at && (Date.now() - new Date(p.last_checked_at).getTime() < 300000);
-        // Check 2: fallback brief exists in serp_spy (NEW — immediate detection)
-        var spy = p.serp_spy || {};
-        var hasFallbackBrief = spy.citation_brief && (spy.citation_brief._fallback || spy.citation_brief._guaranteed);
-        if (checkedRecently || hasFallbackBrief) {
-          clearInterval(timer);
-          openBriefFromPoll(p);
+        if (d2.success && d2.page && d2.page.last_checked_at) {
+          var t = new Date(d2.page.last_checked_at).getTime();
+          if (Date.now() - t < 300000) {
+            clearInterval(timer);
+            openBriefFromPoll(d2.page);
+          }
         }
       }).catch(function(){});
     }, intervalMs);
@@ -27777,15 +27773,12 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
   function openBriefFromPoll(pageData) {
     hideScanOverlay();
     loadPages();
+    // Don't open overlay — inline brief already shows the data
+    // User can click "📄 Brief" button to view overlay if needed
     var snap = pageData || {};
-    var pageId = snap.id || pageData.page_id;
-    // Try to get brief data from serp_spy first (fallback brief saved by server)
-    var spy = snap.serp_spy || {};
-    var spyBrief = spy.citation_brief || {};
-    var hasSpyData = spyBrief && (spyBrief.passages_to_add || spyBrief._guaranteed || spyBrief.primary_reason_not_cited);
-    // Build brief data — use serp_spy if available, else build from page data
-    var briefData = {
-      page_id: pageId,
+    // Store data for button click
+    _lastBriefData[snap.id || pageData.page_id] = {
+      page_id: snap.id || pageData.page_id,
       url: snap.url || '',
       keyword: snap.keyword || snap.gsc_keyword || '',
       domain: DOMAIN,
@@ -27795,8 +27788,8 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
       bing_cited: !!(snap.ai_bing_cited),
       brave_cited: !!(snap.ai_brave_cited),
       score: snap.score || snap.graaf_score || snap.last_graaf_score || null,
-      passages: hasSpyData && Array.isArray(spyBrief.passages_to_add) && spyBrief.passages_to_add.length ? _convertSpyPassages(spyBrief) : (Array.isArray(snap.recommendations) && snap.recommendations.length ? snap.recommendations : _buildGuaranteedPassages(snap)),
-      gsc_brief: Array.isArray(snap.gsc_brief) ? snap.gsc_brief : (spyBrief.gsc_brief || []),
+      passages: Array.isArray(snap.recommendations) ? snap.recommendations : [],
+      gsc_brief: Array.isArray(snap.gsc_brief) ? snap.gsc_brief : [],
       source_suggestions: Array.isArray(snap.source_suggestions) ? snap.source_suggestions : [],
       discovered_sources: Array.isArray(snap.discovered_sources) ? snap.discovered_sources : [],
       author_trust_score: snap.author_trust_score || 0,
@@ -27808,107 +27801,7 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
       _gsc_enabled: GSC_ENABLED || (snap.gsc_clicks != null) || (snap.gsc_impressions != null) || (snap.gsc_position != null),
       type: 'brief_ready'
     };
-    // Store for button click
-    _lastBriefData[pageId] = briefData;
-    // OPEN overlay automatically — with guaranteed data
-    showCitationBrief(briefData);
-    toast('Citation Brief ready — closes in 30s', '#4ade80');
-  }
-
-  // Convert serp_spy citation_brief passages to showBriefResult format
-  function _convertSpyPassages(spyBrief) {
-    var passages = spyBrief.passages_to_add || [];
-    var fixes = spyBrief.structural_fixes || [];
-    var items = [];
-    passages.forEach(function(p, i) {
-      items.push({
-        title: (p.type ? p.type.charAt(0).toUpperCase() + p.type.slice(1) : 'Passage') + ': ' + (p.placement || ''),
-        priority: i === 0 ? 'HIGH' : 'MEDIUM',
-        p: i === 0 ? 'HIGH' : 'MEDIUM',
-        system: 'AIO',
-        action: p.improved_version || p.passage || '',
-        expected_impact: p.why || '',
-        trigger: (p.platforms || []).join(', '),
-        effort: '20 min'
-      });
-    });
-    fixes.forEach(function(f, i) {
-      items.push({
-        title: 'Fix: ' + (f.fix || ''),
-        priority: 'MEDIUM', p: 'MEDIUM', system: 'AIO',
-        action: f.fix || '',
-        expected_impact: f.reason || '',
-        trigger: (f.platforms || []).join(', '),
-        effort: '15 min'
-      });
-    });
-    // Add primary reason as first item if no passages
-    if (!items.length && spyBrief.primary_reason_not_cited) {
-      items.push({
-        title: 'Primary reason not cited',
-        priority: 'HIGH', p: 'HIGH', system: 'AIO',
-        action: spyBrief.primary_reason_not_cited,
-        expected_impact: spyBrief.estimated_impact || '',
-        trigger: 'All AI platforms',
-        effort: 'Review needed'
-      });
-    }
-    return items;
-  }
-
-  // Guaranteed passages — NEVER let the brief be empty
-  function _buildGuaranteedPassages(snap) {
-    var kw = snap.keyword || snap.gsc_keyword || '';
-    var url = snap.url || '';
-    var pos = snap.google_position || snap.gsc_position || null;
-    var items = [];
-    if (kw) {
-      items.push({
-        title: 'Add direct answer for "' + kw + '"',
-        priority: 'HIGH', p: 'HIGH', system: 'AIO',
-        action: 'Add a 134-167 word direct answer paragraph immediately after H1. Format: "' + kw + ' is [definition]. [2-3 sentences with data]. According to [expert], [quote]. [Practical example]."',
-        expected_impact: '44% of AI citations come from first 30% of page text. Direct answers increase citation probability by 3x.',
-        trigger: 'Google AI Overview, Perplexity, ChatGPT',
-        effort: '15 min'
-      });
-      items.push({
-        title: 'Add FAQ schema for "' + kw + '"',
-        priority: 'HIGH', p: 'HIGH', system: 'AIO',
-        action: 'Add JSON-LD FAQ schema with 3-5 questions about "' + kw + '". Use: <script type="application/ld+json">{"@type":"FAQPage","mainEntity":[{"@type":"Question","name":"What is ' + kw + '?","acceptedAnswer":{"@type":"Answer","text":"[answer]"}}]}</script>',
-        expected_impact: 'Pages with FAQ schema are cited 3.2x more often in AI Overviews.',
-        trigger: 'Google AI Overview, ChatGPT',
-        effort: '10 min'
-      });
-    }
-    if (!snap.ai_google_overview_cited) {
-      items.push({
-        title: 'Increase E-E-A-T signals',
-        priority: 'MEDIUM', p: 'MEDIUM', system: 'AIO',
-        action: 'Add author bio with photo, credentials, and direct contact. Include first-person experience statements.',
-        expected_impact: 'Claude and Perplexity check author expertise. Pages with E-E-A-T signals are cited 2.1x more.',
-        trigger: 'Perplexity, Claude',
-        effort: '20 min'
-      });
-    }
-    items.push({
-      title: 'Update content timestamp',
-      priority: 'MEDIUM', p: 'MEDIUM', system: 'AIO',
-      action: 'Add "Last updated: [Month Year]" and refresh key statistics. Content under 90 days is 3x more likely to be cited.',
-      expected_impact: 'Freshness is a top-3 citation signal for all AI platforms.',
-      trigger: 'Google, Perplexity, ChatGPT, Copilot, Claude',
-      effort: '10 min'
-    });
-    if (pos && pos > 3) {
-      items.push({
-        title: 'Improve ranking from #' + pos + ' to top 3',
-        priority: 'HIGH', p: 'HIGH', system: 'GSC Ranking',
-        action: 'Add internal links from higher-ranking pages. Include "' + kw + '" in 2-3 existing page titles and meta descriptions.',
-        expected_impact: 'Pages in top 3 get 54.4% of all AI citations. Position #' + pos + ' gets significantly less visibility.',
-        trigger: 'All AI platforms',
-        effort: '30 min'
-      });
-    }
-    return items;
+    return; // EXIT — no overlay, inline brief shows data
   }
 
   async function submitHtmlUpload() {
@@ -29223,133 +29116,46 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     var urlParts = urlClean.split('/');
                     title.textContent = (keyword || 'Citation Brief') + ' - ' + urlParts.slice(0,2).join('/');
                     _activityAdd(' Generating Citation Brief for ' + domain, 'citation');
-                    body.innerHTML = '<style>@keyframes csspin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}@keyframes csprog{0%{margin-left:-60%}100%{margin-left:110%}}</style><div style="text-align:center;padding:60px 20px;"><div style="font-size:2.5rem;display:inline-block;animation:csspin 1.5s linear infinite;margin-bottom:20px;"></div><div style="font-size:14px;color:#a78bfa;font-weight:700;margin-bottom:8px;">Generating Citation Brief</div><div style="font-size:12px;color:#6b7280;margin-bottom:20px;">Fetching AI Overview . Scraping competitors . Analysing your content</div><div style="background:#1f2937;border-radius:99px;height:4px;width:220px;margin:0 auto;overflow:hidden;"><div style="height:100%;width:60%;background:linear-gradient(90deg,#7c3aed,#a78bfa);border-radius:99px;animation:csprog 1.8s ease-in-out infinite;"></div></div><div style="font-size:11px;color:#374151;margin-top:12px;">Loading initial data...</div></div>';
+                    body.innerHTML = '<style>@keyframes csspin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}@keyframes csprog{0%{margin-left:-60%}100%{margin-left:110%}}</style><div style="text-align:center;padding:60px 20px;"><div style="font-size:2.5rem;display:inline-block;animation:csspin 1.5s linear infinite;margin-bottom:20px;"></div><div style="font-size:14px;color:#a78bfa;font-weight:700;margin-bottom:8px;">Generating Citation Brief</div><div style="font-size:12px;color:#6b7280;margin-bottom:20px;">Fetching AI Overview . Scraping competitors . Analysing your content</div><div style="background:#1f2937;border-radius:99px;height:4px;width:220px;margin:0 auto;overflow:hidden;"><div style="height:100%;width:60%;background:linear-gradient(90deg,#7c3aed,#a78bfa);border-radius:99px;animation:csprog 1.8s ease-in-out infinite;"></div></div><div style="font-size:11px;color:#374151;margin-top:12px;">15-30 seconds</div></div>';
                     modal.style.display = 'flex';
                     var token = localStorage.getItem('admin_id') || '';
-                    var fetchTimedOut = false;
-                    // ── AUTO-CLOSE: modal sluit na 90s altijd ──
-                    var _autoCloseTimer = setTimeout(function() {
-                        if (modal.style.display === 'flex') {
-                            modal.style.display = 'none';
-                            _activityAdd(' Citation Brief modal auto-closed after 90s', 'warn');
-                        }
-                    }, 90000);
-                    // ── FETCH MET TIMEOUT: max 15s wachten ──
-                    var fetchController = new AbortController();
-                    var fetchTimeout = setTimeout(function() {
-                        fetchTimedOut = true;
-                        fetchController.abort();
-                    }, 15000);
-                    fetch('/api/tracker/pages/' + pageId + '/citation-brief', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json', 'x-admin-key': token },
-                        signal: fetchController.signal
+                    var aborted = false;
+                    var ctrl = new AbortController();
+                    setTimeout(function(){ aborted=true; ctrl.abort(); }, 15000);
+                    setTimeout(function(){ if(modal.style.display==='flex'){modal.style.display='none';} }, 90000);
+                    fetch('/api/tracker/pages/' + pageId + '/citation-brief', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-admin-key': token }, signal: ctrl.signal })
+                    .then(function(r){ return r.json(); })
+                    .then(function(data){
+                        if(!data.success){ renderEmergencyBrief(pageId,page,body); return; }
+                        renderCitationBrief(data,body,page);
+                        if(data.status==='pending'||((data.brief||{})._status)==='pending'){ pollBrief(pageId,page,body); }
+                        else { _activityAdd('OK Citation Brief ready for '+domain+' - '+((data.brief||{}).passages_to_add||[]).length+' passages','done'); }
                     })
-                    .then(function(r) { clearTimeout(fetchTimeout); return r.json(); })
-                    .then(function(data) {
-                        clearTimeout(_autoCloseTimer);
-                        if (fetchTimedOut) {
-                            // Timeout — toon gegarandeerde brief
-                            renderCitationBrief(_buildEmergencyBrief(pageId, page), body, page);
-                            _activityAdd('⚠️ Server timeout — showing guaranteed brief for ' + domain, 'warn');
-                            return;
-                        }
-                        if (!data.success) {
-                            // Server error — toon gegarandeerde brief
-                            renderCitationBrief(_buildEmergencyBrief(pageId, page), body, page);
-                            _activityAdd('⚠️ Server error — showing guaranteed brief for ' + domain, 'warn');
-                            return;
-                        }
-                        // Show initial brief (fallback or complete)
-                        renderCitationBrief(data, body, page);
-                        // If still pending, start polling every 10s
-                        if (data.status === 'pending' || (data.brief && data.brief._status === 'pending')) {
-                            _pollForBriefCompletion(pageId, page, body);
-                        } else {
-                            var domain2 = (page.url||'').split('//').pop().split('/')[0];
-                            _activityAdd('OK Citation Brief ready for ' + domain2 + ' - ' + (data.brief && data.brief.passages_to_add ? data.brief.passages_to_add.length : 0) + ' passages', 'done');
-                        }
-                    })
-                    .catch(function(e) {
-                        clearTimeout(_autoCloseTimer);
-                        if (e.name === 'AbortError' || fetchTimedOut) {
-                            renderCitationBrief(_buildEmergencyBrief(pageId, page), body, page);
-                            _activityAdd('⚠️ Request timeout — showing guaranteed brief for ' + domain, 'warn');
-                        } else {
-                            body.innerHTML = '<div style="color:#f87171;padding:20px;">Error: ' + e.message + '</div>';
-                        }
-                    });
+                    .catch(function(e){ renderEmergencyBrief(pageId,page,body); });
                 }
-
-                // Emergency brief — NOOIT leeg, altijd bruikbaar
-                function _buildEmergencyBrief(pageId, page) {
-                    var kw = page.keyword || page.gsc_keyword || '';
-                    var pos = page.google_position || page.gsc_position || null;
-                    var score = page.score || page.graaf_score || page.last_graaf_score || null;
-                    return {
-                        success: true,
-                        page_id: pageId,
-                        keyword: kw,
-                        url: page.url || '',
-                        status: 'guaranteed',
-                        google_position: pos,
-                        ai_overview: { found: false, cited: false, text: '', source_url: '' },
-                        brief: {
-                            passages_to_add: [
-                                { type: 'direct_answer', placement: 'immediately after H1', improved_version: 'Add a 134-167 word direct answer for "' + kw + '" immediately after H1. Format: "' + kw + ' is [definition]. [2-3 sentences with data]. According to [expert], [quote]. [Practical example]."', why: '44% of AI citations come from the first 30% of page text. Direct answers increase citation probability by 3x.' },
-                                { type: 'faq_schema', placement: 'before closing </body>', improved_version: 'Add JSON-LD FAQ schema with 3-5 questions about "' + kw + '".', why: 'Pages with FAQ schema are cited 3.2x more often in AI Overviews.' },
-                                { type: 'definition', placement: 'first paragraph', improved_version: '"' + kw + '" is [clear definition in 1-2 sentences]. This [type] [does what] by [mechanism]. According to [Expert], "[quote]." For example: [example with numbers].', why: 'ChatGPT and Copilot both favor clear entity definitions in the opening.' }
-                            ],
-                            structural_fixes: [
-                                { fix: 'Add FAQ schema (JSON-LD)', reason: 'FAQ schema is the #1 signal for AI Overview inclusion. 3.2x citation increase.', platforms: ['google', 'chatgpt'] },
-                                { fix: 'Add direct answer after H1 (134-167 words)', reason: '44% of AI citations come from first 30% of text.', platforms: ['google', 'perplexity', 'chatgpt', 'copilot'] },
-                                { fix: 'Add author bio with E-E-A-T', reason: 'Claude and Perplexity check author credentials. 2.1x more citations.', platforms: ['perplexity', 'claude'] },
-                                { fix: 'Update content timestamp (<90 days)', reason: 'Content under 90 days is 3x more likely to be cited.', platforms: ['google', 'perplexity', 'chatgpt', 'copilot', 'claude'] }
-                            ],
-                            primary_reason_not_cited: 'No direct answer paragraph found. Google AI Overview cites pages with 134-167 word answers in first 30% of content. Add FAQ schema and direct answer to increase citation probability by 40-60%.',
-                            freshness_recommendation: 'Update timestamp and refresh statistics. Content under 90 days is 3x more likely to be cited.',
-                            confidence: 'medium',
-                            estimated_impact: 'Implementing these changes increases AI citation probability by 40-60% within 30-90 days.',
-                            _guaranteed: true
-                        },
-                        model_used: 'guaranteed-emergency'
-                    };
+                function renderEmergencyBrief(pageId,page,container){
+                    var kw=page.keyword||page.gsc_keyword||'';
+                    var pos=page.google_position||page.gsc_position||null;
+                    renderCitationBrief({brief:{passages_to_add:[{type:'direct_answer',placement:'after H1',improved_version:'Add a 134-167 word direct answer for "'+kw+'" after H1. Format: "'+kw+' is [definition]. [Data]. According to [expert], [quote]. [Example]."',why:'44% of AI citations come from first 30% of page text.'},{type:'faq_schema',placement:'before </body>',improved_version:'Add JSON-LD FAQ schema with 3-5 questions about "'+kw+'".',why:'Pages with FAQ schema are cited 3.2x more often.'},{type:'definition',placement:'first paragraph',improved_version:'"'+kw+'" is [definition]. This [type] [does what]. According to [Expert], "[quote]." For example: [numbers].',why:'ChatGPT and Copilot favor clear entity definitions in the opening.'}],structural_fixes:[{fix:'Add FAQ schema (JSON-LD)',reason:'FAQ schema is the #1 signal for AI Overview inclusion. 3.2x citation increase.',platforms:['google','chatgpt']},{fix:'Add direct answer after H1 (134-167 words)',reason:'44% of AI citations come from first 30% of text.',platforms:['google','perplexity','chatgpt','copilot']},{fix:'Add author bio with E-E-A-T',reason:'Claude and Perplexity check author credentials. 2.1x more citations.',platforms:['perplexity','claude']},{fix:'Update content timestamp (<90 days)',reason:'Content under 90 days is 3x more likely to be cited.',platforms:['google','perplexity','chatgpt','copilot','claude']}],primary_reason_not_cited:'No direct answer paragraph found. Google AI Overview cites pages with 134-167 word answers in first 30% of content. Add FAQ schema and direct answer to increase citation probability by 40-60%.',freshness_recommendation:'Update timestamp and refresh statistics.',confidence:'medium',estimated_impact:'Implementing these changes increases AI citation probability by 40-60% within 30-90 days.',_guaranteed:true},ai_overview:{found:false,cited:false,text:'',source_url:''},_source:'emergency'},container,page);
+                    _activityAdd('Showing guaranteed brief for '+domain+' (server timeout)','warn');
                 }
-
-                // Poll for brief completion — background AI calls update the DB
-                function _pollForBriefCompletion(pageId, page, body) {
-                    var pollCount = 0;
-                    var maxPolls = 12; // 12 x 10s = 120s max
-                    var timer = setInterval(function() {
-                        pollCount++;
-                        if (pollCount > maxPolls) {
-                            clearInterval(timer);
-                            // Show "still processing" message in modal
-                            var statusEl = body.querySelector('[data-poll-status]');
-                            if (statusEl) statusEl.innerHTML = '<span style="color:#fbbf24;">⏱ AI analysis still running. Your brief has initial data — close and reopen to see updates.</span>';
-                            return;
-                        }
-                        fetch('/api/tracker/pages/' + pageId, { headers: { 'x-admin-key': localStorage.getItem('admin_id') || '' } })
-                            .then(function(r) { return r.json(); })
-                            .then(function(d) {
-                                if (!d.success || !d.page) return;
-                                var spy = d.page.serp_spy || {};
-                                // Check if brief is now complete
-                                if (spy.citation_brief_status === 'complete') {
-                                    clearInterval(timer);
-                                    // Re-fetch the full brief endpoint for complete data
-                                    fetch('/api/tracker/pages/' + pageId + '/citation-brief', {
-                                        method: 'POST', headers: { 'Content-Type': 'application/json', 'x-admin-key': localStorage.getItem('admin_id') || '' }
-                                    }).then(function(r2){return r2.json();}).then(function(d2){
-                                        if(d2.success && d2.brief){ renderCitationBrief(d2, body, page); }
-                                    }).catch(function(){});
-                                } else if (pollCount <= 3) {
-                                    // Show "analyzing..." indicator
-                                    var statusEl = body.querySelector('[data-poll-status]');
-                                    if (statusEl) statusEl.innerHTML = '<span style="color:#a78bfa;">⏳ Analyzing with AI... (' + (pollCount * 10) + 's)</span>';
-                                }
-                            }).catch(function(){});
-                    }, 10000);
+                function pollBrief(pageId,page,body){
+                    var count=0,timer=setInterval(function(){
+                        count++;
+                        if(count>12){clearInterval(timer);return;}
+                        fetch('/api/tracker/pages/'+pageId,{headers:{'x-admin-key':localStorage.getItem('admin_id')||''}})
+                        .then(function(r){return r.json();})
+                        .then(function(d){
+                            if(!d.success||!d.page)return;
+                            var spy=(d.page.serp_spy||{});
+                            if(spy.citation_brief_status==='complete'){
+                                clearInterval(timer);
+                                fetch('/api/tracker/pages/'+pageId+'/citation-brief',{method:'POST',headers:{'Content-Type':'application/json','x-admin-key':localStorage.getItem('admin_id')||''}})
+                                .then(function(r2){return r2.json();})
+                                .then(function(d2){if(d2.success&&d2.brief){renderCitationBrief(d2,body,page);}}).catch(function(){});
+                            }
+                        }).catch(function(){});
+                    },10000);
                 }
 
                 function closeCitationModal() {
@@ -29529,7 +29335,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                             div('font-size:13px;color:#e5e7eb;', brief.primary_reason_not_cited));
                     }
 
-                    container.innerHTML = html + '<div data-poll-status style="margin-top:16px;padding:12px 16px;background:#111827;border:1px solid #1f2937;border-radius:8px;text-align:center;font-size:12px;min-height:20px;"></div>';
+                    container.innerHTML = html;
                 }
                 <\/script>
             </div>
@@ -32280,76 +32086,15 @@ app.post('/api/tracker/pages/:id/citation-brief', verifyEngineAccess, async (req
     const pageUrl = page.url || '';
     if (!keyword) return res.status(400).json({ success: false, error: 'No keyword set for this page — please add a keyword manually in the tracker' });
 
-    // ══ FALLBACK BRIEF: save immediately so user never sees empty brief ═══
-    // This ensures the brief exists in DB BEFORE slow external API calls.
-    // The AI-enhanced brief will UPDATE this record after Gemini/Claude finish.
-    const fallbackBrief = {
-      citation_source: { domain: '', why_cited: '', key_difference: '' },
-      platform_gaps: {
-        google_aio: snap.ai_google_overview_cited ? 'Page is cited' : (snap.ai_google_overview_found ? 'AI Overview exists but page not cited' : 'No AI Overview detected'),
-        perplexity: snap.ai_perplexity_cited ? 'Page is cited' : 'Citation status unknown',
-        chatgpt: 'Uses Google index — same as Google AIO',
-        copilot_bing: 'Pending Bing search results',
-        claude_brave: 'Pending Brave search results'
-      },
-      passages_to_add: [],
-      structural_fixes: [],
-      primary_reason_not_cited: 'Analysis in progress... AI providers are being queried for detailed recommendations.',
-      freshness_recommendation: '',
-      confidence: 'medium',
-      estimated_impact: 'Results pending from AI analysis',
-      model_searched_google: false,
-      _status: 'pending',
-      _fallback: true,
-      _message: 'Detailed AI recommendations are being generated. Check back in 30-60 seconds.'
-    };
-    const fallbackBriefAt = new Date().toISOString();
-    // Save fallback to tracker_citation_briefs table
-    try {
-      await pool.query(
-        `INSERT INTO tracker_citation_briefs (page_id, tracker_client_id, keyword, url, position, aio_cited, perp_cited, bing_cited, brave_cited, score, brief_json, passages, recommendations, created_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, NOW())`,
-        [
-          pageId,
-          page.tracker_client_id || null,
-          keyword,
-          pageUrl,
-          snap.google_position || null,
-          snap.ai_google_overview_cited || false,
-          snap.ai_perplexity_cited || false,
-          false, // bing — will be updated
-          false, // brave — will be updated
-          0, // score placeholder
-          JSON.stringify(fallbackBrief),
-          JSON.stringify([]),
-          JSON.stringify([{ priority: 'HIGH', section: 'AIO Brief', item: 'AI analysis in progress — detailed recommendations loading...', why: 'External AI providers are being queried. This brief will auto-update within 60 seconds.', estimated_impact: 'Waiting for AI response' }])
-        ]
-      );
-      // Also save to tracker_pages.serp_spy for immediate poll availability
-      await pool.query(
-        `UPDATE tracker_pages SET serp_spy = COALESCE(serp_spy, '{}'::jsonb) || $1::jsonb WHERE id=$2`,
-        [JSON.stringify({ citation_brief: fallbackBrief, citation_brief_at: fallbackBriefAt, citation_brief_model: 'fallback-pending', citation_brief_status: 'pending' }), pageId]
-      );
-      console.log('[citation-brief] Fallback brief saved for page', pageId, 'keyword:', keyword);
-    } catch(saveErr) {
-      console.warn('[citation-brief] Fallback save warning (non-critical):', saveErr.message);
-    }
+    // Fallback brief: save immediately so user never sees empty
+    const fbAt = new Date().toISOString();
+    const fbBrief = { platform_gaps: { google_aio: snap.ai_google_overview_cited ? 'Page cited' : (snap.ai_google_overview_found ? 'AIO exists but not cited' : 'No AIO'), perplexity: snap.ai_perplexity_cited ? 'Cited' : 'Unknown', chatgpt: 'Same as Google', copilot_bing: 'Pending', claude_brave: 'Pending' }, passages_to_add: [], structural_fixes: [], primary_reason_not_cited: 'Analysis in progress. Check back in 30-60s.', confidence: 'medium', estimated_impact: 'Pending', _status: 'pending', _fallback: true };
+    try { await pool.query(`INSERT INTO tracker_citation_briefs (page_id,tracker_client_id,keyword,url,position,aio_cited,perp_cited,bing_cited,brave_cited,score,brief_json,passages,recommendations,created_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,NOW())`, [pageId,page.tracker_client_id||null,keyword,pageUrl,snap.google_position||null,snap.ai_google_overview_cited||false,snap.ai_perplexity_cited||false,false,false,0,JSON.stringify(fbBrief),JSON.stringify([]),JSON.stringify([{priority:'HIGH',section:'AIO',item:'AI analysis in progress',why:'Being generated',estimated_impact:'Waiting'}])]); await pool.query(`UPDATE tracker_pages SET serp_spy=COALESCE(serp_spy,'{}'::jsonb)||$1::jsonb WHERE id=$2`, [JSON.stringify({citation_brief:fbBrief,citation_brief_at:fbAt,citation_brief_model:'fallback-pending',citation_brief_status:'pending'}),pageId]); } catch(e){}
 
     const geminiKey = resolveGeminiKey(req) || process.env.GEMINI_API_KEY;
     const serperKey = resolveSerpapiKey(req) || process.env.SERPAPI_KEY || '';
     const anthropicKey = process.env.ANTHROPIC_API_KEY || '';
     const domain = pageUrl.replace(/^https?:\/\//, '').split('/')[0].replace(/^www\./, '');
-
-    // ══ ASYNC BACKGROUND: return immediately, build brief in background ═══
-    // The client receives a pending brief instantly (from snapshot data).
-    // AI calls run in background and update the DB when complete.
-    // The client polls /api/tracker/pages/:id to detect completion.
-    let _backgroundStarted = false;
-    async function _buildBriefInBackground() {
-      if (_backgroundStarted) return;
-      _backgroundStarted = true;
-      try {
-        console.log('[citation-brief] Background build START for page', pageId, 'keyword:', keyword);
 
     // Auto-detect locale from domain TLD
     var _cbBingMkt = 'en-US';
@@ -32810,96 +32555,25 @@ Return ONLY valid JSON — no markdown:
       brief._grounding_note = 'These are the URLs Gemini actually retrieved from Google Search when analyzing this keyword. The top source is likely what Google AI Overview is currently citing.';
     }
 
-      // ══ Background: UPDATE with AI-enhanced brief ═══
-      const finalBriefAt = new Date().toISOString();
-      // 1. Update tracker_citation_briefs — replace the pending fallback
-      try {
-      // Delete old fallback(s) for this page+keyword combo
-      await pool.query(
-        `DELETE FROM tracker_citation_briefs WHERE page_id=$1 AND keyword=$2 AND brief_json->>'_fallback' = 'true'`,
-        [pageId, keyword]
-      );
-      // Insert the real AI-enhanced brief
-      await pool.query(
-        `INSERT INTO tracker_citation_briefs (page_id, tracker_client_id, keyword, url, position, aio_cited, perp_cited, bing_cited, brave_cited, score, brief_json, passages, recommendations, created_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, NOW())`,
-        [
-          pageId,
-          page.tracker_client_id || null,
-          keyword,
-          pageUrl,
-          googlePosition || snap.google_position || null,
-          aioCited,
-          perplexityCited,
-          copilotCited,
-          claudeCited,
-          (brief.passages_to_add || []).length * 10 + (brief.structural_fixes || []).length * 5,
-          JSON.stringify(brief),
-          JSON.stringify(brief.passages_to_add || []),
-          JSON.stringify((brief.structural_fixes || []).map((f, i) => ({
-            priority: i === 0 ? 'HIGH' : 'MEDIUM',
-            section: 'AIO Brief',
-            item: f.fix || '',
-            why: f.reason || '',
-            example: f.example || '',
-            estimated_impact: brief.estimated_impact || ''
-          })))
-        ]
-      );
-      console.log('[citation-brief] AI-enhanced brief saved for page', pageId);
-    } catch(dbErr) {
-      console.warn('[citation-brief] DB insert warning:', dbErr.message);
-    }
-    // 2. Update tracker_pages.serp_spy
+    // Save brief + which model was used
     await pool.query(
       `UPDATE tracker_pages SET serp_spy = COALESCE(serp_spy, '{}'::jsonb) || $1::jsonb WHERE id=$2`,
-      [JSON.stringify({ citation_brief: brief, citation_brief_at: finalBriefAt, citation_brief_model: modelUsed, citation_brief_status: 'complete' }), pageId]
+      [JSON.stringify({ citation_brief: brief, citation_brief_at: new Date().toISOString(), citation_brief_model: modelUsed }), pageId]
     ).catch(() => {});
 
-        // Cache the full brief result for 24h
-        const finalResult = {
-          success: true, page_id: pageId, keyword, url: pageUrl,
-          google_position: googlePosition,
-          ai_overview: { found: aioFound, cited: aioCited, text: aioText, source_url: aioSourceUrl },
-          competitors: serpCompetitors,
-          brief, model_used: modelUsed,
-          ai_provider_status: Object.fromEntries(
-            Object.entries(_aiProviderStatus).map(([k,v]) => [k, { ok: v.ok, health: v.ok ? (v.consecutiveErrors > 0 ? 'degraded' : 'healthy') : 'down' }])
-          )
-        };
-        if (brief) _cacheSet(gemCacheKey, finalResult, CACHE_TTL.gemini);
-        console.log('[citation-brief] Background build COMPLETE for page', pageId, 'model:', modelUsed);
-      } catch(bgErr) {
-        console.error('[citation-brief] Background build FAILED for page', pageId, ':', bgErr.message);
-        // Mark as failed in DB so client knows
-        try {
-          await pool.query(
-            `UPDATE tracker_pages SET serp_spy = COALESCE(serp_spy, '{}'::jsonb) || $1::jsonb WHERE id=$2`,
-            [JSON.stringify({ citation_brief_status: 'failed', citation_brief_error: bgErr.message }), pageId]
-          );
-        } catch(_) {}
-      }
-    } // END _buildBriefInBackground
-
-    // ══ IMMEDIATE RETURN: client gets fallback within <1s ═══
-    res.json({
+    const finalResult = {
       success: true, page_id: pageId, keyword, url: pageUrl,
-      status: 'pending',
-      google_position: snap.google_position || null,
-      ai_overview: {
-        found: snap.ai_google_overview_found || false,
-        cited: snap.ai_google_overview_cited || false,
-        text: snap.ai_google_overview_text || '',
-        source_url: ''
-      },
-      brief: fallbackBrief,
-      model_used: 'fallback-pending',
-      _message: 'AI analysis running in background. Brief will auto-update within 60 seconds.'
-    });
-
-    // ══ START background build (fire-and-forget) ═══
-    _buildBriefInBackground();
-
+      google_position: googlePosition,
+      ai_overview: { found: aioFound, cited: aioCited, text: aioText, source_url: aioSourceUrl },
+      competitors: serpCompetitors,
+      brief, model_used: modelUsed,
+      ai_provider_status: Object.fromEntries(
+        Object.entries(_aiProviderStatus).map(([k,v]) => [k, { ok: v.ok, health: v.ok ? (v.consecutiveErrors > 0 ? 'degraded' : 'healthy') : 'down' }])
+      )
+    };
+    // Cache the full brief result for 24h
+    if (brief) _cacheSet(gemCacheKey, finalResult, CACHE_TTL.gemini);
+    res.json(finalResult);
   } catch(e) {
     console.error('[citation-brief]', e);
     res.status(500).json({ success: false, error: e.message });
