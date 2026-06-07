@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Free AI Citations Tracker — __DOMAIN__</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 100%; min-height: 100vh; }
+body { background: #0a0a0f; color: #f1f5f9; font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; min-height: 100vh; overflow-x: hidden; }
+@keyframes cs-pulse { 0%,100% { opacity: 1; box-shadow: 0 0 0 0 rgba(239,68,68,.35); } 50% { opacity: .7; box-shadow: 0 0 0 4px rgba(239,68,68,0); } }
+.cs-header { width: 100%; background: #0f172a; padding: 14px 24px; display: flex; align-items: center; justify-content: space-between; }
+.cs-logo { font-size: 15px; font-weight: 800; color: #ffffff; letter-spacing: -.02em; }
+.cs-domain { background: #1e293b; border: 1px solid #334155; border-radius: 6px; padding: 4px 12px; font-size: 11px; color: #94a3b8; font-family: monospace; }
+.cs-container { max-width: 1200px; margin: 0 auto; padding: 24px; }
+.cs-stats { display: grid; grid-template-columns: repeat(5,1fr); gap: 8px; margin-bottom: 20px; }
+.cs-stat { background: #111827; border: 1px solid #1f2937; border-radius: 8px; padding: 12px; text-align: center; }
+.cs-stat .val { font-size: 1.3rem; font-weight: 900; color: #7c3aed; margin-bottom: 2px; }
+.cs-stat .lbl { font-size: 9px; color: #6b7280; text-transform: uppercase; letter-spacing: .06em; }
+.cs-btn { display: inline-flex; align-items: center; gap: 5px; padding: 7px 13px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; border: 1px solid #374151; background: #111827; color: #9ca3af; text-decoration: none; transition: all .15s; }
+.cs-btn:hover { border-color: #7c3aed; color: #a78bfa; }
+.cs-btn.primary { background: #7c3aed; border-color: #7c3aed; color: #ffffff; }
+.cs-btn.primary:hover { background: #6d28d9; }
+.cs-live { background: #0f172a; border-radius: 10px; margin-bottom: 20px; overflow: hidden; max-height: 200px; }
+.cs-live-header { display: flex; align-items: center; justify-content: space-between; padding: 10px 16px; }
+.cs-live-feed { padding: 8px 14px; min-height: 40px; max-height: 160px; overflow-y: auto; font-family: monospace; font-size: 11px; line-height: 1.6; }
+.cs-section { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .1em; color: #6b7280; margin: 16px 0 10px; }
+.cs-page-card { position: relative; background: #0d1117; border: 1px solid #1f2937; border-radius: 10px; margin-bottom: 12px; overflow: hidden; width: 100%; }
+.cs-page-card:hover { background: #131d2e; border-color: #1e3a5f; }
+.btn { display: inline-flex; align-items: center; gap: 4px; padding: 5px 10px; border-radius: 5px; font-size: 11px; font-weight: 600; cursor: pointer; border: 1px solid #374151; background: #111827; color: #9ca3af; transition: all .15s; white-space: nowrap; }
+.btn:hover { border-color: #6b7280; color: #e5e7eb; background: #1f2937; }
+.btn.danger { border-color: #7f1d1d; color: #f87171; }
+.btn.danger:hover { background: #2d0a0a; border-color: #b91c1c; }
+.cs-badge { display: inline-block; font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 3px; margin-right: 4px; }
+.cs-badge.green { background: #052e16; color: #4ade80; }
+.cs-badge.grey { background: #1f2937; color: #6b7280; }
+.cs-badge.blue { background: #0c2340; color: #60a5fa; }
+.cs-badge.purple { background: #1e1b4b; color: #a78bfa; }
+.cs-empty { text-align: center; padding: 48px 20px; color: #94a3b8; }
+.cs-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 30000; align-items: center; justify-content: center; }
+.cs-modal.show { display: flex; }
+.cs-modal-box { background: #111827; border: 1px solid #374151; border-radius: 12px; padding: 24px; width: min(480px,95vw); }
+.cs-input { width: 100%; background: #0d1117; border: 1px solid #374151; border-radius: 6px; padding: 9px 12px; color: #f1f5f9; font-size: 13px; outline: none; }
+.cs-input:focus { border-color: #7c3aed; }
+.cs-toast { position: fixed; bottom: 24px; right: 24px; background: #111827; border-radius: 8px; padding: 12px 20px; font-size: 13px; color: #f1f5f9; z-index: 9999; display: none; }
+.cs-upsell { background: #1a1040; border: 1px solid #4c1d95; border-radius: 10px; padding: 20px; margin-top: 24px; text-align: center; }
+.cs-wa-btn { display: inline-flex; align-items: center; gap: 8px; background: #16a34a; border-radius: 8px; padding: 10px 20px; color: #ffffff; font-size: 13px; font-weight: 700; text-decoration: none; }
+.cb-overlay { position: fixed; inset: 0; z-index: 9000; pointer-events: none; display: flex; align-items: center; justify-content: center; padding: 24px 16px; }
+.cb-card { position: relative; background: #0d1117; border: 1px solid #7c3aed; border-radius: 16px; width: 100%; max-width: 680px; max-height: 90vh; box-shadow: 0 0 60px rgba(124,58,237,0.4); pointer-events: all; transform: translateY(120%); transition: transform .5s cubic-bezier(.16,1,.3,1); overflow: hidden; display: flex; flex-direction: column; }
+.cb-card.show { transform: translateY(0); }
+.cb-header { background: linear-gradient(135deg,#1e1b4b,#4c1d95); padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+.cb-body { padding: 20px; overflow-y: auto; flex: 1; }
+.cb-footer { padding: 12px 20px; border-top: 1px solid #1f2937; display: flex; align-items: center; justify-content: space-between; background: #0a0a12; }
+.wl-overlay { position: fixed; inset: 0; z-index: 9999; background: rgba(6,6,14,0.92); backdrop-filter: blur(8px); display: flex; align-items: center; justify-content: center; padding: 16px; display: none; }
+.wl-card { position: relative; background: #0d1117; border: 1px solid #1f2937; border-radius: 20px; width: 100%; max-width: 560px; max-height: 92vh; overflow-y: auto; display: flex; flex-direction: column; }
+.wl-header { text-align: center; padding: 32px 24px 20px; background: linear-gradient(180deg,rgba(124,58,237,0.08),transparent); }
+.wl-title { font-size: 22px; font-weight: 900; color: #f1f5f9; margin-bottom: 4px; }
+.wl-btn { background: linear-gradient(135deg,#7c3aed,#6d28d9); color: #fff; border: none; border-radius: 10px; padding: 14px 32px; font-size: 14px; font-weight: 700; cursor: pointer; }
+</style>
+</head>
+<body>
+
+<div class="cs-header">
+  <div class="cs-logo">Free AI Citations Tracker</div>
+  <div class="cs-domain">__DOMAIN__</div>
+</div>
+
+<div class="cs-container">
+  <div class="cs-stats" id="statsRow">
+    <div class="cs-stat"><div class="val" id="statTotal">—</div><div class="lbl">Pages</div></div>
+    <div class="cs-stat"><div class="val" id="statCitedG" style="color:#0284c7;">—</div><div class="lbl">Google AIO</div></div>
+    <div class="cs-stat"><div class="val" id="statCitedP" style="color:#7c3aed;">—</div><div class="lbl">Perplexity</div></div>
+    <div class="cs-stat"><div class="val" id="statCitedB" style="color:#2563eb;">—</div><div class="lbl">Copilot</div></div>
+    <div class="cs-stat"><div class="val" id="statCitedC" style="color:#dc2626;">—</div><div class="lbl">Claude</div></div>
+    <div class="cs-stat"><div class="val" id="statRemaining" style="color:#16a34a;">—</div><div class="lbl">Slots left</div></div>
+  </div>
+
+  <div style="display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap;">
+    <button class="cs-btn primary" onclick="showAddModal()">+ Add URL</button>
+    <button class="cs-btn" onclick="showImportModal('sitemap')">📋 Sitemap</button>
+    <button class="cs-btn" onclick="loadPages()">🔄 Refresh</button>
+    <button class="cs-btn" onclick="scanAllPages()">⚡ Scan All</button>
+    <input id="ctSearch" type="text" placeholder="Search..." oninput="filterPages(this.value)" style="width:160px;padding:5px 10px;font-size:11px;margin-left:auto;background:#0d1117;border:1px solid #374151;border-radius:6px;color:#f1f5f9;">
+  </div>
+
+  <div id="pagesList"></div>
+
+  <div class="cs-upsell">
+    <div style="font-size:13px;font-weight:700;margin-bottom:6px;">Want Ottmar to babysit your domain?</div>
+    <div style="font-size:12px;color:#9ca3af;margin-bottom:14px;">Done-for-you AI citation optimization — Ottmar implements every Citation Brief for you.</div>
+    <a href="https://wa.me/34644204756" target="_blank" class="cs-wa-btn">💬 Let Ottmar babysit your domain</a>
+  </div>
+</div>
+
+<div class="cs-modal" id="addModal">
+  <div class="cs-modal-box">
+    <h3 style="margin-bottom:16px;">Add URL to track</h3>
+    <input id="addUrl" type="url" class="cs-input" placeholder="https://__DOMAIN__/your-page/" style="margin-bottom:12px;">
+    <input id="addKeyword" type="text" class="cs-input" placeholder="Target keyword (optional)" style="margin-bottom:16px;">
+    <div style="display:flex;gap:8px;">
+      <button class="cs-btn primary" onclick="addPage()" style="flex:1;">Add &amp; start tracking</button>
+      <button class="cs-btn" onclick="hideModal('addModal')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div class="cs-modal" id="importModal">
+  <div class="cs-modal-box">
+    <h3 style="margin-bottom:16px;">Import from sitemap</h3>
+    <input id="sitemapUrl" type="url" class="cs-input" placeholder="https://__DOMAIN__/sitemap.xml" style="margin-bottom:12px;">
+    <button class="cs-btn primary" onclick="fetchSitemap()" style="width:100%;margin-bottom:12px;">Fetch sitemap</button>
+    <div id="sitemapList" style="max-height:200px;overflow-y:auto;"></div>
+    <div style="display:flex;gap:8px;margin-top:12px;">
+      <button class="cs-btn primary" onclick="importSelectedSitemap()" style="flex:1;">Import selected</button>
+      <button class="cs-btn" onclick="hideModal('importModal')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div class="cs-toast" id="toast"></div>
+
+<script>
+var TOKEN = '__TOKEN__';
+var DOMAIN = '__DOMAIN__';
+var MAX_PAGES = __MAX_PAGES__;
+var _pages = [];
+
+function toast(msg, color) {
+  var el = document.getElementById('toast');
+  el.textContent = msg;
+  el.style.color = color || '#4ade80';
+  el.style.display = 'block';
+  setTimeout(function() { el.style.display = 'none'; }, 3000);
+}
+
+async function api(path, method, body) {
+  var opts = { method: method||'GET', headers: { 'Content-Type': 'application/json' } };
+  if (body) opts.body = JSON.stringify(body);
+  var r = await fetch('/api/tracker-client/' + TOKEN + path, opts);
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  return r.json();
+}
+
+async function loadPages() {
+  try {
+    var data = await api('');
+    _pages = data.pages || [];
+    renderStats(data);
+    renderPages();
+  } catch(e) {
+    document.getElementById('pagesList').innerHTML = '<div class="cs-empty">Error loading pages: ' + e.message + '</div>';
+  }
+}
+
+function renderStats(data) {
+  var pages = data.pages || [];
+  var citedG = pages.filter(function(p) { return p.ai_google_overview_cited; }).length;
+  var citedP = pages.filter(function(p) { return p.ai_perplexity_cited; }).length;
+  var citedB = pages.filter(function(p) { return p.ai_bing_cited; }).length;
+  var citedC = pages.filter(function(p) { return p.ai_brave_cited; }).length;
+  document.getElementById('statTotal').textContent = pages.length;
+  document.getElementById('statCitedG').textContent = citedG;
+  document.getElementById('statCitedP').textContent = citedP;
+  document.getElementById('statCitedB').textContent = citedB;
+  document.getElementById('statCitedC').textContent = citedC;
+  var remaining = Math.max(0, MAX_PAGES - pages.length);
+  document.getElementById('statRemaining').textContent = remaining;
+}
+
+function renderPages() {
+  var el = document.getElementById('pagesList');
+  if (!_pages.length) {
+    el.innerHTML = '<div class="cs-empty">No pages added yet. Click + Add URL to start tracking.</div>';
+    return;
+  }
+  el.innerHTML = _pages.map(function(p, i) {
+    var pos = p.google_position;
+    var cited = p.ai_google_overview_cited ? '✓' : '○';
+    var citedColor = p.ai_google_overview_cited ? '#4ade80' : '#6b7280';
+    var hasHtml = p.html_content && p.html_content.length > 100;
+    return '<div class="cs-page-card" style="padding:14px 16px;">'
+      + '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">'
+      + '<div><span style="font-weight:700;">' + (p.url || '').replace(/^https?:\/\//, '').substring(0,60) + '</span>'
+      + (p.keyword ? '<span style="font-size:11px;color:#a78bfa;margin-left:8px;">' + p.keyword + '</span>' : '')
+      + '</div>'
+      + '<div><span class="cs-badge" style="background:#0d1117;border:1px solid ' + (pos ? '#4ade80' : '#374151') + ';color:' + (pos ? '#4ade80' : '#6b7280') + ';">' + (pos ? '#' + pos : 'No rank') + '</span>'
+      + '<span class="cs-badge" style="background:#0d1117;color:' + citedColor + ';border:1px solid ' + citedColor + '66;">Google ' + cited + '</span>'
+      + '<button onclick="openHtmlUpload(' + p.id + ')" class="btn" style="font-size:10px;">📋 HTML</button>'
+      + '<button onclick="checkPage(' + p.id + ')" class="btn" style="font-size:10px;">🔄 Scan</button>'
+      + '</div></div></div>';
+  }).join('');
+}
+
+function showAddModal() { document.getElementById('addModal').classList.add('show'); }
+function hideModal(id) { document.getElementById(id).classList.remove('show'); }
+
+async function addPage() {
+  var url = document.getElementById('addUrl').value.trim();
+  var kw = document.getElementById('addKeyword').value.trim();
+  if (!url) { toast('Enter a URL'); return; }
+  if (!url.startsWith('http')) url = 'https://' + url;
+  try {
+    await api('/pages', 'POST', { url: url, keyword: kw });
+    hideModal('addModal');
+    document.getElementById('addUrl').value = '';
+    document.getElementById('addKeyword').value = '';
+    loadPages();
+    toast('Page added — first scan starts soon');
+  } catch(e) { toast('Error: ' + e.message, '#f87171'); }
+}
+
+function showImportModal(mode) {
+  document.getElementById('importModal').classList.add('show');
+}
+
+async function fetchSitemap() {
+  var url = document.getElementById('sitemapUrl').value.trim();
+  if (!url) { toast('Enter sitemap URL'); return; }
+  try {
+    var data = await api('/fetch-sitemap?url=' + encodeURIComponent(url));
+    if (data.urls && data.urls.length) {
+      var list = document.getElementById('sitemapList');
+      list.innerHTML = data.urls.slice(0,50).map(function(u) {
+        return '<div style="padding:4px 0;"><input type="checkbox" value="' + u + '" class="sitemap-cb"> ' + u.replace(/^https?:\/\//, '').substring(0,60) + '</div>';
+      }).join('');
+    } else { toast('No URLs found'); }
+  } catch(e) { toast('Error: ' + e.message); }
+}
+
+async function importSelectedSitemap() {
+  var cbs = document.querySelectorAll('.sitemap-cb:checked');
+  if (!cbs.length) { toast('Select at least one URL'); return; }
+  var added = 0;
+  for (var i = 0; i < cbs.length; i++) {
+    try {
+      await api('/pages', 'POST', { url: cbs[i].value });
+      added++;
+    } catch(e) {}
+  }
+  hideModal('importModal');
+  loadPages();
+  toast('Imported ' + added + ' pages');
+}
+
+async function checkPage(pageId) {
+  try {
+    await api('/check/' + pageId, 'POST');
+    toast('Scan started — results in ~30 seconds');
+    setTimeout(loadPages, 5000);
+  } catch(e) { toast('Error: ' + e.message); }
+}
+
+function openHtmlUpload(pageId) {
+  // Simplified HTML upload
+  var html = prompt('Paste the full HTML source of your page (View Page Source → Ctrl+A → Ctrl+C):');
+  if (html && html.length > 100) {
+    api('/pages/' + pageId + '/html', 'POST', { html_content: html }).then(function() {
+      toast('HTML saved — will be scanned on next check');
+      loadPages();
+    }).catch(function(e) { toast('Error: ' + e.message); });
+  }
+}
+
+function scanAllPages() {
+  if (!confirm('Scan all pages now? This may take a few minutes.')) return;
+  api('/scan-all', 'POST').then(function() {
+    toast('Scan started for all pages');
+    var count = 0;
+    var iv = setInterval(function() { count++; loadPages(); if (count >= 12) clearInterval(iv); }, 5000);
+  }).catch(function(e) { toast('Error: ' + e.message); });
+}
+
+function filterPages(q) {
+  // Simple filter on client side
+  var term = q.toLowerCase();
+  var cards = document.querySelectorAll('.cs-page-card');
+  cards.forEach(function(card) {
+    var text = card.innerText.toLowerCase();
+    card.style.display = text.includes(term) ? '' : 'none';
+  });
+}
+
+loadPages();
+setInterval(loadPages, 60000);
+<\/script>
+</body>
+</html>
