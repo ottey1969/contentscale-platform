@@ -1172,7 +1172,7 @@ app.get('/api/tracker-client/:token/fetch-sitemap', async (req, res) => {
     let urls = [];
     if (/<sitemapindex/i.test(xml)) {
       // Sitemap INDEX — follow each sub-sitemap and collect real page URLs
-      const subSitemaps = [...xml.matchAll(new RegExp('<loc>(https?://[^<]+\\.xml[^<]*)</loc>', 'gi'))].map(m => m[1].trim()).slice(0, 20);
+      const subSitemaps = [...xml.matchAll(/<loc>(https?:\/\/[^<]+\.xml[^<]*)<\/loc>/gi)].map(m => m[1].trim()).slice(0, 20);
       for (const sm of subSitemaps) {
         try {
           const ctrl2 = new AbortController();
@@ -1180,14 +1180,14 @@ app.get('/api/tracker-client/:token/fetch-sitemap', async (req, res) => {
           const sr = await fetch(sm, { headers: { 'User-Agent': 'ContentScale-Bot/1.0' }, signal: ctrl2.signal });
           if (!sr.ok) continue;
           const sx = await sr.text();
-          const subUrls = [...sx.matchAll(new RegExp('<loc>(https?://[^<]+)</loc>', 'gi'))].map(m => m[1].trim()).filter(u => !new RegExp('\\.xml(\\?|$)', 'i').test(u));
+          const subUrls = [...sx.matchAll(/<loc>(https?:\/\/[^<]+)<\/loc>/gi)].map(m => m[1].trim()).filter(u => !/\.xml(\?|$)/i.test(u));
           urls.push(...subUrls);
         } catch(e) {}
         if (urls.length >= 100) break;
       }
     } else {
       // Regular sitemap — extract page URLs, never the .xml files themselves
-      urls = [...xml.matchAll(new RegExp('<loc>([^<]+)</loc>', 'g'))].map(m => m[1].trim()).filter(u => u.startsWith('http') && !new RegExp('\\.xml(\\?|$)', 'i').test(u));
+      urls = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map(m => m[1].trim()).filter(u => u.startsWith('http') && !/\.xml(\?|$)/i.test(u));
     }
     urls = urls.slice(0, 100);
     res.json({ success: true, urls, count: urls.length });
@@ -1565,9 +1565,6 @@ app.get('/api/tracker-client/:token/latest-briefs', async (req, res) => {
     res.json({ success: true, briefs });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
-
-var _scanQueue = [];
-var _scanRunning = false;
 
 function _processScanQueue() {
   if (_scanRunning || _scanQueue.length === 0) return;
@@ -2321,21 +2318,7 @@ app.use((req, res, next) => {
   next();
 });
 
-// Cache-bust: HTML never cached, hashed chunks cached 1y, other JS/CSS revalidates
-app.use((req, res, next) => {
-  const p = req.path;
-  if (p.endsWith('.html') || p === '/') {
-    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-    res.setHeader('Pragma', 'no-cache');
-    res.setHeader('Expires', '0');
-  } else if (/\.[0-9a-f]{8,}\.(js|css)(\?.*)?$/i.test(p)) {
-    res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
-  } else if (/\.(js|css)$/.test(p)) {
-    res.setHeader('Cache-Control', 'no-cache, must-revalidate');
-  }
-  next();
-});
-app.use(express.static('public', { maxAge: 0, etag: true }));
+app.use(express.static('public', { maxAge: '1y', etag: true }));
 // ── Favicon & manifest ──────────────────────────────────────────────────────
 app.get('/site.webmanifest', (req, res) => {
 res.setHeader('Content-Type', 'application/manifest+json');
@@ -25048,7 +25031,7 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
 .cs-cs-badge.purple{background:#2e1065;color:#a78bfa;border:1px solid #4c1d95;}
 .cs-cs-badge.yellow{background:#2d1f00;color:#fbbf24;border:1px solid #78350f;}
 
-/* ═══ CINEMATIC SCAN OVERLAY ═══ */
+/* \\002550\\002550\\002550 CINEMATIC SCAN OVERLAY \\002550\\002550\\002550 */
 @keyframes soFadeIn{from{opacity:0}to{opacity:1}}
 @keyframes soFadeOut{from{opacity:1}to{opacity:0}}
 @keyframes soGlow{0%,100%{box-shadow:0 0 20px rgba(124,58,237,.15),inset 0 0 20px rgba(124,58,237,.02)}50%{box-shadow:0 0 60px rgba(124,58,237,.35),inset 0 0 40px rgba(124,58,237,.08)}}
@@ -25116,7 +25099,7 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
 .cb-copy-btn-action{background:linear-gradient(135deg,#1e1b4b,#2e1065);border:1px solid #7c3aed;border-radius:8px;color:#a78bfa;font-size:11px;font-weight:700;padding:7px 16px;cursor:pointer;font-family:Verdana,sans-serif;transition:all .15s}
 .cb-copy-btn-action:hover{background:#3b1f70;color:#e9d5ff;transform:translateY(-1px);box-shadow:0 4px 12px rgba(124,58,237,.2)}
 
-/* ═══ BRIEF PASSAGES — example format: priority badge + title + action + impact ═══ */
+/* \\002550\\002550\\002550 BRIEF PASSAGES \\002014 example format: priority badge + title + action + impact \\002550\\002550\\002550 */
 .cb-passage{background:#0d0d1a;border:1px solid #1e2536;border-left:4px solid #7c3aed;border-radius:0 10px 10px 0;padding:18px 20px;margin-bottom:14px;font-family:system-ui,-apple-system,sans-serif;user-select:text;-webkit-user-select:text;cursor:text;transition:background .2s,border-color .2s}
 .cb-passage:hover{background:#111827;border-color:#374151}
 .cb-passage .pri-row{display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap}
@@ -25128,12 +25111,12 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
 .cb-passage .rec-title{font-size:15px;font-weight:700;color:#f1f5f9;line-height:1.3;display:block;margin-bottom:10px}
 .cb-passage .rec-action{font-size:13px;color:#cbd5e1;line-height:1.8;display:block;margin-bottom:10px;padding:10px 14px;background:#060610;border-radius:6px;border:1px solid #1e2536;white-space:pre-wrap;word-break:break-word}
 .cb-passage .rec-impact{font-size:12px;color:#a78bfa;font-weight:600;margin-top:2px;display:flex;align-items:center;gap:6px}
-.cb-passage .rec-impact::before{content:'→';color:#7c3aed;font-weight:900}
+.cb-passage .rec-impact::before{content:'\\002192';color:#7c3aed;font-weight:900}
 
-/* ═══ PERSISTENT STARS — pure CSS, no JS needed ═══ */
+/* \\002550\\002550\\002550 PERSISTENT STARS \\002014 pure CSS, no JS needed \\002550\\002550\\002550 */
 @keyframes twinkle{0%,100%{opacity:.15}50%{opacity:1}}
 
-/* ═══ Animated Welcome Screen ═══ */
+/* \\002550\\002550\\002550 Animated Welcome Screen \\002550\\002550\\002550 */
 .wl-overlay{position:fixed;inset:0;z-index:9999;background:rgba(6,6,14,.92);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;padding:16px;animation:wlFadeIn .5s ease}
 @keyframes wlFadeIn{from{opacity:0}to{opacity:1}}
 .wl-card{position:relative;background:#0d1117;border:1px solid #1f2937;border-radius:20px;width:100%;max-width:560px;max-height:92vh;overflow-y:auto;display:flex;flex-direction:column;box-shadow:0 0 80px rgba(124,58,237,.25),0 0 160px rgba(124,58,237,.08);animation:wlSlideUp .7s cubic-bezier(.16,1,.3,1)}
@@ -25162,10 +25145,10 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
 .wl-hint{font-size:10px;color:#4b5563;margin-top:10px}
 @media(max-width:480px){.wl-card{max-width:100%}.wl-features{grid-template-columns:1fr}.wl-title{font-size:18px}}
 
-/* ═══ PERSISTENT STARS — bigger, brighter, multi-layered ═══ */
+/* \\002550\\002550\\002550 PERSISTENT STARS \\002014 bigger, brighter, multi-layered \\002550\\002550\\002550 */
 @keyframes twinkle{0%,100%{opacity:.25;transform:scale(1)}50%{opacity:1;transform:scale(1.4)}}
 
-/* Stars on page cards — top-right cluster */
+/* Stars on page cards \\002014 top-right cluster */
 .cs-page-card::before{
   content:'';position:absolute;top:6px;right:8px;width:4px;height:4px;border-radius:50%;
   background:#e0d7ff;animation:twinkle 2.5s ease-in-out infinite;z-index:2;pointer-events:none;
@@ -25229,12 +25212,12 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
 </head>
 <body>
 
-<!-- ═══ Animated Welcome Screen ═══ -->
+<!-- &#x2550;&#x2550;&#x2550; Animated Welcome Screen &#x2550;&#x2550;&#x2550; -->
 <div id="wlOverlay" class="wl-overlay" style="display:none;">
   <div class="wl-card" id="wlCard">
     <div class="wl-header">
       <div class="wl-stars"></div>
-      <div class="wl-icon">🎯</div>
+      <div class="wl-icon">&#x1f3af;</div>
       <div class="wl-title">AI Citation Tracker</div>
       <div class="wl-subtitle">Monitor where AI systems cite your content</div>
     </div>
@@ -25270,14 +25253,14 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
         </div>
       </div>
       <div class="wl-features">
-        <div class="wl-feature"><span class="wl-feat-icon">⚡</span> Scans 4 AI systems simultaneously</div>
-        <div class="wl-feature"><span class="wl-feat-icon">📊</span> GSC integration for ranking data</div>
-        <div class="wl-feature"><span class="wl-feat-icon">🔔</span> Telegram alerts when cited</div>
-        <div class="wl-feature"><span class="wl-feat-icon">🌍</span> Multi-language & global support</div>
+        <div class="wl-feature"><span class="wl-feat-icon">&#x26a1;</span> Scans 4 AI systems simultaneously</div>
+        <div class="wl-feature"><span class="wl-feat-icon">&#x1f4ca;</span> GSC integration for ranking data</div>
+        <div class="wl-feature"><span class="wl-feat-icon">&#x1f514;</span> Telegram alerts when cited</div>
+        <div class="wl-feature"><span class="wl-feat-icon">&#x1f30d;</span> Multi-language & global support</div>
       </div>
     </div>
     <div class="wl-footer">
-      <button class="wl-btn" onclick="closeWelcome()">Get Started <span style="margin-left:6px">→</span></button>
+      <button class="wl-btn" onclick="closeWelcome()">Get Started <span style="margin-left:6px">&#x2192;</span></button>
       <div class="wl-hint">Press ESC or click outside to dismiss</div>
     </div>
   </div>
@@ -25332,11 +25315,11 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
     <button class="cs-btn" onclick="showImportModal('paste')" style="border-color:#6b7280;color:#6b7280;"><i class="fas fa-paste"></i> Paste</button>
     <button id="sitemapBtn" class="cs-btn" onclick="showImportModal('sitemap')" style="border-color:#38bdf8;color:#38bdf8;" title="Import from sitemap"><i class="fas fa-list"></i> Sitemap</button>
     <button class="cs-btn" onclick="loadPages()" style="margin-left:4px;" title="Refresh"><i class="fas fa-sync-alt"></i></button>
-    <button class="cs-btn" onclick="scanAllPages()" style="border-color:#4ade80;color:#4ade80;font-weight:700;" title="Scan all pages one by one">⚡ Scan All</button>
-    <button class="cs-btn" onclick="mergePages()" style="border-color:#38bdf8;color:#38bdf8;" title="Merge duplicate URLs — keep best">⊕ Merge</button>
-    <button class="cs-btn" onclick="cleanPages()" style="border-color:#f59e0b;color:#f59e0b;" title="Remove image/asset URLs (.jpg, .png, .pdf etc)">🧹 Clean</button>
-    <button id="bulkDeleteBtn" class="cs-btn" style="border-color:#ef4444;color:#ef4444;display:none;" onclick="bulkDeleteSelected()">🗑 Delete selected</button>
-    <button class="cs-btn" onclick="openTelegramSetup()" style="border-color:#2AABEE;color:#2AABEE;background:rgba(42,171,238,.08);font-weight:700;animation:tgPulse 2s ease-in-out infinite;" title="Enable Telegram alerts — get notified after every scan"><i class="fab fa-telegram"></i> Enable Telegram</button>
+    <button class="cs-btn" onclick="scanAllPages()" style="border-color:#4ade80;color:#4ade80;font-weight:700;" title="Scan all pages one by one">&#x26a1; Scan All</button>
+    <button class="cs-btn" onclick="mergePages()" style="border-color:#38bdf8;color:#38bdf8;" title="Merge duplicate URLs &#x2014; keep best">&#x2295; Merge</button>
+    <button class="cs-btn" onclick="cleanPages()" style="border-color:#f59e0b;color:#f59e0b;" title="Remove image/asset URLs (.jpg, .png, .pdf etc)">&#x1f9f9; Clean</button>
+    <button id="bulkDeleteBtn" class="cs-btn" style="border-color:#ef4444;color:#ef4444;display:none;" onclick="bulkDeleteSelected()">&#x1f5d1; Delete selected</button>
+    <button class="cs-btn" onclick="openTelegramSetup()" style="border-color:#2AABEE;color:#2AABEE;background:rgba(42,171,238,.08);font-weight:700;animation:tgPulse 2s ease-in-out infinite;" title="Enable Telegram alerts &#x2014; get notified after every scan"><i class="fab fa-telegram"></i> Enable Telegram</button>
     <input id="ctSearch" type="text" class="cs-input" placeholder="Search..." oninput="filterPages(this.value)" style="width:160px;padding:5px 10px;font-size:11px;margin-left:auto;">
     <span style="font-size:11px;color:#6b7280;" id="pageCountLabel"></span>
   </div>
@@ -25509,12 +25492,12 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
   </div>
 </div>
 
-<!-- ═══ Citation Brief Overlay ═══ -->
+<!-- &#x2550;&#x2550;&#x2550; Citation Brief Overlay &#x2550;&#x2550;&#x2550; -->
 <div id="cbOverlay" class="cb-overlay" style="display:none;">
   <div id="cbCard" class="cb-card hide">
     <div class="cb-header">
       <div>
-        <div style="font-size:13px;font-weight:700;color:#f1f5f9;">🎯 Citation Brief</div>
+        <div style="font-size:13px;font-weight:700;color:#f1f5f9;">&#x1f3af; Citation Brief</div>
         <div id="cbUrl" class="cb-url"></div>
         <div id="cbKw" style="font-size:10px;color:#6b7280;margin-top:2px;"></div>
       </div>
@@ -25526,10 +25509,10 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
     <div class="cb-body">
       <!-- Progress steps -->
       <div id="cbSteps">
-        <div class="cb-step" id="cbStep1"><span class="cb-step-icon pending" id="cbStep1Icon"></span><span>Checking Google position &amp; AI Overview…</span></div>
-        <div class="cb-step" id="cbStep2"><span class="cb-step-icon pending" id="cbStep2Icon"></span><span>Scanning Perplexity &amp; Copilot citations…</span></div>
-        <div class="cb-step" id="cbStep3"><span class="cb-step-icon pending" id="cbStep3Icon"></span><span>Analyzing Claude/Brave citations…</span></div>
-        <div class="cb-step" id="cbStep4"><span class="cb-step-icon pending" id="cbStep4Icon"></span><span>Generating your Citation Brief…</span></div>
+        <div class="cb-step" id="cbStep1"><span class="cb-step-icon pending" id="cbStep1Icon"></span><span>Checking Google position &amp; AI Overview&#x2026;</span></div>
+        <div class="cb-step" id="cbStep2"><span class="cb-step-icon pending" id="cbStep2Icon"></span><span>Scanning Perplexity &amp; Copilot citations&#x2026;</span></div>
+        <div class="cb-step" id="cbStep3"><span class="cb-step-icon pending" id="cbStep3Icon"></span><span>Analyzing Claude/Brave citations&#x2026;</span></div>
+        <div class="cb-step" id="cbStep4"><span class="cb-step-icon pending" id="cbStep4Icon"></span><span>Generating your Citation Brief&#x2026;</span></div>
         <div class="cb-progress"><div class="cb-progress-bar" id="cbProgressBar"></div></div>
       </div>
       <!-- Results -->
@@ -25538,7 +25521,7 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
         <!-- GSC section -->
         <div id="cbGscSection" style="display:none;margin-bottom:14px;">
           <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;cursor:pointer;" onclick="toggleGscPanel()">
-            <span style="font-size:11px;font-weight:700;color:#4ade80;">📊 Google Search Console</span>
+            <span style="font-size:11px;font-weight:700;color:#4ade80;">&#x1f4ca; Google Search Console</span>
             <span id="cbGscArrow" style="font-size:10px;color:#6b7280;transition:transform .2s;">&#9660;</span>
           </div>
           <div id="cbGscPanel" style="display:none;">
@@ -25549,7 +25532,7 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
         <div id="cbPassages"></div>
         <!-- Copy section -->
         <div id="cbCopySection" style="display:none;margin-top:16px;">
-          <div style="font-size:11px;font-weight:700;color:#7c3aed;margin-bottom:6px;">📋 Copy Brief</div>
+          <div style="font-size:11px;font-weight:700;color:#7c3aed;margin-bottom:6px;">&#x1f4cb; Copy Brief</div>
           <textarea id="cbCopyText" readonly style="width:100%;height:120px;background:#0a0a12;border:1px solid #1f2937;border-radius:8px;padding:10px;font-size:11px;color:#9ca3af;font-family:monospace;resize:vertical;"></textarea>
           <button onclick="copyBriefToClipboard()" class="cs-btn" style="margin-top:8px;border-color:#7c3aed;color:#7c3aed;font-size:11px;">Copy to Clipboard</button>
         </div>
@@ -25568,7 +25551,7 @@ var GSC_ENABLED = __GSC_ENABLED__;
 var MAX_PAGES = __MAX_PAGES__;
 var _pages = [];
 
-// GSC status indicator — lit green when enabled, grey when off
+// GSC status indicator \\u2014 lit green when enabled, grey when off
 function gscAction() {
   if (GSC_ENABLED) { showImportModal('gsc'); }
   else { toast('GSC is not enabled for this tracker', '#6b7280'); }
@@ -25579,8 +25562,8 @@ function _applyGscBtnState() {
     if (GSC_ENABLED) {
       btn.style.borderColor = '#4ade80';
       btn.style.color = '#4ade80';
-      btn.innerHTML = '<i class="fas fa-chart-line"></i> GSC \u2713';
-      btn.title = 'Google Search Console connected — click to import';
+      btn.innerHTML = '<i class="fas fa-chart-line"></i> GSC \\u2713';
+      btn.title = 'Google Search Console connected \\u2014 click to import';
     } else {
       btn.style.borderColor = '#374151';
       btn.style.color = '#6b7280';
@@ -25593,11 +25576,11 @@ function _applyGscBtnState() {
 }
 document.addEventListener('DOMContentLoaded', _applyGscBtnState);
 
-// ── Toolbar actions (merge / clean / telegram / internal links) ──
+// \\u2500\\u2500 Toolbar actions (merge / clean / telegram / internal links) \\u2500\\u2500
 function mergePages() {
   if (!confirm('Merge duplicate URLs? Duplicate pages will be deactivated (the first one is kept).')) return;
   api('/merge-pages', 'POST').then(function(d){
-    if (d && d.success) { toast('Merged ' + (d.merged||0) + ' duplicates \u2014 ' + (d.kept||0) + ' pages kept', '#4ade80'); loadPages(); }
+    if (d && d.success) { toast('Merged ' + (d.merged||0) + ' duplicates \\u2014 ' + (d.kept||0) + ' pages kept', '#4ade80'); loadPages(); }
     else { toast((d && d.error) || 'Merge failed', '#f87171'); }
   }).catch(function(e){ toast('Merge failed: ' + e.message, '#f87171'); });
 }
@@ -25637,7 +25620,7 @@ function openTelegramSetup() {
   fetch(base + '/api/telegram/test-start/' + TOKEN).then(function(r){ return r.json(); }).then(function(d){
     if (d && d.bot_link) {
       window.open(d.bot_link, '_blank');
-      toast(d.linked ? 'Telegram already linked \u2713' : 'Opening Telegram \u2014 press Start in the bot to link alerts', '#2AABEE');
+      toast(d.linked ? 'Telegram already linked \\u2713' : 'Opening Telegram \\u2014 press Start in the bot to link alerts', '#2AABEE');
     } else {
       toast((d && d.error) || 'Telegram is not available right now', '#f87171');
     }
@@ -25648,7 +25631,7 @@ function openSitemapLinks() {
   var guess = 'https://' + (DOMAIN || '') + '/sitemap.xml';
   var sm = prompt('Enter your sitemap URL to get internal-link suggestions:', guess);
   if (!sm) return;
-  toast('Analysing sitemap \u2014 this can take a moment...', '#a78bfa');
+  toast('Analysing sitemap \\u2014 this can take a moment...', '#a78bfa');
   api('/sitemap-links', 'POST', { sitemap_url: sm }).then(function(d){
     if (!d || !d.success) { toast((d && d.error) || 'Could not analyse sitemap', '#f87171'); return; }
     var sug = d.suggestions || [];
@@ -25669,16 +25652,16 @@ function _showLinkSuggestions(sug) {
     var col = pri === 'high' ? '#ef4444' : pri === 'low' ? '#22c55e' : '#f59e0b';
     return '<div style="border:1px solid #1f2937;border-radius:8px;padding:10px 12px;margin-bottom:8px;background:#0d1117;">'
       + '<div style="font-size:11px;color:' + col + ';font-weight:700;text-transform:uppercase;margin-bottom:4px;">' + (s.priority||'medium') + '</div>'
-      + '<div style="font-size:12px;color:#e5e7eb;margin-bottom:3px;">' + _escHtml(s.from_page||'') + ' \u2192 ' + _escHtml(s.to_page||'') + '</div>'
-      + '<div style="font-size:12px;color:#a78bfa;margin-bottom:3px;">Anchor: \u201c' + _escHtml(s.anchor_text||'') + '\u201d</div>'
+      + '<div style="font-size:12px;color:#e5e7eb;margin-bottom:3px;">' + _escHtml(s.from_page||'') + ' \\u2192 ' + _escHtml(s.to_page||'') + '</div>'
+      + '<div style="font-size:12px;color:#a78bfa;margin-bottom:3px;">Anchor: \\u201c' + _escHtml(s.anchor_text||'') + '\\u201d</div>'
       + (s.where_to_add ? '<div style="font-size:11px;color:#6b7280;">' + _escHtml(s.where_to_add) + '</div>' : '')
       + (s.reason ? '<div style="font-size:11px;color:#4b5563;font-style:italic;margin-top:3px;">' + _escHtml(s.reason) + '</div>' : '')
       + '</div>';
   }).join('');
   ov.innerHTML = '<div style="background:#06060f;border:1px solid #7c3aed;border-radius:12px;max-width:640px;width:100%;max-height:80vh;overflow-y:auto;padding:18px;">'
     + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">'
-    + '<div style="font-size:14px;font-weight:800;color:#a78bfa;">\uD83D\uDD17 Internal Link Suggestions</div>'
-    + '<button id="linkSugClose" style="background:none;border:none;color:#9ca3af;cursor:pointer;font-size:16px;">\u2715</button>'
+    + '<div style="font-size:14px;font-weight:800;color:#a78bfa;">\\ud83d\\udd17 Internal Link Suggestions</div>'
+    + '<button id="linkSugClose" style="background:none;border:none;color:#9ca3af;cursor:pointer;font-size:16px;">\\u2715</button>'
     + '</div>' + rows + '</div>';
   document.body.appendChild(ov);
   var _cl = document.getElementById('linkSugClose');
@@ -25705,7 +25688,7 @@ function toast(msg, color) {
   el._t = setTimeout(function(){ el.style.display='none'; }, 3500);
 }
 
-// In-app notification system — shows a persistent notification badge
+// In-app notification system \\u2014 shows a persistent notification badge
 var _notifications = [];
 var _notifUnread = 0;
 function showNotification(msg, type, color) {
@@ -25717,7 +25700,7 @@ function showNotification(msg, type, color) {
   var badge = document.getElementById('notifBadge');
   if (badge) { badge.textContent = _notifUnread; badge.style.display = 'inline-flex'; }
   // Also show a toast
-  var icon = type === 'brief' ? '\u{1F3AF}' : type === 'email' ? '\u{1F4E7}' : type === 'scan' ? '\u{26A1}' : '\u{1F514}';
+  var icon = type === 'brief' ? '\\ud83c\\udfaf' : type === 'email' ? '\\ud83d\\udce7' : type === 'scan' ? '\\u26a1' : '\\ud83d\\udd14';
   toast(icon + ' ' + msg, color);
 }
 function markNotifsRead() {
@@ -25736,7 +25719,7 @@ function toggleNotifPanel() {
     list.innerHTML = '<div style="padding:20px;text-align:center;color:#4b5563;font-size:11px;">No notifications yet</div>';
   } else {
     list.innerHTML = _notifications.map(function(n) {
-      var icon = n.type === 'brief' ? '\u{1F3AF}' : n.type === 'email' ? '\u{1F4E7}' : n.type === 'scan' ? '\u{26A1}' : '\u{1F514}';
+      var icon = n.type === 'brief' ? '\\ud83c\\udfaf' : n.type === 'email' ? '\\ud83d\\udce7' : n.type === 'scan' ? '\\u26a1' : '\\ud83d\\udd14';
       var time = new Date(n.ts).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
       return '<div style="padding:8px 10px;border-radius:6px;margin-bottom:4px;background:#111827;font-size:11px;color:#d1d5db;line-height:1.5;"><span style="margin-right:6px;">' + icon + '</span><span style="color:' + (n.color || '#4ade80') + ';">' + n.msg + '</span><div style="font-size:9px;color:#4b5563;margin-top:2px;">' + time + '</div></div>';
     }).join('');
@@ -25745,7 +25728,7 @@ function toggleNotifPanel() {
   markNotifsRead();
 }
 
-// ── Welcome Screen ──
+// \\u2500\\u2500 Welcome Screen \\u2500\\u2500
 function showWelcome() {
   var el = document.getElementById('wlOverlay');
   if (!el) return;
@@ -25821,8 +25804,8 @@ var _ctSearchQuery = '';
       // Show TV Brief for this page
       var brief = typeof p.brief_content === 'string' ? JSON.parse(p.brief_content) : p.brief_content;
       if (!brief) return;
-      // Store brief data for "📄 Brief" button, but DON'T auto-open overlay
-      // User can click "📄 Brief" to view it. This prevents spinner overlay
+      // Store brief data for "\\ud83d\\udcc4 Brief" button, but DON'T auto-open overlay
+      // User can click "\\ud83d\\udcc4 Brief" to view it. This prevents spinner overlay
       // from blocking the UI when brief content is already shown inline.
       var briefData = {
         page_id: p.id,
@@ -25867,7 +25850,7 @@ function renderStats(data) {
   var elB = document.getElementById('statCitedB'); if(elB) elB.textContent = citedB;
   var elC = document.getElementById('statCitedC'); if(elC) elC.textContent = citedC;
 
-  // Slots left — MAX_PAGES is total across all domains
+  // Slots left \\u2014 MAX_PAGES is total across all domains
   // Show: used/total and per-domain breakdown if multiple domains
   var usedSlots = pages.length;
   var remaining = Math.max(0, MAX_PAGES - usedSlots);
@@ -25881,7 +25864,7 @@ function renderStats(data) {
       slotEl.textContent = remaining;
     }
   }
-  // Page count label — show domain count if multiple
+  // Page count label \\u2014 show domain count if multiple
   var domainSet = {};
   pages.forEach(function(p){
     var d = (p.url||'').split('//').pop().replace('www.','').split('/')[0].split('.').slice(-2).join('.');
@@ -25889,7 +25872,7 @@ function renderStats(data) {
   });
   var domainCount = Object.keys(domainSet).length;
   var pageLabel = '(' + pages.length + (MAX_PAGES < 100 ? '/' + MAX_PAGES : '') + ' pages tracked';
-  if (domainCount > 1) pageLabel += ' · ' + domainCount + ' domains';
+  if (domainCount > 1) pageLabel += ' \\u00b7 ' + domainCount + ' domains';
   pageLabel += ')';
   document.getElementById('pageCountLabel').textContent = pageLabel;
 
@@ -25939,7 +25922,6 @@ function renderPages() {
     var posColor = !pos ? '#6b7280' : pos<=3 ? '#4ade80' : pos<=10 ? '#a3e635' : pos<=20 ? '#fbbf24' : '#f87171';
     var lastCheckedRaw = p.last_checked || p.last_checked_at; // snapshot OR page timestamp
     var lastChecked = lastCheckedRaw ? new Date(lastCheckedRaw).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}) : null;
-    var hasNewHtml = !!p.html_pasted_at; // Any HTML upload hides Done button until next check
     // Calculate next check based on frequency if not set yet
     var nextCheckDate = p.next_check_at ? new Date(p.next_check_at) : null;
     if (!nextCheckDate && p.last_checked) {
@@ -25970,7 +25952,7 @@ function renderPages() {
     if (score) badges += '<span class="cs-cs-badge yellow">' + score + '/100</span> ';
     if (p.fetch_reliable === false) badges += '<span class="cs-cs-badge" style="background:#2d1f00;color:#fbbf24;">! fetch issue</span> ';
 
-    // GSC data row — always show if available
+    // GSC data row \\u2014 always show if available
     var gscHtml = '';
     if (p.gsc_clicks !== null && p.gsc_clicks !== undefined
      || p.gsc_impressions !== null && p.gsc_impressions !== undefined
@@ -25991,9 +25973,9 @@ function renderPages() {
     }
 
     // Recommendations
-    var recsHtml = ''; // inline brief removed — brief now opens in the popup via the Brief button
+    var recsHtml = ''; // inline brief removed \\u2014 brief now opens in the popup via the Brief button
 
-    // Pending first check banner — only show if NO data whatsoever
+    // Pending first check banner \\u2014 only show if NO data whatsoever
     var hasAnyData = !!lastCheckedRaw || p.google_position !== null && p.google_position !== undefined
       || p.ai_google_overview_cited !== null && p.ai_google_overview_cited !== undefined
       || (p.gsc_clicks > 0) || (p.brief_check_count > 0) || (p.graaf_score > 0);
@@ -26017,13 +25999,13 @@ function renderPages() {
 
     // Button pulses orange when: explicitly needs new HTML OR never had HTML at all
     var htmlNeeded = explicitlyNeeds || (!hasHtml && !isDone);
-    // No flashing banner — just a button state
+    // No flashing banner \\u2014 just a button state
     var needsHtmlBanner = '';
 
     return '<div class="cs-page-card' + (isDone ? ' done' : '') + '" data-page-id="' + p.id + '" style="position:relative;background:#0d1117;border:1px solid #1f2937;border-radius:10px;margin-bottom:12px;overflow:hidden;">'
       + pendingBanner
       + needsHtmlBanner
-      + (isDone ? '<div style="display:flex;align-items:center;gap:6px;padding:5px 14px;background:rgba(74,222,128,.06);border-bottom:1px solid #166534;font-size:10px;color:#4ade80;letter-spacing:.06em;"><span>✓</span> DONE &mdash; marked as implemented. Tracking continues.</div>' : '')
+      + (isDone ? '<div style="display:flex;align-items:center;gap:6px;padding:5px 14px;background:rgba(74,222,128,.06);border-bottom:1px solid #166534;font-size:10px;color:#4ade80;letter-spacing:.06em;"><span>\\u2713</span> DONE &mdash; marked as implemented. Tracking continues.</div>' : '')
       + '<div style="padding:14px 16px;' + (isDone ? 'opacity:.6;' : '') + '">'
       + '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;">'
       + '<div style="display:flex;align-items:flex-start;gap:8px;flex:1;min-width:0;">'
@@ -26036,30 +26018,30 @@ function renderPages() {
       + (kw ? '<span style="font-size:10px;color:#4b5563;">kw: <span style="color:#a78bfa;">' + kw + '</span></span><button onclick="editKeyword(' + p.id + ',this)" style="font-size:9px;background:none;border:none;color:#374151;cursor:pointer;text-decoration:underline;">edit</button>'
             : '<button onclick="editKeyword(' + p.id + ',this)" style="font-size:9px;background:none;border:none;color:#4b5563;cursor:pointer;">+keyword</button>')
       + (lastChecked ? '<span style="font-size:10px;color:#6b7280;">Checked: ' + lastChecked + (nextCheck ? ' &middot; ' + nextCheck : '') + '</span>' : '<span style="font-size:10px;color:#4b5563;">' + freqLabel + ' auto-check</span>')
-      + ((hasNewHtml && hasBrief) ? '<span style="font-size:10px;color:#38bdf8;font-weight:600;">&#128221; New HTML saved &mdash; fresh brief on next check</span>' : '')
+      + ((!!p.html_pasted_at && hasBrief && (!lastCheckedRaw || new Date(p.html_pasted_at) > new Date(lastCheckedRaw))) ? '<span style="font-size:10px;color:#38bdf8;font-weight:600;">&#128221; New HTML saved &mdash; fresh brief on next check</span>' : '')
       + '</div>'
       + '</div>'
       + '</div>'
       + '<div style="display:flex;gap:5px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;align-items:flex-start;">'
-      + ((hasBrief || _lastBriefData[p.id]) ? '<button onclick="viewLastBrief(' + p.id + ')" style="background:#7c3aed;border:1px solid #8b5cf6;border-radius:6px;color:#fff;cursor:pointer;font-size:12px;padding:6px 14px;font-weight:700;box-shadow:0 2px 10px rgba(124,58,237,.45);" title="View Citation Brief">📄 View Brief</button>' : '')
-      + '<button onclick="openHtmlUpload(' + p.id + ')" style="background:none;border:1px solid ' + (htmlNeeded ? '#f59e0b' : '#374151') + ';border-radius:5px;color:' + (htmlNeeded ? '#fbbf24' : '#4b5563') + ';cursor:pointer;font-size:11px;padding:3px 10px;font-weight:' + (htmlNeeded ? '700' : '400') + ';' + (htmlNeeded ? 'animation:htmlNeeded 1.2s ease-in-out infinite;' : '') + '" title="' + (htmlNeeded ? 'Paste updated HTML for next scan' : 'Update HTML') + '">📋 ' + (htmlNeeded ? 'Add HTML' : 'HTML') + '</button>'
-      + (lastChecked ? '<button onclick="checkPage(' + p.id + ')" style="background:none;border:1px solid #374151;border-radius:5px;color:#6b7280;cursor:pointer;font-size:11px;padding:3px 8px;" title="Rescan now">↻</button>' : '')
-      + '<button onclick="deletePage(' + p.id + ')" style="background:none;border:1px solid #374151;border-radius:5px;color:#374151;cursor:pointer;font-size:12px;padding:4px 8px;" title="Delete page">🗑</button>'
+      + ((hasBrief || _lastBriefData[p.id]) ? '<button onclick="viewLastBrief(' + p.id + ')" style="background:#7c3aed;border:1px solid #8b5cf6;border-radius:6px;color:#fff;cursor:pointer;font-size:12px;padding:6px 14px;font-weight:700;box-shadow:0 2px 10px rgba(124,58,237,.45);" title="View Citation Brief">\\ud83d\\udcc4 View Brief</button>' : '')
+      + '<button onclick="openHtmlUpload(' + p.id + ')" style="background:none;border:1px solid ' + (htmlNeeded ? '#f59e0b' : '#374151') + ';border-radius:5px;color:' + (htmlNeeded ? '#fbbf24' : '#4b5563') + ';cursor:pointer;font-size:11px;padding:3px 10px;font-weight:' + (htmlNeeded ? '700' : '400') + ';' + (htmlNeeded ? 'animation:htmlNeeded 1.2s ease-in-out infinite;' : '') + '" title="' + (htmlNeeded ? 'Paste updated HTML for next scan' : 'Update HTML') + '">\\ud83d\\udccb ' + (htmlNeeded ? 'Add HTML' : 'HTML') + '</button>'
+      + (lastChecked ? '<button onclick="checkPage(' + p.id + ')" style="background:none;border:1px solid #374151;border-radius:5px;color:#6b7280;cursor:pointer;font-size:11px;padding:3px 8px;" title="Rescan now">\\u21bb</button>' : '')
+      + '<button onclick="deletePage(' + p.id + ')" style="background:none;border:1px solid #374151;border-radius:5px;color:#374151;cursor:pointer;font-size:12px;padding:4px 8px;" title="Delete page">\\ud83d\\uddd1</button>'
       + '</div>'
       + '</div>'
       + recsHtml
-      + ((!isDone && hasBrief && !hasNewHtml)
-        ? '<div onclick="markDone(' + p.id + ',this,false)" style="cursor:pointer;display:flex;align-items:center;gap:10px;padding:12px 16px;background:linear-gradient(90deg,rgba(74,222,128,.08),rgba(74,222,128,.02));border-top:1px solid #1f2937;animation:donePulse 2s ease-in-out infinite;">"
-          + '<span style="font-size:1.3rem;flex-shrink:0;">✅</span>'
+      + ((!isDone && hasBrief)
+        ? '<div onclick="markDone(' + p.id + ',this,false)" style="cursor:pointer;display:flex;align-items:center;gap:10px;padding:12px 16px;background:linear-gradient(90deg,rgba(74,222,128,.08),rgba(74,222,128,.02));border-top:1px solid #1f2937;animation:donePulse 2s ease-in-out infinite;">'
+          + '<span style="font-size:1.3rem;flex-shrink:0;">\\u2705</span>'
           + '<div style="flex:1;">'
-          + '<div style="font-size:12px;font-weight:800;color:#4ade80;margin-bottom:2px;">MARK AS DONE — I implemented the recommendations</div>'
+          + '<div style="font-size:12px;font-weight:800;color:#4ade80;margin-bottom:2px;">MARK AS DONE \\u2014 I implemented the recommendations</div>'
           + '<div style="font-size:11px;color:#6b7280;">Press when you have added all recommended content to your page</div>'
           + '</div>'
-          + '<span style="font-size:11px;font-weight:700;color:#4ade80;background:rgba(74,222,128,.12);border:1px solid #4ade80;border-radius:5px;padding:4px 10px;flex-shrink:0;white-space:nowrap;">Done →</span>'
+          + '<span style="font-size:11px;font-weight:700;color:#4ade80;background:rgba(74,222,128,.12);border:1px solid #4ade80;border-radius:5px;padding:4px 10px;flex-shrink:0;white-space:nowrap;">Done \\u2192</span>'
           + '</div>'
         : isDone
           ? '<div style="display:flex;align-items:center;gap:8px;padding:10px 16px;background:rgba(74,222,128,.06);border-top:1px solid #166534;font-size:12px;color:#4ade80;cursor:pointer;" onclick="markDone(' + p.id + ',this,true)">'
-            + '<span>✓</span><span style="font-weight:700;">DONE — marked as implemented</span>'
+            + '<span>\\u2713</span><span style="font-weight:700;">DONE \\u2014 marked as implemented</span>'
             + '<span style="margin-left:auto;font-size:11px;color:#374151;">click to undo</span>'
             + '</div>'
           : ''
@@ -26135,7 +26117,7 @@ function renderRecs(p) {
 
     html += '</div>';
 
-    // ── GOOGLE RANKING BRIEF — only shown if GSC data exists ─────────────────
+    // \\u2500\\u2500 GOOGLE RANKING BRIEF \\u2014 only shown if GSC data exists \\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500
     var rb = p.ranking_brief;
     if (typeof rb === 'string') { try { rb = JSON.parse(rb); } catch(e) { rb = null; } }
     if (rb && rb.items && rb.items.length && (p.gsc_clicks || p.gsc_impressions || p.gsc_position)) {
@@ -26232,7 +26214,7 @@ function copyBrief(pageId) {
   var _n = String.fromCharCode(10);
   var pos = d.position || p.google_position || p.gsc_position || null;
   var score = d.score || p.graaf_score || p.last_graaf_score || null;
-  var lines = ['AI Citation Brief \u2014 ' + (p.url||''), ''];
+  var lines = ['AI Citation Brief \\u2014 ' + (p.url||''), ''];
   if (p.keyword || p.gsc_keyword) lines.push('Keyword: ' + (p.keyword||p.gsc_keyword));
   lines.push('AI Citation Results:');
   lines.push('- Google AIO: ' + (p.ai_google_overview_cited ? 'CITED' : 'Not cited'));
@@ -26316,7 +26298,7 @@ async function addPage() {
     document.getElementById('addUrl').value = '';
     document.getElementById('addKeyword').value = '';
     loadPages();
-    toast('Page added — first scan starts in ~10 seconds', '#4ade80');
+    toast('Page added \\u2014 first scan starts in ~10 seconds', '#4ade80');
 
     // Auto-refresh cycle
     var refreshCount = 0;
@@ -26328,7 +26310,7 @@ async function addPage() {
         var pg = (_pages||[]).find(function(x){ return x.id == newPageId; });
         var hasData = pg && (pg.last_checked || pg.google_position !== undefined || pg.last_checked_at);
         if (!hasData) {
-          console.log('[addPage] Server scan may not have fired — triggering client-side scan for page', newPageId);
+          console.log('[addPage] Server scan may not have fired \\u2014 triggering client-side scan for page', newPageId);
           fetch('/api/tracker-client/' + TOKEN + '/check/' + newPageId, { method: 'POST' }).catch(function(){});
         }
       }
@@ -26364,7 +26346,7 @@ function markSitemapDone() {
   if (!b) return;
   b.style.borderColor = '#4ade80';
   b.style.color = '#4ade80';
-  b.innerHTML = '<i class="fas fa-list"></i> Sitemap \u2713';
+  b.innerHTML = '<i class="fas fa-list"></i> Sitemap \\u2713';
   b.title = 'Sitemap imported';
 }
 
@@ -26392,7 +26374,7 @@ async function markDone(pageId, btn, currentDone) {
 
   async function checkPage(pageId) {
     if (_briefIsOpen) {
-      toast('Finish the current brief first — then scan this page', '#f59e0b');
+      toast('Finish the current brief first \\u2014 then scan this page', '#f59e0b');
       return;
     }
     var p = (_pages||[]).find(function(x){ return x.id == pageId; });
@@ -26655,31 +26637,31 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
     var posColor = pos ? (pos <= 3 ? '#4ade80' : pos <= 10 ? '#fbbf24' : '#f87171') : '#4b5563';
     statRow.innerHTML =
       '<div class="cb-stat" style="animation:soStatPop .4s ease both"><div class="v" style="color:' + posColor + ';">' + (pos ? '#' + pos : 'N/A') + '</div><div class="l">Position</div></div>' +
-      '<div class="cb-stat" style="animation:soStatPop .4s ease .06s both"><div class="v" style="color:' + (data.aio_cited ? '#4ade80' : '#4b5563') + ';">' + (data.aio_cited ? '✓ Cited' : 'No') + '</div><div class="l">Google AIO</div></div>' +
-      '<div class="cb-stat" style="animation:soStatPop .4s ease .12s both"><div class="v" style="color:' + (data.perp_cited ? '#a78bfa' : '#4b5563') + ';">' + (data.perp_cited ? '✓ Cited' : 'No') + '</div><div class="l">Perplexity</div></div>' +
-      '<div class="cb-stat" style="animation:soStatPop .4s ease .18s both"><div class="v" style="color:' + (data.bing_cited ? '#60a5fa' : '#4b5563') + ';">' + (data.bing_cited ? '✓ Cited' : 'No') + '</div><div class="l">Copilot</div></div>' +
-      '<div class="cb-stat" style="animation:soStatPop .4s ease .24s both;position:relative;"><div class="v" style="color:' + (data.brave_cited ? '#f87171' : '#4b5563') + ';">' + (data.brave_cited ? '✓ Cited' : 'No') + '</div><div class="l">Claude</div>' + (data.brave_cited ? '<span style="position:absolute;top:-4px;right:-4px;font-size:8px;background:#0a0a12;border:1px solid #1f2937;border-radius:3px;padding:0 3px;color:#6b7280;white-space:nowrap;">ὄ1; see img</span>' : '') + '</div>' +
-      '<div class="cb-stat" style="animation:soStatPop .4s ease .3s both"><div class="v" style="color:#fbbf24;">' + (data.score || '—') + '</div><div class="l">GRAAF</div></div>';
+      '<div class="cb-stat" style="animation:soStatPop .4s ease .06s both"><div class="v" style="color:' + (data.aio_cited ? '#4ade80' : '#4b5563') + ';">' + (data.aio_cited ? '\\u2713 Cited' : 'No') + '</div><div class="l">Google AIO</div></div>' +
+      '<div class="cb-stat" style="animation:soStatPop .4s ease .12s both"><div class="v" style="color:' + (data.perp_cited ? '#a78bfa' : '#4b5563') + ';">' + (data.perp_cited ? '\\u2713 Cited' : 'No') + '</div><div class="l">Perplexity</div></div>' +
+      '<div class="cb-stat" style="animation:soStatPop .4s ease .18s both"><div class="v" style="color:' + (data.bing_cited ? '#60a5fa' : '#4b5563') + ';">' + (data.bing_cited ? '\\u2713 Cited' : 'No') + '</div><div class="l">Copilot</div></div>' +
+      '<div class="cb-stat" style="animation:soStatPop .4s ease .24s both;position:relative;"><div class="v" style="color:' + (data.brave_cited ? '#f87171' : '#4b5563') + ';">' + (data.brave_cited ? '\\u2713 Cited' : 'No') + '</div><div class="l">Claude</div>' + (data.brave_cited ? '<span style="position:absolute;top:-4px;right:-4px;font-size:8px;background:#0a0a12;border:1px solid #1f2937;border-radius:3px;padding:0 3px;color:#6b7280;white-space:nowrap;">\\u1f441; see img</span>' : '') + '</div>' +
+      '<div class="cb-stat" style="animation:soStatPop .4s ease .3s both"><div class="v" style="color:#fbbf24;">' + (data.score || '\\u2014') + '</div><div class="l">GRAAF</div></div>';
 
-    // GSC section — show if GSC is connected (even if values are 0)
+    // GSC section \\u2014 show if GSC is connected (even if values are 0)
     var hasGsc = GSC_ENABLED || data._gsc_enabled || (data.gsc_clicks != null) || (data.gsc_impressions != null) || (data.gsc_position != null);
     if (hasGsc && gscS) {
       gscS.style.display = 'block';
       var gscStats = document.getElementById('cbGscStats');
       if (gscStats) {
         var items = [];
-        if (data.gsc_clicks != null) items.push('<span style="color:#4ade80;font-weight:600;">↓ ' + Number(data.gsc_clicks).toLocaleString() + ' clicks</span>');
+        if (data.gsc_clicks != null) items.push('<span style="color:#4ade80;font-weight:600;">\\u2193 ' + Number(data.gsc_clicks).toLocaleString() + ' clicks</span>');
         if (data.gsc_impressions != null) items.push('<span style="color:#60a5fa;">' + Number(data.gsc_impressions).toLocaleString() + ' impr</span>');
         if (data.gsc_ctr) items.push('<span style="color:#a78bfa;">CTR ' + data.gsc_ctr + '</span>');
         if (data.gsc_position != null) items.push('<span style="color:#f59e0b;font-weight:600;">pos ' + parseFloat(data.gsc_position).toFixed(1) + '</span>');
         if (data.gsc_keyword) items.push('<span style="color:#4b5563;font-style:italic;">' + data.gsc_keyword + '</span>');
-        if (!items.length) items.push('<span style="color:#6b7280;">GSC connected — no data yet</span>');
+        if (!items.length) items.push('<span style="color:#6b7280;">GSC connected \\u2014 no data yet</span>');
         items.push('<span style="margin-left:auto;color:#4ade80;font-weight:700;font-size:10px;">Goal: #1</span>');
         gscStats.innerHTML = items.join('');
       }
     }
 
-    // Recommendations — Citation Brief + GSC Brief combined
+    // Recommendations \\u2014 Citation Brief + GSC Brief combined
     var passages = data.passages || data.recommendations;
     var passDiv = document.getElementById('cbPassages');
     var allItems = [];
@@ -26709,7 +26691,7 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
         var pb = (b.priority || b.p || 'low').toLowerCase();
         return (priOrder[pa] || 2) - (priOrder[pb] || 2);
       });
-      passDiv.innerHTML = '<div style="font-size:11px;font-weight:800;color:#7c3aed;text-transform:uppercase;letter-spacing:.08em;margin:18px 0 14px;">✨ What to do next — ranked by impact</div>';
+      passDiv.innerHTML = '<div style="font-size:11px;font-weight:800;color:#7c3aed;text-transform:uppercase;letter-spacing:.08em;margin:18px 0 14px;">\\u2728 What to do next \\u2014 ranked by impact</div>';
       allItems.slice(0, 7).forEach(function(p, idx) {
         setTimeout(function() {
           var pri = (p.priority || p.p || 'low').toLowerCase();
@@ -26744,16 +26726,16 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
       document.getElementById('cbPassages').innerHTML = '<div class="cb-passage" style="animation:soStatPop .5s ease;font-size:13px;">Your Citation Brief has been generated. Copy it below to share with your team or AI assistant.</div>';
     }
 
-    // Discovered Sources — sources found on your site to back up claims
+    // Discovered Sources \\u2014 sources found on your site to back up claims
     var discSources = data.discovered_sources || [];
     if (discSources.length) {
       var srcDiv = document.createElement('div');
-      srcDiv.innerHTML = '<div style="font-size:11px;font-weight:800;color:#4ade80;text-transform:uppercase;letter-spacing:.08em;margin:18px 0 14px;">✅ Sources Found on Your Site</div>';
+      srcDiv.innerHTML = '<div style="font-size:11px;font-weight:800;color:#4ade80;text-transform:uppercase;letter-spacing:.08em;margin:18px 0 14px;">\\u2705 Sources Found on Your Site</div>';
       discSources.forEach(function(s) {
         var found = s.found || s.status === 'found';
         var el = document.createElement('div');
         el.style.cssText = 'font-size:12px;padding:8px 12px;margin-bottom:6px;border-radius:6px;background:' + (found ? '#052e16' : '#1a0a0a') + ';border:1px solid ' + (found ? '#166534' : '#7f1d1d') + ';color:' + (found ? '#e5e7eb' : '#9ca3af') + ';';
-        el.innerHTML = '<div style="font-weight:700;color:' + (found ? '#4ade80' : '#f87171') + ';margin-bottom:2px;">' + (found ? '✓ Found' : '⚠ Missing') + ': ' + (s.claim || s.title || '') + '</div>' +
+        el.innerHTML = '<div style="font-weight:700;color:' + (found ? '#4ade80' : '#f87171') + ';margin-bottom:2px;">' + (found ? '\\u2713 Found' : '\\u26a0 Missing') + ': ' + (s.claim || s.title || '') + '</div>' +
           (s.source_url ? '<div style="font-size:10px;color:#6b7280;">Source: <a href="' + s.source_url + '" target="_blank" style="color:#a78bfa;text-decoration:none;">' + s.source_url + '</a></div>' : '') +
           (s.suggested_text ? '<div style="font-size:10px;color:#9ca3af;margin-top:4px;padding:4px 6px;background:#0a0a12;border-radius:3px;font-family:monospace;">' + s.suggested_text.substring(0, 120) + '</div>' : '');
         srcDiv.appendChild(el);
@@ -26766,7 +26748,7 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
       var cpT = document.getElementById('cbCopyText');
       if (cpT) {
         var _n = String.fromCharCode(10);
-        var lines = ['AI Citation Brief — ' + (data.url || ''), ''];
+        var lines = ['AI Citation Brief \\u2014 ' + (data.url || ''), ''];
         if (data.keyword) lines.push('Keyword: ' + data.keyword);
         lines.push('AI Citation Results:');
         lines.push('- Google AIO: ' + (data.aio_cited ? 'CITED' : 'Not cited'));
@@ -26830,13 +26812,13 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
       cpS.style.display = 'block';
     }
 
-    // Source Suggestions — Verified Claims (show only if issues found)
+    // Source Suggestions \\u2014 Verified Claims (show only if issues found)
     var sourceSuggestions = data.source_suggestions || [];
     if (sourceSuggestions.length > 0) {
       var srcDiv = document.getElementById('cbPassages');
       var srcHeader = document.createElement('div');
       srcHeader.style.cssText = 'font-size:11px;font-weight:800;color:#ef4444;text-transform:uppercase;letter-spacing:.08em;margin:24px 0 14px;';
-      srcHeader.innerHTML = '⚠ Verify Your Claims — Source Needed';
+      srcHeader.innerHTML = '\\u26a0 Verify Your Claims \\u2014 Source Needed';
       srcDiv.appendChild(srcHeader);
 
       sourceSuggestions.slice(0, 5).forEach(function(s, idx) {
@@ -26863,21 +26845,21 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
         srcDiv.appendChild(sEl);
       });
     } else if (sourceSuggestions.length === 0 && data.score && data.score >= 80) {
-      // All claims verified — show positive message
+      // All claims verified \\u2014 show positive message
       var srcDiv = document.getElementById('cbPassages');
       var verifiedMsg = document.createElement('div');
       verifiedMsg.style.cssText = 'background:#052e16;border:1px solid #166534;border-radius:8px;padding:12px 16px;margin-top:20px;font-size:12px;color:#4ade80;';
-      verifiedMsg.innerHTML = '✅ All major claims appear to have sources. Your content has strong verification signals for AI citation systems.';
+      verifiedMsg.innerHTML = '\\u2705 All major claims appear to have sources. Your content has strong verification signals for AI citation systems.';
       srcDiv.appendChild(verifiedMsg);
     }
 
-    // Discovered Sources — Auto-Source Discovery
+    // Discovered Sources \\u2014 Auto-Source Discovery
     var discoveredSources = data.discovered_sources || [];
     if (discoveredSources.length > 0) {
       var dsDiv = document.getElementById('cbPassages');
       var dsHeader = document.createElement('div');
       dsHeader.style.cssText = 'font-size:11px;font-weight:800;color:#22c55e;text-transform:uppercase;letter-spacing:.08em;margin:20px 0 12px;padding-top:16px;border-top:1px solid #1f2937;';
-      dsHeader.innerHTML = '\u{1F50D} Sources Found on Your Site';
+      dsHeader.innerHTML = '\\ud83d\\udd0d Sources Found on Your Site';
       dsDiv.appendChild(dsHeader);
       
       var foundSources = discoveredSources.filter(function(ds) { return ds.found_where !== 'not_found'; });
@@ -26886,20 +26868,20 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
       foundSources.forEach(function(ds) {
         var dsEl = document.createElement('div');
         dsEl.style.cssText = 'background:#052e16;border:1px solid #166534;border-radius:8px;padding:10px 12px;margin-bottom:8px;font-size:11px;';
-        var icon = ds.found_where === 'schema_markup' ? '\u{1F4CB}' : 
-                   ds.found_where === 'case_study_page' ? '\u{1F4C8}' : 
-                   ds.found_where === 'current_page' ? '\u{1F4DD}' : '\u{1F517}';
+        var icon = ds.found_where === 'schema_markup' ? '\\ud83d\\udccb' : 
+                   ds.found_where === 'case_study_page' ? '\\ud83d\\udcc8' : 
+                   ds.found_where === 'current_page' ? '\\ud83d\\udcdd' : '\\ud83d\\udd17';
         dsEl.innerHTML =
           '<div style="color:#4ade80;font-weight:700;margin-bottom:3px;">' + icon + ' "' + (ds.claim || '') + '"</div>' +
           '<div style="color:#86efac;">' + (ds.evidence || '') + '</div>' +
-          (ds.source_url ? '<a href="' + ds.source_url + '" target="_blank" style="color:#60a5fa;font-size:10px;text-decoration:none;margin-top:4px;display:inline-block;">View source →</a>' : '');
+          (ds.source_url ? '<a href="' + ds.source_url + '" target="_blank" style="color:#60a5fa;font-size:10px;text-decoration:none;margin-top:4px;display:inline-block;">View source \\u2192</a>' : '');
         dsDiv.appendChild(dsEl);
       });
       
       if (missingSources.length > 0) {
         var msHeader = document.createElement('div');
         msHeader.style.cssText = 'font-size:11px;font-weight:800;color:#f59e0b;text-transform:uppercase;letter-spacing:.08em;margin:16px 0 10px;';
-        msHeader.innerHTML = '\u{26A0} Claims Needing a Source';
+        msHeader.innerHTML = '\\u26a0 Claims Needing a Source';
         dsDiv.appendChild(msHeader);
         missingSources.forEach(function(ms) {
           var msEl = document.createElement('div');
@@ -26922,14 +26904,14 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
       updateBriefButtons();
     }
 
-    // Countdown — 30 seconds
+    // Countdown \\u2014 30 seconds
     _cbSecondsLeft = 30;
-    document.getElementById('cbCountdown').textContent = 'Closing in 30s — the HTML button will blink orange for your next scan';
+    document.getElementById('cbCountdown').textContent = 'Closing in 30s \\u2014 the HTML button will blink orange for your next scan';
     if (_cbTimer) clearInterval(_cbTimer);
     _cbTimer = setInterval(function() {
-      if (_cbKept) { clearInterval(_cbTimer); document.getElementById('cbCountdown').textContent = 'Paste new HTML when ready — your HTML button will blink orange'; return; }
+      if (_cbKept) { clearInterval(_cbTimer); document.getElementById('cbCountdown').textContent = 'Paste new HTML when ready \\u2014 your HTML button will blink orange'; return; }
       _cbSecondsLeft--;
-      document.getElementById('cbCountdown').textContent = 'Closing in ' + _cbSecondsLeft + 's — HTML button will blink orange for next scan';
+      document.getElementById('cbCountdown').textContent = 'Closing in ' + _cbSecondsLeft + 's \\u2014 HTML button will blink orange for next scan';
       if (_cbSecondsLeft <= 0) {
         clearInterval(_cbTimer);
         hideCitationBrief(data.page_id);
@@ -26940,7 +26922,7 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
   function keepCbOpen() {
     _cbKept = true;
     clearInterval(_cbTimer);
-    document.getElementById('cbCountdown').textContent = 'Paste new HTML when ready — your HTML button will blink orange';
+    document.getElementById('cbCountdown').textContent = 'Paste new HTML when ready \\u2014 your HTML button will blink orange';
     document.getElementById('cbKeepBtn').style.display = 'none';
   }
 
@@ -26962,7 +26944,7 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
     }, 400);
   }
 
-  // Show saved brief instantly — no animation, immediate display
+  // Show saved brief instantly \\u2014 no animation, immediate display
   function viewLastBrief(pageId) {
     var data = _lastBriefData[pageId];
     if (!data) {
@@ -26970,7 +26952,7 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
       data = _buildBriefData(_p);
       if (data) _lastBriefData[pageId] = data;
     }
-    if (!data) { toast('No brief available yet — run a scan first', '#f59e0b'); return; }
+    if (!data) { toast('No brief available yet \\u2014 run a scan first', '#f59e0b'); return; }
     var card = document.getElementById('cbCard');
     if (!card) return;
     var overlay = document.getElementById('cbOverlay');
@@ -27005,31 +26987,31 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
     var posColor = pos ? (pos <= 3 ? '#4ade80' : pos <= 10 ? '#fbbf24' : '#f87171') : '#4b5563';
     statRow.innerHTML =
       '<div class="cb-stat" style="animation:soStatPop .3s ease both"><div class="v" style="color:' + posColor + ';">' + (pos ? '#' + pos : 'N/A') + '</div><div class="l">Position</div></div>' +
-      '<div class="cb-stat" style="animation:soStatPop .3s ease .05s both"><div class="v" style="color:' + (data.aio_cited ? '#4ade80' : '#4b5563') + ';">' + (data.aio_cited ? '\u2713 Cited' : 'No') + '</div><div class="l">Google AIO</div></div>' +
-      '<div class="cb-stat" style="animation:soStatPop .3s ease .1s both"><div class="v" style="color:' + (data.perp_cited ? '#a78bfa' : '#4b5563') + ';">' + (data.perp_cited ? '\u2713 Cited' : 'No') + '</div><div class="l">Perplexity</div></div>' +
-      '<div class="cb-stat" style="animation:soStatPop .3s ease .15s both"><div class="v" style="color:' + (data.bing_cited ? '#60a5fa' : '#4b5563') + ';">' + (data.bing_cited ? '\u2713 Cited' : 'No') + '</div><div class="l">Copilot</div></div>' +
-      '<div class="cb-stat" style="animation:soStatPop .3s ease .2s both"><div class="v" style="color:' + (data.brave_cited ? '#f87171' : '#4b5563') + ';">' + (data.brave_cited ? '\u2713 Cited' : 'No') + '</div><div class="l">Claude</div></div>' +
-      '<div class="cb-stat" style="animation:soStatPop .3s ease .25s both"><div class="v" style="color:#fbbf24;">' + (data.score || '—') + '</div><div class="l">GRAAF</div></div>';
+      '<div class="cb-stat" style="animation:soStatPop .3s ease .05s both"><div class="v" style="color:' + (data.aio_cited ? '#4ade80' : '#4b5563') + ';">' + (data.aio_cited ? '\\u2713 Cited' : 'No') + '</div><div class="l">Google AIO</div></div>' +
+      '<div class="cb-stat" style="animation:soStatPop .3s ease .1s both"><div class="v" style="color:' + (data.perp_cited ? '#a78bfa' : '#4b5563') + ';">' + (data.perp_cited ? '\\u2713 Cited' : 'No') + '</div><div class="l">Perplexity</div></div>' +
+      '<div class="cb-stat" style="animation:soStatPop .3s ease .15s both"><div class="v" style="color:' + (data.bing_cited ? '#60a5fa' : '#4b5563') + ';">' + (data.bing_cited ? '\\u2713 Cited' : 'No') + '</div><div class="l">Copilot</div></div>' +
+      '<div class="cb-stat" style="animation:soStatPop .3s ease .2s both"><div class="v" style="color:' + (data.brave_cited ? '#f87171' : '#4b5563') + ';">' + (data.brave_cited ? '\\u2713 Cited' : 'No') + '</div><div class="l">Claude</div></div>' +
+      '<div class="cb-stat" style="animation:soStatPop .3s ease .25s both"><div class="v" style="color:#fbbf24;">' + (data.score || '\\u2014') + '</div><div class="l">GRAAF</div></div>';
 
-    // GSC — show if connected (even with 0 values)
+    // GSC \\u2014 show if connected (even with 0 values)
     var hasGsc = GSC_ENABLED || data._gsc_enabled || (data.gsc_clicks != null) || (data.gsc_impressions != null) || (data.gsc_position != null);
     if (hasGsc && gscS) {
       gscS.style.display = 'block';
       var gscStats = document.getElementById('cbGscStats');
       if (gscStats) {
         var items = [];
-        if (data.gsc_clicks != null) items.push('<span style="color:#4ade80;font-weight:600;">\u2193 ' + Number(data.gsc_clicks).toLocaleString() + ' clicks</span>');
+        if (data.gsc_clicks != null) items.push('<span style="color:#4ade80;font-weight:600;">\\u2193 ' + Number(data.gsc_clicks).toLocaleString() + ' clicks</span>');
         if (data.gsc_impressions != null) items.push('<span style="color:#60a5fa;">' + Number(data.gsc_impressions).toLocaleString() + ' impr</span>');
         if (data.gsc_ctr) items.push('<span style="color:#a78bfa;">CTR ' + data.gsc_ctr + '</span>');
         if (data.gsc_position != null) items.push('<span style="color:#f59e0b;font-weight:600;">pos ' + parseFloat(data.gsc_position).toFixed(1) + '</span>');
         if (data.gsc_keyword) items.push('<span style="color:#4b5563;font-style:italic;">' + data.gsc_keyword + '</span>');
-        if (!items.length) items.push('<span style="color:#6b7280;">GSC connected — no data yet</span>');
+        if (!items.length) items.push('<span style="color:#6b7280;">GSC connected \\u2014 no data yet</span>');
         items.push('<span style="margin-left:auto;color:#4ade80;font-weight:700;font-size:10px;">Goal: #1</span>');
         gscStats.innerHTML = items.join('');
       }
     }
 
-    // Recommendations — Citation Brief + GSC Brief combined
+    // Recommendations \\u2014 Citation Brief + GSC Brief combined
     var passages = data.passages || data.recommendations;
     var gscBriefItems = data.gsc_brief || [];
     var isGscEnabled = GSC_ENABLED || data._gsc_enabled || !!(data.gsc_clicks || data.gsc_impressions || data.gsc_position);
@@ -27048,7 +27030,7 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
         var pb = (b.priority || b.p || 'low').toLowerCase();
         return (priOrder[pa] || 2) - (priOrder[pb] || 2);
       });
-      passDiv.innerHTML = '<div style="font-size:11px;font-weight:800;color:#7c3aed;text-transform:uppercase;letter-spacing:.08em;margin:18px 0 14px;">\u2728 What to do next \u2014 ranked by impact</div>';
+      passDiv.innerHTML = '<div style="font-size:11px;font-weight:800;color:#7c3aed;text-transform:uppercase;letter-spacing:.08em;margin:18px 0 14px;">\\u2728 What to do next \\u2014 ranked by impact</div>';
       allItems.slice(0, 7).forEach(function(p) {
         var pri = (p.priority || p.p || 'low').toLowerCase();
         var priKey = (pri === 'high' || pri === 'h') ? 'high' : (pri === 'medium' || pri === 'med' || pri === 'm') ? 'medium' : 'low';
@@ -27078,15 +27060,15 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
         passDiv.appendChild(el);
       });
     } else {
-      passDiv.innerHTML = '<div class="cb-passage">No recommendations yet — run a scan first.</div>';
+      passDiv.innerHTML = '<div class="cb-passage">No recommendations yet \\u2014 run a scan first.</div>';
     }
 
-    // Source Suggestions — Verified Claims (show only if issues found)
+    // Source Suggestions \\u2014 Verified Claims (show only if issues found)
     var sourceSuggestions = data.source_suggestions || [];
     if (sourceSuggestions.length > 0) {
       var srcHeader = document.createElement('div');
       srcHeader.style.cssText = 'font-size:11px;font-weight:800;color:#ef4444;text-transform:uppercase;letter-spacing:.08em;margin:24px 0 14px;';
-      srcHeader.innerHTML = '\u26A0 Verify Your Claims — Source Needed';
+      srcHeader.innerHTML = '\\u26a0 Verify Your Claims \\u2014 Source Needed';
       passDiv.appendChild(srcHeader);
       sourceSuggestions.slice(0, 5).forEach(function(s) {
         var sEl = document.createElement('div');
@@ -27111,12 +27093,12 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
       });
     }
 
-    // Discovered Sources — Auto-Source Discovery
+    // Discovered Sources \\u2014 Auto-Source Discovery
     var discoveredSources = data.discovered_sources || [];
     if (discoveredSources.length > 0) {
       var dsHeader = document.createElement('div');
       dsHeader.style.cssText = 'font-size:11px;font-weight:800;color:#22c55e;text-transform:uppercase;letter-spacing:.08em;margin:20px 0 12px;padding-top:16px;border-top:1px solid #1f2937;';
-      dsHeader.innerHTML = '\u{1F50D} Sources Found on Your Site';
+      dsHeader.innerHTML = '\\ud83d\\udd0d Sources Found on Your Site';
       passDiv.appendChild(dsHeader);
       
       var foundSources = discoveredSources.filter(function(ds) { return ds.found_where !== 'not_found'; });
@@ -27125,20 +27107,20 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
       foundSources.forEach(function(ds) {
         var dsEl = document.createElement('div');
         dsEl.style.cssText = 'background:#052e16;border:1px solid #166534;border-radius:8px;padding:10px 12px;margin-bottom:8px;font-size:11px;';
-        var icon = ds.found_where === 'schema_markup' ? '\u{1F4CB}' : 
-                   ds.found_where === 'case_study_page' ? '\u{1F4C8}' : 
-                   ds.found_where === 'current_page' ? '\u{1F4DD}' : '\u{1F517}';
+        var icon = ds.found_where === 'schema_markup' ? '\\ud83d\\udccb' : 
+                   ds.found_where === 'case_study_page' ? '\\ud83d\\udcc8' : 
+                   ds.found_where === 'current_page' ? '\\ud83d\\udcdd' : '\\ud83d\\udd17';
         dsEl.innerHTML =
           '<div style="color:#4ade80;font-weight:700;margin-bottom:3px;">' + icon + ' "' + (ds.claim || '') + '"</div>' +
           '<div style="color:#86efac;">' + (ds.evidence || '') + '</div>' +
-          (ds.source_url ? '<a href="' + ds.source_url + '" target="_blank" style="color:#60a5fa;font-size:10px;text-decoration:none;margin-top:4px;display:inline-block;">View source →</a>' : '');
+          (ds.source_url ? '<a href="' + ds.source_url + '" target="_blank" style="color:#60a5fa;font-size:10px;text-decoration:none;margin-top:4px;display:inline-block;">View source \\u2192</a>' : '');
         passDiv.appendChild(dsEl);
       });
       
       if (missingSources.length > 0) {
         var msHeader = document.createElement('div');
         msHeader.style.cssText = 'font-size:11px;font-weight:800;color:#f59e0b;text-transform:uppercase;letter-spacing:.08em;margin:16px 0 10px;';
-        msHeader.innerHTML = '\u{26A0} Claims Needing a Source';
+        msHeader.innerHTML = '\\u26a0 Claims Needing a Source';
         passDiv.appendChild(msHeader);
         missingSources.forEach(function(ms) {
           var msEl = document.createElement('div');
@@ -27156,7 +27138,7 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
     var cpT = document.getElementById('cbCopyText');
     if (cpS && cpT) {
       var _n = String.fromCharCode(10);
-      var lines = ['AI Citation Brief \u2014 ' + (data.url || ''), ''];
+      var lines = ['AI Citation Brief \\u2014 ' + (data.url || ''), ''];
       if (data.keyword) lines.push('Keyword: ' + data.keyword);
       lines.push('AI Citation Results:');
       lines.push('- Google AIO: ' + (data.aio_cited ? 'CITED' : 'Not cited'));
@@ -27220,7 +27202,7 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
 
     document.getElementById('cbResult').classList.add('show');
     document.getElementById('cbKeepBtn').style.display = 'none';
-    document.getElementById('cbCountdown').textContent = 'Click \u2715 to close';
+    document.getElementById('cbCountdown').textContent = 'Click \\u2715 to close';
   }
 
   function toggleGscPanel() {
@@ -27251,7 +27233,7 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
     ta.style.cssText = 'position:fixed;top:-9999px;left:-9999px';
     document.body.appendChild(ta);
     ta.select();
-    try { document.execCommand('copy'); toast('Copied', '#4ade80'); } catch(e) { toast('Copy failed — select manually', '#f87171'); }
+    try { document.execCommand('copy'); toast('Copied', '#4ade80'); } catch(e) { toast('Copy failed \\u2014 select manually', '#f87171'); }
     document.body.removeChild(ta);
   }
 
@@ -27344,7 +27326,7 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
   // -- Sitemap fetch ----------------------------------------------------------
   function renderCheckList(items, containerEl, cbClass, labelFn, countEl, maxN) {
     containerEl.innerHTML = '';
-    if (countEl) countEl.textContent = items.length + ' found — ' + maxN + ' slots available (Select All picks top ' + maxN + ')';
+    if (countEl) countEl.textContent = items.length + ' found \\u2014 ' + maxN + ' slots available (Select All picks top ' + maxN + ')';
     items.forEach(function(item, idx) {
       var checked = idx < maxN;
       var label = document.createElement('label');
@@ -27432,7 +27414,7 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
     if (btn) { btn.textContent = 'Fetch sitemap'; btn.disabled = false; }
   }
 
-  // ── GSC drag/drop handlers ─────────────────────────────────────────────────
+  // \\u2500\\u2500 GSC drag/drop handlers \\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500
   function handleGscDrop(e) {
     e.preventDefault();
     document.getElementById('gscDropZone').style.borderColor = '#374151';
@@ -27460,7 +27442,7 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
             return idx === 0 ? lines.join(String.fromCharCode(10)) : lines.slice(1).join(String.fromCharCode(10));
           }).join(String.fromCharCode(10));
           document.getElementById('importGscData').value = combined;
-          toast('Loaded ' + files.length + ' file' + (files.length > 1 ? 's' : '') + ' — parsing...', '#60a5fa');
+          toast('Loaded ' + files.length + ' file' + (files.length > 1 ? 's' : '') + ' \\u2014 parsing...', '#60a5fa');
           parseGscData();
         }
       };
@@ -27478,9 +27460,9 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
 
     // Detect format:
     // A) GSC Queries CSV: "Top queries,Clicks,Impressions,CTR,Position"
-    //    -> no URL, only query — we pair with domain homepage as placeholder
+    //    -> no URL, only query \\u2014 we pair with domain homepage as placeholder
     // B) GSC Pages CSV: "Top pages,Clicks,Impressions,CTR,Position"  
-    //    -> URL present, no keyword — use slug as keyword
+    //    -> URL present, no keyword \\u2014 use slug as keyword
     // C) URL | keyword format
     // D) Mixed CSV with both URL and query columns
 
@@ -27491,7 +27473,7 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
       if (idx === 0 && (isQueriesCSV || isPagesCSV)) return; // skip header
 
       // Strip BOM and quotes
-      line = line.replace(/^﻿/, '').replace(/^"|"$/g, '');
+      line = line.replace(/^\\ufeff/, '').replace(/^"|"$/g, '');
 
       // Split on comma or tab
       var parts = line.split(/[,	]/).map(function(p){ return p.replace(/^"|"$/g,'').trim(); });
@@ -27502,7 +27484,7 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
         if (!query || query.length < 2) return;
         // Skip header-like rows
         if (query.toLowerCase() === 'top queries' || query.toLowerCase() === 'query') return;
-        // Create a URL hint — user will confirm which URL this maps to
+        // Create a URL hint \\u2014 user will confirm which URL this maps to
         pairs.push({ url: 'https://' + domain + '/', keyword: query, isQueryOnly: true });
 
       } else if (isPagesCSV) {
@@ -27511,7 +27493,7 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
         if (!url || url.indexOf('http') !== 0) return;
         var slug = url.replace(/^https?:[/][/]/, '').replace(/^www[.]/, '').split('/').filter(Boolean).pop() || '';
         var kw = slug.replace(/[-_]/g, ' ').replace(/[.][a-z]+$/, '').trim();
-        // Parse numbers — GSC uses commas in large numbers e.g. "1,234"
+        // Parse numbers \\u2014 GSC uses commas in large numbers e.g. "1,234"
         var parseNum = function(s) { return parseFloat((s||'0').replace(/,/g,'')) || 0; };
         var clicks = parseNum(parts[1]);
         var impressions = parseNum(parts[2]);
@@ -27545,7 +27527,7 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
 
     // If queries-only, show info
     if (pairs[0] && pairs[0].isQueryOnly) {
-      toast('Queries CSV detected — ' + pairs.length + ' keywords found. URLs will be set to your homepage. Edit per page after import.', '#fbbf24');
+      toast('Queries CSV detected \\u2014 ' + pairs.length + ' keywords found. URLs will be set to your homepage. Edit per page after import.', '#fbbf24');
     }
 
     var container = document.getElementById('gscItems');
@@ -27659,7 +27641,7 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
     doNext(0);
   }
 
-  // ── HTML upload ─────────────────────────────────────────────────────────────
+  // \\u2500\\u2500 HTML upload \\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500
   var _htmlUploadPageId = null;
   function closeHtmlUpload() {
     hideModal('htmlUploadModal');
@@ -27696,7 +27678,7 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
       var icon = document.getElementById('soIcon_' + sid);
       var label = document.getElementById('soLabel_' + sid);
       if (step) { step.className = 'so-step'; }
-      if (icon) { icon.className = 'so-step-icon pending'; icon.textContent = '\u25CB'; }
+      if (icon) { icon.className = 'so-step-icon pending'; icon.textContent = '\\u25cb'; }
       if (label) { label.style.color = ''; }
     });
     if (urlEl) urlEl.textContent = url || '';
@@ -27715,7 +27697,7 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
       { id: 'brave',      label: 'Claude / Brave citation check', pct: 80 },
       { id: 'ai',         label: 'AI recommendations',            pct: 92 },
     ];
-    // Realistic timing — total ~35s so animation overlaps server work
+    // Realistic timing \\u2014 total ~35s so animation overlaps server work
     var timings = [0, 1500, 5000, 10000, 16000, 22000, 28000];
     var durations = [1200, 3000, 4000, 4500, 4500, 4500, 5000];
     steps.forEach(function(s, idx) {
@@ -27724,7 +27706,7 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
         var icon = document.getElementById('soIcon_' + s.id);
         var label = document.getElementById('soLabel_' + s.id);
         if (step) step.classList.add('active');
-        if (icon) { icon.className = 'so-step-icon running'; icon.textContent = '\u25CF'; }
+        if (icon) { icon.className = 'so-step-icon running'; icon.textContent = '\\u25cf'; }
         if (label) label.textContent = s.label + '...';
         if (bar) bar.style.width = s.pct + '%';
         if (statusEl) { statusEl.textContent = s.label + '...'; statusEl.style.color = '#a78bfa'; }
@@ -27733,7 +27715,7 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
         var step = document.getElementById('soStep_' + s.id);
         var icon = document.getElementById('soIcon_' + s.id);
         if (step) { step.classList.remove('active'); step.classList.add('done'); }
-        if (icon) { icon.className = 'so-step-icon done'; icon.textContent = '\u2713'; }
+        if (icon) { icon.className = 'so-step-icon done'; icon.textContent = '\\u2713'; }
         if (statusEl) { statusEl.textContent = s.label + ' done'; statusEl.style.color = '#4ade80'; }
       }, timings[idx] + durations[idx]);
     });
@@ -27762,25 +27744,24 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
   }
   (function(){ var _soc = document.getElementById('soClose'); if (_soc) _soc.addEventListener('click', function(){ hideScanOverlay(); if (typeof loadPages === 'function') loadPages(); }); })();
 
-  // Poll for server results — brief opens as soon as data is ready
+  // Poll for server results \\u2014 brief opens as soon as data is ready
   function pollAndShowBrief(pageId, maxPolls, intervalMs) {
     var pollCount = 0;
     var timer = setInterval(function() {
       pollCount++;
       if (pollCount > maxPolls) {
         clearInterval(timer);
-        // Timeout — open brief with whatever data we have
+        // Timeout \\u2014 open brief with whatever data we have
         api('/pages/' + pageId).then(function(d2) {
           if (d2.success && d2.page) { openBriefFromPoll(d2.page); }
-          else { hideScanOverlay(); loadPages(); toast('Scan complete — brief ready', '#4ade80'); }
+          else { hideScanOverlay(); loadPages(); toast('Scan complete \\u2014 brief ready', '#4ade80'); }
         }).catch(function() { hideScanOverlay(); toast('Connection issue', '#f87171'); });
         return;
       }
       api('/pages/' + pageId).then(function(d2) {
-        if (d2.success && d2.page) {
-          var spy = d2.page.serp_spy || {};
-          // ✅ Check citation_brief_status instead of last_checked_at
-          if (spy.citation_brief_status === 'complete' || spy.citation_brief_status === 'error') {
+        if (d2.success && d2.page && d2.page.last_checked_at) {
+          var t = new Date(d2.page.last_checked_at).getTime();
+          if (Date.now() - t < 300000) {
             clearInterval(timer);
             openBriefFromPoll(d2.page);
           }
@@ -27789,132 +27770,11 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
     }, intervalMs);
   }
 
-                async function openCitationBrief(pageId) {
-                    // ✅ Haal page data op via API (allTrackerPages is niet altijd in scope)
-                    const modal = document.getElementById('trCitationModal');
-                    const contentDiv = document.getElementById('trCitationBody');
-                    const title = document.getElementById('trCitationTitle');
-                    if (!modal || !contentDiv) return;
-
-                    // Fetch page data first
-                    const token = localStorage.getItem('admin_id') || '';
-                    let page = { id: pageId, keyword: '', url: '' };
-                    try {
-                        const pageRes = await fetch('/api/tracker/pages/' + pageId, { headers: { 'x-admin-key': token } });
-                        const pageData = await pageRes.json();
-                        if(pageData.success && pageData.page) page = pageData.page;
-                    } catch(e) {}
-
-                    var url = page.url || '';
-                    var kw = page.keyword || page.gsc_keyword || '';
-                    var urlClean = url.indexOf('//') > -1 ? url.split('//')[1] : url;
-                    var urlParts = urlClean.split('/');
-                    title.textContent = (kw || 'Citation Brief') + ' - ' + urlParts.slice(0,2).join('/');
-                    _activityAdd(' Generating Citation Brief for ' + (url.split('//').pop().split('/')[0]), 'citation');
-
-                    contentDiv.innerHTML = '<style>@keyframes csspin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}@keyframes csprog{0%{margin-left:-60%}100%{margin-left:110%}}</style><div style="text-align:center;padding:50px;"><div style="font-size:2.5rem;display:inline-block;animation:csspin 1.5s linear infinite;margin-bottom:20px;">🌀</div><div style="font-size:14px;color:#a78bfa;font-weight:700;margin-bottom:8px;">Building your Citation Brief...</div><div style="font-size:12px;color:#6b7280;margin-bottom:20px;">This may take up to 60 seconds.</div><div style="background:#1f2937;border-radius:99px;height:4px;width:220px;margin:0 auto;overflow:hidden;"><div style="height:100%;width:60%;background:linear-gradient(90deg,#7c3aed,#a78bfa);border-radius:99px;animation:csprog 1.8s ease-in-out infinite;"></div></div></div>';
-                    modal.style.display = 'flex';
-
-                    const controller = new AbortController();
-                    const timeoutId = setTimeout(function(){ controller.abort(); }, 12000);
-
-                    try {
-                        const response = await fetch('/api/tracker/pages/' + pageId + '/citation-brief', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json', 'x-admin-key': token },
-                            signal: controller.signal
-                        });
-                        clearTimeout(timeoutId);
-                        const data = await response.json();
-
-                        if (data.status === 'complete' && data.brief) {
-                            renderCitationBrief(data, contentDiv, page);
-                            _activityAdd('OK Citation Brief ready - ' + ((data.brief||{}).passages_to_add||[]).length + ' passages', 'done');
-                        } else {
-                            startCitationPolling(pageId, contentDiv, page);
-                        }
-                    } catch (error) {
-                        clearTimeout(timeoutId);
-                        startCitationPolling(pageId, contentDiv, page);
-                    }
-                }
-
-                // --- FIX 2: startCitationPolling - poll elke 3s, max 30 keer (90s totaal) ---
-                function startCitationPolling(pageId, container, page) {
-                    let attempts = 0;
-                    const maxAttempts = 30; // 30 x 3s = 90s max
-                    const kw = (page||{}).keyword || (page||{}).gsc_keyword || '';
-                    container.innerHTML = '<style>@keyframes csspin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}</style><div style="text-align:center;padding:40px;"><div style="font-size:2rem;display:inline-block;animation:csspin 1.5s linear infinite;margin-bottom:16px;">⏳</div><div style="font-size:14px;color:#fbbf24;font-weight:700;margin-bottom:8px;">AI Analysis in Progress...</div><div style="font-size:12px;color:#6b7280;margin-bottom:12px;">Checking every 3 seconds...</div><div id="_pollStatus" style="font-size:11px;color:#374151;">Check 1/30</div></div>';
-
-                    // ✅ Toon emergency brief na 15s (5 attempts) als AI nog bezig is
-                    var emergencyTimer = setTimeout(function(){
-                        if(container.innerHTML.indexOf('AI Analysis in Progress') > -1){
-                            showEmergencyBrief(container, page||{keyword:kw,id:pageId}, 'AI is still working in the background. Here are guaranteed best practices:');
-                        }
-                    }, 15000);
-
-                    const timer = setInterval(async function() {
-                        attempts++;
-                        var statusEl = document.getElementById('_pollStatus');
-                        if(statusEl) statusEl.textContent = 'Check ' + attempts + '/' + maxAttempts;
-
-                        try {
-                            const token = localStorage.getItem('admin_id') || '';
-                            const res = await fetch('/api/tracker/pages/' + pageId, { headers: { 'x-admin-key': token } });
-                            const result = await res.json();
-                            const pageData = result.page || result.data || result;
-                            const serpSpy = (pageData.serp_spy || {});
-
-                            if (serpSpy.citation_brief_status === 'complete' && serpSpy.citation_brief) {
-                                clearInterval(timer);
-                                clearTimeout(emergencyTimer);
-                                // Heropen modal als deze gesloten is
-                                var modal = document.getElementById('trCitationModal');
-                                if(modal) modal.style.display = 'flex';
-                                renderCitationBrief({ brief: serpSpy.citation_brief }, container, pageData);
-                                _activityAdd('OK Citation Brief loaded via poll - ' + ((serpSpy.citation_brief||{}).passages_to_add||[]).length + ' passages', 'done');
-                                return;
-                            }
-                            if (serpSpy.citation_brief_status === 'failed' || serpSpy.citation_brief_status === 'error') {
-                                clearInterval(timer);
-                                clearTimeout(emergencyTimer);
-                                var modal2 = document.getElementById('trCitationModal');
-                                if(modal2) modal2.style.display = 'flex';
-                                showEmergencyBrief(container, page||pageData, 'Analysis failed. Showing best practices:');
-                                return;
-                            }
-                        } catch (e) { console.error('Poll error:', e); }
-
-                        if (attempts >= maxAttempts) {
-                            clearInterval(timer);
-                            clearTimeout(emergencyTimer);
-                            // Modal heropenen als gesloten
-                            var modal3 = document.getElementById('trCitationModal');
-                            if(modal3) modal3.style.display = 'flex';
-                            showEmergencyBrief(container, page||{keyword:kw,id:pageId}, 'Taking too long. Showing best practices:');
-                        }
-                    }, 3000);
-                }
-
-                // --- FIX 3: showEmergencyBrief - nooit leeg ---
-                function showEmergencyBrief(container, page, message) {
-                    if (!container) return;
-                    const kw = (page||{}).keyword || (page||{}).gsc_keyword || 'this topic';
-                    const html = '<div style="background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);border-radius:8px;padding:12px 16px;margin-bottom:16px;font-size:13px;color:#fbbf24;">⚠️ ' + message + '</div><div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:#a78bfa;margin:18px 0 12px;">✨ Recommended Passages</div><div style="background:rgba(124,58,237,.1);border-left:3px solid #a78bfa;padding:12px 16px;margin:8px 0;border-radius:0 8px 8px 0;"><strong style="color:#f1f5f9;font-size:13px;">1. Direct Answer</strong><p style="font-size:12px;color:#9ca3af;margin:4px 0 0;line-height:1.6;">Add a 134-167 word direct answer for "' + kw + '" immediately after H1. Format: "' + kw + ' is [definition]. [2-3 sentences with data]. According to [expert], [quote]. [Practical example]."</p><div style="font-size:11px;color:#6b7280;margin-top:6px;">📍 immediately after H1 | 44% of AI citations from first 30% of text</div></div><div style="background:rgba(124,58,237,.1);border-left:3px solid #a78bfa;padding:12px 16px;margin:8px 0;border-radius:0 8px 8px 0;"><strong style="color:#f1f5f9;font-size:13px;">2. FAQ Schema</strong><p style="font-size:12px;color:#9ca3af;margin:4px 0 0;line-height:1.6;">Add JSON-LD FAQ schema with 3-5 questions about "' + kw + '". Pages with FAQ schema are cited 3.2x more often.</p><div style="font-size:11px;color:#6b7280;margin-top:6px;">📍 before closing &lt;/body&gt; | #1 signal for AI Overview</div></div><div style="background:rgba(124,58,237,.1);border-left:3px solid #a78bfa;padding:12px 16px;margin:8px 0;border-radius:0 8px 8px 0;"><strong style="color:#f1f5f9;font-size:13px;">3. Entity Definition</strong><p style="font-size:12px;color:#9ca3af;margin:4px 0 0;line-height:1.6;">"' + kw + '" is [clear definition]. This [type] [does what] by [mechanism]. According to [Expert], "[quote]." For example: [numbers].</p><div style="font-size:11px;color:#6b7280;margin-top:6px;">📍 first paragraph | ChatGPT & Copilot favor definitions</div></div><div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:#60a5fa;margin:18px 0 12px;">🔧 Structural Fixes</div><div style="background:rgba(96,165,250,.05);border-left:3px solid #60a5fa;padding:12px 16px;margin:8px 0;border-radius:0 8px 8px 0;"><strong style="color:#f1f5f9;font-size:13px;">1. Add FAQ Schema (JSON-LD)</strong><p style="font-size:12px;color:#9ca3af;margin:4px 0 0;">FAQ schema is the #1 signal for AI Overview inclusion. 3.2x citation increase.</p></div><div style="background:rgba(96,165,250,.05);border-left:3px solid #60a5fa;padding:12px 16px;margin:8px 0;border-radius:0 8px 8px 0;"><strong style="color:#f1f5f9;font-size:13px;">2. Add Direct Answer (134-167 words)</strong><p style="font-size:12px;color:#9ca3af;margin:4px 0 0;">44% of AI citations come from first 30% of text.</p></div><div style="background:rgba(96,165,250,.05);border-left:3px solid #60a5fa;padding:12px 16px;margin:8px 0;border-radius:0 8px 8px 0;"><strong style="color:#f1f5f9;font-size:13px;">3. Add Author Bio (E-E-A-T)</strong><p style="font-size:12px;color:#9ca3af;margin:4px 0 0;">Claude and Perplexity check author credentials. 2.1x more citations.</p></div><div style="background:rgba(96,165,250,.05);border-left:3px solid #60a5fa;padding:12px 16px;margin:8px 0;border-radius:0 8px 8px 0;"><strong style="color:#f1f5f9;font-size:13px;">4. Update Timestamp (&lt;90 days)</strong><p style="font-size:12px;color:#9ca3af;margin:4px 0 0;">Content under 90 days is 3x more likely to be cited.</p></div>';
-                    container.innerHTML = html;
-                    _activityAdd('Showing emergency brief for ' + kw, 'warn');
-                }
   function openBriefFromPoll(pageData) {
     hideScanOverlay();
     loadPages();
-    
-    // ✅ Open the citation brief overlay automatically
-    if (pageData && pageData.id) {
-      setTimeout(function() {
-        openCitationBrief(pageData.id);
-      }, 300);
-    }
-    
+    // Don't open overlay \\u2014 inline brief already shows the data
+    // User can click "\\ud83d\\udcc4 Brief" button to view overlay if needed
     var snap = pageData || {};
     // Store data for button click
     _lastBriefData[snap.id || pageData.page_id] = {
@@ -27941,7 +27801,7 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
       _gsc_enabled: GSC_ENABLED || (snap.gsc_clicks != null) || (snap.gsc_impressions != null) || (snap.gsc_position != null),
       type: 'brief_ready'
     };
-    return;
+    return; // EXIT \\u2014 no overlay, inline brief shows data
   }
 
   async function submitHtmlUpload() {
@@ -27965,7 +27825,7 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
           setTimeout(function() { runScanAnimation(p ? p.url : '', function() { pollAndShowBrief(pageId, 60, 5000); }); }, 300);
         } else {
           var _when = r.next_check_at ? new Date(r.next_check_at).toLocaleDateString() : 'the next scheduled check';
-          toast('HTML updated — will be re-checked on ' + _when, '#38bdf8');
+          toast('HTML updated \\u2014 will be re-checked on ' + _when, '#38bdf8');
           loadPages();
         }
       } else { toast(r.error || 'Failed to save', '#f87171'); }
@@ -27977,7 +27837,7 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
     if (overlay) overlay.style.display = 'flex';
   }
 
-<\/script>
+</script>
 </body>
 </html>`;
 
@@ -29244,7 +29104,39 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
 
                 <script>
                 // -- Citation Brief --------------------------------------------
-                // --- FIX 1: openCitationBrief met AbortController 12s timeout ---
+                function openCitationBrief(pageId) {
+                    var page = (allTrackerPages||[]).find(function(p){ return p.id == pageId; }) || {};
+                    var url = page.url || '';
+                    var keyword = page.keyword || page.gsc_keyword || '';
+                    var domain = url.split('//').pop().split('/')[0];
+                    var modal = document.getElementById('trCitationModal');
+                    var title = document.getElementById('trCitationTitle');
+                    var body  = document.getElementById('trCitationBody');
+                    var urlClean = url.indexOf('//') > -1 ? url.split('//')[1] : url;
+                    var urlParts = urlClean.split('/');
+                    title.textContent = (keyword || 'Citation Brief') + ' - ' + urlParts.slice(0,2).join('/');
+                    _activityAdd(' Generating Citation Brief for ' + domain, 'citation');
+                    body.innerHTML = '<style>@keyframes csspin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}@keyframes csprog{0%{margin-left:-60%}100%{margin-left:110%}}</style><div style="text-align:center;padding:60px 20px;"><div style="font-size:2.5rem;display:inline-block;animation:csspin 1.5s linear infinite;margin-bottom:20px;"></div><div style="font-size:14px;color:#a78bfa;font-weight:700;margin-bottom:8px;">Generating Citation Brief</div><div style="font-size:12px;color:#6b7280;margin-bottom:20px;">Fetching AI Overview . Scraping competitors . Analysing your content</div><div style="background:#1f2937;border-radius:99px;height:4px;width:220px;margin:0 auto;overflow:hidden;"><div style="height:100%;width:60%;background:linear-gradient(90deg,#7c3aed,#a78bfa);border-radius:99px;animation:csprog 1.8s ease-in-out infinite;"></div></div><div style="font-size:11px;color:#374151;margin-top:12px;">15-30 seconds</div></div>';
+                    modal.style.display = 'flex';
+                    var token = localStorage.getItem('admin_id') || '';
+                    fetch('/api/tracker/pages/' + pageId + '/citation-brief', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'x-admin-key': token }
+                    })
+                    .then(function(r) { return r.json(); })
+                    .then(function(data) {
+                        if (!data.success) {
+                            body.innerHTML = '<div style="color:#f87171;padding:20px;">' + (data.error || 'Failed') + '</div>';
+                            return;
+                        }
+                        renderCitationBrief(data, body, page);
+                        var domain2 = (page.url||'').split('//').pop().split('/')[0];
+                        _activityAdd('OK Citation Brief ready for ' + domain2 + ' - ' + (data.brief && data.brief.passages_to_add ? data.brief.passages_to_add.length : 0) + ' passages', 'done');
+                    })
+                    .catch(function(e) {
+                        body.innerHTML = '<div style="color:#f87171;padding:20px;">Error: ' + e.message + '</div>';
+                    });
+                }
 
                 function closeCitationModal() {
                     document.getElementById('trCitationModal').style.display = 'none';
@@ -29423,114 +29315,6 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                             div('font-size:13px;color:#e5e7eb;', brief.primary_reason_not_cited));
                     }
 
-                    container.innerHTML = html;
-                }
-
-                // ── openCitationBrief / startCitationPolling / showEmergencyBrief ──
-                // These were missing from the admin template — added to fix "undefined" errors.
-
-                async function openCitationBrief(pageId) {
-                    var modal = document.getElementById('trCitationModal');
-                    var contentDiv = document.getElementById('trCitationBody');
-                    var titleEl = document.getElementById('trCitationTitle');
-                    if (!modal || !contentDiv) { console.error('[CitationBrief] Modal not found'); return; }
-
-                    modal.style.display = 'flex';
-                    contentDiv.innerHTML = '<div style="text-align:center;padding:50px;"><div style="font-size:2.5rem;display:inline-block;animation:csspin 1.5s linear infinite;margin-bottom:20px;">\u{1F300}</div><div style="font-size:14px;color:#a78bfa;font-weight:700;margin-bottom:8px;">Building your Citation Brief...</div><div style="font-size:12px;color:#6b7280;">This may take up to 60 seconds.</div></div>';
-
-                    var token = localStorage.getItem('admin_id') || localStorage.getItem('adminToken') || '';
-                    var page = { id: pageId, keyword: '', url: '' };
-                    try {
-                        var pr = await fetch('/api/tracker/pages/' + pageId, { headers: { 'x-admin-key': token } });
-                        var pd = await pr.json();
-                        if (pd.success && pd.page) { page = pd.page; }
-                        if (titleEl) titleEl.textContent = (page.keyword || 'Citation Brief');
-                    } catch(e) {}
-
-                    var controller = new AbortController();
-                    var timeoutId = setTimeout(function() { controller.abort(); }, 12000);
-
-                    try {
-                        var response = await fetch('/api/tracker/pages/' + pageId + '/citation-brief', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json', 'x-admin-key': token },
-                            signal: controller.signal
-                        });
-                        clearTimeout(timeoutId);
-                        var data = await response.json();
-                        if (data.status === 'complete' && data.brief) {
-                            renderCitationBrief(data, contentDiv, page);
-                        } else {
-                            startCitationPolling(pageId, contentDiv, page);
-                        }
-                    } catch(err) {
-                        clearTimeout(timeoutId);
-                        console.warn('[CitationBrief] Fetch failed, starting poll', err);
-                        startCitationPolling(pageId, contentDiv, page);
-                    }
-                }
-
-                function startCitationPolling(pageId, container, page) {
-                    var attempts = 0;
-                    var maxAttempts = 25;
-                    var kw = (page || {}).keyword || '';
-                    container.innerHTML = '<div style="text-align:center;padding:40px;"><div style="font-size:2rem;display:inline-block;animation:csspin 1.5s linear infinite;margin-bottom:16px;">\u23F3</div><div style="font-size:14px;color:#fbbf24;font-weight:700;margin-bottom:8px;">AI Analysis in Progress...</div><div style="font-size:12px;color:#6b7280;margin-bottom:12px;">Checking every 7 seconds...</div><div id="_adminPollStatus" style="font-size:11px;color:#374151;">Check 1/' + maxAttempts + '</div></div>';
-
-                    var emergencyTimer = setTimeout(function() {
-                        if (container.innerHTML.indexOf('AI Analysis in Progress') > -1) {
-                            showEmergencyBrief(container, page || { keyword: kw, id: pageId }, 'AI is still working. Here are best practices:');
-                        }
-                    }, 20000);
-
-                    var timer = setInterval(async function() {
-                        attempts++;
-                        var statusEl = document.getElementById('_adminPollStatus');
-                        if (statusEl) statusEl.textContent = 'Check ' + attempts + '/' + maxAttempts;
-
-                        try {
-                            var token = localStorage.getItem('admin_id') || localStorage.getItem('adminToken') || '';
-                            var res = await fetch('/api/tracker/pages/' + pageId, { headers: { 'x-admin-key': token } });
-                            var result = await res.json();
-                            var pageData = result.page || result.data || result;
-                            var serpSpy = pageData.serp_spy || {};
-
-                            if (serpSpy.citation_brief_status === 'complete' && serpSpy.citation_brief) {
-                                clearInterval(timer);
-                                clearTimeout(emergencyTimer);
-                                var m = document.getElementById('trCitationModal');
-                                if (m) m.style.display = 'flex';
-                                renderCitationBrief({ brief: serpSpy.citation_brief }, container, pageData);
-                                return;
-                            }
-                            if (serpSpy.citation_brief_status === 'failed' || serpSpy.citation_brief_status === 'error') {
-                                clearInterval(timer);
-                                clearTimeout(emergencyTimer);
-                                showEmergencyBrief(container, page || pageData, 'Analysis failed. Showing best practices:');
-                                return;
-                            }
-                        } catch(e) { console.error('[CitationBrief] Poll error:', e); }
-
-                        if (attempts >= maxAttempts) {
-                            clearInterval(timer);
-                            clearTimeout(emergencyTimer);
-                            showEmergencyBrief(container, page || { keyword: kw, id: pageId }, 'Taking too long. Showing best practices:');
-                        }
-                    }, 7000);
-                }
-
-                function showEmergencyBrief(container, page, message) {
-                    if (!container) return;
-                    var kw = (page || {}).keyword || (page || {}).gsc_keyword || 'this topic';
-                    var html = '<div style="background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);border-radius:8px;padding:12px 16px;margin-bottom:16px;font-size:13px;color:#fbbf24;">\u26A0\uFE0F ' + message + '</div>';
-                    html += '<div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:#a78bfa;margin:18px 0 12px;">\u2728 Recommended Passages</div>';
-                    html += '<div style="background:rgba(124,58,237,.1);border-left:3px solid #a78bfa;padding:12px 16px;margin:8px 0;border-radius:0 8px 8px 0;"><strong style="color:#f1f5f9;font-size:13px;">1. Direct Answer</strong><p style="font-size:12px;color:#9ca3af;margin:4px 0 0;line-height:1.6;">Add a 134-167 word direct answer for &quot;' + kw + '&quot; immediately after H1. Format: &quot;' + kw + ' is [definition]. [2-3 sentences with data].&quot;</p><div style="font-size:11px;color:#6b7280;margin-top:6px;">\uD83D\uDCCD immediately after H1 | 44% of AI citations from first 30% of text</div></div>';
-                    html += '<div style="background:rgba(124,58,237,.1);border-left:3px solid #a78bfa;padding:12px 16px;margin:8px 0;border-radius:0 8px 8px 0;"><strong style="color:#f1f5f9;font-size:13px;">2. FAQ Schema</strong><p style="font-size:12px;color:#9ca3af;margin:4px 0 0;line-height:1.6;">Add JSON-LD FAQ schema with 3-5 questions about &quot;' + kw + '&quot;. Pages with FAQ schema are cited 3.2x more often.</p><div style="font-size:11px;color:#6b7280;margin-top:6px;">\uD83D\uDCCD before &lt;/body&gt; | #1 signal for AI Overview</div></div>';
-                    html += '<div style="background:rgba(124,58,237,.1);border-left:3px solid #a78bfa;padding:12px 16px;margin:8px 0;border-radius:0 8px 8px 0;"><strong style="color:#f1f5f9;font-size:13px;">3. Entity Definition</strong><p style="font-size:12px;color:#9ca3af;margin:4px 0 0;line-height:1.6;">&quot;' + kw + '&quot; is [clear definition]. This [type] [does what] by [mechanism].</p><div style="font-size:11px;color:#6b7280;margin-top:6px;">\uD83D\uDCCD first paragraph | ChatGPT &amp; Copilot favor definitions</div></div>';
-                    html += '<div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:#60a5fa;margin:18px 0 12px;">\uD83D\uDD27 Structural Fixes</div>';
-                    html += '<div style="background:rgba(96,165,250,.05);border-left:3px solid #60a5fa;padding:12px 16px;margin:8px 0;border-radius:0 8px 8px 0;"><strong style="color:#f1f5f9;font-size:13px;">Add FAQ Schema (JSON-LD)</strong><p style="font-size:12px;color:#9ca3af;margin:4px 0 0;">FAQ schema is the #1 signal for AI Overview inclusion. 3.2x citation increase.</p></div>';
-                    html += '<div style="background:rgba(96,165,250,.05);border-left:3px solid #60a5fa;padding:12px 16px;margin:8px 0;border-radius:0 8px 8px 0;"><strong style="color:#f1f5f9;font-size:13px;">Add Direct Answer (134-167 words)</strong><p style="font-size:12px;color:#9ca3af;margin:4px 0 0;">44% of AI citations come from first 30% of text.</p></div>';
-                    html += '<div style="background:rgba(96,165,250,.05);border-left:3px solid #60a5fa;padding:12px 16px;margin:8px 0;border-radius:0 8px 8px 0;"><strong style="color:#f1f5f9;font-size:13px;">Add Author Bio (E-E-A-T)</strong><p style="font-size:12px;color:#9ca3af;margin:4px 0 0;">2.1x more citations when author credentials are visible.</p></div>';
-                    html += '<div style="background:rgba(96,165,250,.05);border-left:3px solid #60a5fa;padding:12px 16px;margin:8px 0;border-radius:0 8px 8px 0;"><strong style="color:#f1f5f9;font-size:13px;">Update Timestamp (&lt;90 days)</strong><p style="font-size:12px;color:#9ca3af;margin:4px 0 0;">Content under 90 days is 3x more likely to be cited.</p></div>';
                     container.innerHTML = html;
                 }
                 <\/script>
@@ -32282,28 +32066,6 @@ app.post('/api/tracker/pages/:id/citation-brief', verifyEngineAccess, async (req
     const pageUrl = page.url || '';
     if (!keyword) return res.status(400).json({ success: false, error: 'No keyword set for this page — please add a keyword manually in the tracker' });
 
-    // === FALLBACK BRIEF: save immediately so brief is never empty ===
-    const _fbAt = new Date().toISOString();
-    const _fbBrief = { platform_gaps: { google_aio: snap.ai_google_overview_cited ? 'Page cited' : (snap.ai_google_overview_found ? 'AIO exists but page not cited' : 'No AIO detected'), perplexity: snap.ai_perplexity_cited ? 'Page cited' : 'Citation status unknown', chatgpt: 'Uses Google index', copilot_bing: 'Pending Bing search results', claude_brave: 'Pending Brave search results' }, passages_to_add: [], structural_fixes: [], primary_reason_not_cited: 'AI analysis in progress — detailed recommendations are being generated. This typically takes 30-60 seconds. The brief will auto-update when complete.', freshness_recommendation: '', confidence: 'medium', estimated_impact: 'Results pending from AI analysis', model_searched_google: false, _status: 'pending', _fallback: true, _message: 'Detailed AI recommendations are being generated. Check back in 30-60 seconds.' };
-    try {
-      await pool.query("INSERT INTO tracker_citation_briefs (page_id,tracker_client_id,keyword,url,position,aio_cited,perp_cited,bing_cited,brave_cited,score,brief_json,passages,recommendations,created_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,NOW())", [pageId, page.tracker_client_id || null, keyword, pageUrl, snap.google_position || null, snap.ai_google_overview_cited || false, snap.ai_perplexity_cited || false, false, false, 0, JSON.stringify(_fbBrief), JSON.stringify([]), JSON.stringify([{ priority: 'HIGH', section: 'AIO Brief', item: 'AI analysis in progress — detailed recommendations loading...', why: 'External AI providers are being queried. This brief will auto-update within 60 seconds.', estimated_impact: 'Waiting for AI response' }])]);
-      await pool.query("UPDATE tracker_pages SET serp_spy = COALESCE(serp_spy, '{}'::jsonb) || $1::jsonb WHERE id = $2", [JSON.stringify({ citation_brief: _fbBrief, citation_brief_at: _fbAt, citation_brief_model: 'fallback-pending', citation_brief_status: 'processing' }), pageId]);
-    } catch (e) {}
-    // === /FALLBACK BRIEF ===
-
-    // ✅ EARLY RETURN - send pending status immediately, run AI in background
-    res.json({ 
-      success: true, 
-      status: 'pending', 
-      message: 'Building your Citation Brief...',
-      page_id: pageId,
-      brief: _fbBrief
-    });
-
-    // ✅ Run all AI calls in background (setTimeout is more reliable than setImmediate)
-    setTimeout(async () => {
-    try {
-      console.log('[citation-brief] 🚀 Background AI analysis STARTED for page', pageId, 'keyword:', keyword);
     const geminiKey = resolveGeminiKey(req) || process.env.GEMINI_API_KEY;
     const serperKey = resolveSerpapiKey(req) || process.env.SERPAPI_KEY || '';
     const anthropicKey = process.env.ANTHROPIC_API_KEY || '';
@@ -32768,16 +32530,11 @@ Return ONLY valid JSON — no markdown:
       brief._grounding_note = 'These are the URLs Gemini actually retrieved from Google Search when analyzing this keyword. The top source is likely what Google AI Overview is currently citing.';
     }
 
-    // Update database — single atomic update with complete status
-    try {
-      await pool.query(
-        `UPDATE tracker_pages SET serp_spy = COALESCE(serp_spy, '{}'::jsonb) || $1::jsonb WHERE id=$2`,
-        [JSON.stringify({ citation_brief: brief, citation_brief_at: new Date().toISOString(), citation_brief_model: modelUsed, citation_brief_status: 'complete' }), pageId]
-      );
-      console.log(`[citation-brief] ✅ Status set to 'complete' for page ${pageId}`);
-    } catch(dbErr) {
-      console.error(`[citation-brief] ❌ DB save failed for page ${pageId}:`, dbErr.message);
-    }
+    // Save brief + which model was used
+    await pool.query(
+      `UPDATE tracker_pages SET serp_spy = COALESCE(serp_spy, '{}'::jsonb) || $1::jsonb WHERE id=$2`,
+      [JSON.stringify({ citation_brief: brief, citation_brief_at: new Date().toISOString(), citation_brief_model: modelUsed }), pageId]
+    ).catch(() => {});
 
     const finalResult = {
       success: true, page_id: pageId, keyword, url: pageUrl,
@@ -32791,19 +32548,7 @@ Return ONLY valid JSON — no markdown:
     };
     // Cache the full brief result for 24h
     if (brief) _cacheSet(gemCacheKey, finalResult, CACHE_TTL.gemini);
-    
-    console.log(`[citation-brief] ✅ Complete for page ${pageId}`);
-    
-    } catch(bgErr) {
-      console.error('[citation-brief] Background error:', bgErr);
-      // Update with error status
-      await pool.query(
-        `UPDATE tracker_pages SET serp_spy = COALESCE(serp_spy, '{}'::jsonb) || $1::jsonb WHERE id=$2`,
-        [JSON.stringify({ citation_brief_status: 'error', citation_brief_error: bgErr.message }), pageId]
-      ).catch(() => {});
-    }
-    }, 100); // End setTimeout (100ms delay for reliable background execution)
-    
+    res.json(finalResult);
   } catch(e) {
     console.error('[citation-brief]', e);
     res.status(500).json({ success: false, error: e.message });
@@ -35283,6 +35028,29 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
         }
       } catch(e) { _otherPagesList = ''; }
 
+      // ── INSTANT LOCAL BRIEF — built from scan results, persisted NOW so the page is never empty and shows fast ──
+      (function(){
+        var _ckw = keyword || page.keyword || page.gsc_keyword || 'this topic';
+        var _cpos = snapshot.google_position || page.gsc_position || null;
+        var _items = [];
+        if (!snapshot.ai_google_overview_cited) _items.push({ title:'Win Google AI Overview citation', priority:'high', system:'Google AIO', action:'Add a direct, quotable 2-3 sentence definition answering "what is '+_ckw+'" within the first 100 words, right after the H1. AI Overviews quote concise, self-contained answers.', expected_impact:'Eligible for AIO citation within 2-3 crawl cycles' });
+        if (!snapshot.ai_perplexity_cited) _items.push({ title:'Win Perplexity citation', priority:'medium', system:'Perplexity', action:'Add an "About the Author" block with a named author, credentials and 1-2 verifiable stats. Perplexity favors clear E-E-A-T signals.', expected_impact:'Stronger author trust → Perplexity citation' });
+        if (!snapshot.ai_bing_cited) _items.push({ title:'Win Microsoft Copilot citation', priority:'medium', system:'Microsoft Copilot', action:'Add a 50-60 word summary paragraph near the top that directly matches the search query for "'+_ckw+'".', expected_impact:'Concise top-of-page summary → Copilot citation' });
+        if (!snapshot.ai_brave_cited) _items.push({ title:'Win Claude / Brave citation', priority:'low', system:'Claude/Brave', action:'Add verifiable facts with named sources and a clear author byline. Claude and Brave prioritize factual, well-sourced content.', expected_impact:'Factual sourcing → Claude/Brave citation' });
+        if (_cpos != null && parseFloat(_cpos) > 3) _items.push({ title:'Improve Google rank for "'+_ckw+'"', priority:'high', system:'Google AIO', action:'Rewrite the <title> and H1 to lead with "'+_ckw+'" plus a clear benefit. Currently ranking #'+_cpos+'.', expected_impact:'Position #'+_cpos+' → top 3 after recrawl' });
+        if (Array.isArray(snapshot.graaf_recommendations)) snapshot.graaf_recommendations.slice(0,2).forEach(function(g){ var t=typeof g==='string'?g:(g&&(g.title||g.text||g.name))||''; var a=typeof g==='string'?g:(g&&(g.action||g.fix||g.text||g.detail))||''; if(t||a) _items.push({title:String(t||'Content improvement').substring(0,60),priority:'medium',system:'Content Quality',action:a,expected_impact:''}); });
+        snapshot.recommendations = _items.slice(0,6);
+        var _gsc = [];
+        if (_ckw && _cpos != null) _gsc.push({ title:'Optimize title for "'+_ckw+'"', priority:'high', trigger:'Ranking #'+_cpos+(gscImpr?' with '+gscImpr+' impressions':''), action:'Rewrite the <title> to lead with "'+_ckw+'" and add a clear benefit or number to lift click-through.', expected_impact:'Position #'+_cpos+' → top 3 after Google recrawl', effort:'quick_win' });
+        if (gscImpr && (gscClicks != null)) _gsc.push({ title:'Capture missed clicks', priority:'medium', trigger:gscImpr+' impressions, '+gscClicks+' clicks', action:'Add a concise meta description and a question-style H2 matching search intent for "'+_ckw+'".', expected_impact:'+'+(clickGap||'more')+' clicks/month', effort:'content' });
+        snapshot.gsc_brief = _gsc;
+      })();
+      try {
+        await pool.query('UPDATE tracker_pages SET brief_content=$1 WHERE id=$2',
+          [JSON.stringify({ items: snapshot.recommendations, gsc_brief: snapshot.gsc_brief, position: snapshot.google_position, score: snapshot.score || null, generated_at: new Date().toISOString(), partial: true }), page.id]);
+        console.log('[tracker] Instant local brief persisted for page', page.id, '(' + snapshot.recommendations.length + ' items)');
+      } catch(e) { console.warn('[brief-instant]', e.message); }
+
       // ── CALL 1: Citation Brief ─────────────────────────────────────────
       const citationPrompt = `You are an AI Citation Strategist. Your job is to create an actionable Citation Brief for a single web page.
 
@@ -35408,15 +35176,16 @@ QUALITY BAR: A user with zero SEO knowledge must be able to implement every acti
 
 GOAL: Rank #1 for "${kw}" and capture the maximum clicks from ${gscImpr || 'the available'} monthly impressions.`;
       // Run both in parallel
+      var _briefTimeout = function(){ return new Promise(function(res){ setTimeout(function(){ res({ ok:false, status:408, errorMessage:'brief time budget exceeded' }); }, 22000); }); };
       const [citResp, gscResp] = await Promise.all([
-        callGeminiWithFallback(geminiKey, {
+        Promise.race([ callGeminiWithFallback(geminiKey, {
           contents: [{ role: 'user', parts: [{ text: citationPrompt }] }],
           generationConfig: { temperature: 0.3, maxOutputTokens: 2000 }
-        }),
-        callGeminiWithFallback(geminiKey, {
+        }, null, null, 1), _briefTimeout() ]),
+        Promise.race([ callGeminiWithFallback(geminiKey, {
           contents: [{ role: 'user', parts: [{ text: gscPrompt }] }],
           generationConfig: { temperature: 0.2, maxOutputTokens: 1500 }
-        })
+        }, null, null, 1), _briefTimeout() ])
       ]);
 
       // Parse Citation Brief
@@ -35560,10 +35329,10 @@ If no unanchored claims found, return empty array: []`;
 
       let sourceResp;
       try {
-        sourceResp = await callGeminiWithFallback(geminiKey, {
+        sourceResp = await Promise.race([ callGeminiWithFallback(geminiKey, {
           contents: [{ role: 'user', parts: [{ text: sourcePrompt }] }],
           generationConfig: { temperature: 0.2, maxOutputTokens: 1500 }
-        });
+        }, null, null, 1), new Promise(function(res){ setTimeout(function(){ res({ ok:false, status:408, errorMessage:'source time budget exceeded' }); }, 12000); }) ]);
         if (sourceResp.ok) {
           let srcRecs = sourceResp.data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
           srcRecs = srcRecs.replace(/^\`\`\`json\n?/i,'').replace(/\`\`\`\s*$/,'').trim();
