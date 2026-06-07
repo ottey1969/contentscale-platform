@@ -1566,6 +1566,9 @@ app.get('/api/tracker-client/:token/latest-briefs', async (req, res) => {
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
+var _scanQueue = [];
+var _scanRunning = false;
+
 function _processScanQueue() {
   if (_scanRunning || _scanQueue.length === 0) return;
   _scanRunning = true;
