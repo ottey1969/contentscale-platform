@@ -26018,7 +26018,7 @@ function renderPages() {
       + (kw ? '<span style="font-size:10px;color:#4b5563;">kw: <span style="color:#a78bfa;">' + kw + '</span></span><button onclick="editKeyword(' + p.id + ',this)" style="font-size:9px;background:none;border:none;color:#374151;cursor:pointer;text-decoration:underline;">edit</button>'
             : '<button onclick="editKeyword(' + p.id + ',this)" style="font-size:9px;background:none;border:none;color:#4b5563;cursor:pointer;">+keyword</button>')
       + (lastChecked ? '<span style="font-size:10px;color:#6b7280;">Checked: ' + lastChecked + (nextCheck ? ' &middot; ' + nextCheck : '') + '</span>' : '<span style="font-size:10px;color:#4b5563;">' + freqLabel + ' auto-check</span>')
-      + ((!!p.html_pasted_at && hasBrief && (!lastCheckedRaw || new Date(p.html_pasted_at) > new Date(lastCheckedRaw))) ? '<span style="font-size:10px;color:#38bdf8;font-weight:600;">&#128221; New HTML saved &mdash; fresh brief on next check</span>' : '')
+      + ((!!p.html_pasted_at && (!lastCheckedRaw || new Date(p.html_pasted_at) > new Date(lastCheckedRaw))) ? '<span style="font-size:10px;color:#38bdf8;font-weight:600;">&#128221; New HTML saved &mdash; fresh brief on next check</span>' : '')
       + '</div>'
       + '</div>'
       + '</div>'
