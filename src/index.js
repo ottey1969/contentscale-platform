@@ -25925,7 +25925,7 @@ function renderPages() {
     var posColor = !pos ? '#6b7280' : pos<=3 ? '#4ade80' : pos<=10 ? '#a3e635' : pos<=20 ? '#fbbf24' : '#f87171';
     var lastCheckedRaw = p.last_checked || p.last_checked_at; // snapshot OR page timestamp
     var lastChecked = lastCheckedRaw ? new Date(lastCheckedRaw).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}) : null;
-    var hasNewHtml = !!p.html_pasted_at && (!lastCheckedRaw || new Date(p.html_pasted_at) > new Date(lastCheckedRaw));
+    var hasNewHtml = !!p.html_pasted_at; // Any HTML upload hides Done button until next check
     // Calculate next check based on frequency if not set yet
     var nextCheckDate = p.next_check_at ? new Date(p.next_check_at) : null;
     if (!nextCheckDate && p.last_checked) {
