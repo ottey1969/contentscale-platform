@@ -26030,7 +26030,7 @@ function renderPages() {
       + '</div>'
       + '</div>'
       + recsHtml
-      + ((!isDone && hasBrief)
+      + ((!isDone && hasBrief && !(!!p.html_pasted_at && (!lastCheckedRaw || new Date(p.html_pasted_at) > new Date(lastCheckedRaw))))
         ? '<div onclick="markDone(' + p.id + ',this,false)" style="cursor:pointer;display:flex;align-items:center;gap:10px;padding:12px 16px;background:linear-gradient(90deg,rgba(74,222,128,.08),rgba(74,222,128,.02));border-top:1px solid #1f2937;animation:donePulse 2s ease-in-out infinite;">'
           + '<span style="font-size:1.3rem;flex-shrink:0;">\\u2705</span>'
           + '<div style="flex:1;">'
