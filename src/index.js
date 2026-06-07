@@ -27816,17 +27816,24 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
                     }
                 }
 
-                // --- FIX 2: startCitationPolling - poll elke 7s, max 25 keer ---
+                // --- FIX 2: startCitationPolling - poll elke 3s, max 30 keer (90s totaal) ---
                 function startCitationPolling(pageId, container, page) {
                     let attempts = 0;
-                    const maxAttempts = 25;
+                    const maxAttempts = 30; // 30 x 3s = 90s max
                     const kw = (page||{}).keyword || (page||{}).gsc_keyword || '';
-                    container.innerHTML = '<style>@keyframes csspin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}</style><div style="text-align:center;padding:40px;"><div style="font-size:2rem;display:inline-block;animation:csspin 1.5s linear infinite;margin-bottom:16px;">⏳</div><div style="font-size:14px;color:#fbbf24;font-weight:700;margin-bottom:8px;">AI Analysis in Progress...</div><div style="font-size:12px;color:#6b7280;margin-bottom:12px;">Refreshing every 7 seconds...</div><div id="_pollStatus" style="font-size:11px;color:#374151;">Attempt 1 of 25</div></div>';
+                    container.innerHTML = '<style>@keyframes csspin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}</style><div style="text-align:center;padding:40px;"><div style="font-size:2rem;display:inline-block;animation:csspin 1.5s linear infinite;margin-bottom:16px;">⏳</div><div style="font-size:14px;color:#fbbf24;font-weight:700;margin-bottom:8px;">AI Analysis in Progress...</div><div style="font-size:12px;color:#6b7280;margin-bottom:12px;">Checking every 3 seconds...</div><div id="_pollStatus" style="font-size:11px;color:#374151;">Check 1/30</div></div>';
+
+                    // ✅ Toon emergency brief na 15s (5 attempts) als AI nog bezig is
+                    var emergencyTimer = setTimeout(function(){
+                        if(container.innerHTML.indexOf('AI Analysis in Progress') > -1){
+                            showEmergencyBrief(container, page||{keyword:kw,id:pageId}, 'AI is still working in the background. Here are guaranteed best practices:');
+                        }
+                    }, 15000);
 
                     const timer = setInterval(async function() {
                         attempts++;
                         var statusEl = document.getElementById('_pollStatus');
-                        if(statusEl) statusEl.textContent = 'Attempt ' + attempts + ' of ' + maxAttempts;
+                        if(statusEl) statusEl.textContent = 'Check ' + attempts + '/' + maxAttempts;
 
                         try {
                             const token = localStorage.getItem('admin_id') || '';
@@ -27837,12 +27844,19 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
 
                             if (serpSpy.citation_brief_status === 'complete' && serpSpy.citation_brief) {
                                 clearInterval(timer);
+                                clearTimeout(emergencyTimer);
+                                // Heropen modal als deze gesloten is
+                                var modal = document.getElementById('trCitationModal');
+                                if(modal) modal.style.display = 'flex';
                                 renderCitationBrief({ brief: serpSpy.citation_brief }, container, pageData);
                                 _activityAdd('OK Citation Brief loaded via poll - ' + ((serpSpy.citation_brief||{}).passages_to_add||[]).length + ' passages', 'done');
                                 return;
                             }
                             if (serpSpy.citation_brief_status === 'failed' || serpSpy.citation_brief_status === 'error') {
                                 clearInterval(timer);
+                                clearTimeout(emergencyTimer);
+                                var modal2 = document.getElementById('trCitationModal');
+                                if(modal2) modal2.style.display = 'flex';
                                 showEmergencyBrief(container, page||pageData, 'Analysis failed. Showing best practices:');
                                 return;
                             }
@@ -27850,9 +27864,13 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
 
                         if (attempts >= maxAttempts) {
                             clearInterval(timer);
+                            clearTimeout(emergencyTimer);
+                            // Modal heropenen als gesloten
+                            var modal3 = document.getElementById('trCitationModal');
+                            if(modal3) modal3.style.display = 'flex';
                             showEmergencyBrief(container, page||{keyword:kw,id:pageId}, 'Taking too long. Showing best practices:');
                         }
-                    }, 7000);
+                    }, 3000);
                 }
 
                 // --- FIX 3: showEmergencyBrief - nooit leeg ---
@@ -32138,7 +32156,7 @@ app.post('/api/tracker/pages/:id/citation-brief', verifyEngineAccess, async (req
     const _fbBrief = { platform_gaps: { google_aio: snap.ai_google_overview_cited ? 'Page cited' : (snap.ai_google_overview_found ? 'AIO exists but page not cited' : 'No AIO detected'), perplexity: snap.ai_perplexity_cited ? 'Page cited' : 'Citation status unknown', chatgpt: 'Uses Google index', copilot_bing: 'Pending Bing search results', claude_brave: 'Pending Brave search results' }, passages_to_add: [], structural_fixes: [], primary_reason_not_cited: 'AI analysis in progress — detailed recommendations are being generated. This typically takes 30-60 seconds. The brief will auto-update when complete.', freshness_recommendation: '', confidence: 'medium', estimated_impact: 'Results pending from AI analysis', model_searched_google: false, _status: 'pending', _fallback: true, _message: 'Detailed AI recommendations are being generated. Check back in 30-60 seconds.' };
     try {
       await pool.query("INSERT INTO tracker_citation_briefs (page_id,tracker_client_id,keyword,url,position,aio_cited,perp_cited,bing_cited,brave_cited,score,brief_json,passages,recommendations,created_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,NOW())", [pageId, page.tracker_client_id || null, keyword, pageUrl, snap.google_position || null, snap.ai_google_overview_cited || false, snap.ai_perplexity_cited || false, false, false, 0, JSON.stringify(_fbBrief), JSON.stringify([]), JSON.stringify([{ priority: 'HIGH', section: 'AIO Brief', item: 'AI analysis in progress — detailed recommendations loading...', why: 'External AI providers are being queried. This brief will auto-update within 60 seconds.', estimated_impact: 'Waiting for AI response' }])]);
-      await pool.query("UPDATE tracker_pages SET serp_spy = COALESCE(serp_spy, '{}'::jsonb) || $1::jsonb WHERE id = $2", [JSON.stringify({ citation_brief: _fbBrief, citation_brief_at: _fbAt, citation_brief_model: 'fallback-pending', citation_brief_status: 'pending' }), pageId]);
+      await pool.query("UPDATE tracker_pages SET serp_spy = COALESCE(serp_spy, '{}'::jsonb) || $1::jsonb WHERE id = $2", [JSON.stringify({ citation_brief: _fbBrief, citation_brief_at: _fbAt, citation_brief_model: 'fallback-pending', citation_brief_status: 'processing' }), pageId]);
     } catch (e) {}
     // === /FALLBACK BRIEF ===
 
@@ -32151,9 +32169,10 @@ app.post('/api/tracker/pages/:id/citation-brief', verifyEngineAccess, async (req
       brief: _fbBrief
     });
 
-    // ✅ Run all AI calls in background
-    setImmediate(async () => {
+    // ✅ Run all AI calls in background (setTimeout is more reliable than setImmediate)
+    setTimeout(async () => {
     try {
+      console.log('[citation-brief] 🚀 Background AI analysis STARTED for page', pageId, 'keyword:', keyword);
     const geminiKey = resolveGeminiKey(req) || process.env.GEMINI_API_KEY;
     const serperKey = resolveSerpapiKey(req) || process.env.SERPAPI_KEY || '';
     const anthropicKey = process.env.ANTHROPIC_API_KEY || '';
@@ -32618,11 +32637,16 @@ Return ONLY valid JSON — no markdown:
       brief._grounding_note = 'These are the URLs Gemini actually retrieved from Google Search when analyzing this keyword. The top source is likely what Google AI Overview is currently citing.';
     }
 
-    // Save brief + which model was used
-    await pool.query(
-      `UPDATE tracker_pages SET serp_spy = COALESCE(serp_spy, '{}'::jsonb) || $1::jsonb WHERE id=$2`,
-      [JSON.stringify({ citation_brief: brief, citation_brief_at: new Date().toISOString(), citation_brief_model: modelUsed }), pageId]
-    ).catch(() => {});
+    // Update database — single atomic update with complete status
+    try {
+      await pool.query(
+        `UPDATE tracker_pages SET serp_spy = COALESCE(serp_spy, '{}'::jsonb) || $1::jsonb WHERE id=$2`,
+        [JSON.stringify({ citation_brief: brief, citation_brief_at: new Date().toISOString(), citation_brief_model: modelUsed, citation_brief_status: 'complete' }), pageId]
+      );
+      console.log(`[citation-brief] ✅ Status set to 'complete' for page ${pageId}`);
+    } catch(dbErr) {
+      console.error(`[citation-brief] ❌ DB save failed for page ${pageId}:`, dbErr.message);
+    }
 
     const finalResult = {
       success: true, page_id: pageId, keyword, url: pageUrl,
@@ -32635,14 +32659,7 @@ Return ONLY valid JSON — no markdown:
       )
     };
     // Cache the full brief result for 24h
-        // Cache the full brief result for 24h
     if (brief) _cacheSet(gemCacheKey, finalResult, CACHE_TTL.gemini);
-    
-    // Update database with complete brief
-    await pool.query(
-      `UPDATE tracker_pages SET serp_spy = COALESCE(serp_spy, '{}'::jsonb) || $1::jsonb WHERE id=$2`,
-      [JSON.stringify({ citation_brief: brief, citation_brief_at: new Date().toISOString(), citation_brief_model: modelUsed, citation_brief_status: 'complete' }), pageId]
-    ).catch(() => {});
     
     console.log(`[citation-brief] ✅ Complete for page ${pageId}`);
     
@@ -32654,7 +32671,7 @@ Return ONLY valid JSON — no markdown:
         [JSON.stringify({ citation_brief_status: 'error', citation_brief_error: bgErr.message }), pageId]
       ).catch(() => {});
     }
-    }); // End setImmediate
+    }, 100); // End setTimeout (100ms delay for reliable background execution)
     
   } catch(e) {
     console.error('[citation-brief]', e);
