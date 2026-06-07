@@ -27771,6 +27771,95 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
     }, intervalMs);
   }
 
+                async function openCitationBrief(pageId) {
+                    const page = (allTrackerPages||[]).find(function(p){ return p.id == pageId; }) || {};
+                    const modal = document.getElementById('trCitationModal');
+                    const contentDiv = document.getElementById('trCitationBody');
+                    const title = document.getElementById('trCitationTitle');
+                    if (!modal || !contentDiv) return;
+
+                    var url = page.url || '';
+                    var kw = page.keyword || page.gsc_keyword || '';
+                    var urlClean = url.indexOf('//') > -1 ? url.split('//')[1] : url;
+                    var urlParts = urlClean.split('/');
+                    title.textContent = (kw || 'Citation Brief') + ' - ' + urlParts.slice(0,2).join('/');
+                    _activityAdd(' Generating Citation Brief for ' + (url.split('//').pop().split('/')[0]), 'citation');
+
+                    contentDiv.innerHTML = '<style>@keyframes csspin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}@keyframes csprog{0%{margin-left:-60%}100%{margin-left:110%}}</style><div style="text-align:center;padding:50px;"><div style="font-size:2.5rem;display:inline-block;animation:csspin 1.5s linear infinite;margin-bottom:20px;">🌀</div><div style="font-size:14px;color:#a78bfa;font-weight:700;margin-bottom:8px;">Building your Citation Brief...</div><div style="font-size:12px;color:#6b7280;margin-bottom:20px;">This may take up to 60 seconds.</div><div style="background:#1f2937;border-radius:99px;height:4px;width:220px;margin:0 auto;overflow:hidden;"><div style="height:100%;width:60%;background:linear-gradient(90deg,#7c3aed,#a78bfa);border-radius:99px;animation:csprog 1.8s ease-in-out infinite;"></div></div></div>';
+                    modal.style.display = 'flex';
+
+                    const token = localStorage.getItem('admin_id') || '';
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(function(){ controller.abort(); }, 12000);
+
+                    try {
+                        const response = await fetch('/api/tracker/pages/' + pageId + '/citation-brief', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json', 'x-admin-key': token },
+                            signal: controller.signal
+                        });
+                        clearTimeout(timeoutId);
+                        const data = await response.json();
+
+                        if (data.status === 'complete' && data.brief) {
+                            renderCitationBrief(data, contentDiv, page);
+                            _activityAdd('OK Citation Brief ready - ' + ((data.brief||{}).passages_to_add||[]).length + ' passages', 'done');
+                        } else {
+                            startCitationPolling(pageId, contentDiv, page);
+                        }
+                    } catch (error) {
+                        clearTimeout(timeoutId);
+                        startCitationPolling(pageId, contentDiv, page);
+                    }
+                }
+
+                // --- FIX 2: startCitationPolling - poll elke 7s, max 25 keer ---
+                function startCitationPolling(pageId, container, page) {
+                    let attempts = 0;
+                    const maxAttempts = 25;
+                    const kw = (page||{}).keyword || (page||{}).gsc_keyword || '';
+                    container.innerHTML = '<style>@keyframes csspin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}</style><div style="text-align:center;padding:40px;"><div style="font-size:2rem;display:inline-block;animation:csspin 1.5s linear infinite;margin-bottom:16px;">⏳</div><div style="font-size:14px;color:#fbbf24;font-weight:700;margin-bottom:8px;">AI Analysis in Progress...</div><div style="font-size:12px;color:#6b7280;margin-bottom:12px;">Refreshing every 7 seconds...</div><div id="_pollStatus" style="font-size:11px;color:#374151;">Attempt 1 of 25</div></div>';
+
+                    const timer = setInterval(async function() {
+                        attempts++;
+                        var statusEl = document.getElementById('_pollStatus');
+                        if(statusEl) statusEl.textContent = 'Attempt ' + attempts + ' of ' + maxAttempts;
+
+                        try {
+                            const token = localStorage.getItem('admin_id') || '';
+                            const res = await fetch('/api/tracker/pages/' + pageId, { headers: { 'x-admin-key': token } });
+                            const result = await res.json();
+                            const pageData = result.page || result.data || result;
+                            const serpSpy = (pageData.serp_spy || {});
+
+                            if (serpSpy.citation_brief_status === 'complete' && serpSpy.citation_brief) {
+                                clearInterval(timer);
+                                renderCitationBrief({ brief: serpSpy.citation_brief }, container, pageData);
+                                _activityAdd('OK Citation Brief loaded via poll - ' + ((serpSpy.citation_brief||{}).passages_to_add||[]).length + ' passages', 'done');
+                                return;
+                            }
+                            if (serpSpy.citation_brief_status === 'failed' || serpSpy.citation_brief_status === 'error') {
+                                clearInterval(timer);
+                                showEmergencyBrief(container, page||pageData, 'Analysis failed. Showing best practices:');
+                                return;
+                            }
+                        } catch (e) { console.error('Poll error:', e); }
+
+                        if (attempts >= maxAttempts) {
+                            clearInterval(timer);
+                            showEmergencyBrief(container, page||{keyword:kw,id:pageId}, 'Taking too long. Showing best practices:');
+                        }
+                    }, 7000);
+                }
+
+                // --- FIX 3: showEmergencyBrief - nooit leeg ---
+                function showEmergencyBrief(container, page, message) {
+                    if (!container) return;
+                    const kw = (page||{}).keyword || (page||{}).gsc_keyword || 'this topic';
+                    const html = '<div style="background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);border-radius:8px;padding:12px 16px;margin-bottom:16px;font-size:13px;color:#fbbf24;">⚠️ ' + message + '</div><div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:#a78bfa;margin:18px 0 12px;">✨ Recommended Passages</div><div style="background:rgba(124,58,237,.1);border-left:3px solid #a78bfa;padding:12px 16px;margin:8px 0;border-radius:0 8px 8px 0;"><strong style="color:#f1f5f9;font-size:13px;">1. Direct Answer</strong><p style="font-size:12px;color:#9ca3af;margin:4px 0 0;line-height:1.6;">Add a 134-167 word direct answer for "' + kw + '" immediately after H1. Format: "' + kw + ' is [definition]. [2-3 sentences with data]. According to [expert], [quote]. [Practical example]."</p><div style="font-size:11px;color:#6b7280;margin-top:6px;">📍 immediately after H1 | 44% of AI citations from first 30% of text</div></div><div style="background:rgba(124,58,237,.1);border-left:3px solid #a78bfa;padding:12px 16px;margin:8px 0;border-radius:0 8px 8px 0;"><strong style="color:#f1f5f9;font-size:13px;">2. FAQ Schema</strong><p style="font-size:12px;color:#9ca3af;margin:4px 0 0;line-height:1.6;">Add JSON-LD FAQ schema with 3-5 questions about "' + kw + '". Pages with FAQ schema are cited 3.2x more often.</p><div style="font-size:11px;color:#6b7280;margin-top:6px;">📍 before closing &lt;/body&gt; | #1 signal for AI Overview</div></div><div style="background:rgba(124,58,237,.1);border-left:3px solid #a78bfa;padding:12px 16px;margin:8px 0;border-radius:0 8px 8px 0;"><strong style="color:#f1f5f9;font-size:13px;">3. Entity Definition</strong><p style="font-size:12px;color:#9ca3af;margin:4px 0 0;line-height:1.6;">"' + kw + '" is [clear definition]. This [type] [does what] by [mechanism]. According to [Expert], "[quote]." For example: [numbers].</p><div style="font-size:11px;color:#6b7280;margin-top:6px;">📍 first paragraph | ChatGPT & Copilot favor definitions</div></div><div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:#60a5fa;margin:18px 0 12px;">🔧 Structural Fixes</div><div style="background:rgba(96,165,250,.05);border-left:3px solid #60a5fa;padding:12px 16px;margin:8px 0;border-radius:0 8px 8px 0;"><strong style="color:#f1f5f9;font-size:13px;">1. Add FAQ Schema (JSON-LD)</strong><p style="font-size:12px;color:#9ca3af;margin:4px 0 0;">FAQ schema is the #1 signal for AI Overview inclusion. 3.2x citation increase.</p></div><div style="background:rgba(96,165,250,.05);border-left:3px solid #60a5fa;padding:12px 16px;margin:8px 0;border-radius:0 8px 8px 0;"><strong style="color:#f1f5f9;font-size:13px;">2. Add Direct Answer (134-167 words)</strong><p style="font-size:12px;color:#9ca3af;margin:4px 0 0;">44% of AI citations come from first 30% of text.</p></div><div style="background:rgba(96,165,250,.05);border-left:3px solid #60a5fa;padding:12px 16px;margin:8px 0;border-radius:0 8px 8px 0;"><strong style="color:#f1f5f9;font-size:13px;">3. Add Author Bio (E-E-A-T)</strong><p style="font-size:12px;color:#9ca3af;margin:4px 0 0;">Claude and Perplexity check author credentials. 2.1x more citations.</p></div><div style="background:rgba(96,165,250,.05);border-left:3px solid #60a5fa;padding:12px 16px;margin:8px 0;border-radius:0 8px 8px 0;"><strong style="color:#f1f5f9;font-size:13px;">4. Update Timestamp (&lt;90 days)</strong><p style="font-size:12px;color:#9ca3af;margin:4px 0 0;">Content under 90 days is 3x more likely to be cited.</p></div>';
+                    container.innerHTML = html;
+                    _activityAdd('Showing emergency brief for ' + kw, 'warn');
+                }
   function openBriefFromPoll(pageData) {
     hideScanOverlay();
     loadPages();
@@ -29112,95 +29201,6 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 <script>
                 // -- Citation Brief --------------------------------------------
                 // --- FIX 1: openCitationBrief met AbortController 12s timeout ---
-                async function openCitationBrief(pageId) {
-                    const page = (allTrackerPages||[]).find(function(p){ return p.id == pageId; }) || {};
-                    const modal = document.getElementById('trCitationModal');
-                    const contentDiv = document.getElementById('trCitationBody');
-                    const title = document.getElementById('trCitationTitle');
-                    if (!modal || !contentDiv) return;
-
-                    var url = page.url || '';
-                    var kw = page.keyword || page.gsc_keyword || '';
-                    var urlClean = url.indexOf('//') > -1 ? url.split('//')[1] : url;
-                    var urlParts = urlClean.split('/');
-                    title.textContent = (kw || 'Citation Brief') + ' - ' + urlParts.slice(0,2).join('/');
-                    _activityAdd(' Generating Citation Brief for ' + (url.split('//').pop().split('/')[0]), 'citation');
-
-                    contentDiv.innerHTML = '<style>@keyframes csspin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}@keyframes csprog{0%{margin-left:-60%}100%{margin-left:110%}}</style><div style="text-align:center;padding:50px;"><div style="font-size:2.5rem;display:inline-block;animation:csspin 1.5s linear infinite;margin-bottom:20px;">🌀</div><div style="font-size:14px;color:#a78bfa;font-weight:700;margin-bottom:8px;">Building your Citation Brief...</div><div style="font-size:12px;color:#6b7280;margin-bottom:20px;">This may take up to 60 seconds.</div><div style="background:#1f2937;border-radius:99px;height:4px;width:220px;margin:0 auto;overflow:hidden;"><div style="height:100%;width:60%;background:linear-gradient(90deg,#7c3aed,#a78bfa);border-radius:99px;animation:csprog 1.8s ease-in-out infinite;"></div></div></div>';
-                    modal.style.display = 'flex';
-
-                    const token = localStorage.getItem('admin_id') || '';
-                    const controller = new AbortController();
-                    const timeoutId = setTimeout(function(){ controller.abort(); }, 12000);
-
-                    try {
-                        const response = await fetch('/api/tracker/pages/' + pageId + '/citation-brief', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json', 'x-admin-key': token },
-                            signal: controller.signal
-                        });
-                        clearTimeout(timeoutId);
-                        const data = await response.json();
-
-                        if (data.status === 'complete' && data.brief) {
-                            renderCitationBrief(data, contentDiv, page);
-                            _activityAdd('OK Citation Brief ready - ' + ((data.brief||{}).passages_to_add||[]).length + ' passages', 'done');
-                        } else {
-                            startCitationPolling(pageId, contentDiv, page);
-                        }
-                    } catch (error) {
-                        clearTimeout(timeoutId);
-                        startCitationPolling(pageId, contentDiv, page);
-                    }
-                }
-
-                // --- FIX 2: startCitationPolling - poll elke 7s, max 25 keer ---
-                function startCitationPolling(pageId, container, page) {
-                    let attempts = 0;
-                    const maxAttempts = 25;
-                    const kw = (page||{}).keyword || (page||{}).gsc_keyword || '';
-                    container.innerHTML = '<style>@keyframes csspin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}</style><div style="text-align:center;padding:40px;"><div style="font-size:2rem;display:inline-block;animation:csspin 1.5s linear infinite;margin-bottom:16px;">⏳</div><div style="font-size:14px;color:#fbbf24;font-weight:700;margin-bottom:8px;">AI Analysis in Progress...</div><div style="font-size:12px;color:#6b7280;margin-bottom:12px;">Refreshing every 7 seconds...</div><div id="_pollStatus" style="font-size:11px;color:#374151;">Attempt 1 of 25</div></div>';
-
-                    const timer = setInterval(async function() {
-                        attempts++;
-                        var statusEl = document.getElementById('_pollStatus');
-                        if(statusEl) statusEl.textContent = 'Attempt ' + attempts + ' of ' + maxAttempts;
-
-                        try {
-                            const token = localStorage.getItem('admin_id') || '';
-                            const res = await fetch('/api/tracker/pages/' + pageId, { headers: { 'x-admin-key': token } });
-                            const result = await res.json();
-                            const pageData = result.page || result.data || result;
-                            const serpSpy = (pageData.serp_spy || {});
-
-                            if (serpSpy.citation_brief_status === 'complete' && serpSpy.citation_brief) {
-                                clearInterval(timer);
-                                renderCitationBrief({ brief: serpSpy.citation_brief }, container, pageData);
-                                _activityAdd('OK Citation Brief loaded via poll - ' + ((serpSpy.citation_brief||{}).passages_to_add||[]).length + ' passages', 'done');
-                                return;
-                            }
-                            if (serpSpy.citation_brief_status === 'failed' || serpSpy.citation_brief_status === 'error') {
-                                clearInterval(timer);
-                                showEmergencyBrief(container, page||pageData, 'Analysis failed. Showing best practices:');
-                                return;
-                            }
-                        } catch (e) { console.error('Poll error:', e); }
-
-                        if (attempts >= maxAttempts) {
-                            clearInterval(timer);
-                            showEmergencyBrief(container, page||{keyword:kw,id:pageId}, 'Taking too long. Showing best practices:');
-                        }
-                    }, 7000);
-                }
-
-                // --- FIX 3: showEmergencyBrief - nooit leeg ---
-                function showEmergencyBrief(container, page, message) {
-                    if (!container) return;
-                    const kw = (page||{}).keyword || (page||{}).gsc_keyword || 'this topic';
-                    const html = '<div style="background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);border-radius:8px;padding:12px 16px;margin-bottom:16px;font-size:13px;color:#fbbf24;">⚠️ ' + message + '</div><div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:#a78bfa;margin:18px 0 12px;">✨ Recommended Passages</div><div style="background:rgba(124,58,237,.1);border-left:3px solid #a78bfa;padding:12px 16px;margin:8px 0;border-radius:0 8px 8px 0;"><strong style="color:#f1f5f9;font-size:13px;">1. Direct Answer</strong><p style="font-size:12px;color:#9ca3af;margin:4px 0 0;line-height:1.6;">Add a 134-167 word direct answer for "' + kw + '" immediately after H1. Format: "' + kw + ' is [definition]. [2-3 sentences with data]. According to [expert], [quote]. [Practical example]."</p><div style="font-size:11px;color:#6b7280;margin-top:6px;">📍 immediately after H1 | 44% of AI citations from first 30% of text</div></div><div style="background:rgba(124,58,237,.1);border-left:3px solid #a78bfa;padding:12px 16px;margin:8px 0;border-radius:0 8px 8px 0;"><strong style="color:#f1f5f9;font-size:13px;">2. FAQ Schema</strong><p style="font-size:12px;color:#9ca3af;margin:4px 0 0;line-height:1.6;">Add JSON-LD FAQ schema with 3-5 questions about "' + kw + '". Pages with FAQ schema are cited 3.2x more often.</p><div style="font-size:11px;color:#6b7280;margin-top:6px;">📍 before closing &lt;/body&gt; | #1 signal for AI Overview</div></div><div style="background:rgba(124,58,237,.1);border-left:3px solid #a78bfa;padding:12px 16px;margin:8px 0;border-radius:0 8px 8px 0;"><strong style="color:#f1f5f9;font-size:13px;">3. Entity Definition</strong><p style="font-size:12px;color:#9ca3af;margin:4px 0 0;line-height:1.6;">"' + kw + '" is [clear definition]. This [type] [does what] by [mechanism]. According to [Expert], "[quote]." For example: [numbers].</p><div style="font-size:11px;color:#6b7280;margin-top:6px;">📍 first paragraph | ChatGPT & Copilot favor definitions</div></div><div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:#60a5fa;margin:18px 0 12px;">🔧 Structural Fixes</div><div style="background:rgba(96,165,250,.05);border-left:3px solid #60a5fa;padding:12px 16px;margin:8px 0;border-radius:0 8px 8px 0;"><strong style="color:#f1f5f9;font-size:13px;">1. Add FAQ Schema (JSON-LD)</strong><p style="font-size:12px;color:#9ca3af;margin:4px 0 0;">FAQ schema is the #1 signal for AI Overview inclusion. 3.2x citation increase.</p></div><div style="background:rgba(96,165,250,.05);border-left:3px solid #60a5fa;padding:12px 16px;margin:8px 0;border-radius:0 8px 8px 0;"><strong style="color:#f1f5f9;font-size:13px;">2. Add Direct Answer (134-167 words)</strong><p style="font-size:12px;color:#9ca3af;margin:4px 0 0;">44% of AI citations come from first 30% of text.</p></div><div style="background:rgba(96,165,250,.05);border-left:3px solid #60a5fa;padding:12px 16px;margin:8px 0;border-radius:0 8px 8px 0;"><strong style="color:#f1f5f9;font-size:13px;">3. Add Author Bio (E-E-A-T)</strong><p style="font-size:12px;color:#9ca3af;margin:4px 0 0;">Claude and Perplexity check author credentials. 2.1x more citations.</p></div><div style="background:rgba(96,165,250,.05);border-left:3px solid #60a5fa;padding:12px 16px;margin:8px 0;border-radius:0 8px 8px 0;"><strong style="color:#f1f5f9;font-size:13px;">4. Update Timestamp (&lt;90 days)</strong><p style="font-size:12px;color:#9ca3af;margin:4px 0 0;">Content under 90 days is 3x more likely to be cited.</p></div>';
-                    container.innerHTML = html;
-                    _activityAdd('Showing emergency brief for ' + kw, 'warn');
-                }
 
                 function closeCitationModal() {
                     document.getElementById('trCitationModal').style.display = 'none';
