@@ -26018,7 +26018,7 @@ function renderPages() {
       + (kw ? '<span style="font-size:10px;color:#4b5563;">kw: <span style="color:#a78bfa;">' + kw + '</span></span><button onclick="editKeyword(' + p.id + ',this)" style="font-size:9px;background:none;border:none;color:#374151;cursor:pointer;text-decoration:underline;">edit</button>'
             : '<button onclick="editKeyword(' + p.id + ',this)" style="font-size:9px;background:none;border:none;color:#4b5563;cursor:pointer;">+keyword</button>')
       + (lastChecked ? '<span style="font-size:10px;color:#6b7280;">Checked: ' + lastChecked + (nextCheck ? ' &middot; ' + nextCheck : '') + '</span>' : '<span style="font-size:10px;color:#4b5563;">' + freqLabel + ' auto-check</span>')
-      + ((!!p.html_pasted_at && (!lastCheckedRaw || new Date(p.html_pasted_at) > new Date(lastCheckedRaw))) ? '<span style="font-size:10px;color:#38bdf8;font-weight:600;">&#128221; New HTML saved &mdash; fresh brief on next check</span>' : '')
+      + ((!!p.html_pasted_at && !!lastCheckedRaw && new Date(p.html_pasted_at) > new Date(lastCheckedRaw)) ? '<span style="font-size:10px;color:#38bdf8;font-weight:600;">&#128221; New HTML saved &mdash; fresh brief on next check</span>' : '')
       + '</div>'
       + '</div>'
       + '</div>'
@@ -26030,7 +26030,7 @@ function renderPages() {
       + '</div>'
       + '</div>'
       + recsHtml
-      + ((!isDone && hasBrief && !(!!p.html_pasted_at && (!lastCheckedRaw || new Date(p.html_pasted_at) > new Date(lastCheckedRaw))))
+      + ((!isDone && hasBrief && !(!!p.html_pasted_at && !!lastCheckedRaw && new Date(p.html_pasted_at) > new Date(lastCheckedRaw)))
         ? '<div onclick="markDone(' + p.id + ',this,false)" style="cursor:pointer;display:flex;align-items:center;gap:10px;padding:12px 16px;background:linear-gradient(90deg,rgba(74,222,128,.08),rgba(74,222,128,.02));border-top:1px solid #1f2937;animation:donePulse 2s ease-in-out infinite;">'
           + '<span style="font-size:1.3rem;flex-shrink:0;">\\u2705</span>'
           + '<div style="flex:1;">'
@@ -34768,6 +34768,8 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
       prevSnap.google_position !== snapshot.google_position ||
       Math.abs((prevSnap.google_position||99) - (snapshot.google_position||99)) >= 2;
 
+    await Promise.all([
+    (async function(){
     _trSetStep(pageId, 'perplexity', 'running', keyword ? (runPerplexity ? 'Asking Perplexity Sonar: ' + keyword : 'Skipped (using cached result)') : 'Skipped (no keyword)');
     if (!keyword) {
       _trSetStep(pageId, 'perplexity', 'done', 'Skipped — set a keyword to enable');
@@ -34822,6 +34824,8 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
     } else {
       _trSetStep(pageId, 'perplexity', 'error', 'Perplexity key not set — add PERPLEXITY_API_KEY to Railway or engine settings');
     }
+    })(),
+    (async function(){
 
     // ── 4. You.com Smart API citation ────────────────────────────────────────
     // ── 4. Microsoft Bing / Copilot citation ───────────────────────────────────
@@ -34875,6 +34879,8 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
       _trSetStep(pageId, 'youcom', 'error', 'BING_SEARCH_API_KEY not set — free at portal.azure.com (1000 calls/mo)');
       snapshot.ai_bing_cited = false;
     }
+    })(),
+    (async function(){
 
     // ── 4b. Brave Search citation ──────────────────────────────────────────────
     if (!runBrave && prevSnap) {
@@ -34924,6 +34930,8 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
       snapshot.ai_brave_cited = false;
     }
     } // end brave else block
+    })()
+    ]);
 
   } else {
     _trSetStep(pageId, 'google', 'error', 'No keyword set — add a target keyword to this page');
