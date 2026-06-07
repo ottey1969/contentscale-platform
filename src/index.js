@@ -1566,6 +1566,10 @@ app.get('/api/tracker-client/:token/latest-briefs', async (req, res) => {
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
+// ── Scan queue — max 1 concurrent scan ───────────────────────────────────────
+const _scanQueue = [];
+let _scanRunning = false;
+
 function _processScanQueue() {
   if (_scanRunning || _scanQueue.length === 0) return;
   _scanRunning = true;
