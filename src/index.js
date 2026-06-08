@@ -35000,7 +35000,31 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
 
       // HTML: raw first 5000 chars for structural analysis
       const rawHtml = page.html_content || '';
-      const htmlExcerpt = rawHtml.substring(0, 5000);
+      const htmlExcerpt = rawHtml.substring(0, 8000);
+      // ── Presence detection on the FULL page so the brief never re-recommends what already exists ──
+      const _onPage = {
+        def: /id=["']?direct-answer|class=["'][^"']*direct-answer|is (a|the) (leading|strategic|systematic|premier|content)/i.test(rawHtml),
+        whatIsH2: /<h2[^>]*>[^<]*what is\b/i.test(rawHtml),
+        author: /about the author|about the founder|written by|id=["']?author|class=["'][^"']*author-card/i.test(rawHtml),
+        faq: /"@type"\s*:\s*"FAQPage"/i.test(rawHtml),
+        org: /"@type"\s*:\s*"Organization"/i.test(rawHtml),
+        article: /"@type"\s*:\s*"Article"/i.test(rawHtml),
+        howto: /"@type"\s*:\s*"HowTo"/i.test(rawHtml),
+        speakable: /speakable/i.test(rawHtml),
+        steps: /<ol[\s>]|class=["'][^"']*(step|voice-list)/i.test(rawHtml),
+        outbound: /href=["']https?:\/\/(developers\.google|static\.googleusercontent|moz\.com|searchengineland|schema\.org)/i.test(rawHtml)
+      };
+      let _alreadyOnPage = '';
+      if (_onPage.def) _alreadyOnPage += '\n- A quotable definition / direct-answer block is ALREADY on the page -> do NOT add another definition; MODIFY the existing one only if it is weak.';
+      if (_onPage.whatIsH2) _alreadyOnPage += '\n- A "What is ..." H2 is ALREADY present -> do NOT add another one.';
+      if (_onPage.author) _alreadyOnPage += '\n- An "About the Author" / author block is ALREADY present -> do NOT add another; MODIFY only if credentials are weak.';
+      if (_onPage.faq) _alreadyOnPage += '\n- FAQPage schema is ALREADY present -> do NOT add FAQ schema; REPLACE only if a fact is wrong.';
+      if (_onPage.org) _alreadyOnPage += '\n- Organization schema is ALREADY present -> do NOT add it again.';
+      if (_onPage.article) _alreadyOnPage += '\n- Article schema is ALREADY present -> do NOT add it again.';
+      if (_onPage.howto) _alreadyOnPage += '\n- HowTo schema is ALREADY present -> do NOT add it again.';
+      if (_onPage.speakable) _alreadyOnPage += '\n- Speakable schema is ALREADY present -> do NOT add it again.';
+      if (_onPage.steps) _alreadyOnPage += '\n- Numbered / step lists are ALREADY present -> do NOT recommend adding a step list.';
+      if (_onPage.outbound) _alreadyOnPage += '\n- Outbound authoritative-source links are ALREADY present -> do NOT recommend adding generic external links.';
 
       // Stripped text for content comparison
       let ourContent = '';
@@ -35035,15 +35059,45 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
         ? 'GSC: ' + gscImpr + ' impressions x ' + gscCtr + '% CTR = ' + gscClicks + ' clicks. At rank #1 (28% CTR) = ' + oppClicks + ' clicks (+' + clickGap + '/month).'
         : '';
 
-      // Internal-link candidates: other pages this client already tracks
+      // ── Internal-link candidates: ONLY real URLs from the client's sitemap (never invented) ──
       let _otherPagesList = '';
+      let _sitemapUrls = [];
       try {
         if (page.tracker_client_id) {
-          const _opR = await pool.query(
-            'SELECT url, keyword, gsc_keyword FROM tracker_pages WHERE tracker_client_id=$1 AND id<>$2 AND (is_active=TRUE OR is_active IS NULL) ORDER BY created_at DESC LIMIT 30',
-            [page.tracker_client_id, page.id]
-          );
-          _otherPagesList = _opR.rows.map(function(r){ return '- ' + r.url + ((r.keyword||r.gsc_keyword) ? ' [topic: ' + (r.keyword||r.gsc_keyword) + ']' : ''); }).join('\n');
+          // 1) Authoritative source = the client's sitemap
+          let _smUrl = '';
+          try {
+            const _cR = await pool.query('SELECT sitemap_url, domain FROM tracker_clients WHERE id=$1', [page.tracker_client_id]);
+            _smUrl = (_cR.rows[0] && _cR.rows[0].sitemap_url) || '';
+            if (!_smUrl && _cR.rows[0] && _cR.rows[0].domain) {
+              _smUrl = 'https://' + String(_cR.rows[0].domain).replace(/^https?:\/\//, '').replace(/\/$/, '') + '/sitemap.xml';
+            }
+          } catch(e) {}
+          if (_smUrl) {
+            try {
+              const _smR = await fetch(_smUrl, { headers: { 'User-Agent': 'ContentScaleBot/1.0' }, signal: AbortSignal.timeout(8000) });
+              if (_smR.ok) {
+                const _smXml = await _smR.text();
+                _sitemapUrls = [..._smXml.matchAll(/<loc>\s*([^<\s]+)\s*<\/loc>/gi)]
+                  .map(function(m){ return m[1].trim(); })
+                  .filter(function(u){ return /^https?:\/\//i.test(u) && !/\.(xml|jpe?g|png|webp|gif|svg|pdf)$/i.test(u); });
+                _sitemapUrls = Array.from(new Set(_sitemapUrls))
+                  .filter(function(u){ return u.replace(/\/$/, '') !== String(pageUrl || '').replace(/\/$/, ''); })
+                  .slice(0, 60);
+              }
+            } catch(e) {}
+          }
+          // 2) Topic hints from tracked pages — only to annotate sitemap URLs (URL source only if sitemap failed)
+          try {
+            const _opR = await pool.query(
+              'SELECT url, keyword, gsc_keyword FROM tracker_pages WHERE tracker_client_id=$1 AND id<>$2 AND (is_active=TRUE OR is_active IS NULL) ORDER BY created_at DESC LIMIT 50',
+              [page.tracker_client_id, page.id]
+            );
+            const _topicByUrl = {};
+            _opR.rows.forEach(function(r){ var k = r.keyword || r.gsc_keyword; if (k) _topicByUrl[String(r.url).replace(/\/$/, '')] = k; });
+            if (!_sitemapUrls.length) _sitemapUrls = _opR.rows.map(function(r){ return r.url; }).filter(Boolean); // fallback: still REAL urls, never invented
+            _otherPagesList = _sitemapUrls.map(function(u){ var t = _topicByUrl[u.replace(/\/$/, '')]; return '- ' + u + (t ? ' [topic: ' + t + ']' : ''); }).join('\n');
+          } catch(e) {}
         }
       } catch(e) { _otherPagesList = ''; }
 
@@ -35084,11 +35138,11 @@ INPUT DATA:
 - Microsoft Copilot cited: ${snapshot.ai_bing_cited ? 'YES' : 'NO'}
 - Claude/Brave cited: ${snapshot.ai_brave_cited ? 'YES' : 'NO'}
 - GRAAF score: ${snapshot.score || '?'}/100
-- Page HTML content (first 3000 chars): ${htmlExcerpt.substring(0,3000) || '(no HTML)'}
+- Page HTML content (first 8000 chars): ${htmlExcerpt.substring(0,8000) || '(no HTML)'}
 - Previous brief actions (if any): ${JSON.stringify((page.brief_content?.items || []).slice(0,3))}
 - Competitor #1: ${competitor1 ? competitor1.url + ' — ' + competitor1.title : 'no data'}
-- Other pages on this site (internal-link candidates):
-${_otherPagesList || '(none — this is the only tracked page)'}
+- Internal-link candidates — REAL URLs from this site's sitemap (you may ONLY link to a URL that appears verbatim in this list; NEVER invent, guess, or construct a URL):
+${_otherPagesList || '(none available — do NOT output any internal-link action)'}
 
 CITATION SYSTEM REQUIREMENTS (use these to write actions):
 
@@ -35107,7 +35161,7 @@ Perplexity:
 Microsoft Copilot:
 - Needs clear H2/H3 structure matching search queries
 - Needs a concise summary paragraph (50-80 words) near top
--干实事 Needs the keyword in H1, first paragraph, and meta title
+- Needs the keyword in H1, first paragraph, and meta title
 - Pulls from Bing index — needs Bing-optimized meta tags
 
 Claude/Brave:
@@ -35132,11 +35186,14 @@ ACTIONS THAT ARE ALREADY RESOLVED — DO NOT INCLUDE THESE:`
 + (snapshot.ai_bing_cited ? '\n- Copilot cites this page → SKIP all Copilot actions' : '')
 + (snapshot.ai_brave_cited ? '\n- Claude/Brave cites this page → SKIP all Claude actions' : '')
 + (snapshot.google_position && snapshot.google_position <= 3 ? '\n- Position #'+snapshot.google_position+' → SKIP basic ranking actions' : '')
++ _alreadyOnPage
 + `\n- Remove any actions from previous brief that are now done
+\nHARD RULE: anything listed above is already on the page. NEVER output an ADD action for it. Skip it entirely, or use MODIFY/REPLACE only when it is genuinely weak. Re-recommending content that already exists wastes the owner's time and causes duplicate content — do not do it.
 
 INTERNAL LINKING:
-- If one of the "Other pages on this site" above is genuinely topically relevant, include ONE internal-link action (system "Internal Link", priority "low" or "medium"): give the EXACT anchor text and which existing paragraph on THIS page to add it in, linking from this page TO that page's URL.
-- Only include this if it truly strengthens topical authority. If no other page is relevant, DO NOT mention internal linking at all.
+- You may ONLY link to a URL that appears verbatim in the sitemap candidate list above. NEVER invent, guess, shorten, or construct a URL (e.g. do NOT assume "/contentscore/" exists). If the exact URL is not in that list, do not output an internal-link action.
+- If one listed URL is genuinely topically relevant, include ONE internal-link action (system "Internal Link", priority "low" or "medium"): give the EXACT anchor text and which existing paragraph on THIS page to add it in, linking from this page TO that listed URL.
+- Only include this if it truly strengthens topical authority. If no listed URL is relevant, DO NOT mention internal linking at all.
 
 OUTPUT FORMAT — return ONLY this JSON, no markdown, no explanation, no preamble:
 [{"title":"6 words max describing the gap","priority":"high","system":"Google AIO","action":"ADD after your H1: '[EXACT 40-60 word paragraph they should copy-paste]'. This triggers Google AI Overview because [specific reason based on AIO requirements above].","expected_impact":"Google AIO will cite this page within 2-3 crawl cycles because [specific technical reason]"}]
@@ -35154,10 +35211,12 @@ INPUT DATA:
 - GSC Average position: ${gscPos || 'n/a'}
 - Live Google position: ${snapshot.google_position || 'not ranked'}
 - GRAAF score: ${snapshot.score || '?'}/100
-- Page HTML content (first 3000 chars): ${htmlExcerpt.substring(0,3000) || '(no HTML)'}
+- Page HTML content (first 8000 chars): ${htmlExcerpt.substring(0,8000) || '(no HTML)'}
 - Competitor #1 URL: ${competitor1 ? competitor1.url : 'no data'}
 - Competitor #1 title: ${competitor1 ? competitor1.title : 'no data'}
 - Competitor #1 snippet: ${competitor1 ? competitor1.snippet : 'no data'}
+- Internal-link candidates — REAL URLs from this site's sitemap (if you suggest an internal link, the target MUST be copied verbatim from this list; NEVER invent or guess a URL):
+${_otherPagesList || '(none available — do NOT output any internal-link action)'}
 
 GSC INTERPRETATION RULES:
 - Impressions > 1000 but CTR < 3%: title/meta problem → rewrite title
@@ -35194,7 +35253,7 @@ Each action must include:
    - "NEW BLOCK before the footer: <content>"
    Never give content without naming WHERE it goes and WHETHER it is added, merged, or replaced.
 6. NO DUPLICATES: never output two actions that touch the same page element or repeat the same change. Each action must target a DISTINCT element/section. If the relevant content already exists, use MODIFY or REPLACE on it — never tell the user to ADD a second copy of something already there.
-7. STAY IN YOUR LANE: this is the GOOGLE-RANKING brief only. Generate ranking/CTR/meta/content-gap actions. Do NOT repeat AI-citation passage additions (Perplexity/AIO/Copilot text) — a separate Citation Brief covers those.
+7. STAY IN YOUR LANE: this is the GOOGLE-RANKING brief only. Generate ranking/CTR/meta/content-gap actions. Do NOT repeat AI-citation passage additions (Perplexity/AIO/Copilot text) — a separate Citation Brief covers those.${_alreadyOnPage ? '\n\nALREADY ON PAGE — do NOT recommend adding any of these (skip entirely, or MODIFY/REPLACE only when genuinely weak; re-recommending existing content wastes the owner time and causes duplicates):' + _alreadyOnPage : ''}
 
 REQUIRED ACTION TYPES (include all of these):
 - A "Meta Title & Description (Rank Math)" action — ALWAYS include this. Give the EXACT SEO Title (max 60 characters, must contain "${kw}") and the EXACT Meta Description (max 155 characters, compelling, includes "${kw}"). Format the action as: "[VOOR GOOGLE RANKING] REPLACE in Rank Math → SEO Title: <title>  |  REPLACE in Rank Math → Meta Description: <description>". This is where the client pastes it in WordPress (Rank Math plugin), so be explicit.
