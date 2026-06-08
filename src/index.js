@@ -35176,7 +35176,7 @@ Analyze the input data and create a Citation Brief with exactly 5 actions. Each 
 2. Copy-paste ready — give the EXACT sentence, paragraph, schema code, or HTML the user needs to add
 3. Prioritized: HIGH (blocks all citations), MEDIUM (improves 1-2 systems), LOW (incremental gain)
 4. Measurable: state which AI system will cite the page and why, based on the specific requirement above
-5. LABEL + OPERATION + LOCATION: begin every "action" with the tag [VOOR AI-CITATIE], then the operation in CAPITALS and the exact place, so the client knows precisely what to do — "ADD after your H1: ...", "MERGE into your opening paragraph: ...", "REPLACE your existing FAQ schema with: ...", "NEW BLOCK before the footer: ...". Always state whether the content is added, merged into existing text, or replaces something — and exactly where on the page.
+5. LABEL + OPERATION + LOCATION: begin every "action" with the tag [FOR AI CITATION], then the operation in CAPITALS and the exact place, so the client knows precisely what to do — "ADD after your H1: ...", "MERGE into your opening paragraph: ...", "REPLACE your existing FAQ schema with: ...", "NEW BLOCK before the footer: ...". Always state whether the content is added, merged into existing text, or replaces something — and exactly where on the page.
 6. NO DUPLICATES: never output two actions that touch the same page element or repeat the same change. Each of the 5 actions must target a DISTINCT element/section. If the relevant content already exists on the page, use MODIFY or REPLACE on it — never tell the user to ADD a second copy of something that is already there.
 7. STAY IN YOUR LANE: this is the AI-CITATION brief only. Generate AI-citation passage/structure/schema actions. Do NOT include Google ranking, meta-title, or CTR actions — a separate GSC Brief covers those.
 
@@ -35244,7 +35244,7 @@ Each action must include:
 2. The exact change to make — write the new title tag, the new paragraph, the schema block, the internal link anchor text — NOT a suggestion, the actual text
 3. The expected position improvement (e.g. "position 14 → 8")
 4. The timeframe (e.g. "within 2-4 weeks after Google recrawl")
-5. LABEL + OPERATION + LOCATION: begin every "action" with the tag [VOOR GOOGLE RANKING], then the operation in CAPITALS and the exact place, so a non-technical user knows precisely what to do. Use one of:
+5. LABEL + OPERATION + LOCATION: begin every "action" with the tag [FOR GOOGLE RANKING], then the operation in CAPITALS and the exact place, so a non-technical user knows precisely what to do. Use one of:
    - "REPLACE in Rank Math → SEO Title: <new title>"
    - "REPLACE in Rank Math → Meta Description: <new description>"
    - "ADD after your H1: <new text>"
@@ -35256,27 +35256,27 @@ Each action must include:
 7. STAY IN YOUR LANE: this is the GOOGLE-RANKING brief only. Generate ranking/CTR/meta/content-gap actions. Do NOT repeat AI-citation passage additions (Perplexity/AIO/Copilot text) — a separate Citation Brief covers those.${_alreadyOnPage ? '\n\nALREADY ON PAGE — do NOT recommend adding any of these (skip entirely, or MODIFY/REPLACE only when genuinely weak; re-recommending existing content wastes the owner time and causes duplicates):' + _alreadyOnPage : ''}
 
 REQUIRED ACTION TYPES (include all of these):
-- A "Meta Title & Description (Rank Math)" action — ALWAYS include this. Give the EXACT SEO Title (max 60 characters, must contain "${kw}") and the EXACT Meta Description (max 155 characters, compelling, includes "${kw}"). Format the action as: "[VOOR GOOGLE RANKING] REPLACE in Rank Math → SEO Title: <title>  |  REPLACE in Rank Math → Meta Description: <description>". This is where the client pastes it in WordPress (Rank Math plugin), so be explicit.
+- A "Meta Title & Description (Rank Math)" action — ALWAYS include this. Give the EXACT SEO Title (max 60 characters, must contain "${kw}") and the EXACT Meta Description (max 155 characters, compelling, includes "${kw}"). Format the action as: "[FOR GOOGLE RANKING] REPLACE in Rank Math → SEO Title: <title>  |  REPLACE in Rank Math → Meta Description: <description>". This is where the client pastes it in WordPress (Rank Math plugin), so be explicit.
 - One "Quick Win" action completable in under 5 minutes
 - One "Content Gap" action based on what competitor #1 has that this page lacks
 - A freshness recommendation if the page content appears dated
 
 OUTPUT FORMAT — return ONLY this JSON, no markdown:
-[{"title":"6 words max","priority":"high","trigger":"Specific GSC signal that triggered this (e.g. '9,196 impressions, 2.7% CTR = title mismatch')","action":"Starts with [VOOR GOOGLE RANKING] + OPERATION + LOCATION, e.g. 'REPLACE in Rank Math → SEO Title: ...' or 'ADD after your H1: ...' or 'MERGE into your opening paragraph: ...' — always copy-paste ready text","expected_impact":"Position {current} → {target} within {timeframe}","effort":"quick_win"}]
+[{"title":"6 words max","priority":"high","trigger":"Specific GSC signal that triggered this (e.g. '9,196 impressions, 2.7% CTR = title mismatch')","action":"Starts with [FOR GOOGLE RANKING] + OPERATION + LOCATION, e.g. 'REPLACE in Rank Math → SEO Title: ...' or 'ADD after your H1: ...' or 'MERGE into your opening paragraph: ...' — always copy-paste ready text","expected_impact":"Position {current} → {target} within {timeframe}","effort":"quick_win"}]
 
 QUALITY BAR: A user with zero SEO knowledge must be able to implement every action. Write the new title tag. Write the new paragraph. Write the schema. If you say "add more content" without writing the content, you have failed.
 
 GOAL: Rank #1 for "${kw}" and capture the maximum clicks from ${gscImpr || 'the available'} monthly impressions.`;
       // Run both in parallel
-      var _briefTimeout = function(){ return new Promise(function(res){ setTimeout(function(){ res({ ok:false, status:408, errorMessage:'brief time budget exceeded' }); }, 22000); }); };
+      var _briefTimeout = function(){ return new Promise(function(res){ setTimeout(function(){ res({ ok:false, status:408, errorMessage:'brief time budget exceeded' }); }, 30000); }); };
       const [citResp, gscResp] = await Promise.all([
         Promise.race([ callGeminiWithFallback(geminiKey, {
           contents: [{ role: 'user', parts: [{ text: citationPrompt }] }],
-          generationConfig: { temperature: 0.3, maxOutputTokens: 2000 }
+          generationConfig: { temperature: 0.3, maxOutputTokens: 8192, responseMimeType: 'application/json' }
         }, null, null, 1), _briefTimeout() ]),
         Promise.race([ callGeminiWithFallback(geminiKey, {
           contents: [{ role: 'user', parts: [{ text: gscPrompt }] }],
-          generationConfig: { temperature: 0.2, maxOutputTokens: 1500 }
+          generationConfig: { temperature: 0.2, maxOutputTokens: 8192, responseMimeType: 'application/json' }
         }, null, null, 1), _briefTimeout() ])
       ]);
 
@@ -35289,7 +35289,7 @@ GOAL: Rank #1 for "${kw}" and capture the maximum clicks from ${gscImpr || 'the 
         try {
           snapshot.recommendations = JSON.parse(recs);
         } catch(e) {
-          snapshot.recommendations = [{ title: 'Citation Brief', priority: 'medium', system: 'All', action: recs.substring(0,800), expected_impact: 'See above' }];
+          snapshot.recommendations = [{ title: 'Citation Brief', priority: 'medium', system: 'All', action: recs.substring(0,4000), expected_impact: 'See above' }];
         }
       } else {
         console.warn('[tracker] Citation Gemini failed:', citResp.status, citResp.errorMessage || '');
@@ -35305,7 +35305,7 @@ GOAL: Rank #1 for "${kw}" and capture the maximum clicks from ${gscImpr || 'the 
         try {
           snapshot.gsc_brief = JSON.parse(gscRecs);
         } catch(e) {
-          snapshot.gsc_brief = [{ title: 'GSC Brief', priority: 'medium', trigger: 'See text', action: gscRecs.substring(0,800), expected_impact: 'Ranking improvement', effort: 'content' }];
+          snapshot.gsc_brief = [{ title: 'GSC Brief', priority: 'medium', trigger: 'See text', action: gscRecs.substring(0,4000), expected_impact: 'Ranking improvement', effort: 'content' }];
         }
       } else {
         console.warn('[tracker] GSC Gemini failed:', gscResp.status, gscResp.errorMessage || '');
