@@ -35056,8 +35056,8 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
         if (Array.isArray(snapshot.graaf_recommendations)) snapshot.graaf_recommendations.slice(0,2).forEach(function(g){ var t=typeof g==='string'?g:(g&&(g.title||g.text||g.name))||''; var a=typeof g==='string'?g:(g&&(g.action||g.fix||g.text||g.detail))||''; if(t||a) _items.push({title:String(t||'Content improvement').substring(0,60),priority:'medium',system:'Content Quality',action:a,expected_impact:''}); });
         snapshot.recommendations = _items.slice(0,6);
         var _gsc = [];
-        if (_ckw && _cpos != null) _gsc.push({ title:'Optimize title for "'+_ckw+'"', priority:'high', trigger:'Ranking #'+_cpos+(gscImpr?' with '+gscImpr+' impressions':''), action:'Rewrite the <title> to lead with "'+_ckw+'" and add a clear benefit or number to lift click-through.', expected_impact:'Position #'+_cpos+' → top 3 after Google recrawl', effort:'quick_win' });
-        if (gscImpr && (gscClicks != null)) _gsc.push({ title:'Capture missed clicks', priority:'medium', trigger:gscImpr+' impressions, '+gscClicks+' clicks', action:'Add a concise meta description and a question-style H2 matching search intent for "'+_ckw+'".', expected_impact:'+'+(clickGap||'more')+' clicks/month', effort:'content' });
+        if (_ckw && _cpos != null) _gsc.push({ title:'Meta Title & Description (Rank Math)', priority:'high', trigger:'Ranking #'+_cpos+(gscImpr?' with '+gscImpr+' impressions, '+(gscCtr||'low')+'% CTR':''), action:'REPLACE in Rank Math \u2192 SEO Title: "'+_ckw.charAt(0).toUpperCase()+_ckw.slice(1)+' \u2014 [your key benefit]" (keep under 60 characters).  |  REPLACE in Rank Math \u2192 Meta Description: "Discover '+_ckw+': [what the reader gains]. [Clear call to action]." (keep under 155 characters).', expected_impact:'Higher CTR \u2192 position #'+_cpos+' \u2192 top 3 after Google recrawl', effort:'quick_win' });
+        if (gscImpr && (gscClicks != null)) _gsc.push({ title:'Capture missed clicks', priority:'medium', trigger:gscImpr+' impressions, '+gscClicks+' clicks', action:'ADD after your H1: a question-style H2 matching search intent for "'+_ckw+'", followed by a 40-60 word direct answer.', expected_impact:'+'+(clickGap||'more')+' clicks/month', effort:'content' });
         snapshot.gsc_brief = _gsc;
       })();
       try {
@@ -35118,6 +35118,7 @@ Analyze the input data and create a Citation Brief with exactly 5 actions. Each 
 2. Copy-paste ready — give the EXACT sentence, paragraph, schema code, or HTML the user needs to add
 3. Prioritized: HIGH (blocks all citations), MEDIUM (improves 1-2 systems), LOW (incremental gain)
 4. Measurable: state which AI system will cite the page and why, based on the specific requirement above
+5. OPERATION + LOCATION: begin every "action" with the operation in CAPITALS and the exact place, so the client knows precisely what to do — "ADD after your H1: ...", "MERGE into your opening paragraph: ...", "REPLACE your existing FAQ schema with: ...", "NEW BLOCK before the footer: ...". Always state whether the content is added, merged into existing text, or replaces something — and exactly where on the page.
 
 ACTIONS THAT ARE ALREADY RESOLVED — DO NOT INCLUDE THESE:`
 + (snapshot.ai_google_overview_cited ? '\n- AIO cites this page → SKIP all Google AIO actions' : '')
@@ -35132,7 +35133,7 @@ INTERNAL LINKING:
 - Only include this if it truly strengthens topical authority. If no other page is relevant, DO NOT mention internal linking at all.
 
 OUTPUT FORMAT — return ONLY this JSON, no markdown, no explanation, no preamble:
-[{"title":"6 words max describing the gap","priority":"high","system":"Google AIO","action":"Add this exact text after your H1 heading: '[EXACT 40-60 word paragraph they should copy-paste]'. This triggers Google AI Overview because [specific reason based on AIO requirements above].","expected_impact":"Google AIO will cite this page within 2-3 crawl cycles because [specific technical reason]"}]
+[{"title":"6 words max describing the gap","priority":"high","system":"Google AIO","action":"ADD after your H1: '[EXACT 40-60 word paragraph they should copy-paste]'. This triggers Google AI Overview because [specific reason based on AIO requirements above].","expected_impact":"Google AIO will cite this page within 2-3 crawl cycles because [specific technical reason]"}]
 
 QUALITY BAR: Every action must be so specific that the user can implement it in under 10 minutes without asking any follow-up questions. If you write "improve your introduction" you have failed. Write the introduction FOR them.`;
       // ── CALL 2: GSC Ranking Brief ──────────────────────────────────────
@@ -35171,21 +35172,30 @@ WHAT DRIVES RANK #1 IN 2025-2026:
 8. Outbound links to authoritative sources (signals trust)
 
 TASK:
-Analyze the GSC data and create a GSC Brief with exactly 4 actions to reach rank #1 for "${kw}".
+Analyze the GSC data and create a GSC Brief with 4-5 actions to reach rank #1 for "${kw}" (ALWAYS include the Meta Title & Description action).
 
 Each action must include:
 1. The specific GSC signal that triggered this recommendation (e.g. "CTR of 2.7% at position 14 = title problem")
 2. The exact change to make — write the new title tag, the new paragraph, the schema block, the internal link anchor text — NOT a suggestion, the actual text
 3. The expected position improvement (e.g. "position 14 → 8")
 4. The timeframe (e.g. "within 2-4 weeks after Google recrawl")
+5. OPERATION + LOCATION: begin every "action" with the operation in CAPITALS and the exact place, so a non-technical user knows precisely what to do. Use one of:
+   - "REPLACE in Rank Math → SEO Title: <new title>"
+   - "REPLACE in Rank Math → Meta Description: <new description>"
+   - "ADD after your H1: <new text>"
+   - "MERGE into your opening paragraph: <text to weave in>"
+   - "REPLACE your existing <H1 / FAQ schema / intro>: <new content>"
+   - "NEW BLOCK before the footer: <content>"
+   Never give content without naming WHERE it goes and WHETHER it is added, merged, or replaced.
 
-REQUIRED ACTION TYPES:
+REQUIRED ACTION TYPES (include all of these):
+- A "Meta Title & Description (Rank Math)" action — ALWAYS include this. Give the EXACT SEO Title (max 60 characters, must contain "${kw}") and the EXACT Meta Description (max 155 characters, compelling, includes "${kw}"). Format the action as: "REPLACE in Rank Math → SEO Title: <title>  |  REPLACE in Rank Math → Meta Description: <description>". This is where the client pastes it in WordPress (Rank Math plugin), so be explicit.
 - One "Quick Win" action completable in under 5 minutes
 - One "Content Gap" action based on what competitor #1 has that this page lacks
 - A freshness recommendation if the page content appears dated
 
 OUTPUT FORMAT — return ONLY this JSON, no markdown:
-[{"title":"6 words max","priority":"high","trigger":"Specific GSC signal that triggered this (e.g. '9,196 impressions, 2.7% CTR = title mismatch')","action":"Exact implementation: [copy-paste ready text, code, or HTML]","expected_impact":"Position {current} → {target} within {timeframe}","effort":"quick_win"}]
+[{"title":"6 words max","priority":"high","trigger":"Specific GSC signal that triggered this (e.g. '9,196 impressions, 2.7% CTR = title mismatch')","action":"Starts with OPERATION + LOCATION, e.g. 'REPLACE in Rank Math → SEO Title: ...' or 'ADD after your H1: ...' or 'MERGE into your opening paragraph: ...' — always copy-paste ready text","expected_impact":"Position {current} → {target} within {timeframe}","effort":"quick_win"}]
 
 QUALITY BAR: A user with zero SEO knowledge must be able to implement every action. Write the new title tag. Write the new paragraph. Write the schema. If you say "add more content" without writing the content, you have failed.
 
