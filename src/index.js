@@ -35121,7 +35121,9 @@ Analyze the input data and create a Citation Brief with exactly 5 actions. Each 
 2. Copy-paste ready — give the EXACT sentence, paragraph, schema code, or HTML the user needs to add
 3. Prioritized: HIGH (blocks all citations), MEDIUM (improves 1-2 systems), LOW (incremental gain)
 4. Measurable: state which AI system will cite the page and why, based on the specific requirement above
-5. OPERATION + LOCATION: begin every "action" with the operation in CAPITALS and the exact place, so the client knows precisely what to do — "ADD after your H1: ...", "MERGE into your opening paragraph: ...", "REPLACE your existing FAQ schema with: ...", "NEW BLOCK before the footer: ...". Always state whether the content is added, merged into existing text, or replaces something — and exactly where on the page.
+5. LABEL + OPERATION + LOCATION: begin every "action" with the tag [VOOR AI-CITATIE], then the operation in CAPITALS and the exact place, so the client knows precisely what to do — "ADD after your H1: ...", "MERGE into your opening paragraph: ...", "REPLACE your existing FAQ schema with: ...", "NEW BLOCK before the footer: ...". Always state whether the content is added, merged into existing text, or replaces something — and exactly where on the page.
+6. NO DUPLICATES: never output two actions that touch the same page element or repeat the same change. Each of the 5 actions must target a DISTINCT element/section. If the relevant content already exists on the page, use MODIFY or REPLACE on it — never tell the user to ADD a second copy of something that is already there.
+7. STAY IN YOUR LANE: this is the AI-CITATION brief only. Generate AI-citation passage/structure/schema actions. Do NOT include Google ranking, meta-title, or CTR actions — a separate GSC Brief covers those.
 
 ACTIONS THAT ARE ALREADY RESOLVED — DO NOT INCLUDE THESE:`
 + (snapshot.ai_google_overview_cited ? '\n- AIO cites this page → SKIP all Google AIO actions' : '')
@@ -35182,7 +35184,7 @@ Each action must include:
 2. The exact change to make — write the new title tag, the new paragraph, the schema block, the internal link anchor text — NOT a suggestion, the actual text
 3. The expected position improvement (e.g. "position 14 → 8")
 4. The timeframe (e.g. "within 2-4 weeks after Google recrawl")
-5. OPERATION + LOCATION: begin every "action" with the operation in CAPITALS and the exact place, so a non-technical user knows precisely what to do. Use one of:
+5. LABEL + OPERATION + LOCATION: begin every "action" with the tag [VOOR GOOGLE RANKING], then the operation in CAPITALS and the exact place, so a non-technical user knows precisely what to do. Use one of:
    - "REPLACE in Rank Math → SEO Title: <new title>"
    - "REPLACE in Rank Math → Meta Description: <new description>"
    - "ADD after your H1: <new text>"
@@ -35190,15 +35192,17 @@ Each action must include:
    - "REPLACE your existing <H1 / FAQ schema / intro>: <new content>"
    - "NEW BLOCK before the footer: <content>"
    Never give content without naming WHERE it goes and WHETHER it is added, merged, or replaced.
+6. NO DUPLICATES: never output two actions that touch the same page element or repeat the same change. Each action must target a DISTINCT element/section. If the relevant content already exists, use MODIFY or REPLACE on it — never tell the user to ADD a second copy of something already there.
+7. STAY IN YOUR LANE: this is the GOOGLE-RANKING brief only. Generate ranking/CTR/meta/content-gap actions. Do NOT repeat AI-citation passage additions (Perplexity/AIO/Copilot text) — a separate Citation Brief covers those.
 
 REQUIRED ACTION TYPES (include all of these):
-- A "Meta Title & Description (Rank Math)" action — ALWAYS include this. Give the EXACT SEO Title (max 60 characters, must contain "${kw}") and the EXACT Meta Description (max 155 characters, compelling, includes "${kw}"). Format the action as: "REPLACE in Rank Math → SEO Title: <title>  |  REPLACE in Rank Math → Meta Description: <description>". This is where the client pastes it in WordPress (Rank Math plugin), so be explicit.
+- A "Meta Title & Description (Rank Math)" action — ALWAYS include this. Give the EXACT SEO Title (max 60 characters, must contain "${kw}") and the EXACT Meta Description (max 155 characters, compelling, includes "${kw}"). Format the action as: "[VOOR GOOGLE RANKING] REPLACE in Rank Math → SEO Title: <title>  |  REPLACE in Rank Math → Meta Description: <description>". This is where the client pastes it in WordPress (Rank Math plugin), so be explicit.
 - One "Quick Win" action completable in under 5 minutes
 - One "Content Gap" action based on what competitor #1 has that this page lacks
 - A freshness recommendation if the page content appears dated
 
 OUTPUT FORMAT — return ONLY this JSON, no markdown:
-[{"title":"6 words max","priority":"high","trigger":"Specific GSC signal that triggered this (e.g. '9,196 impressions, 2.7% CTR = title mismatch')","action":"Starts with OPERATION + LOCATION, e.g. 'REPLACE in Rank Math → SEO Title: ...' or 'ADD after your H1: ...' or 'MERGE into your opening paragraph: ...' — always copy-paste ready text","expected_impact":"Position {current} → {target} within {timeframe}","effort":"quick_win"}]
+[{"title":"6 words max","priority":"high","trigger":"Specific GSC signal that triggered this (e.g. '9,196 impressions, 2.7% CTR = title mismatch')","action":"Starts with [VOOR GOOGLE RANKING] + OPERATION + LOCATION, e.g. 'REPLACE in Rank Math → SEO Title: ...' or 'ADD after your H1: ...' or 'MERGE into your opening paragraph: ...' — always copy-paste ready text","expected_impact":"Position {current} → {target} within {timeframe}","effort":"quick_win"}]
 
 QUALITY BAR: A user with zero SEO knowledge must be able to implement every action. Write the new title tag. Write the new paragraph. Write the schema. If you say "add more content" without writing the content, you have failed.
 
