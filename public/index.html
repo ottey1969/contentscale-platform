@@ -598,16 +598,16 @@
 
                      <!-- Scan method toggle -->
                      <div style="display:flex;gap:0;background:#1f2937;border-radius:10px;padding:4px;margin-bottom:16px;border:1px solid #374151;">
-                        <button id="methodHtmlBtn" onclick="setScanMethod('html')" style="flex:1;padding:10px 14px;border-radius:7px;font-size:0.85rem;font-weight:700;border:none;cursor:pointer;background:linear-gradient(135deg,#7e22ce,#be185d);color:white;transition:all .2s;">
-                           📋 Paste HTML <span style="font-size:0.7rem;opacity:.85;margin-left:4px;">— recommended</span>
+                        <button id="methodUrlBtn" onclick="setScanMethod('url')" style="flex:1;padding:10px 14px;border-radius:7px;font-size:0.85rem;font-weight:700;border:none;cursor:pointer;background:linear-gradient(135deg,#7e22ce,#be185d);color:white;transition:all .2s;">
+                           🔗 Scan by URL <span style="font-size:0.7rem;opacity:.85;margin-left:4px;">— recommended</span>
                         </button>
-                        <button id="methodUrlBtn" onclick="setScanMethod('url')" style="flex:1;padding:10px 14px;border-radius:7px;font-size:0.85rem;font-weight:700;border:none;cursor:pointer;background:none;color:#9ca3af;transition:all .2s;">
-                           🔗 Scan by URL
+                        <button id="methodHtmlBtn" onclick="setScanMethod('html')" style="flex:1;padding:10px 14px;border-radius:7px;font-size:0.85rem;font-weight:700;border:none;cursor:pointer;background:none;color:#9ca3af;transition:all .2s;">
+                           📋 Paste HTML
                         </button>
                      </div>
 
-                     <!-- HTML paste method (default) -->
-                     <div id="methodHtmlPanel">
+                     <!-- HTML paste method (fallback) -->
+                     <div id="methodHtmlPanel" style="display:none;">
                         <div style="background:rgba(79,70,229,0.1);border:1px solid rgba(99,102,241,0.3);border-radius:10px;padding:14px 16px;margin-bottom:16px;">
                            <div style="font-size:0.82rem;font-weight:800;color:#a5b4fc;margin-bottom:8px;">📋 How to get your page source</div>
                            <ol style="font-size:0.82rem;color:#d1d5db;line-height:2;margin:0;padding-left:18px;">
@@ -616,8 +616,8 @@
                               <li>Press <strong style="color:#a5b4fc;">Ctrl+A</strong> then <strong style="color:#a5b4fc;">Ctrl+C</strong></li>
                               <li>Paste below and click <strong style="color:#a5b4fc;">Scan</strong></li>
                            </ol>
-                           <div style="margin-top:10px;padding:8px 12px;background:rgba(16,185,129,0.08);border-left:3px solid #10b981;border-radius:0 6px 6px 0;font-size:0.78rem;color:#6ee7b7;">
-                              ✅ <strong>Most accurate</strong> — this is exactly what Google reads, unaffected by caching or server config.
+                           <div style="margin-top:10px;padding:8px 12px;background:rgba(251,191,36,0.08);border-left:3px solid #fbbf24;border-radius:0 6px 6px 0;font-size:0.78rem;color:#fde68a;">
+                              ⚠️ <strong>Use only if the scanner can't reach your page</strong> — e.g. login walls or bot-blocking. Pasted HTML can score slightly higher because it skips live-rendering checks.
                            </div>
                         </div>
                         <div id="singlePasteWrap">
@@ -629,10 +629,10 @@
                         </div>
                      </div>
 
-                     <!-- URL method -->
-                     <div id="methodUrlPanel" style="display:none;">
-                        <div style="background:rgba(251,191,36,0.07);border:1px solid rgba(251,191,36,0.25);border-left:4px solid #fbbf24;border-radius:0 10px 10px 0;padding:12px 16px;margin-bottom:16px;font-size:0.82rem;color:#fde68a;">
-                           ⚠️ <strong>Note:</strong> URL scanning is less accurate than pasting HTML. Results may differ from what Google sees due to JavaScript rendering, caching, or server configuration. <strong>For best results, use Paste HTML.</strong>
+                     <!-- URL method (default) -->
+                     <div id="methodUrlPanel">
+                        <div style="background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.3);border-left:4px solid #10b981;border-radius:0 10px 10px 0;padding:12px 16px;margin-bottom:16px;font-size:0.82rem;color:#6ee7b7;">
+                           ✅ <strong>Recommended — most accurate.</strong> We scan your live page exactly as Google's crawler renders it, with full visibility checks. This is the official ContentScore.
                         </div>
                         <div id="singleUrlWrap">
                            <input type="text" id="singleUrlInput" aria-label="Enter website URL to scan" placeholder="https://your-website.com/page-to-scan" style="width:100%;padding:14px;border-radius:8px;font-size:0.95rem;box-sizing:border-box;margin-bottom:10px;">
