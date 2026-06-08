@@ -5180,7 +5180,8 @@ app.post('/api/scan/paste', async (req, res) => {
       || rawHtml.toLowerCase().includes('class=') && rawHtml.toLowerCase().match(/class=["'][^"']*faq[^"']*["']/);
     const hasTOC = /table of contents|on this page|jump to section|contents/i.test(rawHtml);
     const hasAuthorBio = /written by|about the author|about the founder|meet the author/i.test(rawHtml);
-    const hasDirectAnswer = cleanText.substring(0, 300).length > 150;
+    const first300Words = cleanText.split(/\s+/).slice(0, 300).join(' ');
+    const hasDirectAnswer = /\d/.test(first300Words) && first300Words.length > 150;
     const hasTLDR = /tl;dr|key takeaways|quick summary|at a glance|in this article|highlights/i.test(rawHtml);
 
     // Images
