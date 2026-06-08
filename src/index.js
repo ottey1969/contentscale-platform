@@ -7554,19 +7554,19 @@ const variants = [...new Set(V)]; // dedupe
 // ── Step 1: Exact URL match in scan_log (newest wins) ──
 const placeholders = variants.map((_, i) => '$' + (i + 1)).join(',');
 const exact = await pool.query(
-  `SELECT score, business_url FROM scan_log
+  `SELECT score, business_url, created_at FROM scan_log
    WHERE business_url IN (${placeholders}) AND score IS NOT NULL
    ORDER BY created_at DESC LIMIT 1`,
   variants
 );
 if (exact.rows.length) {
   console.log('[badge] exact hit:', url, '→', exact.rows[0].score, '| stored:', exact.rows[0].business_url);
-  return res.json({ success: true, url: exact.rows[0].business_url, score: exact.rows[0].score, source: 'scan_log_exact' });
+  return res.json({ success: true, url: exact.rows[0].business_url, score: exact.rows[0].score, last_scanned: exact.rows[0].created_at, source: 'scan_log_exact' });
 }
 
 // ── Step 2: Domain-wide scan_log search with JS-level exact slug matching ──
 const recent = await pool.query(
-  `SELECT score, business_url FROM scan_log
+  `SELECT score, business_url, created_at FROM scan_log
    WHERE created_at > NOW() - INTERVAL '30 days'
      AND (business_url ILIKE $1 OR business_url ILIKE $2 OR business_url ILIKE $3 OR business_url ILIKE $4)
    ORDER BY created_at DESC LIMIT 100`,
@@ -7578,12 +7578,12 @@ const match = recent.rows.find(r => {
 });
 if (match && match.score != null) {
   console.log('[badge] slug hit:', url, '→', match.score, '| stored:', match.business_url);
-  return res.json({ success: true, url: match.business_url, score: match.score, source: 'scan_log_slug' });
+  return res.json({ success: true, url: match.business_url, score: match.score, last_scanned: match.created_at, source: 'scan_log_slug' });
 }
 
 // ── Step 3: scans table fallback ──
 const scansRows = await pool.query(
-  `SELECT score, url FROM scans
+  `SELECT score, url, created_at FROM scans
    WHERE created_at > NOW() - INTERVAL '30 days'
      AND (url ILIKE $1 OR url ILIKE $2 OR url ILIKE $3 OR url ILIKE $4)
    ORDER BY created_at DESC LIMIT 50`,
@@ -7595,7 +7595,7 @@ const scansMatch = scansRows.rows.find(r => {
 });
 if (scansMatch && scansMatch.score != null) {
   console.log('[badge] scans hit:', url, '→', scansMatch.score);
-  return res.json({ success: true, url: scansMatch.url, score: scansMatch.score, source: 'scans_table' });
+  return res.json({ success: true, url: scansMatch.url, score: scansMatch.score, last_scanned: scansMatch.created_at, source: 'scans_table' });
 }
 
 // ── Step 4: Leaderboard — only for homepage ──
@@ -7668,6 +7668,8 @@ function render(data) {
   }
   var score = data.score;
   var t = getTier(score);
+  var scanned = '';
+  if (data.last_scanned) { try { scanned = new Date(data.last_scanned).toLocaleString('en-GB',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}); } catch(e) {} }
   var html = '<div style="display:inline-flex;align-items:center;border-radius:10px;overflow:hidden;border:1px solid #374151;font-family:system-ui,sans-serif;background:#111827;">'
     + '<div style="display:flex;align-items:center;gap:10px;padding:10px 16px;">'
     + '<div style="display:flex;flex-direction:column;gap:1px;">'
@@ -7677,6 +7679,7 @@ function render(data) {
     + '<span style="font-size:26px;font-weight:900;color:' + t.color + ';line-height:1;font-variant-numeric:tabular-nums;">' + score + '</span>'
     + '<span style="font-size:11px;color:#6b7280;">/100</span>'
     + '</div>'
+    + (scanned ? '<span style="font-size:8.5px;color:#6b7280;letter-spacing:.02em;margin-top:1px;">Scanned ' + scanned + '</span>' : '')
     + '</div>'
     + '<div style="display:flex;flex-direction:column;align-items:flex-start;gap:4px;">'
     + '<span style="font-size:10px;font-weight:800;background:' + t.bg + ';color:' + t.text + ';border-radius:4px;padding:2px 7px;letter-spacing:.04em;">' + t.label + '</span>'
