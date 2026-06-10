@@ -1274,11 +1274,12 @@ app.patch('/api/tracker-client/:token/settings', async (req, res) => {
   try {
     const cr = await pool.query('SELECT id FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status != $2)', [req.params.token, 'deleted']);
     if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
-    const { whatsapp, callmebot_key, name } = req.body;
+    const { whatsapp, callmebot_key, name, brand_context } = req.body;
     const updates = []; const vals = []; let i = 1;
     if (whatsapp !== undefined) { updates.push(`whatsapp=$${i++}`); vals.push(whatsapp || null); }
     if (callmebot_key !== undefined) { updates.push(`callmebot_key=$${i++}`); vals.push(callmebot_key || null); }
     if (name !== undefined) { updates.push(`name=$${i++}`); vals.push(name || null); }
+    if (brand_context !== undefined) { updates.push(`brand_context=$${i++}`); vals.push((brand_context || '').slice(0, 4000)); }
     if (!updates.length) return res.json({ success: true });
     vals.push(cr.rows[0].id);
     await pool.query(`UPDATE tracker_clients SET ${updates.join(',')} WHERE id=$${i}`, vals);
@@ -3230,6 +3231,7 @@ app.patch('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
   } catch(e) {}
   await client.query(`CREATE INDEX IF NOT EXISTS tracker_clients_ip_idx ON tracker_clients(registered_ip) WHERE registered_ip IS NOT NULL`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS extra_domains TEXT DEFAULT ''`).catch(()=>{});
+  await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS brand_context TEXT DEFAULT ''`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS unsubscribe_token VARCHAR(64)`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS email_unsubscribed BOOLEAN DEFAULT FALSE`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS tracker_client_id INTEGER REFERENCES tracker_clients(id) ON DELETE SET NULL`).catch(()=>{});
@@ -15476,7 +15478,8 @@ app.post('/api/content/write/:jobId', verifyEngineAccess, requireCredits('write'
     const jobR = await pool.query(
       `SELECT j.*, cp.name as profile_name, cp.domain, cp.niche, cp.target_audience, cp.primary_goal, cp.html_template, cp.wp_url,
        cp.years_experience, cp.team_size, cp.pricing_model, cp.free_consultation, cp.guarantee,
-       cp.certifications, cp.unique_selling_points, cp.service_areas, cp.faq, cp.business_info
+       cp.certifications, cp.unique_selling_points, cp.service_areas, cp.faq, cp.business_info,
+       cp.author_name, cp.author_bio, cp.author_location
        FROM content_jobs j JOIN content_profiles cp ON cp.id=j.profile_id WHERE j.id=$1`,
       [req.params.jobId]
     );
@@ -15608,6 +15611,19 @@ Echte zoekopdrachten (verwerk in headings en body): ${gscQueries.join(', ')}
     const antiFacts = verifiedFacts
       ? `GEBRUIK ALLEEN DEZE GEGEVENS. Verzin NOOIT telefoonnummers, adressen, e-mails of andere contactgegevens die niet hierboven staan. Ontbrekende gegevens = weglaten of [CONTACT] gebruiken.`
       : `Er zijn geen bedrijfsgegevens gescrapt. Verzin GEEN telefoonnummers, adressen, e-mails of andere contactgegevens. Gebruik [CONTACT] als placeholder.`;
+
+    // Verified AUTHOR facts (E-E-A-T) — never fabricate author numbers/credentials
+    const _certs = Array.isArray(job.certifications) ? job.certifications : safeParse(job.certifications, []);
+    const authorBits = [
+      job.author_name ? `- Naam: ${job.author_name}` : null,
+      job.author_location ? `- Locatie: ${job.author_location}` : null,
+      job.years_experience ? `- Ervaring: ${job.years_experience}` : null,
+      (Array.isArray(_certs) && _certs.length) ? `- Certificeringen: ${_certs.join(', ')}` : null,
+      job.author_bio ? `- Bio (gebruik letterlijk; vul NIET aan met verzonnen details): ${job.author_bio}` : null
+    ].filter(Boolean).join('\n');
+    const authorRule = authorBits
+      ? `AUTEUR — GEBRUIK ALLEEN DEZE GEGEVENS:\n${authorBits}\nVerzin NOOIT auteur-cijfers: geen jaren ervaring, aantal klanten, aantal sites, succespercentages, landen of certificeringen die hierboven NIET staan. Ontbreekt een getal, laat het WEG (schrijf liever kwalitatief dan een verzonnen cijfer).`
+      : `Er is GEEN geverifieerde auteur-info in het profiel. Voeg GEEN auteur-bio toe met cijfers, jaren ervaring, klantaantallen, landen of percentages — die zou je verzinnen. Gebruik hooguit een neutrale auteursnaam zonder statistieken, of laat de auteur-sectie weg.`;
 
     const realLinks = (brief.internal_links || brief.sitemap_all || [])
       .filter(u => typeof u === 'string' && u.length > 10).slice(0, 30);
@@ -15813,6 +15829,9 @@ BUSINESS FACTS (USE ONLY THESE — NEVER HALLUCINATE):
 ${verifiedFacts || 'None provided'}
 
 ${antiFacts}
+
+AUTHOR (E-E-A-T) — USE ONLY THESE, NEVER INVENT AUTHOR NUMBERS:
+${authorRule}
 
 GSC DATA:
 ${gscBlock || 'None'}
@@ -17394,10 +17413,11 @@ CONTENT KWALITEIT — STRIKTE REGELS
 - Tekst minstens 4.5:1 contrast
 - Touch targets 44px+, leesbaar op 320px
 
-✍️ AUTEUR — NOOIT AANPASSEN:
-- Auteur van deze pagina: ${author.name}
-- ${author.detected ? 'GEDETECTEERD in origineel — behoud exact' : 'STANDAARD (Ottmar) — voeg toe als niet aanwezig'}
-- Auteur-URL: ${author.url || 'https://contentscale.site/about'}
+✍️ AUTEUR — GEBRUIK ALLEEN ECHTE GEGEVENS, NOOIT VERZINNEN:
+- Naam: ${author.name}
+- Auteur-URL: ${author.url || 'https://contentscale.site/about'}${author.location ? '\n- Locatie: ' + author.location : ''}
+- Bio: ${author.bio ? author.bio + ' (gebruik deze bio letterlijk; vul NIET aan met verzonnen details)' : 'GEEN bio in profiel — schrijf GEEN auteur-bio met cijfers.'}
+- NOOIT auteur-cijfers verzinnen: geen jaren ervaring, aantal klanten, aantal sites, succespercentages, landen of certificeringen die niet in de bio hierboven staan. Ontbreekt een getal? Laat het WEG — verzin het niet.
 `;
 
     let sitemapUrlsRW = [];
@@ -35025,6 +35045,50 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
       if (_onPage.speakable) _alreadyOnPage += '\n- Speakable schema is ALREADY present -> do NOT add it again.';
       if (_onPage.steps) _alreadyOnPage += '\n- Numbered / step lists are ALREADY present -> do NOT recommend adding a step list.';
       if (_onPage.outbound) _alreadyOnPage += '\n- Outbound authoritative-source links are ALREADY present -> do NOT recommend adding generic external links.';
+
+      // ── Extract the ACTUAL current text of key blocks so the brief rewrites them IN PLACE (merge/change), never duplicates ──
+      const _stripTags = function(s){ return (s||'').replace(/<[^>]+>/g,' ').replace(/&[a-z#0-9]+;/gi,' ').replace(/\s+/g,' ').trim(); };
+      let _currentContent = '';
+      const _daMatch = rawHtml.match(/id=["']voice-what-is["'][^>]*>([\s\S]*?)<\/p>/i)
+                    || rawHtml.match(/id=["']direct-answer["'][^>]*>([\s\S]*?)<\/div>/i);
+      if (_daMatch) { const _t = _stripTags(_daMatch[1]).substring(0,600); if (_t) _currentContent += '\n- CURRENT DIRECT ANSWER on the page (if it can be stronger, output a MODIFY/REPLACE action that REWRITES THIS EXACT text in place — never add a second direct answer): "' + _t + '"'; }
+      const _h1Match = rawHtml.match(/<h1[^>]*>([\s\S]*?)<\/h1>/i);
+      if (_h1Match) { const _t = _stripTags(_h1Match[1]).substring(0,160); if (_t) _currentContent += '\n- CURRENT H1: "' + _t + '" (REPLACE in place if weak; never add a second H1)'; }
+      if (_currentContent) _alreadyOnPage += '\n\nCURRENT ON-PAGE CONTENT — improve these IN PLACE, do NOT add duplicates:' + _currentContent;
+
+      // ── OWNER-PROVIDED CONTEXT (free-form brand/author field from the tracker UI) + AUTHOR rule ──
+      let _realAuthor = '';
+      let _brandContext = '';
+      try {
+        if (page.tracker_client_id) {
+          const _bcR = await pool.query('SELECT brand_context FROM tracker_clients WHERE id=$1', [page.tracker_client_id]);
+          _brandContext = ((_bcR.rows[0] && _bcR.rows[0].brand_context) || '').trim();
+        }
+      } catch(e) {}
+      try {
+        if (page.profile_id) {
+          const _paR = await pool.query('SELECT author_name, author_bio, author_location, years_experience FROM content_profiles WHERE id=$1', [page.profile_id]);
+          const _pa = _paR.rows[0];
+          if (_pa && (_pa.author_name || _pa.author_bio)) {
+            _realAuthor = [
+              _pa.author_name ? 'Name: ' + _pa.author_name : '',
+              _pa.author_location ? 'Location: ' + _pa.author_location : '',
+              _pa.years_experience ? 'Experience: ' + _pa.years_experience : '',
+              _pa.author_bio ? 'Bio (use verbatim, do not extend): ' + _pa.author_bio : ''
+            ].filter(Boolean).join(' | ');
+          }
+        }
+      } catch(e) {}
+      if (_brandContext) {
+        _alreadyOnPage += '\n\nOWNER-PROVIDED CONTEXT (treat as ground truth — use these facts, names and numbers; do NOT contradict them and do NOT invent any numbers beyond what is written here):\n' + _brandContext.slice(0, 4000);
+      }
+      if (_realAuthor) {
+        _alreadyOnPage += '\n\nAUTHOR — USE ONLY THESE VERIFIED DETAILS (do NOT add any other author numbers): ' + _realAuthor;
+      } else if (!_brandContext) {
+        _alreadyOnPage += '\n\nAUTHOR / E-E-A-T RULE: You do NOT know this site\'s author. If you recommend adding author credentials, NEVER invent specific numbers (years of experience, number of clients, sites, success percentages, countries, certifications). Output a fill-in TEMPLATE with [bracketed placeholders] for the owner to complete with their own verifiable details — e.g. "About the Author: [Name], [role] with [X] years in [field]. [Verifiable result or credential]." Never present invented statistics as if they were facts.';
+      } else {
+        _alreadyOnPage += '\n\nAUTHOR / E-E-A-T RULE: Use only author details found in the OWNER-PROVIDED CONTEXT above. If a specific author number is not written there, do NOT invent it — use a [placeholder] instead.';
+      }
 
       // Stripped text for content comparison
       let ourContent = '';
