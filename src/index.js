@@ -1115,7 +1115,8 @@ app.get('/api/tracker-client/:token', async (req, res) => {
         created_at: client.created_at,
         telegram_linked: !!client.telegram_chat_id,
         live_wall_enabled: !!client.live_wall_enabled,
-        brand_context: client.brand_context || ''
+        brand_context: client.brand_context || '',
+        sitemap_url: client.sitemap_url || ''
       },
       pages: pagesR.rows,
       page_count: pagesR.rows.length
@@ -1191,6 +1192,8 @@ app.get('/api/tracker-client/:token/fetch-sitemap', async (req, res) => {
       urls = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map(m => m[1].trim()).filter(u => u.startsWith('http') && !/\.xml(\?|$)/i.test(u));
     }
     urls = urls.slice(0, 100);
+    // Remember the sitemap URL on the client (shows the "added" check + lets briefs use it for internal links)
+    if (urls.length) { try { await pool.query('UPDATE tracker_clients SET sitemap_url=$1 WHERE token=$2', [sitemapUrl, req.params.token]); } catch(e){} }
     res.json({ success: true, urls, count: urls.length });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
@@ -1204,6 +1207,7 @@ app.post('/api/tracker-client/:token/sitemap-links', async (req, res) => {
     const client = cr.rows[0];
     const { sitemap_url } = req.body;
     if (!sitemap_url) return res.status(400).json({ success: false, error: 'sitemap_url required' });
+    try { await pool.query('UPDATE tracker_clients SET sitemap_url=$1 WHERE id=$2', [sitemap_url, client.id]); } catch(e){}
 
     // Fetch sitemap
     const sitemapResp = await fetch(sitemap_url, { headers: {'User-Agent':'Mozilla/5.0'}, signal: AbortSignal.timeout(10000) });
@@ -3233,6 +3237,7 @@ app.patch('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
   await client.query(`CREATE INDEX IF NOT EXISTS tracker_clients_ip_idx ON tracker_clients(registered_ip) WHERE registered_ip IS NOT NULL`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS extra_domains TEXT DEFAULT ''`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS brand_context TEXT DEFAULT ''`).catch(()=>{});
+  await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS sitemap_url TEXT DEFAULT ''`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS unsubscribe_token VARCHAR(64)`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS email_unsubscribed BOOLEAN DEFAULT FALSE`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS tracker_client_id INTEGER REFERENCES tracker_clients(id) ON DELETE SET NULL`).catch(()=>{});
@@ -25837,8 +25842,24 @@ async function loadBrandCtx() {
     var d = await api('', 'GET');
     var ta = document.getElementById('brandCtx');
     if (ta && d && d.client && typeof d.client.brand_context === 'string') ta.value = d.client.brand_context;
+    if (d && d.client) setSitemapState(!!(d.client.sitemap_url && String(d.client.sitemap_url).trim()));
     _brandCtxLoaded = true;
   } catch (e) { /* ignore */ }
+}
+function setSitemapState(has) {
+  var b = document.getElementById('sitemapBtn');
+  if (!b) return;
+  if (has) {
+    b.style.borderColor = '#16a34a';
+    b.style.color = '#16a34a';
+    b.innerHTML = '<i class="fas fa-list"></i> Sitemap <i class="fas fa-check"></i>';
+    b.title = 'Sitemap added \u2014 click to re-import';
+  } else {
+    b.style.borderColor = '#38bdf8';
+    b.style.color = '#38bdf8';
+    b.innerHTML = '<i class="fas fa-list"></i> Sitemap';
+    b.title = 'Import from sitemap';
+  }
 }
 async function saveBrandCtx() {
   var ta = document.getElementById('brandCtx');
@@ -27480,6 +27501,7 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
       if (!data.success) { toast(data.error || 'Failed to fetch sitemap', '#f87171'); return; }
       var urls = data.urls || [];
       if (!urls.length) { toast('No URLs found in sitemap', '#f87171'); return; }
+      setSitemapState(true);
       var container = document.getElementById('sitemapItems');
       var countEl = document.getElementById('sitemapCount');
       var header = document.getElementById('sitemapHeader');
