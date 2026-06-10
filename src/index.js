@@ -1114,7 +1114,8 @@ app.get('/api/tracker-client/:token', async (req, res) => {
         max_pages: client.max_pages || 3,
         created_at: client.created_at,
         telegram_linked: !!client.telegram_chat_id,
-        live_wall_enabled: !!client.live_wall_enabled
+        live_wall_enabled: !!client.live_wall_enabled,
+        brand_context: client.brand_context || ''
       },
       pages: pagesR.rows,
       page_count: pagesR.rows.length
@@ -25371,6 +25372,26 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
   </div>
 
   <!-- Pages -->
+  <details id="brandCtxPanel" style="margin:0 0 16px;border:1px solid #1f2937;border-radius:10px;background:#0d1117;overflow:hidden;">
+    <summary style="cursor:pointer;padding:13px 16px;font-size:13px;font-weight:700;color:#a78bfa;list-style:none;display:flex;align-items:center;gap:8px;">
+      <i class="fas fa-id-card-clip" style="color:#a78bfa;"></i> Brand &amp; author info — help the AI use real facts (optional)
+      <span style="margin-left:auto;font-size:10px;color:#6b7280;font-weight:400;">click to open</span>
+    </summary>
+    <div style="padding:0 16px 16px;">
+      <p style="font-size:12px;color:#6b7280;line-height:1.65;margin:0 0 10px;">
+        Anything you put here is treated as fact by the AI when it writes your briefs: brand, real numbers, USPs, and your author bio
+        (name, role, real years/experience, certifications). Leave the author part out if you don't want one — the AI will then never invent author numbers.
+      </p>
+      <textarea id="brandCtx" rows="7" maxlength="4000" class="cs-input"
+        style="width:100%;box-sizing:border-box;resize:vertical;font-family:monospace;font-size:12px;line-height:1.6;"
+        placeholder="Example:&#10;Brand: ContentScale — free AI SEO content scoring, built in Amsterdam.&#10;Real numbers: 200+ sites, 47 countries, 78% recovery within 90 days.&#10;Author: Ottmar J.G. Francisca, Founder & GRAAF Framework creator, 24+ yrs City of Amsterdam, 8 yrs SEO. Cert: Burger Service 146663743."></textarea>
+      <div style="display:flex;align-items:center;gap:12px;margin-top:10px;">
+        <button class="cs-btn primary" type="button" onclick="saveBrandCtx()">Save</button>
+        <span id="brandCtxMsg" style="font-size:12px;color:#16a34a;"></span>
+      </div>
+    </div>
+  </details>
+
   <div class="cs-section">Your tracked pages <span id="pageCountLabel2" style="color:#cbd5e1;"></span></div>
   <div id="pagesList" style="width:100%;"></div>
 
@@ -25809,6 +25830,30 @@ async function api(path, method, body) {
   }
   return r.json();
 }
+
+var _brandCtxLoaded = false;
+async function loadBrandCtx() {
+  try {
+    var d = await api('', 'GET');
+    var ta = document.getElementById('brandCtx');
+    if (ta && d && d.client && typeof d.client.brand_context === 'string') ta.value = d.client.brand_context;
+    _brandCtxLoaded = true;
+  } catch (e) { /* ignore */ }
+}
+async function saveBrandCtx() {
+  var ta = document.getElementById('brandCtx');
+  var msg = document.getElementById('brandCtxMsg');
+  if (!ta) return;
+  if (msg) { msg.style.color = '#6b7280'; msg.textContent = 'Saving...'; }
+  try {
+    await api('/settings', 'PATCH', { brand_context: ta.value });
+    if (msg) { msg.style.color = '#16a34a'; msg.textContent = '\u2713 Saved \u2014 the AI will use this'; }
+  } catch (e) {
+    if (msg) { msg.style.color = '#dc2626'; msg.textContent = 'Error: ' + e.message; }
+  }
+  if (msg) setTimeout(function(){ msg.textContent = ''; }, 4000);
+}
+document.addEventListener('DOMContentLoaded', function(){ loadBrandCtx(); });
 
 var _ctSearchQuery = '';
   function filterPages(q) { _ctSearchQuery = (q||'').toLowerCase().trim(); renderPages(); }
