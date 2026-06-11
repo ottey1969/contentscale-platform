@@ -35444,6 +35444,8 @@ Google AI Overview:
 - Needs a direct, quotable definition in first 100 words
 - Needs structured data (FAQ, HowTo, or Article schema)
 - Needs the exact question answered that users search for
+- Prefers question-style H2/H3 headings (e.g. "What is X?", "How do I Y?") with a 1-2 sentence quotable answer placed directly below each heading
+- Prefers each major section to OPEN with a self-contained, independently quotable micro-answer (1-2 sentences, ~25-40 words) before the supporting detail, so AIO can lift a single passage
 - Prefers pages already ranking in top 10
 
 Perplexity:
