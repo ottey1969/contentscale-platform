@@ -26163,10 +26163,8 @@ function renderPages() {
 
   // Sort by GSC priority: pages with impressions/clicks first
   var sorted = displayPages.slice().sort(function(a,b) {
-    // Done pages go last
-    if (a.is_done && !b.is_done) return 1;
-    if (!a.is_done && b.is_done) return -1;
-    // Then by GSC clicks desc
+    // Done pages keep their position (no reorder to bottom) so a card doesn't jump when you press Done
+    // Sort by GSC clicks desc
     var aClicks = a.gsc_clicks || 0;
     var bClicks = b.gsc_clicks || 0;
     if (bClicks !== aClicks) return bClicks - aClicks;
