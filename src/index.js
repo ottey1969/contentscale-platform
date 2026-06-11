@@ -25707,7 +25707,7 @@ function mergePages() {
 }
 
 function cleanPages() {
-  if (!confirm('Clean up this tracker?\n\nRemoves image/file URLs (.jpg, .png, .pdf...), WordPress archive pages (/category/, /tag/, /author/, /uncategorized, feeds) and any page not found in your sitemap or GSC.\n\nOnly live pages that are in your sitemap or GSC are kept.')) return;
+  if (!confirm('Clean up this tracker?\\n\\nRemoves image/file URLs (.jpg, .png, .pdf...), WordPress archive pages (/category/, /tag/, /author/, /uncategorized, feeds) and any page not found in your sitemap or GSC.\\n\\nOnly live pages that are in your sitemap or GSC are kept.')) return;
   api('/cleanup', 'POST').then(function(d){
     if (d && d.success) {
       var msg = 'Removed ' + (d.removed||0) + ' page(s) \u00b7 kept ' + (d.kept||0);
