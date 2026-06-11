@@ -25337,6 +25337,28 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
   .cb-copy-row{flex-direction:column}
   .cb-copy-btn-action{width:100%;text-align:center}
 }
+/* Client tracker — mobile responsive */
+@media(max-width:640px){
+  .cs-container{padding:14px 12px!important;}
+  .cs-header{padding:10px 12px!important;}
+  .cs-logo{font-size:14px!important;}
+  .cs-domain{max-width:110px!important;font-size:10px!important;}
+  .cs-stats{grid-template-columns:repeat(3,1fr)!important;gap:6px!important;margin-bottom:14px!important;}
+  .cs-stat{padding:8px 4px!important;}
+  .cs-stat .val{font-size:15px!important;}
+  .cs-stat .lbl{font-size:8px!important;}
+  .cs-btn{padding:6px 9px!important;font-size:11px!important;}
+  #ctSearch{width:100%!important;margin-left:0!important;margin-top:6px!important;}
+  .cs-card-head{flex-direction:column!important;align-items:stretch!important;}
+  .cs-card-actions{justify-content:flex-start!important;width:100%;margin-top:8px;}
+  .cs-card-actions button{flex:0 0 auto;}
+  .cb-card{max-width:96vw!important;}
+  .cb-url{max-width:200px!important;}
+}
+@media(max-width:380px){
+  .cs-stats{grid-template-columns:repeat(2,1fr)!important;}
+  .cs-btn{font-size:10px!important;padding:6px 8px!important;}
+}
 </style>
 </head>
 <body>
@@ -26250,7 +26272,7 @@ function renderPages() {
       + needsHtmlBanner
       + (isDone ? '<div style="display:flex;align-items:center;gap:6px;padding:5px 14px;background:rgba(74,222,128,.06);border-bottom:1px solid #166534;font-size:10px;color:#4ade80;letter-spacing:.06em;"><span>\\u2713</span> DONE &mdash; marked as implemented. Tracking continues.</div>' : '')
       + '<div style="padding:14px 16px;' + (isDone ? 'opacity:.6;' : '') + '">'
-      + '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;">'
+      + '<div class="cs-card-head" style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;">'
       + '<div style="display:flex;align-items:flex-start;gap:8px;flex:1;min-width:0;">'
       + '<input type="checkbox" class="page-select-cb" data-id="' + p.id + '" onchange="updateBulkBar()" style="width:14px;height:14px;margin-top:3px;accent-color:#ef4444;cursor:pointer;flex-shrink:0;">'
       + '<div style="flex:1;min-width:0;">'
@@ -26265,7 +26287,7 @@ function renderPages() {
       + '</div>'
       + '</div>'
       + '</div>'
-      + '<div style="display:flex;gap:5px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;align-items:flex-start;">'
+      + '<div class="cs-card-actions" style="display:flex;gap:5px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;align-items:flex-start;">'
       + ((hasBrief || _lastBriefData[p.id]) ? '<button onclick="viewLastBrief(' + p.id + ')" style="background:#7c3aed;border:1px solid #8b5cf6;border-radius:6px;color:#fff;cursor:pointer;font-size:12px;padding:6px 14px;font-weight:700;box-shadow:0 2px 10px rgba(124,58,237,.45);" title="View Citation Brief">\\ud83d\\udcc4 View Brief</button>' : '')
       + '<button onclick="openHtmlUpload(' + p.id + ')" style="background:none;border:1px solid ' + (htmlNeeded ? '#f59e0b' : '#374151') + ';border-radius:5px;color:' + (htmlNeeded ? '#fbbf24' : '#4b5563') + ';cursor:pointer;font-size:11px;padding:3px 10px;font-weight:' + (htmlNeeded ? '700' : '400') + ';" title="' + (htmlNeeded ? 'Paste HTML for the first scan' : 'Update HTML') + '">\\ud83d\\udccb ' + (htmlNeeded ? 'Add HTML' : 'HTML') + '</button>'
       + (lastChecked ? '<button onclick="checkPage(' + p.id + ')" style="background:none;border:1px solid #374151;border-radius:5px;color:#6b7280;cursor:pointer;font-size:11px;padding:3px 8px;" title="Rescan now">\\u21bb</button>' : '')
