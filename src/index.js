@@ -1454,6 +1454,32 @@ app.post('/api/tracker-client/:token/cleanup', async (req, res) => {
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
+// POST /api/tracker-client/:token/reset-scans — clear scan data (snapshots, score, citations, dates); pages return to "not scanned yet". Keeps URLs + keywords + GSC data.
+app.post('/api/tracker-client/:token/reset-scans', async (req, res) => {
+  try {
+    const cr = await pool.query('SELECT id FROM tracker_clients WHERE token=$1', [req.params.token]);
+    if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
+    const clientId = cr.rows[0].id;
+    const { page_ids } = req.body || {};
+
+    let idsRow;
+    if (Array.isArray(page_ids) && page_ids.length) {
+      idsRow = await pool.query('SELECT id FROM tracker_pages WHERE id=ANY($1) AND tracker_client_id=$2', [page_ids, clientId]);
+    } else {
+      idsRow = await pool.query('SELECT id FROM tracker_pages WHERE tracker_client_id=$1', [clientId]);
+    }
+    const ids = idsRow.rows.map(r => r.id);
+    if (!ids.length) return res.json({ success: true, reset: 0 });
+
+    await pool.query('DELETE FROM tracker_snapshots WHERE page_id = ANY($1)', [ids]).catch(()=>{});
+    await pool.query(`UPDATE tracker_pages SET last_checked=NULL, last_checked_at=NULL, next_check_at=NULL, brief_check_count=0, graaf_score=NULL WHERE id = ANY($1)`, [ids]).catch(()=>{});
+    // Best-effort: clear denormalised citation flags if they exist as columns
+    await pool.query(`UPDATE tracker_pages SET ai_google_overview_cited=NULL, ai_perplexity_cited=NULL, ai_bing_cited=NULL, ai_brave_cited=NULL WHERE id = ANY($1)`, [ids]).catch(()=>{});
+
+    res.json({ success: true, reset: ids.length });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
 // POST /api/tracker-client/:token/scan-all — scan all pages one by one
 app.post('/api/tracker-client/:token/scan-all', async (req, res) => {
   try {
@@ -25419,6 +25445,7 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
     <button class="cs-btn" onclick="scanAllPages()" style="border-color:#4ade80;color:#4ade80;font-weight:700;" title="Scan all pages one by one">&#x26a1; Scan All</button>
     <button class="cs-btn" onclick="mergePages()" style="border-color:#38bdf8;color:#38bdf8;" title="Merge duplicate URLs &#x2014; keep best">&#x2295; Merge</button>
     <button class="cs-btn" onclick="cleanPages()" style="border-color:#f59e0b;color:#f59e0b;" title="Remove junk (.jpg, /category/, feeds) &amp; pages not in sitemap/GSC &#x2014; keep only live content">&#x1f9f9; Clean</button>
+    <button class="cs-btn" onclick="resetAllScans()" style="border-color:#a78bfa;color:#a78bfa;" title="Tick pages to reset only those &#x2014; or none to reset all. Clears scores, citations &amp; dates; keeps URLs &amp; keywords.">&#x21bb; Reset</button>
     <button id="bulkDeleteBtn" class="cs-btn" style="border-color:#ef4444;color:#ef4444;display:none;" onclick="bulkDeleteSelected()">&#x1f5d1; Delete selected</button>
     <button class="cs-btn" onclick="openTelegramSetup()" style="border-color:#2AABEE;color:#2AABEE;background:rgba(42,171,238,.08);font-weight:700;animation:tgPulse 2s ease-in-out infinite;" title="Enable Telegram alerts &#x2014; get notified after every scan"><i class="fab fa-telegram"></i> Enable Telegram</button>
     <input id="ctSearch" type="text" class="cs-input" placeholder="Search..." oninput="filterPages(this.value)" style="width:160px;padding:5px 10px;font-size:11px;margin-left:auto;">
@@ -25716,6 +25743,21 @@ function cleanPages() {
       loadPages();
     } else { toast((d && d.error) || 'Clean failed', '#f87171'); }
   }).catch(function(e){ toast('Clean failed: ' + e.message, '#f87171'); });
+}
+
+function resetAllScans() {
+  var cbs = document.querySelectorAll('.page-select-cb:checked, .tr-page-cb:checked');
+  var ids = Array.prototype.slice.call(cbs).map(function(cb){ return parseInt(cb.dataset.id); }).filter(function(x){ return !!x; });
+  var selective = ids.length > 0;
+  var msg = selective
+    ? ('Reset ' + ids.length + ' selected page(s) to not-scanned?\\n\\nThis clears their score, citation results and scan date. Their URL and keyword are kept.')
+    : ('No pages are ticked.\\n\\nReset ALL pages to not-scanned? This clears every score, citation result and scan date. All URLs and keywords are kept.\\n\\nTip: tick the checkboxes first to reset only specific pages.');
+  if (!confirm(msg)) return;
+  var body = selective ? { page_ids: ids } : {};
+  api('/reset-scans', 'POST', body).then(function(d){
+    if (d && d.success) { toast('Reset ' + (d.reset||0) + ' page(s) to not-scanned', '#a78bfa'); loadPages(); }
+    else { toast((d && d.error) || 'Reset failed', '#f87171'); }
+  }).catch(function(e){ toast('Reset failed: ' + e.message, '#f87171'); });
 }
 
 function editKeyword(pageId, el) {
