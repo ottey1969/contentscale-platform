@@ -1472,9 +1472,11 @@ app.post('/api/tracker-client/:token/reset-scans', async (req, res) => {
     if (!ids.length) return res.json({ success: true, reset: 0 });
 
     await pool.query('DELETE FROM tracker_snapshots WHERE page_id = ANY($1)', [ids]).catch(()=>{});
-    await pool.query(`UPDATE tracker_pages SET last_checked=NULL, last_checked_at=NULL, next_check_at=NULL, brief_check_count=0, graaf_score=NULL WHERE id = ANY($1)`, [ids]).catch(()=>{});
-    // Best-effort: clear denormalised citation flags if they exist as columns
-    await pool.query(`UPDATE tracker_pages SET ai_google_overview_cited=NULL, ai_perplexity_cited=NULL, ai_bing_cited=NULL, ai_brave_cited=NULL WHERE id = ANY($1)`, [ids]).catch(()=>{});
+    // Null each scan field separately so a non-existent column can't block clearing the others (esp. the Checked/Next dates)
+    for (const col of ['last_checked','last_checked_at','next_check_at','graaf_score','brief_started_at','brief_content','needs_html','content_hash','ai_google_overview_cited','ai_perplexity_cited','ai_bing_cited','ai_brave_cited']) {
+      await pool.query(`UPDATE tracker_pages SET ${col}=NULL WHERE id = ANY($1)`, [ids]).catch(()=>{});
+    }
+    await pool.query('UPDATE tracker_pages SET brief_check_count=0 WHERE id = ANY($1)', [ids]).catch(()=>{});
 
     res.json({ success: true, reset: ids.length });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
