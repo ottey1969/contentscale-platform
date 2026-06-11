@@ -1473,7 +1473,7 @@ app.post('/api/tracker-client/:token/reset-scans', async (req, res) => {
 
     await pool.query('DELETE FROM tracker_snapshots WHERE page_id = ANY($1)', [ids]).catch(()=>{});
     // Null each scan field separately so a non-existent column can't block clearing the others (esp. the Checked/Next dates)
-    for (const col of ['last_checked','last_checked_at','next_check_at','graaf_score','brief_started_at','brief_content','needs_html','content_hash','ai_google_overview_cited','ai_perplexity_cited','ai_bing_cited','ai_brave_cited']) {
+    for (const col of ['last_checked','last_checked_at','next_check_at','graaf_score','brief_started_at','brief_content','needs_html','content_hash','last_page_hash','html_pasted_at','html_source','has_html_content','ai_google_overview_cited','ai_perplexity_cited','ai_bing_cited','ai_brave_cited']) {
       await pool.query(`UPDATE tracker_pages SET ${col}=NULL WHERE id = ANY($1)`, [ids]).catch(()=>{});
     }
     await pool.query('UPDATE tracker_pages SET brief_check_count=0 WHERE id = ANY($1)', [ids]).catch(()=>{});
@@ -25779,7 +25779,11 @@ function resetAllScans() {
   if (!confirm(msg)) return;
   var body = selective ? { page_ids: ids } : {};
   api('/reset-scans', 'POST', body).then(function(d){
-    if (d && d.success) { toast('Reset ' + (d.reset||0) + ' page(s) to not-scanned', '#a78bfa'); loadPages(); }
+    if (d && d.success) {
+      if (selective) { ids.forEach(function(id){ try { delete _lastBriefData[id]; } catch(e){} }); }
+      else { for (var k in _lastBriefData) { try { delete _lastBriefData[k]; } catch(e){} } }
+      toast('Reset ' + (d.reset||0) + ' page(s) to not-scanned', '#a78bfa'); loadPages();
+    }
     else { toast((d && d.error) || 'Reset failed', '#f87171'); }
   }).catch(function(e){ toast('Reset failed: ' + e.message, '#f87171'); });
 }
