@@ -26218,11 +26218,10 @@ function renderPages() {
     // Recommendations
     var recsHtml = ''; // inline brief removed \\u2014 brief now opens in the popup via the Brief button
 
-    // Pending first check banner \\u2014 only show if NO data whatsoever
-    var hasAnyData = !!lastCheckedRaw || p.google_position !== null && p.google_position !== undefined
-      || p.ai_google_overview_cited !== null && p.ai_google_overview_cited !== undefined
-      || (p.gsc_clicks > 0) || (p.brief_check_count > 0) || (p.graaf_score > 0);
-    var pendingBanner = (!hasAnyData && !isDone && !htmlNeeded)
+    // Pending first check banner — show uniformly on any page that has not been scanned yet.
+    // GSC import alone is NOT a scan, so GSC-only pages also get the banner.
+    var notScannedYet = !lastCheckedRaw && !(p.brief_check_count > 0) && !(p.graaf_score > 0);
+    var pendingBanner = (notScannedYet && !isDone)
       ? '<div style="display:flex;align-items:center;gap:8px;padding:6px 14px;background:rgba(96,165,250,.06);border-bottom:1px solid rgba(96,165,250,.15);font-size:11px;color:#60a5fa;"><span style="animation:blink 2s infinite;display:inline-block">&#9679;</span> First scan will start automatically after pasting HTML or clicking Scan All</div>'
       : '';
 
@@ -26267,7 +26266,7 @@ function renderPages() {
       + '</div>'
       + '<div style="display:flex;gap:5px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;align-items:flex-start;">'
       + ((hasBrief || _lastBriefData[p.id]) ? '<button onclick="viewLastBrief(' + p.id + ')" style="background:#7c3aed;border:1px solid #8b5cf6;border-radius:6px;color:#fff;cursor:pointer;font-size:12px;padding:6px 14px;font-weight:700;box-shadow:0 2px 10px rgba(124,58,237,.45);" title="View Citation Brief">\\ud83d\\udcc4 View Brief</button>' : '')
-      + '<button onclick="openHtmlUpload(' + p.id + ')" style="background:none;border:1px solid ' + (htmlNeeded ? '#f59e0b' : '#374151') + ';border-radius:5px;color:' + (htmlNeeded ? '#fbbf24' : '#4b5563') + ';cursor:pointer;font-size:11px;padding:3px 10px;font-weight:' + (htmlNeeded ? '700' : '400') + ';' + (htmlNeeded ? 'animation:htmlNeeded 1.2s ease-in-out infinite;' : '') + '" title="' + (htmlNeeded ? 'Paste updated HTML for next scan' : 'Update HTML') + '">\\ud83d\\udccb ' + (htmlNeeded ? 'Add HTML' : 'HTML') + '</button>'
+      + '<button onclick="openHtmlUpload(' + p.id + ')" style="background:none;border:1px solid ' + (htmlNeeded ? '#f59e0b' : '#374151') + ';border-radius:5px;color:' + (htmlNeeded ? '#fbbf24' : '#4b5563') + ';cursor:pointer;font-size:11px;padding:3px 10px;font-weight:' + (htmlNeeded ? '700' : '400') + ';" title="' + (htmlNeeded ? 'Paste HTML for the first scan' : 'Update HTML') + '">\\ud83d\\udccb ' + (htmlNeeded ? 'Add HTML' : 'HTML') + '</button>'
       + (lastChecked ? '<button onclick="checkPage(' + p.id + ')" style="background:none;border:1px solid #374151;border-radius:5px;color:#6b7280;cursor:pointer;font-size:11px;padding:3px 8px;" title="Rescan now">\\u21bb</button>' : '')
       + '<button onclick="deletePage(' + p.id + ')" style="background:none;border:1px solid #374151;border-radius:5px;color:#374151;cursor:pointer;font-size:12px;padding:4px 8px;" title="Delete page">\\ud83d\\uddd1</button>'
       + '</div>'
