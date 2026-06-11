@@ -26239,8 +26239,9 @@ function renderPages() {
     // explicitly needs HTML = Done was pressed (needs_html set to TRUE by server)
     var explicitlyNeeds = (p.needs_html === true || p.needs_html === 't' || p.needs_html === 'true' || p.needs_html === 1);
 
-    // Button pulses orange when: explicitly needs new HTML OR never had HTML at all
-    var htmlNeeded = explicitlyNeeds || (!hasHtml && !isDone);
+    // Button shows amber "Add HTML" for any page not yet scanned (same rule as the banner),
+    // or when the server explicitly flagged it needs fresh HTML (after "Done").
+    var htmlNeeded = explicitlyNeeds || (notScannedYet && !isDone);
     // No flashing banner \\u2014 just a button state
     var needsHtmlBanner = '';
 
