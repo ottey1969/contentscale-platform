@@ -35438,6 +35438,15 @@ INPUT DATA:
 - Internal-link candidates — REAL URLs from this site's sitemap (you may ONLY link to a URL that appears verbatim in this list; NEVER invent, guess, or construct a URL):
 ${_otherPagesList || '(none available — do NOT output any internal-link action)'}
 
+DIAGNOSE THE REAL BLOCKER BEFORE PRESCRIBING (most important step):
+A "Not cited" result has THREE possible root causes, and the correct fix differs for each. Identify the cause per engine from the data above, then make the #1 (HIGH) action address the ACTUAL cause — not a generic "add a passage".
+1. NOT VISIBLE — an engine cannot cite a page it does not surface.
+   - Google AI Overview and ChatGPT draw from Google's top results. If Google position is worse than ~10 (current: ${snapshot.google_position || 'not ranked'}), AIO will almost never cite this page no matter how quotable it is. Then the gating action is to RANK INTO THE TOP 10 first — say so plainly as the dependency (the GSC Brief covers the how). Citeability passages are secondary until the page reaches the top ~10.
+   - Microsoft Copilot reads the Bing index; Claude reads the Brave index. If Copilot/Claude are "Not cited" and the page may not be in those indexes, the fix is to GET INDEXED THERE — submit the URL in Bing Webmaster Tools and via IndexNow (Brave honors IndexNow) — NOT to add on-page passages.
+2. VISIBLE BUT NOT EXTRACTABLE — the page ranks/indexes but the answer is not in a liftable, self-contained form. Then apply the citeability passage/structure/schema actions below.
+3. VISIBLE & EXTRACTABLE BUT OUTCOMPETED — a competitor's passage is more direct or more authoritative. Then match and beat the cited competitor's passage and strengthen author E-E-A-T.
+Be honest about which blocker applies. If position is poor, do NOT imply a passage edit alone will earn an AIO citation — name ranking into the top 10 as the prerequisite.
+
 CITATION SYSTEM REQUIREMENTS (use these to write actions):
 
 Google AI Overview:
@@ -35446,6 +35455,8 @@ Google AI Overview:
 - Needs the exact question answered that users search for
 - Prefers question-style H2/H3 headings (e.g. "What is X?", "How do I Y?") with a 1-2 sentence quotable answer placed directly below each heading
 - Prefers each major section to OPEN with a self-contained, independently quotable micro-answer (1-2 sentences, ~25-40 words) before the supporting detail, so AIO can lift a single passage
+- Every liftable passage must NAME its subject explicitly and avoid leading pronouns (write "International SEO is…", not "It is…") so the sentence still makes sense when pulled out of context
+- Must answer the EXACT question users type, not just the topic. Use the target keyword and the real question behind it as a verbatim question-form heading, and answer it in the first sentence below
 - Prefers pages already ranking in top 10
 
 Perplexity:
@@ -35459,12 +35470,13 @@ Microsoft Copilot:
 - Needs clear H2/H3 structure matching search queries
 - Needs a concise summary paragraph (50-80 words) near top
 - Needs the keyword in H1, first paragraph, and meta title
-- Pulls from Bing index — needs Bing-optimized meta tags
+- Pulls from the Bing index — the page MUST be indexed in Bing first. If Copilot shows "Not cited", recommend submitting the URL in Bing Webmaster Tools and via IndexNow before any passage edits
 
 Claude/Brave:
 - Needs factual, verifiable claims with sources
 - Needs a clear "About the author" section
 - Needs the page to load fast and be mobile-optimized
+- Pulls from the Brave index — if "Not cited", recommend IndexNow submission (Brave honors it) so the page is discoverable before passage work
 - Prefers pages with consistent publishing history
 
 TASK:
@@ -35493,7 +35505,9 @@ INTERNAL LINKING:
 - Only include this if it truly strengthens topical authority. If no listed URL is relevant, DO NOT mention internal linking at all.
 
 OUTPUT FORMAT — return ONLY this JSON, no markdown, no explanation, no preamble:
-[{"title":"6 words max describing the gap","priority":"high","system":"Google AIO","action":"ADD after your H1: '[EXACT 40-60 word paragraph they should copy-paste]'. This triggers Google AI Overview because [specific reason based on AIO requirements above].","expected_impact":"Google AIO will cite this page within 2-3 crawl cycles because [specific technical reason]"}]
+[{"title":"6 words max describing the gap","priority":"high","system":"Google AIO","action":"ADD after your H1: '[EXACT 40-60 word paragraph they should copy-paste]'. This makes the page more citeable for Google AI Overview because [specific reason based on AIO requirements above].","expected_impact":"Increases the likelihood of an AIO citation once the page ranks in the top ~10 and is re-crawled (typically a few weeks) — state the honest dependency, not a guarantee"}]
+
+IMPACT HONESTY RULE: AI citation is never guaranteed. NEVER write that an engine "will cite" the page, and never promise a fixed number of crawl cycles. Use likelihood language ("increases the likelihood", "makes the page eligible", "improves the chance") and always name the dependency (ranking into the top 10 for AIO/ChatGPT; being indexed in Bing/Brave for Copilot/Claude). An honest, qualified impact line is required — an over-promise is a failed action.
 
 QUALITY BAR: Every action must be so specific that the user can implement it in under 10 minutes without asking any follow-up questions. If you write "improve your introduction" you have failed. Write the introduction FOR them.`;
       // ── CALL 2: GSC Ranking Brief ──────────────────────────────────────
