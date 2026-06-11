@@ -25471,7 +25471,7 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
     <button class="cs-btn" onclick="cleanPages()" style="border-color:#f59e0b;color:#f59e0b;" title="Remove junk (.jpg, /category/, feeds) &amp; pages not in sitemap/GSC &#x2014; keep only live content">&#x1f9f9; Clean</button>
     <button class="cs-btn" onclick="resetAllScans()" style="border-color:#a78bfa;color:#a78bfa;" title="Tick pages to reset only those &#x2014; or none to reset all. Clears scores, citations &amp; dates; keeps URLs &amp; keywords.">&#x21bb; Reset</button>
     <button id="bulkDeleteBtn" class="cs-btn" style="border-color:#ef4444;color:#ef4444;display:none;" onclick="bulkDeleteSelected()">&#x1f5d1; Delete selected</button>
-    <button class="cs-btn" onclick="openTelegramSetup()" style="border-color:#2AABEE;color:#2AABEE;background:rgba(42,171,238,.08);font-weight:700;animation:tgPulse 2s ease-in-out infinite;" title="Enable Telegram alerts &#x2014; get notified after every scan"><i class="fab fa-telegram"></i> Enable Telegram</button>
+    <button class="cs-btn" onclick="openTelegramSetup()" style="border-color:#2AABEE;color:#2AABEE;background:rgba(42,171,238,.08);font-weight:700;animation:tgPulse 2s ease-in-out infinite;" title="Install Telegram, then connect &#x2014; get notified after every scan"><i class="fab fa-telegram"></i> Install Telegram</button>
     <input id="ctSearch" type="text" class="cs-input" placeholder="Search..." oninput="filterPages(this.value)" style="width:160px;padding:5px 10px;font-size:11px;margin-left:auto;">
     <span style="font-size:11px;color:#6b7280;" id="pageCountLabel"></span>
   </div>
@@ -25834,6 +25834,12 @@ function scanAllPages() {
 
 function openTelegramSetup() {
   var base = (typeof location !== 'undefined') ? (location.origin || '') : '';
+  var haveApp = confirm('Telegram alerts need the Telegram app on your phone or computer.\\n\\nOK = I already have Telegram (connect now)\\nCancel = Install Telegram first');
+  if (!haveApp) {
+    window.open('https://telegram.org/apps', '_blank');
+    toast('Install Telegram, then click Install Telegram again to connect', '#2AABEE');
+    return;
+  }
   fetch(base + '/api/telegram/test-start/' + TOKEN).then(function(r){ return r.json(); }).then(function(d){
     if (d && d.bot_link) {
       window.open(d.bot_link, '_blank');
@@ -36373,7 +36379,7 @@ app.post('/api/telegram/webhook', async (req, res) => {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             chat_id: chatId,
-            text: '👋 <b>Welcome to ContentScale Tracker Bot!</b>\n\nTo enable alerts for your tracker, click the "Enable Telegram" button in your tracker page.',
+            text: '👋 <b>Welcome to ContentScale Tracker Bot!</b>\n\nTo enable alerts for your tracker, click the "Install Telegram" button in your tracker page.',
             parse_mode: 'HTML'
           })
         });
