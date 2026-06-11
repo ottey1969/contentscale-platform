@@ -35452,6 +35452,7 @@ Perplexity:
 - Needs clear author credentials and E-E-A-T signals with specifics (years, clients count, notable results)
 - Needs specific data points, statistics, or original research
 - Needs outbound links to authoritative sources
+- Strongly benefits from 2-4 attributed EXPERT QUOTES (blockquote + cite) from REAL, NAMED sources with real URLs — e.g. a published study, or a named author at a known publication (Ahrefs, Search Engine Land, Google Search Central). Recommend adding these. CRITICAL: never fabricate a quote, name, title, organization, statistic, or URL. If you cannot supply a real, verifiable source, output the blockquote with [bracketed placeholders] for the owner to fill — never invent one.
 - Loves numbered lists and step-by-step formats
 
 Microsoft Copilot:
