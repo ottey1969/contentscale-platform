@@ -35262,6 +35262,7 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
         howto: /"@type"\s*:\s*"HowTo"/i.test(rawHtml),
         speakable: /speakable/i.test(rawHtml),
         steps: /<ol[\s>]|class=["'][^"']*(step|voice-list)/i.test(rawHtml),
+        micro: /in short:|quick answer:|tl;?dr|key takeaway/i.test(rawHtml),
         outbound: /href=["']https?:\/\/(developers\.google|static\.googleusercontent|moz\.com|searchengineland|schema\.org)/i.test(rawHtml)
       };
       let _alreadyOnPage = '';
@@ -35274,6 +35275,7 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
       if (_onPage.howto) _alreadyOnPage += '\n- HowTo schema is ALREADY present -> do NOT add it again.';
       if (_onPage.speakable) _alreadyOnPage += '\n- Speakable schema is ALREADY present -> do NOT add it again.';
       if (_onPage.steps) _alreadyOnPage += '\n- Numbered / step lists are ALREADY present -> do NOT recommend adding a step list.';
+      if (_onPage.micro) _alreadyOnPage += '\n- Quotable micro-answers ("In short" / "Quick Answer" / TL;DR / key takeaways) are ALREADY present under headings -> do NOT recommend adding micro-answers; MODIFY an existing one only if it is genuinely weak.';
       if (_onPage.outbound) _alreadyOnPage += '\n- Outbound authoritative-source links are ALREADY present -> do NOT recommend adding generic external links.';
 
       // ── Extract the ACTUAL current text of key blocks so the brief rewrites them IN PLACE (merge/change), never duplicates ──
@@ -35492,6 +35494,7 @@ Analyze the input data and create a Citation Brief with exactly 5 actions. Each 
 5. LABEL + OPERATION + LOCATION: begin every "action" with the tag [FOR AI CITATION], then the operation in CAPITALS and the exact place, so the client knows precisely what to do — "ADD after your H1: ...", "MERGE into your opening paragraph: ...", "REPLACE your existing FAQ schema with: ...", "NEW BLOCK before the footer: ...". Always state whether the content is added, merged into existing text, or replaces something — and exactly where on the page.
 6. NO DUPLICATES: never output two actions that touch the same page element or repeat the same change. Each of the 5 actions must target a DISTINCT element/section. If the relevant content already exists on the page, use MODIFY or REPLACE on it — never tell the user to ADD a second copy of something that is already there.
 7. STAY IN YOUR LANE: this is the AI-CITATION brief only. Generate AI-citation passage/structure/schema actions. Do NOT include Google ranking, meta-title, or CTR actions — a separate GSC Brief covers those.
+${(snapshot.google_position && snapshot.google_position > 10) ? `8. VISIBILITY GATE (REQUIRED FIRST ACTION): this page ranks at #${snapshot.google_position}. Google AI Overview and ChatGPT cite almost only from the top ~10, so passage edits alone will NOT earn an AIO/ChatGPT citation yet. Make ACTION #1 a status item — title like "Rank into top 10 first (AIO gate)", system "Visibility", priority "high" — that states plainly: at #${snapshot.google_position} AIO/ChatGPT will not cite this page until it reaches the top ~10; the ranking work is in the separate GSC Brief; the remaining citation actions below PREPARE the page so it becomes citeable the moment it ranks. Do NOT give ranking how-to here (that belongs in the GSC Brief) — only state the dependency and point to it. The other 4 actions stay citation-focused.` : ''}
 
 ACTIONS THAT ARE ALREADY RESOLVED — DO NOT INCLUDE THESE:`
 + (snapshot.ai_google_overview_cited ? '\n- AIO cites this page → SKIP all Google AIO actions' : '')
@@ -35509,7 +35512,7 @@ INTERNAL LINKING:
 - Only include this if it truly strengthens topical authority. If no listed URL is relevant, DO NOT mention internal linking at all.
 
 OUTPUT FORMAT — return ONLY this JSON, no markdown, no explanation, no preamble:
-[{"title":"6 words max describing the gap","priority":"high","system":"Google AIO","action":"ADD after your H1: '[EXACT 40-60 word paragraph they should copy-paste]'. This makes the page more citeable for Google AI Overview because [specific reason based on AIO requirements above].","expected_impact":"Increases the likelihood of an AIO citation once the page ranks in the top ~10 and is re-crawled (typically a few weeks) — state the honest dependency, not a guarantee"}]
+[{"title":"6 words max describing the gap","priority":"high","system":"Google AIO","action":"[OPERATION] + [LOCATION] + exact copy-paste text. Pick the operation that fits the GAP — if the element already exists (definition, micro-answer, FAQ, schema, author), use MODIFY or REPLACE on it, NEVER ADD a duplicate. e.g. 'MODIFY your existing direct-answer block to: ...' or 'ADD as a new FAQ answer: ...'. End with: This makes the page more citeable for Google AI Overview because [specific reason based on AIO requirements above].","expected_impact":"Increases the likelihood of an AIO citation once the page ranks in the top ~10 and is re-crawled — state the honest dependency, not a guarantee"}]
 
 IMPACT HONESTY RULE: AI citation is never guaranteed. NEVER write that an engine "will cite" the page, and never promise a fixed number of crawl cycles. Use likelihood language ("increases the likelihood", "makes the page eligible", "improves the chance") and always name the dependency (ranking into the top 10 for AIO/ChatGPT; being indexed in Bing/Brave for Copilot/Claude). An honest, qualified impact line is required — an over-promise is a failed action.
 
@@ -35559,8 +35562,8 @@ Analyze the GSC data and create a GSC Brief with 4-5 actions to reach rank #1 fo
 Each action must include:
 1. The specific GSC signal that triggered this recommendation (e.g. "CTR of 2.7% at position 14 = title problem")
 2. The exact change to make — write the new title tag, the new paragraph, the schema block, the internal link anchor text — NOT a suggestion, the actual text
-3. The expected position improvement (e.g. "position 14 → 8")
-4. The timeframe (e.g. "within 2-4 weeks after Google recrawl")
+3. The expected DIRECTION and TYPE of effect, honestly (e.g. "should lift CTR and help the page climb from its current position" or "closes the depth gap keeping it below page 1") — NEVER promise a specific target position or a specific number of weeks. Ranking depends on competitors and Google, so exact "X → Y in N weeks" claims are forbidden
+4. The dependency/caveat (e.g. "takes effect after Google re-crawls; size of the gain depends on competition for this keyword")
 5. LABEL + OPERATION + LOCATION: begin every "action" with the tag [FOR GOOGLE RANKING], then the operation in CAPITALS and the exact place, so a non-technical user knows precisely what to do. Use one of:
    - "REPLACE in Rank Math → SEO Title: <new title>"
    - "REPLACE in Rank Math → Meta Description: <new description>"
@@ -35579,7 +35582,9 @@ REQUIRED ACTION TYPES (include all of these):
 - A freshness recommendation if the page content appears dated
 
 OUTPUT FORMAT — return ONLY this JSON, no markdown:
-[{"title":"6 words max","priority":"high","trigger":"Specific GSC signal that triggered this (e.g. '9,196 impressions, 2.7% CTR = title mismatch')","action":"Starts with [FOR GOOGLE RANKING] + OPERATION + LOCATION, e.g. 'REPLACE in Rank Math → SEO Title: ...' or 'ADD after your H1: ...' or 'MERGE into your opening paragraph: ...' — always copy-paste ready text","expected_impact":"Position {current} → {target} within {timeframe}","effort":"quick_win"}]
+[{"title":"6 words max","priority":"high","trigger":"Specific GSC signal that triggered this (e.g. '9,196 impressions, 2.7% CTR = title mismatch')","action":"Starts with [FOR GOOGLE RANKING] + OPERATION + LOCATION, e.g. 'REPLACE in Rank Math → SEO Title: ...' or 'ADD after your H1: ...' or 'MERGE into your opening paragraph: ...' — always copy-paste ready text","expected_impact":"Honest, qualified effect — direction + dependency, e.g. 'Should improve CTR and support a climb toward page 1 after re-crawl; the exact gain depends on competition'. NEVER a guaranteed position or a fixed deadline","effort":"quick_win"}]
+
+IMPACT HONESTY RULE: ranking improvement is never guaranteed. NEVER write a fixed "position X → Y" target or a fixed "within N weeks" deadline. Use honest, qualified language ("should help", "supports a climb toward", "addresses the gap that holds it back") and always name the dependency (Google re-crawl, keyword competition). A guaranteed number or deadline is a failed action.
 
 QUALITY BAR: A user with zero SEO knowledge must be able to implement every action. Write the new title tag. Write the new paragraph. Write the schema. If you say "add more content" without writing the content, you have failed.
 
@@ -35684,6 +35689,8 @@ GOAL: Rank #1 for "${kw}" and capture the maximum clicks from ${gscImpr || 'the 
       // ── CALL 3: Verified Claims + Source Suggestions ─────────────────────
       _trSetStep(pageId, 'source_check', 'running', 'Checking claims against world-wide sources…');
       const sourcePrompt = `You are a Fact-Verification Analyst. Your job is to find unanchored claims in web page content and suggest authoritative world-wide sources to verify them.
+
+CURRENT DATE: Today is ${new Date().toISOString().slice(0,10)} (year ${new Date().getFullYear()}). Treat ${new Date().getFullYear()} as the current year and any EARLIER year (e.g. ${new Date().getFullYear()-1}) as the PAST. A citation dated ${new Date().getFullYear()-1} or earlier is normal and valid — NEVER say a past year "is in the future" and never ask the user to verify a year just because it looks future-dated when it is not.
 
 INPUT:
 - Page URL: ${pageUrl}
