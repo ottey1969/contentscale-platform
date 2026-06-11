@@ -1191,6 +1191,10 @@ app.get('/api/tracker-client/:token/fetch-sitemap', async (req, res) => {
       // Regular sitemap — extract page URLs, never the .xml files themselves
       urls = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map(m => m[1].trim()).filter(u => u.startsWith('http') && !/\.xml(\?|$)/i.test(u));
     }
+    // Skip non-content archive URLs (WordPress categories, tags, author pages, pagination, feeds, media)
+    const _SKIP_ARCHIVE = /\/(category|categories|tag|tags|author|authors|uncategorized)(\/|$)|\/page\/\d+|\/feed\/?$|\/wp-(json|admin|content|includes)\//i;
+    const _SKIP_FILE = /\.(jpg|jpeg|png|gif|webp|svg|css|js|pdf|xml|json)(\?|$)/i;
+    urls = urls.filter(u => !_SKIP_ARCHIVE.test(u) && !_SKIP_FILE.test(u));
     urls = urls.slice(0, 100);
     // Remember the sitemap URL on the client (shows the "added" check + lets briefs use it for internal links)
     if (urls.length) { try { await pool.query('UPDATE tracker_clients SET sitemap_url=$1 WHERE token=$2', [sitemapUrl, req.params.token]); } catch(e){} }
@@ -1388,14 +1392,74 @@ app.post('/api/tracker-client/:token/pages/bulk-delete', async (req, res) => {
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
+// POST /api/tracker-client/:token/cleanup — remove non-content/non-live pages; keep only live pages in sitemap or GSC
+app.post('/api/tracker-client/:token/cleanup', async (req, res) => {
+  try {
+    const cr = await pool.query('SELECT id, sitemap_url FROM tracker_clients WHERE token=$1', [req.params.token]);
+    if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
+    const client = cr.rows[0];
+
+    const FILE = /\.(jpg|jpeg|png|gif|webp|svg|css|js|pdf|xml|json|ico|mp4|webm|woff2?|ttf|eot)(\?|$)/i;
+    const ARCHIVE = /\/(category|categories|tag|tags|author|authors|uncategorized)(\/|$)|\/page\/\d+|\/feed\/?$|\/wp-(json|admin|content|includes)\//i;
+    const norm = u => String(u||'').trim().replace(/\/$/, '').toLowerCase();
+
+    // Build the sitemap URL set (best-effort; follows a sitemap index)
+    const sitemapSet = new Set();
+    let sitemapLoaded = false;
+    if (client.sitemap_url) {
+      try {
+        const grab = async (sm, depth) => {
+          if (depth > 2) return;
+          const r = await fetch(sm, { headers: {'User-Agent':'Mozilla/5.0'}, signal: AbortSignal.timeout(10000) });
+          if (!r.ok) return;
+          const xml = await r.text();
+          const locs = [...xml.matchAll(/<loc>\s*([^<\s]+)\s*<\/loc>/gi)].map(m => m[1].trim());
+          locs.filter(u => /^https?:\/\//i.test(u) && !/\.xml(\?|$)/i.test(u)).forEach(u => sitemapSet.add(norm(u)));
+          const subs = locs.filter(u => /\.xml(\?|$)/i.test(u)).slice(0, 25);
+          for (const s of subs) { try { await grab(s, depth + 1); } catch(e){} }
+        };
+        await grab(client.sitemap_url, 0);
+        sitemapLoaded = sitemapSet.size > 0;
+      } catch(e) {}
+    }
+
+    const pr = await pool.query(
+      `SELECT id, url, gsc_clicks, gsc_impressions, gsc_position, gsc_keyword
+       FROM tracker_pages WHERE tracker_client_id=$1 AND (is_active=TRUE OR is_active IS NULL)`,
+      [client.id]
+    );
+
+    const removeIds = []; const removedUrls = []; let kept = 0;
+    for (const p of pr.rows) {
+      const url = p.url || '';
+      const isJunk = FILE.test(url) || ARCHIVE.test(url);
+      const hasGsc = (p.gsc_clicks != null) || (p.gsc_impressions != null) || (p.gsc_position != null) || !!p.gsc_keyword;
+      const inSitemap = sitemapSet.has(norm(url));
+      let remove;
+      if (isJunk) {
+        remove = true;                       // .jpg, /category/, feeds, etc. — always remove
+      } else if (sitemapLoaded || hasGsc) {
+        remove = !(inSitemap || hasGsc);     // keep only live pages in sitemap or GSC
+      } else {
+        remove = false;                      // no sitemap + no GSC to check against -> only strip obvious junk
+      }
+      if (remove) { removeIds.push(p.id); if (removedUrls.length < 60) removedUrls.push(url); }
+      else kept++;
+    }
+
+    if (removeIds.length) {
+      await pool.query('UPDATE tracker_pages SET is_active=FALSE WHERE id=ANY($1) AND tracker_client_id=$2', [removeIds, client.id]);
+    }
+    res.json({ success: true, removed: removeIds.length, kept, sitemap_used: sitemapLoaded, removed_urls: removedUrls });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
 // POST /api/tracker-client/:token/scan-all — scan all pages one by one
 app.post('/api/tracker-client/:token/scan-all', async (req, res) => {
   try {
     const cr = await pool.query('SELECT id FROM tracker_clients WHERE token=$1', [req.params.token]);
     if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
     const unscannedOnly = req.body && req.body.unscanned_only === true;
-
-    // If unscanned_only, only pick pages with no snapshot
     let pages;
     if (unscannedOnly) {
       pages = await pool.query(`
@@ -1677,7 +1741,7 @@ app.post('/api/tracker-client/:token/pages', async (req, res) => {
     try {
       pr = await pool.query(
         `INSERT INTO tracker_pages (tracker_client_id, url, keyword, gsc_clicks, gsc_impressions, gsc_position, gsc_ctr, gsc_keyword, check_frequency, next_check_at, is_active)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'3days',NOW(),TRUE)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'3days',NULL,TRUE)
          RETURNING id`,
         [client.id, url, keyword||null, gsc_clicks||null, gsc_impressions||null, gsc_position||null, gsc_ctr||null, gsc_keyword||null]
       );
@@ -1686,7 +1750,7 @@ app.post('/api/tracker-client/:token/pages', async (req, res) => {
       try {
         pr = await pool.query(
           `INSERT INTO tracker_pages (tracker_client_id, url, keyword, check_frequency, next_check_at, is_active)
-           VALUES ($1,$2,$3,'3days',NOW(),TRUE)
+           VALUES ($1,$2,$3,'3days',NULL,TRUE)
            RETURNING id`,
           [client.id, url, keyword||null]
         );
@@ -1703,8 +1767,8 @@ app.post('/api/tracker-client/:token/pages', async (req, res) => {
     const newPageId = pr.rows[0].id;
     res.json({ success: true, page_id: newPageId, remaining: maxPages - count - 1 });
 
-    // First check auto-starts after 10 seconds
-    _triggerPageScan(newPageId, 10000);
+    // No auto-scan on add: a page is only scanned when the user explicitly scans it
+    // (clicks Scan, Scan All, or pastes HTML). The first manual scan starts the 3-day schedule.
   } catch(e) {
     console.error('[POST tracker pages]', e.message, e.detail || '');
     res.status(500).json({ success: false, error: e.message, detail: e.detail || null });
@@ -25354,7 +25418,7 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
     <button class="cs-btn" onclick="loadPages()" style="margin-left:4px;" title="Refresh"><i class="fas fa-sync-alt"></i></button>
     <button class="cs-btn" onclick="scanAllPages()" style="border-color:#4ade80;color:#4ade80;font-weight:700;" title="Scan all pages one by one">&#x26a1; Scan All</button>
     <button class="cs-btn" onclick="mergePages()" style="border-color:#38bdf8;color:#38bdf8;" title="Merge duplicate URLs &#x2014; keep best">&#x2295; Merge</button>
-    <button class="cs-btn" onclick="cleanPages()" style="border-color:#f59e0b;color:#f59e0b;" title="Remove image/asset URLs (.jpg, .png, .pdf etc)">&#x1f9f9; Clean</button>
+    <button class="cs-btn" onclick="cleanPages()" style="border-color:#f59e0b;color:#f59e0b;" title="Remove junk (.jpg, /category/, feeds) &amp; pages not in sitemap/GSC &#x2014; keep only live content">&#x1f9f9; Clean</button>
     <button id="bulkDeleteBtn" class="cs-btn" style="border-color:#ef4444;color:#ef4444;display:none;" onclick="bulkDeleteSelected()">&#x1f5d1; Delete selected</button>
     <button class="cs-btn" onclick="openTelegramSetup()" style="border-color:#2AABEE;color:#2AABEE;background:rgba(42,171,238,.08);font-weight:700;animation:tgPulse 2s ease-in-out infinite;" title="Enable Telegram alerts &#x2014; get notified after every scan"><i class="fab fa-telegram"></i> Enable Telegram</button>
     <input id="ctSearch" type="text" class="cs-input" placeholder="Search..." oninput="filterPages(this.value)" style="width:160px;padding:5px 10px;font-size:11px;margin-left:auto;">
@@ -25643,10 +25707,14 @@ function mergePages() {
 }
 
 function cleanPages() {
-  if (!confirm('Remove non-content URLs (.jpg, .png, .pdf, feeds, wp-content, etc.) from your tracked pages?')) return;
-  api('/clean-pages', 'POST').then(function(d){
-    if (d && d.success) { toast('Cleaned ' + (d.cleaned||0) + ' non-content URLs', '#4ade80'); loadPages(); }
-    else { toast((d && d.error) || 'Clean failed', '#f87171'); }
+  if (!confirm('Clean up this tracker?\n\nRemoves image/file URLs (.jpg, .png, .pdf...), WordPress archive pages (/category/, /tag/, /author/, /uncategorized, feeds) and any page not found in your sitemap or GSC.\n\nOnly live pages that are in your sitemap or GSC are kept.')) return;
+  api('/cleanup', 'POST').then(function(d){
+    if (d && d.success) {
+      var msg = 'Removed ' + (d.removed||0) + ' page(s) \u00b7 kept ' + (d.kept||0);
+      if (!d.sitemap_used) msg += ' \u2014 no sitemap loaded, only junk removed (fetch a sitemap to also clear orphans)';
+      toast(msg, '#4ade80');
+      loadPages();
+    } else { toast((d && d.error) || 'Clean failed', '#f87171'); }
   }).catch(function(e){ toast('Clean failed: ' + e.message, '#f87171'); });
 }
 
@@ -26042,10 +26110,18 @@ function renderPages() {
     var badges = '';
     if (pos) badges += '<span class="cs-badge" style="color:' + posColor + ';background:#0d1117;border:1px solid ' + posColor + '44;">#' + pos + '</span> ';
     else badges += '<span class="cs-cs-badge grey">Not ranked</span> ';
-    badges += p.ai_google_overview_cited ? '<span class="cs-cs-badge green">&#10003; Google AIO</span> ' : '<span class="cs-cs-badge grey">No AIO</span> ';
-    badges += p.ai_perplexity_cited ? '<span class="cs-cs-badge purple" style="border:1px solid #7c3aed;">&#10003; Perplexity</span> ' : '<span class="cs-cs-badge grey">No Perplexity</span> ';
-    badges += p.ai_bing_cited ? '<span class="cs-cs-badge" style="background:#0c2340;color:#60a5fa;border:1px solid #1d4ed8;">&#10003; Copilot</span> ' : '<span class="cs-cs-badge grey">No Copilot</span> ';
-    badges += p.ai_brave_cited ? '<span class="cs-cs-badge" style="background:#1a0e2e;color:#c4b5fd;border:1px solid #6d28d9;">&#10003; Claude</span> ' : '<span class="cs-cs-badge grey">No Claude</span> ';
+    // Only show "No AIO / No Perplexity / ..." once a real AI-citation check has actually run.
+    var aiChecked = (p.brief_check_count > 0)
+      || p.ai_google_overview_cited === true || p.ai_perplexity_cited === true
+      || p.ai_bing_cited === true || p.ai_brave_cited === true;
+    if (aiChecked) {
+      badges += p.ai_google_overview_cited ? '<span class="cs-cs-badge green">&#10003; Google AIO</span> ' : '<span class="cs-cs-badge grey">No AIO</span> ';
+      badges += p.ai_perplexity_cited ? '<span class="cs-cs-badge purple" style="border:1px solid #7c3aed;">&#10003; Perplexity</span> ' : '<span class="cs-cs-badge grey">No Perplexity</span> ';
+      badges += p.ai_bing_cited ? '<span class="cs-cs-badge" style="background:#0c2340;color:#60a5fa;border:1px solid #1d4ed8;">&#10003; Copilot</span> ' : '<span class="cs-cs-badge grey">No Copilot</span> ';
+      badges += p.ai_brave_cited ? '<span class="cs-cs-badge" style="background:#1a0e2e;color:#c4b5fd;border:1px solid #6d28d9;">&#10003; Claude</span> ' : '<span class="cs-cs-badge grey">No Claude</span> ';
+    } else {
+      badges += '<span class="cs-cs-badge grey" title="No AI citation check has run yet \u2014 paste HTML or Scan All">AI citations: not checked yet</span> ';
+    }
     if (score) badges += '<span class="cs-cs-badge yellow">' + score + '/100</span> ';
     if (p.fetch_reliable === false) badges += '<span class="cs-cs-badge" style="background:#2d1f00;color:#fbbf24;">! fetch issue</span> ';
 
@@ -26402,15 +26478,6 @@ async function addPage() {
     var autoRefresh = setInterval(function() {
       refreshCount++;
       loadPages();
-      // After 20s, if page still has no data, trigger scan from client side
-      if (refreshCount === 2 && newPageId) {
-        var pg = (_pages||[]).find(function(x){ return x.id == newPageId; });
-        var hasData = pg && (pg.last_checked || pg.google_position !== undefined || pg.last_checked_at);
-        if (!hasData) {
-          console.log('[addPage] Server scan may not have fired \\u2014 triggering client-side scan for page', newPageId);
-          fetch('/api/tracker-client/' + TOKEN + '/check/' + newPageId, { method: 'POST' }).catch(function(){});
-        }
-      }
       if (refreshCount >= 8) clearInterval(autoRefresh);
     }, 10000);
   } catch(e) { toast('Error: ' + e.message, '#f87171'); }
@@ -35211,7 +35278,7 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
                 const _smXml = await _smR.text();
                 _sitemapUrls = [..._smXml.matchAll(/<loc>\s*([^<\s]+)\s*<\/loc>/gi)]
                   .map(function(m){ return m[1].trim(); })
-                  .filter(function(u){ return /^https?:\/\//i.test(u) && !/\.(xml|jpe?g|png|webp|gif|svg|pdf)$/i.test(u); });
+                  .filter(function(u){ return /^https?:\/\//i.test(u) && !/\.(xml|jpe?g|png|webp|gif|svg|pdf)$/i.test(u) && !/\/(category|categories|tag|tags|author|authors|uncategorized)(\/|$)|\/page\/\d+|\/feed\/?$/i.test(u); });
                 _sitemapUrls = Array.from(new Set(_sitemapUrls))
                   .filter(function(u){ return u.replace(/\/$/, '') !== String(pageUrl || '').replace(/\/$/, ''); })
                   .slice(0, 60);
@@ -36452,9 +36519,13 @@ function startTrackerScheduler() {
       // Pick pages from BOTH engine tracker (engine_code_id) AND client tracker (tracker_client_id)
       const due = await pool.query(
         `SELECT p.* FROM tracker_pages p
-         WHERE (p.next_check_at <= NOW() OR p.next_check_at IS NULL)
-         AND (p.is_active = TRUE OR p.is_active IS NULL)
+         WHERE (p.is_active = TRUE OR p.is_active IS NULL)
          AND (p.engine_code_id IS NOT NULL OR p.tracker_client_id IS NOT NULL)
+         AND (
+           (p.engine_code_id IS NOT NULL AND (p.next_check_at <= NOW() OR p.next_check_at IS NULL))
+           OR
+           (p.tracker_client_id IS NOT NULL AND p.last_checked_at IS NOT NULL AND p.next_check_at IS NOT NULL AND p.next_check_at <= NOW())
+         )
          ORDER BY
            CASE p.check_frequency
              WHEN 'daily' THEN 1
