@@ -35415,7 +35415,11 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
       } catch(e) { console.warn('[brief-instant]', e.message); }
 
       // ── CALL 1: Citation Brief ─────────────────────────────────────────
+      const _briefToday = new Date().toISOString().slice(0,10);
+      const _briefYear = new Date().getFullYear();
       const citationPrompt = `You are an AI Citation Strategist. Your job is to create an actionable Citation Brief for a single web page.
+
+CURRENT DATE: Today is ${_briefToday} — treat ${_briefYear} as the current year. For any freshness, recency, or "last updated" recommendation, use ${_briefYear}; NEVER describe an earlier year as "current", "latest", or "this year", and never suggest adding a date that is not ${_briefYear}. If the page content shows an older year (e.g. ${_briefYear - 1} or earlier) anywhere — a heading (H1/H2/H3), title tag, meta description, intro, "last updated", or any "current/latest" claim — explicitly flag it as stale and give the exact replacement text using ${_briefYear} (e.g. rewrite an H1 like "... ${_briefYear - 1}" to "... ${_briefYear}").
 
 A Citation Brief tells the content owner EXACTLY what to change so that Google AI Overview, Perplexity, Microsoft Copilot, and Claude all cite this page in their answers.
 
@@ -35491,6 +35495,8 @@ OUTPUT FORMAT — return ONLY this JSON, no markdown, no explanation, no preambl
 QUALITY BAR: Every action must be so specific that the user can implement it in under 10 minutes without asking any follow-up questions. If you write "improve your introduction" you have failed. Write the introduction FOR them.`;
       // ── CALL 2: GSC Ranking Brief ──────────────────────────────────────
       const gscPrompt = `You are a Google Search Console Analyst and SEO Strategist. Your job is to create a GSC Brief — a data-driven action plan to move a page from its current position to RANK #1.
+
+CURRENT DATE: Today is ${_briefToday} — treat ${_briefYear} as the current year. Use ${_briefYear} for any freshness or "last updated" recommendation; never reference an older year as current.
 
 INPUT DATA:
 - Page URL: ${pageUrl}
