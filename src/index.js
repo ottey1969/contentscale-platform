@@ -25745,6 +25745,28 @@ function cleanPages() {
   }).catch(function(e){ toast('Clean failed: ' + e.message, '#f87171'); });
 }
 
+function _ctSelectedIds() {
+  var cbs = document.querySelectorAll('.page-select-cb:checked, .tr-page-cb:checked');
+  return Array.prototype.slice.call(cbs).map(function(cb){ return parseInt(cb.dataset.id); }).filter(function(x){ return !!x; });
+}
+function updateBulkBar() {
+  var n = _ctSelectedIds().length;
+  var btn = document.getElementById('bulkDeleteBtn');
+  if (btn) {
+    btn.style.display = n > 0 ? '' : 'none';
+    btn.innerHTML = '&#x1f5d1; Delete selected' + (n > 0 ? ' (' + n + ')' : '');
+  }
+}
+function bulkDeleteSelected() {
+  var ids = _ctSelectedIds();
+  if (!ids.length) { toast('No pages selected', '#f87171'); return; }
+  if (!confirm('Delete ' + ids.length + ' selected page(s) from the tracker? Their URL and keyword are removed.')) return;
+  api('/pages/bulk-delete', 'POST', { page_ids: ids }).then(function(d){
+    if (d && d.success) { toast('Deleted ' + (d.deleted||0) + ' page(s)', '#4ade80'); loadPages(); }
+    else { toast((d && d.error) || 'Delete failed', '#f87171'); }
+  }).catch(function(e){ toast('Delete failed: ' + e.message, '#f87171'); });
+}
+
 function resetAllScans() {
   var cbs = document.querySelectorAll('.page-select-cb:checked, .tr-page-cb:checked');
   var ids = Array.prototype.slice.call(cbs).map(function(cb){ return parseInt(cb.dataset.id); }).filter(function(x){ return !!x; });
