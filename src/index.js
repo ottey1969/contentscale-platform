@@ -35441,6 +35441,7 @@ INPUT DATA:
 - Page HTML content (first 8000 chars): ${htmlExcerpt.substring(0,8000) || '(no HTML)'}
 - Previous brief actions (if any): ${JSON.stringify((page.brief_content?.items || []).slice(0,3))}
 - Competitor #1: ${competitor1 ? competitor1.url + ' — ' + competitor1.title : 'no data'}
+- Current Google AI Overview text (what the AIO says NOW for this keyword): ${snapshot.ai_google_overview_text ? '"' + snapshot.ai_google_overview_text + '"' : '(no AIO captured for this query)'}
 - Internal-link candidates — REAL URLs from this site's sitemap (you may ONLY link to a URL that appears verbatim in this list; NEVER invent, guess, or construct a URL):
 ${_otherPagesList || '(none available — do NOT output any internal-link action)'}
 
@@ -35452,6 +35453,9 @@ A "Not cited" result has THREE possible root causes, and the correct fix differs
 2. VISIBLE BUT NOT EXTRACTABLE — the page ranks/indexes but the answer is not in a liftable, self-contained form. Then apply the citeability passage/structure/schema actions below.
 3. VISIBLE & EXTRACTABLE BUT OUTCOMPETED — a competitor's passage is more direct or more authoritative. Then match and beat the cited competitor's passage and strengthen author E-E-A-T.
 Be honest about which blocker applies. If position is poor, do NOT imply a passage edit alone will earn an AIO citation — name ranking into the top 10 as the prerequisite.
+
+OUT-WRITE THE CURRENT AIO (only when "Current Google AI Overview text" is provided above):
+If an AIO text is shown, the AI Overview is already answering this query from OTHER sources — and AIO cites the page whose passage best MATCHES that answer, which is not always the #1 result. So the opportunity is to make THIS page the better source for that exact answer. For the #1 Google-AIO action: pinpoint the specific claim/angle the current AIO makes, then prescribe a passage that says the SAME thing more clearly, more completely, and more authoritatively — entity-anchored, with a named source and an exact figure where possible — so an engine assembling that answer prefers this page. Mirror the AIO's framing and beat it on precision and authority. Do NOT contradict a correct AIO answer; out-write it.
 
 CITATION SYSTEM REQUIREMENTS (use these to write actions):
 
@@ -35613,6 +35617,62 @@ GOAL: Rank #1 for "${kw}" and capture the maximum clicks from ${gscImpr || 'the 
         } catch(e) {
           snapshot.recommendations = [{ title: 'Citation Brief', priority: 'medium', system: 'All', action: recs.substring(0,4000), expected_impact: 'See above' }];
         }
+
+        // ── SERVER-SIDE HARD FIX: enforce visibility-gate + strip duplicate/no-op AIO actions ──
+        try {
+          if (Array.isArray(snapshot.recommendations)) {
+            const _yr = String(new Date().getFullYear());
+            const _h1m = (rawHtml.match(/<h1[^>]*>([\s\S]*?)<\/h1>/i) || [,''])[1].replace(/<[^>]+>/g,'');
+            const _metaDesc = (rawHtml.match(/<meta[^>]+name=["']description["'][^>]*content=["']([^"']*)["']/i) || [,''])[1];
+            const _yrInTitle = _h1m.includes(_yr) || _metaDesc.includes(_yr);
+            const _norm = s => String(s||'').toLowerCase().replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').replace(/[^a-z0-9 ]/g,'').trim();
+            const _rawNorm = _norm(rawHtml);
+
+            snapshot.recommendations = snapshot.recommendations.filter(r => {
+              const _t = ((r.title||'') + ' ' + (r.action||'')).toLowerCase();
+              const _sys = (r.system||'').toLowerCase();
+              const _isAIO = _sys.includes('aio') || _sys.includes('overview') || _sys.includes('google');
+              // 1) drop false "stale year" actions when the page already shows the current year
+              if (_isAIO && /stale year|current year|update the year|year in (the )?(h1|title|meta)|freshness.{0,20}year/.test(_t) && _yrInTitle) return false;
+              // 2) drop "ADD ... after H1" definition/micro-answer actions when one already exists on the page
+              if (/\badd\b/.test(_t) && /(after|below) (your |the )?h1/.test(_t)
+                  && /(direct[- ]answer|definition|what is|micro[- ]?answer|in short|quick answer|tl;?dr)/.test(_t)
+                  && (_onPage.def || _onPage.micro)) return false;
+              // 3) drop no-op MODIFY/REPLACE actions whose suggested text already appears verbatim on the page
+              if (/\b(modify|replace)\b/.test(_t)) {
+                const _q = (r.action||'').match(/[:"']\s*([A-Za-z][^"'\n]{60,})/);
+                if (_q) {
+                  const _frag = _norm(_q[1]).slice(0, 80);
+                  if (_frag.length >= 40 && _rawNorm.includes(_frag)) return false;
+                }
+              }
+              return true;
+            });
+
+            // enforce the visibility gate as a hard action #1 when ranking is poor
+            const _pos = snapshot.google_position;
+            if (_pos && _pos > 10) {
+              const _hasGate = snapshot.recommendations.some(r =>
+                /(top ?10|top ten|visibility gate|rank into|aio gate)/i.test((r.title||'') + ' ' + (r.action||'')) ||
+                /visibility/i.test(r.system||''));
+              if (!_hasGate) {
+                snapshot.recommendations.unshift({
+                  title: 'Rank into top 10 first (AIO gate)',
+                  priority: 'high',
+                  system: 'Visibility',
+                  action: 'This page ranks at #' + _pos + '. Google AI Overview and ChatGPT cite almost only from the top ~10, so the on-page passage edits below will not earn an AIO/ChatGPT citation until the page reaches the top ~10. The ranking work is in the GSC Brief; the citation actions below prepare the page to be cited the moment it ranks.',
+                  expected_impact: 'Removes the visibility blocker. Once the page reaches the top ~10 and is re-crawled, the citation work below can take effect — no ranking guarantee.'
+                });
+              }
+            }
+
+            // keep the brief tight, with a safe fallback if everything was filtered out
+            if (snapshot.recommendations.length > 5) snapshot.recommendations = snapshot.recommendations.slice(0, 5);
+            if (!snapshot.recommendations.length) {
+              snapshot.recommendations = [{ title: 'Citation Brief', priority: 'medium', system: 'All', action: 'No new citation actions — the page already has the core citeability elements (direct answer, micro-answers, schema) in place.', expected_impact: 'Maintain the current structure; revisit after the next ranking change.' }];
+            }
+          }
+        } catch(_hf) { console.warn('[tracker] citation hard-fix skipped:', _hf && _hf.message); }
       } else {
         console.warn('[tracker] Citation Gemini failed:', citResp.status, citResp.errorMessage || '');
         _trSetStep(pageId, 'recommendations', 'error', 'Citation Brief — Gemini ' + citResp.status);
