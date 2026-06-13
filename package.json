@@ -9,7 +9,11 @@
     "dev": "nodemon index.cjs",
     "lint": "eslint .",
     "test": "jest --detectOpenHandles",
+    "test:quality": "node src/brief-quality.test.js && node src/gsc-client.test.js",
     "postinstall": "puppeteer browsers install chrome"
+  },
+  "jest": {
+    "testPathIgnorePatterns": ["/node_modules/", "src/brief-quality.test.js", "src/gsc-client.test.js"]
   },
   "engines": {
     "node": ">=18.0.0",
