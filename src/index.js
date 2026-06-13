@@ -35833,6 +35833,20 @@ If no unanchored claims found, return empty array: []`;
     _trSetStep(pageId, 'recommendations', 'error', 'GEMINI_API_KEY not set — skipped');
   }
 
+  // ── Brief quality layer: strip fabricated claims, junk-keyword plans, no-ops, duplicates ──
+  try {
+    const { cleanTrackerBriefs } = require('./brief-quality-hook');
+    const _q = cleanTrackerBriefs({
+      snapshot,
+      page,
+      recommendations: snapshot.recommendations || [],
+      gscBrief: snapshot.gsc_brief || [],
+    });
+    snapshot.recommendations = _q.recommendations;
+    snapshot.gsc_brief = _q.gscBrief;
+    snapshot._quality_report = _q.report;
+  } catch (e) { console.warn('[brief-quality] skipped:', e.message); }
+
   // 6. Save snapshot
   // Content change detection: did hash change since last check?
   let contentChanged = false;
