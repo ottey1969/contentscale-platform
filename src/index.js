@@ -35835,12 +35835,26 @@ If no unanchored claims found, return empty array: []`;
 
   // ── Brief quality layer: strip fabricated claims, junk-keyword plans, no-ops, duplicates ──
   try {
+    // Pull the query→page matrix for this domain so cannibalization is EXACT (not heuristic).
+    let _gscQueryPages;
+    try {
+      const _dom = new URL(page.url).hostname.replace(/^www\./, '');
+      const _qp = await pool.query(
+        'SELECT query, url, impressions FROM gsc_queries WHERE url ILIKE $1 AND impressions > 0',
+        ['%' + _dom + '%']
+      );
+      if (_qp.rows.length) {
+        _gscQueryPages = _qp.rows.map(r => ({ query: r.query, url: r.url, impressions: Number(r.impressions) || 0 }));
+      }
+    } catch (e) { /* no shared GSC for this domain — cannibalization simply stays off, no false alarms */ }
+
     const { cleanTrackerBriefs } = require('./brief-quality-hook');
     const _q = cleanTrackerBriefs({
       snapshot,
       page,
       recommendations: snapshot.recommendations || [],
       gscBrief: snapshot.gsc_brief || [],
+      gscQueryPages: _gscQueryPages,
     });
     snapshot.recommendations = _q.recommendations;
     snapshot.gsc_brief = _q.gscBrief;
