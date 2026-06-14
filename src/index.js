@@ -35582,12 +35582,17 @@ INPUT DATA:
 - Internal-link candidates — REAL URLs from this site's sitemap (if you suggest an internal link, the target MUST be copied verbatim from this list; NEVER invent or guess a URL):
 ${_otherPagesList || '(none available — do NOT output any internal-link action)'}
 
-GSC INTERPRETATION RULES:
-- Impressions > 1000 but CTR < 3%: title/meta problem → rewrite title
+DATA SCOPE — READ THIS FIRST:
+- The GSC Clicks, Impressions, CTR and Average position above are PAGE-LEVEL AGGREGATES across ALL queries this page appears for — they are NOT specific to "${kw}". This page's single highest-volume query is "${page.gsc_keyword || kw}".
+- A low aggregate CTR is normally diluted by many lower-ranked, non-target queries. Do NOT treat a low page-level CTR as proof of a title/description mismatch for "${kw}".
+- If "Live Google position" is 1-3 for "${kw}", the page already ranks well for it — do NOT prescribe a title overhaul for that keyword.
+- ALIGNMENT CHECK (important): compare the page CONTENT (HTML above) to the target keyword "${kw}". If the content is clearly about a DIFFERENT topic than the keyword — e.g. the content is written for a specific service but the keyword is the brand name (or vice-versa) — then the REAL issue is page↔keyword alignment/positioning, not a CTR tweak. In that case recommend aligning the page to its actual top query "${page.gsc_keyword || kw}", or moving "${kw}" to the page that should own it. Do NOT prescribe a blind title overhaul.
+
+GSC INTERPRETATION RULES (apply only AFTER the DATA SCOPE check, and only when the metrics plausibly reflect "${kw}" itself, not aggregate dilution):
+- Impressions > 1000 but CTR < 3%: possible title/meta sharpening — but only if not explained by aggregate dilution or a content↔keyword mismatch above
 - Impressions > 1000 but position > 10: content depth problem → expand content
 - Position 4-10 with good CTR: one strong content gap blocking #1 → find it
 - Position > 20: fundamental relevance or authority problem → rewrite + backlinks
-- CTR < 1%: severe title mismatch with search intent → complete title overhaul
 - Clicks but position dropping: freshness signal needed → update content
 
 WHAT DRIVES RANK #1 IN 2025-2026:
