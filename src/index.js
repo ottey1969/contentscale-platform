@@ -26170,14 +26170,15 @@ function renderPages() {
   }) : _pages;
   if (countEl) countEl.textContent = displayPages.length + (_ctSearchQuery ? ' of '+_pages.length : '') + ' pages tracked';
 
-  // Sort by GSC priority: pages with impressions/clicks first
+  // Sort by OPPORTUNITY: highest GSC impressions first (most demand = highest priority),
+  // then clicks desc, then position asc (lower = better). Pages without GSC data sink to the bottom.
   var sorted = displayPages.slice().sort(function(a,b) {
-    // Done pages keep their position (no reorder to bottom) so a card doesn't jump when you press Done
-    // Sort by GSC clicks desc
+    var aImpr = a.gsc_impressions || 0;
+    var bImpr = b.gsc_impressions || 0;
+    if (bImpr !== aImpr) return bImpr - aImpr;
     var aClicks = a.gsc_clicks || 0;
     var bClicks = b.gsc_clicks || 0;
     if (bClicks !== aClicks) return bClicks - aClicks;
-    // Then by position asc (lower = better)
     var aPos = a.google_position || 999;
     var bPos = b.google_position || 999;
     return aPos - bPos;

@@ -266,14 +266,17 @@ function assessDataSufficiency({ impressions = 0 } = {}, minImpressions = 300) {
  * ------------------------------------------------------------------ */
 // Lineage/association claims that must be backed by verified facts (brand.allowedClaims) or removed.
 const RISKY_CLAIM = /\b(successor to|succeeded|replaced (?:them|by)|\bthe\b[^.]{0,30}\bsuccessor\b|acquired by|acquired|merged with|merger with|official partner|in partnership with|powered by|owned by|subsidiary of|affiliated with|endorsed by|certified by|authorized (?:dealer|reseller))\b/i;
+// Unverified leadership-role claims tying a named person to the brand (e.g. "our founder Jane Doe").
+// Author/writer/consultant attributions are NOT matched — only founder/CEO/owner/president-type roles.
+const ROLE_CLAIM = /\b(?:our|the)\s+(?:co-?founder|founder|ceo|owner|president|principal)\b|\bfounded by\b/i;
 function scanForRiskyClaims(text = '', brand = {}) {
   const allowed = (brand.allowedClaims || []).map((s) => String(s).toLowerCase());
   const flagged = [];
   const kept = String(text).split(/(?<=[.!?])\s+/).filter((sent) => {
-    const m = sent.match(RISKY_CLAIM);
+    const m = sent.match(RISKY_CLAIM) || sent.match(ROLE_CLAIM);
     if (m && !allowed.some((a) => sent.toLowerCase().includes(a))) {
       flagged.push({ phrase: m[0].trim(), sentence: sent.trim() });
-      return false; // remove the unverified lineage/association claim
+      return false; // remove the unverified lineage / association / leadership-role claim
     }
     return true;
   });

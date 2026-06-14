@@ -282,5 +282,16 @@ test('flags brand top-query, injects click advice once (citation only)', () => {
   assert.ok(!gsc.brief.recommendations.some(r => /brand visibility/i.test(r.title)));    // not duplicated
 });
 
+test('strips unverified leadership-role claims but keeps author attributions', () => {
+  const r = Q.scanForRiskyClaims('Our founder Ottmar J.G. Francisca brings 24 years of experience. We serve all 21 counties.', {});
+  assert.ok(!r.text.toLowerCase().includes('founder'));
+  assert.ok(r.text.includes('We serve all 21 counties'));
+  assert.strictEqual(r.flagged.length, 1);
+  const a = Q.scanForRiskyClaims('This guide was written by Ottmar Francisca, an SEO consultant.', {});
+  assert.strictEqual(a.flagged.length, 0); // author/consultant is fine
+  const b = Q.scanForRiskyClaims('Our founder Jane Doe started the company in 2005.', { allowedClaims: ['our founder jane doe'] });
+  assert.strictEqual(b.flagged.length, 0); // verified in brand facts
+});
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
