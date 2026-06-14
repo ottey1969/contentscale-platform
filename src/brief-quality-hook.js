@@ -63,7 +63,8 @@ function buildCtx({ snapshot = {}, page = {}, sitemap, gscQueryPages }) {
     },
     page: {
       url: page.url || snapshot.url || '',
-      keyword: page.gsc_keyword || page.keyword || snapshot.keyword || '',
+      keyword: page.keyword || snapshot.keyword || '',
+      topQuery: page.gsc_keyword || '',
       html: snapshot.html || snapshot.page_html || page.html || '',
       title: snapshot.metaTitle || page.title || '',
       h1: snapshot.h1Text || page.h1 || '',

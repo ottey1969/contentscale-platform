@@ -265,5 +265,22 @@ test('injectGlobal:false skips global recs but still cleans + still reports', ()
   assert.strictEqual(noInj.report.cannibalization.cannibalized, true);                     // report still computed
 });
 
+console.log('detectKeywordMismatch + brand click advice');
+test('flags brand top-query, injects click advice once (citation only)', () => {
+  assert.strictEqual(Q.detectKeywordMismatch({ keyword: 'emergency roof repair nj', topQuery: 'perfectroofingteam', url: 'https://perfectroofingteam.com/' }).isBrand, true);
+  assert.strictEqual(Q.detectKeywordMismatch({ keyword: 'roof repair', topQuery: 'roof repair', url: 'https://x.com/' }).mismatch, false);
+  const ctx = {
+    gsc: { clicks: 8, impressions: 8678, position: 5.7 },
+    page: { url: 'https://perfectroofingteam.com/', keyword: 'emergency roof repair nj', topQuery: 'perfectroofingteam', html: '' },
+    site: {}, brand: {},
+  };
+  const mk = function(){ return [{ engine: 'Google', priority: 'LOW', title: 'x', action: 'do something useful here', impact: 'y' }]; };
+  const cit = Q.postProcessBrief({ recommendations: mk() }, ctx);
+  assert.ok(cit.brief.recommendations.some(r => /brand visibility/i.test(r.title)));     // advice present
+  assert.strictEqual(cit.report.keywordMismatch.isBrand, true);
+  const gsc = Q.postProcessBrief({ recommendations: mk() }, ctx, { injectGlobal: false });
+  assert.ok(!gsc.brief.recommendations.some(r => /brand visibility/i.test(r.title)));    // not duplicated
+});
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

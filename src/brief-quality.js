@@ -318,6 +318,30 @@ function collapseByTarget(recs = []) {
 }
 
 /* ------------------------------------------------------------------ *
+ * 13. KEYWORD <-> TOP-QUERY MISMATCH (page ranks for X, targeted for Y)*
+ * ------------------------------------------------------------------ */
+function brandTokenFromUrl(url = '') {
+  try {
+    const host = new URL(url).hostname.replace(/^www\./, '');
+    return (host.split('.')[0] || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  } catch (e) { return ''; }
+}
+function detectKeywordMismatch({ keyword = '', topQuery = '', url = '' } = {}) {
+  const k = String(keyword).toLowerCase().trim();
+  const t = String(topQuery).toLowerCase().trim();
+  if (!t || !k || t === k) return { mismatch: false };
+  const brand = brandTokenFromUrl(url);
+  const tCompact = t.replace(/[^a-z0-9]/g, '');
+  const isBrand = !!brand && (tCompact.indexOf(brand) > -1 || brand.indexOf(tCompact) > -1);
+  return {
+    mismatch: true, topQuery, keyword, isBrand,
+    note: isBrand
+      ? `This page's top Search Console query is your brand ("${topQuery}"), not the target "${keyword}".`
+      : `This page's top Search Console query is "${topQuery}", not the target "${keyword}".`,
+  };
+}
+
+/* ------------------------------------------------------------------ *
  * 7. FACT SHEET FOR GEMINI  (the only numbers it may use)            *
  * ------------------------------------------------------------------ */
 function buildFactSheet({ gsc, page, site, brand }) {
@@ -422,6 +446,25 @@ function postProcessBrief(brief, ctx, opts = {}) {
     });
   }
 
+  // f) keyword vs top-query mismatch — brand seen but not clicked / wrong target page
+  const mismatch = detectKeywordMismatch({ keyword: ctx.page.keyword, topQuery: ctx.page.topQuery, url: ctx.page.url });
+  report.keywordMismatch = mismatch;
+  if (mismatch.mismatch && opts.injectGlobal !== false) {
+    if (mismatch.isBrand) {
+      recs.unshift({
+        engine: 'Google', priority: 'HIGH', title: 'Convert brand visibility into clicks',
+        action: `${mismatch.note} High brand impressions with almost no clicks usually means you're not #1 for your own name with sitelinks. Win those clicks: lead the homepage <title> with the brand, claim/optimise the Google Business Profile, add LocalBusiness + review-star schema so the result stands out, and write a meta that sells (value + phone + "free assessment"). Then move the "${ctx.page.keyword}" target to the dedicated page that actually ranks for it — the homepage is your brand page.`,
+        impact: 'Captures the brand searches you already earn, and points the keyword at a page that can rank for it.',
+      });
+    } else {
+      recs.unshift({
+        engine: 'Google', priority: 'HIGH', title: 'Fix the page-keyword mismatch',
+        action: `${mismatch.note} Either retarget this page to "${mismatch.topQuery}", or move the "${ctx.page.keyword}" target to the page that already ranks for it. Optimising a page for a keyword it doesn't surface for rarely works.`,
+        impact: 'Aligns the target keyword with the page Google actually ranks, instead of fighting the SERP.',
+      });
+    }
+  }
+
   return { brief: { ...brief, recommendations: recs }, report };
 }
 
@@ -429,6 +472,7 @@ module.exports = {
   expectedCtr,
   computeGscSignals,
   detectCannibalization,
+  detectKeywordMismatch,
   isValidKeyword,
   assessDataSufficiency,
   scanForRiskyClaims,
