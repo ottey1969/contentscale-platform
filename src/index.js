@@ -932,11 +932,14 @@ async function sendTrackerEmail(clientId, subject, htmlBody) {
     const brevoKey = process.env.BREVO_API_KEY || '';
     if (!brevoKey) { console.warn('[tracker-email] No email API key (BREVO_API_KEY)'); return; }
 
+    const _ccList = String(client.cc_emails || '').split(',').map(e => e.trim()).filter(e => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e));
+    const _recipients = [{ email: client.email, name: client.name || client.email }]
+      .concat(_ccList.filter(e => e.toLowerCase() !== String(client.email || '').toLowerCase()).map(e => ({ email: e })));
     const resp = await fetch('https://api.brevo.com/v3/smtp/email', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'api-key': brevoKey },
       body: JSON.stringify({
-        to: [{ email: client.email, name: client.name || client.email }],
+        to: _recipients,
         sender: { email: process.env.FROM_EMAIL || 'info@contentscale.site', name: process.env.SENDER_NAME || 'ContentScale Tracker' },
         subject: subject,
         htmlContent: fullHtml
@@ -3065,6 +3068,7 @@ app.patch('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
       }
     }
     if (req.body.gsc_enabled !== undefined) { updates.push(`gsc_enabled=$${i++}`); vals.push(!!req.body.gsc_enabled); }
+    if (req.body.cc_emails !== undefined) { updates.push(`cc_emails=$${i++}`); vals.push(req.body.cc_emails || ''); }
     if (status !== undefined) {
       updates.push(`status=$${i++}`);
       vals.push(status);
@@ -3295,6 +3299,7 @@ app.patch('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS max_pages INTEGER DEFAULT 3`).catch(()=>{});
   await client.query(`UPDATE tracker_clients SET max_pages=3 WHERE max_pages IS NULL OR max_pages=10`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS registered_ip VARCHAR(45)`).catch(()=>{});
+  await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS cc_emails TEXT`).catch(()=>{});
   // Brief merge system
   await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS brief_content JSONB`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS brief_started_at TIMESTAMPTZ`).catch(()=>{});
@@ -25725,13 +25730,16 @@ var _pages = [];
 
 // GSC status indicator \\u2014 lit green when enabled, grey when off
 function gscAction() {
-  if (GSC_ENABLED) { showImportModal('gsc'); }
+  if (GSC_ENABLED || _hasGscData()) { showImportModal('gsc'); }
   else { toast('GSC is not enabled for this tracker', '#6b7280'); }
+}
+function _hasGscData() {
+  try { return (_pages || []).some(function(p){ return p.gsc_clicks != null || p.gsc_impressions != null || p.gsc_position != null; }); } catch(e) { return false; }
 }
 function _applyGscBtnState() {
   var btn = document.getElementById('gscBtn');
   if (btn) {
-    if (GSC_ENABLED) {
+    if (GSC_ENABLED || _hasGscData()) {
       btn.style.borderColor = '#4ade80';
       btn.style.color = '#4ade80';
       btn.innerHTML = '<i class="fas fa-chart-line"></i> GSC \\u2713';
@@ -26051,6 +26059,7 @@ var _ctSearchQuery = '';
     var data = await api('');
     if (!data || !data.success) throw new Error(data && data.error || 'Failed to load');
     _pages = data.pages || [];
+    _applyGscBtnState();
     renderStats(data);
     renderPages();
     // Mark Telegram as linked if already set
@@ -27653,11 +27662,23 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
     }
   }
 
+  // Lightweight inline progress spinner for long fetches/imports (sitemap + GSC)
+  function _csSpinner(btn, label) {
+    if (!btn) return { update: function(){}, stop: function(){} };
+    var dots = 0, txt = label || 'Working';
+    btn.disabled = true;
+    var iv = setInterval(function(){ dots = (dots + 1) % 4; btn.textContent = txt + ' ' + Array(dots + 1).join('.'); }, 250);
+    return {
+      update: function(t){ txt = t; },
+      stop: function(restore){ clearInterval(iv); btn.disabled = false; if (restore != null) btn.textContent = restore; }
+    };
+  }
+
   async function fetchSitemap() {
     var url = document.getElementById('sitemapUrl').value.trim();
     if (!url) { toast('Enter a sitemap URL', '#f87171'); return; }
     var btn = document.querySelector('[onclick="fetchSitemap()"]');
-    if (btn) { btn.textContent = 'Fetching...'; btn.disabled = true; }
+    var _sp = _csSpinner(btn, 'Fetching sitemap');
     try {
       var r = await fetch('https://app.contentscale.site/api/tracker-client/' + TOKEN + '/fetch-sitemap?url=' + encodeURIComponent(url));
       var data = await r.json();
@@ -27672,7 +27693,7 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
       renderCheckList(urls, container, 'sitemap-cb', function(u){ return u; }, countEl, MAX_PAGES);
       document.getElementById('importSitemapBtn').style.display = 'block';
     } catch(e) { toast('Error: ' + e.message, '#f87171'); }
-    if (btn) { btn.textContent = 'Fetch sitemap'; btn.disabled = false; }
+    finally { _sp.stop('Fetch sitemap'); }
   }
 
   // \\u2500\\u2500 GSC drag/drop handlers \\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500
@@ -27820,14 +27841,18 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
     var cbs = document.querySelectorAll('.sitemap-cb:checked');
     if (!cbs.length) { toast('Select at least one URL', '#f87171'); return; }
     var urls = Array.from(cbs).map(function(cb) { return cb.value; }).slice(0, MAX_PAGES);
+    var _btn = document.getElementById('importSitemapBtn');
+    var _sp = _csSpinner(_btn, 'Importing 0/' + urls.length);
     var added = 0; var failed = 0;
     for (var i = 0; i < urls.length; i++) {
+      _sp.update('Importing ' + (i + 1) + '/' + urls.length);
       try {
         var data = await api('/pages', 'POST', { url: urls[i] });
         if (data.success) added++;
         else failed++;
       } catch(e) { failed++; }
     }
+    _sp.stop('Import selected');
     toast('Imported ' + added + ' pages' + (failed ? ', ' + failed + ' failed' : ''), added > 0 ? '#4ade80' : '#f87171');
     if (added > 0) { hideModal('importModal'); loadPages(); markSitemapDone(); }
   }
@@ -27872,6 +27897,7 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
         return;
       }
       var p = toImport[idx];
+      if (bt) bt.textContent = 'Importing ' + (idx + 1) + '/' + total + '...';
       api('/pages', 'POST', {
         url: p.url,
         keyword: p.keyword || '',
@@ -31905,6 +31931,20 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     setTimeout(loadTrackerClients, 400);
                 }; })(c.id, !!c.gsc_enabled);
                 actionsDiv.appendChild(gscBtn);
+
+                // ── Extra Citation-Brief recipients ──
+                var emailsBtn = document.createElement('button');
+                emailsBtn.className = 'tr-btn';
+                var _ccCount = (c.cc_emails ? String(c.cc_emails).split(',').map(function(e){ return e.trim(); }).filter(Boolean).length : 0);
+                emailsBtn.textContent = _ccCount ? ('\u2709 +' + _ccCount) : '\u2709 Emails';
+                emailsBtn.title = 'Extra Citation-Brief recipients (comma-separated). Primary: ' + (c.email || '\u2014');
+                emailsBtn.style.cssText = 'font-size:10px;padding:3px 8px;' + (_ccCount ? 'border-color:#4ade80;color:#4ade80;' : '');
+                emailsBtn.onclick = (function(id, current){ return function(){
+                    var v = prompt('Extra Citation-Brief recipients for this tracker (comma-separated emails). They receive the brief in addition to the primary email.', current || '');
+                    if (v === null) return;
+                    updateTcClient(id, { cc_emails: v.trim() });
+                }; })(c.id, c.cc_emails || '');
+                actionsDiv.appendChild(emailsBtn);
 
                 // ── Live Wall toggle ──
                 var lwWrap = document.createElement('div');
