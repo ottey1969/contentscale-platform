@@ -164,5 +164,106 @@ test('produces client-safe brief + change report + cannibalization rec', () => {
   assert.strictEqual(brief.recommendations[0].priority, 'HIGH');
 });
 
+console.log('isValidKeyword');
+test('rejects navigational/stopword queries', () => {
+  assert.strictEqual(Q.isValidKeyword('about').valid, false);
+  assert.strictEqual(Q.isValidKeyword('home').valid, false);
+  assert.strictEqual(Q.isValidKeyword('the for a').valid, false);
+});
+test('accepts real intent keywords', () => {
+  assert.strictEqual(Q.isValidKeyword('emergency roof repair nj').valid, true);
+  assert.strictEqual(Q.isValidKeyword('Ottmar Francisca').valid, true);
+});
+
+console.log('assessDataSufficiency');
+test('73 impressions is insufficient, 8678 is sufficient', () => {
+  assert.strictEqual(Q.assessDataSufficiency({ impressions: 73 }).sufficient, false);
+  assert.strictEqual(Q.assessDataSufficiency({ impressions: 8678 }).sufficient, true);
+});
+
+console.log('scanForRiskyClaims');
+test('strips fabricated lineage ("successor to BrandWell") but keeps "alternative to"', () => {
+  const a = Q.scanForRiskyClaims('ContentScale is the independent successor to BrandWell (formerly Content at Scale). We help businesses.', {});
+  assert.ok(!a.text.toLowerCase().includes('successor'));
+  assert.ok(a.text.includes('We help businesses'));
+  assert.strictEqual(a.flagged.length, 1);
+  const b = Q.scanForRiskyClaims('ContentScale is the independent alternative to Content at Scale.', {});
+  assert.strictEqual(b.flagged.length, 0); // "alternative to" is allowed
+});
+test('respects brand.allowedClaims', () => {
+  const r = Q.scanForRiskyClaims('We are powered by GRAAF.', { allowedClaims: ['powered by graaf'] });
+  assert.strictEqual(r.flagged.length, 0);
+});
+
+console.log('dropNoOps + collapseByTarget');
+test('drops empty actions and replace-with-same-value', () => {
+  const recs = [
+    { action: '' },
+    { action: 'REPLACE your existing H1: About Ottmar Francisca ContentScale Founder' },
+    { action: 'ADD a new statistics paragraph about response times' },
+  ];
+  const out = Q.dropNoOps(recs, { page: { h1: 'About Ottmar Francisca ContentScale Founder' } });
+  assert.strictEqual(out.length, 1);
+});
+test('collapses conflicting meta-description recs to highest priority', () => {
+  const recs = [
+    { priority: 'HIGH', title: 'Update Meta Description', action: 'REPLACE meta description: v1' },
+    { priority: 'MEDIUM', title: 'Freshness', action: 'REPLACE meta description: v2' },
+    { priority: 'HIGH', title: 'Bing indexing', action: 'submit to IndexNow' },
+  ];
+  const { recs: out, collapsed } = Q.collapseByTarget(recs);
+  assert.strictEqual(out.filter((r) => /meta description/i.test(r.action)).length, 1);
+  assert.strictEqual(collapsed.length, 1);
+});
+
+console.log('postProcessBrief — the real "about" brief scenario');
+test('rejects junk keyword, strips successor claim, collapses duplicate meta, drops no-op H1', () => {
+  const ctx = {
+    gsc: { clicks: 2, impressions: 73, position: 7.1 },
+    page: { url: 'https://contentscale.site/about/', keyword: 'about', html: '',
+      title: 'About Ottmar Francisca', h1: 'About Ottmar Francisca ContentScale Founder' },
+    site: { sitemap: [{ url: 'https://contentscale.site/about/' }] },
+    brand: {},
+  };
+  const raw = { recommendations: [
+    { engine: 'Google', priority: 'HIGH', title: 'Update Meta Title and Description', action: 'REPLACE meta description: Discover Ottmar Francisca, founder of ContentScale.' },
+    { engine: 'Google', priority: 'MEDIUM', title: 'Improve Content Freshness', action: 'REPLACE meta description: Ottmar Francisca, founder. Updated June 2026.' },
+    { engine: 'Google', priority: 'HIGH', title: 'Address Content Depth', action: 'ADD a paragraph: Ottmar is the founder of ContentScale. ContentScale is the independent successor to BrandWell (formerly Content at Scale).' },
+    { engine: 'Google', priority: 'HIGH', title: 'Strengthen H1', action: 'REPLACE your existing H1: About Ottmar Francisca ContentScale Founder' },
+  ] };
+  const { brief, report } = Q.postProcessBrief(raw, ctx);
+  assert.strictEqual(brief.recommendations[0].title, 'Target a real keyword'); // junk keyword caught
+  assert.strictEqual(report.keywordValidity.valid, false);
+  assert.ok(!JSON.stringify(brief).toLowerCase().includes('successor')); // fabricated lineage removed
+  assert.ok(report.riskyClaimsRemoved.length >= 1);
+  assert.ok(report.droppedNoOps.length >= 1); // same-H1 replacement dropped
+  assert.strictEqual(brief.recommendations.filter((r) => /meta description/i.test(r.action || '')).length, 1); // collapsed
+  assert.strictEqual(report.dataSufficiency.sufficient, false); // 73 impressions
+});
+
+console.log('postProcessBrief — injectGlobal flag (cannibalization once)');
+test('injectGlobal:false skips global recs but still cleans + still reports', () => {
+  const ctx = {
+    gsc: { clicks: 8, impressions: 8678, position: 5.7 },
+    page: { url: 'https://prt.com/', keyword: 'emergency roof repair nj', html: '' },
+    site: { gscQueryPages: [
+      { query: 'emergency roof repair nj', url: 'https://prt.com/', impressions: 8000 },
+      { query: 'emergency roof repair nj', url: 'https://prt.com/24-hour-emergency-roof-repair-nj/', impressions: 900 },
+    ] },
+    brand: {},
+  };
+  var mk = function(){ return [
+    { engine: 'Google', priority: 'HIGH', title: 'Add FAQ', action: 'Add an FAQ section with three questions about emergency roofing.', impact: 'aio' },
+    { engine: 'Perplexity', priority: 'HIGH', title: 'E-E-A-T', action: 'We are the independent successor to BrandWell.', impact: 'eeat' },
+  ]; };
+  var withInj = Q.postProcessBrief({ recommendations: mk() }, ctx);                       // citation brief
+  var noInj   = Q.postProcessBrief({ recommendations: mk() }, ctx, { injectGlobal: false }); // gsc brief
+  assert.ok(withInj.brief.recommendations.some(r => /cannibalization/i.test(r.title)));   // appears in citation
+  assert.ok(!noInj.brief.recommendations.some(r => /cannibalization/i.test(r.title)));    // NOT duplicated in gsc
+  assert.ok(noInj.brief.recommendations.some(r => r.title === 'Add FAQ'));                 // real recs still kept
+  assert.ok(!JSON.stringify(noInj.brief).toLowerCase().includes('successor'));            // fabrication still stripped
+  assert.strictEqual(noInj.report.cannibalization.cannibalized, true);                     // report still computed
+});
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

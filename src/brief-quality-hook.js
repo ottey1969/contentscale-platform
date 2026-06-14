@@ -76,8 +76,8 @@ function buildCtx({ snapshot = {}, page = {}, sitemap, gscQueryPages }) {
 
 function cleanTrackerBriefs({ snapshot, page, recommendations = [], gscBrief = [], sitemap, gscQueryPages }) {
   const ctx = buildCtx({ snapshot, page, sitemap, gscQueryPages });
-  const rec = postProcessBrief({ recommendations: (recommendations || []).map(toQ) }, ctx);
-  const gsc = postProcessBrief({ recommendations: (gscBrief || []).map(toQ) }, ctx);
+  const rec = postProcessBrief({ recommendations: (recommendations || []).map(toQ) }, ctx, { injectGlobal: true });
+  const gsc = postProcessBrief({ recommendations: (gscBrief || []).map(toQ) }, ctx, { injectGlobal: false });
   return {
     recommendations: rec.brief.recommendations.map(fromQ),
     gscBrief: gsc.brief.recommendations.map(fromQ),

@@ -233,16 +233,105 @@ function dedupe(recs = []) {
 }
 
 /* ------------------------------------------------------------------ *
+ * 9. KEYWORD VALIDITY  (reject navigational / stopword-only queries)  *
+ * ------------------------------------------------------------------ */
+const NON_TARGET = new Set([
+  'about', 'about us', 'home', 'homepage', 'contact', 'contact us', 'login', 'log in',
+  'sign in', 'privacy', 'privacy policy', 'terms', 'terms and conditions', 'sitemap',
+  'faq', 'faqs', 'blog', 'services', 'menu', 'search', 'disclaimer', 'index',
+]);
+function isValidKeyword(keyword = '') {
+  const k = String(keyword).toLowerCase().trim();
+  if (!k) return { valid: false, reason: 'empty keyword' };
+  if (NON_TARGET.has(k)) return { valid: false, reason: `"${keyword}" is a navigational/structural label, not a search target` };
+  if (k.length <= 2) return { valid: false, reason: 'keyword too short to be meaningful' };
+  if (coreTokens(k).length === 0) return { valid: false, reason: `"${keyword}" is only stopwords — no real search intent` };
+  return { valid: true, reason: '' };
+}
+
+/* ------------------------------------------------------------------ *
+ * 10. DATA SUFFICIENCY  (don't draw conclusions from noise)          *
+ * ------------------------------------------------------------------ */
+function assessDataSufficiency({ impressions = 0 } = {}, minImpressions = 300) {
+  if (impressions < minImpressions) {
+    return { sufficient: false,
+      note: `Only ${impressions} impressions — too little data for CTR/ranking conclusions ` +
+            `(need ~${minImpressions}+). Mark findings low-confidence; do NOT assert a title/meta "mismatch".` };
+  }
+  return { sufficient: true, note: '' };
+}
+
+/* ------------------------------------------------------------------ *
+ * 11. FABRICATED RELATIONSHIP / CLAIM GUARD  (beyond placeholders)    *
+ * ------------------------------------------------------------------ */
+// Lineage/association claims that must be backed by verified facts (brand.allowedClaims) or removed.
+const RISKY_CLAIM = /\b(successor to|succeeded|replaced (?:them|by)|\bthe\b[^.]{0,30}\bsuccessor\b|acquired by|acquired|merged with|merger with|official partner|in partnership with|powered by|owned by|subsidiary of|affiliated with|endorsed by|certified by|authorized (?:dealer|reseller))\b/i;
+function scanForRiskyClaims(text = '', brand = {}) {
+  const allowed = (brand.allowedClaims || []).map((s) => String(s).toLowerCase());
+  const flagged = [];
+  const kept = String(text).split(/(?<=[.!?])\s+/).filter((sent) => {
+    const m = sent.match(RISKY_CLAIM);
+    if (m && !allowed.some((a) => sent.toLowerCase().includes(a))) {
+      flagged.push({ phrase: m[0].trim(), sentence: sent.trim() });
+      return false; // remove the unverified lineage/association claim
+    }
+    return true;
+  });
+  return { text: kept.join(' ').replace(/\s{2,}/g, ' ').trim(), flagged };
+}
+
+/* ------------------------------------------------------------------ *
+ * 12. NO-OP RECS + ONE-PER-TARGET  (no empty / duplicate-target recs) *
+ * ------------------------------------------------------------------ */
+function dropNoOps(recs = [], { page = {} } = {}) {
+  const norm = (s) => String(s || '').replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim().toLowerCase();
+  const currents = [norm(page.title), norm(page.h1), norm(page.metaDescription)].filter(Boolean);
+  return recs.filter((r) => {
+    const action = String(r.action || '').trim();
+    if (!action) { r._dropped = 'empty action'; return false; }
+    const proposed = norm(action.includes(':') ? action.slice(action.indexOf(':') + 1) : action);
+    if (proposed && currents.includes(proposed)) { r._dropped = 'proposed value equals current (no-op)'; return false; }
+    return true;
+  });
+}
+// Collapse multiple recs that change the SAME on-page target (e.g. two conflicting
+// meta-description rewrites) to one — keep highest priority, then first seen.
+const TARGET_PATTERNS = [
+  { target: 'meta_description', re: /meta description/i },
+  { target: 'seo_title', re: /seo title|title tag|<title>/i },
+  { target: 'h1', re: /\bh1\b/i },
+];
+const PRIO = { HIGH: 3, MEDIUM: 2, LOW: 1 };
+function collapseByTarget(recs = []) {
+  const bestByTarget = {}; const passthrough = []; const collapsed = [];
+  for (const r of recs) {
+    const blob = `${r.title || ''} ${r.action || ''}`;
+    const hit = TARGET_PATTERNS.find((t) => t.re.test(blob));
+    if (!hit) { passthrough.push(r); continue; }
+    const cur = bestByTarget[hit.target];
+    if (!cur) { bestByTarget[hit.target] = r; continue; }
+    const keep = (PRIO[r.priority] || 0) > (PRIO[cur.priority] || 0) ? r : cur;
+    collapsed.push({ target: hit.target, dropped: (keep === r ? cur : r).title || '' });
+    bestByTarget[hit.target] = keep;
+  }
+  return { recs: [...passthrough, ...Object.values(bestByTarget)], collapsed };
+}
+
+/* ------------------------------------------------------------------ *
  * 7. FACT SHEET FOR GEMINI  (the only numbers it may use)            *
  * ------------------------------------------------------------------ */
 function buildFactSheet({ gsc, page, site, brand }) {
   const signals = computeGscSignals(gsc || {});
   const cannib = detectCannibalization({ keyword: page.keyword, page, site });
+  const kw = isValidKeyword(page.keyword);
+  const data = assessDataSufficiency(gsc || {});
   const ctr = gsc && gsc.impressions ? (gsc.clicks / gsc.impressions) : 0;
 
   const contextBlock = [
     `URL: ${page.url}`,
     `Target keyword: ${page.keyword}`,
+    `Keyword validity: ${kw.valid ? 'valid' : 'INVALID — ' + kw.reason}`,
+    `Data sufficiency: ${data.sufficient ? 'sufficient' : data.note}`,
     `GSC: clicks=${gsc.clicks}, impressions=${gsc.impressions}, position=${gsc.position}, ctr=${(ctr * 100).toFixed(2)}%`,
     `Computed signals: ${JSON.stringify(signals)}`,
     cannib.cannibalized ? `Cannibalization: ${cannib.note} Pages: ${cannib.pages.join(', ')}` : `Cannibalization: none detected`,
@@ -251,34 +340,44 @@ function buildFactSheet({ gsc, page, site, brand }) {
 
   const guardrails =
     'RULES: Use ONLY the numbers and facts in the context block. Do NOT invent statistics, ' +
-    'positions, CTRs, dates, or credentials. NEVER output bracketed placeholders like [X] or ' +
-    '[mention ...]; if a fact is not in "Verified brand facts", omit that claim entirely. ' +
-    'Only recommend adding content that is not already described as present. Return valid JSON only.';
+    'positions, CTRs, dates, or credentials. NEVER output bracketed placeholders like [X] or [mention ...]; ' +
+    'if a fact is not in "Verified brand facts", omit that claim entirely. ' +
+    'NEVER state a relationship, lineage, or association with another company/brand ' +
+    '(e.g. "successor to", "replaced", "acquired", "partner of", "powered by") unless it appears verbatim ' +
+    'in "Verified brand facts.allowedClaims" — "alternative to X" is allowed, "successor to X" is NOT. ' +
+    'If "Keyword validity" is INVALID, do NOT optimize for it — instead recommend choosing a real target keyword. ' +
+    'If "Data sufficiency" is insufficient, do NOT assert a title/meta "mismatch"; label findings low-confidence. ' +
+    'Only recommend adding content not already described as present. Return valid JSON only.';
 
-  return { signals, cannibalization: cannib, contextBlock, guardrails };
+  return { signals, cannibalization: cannib, keywordValidity: kw, dataSufficiency: data, contextBlock, guardrails };
 }
 
 /* ------------------------------------------------------------------ *
  * 8. POST-PROCESS THE LLM BRIEF  (client-safe output + change report) *
  * ------------------------------------------------------------------ */
-function postProcessBrief(brief, ctx) {
-  const report = { placeholdersRemoved: [], placeholdersFilled: [], linkIssues: [], suppressed: [], cannibalization: null };
+function postProcessBrief(brief, ctx, opts = {}) {
+  const report = {
+    placeholdersRemoved: [], placeholdersFilled: [], linkIssues: [], suppressed: [],
+    riskyClaimsRemoved: [], droppedNoOps: [], collapsed: [], cannibalization: null,
+    keywordValidity: null, dataSufficiency: null,
+  };
   const brand = ctx.brand || {};
 
   // brief.recommendations expected shape: [{ engine, priority, title, action, impact }]
   let recs = Array.isArray(brief.recommendations) ? brief.recommendations.slice() : [];
 
-  // a) strip/fill placeholders in every text field
+  // a) per-field cleaning: fill/strip placeholders, then strip fabricated relationship claims, then validate links
   recs = recs.map((r) => {
     for (const f of ['title', 'action', 'impact']) {
-      if (typeof r[f] === 'string') {
-        const res = fillOrStripPlaceholders(r[f], brand);
-        r[f] = res.text;
-        report.placeholdersRemoved.push(...res.removedSentences);
-        report.placeholdersFilled.push(...res.filled);
-      }
+      if (typeof r[f] !== 'string') continue;
+      const ph = fillOrStripPlaceholders(r[f], brand);
+      r[f] = ph.text;
+      report.placeholdersRemoved.push(...ph.removedSentences);
+      report.placeholdersFilled.push(...ph.filled);
+      const rc = scanForRiskyClaims(r[f], brand);
+      r[f] = rc.text;
+      report.riskyClaimsRemoved.push(...rc.flagged);
     }
-    // b) validate internal links inside the action
     if (typeof r.action === 'string') {
       const lv = validateInternalLinks(r.action, ctx);
       r.action = lv.text; report.linkIssues.push(...lv.issues);
@@ -286,19 +385,38 @@ function postProcessBrief(brief, ctx) {
     return r;
   });
 
-  // c) suppress recs that the page already satisfies, then dedupe
+  // b) suppress recs the page already satisfies; drop no-ops; dedupe; collapse same-target conflicts
+  const preSuppress = recs;
   recs = suppressRedundant(recs, ctx);
-  report.suppressed = recs.filter((r) => r._suppressed).map((r) => ({ title: r.title, reason: r._suppressed }));
+  report.suppressed = preSuppress.filter((r) => r._suppressed).map((r) => ({ title: r.title, reason: r._suppressed }));
+  const preNoop = recs;
+  recs = dropNoOps(recs, ctx);
+  report.droppedNoOps = preNoop.filter((r) => r._dropped).map((r) => ({ title: r.title, reason: r._dropped }));
   recs = dedupe(recs);
+  const col = collapseByTarget(recs);
+  recs = col.recs; report.collapsed = col.collapsed;
 
-  // d) inject the cannibalization finding the single-URL view would miss
+  // c) keyword validity — if the target is a non-keyword, replace the plan with the real fix
+  const kw = isValidKeyword(ctx.page.keyword);
+  report.keywordValidity = kw;
+  if (!kw.valid && opts.injectGlobal !== false) {
+    recs.unshift({
+      engine: 'Google', priority: 'HIGH', title: 'Target a real keyword',
+      action: `${kw.reason}. Re-run the scan against an intent-bearing query (e.g. a brand, service, or topic term) instead of optimizing this page for "${ctx.page.keyword}".`,
+      impact: 'Optimizing for a navigational/stopword query yields no qualified traffic; a real target keyword does.',
+    });
+  }
+
+  // d) data sufficiency note
+  const data = assessDataSufficiency(ctx.gsc || {});
+  report.dataSufficiency = data;
+
+  // e) inject the cannibalization finding the single-URL view would miss
   const cannib = detectCannibalization({ keyword: ctx.page.keyword, page: ctx.page, site: ctx.site });
   report.cannibalization = cannib;
-  if (cannib.cannibalized) {
+  if (cannib.cannibalized && opts.injectGlobal !== false) {
     recs.unshift({
-      engine: 'Google',
-      priority: 'HIGH',
-      title: 'Resolve keyword cannibalization',
+      engine: 'Google', priority: 'HIGH', title: 'Resolve keyword cannibalization',
       action: cannib.note + ' Pages: ' + cannib.pages.join(', '),
       impact: 'Consolidating one target per query typically lifts ranking + CTR more than any title tweak.',
     });
@@ -311,9 +429,14 @@ module.exports = {
   expectedCtr,
   computeGscSignals,
   detectCannibalization,
+  isValidKeyword,
+  assessDataSufficiency,
+  scanForRiskyClaims,
   fillOrStripPlaceholders,
   validateInternalLinks,
   suppressRedundant,
+  dropNoOps,
+  collapseByTarget,
   dedupe,
   buildFactSheet,
   postProcessBrief,
