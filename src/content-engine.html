@@ -3845,7 +3845,7 @@ async function loadTrackerPages() {
   window._loadTrackerStarted = Date.now();
   var _tok3 = '';
   try { _tok3 = (document.getElementById('engineToken')||{}).value || localStorage.getItem('nexus_engine_token') || ''; } catch(e) {}
-  if (!_tok3) { renderTrackerList(); return; }
+  if (!_tok3) { window._loadTrackerRunning = false; window._loadTrackerStarted = 0; renderTrackerList(); return; }
 
   // Show skeleton only when a profile is selected
   var skelEl = document.getElementById('trPagesList');
@@ -3881,6 +3881,7 @@ async function loadTrackerPages() {
     renderTrackerKpis();
     renderTrackerList();
     if (_trPages && _trPages.length > 0 && (_context.profileId || (_profile && _profile.id))) updateWorkflowStep(2);
+    window._loadTrackerRunning = false; window._loadTrackerStarted = 0;
   } catch(e) {
     var el = document.getElementById('trPagesList');
     if (el) el.innerHTML = '<div style="padding:40px;text-align:center;color:#f87171;">Failed: ' + e.message + '</div>';
@@ -7209,6 +7210,14 @@ function openSerpSpy(pageId) {
   document.getElementById('serpSpyUrl').value = url;
   document.getElementById('serpSpyResult').innerHTML = '';
   document.getElementById('serpSpyStatus').textContent = '';
+  var _hs = document.getElementById('serpSpyHtmlStatus');
+  if (_hs) {
+    if (page && page.has_html_content) {
+      _hs.innerHTML = '✓ <span style="color:#34d399;font-weight:600;">HTML already added</span> for this page — the Spy will use it.';
+    } else {
+      _hs.innerHTML = 'No HTML saved yet. Add it once via the <strong style="color:#9ca3af;">📋 HTML</strong> button on the page — the Spy then uses the same HTML. Otherwise it fetches the URL.';
+    }
+  }
   modal.style.display = 'flex';
 }
 
@@ -8532,14 +8541,14 @@ function renderSerpSpyReport(s) {
       </div>
       <button id="serpSpyRunBtn" onclick="runSerpSpy()" style="padding:8px 18px;border-radius:7px;border:none;background:linear-gradient(135deg,#7c3aed,#0f766e);color:#fff;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap;">🔍 Run Spy</button>
     </div>
-    <!-- Live HTML paste (collapsible) -->
+    <!-- HTML now comes from the page's 📋 HTML button (single source — no second paste) -->
     <div style="padding:0 20px;border-bottom:1px solid rgba(255,255,255,.06);flex-shrink:0;">
       <div style="padding-bottom:10px;">
-        <div style="font-size:10px;font-weight:700;color:#a78bfa;margin-bottom:6px;letter-spacing:.04em;">📋 PASTE LIVE HTML <span style="font-weight:400;color:#6b7280;font-size:9px;">— more accurate than URL parsing</span></div>
-        <div style="font-size:9px;color:#6b7280;margin-bottom:6px;">In Chrome: go to your page → <strong style="color:#9ca3af;">Ctrl+U</strong> → Ctrl+A → Ctrl+C → paste below</div>
-        <textarea id="serpSpyHtml" rows="3" placeholder="Paste page HTML here (optional — leave empty to fetch by URL)..." style="width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(124,58,237,.3);border-radius:7px;padding:8px 10px;color:#e2e8f0;font-size:11px;font-family:'DM Mono',monospace;outline:none;box-sizing:border-box;resize:vertical;"></textarea>
-        <div style="font-size:9px;color:#34d399;margin-top:4px;">✓ When pasted — Spy uses this directly, bypasses parser. Leave empty to fetch by URL.</div>
+        <div style="font-size:10px;font-weight:700;color:#a78bfa;margin-bottom:6px;letter-spacing:.04em;">📋 PAGE HTML</div>
+        <div id="serpSpyHtmlStatus" style="font-size:10px;color:#6b7280;line-height:1.5;">Add HTML once via the <strong style="color:#9ca3af;">📋 HTML</strong> button on the page — the Spy uses that same HTML automatically. If none is saved, it fetches the URL.</div>
+        <textarea id="serpSpyHtml" style="display:none;"></textarea>
       </div>
+    </div>
     </div>
     <div style="padding:6px 20px;flex-shrink:0;font-size:10px;color:#34d399;min-height:18px;" id="serpSpyStatus"></div>
     <!-- Result scrollable -->

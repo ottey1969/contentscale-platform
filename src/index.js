@@ -34251,16 +34251,26 @@ app.post('/api/tracker/serp-spy', verifyEngineAccess, async (req, res) => {
   }
   if (!serpUrls.length) return res.status(502).json({success:false,error:'Could not fetch SERP results — check SERPAPI_KEY is set in Railway environment'});
   const top5 = serpUrls.slice(0,5);
-  // If user pasted live HTML, use it directly — more accurate than parser
+  // HTML source priority: pasted live_html → page's SAVED html_content (📋 HTML button) → live URL fetch.
+  let _spyHtml = (live_html && live_html.trim().length > 100) ? live_html : null;
+  if (!_spyHtml && page_id) {
+    try {
+      const _pr = await pool.query('SELECT html_content FROM tracker_pages WHERE id=$1', [page_id]);
+      if (_pr.rows.length && _pr.rows[0].html_content && _pr.rows[0].html_content.length > 100) {
+        _spyHtml = _pr.rows[0].html_content;
+        console.log('[serp-spy] Using SAVED html_content from page', page_id, '(' + _spyHtml.length + ' chars)');
+      }
+    } catch(e) { /* fall through to URL fetch */ }
+  }
   let clientScrape;
-  if (live_html && live_html.trim().length > 100) {
-    // Extract text from live HTML
-    const liveText = live_html.replace(/<script[^>]*>[\s\S]*?<\/script>/gi,'')
+  if (_spyHtml) {
+    // Extract text from the HTML
+    const liveText = _spyHtml.replace(/<script[^>]*>[\s\S]*?<\/script>/gi,'')
       .replace(/<style[^>]*>[\s\S]*?<\/style>/gi,'')
       .replace(/<[^>]+>/g,' ')
       .replace(/\s+/g,' ').trim().substring(0, 8000);
-    clientScrape = { text: liveText, status: 200, fullHtml: live_html };
-    console.log('[serp-spy] Using pasted live HTML for client page (' + live_html.length + ' chars)');
+    clientScrape = { text: liveText, status: 200, fullHtml: _spyHtml };
+    console.log('[serp-spy] Using saved/pasted HTML for client page (' + _spyHtml.length + ' chars)');
   } else {
     clientScrape = myUrl ? await scrapeBodyText(myUrl, 8000) : { text: '', status: 0, fullHtml: '' };
   }
