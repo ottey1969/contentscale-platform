@@ -3751,6 +3751,7 @@ app.patch('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
    // ── API Cost Tracking System (replaces credits) ─────────────
    await client.query(`ALTER TABLE engine_access_codes ADD COLUMN IF NOT EXISTS api_key_mode VARCHAR(20) DEFAULT NULL`).catch(()=>{});
    await client.query(`ALTER TABLE engine_access_codes ADD COLUMN IF NOT EXISTS monthly_cost_limit DECIMAL(10,2) DEFAULT 50.00`).catch(()=>{});
+   await client.query(`ALTER TABLE engine_access_codes ADD COLUMN IF NOT EXISTS notify_emails TEXT`).catch(()=>{});
    await client.query(`ALTER TABLE engine_access_codes ADD COLUMN IF NOT EXISTS monthly_cost_used DECIMAL(10,2) DEFAULT 0.00`).catch(()=>{});
    await client.query(`ALTER TABLE engine_access_codes ADD COLUMN IF NOT EXISTS cost_reset_at TIMESTAMPTZ DEFAULT NULL`).catch(()=>{});
    await client.query(`CREATE TABLE IF NOT EXISTS api_cost_log (id SERIAL PRIMARY KEY, code_id INTEGER REFERENCES engine_access_codes(id) ON DELETE CASCADE, action VARCHAR(100) NOT NULL, model VARCHAR(100) NOT NULL, input_tokens INTEGER DEFAULT 0, output_tokens INTEGER DEFAULT 0, estimated_cost DECIMAL(10,6) NOT NULL DEFAULT 0, detail TEXT, created_at TIMESTAMPTZ DEFAULT NOW())`).catch(()=>{});
@@ -14278,8 +14279,8 @@ function safeProfileLocations(profile) {
 // Flat EUR estimate per action — used so the Platform budget reliably accumulates
 // and STOPS at its limit, even for actions that don't call trackApiCost.
 const _ACTION_EUR_ESTIMATE = {
-  'research': 0.02, 'brief': 0.02, 'write': 0.08, 'analyse-rewrite': 0.02,
-  'execute-rewrite': 0.08, 'targeted-fix': 0.03, 'bulk-create': 0.12, 'stats-study': 0.02
+  'research': 0.02, 'brief': 0.02, 'write': 0.08, 'analyse-rewrite': 0.04,
+  'execute-rewrite': 0.10, 'targeted-fix': 0.04, 'bulk-create': 0.15, 'stats-study': 0.02
 };
 // These already report precise token cost via trackApiCost — don't double-charge them here.
 const _PRECISELY_TRACKED = new Set(['research', 'write']);
@@ -14359,6 +14360,48 @@ async function trackApiCost(codeId, action, model, inputTokens, outputTokens, de
     console.error('[trackApiCost] failed:', e.message);
     return { ok: false, cost: 0 };
   }
+}
+
+// Flat EUR cost for external SEARCH APIs (Serper / Bing / Brave / Perplexity) — these are
+// the "hidden" costs not captured by LLM token tracking. Charged to the engine code's budget.
+const SEARCH_EUR = { serper: 0.003, bing: 0.005, brave: 0.003, perplexity: 0.004, tracker_scan: 0.012 };
+async function chargeFlatCost(codeId, action, eur, detail) {
+  if (!codeId || !pool || !(eur > 0)) return;
+  try {
+    await pool.query(`UPDATE engine_access_codes SET monthly_cost_used = COALESCE(monthly_cost_used,0) + $1 WHERE id=$2`, [eur, codeId]);
+    await pool.query(`INSERT INTO api_cost_log (code_id, action, model, input_tokens, output_tokens, estimated_cost, detail) VALUES ($1,$2,'search',0,0,$3,$4)`, [codeId, action, eur, detail || '']);
+  } catch (e) { console.warn('[chargeFlatCost]', e.message); }
+}
+
+// Notify the client by email when work is completed in the engine (keeps them informed).
+// Emails are set per engine code in admin → Give Access (comma-separated). No-op if none set.
+async function notifyEngineClient(codeId, actionLabel, detail) {
+  if (!codeId || !pool) return;
+  try {
+    const r = await pool.query('SELECT client_name, notify_emails FROM engine_access_codes WHERE id=$1', [codeId]);
+    const row = r.rows[0];
+    if (!row || !row.notify_emails) return;
+    const emails = String(row.notify_emails).split(/[,;\s]+/).map(e => e.trim()).filter(e => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e));
+    if (!emails.length) return;
+    const brevoKey = process.env.BREVO_API_KEY;
+    if (!brevoKey) { console.warn('[notifyEngineClient] BREVO_API_KEY not set'); return; }
+    await fetch('https://api.brevo.com/v3/smtp/email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'api-key': brevoKey },
+      body: JSON.stringify({
+        to: emails.map(email => ({ email })),
+        sender: { email: process.env.FROM_EMAIL || 'noreply@contentscale.site', name: process.env.SENDER_NAME || 'ContentScale' },
+        subject: 'ContentScale update: ' + actionLabel,
+        htmlContent: `<div style="font-family:system-ui,Arial,sans-serif;max-width:520px;margin:0 auto;padding:24px">
+          <h2 style="color:#0f172a;margin:0 0 8px">${actionLabel}</h2>
+          <p style="color:#475569;margin:0 0 12px">We just completed work on your content${row.client_name ? (' (' + row.client_name + ')') : ''}:</p>
+          <p style="color:#0f172a;font-weight:600;margin:0 0 16px">${detail || ''}</p>
+          <p style="color:#94a3b8;font-size:13px;margin:16px 0 0">You'll keep getting these updates as work progresses. — ContentScale</p>
+        </div>`
+      })
+    });
+    console.log('[notifyEngineClient] sent "' + actionLabel + '" to', emails.length, 'recipient(s)');
+  } catch (e) { console.warn('[notifyEngineClient]', e.message); }
 }
 
 app.get('/api/engine/billing', verifyEngineAccess, async (req, res) => {
@@ -14737,7 +14780,7 @@ app.post('/api/admin/engine-codes', verifyAdmin, async (req, res) => {
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 app.patch('/api/admin/engine-codes/:id', verifyAdmin, async (req, res) => {
-  const { is_active, gemini_key, claude_key, expires_at, notes, use_platform_keys, platform_credits, reset_used, deal_type, deal_label, serpapi_key, perplexity_key, you_api_key, api_key_mode, monthly_cost_limit } = req.body;
+  const { is_active, gemini_key, claude_key, expires_at, notes, use_platform_keys, platform_credits, reset_used, deal_type, deal_label, serpapi_key, perplexity_key, you_api_key, api_key_mode, monthly_cost_limit, notify_emails } = req.body;
   try {
     const fields=[]; const vals=[]; let i=1;
     if (is_active!==undefined){fields.push(`is_active=$${i++}`);vals.push(is_active);}
@@ -14755,6 +14798,7 @@ app.patch('/api/admin/engine-codes/:id', verifyAdmin, async (req, res) => {
     if (you_api_key!==undefined){fields.push(`you_api_key=$${i++}`);vals.push(you_api_key||null);}
     if (api_key_mode!==undefined){fields.push(`api_key_mode=$${i++}`);vals.push(api_key_mode);}
     if (monthly_cost_limit!==undefined){fields.push(`monthly_cost_limit=$${i++}`);vals.push(monthly_cost_limit);}
+    if (notify_emails!==undefined){fields.push(`notify_emails=$${i++}`);vals.push(notify_emails||null);}
     if (!fields.length) return res.status(400).json({ success: false, error: 'Nothing to update' });
     vals.push(req.params.id);
     await pool.query(`UPDATE engine_access_codes SET ${fields.join(',')} WHERE id=$${i}`, vals);
@@ -16219,6 +16263,7 @@ OUTPUT ONLY COMPLETE HTML.`;
     }
 
     console.log(`[writeJob ${writeJobId}] completed — ${wordCount} words, article ${articleR.rows[0].id}`);
+    if (codeIdForCost) notifyEngineClient(codeIdForCost, 'New article written', (brief.title || job.seed_keyword || 'Your article') + ' — ' + wordCount + ' words').catch(()=>{});
   } catch(error) {
     console.error(`[writeJob ${writeJobId}] failed:`, error.message, error.stack);
     await pool.query(
@@ -31764,12 +31809,27 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     '<div style="display:flex;flex-direction:column;gap:8px;">' +
                     '<button onclick="gaCopyLoginUrl(&apos;'+c.code+'&apos;)" style="background:#0f766e;color:#fff;border:none;border-radius:6px;padding:9px 16px;cursor:pointer;"> Copy Login URL</button>' +
                     '<button onclick="gaRevoke('+c.id+')" style="background:#1c0a0a;color:#f87171;border:1px solid #7f1d1d;border-radius:6px;padding:9px 16px;cursor:pointer;">x Revoke Access</button>' +
-                    '</div></div></div>';}).join('');}catch(e){el.innerHTML='<div style="color:#f87171;">Error: '+e.message+'</div>';}
+                    '</div></div>' +
+                    '<div style="margin-top:12px;padding-top:12px;border-top:1px solid #1e293b;">' +
+                    '<label style="font-size:10px;color:#64748b;display:block;margin-bottom:4px;">📧 Notify e-mails on completed actions (comma-separated)</label>' +
+                    '<div style="display:flex;gap:6px;flex-wrap:wrap;">' +
+                    '<input id="ganotify_'+c.id+'" type="text" value="'+(c.notify_emails?String(c.notify_emails).replace(/"/g,'&quot;'):'')+'" placeholder="client@example.com, manager@example.com" style="flex:1;min-width:200px;font-size:12px;padding:6px 10px;border-radius:6px;background:#0d1117;border:1px solid #334155;color:#e5e7eb;">' +
+                    '<button onclick="gaSetNotify('+c.id+')" style="font-size:11px;padding:6px 14px;background:#0891b2;color:#fff;border:none;border-radius:6px;cursor:pointer;">Save e-mails</button>' +
+                    '</div></div>' +
+                    '</div>';}).join('');}catch(e){el.innerHTML='<div style="color:#f87171;">Error: '+e.message+'</div>';}
         }
 
         function gaCopyLoginUrl(code){const url=window.location.origin+'/engine-login?code='+code;navigator.clipboard.writeText(url).then(()=>{const t=document.createElement('div');t.textContent='OK Login URL copied';t.style.cssText='position:fixed;bottom:24px;right:24px;background:#0f766e;color:#fff;padding:12px 20px;border-radius:10px;z-index:9999;';document.body.appendChild(t);setTimeout(()=>t.remove(),3000);});}
 
         async function gaRevoke(id){if(!confirm('Revoke this access code?'))return;try{await apiCall('/api/admin/engine-codes/'+id,'PATCH',{is_active:false});loadGiveAccess();loadEngineCodes();}catch(e){alert('Error: '+e.message);}}
+
+        async function gaSetNotify(id){
+            const v=document.getElementById('ganotify_'+id).value.trim();
+            try{
+                await apiCall('/api/admin/engine-codes/'+id,'PATCH',{notify_emails:v||null});
+                const t=document.createElement('div');t.textContent='OK notify e-mails saved';t.style.cssText='position:fixed;bottom:24px;right:24px;background:#0f766e;color:#fff;padding:12px 20px;border-radius:10px;z-index:9999;';document.body.appendChild(t);setTimeout(()=>t.remove(),2500);
+            }catch(e){alert('Error: '+e.message);}
+        }
 
         async function gaCreateCode(){
             const name=document.getElementById('gaClientName').value.trim();if(!name){alert('Enter a client name');return;}
@@ -35286,6 +35346,7 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
             _competitors: snapshot._competitors
           }, CACHE_TTL.serper);
           console.log(`[tracker] Serper: position=${snapshot.google_position}, AIO=${snapshot.ai_google_overview_found}, cited=${snapshot.ai_google_overview_cited}`);
+          if (page.engine_code_id) chargeFlatCost(page.engine_code_id, 'tracker-scan', SEARCH_EUR.tracker_scan, 'Tracker scan search APIs: ' + (keyword || domain));
         } else {
           const err = await sResp.text().catch(()=>'');
           const quotaMsg = sResp.status === 429 ? 'Serper quota exhausted — upgrade at serper.dev or wait until monthly reset' : `Serper ${sResp.status}: ${err.substring(0,120)}`;
