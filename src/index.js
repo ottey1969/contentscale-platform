@@ -32592,11 +32592,11 @@ app.post('/api/tracker/pages/:id/refresh', verifyEngineAccess, async (req, res) 
     const eu = req.engineUser;
     const pageId = parseInt(req.params.id);
     if (!eu.isAdmin) {
-      const own = await pool.query('SELECT id FROM tracker_pages WHERE id=$1 AND engine_code_id=$2', [pageId, eu.codeId]);
+      const own = await pool.query('SELECT id FROM tracker_pages WHERE id=$1 AND (engine_code_id=$2 OR profile_id IN (SELECT id FROM content_profiles WHERE owner_code_id=$2))', [pageId, eu.codeId]);
       if (!own.rows.length) return res.status(403).json({ success: false, error: 'Not found or access denied' });
     }
 
-    const pageR = await pool.query('SELECT * FROM tracker_pages WHERE id=$1 AND engine_code_id=$2', [pageId, eu.codeId]);
+    const pageR = await pool.query('SELECT * FROM tracker_pages WHERE id=$1 AND (engine_code_id=$2 OR profile_id IN (SELECT id FROM content_profiles WHERE owner_code_id=$2))', [pageId, eu.codeId]);
     if (!pageR.rows.length) return res.status(404).json({ success: false, error: 'Page not found or access denied' });
     const page = pageR.rows[0];
 
@@ -32706,7 +32706,7 @@ app.post('/api/tracker/pages/:id/citation-brief', verifyEngineAccess, async (req
   try {
     let r;
     if (eu.isAdmin) { r = await pool.query('SELECT * FROM tracker_pages WHERE id=$1', [pageId]); }
-    else { r = await pool.query('SELECT * FROM tracker_pages WHERE id=$1 AND engine_code_id=$2', [pageId, eu.codeId]); }
+    else { r = await pool.query('SELECT * FROM tracker_pages WHERE id=$1 AND (engine_code_id=$2 OR profile_id IN (SELECT id FROM content_profiles WHERE owner_code_id=$2))', [pageId, eu.codeId]); }
     if (!r.rows.length) return res.status(404).json({ success: false, error: 'Page not found' });
     const page = r.rows[0];
 
@@ -33386,7 +33386,7 @@ app.patch('/api/tracker/pages/:id', verifyEngineAccess, async (req, res) => {
     // Ownership check for non-admins
     const eu = req.engineUser;
     if (!eu.isAdmin) {
-      const own = await pool.query('SELECT id FROM tracker_pages WHERE id=$1 AND engine_code_id=$2', [req.params.id, eu.codeId]);
+      const own = await pool.query('SELECT id FROM tracker_pages WHERE id=$1 AND (engine_code_id=$2 OR profile_id IN (SELECT id FROM content_profiles WHERE owner_code_id=$2))', [req.params.id, eu.codeId]);
       if (!own.rows.length) return res.status(403).json({ success: false, error: 'Not found or access denied' });
     }
     const fields=[]; const vals=[]; let i=1;
@@ -33425,7 +33425,7 @@ app.put('/api/tracker/pages/:id/gsc', verifyEngineAccess, asyncHandler(async (re
   const pageId = parseInt(req.params.id);
   if (!pageId || isNaN(pageId)) return res.status(400).json({ success: false, error: 'Invalid page ID' });
   if (!eu.isAdmin) {
-    const own = await pool.query('SELECT id FROM tracker_pages WHERE id=$1 AND engine_code_id=$2', [pageId, eu.codeId]);
+    const own = await pool.query('SELECT id FROM tracker_pages WHERE id=$1 AND (engine_code_id=$2 OR profile_id IN (SELECT id FROM content_profiles WHERE owner_code_id=$2))', [pageId, eu.codeId]);
     if (!own.rows.length) return res.status(403).json({ success: false, error: 'Not found or access denied' });
   }
 
@@ -33465,9 +33465,9 @@ app.delete('/api/tracker/pages/:id', verifyEngineAccess, async (req, res) => {
     if (eu.isAdmin) {
       await pool.query('DELETE FROM tracker_pages WHERE id=$1', [req.params.id]);
     } else {
-      const own = await pool.query('SELECT id FROM tracker_pages WHERE id=$1 AND engine_code_id=$2', [req.params.id, eu.codeId]);
+      const own = await pool.query('SELECT id FROM tracker_pages WHERE id=$1 AND (engine_code_id=$2 OR profile_id IN (SELECT id FROM content_profiles WHERE owner_code_id=$2))', [req.params.id, eu.codeId]);
       if (!own.rows.length) return res.status(403).json({ success: false, error: 'Not found or access denied' });
-      await pool.query('DELETE FROM tracker_pages WHERE id=$1 AND engine_code_id=$2', [req.params.id, eu.codeId]);
+      await pool.query('DELETE FROM tracker_pages WHERE id=$1 AND (engine_code_id=$2 OR profile_id IN (SELECT id FROM content_profiles WHERE owner_code_id=$2))', [req.params.id, eu.codeId]);
     }
     res.json({ success: true });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
@@ -33503,7 +33503,7 @@ app.get('/api/tracker/pages/:id/snapshots', verifyEngineAccess, async (req, res)
   try {
     const eu = req.engineUser;
     if (!eu.isAdmin) {
-      const own = await pool.query('SELECT id FROM tracker_pages WHERE id=$1 AND engine_code_id=$2', [req.params.id, eu.codeId]);
+      const own = await pool.query('SELECT id FROM tracker_pages WHERE id=$1 AND (engine_code_id=$2 OR profile_id IN (SELECT id FROM content_profiles WHERE owner_code_id=$2))', [req.params.id, eu.codeId]);
       if (!own.rows.length) return res.status(403).json({ success: false, error: 'Not found or access denied' });
     }
     const r = await pool.query(
@@ -33520,7 +33520,7 @@ app.post('/api/tracker/pages/:id/snapshot', verifyEngineAccess, async (req, res)
     const eu = req.engineUser;
     const pageId = parseInt(req.params.id);
     if (!eu.isAdmin) {
-      const own = await pool.query('SELECT id FROM tracker_pages WHERE id=$1 AND engine_code_id=$2', [pageId, eu.codeId]);
+      const own = await pool.query('SELECT id FROM tracker_pages WHERE id=$1 AND (engine_code_id=$2 OR profile_id IN (SELECT id FROM content_profiles WHERE owner_code_id=$2))', [pageId, eu.codeId]);
       if (!own.rows.length) return res.status(403).json({ success: false, error: 'Not found or access denied' });
     }
     const { score, metrics, graaf_score, craft_score, technical_score } = req.body;
@@ -33538,7 +33538,7 @@ app.get('/api/tracker/pages/:id/changes', verifyEngineAccess, async (req, res) =
   try {
     const eu = req.engineUser;
     if (!eu.isAdmin) {
-      const own = await pool.query('SELECT id FROM tracker_pages WHERE id=$1 AND engine_code_id=$2', [req.params.id, eu.codeId]);
+      const own = await pool.query('SELECT id FROM tracker_pages WHERE id=$1 AND (engine_code_id=$2 OR profile_id IN (SELECT id FROM content_profiles WHERE owner_code_id=$2))', [req.params.id, eu.codeId]);
       if (!own.rows.length) return res.status(403).json({ success: false, error: 'Not found or access denied' });
     }
     const r = await pool.query(
@@ -33565,7 +33565,7 @@ app.post('/api/tracker/pages/:id/push-to-rewrite', verifyEngineAccess, async (re
     const eu = req.engineUser;
     const pageId = parseInt(req.params.id);
     if (!eu.isAdmin) {
-      const own = await pool.query('SELECT id FROM tracker_pages WHERE id=$1 AND engine_code_id=$2', [pageId, eu.codeId]);
+      const own = await pool.query('SELECT id FROM tracker_pages WHERE id=$1 AND (engine_code_id=$2 OR profile_id IN (SELECT id FROM content_profiles WHERE owner_code_id=$2))', [pageId, eu.codeId]);
       if (!own.rows.length) return res.status(403).json({ success: false, error: 'Not found or access denied' });
     }
 
@@ -33779,7 +33779,7 @@ app.patch('/api/tracker/pages/:id/html', verifyEngineAccess, async (req, res) =>
     const eu = req.engineUser;
     const pageId = parseInt(req.params.id);
     if (!eu.isAdmin) {
-      const own = await pool.query('SELECT id FROM tracker_pages WHERE id=$1 AND engine_code_id=$2', [pageId, eu.codeId]);
+      const own = await pool.query('SELECT id FROM tracker_pages WHERE id=$1 AND (engine_code_id=$2 OR profile_id IN (SELECT id FROM content_profiles WHERE owner_code_id=$2))', [pageId, eu.codeId]);
       if (!own.rows.length) return res.status(403).json({ success: false, error: 'Not found or access denied' });
     }
     const { html_content } = req.body;
@@ -33807,7 +33807,7 @@ app.post('/api/tracker/pages/:id/check', verifyEngineAccess, async (req, res) =>
     if (eu.isAdmin) {
       r = await pool.query('SELECT * FROM tracker_pages WHERE id=$1', [req.params.id]);
     } else {
-      r = await pool.query('SELECT * FROM tracker_pages WHERE id=$1 AND engine_code_id=$2', [req.params.id, eu.codeId]);
+      r = await pool.query('SELECT * FROM tracker_pages WHERE id=$1 AND (engine_code_id=$2 OR profile_id IN (SELECT id FROM content_profiles WHERE owner_code_id=$2))', [req.params.id, eu.codeId]);
     }
     if(!r.rows.length) return res.status(404).json({ success: false, error: 'Page not found or access denied' });
         const page = r.rows[0];
