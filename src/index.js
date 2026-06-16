@@ -3513,6 +3513,17 @@ app.patch('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
    await client.query(`ALTER TABLE scan_log ADD COLUMN IF NOT EXISTS recommendations TEXT`).catch(() => {});
    await client.query(`ALTER TABLE scan_log ADD COLUMN IF NOT EXISTS source VARCHAR(50) DEFAULT 'single'`).catch(() => {});
    await client.query(`ALTER TABLE scan_log ADD COLUMN IF NOT EXISTS report_url TEXT`).catch(() => {});
+   // 6b. Scan gate — free-tier limit per IP (5 free scans, then email verify)
+   await client.query(`CREATE TABLE IF NOT EXISTS scan_gate (
+   ip TEXT PRIMARY KEY,
+   scan_count INTEGER NOT NULL DEFAULT 0,
+   email TEXT,
+   verified BOOLEAN NOT NULL DEFAULT FALSE,
+   code TEXT,
+   code_expires TIMESTAMPTZ,
+   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+   )`).catch(() => {});
    // 7. Email suppression list
    await client.query(`CREATE TABLE IF NOT EXISTS email_suppression (id SERIAL PRIMARY KEY, email VARCHAR(255) UNIQUE NOT NULL, unsubscribed_at TIMESTAMP DEFAULT NOW(), reason VARCHAR(100) DEFAULT 'user_request')`).catch(() => {});
    // 8. Warmup config
@@ -6091,9 +6102,114 @@ recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', descriptio
                res.json({ success: true });
                });
                // ============================================
+// ═══════════════════════════════════════════════════════════════════════════
+// SCAN GATE — free-tier limit (5 free scans per IP, then email verify via Brevo)
+// ═══════════════════════════════════════════════════════════════════════════
+const FREE_SCAN_LIMIT = 5;
+const GATE_CODE_TTL_MIN = 15;
+
+function getGateIp(req) {
+  const xff = String(req.headers['x-forwarded-for'] || '').split(',')[0].trim();
+  return xff || req.ip || (req.socket && req.socket.remoteAddress) || 'unknown';
+}
+
+async function sendGateCode(email, code) {
+  const brevoKey = process.env.BREVO_API_KEY || '';
+  if (!brevoKey) throw new Error('BREVO_API_KEY not set');
+  const resp = await fetch('https://api.brevo.com/v3/smtp/email', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'api-key': brevoKey },
+    body: JSON.stringify({
+      to: [{ email }],
+      sender: { email: process.env.FROM_EMAIL || 'noreply@contentscale.site', name: process.env.SENDER_NAME || 'ContentScale' },
+      subject: 'Your ContentScale verification code: ' + code,
+      htmlContent: `
+        <div style="font-family:system-ui,Arial,sans-serif;max-width:480px;margin:0 auto;padding:24px">
+          <h2 style="margin:0 0 8px;color:#0f172a">Verify your email</h2>
+          <p style="color:#475569;margin:0 0 16px">Enter this code to keep scanning on ContentScale:</p>
+          <div style="font-size:32px;font-weight:700;letter-spacing:6px;background:#0f172a;color:#fff;text-align:center;padding:16px;border-radius:10px">${code}</div>
+          <p style="color:#94a3b8;font-size:13px;margin:16px 0 0">This code expires in ${GATE_CODE_TTL_MIN} minutes. If you didn't request it, ignore this email.</p>
+        </div>`
+    })
+  });
+  if (!resp.ok) { const t = await resp.text().catch(()=>''); throw new Error('Brevo ' + resp.status + ': ' + t.substring(0,200)); }
+}
+
+// POST /api/scan-gate/request-code — send a 6-digit code to the visitor's email
+app.post('/api/scan-gate/request-code', async (req, res) => {
+  try {
+    if (!pool) return res.status(500).json({ ok: false, error: 'db_unavailable' });
+    const ip = getGateIp(req);
+    const email = String((req.body && req.body.email) || '').trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ ok: false, error: 'invalid_email' });
+    const code = String(Math.floor(100000 + Math.random() * 900000));
+    await pool.query(
+      `INSERT INTO scan_gate (ip, email, code, code_expires, updated_at)
+       VALUES ($1, $2, $3, NOW() + ($4 || ' minutes')::interval, NOW())
+       ON CONFLICT (ip) DO UPDATE
+       SET email = EXCLUDED.email, code = EXCLUDED.code,
+           code_expires = EXCLUDED.code_expires, updated_at = NOW()`,
+      [ip, email, code, String(GATE_CODE_TTL_MIN)]
+    );
+    await sendGateCode(email, code);
+    return res.json({ ok: true });
+  } catch (e) {
+    console.error('[scan-gate] request-code:', e.message);
+    return res.status(500).json({ ok: false, error: 'send_failed' });
+  }
+});
+
+// POST /api/scan-gate/verify-code — verify the code and unlock this IP
+app.post('/api/scan-gate/verify-code', async (req, res) => {
+  try {
+    if (!pool) return res.status(500).json({ ok: false, error: 'db_unavailable' });
+    const ip = getGateIp(req);
+    const email = String((req.body && req.body.email) || '').trim().toLowerCase();
+    const code = String((req.body && req.body.code) || '').trim();
+    const r = await pool.query(`SELECT email, code, code_expires FROM scan_gate WHERE ip = $1`, [ip]);
+    const row = r.rows[0];
+    if (!row || row.email !== email || !row.code || row.code !== code) return res.status(400).json({ ok: false, error: 'invalid_code' });
+    if (row.code_expires && new Date(row.code_expires) < new Date()) return res.status(400).json({ ok: false, error: 'code_expired' });
+    await pool.query(`UPDATE scan_gate SET verified = TRUE, code = NULL, code_expires = NULL, updated_at = NOW() WHERE ip = $1`, [ip]);
+    return res.json({ ok: true });
+  } catch (e) {
+    console.error('[scan-gate] verify-code:', e.message);
+    return res.status(500).json({ ok: false, error: 'verify_failed' });
+  }
+});
+
+// GET /api/scan-gate/status — remaining free scans for this IP (optional, for UI)
+app.get('/api/scan-gate/status', async (req, res) => {
+  try {
+    if (!pool) return res.json({ verified: false, used: 0, limit: FREE_SCAN_LIMIT, remaining: FREE_SCAN_LIMIT });
+    const ip = getGateIp(req);
+    const r = await pool.query(`SELECT scan_count, verified FROM scan_gate WHERE ip = $1`, [ip]);
+    const row = r.rows[0] || { scan_count: 0, verified: false };
+    const used = row.scan_count || 0;
+    return res.json({ verified: !!row.verified, used, limit: FREE_SCAN_LIMIT, remaining: row.verified ? null : Math.max(0, FREE_SCAN_LIMIT - used) });
+  } catch (e) {
+    return res.json({ verified: false, used: 0, limit: FREE_SCAN_LIMIT, remaining: FREE_SCAN_LIMIT });
+  }
+});
+
                app.post('/api/scan', async (req, res) => {
                const { url } = req.body;
                if (!url) return res.status(400).json({ success: false, error: 'URL required' });
+               // ── Free-tier gate: 5 free scans/IP, then 403 { gated:true } ──────────────
+               try {
+                 if (pool) {
+                   const _gip = getGateIp(req);
+                   const _g = await pool.query(
+                     `INSERT INTO scan_gate (ip) VALUES ($1)
+                      ON CONFLICT (ip) DO UPDATE SET updated_at = NOW()
+                      RETURNING scan_count, verified`, [_gip]);
+                   const _row = _g.rows[0] || { scan_count: 0, verified: false };
+                   if (!_row.verified && _row.scan_count >= FREE_SCAN_LIMIT) {
+                     return res.status(403).json({ success: false, gated: true, reason: 'email_required', limit: FREE_SCAN_LIMIT, message: 'Free limit reached. Verify your email to keep scanning.' });
+                   }
+                   pool.query(`UPDATE scan_gate SET scan_count = scan_count + 1, updated_at = NOW() WHERE ip = $1`, [_gip]).catch(()=>{});
+                 }
+               } catch (e) { console.warn('[scan-gate]', e.message); /* fail open — never block on DB hiccup */ }
                let scanUrl = url.startsWith('http') ? url : 'https://' + url;
                try {
                console.log(`🔍 Elite Scanning: ${scanUrl}`);
