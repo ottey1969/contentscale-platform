@@ -110,7 +110,7 @@ function _cacheSet(key, data, ttlMs) {
 }
 // TTLs
 const CACHE_TTL = {
-  serper:     6  * 60 * 60 * 1000, // 6 hours — SERP changes slowly
+  serper:     24 * 60 * 60 * 1000, // 24 hours — SERP changes slowly; longer cache = far fewer Serper credits
   perplexity: 12 * 60 * 60 * 1000, // 12 hours — citation status stable
   brave:      12 * 60 * 60 * 1000, // 12 hours
   gemini:     24 * 60 * 60 * 1000, // 24 hours — briefs valid 1 day
@@ -3038,6 +3038,7 @@ app.patch('/api/admin/tracker-clients/:id/frequency', verifyAdmin, async (req, r
     if (!allowed.includes(frequency)) return res.status(400).json({ success: false, error: 'Invalid frequency' });
     const _fm = { 'daily':1,'1day':1,'3days':3,'7days':7,'weekly':7,'1week':7,'2weeks':14,'17days':17,'21days':21,'30days':30,'monthly':30 };
     let _d = _fm[frequency]; if (!_d) { const _m = String(frequency).match(/^(\d+)\s*days?$/); _d = _m ? parseInt(_m[1],10) : 3; }
+    _d = Math.max(7, _d); // weekly minimum for auto-scans — give Google/AI/GSC time to react
     await pool.query(
       `UPDATE tracker_pages
          SET check_frequency=$1,
@@ -3057,6 +3058,7 @@ app.patch('/api/admin/tracker-pages/:pageId/frequency', verifyAdmin, async (req,
     if (!allowed.includes(frequency)) return res.status(400).json({ success: false, error: 'Invalid frequency' });
     const _fm = { 'daily':1,'1day':1,'3days':3,'7days':7,'weekly':7,'1week':7,'2weeks':14,'17days':17,'21days':21,'30days':30,'monthly':30 };
     let _d = _fm[frequency]; if (!_d) { const _m = String(frequency).match(/^(\d+)\s*days?$/); _d = _m ? parseInt(_m[1],10) : 3; }
+    _d = Math.max(7, _d); // weekly minimum for auto-scans — give Google/AI/GSC time to react
     // Save interval AND re-anchor next_check_at from the last scan (or now) so the scan + its
     // notification email fire on the correct new date for this specific page.
     await pool.query(
@@ -14282,10 +14284,12 @@ function requireCredits(action) {
       if (used >= limit) {
         return res.status(402).json({
           success: false,
-          error: `Budget exhausted: €${used.toFixed(2)} used of €${limit.toFixed(2)} limit. Contact admin to top up.`,
+          error: `Budget exhausted: €${used.toFixed(2)} used of €${limit.toFixed(2)} limit.`,
           code: 'COST_LIMIT_REACHED',
           used: used,
-          limit: limit
+          limit: limit,
+          contact_message: 'You are out of credits. Contact Ottmar via WhatsApp to top up and keep working.',
+          whatsapp: 'https://wa.me/31628073996?text=' + encodeURIComponent('Hi Ottmar, my ContentScale credits are used up — I need more credits to continue.')
         });
       }
       req.monthlyLimit = limit;
@@ -14733,12 +14737,19 @@ app.post('/api/engine/login', async (req, res) => {
   const { code } = req.body;
   if (!code) return res.status(400).json({ success: false, error: 'Code required' });
   try {
-    let r = await pool.query(`SELECT * FROM engine_access_codes WHERE code=$1 AND is_active=TRUE AND (expires_at IS NULL OR expires_at > NOW())`, [code.trim().toUpperCase()]).catch(() => ({ rows: [] }));
-    if (!r.rows.length) {
-      r = await pool.query(`SELECT * FROM engine_access_codes WHERE code=$1 AND (expires_at IS NULL OR expires_at > NOW())`, [code.trim().toUpperCase()]);
-    }
-    if (!r.rows.length) return res.status(401).json({ success: false, error: 'Invalid or expired engine code' });
+    const lookup = code.trim().toUpperCase();
+    let r = await pool.query(`SELECT * FROM engine_access_codes WHERE code=$1`, [lookup]).catch(() => ({ rows: [] }));
+    if (!r.rows.length) return res.status(401).json({ success: false, error: 'Invalid engine code — not found.', code: 'NOT_FOUND' });
     const ec = r.rows[0];
+    // ── ACCESS = on/off (is_active) + optional expiry. BOTH independent of budget. ──
+    // is_active=TRUE + expires_at=NULL  → unlimited access.
+    // is_active=TRUE + expires_at=date  → access until that date.
+    if (ec.is_active === false) {
+      return res.status(403).json({ success: false, code: 'ACCESS_OFF', error: 'Access is turned OFF for this code. Ask Ottmar to switch it on.' });
+    }
+    if (ec.expires_at && new Date(ec.expires_at) < new Date()) {
+      return res.status(403).json({ success: false, code: 'ACCESS_EXPIRED', expired_at: ec.expires_at, error: 'Access ended on ' + new Date(ec.expires_at).toLocaleDateString('en-GB') + '. Set it to Unlimited or a future date in admin.' });
+    }
     // verifyEngineAccess uses the raw ENG-XXXX code as the token (x-engine-token header),
     // so return the code itself — no access_sessions insert needed.
     const creditsLeft = ec.platform_credits === null ? null : Math.max(0, ec.platform_credits - (ec.credits_used||0));
@@ -26373,7 +26384,8 @@ function renderPages() {
     } else {
       badges += '<span class="cs-cs-badge grey" title="No AI citation check has run yet \u2014 paste HTML or Scan All">AI citations: not checked yet</span> ';
     }
-    if (score) badges += '<span class="cs-cs-badge yellow">' + score + '/100</span> ';
+    // GRAAF scanner disabled — score badge removed (scanner no longer in use)
+    // if (score) badges += '<span class="cs-cs-badge yellow">' + score + '/100</span> ';
     if (p.fetch_reliable === false) badges += '<span class="cs-cs-badge" style="background:#2d1f00;color:#fbbf24;">! fetch issue</span> ';
 
     // GSC data row \\u2014 always show if available
@@ -36214,6 +36226,7 @@ If no unanchored claims found, return empty array: []`;
   const freqMap = { 'daily': 1, '1day': 1, '3days': 3, '7days': 7, 'weekly': 7, '1week': 7, '2weeks': 14, '17days': 17, '21days': 21, '30days': 30, 'monthly': 30 };
   let days = freqMap[page.check_frequency];
   if (!days) { const _dm = String(page.check_frequency || '').match(/^(\d+)\s*days?$/); days = _dm ? parseInt(_dm[1], 10) : 3; }
+  days = Math.max(7, days); // weekly minimum — no auto-scan more than once a week (manual scans still on-demand)
   await pool.query(
     `UPDATE tracker_pages SET last_checked_at=NOW(), next_check_at=NOW() + INTERVAL '${days} days' WHERE id=$1`,
     [page.id]
