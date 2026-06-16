@@ -28821,7 +28821,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 <button onclick="switchTab('pending')" id="tabPendingBtn" class="sidebar-btn"><i class="fas fa-clock"></i><span>Pending</span></button>
                 <button onclick="switchTab('users')" id="tabUsersBtn" class="sidebar-btn"><i class="fas fa-user-cog"></i><span>Users</span></button>
                 <button onclick="switchTab('freelancers')" id="tabFreelancersBtn" class="sidebar-btn"><i class="fas fa-users"></i><span>Freelancers</span></button>
-                <button onclick="switchTab('tracker')" id="tabTrackerBtn" class="sidebar-btn"><i class="fas fa-chart-line"></i><span>Content Tracker</span></button>
+                <!-- Content Lifecycle Tracker tab removed from admin dashboard (deleted/unused). Client trackers stay under "Tracker Clients". -->
                 <button onclick="switchTab('tracker-clients')" id="tabTrackerClientsBtn" class="sidebar-btn"><i class="fas fa-users"></i><span>Tracker Clients</span></button>
                 <button onclick="switchTab('enginecodes')" id="tabEnginecodesBtn" class="sidebar-btn"><i class="fas fa-key"></i><span>Engine Access</span></button>
                 <button onclick="switchTab('giveaccess')" id="tabGiveaccessBtn" class="sidebar-btn"><i class="fas fa-share-alt"></i><span>Give Access</span></button>
