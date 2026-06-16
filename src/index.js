@@ -14293,7 +14293,10 @@ function requireCredits(action) {
       if (!eu.code) return next();
       // ── BYOK users pass through (they pay Google/Anthropic directly) ──
       if (eu.code.api_key_mode === 'byok') return next();
-      // ── Platform key users: check monthly cost limit ──
+      // ── Budget is OPTIONAL on Platform. NULL / 0 limit = unlimited platform (no euro counting, no stop). ──
+      const _rawLimit = eu.code.monthly_cost_limit;
+      if (_rawLimit === null || _rawLimit === undefined || _rawLimit === '' || parseFloat(_rawLimit) <= 0) return next();
+      // ── Platform WITH a budget: enforce monthly limit ──
       // Reset monthly cost if needed
       const now = new Date();
       const resetAt = eu.code.cost_reset_at ? new Date(eu.code.cost_reset_at) : null;
@@ -14301,7 +14304,7 @@ function requireCredits(action) {
         await pool.query(`UPDATE engine_access_codes SET monthly_cost_used=0, cost_reset_at=NOW() WHERE id=$1`, [eu.codeId]).catch(()=>{});
         eu.code.monthly_cost_used = 0;
       }
-      const limit = parseFloat(eu.code.monthly_cost_limit) || 5;
+      const limit = parseFloat(_rawLimit);
       const used = parseFloat(eu.code.monthly_cost_used) || 0;
       if (used >= limit) {
         return res.status(402).json({
@@ -31496,14 +31499,16 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     const keyInfo=c.gemini_key||c.claude_key?'<div style="font-size:11px;color:#64748b;margin-top:4px;">'+(c.gemini_key?'Gemini: '+c.gemini_key+' ':'')+( c.claude_key?'Claude: '+c.claude_key:'')+'</div>':'';
                     // -- API Cost Budget Display ---------------------------
                     let creditBar = '';
-                    const costLimit = parseFloat(c.monthly_cost_limit) || 5;
+                    const _hasBudget = c.monthly_cost_limit !== null && c.monthly_cost_limit !== undefined && c.monthly_cost_limit !== '' && parseFloat(c.monthly_cost_limit) > 0;
+                    const costLimit = parseFloat(c.monthly_cost_limit) || 0;
                     const costUsed = parseFloat(c.monthly_cost_used) || 0;
-                    const costPct = costLimit > 0 ? Math.min(100, Math.round((costUsed / costLimit) * 100)) : 0;
+                    const costPct = (_hasBudget && costLimit > 0) ? Math.min(100, Math.round((costUsed / costLimit) * 100)) : 0;
                     const costColor = costPct >= 100 ? '#ef4444' : costPct >= 80 ? '#f59e0b' : costPct >= 50 ? '#fbbf24' : '#22c55e';
                     const modeLabel = c.api_key_mode === 'byok' ? '🔑 BYOK' : c.api_key_mode === 'platform' ? '🖥 Platform' : '? Not set';
-                    creditBar = '<div style="margin-top:10px;padding:10px 12px;background:#0a1628;border-radius:8px;border:1px solid #1e3a5f;">' +
+                    if (_hasBudget) {
+                      creditBar = '<div style="margin-top:10px;padding:10px 12px;background:#0a1628;border-radius:8px;border:1px solid #1e3a5f;">' +
                         '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">' +
-                        '<span style="font-size:11px;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:.05em;">' + modeLabel + ' Budget</span>' +
+                        '<span style="font-size:11px;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:.05em;">' + modeLabel + ' Budget ON</span>' +
                         '<span style="font-size:12px;font-weight:700;color:' + costColor + ';">EUR' + costUsed.toFixed(2) + ' / EUR' + costLimit.toFixed(2) + '</span>' +
                         '</div>' +
                         '<div style="background:#1e293b;border-radius:99px;height:6px;overflow:hidden;"><div style="height:6px;border-radius:99px;background:' + costColor + ';width:' + costPct + '%;transition:width .3s;"></div></div>' +
@@ -31511,8 +31516,23 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                         '<input type="number" id="setlimit_' + c.id + '" placeholder="Set EUR budget" min="1" step="0.01" style="width:120px;font-size:12px;padding:4px 8px;border-radius:4px;">' +
                         '<button onclick="setCostLimit(' + c.id + ')" style="font-size:11px;padding:4px 10px;background:#0891b2;color:#fff;border:none;border-radius:4px;cursor:pointer;">v Set Budget</button>' +
                         '<button onclick="resetCostUsed(' + c.id + ')" style="font-size:11px;padding:4px 10px;background:#1e293b;color:#94a3b8;border:1px solid #334155;border-radius:4px;cursor:pointer;">Reset Used</button>' +
+                        '<button onclick="setBudgetOff(' + c.id + ')" style="font-size:11px;padding:4px 10px;background:#3f1d1d;color:#fca5a5;border:1px solid #7f1d1d;border-radius:4px;cursor:pointer;">Budget OFF</button>' +
                         '<button onclick="showCostLog(' + c.id + ')" style="font-size:11px;padding:4px 10px;background:#0c4a6e;color:#38bdf8;border:1px solid #0284c7;border-radius:4px;cursor:pointer;"> Cost Log</button>' +
                         '</div></div>';
+                    } else {
+                      creditBar = '<div style="margin-top:10px;padding:10px 12px;background:#0a1628;border-radius:8px;border:1px solid #1e3a5f;">' +
+                        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">' +
+                        '<span style="font-size:11px;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:.05em;">' + modeLabel + ' Budget</span>' +
+                        '<span style="font-size:12px;font-weight:700;color:#4ade80;">OFF \u2014 unlimited</span>' +
+                        '</div>' +
+                        '<div style="display:flex;gap:6px;margin-top:4px;flex-wrap:wrap;">' +
+                        '<input type="number" id="setlimit_' + c.id + '" placeholder="Set EUR budget" min="1" step="0.01" style="width:120px;font-size:12px;padding:4px 8px;border-radius:4px;">' +
+                        '<button onclick="setCostLimit(' + c.id + ')" style="font-size:11px;padding:4px 10px;background:#0891b2;color:#fff;border:none;border-radius:4px;cursor:pointer;">v Turn Budget ON</button>' +
+                        '<button onclick="showCostLog(' + c.id + ')" style="font-size:11px;padding:4px 10px;background:#0c4a6e;color:#38bdf8;border:1px solid #0284c7;border-radius:4px;cursor:pointer;"> Cost Log</button>' +
+                        '</div>' +
+                        '<div style="font-size:10px;color:#475569;margin-top:6px;">Platform usage is unlimited (no euro cap). Set a EUR amount to cap + auto-stop.</div>' +
+                        '</div>';
+                    }
                     // -- Access control: Unlimited / per-date expiry (separate from budget) --
                     let accessBar = '';
                     {
@@ -31571,6 +31591,13 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
             if(!v){alert('Pick a date, or use Unlimited for never-expires.');return;}
             try{
                 await apiCall('/api/admin/engine-codes/'+id,'PATCH',{expires_at:v+'T23:59:59',is_active:true});
+                loadEngineCodes();
+            }catch(e){alert('Error: '+e.message);}
+        }
+        async function setBudgetOff(id){
+            if(!confirm('Turn budget OFF for this code? Platform usage becomes UNLIMITED (no euro cap).'))return;
+            try{
+                await apiCall('/api/admin/engine-codes/'+id+'/credits','PATCH',{monthly_cost_limit:null});
                 loadEngineCodes();
             }catch(e){alert('Error: '+e.message);}
         }
