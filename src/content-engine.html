@@ -8,7 +8,7 @@
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <meta name="app-version" content="4.2.7-2026-05-10">
-<title>PULSE + NEXUS Content Engine — AI SEO Intelligence | ContentScale</title>
+<title>PULSE + NEXUS Content Dashboard — AI SEO Intelligence | ContentScale</title>
 <meta name="description" content="PULSE + NEXUS is ContentScale's AI content intelligence engine. Live SERP spy, AI Overviews analysis, GSC integration, and GRAAF-guided rewrites. Built in Amsterdam by Ottmar Francisca.">
 <link rel="canonical" href="https://app.contentscale.site/content-engine/">
 <meta property="og:title" content="PULSE + NEXUS Content Engine — AI SEO Intelligence | ContentScale">
@@ -256,7 +256,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'DM San
   <aside class="sidebar">
     <!-- Auth -->
     <div class="sidebar-section">
-      <div class="sidebar-label">Engine Access</div>
+      <div class="sidebar-label">Client Access</div>
       <input class="token-input" id="engineToken" placeholder="ENG-XXXX engine code" type="password">
       <div style="font-size:10px;color:var(--muted);margin-top:6px;line-height:1.5;">
         AI keys are configured securely on the server. No API keys stored in your browser.
@@ -372,7 +372,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'DM San
 
     <!-- AI Keys -->
     <div class="sidebar-section" id="aiKeysSection" style="display:none;">
-      <div class="sidebar-label">⚙️ AI Engine</div>
+      <div class="sidebar-label">⚙️ AI Dashboard</div>
       <div id="aiKeyStatus" style="font-size:10px;color:var(--muted);margin-bottom:8px;line-height:1.4;">
         Loading key status…
       </div>
@@ -4014,6 +4014,8 @@ function getPagePriority(page) {
 }
 
 function renderTrackerList() {
+  var _searchHadFocus = document.activeElement && document.activeElement.id === 'trSearchInput';
+  var _searchCaret = _searchHadFocus ? document.activeElement.selectionStart : null;
   var el = document.getElementById('trPagesList');
   var activeProfileId = _context.profileId || (_profile && _profile.id) || null;
   if (!activeProfileId) {
@@ -4144,7 +4146,8 @@ function renderTrackerList() {
       '</select>';
     })() +
     '<button onclick="window._trFilter={priority:\'all\',status:\'all\',score:\'all\',search:\'\',domain:\'all\'};renderTrackerList()" style="font-size:10px;padding:5px 10px;border-radius:6px;border:1px solid rgba(255,255,255,.1);background:transparent;color:#6b7280;cursor:pointer;">✕ Clear</button>' +
-    '<button onclick="scanAllImported()" title="Run ContentScore scan on all pages that have never been scanned" style="font-size:11px;font-weight:700;padding:5px 12px;border-radius:6px;border:none;background:linear-gradient(135deg,#0ea5e9,#0f766e);color:#fff;cursor:pointer;margin-left:auto;">GRAAF Scan All <span style="font-size:9px;opacity:.6;">step 1</span></button>' +
+    '<button onclick="toggleSelectAll(true)" title="Select every page currently shown (respects the domain/search filter)" style="font-size:11px;font-weight:700;padding:5px 12px;border-radius:6px;border:1px solid rgba(124,58,237,.4);background:rgba(124,58,237,.12);color:#a78bfa;cursor:pointer;margin-left:auto;">☑ Select all visible</button>' +
+    '<button onclick="deleteVisibleDomain()" title="Delete ALL pages currently shown — use the domain filter first to wipe one domain" style="font-size:11px;font-weight:700;padding:5px 12px;border-radius:6px;border:1px solid rgba(248,113,113,.4);background:rgba(248,113,113,.12);color:#f87171;cursor:pointer;">🗑 Delete domain</button>' +
   '</div>' +
   // Bulk actions bar (visible only when items selected)
   '<div id="trBulkBar" style="display:' + (window._trSelected.size > 0 ? 'flex' : 'none') + ';gap:8px;padding:6px 16px 8px;align-items:center;background:rgba(124,58,237,0.08);border-bottom:1px solid rgba(124,58,237,0.2);">' +
@@ -4210,6 +4213,7 @@ function renderTrackerList() {
 
     return true;
   });
+  window._trVisibleIds = activePages.map(function(p){ return p.id; });
   var donePages   = trData.filter(function(p){ return p.is_done; });
 
   el.innerHTML = '<div style="padding:0 16px;">' + alertBar + summaryBar + filterBar + activePages.map(function(p, idx) {
@@ -4372,6 +4376,12 @@ function renderTrackerList() {
   : '') +
 
   '</div>';
+  // Restore search focus + caret — the re-render recreates the input, which dropped focus
+  // after every keystroke (the "can't type in search" bug).
+  if (_searchHadFocus) {
+    var _si = document.getElementById('trSearchInput');
+    if (_si) { _si.focus(); var _pos = (_searchCaret == null ? _si.value.length : _searchCaret); try { _si.setSelectionRange(_pos, _pos); } catch(e){} }
+  }
 }
 
 
@@ -4424,10 +4434,19 @@ function toggleSelectPage(pageId, checked) {
 }
 
 function toggleSelectAll(checked) {
-  var visibleIds = (_trPages||[]).filter(function(p){ return !p.is_done; }).map(function(p){ return p.id; });
+  var visibleIds = window._trVisibleIds || (_trPages||[]).filter(function(p){ return !p.is_done; }).map(function(p){ return p.id; });
   if (checked) visibleIds.forEach(function(id){ window._trSelected.add(id); });
   else window._trSelected.clear();
   renderTrackerList();
+}
+
+async function deleteVisibleDomain() {
+  var ids = (window._trVisibleIds || []).slice();
+  if (!ids.length) { toast('Nothing visible to delete', 2000, 'warn'); return; }
+  var dom = (window._trFilter && window._trFilter.domain && window._trFilter.domain !== 'all') ? window._trFilter.domain : 'all visible pages';
+  if (!confirm('Delete ALL ' + ids.length + ' pages for "' + dom + '"? This cannot be undone.')) return;
+  window._trSelected = new Set(ids);
+  await deleteSelected();
 }
 
 async function scanSelected() {
@@ -5263,7 +5282,7 @@ switchView = function(view) {
 async function loadProfilesList() {
   var el = document.getElementById('profilesList');
   if (!_connected) {
-    el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted);grid-column:1/-1;">Connect with your engine code first.</div>';
+    el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted);grid-column:1/-1;">Connect with your access code first.</div>';
     return;
   }
   el.innerHTML = '<div style="text-align:center;padding:30px;color:var(--muted);grid-column:1/-1;">⏳ Loading…</div>';
@@ -6142,7 +6161,7 @@ async function runRewriteFromModal() {
   // GUARD: profile must be selected BEFORE any work starts
   if (!_context.profileId) _context.profileId = (_profile && _profile.id) || null;
   if (!_context.profileId) {
-    addAgentMessage('❌ <b>Profile Required</b> — Select a profile in the sidebar first (Engine Code → Pick Profile). The rewrite needs your business info, niche, target audience, and USPs to write accurate content.');
+    addAgentMessage('❌ <b>Profile Required</b> — Select a profile in the sidebar first (Access Code → Pick Profile). The rewrite needs your business info, niche, target audience, and USPs to write accurate content.');
     return;
   }
   var keyword = document.getElementById('rewriteKeyword').value.trim();
@@ -8212,7 +8231,7 @@ function renderSerpSpyReport(s) {
       <!-- Profile Required Banner -->
       <div id="rewriteProfileBanner" style="display:none;background:rgba(248,113,113,.12);border:1px solid rgba(248,113,113,.3);border-radius:8px;padding:10px 12px;margin-bottom:14px;">
         <div style="font-size:11px;font-weight:700;color:#f87171;margin-bottom:2px;">❌ Profile Required</div>
-        <div style="font-size:10px;color:#fca5a5;line-height:1.5;">Select a profile in the sidebar (Engine Code → Pick Profile) before rewriting. The system needs your business info, niche, and USPs.</div>
+        <div style="font-size:10px;color:#fca5a5;line-height:1.5;">Select a profile in the sidebar (Access Code → Pick Profile) before rewriting. The system needs your business info, niche, and USPs.</div>
       </div>
 
       <!-- Risk Warning Banner -->
@@ -8486,7 +8505,7 @@ function renderSerpSpyReport(s) {
   <!-- Header -->
   <div style="margin-bottom:20px;">
     <div style="font-size:16px;font-weight:800;color:#f9fafb;">🎥 Video Intelligence Brief</div>
-    <div style="font-size:12px;color:#4b5563;margin-top:4px;">Search or paste a YouTube URL → engine fetches transcript + researches competition → outputs a complete content brief. No writing. No agent. Just intelligence.</div>
+    <div style="font-size:12px;color:#4b5563;margin-top:4px;">Search or paste a YouTube URL → the tool fetches transcript + researches competition → outputs a complete content brief. No writing. No agent. Just intelligence.</div>
   </div>
 
   <!-- Two-column input -->
