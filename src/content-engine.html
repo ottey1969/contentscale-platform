@@ -4159,7 +4159,6 @@ function renderTrackerList() {
 
   // Split active vs done — active get numbered, done go to bottom with separate section
   var activePages = trData.filter(function(p) {
-    if (p.is_done) return false;
     var f = window._trFilter || {};
     var snap = p.latest_snapshot || {};
     var cs = parseInt(snap.score || 0);
@@ -4215,16 +4214,32 @@ function renderTrackerList() {
   window._trVisibleIds = activePages.map(function(p){ return p.id; });
   var donePages   = trData.filter(function(p){ return p.is_done; });
 
+  var _activeCounter = 0;
   el.innerHTML = '<div style="padding:0 16px;">' + alertBar + summaryBar + filterBar + activePages.map(function(p, idx) {
+    if (p.is_done) {
+      var _snapD = p.latest_snapshot || {};
+      var _lastChD = p.last_checked_at ? (Math.floor((Date.now()-new Date(p.last_checked_at).getTime())/86400000) + 'd ago') : 'Never';
+      var _csBadgeD = _snapD.score ? ' <span style="font-size:10px;padding:1px 5px;border-radius:3px;background:rgba(75,85,99,.1);color:#6b7280;">CS:'+_snapD.score+'</span>' : '';
+      return '<div style="opacity:0.45;padding:10px 0 10px 10px;border-bottom:1px solid rgba(255,255,255,.04);border-left:3px solid #374151;margin-bottom:3px;">' +
+        '<div style="display:flex;align-items:center;gap:6px;margin-bottom:2px;"><span style="font-size:10px;color:#34d399;font-weight:700;">✓ Done</span></div>' +
+        '<div style="font-size:12px;font-weight:600;color:#9ca3af;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escHtml(p.title||p.url) + _csBadgeD + '</div>' +
+        '<div style="font-size:10px;color:#4b5563;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escHtml(p.url) + (p.keyword ? ' · 🎯 '+escHtml(p.keyword) : '') + ' · ' + _lastChD + '</div>' +
+        '<div style="margin-top:6px;display:flex;gap:6px;">' +
+          '<button onclick="togglePageDone(' + p.id + ')" style="font-size:10px;padding:3px 8px;border-radius:5px;border:1px solid rgba(52,211,153,.3);background:rgba(52,211,153,.08);color:#34d399;cursor:pointer;">↺ Reopen</button>' +
+          '<button onclick="deleteTrackerPage(' + p.id + ')" style="font-size:10px;padding:3px 8px;border-radius:5px;border:1px solid rgba(248,113,113,.2);background:rgba(248,113,113,.04);color:#f87171;cursor:pointer;">✕</button>' +
+        '</div>' +
+      '</div>';
+    }
     var pri = p._priority;
-    var activeNum = idx + 1;
+    _activeCounter++;
+    var activeNum = _activeCounter;
     // Number badge — START HERE on #1, number on rest
     // Number sits to the LEFT of the card — clear vertical counter
     var _isSelected = window._trSelected.has(p.id);
     var cbx = '<div style="width:24px;flex-shrink:0;display:flex;align-items:flex-start;justify-content:center;padding-top:6px;">' +
       '<input type="checkbox" ' + (_isSelected ? 'checked' : '') + ' onchange="toggleSelectPage(' + p.id + ',this.checked)" style="width:14px;height:14px;cursor:pointer;accent-color:#7c3aed;">' +
       '</div>';
-    var numBadge = (idx === 0 && pri.score > 100) ?
+    var numBadge = (_activeCounter === 1 && pri.score > 100) ?
       '<div style="width:36px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;padding-top:2px;gap:3px;">' +
         '<span style="font-size:13px;font-weight:900;color:' + pri.color + ';line-height:1;">1</span>' +
         '<span style="font-size:7px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:' + pri.color + ';writing-mode:vertical-lr;transform:rotate(180deg);">START</span>' +
@@ -4340,40 +4355,6 @@ function renderTrackerList() {
     '</div>';
   }).join('') +
 
-  // ── DONE SECTION — always visible at bottom ─────────────────────────────
-  (donePages.length ?
-    '<div style="margin-top:20px;border-top:1px solid rgba(255,255,255,.08);padding-top:14px;">' +
-    '<div style="font-size:10px;font-weight:700;color:#4b5563;text-transform:uppercase;letter-spacing:.1em;margin-bottom:10px;display:flex;align-items:center;gap:6px;">' +
-      '<span style="display:inline-block;width:16px;height:1px;background:#374151;"></span>' +
-      '✓ Completed (' + donePages.length + ')' +
-      '<span style="display:inline-block;flex:1;height:1px;background:#374151;margin-left:6px;"></span>' +
-    '</div>' +
-    '<div>' +
-    donePages.map(function(p, dIdx) {
-      var pri = p._priority;
-      var snap = p.latest_snapshot || {};
-      var lastCh = p.last_checked_at ? (Math.floor((Date.now()-new Date(p.last_checked_at).getTime())/86400000) + 'd ago') : 'Never';
-      var startHere = '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;"><span style="font-size:10px;color:#374151;font-weight:600;">✓ Done</span></div>';
-      var priBadge = '';
-      var posLabel = '';
-      var imprLabel = '';
-      var aiG = '<span style="font-size:10px;color:#374151;">—</span>';
-      var aiP = '';
-      var gscLine = '';
-      var recHtml = '';
-      var csBadge = snap.score ? ' <span style="font-size:10px;padding:1px 5px;border-radius:3px;background:rgba(75,85,99,.1);color:#6b7280;">CS:'+snap.score+'</span>' : '';
-      return '<div style="opacity:0.4;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.04);border-left:3px solid #374151;padding-left:10px;margin-bottom:3px;">' +
-        startHere +
-        '<div style="font-size:12px;font-weight:600;color:#6b7280;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escHtml(p.title||p.url) + csBadge + '</div>' +
-        '<div style="font-size:10px;color:#4b5563;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escHtml(p.url) + ' · ' + lastCh + '</div>' +
-        '<div style="margin-top:6px;display:flex;gap:6px;">' +
-          '<button onclick="togglePageDone(' + p.id + ')" style="font-size:10px;padding:3px 8px;border-radius:5px;border:1px solid rgba(52,211,153,.3);background:rgba(52,211,153,.08);color:#34d399;cursor:pointer;">↺ Reopen</button>' +
-          '<button onclick="deleteTrackerPage(' + p.id + ')" style="font-size:10px;padding:3px 8px;border-radius:5px;border:1px solid rgba(248,113,113,.2);background:rgba(248,113,113,.04);color:#f87171;cursor:pointer;">✕</button>' +
-        '</div>' +
-      '</div>';
-    }).join('') +
-    '</div></div>'
-  : '') +
 
   '</div>';
   // Restore search focus + caret — the re-render recreates the input, which dropped focus
