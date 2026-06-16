@@ -1366,7 +1366,7 @@ app.patch('/api/tracker-client/:token/pages/:pageId/frequency', async (req, res)
     const cr = await pool.query('SELECT id FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status != $2)', [req.params.token, 'deleted']);
     if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
     const { frequency } = req.body;
-    const allowed = ['1day','3days','weekly','monthly'];
+    const allowed = ['1day','3days','7days','17days','21days','30days','weekly','1week','2weeks','monthly'];
     if (!allowed.includes(frequency)) return res.status(400).json({ success: false, error: 'Invalid frequency' });
     await pool.query('UPDATE tracker_pages SET check_frequency=$1 WHERE id=$2 AND tracker_client_id=$3', [frequency, req.params.pageId, cr.rows[0].id]);
     res.json({ success: true });
@@ -3034,10 +3034,39 @@ app.post('/api/admin/tracker-clients/merge-duplicates', verifyAdmin, async (req,
 app.patch('/api/admin/tracker-clients/:id/frequency', verifyAdmin, async (req, res) => {
   try {
     const { frequency } = req.body;
-    const allowed = ['1day','3days','weekly','monthly'];
+    const allowed = ['1day','3days','7days','17days','21days','30days','weekly','1week','2weeks','monthly'];
     if (!allowed.includes(frequency)) return res.status(400).json({ success: false, error: 'Invalid frequency' });
-    await pool.query('UPDATE tracker_pages SET check_frequency= WHERE tracker_client_id= AND (is_active=TRUE OR is_active IS NULL)', [frequency, req.params.id]);
-    res.json({ success: true });
+    const _fm = { 'daily':1,'1day':1,'3days':3,'7days':7,'weekly':7,'1week':7,'2weeks':14,'17days':17,'21days':21,'30days':30,'monthly':30 };
+    let _d = _fm[frequency]; if (!_d) { const _m = String(frequency).match(/^(\d+)\s*days?$/); _d = _m ? parseInt(_m[1],10) : 3; }
+    await pool.query(
+      `UPDATE tracker_pages
+         SET check_frequency=$1,
+             next_check_at = COALESCE(last_checked_at, NOW()) + INTERVAL '${_d} days'
+       WHERE tracker_client_id=$2 AND (is_active=TRUE OR is_active IS NULL)`,
+      [frequency, req.params.id]
+    );
+    res.json({ success: true, frequency, days: _d });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// PATCH /api/admin/tracker-pages/:pageId/frequency — set scan interval for ONE page (3/7/17/21/30 days)
+app.patch('/api/admin/tracker-pages/:pageId/frequency', verifyAdmin, async (req, res) => {
+  try {
+    const { frequency } = req.body;
+    const allowed = ['1day','3days','7days','17days','21days','30days','weekly','1week','2weeks','monthly'];
+    if (!allowed.includes(frequency)) return res.status(400).json({ success: false, error: 'Invalid frequency' });
+    const _fm = { 'daily':1,'1day':1,'3days':3,'7days':7,'weekly':7,'1week':7,'2weeks':14,'17days':17,'21days':21,'30days':30,'monthly':30 };
+    let _d = _fm[frequency]; if (!_d) { const _m = String(frequency).match(/^(\d+)\s*days?$/); _d = _m ? parseInt(_m[1],10) : 3; }
+    // Save interval AND re-anchor next_check_at from the last scan (or now) so the scan + its
+    // notification email fire on the correct new date for this specific page.
+    await pool.query(
+      `UPDATE tracker_pages
+         SET check_frequency=$1,
+             next_check_at = COALESCE(last_checked_at, NOW()) + INTERVAL '${_d} days'
+       WHERE id=$2`,
+      [frequency, req.params.pageId]
+    );
+    res.json({ success: true, frequency, days: _d });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
@@ -3316,7 +3345,7 @@ app.patch('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
   await client.query(`
     UPDATE tracker_pages SET check_frequency='3days'
     WHERE check_frequency IS NULL
-       OR check_frequency NOT IN ('1day','3days','weekly','1week','2weeks','monthly')
+       OR check_frequency NOT IN ('1day','3days','7days','17days','21days','30days','weekly','1week','2weeks','monthly')
   `).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS telegram_chat_id VARCHAR(64)`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS email_unsubscribed BOOLEAN DEFAULT FALSE`).catch(()=>{});
@@ -26197,12 +26226,12 @@ function renderPages() {
     var nextCheckDate = p.next_check_at ? new Date(p.next_check_at) : null;
     if (!nextCheckDate && p.last_checked) {
       var d = new Date(p.last_checked);
-    var freqDays = p.check_frequency === '1day' ? 1 : p.check_frequency === '3days' ? 3 : p.check_frequency === 'weekly' || p.check_frequency === '1week' ? 7 : p.check_frequency === 'monthly' ? 30 : 3;
+    var freqDays = (function(f){ var m={'1day':1,'3days':3,'7days':7,'weekly':7,'1week':7,'2weeks':14,'17days':17,'21days':21,'30days':30,'monthly':30}; if(m[f])return m[f]; var x=String(f||'').match(/^(\d+)\s*days?$/); return x?parseInt(x[1],10):3; })(p.check_frequency);
       d.setDate(d.getDate() + freqDays);
       nextCheckDate = d;
     }
     var nextCheck = nextCheckDate ? 'Next: ' + nextCheckDate.toLocaleDateString('en-GB',{day:'2-digit',month:'short'}) : '';
-    var freqLabel = p.check_frequency === '1day' ? 'daily' : p.check_frequency === '3days' ? 'every 3 days' : p.check_frequency === 'weekly' || p.check_frequency === '1week' ? 'weekly' : p.check_frequency === 'monthly' ? 'monthly' : 'every 3 days';
+    var freqLabel = (function(f){ var m={'1day':'daily','3days':'every 3 days','7days':'every 7 days','weekly':'weekly','1week':'weekly','2weeks':'every 2 weeks','17days':'every 17 days','21days':'every 21 days','30days':'every 30 days','monthly':'monthly'}; if(m[f])return m[f]; var x=String(f||'').match(/^(\d+)\s*days?$/); return x?('every '+x[1]+' days'):'every 3 days'; })(p.check_frequency);
     // Clean URL - remove protocol, www, and fix anchor slugs (#section)
     var rawUrl = p.url || '';
     var urlClean = rawUrl.replace(/^https?:[/][/]/, '').replace(/^www[.]/, '');
@@ -29306,6 +29335,10 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                                 <select id="trAddFreq" class="tr-select" style="width:100%;">
                                     <option value="1day">Daily (heavy usage)</option>
                                     <option value="3days" selected>Every 3 days ← recommended</option>
+                                    <option value="7days">Every 7 days</option>
+                                    <option value="17days">Every 17 days</option>
+                                    <option value="21days">Every 21 days</option>
+                                    <option value="30days">Every 30 days (large lists)</option>
                                     <option value="1week">Weekly</option>
                                     <option value="2weeks">Every 2 weeks (stable pages)</option>
                                 </select>
@@ -30706,12 +30739,28 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
             el.innerHTML = filtered.map(function(p, pageIdx) { return renderTrackerPageCard(p, pageIdx); }).join('');
         }
 
+        function changeTrackerPageFreq(pageId, freq) {
+            fetch('/api/admin/tracker-pages/' + pageId + '/frequency', {
+                method: 'PATCH',
+                headers: {'Content-Type':'application/json','x-admin-key':currentAdminId},
+                body: JSON.stringify({ frequency: freq })
+            }).then(function(r){ return r.json(); }).then(function(d){
+                if (d.success) { setTimeout(loadTrackerPages, 400); }
+                else { alert(d.error || 'Failed to update scan interval'); }
+            }).catch(function(e){ alert('Error: ' + e.message); });
+        }
+
         function renderTrackerPageCard(p, pageIdx) {
             const pageNum = (pageIdx !== undefined ? pageIdx : 0) + 1;
             const snap = p.latest_snapshot;
             const pending = parseInt(p.pending_changes||0);
-            const freqLabels = {'1day':'Daily','3days':'3 days','1week':'Weekly','2weeks':'2 weeks','weekly':'Weekly','monthly':'Monthly'};
+            const freqLabels = {'1day':'Daily','3days':'3 days','7days':'7 days','17days':'17 days','21days':'21 days','30days':'30 days','1week':'Weekly','2weeks':'2 weeks','weekly':'Weekly','monthly':'Monthly'};
             const nextCheck = p.next_check_at ? getTimeAgo(new Date(p.next_check_at)) : '-';
+            const _freqOpts = [['3days','3 days'],['7days','7 days'],['17days','17 days'],['21days','21 days'],['30days','30 days']];
+            const freqSelectHtml = '<select onclick="event.stopPropagation()" onchange="changeTrackerPageFreq('+p.id+',this.value)" title="Scan interval for this page — the notification email follows this same schedule" style="font-size:10px;padding:3px 6px;border:1px solid #818cf8;color:#818cf8;background:#0d1117;cursor:pointer;border-radius:4px;">'
+                + _freqOpts.map(function(o){ return '<option value="'+o[0]+'"'+(p.check_frequency===o[0]?' selected':'')+'>'+o[1]+'</option>'; }).join('')
+                + (_freqOpts.some(function(o){return o[0]===p.check_frequency;}) ? '' : '<option value="'+(p.check_frequency||'3days')+'" selected>'+(freqLabels[p.check_frequency]||p.check_frequency||'3 days')+'</option>')
+                + '</select>';
             const lastCheck = p.last_checked_at ? getTimeAgo(new Date(p.last_checked_at)) : 'Never checked';
             const checkboxHtml = '<input type="checkbox" class="tr-page-cb" data-id="'+p.id+'" onchange="updateBulkBar()" style="margin-right:8px;cursor:pointer;flex-shrink:0;">';
             const isDone = !!p.is_done;
@@ -30848,6 +30897,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 +'<button onclick="runManualCheck('+p.id+')" class="tr-btn green" id="trCheckBtn_'+p.id+'" title="Step 2: Check now"><span style="font-size:9px;background:#166534;border-radius:3px;padding:1px 4px;margin-right:3px;">2</span>Check now</button>'
                 +'<button onclick="openCitationBrief('+p.id+')" class="tr-btn" style="border-color:#a78bfa;color:#a78bfa;" title="Step 3: Citation Brief"><span style="font-size:9px;background:#4c1d95;border-radius:3px;padding:1px 4px;margin-right:3px;color:#fff;">3</span> Citation</button>'
                 +'<button onclick="markTrackerPageDone('+p.id+',this)" class="tr-btn" style="'+(isDone?'border-color:#4ade80;color:#4ade80;background:#052e1655;':'border-color:#374151;color:#6b7280;')+'" title="Mark as done / implemented">'+(isDone?'v Done':'Mark done')+'</button>'
+                +freqSelectHtml
                 +'<button onclick="deleteTrackerPage('+p.id+')" class="tr-btn danger">x</button>'
                 +'</div>'
                 +'<div style="font-size:11px;color:#6b7280;text-align:right;">'
@@ -31891,7 +31941,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 freqSelect.className = 'tr-btn';
                 freqSelect.title = 'Change auto-check frequency for all pages of this client';
                 freqSelect.style.cssText = 'font-size:10px;padding:3px 6px;border-color:#818cf8;color:#818cf8;background:#0d1117;cursor:pointer;border-radius:4px;border:1px solid #818cf8;';
-                [['3days','3 days'],['weekly','Weekly'],['monthly','Monthly']].forEach(function(opt) {
+                [['3days','3 days'],['7days','7 days'],['17days','17 days'],['21days','21 days'],['30days','30 days'],['weekly','Weekly'],['monthly','Monthly']].forEach(function(opt) {
                     var o = document.createElement('option');
                     o.value = opt[0];
                     o.textContent = opt[1];
@@ -31903,7 +31953,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     // Update all pages for this client
                     fetch('/api/admin/tracker-clients/' + id + '/frequency', {
                         method: 'PATCH',
-                        headers: {'Content-Type':'application/json', 'Authorization': 'Bearer ' + _adminToken},
+                        headers: {'Content-Type':'application/json', 'x-admin-key': currentAdminId},
                         body: JSON.stringify({frequency: freq})
                     }).then(function(r){ return r.json(); }).then(function(d){
                         if (d.success) alert('Frequency updated to ' + freq);
@@ -34870,46 +34920,22 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
     }
 
     if (!inherited) {
-      // Frisse scan — altijd bij suspicious fetch, nieuwe pagina, of content gewijzigd
-      // PRIMARY: browser-based scan (zelfde als /api/scan) voor identieke scores
-      // FALLBACK: regex-based scan als browser niet beschikbaar is
-      var graafResult = null;
+      // GRAAF is removed from the tracker — it now runs manually on the Content
+      // Engine (app.contentscale.site). No fresh scan here, no headless browser,
+      // no Puppeteer. Carry forward the last known score so snapshots/history stay
+      // intact at zero compute.
       try {
-        graafResult = await browserScanHtml(effectiveHtml, page.url || '');
-        if (graafResult) {
-          graafScore = graafResult.totalScore || graafResult.score || null;
-          graafBreakdown = graafResult.metrics || null;  // metrics = { graaf, craft, technical }
-          graafRecs = graafResult.recommendations || null;
-          _trSetStep(pageId, 'graaf_score', 'done', '🎯 GRAAF: ' + (graafScore || 0) + '/100 (G:' + (graafBreakdown?.graaf||0) + ' C:' + (graafBreakdown?.craft||0) + ' T:' + (graafBreakdown?.technical||0) + ')' + (fetchReliable ? '' : ' (handmatige scan aangeraden voor nauwkeurigheid)'));
+        const _carryR = await pool.query(
+          `SELECT score, graaf_breakdown, graaf_recommendations FROM tracker_snapshots WHERE page_id=$1 ORDER BY checked_at DESC LIMIT 1`,
+          [pageId]
+        );
+        if (_carryR.rows[0]) {
+          graafScore = _carryR.rows[0].score;
+          graafBreakdown = _carryR.rows[0].graaf_breakdown;
+          graafRecs = _carryR.rows[0].graaf_recommendations;
         }
-      } catch(e) {
-        console.warn('[tracker-graaf] browserScanHtml failed:', e.message);
-      }
-
-      // FALLBACK: als browser scan faalt of null returned, gebruik regex-based scan
-      if (!graafResult) {
-        console.log('[tracker-graaf] Falling back to regex-based graafAnalyzeHtml for page', pageId);
-        try {
-          const fallbackResult = graafAnalyzeHtml(effectiveHtml, page.url || '');
-          if (fallbackResult) {
-            graafScore = fallbackResult.totalScore || fallbackResult.score || null;
-            // Map breakdown fields: graafAnalyzeHtml uses different structure than browserScanHtml
-            var fbMetrics = fallbackResult.metrics || fallbackResult.breakdown || {};
-            graafBreakdown = {
-              graaf: fbMetrics.graaf || fbMetrics.content || 0,
-              craft: fbMetrics.craft || fbMetrics.structure || 0,
-              technical: fbMetrics.technical || fbMetrics.meta || 0
-            };
-            graafRecs = fallbackResult.recommendations || null;
-            _trSetStep(pageId, 'graaf_score', 'done', '🎯 GRAAF: ' + (graafScore || 0) + '/100 (G:' + graafBreakdown.graaf + ' C:' + graafBreakdown.craft + ' T:' + graafBreakdown.technical + ') [regex fallback]');
-          } else {
-            _trSetStep(pageId, 'graaf_score', 'done', 'GRAAF scan geen resultaat');
-          }
-        } catch(e2) {
-          console.warn('[tracker-graaf] Fallback also failed:', e2.message);
-          _trSetStep(pageId, 'graaf_score', 'done', 'GRAAF scan error');
-        }
-      }
+      } catch(e) { /* non-fatal */ }
+      _trSetStep(pageId, 'graaf_score', 'done', 'GRAAF skipped — run it manually on app.contentscale.site');
     }
 
     snapshot.score = graafScore;
@@ -36069,8 +36095,9 @@ If no unanchored claims found, return empty array: []`;
   }
 
   // 8. Update page last_checked_at + schedule next check
-  const freqMap = { 'daily': 1, '1day': 1, '3days': 3, 'weekly': 7, '1week': 7, '2weeks': 14, 'monthly': 30 };
-  const days = freqMap[page.check_frequency] || 3;
+  const freqMap = { 'daily': 1, '1day': 1, '3days': 3, '7days': 7, 'weekly': 7, '1week': 7, '2weeks': 14, '17days': 17, '21days': 21, '30days': 30, 'monthly': 30 };
+  let days = freqMap[page.check_frequency];
+  if (!days) { const _dm = String(page.check_frequency || '').match(/^(\d+)\s*days?$/); days = _dm ? parseInt(_dm[1], 10) : 3; }
   await pool.query(
     `UPDATE tracker_pages SET last_checked_at=NOW(), next_check_at=NOW() + INTERVAL '${days} days' WHERE id=$1`,
     [page.id]
@@ -36808,8 +36835,9 @@ function startTrackerScheduler() {
           if (page.needs_html === true || page.needs_html === 't' || page.needs_html === 1) {
             console.log('[tracker-scheduler] Skipping scan for', page.url, '— needs fresh HTML from user (needs_html=true)');
             // Push next check out by one frequency period so we don't keep trying
-            const freqHours = { daily: 24, '1day': 24, '3days': 72, weekly: 168, '1week': 168 };
-            const hours = freqHours[page.check_frequency] || 72;
+            const freqHours = { daily: 24, '1day': 24, '3days': 72, '7days': 168, weekly: 168, '1week': 168, '17days': 408, '21days': 504, '30days': 720, monthly: 720 };
+            let hours = freqHours[page.check_frequency];
+            if (!hours) { const _hm = String(page.check_frequency || '').match(/^(\d+)\s*days?$/); hours = _hm ? parseInt(_hm[1], 10) * 24 : 72; }
             await pool.query('UPDATE tracker_pages SET next_check_at = NOW() + INTERVAL \'' + hours + ' hours\' WHERE id=$1', [page.id]).catch(()=>{});
             continue;
           }
