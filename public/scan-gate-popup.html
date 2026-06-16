@@ -1,0 +1,117 @@
+<!-- ════════════════════════════════════════════════════════════════════════
+  ContentScale — Scan Gate popup
+  Paste this whole block once, just before </body> on your scanner page.
+  It hooks window.fetch: when /api/scan returns 403 {gated:true} it shows the
+  email→code modal, then auto-replays the original scan after verification.
+  No changes needed to your existing scanner code.
+═════════════════════════════════════════════════════════════════════════ -->
+<script>
+(function () {
+  if (window.__csGateInit) return; window.__csGateInit = true;
+  var apiBase = '', currentEmail = '', resolveGate, rejectGate;
+
+  var style = document.createElement('style');
+  style.textContent = `
+    .csg-overlay{position:fixed;inset:0;background:rgba(2,6,23,.72);display:none;align-items:center;justify-content:center;z-index:2147483000;font-family:system-ui,Arial,sans-serif}
+    .csg-overlay.csg-show{display:flex}
+    .csg-card{background:#fff;width:92%;max-width:420px;border-radius:16px;padding:28px;box-shadow:0 24px 60px rgba(0,0,0,.35);position:relative;box-sizing:border-box}
+    .csg-x{position:absolute;top:14px;right:16px;border:0;background:none;font-size:22px;color:#94a3b8;cursor:pointer;line-height:1}
+    .csg-card h3{margin:0 0 6px;font-size:20px;color:#0f172a}
+    .csg-card p{margin:0 0 18px;color:#475569;font-size:14px;line-height:1.5}
+    .csg-card input{width:100%;box-sizing:border-box;padding:13px 14px;border:1px solid #cbd5e1;border-radius:10px;font-size:16px;outline:none}
+    .csg-card input:focus{border-color:#0f172a}
+    .csg-btn{width:100%;margin-top:14px;padding:13px;border:0;border-radius:10px;background:#0f172a;color:#fff;font-size:15px;font-weight:600;cursor:pointer}
+    .csg-btn:disabled{opacity:.6;cursor:default}
+    .csg-err{color:#dc2626;font-size:13px;margin-top:10px;min-height:16px}
+    .csg-code input{letter-spacing:8px;text-align:center;font-size:22px}
+    .csg-hide{display:none}
+  `;
+  document.head.appendChild(style);
+
+  var ov = document.createElement('div');
+  ov.className = 'csg-overlay';
+  ov.innerHTML = `
+    <div class="csg-card">
+      <button class="csg-x" data-x>&times;</button>
+      <div data-step="email">
+        <h3>Keep scanning — it's free</h3>
+        <p>You've used your free scans. Enter your email to unlock unlimited scanning.</p>
+        <input type="email" data-email placeholder="you@company.com" autocomplete="email">
+        <div class="csg-err" data-email-err></div>
+        <button class="csg-btn" data-email-btn>Send code</button>
+      </div>
+      <div data-step="code" class="csg-hide csg-code">
+        <h3>Enter your code</h3>
+        <p>We sent a 6-digit code to your email.</p>
+        <input type="text" inputmode="numeric" maxlength="6" data-code placeholder="------">
+        <div class="csg-err" data-code-err></div>
+        <button class="csg-btn" data-code-btn>Verify &amp; unlock</button>
+      </div>
+    </div>`;
+  document.body.appendChild(ov);
+
+  var q = function (s) { return ov.querySelector(s); };
+  var stepEmail = q('[data-step="email"]'), stepCode = q('[data-step="code"]');
+  var emailIn = q('[data-email]'), emailErr = q('[data-email-err]'), emailBtn = q('[data-email-btn]');
+  var codeIn = q('[data-code]'), codeErr = q('[data-code-err]'), codeBtn = q('[data-code-btn]');
+
+  function show(){ ov.classList.add('csg-show'); }
+  function hide(){ ov.classList.remove('csg-show'); }
+  function step(n){ stepEmail.classList.toggle('csg-hide', n!=='email'); stepCode.classList.toggle('csg-hide', n!=='code'); }
+  function busy(btn,b,t){ btn.disabled=b; btn.textContent = b ? 'Please wait...' : t; }
+
+  function showGate(){
+    return new Promise(function(res,rej){
+      resolveGate=res; rejectGate=rej;
+      emailErr.textContent=''; codeErr.textContent=''; emailIn.value=''; codeIn.value='';
+      step('email'); show(); setTimeout(function(){ emailIn.focus(); }, 50);
+    });
+  }
+
+  emailBtn.onclick = async function(){
+    var email = emailIn.value.trim(); emailErr.textContent='';
+    if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ emailErr.textContent='Enter a valid email'; return; }
+    busy(emailBtn,true);
+    try{
+      var r = await fetch(apiBase + '/api/scan-gate/request-code', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:email})});
+      var d = await r.json().catch(function(){return{};});
+      if(!r.ok || !d.ok) throw 0;
+      currentEmail = email; step('code'); setTimeout(function(){ codeIn.focus(); }, 50);
+    }catch(e){ emailErr.textContent='Could not send code. Try again.'; }
+    finally{ busy(emailBtn,false,'Send code'); }
+  };
+
+  codeBtn.onclick = async function(){
+    var code = codeIn.value.trim(); codeErr.textContent='';
+    if(code.length<4){ codeErr.textContent='Enter the code'; return; }
+    busy(codeBtn,true);
+    try{
+      var r = await fetch(apiBase + '/api/scan-gate/verify-code', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:currentEmail,code:code})});
+      var d = await r.json().catch(function(){return{};});
+      if(!r.ok || !d.ok) throw 0;
+      hide(); if(resolveGate) resolveGate(true);
+    }catch(e){ codeErr.textContent='Invalid or expired code.'; }
+    finally{ busy(codeBtn,false,'Verify & unlock'); }
+  };
+
+  q('[data-x]').onclick = function(){ hide(); if(rejectGate) rejectGate(new Error('cancelled')); };
+
+  // ── fetch interceptor: catch the gated 403 on /api/scan, then replay ──────
+  var origFetch = window.fetch.bind(window);
+  window.fetch = async function(input, init){
+    var url = typeof input === 'string' ? input : (input && input.url) || '';
+    var isScan = url.indexOf('/api/scan') !== -1 && url.indexOf('/api/scan-gate') === -1;
+    var reqClone = (typeof Request !== 'undefined' && input instanceof Request) ? input.clone() : null;
+    var resp = await origFetch(input, init);
+    if(isScan && resp.status === 403){
+      var data = {}; try { data = await resp.clone().json(); } catch(e){}
+      if(data && data.gated){
+        apiBase = url.slice(0, url.indexOf('/api/scan'));
+        try { await showGate(); return await origFetch(reqClone || input, init); }
+        catch(e){ return resp; } // user closed → original 403 flows through
+      }
+    }
+    return resp;
+  };
+})();
+</script>
