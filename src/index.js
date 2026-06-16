@@ -13194,33 +13194,55 @@ app.post('/api/gsc/confirm-import', verifyEngineAccess, async (req, res) => {
     let updated = 0;
     let skipped = 0;
     const results = [];
+    const seenHomepage = new Set();
+    const _isHome = (u) => { try { const x = new URL(u); const p = x.pathname.replace(/\/+$/,''); return p === '' || /^\/(index|home)(\.html?)?$/i.test(p); } catch(e){ return false; } };
+    const _homeNorm = `regexp_replace(regexp_replace(regexp_replace(url,'^https?://(www\\.)?',''),'\\?.*$',''),'/+$','')`;
     for (const url of urls) {
       try {
-        // Get GSC data for this URL
-        const gscR = await pool.query(
-          'SELECT clicks, impressions, ctr, position FROM gsc_pages WHERE profile_id = $1 AND url = $2',
-          [profile_id, url]
-        );
-        const gsc = gscR.rows[0] || {};
-        const urlObj = new URL(url);
-        const slug = urlObj.pathname.split('/').filter(Boolean).pop() || '/';
+        let importUrl = url, gsc = {}, bestKeyword = null;
 
-        // Best keyword = top GSC query for THIS url (short + intent-bearing). Else null → set manually.
-        let bestKeyword = null;
-        try {
+        if (_isHome(url)) {
+          // HOMEPAGE: merge all variants (www/non-www, http/https, trailing slash, query) into ONE row.
+          const host = new URL(url).hostname.replace(/^www\./, '');
+          const canonical = 'https://' + host + '/';
+          if (seenHomepage.has(canonical)) { skipped++; results.push({ url, status: 'merged_into_homepage' }); continue; }
+          seenHomepage.add(canonical);
+          importUrl = canonical;
+          const aggR = await pool.query(
+            `SELECT COALESCE(SUM(clicks),0)::int AS clicks, COALESCE(SUM(impressions),0)::int AS impressions,
+                    MIN(position) AS position, AVG(ctr) AS ctr
+             FROM gsc_pages WHERE profile_id=$1 AND ${_homeNorm} = $2`,
+            [profile_id, host]
+          ).catch(() => ({ rows: [] }));
+          gsc = aggR.rows[0] || {};
+          const kwR = await pool.query(
+            `SELECT query FROM gsc_queries
+             WHERE profile_id=$1 AND ${_homeNorm} = $2 AND query IS NOT NULL AND trim(query) <> ''
+               AND char_length(query) BETWEEN 2 AND 60
+               AND array_length(regexp_split_to_array(trim(query), '\\s+'), 1) <= 8
+             ORDER BY clicks DESC NULLS LAST, impressions DESC NULLS LAST LIMIT 1`,
+            [profile_id, host]
+          ).catch(() => ({ rows: [] }));
+          if (kwR.rows.length) bestKeyword = kwR.rows[0].query;
+        } else {
+          // NON-HOMEPAGE: exact URL match.
+          const gscR = await pool.query('SELECT clicks, impressions, ctr, position FROM gsc_pages WHERE profile_id=$1 AND url=$2', [profile_id, url]);
+          gsc = gscR.rows[0] || {};
           const kwR = await pool.query(
             `SELECT query FROM gsc_queries
              WHERE profile_id=$1 AND url=$2 AND query IS NOT NULL AND trim(query) <> ''
                AND char_length(query) BETWEEN 2 AND 60
                AND array_length(regexp_split_to_array(trim(query), '\\s+'), 1) <= 8
-             ORDER BY clicks DESC NULLS LAST, impressions DESC NULLS LAST
-             LIMIT 1`,
+             ORDER BY clicks DESC NULLS LAST, impressions DESC NULLS LAST LIMIT 1`,
             [profile_id, url]
-          );
+          ).catch(() => ({ rows: [] }));
           if (kwR.rows.length) bestKeyword = kwR.rows[0].query;
-        } catch(kwErr) { /* keyword stays null — user can set it manually */ }
+        }
 
-        // Idempotent import: check if this URL is already tracked for this engine.
+        const urlObj = new URL(importUrl);
+        const slug = urlObj.pathname.split('/').filter(Boolean).pop() || '/';
+
+                // Idempotent import: check if this URL is already tracked for this engine.
         // Look it up first instead of relying on a DB unique constraint (which may
         // not exist) — this is what was causing duplicates (56 -> 113) on re-import.
         let r, isUpdate = false;
@@ -13228,7 +13250,7 @@ app.post('/api/gsc/confirm-import', verifyEngineAccess, async (req, res) => {
           `SELECT id FROM tracker_pages
            WHERE url=$1 AND (engine_code_id=$2 OR ($2 IS NULL AND engine_code_id IS NULL))
            LIMIT 1`,
-          [url, codeId]
+          [importUrl, codeId]
         );
         if (existing.rows.length) {
           isUpdate = true;
@@ -13248,7 +13270,7 @@ app.post('/api/gsc/confirm-import', verifyEngineAccess, async (req, res) => {
             `INSERT INTO tracker_pages (engine_code_id, profile_id, url, slug, keyword, check_frequency, next_check_at, gsc_impressions, gsc_clicks, gsc_position, gsc_ctr, import_batch, is_active)
              VALUES ($1,$2,$3,$4,$5,$6,NOW(),$7,$8,$9,$10,$11,TRUE)
              RETURNING id`,
-            [codeId, profile_id, url, slug, bestKeyword, '3days',
+            [codeId, profile_id, importUrl, slug, bestKeyword, '3days',
              parseInt(gsc.impressions) || null, parseInt(gsc.clicks) || null,
              parseFloat(gsc.position) || null, parseFloat(gsc.ctr) || null, batchId]
           );
