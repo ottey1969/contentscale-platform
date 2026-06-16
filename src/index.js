@@ -31497,6 +31497,30 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                         '<button onclick="resetCostUsed(' + c.id + ')" style="font-size:11px;padding:4px 10px;background:#1e293b;color:#94a3b8;border:1px solid #334155;border-radius:4px;cursor:pointer;">Reset Used</button>' +
                         '<button onclick="showCostLog(' + c.id + ')" style="font-size:11px;padding:4px 10px;background:#0c4a6e;color:#38bdf8;border:1px solid #0284c7;border-radius:4px;cursor:pointer;"> Cost Log</button>' +
                         '</div></div>';
+                    // -- Access control: Unlimited / per-date expiry (separate from budget) --
+                    let accessBar = '';
+                    {
+                        const _exp = c.expires_at ? new Date(c.expires_at) : null;
+                        const _now = new Date();
+                        let _st, _stColor;
+                        if (!c.is_active) { _st = 'Revoked (login off)'; _stColor = '#9ca3af'; }
+                        else if (!_exp) { _st = '\u267e Unlimited access'; _stColor = '#4ade80'; }
+                        else if (_exp < _now) { _st = '\u26a0 Expired ' + _exp.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}); _stColor = '#ef4444'; }
+                        else { _st = 'Active until ' + _exp.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}); _stColor = '#38bdf8'; }
+                        const _expVal = _exp ? _exp.toISOString().slice(0,10) : '';
+                        accessBar = '<div style="margin-top:10px;padding:10px 12px;background:#0a1628;border-radius:8px;border:1px solid #1e3a5f;">' +
+                            '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">' +
+                            '<span style="font-size:11px;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:.05em;">Access</span>' +
+                            '<span style="font-size:12px;font-weight:700;color:' + _stColor + ';">' + _st + '</span>' +
+                            '</div>' +
+                            '<div style="display:flex;gap:6px;margin-top:4px;flex-wrap:wrap;align-items:center;">' +
+                            '<button onclick="setEngineUnlimited(' + c.id + ')" style="font-size:11px;padding:4px 10px;background:#064e3b;color:#4ade80;border:1px solid #15803d;border-radius:4px;cursor:pointer;">\u267e Unlimited</button>' +
+                            '<input type="date" id="setexp_' + c.id + '" value="' + _expVal + '" style="font-size:12px;padding:4px 8px;border-radius:4px;background:#0d1117;border:1px solid #334155;color:#e5e7eb;">' +
+                            '<button onclick="setEngineExpiry(' + c.id + ')" style="font-size:11px;padding:4px 10px;background:#0891b2;color:#fff;border:none;border-radius:4px;cursor:pointer;">Set expiry</button>' +
+                            '</div>' +
+                            '<div style="font-size:10px;color:#475569;margin-top:6px;">Access is separate from budget. Unlimited = never expires. Budget (below) only applies when Platform is ON.</div>' +
+                            '</div>';
+                    }
                     return '<div class="card" style="border-left:3px solid '+(c.is_active?'#a78bfa':'#6b7280')+';">' +
                     '<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;">' +
                     '<div style="flex:1;min-width:0;"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px;"><span style="font-family:monospace;font-size:1.1rem;font-weight:700;color:#a78bfa;">'+c.code+'</span>' +
@@ -31509,7 +31533,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     '<button onclick="copyEngineCode(&apos;'+c.code+'&apos;)" style="font-size:10px;padding:3px 10px;background:#334155;color:#94a3b8;border:none;border-radius:4px;cursor:pointer;">Copy</button>' +
                     '<a href="https://app.contentscale.site/content-engine" target="_blank" style="font-size:10px;color:#38bdf8;text-decoration:none;">-> content-engine</a>' +
                     '</div>' +
-                    keyInfo+creditBar+'</div>' +
+                    keyInfo+accessBar+creditBar+'</div>' +
                     '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-start;">' +
                     '<button onclick="togglePlatformKeys('+c.id+','+!c.use_platform_keys+')" class="btn" style="font-size:0.75rem;background:'+(c.use_platform_keys?'#0c4a6e':'#1e293b')+';color:'+(c.use_platform_keys?'#38bdf8':'#94a3b8')+';border:1px solid '+(c.use_platform_keys?'#0284c7':'#334155')+';">'+(c.use_platform_keys?'🔑 Platform ON':'🔑 Platform Keys')+'</button>' +
                     '<button onclick="copyEngineCode(&apos;'+c.code+'&apos;)" class="btn btn-info" style="font-size:0.75rem;"> Copy</button>' +
@@ -31519,6 +31543,21 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
             }catch(e){console.error('Failed to load engine codes:',e);}
         }
 
+        async function setEngineUnlimited(id){
+            if(!confirm('Set this code to UNLIMITED access (never expires)? This also re-activates login if it was off.'))return;
+            try{
+                await apiCall('/api/admin/engine-codes/'+id,'PATCH',{expires_at:null,is_active:true});
+                loadEngineCodes();
+            }catch(e){alert('Error: '+e.message);}
+        }
+        async function setEngineExpiry(id){
+            const v=document.getElementById('setexp_'+id).value;
+            if(!v){alert('Pick a date, or use Unlimited for never-expires.');return;}
+            try{
+                await apiCall('/api/admin/engine-codes/'+id,'PATCH',{expires_at:v+'T23:59:59',is_active:true});
+                loadEngineCodes();
+            }catch(e){alert('Error: '+e.message);}
+        }
         async function setCostLimit(id){
             const inp=document.getElementById('setlimit_'+id);
             const limit=parseFloat(inp.value);
@@ -36946,14 +36985,12 @@ function startTrackerScheduler() {
   _trackerSchedulerTimer = setInterval(async () => {
     if(!pool) return;
     try {
-      // Pick pages from BOTH engine tracker (engine_code_id) AND client tracker (tracker_client_id)
+      // Auto-scan: ONLY client trackers (tracker_client_id). Engine tracker is manual-only.
       const due = await pool.query(
         `SELECT p.* FROM tracker_pages p
          WHERE (p.is_active = TRUE OR p.is_active IS NULL)
-         AND (p.engine_code_id IS NOT NULL OR p.tracker_client_id IS NOT NULL)
+         AND p.tracker_client_id IS NOT NULL
          AND (
-           (p.engine_code_id IS NOT NULL AND (p.next_check_at <= NOW() OR p.next_check_at IS NULL))
-           OR
            (p.tracker_client_id IS NOT NULL AND p.last_checked_at IS NOT NULL AND p.next_check_at IS NOT NULL AND p.next_check_at <= NOW())
          )
          ORDER BY
