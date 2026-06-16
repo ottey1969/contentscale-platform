@@ -14275,6 +14275,15 @@ function safeProfileLocations(profile) {
   return profile.locations;
 }
 
+// Flat EUR estimate per action — used so the Platform budget reliably accumulates
+// and STOPS at its limit, even for actions that don't call trackApiCost.
+const _ACTION_EUR_ESTIMATE = {
+  'research': 0.02, 'brief': 0.02, 'write': 0.08, 'analyse-rewrite': 0.02,
+  'execute-rewrite': 0.08, 'targeted-fix': 0.03, 'bulk-create': 0.12, 'stats-study': 0.02
+};
+// These already report precise token cost via trackApiCost — don't double-charge them here.
+const _PRECISELY_TRACKED = new Set(['research', 'write']);
+
 function requireCredits(action) {
   return async (req, res, next) => {
     try {
@@ -14307,6 +14316,13 @@ function requireCredits(action) {
       }
       req.monthlyLimit = limit;
       req.monthlyUsed = used;
+      // Make the budget actually move for actions not covered by trackApiCost,
+      // so a Platform budget hard-stops at its limit (fire-and-forget).
+      if (!_PRECISELY_TRACKED.has(action)) {
+        const _est = _ACTION_EUR_ESTIMATE[action] || 0.03;
+        pool.query(`UPDATE engine_access_codes SET monthly_cost_used = COALESCE(monthly_cost_used,0) + $1 WHERE id=$2`, [_est, eu.codeId]).catch(()=>{});
+        pool.query(`INSERT INTO api_cost_log (code_id, action, model, input_tokens, output_tokens, estimated_cost, detail) VALUES ($1,$2,'estimate',0,0,$3,$4)`, [eu.codeId, action, _est, 'flat budget estimate']).catch(()=>{});
+      }
       next();
     } catch (e) {
       console.error('[requireApiAccess]', e);
@@ -36979,8 +36995,11 @@ function startHtmlReminderScheduler() {
 
 startHtmlReminderScheduler();
 
+// Tracker auto-scan master switch. false = ALL tracker scanning is manual only.
+const AUTO_TRACKER_SCAN = false;
 let _trackerSchedulerTimer = null;
 function startTrackerScheduler() {
+  if (!AUTO_TRACKER_SCAN) { console.log('[tracker-scheduler] Auto-scan disabled — tracker runs manual-only'); return; }
   if(_trackerSchedulerTimer) return;
   _trackerSchedulerTimer = setInterval(async () => {
     if(!pool) return;
