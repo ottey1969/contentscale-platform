@@ -4308,8 +4308,11 @@ function renderTrackerList() {
     // Priority badge
     var priBadge = '<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:12px;background:' + pri.bg + ';border:1px solid ' + pri.border + ';color:' + pri.color + ';white-space:nowrap;">' + pri.label + '</span>';
     // GSC quick stats inline
-    var posLabel = (p.gsc_position || (p.latest_snapshot && p.latest_snapshot.google_position)) ?
-      '<span style="font-size:10px;color:#9ca3af;">pos <b style="color:#e2e8f0;">' + parseFloat(p.gsc_position || p.latest_snapshot.google_position).toFixed(1) + '</b></span>' : '';
+    // Position: live scan rank = current position NOW; GSC = historical average across all queries
+    var _liveRank = (p.latest_snapshot && p.latest_snapshot.google_position) ? p.latest_snapshot.google_position : null;
+    var posLabel = _liveRank ?
+      '<span style="font-size:10px;color:#9ca3af;">rank <b style="color:#34d399;">#' + _liveRank + '</b> <span style="color:#6b7280;">now</span></span>'
+      : (p.gsc_position ? '<span style="font-size:10px;color:#9ca3af;">GSC avg <b style="color:#e2e8f0;">' + parseFloat(p.gsc_position).toFixed(1) + '</b></span>' : '');
     var imprLabel = p.gsc_impressions ?
       '<span style="font-size:10px;color:#9ca3af;"><b style="color:#e2e8f0;">' + Number(p.gsc_impressions).toLocaleString() + '</b> impr</span>' : '';
 
