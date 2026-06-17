@@ -18,6 +18,11 @@
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
+/* ── Mobile-friendly tracker cards ────────────────────────────── */
+@media (max-width: 560px) {
+  #trPagesList .tr-actions { flex-direction: row !important; flex-wrap: wrap !important; width: 100% !important; margin-top: 8px !important; padding-left: 34px !important; }
+  #trPagesList .tr-actions > button { flex: 1 1 auto !important; min-width: 90px !important; }
+}
 :root{
   --bg:#07090e;
   --surface:#0d1117;
@@ -4318,7 +4323,7 @@ function renderTrackerList() {
 
     var doneStyle = p.is_done ? 'opacity:0.45;' : '';
     return '<div style="' + doneStyle + 'padding:12px 0;border-bottom:1px solid rgba(255,255,255,.06);margin-bottom:4px;">' +
-    '<div style="display:flex;gap:0;align-items:flex-start;">' +
+    '<div style="display:flex;gap:0;align-items:flex-start;flex-wrap:wrap;">' +
       cbx + numBadge +
       '<div style="flex:1;min-width:0;border-left:3px solid ' + (p.is_done ? '#374151' : pri.border) + ';padding-left:10px;">' +
         '<div style="display:flex;gap:6px;align-items:center;margin-bottom:5px;flex-wrap:wrap;">' + priBadge + (posLabel||'') + (imprLabel||'') + '</div>' +
@@ -4329,10 +4334,7 @@ function renderTrackerList() {
         (pri.recommended ? '<div style="margin-top:5px;font-size:10px;font-weight:700;color:'+pri.color+';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="'+escHtml(pri.recommended)+'">→ ' + escHtml(pri.recommended.split('.')[0]) + '</div>' : '') +
         recHtml +
         '<div class="tr-status-' + p.id + '"></div>' +
-      '</div>' +
-      '<div style="text-align:right;flex-shrink:0;display:flex;flex-direction:column;gap:4px;align-items:flex-end;">' +
-      '</div>' +
-      // ── Meta Intelligence row ──────────────────────────────────────────
+      // ── Meta Intelligence row (inside content column → full width, stacks below) ──
       (p.meta_intel ? '<div style="margin:6px 0 2px;padding:8px 12px;background:rgba(124,58,237,0.06);border:1px solid rgba(124,58,237,0.2);border-radius:8px;">' +
         '<div style="font-size:9px;font-weight:800;color:#6b7280;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;">📋 META INTELLIGENCE' + (p.meta_intel_at ? ' · <span style="color:#4b5563;font-weight:400;">' + new Date(p.meta_intel_at).toLocaleDateString() + '</span>' : '') + '</div>' +
         (p.meta_intel.title ? '<div style="font-size:11px;color:#e5e7eb;margin-bottom:3px;"><span style="color:#a78bfa;font-weight:700;">Title:</span> ' + escHtml(p.meta_intel.title) + '</div>' : '') +
@@ -4340,7 +4342,8 @@ function renderTrackerList() {
         (p.meta_intel.h1 ? '<div style="font-size:11px;color:#9ca3af;"><span style="color:#34d399;font-weight:700;">H1:</span> ' + escHtml(p.meta_intel.h1) + '</div>' : '') +
         '<button onclick="refreshMetaIntel(' + p.id + ',this)" style="margin-top:6px;font-size:9px;padding:3px 8px;border-radius:4px;border:1px solid rgba(124,58,237,.3);background:transparent;color:#a78bfa;cursor:pointer;">↻ Refresh</button>' +
       '</div>' : '<button onclick="getMetaIntel(' + p.id + ',\'' + escHtml(p.url||'') + '\',\'' + escHtml(p.keyword||'') + '\',this)" style="margin:4px 0 2px;font-size:9px;padding:3px 10px;border-radius:4px;border:1px solid rgba(124,58,237,.2);background:rgba(124,58,237,.06);color:#a78bfa;cursor:pointer;font-weight:700;">📋 Get Best Title / Desc / H1</button>') +
-      '<div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0;">' +
+      '</div>' +
+      '<div class="tr-actions" style="display:flex;flex-direction:column;gap:4px;flex-shrink:0;">' +
         '<button onclick="runTrackerCheck('+p.id+',this)" style="font-size:10px;padding:4px 8px;border-radius:5px;border:1px solid rgba(167,139,250,.3);background:rgba(167,139,250,.08);color:#a78bfa;cursor:pointer;">▶ Check</button>' +
         '<button onclick="openPasteHtmlModal('+p.id+')" title="Paste the page HTML for an accurate scan (more reliable than live fetch)" style="font-size:10px;padding:4px 8px;border-radius:5px;border:1px solid rgba(56,189,248,.3);background:rgba(56,189,248,.08);color:#38bdf8;cursor:pointer;">' + (p.has_html_content ? '📋 HTML ✓' : '📋 HTML') + '</button>' +
         (pri.action === 'rewrite' ?
