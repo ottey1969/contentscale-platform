@@ -413,6 +413,18 @@ function _trackAiCall(provider, model, success, errorMsg, durationMs) {
 
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// Strong system prompt for the writing agent — encodes GRAAF/CRAFT, verifiability and brand voice
+// so output approaches claude.ai quality instead of thin, generic copy.
+const AGENT_SYSTEM_PROMPT = `You are an elite SEO content writer and HTML engineer for ContentScale (founder: Ottmar Francisca, an Amsterdam-based AI-era SEO brand). You write at the level of a top human content strategist, using the GRAAF framework (Genuinely credible, Relevant, Actionable, Accurate, Fresh) and the CRAFT methodology.
+
+NON-NEGOTIABLE RULES:
+1. VERIFIABILITY FIRST. Never invent facts, statistics, numbers, dates, prices, study results, awards, certifications, or quotes. If a specific claim cannot be safely stated as true, omit it or phrase it generally. No fake citations, no made-up data. Accuracy beats sounding impressive — when unsure, choose the honest general statement over the impressive specific one.
+2. SUBSTANCE OVER FLUFF. Every sentence must earn its place: concrete, specific, useful. No empty filler ("in today's fast-paced world"), no hollow superlatives, no padding to hit a word count.
+3. REAL E-E-A-T. Write with genuine expertise and a clear, confident, human advisory voice — the way a trusted specialist explains things, not a content mill.
+4. MATCH INTENT. Serve the actual search intent behind the target keyword; don't drift off-topic.
+5. LAYOUT INTEGRITY. Preserve the page's HTML structure, CSS classes, IDs, inline styles, images, author block, and nav/header/footer exactly. Only rewrite the text inside content zones.
+6. OUTPUT DISCIPLINE. Return ONLY the HTML. No markdown, no code fences, no commentary.`;
+
 // callClaudeForWrite — ALL writing goes through Claude
 // Gemini = research/JSON only · Claude = every HTML output
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -3319,6 +3331,8 @@ app.patch('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
    await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS is_done BOOLEAN DEFAULT FALSE`).catch(()=>{});
    await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS serp_spy JSONB`).catch(()=>{});
    await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS serp_spy_at TIMESTAMPTZ`).catch(()=>{});
+   await client.query(`CREATE TABLE IF NOT EXISTS agent_memory (id SERIAL PRIMARY KEY, profile_id INTEGER, url TEXT, event TEXT, detail TEXT, created_at TIMESTAMPTZ DEFAULT NOW())`).catch(()=>{});
+   await client.query(`CREATE INDEX IF NOT EXISTS idx_agent_memory_profile ON agent_memory(profile_id, created_at DESC)`).catch(()=>{});
    await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS import_batch VARCHAR(50)`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS html_source VARCHAR(20) DEFAULT 'live'`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS html_pasted_at TIMESTAMPTZ`).catch(()=>{});
@@ -18052,6 +18066,42 @@ Geef ALLEEN HTML terug vanaf <article>. Geen markdown. Eindig met <!-- word_coun
     let wasTruncated = false;
     let modelUsed = '';
     let attemptsUsed = 0;
+    // ── Reuse the SAVED SERP-spy data + agent memory (don't re-run the spy; remember prior work) ──
+    let _agentExtra = '';
+    try {
+      const _pageUrl = rw.original_url || '';
+      if (_pageUrl) {
+        const _spyR = await pool.query(
+          `SELECT serp_spy FROM tracker_pages WHERE url ILIKE $1 AND serp_spy IS NOT NULL ORDER BY serp_spy_at DESC NULLS LAST LIMIT 1`,
+          ['%' + _pageUrl.replace(/^https?:\/\/(www\.)?/, '').replace(/\/+$/, '') + '%']
+        );
+        if (_spyR.rows.length && _spyR.rows[0].serp_spy) {
+          const sp = _spyR.rows[0].serp_spy;
+          const _formula = sp.step2_pattern && sp.step2_pattern.the_ranking_formula ? sp.step2_pattern.the_ranking_formula : '';
+          const _gaps = (sp._entity_gaps || sp.entity_gaps_priority || []).slice(0, 12).map(g => g.entity || g).filter(Boolean);
+          const _paa = (sp.paa_questions || []).slice(0, 6);
+          const _brief = sp.content_brief || {};
+          _agentExtra += `\n\n═══ SERP-SPY INTELLIGENCE (already gathered for this page — USE THIS, do not guess) ═══\n` +
+            (_formula ? `Ranking formula: ${_formula}\n` : '') +
+            (_brief.recommended_word_count ? `Target length: ~${_brief.recommended_word_count} words\n` : '') +
+            (Array.isArray(_brief.must_have_h2s) && _brief.must_have_h2s.length ? `Must-have H2s: ${_brief.must_have_h2s.join(' | ')}\n` : '') +
+            (_gaps.length ? `Entity gaps competitors cover and this page is missing: ${_gaps.join(', ')}\n` : '') +
+            (_paa.length ? `Answer these real People-Also-Ask questions: ${_paa.join(' | ')}\n` : '');
+        }
+      }
+    } catch(e) { /* spy is optional */ }
+    try {
+      const _memR = await pool.query(
+        `SELECT event, detail, created_at FROM agent_memory WHERE profile_id=$1 ORDER BY created_at DESC LIMIT 8`,
+        [rw.profile_id]
+      );
+      if (_memR.rows.length) {
+        _agentExtra += `\n\n═══ MEMORY — what's already been done for this client (don't repeat it, build on it) ═══\n` +
+          _memR.rows.map(m => `- ${new Date(m.created_at).toISOString().slice(0,10)}: ${m.event}${m.detail ? ' — ' + m.detail : ''}`).join('\n');
+      }
+    } catch(e) { /* memory optional */ }
+    if (_agentExtra) writePromptRW += _agentExtra;
+
     const violationHistory = [];
     let bestScore = -1;
     let bestViolations = [];
@@ -18074,13 +18124,13 @@ Geef ALLEEN HTML terug vanaf <article>. Geen markdown. Eindig met <!-- word_coun
       try {
         if (!useGemini) {
           // Claude path (primary)
-          const sys = 'You are an elite SEO content writer and HTML engineer. Rewrite HTML pages to rank higher while preserving layout, author, CSS, and branding exactly. Return only HTML — no markdown, no code fences.';
+          const sys = AGENT_SYSTEM_PROMPT;
           const promptCapped = promptThisAttempt.length > 150000 ? promptThisAttempt.slice(0, 150000) + '\n\n[Content truncated — complete the rewrite with what you have]' : promptThisAttempt;
           rawHtml = await callClaudeForWrite(sys, promptCapped, 10000, claudeRwKey);
           modelUsed = 'claude-sonnet-4-20250514';
         } else {
           // Gemini fallback path
-          const gemSys = 'You are an elite SEO content writer and HTML engineer. Rewrite HTML pages to rank higher while preserving layout, author, CSS, and branding exactly. Return only HTML — no markdown, no code fences.';
+          const gemSys = AGENT_SYSTEM_PROMPT;
           const gemResult = await callGeminiWithFallback(geminiKey, {
             systemInstruction: { parts: [{ text: gemSys }] },
             contents: [{ role: 'user', parts: [{ text: promptThisAttempt }] }],
@@ -18179,6 +18229,15 @@ Return ONLY the complete updated HTML. No markdown, no explanation.`;
       `UPDATE content_rewrites SET rewritten_html=$1,rewritten_title=$2,word_count=$3,status='rewritten',updated_at=NOW() WHERE id=$4`,
       [html, analysis.recommended_title||rw.original_title, wc, rw.id]
     );
+
+    // Remember this work so the agent builds on it next time instead of forgetting.
+    try {
+      await pool.query(
+        `INSERT INTO agent_memory (profile_id, url, event, detail) VALUES ($1,$2,$3,$4)`,
+        [rw.profile_id, rw.original_url || null, 'Rewrote page',
+         (rw.keyword ? 'keyword: ' + rw.keyword + ' · ' : '') + (analysis.recommended_title ? '"' + String(analysis.recommended_title).slice(0,80) + '" · ' : '') + wc + ' words']
+      );
+    } catch(e) { /* memory is best-effort */ }
 
     const ctrCalc = (rw.gsc_clicks > 0 && rw.gsc_impressions > 0)
       ? (rw.gsc_clicks / rw.gsc_impressions * 100).toFixed(2)
@@ -34221,11 +34280,27 @@ function scoreAICitation(html, bodyText, keyword) {
 }
 
 // ── POST /api/tracker/serp-spy ───────────────────────────────────────────────
+// In-memory job store for async SERP spy (avoids Railway gateway 502 on long Claude calls)
+const _spyJobs = {};
+function _spyJobCleanup() {
+  const now = Date.now();
+  for (const id in _spyJobs) { if (now - (_spyJobs[id]._t || 0) > 10 * 60 * 1000) delete _spyJobs[id]; }
+}
+
 app.post('/api/tracker/serp-spy', verifyEngineAccess, async (req, res) => {
   const { keyword, profile_url, page_id, live_html } = req.body;
   if (!keyword) return res.status(400).json({ success: false, error: 'keyword required' });
   const anthropicKey = process.env.ANTHROPIC_API_KEY;
   if (!anthropicKey) return res.status(500).json({ success: false, error: 'ANTHROPIC_API_KEY not set' });
+
+  _spyJobCleanup();
+  const jobId = 'spy_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+  _spyJobs[jobId] = { status: 'processing', _t: Date.now() };
+  // Respond immediately — the heavy Serper+Claude work runs in the background so Railway never times out (502).
+  res.json({ success: true, job_id: jobId, status: 'processing' });
+
+  (async () => {
+   try {
   const myUrl = (profile_url||'').trim();
   const serperKey = process.env.SERPAPI_KEY; // Serper.dev key (same one used by tracker check)
   let serpUrls = [];
@@ -34259,7 +34334,7 @@ app.post('/api/tracker/serp-spy', verifyEngineAccess, async (req, res) => {
   } else {
     console.warn('[serp-spy] SERPAPI_KEY not set — cannot fetch SERP results');
   }
-  if (!serpUrls.length) return res.status(502).json({success:false,error:'Could not fetch SERP results — check SERPAPI_KEY is set in Railway environment'});
+  if (!serpUrls.length) { _spyJobs[jobId] = { status:'error', error:'Could not fetch SERP results — check SERPAPI_KEY is set in Railway environment', _t:Date.now() }; return; }
   const top5 = serpUrls.slice(0,5);
   // HTML source priority: pasted live_html → page's SAVED html_content (📋 HTML button) → live URL fetch.
   let _spyHtml = (live_html && live_html.trim().length > 100) ? live_html : null;
@@ -34300,7 +34375,7 @@ ENTITY GAPS (missing from client, in 2+ competitor pages): ${entityGaps.slice(0,
 Return ONLY valid JSON:
 {"keyword":"${keyword}","search_intent":"informational|commercial|transactional","ai_overview_blueprint":"steps to get cited","step1_catalog":[{"rank":1,"domain":"domain","url":"https://...","title":"page title","content_type":"service page|guide|landing page|blog","estimated_word_count":2000,"serp_features":["Featured Snippet","People Also Ask"],"schema_types":["FAQPage","LocalBusiness"],"freshness":"2024|not visible","ai_overview_eligible":true,"snippet_text":"google snippet text"}],"step2_pattern":{"the_ranking_formula":"ONE sentence","dominant_content_format":"format","dominant_schema":"schema","dominant_word_count_range":"range","top3_shared_traits":["trait"],"bottom_missing_traits":["missing"],"freshness_pattern":"pattern"},"step3_outlier":{"domain":"domain","rank":4,"why_breaks_pattern":"reason","why_it_ranks_anyway":"reason","signal_type":"warning|opportunity","what_to_learn":"insight"},"step4_missing":[{"gap":"topic","gap_type":"warning|opportunity","how_to_exploit":"action"}],"entity_gaps_priority":[{"entity":"term","priority":"high|medium|low","where_to_add":"location"}],"content_brief":{"recommended_format":"format","recommended_word_count":2200,"recommended_schema":["FAQPage"],"must_have_h2s":["h2"],"must_cover_entities":["entity"],"faq_questions":["Q"]},"paa_questions":["Q1","Q2","Q3"],"action_plan":[{"step":1,"priority":"high","action":"action","effort":"low|medium|high","time_to_impact":"days|weeks"}],"quick_wins":[{"win":"action","reason":"why","effort_minutes":20}],"client_vs_best":"${myUrl?'specific gap analysis':'no client URL'}","confidence":"high|medium|low"}`;
   try {
-    const ctrl2=new AbortController();setTimeout(()=>ctrl2.abort(),55000);
+    const ctrl2=new AbortController();setTimeout(()=>ctrl2.abort(),120000);
     const r2=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':anthropicKey,'anthropic-version':'2023-06-01'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:5000,messages:[{role:'user',content:prompt}]}),signal:ctrl2.signal});
     const d2=await r2.json().catch(()=>({}));
     if(!r2.ok) throw new Error((d2.error&&d2.error.message)||'Claude '+r2.status);
@@ -34308,8 +34383,19 @@ Return ONLY valid JSON:
     let spy=null;try{const m2=rawText.match(/\{[\s\S]*\}/);if(m2)spy=JSON.parse(m2[0]);}catch(e){}
     if(spy){spy._entity_gaps=entityGaps;spy._client_ai_citation=clientAI;spy.keyword=keyword;}
     if(page_id&&spy){try{await pool.query(`UPDATE tracker_pages SET serp_spy=$1,serp_spy_at=NOW() WHERE id=$2`,[JSON.stringify(spy),page_id]);}catch(e){}}
-    res.json({success:true,spy,competitors_scraped:top5.length});
-  } catch(e){console.error('[serp-spy]',e.message);res.status(502).json({success:false,error:e.message});}
+    _spyJobs[jobId] = { status:'done', result:{ spy, competitors_scraped: top5.length }, _t:Date.now() };
+  } catch(e){ console.error('[serp-spy]',e.message); _spyJobs[jobId] = { status:'error', error:e.message, _t:Date.now() }; }
+  } catch(eOuter){ console.error('[serp-spy outer]',eOuter.message); if(!_spyJobs[jobId]||_spyJobs[jobId].status==='processing') _spyJobs[jobId] = { status:'error', error:eOuter.message, _t:Date.now() }; }
+  })();
+});
+
+// Poll endpoint for the async SERP spy job
+app.get('/api/tracker/serp-spy/status/:jobId', verifyEngineAccess, (req, res) => {
+  const job = _spyJobs[req.params.jobId];
+  if (!job) return res.json({ success:false, status:'not_found', error:'Spy job expired or not found — run it again.' });
+  if (job.status === 'processing') return res.json({ success:true, status:'processing' });
+  if (job.status === 'done') { const r = job.result; delete _spyJobs[req.params.jobId]; return res.json({ success:true, status:'done', spy:r.spy, competitors_scraped:r.competitors_scraped }); }
+  const err = job.error; delete _spyJobs[req.params.jobId]; return res.json({ success:false, status:'error', error:err });
 });
 
 // ── POST /api/tracker/meta-intel — AI-powered best title/desc/H1 ────────────

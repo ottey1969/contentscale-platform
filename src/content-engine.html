@@ -7273,15 +7273,27 @@ async function runSerpSpy() {
         btn.disabled = false;
         btn.textContent = '🔍 Run Spy';
         stat.textContent = '⚠️ Timeout — try again';
-        result.innerHTML = '<div style="color:#f87171;padding:20px;">Spy took too long (90s). The SERP API may be slow. Try again.</div>';
+        result.innerHTML = '<div style="color:#f87171;padding:20px;">Spy took too long (3 min). The SERP API may be slow. Try again.</div>';
       }
-    }, 90000);
-    var d = await api('/api/tracker/serp-spy', 'POST', {
+    }, 200000);
+    var _start = await api('/api/tracker/serp-spy', 'POST', {
       keyword: kw,
       profile_url: url,
       page_id: _serpSpyPageId,
       live_html: liveHtml.trim() || null
     });
+    var d = { success: false, error: 'No response' };
+    if (_start && _start.job_id) {
+      var _jobId = _start.job_id;
+      for (var _i = 0; _i < 60 && window._spyRunning; _i++) {   // poll up to ~3 min
+        await new Promise(function(r){ setTimeout(r, 3000); });
+        var _s = await api('/api/tracker/serp-spy/status/' + _jobId, 'GET').catch(function(){ return null; });
+        if (_s && _s.status === 'done') { d = _s; break; }
+        if (_s && (_s.status === 'error' || _s.status === 'not_found')) { d = { success: false, error: _s.error }; break; }
+      }
+    } else if (_start) {
+      d = _start; // fallback if server returned the result directly
+    }
     clearTimeout(_spyTimeout);
     clearInterval(stepTimer);
     window._spyRunning = false;
