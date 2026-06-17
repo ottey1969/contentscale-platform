@@ -415,7 +415,7 @@ function _trackAiCall(provider, model, success, errorMsg, durationMs) {
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // Strong system prompt for the writing agent — encodes GRAAF/CRAFT, verifiability and brand voice
 // so output approaches claude.ai quality instead of thin, generic copy.
-const AGENT_SYSTEM_PROMPT = `You are an elite SEO content writer and HTML engineer for ContentScale (founder: Ottmar Francisca, an Amsterdam-based AI-era SEO brand). You write at the level of a top human content strategist, using the GRAAF framework (Genuinely credible, Relevant, Actionable, Accurate, Fresh) and the CRAFT methodology.
+const AGENT_SYSTEM_PROMPT = `You are an elite SEO content writer and HTML engineer writing on behalf of the client described in the prompt (their brand, niche and audience are given there — always write in THAT client's voice, never any other brand's). You write at the level of a top human content strategist, using the GRAAF framework (Genuinely credible, Relevant, Actionable, Accurate, Fresh) and the CRAFT methodology.
 
 NON-NEGOTIABLE RULES:
 1. VERIFIABILITY FIRST. Never invent facts, statistics, numbers, dates, prices, study results, awards, certifications, or quotes. If a specific claim cannot be safely stated as true, omit it or phrase it generally. No fake citations, no made-up data. Accuracy beats sounding impressive — when unsure, choose the honest general statement over the impressive specific one.
@@ -17666,6 +17666,54 @@ Return ONLY valid JSON:
   }
 });
 
+// Pre-write PLAN & VERIFY: returns the angle + the factual claims the agent intends to make,
+// each flagged VERIFIABLE or ASSUMPTION, so the human can correct BEFORE the agent writes.
+app.post('/api/content/preflight/:rewriteId', verifyEngineAccess, async (req, res) => {
+  try {
+    const rwR = await pool.query(
+      `SELECT r.*, cp.name as profile_name, cp.niche, cp.target_audience
+       FROM content_rewrites r JOIN content_profiles cp ON cp.id=r.profile_id WHERE r.id=$1`,
+      [req.params.rewriteId]
+    );
+    if (!rwR.rows.length) return res.status(404).json({ success:false, error:'Rewrite not found' });
+    const rw = rwR.rows[0];
+    let analysis = {}; try { analysis = typeof rw.analysis_data === 'string' ? JSON.parse(rw.analysis_data) : (rw.analysis_data || {}); } catch(_) {}
+    const geminiKey = process.env.GEMINI_API_KEY;
+    if (!geminiKey) return res.status(500).json({ success:false, error:'GEMINI_API_KEY not set' });
+
+    // Reuse saved spy
+    let spyLine = '';
+    try {
+      const _u = rw.original_url || '';
+      if (_u) {
+        const _s = await pool.query(`SELECT serp_spy FROM tracker_pages WHERE url ILIKE $1 AND serp_spy IS NOT NULL ORDER BY serp_spy_at DESC NULLS LAST LIMIT 1`, ['%' + _u.replace(/^https?:\/\/(www\.)?/,'').replace(/\/+$/,'') + '%']);
+        if (_s.rows.length && _s.rows[0].serp_spy) {
+          const sp = _s.rows[0].serp_spy;
+          const gaps = (sp._entity_gaps||sp.entity_gaps_priority||[]).slice(0,10).map(g=>g.entity||g).filter(Boolean);
+          spyLine = (sp.step2_pattern&&sp.step2_pattern.the_ranking_formula ? 'Ranking formula: '+sp.step2_pattern.the_ranking_formula+'\n' : '') + (gaps.length ? 'Entity gaps: '+gaps.join(', ')+'\n' : '');
+        }
+      }
+    } catch(e) {}
+
+    const kw = rw.keyword || analysis.primary_keyword || rw.original_title || '';
+    const prompt = `You are planning an SEO content rewrite. BEFORE writing, produce a short PRE-WRITE PLAN so a human can verify it.
+Client/brand: ${rw.profile_name||'(unknown)'} | Niche: ${rw.niche||'-'} | Audience: ${rw.target_audience||'-'}
+Target keyword: ${kw}
+Page URL: ${rw.original_url||'-'}
+${spyLine}
+Return ONLY valid JSON:
+{"angle":"1-2 sentence approach","key_claims":[{"claim":"a factual claim the article would make","status":"VERIFIABLE|ASSUMPTION","note":"how to verify, or why it's an assumption"}],"questions_for_human":["anything to confirm before writing"]}
+List 4-8 key_claims. Mark VERIFIABLE only if it's general knowledge or safely true; mark anything specific (stats, prices, dates, awards, named results, certifications) as ASSUMPTION unless the brand context confirms it.`;
+
+    const gem = await callGeminiWithFallback(geminiKey, { contents:[{role:'user',parts:[{text:prompt}]}], generationConfig:{ temperature:0.3, maxOutputTokens:2000 } });
+    if (!gem.ok) return res.status(502).json({ success:false, error: gem.errorMessage || 'Gemini failed' });
+    const raw = (gem.data && gem.data.candidates && gem.data.candidates[0] && gem.data.candidates[0].content && gem.data.candidates[0].content.parts && gem.data.candidates[0].content.parts[0] && gem.data.candidates[0].content.parts[0].text) || '';
+    let plan = null; try { const m = raw.match(/\{[\s\S]*\}/); if (m) plan = JSON.parse(m[0]); } catch(e) {}
+    if (!plan) return res.json({ success:true, plan:{ angle:'', key_claims:[], questions_for_human:[], raw } });
+    res.json({ success:true, plan });
+  } catch(e) { res.status(500).json({ success:false, error:e.message }); }
+});
+
 app.post('/api/content/execute-rewrite/:rewriteId', verifyEngineAccess, requireCredits('execute-rewrite'), asyncHandler(async (req, res) => {
   req.socket && req.socket.setKeepAlive && req.socket.setKeepAlive(true);
   res.setHeader('X-Accel-Buffering', 'no');
@@ -18068,6 +18116,14 @@ Geef ALLEEN HTML terug vanaf <article>. Geen markdown. Eindig met <!-- word_coun
     let attemptsUsed = 0;
     // ── Reuse the SAVED SERP-spy data + agent memory (don't re-run the spy; remember prior work) ──
     let _agentExtra = '';
+    // Client/brand context from the profile — so each client gets their OWN voice, not a hardcoded brand.
+    var _brand = [
+      rw.profile_name ? 'Client / brand: ' + rw.profile_name : '',
+      rw.niche ? 'Niche: ' + rw.niche : '',
+      rw.target_audience ? 'Audience: ' + rw.target_audience : '',
+      rw.primary_goal ? 'Primary goal: ' + rw.primary_goal : ''
+    ].filter(Boolean);
+    if (_brand.length) _agentExtra += '\n\n═══ CLIENT / BRAND CONTEXT (write in THIS brand\'s voice) ═══\n' + _brand.join('\n');
     try {
       const _pageUrl = rw.original_url || '';
       if (_pageUrl) {
@@ -34291,7 +34347,7 @@ app.post('/api/tracker/serp-spy', verifyEngineAccess, async (req, res) => {
   const { keyword, profile_url, page_id, live_html } = req.body;
   if (!keyword) return res.status(400).json({ success: false, error: 'keyword required' });
   const anthropicKey = process.env.ANTHROPIC_API_KEY;
-  if (!anthropicKey) return res.status(500).json({ success: false, error: 'ANTHROPIC_API_KEY not set' });
+  if (!process.env.GEMINI_API_KEY) return res.status(500).json({ success: false, error: 'GEMINI_API_KEY not set' });
 
   _spyJobCleanup();
   const jobId = 'spy_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
@@ -34375,11 +34431,11 @@ ENTITY GAPS (missing from client, in 2+ competitor pages): ${entityGaps.slice(0,
 Return ONLY valid JSON:
 {"keyword":"${keyword}","search_intent":"informational|commercial|transactional","ai_overview_blueprint":"steps to get cited","step1_catalog":[{"rank":1,"domain":"domain","url":"https://...","title":"page title","content_type":"service page|guide|landing page|blog","estimated_word_count":2000,"serp_features":["Featured Snippet","People Also Ask"],"schema_types":["FAQPage","LocalBusiness"],"freshness":"2024|not visible","ai_overview_eligible":true,"snippet_text":"google snippet text"}],"step2_pattern":{"the_ranking_formula":"ONE sentence","dominant_content_format":"format","dominant_schema":"schema","dominant_word_count_range":"range","top3_shared_traits":["trait"],"bottom_missing_traits":["missing"],"freshness_pattern":"pattern"},"step3_outlier":{"domain":"domain","rank":4,"why_breaks_pattern":"reason","why_it_ranks_anyway":"reason","signal_type":"warning|opportunity","what_to_learn":"insight"},"step4_missing":[{"gap":"topic","gap_type":"warning|opportunity","how_to_exploit":"action"}],"entity_gaps_priority":[{"entity":"term","priority":"high|medium|low","where_to_add":"location"}],"content_brief":{"recommended_format":"format","recommended_word_count":2200,"recommended_schema":["FAQPage"],"must_have_h2s":["h2"],"must_cover_entities":["entity"],"faq_questions":["Q"]},"paa_questions":["Q1","Q2","Q3"],"action_plan":[{"step":1,"priority":"high","action":"action","effort":"low|medium|high","time_to_impact":"days|weeks"}],"quick_wins":[{"win":"action","reason":"why","effort_minutes":20}],"client_vs_best":"${myUrl?'specific gap analysis':'no client URL'}","confidence":"high|medium|low"}`;
   try {
-    const ctrl2=new AbortController();setTimeout(()=>ctrl2.abort(),120000);
-    const r2=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':anthropicKey,'anthropic-version':'2023-06-01'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:5000,messages:[{role:'user',content:prompt}]}),signal:ctrl2.signal});
-    const d2=await r2.json().catch(()=>({}));
-    if(!r2.ok) throw new Error((d2.error&&d2.error.message)||'Claude '+r2.status);
-    const rawText=(d2.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('');
+    const _gemKey = process.env.GEMINI_API_KEY;
+    if (!_gemKey) throw new Error('GEMINI_API_KEY not set');
+    const _gem = await callGeminiWithFallback(_gemKey, { contents:[{role:'user',parts:[{text:prompt}]}], generationConfig:{ temperature:0.3, maxOutputTokens:6000 } });
+    if (!_gem.ok) throw new Error('Gemini: ' + (_gem.errorMessage || _gem.status));
+    const rawText = (_gem.data && _gem.data.candidates && _gem.data.candidates[0] && _gem.data.candidates[0].content && _gem.data.candidates[0].content.parts && _gem.data.candidates[0].content.parts[0] && _gem.data.candidates[0].content.parts[0].text) || '';
     let spy=null;try{const m2=rawText.match(/\{[\s\S]*\}/);if(m2)spy=JSON.parse(m2[0]);}catch(e){}
     if(spy){spy._entity_gaps=entityGaps;spy._client_ai_citation=clientAI;spy.keyword=keyword;}
     if(page_id&&spy){try{await pool.query(`UPDATE tracker_pages SET serp_spy=$1,serp_spy_at=NOW() WHERE id=$2`,[JSON.stringify(spy),page_id]);}catch(e){}}

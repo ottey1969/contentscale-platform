@@ -7319,7 +7319,7 @@ async function runSerpSpy() {
     btn.textContent = '🔍 Run Spy';
 
     if (!d.success || (!d.spy && !d.raw)) {
-      result.innerHTML = '<div style="color:#f87171;padding:20px;">Analysis failed — try again</div>';
+      result.innerHTML = '<div style="color:#f87171;padding:20px;">Analysis failed — try again' + (d && d.error ? '<div style="font-size:11px;color:#9ca3af;margin-top:8px;">' + d.error + '</div>' : '') + '</div>';
       return;
     }
 
