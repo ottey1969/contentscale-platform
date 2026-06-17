@@ -7216,6 +7216,12 @@ async function refreshMetaIntel(pageId, btn) {
   await getMetaIntel(pageId, pg.url, pg.keyword, btn);
 }
 
+function serpSpyShowInputs() {
+  var si = document.getElementById('serpSpyInputs'); if (si) si.style.display = '';
+  var r = document.getElementById('serpSpyResult'); if (r) r.innerHTML = '';
+  var st = document.getElementById('serpSpyStatus'); if (st) st.textContent = '';
+}
+
 function openSavedSpy(pageId) {
   var pg = (_trPages || []).find(function(p){ return p.id === pageId; });
   if (!pg || !pg.serp_spy) { toast('No saved brief yet — run the Spy first', 2500, 'warn'); return; }
@@ -7224,16 +7230,21 @@ function openSavedSpy(pageId) {
   if (modal && modal.parentNode !== document.body) document.body.appendChild(modal);
   document.getElementById('serpSpyKeyword').value = pg.keyword || '';
   document.getElementById('serpSpyUrl').value = pg.url || '';
-  document.getElementById('serpSpyStatus').textContent = '✓ Saved brief';
+  document.getElementById('serpSpyStatus').textContent = '';
+  var si = document.getElementById('serpSpyInputs'); if (si) si.style.display = 'none';
   var when = pg.serp_spy_at ? new Date(pg.serp_spy_at).toLocaleString() : '';
   document.getElementById('serpSpyResult').innerHTML =
-    (when ? '<div style="font-size:11px;color:#34d399;padding:8px 16px 0;">📄 Saved brief · scanned ' + when + '</div>' : '') +
+    '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 0;flex-wrap:wrap;">' +
+      (when ? '<div style="font-size:11px;color:#34d399;">📄 Saved brief · scanned ' + when + '</div>' : '<div></div>') +
+      '<button onclick="serpSpyShowInputs()" style="font-size:10px;padding:4px 10px;border-radius:6px;border:1px solid rgba(124,58,237,.4);background:rgba(124,58,237,.1);color:#c4b5fd;cursor:pointer;">↻ New scan</button>' +
+    '</div>' +
     renderSerpSpyReport(pg.serp_spy);
   if (modal) modal.style.display = 'flex';
 }
 
 function openSerpSpy(pageId) {
   updateWorkflowStep(3);
+  var _siShow = document.getElementById('serpSpyInputs'); if (_siShow) _siShow.style.display = '';
   _serpSpyPageId = pageId;
   var page = (_trPages || []).find(function(p){ return p.id === pageId; });
   var kw   = (page && page.keyword) || '';
@@ -7350,7 +7361,9 @@ async function runSerpSpy() {
       // and stay until the next spy overwrites it (it's already saved in the DB too).
       var _pgSpy = (_trPages || []).find(function(p){ return p.id === _serpSpyPageId; });
       if (_pgSpy) { _pgSpy.serp_spy = d.spy; _pgSpy.serp_spy_at = new Date().toISOString(); }
-      result.innerHTML = renderSerpSpyReport(d.spy);
+      var _siHide = document.getElementById('serpSpyInputs'); if (_siHide) _siHide.style.display = 'none';
+      var _stClr = document.getElementById('serpSpyStatus'); if (_stClr) _stClr.textContent = '';
+      result.innerHTML = '<div style="display:flex;justify-content:flex-end;padding:8px 0;"><button onclick="serpSpyShowInputs()" style="font-size:10px;padding:4px 10px;border-radius:6px;border:1px solid rgba(124,58,237,.4);background:rgba(124,58,237,.1);color:#c4b5fd;cursor:pointer;">↻ New scan</button></div>' + renderSerpSpyReport(d.spy);
       // Action buttons below report
       var actDiv = document.createElement('div');
       actDiv.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap;padding:12px 16px;background:rgba(0,0,0,.3);border-top:1px solid rgba(255,255,255,.06);';
@@ -8589,7 +8602,8 @@ function renderSerpSpyReport(s) {
       </div>
       <button onclick="closeSerpSpy()" style="background:rgba(255,255,255,.05);border:none;color:#9ca3af;border-radius:6px;padding:6px 12px;cursor:pointer;font-size:12px;">✕ Close</button>
     </div>
-    <!-- Inputs -->
+    <!-- Inputs (hidden once a brief is shown) -->
+    <div id="serpSpyInputs">
     <div style="padding:14px 20px;border-bottom:1px solid rgba(255,255,255,.06);flex-shrink:0;display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;">
       <div style="flex:1;min-width:180px;">
         <div style="font-size:9px;color:#6b7280;margin-bottom:4px;font-weight:700;letter-spacing:.05em;">TARGET KEYWORD</div>
