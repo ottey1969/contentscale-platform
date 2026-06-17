@@ -12894,7 +12894,17 @@ const verifyEngineAccess = async (req, res, next) => {
       } catch(q2err) { codeResult = { rows: [] }; }
     }
     if (!codeResult || codeResult.rows.length === 0) {
-      return res.status(403).json({ success: false, error: 'Engine access code not found. The database was reset — please get a new code from your admin dashboard.' });
+      // Distinguish WHY the code failed so the message is accurate (not the scary "db reset").
+      let reason = 'Access code not found — get a valid code from your admin dashboard.';
+      try {
+        const anyR = await pool.query('SELECT is_active, expires_at FROM engine_access_codes WHERE code = $1', [lookupCode.trim().toUpperCase()]);
+        if (anyR.rows.length) {
+          const c = anyR.rows[0];
+          if (c.is_active === false) reason = 'This access code is turned OFF. Re-activate it in the admin dashboard (Give Access).';
+          else if (c.expires_at && new Date(c.expires_at) <= new Date()) reason = 'This access code EXPIRED on ' + new Date(c.expires_at).toISOString().slice(0,10) + '. Extend it or set it to Unlimited in Give Access.';
+        }
+      } catch(e) {}
+      return res.status(403).json({ success: false, error: reason });
     }
     const code = codeResult.rows[0];
     req.engineUser = { isAdmin: false, codeId: code.id, code: code };
