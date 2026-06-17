@@ -4356,9 +4356,10 @@ function renderTrackerList() {
       // Reject if it looks like JSON
       if (typeof _rawAction === 'string' && (_rawAction.trim().startsWith('[') || _rawAction.trim().startsWith('{'))) _rawAction = '';
       var rAction = escHtml(String(_rawAction));
-      recHtml = '<div style="margin-top:5px;background:#07090e;border-left:2px solid '+rPriority+';border-radius:2px;padding:5px 8px;font-size:11px;color:#fdba74;line-height:1.5;">' +
-        '<span style="font-weight:700;">AI Rec: </span>' + rTitle +
-        (rAction ? '<div style="color:#9ca3af;font-size:10px;margin-top:2px;line-height:1.5;word-break:break-word;">' + rAction + '</div>' : '') +
+      var _recCount = (Array.isArray(recs) && recs.length) ? recs.length : 1;
+      recHtml = '<div onclick="openTrackerDetail('+p.id+')" title="Open for all recommendations" style="margin-top:5px;cursor:pointer;background:#07090e;border-left:2px solid '+rPriority+';border-radius:2px;padding:5px 8px;font-size:10px;color:#fdba74;line-height:1.5;">' +
+        '<span style="font-weight:700;">🎯 ' + _recCount + ' AI fix' + (_recCount !== 1 ? 'es' : '') + ':</span> ' + rTitle +
+        ' <span style="color:#6b7280;">· tap to view →</span>' +
         '</div>';
     }
 
@@ -4906,9 +4907,9 @@ async function openTrackerDetail(pageId) {
     if (Array.isArray(recs2) && recs2.length) {
       var _isElite = snap.score >= 90;
       var _recHeader = _isElite
-        ? '<div style="font-size:10px;color:#34d399;margin-bottom:10px;line-height:1.5;">🏆 Your page structure scores <b>Elite ('+snap.score+'/100)</b>. The recommendations below are <b>live competitive intelligence</b> — what to change to reach position #1 and get cited by Google AI Overview, Perplexity & You.com. These are not fixes for your structure — they are strategic moves against live competitors.</div>'
-        : '<div style="font-size:10px;color:#9ca3af;margin-bottom:10px;line-height:1.5;">🎯 <b>Live AI Recommendations</b> — Based on live SERP analysis and competitor positioning for this keyword. These target getting to #1 in Google and earning AI citations.</div>';
-      recsHtml = '<div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:12px;margin-bottom:14px;"><div style="font-size:9px;color:#6b7280;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">📋 AI Recommendations ('+recs2.length+')</div>' + _recHeader +
+        ? '<div style="font-size:10px;color:#34d399;margin-bottom:10px;line-height:1.5;">🏆 Your page structure scores <b>Elite ('+snap.score+'/100)</b>. The fixes below are <b>on-page changes that make this page citeable in Google AI Overview &amp; Perplexity</b> — not structure fixes. <span style="color:#6b7280;">(To research what to WRITE vs competitors, use 🔍 Spy &amp; Brief.)</span></div>'
+        : '<div style="font-size:10px;color:#9ca3af;margin-bottom:10px;line-height:1.5;">🤖 <b>AI Citation Fixes</b> — on-page changes that make this page citeable in <b>Google AI Overview</b> &amp; <b>Perplexity</b>. <span style="color:#6b7280;">(To research what to WRITE to outrank competitors, use 🔍 Spy &amp; Brief.)</span></div>';
+      recsHtml = '<div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:12px;margin-bottom:14px;"><div style="font-size:9px;color:#a78bfa;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">🤖 AI Citation Fixes ('+recs2.length+') · Google AI Overview &amp; Perplexity</div>' + _recHeader +
         recs2.slice(0,5).map(function(r){
           var pI = r.priority==='high'?'🔴':r.priority==='medium'?'🟡':'🟢';
           var title  = r.title  || r.description || r.name || '';
@@ -7692,6 +7693,12 @@ function renderSerpSpyReport(s) {
   };
 
   var html = '<div style="font-family:monospace;font-size:11px;color:#e2e8f0;">';
+
+  // ── PURPOSE BANNER ──
+  html += '<div style="background:rgba(124,58,237,.1);border:1px solid rgba(124,58,237,.3);border-radius:8px;padding:8px 12px;margin-bottom:10px;font-family:\'DM Sans\',sans-serif;">' +
+    '<div style="font-size:11px;font-weight:800;color:#c4b5fd;">✍️ What to WRITE to outrank the top 10</div>' +
+    '<div style="font-size:10px;color:#9ca3af;margin-top:2px;line-height:1.5;">Competitive content brief — the ranking formula, entity gaps and H2s the winners have that you don\'t. <span style="color:#6b7280;">(For on-page AI-citation fixes, use ▶ Check instead.)</span></div>' +
+    '</div>';
 
   // ── HEADER ──
   html += '<div style="background:linear-gradient(135deg,#1e1b4b,#0f1923);border-radius:10px;padding:16px 20px;margin-bottom:12px;">' +
