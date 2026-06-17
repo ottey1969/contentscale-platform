@@ -367,7 +367,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'DM San
         <div id="wfStep1" style="padding:4px 0 4px 10px;border-left:2px solid #374151;margin-bottom:3px;line-height:1.4;">2. Tracker → profile → Import GSC</div>
         <div id="wfStep2" style="padding:4px 0 4px 10px;border-left:2px solid #374151;margin-bottom:3px;line-height:1.4;">3. 🔍 Spy on page → competitors</div>
         <div id="wfStep3" style="padding:4px 0 4px 10px;border-left:2px solid #374151;margin-bottom:3px;line-height:1.4;">④ Paste GRAAF recs → Copy Master Brief</div>
-        <div id="wfStep4" style="padding:4px 0 4px 10px;border-left:2px solid #374151;margin-bottom:3px;line-height:1.4;">5. External AI Agent fixes ALL</div>
+        <div id="wfStep4" style="padding:4px 0 4px 10px;border-left:2px solid #374151;margin-bottom:3px;line-height:1.4;">5. AI Writer &amp; Rewriter writes &amp; fixes ALL</div>
         <div id="wfStep5" style="padding:4px 0 4px 10px;border-left:2px solid #374151;line-height:1.4;">6. Publish → Tracker monitors</div>
       </div>
     </div>
@@ -1988,6 +1988,22 @@ async function runDirectFullRewrite() {
     if (!confirm('⚠️ You rank at position ' + pos + '. A full rewrite can cause a 7–30 day ranking dip. Continue?')) return;
   } else if (pos && pos <= 10) {
     if (!confirm('⚠️ You rank at position ' + pos + '. Consider surgical fixes instead. Continue with full rewrite?')) return;
+  }
+  // ── Pre-write verify step: show the plan + claims BEFORE writing so you can correct first ──
+  var _pf = await api('/api/content/preflight/' + rewriteId, 'POST', {}).catch(function(){ return null; });
+  if (_pf && _pf.success && _pf.plan) {
+    var pl = _pf.plan;
+    var _claims = (pl.key_claims||[]).map(function(c){
+      var ok = (c.status||'').toUpperCase().indexOf('VERIF') === 0;
+      return '<div style="margin:3px 0;font-size:12px;"><span style="font-weight:700;color:' + (ok?'#34d399':'#fbbf24') + ';">' + (ok?'✓ verifiable':'⚠ assumption') + '</span> — ' + (c.claim||'') + (c.note?' <span style="color:#6b7280;">('+c.note+')</span>':'') + '</div>';
+    }).join('');
+    var _q = (pl.questions_for_human||[]).map(function(q){ return '<li>'+q+'</li>'; }).join('');
+    addAgentMessage('<b>🔍 Pre-write plan — verify before I write:</b>' +
+      (pl.angle?'<div style="margin:6px 0;"><b>Angle:</b> '+pl.angle+'</div>':'') +
+      (_claims?'<div style="margin:6px 0;"><b>Claims I would make:</b>'+_claims+'</div>':'') +
+      (_q?'<div style="margin:6px 0;"><b>Confirm before writing:</b><ul style="margin:4px 0 0 18px;">'+_q+'</ul></div>':'') +
+      '<div style="margin-top:6px;font-size:11px;color:#6b7280;">⚠ assumptions are written generally or left out unless you confirm them. OK = write · Cancel = adjust first.</div>');
+    if (!confirm('Pre-write plan is shown above. OK = write now · Cancel = stop so you can adjust the keyword/brief first.')) return;
   }
   var prog = addProgress('✍ Running full rewrite…', 10);
   try {
