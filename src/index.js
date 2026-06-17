@@ -423,7 +423,8 @@ NON-NEGOTIABLE RULES:
 3. REAL E-E-A-T. Write with genuine expertise and a clear, confident, human advisory voice — the way a trusted specialist explains things, not a content mill.
 4. MATCH INTENT. Serve the actual search intent behind the target keyword; don't drift off-topic.
 5. LAYOUT INTEGRITY. Preserve the page's HTML structure, CSS classes, IDs, inline styles, images, author block, and nav/header/footer exactly. Only rewrite the text inside content zones.
-6. OUTPUT DISCIPLINE. Return ONLY the HTML. No markdown, no code fences, no commentary.`;
+6. NO DUPLICATION. If the page already has an element — a definition / direct answer, a "What is …" H2, an FAQ, an author block, a micro-answer/TL;DR, or a schema block — IMPROVE it in place. NEVER create a second copy. One definition, one author block, one of each section. Adding a duplicate of something already present is a failure.
+7. OUTPUT DISCIPLINE. Return ONLY the HTML. No markdown, no code fences, no commentary.`;
 
 // callClaudeForWrite — ALL writing goes through Claude
 // Gemini = research/JSON only · Claude = every HTML output
@@ -35785,8 +35786,10 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
     try {
       const kw = keyword;
 
-      // HTML: raw first 5000 chars for structural analysis
-      const rawHtml = page.html_content || '';
+      // HTML: prefer pasted HTML, else the live-fetched HTML — so detection sees the REAL page
+      const rawHtml = (page.html_content && page.html_content.length > 200)
+        ? page.html_content
+        : ((typeof effectiveHtml === 'string' && effectiveHtml.length > 200) ? effectiveHtml : (page.html_content || ''));
       const htmlExcerpt = rawHtml.substring(0, 8000);
       // ── Presence detection on the FULL page so the brief never re-recommends what already exists ──
       const _onPage = {
