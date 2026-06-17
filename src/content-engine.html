@@ -4300,7 +4300,7 @@ function renderTrackerList() {
       var rAction = escHtml(String(_rawAction));
       recHtml = '<div style="margin-top:5px;background:#07090e;border-left:2px solid '+rPriority+';border-radius:2px;padding:5px 8px;font-size:11px;color:#fdba74;line-height:1.5;">' +
         '<span style="font-weight:700;">AI Rec: </span>' + rTitle +
-        (rAction ? '<div style="color:#9ca3af;font-size:10px;margin-top:2px;">' + rAction.substring(0,140) + (rAction.length>140?'…':'') + '</div>' : '') +
+        (rAction ? '<div style="color:#9ca3af;font-size:10px;margin-top:2px;line-height:1.5;word-break:break-word;">' + rAction + '</div>' : '') +
         '</div>';
     }
 
