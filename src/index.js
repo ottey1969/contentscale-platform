@@ -35939,7 +35939,18 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
         var _ckw = keyword || page.keyword || page.gsc_keyword || 'this topic';
         var _cpos = snapshot.google_position || page.gsc_position || null;
         var _items = [];
-        if (!snapshot.ai_google_overview_cited) _items.push({ title:'Win Google AI Overview citation', priority:'high', system:'Google AIO', action:'Add a direct, quotable 2-3 sentence definition answering "what is '+_ckw+'" within the first 100 words, right after the H1. AI Overviews quote concise, self-contained answers.', expected_impact:'Eligible for AIO citation within 2-3 crawl cycles' });
+        // ── Content-aware guards: don't recommend ADDING what the page already has ──
+        var _html = (typeof effectiveHtml === 'string' && effectiveHtml) ? effectiveHtml : (page.html_content || '');
+        var _htmlLow = String(_html).toLowerCase();
+        var _kwLow = String(_ckw || '').toLowerCase();
+        var _kwEsc = _kwLow.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        var _hasQuestionH2 = /<h2[^>]*>[^<]*\?/i.test(_html) || /<h2[^>]*>\s*(what|how|why|when|where|who|which|is|are|can|does|do)\b/i.test(_html);
+        var _hasDefinition = !!_kwLow && (_htmlLow.indexOf('what is ' + _kwLow) !== -1 || new RegExp('\\b' + _kwEsc + '\\b[^<.]{0,40}\\bis\\b', 'i').test(_html));
+        var _hasDirectAnswer = _hasDefinition || /id=["']direct-answer["']/i.test(_html);
+        if (!snapshot.ai_google_overview_cited) {
+          if (!_hasDefinition) _items.push({ title:'Win Google AI Overview citation', priority:'high', system:'Google AIO', action:'Add a direct, quotable 2-3 sentence definition answering "what is '+_ckw+'" within the first 100 words, right after the H1. AI Overviews quote concise, self-contained answers.', expected_impact:'Eligible for AIO citation within 2-3 crawl cycles' });
+          else _items.push({ title:'Sharpen your existing AI Overview answer', priority:'medium', system:'Google AIO', action:'You ALREADY have a definition near the top — do NOT add a second one. Instead make it more quotable: tighten to 2-3 self-contained sentences, lead with "'+(_ckw.charAt(0).toUpperCase()+_ckw.slice(1))+' is…", and add one named source/stat.', expected_impact:'More citeable existing answer → AIO eligibility' });
+        }
         if (!snapshot.ai_perplexity_cited) _items.push({ title:'Win Perplexity citation', priority:'medium', system:'Perplexity', action:'Add an "About the Author" block with a named author, credentials and 1-2 verifiable stats. Perplexity favors clear E-E-A-T signals.', expected_impact:'Stronger author trust → Perplexity citation' });
         if (!snapshot.ai_bing_cited) _items.push({ title:'Win Microsoft Copilot citation', priority:'medium', system:'Microsoft Copilot', action:'Add a 50-60 word summary paragraph near the top that directly matches the search query for "'+_ckw+'".', expected_impact:'Concise top-of-page summary → Copilot citation' });
         if (!snapshot.ai_brave_cited) _items.push({ title:'Win Claude / Brave citation', priority:'low', system:'Claude/Brave', action:'Add verifiable facts with named sources and a clear author byline. Claude and Brave prioritize factual, well-sourced content.', expected_impact:'Factual sourcing → Claude/Brave citation' });
@@ -35948,7 +35959,7 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
         snapshot.recommendations = _items.slice(0,6);
         var _gsc = [];
         if (_ckw && _cpos != null) _gsc.push({ title:'Meta Title & Description (Rank Math)', priority:'high', trigger:'Ranking #'+_cpos+(gscImpr?' with '+gscImpr+' impressions, '+(gscCtr||'low')+'% CTR':''), action:'REPLACE in Rank Math \u2192 SEO Title: "'+_ckw.charAt(0).toUpperCase()+_ckw.slice(1)+' \u2014 [your key benefit]" (keep under 60 characters).  |  REPLACE in Rank Math \u2192 Meta Description: "Discover '+_ckw+': [what the reader gains]. [Clear call to action]." (keep under 155 characters).', expected_impact:'Higher CTR \u2192 position #'+_cpos+' \u2192 top 3 after Google recrawl', effort:'quick_win' });
-        if (gscImpr && (gscClicks != null)) _gsc.push({ title:'Capture missed clicks', priority:'medium', trigger:gscImpr+' impressions, '+gscClicks+' clicks', action:'ADD after your H1: a question-style H2 matching search intent for "'+_ckw+'", followed by a 40-60 word direct answer.', expected_impact:'+'+(clickGap||'more')+' clicks/month', effort:'content' });
+        if (gscImpr && (gscClicks != null) && !(_hasQuestionH2 && _hasDirectAnswer)) _gsc.push({ title:'Capture missed clicks', priority:'medium', trigger:gscImpr+' impressions, '+gscClicks+' clicks', action:'ADD after your H1: a question-style H2 matching search intent for "'+_ckw+'", followed by a 40-60 word direct answer.', expected_impact:'+'+(clickGap||'more')+' clicks/month', effort:'content' });
         snapshot.gsc_brief = _gsc;
       })();
       try {

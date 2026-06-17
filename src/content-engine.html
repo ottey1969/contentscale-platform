@@ -23,6 +23,29 @@
   #trPagesList .tr-actions { flex-direction: row !important; flex-wrap: wrap !important; width: 100% !important; margin-top: 8px !important; padding-left: 34px !important; }
   #trPagesList .tr-actions > button { flex: 1 1 auto !important; min-width: 90px !important; }
 }
+/* ── Mobile responsive: off-canvas sidebar + full-width views ─── */
+#mobileNavToggle { display: none; }
+#navBackdrop { display: none; position: fixed; inset: 52px 0 0 0; background: rgba(0,0,0,.55); z-index: 25500; }
+@media (max-width: 768px) {
+  .shell { grid-template-columns: 1fr !important; }
+  .sidebar {
+    position: fixed; top: 52px; left: 0; bottom: 0;
+    width: 86%; max-width: 310px; max-height: none;
+    z-index: 26000; transform: translateX(-100%);
+    transition: transform .25s ease; box-shadow: 4px 0 28px rgba(0,0,0,.55);
+  }
+  .sidebar.open { transform: translateX(0); }
+  #navBackdrop.open { display: block; }
+  #mobileNavToggle { display: inline-flex !important; align-items: center; justify-content: center; }
+  #topbarLogo, .topbar-sep, .topbar-title { display: none !important; }
+  .topbar { padding: 0 8px; gap: 6px; }
+  .topbar-status #statusText { display: none; }
+  #view-pages, #view-tracker, #view-stats, #view-video { left: 0 !important; }
+  #serpSpyModal { padding: 0 !important; }
+  #serpSpyModal > div { max-width: 100% !important; height: 100vh; max-height: 100vh !important; border-radius: 0 !important; }
+  #serpSpyResult { overflow-wrap: break-word; word-break: break-word; }
+  #serpSpyResult table { display: block; overflow-x: auto; max-width: 100%; }
+}
 :root{
   --bg:#07090e;
   --surface:#0d1117;
@@ -241,7 +264,8 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'DM San
 <div class="shell">
   <!-- TOPBAR -->
   <header class="topbar">
-    <div style="line-height:1.2;"><div style="font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:16px;letter-spacing:.04em;"><span style="color:#a78bfa;">PULSE</span><span style="color:#e2e8f0;"> + </span><span style="color:#f56d00;">NEXUS</span></div><div style="font-size:9px;letter-spacing:.14em;color:#4a5260;text-transform:uppercase;">by ContentScale</div></div>
+    <button id="mobileNavToggle" onclick="toggleMobileNav()" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);color:#e2e8f0;border-radius:6px;width:34px;height:32px;font-size:16px;cursor:pointer;flex-shrink:0;">☰</button>
+    <div id="topbarLogo" style="line-height:1.2;"><div style="font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:16px;letter-spacing:.04em;"><span style="color:#a78bfa;">PULSE</span><span style="color:#e2e8f0;"> + </span><span style="color:#f56d00;">NEXUS</span></div><div style="font-size:9px;letter-spacing:.14em;color:#4a5260;text-transform:uppercase;">by ContentScale</div></div>
     <div class="topbar-sep"></div>
     <div class="topbar-title" id="topbarTitle"><span id="topbarContext">Intelligence Agent</span></div>
     <div style="display:flex;gap:4px;margin-left:8px;">
@@ -255,6 +279,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'DM San
       <span id="statusText">not connected</span>
     </div>
   </header>
+  <div id="navBackdrop" onclick="closeMobileNav()"></div>
 
   <!-- SIDEBAR -->
   <aside class="sidebar">
@@ -3796,7 +3821,19 @@ async function api(endpoint, method, body) {
 // ════════════════════════════════════════════════════════════════
 // VIEW SWITCHER
 // ════════════════════════════════════════════════════════════════
+function toggleMobileNav() {
+  var sb = document.querySelector('.sidebar');
+  var bd = document.getElementById('navBackdrop');
+  var open = sb && sb.classList.toggle('open');
+  if (bd) bd.classList.toggle('open', !!open);
+}
+function closeMobileNav() {
+  var sb = document.querySelector('.sidebar'); if (sb) sb.classList.remove('open');
+  var bd = document.getElementById('navBackdrop'); if (bd) bd.classList.remove('open');
+}
+
 function switchView(view) {
+  closeMobileNav();
   // Update topbar context label
   var _ctx = document.getElementById('topbarContext');
   if (_ctx) {
@@ -4670,11 +4707,13 @@ function startTrackerPoll(pageId) {
           clearInterval(_trPollers[pageId]);
           delete _trPollers[pageId];
           setTimeout(loadTrackerPages, 1000);
+          setTimeout(function(){ try { openTrackerDetail(pageId); } catch(e){} }, 1200);
         }
       } else if (!d.running) {
         clearInterval(_trPollers[pageId]);
         delete _trPollers[pageId];
         setTimeout(loadTrackerPages, 1000);
+        setTimeout(function(){ try { openTrackerDetail(pageId); } catch(e){} }, 1200);
       }
     } catch(e) { clearInterval(_trPollers[pageId]); }
     if (count > 80) clearInterval(_trPollers[pageId]);
