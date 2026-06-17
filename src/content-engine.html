@@ -346,6 +346,11 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'DM San
           #wfStep0 .graaf-dot   { animation: graafDot 1.4s ease-in-out infinite; display:inline-block; }
         </style>
 
+        <div style="margin-bottom:10px;padding:8px 10px;border-radius:8px;background:linear-gradient(135deg,rgba(124,58,237,0.15),rgba(15,118,110,0.12));border:1px solid rgba(124,58,237,0.3);">
+          <div style="font-size:11px;font-weight:800;color:#c4b5fd;line-height:1.4;">🤖 AI Writer &amp; Rewriter</div>
+          <div style="font-size:9px;color:#9ca3af;margin-top:2px;line-height:1.4;">The only way to get cited and ranked in 2026 and beyond</div>
+        </div>
+
         <div id="wfStep0" style="padding:8px 10px;border:1px solid #7c3aed;border-left:3px solid #a78bfa;margin-bottom:6px;background:rgba(124,58,237,0.07);border-radius:0 8px 8px 0;position:relative;overflow:hidden;">
           <!-- shimmer sweep overlay -->
           <div style="position:absolute;inset:0;background:linear-gradient(105deg,transparent 40%,rgba(167,139,250,0.06) 50%,transparent 60%);background-size:200% 100%;animation:graafShimmer 2.8s linear infinite;pointer-events:none;"></div>
@@ -4346,7 +4351,7 @@ function renderTrackerList() {
         '<div style="font-size:13px;font-weight:600;color:#e2e8f0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escHtml(p.title||p.url) + csBadge + '</div>' +
         '<div style="font-size:11px;color:#6b7280;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escHtml(p.url) + (' · <span onclick="event.stopPropagation();editTrackerKeyword(' + p.id + ')" style="cursor:pointer;' + (p.keyword ? 'color:#9ca3af;border-bottom:1px dashed rgba(255,255,255,.25);' : 'color:#f59e0b;font-weight:700;') + '" title="Click to edit the target keyword">' + (p.keyword ? '🎯 ' + escHtml(p.keyword) + ' ✎' : '⚠ set keyword') + '</span>') + ' · ' + lastCh + (p._isStale ? ' <span style="font-size:9px;font-weight:700;background:rgba(251,191,36,.12);border:1px solid rgba(251,191,36,.35);color:#fbbf24;padding:1px 6px;border-radius:4px;" title="Not updated in 90+ days">🕐 Stale</span>' : '') + (p._cannibal ? ' <span style="font-size:9px;font-weight:700;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);color:#f87171;padding:1px 6px;border-radius:4px;" title="' + p._cannibalCount + ' pages target same keyword">🔀 Cannibal</span>' : '') + '</div>' +
         gscLine +
-        '<div style="margin-top:5px;">' + aiG + aiP + '</div>' +
+        '<div style="margin-top:5px;">' + aiG + aiP + (p.serp_spy_at ? ' <span style="font-size:10px;color:#6b7280;">· 🔍 Brief ' + new Date(p.serp_spy_at).toLocaleDateString() + '</span>' : '') + '</div>' +
         (pri.recommended ? '<div style="margin-top:5px;font-size:10px;font-weight:700;color:'+pri.color+';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="'+escHtml(pri.recommended)+'">→ ' + escHtml(pri.recommended.split('.')[0]) + '</div>' : '') +
         recHtml +
         '<div class="tr-status-' + p.id + '"></div>' +
@@ -4362,6 +4367,7 @@ function renderTrackerList() {
       '<div class="tr-actions" style="display:flex;flex-direction:column;gap:4px;flex-shrink:0;">' +
         '<button onclick="runTrackerCheck('+p.id+',this)" style="font-size:10px;padding:4px 8px;border-radius:5px;border:1px solid rgba(167,139,250,.3);background:rgba(167,139,250,.08);color:#a78bfa;cursor:pointer;">▶ Check</button>' +
         '<button onclick="openPasteHtmlModal('+p.id+')" title="Paste the page HTML for an accurate scan (more reliable than live fetch)" style="font-size:10px;padding:4px 8px;border-radius:5px;border:1px solid rgba(56,189,248,.3);background:rgba(56,189,248,.08);color:#38bdf8;cursor:pointer;">' + (p.has_html_content ? '📋 HTML ✓' : '📋 HTML') + '</button>' +
+        (p.serp_spy ? '<button onclick="openSavedSpy('+p.id+')" title="View the saved SERP brief from the last spy" style="font-size:10px;padding:4px 8px;border-radius:5px;border:1px solid rgba(52,211,153,.3);background:rgba(52,211,153,.08);color:#34d399;cursor:pointer;">📄 Brief</button>' : '') +
         (pri.action === 'rewrite' ?
           '<button onclick="openSerpSpy('+p.id+')" style="font-size:10px;padding:5px 10px;border-radius:5px;border:none;background:linear-gradient(135deg,#7c3aed,#0f766e);color:#fff;cursor:pointer;font-weight:800;">Spy & Brief <span style="font-size:9px;opacity:.6;">step 2</span></button>'
         : pri.action === 'surgical' ?
@@ -4918,7 +4924,7 @@ async function createStatsStudy() {
     '<div style="background:rgba(255,255,255,.06);border-radius:999px;height:4px;margin:12px auto;max-width:280px;overflow:hidden;">' +
     '<div id="statsProgressBar" style="background:linear-gradient(90deg,#7c3aed,#f56d00);height:4px;border-radius:999px;width:5%;transition:width .8s ease;"></div>' +
     '</div>' +
-    '<div style="font-size:11px;color:#4b5563;margin-top:6px;">Claude is searching live — no fabricated numbers.</div>' +
+    '<div style="font-size:11px;color:#4b5563;margin-top:6px;">Searching live — no fabricated numbers.</div>' +
     '</div>';
   // Inject spin keyframe if not present
   if (!document.getElementById('statsSpinStyle')) {
@@ -7210,6 +7216,22 @@ async function refreshMetaIntel(pageId, btn) {
   await getMetaIntel(pageId, pg.url, pg.keyword, btn);
 }
 
+function openSavedSpy(pageId) {
+  var pg = (_trPages || []).find(function(p){ return p.id === pageId; });
+  if (!pg || !pg.serp_spy) { toast('No saved brief yet — run the Spy first', 2500, 'warn'); return; }
+  _serpSpyPageId = pageId;
+  var modal = document.getElementById('serpSpyModal');
+  if (modal && modal.parentNode !== document.body) document.body.appendChild(modal);
+  document.getElementById('serpSpyKeyword').value = pg.keyword || '';
+  document.getElementById('serpSpyUrl').value = pg.url || '';
+  document.getElementById('serpSpyStatus').textContent = '✓ Saved brief';
+  var when = pg.serp_spy_at ? new Date(pg.serp_spy_at).toLocaleString() : '';
+  document.getElementById('serpSpyResult').innerHTML =
+    (when ? '<div style="font-size:11px;color:#34d399;padding:8px 16px 0;">📄 Saved brief · scanned ' + when + '</div>' : '') +
+    renderSerpSpyReport(pg.serp_spy);
+  if (modal) modal.style.display = 'flex';
+}
+
 function openSerpSpy(pageId) {
   updateWorkflowStep(3);
   _serpSpyPageId = pageId;
@@ -7261,7 +7283,7 @@ async function runSerpSpy() {
   btn.disabled = true;
   btn.textContent = '⏳ Analyzing…';
   stat.textContent = 'Step 1: Cataloging SERP results…';
-  result.innerHTML = '<div style="text-align:center;padding:40px;color:#6b7280;">🔍 Running 4-Step SERP analysis — Claude is searching, scraping body content, and building your intelligence report. This takes 30–60 seconds.</div>';
+  result.innerHTML = '<div style="text-align:center;padding:40px;color:#6b7280;">🔍 Running 4-Step SERP analysis — searching live results, scraping competitor pages, and building your intelligence report. This takes 30–60 seconds.</div>';
 
   // Animate status messages
   var steps = [
@@ -7324,6 +7346,10 @@ async function runSerpSpy() {
     }
 
     if (d.spy) {
+      // Persist the brief on the page in memory so the 📄 Brief button + date show immediately
+      // and stay until the next spy overwrites it (it's already saved in the DB too).
+      var _pgSpy = (_trPages || []).find(function(p){ return p.id === _serpSpyPageId; });
+      if (_pgSpy) { _pgSpy.serp_spy = d.spy; _pgSpy.serp_spy_at = new Date().toISOString(); }
       result.innerHTML = renderSerpSpyReport(d.spy);
       // Action buttons below report
       var actDiv = document.createElement('div');
