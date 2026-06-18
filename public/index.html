@@ -3098,7 +3098,12 @@
          style="flex:1;min-width:130px;padding:12px 14px;background:linear-gradient(135deg,#f59e0b,#d97706);color:white!important;border:none;border-radius:10px;cursor:pointer;font-weight:700;font-size:0.85rem;display:inline-flex;align-items:center;justify-content:center;gap:6px;">
          🏅 Page Badge
          </button>
-         
+
+         <button onclick="copyRecommendations();return false;"
+         style="flex:1;min-width:130px;padding:12px 14px;background:linear-gradient(135deg,#14b8a6,#0d9488);color:white!important;border:none;border-radius:10px;cursor:pointer;font-weight:700;font-size:0.85rem;display:inline-flex;align-items:center;justify-content:center;gap:6px;">
+         📋 Copy Recommendations
+         </button>
+
          <button onclick="document.getElementById('singleResult').classList.add('hidden')"
          style="padding:12px 14px;background:#1e293b;color:#94a3b8!important;border:1px solid #334155;border-radius:10px;cursor:pointer;font-weight:600;font-size:0.85rem;">
          ✕ Close
@@ -3111,6 +3116,24 @@
          window._lastScanData = data;
          window._lastScanData._scoreLabel = scoreLabel;
          if (!targetEl) resultDiv.scrollIntoView({ behavior: 'smooth' });
+         }
+         function copyRecommendations() {
+           const data = window._lastScanData;
+           const recs = (data && (data.recommendations?.all || data.recommendations)) || [];
+           if (!recs.length) { showToast('❌ No recommendations to copy', '#ef4444'); return; }
+           const pr = { high:'HIGH PRIORITY', medium:'MEDIUM PRIORITY', low:'QUICK WIN', none:'OK' };
+           let txt = `GRAAF ContentScore recommendations for ${data.url} — ${data.score||0}/100\n\n`;
+           recs.forEach((r, i) => {
+             txt += `${i+1}. ${r.title}` + (r.priority ? ` [${pr[r.priority]||r.priority}]` : '') + '\n';
+             if (r.description) txt += `   ${r.description}\n`;
+             if (r.action)      txt += `   ACTION: ${r.action}\n`;
+             if (r.learning)    txt += `   WHY: ${r.learning}\n`;
+             if (r.target)      txt += `   TARGET: ${r.target}\n`;
+             txt += '\n';
+           });
+           if (navigator.clipboard && navigator.clipboard.writeText) {
+             navigator.clipboard.writeText(txt).then(() => showToast('📋 Recommendations copied — paste into the Content Engine', '#14b8a6')).catch(() => fallbackCopy(txt));
+           } else { fallbackCopy(txt); }
          }
          function copyScanShareLink() {
          const data = window._lastScanData;
