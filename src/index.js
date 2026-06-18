@@ -6930,6 +6930,22 @@ console.log('\n✅ Elite scanner ready\n');
 // BACKGROUND BATCH JOB SYSTEM
 // ============================================
 const activeJobs = new Map();
+
+// ── Public sitemap + robots for app.contentscale.site ─────────────────────────
+// Edit SITEMAP_PATHS to control which public pages Google indexes. Keep gated
+// tool pages (engine, lead-crawler, campaigns, boost, otto, login...) OUT.
+const SITEMAP_PATHS = ['/', '/blog', '/tools', '/handleiding', '/seo-audit'];
+app.get('/sitemap.xml', (req, res) => {
+  const base = 'https://app.contentscale.site';
+  const today = new Date().toISOString().slice(0, 10);
+  const urls = SITEMAP_PATHS.map(p =>
+    `  <url><loc>${base}${p}</loc><lastmod>${today}</lastmod><changefreq>weekly</changefreq></url>`).join('\n');
+  res.type('application/xml').send(`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>`);
+});
+app.get('/robots.txt', (req, res) => {
+  res.type('text/plain').send('User-agent: *\nDisallow: /api/\nSitemap: https://app.contentscale.site/sitemap.xml\n');
+});
+
 app.post('/api/admin/batch-job/start', verifyAdmin, async (req, res) => {
 if (!pool) return res.json({ success: false, error: 'No DB' });
 const { niches, cities, country, max_results, website_only } = req.body;
