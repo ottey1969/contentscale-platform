@@ -110,7 +110,7 @@ function _cacheSet(key, data, ttlMs) {
 }
 // TTLs
 const CACHE_TTL = {
-  serper:     24 * 60 * 60 * 1000, // 24 hours — SERP changes slowly; longer cache = far fewer Serper credits
+  serper:     6  * 60 * 60 * 1000, // 6 hours — SERP changes slowly
   perplexity: 12 * 60 * 60 * 1000, // 12 hours — citation status stable
   brave:      12 * 60 * 60 * 1000, // 12 hours
   gemini:     24 * 60 * 60 * 1000, // 24 hours — briefs valid 1 day
@@ -413,19 +413,6 @@ function _trackAiCall(provider, model, success, errorMsg, durationMs) {
 
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// Strong system prompt for the writing agent — encodes GRAAF/CRAFT, verifiability and brand voice
-// so output approaches claude.ai quality instead of thin, generic copy.
-const AGENT_SYSTEM_PROMPT = `You are an elite SEO content writer and HTML engineer writing on behalf of the client described in the prompt (their brand, niche and audience are given there — always write in THAT client's voice, never any other brand's). You write at the level of a top human content strategist, using the GRAAF framework (Genuinely credible, Relevant, Actionable, Accurate, Fresh) and the CRAFT methodology.
-
-NON-NEGOTIABLE RULES:
-1. VERIFIABILITY FIRST. Never invent facts, statistics, numbers, dates, prices, study results, awards, certifications, or quotes. If a specific claim cannot be safely stated as true, omit it or phrase it generally. No fake citations, no made-up data. Accuracy beats sounding impressive — when unsure, choose the honest general statement over the impressive specific one.
-2. SUBSTANCE OVER FLUFF. Every sentence must earn its place: concrete, specific, useful. No empty filler ("in today's fast-paced world"), no hollow superlatives, no padding to hit a word count.
-3. REAL E-E-A-T. Write with genuine expertise and a clear, confident, human advisory voice — the way a trusted specialist explains things, not a content mill.
-4. MATCH INTENT. Serve the actual search intent behind the target keyword; don't drift off-topic.
-5. LAYOUT INTEGRITY. Preserve the page's HTML structure, CSS classes, IDs, inline styles, images, author block, and nav/header/footer exactly. Only rewrite the text inside content zones.
-6. NO DUPLICATION. If the page already has an element — a definition / direct answer, a "What is …" H2, an FAQ, an author block, a micro-answer/TL;DR, or a schema block — IMPROVE it in place. NEVER create a second copy. One definition, one author block, one of each section. Adding a duplicate of something already present is a failure.
-7. OUTPUT DISCIPLINE. Return ONLY the HTML. No markdown, no code fences, no commentary.`;
-
 // callClaudeForWrite — ALL writing goes through Claude
 // Gemini = research/JSON only · Claude = every HTML output
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -782,11 +769,10 @@ path.join(__dirname, 'public/index.html'),
 ];
 const filePath = tryPaths.find(p => fs.existsSync(p));
 if (!filePath) return res.status(404).send('Not found');
-const _rawHtml = fs.readFileSync(filePath, 'utf8');
-const html = _rawHtml.includes('</body>') ? _rawHtml.replace(/<\/body>(?![\s\S]*<\/body>)/, '<script src="/scan-gate-popup.js"></script></body>') : _rawHtml + '<script src="/scan-gate-popup.js"></script>';
+const html = fs.readFileSync(filePath, 'utf8');
 res.setHeader('Content-Type', 'text/html; charset=utf-8');
 res.setHeader('Cache-Control', 'no-cache');
-return res.send(html); // scan-gate popup auto-injected + badge-loader via middleware
+return res.send(html); // goes through middleware → badge-loader injected
 });
 // Favicon routes — must be BEFORE express.static to override public/ files
 app.get('/favicon.svg', (req, res) => {
@@ -816,18 +802,6 @@ const _serveOttoJs = (req, res) => {
  'gemini-live-client-v7.js','otto-ai.js'].forEach(name => {
   app.get('/' + name, _serveOttoJs);
 });
-
-// ── ContentScale popups served as real JS URLs (same pattern as otto-ai.js) ──
-const _SCAN_GATE_JS_B64 = 'KGZ1bmN0aW9uICgpIHsKICBpZiAod2luZG93Ll9fY3NHYXRlSW5pdCkgcmV0dXJuOyB3aW5kb3cuX19jc0dhdGVJbml0ID0gdHJ1ZTsKICB2YXIgYXBpQmFzZSA9ICcnLCBjdXJyZW50RW1haWwgPSAnJywgcmVzb2x2ZUdhdGUsIHJlamVjdEdhdGU7CgogIHZhciBzdHlsZSA9IGRvY3VtZW50LmNyZWF0ZUVsZW1lbnQoJ3N0eWxlJyk7CiAgc3R5bGUudGV4dENvbnRlbnQgPSBgCiAgICAuY3NnLW92ZXJsYXl7cG9zaXRpb246Zml4ZWQ7aW5zZXQ6MDtiYWNrZ3JvdW5kOnJnYmEoMiw2LDIzLC43Mik7ZGlzcGxheTpub25lO2FsaWduLWl0ZW1zOmNlbnRlcjtqdXN0aWZ5LWNvbnRlbnQ6Y2VudGVyO3otaW5kZXg6MjE0NzQ4MzAwMDtmb250LWZhbWlseTpzeXN0ZW0tdWksQXJpYWwsc2Fucy1zZXJpZn0KICAgIC5jc2ctb3ZlcmxheS5jc2ctc2hvd3tkaXNwbGF5OmZsZXh9CiAgICAuY3NnLWNhcmR7YmFja2dyb3VuZDojZmZmO3dpZHRoOjkyJTttYXgtd2lkdGg6NDIwcHg7Ym9yZGVyLXJhZGl1czoxNnB4O3BhZGRpbmc6MjhweDtib3gtc2hhZG93OjAgMjRweCA2MHB4IHJnYmEoMCwwLDAsLjM1KTtwb3NpdGlvbjpyZWxhdGl2ZTtib3gtc2l6aW5nOmJvcmRlci1ib3h9CiAgICAuY3NnLXh7cG9zaXRpb246YWJzb2x1dGU7dG9wOjE0cHg7cmlnaHQ6MTZweDtib3JkZXI6MDtiYWNrZ3JvdW5kOm5vbmU7Zm9udC1zaXplOjIycHg7Y29sb3I6Izk0YTNiODtjdXJzb3I6cG9pbnRlcjtsaW5lLWhlaWdodDoxfQogICAgLmNzZy1jYXJkIGgze21hcmdpbjowIDAgNnB4O2ZvbnQtc2l6ZToyMHB4O2NvbG9yOiMwZjE3MmF9CiAgICAuY3NnLWNhcmQgcHttYXJnaW46MCAwIDE4cHg7Y29sb3I6IzQ3NTU2OTtmb250LXNpemU6MTRweDtsaW5lLWhlaWdodDoxLjV9CiAgICAuY3NnLWNhcmQgaW5wdXR7d2lkdGg6MTAwJTtib3gtc2l6aW5nOmJvcmRlci1ib3g7cGFkZGluZzoxM3B4IDE0cHg7Ym9yZGVyOjFweCBzb2xpZCAjY2JkNWUxO2JvcmRlci1yYWRpdXM6MTBweDtmb250LXNpemU6MTZweDtvdXRsaW5lOm5vbmV9CiAgICAuY3NnLWNhcmQgaW5wdXQ6Zm9jdXN7Ym9yZGVyLWNvbG9yOiMwZjE3MmF9CiAgICAuY3NnLWJ0bnt3aWR0aDoxMDAlO21hcmdpbi10b3A6MTRweDtwYWRkaW5nOjEzcHg7Ym9yZGVyOjA7Ym9yZGVyLXJhZGl1czoxMHB4O2JhY2tncm91bmQ6IzBmMTcyYTtjb2xvcjojZmZmO2ZvbnQtc2l6ZToxNXB4O2ZvbnQtd2VpZ2h0OjYwMDtjdXJzb3I6cG9pbnRlcn0KICAgIC5jc2ctYnRuOmRpc2FibGVke29wYWNpdHk6LjY7Y3Vyc29yOmRlZmF1bHR9CiAgICAuY3NnLWVycntjb2xvcjojZGMyNjI2O2ZvbnQtc2l6ZToxM3B4O21hcmdpbi10b3A6MTBweDttaW4taGVpZ2h0OjE2cHh9CiAgICAuY3NnLWNvZGUgaW5wdXR7bGV0dGVyLXNwYWNpbmc6OHB4O3RleHQtYWxpZ246Y2VudGVyO2ZvbnQtc2l6ZToyMnB4fQogICAgLmNzZy1oaWRle2Rpc3BsYXk6bm9uZX0KICBgOwogIGRvY3VtZW50LmhlYWQuYXBwZW5kQ2hpbGQoc3R5bGUpOwoKICB2YXIgb3YgPSBkb2N1bWVudC5jcmVhdGVFbGVtZW50KCdkaXYnKTsKICBvdi5jbGFzc05hbWUgPSAnY3NnLW92ZXJsYXknOwogIG92LmlubmVySFRNTCA9IGAKICAgIDxkaXYgY2xhc3M9ImNzZy1jYXJkIj4KICAgICAgPGJ1dHRvbiBjbGFzcz0iY3NnLXgiIGRhdGEteD4mdGltZXM7PC9idXR0b24+CiAgICAgIDxkaXYgZGF0YS1zdGVwPSJlbWFpbCI+CiAgICAgICAgPGgzPktlZXAgc2Nhbm5pbmcg4oCUIGl0J3MgZnJlZTwvaDM+CiAgICAgICAgPHA+WW91J3ZlIHVzZWQgeW91ciBmcmVlIHNjYW5zLiBFbnRlciB5b3VyIGVtYWlsIHRvIHVubG9jayB1bmxpbWl0ZWQgc2Nhbm5pbmcuPC9wPgogICAgICAgIDxpbnB1dCB0eXBlPSJlbWFpbCIgZGF0YS1lbWFpbCBwbGFjZWhvbGRlcj0ieW91QGNvbXBhbnkuY29tIiBhdXRvY29tcGxldGU9ImVtYWlsIj4KICAgICAgICA8ZGl2IGNsYXNzPSJjc2ctZXJyIiBkYXRhLWVtYWlsLWVycj48L2Rpdj4KICAgICAgICA8YnV0dG9uIGNsYXNzPSJjc2ctYnRuIiBkYXRhLWVtYWlsLWJ0bj5TZW5kIGNvZGU8L2J1dHRvbj4KICAgICAgPC9kaXY+CiAgICAgIDxkaXYgZGF0YS1zdGVwPSJjb2RlIiBjbGFzcz0iY3NnLWhpZGUgY3NnLWNvZGUiPgogICAgICAgIDxoMz5FbnRlciB5b3VyIGNvZGU8L2gzPgogICAgICAgIDxwPldlIHNlbnQgYSA2LWRpZ2l0IGNvZGUgdG8geW91ciBlbWFpbC48L3A+CiAgICAgICAgPGlucHV0IHR5cGU9InRleHQiIGlucHV0bW9kZT0ibnVtZXJpYyIgbWF4bGVuZ3RoPSI2IiBkYXRhLWNvZGUgcGxhY2Vob2xkZXI9Ii0tLS0tLSI+CiAgICAgICAgPGRpdiBjbGFzcz0iY3NnLWVyciIgZGF0YS1jb2RlLWVycj48L2Rpdj4KICAgICAgICA8YnV0dG9uIGNsYXNzPSJjc2ctYnRuIiBkYXRhLWNvZGUtYnRuPlZlcmlmeSAmYW1wOyB1bmxvY2s8L2J1dHRvbj4KICAgICAgPC9kaXY+CiAgICA8L2Rpdj5gOwogIGRvY3VtZW50LmJvZHkuYXBwZW5kQ2hpbGQob3YpOwoKICB2YXIgcSA9IGZ1bmN0aW9uIChzKSB7IHJldHVybiBvdi5xdWVyeVNlbGVjdG9yKHMpOyB9OwogIHZhciBzdGVwRW1haWwgPSBxKCdbZGF0YS1zdGVwPSJlbWFpbCJdJyksIHN0ZXBDb2RlID0gcSgnW2RhdGEtc3RlcD0iY29kZSJdJyk7CiAgdmFyIGVtYWlsSW4gPSBxKCdbZGF0YS1lbWFpbF0nKSwgZW1haWxFcnIgPSBxKCdbZGF0YS1lbWFpbC1lcnJdJyksIGVtYWlsQnRuID0gcSgnW2RhdGEtZW1haWwtYnRuXScpOwogIHZhciBjb2RlSW4gPSBxKCdbZGF0YS1jb2RlXScpLCBjb2RlRXJyID0gcSgnW2RhdGEtY29kZS1lcnJdJyksIGNvZGVCdG4gPSBxKCdbZGF0YS1jb2RlLWJ0bl0nKTsKCiAgZnVuY3Rpb24gc2hvdygpeyBvdi5jbGFzc0xpc3QuYWRkKCdjc2ctc2hvdycpOyB9CiAgZnVuY3Rpb24gaGlkZSgpeyBvdi5jbGFzc0xpc3QucmVtb3ZlKCdjc2ctc2hvdycpOyB9CiAgZnVuY3Rpb24gc3RlcChuKXsgc3RlcEVtYWlsLmNsYXNzTGlzdC50b2dnbGUoJ2NzZy1oaWRlJywgbiE9PSdlbWFpbCcpOyBzdGVwQ29kZS5jbGFzc0xpc3QudG9nZ2xlKCdjc2ctaGlkZScsIG4hPT0nY29kZScpOyB9CiAgZnVuY3Rpb24gYnVzeShidG4sYix0KXsgYnRuLmRpc2FibGVkPWI7IGJ0bi50ZXh0Q29udGVudCA9IGIgPyAnUGxlYXNlIHdhaXQuLi4nIDogdDsgfQoKICBmdW5jdGlvbiBzaG93R2F0ZSgpewogICAgcmV0dXJuIG5ldyBQcm9taXNlKGZ1bmN0aW9uKHJlcyxyZWopewogICAgICByZXNvbHZlR2F0ZT1yZXM7IHJlamVjdEdhdGU9cmVqOwogICAgICBlbWFpbEVyci50ZXh0Q29udGVudD0nJzsgY29kZUVyci50ZXh0Q29udGVudD0nJzsgZW1haWxJbi52YWx1ZT0nJzsgY29kZUluLnZhbHVlPScnOwogICAgICBzdGVwKCdlbWFpbCcpOyBzaG93KCk7IHNldFRpbWVvdXQoZnVuY3Rpb24oKXsgZW1haWxJbi5mb2N1cygpOyB9LCA1MCk7CiAgICB9KTsKICB9CgogIGVtYWlsQnRuLm9uY2xpY2sgPSBhc3luYyBmdW5jdGlvbigpewogICAgdmFyIGVtYWlsID0gZW1haWxJbi52YWx1ZS50cmltKCk7IGVtYWlsRXJyLnRleHRDb250ZW50PScnOwogICAgaWYoIS9eW15cc0BdK0BbXlxzQF0rXC5bXlxzQF0rJC8udGVzdChlbWFpbCkpeyBlbWFpbEVyci50ZXh0Q29udGVudD0nRW50ZXIgYSB2YWxpZCBlbWFpbCc7IHJldHVybjsgfQogICAgYnVzeShlbWFpbEJ0bix0cnVlKTsKICAgIHRyeXsKICAgICAgdmFyIHIgPSBhd2FpdCBmZXRjaChhcGlCYXNlICsgJy9hcGkvc2Nhbi1nYXRlL3JlcXVlc3QtY29kZScsIHttZXRob2Q6J1BPU1QnLGhlYWRlcnM6eydDb250ZW50LVR5cGUnOidhcHBsaWNhdGlvbi9qc29uJ30sYm9keTpKU09OLnN0cmluZ2lmeSh7ZW1haWw6ZW1haWx9KX0pOwogICAgICB2YXIgZCA9IGF3YWl0IHIuanNvbigpLmNhdGNoKGZ1bmN0aW9uKCl7cmV0dXJue307fSk7CiAgICAgIGlmKCFyLm9rIHx8ICFkLm9rKSB0aHJvdyAwOwogICAgICBjdXJyZW50RW1haWwgPSBlbWFpbDsgc3RlcCgnY29kZScpOyBzZXRUaW1lb3V0KGZ1bmN0aW9uKCl7IGNvZGVJbi5mb2N1cygpOyB9LCA1MCk7CiAgICB9Y2F0Y2goZSl7IGVtYWlsRXJyLnRleHRDb250ZW50PSdDb3VsZCBub3Qgc2VuZCBjb2RlLiBUcnkgYWdhaW4uJzsgfQogICAgZmluYWxseXsgYnVzeShlbWFpbEJ0bixmYWxzZSwnU2VuZCBjb2RlJyk7IH0KICB9OwoKICBjb2RlQnRuLm9uY2xpY2sgPSBhc3luYyBmdW5jdGlvbigpewogICAgdmFyIGNvZGUgPSBjb2RlSW4udmFsdWUudHJpbSgpOyBjb2RlRXJyLnRleHRDb250ZW50PScnOwogICAgaWYoY29kZS5sZW5ndGg8NCl7IGNvZGVFcnIudGV4dENvbnRlbnQ9J0VudGVyIHRoZSBjb2RlJzsgcmV0dXJuOyB9CiAgICBidXN5KGNvZGVCdG4sdHJ1ZSk7CiAgICB0cnl7CiAgICAgIHZhciByID0gYXdhaXQgZmV0Y2goYXBpQmFzZSArICcvYXBpL3NjYW4tZ2F0ZS92ZXJpZnktY29kZScsIHttZXRob2Q6J1BPU1QnLGhlYWRlcnM6eydDb250ZW50LVR5cGUnOidhcHBsaWNhdGlvbi9qc29uJ30sYm9keTpKU09OLnN0cmluZ2lmeSh7ZW1haWw6Y3VycmVudEVtYWlsLGNvZGU6Y29kZX0pfSk7CiAgICAgIHZhciBkID0gYXdhaXQgci5qc29uKCkuY2F0Y2goZnVuY3Rpb24oKXtyZXR1cm57fTt9KTsKICAgICAgaWYoIXIub2sgfHwgIWQub2spIHRocm93IDA7CiAgICAgIGhpZGUoKTsgaWYocmVzb2x2ZUdhdGUpIHJlc29sdmVHYXRlKHRydWUpOwogICAgfWNhdGNoKGUpeyBjb2RlRXJyLnRleHRDb250ZW50PSdJbnZhbGlkIG9yIGV4cGlyZWQgY29kZS4nOyB9CiAgICBmaW5hbGx5eyBidXN5KGNvZGVCdG4sZmFsc2UsJ1ZlcmlmeSAmIHVubG9jaycpOyB9CiAgfTsKCiAgcSgnW2RhdGEteF0nKS5vbmNsaWNrID0gZnVuY3Rpb24oKXsgaGlkZSgpOyBpZihyZWplY3RHYXRlKSByZWplY3RHYXRlKG5ldyBFcnJvcignY2FuY2VsbGVkJykpOyB9OwoKICAvLyDilIDilIAgZmV0Y2ggaW50ZXJjZXB0b3I6IGNhdGNoIHRoZSBnYXRlZCA0MDMgb24gL2FwaS9zY2FuLCB0aGVuIHJlcGxheSDilIDilIDilIDilIDilIDilIAKICB2YXIgb3JpZ0ZldGNoID0gd2luZG93LmZldGNoLmJpbmQod2luZG93KTsKICB3aW5kb3cuZmV0Y2ggPSBhc3luYyBmdW5jdGlvbihpbnB1dCwgaW5pdCl7CiAgICB2YXIgdXJsID0gdHlwZW9mIGlucHV0ID09PSAnc3RyaW5nJyA/IGlucHV0IDogKGlucHV0ICYmIGlucHV0LnVybCkgfHwgJyc7CiAgICB2YXIgaXNTY2FuID0gdXJsLmluZGV4T2YoJy9hcGkvc2NhbicpICE9PSAtMSAmJiB1cmwuaW5kZXhPZignL2FwaS9zY2FuLWdhdGUnKSA9PT0gLTE7CiAgICB2YXIgcmVxQ2xvbmUgPSAodHlwZW9mIFJlcXVlc3QgIT09ICd1bmRlZmluZWQnICYmIGlucHV0IGluc3RhbmNlb2YgUmVxdWVzdCkgPyBpbnB1dC5jbG9uZSgpIDogbnVsbDsKICAgIHZhciByZXNwID0gYXdhaXQgb3JpZ0ZldGNoKGlucHV0LCBpbml0KTsKICAgIGlmKGlzU2NhbiAmJiByZXNwLnN0YXR1cyA9PT0gNDAzKXsKICAgICAgdmFyIGRhdGEgPSB7fTsgdHJ5IHsgZGF0YSA9IGF3YWl0IHJlc3AuY2xvbmUoKS5qc29uKCk7IH0gY2F0Y2goZSl7fQogICAgICBpZihkYXRhICYmIGRhdGEuZ2F0ZWQpewogICAgICAgIGFwaUJhc2UgPSB1cmwuc2xpY2UoMCwgdXJsLmluZGV4T2YoJy9hcGkvc2NhbicpKTsKICAgICAgICB0cnkgeyBhd2FpdCBzaG93R2F0ZSgpOyByZXR1cm4gYXdhaXQgb3JpZ0ZldGNoKHJlcUNsb25lIHx8IGlucHV0LCBpbml0KTsgfQogICAgICAgIGNhdGNoKGUpeyByZXR1cm4gcmVzcDsgfSAvLyB1c2VyIGNsb3NlZCDihpIgb3JpZ2luYWwgNDAzIGZsb3dzIHRocm91Z2gKICAgICAgfQogICAgfQogICAgcmV0dXJuIHJlc3A7CiAgfTsKfSkoKTsK';
-const _ENGINE_BUDGET_JS_B64 = 'KGZ1bmN0aW9uICgpIHsKICBpZiAod2luZG93Ll9fY3NCdWRnZXRJbml0KSByZXR1cm47IHdpbmRvdy5fX2NzQnVkZ2V0SW5pdCA9IHRydWU7CgogIHZhciBzdHlsZSA9IGRvY3VtZW50LmNyZWF0ZUVsZW1lbnQoJ3N0eWxlJyk7CiAgc3R5bGUudGV4dENvbnRlbnQgPSBgCiAgICAuY3NiLW92ZXJsYXl7cG9zaXRpb246Zml4ZWQ7aW5zZXQ6MDtiYWNrZ3JvdW5kOnJnYmEoMiw2LDIzLC43NCk7ZGlzcGxheTpub25lO2FsaWduLWl0ZW1zOmNlbnRlcjtqdXN0aWZ5LWNvbnRlbnQ6Y2VudGVyO3otaW5kZXg6MjE0NzQ4MzAwMDtmb250LWZhbWlseTpzeXN0ZW0tdWksQXJpYWwsc2Fucy1zZXJpZn0KICAgIC5jc2Itb3ZlcmxheS5jc2Itc2hvd3tkaXNwbGF5OmZsZXh9CiAgICAuY3NiLWNhcmR7YmFja2dyb3VuZDojMGYxNzJhO2NvbG9yOiNmMWY1Zjk7d2lkdGg6OTIlO21heC13aWR0aDo0MjBweDtib3JkZXItcmFkaXVzOjE2cHg7cGFkZGluZzozMHB4O2JvcmRlcjoxcHggc29saWQgIzFlMjkzYjtib3gtc2hhZG93OjAgMjRweCA2MHB4IHJnYmEoMCwwLDAsLjQ1KTt0ZXh0LWFsaWduOmNlbnRlcjtib3gtc2l6aW5nOmJvcmRlci1ib3h9CiAgICAuY3NiLWNhcmQgLmNzYi1pY3tmb250LXNpemU6NDBweDttYXJnaW4tYm90dG9tOjEwcHh9CiAgICAuY3NiLWNhcmQgaDN7bWFyZ2luOjAgMCA4cHg7Zm9udC1zaXplOjIwcHh9CiAgICAuY3NiLWNhcmQgcHttYXJnaW46MCAwIDZweDtjb2xvcjojOTRhM2I4O2ZvbnQtc2l6ZToxNHB4O2xpbmUtaGVpZ2h0OjEuNn0KICAgIC5jc2ItbWV0ZXJ7Y29sb3I6I2ZiYmYyNDtmb250LXdlaWdodDo3MDA7bWFyZ2luOjhweCAwIDE4cHh9CiAgICAuY3NiLXdhe2Rpc3BsYXk6YmxvY2s7YmFja2dyb3VuZDojMjVkMzY2O2NvbG9yOiNmZmY7dGV4dC1kZWNvcmF0aW9uOm5vbmU7cGFkZGluZzoxM3B4O2JvcmRlci1yYWRpdXM6MTBweDtmb250LXNpemU6MTVweDtmb250LXdlaWdodDo3MDB9CiAgICAuY3NiLWNsb3Nle21hcmdpbi10b3A6MTJweDtiYWNrZ3JvdW5kOm5vbmU7Ym9yZGVyOjA7Y29sb3I6IzY0NzQ4Yjtmb250LXNpemU6MTNweDtjdXJzb3I6cG9pbnRlcn0KICBgOwogIGRvY3VtZW50LmhlYWQuYXBwZW5kQ2hpbGQoc3R5bGUpOwoKICB2YXIgb3YgPSBkb2N1bWVudC5jcmVhdGVFbGVtZW50KCdkaXYnKTsKICBvdi5jbGFzc05hbWUgPSAnY3NiLW92ZXJsYXknOwogIG92LmlubmVySFRNTCA9IGAKICAgIDxkaXYgY2xhc3M9ImNzYi1jYXJkIj4KICAgICAgPGRpdiBjbGFzcz0iY3NiLWljIj4mIzEyODE4NDs8L2Rpdj4KICAgICAgPGgzPllvdSdyZSBvdXQgb2YgY3JlZGl0czwvaDM+CiAgICAgIDxwPllvdXIgcGxhdGZvcm0gYnVkZ2V0IGZvciB0aGlzIHBlcmlvZCBpcyB1c2VkIHVwLjwvcD4KICAgICAgPGRpdiBjbGFzcz0iY3NiLW1ldGVyIiBkYXRhLW1ldGVyPjwvZGl2PgogICAgICA8cD5Db250YWN0IE90dG1hciB2aWEgV2hhdHNBcHAgdG8gdG9wIHVwIGFuZCBrZWVwIHdvcmtpbmcuPC9wPgogICAgICA8YSBjbGFzcz0iY3NiLXdhIiBkYXRhLXdhIHRhcmdldD0iX2JsYW5rIiByZWw9Im5vb3BlbmVyIj4mIzEyODE3MjsgTWVzc2FnZSBPdHRtYXIgb24gV2hhdHNBcHA8L2E+CiAgICAgIDxidXR0b24gY2xhc3M9ImNzYi1jbG9zZSIgZGF0YS14PkNsb3NlPC9idXR0b24+CiAgICA8L2Rpdj5gOwogIGRvY3VtZW50LmJvZHkuYXBwZW5kQ2hpbGQob3YpOwoKICB2YXIgbWV0ZXJFbCA9IG92LnF1ZXJ5U2VsZWN0b3IoJ1tkYXRhLW1ldGVyXScpOwogIHZhciB3YUVsID0gb3YucXVlcnlTZWxlY3RvcignW2RhdGEtd2FdJyk7CiAgdmFyIGRlZmF1bHRXYSA9ICdodHRwczovL3dhLm1lLzMxNjI4MDczOTk2P3RleHQ9JyArIGVuY29kZVVSSUNvbXBvbmVudCgnSGkgT3R0bWFyLCBteSBDb250ZW50U2NhbGUgY3JlZGl0cyBhcmUgdXNlZCB1cCDigJQgSSBuZWVkIG1vcmUgY3JlZGl0cyB0byBjb250aW51ZS4nKTsKCiAgZnVuY3Rpb24gc2hvdyhkKXsKICAgIGQgPSBkIHx8IHt9OwogICAgd2FFbC5ocmVmID0gZC53aGF0c2FwcCB8fCBkZWZhdWx0V2E7CiAgICBtZXRlckVsLnRleHRDb250ZW50ID0gKGQudXNlZCAhPSBudWxsICYmIGQubGltaXQgIT0gbnVsbCkgPyAoJ1VzZWQgXHUyMGFjJyArIE51bWJlcihkLnVzZWQpLnRvRml4ZWQoMikgKyAnIG9mIFx1MjBhYycgKyBOdW1iZXIoZC5saW1pdCkudG9GaXhlZCgyKSkgOiAnJzsKICAgIG92LmNsYXNzTGlzdC5hZGQoJ2NzYi1zaG93Jyk7CiAgfQogIG92LnF1ZXJ5U2VsZWN0b3IoJ1tkYXRhLXhdJykub25jbGljayA9IGZ1bmN0aW9uKCl7IG92LmNsYXNzTGlzdC5yZW1vdmUoJ2NzYi1zaG93Jyk7IH07CgogIHZhciBvcmlnRmV0Y2ggPSB3aW5kb3cuZmV0Y2guYmluZCh3aW5kb3cpOwogIHdpbmRvdy5mZXRjaCA9IGFzeW5jIGZ1bmN0aW9uKGlucHV0LCBpbml0KXsKICAgIHZhciByZXNwID0gYXdhaXQgb3JpZ0ZldGNoKGlucHV0LCBpbml0KTsKICAgIHRyeSB7CiAgICAgIGlmIChyZXNwLnN0YXR1cyA9PT0gNDAyKSB7CiAgICAgICAgdmFyIGQgPSBhd2FpdCByZXNwLmNsb25lKCkuanNvbigpLmNhdGNoKGZ1bmN0aW9uKCl7cmV0dXJue307fSk7CiAgICAgICAgaWYgKGQgJiYgZC5jb2RlID09PSAnQ09TVF9MSU1JVF9SRUFDSEVEJykgc2hvdyhkKTsKICAgICAgfQogICAgfSBjYXRjaChlKXt9CiAgICByZXR1cm4gcmVzcDsKICB9Owp9KSgpOwo=';
-const _servePopupJs = (b64) => (req, res) => {
-  res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
-  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.send(Buffer.from(b64, 'base64').toString('utf8'));
-};
-app.get('/scan-gate-popup.js', _servePopupJs(_SCAN_GATE_JS_B64));
-app.get('/engine-budget-popup.js', _servePopupJs(_ENGINE_BUDGET_JS_B64));
 
 // ── Gemini Live ephemeral token ─────────────────────────────
 // Browser calls this → gets short-lived token → connects DIRECTLY to Google
@@ -3064,7 +3038,6 @@ app.patch('/api/admin/tracker-clients/:id/frequency', verifyAdmin, async (req, r
     if (!allowed.includes(frequency)) return res.status(400).json({ success: false, error: 'Invalid frequency' });
     const _fm = { 'daily':1,'1day':1,'3days':3,'7days':7,'weekly':7,'1week':7,'2weeks':14,'17days':17,'21days':21,'30days':30,'monthly':30 };
     let _d = _fm[frequency]; if (!_d) { const _m = String(frequency).match(/^(\d+)\s*days?$/); _d = _m ? parseInt(_m[1],10) : 3; }
-    _d = Math.max(7, _d); // weekly minimum for auto-scans — give Google/AI/GSC time to react
     await pool.query(
       `UPDATE tracker_pages
          SET check_frequency=$1,
@@ -3084,7 +3057,6 @@ app.patch('/api/admin/tracker-pages/:pageId/frequency', verifyAdmin, async (req,
     if (!allowed.includes(frequency)) return res.status(400).json({ success: false, error: 'Invalid frequency' });
     const _fm = { 'daily':1,'1day':1,'3days':3,'7days':7,'weekly':7,'1week':7,'2weeks':14,'17days':17,'21days':21,'30days':30,'monthly':30 };
     let _d = _fm[frequency]; if (!_d) { const _m = String(frequency).match(/^(\d+)\s*days?$/); _d = _m ? parseInt(_m[1],10) : 3; }
-    _d = Math.max(7, _d); // weekly minimum for auto-scans — give Google/AI/GSC time to react
     // Save interval AND re-anchor next_check_at from the last scan (or now) so the scan + its
     // notification email fire on the correct new date for this specific page.
     await pool.query(
@@ -3332,8 +3304,6 @@ app.patch('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
    await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS is_done BOOLEAN DEFAULT FALSE`).catch(()=>{});
    await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS serp_spy JSONB`).catch(()=>{});
    await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS serp_spy_at TIMESTAMPTZ`).catch(()=>{});
-   await client.query(`CREATE TABLE IF NOT EXISTS agent_memory (id SERIAL PRIMARY KEY, profile_id INTEGER, url TEXT, event TEXT, detail TEXT, created_at TIMESTAMPTZ DEFAULT NOW())`).catch(()=>{});
-   await client.query(`CREATE INDEX IF NOT EXISTS idx_agent_memory_profile ON agent_memory(profile_id, created_at DESC)`).catch(()=>{});
    await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS import_batch VARCHAR(50)`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS html_source VARCHAR(20) DEFAULT 'live'`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS html_pasted_at TIMESTAMPTZ`).catch(()=>{});
@@ -3543,17 +3513,11 @@ app.patch('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
    await client.query(`ALTER TABLE scan_log ADD COLUMN IF NOT EXISTS recommendations TEXT`).catch(() => {});
    await client.query(`ALTER TABLE scan_log ADD COLUMN IF NOT EXISTS source VARCHAR(50) DEFAULT 'single'`).catch(() => {});
    await client.query(`ALTER TABLE scan_log ADD COLUMN IF NOT EXISTS report_url TEXT`).catch(() => {});
-   // 6b. Scan gate — free-tier limit per IP (5 free scans, then email verify)
-   await client.query(`CREATE TABLE IF NOT EXISTS scan_gate (
-   ip TEXT PRIMARY KEY,
-   scan_count INTEGER NOT NULL DEFAULT 0,
-   email TEXT,
-   verified BOOLEAN NOT NULL DEFAULT FALSE,
-   code TEXT,
-   code_expires TIMESTAMPTZ,
-   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-   )`).catch(() => {});
+   await client.query(`ALTER TABLE scan_log ADD COLUMN IF NOT EXISTS phone VARCHAR(60)`).catch(() => {});
+   await client.query(`ALTER TABLE scan_log ADD COLUMN IF NOT EXISTS address TEXT`).catch(() => {});
+   await client.query(`ALTER TABLE scan_log ADD COLUMN IF NOT EXISTS rating NUMERIC(2,1)`).catch(() => {});
+   await client.query(`ALTER TABLE scan_log ADD COLUMN IF NOT EXISTS reviews INTEGER`).catch(() => {});
+   await client.query(`ALTER TABLE scan_log ADD COLUMN IF NOT EXISTS category VARCHAR(120)`).catch(() => {});
    // 7. Email suppression list
    await client.query(`CREATE TABLE IF NOT EXISTS email_suppression (id SERIAL PRIMARY KEY, email VARCHAR(255) UNIQUE NOT NULL, unsubscribed_at TIMESTAMP DEFAULT NOW(), reason VARCHAR(100) DEFAULT 'user_request')`).catch(() => {});
    // 8. Warmup config
@@ -3766,7 +3730,6 @@ app.patch('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
    // ── API Cost Tracking System (replaces credits) ─────────────
    await client.query(`ALTER TABLE engine_access_codes ADD COLUMN IF NOT EXISTS api_key_mode VARCHAR(20) DEFAULT NULL`).catch(()=>{});
    await client.query(`ALTER TABLE engine_access_codes ADD COLUMN IF NOT EXISTS monthly_cost_limit DECIMAL(10,2) DEFAULT 50.00`).catch(()=>{});
-   await client.query(`ALTER TABLE engine_access_codes ADD COLUMN IF NOT EXISTS notify_emails TEXT`).catch(()=>{});
    await client.query(`ALTER TABLE engine_access_codes ADD COLUMN IF NOT EXISTS monthly_cost_used DECIMAL(10,2) DEFAULT 0.00`).catch(()=>{});
    await client.query(`ALTER TABLE engine_access_codes ADD COLUMN IF NOT EXISTS cost_reset_at TIMESTAMPTZ DEFAULT NULL`).catch(()=>{});
    await client.query(`CREATE TABLE IF NOT EXISTS api_cost_log (id SERIAL PRIMARY KEY, code_id INTEGER REFERENCES engine_access_codes(id) ON DELETE CASCADE, action VARCHAR(100) NOT NULL, model VARCHAR(100) NOT NULL, input_tokens INTEGER DEFAULT 0, output_tokens INTEGER DEFAULT 0, estimated_cost DECIMAL(10,6) NOT NULL DEFAULT 0, detail TEXT, created_at TIMESTAMPTZ DEFAULT NOW())`).catch(()=>{});
@@ -6133,114 +6096,9 @@ recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', descriptio
                res.json({ success: true });
                });
                // ============================================
-// ═══════════════════════════════════════════════════════════════════════════
-// SCAN GATE — free-tier limit (5 free scans per IP, then email verify via Brevo)
-// ═══════════════════════════════════════════════════════════════════════════
-const FREE_SCAN_LIMIT = 5;
-const GATE_CODE_TTL_MIN = 15;
-
-function getGateIp(req) {
-  const xff = String(req.headers['x-forwarded-for'] || '').split(',')[0].trim();
-  return xff || req.ip || (req.socket && req.socket.remoteAddress) || 'unknown';
-}
-
-async function sendGateCode(email, code) {
-  const brevoKey = process.env.BREVO_API_KEY || '';
-  if (!brevoKey) throw new Error('BREVO_API_KEY not set');
-  const resp = await fetch('https://api.brevo.com/v3/smtp/email', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'api-key': brevoKey },
-    body: JSON.stringify({
-      to: [{ email }],
-      sender: { email: process.env.FROM_EMAIL || 'noreply@contentscale.site', name: process.env.SENDER_NAME || 'ContentScale' },
-      subject: 'Your ContentScale verification code: ' + code,
-      htmlContent: `
-        <div style="font-family:system-ui,Arial,sans-serif;max-width:480px;margin:0 auto;padding:24px">
-          <h2 style="margin:0 0 8px;color:#0f172a">Verify your email</h2>
-          <p style="color:#475569;margin:0 0 16px">Enter this code to keep scanning on ContentScale:</p>
-          <div style="font-size:32px;font-weight:700;letter-spacing:6px;background:#0f172a;color:#fff;text-align:center;padding:16px;border-radius:10px">${code}</div>
-          <p style="color:#94a3b8;font-size:13px;margin:16px 0 0">This code expires in ${GATE_CODE_TTL_MIN} minutes. If you didn't request it, ignore this email.</p>
-        </div>`
-    })
-  });
-  if (!resp.ok) { const t = await resp.text().catch(()=>''); throw new Error('Brevo ' + resp.status + ': ' + t.substring(0,200)); }
-}
-
-// POST /api/scan-gate/request-code — send a 6-digit code to the visitor's email
-app.post('/api/scan-gate/request-code', async (req, res) => {
-  try {
-    if (!pool) return res.status(500).json({ ok: false, error: 'db_unavailable' });
-    const ip = getGateIp(req);
-    const email = String((req.body && req.body.email) || '').trim().toLowerCase();
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ ok: false, error: 'invalid_email' });
-    const code = String(Math.floor(100000 + Math.random() * 900000));
-    await pool.query(
-      `INSERT INTO scan_gate (ip, email, code, code_expires, updated_at)
-       VALUES ($1, $2, $3, NOW() + ($4 || ' minutes')::interval, NOW())
-       ON CONFLICT (ip) DO UPDATE
-       SET email = EXCLUDED.email, code = EXCLUDED.code,
-           code_expires = EXCLUDED.code_expires, updated_at = NOW()`,
-      [ip, email, code, String(GATE_CODE_TTL_MIN)]
-    );
-    await sendGateCode(email, code);
-    return res.json({ ok: true });
-  } catch (e) {
-    console.error('[scan-gate] request-code:', e.message);
-    return res.status(500).json({ ok: false, error: 'send_failed' });
-  }
-});
-
-// POST /api/scan-gate/verify-code — verify the code and unlock this IP
-app.post('/api/scan-gate/verify-code', async (req, res) => {
-  try {
-    if (!pool) return res.status(500).json({ ok: false, error: 'db_unavailable' });
-    const ip = getGateIp(req);
-    const email = String((req.body && req.body.email) || '').trim().toLowerCase();
-    const code = String((req.body && req.body.code) || '').trim();
-    const r = await pool.query(`SELECT email, code, code_expires FROM scan_gate WHERE ip = $1`, [ip]);
-    const row = r.rows[0];
-    if (!row || row.email !== email || !row.code || row.code !== code) return res.status(400).json({ ok: false, error: 'invalid_code' });
-    if (row.code_expires && new Date(row.code_expires) < new Date()) return res.status(400).json({ ok: false, error: 'code_expired' });
-    await pool.query(`UPDATE scan_gate SET verified = TRUE, code = NULL, code_expires = NULL, updated_at = NOW() WHERE ip = $1`, [ip]);
-    return res.json({ ok: true });
-  } catch (e) {
-    console.error('[scan-gate] verify-code:', e.message);
-    return res.status(500).json({ ok: false, error: 'verify_failed' });
-  }
-});
-
-// GET /api/scan-gate/status — remaining free scans for this IP (optional, for UI)
-app.get('/api/scan-gate/status', async (req, res) => {
-  try {
-    if (!pool) return res.json({ verified: false, used: 0, limit: FREE_SCAN_LIMIT, remaining: FREE_SCAN_LIMIT });
-    const ip = getGateIp(req);
-    const r = await pool.query(`SELECT scan_count, verified FROM scan_gate WHERE ip = $1`, [ip]);
-    const row = r.rows[0] || { scan_count: 0, verified: false };
-    const used = row.scan_count || 0;
-    return res.json({ verified: !!row.verified, used, limit: FREE_SCAN_LIMIT, remaining: row.verified ? null : Math.max(0, FREE_SCAN_LIMIT - used) });
-  } catch (e) {
-    return res.json({ verified: false, used: 0, limit: FREE_SCAN_LIMIT, remaining: FREE_SCAN_LIMIT });
-  }
-});
-
                app.post('/api/scan', async (req, res) => {
                const { url } = req.body;
                if (!url) return res.status(400).json({ success: false, error: 'URL required' });
-               // ── Free-tier gate: 5 free scans/IP, then 403 { gated:true } ──────────────
-               try {
-                 if (pool) {
-                   const _gip = getGateIp(req);
-                   const _g = await pool.query(
-                     `INSERT INTO scan_gate (ip) VALUES ($1)
-                      ON CONFLICT (ip) DO UPDATE SET updated_at = NOW()
-                      RETURNING scan_count, verified`, [_gip]);
-                   const _row = _g.rows[0] || { scan_count: 0, verified: false };
-                   if (!_row.verified && _row.scan_count >= FREE_SCAN_LIMIT) {
-                     return res.status(403).json({ success: false, gated: true, reason: 'email_required', limit: FREE_SCAN_LIMIT, message: 'Free limit reached. Verify your email to keep scanning.' });
-                   }
-                   pool.query(`UPDATE scan_gate SET scan_count = scan_count + 1, updated_at = NOW() WHERE ip = $1`, [_gip]).catch(()=>{});
-                 }
-               } catch (e) { console.warn('[scan-gate]', e.message); /* fail open — never block on DB hiccup */ }
                let scanUrl = url.startsWith('http') ? url : 'https://' + url;
                try {
                console.log(`🔍 Elite Scanning: ${scanUrl}`);
@@ -7074,8 +6932,10 @@ console.log('\n✅ Elite scanner ready\n');
 const activeJobs = new Map();
 app.post('/api/admin/batch-job/start', verifyAdmin, async (req, res) => {
 if (!pool) return res.json({ success: false, error: 'No DB' });
-const { niches, cities, country, max_results, website_only, apify_token } = req.body;
-if (!niches || !cities || !apify_token) return res.status(400).json({ success: false, error: 'Missing niches, cities or apify_token' });
+const { niches, cities, country, max_results, website_only } = req.body;
+const apify_token = (req.body.apify_token && req.body.apify_token.trim()) || process.env.APIFY_TOKEN || '';
+if (!niches || !cities) return res.status(400).json({ success: false, error: 'Missing niches or cities' });
+if (!apify_token) return res.status(400).json({ success: false, error: 'No Apify token — set APIFY_TOKEN in Railway' });
 const nicheArr = niches.split('\n').map(n => n.trim()).filter(n => n);
 const cityArr  = cities.split('\n').map(c => c.trim()).filter(c => c);
 if (!nicheArr.length || !cityArr.length) return res.status(400).json({ success: false, error: 'No valid niches or cities' });
@@ -7120,6 +6980,78 @@ await pool.query(`UPDATE batch_jobs SET status='cancelled', completed_at=NOW() W
 res.json({ success: true });
 } catch (e) { res.status(500).json({ success: false, error: e.message }); }
 });
+
+// ── Score the discovered leads of a batch job (on-demand, controlled) ──────────
+app.post('/api/admin/batch-job/:id/score', verifyAdmin, async (req, res) => {
+  if (!pool) return res.json({ success: false, error: 'No DB' });
+  const jobId = req.params.id;
+  try {
+    const cnt = await pool.query(
+      `SELECT COUNT(*)::int AS n FROM scan_log WHERE user_id=$1 AND source='discover' AND business_url <> '' AND (score IS NULL OR score=0)`,
+      ['batch_job_' + jobId]);
+    if (!cnt.rows[0].n) return res.json({ success: false, error: 'No unscored leads with a website for this job' });
+    await pool.query(`UPDATE batch_jobs SET status='scoring', progress=0, progress_text=$2 WHERE id=$1`, [jobId, `Scoring 0/${cnt.rows[0].n}...`]).catch(()=>{});
+    scoreBatchJobInBackground(jobId);
+    res.json({ success: true, to_score: cnt.rows[0].n });
+  } catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// ── Read a job's leads, best prospects (lowest ContentScore) first ─────────────
+app.get('/api/admin/batch-job/:id/leads', verifyAdmin, async (req, res) => {
+  if (!pool) return res.json({ success: false, error: 'No DB' });
+  try {
+    const r = await pool.query(
+      `SELECT business_name, business_url, phone, email_found AS email, address, rating, reviews, category, niche, city, country, score,
+              CASE WHEN score IS NULL OR score<=0 THEN 'unscored'
+                   WHEN score < 40 THEN 'hot' WHEN score < 70 THEN 'warm' ELSE 'cold' END AS prospect
+       FROM scan_log
+       WHERE user_id=$1 AND source IN ('discover','scored')
+       ORDER BY (CASE WHEN score IS NOT NULL AND score>0 THEN 0 ELSE 1 END), score ASC`,
+      ['batch_job_' + req.params.id]);
+    res.json({ success: true, count: r.rows.length, leads: r.rows });
+  } catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// ── Background: score a job's discovered leads via the existing /api/scan ───────
+async function scoreBatchJobInBackground(jobId) {
+  if (!pool) return;
+  activeJobs.set(jobId, { cancelled: false });
+  try {
+    const rows = (await pool.query(
+      `SELECT id, business_url FROM scan_log
+       WHERE user_id=$1 AND source='discover' AND business_url <> '' AND (score IS NULL OR score=0)
+       ORDER BY id ASC`, ['batch_job_' + jobId])).rows;
+    let done = 0, high = 0, good = 0, low = 0;
+    for (const row of rows) {
+      if (activeJobs.get(jobId)?.cancelled) break;
+      let score = null;
+      try {
+        const r = await fetch(`http://127.0.0.1:${PORT}/api/scan`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url: row.business_url })
+        });
+        const j = await r.json();
+        if (j && j.success !== false && typeof j.score === 'number') score = j.score;
+      } catch (e) { /* site unreachable — skip */ }
+      if (score !== null) {
+        await pool.query(`UPDATE scan_log SET score=$2, source='scored' WHERE id=$1`, [row.id, score]).catch(()=>{});
+        if (score >= 70) high++; else if (score >= 40) good++; else low++;
+      } else {
+        await pool.query(`UPDATE scan_log SET score=-1 WHERE id=$1`, [row.id]).catch(()=>{}); // mark unreachable, won't retry
+      }
+      done++;
+      await pool.query(
+        `UPDATE batch_jobs SET progress=$2, progress_text=$3, score_high=$4, score_good=$5, score_low=$6 WHERE id=$1`,
+        [jobId, Math.round((done / rows.length) * 100), `Scoring ${done}/${rows.length}...`, high, good, low]).catch(()=>{});
+      await new Promise(r => setTimeout(r, 2000)); // 1 at a time, 2s apart — matches your scan queue
+    }
+    await pool.query(`UPDATE batch_jobs SET status='completed', progress=100, progress_text=$2, completed_at=NOW() WHERE id=$1`,
+      [jobId, `✅ Scored ${done} — ${low} hot (<40), ${good} warm, ${high} cold`]).catch(()=>{});
+  } catch (e) {
+    await pool.query(`UPDATE batch_jobs SET status='failed', error_message=$2 WHERE id=$1`, [jobId, e.message]).catch(()=>{});
+  } finally { activeJobs.delete(jobId); }
+}
+
 async function runBatchJobInBackground(jobId) {
 if (!pool) return;
 const jobRef = { cancelled: false };
@@ -7142,7 +7074,7 @@ nicheArr.forEach(niche => cityArr.forEach(city => combos.push({ niche, city })))
 const maxResultsActual = (!job.max_results || job.max_results === 0) ? 9999 : parseInt(job.max_results);
 const websiteOnly = job.website_only;
 const country     = job.country;
-const apifyToken  = job.apify_token;
+const apifyToken  = process.env.APIFY_TOKEN || job.apify_token;
 await updateJob({ status: 'running', started_at: new Date(), progress: 1, progress_text: 'Loading existing scans for dedup...' });
 let alreadyScanned = new Set();
 try {
@@ -7165,10 +7097,10 @@ const runRes = await fetch(`${APIFY_BASE}/acts/compass~crawler-google-places/run
 method: 'POST',
 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apifyToken}` },
 body: JSON.stringify({
-searchStringsArray: [`${niche} in ${city}`],
+searchStringsArray: [`${niche} in ${city}${country ? ', ' + country : ''}`],
 maxCrawledPlacesPerSearch: maxResultsActual,
 language: 'en', exportPlaceUrls: true,
-includeWebResults: true, skipClosedPlaces: false
+includeWebResults: true, skipClosedPlaces: false, scrapeContacts: true
 })
 });
 const runData = await runRes.json();
@@ -7203,16 +7135,19 @@ headers: { 'Authorization': `Bearer ${apifyToken}` }
 })).json();
 places = Array.isArray(dataRaw) ? dataRaw : (dataRaw.items || dataRaw.data || []);
 } catch(e) { continue; }
+const _email = p => p.email || (p.emails && p.emails[0]) || (p.contactDetails && p.contactDetails.emails && p.contactDetails.emails[0]) || null;
+const _phone = p => p.phone || p.phoneUnformatted || (p.contactDetails && p.contactDetails.phones && p.contactDetails.phones[0]) || null;
+const _meta  = p => ({ email:_email(p), phone:_phone(p), address: p.address || p.street || null, rating: p.totalScore || p.rating || null, reviews: p.reviewsCount || p.reviews || null, category: p.categoryName || (Array.isArray(p.categories) && p.categories[0]) || null });
 let urls = places.filter(p => p.website).map(p => ({
 url: p.website.startsWith('http') ? p.website : 'https://' + p.website,
 name: p.title || p.name || '',
-email: p.email || (p.emails && p.emails[0]) || null,
+..._meta(p),
 country
 }));
 if (!websiteOnly) {
 places.filter(p => !p.website).forEach(p => urls.push({
 url: '', name: p.title || p.name || '',
-email: p.email || (p.emails && p.emails[0]) || null,
+..._meta(p),
 country
 }));
 }
@@ -7226,10 +7161,10 @@ allDomains.push(place);
 totalScanned++;
 // Save to scan_log as 'discovered' (no scan yet — campaign will scan)
 await pool.query(
-`INSERT INTO scan_log (user_id, business_url, business_name, niche, city, country, email_found, email_status, source, score)
-VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'discover',0)
+`INSERT INTO scan_log (user_id, business_url, business_name, niche, city, country, email_found, email_status, phone, address, rating, reviews, category, source, score)
+VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,'discover',0)
 ON CONFLICT DO NOTHING`,
-['batch_job_' + jobId, place.url, place.name, niche, city, country, place.email || null, place.email ? 'has_email' : 'no_email']
+['batch_job_' + jobId, place.url, place.name, niche, city, country, place.email || null, place.email ? 'has_email' : 'no_email', place.phone || null, place.address || null, place.rating || null, place.reviews || null, place.category || null]
 ).catch(err => console.error('[discover scan_log] insert failed:', err.message, '| url:', place.url));
 }
 await updateJob({
@@ -12909,17 +12844,7 @@ const verifyEngineAccess = async (req, res, next) => {
       } catch(q2err) { codeResult = { rows: [] }; }
     }
     if (!codeResult || codeResult.rows.length === 0) {
-      // Distinguish WHY the code failed so the message is accurate (not the scary "db reset").
-      let reason = 'Access code not found — get a valid code from your admin dashboard.';
-      try {
-        const anyR = await pool.query('SELECT is_active, expires_at FROM engine_access_codes WHERE code = $1', [lookupCode.trim().toUpperCase()]);
-        if (anyR.rows.length) {
-          const c = anyR.rows[0];
-          if (c.is_active === false) reason = 'This access code is turned OFF. Re-activate it in the admin dashboard (Give Access).';
-          else if (c.expires_at && new Date(c.expires_at) <= new Date()) reason = 'This access code EXPIRED on ' + new Date(c.expires_at).toISOString().slice(0,10) + '. Extend it or set it to Unlimited in Give Access.';
-        }
-      } catch(e) {}
-      return res.status(403).json({ success: false, error: reason });
+      return res.status(403).json({ success: false, error: 'Engine access code not found. The database was reset — please get a new code from your admin dashboard.' });
     }
     const code = codeResult.rows[0];
     req.engineUser = { isAdmin: false, codeId: code.id, code: code };
@@ -13219,95 +13144,72 @@ app.post('/api/gsc/confirm-import', verifyEngineAccess, async (req, res) => {
     let updated = 0;
     let skipped = 0;
     const results = [];
-    const seenHomepage = new Set();
-    const _isHome = (u) => { try { const x = new URL(u); const p = x.pathname.replace(/\/+$/,''); return p === '' || /^\/(index|home)(\.html?)?$/i.test(p); } catch(e){ return false; } };
-    const _homeNorm = `regexp_replace(regexp_replace(regexp_replace(url,'^https?://(www\\.)?',''),'\\?.*$',''),'/+$','')`;
     for (const url of urls) {
       try {
-        let importUrl = url, gsc = {}, bestKeyword = null;
-
-        if (_isHome(url)) {
-          // HOMEPAGE: merge all variants (www/non-www, http/https, trailing slash, query) into ONE row.
-          const host = new URL(url).hostname.replace(/^www\./, '');
-          const canonical = 'https://' + host + '/';
-          if (seenHomepage.has(canonical)) { skipped++; results.push({ url, status: 'merged_into_homepage' }); continue; }
-          seenHomepage.add(canonical);
-          importUrl = canonical;
-          const aggR = await pool.query(
-            `SELECT COALESCE(SUM(clicks),0)::int AS clicks, COALESCE(SUM(impressions),0)::int AS impressions,
-                    MIN(position) AS position, AVG(ctr) AS ctr
-             FROM gsc_pages WHERE profile_id=$1 AND ${_homeNorm} = $2`,
-            [profile_id, host]
-          ).catch(() => ({ rows: [] }));
-          gsc = aggR.rows[0] || {};
-          const kwR = await pool.query(
-            `SELECT query FROM gsc_queries
-             WHERE profile_id=$1 AND ${_homeNorm} = $2 AND query IS NOT NULL AND trim(query) <> ''
-               AND char_length(query) BETWEEN 2 AND 60
-               AND array_length(regexp_split_to_array(trim(query), '\\s+'), 1) <= 8
-             ORDER BY clicks DESC NULLS LAST, impressions DESC NULLS LAST LIMIT 1`,
-            [profile_id, host]
-          ).catch(() => ({ rows: [] }));
-          if (kwR.rows.length) bestKeyword = kwR.rows[0].query;
-        } else {
-          // NON-HOMEPAGE: exact URL match.
-          const gscR = await pool.query('SELECT clicks, impressions, ctr, position FROM gsc_pages WHERE profile_id=$1 AND url=$2', [profile_id, url]);
-          gsc = gscR.rows[0] || {};
-          const kwR = await pool.query(
-            `SELECT query FROM gsc_queries
-             WHERE profile_id=$1 AND url=$2 AND query IS NOT NULL AND trim(query) <> ''
-               AND char_length(query) BETWEEN 2 AND 60
-               AND array_length(regexp_split_to_array(trim(query), '\\s+'), 1) <= 8
-             ORDER BY clicks DESC NULLS LAST, impressions DESC NULLS LAST LIMIT 1`,
-            [profile_id, url]
-          ).catch(() => ({ rows: [] }));
-          if (kwR.rows.length) bestKeyword = kwR.rows[0].query;
-        }
-
-        const urlObj = new URL(importUrl);
+        // Get GSC data for this URL
+        const gscR = await pool.query(
+          'SELECT clicks, impressions, ctr, position FROM gsc_pages WHERE profile_id = $1 AND url = $2',
+          [profile_id, url]
+        );
+        const gsc = gscR.rows[0] || {};
+        const urlObj = new URL(url);
         const slug = urlObj.pathname.split('/').filter(Boolean).pop() || '/';
 
-                // Idempotent import: check if this URL is already tracked for this engine.
-        // Look it up first instead of relying on a DB unique constraint (which may
-        // not exist) — this is what was causing duplicates (56 -> 113) on re-import.
+        // Step 1: Try INSERT. If URL already exists for this engine, catch the conflict
+        // and UPDATE the existing row with new profile_id + GSC data instead of skipping.
         let r, isUpdate = false;
-        const existing = await pool.query(
-          `SELECT id FROM tracker_pages
-           WHERE url=$1 AND (engine_code_id=$2 OR ($2 IS NULL AND engine_code_id IS NULL))
-           LIMIT 1`,
-          [importUrl, codeId]
-        );
-        if (existing.rows.length) {
-          isUpdate = true;
-          r = await pool.query(
-            `UPDATE tracker_pages SET
-               profile_id = $1, gsc_impressions = $2, gsc_clicks = $3, gsc_position = $4, gsc_ctr = $5,
-               import_batch = $6, slug = $7,
-               keyword = COALESCE(NULLIF(keyword, ''), $8),
-               updated_at = NOW()
-             WHERE id = $9
-             RETURNING id`,
-            [profile_id, parseInt(gsc.impressions) || null, parseInt(gsc.clicks) || null,
-             parseFloat(gsc.position) || null, parseFloat(gsc.ctr) || null, batchId, slug, bestKeyword, existing.rows[0].id]
-          );
-        } else {
+        try {
           r = await pool.query(
             `INSERT INTO tracker_pages (engine_code_id, profile_id, url, slug, keyword, check_frequency, next_check_at, gsc_impressions, gsc_clicks, gsc_position, gsc_ctr, import_batch, is_active)
              VALUES ($1,$2,$3,$4,$5,$6,NOW(),$7,$8,$9,$10,$11,TRUE)
              RETURNING id`,
-            [codeId, profile_id, importUrl, slug, bestKeyword, '3days',
-             parseInt(gsc.impressions) || null, parseInt(gsc.clicks) || null,
-             parseFloat(gsc.position) || null, parseFloat(gsc.ctr) || null, batchId]
+            [codeId, profile_id, url, slug, null, '3days',
+             parseInt(gsc.impressions) || null,
+             parseInt(gsc.clicks) || null,
+             parseFloat(gsc.position) || null,
+             parseFloat(gsc.ctr) || null,
+             batchId]
           );
+        } catch(insertErr) {
+          // Unique constraint violation — URL already exists for this engine.
+          // Update the existing row with new profile_id and GSC data.
+          if (insertErr.code === '23505' || /unique|duplicate/i.test(insertErr.message)) {
+            isUpdate = true;
+            r = await pool.query(
+              `UPDATE tracker_pages SET
+                 profile_id = $1,
+                 gsc_impressions = $2,
+                 gsc_clicks = $3,
+                 gsc_position = $4,
+                 gsc_ctr = $5,
+                 import_batch = $6,
+                 slug = $7,
+                 updated_at = NOW()
+               WHERE (engine_code_id = $8 OR ($8 IS NULL AND engine_code_id IS NULL))
+                 AND url = $9
+               RETURNING id`,
+              [profile_id,
+               parseInt(gsc.impressions) || null,
+               parseInt(gsc.clicks) || null,
+               parseFloat(gsc.position) || null,
+               parseFloat(gsc.ctr) || null,
+               batchId,
+               slug,
+               codeId,
+               url]
+            );
+          } else {
+            throw insertErr;
+          }
         }
 
         if (r.rows.length) {
           if (isUpdate) {
             updated++;
-            results.push({ url, id: r.rows[0].id, status: 'updated', keyword: bestKeyword });
+            results.push({ url, id: r.rows[0].id, status: 'updated' });
           } else {
             imported++;
-            results.push({ url, id: r.rows[0].id, status: 'imported', keyword: bestKeyword });
+            results.push({ url, id: r.rows[0].id, status: 'imported' });
           }
         } else {
           skipped++;
@@ -14324,15 +14226,6 @@ function safeProfileLocations(profile) {
   return profile.locations;
 }
 
-// Flat EUR estimate per action — used so the Platform budget reliably accumulates
-// and STOPS at its limit, even for actions that don't call trackApiCost.
-const _ACTION_EUR_ESTIMATE = {
-  'research': 0.02, 'brief': 0.02, 'write': 0.08, 'analyse-rewrite': 0.04,
-  'execute-rewrite': 0.10, 'targeted-fix': 0.04, 'bulk-create': 0.15, 'stats-study': 0.02
-};
-// These already report precise token cost via trackApiCost — don't double-charge them here.
-const _PRECISELY_TRACKED = new Set(['research', 'write']);
-
 function requireCredits(action) {
   return async (req, res, next) => {
     try {
@@ -14342,10 +14235,7 @@ function requireCredits(action) {
       if (!eu.code) return next();
       // ── BYOK users pass through (they pay Google/Anthropic directly) ──
       if (eu.code.api_key_mode === 'byok') return next();
-      // ── Budget is OPTIONAL on Platform. NULL / 0 limit = unlimited platform (no euro counting, no stop). ──
-      const _rawLimit = eu.code.monthly_cost_limit;
-      if (_rawLimit === null || _rawLimit === undefined || _rawLimit === '' || parseFloat(_rawLimit) <= 0) return next();
-      // ── Platform WITH a budget: enforce monthly limit ──
+      // ── Platform key users: check monthly cost limit ──
       // Reset monthly cost if needed
       const now = new Date();
       const resetAt = eu.code.cost_reset_at ? new Date(eu.code.cost_reset_at) : null;
@@ -14353,28 +14243,19 @@ function requireCredits(action) {
         await pool.query(`UPDATE engine_access_codes SET monthly_cost_used=0, cost_reset_at=NOW() WHERE id=$1`, [eu.codeId]).catch(()=>{});
         eu.code.monthly_cost_used = 0;
       }
-      const limit = parseFloat(_rawLimit);
+      const limit = parseFloat(eu.code.monthly_cost_limit) || 5;
       const used = parseFloat(eu.code.monthly_cost_used) || 0;
       if (used >= limit) {
         return res.status(402).json({
           success: false,
-          error: `Budget exhausted: €${used.toFixed(2)} used of €${limit.toFixed(2)} limit.`,
+          error: `Budget exhausted: €${used.toFixed(2)} used of €${limit.toFixed(2)} limit. Contact admin to top up.`,
           code: 'COST_LIMIT_REACHED',
           used: used,
-          limit: limit,
-          contact_message: 'You are out of credits. Contact Ottmar via WhatsApp to top up and keep working.',
-          whatsapp: 'https://wa.me/31628073996?text=' + encodeURIComponent('Hi Ottmar, my ContentScale credits are used up — I need more credits to continue.')
+          limit: limit
         });
       }
       req.monthlyLimit = limit;
       req.monthlyUsed = used;
-      // Make the budget actually move for actions not covered by trackApiCost,
-      // so a Platform budget hard-stops at its limit (fire-and-forget).
-      if (!_PRECISELY_TRACKED.has(action)) {
-        const _est = _ACTION_EUR_ESTIMATE[action] || 0.03;
-        pool.query(`UPDATE engine_access_codes SET monthly_cost_used = COALESCE(monthly_cost_used,0) + $1 WHERE id=$2`, [_est, eu.codeId]).catch(()=>{});
-        pool.query(`INSERT INTO api_cost_log (code_id, action, model, input_tokens, output_tokens, estimated_cost, detail) VALUES ($1,$2,'estimate',0,0,$3,$4)`, [eu.codeId, action, _est, 'flat budget estimate']).catch(()=>{});
-      }
       next();
     } catch (e) {
       console.error('[requireApiAccess]', e);
@@ -14408,48 +14289,6 @@ async function trackApiCost(codeId, action, model, inputTokens, outputTokens, de
     console.error('[trackApiCost] failed:', e.message);
     return { ok: false, cost: 0 };
   }
-}
-
-// Flat EUR cost for external SEARCH APIs (Serper / Bing / Brave / Perplexity) — these are
-// the "hidden" costs not captured by LLM token tracking. Charged to the engine code's budget.
-const SEARCH_EUR = { serper: 0.003, bing: 0.005, brave: 0.003, perplexity: 0.004, tracker_scan: 0.012 };
-async function chargeFlatCost(codeId, action, eur, detail) {
-  if (!codeId || !pool || !(eur > 0)) return;
-  try {
-    await pool.query(`UPDATE engine_access_codes SET monthly_cost_used = COALESCE(monthly_cost_used,0) + $1 WHERE id=$2`, [eur, codeId]);
-    await pool.query(`INSERT INTO api_cost_log (code_id, action, model, input_tokens, output_tokens, estimated_cost, detail) VALUES ($1,$2,'search',0,0,$3,$4)`, [codeId, action, eur, detail || '']);
-  } catch (e) { console.warn('[chargeFlatCost]', e.message); }
-}
-
-// Notify the client by email when work is completed in the engine (keeps them informed).
-// Emails are set per engine code in admin → Give Access (comma-separated). No-op if none set.
-async function notifyEngineClient(codeId, actionLabel, detail) {
-  if (!codeId || !pool) return;
-  try {
-    const r = await pool.query('SELECT client_name, notify_emails FROM engine_access_codes WHERE id=$1', [codeId]);
-    const row = r.rows[0];
-    if (!row || !row.notify_emails) return;
-    const emails = String(row.notify_emails).split(/[,;\s]+/).map(e => e.trim()).filter(e => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e));
-    if (!emails.length) return;
-    const brevoKey = process.env.BREVO_API_KEY;
-    if (!brevoKey) { console.warn('[notifyEngineClient] BREVO_API_KEY not set'); return; }
-    await fetch('https://api.brevo.com/v3/smtp/email', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'api-key': brevoKey },
-      body: JSON.stringify({
-        to: emails.map(email => ({ email })),
-        sender: { email: process.env.FROM_EMAIL || 'noreply@contentscale.site', name: process.env.SENDER_NAME || 'ContentScale' },
-        subject: 'ContentScale update: ' + actionLabel,
-        htmlContent: `<div style="font-family:system-ui,Arial,sans-serif;max-width:520px;margin:0 auto;padding:24px">
-          <h2 style="color:#0f172a;margin:0 0 8px">${actionLabel}</h2>
-          <p style="color:#475569;margin:0 0 12px">We just completed work on your content${row.client_name ? (' (' + row.client_name + ')') : ''}:</p>
-          <p style="color:#0f172a;font-weight:600;margin:0 0 16px">${detail || ''}</p>
-          <p style="color:#94a3b8;font-size:13px;margin:16px 0 0">You'll keep getting these updates as work progresses. — ContentScale</p>
-        </div>`
-      })
-    });
-    console.log('[notifyEngineClient] sent "' + actionLabel + '" to', emails.length, 'recipient(s)');
-  } catch (e) { console.warn('[notifyEngineClient]', e.message); }
 }
 
 app.get('/api/engine/billing', verifyEngineAccess, async (req, res) => {
@@ -14828,7 +14667,7 @@ app.post('/api/admin/engine-codes', verifyAdmin, async (req, res) => {
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 app.patch('/api/admin/engine-codes/:id', verifyAdmin, async (req, res) => {
-  const { is_active, gemini_key, claude_key, expires_at, notes, use_platform_keys, platform_credits, reset_used, deal_type, deal_label, serpapi_key, perplexity_key, you_api_key, api_key_mode, monthly_cost_limit, notify_emails } = req.body;
+  const { is_active, gemini_key, claude_key, expires_at, notes, use_platform_keys, platform_credits, reset_used, deal_type, deal_label, serpapi_key, perplexity_key, you_api_key, api_key_mode, monthly_cost_limit } = req.body;
   try {
     const fields=[]; const vals=[]; let i=1;
     if (is_active!==undefined){fields.push(`is_active=$${i++}`);vals.push(is_active);}
@@ -14846,7 +14685,6 @@ app.patch('/api/admin/engine-codes/:id', verifyAdmin, async (req, res) => {
     if (you_api_key!==undefined){fields.push(`you_api_key=$${i++}`);vals.push(you_api_key||null);}
     if (api_key_mode!==undefined){fields.push(`api_key_mode=$${i++}`);vals.push(api_key_mode);}
     if (monthly_cost_limit!==undefined){fields.push(`monthly_cost_limit=$${i++}`);vals.push(monthly_cost_limit);}
-    if (notify_emails!==undefined){fields.push(`notify_emails=$${i++}`);vals.push(notify_emails||null);}
     if (!fields.length) return res.status(400).json({ success: false, error: 'Nothing to update' });
     vals.push(req.params.id);
     await pool.query(`UPDATE engine_access_codes SET ${fields.join(',')} WHERE id=$${i}`, vals);
@@ -14861,19 +14699,12 @@ app.post('/api/engine/login', async (req, res) => {
   const { code } = req.body;
   if (!code) return res.status(400).json({ success: false, error: 'Code required' });
   try {
-    const lookup = code.trim().toUpperCase();
-    let r = await pool.query(`SELECT * FROM engine_access_codes WHERE code=$1`, [lookup]).catch(() => ({ rows: [] }));
-    if (!r.rows.length) return res.status(401).json({ success: false, error: 'Invalid engine code — not found.', code: 'NOT_FOUND' });
+    let r = await pool.query(`SELECT * FROM engine_access_codes WHERE code=$1 AND is_active=TRUE AND (expires_at IS NULL OR expires_at > NOW())`, [code.trim().toUpperCase()]).catch(() => ({ rows: [] }));
+    if (!r.rows.length) {
+      r = await pool.query(`SELECT * FROM engine_access_codes WHERE code=$1 AND (expires_at IS NULL OR expires_at > NOW())`, [code.trim().toUpperCase()]);
+    }
+    if (!r.rows.length) return res.status(401).json({ success: false, error: 'Invalid or expired engine code' });
     const ec = r.rows[0];
-    // ── ACCESS = on/off (is_active) + optional expiry. BOTH independent of budget. ──
-    // is_active=TRUE + expires_at=NULL  → unlimited access.
-    // is_active=TRUE + expires_at=date  → access until that date.
-    if (ec.is_active === false) {
-      return res.status(403).json({ success: false, code: 'ACCESS_OFF', error: 'Access is turned OFF for this code. Ask Ottmar to switch it on.' });
-    }
-    if (ec.expires_at && new Date(ec.expires_at) < new Date()) {
-      return res.status(403).json({ success: false, code: 'ACCESS_EXPIRED', expired_at: ec.expires_at, error: 'Access ended on ' + new Date(ec.expires_at).toLocaleDateString('en-GB') + '. Set it to Unlimited or a future date in admin.' });
-    }
     // verifyEngineAccess uses the raw ENG-XXXX code as the token (x-engine-token header),
     // so return the code itself — no access_sessions insert needed.
     const creditsLeft = ec.platform_credits === null ? null : Math.max(0, ec.platform_credits - (ec.credits_used||0));
@@ -16311,7 +16142,6 @@ OUTPUT ONLY COMPLETE HTML.`;
     }
 
     console.log(`[writeJob ${writeJobId}] completed — ${wordCount} words, article ${articleR.rows[0].id}`);
-    if (codeIdForCost) notifyEngineClient(codeIdForCost, 'New article written', (brief.title || job.seed_keyword || 'Your article') + ' — ' + wordCount + ' words').catch(()=>{});
   } catch(error) {
     console.error(`[writeJob ${writeJobId}] failed:`, error.message, error.stack);
     await pool.query(
@@ -16644,7 +16474,6 @@ app.get('/content-engine', (req, res) => {
   res.setHeader('Expires', '0');
   res.setHeader('Vary', '*');
   let html = require('fs').readFileSync(require('path').join(__dirname, 'content-engine.html'), 'utf8');
-  html = html.includes('</body>') ? html.replace(/<\/body>(?![\s\S]*<\/body>)/, '<script src="/engine-budget-popup.js"></script></body>') : html + '<script src="/engine-budget-popup.js"></script>';
   // Auto-inject engine code from URL param into localStorage and auto-connect
   const code = req.query.code || req.query.token || '';
   if (code && /^ENG-[A-Z0-9]+$/i.test(code)) {
@@ -17667,54 +17496,6 @@ Return ONLY valid JSON:
   }
 });
 
-// Pre-write PLAN & VERIFY: returns the angle + the factual claims the agent intends to make,
-// each flagged VERIFIABLE or ASSUMPTION, so the human can correct BEFORE the agent writes.
-app.post('/api/content/preflight/:rewriteId', verifyEngineAccess, async (req, res) => {
-  try {
-    const rwR = await pool.query(
-      `SELECT r.*, cp.name as profile_name, cp.niche, cp.target_audience
-       FROM content_rewrites r JOIN content_profiles cp ON cp.id=r.profile_id WHERE r.id=$1`,
-      [req.params.rewriteId]
-    );
-    if (!rwR.rows.length) return res.status(404).json({ success:false, error:'Rewrite not found' });
-    const rw = rwR.rows[0];
-    let analysis = {}; try { analysis = typeof rw.analysis_data === 'string' ? JSON.parse(rw.analysis_data) : (rw.analysis_data || {}); } catch(_) {}
-    const geminiKey = process.env.GEMINI_API_KEY;
-    if (!geminiKey) return res.status(500).json({ success:false, error:'GEMINI_API_KEY not set' });
-
-    // Reuse saved spy
-    let spyLine = '';
-    try {
-      const _u = rw.original_url || '';
-      if (_u) {
-        const _s = await pool.query(`SELECT serp_spy FROM tracker_pages WHERE url ILIKE $1 AND serp_spy IS NOT NULL ORDER BY serp_spy_at DESC NULLS LAST LIMIT 1`, ['%' + _u.replace(/^https?:\/\/(www\.)?/,'').replace(/\/+$/,'') + '%']);
-        if (_s.rows.length && _s.rows[0].serp_spy) {
-          const sp = _s.rows[0].serp_spy;
-          const gaps = (sp._entity_gaps||sp.entity_gaps_priority||[]).slice(0,10).map(g=>g.entity||g).filter(Boolean);
-          spyLine = (sp.step2_pattern&&sp.step2_pattern.the_ranking_formula ? 'Ranking formula: '+sp.step2_pattern.the_ranking_formula+'\n' : '') + (gaps.length ? 'Entity gaps: '+gaps.join(', ')+'\n' : '');
-        }
-      }
-    } catch(e) {}
-
-    const kw = rw.keyword || analysis.primary_keyword || rw.original_title || '';
-    const prompt = `You are planning an SEO content rewrite. BEFORE writing, produce a short PRE-WRITE PLAN so a human can verify it.
-Client/brand: ${rw.profile_name||'(unknown)'} | Niche: ${rw.niche||'-'} | Audience: ${rw.target_audience||'-'}
-Target keyword: ${kw}
-Page URL: ${rw.original_url||'-'}
-${spyLine}
-Return ONLY valid JSON:
-{"angle":"1-2 sentence approach","key_claims":[{"claim":"a factual claim the article would make","status":"VERIFIABLE|ASSUMPTION","note":"how to verify, or why it's an assumption"}],"questions_for_human":["anything to confirm before writing"]}
-List 4-8 key_claims. Mark VERIFIABLE only if it's general knowledge or safely true; mark anything specific (stats, prices, dates, awards, named results, certifications) as ASSUMPTION unless the brand context confirms it.`;
-
-    const gem = await callGeminiWithFallback(geminiKey, { contents:[{role:'user',parts:[{text:prompt}]}], generationConfig:{ temperature:0.3, maxOutputTokens:2000 } });
-    if (!gem.ok) return res.status(502).json({ success:false, error: gem.errorMessage || 'Gemini failed' });
-    const raw = (gem.data && gem.data.candidates && gem.data.candidates[0] && gem.data.candidates[0].content && gem.data.candidates[0].content.parts && gem.data.candidates[0].content.parts[0] && gem.data.candidates[0].content.parts[0].text) || '';
-    let plan = null; try { const m = raw.match(/\{[\s\S]*\}/); if (m) plan = JSON.parse(m[0]); } catch(e) {}
-    if (!plan) return res.json({ success:true, plan:{ angle:'', key_claims:[], questions_for_human:[], raw } });
-    res.json({ success:true, plan });
-  } catch(e) { res.status(500).json({ success:false, error:e.message }); }
-});
-
 app.post('/api/content/execute-rewrite/:rewriteId', verifyEngineAccess, requireCredits('execute-rewrite'), asyncHandler(async (req, res) => {
   req.socket && req.socket.setKeepAlive && req.socket.setKeepAlive(true);
   res.setHeader('X-Accel-Buffering', 'no');
@@ -18115,50 +17896,6 @@ Geef ALLEEN HTML terug vanaf <article>. Geen markdown. Eindig met <!-- word_coun
     let wasTruncated = false;
     let modelUsed = '';
     let attemptsUsed = 0;
-    // ── Reuse the SAVED SERP-spy data + agent memory (don't re-run the spy; remember prior work) ──
-    let _agentExtra = '';
-    // Client/brand context from the profile — so each client gets their OWN voice, not a hardcoded brand.
-    var _brand = [
-      rw.profile_name ? 'Client / brand: ' + rw.profile_name : '',
-      rw.niche ? 'Niche: ' + rw.niche : '',
-      rw.target_audience ? 'Audience: ' + rw.target_audience : '',
-      rw.primary_goal ? 'Primary goal: ' + rw.primary_goal : ''
-    ].filter(Boolean);
-    if (_brand.length) _agentExtra += '\n\n═══ CLIENT / BRAND CONTEXT (write in THIS brand\'s voice) ═══\n' + _brand.join('\n');
-    try {
-      const _pageUrl = rw.original_url || '';
-      if (_pageUrl) {
-        const _spyR = await pool.query(
-          `SELECT serp_spy FROM tracker_pages WHERE url ILIKE $1 AND serp_spy IS NOT NULL ORDER BY serp_spy_at DESC NULLS LAST LIMIT 1`,
-          ['%' + _pageUrl.replace(/^https?:\/\/(www\.)?/, '').replace(/\/+$/, '') + '%']
-        );
-        if (_spyR.rows.length && _spyR.rows[0].serp_spy) {
-          const sp = _spyR.rows[0].serp_spy;
-          const _formula = sp.step2_pattern && sp.step2_pattern.the_ranking_formula ? sp.step2_pattern.the_ranking_formula : '';
-          const _gaps = (sp._entity_gaps || sp.entity_gaps_priority || []).slice(0, 12).map(g => g.entity || g).filter(Boolean);
-          const _paa = (sp.paa_questions || []).slice(0, 6);
-          const _brief = sp.content_brief || {};
-          _agentExtra += `\n\n═══ SERP-SPY INTELLIGENCE (already gathered for this page — USE THIS, do not guess) ═══\n` +
-            (_formula ? `Ranking formula: ${_formula}\n` : '') +
-            (_brief.recommended_word_count ? `Target length: ~${_brief.recommended_word_count} words\n` : '') +
-            (Array.isArray(_brief.must_have_h2s) && _brief.must_have_h2s.length ? `Must-have H2s: ${_brief.must_have_h2s.join(' | ')}\n` : '') +
-            (_gaps.length ? `Entity gaps competitors cover and this page is missing: ${_gaps.join(', ')}\n` : '') +
-            (_paa.length ? `Answer these real People-Also-Ask questions: ${_paa.join(' | ')}\n` : '');
-        }
-      }
-    } catch(e) { /* spy is optional */ }
-    try {
-      const _memR = await pool.query(
-        `SELECT event, detail, created_at FROM agent_memory WHERE profile_id=$1 ORDER BY created_at DESC LIMIT 8`,
-        [rw.profile_id]
-      );
-      if (_memR.rows.length) {
-        _agentExtra += `\n\n═══ MEMORY — what's already been done for this client (don't repeat it, build on it) ═══\n` +
-          _memR.rows.map(m => `- ${new Date(m.created_at).toISOString().slice(0,10)}: ${m.event}${m.detail ? ' — ' + m.detail : ''}`).join('\n');
-      }
-    } catch(e) { /* memory optional */ }
-    if (_agentExtra) writePromptRW += _agentExtra;
-
     const violationHistory = [];
     let bestScore = -1;
     let bestViolations = [];
@@ -18181,13 +17918,13 @@ Geef ALLEEN HTML terug vanaf <article>. Geen markdown. Eindig met <!-- word_coun
       try {
         if (!useGemini) {
           // Claude path (primary)
-          const sys = AGENT_SYSTEM_PROMPT;
+          const sys = 'You are an elite SEO content writer and HTML engineer. Rewrite HTML pages to rank higher while preserving layout, author, CSS, and branding exactly. Return only HTML — no markdown, no code fences.';
           const promptCapped = promptThisAttempt.length > 150000 ? promptThisAttempt.slice(0, 150000) + '\n\n[Content truncated — complete the rewrite with what you have]' : promptThisAttempt;
           rawHtml = await callClaudeForWrite(sys, promptCapped, 10000, claudeRwKey);
           modelUsed = 'claude-sonnet-4-20250514';
         } else {
           // Gemini fallback path
-          const gemSys = AGENT_SYSTEM_PROMPT;
+          const gemSys = 'You are an elite SEO content writer and HTML engineer. Rewrite HTML pages to rank higher while preserving layout, author, CSS, and branding exactly. Return only HTML — no markdown, no code fences.';
           const gemResult = await callGeminiWithFallback(geminiKey, {
             systemInstruction: { parts: [{ text: gemSys }] },
             contents: [{ role: 'user', parts: [{ text: promptThisAttempt }] }],
@@ -18286,15 +18023,6 @@ Return ONLY the complete updated HTML. No markdown, no explanation.`;
       `UPDATE content_rewrites SET rewritten_html=$1,rewritten_title=$2,word_count=$3,status='rewritten',updated_at=NOW() WHERE id=$4`,
       [html, analysis.recommended_title||rw.original_title, wc, rw.id]
     );
-
-    // Remember this work so the agent builds on it next time instead of forgetting.
-    try {
-      await pool.query(
-        `INSERT INTO agent_memory (profile_id, url, event, detail) VALUES ($1,$2,$3,$4)`,
-        [rw.profile_id, rw.original_url || null, 'Rewrote page',
-         (rw.keyword ? 'keyword: ' + rw.keyword + ' · ' : '') + (analysis.recommended_title ? '"' + String(analysis.recommended_title).slice(0,80) + '" · ' : '') + wc + ' words']
-      );
-    } catch(e) { /* memory is best-effort */ }
 
     const ctrCalc = (rw.gsc_clicks > 0 && rw.gsc_impressions > 0)
       ? (rw.gsc_clicks / rw.gsc_impressions * 100).toFixed(2)
@@ -26611,8 +26339,7 @@ function renderPages() {
     } else {
       badges += '<span class="cs-cs-badge grey" title="No AI citation check has run yet \u2014 paste HTML or Scan All">AI citations: not checked yet</span> ';
     }
-    // GRAAF scanner disabled — score badge removed (scanner no longer in use)
-    // if (score) badges += '<span class="cs-cs-badge yellow">' + score + '/100</span> ';
+    if (score) badges += '<span class="cs-cs-badge yellow">' + score + '/100</span> ';
     if (p.fetch_reliable === false) badges += '<span class="cs-cs-badge" style="background:#2d1f00;color:#fbbf24;">! fetch issue</span> ';
 
     // GSC data row \\u2014 always show if available
@@ -29034,7 +28761,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 <button onclick="switchTab('pending')" id="tabPendingBtn" class="sidebar-btn"><i class="fas fa-clock"></i><span>Pending</span></button>
                 <button onclick="switchTab('users')" id="tabUsersBtn" class="sidebar-btn"><i class="fas fa-user-cog"></i><span>Users</span></button>
                 <button onclick="switchTab('freelancers')" id="tabFreelancersBtn" class="sidebar-btn"><i class="fas fa-users"></i><span>Freelancers</span></button>
-                <!-- Content Lifecycle Tracker tab removed from admin dashboard (deleted/unused). Client trackers stay under "Tracker Clients". -->
+                <button onclick="switchTab('tracker')" id="tabTrackerBtn" class="sidebar-btn"><i class="fas fa-chart-line"></i><span>Content Tracker</span></button>
                 <button onclick="switchTab('tracker-clients')" id="tabTrackerClientsBtn" class="sidebar-btn"><i class="fas fa-users"></i><span>Tracker Clients</span></button>
                 <button onclick="switchTab('enginecodes')" id="tabEnginecodesBtn" class="sidebar-btn"><i class="fas fa-key"></i><span>Engine Access</span></button>
                 <button onclick="switchTab('giveaccess')" id="tabGiveaccessBtn" class="sidebar-btn"><i class="fas fa-share-alt"></i><span>Give Access</span></button>
@@ -31693,16 +31420,14 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     const keyInfo=c.gemini_key||c.claude_key?'<div style="font-size:11px;color:#64748b;margin-top:4px;">'+(c.gemini_key?'Gemini: '+c.gemini_key+' ':'')+( c.claude_key?'Claude: '+c.claude_key:'')+'</div>':'';
                     // -- API Cost Budget Display ---------------------------
                     let creditBar = '';
-                    const _hasBudget = c.monthly_cost_limit !== null && c.monthly_cost_limit !== undefined && c.monthly_cost_limit !== '' && parseFloat(c.monthly_cost_limit) > 0;
-                    const costLimit = parseFloat(c.monthly_cost_limit) || 0;
+                    const costLimit = parseFloat(c.monthly_cost_limit) || 5;
                     const costUsed = parseFloat(c.monthly_cost_used) || 0;
-                    const costPct = (_hasBudget && costLimit > 0) ? Math.min(100, Math.round((costUsed / costLimit) * 100)) : 0;
+                    const costPct = costLimit > 0 ? Math.min(100, Math.round((costUsed / costLimit) * 100)) : 0;
                     const costColor = costPct >= 100 ? '#ef4444' : costPct >= 80 ? '#f59e0b' : costPct >= 50 ? '#fbbf24' : '#22c55e';
                     const modeLabel = c.api_key_mode === 'byok' ? '🔑 BYOK' : c.api_key_mode === 'platform' ? '🖥 Platform' : '? Not set';
-                    if (_hasBudget) {
-                      creditBar = '<div style="margin-top:10px;padding:10px 12px;background:#0a1628;border-radius:8px;border:1px solid #1e3a5f;">' +
+                    creditBar = '<div style="margin-top:10px;padding:10px 12px;background:#0a1628;border-radius:8px;border:1px solid #1e3a5f;">' +
                         '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">' +
-                        '<span style="font-size:11px;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:.05em;">' + modeLabel + ' Budget ON</span>' +
+                        '<span style="font-size:11px;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:.05em;">' + modeLabel + ' Budget</span>' +
                         '<span style="font-size:12px;font-weight:700;color:' + costColor + ';">EUR' + costUsed.toFixed(2) + ' / EUR' + costLimit.toFixed(2) + '</span>' +
                         '</div>' +
                         '<div style="background:#1e293b;border-radius:99px;height:6px;overflow:hidden;"><div style="height:6px;border-radius:99px;background:' + costColor + ';width:' + costPct + '%;transition:width .3s;"></div></div>' +
@@ -31710,47 +31435,8 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                         '<input type="number" id="setlimit_' + c.id + '" placeholder="Set EUR budget" min="1" step="0.01" style="width:120px;font-size:12px;padding:4px 8px;border-radius:4px;">' +
                         '<button onclick="setCostLimit(' + c.id + ')" style="font-size:11px;padding:4px 10px;background:#0891b2;color:#fff;border:none;border-radius:4px;cursor:pointer;">v Set Budget</button>' +
                         '<button onclick="resetCostUsed(' + c.id + ')" style="font-size:11px;padding:4px 10px;background:#1e293b;color:#94a3b8;border:1px solid #334155;border-radius:4px;cursor:pointer;">Reset Used</button>' +
-                        '<button onclick="setBudgetOff(' + c.id + ')" style="font-size:11px;padding:4px 10px;background:#3f1d1d;color:#fca5a5;border:1px solid #7f1d1d;border-radius:4px;cursor:pointer;">Budget OFF</button>' +
                         '<button onclick="showCostLog(' + c.id + ')" style="font-size:11px;padding:4px 10px;background:#0c4a6e;color:#38bdf8;border:1px solid #0284c7;border-radius:4px;cursor:pointer;"> Cost Log</button>' +
                         '</div></div>';
-                    } else {
-                      creditBar = '<div style="margin-top:10px;padding:10px 12px;background:#0a1628;border-radius:8px;border:1px solid #1e3a5f;">' +
-                        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">' +
-                        '<span style="font-size:11px;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:.05em;">' + modeLabel + ' Budget</span>' +
-                        '<span style="font-size:12px;font-weight:700;color:#4ade80;">OFF \u2014 unlimited</span>' +
-                        '</div>' +
-                        '<div style="display:flex;gap:6px;margin-top:4px;flex-wrap:wrap;">' +
-                        '<input type="number" id="setlimit_' + c.id + '" placeholder="Set EUR budget" min="1" step="0.01" style="width:120px;font-size:12px;padding:4px 8px;border-radius:4px;">' +
-                        '<button onclick="setCostLimit(' + c.id + ')" style="font-size:11px;padding:4px 10px;background:#0891b2;color:#fff;border:none;border-radius:4px;cursor:pointer;">v Turn Budget ON</button>' +
-                        '<button onclick="showCostLog(' + c.id + ')" style="font-size:11px;padding:4px 10px;background:#0c4a6e;color:#38bdf8;border:1px solid #0284c7;border-radius:4px;cursor:pointer;"> Cost Log</button>' +
-                        '</div>' +
-                        '<div style="font-size:10px;color:#475569;margin-top:6px;">Platform usage is unlimited (no euro cap). Set a EUR amount to cap + auto-stop.</div>' +
-                        '</div>';
-                    }
-                    // -- Access control: Unlimited / per-date expiry (separate from budget) --
-                    let accessBar = '';
-                    {
-                        const _exp = c.expires_at ? new Date(c.expires_at) : null;
-                        const _now = new Date();
-                        let _st, _stColor;
-                        if (!c.is_active) { _st = 'Revoked (login off)'; _stColor = '#9ca3af'; }
-                        else if (!_exp) { _st = '\u267e Unlimited access'; _stColor = '#4ade80'; }
-                        else if (_exp < _now) { _st = '\u26a0 Expired ' + _exp.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}); _stColor = '#ef4444'; }
-                        else { _st = 'Active until ' + _exp.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}); _stColor = '#38bdf8'; }
-                        const _expVal = _exp ? _exp.toISOString().slice(0,10) : '';
-                        accessBar = '<div style="margin-top:10px;padding:10px 12px;background:#0a1628;border-radius:8px;border:1px solid #1e3a5f;">' +
-                            '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">' +
-                            '<span style="font-size:11px;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:.05em;">Access</span>' +
-                            '<span style="font-size:12px;font-weight:700;color:' + _stColor + ';">' + _st + '</span>' +
-                            '</div>' +
-                            '<div style="display:flex;gap:6px;margin-top:4px;flex-wrap:wrap;align-items:center;">' +
-                            '<button onclick="setEngineUnlimited(' + c.id + ')" style="font-size:11px;padding:4px 10px;background:#064e3b;color:#4ade80;border:1px solid #15803d;border-radius:4px;cursor:pointer;">\u267e Unlimited</button>' +
-                            '<input type="date" id="setexp_' + c.id + '" value="' + _expVal + '" style="font-size:12px;padding:4px 8px;border-radius:4px;background:#0d1117;border:1px solid #334155;color:#e5e7eb;">' +
-                            '<button onclick="setEngineExpiry(' + c.id + ')" style="font-size:11px;padding:4px 10px;background:#0891b2;color:#fff;border:none;border-radius:4px;cursor:pointer;">Set expiry</button>' +
-                            '</div>' +
-                            '<div style="font-size:10px;color:#475569;margin-top:6px;">Access is separate from budget. Unlimited = never expires. Budget (below) only applies when Platform is ON.</div>' +
-                            '</div>';
-                    }
                     return '<div class="card" style="border-left:3px solid '+(c.is_active?'#a78bfa':'#6b7280')+';">' +
                     '<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;">' +
                     '<div style="flex:1;min-width:0;"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px;"><span style="font-family:monospace;font-size:1.1rem;font-weight:700;color:#a78bfa;">'+c.code+'</span>' +
@@ -31763,7 +31449,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     '<button onclick="copyEngineCode(&apos;'+c.code+'&apos;)" style="font-size:10px;padding:3px 10px;background:#334155;color:#94a3b8;border:none;border-radius:4px;cursor:pointer;">Copy</button>' +
                     '<a href="https://app.contentscale.site/content-engine" target="_blank" style="font-size:10px;color:#38bdf8;text-decoration:none;">-> content-engine</a>' +
                     '</div>' +
-                    keyInfo+accessBar+creditBar+'</div>' +
+                    keyInfo+creditBar+'</div>' +
                     '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-start;">' +
                     '<button onclick="togglePlatformKeys('+c.id+','+!c.use_platform_keys+')" class="btn" style="font-size:0.75rem;background:'+(c.use_platform_keys?'#0c4a6e':'#1e293b')+';color:'+(c.use_platform_keys?'#38bdf8':'#94a3b8')+';border:1px solid '+(c.use_platform_keys?'#0284c7':'#334155')+';">'+(c.use_platform_keys?'🔑 Platform ON':'🔑 Platform Keys')+'</button>' +
                     '<button onclick="copyEngineCode(&apos;'+c.code+'&apos;)" class="btn btn-info" style="font-size:0.75rem;"> Copy</button>' +
@@ -31773,28 +31459,6 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
             }catch(e){console.error('Failed to load engine codes:',e);}
         }
 
-        async function setEngineUnlimited(id){
-            if(!confirm('Set this code to UNLIMITED access (never expires)? This also re-activates login if it was off.'))return;
-            try{
-                await apiCall('/api/admin/engine-codes/'+id,'PATCH',{expires_at:null,is_active:true});
-                loadEngineCodes();
-            }catch(e){alert('Error: '+e.message);}
-        }
-        async function setEngineExpiry(id){
-            const v=document.getElementById('setexp_'+id).value;
-            if(!v){alert('Pick a date, or use Unlimited for never-expires.');return;}
-            try{
-                await apiCall('/api/admin/engine-codes/'+id,'PATCH',{expires_at:v+'T23:59:59',is_active:true});
-                loadEngineCodes();
-            }catch(e){alert('Error: '+e.message);}
-        }
-        async function setBudgetOff(id){
-            if(!confirm('Turn budget OFF for this code? Platform usage becomes UNLIMITED (no euro cap).'))return;
-            try{
-                await apiCall('/api/admin/engine-codes/'+id+'/credits','PATCH',{monthly_cost_limit:null});
-                loadEngineCodes();
-            }catch(e){alert('Error: '+e.message);}
-        }
         async function setCostLimit(id){
             const inp=document.getElementById('setlimit_'+id);
             const limit=parseFloat(inp.value);
@@ -31958,27 +31622,12 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     '<div style="display:flex;flex-direction:column;gap:8px;">' +
                     '<button onclick="gaCopyLoginUrl(&apos;'+c.code+'&apos;)" style="background:#0f766e;color:#fff;border:none;border-radius:6px;padding:9px 16px;cursor:pointer;"> Copy Login URL</button>' +
                     '<button onclick="gaRevoke('+c.id+')" style="background:#1c0a0a;color:#f87171;border:1px solid #7f1d1d;border-radius:6px;padding:9px 16px;cursor:pointer;">x Revoke Access</button>' +
-                    '</div></div>' +
-                    '<div style="margin-top:12px;padding-top:12px;border-top:1px solid #1e293b;">' +
-                    '<label style="font-size:10px;color:#64748b;display:block;margin-bottom:4px;">📧 Notify e-mails on completed actions (comma-separated)</label>' +
-                    '<div style="display:flex;gap:6px;flex-wrap:wrap;">' +
-                    '<input id="ganotify_'+c.id+'" type="text" value="'+(c.notify_emails?String(c.notify_emails).replace(/"/g,'&quot;'):'')+'" placeholder="client@example.com, manager@example.com" style="flex:1;min-width:200px;font-size:12px;padding:6px 10px;border-radius:6px;background:#0d1117;border:1px solid #334155;color:#e5e7eb;">' +
-                    '<button onclick="gaSetNotify('+c.id+')" style="font-size:11px;padding:6px 14px;background:#0891b2;color:#fff;border:none;border-radius:6px;cursor:pointer;">Save e-mails</button>' +
-                    '</div></div>' +
-                    '</div>';}).join('');}catch(e){el.innerHTML='<div style="color:#f87171;">Error: '+e.message+'</div>';}
+                    '</div></div></div>';}).join('');}catch(e){el.innerHTML='<div style="color:#f87171;">Error: '+e.message+'</div>';}
         }
 
         function gaCopyLoginUrl(code){const url=window.location.origin+'/engine-login?code='+code;navigator.clipboard.writeText(url).then(()=>{const t=document.createElement('div');t.textContent='OK Login URL copied';t.style.cssText='position:fixed;bottom:24px;right:24px;background:#0f766e;color:#fff;padding:12px 20px;border-radius:10px;z-index:9999;';document.body.appendChild(t);setTimeout(()=>t.remove(),3000);});}
 
         async function gaRevoke(id){if(!confirm('Revoke this access code?'))return;try{await apiCall('/api/admin/engine-codes/'+id,'PATCH',{is_active:false});loadGiveAccess();loadEngineCodes();}catch(e){alert('Error: '+e.message);}}
-
-        async function gaSetNotify(id){
-            const v=document.getElementById('ganotify_'+id).value.trim();
-            try{
-                await apiCall('/api/admin/engine-codes/'+id,'PATCH',{notify_emails:v||null});
-                const t=document.createElement('div');t.textContent='OK notify e-mails saved';t.style.cssText='position:fixed;bottom:24px;right:24px;background:#0f766e;color:#fff;padding:12px 20px;border-radius:10px;z-index:9999;';document.body.appendChild(t);setTimeout(()=>t.remove(),2500);
-            }catch(e){alert('Error: '+e.message);}
-        }
 
         async function gaCreateCode(){
             const name=document.getElementById('gaClientName').value.trim();if(!name){alert('Enter a client name');return;}
@@ -32718,11 +32367,11 @@ app.post('/api/tracker/pages/:id/refresh', verifyEngineAccess, async (req, res) 
     const eu = req.engineUser;
     const pageId = parseInt(req.params.id);
     if (!eu.isAdmin) {
-      const own = await pool.query('SELECT id FROM tracker_pages WHERE id=$1 AND (engine_code_id=$2 OR profile_id IN (SELECT id FROM content_profiles WHERE owner_code_id=$2))', [pageId, eu.codeId]);
+      const own = await pool.query('SELECT id FROM tracker_pages WHERE id=$1 AND engine_code_id=$2', [pageId, eu.codeId]);
       if (!own.rows.length) return res.status(403).json({ success: false, error: 'Not found or access denied' });
     }
 
-    const pageR = await pool.query('SELECT * FROM tracker_pages WHERE id=$1 AND (engine_code_id=$2 OR profile_id IN (SELECT id FROM content_profiles WHERE owner_code_id=$2))', [pageId, eu.codeId]);
+    const pageR = await pool.query('SELECT * FROM tracker_pages WHERE id=$1 AND engine_code_id=$2', [pageId, eu.codeId]);
     if (!pageR.rows.length) return res.status(404).json({ success: false, error: 'Page not found or access denied' });
     const page = pageR.rows[0];
 
@@ -32832,7 +32481,7 @@ app.post('/api/tracker/pages/:id/citation-brief', verifyEngineAccess, async (req
   try {
     let r;
     if (eu.isAdmin) { r = await pool.query('SELECT * FROM tracker_pages WHERE id=$1', [pageId]); }
-    else { r = await pool.query('SELECT * FROM tracker_pages WHERE id=$1 AND (engine_code_id=$2 OR profile_id IN (SELECT id FROM content_profiles WHERE owner_code_id=$2))', [pageId, eu.codeId]); }
+    else { r = await pool.query('SELECT * FROM tracker_pages WHERE id=$1 AND engine_code_id=$2', [pageId, eu.codeId]); }
     if (!r.rows.length) return res.status(404).json({ success: false, error: 'Page not found' });
     const page = r.rows[0];
 
@@ -33512,7 +33161,7 @@ app.patch('/api/tracker/pages/:id', verifyEngineAccess, async (req, res) => {
     // Ownership check for non-admins
     const eu = req.engineUser;
     if (!eu.isAdmin) {
-      const own = await pool.query('SELECT id FROM tracker_pages WHERE id=$1 AND (engine_code_id=$2 OR profile_id IN (SELECT id FROM content_profiles WHERE owner_code_id=$2))', [req.params.id, eu.codeId]);
+      const own = await pool.query('SELECT id FROM tracker_pages WHERE id=$1 AND engine_code_id=$2', [req.params.id, eu.codeId]);
       if (!own.rows.length) return res.status(403).json({ success: false, error: 'Not found or access denied' });
     }
     const fields=[]; const vals=[]; let i=1;
@@ -33551,7 +33200,7 @@ app.put('/api/tracker/pages/:id/gsc', verifyEngineAccess, asyncHandler(async (re
   const pageId = parseInt(req.params.id);
   if (!pageId || isNaN(pageId)) return res.status(400).json({ success: false, error: 'Invalid page ID' });
   if (!eu.isAdmin) {
-    const own = await pool.query('SELECT id FROM tracker_pages WHERE id=$1 AND (engine_code_id=$2 OR profile_id IN (SELECT id FROM content_profiles WHERE owner_code_id=$2))', [pageId, eu.codeId]);
+    const own = await pool.query('SELECT id FROM tracker_pages WHERE id=$1 AND engine_code_id=$2', [pageId, eu.codeId]);
     if (!own.rows.length) return res.status(403).json({ success: false, error: 'Not found or access denied' });
   }
 
@@ -33591,9 +33240,9 @@ app.delete('/api/tracker/pages/:id', verifyEngineAccess, async (req, res) => {
     if (eu.isAdmin) {
       await pool.query('DELETE FROM tracker_pages WHERE id=$1', [req.params.id]);
     } else {
-      const own = await pool.query('SELECT id FROM tracker_pages WHERE id=$1 AND (engine_code_id=$2 OR profile_id IN (SELECT id FROM content_profiles WHERE owner_code_id=$2))', [req.params.id, eu.codeId]);
+      const own = await pool.query('SELECT id FROM tracker_pages WHERE id=$1 AND engine_code_id=$2', [req.params.id, eu.codeId]);
       if (!own.rows.length) return res.status(403).json({ success: false, error: 'Not found or access denied' });
-      await pool.query('DELETE FROM tracker_pages WHERE id=$1 AND (engine_code_id=$2 OR profile_id IN (SELECT id FROM content_profiles WHERE owner_code_id=$2))', [req.params.id, eu.codeId]);
+      await pool.query('DELETE FROM tracker_pages WHERE id=$1 AND engine_code_id=$2', [req.params.id, eu.codeId]);
     }
     res.json({ success: true });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
@@ -33629,7 +33278,7 @@ app.get('/api/tracker/pages/:id/snapshots', verifyEngineAccess, async (req, res)
   try {
     const eu = req.engineUser;
     if (!eu.isAdmin) {
-      const own = await pool.query('SELECT id FROM tracker_pages WHERE id=$1 AND (engine_code_id=$2 OR profile_id IN (SELECT id FROM content_profiles WHERE owner_code_id=$2))', [req.params.id, eu.codeId]);
+      const own = await pool.query('SELECT id FROM tracker_pages WHERE id=$1 AND engine_code_id=$2', [req.params.id, eu.codeId]);
       if (!own.rows.length) return res.status(403).json({ success: false, error: 'Not found or access denied' });
     }
     const r = await pool.query(
@@ -33646,7 +33295,7 @@ app.post('/api/tracker/pages/:id/snapshot', verifyEngineAccess, async (req, res)
     const eu = req.engineUser;
     const pageId = parseInt(req.params.id);
     if (!eu.isAdmin) {
-      const own = await pool.query('SELECT id FROM tracker_pages WHERE id=$1 AND (engine_code_id=$2 OR profile_id IN (SELECT id FROM content_profiles WHERE owner_code_id=$2))', [pageId, eu.codeId]);
+      const own = await pool.query('SELECT id FROM tracker_pages WHERE id=$1 AND engine_code_id=$2', [pageId, eu.codeId]);
       if (!own.rows.length) return res.status(403).json({ success: false, error: 'Not found or access denied' });
     }
     const { score, metrics, graaf_score, craft_score, technical_score } = req.body;
@@ -33664,7 +33313,7 @@ app.get('/api/tracker/pages/:id/changes', verifyEngineAccess, async (req, res) =
   try {
     const eu = req.engineUser;
     if (!eu.isAdmin) {
-      const own = await pool.query('SELECT id FROM tracker_pages WHERE id=$1 AND (engine_code_id=$2 OR profile_id IN (SELECT id FROM content_profiles WHERE owner_code_id=$2))', [req.params.id, eu.codeId]);
+      const own = await pool.query('SELECT id FROM tracker_pages WHERE id=$1 AND engine_code_id=$2', [req.params.id, eu.codeId]);
       if (!own.rows.length) return res.status(403).json({ success: false, error: 'Not found or access denied' });
     }
     const r = await pool.query(
@@ -33691,7 +33340,7 @@ app.post('/api/tracker/pages/:id/push-to-rewrite', verifyEngineAccess, async (re
     const eu = req.engineUser;
     const pageId = parseInt(req.params.id);
     if (!eu.isAdmin) {
-      const own = await pool.query('SELECT id FROM tracker_pages WHERE id=$1 AND (engine_code_id=$2 OR profile_id IN (SELECT id FROM content_profiles WHERE owner_code_id=$2))', [pageId, eu.codeId]);
+      const own = await pool.query('SELECT id FROM tracker_pages WHERE id=$1 AND engine_code_id=$2', [pageId, eu.codeId]);
       if (!own.rows.length) return res.status(403).json({ success: false, error: 'Not found or access denied' });
     }
 
@@ -33905,7 +33554,7 @@ app.patch('/api/tracker/pages/:id/html', verifyEngineAccess, async (req, res) =>
     const eu = req.engineUser;
     const pageId = parseInt(req.params.id);
     if (!eu.isAdmin) {
-      const own = await pool.query('SELECT id FROM tracker_pages WHERE id=$1 AND (engine_code_id=$2 OR profile_id IN (SELECT id FROM content_profiles WHERE owner_code_id=$2))', [pageId, eu.codeId]);
+      const own = await pool.query('SELECT id FROM tracker_pages WHERE id=$1 AND engine_code_id=$2', [pageId, eu.codeId]);
       if (!own.rows.length) return res.status(403).json({ success: false, error: 'Not found or access denied' });
     }
     const { html_content } = req.body;
@@ -33933,7 +33582,7 @@ app.post('/api/tracker/pages/:id/check', verifyEngineAccess, async (req, res) =>
     if (eu.isAdmin) {
       r = await pool.query('SELECT * FROM tracker_pages WHERE id=$1', [req.params.id]);
     } else {
-      r = await pool.query('SELECT * FROM tracker_pages WHERE id=$1 AND (engine_code_id=$2 OR profile_id IN (SELECT id FROM content_profiles WHERE owner_code_id=$2))', [req.params.id, eu.codeId]);
+      r = await pool.query('SELECT * FROM tracker_pages WHERE id=$1 AND engine_code_id=$2', [req.params.id, eu.codeId]);
     }
     if(!r.rows.length) return res.status(404).json({ success: false, error: 'Page not found or access denied' });
         const page = r.rows[0];
@@ -34337,27 +33986,11 @@ function scoreAICitation(html, bodyText, keyword) {
 }
 
 // ── POST /api/tracker/serp-spy ───────────────────────────────────────────────
-// In-memory job store for async SERP spy (avoids Railway gateway 502 on long Claude calls)
-const _spyJobs = {};
-function _spyJobCleanup() {
-  const now = Date.now();
-  for (const id in _spyJobs) { if (now - (_spyJobs[id]._t || 0) > 10 * 60 * 1000) delete _spyJobs[id]; }
-}
-
 app.post('/api/tracker/serp-spy', verifyEngineAccess, async (req, res) => {
   const { keyword, profile_url, page_id, live_html } = req.body;
   if (!keyword) return res.status(400).json({ success: false, error: 'keyword required' });
   const anthropicKey = process.env.ANTHROPIC_API_KEY;
-  if (!process.env.GEMINI_API_KEY) return res.status(500).json({ success: false, error: 'GEMINI_API_KEY not set' });
-
-  _spyJobCleanup();
-  const jobId = 'spy_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
-  _spyJobs[jobId] = { status: 'processing', _t: Date.now() };
-  // Respond immediately — the heavy Serper+Claude work runs in the background so Railway never times out (502).
-  res.json({ success: true, job_id: jobId, status: 'processing' });
-
-  (async () => {
-   try {
+  if (!anthropicKey) return res.status(500).json({ success: false, error: 'ANTHROPIC_API_KEY not set' });
   const myUrl = (profile_url||'').trim();
   const serperKey = process.env.SERPAPI_KEY; // Serper.dev key (same one used by tracker check)
   let serpUrls = [];
@@ -34391,28 +34024,18 @@ app.post('/api/tracker/serp-spy', verifyEngineAccess, async (req, res) => {
   } else {
     console.warn('[serp-spy] SERPAPI_KEY not set — cannot fetch SERP results');
   }
-  if (!serpUrls.length) { _spyJobs[jobId] = { status:'error', error:'Could not fetch SERP results — check SERPAPI_KEY is set in Railway environment', _t:Date.now() }; return; }
+  if (!serpUrls.length) return res.status(502).json({success:false,error:'Could not fetch SERP results — check SERPAPI_KEY is set in Railway environment'});
   const top5 = serpUrls.slice(0,5);
-  // HTML source priority: pasted live_html → page's SAVED html_content (📋 HTML button) → live URL fetch.
-  let _spyHtml = (live_html && live_html.trim().length > 100) ? live_html : null;
-  if (!_spyHtml && page_id) {
-    try {
-      const _pr = await pool.query('SELECT html_content FROM tracker_pages WHERE id=$1', [page_id]);
-      if (_pr.rows.length && _pr.rows[0].html_content && _pr.rows[0].html_content.length > 100) {
-        _spyHtml = _pr.rows[0].html_content;
-        console.log('[serp-spy] Using SAVED html_content from page', page_id, '(' + _spyHtml.length + ' chars)');
-      }
-    } catch(e) { /* fall through to URL fetch */ }
-  }
+  // If user pasted live HTML, use it directly — more accurate than parser
   let clientScrape;
-  if (_spyHtml) {
-    // Extract text from the HTML
-    const liveText = _spyHtml.replace(/<script[^>]*>[\s\S]*?<\/script>/gi,'')
+  if (live_html && live_html.trim().length > 100) {
+    // Extract text from live HTML
+    const liveText = live_html.replace(/<script[^>]*>[\s\S]*?<\/script>/gi,'')
       .replace(/<style[^>]*>[\s\S]*?<\/style>/gi,'')
       .replace(/<[^>]+>/g,' ')
       .replace(/\s+/g,' ').trim().substring(0, 8000);
-    clientScrape = { text: liveText, status: 200, fullHtml: _spyHtml };
-    console.log('[serp-spy] Using saved/pasted HTML for client page (' + _spyHtml.length + ' chars)');
+    clientScrape = { text: liveText, status: 200, fullHtml: live_html };
+    console.log('[serp-spy] Using pasted live HTML for client page (' + live_html.length + ' chars)');
   } else {
     clientScrape = myUrl ? await scrapeBodyText(myUrl, 8000) : { text: '', status: 0, fullHtml: '' };
   }
@@ -34432,27 +34055,16 @@ ENTITY GAPS (missing from client, in 2+ competitor pages): ${entityGaps.slice(0,
 Return ONLY valid JSON:
 {"keyword":"${keyword}","search_intent":"informational|commercial|transactional","ai_overview_blueprint":"steps to get cited","step1_catalog":[{"rank":1,"domain":"domain","url":"https://...","title":"page title","content_type":"service page|guide|landing page|blog","estimated_word_count":2000,"serp_features":["Featured Snippet","People Also Ask"],"schema_types":["FAQPage","LocalBusiness"],"freshness":"2024|not visible","ai_overview_eligible":true,"snippet_text":"google snippet text"}],"step2_pattern":{"the_ranking_formula":"ONE sentence","dominant_content_format":"format","dominant_schema":"schema","dominant_word_count_range":"range","top3_shared_traits":["trait"],"bottom_missing_traits":["missing"],"freshness_pattern":"pattern"},"step3_outlier":{"domain":"domain","rank":4,"why_breaks_pattern":"reason","why_it_ranks_anyway":"reason","signal_type":"warning|opportunity","what_to_learn":"insight"},"step4_missing":[{"gap":"topic","gap_type":"warning|opportunity","how_to_exploit":"action"}],"entity_gaps_priority":[{"entity":"term","priority":"high|medium|low","where_to_add":"location"}],"content_brief":{"recommended_format":"format","recommended_word_count":2200,"recommended_schema":["FAQPage"],"must_have_h2s":["h2"],"must_cover_entities":["entity"],"faq_questions":["Q"]},"paa_questions":["Q1","Q2","Q3"],"action_plan":[{"step":1,"priority":"high","action":"action","effort":"low|medium|high","time_to_impact":"days|weeks"}],"quick_wins":[{"win":"action","reason":"why","effort_minutes":20}],"client_vs_best":"${myUrl?'specific gap analysis':'no client URL'}","confidence":"high|medium|low"}`;
   try {
-    const _gemKey = process.env.GEMINI_API_KEY;
-    if (!_gemKey) throw new Error('GEMINI_API_KEY not set');
-    const _gem = await callGeminiWithFallback(_gemKey, { contents:[{role:'user',parts:[{text:prompt}]}], generationConfig:{ temperature:0.3, maxOutputTokens:6000 } });
-    if (!_gem.ok) throw new Error('Gemini: ' + (_gem.errorMessage || _gem.status));
-    const rawText = (_gem.data && _gem.data.candidates && _gem.data.candidates[0] && _gem.data.candidates[0].content && _gem.data.candidates[0].content.parts && _gem.data.candidates[0].content.parts[0] && _gem.data.candidates[0].content.parts[0].text) || '';
+    const ctrl2=new AbortController();setTimeout(()=>ctrl2.abort(),55000);
+    const r2=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':anthropicKey,'anthropic-version':'2023-06-01'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:5000,messages:[{role:'user',content:prompt}]}),signal:ctrl2.signal});
+    const d2=await r2.json().catch(()=>({}));
+    if(!r2.ok) throw new Error((d2.error&&d2.error.message)||'Claude '+r2.status);
+    const rawText=(d2.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('');
     let spy=null;try{const m2=rawText.match(/\{[\s\S]*\}/);if(m2)spy=JSON.parse(m2[0]);}catch(e){}
     if(spy){spy._entity_gaps=entityGaps;spy._client_ai_citation=clientAI;spy.keyword=keyword;}
     if(page_id&&spy){try{await pool.query(`UPDATE tracker_pages SET serp_spy=$1,serp_spy_at=NOW() WHERE id=$2`,[JSON.stringify(spy),page_id]);}catch(e){}}
-    _spyJobs[jobId] = { status:'done', result:{ spy, competitors_scraped: top5.length }, _t:Date.now() };
-  } catch(e){ console.error('[serp-spy]',e.message); _spyJobs[jobId] = { status:'error', error:e.message, _t:Date.now() }; }
-  } catch(eOuter){ console.error('[serp-spy outer]',eOuter.message); if(!_spyJobs[jobId]||_spyJobs[jobId].status==='processing') _spyJobs[jobId] = { status:'error', error:eOuter.message, _t:Date.now() }; }
-  })();
-});
-
-// Poll endpoint for the async SERP spy job
-app.get('/api/tracker/serp-spy/status/:jobId', verifyEngineAccess, (req, res) => {
-  const job = _spyJobs[req.params.jobId];
-  if (!job) return res.json({ success:false, status:'not_found', error:'Spy job expired or not found — run it again.' });
-  if (job.status === 'processing') return res.json({ success:true, status:'processing' });
-  if (job.status === 'done') { const r = job.result; delete _spyJobs[req.params.jobId]; return res.json({ success:true, status:'done', spy:r.spy, competitors_scraped:r.competitors_scraped }); }
-  const err = job.error; delete _spyJobs[req.params.jobId]; return res.json({ success:false, status:'error', error:err });
+    res.json({success:true,spy,competitors_scraped:top5.length});
+  } catch(e){console.error('[serp-spy]',e.message);res.status(502).json({success:false,error:e.message});}
 });
 
 // ── POST /api/tracker/meta-intel — AI-powered best title/desc/H1 ────────────
@@ -35532,7 +35144,6 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
             _competitors: snapshot._competitors
           }, CACHE_TTL.serper);
           console.log(`[tracker] Serper: position=${snapshot.google_position}, AIO=${snapshot.ai_google_overview_found}, cited=${snapshot.ai_google_overview_cited}`);
-          if (page.engine_code_id) chargeFlatCost(page.engine_code_id, 'tracker-scan', SEARCH_EUR.tracker_scan, 'Tracker scan search APIs: ' + (keyword || domain));
         } else {
           const err = await sResp.text().catch(()=>'');
           const quotaMsg = sResp.status === 429 ? 'Serper quota exhausted — upgrade at serper.dev or wait until monthly reset' : `Serper ${sResp.status}: ${err.substring(0,120)}`;
@@ -35786,10 +35397,8 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
     try {
       const kw = keyword;
 
-      // HTML: prefer pasted HTML, else the live-fetched HTML — so detection sees the REAL page
-      const rawHtml = (page.html_content && page.html_content.length > 200)
-        ? page.html_content
-        : ((typeof effectiveHtml === 'string' && effectiveHtml.length > 200) ? effectiveHtml : (page.html_content || ''));
+      // HTML: raw first 5000 chars for structural analysis
+      const rawHtml = page.html_content || '';
       const htmlExcerpt = rawHtml.substring(0, 8000);
       // ── Presence detection on the FULL page so the brief never re-recommends what already exists ──
       const _onPage = {
@@ -35942,18 +35551,7 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
         var _ckw = keyword || page.keyword || page.gsc_keyword || 'this topic';
         var _cpos = snapshot.google_position || page.gsc_position || null;
         var _items = [];
-        // ── Content-aware guards: don't recommend ADDING what the page already has ──
-        var _html = (typeof effectiveHtml === 'string' && effectiveHtml) ? effectiveHtml : (page.html_content || '');
-        var _htmlLow = String(_html).toLowerCase();
-        var _kwLow = String(_ckw || '').toLowerCase();
-        var _kwEsc = _kwLow.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        var _hasQuestionH2 = /<h2[^>]*>[^<]*\?/i.test(_html) || /<h2[^>]*>\s*(what|how|why|when|where|who|which|is|are|can|does|do)\b/i.test(_html);
-        var _hasDefinition = !!_kwLow && (_htmlLow.indexOf('what is ' + _kwLow) !== -1 || new RegExp('\\b' + _kwEsc + '\\b[^<.]{0,40}\\bis\\b', 'i').test(_html));
-        var _hasDirectAnswer = _hasDefinition || /id=["']direct-answer["']/i.test(_html);
-        if (!snapshot.ai_google_overview_cited) {
-          if (!_hasDefinition) _items.push({ title:'Win Google AI Overview citation', priority:'high', system:'Google AIO', action:'Add a direct, quotable 2-3 sentence definition answering "what is '+_ckw+'" within the first 100 words, right after the H1. AI Overviews quote concise, self-contained answers.', expected_impact:'Eligible for AIO citation within 2-3 crawl cycles' });
-          else _items.push({ title:'Sharpen your existing AI Overview answer', priority:'medium', system:'Google AIO', action:'You ALREADY have a definition near the top — do NOT add a second one. Instead make it more quotable: tighten to 2-3 self-contained sentences, lead with "'+(_ckw.charAt(0).toUpperCase()+_ckw.slice(1))+' is…", and add one named source/stat.', expected_impact:'More citeable existing answer → AIO eligibility' });
-        }
+        if (!snapshot.ai_google_overview_cited) _items.push({ title:'Win Google AI Overview citation', priority:'high', system:'Google AIO', action:'Add a direct, quotable 2-3 sentence definition answering "what is '+_ckw+'" within the first 100 words, right after the H1. AI Overviews quote concise, self-contained answers.', expected_impact:'Eligible for AIO citation within 2-3 crawl cycles' });
         if (!snapshot.ai_perplexity_cited) _items.push({ title:'Win Perplexity citation', priority:'medium', system:'Perplexity', action:'Add an "About the Author" block with a named author, credentials and 1-2 verifiable stats. Perplexity favors clear E-E-A-T signals.', expected_impact:'Stronger author trust → Perplexity citation' });
         if (!snapshot.ai_bing_cited) _items.push({ title:'Win Microsoft Copilot citation', priority:'medium', system:'Microsoft Copilot', action:'Add a 50-60 word summary paragraph near the top that directly matches the search query for "'+_ckw+'".', expected_impact:'Concise top-of-page summary → Copilot citation' });
         if (!snapshot.ai_brave_cited) _items.push({ title:'Win Claude / Brave citation', priority:'low', system:'Claude/Brave', action:'Add verifiable facts with named sources and a clear author byline. Claude and Brave prioritize factual, well-sourced content.', expected_impact:'Factual sourcing → Claude/Brave citation' });
@@ -35962,7 +35560,7 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
         snapshot.recommendations = _items.slice(0,6);
         var _gsc = [];
         if (_ckw && _cpos != null) _gsc.push({ title:'Meta Title & Description (Rank Math)', priority:'high', trigger:'Ranking #'+_cpos+(gscImpr?' with '+gscImpr+' impressions, '+(gscCtr||'low')+'% CTR':''), action:'REPLACE in Rank Math \u2192 SEO Title: "'+_ckw.charAt(0).toUpperCase()+_ckw.slice(1)+' \u2014 [your key benefit]" (keep under 60 characters).  |  REPLACE in Rank Math \u2192 Meta Description: "Discover '+_ckw+': [what the reader gains]. [Clear call to action]." (keep under 155 characters).', expected_impact:'Higher CTR \u2192 position #'+_cpos+' \u2192 top 3 after Google recrawl', effort:'quick_win' });
-        if (gscImpr && (gscClicks != null) && !(_hasQuestionH2 && _hasDirectAnswer)) _gsc.push({ title:'Capture missed clicks', priority:'medium', trigger:gscImpr+' impressions, '+gscClicks+' clicks', action:'ADD after your H1: a question-style H2 matching search intent for "'+_ckw+'", followed by a 40-60 word direct answer.', expected_impact:'+'+(clickGap||'more')+' clicks/month', effort:'content' });
+        if (gscImpr && (gscClicks != null)) _gsc.push({ title:'Capture missed clicks', priority:'medium', trigger:gscImpr+' impressions, '+gscClicks+' clicks', action:'ADD after your H1: a question-style H2 matching search intent for "'+_ckw+'", followed by a 40-60 word direct answer.', expected_impact:'+'+(clickGap||'more')+' clicks/month', effort:'content' });
         snapshot.gsc_brief = _gsc;
       })();
       try {
@@ -36582,7 +36180,6 @@ If no unanchored claims found, return empty array: []`;
   const freqMap = { 'daily': 1, '1day': 1, '3days': 3, '7days': 7, 'weekly': 7, '1week': 7, '2weeks': 14, '17days': 17, '21days': 21, '30days': 30, 'monthly': 30 };
   let days = freqMap[page.check_frequency];
   if (!days) { const _dm = String(page.check_frequency || '').match(/^(\d+)\s*days?$/); days = _dm ? parseInt(_dm[1], 10) : 3; }
-  days = Math.max(7, days); // weekly minimum — no auto-scan more than once a week (manual scans still on-demand)
   await pool.query(
     `UPDATE tracker_pages SET last_checked_at=NOW(), next_check_at=NOW() + INTERVAL '${days} days' WHERE id=$1`,
     [page.id]
@@ -37282,21 +36879,20 @@ function startHtmlReminderScheduler() {
 
 startHtmlReminderScheduler();
 
-// Tracker auto-scan master switch. false = ALL tracker scanning is manual only.
-const AUTO_TRACKER_SCAN = false;
 let _trackerSchedulerTimer = null;
 function startTrackerScheduler() {
-  if (!AUTO_TRACKER_SCAN) { console.log('[tracker-scheduler] Auto-scan disabled — tracker runs manual-only'); return; }
   if(_trackerSchedulerTimer) return;
   _trackerSchedulerTimer = setInterval(async () => {
     if(!pool) return;
     try {
-      // Auto-scan: ONLY client trackers (tracker_client_id). Engine tracker is manual-only.
+      // Pick pages from BOTH engine tracker (engine_code_id) AND client tracker (tracker_client_id)
       const due = await pool.query(
         `SELECT p.* FROM tracker_pages p
          WHERE (p.is_active = TRUE OR p.is_active IS NULL)
-         AND p.tracker_client_id IS NOT NULL
+         AND (p.engine_code_id IS NOT NULL OR p.tracker_client_id IS NOT NULL)
          AND (
+           (p.engine_code_id IS NOT NULL AND (p.next_check_at <= NOW() OR p.next_check_at IS NULL))
+           OR
            (p.tracker_client_id IS NOT NULL AND p.last_checked_at IS NOT NULL AND p.next_check_at IS NOT NULL AND p.next_check_at <= NOW())
          )
          ORDER BY
