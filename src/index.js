@@ -29027,7 +29027,8 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 <\/script>
 
                 <!-- ── LIVE ACTIVITY WALL ─────────────────────────────────── -->
-                <div id="csLiveWall" style="background:#0d1117;border:2px solid #1f2937;border-radius:10px;padding:12px 16px;margin-bottom:16px;position:relative;animation:csWallIdle 3s ease-in-out infinite;">
+                <div style="margin-bottom:16px;border-radius:10px;overflow:hidden;border:1px solid #1f2937;"><img src="/blog/images/live-ai-overview-seo-monitor.jpg" alt="Live AI Overview and SEO ranking monitor dashboard — ContentScale" style="width:100%;height:auto;display:block;" loading="lazy"></div>
+                <div id="csLiveWall" style="display:none;">
                 <style>
                 @keyframes csWallIdle {
                     0%,100% { border-color:#1f2937;box-shadow:none; }
@@ -36527,7 +36528,8 @@ async function _startAlwaysOnMonitor() {
 }
 
 // Start monitor after DB is ready — 60s delay
-setTimeout(_startAlwaysOnMonitor, 60000);
+// DISABLED — live-monitor replaced by a static image to stop 24/7 Serper API cost
+// setTimeout(_startAlwaysOnMonitor, 60000);
 
 // ── Simple text diff for content change detection ────────────────────────────
 function computeTextDiff(oldHtml, newHtml) {
