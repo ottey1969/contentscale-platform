@@ -2835,7 +2835,7 @@ app.get('/api/admin/settings', verifyAdmin, async (req, res) => {
     settings.sender_name = settings.sender_name || process.env.SENDER_NAME || 'ContentScale Tracker';
       settings.engine_from_email = settings.engine_from_email || settings.contact_email || process.env.FROM_EMAIL || 'info@contentscale.site';
       settings.engine_sender_name = settings.engine_sender_name || 'ContentScale Engine';
-    if (typeof settings.rewrite_keep_rules !== 'string') settings.rewrite_keep_rules = '- Keep the existing layout, CSS and classes that already work; do not restyle or reorder sections that are fine.\n- Reuse the existing images (keep their current src and alt); never invent image URLs or use placeholders.\n- Output the page CONTENT only: no menu / navigation, no footer, no scan badge (the site template adds those).';
+    if (typeof settings.rewrite_keep_rules !== 'string') settings.rewrite_keep_rules = '- Keep the existing layout, CSS and classes that already work; do not restyle or reorder sections that are fine.\n- Reuse the existing images (keep their current src and alt); never invent image URLs or use placeholders.\n- Output the page CONTENT only: no menu / navigation, no footer, no scan badge (the site template adds those).\n- Internal links: only link to pages that actually exist - use URLs already present in the current page HTML, or from the INTERNAL LINKS list if one is provided. Never invent internal URLs or guess slugs; when unsure, link to the homepage only.\n- External links: add 2-4 links to high-authority sources only, linking to their ROOT domain or a well-known stable page - never invent deep URLs. Match the LANGUAGE of the page. For English pages use English sources: Google Search Central, Wikipedia, Ahrefs, Semrush, Moz, Backlinko, Search Engine Journal, Search Engine Land. ONLY for Dutch-language pages you may also use Dutch sources like Frankwatching, Emerce or Marketingfacts. Never link to a source in a different language than the page.';
     res.json({ success: true, settings });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
@@ -2869,7 +2869,7 @@ app.post('/api/admin/settings', verifyAdmin, async (req, res) => {
 
 // ── Engine: email the Master Brief to admin-configured recipients ─────────
 app.get('/api/engine/output-rules', verifyEngineAccess, async (req, res) => {
-  const DEF = '- Keep the existing layout, CSS and classes that already work; do not restyle or reorder sections that are fine.\n- Reuse the existing images (keep their current src and alt); never invent image URLs or use placeholders.\n- Output the page CONTENT only: no menu / navigation, no footer, no scan badge (the site template adds those).';
+  const DEF = '- Keep the existing layout, CSS and classes that already work; do not restyle or reorder sections that are fine.\n- Reuse the existing images (keep their current src and alt); never invent image URLs or use placeholders.\n- Output the page CONTENT only: no menu / navigation, no footer, no scan badge (the site template adds those).\n- Internal links: only link to pages that actually exist - use URLs already present in the current page HTML, or from the INTERNAL LINKS list if one is provided. Never invent internal URLs or guess slugs; when unsure, link to the homepage only.\n- External links: add 2-4 links to high-authority sources only, linking to their ROOT domain or a well-known stable page - never invent deep URLs. Match the LANGUAGE of the page. For English pages use English sources: Google Search Central, Wikipedia, Ahrefs, Semrush, Moz, Backlinko, Search Engine Journal, Search Engine Land. ONLY for Dutch-language pages you may also use Dutch sources like Frankwatching, Emerce or Marketingfacts. Never link to a source in a different language than the page.';
   try {
     const r = pool ? (await pool.query("SELECT value FROM app_settings WHERE key='rewrite_keep_rules'").catch(()=>({rows:[]}))).rows : [];
     res.json({ success: true, rules: r.length ? (r[0].value || '') : DEF });
@@ -17660,11 +17660,26 @@ const statsCtxRW = analysis.stats_context ? `\nSTATISTICS TO CITE:\n${String(ana
     const imageNote = keep_images_urls ? `\nBESTAANDE AFBEELDINGEN BEWAREN (gebruik deze URLs):\n${keep_images_urls}` : '';
     let _krRow = [];
     try { _krRow = (await pool.query("SELECT value FROM app_settings WHERE key='rewrite_keep_rules'")).rows; } catch(e) {}
-    const _krRules = (_krRow.length ? (_krRow[0].value || '') : '- Keep the existing layout, CSS and classes that already work; do not restyle or reorder sections that are fine.\n- Reuse the existing images (keep their current src and alt); never invent image URLs or use placeholders.\n- Output the page CONTENT only: no menu / navigation, no footer, no scan badge (the site template adds those).').trim();
+    const _krRules = (_krRow.length ? (_krRow[0].value || '') : '- Keep the existing layout, CSS and classes that already work; do not restyle or reorder sections that are fine.\n- Reuse the existing images (keep their current src and alt); never invent image URLs or use placeholders.\n- Output the page CONTENT only: no menu / navigation, no footer, no scan badge (the site template adds those).\n- Internal links: only link to pages that actually exist - use URLs already present in the current page HTML, or from the INTERNAL LINKS list if one is provided. Never invent internal URLs or guess slugs; when unsure, link to the homepage only.\n- External links: add 2-4 links to high-authority sources only, linking to their ROOT domain or a well-known stable page - never invent deep URLs. Match the LANGUAGE of the page. For English pages use English sources: Google Search Central, Wikipedia, Ahrefs, Semrush, Moz, Backlinko, Search Engine Journal, Search Engine Land. ONLY for Dutch-language pages you may also use Dutch sources like Frankwatching, Emerce or Marketingfacts. Never link to a source in a different language than the page.').trim();
     const keepRulesBlock = _krRules ? `\n\u2550\u2550\u2550 STRICT OUTPUT RULES (MANDATORY) \u2550\u2550\u2550\n${_krRules}\n` : '';
 
     const profBiR = await pool.query(`SELECT business_info, sitemap_url, domain, author_name, author_bio, author_location FROM content_profiles WHERE id=$1`, [rw.profile_id]);
     const profBi = profBiR.rows[0] || {};
+    // Fetch REAL internal URLs from the sitemap so the model links only to pages that exist (never invents).
+    let internalLinksBlock = '';
+    try {
+      let _smUrl = profBi.sitemap_url || (profBi.domain ? ('https://' + String(profBi.domain).replace(/^https?:\/\//,'').replace(/\/$/,'') + '/sitemap.xml') : '');
+      if (_smUrl) {
+        const _smCtrl = new AbortController(); const _smT = setTimeout(() => _smCtrl.abort(), 6000);
+        const _smR = await fetch(_smUrl, { headers: { 'User-Agent': 'ContentScale-Bot/1.0' }, signal: _smCtrl.signal }).catch(() => null);
+        clearTimeout(_smT);
+        if (_smR && _smR.ok) {
+          const _smXml = await _smR.text().catch(() => '');
+          const _smUrls = [...(_smXml.matchAll(/<loc>([^<]+)<\/loc>/g))].map(m => m[1].trim()).filter(u => u.startsWith('http') && !/\.xml(\?|$)/i.test(u)).slice(0, 40);
+          if (_smUrls.length) internalLinksBlock = '\nINTERNAL LINKS (real URLs from this site sitemap \u2014 link ONLY to these for internal links, never invent a URL):\n' + _smUrls.join('\n') + '\n';
+        }
+      }
+    } catch(e) {}
 
     // Use profile author as fallback (replaces hardcoded DEFAULT_AUTHOR for new clients)
     const profileAuthorFallback = {
@@ -17839,7 +17854,7 @@ ${internalLinksRW}
 JSON-LD SCHEMA'S (toevoegen voor </article>):
 <script type="application/ld+json">${JSON.stringify(schemaObjRW)}</script>
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"${analysis.recommended_title||rw.original_title}","datePublished":"${schemaDatePublished}","dateModified":"${schemaDateModified}","author":{"@type":"Person","name":"${author.name}","url":"${author.url || 'https://contentscale.site/about'}"}}</script>
-${imageNote}${keepRulesBlock}
+${imageNote}${keepRulesBlock}${internalLinksBlock}
 
 ═══════════════════════════════════════
 HET TEMPLATE — VUL ALLE PLACEHOLDERS IN, VERANDER HTML-STRUCTUUR NIET
@@ -17901,7 +17916,7 @@ VOICE SEARCH (verwerk als FAQ-vragen en directe antwoorden): ${(Array.isArray(an
 
 INTERNE LINKS: ${internalLinksRW}
 MONEY PAGES: ${moneyPages}
-${imageNote}${keepRulesBlock}
+${imageNote}${keepRulesBlock}${internalLinksBlock}
 
 BESTAANDE JSON-LD SCHEMA'S (behoud exact — update ALLEEN dateModified naar "${schemaDateModified}", datePublished NOOIT aanpassen):
 ${(layoutSkeleton.schemaBlocks||[]).slice(0,3).map((s,i)=>`--- Schema ${i+1} ---\n${s.slice(0,400)}`).join('\n\n')}
@@ -17971,7 +17986,7 @@ SECONDARY: ${(Array.isArray(analysis.secondary_keywords)?analysis.secondary_keyw
 
 INTERNE LINKS: ${internalLinksRW}
 MONEY PAGES: ${moneyPages}
-${imageNote}${keepRulesBlock}
+${imageNote}${keepRulesBlock}${internalLinksBlock}
 
 Geef ALLEEN HTML terug vanaf <article>. Geen markdown. Eindig met <!-- word_count: X -->.`;
     }
@@ -29880,7 +29895,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     </div>
 
                     <div style="background:#0d1117;border:1px solid #1f2937;border-radius:10px;padding:20px;margin-top:16px;">
-                        <div style="font-size:13px;font-weight:700;color:#f1f5f9;margin-bottom:10px;">🔑 Environment (read-only)</div>
+                        <div style="font-size:13px;font-weight:700;color:#f1f5f9;margin-bottom:10px;">🔑 Engine email &mdash; current (read-only)</div>
                         <div id="settingsEnvInfo" style="font-size:11px;color:#6b7280;font-family:monospace;line-height:2;"></div>
                     </div>
                 </div>
@@ -31834,10 +31849,9 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 var _kr = document.getElementById('settingKeepRules'); if (_kr) _kr.value = (s.rewrite_keep_rules != null ? s.rewrite_keep_rules : '');
                 var envEl = document.getElementById('settingsEnvInfo');
                 if (envEl) envEl.innerHTML =
-                    'FROM_EMAIL: ' + (s.contact_email || 'not set') + '<br>' +
-                    'SENDER_NAME: ' + (s.sender_name || 'not set') + '<br>' +
-                    'BREVO: configured via Railway env var<br>' +
-                    'TELEGRAM_BOT_TOKEN: configured via Railway env var';
+                    'ENGINE FROM: ' + (s.engine_from_email || s.contact_email || 'not set') + '<br>' +
+                    'ENGINE SENDER NAME: ' + (s.engine_sender_name || 'not set') + '<br>' +
+                    'BREVO: configured via Railway env var';
 
             } catch(e) { console.warn('Settings load failed:', e.message); }
         }
