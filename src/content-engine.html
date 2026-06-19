@@ -2011,7 +2011,30 @@ async function runDirectFullRewrite() {
   }
 }
 
+function sendRewriteSummaryEmail() {
+  try {
+    var recs = (_context && _context.recs) || [];
+    var high = recs.filter(function(r){ return r.priority === 'high'; });
+    var med  = recs.filter(function(r){ return r.priority === 'medium'; });
+    var L = [];
+    L.push('Keyword: ' + ((_context && _context.keyword) || ''));
+    if (_context && _context.url) L.push('Page: ' + _context.url);
+    if (_context && _context.score != null) L.push('ContentScore (before): ' + _context.score + '/100');
+    L.push('');
+    L.push('KEY POINTS ADDRESSED:');
+    high.forEach(function(r){ L.push('[HIGH] ' + (r.title || r.description || '')); });
+    med.forEach(function(r){ L.push('[MEDIUM] ' + (r.title || r.description || '')); });
+    if (!high.length && !med.length) L.push('(no high/medium items recorded)');
+    var token = (document.getElementById('engineToken')||{}).value || localStorage.getItem('nexus_engine_token') || '';
+    fetch('/api/engine/brief-email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-engine-token': token },
+      body: JSON.stringify({ kind: 'summary', brief: L.join('\n'), url: (_context && _context.url) || '', keyword: (_context && _context.keyword) || '' })
+    }).then(function(r){ return r.json(); }).then(function(d){ if (d && d.success) toast('\ud83d\udce7 Summary emailed to ' + d.sent_to, 'ok'); }).catch(function(){});
+  } catch(e) {}
+}
 function addRewriteResult(d) {
+  sendRewriteSummaryEmail();
   var msgs = document.getElementById('messages');
   var div = document.createElement('div');
   div.className = 'msg agent';

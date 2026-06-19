@@ -2874,6 +2874,7 @@ app.post('/api/engine/brief-email', verifyEngineAccess, async (req, res) => {
     if (!brief.trim()) return res.json({ success: false, error: 'No brief' });
     const url = ((req.body && req.body.url) || '').toString().slice(0, 300);
     const keyword = ((req.body && req.body.keyword) || '').toString().slice(0, 160);
+    const _lbl = ((req.body && req.body.kind) === 'summary') ? 'Rewrite Summary' : 'Master Brief';
     const sr = await pool.query("SELECT value FROM app_settings WHERE key='engine_brief_emails'").catch(() => ({ rows: [] }));
     const raw = ((sr.rows[0] && sr.rows[0].value) || '').trim();
     const recipients = raw.split(',').map(e => e.trim()).filter(e => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e));
@@ -2884,7 +2885,7 @@ app.post('/api/engine/brief-email', verifyEngineAccess, async (req, res) => {
     const who = eu.client_name || eu.clientName || eu.code || (eu.isAdmin ? 'admin' : 'engine user');
     const esc = x => String(x).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     const htmlBody = '<div style="font-family:Verdana,Geneva,sans-serif;max-width:680px;margin:0 auto;color:#0f172a;">'
-      + '<div style="background:#0f172a;border-radius:10px 10px 0 0;padding:18px 24px;color:#fff;font-weight:800;">ContentScale Engine \u2014 Master Brief</div>'
+      + '<div style="background:#0f172a;border-radius:10px 10px 0 0;padding:18px 24px;color:#fff;font-weight:800;">ContentScale Engine \u2014 ' + _lbl + '</div>'
       + '<div style="background:#fff;border:1px solid #e2e8f0;border-top:none;border-radius:0 0 10px 10px;padding:22px 24px;">'
       + '<p style="font-size:13px;color:#475569;margin:0 0 12px;">Sent by <strong>ContentScale.site</strong> \u2014 Made for <strong>' + esc(who) + '</strong></p>'
       + ((url || keyword) ? '<p style="font-size:12px;color:#94a3b8;margin:0 0 12px;">' + (url ? 'Page: <strong style="color:#475569;">' + esc(url) + '</strong>' : '') + (url && keyword ? ' \u00b7 ' : '') + (keyword ? 'Keyword: <strong style="color:#475569;">' + esc(keyword) + '</strong>' : '') + '</p>' : '')
@@ -2896,7 +2897,7 @@ app.post('/api/engine/brief-email', verifyEngineAccess, async (req, res) => {
       body: JSON.stringify({
         to: recipients.map(e => ({ email: e })),
         sender: { email: process.env.FROM_EMAIL || 'info@contentscale.site', name: process.env.SENDER_NAME || 'ContentScale Engine' },
-        subject: 'Master Brief' + (keyword ? ' \u2014 ' + keyword : (url ? ' \u2014 ' + url : '')),
+        subject: _lbl + (keyword ? ' \u2014 ' + keyword : (url ? ' \u2014 ' + url : '')),
         htmlContent: htmlBody
       })
     });
