@@ -2874,7 +2874,8 @@ app.post('/api/engine/brief-email', verifyEngineAccess, async (req, res) => {
     if (!brief.trim()) return res.json({ success: false, error: 'No brief' });
     const url = ((req.body && req.body.url) || '').toString().slice(0, 300);
     const keyword = ((req.body && req.body.keyword) || '').toString().slice(0, 160);
-    const _lbl = ((req.body && req.body.kind) === 'summary') ? 'Rewrite Summary' : 'Master Brief';
+    const _kind = (req.body && req.body.kind) || 'brief';
+    const _lbl = _kind === 'summary' ? 'Rewrite Summary' : _kind === 'rewrite' ? 'Rewritten HTML (ready to edit)' : 'Master Brief';
     const sr = await pool.query("SELECT value FROM app_settings WHERE key='engine_brief_emails'").catch(() => ({ rows: [] }));
     const raw = ((sr.rows[0] && sr.rows[0].value) || '').trim();
     const recipients = raw.split(',').map(e => e.trim()).filter(e => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e));

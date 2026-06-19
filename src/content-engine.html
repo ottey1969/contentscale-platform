@@ -2011,7 +2011,28 @@ async function runDirectFullRewrite() {
   }
 }
 
+function emailRewrittenHtml(d) {
+  try {
+    var html = (d && (d.html_content || d.html || d.html_full)) || '';
+    if (!html || html.length < 50) return;
+    var kw = (_context && _context.keyword) || '';
+    var url = (_context && _context.url) || '';
+    var score = (d && (d.bofu_score != null ? d.bofu_score : (d.score != null ? d.score : null)));
+    var head = 'REWRITTEN PAGE HTML \u2014 ready to review/edit before publishing\n';
+    if (kw) head += 'Keyword: ' + kw + '\n';
+    if (url) head += 'Page: ' + url + '\n';
+    if (score != null) head += 'New ContentScore: ' + score + '/100\n';
+    head += '\n----- HTML BELOW (copy, edit, then publish) -----\n\n';
+    var token = (document.getElementById('engineToken')||{}).value || localStorage.getItem('nexus_engine_token') || '';
+    fetch('/api/engine/brief-email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-engine-token': token },
+      body: JSON.stringify({ kind: 'rewrite', brief: head + html, url: url, keyword: kw })
+    }).then(function(r){ return r.json(); }).then(function(res){ if (res && res.success) toast('\ud83d\udce7 Rewritten HTML emailed to ' + res.sent_to, 3500, 'ok'); }).catch(function(){});
+  } catch(e) {}
+}
 function addRewriteResult(d) {
+  emailRewrittenHtml(d);
   var msgs = document.getElementById('messages');
   var div = document.createElement('div');
   div.className = 'msg agent';
