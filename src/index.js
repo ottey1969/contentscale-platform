@@ -886,6 +886,7 @@ async function notifyClient(clientId, subject, htmlBody, telegramText) {
 }
 
 async function sendTrackerEmail(clientId, subject, htmlBody) {
+  if (subject && subject.indexOf('[TRACKER]') !== 0) subject = '[TRACKER] ' + subject;
   try {
     // Robust query — handle missing columns gracefully
     let client;
@@ -2832,6 +2833,8 @@ app.get('/api/admin/settings', verifyAdmin, async (req, res) => {
     r.rows.forEach(row => settings[row.key] = row.value);
     settings.contact_email = settings.contact_email || process.env.FROM_EMAIL || 'info@contentscale.site';
     settings.sender_name = settings.sender_name || process.env.SENDER_NAME || 'ContentScale Tracker';
+      settings.engine_from_email = settings.engine_from_email || settings.contact_email || process.env.FROM_EMAIL || 'info@contentscale.site';
+      settings.engine_sender_name = settings.engine_sender_name || 'ContentScale Engine';
     if (typeof settings.rewrite_keep_rules !== 'string') settings.rewrite_keep_rules = '- Keep the existing layout, CSS and classes that already work; do not restyle or reorder sections that are fine.\n- Reuse the existing images (keep their current src and alt); never invent image URLs or use placeholders.\n- Output the page CONTENT only: no menu / navigation, no footer, no scan badge (the site template adds those).';
     res.json({ success: true, settings });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
@@ -2850,6 +2853,12 @@ app.post('/api/admin/settings', verifyAdmin, async (req, res) => {
     }
     if (typeof req.body.engine_brief_emails === 'string') {
       await pool.query(`INSERT INTO app_settings (key, value, updated_at) VALUES ('engine_brief_emails', $1, NOW()) ON CONFLICT (key) DO UPDATE SET value=$1, updated_at=NOW()`, [req.body.engine_brief_emails.trim()]);
+    }
+    if (typeof req.body.engine_from_email === 'string' && req.body.engine_from_email.trim()) {
+      await pool.query(`INSERT INTO app_settings (key, value, updated_at) VALUES ('engine_from_email', $1, NOW()) ON CONFLICT (key) DO UPDATE SET value=$1, updated_at=NOW()`, [req.body.engine_from_email.trim()]);
+    }
+    if (typeof req.body.engine_sender_name === 'string' && req.body.engine_sender_name.trim()) {
+      await pool.query(`INSERT INTO app_settings (key, value, updated_at) VALUES ('engine_sender_name', $1, NOW()) ON CONFLICT (key) DO UPDATE SET value=$1, updated_at=NOW()`, [req.body.engine_sender_name.trim()]);
     }
     if (typeof req.body.rewrite_keep_rules === 'string') {
       await pool.query(`INSERT INTO app_settings (key, value, updated_at) VALUES ('rewrite_keep_rules', $1, NOW()) ON CONFLICT (key) DO UPDATE SET value=$1, updated_at=NOW()`, [req.body.rewrite_keep_rules]);
@@ -2876,8 +2885,11 @@ app.post('/api/engine/brief-email', verifyEngineAccess, async (req, res) => {
     const keyword = ((req.body && req.body.keyword) || '').toString().slice(0, 160);
     const _kind = (req.body && req.body.kind) || 'brief';
     const _lbl = _kind === 'summary' ? 'Rewrite Summary' : _kind === 'rewrite' ? 'Rewritten HTML (ready to edit)' : 'Master Brief';
-    const sr = await pool.query("SELECT value FROM app_settings WHERE key='engine_brief_emails'").catch(() => ({ rows: [] }));
-    const raw = ((sr.rows[0] && sr.rows[0].value) || '').trim();
+    const sr = await pool.query("SELECT key,value FROM app_settings WHERE key IN ('engine_brief_emails','engine_from_email','engine_sender_name')").catch(() => ({ rows: [] }));
+    const _em = {}; (sr.rows||[]).forEach(r => { _em[r.key] = (r.value||'').trim(); });
+        const raw = (_em.engine_brief_emails || '');
+        const _engFrom = _em.engine_from_email || process.env.FROM_EMAIL || 'info@contentscale.site';
+        const _engName = _em.engine_sender_name || 'ContentScale Engine';
     const recipients = raw.split(',').map(e => e.trim()).filter(e => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e));
     if (!recipients.length) return res.json({ success: false, error: 'No engine_brief_emails configured' });
     const brevoKey = process.env.BREVO_API_KEY || '';
@@ -2897,8 +2909,8 @@ app.post('/api/engine/brief-email', verifyEngineAccess, async (req, res) => {
       headers: { 'Content-Type': 'application/json', 'api-key': brevoKey },
       body: JSON.stringify({
         to: recipients.map(e => ({ email: e })),
-        sender: { email: process.env.FROM_EMAIL || 'info@contentscale.site', name: process.env.SENDER_NAME || 'ContentScale Engine' },
-        subject: _lbl + (keyword ? ' \u2014 ' + keyword : '') + (url ? ' \u2014 ' + url.replace(/^https?:\/\//,'').replace(/\/$/,'') : ''),
+        sender: { email: _engFrom, name: _engName },
+        subject: '[ENGINE] ' + _lbl + (keyword ? ' \u2014 ' + keyword : '') + (url ? ' \u2014 ' + url.replace(/^https?:\/\//,'').replace(/\/$/,'') : ''),
         htmlContent: htmlBody
       })
     });
@@ -29839,15 +29851,15 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     <p style="font-size:12px;color:#6b7280;margin-bottom:24px;">Admin settings — stored in database, survive deploys</p>
 
                     <div style="background:#0d1117;border:1px solid #1f2937;border-radius:10px;padding:20px;margin-bottom:16px;">
-                        <div style="font-size:13px;font-weight:700;color:#f1f5f9;margin-bottom:14px;">📧 Email Settings</div>
+                        <div style="font-size:13px;font-weight:700;color:#f1f5f9;margin-bottom:14px;">📧 Content Engine — Email Settings</div>
                         <div style="margin-bottom:12px;">
-                            <label style="display:block;font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;">From / Contact Email</label>
+                            <label style="display:block;font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;">Engine From / Sender Email</label>
                             <input id="settingContactEmail" type="email" class="tr-input" style="width:100%;max-width:360px;" placeholder="info@contentscale.site">
-                            <div style="font-size:11px;color:#4b5563;margin-top:4px;">Sender address for ALL emails &mdash; tracker (Citation Brief, reminders, welcome) AND engine (Master Brief, rewritten HTML).</div>
+                            <div style="font-size:11px;color:#4b5563;margin-top:4px;">Sender address for <strong>Content Engine emails only</strong> (Master Brief, rewritten HTML). The tracker uses its own sender (managed internally).</div>
                         </div>
                         <div style="margin-bottom:16px;">
-                            <label style="display:block;font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;">Sender Name</label>
-                            <input id="settingSenderName" type="text" class="tr-input" style="width:100%;max-width:360px;" placeholder="ContentScale Tracker">
+                            <label style="display:block;font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;">Engine Sender Name</label>
+                            <input id="settingSenderName" type="text" class="tr-input" style="width:100%;max-width:360px;" placeholder="ContentScale Engine">
                         </div>
                         <div style="margin-bottom:16px;">
                             <label style="display:block;font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;">Engine Brief Emails</label>
@@ -29859,7 +29871,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                             <textarea id="settingKeepRules" class="tr-input" style="width:100%;max-width:520px;min-height:92px;font-family:monospace;font-size:12px;line-height:1.5;" placeholder="- Keep existing layout/CSS&#10;- Reuse existing images&#10;- No menu/footer/badge"></textarea>
                             <div style="font-size:11px;color:#4b5563;margin-top:4px;">Applied to BOTH the internal full rewrite and the external Master Brief. Edit to change; clear the box to disable.</div>
                         </div>
-                        <button onclick="saveAdminSettings()" class="tr-btn" style="border-color:#4ade80;color:#4ade80;font-weight:700;">Save Email Settings</button>
+                        <button onclick="saveAdminSettings()" class="tr-btn" style="border-color:#4ade80;color:#4ade80;font-weight:700;">Save Engine Settings</button>
                         <span id="settingsSaved" style="display:none;font-size:12px;color:#4ade80;margin-left:10px;">✓ Saved</span>
                         <button onclick="checkBrevoStatus()" class="tr-btn" style="border-color:#38bdf8;color:#38bdf8;margin-left:10px;" title="Check Brevo account: verified domains, recent sends, quota">🔍 Check Brevo Status</button>
                         <button onclick="sendTestEmail()" class="tr-btn" style="border-color:#4ade80;color:#4ade80;margin-left:8px;" title="Send a test email to yourself">📧 Send Test Email</button>
@@ -31816,8 +31828,8 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 var d = await apiCall('/api/admin/settings');
                 if (!d.success) return;
                 var s = d.settings;
-                document.getElementById('settingContactEmail').value = s.contact_email || '';
-                document.getElementById('settingSenderName').value = s.sender_name || '';
+                document.getElementById('settingContactEmail').value = s.engine_from_email || s.contact_email || '';
+                document.getElementById('settingSenderName').value = s.engine_sender_name || '';
                 var _ebe = document.getElementById('settingEngineBriefEmails'); if (_ebe) _ebe.value = s.engine_brief_emails || '';
                 var _kr = document.getElementById('settingKeepRules'); if (_kr) _kr.value = (s.rewrite_keep_rules != null ? s.rewrite_keep_rules : '');
                 var envEl = document.getElementById('settingsEnvInfo');
@@ -31928,7 +31940,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
             var keepRules = (document.getElementById('settingKeepRules')||{}).value || '';
             if (!email) { alert('Enter an email address'); return; }
             try {
-                var d = await apiCall('/api/admin/settings', 'POST', { contact_email: email, sender_name: name, engine_brief_emails: briefEmails, rewrite_keep_rules: keepRules });
+                var d = await apiCall('/api/admin/settings', 'POST', { engine_from_email: email, engine_sender_name: name, engine_brief_emails: briefEmails, rewrite_keep_rules: keepRules });
                 if (d.success) {
                     var saved = document.getElementById('settingsSaved');
                     if (saved) { saved.style.display='inline'; setTimeout(function(){ saved.style.display='none'; }, 3000); }

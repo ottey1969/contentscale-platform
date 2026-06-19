@@ -4193,6 +4193,7 @@ function renderTrackerList() {
     (dueCount ? '<span id="checkAllDueBadge" style="font-size:11px;font-weight:700;background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.3);color:#f87171;padding:3px 10px;border-radius:20px;">🔴 ' + dueCount + ' due</span>' : '<span style="font-size:11px;background:rgba(52,211,153,.07);border:1px solid rgba(52,211,153,.2);color:#34d399;padding:3px 10px;border-radius:20px;">✅ All checked</span>') +
     '<div style="margin-left:auto;display:flex;align-items:center;gap:8px;">' +
     '<label style="display:flex;align-items:center;gap:5px;font-size:10px;color:#a78bfa;cursor:pointer;font-weight:700;" title="When ON, pressing a page Spy & Brief automatically emails the full brief and sends HTML + ContentScore + brief to the internal agent, which writes."><input type="checkbox" id="autoAgentToggle" ' + (localStorage.getItem('cs_auto_agent')==='1'?'checked':'') + ' onchange="localStorage.setItem(\'cs_auto_agent\',this.checked?\'1\':\'0\')" style="accent-color:#a78bfa;"> ⚡ Auto → agent</label>' +
+    '<label style="display:flex;align-items:center;gap:5px;font-size:10px;color:#34d399;cursor:pointer;font-weight:700;" title="OFF = agent returns a brief (strategy + exact HTML snippets). ON = agent writes the full updated page."><input type="checkbox" id="agentWriteToggle" ' + (localStorage.getItem('cs_agent_write')==='1'?'checked':'') + ' onchange="localStorage.setItem(\'cs_agent_write\',this.checked?\'1\':\'0\')" style="accent-color:#34d399;"> \u270d\ufe0f Agent writes page</label>' +
     '<select id="rewriteModeSelect" title="Surgical = edit existing page (safe, page 1). Full = rewrite (page 2+). Auto picks by ranking: pos &le;10 surgical, &gt;10 full." onchange="localStorage.setItem(\'cs_rewrite_mode\',this.value)" style="font-size:10px;background:#1f2937;color:#cbd5e1;border:1px solid #374151;border-radius:5px;padding:4px 6px;cursor:pointer;"><option value="auto" ' + (((localStorage.getItem('cs_rewrite_mode')||'auto')==='auto')?'selected':'') + '>Mode: Auto (by ranking)</option><option value="surgical" ' + ((localStorage.getItem('cs_rewrite_mode')==='surgical')?'selected':'') + '>Mode: Surgical</option><option value="full" ' + ((localStorage.getItem('cs_rewrite_mode')==='full')?'selected':'') + '>Mode: Full rewrite</option></select>' +
 
     '<label style="display:flex;align-items:center;gap:5px;font-size:10px;color:#9ca3af;cursor:pointer;" title="Bulk SERP scans cost paid Serper calls per page. OFF by default for safety."><input type="checkbox" id="allowBulkSerp" style="accent-color:#fbbf24;"> Allow bulk SERP</label>' +
@@ -7458,7 +7459,8 @@ function spySendToAgentWithHtml() {
 
   var parts = ['[SPY BRIEF + GAP ANALYSIS REQUEST] Keyword: "' + kw + '"'];
   if (url) parts.push('Page: ' + url);
-  parts.push('\nRANKING FORMULA: ' + formula);
+  parts.push('\nPOSITIONING (critical \u2014 never misrepresent): ContentScale is a GRAAF SEO ContentScore + live competitor-intelligence tool. It is NOT a plagiarism checker and NOT an AI-content detector. When covering competitor entities like "checker", "plagiarism" or "AI detection", frame ContentScale ContentScore as a superior SEO-quality checker (differentiation) \u2014 NEVER claim to be a plagiarism or AI-detection tool, and never invent features it does not have.');
+      parts.push('\nRANKING FORMULA: ' + formula);
   if (gaps) parts.push('MISSING ENTITIES: ' + gaps);
   if (missing) parts.push('GAPS TO EXPLOIT:\n' + missing);
   if (wins) parts.push('QUICK WINS:\n' + wins);
@@ -7545,9 +7547,14 @@ function spySendToAgentWithHtml() {
     parts.push('You have access to the current page HTML via [ANALYSE ' + url + ' "' + kw + '"].');
     parts.push('Run [ANALYSE ' + url + ' "' + kw + '"] then tell me: for each missing entity and gap above, write the EXACT text/HTML I need to add — specific sentences, not generic advice. Do NOT rewrite the page. Surgical additions only.');
   } else {
-    parts.push('Run [ANALYSE ' + url + ' "' + kw + '"] to see my current page. For each missing entity and gap above, write the EXACT HTML to add. Surgical only — do NOT rewrite. End with BRIEF COMPLETE.');
+    var _agentWrites = (localStorage.getItem('cs_agent_write') === '1');
+      if (_agentWrites) {
+        parts.push('Run [ANALYSE ' + url + ' "' + kw + '"] to see my current page. Apply the GRAAF fixes + missing entities as SURGICAL edits, then OUTPUT THE COMPLETE UPDATED HTML — keep layout, CSS and images, change nothing that works, add/fix only what this brief lists. Do not omit any part of the page. After the HTML, state recommended TITLE + META (OLD vs NEW). End with BRIEF COMPLETE.');
+      } else {
+        parts.push('Run [ANALYSE ' + url + ' "' + kw + '"] to see my current page. For each missing entity and gap above, write the EXACT HTML to add. Surgical only — do NOT rewrite. End with BRIEF COMPLETE.');
+        parts.push('Focus only on surgical additions — do NOT suggest a full rewrite.');
+      }
   }
-  parts.push('Focus only on surgical additions — do NOT suggest a full rewrite.');
 
   var msg = parts.join('\n');
 
