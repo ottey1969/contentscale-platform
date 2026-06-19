@@ -29843,7 +29843,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                         <div style="margin-bottom:12px;">
                             <label style="display:block;font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;">From / Contact Email</label>
                             <input id="settingContactEmail" type="email" class="tr-input" style="width:100%;max-width:360px;" placeholder="info@contentscale.site">
-                            <div style="font-size:11px;color:#4b5563;margin-top:4px;">Used as sender in all tracker emails (Citation Brief, reminders, welcome)</div>
+                            <div style="font-size:11px;color:#4b5563;margin-top:4px;">Sender address for ALL emails &mdash; tracker (Citation Brief, reminders, welcome) AND engine (Master Brief, rewritten HTML).</div>
                         </div>
                         <div style="margin-bottom:16px;">
                             <label style="display:block;font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;">Sender Name</label>
@@ -29852,7 +29852,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                         <div style="margin-bottom:16px;">
                             <label style="display:block;font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;">Engine Brief Emails</label>
                             <input id="settingEngineBriefEmails" type="text" class="tr-input" style="width:100%;max-width:360px;" placeholder="you@x.com, team@y.com">
-                            <div style="font-size:11px;color:#4b5563;margin-top:4px;">Recipients for the Content Engine &quot;Copy Master Brief &rarr; External AI&quot; email. Comma-separated for multiple. Leave empty to disable.</div>
+                            <div style="font-size:11px;color:#4b5563;margin-top:4px;"><strong>ENGINE only (not tracker).</strong> Recipients of the engine emails: the <strong>Master Brief</strong> AND the <strong>rewritten HTML</strong>. Comma-separated. Leave empty to disable.</div>
                         </div>
                         <div style="margin-bottom:16px;">
                             <label style="display:block;font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;">Rewrite KEEP rules (internal + external)</label>
