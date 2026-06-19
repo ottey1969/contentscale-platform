@@ -8,7 +8,7 @@
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <meta name="app-version" content="4.2.7-2026-05-10">
-<title>PULSE + NEXUS Content Dashboard — AI SEO Intelligence | ContentScale</title>
+<title>PULSE + NEXUS Content Engine — AI SEO Intelligence | ContentScale</title>
 <meta name="description" content="PULSE + NEXUS is ContentScale's AI content intelligence engine. Live SERP spy, AI Overviews analysis, GSC integration, and GRAAF-guided rewrites. Built in Amsterdam by Ottmar Francisca.">
 <link rel="canonical" href="https://app.contentscale.site/content-engine/">
 <meta property="og:title" content="PULSE + NEXUS Content Engine — AI SEO Intelligence | ContentScale">
@@ -18,34 +18,6 @@
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-/* ── Mobile-friendly tracker cards ────────────────────────────── */
-@media (max-width: 560px) {
-  #trPagesList .tr-actions { flex-direction: row !important; flex-wrap: wrap !important; width: 100% !important; margin-top: 8px !important; padding-left: 34px !important; }
-  #trPagesList .tr-actions > button { flex: 1 1 auto !important; min-width: 90px !important; }
-}
-/* ── Mobile responsive: off-canvas sidebar + full-width views ─── */
-#mobileNavToggle { display: none; }
-#navBackdrop { display: none; position: fixed; inset: 52px 0 0 0; background: rgba(0,0,0,.55); z-index: 25500; }
-@media (max-width: 768px) {
-  .shell { grid-template-columns: 1fr !important; }
-  .sidebar {
-    position: fixed; top: 52px; left: 0; bottom: 0;
-    width: 86%; max-width: 310px; max-height: none;
-    z-index: 26000; transform: translateX(-100%);
-    transition: transform .25s ease; box-shadow: 4px 0 28px rgba(0,0,0,.55);
-  }
-  .sidebar.open { transform: translateX(0); }
-  #navBackdrop.open { display: block; }
-  #mobileNavToggle { display: inline-flex !important; align-items: center; justify-content: center; }
-  #topbarLogo, .topbar-sep, .topbar-title { display: none !important; }
-  .topbar { padding: 0 8px; gap: 6px; }
-  .topbar-status #statusText { display: none; }
-  #view-pages, #view-tracker, #view-stats, #view-video { left: 0 !important; }
-  #serpSpyModal { padding: 0 !important; }
-  #serpSpyModal > div { max-width: 100% !important; height: 100vh; max-height: 100vh !important; border-radius: 0 !important; }
-  #serpSpyResult { overflow-wrap: break-word; word-break: break-word; }
-  #serpSpyResult table { display: block; overflow-x: auto; max-width: 100%; }
-}
 :root{
   --bg:#07090e;
   --surface:#0d1117;
@@ -264,8 +236,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'DM San
 <div class="shell">
   <!-- TOPBAR -->
   <header class="topbar">
-    <button id="mobileNavToggle" onclick="toggleMobileNav()" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);color:#e2e8f0;border-radius:6px;width:34px;height:32px;font-size:16px;cursor:pointer;flex-shrink:0;">☰</button>
-    <div id="topbarLogo" style="line-height:1.2;"><div style="font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:16px;letter-spacing:.04em;"><span style="color:#a78bfa;">PULSE</span><span style="color:#e2e8f0;"> + </span><span style="color:#f56d00;">NEXUS</span></div><div style="font-size:9px;letter-spacing:.14em;color:#4a5260;text-transform:uppercase;">by ContentScale</div></div>
+    <div style="line-height:1.2;"><div style="font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:16px;letter-spacing:.04em;"><span style="color:#a78bfa;">PULSE</span><span style="color:#e2e8f0;"> + </span><span style="color:#f56d00;">NEXUS</span></div><div style="font-size:9px;letter-spacing:.14em;color:#4a5260;text-transform:uppercase;">by ContentScale</div></div>
     <div class="topbar-sep"></div>
     <div class="topbar-title" id="topbarTitle"><span id="topbarContext">Intelligence Agent</span></div>
     <div style="display:flex;gap:4px;margin-left:8px;">
@@ -273,19 +244,19 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'DM San
       <button id="navAgent" onclick="switchView('agent')" style="padding:5px 12px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid rgba(245,109,0,.4);background:rgba(245,109,0,.15);color:#f56d00;">🧠 Agent</button>
 
       <button id="navProfiles" onclick="switchView('profiles')" style="padding:5px 12px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid rgba(255,255,255,.1);background:transparent;color:#6b7280;">👤 Profiles</button>
+      <button id="navVideo" onclick="switchView('video')" style="padding:5px 12px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid rgba(255,255,255,.1);background:transparent;color:#6b7280;">🎥 Video → Brief</button>
     </div>
     <div class="topbar-status">
       <div class="status-dot" id="statusDot"></div>
       <span id="statusText">not connected</span>
     </div>
   </header>
-  <div id="navBackdrop" onclick="closeMobileNav()"></div>
 
   <!-- SIDEBAR -->
   <aside class="sidebar">
     <!-- Auth -->
     <div class="sidebar-section">
-      <div class="sidebar-label">Client Access</div>
+      <div class="sidebar-label">Engine Access</div>
       <input class="token-input" id="engineToken" placeholder="ENG-XXXX engine code" type="password">
       <div style="font-size:10px;color:var(--muted);margin-top:6px;line-height:1.5;">
         AI keys are configured securely on the server. No API keys stored in your browser.
@@ -371,11 +342,6 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'DM San
           #wfStep0 .graaf-dot   { animation: graafDot 1.4s ease-in-out infinite; display:inline-block; }
         </style>
 
-        <div style="margin-bottom:10px;padding:8px 10px;border-radius:8px;background:linear-gradient(135deg,rgba(124,58,237,0.15),rgba(15,118,110,0.12));border:1px solid rgba(124,58,237,0.3);">
-          <div style="font-size:11px;font-weight:800;color:#c4b5fd;line-height:1.4;">🤖 AI Writer &amp; Rewriter</div>
-          <div style="font-size:9px;color:#9ca3af;margin-top:2px;line-height:1.4;">The only way to get cited and ranked in 2026 and beyond</div>
-        </div>
-
         <div id="wfStep0" style="padding:8px 10px;border:1px solid #7c3aed;border-left:3px solid #a78bfa;margin-bottom:6px;background:rgba(124,58,237,0.07);border-radius:0 8px 8px 0;position:relative;overflow:hidden;">
           <!-- shimmer sweep overlay -->
           <div style="position:absolute;inset:0;background:linear-gradient(105deg,transparent 40%,rgba(167,139,250,0.06) 50%,transparent 60%);background-size:200% 100%;animation:graafShimmer 2.8s linear infinite;pointer-events:none;"></div>
@@ -397,7 +363,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'DM San
         <div id="wfStep1" style="padding:4px 0 4px 10px;border-left:2px solid #374151;margin-bottom:3px;line-height:1.4;">2. Tracker → profile → Import GSC</div>
         <div id="wfStep2" style="padding:4px 0 4px 10px;border-left:2px solid #374151;margin-bottom:3px;line-height:1.4;">3. 🔍 Spy on page → competitors</div>
         <div id="wfStep3" style="padding:4px 0 4px 10px;border-left:2px solid #374151;margin-bottom:3px;line-height:1.4;">④ Paste GRAAF recs → Copy Master Brief</div>
-        <div id="wfStep4" style="padding:4px 0 4px 10px;border-left:2px solid #374151;margin-bottom:3px;line-height:1.4;">5. AI Writer &amp; Rewriter writes &amp; fixes ALL</div>
+        <div id="wfStep4" style="padding:4px 0 4px 10px;border-left:2px solid #374151;margin-bottom:3px;line-height:1.4;">5. External AI Agent fixes ALL</div>
         <div id="wfStep5" style="padding:4px 0 4px 10px;border-left:2px solid #374151;line-height:1.4;">6. Publish → Tracker monitors</div>
       </div>
     </div>
@@ -406,7 +372,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'DM San
 
     <!-- AI Keys -->
     <div class="sidebar-section" id="aiKeysSection" style="display:none;">
-      <div class="sidebar-label">⚙️ AI Dashboard</div>
+      <div class="sidebar-label">⚙️ AI Engine</div>
       <div id="aiKeyStatus" style="font-size:10px;color:var(--muted);margin-bottom:8px;line-height:1.4;">
         Loading key status…
       </div>
@@ -2019,22 +1985,6 @@ async function runDirectFullRewrite() {
   } else if (pos && pos <= 10) {
     if (!confirm('⚠️ You rank at position ' + pos + '. Consider surgical fixes instead. Continue with full rewrite?')) return;
   }
-  // ── Pre-write verify step: show the plan + claims BEFORE writing so you can correct first ──
-  var _pf = await api('/api/content/preflight/' + rewriteId, 'POST', {}).catch(function(){ return null; });
-  if (_pf && _pf.success && _pf.plan) {
-    var pl = _pf.plan;
-    var _claims = (pl.key_claims||[]).map(function(c){
-      var ok = (c.status||'').toUpperCase().indexOf('VERIF') === 0;
-      return '<div style="margin:3px 0;font-size:12px;"><span style="font-weight:700;color:' + (ok?'#34d399':'#fbbf24') + ';">' + (ok?'✓ verifiable':'⚠ assumption') + '</span> — ' + (c.claim||'') + (c.note?' <span style="color:#6b7280;">('+c.note+')</span>':'') + '</div>';
-    }).join('');
-    var _q = (pl.questions_for_human||[]).map(function(q){ return '<li>'+q+'</li>'; }).join('');
-    addAgentMessage('<b>🔍 Pre-write plan — verify before I write:</b>' +
-      (pl.angle?'<div style="margin:6px 0;"><b>Angle:</b> '+pl.angle+'</div>':'') +
-      (_claims?'<div style="margin:6px 0;"><b>Claims I would make:</b>'+_claims+'</div>':'') +
-      (_q?'<div style="margin:6px 0;"><b>Confirm before writing:</b><ul style="margin:4px 0 0 18px;">'+_q+'</ul></div>':'') +
-      '<div style="margin-top:6px;font-size:11px;color:#6b7280;">⚠ assumptions are written generally or left out unless you confirm them. OK = write · Cancel = adjust first.</div>');
-    if (!confirm('Pre-write plan is shown above. OK = write now · Cancel = stop so you can adjust the keyword/brief first.')) return;
-  }
   var prog = addProgress('✍ Running full rewrite…', 10);
   try {
     setProgress(prog, 50);
@@ -3378,7 +3328,7 @@ async function copyMasterBrief() {
   }
 
   parts.push(''); parts.push(sep);
-  if (parts.length < 5) { parts.push('No brief yet. Run Spy + Get Deeper Suggestions first.'); }
+  if (parts.length < 5) { parts.push('No brief yet. Run Spy + Send to Internal Agent first.'); }
 
   // Strip markdown artifacts that bleed through from AI responses
   var briefText = parts.join('\n')
@@ -3821,19 +3771,7 @@ async function api(endpoint, method, body) {
 // ════════════════════════════════════════════════════════════════
 // VIEW SWITCHER
 // ════════════════════════════════════════════════════════════════
-function toggleMobileNav() {
-  var sb = document.querySelector('.sidebar');
-  var bd = document.getElementById('navBackdrop');
-  var open = sb && sb.classList.toggle('open');
-  if (bd) bd.classList.toggle('open', !!open);
-}
-function closeMobileNav() {
-  var sb = document.querySelector('.sidebar'); if (sb) sb.classList.remove('open');
-  var bd = document.getElementById('navBackdrop'); if (bd) bd.classList.remove('open');
-}
-
 function switchView(view) {
-  closeMobileNav();
   // Update topbar context label
   var _ctx = document.getElementById('topbarContext');
   if (_ctx) {
@@ -3908,7 +3846,7 @@ async function loadTrackerPages() {
   window._loadTrackerStarted = Date.now();
   var _tok3 = '';
   try { _tok3 = (document.getElementById('engineToken')||{}).value || localStorage.getItem('nexus_engine_token') || ''; } catch(e) {}
-  if (!_tok3) { window._loadTrackerRunning = false; window._loadTrackerStarted = 0; renderTrackerList(); return; }
+  if (!_tok3) { renderTrackerList(); return; }
 
   // Show skeleton only when a profile is selected
   var skelEl = document.getElementById('trPagesList');
@@ -3944,7 +3882,6 @@ async function loadTrackerPages() {
     renderTrackerKpis();
     renderTrackerList();
     if (_trPages && _trPages.length > 0 && (_context.profileId || (_profile && _profile.id))) updateWorkflowStep(2);
-    window._loadTrackerRunning = false; window._loadTrackerStarted = 0;
   } catch(e) {
     var el = document.getElementById('trPagesList');
     if (el) el.innerHTML = '<div style="padding:40px;text-align:center;color:#f87171;">Failed: ' + e.message + '</div>';
@@ -4077,8 +4014,6 @@ function getPagePriority(page) {
 }
 
 function renderTrackerList() {
-  var _searchHadFocus = document.activeElement && document.activeElement.id === 'trSearchInput';
-  var _searchCaret = _searchHadFocus ? document.activeElement.selectionStart : null;
   var el = document.getElementById('trPagesList');
   var activeProfileId = _context.profileId || (_profile && _profile.id) || null;
   if (!activeProfileId) {
@@ -4209,12 +4144,12 @@ function renderTrackerList() {
       '</select>';
     })() +
     '<button onclick="window._trFilter={priority:\'all\',status:\'all\',score:\'all\',search:\'\',domain:\'all\'};renderTrackerList()" style="font-size:10px;padding:5px 10px;border-radius:6px;border:1px solid rgba(255,255,255,.1);background:transparent;color:#6b7280;cursor:pointer;">✕ Clear</button>' +
-    '<button onclick="toggleSelectAll(true)" title="Select every page currently shown (respects the domain/search filter)" style="font-size:11px;font-weight:700;padding:5px 12px;border-radius:6px;border:1px solid rgba(124,58,237,.4);background:rgba(124,58,237,.12);color:#a78bfa;cursor:pointer;margin-left:auto;">☑ Select all visible</button>' +
-    '<button onclick="deleteVisibleDomain()" title="Delete ALL pages currently shown — use the domain filter first to wipe one domain" style="font-size:11px;font-weight:700;padding:5px 12px;border-radius:6px;border:1px solid rgba(248,113,113,.4);background:rgba(248,113,113,.12);color:#f87171;cursor:pointer;">🗑 Delete domain</button>' +
+    '<button onclick="scanAllImported()" title="Run ContentScore scan on all pages that have never been scanned" style="font-size:11px;font-weight:700;padding:5px 12px;border-radius:6px;border:none;background:linear-gradient(135deg,#0ea5e9,#0f766e);color:#fff;cursor:pointer;margin-left:auto;">GRAAF Scan All <span style="font-size:9px;opacity:.6;">step 1</span></button>' +
   '</div>' +
   // Bulk actions bar (visible only when items selected)
   '<div id="trBulkBar" style="display:' + (window._trSelected.size > 0 ? 'flex' : 'none') + ';gap:8px;padding:6px 16px 8px;align-items:center;background:rgba(124,58,237,0.08);border-bottom:1px solid rgba(124,58,237,0.2);">' +
     '<span style="font-size:11px;color:#a78bfa;font-weight:700;">' + window._trSelected.size + ' selected</span>' +
+    '<button onclick="scanSelected()" title="Step 1: Run GRAAF ContentScore scan · Then use ② Spy & Brief to get competitive gaps" style="font-size:11px;font-weight:700;padding:5px 12px;border-radius:6px;border:none;background:linear-gradient(135deg,#0ea5e9,#0f766e);color:#fff;cursor:pointer;">GRAAF Scan <span style="font-size:9px;opacity:.6;">step 1</span></button>' +
     '<button onclick="deleteSelected()" style="font-size:11px;font-weight:700;padding:5px 12px;border-radius:6px;border:none;background:rgba(248,113,113,.15);color:#f87171;border:1px solid rgba(248,113,113,.3);cursor:pointer;">🗑 Delete Selected</button>' +
     '<button onclick="window._trSelected.clear();renderTrackerList()" style="font-size:11px;padding:5px 10px;border-radius:6px;border:1px solid rgba(255,255,255,.1);background:transparent;color:#6b7280;cursor:pointer;">✕ Deselect all</button>' +
     '<label style="margin-left:auto;font-size:11px;color:#6b7280;cursor:pointer;"><input type="checkbox" id="trSelectAll" onchange="toggleSelectAll(this.checked)" style="margin-right:4px;">Select all visible</label>' +
@@ -4222,6 +4157,7 @@ function renderTrackerList() {
 
   // Split active vs done — active get numbered, done go to bottom with separate section
   var activePages = trData.filter(function(p) {
+    if (p.is_done) return false;
     var f = window._trFilter || {};
     var snap = p.latest_snapshot || {};
     var cs = parseInt(snap.score || 0);
@@ -4274,35 +4210,18 @@ function renderTrackerList() {
 
     return true;
   });
-  window._trVisibleIds = activePages.map(function(p){ return p.id; });
   var donePages   = trData.filter(function(p){ return p.is_done; });
 
-  var _activeCounter = 0;
   el.innerHTML = '<div style="padding:0 16px;">' + alertBar + summaryBar + filterBar + activePages.map(function(p, idx) {
-    if (p.is_done) {
-      var _snapD = p.latest_snapshot || {};
-      var _lastChD = p.last_checked_at ? (Math.floor((Date.now()-new Date(p.last_checked_at).getTime())/86400000) + 'd ago') : 'Never';
-      var _csBadgeD = _snapD.score ? ' <span style="font-size:10px;padding:1px 5px;border-radius:3px;background:rgba(75,85,99,.1);color:#6b7280;">CS:'+_snapD.score+'</span>' : '';
-      return '<div style="opacity:0.45;padding:10px 0 10px 10px;border-bottom:1px solid rgba(255,255,255,.04);border-left:3px solid #374151;margin-bottom:3px;">' +
-        '<div style="display:flex;align-items:center;gap:6px;margin-bottom:2px;"><span style="font-size:10px;color:#34d399;font-weight:700;">✓ Done</span></div>' +
-        '<div style="font-size:12px;font-weight:600;color:#9ca3af;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escHtml(p.title||p.url) + _csBadgeD + '</div>' +
-        '<div style="font-size:10px;color:#4b5563;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escHtml(p.url) + (p.keyword ? ' · 🎯 '+escHtml(p.keyword) : '') + ' · ' + _lastChD + '</div>' +
-        '<div style="margin-top:6px;display:flex;gap:6px;">' +
-          '<button onclick="togglePageDone(' + p.id + ')" style="font-size:10px;padding:3px 8px;border-radius:5px;border:1px solid rgba(52,211,153,.3);background:rgba(52,211,153,.08);color:#34d399;cursor:pointer;">↺ Reopen</button>' +
-          '<button onclick="deleteTrackerPage(' + p.id + ')" style="font-size:10px;padding:3px 8px;border-radius:5px;border:1px solid rgba(248,113,113,.2);background:rgba(248,113,113,.04);color:#f87171;cursor:pointer;">✕</button>' +
-        '</div>' +
-      '</div>';
-    }
     var pri = p._priority;
-    _activeCounter++;
-    var activeNum = _activeCounter;
+    var activeNum = idx + 1;
     // Number badge — START HERE on #1, number on rest
     // Number sits to the LEFT of the card — clear vertical counter
     var _isSelected = window._trSelected.has(p.id);
     var cbx = '<div style="width:24px;flex-shrink:0;display:flex;align-items:flex-start;justify-content:center;padding-top:6px;">' +
       '<input type="checkbox" ' + (_isSelected ? 'checked' : '') + ' onchange="toggleSelectPage(' + p.id + ',this.checked)" style="width:14px;height:14px;cursor:pointer;accent-color:#7c3aed;">' +
       '</div>';
-    var numBadge = (_activeCounter === 1 && pri.score > 100) ?
+    var numBadge = (idx === 0 && pri.score > 100) ?
       '<div style="width:36px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;padding-top:2px;gap:3px;">' +
         '<span style="font-size:13px;font-weight:900;color:' + pri.color + ';line-height:1;">1</span>' +
         '<span style="font-size:7px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:' + pri.color + ';writing-mode:vertical-lr;transform:rotate(180deg);">START</span>' +
@@ -4356,10 +4275,9 @@ function renderTrackerList() {
       // Reject if it looks like JSON
       if (typeof _rawAction === 'string' && (_rawAction.trim().startsWith('[') || _rawAction.trim().startsWith('{'))) _rawAction = '';
       var rAction = escHtml(String(_rawAction));
-      var _recCount = (Array.isArray(recs) && recs.length) ? recs.length : 1;
-      recHtml = '<div onclick="openTrackerDetail('+p.id+')" title="Open for all recommendations" style="margin-top:5px;cursor:pointer;background:#07090e;border-left:2px solid '+rPriority+';border-radius:2px;padding:5px 8px;font-size:10px;color:#fdba74;line-height:1.5;">' +
-        '<span style="font-weight:700;">🎯 ' + _recCount + ' AI fix' + (_recCount !== 1 ? 'es' : '') + ':</span> ' + rTitle +
-        ' <span style="color:#6b7280;">· tap to view →</span>' +
+      recHtml = '<div style="margin-top:5px;background:#07090e;border-left:2px solid '+rPriority+';border-radius:2px;padding:5px 8px;font-size:11px;color:#fdba74;line-height:1.5;">' +
+        '<span style="font-weight:700;">AI Rec: </span>' + rTitle +
+        (rAction ? '<div style="color:#9ca3af;font-size:10px;margin-top:2px;">' + rAction.substring(0,140) + (rAction.length>140?'…':'') + '</div>' : '') +
         '</div>';
     }
 
@@ -4372,28 +4290,28 @@ function renderTrackerList() {
     // Priority badge
     var priBadge = '<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:12px;background:' + pri.bg + ';border:1px solid ' + pri.border + ';color:' + pri.color + ';white-space:nowrap;">' + pri.label + '</span>';
     // GSC quick stats inline
-    // Position: live scan rank = current position NOW; GSC = historical average across all queries
-    var _liveRank = (p.latest_snapshot && p.latest_snapshot.google_position) ? p.latest_snapshot.google_position : null;
-    var posLabel = _liveRank ?
-      '<span style="font-size:10px;color:#9ca3af;">rank <b style="color:#34d399;">#' + _liveRank + '</b> <span style="color:#6b7280;">now</span></span>'
-      : (p.gsc_position ? '<span style="font-size:10px;color:#9ca3af;">GSC avg <b style="color:#e2e8f0;">' + parseFloat(p.gsc_position).toFixed(1) + '</b></span>' : '');
+    var posLabel = (p.gsc_position || (p.latest_snapshot && p.latest_snapshot.google_position)) ?
+      '<span style="font-size:10px;color:#9ca3af;">pos <b style="color:#e2e8f0;">' + parseFloat(p.gsc_position || p.latest_snapshot.google_position).toFixed(1) + '</b></span>' : '';
     var imprLabel = p.gsc_impressions ?
       '<span style="font-size:10px;color:#9ca3af;"><b style="color:#e2e8f0;">' + Number(p.gsc_impressions).toLocaleString() + '</b> impr</span>' : '';
 
     var doneStyle = p.is_done ? 'opacity:0.45;' : '';
     return '<div style="' + doneStyle + 'padding:12px 0;border-bottom:1px solid rgba(255,255,255,.06);margin-bottom:4px;">' +
-    '<div style="display:flex;gap:0;align-items:flex-start;flex-wrap:wrap;">' +
+    '<div style="display:flex;gap:0;align-items:flex-start;">' +
       cbx + numBadge +
       '<div style="flex:1;min-width:0;border-left:3px solid ' + (p.is_done ? '#374151' : pri.border) + ';padding-left:10px;">' +
         '<div style="display:flex;gap:6px;align-items:center;margin-bottom:5px;flex-wrap:wrap;">' + priBadge + (posLabel||'') + (imprLabel||'') + '</div>' +
         '<div style="font-size:13px;font-weight:600;color:#e2e8f0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escHtml(p.title||p.url) + csBadge + '</div>' +
-        '<div style="font-size:11px;color:#6b7280;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escHtml(p.url) + (' · <span onclick="event.stopPropagation();editTrackerKeyword(' + p.id + ')" style="cursor:pointer;' + (p.keyword ? 'color:#9ca3af;border-bottom:1px dashed rgba(255,255,255,.25);' : 'color:#f59e0b;font-weight:700;') + '" title="Click to edit the target keyword">' + (p.keyword ? '🎯 ' + escHtml(p.keyword) + ' ✎' : '⚠ set keyword') + '</span>') + ' · ' + lastCh + (p._isStale ? ' <span style="font-size:9px;font-weight:700;background:rgba(251,191,36,.12);border:1px solid rgba(251,191,36,.35);color:#fbbf24;padding:1px 6px;border-radius:4px;" title="Not updated in 90+ days">🕐 Stale</span>' : '') + (p._cannibal ? ' <span style="font-size:9px;font-weight:700;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);color:#f87171;padding:1px 6px;border-radius:4px;" title="' + p._cannibalCount + ' pages target same keyword">🔀 Cannibal</span>' : '') + '</div>' +
+        '<div style="font-size:11px;color:#6b7280;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escHtml(p.url) + (p.keyword ? ' · 🎯 '+escHtml(p.keyword) : '') + ' · ' + lastCh + (p._isStale ? ' <span style="font-size:9px;font-weight:700;background:rgba(251,191,36,.12);border:1px solid rgba(251,191,36,.35);color:#fbbf24;padding:1px 6px;border-radius:4px;" title="Not updated in 90+ days">🕐 Stale</span>' : '') + (p._cannibal ? ' <span style="font-size:9px;font-weight:700;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);color:#f87171;padding:1px 6px;border-radius:4px;" title="' + p._cannibalCount + ' pages target same keyword">🔀 Cannibal</span>' : '') + '</div>' +
         gscLine +
-        '<div style="margin-top:5px;">' + aiG + aiP + (p.serp_spy_at ? ' <span style="font-size:10px;color:#6b7280;">· 🔍 Brief ' + new Date(p.serp_spy_at).toLocaleDateString() + '</span>' : '') + '</div>' +
+        '<div style="margin-top:5px;">' + aiG + aiP + '</div>' +
         (pri.recommended ? '<div style="margin-top:5px;font-size:10px;font-weight:700;color:'+pri.color+';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="'+escHtml(pri.recommended)+'">→ ' + escHtml(pri.recommended.split('.')[0]) + '</div>' : '') +
         recHtml +
         '<div class="tr-status-' + p.id + '"></div>' +
-      // ── Meta Intelligence row (inside content column → full width, stacks below) ──
+      '</div>' +
+      '<div style="text-align:right;flex-shrink:0;display:flex;flex-direction:column;gap:4px;align-items:flex-end;">' +
+      '</div>' +
+      // ── Meta Intelligence row ──────────────────────────────────────────
       (p.meta_intel ? '<div style="margin:6px 0 2px;padding:8px 12px;background:rgba(124,58,237,0.06);border:1px solid rgba(124,58,237,0.2);border-radius:8px;">' +
         '<div style="font-size:9px;font-weight:800;color:#6b7280;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;">📋 META INTELLIGENCE' + (p.meta_intel_at ? ' · <span style="color:#4b5563;font-weight:400;">' + new Date(p.meta_intel_at).toLocaleDateString() + '</span>' : '') + '</div>' +
         (p.meta_intel.title ? '<div style="font-size:11px;color:#e5e7eb;margin-bottom:3px;"><span style="color:#a78bfa;font-weight:700;">Title:</span> ' + escHtml(p.meta_intel.title) + '</div>' : '') +
@@ -4401,11 +4319,8 @@ function renderTrackerList() {
         (p.meta_intel.h1 ? '<div style="font-size:11px;color:#9ca3af;"><span style="color:#34d399;font-weight:700;">H1:</span> ' + escHtml(p.meta_intel.h1) + '</div>' : '') +
         '<button onclick="refreshMetaIntel(' + p.id + ',this)" style="margin-top:6px;font-size:9px;padding:3px 8px;border-radius:4px;border:1px solid rgba(124,58,237,.3);background:transparent;color:#a78bfa;cursor:pointer;">↻ Refresh</button>' +
       '</div>' : '<button onclick="getMetaIntel(' + p.id + ',\'' + escHtml(p.url||'') + '\',\'' + escHtml(p.keyword||'') + '\',this)" style="margin:4px 0 2px;font-size:9px;padding:3px 10px;border-radius:4px;border:1px solid rgba(124,58,237,.2);background:rgba(124,58,237,.06);color:#a78bfa;cursor:pointer;font-weight:700;">📋 Get Best Title / Desc / H1</button>') +
-      '</div>' +
-      '<div class="tr-actions" style="display:flex;flex-direction:column;gap:4px;flex-shrink:0;">' +
+      '<div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0;">' +
         '<button onclick="runTrackerCheck('+p.id+',this)" style="font-size:10px;padding:4px 8px;border-radius:5px;border:1px solid rgba(167,139,250,.3);background:rgba(167,139,250,.08);color:#a78bfa;cursor:pointer;">▶ Check</button>' +
-        '<button onclick="openPasteHtmlModal('+p.id+')" title="Paste the page HTML for an accurate scan (more reliable than live fetch)" style="font-size:10px;padding:4px 8px;border-radius:5px;border:1px solid rgba(56,189,248,.3);background:rgba(56,189,248,.08);color:#38bdf8;cursor:pointer;">' + (p.has_html_content ? '📋 HTML ✓' : '📋 HTML') + '</button>' +
-        (p.serp_spy ? '<button onclick="openSavedSpy('+p.id+')" title="View the saved SERP brief from the last spy" style="font-size:10px;padding:4px 8px;border-radius:5px;border:1px solid rgba(52,211,153,.3);background:rgba(52,211,153,.08);color:#34d399;cursor:pointer;">📄 Brief</button>' : '') +
         (pri.action === 'rewrite' ?
           '<button onclick="openSerpSpy('+p.id+')" style="font-size:10px;padding:5px 10px;border-radius:5px;border:none;background:linear-gradient(135deg,#7c3aed,#0f766e);color:#fff;cursor:pointer;font-weight:800;">Spy & Brief <span style="font-size:9px;opacity:.6;">step 2</span></button>'
         : pri.action === 'surgical' ?
@@ -4421,14 +4336,42 @@ function renderTrackerList() {
     '</div>';
   }).join('') +
 
+  // ── DONE SECTION — always visible at bottom ─────────────────────────────
+  (donePages.length ?
+    '<div style="margin-top:20px;border-top:1px solid rgba(255,255,255,.08);padding-top:14px;">' +
+    '<div style="font-size:10px;font-weight:700;color:#4b5563;text-transform:uppercase;letter-spacing:.1em;margin-bottom:10px;display:flex;align-items:center;gap:6px;">' +
+      '<span style="display:inline-block;width:16px;height:1px;background:#374151;"></span>' +
+      '✓ Completed (' + donePages.length + ')' +
+      '<span style="display:inline-block;flex:1;height:1px;background:#374151;margin-left:6px;"></span>' +
+    '</div>' +
+    '<div>' +
+    donePages.map(function(p, dIdx) {
+      var pri = p._priority;
+      var snap = p.latest_snapshot || {};
+      var lastCh = p.last_checked_at ? (Math.floor((Date.now()-new Date(p.last_checked_at).getTime())/86400000) + 'd ago') : 'Never';
+      var startHere = '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;"><span style="font-size:10px;color:#374151;font-weight:600;">✓ Done</span></div>';
+      var priBadge = '';
+      var posLabel = '';
+      var imprLabel = '';
+      var aiG = '<span style="font-size:10px;color:#374151;">—</span>';
+      var aiP = '';
+      var gscLine = '';
+      var recHtml = '';
+      var csBadge = snap.score ? ' <span style="font-size:10px;padding:1px 5px;border-radius:3px;background:rgba(75,85,99,.1);color:#6b7280;">CS:'+snap.score+'</span>' : '';
+      return '<div style="opacity:0.4;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.04);border-left:3px solid #374151;padding-left:10px;margin-bottom:3px;">' +
+        startHere +
+        '<div style="font-size:12px;font-weight:600;color:#6b7280;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escHtml(p.title||p.url) + csBadge + '</div>' +
+        '<div style="font-size:10px;color:#4b5563;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escHtml(p.url) + ' · ' + lastCh + '</div>' +
+        '<div style="margin-top:6px;display:flex;gap:6px;">' +
+          '<button onclick="togglePageDone(' + p.id + ')" style="font-size:10px;padding:3px 8px;border-radius:5px;border:1px solid rgba(52,211,153,.3);background:rgba(52,211,153,.08);color:#34d399;cursor:pointer;">↺ Reopen</button>' +
+          '<button onclick="deleteTrackerPage(' + p.id + ')" style="font-size:10px;padding:3px 8px;border-radius:5px;border:1px solid rgba(248,113,113,.2);background:rgba(248,113,113,.04);color:#f87171;cursor:pointer;">✕</button>' +
+        '</div>' +
+      '</div>';
+    }).join('') +
+    '</div></div>'
+  : '') +
 
   '</div>';
-  // Restore search focus + caret — the re-render recreates the input, which dropped focus
-  // after every keystroke (the "can't type in search" bug).
-  if (_searchHadFocus) {
-    var _si = document.getElementById('trSearchInput');
-    if (_si) { _si.focus(); var _pos = (_searchCaret == null ? _si.value.length : _searchCaret); try { _si.setSelectionRange(_pos, _pos); } catch(e){} }
-  }
 }
 
 
@@ -4453,7 +4396,7 @@ async function submitTrackerAdd() {
       profile_id: profileId,
       keyword: document.getElementById('trAddKeyword').value.trim() || null,
       title: document.getElementById('trAddTitle').value.trim() || null,
-      check_frequency: 'weekly'
+      check_frequency: document.getElementById('trAddFreq').value
     });
     if (!d.success) throw new Error(d.error || 'Failed');
     closeAddTrackerModal();
@@ -4481,61 +4424,10 @@ function toggleSelectPage(pageId, checked) {
 }
 
 function toggleSelectAll(checked) {
-  var visibleIds = window._trVisibleIds || (_trPages||[]).filter(function(p){ return !p.is_done; }).map(function(p){ return p.id; });
+  var visibleIds = (_trPages||[]).filter(function(p){ return !p.is_done; }).map(function(p){ return p.id; });
   if (checked) visibleIds.forEach(function(id){ window._trSelected.add(id); });
   else window._trSelected.clear();
   renderTrackerList();
-}
-
-var _pasteHtmlPageId = null;
-function openPasteHtmlModal(pageId) {
-  var pg = (_trPages||[]).find(function(p){ return p.id === pageId; });
-  _pasteHtmlPageId = pageId;
-  document.getElementById('pasteHtmlUrl').textContent = pg ? ('· ' + pg.url) : '';
-  document.getElementById('pasteHtmlKeyword').value = (pg && pg.keyword) || '';
-  document.getElementById('pasteHtmlContent').value = '';
-  document.getElementById('pasteHtmlHas').textContent = (pg && pg.has_html_content) ? '· HTML already saved — paste again to replace' : '';
-  document.getElementById('pasteHtmlModal').style.display = 'flex';
-  setTimeout(function(){ document.getElementById('pasteHtmlContent').focus(); }, 50);
-}
-function closePasteHtmlModal() { document.getElementById('pasteHtmlModal').style.display = 'none'; _pasteHtmlPageId = null; }
-async function savePasteHtml() {
-  if (!_pasteHtmlPageId) return;
-  var kw = document.getElementById('pasteHtmlKeyword').value.trim();
-  var html = document.getElementById('pasteHtmlContent').value;
-  var btn = document.getElementById('pasteHtmlSaveBtn'); btn.disabled = true; btn.textContent = 'Saving…';
-  try {
-    await api('/api/tracker/pages/' + _pasteHtmlPageId, 'PATCH', { keyword: kw || null, html_content: html || null });
-    var pg = (_trPages||[]).find(function(p){ return p.id === _pasteHtmlPageId; });
-    if (pg) { pg.keyword = kw || null; pg.has_html_content = !!(html && html.trim()); }
-    closePasteHtmlModal();
-    renderTrackerList();
-    toast('📋 HTML saved — the next scan will use it', 2500, 'ok');
-  } catch(e) { toast('Error: ' + e.message, 3000, 'warn'); }
-  finally { btn.disabled = false; btn.textContent = 'Save HTML + keyword'; }
-}
-
-async function editTrackerKeyword(pageId) {
-  var pg = (_trPages||[]).find(function(p){ return p.id === pageId; });
-  var cur = pg && pg.keyword ? pg.keyword : '';
-  var v = window.prompt('Target keyword for this page (used for the citation scan):', cur);
-  if (v === null) return;
-  v = v.trim();
-  try {
-    await api('/api/tracker/pages/' + pageId, 'PATCH', { keyword: v || null });
-    if (pg) pg.keyword = v || null;
-    renderTrackerList();
-    toast('🎯 Keyword updated', 2000, 'ok');
-  } catch(e) { toast('Error: ' + e.message, 3000, 'warn'); }
-}
-
-async function deleteVisibleDomain() {
-  var ids = (window._trVisibleIds || []).slice();
-  if (!ids.length) { toast('Nothing visible to delete', 2000, 'warn'); return; }
-  var dom = (window._trFilter && window._trFilter.domain && window._trFilter.domain !== 'all') ? window._trFilter.domain : 'all visible pages';
-  if (!confirm('Delete ALL ' + ids.length + ' pages for "' + dom + '"? This cannot be undone.')) return;
-  window._trSelected = new Set(ids);
-  await deleteSelected();
 }
 
 async function scanSelected() {
@@ -4570,8 +4462,7 @@ async function deleteSelected() {
     } catch(e) { failed++; }
   }
   window._trSelected.clear();
-  window._loadTrackerRunning = false; window._loadTrackerStarted = 0;
-  await loadTrackerPages();
+  renderTrackerList();
   toast('🗑 ' + done + ' pages deleted' + (failed?' · '+failed+' failed':''), 3000, 'ok');
 }
 
@@ -4708,13 +4599,11 @@ function startTrackerPoll(pageId) {
           clearInterval(_trPollers[pageId]);
           delete _trPollers[pageId];
           setTimeout(loadTrackerPages, 1000);
-          setTimeout(function(){ try { openTrackerDetail(pageId); } catch(e){} }, 1200);
         }
       } else if (!d.running) {
         clearInterval(_trPollers[pageId]);
         delete _trPollers[pageId];
         setTimeout(loadTrackerPages, 1000);
-        setTimeout(function(){ try { openTrackerDetail(pageId); } catch(e){} }, 1200);
       }
     } catch(e) { clearInterval(_trPollers[pageId]); }
     if (count > 80) clearInterval(_trPollers[pageId]);
@@ -4907,9 +4796,9 @@ async function openTrackerDetail(pageId) {
     if (Array.isArray(recs2) && recs2.length) {
       var _isElite = snap.score >= 90;
       var _recHeader = _isElite
-        ? '<div style="font-size:10px;color:#34d399;margin-bottom:10px;line-height:1.5;">🏆 Your page structure scores <b>Elite ('+snap.score+'/100)</b>. The fixes below are <b>on-page changes that make this page citeable in Google AI Overview &amp; Perplexity</b> — not structure fixes. <span style="color:#6b7280;">(To research what to WRITE vs competitors, use 🔍 Spy &amp; Brief.)</span></div>'
-        : '<div style="font-size:10px;color:#9ca3af;margin-bottom:10px;line-height:1.5;">🤖 <b>AI Citation Fixes</b> — on-page changes that make this page citeable in <b>Google AI Overview</b> &amp; <b>Perplexity</b>. <span style="color:#6b7280;">(To research what to WRITE to outrank competitors, use 🔍 Spy &amp; Brief.)</span></div>';
-      recsHtml = '<div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:12px;margin-bottom:14px;"><div style="font-size:9px;color:#a78bfa;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">🤖 AI Citation Fixes ('+recs2.length+') · Google AI Overview &amp; Perplexity</div>' + _recHeader +
+        ? '<div style="font-size:10px;color:#34d399;margin-bottom:10px;line-height:1.5;">🏆 Your page structure scores <b>Elite ('+snap.score+'/100)</b>. The recommendations below are <b>live competitive intelligence</b> — what to change to reach position #1 and get cited by Google AI Overview, Perplexity & You.com. These are not fixes for your structure — they are strategic moves against live competitors.</div>'
+        : '<div style="font-size:10px;color:#9ca3af;margin-bottom:10px;line-height:1.5;">🎯 <b>Live AI Recommendations</b> — Based on live SERP analysis and competitor positioning for this keyword. These target getting to #1 in Google and earning AI citations.</div>';
+      recsHtml = '<div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:12px;margin-bottom:14px;"><div style="font-size:9px;color:#6b7280;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">📋 AI Recommendations ('+recs2.length+')</div>' + _recHeader +
         recs2.slice(0,5).map(function(r){
           var pI = r.priority==='high'?'🔴':r.priority==='medium'?'🟡':'🟢';
           var title  = r.title  || r.description || r.name || '';
@@ -4964,7 +4853,7 @@ async function createStatsStudy() {
     '<div style="background:rgba(255,255,255,.06);border-radius:999px;height:4px;margin:12px auto;max-width:280px;overflow:hidden;">' +
     '<div id="statsProgressBar" style="background:linear-gradient(90deg,#7c3aed,#f56d00);height:4px;border-radius:999px;width:5%;transition:width .8s ease;"></div>' +
     '</div>' +
-    '<div style="font-size:11px;color:#4b5563;margin-top:6px;">Searching live — no fabricated numbers.</div>' +
+    '<div style="font-size:11px;color:#4b5563;margin-top:6px;">Claude is searching live — no fabricated numbers.</div>' +
     '</div>';
   // Inject spin keyframe if not present
   if (!document.getElementById('statsSpinStyle')) {
@@ -5374,7 +5263,7 @@ switchView = function(view) {
 async function loadProfilesList() {
   var el = document.getElementById('profilesList');
   if (!_connected) {
-    el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted);grid-column:1/-1;">Connect with your access code first.</div>';
+    el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted);grid-column:1/-1;">Connect with your engine code first.</div>';
     return;
   }
   el.innerHTML = '<div style="text-align:center;padding:30px;color:var(--muted);grid-column:1/-1;">⏳ Loading…</div>';
@@ -6253,7 +6142,7 @@ async function runRewriteFromModal() {
   // GUARD: profile must be selected BEFORE any work starts
   if (!_context.profileId) _context.profileId = (_profile && _profile.id) || null;
   if (!_context.profileId) {
-    addAgentMessage('❌ <b>Profile Required</b> — Select a profile in the sidebar first (Access Code → Pick Profile). The rewrite needs your business info, niche, target audience, and USPs to write accurate content.');
+    addAgentMessage('❌ <b>Profile Required</b> — Select a profile in the sidebar first (Engine Code → Pick Profile). The rewrite needs your business info, niche, target audience, and USPs to write accurate content.');
     return;
   }
   var keyword = document.getElementById('rewriteKeyword').value.trim();
@@ -7256,35 +7145,8 @@ async function refreshMetaIntel(pageId, btn) {
   await getMetaIntel(pageId, pg.url, pg.keyword, btn);
 }
 
-function serpSpyShowInputs() {
-  var si = document.getElementById('serpSpyInputs'); if (si) si.style.display = '';
-  var r = document.getElementById('serpSpyResult'); if (r) r.innerHTML = '';
-  var st = document.getElementById('serpSpyStatus'); if (st) st.textContent = '';
-}
-
-function openSavedSpy(pageId) {
-  var pg = (_trPages || []).find(function(p){ return p.id === pageId; });
-  if (!pg || !pg.serp_spy) { toast('No saved brief yet — run the Spy first', 2500, 'warn'); return; }
-  _serpSpyPageId = pageId;
-  var modal = document.getElementById('serpSpyModal');
-  if (modal && modal.parentNode !== document.body) document.body.appendChild(modal);
-  document.getElementById('serpSpyKeyword').value = pg.keyword || '';
-  document.getElementById('serpSpyUrl').value = pg.url || '';
-  document.getElementById('serpSpyStatus').textContent = '';
-  var si = document.getElementById('serpSpyInputs'); if (si) si.style.display = 'none';
-  var when = pg.serp_spy_at ? new Date(pg.serp_spy_at).toLocaleString() : '';
-  document.getElementById('serpSpyResult').innerHTML =
-    '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 0;flex-wrap:wrap;">' +
-      (when ? '<div style="font-size:11px;color:#34d399;">📄 Saved brief · scanned ' + when + '</div>' : '<div></div>') +
-      '<button onclick="serpSpyShowInputs()" style="font-size:10px;padding:4px 10px;border-radius:6px;border:1px solid rgba(124,58,237,.4);background:rgba(124,58,237,.1);color:#c4b5fd;cursor:pointer;">↻ New scan</button>' +
-    '</div>' +
-    renderSerpSpyReport(pg.serp_spy);
-  if (modal) modal.style.display = 'flex';
-}
-
 function openSerpSpy(pageId) {
   updateWorkflowStep(3);
-  var _siShow = document.getElementById('serpSpyInputs'); if (_siShow) _siShow.style.display = '';
   _serpSpyPageId = pageId;
   var page = (_trPages || []).find(function(p){ return p.id === pageId; });
   var kw   = (page && page.keyword) || '';
@@ -7305,14 +7167,6 @@ function openSerpSpy(pageId) {
   document.getElementById('serpSpyUrl').value = url;
   document.getElementById('serpSpyResult').innerHTML = '';
   document.getElementById('serpSpyStatus').textContent = '';
-  var _hs = document.getElementById('serpSpyHtmlStatus');
-  if (_hs) {
-    if (page && page.has_html_content) {
-      _hs.innerHTML = '✓ <span style="color:#34d399;font-weight:600;">HTML already added</span> for this page — the Spy will use it.';
-    } else {
-      _hs.innerHTML = 'No HTML saved yet. Add it once via the <strong style="color:#9ca3af;">📋 HTML</strong> button on the page — the Spy then uses the same HTML. Otherwise it fetches the URL.';
-    }
-  }
   modal.style.display = 'flex';
 }
 
@@ -7334,7 +7188,7 @@ async function runSerpSpy() {
   btn.disabled = true;
   btn.textContent = '⏳ Analyzing…';
   stat.textContent = 'Step 1: Cataloging SERP results…';
-  result.innerHTML = '<div style="text-align:center;padding:40px;color:#6b7280;">🔍 Running 4-Step SERP analysis — searching live results, scraping competitor pages, and building your intelligence report. This takes 30–60 seconds.</div>';
+  result.innerHTML = '<div style="text-align:center;padding:40px;color:#6b7280;">🔍 Running 4-Step SERP analysis — Claude is searching, scraping body content, and building your intelligence report. This takes 30–60 seconds.</div>';
 
   // Animate status messages
   var steps = [
@@ -7362,27 +7216,15 @@ async function runSerpSpy() {
         btn.disabled = false;
         btn.textContent = '🔍 Run Spy';
         stat.textContent = '⚠️ Timeout — try again';
-        result.innerHTML = '<div style="color:#f87171;padding:20px;">Spy took too long (3 min). The SERP API may be slow. Try again.</div>';
+        result.innerHTML = '<div style="color:#f87171;padding:20px;">Spy took too long (90s). The SERP API may be slow. Try again.</div>';
       }
-    }, 200000);
-    var _start = await api('/api/tracker/serp-spy', 'POST', {
+    }, 90000);
+    var d = await api('/api/tracker/serp-spy', 'POST', {
       keyword: kw,
       profile_url: url,
       page_id: _serpSpyPageId,
       live_html: liveHtml.trim() || null
     });
-    var d = { success: false, error: 'No response' };
-    if (_start && _start.job_id) {
-      var _jobId = _start.job_id;
-      for (var _i = 0; _i < 60 && window._spyRunning; _i++) {   // poll up to ~3 min
-        await new Promise(function(r){ setTimeout(r, 3000); });
-        var _s = await api('/api/tracker/serp-spy/status/' + _jobId, 'GET').catch(function(){ return null; });
-        if (_s && _s.status === 'done') { d = _s; break; }
-        if (_s && (_s.status === 'error' || _s.status === 'not_found')) { d = { success: false, error: _s.error }; break; }
-      }
-    } else if (_start) {
-      d = _start; // fallback if server returned the result directly
-    }
     clearTimeout(_spyTimeout);
     clearInterval(stepTimer);
     window._spyRunning = false;
@@ -7392,18 +7234,12 @@ async function runSerpSpy() {
     btn.textContent = '🔍 Run Spy';
 
     if (!d.success || (!d.spy && !d.raw)) {
-      result.innerHTML = '<div style="color:#f87171;padding:20px;">Analysis failed — try again' + (d && d.error ? '<div style="font-size:11px;color:#9ca3af;margin-top:8px;">' + d.error + '</div>' : '') + '</div>';
+      result.innerHTML = '<div style="color:#f87171;padding:20px;">Analysis failed — try again</div>';
       return;
     }
 
     if (d.spy) {
-      // Persist the brief on the page in memory so the 📄 Brief button + date show immediately
-      // and stay until the next spy overwrites it (it's already saved in the DB too).
-      var _pgSpy = (_trPages || []).find(function(p){ return p.id === _serpSpyPageId; });
-      if (_pgSpy) { _pgSpy.serp_spy = d.spy; _pgSpy.serp_spy_at = new Date().toISOString(); }
-      var _siHide = document.getElementById('serpSpyInputs'); if (_siHide) _siHide.style.display = 'none';
-      var _stClr = document.getElementById('serpSpyStatus'); if (_stClr) _stClr.textContent = '';
-      result.innerHTML = '<div style="display:flex;justify-content:flex-end;padding:8px 0;"><button onclick="serpSpyShowInputs()" style="font-size:10px;padding:4px 10px;border-radius:6px;border:1px solid rgba(124,58,237,.4);background:rgba(124,58,237,.1);color:#c4b5fd;cursor:pointer;">↻ New scan</button></div>' + renderSerpSpyReport(d.spy);
+      result.innerHTML = renderSerpSpyReport(d.spy);
       // Action buttons below report
       var actDiv = document.createElement('div');
       actDiv.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap;padding:12px 16px;background:rgba(0,0,0,.3);border-top:1px solid rgba(255,255,255,.06);';
@@ -7413,7 +7249,7 @@ async function runSerpSpy() {
       var _scanInBrief = _context && _context.recs && _context.recs.length > 0;
       actDiv.innerHTML =
         '<button onclick="' + (_scanInBrief || !url ? 'copyMasterBrief()' : 'var _pr=(document.getElementById(\'graafRecsInput\')||{}).value||\'\';if(_pr.trim().length>50||confirm(\'Run ContentScore scan first for best results. Copy anyway?\'))copyMasterBrief()') + '" style="padding:8px 18px;border-radius:7px;border:none;background:' + (_scanInBrief ? 'linear-gradient(135deg,#059669,#10b981)' : 'linear-gradient(135deg,#7c3aed,#be185d)') + ';color:#fff;font-size:12px;font-weight:800;cursor:pointer;">' + (_scanInBrief ? '✅ Copy Master Brief (Spy + Agent + Scan)' : '🌐 Copy Master Brief → External AI') + '</button>' +
-        '<button onclick="spySendToAgentWithHtml()" style="padding:8px 14px;border-radius:7px;border:1px solid rgba(245,109,0,.3);background:rgba(245,109,0,.08);color:#f56d00;font-size:11px;cursor:pointer;">🔬 Get Deeper Suggestions</button>' +
+        '<button onclick="spySendToAgentWithHtml()" style="padding:8px 14px;border-radius:7px;border:1px solid rgba(245,109,0,.3);background:rgba(245,109,0,.08);color:#f56d00;font-size:11px;cursor:pointer;">🤖 Send to Internal Agent → Rewrite</button>' +
         '<button onclick="closeSerpSpy()" style="padding:8px 12px;border-radius:7px;border:1px solid rgba(255,255,255,.1);background:transparent;color:#9ca3af;font-size:11px;cursor:pointer;">✕ Close</button>' +
         '<div style="width:100%;margin-top:10px;">' +
           '<div style="font-size:9px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:#4b5563;margin-bottom:5px;font-family:DM Mono,monospace;">📊 GRAAF ContentScore — Separate from Spy</div>' +
@@ -7693,12 +7529,6 @@ function renderSerpSpyReport(s) {
   };
 
   var html = '<div style="font-family:monospace;font-size:11px;color:#e2e8f0;">';
-
-  // ── PURPOSE BANNER ──
-  html += '<div style="background:rgba(124,58,237,.1);border:1px solid rgba(124,58,237,.3);border-radius:8px;padding:8px 12px;margin-bottom:10px;font-family:\'DM Sans\',sans-serif;">' +
-    '<div style="font-size:11px;font-weight:800;color:#c4b5fd;">✍️ What to WRITE to outrank the top 10</div>' +
-    '<div style="font-size:10px;color:#9ca3af;margin-top:2px;line-height:1.5;">Competitive content brief — the ranking formula, entity gaps and H2s the winners have that you don\'t. <span style="color:#6b7280;">(For on-page AI-citation fixes, use ▶ Check instead.)</span></div>' +
-    '</div>';
 
   // ── HEADER ──
   html += '<div style="background:linear-gradient(135deg,#1e1b4b,#0f1923);border-radius:10px;padding:16px 20px;margin-bottom:12px;">' +
@@ -8382,7 +8212,7 @@ function renderSerpSpyReport(s) {
       <!-- Profile Required Banner -->
       <div id="rewriteProfileBanner" style="display:none;background:rgba(248,113,113,.12);border:1px solid rgba(248,113,113,.3);border-radius:8px;padding:10px 12px;margin-bottom:14px;">
         <div style="font-size:11px;font-weight:700;color:#f87171;margin-bottom:2px;">❌ Profile Required</div>
-        <div style="font-size:10px;color:#fca5a5;line-height:1.5;">Select a profile in the sidebar (Access Code → Pick Profile) before rewriting. The system needs your business info, niche, and USPs.</div>
+        <div style="font-size:10px;color:#fca5a5;line-height:1.5;">Select a profile in the sidebar (Engine Code → Pick Profile) before rewriting. The system needs your business info, niche, and USPs.</div>
       </div>
 
       <!-- Risk Warning Banner -->
@@ -8587,42 +8417,17 @@ function renderSerpSpyReport(s) {
 </div>
 
 <!-- ADD TRACKER MODAL -->
-<div id="pasteHtmlModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:9100;align-items:center;justify-content:center;">
-  <div style="background:#0d1117;border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:20px;max-width:680px;width:95%;max-height:88vh;display:flex;flex-direction:column;">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
-      <div style="font-size:15px;font-weight:800;color:#e2e8f0;">📋 Paste page HTML</div>
-      <button onclick="closePasteHtmlModal()" style="background:none;border:none;color:#6b7280;font-size:20px;cursor:pointer;line-height:1;">✕</button>
-    </div>
-    <div style="font-size:11px;color:#6b7280;margin-bottom:12px;">More accurate than live fetch — the scan uses this HTML instead of fetching the page. <span id="pasteHtmlUrl" style="color:#9ca3af;"></span></div>
-    <label style="display:block;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#6b7280;margin-bottom:4px;">Target keyword</label>
-    <input id="pasteHtmlKeyword" placeholder="your target keyword" style="width:100%;box-sizing:border-box;background:#07090e;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:8px 10px;color:#e2e8f0;font-size:13px;margin-bottom:12px;outline:none;">
-    <label style="display:block;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#6b7280;margin-bottom:4px;">Page HTML <span id="pasteHtmlHas" style="color:#34d399;font-weight:400;"></span></label>
-    <textarea id="pasteHtmlContent" placeholder="Paste the full page HTML here (open the live page → view source / Ctrl+U → copy all)…" style="flex:1;min-height:240px;box-sizing:border-box;background:#07090e;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:10px;color:#e2e8f0;font-size:11px;font-family:'DM Mono',monospace;margin-bottom:12px;resize:vertical;outline:none;"></textarea>
-    <div style="display:flex;gap:8px;">
-      <button onclick="closePasteHtmlModal()" style="flex:1;padding:9px;border-radius:6px;font-size:12px;cursor:pointer;border:1px solid rgba(255,255,255,.1);background:transparent;color:#9ca3af;">Cancel</button>
-      <button id="pasteHtmlSaveBtn" onclick="savePasteHtml()" style="flex:2;padding:9px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;border:none;background:linear-gradient(135deg,#7c3aed,#1d4ed8);color:#fff;">Save HTML + keyword</button>
-    </div>
-  </div>
-</div>
-
 <div id="addTrackerModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:9100;align-items:center;justify-content:center;">
   <div style="background:#0d1117;border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:24px;width:100%;max-width:460px;margin:20px;">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;"><span style="font-size:15px;font-weight:700;">+ Add URL to Tracker</span><button onclick="closeAddTrackerModal()" style="background:none;border:none;color:#6b7280;font-size:18px;cursor:pointer;">✕</button></div>
     <div style="margin-bottom:10px;"><label style="display:block;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#6b7280;margin-bottom:5px;">Page URL *</label><input id="trAddUrl" placeholder="https://example.com/your-page" style="width:100%;background:#07090e;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:9px 11px;color:#e2e8f0;font-size:13px;outline:none;"></div>
     <div style="margin-bottom:10px;"><label style="display:block;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#6b7280;margin-bottom:5px;">Target Keyword</label><input id="trAddKeyword" placeholder="your target keyword" style="width:100%;background:#07090e;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:9px 11px;color:#e2e8f0;font-size:13px;outline:none;"></div>
     <div style="margin-bottom:10px;"><label style="display:block;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#6b7280;margin-bottom:5px;">Page Title (optional)</label><input id="trAddTitle" placeholder="Your Page Title" style="width:100%;background:#07090e;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:9px 11px;color:#e2e8f0;font-size:13px;outline:none;"></div>
+    <div style="margin-bottom:12px;"><label style="display:block;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#6b7280;margin-bottom:5px;">Check Frequency</label>
+      <select id="trAddFreq" style="width:100%;background:#07090e;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:9px 11px;color:#e2e8f0;font-size:13px;outline:none;">
+        <option value="1day">Every day</option><option value="3days" selected>Every 3 days</option><option value="1week">Every week</option><option value="2weeks">Every 2 weeks</option>
+      </select></div>
     <div style="display:flex;gap:8px;"><button onclick="closeAddTrackerModal()" style="flex:1;padding:9px;border-radius:6px;font-size:12px;cursor:pointer;border:1px solid rgba(255,255,255,.1);background:transparent;color:#9ca3af;">Cancel</button><button id="trAddBtn" onclick="submitTrackerAdd()" style="flex:2;padding:9px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;border:none;background:linear-gradient(135deg,#7c3aed,#1d4ed8);color:#fff;">Add & Start Tracking</button></div>
-  </div>
-</div>
-
-<!-- HTML INSERT MODAL — paste page HTML + keyword for an exact, reliable scan -->
-<div id="htmlInsertModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:9100;align-items:center;justify-content:center;">
-  <div style="background:#0d1117;border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:24px;width:100%;max-width:680px;margin:20px;max-height:88vh;display:flex;flex-direction:column;">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;"><span style="font-size:15px;font-weight:700;">📋 Paste HTML + keyword</span><button onclick="closeHtmlInsert()" style="background:none;border:none;color:#6b7280;font-size:18px;cursor:pointer;">✕</button></div>
-    <div style="font-size:11px;color:#6b7280;margin-bottom:14px;">Paste the page's HTML so the scan reads exactly what you see — more reliable than a live fetch (no JS / cookie-wall / CDN issues). Leave the box empty to switch back to live fetch.</div>
-    <div style="margin-bottom:10px;"><label style="display:block;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#6b7280;margin-bottom:5px;">Target Keyword</label><input id="hiKeyword" placeholder="your target keyword" style="width:100%;background:#07090e;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:9px 11px;color:#e2e8f0;font-size:13px;outline:none;"></div>
-    <div style="margin-bottom:12px;flex:1;display:flex;flex-direction:column;min-height:200px;"><label style="display:block;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#6b7280;margin-bottom:5px;">Page HTML <span id="hiCount" style="color:#4b5563;text-transform:none;letter-spacing:0;"></span></label><textarea id="hiHtml" oninput="document.getElementById('hiCount').textContent=this.value.length?('· '+this.value.length+' chars'):''" placeholder="Paste the full page HTML here (browser: Ctrl+U / right-click → View Source → copy all)..." style="flex:1;width:100%;background:#07090e;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:10px 12px;color:#c084fc;font-family:DM Mono,monospace;font-size:11px;resize:vertical;min-height:180px;outline:none;box-sizing:border-box;"></textarea></div>
-    <div style="display:flex;gap:8px;"><button onclick="closeHtmlInsert()" style="flex:1;padding:9px;border-radius:6px;font-size:12px;cursor:pointer;border:1px solid rgba(255,255,255,.1);background:transparent;color:#9ca3af;">Cancel</button><button id="hiSaveBtn" onclick="saveHtmlInsert()" style="flex:2;padding:9px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;border:none;background:linear-gradient(135deg,#7c3aed,#1d4ed8);color:#fff;">Save & use this HTML</button></div>
   </div>
 </div>
 
@@ -8648,8 +8453,7 @@ function renderSerpSpyReport(s) {
       </div>
       <button onclick="closeSerpSpy()" style="background:rgba(255,255,255,.05);border:none;color:#9ca3af;border-radius:6px;padding:6px 12px;cursor:pointer;font-size:12px;">✕ Close</button>
     </div>
-    <!-- Inputs (hidden once a brief is shown) -->
-    <div id="serpSpyInputs">
+    <!-- Inputs -->
     <div style="padding:14px 20px;border-bottom:1px solid rgba(255,255,255,.06);flex-shrink:0;display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;">
       <div style="flex:1;min-width:180px;">
         <div style="font-size:9px;color:#6b7280;margin-bottom:4px;font-weight:700;letter-spacing:.05em;">TARGET KEYWORD</div>
@@ -8661,14 +8465,14 @@ function renderSerpSpyReport(s) {
       </div>
       <button id="serpSpyRunBtn" onclick="runSerpSpy()" style="padding:8px 18px;border-radius:7px;border:none;background:linear-gradient(135deg,#7c3aed,#0f766e);color:#fff;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap;">🔍 Run Spy</button>
     </div>
-    <!-- HTML now comes from the page's 📋 HTML button (single source — no second paste) -->
+    <!-- Live HTML paste (collapsible) -->
     <div style="padding:0 20px;border-bottom:1px solid rgba(255,255,255,.06);flex-shrink:0;">
       <div style="padding-bottom:10px;">
-        <div style="font-size:10px;font-weight:700;color:#a78bfa;margin-bottom:6px;letter-spacing:.04em;">📋 PAGE HTML</div>
-        <div id="serpSpyHtmlStatus" style="font-size:10px;color:#6b7280;line-height:1.5;">Add HTML once via the <strong style="color:#9ca3af;">📋 HTML</strong> button on the page — the Spy uses that same HTML automatically. If none is saved, it fetches the URL.</div>
-        <textarea id="serpSpyHtml" style="display:none;"></textarea>
+        <div style="font-size:10px;font-weight:700;color:#a78bfa;margin-bottom:6px;letter-spacing:.04em;">📋 PASTE LIVE HTML <span style="font-weight:400;color:#6b7280;font-size:9px;">— more accurate than URL parsing</span></div>
+        <div style="font-size:9px;color:#6b7280;margin-bottom:6px;">In Chrome: go to your page → <strong style="color:#9ca3af;">Ctrl+U</strong> → Ctrl+A → Ctrl+C → paste below</div>
+        <textarea id="serpSpyHtml" rows="3" placeholder="Paste page HTML here (optional — leave empty to fetch by URL)..." style="width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(124,58,237,.3);border-radius:7px;padding:8px 10px;color:#e2e8f0;font-size:11px;font-family:'DM Mono',monospace;outline:none;box-sizing:border-box;resize:vertical;"></textarea>
+        <div style="font-size:9px;color:#34d399;margin-top:4px;">✓ When pasted — Spy uses this directly, bypasses parser. Leave empty to fetch by URL.</div>
       </div>
-    </div>
     </div>
     <div style="padding:6px 20px;flex-shrink:0;font-size:10px;color:#34d399;min-height:18px;" id="serpSpyStatus"></div>
     <!-- Result scrollable -->
@@ -8682,7 +8486,7 @@ function renderSerpSpyReport(s) {
   <!-- Header -->
   <div style="margin-bottom:20px;">
     <div style="font-size:16px;font-weight:800;color:#f9fafb;">🎥 Video Intelligence Brief</div>
-    <div style="font-size:12px;color:#4b5563;margin-top:4px;">Search or paste a YouTube URL → the tool fetches transcript + researches competition → outputs a complete content brief. No writing. No agent. Just intelligence.</div>
+    <div style="font-size:12px;color:#4b5563;margin-top:4px;">Search or paste a YouTube URL → engine fetches transcript + researches competition → outputs a complete content brief. No writing. No agent. Just intelligence.</div>
   </div>
 
   <!-- Two-column input -->
