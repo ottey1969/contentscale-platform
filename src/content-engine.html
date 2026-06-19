@@ -2011,30 +2011,7 @@ async function runDirectFullRewrite() {
   }
 }
 
-function sendRewriteSummaryEmail() {
-  try {
-    var recs = (_context && _context.recs) || [];
-    var high = recs.filter(function(r){ return r.priority === 'high'; });
-    var med  = recs.filter(function(r){ return r.priority === 'medium'; });
-    var L = [];
-    L.push('Keyword: ' + ((_context && _context.keyword) || ''));
-    if (_context && _context.url) L.push('Page: ' + _context.url);
-    if (_context && _context.score != null) L.push('ContentScore (before): ' + _context.score + '/100');
-    L.push('');
-    L.push('KEY POINTS ADDRESSED:');
-    high.forEach(function(r){ L.push('[HIGH] ' + (r.title || r.description || '')); });
-    med.forEach(function(r){ L.push('[MEDIUM] ' + (r.title || r.description || '')); });
-    if (!high.length && !med.length) L.push('(no high/medium items recorded)');
-    var token = (document.getElementById('engineToken')||{}).value || localStorage.getItem('nexus_engine_token') || '';
-    fetch('/api/engine/brief-email', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-engine-token': token },
-      body: JSON.stringify({ kind: 'summary', brief: L.join('\n'), url: (_context && _context.url) || '', keyword: (_context && _context.keyword) || '' })
-    }).then(function(r){ return r.json(); }).then(function(d){ if (d && d.success) toast('\ud83d\udce7 Summary emailed to ' + d.sent_to, 'ok'); }).catch(function(){});
-  } catch(e) {}
-}
 function addRewriteResult(d) {
-  sendRewriteSummaryEmail();
   var msgs = document.getElementById('messages');
   var div = document.createElement('div');
   div.className = 'msg agent';
@@ -4192,6 +4169,7 @@ function renderTrackerList() {
     (aiCount ? '<span style="font-size:11px;font-weight:700;background:rgba(124,58,237,.1);border:1px solid rgba(124,58,237,.25);color:#a78bfa;padding:3px 10px;border-radius:20px;">⚡ ' + aiCount + ' AI Citation</span>' : '') +
     (dueCount ? '<span id="checkAllDueBadge" style="font-size:11px;font-weight:700;background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.3);color:#f87171;padding:3px 10px;border-radius:20px;">🔴 ' + dueCount + ' due</span>' : '<span style="font-size:11px;background:rgba(52,211,153,.07);border:1px solid rgba(52,211,153,.2);color:#34d399;padding:3px 10px;border-radius:20px;">✅ All checked</span>') +
     '<div style="margin-left:auto;display:flex;align-items:center;gap:8px;">' +
+    '<label style="display:flex;align-items:center;gap:5px;font-size:10px;color:#9ca3af;cursor:pointer;" title="Bulk SERP scans cost paid Serper calls per page. OFF by default for safety."><input type="checkbox" id="allowBulkSerp" style="accent-color:#fbbf24;"> Allow bulk SERP</label>' +
     (dueCount ? '<button onclick="checkAllDue()" id="checkAllDueBtn" style="font-size:11px;font-weight:700;padding:5px 12px;border-radius:6px;border:none;background:linear-gradient(135deg,#7c3aed,#1d4ed8);color:#fff;cursor:pointer;">▶ Check All Due (' + dueCount + ')</button>' : '') +
     '<button onclick="forceCheckAll()" title="Force-check ALL pages now, ignoring schedule" style="font-size:11px;font-weight:700;padding:5px 12px;border-radius:6px;border:1px solid rgba(251,191,36,.3);background:rgba(251,191,36,.07);color:#fbbf24;cursor:pointer;">↻ Force All</button>' +
     '<span style="font-size:10px;color:#4b5563;">Sorted highest opportunity first</span>' +
@@ -4588,6 +4566,7 @@ async function scanAllImported() {
 }
 
 async function forceCheckAll() {
+  if (!((document.getElementById('allowBulkSerp')||{}).checked)) { toast('\u26a0\ufe0f Bulk SERP is OFF \u2014 tick "Allow bulk SERP" first. It costs paid Serper calls on EVERY page.', 6000, 'warn'); return; }
   if (_checkAllRunning) { toast('Already running', 3000, 'warn'); return; }
   var active = (_trPages||[]).filter(function(p){ return !p.is_done; });
   if (!active.length) { toast('No pages to check', 2000, 'info'); return; }
@@ -4600,6 +4579,7 @@ async function forceCheckAll() {
 // ── Check All Due — runs all overdue/never-checked pages, then re-sorts ────────
 var _checkAllRunning = false;
 async function checkAllDue() {
+  if (!((document.getElementById('allowBulkSerp')||{}).checked)) { toast('\u26a0\ufe0f Bulk SERP is OFF \u2014 tick "Allow bulk SERP" first. It costs paid Serper calls per page.', 6000, 'warn'); return; }
   if (_checkAllRunning) { toast('Already running — wait for it to finish', 'warn'); return; }
 
   var now = Date.now();
@@ -7335,7 +7315,8 @@ async function runSerpSpy() {
     }
 
     if (d.spy) {
-      result.innerHTML = renderSerpSpyReport(d.spy);
+      var _posBanner = (d.spy && d.spy.live_position) ? '<div style="margin-bottom:10px;padding:8px 12px;border-radius:8px;background:rgba(167,139,250,.12);border:1px solid rgba(167,139,250,.35);color:#c4b5fd;font-size:12px;font-weight:700;">\ud83d\udccd Live position for this keyword: #' + d.spy.live_position + ' <span style="font-weight:400;color:#9ca3af;">(captured from this scan \u2014 no extra SERP cost)</span></div>' : '';
+      result.innerHTML = _posBanner + renderSerpSpyReport(d.spy);
       // Action buttons below report
       var actDiv = document.createElement('div');
       actDiv.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap;padding:12px 16px;background:rgba(0,0,0,.3);border-top:1px solid rgba(255,255,255,.06);';

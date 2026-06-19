@@ -34151,7 +34151,14 @@ Return ONLY valid JSON:
     let spy=null;try{const m2=rawText.match(/\{[\s\S]*\}/);if(m2)spy=JSON.parse(m2[0]);}catch(e){}
     if(spy){spy._entity_gaps=entityGaps;spy._client_ai_citation=clientAI;spy.keyword=keyword;}
     if(page_id&&spy){try{await pool.query(`UPDATE tracker_pages SET serp_spy=$1,serp_spy_at=NOW() WHERE id=$2`,[JSON.stringify(spy),page_id]);}catch(e){}}
-    res.json({success:true,spy,competitors_scraped:top5.length});
+    try {
+      if (myUrl && Array.isArray(serpUrls) && spy && typeof spy === 'object') {
+        const _md = myUrl.replace(/^https?:\/\//,'').split('/')[0].replace(/^www\./,'');
+        const _mine = serpUrls.find(r => r.url === myUrl) || serpUrls.find(r => r.domain === _md);
+        if (_mine) spy.live_position = _mine.rank;
+      }
+    } catch(e) {}
+    res.json({success:true,spy,live_position:(spy&&spy.live_position)||null,competitors_scraped:top5.length});
   } catch(e){console.error('[serp-spy]',e.message);res.status(502).json({success:false,error:e.message});}
 });
 
