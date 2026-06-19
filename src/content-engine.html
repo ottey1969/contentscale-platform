@@ -7466,6 +7466,21 @@ function spySendToAgentWithHtml() {
 
   parts.push('\n---');
   parts.push('I need you to analyse the gap between my page and rank 1.');
+      // Real current title + meta from the pasted HTML (so OLD vs NEW is accurate, never assumed)
+      try {
+        var _lh = (document.getElementById('serpSpyHtml') || {}).value || '';
+        var _t = (_lh.match(/<title[^>]*>([\s\S]*?)<\/title>/i) || [])[1];
+        var _m = (_lh.match(/<meta[^>]*name=["']description["'][^>]*content=["']([\s\S]*?)["']/i) || [])[1] || (_lh.match(/<meta[^>]*content=["']([\s\S]*?)["'][^>]*name=["']description["']/i) || [])[1];
+        if (_t) parts.push('\nCURRENT TITLE (real \u2014 use as OLD): ' + _t.trim());
+        if (_m) parts.push('CURRENT META (real \u2014 use as OLD): ' + _m.trim());
+        if (_t || _m) parts.push('Use the REAL current title/meta above as OLD \u2014 do NOT assume or invent them.');
+      } catch(e) {}
+      // GRAAF ContentScore + the score-based fixes
+      try {
+        if (_context && _context.score != null) parts.push('\nGRAAF CONTENTSCORE: ' + _context.score + '/100');
+        var _recs = (_context && _context.recs) || [];
+        if (_recs.length) { parts.push('GRAAF FIXES TO APPLY (address each):\n' + _recs.slice(0,12).map(function(r){ return '- [' + (String(r.priority||'')).toUpperCase() + '] ' + (r.title||r.description||r.fix||''); }).join('\n')); }
+      } catch(e) {}
       var _arm = window._autoRewriteMode || (localStorage.getItem('cs_rewrite_mode')||'auto');
       if (_arm === 'auto') { var _ap = (spy && spy.live_position) || 0; _arm = (_ap && _ap <= 10) ? 'surgical' : 'full'; }
       parts.push('\nREWRITE MODE: ' + _arm.toUpperCase() + (_arm === 'surgical' ? ' \u2014 edit the EXISTING page only; keep layout, CSS and images; preserve rankings.' : ' \u2014 full rewrite allowed (page ranks poorly / page 2+).'));
