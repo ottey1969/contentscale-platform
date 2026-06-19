@@ -2832,6 +2832,7 @@ app.get('/api/admin/settings', verifyAdmin, async (req, res) => {
     r.rows.forEach(row => settings[row.key] = row.value);
     settings.contact_email = settings.contact_email || process.env.FROM_EMAIL || 'info@contentscale.site';
     settings.sender_name = settings.sender_name || process.env.SENDER_NAME || 'ContentScale Tracker';
+    if (typeof settings.rewrite_keep_rules !== 'string') settings.rewrite_keep_rules = '- Keep the existing layout, CSS and classes that already work; do not restyle or reorder sections that are fine.\n- Reuse the existing images (keep their current src and alt); never invent image URLs or use placeholders.\n- Output the page CONTENT only: no menu / navigation, no footer, no scan badge (the site template adds those).';
     res.json({ success: true, settings });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
@@ -2850,11 +2851,22 @@ app.post('/api/admin/settings', verifyAdmin, async (req, res) => {
     if (typeof req.body.engine_brief_emails === 'string') {
       await pool.query(`INSERT INTO app_settings (key, value, updated_at) VALUES ('engine_brief_emails', $1, NOW()) ON CONFLICT (key) DO UPDATE SET value=$1, updated_at=NOW()`, [req.body.engine_brief_emails.trim()]);
     }
+    if (typeof req.body.rewrite_keep_rules === 'string') {
+      await pool.query(`INSERT INTO app_settings (key, value, updated_at) VALUES ('rewrite_keep_rules', $1, NOW()) ON CONFLICT (key) DO UPDATE SET value=$1, updated_at=NOW()`, [req.body.rewrite_keep_rules]);
+    }
     res.json({ success: true });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
 // ── Engine: email the Master Brief to admin-configured recipients ─────────
+app.get('/api/engine/output-rules', verifyEngineAccess, async (req, res) => {
+  const DEF = '- Keep the existing layout, CSS and classes that already work; do not restyle or reorder sections that are fine.\n- Reuse the existing images (keep their current src and alt); never invent image URLs or use placeholders.\n- Output the page CONTENT only: no menu / navigation, no footer, no scan badge (the site template adds those).';
+  try {
+    const r = pool ? (await pool.query("SELECT value FROM app_settings WHERE key='rewrite_keep_rules'").catch(()=>({rows:[]}))).rows : [];
+    res.json({ success: true, rules: r.length ? (r[0].value || '') : DEF });
+  } catch(e) { res.json({ success: true, rules: DEF }); }
+});
+
 app.post('/api/engine/brief-email', verifyEngineAccess, async (req, res) => {
   try {
     if (!pool) return res.json({ success: false, error: 'No DB' });
@@ -17632,6 +17644,10 @@ const statsCtxRW = analysis.stats_context ? `\nSTATISTICS TO CITE:\n${String(ana
     const moneyPages = mpR.rows.map(p => `${p.title || p.url}: ${p.url} (keyword: ${p.primary_keyword || ''})`).join('\n');
 
     const imageNote = keep_images_urls ? `\nBESTAANDE AFBEELDINGEN BEWAREN (gebruik deze URLs):\n${keep_images_urls}` : '';
+    let _krRow = [];
+    try { _krRow = (await pool.query("SELECT value FROM app_settings WHERE key='rewrite_keep_rules'")).rows; } catch(e) {}
+    const _krRules = (_krRow.length ? (_krRow[0].value || '') : '- Keep the existing layout, CSS and classes that already work; do not restyle or reorder sections that are fine.\n- Reuse the existing images (keep their current src and alt); never invent image URLs or use placeholders.\n- Output the page CONTENT only: no menu / navigation, no footer, no scan badge (the site template adds those).').trim();
+    const keepRulesBlock = _krRules ? `\n\u2550\u2550\u2550 STRICT OUTPUT RULES (MANDATORY) \u2550\u2550\u2550\n${_krRules}\n` : '';
 
     const profBiR = await pool.query(`SELECT business_info, sitemap_url, domain, author_name, author_bio, author_location FROM content_profiles WHERE id=$1`, [rw.profile_id]);
     const profBi = profBiR.rows[0] || {};
@@ -17809,7 +17825,7 @@ ${internalLinksRW}
 JSON-LD SCHEMA'S (toevoegen voor </article>):
 <script type="application/ld+json">${JSON.stringify(schemaObjRW)}</script>
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"${analysis.recommended_title||rw.original_title}","datePublished":"${schemaDatePublished}","dateModified":"${schemaDateModified}","author":{"@type":"Person","name":"${author.name}","url":"${author.url || 'https://contentscale.site/about'}"}}</script>
-${imageNote}
+${imageNote}${keepRulesBlock}
 
 ═══════════════════════════════════════
 HET TEMPLATE — VUL ALLE PLACEHOLDERS IN, VERANDER HTML-STRUCTUUR NIET
@@ -17871,7 +17887,7 @@ VOICE SEARCH (verwerk als FAQ-vragen en directe antwoorden): ${(Array.isArray(an
 
 INTERNE LINKS: ${internalLinksRW}
 MONEY PAGES: ${moneyPages}
-${imageNote}
+${imageNote}${keepRulesBlock}
 
 BESTAANDE JSON-LD SCHEMA'S (behoud exact — update ALLEEN dateModified naar "${schemaDateModified}", datePublished NOOIT aanpassen):
 ${(layoutSkeleton.schemaBlocks||[]).slice(0,3).map((s,i)=>`--- Schema ${i+1} ---\n${s.slice(0,400)}`).join('\n\n')}
@@ -17941,7 +17957,7 @@ SECONDARY: ${(Array.isArray(analysis.secondary_keywords)?analysis.secondary_keyw
 
 INTERNE LINKS: ${internalLinksRW}
 MONEY PAGES: ${moneyPages}
-${imageNote}
+${imageNote}${keepRulesBlock}
 
 Geef ALLEEN HTML terug vanaf <article>. Geen markdown. Eindig met <!-- word_count: X -->.`;
     }
@@ -29836,6 +29852,11 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                             <input id="settingEngineBriefEmails" type="text" class="tr-input" style="width:100%;max-width:360px;" placeholder="you@x.com, team@y.com">
                             <div style="font-size:11px;color:#4b5563;margin-top:4px;">Recipients for the Content Engine &quot;Copy Master Brief &rarr; External AI&quot; email. Comma-separated for multiple. Leave empty to disable.</div>
                         </div>
+                        <div style="margin-bottom:16px;">
+                            <label style="display:block;font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;">Rewrite KEEP rules (internal + external)</label>
+                            <textarea id="settingKeepRules" class="tr-input" style="width:100%;max-width:520px;min-height:92px;font-family:monospace;font-size:12px;line-height:1.5;" placeholder="- Keep existing layout/CSS&#10;- Reuse existing images&#10;- No menu/footer/badge"></textarea>
+                            <div style="font-size:11px;color:#4b5563;margin-top:4px;">Applied to BOTH the internal full rewrite and the external Master Brief. Edit to change; clear the box to disable.</div>
+                        </div>
                         <button onclick="saveAdminSettings()" class="tr-btn" style="border-color:#4ade80;color:#4ade80;font-weight:700;">Save Email Settings</button>
                         <span id="settingsSaved" style="display:none;font-size:12px;color:#4ade80;margin-left:10px;">✓ Saved</span>
                         <button onclick="checkBrevoStatus()" class="tr-btn" style="border-color:#38bdf8;color:#38bdf8;margin-left:10px;" title="Check Brevo account: verified domains, recent sends, quota">🔍 Check Brevo Status</button>
@@ -31796,6 +31817,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 document.getElementById('settingContactEmail').value = s.contact_email || '';
                 document.getElementById('settingSenderName').value = s.sender_name || '';
                 var _ebe = document.getElementById('settingEngineBriefEmails'); if (_ebe) _ebe.value = s.engine_brief_emails || '';
+                var _kr = document.getElementById('settingKeepRules'); if (_kr) _kr.value = (s.rewrite_keep_rules != null ? s.rewrite_keep_rules : '');
                 var envEl = document.getElementById('settingsEnvInfo');
                 if (envEl) envEl.innerHTML =
                     'FROM_EMAIL: ' + (s.contact_email || 'not set') + '<br>' +
@@ -31901,9 +31923,10 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
             var email = document.getElementById('settingContactEmail').value.trim();
             var name = document.getElementById('settingSenderName').value.trim();
             var briefEmails = (document.getElementById('settingEngineBriefEmails')||{}).value || '';
+            var keepRules = (document.getElementById('settingKeepRules')||{}).value || '';
             if (!email) { alert('Enter an email address'); return; }
             try {
-                var d = await apiCall('/api/admin/settings', 'POST', { contact_email: email, sender_name: name, engine_brief_emails: briefEmails });
+                var d = await apiCall('/api/admin/settings', 'POST', { contact_email: email, sender_name: name, engine_brief_emails: briefEmails, rewrite_keep_rules: keepRules });
                 if (d.success) {
                     var saved = document.getElementById('settingsSaved');
                     if (saved) { saved.style.display='inline'; setTimeout(function(){ saved.style.display='none'; }, 3000); }

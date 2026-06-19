@@ -3107,9 +3107,22 @@ async function copyMasterBrief() {
   parts.push('7. When finished, confirm each HIGH and MEDIUM requirement was applied.');
   parts.push('');
   parts.push('KEEP (do not change):');
-  parts.push('- Layout, CSS and classes that already work \u2014 do not restyle or reorder sections that are fine.');
-  parts.push('- Existing images \u2014 reuse their current src and alt; never invent image URLs or use placeholders.');
-  parts.push('- Output the page CONTENT only \u2014 NO menu / navigation, NO footer, NO scan badge (the site template adds those).');
+  try {
+    var _krRes = await fetch('/api/engine/output-rules', { headers: { 'x-engine-token': ((document.getElementById('engineToken')||{}).value || localStorage.getItem('nexus_engine_token') || '') } });
+    var _krJson = await _krRes.json();
+    var _krRules = (_krJson && _krJson.success && typeof _krJson.rules === 'string') ? _krJson.rules : '';
+    if (_krRules.trim()) {
+      _krRules.split('\n').forEach(function(l){ l = l.trim(); if (l) parts.push(l.charAt(0) === '-' ? l : '- ' + l); });
+    } else {
+      parts.push('- Layout, CSS and classes that already work \u2014 do not restyle or reorder sections that are fine.');
+      parts.push('- Existing images \u2014 reuse their current src and alt; never invent image URLs or use placeholders.');
+      parts.push('- Output the page CONTENT only \u2014 NO menu / navigation, NO footer, NO scan badge (the site template adds those).');
+    }
+  } catch(e) {
+      parts.push('- Layout, CSS and classes that already work \u2014 do not restyle or reorder sections that are fine.');
+      parts.push('- Existing images \u2014 reuse their current src and alt; never invent image URLs or use placeholders.');
+      parts.push('- Output the page CONTENT only \u2014 NO menu / navigation, NO footer, NO scan badge (the site template adds those).');
+  }
   parts.push('');
   parts.push('NOTE: if no GRAAF CONTENTSCORE REQUIREMENTS section appears below, scan the page first at app.contentscale.site \u2014 the brief is incomplete without it.');
   parts.push('');
