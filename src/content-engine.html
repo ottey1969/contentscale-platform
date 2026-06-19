@@ -2022,6 +2022,7 @@ function emailRewrittenHtml(d) {
     if (kw) head += 'Keyword: ' + kw + '\n';
     if (url) head += 'Page: ' + url + '\n';
     if (score != null) head += 'New ContentScore: ' + score + '/100\n';
+    if (d && d.title) head += 'Recommended TITLE: ' + d.title + '\n';
     head += '\n----- HTML BELOW (copy, edit, then publish) -----\n\n';
     var token = (document.getElementById('engineToken')||{}).value || localStorage.getItem('nexus_engine_token') || '';
     fetch('/api/engine/brief-email', {
@@ -3125,6 +3126,7 @@ async function copyMasterBrief() {
   parts.push('4. Match or beat the winning RANKING FORMULA below (sections, schema, depth).');
   parts.push('5. Add the listed schema types as JSON-LD (e.g. LocalBusiness + FAQPage).');
   parts.push('6. Write in a natural, experience-led tone (E-E-A-T). No fluff, no invented stats or fake reviews.');
+  parts.push('TITLE + META (CTR-critical): provide an SEO title (max 60 chars, focus keyword first) and meta description (max 155 chars). They MUST be FAR more click-worthy than the current ones \u2014 lead with the strongest benefit/hook, be specific, create curiosity or urgency. State OLD vs NEW. These go into Rank Math (changing HTML does not update Rank Math).');
   parts.push('7. When finished, confirm each HIGH and MEDIUM requirement was applied.');
   parts.push('');
   parts.push('KEEP (do not change):');
@@ -7301,7 +7303,12 @@ async function runSerpSpy() {
   btn.disabled = true;
   btn.textContent = '⏳ Analyzing…';
   stat.textContent = 'Step 1: Cataloging SERP results…';
-  result.innerHTML = '<div style="text-align:center;padding:40px;color:#6b7280;">🔍 Running 4-Step SERP analysis — Claude is searching, scraping body content, and building your intelligence report. This takes 30–60 seconds.</div>';
+  result.innerHTML = '<div style="text-align:center;padding:40px 20px;color:#9ca3af;">'
+    + '<div style="width:44px;height:44px;margin:0 auto 18px;border:3px solid rgba(167,139,250,.18);border-top-color:#a78bfa;border-radius:50%;animation:csSpin .8s linear infinite;"></div>'
+    + '<div style="font-size:13px;font-weight:700;color:#c4b5fd;">🔍 Running 4-Step SERP analysis</div>'
+    + '<div style="font-size:11px;margin-top:6px;line-height:1.5;">Claude is searching, scraping body content and building your intelligence report…</div>'
+    + '<div id="spyPhase" style="font-size:10px;margin-top:12px;color:#6b7280;">~20–40 seconds</div>'
+    + '<style>@keyframes csSpin{to{transform:rotate(360deg)}}</style></div>';
 
   // Animate status messages
   var steps = [
@@ -7462,7 +7469,7 @@ function spySendToAgentWithHtml() {
       var _arm = window._autoRewriteMode || (localStorage.getItem('cs_rewrite_mode')||'auto');
       if (_arm === 'auto') { var _ap = (spy && spy.live_position) || 0; _arm = (_ap && _ap <= 10) ? 'surgical' : 'full'; }
       parts.push('\nREWRITE MODE: ' + _arm.toUpperCase() + (_arm === 'surgical' ? ' \u2014 edit the EXISTING page only; keep layout, CSS and images; preserve rankings.' : ' \u2014 full rewrite allowed (page ranks poorly / page 2+).'));
-      parts.push('ALWAYS end your answer with a recommended SEO TITLE (max 60 chars, focus keyword first) and META DESCRIPTION (max 155 chars), stated separately so they can be pasted into Rank Math (changing the HTML does NOT update Rank Math automatically).');
+      parts.push('ALWAYS end with a recommended SEO TITLE (max 60 chars, focus keyword first) and META DESCRIPTION (max 155 chars), stated separately for Rank Math. CTR-CRITICAL: the new title + meta MUST be FAR more click-worthy than the current ones \u2014 lead with the strongest benefit/hook, be specific, create curiosity or urgency, no fluff. Show OLD vs NEW so the gain can be checked. (Changing the HTML does NOT update Rank Math automatically.)');
   // Build full three-layer context — spy found X, live page has Y, agent adds only Z
   if (window._lastSpyData) {
     var s = window._lastSpyData;

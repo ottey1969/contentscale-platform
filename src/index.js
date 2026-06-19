@@ -34114,7 +34114,7 @@ app.post('/api/tracker/serp-spy', verifyEngineAccess, async (req, res) => {
     console.warn('[serp-spy] SERPAPI_KEY not set — cannot fetch SERP results');
   }
   if (!serpUrls.length) return res.status(502).json({success:false,error:'Could not fetch SERP results — check SERPAPI_KEY is set in Railway environment'});
-  const top5 = serpUrls.slice(0,5);
+  const top5 = serpUrls.slice(0,3);
   // If user pasted live HTML, use it directly — more accurate than parser
   let clientScrape;
   if (live_html && live_html.trim().length > 100) {
@@ -34145,7 +34145,7 @@ Return ONLY valid JSON:
 {"keyword":"${keyword}","search_intent":"informational|commercial|transactional","ai_overview_blueprint":"steps to get cited","step1_catalog":[{"rank":1,"domain":"domain","url":"https://...","title":"page title","content_type":"service page|guide|landing page|blog","estimated_word_count":2000,"serp_features":["Featured Snippet","People Also Ask"],"schema_types":["FAQPage","LocalBusiness"],"freshness":"2024|not visible","ai_overview_eligible":true,"snippet_text":"google snippet text"}],"step2_pattern":{"the_ranking_formula":"ONE sentence","dominant_content_format":"format","dominant_schema":"schema","dominant_word_count_range":"range","top3_shared_traits":["trait"],"bottom_missing_traits":["missing"],"freshness_pattern":"pattern"},"step3_outlier":{"domain":"domain","rank":4,"why_breaks_pattern":"reason","why_it_ranks_anyway":"reason","signal_type":"warning|opportunity","what_to_learn":"insight"},"step4_missing":[{"gap":"topic","gap_type":"warning|opportunity","how_to_exploit":"action"}],"entity_gaps_priority":[{"entity":"term","priority":"high|medium|low","where_to_add":"location"}],"content_brief":{"recommended_format":"format","recommended_word_count":2200,"recommended_schema":["FAQPage"],"must_have_h2s":["h2"],"must_cover_entities":["entity"],"faq_questions":["Q"]},"paa_questions":["Q1","Q2","Q3"],"action_plan":[{"step":1,"priority":"high","action":"action","effort":"low|medium|high","time_to_impact":"days|weeks"}],"quick_wins":[{"win":"action","reason":"why","effort_minutes":20}],"client_vs_best":"${myUrl?'specific gap analysis':'no client URL'}","confidence":"high|medium|low"}`;
   try {
     const ctrl2=new AbortController();setTimeout(()=>ctrl2.abort(),55000);
-    const r2=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':anthropicKey,'anthropic-version':'2023-06-01'},body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:4000,messages:[{role:'user',content:prompt}]}),signal:ctrl2.signal});
+    const r2=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':anthropicKey,'anthropic-version':'2023-06-01'},body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:3000,messages:[{role:'user',content:prompt}]}),signal:ctrl2.signal});
     const d2=await r2.json().catch(()=>({}));
     if(!r2.ok) throw new Error((d2.error&&d2.error.message)||'Claude '+r2.status);
     const rawText=(d2.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('');
