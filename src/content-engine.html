@@ -3106,6 +3106,11 @@ async function copyMasterBrief() {
   parts.push('6. Write in a natural, experience-led tone (E-E-A-T). No fluff, no invented stats or fake reviews.');
   parts.push('7. When finished, confirm each HIGH and MEDIUM requirement was applied.');
   parts.push('');
+  parts.push('KEEP (do not change):');
+  parts.push('- Layout, CSS and classes that already work \u2014 do not restyle or reorder sections that are fine.');
+  parts.push('- Existing images \u2014 reuse their current src and alt; never invent image URLs or use placeholders.');
+  parts.push('- Output the page CONTENT only \u2014 NO menu / navigation, NO footer, NO scan badge (the site template adds those).');
+  parts.push('');
   parts.push('NOTE: if no GRAAF CONTENTSCORE REQUIREMENTS section appears below, scan the page first at app.contentscale.site \u2014 the brief is incomplete without it.');
   parts.push('');
 
@@ -3351,6 +3356,25 @@ async function copyMasterBrief() {
   if (parts.length < 5) { parts.push('No brief yet. Run Spy + Send to Internal Agent first.'); }
 
   // Strip markdown artifacts that bleed through from AI responses
+  // ── Attach current page HTML so the external AI can do SURGICAL edits ──
+  try {
+    var _curHtml = '';
+    try { _curHtml = (document.getElementById('serpSpyHtml')||{}).value || (document.getElementById('rewriteHtml')||{}).value || (_context && _context.html) || ''; } catch(e) {}
+    _curHtml = (_curHtml || '').trim();
+    if (_curHtml.length > 200) {
+      var _CAP = 60000, _trunc = _curHtml.length > _CAP;
+      if (_trunc) _curHtml = _curHtml.slice(0, _CAP);
+      parts.push('');
+      parts.push(sep);
+      parts.push('CURRENT PAGE HTML — EDIT THIS (SURGICAL)');
+      parts.push(sep);
+      parts.push('This is the live page. For SURGICAL mode, return THIS HTML with ONLY the fixes applied — keep all layout, CSS classes and images; remove nothing that works.');
+      if (_trunc) parts.push('[NOTE: HTML truncated to ' + _CAP + ' chars — paste the full HTML manually if the page is longer.]');
+      parts.push(_curHtml);
+      parts.push('');
+    }
+  } catch(e) {}
+
   var briefText = parts.join('\n')
     .replace(/\*\*/g, '')
     .replace(/^#{1,6}\s+/gm, '')
