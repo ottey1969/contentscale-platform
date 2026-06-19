@@ -4169,6 +4169,9 @@ function renderTrackerList() {
     (aiCount ? '<span style="font-size:11px;font-weight:700;background:rgba(124,58,237,.1);border:1px solid rgba(124,58,237,.25);color:#a78bfa;padding:3px 10px;border-radius:20px;">⚡ ' + aiCount + ' AI Citation</span>' : '') +
     (dueCount ? '<span id="checkAllDueBadge" style="font-size:11px;font-weight:700;background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.3);color:#f87171;padding:3px 10px;border-radius:20px;">🔴 ' + dueCount + ' due</span>' : '<span style="font-size:11px;background:rgba(52,211,153,.07);border:1px solid rgba(52,211,153,.2);color:#34d399;padding:3px 10px;border-radius:20px;">✅ All checked</span>') +
     '<div style="margin-left:auto;display:flex;align-items:center;gap:8px;">' +
+    '<label style="display:flex;align-items:center;gap:5px;font-size:10px;color:#a78bfa;cursor:pointer;font-weight:700;" title="When ON, pressing a page Spy & Brief automatically emails the full brief and sends HTML + ContentScore + brief to the internal agent, which writes."><input type="checkbox" id="autoAgentToggle" ' + (localStorage.getItem('cs_auto_agent')==='1'?'checked':'') + ' onchange="localStorage.setItem(\'cs_auto_agent\',this.checked?\'1\':\'0\')" style="accent-color:#a78bfa;"> ⚡ Auto → agent</label>' +
+    '<select id="rewriteModeSelect" title="Surgical = edit existing page (safe, page 1). Full = rewrite (page 2+). Auto picks by ranking: pos &le;10 surgical, &gt;10 full." onchange="localStorage.setItem(\'cs_rewrite_mode\',this.value)" style="font-size:10px;background:#1f2937;color:#cbd5e1;border:1px solid #374151;border-radius:5px;padding:4px 6px;cursor:pointer;"><option value="auto" ' + (((localStorage.getItem('cs_rewrite_mode')||'auto')==='auto')?'selected':'') + '>Mode: Auto (by ranking)</option><option value="surgical" ' + ((localStorage.getItem('cs_rewrite_mode')==='surgical')?'selected':'') + '>Mode: Surgical</option><option value="full" ' + ((localStorage.getItem('cs_rewrite_mode')==='full')?'selected':'') + '>Mode: Full rewrite</option></select>' +
+
     '<label style="display:flex;align-items:center;gap:5px;font-size:10px;color:#9ca3af;cursor:pointer;" title="Bulk SERP scans cost paid Serper calls per page. OFF by default for safety."><input type="checkbox" id="allowBulkSerp" style="accent-color:#fbbf24;"> Allow bulk SERP</label>' +
     (dueCount ? '<button onclick="checkAllDue()" id="checkAllDueBtn" style="font-size:11px;font-weight:700;padding:5px 12px;border-radius:6px;border:none;background:linear-gradient(135deg,#7c3aed,#1d4ed8);color:#fff;cursor:pointer;">▶ Check All Due (' + dueCount + ')</button>' : '') +
     '<button onclick="forceCheckAll()" title="Force-check ALL pages now, ignoring schedule" style="font-size:11px;font-weight:700;padding:5px 12px;border-radius:6px;border:1px solid rgba(251,191,36,.3);background:rgba(251,191,36,.07);color:#fbbf24;cursor:pointer;">↻ Force All</button>' +
@@ -4393,7 +4396,6 @@ function renderTrackerList() {
         '<button onclick="refreshMetaIntel(' + p.id + ',this)" style="margin-top:6px;font-size:9px;padding:3px 8px;border-radius:4px;border:1px solid rgba(124,58,237,.3);background:transparent;color:#a78bfa;cursor:pointer;">↻ Refresh</button>' +
       '</div>' : '<button onclick="getMetaIntel(' + p.id + ',\'' + escHtml(p.url||'') + '\',\'' + escHtml(p.keyword||'') + '\',this)" style="margin:4px 0 2px;font-size:9px;padding:3px 10px;border-radius:4px;border:1px solid rgba(124,58,237,.2);background:rgba(124,58,237,.06);color:#a78bfa;cursor:pointer;font-weight:700;">📋 Get Best Title / Desc / H1</button>') +
       '<div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0;">' +
-        '<button onclick="runTrackerCheck('+p.id+',this)" style="font-size:10px;padding:4px 8px;border-radius:5px;border:1px solid rgba(167,139,250,.3);background:rgba(167,139,250,.08);color:#a78bfa;cursor:pointer;">▶ Check</button>' +
         (pri.action === 'rewrite' ?
           '<button onclick="openSerpSpy('+p.id+')" style="font-size:10px;padding:5px 10px;border-radius:5px;border:none;background:linear-gradient(135deg,#7c3aed,#0f766e);color:#fff;cursor:pointer;font-weight:800;">Spy & Brief <span style="font-size:9px;opacity:.6;">step 2</span></button>'
         : pri.action === 'surgical' ?
@@ -4890,7 +4892,6 @@ async function openTrackerDetail(pageId) {
 
     body.innerHTML = scoreHtml + chartHtml + timelineHtml + recsHtml +
       '<div style="display:flex;gap:8px;">' +
-      '<button onclick="runTrackerCheck('+pageId+',this)" style="padding:7px 14px;border-radius:6px;font-size:11px;cursor:pointer;border:1px solid rgba(255,255,255,.1);background:transparent;color:#9ca3af;">▶ Run Check</button>' +
       '<button onclick="trPushToAgent('+pageId+')" style="padding:7px 14px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;border:none;background:rgba(245,109,0,.15);color:#f56d00;border:1px solid rgba(245,109,0,.3);">→ Push to Agent</button>' +
       '<button onclick="document.getElementById(\'trDetailModal\').style.display=\'none\'" style="padding:7px 14px;border-radius:6px;font-size:11px;cursor:pointer;border:1px solid rgba(255,255,255,.1);background:transparent;color:#9ca3af;">Close</button>' +
       '</div>';
@@ -7345,6 +7346,18 @@ async function runSerpSpy() {
         '</div>' +
         (_spyRec ? '<div style="width:100%;font-size:10px;color:#9ca3af;margin-top:4px;padding:6px 8px;background:rgba(255,255,255,.03);border-radius:5px;">💡 ' + escHtml(_spyRec) + '</div>' : '');
       result.appendChild(actDiv);
+        if (localStorage.getItem('cs_auto_agent') === '1') {
+          try {
+            window._lastSpyKeyword = kw; window._lastSpyUrl = url;
+            var _m = localStorage.getItem('cs_rewrite_mode') || 'auto';
+            var _pg = (_trPages||[]).find(function(p){ return p.url === url; });
+            var _pos = (d.spy && d.spy.live_position) || (_pg && _pg.gsc_position) || 0;
+            window._autoRewriteMode = (_m === 'auto') ? ((_pos && _pos <= 10) ? 'surgical' : 'full') : _m;
+            try { copyMasterBrief(); } catch(e) {}
+            setTimeout(function(){ try { spySendToAgentWithHtml(); } catch(e){} }, 600);
+            toast('⚡ Auto: full brief emailed + sent to agent (' + window._autoRewriteMode + ')', 4500, 'ok');
+          } catch(e) {}
+        }
       // Store spy data for button handlers
       window._lastSpyData = d.spy;
       window._lastSpyKeyword = kw;
@@ -7410,6 +7423,10 @@ function spySendToAgentWithHtml() {
 
   parts.push('\n---');
   parts.push('I need you to analyse the gap between my page and rank 1.');
+      var _arm = window._autoRewriteMode || (localStorage.getItem('cs_rewrite_mode')||'auto');
+      if (_arm === 'auto') { var _ap = (spy && spy.live_position) || 0; _arm = (_ap && _ap <= 10) ? 'surgical' : 'full'; }
+      parts.push('\nREWRITE MODE: ' + _arm.toUpperCase() + (_arm === 'surgical' ? ' \u2014 edit the EXISTING page only; keep layout, CSS and images; preserve rankings.' : ' \u2014 full rewrite allowed (page ranks poorly / page 2+).'));
+      parts.push('ALWAYS end your answer with a recommended SEO TITLE (max 60 chars, focus keyword first) and META DESCRIPTION (max 155 chars), stated separately so they can be pasted into Rank Math (changing the HTML does NOT update Rank Math automatically).');
   // Build full three-layer context — spy found X, live page has Y, agent adds only Z
   if (window._lastSpyData) {
     var s = window._lastSpyData;
