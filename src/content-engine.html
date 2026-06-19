@@ -3346,6 +3346,21 @@ async function copyMasterBrief() {
     briefText = beforeGraaf + '\n\n' + graafSection;
   }
 
+  // Email the Master Brief to the admin-configured recipients (engine_brief_emails)
+  try {
+    var _ebToken = '';
+    try { _ebToken = (document.getElementById('engineToken')||{}).value || localStorage.getItem('nexus_engine_token') || ''; } catch(e) {}
+    var _ebUrl = window._lastSpyUrl || (_context && _context.url) || '';
+    var _ebKw  = window._lastSpyKeyword || '';
+    fetch('/api/engine/brief-email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-engine-token': _ebToken },
+      body: JSON.stringify({ brief: briefText, url: _ebUrl, keyword: _ebKw })
+    }).then(function(r){ return r.json(); }).then(function(d){
+      if (d && d.success) toast('\ud83d\udce7 Brief emailed to ' + d.sent_to + ' recipient(s)', 3000, 'ok');
+    }).catch(function(){});
+  } catch(e) {}
+
   try {
     await navigator.clipboard.writeText(briefText);
     updateWorkflowStep(5);

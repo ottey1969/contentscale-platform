@@ -2847,8 +2847,50 @@ app.post('/api/admin/settings', verifyAdmin, async (req, res) => {
       await pool.query(`INSERT INTO app_settings (key, value, updated_at) VALUES ('sender_name', $1, NOW()) ON CONFLICT (key) DO UPDATE SET value=$1, updated_at=NOW()`, [sender_name]);
       process.env.SENDER_NAME = sender_name;
     }
+    if (typeof req.body.engine_brief_emails === 'string') {
+      await pool.query(`INSERT INTO app_settings (key, value, updated_at) VALUES ('engine_brief_emails', $1, NOW()) ON CONFLICT (key) DO UPDATE SET value=$1, updated_at=NOW()`, [req.body.engine_brief_emails.trim()]);
+    }
     res.json({ success: true });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// ── Engine: email the Master Brief to admin-configured recipients ─────────
+app.post('/api/engine/brief-email', verifyEngineAccess, async (req, res) => {
+  try {
+    if (!pool) return res.json({ success: false, error: 'No DB' });
+    const brief = ((req.body && req.body.brief) || '').toString();
+    if (!brief.trim()) return res.json({ success: false, error: 'No brief' });
+    const url = ((req.body && req.body.url) || '').toString().slice(0, 300);
+    const keyword = ((req.body && req.body.keyword) || '').toString().slice(0, 160);
+    const sr = await pool.query("SELECT value FROM app_settings WHERE key='engine_brief_emails'").catch(() => ({ rows: [] }));
+    const raw = ((sr.rows[0] && sr.rows[0].value) || '').trim();
+    const recipients = raw.split(',').map(e => e.trim()).filter(e => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e));
+    if (!recipients.length) return res.json({ success: false, error: 'No engine_brief_emails configured' });
+    const brevoKey = process.env.BREVO_API_KEY || '';
+    if (!brevoKey) return res.json({ success: false, error: 'No BREVO_API_KEY' });
+    const eu = req.engineUser || {};
+    const who = eu.client_name || eu.clientName || eu.code || (eu.isAdmin ? 'admin' : 'engine user');
+    const esc = x => String(x).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const htmlBody = '<div style="font-family:Verdana,Geneva,sans-serif;max-width:680px;margin:0 auto;color:#0f172a;">'
+      + '<div style="background:#0f172a;border-radius:10px 10px 0 0;padding:18px 24px;color:#fff;font-weight:800;">ContentScale Engine \u2014 Master Brief</div>'
+      + '<div style="background:#fff;border:1px solid #e2e8f0;border-top:none;border-radius:0 0 10px 10px;padding:22px 24px;">'
+      + '<p style="font-size:13px;color:#475569;margin:0 0 12px;">Sent by <strong>' + esc(who) + '</strong>'
+      + (url ? ' for <strong>' + esc(url) + '</strong>' : '') + (keyword ? ' \u00b7 keyword: <strong>' + esc(keyword) + '</strong>' : '') + '.</p>'
+      + '<pre style="white-space:pre-wrap;word-break:break-word;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:14px;font-size:12px;line-height:1.55;color:#1e293b;font-family:Consolas,monospace;">' + esc(brief) + '</pre>'
+      + '</div></div>';
+    const resp = await fetch('https://api.brevo.com/v3/smtp/email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'api-key': brevoKey },
+      body: JSON.stringify({
+        to: recipients.map(e => ({ email: e })),
+        sender: { email: process.env.FROM_EMAIL || 'info@contentscale.site', name: process.env.SENDER_NAME || 'ContentScale Engine' },
+        subject: 'Master Brief' + (keyword ? ' \u2014 ' + keyword : (url ? ' \u2014 ' + url : '')),
+        htmlContent: htmlBody
+      })
+    });
+    if (!resp.ok) { const t = await resp.text().catch(() => ''); return res.json({ success: false, error: 'Brevo ' + resp.status + ' ' + t.slice(0, 160) }); }
+    res.json({ success: true, sent_to: recipients.length });
+  } catch (e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
 // GET /api/admin/telegram-status
@@ -29789,6 +29831,11 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                             <label style="display:block;font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;">Sender Name</label>
                             <input id="settingSenderName" type="text" class="tr-input" style="width:100%;max-width:360px;" placeholder="ContentScale Tracker">
                         </div>
+                        <div style="margin-bottom:16px;">
+                            <label style="display:block;font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;">Engine Brief Emails</label>
+                            <input id="settingEngineBriefEmails" type="text" class="tr-input" style="width:100%;max-width:360px;" placeholder="you@x.com, team@y.com">
+                            <div style="font-size:11px;color:#4b5563;margin-top:4px;">Recipients for the Content Engine &quot;Copy Master Brief &rarr; External AI&quot; email. Comma-separated for multiple. Leave empty to disable.</div>
+                        </div>
                         <button onclick="saveAdminSettings()" class="tr-btn" style="border-color:#4ade80;color:#4ade80;font-weight:700;">Save Email Settings</button>
                         <span id="settingsSaved" style="display:none;font-size:12px;color:#4ade80;margin-left:10px;">✓ Saved</span>
                         <button onclick="checkBrevoStatus()" class="tr-btn" style="border-color:#38bdf8;color:#38bdf8;margin-left:10px;" title="Check Brevo account: verified domains, recent sends, quota">🔍 Check Brevo Status</button>
@@ -31748,6 +31795,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 var s = d.settings;
                 document.getElementById('settingContactEmail').value = s.contact_email || '';
                 document.getElementById('settingSenderName').value = s.sender_name || '';
+                var _ebe = document.getElementById('settingEngineBriefEmails'); if (_ebe) _ebe.value = s.engine_brief_emails || '';
                 var envEl = document.getElementById('settingsEnvInfo');
                 if (envEl) envEl.innerHTML =
                     'FROM_EMAIL: ' + (s.contact_email || 'not set') + '<br>' +
@@ -31852,9 +31900,10 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
         async function saveAdminSettings() {
             var email = document.getElementById('settingContactEmail').value.trim();
             var name = document.getElementById('settingSenderName').value.trim();
+            var briefEmails = (document.getElementById('settingEngineBriefEmails')||{}).value || '';
             if (!email) { alert('Enter an email address'); return; }
             try {
-                var d = await apiCall('/api/admin/settings', 'POST', { contact_email: email, sender_name: name });
+                var d = await apiCall('/api/admin/settings', 'POST', { contact_email: email, sender_name: name, engine_brief_emails: briefEmails });
                 if (d.success) {
                     var saved = document.getElementById('settingsSaved');
                     if (saved) { saved.style.display='inline'; setTimeout(function(){ saved.style.display='none'; }, 3000); }
