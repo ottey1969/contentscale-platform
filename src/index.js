@@ -312,7 +312,7 @@ async function callGeminiWithFallback(apiKey, body, primaryModel, fallbackModel,
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-api-key': claudeKey, 'anthropic-version': '2023-06-01', 'anthropic-beta': 'web-search-2025-03-05' },
         body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
+          model: 'claude-sonnet-4-6',
           max_tokens: 4000,
           tools: [{ type: 'web_search_20250305', name: 'web_search' }],
           messages: [{ role: 'user', content: userPrompt }]
@@ -323,7 +323,7 @@ async function callGeminiWithFallback(apiKey, body, primaryModel, fallbackModel,
         const s4Text = (s4Json.content || []).filter(b => b.type === 'text').map(b => b.text).join('\n').trim();
         if (s4Text.length > 100) {
           console.log(`✅ Claude Sonnet phase 4 succeeded`);
-          return { ok: true, status: 200, data: { candidates: [{ content: { parts: [{ text: s4Text }] } }] }, modelUsed: 'claude-sonnet-4-20250514', errorMessage: '' };
+          return { ok: true, status: 200, data: { candidates: [{ content: { parts: [{ text: s4Text }] } }] }, modelUsed: 'claude-sonnet-4-6', errorMessage: '' };
         }
       }
     } catch(e) {
@@ -339,7 +339,7 @@ async function callGeminiWithFallback(apiKey, body, primaryModel, fallbackModel,
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-api-key': claudeKey, 'anthropic-version': '2023-06-01', 'anthropic-beta': 'web-search-2025-03-05' },
         body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
+          model: 'claude-sonnet-4-6',
           max_tokens: 4000,
           tools: [{ type: 'web_search_20250305', name: 'web_search' }],
           messages: [{ role: 'user', content: userPrompt }]
@@ -416,7 +416,7 @@ function _trackAiCall(provider, model, success, errorMsg, durationMs) {
 // callClaudeForWrite — ALL writing goes through Claude
 // Gemini = research/JSON only · Claude = every HTML output
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-async function callClaudeForWrite(systemPrompt, userPrompt, maxTokens = 8000, claudeKey, modelName = 'claude-sonnet-4-20250514') {
+async function callClaudeForWrite(systemPrompt, userPrompt, maxTokens = 8000, claudeKey, modelName = 'claude-sonnet-4-6') {
   const anthropicKey = claudeKey || process.env.ANTHROPIC_API_KEY;
   if (!anthropicKey) throw new Error('Claude API key required — add ANTHROPIC_API_KEY to Railway or provide x-claude-key header');
   const controller = new AbortController();
@@ -2898,7 +2898,7 @@ app.post('/api/engine/brief-email', verifyEngineAccess, async (req, res) => {
       body: JSON.stringify({
         to: recipients.map(e => ({ email: e })),
         sender: { email: process.env.FROM_EMAIL || 'info@contentscale.site', name: process.env.SENDER_NAME || 'ContentScale Engine' },
-        subject: _lbl + (keyword ? ' \u2014 ' + keyword : (url ? ' \u2014 ' + url : '')),
+        subject: _lbl + (keyword ? ' \u2014 ' + keyword : '') + (url ? ' \u2014 ' + url.replace(/^https?:\/\//,'').replace(/\/$/,'') : ''),
         htmlContent: htmlBody
       })
     });
@@ -12348,7 +12348,7 @@ Remember: ONLY companies. If you think of homeowners — replace with property m
     const r = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': process.env.ANTHROPIC_API_KEY||'', 'anthropic-version': '2023-06-01' },
-      body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 1000, messages: [{ role: 'user', content: prompt }] }),
+      body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 1000, messages: [{ role: 'user', content: prompt }] }),
     });
     const d = await r.json();
     const text = d.content?.[0]?.text || '[]';
@@ -14123,7 +14123,7 @@ REQUIREMENTS:
 
       try {
         const draftResult = await callClaude(claudeKey, {
-          model: 'claude-sonnet-4-20250514',
+          model: 'claude-sonnet-4-6',
           max_tokens: 8192,
           messages: [{ role: 'user', content: draftPrompt }]
         });
@@ -14340,7 +14340,7 @@ const COST_RATES = {
   'gemini-2.5-flash-lite': { input: 0.075e-6, output: 0.15e-6 },
   'gemini-2.0-flash': { input: 0.075e-6, output: 0.30e-6 },
   'gemini-1.5-flash-001': { input: 0.075e-6, output: 0.30e-6 },
-  'claude-sonnet-4-20250514': { input: 3.00e-6, output: 15.00e-6 },
+  'claude-sonnet-4-6': { input: 3.00e-6, output: 15.00e-6 },
   'claude-haiku-4-5-20251001': { input: 1.00e-6, output: 5.00e-6 },
   'perplexity-sonar':     { input: 1.00e-6, output: 1.00e-6 },
   'perplexity-sonar-pro': { input: 3.00e-6, output: 15.00e-6 },
@@ -16169,10 +16169,10 @@ OUTPUT ONLY COMPLETE HTML.`;
 
     let htmlContent;
     try {
-      htmlContent = await callClaudeForWrite(systemPrompt, userPrompt, 12000, claudeKey, 'claude-sonnet-4-20250514');
+      htmlContent = await callClaudeForWrite(systemPrompt, userPrompt, 12000, claudeKey, 'claude-sonnet-4-6');
     } catch(claudeErr) {
       console.error('Claude Sonnet 4 failed, trying 3.7 fallback:', claudeErr.message);
-      htmlContent = await callClaudeForWrite(systemPrompt, userPrompt, 12000, claudeKey, 'claude-sonnet-4-20250514');
+      htmlContent = await callClaudeForWrite(systemPrompt, userPrompt, 12000, claudeKey, 'claude-sonnet-4-6');
     }
 
     if (!htmlContent || htmlContent.length < 100) {
@@ -16207,7 +16207,7 @@ OUTPUT ONLY COMPLETE HTML.`;
       try {
         const inputTokens = Math.round(systemPrompt.length / 4) + Math.round(userPrompt.length / 4);
         const outputTokens = Math.round((htmlContent || '').length / 4);
-        await trackApiCost(codeIdForCost, 'write', 'claude-sonnet-4-20250514', inputTokens, outputTokens, `Write: ${brief.title || job.seed_keyword}`);
+        await trackApiCost(codeIdForCost, 'write', 'claude-sonnet-4-6', inputTokens, outputTokens, `Write: ${brief.title || job.seed_keyword}`);
       } catch(costErr) { console.warn('[write] Cost tracking failed:', costErr.message); }
     }
 
@@ -16711,7 +16711,7 @@ app.post('/api/content/video-search', verifyEngineAccess, async (req, res) => {
 // Helper: write with Claude if available, else Gemini
 async function callAiForWrite(sys, prompt, maxTokens, claudeKey, geminiKey) {
   if (claudeKey) {
-    return await callClaudeForWrite(sys, prompt, maxTokens, claudeKey, 'claude-sonnet-4-20250514');
+    return await callClaudeForWrite(sys, prompt, maxTokens, claudeKey, 'claude-sonnet-4-6');
   }
   if (geminiKey) {
     const body = { contents: [{ role: 'user', parts: [{ text: sys + '\n\n' + prompt }] }], generationConfig: { maxOutputTokens: maxTokens || 8000, temperature: 0.7 } };
@@ -17995,7 +17995,7 @@ Geef ALLEEN HTML terug vanaf <article>. Geen markdown. Eindig met <!-- word_coun
           const sys = 'You are an elite SEO content writer and HTML engineer. Rewrite HTML pages to rank higher while preserving layout, author, CSS, and branding exactly. Return only HTML — no markdown, no code fences.';
           const promptCapped = promptThisAttempt.length > 150000 ? promptThisAttempt.slice(0, 150000) + '\n\n[Content truncated — complete the rewrite with what you have]' : promptThisAttempt;
           rawHtml = await callClaudeForWrite(sys, promptCapped, 10000, claudeRwKey);
-          modelUsed = 'claude-sonnet-4-20250514';
+          modelUsed = 'claude-sonnet-4-6';
         } else {
           // Gemini fallback path
           const gemSys = 'You are an elite SEO content writer and HTML engineer. Rewrite HTML pages to rank higher while preserving layout, author, CSS, and branding exactly. Return only HTML — no markdown, no code fences.';
@@ -18370,7 +18370,7 @@ INSTRUCTIONS:
     let modelUsed = '';
     try {
       if (!useGemini) {
-        htmlContent = await callClaudeForWrite(systemPrompt, userPrompt, 16000, claudeKey, 'claude-sonnet-4-20250514');
+        htmlContent = await callClaudeForWrite(systemPrompt, userPrompt, 16000, claudeKey, 'claude-sonnet-4-6');
         modelUsed = 'claude-sonnet-4-targeted';
       } else {
         const gemResult = await callGeminiWithFallback(geminiKey, {
@@ -18450,7 +18450,7 @@ app.post('/api/ai/chat', verifyEngineAccess, asyncHandler(async (req, res) => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': anthropicKey, 'anthropic-version': '2023-06-01' },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-6',
         max_tokens: 2000,
         system: systemPrompt ? systemPrompt.slice(0, 8000) : '', // cap system prompt
         messages: messages.slice(-10).map(m => ({ role: m.role, content: typeof m.content === 'string' ? m.content.slice(0, 6000) : m.content }))
@@ -18461,7 +18461,7 @@ app.post('/api/ai/chat', verifyEngineAccess, asyncHandler(async (req, res) => {
     const data = await r.json().catch(() => ({}));
     if (!r.ok) throw new Error(data.error?.message || 'Claude ' + r.status);
     const text = data?.content?.[0]?.text || '';
-    res.json({ success: true, text, model: data.model || 'claude-sonnet-4-20250514' });
+    res.json({ success: true, text, model: data.model || 'claude-sonnet-4-6' });
   } catch(e) {
     clearTimeout(timer);
     console.error('[ai/chat]', e.message);
@@ -18484,7 +18484,7 @@ app.post('/api/ai/cluster', verifyEngineAccess, asyncHandler(async (req, res) =>
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': anthropicKey, 'anthropic-version': '2023-06-01' },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-6',
         max_tokens: 4000,
         messages: [{role:'user',content:prompt}],
         tools: [{type:'web_search_20250305',name:'web_search'}]
@@ -18501,7 +18501,7 @@ app.post('/api/ai/cluster', verifyEngineAccess, asyncHandler(async (req, res) =>
       const jsonMatch = text.match(/\{[\s\S]*\}/);
       cluster = jsonMatch ? JSON.parse(jsonMatch[0]) : null;
     } catch(e) { cluster = null; }
-    res.json({ success: true, text, cluster, model: data.model || 'claude-sonnet-4-20250514' });
+    res.json({ success: true, text, cluster, model: data.model || 'claude-sonnet-4-6' });
   } catch(e) {
     clearTimeout(timer);
     console.error('[ai/cluster]', e.message);
@@ -32982,7 +32982,7 @@ Return ONLY valid JSON — no markdown:
         const aResp = await fetch('https://api.anthropic.com/v1/messages', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'x-api-key': anthropicKey, 'anthropic-version': '2023-06-01' },
-          body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 4000, messages: [{ role: 'user', content: briefPrompt }] }),
+          body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 4000, messages: [{ role: 'user', content: briefPrompt }] }),
           signal: ctrl4.signal
         });
         const dur4 = Date.now() - t4;
@@ -34126,9 +34126,9 @@ app.post('/api/tracker/serp-spy', verifyEngineAccess, async (req, res) => {
     clientScrape = { text: liveText, status: 200, fullHtml: live_html };
     console.log('[serp-spy] Using pasted live HTML for client page (' + live_html.length + ' chars)');
   } else {
-    clientScrape = myUrl ? await scrapeBodyText(myUrl, 8000) : { text: '', status: 0, fullHtml: '' };
+    clientScrape = myUrl ? await scrapeBodyText(myUrl, 6000) : { text: '', status: 0, fullHtml: '' };
   }
-  const compScrapes = await Promise.all(top5.map(e=>scrapeBodyText(e.url,6000)));
+  const compScrapes = await Promise.all(top5.map(e=>scrapeBodyText(e.url,4000)));
   const clientAI = clientScrape.fullHtml ? scoreAICitation(clientScrape.fullHtml, clientScrape.text, keyword) : null;
   const stops = new Set(['the','a','an','and','or','in','on','at','to','for','of','with','is','are','was','this','that','it','we','you','they','not','can','all','from']);
   const clientWords = new Set((clientScrape.text||'').toLowerCase().replace(/[^a-z0-9\s]/g,' ').split(/\s+/).filter(w=>w.length>=4&&!stops.has(w)));
@@ -34145,7 +34145,7 @@ Return ONLY valid JSON:
 {"keyword":"${keyword}","search_intent":"informational|commercial|transactional","ai_overview_blueprint":"steps to get cited","step1_catalog":[{"rank":1,"domain":"domain","url":"https://...","title":"page title","content_type":"service page|guide|landing page|blog","estimated_word_count":2000,"serp_features":["Featured Snippet","People Also Ask"],"schema_types":["FAQPage","LocalBusiness"],"freshness":"2024|not visible","ai_overview_eligible":true,"snippet_text":"google snippet text"}],"step2_pattern":{"the_ranking_formula":"ONE sentence","dominant_content_format":"format","dominant_schema":"schema","dominant_word_count_range":"range","top3_shared_traits":["trait"],"bottom_missing_traits":["missing"],"freshness_pattern":"pattern"},"step3_outlier":{"domain":"domain","rank":4,"why_breaks_pattern":"reason","why_it_ranks_anyway":"reason","signal_type":"warning|opportunity","what_to_learn":"insight"},"step4_missing":[{"gap":"topic","gap_type":"warning|opportunity","how_to_exploit":"action"}],"entity_gaps_priority":[{"entity":"term","priority":"high|medium|low","where_to_add":"location"}],"content_brief":{"recommended_format":"format","recommended_word_count":2200,"recommended_schema":["FAQPage"],"must_have_h2s":["h2"],"must_cover_entities":["entity"],"faq_questions":["Q"]},"paa_questions":["Q1","Q2","Q3"],"action_plan":[{"step":1,"priority":"high","action":"action","effort":"low|medium|high","time_to_impact":"days|weeks"}],"quick_wins":[{"win":"action","reason":"why","effort_minutes":20}],"client_vs_best":"${myUrl?'specific gap analysis':'no client URL'}","confidence":"high|medium|low"}`;
   try {
     const ctrl2=new AbortController();setTimeout(()=>ctrl2.abort(),55000);
-    const r2=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':anthropicKey,'anthropic-version':'2023-06-01'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:5000,messages:[{role:'user',content:prompt}]}),signal:ctrl2.signal});
+    const r2=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':anthropicKey,'anthropic-version':'2023-06-01'},body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:4000,messages:[{role:'user',content:prompt}]}),signal:ctrl2.signal});
     const d2=await r2.json().catch(()=>({}));
     if(!r2.ok) throw new Error((d2.error&&d2.error.message)||'Claude '+r2.status);
     const rawText=(d2.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('');
@@ -37114,7 +37114,7 @@ Return ONLY a valid JSON array with exactly 1 string, no markdown:
   const r = await fetch('https://api.anthropic.com/v1/messages', {
     method:'POST',
     headers:{'Content-Type':'application/json','x-api-key':claudeKey,'anthropic-version':'2023-06-01'},
-    body: JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:400,messages:[{role:'user',content:prompt}]})
+    body: JSON.stringify({model:'claude-sonnet-4-6',max_tokens:400,messages:[{role:'user',content:prompt}]})
   });
   const json = await r.json();
   const raw = json.content?.[0]?.text?.trim()||'';
@@ -37325,7 +37325,7 @@ app.post('/boost/my-comment', asyncHandler(async (req,res) => {
   const userCtx = [u.name&&('Name: '+u.name), u.linkedin_url&&('LinkedIn: '+u.linkedin_url), u.notes&&('Background: '+u.notes)].filter(Boolean).join('\n');
   const prompt = 'Generate 1 unique LinkedIn comment for this person.\n\nPOST by '+sess.rows[0].client_name+':\n"'+sess.rows[0].post_text.substring(0,600)+'"\n\nCOMMENTER:\n'+(userCtx||'A LinkedIn professional')+'\n\nRules:\n- 1-3 sentences, adds real value\n- NEVER start with Great post/Love this/This resonates/That\'s exactly/Absolutely\n- No hashtags, no emojis\n- Same language as post\n- Unique to this person\n\nReturn ONLY the comment text.';
 
-  const r = await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':claudeKey,'anthropic-version':'2023-06-01'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:200,messages:[{role:'user',content:prompt}]})});
+  const r = await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':claudeKey,'anthropic-version':'2023-06-01'},body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:200,messages:[{role:'user',content:prompt}]})});
   const json = await r.json();
   const comment = json.content?.[0]?.text?.trim()||'';
 
@@ -37747,7 +37747,7 @@ app.post('/ai/linkedin-strategy', asyncHandler(async (req, res) => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': claudeKey, 'anthropic-version': '2023-06-01', 'anthropic-beta': 'web-search-2025-03-05' },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-6',
         max_tokens: 6000,
         tools: [{ type: 'web_search_20250305', name: 'web_search' }],
         messages: [{ role: 'user', content: customPrompt }]
@@ -37847,7 +37847,7 @@ CRITICAL RULES:
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-api-key': claudeKey, 'anthropic-version': '2023-06-01', 'anthropic-beta': 'web-search-2025-03-05' },
     body: JSON.stringify({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-6',
       max_tokens: 2500,
       tools: [{ type: 'web_search_20250305', name: 'web_search' }],
       messages: [{ role: 'user', content: prompt }]
@@ -37920,7 +37920,7 @@ DM: [text]`;
   const r = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-api-key': claudeKey, 'anthropic-version': '2023-06-01' },
-    body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 800, messages: [{ role: 'user', content: prompt }] })
+    body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 800, messages: [{ role: 'user', content: prompt }] })
   });
 
   const json = await r.json();
