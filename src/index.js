@@ -34078,8 +34078,8 @@ function scoreAICitation(html, bodyText, keyword) {
 app.post('/api/tracker/serp-spy', verifyEngineAccess, async (req, res) => {
   const { keyword, profile_url, page_id, live_html } = req.body;
   if (!keyword) return res.status(400).json({ success: false, error: 'keyword required' });
-  const anthropicKey = process.env.ANTHROPIC_API_KEY;
-  if (!anthropicKey) return res.status(500).json({ success: false, error: 'ANTHROPIC_API_KEY not set' });
+  // brief uses Gemini; Claude is only for the agent
+  if (!process.env.GEMINI_API_KEY) return res.status(500).json({ success: false, error: 'GEMINI_API_KEY not set' });
   const myUrl = (profile_url||'').trim();
   const serperKey = process.env.SERPAPI_KEY; // Serper.dev key (same one used by tracker check)
   let serpUrls = [];
@@ -34144,11 +34144,12 @@ ENTITY GAPS (missing from client, in 2+ competitor pages): ${entityGaps.slice(0,
 Return ONLY valid JSON:
 {"keyword":"${keyword}","search_intent":"informational|commercial|transactional","ai_overview_blueprint":"steps to get cited","step1_catalog":[{"rank":1,"domain":"domain","url":"https://...","title":"page title","content_type":"service page|guide|landing page|blog","estimated_word_count":2000,"serp_features":["Featured Snippet","People Also Ask"],"schema_types":["FAQPage","LocalBusiness"],"freshness":"2024|not visible","ai_overview_eligible":true,"snippet_text":"google snippet text"}],"step2_pattern":{"the_ranking_formula":"ONE sentence","dominant_content_format":"format","dominant_schema":"schema","dominant_word_count_range":"range","top3_shared_traits":["trait"],"bottom_missing_traits":["missing"],"freshness_pattern":"pattern"},"step3_outlier":{"domain":"domain","rank":4,"why_breaks_pattern":"reason","why_it_ranks_anyway":"reason","signal_type":"warning|opportunity","what_to_learn":"insight"},"step4_missing":[{"gap":"topic","gap_type":"warning|opportunity","how_to_exploit":"action"}],"entity_gaps_priority":[{"entity":"term","priority":"high|medium|low","where_to_add":"location"}],"content_brief":{"recommended_format":"format","recommended_word_count":2200,"recommended_schema":["FAQPage"],"must_have_h2s":["h2"],"must_cover_entities":["entity"],"faq_questions":["Q"]},"paa_questions":["Q1","Q2","Q3"],"action_plan":[{"step":1,"priority":"high","action":"action","effort":"low|medium|high","time_to_impact":"days|weeks"}],"quick_wins":[{"win":"action","reason":"why","effort_minutes":20}],"client_vs_best":"${myUrl?'specific gap analysis':'no client URL'}","confidence":"high|medium|low"}`;
   try {
-    const ctrl2=new AbortController();setTimeout(()=>ctrl2.abort(),55000);
-    const r2=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':anthropicKey,'anthropic-version':'2023-06-01'},body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:3000,messages:[{role:'user',content:prompt}]}),signal:ctrl2.signal});
+    const ctrl2=new AbortController();setTimeout(()=>ctrl2.abort(),45000);
+    const geminiKey=process.env.GEMINI_API_KEY; if(!geminiKey) throw new Error('GEMINI_API_KEY required for SERP brief');
+    const r2=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:[{parts:[{text:prompt}]}],generationConfig:{temperature:0.4,maxOutputTokens:4000,responseMimeType:'application/json'}}),signal:ctrl2.signal});
     const d2=await r2.json().catch(()=>({}));
-    if(!r2.ok) throw new Error((d2.error&&d2.error.message)||'Claude '+r2.status);
-    const rawText=(d2.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('');
+    if(!r2.ok) throw new Error((d2.error&&d2.error.message)||'Gemini '+r2.status);
+    const rawText=(d2.candidates&&d2.candidates[0]&&d2.candidates[0].content&&d2.candidates[0].content.parts&&d2.candidates[0].content.parts[0]&&d2.candidates[0].content.parts[0].text)||'';
     let spy=null;try{const m2=rawText.match(/\{[\s\S]*\}/);if(m2)spy=JSON.parse(m2[0]);}catch(e){}
     if(spy){spy._entity_gaps=entityGaps;spy._client_ai_citation=clientAI;spy.keyword=keyword;}
     if(page_id&&spy){try{await pool.query(`UPDATE tracker_pages SET serp_spy=$1,serp_spy_at=NOW() WHERE id=$2`,[JSON.stringify(spy),page_id]);}catch(e){}}
@@ -34160,7 +34161,31 @@ Return ONLY valid JSON:
       }
     } catch(e) {}
     res.json({success:true,spy,live_position:(spy&&spy.live_position)||null,competitors_scraped:top5.length});
-  } catch(e){console.error('[serp-spy]',e.message);res.status(502).json({success:false,error:e.message});}
+  } catch(e){
+    console.error('[serp-spy] Claude analysis failed, returning data-only brief:', e.message);
+    try {
+      let _livePos = null;
+      if (myUrl) { const _md = myUrl.replace(/^https?:\/\//,'').split('/')[0].replace(/^www\./,''); const _m = serpUrls.find(r=>r.url===myUrl)||serpUrls.find(r=>r.domain===_md); if(_m) _livePos=_m.rank; }
+      const fallbackSpy = {
+        keyword,
+        _fallback: true,
+        _fallback_reason: e.message,
+        live_position: _livePos,
+        search_intent: 'unknown',
+        step1_catalog: serpUrls.slice(0,10).map(r=>({rank:r.rank,domain:r.domain,url:r.url,title:r.title||r.domain,snippet_text:r.snippet||''})),
+        step4_missing: entityGaps.slice(0,10).map(g=>({gap:g.entity,gap_type:'opportunity',how_to_exploit:'Add this entity/topic \u2014 it appears in '+g.in_competitor_pages+' competitor pages but not on your page.'})),
+        entity_gaps_priority: entityGaps.slice(0,15).map(g=>({entity:g.entity,priority:(g.in_competitor_pages>=3?'high':'medium'),where_to_add:'body content / headings'})),
+        _entity_gaps: entityGaps,
+        _client_ai_citation: clientAI,
+        content_brief: { recommended_format:'match the top 3 results', must_cover_entities: entityGaps.slice(0,10).map(g=>g.entity), faq_questions: [] },
+        confidence: 'low'
+      };
+      if (page_id) { try { await pool.query(`UPDATE tracker_pages SET serp_spy=$1,serp_spy_at=NOW() WHERE id=$2`,[JSON.stringify(fallbackSpy),page_id]); } catch(_e){} }
+      return res.json({success:true,spy:fallbackSpy,live_position:_livePos,competitors_scraped:top5.length,fallback:true});
+    } catch(e2){
+      return res.status(502).json({success:false,error:e.message});
+    }
+  }
 });
 
 // ── POST /api/tracker/meta-intel — AI-powered best title/desc/H1 ────────────
