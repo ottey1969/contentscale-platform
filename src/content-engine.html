@@ -3088,6 +3088,22 @@ async function copyMasterBrief() {
   var pastedGraaf = (document.getElementById('graafManualInput') || {}).value || '';
   var hasScan = (_context && _context.recs && _context.recs.length > 0) || pastedGraaf.trim().length > 50;
   var hasUrl  = !!(window._lastSpyUrl || (_context && _context.url));
+  // ── TASK BLOCK — always first, tells the external AI exactly what to deliver ──
+  var _kwTop  = window._lastSpyKeyword || (_context && _context.keyword) || '';
+  parts.push('=== YOUR TASK (READ THIS FIRST) ===');
+  parts.push('You are an expert SEO + AEO content writer. Using ALL the data in this brief, produce ONE complete, publish-ready HTML page' + (_kwTop ? ' for the keyword "' + _kwTop + '"' : '') + ' that outranks the current top 10 and is eligible to be cited in Google AI Overviews and Perplexity.');
+  parts.push('');
+  parts.push('WHAT TO DELIVER:');
+  parts.push('1. Output ONLY the full HTML (no explanation, no markdown fences).');
+  parts.push('2. Use the real BUSINESS PROFILE data below (name, phone, address) — never placeholder data.');
+  parts.push('3. Match or beat the winning RANKING FORMULA below (sections, depth, format).');
+  parts.push('4. Implement EVERY item in the GRAAF CONTENTSCORE REQUIREMENTS below — HIGH and MEDIUM are mandatory.');
+  parts.push('5. Add the listed schema types as JSON-LD (e.g. LocalBusiness + FAQPage).');
+  parts.push('6. Write in a natural, experience-led tone (E-E-A-T). No fluff, no invented stats or fake reviews.');
+  parts.push('7. When finished, confirm each HIGH and MEDIUM requirement was applied.');
+  parts.push('');
+  parts.push('NOTE: if no GRAAF CONTENTSCORE REQUIREMENTS section appears below, scan the page first at app.contentscale.site — the brief is incomplete without it.');
+  parts.push('');
 
   // SCAN GATE — bypass if user pasted GRAAF recs manually
   if (hasUrl && !hasScan) {

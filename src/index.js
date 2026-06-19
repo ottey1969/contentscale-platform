@@ -2874,8 +2874,8 @@ app.post('/api/engine/brief-email', verifyEngineAccess, async (req, res) => {
     const htmlBody = '<div style="font-family:Verdana,Geneva,sans-serif;max-width:680px;margin:0 auto;color:#0f172a;">'
       + '<div style="background:#0f172a;border-radius:10px 10px 0 0;padding:18px 24px;color:#fff;font-weight:800;">ContentScale Engine \u2014 Master Brief</div>'
       + '<div style="background:#fff;border:1px solid #e2e8f0;border-top:none;border-radius:0 0 10px 10px;padding:22px 24px;">'
-      + '<p style="font-size:13px;color:#475569;margin:0 0 12px;">Sent by <strong>' + esc(who) + '</strong>'
-      + (url ? ' for <strong>' + esc(url) + '</strong>' : '') + (keyword ? ' \u00b7 keyword: <strong>' + esc(keyword) + '</strong>' : '') + '.</p>'
+      + '<p style="font-size:13px;color:#475569;margin:0 0 12px;">Sent by <strong>ContentScale.site</strong> \u2014 Made for <strong>' + esc(who) + '</strong></p>'
+      + ((url || keyword) ? '<p style="font-size:12px;color:#94a3b8;margin:0 0 12px;">' + (url ? 'Page: <strong style="color:#475569;">' + esc(url) + '</strong>' : '') + (url && keyword ? ' \u00b7 ' : '') + (keyword ? 'Keyword: <strong style="color:#475569;">' + esc(keyword) + '</strong>' : '') + '</p>' : '')
       + '<pre style="white-space:pre-wrap;word-break:break-word;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:14px;font-size:12px;line-height:1.55;color:#1e293b;font-family:Consolas,monospace;">' + esc(brief) + '</pre>'
       + '</div></div>';
     const resp = await fetch('https://api.brevo.com/v3/smtp/email', {
