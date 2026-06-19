@@ -6135,6 +6135,7 @@ function openRewriteModal() {
 }
 
 function openRewriteModalWithMode(preselectMode) {
+  try { var _ap = document.getElementById('autoPilotToggle'); if (_ap) _ap.checked = (localStorage.getItem('cs_autopilot') === '1'); } catch(e) {}
   updateWorkflowStep(4);
   var modal = document.getElementById('rewriteModal');
   if (modal && modal.parentNode !== document.body) document.body.appendChild(modal);
@@ -6222,7 +6223,7 @@ async function runRewriteFromModal() {
   var html = document.getElementById('rewriteHtml').value.trim();
   if (!keyword) { toast('Enter a target keyword', 'warn'); return; }
   if (!html) { toast('Paste your page HTML', 'warn'); return; }
-  var modes = getSelectedModes();
+  var modes = ((document.getElementById('autoPilotToggle')||{}).checked) ? ['surgical'] : getSelectedModes();
   var modeLabels = { complete: 'Complete Rewrite', sections: 'Add Sections', meta: 'Better Meta', compete: 'Beat Competitors', voice: 'Voice Search', paa: 'Answer PAA', surgical: 'Surgical Fixes' };
   var modeNames = modes.map(function(m) { return modeLabels[m] || m; }).join(' + ');
 
@@ -8372,6 +8373,10 @@ function renderSerpSpyReport(s) {
         </div>
       </div>
 
+      <label style="display:flex;align-items:flex-start;gap:8px;padding:10px;border-radius:8px;border:1px solid rgba(124,58,237,.35);background:rgba(124,58,237,.08);cursor:pointer;margin-bottom:10px;">
+        <input type="checkbox" id="autoPilotToggle" onchange="try{localStorage.setItem('cs_autopilot',this.checked?'1':'0')}catch(e){}" style="margin-top:2px;accent-color:#7c3aed;">
+        <div><div style="font-size:11px;font-weight:700;color:#e2e8f0;">⚡ Auto-pilot — scan → agent → rewrite (one click)</div><div style="font-size:9px;color:#9ca3af;">When ON, Execute runs the full chain automatically using Surgical fixes (safest — keeps structure, preserves rankings). Turn OFF to pick modes manually.</div></div>
+      </label>
       <div style="display:flex;justify-content:flex-end;gap:8px;">
         <button onclick="closeRewriteModal()" style="padding:7px 14px;border-radius:6px;font-size:11px;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--muted);">Cancel</button>
         <button onclick="runRewriteFromModal()" id="rewriteRunBtn" style="padding:7px 16px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;border:none;background:linear-gradient(135deg,#7c3aed,#1d4ed8);color:#fff;">🚀 Execute Selected</button>
