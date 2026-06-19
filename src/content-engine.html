@@ -7288,15 +7288,23 @@ async function runSerpSpy() {
   // ── Auto GRAAF ContentScore on the pasted HTML (no SERP cost) — fills the brief automatically ──
   try {
     var _spyHtml = (document.getElementById('serpSpyHtml') || {}).value || '';
-    if (_spyHtml.trim().length > 200 && !(_context.recs && _context.recs.length)) {
-      if (stat) stat.textContent = '\u2699\ufe0f Auto GRAAF ContentScore\u2026';
-      var _scan = await api('/api/scan/paste', 'POST', { html: _spyHtml, url: url || 'https://example.com', keyword: kw, profile_id: _context.profileId || (_profile && _profile.id) || null });
-      if (_scan && _scan.success !== false && _scan.recommendations != null) {
+    if (_spyHtml.trim().length > 200 || (url && /^https?:\/\//.test(url))) {
+        _context.score = null; _context.recs = [];  // fresh GRAAF scan is the single source of truth — never keep a stale score
+      if (stat) stat.textContent = '\u2699\ufe0f GRAAF ContentScore (live single scan)\u2026';
+      var _scan = null;
+      // Authoritative GRAAF score = the LIVE single scan (renders JS, same number as the manual single scan). One source of truth.
+      if (url && /^https?:\/\//.test(url)) { try { _scan = await api('/api/scan', 'POST', { url: url }); } catch(e) { _scan = null; } }
+      // Fallback: score the pasted raw HTML only if the live scan failed or no URL was given.
+      if ((!_scan || _scan.success === false || _scan.score == null) && _spyHtml.trim().length > 200) {
+        if (stat) stat.textContent = '\u2699\ufe0f GRAAF ContentScore (pasted HTML fallback)\u2026';
+        try { _scan = await api('/api/scan/paste', 'POST', { html: _spyHtml, url: url || 'https://example.com', keyword: kw, profile_id: _context.profileId || (_profile && _profile.id) || null }); } catch(e) {}
+      }
+      if (_scan && _scan.success !== false && _scan.score != null) {
         _context.score = _scan.score;
         _context.recs = parseRecs(_scan.recommendations);
         _context.url = url || _context.url;
         _context.keyword = kw || _context.keyword;
-        if (typeof toast === 'function') toast('\u2705 GRAAF ContentScore auto-scanned (' + ((_context.recs||[]).length) + ' recs in brief)', 3000, 'ok');
+        if (typeof toast === 'function') toast('\u2705 Fresh GRAAF ContentScore: ' + (_context.score!=null?_context.score+'/100':'\u2014') + ' (' + ((_context.recs||[]).length) + ' recs in brief)', 3500, 'ok');
       }
     }
   } catch(e) { console.warn('[auto-graaf] scan skipped:', e && e.message); }
