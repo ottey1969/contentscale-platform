@@ -7261,6 +7261,21 @@ async function runSerpSpy() {
   var btn = document.getElementById('serpSpyRunBtn');
   var stat = document.getElementById('serpSpyStatus');
   var result = document.getElementById('serpSpyResult');
+  // ── Auto GRAAF ContentScore on the pasted HTML (no SERP cost) — fills the brief automatically ──
+  try {
+    var _spyHtml = (document.getElementById('serpSpyHtml') || {}).value || '';
+    if (_spyHtml.trim().length > 200 && !(_context.recs && _context.recs.length)) {
+      if (stat) stat.textContent = '\u2699\ufe0f Auto GRAAF ContentScore\u2026';
+      var _scan = await api('/api/scan/paste', 'POST', { html: _spyHtml, url: url || 'https://example.com', keyword: kw, profile_id: _context.profileId || (_profile && _profile.id) || null });
+      if (_scan && _scan.success !== false && _scan.recommendations != null) {
+        _context.score = _scan.score;
+        _context.recs = parseRecs(_scan.recommendations);
+        _context.url = url || _context.url;
+        _context.keyword = kw || _context.keyword;
+        if (typeof toast === 'function') toast('\u2705 GRAAF ContentScore auto-scanned (' + ((_context.recs||[]).length) + ' recs in brief)', 3000, 'ok');
+      }
+    }
+  } catch(e) { console.warn('[auto-graaf] scan skipped:', e && e.message); }
 
   btn.disabled = true;
   btn.textContent = '⏳ Analyzing…';
