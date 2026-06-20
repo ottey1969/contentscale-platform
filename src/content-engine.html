@@ -462,6 +462,13 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'DM San
       </div>
     </div>
 
+    <div id="quickStarters" style="display:none;flex-wrap:wrap;gap:6px;padding:0 16px 10px;">
+      <button class="starter-btn" onclick="sendStarter(this)" style="font-size:11px;padding:6px 12px;">What pages should I prioritise?</button>
+      <button class="starter-btn" onclick="sendStarter(this)" style="font-size:11px;padding:6px 12px;">Brief an existing page for rewrite</button>
+      <button class="starter-btn" onclick="sendStarter(this)" style="font-size:11px;padding:6px 12px;">Audit my site's content quality</button>
+      <button class="starter-btn" onclick="sendStarter(this)" style="font-size:11px;padding:6px 12px;">Help me get into AI Overviews</button>
+      <button class="starter-btn" onclick="writeNewPage()" style="font-size:11px;padding:6px 12px;border-color:#34d399;color:#34d399;">✍️ Write a new page</button>
+    </div>
     <div class="input-area">
       <div class="input-wrap">
         <textarea id="chatInput" placeholder="Ask anything about your SEO, content, or rankings…" rows="1" onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
@@ -3152,6 +3159,16 @@ async function copyMasterBrief() {
   var pastedGraaf = (document.getElementById('graafManualInput') || {}).value || '';
   var hasScan = (_context && _context.recs && _context.recs.length > 0) || pastedGraaf.trim().length > 50;
   var hasUrl  = !!(window._lastSpyUrl || (_context && _context.url));
+  // AUTO LIVE GRAAF SCAN: no recs yet but we have a URL -> scan the LIVE page so the brief carries REAL GRAAF data (deterministic, no AI cost)
+  if (!(_context && _context.recs && _context.recs.length > 0) && hasUrl) {
+    try {
+      var _briefUrl = window._lastSpyUrl || (_context && _context.url);
+      toast('Running live GRAAF scan for the brief\u2026', 2500);
+      var _bs = await fetch('/api/scan', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ url: _briefUrl }) }).then(function(r){ return r.ok ? r.json() : null; }).catch(function(){ return null; });
+      if (_bs && _bs.score != null) { _context.score = _bs.score; _context.recs = parseRecs(_bs.recommendations); _context.url = _briefUrl; }
+    } catch(e) {}
+    hasScan = (_context && _context.recs && _context.recs.length > 0) || pastedGraaf.trim().length > 50;
+  }
   // ── TASK BLOCK — always first, tells the external AI exactly what to deliver ──
   var _kwTop  = window._lastSpyKeyword || (_context && _context.keyword) || '';
   parts.push('=== YOUR TASK (READ THIS FIRST) ===');
@@ -3855,6 +3872,7 @@ function setStatus(type, text) {
 }
 
 function hideWelcome() {
+  var _qs=document.getElementById('quickStarters'); if(_qs) _qs.style.display='flex';
   var w = document.getElementById('welcomeScreen');
   if (w) { w.style.transition = 'opacity .3s'; w.style.opacity = '0'; setTimeout(function(){ w.remove(); }, 300); }
 }
