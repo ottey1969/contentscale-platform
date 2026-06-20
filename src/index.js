@@ -2618,6 +2618,31 @@ app.get('/api/admin/test-notify/:clientId', verifyAdmin, async (req, res) => {
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
+app.get('/api/admin/test-engine-email', verifyAdmin, async (req, res) => {
+  try {
+    const sr = await pool.query("SELECT key,value FROM app_settings WHERE key IN ('engine_brief_emails','engine_from_email','engine_sender_name','contact_email')").catch(() => ({ rows: [] }));
+    const m = {}; (sr.rows||[]).forEach(r => { m[r.key] = (r.value||'').trim(); });
+    const recipients = (m.engine_brief_emails||'').split(',').map(e=>e.trim()).filter(e=>/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e));
+    if (!recipients.length) return res.json({ success: false, error: 'No Engine Brief Emails configured \u2014 add your address in the field above and click Save first.' });
+    const brevoKey = process.env.BREVO_API_KEY || '';
+    if (!brevoKey) return res.json({ success: false, error: 'BREVO_API_KEY not set in Railway' });
+    const from = m.engine_from_email || m.contact_email || process.env.FROM_EMAIL || 'info@contentscale.site';
+    const name = m.engine_sender_name || 'ContentScale Engine';
+    const resp = await fetch('https://api.brevo.com/v3/smtp/email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'api-key': brevoKey },
+      body: JSON.stringify({
+        to: recipients.map(e => ({ email: e })),
+        sender: { email: from, name: name },
+        subject: '[ENGINE] Test email \u2014 ContentScale Engine',
+        htmlContent: '<div style="font-family:Verdana,sans-serif;max-width:560px;margin:0 auto;color:#0f172a;"><h2>\u2705 Engine email works</h2><p>This is a test from your ContentScale Content Engine settings. If you received this, your engine sender (' + name + ' &lt;' + from + '&gt;) and Brevo are configured correctly.</p><p style="font-size:12px;color:#64748b;">Sent to: ' + recipients.join(', ') + '</p></div>'
+      })
+    });
+    if (!resp.ok) { const t = await resp.text().catch(()=>''); return res.json({ success: false, error: 'Brevo ' + resp.status + ' ' + t.slice(0,160) }); }
+    res.json({ success: true, sent_to: recipients, from: from });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
 // GET /api/admin/brevo-status — check Brevo account: verified domains, quota, recent sends
 app.get('/api/admin/brevo-status', verifyAdmin, async (req, res) => {
   try {
@@ -31917,34 +31942,14 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
             resultEl.style.display = 'block';
             resultEl.style.background = '#0f172a';
             resultEl.style.border = '1px solid #1e3a5f';
-            resultEl.innerHTML = '<span style="color:#38bdf8;">Sending test email...</span>';
+            resultEl.innerHTML = '<span style="color:#38bdf8;">Sending test engine email...</span>';
             try {
-                // Find a client with an email
-                var clients = await apiCall('/api/admin/tracker-clients');
-                if (!clients.success || !clients.clients || !clients.clients.length) {
-                    resultEl.innerHTML = '<span style="color:#f59e0b;">⚠️ No tracker clients found. Create a tracker first.</span>';
-                    return;
-                }
-                var client = clients.clients.find(function(c){ return c.email; });
-                if (!client) {
-                    resultEl.innerHTML = '<span style="color:#f59e0b;">⚠️ No client with email found. Add an email to a tracker client first.</span>';
-                    return;
-                }
-                var d = await apiCall('/api/admin/test-notify/' + client.id, 'GET');
-                if (!d.success) { resultEl.innerHTML = '<span style="color:#ef4444;">Error: ' + (d.error || 'Failed') + '</span>'; return; }
-                var r = d.results;
-                if (r.email && r.email.indexOf('sent') > -1) {
-                    resultEl.innerHTML = '<span style="color:#4ade80;">✅ Test email ' + r.email + '</span><br><span style="color:#6b7280;font-size:10px;">Check inbox/spam. If not received in 2 min, Brevo domain verification may still be pending.</span>';
-                    resultEl.style.border = '1px solid #166534';
-                    resultEl.style.background = '#052e16';
-                } else if (r.email === 'no email on file') {
-                    resultEl.innerHTML = '<span style="color:#f59e0b;">⚠️ Client has no email on file</span>';
-                } else if (r.email && r.email.indexOf('ERROR') > -1) {
-                    resultEl.innerHTML = '<span style="color:#ef4444;">❌ ' + r.email + '</span>';
-                } else {
-                    resultEl.innerHTML = '<span style="color:#f59e0b;">⚠️ ' + (r.email || 'Brevo key: ' + r.brevo_key) + '</span>';
-                }
-            } catch(e) { resultEl.innerHTML = '<span style="color:#ef4444;">Error: ' + e.message + '</span>'; }
+                var d = await apiCall('/api/admin/test-engine-email', 'GET');
+                if (!d || !d.success) { resultEl.innerHTML = '<span style="color:#ef4444;">\u274c ' + ((d && d.error) || 'Failed') + '</span>'; return; }
+                resultEl.innerHTML = '<span style="color:#4ade80;">\u2705 Test email sent to ' + (d.sent_to||[]).join(', ') + ' (from ' + (d.from||'') + ')</span><br><span style="color:#6b7280;font-size:10px;">Check inbox/spam. If not received in 2 min, your engine FROM domain may need Brevo verification.</span>';
+                resultEl.style.border = '1px solid #166534';
+                resultEl.style.background = '#052e16';
+            } catch(e) { resultEl.innerHTML = '<span style="color:#ef4444;">Error: ' + (e.message || e) + '</span>'; }
         }
 
         async function saveAdminSettings() {
