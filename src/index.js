@@ -33212,6 +33212,30 @@ app.get('/api/tracker/pages', verifyEngineAccess, async (req, res) => {
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
+app.get('/api/tracker/diagnose', verifyEngineAccess, async (req, res) => {
+  try {
+    const eu = req.engineUser;
+    const codeId = (eu && !eu.isAdmin) ? eu.codeId : null;
+    const totals = await pool.query(
+      `SELECT COUNT(*)::int AS grand_total,
+              COUNT(*) FILTER (WHERE engine_code_id = $1)::int AS under_this_engine,
+              COUNT(*) FILTER (WHERE engine_code_id IS NULL)::int AS null_engine,
+              COUNT(*) FILTER (WHERE engine_code_id IS NOT NULL AND engine_code_id <> $1)::int AS other_engine,
+              COUNT(*) FILTER (WHERE tracker_client_id IS NOT NULL)::int AS under_tracker_client
+         FROM tracker_pages WHERE (is_active = TRUE OR is_active IS NULL)`,
+      [codeId]
+    ).catch(e => ({ rows: [{}], _err: e.message }));
+    const domains = await pool.query(
+      `SELECT substring(url from 'https?://(?:www\\.)?([^/]+)') AS domain, COUNT(*)::int AS n,
+              COUNT(*) FILTER (WHERE engine_code_id = $1)::int AS mine
+         FROM tracker_pages WHERE (is_active = TRUE OR is_active IS NULL) AND url IS NOT NULL
+         GROUP BY 1 ORDER BY n DESC LIMIT 12`,
+      [codeId]
+    ).catch(() => ({ rows: [] }));
+    res.json({ success: true, code_id: codeId, totals: (totals.rows[0] || {}), domains: domains.rows });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
 app.post('/api/tracker/reassign-profile', verifyEngineAccess, async (req, res) => {
   try {
     const eu = req.engineUser;

@@ -3971,6 +3971,25 @@ function switchView(view) {
 var _trPages = [];
 
 var _loadTrackerTimer = null;
+async function trackerDiagnose() {
+  try {
+    var d = await api('/api/tracker/diagnose', 'GET');
+    if (!d || !d.success) { toast((d&&d.error)||'Failed', 4000, 'err'); return; }
+    var t = d.totals || {};
+    var rows = (d.domains||[]).map(function(x){ return '<tr><td style="padding:4px 8px;color:#cbd5e1;">' + escHtml(x.domain||'?') + '</td><td style="padding:4px 8px;text-align:right;color:#94a3b8;">' + x.n + '</td><td style="padding:4px 8px;text-align:right;color:' + ((x.mine>0)?'#34d399':'#64748b') + ';">' + x.mine + '</td></tr>'; }).join('');
+    var body = '<div style="font-size:12px;color:#cbd5e1;line-height:1.8;">' +
+      '<div><b>Total tracked pages in the database:</b> ' + (t.grand_total||0) + '</div>' +
+      '<div>Under <b>THIS</b> engine login: <b style="color:' + (((t.under_this_engine||0)>0)?'#34d399':'#ef4444') + ';">' + (t.under_this_engine||0) + '</b></div>' +
+      '<div>Under a <b>different / old</b> engine login: ' + (t.other_engine||0) + '</div>' +
+      '<div>With <b>no</b> engine login (null): ' + (t.null_engine||0) + '</div>' +
+      '<div>Under the <b>tracker-import</b> path: ' + (t.under_tracker_client||0) + '</div>' +
+      '<div style="margin-top:12px;font-weight:700;color:#e2e8f0;">Pages per domain:</div>' +
+      '<table style="width:100%;border-collapse:collapse;margin-top:4px;font-size:11px;"><tr style="color:#64748b;"><td style="padding:4px 8px;">Domain</td><td style="padding:4px 8px;text-align:right;">Total</td><td style="padding:4px 8px;text-align:right;">This login</td></tr>' + rows + '</table>' +
+      '<div style="margin-top:14px;font-size:11px;color:#94a3b8;">If pages show under "different login", "null" or "tracker-import", click <b>Find my pages for this profile</b> to claim them by domain.</div>' +
+      '</div>';
+    showModal('Where are my pages?', body);
+  } catch(e) { toast('Error: ' + (e.message||e), 4000, 'err'); }
+}
 async function trackerFixProfilePages(claimAll) {
   var pid = _context.profileId || (_profile && _profile.id);
   if (!pid) { toast('Select a profile first', 2500, 'err'); return; }
@@ -4225,7 +4244,7 @@ function renderTrackerList() {
   var _cannibalKws = Object.keys(_kwMap).filter(function(k){ return _kwMap[k].length > 1; }).length;
 
   if (!trData.length) {
-    el.innerHTML = '<div style="text-align:center;padding:50px 20px;color:#6b7280;"><div style="font-size:28px;margin-bottom:10px;">📡</div><div style="font-weight:600;margin-bottom:4px;">No pages tracked yet</div><div style="font-size:12px;">Import GSC or add URLs to start tracking</div>' + (((_context.profileId)||(_profile&&_profile.id))?'<button onclick="trackerFixProfilePages()" style="margin-top:16px;font-size:11px;padding:7px 14px;border-radius:6px;border:1px solid #f59e0b;background:transparent;color:#f59e0b;cursor:pointer;">🔧 Find my pages for this profile</button><div style="font-size:10px;color:#4b5563;margin-top:6px;">If you tracked pages before, this links them to this profile by domain.</div>':'') + '</div></div>';
+    el.innerHTML = '<div style="text-align:center;padding:50px 20px;color:#6b7280;"><div style="font-size:28px;margin-bottom:10px;">📡</div><div style="font-weight:600;margin-bottom:4px;">No pages tracked yet</div><div style="font-size:12px;">Import GSC or add URLs to start tracking</div>' + (((_context.profileId)||(_profile&&_profile.id))?'<button onclick="trackerDiagnose()" style="margin-top:16px;margin-right:8px;font-size:11px;padding:7px 14px;border-radius:6px;border:1px solid #60a5fa;background:transparent;color:#60a5fa;cursor:pointer;">\ud83d\udd0d Where are my pages?</button><button onclick="trackerFixProfilePages()" style="margin-top:16px;font-size:11px;padding:7px 14px;border-radius:6px;border:1px solid #f59e0b;background:transparent;color:#f59e0b;cursor:pointer;">🔧 Find my pages for this profile</button><div style="font-size:10px;color:#4b5563;margin-top:6px;">If you tracked pages before, this links them to this profile by domain.</div>':'') + '</div></div>';
     return;
   }
 
