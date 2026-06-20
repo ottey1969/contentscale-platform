@@ -1279,7 +1279,7 @@ function renderProfileSelector(profiles, showPlaceholder) {
     html += '<option value="" disabled selected>-- Select a profile --</option>';
   }
   html += profiles.map(function(p) {
-    return '<option value="' + p.id + '">' + escHtml(p.name) + (p.domain ? ' · ' + p.domain : '') + '</option>';
+    return '<option value="' + p.id + '">' + escHtml(p.name || p.domain || ('Profile ' + p.id)) + ((p.name && p.domain) ? ' · ' + p.domain : '') + '</option>';
   }).join('');
   sel.innerHTML = html;
   if (lbl) lbl.textContent = profiles.length + ' profile' + (profiles.length !== 1 ? 's' : '');
@@ -1463,7 +1463,8 @@ function writeNewPage() {
   var lang = (localStorage.getItem('cs_output_language')||'').trim() || 'English';
   var ist = 'width:100%;margin-top:4px;background:#0f172a;color:#e2e8f0;border:1px solid #334155;border-radius:6px;padding:8px;font-size:12px;font-family:inherit;box-sizing:border-box;';
   var body = '<div style="display:flex;flex-direction:column;gap:12px;">' +
-    '<div style="font-size:11px;color:#94a3b8;">Profile: <b style="color:#e2e8f0;">' + escHtml(dom) + '</b> &middot; Language: <b style="color:#34d399;">' + escHtml(lang) + '</b> <span style="color:#64748b;">(change via the Lang field)</span></div>' +
+    '<label style="font-size:11px;color:#94a3b8;font-weight:600;">Profile (which site to write for)<select id="wnpProfile" onchange="document.getElementById(\'profileSelect\').value=this.value; if(typeof onProfileSwitch===\'function\')onProfileSwitch();" style="' + ist + '">' + ((_allProfiles && _allProfiles.length) ? _allProfiles.map(function(pp){ return '<option value="' + pp.id + '"' + ((_profile && String(_profile.id)===String(pp.id))?' selected':'') + '>' + escHtml(pp.name||pp.domain||('Profile '+pp.id)) + (pp.domain?(' (' + escHtml(pp.domain) + ')'):'') + '</option>'; }).join('') : '<option value="">No profiles yet \u2014 create one first</option>') + '</select></label>' +
+    '<div style="font-size:11px;color:#94a3b8;">Language: <b style="color:#34d399;">' + escHtml(lang) + '</b> <span style="color:#64748b;">(change via the Lang field in the tracker bar)</span></div>' +
     '<label style="font-size:11px;color:#94a3b8;font-weight:600;">What to write (topic / angle) *<textarea id="wnpTopic" rows="3" style="' + ist + '" placeholder="e.g. A practical guide to ranking in Google AI Overviews for local clinics"></textarea></label>' +
     '<label style="font-size:11px;color:#94a3b8;font-weight:600;">Seed keywords (comma separated)<input id="wnpKeywords" style="' + ist + '" placeholder="ai overview seo, local seo, ..."></label>' +
     '<label style="font-size:11px;color:#94a3b8;font-weight:600;">Title (optional)<input id="wnpTitle" style="' + ist + '" placeholder="leave blank = agent writes the best title"></label>' +
@@ -1478,7 +1479,10 @@ function submitWriteNewPage() {
   var kws = (document.getElementById('wnpKeywords').value||'').trim();
   var title = (document.getElementById('wnpTitle').value||'').trim();
   var words = (document.getElementById('wnpWords').value||'1200').trim();
-  var dom = (_profile && _profile.domain) ? _profile.domain : '';
+  var pe = document.getElementById('wnpProfile');
+  var selP = (pe && pe.value) ? (_allProfiles||[]).find(function(p){return String(p.id)===String(pe.value);}) : null;
+  if (!selP) selP = _profile;
+  var dom = (selP && selP.domain) ? selP.domain : '';
   var lang = (localStorage.getItem('cs_output_language')||'').trim();
   var p = [];
   p.push('[WRITE NEW PAGE]');
