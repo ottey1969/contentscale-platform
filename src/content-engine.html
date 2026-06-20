@@ -3972,6 +3972,20 @@ function switchView(view) {
 var _trPages = [];
 
 var _loadTrackerTimer = null;
+async function trackerFixProfilePages() {
+  var pid = _context.profileId || (_profile && _profile.id);
+  if (!pid) { toast('Select a profile first', 2500, 'err'); return; }
+  toast('Looking for your pages\u2026', 1500);
+  try {
+    var d = await api('/api/tracker/reassign-profile', 'POST', { profile_id: pid });
+    if (!d || !d.success) { toast((d && d.error) || 'Failed', 4000, 'err'); return; }
+    if (d.engine_total === 0) { toast('No tracked pages exist under this engine login yet \u2014 import GSC or add a URL first', 5000, 'err'); return; }
+    if (d.updated > 0) { toast('\u2705 Linked ' + d.updated + ' page(s) to this profile', 2500, 'ok'); }
+    else { toast('No pages match ' + (d.domain||'this domain') + ' (engine has ' + d.engine_total + ' page(s) total \u2014 they may be under another profile/domain)', 5000); }
+    window._loadTrackerRunning = false; window._loadTrackerStarted = 0;
+    loadTrackerPages();
+  } catch(e) { toast('Error: ' + (e.message || e), 4000, 'err'); }
+}
 async function loadTrackerPages() {
   // Debounce — prevent multiple simultaneous calls (auto-reset after 30s)
   if (window._loadTrackerRunning) {
@@ -4199,7 +4213,7 @@ function renderTrackerList() {
   var _cannibalKws = Object.keys(_kwMap).filter(function(k){ return _kwMap[k].length > 1; }).length;
 
   if (!trData.length) {
-    el.innerHTML = '<div style="text-align:center;padding:50px 20px;color:#6b7280;"><div style="font-size:28px;margin-bottom:10px;">📡</div><div style="font-weight:600;margin-bottom:4px;">No pages tracked yet</div><div style="font-size:12px;">Import GSC or add URLs to start tracking</div></div>';
+    el.innerHTML = '<div style="text-align:center;padding:50px 20px;color:#6b7280;"><div style="font-size:28px;margin-bottom:10px;">📡</div><div style="font-weight:600;margin-bottom:4px;">No pages tracked yet</div><div style="font-size:12px;">Import GSC or add URLs to start tracking</div>' + (((_context.profileId)||(_profile&&_profile.id))?'<button onclick="trackerFixProfilePages()" style="margin-top:16px;font-size:11px;padding:7px 14px;border-radius:6px;border:1px solid #f59e0b;background:transparent;color:#f59e0b;cursor:pointer;">🔧 Find my pages for this profile</button><div style="font-size:10px;color:#4b5563;margin-top:6px;">If you tracked pages before, this links them to this profile by domain.</div>':'') + '</div></div>';
     return;
   }
 

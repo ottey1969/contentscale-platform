@@ -33209,6 +33209,25 @@ app.get('/api/tracker/pages', verifyEngineAccess, async (req, res) => {
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
+app.post('/api/tracker/reassign-profile', verifyEngineAccess, async (req, res) => {
+  try {
+    const eu = req.engineUser;
+    const codeId = (eu && !eu.isAdmin) ? eu.codeId : null;
+    const profileId = req.body.profile_id;
+    if (!profileId) return res.json({ success: false, error: 'profile_id required' });
+    if (!codeId) return res.json({ success: false, error: 'engine login required' });
+    const pdR = await pool.query('SELECT domain FROM content_profiles WHERE id=$1', [profileId]);
+    if (!pdR.rows.length || !pdR.rows[0].domain) return res.json({ success: false, error: 'profile has no domain set' });
+    const dom = String(pdR.rows[0].domain).replace(/^https?:\/\//,'').replace(/\/.*$/,'').replace(/^www\./,'');
+    const upd = await pool.query(
+      'UPDATE tracker_pages SET profile_id=$1 WHERE engine_code_id=$2 AND (url ILIKE $3 OR url ILIKE $4) AND (profile_id IS NULL OR profile_id<>$1)',
+      [profileId, codeId, '%' + dom + '%', '%www.' + dom + '%']
+    );
+    const totR = await pool.query('SELECT COUNT(*)::int AS n FROM tracker_pages WHERE engine_code_id=$1', [codeId]);
+    res.json({ success: true, updated: upd.rowCount, engine_total: (totR.rows[0]||{}).n || 0, domain: dom });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
 app.post('/api/tracker/pages', verifyEngineAccess, async (req, res) => {
   const { profile_id, url, slug, title, keyword, html_content, check_frequency = '3days',
           gsc_impressions, gsc_clicks, gsc_position, gsc_ctr, gsc_queries, gsc_pages, gsc_keyword } = req.body;
