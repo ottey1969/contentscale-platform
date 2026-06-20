@@ -1,4 +1,4 @@
-console.log('=== CONTENTSCALE BOOT v2026-06-20-breaker | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | circuitBreaker=ON ===');
+console.log('=== CONTENTSCALE BOOT v2026-06-20-breaker | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON ===');
 // CONTENTSCALE SERVER.JS — ELITE EDITION v4 (FIXED v3)
 // ✅ FIX v7: secondary_keywords + related_keywords auto in Analyse JSON + Execute prompt
 // ✅ FIX v7: analysis_data JSONB safe parse in execute-rewrite
@@ -5484,6 +5484,15 @@ app.post('/api/scan/paste', async (req, res) => {
     const statsPattern = /\d+%|\$[\d,.]+|€[\d,.]+|\d{1,3}(,\d{3})+|\d+x\s/g;
     const statsFound = (cleanText.match(statsPattern) || []).length;
 
+    // Structural audit counts (live parse-bug detection — deterministic, no AI)
+    const headCount    = (rawHtml.match(/<head\b/gi) || []).length;
+    const footerCount  = (rawHtml.match(/<footer\b/gi) || []).length;
+    const doctypeCount = (rawHtml.match(/<!doctype/gi) || []).length;
+    const htmlTagCount = (rawHtml.match(/<html\b/gi) || []).length;
+    const bodyCount    = (rawHtml.match(/<body\b/gi) || []).length;
+    const csNavCount   = (rawHtml.match(/class=["'][^"']*cs-nav/gi) || []).length;
+    const csBadgeCount = (rawHtml.match(/data-cs-badge/gi) || []).length;
+
     // Build analysis object matching the browser evaluate() output
     const analysis = {
       wordCount, h1Count, h1Text, h1Length, 
@@ -5495,6 +5504,7 @@ app.post('/api/scan/paste', async (req, res) => {
       hasOpenGraph, hasTwitterCard,
       hasArticleSchema, hasFAQPageSchema, hasOrganizationSchema,
       hasFAQContent, images, imagesWithAlt,
+headCount, footerCount, doctypeCount, htmlTagCount, bodyCount, csNavCount, csBadgeCount,
       internalLinks, externalLinks,
       expertQuoteCount, caseStudyCount, statsFound,
       hasDirectAnswer, hasTLDR, hasTOC, hasAuthorBio
@@ -5760,6 +5770,20 @@ const totalScore = Math.min(100, graafScore + craftScore + technicalScore);
 const quality = totalScore >= 95 ? 'elite' : totalScore >= 90 ? 'excellent' : totalScore >= 80 ? 'very good' : totalScore >= 70 ? 'good' : totalScore >= 60 ? 'average' : 'needs improvement';
 // ── RECOMMENDATIONS ──
 const recommendations = [];
+  // ── STRUCTURAL AUDIT (duplicate document parts — real parse bugs) ──
+  if ((analysis.headCount||0) > 1 || (analysis.doctypeCount||0) > 1 || (analysis.htmlTagCount||0) > 1 || (analysis.bodyCount||0) > 1) {
+    recommendations.push({ title: '\ud83d\udea8 Critical: Duplicate document structure', description: `Found ${analysis.headCount} <head>, ${analysis.doctypeCount} <!doctype>, ${analysis.htmlTagCount} <html>, ${analysis.bodyCount} <body> tags. A full HTML document was pasted INTO the page content — search engines see a nested, broken document.`, priority: 'high', action: 'Remove the second <head>/<!doctype>/<html>/<body> from the page body — keep only the content. A WordPress content-sanitizer filter can auto-strip this.', learning: 'Duplicate <head>/<body> confuses crawlers and can suppress indexing of the real content.', target: 'Exactly one <head> and one <body> per page' });
+  }
+  if ((analysis.footerCount||0) > 1) {
+    recommendations.push({ title: '\u26a0\ufe0f Duplicate footer in content', description: `Found ${analysis.footerCount} <footer> elements. The theme already renders the footer, so a pasted duplicate is sitting inside the body.`, priority: 'medium', action: 'Remove the duplicate <footer> block from the page content.', learning: 'A second footer inside content adds noise links and confuses page structure.', target: 'One footer (rendered by the theme)' });
+  }
+  if ((analysis.csNavCount||0) > 1) {
+    recommendations.push({ title: '\u26a0\ufe0f Duplicate navigation in content', description: `Found ${analysis.csNavCount} menu bars. The template already adds the menu, so a pasted copy is duplicated.`, priority: 'medium', action: 'Remove the leftover top-nav from the page content (the template adds it).', learning: 'Duplicate nav repeats internal links and dilutes structure.', target: 'One navigation bar (from the template)' });
+  }
+  if ((analysis.csBadgeCount||0) > 1) {
+    recommendations.push({ title: '\u26a0\ufe0f Duplicate scan badge', description: `Found ${analysis.csBadgeCount} scan badges. badge-loader already injects one, so a pasted copy is duplicated.`, priority: 'low', action: 'Remove the scan badge from the page content (the template adds it).', learning: 'Duplicate badges add redundant markup.', target: 'One badge (injected by the template)' });
+  }
+
 if (analysis.wordCount < 500) {
 recommendations.push({ title: '🚨 Critical: Content Is Too Thin', description: `Only ${analysis.wordCount} words found. This is well below what Google considers a substantive page.`, priority: 'high', action: 'Expand with deep explanations, examples, case studies, and FAQs. Aim for 2,500+ words.', learning: "Thin content (< 500 words) is the #1 trigger for Google Helpful Content penalties. Pages with 2,500+ words earn 3.7x more backlinks on average (Backlinko).", target: 'Minimum 1,500 words; ideal 2,500+' });
 } else if (analysis.wordCount < 1500) {
@@ -37138,6 +37162,7 @@ let _trackerSchedulerTimer = null;
 function startTrackerScheduler() {
   if(_trackerSchedulerTimer) return;
   _trackerSchedulerTimer = setInterval(async () => {
+    if (process.env.ENABLE_TRACKER_SCHEDULER !== '1') return;  // SAFETY: auto SERP/Serper scanning OFF unless explicitly enabled (prevents silent Serper credit drain)
     if(!pool) return;
     try {
       // Pick pages from BOTH engine tracker (engine_code_id) AND client tracker (tracker_client_id)
@@ -37236,7 +37261,7 @@ function startTrackerScheduler() {
       }
     } catch(e) { console.warn('[tracker-scheduler]', e.message); }
   }, 15 * 60 * 1000);
-  console.log('[tracker-scheduler] Started (engine + client tracker, every 15min)');
+  console.log('[tracker-scheduler] '+(process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ENABLED (every 15min)':'DISABLED (set ENABLE_TRACKER_SCHEDULER=1 to turn on auto-scans)'));
   console.log('[tracker-keys] SERPAPI_KEY:', !!process.env.SERPAPI_KEY, '| SERPER_API_KEY:', !!process.env.SERPER_API_KEY, '| GEMINI:', !!process.env.GEMINI_API_KEY, '| PERPLEXITY:', !!process.env.PERPLEXITY_API_KEY);
 }
 
