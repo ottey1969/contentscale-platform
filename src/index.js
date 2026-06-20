@@ -270,7 +270,7 @@ async function callGeminiWithFallback(apiKey, body, primaryModel, fallbackModel,
   // PHASE 3: Cross-provider fallback to Perplexity Sonar — for research/analysis
   const perplexityKey = process.env.PERPLEXITY_API_KEY;
   const userPrompt = body?.contents?.[0]?.parts?.[0]?.text || '';
-  if (perplexityKey && userPrompt.length > 50) {
+  if (process.env.ALLOW_PERPLEXITY_FALLBACK === '1' && perplexityKey && userPrompt.length > 50) {
     console.warn(`🔄 Cross-provider fallback: trying Perplexity Sonar...`);
     try {
       const pxRes = await fetch('https://api.perplexity.ai/chat/completions', {
@@ -305,7 +305,7 @@ async function callGeminiWithFallback(apiKey, body, primaryModel, fallbackModel,
 
   // PHASE 4: Claude Sonnet — best quality Claude fallback with web search
   const claudeKey = process.env.ANTHROPIC_API_KEY;
-  if (claudeKey && userPrompt.length > 50) {
+  if (process.env.ALLOW_CLAUDE_FALLBACK === '1' && claudeKey && userPrompt.length > 50) {
     console.warn(`🔄 Phase 4: Claude Sonnet with web search...`);
     try {
       const sonnet4Res = await fetch('https://api.anthropic.com/v1/messages', {
@@ -332,7 +332,7 @@ async function callGeminiWithFallback(apiKey, body, primaryModel, fallbackModel,
   }
 
   // PHASE 5: Last resort — Claude Haiku with web search
-  if (claudeKey && userPrompt.length > 50) {
+  if (process.env.ALLOW_CLAUDE_FALLBACK === '1' && claudeKey && userPrompt.length > 50) {
     console.warn(`🔄 Phase 5 fallback: Claude Sonnet with web search...`);
     try {
       const sonnetRes = await fetch('https://api.anthropic.com/v1/messages', {
@@ -19146,6 +19146,7 @@ Return ONLY the complete updated HTML. No markdown.`;
 }
 
 async function bulkWorkerTick() {
+  if (process.env.ENABLE_BULK_WORKER !== '1') return;  // SAFETY: background AI worker OFF unless explicitly enabled (prevents runaway credit drain)
   if (_bulkWorkerRunning) return;
   // Skip if DB is down — prevents log spam during quota exceeded
   if (!pool || _dbReconnectInterval) {
@@ -19256,6 +19257,8 @@ function kickBulkWorker() {
 }
 
 // Start the recurring worker
+// SAFETY: on boot, fail any bulk jobs stuck mid-run so they cannot resume a runaway loop
+(async () => { try { if (pool) { const rr = await pool.query("UPDATE content_bulk_jobs SET status='failed' WHERE status IN ('analysing','executing') RETURNING id"); if (rr.rowCount) console.warn('[bulk] Failed', rr.rowCount, 'stuck job(s) on boot'); } } catch(e) { console.warn('[bulk] boot cleanup:', e.message); } })();
 setInterval(bulkWorkerTick, BULK_WORKER_INTERVAL_MS);
 console.log(`[bulk] Worker interval started (every ${BULK_WORKER_INTERVAL_MS}ms)`);
 
