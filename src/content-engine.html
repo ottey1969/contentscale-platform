@@ -4606,7 +4606,7 @@ async function writeAllSelected() {
   var pages = (_trPages||[]).filter(function(p){ return ids.indexOf(p.id) > -1; });
   if (!pages.length) { toast('No pages selected', 2000, 'warn'); return; }
   if (!_context.profileId && !(_profile && _profile.id)) { toast('Select a profile first', 2500, 'err'); return; }
-  if (!confirm('Write / optimize ' + pages.length + ' selected page(s), one by one?\n\nEach page runs a Spy + agent pass (uses Serper per page). Pages without stored HTML are skipped.')) return;
+  if (!confirm('Process ' + pages.length + ' selected page(s), one by one?\n\nPages WITH stored HTML are REWRITTEN (surgical). Pages with NO HTML but a keyword are WRITTEN from scratch. Uses Serper per page.')) return;
   if (typeof switchView === 'function') switchView('agent');
   if (typeof hideWelcome === 'function') hideWelcome();
   var done = 0, skipped = 0, failed = 0;
@@ -4617,15 +4617,19 @@ async function writeAllSelected() {
     var html = (p.latest_snapshot && p.latest_snapshot.html_snapshot) || p.html_content || '';
     if (typeof addAgentMessage === 'function') addAgentMessage('<b>\ud83d\udcdd Queue ' + (i+1) + '/' + pages.length + '</b> \u2014 ' + escHtml(url));
     toast('\u270d\ufe0f Writing ' + (i+1) + '/' + pages.length + '\u2026', 2500, 'info');
-    if (!html || html.trim().length < 200) {
-      if (typeof addAgentMessage === 'function') addAgentMessage('\u23ed Skipped (no stored HTML \u2014 open this page and paste/scan it first): ' + escHtml(url));
-      skipped++;
-      continue;
-    }
+    _context.url = url; _context.keyword = kw;
     try {
-      _context.url = url; _context.keyword = kw;
-      await runSurgicalFromModal(kw, url, html);
-      done++;
+      if (html && html.trim().length >= 200) {
+        await runSurgicalFromModal(kw, url, html);            // REWRITE existing page
+        done++;
+      } else if (kw && kw.trim() && typeof cmdPipeline === 'function') {
+        if (typeof addAgentMessage === 'function') addAgentMessage('\u270d\ufe0f No stored HTML \u2014 writing a new page from keyword: ' + escHtml(kw));
+        await cmdPipeline(kw, url);                            // WRITE new content from keyword
+        done++;
+      } else {
+        if (typeof addAgentMessage === 'function') addAgentMessage('\u23ed Skipped (no stored HTML and no keyword to write from): ' + escHtml(url));
+        skipped++;
+      }
     } catch(e) {
       failed++;
       if (typeof addAgentMessage === 'function') addAgentMessage('\u274c Failed: ' + escHtml(url) + ' \u2014 ' + ((e && e.message) || e));
