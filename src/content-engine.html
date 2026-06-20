@@ -667,8 +667,8 @@ async function connect() {
     _context.profileId = null;
     document.getElementById('profileSelect').value = '';
 
-    // Open Tracker first — it's the workflow starting point
-    switchView('tracker');
+    // Land in the Agent (engine workspace) by default — Tracker is a separate tab the user opens deliberately
+    switchView('agent');
     updateWorkflowStep(1);
     // Agent greets in background
     setTimeout(agentGreet, 300);
@@ -1177,7 +1177,7 @@ async function addSelectedSitemapUrls() {
   // Force fresh load from server to get complete picture
   loadPagesOverview(true);
   loadTrackerPages();
-  switchView('tracker');
+  switchView('agent');
   var parts = [];
   if (added) parts.push('added ' + added);
   if (updated) parts.push('updated ' + updated);
@@ -8391,7 +8391,6 @@ function renderSerpSpyReport(s) {
         <option value="url">Sort: URL A-Z</option>
       </select>
       <button onclick="loadPagesOverview(true)" style="padding:7px 14px;border-radius:6px;font-size:10px;font-weight:600;cursor:pointer;border:1px solid rgba(255,255,255,.1);background:transparent;color:#9ca3af;font-family:'DM Mono',monospace;">↺ Refresh</button>
-      <button onclick="openAddUrlModal()" style="padding:7px 14px;border-radius:6px;font-size:10px;font-weight:600;cursor:pointer;border:1px solid rgba(124,58,237,.4);background:rgba(124,58,237,.1);color:#a78bfa;">+ Add URL</button>
       <button onclick="openPagesImportModal()" style="padding:7px 14px;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer;border:none;background:linear-gradient(135deg,#7c3aed,#1d4ed8);color:#fff;">📊 Import GSC CSV</button>
       <button onclick="clearAllPages()" id="pagesClearBtn" style="padding:7px 14px;border-radius:6px;font-size:10px;font-weight:600;cursor:pointer;border:1px solid rgba(248,113,113,.3);background:rgba(248,113,113,.08);color:#f87171;margin-left:4px;" title="Remove all pages for this profile">🗑 Reset All</button>
       <button onclick="openMergeModal()" id="pagesMergeBtn" style="padding:7px 14px;border-radius:6px;font-size:10px;font-weight:600;cursor:pointer;border:1px solid rgba(245,158,11,.3);background:rgba(245,158,11,.08);color:#f59e0b;margin-left:4px;display:none;" title="Find and merge duplicate pages">🔀 Merge Dups</button>
@@ -8644,7 +8643,6 @@ function renderSerpSpyReport(s) {
     </div>
     <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;">
       <button onclick="loadTrackerPages()" style="padding:6px 11px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid rgba(255,255,255,.1);background:transparent;color:#9ca3af;">↺ Refresh</button>
-      <button onclick="openAddTrackerModal()" style="padding:6px 11px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;border:none;background:rgba(124,58,237,.2);color:#a78bfa;border:1px solid rgba(124,58,237,.3);">+ Add URL</button>
       <button onclick="openTrackerGscImport()" style="padding:6px 11px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;border:none;background:linear-gradient(135deg,#7c3aed,#1d4ed8);color:#fff;">📊 Import GSC</button>
       <button onclick="openTrackerSitemapPanel()" style="padding:6px 11px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;border:none;background:rgba(245,109,0,.15);color:#f56d00;border:1px solid rgba(245,109,0,.3);">🗺 Sitemap</button>
     </div>
