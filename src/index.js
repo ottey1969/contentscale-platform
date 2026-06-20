@@ -308,7 +308,8 @@ async function callGeminiWithFallback(apiKey, body, primaryModel, fallbackModel,
   if (process.env.ALLOW_CLAUDE_FALLBACK === '1' && claudeKey && userPrompt.length > 50) {
     console.warn(`🔄 Phase 4: Claude Sonnet with web search...`);
     try {
-      const sonnet4Res = await fetch('https://api.anthropic.com/v1/messages', {
+      claudeGuard.gate();
+        const sonnet4Res = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-api-key': claudeKey, 'anthropic-version': '2023-06-01', 'anthropic-beta': 'web-search-2025-03-05' },
         body: JSON.stringify({
@@ -335,7 +336,8 @@ async function callGeminiWithFallback(apiKey, body, primaryModel, fallbackModel,
   if (process.env.ALLOW_CLAUDE_FALLBACK === '1' && claudeKey && userPrompt.length > 50) {
     console.warn(`🔄 Phase 5 fallback: Claude Sonnet with web search...`);
     try {
-      const sonnetRes = await fetch('https://api.anthropic.com/v1/messages', {
+      claudeGuard.gate();
+        const sonnetRes = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-api-key': claudeKey, 'anthropic-version': '2023-06-01', 'anthropic-beta': 'web-search-2025-03-05' },
         body: JSON.stringify({
@@ -416,9 +418,36 @@ function _trackAiCall(provider, model, success, errorMsg, durationMs) {
 // callClaudeForWrite — ALL writing goes through Claude
 // Gemini = research/JSON only · Claude = every HTML output
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// -- Claude circuit breaker: auto-stops runaway AI spend ---------------------
+const claudeGuard = (() => {
+  const WINDOW_MS   = parseInt(process.env.CLAUDE_WINDOW_MS) || 300000;
+  const MAX_CALLS   = parseInt(process.env.CLAUDE_MAX_CALLS) || 40;
+  const COOLDOWN_MS = parseInt(process.env.CLAUDE_COOLDOWN_MS) || 600000;
+  let calls = [], trippedUntil = 0, lastAlert = 0;
+  function notify(msg){
+    try{ const p=process.env.CALLMEBOT_PHONE,k=process.env.CALLMEBOT_APIKEY;
+      if(p&&k&&Date.now()-lastAlert>60000){ lastAlert=Date.now();
+        fetch('https://api.callmebot.com/whatsapp.php?phone='+encodeURIComponent(p)+'&apikey='+encodeURIComponent(k)+'&text='+encodeURIComponent(msg)).catch(()=>{}); } }catch(_){}
+  }
+  return {
+    gate(){
+      const now=Date.now();
+      if(now<trippedUntil) throw new Error('Claude circuit breaker OPEN - AI calls blocked to prevent runaway cost. Resets '+new Date(trippedUntil).toISOString()+'.');
+      calls=calls.filter(t=>now-t<WINDOW_MS); calls.push(now);
+      if(calls.length>MAX_CALLS){ trippedUntil=now+COOLDOWN_MS; calls=[];
+        const m='ALERT ContentScale: Claude circuit breaker TRIPPED - too many AI calls. Blocking for '+Math.round(COOLDOWN_MS/60000)+'min.';
+        console.error(m); notify(m);
+        throw new Error('Claude circuit breaker tripped - AI calls blocked.'); }
+    },
+    status(){ const now=Date.now(); calls=calls.filter(t=>now-t<WINDOW_MS); return {open:now<trippedUntil, trippedUntil, calls_in_window:calls.length, max_calls:MAX_CALLS, window_minutes:Math.round(WINDOW_MS/60000)}; },
+    reset(){ trippedUntil=0; calls=[]; return true; }
+  };
+})();
+
 async function callClaudeForWrite(systemPrompt, userPrompt, maxTokens = 8000, claudeKey, modelName = 'claude-sonnet-4-6') {
   const anthropicKey = claudeKey || process.env.ANTHROPIC_API_KEY;
   if (!anthropicKey) throw new Error('Claude API key required — add ANTHROPIC_API_KEY to Railway or provide x-claude-key header');
+  claudeGuard.gate();
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 55000); // 55s — under Railway limit
   try {
@@ -33212,6 +33241,9 @@ app.get('/api/tracker/pages', verifyEngineAccess, async (req, res) => {
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
+app.get('/api/admin/claude-breaker', verifyAdmin, (req,res)=>{ res.json({success:true, breaker: claudeGuard.status()}); });
+app.post('/api/admin/claude-breaker/reset', verifyAdmin, (req,res)=>{ claudeGuard.reset(); res.json({success:true, breaker: claudeGuard.status()}); });
+
 app.get('/api/tracker/diagnose', verifyEngineAccess, async (req, res) => {
   try {
     const eu = req.engineUser;
@@ -33423,11 +33455,11 @@ app.delete('/api/tracker/pages/:id', verifyEngineAccess, async (req, res) => {
   try {
     const eu = req.engineUser;
     if (eu.isAdmin) {
-      await pool.query('DELETE FROM tracker_pages WHERE id=$1', [req.params.id]);
+      await pool.query('UPDATE tracker_pages SET is_active=FALSE WHERE id=$1', [req.params.id]);
     } else {
       const own = await pool.query('SELECT id FROM tracker_pages WHERE id=$1 AND engine_code_id=$2', [req.params.id, eu.codeId]);
       if (!own.rows.length) return res.status(403).json({ success: false, error: 'Not found or access denied' });
-      await pool.query('DELETE FROM tracker_pages WHERE id=$1 AND engine_code_id=$2', [req.params.id, eu.codeId]);
+      await pool.query('UPDATE tracker_pages SET is_active=FALSE WHERE id=$1 AND engine_code_id=$2', [req.params.id, eu.codeId]);
     }
     res.json({ success: true });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
@@ -33449,9 +33481,9 @@ app.delete('/api/tracker/pages', verifyEngineAccess, async (req, res) => {
     if (count === 0) return res.json({ success: true, deleted: 0, message: 'No pages to delete' });
     // Delete
     if (codeId) {
-      await pool.query('DELETE FROM tracker_pages WHERE profile_id=$1 AND engine_code_id=$2', [profile_id, codeId]);
+      await pool.query('UPDATE tracker_pages SET is_active=FALSE WHERE profile_id=$1 AND engine_code_id=$2', [profile_id, codeId]);
     } else {
-      await pool.query('DELETE FROM tracker_pages WHERE profile_id=$1', [profile_id]);
+      await pool.query('UPDATE tracker_pages SET is_active=FALSE WHERE profile_id=$1', [profile_id]);
     }
     res.json({ success: true, deleted: count });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
