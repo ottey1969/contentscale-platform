@@ -3456,6 +3456,16 @@ async function copyMasterBrief() {
     var _curHtml = '';
     try { _curHtml = (document.getElementById('serpSpyHtml')||{}).value || (document.getElementById('rewriteHtml')||{}).value || (_context && _context.html) || ''; } catch(e) {}
     _curHtml = (_curHtml || '').trim();
+      // Strip noise (CSS/JS/SVG/comments/head links) so the brief carries only the editable CONTENT — smaller = cheaper, and no truncation
+      _curHtml = _curHtml
+        .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi,'')
+        .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi,'')
+        .replace(/<svg\b[^>]*>[\s\S]*?<\/svg>/gi,'')
+        .replace(/<!--[\s\S]*?-->/g,'')
+        .replace(/<link\b[^>]*>/gi,'')
+        .replace(/<meta\b[^>]*>/gi,'')
+        .replace(/\n{3,}/g,'\n\n')
+        .trim();
     if (_curHtml.length > 200) {
       var _CAP = 60000, _trunc = _curHtml.length > _CAP;
       if (_trunc) _curHtml = _curHtml.slice(0, _CAP);
@@ -8791,6 +8801,10 @@ function renderSerpSpyReport(s) {
         <div style="font-size:9px;color:#6b7280;margin-bottom:6px;">In Chrome: go to your page → <strong style="color:#9ca3af;">Ctrl+U</strong> → Ctrl+A → Ctrl+C → paste below</div>
         <textarea id="serpSpyHtml" rows="3" placeholder="Paste page HTML here (optional — leave empty to fetch by URL)..." style="width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(124,58,237,.3);border-radius:7px;padding:8px 10px;color:#e2e8f0;font-size:11px;font-family:'DM Mono',monospace;outline:none;box-sizing:border-box;resize:vertical;"></textarea>
         <div style="font-size:9px;color:#34d399;margin-top:4px;">✓ When pasted — Spy uses this directly, bypasses parser. Leave empty to fetch by URL.</div>
+                <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;">
+                  <button onclick="copyMasterBrief()" style="font-size:11px;padding:7px 14px;border-radius:6px;border:1px solid #a78bfa;background:rgba(124,58,237,.15);color:#a78bfa;cursor:pointer;font-weight:700;">\ud83d\udccb Brief opnieuw opbouwen</button>
+                  <button onclick="this.textContent='\u2705 Klaar';this.style.color='#34d399';this.style.borderColor='#34d399';this.style.background='rgba(52,211,153,.18)';toast('Klaar \u2014 brief is af',2500,'ok');" style="font-size:11px;padding:7px 14px;border-radius:6px;border:1px solid #34d399;background:rgba(52,211,153,.10);color:#34d399;cursor:pointer;font-weight:700;">\u2713 Done</button>
+                </div>
       </div>
     </div>
     <div style="padding:6px 20px;flex-shrink:0;font-size:10px;color:#34d399;min-height:18px;" id="serpSpyStatus"></div>

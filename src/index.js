@@ -2949,7 +2949,9 @@ app.post('/api/engine/brief-email', verifyEngineAccess, async (req, res) => {
     const brevoKey = process.env.BREVO_API_KEY || '';
     if (!brevoKey) return res.json({ success: false, error: 'No BREVO_API_KEY' });
     const eu = req.engineUser || {};
-    const who = eu.client_name || eu.clientName || eu.code || (eu.isAdmin ? 'admin' : 'engine user');
+    let who = eu.client_name || eu.clientName || eu.domain || eu.code;
+    if (who && typeof who === 'object') who = who.client_name || who.name || who.domain || who.code || '';
+    if (typeof who !== 'string' || !who.trim()) who = eu.isAdmin ? 'admin' : 'engine user';
     const esc = x => String(x).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     const htmlBody = '<div style="font-family:Verdana,Geneva,sans-serif;max-width:680px;margin:0 auto;color:#0f172a;">'
       + '<div style="background:#0f172a;border-radius:10px 10px 0 0;padding:18px 24px;color:#fff;font-weight:800;">ContentScale Engine \u2014 ' + _lbl + '</div>'
