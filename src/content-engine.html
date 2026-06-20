@@ -458,6 +458,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'DM San
           <button class="starter-btn" onclick="sendStarter(this)">Audit my site's content quality</button>
           <button class="starter-btn" onclick="sendStarter(this)">Help me get into AI Overviews</button>
           <button class="starter-btn" onclick="sendStarter(this)">How does the Tracker work?</button>
+          <button class="starter-btn" onclick="writeNewPage()" style="border-color:#34d399;color:#34d399;">✍️ Write a new page</button>
         </div>
       </div>
     </div>
@@ -1455,6 +1456,44 @@ function handleKey(e) {
   if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
 }
 
+function writeNewPage() {
+  if (typeof _connected !== 'undefined' && !_connected) { toast('Connect first', 'err'); return; }
+  if (typeof hideWelcome === 'function') hideWelcome();
+  var dom = (_profile && _profile.domain) ? _profile.domain : 'your site';
+  var lang = (localStorage.getItem('cs_output_language')||'').trim() || 'English';
+  var ist = 'width:100%;margin-top:4px;background:#0f172a;color:#e2e8f0;border:1px solid #334155;border-radius:6px;padding:8px;font-size:12px;font-family:inherit;box-sizing:border-box;';
+  var body = '<div style="display:flex;flex-direction:column;gap:12px;">' +
+    '<div style="font-size:11px;color:#94a3b8;">Profile: <b style="color:#e2e8f0;">' + escHtml(dom) + '</b> &middot; Language: <b style="color:#34d399;">' + escHtml(lang) + '</b> <span style="color:#64748b;">(change via the Lang field)</span></div>' +
+    '<label style="font-size:11px;color:#94a3b8;font-weight:600;">What to write (topic / angle) *<textarea id="wnpTopic" rows="3" style="' + ist + '" placeholder="e.g. A practical guide to ranking in Google AI Overviews for local clinics"></textarea></label>' +
+    '<label style="font-size:11px;color:#94a3b8;font-weight:600;">Seed keywords (comma separated)<input id="wnpKeywords" style="' + ist + '" placeholder="ai overview seo, local seo, ..."></label>' +
+    '<label style="font-size:11px;color:#94a3b8;font-weight:600;">Title (optional)<input id="wnpTitle" style="' + ist + '" placeholder="leave blank = agent writes the best title"></label>' +
+    '<label style="font-size:11px;color:#94a3b8;font-weight:600;">Approx word count<input id="wnpWords" type="number" value="1200" style="' + ist + '"></label>' +
+    '<button onclick="submitWriteNewPage()" style="margin-top:4px;background:#34d399;color:#06281c;border:none;border-radius:8px;padding:10px;font-size:13px;font-weight:700;cursor:pointer;">\u270d\ufe0f Write this page</button>' +
+    '</div>';
+  showModal('Write a new page', body);
+}
+function submitWriteNewPage() {
+  var topic = (document.getElementById('wnpTopic').value||'').trim();
+  if (!topic) { toast('Add a topic first', 'err'); return; }
+  var kws = (document.getElementById('wnpKeywords').value||'').trim();
+  var title = (document.getElementById('wnpTitle').value||'').trim();
+  var words = (document.getElementById('wnpWords').value||'1200').trim();
+  var dom = (_profile && _profile.domain) ? _profile.domain : '';
+  var lang = (localStorage.getItem('cs_output_language')||'').trim();
+  var p = [];
+  p.push('[WRITE NEW PAGE]');
+  p.push('Write a new, original, SEO-optimized HTML page' + (dom ? ' for ' + dom : '') + '.');
+  p.push('Topic / angle: ' + topic);
+  if (kws) p.push('Target / seed keywords (use naturally, never keyword-stuff): ' + kws);
+  if (title) p.push('Suggested title (improve only if clearly weak): ' + title); else p.push('Write the most click-worthy, accurate title yourself.');
+  p.push('Approx length: ' + words + ' words.');
+  if (lang && !/^(english|engels)$/i.test(lang)) p.push('OUTPUT LANGUAGE: Write EVERYTHING (title, meta, headings, body) in ' + lang + ' \u2014 native, natural quality, not machine-translation style.');
+  p.push('Structure: one clear H1, scannable H2/H3, and an intro that answers the main query in the first 2-3 sentences (AI-Overview friendly). Add an FAQ where it helps.');
+  p.push('Links: add 2-4 external links to high-authority sources in the SAME language as the page (link to root domains, never invent URLs). Internal links only to pages that exist; never invent slugs.');
+  p.push('Output the page CONTENT only as clean HTML (no menu / navigation / footer / scan badge). After the HTML, give the Rank Math SEO title (max 60 chars, focus keyword first) and meta description (max 155 chars).');
+  closeModal();
+  userSend(p.join('\n'));
+}
 function sendStarter(btn) {
   if (!_connected) { toast('Connect first', 'err'); return; }
   hideWelcome();
