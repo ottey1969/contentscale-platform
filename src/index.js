@@ -5460,8 +5460,11 @@ app.post('/api/scan/paste', async (req, res) => {
 
     // Images
     const imgMatches = [...rawHtml.matchAll(/<img[^>]*>/gi)];
-    const images = imgMatches.length;
-    const imagesWithAlt = imgMatches.filter(m => /alt=["'][^"']+["']/i.test(m[0]) && !/alt=["']?["']/i.test(m[0])).length;
+    const contentImgs = imgMatches.filter(m => { const t = m[0].toLowerCase();
+      if (/wp-content\/plugins|cookie|consent|placeholder\.svg|revisit|\/close\.svg|gravatar|emoji|wp-smiley|spinner|loader|tracking|1x1|spacer|data:image\/(?:gif|svg)/i.test(t)) return false;
+      return true; });
+    const images = contentImgs.length;
+    const imagesWithAlt = contentImgs.filter(m => /alt=["'][^"']+["']/i.test(m[0]) && !/alt=["']?["']/i.test(m[0])).length;
 
     // Links
     const allLinks = [...rawHtml.matchAll(/<a[^>]*href=["']([^"']+)["']/gi)].map(m => m[1]);
@@ -34258,10 +34261,10 @@ app.post('/api/tracker/serp-spy', verifyEngineAccess, async (req, res) => {
   }
   const compScrapes = await Promise.all(top5.map(e=>scrapeBodyText(e.url,4000)));
   const clientAI = clientScrape.fullHtml ? scoreAICitation(clientScrape.fullHtml, clientScrape.text, keyword) : null;
-  const stops = new Set(['the','a','an','and','or','in','on','at','to','for','of','with','is','are','was','this','that','it','we','you','they','not','can','all','from']);
-  const clientWords = new Set((clientScrape.text||'').toLowerCase().replace(/[^a-z0-9\s]/g,' ').split(/\s+/).filter(w=>w.length>=4&&!stops.has(w)));
+  const stops = new Set(['the','a','an','and','or','in','on','at','to','for','of','with','is','are','was','were','be','been','being','this','that','these','those','it','its','we','you','your','our','they','them','their','his','her','not','can','could','will','would','should','shall','may','might','must','have','has','had','having','does','doing','done','make','makes','made','want','wants','copy','than','then','also','more','most','much','many','some','any','each','every','such','very','even','only','just','like','into','onto','over','about','above','after','before','below','here','there','when','where','which','while','what','whom','whose','because','but','however','therefore','thus','hence','still','already','again','always','never','often','sometimes','around','through','between','within','without','upon','using','used','uses','being','they','them','your','yours','ours','whether','either','neither','both','others','another','same','different','able','etc']);
+  const clientWords = new Set((clientScrape.text||'').toLowerCase().replace(/[^a-z0-9\s]/g,' ').split(/\s+/).filter(w=>w.length>=5&&!stops.has(w)));
   const entityFreq = {};
-  compScrapes.forEach(sc=>{const seen=new Set();(sc.text||'').toLowerCase().replace(/[^a-z0-9\s]/g,' ').split(/\s+/).filter(w=>w.length>=4&&!stops.has(w)).forEach(w=>{if(!seen.has(w)){entityFreq[w]=(entityFreq[w]||0)+1;seen.add(w);}});});
+  compScrapes.forEach(sc=>{const seen=new Set();(sc.text||'').toLowerCase().replace(/[^a-z0-9\s]/g,' ').split(/\s+/).filter(w=>w.length>=5&&!stops.has(w)).forEach(w=>{if(!seen.has(w)){entityFreq[w]=(entityFreq[w]||0)+1;seen.add(w);}});});
   const entityGaps = Object.entries(entityFreq).filter(([w,n])=>n>=2&&!clientWords.has(w)).sort((a,b)=>b[1]-a[1]).slice(0,20).map(([entity,n])=>({entity,in_competitor_pages:n}));
   const compSummary = top5.map((e,i)=>`RANK ${e.rank}: ${e.domain}\n  Snippet: "${(e.snippet||'')}"`).join('\n\n');
   const prompt = `You are an elite SEO analyst. Live SERP data for: "${keyword}"
