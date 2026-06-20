@@ -3971,18 +3971,31 @@ function switchView(view) {
 var _trPages = [];
 
 var _loadTrackerTimer = null;
-async function trackerFixProfilePages() {
+async function trackerFixProfilePages(claimAll) {
   var pid = _context.profileId || (_profile && _profile.id);
   if (!pid) { toast('Select a profile first', 2500, 'err'); return; }
   toast('Looking for your pages\u2026', 1500);
   try {
-    var d = await api('/api/tracker/reassign-profile', 'POST', { profile_id: pid });
+    var d = await api('/api/tracker/reassign-profile', 'POST', { profile_id: pid, claim_all: !!claimAll });
     if (!d || !d.success) { toast((d && d.error) || 'Failed', 4000, 'err'); return; }
-    if (d.engine_total === 0) { toast('No tracked pages exist under this engine login yet \u2014 import GSC or add a URL first', 5000, 'err'); return; }
-    if (d.updated > 0) { toast('\u2705 Linked ' + d.updated + ' page(s) to this profile', 2500, 'ok'); }
-    else { toast('No pages match ' + (d.domain||'this domain') + ' (engine has ' + d.engine_total + ' page(s) total \u2014 they may be under another profile/domain)', 5000); }
-    window._loadTrackerRunning = false; window._loadTrackerStarted = 0;
-    loadTrackerPages();
+    var diag = d.diag || {};
+    if (d.updated > 0) {
+      toast('\u2705 Linked ' + d.updated + ' page(s) to this profile', 2500, 'ok');
+      window._loadTrackerRunning = false; window._loadTrackerStarted = 0; loadTrackerPages();
+      return;
+    }
+    if ((diag.domain_total||0) === 0) {
+      toast('No tracked pages exist for ' + (d.domain||'this domain') + ' yet \u2014 import GSC or add a URL', 5000, 'err');
+      return;
+    }
+    if (!claimAll && (diag.other_code||0) > 0) {
+      if (confirm(diag.other_code + ' page(s) for ' + (d.domain||'this domain') + ' are under a different / old engine login.\n\nClaim them to this profile now? (safe \u2014 they match your domain)')) {
+        return trackerFixProfilePages(true);
+      }
+      return;
+    }
+    toast('Your ' + (diag.domain_total||0) + ' page(s) for ' + (d.domain||'this domain') + ' are already linked', 4000, 'ok');
+    window._loadTrackerRunning = false; window._loadTrackerStarted = 0; loadTrackerPages();
   } catch(e) { toast('Error: ' + (e.message || e), 4000, 'err'); }
 }
 async function loadTrackerPages() {
@@ -4307,6 +4320,7 @@ function renderTrackerList() {
   '<div id="trBulkBar" style="display:' + (window._trSelected.size > 0 ? 'flex' : 'none') + ';gap:8px;padding:6px 16px 8px;align-items:center;background:rgba(124,58,237,0.08);border-bottom:1px solid rgba(124,58,237,0.2);">' +
     '<span style="font-size:11px;color:#a78bfa;font-weight:700;">' + window._trSelected.size + ' selected</span>' +
     '' +
+    '<button onclick="writeAllSelected()" style="font-size:11px;font-weight:700;padding:5px 12px;border-radius:6px;border:1px solid rgba(52,211,153,.4);background:rgba(52,211,153,.15);color:#34d399;cursor:pointer;">\u270d\ufe0f Write All Selected</button>' +
     '<button onclick="deleteSelected()" style="font-size:11px;font-weight:700;padding:5px 12px;border-radius:6px;border:none;background:rgba(248,113,113,.15);color:#f87171;border:1px solid rgba(248,113,113,.3);cursor:pointer;">🗑 Delete Selected</button>' +
     '<button onclick="window._trSelected.clear();renderTrackerList()" style="font-size:11px;padding:5px 10px;border-radius:6px;border:1px solid rgba(255,255,255,.1);background:transparent;color:#6b7280;cursor:pointer;">✕ Deselect all</button>' +
     '<label style="margin-left:auto;font-size:11px;color:#6b7280;cursor:pointer;"><input type="checkbox" id="trSelectAll" onchange="toggleSelectAll(this.checked)" style="margin-right:4px;">Select all visible</label>' +
@@ -4586,6 +4600,42 @@ function toggleSelectAll(checked) {
   renderTrackerList();
 }
 
+async function writeAllSelected() {
+  var ids = Array.from(window._trSelected || []);
+  if (!ids.length) { toast('No pages selected', 2000, 'warn'); return; }
+  var pages = (_trPages||[]).filter(function(p){ return ids.indexOf(p.id) > -1; });
+  if (!pages.length) { toast('No pages selected', 2000, 'warn'); return; }
+  if (!_context.profileId && !(_profile && _profile.id)) { toast('Select a profile first', 2500, 'err'); return; }
+  if (!confirm('Write / optimize ' + pages.length + ' selected page(s), one by one?\n\nEach page runs a Spy + agent pass (uses Serper per page). Pages without stored HTML are skipped.')) return;
+  if (typeof switchView === 'function') switchView('agent');
+  if (typeof hideWelcome === 'function') hideWelcome();
+  var done = 0, skipped = 0, failed = 0;
+  for (var i = 0; i < pages.length; i++) {
+    var p = pages[i];
+    var url = p.url || '';
+    var kw = p.keyword || p.gsc_keyword || '';
+    var html = (p.latest_snapshot && p.latest_snapshot.html_snapshot) || p.html_content || '';
+    if (typeof addAgentMessage === 'function') addAgentMessage('<b>\ud83d\udcdd Queue ' + (i+1) + '/' + pages.length + '</b> \u2014 ' + escHtml(url));
+    toast('\u270d\ufe0f Writing ' + (i+1) + '/' + pages.length + '\u2026', 2500, 'info');
+    if (!html || html.trim().length < 200) {
+      if (typeof addAgentMessage === 'function') addAgentMessage('\u23ed Skipped (no stored HTML \u2014 open this page and paste/scan it first): ' + escHtml(url));
+      skipped++;
+      continue;
+    }
+    try {
+      _context.url = url; _context.keyword = kw;
+      await runSurgicalFromModal(kw, url, html);
+      done++;
+    } catch(e) {
+      failed++;
+      if (typeof addAgentMessage === 'function') addAgentMessage('\u274c Failed: ' + escHtml(url) + ' \u2014 ' + ((e && e.message) || e));
+    }
+    await new Promise(function(res){ setTimeout(res, 2500); });
+  }
+  window._trSelected.clear();
+  if (typeof renderTrackerList === 'function') renderTrackerList();
+  toast('\u2705 Queue done: ' + done + ' written' + (skipped?(' \u00b7 ' + skipped + ' skipped'):'') + (failed?(' \u00b7 ' + failed + ' failed'):''), 6000, 'ok');
+}
 async function scanSelected() {
   var ids = Array.from(window._trSelected);
   if (!ids.length) { toast('No pages selected', 2000, 'warn'); return; }
