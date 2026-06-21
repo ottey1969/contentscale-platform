@@ -8832,13 +8832,51 @@ app.post('/api/brief/generate', async (req, res) => {
   if (!keyword) return res.status(400).json({ success: false, error: 'Keyword required' });
   if (!process.env.GEMINI_API_KEY) return res.status(503).json({ success: false, error: 'AI service not configured. Add GEMINI_API_KEY.' });
 
+  // ── MANDATORY top-3 competitors: if none supplied, fetch them server-side from the live SERP ──
+  let _comp = (Array.isArray(competitors) ? competitors.slice() : []);
+  if (!_comp.length && keyword) {
+    try {
+      const _serpKey = process.env.SERPER_API_KEY || process.env.SERPAPI_KEY;
+      if (_serpKey) {
+        const _sc = new AbortController();
+        const _st = setTimeout(() => _sc.abort(), 10000);
+        const _sr = await fetch('https://google.serper.dev/search', {
+          method: 'POST',
+          headers: { 'X-API-KEY': _serpKey, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ q: keyword, num: 10, hl: 'en', gl: 'us' }),
+          signal: _sc.signal
+        });
+        clearTimeout(_st);
+        const _sd = await _sr.json();
+        const _hostOf = u => String(u || '').replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/\/+$/, '').toLowerCase().split('/')[0];
+        const _myHost = _hostOf(url);
+        const _cand = (((_sd && _sd.organic) || []).map(r => r.link).filter(Boolean))
+          .filter(u => { const h = _hostOf(u); return h && h !== _myHost; })
+          .filter(u => !/youtube\.com|reddit\.com|facebook\.com|linkedin\.com|twitter\.com|x\.com|pinterest\./i.test(u))
+          .slice(0, 3);
+        for (const cu of _cand) {
+          try {
+            const _fc = new AbortController();
+            const _ft = setTimeout(() => _fc.abort(), 9000);
+            const _fr = await fetch(cu, { headers: { 'User-Agent': 'Mozilla/5.0 (compatible; ContentScaleBot/1.0)' }, signal: _fc.signal });
+            clearTimeout(_ft);
+            if (_fr.ok) { const _h = await _fr.text(); if (_h && _h.length > 500) _comp.push({ url: cu, html: _h }); }
+          } catch (e) { console.warn('[brief/generate] competitor fetch failed:', cu, e.message); }
+        }
+        console.log('[brief/generate] auto-fetched ' + _comp.length + ' of top-3 competitor page(s) from SERP for "' + keyword + '"');
+      } else {
+        console.warn('[brief/generate] no SERPER_API_KEY — cannot auto-fetch competitors');
+      }
+    } catch (e) { console.warn('[brief/generate] competitor SERP fetch failed:', e.message); }
+  }
+
   var _schemaBlocks = (pageHtml.match(/<script[^>]*ld\+json[^>]*>[\s\S]*?<\/script>/gi) || []).join('\n').substring(0, 8000);
   var cleanPage = _briefStripHtml(pageHtml).substring(0, 40000) + (_schemaBlocks ? '\n\n=== JSON-LD SCHEMA ON THIS PAGE (search this too for entities, intent, FAQ) ===\n' + _schemaBlocks : '');
   const rawRecsText = (Array.isArray(rawRecs) && rawRecs.length)
     ? rawRecs.map((r, i) => `${i + 1}. ${(r && (r.title || r.what)) || r}${r && r.description ? ' — ' + r.description : ''}${r && r.priority ? ' [' + r.priority + ']' : ''}`).join('\n')
     : '(none provided)';
-  const compBlock = competitors.length
-    ? competitors.map((c, i) => `[${i + 1}] ${c.url || ''}\n${_briefStripHtml(c.html).substring(0, 18000)}`).join('\n\n')
+  const compBlock = _comp.length
+    ? _comp.map((c, i) => `[${i + 1}] ${c.url || ''}\n${_briefStripHtml(c.html).substring(0, 18000)}`).join('\n\n')
     : '(no competitor HTML provided)';
 
   const systemPrompt = [
@@ -8900,7 +8938,7 @@ compBlock
   ].join('\n');
 
   try {
-    console.log('[brief/generate] page="' + url + '" kw="' + keyword + '" textChars=' + cleanPage.length + ' schemaChars=' + _schemaBlocks.length + ' competitors=' + competitors.length + ' rawRecs=' + ((rawRecs&&rawRecs.length)||0));
+    console.log('[brief/generate] page="' + url + '" kw="' + keyword + '" textChars=' + cleanPage.length + ' schemaChars=' + _schemaBlocks.length + ' competitors=' + _comp.length + ' rawRecs=' + ((rawRecs&&rawRecs.length)||0));
     const aiResponse = await callGeminiAPI(systemPrompt + '\n\n' + userMessage, undefined, true);
     const brief = extractJsonFromText(aiResponse);
     if (!brief) return res.status(502).json({ success: false, error: 'AI returned invalid JSON — try again.' });
