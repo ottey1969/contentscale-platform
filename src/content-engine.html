@@ -4203,6 +4203,15 @@ async function loadTrackerPages() {
       _trPages = _dedup;
     } catch(e) {}
 
+    // ── Hydrate live Google position from the last persisted Spy scan (survives refresh) ──
+    try {
+      _trPages.forEach(function(p){
+        var sp = p.serp_spy;
+        if (sp && typeof sp === 'string') { try { sp = JSON.parse(sp); } catch(e) { sp = null; } }
+        if (sp && sp.live_position) { var _v = parseFloat(sp.live_position); if (_v > 0) p._livePos = _v; }
+      });
+    } catch(e) {}
+
     // NO domain fallback — it causes cross-profile mixing.
     // If profile returns empty: show empty state. Deploy index.js migration to fix root cause.
 
@@ -7687,7 +7696,8 @@ async function runSerpSpy() {
       try {
         if (d.spy && d.spy.live_position) {
           var _lp = parseFloat(d.spy.live_position);
-          (_trPages||[]).forEach(function(p){ if (p.url === url) { p._livePos = _lp; } });
+          var _nu = function(u){ return String(u||'').replace(/^https?:\/\//,'').replace(/^www\./,'').replace(/\/+$/,'').toLowerCase(); };
+          (_trPages||[]).forEach(function(p){ if (_nu(p.url) === _nu(url)) { p._livePos = _lp; } });
           if (typeof renderTrackerList === 'function') renderTrackerList();
         }
       } catch(e) {}
