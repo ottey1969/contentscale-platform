@@ -8769,7 +8769,7 @@ async function callGeminiAPI(prompt, apiKey = process.env.GEMINI_API_KEY, jsonMo
             temperature: 0.7,
             topK: 40,
             topP: 0.95,
-            maxOutputTokens: 16384,
+            maxOutputTokens: 32768,
             thinkingConfig: { thinkingBudget: 0 },
             ...(jsonMode ? { responseMimeType: 'application/json' } : {}),
           }
@@ -14200,6 +14200,37 @@ function _scoreMetaDescription(desc, patterns) {
 }
 
 // Extract JSON from text (handles markdown code blocks, truncated responses, extra text)
+function _repairTruncatedJson(s) {
+  // Recover a usable object from a truncated JSON string (drops only the incomplete tail).
+  var inStr = false, esc = false, lastSafe = -1, i, c;
+  for (i = 0; i < s.length; i++) {
+    c = s[i];
+    if (inStr) {
+      if (esc) { esc = false; }
+      else if (s.charCodeAt(i) === 92) { esc = true; }       // backslash
+      else if (c === '"') { inStr = false; lastSafe = i; }
+      continue;
+    }
+    if (c === '"') { inStr = true; }
+    else if (c === '}' || c === ']') { lastSafe = i; }
+    else if (c === ',') { lastSafe = i - 1; }                 // safe point = last complete element
+  }
+  var cut = (lastSafe >= 0) ? s.slice(0, lastSafe + 1) : s;
+  cut = cut.replace(/,\s*$/, '');
+  // recompute which brackets are still open on the cut string
+  inStr = false; esc = false; var st = [];
+  for (i = 0; i < cut.length; i++) {
+    c = cut[i];
+    if (inStr) { if (esc) { esc = false; } else if (cut.charCodeAt(i) === 92) { esc = true; } else if (c === '"') { inStr = false; } continue; }
+    if (c === '"') { inStr = true; }
+    else if (c === '{' || c === '[') { st.push(c === '{' ? '}' : ']'); }
+    else if (c === '}' || c === ']') { st.pop(); }
+  }
+  if (inStr) cut += '"';
+  while (st.length) cut += st.pop();
+  return cut;
+}
+
 function extractJsonFromText(text) {
   if (!text || typeof text !== 'string') return null;
 
@@ -14226,9 +14257,17 @@ function extractJsonFromText(text) {
   }
 
   if (endIdx === -1) {
-    // Truncated response — log warning instead of throwing
-    console.warn('[extractJsonFromText] Unclosed JSON object — AI response may have been truncated');
-    return null;
+    // Truncated response — try to repair (close open strings/arrays/objects) so we recover a partial brief
+    console.warn('[extractJsonFromText] Unclosed JSON object — attempting repair (truncated response)');
+    try {
+      const repaired = _repairTruncatedJson(cleaned.slice(startIdx));
+      const obj = JSON.parse(repaired);
+      console.warn('[extractJsonFromText] repair OK — recovered partial JSON');
+      return obj;
+    } catch (e) {
+      console.warn('[extractJsonFromText] repair failed:', e.message);
+      return null;
+    }
   }
 
   try { return JSON.parse(cleaned.slice(startIdx, endIdx + 1)); } catch (_) {}
