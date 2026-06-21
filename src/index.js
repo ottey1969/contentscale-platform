@@ -34458,9 +34458,13 @@ Return ONLY valid JSON:
     if(page_id&&spy){try{await pool.query(`UPDATE tracker_pages SET serp_spy=$1,serp_spy_at=NOW() WHERE id=$2`,[JSON.stringify(spy),page_id]);}catch(e){}}
     try {
       if (myUrl && Array.isArray(serpUrls) && spy && typeof spy === 'object') {
-        const _md = myUrl.replace(/^https?:\/\//,'').split('/')[0].replace(/^www\./,'');
-        const _mine = serpUrls.find(r => r.url === myUrl) || serpUrls.find(r => r.domain === _md);
+        const _norm = u => String(u||'').replace(/^https?:\/\//,'').replace(/^www\./,'').replace(/\/+$/,'').toLowerCase();
+        const _myHost = _norm(myUrl).split('/')[0];
+        const _mine = serpUrls.find(r => _norm(r.url) === _norm(myUrl))
+                   || serpUrls.find(r => String(r.domain||'').replace(/^www\./,'').toLowerCase() === _myHost)
+                   || serpUrls.find(r => _norm(r.url).split('/')[0] === _myHost);
         if (_mine) spy.live_position = _mine.rank;
+        console.log('[serp-spy] live_position: myHost=' + _myHost + ' result=' + (_mine ? ('#'+_mine.rank) : ('NOT in top-'+serpUrls.length)) + ' | serp=' + serpUrls.map(r=>r.rank+':'+r.domain).join(' '));
       }
     } catch(e) {}
     res.json({success:true,spy,live_position:(spy&&spy.live_position)||null,competitors_scraped:top5.length});
@@ -34468,7 +34472,7 @@ Return ONLY valid JSON:
     console.error('[serp-spy] Claude analysis failed, returning data-only brief:', e.message);
     try {
       let _livePos = null;
-      if (myUrl) { const _md = myUrl.replace(/^https?:\/\//,'').split('/')[0].replace(/^www\./,''); const _m = serpUrls.find(r=>r.url===myUrl)||serpUrls.find(r=>r.domain===_md); if(_m) _livePos=_m.rank; }
+      if (myUrl) { const _norm = u => String(u||'').replace(/^https?:\/\//,'').replace(/^www\./,'').replace(/\/+$/,'').toLowerCase(); const _myHost = _norm(myUrl).split('/')[0]; const _m = serpUrls.find(r=>_norm(r.url)===_norm(myUrl))||serpUrls.find(r=>String(r.domain||'').replace(/^www\./,'').toLowerCase()===_myHost)||serpUrls.find(r=>_norm(r.url).split('/')[0]===_myHost); if(_m) _livePos=_m.rank; console.log('[serp-spy fallback] live_position: myHost=' + _myHost + ' result=' + (_m?('#'+_m.rank):('NOT in top-'+serpUrls.length))); }
       const fallbackSpy = {
         keyword,
         _fallback: true,
