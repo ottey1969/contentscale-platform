@@ -3153,6 +3153,51 @@ function sendVideoBriefToAgent() {
   setTimeout(function() { addUserMessage(msg); sendMessage(); }, 300);
 }
 
+function renderPerfectBrief(b) {
+  b = b || {};
+  var L = [];
+  L.push('=== CONTENT BRIEF (recommendations only \u2014 no HTML) ===');
+  if (b.keyword) L.push('Keyword: "' + b.keyword + '"');
+  if (b.url) L.push('Page: ' + b.url);
+  L.push('Live GRAAF ContentScore: ' + (b.graaf_score != null ? b.graaf_score : '?') + '/100  (' + (b.graaf_score_source || 'live manual scan') + ')');
+  L.push('Intent: ' + (b.intent || 'n/a') + '  [confidence: ' + (b.intent_confidence || 'n/a') + ']');
+  L.push('');
+  if (b.positioning_angle) { L.push('POSITIONING ANGLE'); L.push(b.positioning_angle); L.push(''); }
+  if (b.ranking_formula) {
+    var rf = b.ranking_formula;
+    L.push('RANKING FORMULA');
+    if (rf.format) L.push('- Format: ' + rf.format);
+    if (rf.schema && rf.schema.length) L.push('- Schema: ' + rf.schema.join(', '));
+    if (rf.target_word_count) L.push('- Target words: ' + rf.target_word_count);
+    L.push('');
+  }
+  if (b.recommendations && b.recommendations.length) {
+    L.push('RECOMMENDATIONS');
+    b.recommendations.forEach(function(r, i) {
+      L.push((i + 1) + '. [' + String(r.priority || '').toUpperCase() + (r.source ? ' / ' + r.source : '') + ']' + (r.needs_human_verification ? '  [VERIFY BEFORE USE]' : ''));
+      if (r.what)  L.push('   WHAT:  ' + r.what);
+      if (r.where) L.push('   WHERE: ' + r.where);
+      if (r.write) L.push('   WRITE: ' + r.write);
+      if (r.why)   L.push('   WHY:   ' + r.why);
+    });
+    L.push('');
+  }
+  if (b.missing_entities && b.missing_entities.length) { L.push('MISSING ENTITIES (real concepts to cover): ' + b.missing_entities.join(', ')); L.push(''); }
+  if (b.claims_to_verify && b.claims_to_verify.length) {
+    L.push('CLAIMS TO VERIFY BEFORE PUBLISHING');
+    b.claims_to_verify.forEach(function(c, i) {
+      L.push((i + 1) + '. [' + (c.confidence || '?') + '] ' + (c.claim_as_written || ''));
+      if (c.location) L.push('   where: ' + c.location);
+      if (c.concern)  L.push('   concern: ' + c.concern);
+    });
+    L.push('');
+  }
+  if (b.ai_overview_blueprint && b.ai_overview_blueprint.length) { L.push('AI OVERVIEW BLUEPRINT'); b.ai_overview_blueprint.forEach(function(x){ L.push('- ' + x); }); L.push(''); }
+  if (b.quick_wins && b.quick_wins.length) { L.push('QUICK WINS - DO TODAY'); b.quick_wins.forEach(function(x){ L.push('- ' + x); }); L.push(''); }
+  if (b.title) L.push('SEO TITLE (<=60 chars): ' + b.title);
+  if (b.meta)  L.push('META DESCRIPTION (<=155 chars): ' + b.meta);
+  return L.join('\n');
+}
 async function copyMasterBrief() {
   var parts   = [];
   var sep     = new Array(66).join('\u2501');
@@ -3169,6 +3214,31 @@ async function copyMasterBrief() {
     } catch(e) {}
     hasScan = (_context && _context.recs && _context.recs.length > 0) || pastedGraaf.trim().length > 50;
   }
+
+  // ── PERFECT BRIEF (Gemini v3): clean, no HTML, identical for copy/email; agent gets HTML on send ──
+  try {
+    var _pbKw = window._lastSpyKeyword || (_context && _context.keyword) || '';
+    if (_pbKw) {
+      var _pbUrl = window._lastSpyUrl || (_context && _context.url) || '';
+      var _pbHtml = '';
+      try { _pbHtml = (document.getElementById('serpSpyHtml')||{}).value || (document.getElementById('rewriteHtml')||{}).value || (_context && _context.html) || ''; } catch(e) {}
+      var _pbComp = (window._lastSpyData && Array.isArray(window._lastSpyData.competitors))
+        ? window._lastSpyData.competitors.map(function(c){ return { url: c.url || '', html: c.html || c.content || c.text || '' }; })
+        : [];
+      toast('Generating perfect brief (Gemini)\u2026', 2500);
+      var _pbRes = await fetch('/api/brief/generate', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ keyword:_pbKw, url:_pbUrl, score:(_context && _context.score != null ? _context.score : null), rawRecs:(_context && _context.recs) || [], pageHtml:_pbHtml, competitors:_pbComp }) }).then(function(r){ return r.ok ? r.json() : null; }).catch(function(){ return null; });
+      if (_pbRes && _pbRes.success && _pbRes.brief) {
+        window._lastBriefHtmlForAgent = _pbHtml;        // stashed HTML — only attached when sending to the agent
+        window._lastPerfectBrief = _pbRes.brief;
+        var _pbTxt = renderPerfectBrief(_pbRes.brief);
+        window._lastMasterBriefText = _pbTxt;
+        try { if (navigator.clipboard && navigator.clipboard.writeText) { await navigator.clipboard.writeText(_pbTxt); } } catch(e) {}
+        toast('Perfect brief ready - copied (no HTML). Use Send to Agent to attach HTML.', 3200, 'ok');
+        return;
+      }
+    }
+  } catch(e) {}
+  // ── fallback: legacy brief assembly below (only if the new engine could not produce a brief) ──
   // ── TASK BLOCK — always first, tells the external AI exactly what to deliver ──
   var _kwTop  = window._lastSpyKeyword || (_context && _context.keyword) || '';
   parts.push('=== YOUR TASK (READ THIS FIRST) ===');
