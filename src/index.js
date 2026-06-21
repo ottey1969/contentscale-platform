@@ -6338,11 +6338,24 @@ recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', descriptio
                const checkSchemaType = (typeVal) => { if(!typeVal)return; const types=Array.isArray(typeVal)?typeVal:[typeVal]; if(types.some(t=>['Article','BlogPosting','NewsArticle','TechArticle'].includes(t)))hasArticleSchema=true; if(types.includes('FAQPage'))hasFAQPageSchema=true; if(types.some(t=>['Organization','LocalBusiness','Corporation'].includes(t)))hasOrganizationSchema=true; };
                schemaScripts.forEach(script => { try { const data=JSON.parse(script.textContent); if(Array.isArray(data))data.forEach(i=>checkSchemaType(i['@type'])); else { checkSchemaType(data['@type']); if(Array.isArray(data['@graph']))data['@graph'].forEach(i=>checkSchemaType(i['@type'])); } } catch(e){} });
                const hasFAQContent = (() => { const headingMatch=Array.from(document.querySelectorAll('h2,h3,h4')).some(h=>h.textContent.toLowerCase().includes('faq')||h.textContent.toLowerCase().includes('frequently asked')||h.textContent.toLowerCase().includes('common question')); const idMatch=Array.from(document.querySelectorAll('[id]')).some(el=>el.id.toLowerCase().includes('faq')); const classMatch=Array.from(document.querySelectorAll('[class]')).some(el=>{const cn=el.className; const cns=typeof cn==='string'?cn:cn.baseVal||''; return cns.toLowerCase().includes('faq');}); const bodyText=document.body?document.body.innerText.toLowerCase():''; const textMatch=bodyText.includes('frequently asked')||bodyText.includes('common questions'); return headingMatch||idMatch||classMatch||textMatch; })();
-               const images = document.querySelectorAll('img');
-               const imagesWithAlt = Array.from(images).filter(img => img.hasAttribute('alt') && img.getAttribute('alt').trim().length > 5).length;
+               const _imgRoot = document.querySelector('main, [role="main"], #main-content, article, #csa') || document.body;
+               const _junkImg = /wp-content\/plugins|cookie|consent|gravatar|emoji|wp-smiley|spinner|loader|tracking|pixel|1x1|spacer|sprite|favicon|\blogo|badge|\bicon|thumb|screenshot|\bflag|placeholder|avatar|tawk|adabundle|widget|data:image/i;
+               const images = Array.from(_imgRoot.querySelectorAll('img')).filter(img => {
+                 const src = (img.currentSrc || img.getAttribute('src') || '').toLowerCase();
+                 if (_junkImg.test(src)) return false;
+                 const w = img.naturalWidth || img.width || 0, h = img.naturalHeight || img.height || 0;
+                 if (w && h && (w < 40 || h < 40)) return false; // drop tiny icons/pixels
+                 return true;
+               });
+               const imagesWithAlt = images.filter(img => img.hasAttribute('alt') && (img.getAttribute('alt')||'').trim().length > 5).length;
                let baseHostname = ''; try { baseHostname = new URL(scanUrlParam).hostname.replace('www.',''); } catch(e) {}
                const allLinks = Array.from(document.querySelectorAll('a[href]'));
-               const internalLinks = allLinks.filter(a => { try { return new URL(a.href).hostname.replace('www.','') === baseHostname; } catch(e) { return false; } }).length;
+               const _seenInt = new Set();
+               const internalLinks = allLinks.filter(a => {
+                 const raw = (a.getAttribute('href') || '').trim().toLowerCase();
+                 if (!raw || raw.charAt(0) === '#' || raw.indexOf('mailto:') === 0 || raw.indexOf('tel:') === 0 || raw.indexOf('javascript:') === 0 || raw.indexOf('/cdn-cgi/') !== -1) return false;
+                 try { const u = new URL(a.href); if (u.hostname.replace('www.','') !== baseHostname) return false; const key = u.pathname + u.search; if (_seenInt.has(key)) return false; _seenInt.add(key); return true; } catch(e) { return false; }
+               }).length;
                const externalLinks = allLinks.filter(a => { try { const h = new URL(a.href).hostname.replace('www.',''); return h !== baseHostname && !a.href.startsWith('#') && !a.href.startsWith('mailto:') && !a.href.startsWith('tel:'); } catch(e) { return false; } }).length;
                let expertQuoteCount = 0;
                document.querySelectorAll('blockquote').forEach(bq => { const cite=bq.querySelector('cite'); const txt=bq.textContent.trim(); if(txt.length>30&&(cite||txt.length>80))expertQuoteCount++; });
@@ -8783,6 +8796,113 @@ async function callGeminiAPI(prompt, apiKey = process.env.GEMINI_API_KEY) {
 // ============================================
 // 1. ANALYZE COMPETITORS (with Manual HTML)
 // ============================================
+// ══════════════════════════════════════════════════════════════════
+// PERFECT BRIEF GENERATOR (Gemini-driven · spec v2)
+// Order enforced: (1) live GRAAF score + raw scanner recs  (2) user's page HTML
+// (3) competitors. Drops already-resolved items. Returns ONE strict-JSON brief
+// reused identically for Copy / Email / Agent. No old HTML in the output.
+// ══════════════════════════════════════════════════════════════════
+function _briefStripHtml(h) {
+  return (h || '')
+    .replace(/<script[\s\S]*?<\/script>/gi, '')
+    .replace(/<style[\s\S]*?<\/style>/gi, '')
+    .replace(/<svg[\s\S]*?<\/svg>/gi, '')
+    .replace(/<!--[\s\S]*?-->/g, '')
+    .replace(/<(link|meta|noscript)[^>]*>/gi, '');
+}
+app.post('/api/brief/generate', async (req, res) => {
+  const {
+    keyword,
+    url = '',
+    score = null,          // live deterministic GRAAF score (ground truth)
+    rawRecs = [],          // raw scanner-generated recommendations
+    pageHtml = '',         // the user's own page (full HTML/content)
+    competitors = [],      // [{ url, html }]
+    language = 'en'
+  } = req.body || {};
+
+  if (!keyword) return res.status(400).json({ success: false, error: 'Keyword required' });
+  if (!process.env.GEMINI_API_KEY) return res.status(503).json({ success: false, error: 'AI service not configured. Add GEMINI_API_KEY.' });
+
+  const cleanPage = _briefStripHtml(pageHtml).substring(0, 30000);
+  const rawRecsText = (Array.isArray(rawRecs) && rawRecs.length)
+    ? rawRecs.map((r, i) => `${i + 1}. ${(r && (r.title || r.what)) || r}${r && r.description ? ' — ' + r.description : ''}${r && r.priority ? ' [' + r.priority + ']' : ''}`).join('\n')
+    : '(none provided)';
+  const compBlock = competitors.length
+    ? competitors.map((c, i) => `[${i + 1}] ${c.url || ''}\n${_briefStripHtml(c.html).substring(0, 18000)}`).join('\n\n')
+    : '(no competitor HTML provided)';
+
+  const systemPrompt = [
+"You are a world-class SEO and AEO (Answer Engine Optimization) strategist and senior content editor. Your single objective: produce a recommendation set that lets THIS page (a) outrank the current top-10 for the target keyword, and (b) get cited in Google AI Overviews, ChatGPT, and Perplexity, while being unmistakably trustworthy to Google under E-E-A-T.",
+"",
+"YOU WILL RECEIVE, IN THIS EXACT ORDER: (1) the live deterministic GRAAF ContentScore and the raw scanner-generated recommendations that produced it; (2) the FULL content of the user's own page; (3) the FULL content of the top competing SERP pages.",
+"",
+"MANDATORY PROCESSING ORDER:",
+"STEP 1 - Read the live GRAAF score and raw scanner recommendations FIRST. Treat them as ground truth (deterministic, not an estimate).",
+"STEP 2 - Read the full content of the user's own page. For every raw scanner recommendation, check whether it is ALREADY present or already resolved in the page. If already satisfied, DROP it. If not resolved, carry it forward in your own words with WHAT/WHERE/WRITE/WHY.",
+"STEP 3 - Only after steps 1-2, read the competitor pages and determine positioning, SERP gaps, and missing entities.",
+"",
+"INTELLIGENT POSITIONING (most important skill): the user's page may NOT be the same category as the competitors. Never tell the user to copy competitors or become something they are not. Find the SMART ANGLE that lets the user own the keyword from their unique position; turn the competitors' topic into the user's differentiator. Write a positioning angle that is fresh and specific to what you actually read on the user's page - never reuse a generic template.",
+"",
+"ANALYZE: search intent (specific, confident, never 'unknown'); what competitors cover (entities, sections, schema, depth, format); overlaps with the user's page (don't recommend what they already have - recommend strengthening instead); what the user is genuinely MISSING expressed as REAL concepts (e.g. 'AI-detector accuracy data', 'transparent pricing'), NEVER generic words like 'start','other','tools','make'; the user's unique strengths.",
+"",
+"A missing entity may only be recommended if it can be addressed accurately or through honest contrast with competitors. Never recommend an entity that would require fabricating a feature, statistic, or capability the product does not actually have.",
+"",
+"E-E-A-T & TRUST: recommend real expertise signals, real named sources, real verifiable data. NEVER fabricate statistics, quotes, reviews, or experts.",
+"",
+"EVERY recommendation MUST state: what to do, WHERE on the page, the actual copy/angle to WRITE, and WHY it helps (rank + citation + trust). No vague advice. Match the language of the user's page.",
+"",
+"FINAL CHECK: re-read your missing_entities and recommendations against the GRAAF scan (step 1) and the page (step 2). If any item is already resolved, remove it or change 'add' to 'strengthen'.",
+"",
+"OUTPUT - return ONLY valid JSON, no markdown, no preamble:",
+'{',
+'  "graaf_score": 0,',
+'  "graaf_score_source": "live manual scan",',
+'  "intent": "specific intent",',
+'  "intent_confidence": "high | medium | low",',
+'  "positioning_angle": "1-2 sentence smart reframe specific to this page",',
+'  "ranking_formula": { "format": "...", "schema": ["LocalBusiness","FAQPage"], "target_word_count": 0 },',
+'  "missing_entities": ["real meaningful topic"],',
+'  "recommendations": [ { "priority": "high|medium|low", "source": "graaf_scan|gemini_analysis", "what": "the change", "where": "exact section/place on the page", "write": "the actual copy or concrete angle to write", "why": "why it ranks + gets cited + is trusted" } ],',
+'  "ai_overview_blueprint": ["specific thing to add to earn an AI citation"],',
+'  "quick_wins": ["do-today item"],',
+'  "title": "<=60 chars, focus keyword first",',
+'  "meta": "<=155 chars, click-worthy"',
+'}'
+  ].join('\n');
+
+  const userMessage = [
+'=== LIVE GRAAF SCORE (deterministic, manual scan — ground truth) ===',
+'SCORE: ' + (score == null ? 'unknown' : score) + '/100',
+'RAW SCANNER RECOMMENDATIONS:',
+rawRecsText,
+'',
+'=== TARGET KEYWORD ===',
+keyword,
+'',
+"=== USER'S OWN PAGE (full content, read AFTER the score above) ===",
+(cleanPage || '(no page content provided)'),
+'',
+'=== TOP COMPETITORS (full content, in SERP order, read LAST) ===',
+compBlock
+  ].join('\n');
+
+  try {
+    const aiResponse = await callGeminiAPI(systemPrompt + '\n\n' + userMessage);
+    const brief = extractJsonFromText(aiResponse);
+    if (!brief) return res.status(502).json({ success: false, error: 'AI returned invalid JSON — try again.' });
+    // Force the deterministic ground-truth score so the brief number always matches the live scan
+    if (score != null) brief.graaf_score = score;
+    brief.graaf_score_source = 'live manual scan';
+    if (url) brief.url = url;
+    brief.keyword = keyword;
+    return res.json({ success: true, brief });
+  } catch (e) {
+    console.error('[brief/generate]', e.message);
+    return res.status(500).json({ success: false, error: e.message });
+  }
+});
+
 app.post('/api/audit/analyze-competitors', async (req, res) => {
   const { 
     keyword, 
