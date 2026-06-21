@@ -3153,6 +3153,24 @@ function sendVideoBriefToAgent() {
   setTimeout(function() { addUserMessage(msg); sendMessage(); }, 300);
 }
 
+function _isFunctionalPage(html) {
+  if (!html) return false;
+  var h = String(html);
+  var forms   = (h.match(/<form\b/gi) || []).length;
+  var inputs  = (h.match(/<input\b/gi) || []).length;
+  var buttons = (h.match(/<button\b/gi) || []).length;
+  var selects = (h.match(/<select\b|<textarea\b/gi) || []).length;
+  var scripts = (h.match(/<script\b/gi) || []).length;
+  var hints   = (h.match(/onclick=|addeventlistener|dashboard|leaderboard|scanner|calculator|<canvas\b/gi) || []).length;
+  var text = h.replace(/<script[\s\S]*?<\/script>/gi,' ').replace(/<style[\s\S]*?<\/style>/gi,' ').replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim();
+  var words = text ? text.split(' ').length : 0;
+  var interactive = forms*3 + inputs + buttons + selects*2 + Math.min(hints,20) + Math.min(scripts,10);
+  if (forms >= 1 && (inputs + buttons) >= 3) return true;       // any real form-driven tool
+  if (interactive >= 20 && words < 2500) return true;            // heavy UI, little prose
+  if (interactive >= 12 && words < 1200) return true;           // moderate UI, thin prose
+  return false;
+}
+
 function buildAgentExecutionMessage(brief, html, kw, url) {
   var P = [
 "[AGENT EXECUTION TASK - apply this brief to the HTML below]",
@@ -3160,6 +3178,8 @@ function buildAgentExecutionMessage(brief, html, kw, url) {
 "You are a senior SEO content editor and HTML engineer. You receive: (1) a structured JSON brief from the GRAAF + Gemini engine, and (2) the FULL live HTML of the page. Your job: apply the brief to the HTML.",
 "",
 "MODE: Default to SURGICAL - the page already ranks / has substantial content, so apply ONLY the specific changes the brief calls for. Do not rewrite, reorder, restyle, or delete anything not explicitly flagged. Choose FULL REWRITE only if the page is new, thin, or broken beyond surgical repair, and state why first (a full rewrite of a ranking page risks a 7-30 day dip).",
+"",
+"PAGE TYPE CHECK (run BEFORE deciding surgical vs full): classify the page first. CONTENT PAGE = primarily prose and headings meant to inform or rank (blog, landing, service, FAQ). FUNCTIONAL/TOOL PAGE = primarily an interactive app (forms, scanners, dashboards, calculators, live data, JS-driven UI) where the text only introduces or supports the tool. If it is a FUNCTIONAL/TOOL PAGE, a low or absent ranking does NOT justify a full rewrite - default to SURGICAL regardless of rank. Add supporting copy that fits naturally AROUND the existing tool (a direct-answer block, an FAQ section, meta, schema, entity coverage) and NEVER impose a fixed blog H2 outline or target word count that would break the working tool. Only consider a full rewrite of a tool page if its supporting copy is genuinely absent or broken - never merely because it underperforms a blog-format competitor.",
 "",
 "PROCESS - do not skip:",
 "1. READ THE FULL HTML before touching anything. The brief 'where' field is a pointer, not a guarantee; the page may have changed - re-locate before editing.",
@@ -7682,7 +7702,7 @@ async function runSerpSpy() {
             var _m = localStorage.getItem('cs_rewrite_mode') || 'auto';
             var _pg = (_trPages||[]).find(function(p){ return p.url === url; });
             var _pos = (d.spy && d.spy.live_position) || (_pg && _pg.gsc_position) || 0;
-            window._autoRewriteMode = (_m === 'auto') ? ((_pos && _pos <= 10) ? 'surgical' : 'full') : _m;
+            window._autoRewriteMode = (_m === 'auto') ? (((_pos && _pos <= 10) || _isFunctionalPage(window._lastBriefHtmlForAgent || (_context && _context.html) || '')) ? 'surgical' : 'full') : _m;
             try { copyMasterBrief(); } catch(e) {}
             setTimeout(function(){ try { spySendToAgentWithHtml(); } catch(e){} }, 600);
             toast('⚡ Auto: full brief emailed + sent to agent (' + window._autoRewriteMode + ')', 4500, 'ok');
@@ -7791,7 +7811,7 @@ function spySendToAgentWithHtml() {
         if (_recs.length) { parts.push('GRAAF FIXES TO APPLY (address each):\n' + _recs.slice(0,12).map(function(r){ return '- [' + (String(r.priority||'')).toUpperCase() + '] ' + (r.title||r.description||r.fix||''); }).join('\n')); }
       } catch(e) {}
       var _arm = window._autoRewriteMode || (localStorage.getItem('cs_rewrite_mode')||'auto');
-      if (_arm === 'auto') { var _ap = (spy && spy.live_position) || 0; _arm = (_ap && _ap <= 10) ? 'surgical' : 'full'; }
+      if (_arm === 'auto') { var _ap = (spy && spy.live_position) || 0; var _funcPg = _isFunctionalPage(window._lastBriefHtmlForAgent || (_context && _context.html) || ((document.getElementById('serpSpyHtml')||{}).value) || ''); _arm = ((_ap && _ap <= 10) || _funcPg) ? 'surgical' : 'full'; }
       parts.push('\nREWRITE MODE: ' + _arm.toUpperCase() + (_arm === 'surgical' ? ' \u2014 edit the EXISTING page only; keep layout, CSS and images; preserve rankings.' : ' \u2014 full rewrite allowed (page ranks poorly / page 2+).'));
       parts.push('ALWAYS end with a recommended SEO TITLE (max 60 chars, focus keyword first) and META DESCRIPTION (max 155 chars), stated separately for Rank Math. CTR-CRITICAL: the new title + meta MUST be FAR more click-worthy than the current ones \u2014 lead with the strongest benefit/hook, be specific, create curiosity or urgency, no fluff. Show OLD vs NEW so the gain can be checked. (Changing the HTML does NOT update Rank Math automatically.)');
   // Build full three-layer context — spy found X, live page has Y, agent adds only Z
