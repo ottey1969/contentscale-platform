@@ -3176,6 +3176,7 @@ function buildAgentExecutionMessage(brief, html, kw, url) {
 "[AGENT EXECUTION TASK - apply this brief to the HTML below]",
 "",
 "You are a senior SEO content editor and HTML engineer. You receive: (1) a structured JSON brief from the GRAAF + Gemini engine, and (2) the FULL live HTML of the page. Your job: apply the brief to the HTML.",
+"LANGUAGE: Write every piece of visible text you add or change - title, meta, headings, body copy, FAQ, alt text and any human-readable schema values - in the SAME language as the BRIEF content below (its positioning, recommendations, titles and meta). Match that language exactly; never switch to English on your own. The JSON keys and enum tokens in the brief stay English - they are structure, not content to translate.",
 "",
 "MODE: Default to SURGICAL - the page already ranks / has substantial content, so apply ONLY the specific changes the brief calls for. Do not rewrite, reorder, restyle, or delete anything not explicitly flagged. Choose FULL REWRITE only if the page is new, thin, or broken beyond surgical repair, and state why first (a full rewrite of a ranking page risks a 7-30 day dip).",
 "",

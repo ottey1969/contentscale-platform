@@ -8818,6 +8818,15 @@ function _briefStripHtml(h) {
     .replace(/\s+/g, ' ')
     .trim();
 }
+// ── Output-language lever: body `language` (code or full name) overrides env OUTPUT_LANGUAGE; default English ──
+function _langPrefix(input) {
+  var raw = String(input || process.env.OUTPUT_LANGUAGE || 'en').trim();
+  var map = { en:'English', nl:'Dutch', zh:'Chinese (Simplified)', 'zh-cn':'Chinese (Simplified)', 'zh-tw':'Chinese (Traditional)', cn:'Chinese (Simplified)', de:'German', fr:'French', es:'Spanish', it:'Italian', pt:'Portuguese', ja:'Japanese', ko:'Korean', ar:'Arabic', ru:'Russian', hi:'Hindi', tr:'Turkish', pl:'Polish', sv:'Swedish', da:'Danish', fi:'Finnish', nb:'Norwegian', no:'Norwegian' };
+  var name = map[raw.toLowerCase()] || raw;
+  if (/^english/i.test(name)) return '';
+  return 'OUTPUT LANGUAGE: Write ALL human-readable text values in ' + name + ' (positioning, recommendations, missing entities, claims, AI Overview blueprint, quick wins, titles, meta, snippets and questions). Keep every JSON key in English, and keep enum values exactly in English (e.g. high|medium|low, warning|opportunity, days|weeks, service page|guide|landing page|blog). Only the natural-language content is translated into ' + name + '.\n\n';
+}
+
 app.post('/api/brief/generate', async (req, res) => {
   const {
     keyword,
@@ -8826,7 +8835,7 @@ app.post('/api/brief/generate', async (req, res) => {
     rawRecs = [],          // raw scanner-generated recommendations
     pageHtml = '',         // the user's own page (full HTML/content)
     competitors = [],      // [{ url, html }]
-    language = 'en'
+    language = ''
   } = req.body || {};
 
   if (!keyword) return res.status(400).json({ success: false, error: 'Keyword required' });
@@ -8943,7 +8952,7 @@ compBlock
   try {
     console.log('[brief/generate] page="' + url + '" kw="' + keyword + '" textChars=' + cleanPage.length + ' schemaChars=' + _schemaBlocks.length + ' competitors=' + _comp.length + ' rawRecs=' + ((rawRecs&&rawRecs.length)||0));
     _gemT0 = Date.now();
-    const aiResponse = await callGeminiAPI(systemPrompt + '\n\n' + userMessage, undefined, true);
+    const aiResponse = await callGeminiAPI(_langPrefix(language) + systemPrompt + '\n\n' + userMessage, undefined, true);
     const brief = extractJsonFromText(aiResponse);
     if (!brief) return res.status(502).json({ success: false, error: 'AI returned invalid JSON — try again.' });
     // Force the deterministic ground-truth score so the brief number always matches the live scan
@@ -34462,7 +34471,7 @@ function scoreAICitation(html, bodyText, keyword) {
 
 // ── POST /api/tracker/serp-spy ───────────────────────────────────────────────
 app.post('/api/tracker/serp-spy', verifyEngineAccess, async (req, res) => {
-  const { keyword, profile_url, page_id, live_html } = req.body;
+  const { keyword, profile_url, page_id, live_html, language } = req.body;
   if (!keyword) return res.status(400).json({ success: false, error: 'keyword required' });
   // brief uses Gemini; Claude is only for the agent
   if (!process.env.GEMINI_API_KEY) return res.status(500).json({ success: false, error: 'GEMINI_API_KEY not set' });
@@ -34537,7 +34546,7 @@ Return ONLY valid JSON. Fill EVERY value with real findings from the live SERP, 
   try {
     const ctrl2=new AbortController();setTimeout(()=>ctrl2.abort(),45000);
     const geminiKey=process.env.GEMINI_API_KEY; if(!geminiKey) throw new Error('GEMINI_API_KEY required for SERP brief');
-    const r2=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${geminiKey}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:[{parts:[{text:prompt}]}],generationConfig:{temperature:0.4,maxOutputTokens:16384,responseMimeType:'application/json',thinkingConfig:{thinkingBudget:0}}}),signal:ctrl2.signal});
+    const r2=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${geminiKey}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:[{parts:[{text:_langPrefix(language)+prompt}]}],generationConfig:{temperature:0.4,maxOutputTokens:16384,responseMimeType:'application/json',thinkingConfig:{thinkingBudget:0}}}),signal:ctrl2.signal});
     const d2=await r2.json().catch(()=>({}));
     if(!r2.ok) throw new Error((d2.error&&d2.error.message)||'Gemini '+r2.status);
     const rawText=(d2.candidates&&d2.candidates[0]&&d2.candidates[0].content&&d2.candidates[0].content.parts&&d2.candidates[0].content.parts[0]&&d2.candidates[0].content.parts[0].text)||'';
