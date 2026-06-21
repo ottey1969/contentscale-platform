@@ -8854,15 +8854,17 @@ app.post('/api/brief/generate', async (req, res) => {
           .filter(u => { const h = _hostOf(u); return h && h !== _myHost; })
           .filter(u => !/youtube\.com|reddit\.com|facebook\.com|linkedin\.com|twitter\.com|x\.com|pinterest\./i.test(u))
           .slice(0, 3);
-        for (const cu of _cand) {
+        const _fetchOne = async (cu) => {
           try {
             const _fc = new AbortController();
             const _ft = setTimeout(() => _fc.abort(), 9000);
             const _fr = await fetch(cu, { headers: { 'User-Agent': 'Mozilla/5.0 (compatible; ContentScaleBot/1.0)' }, signal: _fc.signal });
             clearTimeout(_ft);
-            if (_fr.ok) { const _h = await _fr.text(); if (_h && _h.length > 500) _comp.push({ url: cu, html: _h }); }
+            if (_fr.ok) { const _h = await _fr.text(); if (_h && _h.length > 500) return { url: cu, html: _h }; }
           } catch (e) { console.warn('[brief/generate] competitor fetch failed:', cu, e.message); }
-        }
+          return null;
+        };
+        (await Promise.all(_cand.map(_fetchOne))).forEach(c => { if (c) _comp.push(c); });
         console.log('[brief/generate] auto-fetched ' + _comp.length + ' of top-3 competitor page(s) from SERP for "' + keyword + '"');
       } else {
         console.warn('[brief/generate] no SERPER_API_KEY — cannot auto-fetch competitors');
@@ -8937,8 +8939,10 @@ keyword,
 compBlock
   ].join('\n');
 
+  let _gemT0 = 0;
   try {
     console.log('[brief/generate] page="' + url + '" kw="' + keyword + '" textChars=' + cleanPage.length + ' schemaChars=' + _schemaBlocks.length + ' competitors=' + _comp.length + ' rawRecs=' + ((rawRecs&&rawRecs.length)||0));
+    _gemT0 = Date.now();
     const aiResponse = await callGeminiAPI(systemPrompt + '\n\n' + userMessage, undefined, true);
     const brief = extractJsonFromText(aiResponse);
     if (!brief) return res.status(502).json({ success: false, error: 'AI returned invalid JSON — try again.' });
@@ -8959,10 +8963,10 @@ compBlock
       if (_dropped.length) console.warn('[brief/generate] dropped ' + _dropped.length + ' FALSE-POSITIVE missing_entities present in page: ' + _dropped.join(', '));
       brief.missing_entities = _kept;
     }
-    console.log('[brief/generate] done: intent="' + (brief.intent||'') + '" confidence=' + (brief.intent_confidence||'') + ' missing=' + ((brief.missing_entities&&brief.missing_entities.length)||0) + ' recs=' + ((brief.recommendations&&brief.recommendations.length)||0) + ' claims=' + ((brief.claims_to_verify&&brief.claims_to_verify.length)||0));
+    console.log('[brief/generate] done: intent="' + (brief.intent||'') + '" confidence=' + (brief.intent_confidence||'') + ' missing=' + ((brief.missing_entities&&brief.missing_entities.length)||0) + ' recs=' + ((brief.recommendations&&brief.recommendations.length)||0) + ' claims=' + ((brief.claims_to_verify&&brief.claims_to_verify.length)||0) + ' ms=' + (Date.now() - _gemT0));
     return res.json({ success: true, brief });
   } catch (e) {
-    console.error('[brief/generate]', e.message);
+    console.error('[brief/generate] FAILED ms=' + (_gemT0 ? (Date.now() - _gemT0) : 0) + ':', e.message);
     return res.status(500).json({ success: false, error: e.message });
   }
 });
