@@ -8750,7 +8750,7 @@ console.log('   📥 GET /api/audit/get-workflow-data - Load data in SEO Audit')
 // ============================================
 
 // Helper function to call Gemini (uses existing GEMINI_MODEL from server)
-async function callGeminiAPI(prompt, apiKey = process.env.GEMINI_API_KEY) {
+async function callGeminiAPI(prompt, apiKey = process.env.GEMINI_API_KEY, jsonMode = false) {
   if (!apiKey) {
     throw new Error('GEMINI_API_KEY not configured');
   }
@@ -8771,6 +8771,7 @@ async function callGeminiAPI(prompt, apiKey = process.env.GEMINI_API_KEY) {
             topP: 0.95,
             maxOutputTokens: 16384,
             thinkingConfig: { thinkingBudget: 0 },
+            ...(jsonMode ? { responseMimeType: 'application/json' } : {}),
           }
         })
       }
@@ -8900,7 +8901,7 @@ compBlock
 
   try {
     console.log('[brief/generate] page="' + url + '" kw="' + keyword + '" textChars=' + cleanPage.length + ' schemaChars=' + _schemaBlocks.length + ' competitors=' + competitors.length + ' rawRecs=' + ((rawRecs&&rawRecs.length)||0));
-    const aiResponse = await callGeminiAPI(systemPrompt + '\n\n' + userMessage);
+    const aiResponse = await callGeminiAPI(systemPrompt + '\n\n' + userMessage, undefined, true);
     const brief = extractJsonFromText(aiResponse);
     if (!brief) return res.status(502).json({ success: false, error: 'AI returned invalid JSON — try again.' });
     // Force the deterministic ground-truth score so the brief number always matches the live scan
