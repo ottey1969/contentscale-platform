@@ -8824,7 +8824,8 @@ app.post('/api/brief/generate', async (req, res) => {
   if (!keyword) return res.status(400).json({ success: false, error: 'Keyword required' });
   if (!process.env.GEMINI_API_KEY) return res.status(503).json({ success: false, error: 'AI service not configured. Add GEMINI_API_KEY.' });
 
-  const cleanPage = _briefStripHtml(pageHtml).substring(0, 30000);
+  var _schemaBlocks = (pageHtml.match(/<script[^>]*ld\+json[^>]*>[\s\S]*?<\/script>/gi) || []).join('\n').substring(0, 8000);
+  var cleanPage = _briefStripHtml(pageHtml).substring(0, 30000) + (_schemaBlocks ? '\n\n=== JSON-LD SCHEMA ON THIS PAGE (search this too for entities, intent, FAQ) ===\n' + _schemaBlocks : '');
   const rawRecsText = (Array.isArray(rawRecs) && rawRecs.length)
     ? rawRecs.map((r, i) => `${i + 1}. ${(r && (r.title || r.what)) || r}${r && r.description ? ' — ' + r.description : ''}${r && r.priority ? ' [' + r.priority + ']' : ''}`).join('\n')
     : '(none provided)';
@@ -8841,6 +8842,7 @@ app.post('/api/brief/generate', async (req, res) => {
 "STEP 1 - Read the live GRAAF score and raw scanner recommendations FIRST. Treat them as ground truth (deterministic, not an estimate).",
 "STEP 2 - Read the full content of the user's own page. For every raw scanner recommendation, check whether it is ALREADY present or already resolved in the page. If already satisfied, DROP it. If not resolved, carry it forward in your own words with WHAT/WHERE/WRITE/WHY.",
 "STEP 2A - VERIFY EVERY EXISTING STATISTICAL CLAIM on the page. Identify every statistic, percentage, named study, or named institution already on the page. For each, flag it under claims_to_verify with the exact claim, where it appears, and your confidence (high/medium/low) that it is correctly cited. Do NOT silently trust a published claim; flag anything internally inconsistent, suspiciously precise, or unfamiliar to you as a named study so a human can verify it.",
+"STEP 2B - MANDATORY SUBSTRING SEARCH BEFORE FLAGGING ANY MISSING ENTITY. Before adding ANY term to missing_entities, run a literal case-insensitive substring search (including variants like optimise/optimize) across the ENTIRE page given in the input - head, body, JSON-LD schema scripts, alt text, table cells, feature lists, section headings - not just the visible prose. If the term or a close variant appears anywhere, it is NOT missing; do not list it. This is a KNOWN RECURRING failure (intelligence/structure/optimized were each flagged as missing while all three appeared repeatedly on the page) - actively guard against it.",
 "STEP 3 - Only after steps 1-2, read the competitor pages and determine positioning, SERP gaps, and missing entities.",
 "",
 "INTELLIGENT POSITIONING (most important skill): the user's page may NOT be the same category as the competitors. Never tell the user to copy competitors or become something they are not. Find the SMART ANGLE that lets the user own the keyword from their unique position; turn the competitors' topic into the user's differentiator. Write a positioning angle that is fresh and specific to what you actually read on the user's page - never reuse a generic template.",
@@ -8853,7 +8855,7 @@ app.post('/api/brief/generate', async (req, res) => {
 "",
 "EVERY recommendation MUST state: what to do, WHERE on the page, the actual copy/angle to WRITE, and WHY it helps (rank + citation + trust). No vague advice. Match the language of the user's page.",
 "",
-"FINAL CHECK: re-read your missing_entities and recommendations against the GRAAF scan (step 1) and the page (step 2). If any item is already resolved, remove it or change 'add' to 'strengthen'.",
+"FINAL CHECK: re-read your missing_entities and recommendations against the GRAAF scan (step 1) and the page (step 2). For EVERY missing_entities entry, re-run the Step 2B substring search one more time - this is the step that has failed before, so check it twice. If any item is already resolved, remove it or change 'add' to 'strengthen'.",
 "",
 "OUTPUT - return ONLY valid JSON, no markdown, no preamble:",
 '{',
