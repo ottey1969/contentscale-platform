@@ -3153,6 +3153,38 @@ function sendVideoBriefToAgent() {
   setTimeout(function() { addUserMessage(msg); sendMessage(); }, 300);
 }
 
+function buildAgentExecutionMessage(brief, html, kw, url) {
+  var P = [
+"[AGENT EXECUTION TASK - apply this brief to the HTML below]",
+"",
+"You are a senior SEO content editor and HTML engineer. You receive: (1) a structured JSON brief from the GRAAF + Gemini engine, and (2) the FULL live HTML of the page. Your job: apply the brief to the HTML.",
+"",
+"MODE: Default to SURGICAL - the page already ranks / has substantial content, so apply ONLY the specific changes the brief calls for. Do not rewrite, reorder, restyle, or delete anything not explicitly flagged. Choose FULL REWRITE only if the page is new, thin, or broken beyond surgical repair, and state why first (a full rewrite of a ranking page risks a 7-30 day dip).",
+"",
+"PROCESS - do not skip:",
+"1. READ THE FULL HTML before touching anything. The brief 'where' field is a pointer, not a guarantee; the page may have changed - re-locate before editing.",
+"2. For EVERY recommendation, check if it is ALREADY DONE in the real HTML before adding (schema, FAQ, sections, entities, images, links). If present, do not duplicate - skip or strengthen.",
+"3. Apply each high/medium recommendation ONE AT A TIME and verify after each (correct location, no broken tags, no duplicate content). Do not batch unverified edits.",
+"4. claims_to_verify and needs_human_verification: never silently fix or ignore. Either fix accurately with what you verified it against, or flag it as unresolved in the final summary. For needs_human_verification:true, do NOT write a specific statistic/study yourself - omit it, write a qualitative version, or flag for the human.",
+"5. NEVER FABRICATE a person, quote, review, statistic, client name, or testimonial not in the brief or confirmed real. An honest skip beats a fabricated fix - this overrides 'address every item'. Real info the user already confirmed in this conversation is fine to use.",
+"6. While editing, watch for structural issues no brief mentions: duplicated blocks, content outside <html>, orphaned CSS, broken tag balance, leftover CSV/JSON artifacts. Flag and ask before removing anything not in the brief, unless it is unambiguously broken markup (e.g. content after </html>).",
+"7. KEEP what the brief does not mention: reuse existing images (same src/alt), keep layout/CSS/classes not flagged, keep existing internal links, only add links to URLs that demonstrably exist, 2-4 external links to high-authority root domains in the page language.",
+"8. TITLE/META go to TWO places: the visible <title> + meta description AND every duplicate inside JSON-LD / og: / twitter: tags. State that updating the HTML does NOT update Rank Math - that is a separate manual CMS step.",
+"",
+"FINAL OUTPUT: a confirmation list for EVERY recommendation - DONE (where) / ALREADY PRESENT / SKIPPED (reason) / FLAGGED FOR HUMAN. Never claim DONE without verifying it in the edited file. Be direct and concrete; no padding.",
+"",
+"=== BRIEF (JSON from the GRAAF + Gemini v3 engine) ===",
+JSON.stringify(brief, null, 2),
+""
+  ];
+  if (html && html.length > 200) {
+    P.push("=== FULL LIVE HTML OF THE PAGE (edit THIS) ===");
+    P.push(html.substring(0, 60000));
+  } else {
+    P.push("(No HTML attached - run [ANALYSE " + (url||'') + " \"" + (kw||'') + "\"] to load the current page, then apply the brief.)");
+  }
+  return P.join("\n");
+}
 function renderPerfectBrief(b) {
   b = b || {};
   var L = [];
@@ -4593,8 +4625,7 @@ function renderTrackerList() {
         '<div style="font-size:11px;color:#6b7280;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escHtml(p.url) + (p.keyword ? ' · 🎯 '+escHtml(p.keyword) : '') + ' · ' + lastCh + (p._isStale ? ' <span style="font-size:9px;font-weight:700;background:rgba(251,191,36,.12);border:1px solid rgba(251,191,36,.35);color:#fbbf24;padding:1px 6px;border-radius:4px;" title="Not updated in 90+ days">🕐 Stale</span>' : '') + (p._cannibal ? ' <span style="font-size:9px;font-weight:700;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);color:#f87171;padding:1px 6px;border-radius:4px;" title="' + p._cannibalCount + ' pages target same keyword">🔀 Cannibal</span>' : '') + '</div>' +
         gscLine +
         '<div style="margin-top:5px;">' + aiG + aiP + '</div>' +
-        (pri.recommended ? '<div style="margin-top:5px;font-size:10px;font-weight:700;color:'+pri.color+';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="'+escHtml(pri.recommended)+'">→ ' + escHtml(pri.recommended.split('.')[0]) + '</div>' : '') +
-        recHtml +
+        '' +
         '<div class="tr-status-' + p.id + '"></div>' +
       '</div>' +
       '<div style="text-align:right;flex-shrink:0;display:flex;flex-direction:column;gap:4px;align-items:flex-end;">' +
@@ -4608,15 +4639,7 @@ function renderTrackerList() {
         '<button onclick="refreshMetaIntel(' + p.id + ',this)" style="margin-top:6px;font-size:9px;padding:3px 8px;border-radius:4px;border:1px solid rgba(124,58,237,.3);background:transparent;color:#a78bfa;cursor:pointer;">↻ Refresh</button>' +
       '</div>' : '') +
       '<div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0;">' +
-        (pri.action === 'rewrite' ?
-          '<button onclick="openSerpSpy('+p.id+')" style="font-size:10px;padding:5px 10px;border-radius:5px;border:none;background:linear-gradient(135deg,#7c3aed,#0f766e);color:#fff;cursor:pointer;font-weight:800;">Spy & Brief</button>'
-        : pri.action === 'surgical' ?
-          '<button onclick="openSerpSpy('+p.id+')" style="font-size:10px;padding:5px 10px;border-radius:5px;border:none;background:linear-gradient(135deg,#7c3aed,#0f766e);color:#fff;cursor:pointer;font-weight:800;">Spy & Brief</button>'
-        : pri.action === 'check' ?
-          '<button onclick="openSerpSpy('+p.id+')" style="font-size:10px;padding:5px 10px;border-radius:5px;border:none;background:linear-gradient(135deg,#7c3aed,#0f766e);color:#fff;cursor:pointer;font-weight:800;">Spy & Brief</button>'
-        :
-          '<button onclick="openSerpSpy('+p.id+')" style="font-size:10px;padding:4px 8px;border-radius:5px;border:none;background:linear-gradient(135deg,#7c3aed,#0f766e);color:#fff;cursor:pointer;font-weight:700;">🔍 Spy</button>'
-        ) +
+        '<button onclick="openSerpSpy('+p.id+')" style="font-size:10px;padding:5px 10px;border-radius:5px;border:none;background:linear-gradient(135deg,#7c3aed,#0f766e);color:#fff;cursor:pointer;font-weight:800;">Spy &amp; Brief</button>' +
         '<button onclick="togglePageDone('+p.id+')" style="font-size:10px;padding:4px 8px;border-radius:5px;border:1px solid ' + (p.is_done ? 'rgba(52,211,153,.4)' : 'rgba(255,255,255,.1)') + ';background:' + (p.is_done ? 'rgba(52,211,153,.12)' : 'transparent') + ';color:' + (p.is_done ? '#34d399' : '#6b7280') + ';cursor:pointer;font-weight:700;" title="' + (p.is_done ? 'Mark as todo' : 'Mark as done') + '">' + (p.is_done ? '✓ Done' : '○ Done') + '</button>' +
         '<button onclick="deleteTrackerPage('+p.id+')" style="font-size:10px;padding:4px 8px;border-radius:5px;border:1px solid rgba(248,113,113,.25);background:rgba(248,113,113,.06);color:#f87171;cursor:pointer;">✕</button>' +
       '</div>' +
@@ -7681,6 +7704,16 @@ function spySendToAgentWithHtml() {
   var kw  = window._lastSpyKeyword || '';
   var url = window._lastSpyUrl || '';
   if (!spy) { toast('No spy data', 'warn'); return; }
+
+  // ── If a fresh GRAAF + Gemini v3 brief exists, send execution prompt + brief JSON + HTML ──
+  if (window._lastPerfectBrief) {
+    var _execMsg = buildAgentExecutionMessage(window._lastPerfectBrief, window._lastBriefHtmlForAgent || '', kw, url);
+    closeSerpSpy();
+    switchView('agent');
+    setTimeout(function(){ var _i = document.getElementById('chatInput'); if (_i) { _i.value = _execMsg; sendMessage(); } }, 300);
+    toast('Sent to agent: execution prompt + brief + HTML', 3500, 'ok');
+    return;
+  }
 
   // Get stored page HTML from tracker
   var page = _trPages && _trPages.find(function(p){ return p.url === url; });
