@@ -174,13 +174,13 @@ const PORT = process.env.PORT || 3000;
 // Kiest automatisch beste flash model
 // Nooit meer handmatig aanpassen
 // ============================================
-let GEMINI_MODEL = 'gemini-2.5-flash-lite'; // primary — cheapest, least busy
+let GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash-lite'; // primary — cheapest; set GEMINI_MODEL env to override
 
 async function detectBestGeminiModel(apiKey) {
   if (!apiKey) return;
   // Priority: cheapest postpay models first (billing enabled account)
   // gemini-2.0-flash = $0.075/1M tokens — best price/quality for postpay
-  const PRIORITY = ['gemini-2.5-flash-lite', 'gemini-2.5-flash', 'gemini-2.0-flash-lite', 'gemini-1.5-flash-001'];
+  const PRIORITY = ['gemini-2.5-flash-lite', 'gemini-2.5-flash', 'gemini-2.5-pro'];
   try {
     const resp = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`,
@@ -1302,7 +1302,7 @@ Return ONLY a JSON array:
   "reason": "one sentence why this link helps"
 }]`;
 
-    const gResp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey}`, {
+    const gResp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${geminiKey}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { temperature: 0.3, maxOutputTokens: 1000 } })
@@ -34170,7 +34170,7 @@ app.post('/api/tracker/pages/:id/check', verifyEngineAccess, async (req, res) =>
                         'Return ONLY valid JSON array, no markdown:\n' +
                         '[{"title":"max 6 words","priority":"high|medium|low","system":"Google AIO|Perplexity|Copilot|Claude|Ranking","action":"EXACT text min 50 words","expected_impact":"[System] cites/ranks because [specific reason]"}]';
 
-                      const gResp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${gemKey}`, {
+                      const gResp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${gemKey}`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ contents: [{ parts: [{ text: mergePrompt }] }], generationConfig: { temperature: 0.3, maxOutputTokens: 800 } })
@@ -34241,7 +34241,7 @@ DO NOT be generic. Every action must reference the actual keyword "${kw}" and ac
 Return ONLY a JSON array, no markdown:
 [{"title":"specific gap max 8 words","priority":"high"|"medium"|"low","action":"exact change to make — copy-paste ready, min 25 words","expected_impact":"estimated position improvement and why"}]`;
 
-                  const gRankResp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey}`, {
+                  const gRankResp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${geminiKey}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ contents: [{ parts: [{ text: rankingPrompt }] }], generationConfig: { temperature: 0.3, maxOutputTokens: 800 } })
@@ -34449,7 +34449,7 @@ Return ONLY valid JSON:
   try {
     const ctrl2=new AbortController();setTimeout(()=>ctrl2.abort(),45000);
     const geminiKey=process.env.GEMINI_API_KEY; if(!geminiKey) throw new Error('GEMINI_API_KEY required for SERP brief');
-    const r2=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:[{parts:[{text:prompt}]}],generationConfig:{temperature:0.4,maxOutputTokens:4000,responseMimeType:'application/json'}}),signal:ctrl2.signal});
+    const r2=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${geminiKey}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:[{parts:[{text:prompt}]}],generationConfig:{temperature:0.4,maxOutputTokens:4000,responseMimeType:'application/json'}}),signal:ctrl2.signal});
     const d2=await r2.json().catch(()=>({}));
     if(!r2.ok) throw new Error((d2.error&&d2.error.message)||'Gemini '+r2.status);
     const rawText=(d2.candidates&&d2.candidates[0]&&d2.candidates[0].content&&d2.candidates[0].content.parts&&d2.candidates[0].content.parts[0]&&d2.candidates[0].content.parts[0].text)||'';
@@ -36664,7 +36664,7 @@ Goal: rank #1 and be cited in all AI systems.
 PREVIOUS: ${JSON.stringify((existingBrief2?.items||[]).slice(0,3))}
 NEW: ${JSON.stringify(recsToUse.slice(0,3))}
 Return ONLY JSON array (max 5 items): [{"title":"max 6 words","priority":"high"|"medium"|"low","action":"exact 30+ word instruction","expected_impact":"ranking/AI impact"}]`;
-          const gResp2 = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey}`, {
+          const gResp2 = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${geminiKey}`, {
             method: 'POST', headers: {'Content-Type':'application/json'},
             body: JSON.stringify({ contents: [{ parts: [{ text: mergePrompt2 }] }], generationConfig: { temperature: 0.3, maxOutputTokens: 600 } }),
             signal: AbortSignal.timeout(15000)
