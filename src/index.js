@@ -8769,7 +8769,8 @@ async function callGeminiAPI(prompt, apiKey = process.env.GEMINI_API_KEY) {
             temperature: 0.7,
             topK: 40,
             topP: 0.95,
-            maxOutputTokens: 8192,
+            maxOutputTokens: 16384,
+            thinkingConfig: { thinkingBudget: 0 },
           }
         })
       }
@@ -34449,7 +34450,7 @@ Return ONLY valid JSON:
   try {
     const ctrl2=new AbortController();setTimeout(()=>ctrl2.abort(),45000);
     const geminiKey=process.env.GEMINI_API_KEY; if(!geminiKey) throw new Error('GEMINI_API_KEY required for SERP brief');
-    const r2=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${geminiKey}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:[{parts:[{text:prompt}]}],generationConfig:{temperature:0.4,maxOutputTokens:4000,responseMimeType:'application/json'}}),signal:ctrl2.signal});
+    const r2=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${geminiKey}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:[{parts:[{text:prompt}]}],generationConfig:{temperature:0.4,maxOutputTokens:8192,responseMimeType:'application/json',thinkingConfig:{thinkingBudget:0}}}),signal:ctrl2.signal});
     const d2=await r2.json().catch(()=>({}));
     if(!r2.ok) throw new Error((d2.error&&d2.error.message)||'Gemini '+r2.status);
     const rawText=(d2.candidates&&d2.candidates[0]&&d2.candidates[0].content&&d2.candidates[0].content.parts&&d2.candidates[0].content.parts[0]&&d2.candidates[0].content.parts[0].text)||'';
