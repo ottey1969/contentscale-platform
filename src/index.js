@@ -5463,15 +5463,17 @@ app.post('/api/scan/paste', async (req, res) => {
     // Images
     const imgMatches = [...rawHtml.matchAll(/<img[^>]*>/gi)];
     const contentImgs = imgMatches.filter(m => { const t = m[0].toLowerCase();
-      if (/wp-content\/plugins|cookie|consent|placeholder\.svg|revisit|\/close\.svg|gravatar|emoji|wp-smiley|spinner|loader|tracking|1x1|spacer|data:image\/(?:gif|svg)/i.test(t)) return false;
+      if (/wp-content\/plugins|cookie|consent|placeholder|revisit|\/close|gravatar|emoji|wp-smiley|spinner|loader|tracking|1x1|spacer|sprite|favicon|\blogo|badge|\bicon|thumb|screenshot|\bflag|data:image/i.test(t)) return false;
       return true; });
     const images = contentImgs.length;
     const imagesWithAlt = contentImgs.filter(m => /alt=["'][^"']+["']/i.test(m[0]) && !/alt=["']?["']/i.test(m[0])).length;
 
     // Links
     const allLinks = [...rawHtml.matchAll(/<a[^>]*href=["']([^"']+)["']/gi)].map(m => m[1]);
-    const internalLinks = allLinks.filter(href => !href.startsWith('http') || href.includes(labelUrl || '')).length;
-    const externalLinks = allLinks.filter(href => href.startsWith('http') && !href.includes(labelUrl || '')).length;
+    const _luc = (labelUrl || '').toLowerCase();
+    const _cleanLinks = allLinks.map(h => (h || '').trim()).filter(h => { const x = h.toLowerCase(); return x && !x.startsWith('#') && !x.startsWith('mailto:') && !x.startsWith('tel:') && !x.startsWith('javascript:') && !x.includes('/cdn-cgi/'); });
+    const internalLinks = [...new Set(_cleanLinks.filter(h => { const x = h.toLowerCase(); return !x.startsWith('http') || (_luc && x.includes(_luc)); }))].length;
+    const externalLinks = [...new Set(_cleanLinks.filter(h => { const x = h.toLowerCase(); return x.startsWith('http') && !(_luc && x.includes(_luc)); }))].length;
 
     // Quotes & case studies
     const bqCount = ([...rawHtml.matchAll(/<blockquote/gi)]).length;
