@@ -2944,8 +2944,12 @@ app.post('/api/engine/brief-email', verifyEngineAccess, async (req, res) => {
         const raw = (_em.engine_brief_emails || '');
         const _engFrom = _em.engine_from_email || process.env.FROM_EMAIL || 'info@contentscale.site';
         const _engName = _em.engine_sender_name || 'ContentScale Engine';
-    const recipients = raw.split(',').map(e => e.trim()).filter(e => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e));
-    if (!recipients.length) return res.json({ success: false, error: 'No engine_brief_emails configured' });
+    const _toOverride = ((req.body && req.body.to) || '').toString();
+    const _rxEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const _parseEmails = str => Array.from(new Set(String(str||'').split(/[,;\n]+/).map(e => e.trim()).filter(e => _rxEmail.test(e))));
+    let recipients = _parseEmails(_toOverride);
+    if (!recipients.length) recipients = _parseEmails(raw);
+    if (!recipients.length) return res.json({ success: false, error: 'No recipient - type a writer email in the Send-brief-to field, or configure engine_brief_emails.' });
     const brevoKey = process.env.BREVO_API_KEY || '';
     if (!brevoKey) return res.json({ success: false, error: 'No BREVO_API_KEY' });
     const eu = req.engineUser || {};
