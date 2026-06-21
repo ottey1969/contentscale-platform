@@ -3284,8 +3284,12 @@ async function copyMasterBrief() {
         window._lastPerfectBrief = _pbRes.brief;
         var _pbTxt = renderPerfectBrief(_pbRes.brief);
         window._lastMasterBriefText = _pbTxt;
-        try { if (navigator.clipboard && navigator.clipboard.writeText) { await navigator.clipboard.writeText(_pbTxt); } } catch(e) {}
-        toast('Perfect brief ready - copied (no HTML). Use Send to Agent to attach HTML.', 3200, 'ok');
+        var _pbCopied = false;
+        try { if (navigator.clipboard && navigator.clipboard.writeText) { await navigator.clipboard.writeText(_pbTxt); _pbCopied = true; } } catch(e) {}
+        if (!_pbCopied) {
+          try { var _ta = document.createElement('textarea'); _ta.value = _pbTxt; _ta.style.cssText = 'position:fixed;opacity:0;'; document.body.appendChild(_ta); _ta.select(); document.execCommand('copy'); document.body.removeChild(_ta); _pbCopied = true; } catch(e2) {}
+        }
+        toast(_pbCopied ? 'Perfect brief ready - copied (no HTML). Use Send to Agent to attach HTML.' : 'Perfect brief ready - press Ctrl+C if not copied. Use Send to Agent to attach HTML.', 3400, 'ok');
         return;
       }
     }
