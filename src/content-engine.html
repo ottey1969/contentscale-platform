@@ -3160,7 +3160,7 @@ async function copyMasterBrief() {
   var hasScan = (_context && _context.recs && _context.recs.length > 0) || pastedGraaf.trim().length > 50;
   var hasUrl  = !!(window._lastSpyUrl || (_context && _context.url));
   // AUTO LIVE GRAAF SCAN: no recs yet but we have a URL -> scan the LIVE page so the brief carries REAL GRAAF data (deterministic, no AI cost)
-  if (!(_context && _context.recs && _context.recs.length > 0) && hasUrl) {
+  if (hasUrl) {  // ALWAYS refresh from the live GRAAF scan so the brief score == live scan (deterministic, no AI cost)
     try {
       var _briefUrl = window._lastSpyUrl || (_context && _context.url);
       toast('Running live GRAAF scan for the brief\u2026', 2500);
@@ -8802,8 +8802,8 @@ function renderSerpSpyReport(s) {
         <textarea id="serpSpyHtml" rows="3" placeholder="Paste page HTML here (optional — leave empty to fetch by URL)..." style="width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(124,58,237,.3);border-radius:7px;padding:8px 10px;color:#e2e8f0;font-size:11px;font-family:'DM Mono',monospace;outline:none;box-sizing:border-box;resize:vertical;"></textarea>
         <div style="font-size:9px;color:#34d399;margin-top:4px;">✓ When pasted — Spy uses this directly, bypasses parser. Leave empty to fetch by URL.</div>
                 <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;">
-                  <button onclick="copyMasterBrief()" style="font-size:11px;padding:7px 14px;border-radius:6px;border:1px solid #a78bfa;background:rgba(124,58,237,.15);color:#a78bfa;cursor:pointer;font-weight:700;">\ud83d\udccb Rebuild Brief</button>
-                  <button onclick="this.textContent='\u2705 Done';this.style.color='#34d399';this.style.borderColor='#34d399';this.style.background='rgba(52,211,153,.18)';toast('Done - brief is ready',2500,'ok');" style="font-size:11px;padding:7px 14px;border-radius:6px;border:1px solid #34d399;background:rgba(52,211,153,.10);color:#34d399;cursor:pointer;font-weight:700;">\u2713 Done</button>
+                  <button onclick="copyMasterBrief()" style="font-size:11px;padding:7px 14px;border-radius:6px;border:1px solid #a78bfa;background:rgba(124,58,237,.15);color:#a78bfa;cursor:pointer;font-weight:700;">Copy Brief</button>
+                  <button onclick="this.textContent='Done';this.style.color='#34d399';this.style.borderColor='#34d399';this.style.background='rgba(52,211,153,.18)';toast('Done - brief is ready',2500,'ok');" style="font-size:11px;padding:7px 14px;border-radius:6px;border:1px solid #34d399;background:rgba(52,211,153,.10);color:#34d399;cursor:pointer;font-weight:700;">Done</button>
                 </div>
       </div>
     </div>
