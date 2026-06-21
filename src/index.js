@@ -8804,11 +8804,17 @@ async function callGeminiAPI(prompt, apiKey = process.env.GEMINI_API_KEY) {
 // ══════════════════════════════════════════════════════════════════
 function _briefStripHtml(h) {
   return (h || '')
-    .replace(/<script[\s\S]*?<\/script>/gi, '')
-    .replace(/<style[\s\S]*?<\/style>/gi, '')
-    .replace(/<svg[\s\S]*?<\/svg>/gi, '')
-    .replace(/<!--[\s\S]*?-->/g, '')
-    .replace(/<(link|meta|noscript)[^>]*>/gi, '');
+    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<svg[\s\S]*?<\/svg>/gi, ' ')
+    .replace(/<!--[\s\S]*?-->/g, ' ')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/gi, ' ').replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<').replace(/&gt;/gi, '>')
+    .replace(/&#8217;|&rsquo;/gi, "'").replace(/&#8212;|&mdash;/gi, '-')
+    .replace(/&quot;/gi, '"')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 app.post('/api/brief/generate', async (req, res) => {
   const {
@@ -8825,7 +8831,7 @@ app.post('/api/brief/generate', async (req, res) => {
   if (!process.env.GEMINI_API_KEY) return res.status(503).json({ success: false, error: 'AI service not configured. Add GEMINI_API_KEY.' });
 
   var _schemaBlocks = (pageHtml.match(/<script[^>]*ld\+json[^>]*>[\s\S]*?<\/script>/gi) || []).join('\n').substring(0, 8000);
-  var cleanPage = _briefStripHtml(pageHtml).substring(0, 30000) + (_schemaBlocks ? '\n\n=== JSON-LD SCHEMA ON THIS PAGE (search this too for entities, intent, FAQ) ===\n' + _schemaBlocks : '');
+  var cleanPage = _briefStripHtml(pageHtml).substring(0, 40000) + (_schemaBlocks ? '\n\n=== JSON-LD SCHEMA ON THIS PAGE (search this too for entities, intent, FAQ) ===\n' + _schemaBlocks : '');
   const rawRecsText = (Array.isArray(rawRecs) && rawRecs.length)
     ? rawRecs.map((r, i) => `${i + 1}. ${(r && (r.title || r.what)) || r}${r && r.description ? ' — ' + r.description : ''}${r && r.priority ? ' [' + r.priority + ']' : ''}`).join('\n')
     : '(none provided)';
@@ -8892,6 +8898,7 @@ compBlock
   ].join('\n');
 
   try {
+    console.log('[brief/generate] page="' + url + '" kw="' + keyword + '" textChars=' + cleanPage.length + ' schemaChars=' + _schemaBlocks.length + ' competitors=' + competitors.length + ' rawRecs=' + ((rawRecs&&rawRecs.length)||0));
     const aiResponse = await callGeminiAPI(systemPrompt + '\n\n' + userMessage);
     const brief = extractJsonFromText(aiResponse);
     if (!brief) return res.status(502).json({ success: false, error: 'AI returned invalid JSON — try again.' });
@@ -8900,6 +8907,19 @@ compBlock
     brief.graaf_score_source = 'live manual scan';
     if (url) brief.url = url;
     brief.keyword = keyword;
+    // ── Guard: drop any missing_entity that actually appears in the page text (known recurring bug) ──
+    if (Array.isArray(brief.missing_entities) && brief.missing_entities.length) {
+      var _norm = function(x){ return String(x||'').toLowerCase().replace(/optimi[sz]/g,'optimi').replace(/\s+/g,' ').trim(); };
+      var _pageN = _norm(cleanPage + ' ' + _schemaBlocks);
+      var _kept = [], _dropped = [];
+      brief.missing_entities.forEach(function(ent){
+        var e = _norm(ent);
+        if (e && _pageN.indexOf(e) !== -1) { _dropped.push(ent); } else { _kept.push(ent); }
+      });
+      if (_dropped.length) console.warn('[brief/generate] dropped ' + _dropped.length + ' FALSE-POSITIVE missing_entities present in page: ' + _dropped.join(', '));
+      brief.missing_entities = _kept;
+    }
+    console.log('[brief/generate] done: intent="' + (brief.intent||'') + '" confidence=' + (brief.intent_confidence||'') + ' missing=' + ((brief.missing_entities&&brief.missing_entities.length)||0) + ' recs=' + ((brief.recommendations&&brief.recommendations.length)||0) + ' claims=' + ((brief.claims_to_verify&&brief.claims_to_verify.length)||0));
     return res.json({ success: true, brief });
   } catch (e) {
     console.error('[brief/generate]', e.message);
