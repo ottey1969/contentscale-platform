@@ -4189,6 +4189,19 @@ async function loadTrackerPages() {
     var d = await api('/api/tracker/pages' + profileFilter);
     _trPages = d.pages || [];
 
+    // ── Dedupe: GSC import can create multiple rows for the same URL. Keep the richest one. ──
+    try {
+      var _seen = {}, _dedup = [];
+      _trPages.forEach(function(p){
+        var k = String(p.url||'').replace(/\/+$/,'').toLowerCase();
+        if (!k) { _dedup.push(p); return; }
+        var _sc = function(x){ return ((x.latest_snapshot||x.last_checked)?2:0) + (Number(x.gsc_impressions)||0)/1e6; };
+        if (!_seen.hasOwnProperty(k)) { _seen[k] = _dedup.length; _dedup.push(p); }
+        else if (_sc(p) > _sc(_dedup[_seen[k]])) { _dedup[_seen[k]] = p; }
+      });
+      _trPages = _dedup;
+    } catch(e) {}
+
     // NO domain fallback — it causes cross-profile mixing.
     // If profile returns empty: show empty state. Deploy index.js migration to fix root cause.
 
