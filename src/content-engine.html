@@ -4625,6 +4625,7 @@ function renderTrackerList() {
     // GSC quick stats inline
     var posLabel = (p.gsc_position || (p.latest_snapshot && p.latest_snapshot.google_position)) ?
       '<span style="font-size:10px;color:#9ca3af;">pos <b style="color:#e2e8f0;">' + parseFloat(p.gsc_position || p.latest_snapshot.google_position).toFixed(1) + '</b></span>' : '';
+    var livePosLabel = (p._livePos) ? '<span style="font-size:10px;font-weight:700;color:#c4b5fd;background:rgba(167,139,250,.12);border:1px solid rgba(167,139,250,.35);border-radius:4px;padding:1px 6px;" title="Live Google position from the last Spy scan">\ud83d\udd34 live #' + p._livePos + '</span>' : '';
     var imprLabel = p.gsc_impressions ?
       '<span style="font-size:10px;color:#9ca3af;"><b style="color:#e2e8f0;">' + Number(p.gsc_impressions).toLocaleString() + '</b> impr</span>' : '';
 
@@ -4633,7 +4634,7 @@ function renderTrackerList() {
     '<div style="display:flex;gap:0;align-items:flex-start;">' +
       cbx + numBadge +
       '<div style="flex:1;min-width:0;border-left:3px solid ' + (p.is_done ? '#374151' : pri.border) + ';padding-left:10px;">' +
-        '<div style="display:flex;gap:6px;align-items:center;margin-bottom:5px;flex-wrap:wrap;">' + priBadge + (posLabel||'') + (imprLabel||'') + '</div>' +
+        '<div style="display:flex;gap:6px;align-items:center;margin-bottom:5px;flex-wrap:wrap;">' + priBadge + (posLabel||'') + livePosLabel + (imprLabel||'') + '</div>' +
         '<div style="font-size:13px;font-weight:600;color:#e2e8f0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escHtml(p.title||p.url) + csBadge + '</div>' +
         '<div style="font-size:11px;color:#6b7280;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escHtml(p.url) + (p.keyword ? ' · 🎯 '+escHtml(p.keyword) : '') + ' · ' + lastCh + (p._isStale ? ' <span style="font-size:9px;font-weight:700;background:rgba(251,191,36,.12);border:1px solid rgba(251,191,36,.35);color:#fbbf24;padding:1px 6px;border-radius:4px;" title="Not updated in 90+ days">🕐 Stale</span>' : '') + (p._cannibal ? ' <span style="font-size:9px;font-weight:700;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);color:#f87171;padding:1px 6px;border-radius:4px;" title="' + p._cannibalCount + ' pages target same keyword">🔀 Cannibal</span>' : '') + '</div>' +
         gscLine +
@@ -7678,6 +7679,14 @@ async function runSerpSpy() {
       window._lastSpyData = d.spy;
       window._lastSpyKeyword = kw;
       window._lastSpyUrl = url;
+      // ── Push the live Google position from this spy onto the dashboard row ──
+      try {
+        if (d.spy && d.spy.live_position) {
+          var _lp = parseFloat(d.spy.live_position);
+          (_trPages||[]).forEach(function(p){ if (p.url === url) { p._livePos = _lp; } });
+          if (typeof renderTrackerList === 'function') renderTrackerList();
+        }
+      } catch(e) {}
     } else {
       result.innerHTML = '<pre style="white-space:pre-wrap;font-size:11px;color:#9ca3af;">' + escHtml(d.raw) + '</pre>';
     }
