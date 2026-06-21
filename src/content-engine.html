@@ -3589,15 +3589,12 @@ async function copyMasterBrief() {
         .replace(/\n{3,}/g,'\n\n')
         .trim();
     if (_curHtml.length > 200) {
-      var _CAP = 60000, _trunc = _curHtml.length > _CAP;
-      if (_trunc) _curHtml = _curHtml.slice(0, _CAP);
       parts.push('');
       parts.push(sep);
-      parts.push('CURRENT PAGE HTML — EDIT THIS (SURGICAL)');
+      parts.push('CURRENT PAGE');
       parts.push(sep);
-      parts.push('This is the live page. For SURGICAL mode, return THIS HTML with ONLY the fixes applied — keep all layout, CSS classes and images; remove nothing that works.');
-      if (_trunc) parts.push('[NOTE: HTML truncated to ' + _CAP + ' chars — paste the full HTML manually if the page is longer.]');
-      parts.push(_curHtml);
+      parts.push('Page: ' + (window._lastSpyUrl || (_context && _context.url) || '') + ' (' + _curHtml.length + ' chars of HTML on the live page).');
+      parts.push('SURGICAL: open the live page, keep all layout / CSS / images, and apply ONLY the fixes in this brief. The full live HTML is NOT pasted here to keep the brief short — load it from the page itself (or use Send to Agent, which attaches the live HTML automatically).');
       parts.push('');
     }
   } catch(e) {}
