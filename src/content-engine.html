@@ -4039,6 +4039,7 @@ async function api(endpoint, method, body) {
 // VIEW SWITCHER
 // ════════════════════════════════════════════════════════════════
 function switchView(view) {
+  window._csView = view;
   // Update topbar context label
   var _ctx = document.getElementById('topbarContext');
   if (_ctx) {
@@ -4575,11 +4576,14 @@ function renderTrackerList() {
       var now = Date.now();
       var last = new Date(p.last_checked_at).getTime();
       var daysSince = Math.floor((now - last) / 86400000);
-      var nextCheck = p.next_check_at ? new Date(p.next_check_at).getTime() : (last + 3*86400000);
-      var daysUntil = Math.ceil((nextCheck - now) / 86400000);
-      if (daysUntil <= 0) return '<span style="color:#f87171;font-weight:700;">🔴 Check due</span>';
-      if (daysUntil === 1) return '<span style="color:#fbbf24;font-weight:700;">🟡 Check tomorrow</span>';
-      if (daysUntil <= 2) return '<span style="color:#fbbf24;">🟡 Check in ' + daysUntil + ' days</span>';
+      // Forward-looking scheduling labels belong to the TRACKER only, not the engine view
+      if (window._csView === 'tracker') {
+        var nextCheck = p.next_check_at ? new Date(p.next_check_at).getTime() : (last + 3*86400000);
+        var daysUntil = Math.ceil((nextCheck - now) / 86400000);
+        if (daysUntil <= 0) return '<span style="color:#f87171;font-weight:700;">🔴 Check due</span>';
+        if (daysUntil === 1) return '<span style="color:#fbbf24;font-weight:700;">🟡 Check tomorrow</span>';
+        if (daysUntil <= 2) return '<span style="color:#fbbf24;">🟡 Check in ' + daysUntil + ' days</span>';
+      }
       return '<span style="color:#4b5563;">🟢 Checked ' + daysSince + 'd ago</span>';
     })();
     var recs = snap.recommendations;
