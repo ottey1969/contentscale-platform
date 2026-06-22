@@ -2959,9 +2959,9 @@ app.post('/api/engine/brief-email', verifyEngineAccess, async (req, res) => {
     const _toOverride = ((req.body && req.body.to) || '').toString();
     const _rxEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     const _parseEmails = str => Array.from(new Set(String(str||'').split(/[,;\n]+/).map(e => e.trim()).filter(e => _rxEmail.test(e))));
-    let recipients = _parseEmails(_toOverride);
-    if (!recipients.length) recipients = _parseEmails(raw);
-    if (!recipients.length) return res.json({ success: false, error: 'No recipient - type a writer email in the Send-brief-to field, or configure engine_brief_emails.' });
+    let recipients = _parseEmails(raw);
+    _parseEmails(_toOverride).forEach(function(e){ if (recipients.indexOf(e) < 0) recipients.push(e); });
+    if (!recipients.length) return res.json({ success: false, error: 'No recipient - add team emails in admin (engine_brief_emails) and/or pick a specialist in the Send-brief-to field.' });
     const brevoKey = process.env.BREVO_API_KEY || '';
     if (!brevoKey) return res.json({ success: false, error: 'No BREVO_API_KEY' });
     const eu = req.engineUser || {};
