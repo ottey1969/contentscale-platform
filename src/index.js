@@ -33554,34 +33554,18 @@ app.get('/api/tracker/pages', verifyEngineAccess, async (req, res) => {
       params = adminParams;
     } else {
       // Engine users see only their own pages
-      // profile_id filter: match exact profile_id OR pages with no profile assigned (backward compat)
-      // Also match pages whose domain matches the profile domain (handles pages saved before profile was set)
+      // STRICT: profile_id must match exactly — no domain-based fallback (prevents domain-mixing)
       if (profileId) {
-        // Get profile domain for fallback matching
-        let profileDomain = null;
-        try {
-          const pdR = await pool.query(`SELECT domain FROM content_profiles WHERE id=$1`, [profileId]);
-          if (pdR.rows.length && pdR.rows[0].domain) {
-            profileDomain = pdR.rows[0].domain.replace(/^https?:\/\//, '').replace(/\/.*$/, '').replace(/^www\./, '');
-          }
-        } catch(e) {}
-        // Show pages with exact profile_id match OR pages with NULL profile_id
-        // that belong to this engine AND match the profile domain (backward compat for old pages)
-        if (profileDomain) {
-          q = `SELECT ${COLS} FROM tracker_pages p 
-               WHERE p.engine_code_id=$1 
-               AND (p.is_active=TRUE OR p.is_active IS NULL)
-               AND (
-                 p.profile_id=$2 
-                 OR (p.profile_id IS NULL AND (p.url ILIKE $3 OR p.url ILIKE $4))
-               )
-               ORDER BY p.created_at DESC`;
-          params = [codeId, profileId, '%' + profileDomain + '%', '%www.' + profileDomain + '%'];
-        } else {
-          q = `SELECT ${COLS} FROM tracker_pages p WHERE p.engine_code_id=$1 AND p.profile_id=$2 AND (p.is_active=TRUE OR p.is_active IS NULL) ORDER BY p.created_at DESC`;
-          params = [codeId, profileId];
-        }
-      } else { q = `SELECT ${COLS} FROM tracker_pages p WHERE p.engine_code_id=$1 AND (p.is_active=TRUE OR p.is_active IS NULL) ORDER BY p.created_at DESC`; params = [codeId]; }
+        q = `SELECT ${COLS} FROM tracker_pages p 
+             WHERE p.engine_code_id=$1 
+             AND p.profile_id=$2
+             AND (p.is_active=TRUE OR p.is_active IS NULL)
+             ORDER BY p.created_at DESC`;
+        params = [codeId, profileId];
+      } else { 
+        q = `SELECT ${COLS} FROM tracker_pages p WHERE p.engine_code_id=$1 AND (p.is_active=TRUE OR p.is_active IS NULL) ORDER BY p.created_at DESC`; 
+        params = [codeId]; 
+      }
     }
     const r = await pool.query(q, params);
     res.json({ success: true, pages: r.rows });
