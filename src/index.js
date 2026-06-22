@@ -33609,31 +33609,56 @@ app.post('/api/tracker/reassign-profile', verifyEngineAccess, async (req, res) =
     if (!codeId) return res.json({ success: false, error: 'engine login required' });
     const pdR = await pool.query('SELECT domain FROM content_profiles WHERE id=$1', [profileId]);
     if (!pdR.rows.length || !pdR.rows[0].domain) return res.json({ success: false, error: 'profile has no domain set' });
-    const dom = String(pdR.rows[0].domain).replace(/^https?:\/\//,'').replace(/\/.*$/,'').replace(/^www\./,'');
-    const like1 = '%' + dom + '%', like2 = '%www.' + dom + '%';
-    const diagR = await pool.query(
-      `SELECT COUNT(*)::int AS domain_total,
-              COUNT(*) FILTER (WHERE engine_code_id=$1)::int AS under_current,
-              COUNT(*) FILTER (WHERE engine_code_id IS NULL)::int AS null_code,
-              COUNT(*) FILTER (WHERE engine_code_id IS NOT NULL AND engine_code_id<>$1)::int AS other_code
-         FROM tracker_pages WHERE (url ILIKE $2 OR url ILIKE $3)`,
-      [codeId, like1, like2]
+    
+    // Extract profile domain strictly (no substring matching)
+    const profileDomain = String(pdR.rows[0].domain).replace(/^https?:\/\//,'').replace(/\/.*$/,'').replace(/^www\./,'').toLowerCase();
+    
+    // Use JavaScript-side domain extraction for strict matching
+    // Fetch all tracker pages for this engine and filter by exact domain match in app layer
+    const allPagesR = await pool.query(
+      `SELECT id, url FROM tracker_pages WHERE engine_code_id = $1 OR (engine_code_id IS NULL AND $1 IS NOT NULL)`,
+      [codeId]
     );
-    const diag = diagR.rows[0] || { domain_total:0, under_current:0, null_code:0, other_code:0 };
-    let upd;
-    if (claimAll) {
-      upd = await pool.query(
-        `UPDATE tracker_pages SET engine_code_id=$1, profile_id=$2 WHERE (url ILIKE $3 OR url ILIKE $4) AND (engine_code_id IS DISTINCT FROM $1 OR profile_id IS DISTINCT FROM $2)`,
-        [codeId, profileId, like1, like2]
-      );
-    } else {
-      upd = await pool.query(
-        `UPDATE tracker_pages SET engine_code_id=$1, profile_id=$2 WHERE (url ILIKE $3 OR url ILIKE $4) AND (engine_code_id IS NULL OR engine_code_id=$1) AND (engine_code_id IS DISTINCT FROM $1 OR profile_id IS DISTINCT FROM $2)`,
-        [codeId, profileId, like1, like2]
-      );
+    
+    // Filter pages with exact domain match
+    const matchingPages = allPagesR.rows.filter(p => {
+      try {
+        const urlObj = new URL(p.url);
+        const pageDomain = urlObj.hostname.replace(/^www\./, '').toLowerCase();
+        return pageDomain === profileDomain;
+      } catch(e) { return false; }
+    });
+    
+    const matchingIds = matchingPages.map(p => p.id);
+    
+    // Diagnostic info
+    const diag = {
+      domain_total: matchingIds.length,
+      under_current: allPagesR.rows.filter(p => matchingIds.includes(p.id) && p.engine_code_id === codeId).length || 0,
+      null_code: allPagesR.rows.filter(p => matchingIds.includes(p.id) && p.engine_code_id === null).length || 0,
+      other_code: allPagesR.rows.filter(p => matchingIds.includes(p.id) && p.engine_code_id !== null && p.engine_code_id !== codeId).length || 0
+    };
+    
+    let upd = { rowCount: 0 };
+    if (matchingIds.length > 0) {
+      if (claimAll) {
+        upd = await pool.query(
+          `UPDATE tracker_pages SET engine_code_id=$1, profile_id=$2 
+           WHERE id = ANY($3) AND (engine_code_id IS DISTINCT FROM $1 OR profile_id IS DISTINCT FROM $2)`,
+          [codeId, profileId, matchingIds]
+        );
+      } else {
+        upd = await pool.query(
+          `UPDATE tracker_pages SET engine_code_id=$1, profile_id=$2 
+           WHERE id = ANY($3) AND (engine_code_id IS NULL OR engine_code_id=$1) 
+           AND (engine_code_id IS DISTINCT FROM $1 OR profile_id IS DISTINCT FROM $2)`,
+          [codeId, profileId, matchingIds]
+        );
+      }
     }
+    
     const totR = await pool.query('SELECT COUNT(*)::int AS n FROM tracker_pages WHERE engine_code_id=$1', [codeId]);
-    res.json({ success: true, updated: upd.rowCount, engine_total: (totR.rows[0]||{}).n || 0, domain: dom, diag: diag });
+    res.json({ success: true, updated: upd.rowCount, engine_total: (totR.rows[0]||{}).n || 0, domain: profileDomain, diag: diag });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
