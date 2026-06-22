@@ -8898,7 +8898,7 @@ app.post('/api/brief/generate', async (req, res) => {
   }
 
   var _schemaBlocks = (pageHtml.match(/<script[^>]*ld\+json[^>]*>[\s\S]*?<\/script>/gi) || []).join('\n').substring(0, 8000);
-  var cleanPage = _briefStripHtml(pageHtml).substring(0, 40000) + (_schemaBlocks ? '\n\n=== JSON-LD SCHEMA ON THIS PAGE (search this too for entities, intent, FAQ) ===\n' + _schemaBlocks : '');
+  var cleanPage = _briefStripHtml(pageHtml).substring(0, 18000) + (_schemaBlocks ? '\n\n=== JSON-LD SCHEMA ON THIS PAGE (search this too for entities, intent, FAQ) ===\n' + _schemaBlocks : '');
   const rawRecsText = (Array.isArray(rawRecs) && rawRecs.length)
     ? rawRecs.map((r, i) => `${i + 1}. ${(r && (r.title || r.what)) || r}${r && r.description ? ' — ' + r.description : ''}${r && r.priority ? ' [' + r.priority + ']' : ''}`).join('\n')
     : '(none provided)';
@@ -8914,7 +8914,7 @@ app.post('/api/brief/generate', async (req, res) => {
 "MANDATORY PROCESSING ORDER:",
 "STEP 1 - Read the live GRAAF score and raw scanner recommendations FIRST. Treat them as ground truth (deterministic, not an estimate).",
 "STEP 2 - Read the full content of the user's own page. For every raw scanner recommendation, check whether it is ALREADY present or already resolved in the page. If already satisfied, DROP it. If not resolved, carry it forward in your own words with WHAT/WHERE/WRITE/WHY.",
-"STEP 2A - VERIFY EVERY EXISTING STATISTICAL CLAIM on the page. Identify every statistic, percentage, named study, or named institution already on the page. For each, flag it under claims_to_verify with the exact claim, where it appears, and your confidence (high/medium/low) that it is correctly cited. Do NOT silently trust a published claim; flag anything internally inconsistent, suspiciously precise, or unfamiliar to you as a named study so a human can verify it.",
+"STEP 2A - VERIFY THE STATISTICAL CLAIMS on the page, but flag ONLY the highest-risk ones under claims_to_verify - CAP AT 12. Prioritise claims that are internally inconsistent, suspiciously precise, or cite a named study/institution you do not recognise, over routine claims that merely need a source link. For each flagged claim give the exact claim, where it appears, and your confidence (high/medium/low) plus a one-line concern. Do NOT exhaustively list every claim on the page - that bloats the response and truncates it; pick the 12 that most need a human's eyes.",
 "STEP 2B - MANDATORY SUBSTRING SEARCH BEFORE FLAGGING ANY MISSING ENTITY. Before adding ANY term to missing_entities, run a literal case-insensitive substring search (including variants like optimise/optimize) across the ENTIRE page given in the input - head, body, JSON-LD schema scripts, alt text, table cells, feature lists, section headings - not just the visible prose. If the term or a close variant appears anywhere, it is NOT missing; do not list it. This is a KNOWN RECURRING failure (intelligence/structure/optimized were each flagged as missing while all three appeared repeatedly on the page) - actively guard against it.",
 "STEP 3 - Only after steps 1-2, read the competitor pages and determine positioning, SERP gaps, and missing entities.",
 "",
@@ -8929,6 +8929,8 @@ app.post('/api/brief/generate', async (req, res) => {
 "EVERY recommendation MUST state: what to do, WHERE on the page, the actual copy/angle to WRITE, and WHY it helps (rank + citation + trust). No vague advice. Match the language of the user's page.",
 "",
 "FINAL CHECK: re-read your missing_entities and recommendations against the GRAAF scan (step 1) and the page (step 2). For EVERY missing_entities entry, re-run the Step 2B substring search one more time - this is the step that has failed before, so check it twice. If any item is already resolved, remove it or change 'add' to 'strengthen'.",
+"",
+"LENGTH BUDGET (critical - your ENTIRE response MUST be complete, valid JSON and must NOT be truncated): be concise in every field and cap the arrays - recommendations max 8, claims_to_verify max 12 (highest-risk only), missing_entities max 10, ai_overview_blueprint max 5, quick_wins max 5. A complete shorter brief is mandatory; an exhaustive one that gets cut off mid-JSON is useless.",
 "",
 "OUTPUT - return ONLY valid JSON, no markdown, no preamble:",
 '{',
