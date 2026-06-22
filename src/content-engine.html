@@ -3302,22 +3302,19 @@ async function copyMasterBrief() {
   // ── fallback: legacy brief assembly below (only if the new engine could not produce a brief) ──
   // ── TASK BLOCK — always first, tells the external AI exactly what to deliver ──
   var _kwTop  = window._lastSpyKeyword || (_context && _context.keyword) || '';
-  parts.push('=== YOUR TASK (READ THIS FIRST) ===');
-  parts.push('You are an expert SEO + AEO content writer. Goal: make the page' + (_kwTop ? ' for the keyword "' + _kwTop + '"' : '') + ' outrank the current top 10 and become eligible for citation in Google AI Overviews and Perplexity.');
+  parts.push('=== CONTENT BRIEF (recommendations only \u2014 no HTML) ===');
+  parts.push('Goal: make the page' + (_kwTop ? ' for the keyword "' + _kwTop + '"' : '') + ' outrank the current top 10 and become eligible for citation in Google AI Overviews and Perplexity.');
+  parts.push('This brief lists WHAT to change \u2014 it contains NO HTML. To apply it: click "Send to Agent" (it attaches the live page HTML automatically), or hand this brief to a writer.');
   parts.push('');
-  parts.push('CHOOSE THE RIGHT APPROACH:');
-  parts.push('* SURGICAL (PREFERRED when the current page HTML is provided below and the page already ranks): keep the existing page intact and apply ONLY the specific fixes/additions in this brief (direct answer, meta/title, CTAs, schema, PAA, missing entities, FAQ). Do NOT rewrite, reorder, or delete anything that already works. This preserves rankings.');
-  parts.push('* FULL REWRITE (only if no current HTML is provided, or the page is thin/new): write ONE complete, publish-ready HTML page from scratch using all the data below. Warning: a full rewrite of a page that already ranks can cause a 7-30 day ranking dip.');
+  parts.push('THE PAGE MUST END UP WITH:');
+  parts.push('1. Every item in the GRAAF CONTENTSCORE REQUIREMENTS below \u2014 HIGH and MEDIUM are mandatory.');
+  parts.push('2. The winning structure from the RANKING FORMULA below (sections, schema, depth), matched or beaten.');
+  parts.push('3. The listed schema types as JSON-LD (e.g. LocalBusiness + FAQPage).');
+  parts.push('4. The real BUSINESS PROFILE data below (name, phone, address) \u2014 never placeholder data.');
+  parts.push('5. A natural, experience-led tone (E-E-A-T). No fluff, no invented stats or fake reviews.');
+  parts.push('6. An SEO title (max 60 chars, focus keyword first) and meta description (max 155 chars), FAR more click-worthy than the current ones \u2014 lead with the strongest benefit/hook, state OLD vs NEW. (These go into Rank Math separately.)');
   parts.push('');
-  parts.push('WHAT TO DELIVER (either approach):');
-  parts.push('1. Output ONLY the full HTML (no explanation, no markdown fences).');
-  parts.push('2. Use the real BUSINESS PROFILE data below (name, phone, address) \u2014 never placeholder data.');
-  parts.push('3. Implement EVERY item in the GRAAF CONTENTSCORE REQUIREMENTS below \u2014 HIGH and MEDIUM are mandatory.');
-  parts.push('4. Match or beat the winning RANKING FORMULA below (sections, schema, depth).');
-  parts.push('5. Add the listed schema types as JSON-LD (e.g. LocalBusiness + FAQPage).');
-  parts.push('6. Write in a natural, experience-led tone (E-E-A-T). No fluff, no invented stats or fake reviews.');
-  parts.push('TITLE + META (CTR-critical): provide an SEO title (max 60 chars, focus keyword first) and meta description (max 155 chars). They MUST be FAR more click-worthy than the current ones \u2014 lead with the strongest benefit/hook, be specific, create curiosity or urgency. State OLD vs NEW. These go into Rank Math (changing HTML does not update Rank Math).');
-  parts.push('7. When finished, confirm each HIGH and MEDIUM requirement was applied.');
+  parts.push('PREFER SURGICAL CHANGES: keep the existing page, layout, CSS and images intact and apply only the fixes above. Only do a full rewrite if the page is thin or brand-new (a full rewrite of a page that already ranks can cause a 7-30 day dip).');
   parts.push('');
   parts.push('KEEP (do not change):');
   try {
@@ -3351,7 +3348,7 @@ async function copyMasterBrief() {
     if (!proceed) return;
     parts.push('WARNING: ContentScore scan NOT included. Brief is incomplete.');
     parts.push('Scan ' + (window._lastSpyUrl||'') + ' at app.contentscale.site');
-    parts.push('Add High + Medium results below before writing HTML.');
+    parts.push('Add High + Medium GRAAF results below to complete the brief.');
     parts.push('');
   }
 
@@ -3375,7 +3372,7 @@ async function copyMasterBrief() {
     if (usps.length) parts.push('USPs: ' + usps.filter(Boolean).join(' | '));
     var certs = p.certifications ? (typeof p.certifications === 'string' ? p.certifications.split('\n') : p.certifications) : [];
     if (certs.length) parts.push('Certifications: ' + certs.filter(Boolean).join(', '));
-    parts.push('NOTE: Use the real phone, address, and business name above in ALL HTML output. Never use placeholder data.');
+    parts.push('NOTE: Use the real phone, address, and business name above \u2014 never placeholder data.');
     parts.push('');
   }
 
@@ -3566,7 +3563,7 @@ async function copyMasterBrief() {
       parts.push('━━ CONFIRMATION REQUIRED ━━');
       parts.push('After completing, confirm each item above as: DONE or SKIPPED (with reason).');
     } else if (scanUrl2) {
-      parts.push('[ACTION REQUIRED] Run GRAAF scan before writing HTML:');
+      parts.push('[ACTION REQUIRED] Run GRAAF scan to complete this brief:');
       parts.push('1. Open: https://app.contentscale.site/?url=' + encodeURIComponent(scanUrl2));
       parts.push('2. Copy all High + Medium + Low recommendations');
       parts.push('3. Paste into the GRAAF Recommendations field in the Brief Builder');
