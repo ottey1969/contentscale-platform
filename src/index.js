@@ -29836,6 +29836,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                         <option value="">All domains</option>
                     </select>
                     <button onclick="deleteFilteredDomain()" class="tr-btn danger" title="Delete all pages for selected domain" style="font-size:11px;padding:5px 10px;white-space:nowrap;">&#x1f5d1; Delete domain</button>
+                    <button onclick="deleteAllTrackerPages()" class="tr-btn danger" title="Delete ALL tracked pages (every domain)" style="font-size:11px;padding:5px 10px;white-space:nowrap;background:#7f1d1d;">&#x1f5d1; Delete ALL</button>
                     <span id="trFilterCount" style="font-size:12px;color:#6b7280;"></span>
                 </div>
                 <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;" id="trBulkBar">
@@ -31868,6 +31869,20 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
             loadTrackerPages();
         }
 
+        async function deleteAllTrackerPages() {
+            var n = allTrackerPages.length;
+            if (!n) { alert('No pages to delete'); return; }
+            if (!confirm('Delete ALL ' + n + ' tracked pages? This cannot be undone.')) return;
+            if (!confirm('Last check — wipe every page in the tracker?')) return;
+            var ids = allTrackerPages.map(function(p){ return p.id; });
+            var deleted = 0, failed = 0;
+            for (var i = 0; i < ids.length; i++) {
+                try { await apiCall('/api/tracker/pages/' + ids[i], 'DELETE'); deleted++; } catch(e) { failed++; }
+            }
+            alert('Deleted ' + deleted + ' pages' + (failed ? ', ' + failed + ' failed' : ''));
+            loadTrackerPages();
+        }
+
         async function markTrackerPageDone(pageId, btn) {
             var isDone = btn && btn.textContent.trim() === 'Mark done' ? true : false;
             try {
@@ -33529,7 +33544,7 @@ app.get('/api/tracker/pages', verifyEngineAccess, async (req, res) => {
     let q, params = [];
     if (isAdmin) {
       // Admin sees all pages with client name, optionally filtered by profile/domain/client
-      const whereClauses = [];
+      const whereClauses = ['(p.is_active=TRUE OR p.is_active IS NULL)'];
       const adminParams = [];
       if (profileId) { adminParams.push(profileId); whereClauses.push(`p.profile_id=$${adminParams.length}`); }
       if (domainFilter) { adminParams.push('%' + domainFilter + '%'); whereClauses.push(`p.url ILIKE $${adminParams.length}`); }
@@ -33555,6 +33570,7 @@ app.get('/api/tracker/pages', verifyEngineAccess, async (req, res) => {
         if (profileDomain) {
           q = `SELECT ${COLS} FROM tracker_pages p 
                WHERE p.engine_code_id=$1 
+               AND (p.is_active=TRUE OR p.is_active IS NULL)
                AND (
                  p.profile_id=$2 
                  OR (p.profile_id IS NULL AND (p.url ILIKE $3 OR p.url ILIKE $4))
@@ -33562,10 +33578,10 @@ app.get('/api/tracker/pages', verifyEngineAccess, async (req, res) => {
                ORDER BY p.created_at DESC`;
           params = [codeId, profileId, '%' + profileDomain + '%', '%www.' + profileDomain + '%'];
         } else {
-          q = `SELECT ${COLS} FROM tracker_pages p WHERE p.engine_code_id=$1 AND p.profile_id=$2 ORDER BY p.created_at DESC`;
+          q = `SELECT ${COLS} FROM tracker_pages p WHERE p.engine_code_id=$1 AND p.profile_id=$2 AND (p.is_active=TRUE OR p.is_active IS NULL) ORDER BY p.created_at DESC`;
           params = [codeId, profileId];
         }
-      } else { q = `SELECT ${COLS} FROM tracker_pages p WHERE p.engine_code_id=$1 ORDER BY p.created_at DESC`; params = [codeId]; }
+      } else { q = `SELECT ${COLS} FROM tracker_pages p WHERE p.engine_code_id=$1 AND (p.is_active=TRUE OR p.is_active IS NULL) ORDER BY p.created_at DESC`; params = [codeId]; }
     }
     const r = await pool.query(q, params);
     res.json({ success: true, pages: r.rows });
