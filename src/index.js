@@ -3187,8 +3187,17 @@ app.post('/api/admin/tracker-clients/merge-duplicates', verifyAdmin, async (req,
 app.patch('/api/admin/tracker-clients/:id/frequency', verifyAdmin, async (req, res) => {
   try {
     const { frequency } = req.body;
-    const allowed = ['1day','3days','7days','17days','21days','30days','weekly','1week','2weeks','monthly'];
+    const allowed = ['0','0days','off','1day','3days','7days','17days','21days','30days','weekly','1week','2weeks','monthly'];
     if (!allowed.includes(frequency)) return res.status(400).json({ success: false, error: 'Invalid frequency' });
+    const _off = (frequency==='0'||frequency==='0days'||frequency==='off');
+    if (_off) {
+      await pool.query(
+        `UPDATE tracker_pages SET check_frequency='0', next_check_at=NULL
+           WHERE tracker_client_id=$1 AND (is_active=TRUE OR is_active IS NULL)`,
+        [req.params.id]
+      );
+      return res.json({ success: true, frequency: '0', days: 0 });
+    }
     const _fm = { 'daily':1,'1day':1,'3days':3,'7days':7,'weekly':7,'1week':7,'2weeks':14,'17days':17,'21days':21,'30days':30,'monthly':30 };
     let _d = _fm[frequency]; if (!_d) { const _m = String(frequency).match(/^(\d+)\s*days?$/); _d = _m ? parseInt(_m[1],10) : 3; }
     await pool.query(
@@ -3206,8 +3215,13 @@ app.patch('/api/admin/tracker-clients/:id/frequency', verifyAdmin, async (req, r
 app.patch('/api/admin/tracker-pages/:pageId/frequency', verifyAdmin, async (req, res) => {
   try {
     const { frequency } = req.body;
-    const allowed = ['1day','3days','7days','17days','21days','30days','weekly','1week','2weeks','monthly'];
+    const allowed = ['0','0days','off','1day','3days','7days','17days','21days','30days','weekly','1week','2weeks','monthly'];
     if (!allowed.includes(frequency)) return res.status(400).json({ success: false, error: 'Invalid frequency' });
+    const _off = (frequency==='0'||frequency==='0days'||frequency==='off');
+    if (_off) {
+      await pool.query(`UPDATE tracker_pages SET check_frequency='0', next_check_at=NULL WHERE id=$1`, [req.params.pageId]);
+      return res.json({ success: true, frequency: '0', days: 0 });
+    }
     const _fm = { 'daily':1,'1day':1,'3days':3,'7days':7,'weekly':7,'1week':7,'2weeks':14,'17days':17,'21days':21,'30days':30,'monthly':30 };
     let _d = _fm[frequency]; if (!_d) { const _m = String(frequency).match(/^(\d+)\s*days?$/); _d = _m ? parseInt(_m[1],10) : 3; }
     // Save interval AND re-anchor next_check_at from the last scan (or now) so the scan + its
@@ -3498,7 +3512,7 @@ app.patch('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
   await client.query(`
     UPDATE tracker_pages SET check_frequency='3days'
     WHERE check_frequency IS NULL
-       OR check_frequency NOT IN ('1day','3days','7days','17days','21days','30days','weekly','1week','2weeks','monthly')
+       OR check_frequency NOT IN ('0','1day','3days','7days','17days','21days','30days','weekly','1week','2weeks','monthly')
   `).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS telegram_chat_id VARCHAR(64)`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS email_unsubscribed BOOLEAN DEFAULT FALSE`).catch(()=>{});
@@ -26756,7 +26770,7 @@ function renderPages() {
       nextCheckDate = d;
     }
     var nextCheck = nextCheckDate ? 'Next: ' + nextCheckDate.toLocaleDateString('en-GB',{day:'2-digit',month:'short'}) : '';
-    var freqLabel = (function(f){ var m={'1day':'daily','3days':'every 3 days','7days':'every 7 days','weekly':'weekly','1week':'weekly','2weeks':'every 2 weeks','17days':'every 17 days','21days':'every 21 days','30days':'every 30 days','monthly':'monthly'}; if(m[f])return m[f]; var x=String(f||'').match(/^(\d+)\s*days?$/); return x?('every '+x[1]+' days'):'every 3 days'; })(p.check_frequency);
+    var freqLabel = (function(f){ var m={'0':'off (no scan)','off':'off (no scan)','1day':'daily','3days':'every 3 days','7days':'every 7 days','weekly':'weekly','1week':'weekly','2weeks':'every 2 weeks','17days':'every 17 days','21days':'every 21 days','30days':'every 30 days','monthly':'monthly'}; if(m[f])return m[f]; var x=String(f||'').match(/^(\d+)\s*days?$/); return x?('every '+x[1]+' days'):'every 3 days'; })(p.check_frequency);
     // Clean URL - remove protocol, www, and fix anchor slugs (#section)
     var rawUrl = p.url || '';
     var urlClean = rawUrl.replace(/^https?:[/][/]/, '').replace(/^www[.]/, '');
@@ -29830,6 +29844,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                         Select all
                     </label>
                     <span id="trSelectedCount" style="font-size:12px;color:#6b7280;"></span>
+                    <button onclick="setSelectedPagesOff()" class="tr-btn" style="font-size:11px;padding:4px 12px;display:none;border:1px solid #6b7280;color:#9ca3af;background:#0d1117;border-radius:4px;cursor:pointer;" id="trBulkOffBtn">\u2298 Set Off (no scan)</button>
                     <button onclick="deleteSelectedPages()" class="tr-btn danger" style="font-size:11px;padding:4px 12px;display:none;" id="trBulkDeleteBtn">&#x1f5d1; Delete selected</button>
                 </div>
 
@@ -29860,6 +29875,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                                 <label style="font-size:11px;color:#9ca3af;text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:5px;">Check Frequency</label>
                                 <select id="trAddFreq" class="tr-select" style="width:100%;">
                                     <option value="1day">Daily (heavy usage)</option>
+                                    <option value="0">⊘ Off (no auto-scan)</option>
                                     <option value="3days" selected>Every 3 days ← recommended</option>
                                     <option value="7days">Every 7 days</option>
                                     <option value="17days">Every 17 days</option>
@@ -31288,13 +31304,34 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
             }).catch(function(e){ alert('Error: ' + e.message); });
         }
 
+        async function setSelectedPagesOff() {
+            var cbs = document.querySelectorAll('.tr-page-cb:checked');
+            if (!cbs.length) return;
+            if (!confirm('Set ' + cbs.length + ' selected page(s) to Off (no auto-scan)?')) return;
+            var ids = Array.from(cbs).map(function(cb){ return cb.dataset.id; });
+            var ok = 0, fail = 0;
+            for (var i = 0; i < ids.length; i++) {
+                try {
+                    var r = await fetch('/api/admin/tracker-pages/' + ids[i] + '/frequency', {
+                        method: 'PATCH',
+                        headers: {'Content-Type':'application/json','x-admin-key':currentAdminId},
+                        body: JSON.stringify({ frequency: '0' })
+                    });
+                    var d = await r.json();
+                    if (d && d.success) ok++; else fail++;
+                } catch(e) { fail++; }
+            }
+            alert('Set ' + ok + ' page(s) to Off' + (fail ? ' (' + fail + ' failed)' : ''));
+            loadTrackerPages();
+        }
+
         function renderTrackerPageCard(p, pageIdx) {
             const pageNum = (pageIdx !== undefined ? pageIdx : 0) + 1;
             const snap = p.latest_snapshot;
             const pending = parseInt(p.pending_changes||0);
-            const freqLabels = {'1day':'Daily','3days':'3 days','7days':'7 days','17days':'17 days','21days':'21 days','30days':'30 days','1week':'Weekly','2weeks':'2 weeks','weekly':'Weekly','monthly':'Monthly'};
+            const freqLabels = {'0':'Off','0days':'Off','off':'Off','1day':'Daily','3days':'3 days','7days':'7 days','17days':'17 days','21days':'21 days','30days':'30 days','1week':'Weekly','2weeks':'2 weeks','weekly':'Weekly','monthly':'Monthly'};
             const nextCheck = p.next_check_at ? getTimeAgo(new Date(p.next_check_at)) : '-';
-            const _freqOpts = [['3days','3 days'],['7days','7 days'],['17days','17 days'],['21days','21 days'],['30days','30 days']];
+            const _freqOpts = [['0','\u2298 Off'],['3days','3 days'],['7days','7 days'],['17days','17 days'],['21days','21 days'],['30days','30 days']];
             const freqSelectHtml = '<select onclick="event.stopPropagation()" onchange="changeTrackerPageFreq('+p.id+',this.value)" title="Scan interval for this page — the notification email follows this same schedule" style="font-size:10px;padding:3px 6px;border:1px solid #818cf8;color:#818cf8;background:#0d1117;cursor:pointer;border-radius:4px;">'
                 + _freqOpts.map(function(o){ return '<option value="'+o[0]+'"'+(p.check_frequency===o[0]?' selected':'')+'>'+o[1]+'</option>'; }).join('')
                 + (_freqOpts.some(function(o){return o[0]===p.check_frequency;}) ? '' : '<option value="'+(p.check_frequency||'3days')+'" selected>'+(freqLabels[p.check_frequency]||p.check_frequency||'3 days')+'</option>')
@@ -31780,9 +31817,11 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
             var total = document.querySelectorAll('.tr-page-cb');
             var countEl = document.getElementById('trSelectedCount');
             var deleteBtn = document.getElementById('trBulkDeleteBtn');
+            var offBtn = document.getElementById('trBulkOffBtn');
             var selectAll = document.getElementById('trSelectAll');
             if (countEl) countEl.textContent = cbs.length ? cbs.length + ' selected' : '';
             if (deleteBtn) deleteBtn.style.display = cbs.length ? 'inline-flex' : 'none';
+            if (offBtn) offBtn.style.display = cbs.length ? 'inline-flex' : 'none';
             if (selectAll) selectAll.indeterminate = cbs.length > 0 && cbs.length < total.length;
             if (selectAll && cbs.length === total.length && total.length > 0) selectAll.checked = true;
         }
@@ -32464,7 +32503,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 freqSelect.className = 'tr-btn';
                 freqSelect.title = 'Change auto-check frequency for all pages of this client';
                 freqSelect.style.cssText = 'font-size:10px;padding:3px 6px;border-color:#818cf8;color:#818cf8;background:#0d1117;cursor:pointer;border-radius:4px;border:1px solid #818cf8;';
-                [['3days','3 days'],['7days','7 days'],['17days','17 days'],['21days','21 days'],['30days','30 days'],['weekly','Weekly'],['monthly','Monthly']].forEach(function(opt) {
+                [['0','\u2298 Off'],['3days','3 days'],['7days','7 days'],['17days','17 days'],['21days','21 days'],['30days','30 days'],['weekly','Weekly'],['monthly','Monthly']].forEach(function(opt) {
                     var o = document.createElement('option');
                     o.value = opt[0];
                     o.textContent = opt[1];

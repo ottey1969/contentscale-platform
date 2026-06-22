@@ -8921,7 +8921,7 @@ function renderSerpSpyReport(s) {
     <div style="margin-bottom:10px;"><label style="display:block;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#6b7280;margin-bottom:5px;">Page Title (optional)</label><input id="trAddTitle" placeholder="Your Page Title" style="width:100%;background:#07090e;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:9px 11px;color:#e2e8f0;font-size:13px;outline:none;"></div>
     <div style="margin-bottom:12px;"><label style="display:block;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#6b7280;margin-bottom:5px;">Check Frequency</label>
       <select id="trAddFreq" style="width:100%;background:#07090e;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:9px 11px;color:#e2e8f0;font-size:13px;outline:none;">
-        <option value="1day">Every day</option><option value="3days" selected>Every 3 days</option><option value="1week">Every week</option><option value="2weeks">Every 2 weeks</option>
+        <option value="0">⊘ Off (no scan)</option><option value="1day">Every day</option><option value="3days" selected>Every 3 days</option><option value="1week">Every week</option><option value="2weeks">Every 2 weeks</option>
       </select></div>
     <div style="display:flex;gap:8px;"><button onclick="closeAddTrackerModal()" style="flex:1;padding:9px;border-radius:6px;font-size:12px;cursor:pointer;border:1px solid rgba(255,255,255,.1);background:transparent;color:#9ca3af;">Cancel</button><button id="trAddBtn" onclick="submitTrackerAdd()" style="flex:2;padding:9px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;border:none;background:linear-gradient(135deg,#7c3aed,#1d4ed8);color:#fff;">Add & Start Tracking</button></div>
   </div>
