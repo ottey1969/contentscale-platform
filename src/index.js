@@ -30237,9 +30237,12 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                         <div style="margin-bottom:16px;">
                             <label style="display:block;font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;">Engine Brief Emails</label>
                             <input id="settingEngineBriefEmails" type="text" class="tr-input" style="width:100%;max-width:360px;" placeholder="you@x.com, team@y.com">
-                            <div style="margin-top:10px;font-size:12px;color:#94a3b8;">Specialists / writers (the pick-list shown in the engine's "Send brief to" field)</div>
+                            <div style="font-size:11px;color:#4b5563;margin-top:4px;"><strong>ENGINE only (not tracker).</strong> These addresses ALWAYS receive every Master Brief + rewritten HTML. Comma-separated. Leave empty to disable.</div>
+                        </div>
+                        <div style="margin-bottom:16px;">
+                            <label style="display:block;font-size:11px;font-weight:700;color:#34d399;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;">\u2b95 Specialists / writers (engine dropdown)</label>
                             <input id="settingEngineBriefWriters" type="text" class="tr-input" style="width:100%;max-width:360px;" placeholder="anna@x.com, chen@y.com, ...">
-                            <div style="font-size:11px;color:#4b5563;margin-top:4px;"><strong>ENGINE only (not tracker).</strong> Recipients of the engine emails: the <strong>Master Brief</strong> AND the <strong>rewritten HTML</strong>. Comma-separated. Leave empty to disable.</div>
+                            <div style="font-size:11px;color:#4b5563;margin-top:4px;">These show up in the green <strong>\u25be pick writer</strong> dropdown in the engine toolbar. Per brief you pick one \u2192 that specialist is added on top of the team list above. Comma-separated.</div>
                         </div>
                         <div style="margin-bottom:16px;">
                             <label style="display:block;font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;">Rewrite KEEP rules (internal + external)</label>
