@@ -2908,6 +2908,9 @@ app.post('/api/admin/settings', verifyAdmin, async (req, res) => {
     if (typeof req.body.engine_brief_emails === 'string') {
       await pool.query(`INSERT INTO app_settings (key, value, updated_at) VALUES ('engine_brief_emails', $1, NOW()) ON CONFLICT (key) DO UPDATE SET value=$1, updated_at=NOW()`, [req.body.engine_brief_emails.trim()]);
     }
+    if (typeof req.body.engine_brief_writers === 'string') {
+      await pool.query(`INSERT INTO app_settings (key, value, updated_at) VALUES ('engine_brief_writers', $1, NOW()) ON CONFLICT (key) DO UPDATE SET value=$1, updated_at=NOW()`, [req.body.engine_brief_writers.trim()]);
+    }
     if (typeof req.body.engine_from_email === 'string' && req.body.engine_from_email.trim()) {
       await pool.query(`INSERT INTO app_settings (key, value, updated_at) VALUES ('engine_from_email', $1, NOW()) ON CONFLICT (key) DO UPDATE SET value=$1, updated_at=NOW()`, [req.body.engine_from_email.trim()]);
     }
@@ -2928,6 +2931,15 @@ app.get('/api/engine/output-rules', verifyEngineAccess, async (req, res) => {
     const r = pool ? (await pool.query("SELECT value FROM app_settings WHERE key='rewrite_keep_rules'").catch(()=>({rows:[]}))).rows : [];
     res.json({ success: true, rules: r.length ? (r[0].value || '') : DEF });
   } catch(e) { res.json({ success: true, rules: DEF }); }
+});
+
+app.get('/api/engine/brief-writers', verifyEngineAccess, async (req, res) => {
+  try {
+    const r = pool ? (await pool.query("SELECT value FROM app_settings WHERE key='engine_brief_writers'").catch(()=>({rows:[]}))).rows : [];
+    const raw = r.length ? (r[0].value || '') : '';
+    const writers = Array.from(new Set(raw.split(/[,;\n]+/).map(e=>e.trim()).filter(e=>/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e))));
+    res.json({ success: true, writers });
+  } catch(e) { res.json({ success: true, writers: [] }); }
 });
 
 app.post('/api/engine/brief-email', verifyEngineAccess, async (req, res) => {
@@ -30207,6 +30219,8 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                         <div style="margin-bottom:16px;">
                             <label style="display:block;font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;">Engine Brief Emails</label>
                             <input id="settingEngineBriefEmails" type="text" class="tr-input" style="width:100%;max-width:360px;" placeholder="you@x.com, team@y.com">
+                            <div style="margin-top:10px;font-size:12px;color:#94a3b8;">Specialists / writers (the pick-list shown in the engine's "Send brief to" field)</div>
+                            <input id="settingEngineBriefWriters" type="text" class="tr-input" style="width:100%;max-width:360px;" placeholder="anna@x.com, chen@y.com, ...">
                             <div style="font-size:11px;color:#4b5563;margin-top:4px;"><strong>ENGINE only (not tracker).</strong> Recipients of the engine emails: the <strong>Master Brief</strong> AND the <strong>rewritten HTML</strong>. Comma-separated. Leave empty to disable.</div>
                         </div>
                         <div style="margin-bottom:16px;">
@@ -32174,6 +32188,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 document.getElementById('settingContactEmail').value = s.engine_from_email || s.contact_email || '';
                 document.getElementById('settingSenderName').value = s.engine_sender_name || '';
                 var _ebe = document.getElementById('settingEngineBriefEmails'); if (_ebe) _ebe.value = s.engine_brief_emails || '';
+                var _ebw = document.getElementById('settingEngineBriefWriters'); if (_ebw) _ebw.value = s.engine_brief_writers || '';
                 var _kr = document.getElementById('settingKeepRules'); if (_kr) _kr.value = (s.rewrite_keep_rules != null ? s.rewrite_keep_rules : '');
                 var envEl = document.getElementById('settingsEnvInfo');
                 if (envEl) envEl.innerHTML =
@@ -32259,10 +32274,11 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
             var email = document.getElementById('settingContactEmail').value.trim();
             var name = document.getElementById('settingSenderName').value.trim();
             var briefEmails = (document.getElementById('settingEngineBriefEmails')||{}).value || '';
+            var briefWriters = (document.getElementById('settingEngineBriefWriters')||{}).value || '';
             var keepRules = (document.getElementById('settingKeepRules')||{}).value || '';
             if (!email) { alert('Enter an email address'); return; }
             try {
-                var d = await apiCall('/api/admin/settings', 'POST', { engine_from_email: email, engine_sender_name: name, engine_brief_emails: briefEmails, rewrite_keep_rules: keepRules });
+                var d = await apiCall('/api/admin/settings', 'POST', { engine_from_email: email, engine_sender_name: name, engine_brief_emails: briefEmails, engine_brief_writers: briefWriters, rewrite_keep_rules: keepRules });
                 if (d.success) {
                     var saved = document.getElementById('settingsSaved');
                     if (saved) { saved.style.display='inline'; setTimeout(function(){ saved.style.display='none'; }, 3000); }
