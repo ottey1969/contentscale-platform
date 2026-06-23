@@ -27022,14 +27022,16 @@ function _bwRecs(bd, limit){
   return html;
 }
 function _bwCard(p, isFeature){
-  var bd = _buildBriefData(p) || { url:p.url, position:null, passages:[] };
+  var _real = _buildBriefData(p);
+  if (_real) { try { _lastBriefData[p.id] = _real; } catch(e) {} }  // so viewLastBrief() has the data on click
+  var bd = _real || { url:p.url, position:null, passages:[] };
   var head = '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">'
     + '<div style="min-width:0;"><div class="bw-url">'+_bwEsc(_bwCleanUrl(p.url))+'</div>'
     + (_bwTime(p)?'<div class="bw-time">Scanned '+_bwTime(p)+'</div>':'')+'</div>'
     + (isFeature?'<span class="bw-new">NEW</span>':'')
     + '</div>';
   var body = _bwChips(bd) + _bwRecs(bd, isFeature?4:1);
-  return '<div class="bw-card" onclick="openBriefHistory('+p.id+')">'+head+body+'</div>';
+  return '<div class="bw-card" onclick="viewLastBrief('+p.id+')">'+head+body+'</div>';
 }
 function renderBriefWall(){
   var sec = document.getElementById('briefWallSection');
