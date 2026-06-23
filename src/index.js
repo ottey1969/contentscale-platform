@@ -1380,6 +1380,44 @@ app.post('/api/tracker-client/:token/pages/:pageId/html', async (req, res) => {
   }
 });
 
+// POST /api/tracker-client/:token/pages/:pageId/aio-screenshot — upload AIO screenshot
+app.post('/api/tracker-client/:token/pages/:pageId/aio-screenshot', async (req, res) => {
+  try {
+    const cr = await pool.query('SELECT id FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status != $2)', [req.params.token, 'deleted']);
+    if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
+    const own = await pool.query('SELECT id FROM tracker_pages WHERE id=$1 AND tracker_client_id=$2', [req.params.pageId, cr.rows[0].id]);
+    if (!own.rows.length) return res.status(403).json({ success: false, error: 'Not your page' });
+    
+    const { aio_text } = req.body;
+    if (!aio_text || aio_text.trim().length === 0) {
+      return res.status(400).json({ success: false, error: 'AIO text is required' });
+    }
+    
+    // Get latest snapshot for this page
+    const snapR = await pool.query('SELECT id, page_id FROM tracker_snapshots WHERE page_id=$1 ORDER BY checked_at DESC LIMIT 1', [req.params.pageId]);
+    
+    if (snapR.rows.length === 0) {
+      return res.status(400).json({ success: false, error: 'No snapshot found for this page — scan first' });
+    }
+    
+    const snapshot_id = snapR.rows[0].id;
+    
+    // Update snapshot with AIO screenshot data
+    await pool.query(`
+      UPDATE tracker_snapshots SET 
+        ai_google_overview_found = TRUE,
+        ai_google_overview_cited = TRUE,
+        ai_google_overview_text = $1
+      WHERE id = $2
+    `, [aio_text.substring(0, 2000), snapshot_id]);
+    
+    res.json({ success: true, snapshot_id });
+  } catch(e) {
+    console.error('[aio-screenshot]', e.message);
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
 // GET /api/tracker-client/:token/pages/:pageId — get single page with latest snapshot
 app.get('/api/tracker-client/:token/pages/:pageId', async (req, res) => {
   try {
@@ -34922,6 +34960,19 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
             return { url: r.link, title: r.title, snippet: r.snippet || '', position: r.position };
           });
 
+          // ── SERP SPY SNAPSHOT: store for brief generation ──
+          const serpSpySnapshot = {
+            keyword: keyword,
+            live_position: snapshot.google_position,
+            aio_present: snapshot.ai_google_overview_found,
+            competitors: snapshot._competitors.slice(0, 3).map(function(c) {
+              return { url: c.url, title: c.title, snippet: c.snippet };
+            }),
+            captured_at: new Date().toISOString()
+          };
+          await pool.query('UPDATE tracker_pages SET serp_spy=$1, serp_spy_at=NOW() WHERE id=$2',
+            [JSON.stringify(serpSpySnapshot), pageId]).catch(()=>{});
+
           const posLabel = snapshot.google_position ? '#' + snapshot.google_position : 'not in top 10';
           const aiLabel  = snapshot.ai_google_overview_cited ? '✅ AI Overview cited' : (snapshot.ai_google_overview_found ? '⚠️ AI Overview exists (not cited)' : '❌ No AI Overview');
           _trSetStep(pageId, 'google', 'done', `Position: ${posLabel} · ${aiLabel}`);
@@ -35153,6 +35204,30 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
     _trSetStep(pageId, 'author_trust', 'error', 'Author trust check failed: ' + e.message);
   }
 
+  // 4c. Cannibalization check — detect if other pages target the same keyword
+  _trSetStep(pageId, 'cannibalization', 'running', 'Checking for keyword cannibalization…');
+  let cannibalData = { detected: false, pages: [] };
+  if (_hasValidKeyword) {
+    try {
+      const cR = await pool.query(`
+        SELECT id, url FROM tracker_pages 
+        WHERE tracker_client_id = $1 AND id != $2 AND is_active = TRUE
+        AND (keyword ILIKE $3 OR gsc_keyword ILIKE $3)
+      `, [page.tracker_client_id, pageId, '%' + keyword + '%']);
+      if (cR.rows.length > 0) {
+        cannibalData.detected = true;
+        cannibalData.pages = cR.rows.map(r => ({ id: r.id, url: r.url }));
+        _trSetStep(pageId, 'cannibalization', 'done', `⚠️ ${cR.rows.length} other page(s) target "${keyword}"`);
+      } else {
+        _trSetStep(pageId, 'cannibalization', 'done', '✅ No cannibalization detected');
+      }
+    } catch(e) {
+      _trSetStep(pageId, 'cannibalization', 'error', e.message);
+    }
+  } else {
+    _trSetStep(pageId, 'cannibalization', 'done', 'Skipped (no keyword)');
+  }
+
   // 5. Generate recommendations via Gemini — gap analysis vs. what's winning in Google + AI systems
   _trSetStep(pageId, 'recommendations', 'running', 'Analysing gaps vs. top results…');
   if(geminiKey) {
@@ -35283,6 +35358,27 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
       const aioText = snapshot.ai_google_overview_text ? '\nGOOGLE AI OVERVIEW CURRENTLY SAYS:\n' + snapshot.ai_google_overview_text : '';
       const kwSource = page.keyword ? 'manually set' : page.gsc_keyword ? 'from GSC' : 'auto';
 
+      // ── AIO STATUS (manual screenshot vs. predicted vs. no AIO) ──
+      let aioStatus = 'NOT_CITED';
+      if (snapshot.ai_google_overview_cited === true) {
+        aioStatus = snapshot.ai_google_overview_text && snapshot.ai_google_overview_text.length > 20 
+          ? 'CITED_MANUAL' 
+          : 'CITED_PREDICTED';
+      } else if (snapshot.ai_google_overview_found && !snapshot.ai_google_overview_cited) {
+        aioStatus = 'NO_AIO';
+      }
+      const aioStatusLabel = aioStatus === 'CITED_MANUAL' ? 'Manual screenshot uploaded' 
+        : aioStatus === 'CITED_PREDICTED' ? 'Predicted (not manually verified)' 
+        : aioStatus === 'NO_AIO' ? 'AIO exists but page not cited' 
+        : 'No AIO found for this keyword';
+
+      // ── CANNIBALIZATION CONTEXT ──
+      let cannibalContext = '';
+      if (cannibalData.detected && cannibalData.pages.length > 0) {
+        cannibalContext = `KEYWORD CANNIBALIZATION DETECTED: ${cannibalData.pages.length} other page(s) target "${keyword}": ${cannibalData.pages.map(p => p.url).join(', ')}. FIRST ACTION should address consolidation.`;
+      }
+
+
       // GSC opportunity math
       const gscImpr = page.gsc_impressions || 0;
       const gscClicks = page.gsc_clicks || 0;
@@ -35372,14 +35468,25 @@ INPUT DATA:
 - Page URL: ${pageUrl}
 - Target keyword: "${kw}"
 - Google position: ${snapshot.google_position || 'not ranked'}
+- AIO Status: ${aioStatusLabel}
 - Google AI Overview cited: ${snapshot.ai_google_overview_cited ? 'YES' : 'NO'}
 - Perplexity cited: ${snapshot.ai_perplexity_cited ? 'YES' : 'NO'}
 - Microsoft Copilot cited: ${snapshot.ai_bing_cited ? 'YES' : 'NO'}
 - Claude/Brave cited: ${snapshot.ai_brave_cited ? 'YES' : 'NO'}
 - GRAAF score: ${snapshot.score || '?'}/100
 - Page HTML content (first 8000 chars): ${htmlExcerpt.substring(0,8000) || '(no HTML)'}
+
+SERP SPY SNAPSHOT (Live SERP data):
+- Live position: ${snapshot.google_position || 'not ranked'}
+- Competitor #1 (${competitor1 ? '#1' : 'none'}): ${competitor1 ? competitor1.url + ' — ' + competitor1.title : 'no data'}
+- Competitor #2 (${competitors[1] ? '#' + (competitors[1].position || 2) : 'none'}): ${competitors[1] ? competitors[1].url + ' — ' + competitors[1].title : 'no data'}
+- Competitor #3 (${competitors[2] ? '#' + (competitors[2].position || 3) : 'none'}): ${competitors[2] ? competitors[2].url + ' — ' + competitors[2].title : 'no data'}
+- SERP features: ${snapshot.ai_google_overview_found ? 'AIO present' : 'No AIO'} | Featured snippets, PAA, knowledge panels may be present
+
+CANNIBALIZATION & TOPICAL AUTHORITY:
+- Keyword cannibalization: ${cannibalData.detected ? 'YES — ' + cannibalData.pages.map(p => p.url).join(', ') : 'NO'}
+${cannibalContext ? '- PRIORITY: ' + cannibalContext : ''}
 - Previous brief actions (if any): ${JSON.stringify((page.brief_content?.items || []).slice(0,3))}
-- Competitor #1: ${competitor1 ? competitor1.url + ' — ' + competitor1.title : 'no data'}
 - Current Google AI Overview text (what the AIO says NOW for this keyword): ${snapshot.ai_google_overview_text ? '"' + snapshot.ai_google_overview_text + '"' : '(no AIO captured for this query)'}
 - Internal-link candidates — REAL URLs from this site's sitemap (you may ONLY link to a URL that appears verbatim in this list; NEVER invent, guess, or construct a URL):
 ${_otherPagesList || '(none available — do NOT output any internal-link action)'}
@@ -35472,12 +35579,18 @@ INPUT DATA:
 - GSC Impressions (last 28 days): ${gscImpr || 'n/a'}
 - GSC CTR: ${gscCtr || 'n/a'}%
 - GSC Average position: ${gscPos || 'n/a'}
-- Live Google position: ${snapshot.google_position || 'not ranked'}
+- Live Google position (SERP Spy): ${snapshot.google_position || 'not ranked'}
 - GRAAF score: ${snapshot.score || '?'}/100
 - Page HTML content (first 8000 chars): ${htmlExcerpt.substring(0,8000) || '(no HTML)'}
-- Competitor #1 URL: ${competitor1 ? competitor1.url : 'no data'}
-- Competitor #1 title: ${competitor1 ? competitor1.title : 'no data'}
-- Competitor #1 snippet: ${competitor1 ? competitor1.snippet : 'no data'}
+
+SERP SPY SNAPSHOT (Live SERP data):
+- Competitor #1: ${competitor1 ? competitor1.url + ' — ' + competitor1.title + ' (' + competitor1.snippet?.substring(0,100) + '...)' : 'no data'}
+- Competitor #2: ${competitors[1] ? competitors[1].url + ' — ' + competitors[1].title : 'no data'}
+- Competitor #3: ${competitors[2] ? competitors[2].url + ' — ' + competitors[2].title : 'no data'}
+
+CANNIBALIZATION & TOPICAL AUTHORITY:
+- Keyword cannibalization: ${cannibalData.detected ? 'YES — ' + cannibalData.pages.map(p => p.url).join(', ') : 'NO'}
+${cannibalContext ? '- FIRST ACTION REQUIRED: ' + cannibalContext : ''}
 - Internal-link candidates — REAL URLs from this site's sitemap (if you suggest an internal link, the target MUST be copied verbatim from this list; NEVER invent or guess a URL):
 ${_otherPagesList || '(none available — do NOT output any internal-link action)'}
 
@@ -35535,6 +35648,8 @@ OUTPUT FORMAT — return ONLY this JSON, no markdown:
 IMPACT HONESTY RULE: ranking improvement is never guaranteed. NEVER write a fixed "position X → Y" target or a fixed "within N weeks" deadline. Use honest, qualified language ("should help", "supports a climb toward", "addresses the gap that holds it back") and always name the dependency (Google re-crawl, keyword competition). A guaranteed number or deadline is a failed action.
 
 QUALITY BAR: A user with zero SEO knowledge must be able to implement every action. Write the new title tag. Write the new paragraph. Write the schema. If you say "add more content" without writing the content, you have failed.
+
+NOTE: This GSC Brief will be MERGED with a Citation Brief (AI Overview, Perplexity, Copilot, Claude). In the final merged output, your "system" field should be "Google Ranking" to distinguish from Citation systems. All actions from both briefs will be combined into ONE output with 5-8 total actions, prioritized by impact.
 
 GOAL: Rank #1 for "${kw}" and capture the maximum clicks from ${gscImpr || 'the available'} monthly impressions.`;
       // Run both in parallel
@@ -35637,7 +35752,66 @@ GOAL: Rank #1 for "${kw}" and capture the maximum clicks from ${gscImpr || 'the 
         console.warn('[tracker] GSC Gemini failed:', gscResp.status, gscResp.errorMessage || '');
       }
 
-      // ── GUARANTEED local GSC brief — never empty when we have a keyword + position ──
+      // ── MERGE Citation Brief + GSC Brief into ONE brief with mixed systems ──
+      const mergedBrief = [];
+      
+      // Add Citation Brief items (system: Google AIO, Perplexity, Copilot, Claude, Visibility, Internal Link)
+      if (Array.isArray(snapshot.recommendations) && snapshot.recommendations.length > 0) {
+        snapshot.recommendations.forEach(r => {
+          if (r && r.title && r.action) {
+            mergedBrief.push({
+              title: r.title,
+              priority: r.priority || 'medium',
+              system: r.system || 'General',
+              action: r.action,
+              expected_impact: r.expected_impact || '',
+              source: 'citation'
+            });
+          }
+        });
+      }
+
+      // Add GSC Brief items (system: Google Ranking)
+      if (Array.isArray(snapshot.gsc_brief) && snapshot.gsc_brief.length > 0) {
+        snapshot.gsc_brief.forEach(r => {
+          if (r && r.title && r.action) {
+            mergedBrief.push({
+              title: r.title,
+              priority: r.priority || 'medium',
+              system: 'Google Ranking',
+              action: r.action,
+              expected_impact: r.expected_impact || '',
+              trigger: r.trigger,
+              effort: r.effort,
+              source: 'gsc'
+            });
+          }
+        });
+      }
+
+      // Sort by priority (HIGH first, then MEDIUM, then LOW) + by source (consolidation/visibility first)
+      mergedBrief.sort((a, b) => {
+        const priorityOrder = { high: 0, medium: 1, low: 2 };
+        const aPriority = priorityOrder[String(a.priority || '').toLowerCase()] ?? 1;
+        const bPriority = priorityOrder[String(b.priority || '').toLowerCase()] ?? 1;
+        if (aPriority !== bPriority) return aPriority - bPriority;
+        
+        // If priorities are equal, put cannibalization/visibility first
+        const aIsSpecial = /cannibali|consolidat|visibility|gate/i.test((a.title || '') + (a.action || ''));
+        const bIsSpecial = /cannibali|consolidat|visibility|gate/i.test((b.title || '') + (b.action || ''));
+        if (aIsSpecial !== bIsSpecial) return aIsSpecial ? -1 : 1;
+        
+        return 0;
+      });
+
+      // Limit to 5-8 top actions
+      snapshot.recommendations = mergedBrief.slice(0, 8);
+      if (mergedBrief.length === 0) {
+        snapshot.recommendations = [{ title: 'Continue optimizing', priority: 'medium', system: 'General', action: 'Page is already optimized for most citation signals. Continue monitoring performance and update content as rankings change.', expected_impact: 'Maintain citation eligibility' }];
+      }
+
+      console.log('[tracker] Merged ' + (Array.isArray(snapshot.recommendations) ? snapshot.recommendations.length : 0) + ' brief actions (Citation + GSC)');
+
       if (!Array.isArray(snapshot.gsc_brief) || !snapshot.gsc_brief.length) {
         const _gkw = keyword || page.keyword || page.gsc_keyword || '';
         const _gpos = page.gsc_position || snapshot.google_position || null;
