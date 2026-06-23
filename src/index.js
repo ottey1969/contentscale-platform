@@ -1220,7 +1220,7 @@ app.get('/api/tracker-client/:token/fetch-sitemap', async (req, res) => {
     let urls = [];
     if (/<sitemapindex/i.test(xml)) {
       // Sitemap INDEX — follow each sub-sitemap and collect real page URLs
-      const subSitemaps = [...xml.matchAll(/<loc>(https?:\/\/[^<]+\.xml[^<]*)<\/loc>/gi)].map(m => m[1].trim()).slice(0, 100); // increased from 20 to 100
+      const subSitemaps = [...xml.matchAll(/<loc>(https?:\/\/[^<]+\.xml[^<]*)<\/loc>/gi)].map(m => m[1].trim()).slice(0, 20);
       for (const sm of subSitemaps) {
         try {
           const ctrl2 = new AbortController();
@@ -1231,7 +1231,7 @@ app.get('/api/tracker-client/:token/fetch-sitemap', async (req, res) => {
           const subUrls = [...sx.matchAll(/<loc>(https?:\/\/[^<]+)<\/loc>/gi)].map(m => m[1].trim()).filter(u => !/\.xml(\?|$)/i.test(u));
           urls.push(...subUrls);
         } catch(e) {}
-        if (urls.length >= 500) break; // increased from 100 to 500
+        if (urls.length >= 100) break;
       }
     } else {
       // Regular sitemap — extract page URLs, never the .xml files themselves
@@ -1241,7 +1241,7 @@ app.get('/api/tracker-client/:token/fetch-sitemap', async (req, res) => {
     const _SKIP_ARCHIVE = /\/(category|categories|tag|tags|author|authors|uncategorized)(\/|$)|\/page\/\d+|\/feed\/?$|\/wp-(json|admin|content|includes)\//i;
     const _SKIP_FILE = /\.(jpg|jpeg|png|gif|webp|svg|css|js|pdf|xml|json)(\?|$)/i;
     urls = urls.filter(u => !_SKIP_ARCHIVE.test(u) && !_SKIP_FILE.test(u));
-    urls = urls.slice(0, 500); // increased from 100 to 500 for full site context
+    urls = urls.slice(0, 100);
     // Remember the sitemap URL on the client (shows the "added" check + lets briefs use it for internal links)
     if (urls.length) { try { await pool.query('UPDATE tracker_clients SET sitemap_url=$1 WHERE token=$2', [sitemapUrl, req.params.token]); } catch(e){} }
     res.json({ success: true, urls, count: urls.length });
@@ -1269,7 +1269,7 @@ app.post('/api/tracker-client/:token/sitemap-links', async (req, res) => {
     const sitemapPages = urlMatches
       .map(m => m.replace(/<\/?loc>/g, '').trim())
       .filter(u => u.startsWith('http'))
-      .slice(0, 500); // increased from 100 to 500 for full site context (cannibalization + internal linking)
+      .slice(0, 100); // max 100 pages
 
     // Get tracked pages for this client
     const trackedR = await pool.query('SELECT url, keyword FROM tracker_pages WHERE tracker_client_id=$1 AND (is_active=TRUE OR is_active IS NULL)', [client.id]);
@@ -1376,44 +1376,6 @@ app.post('/api/tracker-client/:token/pages/:pageId/html', async (req, res) => {
     }
   } catch(e) {
     console.error('[html-patch]', e.message);
-    res.status(500).json({ success: false, error: e.message });
-  }
-});
-
-// POST /api/tracker-client/:token/pages/:pageId/aio-screenshot — upload AIO screenshot
-app.post('/api/tracker-client/:token/pages/:pageId/aio-screenshot', async (req, res) => {
-  try {
-    const cr = await pool.query('SELECT id FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status != $2)', [req.params.token, 'deleted']);
-    if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
-    const own = await pool.query('SELECT id FROM tracker_pages WHERE id=$1 AND tracker_client_id=$2', [req.params.pageId, cr.rows[0].id]);
-    if (!own.rows.length) return res.status(403).json({ success: false, error: 'Not your page' });
-    
-    const { aio_text } = req.body;
-    if (!aio_text || aio_text.trim().length === 0) {
-      return res.status(400).json({ success: false, error: 'AIO text is required' });
-    }
-    
-    // Get latest snapshot for this page
-    const snapR = await pool.query('SELECT id, page_id FROM tracker_snapshots WHERE page_id=$1 ORDER BY checked_at DESC LIMIT 1', [req.params.pageId]);
-    
-    if (snapR.rows.length === 0) {
-      return res.status(400).json({ success: false, error: 'No snapshot found for this page — scan first' });
-    }
-    
-    const snapshot_id = snapR.rows[0].id;
-    
-    // Update snapshot with AIO screenshot data
-    await pool.query(`
-      UPDATE tracker_snapshots SET 
-        ai_google_overview_found = TRUE,
-        ai_google_overview_cited = TRUE,
-        ai_google_overview_text = $1
-      WHERE id = $2
-    `, [aio_text.substring(0, 2000), snapshot_id]);
-    
-    res.json({ success: true, snapshot_id });
-  } catch(e) {
-    console.error('[aio-screenshot]', e.message);
     res.status(500).json({ success: false, error: e.message });
   }
 });
@@ -18580,8 +18542,58 @@ Return ONLY the complete updated HTML. No markdown, no explanation.`;
       }
     });
 
-    // ── REMOVED: Auto-sync to tracker_pages disabled (one-way flow: Tracker → Engine only) ──────
-    // Engine rewrites should NOT auto-create/sync to Tracker. Tracker is the source of truth for pages.
+    // ── Auto-add to tracker_pages (every 3 days, scoped to engine user) ──────
+    let trackerPageId = null;
+    if(rw.original_url) {
+      try {
+        const eu = req.engineUser;
+        const codeId = (eu && !eu.isAdmin) ? eu.codeId : null;
+        const tUrl = rw.original_url.startsWith('http') ? rw.original_url : 'https://' + rw.original_url;
+        const tKeyword = rw.gsc_keyword || rw.new_seed_keyword || null;
+        // Upsert: update keyword/frequency + GSC baseline if URL already tracked, else insert
+        const conflictClause = codeId
+          ? `ON CONFLICT (engine_code_id, url) WHERE engine_code_id IS NOT NULL DO UPDATE SET keyword=EXCLUDED.keyword, check_frequency='3days', gsc_impressions=EXCLUDED.gsc_impressions, gsc_clicks=EXCLUDED.gsc_clicks, gsc_position=EXCLUDED.gsc_position, gsc_ctr=EXCLUDED.gsc_ctr, gsc_queries=EXCLUDED.gsc_queries, gsc_pages=EXCLUDED.gsc_pages, gsc_keyword=EXCLUDED.gsc_keyword`
+          : `ON CONFLICT (url) WHERE engine_code_id IS NULL DO UPDATE SET keyword=EXCLUDED.keyword, check_frequency='3days', gsc_impressions=EXCLUDED.gsc_impressions, gsc_clicks=EXCLUDED.gsc_clicks, gsc_position=EXCLUDED.gsc_position, gsc_ctr=EXCLUDED.gsc_ctr, gsc_queries=EXCLUDED.gsc_queries, gsc_pages=EXCLUDED.gsc_pages, gsc_keyword=EXCLUDED.gsc_keyword`;
+        const tIns = await pool.query(
+          `INSERT INTO tracker_pages (engine_code_id, profile_id, url, slug, keyword, check_frequency, next_check_at, gsc_impressions, gsc_clicks, gsc_position, gsc_ctr, gsc_queries, gsc_pages, gsc_keyword)
+           VALUES ($1,$2,$3,$4,$5,'3days',NOW(),$6,$7,$8,$9,$10,$11,$12) ` + conflictClause + ` RETURNING id`,
+          [codeId, rw.profile_id||null, tUrl,
+           tUrl.split('/').filter(Boolean).pop()||'/',
+           tKeyword,
+           rw.gsc_impressions || null,
+           rw.gsc_clicks || null,
+           rw.gsc_position || null,
+           ctrCalc ? parseFloat(ctrCalc) : null,
+           (Array.isArray(analysis.gsc_queries) && analysis.gsc_queries.length) ? JSON.stringify(analysis.gsc_queries) : null,
+           (Array.isArray(analysis.gsc_pages) && analysis.gsc_pages.length) ? JSON.stringify(analysis.gsc_pages) : null,
+           rw.gsc_keyword || null]
+        ).catch(()=>{null});
+        trackerPageId = tIns && tIns.rows && tIns.rows[0] ? tIns.rows[0].id : null;
+        console.log('[tracker] Auto-added from rewrite:', tUrl, 'pageId=', trackerPageId);
+
+        // ── Baseline snapshot: store the GSC data as the starting point ──────────
+        if (trackerPageId && (rw.gsc_position || rw.gsc_impressions || rw.gsc_clicks)) {
+          await pool.query(
+            `INSERT INTO tracker_snapshots (page_id, checked_at, google_position, google_impressions, google_clicks, google_ctr, recommendations, notes)
+             VALUES ($1, NOW(), $2, $3, $4, $5, $6, $7)`,
+            [trackerPageId, rw.gsc_position || null, rw.gsc_impressions || null, rw.gsc_clicks || null,
+             ctrCalc ? parseFloat(ctrCalc) : null,
+             JSON.stringify([{ title: 'GSC Baseline recorded', priority: 'low', action: 'Baseline data captured at time of rewrite', expected_impact: 'Reference point for future comparisons' }]),
+             'Baseline GSC data captured at time of rewrite']
+          ).catch(e => console.warn('[tracker] Baseline snapshot failed:', e.message));
+          console.log('[tracker] Baseline snapshot created for page', trackerPageId);
+        }
+
+        // Update tracker page with latest rewritten HTML + score so tracker shows current data
+        if (trackerPageId) {
+          await pool.query(
+            `UPDATE tracker_pages SET html_content=$1, last_graaf_score=$2 WHERE id=$3`,
+            [html || rw.original_html || '', finalGraafResult?.contentScore || null, trackerPageId]
+          ).catch(e => console.warn('[tracker] HTML+score update failed:', e.message));
+          console.log('[tracker] Updated html_content + score for page', trackerPageId, 'score=', finalGraafResult?.contentScore);
+        }
+      } catch(e) { console.warn('[tracker] Auto-add failed:', e.message); }
+    }
   } catch(e) {
     console.error('Rewrite execute error:', e);
     const msg = e.code ? `${e.message} (db code ${e.code})` : e.message;
@@ -28374,40 +28386,12 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
     var list = document.getElementById('gscList');
     if (list) list.style.display = 'block';
     var maxSel = Math.min(MAX_PAGES, pairs.length);
-    
-    // Calculate priority/impact for each keyword
-    pairs.forEach(function(p) {
-      var clicks = p.clicks || 0;
-      var impressions = p.impressions || 0;
-      var position = p.position || 999;
-      var opportunityClicks = impressions > 0 ? Math.round(impressions * (28 / 100)) : 0; // 28% CTR at #1
-      var clickGap = opportunityClicks > clicks ? opportunityClicks - clicks : 0;
-      
-      // Priority scoring
-      var priorityScore = 0;
-      if (clicks >= 10 || impressions >= 500) priorityScore = 3; // HIGH
-      else if (clicks >= 3 || impressions >= 100) priorityScore = 2; // MEDIUM
-      else if (impressions >= 10) priorityScore = 1; // LOW
-      else priorityScore = 0; // NONE
-      
-      p.priority = priorityScore;
-      p.priorityLabel = priorityScore === 3 ? '🔴 HIGH' : priorityScore === 2 ? '🟡 MEDIUM' : priorityScore === 1 ? '⚪ LOW' : '⚫ NONE';
-      p.clickGap = clickGap;
-      p.opportunityClicks = opportunityClicks;
-    });
-    
     renderCheckList(pairs, container, 'gsc-cb',
       function(p) {
         var path = '';
         try { path = new URL(p.url).pathname; } catch(e) { path = p.url; }
         if (path === '/') path = '(homepage)';
-        var label = (p.isQueryOnly ? '[keyword] ' : '') + path + (p.keyword ? ' · ' + p.keyword : '');
-        label += (p.clicks ? ' · ' + p.clicks + ' clicks' : '');
-        label += (p.impressions ? ' · ' + p.impressions + ' impr' : '');
-        label += (p.position ? ' · #' + Math.round(p.position) : '');
-        label += (p.clickGap ? ' · +' + p.clickGap + ' potential' : '');
-        label += ' ' + (p.priorityLabel || '');
-        return label;
+        return (p.isQueryOnly ? '[keyword] ' : '') + path + (p.keyword ? ' - ' + p.keyword : '') + (p.clicks ? ' (' + p.clicks + ' clicks)' : '');
       },
       countEl,
       maxSel
@@ -29234,7 +29218,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 <button onclick="switchTab('pending')" id="tabPendingBtn" class="sidebar-btn"><i class="fas fa-clock"></i><span>Pending</span></button>
                 <button onclick="switchTab('users')" id="tabUsersBtn" class="sidebar-btn"><i class="fas fa-user-cog"></i><span>Users</span></button>
                 <button onclick="switchTab('freelancers')" id="tabFreelancersBtn" class="sidebar-btn"><i class="fas fa-users"></i><span>Freelancers</span></button>
-                <!-- CONTENT TRACKER REMOVED - one-way flow only -->
+                <button onclick="switchTab('tracker')" id="tabTrackerBtn" class="sidebar-btn"><i class="fas fa-chart-line"></i><span>Content Tracker</span></button>
                 <button onclick="switchTab('tracker-clients')" id="tabTrackerClientsBtn" class="sidebar-btn"><i class="fas fa-users"></i><span>Tracker Clients</span></button>
                 <button onclick="switchTab('enginecodes')" id="tabEnginecodesBtn" class="sidebar-btn"><i class="fas fa-key"></i><span>Engine Access</span></button>
                 <button onclick="switchTab('giveaccess')" id="tabGiveaccessBtn" class="sidebar-btn"><i class="fas fa-share-alt"></i><span>Give Access</span></button>
@@ -29405,72 +29389,830 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 </div>
             </div>
 
-            <!-- TRACKER CLIENTS -->
-            <!-- TRACKER CLIENTS -->
-            <div id="tab-tracker-clients" class="tab-content hidden">
-                <div style="padding:16px;">
+            <div id="tab-tracker" class="tab-content hidden">
+                <style>
+                    .tr-card { background:#111827; border:1px solid #1f2937; border-radius:10px; padding:18px; margin-bottom:12px; }
+                    .tr-stat { background:#0d1117; border:1px solid #1f2937; border-radius:8px; padding:12px 16px; }
+                    .tr-stat .val { font-size:1.4rem; font-weight:700; color:#f1f5f9; }
+                    .tr-stat .lbl { font-size:11px; color:#6b7280; text-transform:uppercase; letter-spacing:.06em; margin-top:3px; }
+                    .tr-badge { display:inline-flex; align-items:center; gap:4px; font-size:11px; font-weight:600; padding:2px 8px; border-radius:4px; }
+                    .tr-badge.up { background:#052e16; color:#4ade80; }
+                    .tr-badge.down { background:#2d0a0a; color:#f87171; }
+                    .tr-badge.cited { background:#0c4a6e; color:#38bdf8; }
+                    .tr-badge.notcited { background:#1f2937; color:#6b7280; }
+                    .tr-badge.new { background:#1e1b4b; color:#a78bfa; }
+                    .tr-btn { background:transparent; border:1px solid #374151; border-radius:5px; padding:5px 12px; font-size:12px; font-weight:600; color:#9ca3af; cursor:pointer; }
+                    .tr-btn:hover { border-color:#6b7280; color:#e5e7eb; }
+                    .tr-btn.primary { background:#7e22ce; border-color:#7e22ce; color:#fff; }
+                    .tr-btn.primary:hover { background:#9333ea; }
+                    .tr-btn.green { border-color:#166534; color:#4ade80; }
+                    .tr-btn.danger { border-color:#7f1d1d; color:#f87171; }
+                    .tr-input { background:#0d1117; border:1px solid #1f2937; border-radius:6px; padding:8px 12px; font-size:13px; color:#e5e7eb; outline:none; width:100%; }
+                    .tr-input:focus { border-color:#7e22ce; }
+                    .tr-select { background:#0d1117; border:1px solid #1f2937; border-radius:6px; padding:8px 10px; font-size:13px; color:#e5e7eb; outline:none; }
+                    .tr-change-dot { width:8px; height:8px; border-radius:50%; display:inline-block; margin-right:6px; }
+                    .tr-pulse { animation: tr-blink 2s infinite; }
+                    @keyframes tr-blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+                    .tr-timeline { border-left:2px solid #1f2937; margin-left:12px; padding-left:18px; }
+                    .tr-timeline-item { position:relative; padding:10px 0; }
+                    .tc-row { border-bottom:1px solid #0d1117; transition:background .15s; }
+                    .tc-row:hover { background:#0d1117; }
+                    .tr-timeline-item::before { content:''; position:absolute; left:-23px; top:14px; width:8px; height:8px; border-radius:50%; background:#374151; }
+                    .tr-timeline-item.sig::before { background:#a78bfa; }
+                </style>
+
+                <!-- Header -->
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;flex-wrap:wrap;gap:12px;">
+                    <div>
+                        <h2 style="font-size:1.25rem;font-weight:700;color:#f1f5f9;">Content Lifecycle Tracker</h2>
+                        <p style="font-size:12px;color:#6b7280;margin-top:3px;">Track Google position, AI Overview citations, and content changes over time</p>
+                    </div>
+                    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                        <!-- AI Provider Status Pills -->
+                        <div id="aiStatusPills" style="display:flex;gap:5px;flex-wrap:wrap;"></div>
+                        <button onclick="loadTrackerPages()" class="tr-btn" id="trRefreshBtn"><i class="fas fa-sync-alt" style="margin-right:5px;"></i>Refresh</button>
+                        <button onclick="bulkSetGscKeywords()" class="tr-btn" title="Set GSC keyword for all pages that have GSC data but no manual keyword" style="border-color:#60a5fa;color:#60a5fa;">📊 Apply GSC Keywords</button>
+                        <button onclick="openAddPageModal()" class="tr-btn primary">+ Add URL</button>
+                    </div>
+                </div>
+
+                <script>
+                // -- AI Provider Status Pills ----------------------------------
+                async function loadAiStatus() {
+                    try {
+                        const token = localStorage.getItem('admin_id') || '';
+                        if (!token) return;
+                        const r = await fetch('/api/admin/ai-status', { headers: { 'x-admin-key': token } });
+                        if (!r.ok) return;
+                        const data = await r.json();
+                        const pills = document.getElementById('aiStatusPills');
+                        if (!pills) return;
+                        const labels = {
+                            gemini_primary: 'Gemini Pro', gemini_flash: 'Gemini Flash',
+                            perplexity: 'Perplexity', claude: 'Claude (AI)',
+                            serper: 'Serper/Google', bing: 'Bing/Copilot', brave: 'Brave/Claude'
+                        };
+                        const keyMap = { gemini_primary: 'gemini', gemini_flash: 'gemini', perplexity: 'perplexity', claude: 'anthropic', serper: 'serper', bing: 'bing', brave: 'brave' };
+                        const colors = { healthy: '#166534', degraded: '#854d0e', down: '#7f1d1d', unconfigured: '#1f2937' };
+                        const textColors = { healthy: '#4ade80', degraded: '#fbbf24', down: '#f87171', unconfigured: '#4b5563' };
+                        pills.innerHTML = Object.entries(data.status || {}).map(([key, s]) => {
+                            const configured = data.key_status && data.key_status[keyMap[key]];
+                            const health = !configured ? 'unconfigured' : (s.health || (s.ok ? 'healthy' : 'down'));
+                            const icon = health === 'healthy' ? '*' : health === 'unconfigured' ? 'o' : health === 'degraded' ? 'o' : 'x';
+                            const tip = !configured ? 'Not configured - add key to Railway' : (s.lastError ? s.lastError.substring(0,80) : 'OK');
+                            return '<span title="' + tip + '" style="font-size:10px;font-weight:700;padding:3px 8px;border-radius:4px;background:' + (colors[health]||'#374151') + ';color:' + (textColors[health]||'#9ca3af') + ';cursor:default;">' + icon + ' ' + (labels[key]||key) + '</span>';
+                        }).join('');
+                    } catch(e) {}
+                }
+                // Load on tab switch and every 60 seconds
+                loadAiStatus();
+                setInterval(loadAiStatus, 60000);
+                <\/script>
+
+                <!-- ── LIVE ACTIVITY WALL ─────────────────────────────────── -->
+                <div style="margin-bottom:16px;border-radius:10px;overflow:hidden;border:1px solid #1f2937;"><img src="/blog/images/live-ai-overview-seo-monitor.jpg" alt="Live AI Overview and SEO ranking monitor dashboard — ContentScale" style="width:100%;height:auto;display:block;" loading="lazy"></div>
+                <div id="csLiveWall" style="display:none;">
+                <style>
+                @keyframes csWallIdle {
+                    0%,100% { border-color:#1f2937;box-shadow:none; }
+                    50% { border-color:#4c1d95;box-shadow:0 0 12px rgba(124,58,237,.25); }
+                }
+                @keyframes csWallActive {
+                    0%,100% { border-color:#7c3aed;box-shadow:0 0 20px rgba(124,58,237,.4); }
+                    50% { border-color:#a78bfa;box-shadow:0 0 30px rgba(167,139,250,.5); }
+                }
+                #csLiveWall.active { animation:csWallActive 1s ease-in-out infinite !important; }
+                </style>
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                        <div style="display:flex;align-items:center;gap:8px;">
+                            <span id="csLiveDot" style="width:8px;height:8px;border-radius:50%;background:#374151;display:inline-block;flex-shrink:0;"></span>
+                            <span style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:#6b7280;">Live System Activity</span>
+                            <span id="csLiveStatus" style="font-size:10px;color:#4b5563;">Connecting...</span>
+                        </div>
+                        <div style="display:flex;gap:6px;">
+                            <button onclick="document.getElementById('csNewsPanel').style.display=document.getElementById('csNewsPanel').style.display==='none'?'block':'none';if(document.getElementById('csNewsPanel').style.display==='block')loadNewsList();" style="font-size:10px;padding:2px 8px;border:1px solid #374151;border-radius:4px;background:none;color:#f59e0b;cursor:pointer;">📰 News</button>
+                            <button onclick="toggleLiveOverlay()" id="csOverlayBtn" style="font-size:10px;padding:2px 8px;border:1px solid #7c3aed;border-radius:4px;background:none;color:#a78bfa;cursor:pointer;">⛶ Overlay</button>
+                        </div>
+                    </div>
+                    <!-- Main live log — max 15 lines always visible -->
+                    <div id="csLiveTicker" style="background:#111827;border-radius:6px;padding:8px 12px;min-height:48px;max-height:240px;overflow-y:auto;font-family:monospace;font-size:11px;">
+                        <div style="color:#4b5563;">Waiting for activity — monitor starts 60s after deploy...</div>
+                    </div>
+                    <!-- News panel -->
+                    <div id="csNewsPanel" style="display:none;margin-top:10px;background:#111827;border:1px solid #374151;border-radius:8px;padding:12px;">
+                        <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:#f59e0b;margin-bottom:8px;">📰 Live News Manager</div>
+                        <div style="font-size:11px;color:#6b7280;margin-bottom:8px;">Custom headlines show first in the live feed. Max 120 chars.</div>
+                        <div style="display:flex;gap:6px;margin-bottom:10px;">
+                            <input id="csNewsInput" type="text" maxlength="120" placeholder="Add custom headline (max 120 chars)..." class="tr-input" style="flex:1;font-size:12px;">
+                            <button onclick="addCustomNews()" class="tr-btn primary" style="white-space:nowrap;">+ Add</button>
+                            <button onclick="refreshRssNews(this)" class="tr-btn" style="white-space:nowrap;font-size:11px;" title="Fetch latest RSS news">⟳ RSS</button>
+                        </div>
+                        <div id="csNewsList" style="max-height:150px;overflow-y:auto;"></div>
+                    </div>
+                </div>
+
+                <!-- ── OVERLAY MODE ── -->
+                <div id="csLiveOverlay" style="display:none;position:fixed;inset:0;background:rgba(5,5,10,.92);z-index:9990;backdrop-filter:blur(4px);overflow-y:auto;">
+                    <div style="position:absolute;top:16px;right:16px;z-index:9991;">
+                        <button onclick="toggleLiveOverlay()" style="background:#1f2937;border:1px solid #374151;color:#9ca3af;padding:8px 16px;border-radius:6px;cursor:pointer;font-size:12px;">✕ Close overlay</button>
+                    </div>
+                    <div style="min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 20px;">
                     <!-- Header -->
-                    <div style="margin-bottom:24px;">
-                        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;gap:16px;flex-wrap:wrap;">
+                    <div style="text-align:center;margin-bottom:24px;">
+                        <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.2em;color:#7c3aed;margin-bottom:8px;">ContentScale</div>
+                        <div style="display:inline-flex;align-items:center;gap:8px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:99px;padding:6px 16px;">
+                            <span id="csOvDot" style="width:8px;height:8px;border-radius:50%;background:#ef4444;animation:cs-pulse 1.2s ease-in-out infinite;"></span>
+                            <span style="font-size:11px;font-weight:800;color:#ef4444;letter-spacing:.12em;">LIVE</span>
+                        </div>
+                    </div>
+                    <!-- Big ticker -->
+                    <div style="text-align:center;padding:0 40px;margin-bottom:32px;min-height:60px;">
+                        <div id="csOvTicker" style="font-size:1.3rem;font-family:monospace;color:#a78bfa;transition:all .3s;">Waiting for activity...</div>
+                    </div>
+                    <!-- Alert area -->
+                    <div id="csOvAlert" style="display:none;margin:0 auto 32px;max-width:560px;border-radius:16px;padding:32px 40px;text-align:center;"></div>
+                    <!-- Stats row -->
+                    <div style="display:flex;justify-content:center;align-items:center;gap:clamp(24px,5vw,48px);margin-bottom:32px;flex-wrap:wrap;padding:0 20px;">
+                        <div style="text-align:center;min-width:80px;"><div id="csOvChecked" style="font-size:clamp(1.5rem,3vw,2rem);font-weight:900;color:#a78bfa;">0</div><div style="font-size:10px;color:#4b5563;text-transform:uppercase;letter-spacing:.08em;margin-top:4px;">Checked</div></div>
+                        <div style="text-align:center;min-width:80px;"><div id="csOvCited" style="font-size:clamp(1.5rem,3vw,2rem);font-weight:900;color:#4ade80;">0</div><div style="font-size:10px;color:#4b5563;text-transform:uppercase;letter-spacing:.08em;margin-top:4px;">AI Citations</div></div>
+                        <div style="text-align:center;min-width:80px;"><div id="csOvPositions" style="font-size:clamp(1.5rem,3vw,2rem);font-weight:900;color:#fbbf24;">0</div><div style="font-size:10px;color:#4b5563;text-transform:uppercase;letter-spacing:.08em;margin-top:4px;">Positions Up</div></div>
+                        <div style="text-align:center;min-width:80px;"><div id="csOvScores" style="font-size:clamp(1.5rem,3vw,2rem);font-weight:900;color:#f472b6;">0</div><div style="font-size:10px;color:#4b5563;text-transform:uppercase;letter-spacing:.08em;margin-top:4px;">Scores Up</div></div>
+                    </div>
+                    <!-- Live log in overlay -->
+                    <div style="max-width:700px;margin:0 auto;padding:0 24px;width:100%;">
+                        <div id="csOvLog" style="max-height:220px;overflow-y:auto;"></div>
+                    </div>
+                    </div><!-- /flex center container -->
+                </div>
+
+                <script>
+                var _wallEs = null;
+                var _wallEvents = [];
+                var _overlayStats = { checked:0, cited:0, positions:0, scores:0 };
+                var _overlayVisible = false;
+                var _alertHideTimer = null;
+                var _sseRetryDelay = 10000; // start at 10s, max 120s
+
+                async function addCustomNews() {
+                    var input = document.getElementById('csNewsInput');
+                    var headline = (input ? input.value : '').trim();
+                    if (!headline) return;
+                    try {
+                        var data = await apiCall('/api/admin/live-news', 'POST', { headline: headline });
+                        if (input) input.value = '';
+                        renderNewsList(data.custom || [], []);
+                    } catch(e) { alert('Error: ' + e.message); }
+                }
+
+                async function deleteCustomNews(idx) {
+                    try {
+                        await apiCall('/api/admin/live-news/' + idx, 'DELETE');
+                        loadNewsList();
+                    } catch(e) { alert('Error: ' + e.message); }
+                }
+
+                async function refreshRssNews(btn) {
+                    if (btn) { btn.disabled = true; btn.textContent = 'Loading...'; }
+                    try {
+                        await apiCall('/api/admin/live-news/refresh', 'POST');
+                        setTimeout(loadNewsList, 3500);
+                    } catch(e) {}
+                    if (btn) setTimeout(function(){ btn.disabled=false; btn.textContent='\u27f3 RSS'; }, 4000);
+                }
+
+                async function loadNewsList() {
+                    try {
+                        var data = await apiCall('/api/admin/live-news');
+                        renderNewsList(data.custom || [], data.rss || []);
+                    } catch(e) {}
+                }
+
+                function renderNewsList(custom, rss) {
+                    var el = document.getElementById('csNewsList');
+                    if (!el) return;
+                    var html = '';
+                    if (custom.length) {
+                        html += '<div style="font-size:10px;color:#f59e0b;font-weight:700;margin-bottom:4px;">YOUR CUSTOM HEADLINES</div>';
+                        custom.forEach(function(h, i) {
+                            html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid #1f2937;">'
+                                + '<span style="font-size:11px;color:#e5e7eb;">' + h.substring(0,100) + '</span>'
+                                + '<button onclick="deleteCustomNews(' + i + ')" style="background:none;border:none;color:#f87171;cursor:pointer;font-size:12px;padding:0 6px;">x</button>'
+                                + '</div>';
+                        });
+                    }
+                    if (rss.length) {
+                        html += '<div style="font-size:10px;color:#6b7280;font-weight:700;margin:8px 0 4px;">RSS HEADLINES</div>';
+                        rss.forEach(function(h) {
+                            html += '<div style="font-size:11px;color:#4b5563;padding:3px 0;border-bottom:1px solid #111827;">' + h.substring(0,100) + '</div>';
+                        });
+                    }
+                    if (!html) html = '<div style="font-size:11px;color:#4b5563;padding:4px 0;">No news yet - click RSS to fetch latest headlines</div>';
+                    el.innerHTML = html;
+                }
+
+                function toggleLiveOverlay() {
+                    _overlayVisible = !_overlayVisible;
+                    document.getElementById('csLiveOverlay').style.display = _overlayVisible ? 'block' : 'none';
+                    document.getElementById('csOverlayBtn').textContent = _overlayVisible ? '[] Close' : '[] Overlay';
+                    if (_overlayVisible) _renderOverlayLog();
+                }
+
+                var _pollInterval = null;
+                var _pollLastTs = null;
+
+                function connectSSE() {
+                    var token = localStorage.getItem('admin_id') || '';
+                    if (!token) { setTimeout(connectSSE, 2000); return; }
+                    var dot = document.getElementById('csLiveDot');
+                    var status = document.getElementById('csLiveStatus');
+
+                    function doPoll() {
+                        var url = '/api/tracker/live-events?token=' + encodeURIComponent(token);
+                        if (_pollLastTs) url += '&since=' + encodeURIComponent(_pollLastTs);
+                        fetch(url)
+                            .then(function(r){ return r.json(); })
+                            .then(function(data) {
+                                if (!data.success) return;
+                                if (dot) { dot.style.background='#4ade80'; dot.style.animation='cs-pulse 1.5s ease-in-out infinite'; }
+                                if (status) { status.textContent='* Live'; status.style.color='#4ade80'; }
+                                _pollLastTs = data.ts;
+                                if (data.events && data.events.length) {
+                                    data.events.forEach(function(ev){ _handleWallEvent(ev); });
+                                }
+                            })
+                            .catch(function() {
+                                if (dot) { dot.style.background='#f87171'; dot.style.animation='none'; }
+                                if (status) { status.textContent='Reconnecting...'; status.style.color='#f87171'; }
+                            });
+                    }
+
+                    doPoll();
+                    if (_pollInterval) clearInterval(_pollInterval);
+                    _pollInterval = setInterval(doPoll, 5000);
+                }
+
+
+                function _handleWallEvent(ev) {
+                    _wallEvents.unshift(ev);
+                    if (_wallEvents.length > 50) _wallEvents.pop();
+                    _updateTicker(ev);
+                    _renderLog();
+                    if (_overlayVisible) {
+                        _renderOverlayTicker(ev);
+                        _renderOverlayLog();
+                    }
+                    // Stats
+                    if (ev.type === 'check_done') { _overlayStats.checked++; _updateOverlayStats(); }
+                    if (ev.type === 'citation_gained') { _overlayStats.cited++; _updateOverlayStats(); _showOverlayAlert(ev); }
+                    if (ev.type === 'position_up') { _overlayStats.positions++; _updateOverlayStats(); _showOverlayAlert(ev); }
+                    if (ev.type === 'score_up') { _overlayStats.scores++; _updateOverlayStats(); }
+                    // Also show in activity feed
+                    if (typeof _activityAdd === 'function' && (ev.type === 'citation_gained' || ev.type === 'position_up' || ev.type === 'check_done')) {
+                        _activityAdd(_evToText(ev), ev.type === 'citation_gained' ? 'done' : ev.type === 'position_up' ? 'citation' : 'info');
+                    }
+                }
+
+                function _evToText(ev) {
+                    if (ev.type === 'check_start') return 'Checking ' + ev.domain + (ev.keyword ? ' [' + ev.keyword + ']' : '');
+                    if (ev.type === 'check_done') return 'Done: ' + ev.domain;
+                    if (ev.type === 'citation_gained') return 'NOW CITED: ' + ev.domain + (ev.keyword ? ' [' + ev.keyword + ']' : '');
+                    if (ev.type === 'position_up') return 'Position #' + ev.old_pos + ' to #' + ev.new_pos + ': ' + ev.domain;
+                    if (ev.type === 'score_up') return 'Score +' + ev.gain + ': ' + ev.domain + ' (' + ev.old_score + ' to ' + ev.new_score + ')';
+                    if (ev.type === 'step') return (ev.label||ev.name) + (ev.detail ? ' - ' + ev.detail : '') + ' (' + ev.domain + ')';
+                    if (ev.type === 'monitor_check') return 'Scanning: "' + ev.kw + '"';
+                    if (ev.type === 'monitor_aio') return (ev.cited ? 'CITED ' : 'AIO found: ') + '"' + ev.kw + '" - ' + (ev.aio_text||'').substring(0,60);
+                    if (ev.type === 'monitor_no_aio') return 'No AIO: "' + ev.kw + '"';
+                    if (ev.type === 'monitor_position') return '#' + ev.position + ' in Google: "' + ev.kw + '" (' + ev.domain + ')';
+                    if (ev.type === 'news') { var h = ev.headline || ''; var src2 = ev.source ? ' [' + ev.source + ']' : ''; return '📰 ' + h + src2; }
+                    if (ev.type === 'connected') return 'Live feed connected';
+                    return ev.msg || '';
+                }
+
+                function _evColor(ev) {
+                    if (ev.type === 'citation_gained') return '#4ade80';
+                    if (ev.type === 'position_up') return '#a78bfa';
+                    if (ev.type === 'score_up') return '#fbbf24';
+                    if (ev.type === 'monitor_aio') return ev.cited ? '#4ade80' : '#fbbf24';
+                    if (ev.type === 'monitor_no_aio') return '#4b5563';
+                    if (ev.type === 'monitor_check') return '#374151';
+                    if (ev.type === 'monitor_position') return '#60a5fa';
+                    if (ev.type === 'news') return '#f59e0b';
+                    if (ev.status === 'done' || ev.type === 'check_done') return '#4ade80';
+                    if (ev.status === 'error') return '#f87171';
+                    if (ev.status === 'running' || ev.type === 'check_start') return '#fbbf24';
+                    return '#6b7280';
+                }
+
+                function _updateTicker(ev) {
+                    var el = document.getElementById('csLiveTicker');
+                    if (!el) return;
+                    var ts = new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+                    var color = _evColor(ev);
+                    var text = _evToText(ev);
+                    if (!text || text === 'Live feed connected') return;
+
+                    // Add new line at top
+                    var line = document.createElement('div');
+                    line.style.cssText = 'display:flex;gap:8px;padding:3px 0;border-bottom:1px solid #0d1117;';
+                    var textHtml = ev.url && ev.type === 'news'
+                        ? '<a href="' + ev.url + '" target="_blank" rel="noopener" style="color:' + color + ';text-decoration:none;line-height:1.4;">' + text + '</a>'
+                        : '<span style="color:' + color + ';line-height:1.4;">' + text + '</span>';
+                    line.innerHTML = '<span style="color:#6b7280;white-space:nowrap;flex-shrink:0;font-size:10px;">' + ts + '</span>' + textHtml;
+
+                    // Remove placeholder if present
+                    if (el.firstChild && el.firstChild.querySelector && !el.firstChild.querySelector('span[style*="374151"]')) {
+                        el.innerHTML = '';
+                    }
+                    el.insertBefore(line, el.firstChild);
+
+                    // Keep max 15 lines
+                    while (el.children.length > 15) el.removeChild(el.lastChild);
+
+                    // Flash wall active
+                    var wall = document.getElementById('csLiveWall');
+                    if (wall) {
+                        wall.classList.add('active');
+                        clearTimeout(wall._activeTimer);
+                        wall._activeTimer = setTimeout(function(){ wall.classList.remove('active'); }, 4000);
+                    }
+                }
+
+                function _renderOverlayTicker(ev) {
+                    var el = document.getElementById('csOvTicker');
+                    if (!el) return;
+                    el.style.color = _evColor(ev);
+                    el.textContent = _evToText(ev);
+                }
+
+                function _renderLog() { /* handled inline by _updateTicker */ }
+
+                function _renderOverlayLog() {
+                    var log = document.getElementById('csOvLog');
+                    if (!log) return;
+                    log.innerHTML = _wallEvents.slice(0,15).map(function(ev) {
+                        var ts = new Date(ev.ts||Date.now()).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+                        return '<div style="display:flex;gap:10px;padding:4px 0;border-bottom:1px solid #1f2937;">'
+                            + '<span style="font-size:10px;color:#374151;white-space:nowrap;margin-top:2px;font-family:monospace;">' + ts + '</span>'
+                            + '<span style="font-size:12px;color:' + _evColor(ev) + ';font-family:monospace;">' + _evToText(ev) + '</span>'
+                            + '</div>';
+                    }).join('');
+                }
+
+
+                function _updateOverlayStats() {
+                    var el = function(id){ return document.getElementById(id); };
+                    if(el('csOvChecked')) el('csOvChecked').textContent = _overlayStats.checked;
+                    if(el('csOvCited')) el('csOvCited').textContent = _overlayStats.cited;
+                    if(el('csOvPositions')) el('csOvPositions').textContent = _overlayStats.positions;
+                    if(el('csOvScores')) el('csOvScores').textContent = _overlayStats.scores;
+                }
+
+                function _showOverlayAlert(ev) {
+                    var alertEl = document.getElementById('csOvAlert');
+                    if (!alertEl) return;
+                    var isCitation = ev.type === 'citation_gained';
+                    alertEl.style.display = 'block';
+                    alertEl.style.background = isCitation ? 'linear-gradient(135deg,#052e16,#166534)' : 'linear-gradient(135deg,#1e1b4b,#312e81)';
+                    alertEl.style.border = '2px solid ' + (isCitation ? '#4ade80' : '#a78bfa');
+                    alertEl.innerHTML = '<div style="font-size:3rem;margin-bottom:12px;">' + (isCitation ? 'CITED' : 'POSITION UP') + '</div>'
+                        + '<div style="font-size:1.4rem;font-weight:900;color:' + (isCitation ? '#4ade80' : '#a78bfa') + ';margin-bottom:8px;">'
+                        + (isCitation ? ev.keyword || ev.domain : '#' + ev.old_pos + ' -> #' + ev.new_pos) + '</div>'
+                        + '<div style="font-size:13px;color:#9ca3af;">' + ev.domain + '</div>';
+                    clearTimeout(_alertHideTimer);
+                    _alertHideTimer = setTimeout(function(){ alertEl.style.display = 'none'; }, 6000);
+                    // Confetti
+                    _launchConfetti(isCitation ? '#4ade80' : '#a78bfa');
+                }
+
+                function _launchConfetti(color) {
+                    if (!_overlayVisible) return;
+                    var colors = [color, '#ffffff', '#fbbf24', color];
+                    for (var i = 0; i < 50; i++) {
+                        (function(i) {
+                            setTimeout(function() {
+                                var el = document.createElement('div');
+                                el.style.cssText = 'position:fixed;width:8px;height:8px;border-radius:2px;pointer-events:none;z-index:9999;'
+                                    + 'left:' + (Math.random()*100) + 'vw;top:-10px;'
+                                    + 'background:' + colors[Math.floor(Math.random()*colors.length)] + ';'
+                                    + 'animation:confettiDrop ' + (1.5+Math.random()) + 's ease-in forwards;';
+                                document.body.appendChild(el);
+                                setTimeout(function(){ el.remove(); }, 3000);
+                            }, i * 40);
+                        })(i);
+                    }
+                }
+
+                setTimeout(connectSSE, 500);
+                <\/script>
+                <style>
+                @keyframes cs-pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.4;transform:scale(.8)} }
+                @keyframes confettiDrop { 0%{transform:translateY(0) rotate(0deg);opacity:1} 100%{transform:translateY(100vh) rotate(720deg);opacity:0} }
+                @keyframes csLineIn { from{opacity:0;transform:translateX(-6px)} to{opacity:1;transform:translateX(0)} }
+                </style>
+
+                <!-- Stats -->
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:20px;">
+                    <div class="tr-stat"><div class="val" id="trStatPages">—</div><div class="lbl">Tracked pages</div></div>
+                    <div class="tr-stat"><div class="val" id="trStatAvgPosGain" style="color:#e5e7eb;">—</div><div class="lbl">Avg position gain</div></div>
+                    <div class="tr-stat" onclick="filterByCitation('google')" title="Click to show only Google AIO cited pages" style="cursor:pointer;"><div class="val" id="trStatCitedGoogle" style="color:#38bdf8;">—</div><div class="lbl">Google AIO cited</div></div>
+                    <div class="tr-stat" onclick="filterByCitation('perplexity')" title="Click to show only Perplexity cited pages" style="cursor:pointer;"><div class="val" id="trStatCitedPerplexity" style="color:#a78bfa;">—</div><div class="lbl">Perplexity cited</div></div>
+                    <div class="tr-stat"><div class="val" id="trStatCitedCopilot" style="color:#60a5fa;">—</div><div class="lbl">Copilot/Bing cited</div></div>
+                    <div class="tr-stat"><div class="val" id="trStatCitedClaude" style="color:#f87171;">—</div><div class="lbl">Claude cited</div></div>
+                    <div class="tr-stat"><div class="val" id="trStatCitationRate" style="color:#e5e7eb;">—</div><div class="lbl">AI citation rate</div></div>
+                    <div class="tr-stat"><div class="val" id="trStatCheckedToday" style="color:#4ade80;">—</div><div class="lbl">Checked today</div></div>
+                    <div class="tr-stat"><div class="val" id="trStatPendingChanges" style="color:#fbbf24;">—</div><div class="lbl">Pending changes</div></div>
+                    <div class="tr-stat"><div class="val" id="trStatAvgGraaf" style="color:#e5e7eb;">—</div><div class="lbl">Avg GRAAF score</div></div>
+                </div>
+
+                <!-- Filters -->
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap;">
+                    <input id="trSearchInput" type="text" class="tr-select" placeholder="Search URL or keyword..." oninput="filterTrackerBySearch()" style="min-width:220px;font-size:12px;padding:6px 12px;">
+                    <label style="font-size:12px;color:#6b7280;white-space:nowrap;">Client:</label>
+                    <select id="trClientFilter" class="tr-select" onchange="filterTrackerByClient()" style="min-width:180px;">
+                        <option value="">All clients</option>
+                    </select>
+                    <label style="font-size:12px;color:#6b7280;white-space:nowrap;">Domain:</label>
+                    <select id="trDomainFilter" class="tr-select" onchange="filterTrackerByDomain()" style="min-width:200px;">
+                        <option value="">All domains</option>
+                    </select>
+                    <button onclick="deleteFilteredDomain()" class="tr-btn danger" title="Delete all pages for selected domain" style="font-size:11px;padding:5px 10px;white-space:nowrap;">&#x1f5d1; Delete domain</button>
+                    <button onclick="deleteAllTrackerPages()" class="tr-btn danger" title="Delete ALL tracked pages (every domain)" style="font-size:11px;padding:5px 10px;white-space:nowrap;background:#7f1d1d;">&#x1f5d1; Delete ALL</button>
+                    <span id="trFilterCount" style="font-size:12px;color:#6b7280;"></span>
+                </div>
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;" id="trBulkBar">
+                    <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:#9ca3af;cursor:pointer;">
+                        <input type="checkbox" id="trSelectAll" onchange="toggleSelectAllPages(this.checked)" style="cursor:pointer;">
+                        Select all
+                    </label>
+                    <span id="trSelectedCount" style="font-size:12px;color:#6b7280;"></span>
+                    <button onclick="setSelectedPagesOff()" class="tr-btn" style="font-size:11px;padding:4px 12px;display:none;border:1px solid #6b7280;color:#9ca3af;background:#0d1117;border-radius:4px;cursor:pointer;" id="trBulkOffBtn">\u2298 Set Off (no scan)</button>
+                    <button onclick="deleteSelectedPages()" class="tr-btn danger" style="font-size:11px;padding:4px 12px;display:none;" id="trBulkDeleteBtn">&#x1f5d1; Delete selected</button>
+                </div>
+
+                <!-- Pages list -->
+                <div id="trPagesList"></div>
+
+                <!-- Add URL modal -->
+                <div id="trAddModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9999;align-items:center;justify-content:center;" onclick="if(event.target===this)closeAddPageModal()">
+                    <div style="background:#111827;border:1px solid #374151;border-radius:14px;padding:28px;width:min(580px,95vw);max-height:90vh;overflow-y:auto;" onclick="event.stopPropagation()">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+                            <h3 style="font-weight:700;font-size:1rem;">Add URL to Tracker</h3>
+                            <button onclick="closeAddPageModal()" style="background:none;border:none;color:#9ca3af;font-size:1.3rem;cursor:pointer;">✕</button>
+                        </div>
+                        <div style="display:flex;flex-direction:column;gap:14px;">
                             <div>
-                                <h2 style="font-size:20px;font-weight:900;color:#f1f5f9;margin:0 0 6px;">Tracker Clients</h2>
-                                <p style="font-size:13px;color:#9ca3af;margin:0;">Self-service users registered via the free tracker</p>
+                                <label style="font-size:11px;color:#9ca3af;text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:5px;">URL (with slug) *</label>
+                                <input id="trAddUrl" type="url" class="tr-input" placeholder="https://yoursite.com/blog/your-article">
                             </div>
-                            <button onclick="openNewOwnClient()" style="background:linear-gradient(135deg,#4ade80 0%,#22c55e 100%);border:none;color:#fff;font-weight:700;padding:10px 16px;border-radius:8px;cursor:pointer;font-size:13px;white-space:nowrap;box-shadow:0 4px 12px rgba(74,222,128,.3);">+ New Client</button>
-                        </div>
-
-                        <!-- Stats Grid -->
-                        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:20px;">
-                            <div style="background:linear-gradient(135deg,rgba(59,130,246,.1) 0%,rgba(59,130,246,.05) 100%);border:1px solid rgba(59,130,246,.2);border-radius:10px;padding:14px;text-align:center;">
-                                <div style="font-size:24px;font-weight:900;color:#60a5fa;" id="tcStatTotal">0</div>
-                                <div style="font-size:11px;color:#6b7280;margin-top:4px;text-transform:uppercase;letter-spacing:.05em;">Total clients</div>
+                            <div>
+                                <label style="font-size:11px;color:#9ca3af;text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:5px;">Target Keyword *</label>
+                                <input id="trAddKeyword" type="text" class="tr-input" placeholder="e.g. best SEO tools 2025">
                             </div>
-                            <div style="background:linear-gradient(135deg,rgba(74,222,128,.1) 0%,rgba(74,222,128,.05) 100%);border:1px solid rgba(74,222,128,.2);border-radius:10px;padding:14px;text-align:center;">
-                                <div style="font-size:24px;font-weight:900;color:#4ade80;" id="tcStatActive">0</div>
-                                <div style="font-size:11px;color:#6b7280;margin-top:4px;text-transform:uppercase;letter-spacing:.05em;">Active</div>
+                            <div>
+                                <label style="font-size:11px;color:#9ca3af;text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:5px;">Page Title</label>
+                                <input id="trAddTitle" type="text" class="tr-input" placeholder="Optional — auto-detected if empty">
                             </div>
-                            <div style="background:linear-gradient(135deg,rgba(167,139,250,.1) 0%,rgba(167,139,250,.05) 100%);border:1px solid rgba(167,139,250,.2);border-radius:10px;padding:14px;text-align:center;">
-                                <div style="font-size:24px;font-weight:900;color:#a78bfa;" id="tcStatPages">0</div>
-                                <div style="font-size:11px;color:#6b7280;margin-top:4px;text-transform:uppercase;letter-spacing:.05em;">Total pages</div>
+                            <div>
+                                <label style="font-size:11px;color:#9ca3af;text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:5px;">Check Frequency</label>
+                                <select id="trAddFreq" class="tr-select" style="width:100%;">
+                                    <option value="1day">Daily (heavy usage)</option>
+                                    <option value="0">⊘ Off (no auto-scan)</option>
+                                    <option value="3days" selected>Every 3 days ← recommended</option>
+                                    <option value="7days">Every 7 days</option>
+                                    <option value="17days">Every 17 days</option>
+                                    <option value="21days">Every 21 days</option>
+                                    <option value="30days">Every 30 days (large lists)</option>
+                                    <option value="1week">Weekly</option>
+                                    <option value="2weeks">Every 2 weeks (stable pages)</option>
+                                </select>
                             </div>
-                            <div style="background:linear-gradient(135deg,rgba(56,189,248,.1) 0%,rgba(56,189,248,.05) 100%);border:1px solid rgba(56,189,248,.2);border-radius:10px;padding:14px;text-align:center;">
-                                <div style="font-size:24px;font-weight:900;color:#38bdf8;" id="tcStatWithEmail">0</div>
-                                <div style="font-size:11px;color:#6b7280;margin-top:4px;text-transform:uppercase;letter-spacing:.05em;">With email</div>
+                            <div>
+                                <label style="font-size:11px;color:#9ca3af;text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:5px;">Paste Current HTML (optional — enables change detection)</label>
+                                <textarea id="trAddHtml" class="tr-input" rows="4" placeholder="Paste the current published HTML of this page..." style="resize:vertical;font-size:11px;font-family:monospace;"></textarea>
                             </div>
-                            <div style="background:linear-gradient(135deg,rgba(34,212,102,.1) 0%,rgba(34,212,102,.05) 100%);border:1px solid rgba(34,212,102,.2);border-radius:10px;padding:14px;text-align:center;">
-                                <div style="font-size:24px;font-weight:900;color:#22d462;" id="tcStatWithWa">0</div>
-                                <div style="font-size:11px;color:#6b7280;margin-top:4px;text-transform:uppercase;letter-spacing:.05em;">With WhatsApp</div>
-                            </div>
-                        </div>
-
-                        <!-- Controls Section -->
-                        <div style="background:#0d1117;border:1px solid #1f2937;border-radius:10px;padding:14px;">
-                            <!-- Search Bar -->
-                            <div style="display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap;">
-                                <input id="tcSearch" type="text" placeholder="Search domain..." style="flex:1;min-width:180px;background:#0a0a12;border:1px solid #374151;border-radius:6px;padding:8px 12px;color:#e5e7eb;font-size:12px;" oninput="filterTrackerClients()">
-                                <button onclick="loadTrackerClients()" style="background:none;border:1px solid #374151;color:#9ca3af;padding:6px 12px;border-radius:6px;cursor:pointer;font-size:12px;">⟳ Refresh</button>
-                            </div>
-
-                            <!-- Filter Buttons -->
-                            <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid #1f2937;">
-                                <span style="font-size:10px;color:#6b7280;text-transform:uppercase;align-self:center;font-weight:700;letter-spacing:.05em;">Filter:</span>
-                                <button onclick="filterTcType('all')" id="tcTypeAll" style="background:#374151;border:1px solid #374151;color:#f1f5f9;padding:6px 12px;border-radius:6px;cursor:pointer;font-size:11px;font-weight:600;">All</button>
-                                <button onclick="filterTcType('free')" id="tcTypeFree" style="background:none;border:1px solid #374151;color:#9ca3af;padding:6px 12px;border-radius:6px;cursor:pointer;font-size:11px;">🆓 Free</button>
-                                <button onclick="filterTcType('own')" id="tcTypeOwn" style="background:none;border:1px solid #374151;color:#9ca3af;padding:6px 12px;border-radius:6px;cursor:pointer;font-size:11px;">⭐ Own</button>
-                                <button onclick="filterTcType('dealify')" id="tcTypeDealify" style="background:none;border:1px solid #374151;color:#9ca3af;padding:6px 12px;border-radius:6px;cursor:pointer;font-size:11px;">🎯 Dealify</button>
-                            </div>
-
-                            <!-- Action Buttons -->
-                            <div style="display:flex;gap:6px;flex-wrap:wrap;">
-                                <span style="font-size:10px;color:#6b7280;text-transform:uppercase;align-self:center;font-weight:700;letter-spacing:.05em;">Tools:</span>
-                                <button onclick="mergeDuplicateTrackers()" style="background:none;border:1px solid #f59e0b;color:#f59e0b;padding:6px 12px;border-radius:6px;cursor:pointer;font-size:11px;font-weight:600;" title="Merge duplicate domains">⚡ Merge</button>
-                                <button onclick="recalcMaxPages()" style="background:none;border:1px solid #38bdf8;color:#38bdf8;padding:6px 12px;border-radius:6px;cursor:pointer;font-size:11px;font-weight:600;" title="Recalculate max_pages">⚙️ Fix Pages</button>
-                                <button onclick="_showDeleted=!_showDeleted;this.style.background=_showDeleted?'rgba(239,68,68,.15)':'';loadTrackerClients();" style="background:none;border:1px solid #ef4444;color:#ef4444;padding:6px 12px;border-radius:6px;cursor:pointer;font-size:11px;font-weight:600;" title="Show deleted trackers">🗑️ Deleted</button>
+                            <div style="display:flex;gap:10px;margin-top:4px;">
+                                <button onclick="submitAddPage()" class="tr-btn primary" id="trAddSubmitBtn">Add & Run First Check</button>
+                                <button onclick="closeAddPageModal()" class="tr-btn">Cancel</button>
                             </div>
                         </div>
                     </div>
+                </div>
 
-                    <!-- Clients List -->
+                <!-- Changes popup -->
+                <div id="trChangesModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9999;align-items:center;justify-content:center;" onclick="if(event.target===this)document.getElementById('trChangesModal').style.display='none'">
+                    <div style="background:#111827;border:1px solid #374151;border-radius:14px;padding:28px;width:min(680px,95vw);max-height:85vh;overflow-y:auto;" onclick="event.stopPropagation()">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+                            <h3 id="trChangesTitle" style="font-weight:700;">Changes & Recommendations</h3>
+                            <button onclick="document.getElementById('trChangesModal').style.display='none'" style="background:none;border:none;color:#9ca3af;font-size:1.3rem;cursor:pointer;">✕</button>
+                        </div>
+                        <div id="trChangesBody"></div>
+                    </div>
+                </div>
+
+                <!-- HTML update modal -->
+                <div id="trHtmlModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9999;align-items:center;justify-content:center;" onclick="if(event.target===this)document.getElementById('trHtmlModal').style.display='none'">
+                    <div style="background:#111827;border:1px solid #374151;border-radius:14px;padding:28px;width:min(680px,95vw);max-height:85vh;overflow-y:auto;" onclick="event.stopPropagation()">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+                            <h3 style="font-weight:700;">Update Page</h3>
+                            <button onclick="document.getElementById('trHtmlModal').style.display='none'" style="background:none;border:none;color:#9ca3af;font-size:1.3rem;cursor:pointer;">✕</button>
+                        </div>
+                        <input type="hidden" id="trHtmlPageId">
+                        <div style="margin-bottom:12px;">
+                            <label style="font-size:12px;color:#9ca3af;display:block;margin-bottom:4px;">Keyword <span style="color:#6b7280;">(used for Citation Brief + recommendations — leave blank to use URL slug)</span></label>
+                            <input id="trKeywordInput" type="text" class="tr-input" placeholder="e.g. site speed optimization" style="font-size:13px;">
+                        </div>
+                        <div>
+                            <label style="font-size:12px;color:#9ca3af;display:block;margin-bottom:4px;">Page HTML <span style="color:#6b7280;">(optional — enables change detection and GRAAF scoring)</span></label>
+                            <textarea id="trHtmlContent" class="tr-input" rows="8" placeholder="Paste HTML here..." style="resize:vertical;font-size:11px;font-family:monospace;"></textarea>
+                        </div>
+                        <div style="display:flex;gap:10px;margin-top:14px;">
+                            <button onclick="submitHtmlUpdate()" class="tr-btn primary">Save & Re-check</button>
+                            <button onclick="document.getElementById('trHtmlModal').style.display='none'" class="tr-btn">Cancel</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ── LIVE ACTIVITY FEED (corner) ───────────────────────── -->
+                <div id="csActivityFeed" style="display:none;position:fixed;bottom:24px;right:24px;width:340px;background:#0d1117;border:1px solid #1f2937;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,.6);z-index:9998;flex-direction:column;overflow:hidden;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:#111827;border-bottom:1px solid #1f2937;">
+                        <div style="display:flex;align-items:center;gap:8px;">
+                            <span style="width:8px;height:8px;border-radius:50%;background:#4ade80;display:inline-block;animation:cs-pulse 1.5s ease-in-out infinite;"></span>
+                            <span style="font-size:11px;font-weight:700;color:#f1f5f9;text-transform:uppercase;letter-spacing:.06em;">Live Activity</span>
+                        </div>
+                        <button onclick="_activityHide()" style="background:none;border:none;color:#6b7280;cursor:pointer;font-size:14px;padding:2px 6px;">✕</button>
+                    </div>
+                    <div id="csActivityList" style="padding:8px 14px;max-height:280px;overflow-y:auto;font-family:monospace;"></div>
+                </div>
+                <style>
+                @keyframes cs-pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.4;transform:scale(0.8)} }
+                </style>
+                <div id="trCitationModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:10000;align-items:center;justify-content:center;" onclick="if(event.target===this)closeCitationModal()">
+                    <div style="background:#0d1117;border:1px solid #1f2937;border-radius:16px;padding:0;width:min(820px,97vw);max-height:92vh;overflow:hidden;display:flex;flex-direction:column;" onclick="event.stopPropagation()">
+                        <!-- Header -->
+                        <div style="padding:20px 24px;border-bottom:1px solid #1f2937;display:flex;justify-content:space-between;align-items:center;background:#111827;flex-shrink:0;">
+                            <div>
+                                <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.12em;color:#a78bfa;margin-bottom:4px;">🎯 AI CITATION BRIEF</div>
+                                <h3 id="trCitationTitle" style="font-weight:700;font-size:1rem;color:#f1f5f9;">Loading…</h3>
+                            </div>
+                            <button onclick="closeCitationModal()" style="background:none;border:none;color:#6b7280;font-size:1.4rem;cursor:pointer;">✕</button>
+                        </div>
+                        <!-- Body -->
+                        <div id="trCitationBody" style="overflow-y:auto;padding:24px;flex:1;">
+                            <div style="text-align:center;padding:60px 0;color:#6b7280;">
+                                <div style="font-size:2rem;margin-bottom:12px;">⚙️</div>
+                                <div>Loading citation brief…</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <script>
+                // -- Citation Brief --------------------------------------------
+                function openCitationBrief(pageId) {
+                    var page = (allTrackerPages||[]).find(function(p){ return p.id == pageId; }) || {};
+                    var url = page.url || '';
+                    var keyword = page.keyword || page.gsc_keyword || '';
+                    var domain = url.split('//').pop().split('/')[0];
+                    var modal = document.getElementById('trCitationModal');
+                    var title = document.getElementById('trCitationTitle');
+                    var body  = document.getElementById('trCitationBody');
+                    var urlClean = url.indexOf('//') > -1 ? url.split('//')[1] : url;
+                    var urlParts = urlClean.split('/');
+                    title.textContent = (keyword || 'Citation Brief') + ' - ' + urlParts.slice(0,2).join('/');
+                    _activityAdd(' Generating Citation Brief for ' + domain, 'citation');
+                    body.innerHTML = '<style>@keyframes csspin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}@keyframes csprog{0%{margin-left:-60%}100%{margin-left:110%}}</style><div style="text-align:center;padding:60px 20px;"><div style="font-size:2.5rem;display:inline-block;animation:csspin 1.5s linear infinite;margin-bottom:20px;"></div><div style="font-size:14px;color:#a78bfa;font-weight:700;margin-bottom:8px;">Generating Citation Brief</div><div style="font-size:12px;color:#6b7280;margin-bottom:20px;">Fetching AI Overview . Scraping competitors . Analysing your content</div><div style="background:#1f2937;border-radius:99px;height:4px;width:220px;margin:0 auto;overflow:hidden;"><div style="height:100%;width:60%;background:linear-gradient(90deg,#7c3aed,#a78bfa);border-radius:99px;animation:csprog 1.8s ease-in-out infinite;"></div></div><div style="font-size:11px;color:#374151;margin-top:12px;">15-30 seconds</div></div>';
+                    modal.style.display = 'flex';
+                    var token = localStorage.getItem('admin_id') || '';
+                    fetch('/api/tracker/pages/' + pageId + '/citation-brief', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'x-admin-key': token }
+                    })
+                    .then(function(r) { return r.json(); })
+                    .then(function(data) {
+                        if (!data.success) {
+                            body.innerHTML = '<div style="color:#f87171;padding:20px;">' + (data.error || 'Failed') + '</div>';
+                            return;
+                        }
+                        renderCitationBrief(data, body, page);
+                        var domain2 = (page.url||'').split('//').pop().split('/')[0];
+                        _activityAdd('OK Citation Brief ready for ' + domain2 + ' - ' + (data.brief && data.brief.passages_to_add ? data.brief.passages_to_add.length : 0) + ' passages', 'done');
+                    })
+                    .catch(function(e) {
+                        body.innerHTML = '<div style="color:#f87171;padding:20px;">Error: ' + e.message + '</div>';
+                    });
+                }
+
+                function closeCitationModal() {
+                    document.getElementById('trCitationModal').style.display = 'none';
+                }
+
+                function copyAllPassages(btn) {
+                    var text = window._citationPassages || '';
+                    if (!text) return;
+                    navigator.clipboard.writeText(text).then(function() {
+                        btn.textContent = 'OK Copied!';
+                        setTimeout(function() { btn.textContent = ' Copy All Passages'; }, 2000);
+                    }).catch(function() { btn.textContent = 'Copy failed'; });
+                }
+
+                function div(style, content) { return '<div style="' + style + '">' + content + '</div>'; }
+                function span(style, content) { return '<span style="' + style + '">' + content + '</span>'; }
+
+                function renderCitationBrief(data, container, page) {
+                    page = page || {};
+                    var brief = data.brief || {};
+                    var aio = data.ai_overview || {};
+                    var aioStatus = brief._aio_status || {};
+                    var freshness = brief._freshness || {};
+                    var introWeight = brief._intro_weight || {};
+                    var groundingSources = brief._grounding_sources || [];
+                    var aioFound = aio.found;
+                    var aioCited = aio.cited;
+                    var html = '';
+
+                    // Model badge
+                    if (data.model_used) {
+                        var modelLabel = data.model_used || '';
+                        var isGrounded = modelLabel.indexOf('two-step') > -1 || modelLabel.indexOf('grounding') > -1;
+                        var isClaude = modelLabel.indexOf('claude') > -1;
+                        html += div('font-size:10px;font-weight:700;padding:4px 10px;border-radius:4px;background:' + (isGrounded?'#052e16':isClaude?'#2d0a0a':'#1a0a2e') + ';color:' + (isGrounded?'#4ade80':isClaude?'#f87171':'#a78bfa') + ';display:inline-block;margin-bottom:14px;', (isGrounded ? ' Gemini searched Google live' : isClaude ? '! Claude fallback - check Gemini quota' : ' ' + modelLabel));
+                    }
+
+                    // No AIO warning
+                    if (!aioFound) {
+                        html += div('background:#1c1009;border:1px solid #78350f;border-radius:8px;padding:14px 16px;margin-bottom:16px;',
+                            div('font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:#f59e0b;margin-bottom:6px;', '! NO AI OVERVIEW DETECTED AT THIS MOMENT') +
+                            div('font-size:12px;color:#d97706;line-height:1.6;', (aioStatus.note || 'AI Overviews appear on ~15-48% of queries and change ~12x per month. This is normal.')) +
+                            div('font-size:11px;color:#92400e;margin-top:6px;', (aioStatus.action || 'The brief below is based on competitor analysis.'))
+                        );
+                    }
+
+                    // Stats grid
+                    html += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:20px;">';
+                    html += div('background:#0a1628;border:1px solid ' + (aioFound?'#1e3a5f':'#1f2937') + ';border-radius:8px;padding:12px;text-align:center;',
+                        div('font-size:1.4rem;', aioFound ? (aioCited ? 'OK' : '!') : 'NO') +
+                        div('font-size:11px;font-weight:700;color:' + (aioCited?'#4ade80':aioFound?'#fbbf24':'#6b7280') + ';margin-top:4px;', 'Google AIO') +
+                        div('font-size:10px;color:#6b7280;', aioCited ? 'Cited OK' : aioFound ? 'Not cited' : 'Not found'));
+                    html += div('background:#0a1628;border:1px solid #1f2937;border-radius:8px;padding:12px;text-align:center;',
+                        div('font-size:1.4rem;', (data.google_position || (page && page.latest_snapshot && page.latest_snapshot.google_position)) ? '#' + (data.google_position || page.latest_snapshot.google_position) : '-') +
+                        div('font-size:11px;font-weight:700;color:#a78bfa;margin-top:4px;', 'Google Pos') +
+                        div('font-size:10px;color:#6b7280;', 'Live ranking'));
+                    html += div('background:#0a1628;border:1px solid ' + (freshness.at_risk?'#7f1d1d':'#1f2937') + ';border-radius:8px;padding:12px;text-align:center;',
+                        div('font-size:1.4rem;', freshness.content_age_days ? freshness.content_age_days + 'd' : '?') +
+                        div('font-size:11px;font-weight:700;color:' + (freshness.at_risk?'#f87171':'#6b7280') + ';margin-top:4px;', 'Content Age') +
+                        div('font-size:10px;color:#6b7280;', freshness.at_risk ? '! Citation risk' : 'OK'));
+                    html += div('background:#0a1628;border:1px solid #1f2937;border-radius:8px;padding:12px;text-align:center;',
+                        div('font-size:1.4rem;', (brief.passages_to_add||[]).length) +
+                        div('font-size:11px;font-weight:700;color:#fbbf24;margin-top:4px;', 'Passages to add') +
+                        div('font-size:10px;color:#6b7280;', 'Extracted from AIO'));
+                    html += div('background:#0a1628;border:1px solid #1f2937;border-radius:8px;padding:12px;text-align:center;',
+                        div('font-size:1.4rem;', groundingSources.length || '-') +
+                        div('font-size:11px;font-weight:700;color:#38bdf8;margin-top:4px;', 'Live sources') +
+                        div('font-size:10px;color:#6b7280;', 'Gemini found'));
+                    html += '</div>';
+
+                    // Freshness warning
+                    if (freshness.at_risk) {
+                        html += div('background:#2d0a0a;border:1px solid #7f1d1d;border-left:3px solid #f87171;border-radius:0 8px 8px 0;padding:12px 14px;margin-bottom:16px;',
+                            div('font-size:11px;font-weight:700;color:#f87171;margin-bottom:4px;', ' FRESHNESS WARNING') +
+                            div('font-size:12px;color:#fca5a5;', freshness.message || ''));
+                    }
+
+                    // Grounding sources
+                    if (groundingSources.length) {
+                        var srcHtml = groundingSources.slice(0,5).map(function(s,i) {
+                            var u = (s.url||s||'');
+                            var t = s.title || '';
+                            return div('font-size:11px;padding:4px 0;border-bottom:1px solid #1f2937;color:#9ca3af;',
+                                span('color:#38bdf8;font-weight:700;', i===0 ? '-> ' : '  ') +
+                                '<a href="' + u + '" target="_blank" style="color:#38bdf8;word-break:break-all;">' + u.split('//').pop().substring(0,70) + '</a> ' +
+                                span('color:#374151;', t));
+                        }).join('');
+                        html += div('background:#0a1628;border:1px solid #1e3a5f;border-radius:8px;padding:14px;margin-bottom:16px;',
+                            div('font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:#38bdf8;margin-bottom:8px;', ' URLS GEMINI RETRIEVED FROM GOOGLE SEARCH') +
+                            div('font-size:11px;color:#6b7280;margin-bottom:8px;', brief._grounding_note || '') +
+                            srcHtml);
+                    }
+
+                    // AIO text
+                    if (aio.text) {
+                        html += div('background:#0c1a0c;border:1px solid #166534;border-radius:8px;padding:16px;margin-bottom:16px;',
+                            div('font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:#4ade80;margin-bottom:8px;', ' CURRENT AI OVERVIEW TEXT') +
+                            div('font-size:13px;color:#d1fae5;line-height:1.7;white-space:pre-wrap;', aio.text) +
+                            (aio.source_url ? div('font-size:11px;color:#6b7280;margin-top:8px;', 'Source: <a href="' + aio.source_url + '" target="_blank" style="color:#38bdf8;">' + aio.source_url + '</a>') : ''));
+                    }
+
+                    // Citation source
+                    if (brief.citation_source) {
+                        var cs = brief.citation_source;
+                        html += div('background:#1a0a2e;border:1px solid #4c1d95;border-radius:8px;padding:14px;margin-bottom:16px;',
+                            div('font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:#a78bfa;margin-bottom:8px;', '🏆 PAGE BEING CITED INSTEAD OF YOU') +
+                            div('font-size:13px;color:#e5e7eb;', cs.domain || '') +
+                            div('font-size:11px;color:#6b7280;margin-top:4px;', cs.why_cited || '') +
+                            div('font-size:11px;color:#9ca3af;margin-top:8px;', 'Key difference: ' + span('color:#c4b5fd;', cs.key_difference || '')));
+                    }
+
+                    // Platform gaps
+                    if (brief.platform_gaps) {
+                        var g = brief.platform_gaps;
+                        var gHtml = '';
+                        if (g.google_aio) gHtml += div('display:flex;gap:8px;margin-bottom:8px;', span('font-size:10px;font-weight:700;padding:2px 7px;border-radius:3px;background:#1e3a5f;color:#38bdf8;white-space:nowrap;', 'Google AIO') + span('font-size:12px;color:#9ca3af;', g.google_aio));
+                        if (g.perplexity) gHtml += div('display:flex;gap:8px;margin-bottom:8px;', span('font-size:10px;font-weight:700;padding:2px 7px;border-radius:3px;background:#1e1b4b;color:#a78bfa;white-space:nowrap;', 'Perplexity') + span('font-size:12px;color:#9ca3af;', g.perplexity));
+                        if (g.chatgpt) gHtml += div('display:flex;gap:8px;margin-bottom:8px;', span('font-size:10px;font-weight:700;padding:2px 7px;border-radius:3px;background:#1e3a5f;color:#60a5fa;white-space:nowrap;', 'ChatGPT') + span('font-size:12px;color:#9ca3af;', g.chatgpt));
+                        if (g.copilot_bing) gHtml += div('display:flex;gap:8px;margin-bottom:8px;', span('font-size:10px;font-weight:700;padding:2px 7px;border-radius:3px;background:#0c2340;color:#38bdf8;white-space:nowrap;', 'Copilot/Bing') + span('font-size:12px;color:#9ca3af;', g.copilot_bing));
+                        if (g.claude_brave) gHtml += div('display:flex;gap:8px;', span('font-size:10px;font-weight:700;padding:2px 7px;border-radius:3px;background:#1a0a0a;color:#f87171;white-space:nowrap;', 'Claude/Brave') + span('font-size:12px;color:#9ca3af;', g.claude_brave));
+                        if (gHtml) html += div('background:#111827;border:1px solid #1f2937;border-radius:8px;padding:14px;margin-bottom:16px;',
+                            div('font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:#6b7280;margin-bottom:10px;', '\uD83C\uDFAF WHY YOU ARE NOT CITED \u2014 PER PLATFORM') + gHtml);
+                    }
+
+                    // Passages to add
+                    var passages = brief.passages_to_add || [];
+                    if (passages.length) {
+                        html += div('margin-bottom:20px;',
+                            div('font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:#fbbf24;margin-bottom:12px;', ' PASSAGES TO ADD TO YOUR HTML') +
+                            div('font-size:11px;color:#6b7280;margin-bottom:10px;', 'Add these to your page - in a direct answer box, FAQ, or dedicated paragraph.'));
+                        var allPassageText = '';
+                        passages.forEach(function(p, i) {
+                            var platforms = (p.platforms||[]).map(function(pl) {
+                                var bg = pl==='google'?'#1e3a5f':pl==='perplexity'?'#1e1b4b':'#052e16';
+                                var co = pl==='google'?'#38bdf8':pl==='perplexity'?'#a78bfa':'#4ade80';
+                                return span('font-size:9px;font-weight:700;padding:1px 6px;border-radius:3px;margin-right:3px;background:'+bg+';color:'+co+';', pl.toUpperCase());
+                            }).join('');
+                            var cardHtml = div('display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:6px;',
+                                div('display:flex;align-items:center;gap:6px;', span('font-size:10px;font-weight:700;color:#fbbf24;text-transform:uppercase;', 'Passage ' + (i+1) + ' . ' + (p.type||'content')) + platforms) +
+                                div('', (p.word_count_target ? span('font-size:10px;color:#6b7280;', 'Target: ' + span('color:#fbbf24;', p.word_count_target + ' words')) : '') + ' ' + span('font-size:10px;color:#6b7280;', 'Where: ' + span('color:#a78bfa;', p.placement||'after H1'))));
+                            cardHtml += div('font-size:13px;color:#e5e7eb;line-height:1.7;margin-bottom:10px;background:#0d1117;padding:10px 12px;border-radius:6px;font-style:italic;', p.passage||'');
+                            if (p.why) cardHtml += div('font-size:11px;color:#9ca3af;', '💡 Why: ' + p.why);
+                            if (p.improved_version) {
+                                cardHtml += div('font-size:11px;color:#4ade80;margin-top:8px;font-weight:600;', 'OK Improved version (use this):');
+                                cardHtml += div('font-size:13px;color:#d1fae5;background:#052e16;padding:10px 12px;border-radius:6px;margin-top:4px;line-height:1.7;', p.improved_version);
+                            }
+                            html += div('background:#111827;border:1px solid #374151;border-left:3px solid #fbbf24;border-radius:0 8px 8px 0;padding:14px;margin-bottom:10px;', cardHtml);
+                            allPassageText += '--- PASSAGE ' + (i+1) + ' (' + (p.placement||'after H1') + ') ---' + String.fromCharCode(10) + (p.improved_version||p.passage||'') + String.fromCharCode(10) + String.fromCharCode(10);
+                        });
+                    }
+
+                    // Structural fixes
+                    var fixes = brief.structural_fixes || [];
+                    if (fixes.length) {
+                        html += div('margin-bottom:20px;', div('font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:#38bdf8;margin-bottom:12px;', '🔧 STRUCTURAL FIXES'));
+                        allPassageText += String.fromCharCode(10) + '--- STRUCTURAL FIXES ---' + String.fromCharCode(10);
+                        fixes.forEach(function(f,fi) {
+                            var fHtml = div('font-size:12px;font-weight:700;color:#e5e7eb;margin-bottom:4px;', f.fix||'') +
+                                div('font-size:11px;color:#9ca3af;', f.reason||'');
+                            if (f.example) fHtml += div('font-size:11px;color:#6b7280;margin-top:6px;font-family:monospace;background:#0d1117;padding:8px;border-radius:4px;', f.example);
+                            html += div('background:#111827;border:1px solid #1f2937;border-left:3px solid #38bdf8;border-radius:0 8px 8px 0;padding:12px 14px;margin-bottom:8px;', fHtml);
+                            allPassageText += 'FIX ' + (fi+1) + ': ' + (f.fix||'') + String.fromCharCode(10) + 'WHY: ' + (f.reason||'') + String.fromCharCode(10) + (f.example ? 'EXAMPLE: ' + f.example + String.fromCharCode(10) : '') + String.fromCharCode(10);
+                        });
+                    }
+
+                    // Copy button - after both passages and structural fixes
+                    if (allPassageText) {
+                        window._citationPassages = allPassageText;
+                        html += div('text-align:center;padding:12px 0 8px;', '<button onclick="copyAllPassages(this)" class="tr-btn primary" style="font-size:12px;"> Copy All Passages + Fixes to Clipboard</button>');
+                    }
+
+                    // Primary reason
+                    if (brief.primary_reason_not_cited) {
+                        html += div('background:#1a0a2e;border:1px solid #4c1d95;border-radius:8px;padding:14px;margin-bottom:16px;',
+                            div('font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:#a78bfa;margin-bottom:6px;', ' PRIMARY REASON NOT CITED') +
+                            div('font-size:13px;color:#e5e7eb;', brief.primary_reason_not_cited));
+                    }
+
+                    container.innerHTML = html;
+                }
+                <\/script>
+            </div>
+
+            <!-- TRACKER CLIENTS -->
+            <!-- TRACKER CLIENTS -->
+            <div id="tab-tracker-clients" class="tab-content hidden">
+                <div style="padding:8px;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
+                        <div>
+                            <h2 style="font-size:1.1rem;font-weight:800;color:#f1f5f9;">Tracker Clients</h2>
+                            <p style="font-size:12px;color:#6b7280;margin-top:2px;">Self-service users registered via the free tracker</p>
+                        </div>
+                        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                            <button onclick="openNewOwnClient()" class="tr-btn" style="border-color:#4ade80;color:#4ade80;font-weight:700;">+ New Client</button>
+                            <input id="tcSearch" type="text" placeholder="Search domain..." class="tr-input" style="width:140px;" oninput="filterTrackerClients()">
+                            <button onclick="filterTcType('all')" id="tcTypeAll" class="tr-btn" style="font-size:10px;border-color:#374151;color:#9ca3af;background:#374151;">All</button>
+                            <button onclick="filterTcType('free')" id="tcTypeFree" class="tr-btn" style="font-size:10px;border-color:#6b7280;color:#6b7280;">🆓 Free</button>
+                            <button onclick="filterTcType('own')" id="tcTypeOwn" class="tr-btn" style="font-size:10px;border-color:#a78bfa;color:#a78bfa;">⭐ Own</button>
+                            <button onclick="filterTcType('dealify')" id="tcTypeDealify" class="tr-btn" style="font-size:10px;border-color:#f59e0b;color:#f59e0b;">🎯 Dealify</button>
+                            <button onclick="loadTrackerClients()" class="tr-btn"><i class="fas fa-sync-alt"></i></button>
+                            <button onclick="mergeDuplicateTrackers()" class="tr-btn" style="border-color:#f59e0b;color:#f59e0b;" title="Merge duplicate domains">&#9889; Merge</button>
+                            <button onclick="recalcMaxPages()" class="tr-btn" style="border-color:#38bdf8;color:#38bdf8;" title="Recalculate max_pages">&#9881; Fix Pages</button>
+                            <button onclick="_showDeleted=!_showDeleted;this.style.background=_showDeleted?'rgba(239,68,68,.15)':'';loadTrackerClients();" class="tr-btn" style="border-color:#ef4444;color:#ef4444;" title="Show deleted trackers">&#128465; Deleted</button>
+                        </div>
+                    </div>
+                    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:20px;">
+                        <div class="tr-stat"><div class="val" id="tcStatTotal">0</div><div class="lbl">Total clients</div></div>
+                        <div class="tr-stat"><div class="val" id="tcStatActive" style="color:#4ade80;">0</div><div class="lbl">Active</div></div>
+                        <div class="tr-stat"><div class="val" id="tcStatPages" style="color:#a78bfa;">0</div><div class="lbl">Total pages</div></div>
+                        <div class="tr-stat"><div class="val" id="tcStatWithEmail" style="color:#38bdf8;">0</div><div class="lbl">With email</div></div>
+                        <div class="tr-stat"><div class="val" id="tcStatWithWa" style="color:#4ade80;">0</div><div class="lbl">With WhatsApp</div></div>
+                    </div>
                     <div id="tcList"></div>
                 </div>
             </div>
@@ -29831,7 +30573,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
             if (tab==='leaderboard') loadLeaderboard();
             if (tab==='freelancers') loadFreelancers();
             if (tab==='users') loadUsers();
-            // REMOVED: if (tab==='tracker') loadTrackerPages(); — tracker tab deleted
+            if (tab==='tracker') loadTrackerPages();
             if (tab==='messages') loadMessages();
             if (tab==='tracker-clients') {
                 if (typeof loadTrackerClients === 'function') loadTrackerClients();
@@ -31713,11 +32455,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
             var el = document.getElementById('tcList');
             if (!el) return;
             if (!clients.length) {
-                el.innerHTML = '<div style="text-align:center;padding:60px 40px;background:linear-gradient(135deg,rgba(59,130,246,.05) 0%,rgba(124,58,237,.05) 100%);border:2px dashed #1f2937;border-radius:12px;">'
-                    + '<div style="font-size:48px;margin-bottom:16px;">📊</div>'
-                    + '<div style="font-size:16px;font-weight:800;color:#e5e7eb;margin-bottom:8px;">No tracker clients yet</div>'
-                    + '<div style="font-size:13px;color:#9ca3af;line-height:1.6;max-width:420px;margin:0 auto;">Tracker clients are self-service users who register via the free AI Citations Tracker. They will appear here once they sign up.</div>'
-                    + '</div>';
+                el.innerHTML = '<div style="text-align:center;padding:40px;color:#6b7280;">No clients registered yet</div>';
                 return;
             }
             var table = document.createElement('table');
@@ -32821,12 +33559,11 @@ app.get('/api/tracker/pages', verifyEngineAccess, async (req, res) => {
         q = `SELECT ${COLS} FROM tracker_pages p 
              WHERE p.engine_code_id=$1 
              AND p.profile_id=$2
-             AND p.tracker_client_id IS NULL
              AND (p.is_active=TRUE OR p.is_active IS NULL)
              ORDER BY p.created_at DESC`;
         params = [codeId, profileId];
       } else { 
-        q = `SELECT ${COLS} FROM tracker_pages p WHERE p.engine_code_id=$1 AND p.tracker_client_id IS NULL AND (p.is_active=TRUE OR p.is_active IS NULL) ORDER BY p.created_at DESC`; 
+        q = `SELECT ${COLS} FROM tracker_pages p WHERE p.engine_code_id=$1 AND (p.is_active=TRUE OR p.is_active IS NULL) ORDER BY p.created_at DESC`; 
         params = [codeId]; 
       }
     }
@@ -32854,7 +33591,7 @@ app.get('/api/tracker/diagnose', verifyEngineAccess, async (req, res) => {
     const domains = await pool.query(
       `SELECT substring(url from 'https?://(?:www\\.)?([^/]+)') AS domain, COUNT(*)::int AS n,
               COUNT(*) FILTER (WHERE engine_code_id = $1)::int AS mine
-         FROM tracker_pages WHERE (is_active = TRUE OR is_active IS NULL) AND url IS NOT NULL AND tracker_client_id IS NULL
+         FROM tracker_pages WHERE (is_active = TRUE OR is_active IS NULL) AND url IS NOT NULL
          GROUP BY 1 ORDER BY n DESC LIMIT 12`,
       [codeId]
     ).catch(() => ({ rows: [] }));
@@ -32878,9 +33615,8 @@ app.post('/api/tracker/reassign-profile', verifyEngineAccess, async (req, res) =
     
     // Use JavaScript-side domain extraction for strict matching
     // Fetch all tracker pages for this engine and filter by exact domain match in app layer
-    // EXCLUDE Tracker Clients pages (tracker_client_id IS NOT NULL)
     const allPagesR = await pool.query(
-      `SELECT id, url FROM tracker_pages WHERE (engine_code_id = $1 OR (engine_code_id IS NULL AND $1 IS NOT NULL)) AND tracker_client_id IS NULL`,
+      `SELECT id, url FROM tracker_pages WHERE engine_code_id = $1 OR (engine_code_id IS NULL AND $1 IS NOT NULL)`,
       [codeId]
     );
     
@@ -35029,19 +35765,6 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
             return { url: r.link, title: r.title, snippet: r.snippet || '', position: r.position };
           });
 
-          // ── SERP SPY SNAPSHOT: store for brief generation ──
-          const serpSpySnapshot = {
-            keyword: keyword,
-            live_position: snapshot.google_position,
-            aio_present: snapshot.ai_google_overview_found,
-            competitors: snapshot._competitors.slice(0, 3).map(function(c) {
-              return { url: c.url, title: c.title, snippet: c.snippet };
-            }),
-            captured_at: new Date().toISOString()
-          };
-          await pool.query('UPDATE tracker_pages SET serp_spy=$1, serp_spy_at=NOW() WHERE id=$2',
-            [JSON.stringify(serpSpySnapshot), pageId]).catch(()=>{});
-
           const posLabel = snapshot.google_position ? '#' + snapshot.google_position : 'not in top 10';
           const aiLabel  = snapshot.ai_google_overview_cited ? '✅ AI Overview cited' : (snapshot.ai_google_overview_found ? '⚠️ AI Overview exists (not cited)' : '❌ No AI Overview');
           _trSetStep(pageId, 'google', 'done', `Position: ${posLabel} · ${aiLabel}`);
@@ -35273,30 +35996,6 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
     _trSetStep(pageId, 'author_trust', 'error', 'Author trust check failed: ' + e.message);
   }
 
-  // 4c. Cannibalization check — detect if other pages target the same keyword
-  _trSetStep(pageId, 'cannibalization', 'running', 'Checking for keyword cannibalization…');
-  let cannibalData = { detected: false, pages: [] };
-  if (_hasValidKeyword) {
-    try {
-      const cR = await pool.query(`
-        SELECT id, url FROM tracker_pages 
-        WHERE tracker_client_id = $1 AND id != $2 AND is_active = TRUE
-        AND (keyword ILIKE $3 OR gsc_keyword ILIKE $3)
-      `, [page.tracker_client_id, pageId, '%' + keyword + '%']);
-      if (cR.rows.length > 0) {
-        cannibalData.detected = true;
-        cannibalData.pages = cR.rows.map(r => ({ id: r.id, url: r.url }));
-        _trSetStep(pageId, 'cannibalization', 'done', `⚠️ ${cR.rows.length} other page(s) target "${keyword}"`);
-      } else {
-        _trSetStep(pageId, 'cannibalization', 'done', '✅ No cannibalization detected');
-      }
-    } catch(e) {
-      _trSetStep(pageId, 'cannibalization', 'error', e.message);
-    }
-  } else {
-    _trSetStep(pageId, 'cannibalization', 'done', 'Skipped (no keyword)');
-  }
-
   // 5. Generate recommendations via Gemini — gap analysis vs. what's winning in Google + AI systems
   _trSetStep(pageId, 'recommendations', 'running', 'Analysing gaps vs. top results…');
   if(geminiKey) {
@@ -35427,27 +36126,6 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
       const aioText = snapshot.ai_google_overview_text ? '\nGOOGLE AI OVERVIEW CURRENTLY SAYS:\n' + snapshot.ai_google_overview_text : '';
       const kwSource = page.keyword ? 'manually set' : page.gsc_keyword ? 'from GSC' : 'auto';
 
-      // ── AIO STATUS (manual screenshot vs. predicted vs. no AIO) ──
-      let aioStatus = 'NOT_CITED';
-      if (snapshot.ai_google_overview_cited === true) {
-        aioStatus = snapshot.ai_google_overview_text && snapshot.ai_google_overview_text.length > 20 
-          ? 'CITED_MANUAL' 
-          : 'CITED_PREDICTED';
-      } else if (snapshot.ai_google_overview_found && !snapshot.ai_google_overview_cited) {
-        aioStatus = 'NO_AIO';
-      }
-      const aioStatusLabel = aioStatus === 'CITED_MANUAL' ? 'Manual screenshot uploaded' 
-        : aioStatus === 'CITED_PREDICTED' ? 'Predicted (not manually verified)' 
-        : aioStatus === 'NO_AIO' ? 'AIO exists but page not cited' 
-        : 'No AIO found for this keyword';
-
-      // ── CANNIBALIZATION CONTEXT ──
-      let cannibalContext = '';
-      if (cannibalData.detected && cannibalData.pages.length > 0) {
-        cannibalContext = `KEYWORD CANNIBALIZATION DETECTED: ${cannibalData.pages.length} other page(s) target "${keyword}": ${cannibalData.pages.map(p => p.url).join(', ')}. FIRST ACTION should address consolidation.`;
-      }
-
-
       // GSC opportunity math
       const gscImpr = page.gsc_impressions || 0;
       const gscClicks = page.gsc_clicks || 0;
@@ -35483,7 +36161,7 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
                   .filter(function(u){ return /^https?:\/\//i.test(u) && !/\.(xml|jpe?g|png|webp|gif|svg|pdf)$/i.test(u) && !/\/(category|categories|tag|tags|author|authors|uncategorized)(\/|$)|\/page\/\d+|\/feed\/?$/i.test(u); });
                 _sitemapUrls = Array.from(new Set(_sitemapUrls))
                   .filter(function(u){ return u.replace(/\/$/, '') !== String(pageUrl || '').replace(/\/$/, ''); })
-                  .slice(0, 500); // INCREASED from 60 to 500 — load FULL sitemap for cannibalization + internal linking context
+                  .slice(0, 60);
               }
             } catch(e) {}
           }
@@ -35537,25 +36215,14 @@ INPUT DATA:
 - Page URL: ${pageUrl}
 - Target keyword: "${kw}"
 - Google position: ${snapshot.google_position || 'not ranked'}
-- AIO Status: ${aioStatusLabel}
 - Google AI Overview cited: ${snapshot.ai_google_overview_cited ? 'YES' : 'NO'}
 - Perplexity cited: ${snapshot.ai_perplexity_cited ? 'YES' : 'NO'}
 - Microsoft Copilot cited: ${snapshot.ai_bing_cited ? 'YES' : 'NO'}
 - Claude/Brave cited: ${snapshot.ai_brave_cited ? 'YES' : 'NO'}
 - GRAAF score: ${snapshot.score || '?'}/100
 - Page HTML content (first 8000 chars): ${htmlExcerpt.substring(0,8000) || '(no HTML)'}
-
-SERP SPY SNAPSHOT (Live SERP data):
-- Live position: ${snapshot.google_position || 'not ranked'}
-- Competitor #1 (${competitor1 ? '#1' : 'none'}): ${competitor1 ? competitor1.url + ' — ' + competitor1.title : 'no data'}
-- Competitor #2 (${competitors[1] ? '#' + (competitors[1].position || 2) : 'none'}): ${competitors[1] ? competitors[1].url + ' — ' + competitors[1].title : 'no data'}
-- Competitor #3 (${competitors[2] ? '#' + (competitors[2].position || 3) : 'none'}): ${competitors[2] ? competitors[2].url + ' — ' + competitors[2].title : 'no data'}
-- SERP features: ${snapshot.ai_google_overview_found ? 'AIO present' : 'No AIO'} | Featured snippets, PAA, knowledge panels may be present
-
-CANNIBALIZATION & TOPICAL AUTHORITY:
-- Keyword cannibalization: ${cannibalData.detected ? 'YES — ' + cannibalData.pages.map(p => p.url).join(', ') : 'NO'}
-${cannibalContext ? '- PRIORITY: ' + cannibalContext : ''}
 - Previous brief actions (if any): ${JSON.stringify((page.brief_content?.items || []).slice(0,3))}
+- Competitor #1: ${competitor1 ? competitor1.url + ' — ' + competitor1.title : 'no data'}
 - Current Google AI Overview text (what the AIO says NOW for this keyword): ${snapshot.ai_google_overview_text ? '"' + snapshot.ai_google_overview_text + '"' : '(no AIO captured for this query)'}
 - Internal-link candidates — REAL URLs from this site's sitemap (you may ONLY link to a URL that appears verbatim in this list; NEVER invent, guess, or construct a URL):
 ${_otherPagesList || '(none available — do NOT output any internal-link action)'}
@@ -35648,18 +36315,12 @@ INPUT DATA:
 - GSC Impressions (last 28 days): ${gscImpr || 'n/a'}
 - GSC CTR: ${gscCtr || 'n/a'}%
 - GSC Average position: ${gscPos || 'n/a'}
-- Live Google position (SERP Spy): ${snapshot.google_position || 'not ranked'}
+- Live Google position: ${snapshot.google_position || 'not ranked'}
 - GRAAF score: ${snapshot.score || '?'}/100
 - Page HTML content (first 8000 chars): ${htmlExcerpt.substring(0,8000) || '(no HTML)'}
-
-SERP SPY SNAPSHOT (Live SERP data):
-- Competitor #1: ${competitor1 ? competitor1.url + ' — ' + competitor1.title + ' (' + competitor1.snippet?.substring(0,100) + '...)' : 'no data'}
-- Competitor #2: ${competitors[1] ? competitors[1].url + ' — ' + competitors[1].title : 'no data'}
-- Competitor #3: ${competitors[2] ? competitors[2].url + ' — ' + competitors[2].title : 'no data'}
-
-CANNIBALIZATION & TOPICAL AUTHORITY:
-- Keyword cannibalization: ${cannibalData.detected ? 'YES — ' + cannibalData.pages.map(p => p.url).join(', ') : 'NO'}
-${cannibalContext ? '- FIRST ACTION REQUIRED: ' + cannibalContext : ''}
+- Competitor #1 URL: ${competitor1 ? competitor1.url : 'no data'}
+- Competitor #1 title: ${competitor1 ? competitor1.title : 'no data'}
+- Competitor #1 snippet: ${competitor1 ? competitor1.snippet : 'no data'}
 - Internal-link candidates — REAL URLs from this site's sitemap (if you suggest an internal link, the target MUST be copied verbatim from this list; NEVER invent or guess a URL):
 ${_otherPagesList || '(none available — do NOT output any internal-link action)'}
 
@@ -35717,8 +36378,6 @@ OUTPUT FORMAT — return ONLY this JSON, no markdown:
 IMPACT HONESTY RULE: ranking improvement is never guaranteed. NEVER write a fixed "position X → Y" target or a fixed "within N weeks" deadline. Use honest, qualified language ("should help", "supports a climb toward", "addresses the gap that holds it back") and always name the dependency (Google re-crawl, keyword competition). A guaranteed number or deadline is a failed action.
 
 QUALITY BAR: A user with zero SEO knowledge must be able to implement every action. Write the new title tag. Write the new paragraph. Write the schema. If you say "add more content" without writing the content, you have failed.
-
-NOTE: This GSC Brief will be MERGED with a Citation Brief (AI Overview, Perplexity, Copilot, Claude). In the final merged output, your "system" field should be "Google Ranking" to distinguish from Citation systems. All actions from both briefs will be combined into ONE output with 5-8 total actions, prioritized by impact.
 
 GOAL: Rank #1 for "${kw}" and capture the maximum clicks from ${gscImpr || 'the available'} monthly impressions.`;
       // Run both in parallel
@@ -35821,66 +36480,7 @@ GOAL: Rank #1 for "${kw}" and capture the maximum clicks from ${gscImpr || 'the 
         console.warn('[tracker] GSC Gemini failed:', gscResp.status, gscResp.errorMessage || '');
       }
 
-      // ── MERGE Citation Brief + GSC Brief into ONE brief with mixed systems ──
-      const mergedBrief = [];
-      
-      // Add Citation Brief items (system: Google AIO, Perplexity, Copilot, Claude, Visibility, Internal Link)
-      if (Array.isArray(snapshot.recommendations) && snapshot.recommendations.length > 0) {
-        snapshot.recommendations.forEach(r => {
-          if (r && r.title && r.action) {
-            mergedBrief.push({
-              title: r.title,
-              priority: r.priority || 'medium',
-              system: r.system || 'General',
-              action: r.action,
-              expected_impact: r.expected_impact || '',
-              source: 'citation'
-            });
-          }
-        });
-      }
-
-      // Add GSC Brief items (system: Google Ranking)
-      if (Array.isArray(snapshot.gsc_brief) && snapshot.gsc_brief.length > 0) {
-        snapshot.gsc_brief.forEach(r => {
-          if (r && r.title && r.action) {
-            mergedBrief.push({
-              title: r.title,
-              priority: r.priority || 'medium',
-              system: 'Google Ranking',
-              action: r.action,
-              expected_impact: r.expected_impact || '',
-              trigger: r.trigger,
-              effort: r.effort,
-              source: 'gsc'
-            });
-          }
-        });
-      }
-
-      // Sort by priority (HIGH first, then MEDIUM, then LOW) + by source (consolidation/visibility first)
-      mergedBrief.sort((a, b) => {
-        const priorityOrder = { high: 0, medium: 1, low: 2 };
-        const aPriority = priorityOrder[String(a.priority || '').toLowerCase()] ?? 1;
-        const bPriority = priorityOrder[String(b.priority || '').toLowerCase()] ?? 1;
-        if (aPriority !== bPriority) return aPriority - bPriority;
-        
-        // If priorities are equal, put cannibalization/visibility first
-        const aIsSpecial = /cannibali|consolidat|visibility|gate/i.test((a.title || '') + (a.action || ''));
-        const bIsSpecial = /cannibali|consolidat|visibility|gate/i.test((b.title || '') + (b.action || ''));
-        if (aIsSpecial !== bIsSpecial) return aIsSpecial ? -1 : 1;
-        
-        return 0;
-      });
-
-      // Limit to 5-8 top actions
-      snapshot.recommendations = mergedBrief.slice(0, 8);
-      if (mergedBrief.length === 0) {
-        snapshot.recommendations = [{ title: 'Continue optimizing', priority: 'medium', system: 'General', action: 'Page is already optimized for most citation signals. Continue monitoring performance and update content as rankings change.', expected_impact: 'Maintain citation eligibility' }];
-      }
-
-      console.log('[tracker] Merged ' + (Array.isArray(snapshot.recommendations) ? snapshot.recommendations.length : 0) + ' brief actions (Citation + GSC)');
-
+      // ── GUARANTEED local GSC brief — never empty when we have a keyword + position ──
       if (!Array.isArray(snapshot.gsc_brief) || !snapshot.gsc_brief.length) {
         const _gkw = keyword || page.keyword || page.gsc_keyword || '';
         const _gpos = page.gsc_position || snapshot.google_position || null;
@@ -38008,3 +38608,4 @@ app.post('/boost/:id/engage', asyncHandler(async (req, res) => {
   );
   res.json({ success: true });
 }));
+
