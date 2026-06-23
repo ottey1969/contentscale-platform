@@ -25136,7 +25136,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 return;
             }
             var table = document.createElement('table');
-            table.style.cssText = 'width:100%;border-collapse:collapse;font-size:12px;';
+            table.style.cssText = 'width:100%;font-size:12px;display:block;';
             var thead = document.createElement('thead');
             thead.innerHTML = '<tr style="border-bottom:1px solid #1f2937;">'
                 + '<th style="padding:8px 10px;text-align:left;font-size:10px;color:#6b7280;text-transform:uppercase;">Contact</th>'
@@ -25150,10 +25150,12 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 + '<th style="padding:8px 10px;text-align:center;font-size:10px;color:#6b7280;text-transform:uppercase;">Actions</th>'
                 + '</tr>';
             var tbody = document.createElement('tbody');
+            tbody.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fill,minmax(900px,1fr));gap:16px;';
 
             clients.forEach(function(c) {
                 var tr = document.createElement('tr');
                 tr.className = 'tc-row';
+                tr.style.cssText = 'background:#1a1f2e;border:1px solid #2d3748;border-radius:12px;padding:16px;display:flex;flex-direction:column;';
 
                 var date = c.created_at ? new Date(c.created_at).toLocaleDateString('en-GB') : '-';
                 var trackUrl = 'https://app.contentscale.site/track/' + c.token;
