@@ -25136,382 +25136,147 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 el.innerHTML = '<div style="text-align:center;padding:40px;color:#6b7280;">No clients registered yet</div>';
                 return;
             }
-            var table = document.createElement('table');
-            table.style.cssText = 'width:100%;border-collapse:collapse;font-size:12px;';
-            var thead = document.createElement('thead');
-            thead.innerHTML = '<tr style="border-bottom:1px solid #1f2937;">'
-                + '<th style="padding:8px 10px;text-align:left;font-size:10px;color:#6b7280;text-transform:uppercase;">Contact</th>'
-                + '<th style="padding:8px 10px;text-align:left;font-size:10px;color:#6b7280;text-transform:uppercase;">Domain + Share URL</th>'
-                + '<th style="padding:8px 10px;text-align:center;font-size:10px;color:#6b7280;text-transform:uppercase;">Type</th>'
-                + '<th style="padding:8px 10px;text-align:center;font-size:10px;color:#6b7280;text-transform:uppercase;">Pages</th>'
-                + '<th style="padding:8px 10px;text-align:center;font-size:10px;color:#6b7280;text-transform:uppercase;">Scan freq</th>'
-                + '<th style="padding:8px 10px;text-align:center;font-size:10px;color:#6b7280;text-transform:uppercase;">Max</th>'
-                + '<th style="padding:8px 10px;text-align:center;font-size:10px;color:#6b7280;text-transform:uppercase;">Status</th>'
-                + '<th style="padding:8px 10px;text-align:left;font-size:10px;color:#6b7280;text-transform:uppercase;">Registered</th>'
-                + '<th style="padding:8px 10px;text-align:center;font-size:10px;color:#6b7280;text-transform:uppercase;">Actions</th>'
-                + '</tr>';
-            var tbody = document.createElement('tbody');
-
+            
+            // Create grid container
+            var grid = document.createElement('div');
+            grid.style.cssText = 'display:grid;gap:16px;grid-template-columns:repeat(auto-fill,minmax(560px,1fr));';
+            
             clients.forEach(function(c) {
-                var tr = document.createElement('tr');
-                tr.className = 'tc-row';
-
+                // Get data
                 var date = c.created_at ? new Date(c.created_at).toLocaleDateString('en-GB') : '-';
                 var trackUrl = 'https://app.contentscale.site/track/' + c.token;
                 var isActive = c.status !== 'disabled';
-                var statusColor = isActive ? '#4ade80' : '#f87171';
-
-                // -- Max pages selector with quick presets --
-                var maxCell = document.createElement('td');
-                maxCell.style.cssText = 'padding:8px 10px;text-align:center;';
-                var maxWrap = document.createElement('div');
-                maxWrap.style.cssText = 'display:flex;flex-direction:column;gap:3px;align-items:center;';
-                var maxInput = document.createElement('input');
-                maxInput.type = 'number';
-                maxInput.value = c.max_pages || 3;
-                maxInput.min = 1; maxInput.max = 500;
-                maxInput.style.cssText = 'width:54px;background:#0d1117;border:1px solid #374151;border-radius:4px;padding:3px 6px;color:#e5e7eb;font-size:12px;text-align:center;';
-                maxInput.onchange = (function(id){ return function(){ updateTcClient(id, {max_pages: parseInt(this.value)||3}); }; })(c.id);
-                var presets = document.createElement('div');
-                presets.style.cssText = 'display:flex;gap:2px;';
-                [10,25,50,100].forEach(function(n) {
-                    var btn = document.createElement('button');
-                    btn.textContent = n;
-                    btn.style.cssText = 'font-size:9px;padding:1px 5px;background:' + ((c.max_pages||10)==n?'#374151':'none') + ';border:1px solid #374151;border-radius:3px;color:#9ca3af;cursor:pointer;';
-                    btn.onclick = (function(id, val, inp, pBtns){ return function(){
-                        inp.value = val;
-                        updateTcClient(id, {max_pages: val});
-                        pBtns.querySelectorAll('button').forEach(function(b){ b.style.background='none'; });
-                        this.style.background = '#374151';
-                    }; })(c.id, n, maxInput, presets);
-                    presets.appendChild(btn);
-                });
-                maxWrap.appendChild(maxInput);
-                maxWrap.appendChild(presets);
-                maxCell.appendChild(maxWrap);
-
-                // -- Actions --
-                var actionsDiv = document.createElement('div');
-                actionsDiv.style.cssText = 'display:flex;gap:3px;justify-content:center;flex-wrap:wrap;';
-
-                // ── Frequency selector ──
-                var freqSelect = document.createElement('select');
-                freqSelect.className = 'tr-btn';
-                freqSelect.title = 'Change auto-check frequency for all pages of this client';
-                freqSelect.style.cssText = 'font-size:10px;padding:3px 6px;border-color:#818cf8;color:#818cf8;background:#0d1117;cursor:pointer;border-radius:4px;border:1px solid #818cf8;';
-                [['0','\u2298 Off'],['3days','3 days'],['7days','7 days'],['17days','17 days'],['21days','21 days'],['30days','30 days'],['weekly','Weekly'],['monthly','Monthly']].forEach(function(opt) {
-                    var o = document.createElement('option');
-                    o.value = opt[0];
-                    o.textContent = opt[1];
-                    if (c.scan_frequency === opt[0]) o.selected = true;
-                    freqSelect.appendChild(o);
-                });
-                freqSelect.onchange = (function(id){ return function() {
-                    var freq = this.value;
-                    // Update all pages for this client
-                    fetch('/api/admin/tracker-clients/' + id + '/frequency', {
-                        method: 'PATCH',
-                        headers: {'Content-Type':'application/json', 'x-admin-key': currentAdminId},
-                        body: JSON.stringify({frequency: freq})
-                    }).then(function(r){ return r.json(); }).then(function(d){
-                        if (d.success) alert('Frequency updated to ' + freq);
-                        else alert(d.error || 'Failed');
-                        setTimeout(loadTrackerClients, 400);
-                    });
-                }; })(c.id);
-                actionsDiv.appendChild(freqSelect);
-
-                var toggleBtn = document.createElement('button');
-                toggleBtn.className = 'tr-btn' + (isActive ? '' : ' green');
-                toggleBtn.textContent = isActive ? 'Disable' : 'Enable';
-                toggleBtn.title = isActive ? 'Disable this client' : 'Re-enable this client';
-                toggleBtn.style.cssText = 'font-size:10px;padding:3px 8px;';
-                toggleBtn.onclick = (function(id, newStatus){ return function(){ updateTcClient(id, {status: newStatus}); loadTrackerClients(); }; })(c.id, isActive ? 'disabled' : 'active');
-
-                // ── GSC toggle ──
-                var gscBtn = document.createElement('button');
-                gscBtn.className = 'tr-btn';
-                gscBtn.textContent = c.gsc_enabled ? 'GSC ✓' : 'GSC off';
-                gscBtn.title = c.gsc_enabled ? 'GSC enabled — click to disable' : 'Enable GSC for this client (Tier 2)';
-                gscBtn.style.cssText = 'font-size:10px;padding:3px 8px;border-color:' + (c.gsc_enabled ? '#4ade80' : '#374151') + ';color:' + (c.gsc_enabled ? '#4ade80' : '#6b7280') + ';';
-                gscBtn.onclick = (function(id, current){ return function(){
-                    var newVal = !current;
-                    updateTcClient(id, {gsc_enabled: newVal});
-                    setTimeout(loadTrackerClients, 400);
-                }; })(c.id, !!c.gsc_enabled);
-                actionsDiv.appendChild(gscBtn);
-
-                // ── Extra Citation-Brief recipients ──
-                var emailsBtn = document.createElement('button');
-                emailsBtn.className = 'tr-btn';
-                var _ccCount = (c.cc_emails ? String(c.cc_emails).split(',').map(function(e){ return e.trim(); }).filter(Boolean).length : 0);
-                emailsBtn.textContent = _ccCount ? ('\u2709 +' + _ccCount) : '\u2709 Emails';
-                emailsBtn.title = 'Extra Citation-Brief recipients (comma-separated). Primary: ' + (c.email || '\u2014');
-                emailsBtn.style.cssText = 'font-size:10px;padding:3px 8px;' + (_ccCount ? 'border-color:#4ade80;color:#4ade80;' : '');
-                emailsBtn.onclick = (function(id, current){ return function(){
-                    var v = prompt('Extra Citation-Brief recipients for this tracker (comma-separated emails). They receive the brief in addition to the primary email.', current || '');
-                    if (v === null) return;
-                    updateTcClient(id, { cc_emails: v.trim() });
-                }; })(c.id, c.cc_emails || '');
-                actionsDiv.appendChild(emailsBtn);
-
-                // ── Live Wall toggle ──
-                var lwWrap = document.createElement('div');
-                lwWrap.style.cssText = 'display:flex;align-items:center;gap:4px;';
-                var lwCb = document.createElement('input');
-                lwCb.type = 'checkbox';
-                lwCb.checked = !!c.live_wall_enabled;
-                lwCb.style.cssText = 'width:14px;height:14px;accent-color:#7c3aed;cursor:pointer;';
-                lwCb.title = 'Enable Live Brief Wall for this client';
-                var lwLbl = document.createElement('span');
-                lwLbl.textContent = 'Live';
-                lwLbl.style.cssText = 'font-size:10px;color:' + (c.live_wall_enabled ? '#a78bfa' : '#6b7280') + ';';
-                var lwStatus = document.createElement('span');
-                lwStatus.style.cssText = 'display:none;font-size:9px;padding-left:4px;';
-                var lwUrl = document.createElement('div');
-                lwUrl.style.cssText = 'display:none;font-size:9px;margin-top:2px;';
-                if (c.live_wall_enabled) {
-                    lwUrl.style.display = 'block';
-                    lwUrl.innerHTML = '<a href="/track/' + c.token + '/live" target="_blank" style="color:#4ade80;text-decoration:none;font-family:monospace;">/track/' + c.token + '/live</a>';
-                }
-                lwCb.onchange = (function(cid, token, cb, st, urlEl, lbl){ return function(){
-                    toggleLiveWall(cid, token, cb, st, urlEl);
-                    lbl.style.color = cb.checked ? '#a78bfa' : '#6b7280';
-                }; })(c.id, c.token, lwCb, lwStatus, lwUrl, lwLbl);
-                lwWrap.appendChild(lwCb);
-                lwWrap.appendChild(lwLbl);
-                lwWrap.appendChild(lwStatus);
-                actionsDiv.appendChild(lwWrap);
-                actionsDiv.appendChild(lwUrl);
-
-                var domainsBtn = document.createElement('button');
-                domainsBtn.className = 'tr-btn';
-                var extraDomList = (c.extra_domains || '').split(',').map(function(d){ return d.trim(); }).filter(Boolean);
-                domainsBtn.textContent = extraDomList.length ? '+ domains (' + extraDomList.length + ')' : '+ domain';
-                domainsBtn.title = extraDomList.length ? 'Extra domains: ' + extraDomList.join(', ') + ' (click to edit)' : 'Add extra domains this client can track';
-                domainsBtn.style.cssText = 'font-size:10px;padding:3px 8px;border-color:#38bdf8;color:#38bdf8;';
-                domainsBtn.onclick = (function(id, current, totalMax, dealifyCodes){ return function(){
-                    var currentExtras = (current||'').split(',').map(function(d){ return d.trim(); }).filter(Boolean);
-                    var currentDomains = 1 + currentExtras.length;
-                    var basePerDomain = Math.round(totalMax / currentDomains); // e.g. 3/1=3, 10/1=10, 20/2=10
-                    var val = prompt('Extra domains (comma-separated, no https or www). Current: ' + (current||'none') + '. Each domain gives ' + basePerDomain + ' extra page slots.', current||'');
-                    if (val === null) return;
-                    var newExtras = val.trim().split(',').map(function(d){ return d.trim(); }).filter(Boolean);
-                    var newDomains = 1 + newExtras.length;
-                    var newMax = newDomains * basePerDomain;
-                    if (!confirm('Domains: ' + newDomains + ' — Pages per domain: ' + basePerDomain + ' — New max pages: ' + newMax + '. Confirm?')) return;
-                    updateTcClient(id, {extra_domains: val.trim()});
-                    setTimeout(loadTrackerClients, 500);
-                }; })(c.id, c.extra_domains || '', c.max_pages || 3, c.dealify_codes || '');
-
-                var ipBtn = document.createElement('button');
-                ipBtn.className = 'tr-btn';
-                ipBtn.textContent = 'Reset IP';
-                ipBtn.title = 'Registered IP: ' + (c.registered_ip || 'none');
-                ipBtn.style.cssText = 'font-size:10px;padding:3px 8px;';
-                ipBtn.onclick = (function(id){ return function(){ resetTcIp(id); }; })(c.id);
-
-                var regenBtn = document.createElement('button');
-                regenBtn.className = 'tr-btn';
-                regenBtn.textContent = 'New link';
-                regenBtn.title = 'Generate new tracker URL (old link stops working, all data kept, email sent to client)';
-                regenBtn.style.cssText = 'font-size:10px;padding:3px 8px;border-color:#a78bfa;color:#a78bfa;';
-                regenBtn.onclick = (function(id, domain, email){ return function(){
-                    if (!confirm('Generate new URL for ' + domain + '? Old URL stops working. All data kept. ' + (email ? 'New link sent to: ' + email : 'No email — copy manually.'))) return;
-                    apiCall('/api/admin/tracker-clients/' + id + '/regenerate-token', 'POST', {})
-                        .then(function(d) {
-                            if (d.success) {
-                                navigator.clipboard.writeText(d.new_url).then(function(){
-                                    alert('New link: ' + d.new_url + (email ? ' — sent to: ' + email : ' — no email, copy manually'));
-                                }).catch(function(){
-                                    alert('New link: ' + d.new_url + (email ? ' — sent to: ' + email : ''));
-                                });
-                                loadTrackerClients();
-                            } else { alert('Error: ' + (d.error||'Failed')); }
-                        }).catch(function(e){ alert('Error: ' + e.message); });
-                }; })(c.id, c.domain, c.email || '');
-
+                var statusColor = isActive ? '#22c55e' : '#ef4444';
+                var statusText = isActive ? '● ACTIVE' : '● DISABLED';
+                
+                // Type badge
+                var typeBg = c.type === 'dealify' ? '#ea580c' : c.type === 'own' ? '#a855f7' : '#6b7280';
+                var typeLabel = c.type === 'dealify' ? '🎯 Dealify' : c.type === 'own' ? '⭐ Own' : '🆓 Free';
+                
+                // Build card
+                var card = document.createElement('div');
+                card.style.cssText = 'background:#1a1f2e;border:1px solid #2d3748;border-radius:12px;overflow:hidden;box-shadow:0 4px 6px rgba(0,0,0,0.3);transition:all 0.2s;';
+                card.onmouseover = function(){ this.style.boxShadow = '0 8px 12px rgba(168,85,247,0.2)'; };
+                card.onmouseout = function(){ this.style.boxShadow = '0 4px 6px rgba(0,0,0,0.3)'; };
+                
+                // Header with domain
+                var header = document.createElement('div');
+                header.style.cssText = 'background:linear-gradient(135deg,#2d3748 0%,#1a1f2e 100%);padding:16px;border-bottom:2px solid #a855f7;display:flex;justify-content:space-between;align-items:flex-start;gap:12px;';
+                header.innerHTML = '<div style="flex:1;"><div style="font-size:18px;font-weight:700;color:#f1f5f9;margin-bottom:4px;">' + (c.domain || 'Unknown') + '</div><div style="font-size:13px;color:#9ca3af;">' + (c.contact_name || 'No name') + '</div></div>'
+                    + '<span style="background:' + typeBg + ';color:white;padding:4px 10px;border-radius:6px;font-size:11px;font-weight:600;white-space:nowrap;">' + typeLabel + '</span>';
+                
+                // Content section
+                var content = document.createElement('div');
+                content.style.cssText = 'padding:16px;';
+                
+                // Contact row
+                var contactRow = document.createElement('div');
+                contactRow.style.cssText = 'margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid #2d3748;';
+                contactRow.innerHTML = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:12px;">'
+                    + '<div><span style="color:#6b7280;">Email</span><div style="color:#e5e7eb;word-break:break-word;">' + (c.email || '—') + '</div></div>'
+                    + '<div><span style="color:#6b7280;">WhatsApp</span><div style="color:#e5e7eb;">' + (c.whatsapp || '—') + '</div></div>'
+                    + '</div>';
+                
+                // Status row (3 columns)
+                var statusRow = document.createElement('div');
+                statusRow.style.cssText = 'margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid #2d3748;display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;font-size:12px;';
+                statusRow.innerHTML = '<div><span style="color:#6b7280;">Status</span><div style="color:' + statusColor + ';font-weight:700;">' + statusText + '</div></div>'
+                    + '<div><span style="color:#6b7280;">Registered</span><div style="color:#e5e7eb;">' + date + '</div></div>'
+                    + '<div><span style="color:#6b7280;">Pages</span><div style="color:#e5e7eb;">' + (c.page_count||0) + ' / ' + (c.max_pages||10) + '</div></div>';
+                
+                // Frequency row
+                var freqRow = document.createElement('div');
+                freqRow.style.cssText = 'margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid #2d3748;font-size:12px;';
+                freqRow.innerHTML = '<div style="color:#6b7280;margin-bottom:6px;">Scan Frequency</div>'
+                    + '<select style="width:100%;background:#0d1117;border:1px solid #374151;border-radius:6px;padding:8px;color:#e5e7eb;font-size:12px;cursor:pointer;">'
+                    + '<option value="0" ' + (c.scan_frequency==='0'?'selected':'') + '>⊘ Off</option>'
+                    + '<option value="3" ' + (c.scan_frequency==='3'?'selected':'') + '>3 days</option>'
+                    + '<option value="7" ' + (c.scan_frequency==='7'?'selected':'') + '>7 days</option>'
+                    + '<option value="17" ' + (c.scan_frequency==='17'?'selected':'') + '>17 days</option>'
+                    + '<option value="21" ' + (c.scan_frequency==='21'?'selected':'') + '>21 days</option>'
+                    + '<option value="30" ' + (c.scan_frequency==='30'?'selected':'') + '>30 days</option>'
+                    + '</select>';
+                
+                // Action buttons (4 cols)
+                var actions = document.createElement('div');
+                actions.style.cssText = 'margin-bottom:12px;display:grid;grid-template-columns:repeat(4,1fr);gap:8px;font-size:11px;';
+                
+                var viewBtn = document.createElement('button');
+                viewBtn.textContent = '👁 View';
+                viewBtn.style.cssText = 'padding:8px;background:#2d3748;border:1px solid #374151;border-radius:6px;color:#9ca3af;cursor:pointer;font-weight:600;transition:all 0.2s;';
+                viewBtn.onmouseover = function(){ this.style.background='#3d4758';this.style.color='#e5e7eb'; };
+                viewBtn.onmouseout = function(){ this.style.background='#2d3748';this.style.color='#9ca3af'; };
+                viewBtn.onclick = (function(token){ return function(){ window.open('https://app.contentscale.site/track/' + token, '_blank'); }; })(c.token);
+                
+                var emailBtn = document.createElement('button');
+                emailBtn.textContent = '📧 Email';
+                emailBtn.style.cssText = 'padding:8px;background:#2d3748;border:1px solid #374151;border-radius:6px;color:#9ca3af;cursor:pointer;font-weight:600;transition:all 0.2s;';
+                emailBtn.onmouseover = function(){ this.style.background='#3d4758';this.style.color='#e5e7eb'; };
+                emailBtn.onmouseout = function(){ this.style.background='#2d3748';this.style.color='#9ca3af'; };
+                emailBtn.onclick = (function(id){ return function(){ sendTrackerEmail(id); }; })(c.id);
+                
+                var liveBtn = document.createElement('button');
+                liveBtn.textContent = '📺 Live';
+                liveBtn.style.cssText = 'padding:8px;background:#2d3748;border:1px solid #374151;border-radius:6px;color:#9ca3af;cursor:pointer;font-weight:600;transition:all 0.2s;';
+                liveBtn.onmouseover = function(){ this.style.background='#3d4758';this.style.color='#e5e7eb'; };
+                liveBtn.onmouseout = function(){ this.style.background='#2d3748';this.style.color='#9ca3af'; };
+                liveBtn.onclick = (function(id){ return function(){ loadTrackerPages(id); }; })(c.id);
+                
                 var cleanBtn = document.createElement('button');
-                cleanBtn.className = 'tr-btn';
                 cleanBtn.textContent = '🧹 Clean';
-                cleanBtn.title = 'Remove image/asset URLs and merge duplicate pages';
-                cleanBtn.style.cssText = 'font-size:10px;padding:3px 8px;border-color:#38bdf8;color:#38bdf8;';
-                cleanBtn.onclick = (function(id, domain){ return function(){
-                    apiCall('/api/admin/tracker-clients/' + id + '/clean-pages', 'POST', {})
-                        .then(function(d) {
-                            if (d.success) {
-                                alert('Clean done for ' + domain + ': ' + d.cleaned + ' removed, ' + d.merged + ' merged');
-                                loadTrackerClients();
-                            } else { alert('Error: ' + (d.error||'Failed')); }
-                        }).catch(function(e){ alert('Error: ' + e.message); });
-                }; })(c.id, c.domain);
-
-                var copyBtn = document.createElement('button');
-                copyBtn.className = 'tr-btn';
-                copyBtn.textContent = 'Copy link';
-                copyBtn.title = 'Copy share URL to clipboard';
-                copyBtn.style.cssText = 'font-size:10px;padding:3px 8px;';
-                copyBtn.onclick = (function(url, btn){ return function(){
-                    navigator.clipboard.writeText(url).then(function(){
-                        btn.textContent = 'Copied!';
-                        setTimeout(function(){ btn.textContent = 'Copy link'; }, 2000);
-                    });
-                }; })(trackUrl, copyBtn);
-
-                var delBtn = document.createElement('button');
-                delBtn.className = 'tr-btn danger';
-                delBtn.textContent = 'Delete';
-                delBtn.title = 'Delete client + all pages';
-                delBtn.style.cssText = 'font-size:10px;padding:3px 8px;';
-                delBtn.onclick = (function(id){ return function(){ deleteTcClient(id); }; })(c.id);
-
-                actionsDiv.appendChild(toggleBtn);
-                actionsDiv.appendChild(domainsBtn);
-                actionsDiv.appendChild(ipBtn);
-                actionsDiv.appendChild(regenBtn);
-                actionsDiv.appendChild(cleanBtn);
-                actionsDiv.appendChild(copyBtn);
-                actionsDiv.appendChild(delBtn);
-
-                // -- Share URL cell - domain + full URL + copy --
-                var urlCell = document.createElement('td');
-                urlCell.style.cssText = 'padding:8px 10px;';
-
-                var domainDiv = document.createElement('div');
-                domainDiv.style.cssText = 'font-size:13px;font-weight:700;color:#e5e7eb;margin-bottom:2px;';
-                domainDiv.textContent = c.domain || '-';
-
-                // Show extra domains prominently if any
-                var extraDomsDiv = null;
-                if (c.extra_domains) {
-                    var extraDoms = c.extra_domains.split(',').map(function(d){ return d.trim(); }).filter(Boolean);
-                    if (extraDoms.length) {
-                        extraDomsDiv = document.createElement('div');
-                        extraDomsDiv.style.cssText = 'margin-bottom:4px;';
-                        extraDoms.forEach(function(d) {
-                            var tag = document.createElement('span');
-                            tag.style.cssText = 'display:inline-block;font-size:10px;color:#38bdf8;background:#0c2340;border:1px solid #1d4ed8;border-radius:4px;padding:1px 6px;margin-right:3px;margin-bottom:2px;';
-                            tag.textContent = d;
-                            tag.title = 'Extra domain added by admin';
-                            extraDomsDiv.appendChild(tag);
-                        });
-                    }
-                }
-
-                var urlLink = document.createElement('a');
-                urlLink.href = trackUrl;
-                urlLink.target = '_blank';
-                urlLink.rel = 'noopener';
-                urlLink.style.cssText = 'font-size:10px;font-family:monospace;color:#7c3aed;text-decoration:none;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:220px;margin-bottom:4px;';
-                urlLink.textContent = trackUrl;
-                urlLink.title = trackUrl;
-
-                var copyInlineBtn = document.createElement('button');
-                copyInlineBtn.className = 'tr-btn';
-                copyInlineBtn.textContent = 'Copy link';
-                copyInlineBtn.style.cssText = 'font-size:9px;padding:2px 7px;';
-                copyInlineBtn.onclick = (function(url, btn){ return function(e){
-                    e.preventDefault();
-                    navigator.clipboard.writeText(url).then(function(){
-                        btn.textContent = 'Copied!';
-                        setTimeout(function(){ btn.textContent = 'Copy link'; }, 2000);
-                    });
-                }; })(trackUrl, copyInlineBtn);
-
-                urlCell.appendChild(domainDiv);
-                if (extraDomsDiv) urlCell.appendChild(extraDomsDiv);
-                urlCell.appendChild(urlLink);
-                urlCell.appendChild(copyInlineBtn);
-
-                var isPaused = c.status === 'paused';
-                var isDisabled = c.status === 'disabled';
-                var isActive = !isPaused && !isDisabled;
-                var statusColor = isActive ? '#4ade80' : isPaused ? '#f59e0b' : '#f87171';
-                var statusLabel = isActive ? 'ACTIVE' : isPaused ? 'PAUSED' : 'DISABLED';
-
-                // Client type badge
-                var isDealify = !!c.dealify_codes;
-                var isOwnClient = !isDealify && (c.max_pages || 3) > 3;
-                var clientTypeBadge, clientTypeColor;
-                if (isDealify) {
-                    var codeCount = c.dealify_codes.split(',').filter(function(x){ return x.trim(); }).length;
-                    clientTypeBadge = '🎯 Dealify ×' + codeCount;
-                    clientTypeColor = '#f59e0b';
-                } else if (isOwnClient) {
-                    clientTypeBadge = '⭐ Own client';
-                    clientTypeColor = '#a78bfa';
+                cleanBtn.style.cssText = 'padding:8px;background:#2d3748;border:1px solid #374151;border-radius:6px;color:#9ca3af;cursor:pointer;font-weight:600;transition:all 0.2s;';
+                cleanBtn.onmouseover = function(){ this.style.background='#3d4758';this.style.color='#e5e7eb'; };
+                cleanBtn.onmouseout = function(){ this.style.background='#2d3748';this.style.color='#9ca3af'; };
+                cleanBtn.onclick = (function(id){ return function(){ cleanTrackerClient(id); }; })(c.id);
+                
+                actions.appendChild(viewBtn);
+                actions.appendChild(emailBtn);
+                actions.appendChild(liveBtn);
+                actions.appendChild(cleanBtn);
+                
+                // Bottom control buttons
+                var controls = document.createElement('div');
+                controls.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:11px;';
+                
+                var toggleBtn = document.createElement('button');
+                if (isActive) {
+                    toggleBtn.textContent = '❌ Disable';
+                    toggleBtn.style.cssText = 'padding:10px;background:#7f1d1d;border:1px solid #991b1b;border-radius:6px;color:#fca5a5;cursor:pointer;font-weight:600;transition:all 0.2s;';
+                    toggleBtn.onmouseover = function(){ this.style.background='#991b1b'; };
+                    toggleBtn.onmouseout = function(){ this.style.background='#7f1d1d'; };
                 } else {
-                    clientTypeBadge = '🆓 Free';
-                    clientTypeColor = '#6b7280';
+                    toggleBtn.textContent = '✓ Enable';
+                    toggleBtn.style.cssText = 'padding:10px;background:#166534;border:1px solid #15803d;border-radius:6px;color:#86efac;cursor:pointer;font-weight:600;transition:all 0.2s;';
+                    toggleBtn.onmouseover = function(){ this.style.background='#15803d'; };
+                    toggleBtn.onmouseout = function(){ this.style.background='#166534'; };
                 }
-
-                // Scan frequency from pages
-                var freqMap = { '3days': '3 days', 'weekly': 'Weekly', '1week': 'Weekly', 'monthly': 'Monthly', '1day': 'Daily' };
-                var freqDisplay = c.scan_frequency ? (freqMap[c.scan_frequency] || c.scan_frequency) : '—';
-                var freqColor = c.scan_frequency === '3days' ? '#4ade80' : c.scan_frequency === 'weekly' || c.scan_frequency === '1week' ? '#60a5fa' : c.scan_frequency === 'monthly' ? '#a78bfa' : '#6b7280';
-
-                tr.innerHTML =
-                    '<td style="padding:8px 10px;"><div style="color:#9ca3af;">' + (c.name||'-') + '</div>'
-                    + (c.email ? '<div style="color:#38bdf8;font-size:11px;">' + c.email + '</div>' : '')
-                    + (c.whatsapp ? '<div style="color:#4ade80;font-size:11px;">' + c.whatsapp + '</div>' : '')
-                    + '</td>'
-                    + '<td class="tc-url-cell" style="padding:8px 10px;max-width:240px;"></td>'
-                    + '<td style="padding:8px 10px;text-align:center;"><span style="font-size:11px;font-weight:700;color:' + clientTypeColor + ';">' + clientTypeBadge + '</span></td>'
-                    + '<td style="padding:8px 10px;text-align:center;color:#a78bfa;">' + (c.page_count||0) + '</td>'
-                    + '<td style="padding:8px 10px;text-align:center;"><span style="font-size:11px;font-weight:700;color:' + freqColor + ';">' + freqDisplay + '</span></td>'
-                    + '<td class="tc-max-cell" style="padding:8px 10px;text-align:center;"></td>'
-                    + '<td style="padding:8px 10px;text-align:center;"><span style="font-size:10px;font-weight:700;color:' + statusColor + ';">' + statusLabel + '</span>'
-                    + (isPaused ? '<div style="font-size:9px;color:#6b7280;margin-top:2px;">auto-paused</div>' : '')
-                    + '</td>'
-                    + '<td style="padding:8px 10px;color:#6b7280;">' + date + (c.registered_ip ? '<div style="font-size:10px;color:#374151;">' + c.registered_ip + '</div>' : '') + '</td>'
-                    + '<td style="padding:8px 10px;text-align:center;" class="tc-actions-cell"></td>';
-
-                // Activate button (for paused or disabled)
-                if (!isActive) {
-                    var activateBtn = document.createElement('button');
-                    activateBtn.className = 'tr-btn green';
-                    activateBtn.textContent = isPaused ? 'Activate' : 'Enable';
-                    activateBtn.title = isPaused ? 'Reactivate paused account' : 'Re-enable disabled account';
-                    activateBtn.style.cssText = 'font-size:10px;padding:3px 8px;border-color:#4ade80;color:#4ade80;font-weight:600;';
-                    activateBtn.onclick = (function(id){ return function(){ updateTcClient(id, {status: 'active'}); }; })(c.id);
-                    actionsDiv.insertBefore(activateBtn, actionsDiv.firstChild);
-                }
-
-                // Restore button for deleted clients
-                if (c.status === 'deleted') {
-                    var restoreBtn = document.createElement('button');
-                    restoreBtn.className = 'tr-btn';
-                    restoreBtn.textContent = '↩ Restore';
-                    restoreBtn.title = 'Restore this deleted tracker — all data recovered';
-                    restoreBtn.style.cssText = 'font-size:10px;padding:3px 8px;border-color:#4ade80;color:#4ade80;font-weight:700;';
-                    restoreBtn.onclick = (function(id, domain){ return function(){
-                        if (!confirm('Restore tracker for ' + domain + '? All pages and scan data will be recovered.')) return;
-                        apiCall('/api/admin/tracker-clients/' + id + '/restore', 'POST', {})
-                            .then(function(d) {
-                                if (d.success) {
-                                    navigator.clipboard.writeText(d.url).catch(()=>{});
-                                    alert('Restored! URL: ' + d.url + ' (copied to clipboard)');
-                                    loadTrackerClients();
-                                } else { alert('Error: ' + (d.error||'Failed')); }
-                            }).catch(function(e){ alert('Error: ' + e.message); });
-                    }; })(c.id, c.domain);
-                    actionsDiv.insertBefore(restoreBtn, actionsDiv.firstChild);
-                }
-
-                var tc_url_td = tr.querySelector('.tc-url-cell');
-                if (tc_url_td) {
-                    tc_url_td.appendChild(domainDiv);
-                    tc_url_td.appendChild(urlLink);
-                    tc_url_td.appendChild(copyInlineBtn);
-                }
-                tr.querySelector('.tc-max-cell').appendChild(maxWrap);
-                tr.querySelector('.tc-actions-cell').appendChild(actionsDiv);
-                tbody.appendChild(tr);
+                toggleBtn.onclick = (function(id, active){ return function(){ updateTcClient(id, {status: active ? 'disabled' : 'active'}); }; })(c.id, isActive);
+                
+                var delBtn = document.createElement('button');
+                delBtn.textContent = '🗑 Delete';
+                delBtn.style.cssText = 'padding:10px;background:#7f1d1d;border:1px solid #991b1b;border-radius:6px;color:#fca5a5;cursor:pointer;font-weight:600;transition:all 0.2s;';
+                delBtn.onmouseover = function(){ this.style.background='#991b1b'; };
+                delBtn.onmouseout = function(){ this.style.background='#7f1d1d'; };
+                delBtn.onclick = (function(id){ return function(){ deleteTrackerClient(id); }; })(c.id);
+                
+                controls.appendChild(toggleBtn);
+                controls.appendChild(delBtn);
+                
+                // Assemble card
+                content.appendChild(contactRow);
+                content.appendChild(statusRow);
+                content.appendChild(freqRow);
+                content.appendChild(actions);
+                content.appendChild(controls);
+                
+                card.appendChild(header);
+                card.appendChild(content);
+                grid.appendChild(card);
             });
-            table.appendChild(thead);
-            table.appendChild(tbody);
+            
+            // Render
             el.innerHTML = '';
-            el.appendChild(table);
+            el.appendChild(grid);
         }
 
         async function updateTcClient(id, data) {
