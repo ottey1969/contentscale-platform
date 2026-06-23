@@ -29408,32 +29408,69 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
             <!-- TRACKER CLIENTS -->
             <!-- TRACKER CLIENTS -->
             <div id="tab-tracker-clients" class="tab-content hidden">
-                <div style="padding:8px;">
-                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
-                        <div>
-                            <h2 style="font-size:1.1rem;font-weight:800;color:#f1f5f9;">Tracker Clients</h2>
-                            <p style="font-size:12px;color:#6b7280;margin-top:2px;">Self-service users registered via the free tracker</p>
+                <div style="padding:16px;">
+                    <!-- Header -->
+                    <div style="margin-bottom:24px;">
+                        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;gap:16px;flex-wrap:wrap;">
+                            <div>
+                                <h2 style="font-size:20px;font-weight:900;color:#f1f5f9;margin:0 0 6px;">Tracker Clients</h2>
+                                <p style="font-size:13px;color:#9ca3af;margin:0;">Self-service users registered via the free tracker</p>
+                            </div>
+                            <button onclick="openNewOwnClient()" style="background:linear-gradient(135deg,#4ade80 0%,#22c55e 100%);border:none;color:#fff;font-weight:700;padding:10px 16px;border-radius:8px;cursor:pointer;font-size:13px;white-space:nowrap;box-shadow:0 4px 12px rgba(74,222,128,.3);">+ New Client</button>
                         </div>
-                        <div style="display:flex;gap:8px;flex-wrap:wrap;">
-                            <button onclick="openNewOwnClient()" class="tr-btn" style="border-color:#4ade80;color:#4ade80;font-weight:700;">+ New Client</button>
-                            <input id="tcSearch" type="text" placeholder="Search domain..." class="tr-input" style="width:140px;" oninput="filterTrackerClients()">
-                            <button onclick="filterTcType('all')" id="tcTypeAll" class="tr-btn" style="font-size:10px;border-color:#374151;color:#9ca3af;background:#374151;">All</button>
-                            <button onclick="filterTcType('free')" id="tcTypeFree" class="tr-btn" style="font-size:10px;border-color:#6b7280;color:#6b7280;">🆓 Free</button>
-                            <button onclick="filterTcType('own')" id="tcTypeOwn" class="tr-btn" style="font-size:10px;border-color:#a78bfa;color:#a78bfa;">⭐ Own</button>
-                            <button onclick="filterTcType('dealify')" id="tcTypeDealify" class="tr-btn" style="font-size:10px;border-color:#f59e0b;color:#f59e0b;">🎯 Dealify</button>
-                            <button onclick="loadTrackerClients()" class="tr-btn"><i class="fas fa-sync-alt"></i></button>
-                            <button onclick="mergeDuplicateTrackers()" class="tr-btn" style="border-color:#f59e0b;color:#f59e0b;" title="Merge duplicate domains">&#9889; Merge</button>
-                            <button onclick="recalcMaxPages()" class="tr-btn" style="border-color:#38bdf8;color:#38bdf8;" title="Recalculate max_pages">&#9881; Fix Pages</button>
-                            <button onclick="_showDeleted=!_showDeleted;this.style.background=_showDeleted?'rgba(239,68,68,.15)':'';loadTrackerClients();" class="tr-btn" style="border-color:#ef4444;color:#ef4444;" title="Show deleted trackers">&#128465; Deleted</button>
+
+                        <!-- Stats Grid -->
+                        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:20px;">
+                            <div style="background:linear-gradient(135deg,rgba(59,130,246,.1) 0%,rgba(59,130,246,.05) 100%);border:1px solid rgba(59,130,246,.2);border-radius:10px;padding:14px;text-align:center;">
+                                <div style="font-size:24px;font-weight:900;color:#60a5fa;" id="tcStatTotal">0</div>
+                                <div style="font-size:11px;color:#6b7280;margin-top:4px;text-transform:uppercase;letter-spacing:.05em;">Total clients</div>
+                            </div>
+                            <div style="background:linear-gradient(135deg,rgba(74,222,128,.1) 0%,rgba(74,222,128,.05) 100%);border:1px solid rgba(74,222,128,.2);border-radius:10px;padding:14px;text-align:center;">
+                                <div style="font-size:24px;font-weight:900;color:#4ade80;" id="tcStatActive">0</div>
+                                <div style="font-size:11px;color:#6b7280;margin-top:4px;text-transform:uppercase;letter-spacing:.05em;">Active</div>
+                            </div>
+                            <div style="background:linear-gradient(135deg,rgba(167,139,250,.1) 0%,rgba(167,139,250,.05) 100%);border:1px solid rgba(167,139,250,.2);border-radius:10px;padding:14px;text-align:center;">
+                                <div style="font-size:24px;font-weight:900;color:#a78bfa;" id="tcStatPages">0</div>
+                                <div style="font-size:11px;color:#6b7280;margin-top:4px;text-transform:uppercase;letter-spacing:.05em;">Total pages</div>
+                            </div>
+                            <div style="background:linear-gradient(135deg,rgba(56,189,248,.1) 0%,rgba(56,189,248,.05) 100%);border:1px solid rgba(56,189,248,.2);border-radius:10px;padding:14px;text-align:center;">
+                                <div style="font-size:24px;font-weight:900;color:#38bdf8;" id="tcStatWithEmail">0</div>
+                                <div style="font-size:11px;color:#6b7280;margin-top:4px;text-transform:uppercase;letter-spacing:.05em;">With email</div>
+                            </div>
+                            <div style="background:linear-gradient(135deg,rgba(34,212,102,.1) 0%,rgba(34,212,102,.05) 100%);border:1px solid rgba(34,212,102,.2);border-radius:10px;padding:14px;text-align:center;">
+                                <div style="font-size:24px;font-weight:900;color:#22d462;" id="tcStatWithWa">0</div>
+                                <div style="font-size:11px;color:#6b7280;margin-top:4px;text-transform:uppercase;letter-spacing:.05em;">With WhatsApp</div>
+                            </div>
+                        </div>
+
+                        <!-- Controls Section -->
+                        <div style="background:#0d1117;border:1px solid #1f2937;border-radius:10px;padding:14px;">
+                            <!-- Search Bar -->
+                            <div style="display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap;">
+                                <input id="tcSearch" type="text" placeholder="Search domain..." style="flex:1;min-width:180px;background:#0a0a12;border:1px solid #374151;border-radius:6px;padding:8px 12px;color:#e5e7eb;font-size:12px;" oninput="filterTrackerClients()">
+                                <button onclick="loadTrackerClients()" style="background:none;border:1px solid #374151;color:#9ca3af;padding:6px 12px;border-radius:6px;cursor:pointer;font-size:12px;">⟳ Refresh</button>
+                            </div>
+
+                            <!-- Filter Buttons -->
+                            <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid #1f2937;">
+                                <span style="font-size:10px;color:#6b7280;text-transform:uppercase;align-self:center;font-weight:700;letter-spacing:.05em;">Filter:</span>
+                                <button onclick="filterTcType('all')" id="tcTypeAll" style="background:#374151;border:1px solid #374151;color:#f1f5f9;padding:6px 12px;border-radius:6px;cursor:pointer;font-size:11px;font-weight:600;">All</button>
+                                <button onclick="filterTcType('free')" id="tcTypeFree" style="background:none;border:1px solid #374151;color:#9ca3af;padding:6px 12px;border-radius:6px;cursor:pointer;font-size:11px;">🆓 Free</button>
+                                <button onclick="filterTcType('own')" id="tcTypeOwn" style="background:none;border:1px solid #374151;color:#9ca3af;padding:6px 12px;border-radius:6px;cursor:pointer;font-size:11px;">⭐ Own</button>
+                                <button onclick="filterTcType('dealify')" id="tcTypeDealify" style="background:none;border:1px solid #374151;color:#9ca3af;padding:6px 12px;border-radius:6px;cursor:pointer;font-size:11px;">🎯 Dealify</button>
+                            </div>
+
+                            <!-- Action Buttons -->
+                            <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                                <span style="font-size:10px;color:#6b7280;text-transform:uppercase;align-self:center;font-weight:700;letter-spacing:.05em;">Tools:</span>
+                                <button onclick="mergeDuplicateTrackers()" style="background:none;border:1px solid #f59e0b;color:#f59e0b;padding:6px 12px;border-radius:6px;cursor:pointer;font-size:11px;font-weight:600;" title="Merge duplicate domains">⚡ Merge</button>
+                                <button onclick="recalcMaxPages()" style="background:none;border:1px solid #38bdf8;color:#38bdf8;padding:6px 12px;border-radius:6px;cursor:pointer;font-size:11px;font-weight:600;" title="Recalculate max_pages">⚙️ Fix Pages</button>
+                                <button onclick="_showDeleted=!_showDeleted;this.style.background=_showDeleted?'rgba(239,68,68,.15)':'';loadTrackerClients();" style="background:none;border:1px solid #ef4444;color:#ef4444;padding:6px 12px;border-radius:6px;cursor:pointer;font-size:11px;font-weight:600;" title="Show deleted trackers">🗑️ Deleted</button>
+                            </div>
                         </div>
                     </div>
-                    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:20px;">
-                        <div class="tr-stat"><div class="val" id="tcStatTotal">0</div><div class="lbl">Total clients</div></div>
-                        <div class="tr-stat"><div class="val" id="tcStatActive" style="color:#4ade80;">0</div><div class="lbl">Active</div></div>
-                        <div class="tr-stat"><div class="val" id="tcStatPages" style="color:#a78bfa;">0</div><div class="lbl">Total pages</div></div>
-                        <div class="tr-stat"><div class="val" id="tcStatWithEmail" style="color:#38bdf8;">0</div><div class="lbl">With email</div></div>
-                        <div class="tr-stat"><div class="val" id="tcStatWithWa" style="color:#4ade80;">0</div><div class="lbl">With WhatsApp</div></div>
-                    </div>
+
+                    <!-- Clients List -->
                     <div id="tcList"></div>
                 </div>
             </div>
@@ -31676,7 +31713,11 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
             var el = document.getElementById('tcList');
             if (!el) return;
             if (!clients.length) {
-                el.innerHTML = '<div style="text-align:center;padding:40px;color:#6b7280;">No clients registered yet</div>';
+                el.innerHTML = '<div style="text-align:center;padding:60px 40px;background:linear-gradient(135deg,rgba(59,130,246,.05) 0%,rgba(124,58,237,.05) 100%);border:2px dashed #1f2937;border-radius:12px;">'
+                    + '<div style="font-size:48px;margin-bottom:16px;">📊</div>'
+                    + '<div style="font-size:16px;font-weight:800;color:#e5e7eb;margin-bottom:8px;">No tracker clients yet</div>'
+                    + '<div style="font-size:13px;color:#9ca3af;line-height:1.6;max-width:420px;margin:0 auto;">Tracker clients are self-service users who register via the free AI Citations Tracker. They will appear here once they sign up.</div>'
+                    + '</div>';
                 return;
             }
             var table = document.createElement('table');
