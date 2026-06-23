@@ -25139,63 +25139,127 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 el.innerHTML = '<div style="text-align:center;padding:40px;color:#6b7280;">No clients registered yet</div>';
                 return;
             }
-            var table = document.createElement('table');
-            table.style.cssText = 'width:100%;border-collapse:collapse;font-size:12px;';
-            var thead = document.createElement('thead');
-            thead.innerHTML = '<tr style="border-bottom:1px solid #1f2937;">'
-                + '<th style="padding:8px 10px;text-align:left;font-size:10px;color:#6b7280;text-transform:uppercase;">Contact</th>'
-                + '<th style="padding:8px 10px;text-align:left;font-size:10px;color:#6b7280;text-transform:uppercase;">Domain + Share URL</th>'
-                + '<th style="padding:8px 10px;text-align:center;font-size:10px;color:#6b7280;text-transform:uppercase;">Type</th>'
-                + '<th style="padding:8px 10px;text-align:center;font-size:10px;color:#6b7280;text-transform:uppercase;">Pages</th>'
-                + '<th style="padding:8px 10px;text-align:center;font-size:10px;color:#6b7280;text-transform:uppercase;">Scan freq</th>'
-                + '<th style="padding:8px 10px;text-align:center;font-size:10px;color:#6b7280;text-transform:uppercase;">Max</th>'
-                + '<th style="padding:8px 10px;text-align:center;font-size:10px;color:#6b7280;text-transform:uppercase;">Status</th>'
-                + '<th style="padding:8px 10px;text-align:left;font-size:10px;color:#6b7280;text-transform:uppercase;">Registered</th>'
-                + '<th style="padding:8px 10px;text-align:center;font-size:10px;color:#6b7280;text-transform:uppercase;">Actions</th>'
-                + '</tr>';
-            var tbody = document.createElement('tbody');
-
+            
+            // Grid container for cards
+            var grid = document.createElement('div');
+            grid.style.cssText = 'display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(520px,1fr));';
+            
             clients.forEach(function(c) {
-                var tr = document.createElement('tr');
-                tr.className = 'tc-row';
-
                 var date = c.created_at ? new Date(c.created_at).toLocaleDateString('en-GB') : '-';
                 var trackUrl = 'https://app.contentscale.site/track/' + c.token;
                 var isActive = c.status !== 'disabled';
                 var statusColor = isActive ? '#4ade80' : '#f87171';
+                var statusText = isActive ? 'ACTIVE' : 'DISABLED';
+                
+                // Type badge colors
+                var typeBg = c.type === 'dealify' ? '#b45309' : c.type === 'own' ? '#7e22ce' : '#6b7280';
+                var typeLabel = c.type === 'dealify' ? '🎯 Dealify' : c.type === 'own' ? '⭐ Own' : '🆓 Free';
+                
+                // Card HTML
+                var card = document.createElement('div');
+                card.style.cssText = 'background:#0d1117;border:1px solid #1f2937;border-radius:10px;box-shadow:0 4px 12px rgba(0,0,0,.3);overflow:hidden;';
+                
+                var headerGrad = document.createElement('div');
+                headerGrad.style.cssText = 'background:linear-gradient(135deg,#1f2937 0%,#0d1117 100%);padding:16px;border-bottom:2px solid #7e22ce;';
+                headerGrad.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;"><div style="font-weight:700;font-size:16px;color:#f1f5f9;">' + (c.domain || 'Unknown') + '</div><span style="background:' + typeBg + ';color:white;padding:3px 8px;border-radius:4px;font-size:11px;font-weight:600;">' + typeLabel + '</span></div>'
+                    + '<div style="font-size:13px;color:#9ca3af;">' + (c.contact_name || 'No name') + '</div>';
+                
+                var content = document.createElement('div');
+                content.style.cssText = 'padding:14px;';
+                
+                // Contact info
+                var contactInfo = document.createElement('div');
+                contactInfo.style.cssText = 'margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid #1f2937;';
+                contactInfo.innerHTML = '<div style="font-size:12px;color:#9ca3af;margin-bottom:4px;">📧 ' + (c.email || 'no-email') + '</div>'
+                    + '<div style="font-size:12px;color:#9ca3af;">💬 ' + (c.whatsapp || 'no-whatsapp') + '</div>';
+                
+                // Status line
+                var statusLine = document.createElement('div');
+                statusLine.style.cssText = 'margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid #1f2937;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;';
+                statusLine.innerHTML = '<div style="font-size:12px;"><span style="color:#6b7280;">Status: </span><span style="color:' + statusColor + ';font-weight:700;">✓ ' + statusText + '</span></div>'
+                    + '<div style="font-size:12px;"><span style="color:#6b7280;">Registered: </span><span style="color:#e5e7eb;">' + date + '</span></div>'
+                    + '<div style="font-size:12px;"><span style="color:#6b7280;">Pages: </span><span style="color:#e5e7eb;">' + (c.page_count||0) + ' / ' + (c.max_pages||10) + '</span></div>'
+                    + '<div style="font-size:12px;"><span style="color:#6b7280;">Freq: </span><span style="color:#e5e7eb;">' + (c.scan_interval_days||3) + 'd</span></div>';
+                
+                // Extra domains
+                if (c.extra_domains) {
+                    var domainsDiv = document.createElement('div');
+                    domainsDiv.style.cssText = 'margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid #1f2937;border-left:3px solid #7e22ce;padding-left:10px;';
+                    domainsDiv.innerHTML = '<div style="font-size:11px;color:#6b7280;margin-bottom:4px;">EXTRA DOMAINS</div><div style="font-size:12px;color:#9ca3af;">(' + c.extra_domains + ')</div>';
+                    content.appendChild(domainsDiv);
+                }
+                
+                // Actions
+                var actions = document.createElement('div');
+                actions.style.cssText = 'display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;';
+                
+                var viewBtn = document.createElement('button');
+                viewBtn.textContent = '👁 View';
+                viewBtn.style.cssText = 'font-size:11px;padding:6px 10px;background:#1f2937;border:1px solid #374151;border-radius:5px;color:#9ca3af;cursor:pointer;';
+                viewBtn.onclick = (function(token){ return function(){ window.open('https://app.contentscale.site/track/' + token, '_blank'); }; })(c.token);
+                
+                var emailBtn = document.createElement('button');
+                emailBtn.textContent = '📧 Emails';
+                emailBtn.style.cssText = 'font-size:11px;padding:6px 10px;background:#1f2937;border:1px solid #374151;border-radius:5px;color:#9ca3af;cursor:pointer;';
+                emailBtn.onclick = (function(id){ return function(){ sendTrackerEmail(id); }; })(c.id);
+                
+                var liveBtn = document.createElement('button');
+                liveBtn.textContent = '📺 Live';
+                liveBtn.style.cssText = 'font-size:11px;padding:6px 10px;background:#1f2937;border:1px solid #374151;border-radius:5px;color:#9ca3af;cursor:pointer;';
+                liveBtn.onclick = (function(id){ return function(){ loadTrackerPages(id); }; })(c.id);
+                
+                var cleanBtn = document.createElement('button');
+                cleanBtn.textContent = '🧹 Clean';
+                cleanBtn.style.cssText = 'font-size:11px;padding:6px 10px;background:#1f2937;border:1px solid #374151;border-radius:5px;color:#9ca3af;cursor:pointer;';
+                cleanBtn.onclick = (function(id){ return function(){ cleanTrackerClient(id); }; })(c.id);
+                
+                actions.appendChild(viewBtn);
+                actions.appendChild(emailBtn);
+                actions.appendChild(liveBtn);
+                actions.appendChild(cleanBtn);
+                
+                // Bottom actions (right aligned)
+                var bottomActions = document.createElement('div');
+                bottomActions.style.cssText = 'display:flex;gap:6px;flex-wrap:wrap;justify-content:space-between;align-items:center;';
+                
+                var toggleBtn = document.createElement('button');
+                if (isActive) {
+                    toggleBtn.textContent = '❌ Disable';
+                    toggleBtn.style.cssText = 'font-size:11px;padding:6px 10px;background:#1f2937;border:1px solid #7f1d1d;border-radius:5px;color:#f87171;cursor:pointer;';
+                } else {
+                    toggleBtn.textContent = '✓ Enable';
+                    toggleBtn.style.cssText = 'font-size:11px;padding:6px 10px;background:#1f2937;border:1px solid #166534;border-radius:5px;color:#4ade80;cursor:pointer;';
+                }
+                toggleBtn.onclick = (function(id, active){ return function(){ updateTcClient(id, {status: active ? 'disabled' : 'active'}); }; })(c.id, isActive);
+                
+                var delBtn = document.createElement('button');
+                delBtn.textContent = '🗑 Delete';
+                delBtn.style.cssText = 'font-size:11px;padding:6px 10px;background:#1f2937;border:1px solid #7f1d1d;border-radius:5px;color:#f87171;cursor:pointer;';
+                delBtn.onclick = (function(id){ return function(){ deleteTrackerClient(id); }; })(c.id);
+                
+                bottomActions.appendChild(toggleBtn);
+                bottomActions.appendChild(delBtn);
+                
+                // Assemble card
+                content.appendChild(contactInfo);
+                content.appendChild(statusLine);
+                content.appendChild(actions);
+                content.appendChild(bottomActions);
+                
+                card.appendChild(headerGrad);
+                card.appendChild(content);
+                grid.appendChild(card);
+            });
+            
+            el.innerHTML = '';
+            el.appendChild(grid);
+        }
 
-                // -- Max pages selector with quick presets --
-                var maxCell = document.createElement('td');
-                maxCell.style.cssText = 'padding:8px 10px;text-align:center;';
-                var maxWrap = document.createElement('div');
-                maxWrap.style.cssText = 'display:flex;flex-direction:column;gap:3px;align-items:center;';
-                var maxInput = document.createElement('input');
-                maxInput.type = 'number';
-                maxInput.value = c.max_pages || 3;
-                maxInput.min = 1; maxInput.max = 500;
-                maxInput.style.cssText = 'width:54px;background:#0d1117;border:1px solid #374151;border-radius:4px;padding:3px 6px;color:#e5e7eb;font-size:12px;text-align:center;';
-                maxInput.onchange = (function(id){ return function(){ updateTcClient(id, {max_pages: parseInt(this.value)||3}); }; })(c.id);
-                var presets = document.createElement('div');
-                presets.style.cssText = 'display:flex;gap:2px;';
-                [10,25,50,100].forEach(function(n) {
-                    var btn = document.createElement('button');
-                    btn.textContent = n;
-                    btn.style.cssText = 'font-size:9px;padding:1px 5px;background:' + ((c.max_pages||10)==n?'#374151':'none') + ';border:1px solid #374151;border-radius:3px;color:#9ca3af;cursor:pointer;';
-                    btn.onclick = (function(id, val, inp, pBtns){ return function(){
-                        inp.value = val;
-                        updateTcClient(id, {max_pages: val});
-                        pBtns.querySelectorAll('button').forEach(function(b){ b.style.background='none'; });
-                        this.style.background = '#374151';
-                    }; })(c.id, n, maxInput, presets);
-                    presets.appendChild(btn);
-                });
-                maxWrap.appendChild(maxInput);
-                maxWrap.appendChild(presets);
-                maxCell.appendChild(maxWrap);
-
-                // -- Actions --
-                var actionsDiv = document.createElement('div');
-                actionsDiv.style.cssText = 'display:flex;gap:3px;justify-content:center;flex-wrap:wrap;';
+        // ──────────────────────────────────────────────────────────────────────────
+        // OLD CODE PLACEHOLDER (for line continuity)
+        // ──────────────────────────────────────────────────────────────────────────
+        
+        // -- Frequency selector --
 
                 // ── Frequency selector ──
                 var freqSelect = document.createElement('select');
