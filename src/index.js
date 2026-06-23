@@ -1050,7 +1050,7 @@ app.post('/api/tracker-client/register', async (req, res) => {
     }
 
     // Dealify code validation — format: DEALIFY-XXXXX (1-5 codes allowed)
-    let maxPages = 3; // default free
+    let maxPages = 1; // default free (was 3) — scan interval stays 3 days
     let dealifyCodesCount = 0;
     let isDealify = false;
     if (dealify_code) {
@@ -28342,12 +28342,15 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
 
   // -- Import modes ----------------------------------------------------------
   function setImportMode(mode) {
+    var _gscOk = (typeof GSC_ENABLED !== 'undefined' && GSC_ENABLED) || (typeof _hasGscData === 'function' && _hasGscData());
+    if (mode === 'gsc' && !_gscOk) mode = 'paste';   // GSC import is a paid tier — free clients cannot self-import
     window._impMode = mode;
     var panels = ['paste','sitemap','gsc'];
     panels.forEach(function(m) {
       var panel = document.getElementById('import' + (m === 'paste' ? 'Paste' : m === 'sitemap' ? 'Sitemap' : 'Gsc') + 'Panel');
       var tab = document.getElementById('importTab' + (m === 'paste' ? 'Paste' : m === 'sitemap' ? 'Sitemap' : 'Gsc'));
       if (!panel || !tab) return;
+      if (m === 'gsc' && !_gscOk) { tab.style.display = 'none'; panel.style.display = 'none'; return; }  // hide GSC tab entirely for free tier
       var active = m === mode;
       panel.style.display = active ? 'block' : 'none';
       tab.style.background = active ? '#374151' : 'none';
@@ -28356,6 +28359,10 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
   }
 
   function showImportModal(mode) {
+    var gscTab = document.getElementById('importTabGsc');
+    var gscAllowed = (GSC_ENABLED || _hasGscData());
+    if (gscTab) gscTab.style.display = gscAllowed ? '' : 'none';   // GSC import is a paid tier — hidden for free clients
+    if (mode === 'gsc' && !gscAllowed) mode = 'paste';
     document.getElementById('importModal').classList.add('show');
     setImportMode(mode || 'paste');
   }
@@ -34056,20 +34063,26 @@ app.post('/api/tracker/serp-spy', verifyEngineAccess, async (req, res) => {
     const liveText = live_html.replace(/<script[^>]*>[\s\S]*?<\/script>/gi,'')
       .replace(/<style[^>]*>[\s\S]*?<\/style>/gi,'')
       .replace(/<[^>]+>/g,' ')
-      .replace(/\s+/g,' ').trim().substring(0, 8000);
+      .replace(/\s+/g,' ').trim().substring(0, 9000);
     clientScrape = { text: liveText, status: 200, fullHtml: live_html };
     console.log('[serp-spy] Using pasted live HTML for client page (' + live_html.length + ' chars)');
   } else {
-    clientScrape = myUrl ? await scrapeBodyText(myUrl, 6000) : { text: '', status: 0, fullHtml: '' };
+    clientScrape = myUrl ? await scrapeBodyText(myUrl, 9000) : { text: '', status: 0, fullHtml: '' };
   }
-  const compScrapes = await Promise.all(top5.map(e=>scrapeBodyText(e.url,4000)));
+  const compScrapes = await Promise.all(top5.map(e=>scrapeBodyText(e.url,6000)));
   const clientAI = clientScrape.fullHtml ? scoreAICitation(clientScrape.fullHtml, clientScrape.text, keyword) : null;
   const stops = new Set(['the','a','an','and','or','in','on','at','to','for','of','with','is','are','was','were','be','been','being','this','that','these','those','it','its','we','you','your','our','they','them','their','his','her','not','can','could','will','would','should','shall','may','might','must','have','has','had','having','does','doing','done','make','makes','made','want','wants','copy','than','then','also','more','most','much','many','some','any','each','every','such','very','even','only','just','like','into','onto','over','about','above','after','before','below','here','there','when','where','which','while','what','whom','whose','because','but','however','therefore','thus','hence','still','already','again','always','never','often','sometimes','around','through','between','within','without','upon','using','used','uses','being','they','them','your','yours','ours','whether','either','neither','both','others','another','same','different','able','etc','start','other','create','tools','write','writing','written','make','making','made','include','includes','including','maintain','maintaining','process','powered','provide','provides','offer','offers','help','helps','need','needs','want','build','builds','built','using','based','across','content','contents','website','websites','page','pages','online','digital','quality','feature','features','option','options','simple','easy','best','great','good','better','review','reviews','check','checker','tool','data','user','users','people','business','businesses','service','services','solution','solutions','platform','system','great','various','available','popular','important','effective']);
   const clientWords = new Set((clientScrape.text||'').toLowerCase().replace(/[^a-z0-9\s]/g,' ').split(/\s+/).filter(w=>w.length>=5&&!stops.has(w)));
   const entityFreq = {};
   compScrapes.forEach(sc=>{const seen=new Set();(sc.text||'').toLowerCase().replace(/[^a-z0-9\s]/g,' ').split(/\s+/).filter(w=>w.length>=5&&!stops.has(w)).forEach(w=>{if(!seen.has(w)){entityFreq[w]=(entityFreq[w]||0)+1;seen.add(w);}});});
   const entityGaps = Object.entries(entityFreq).filter(([w,n])=>n>=2&&!clientWords.has(w)).sort((a,b)=>b[1]-a[1]).slice(0,20).map(([entity,n])=>({entity,in_competitor_pages:n}));
-  const compSummary = top5.map((e,i)=>`RANK ${e.rank}: ${e.domain}\n  Snippet: "${(e.snippet||'')}"`).join('\n\n');
+  const _detectSchema = h => Array.from(new Set(((h||'').match(/"@type"\s*:\s*"([^"]+)"/g)||[]).map(x=>x.replace(/.*"([^"]+)"$/,'$1')))).slice(0,6);
+  const compSummary = top5.map((e,i)=>{
+    const sc = compScrapes[i] || {};
+    const schema = _detectSchema(sc.fullHtml);
+    const body = (sc.text||'').slice(0,1500);
+    return `RANK ${e.rank}: ${e.domain}\n  Title: "${e.title||''}"\n  Snippet: "${(e.snippet||'')}"\n  Word count: ${sc.wordCount||'?'}\n  Schema detected: ${schema.length?schema.join(', '):'none'}\n  Body excerpt: ${body||'(not captured)'}`;
+  }).join('\n\n');
   const prompt = `You are an elite SEO and AEO analyst with live SERP data, the client's own page, and entity-gap data. Your output feeds an automated content engine: it must be machine-parseable JSON, and every claim must be traceable to the input below. A wrong or invented claim becomes a wrong instruction to the writer after you. Precision beats completeness.
 
 KEYWORD: "${keyword}"
@@ -34077,7 +34090,7 @@ CLIENT: ${myUrl||'(no client URL provided)'}
 AI OVERVIEW CITATION SCORE (the client page's current AI Overview citation eligibility): ${clientAI?clientAI.score+'/100 ('+clientAI.eligibility+')':'not scored'}
 
 CLIENT PAGE (your ground truth for what already exists - read this FULLY first):
-${clientScrape.text?clientScrape.text.slice(0,6000):'(no client page text captured)'}
+${clientScrape.text?clientScrape.text.slice(0,9000):'(no client page text captured)'}
 
 LIVE SERP - COMPETITORS:
 ${compSummary}
