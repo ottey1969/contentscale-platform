@@ -18542,58 +18542,8 @@ Return ONLY the complete updated HTML. No markdown, no explanation.`;
       }
     });
 
-    // ── Auto-add to tracker_pages (every 3 days, scoped to engine user) ──────
-    let trackerPageId = null;
-    if(rw.original_url) {
-      try {
-        const eu = req.engineUser;
-        const codeId = (eu && !eu.isAdmin) ? eu.codeId : null;
-        const tUrl = rw.original_url.startsWith('http') ? rw.original_url : 'https://' + rw.original_url;
-        const tKeyword = rw.gsc_keyword || rw.new_seed_keyword || null;
-        // Upsert: update keyword/frequency + GSC baseline if URL already tracked, else insert
-        const conflictClause = codeId
-          ? `ON CONFLICT (engine_code_id, url) WHERE engine_code_id IS NOT NULL DO UPDATE SET keyword=EXCLUDED.keyword, check_frequency='3days', gsc_impressions=EXCLUDED.gsc_impressions, gsc_clicks=EXCLUDED.gsc_clicks, gsc_position=EXCLUDED.gsc_position, gsc_ctr=EXCLUDED.gsc_ctr, gsc_queries=EXCLUDED.gsc_queries, gsc_pages=EXCLUDED.gsc_pages, gsc_keyword=EXCLUDED.gsc_keyword`
-          : `ON CONFLICT (url) WHERE engine_code_id IS NULL DO UPDATE SET keyword=EXCLUDED.keyword, check_frequency='3days', gsc_impressions=EXCLUDED.gsc_impressions, gsc_clicks=EXCLUDED.gsc_clicks, gsc_position=EXCLUDED.gsc_position, gsc_ctr=EXCLUDED.gsc_ctr, gsc_queries=EXCLUDED.gsc_queries, gsc_pages=EXCLUDED.gsc_pages, gsc_keyword=EXCLUDED.gsc_keyword`;
-        const tIns = await pool.query(
-          `INSERT INTO tracker_pages (engine_code_id, profile_id, url, slug, keyword, check_frequency, next_check_at, gsc_impressions, gsc_clicks, gsc_position, gsc_ctr, gsc_queries, gsc_pages, gsc_keyword)
-           VALUES ($1,$2,$3,$4,$5,'3days',NOW(),$6,$7,$8,$9,$10,$11,$12) ` + conflictClause + ` RETURNING id`,
-          [codeId, rw.profile_id||null, tUrl,
-           tUrl.split('/').filter(Boolean).pop()||'/',
-           tKeyword,
-           rw.gsc_impressions || null,
-           rw.gsc_clicks || null,
-           rw.gsc_position || null,
-           ctrCalc ? parseFloat(ctrCalc) : null,
-           (Array.isArray(analysis.gsc_queries) && analysis.gsc_queries.length) ? JSON.stringify(analysis.gsc_queries) : null,
-           (Array.isArray(analysis.gsc_pages) && analysis.gsc_pages.length) ? JSON.stringify(analysis.gsc_pages) : null,
-           rw.gsc_keyword || null]
-        ).catch(()=>{null});
-        trackerPageId = tIns && tIns.rows && tIns.rows[0] ? tIns.rows[0].id : null;
-        console.log('[tracker] Auto-added from rewrite:', tUrl, 'pageId=', trackerPageId);
-
-        // ── Baseline snapshot: store the GSC data as the starting point ──────────
-        if (trackerPageId && (rw.gsc_position || rw.gsc_impressions || rw.gsc_clicks)) {
-          await pool.query(
-            `INSERT INTO tracker_snapshots (page_id, checked_at, google_position, google_impressions, google_clicks, google_ctr, recommendations, notes)
-             VALUES ($1, NOW(), $2, $3, $4, $5, $6, $7)`,
-            [trackerPageId, rw.gsc_position || null, rw.gsc_impressions || null, rw.gsc_clicks || null,
-             ctrCalc ? parseFloat(ctrCalc) : null,
-             JSON.stringify([{ title: 'GSC Baseline recorded', priority: 'low', action: 'Baseline data captured at time of rewrite', expected_impact: 'Reference point for future comparisons' }]),
-             'Baseline GSC data captured at time of rewrite']
-          ).catch(e => console.warn('[tracker] Baseline snapshot failed:', e.message));
-          console.log('[tracker] Baseline snapshot created for page', trackerPageId);
-        }
-
-        // Update tracker page with latest rewritten HTML + score so tracker shows current data
-        if (trackerPageId) {
-          await pool.query(
-            `UPDATE tracker_pages SET html_content=$1, last_graaf_score=$2 WHERE id=$3`,
-            [html || rw.original_html || '', finalGraafResult?.contentScore || null, trackerPageId]
-          ).catch(e => console.warn('[tracker] HTML+score update failed:', e.message));
-          console.log('[tracker] Updated html_content + score for page', trackerPageId, 'score=', finalGraafResult?.contentScore);
-        }
-      } catch(e) { console.warn('[tracker] Auto-add failed:', e.message); }
-    }
+    // ── REMOVED: Auto-sync to tracker_pages disabled (one-way flow: Tracker → Engine only) ──────
+    // Engine rewrites should NOT auto-create/sync to Tracker. Tracker is the source of truth for pages.
   } catch(e) {
     console.error('Rewrite execute error:', e);
     const msg = e.code ? `${e.message} (db code ${e.code})` : e.message;
