@@ -32,7 +32,7 @@ if (typeof window !== 'undefined' && window.location && window.location.pathname
     }
   }, true);
 }
-;
+
 // CONTENTSCALE SERVER.JS — ELITE EDITION v4 (FIXED v3)
 // ✅ FIX v7: secondary_keywords + related_keywords auto in Analyse JSON + Execute prompt
 // ✅ FIX v7: analysis_data JSONB safe parse in execute-rewrite
