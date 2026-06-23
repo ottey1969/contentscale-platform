@@ -24744,10 +24744,79 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
             var el = document.getElementById('tcList');
             if (!el) return;
             if (!clients.length) {
-                el.innerHTML = '<div style="text-align:center;padding:40px;color:#6b7280;">No clients registered yet</div>';
+                el.innerHTML = '<div style="text-align:center;padding:60px 40px;background:linear-gradient(135deg,rgba(59,130,246,.05) 0%,rgba(124,58,237,.05) 100%);border:2px dashed #1f2937;border-radius:12px;"><div style="font-size:48px;margin-bottom:16px;">📊</div><div style="font-size:16px;font-weight:800;color:#e5e7eb;margin-bottom:8px;">No tracker clients yet</div><div style="font-size:13px;color:#9ca3af;line-height:1.6;max-width:420px;margin:0 auto;">Tracker clients are self-service users who register via the free AI Citations Tracker. They will appear here once they sign up.</div></div>';
                 return;
             }
-            var table = document.createElement('table');
+
+            var html = '<div style="display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(520px,1fr));">';
+
+            clients.forEach(function(c) {
+                var date = c.created_at ? new Date(c.created_at).toLocaleDateString('en-GB') : '-';
+                var trackUrl = 'https://app.contentscale.site/track/' + c.token;
+                
+                var isPaused = c.status === 'paused';
+                var isDisabled = c.status === 'disabled';
+                var isActive = !isPaused && !isDisabled;
+                var statusColor = isActive ? '#4ade80' : isPaused ? '#f59e0b' : '#f87171';
+                var statusLabel = isActive ? '✓ ACTIVE' : isPaused ? '⏸ PAUSED' : '✕ DISABLED';
+
+                var isDealify = !!c.dealify_codes;
+                var isOwnClient = !isDealify && (c.max_pages || 3) > 3;
+                var clientTypeBadge, clientTypeColor;
+                if (isDealify) {
+                    var codeCount = c.dealify_codes.split(',').filter(function(x){ return x.trim(); }).length;
+                    clientTypeBadge = '🎯 Dealify ×' + codeCount;
+                    clientTypeColor = '#f59e0b';
+                } else if (isOwnClient) {
+                    clientTypeBadge = '⭐ Own';
+                    clientTypeColor = '#a78bfa';
+                } else {
+                    clientTypeBadge = '🆓 Free';
+                    clientTypeColor = '#6b7280';
+                }
+
+                var freqMap = { '3days': '3 days', 'weekly': 'Weekly', '1week': 'Weekly', 'monthly': 'Monthly', '1day': 'Daily', '0': 'Off' };
+                var freqDisplay = c.scan_frequency ? (freqMap[c.scan_frequency] || c.scan_frequency) : 'Auto';
+
+                var extraDoms = c.extra_domains ? c.extra_domains.split(',').map(function(d){ return d.trim(); }).filter(Boolean) : [];
+
+                html += '<div style="background:#0d1117;border:1px solid #1f2937;border-radius:10px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 4px 12px rgba(0,0,0,.3);">'
+                    + '<div style="padding:16px 18px;border-bottom:1px solid #1f2937;display:flex;justify-content:space-between;align-items:flex-start;gap:12px;background:linear-gradient(135deg,rgba(13,17,23,.8) 0%,rgba(15,23,42,.8) 100%);border-bottom:2px solid rgba(124,58,237,.2);">'
+                    + '<div style="flex:1;min-width:0;">'
+                    + '<div style="font-size:15px;font-weight:800;color:#e5e7eb;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + (c.domain || '-') + '</div>'
+                    + '<div style="font-size:11px;color:#9ca3af;margin-top:3px;">' + (c.name || 'No name') + '</div>'
+                    + '</div>'
+                    + '<span style="font-size:11px;font-weight:700;color:' + clientTypeColor + ';background:rgba(' + (clientTypeColor === '#f59e0b' ? '245,158,11' : clientTypeColor === '#a78bfa' ? '167,139,250' : '107,114,128') + ',.12);border:1px solid' + clientTypeColor + '30;border-radius:6px;padding:4px 10px;flex-shrink:0;">' + clientTypeBadge + '</span>'
+                    + '</div>'
+                    
+                    + '<div style="padding:12px 18px;border-bottom:1px solid #1f2937;font-size:11px;">'
+                    + (c.email ? '<div style="color:#38bdf8;margin-bottom:4px;"><strong>📧</strong> ' + c.email + '</div>' : '')
+                    + (c.whatsapp ? '<div style="color:#4ade80;"><strong>💬</strong> ' + c.whatsapp + '</div>' : '')
+                    + '</div>'
+                    
+                    + '<div style="padding:12px 18px;border-bottom:1px solid #1f2937;display:grid;grid-template-columns:1fr 1fr;gap:14px;font-size:11px;">'
+                    + '<div><span style="color:#9ca3af;font-weight:600;">Status:</span><br><span style="color:' + statusColor + ';font-weight:700;font-size:12px;">' + statusLabel + '</span></div>'
+                    + '<div><span style="color:#9ca3af;font-weight:600;">Registered:</span><br><span style="color:#a78bfa;">' + date + '</span></div>'
+                    + '<div><span style="color:#9ca3af;font-weight:600;">Pages:</span><br><span style="color:#4ade80;font-weight:700;">' + (c.page_count||0) + ' / ' + (c.max_pages||3) + '</span></div>'
+                    + '<div><span style="color:#9ca3af;font-weight:600;">Freq:</span><br><span style="color:#60a5fa;">' + freqDisplay + '</span></div>'
+                    + '</div>'
+                    
+                    + (extraDoms.length ? '<div style="padding:8px 18px;border-bottom:1px solid #1f2937;border-left:3px solid #38bdf8;background:rgba(56,189,248,.05);font-size:10px;color:#38bdf8;"><strong>Extra domains:</strong> ' + extraDoms.join(', ') + '</div>' : '')
+                    
+                    + '<div style="padding:14px 18px;display:flex;gap:6px;flex-wrap:wrap;align-items:center;background:rgba(255,255,255,.01);">'
+                    + '<button onclick="window.open(\'' + trackUrl + '\',\'_blank\')" style="background:none;border:1px solid #7c3aed;color:#a78bfa;padding:6px 12px;border-radius:6px;cursor:pointer;font-size:11px;font-weight:600;transition:all .2s;">👁 View</button>'
+                    + '<button onclick="var v = prompt(\'Extra Citation-Brief recipients (comma-separated)\', \'' + (c.cc_emails||'') + '\');if(v!==null) updateTcClient(' + c.id + ', {cc_emails: v});" style="background:none;border:1px solid #4ade80;color:#4ade80;padding:6px 12px;border-radius:6px;cursor:pointer;font-size:11px;font-weight:600;transition:all .2s;">📧 Emails</button>'
+                    + '<button onclick="var newVal = !' + (!!c.live_wall_enabled) + '; apiCall(\'/api/admin/tracker-clients/' + c.id + '/live-wall\',\'POST\',{enabled:newVal}).then(function(d){if(d.success) loadTrackerClients(); else alert(d.error);});" style="background:none;border:1px solid #a78bfa;color:' + (c.live_wall_enabled ? '#a78bfa' : '#6b7280') + ';padding:6px 12px;border-radius:6px;cursor:pointer;font-size:11px;font-weight:600;transition:all .2s;">📺 ' + (c.live_wall_enabled ? 'Live ✓' : 'Live') + '</button>'
+                    + '<button onclick="apiCall(\'/api/admin/tracker-clients/' + c.id + '/clean-pages\',\'POST\',{}).then(function(d){if(d.success) {alert(\'Cleaned: \' + d.cleaned + \' removed, \' + d.merged + \' merged\'); loadTrackerClients();} else alert(d.error);});" style="background:none;border:1px solid #38bdf8;color:#38bdf8;padding:6px 12px;border-radius:6px;cursor:pointer;font-size:11px;font-weight:600;transition:all .2s;">🧹 Clean</button>'
+                    + '<button onclick="updateTcClient(' + c.id + ', {status: \'' + (isActive ? 'disabled' : 'active') + '\'});" style="background:none;border:1px solid ' + (isActive ? '#ef4444' : '#4ade80') + ';color:' + (isActive ? '#ef4444' : '#4ade80') + ';padding:6px 12px;border-radius:6px;cursor:pointer;font-size:11px;font-weight:600;transition:all .2s;">' + (isActive ? '❌ Disable' : '✓ Enable') + '</button>'
+                    + '<button onclick="if(confirm(\'Delete ' + c.domain + ' and all its data?\')) updateTcClient(' + c.id + ', {status: \\\'deleted\\\'});" style="background:none;border:1px solid #f87171;color:#f87171;padding:6px 12px;border-radius:6px;cursor:pointer;font-size:11px;font-weight:600;transition:all .2s;margin-left:auto;">🗑 Delete</button>'
+                    + '</div>'
+                    + '</div>';
+            });
+
+            html += '</div>';
+            el.innerHTML = html;
+        }
             table.style.cssText = 'width:100%;border-collapse:collapse;font-size:12px;';
             var thead = document.createElement('thead');
             thead.innerHTML = '<tr style="border-bottom:1px solid #1f2937;">'
