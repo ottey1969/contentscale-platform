@@ -22219,11 +22219,21 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
     // Sort by clicks desc (GSC priority)
     pairs.sort(function(a,b){ return (b.clicks||0) - (a.clicks||0); });
 
-    // If queries-only, show info
-    if (pairs[0] && pairs[0].isQueryOnly) {
-      toast('Queries CSV detected — ' + pairs.length + ' keywords found. URLs will be set to your homepage. Edit per page after import.', '#fbbf24');
+    // Filter: Remove queries-only (no real URL) and homepage (all / variants)
+    pairs = pairs.filter(function(p) {
+      // Just remove trailing slash + compare
+      var cleanUrl = (p.url || '').replace(/\/$/, '').toLowerCase();
+      var cleanDomain = ('https://' + domain).replace(/\/$/, '').toLowerCase();
+      var isHomepage = !p.url || cleanUrl === cleanDomain;
+      return p.url && p.url.indexOf('http') === 0 && !isHomepage && !p.isQueryOnly;
+    });
+
+    if (!pairs.length) { 
+      toast('No valid GSC pages found. Use GSC → Performance → Pages tab → Export CSV. Don\'t use Queries tab.', '#f87171'); 
+      return; 
     }
 
+    // All items are now real pages with URLs
     var container = document.getElementById('gscItems');
     var countEl = document.getElementById('gscCount');
     var list = document.getElementById('gscList');
@@ -22234,8 +22244,7 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
       function(p) {
         var path = '';
         try { path = new URL(p.url).pathname; } catch(e) { path = p.url; }
-        if (path === '/') path = '(homepage)';
-        return (p.isQueryOnly ? '[keyword] ' : '') + path + (p.keyword ? ' - ' + p.keyword : '') + (p.clicks ? ' (' + p.clicks + ' clicks)' : '');
+        return path + (p.keyword ? ' - ' + p.keyword : '') + (p.clicks ? ' (' + p.clicks + ' clicks)' : '');
       },
       countEl,
       maxSel
@@ -22284,18 +22293,17 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
         selected.push({ url: cb.value, keyword: '' });
       }
     });
-    // Filter: only items with a URL (skip queries-only unless we have domain)
+    // Filter: only items with a REAL URL (no homepage, no queries-only)
     var toImport = selected.filter(function(p) {
-      return p.url && p.url.indexOf('http') === 0;
+      // Just remove trailing slash + compare
+      var cleanUrl = (p.url || '').replace(/\/$/, '').toLowerCase();
+      var cleanDomain = ('https://' + DOMAIN).replace(/\/$/, '').toLowerCase();
+      var isHomepage = !p.url || cleanUrl === cleanDomain;
+      return p.url && p.url.indexOf('http') === 0 && !isHomepage;
     });
-    // For queries-only items (no proper URL), use homepage
-    var queriesOnly = selected.filter(function(p) {
-      return !p.url || p.url.indexOf('http') !== 0;
-    });
-    queriesOnly.forEach(function(p) {
-      toImport.push({ url: 'https://' + DOMAIN + '/', keyword: p.keyword || p.url, priority: p.priority });
-    });
-    if (!toImport.length) { toast('No valid URLs to import', '#f87171'); return; }
+    
+    // Skip queries-only items completely (no homepage fallback)
+    if (!toImport.length) { toast('No valid pages to import. Use GSC pages CSV (with URLs), not queries. All pages must be actual published content.', '#f87171'); return; }
     var bt = document.getElementById('importGscBtn');
     if (bt) { bt.disabled = true; bt.textContent = 'Importing...'; }
     var done = 0;
