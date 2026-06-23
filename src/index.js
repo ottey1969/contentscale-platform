@@ -3788,7 +3788,7 @@ app.patch('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
     updated_at TIMESTAMPTZ DEFAULT NOW()
   )`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS max_pages INTEGER DEFAULT 3`).catch(()=>{});
-  await client.query(`UPDATE tracker_clients SET max_pages=3 WHERE max_pages IS NULL OR max_pages=10`).catch(()=>{});
+  await client.query(`UPDATE tracker_clients SET max_pages=3 WHERE max_pages IS NULL`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS registered_ip VARCHAR(45)`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS cc_emails TEXT`).catch(()=>{});
   // Brief merge system
