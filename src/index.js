@@ -29372,52 +29372,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 </style>
 
                 <!-- Header -->
-                <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;flex-wrap:wrap;gap:12px;">
-                    <div>
-                        <h2 style="font-size:1.25rem;font-weight:700;color:#f1f5f9;">Content Lifecycle Tracker</h2>
-                        <p style="font-size:12px;color:#6b7280;margin-top:3px;">Track Google position, AI Overview citations, and content changes over time</p>
-                    </div>
-                    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-                        <!-- AI Provider Status Pills -->
-                        <div id="aiStatusPills" style="display:flex;gap:5px;flex-wrap:wrap;"></div>
-                        <button onclick="loadTrackerPages()" class="tr-btn" id="trRefreshBtn"><i class="fas fa-sync-alt" style="margin-right:5px;"></i>Refresh</button>
-                        <button onclick="bulkSetGscKeywords()" class="tr-btn" title="Set GSC keyword for all pages that have GSC data but no manual keyword" style="border-color:#60a5fa;color:#60a5fa;">📊 Apply GSC Keywords</button>
-                        <button onclick="openAddPageModal()" class="tr-btn primary">+ Add URL</button>
-                    </div>
-                </div>
-
-                <script>
-                // -- AI Provider Status Pills ----------------------------------
-                async function loadAiStatus() {
-                    try {
-                        const token = localStorage.getItem('admin_id') || '';
-                        if (!token) return;
-                        const r = await fetch('/api/admin/ai-status', { headers: { 'x-admin-key': token } });
-                        if (!r.ok) return;
-                        const data = await r.json();
-                        const pills = document.getElementById('aiStatusPills');
-                        if (!pills) return;
-                        const labels = {
-                            gemini_primary: 'Gemini Pro', gemini_flash: 'Gemini Flash',
-                            perplexity: 'Perplexity', claude: 'Claude (AI)',
-                            serper: 'Serper/Google', bing: 'Bing/Copilot', brave: 'Brave/Claude'
-                        };
-                        const keyMap = { gemini_primary: 'gemini', gemini_flash: 'gemini', perplexity: 'perplexity', claude: 'anthropic', serper: 'serper', bing: 'bing', brave: 'brave' };
-                        const colors = { healthy: '#166534', degraded: '#854d0e', down: '#7f1d1d', unconfigured: '#1f2937' };
-                        const textColors = { healthy: '#4ade80', degraded: '#fbbf24', down: '#f87171', unconfigured: '#4b5563' };
-                        pills.innerHTML = Object.entries(data.status || {}).map(([key, s]) => {
-                            const configured = data.key_status && data.key_status[keyMap[key]];
-                            const health = !configured ? 'unconfigured' : (s.health || (s.ok ? 'healthy' : 'down'));
-                            const icon = health === 'healthy' ? '*' : health === 'unconfigured' ? 'o' : health === 'degraded' ? 'o' : 'x';
-                            const tip = !configured ? 'Not configured - add key to Railway' : (s.lastError ? s.lastError.substring(0,80) : 'OK');
-                            return '<span title="' + tip + '" style="font-size:10px;font-weight:700;padding:3px 8px;border-radius:4px;background:' + (colors[health]||'#374151') + ';color:' + (textColors[health]||'#9ca3af') + ';cursor:default;">' + icon + ' ' + (labels[key]||key) + '</span>';
-                        }).join('');
-                    } catch(e) {}
-                }
-                // Load on tab switch and every 60 seconds
-                loadAiStatus();
-                setInterval(loadAiStatus, 60000);
-                <\/script>
+                <!-- CONTENT LIFECYCLE TRACKER REMOVED — one-way flow: Tracker is now read-only in app.contentscale.site, not synced from Engine -->
 
                 <!-- ── LIVE ACTIVITY WALL ─────────────────────────────────── -->
                 <div style="margin-bottom:16px;border-radius:10px;overflow:hidden;border:1px solid #1f2937;"><img src="/blog/images/live-ai-overview-seo-monitor.jpg" alt="Live AI Overview and SEO ranking monitor dashboard — ContentScale" style="width:100%;height:auto;display:block;" loading="lazy"></div>
