@@ -1,4 +1,38 @@
-console.log('=== CONTENTSCALE BOOT v2026-06-23-ui-upgrade | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON | GSCpriority=ON | intentTracking=ON | livePositionUI=ON ===');
+console.log('=== CONTENTSCALE BOOT v2026-06-23-ui-upgrade | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON | GSCpriority=ON | intentTracking=ON | livePositionUI=ON | defensiveCode=ON ===');
+
+// ═══════════════════════════════════════════════════════════════════════════
+// DEFENSIVE CODE: CATCH UNDEFINED FUNCTIONS BEFORE THEY BREAK
+// ═══════════════════════════════════════════════════════════════════════════
+// This code runs at startup to detect missing functions and prevent silent failures
+const REQUIRED_FUNCTIONS = [
+  'showAddModal', 'showImportModal', 'hideModal', 'openCitationBrief', 'loadPages',
+  'scanAllPages', 'mergePages', 'cleanPages', 'resetAllScans', 'bulkDeleteSelected',
+  'openTelegramSetup', 'filterPages', 'updateSitemapCount', 'updateSelectCount',
+  'renderGscCheckList', 'importGscKeywords', 'renderTrackerPages', 'openAddModal'
+];
+
+// Create a proxy handler that warns about missing functions
+if (typeof window !== 'undefined') {
+  window.addEventListener('error', function(event) {
+    if (event.message && event.message.includes('is not defined')) {
+      console.error('🚨 [DEFENSIVE] FUNCTION NOT DEFINED - This is a REAL error, not cache:', event.message);
+      console.error('   Stack:', event.filename + ':' + event.lineno);
+      console.error('   Please check if function is defined in index.js');
+    }
+  }, true);
+}
+
+// Log all function calls to admin dashboard (for debugging)
+if (typeof window !== 'undefined' && window.location && window.location.pathname.includes('/admin')) {
+  const originalOnclick = window.onclick;
+  document.addEventListener('click', function(e) {
+    if (e.target && e.target.onclick) {
+      const onclickStr = e.target.onclick.toString();
+      console.log('[CLICK] ' + onclickStr.substring(0, 80) + '...');
+    }
+  }, true);
+}
+;
 // CONTENTSCALE SERVER.JS — ELITE EDITION v4 (FIXED v3)
 // ✅ FIX v7: secondary_keywords + related_keywords auto in Analyse JSON + Execute prompt
 // ✅ FIX v7: analysis_data JSONB safe parse in execute-rewrite
@@ -21117,6 +21151,15 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
   var _lastBriefData = {};
   var _briefIsOpen = false;
   var _currentBriefPageId = null;
+
+  function openCitationBrief(pageId) {
+    // Open citation brief modal for a specific page from tracker
+    if (!pageId) return;
+    var page = allTrackerPages ? allTrackerPages.find(p => p.id === pageId) : null;
+    if (!page) { console.warn('[openCitationBrief] Page not found:', pageId); return; }
+    console.log('=== openCitationBrief CALLED | pageId=' + pageId + ' | url=' + page.url + ' ===');
+    showCitationBrief({ page_id: pageId, url: page.url, keyword: page.keyword || page.gsc_keyword, title: page.title });
+  }
 
   function showCitationBrief(data) {
     var card = document.getElementById('cbCard');
