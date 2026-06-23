@@ -21949,6 +21949,7 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
 
   // NEW: renderGscCheckList with priority selector (🔴🟡⚪) + intent
   function renderGscCheckList(items, containerEl, cbClass, labelFn, countEl, maxN) {
+    console.log('=== renderGscCheckList DEPLOYED | priority=ON | intent=ON | items=' + items.length + ' ===');
     containerEl.innerHTML = '';
     if (countEl) countEl.textContent = items.length + ' found — ' + maxN + ' slots available (Select All picks top ' + maxN + ')';
     
@@ -22281,6 +22282,7 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
 
   // -- GSC keyword import ----------------------------------------------------
   async function importGscKeywords() {
+    console.log('=== importGscKeywords DEPLOYED | sending priority + intent to API ===');
     // Read from checked checkboxes (set by renderGscCheckList)
     var cbs = document.querySelectorAll('.gsc-cb:checked');
     if (!cbs || !cbs.length) { toast('Select at least one item', '#f87171'); return; }
@@ -24386,6 +24388,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
         }
 
         function renderTrackerPageCard(p, pageIdx) {
+            if (pageIdx === 0) console.log('=== renderTrackerPageCard DEPLOYED | livePosition=ON | gscPosition=ON ===');
             const pageNum = (pageIdx !== undefined ? pageIdx : 0) + 1;
             const snap = p.latest_snapshot;
             const pending = parseInt(p.pending_changes||0);
