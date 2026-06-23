@@ -32185,12 +32185,12 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     + '<td style="padding:8px 10px;text-align:center;"><span style="font-size:11px;font-weight:700;color:' + clientTypeColor + ';">' + clientTypeBadge + '</span></td>'
                     + '<td style="padding:8px 10px;text-align:center;color:#a78bfa;">' + (c.page_count||0) + '</td>'
                     + '<td style="padding:8px 10px;text-align:center;"><span style="font-size:11px;font-weight:700;color:' + freqColor + ';">' + freqDisplay + '</span></td>'
-                    + '<td class="tc-max-cell" style="padding:8px 10px;text-align:center;"></td>'
+                    + '<td style="padding:6px 10px;text-align:center;color:#9ca3af;font-weight:700;">' + (c.max_pages||3) + '</td>'
                     + '<td style="padding:8px 10px;text-align:center;"><span style="font-size:10px;font-weight:700;color:' + statusColor + ';">' + statusLabel + '</span>'
                     + (isPaused ? '<div style="font-size:9px;color:#6b7280;margin-top:2px;">auto-paused</div>' : '')
                     + '</td>'
                     + '<td style="padding:8px 10px;color:#6b7280;">' + date + (c.registered_ip ? '<div style="font-size:10px;color:#374151;">' + c.registered_ip + '</div>' : '') + '</td>'
-                    + '<td style="padding:8px 10px;text-align:center;" class="tc-actions-cell"></td>';
+                    + '<td style="padding:6px 10px;text-align:center;" class="tc-toggle-cell"></td>';
 
                 // Activate button (for paused or disabled)
                 if (!isActive) {
@@ -32227,12 +32227,52 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 var tc_url_td = tr.querySelector('.tc-url-cell');
                 if (tc_url_td) {
                     tc_url_td.appendChild(domainDiv);
+                    if (extraDomsDiv) tc_url_td.appendChild(extraDomsDiv);
                     tc_url_td.appendChild(urlLink);
                     tc_url_td.appendChild(copyInlineBtn);
                 }
-                tr.querySelector('.tc-max-cell').appendChild(maxWrap);
-                tr.querySelector('.tc-actions-cell').appendChild(actionsDiv);
+
+                // ── Compact: collapse Max selector + all action buttons into an expandable detail row ──
+                var detailId = 'tcd-' + c.id;
+                var manageBtn = document.createElement('button');
+                manageBtn.className = 'tr-btn';
+                manageBtn.innerHTML = '\u2699 Manage \u25be';
+                manageBtn.style.cssText = 'font-size:10px;padding:3px 10px;border-color:#475569;color:#cbd5e1;white-space:nowrap;';
+                manageBtn.onclick = (function(did, btn){ return function(){
+                    var d = document.getElementById(did);
+                    if (!d) return;
+                    var open = (d.style.display === 'none' || !d.style.display);
+                    d.style.display = open ? 'table-row' : 'none';
+                    btn.innerHTML = open ? '\u2699 Manage \u25b4' : '\u2699 Manage \u25be';
+                    btn.style.borderColor = open ? '#818cf8' : '#475569';
+                    btn.style.color = open ? '#818cf8' : '#cbd5e1';
+                }; })(detailId, manageBtn);
+                tr.querySelector('.tc-toggle-cell').appendChild(manageBtn);
+                tr.style.borderBottom = '1px solid #161b22';
                 tbody.appendChild(tr);
+
+                // Hidden detail row — full Max selector + every action button (handlers unchanged)
+                var detailTr = document.createElement('tr');
+                detailTr.id = detailId;
+                detailTr.className = 'tc-detail-row';
+                detailTr.style.display = 'none';
+                var detailTd = document.createElement('td');
+                detailTd.colSpan = 9;
+                detailTd.style.cssText = 'padding:10px 14px 14px;background:#0b0f17;border-bottom:1px solid #1f2937;';
+                var detailWrap = document.createElement('div');
+                detailWrap.style.cssText = 'display:flex;flex-wrap:wrap;align-items:center;gap:14px;';
+                var maxBlock = document.createElement('div');
+                maxBlock.style.cssText = 'display:flex;align-items:center;gap:8px;';
+                var maxLbl = document.createElement('span');
+                maxLbl.textContent = 'Max pages';
+                maxLbl.style.cssText = 'font-size:10px;color:#6b7280;text-transform:uppercase;letter-spacing:.06em;';
+                maxBlock.appendChild(maxLbl);
+                maxBlock.appendChild(maxWrap);
+                detailWrap.appendChild(maxBlock);
+                detailWrap.appendChild(actionsDiv);
+                detailTd.appendChild(detailWrap);
+                detailTr.appendChild(detailTd);
+                tbody.appendChild(detailTr);
             });
             table.appendChild(thead);
             table.appendChild(tbody);
