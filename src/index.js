@@ -1,4 +1,4 @@
-console.log('=== CONTENTSCALE BOOT v2026-06-20-breaker | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON ===');
+console.log('=== CONTENTSCALE BOOT v2026-06-23-ui-upgrade | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON | GSCpriority=ON | intentTracking=ON | livePositionUI=ON ===');
 // CONTENTSCALE SERVER.JS — ELITE EDITION v4 (FIXED v3)
 // ✅ FIX v7: secondary_keywords + related_keywords auto in Analyse JSON + Execute prompt
 // ✅ FIX v7: analysis_data JSONB safe parse in execute-rewrite
@@ -21947,6 +21947,107 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
     }
   }
 
+  // NEW: renderGscCheckList with priority selector (🔴🟡⚪) + intent
+  function renderGscCheckList(items, containerEl, cbClass, labelFn, countEl, maxN) {
+    containerEl.innerHTML = '';
+    if (countEl) countEl.textContent = items.length + ' found — ' + maxN + ' slots available (Select All picks top ' + maxN + ')';
+    
+    items.forEach(function(item, idx) {
+      var checked = idx < maxN;
+      
+      // Outer wrapper
+      var wrapper = document.createElement('div');
+      wrapper.style.cssText = 'display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid #1f2937;font-size:11px;';
+      
+      // Checkbox
+      var cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.className = cbClass;
+      cb.checked = checked;
+      cb.style.cssText = 'cursor:pointer;flex-shrink:0;';
+      cb.value = typeof item === 'object' ? JSON.stringify(item) : item;
+      cb.onchange = function() { updateSelectCount(cbClass, maxN); };
+      
+      // Label/URL
+      var span = document.createElement('span');
+      span.style.cssText = 'color:#9ca3af;font-family:monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:150px;';
+      span.title = labelFn(item);
+      span.textContent = labelFn(item);
+      
+      // Intent selector
+      var intentGroup = document.createElement('div');
+      intentGroup.style.cssText = 'display:flex;flex-shrink:0;gap:4px;';
+      
+      var intentSelect = document.createElement('select');
+      intentSelect.style.cssText = 'background:#1f2937;color:#fff;border:1px solid #374151;border-radius:3px;padding:4px;font-size:10px;cursor:pointer;width:80px;';
+      var intents = [
+        { value: '', label: '— intent' },
+        { value: 'service', label: 'Service' },
+        { value: 'info', label: 'Info' },
+        { value: 'product', label: 'Product' },
+        { value: 'guide', label: 'Guide' },
+        { value: 'comparison', label: 'Compare' },
+        { value: 'review', label: 'Review' },
+        { value: 'local', label: 'Local' }
+      ];
+      intents.forEach(function(intent) {
+        var opt = document.createElement('option');
+        opt.value = intent.value;
+        opt.textContent = intent.label;
+        intentSelect.appendChild(opt);
+      });
+      intentSelect.onchange = function() {
+        if (typeof item === 'object') {
+          item.intent = intentSelect.value;
+        }
+      };
+      intentGroup.appendChild(intentSelect);
+      
+      // Priority selector (🔴🟡⚪)
+      var priorityGroup = document.createElement('div');
+      priorityGroup.style.cssText = 'display:flex;gap:4px;flex-shrink:0;';
+      
+      var priorities = [
+        { emoji: '🔴', label: 'HIGH', value: 'high', bg: '#dc2626' },
+        { emoji: '🟡', label: 'MEDIUM', value: 'medium', bg: '#f59e0b' },
+        { emoji: '⚪', label: 'LOW', value: 'low', bg: '#d1d5db' }
+      ];
+      
+      // Default priority: HIGH for top 3, MEDIUM for rest
+      var defaultPrio = idx < 3 ? 'high' : (idx < Math.ceil(maxN * 0.66) ? 'medium' : 'low');
+      if (typeof item === 'object') item.priority = defaultPrio;
+      
+      priorities.forEach(function(p) {
+        var btn = document.createElement('button');
+        btn.textContent = p.emoji;
+        btn.title = p.label;
+        btn.type = 'button';
+        btn.style.cssText = 'border:none;background:' + (p.value === defaultPrio ? p.bg : '#374151') + ';color:#fff;width:24px;height:24px;border-radius:3px;cursor:pointer;font-size:12px;padding:0;transition:all 0.2s;';
+        btn.onclick = function(e) {
+          e.preventDefault();
+          // Store priority in item
+          if (typeof item === 'object') {
+            item.priority = p.value;
+          }
+          // Update button styles
+          priorityGroup.querySelectorAll('button').forEach(function(b) {
+            var prio = priorities.find(function(x) { return x.emoji === b.textContent; });
+            b.style.background = (item.priority === prio.value) ? prio.bg : '#374151';
+          });
+        };
+        priorityGroup.appendChild(btn);
+      });
+      
+      wrapper.appendChild(cb);
+      wrapper.appendChild(span);
+      wrapper.appendChild(intentGroup);
+      wrapper.appendChild(priorityGroup);
+      containerEl.appendChild(wrapper);
+    });
+    
+    updateSelectCount(cbClass, maxN);
+  }
+
   function selectAllSitemap(val) {
     var cbs = document.querySelectorAll('.sitemap-cb');
     var count = 0;
@@ -22120,7 +22221,7 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
 
     // If queries-only, show info
     if (pairs[0] && pairs[0].isQueryOnly) {
-      toast('Queries CSV detected \\u2014 ' + pairs.length + ' keywords found. URLs will be set to your homepage. Edit per page after import.', '#fbbf24');
+      toast('Queries CSV detected — ' + pairs.length + ' keywords found. URLs will be set to your homepage. Edit per page after import.', '#fbbf24');
     }
 
     var container = document.getElementById('gscItems');
@@ -22128,7 +22229,8 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
     var list = document.getElementById('gscList');
     if (list) list.style.display = 'block';
     var maxSel = Math.min(MAX_PAGES, pairs.length);
-    renderCheckList(pairs, container, 'gsc-cb',
+    // Use NEW renderGscCheckList with priority selector
+    renderGscCheckList(pairs, container, 'gsc-cb',
       function(p) {
         var path = '';
         try { path = new URL(p.url).pathname; } catch(e) { path = p.url; }
@@ -22170,7 +22272,7 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
 
   // -- GSC keyword import ----------------------------------------------------
   async function importGscKeywords() {
-    // Read from checked checkboxes (set by renderCheckList)
+    // Read from checked checkboxes (set by renderGscCheckList)
     var cbs = document.querySelectorAll('.gsc-cb:checked');
     if (!cbs || !cbs.length) { toast('Select at least one item', '#f87171'); return; }
     var selected = [];
@@ -22191,7 +22293,7 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
       return !p.url || p.url.indexOf('http') !== 0;
     });
     queriesOnly.forEach(function(p) {
-      toImport.push({ url: 'https://' + DOMAIN + '/', keyword: p.keyword || p.url });
+      toImport.push({ url: 'https://' + DOMAIN + '/', keyword: p.keyword || p.url, priority: p.priority });
     });
     if (!toImport.length) { toast('No valid URLs to import', '#f87171'); return; }
     var bt = document.getElementById('importGscBtn');
@@ -22212,6 +22314,8 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
       api('/pages', 'POST', {
         url: p.url,
         keyword: p.keyword || '',
+        intent: p.intent || null,
+        priority: p.priority || 'medium',
         gsc_clicks: p.clicks || null,
         gsc_impressions: p.impressions || null,
         gsc_position: p.position || null,
@@ -24292,13 +24396,24 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
             const rawUrl = p.url || '';
             const urlClean = rawUrl.replace(/#.*$/, '').replace(/[/]$/, '');
 
-            // Position pill
+            // Position pills - GSC vs LIVE
             let posPill = '<span style="color:#6b7280;font-size:13px;">Not ranked</span>';
+            let gscPosPill = '';
+            
+            // LIVE position (from latest scan)
             if(snap?.google_position) {
-                const pos = snap.google_position;
-                const posColor = pos<=3?'#4ade80':pos<=10?'#a3e635':pos<=20?'#fbbf24':'#f87171';
-                const posBg = pos<=3?'#052e16':pos<=10?'#1a2e05':pos<=20?'#2d1f00':'#2d0a0a';
-                posPill = '<span class="tr-badge" title="Google ranking position #'+pos+' for keyword: '+(p.keyword||p.gsc_keyword||'unknown')+'" style="color:'+posColor+';background:'+posBg+';font-size:13px;padding:3px 12px;cursor:help;">#'+pos+'</span>';
+                const livePos = snap.google_position;
+                const liveColor = livePos<=3?'#4ade80':livePos<=10?'#a3e635':livePos<=20?'#fbbf24':'#f87171';
+                const liveBg = livePos<=3?'#052e16':livePos<=10?'#1a2e05':livePos<=20?'#2d1f00':'#2d0a0a';
+                posPill = '<span class="tr-badge" title="LIVE Google ranking position #'+livePos+' for keyword: '+(p.keyword||p.gsc_keyword||'unknown')+'. Last scan: '+lastCheck+'" style="color:'+liveColor+';background:'+liveBg+';font-size:13px;padding:3px 12px;cursor:help;">🔴 #'+livePos+'</span>';
+            }
+            
+            // GSC position (from Search Console) - if different from LIVE
+            if(p.gsc_position && (!snap?.google_position || snap.google_position !== p.gsc_position)) {
+                const gscPos = p.gsc_position;
+                const gscColor = gscPos<=3?'#60a5fa':gscPos<=10?'#3b82f6':gscPos<=20?'#93c5fd':'#bfdbfe';
+                const gscBg = gscPos<=3?'#0c2340':gscPos<=10?'#082f49':gscPos<=20?'#0e3a5f':'#1e3a5f';
+                gscPosPill = '<span class="tr-badge" title="GSC position #'+gscPos+' (from Search Console)" style="color:'+gscColor+';background:'+gscBg+';font-size:13px;padding:3px 12px;cursor:help;margin-left:6px;">📊 #'+gscPos+'</span>';
             }
 
             // GRAAF score badge
@@ -24411,7 +24526,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 +'</div>'
                 +manualCta
                 +'<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">'
-                +posPill+gBadge+pBadge+bBadge+brBadge
+                +posPill+gscPosPill+gBadge+pBadge+bBadge+brBadge
                 +'</div></div>'
                 +'<div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">'
                 +'<div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;">'
