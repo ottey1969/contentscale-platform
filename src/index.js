@@ -959,7 +959,7 @@ async function sendTrackerEmail(clientId, subject, htmlBody) {
   </div>
   <div style="background:#f5f3ff;border:1px solid #ddd6fe;padding:20px 32px;text-align:center;">
     <div style="font-size:13px;font-weight:700;color:#1e293b;margin-bottom:6px;">Want Ottmar to implement these changes for you?</div>
-    <div style="font-size:12px;color:#64748b;margin-bottom:12px;">Book a free strategy call — Done-for-you AI citation optimization &mdash; GRAAF score 90+ guaranteed.</div>
+    <div style="font-size:12px;color:#64748b;margin-bottom:12px;">Book a free strategy call — Done-for-you AI citation optimization &mdash; high-GRAAF, citation-ready content.</div>
     <a href="https://calendly.com/aioeditors" style="display:inline-block;background:#0f172a;color:#ffffff;text-decoration:none;padding:10px 20px;border-radius:6px;font-size:12px;font-weight:700;">Book Free Strategy Call</a>
   </div>
   <div style="background:#f8fafc;border:1px solid #e2e8f0;border-top:none;border-radius:0 0 12px 12px;padding:20px 32px;text-align:center;">
@@ -3027,6 +3027,43 @@ app.post('/api/admin/tracker-clients/:id/regenerate-token', verifyAdmin, async (
       await sendTrackerEmail(client.id, 'Your tracker link has been updated — ' + client.domain, html).catch(()=>{});
     }
     res.json({ success: true, new_url: newUrl, token: newToken });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// POST /api/admin/tracker-clients/:id/email-last-brief — manually (re)send the most recent Citation Brief by email
+app.post('/api/admin/tracker-clients/:id/email-last-brief', verifyAdmin, async (req, res) => {
+  try {
+    const cr = await pool.query('SELECT * FROM tracker_clients WHERE id=$1', [req.params.id]);
+    if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Client not found' });
+    const client = cr.rows[0];
+    if (!client.email) return res.status(400).json({ success: false, error: 'Client has no email address on file' });
+    const pr = await pool.query(
+      `SELECT url, brief_content FROM tracker_pages
+       WHERE tracker_client_id=$1 AND brief_content IS NOT NULL AND (is_active=TRUE OR is_active IS NULL)
+       ORDER BY brief_started_at DESC NULLS LAST, id DESC LIMIT 1`,
+      [client.id]
+    );
+    if (!pr.rows.length) return res.status(400).json({ success: false, error: 'No brief found yet for this client — run a scan first' });
+    const page = pr.rows[0];
+    let brief; try { brief = typeof page.brief_content === 'string' ? JSON.parse(page.brief_content) : page.brief_content; } catch(e) { brief = null; }
+    const items = (brief && Array.isArray(brief.items)) ? brief.items : [];
+    if (!items.length) return res.status(400).json({ success: false, error: 'Latest brief has no recommendations to send' });
+    const _esc = s => String(s==null?'':s).replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
+    const recHtml = items.map(it => {
+      const t = it.h2 || it.title || it.heading || it.action || 'Recommendation';
+      const b = it.body || it.content || it.text || it.detail || '';
+      const w = it.reason || it.why || it.impact || it.rationale || '';
+      return '<div style="border-left:3px solid #7c3aed;padding:4px 0 4px 14px;margin-bottom:18px;">'
+        + '<div style="font-size:14px;font-weight:800;color:#0f172a;margin-bottom:6px;">' + _esc(t) + '</div>'
+        + (b ? '<div style="font-size:13px;color:#374151;line-height:1.65;">' + _esc(b) + '</div>' : '')
+        + (w ? '<div style="font-size:12px;color:#7c3aed;font-style:italic;margin-top:6px;line-height:1.5;">' + _esc(w) + '</div>' : '')
+        + '</div>';
+    }).join('');
+    const html = '<div style="font-size:13px;color:#64748b;margin-bottom:6px;">AI Citation Brief</div>'
+      + '<div style="font-size:16px;font-weight:800;color:#0f172a;margin-bottom:16px;word-break:break-all;">' + _esc(page.url) + '</div>'
+      + recHtml;
+    await notifyClient(client.id, 'Your AI Citation Brief — ' + client.domain, html, '\u{1F3AF} Your AI Citation Brief for ' + page.url);
+    res.json({ success: true, message: 'Brief emailed to ' + client.email });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
@@ -26290,7 +26327,7 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
   <!-- Upsell -->
   <div class="cs-upsell">
     <div style="font-size:13px;font-weight:700;color:#e5e7eb;margin-bottom:6px;">Want Ottmar to &ldquo;babysit&rdquo; your domain?</div>
-    <div style="font-size:12px;color:#9ca3af;margin-bottom:14px;">Done-for-you AI citation optimization &mdash; Ottmar implements every Citation Brief for you. Plus the GRAAF SEO content score 90+ guaranteed.</div>
+    <div style="font-size:12px;color:#9ca3af;margin-bottom:14px;">Done-for-you AI citation optimization &mdash; Ottmar implements every Citation Brief for you. Plus high-GRAAF, citation-ready content.</div>
     <a href="https://wa.me/34644204756?text=Hi+Ottmar,+I+want+you+to+babysit+my+domain+__DOMAIN__+for+AI+citations" target="_blank" class="cs-wa-btn">
       <i class="fab fa-whatsapp"></i> Let Ottmar babysit your domain
     </a>
@@ -29623,6 +29660,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                         <div class="tr-stat"><div class="val" id="tcStatPages" style="color:#a78bfa;">0</div><div class="lbl">Total pages</div></div>
                         <div class="tr-stat"><div class="val" id="tcStatWithEmail" style="color:#38bdf8;">0</div><div class="lbl">With email</div></div>
                         <div class="tr-stat"><div class="val" id="tcStatWithWa" style="color:#4ade80;">0</div><div class="lbl">With WhatsApp</div></div>
+                        <div class="tr-stat"><div class="val" id="tcStatScansDay" style="color:#f59e0b;" title="Estimated SERP scans per day = active tracked pages ÷ 3-day interval. Watch this against your daily SERP budget.">0</div><div class="lbl">Scans/day (est)</div></div>
                     </div>
                     <div id="tcList"></div>
                 </div>
@@ -31809,6 +31847,8 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 s('tcStatPages', pages);
                 s('tcStatWithEmail', withEmail);
                 s('tcStatWithWa', withWa);
+                var activePages = _tcClients.filter(function(c){ return c.status === 'active'; }).reduce(function(a,c){ return a + parseInt(c.page_count||0); }, 0);
+                s('tcStatScansDay', Math.ceil(activePages / 3));
                 // Type breakdown in title attributes
                 var totalEl = document.getElementById('tcStatTotal');
                 if (totalEl) totalEl.title = 'Free: ' + freeCount + ' · Own: ' + ownCount + ' · Dealify: ' + dealifyCount;
@@ -32043,6 +32083,18 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 ipBtn.title = 'Registered IP: ' + (c.registered_ip || 'none');
                 ipBtn.style.cssText = 'font-size:10px;padding:3px 8px;';
                 ipBtn.onclick = (function(id){ return function(){ resetTcIp(id); }; })(c.id);
+
+                var emailBriefBtn = document.createElement('button');
+                emailBriefBtn.className = 'tr-btn';
+                emailBriefBtn.textContent = '\u2709 Email brief';
+                emailBriefBtn.title = 'Send the latest Citation Brief to this client by email now';
+                emailBriefBtn.style.cssText = 'font-size:10px;padding:3px 8px;border-color:#38bdf8;color:#38bdf8;';
+                emailBriefBtn.onclick = (function(id){ return async function(){
+                    if (!confirm('Email the latest Citation Brief to this client now?')) return;
+                    var r = await apiCall('/api/admin/tracker-clients/' + id + '/email-last-brief', 'POST', {});
+                    alert(r && r.success ? (r.message || 'Brief emailed.') : ('Could not email: ' + ((r && r.error) || 'unknown error')));
+                }; })(c.id);
+                actionsDiv.appendChild(emailBriefBtn);
 
                 var regenBtn = document.createElement('button');
                 regenBtn.className = 'tr-btn';
@@ -36388,6 +36440,36 @@ Return ONLY JSON array (max 5 items): [{"title":"max 6 words","priority":"high"|
         _sseBroadcast(_briefPayload2);
         if (_clientToken) _liveWallBroadcast(_clientToken, _briefPayload2);
         console.log(`[tracker] Brief generated and broadcast for ${pageUrl}`);
+
+        // ── Email the brief to the client (previously briefs went ONLY to the live wall, never email) ──
+        try {
+          const _items = Array.isArray(brief2.items) ? brief2.items : [];
+          if (_items.length) {
+            const _esc = s => String(s==null?'':s).replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
+            const _recHtml = _items.map(it => {
+              const _title = it.h2 || it.title || it.heading || it.action || 'Recommendation';
+              const _body  = it.body || it.content || it.text || it.detail || '';
+              const _why   = it.reason || it.why || it.impact || it.rationale || '';
+              return '<div style="border-left:3px solid #7c3aed;padding:4px 0 4px 14px;margin-bottom:18px;">'
+                + '<div style="font-size:14px;font-weight:800;color:#0f172a;margin-bottom:6px;">' + _esc(_title) + '</div>'
+                + (_body ? '<div style="font-size:13px;color:#374151;line-height:1.65;">' + _esc(_body) + '</div>' : '')
+                + (_why ? '<div style="font-size:12px;color:#7c3aed;font-style:italic;margin-top:6px;line-height:1.5;">' + _esc(_why) + '</div>' : '')
+                + '</div>';
+            }).join('');
+            const _briefHtml =
+              '<div style="font-size:13px;color:#64748b;margin-bottom:6px;">AI Citation Brief — fresh scan</div>'
+              + '<div style="font-size:16px;font-weight:800;color:#0f172a;margin-bottom:4px;word-break:break-all;">' + _esc(pageUrl) + '</div>'
+              + '<div style="font-size:12px;color:#64748b;margin-bottom:20px;">Position ' + _esc(pos2 || '—')
+              + ' · AIO ' + (aio2?'✓':'✗') + ' · Perplexity ' + (perp2?'✓':'✗') + ' · Score ' + _esc(score2 || '—') + '/100</div>'
+              + _recHtml;
+            await notifyClient(
+              page.tracker_client_id,
+              'New AI Citation Brief — ' + (domain2 || pageUrl),
+              _briefHtml,
+              '🎯 New AI Citation Brief ready for ' + pageUrl
+            ).catch(e => console.warn('[brief-email]', e.message));
+          }
+        } catch(emailErr) { console.warn('[brief-email]', emailErr.message); }
       }
     } catch(briefErr) {
       console.warn('[brief-gen]', briefErr.message);
@@ -36812,7 +36894,7 @@ function startPausedFollowupScheduler() {
             + '<p style="font-size:14px;color:#374151;line-height:1.7;margin-bottom:14px;">No worries — implementing SEO recommendations takes time. That\'s exactly why Ottmar offers a done-for-you service.</p>'
             + '<div style="background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:16px;margin-bottom:16px;">'
             + '<div style="font-size:14px;font-weight:700;color:#166534;margin-bottom:8px;">&#128161; Let Ottmar babysit your domain</div>'
-            + '<div style="font-size:13px;color:#166534;line-height:1.7;margin-bottom:12px;">Ottmar implements every Citation Brief for you. Plus the GRAAF SEO content score 90+ guaranteed.</div>'
+            + '<div style="font-size:13px;color:#166534;line-height:1.7;margin-bottom:12px;">Ottmar implements every Citation Brief for you. Plus high-GRAAF, citation-ready content.</div>'
             + '<a href="' + ottmarWa + '" style="display:inline-block;background:#16a34a;color:white;text-decoration:none;padding:10px 22px;border-radius:6px;font-size:13px;font-weight:700;">WhatsApp Ottmar &rarr;</a>'
             + '</div>'
             + '<p style="font-size:12px;color:#94a3b8;">Your tracker will be deleted in 23 days if not reactivated.</p>'
@@ -36907,7 +36989,7 @@ function startHtmlReminderScheduler() {
               + '<p style="font-size:14px;color:#374151;line-height:1.7;margin-bottom:14px;">Your Citation Brief for <strong>' + p.url + '</strong> has been active for <strong>' + briefAgeDays + ' days</strong> without being marked as done.</p>'
               + '<p style="font-size:14px;color:#374151;line-height:1.7;margin-bottom:14px;">To reactivate your tracker, contact Ottmar directly.</p>'
               + '<a href="https://wa.me/31628073996?text=Hi+Ottmar,+I+want+to+reactivate+my+tracker+for+' + encodeURIComponent(p.domain) + '" style="display:inline-block;background:#16a34a;color:white;text-decoration:none;padding:10px 22px;border-radius:6px;font-size:13px;font-weight:700;">WhatsApp Ottmar to reactivate &rarr;</a>'
-              + '<p style="font-size:11px;color:#94a3b8;margin-top:12px;">Or let Ottmar implement everything for you — GRAAF score 90+ guaranteed.</p>';
+              + '<p style="font-size:11px;color:#94a3b8;margin-top:12px;">Or let Ottmar implement everything for you — high-GRAAF, citation-ready content.</p>';
             await notifyClient(p.tracker_client_id, subject, htmlBody, subject + '\n\n<a href="' + trackerUrl + '">Open tracker →</a>').catch(()=>{});
 
             if (p.telegram_chat_id) {
@@ -36931,7 +37013,7 @@ function startHtmlReminderScheduler() {
             + '</div>'
             + '<a href="' + trackerUrl + '" style="display:inline-block;background:#7c3aed;color:white;text-decoration:none;padding:10px 22px;border-radius:6px;font-size:13px;font-weight:700;margin-right:10px;">Open tracker &rarr;</a>'
             + '<a href="https://wa.me/31628073996?text=Hi+Ottmar,+please+implement+my+Citation+Brief+for+' + encodeURIComponent(p.url) + '" style="display:inline-block;background:#16a34a;color:white;text-decoration:none;padding:10px 22px;border-radius:6px;font-size:13px;font-weight:700;">Let Ottmar do it for me &rarr;</a>'
-            + '<p style="font-size:11px;color:#94a3b8;margin-top:14px;">Done-for-you AI citation optimization — GRAAF score 90+ guaranteed.</p>';
+            + '<p style="font-size:11px;color:#94a3b8;margin-top:14px;">Done-for-you AI citation optimization — high-GRAAF, citation-ready content.</p>';
           await notifyClient(p.tracker_client_id, subject, htmlBody, subject + '\n\n<a href="' + trackerUrl + '">Open tracker →</a>').catch(()=>{});
 
           if (p.telegram_chat_id) {
