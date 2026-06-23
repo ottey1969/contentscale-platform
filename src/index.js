@@ -1220,7 +1220,7 @@ app.get('/api/tracker-client/:token/fetch-sitemap', async (req, res) => {
     let urls = [];
     if (/<sitemapindex/i.test(xml)) {
       // Sitemap INDEX — follow each sub-sitemap and collect real page URLs
-      const subSitemaps = [...xml.matchAll(/<loc>(https?:\/\/[^<]+\.xml[^<]*)<\/loc>/gi)].map(m => m[1].trim()).slice(0, 20);
+      const subSitemaps = [...xml.matchAll(/<loc>(https?:\/\/[^<]+\.xml[^<]*)<\/loc>/gi)].map(m => m[1].trim()).slice(0, 100); // increased from 20 to 100
       for (const sm of subSitemaps) {
         try {
           const ctrl2 = new AbortController();
@@ -1231,7 +1231,7 @@ app.get('/api/tracker-client/:token/fetch-sitemap', async (req, res) => {
           const subUrls = [...sx.matchAll(/<loc>(https?:\/\/[^<]+)<\/loc>/gi)].map(m => m[1].trim()).filter(u => !/\.xml(\?|$)/i.test(u));
           urls.push(...subUrls);
         } catch(e) {}
-        if (urls.length >= 100) break;
+        if (urls.length >= 500) break; // increased from 100 to 500
       }
     } else {
       // Regular sitemap — extract page URLs, never the .xml files themselves
@@ -1241,7 +1241,7 @@ app.get('/api/tracker-client/:token/fetch-sitemap', async (req, res) => {
     const _SKIP_ARCHIVE = /\/(category|categories|tag|tags|author|authors|uncategorized)(\/|$)|\/page\/\d+|\/feed\/?$|\/wp-(json|admin|content|includes)\//i;
     const _SKIP_FILE = /\.(jpg|jpeg|png|gif|webp|svg|css|js|pdf|xml|json)(\?|$)/i;
     urls = urls.filter(u => !_SKIP_ARCHIVE.test(u) && !_SKIP_FILE.test(u));
-    urls = urls.slice(0, 100);
+    urls = urls.slice(0, 500); // increased from 100 to 500 for full site context
     // Remember the sitemap URL on the client (shows the "added" check + lets briefs use it for internal links)
     if (urls.length) { try { await pool.query('UPDATE tracker_clients SET sitemap_url=$1 WHERE token=$2', [sitemapUrl, req.params.token]); } catch(e){} }
     res.json({ success: true, urls, count: urls.length });
@@ -1269,7 +1269,7 @@ app.post('/api/tracker-client/:token/sitemap-links', async (req, res) => {
     const sitemapPages = urlMatches
       .map(m => m.replace(/<\/?loc>/g, '').trim())
       .filter(u => u.startsWith('http'))
-      .slice(0, 100); // max 100 pages
+      .slice(0, 500); // increased from 100 to 500 for full site context (cannibalization + internal linking)
 
     // Get tracked pages for this client
     const trackedR = await pool.query('SELECT url, keyword FROM tracker_pages WHERE tracker_client_id=$1 AND (is_active=TRUE OR is_active IS NULL)', [client.id]);
@@ -28374,12 +28374,40 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
     var list = document.getElementById('gscList');
     if (list) list.style.display = 'block';
     var maxSel = Math.min(MAX_PAGES, pairs.length);
+    
+    // Calculate priority/impact for each keyword
+    pairs.forEach(function(p) {
+      var clicks = p.clicks || 0;
+      var impressions = p.impressions || 0;
+      var position = p.position || 999;
+      var opportunityClicks = impressions > 0 ? Math.round(impressions * (28 / 100)) : 0; // 28% CTR at #1
+      var clickGap = opportunityClicks > clicks ? opportunityClicks - clicks : 0;
+      
+      // Priority scoring
+      var priorityScore = 0;
+      if (clicks >= 10 || impressions >= 500) priorityScore = 3; // HIGH
+      else if (clicks >= 3 || impressions >= 100) priorityScore = 2; // MEDIUM
+      else if (impressions >= 10) priorityScore = 1; // LOW
+      else priorityScore = 0; // NONE
+      
+      p.priority = priorityScore;
+      p.priorityLabel = priorityScore === 3 ? '🔴 HIGH' : priorityScore === 2 ? '🟡 MEDIUM' : priorityScore === 1 ? '⚪ LOW' : '⚫ NONE';
+      p.clickGap = clickGap;
+      p.opportunityClicks = opportunityClicks;
+    });
+    
     renderCheckList(pairs, container, 'gsc-cb',
       function(p) {
         var path = '';
         try { path = new URL(p.url).pathname; } catch(e) { path = p.url; }
         if (path === '/') path = '(homepage)';
-        return (p.isQueryOnly ? '[keyword] ' : '') + path + (p.keyword ? ' - ' + p.keyword : '') + (p.clicks ? ' (' + p.clicks + ' clicks)' : '');
+        var label = (p.isQueryOnly ? '[keyword] ' : '') + path + (p.keyword ? ' · ' + p.keyword : '');
+        label += (p.clicks ? ' · ' + p.clicks + ' clicks' : '');
+        label += (p.impressions ? ' · ' + p.impressions + ' impr' : '');
+        label += (p.position ? ' · #' + Math.round(p.position) : '');
+        label += (p.clickGap ? ' · +' + p.clickGap + ' potential' : '');
+        label += ' ' + (p.priorityLabel || '');
+        return label;
       },
       countEl,
       maxSel
@@ -35414,7 +35442,7 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
                   .filter(function(u){ return /^https?:\/\//i.test(u) && !/\.(xml|jpe?g|png|webp|gif|svg|pdf)$/i.test(u) && !/\/(category|categories|tag|tags|author|authors|uncategorized)(\/|$)|\/page\/\d+|\/feed\/?$/i.test(u); });
                 _sitemapUrls = Array.from(new Set(_sitemapUrls))
                   .filter(function(u){ return u.replace(/\/$/, '') !== String(pageUrl || '').replace(/\/$/, ''); })
-                  .slice(0, 60);
+                  .slice(0, 500); // INCREASED from 60 to 500 — load FULL sitemap for cannibalization + internal linking context
               }
             } catch(e) {}
           }
