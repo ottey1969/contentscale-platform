@@ -32771,8 +32771,9 @@ app.post('/api/tracker/reassign-profile', verifyEngineAccess, async (req, res) =
     
     // Use JavaScript-side domain extraction for strict matching
     // Fetch all tracker pages for this engine and filter by exact domain match in app layer
+    // EXCLUDE Tracker Clients pages (tracker_client_id IS NOT NULL)
     const allPagesR = await pool.query(
-      `SELECT id, url FROM tracker_pages WHERE engine_code_id = $1 OR (engine_code_id IS NULL AND $1 IS NOT NULL)`,
+      `SELECT id, url FROM tracker_pages WHERE (engine_code_id = $1 OR (engine_code_id IS NULL AND $1 IS NOT NULL)) AND tracker_client_id IS NULL`,
       [codeId]
     );
     
