@@ -13318,6 +13318,8 @@ app.post('/api/gsc/match-stats', verifyEngineAccess, async (req, res) => {
   }
 });
 
+// ── GSC Match-Stats Alias (for /api/content prefix) ──
+
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 const _SEO_AUDIT_FINAL_HTML = `<!DOCTYPE html>
 <html lang="en">
@@ -22691,6 +22693,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 <button onclick="switchTab('pending')" id="tabPendingBtn" class="sidebar-btn"><i class="fas fa-clock"></i><span>Pending</span></button>
                 <button onclick="switchTab('users')" id="tabUsersBtn" class="sidebar-btn"><i class="fas fa-user-cog"></i><span>Users</span></button>
                 <button onclick="switchTab('freelancers')" id="tabFreelancersBtn" class="sidebar-btn"><i class="fas fa-users"></i><span>Freelancers</span></button>
+
                 <button onclick="switchTab('tracker-clients')" id="tabTrackerClientsBtn" class="sidebar-btn"><i class="fas fa-users"></i><span>Tracker Clients</span></button>
                 <button onclick="switchTab('enginecodes')" id="tabEnginecodesBtn" class="sidebar-btn"><i class="fas fa-key"></i><span>Engine Access</span></button>
                 <button onclick="switchTab('giveaccess')" id="tabGiveaccessBtn" class="sidebar-btn"><i class="fas fa-share-alt"></i><span>Give Access</span></button>
@@ -22861,6 +22864,9 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 </div>
             </div>
 
+
+            <!-- TRACKER CLIENTS -->
+            <!-- TRACKER CLIENTS -->
             <div id="tab-tracker-clients" class="tab-content hidden">
                 <div style="padding:8px;">
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
@@ -23248,6 +23254,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
             if (tab==='leaderboard') loadLeaderboard();
             if (tab==='freelancers') loadFreelancers();
             if (tab==='users') loadUsers();
+            if (tab==='tracker') loadTrackerPages();
             if (tab==='messages') loadMessages();
             if (tab==='tracker-clients') {
                 if (typeof loadTrackerClients === 'function') loadTrackerClients();
@@ -23794,6 +23801,391 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
 
         async function loadCampaignsList(){} // removed
 
+
+        // -- CONTENT LIFECYCLE TRACKER JS ----------------------------------------
+        let allTrackerPages = [];
+        let _trProfileId = null;
+        let _trClientFilter = '';
+
+        async function loadTrackerPages() {
+            const btn = document.getElementById('trRefreshBtn');
+            if(btn){btn.disabled=true;btn.innerHTML='<i class="fas fa-sync-alt fa-spin" style="margin-right:5px;"></i>Refreshing...';}
+            try {
+                const data = await apiCall('/api/tracker/pages' + (_trProfileId ? '?profile_id='+_trProfileId : ''));
+                allTrackerPages = data.pages || [];
+                populateClientFilter();
+                renderTrackerStats();
+                renderTrackerPages();
+            } catch(e) {
+                document.getElementById('trPagesList').innerHTML = '<div style="text-align:center;color:#f87171;padding:40px;">Failed to load - '+e.message+'</div>';
+            } finally {
+                if(btn){btn.disabled=false;btn.innerHTML='<i class="fas fa-sync-alt" style="margin-right:5px;"></i>Refresh';}
+            }
+        }
+
+        let _trDomainFilter = '';
+        let _trSearchQuery = '';
+
+        function filterTrackerBySearch() {
+            const el = document.getElementById('trSearchInput');
+            _trSearchQuery = el ? el.value.toLowerCase().trim() : '';
+            renderTrackerPages();
+        }
+
+        function filterTrackerByClient() {
+            const sel = document.getElementById('trClientFilter');
+            _trClientFilter = sel ? sel.value : '';
+            renderTrackerPages();
+        }
+
+        function filterTrackerByDomain() {
+            const sel = document.getElementById('trDomainFilter');
+            _trDomainFilter = sel ? sel.value : '';
+            renderTrackerPages();
+        }
+
+        function populateClientFilter() {
+            const sel = document.getElementById('trClientFilter');
+            if(!sel) return;
+            const clients = {};
+            allTrackerPages.forEach(function(p) {
+                const key = p.engine_client_name || '__admin__';
+                clients[key] = p.engine_client_name || 'Admin';
+            });
+            const prev = sel.value;
+            sel.innerHTML = '<option value="">All clients (' + allTrackerPages.length + ' pages)</option>';
+            Object.keys(clients).sort().forEach(function(k) {
+                const count = allTrackerPages.filter(function(p){ return (p.engine_client_name||'__admin__') === k; }).length;
+                const opt = document.createElement('option');
+                opt.value = k; opt.textContent = clients[k] + ' (' + count + ')';
+                sel.appendChild(opt);
+            });
+            sel.value = prev || '';
+
+            // Populate domain filter
+            const domSel = document.getElementById('trDomainFilter');
+            if(domSel) {
+                const domains = {};
+                allTrackerPages.forEach(function(p) {
+                    const d = (p.url||'').split('//').pop().split('/')[0].replace('www.','');
+                    if(d) domains[d] = (domains[d]||0) + 1;
+                });
+                const prevDom = domSel.value;
+                domSel.innerHTML = '<option value="">All domains (' + allTrackerPages.length + ' pages)</option>';
+                Object.keys(domains).sort().forEach(function(d) {
+                    const opt = document.createElement('option');
+                    opt.value = d; opt.textContent = d + ' (' + domains[d] + ')';
+                    domSel.appendChild(opt);
+                });
+                domSel.value = prevDom || '';
+            }
+        }
+
+        function renderTrackerStats() {
+            const pages = allTrackerPages;
+            const withLatest = pages.filter(p => p.latest_snapshot);
+            const citedG = withLatest.filter(p => p.latest_snapshot?.ai_google_overview_cited).length;
+            const citedP = withLatest.filter(p => p.latest_snapshot?.ai_perplexity_cited).length;
+            const citedB = withLatest.filter(p => p.latest_snapshot?.ai_bing_cited).length;
+            const citedC = withLatest.filter(p => p.latest_snapshot?.ai_brave_cited).length;
+            const today = new Date().toDateString();
+            const checkedToday = pages.filter(p => p.last_checked_at && new Date(p.last_checked_at).toDateString()===today).length;
+            const pending = pages.reduce((a,p) => a + parseInt(p.pending_changes||0), 0);
+            const el = id => document.getElementById(id);
+            if(el('trStatPages')) el('trStatPages').textContent = pages.length;
+            if(el('trStatCitedGoogle')) el('trStatCitedGoogle').textContent = citedG;
+            if(el('trStatCitedPerplexity')) el('trStatCitedPerplexity').textContent = citedP;
+            if(el('trStatCitedCopilot')) el('trStatCitedCopilot').textContent = citedB;
+            if(el('trStatCitedClaude')) el('trStatCitedClaude').textContent = citedC;
+            if(el('trStatCheckedToday')) el('trStatCheckedToday').textContent = checkedToday;
+            if(el('trStatPendingChanges')) el('trStatPendingChanges').textContent = pending;
+
+            // -- New aggregate KPIs ----------------------------------------------------
+            let pagesWithPos = 0, totalPosGain = 0;
+            let totalGraaf = 0, pagesWithGraaf = 0;
+            let citedCount = 0;
+            withLatest.forEach(p => {
+                const base = p.baseline_snapshot || {};
+                const curr = p.latest_snapshot || {};
+                if (base.google_position && curr.google_position && base.google_position !== curr.google_position) {
+                    pagesWithPos++;
+                    totalPosGain += (base.google_position - curr.google_position);
+                }
+                if (curr.score) { pagesWithGraaf++; totalGraaf += curr.score; }
+                if (curr.ai_google_overview_cited || curr.ai_perplexity_cited || curr.ai_bing_cited || curr.ai_brave_cited) citedCount++;
+            });
+            const avgPosGain = pagesWithPos ? (totalPosGain / pagesWithPos).toFixed(1) : null;
+            const avgGraaf = pagesWithGraaf ? Math.round(totalGraaf / pagesWithGraaf) : null;
+            const citationRate = withLatest.length ? Math.round((citedCount / withLatest.length) * 100) : 0;
+
+            if (el('trStatAvgPosGain')) {
+                if (avgPosGain !== null) {
+                    const gainNum = parseFloat(avgPosGain);
+                    el('trStatAvgPosGain').textContent = (gainNum > 0 ? '+' : '') + avgPosGain;
+                    el('trStatAvgPosGain').style.color = gainNum > 0 ? '#4ade80' : gainNum < 0 ? '#f87171' : '#e5e7eb';
+                } else {
+                    el('trStatAvgPosGain').textContent = '-';
+                    el('trStatAvgPosGain').style.color = '#e5e7eb';
+                }
+            }
+            if (el('trStatAvgGraaf')) {
+                if (avgGraaf !== null) {
+                    el('trStatAvgGraaf').textContent = avgGraaf + '/100';
+                    el('trStatAvgGraaf').style.color = avgGraaf >= 70 ? '#4ade80' : avgGraaf >= 50 ? '#fbbf24' : '#f87171';
+                } else {
+                    el('trStatAvgGraaf').textContent = '-';
+                    el('trStatAvgGraaf').style.color = '#e5e7eb';
+                }
+            }
+            if (el('trStatCitationRate')) el('trStatCitationRate').textContent = citationRate + '%';
+        }
+
+        function renderTrackerPages() {
+            const el = document.getElementById('trPagesList');
+            if(!allTrackerPages.length) {
+                el.innerHTML = '<div style="text-align:center;padding:60px 20px;color:#6b7280;"><div style="font-size:2rem;margin-bottom:12px;">📡</div><div style="font-weight:600;color:#9ca3af;margin-bottom:6px;">No pages tracked yet</div><div style="font-size:13px;">Add your published URLs to start tracking Google position and AI citations</div></div>';
+                return;
+            }
+            // Apply client + domain + citation filter
+            let filtered = allTrackerPages;
+            if(_trClientFilter) filtered = filtered.filter(function(p){ return (p.engine_client_name||'__admin__') === _trClientFilter; });
+            if(_trDomainFilter) filtered = filtered.filter(function(p){ return (p.url||'').split('//').pop().split('/')[0].replace('www.','') === _trDomainFilter; });
+            if(_trCitationFilter === 'google') filtered = filtered.filter(function(p){ return p.latest_snapshot && p.latest_snapshot.ai_google_overview_cited; });
+            if(_trCitationFilter === 'perplexity') filtered = filtered.filter(function(p){ return p.latest_snapshot && p.latest_snapshot.ai_perplexity_cited; });
+            if(_trCitationFilter === 'youcom') filtered = filtered.filter(function(p){ return p.latest_snapshot && p.latest_snapshot.ai_bing_cited; });
+            // Search filter
+            if(_trSearchQuery) filtered = filtered.filter(function(p) {
+                var hay = [(p.url||''), (p.keyword||''), (p.gsc_keyword||''), (p.title||'')].join(' ').toLowerCase();
+                return hay.indexOf(_trSearchQuery) > -1;
+            });
+            filtered = filtered.slice().sort(function(a,b) {
+                if (a.is_done && !b.is_done) return 1;
+                if (!a.is_done && b.is_done) return -1;
+                var aClicks = a.gsc_clicks || 0;
+                var bClicks = b.gsc_clicks || 0;
+                if (bClicks !== aClicks) return bClicks - aClicks;
+                var aPos = (a.latest_snapshot && a.latest_snapshot.google_position) || 999;
+                var bPos = (b.latest_snapshot && b.latest_snapshot.google_position) || 999;
+                return aPos - bPos;
+            });
+            const activeFilters = [_trClientFilter, _trDomainFilter, _trCitationFilter].filter(Boolean).length;
+            const countEl = document.getElementById('trFilterCount');
+            if(countEl) countEl.textContent = activeFilters ? 'Showing ' + filtered.length + ' of ' + allTrackerPages.length + ' pages' + (_trCitationFilter ? ' - cited in ' + _trCitationFilter : '') : '';
+            if(!filtered.length) {
+                el.innerHTML = '<div style="text-align:center;padding:40px;color:#6b7280;">No pages match this filter.</div>';
+                return;
+            }
+            el.innerHTML = filtered.map(function(p, pageIdx) { return renderTrackerPageCard(p, pageIdx); }).join('');
+        }
+
+        function changeTrackerPageFreq(pageId, freq) {
+            fetch('/api/admin/tracker-pages/' + pageId + '/frequency', {
+                method: 'PATCH',
+                headers: {'Content-Type':'application/json','x-admin-key':currentAdminId},
+                body: JSON.stringify({ frequency: freq })
+            }).then(function(r){ return r.json(); }).then(function(d){
+                if (d.success) { setTimeout(loadTrackerPages, 400); }
+                else { alert(d.error || 'Failed to update scan interval'); }
+            }).catch(function(e){ alert('Error: ' + e.message); });
+        }
+
+        async function setSelectedPagesOff() {
+            var cbs = document.querySelectorAll('.tr-page-cb:checked');
+            if (!cbs.length) return;
+            if (!confirm('Set ' + cbs.length + ' selected page(s) to Off (no auto-scan)?')) return;
+            var ids = Array.from(cbs).map(function(cb){ return cb.dataset.id; });
+            var ok = 0, fail = 0;
+            for (var i = 0; i < ids.length; i++) {
+                try {
+                    var r = await fetch('/api/admin/tracker-pages/' + ids[i] + '/frequency', {
+                        method: 'PATCH',
+                        headers: {'Content-Type':'application/json','x-admin-key':currentAdminId},
+                        body: JSON.stringify({ frequency: '0' })
+                    });
+                    var d = await r.json();
+                    if (d && d.success) ok++; else fail++;
+                } catch(e) { fail++; }
+            }
+            alert('Set ' + ok + ' page(s) to Off' + (fail ? ' (' + fail + ' failed)' : ''));
+            loadTrackerPages();
+        }
+
+        function renderTrackerPageCard(p, pageIdx) {
+            const pageNum = (pageIdx !== undefined ? pageIdx : 0) + 1;
+            const snap = p.latest_snapshot;
+            const pending = parseInt(p.pending_changes||0);
+            const freqLabels = {'0':'Off','0days':'Off','off':'Off','1day':'Daily','3days':'3 days','7days':'7 days','17days':'17 days','21days':'21 days','30days':'30 days','1week':'Weekly','2weeks':'2 weeks','weekly':'Weekly','monthly':'Monthly'};
+            const nextCheck = p.next_check_at ? getTimeAgo(new Date(p.next_check_at)) : '-';
+            const _freqOpts = [['0','\u2298 Off'],['3days','3 days'],['7days','7 days'],['17days','17 days'],['21days','21 days'],['30days','30 days']];
+            const freqSelectHtml = '<select onclick="event.stopPropagation()" onchange="changeTrackerPageFreq('+p.id+',this.value)" title="Scan interval for this page — the notification email follows this same schedule" style="font-size:10px;padding:3px 6px;border:1px solid #818cf8;color:#818cf8;background:#0d1117;cursor:pointer;border-radius:4px;">'
+                + _freqOpts.map(function(o){ return '<option value="'+o[0]+'"'+(p.check_frequency===o[0]?' selected':'')+'>'+o[1]+'</option>'; }).join('')
+                + (_freqOpts.some(function(o){return o[0]===p.check_frequency;}) ? '' : '<option value="'+(p.check_frequency||'3days')+'" selected>'+(freqLabels[p.check_frequency]||p.check_frequency||'3 days')+'</option>')
+                + '</select>';
+            const lastCheck = p.last_checked_at ? getTimeAgo(new Date(p.last_checked_at)) : 'Never checked';
+            const checkboxHtml = '<input type="checkbox" class="tr-page-cb" data-id="'+p.id+'" onchange="updateBulkBar()" style="margin-right:8px;cursor:pointer;flex-shrink:0;">';
+            const isDone = !!p.is_done;
+
+            // Clean URL - strip anchor fragments (#section etc)
+            const rawUrl = p.url || '';
+            const urlClean = rawUrl.replace(/#.*$/, '').replace(/[/]$/, '');
+
+            // Position pill
+            let posPill = '<span style="color:#6b7280;font-size:13px;">Not ranked</span>';
+            if(snap?.google_position) {
+                const pos = snap.google_position;
+                const posColor = pos<=3?'#4ade80':pos<=10?'#a3e635':pos<=20?'#fbbf24':'#f87171';
+                const posBg = pos<=3?'#052e16':pos<=10?'#1a2e05':pos<=20?'#2d1f00':'#2d0a0a';
+                posPill = '<span class="tr-badge" title="Google ranking position #'+pos+' for keyword: '+(p.keyword||p.gsc_keyword||'unknown')+'" style="color:'+posColor+';background:'+posBg+';font-size:13px;padding:3px 12px;cursor:help;">#'+pos+'</span>';
+            }
+
+            // GRAAF score badge
+            const graafBadge = (snap?.score)
+                ? '<span class="tr-badge" style="background:#2e1065;color:#a78bfa;margin-left:6px;"> '+snap.score+'/100</span>'
+                : '';
+
+            // GSC baseline badge
+            const gscBadge = (p.gsc_impressions || p.gsc_clicks || p.gsc_position)
+                ? '<span class="tr-badge" style="background:#0c2340;color:#60a5fa;margin-left:6px;"> GSC</span>'
+                : '';
+
+            // Classification badge
+            let clsBadge = '';
+            if (p.latest_classification) {
+                const cls = p.latest_classification;
+                const clsColor = cls.status === 'healthy' ? '#4ade80' : cls.status === 'attention' ? '#fbbf24' : cls.status === 'opportunity' ? '#60a5fa' : '#f87171';
+                const clsEmoji = cls.status === 'healthy' ? '' : cls.status === 'attention' ? '' : cls.status === 'opportunity' ? '💡' : '';
+                const clsLabel = cls.status === 'healthy' ? 'HEALTHY' : cls.status === 'attention' ? 'NEEDS REFRESH' : cls.status === 'opportunity' ? 'OPPORTUNITY' : 'NEEDS REWRITE';
+                clsBadge = '<span class="tr-badge" style="background:'+clsColor+'22;color:'+clsColor+';border:1px solid '+clsColor+'44;margin-left:6px;">'+clsEmoji+' '+clsLabel+' '+(cls.score||0)+'/100</span>';
+            }
+
+            // Fetch reliability warning
+            const fetchWarning = (p.fetch_reliable === false)
+                ? '<span class="tr-badge" style="background:#2d1f00;color:#fbbf24;margin-left:6px;">! fetch unreliable</span>'
+                : '';
+
+            // AI citation badges
+            const gBadge = snap
+                ? (snap.ai_google_overview_cited
+                    ? '<span class="tr-badge" style="background:#052e16;color:#4ade80;border:1px solid #16a34a;">OK Google AIO cited</span>'
+                    : snap.ai_google_overview_found
+                        ? '<span class="tr-badge" style="background:#2d0a0a;color:#f87171;border:1px solid #b91c1c;">NO AIO exists - not cited</span>'
+                        : '<span class="tr-badge" style="background:#1f2937;color:#6b7280;">No AI Overview</span>')
+                : '<span class="tr-badge notcited">Not checked</span>';
+
+            const pBadge = snap
+                ? (snap.ai_perplexity_cited
+                    ? '<span class="tr-badge" style="background:#1e1b4b;color:#a78bfa;border:1px solid #7c3aed;">OK Perplexity cited</span>'
+                    : '<span class="tr-badge" style="background:#1f2937;color:#6b7280;">Perplexity - not cited</span>')
+                : '';
+
+            const bBadge = snap
+                ? (snap.ai_bing_cited
+                    ? '<span class="tr-badge" style="background:#0c2340;color:#60a5fa;border:1px solid #1d4ed8;">OK Copilot cited</span>'
+                    : '<span class="tr-badge" style="background:#1f2937;color:#4b5563;">Copilot - not cited</span>')
+                : '';
+
+            const brBadge = snap
+                ? (snap.ai_brave_cited
+                    ? '<span class="tr-badge" style="background:#1a0e2e;color:#c4b5fd;border:1px solid #6d28d9;">OK Claude cited</span>'
+                    : '<span class="tr-badge" style="background:#1f2937;color:#4b5563;">Claude - not cited</span>')
+                : '';
+
+            // Pending changes button
+            const changesBtn = pending > 0
+                ? '<button onclick="openChangesModalById('+p.id+')" class="tr-btn" style="border-color:#f59e0b;color:#fbbf24;position:relative;">See changes <span style="background:#f59e0b;color:#000;border-radius:99px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:4px;">'+pending+'</span></button>'
+                : '';
+
+            // Manual HTML paste CTA for unreliable pages
+            const manualCta = (p.fetch_reliable === false && (!p.html_content || p.html_content.length < 500))
+                ? '<div style="margin-top:8px;"><button onclick="openHtmlModal('+p.id+')" class="tr-btn" style="border-color:#fbbf24;color:#fef9c3;"> Paste HTML manually for GRAAF scan</button></div>'
+                : '';
+
+            const borderColor = isDone ? '#374151' : (p.is_active ? '#7e22ce' : '#374151');
+            const dotHtml = p.is_active && !isDone
+                ? '<span class="tr-change-dot tr-pulse" style="background:#7e22ce;"></span>'
+                : '<span class="tr-change-dot" style="background:#374151;"></span>';
+
+            // Keyword badge - fix slug display
+            let kwHtml = '';
+            if (p.keyword) {
+                kwHtml = '<span style="font-size:11px;color:#6b7280;margin-left:4px;">keyword: <span style="color:#a78bfa;">'+p.keyword+'</span></span>';
+            } else if (p.gsc_keyword) {
+                kwHtml = '<span style="font-size:11px;color:#6b7280;margin-left:4px;">keyword: <span style="color:#60a5fa;">'+p.gsc_keyword+'</span> <span style="color:#374151;font-size:10px;">(GSC)</span></span>';
+            } else {
+                // Extract slug from clean URL (no anchors)
+                var rawSlug = urlClean;
+                if (rawSlug.charAt(rawSlug.length-1) === '/') rawSlug = rawSlug.slice(0,-1);
+                rawSlug = rawSlug.split('/').pop() || '';
+                rawSlug = rawSlug.split('.')[0];
+                var slug = rawSlug.split('').map(function(c){ return (c==='-'||c==='_')?' ':c; }).join('').trim();
+                if (slug) {
+                    kwHtml = '<span style="font-size:11px;color:#6b7280;margin-left:4px;">keyword: <span style="color:#fbbf24;">'+slug+'</span> <span style="background:#2d1f00;color:#fbbf24;font-size:9px;padding:1px 5px;border-radius:3px;cursor:pointer;" onclick="openHtmlModal('+p.id+')" title="Slug used as keyword - click to set manually">! slug</span></span>';
+                } else {
+                    kwHtml = '<span style="font-size:11px;background:#2d0a0a;color:#f87171;margin-left:4px;padding:1px 6px;border-radius:3px;cursor:pointer;" onclick="openHtmlModal('+p.id+')" title="No keyword - click to set">! no keyword</span>';
+                }
+            }
+
+            let _recs = snap && snap.recommendations ? snap.recommendations : null;
+            if(_recs && typeof _recs === 'string') { try { _recs = JSON.parse(_recs); } catch(e) { _recs = null; } }
+            const recsHtml = Array.isArray(_recs) && _recs.length ? renderTrackerRecommendations(_recs, p.id) : '';
+
+            return '<div class="tr-card" style="border-left:3px solid '+borderColor+';position:relative;' + (isDone ? 'opacity:.65;' : '') + '">'
+                + (isDone ? '<div style="display:flex;align-items:center;gap:6px;padding:5px 14px;background:rgba(74,222,128,.06);border-bottom:1px solid #166534;font-size:10px;color:#4ade80;letter-spacing:.06em;"><span>v</span> DONE &mdash; marked as implemented. Tracking continues.</div>' : '')
+                + '<div style="position:absolute;top:' + (isDone ? '38' : '14') + 'px;left:14px;">'+checkboxHtml+'</div>'
+                + '<div style="padding-left:24px;">'
+                +'<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;">'
+                +'<div style="flex:1;min-width:0;">'
+                +'<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px;">'
+                +'<span style="font-size:10px;font-weight:700;color:#4b5563;background:#1f2937;border-radius:4px;padding:1px 7px;flex-shrink:0;">#'+pageNum+'</span>'
+                +dotHtml
+                +'<span style="font-weight:600;font-size:13px;color:#f1f5f9;' + (isDone ? 'text-decoration:line-through;color:#4b5563;' : '') + '">'+(p.title||'Untitled page')+'</span>'
+                +graafBadge+gscBadge+clsBadge+fetchWarning
+                +'<span style="font-size:11px;color:#6b7280;">· '+(freqLabels[p.check_frequency]||p.check_frequency)+'</span>'
+                +'</div>'
+                +'<div style="margin-bottom:8px;">'
+                +'<a href="'+urlClean+'" target="_blank" style="font-size:12px;color:#60a5fa;text-decoration:none;' + (isDone ? 'text-decoration:line-through;color:#374151;' : '') + '">'+urlClean+'</a>'
+                +kwHtml
+                +'</div>'
+                +manualCta
+                +'<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">'
+                +posPill+gBadge+pBadge+bBadge+brBadge
+                +'</div></div>'
+                +'<div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">'
+                +'<div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;">'
+                +changesBtn
+                +'<button onclick="openHtmlModal('+p.id+')" class="tr-btn" title="Step 1: Set keyword and paste HTML"><span style="font-size:9px;background:#374151;border-radius:3px;padding:1px 4px;margin-right:3px;">1</span>Keyword / HTML</button>'
+                +'<button onclick="runManualCheck('+p.id+')" class="tr-btn green" id="trCheckBtn_'+p.id+'" title="Step 2: Check now"><span style="font-size:9px;background:#166534;border-radius:3px;padding:1px 4px;margin-right:3px;">2</span>Check now</button>'
+                +'<button onclick="openCitationBrief('+p.id+')" class="tr-btn" style="border-color:#a78bfa;color:#a78bfa;" title="Step 3: Citation Brief"><span style="font-size:9px;background:#4c1d95;border-radius:3px;padding:1px 4px;margin-right:3px;color:#fff;">3</span> Citation</button>'
+                +'<button onclick="markTrackerPageDone('+p.id+',this)" class="tr-btn" style="'+(isDone?'border-color:#4ade80;color:#4ade80;background:#052e1655;':'border-color:#374151;color:#6b7280;')+'" title="Mark as done / implemented">'+(isDone?'v Done':'Mark done')+'</button>'
+                +freqSelectHtml
+                +'<button onclick="deleteTrackerPage('+p.id+')" class="tr-btn danger">x</button>'
+                +'</div>'
+                +'<div style="font-size:11px;color:#6b7280;text-align:right;">'
+                +'Last checked: '+lastCheck+' · Next: '+nextCheck+' · '+(p.snapshot_count||0)+' snapshots'
+                +'</div></div></div></div>'
+                +recsHtml
+                +'</div>';
+        }
+
+        function renderTrackerRecommendations(recs, pageId) {
+            if(!recs) return '';
+            if(typeof recs === 'string') { try { recs = JSON.parse(recs); } catch(e) { return ''; } }
+            if(!Array.isArray(recs)||!recs.length) return '';
+            const priorityColor = {'high':'#f87171','medium':'#fbbf24','low':'#4ade80'};
+            const rows = recs.slice(0,3).map(function(r) {
+                const pc = priorityColor[r.priority]||'#6b7280';
+                return '<div style="display:flex;align-items:flex-start;gap:10px;padding:7px 0;border-bottom:1px solid #1f2937;">'
+                    +'<span style="font-size:10px;font-weight:700;padding:2px 6px;border-radius:3px;background:'+pc+'22;color:'+pc+';white-space:nowrap;margin-top:1px;">'+(r.priority||'').toUpperCase()+'</span>'
+                    +'<div style="flex:1;">'
+                    +'<div style="font-size:12px;font-weight:600;color:#e5e7eb;">'+(r.title||'')+'</div>'
+                    +'<div style="font-size:11px;color:#6b7280;margin-top:2px;">'+(r.action||'')+'</div>'
+                    +'</div></div>';
+            }).join('');
+            const moreRow = recs.length > 3 ? '<div onclick="openChangesModalById('+pageId+')" style="font-size:11px;color:#a78bfa;margin-top:6px;cursor:pointer;text-decoration:underline;">+'+(recs.length-3)+' more recommendations - click to view all</div>' : '';
+            return '<div style="margin-top:14px;padding:12px 14px;background:#0d1117;border-radius:8px;border:1px solid #1f2937;">'
+                +'<div style="font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;">Latest Recommendations</div>'
+                +rows+moreRow+'</div>';
+        }
 
         // -- Live Activity Feed ---------------------------------------------
         var _activityLog = [];
@@ -24744,79 +25136,10 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
             var el = document.getElementById('tcList');
             if (!el) return;
             if (!clients.length) {
-                el.innerHTML = '<div style="text-align:center;padding:60px 40px;background:linear-gradient(135deg,rgba(59,130,246,.05) 0%,rgba(124,58,237,.05) 100%);border:2px dashed #1f2937;border-radius:12px;"><div style="font-size:48px;margin-bottom:16px;">📊</div><div style="font-size:16px;font-weight:800;color:#e5e7eb;margin-bottom:8px;">No tracker clients yet</div><div style="font-size:13px;color:#9ca3af;line-height:1.6;max-width:420px;margin:0 auto;">Tracker clients are self-service users who register via the free AI Citations Tracker. They will appear here once they sign up.</div></div>';
+                el.innerHTML = '<div style="text-align:center;padding:40px;color:#6b7280;">No clients registered yet</div>';
                 return;
             }
-
-            var html = '<div style="display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(520px,1fr));">';
-
-            clients.forEach(function(c) {
-                var date = c.created_at ? new Date(c.created_at).toLocaleDateString('en-GB') : '-';
-                var trackUrl = 'https://app.contentscale.site/track/' + c.token;
-                
-                var isPaused = c.status === 'paused';
-                var isDisabled = c.status === 'disabled';
-                var isActive = !isPaused && !isDisabled;
-                var statusColor = isActive ? '#4ade80' : isPaused ? '#f59e0b' : '#f87171';
-                var statusLabel = isActive ? '✓ ACTIVE' : isPaused ? '⏸ PAUSED' : '✕ DISABLED';
-
-                var isDealify = !!c.dealify_codes;
-                var isOwnClient = !isDealify && (c.max_pages || 3) > 3;
-                var clientTypeBadge, clientTypeColor;
-                if (isDealify) {
-                    var codeCount = c.dealify_codes.split(',').filter(function(x){ return x.trim(); }).length;
-                    clientTypeBadge = '🎯 Dealify ×' + codeCount;
-                    clientTypeColor = '#f59e0b';
-                } else if (isOwnClient) {
-                    clientTypeBadge = '⭐ Own';
-                    clientTypeColor = '#a78bfa';
-                } else {
-                    clientTypeBadge = '🆓 Free';
-                    clientTypeColor = '#6b7280';
-                }
-
-                var freqMap = { '3days': '3 days', 'weekly': 'Weekly', '1week': 'Weekly', 'monthly': 'Monthly', '1day': 'Daily', '0': 'Off' };
-                var freqDisplay = c.scan_frequency ? (freqMap[c.scan_frequency] || c.scan_frequency) : 'Auto';
-
-                var extraDoms = c.extra_domains ? c.extra_domains.split(',').map(function(d){ return d.trim(); }).filter(Boolean) : [];
-
-                html += '<div style="background:#0d1117;border:1px solid #1f2937;border-radius:10px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 4px 12px rgba(0,0,0,.3);">'
-                    + '<div style="padding:16px 18px;border-bottom:1px solid #1f2937;display:flex;justify-content:space-between;align-items:flex-start;gap:12px;background:linear-gradient(135deg,rgba(13,17,23,.8) 0%,rgba(15,23,42,.8) 100%);border-bottom:2px solid rgba(124,58,237,.2);">'
-                    + '<div style="flex:1;min-width:0;">'
-                    + '<div style="font-size:15px;font-weight:800;color:#e5e7eb;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + (c.domain || '-') + '</div>'
-                    + '<div style="font-size:11px;color:#9ca3af;margin-top:3px;">' + (c.name || 'No name') + '</div>'
-                    + '</div>'
-                    + '<span style="font-size:11px;font-weight:700;color:' + clientTypeColor + ';background:rgba(' + (clientTypeColor === '#f59e0b' ? '245,158,11' : clientTypeColor === '#a78bfa' ? '167,139,250' : '107,114,128') + ',.12);border:1px solid' + clientTypeColor + '30;border-radius:6px;padding:4px 10px;flex-shrink:0;">' + clientTypeBadge + '</span>'
-                    + '</div>'
-                    
-                    + '<div style="padding:12px 18px;border-bottom:1px solid #1f2937;font-size:11px;">'
-                    + (c.email ? '<div style="color:#38bdf8;margin-bottom:4px;"><strong>📧</strong> ' + c.email + '</div>' : '')
-                    + (c.whatsapp ? '<div style="color:#4ade80;"><strong>💬</strong> ' + c.whatsapp + '</div>' : '')
-                    + '</div>'
-                    
-                    + '<div style="padding:12px 18px;border-bottom:1px solid #1f2937;display:grid;grid-template-columns:1fr 1fr;gap:14px;font-size:11px;">'
-                    + '<div><span style="color:#9ca3af;font-weight:600;">Status:</span><br><span style="color:' + statusColor + ';font-weight:700;font-size:12px;">' + statusLabel + '</span></div>'
-                    + '<div><span style="color:#9ca3af;font-weight:600;">Registered:</span><br><span style="color:#a78bfa;">' + date + '</span></div>'
-                    + '<div><span style="color:#9ca3af;font-weight:600;">Pages:</span><br><span style="color:#4ade80;font-weight:700;">' + (c.page_count||0) + ' / ' + (c.max_pages||3) + '</span></div>'
-                    + '<div><span style="color:#9ca3af;font-weight:600;">Freq:</span><br><span style="color:#60a5fa;">' + freqDisplay + '</span></div>'
-                    + '</div>'
-                    
-                    + (extraDoms.length ? '<div style="padding:8px 18px;border-bottom:1px solid #1f2937;border-left:3px solid #38bdf8;background:rgba(56,189,248,.05);font-size:10px;color:#38bdf8;"><strong>Extra domains:</strong> ' + extraDoms.join(', ') + '</div>' : '')
-                    
-                    + '<div style="padding:14px 18px;display:flex;gap:6px;flex-wrap:wrap;align-items:center;background:rgba(255,255,255,.01);">'
-                    + '<button onclick="window.open(\'' + trackUrl + '\',\'_blank\')" style="background:none;border:1px solid #7c3aed;color:#a78bfa;padding:6px 12px;border-radius:6px;cursor:pointer;font-size:11px;font-weight:600;transition:all .2s;">👁 View</button>'
-                    + '<button onclick="var v = prompt(\'Extra Citation-Brief recipients (comma-separated)\', \'' + (c.cc_emails||'') + '\');if(v!==null) updateTcClient(' + c.id + ', {cc_emails: v});" style="background:none;border:1px solid #4ade80;color:#4ade80;padding:6px 12px;border-radius:6px;cursor:pointer;font-size:11px;font-weight:600;transition:all .2s;">📧 Emails</button>'
-                    + '<button onclick="var newVal = !' + (!!c.live_wall_enabled) + '; apiCall(\'/api/admin/tracker-clients/' + c.id + '/live-wall\',\'POST\',{enabled:newVal}).then(function(d){if(d.success) loadTrackerClients(); else alert(d.error);});" style="background:none;border:1px solid #a78bfa;color:' + (c.live_wall_enabled ? '#a78bfa' : '#6b7280') + ';padding:6px 12px;border-radius:6px;cursor:pointer;font-size:11px;font-weight:600;transition:all .2s;">📺 ' + (c.live_wall_enabled ? 'Live ✓' : 'Live') + '</button>'
-                    + '<button onclick="apiCall(\'/api/admin/tracker-clients/' + c.id + '/clean-pages\',\'POST\',{}).then(function(d){if(d.success) {alert(\'Cleaned: \' + d.cleaned + \' removed, \' + d.merged + \' merged\'); loadTrackerClients();} else alert(d.error);});" style="background:none;border:1px solid #38bdf8;color:#38bdf8;padding:6px 12px;border-radius:6px;cursor:pointer;font-size:11px;font-weight:600;transition:all .2s;">🧹 Clean</button>'
-                    + '<button onclick="updateTcClient(' + c.id + ', {status: \'' + (isActive ? 'disabled' : 'active') + '\'});" style="background:none;border:1px solid ' + (isActive ? '#ef4444' : '#4ade80') + ';color:' + (isActive ? '#ef4444' : '#4ade80') + ';padding:6px 12px;border-radius:6px;cursor:pointer;font-size:11px;font-weight:600;transition:all .2s;">' + (isActive ? '❌ Disable' : '✓ Enable') + '</button>'
-                    + '<button onclick="if(confirm(\'Delete ' + c.domain + ' and all its data?\')) updateTcClient(' + c.id + ', {status: \\\'deleted\\\'});" style="background:none;border:1px solid #f87171;color:#f87171;padding:6px 12px;border-radius:6px;cursor:pointer;font-size:11px;font-weight:600;transition:all .2s;margin-left:auto;">🗑 Delete</button>'
-                    + '</div>'
-                    + '</div>';
-            });
-
-            html += '</div>';
-            el.innerHTML = html;
-        }
+            var table = document.createElement('table');
             table.style.cssText = 'width:100%;border-collapse:collapse;font-size:12px;';
             var thead = document.createElement('thead');
             thead.innerHTML = '<tr style="border-bottom:1px solid #1f2937;">'
