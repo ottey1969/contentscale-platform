@@ -1887,6 +1887,273 @@ app.post('/api/tracker-client/:token/refresh-gsc', async (req, res) => {
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
+// POST /api/tracker-client/:token/import-gsc-pages — import GSC pages with priority + intent selection
+// Body: { pages: [{url, keyword, intent, clicks, impressions, position, priority}], ...] }
+app.post('/api/tracker-client/:token/import-gsc-pages', async (req, res) => {
+  try {
+    const cr = await pool.query('SELECT id FROM tracker_clients WHERE token=$1', [req.params.token]);
+    if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Client not found' });
+    
+    const clientId = cr.rows[0].id;
+    const { pages } = req.body;
+    if (!Array.isArray(pages) || !pages.length) return res.status(400).json({ success: false, error: 'pages array required' });
+    
+    let imported = 0;
+    let skipped = 0;
+    const warnings = [];
+    
+    for (const p of pages) {
+      try {
+        // Check if page already exists
+        const existing = await pool.query('SELECT id FROM tracker_pages WHERE tracker_client_id=$1 AND url=$2', [clientId, p.url]);
+        if (existing.rows.length) { skipped++; continue; }
+        
+        // Check for intent overlap
+        if (p.intent) {
+          const intentOverlap = await pool.query(
+            `SELECT url FROM tracker_pages WHERE tracker_client_id=$1 AND LOWER(intent)=LOWER($2) LIMIT 1`,
+            [clientId, p.intent]
+          );
+          if (intentOverlap.rows.length) {
+            warnings.push({ url: p.url, issue: 'Intent overlap with ' + intentOverlap.rows[0].url });
+            continue; // Skip to avoid cannibalization
+          }
+        }
+        
+        // Insert new page with GSC data + intent
+        await pool.query(
+          `INSERT INTO tracker_pages (tracker_client_id, url, keyword, intent, gsc_keyword, gsc_clicks, gsc_impressions, gsc_position, priority, created_at)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())
+           ON CONFLICT(tracker_client_id, url) DO UPDATE SET 
+           intent=EXCLUDED.intent, gsc_clicks=EXCLUDED.gsc_clicks, gsc_impressions=EXCLUDED.gsc_impressions, gsc_position=EXCLUDED.gsc_position, priority=EXCLUDED.priority`,
+          [clientId, p.url, p.keyword||null, p.intent||null, p.keyword||null, p.clicks||0, p.impressions||0, p.position||null, p.priority||'medium']
+        );
+        imported++;
+      } catch(e) { console.warn('[import-gsc] page', p.url, e.message); }
+    }
+    
+    res.json({ 
+      success: true, 
+      imported, 
+      skipped,
+      total: pages.length, 
+      warnings: warnings.length > 0 ? warnings : undefined,
+      message: `Imported ${imported}/${pages.length} pages (${skipped} skipped)` + (warnings.length > 0 ? ` — ${warnings.length} intent overlaps` : '')
+    });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// GET /api/tracker-client/:token/gsc-pages — get available GSC pages for import (with priority selector UI)
+app.get('/api/tracker-client/:token/gsc-pages', async (req, res) => {
+  try {
+    const cr = await pool.query('SELECT id FROM tracker_clients WHERE token=$1', [req.params.token]);
+    if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Client not found' });
+    
+    // This would fetch from Google Search Console API
+    // For now, return empty - frontend will populate via GSC OAuth flow
+    res.json({ success: true, pages: [], message: 'Connect GSC to see available pages' });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// GET /api/tracker-client/:token/pages/check-cannibalization — detect duplicate keywords OR intent overlap
+app.get('/api/tracker-client/:token/pages/check-cannibalization', async (req, res) => {
+  try {
+    const cr = await pool.query('SELECT id FROM tracker_clients WHERE token=$1', [req.params.token]);
+    if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Client not found' });
+    
+    // Get all pages with keyword + intent
+    const allPages = await pool.query(`
+      SELECT id, url, keyword, COALESCE(intent, 'unknown') as intent
+      FROM tracker_pages
+      WHERE tracker_client_id=$1 AND (is_active=TRUE OR is_active IS NULL)
+      ORDER BY created_at ASC
+    `, [cr.rows[0].id]);
+    
+    // Detect cannibalization: same intent OR same keyword
+    const issues = [];
+    const intents = {};
+    const keywords = {};
+    
+    for (const p of allPages.rows) {
+      const intent = (p.intent || 'unknown').toLowerCase().trim();
+      const keyword = (p.keyword || '').toLowerCase().trim();
+      
+      // Group by intent
+      if (!intents[intent]) intents[intent] = [];
+      intents[intent].push({ id: p.id, url: p.url, keyword: p.keyword });
+      
+      // Group by keyword
+      if (keyword) {
+        if (!keywords[keyword]) keywords[keyword] = [];
+        keywords[keyword].push({ id: p.id, url: p.url, intent: p.intent });
+      }
+    }
+    
+    // Find intent overlaps (multiple pages with same intent)
+    for (const [intent, pages] of Object.entries(intents)) {
+      if (pages.length > 1 && intent !== 'unknown') {
+        issues.push({
+          type: 'intent_overlap',
+          intent,
+          count: pages.length,
+          pages: pages.map(p => ({ id: p.id, url: p.url, keyword: p.keyword })),
+          severity: 'high'
+        });
+      }
+    }
+    
+    // Find keyword duplicates
+    for (const [keyword, pages] of Object.entries(keywords)) {
+      if (pages.length > 1) {
+        issues.push({
+          type: 'keyword_duplicate',
+          keyword,
+          count: pages.length,
+          pages: pages.map(p => ({ id: p.id, url: p.url, intent: p.intent })),
+          severity: 'high'
+        });
+      }
+    }
+    
+    res.json({ 
+      success: true, 
+      cannibalization_issues: issues, 
+      total_issues: issues.length,
+      message: issues.length > 0 ? 'Cannibalization detected!' : 'No cannibalization detected'
+    });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// GET /api/tracker-client/:token/pages/check-stale — detect old pages (no scan in X days)
+app.get('/api/tracker-client/:token/pages/check-stale', async (req, res) => {
+  try {
+    const cr = await pool.query('SELECT id FROM tracker_clients WHERE token=$1', [req.params.token]);
+    if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Client not found' });
+    
+    const dayLimit = parseInt(req.query.days) || 30;
+    const r = await pool.query(`
+      SELECT id, url, keyword, last_checked_at, created_at,
+             EXTRACT(DAY FROM NOW() - COALESCE(last_checked_at, created_at)) as days_old
+      FROM tracker_pages
+      WHERE tracker_client_id=$1 AND (is_active=TRUE OR is_active IS NULL)
+      AND EXTRACT(DAY FROM NOW() - COALESCE(last_checked_at, created_at)) > $2
+      ORDER BY days_old DESC
+    `, [cr.rows[0].id, dayLimit]);
+    
+    res.json({ success: true, stale: r.rows, message: r.rows.length + ' stale pages found (>' + dayLimit + ' days)' });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// POST /api/tracker-client/:token/add-page-manual — Add single URL with keyword + intent (fallback)
+app.post('/api/tracker-client/:token/add-page-manual', async (req, res) => {
+  try {
+    const cr = await pool.query('SELECT id FROM tracker_clients WHERE token=$1', [req.params.token]);
+    if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Client not found' });
+    
+    const { url, keyword, intent, html_content } = req.body;
+    if (!url || !keyword) return res.status(400).json({ success: false, error: 'url and keyword required' });
+    
+    // Check if already exists
+    const existing = await pool.query('SELECT id FROM tracker_pages WHERE tracker_client_id=$1 AND url=$2', [cr.rows[0].id, url]);
+    if (existing.rows.length) return res.status(409).json({ success: false, error: 'Page already tracked' });
+    
+    // Check for intent overlap with existing pages
+    if (intent) {
+      const overlap = await pool.query(
+        `SELECT id, url FROM tracker_pages WHERE tracker_client_id=$1 AND LOWER(intent)=LOWER($2) AND (is_active=TRUE OR is_active IS NULL) LIMIT 1`,
+        [cr.rows[0].id, intent]
+      );
+      if (overlap.rows.length) {
+        return res.status(409).json({ 
+          success: false, 
+          error: 'Intent overlap detected with: ' + overlap.rows[0].url,
+          suggestion: 'Choose different intent or modify existing page'
+        });
+      }
+    }
+    
+    // Insert new page
+    const r = await pool.query(
+      `INSERT INTO tracker_pages (tracker_client_id, url, keyword, intent, html_content, html_source, created_at)
+       VALUES ($1, $2, $3, $4, $5, 'manual', NOW())
+       RETURNING id`,
+      [cr.rows[0].id, url, keyword, intent||null, html_content||null]
+    );
+    
+    res.json({ success: true, pageId: r.rows[0].id, message: 'Page added with intent: ' + (intent||'auto') + '. Scan will start on next interval.' });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// GET /api/tracker-client/:token/pages/:pageId/extract-keyword — HTML parser fallback for keyword
+app.get('/api/tracker-client/:token/pages/:pageId/extract-keyword', async (req, res) => {
+  try {
+    const cr = await pool.query('SELECT id FROM tracker_clients WHERE token=$1', [req.params.token]);
+    if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Client not found' });
+    
+    const r = await pool.query('SELECT html_content FROM tracker_pages WHERE id=$1 AND tracker_client_id=$2', 
+      [req.params.pageId, cr.rows[0].id]);
+    if (!r.rows.length || !r.rows[0].html_content) return res.status(400).json({ success: false, error: 'No HTML content' });
+    
+    const html = r.rows[0].html_content;
+    
+    // Try to extract keyword: title > H1 > meta description
+    const titleMatch = html.match(/<title[^>]*>([^<]{3,120})<\/title>/i);
+    const h1Match = html.match(/<h1[^>]*>([^<]{3,120})<\/h1>/i);
+    const metaDesc = html.match(/<meta[^>]*name=["']description["'][^>]*content=["']([^"']{10,160})["']/i);
+    
+    let keyword = '';
+    let source = '';
+    
+    if (h1Match && h1Match[1]) { keyword = h1Match[1]; source = 'H1'; }
+    else if (titleMatch && titleMatch[1]) { keyword = titleMatch[1]; source = 'title'; }
+    else if (metaDesc && metaDesc[1]) { keyword = metaDesc[1]; source = 'meta-description'; }
+    
+    if (keyword) {
+      // Clean: strip site name suffix
+      keyword = keyword.replace(/\s*[\|\-–—]\s*.{2,40}$/, '').trim().substring(0, 80);
+    }
+    
+    res.json({ success: !!keyword, keyword, source, message: keyword ? `Extracted from ${source}` : 'Could not extract keyword' });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// GET /api/tracker-client/:token/pages — get all pages (with stale/cannibalization flags)
+app.get('/api/tracker-client/:token/pages', async (req, res) => {
+  try {
+    const cr = await pool.query('SELECT id FROM tracker_clients WHERE token=$1', [req.params.token]);
+    if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Client not found' });
+    
+    const r = await pool.query(`
+      SELECT id, url, keyword, gsc_keyword, gsc_clicks, gsc_impressions, gsc_position, priority,
+             created_at, last_checked_at, is_active,
+             EXTRACT(DAY FROM NOW() - COALESCE(last_checked_at, created_at)) as days_since_check
+      FROM tracker_pages
+      WHERE tracker_client_id=$1 AND (is_active=TRUE OR is_active IS NULL)
+      ORDER BY COALESCE(last_checked_at, created_at) DESC
+    `, [cr.rows[0].id]);
+    
+    res.json({ success: true, pages: r.rows, count: r.rows.length });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// GET /api/tracker-client/:token/import/limits — check import limits for user vs admin
+app.get('/api/tracker-client/:token/import/limits', async (req, res) => {
+  try {
+    const cr = await pool.query('SELECT id FROM tracker_clients WHERE token=$1', [req.params.token]);
+    if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Client not found' });
+    
+    const isAdmin = req.headers['x-admin-key']; // Admin header check
+    const limit = isAdmin ? 10000 : 100; // Admin can do more via admin dashboard
+    
+    res.json({ 
+      success: true, 
+      limit,
+      isAdmin: !!isAdmin,
+      message: isAdmin ? 'Admin limit: 10,000 pages' : 'Regular limit: 100 pages (use admin dashboard for more)'
+    });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
 // GET /api/tracker-client/:token/debug-pages — check what data exists per page
 app.get('/api/tracker-client/:token/debug-pages', async (req, res) => {
   try {
