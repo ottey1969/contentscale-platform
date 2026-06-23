@@ -29728,7 +29728,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
             if (tab==='leaderboard') loadLeaderboard();
             if (tab==='freelancers') loadFreelancers();
             if (tab==='users') loadUsers();
-            if (tab==='tracker') loadTrackerPages();
+            // REMOVED: if (tab==='tracker') loadTrackerPages(); — tracker tab deleted
             if (tab==='messages') loadMessages();
             if (tab==='tracker-clients') {
                 if (typeof loadTrackerClients === 'function') loadTrackerClients();
