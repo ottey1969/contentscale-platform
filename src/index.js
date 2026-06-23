@@ -32714,11 +32714,12 @@ app.get('/api/tracker/pages', verifyEngineAccess, async (req, res) => {
         q = `SELECT ${COLS} FROM tracker_pages p 
              WHERE p.engine_code_id=$1 
              AND p.profile_id=$2
+             AND p.tracker_client_id IS NULL
              AND (p.is_active=TRUE OR p.is_active IS NULL)
              ORDER BY p.created_at DESC`;
         params = [codeId, profileId];
       } else { 
-        q = `SELECT ${COLS} FROM tracker_pages p WHERE p.engine_code_id=$1 AND (p.is_active=TRUE OR p.is_active IS NULL) ORDER BY p.created_at DESC`; 
+        q = `SELECT ${COLS} FROM tracker_pages p WHERE p.engine_code_id=$1 AND p.tracker_client_id IS NULL AND (p.is_active=TRUE OR p.is_active IS NULL) ORDER BY p.created_at DESC`; 
         params = [codeId]; 
       }
     }
@@ -32746,7 +32747,7 @@ app.get('/api/tracker/diagnose', verifyEngineAccess, async (req, res) => {
     const domains = await pool.query(
       `SELECT substring(url from 'https?://(?:www\\.)?([^/]+)') AS domain, COUNT(*)::int AS n,
               COUNT(*) FILTER (WHERE engine_code_id = $1)::int AS mine
-         FROM tracker_pages WHERE (is_active = TRUE OR is_active IS NULL) AND url IS NOT NULL
+         FROM tracker_pages WHERE (is_active = TRUE OR is_active IS NULL) AND url IS NOT NULL AND tracker_client_id IS NULL
          GROUP BY 1 ORDER BY n DESC LIMIT 12`,
       [codeId]
     ).catch(() => ({ rows: [] }));
