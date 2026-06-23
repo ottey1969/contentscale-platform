@@ -26991,7 +26991,7 @@ function renderStats(data) {
 
 // ── Live Brief Wall ── newest brief in the middle, rotates to side cards, click to open full brief
 function _bwEsc(s){ return String(s==null?'':s).replace(/[<>&]/g,function(c){return {'<':'&lt;','>':'&gt;','&':'&amp;'}[c];}); }
-function _bwCleanUrl(u){ return String(u||'').replace(/^https?:\/\//,'').replace(/^www\./,''); }
+function _bwCleanUrl(u){ return String(u||'').replace(/^https?:[/][/]/,'').replace(/^www[.]/,''); }
 function _bwTime(p){
   var t = p.brief_started_at || p.last_checked || p.last_checked_at;
   if (!t) return '';
