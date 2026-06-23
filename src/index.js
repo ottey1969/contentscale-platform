@@ -3523,6 +3523,15 @@ app.patch('/api/admin/tracker-pages/:pageId/frequency', verifyAdmin, async (req,
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
+// GET /api/admin/tracker-clients/:id — single client (defensive; prevents 404 if any UI/link fetches one client directly)
+app.get('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
+  try {
+    if (!/^\d+$/.test(req.params.id)) return res.status(404).json({ success: false, error: 'Not found' });
+    const r = await pool.query('SELECT * FROM tracker_clients WHERE id=$1', [req.params.id]);
+    if (!r.rows.length) return res.status(404).json({ success: false, error: 'Client not found' });
+    res.json({ success: true, client: r.rows[0] });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
 app.patch('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
   try {
     const { max_pages, status, reset_ip } = req.body;
@@ -26321,6 +26330,31 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
     </div>
   </details>
 
+  <div id="briefWallSection" style="display:none;margin:0 0 28px;">
+    <style>
+      .bw-wrap{display:flex;gap:14px;align-items:flex-start;}
+      .bw-side{flex:1;display:flex;flex-direction:column;gap:14px;min-width:0;}
+      .bw-feature{flex:1.7;min-width:0;}
+      .bw-card{background:#0d1117;border:1px solid #1f2937;border-radius:14px;padding:16px;cursor:pointer;transition:border-color .15s,transform .15s,box-shadow .15s;}
+      .bw-card:hover{border-color:#7c3aed;transform:translateY(-2px);}
+      .bw-feature .bw-card{border-color:#7c3aed;box-shadow:0 0 0 1px rgba(124,58,237,.25),0 10px 36px rgba(124,58,237,.18);}
+      .bw-url{font-size:12px;font-weight:700;color:#e5e7eb;word-break:break-all;line-height:1.4;}
+      .bw-time{font-size:10px;color:#6b7280;margin-top:4px;}
+      .bw-new{display:inline-block;background:#dc2626;color:#fff;font-size:9px;font-weight:800;padding:2px 9px;border-radius:999px;letter-spacing:.06em;flex-shrink:0;}
+      .bw-chips{display:flex;gap:6px;flex-wrap:wrap;margin:12px 0;}
+      .bw-chip{background:#0a0a12;border:1px solid #1f2937;border-radius:8px;padding:5px 9px;text-align:center;min-width:50px;}
+      .bw-chip .v{font-size:12px;font-weight:800;}
+      .bw-chip .l{font-size:8px;color:#6b7280;text-transform:uppercase;letter-spacing:.06em;margin-top:2px;}
+      .bw-rec{border-left:3px solid #7c3aed;padding:2px 0 2px 12px;margin-bottom:12px;}
+      .bw-rec-t{font-size:13px;font-weight:800;color:#f1f5f9;margin-bottom:4px;}
+      .bw-rec-b{font-size:12px;color:#9ca3af;line-height:1.55;}
+      .bw-mini{font-size:11px;color:#6b7280;margin-top:6px;}
+      @media(max-width:820px){.bw-wrap{flex-direction:column;}.bw-feature{order:-1;flex:1;}.bw-side{flex:1;}}
+    </style>
+    <div class="cs-section" style="display:flex;align-items:center;gap:10px;">&#9889; Live Brief Wall <span id="bwCount" style="color:#6b7280;font-weight:600;font-size:11px;"></span></div>
+    <div id="briefWall"></div>
+  </div>
+
   <div class="cs-section">Your tracked pages <span id="pageCountLabel2" style="color:#cbd5e1;"></span></div>
   <div id="pagesList" style="width:100%;"></div>
 
@@ -26866,6 +26900,7 @@ var _ctSearchQuery = '';
     _applyGscBtnState();
     renderStats(data);
     renderPages();
+    renderBriefWall();
     // Mark Telegram as linked if already set
     if (data.client && data.client.telegram_linked) markTelegramLinked();
     // Auto-show TV Brief if a page has brief_content but hasn't been shown this session
@@ -26952,6 +26987,72 @@ function renderStats(data) {
   pageLabel += ')';
   document.getElementById('pageCountLabel').textContent = pageLabel;
 
+}
+
+// ── Live Brief Wall ── newest brief in the middle, rotates to side cards, click to open full brief
+function _bwEsc(s){ return String(s==null?'':s).replace(/[<>&]/g,function(c){return {'<':'&lt;','>':'&gt;','&':'&amp;'}[c];}); }
+function _bwCleanUrl(u){ return String(u||'').replace(/^https?:\/\//,'').replace(/^www\./,''); }
+function _bwTime(p){
+  var t = p.brief_started_at || p.last_checked || p.last_checked_at;
+  if (!t) return '';
+  try { var d=new Date(t); return d.toLocaleDateString('en-GB',{day:'2-digit',month:'short'}) + ' ' + d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}); } catch(e){ return ''; }
+}
+function _bwChips(bd){
+  function chip(v,l,c){ return '<div class="bw-chip"><div class="v" style="color:'+c+';">'+v+'</div><div class="l">'+l+'</div></div>'; }
+  var posC = !bd.position ? '#6b7280' : bd.position<=3?'#4ade80':bd.position<=10?'#a3e635':bd.position<=20?'#fbbf24':'#f87171';
+  return '<div class="bw-chips">'
+    + chip(bd.position?('#'+bd.position):'\u2014','Position',posC)
+    + chip(bd.aio_cited?'YES':'NO','AIO',bd.aio_cited?'#4ade80':'#6b7280')
+    + chip(bd.perp_cited?'YES':'NO','Perplexity',bd.perp_cited?'#4ade80':'#6b7280')
+    + chip(bd.bing_cited?'YES':'NO','Copilot',bd.bing_cited?'#4ade80':'#6b7280')
+    + chip(bd.brave_cited?'YES':'NO','Claude',bd.brave_cited?'#4ade80':'#6b7280')
+    + chip(bd.score?bd.score:'\u2014','GRAAF',bd.score?'#a78bfa':'#6b7280')
+    + '</div>';
+}
+function _bwRecs(bd, limit){
+  var items = Array.isArray(bd.passages)?bd.passages:[];
+  if (!items.length) return '<div class="bw-mini">Brief saved \u2014 click to view.</div>';
+  var html = items.slice(0,limit).map(function(it){
+    var t = it.h2||it.title||it.heading||it.action||'Recommendation';
+    var b = it.body||it.content||it.text||it.detail||'';
+    if (b.length>170) b = b.slice(0,170)+'\u2026';
+    return '<div class="bw-rec"><div class="bw-rec-t">'+_bwEsc(t)+'</div>'+(b?'<div class="bw-rec-b">'+_bwEsc(b)+'</div>':'')+'</div>';
+  }).join('');
+  if (items.length>limit) html += '<div class="bw-mini">+ '+(items.length-limit)+' more \u2014 click to view all</div>';
+  return html;
+}
+function _bwCard(p, isFeature){
+  var bd = _buildBriefData(p) || { url:p.url, position:null, passages:[] };
+  var head = '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">'
+    + '<div style="min-width:0;"><div class="bw-url">'+_bwEsc(_bwCleanUrl(p.url))+'</div>'
+    + (_bwTime(p)?'<div class="bw-time">Scanned '+_bwTime(p)+'</div>':'')+'</div>'
+    + (isFeature?'<span class="bw-new">NEW</span>':'')
+    + '</div>';
+  var body = _bwChips(bd) + _bwRecs(bd, isFeature?4:1);
+  return '<div class="bw-card" onclick="openBriefHistory('+p.id+')">'+head+body+'</div>';
+}
+function renderBriefWall(){
+  var sec = document.getElementById('briefWallSection');
+  var wall = document.getElementById('briefWall');
+  if (!sec || !wall) return;
+  var withB = (_pages||[]).filter(function(p){ return p.brief_content; });
+  if (!withB.length){ sec.style.display='none'; return; }
+  sec.style.display='block';
+  withB.sort(function(a,b){
+    var ta=new Date(a.brief_started_at||a.last_checked||a.last_checked_at||0).getTime();
+    var tb=new Date(b.brief_started_at||b.last_checked||b.last_checked_at||0).getTime();
+    return tb-ta;
+  });
+  var cnt=document.getElementById('bwCount'); if(cnt) cnt.textContent = withB.length+' brief'+(withB.length>1?'s':'')+' \u00b7 newest in the middle';
+  var feature = withB[0];
+  var rest = withB.slice(1);
+  var left=[], right=[];
+  rest.forEach(function(p,i){ (i%2===0?left:right).push(p); });
+  wall.innerHTML = '<div class="bw-wrap">'
+    + '<div class="bw-side">'+left.map(function(p){return _bwCard(p,false);}).join('')+'</div>'
+    + '<div class="bw-feature">'+_bwCard(feature,true)+'</div>'
+    + '<div class="bw-side">'+right.map(function(p){return _bwCard(p,false);}).join('')+'</div>'
+    + '</div>';
 }
 
 function renderPages() {
@@ -27555,6 +27656,17 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
                 showNotification('Citation Brief ready for ' + (ev.url||''), 'brief', '#7c3aed');
                 var inlineBriefHasData = !!(ev.passages && ev.passages.length);
                 if (!inlineBriefHasData) showCitationBrief(ev);
+                // Live Brief Wall: drop the new brief straight into the middle
+                if (ev.page_id) {
+                  for (var _wi=0; _wi<(_pages||[]).length; _wi++) {
+                    if (_pages[_wi].id === ev.page_id) {
+                      _pages[_wi].brief_content = ev.brief_content || _pages[_wi].brief_content || ev;
+                      _pages[_wi].brief_started_at = ev.ts || new Date().toISOString();
+                      break;
+                    }
+                  }
+                  try { renderBriefWall(); } catch(e) {}
+                }
                 return;
               }
               if (ev.type === 'email_sent' && (ev.domain === DOMAIN || (ev.url && ev.url.includes(DOMAIN)))) {
