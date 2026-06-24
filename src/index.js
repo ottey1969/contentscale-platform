@@ -1664,10 +1664,11 @@ app.get('/api/tracker-client/:token/live-events', async (req, res) => {
 // ── Latest briefs for a client — lets the Live Wall populate on open ─────────
 app.get('/api/tracker-client/:token/latest-briefs', async (req, res) => {
   try {
-    const cr = await pool.query('SELECT id FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status != $2)', [req.params.token, 'deleted']);
+    const cr = await pool.query('SELECT id FROM tracker_clients WHERE (token=$1 OR board_token=$1) AND (status IS NULL OR status != $2)', [req.params.token, 'deleted']);
     if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
     const r = await pool.query(
-      `SELECT p.url, p.keyword, p.gsc_keyword, p.brief_content, p.gsc_clicks, p.gsc_impressions, p.gsc_position,
+      `SELECT p.id, p.url, p.keyword, p.gsc_keyword, p.brief_content, p.gsc_clicks, p.gsc_impressions, p.gsc_position,
+              p.brief_status, p.brief_claimed_by, p.brief_claimed_at, p.brief_started_at,
               s.checked_at, s.google_position, s.ai_google_overview_cited, s.ai_perplexity_cited, s.ai_bing_cited, s.ai_brave_cited,
               s.score, s.recommendations, s.gsc_brief, s.source_suggestions
        FROM tracker_pages p
@@ -1703,10 +1704,57 @@ app.get('/api/tracker-client/:token/latest-briefs', async (req, res) => {
         gsc_brief: gscB,
         source_suggestions: srcB,
         gsc_clicks: p.gsc_clicks, gsc_impressions: p.gsc_impressions, gsc_position: p.gsc_position,
+        page_id: p.id,
+        brief_status: p.brief_status || 'open',
+        brief_claimed_by: p.brief_claimed_by || null,
+        brief_claimed_at: p.brief_claimed_at || null,
+        ts: p.checked_at || p.brief_started_at || null,
         ts: p.checked_at ? new Date(p.checked_at).toISOString() : ''
       };
     }).filter(function(b) { return b.passages.length || b.position != null || b.score != null; });
     res.json({ success: true, briefs });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// ── Specialist work board: claim / done / reopen a brief ─────────────────────
+async function _resolveBoardPage(token, pageId) {
+  const cr = await pool.query('SELECT id FROM tracker_clients WHERE (token=$1 OR board_token=$1) AND (status IS NULL OR status != $2)', [token, 'deleted']);
+  if (!cr.rows.length) return { error: 'Tracker not found', code: 404 };
+  const pr = await pool.query('SELECT id FROM tracker_pages WHERE id=$1 AND tracker_client_id=$2', [pageId, cr.rows[0].id]);
+  if (!pr.rows.length) return { error: 'Page not found for this tracker', code: 404 };
+  return { clientId: cr.rows[0].id, pageId: pr.rows[0].id };
+}
+app.post('/api/tracker-client/:token/brief/:pageId/claim', async (req, res) => {
+  try {
+    const r = await _resolveBoardPage(req.params.token, req.params.pageId);
+    if (r.error) return res.status(r.code).json({ success: false, error: r.error });
+    const name = String((req.body && req.body.name) || '').trim().slice(0, 80);
+    if (!name) return res.status(400).json({ success: false, error: 'Name required to claim' });
+    // refuse if already claimed by someone else (and not done)
+    const cur = await pool.query('SELECT brief_status, brief_claimed_by FROM tracker_pages WHERE id=$1', [r.pageId]);
+    const row = cur.rows[0] || {};
+    if (row.brief_status === 'in_progress' && row.brief_claimed_by && row.brief_claimed_by !== name) {
+      return res.status(409).json({ success: false, error: 'Already claimed by ' + row.brief_claimed_by, claimed_by: row.brief_claimed_by });
+    }
+    await pool.query("UPDATE tracker_pages SET brief_status='in_progress', brief_claimed_by=$1, brief_claimed_at=NOW() WHERE id=$2", [name, r.pageId]);
+    res.json({ success: true, status: 'in_progress', claimed_by: name });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+app.post('/api/tracker-client/:token/brief/:pageId/done', async (req, res) => {
+  try {
+    const r = await _resolveBoardPage(req.params.token, req.params.pageId);
+    if (r.error) return res.status(r.code).json({ success: false, error: r.error });
+    const name = String((req.body && req.body.name) || '').trim().slice(0, 80);
+    await pool.query("UPDATE tracker_pages SET brief_status='done', brief_done_at=NOW(), brief_claimed_by=COALESCE(NULLIF(brief_claimed_by,''), $1) WHERE id=$2", [name || null, r.pageId]);
+    res.json({ success: true, status: 'done' });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+app.post('/api/tracker-client/:token/brief/:pageId/reopen', async (req, res) => {
+  try {
+    const r = await _resolveBoardPage(req.params.token, req.params.pageId);
+    if (r.error) return res.status(r.code).json({ success: false, error: r.error });
+    await pool.query("UPDATE tracker_pages SET brief_status='open', brief_claimed_by=NULL, brief_claimed_at=NULL WHERE id=$1", [r.pageId]);
+    res.json({ success: true, status: 'open' });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
@@ -2292,6 +2340,108 @@ app.post('/api/tracker-client/:token/check/:pageId', async (req, res) => {
 
 
 // GET /track/:token — client tracker page
+app.get('/track/:token/board', async (req, res) => {
+  try {
+    let cr;
+    try { cr = await pool.query('SELECT * FROM tracker_clients WHERE (token=$1 OR board_token=$1) AND (status IS NULL OR status != $2)', [req.params.token, 'deleted']); }
+    catch(e) { cr = await pool.query('SELECT * FROM tracker_clients WHERE token=$1 OR board_token=$1', [req.params.token]); }
+    if (!cr.rows.length) return res.status(404).send('Not found');
+    const client = cr.rows[0];
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.send(`<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Brief Board - ${client.domain || 'ContentScale'}</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif}
+.bd-head{position:sticky;top:0;z-index:50;background:rgba(6,6,15,.95);backdrop-filter:blur(12px);border-bottom:1px solid #1f2937;padding:14px 20px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.bd-title{font-size:15px;font-weight:800;color:#f1f5f9}
+.bd-sub{font-size:11px;color:#6b7280;margin-top:2px}
+.bd-filters{display:flex;gap:6px;flex-wrap:wrap}
+.bd-fbtn{background:#0d1117;border:1px solid #1f2937;border-radius:8px;padding:6px 12px;color:#9ca3af;font-size:11px;font-weight:700;cursor:pointer}
+.bd-fbtn.on{border-color:#7c3aed;color:#c4b5fd;background:rgba(124,58,237,.12)}
+.bd-name{margin-left:auto;display:flex;align-items:center;gap:8px}
+.bd-name input{background:#0d1117;border:1px solid #1f2937;border-radius:8px;padding:7px 11px;color:#e5e7eb;font-size:12px;width:150px}
+.bd-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:16px;padding:20px;max-width:1700px;margin:0 auto}
+.bw-card{background:#0d1117;border:1px solid #1f2937;border-radius:16px;padding:18px;display:flex;flex-direction:column}
+.bw-card.s-open{border-color:rgba(22,163,74,.4)}
+.bw-card.s-progress{border-color:rgba(217,119,6,.45)}
+.bw-card.s-done{opacity:.55}
+.bw-url{font-size:13px;font-weight:800;color:#f1f5f9;word-break:break-all;line-height:1.4}
+.bw-time{font-size:10px;color:#6b7280;margin-top:3px}
+.bd-badge{display:inline-block;font-size:10px;font-weight:800;padding:3px 10px;border-radius:999px;letter-spacing:.04em;flex-shrink:0}
+.bd-badge.open{background:rgba(22,163,74,.15);color:#4ade80}
+.bd-badge.progress{background:rgba(217,119,6,.15);color:#fbbf24}
+.bd-badge.done{background:rgba(55,65,81,.25);color:#9ca3af}
+.bw-chips{display:flex;gap:6px;flex-wrap:wrap;margin:12px 0}
+.bw-chip{background:#0a0a12;border:1px solid #1f2937;border-radius:8px;padding:5px 9px;text-align:center;min-width:50px}
+.bw-chip .v{font-size:12px;font-weight:800}
+.bw-chip .l{font-size:8px;color:#6b7280;text-transform:uppercase;letter-spacing:.06em;margin-top:2px}
+.bw-rec{border-left:3px solid #7c3aed;padding:2px 0 2px 12px;margin-bottom:11px}
+.bw-rec-t{font-size:13px;font-weight:800;color:#f1f5f9;margin-bottom:3px}
+.bw-rec-b{font-size:12px;color:#9ca3af;line-height:1.5}
+.bd-actions{margin-top:auto;padding-top:14px;display:flex;gap:8px;flex-wrap:wrap}
+.bd-btn{border:none;border-radius:9px;padding:9px 15px;font-size:12px;font-weight:800;cursor:pointer}
+.bd-btn.claim{background:#7c3aed;color:#fff}
+.bd-btn.done{background:#16a34a;color:#fff}
+.bd-btn.sec{background:#0d1117;border:1px solid #374151;color:#9ca3af}
+.bd-empty{text-align:center;color:#6b7280;padding:60px 20px;font-size:14px;grid-column:1/-1}
+</style></head><body>
+<div class="bd-head">
+  <div><div class="bd-title">Brief Board - ${client.domain || ''}</div><div class="bd-sub">Claim a brief, do the work, mark it done. Everyone sees the same board live.</div></div>
+  <div class="bd-filters">
+    <button class="bd-fbtn on" data-f="all" onclick="setFilter('all')">All</button>
+    <button class="bd-fbtn" data-f="open" onclick="setFilter('open')">Open</button>
+    <button class="bd-fbtn" data-f="in_progress" onclick="setFilter('in_progress')">In progress</button>
+    <button class="bd-fbtn" data-f="done" onclick="setFilter('done')">Done</button>
+  </div>
+  <div class="bd-name"><span style="font-size:11px;color:#6b7280">You:</span><input id="bdName" placeholder="Your name" oninput="saveName(this.value)"></div>
+</div>
+<div class="bd-grid" id="bdGrid"></div>
+<script>
+  var TOKEN='${req.params.token}';
+  var NL=String.fromCharCode(10);
+  var _name='', _filter='all', _briefs=[];
+  try{ _name=localStorage.getItem('csBoardName')||''; }catch(e){}
+  function saveName(v){ _name=(v||'').trim(); try{ localStorage.setItem('csBoardName',_name); }catch(e){} }
+  function setFilter(f){ _filter=f; var bs=document.querySelectorAll('.bd-fbtn'); for(var i=0;i<bs.length;i++){ bs[i].classList.toggle('on', bs[i].getAttribute('data-f')===f); } render(); }
+  function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function cleanUrl(u){ return String(u||'').replace(/^https?:[/][/]/,'').replace(/^www[.]/,''); }
+  function fmtTime(t){ try{ var d=t?new Date(t):null; return d?(d.toLocaleDateString('en-GB',{day:'2-digit',month:'short'})+' '+d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})):''; }catch(e){ return ''; } }
+  function chip(v,l,c){ return '<div class="bw-chip"><div class="v" style="color:'+c+'">'+v+'</div><div class="l">'+l+'</div></div>'; }
+  function chips(d){ var pos=d.position||d.gsc_position; var pc=(!pos)?'#6b7280':pos<=3?'#4ade80':pos<=10?'#a3e635':pos<=20?'#fbbf24':'#f87171';
+    return '<div class="bw-chips">'+chip(pos?('#'+pos):'-','Position',pc)+chip(d.aio_cited?'YES':'NO','AIO',d.aio_cited?'#4ade80':'#6b7280')+chip(d.perp_cited?'YES':'NO','Perplexity',d.perp_cited?'#a78bfa':'#6b7280')+chip(d.bing_cited?'YES':'NO','Copilot',d.bing_cited?'#60a5fa':'#6b7280')+chip(d.brave_cited?'YES':'NO','Claude',d.brave_cited?'#f87171':'#6b7280')+chip(d.score?d.score:'-','GRAAF',d.score?'#a78bfa':'#6b7280')+'</div>'; }
+  function recs(d){ var items=d.passages||[]; if(!items.length) return ''; return items.map(function(p){ var t=p.title||p.h2||p.heading||'Recommendation'; var b=p.action||p.passage||p.body||p.text||''; if(b.length>200)b=b.slice(0,200)+'...'; return '<div class="bw-rec"><div class="bw-rec-t">'+esc(t)+'</div>'+(b?'<div class="bw-rec-b">'+esc(b)+'</div>':'')+'</div>'; }).join(''); }
+  function badge(st,who){ if(st==='done')return '<span class="bd-badge done">DONE</span>'; if(st==='in_progress')return '<span class="bd-badge progress">IN PROGRESS'+(who?' - '+esc(who):'')+'</span>'; return '<span class="bd-badge open">OPEN</span>'; }
+  function actions(d){ var st=d.brief_status||'open';
+    if(st==='open') return '<button class="bd-btn claim" onclick="claim('+d.page_id+')">Claim this</button>';
+    if(st==='in_progress') return '<button class="bd-btn done" onclick="markDone('+d.page_id+')">Mark done</button><button class="bd-btn sec" onclick="reopen('+d.page_id+')">Release</button>';
+    return '<button class="bd-btn sec" onclick="reopen('+d.page_id+')">Reopen</button>'; }
+  function render(){
+    var grid=document.getElementById('bdGrid');
+    var list=_briefs.filter(function(d){ return _filter==='all' || (d.brief_status||'open')===_filter; });
+    if(!list.length){ grid.innerHTML='<div class="bd-empty">No briefs'+(_filter!=='all'?' in this status':' yet - they appear here after a scan')+'.</div>'; return; }
+    grid.innerHTML=list.map(function(d){
+      var st=d.brief_status||'open'; var cls=st==='done'?'s-done':st==='in_progress'?'s-progress':'s-open';
+      return '<div class="bw-card '+cls+'"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:6px"><div style="min-width:0"><div class="bw-url">'+esc(cleanUrl(d.url))+'</div><div class="bw-time">Scanned '+fmtTime(d.ts)+'</div></div>'+badge(st,d.brief_claimed_by)+'</div>'+chips(d)+recs(d)+'<div class="bd-actions">'+actions(d)+'<button class="bd-btn sec" onclick="copyBrief('+d.page_id+')">Copy brief</button><a class="bd-btn sec" href="'+esc(d.url)+'" target="_blank" rel="noopener" style="text-decoration:none">Open page</a></div></div>';
+    }).join('');
+  }
+  function ensureName(){ if(_name) return true; var n=prompt('Enter your name to claim briefs:'); if(n&&n.trim()){ saveName(n); document.getElementById('bdName').value=_name; return true; } return false; }
+  function post(pageId,action,body){ return fetch('/api/tracker-client/'+TOKEN+'/brief/'+pageId+'/'+action,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body||{})}).then(function(r){return r.json();}); }
+  function claim(pageId){ if(!ensureName())return; post(pageId,'claim',{name:_name}).then(function(r){ if(!r.success) alert(r.error||'Could not claim'); load(); }); }
+  function markDone(pageId){ post(pageId,'done',{name:_name}).then(function(){ load(); }); }
+  function reopen(pageId){ post(pageId,'reopen',{}).then(function(){ load(); }); }
+  function copyBrief(pageId){ var d=_briefs.filter(function(x){return x.page_id===pageId;})[0]; if(!d)return; var txt=cleanUrl(d.url)+NL+NL+(d.passages||[]).map(function(p){return '- '+(p.title||'')+': '+(p.action||p.passage||'');}).join(NL); if(navigator.clipboard){ navigator.clipboard.writeText(txt).then(function(){ alert('Brief copied'); },function(){ alert('Copy failed'); }); } }
+  function load(){ fetch('/api/tracker-client/'+TOKEN+'/latest-briefs').then(function(r){return r.json();}).then(function(d){ if(d&&d.briefs){ _briefs=d.briefs; render(); } }).catch(function(){}); }
+  document.getElementById('bdName').value=_name;
+  load(); setInterval(load,12000);
+</script>
+</body></html>`);
+  } catch(e) { res.status(500).send('Board error: ' + e.message); }
+});
+
 app.get('/track/:token/live', async (req, res) => {
   try {
     let cr;
@@ -3890,11 +4040,21 @@ app.patch('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
   await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS brief_content JSONB`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS brief_started_at TIMESTAMPTZ`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS brief_done_at TIMESTAMPTZ`).catch(()=>{});
+  await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS brief_status TEXT DEFAULT 'open'`).catch(()=>{});
+  await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS brief_claimed_by TEXT`).catch(()=>{});
+  await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS brief_claimed_at TIMESTAMPTZ`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS brief_check_count INTEGER DEFAULT 0`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS ranking_brief JSONB`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS needs_html BOOLEAN DEFAULT FALSE`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS html_mismatch_notified_at TIMESTAMPTZ`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS live_wall_enabled BOOLEAN DEFAULT FALSE`).catch(()=>{});
+  await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS board_token VARCHAR(64)`).catch(()=>{});
+  try {
+    const _needBt = await client.query(`SELECT id FROM tracker_clients WHERE board_token IS NULL`);
+    for (const _r of _needBt.rows) {
+      await client.query(`UPDATE tracker_clients SET board_token=$1 WHERE id=$2`, [require('crypto').randomBytes(24).toString('hex'), _r.id]).catch(()=>{});
+    }
+  } catch(e) {}
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS paused_at TIMESTAMPTZ`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS dealify_codes VARCHAR(500)`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS gsc_enabled BOOLEAN DEFAULT FALSE`).catch(()=>{});
@@ -32297,6 +32457,28 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 actionsDiv.appendChild(lwWrap);
                 actionsDiv.appendChild(lwUrl);
 
+                // Specialist board link (separate board_token, not derivable from the public link)
+                var boardWrap = document.createElement('div');
+                boardWrap.style.cssText = 'font-size:9px;margin-top:4px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;';
+                var boardPath = '/track/' + (c.board_token || c.token) + '/board';
+                var boardCopyBtn = document.createElement('button');
+                boardCopyBtn.className = 'tr-btn';
+                boardCopyBtn.textContent = '📋 Copy board link';
+                boardCopyBtn.style.cssText = 'font-size:10px;padding:3px 8px;border-color:#7c3aed;color:#c4b5fd;';
+                boardCopyBtn.onclick = (function(path, btn){ return function(){
+                    navigator.clipboard.writeText(window.location.origin + path).then(function(){
+                        btn.textContent = 'Copied!';
+                        setTimeout(function(){ btn.textContent = '📋 Copy board link'; }, 2000);
+                    });
+                }; })(boardPath, boardCopyBtn);
+                var boardLink = document.createElement('a');
+                boardLink.href = boardPath; boardLink.target = '_blank';
+                boardLink.textContent = boardPath;
+                boardLink.style.cssText = 'color:#a78bfa;text-decoration:none;font-family:monospace;';
+                boardWrap.appendChild(boardCopyBtn);
+                boardWrap.appendChild(boardLink);
+                actionsDiv.appendChild(boardWrap);
+
                 var domainsBtn = document.createElement('button');
                 domainsBtn.className = 'tr-btn';
                 var extraDomList = (c.extra_domains || '').split(',').map(function(d){ return d.trim(); }).filter(Boolean);
@@ -36472,10 +36654,24 @@ If no unanchored claims found, return empty array: []`;
       source_suggestions: Array.isArray(snapshot.source_suggestions) ? snapshot.source_suggestions : [],
       discovered_sources: Array.isArray(snapshot.discovered_sources) ? snapshot.discovered_sources : []
     };
-    await pool.query(
-      'UPDATE tracker_pages SET brief_content=$1, brief_started_at=COALESCE(brief_started_at, NOW()) WHERE id=$2',
-      [JSON.stringify(_briefNow), page.id]
-    );
+    // Only reopen the board task if the brief actually CHANGED — keeps in-progress/done work on identical re-scans.
+    let _briefChanged = true;
+    try {
+      const _oldBrief = typeof page.brief_content === 'string' ? JSON.parse(page.brief_content) : (page.brief_content || null);
+      const _sig = b => JSON.stringify((b && Array.isArray(b.items) ? b.items : []).map(function(i){ return [(i.title||i.h2||''), (i.action||i.body||i.passage||'')]; }));
+      if (_oldBrief && _sig(_oldBrief) === _sig(_briefNow)) _briefChanged = false;
+    } catch(e) {}
+    if (_briefChanged) {
+      await pool.query(
+        "UPDATE tracker_pages SET brief_content=$1, brief_started_at=COALESCE(brief_started_at, NOW()), brief_status='open', brief_claimed_by=NULL, brief_claimed_at=NULL WHERE id=$2",
+        [JSON.stringify(_briefNow), page.id]
+      );
+    } else {
+      await pool.query(
+        'UPDATE tracker_pages SET brief_content=$1, brief_started_at=COALESCE(brief_started_at, NOW()) WHERE id=$2',
+        [JSON.stringify(_briefNow), page.id]
+      );
+    }
   } catch(e) { console.error('[brief-persist-early]', e.message); }
 
   // Mark the page as checked NOW so the client poll resolves and shows the brief immediately,
