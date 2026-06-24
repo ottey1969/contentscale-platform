@@ -1531,7 +1531,7 @@ app.post('/api/tracker-client/:token/reset-scans', async (req, res) => {
 // POST /api/tracker-client/:token/scan-all — scan all pages one by one
 app.post('/api/tracker-client/:token/scan-all', async (req, res) => {
   try {
-    const cr = await pool.query('SELECT id FROM tracker_clients WHERE token=$1', [req.params.token]);
+    const cr = await pool.query('SELECT id FROM tracker_clients WHERE token=$1 OR lead_token=$1', [req.params.token]);
     if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
     const unscannedOnly = req.body && req.body.unscanned_only === true;
     let pages;
@@ -1664,7 +1664,7 @@ app.get('/api/tracker-client/:token/live-events', async (req, res) => {
 // ── Latest briefs for a client — lets the Live Wall populate on open ─────────
 app.get('/api/tracker-client/:token/latest-briefs', async (req, res) => {
   try {
-    const cr = await pool.query('SELECT id FROM tracker_clients WHERE (token=$1 OR board_token=$1) AND (status IS NULL OR status != $2)', [req.params.token, 'deleted']);
+    const cr = await pool.query('SELECT id FROM tracker_clients WHERE (token=$1 OR board_token=$1 OR lead_token=$1) AND (status IS NULL OR status != $2)', [req.params.token, 'deleted']);
     if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
     const r = await pool.query(
       `SELECT p.id, p.url, p.keyword, p.gsc_keyword, p.brief_content, p.gsc_clicks, p.gsc_impressions, p.gsc_position,
@@ -1718,7 +1718,7 @@ app.get('/api/tracker-client/:token/latest-briefs', async (req, res) => {
 
 // ── Specialist work board: claim / done / reopen a brief ─────────────────────
 async function _resolveBoardPage(token, pageId) {
-  const cr = await pool.query('SELECT id FROM tracker_clients WHERE (token=$1 OR board_token=$1) AND (status IS NULL OR status != $2)', [token, 'deleted']);
+  const cr = await pool.query('SELECT id FROM tracker_clients WHERE (token=$1 OR board_token=$1 OR lead_token=$1) AND (status IS NULL OR status != $2)', [token, 'deleted']);
   if (!cr.rows.length) return { error: 'Tracker not found', code: 404 };
   const pr = await pool.query('SELECT id FROM tracker_pages WHERE id=$1 AND tracker_client_id=$2', [pageId, cr.rows[0].id]);
   if (!pr.rows.length) return { error: 'Page not found for this tracker', code: 404 };
@@ -1755,6 +1755,46 @@ app.post('/api/tracker-client/:token/brief/:pageId/reopen', async (req, res) => 
     if (r.error) return res.status(r.code).json({ success: false, error: r.error });
     await pool.query("UPDATE tracker_pages SET brief_status='open', brief_claimed_by=NULL, brief_claimed_at=NULL WHERE id=$1", [r.pageId]);
     res.json({ success: true, status: 'open' });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// ── Lead: assign a brief to a specialist (push) + manage the specialist list ──
+app.post('/api/tracker-client/:token/brief/:pageId/assign', async (req, res) => {
+  try {
+    const r = await _resolveBoardPage(req.params.token, req.params.pageId);
+    if (r.error) return res.status(r.code).json({ success: false, error: r.error });
+    const name = String((req.body && req.body.name) || '').trim().slice(0, 80);
+    if (!name) {
+      await pool.query("UPDATE tracker_pages SET brief_status='open', brief_claimed_by=NULL, brief_claimed_at=NULL WHERE id=$1", [r.pageId]);
+      return res.json({ success: true, status: 'open' });
+    }
+    await pool.query("UPDATE tracker_pages SET brief_status='in_progress', brief_claimed_by=$1, brief_claimed_at=NOW() WHERE id=$2", [name, r.pageId]);
+    res.json({ success: true, status: 'in_progress', claimed_by: name });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+async function _resolveLeadClient(token) {
+  const cr = await pool.query('SELECT id, specialists FROM tracker_clients WHERE (token=$1 OR lead_token=$1) AND (status IS NULL OR status != $2)', [token, 'deleted']);
+  return cr.rows.length ? cr.rows[0] : null;
+}
+app.get('/api/tracker-client/:token/lead/specialists', async (req, res) => {
+  try {
+    const c = await _resolveLeadClient(req.params.token);
+    if (!c) return res.status(404).json({ success: false, error: 'Not found' });
+    let list = [];
+    try { list = c.specialists ? JSON.parse(c.specialists) : []; } catch(e) { list = []; }
+    res.json({ success: true, specialists: Array.isArray(list) ? list : [] });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+app.post('/api/tracker-client/:token/lead/specialists', async (req, res) => {
+  try {
+    const c = await _resolveLeadClient(req.params.token);
+    if (!c) return res.status(404).json({ success: false, error: 'Not found' });
+    let names = req.body && req.body.specialists;
+    if (typeof names === 'string') names = names.split(',');
+    if (!Array.isArray(names)) names = [];
+    names = names.map(s => String(s).trim().slice(0,80)).filter(Boolean).slice(0, 50);
+    await pool.query('UPDATE tracker_clients SET specialists=$1 WHERE id=$2', [JSON.stringify(names), c.id]);
+    res.json({ success: true, specialists: names });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
@@ -1807,7 +1847,7 @@ function _triggerPageScan(pageId, delayMs) {
 // POST /api/tracker-client/:token/pages — add URL to track
 app.post('/api/tracker-client/:token/pages', async (req, res) => {
   try {
-    const cr = await pool.query('SELECT * FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status != $2)', [req.params.token, 'deleted']);
+    const cr = await pool.query('SELECT * FROM tracker_clients WHERE (token=$1 OR lead_token=$1) AND (status IS NULL OR status != $2)', [req.params.token, 'deleted']);
     if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
     const client = cr.rows[0];
 
@@ -2340,6 +2380,105 @@ app.post('/api/tracker-client/:token/check/:pageId', async (req, res) => {
 
 
 // GET /track/:token — client tracker page
+app.get('/track/:token/lead', async (req, res) => {
+  try {
+    let cr;
+    try { cr = await pool.query('SELECT * FROM tracker_clients WHERE (token=$1 OR lead_token=$1) AND (status IS NULL OR status != $2)', [req.params.token, 'deleted']); }
+    catch(e) { cr = await pool.query('SELECT * FROM tracker_clients WHERE token=$1 OR lead_token=$1', [req.params.token]); }
+    if (!cr.rows.length) return res.status(404).send('Not found');
+    const client = cr.rows[0];
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.send(`<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Lead Panel - ${client.domain || 'ContentScale'}</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;padding-bottom:40px}
+.ld-head{position:sticky;top:0;z-index:50;background:rgba(6,6,15,.95);backdrop-filter:blur(12px);border-bottom:1px solid #1f2937;padding:14px 20px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.ld-title{font-size:16px;font-weight:800;color:#f1f5f9}
+.ld-sub{font-size:11px;color:#6b7280;margin-top:2px}
+.ld-body{display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:20px;max-width:1100px}
+@media(max-width:720px){.ld-body{grid-template-columns:1fr}}
+.ld-panel{background:#0d1117;border:1px solid #1f2937;border-radius:14px;padding:16px}
+.ld-h{font-size:12px;font-weight:800;color:#a78bfa;text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px}
+.ld-h2{font-size:13px;font-weight:800;color:#c4b5fd;text-transform:uppercase;letter-spacing:.08em;padding:8px 20px 0;max-width:1700px}
+.ld-row{display:flex;gap:8px;margin-bottom:10px;align-items:flex-start}
+.ld-input{flex:1;background:#0a0a12;border:1px solid #1f2937;border-radius:8px;padding:9px 11px;color:#e5e7eb;font-size:13px;font-family:inherit}
+.ld-btn{border:none;border-radius:8px;padding:9px 16px;font-size:12px;font-weight:800;cursor:pointer;background:#0a0a12;border:1px solid #374151;color:#c4b5fd;white-space:nowrap}
+.ld-btn.primary{background:#7c3aed;color:#fff;border-color:#7c3aed}
+.ld-msg{font-size:11px;color:#6b7280;align-self:center}
+.ld-chips{display:flex;gap:6px;flex-wrap:wrap}
+.ld-chip{background:rgba(124,58,237,.12);border:1px solid rgba(124,58,237,.3);color:#c4b5fd;border-radius:999px;padding:4px 11px;font-size:12px;font-weight:700}
+.ld-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:14px;padding:14px 20px;max-width:1700px}
+.ld-card{background:#0d1117;border:1px solid #1f2937;border-radius:14px;padding:16px}
+.ld-card.s-progress{border-color:rgba(217,119,6,.4)}
+.ld-card.s-done{opacity:.6}
+.ld-url{font-size:13px;font-weight:800;color:#f1f5f9;word-break:break-all;line-height:1.4}
+.ld-time{font-size:10px;color:#6b7280;margin:3px 0 10px}
+.ld-badge{display:inline-block;font-size:10px;font-weight:800;padding:3px 9px;border-radius:999px}
+.ld-badge.open{background:rgba(22,163,74,.15);color:#4ade80}
+.ld-badge.progress{background:rgba(217,119,6,.15);color:#fbbf24}
+.ld-badge.done{background:rgba(55,65,81,.25);color:#9ca3af}
+.ld-assign{margin-top:12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.ld-select{background:#0a0a12;border:1px solid #374151;border-radius:8px;padding:7px 10px;color:#e5e7eb;font-size:12px;font-family:inherit;flex:1;min-width:140px}
+.ld-link{font-size:11px;color:#60a5fa;text-decoration:none}
+.ld-empty{grid-column:1/-1;text-align:center;color:#6b7280;padding:40px;font-size:14px}
+</style></head><body>
+<div class="ld-head">
+  <div><div class="ld-title">Lead Panel - ${client.domain || ''}</div><div class="ld-sub">Add pages, scan, and assign work to your specialists. No admin needed.</div></div>
+  <button class="ld-btn primary" id="scanBtn" onclick="scanAll()">Scan all now</button>
+</div>
+<div class="ld-body">
+  <div class="ld-panel">
+    <div class="ld-h">Your specialists</div>
+    <div class="ld-row"><input id="specInput" class="ld-input" placeholder="Names, comma-separated"></div>
+    <div class="ld-row"><button class="ld-btn primary" onclick="saveSpecs()">Save list</button><span class="ld-msg" id="specMsg"></span></div>
+    <div id="specList" class="ld-chips"></div>
+  </div>
+  <div class="ld-panel">
+    <div class="ld-h">Add pages to track</div>
+    <div class="ld-row"><textarea id="urlInput" class="ld-input" rows="3" placeholder="Paste page URLs, one per line"></textarea></div>
+    <div class="ld-row"><button class="ld-btn primary" onclick="addPages()">Add pages</button><span class="ld-msg" id="addMsg"></span></div>
+  </div>
+</div>
+<div class="ld-h2">Briefs &amp; assignments</div>
+<div class="ld-grid" id="ldGrid"></div>
+<script>
+  var TOKEN='${req.params.token}';
+  var NL=String.fromCharCode(10);
+  var _briefs=[], _specs=[];
+  function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function cleanUrl(u){ return String(u||'').replace(/^https?:[/][/]/,'').replace(/^www[.]/,''); }
+  function fmtTime(t){ try{ var d=t?new Date(t):null; return d?(d.toLocaleDateString('en-GB',{day:'2-digit',month:'short'})+' '+d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})):''; }catch(e){ return ''; } }
+  function loadSpecs(){ fetch('/api/tracker-client/'+TOKEN+'/lead/specialists').then(function(r){return r.json();}).then(function(d){ if(d&&d.specialists){ _specs=d.specialists; renderSpecs(); render(); } }).catch(function(){}); }
+  function renderSpecs(){ var el=document.getElementById('specList'); el.innerHTML=_specs.length?_specs.map(function(n){return '<span class="ld-chip">'+esc(n)+'</span>';}).join(''):'<span style="color:#6b7280;font-size:12px">No specialists yet - add some above.</span>'; var inp=document.getElementById('specInput'); if(inp&&!inp.value)inp.value=_specs.join(', '); }
+  function saveSpecs(){ var v=document.getElementById('specInput').value; var m=document.getElementById('specMsg'); m.textContent='Saving...'; fetch('/api/tracker-client/'+TOKEN+'/lead/specialists',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({specialists:v})}).then(function(r){return r.json();}).then(function(d){ if(d&&d.specialists){ _specs=d.specialists; renderSpecs(); render(); m.textContent='Saved'; setTimeout(function(){m.textContent='';},1500); } }).catch(function(){ m.textContent='Failed'; }); }
+  function scanAll(){ var b=document.getElementById('scanBtn'); b.textContent='Scanning...'; b.disabled=true; fetch('/api/tracker-client/'+TOKEN+'/scan-all',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({})}).then(function(r){return r.json();}).then(function(){ b.textContent='Scan started'; setTimeout(function(){ b.textContent='Scan all now'; b.disabled=false; load(); },4000); }).catch(function(){ b.textContent='Scan all now'; b.disabled=false; }); }
+  function addPages(){ var raw=document.getElementById('urlInput').value; var urls=raw.split(NL).map(function(s){return s.trim();}).filter(Boolean); var msg=document.getElementById('addMsg'); if(!urls.length){ msg.textContent='Paste at least one URL'; return; } var i=0, ok=0; (function next(){ if(i>=urls.length){ msg.textContent='Added '+ok+'/'+urls.length; document.getElementById('urlInput').value=''; load(); return; } var u=urls[i++]; if(u.indexOf('http')!==0)u='https://'+u; fetch('/api/tracker-client/'+TOKEN+'/pages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url:u})}).then(function(r){return r.json();}).then(function(d){ if(d&&d.success)ok++; msg.textContent='Adding '+i+'/'+urls.length; next(); }).catch(function(){ msg.textContent='Adding '+i+'/'+urls.length; next(); }); })(); }
+  function badge(st,who){ if(st==='done')return '<span class="ld-badge done">DONE</span>'; if(st==='in_progress')return '<span class="ld-badge progress">IN PROGRESS'+(who?' - '+esc(who):'')+'</span>'; return '<span class="ld-badge open">OPEN</span>'; }
+  function options(cur){ var o='<option value="">- Unassigned -</option>'; var found=false; _specs.forEach(function(n){ var sel=(n===cur); if(sel)found=true; o+='<option value="'+esc(n)+'"'+(sel?' selected':'')+'>'+esc(n)+'</option>'; }); if(cur&&!found)o+='<option value="'+esc(cur)+'" selected>'+esc(cur)+' (not in list)</option>'; return o; }
+  function assign(pageId, sel){ fetch('/api/tracker-client/'+TOKEN+'/brief/'+pageId+'/assign',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:sel.value})}).then(function(r){return r.json();}).then(function(){ load(); }).catch(function(){}); }
+  function render(){
+    var grid=document.getElementById('ldGrid');
+    if(!_briefs.length){ grid.innerHTML='<div class="ld-empty">No briefs yet - add pages and scan, they appear here.</div>'; return; }
+    var rank={open:0,in_progress:1,done:2};
+    var list=_briefs.slice().sort(function(a,b){ var ra=rank[a.brief_status||'open']; if(ra==null)ra=0; var rb=rank[b.brief_status||'open']; if(rb==null)rb=0; if(ra!==rb)return ra-rb; return (b.gsc_impressions||0)-(a.gsc_impressions||0); });
+    grid.innerHTML=list.map(function(d){
+      var st=d.brief_status||'open'; var cls=st==='done'?'s-done':st==='in_progress'?'s-progress':'';
+      return '<div class="ld-card '+cls+'"><div class="ld-url">'+esc(cleanUrl(d.url))+'</div><div class="ld-time">Scanned '+fmtTime(d.ts)+'</div>'+badge(st,d.brief_claimed_by)
+        +'<div class="ld-assign"><span style="font-size:11px;color:#6b7280">Assign:</span><select class="ld-select" onchange="assign('+d.page_id+',this)">'+options(d.brief_claimed_by||'')+'</select></div>'
+        +'<div style="margin-top:10px"><a class="ld-link" href="'+esc(d.url)+'" target="_blank" rel="noopener">Open page</a></div></div>';
+    }).join('');
+  }
+  function load(){ fetch('/api/tracker-client/'+TOKEN+'/latest-briefs').then(function(r){return r.json();}).then(function(d){ if(d&&d.briefs){ _briefs=d.briefs; render(); } }).catch(function(){}); }
+  loadSpecs(); load(); setInterval(load,15000);
+</script>
+</body></html>`);
+  } catch(e) { res.status(500).send('Lead panel error: ' + e.message); }
+});
+
 app.get('/track/:token/board', async (req, res) => {
   try {
     let cr;
@@ -4081,6 +4220,14 @@ app.patch('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS live_wall_enabled BOOLEAN DEFAULT FALSE`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS board_token VARCHAR(64)`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS board_enabled BOOLEAN DEFAULT TRUE`).catch(()=>{});
+  await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS lead_token VARCHAR(64)`).catch(()=>{});
+  await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS specialists TEXT`).catch(()=>{});
+  try {
+    const _needLt = await client.query(`SELECT id FROM tracker_clients WHERE lead_token IS NULL`);
+    for (const _r of _needLt.rows) {
+      await client.query(`UPDATE tracker_clients SET lead_token=$1 WHERE id=$2`, [require('crypto').randomBytes(24).toString('hex'), _r.id]).catch(()=>{});
+    }
+  } catch(e) {}
   try {
     const _needBt = await client.query(`SELECT id FROM tracker_clients WHERE board_token IS NULL`);
     for (const _r of _needBt.rows) {
@@ -32522,6 +32669,28 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 boardWrap.appendChild(boardCopyBtn);
                 boardWrap.appendChild(boardLink);
                 actionsDiv.appendChild(boardWrap);
+
+                // Lead panel link (lead_token — company lead can upload, scan, assign work, no admin)
+                var leadWrap = document.createElement('div');
+                leadWrap.style.cssText = 'font-size:9px;margin-top:4px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;';
+                var leadPath = '/track/' + (c.lead_token || c.token) + '/lead';
+                var leadCopyBtn = document.createElement('button');
+                leadCopyBtn.className = 'tr-btn';
+                leadCopyBtn.textContent = '👤 Copy lead link';
+                leadCopyBtn.style.cssText = 'font-size:10px;padding:3px 8px;border-color:#22c55e;color:#86efac;';
+                leadCopyBtn.onclick = (function(path, btn){ return function(){
+                    navigator.clipboard.writeText(window.location.origin + path).then(function(){
+                        btn.textContent = 'Copied!';
+                        setTimeout(function(){ btn.textContent = '👤 Copy lead link'; }, 2000);
+                    });
+                }; })(leadPath, leadCopyBtn);
+                var leadLink = document.createElement('a');
+                leadLink.href = leadPath; leadLink.target = '_blank';
+                leadLink.textContent = leadPath;
+                leadLink.style.cssText = 'color:#86efac;text-decoration:none;font-family:monospace;';
+                leadWrap.appendChild(leadCopyBtn);
+                leadWrap.appendChild(leadLink);
+                actionsDiv.appendChild(leadWrap);
 
                 var domainsBtn = document.createElement('button');
                 domainsBtn.className = 'tr-btn';
