@@ -2347,6 +2347,7 @@ app.get('/track/:token/board', async (req, res) => {
     catch(e) { cr = await pool.query('SELECT * FROM tracker_clients WHERE token=$1 OR board_token=$1', [req.params.token]); }
     if (!cr.rows.length) return res.status(404).send('Not found');
     const client = cr.rows[0];
+    if (client.board_enabled === false) return res.status(403).send('<body style="background:#06060f;color:#9ca3af;font-family:system-ui,sans-serif;text-align:center;padding:80px"><h2 style="color:#e5e7eb">Board turned off</h2><p>This work board is currently disabled. Ask the account owner to enable it.</p></body>');
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
     res.send(`<!DOCTYPE html>
@@ -2393,6 +2394,7 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
   <div><div class="bd-title">Brief Board - ${client.domain || ''}</div><div class="bd-sub">Claim a brief, do the work, mark it done. Everyone sees the same board live.</div></div>
   <div class="bd-filters">
     <button class="bd-fbtn on" data-f="all" onclick="setFilter('all')">All</button>
+    <button class="bd-fbtn" data-f="mine" onclick="setFilter('mine')">My work</button>
     <button class="bd-fbtn" data-f="open" onclick="setFilter('open')">Open</button>
     <button class="bd-fbtn" data-f="in_progress" onclick="setFilter('in_progress')">In progress</button>
     <button class="bd-fbtn" data-f="done" onclick="setFilter('done')">Done</button>
@@ -2421,11 +2423,23 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
     return '<button class="bd-btn sec" onclick="reopen('+d.page_id+')">Reopen</button>'; }
   function render(){
     var grid=document.getElementById('bdGrid');
-    var list=_briefs.filter(function(d){ return _filter==='all' || (d.brief_status||'open')===_filter; });
-    if(!list.length){ grid.innerHTML='<div class="bd-empty">No briefs'+(_filter!=='all'?' in this status':' yet - they appear here after a scan')+'.</div>'; return; }
+    var list=_briefs.filter(function(d){
+      if(_filter==='all') return true;
+      if(_filter==='mine') return d.brief_claimed_by && _name && String(d.brief_claimed_by).toLowerCase()===_name.toLowerCase();
+      return (d.brief_status||'open')===_filter;
+    });
+    var rank={open:0,in_progress:1,done:2};
+    list.sort(function(a,b){
+      var ra=rank[a.brief_status||'open']; if(ra==null)ra=0; var rb=rank[b.brief_status||'open']; if(rb==null)rb=0;
+      if(ra!==rb) return ra-rb;
+      var ia=a.gsc_impressions||0, ib=b.gsc_impressions||0;
+      if(ib!==ia) return ib-ia;
+      return (a.position||a.gsc_position||999)-(b.position||b.gsc_position||999);
+    });
+    if(!list.length){ grid.innerHTML='<div class="bd-empty">'+(_filter==='mine'?'You have not claimed any briefs yet — pick one from Open.':(_filter!=='all'?'No briefs in this status.':'No briefs yet - they appear here after a scan.'))+'</div>'; return; }
     grid.innerHTML=list.map(function(d){
       var st=d.brief_status||'open'; var cls=st==='done'?'s-done':st==='in_progress'?'s-progress':'s-open';
-      return '<div class="bw-card '+cls+'"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:6px"><div style="min-width:0"><div class="bw-url">'+esc(cleanUrl(d.url))+'</div><div class="bw-time">Scanned '+fmtTime(d.ts)+'</div></div>'+badge(st,d.brief_claimed_by)+'</div>'+chips(d)+recs(d)+'<div class="bd-actions">'+actions(d)+'<button class="bd-btn sec" onclick="copyBrief('+d.page_id+')">Copy brief</button><a class="bd-btn sec" href="'+esc(d.url)+'" target="_blank" rel="noopener" style="text-decoration:none">Open page</a></div></div>';
+      return '<div class="bw-card '+cls+'"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:6px"><div style="min-width:0"><div class="bw-url">'+esc(cleanUrl(d.url))+'</div><div class="bw-time">Scanned '+fmtTime(d.ts)+'</div></div>'+badge(st,d.brief_claimed_by)+'</div>'+chips(d)+recs(d)+'<div class="bd-actions">'+actions(d)+'<button class="bd-btn sec" onclick="copyBrief('+d.page_id+',this)">Copy brief</button><a class="bd-btn sec" href="'+esc(d.url)+'" target="_blank" rel="noopener" style="text-decoration:none">Open page</a></div></div>';
     }).join('');
   }
   function ensureName(){ if(_name) return true; var n=prompt('Enter your name to claim briefs:'); if(n&&n.trim()){ saveName(n); document.getElementById('bdName').value=_name; return true; } return false; }
@@ -2433,7 +2447,16 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
   function claim(pageId){ if(!ensureName())return; post(pageId,'claim',{name:_name}).then(function(r){ if(!r.success) alert(r.error||'Could not claim'); load(); }); }
   function markDone(pageId){ post(pageId,'done',{name:_name}).then(function(){ load(); }); }
   function reopen(pageId){ post(pageId,'reopen',{}).then(function(){ load(); }); }
-  function copyBrief(pageId){ var d=_briefs.filter(function(x){return x.page_id===pageId;})[0]; if(!d)return; var txt=cleanUrl(d.url)+NL+NL+(d.passages||[]).map(function(p){return '- '+(p.title||'')+': '+(p.action||p.passage||'');}).join(NL); if(navigator.clipboard){ navigator.clipboard.writeText(txt).then(function(){ alert('Brief copied'); },function(){ alert('Copy failed'); }); } }
+  function copyBrief(pageId, btn){
+    var d=_briefs.filter(function(x){return String(x.page_id)===String(pageId);})[0];
+    if(!d){ if(btn){ btn.textContent='Not found'; } return; }
+    var lines=[cleanUrl(d.url),''];
+    (d.passages||[]).forEach(function(p){ lines.push('- '+(p.title||p.h2||'')+': '+(p.action||p.passage||p.body||p.text||'')); });
+    var txt=lines.join(NL);
+    function feedback(ok){ if(!btn)return; var o=btn.getAttribute('data-orig')||btn.textContent; btn.setAttribute('data-orig',o); btn.textContent=ok?'Copied!':'Copy failed'; setTimeout(function(){ btn.textContent=o; },1500); }
+    function fallback(){ try{ var ta=document.createElement('textarea'); ta.value=txt; ta.style.position='fixed'; ta.style.top='-1000px'; ta.style.opacity='0'; document.body.appendChild(ta); ta.focus(); ta.select(); var ok=document.execCommand('copy'); document.body.removeChild(ta); feedback(ok); }catch(e){ feedback(false); } }
+    if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(txt).then(function(){feedback(true);},function(){fallback();}); } else { fallback(); }
+  }
   function load(){ fetch('/api/tracker-client/'+TOKEN+'/latest-briefs').then(function(r){return r.json();}).then(function(d){ if(d&&d.briefs){ _briefs=d.briefs; render(); } }).catch(function(){}); }
   document.getElementById('bdName').value=_name;
   load(); setInterval(load,12000);
@@ -3250,6 +3273,14 @@ app.post('/api/admin/tracker-clients/:id/live-wall', verifyAdmin, async (req, re
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
+app.post('/api/admin/tracker-clients/:id/board-toggle', verifyAdmin, async (req, res) => {
+  try {
+    const enabled = req.body.enabled === true || req.body.enabled === 'true';
+    await pool.query('UPDATE tracker_clients SET board_enabled = $1 WHERE id = $2', [enabled, req.params.id]);
+    res.json({ success: true, board_enabled: enabled });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
 // POST /api/admin/tracker-clients/:id/regenerate-token
 app.post('/api/admin/tracker-clients/:id/regenerate-token', verifyAdmin, async (req, res) => {
   try {
@@ -4049,6 +4080,7 @@ app.patch('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
   await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS html_mismatch_notified_at TIMESTAMPTZ`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS live_wall_enabled BOOLEAN DEFAULT FALSE`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS board_token VARCHAR(64)`).catch(()=>{});
+  await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS board_enabled BOOLEAN DEFAULT TRUE`).catch(()=>{});
   try {
     const _needBt = await client.query(`SELECT id FROM tracker_clients WHERE board_token IS NULL`);
     for (const _r of _needBt.rows) {
@@ -32460,6 +32492,18 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 // Specialist board link (separate board_token, not derivable from the public link)
                 var boardWrap = document.createElement('div');
                 boardWrap.style.cssText = 'font-size:9px;margin-top:4px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;';
+                var boardCb = document.createElement('input');
+                boardCb.type = 'checkbox'; boardCb.checked = (c.board_enabled !== false);
+                boardCb.style.cssText = 'accent-color:#7c3aed;cursor:pointer;';
+                var boardLbl = document.createElement('span');
+                boardLbl.textContent = 'Board'; boardLbl.style.cssText = 'font-size:10px;color:' + (boardCb.checked ? '#a78bfa' : '#6b7280') + ';font-weight:700;';
+                boardCb.onchange = (function(id, cb, lbl){ return function(){
+                    var on = cb.checked;
+                    lbl.style.color = on ? '#a78bfa' : '#6b7280';
+                    apiCall('/api/admin/tracker-clients/' + id + '/board-toggle', 'POST', { enabled: on });
+                }; })(c.id, boardCb, boardLbl);
+                boardWrap.appendChild(boardCb);
+                boardWrap.appendChild(boardLbl);
                 var boardPath = '/track/' + (c.board_token || c.token) + '/board';
                 var boardCopyBtn = document.createElement('button');
                 boardCopyBtn.className = 'tr-btn';
