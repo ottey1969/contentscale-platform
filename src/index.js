@@ -3175,7 +3175,7 @@ app.get('/api/admin/settings', verifyAdmin, async (req, res) => {
     settings.sender_name = settings.sender_name || process.env.SENDER_NAME || 'ContentScale Tracker';
       settings.engine_from_email = settings.engine_from_email || settings.contact_email || process.env.FROM_EMAIL || 'info@contentscale.site';
       settings.engine_sender_name = settings.engine_sender_name || 'ContentScale Engine';
-    if (typeof settings.rewrite_keep_rules !== 'string') settings.rewrite_keep_rules = '- Keep the existing layout, CSS and classes that already work; do not restyle or reorder sections that are fine.\n- Reuse the existing images (keep their current src and alt); never invent image URLs or use placeholders.\n- Output the page CONTENT only: no menu / navigation, no footer, no scan badge (the site template adds those).\n- Internal links: only link to pages that actually exist - use URLs already present in the current page HTML, or from the INTERNAL LINKS list if one is provided. Never invent internal URLs or guess slugs; when unsure, link to the homepage only.\n- External links: add 2-4 links to high-authority sources only, linking to their ROOT domain or a well-known stable page - never invent deep URLs. Match the LANGUAGE of the page. For English pages use English sources: Google Search Central, Wikipedia, Ahrefs, Semrush, Moz, Backlinko, Search Engine Journal, Search Engine Land. ONLY for Dutch-language pages you may also use Dutch sources like Frankwatching, Emerce or Marketingfacts. Never link to a source in a different language than the page.';
+    if (typeof settings.rewrite_keep_rules !== 'string') settings.rewrite_keep_rules = '- Keep the existing layout, CSS and classes that already work; do not restyle or reorder sections that are fine.\n- Reuse the existing images (keep their current src and alt); never invent image URLs or use placeholders.\n- Output the page CONTENT only: no menu / navigation, no footer, no scan badge (the site template adds those).\\n- Output a CONTENT FRAGMENT only: never wrap output in <!doctype>, <html>, <head>, <body>, <title> or <meta> tags.\\n- Never add a second H1 (the page already has one); use H2/H3 for new sections, and never repeat the page title as a heading.\\n- Never duplicate JSON-LD/schema, headers, footers or meta the page already has. Anything that creates a nested document or duplicate headers/meta confuses Google - keep it a clean content fragment.\n- Internal links: only link to pages that actually exist - use URLs already present in the current page HTML, or from the INTERNAL LINKS list if one is provided. Never invent internal URLs or guess slugs; when unsure, link to the homepage only.\n- External links: add 2-4 links to high-authority sources only, linking to their ROOT domain or a well-known stable page - never invent deep URLs. Match the LANGUAGE of the page. For English pages use English sources: Google Search Central, Wikipedia, Ahrefs, Semrush, Moz, Backlinko, Search Engine Journal, Search Engine Land. ONLY for Dutch-language pages you may also use Dutch sources like Frankwatching, Emerce or Marketingfacts. Never link to a source in a different language than the page.';
     res.json({ success: true, settings });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
@@ -3212,7 +3212,7 @@ app.post('/api/admin/settings', verifyAdmin, async (req, res) => {
 
 // ── Engine: email the Master Brief to admin-configured recipients ─────────
 app.get('/api/engine/output-rules', verifyEngineAccess, async (req, res) => {
-  const DEF = '- Keep the existing layout, CSS and classes that already work; do not restyle or reorder sections that are fine.\n- Reuse the existing images (keep their current src and alt); never invent image URLs or use placeholders.\n- Output the page CONTENT only: no menu / navigation, no footer, no scan badge (the site template adds those).\n- Internal links: only link to pages that actually exist - use URLs already present in the current page HTML, or from the INTERNAL LINKS list if one is provided. Never invent internal URLs or guess slugs; when unsure, link to the homepage only.\n- External links: add 2-4 links to high-authority sources only, linking to their ROOT domain or a well-known stable page - never invent deep URLs. Match the LANGUAGE of the page. For English pages use English sources: Google Search Central, Wikipedia, Ahrefs, Semrush, Moz, Backlinko, Search Engine Journal, Search Engine Land. ONLY for Dutch-language pages you may also use Dutch sources like Frankwatching, Emerce or Marketingfacts. Never link to a source in a different language than the page.';
+  const DEF = '- Keep the existing layout, CSS and classes that already work; do not restyle or reorder sections that are fine.\n- Reuse the existing images (keep their current src and alt); never invent image URLs or use placeholders.\n- Output the page CONTENT only: no menu / navigation, no footer, no scan badge (the site template adds those).\\n- Output a CONTENT FRAGMENT only: never wrap output in <!doctype>, <html>, <head>, <body>, <title> or <meta> tags.\\n- Never add a second H1 (the page already has one); use H2/H3 for new sections, and never repeat the page title as a heading.\\n- Never duplicate JSON-LD/schema, headers, footers or meta the page already has. Anything that creates a nested document or duplicate headers/meta confuses Google - keep it a clean content fragment.\n- Internal links: only link to pages that actually exist - use URLs already present in the current page HTML, or from the INTERNAL LINKS list if one is provided. Never invent internal URLs or guess slugs; when unsure, link to the homepage only.\n- External links: add 2-4 links to high-authority sources only, linking to their ROOT domain or a well-known stable page - never invent deep URLs. Match the LANGUAGE of the page. For English pages use English sources: Google Search Central, Wikipedia, Ahrefs, Semrush, Moz, Backlinko, Search Engine Journal, Search Engine Land. ONLY for Dutch-language pages you may also use Dutch sources like Frankwatching, Emerce or Marketingfacts. Never link to a source in a different language than the page.';
   try {
     const r = pool ? (await pool.query("SELECT value FROM app_settings WHERE key='rewrite_keep_rules'").catch(()=>({rows:[]}))).rows : [];
     res.json({ success: true, rules: r.length ? (r[0].value || '') : DEF });
@@ -18308,7 +18308,7 @@ const statsCtxRW = analysis.stats_context ? `\nSTATISTICS TO CITE:\n${String(ana
     const imageNote = keep_images_urls ? `\nBESTAANDE AFBEELDINGEN BEWAREN (gebruik deze URLs):\n${keep_images_urls}` : '';
     let _krRow = [];
     try { _krRow = (await pool.query("SELECT value FROM app_settings WHERE key='rewrite_keep_rules'")).rows; } catch(e) {}
-    const _krRules = (_krRow.length ? (_krRow[0].value || '') : '- Keep the existing layout, CSS and classes that already work; do not restyle or reorder sections that are fine.\n- Reuse the existing images (keep their current src and alt); never invent image URLs or use placeholders.\n- Output the page CONTENT only: no menu / navigation, no footer, no scan badge (the site template adds those).\n- Internal links: only link to pages that actually exist - use URLs already present in the current page HTML, or from the INTERNAL LINKS list if one is provided. Never invent internal URLs or guess slugs; when unsure, link to the homepage only.\n- External links: add 2-4 links to high-authority sources only, linking to their ROOT domain or a well-known stable page - never invent deep URLs. Match the LANGUAGE of the page. For English pages use English sources: Google Search Central, Wikipedia, Ahrefs, Semrush, Moz, Backlinko, Search Engine Journal, Search Engine Land. ONLY for Dutch-language pages you may also use Dutch sources like Frankwatching, Emerce or Marketingfacts. Never link to a source in a different language than the page.').trim();
+    const _krRules = (_krRow.length ? (_krRow[0].value || '') : '- Keep the existing layout, CSS and classes that already work; do not restyle or reorder sections that are fine.\n- Reuse the existing images (keep their current src and alt); never invent image URLs or use placeholders.\n- Output the page CONTENT only: no menu / navigation, no footer, no scan badge (the site template adds those).\\n- Output a CONTENT FRAGMENT only: never wrap output in <!doctype>, <html>, <head>, <body>, <title> or <meta> tags.\\n- Never add a second H1 (the page already has one); use H2/H3 for new sections, and never repeat the page title as a heading.\\n- Never duplicate JSON-LD/schema, headers, footers or meta the page already has. Anything that creates a nested document or duplicate headers/meta confuses Google - keep it a clean content fragment.\n- Internal links: only link to pages that actually exist - use URLs already present in the current page HTML, or from the INTERNAL LINKS list if one is provided. Never invent internal URLs or guess slugs; when unsure, link to the homepage only.\n- External links: add 2-4 links to high-authority sources only, linking to their ROOT domain or a well-known stable page - never invent deep URLs. Match the LANGUAGE of the page. For English pages use English sources: Google Search Central, Wikipedia, Ahrefs, Semrush, Moz, Backlinko, Search Engine Journal, Search Engine Land. ONLY for Dutch-language pages you may also use Dutch sources like Frankwatching, Emerce or Marketingfacts. Never link to a source in a different language than the page.').trim();
     const keepRulesBlock = _krRules ? `\n\u2550\u2550\u2550 STRICT OUTPUT RULES (MANDATORY) \u2550\u2550\u2550\n${_krRules}\n` : '';
 
     const profBiR = await pool.query(`SELECT business_info, sitemap_url, domain, author_name, author_bio, author_location FROM content_profiles WHERE id=$1`, [rw.profile_id]);
@@ -28693,7 +28693,10 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
         // Skip header-like rows
         if (query.toLowerCase() === 'top queries' || query.toLowerCase() === 'query') return;
         // Create a URL hint \\u2014 user will confirm which URL this maps to
-        pairs.push({ url: 'https://' + domain + '/', keyword: query, isQueryOnly: true });
+        var parseNumQ = function(s) { return parseFloat((s||'0').replace(/,/g,'')) || 0; };
+        pairs.push({ url: 'https://' + domain + '/', keyword: query, isQueryOnly: true,
+          clicks: parseNumQ(parts[1]), impressions: parseNumQ(parts[2]),
+          ctr: parseFloat((parts[3]||'0').replace('%','').replace(',','.')) || 0, position: parseNumQ(parts[4]) });
 
       } else if (isPagesCSV) {
         // Format: URL, clicks, impressions, CTR, position
@@ -28730,8 +28733,31 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
 
     if (!pairs.length) { toast('No valid data found. Try: GSC Queries CSV, Pages CSV, or URL | keyword format', '#f87171'); return; }
 
-    // Sort by clicks desc (GSC priority)
-    pairs.sort(function(a,b){ return (b.clicks||0) - (a.clicks||0); });
+    // Merge duplicate URLs \\u2014 GSC often splits one page across http/https/www/trailing-slash variants. Sum the metrics.
+    var _byUrl = {}; var _merged = [];
+    pairs.forEach(function(p){
+      if (p.isQueryOnly) { _merged.push(p); return; }
+      var key = String(p.url||'').replace(/^https?:[/][/]/,'').replace(/^www[.]/,'').replace(/[/]+$/,'').toLowerCase();
+      if (!key) { _merged.push(p); return; }
+      if (_byUrl[key]) {
+        var e = _byUrl[key];
+        e.clicks = (e.clicks||0) + (p.clicks||0);
+        e.impressions = (e.impressions||0) + (p.impressions||0);
+        if (p.position && (!e.position || p.position < e.position)) e.position = p.position;
+        if (!e.keyword && p.keyword) e.keyword = p.keyword;
+      } else { _byUrl[key] = p; _merged.push(p); }
+    });
+    pairs = _merged;
+
+    // Sort by OPPORTUNITY: impressions desc (most demand = highest priority), then clicks desc, then best position
+    pairs.sort(function(a,b){
+      var ai=a.impressions||0, bi=b.impressions||0;
+      if (bi!==ai) return bi-ai;
+      var ac=a.clicks||0, bc=b.clicks||0;
+      if (bc!==ac) return bc-ac;
+      return (a.position||999)-(b.position||999);
+    });
+    pairs.forEach(function(p,i){ p._rank = i+1; });
 
     // If queries-only, show info
     if (pairs[0] && pairs[0].isQueryOnly) {
@@ -28748,7 +28774,12 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
         var path = '';
         try { path = new URL(p.url).pathname; } catch(e) { path = p.url; }
         if (path === '/') path = '(homepage)';
-        return (p.isQueryOnly ? '[keyword] ' : '') + path + (p.keyword ? ' - ' + p.keyword : '') + (p.clicks ? ' (' + p.clicks + ' clicks)' : '');
+        var who = p.isQueryOnly ? ('"' + p.keyword + '"') : (path + (p.keyword ? ' \\u2014 ' + p.keyword : ''));
+        var m = [];
+        if (p.impressions) m.push(Math.round(p.impressions).toLocaleString() + ' impr');
+        if (p.clicks) m.push(p.clicks + ' clk');
+        if (p.position) m.push('pos ' + p.position.toFixed(1));
+        return '#' + (p._rank||'?') + '  ' + who + (m.length ? '  \\u00b7  ' + m.join(' \\u00b7 ') : '');
       },
       countEl,
       maxSel
