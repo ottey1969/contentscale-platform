@@ -942,6 +942,7 @@ async function sendTrackerEmail(clientId, subject, htmlBody) {
 
     const unsubUrl = (process.env.APP_URL || 'https://app.contentscale.site') + '/unsubscribe/' + unsubToken;
     const trackUrl = (process.env.APP_URL || 'https://app.contentscale.site') + '/track/' + client.token;
+    const liveUrl = trackUrl + '/live';
 
     const fullHtml = `<!DOCTYPE html>
 <html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
@@ -954,7 +955,7 @@ async function sendTrackerEmail(clientId, subject, htmlBody) {
   <div style="background:#ffffff;padding:32px;border-left:1px solid #e2e8f0;border-right:1px solid #e2e8f0;">
     ${htmlBody}
     <div style="margin-top:32px;text-align:center;">
-      <a href="${trackUrl}" style="display:inline-block;background:#7c3aed;color:#ffffff;text-decoration:none;padding:12px 28px;border-radius:8px;font-weight:700;font-size:14px;">View Your Tracker</a>
+      <a href="${liveUrl}" style="display:inline-block;background:#7c3aed;color:#ffffff;text-decoration:none;padding:12px 28px;border-radius:8px;font-weight:700;font-size:14px;">View Your Tracker</a>
     </div>
   </div>
   <div style="background:#f5f3ff;border:1px solid #ddd6fe;padding:20px 32px;text-align:center;">
@@ -1084,6 +1085,9 @@ app.post('/api/tracker-client/register', async (req, res) => {
         [token, cleanDomain, name||null, email||null, whatsapp||null, maxPages, clientIp||null]
       );
     });
+
+    // Live Brief Wall ("View tracker" page) is ON by default for every new domain
+    try { await pool.query(`UPDATE tracker_clients SET live_wall_enabled=TRUE WHERE token=$1`, [token]); } catch(e) {}
 
     const trackUrl = (process.env.APP_URL || 'https://app.contentscale.site') + '/track/' + token;
     const appUrl = process.env.APP_URL || 'https://app.contentscale.site';
@@ -4217,7 +4221,7 @@ app.patch('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
   await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS ranking_brief JSONB`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS needs_html BOOLEAN DEFAULT FALSE`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS html_mismatch_notified_at TIMESTAMPTZ`).catch(()=>{});
-  await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS live_wall_enabled BOOLEAN DEFAULT FALSE`).catch(()=>{});
+  await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS live_wall_enabled BOOLEAN DEFAULT TRUE`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS board_token VARCHAR(64)`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS board_enabled BOOLEAN DEFAULT TRUE`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS lead_token VARCHAR(64)`).catch(()=>{});
@@ -30133,6 +30137,12 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     .ut-action.red:hover { background:#2d0a0a; }
                     .ut-filter { background:#0d1117; border:1px solid #1f2937; border-radius:6px; padding:6px 10px; font-size:13px; color:#e5e7eb; outline:none; }
                     .ut-filter:focus { border-color:#7e22ce; }
+                    .tr-btn { background:transparent; border:1px solid #374151; border-radius:6px; padding:4px 10px; font-size:11px; font-weight:600; color:#9ca3af; cursor:pointer; transition:border-color .12s, background .12s, color .12s; display:inline-flex; align-items:center; gap:5px; line-height:1.4; white-space:nowrap; }
+                    .tr-btn:hover { border-color:#7c3aed; color:#e5e7eb; background:rgba(124,58,237,.12); }
+                    .tr-btn.green { border-color:#166534; color:#4ade80; }
+                    .tr-btn.green:hover { background:#052e16; }
+                    .tr-btn.danger { border-color:#7f1d1d; color:#f87171; }
+                    .tr-btn.danger:hover { background:#2d0a0a; }
                 </style>
                 <!-- Header -->
                 <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;flex-wrap:wrap;gap:12px;">
@@ -32542,9 +32552,39 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 maxWrap.appendChild(presets);
                 maxCell.appendChild(maxWrap);
 
-                // -- Actions --
+                // -- Actions (grouped: toggles · stacked links · buttons) --
                 var actionsDiv = document.createElement('div');
-                actionsDiv.style.cssText = 'display:flex;gap:3px;justify-content:center;flex-wrap:wrap;';
+                actionsDiv.style.cssText = 'display:flex;flex-direction:column;gap:10px;min-width:360px;max-width:560px;';
+
+                var togglesRow = document.createElement('div');
+                togglesRow.style.cssText = 'display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:center;padding-bottom:9px;border-bottom:1px solid #1f2430;';
+
+                var linksCol = document.createElement('div');
+                linksCol.style.cssText = 'display:flex;flex-direction:column;gap:6px;';
+
+                var btnRow = document.createElement('div');
+                btnRow.style.cssText = 'display:flex;flex-wrap:wrap;gap:6px;justify-content:center;padding-top:9px;border-top:1px solid #1f2430;';
+
+                // helper: build a stacked, clickable share-link row (label · url · copy)
+                function tcMkLinkRow(labelText, accent, path, primary){
+                    var row = document.createElement('div');
+                    row.style.cssText = 'display:flex;align-items:center;gap:10px;background:#14141b;border:1px solid ' + (primary ? 'rgba(139,92,246,.5)' : '#2a2a36') + ';border-radius:9px;padding:8px 11px;' + (primary ? 'box-shadow:inset 0 0 0 999px rgba(139,92,246,.06);' : '');
+                    var lab = document.createElement('span');
+                    lab.textContent = labelText;
+                    lab.style.cssText = 'min-width:108px;font-size:11px;font-weight:700;color:' + accent + ';white-space:nowrap;';
+                    var a = document.createElement('a');
+                    a.href = path; a.target = '_blank'; a.rel = 'noopener'; a.textContent = path;
+                    a.style.cssText = 'flex:1;font-family:monospace;font-size:11px;color:#9aa0b4;text-decoration:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;';
+                    var cp = document.createElement('button');
+                    cp.className = 'tr-btn'; cp.textContent = 'Copy link'; cp.style.cssText = 'font-size:10px;padding:3px 9px;flex-shrink:0;';
+                    cp.onclick = (function(u, btn){ return function(){
+                        navigator.clipboard.writeText(window.location.origin + u).then(function(){
+                            btn.textContent = 'Copied!'; setTimeout(function(){ btn.textContent = 'Copy link'; }, 1800);
+                        });
+                    }; })(path, cp);
+                    row.appendChild(lab); row.appendChild(a); row.appendChild(cp);
+                    return row;
+                }
 
                 // ── Frequency selector ──
                 var freqSelect = document.createElement('select');
@@ -32571,7 +32611,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                         setTimeout(loadTrackerClients, 400);
                     });
                 }; })(c.id);
-                actionsDiv.appendChild(freqSelect);
+                togglesRow.appendChild(freqSelect);
 
                 var toggleBtn = document.createElement('button');
                 toggleBtn.className = 'tr-btn' + (isActive ? '' : ' green');
@@ -32580,18 +32620,18 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 toggleBtn.style.cssText = 'font-size:10px;padding:3px 8px;';
                 toggleBtn.onclick = (function(id, newStatus){ return function(){ updateTcClient(id, {status: newStatus}); loadTrackerClients(); }; })(c.id, isActive ? 'disabled' : 'active');
 
-                // ── GSC toggle ──
+                // ── GSC toggle (admin tier-2 grant; default off, gated server-side) ──
                 var gscBtn = document.createElement('button');
                 gscBtn.className = 'tr-btn';
-                gscBtn.textContent = c.gsc_enabled ? 'GSC ✓' : 'GSC off';
-                gscBtn.title = c.gsc_enabled ? 'GSC enabled — click to disable' : 'Enable GSC for this client (Tier 2)';
+                gscBtn.textContent = c.gsc_enabled ? 'GSC \u2713' : 'GSC off';
+                gscBtn.title = c.gsc_enabled ? 'GSC enabled — click to disable' : 'Enable GSC for this client (Tier 2+; free & Tier 1 have no GSC)';
                 gscBtn.style.cssText = 'font-size:10px;padding:3px 8px;border-color:' + (c.gsc_enabled ? '#4ade80' : '#374151') + ';color:' + (c.gsc_enabled ? '#4ade80' : '#6b7280') + ';';
                 gscBtn.onclick = (function(id, current){ return function(){
                     var newVal = !current;
                     updateTcClient(id, {gsc_enabled: newVal});
                     setTimeout(loadTrackerClients, 400);
                 }; })(c.id, !!c.gsc_enabled);
-                actionsDiv.appendChild(gscBtn);
+                togglesRow.appendChild(gscBtn);
 
                 // ── Extra Citation-Brief recipients ──
                 var emailsBtn = document.createElement('button');
@@ -32605,27 +32645,23 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     if (v === null) return;
                     updateTcClient(id, { cc_emails: v.trim() });
                 }; })(c.id, c.cc_emails || '');
-                actionsDiv.appendChild(emailsBtn);
+                togglesRow.appendChild(emailsBtn);
 
-                // ── Live Wall toggle ──
+                // ── Live Wall enable toggle (the /live URL is shown as "View tracker" below) ──
                 var lwWrap = document.createElement('div');
-                lwWrap.style.cssText = 'display:flex;align-items:center;gap:4px;';
+                lwWrap.style.cssText = 'display:flex;align-items:center;gap:5px;';
                 var lwCb = document.createElement('input');
                 lwCb.type = 'checkbox';
                 lwCb.checked = !!c.live_wall_enabled;
                 lwCb.style.cssText = 'width:14px;height:14px;accent-color:#7c3aed;cursor:pointer;';
-                lwCb.title = 'Enable Live Brief Wall for this client';
+                lwCb.title = 'Enable Live Brief Wall (View tracker page) for this client';
                 var lwLbl = document.createElement('span');
-                lwLbl.textContent = 'Live';
-                lwLbl.style.cssText = 'font-size:10px;color:' + (c.live_wall_enabled ? '#a78bfa' : '#6b7280') + ';';
+                lwLbl.textContent = 'Live wall';
+                lwLbl.style.cssText = 'font-size:11px;font-weight:600;color:' + (c.live_wall_enabled ? '#a78bfa' : '#6b7280') + ';';
                 var lwStatus = document.createElement('span');
                 lwStatus.style.cssText = 'display:none;font-size:9px;padding-left:4px;';
                 var lwUrl = document.createElement('div');
-                lwUrl.style.cssText = 'display:none;font-size:9px;margin-top:2px;';
-                if (c.live_wall_enabled) {
-                    lwUrl.style.display = 'block';
-                    lwUrl.innerHTML = '<a href="/track/' + c.token + '/live" target="_blank" style="color:#4ade80;text-decoration:none;font-family:monospace;">/track/' + c.token + '/live</a>';
-                }
+                lwUrl.style.cssText = 'display:none;';
                 lwCb.onchange = (function(cid, token, cb, st, urlEl, lbl){ return function(){
                     toggleLiveWall(cid, token, cb, st, urlEl);
                     lbl.style.color = cb.checked ? '#a78bfa' : '#6b7280';
@@ -32633,17 +32669,17 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 lwWrap.appendChild(lwCb);
                 lwWrap.appendChild(lwLbl);
                 lwWrap.appendChild(lwStatus);
-                actionsDiv.appendChild(lwWrap);
-                actionsDiv.appendChild(lwUrl);
+                togglesRow.appendChild(lwWrap);
+                togglesRow.appendChild(lwUrl);
 
-                // Specialist board link (separate board_token, not derivable from the public link)
+                // ── Board enable toggle (board link shown stacked below) ──
                 var boardWrap = document.createElement('div');
-                boardWrap.style.cssText = 'font-size:9px;margin-top:4px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;';
+                boardWrap.style.cssText = 'display:flex;align-items:center;gap:5px;';
                 var boardCb = document.createElement('input');
                 boardCb.type = 'checkbox'; boardCb.checked = (c.board_enabled !== false);
-                boardCb.style.cssText = 'accent-color:#7c3aed;cursor:pointer;';
+                boardCb.style.cssText = 'width:14px;height:14px;accent-color:#7c3aed;cursor:pointer;';
                 var boardLbl = document.createElement('span');
-                boardLbl.textContent = 'Board'; boardLbl.style.cssText = 'font-size:10px;color:' + (boardCb.checked ? '#a78bfa' : '#6b7280') + ';font-weight:700;';
+                boardLbl.textContent = 'Board'; boardLbl.style.cssText = 'font-size:11px;color:' + (boardCb.checked ? '#a78bfa' : '#6b7280') + ';font-weight:600;';
                 boardCb.onchange = (function(id, cb, lbl){ return function(){
                     var on = cb.checked;
                     lbl.style.color = on ? '#a78bfa' : '#6b7280';
@@ -32651,47 +32687,16 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 }; })(c.id, boardCb, boardLbl);
                 boardWrap.appendChild(boardCb);
                 boardWrap.appendChild(boardLbl);
+                togglesRow.appendChild(boardWrap);
+
+                // ── Stacked share links — View tracker (live), Board, Lead ──
                 var boardPath = '/track/' + (c.board_token || c.token) + '/board';
-                var boardCopyBtn = document.createElement('button');
-                boardCopyBtn.className = 'tr-btn';
-                boardCopyBtn.textContent = '📋 Copy board link';
-                boardCopyBtn.style.cssText = 'font-size:10px;padding:3px 8px;border-color:#7c3aed;color:#c4b5fd;';
-                boardCopyBtn.onclick = (function(path, btn){ return function(){
-                    navigator.clipboard.writeText(window.location.origin + path).then(function(){
-                        btn.textContent = 'Copied!';
-                        setTimeout(function(){ btn.textContent = '📋 Copy board link'; }, 2000);
-                    });
-                }; })(boardPath, boardCopyBtn);
-                var boardLink = document.createElement('a');
-                boardLink.href = boardPath; boardLink.target = '_blank';
-                boardLink.textContent = boardPath;
-                boardLink.style.cssText = 'color:#a78bfa;text-decoration:none;font-family:monospace;';
-                boardWrap.appendChild(boardCopyBtn);
-                boardWrap.appendChild(boardLink);
-                actionsDiv.appendChild(boardWrap);
-
-                // Lead panel link (lead_token — company lead can upload, scan, assign work, no admin)
-                var leadWrap = document.createElement('div');
-                leadWrap.style.cssText = 'font-size:9px;margin-top:4px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;';
                 var leadPath = '/track/' + (c.lead_token || c.token) + '/lead';
-                var leadCopyBtn = document.createElement('button');
-                leadCopyBtn.className = 'tr-btn';
-                leadCopyBtn.textContent = '👤 Copy lead link';
-                leadCopyBtn.style.cssText = 'font-size:10px;padding:3px 8px;border-color:#22c55e;color:#86efac;';
-                leadCopyBtn.onclick = (function(path, btn){ return function(){
-                    navigator.clipboard.writeText(window.location.origin + path).then(function(){
-                        btn.textContent = 'Copied!';
-                        setTimeout(function(){ btn.textContent = '👤 Copy lead link'; }, 2000);
-                    });
-                }; })(leadPath, leadCopyBtn);
-                var leadLink = document.createElement('a');
-                leadLink.href = leadPath; leadLink.target = '_blank';
-                leadLink.textContent = leadPath;
-                leadLink.style.cssText = 'color:#86efac;text-decoration:none;font-family:monospace;';
-                leadWrap.appendChild(leadCopyBtn);
-                leadWrap.appendChild(leadLink);
-                actionsDiv.appendChild(leadWrap);
+                linksCol.appendChild(tcMkLinkRow('\uD83D\uDC41 View tracker', '#c4b5fd', '/track/' + c.token + '/live', true));
+                linksCol.appendChild(tcMkLinkRow('\uD83D\uDCCB Board', '#a78bfa', boardPath, false));
+                linksCol.appendChild(tcMkLinkRow('\uD83D\uDC64 Lead', '#86efac', leadPath, false));
 
+                // ── Action buttons ──
                 var domainsBtn = document.createElement('button');
                 domainsBtn.className = 'tr-btn';
                 var extraDomList = (c.extra_domains || '').split(',').map(function(d){ return d.trim(); }).filter(Boolean);
@@ -32729,7 +32734,6 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     var r = await apiCall('/api/admin/tracker-clients/' + id + '/email-last-brief', 'POST', {});
                     alert(r && r.success ? (r.message || 'Brief emailed.') : ('Could not email: ' + ((r && r.error) || 'unknown error')));
                 }; })(c.id);
-                actionsDiv.appendChild(emailBriefBtn);
 
                 var regenBtn = document.createElement('button');
                 regenBtn.className = 'tr-btn';
@@ -32753,7 +32757,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
 
                 var cleanBtn = document.createElement('button');
                 cleanBtn.className = 'tr-btn';
-                cleanBtn.textContent = '🧹 Clean';
+                cleanBtn.textContent = '\uD83E\uDDF9 Clean';
                 cleanBtn.title = 'Remove image/asset URLs and merge duplicate pages';
                 cleanBtn.style.cssText = 'font-size:10px;padding:3px 8px;border-color:#38bdf8;color:#38bdf8;';
                 cleanBtn.onclick = (function(id, domain){ return function(){
@@ -32785,13 +32789,18 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 delBtn.style.cssText = 'font-size:10px;padding:3px 8px;';
                 delBtn.onclick = (function(id){ return function(){ deleteTcClient(id); }; })(c.id);
 
-                actionsDiv.appendChild(toggleBtn);
-                actionsDiv.appendChild(domainsBtn);
-                actionsDiv.appendChild(ipBtn);
-                actionsDiv.appendChild(regenBtn);
-                actionsDiv.appendChild(cleanBtn);
-                actionsDiv.appendChild(copyBtn);
-                actionsDiv.appendChild(delBtn);
+                btnRow.appendChild(toggleBtn);
+                btnRow.appendChild(domainsBtn);
+                btnRow.appendChild(ipBtn);
+                btnRow.appendChild(regenBtn);
+                btnRow.appendChild(cleanBtn);
+                btnRow.appendChild(emailBriefBtn);
+                btnRow.appendChild(copyBtn);
+                btnRow.appendChild(delBtn);
+
+                actionsDiv.appendChild(togglesRow);
+                actionsDiv.appendChild(linksCol);
+                actionsDiv.appendChild(btnRow);
 
                 // -- Share URL cell - domain + full URL + copy --
                 var urlCell = document.createElement('td');
