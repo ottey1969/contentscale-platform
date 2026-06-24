@@ -2364,6 +2364,24 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
 .lw-sb-num{font-size:16px;font-weight:800;font-variant-numeric:tabular-nums}
 .lw-sb-lbl{font-size:9px;color:#6b7280;text-transform:uppercase;letter-spacing:.08em;margin-top:2px}
 @media(max-width:640px){.lw-container{padding:70px 8px 30px}.lw-card-stats{gap:6px}.lw-stat{min-width:60px;padding:6px 8px}.lw-stats-bar{gap:16px;padding:8px 10px}}
+.bw-live-wrap{position:fixed;inset:64px 0 56px;overflow-y:auto;padding:20px;z-index:6}
+.bw-title-row{max-width:1600px;margin:0 auto 18px;display:flex;align-items:center;gap:10px;color:#a78bfa;font-size:12px;font-weight:800;letter-spacing:.12em;text-transform:uppercase}
+.bw-wrap{display:flex;gap:16px;align-items:flex-start;max-width:1600px;margin:0 auto}
+.bw-side{flex:1;display:flex;flex-direction:column;gap:16px;min-width:0}
+.bw-feature{flex:1.7;min-width:0}
+.bw-card{background:#0d1117;border:1px solid #1f2937;border-radius:16px;padding:18px;box-shadow:0 16px 40px rgba(0,0,0,.45)}
+.bw-feature .bw-card{border-color:#7c3aed;box-shadow:0 0 0 1px rgba(124,58,237,.3),0 18px 50px rgba(124,58,237,.22)}
+.bw-url{font-size:14px;font-weight:800;color:#f1f5f9;word-break:break-all;line-height:1.4}
+.bw-time{font-size:11px;color:#6b7280;margin-top:4px}
+.bw-new{display:inline-block;background:#dc2626;color:#fff;font-size:10px;font-weight:800;padding:3px 11px;border-radius:999px;letter-spacing:.06em;flex-shrink:0}
+.bw-chips{display:flex;gap:7px;flex-wrap:wrap;margin:14px 0}
+.bw-chip{background:#0a0a12;border:1px solid #1f2937;border-radius:9px;padding:6px 10px;text-align:center;min-width:54px}
+.bw-chip .v{font-size:13px;font-weight:800}
+.bw-chip .l{font-size:8px;color:#6b7280;text-transform:uppercase;letter-spacing:.06em;margin-top:2px}
+.bw-rec{border-left:3px solid #7c3aed;padding:2px 0 2px 13px;margin-bottom:13px}
+.bw-rec-t{font-size:14px;font-weight:800;color:#f1f5f9;margin-bottom:4px}
+.bw-rec-b{font-size:12px;color:#9ca3af;line-height:1.55}
+@media(max-width:820px){.bw-wrap{flex-direction:column}.bw-feature{order:-1;flex:1}.bw-side{flex:1}}
 </style>
 </head>
 <body>
@@ -2388,6 +2406,10 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
 </div>
 
 <div class="lw-container" id="lwContainer"></div>
+<div class="bw-live-wrap" id="bwLiveWrap" style="display:none;">
+  <div class="bw-title-row">&#9889; Live Brief Wall <span id="bwLiveCount" style="color:#6b7280;font-weight:600"></span></div>
+  <div id="bwLive"></div>
+</div>
 
 <div class="lw-stats-bar" id="lwStatsBar" style="display:none;">
   <div class="lw-sb-item"><div class="lw-sb-num" id="lwSbBriefs" style="color:#a78bfa">0</div><div class="lw-sb-lbl">Briefs</div></div>
@@ -2482,11 +2504,84 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
   var _seenBriefs = {};
   function _esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
   function _briefKey(d){ return (d.page_id||d.url||d.domain||'') + '|' + (d.ts||''); }
+  var _wallBriefs = [];
   function handleBrief(data){
     var k = _briefKey(data);
-    if (_seenBriefs[k]) return;   // avoid double cards from SSE + polling
+    if (_seenBriefs[k]) return;   // avoid double from SSE + polling
     _seenBriefs[k] = true;
-    createBriefCard(data);
+    // stats (saver hide on first brief)
+    briefCount++;
+    if (!hasBriefs) { hasBriefs = true; if (saverEl) saverEl.classList.add('hidden'); if (statsBar) statsBar.style.display = 'flex'; }
+    var posNum = parseInt(data.position || data.pos || data.gsc_position, 10);
+    if (!isNaN(posNum)) totalPos += posNum;
+    if (sbBriefs) sbBriefs.textContent = briefCount;
+    if (scanCount < briefCount) scanCount = briefCount;
+    if (sbScans) sbScans.textContent = scanCount;
+    if (sbCited) sbCited.textContent = (data.aio_cited||data.perp_cited||data.bing_cited||data.brave_cited) ? (parseInt(sbCited.textContent)||0)+1 : (parseInt(sbCited.textContent)||0);
+    if (sbPos) sbPos.textContent = totalPos ? Math.round(totalPos / briefCount) : '-';
+    // wall: one card per page/url, newest first
+    var pk = data.page_id || data.url || data.domain;
+    _wallBriefs = _wallBriefs.filter(function(b){ return (b.page_id||b.url||b.domain) !== pk; });
+    _wallBriefs.unshift(data);
+    if (_wallBriefs.length > 12) _wallBriefs = _wallBriefs.slice(0, 12);
+    renderLiveWall();
+  }
+
+  function _bwEscL(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function _bwCleanUrlL(u){ return String(u||'').replace(/^https?:[/][/]/,'').replace(/^www[.]/,''); }
+  function _bwTimeL(d){
+    var t = d.ts || d.checked_at || d.brief_started_at;
+    try { var dt = t ? new Date(t) : new Date(); return dt.toLocaleDateString('en-GB',{day:'2-digit',month:'short'}) + ' ' + dt.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}); } catch(e){ return ''; }
+  }
+  function _bwChipsL(d){
+    function chip(v,l,c){ return '<div class="bw-chip"><div class="v" style="color:'+c+'">'+v+'</div><div class="l">'+l+'</div></div>'; }
+    var pos = d.position||d.pos||d.gsc_position;
+    var pc = (!pos||pos==='N/A') ? '#6b7280' : pos<=3?'#4ade80':pos<=10?'#a3e635':pos<=20?'#fbbf24':'#f87171';
+    return '<div class="bw-chips">'
+      + chip((pos&&pos!=='N/A')?('#'+pos):'-','Position',pc)
+      + chip(d.aio_cited?'YES':'NO','AIO',d.aio_cited?'#4ade80':'#6b7280')
+      + chip(d.perp_cited?'YES':'NO','Perplexity',d.perp_cited?'#a78bfa':'#6b7280')
+      + chip(d.bing_cited?'YES':'NO','Copilot',d.bing_cited?'#60a5fa':'#6b7280')
+      + chip(d.brave_cited?'YES':'NO','Claude',d.brave_cited?'#f87171':'#6b7280')
+      + chip(d.score?d.score:'-','GRAAF',d.score?'#a78bfa':'#6b7280')
+      + '</div>';
+  }
+  function _bwRecsL(d, limit){
+    var items = d.passages || d.recommendations || (d.brief_content && d.brief_content.items) || [];
+    if (!items.length) return '';
+    var html = items.slice(0,limit).map(function(p){
+      var t = p.title||p.h2||p.heading||'Recommendation';
+      var b = p.action||p.passage||p.body||p.text||'';
+      if (b.length>180) b = b.slice(0,180)+'...';
+      return '<div class="bw-rec"><div class="bw-rec-t">'+_bwEscL(t)+'</div>'+(b?'<div class="bw-rec-b">'+_bwEscL(b)+'</div>':'')+'</div>';
+    }).join('');
+    if (items.length>limit) html += '<div style="font-size:11px;color:#6b7280">+ '+(items.length-limit)+' more</div>';
+    return html;
+  }
+  function _bwCardL(d, isFeature){
+    var head = '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">'
+      + '<div style="min-width:0"><div class="bw-url">'+_bwEscL(_bwCleanUrlL(d.url||d.domain||''))+'</div>'
+      + '<div class="bw-time">Scanned '+_bwTimeL(d)+'</div></div>'
+      + (isFeature?'<span class="bw-new">NEW</span>':'')
+      + '</div>';
+    return '<div class="bw-card">'+head+_bwChipsL(d)+_bwRecsL(d, isFeature?5:1)+'</div>';
+  }
+  function renderLiveWall(){
+    var wrap = document.getElementById('bwLiveWrap');
+    var el = document.getElementById('bwLive');
+    if (!wrap || !el) return;
+    if (!_wallBriefs.length){ wrap.style.display='none'; return; }
+    wrap.style.display='block';
+    var cnt = document.getElementById('bwLiveCount'); if (cnt) cnt.textContent = _wallBriefs.length + ' brief' + (_wallBriefs.length>1?'s':'') + ' - newest in the middle';
+    var feature = _wallBriefs[0];
+    var rest = _wallBriefs.slice(1);
+    var left=[], right=[];
+    rest.forEach(function(d,i){ (i%2===0?left:right).push(d); });
+    el.innerHTML = '<div class="bw-wrap">'
+      + '<div class="bw-side">'+left.map(function(d){return _bwCardL(d,false);}).join('')+'</div>'
+      + '<div class="bw-feature">'+_bwCardL(feature,true)+'</div>'
+      + '<div class="bw-side">'+right.map(function(d){return _bwCardL(d,false);}).join('')+'</div>'
+      + '</div>';
   }
 
   function createBriefCard(data) {
