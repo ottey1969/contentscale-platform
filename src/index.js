@@ -914,7 +914,7 @@ async function notifyClient(clientId, subject, htmlBody, telegramText) {
   }
 }
 
-async function sendTrackerEmail(clientId, subject, htmlBody) {
+async function sendTrackerEmail(clientId, subject, htmlBody, hideViewBtn) {
   if (subject && subject.indexOf('[TRACKER]') !== 0) subject = '[TRACKER] ' + subject;
   try {
     // Robust query — handle missing columns gracefully
@@ -954,9 +954,9 @@ async function sendTrackerEmail(clientId, subject, htmlBody) {
   </div>
   <div style="background:#ffffff;padding:32px;border-left:1px solid #e2e8f0;border-right:1px solid #e2e8f0;">
     ${htmlBody}
-    <div style="margin-top:32px;text-align:center;">
+    ${hideViewBtn ? '' : `<div style="margin-top:32px;text-align:center;">
       <a href="${liveUrl}" style="display:inline-block;background:#7c3aed;color:#ffffff;text-decoration:none;padding:12px 28px;border-radius:8px;font-weight:700;font-size:14px;">View Your Tracker</a>
-    </div>
+    </div>`}
   </div>
   <div style="background:#f5f3ff;border:1px solid #ddd6fe;padding:20px 32px;text-align:center;">
     <div style="font-size:13px;font-weight:700;color:#1e293b;margin-bottom:6px;">Want Ottmar to implement these changes for you?</div>
@@ -1094,14 +1094,22 @@ app.post('/api/tracker-client/register', async (req, res) => {
 
     // Send welcome email with tracker URL
     if (email) {
+      const liveUrl = trackUrl + '/live';
       const welcomeHtml = '<h2 style="font-size:17px;font-weight:800;color:#0f172a;margin-bottom:10px;">Your AI Citations Tracker is ready</h2>'
-        + '<p style="font-size:14px;color:#374151;line-height:1.7;margin-bottom:14px;">Hi ' + (name || 'there') + ',<br><br>Your tracker for <strong>' + cleanDomain + '</strong> has been set up. Bookmark this link — it\'s your personal tracker URL:</p>'
-        + '<div style="background:#f5f3ff;border:1px solid #ddd6fe;border-radius:8px;padding:14px 16px;margin-bottom:16px;">'
+        + '<p style="font-size:14px;color:#374151;line-height:1.7;margin-bottom:14px;">Hi ' + (name || 'there') + ',<br><br>Your tracker for <strong>' + cleanDomain + '</strong> is set up. You have two links — they do different things:</p>'
+        + '<div style="background:#f5f3ff;border:2px solid #c4b5fd;border-radius:8px;padding:16px;margin-bottom:14px;">'
+        + '<div style="font-size:12px;font-weight:800;color:#6d28d9;text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px;">&#128278; Bookmark this — your working scanner</div>'
+        + '<div style="font-size:13px;color:#374151;line-height:1.6;margin-bottom:10px;">This is where you <strong>add pages, keywords, and paste HTML</strong>. Save it as a bookmark — it is your private link, do not share it.</div>'
         + '<div style="font-size:11px;font-family:monospace;color:#7c3aed;word-break:break-all;margin-bottom:10px;">' + trackUrl + '</div>'
-        + '<a href="' + trackUrl + '" style="display:inline-block;background:#7c3aed;color:white;text-decoration:none;padding:10px 22px;border-radius:6px;font-size:13px;font-weight:700;">Open My Tracker &rarr;</a>'
+        + '<a href="' + trackUrl + '" style="display:inline-block;background:#7c3aed;color:white;text-decoration:none;padding:10px 22px;border-radius:6px;font-size:13px;font-weight:700;">Open My Scanner &rarr;</a>'
+        + '</div>'
+        + '<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:16px;margin-bottom:16px;">'
+        + '<div style="font-size:12px;font-weight:800;color:#0f172a;text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px;">&#128250; View Tracker — live results (TV mode)</div>'
+        + '<div style="font-size:13px;color:#374151;line-height:1.6;margin-bottom:10px;">A read-only live wall of your citation results. Safe to share or leave on a screen.</div>'
+        + '<a href="' + liveUrl + '" style="display:inline-block;background:#0f172a;color:white;text-decoration:none;padding:9px 20px;border-radius:6px;font-size:12px;font-weight:700;">View Tracker &rarr;</a>'
         + '</div>'
         + '<p style="font-size:14px;color:#374151;line-height:1.7;margin-bottom:14px;"><strong>What happens next:</strong><br>'
-        + '1. Add your pages and keywords in the tracker<br>'
+        + '1. Add your pages and keywords in the scanner<br>'
         + '2. Your first check runs automatically in ~1 minute<br>'
         + '3. Paste your page HTML for a full GRAAF score<br>'
         + '4. Your Citation Brief arrives by email</p>'
@@ -1109,7 +1117,7 @@ app.post('/api/tracker-client/register', async (req, res) => {
         + '<p style="font-size:13px;color:#374151;line-height:1.7;">Questions? WhatsApp Ottmar directly: <a href="https://wa.me/31628073996" style="color:#7c3aed;">wa.me/31628073996</a></p>';
 
       const clientId = (await pool.query('SELECT id FROM tracker_clients WHERE token=$1', [token])).rows[0]?.id;
-      if (clientId) await sendTrackerEmail(clientId, 'Your AI Citations Tracker is ready — ' + cleanDomain, welcomeHtml).catch(() => {});
+      if (clientId) await sendTrackerEmail(clientId, 'Your AI Citations Tracker is ready — ' + cleanDomain, welcomeHtml, true).catch(() => {});
     }
 
     // Notify Ottmar via WA
@@ -1673,6 +1681,8 @@ app.get('/api/tracker-client/:token/latest-briefs', async (req, res) => {
     const r = await pool.query(
       `SELECT p.id, p.url, p.keyword, p.gsc_keyword, p.brief_content, p.gsc_clicks, p.gsc_impressions, p.gsc_position,
               p.brief_status, p.brief_claimed_by, p.brief_claimed_at, p.brief_started_at,
+              p.brief_done_at, p.brief_submitted_at, p.brief_approved_at, p.brief_approved_by, p.brief_published_at,
+              (p.specialist_html IS NOT NULL AND p.specialist_html != '') AS has_deliverable,
               s.checked_at, s.google_position, s.ai_google_overview_cited, s.ai_perplexity_cited, s.ai_bing_cited, s.ai_brave_cited,
               s.score, s.recommendations, s.gsc_brief, s.source_suggestions
        FROM tracker_pages p
@@ -1712,6 +1722,12 @@ app.get('/api/tracker-client/:token/latest-briefs', async (req, res) => {
         brief_status: p.brief_status || 'open',
         brief_claimed_by: p.brief_claimed_by || null,
         brief_claimed_at: p.brief_claimed_at || null,
+        brief_done_at: p.brief_done_at || null,
+        brief_submitted_at: p.brief_submitted_at || null,
+        brief_approved_at: p.brief_approved_at || null,
+        brief_approved_by: p.brief_approved_by || null,
+        brief_published_at: p.brief_published_at || null,
+        has_deliverable: !!p.has_deliverable,
         ts: p.checked_at || p.brief_started_at || null,
         ts: p.checked_at ? new Date(p.checked_at).toISOString() : ''
       };
@@ -1759,6 +1775,96 @@ app.post('/api/tracker-client/:token/brief/:pageId/reopen', async (req, res) => 
     if (r.error) return res.status(r.code).json({ success: false, error: r.error });
     await pool.query("UPDATE tracker_pages SET brief_status='open', brief_claimed_by=NULL, brief_claimed_at=NULL WHERE id=$1", [r.pageId]);
     res.json({ success: true, status: 'open' });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// ── Lead notification helper (emails the coupled lead, if one is set) ─────────
+async function _notifyLead(clientId, subject, html) {
+  try {
+    const cr = await pool.query('SELECT domain, lead_name, lead_email FROM tracker_clients WHERE id=$1', [clientId]);
+    const c = cr.rows[0];
+    if (!c || !c.lead_email) return;
+    const brevoKey = process.env.BREVO_API_KEY || '';
+    if (!brevoKey) return;
+    const full = `<!DOCTYPE html><html><body style="margin:0;background:#f1f5f9;font-family:Verdana,Geneva,sans-serif;"><div style="max-width:560px;margin:0 auto;padding:28px 16px;"><div style="background:#0f172a;border-radius:12px 12px 0 0;padding:20px 28px;text-align:center;"><div style="font-size:18px;font-weight:800;color:#fff;">ContentScale</div><div style="font-size:10px;color:#64748b;margin-top:3px;text-transform:uppercase;letter-spacing:.1em;">Lead Review</div></div><div style="background:#fff;padding:28px;border:1px solid #e2e8f0;border-radius:0 0 12px 12px;">${html}</div></div></body></html>`;
+    await fetch('https://api.brevo.com/v3/smtp/email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'api-key': brevoKey },
+      body: JSON.stringify({
+        to: [{ email: c.lead_email, name: c.lead_name || c.lead_email }],
+        sender: { email: process.env.FROM_EMAIL || 'info@contentscale.site', name: process.env.SENDER_NAME || 'ContentScale Tracker' },
+        subject: '[LEAD] ' + subject,
+        htmlContent: full
+      })
+    }).catch(()=>{});
+  } catch(e) { console.warn('[notify-lead]', e.message); }
+}
+
+// ── Specialist uploads finished/processed HTML → status 'submitted' ──────────
+app.post('/api/tracker-client/:token/brief/:pageId/submit-html', async (req, res) => {
+  try {
+    const r = await _resolveBoardPage(req.params.token, req.params.pageId);
+    if (r.error) return res.status(r.code).json({ success: false, error: r.error });
+    const name = String((req.body && req.body.name) || '').trim().slice(0, 80);
+    const html = String((req.body && req.body.html) || '').trim();
+    if (!html) return res.status(400).json({ success: false, error: 'Paste your finished HTML first' });
+    await pool.query(
+      "UPDATE tracker_pages SET specialist_html=$1, brief_status='submitted', brief_submitted_at=NOW(), brief_done_at=COALESCE(brief_done_at, NOW()), brief_claimed_by=COALESCE(NULLIF(brief_claimed_by,''), $2) WHERE id=$3",
+      [html, name || null, r.pageId]
+    );
+    const pr = await pool.query('SELECT tracker_client_id, url, brief_claimed_by FROM tracker_pages WHERE id=$1', [r.pageId]);
+    const pg = pr.rows[0] || {};
+    if (pg.tracker_client_id) {
+      _notifyLead(pg.tracker_client_id, 'Work submitted for review — ' + (pg.url || ''),
+        '<p style="font-size:14px;color:#374151;line-height:1.7;"><strong>' + (pg.brief_claimed_by || name || 'A specialist') + '</strong> submitted finished HTML for review:</p>'
+        + '<p style="font-size:13px;color:#374151;word-break:break-all;">' + (pg.url || '') + '</p>'
+        + '<p style="font-size:13px;color:#6b7280;">Open your Lead Panel to review and approve it.</p>').catch(()=>{});
+      if (typeof _sseBroadcast === 'function') _sseBroadcast({ type: 'brief_submitted', clientId: pg.tracker_client_id, page_id: r.pageId, by: pg.brief_claimed_by || name || '', ts: new Date().toISOString() });
+    }
+    res.json({ success: true, status: 'submitted' });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// ── Lead reviews the submitted HTML ──────────────────────────────────────────
+app.get('/api/tracker-client/:token/brief/:pageId/deliverable', async (req, res) => {
+  try {
+    const r = await _resolveBoardPage(req.params.token, req.params.pageId);
+    if (r.error) return res.status(r.code).json({ success: false, error: r.error });
+    const pr = await pool.query('SELECT specialist_html, brief_status, brief_claimed_by, brief_submitted_at, brief_approved_by FROM tracker_pages WHERE id=$1', [r.pageId]);
+    const pg = pr.rows[0] || {};
+    res.json({ success: true, html: pg.specialist_html || '', status: pg.brief_status || 'open', claimed_by: pg.brief_claimed_by || null, submitted_at: pg.brief_submitted_at || null, approved_by: pg.brief_approved_by || null });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// ── Lead approves the submitted work → status 'approved' ─────────────────────
+app.post('/api/tracker-client/:token/brief/:pageId/approve', async (req, res) => {
+  try {
+    const r = await _resolveBoardPage(req.params.token, req.params.pageId);
+    if (r.error) return res.status(r.code).json({ success: false, error: r.error });
+    const name = String((req.body && req.body.name) || '').trim().slice(0, 80) || 'Lead';
+    await pool.query("UPDATE tracker_pages SET brief_status='approved', brief_approved_at=NOW(), brief_approved_by=$1 WHERE id=$2", [name, r.pageId]);
+    const pr = await pool.query('SELECT tracker_client_id, brief_claimed_by FROM tracker_pages WHERE id=$1', [r.pageId]);
+    const pg = pr.rows[0] || {};
+    if (pg.tracker_client_id && typeof _sseBroadcast === 'function') _sseBroadcast({ type: 'brief_approved', clientId: pg.tracker_client_id, page_id: r.pageId, by: name, specialist: pg.brief_claimed_by || '', ts: new Date().toISOString() });
+    res.json({ success: true, status: 'approved', approved_by: name });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// ── Specialist publishes after approval → status 'published' ─────────────────
+app.post('/api/tracker-client/:token/brief/:pageId/publish', async (req, res) => {
+  try {
+    const r = await _resolveBoardPage(req.params.token, req.params.pageId);
+    if (r.error) return res.status(r.code).json({ success: false, error: r.error });
+    const cur = await pool.query('SELECT brief_status FROM tracker_pages WHERE id=$1', [r.pageId]);
+    const st = (cur.rows[0] || {}).brief_status;
+    if (st !== 'approved' && st !== 'published') {
+      return res.status(409).json({ success: false, error: 'Brief must be approved by the lead before publishing' });
+    }
+    await pool.query("UPDATE tracker_pages SET brief_status='published', brief_published_at=NOW() WHERE id=$1", [r.pageId]);
+    const pr = await pool.query('SELECT tracker_client_id FROM tracker_pages WHERE id=$1', [r.pageId]);
+    const pg = pr.rows[0] || {};
+    if (pg.tracker_client_id && typeof _sseBroadcast === 'function') _sseBroadcast({ type: 'brief_published', clientId: pg.tracker_client_id, page_id: r.pageId, ts: new Date().toISOString() });
+    res.json({ success: true, status: 'published' });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
@@ -2425,6 +2531,23 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
 .ld-badge.open{background:rgba(22,163,74,.15);color:#4ade80}
 .ld-badge.progress{background:rgba(217,119,6,.15);color:#fbbf24}
 .ld-badge.done{background:rgba(55,65,81,.25);color:#9ca3af}
+.ld-badge.subm{background:rgba(14,165,233,.18);color:#38bdf8}
+.ld-badge.appr{background:rgba(34,197,94,.18);color:#4ade80}
+.ld-badge.pub{background:rgba(124,58,237,.2);color:#c4b5fd}
+.ld-card.s-subm{border-color:rgba(14,165,233,.45)}
+.ld-card.s-appr{border-color:rgba(34,197,94,.5)}
+.ld-card.s-pub{border-color:rgba(124,58,237,.5);opacity:.9}
+.ld-rev{margin-top:12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.ld-note{font-size:11px;font-weight:700}
+.ld-note.appr{color:#4ade80}
+.ld-note.pub{color:#c4b5fd}
+.ld-ov{position:fixed;inset:0;background:rgba(2,2,8,.82);z-index:200;display:none;align-items:center;justify-content:center;padding:18px}
+.ld-ov.on{display:flex}
+.ld-modal{background:#0d1117;border:1px solid #1f2937;border-radius:16px;width:100%;max-width:760px;max-height:88vh;display:flex;flex-direction:column;overflow:hidden}
+.ld-modal h3{font-size:15px;font-weight:800;color:#f1f5f9;padding:16px 20px;border-bottom:1px solid #1f2937}
+.ld-mbody{padding:16px 20px;overflow:auto}
+.ld-mfoot{padding:14px 20px;border-top:1px solid #1f2937;display:flex;gap:8px;justify-content:flex-end}
+.ld-prev{background:#06060f;border:1px solid #1f2937;border-radius:10px;padding:12px;font-family:monospace;font-size:12px;color:#9ca3af;white-space:pre-wrap;word-break:break-word;max-height:62vh;overflow:auto}
 .ld-assign{margin-top:12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .ld-select{background:#0a0a12;border:1px solid #374151;border-radius:8px;padding:7px 10px;color:#e5e7eb;font-size:12px;font-family:inherit;flex:1;min-width:140px}
 .ld-link{font-size:11px;color:#60a5fa;text-decoration:none}
@@ -2461,21 +2584,33 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
   function saveSpecs(){ var v=document.getElementById('specInput').value; var m=document.getElementById('specMsg'); m.textContent='Saving...'; fetch('/api/tracker-client/'+TOKEN+'/lead/specialists',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({specialists:v})}).then(function(r){return r.json();}).then(function(d){ if(d&&d.specialists){ _specs=d.specialists; renderSpecs(); render(); m.textContent='Saved'; setTimeout(function(){m.textContent='';},1500); } }).catch(function(){ m.textContent='Failed'; }); }
   function scanAll(){ var b=document.getElementById('scanBtn'); b.textContent='Scanning...'; b.disabled=true; fetch('/api/tracker-client/'+TOKEN+'/scan-all',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({})}).then(function(r){return r.json();}).then(function(){ b.textContent='Scan started'; setTimeout(function(){ b.textContent='Scan all now'; b.disabled=false; load(); },4000); }).catch(function(){ b.textContent='Scan all now'; b.disabled=false; }); }
   function addPages(){ var raw=document.getElementById('urlInput').value; var urls=raw.split(NL).map(function(s){return s.trim();}).filter(Boolean); var msg=document.getElementById('addMsg'); if(!urls.length){ msg.textContent='Paste at least one URL'; return; } var i=0, ok=0; (function next(){ if(i>=urls.length){ msg.textContent='Added '+ok+'/'+urls.length; document.getElementById('urlInput').value=''; load(); return; } var u=urls[i++]; if(u.indexOf('http')!==0)u='https://'+u; fetch('/api/tracker-client/'+TOKEN+'/pages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url:u})}).then(function(r){return r.json();}).then(function(d){ if(d&&d.success)ok++; msg.textContent='Adding '+i+'/'+urls.length; next(); }).catch(function(){ msg.textContent='Adding '+i+'/'+urls.length; next(); }); })(); }
-  function badge(st,who){ if(st==='done')return '<span class="ld-badge done">DONE</span>'; if(st==='in_progress')return '<span class="ld-badge progress">IN PROGRESS'+(who?' - '+esc(who):'')+'</span>'; return '<span class="ld-badge open">OPEN</span>'; }
+  function badge(st,who){ if(st==='published')return '<span class="ld-badge pub">PUBLISHED</span>'; if(st==='approved')return '<span class="ld-badge appr">APPROVED'+(who?' - '+esc(who):'')+'</span>'; if(st==='submitted')return '<span class="ld-badge subm">SUBMITTED'+(who?' - '+esc(who):'')+'</span>'; if(st==='done')return '<span class="ld-badge done">DONE</span>'; if(st==='in_progress')return '<span class="ld-badge progress">IN PROGRESS'+(who?' - '+esc(who):'')+'</span>'; return '<span class="ld-badge open">OPEN</span>'; }
   function options(cur){ var o='<option value="">- Unassigned -</option>'; var found=false; _specs.forEach(function(n){ var sel=(n===cur); if(sel)found=true; o+='<option value="'+esc(n)+'"'+(sel?' selected':'')+'>'+esc(n)+'</option>'; }); if(cur&&!found)o+='<option value="'+esc(cur)+'" selected>'+esc(cur)+' (not in list)</option>'; return o; }
   function assign(pageId, sel){ fetch('/api/tracker-client/'+TOKEN+'/brief/'+pageId+'/assign',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:sel.value})}).then(function(r){return r.json();}).then(function(){ load(); }).catch(function(){}); }
+  function ldActions(d){ var st=d.brief_status||'open';
+    if(st==='submitted') return '<div class="ld-rev"><button class="ld-btn" onclick="reviewHtml('+d.page_id+')">Review HTML</button><button class="ld-btn primary" onclick="approve('+d.page_id+')">Approve</button></div>';
+    if(st==='approved') return '<div class="ld-rev"><span class="ld-note appr">Approved'+(d.brief_approved_by?' by '+esc(d.brief_approved_by):'')+' — specialist can publish</span><button class="ld-btn" onclick="reviewHtml('+d.page_id+')">Review HTML</button></div>';
+    if(st==='published') return '<div class="ld-rev"><span class="ld-note pub">Published &#10003;</span><button class="ld-btn" onclick="reviewHtml('+d.page_id+')">Review HTML</button></div>';
+    return ''; }
   function render(){
     var grid=document.getElementById('ldGrid');
     if(!_briefs.length){ grid.innerHTML='<div class="ld-empty">No briefs yet - add pages and scan, they appear here.</div>'; return; }
-    var rank={open:0,in_progress:1,done:2};
+    var rank={open:0,in_progress:1,submitted:2,approved:3,done:2,published:4};
     var list=_briefs.slice().sort(function(a,b){ var ra=rank[a.brief_status||'open']; if(ra==null)ra=0; var rb=rank[b.brief_status||'open']; if(rb==null)rb=0; if(ra!==rb)return ra-rb; return (b.gsc_impressions||0)-(a.gsc_impressions||0); });
     grid.innerHTML=list.map(function(d){
-      var st=d.brief_status||'open'; var cls=st==='done'?'s-done':st==='in_progress'?'s-progress':'';
+      var st=d.brief_status||'open'; var cls=st==='published'?'s-pub':st==='approved'?'s-appr':st==='submitted'?'s-subm':st==='done'?'s-done':st==='in_progress'?'s-progress':'';
       return '<div class="ld-card '+cls+'"><div class="ld-url">'+esc(cleanUrl(d.url))+'</div><div class="ld-time">Scanned '+fmtTime(d.ts)+'</div>'+badge(st,d.brief_claimed_by)
         +'<div class="ld-assign"><span style="font-size:11px;color:#6b7280">Assign:</span><select class="ld-select" onchange="assign('+d.page_id+',this)">'+options(d.brief_claimed_by||'')+'</select></div>'
+        +ldActions(d)
         +'<div style="margin-top:10px"><a class="ld-link" href="'+esc(d.url)+'" target="_blank" rel="noopener">Open page</a></div></div>';
     }).join('');
   }
+  var _ldName=(function(){ try{ return localStorage.getItem('cs_lead_name')||''; }catch(e){ return ''; } })();
+  function _ldEnsureName(){ if(_ldName) return true; var n=prompt('Your name (so the specialist sees who approved):'); if(n&&n.trim()){ _ldName=n.trim(); try{ localStorage.setItem('cs_lead_name',_ldName); }catch(e){} return true; } return false; }
+  function _ldOv(){ var ov=document.getElementById('ldOv'); if(ov) return ov; ov=document.createElement('div'); ov.id='ldOv'; ov.className='ld-ov'; ov.innerHTML='<div class="ld-modal"><h3 id="ldOvTitle"></h3><div class="ld-mbody" id="ldOvBody"></div><div class="ld-mfoot" id="ldOvFoot"></div></div>'; document.body.appendChild(ov); ov.addEventListener('click',function(e){ if(e.target===ov) _ldClose(); }); return ov; }
+  function _ldClose(){ var ov=document.getElementById('ldOv'); if(ov) ov.classList.remove('on'); }
+  function reviewHtml(pageId){ var ov=_ldOv(); document.getElementById('ldOvTitle').textContent='Submitted work — review'; document.getElementById('ldOvBody').innerHTML='<div class="ld-prev" id="ldPrev">Loading...</div>'; document.getElementById('ldOvFoot').innerHTML='<button class="ld-btn" onclick="_ldClose()">Close</button><button class="ld-btn primary" id="ldApproveGo">Approve</button>'; ov.classList.add('on'); fetch('/api/tracker-client/'+TOKEN+'/brief/'+pageId+'/deliverable').then(function(r){return r.json();}).then(function(d){ document.getElementById('ldPrev').textContent=(d&&d.html)?d.html:'(no HTML submitted yet)'; var ga=document.getElementById('ldApproveGo'); if(ga) ga.onclick=function(){ approve(pageId); }; }).catch(function(){ document.getElementById('ldPrev').textContent='Could not load'; }); }
+  function approve(pageId){ if(!_ldEnsureName())return; fetch('/api/tracker-client/'+TOKEN+'/brief/'+pageId+'/approve',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:_ldName})}).then(function(r){return r.json();}).then(function(r){ if(!r.success) alert(r.error||'Could not approve'); _ldClose(); load(); }).catch(function(){ alert('Could not approve'); }); }
   function load(){ fetch('/api/tracker-client/'+TOKEN+'/latest-briefs').then(function(r){return r.json();}).then(function(d){ if(d&&d.briefs){ _briefs=d.briefs; render(); } }).catch(function(){}); }
   loadSpecs(); load(); setInterval(load,15000);
 </script>
@@ -2519,6 +2654,21 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
 .bd-badge.open{background:rgba(22,163,74,.15);color:#4ade80}
 .bd-badge.progress{background:rgba(217,119,6,.15);color:#fbbf24}
 .bd-badge.done{background:rgba(55,65,81,.25);color:#9ca3af}
+.bd-badge.subm{background:rgba(14,165,233,.18);color:#38bdf8}
+.bd-badge.appr{background:rgba(34,197,94,.18);color:#4ade80}
+.bd-badge.pub{background:rgba(124,58,237,.2);color:#c4b5fd}
+.bd-wait{font-size:11px;color:#38bdf8;font-weight:700;align-self:center;margin-left:2px}
+.bw-card.s-subm{border-color:rgba(14,165,233,.45)}
+.bw-card.s-appr{border-color:rgba(34,197,94,.5)}
+.bw-card.s-pub{border-color:rgba(124,58,237,.5)}
+.bd-ov{position:fixed;inset:0;background:rgba(2,2,8,.82);backdrop-filter:blur(4px);z-index:200;display:none;align-items:center;justify-content:center;padding:18px}
+.bd-ov.on{display:flex}
+.bd-modal{background:#0d1117;border:1px solid #1f2937;border-radius:16px;width:100%;max-width:760px;max-height:88vh;display:flex;flex-direction:column;overflow:hidden}
+.bd-modal h3{font-size:15px;font-weight:800;color:#f1f5f9;padding:16px 20px;border-bottom:1px solid #1f2937}
+.bd-modal .bd-body{padding:16px 20px;overflow:auto}
+.bd-modal textarea{width:100%;min-height:300px;background:#06060f;border:1px solid #1f2937;border-radius:10px;color:#e5e7eb;font-family:monospace;font-size:12px;padding:12px;resize:vertical}
+.bd-modal .bd-foot{padding:14px 20px;border-top:1px solid #1f2937;display:flex;gap:8px;justify-content:flex-end}
+.bd-prev{background:#06060f;border:1px solid #1f2937;border-radius:10px;padding:12px;font-family:monospace;font-size:12px;color:#9ca3af;white-space:pre-wrap;word-break:break-word;max-height:60vh;overflow:auto}
 .bw-chips{display:flex;gap:6px;flex-wrap:wrap;margin:12px 0}
 .bw-chip{background:#0a0a12;border:1px solid #1f2937;border-radius:8px;padding:5px 9px;text-align:center;min-width:50px}
 .bw-chip .v{font-size:12px;font-weight:800}
@@ -2530,6 +2680,7 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
 .bd-btn{border:none;border-radius:9px;padding:9px 15px;font-size:12px;font-weight:800;cursor:pointer}
 .bd-btn.claim{background:#7c3aed;color:#fff}
 .bd-btn.done{background:#16a34a;color:#fff}
+.bd-btn.pub{background:#0ea5e9;color:#fff}
 .bd-btn.sec{background:#0d1117;border:1px solid #374151;color:#9ca3af}
 .bd-empty{text-align:center;color:#6b7280;padding:60px 20px;font-size:14px;grid-column:1/-1}
 </style></head><body>
@@ -2559,10 +2710,13 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
   function chips(d){ var pos=d.position||d.gsc_position; var pc=(!pos)?'#6b7280':pos<=3?'#4ade80':pos<=10?'#a3e635':pos<=20?'#fbbf24':'#f87171';
     return '<div class="bw-chips">'+chip(pos?('#'+pos):'-','Position',pc)+chip(d.aio_cited?'YES':'NO','AIO',d.aio_cited?'#4ade80':'#6b7280')+chip(d.perp_cited?'YES':'NO','Perplexity',d.perp_cited?'#a78bfa':'#6b7280')+chip(d.bing_cited?'YES':'NO','Copilot',d.bing_cited?'#60a5fa':'#6b7280')+chip(d.brave_cited?'YES':'NO','Claude',d.brave_cited?'#f87171':'#6b7280')+chip(d.score?d.score:'-','GRAAF',d.score?'#a78bfa':'#6b7280')+'</div>'; }
   function recs(d){ var items=d.passages||[]; if(!items.length) return ''; return items.map(function(p){ var t=p.title||p.h2||p.heading||'Recommendation'; var b=p.action||p.passage||p.body||p.text||''; if(b.length>200)b=b.slice(0,200)+'...'; return '<div class="bw-rec"><div class="bw-rec-t">'+esc(t)+'</div>'+(b?'<div class="bw-rec-b">'+esc(b)+'</div>':'')+'</div>'; }).join(''); }
-  function badge(st,who){ if(st==='done')return '<span class="bd-badge done">DONE</span>'; if(st==='in_progress')return '<span class="bd-badge progress">IN PROGRESS'+(who?' - '+esc(who):'')+'</span>'; return '<span class="bd-badge open">OPEN</span>'; }
+  function badge(st,who){ if(st==='published')return '<span class="bd-badge pub">PUBLISHED</span>'; if(st==='approved')return '<span class="bd-badge appr">APPROVED'+(who?' - '+esc(who):'')+'</span>'; if(st==='submitted')return '<span class="bd-badge subm">SUBMITTED'+(who?' - '+esc(who):'')+'</span>'; if(st==='done')return '<span class="bd-badge done">DONE</span>'; if(st==='in_progress')return '<span class="bd-badge progress">IN PROGRESS'+(who?' - '+esc(who):'')+'</span>'; return '<span class="bd-badge open">OPEN</span>'; }
   function actions(d){ var st=d.brief_status||'open';
     if(st==='open') return '<button class="bd-btn claim" onclick="claim('+d.page_id+')">Claim this</button>';
-    if(st==='in_progress') return '<button class="bd-btn done" onclick="markDone('+d.page_id+')">Mark done</button><button class="bd-btn sec" onclick="reopen('+d.page_id+')">Release</button>';
+    if(st==='in_progress') return '<button class="bd-btn done" onclick="openSubmit('+d.page_id+')">Submit finished HTML</button><button class="bd-btn sec" onclick="reopen('+d.page_id+')">Release</button>';
+    if(st==='submitted') return '<button class="bd-btn sec" onclick="viewHtml('+d.page_id+')">View HTML</button><button class="bd-btn sec" onclick="openSubmit('+d.page_id+')">Re-submit</button><span class="bd-wait">Awaiting lead approval</span>';
+    if(st==='approved') return '<button class="bd-btn pub" onclick="publish('+d.page_id+')">Publish</button><button class="bd-btn sec" onclick="viewHtml('+d.page_id+')">View HTML</button>';
+    if(st==='published') return '<button class="bd-btn sec" onclick="viewHtml('+d.page_id+')">View HTML</button>';
     return '<button class="bd-btn sec" onclick="reopen('+d.page_id+')">Reopen</button>'; }
   function render(){
     var grid=document.getElementById('bdGrid');
@@ -2571,7 +2725,7 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
       if(_filter==='mine') return d.brief_claimed_by && _name && String(d.brief_claimed_by).toLowerCase()===_name.toLowerCase();
       return (d.brief_status||'open')===_filter;
     });
-    var rank={open:0,in_progress:1,done:2};
+    var rank={open:0,in_progress:1,submitted:2,approved:3,done:2,published:4};
     list.sort(function(a,b){
       var ra=rank[a.brief_status||'open']; if(ra==null)ra=0; var rb=rank[b.brief_status||'open']; if(rb==null)rb=0;
       if(ra!==rb) return ra-rb;
@@ -2581,7 +2735,7 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
     });
     if(!list.length){ grid.innerHTML='<div class="bd-empty">'+(_filter==='mine'?'You have not claimed any briefs yet — pick one from Open.':(_filter!=='all'?'No briefs in this status.':'No briefs yet - they appear here after a scan.'))+'</div>'; return; }
     grid.innerHTML=list.map(function(d){
-      var st=d.brief_status||'open'; var cls=st==='done'?'s-done':st==='in_progress'?'s-progress':'s-open';
+      var st=d.brief_status||'open'; var cls=st==='published'?'s-pub':st==='approved'?'s-appr':st==='submitted'?'s-subm':st==='done'?'s-done':st==='in_progress'?'s-progress':'s-open';
       return '<div class="bw-card '+cls+'"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:6px"><div style="min-width:0"><div class="bw-url">'+esc(cleanUrl(d.url))+'</div><div class="bw-time">Scanned '+fmtTime(d.ts)+'</div></div>'+badge(st,d.brief_claimed_by)+'</div>'+chips(d)+recs(d)+'<div class="bd-actions">'+actions(d)+'<button class="bd-btn sec" onclick="copyBrief('+d.page_id+',this)">Copy brief</button><a class="bd-btn sec" href="'+esc(d.url)+'" target="_blank" rel="noopener" style="text-decoration:none">Open page</a></div></div>';
     }).join('');
   }
@@ -2590,6 +2744,11 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
   function claim(pageId){ if(!ensureName())return; post(pageId,'claim',{name:_name}).then(function(r){ if(!r.success) alert(r.error||'Could not claim'); load(); }); }
   function markDone(pageId){ post(pageId,'done',{name:_name}).then(function(){ load(); }); }
   function reopen(pageId){ post(pageId,'reopen',{}).then(function(){ load(); }); }
+  function _ensureOv(){ var ov=document.getElementById('bdOv'); if(ov) return ov; ov=document.createElement('div'); ov.id='bdOv'; ov.className='bd-ov'; ov.innerHTML='<div class="bd-modal"><h3 id="bdOvTitle"></h3><div class="bd-body" id="bdOvBody"></div><div class="bd-foot" id="bdOvFoot"></div></div>'; document.body.appendChild(ov); ov.addEventListener('click',function(e){ if(e.target===ov) closeOv(); }); return ov; }
+  function closeOv(){ var ov=document.getElementById('bdOv'); if(ov) ov.classList.remove('on'); }
+  function openSubmit(pageId){ if(!ensureName())return; var ov=_ensureOv(); document.getElementById('bdOvTitle').textContent='Submit finished HTML'; document.getElementById('bdOvBody').innerHTML='<p style="font-size:12px;color:#9ca3af;margin-bottom:8px">Paste your finished, processed HTML. The lead reviews and approves it before you publish.</p><textarea id="bdHtmlIn" placeholder="<!-- paste your finished HTML here -->"></textarea>'; document.getElementById('bdOvFoot').innerHTML='<button class="bd-btn sec" onclick="closeOv()">Cancel</button><button class="bd-btn done" id="bdSubmitGo">Submit for review</button>'; ov.classList.add('on'); var ta=document.getElementById('bdHtmlIn'); fetch('/api/tracker-client/'+TOKEN+'/brief/'+pageId+'/deliverable').then(function(r){return r.json();}).then(function(d){ if(d&&d.html&&ta&&!ta.value) ta.value=d.html; }).catch(function(){}); document.getElementById('bdSubmitGo').onclick=function(){ var html=ta.value.trim(); if(!html){ alert('Paste your finished HTML first'); return; } this.textContent='Submitting...'; this.disabled=true; post(pageId,'submit-html',{name:_name,html:html}).then(function(r){ if(!r.success) alert(r.error||'Failed'); closeOv(); load(); }); }; }
+  function viewHtml(pageId){ var ov=_ensureOv(); document.getElementById('bdOvTitle').textContent='Submitted HTML'; document.getElementById('bdOvBody').innerHTML='<div class="bd-prev" id="bdPrev">Loading...</div>'; document.getElementById('bdOvFoot').innerHTML='<button class="bd-btn sec" onclick="closeOv()">Close</button><button class="bd-btn sec" id="bdCopyHtml">Copy HTML</button>'; ov.classList.add('on'); fetch('/api/tracker-client/'+TOKEN+'/brief/'+pageId+'/deliverable').then(function(r){return r.json();}).then(function(d){ var pv=document.getElementById('bdPrev'); pv.textContent=(d&&d.html)?d.html:'(no HTML submitted yet)'; var cb=document.getElementById('bdCopyHtml'); if(cb) cb.onclick=function(){ navigator.clipboard.writeText((d&&d.html)||'').then(function(){ cb.textContent='Copied!'; setTimeout(function(){cb.textContent='Copy HTML';},1500); }); }; }).catch(function(){ document.getElementById('bdPrev').textContent='Could not load'; }); }
+  function publish(pageId){ if(!confirm('Publish this brief? Do this once the page is live.')) return; post(pageId,'publish',{name:_name}).then(function(r){ if(!r.success) alert(r.error||'Could not publish'); load(); }); }
   function copyBrief(pageId, btn){
     var d=_briefs.filter(function(x){return String(x.page_id)===String(pageId);})[0];
     if(!d){ if(btn){ btn.textContent='Not found'; } return; }
@@ -3979,6 +4138,8 @@ app.patch('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
     }
     if (req.body.gsc_enabled !== undefined) { updates.push(`gsc_enabled=$${i++}`); vals.push(!!req.body.gsc_enabled); }
     if (req.body.cc_emails !== undefined) { updates.push(`cc_emails=$${i++}`); vals.push(req.body.cc_emails || ''); }
+    if (req.body.lead_name !== undefined) { updates.push(`lead_name=$${i++}`); vals.push(req.body.lead_name || ''); }
+    if (req.body.lead_email !== undefined) { updates.push(`lead_email=$${i++}`); vals.push(req.body.lead_email || ''); }
     if (status !== undefined) {
       updates.push(`status=$${i++}`);
       vals.push(status);
@@ -4221,6 +4382,14 @@ app.patch('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
   await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS ranking_brief JSONB`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS needs_html BOOLEAN DEFAULT FALSE`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS html_mismatch_notified_at TIMESTAMPTZ`).catch(()=>{});
+  // ── Specialist deliverable workflow: done → submitted → approved → published ──
+  await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS specialist_html TEXT`).catch(()=>{});
+  await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS brief_submitted_at TIMESTAMPTZ`).catch(()=>{});
+  await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS brief_approved_at TIMESTAMPTZ`).catch(()=>{});
+  await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS brief_approved_by TEXT`).catch(()=>{});
+  await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS brief_published_at TIMESTAMPTZ`).catch(()=>{});
+  await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS lead_name TEXT`).catch(()=>{});
+  await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS lead_email TEXT`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS live_wall_enabled BOOLEAN DEFAULT TRUE`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS board_token VARCHAR(64)`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS board_enabled BOOLEAN DEFAULT TRUE`).catch(()=>{});
@@ -32646,6 +32815,23 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     updateTcClient(id, { cc_emails: v.trim() });
                 }; })(c.id, c.cc_emails || '');
                 togglesRow.appendChild(emailsBtn);
+
+                // ── Lead coupling (admin links the lead person to this domain) ──
+                var leadBtn = document.createElement('button');
+                leadBtn.className = 'tr-btn';
+                var _leadSet = !!(c.lead_name || c.lead_email);
+                leadBtn.textContent = _leadSet ? ('\uD83D\uDC64 Lead: ' + (c.lead_name || c.lead_email)) : '\uD83D\uDC64 Couple lead';
+                leadBtn.title = _leadSet ? ('Lead: ' + (c.lead_name||'') + ' <' + (c.lead_email||'') + '> — click to edit') : 'Couple a lead to this domain';
+                leadBtn.style.cssText = 'font-size:10px;padding:3px 8px;' + (_leadSet ? 'border-color:#22c55e;color:#86efac;' : '');
+                leadBtn.onclick = (function(id, curName, curEmail){ return function(){
+                    var nm = prompt('Lead name (the person who manages specialists for this domain):', curName || '');
+                    if (nm === null) return;
+                    var em = prompt('Lead email (gets notified when a specialist submits work for review):', curEmail || '');
+                    if (em === null) return;
+                    updateTcClient(id, { lead_name: nm.trim(), lead_email: em.trim() });
+                    setTimeout(loadTrackerClients, 400);
+                }; })(c.id, c.lead_name || '', c.lead_email || '');
+                togglesRow.appendChild(leadBtn);
 
                 // ── Live Wall enable toggle (the /live URL is shown as "View tracker" below) ──
                 var lwWrap = document.createElement('div');
