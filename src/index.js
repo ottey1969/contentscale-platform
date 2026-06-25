@@ -1800,6 +1800,46 @@ async function _notifyLead(clientId, subject, html) {
   } catch(e) { console.warn('[notify-lead]', e.message); }
 }
 
+// ── Welcome the coupled lead with BOTH links (scanner + lead panel) ──────────
+async function _sendLeadWelcome(clientId) {
+  try {
+    const cr = await pool.query('SELECT domain, token, lead_token, lead_name, lead_email FROM tracker_clients WHERE id=$1', [clientId]);
+    const c = cr.rows[0];
+    if (!c || !c.lead_email) return;
+    const brevoKey = process.env.BREVO_API_KEY || '';
+    if (!brevoKey) return;
+    const appUrl = process.env.APP_URL || 'https://app.contentscale.site';
+    const scannerUrl = appUrl + '/track/' + c.token;
+    const leadUrl = appUrl + '/track/' + (c.lead_token || c.token) + '/lead';
+    const dom = c.domain || 'this tracker';
+    const body =
+      '<h2 style="font-size:17px;font-weight:800;color:#0f172a;margin:0 0 10px;">You are the lead for ' + dom + '</h2>' +
+      '<p style="font-size:14px;color:#374151;line-height:1.7;margin:0 0 16px;">Hi ' + (c.lead_name || 'there') + ',<br><br>You have been set up as the lead. You have <b>two links</b> &mdash; bookmark both:</p>' +
+      '<div style="background:#f5f3ff;border:2px solid #c4b5fd;border-radius:8px;padding:16px;margin:0 0 14px;">' +
+        '<div style="font-size:12px;font-weight:800;color:#6d28d9;text-transform:uppercase;letter-spacing:.04em;margin:0 0 4px;">&#128278; Your scanner &mdash; add pages &amp; scan</div>' +
+        '<div style="font-size:13px;color:#374151;line-height:1.6;margin:0 0 10px;">This is where you add pages and run scans. Each scan creates a brief on the board for a specialist to pick up. Keep this link to yourself.</div>' +
+        '<a href="' + scannerUrl + '" style="display:inline-block;background:#7c3aed;color:#fff;text-decoration:none;padding:10px 22px;border-radius:6px;font-size:13px;font-weight:700;">Open scanner &rarr;</a>' +
+      '</div>' +
+      '<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:16px;margin:0 0 16px;">' +
+        '<div style="font-size:12px;font-weight:800;color:#0f172a;text-transform:uppercase;letter-spacing:.04em;margin:0 0 4px;">&#128064; Your Lead Panel &mdash; review &amp; approve</div>' +
+        '<div style="font-size:13px;color:#374151;line-height:1.6;margin:0 0 10px;">Watch work come in here. When a specialist submits finished HTML you review it and approve &mdash; only then can they publish. This page refreshes itself, and you also get an email on every submission.</div>' +
+        '<a href="' + leadUrl + '" style="display:inline-block;background:#0f172a;color:#fff;text-decoration:none;padding:9px 20px;border-radius:6px;font-size:12px;font-weight:700;">Open Lead Panel &rarr;</a>' +
+      '</div>';
+    const full = '<!DOCTYPE html><html><body style="margin:0;background:#f1f5f9;font-family:Verdana,Geneva,sans-serif;"><div style="max-width:560px;margin:0 auto;padding:28px 16px;"><div style="background:#0f172a;border-radius:12px 12px 0 0;padding:20px 28px;text-align:center;"><div style="font-size:18px;font-weight:800;color:#fff;">ContentScale</div><div style="font-size:10px;color:#64748b;margin-top:3px;text-transform:uppercase;letter-spacing:.1em;">Lead Access</div></div><div style="background:#fff;padding:28px;border:1px solid #e2e8f0;border-radius:0 0 12px 12px;">' + body + '</div></div></body></html>';
+    await fetch('https://api.brevo.com/v3/smtp/email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'api-key': brevoKey },
+      body: JSON.stringify({
+        to: [{ email: c.lead_email, name: c.lead_name || c.lead_email }],
+        sender: { email: process.env.FROM_EMAIL || 'info@contentscale.site', name: process.env.SENDER_NAME || 'ContentScale Tracker' },
+        subject: 'You are the lead for ' + dom + ' \u2014 your 2 links',
+        htmlContent: full
+      })
+    }).catch(()=>{});
+    console.log('[lead-welcome] sent to ' + c.lead_email + ' for ' + dom);
+  } catch(e) { console.warn('[lead-welcome]', e.message); }
+}
+
 // ── Specialist uploads finished/processed HTML → status 'submitted' ──────────
 app.post('/api/tracker-client/:token/brief/:pageId/submit-html', async (req, res) => {
   try {
@@ -4147,8 +4187,21 @@ app.patch('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
     }
     if (reset_ip) { updates.push(`registered_ip=NULL`); }
     if (!updates.length) return res.status(400).json({ success: false, error: 'Nothing to update' });
+    // Detect a newly-set / changed lead email so we can welcome the lead with both links
+    let _leadJustSet = false;
+    if (req.body.lead_email !== undefined) {
+      const _nl = String(req.body.lead_email || '').trim();
+      if (_nl) {
+        try {
+          const _pr = await pool.query('SELECT lead_email FROM tracker_clients WHERE id=$1', [req.params.id]);
+          const _prev = _pr.rows[0] ? String(_pr.rows[0].lead_email || '').trim() : '';
+          if (_nl.toLowerCase() !== _prev.toLowerCase()) _leadJustSet = true;
+        } catch(e) {}
+      }
+    }
     vals.push(req.params.id);
     await pool.query(`UPDATE tracker_clients SET ${updates.join(',')} WHERE id=$${i}`, vals);
+    if (_leadJustSet) _sendLeadWelcome(req.params.id).catch(()=>{});
     res.json({ success: true });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
