@@ -901,9 +901,9 @@ app.get('/unsubscribe/:token', async (req, res) => {
 
 // ── Tracker client email notifications ────────────────────────────────────────
 // ── notifyClient — sends email + Telegram for every tracker notification ─────
-async function notifyClient(clientId, subject, htmlBody, telegramText) {
+async function notifyClient(clientId, subject, htmlBody, telegramText, hideViewBtn) {
   // Always send email
-  await sendTrackerEmail(clientId, subject, htmlBody).catch(e => console.warn('[notify] email:', e.message));
+  await sendTrackerEmail(clientId, subject, htmlBody, hideViewBtn).catch(e => console.warn('[notify] email:', e.message));
   // Also send Telegram if client has linked their account
   if (telegramText) {
     try {
@@ -1616,7 +1616,7 @@ app.patch('/api/tracker-client/:token/pages/:pageId/done', async (req, res) => {
             const doneClientR = await pool.query('SELECT telegram_chat_id FROM tracker_clients WHERE id=$1', [cr.rows[0].id]);
             const doneTgId = doneClientR.rows[0]?.telegram_chat_id;
             if (doneTgId) await sendTelegramNotification(doneTgId, '⚠️ <b>Action needed:</b> Paste your updated HTML in the tracker to continue your Citation Brief cycle.\n\n<a href="' + trackerUrl + '">Open tracker →</a>').catch(()=>{});
-            await sendTrackerEmail(cr.rows[0].id, subject, htmlBody);
+            await sendTrackerEmail(cr.rows[0].id, subject, htmlBody, true);
           }
 
           // Telegram reminder
@@ -37911,7 +37911,7 @@ function startHtmlReminderScheduler() {
             + '<a href="' + trackerUrl + '" style="display:inline-block;background:#7c3aed;color:white;text-decoration:none;padding:10px 22px;border-radius:6px;font-size:13px;font-weight:700;margin-right:10px;">Open tracker &rarr;</a>'
             + '<a href="https://wa.me/31628073996?text=Hi+Ottmar,+please+implement+my+Citation+Brief+for+' + encodeURIComponent(p.url) + '" style="display:inline-block;background:#16a34a;color:white;text-decoration:none;padding:10px 22px;border-radius:6px;font-size:13px;font-weight:700;">Let Ottmar do it for me &rarr;</a>'
             + '<p style="font-size:11px;color:#94a3b8;margin-top:14px;">Done-for-you AI citation optimization — high-GRAAF, citation-ready content.</p>';
-          await notifyClient(p.tracker_client_id, subject, htmlBody, subject + '\n\n<a href="' + trackerUrl + '">Open tracker →</a>').catch(()=>{});
+          await notifyClient(p.tracker_client_id, subject, htmlBody, subject + '\n\n<a href="' + trackerUrl + '">Open tracker →</a>', true).catch(()=>{});
 
           if (p.telegram_chat_id) {
             await sendTelegramNotification(p.telegram_chat_id, '⚠️ Your ContentScale tracker for ').catch(()=>{});
@@ -37931,7 +37931,7 @@ function startHtmlReminderScheduler() {
             + '2. Ctrl+A &rarr; Ctrl+C &rarr; Go to tracker &rarr; click <strong>Paste new HTML</strong>'
             + '</div>'
             + '<a href="' + trackerUrl + '" style="display:inline-block;background:#7c3aed;color:white;text-decoration:none;padding:10px 22px;border-radius:6px;font-size:13px;font-weight:700;">Open tracker &rarr;</a>';
-          await notifyClient(p.tracker_client_id, subject, htmlBody, subject + '\n\n<a href="' + trackerUrl + '">Open tracker →</a>').catch(()=>{});
+          await notifyClient(p.tracker_client_id, subject, htmlBody, subject + '\n\n<a href="' + trackerUrl + '">Open tracker →</a>', true).catch(()=>{});
 
           if (p.telegram_chat_id) {
             await sendTelegramNotification(p.telegram_chat_id, '⚠️ Paste updated HTML for ').catch(()=>{});
@@ -38029,7 +38029,7 @@ function startTrackerScheduler() {
                           'Your page changed — paste new HTML for next scan — ' + client2.domain,
                           '<p style="font-size:14px;color:#374151;line-height:1.7;margin-bottom:14px;">Your page <strong>' + page.url + '</strong> has changed online. To get an accurate scan, please paste your updated page HTML into the tracker.</p><p style="font-size:13px;color:#6b7280;line-height:1.6;margin-bottom:14px;">The orange <strong>HTML</strong> button on your page card is now blinking — click it to paste your fresh HTML.</p>'
                           + '<a href="' + trackerUrl2 + '" style="display:inline-block;background:#f59e0b;color:#0a0a12;text-decoration:none;padding:10px 22px;border-radius:6px;font-size:13px;font-weight:700;">Paste New HTML →</a>'
-                        ).catch(()=>{});
+                        , true).catch(()=>{});
                       }
                       if (client2.telegram_chat_id) {
                         await sendTelegramNotification(client2.telegram_chat_id, '🔄 <b>' + page.url + '</b> changed online. Paste fresh HTML in your tracker for the next scan.').catch(()=>{});
