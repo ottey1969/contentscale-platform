@@ -1,4 +1,4 @@
-console.log('=== CONTENTSCALE BOOT v2026-06-29-scorecheck | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON ===');
+console.log('=== CONTENTSCALE BOOT v2026-06-29-tgscan | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON ===');
 // CONTENTSCALE SERVER.JS — ELITE EDITION v4 (FIXED v3)
 // ✅ FIX v7: secondary_keywords + related_keywords auto in Analyse JSON + Execute prompt
 // ✅ FIX v7: analysis_data JSONB safe parse in execute-rewrite
@@ -2251,7 +2251,7 @@ app.post('/api/tracker-client/:token/import-gsc-pages', async (req, res) => {
     for (const p of pages) {
       try {
         // Check if page already exists → OVERWRITE its GSC data (recognise + refresh the same URLs on re-import)
-        const existing = await pool.query('SELECT id FROM tracker_pages WHERE tracker_client_id=$1 AND url=$2', [clientId, p.url]);
+        const existing = await pool.query("SELECT id FROM tracker_pages WHERE tracker_client_id=$1 AND rtrim(url,'/')=rtrim($2,'/')", [clientId, p.url]);
         if (existing.rows.length) {
           await pool.query(
             `UPDATE tracker_pages SET gsc_clicks=$3, gsc_impressions=$4, gsc_position=$5, gsc_keyword=COALESCE($6, gsc_keyword), keyword=COALESCE(keyword, $6), priority=COALESCE($7, priority) WHERE id=$1 AND tracker_client_id=$2`,
@@ -27583,22 +27583,32 @@ function scanAllPages() {
 
 function openTelegramSetup() {
   var base = (typeof location !== 'undefined') ? (location.origin || '') : '';
-  var haveApp = confirm('Telegram alerts need the Telegram app on your phone or computer.\\n\\nOK = I already have Telegram (connect now)\\nCancel = Install Telegram first');
-  if (!haveApp) {
-    window.open('https://telegram.org/apps', '_blank');
-    toast('Install Telegram, then click Install Telegram again to connect', '#2AABEE');
-    return;
-  }
   fetch(base + '/api/telegram/test-start/' + TOKEN).then(function(r){ return r.json(); }).then(function(d){
-    if (d && d.bot_link) {
-      window.open(d.bot_link, '_blank');
-      toast(d.linked ? 'Telegram already linked \\u2713' : 'Opening Telegram \\u2014 press Start in the bot to link alerts', '#2AABEE');
-    } else {
-      toast((d && d.error) || 'Telegram is not available right now', '#f87171');
-    }
-  }).catch(function(e){ toast('Telegram error: ' + e.message, '#f87171'); });
+    var botLink = (d && d.bot_link) ? d.bot_link : ('https://t.me/ContentScaleTrackerBot?start=' + TOKEN);
+    _showTgModal(botLink, TOKEN, !!(d && d.linked));
+  }).catch(function(){ _showTgModal('https://t.me/ContentScaleTrackerBot?start=' + TOKEN, TOKEN, false); });
 }
-
+function _showTgModal(botLink, token, linked) {
+  var ov = document.getElementById('tgOv');
+  if (!ov) { ov = document.createElement('div'); ov.id = 'tgOv'; ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px'; document.body.appendChild(ov); ov.addEventListener('click', function(e){ if (e.target === ov) ov.style.display = 'none'; }); }
+  ov.style.display = 'flex';
+  var startCmd = '/start ' + token;
+  var h = '';
+  h += '<div style="background:#0d1117;border:1px solid #2AABEE;border-radius:16px;max-width:420px;width:100%;padding:22px;color:#e5e7eb">';
+  h += '<div style="font-size:16px;font-weight:800;margin-bottom:6px;color:#2AABEE"><i class="fab fa-telegram"></i> Connect Telegram alerts</div>';
+  h += linked ? '<div style="font-size:12px;color:#4ade80;margin-bottom:12px">Already connected &mdash; you can reconnect below if needed.</div>' : '<div style="font-size:12px;color:#9ca3af;margin-bottom:14px">Get a Telegram message after every scan. Pick whichever is easiest:</div>';
+  h += '<div style="font-weight:700;font-size:13px;margin:8px 0 5px">1 &middot; On this device</div>';
+  h += '<a href="' + botLink + '" target="_blank" rel="noopener" style="display:block;text-align:center;background:#2AABEE;color:#fff;text-decoration:none;border-radius:10px;padding:11px;font-weight:800;margin-bottom:5px">Open in Telegram, then press Start</a>';
+  h += '<div style="font-size:11px;color:#6b7280;margin-bottom:14px">Opens the Telegram app, or Telegram Web if you are logged in at web.telegram.org.</div>';
+  h += '<div style="font-weight:700;font-size:13px;margin:8px 0 5px">2 &middot; Manual (works anywhere, web too)</div>';
+  h += '<div style="font-size:12px;color:#9ca3af;margin-bottom:6px">Open <b>@ContentScaleTrackerBot</b> in any Telegram and send:</div>';
+  h += '<div style="display:flex;gap:6px;margin-bottom:16px"><code id="tgCmd" style="flex:1;background:#06060f;border:1px solid #1f2937;border-radius:8px;padding:9px;font-size:12px;color:#a3e635;word-break:break-all">' + startCmd + '</code><button id="tgCopy" style="background:#1f2937;border:none;color:#e5e7eb;border-radius:8px;padding:0 12px;font-size:12px;cursor:pointer">Copy</button></div>';
+  h += '<button id="tgClose" style="width:100%;background:#0d1117;border:1px solid #374151;color:#9ca3af;border-radius:9px;padding:9px;font-size:12px;cursor:pointer">Close</button>';
+  h += '</div>';
+  ov.innerHTML = h;
+  var cp = document.getElementById('tgCopy'); if (cp) cp.onclick = function(){ try { navigator.clipboard.writeText(startCmd); cp.textContent = 'Copied'; } catch(e) {} };
+  var cl = document.getElementById('tgClose'); if (cl) cl.onclick = function(){ ov.style.display = 'none'; };
+}
 function openSitemapLinks() {
   var guess = 'https://' + (DOMAIN || '') + '/sitemap.xml';
   var sm = prompt('Enter your sitemap URL to get internal-link suggestions:', guess);
@@ -28011,7 +28021,7 @@ function renderPages() {
       d.setDate(d.getDate() + freqDays);
       nextCheckDate = d;
     }
-    var nextCheck = nextCheckDate ? 'Next: ' + nextCheckDate.toLocaleDateString('en-GB',{day:'2-digit',month:'short'}) : '';
+    var nextCheck = (nextCheckDate && p.check_frequency!=='0' && p.check_frequency!=='0days' && p.check_frequency!=='off') ? 'Next: ' + nextCheckDate.toLocaleDateString('en-GB',{day:'2-digit',month:'short'}) : '';
     var freqLabel = (function(f){ var m={'0':'off (no scan)','off':'off (no scan)','1day':'daily','3days':'every 3 days','7days':'every 7 days','weekly':'weekly','1week':'weekly','2weeks':'every 2 weeks','17days':'every 17 days','21days':'every 21 days','30days':'every 30 days','monthly':'monthly'}; if(m[f])return m[f]; var x=String(f||'').match(/^(\d+)\s*days?$/); return x?('every '+x[1]+' days'):'every 3 days'; })(p.check_frequency);
     // Clean URL - remove protocol, www, and fix anchor slugs (#section)
     var rawUrl = p.url || '';
@@ -30654,7 +30664,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
                         <div>
                             <h2 style="font-size:1.1rem;font-weight:800;color:#f1f5f9;">Tracker Clients</h2>
-                            <p style="font-size:12px;color:#6b7280;margin-top:2px;">Self-service users registered via the free tracker · <span style="color:#34d399;font-weight:800;letter-spacing:.04em;">BUILD 2026-06-29-scorecheck</span></p>
+                            <p style="font-size:12px;color:#6b7280;margin-top:2px;">Self-service users registered via the free tracker · <span style="color:#34d399;font-weight:800;letter-spacing:.04em;">BUILD 2026-06-29-tgscan</span></p>
                         </div>
                         <div style="display:flex;gap:8px;flex-wrap:wrap;">
                             <button onclick="openNewOwnClient()" class="tr-btn" style="border-color:#4ade80;color:#4ade80;font-weight:700;">+ New Client</button>
@@ -30686,7 +30696,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
             <div id="tab-admin-settings" class="tab-content hidden">
                 <div style="padding:24px;max-width:600px;">
                     <h2 style="font-size:18px;font-weight:800;color:#f1f5f9;margin-bottom:4px;">⚙️ Settings</h2>
-                    <p style="font-size:12px;color:#6b7280;margin-bottom:24px;">Admin settings — stored in database, survive deploys · <span style="color:#34d399;font-weight:800;letter-spacing:.04em;">BUILD 2026-06-29-scorecheck</span></p>
+                    <p style="font-size:12px;color:#6b7280;margin-bottom:24px;">Admin settings — stored in database, survive deploys · <span style="color:#34d399;font-weight:800;letter-spacing:.04em;">BUILD 2026-06-29-tgscan</span></p>
 
                     <div style="background:#0d1117;border:1px solid #1f2937;border-radius:10px;padding:20px;margin-bottom:16px;">
                         <div style="font-size:13px;font-weight:700;color:#f1f5f9;margin-bottom:14px;">📧 Content Engine — Email Settings</div>
@@ -36605,10 +36615,19 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
         return [];
       } catch(e) { return []; }
     })();
-    const hasCachedBrief = _cachedItems.length > 0 && page.brief_check_count > 0;
+    const _cachedGsc = (function(){
+      try {
+        var b = typeof page.brief_content === 'string' ? JSON.parse(page.brief_content) : page.brief_content;
+        if (b && Array.isArray(b.gsc_brief)) return b.gsc_brief;
+        return [];
+      } catch(e) { return []; }
+    })();
+    const _shouldHaveGsc = (page.gsc_impressions || 0) > 0;
+    const hasCachedBrief = _cachedItems.length > 0 && page.brief_check_count > 0 && (!_shouldHaveGsc || _cachedGsc.length > 0);
     const skipGemini = !resultsChanged && hasCachedBrief;
     if (skipGemini) {
       snapshot.recommendations = _cachedItems;
+      if (_cachedGsc.length) snapshot.gsc_brief = _cachedGsc;
       snapshot._unchanged = true;
       _trSetStep(pageId, 'recommendations', 'done', '✅ Results unchanged — using cached Citation Brief (saves API call)');
       console.log('[tracker] Gemini skipped for page', pageId, '— results unchanged');
@@ -37455,12 +37474,18 @@ If no unanchored claims found, return empty array: []`;
 
   // 8. Update page last_checked_at + schedule next check
   const freqMap = { 'daily': 1, '1day': 1, '3days': 3, '7days': 7, 'weekly': 7, '1week': 7, '2weeks': 14, '17days': 17, '21days': 21, '30days': 30, 'monthly': 30 };
+  const _isOff = (page.check_frequency === '0' || page.check_frequency === '0days' || page.check_frequency === 'off');
   let days = freqMap[page.check_frequency];
   if (!days) { const _dm = String(page.check_frequency || '').match(/^(\d+)\s*days?$/); days = _dm ? parseInt(_dm[1], 10) : 3; }
-  await pool.query(
-    `UPDATE tracker_pages SET last_checked_at=NOW(), next_check_at=NOW() + INTERVAL '${days} days' WHERE id=$1`,
-    [page.id]
-  ).catch(()=>{});
+  if (_isOff) {
+    // Scan was off — record that it ran but DO NOT re-arm the schedule (stays off, shows "off (no scan)")
+    await pool.query(`UPDATE tracker_pages SET last_checked_at=NOW(), next_check_at=NULL WHERE id=$1`, [page.id]).catch(()=>{});
+  } else {
+    await pool.query(
+      `UPDATE tracker_pages SET last_checked_at=NOW(), next_check_at=NOW() + INTERVAL '${days} days' WHERE id=$1`,
+      [page.id]
+    ).catch(()=>{});
+  }
 
   _trSetStep(pageId, 'complete', 'done', 'Check finished — pos:' + (snapshot.google_position||'—') + ' · GRAAF:' + (snapshot.score||'—') + '/100 · AIO:' + (snapshot.ai_google_overview_cited?'✅':'❌') + ' · Perplexity:' + (snapshot.ai_perplexity_cited?'✅':'❌') + ' · You.com:' + (snapshot.ai_bing_cited?'✅':'❌'));
   console.log(`[tracker] Check complete for ${page.url} — position:${snapshot.google_position}, GRAAF:${snapshot.score}, AI Overview:${snapshot.ai_google_overview_cited}`);
@@ -38202,7 +38227,7 @@ function startTrackerScheduler() {
          AND (
            (p.engine_code_id IS NOT NULL AND (p.next_check_at <= NOW() OR p.next_check_at IS NULL))
            OR
-           (p.tracker_client_id IS NOT NULL AND p.last_checked_at IS NOT NULL AND p.next_check_at IS NOT NULL AND p.next_check_at <= NOW())
+           (p.tracker_client_id IS NOT NULL AND p.last_checked_at IS NOT NULL AND p.next_check_at IS NOT NULL AND p.next_check_at <= NOW() AND (p.check_frequency IS NULL OR p.check_frequency NOT IN ('0','0days','off')))
          )
          ORDER BY
            CASE p.check_frequency
