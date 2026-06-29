@@ -1,4 +1,4 @@
-console.log('=== CONTENTSCALE BOOT v2026-06-29-rankgraph | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON ===');
+console.log('=== CONTENTSCALE BOOT v2026-06-29-prompts | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON ===');
 // CONTENTSCALE SERVER.JS — ELITE EDITION v4 (FIXED v3)
 // ✅ FIX v7: secondary_keywords + related_keywords auto in Analyse JSON + Execute prompt
 // ✅ FIX v7: analysis_data JSONB safe parse in execute-rewrite
@@ -1682,6 +1682,7 @@ app.get('/api/tracker-client/:token/latest-briefs', async (req, res) => {
       `SELECT p.id, p.url, p.keyword, p.gsc_keyword, p.brief_content, p.gsc_clicks, p.gsc_impressions, p.gsc_position,
               p.brief_status, p.brief_claimed_by, p.brief_claimed_at, p.brief_started_at,
               p.brief_done_at, p.brief_submitted_at, p.brief_approved_at, p.brief_approved_by, p.brief_published_at,
+              p.brief_deadline, p.brief_assigned_at, p.brief_rejected_at, p.brief_reject_reason, p.priority,
               (p.specialist_html IS NOT NULL AND p.specialist_html != '') AS has_deliverable,
               s.checked_at, s.google_position, s.ai_google_overview_cited, s.ai_perplexity_cited, s.ai_bing_cited, s.ai_brave_cited,
               s.score, s.recommendations, s.gsc_brief, s.source_suggestions
@@ -1690,7 +1691,7 @@ app.get('/api/tracker-client/:token/latest-briefs', async (req, res) => {
          SELECT * FROM tracker_snapshots WHERE page_id = p.id ORDER BY checked_at DESC LIMIT 1
        ) s ON true
        WHERE p.tracker_client_id = $1 AND (p.is_active IS NULL OR p.is_active = TRUE)
-       ORDER BY s.checked_at DESC NULLS LAST LIMIT 8`,
+       ORDER BY s.checked_at DESC NULLS LAST LIMIT 50`,
       [cr.rows[0].id]
     );
     function _arr(v) { if (Array.isArray(v)) return v; if (!v) return []; try { var x = typeof v === 'string' ? JSON.parse(v) : v; return Array.isArray(x) ? x : (Array.isArray(x.items) ? x.items : []); } catch(e) { return []; } }
@@ -1727,6 +1728,11 @@ app.get('/api/tracker-client/:token/latest-briefs', async (req, res) => {
         brief_approved_at: p.brief_approved_at || null,
         brief_approved_by: p.brief_approved_by || null,
         brief_published_at: p.brief_published_at || null,
+        brief_deadline: p.brief_deadline || null,
+        brief_assigned_at: p.brief_assigned_at || null,
+        brief_rejected_at: p.brief_rejected_at || null,
+        brief_reject_reason: p.brief_reject_reason || null,
+        priority: p.priority || 'medium',
         has_deliverable: !!p.has_deliverable,
         ts: p.checked_at || p.brief_started_at || null,
         ts: p.checked_at ? new Date(p.checked_at).toISOString() : ''
@@ -1915,11 +1921,53 @@ app.post('/api/tracker-client/:token/brief/:pageId/assign', async (req, res) => 
     if (r.error) return res.status(r.code).json({ success: false, error: r.error });
     const name = String((req.body && req.body.name) || '').trim().slice(0, 80);
     if (!name) {
-      await pool.query("UPDATE tracker_pages SET brief_status='open', brief_claimed_by=NULL, brief_claimed_at=NULL WHERE id=$1", [r.pageId]);
+      await pool.query("UPDATE tracker_pages SET brief_status='open', brief_claimed_by=NULL, brief_claimed_at=NULL, brief_assigned_at=NULL, brief_deadline=NULL, brief_rejected_at=NULL, brief_reject_reason=NULL WHERE id=$1", [r.pageId]);
       return res.json({ success: true, status: 'open' });
     }
-    await pool.query("UPDATE tracker_pages SET brief_status='in_progress', brief_claimed_by=$1, brief_claimed_at=NOW() WHERE id=$2", [name, r.pageId]);
-    res.json({ success: true, status: 'in_progress', claimed_by: name });
+    // Fresh 24h deadline on first assignment; preserved on reassignment (lead can edit it manually)
+    await pool.query("UPDATE tracker_pages SET brief_status='in_progress', brief_claimed_by=$1, brief_claimed_at=NOW(), brief_assigned_at=NOW(), brief_deadline=COALESCE(brief_deadline, NOW()+interval '24 hours'), brief_rejected_at=NULL, brief_reject_reason=NULL WHERE id=$2", [name, r.pageId]);
+    const pr = await pool.query('SELECT tracker_client_id, brief_deadline FROM tracker_pages WHERE id=$1', [r.pageId]);
+    const pg = pr.rows[0] || {};
+    if (pg.tracker_client_id && typeof _sseBroadcast === 'function') _sseBroadcast({ type: 'brief_assigned', clientId: pg.tracker_client_id, page_id: r.pageId, by: name, deadline: pg.brief_deadline, ts: new Date().toISOString() });
+    res.json({ success: true, status: 'in_progress', claimed_by: name, deadline: pg.brief_deadline });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// ── Lead: reject submitted work → back to the SAME specialist, deadline kept ──
+app.post('/api/tracker-client/:token/brief/:pageId/reject', async (req, res) => {
+  try {
+    const r = await _resolveBoardPage(req.params.token, req.params.pageId);
+    if (r.error) return res.status(r.code).json({ success: false, error: r.error });
+    const reason = String((req.body && req.body.reason) || '').trim().slice(0, 600);
+    const name = String((req.body && req.body.name) || '').trim().slice(0, 80) || 'Lead';
+    // Send back to the specialist who submitted; keep brief_claimed_by AND brief_deadline
+    await pool.query("UPDATE tracker_pages SET brief_status='in_progress', brief_rejected_at=NOW(), brief_reject_reason=$1, brief_submitted_at=NULL, specialist_html=NULL WHERE id=$2", [reason || null, r.pageId]);
+    const pr = await pool.query('SELECT tracker_client_id, brief_claimed_by, url FROM tracker_pages WHERE id=$1', [r.pageId]);
+    const pg = pr.rows[0] || {};
+    if (pg.tracker_client_id && typeof _sseBroadcast === 'function') _sseBroadcast({ type: 'brief_rejected', clientId: pg.tracker_client_id, page_id: r.pageId, reason: reason, by: name, specialist: pg.brief_claimed_by || '', ts: new Date().toISOString() });
+    res.json({ success: true, status: 'in_progress', reason: reason });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// ── Lead/admin: set or change a brief deadline (hours-from-now, or ISO) ───────
+app.post('/api/tracker-client/:token/brief/:pageId/deadline', async (req, res) => {
+  try {
+    const r = await _resolveBoardPage(req.params.token, req.params.pageId);
+    if (r.error) return res.status(r.code).json({ success: false, error: r.error });
+    const hours = parseFloat((req.body && req.body.hours));
+    const iso = (req.body && req.body.deadline) ? String(req.body.deadline) : '';
+    if (iso) {
+      const dt = new Date(iso); if (isNaN(dt.getTime())) return res.status(400).json({ success: false, error: 'bad date' });
+      await pool.query("UPDATE tracker_pages SET brief_deadline=$1 WHERE id=$2", [dt, r.pageId]);
+    } else if (!isNaN(hours)) {
+      await pool.query("UPDATE tracker_pages SET brief_deadline=NOW()+($1 * interval '1 hour') WHERE id=$2", [hours, r.pageId]);
+    } else {
+      return res.status(400).json({ success: false, error: 'provide hours or deadline' });
+    }
+    const pr = await pool.query('SELECT tracker_client_id, brief_deadline FROM tracker_pages WHERE id=$1', [r.pageId]);
+    const pg = pr.rows[0] || {};
+    if (pg.tracker_client_id && typeof _sseBroadcast === 'function') _sseBroadcast({ type: 'brief_deadline', clientId: pg.tracker_client_id, page_id: r.pageId, deadline: pg.brief_deadline, ts: new Date().toISOString() });
+    res.json({ success: true, deadline: pg.brief_deadline });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 async function _resolveLeadClient(token) {
@@ -2594,8 +2642,8 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
 .ld-empty{grid-column:1/-1;text-align:center;color:#6b7280;padding:40px;font-size:14px}
 </style></head><body>
 <div class="ld-head">
-  <div><div class="ld-title">Lead Panel - ${client.domain || ''}</div><div class="ld-sub">Add pages, scan, and assign work to your specialists. No admin needed.</div></div>
-  <button class="ld-btn primary" id="scanBtn" onclick="scanAll()">Scan all now</button>
+  <div><div class="ld-title">Lead Panel - ${client.domain || ''}</div><div class="ld-sub">Assign work to your specialists, review &amp; approve. Add &amp; scan pages in your scanner.</div></div>
+  <a class="ld-btn primary" href="/track/${client.token}" target="_blank" rel="noopener" style="text-decoration:none">&#10133; Add &amp; scan pages</a>
 </div>
 <div class="ld-body">
   <div class="ld-panel">
@@ -2605,9 +2653,9 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
     <div id="specList" class="ld-chips"></div>
   </div>
   <div class="ld-panel">
-    <div class="ld-h">Add pages to track</div>
-    <div class="ld-row"><textarea id="urlInput" class="ld-input" rows="3" placeholder="Paste page URLs, one per line"></textarea></div>
-    <div class="ld-row"><button class="ld-btn primary" onclick="addPages()">Add pages</button><span class="ld-msg" id="addMsg"></span></div>
+    <div class="ld-h">Add &amp; scan pages</div>
+    <div style="font-size:13px;color:#9ca3af;line-height:1.6;margin-bottom:12px">Add and scan pages in your <strong>scanner</strong> — it has GSC import &amp; sitemap. Every page you scan shows up below in <strong>Briefs &amp; assignments</strong> to hand to a specialist.</div>
+    <a class="ld-btn primary" href="/track/${client.token}" target="_blank" rel="noopener" style="text-decoration:none;display:inline-block">Open scanner &rarr;</a>
   </div>
 </div>
 <div class="ld-h2">Briefs &amp; assignments</div>
@@ -2628,20 +2676,26 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
   function options(cur){ var o='<option value="">- Unassigned -</option>'; var found=false; _specs.forEach(function(n){ var sel=(n===cur); if(sel)found=true; o+='<option value="'+esc(n)+'"'+(sel?' selected':'')+'>'+esc(n)+'</option>'; }); if(cur&&!found)o+='<option value="'+esc(cur)+'" selected>'+esc(cur)+' (not in list)</option>'; return o; }
   function assign(pageId, sel){ fetch('/api/tracker-client/'+TOKEN+'/brief/'+pageId+'/assign',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:sel.value})}).then(function(r){return r.json();}).then(function(){ load(); }).catch(function(){}); }
   function ldActions(d){ var st=d.brief_status||'open';
-    if(st==='submitted') return '<div class="ld-rev"><button class="ld-btn" onclick="reviewHtml('+d.page_id+')">Review HTML</button><button class="ld-btn primary" onclick="approve('+d.page_id+')">Approve</button></div>';
+    if(st==='submitted') return '<div class="ld-rev"><button class="ld-btn" onclick="reviewHtml('+d.page_id+')">Review HTML</button><button class="ld-btn primary" onclick="approve('+d.page_id+')">Approve</button><button class="ld-btn" style="border-color:#7f1d1d;color:#fca5a5" onclick="reject('+d.page_id+')">Reject</button></div>';
     if(st==='approved') return '<div class="ld-rev"><span class="ld-note appr">Approved'+(d.brief_approved_by?' by '+esc(d.brief_approved_by):'')+' — specialist can publish</span><button class="ld-btn" onclick="reviewHtml('+d.page_id+')">Review HTML</button></div>';
     if(st==='published') return '<div class="ld-rev"><span class="ld-note pub">Published &#10003;</span><button class="ld-btn" onclick="reviewHtml('+d.page_id+')">Review HTML</button></div>';
     return ''; }
+  function _hrsLeftL(t){ if(!t) return null; try{ return (new Date(t).getTime()-Date.now())/3600000; }catch(e){ return null; } }
+  function dlBadgeL(d){ var h=_hrsLeftL(d.brief_deadline); if(h==null) return ''; var st=d.brief_status||'open'; if(st==='approved'||st==='published') return ''; var c=h<0?'#f87171':(h<6?'#fbbf24':'#4ade80'); var lab; if(h<0){ var o=Math.round(-h); lab='Overdue '+(o>=24?(Math.round(o/24)+'d'):(o+'h')); } else { lab=(h>=24?(Math.round(h/24)+'d'):(Math.max(1,Math.round(h))+'h'))+' left'; } return '<span class="ld-badge" style="cursor:pointer;background:rgba(124,58,237,.10);color:'+c+';border:1px solid '+c+'" title="Click to change the deadline" onclick="editDeadline('+d.page_id+')">\\u23f1 '+lab+'</span>'; }
+  function rejNoteL(d){ if(!d.brief_rejected_at) return ''; return '<div style="background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.3);border-radius:8px;padding:6px 9px;margin-top:8px;font-size:11px;color:#fca5a5">Sent back to '+esc(d.brief_claimed_by||'specialist')+': '+esc(d.brief_reject_reason||'')+'</div>'; }
+  function reject(pageId){ if(!_ldEnsureName())return; var why=prompt('Why send it back to the specialist? (this reason is shown to them)'); if(why===null) return; fetch('/api/tracker-client/'+TOKEN+'/brief/'+pageId+'/reject',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:_ldName,reason:(why||'').trim()})}).then(function(r){return r.json();}).then(function(r){ if(!r.success) alert(r.error||'Could not reject'); _ldClose(); load(); }).catch(function(){ alert('Could not reject'); }); }
+  function editDeadline(pageId){ var h=prompt('Hours from now until the deadline (e.g. 24):','24'); if(h===null) return; var n=parseFloat(h); if(isNaN(n)){ alert('Enter a number of hours'); return; } fetch('/api/tracker-client/'+TOKEN+'/brief/'+pageId+'/deadline',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({hours:n})}).then(function(r){return r.json();}).then(function(){ load(); }).catch(function(){}); }
+  var _prioRankL={high:0,h:0,medium:1,med:1,m:1,low:2,l:2};
+  function _dlValL(d){ var t=d.brief_deadline; return t?new Date(t).getTime():Infinity; }
   function render(){
     var grid=document.getElementById('ldGrid');
-    if(!_briefs.length){ grid.innerHTML='<div class="ld-empty">No briefs yet - add pages and scan, they appear here.</div>'; return; }
-    var rank={open:0,in_progress:1,submitted:2,approved:3,done:2,published:4};
-    var list=_briefs.slice().sort(function(a,b){ var ra=rank[a.brief_status||'open']; if(ra==null)ra=0; var rb=rank[b.brief_status||'open']; if(rb==null)rb=0; if(ra!==rb)return ra-rb; return (b.gsc_impressions||0)-(a.gsc_impressions||0); });
+    if(!_briefs.length){ grid.innerHTML='<div class="ld-empty">No briefs yet &mdash; add &amp; scan pages in your scanner; they appear here to assign.</div>'; return; }
+    var list=_briefs.slice().sort(function(a,b){ var da=_dlValL(a),db=_dlValL(b); if(da!==db)return da-db; var pa=_prioRankL[(a.priority||'medium').toLowerCase()]; if(pa==null)pa=1; var pb=_prioRankL[(b.priority||'medium').toLowerCase()]; if(pb==null)pb=1; if(pa!==pb)return pa-pb; return (b.gsc_impressions||0)-(a.gsc_impressions||0); });
     grid.innerHTML=list.map(function(d){
       var st=d.brief_status||'open'; var cls=st==='published'?'s-pub':st==='approved'?'s-appr':st==='submitted'?'s-subm':st==='done'?'s-done':st==='in_progress'?'s-progress':'';
-      return '<div class="ld-card '+cls+'"><div class="ld-url">'+esc(cleanUrl(d.url))+'</div><div class="ld-time">Scanned '+fmtTime(d.ts)+'</div>'+badge(st,d.brief_claimed_by)
+      return '<div class="ld-card '+cls+'"><div class="ld-url">'+esc(cleanUrl(d.url))+'</div><div class="ld-time">Scanned '+fmtTime(d.ts)+'</div>'+badge(st,d.brief_claimed_by)+' '+dlBadgeL(d)
         +'<div class="ld-assign"><span style="font-size:11px;color:#6b7280">Assign:</span><select class="ld-select" onchange="assign('+d.page_id+',this)">'+options(d.brief_claimed_by||'')+'</select></div>'
-        +ldActions(d)
+        +ldActions(d)+rejNoteL(d)
         +'<div style="margin-top:10px"><a class="ld-link" href="'+esc(d.url)+'" target="_blank" rel="noopener">Open page</a></div></div>';
     }).join('');
   }
@@ -2649,7 +2703,7 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
   function _ldEnsureName(){ if(_ldName) return true; var n=prompt('Your name (so the specialist sees who approved):'); if(n&&n.trim()){ _ldName=n.trim(); try{ localStorage.setItem('cs_lead_name',_ldName); }catch(e){} return true; } return false; }
   function _ldOv(){ var ov=document.getElementById('ldOv'); if(ov) return ov; ov=document.createElement('div'); ov.id='ldOv'; ov.className='ld-ov'; ov.innerHTML='<div class="ld-modal"><h3 id="ldOvTitle"></h3><div class="ld-mbody" id="ldOvBody"></div><div class="ld-mfoot" id="ldOvFoot"></div></div>'; document.body.appendChild(ov); ov.addEventListener('click',function(e){ if(e.target===ov) _ldClose(); }); return ov; }
   function _ldClose(){ var ov=document.getElementById('ldOv'); if(ov) ov.classList.remove('on'); }
-  function reviewHtml(pageId){ var ov=_ldOv(); document.getElementById('ldOvTitle').textContent='Submitted work — review'; document.getElementById('ldOvBody').innerHTML='<div class="ld-prev" id="ldPrev">Loading...</div>'; document.getElementById('ldOvFoot').innerHTML='<button class="ld-btn" onclick="_ldClose()">Close</button><button class="ld-btn primary" id="ldApproveGo">Approve</button>'; ov.classList.add('on'); fetch('/api/tracker-client/'+TOKEN+'/brief/'+pageId+'/deliverable').then(function(r){return r.json();}).then(function(d){ document.getElementById('ldPrev').textContent=(d&&d.html)?d.html:'(no HTML submitted yet)'; var ga=document.getElementById('ldApproveGo'); if(ga) ga.onclick=function(){ approve(pageId); }; }).catch(function(){ document.getElementById('ldPrev').textContent='Could not load'; }); }
+  function reviewHtml(pageId){ var ov=_ldOv(); document.getElementById('ldOvTitle').textContent='Submitted work — review'; document.getElementById('ldOvBody').innerHTML='<div class="ld-prev" id="ldPrev">Loading...</div>'; document.getElementById('ldOvFoot').innerHTML='<button class="ld-btn" onclick="_ldClose()">Close</button><button class="ld-btn" style="border-color:#7f1d1d;color:#fca5a5" id="ldRejectGo">Reject</button><button class="ld-btn primary" id="ldApproveGo">Approve</button>'; ov.classList.add('on'); fetch('/api/tracker-client/'+TOKEN+'/brief/'+pageId+'/deliverable').then(function(r){return r.json();}).then(function(d){ document.getElementById('ldPrev').textContent=(d&&d.html)?d.html:'(no HTML submitted yet)'; var ga=document.getElementById('ldApproveGo'); if(ga) ga.onclick=function(){ approve(pageId); }; var gr=document.getElementById('ldRejectGo'); if(gr) gr.onclick=function(){ reject(pageId); }; }).catch(function(){ document.getElementById('ldPrev').textContent='Could not load'; }); }
   function approve(pageId){ if(!_ldEnsureName())return; fetch('/api/tracker-client/'+TOKEN+'/brief/'+pageId+'/approve',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:_ldName})}).then(function(r){return r.json();}).then(function(r){ if(!r.success) alert(r.error||'Could not approve'); _ldClose(); load(); }).catch(function(){ alert('Could not approve'); }); }
   function load(){ fetch('/api/tracker-client/'+TOKEN+'/latest-briefs').then(function(r){return r.json();}).then(function(d){ if(d&&d.briefs){ _briefs=d.briefs; render(); } }).catch(function(){}); }
   loadSpecs(); load(); setInterval(load,15000);
@@ -2725,10 +2779,10 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
 .bd-empty{text-align:center;color:#6b7280;padding:60px 20px;font-size:14px;grid-column:1/-1}
 </style></head><body>
 <div class="bd-head">
-  <div><div class="bd-title">Brief Board - ${client.domain || ''}</div><div class="bd-sub">Claim a brief, do the work, mark it done. Everyone sees the same board live.</div></div>
+  <div><div class="bd-title">My Work - ${client.domain || ''}</div><div class="bd-sub">Work assigned to you, most urgent first. The lead assigns &amp; reviews — you do the work and submit.</div></div>
   <div class="bd-filters">
-    <button class="bd-fbtn on" data-f="all" onclick="setFilter('all')">All</button>
-    <button class="bd-fbtn" data-f="mine" onclick="setFilter('mine')">My work</button>
+    <button class="bd-fbtn" data-f="all" onclick="setFilter('all')">All</button>
+    <button class="bd-fbtn on" data-f="mine" onclick="setFilter('mine')">My work</button>
     <button class="bd-fbtn" data-f="open" onclick="setFilter('open')">Open</button>
     <button class="bd-fbtn" data-f="in_progress" onclick="setFilter('in_progress')">In progress</button>
     <button class="bd-fbtn" data-f="done" onclick="setFilter('done')">Done</button>
@@ -2739,7 +2793,7 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
 <script>
   var TOKEN='${req.params.token}';
   var NL=String.fromCharCode(10);
-  var _name='', _filter='all', _briefs=[];
+  var _name='', _filter='mine', _briefs=[];
   try{ _name=localStorage.getItem('csBoardName')||''; }catch(e){}
   function saveName(v){ _name=(v||'').trim(); try{ localStorage.setItem('csBoardName',_name); }catch(e){} }
   function setFilter(f){ _filter=f; var bs=document.querySelectorAll('.bd-fbtn'); for(var i=0;i<bs.length;i++){ bs[i].classList.toggle('on', bs[i].getAttribute('data-f')===f); } render(); }
@@ -2752,12 +2806,17 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
   function recs(d){ var items=d.passages||[]; if(!items.length) return ''; return items.map(function(p){ var t=p.title||p.h2||p.heading||'Recommendation'; var b=p.action||p.passage||p.body||p.text||''; if(b.length>200)b=b.slice(0,200)+'...'; return '<div class="bw-rec"><div class="bw-rec-t">'+esc(t)+'</div>'+(b?'<div class="bw-rec-b">'+esc(b)+'</div>':'')+'</div>'; }).join(''); }
   function badge(st,who){ if(st==='published')return '<span class="bd-badge pub">PUBLISHED</span>'; if(st==='approved')return '<span class="bd-badge appr">APPROVED'+(who?' - '+esc(who):'')+'</span>'; if(st==='submitted')return '<span class="bd-badge subm">SUBMITTED'+(who?' - '+esc(who):'')+'</span>'; if(st==='done')return '<span class="bd-badge done">DONE</span>'; if(st==='in_progress')return '<span class="bd-badge progress">IN PROGRESS'+(who?' - '+esc(who):'')+'</span>'; return '<span class="bd-badge open">OPEN</span>'; }
   function actions(d){ var st=d.brief_status||'open';
-    if(st==='open') return '<button class="bd-btn claim" onclick="claim('+d.page_id+')">Claim this</button>';
+    if(st==='open') return '<span class="bd-wait" style="color:#6b7280">Waiting to be assigned by the lead</span>';
     if(st==='in_progress') return '<button class="bd-btn done" onclick="openSubmit('+d.page_id+')">Submit finished HTML</button><button class="bd-btn sec" onclick="reopen('+d.page_id+')">Release</button>';
     if(st==='submitted') return '<button class="bd-btn sec" onclick="viewHtml('+d.page_id+')">View HTML</button><button class="bd-btn sec" onclick="openSubmit('+d.page_id+')">Re-submit</button><span class="bd-wait">Awaiting lead approval</span>';
     if(st==='approved') return '<button class="bd-btn pub" onclick="publish('+d.page_id+')">Publish</button><button class="bd-btn sec" onclick="viewHtml('+d.page_id+')">View HTML</button>';
     if(st==='published') return '<button class="bd-btn sec" onclick="viewHtml('+d.page_id+')">View HTML</button>';
     return '<button class="bd-btn sec" onclick="reopen('+d.page_id+')">Reopen</button>'; }
+  function _hrsLeft(t){ if(!t) return null; try{ return (new Date(t).getTime()-Date.now())/3600000; }catch(e){ return null; } }
+  function dlBadge(d){ var h=_hrsLeft(d.brief_deadline); if(h==null) return ''; var st=d.brief_status||'open'; if(st==='approved'||st==='published') return ''; var c=h<0?'#f87171':(h<6?'#fbbf24':'#4ade80'); var lab; if(h<0){ var o=Math.round(-h); lab='Overdue '+(o>=24?(Math.round(o/24)+'d'):(o+'h')); } else { lab=(h>=24?(Math.round(h/24)+'d'):(Math.max(1,Math.round(h))+'h'))+' left'; } return '<span class="bd-badge" style="background:rgba(124,58,237,.10);color:'+c+';border:1px solid '+c+'">\\u23f1 '+lab+'</span>'; }
+  function rejBanner(d){ if(!d.brief_rejected_at) return ''; return '<div style="background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.4);border-radius:8px;padding:8px 10px;margin:8px 0;font-size:12px;color:#fca5a5"><strong>Sent back by the lead:</strong> '+esc(d.brief_reject_reason||'Please revise and resubmit.')+'</div>'; }
+  var _prioRank={high:0,h:0,medium:1,med:1,m:1,low:2,l:2};
+  function _dlVal(d){ var t=d.brief_deadline; return t?new Date(t).getTime():Infinity; }
   function render(){
     var grid=document.getElementById('bdGrid');
     var list=_briefs.filter(function(d){
@@ -2765,21 +2824,21 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
       if(_filter==='mine') return d.brief_claimed_by && _name && String(d.brief_claimed_by).toLowerCase()===_name.toLowerCase();
       return (d.brief_status||'open')===_filter;
     });
-    var rank={open:0,in_progress:1,submitted:2,approved:3,done:2,published:4};
     list.sort(function(a,b){
-      var ra=rank[a.brief_status||'open']; if(ra==null)ra=0; var rb=rank[b.brief_status||'open']; if(rb==null)rb=0;
-      if(ra!==rb) return ra-rb;
-      var ia=a.gsc_impressions||0, ib=b.gsc_impressions||0;
-      if(ib!==ia) return ib-ia;
+      var da=_dlVal(a), db=_dlVal(b);
+      if(da!==db) return da-db;
+      var pa=_prioRank[(a.priority||'medium').toLowerCase()]; if(pa==null)pa=1;
+      var pb=_prioRank[(b.priority||'medium').toLowerCase()]; if(pb==null)pb=1;
+      if(pa!==pb) return pa-pb;
       return (a.position||a.gsc_position||999)-(b.position||b.gsc_position||999);
     });
-    if(!list.length){ grid.innerHTML='<div class="bd-empty">'+(_filter==='mine'?'You have not claimed any briefs yet — pick one from Open.':(_filter!=='all'?'No briefs in this status.':'No briefs yet - they appear here after a scan.'))+'</div>'; return; }
+    if(!list.length){ grid.innerHTML='<div class="bd-empty">'+(_filter==='mine'?'No work assigned to you yet. The lead assigns briefs from the Lead Panel — assigned work shows here, most urgent first.':(_filter!=='all'?'No briefs in this status.':'No briefs yet - they appear here after a scan.'))+'</div>'; return; }
     grid.innerHTML=list.map(function(d){
       var st=d.brief_status||'open'; var cls=st==='published'?'s-pub':st==='approved'?'s-appr':st==='submitted'?'s-subm':st==='done'?'s-done':st==='in_progress'?'s-progress':'s-open';
-      return '<div class="bw-card '+cls+'"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:6px"><div style="min-width:0"><div class="bw-url">'+esc(cleanUrl(d.url))+'</div><div class="bw-time">Scanned '+fmtTime(d.ts)+'</div></div>'+badge(st,d.brief_claimed_by)+'</div>'+chips(d)+recs(d)+'<div class="bd-actions">'+actions(d)+'<button class="bd-btn sec" onclick="copyBrief('+d.page_id+',this)">Copy brief</button><a class="bd-btn sec" href="'+esc(d.url)+'" target="_blank" rel="noopener" style="text-decoration:none">Open page</a></div></div>';
+      return '<div class="bw-card '+cls+'"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:6px"><div style="min-width:0"><div class="bw-url">'+esc(cleanUrl(d.url))+'</div><div class="bw-time">Scanned '+fmtTime(d.ts)+'</div></div><div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end;flex-shrink:0">'+badge(st,d.brief_claimed_by)+dlBadge(d)+'</div></div>'+rejBanner(d)+chips(d)+recs(d)+'<div class="bd-actions">'+actions(d)+'<button class="bd-btn sec" onclick="copyBrief('+d.page_id+',this)">Copy brief</button><a class="bd-btn sec" href="'+esc(d.url)+'" target="_blank" rel="noopener" style="text-decoration:none">Open page</a></div></div>';
     }).join('');
   }
-  function ensureName(){ if(_name) return true; var n=prompt('Enter your name to claim briefs:'); if(n&&n.trim()){ saveName(n); document.getElementById('bdName').value=_name; return true; } return false; }
+  function ensureName(){ if(_name) return true; var n=prompt('Enter your name to see the work assigned to you:'); if(n&&n.trim()){ saveName(n); document.getElementById('bdName').value=_name; return true; } return false; }
   function post(pageId,action,body){ return fetch('/api/tracker-client/'+TOKEN+'/brief/'+pageId+'/'+action,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body||{})}).then(function(r){return r.json();}); }
   function claim(pageId){ if(!ensureName())return; post(pageId,'claim',{name:_name}).then(function(r){ if(!r.success) alert(r.error||'Could not claim'); load(); }); }
   function markDone(pageId){ post(pageId,'done',{name:_name}).then(function(){ load(); }); }
@@ -4462,6 +4521,12 @@ app.patch('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
   await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS brief_approved_at TIMESTAMPTZ`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS brief_approved_by TEXT`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS brief_published_at TIMESTAMPTZ`).catch(()=>{});
+  // ── Lead/specialist v2: assign-with-deadline + reject-with-reason ──
+  await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS brief_deadline TIMESTAMPTZ`).catch(()=>{});
+  await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS brief_assigned_at TIMESTAMPTZ`).catch(()=>{});
+  await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS brief_rejected_at TIMESTAMPTZ`).catch(()=>{});
+  await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS brief_reject_reason TEXT`).catch(()=>{});
+  await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS priority VARCHAR(20) DEFAULT 'medium'`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS lead_name TEXT`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS lead_email TEXT`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS live_wall_enabled BOOLEAN DEFAULT TRUE`).catch(()=>{});
@@ -30528,7 +30593,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
                         <div>
                             <h2 style="font-size:1.1rem;font-weight:800;color:#f1f5f9;">Tracker Clients</h2>
-                            <p style="font-size:12px;color:#6b7280;margin-top:2px;">Self-service users registered via the free tracker · <span style="color:#34d399;font-weight:800;letter-spacing:.04em;">BUILD 2026-06-29-rankgraph</span></p>
+                            <p style="font-size:12px;color:#6b7280;margin-top:2px;">Self-service users registered via the free tracker · <span style="color:#34d399;font-weight:800;letter-spacing:.04em;">BUILD 2026-06-29-prompts</span></p>
                         </div>
                         <div style="display:flex;gap:8px;flex-wrap:wrap;">
                             <button onclick="openNewOwnClient()" class="tr-btn" style="border-color:#4ade80;color:#4ade80;font-weight:700;">+ New Client</button>
@@ -30560,7 +30625,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
             <div id="tab-admin-settings" class="tab-content hidden">
                 <div style="padding:24px;max-width:600px;">
                     <h2 style="font-size:18px;font-weight:800;color:#f1f5f9;margin-bottom:4px;">⚙️ Settings</h2>
-                    <p style="font-size:12px;color:#6b7280;margin-bottom:24px;">Admin settings — stored in database, survive deploys · <span style="color:#34d399;font-weight:800;letter-spacing:.04em;">BUILD 2026-06-29-rankgraph</span></p>
+                    <p style="font-size:12px;color:#6b7280;margin-bottom:24px;">Admin settings — stored in database, survive deploys · <span style="color:#34d399;font-weight:800;letter-spacing:.04em;">BUILD 2026-06-29-prompts</span></p>
 
                     <div style="background:#0d1117;border:1px solid #1f2937;border-radius:10px;padding:20px;margin-bottom:16px;">
                         <div style="font-size:13px;font-weight:700;color:#f1f5f9;margin-bottom:14px;">📧 Content Engine — Email Settings</div>
@@ -36768,6 +36833,18 @@ INTERNAL LINKING:
 - If one listed URL is genuinely topically relevant, include ONE internal-link action (system "Internal Link", priority "low" or "medium"): give the EXACT anchor text and which existing paragraph on THIS page to add it in, linking from this page TO that listed URL.
 - Only include this if it truly strengthens topical authority. If no listed URL is relevant, DO NOT mention internal linking at all.
 
+WORDPRESS-SAFE OUTPUT — every piece of HTML/copy you put inside an "action" is pasted into a WordPress Custom HTML block that sits behind LiteSpeed Cache. It MUST obey ALL of this:
+- Output CONTENT FRAGMENTS only. NEVER include a doctype, <html>, <head>, <body>, or <title> tag — those already exist on the page; a full document breaks the layout.
+- NEVER use a <style> block or external CSS — LiteSpeed strips them. Put every style as an inline style="" attribute with literal hex colours (no CSS variables).
+- NEVER output a second <h1> — the page already has one. Use <h2>/<h3> for any new section.
+- For structured data, ONLY ever output FAQPage JSON-LD. NEVER output Article, BreadcrumbList, WebPage, or Person schema — Rank Math already emits those and a duplicate causes a schema conflict. If the only useful schema would be Article/Breadcrumb/WebPage, do not output a schema action at all.
+
+TOOL/APP SAFETY (decide this first): if the page is a functional tool, calculator, form, or app (input fields, buttons wired to JavaScript, a dashboard) rather than a text article, you may ONLY prescribe INSERT actions that ADD new sections ABOVE or BELOW the tool (e.g. an intro paragraph or an FAQ). NEVER replace or rewrite the tool's markup, element IDs, classes, or scripts, and NEVER prescribe a full-page rewrite. When in doubt, treat the page as a tool and restrict yourself to safe inserts.
+
+CANNIBALISATION: if one of the sitemap candidate URLs above clearly already targets the SAME keyword/intent as "${kw}", do NOT suggest linking to it. Instead output ONE action (system "Cannibalisation", priority "medium") that names the conflicting URL and recommends differentiating the two pages' intent or canonicalising, so two of the owner's own pages stop competing for the same query.
+
+NO FABRICATION (hard rule, overrides everything): NEVER invent a statistic, percentage, figure, date, quote, name, job title, organisation, award, certification, or ranking, and NEVER add an unverifiable superiority claim such as "#1", "best", "top-rated", or "leading" unless it is already proven on the page. If a number or quote would strengthen a passage but you cannot verify it from the page content or cite a real, named source with a real URL, write it with a [bracketed placeholder] for the owner to fill, or leave it out. A fabricated fact is a failed brief.
+
 OUTPUT FORMAT — return ONLY this JSON, no markdown, no explanation, no preamble:
 [{"title":"6 words max describing the gap","priority":"high","system":"Google AIO","action":"[OPERATION] + [LOCATION] + exact copy-paste text. Pick the operation that fits the GAP — if the element already exists (definition, micro-answer, FAQ, schema, author), use MODIFY or REPLACE on it, NEVER ADD a duplicate. e.g. 'MODIFY your existing direct-answer block to: ...' or 'ADD as a new FAQ answer: ...'. End with: This makes the page more citeable for Google AI Overview because [specific reason based on AIO requirements above].","expected_impact":"Increases the likelihood of an AIO citation once the page ranks in the top ~10 and is re-crawled — state the honest dependency, not a guarantee"}]
 
@@ -36842,6 +36919,15 @@ REQUIRED ACTION TYPES (include all of these):
 - One "Quick Win" action completable in under 5 minutes
 - One "Content Gap" action based on what competitor #1 has that this page lacks
 - A freshness recommendation if the page content appears dated
+
+WORDPRESS-SAFE OUTPUT — any HTML/copy inside an "action" is pasted into a WordPress Custom HTML block behind LiteSpeed Cache:
+- Fragments only: NEVER output a doctype, <html>, <head>, <body>, a <title> tag, a <style> block, or external CSS (LiteSpeed strips <style>). Style everything with inline style="" attributes and literal hex colours.
+- NEVER output a second <h1>; use <h2>/<h3> for new sections. For schema, ONLY FAQPage JSON-LD — never Article/Breadcrumb/WebPage/Person (Rank Math already emits those; a duplicate conflicts).
+- The Meta Title & Description go in Rank Math, not in the HTML body.
+
+NO FABRICATION (hard rule): NEVER invent a statistic, figure, date, quote, name, organisation, award, or ranking, and NEVER add an unverifiable superiority claim ("#1", "best", "leading", "top-rated") in a title, description, or body unless it is already proven. The SEO Title and Meta Description especially must be truthful — no unverifiable "#1" or "best". If unsure, omit the claim.
+
+TOOL/APP SAFETY: if the page is a functional tool/app/calculator rather than an article, restrict content actions to INSERTS that add sections above/below the tool; never rewrite its structure, IDs, or scripts.
 
 OUTPUT FORMAT — return ONLY this JSON, no markdown:
 [{"title":"6 words max","priority":"high","trigger":"Specific GSC signal that triggered this (e.g. '9,196 impressions, 2.7% CTR = title mismatch')","action":"Starts with [FOR GOOGLE RANKING] + OPERATION + LOCATION, e.g. 'REPLACE in Rank Math → SEO Title: ...' or 'ADD after your H1: ...' or 'MERGE into your opening paragraph: ...' — always copy-paste ready text","expected_impact":"Honest, qualified effect — direction + dependency, e.g. 'Should improve CTR and support a climb toward page 1 after re-crawl; the exact gain depends on competition'. NEVER a guaranteed position or a fixed deadline","effort":"quick_win"}]
