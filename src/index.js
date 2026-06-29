@@ -1,4 +1,4 @@
-console.log('=== CONTENTSCALE BOOT v2026-06-29-gscsync | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON ===');
+console.log('=== CONTENTSCALE BOOT v2026-06-29-scorecheck | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON ===');
 // CONTENTSCALE SERVER.JS — ELITE EDITION v4 (FIXED v3)
 // ✅ FIX v7: secondary_keywords + related_keywords auto in Analyse JSON + Execute prompt
 // ✅ FIX v7: analysis_data JSONB safe parse in execute-rewrite
@@ -1683,6 +1683,7 @@ app.get('/api/tracker-client/:token/latest-briefs', async (req, res) => {
               p.brief_status, p.brief_claimed_by, p.brief_claimed_at, p.brief_started_at,
               p.brief_done_at, p.brief_submitted_at, p.brief_approved_at, p.brief_approved_by, p.brief_published_at,
               p.brief_deadline, p.brief_assigned_at, p.brief_rejected_at, p.brief_reject_reason, p.priority,
+              p.brief_before_score, p.brief_after_score, p.brief_after_at,
               (p.specialist_html IS NOT NULL AND p.specialist_html != '') AS has_deliverable,
               s.checked_at, s.google_position, s.ai_google_overview_cited, s.ai_perplexity_cited, s.ai_bing_cited, s.ai_brave_cited,
               s.score, s.recommendations, s.gsc_brief, s.source_suggestions
@@ -1721,6 +1722,8 @@ app.get('/api/tracker-client/:token/latest-briefs', async (req, res) => {
         gsc_clicks: p.gsc_clicks, gsc_impressions: p.gsc_impressions, gsc_position: p.gsc_position,
         page_id: p.id,
         brief_status: p.brief_status || 'open',
+        brief_before_score: p.brief_before_score,
+        brief_after_score: p.brief_after_score,
         brief_claimed_by: p.brief_claimed_by || null,
         brief_claimed_at: p.brief_claimed_at || null,
         brief_done_at: p.brief_done_at || null,
@@ -1868,6 +1871,45 @@ app.post('/api/tracker-client/:token/brief/:pageId/submit-html', async (req, res
       if (typeof _sseBroadcast === 'function') _sseBroadcast({ type: 'brief_submitted', clientId: pg.tracker_client_id, page_id: r.pageId, by: pg.brief_claimed_by || name || '', ts: new Date().toISOString() });
     }
     res.json({ success: true, status: 'submitted' });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// ── Specialist scores their work BEFORE pressing Done: before = live URL, after = improved HTML.
+//    Uses the SAME GRAAF engine as a live scan (graafScanHtml) so the score is real and not hand-typed. ──
+app.post('/api/tracker-client/:token/brief/:pageId/score-work', async (req, res) => {
+  try {
+    const r = await _resolveBoardPage(req.params.token, req.params.pageId);
+    if (r.error) return res.status(r.code).json({ success: false, error: r.error });
+    const html = String((req.body && req.body.html) || '').trim();
+    if (!html) return res.status(400).json({ success: false, error: 'Paste your improved HTML first' });
+    const pr0 = await pool.query('SELECT url, brief_before_score FROM tracker_pages WHERE id=$1', [r.pageId]);
+    const pg0 = pr0.rows[0] || {};
+    const pageUrl = pg0.url || 'internal';
+
+    // AFTER — score the improved HTML with the real GRAAF engine (identical to a live scan)
+    let after = null;
+    try { const a = graafScanHtml(html, pageUrl); after = (a && a.score != null) ? a.score : null; } catch(e) {}
+    if (after == null) return res.status(400).json({ success: false, error: 'Could not score the HTML — make sure it is valid page HTML' });
+
+    // BEFORE — captured ONCE from the live URL (the page as it is now, before the improvements)
+    let before = (pg0.brief_before_score != null) ? pg0.brief_before_score : null;
+    if (before == null && /^https?:\/\//i.test(pageUrl)) {
+      try {
+        const lr = await fetch(pageUrl, { headers: { 'User-Agent': 'ContentScaleBot/1.0' }, signal: AbortSignal.timeout(12000) });
+        if (lr.ok) { const lh = await lr.text(); const lb = graafScanHtml(lh, pageUrl); if (lb && lb.score != null) before = lb.score; }
+      } catch(e) {}
+    }
+
+    await pool.query(
+      'UPDATE tracker_pages SET specialist_html=$1, brief_after_score=$2, brief_after_at=NOW(), brief_before_score=COALESCE(brief_before_score,$3) WHERE id=$4',
+      [html, after, before, r.pageId]
+    );
+    const delta = (before != null && after != null) ? (after - before) : null;
+    const pr1 = await pool.query('SELECT tracker_client_id FROM tracker_pages WHERE id=$1', [r.pageId]);
+    if (pr1.rows[0] && pr1.rows[0].tracker_client_id && typeof _sseBroadcast === 'function') {
+      _sseBroadcast({ type: 'brief_scored', clientId: pr1.rows[0].tracker_client_id, page_id: r.pageId, before: before, after: after, ts: new Date().toISOString() });
+    }
+    res.json({ success: true, before: before, after: after, delta: delta });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
@@ -2716,13 +2758,21 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
   function editDeadline(pageId){ var h=prompt('Hours from now until the deadline (e.g. 24):','24'); if(h===null) return; var n=parseFloat(h); if(isNaN(n)){ alert('Enter a number of hours'); return; } fetch('/api/tracker-client/'+TOKEN+'/brief/'+pageId+'/deadline',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({hours:n})}).then(function(r){return r.json();}).then(function(){ load(); }).catch(function(){}); }
   var _prioRankL={high:0,h:0,medium:1,med:1,m:1,low:2,l:2};
   function _dlValL(d){ var t=d.brief_deadline; return t?new Date(t).getTime():Infinity; }
+  function ldScoreL(d){ var a=d.brief_after_score,b=d.brief_before_score; var st=d.brief_status||'open';
+    var pill=function(t,c){ return '<span style="background:#0a0a12;border:1px solid #1f2937;border-radius:8px;padding:3px 8px;font-weight:800;color:'+c+'">'+t+'</span>'; };
+    if(a==null){ if(st==='in_progress'||st==='submitted'||st==='done') return '<div style="margin-top:8px;font-size:11px;color:#f59e0b">Not scored yet</div>'; return ''; }
+    var h='<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;font-size:12px">';
+    if(b!=null) h+=pill('Before '+b,'#9ca3af');
+    h+=pill('After '+a,'#4ade80');
+    if(b!=null){ var dl=a-b; var dc=dl>0?'#4ade80':(dl<0?'#f87171':'#9ca3af'); h+=pill((dl>0?'+':'')+dl,dc); }
+    return h+'</div>'; }
   function render(){
     var grid=document.getElementById('ldGrid');
     if(!_briefs.length){ grid.innerHTML='<div class="ld-empty">No briefs yet &mdash; add &amp; scan pages in your scanner; they appear here to assign.</div>'; return; }
     var list=_briefs.slice().sort(function(a,b){ var da=_dlValL(a),db=_dlValL(b); if(da!==db)return da-db; var pa=_prioRankL[(a.priority||'medium').toLowerCase()]; if(pa==null)pa=1; var pb=_prioRankL[(b.priority||'medium').toLowerCase()]; if(pb==null)pb=1; if(pa!==pb)return pa-pb; return (b.gsc_impressions||0)-(a.gsc_impressions||0); });
     grid.innerHTML=list.map(function(d){
       var st=d.brief_status||'open'; var cls=st==='published'?'s-pub':st==='approved'?'s-appr':st==='submitted'?'s-subm':st==='done'?'s-done':st==='in_progress'?'s-progress':'';
-      return '<div class="ld-card '+cls+'"><div class="ld-url">'+esc(cleanUrl(d.url))+'</div><div class="ld-time">Scanned '+fmtTime(d.ts)+'</div>'+badge(st,d.brief_claimed_by)+' '+dlBadgeL(d)
+      return '<div class="ld-card '+cls+'"><div class="ld-url">'+esc(cleanUrl(d.url))+'</div><div class="ld-time">Scanned '+fmtTime(d.ts)+'</div>'+badge(st,d.brief_claimed_by)+' '+dlBadgeL(d)+ldScoreL(d)
         +'<div class="ld-assign"><span style="font-size:11px;color:#6b7280">Assign:</span><select class="ld-select" onchange="assign('+d.page_id+',this)">'+options(d.brief_claimed_by||'')+'</select></div>'
         +ldActions(d)+rejNoteL(d)
         +'<div style="margin-top:10px"><a class="ld-link" href="'+esc(d.url)+'" target="_blank" rel="noopener">Open page</a></div></div>';
@@ -2803,6 +2853,9 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
 .bd-btn{border:none;border-radius:9px;padding:9px 15px;font-size:12px;font-weight:800;cursor:pointer}
 .bd-btn.claim{background:#7c3aed;color:#fff}
 .bd-btn.done{background:#16a34a;color:#fff}
+.bd-btn.score{background:#a78bfa;color:#0b0b14}
+.bd-score-line{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:8px 0;font-size:12px}
+.bd-score-pill{background:#0a0a12;border:1px solid #1f2937;border-radius:8px;padding:4px 9px;font-weight:800}
 .bd-btn.pub{background:#0ea5e9;color:#fff}
 .bd-btn.sec{background:#0d1117;border:1px solid #374151;color:#9ca3af}
 .bd-empty{text-align:center;color:#6b7280;padding:60px 20px;font-size:14px;grid-column:1/-1}
@@ -2840,10 +2893,17 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
     if(gsc.length){ out+=_lbl('GSC ranking','#a3e635')+gsc.map(function(g){ var t=g.title||'GSC recommendation'; var b=g.action||g.expected_impact||g.trigger||''; if(b.length>200)b=b.slice(0,200)+'...'; return '<div class="bw-rec"><div class="bw-rec-t">'+esc(t)+'</div>'+(b?'<div class="bw-rec-b">'+esc(b)+'</div>':'')+'</div>'; }).join(''); }
     return out; }
   function badge(st,who){ if(st==='published')return '<span class="bd-badge pub">PUBLISHED</span>'; if(st==='approved')return '<span class="bd-badge appr">APPROVED'+(who?' - '+esc(who):'')+'</span>'; if(st==='submitted')return '<span class="bd-badge subm">SUBMITTED'+(who?' - '+esc(who):'')+'</span>'; if(st==='done')return '<span class="bd-badge done">DONE</span>'; if(st==='in_progress')return '<span class="bd-badge progress">IN PROGRESS'+(who?' - '+esc(who):'')+'</span>'; return '<span class="bd-badge open">OPEN</span>'; }
+  function scoreLine(d){ var a=d.brief_after_score, b=d.brief_before_score;
+    if(a==null && b==null) return '';
+    var html='<div class="bd-score-line">';
+    if(b!=null) html+='<span class="bd-score-pill" style="color:#9ca3af">Before '+b+'</span>';
+    if(a!=null){ if(b!=null) html+='<span style="color:#6b7280">\\\\u2192</span>'; html+='<span class="bd-score-pill" style="color:#4ade80">After '+a+'</span>'; }
+    if(a!=null && b!=null){ var dl=a-b; var dc=dl>0?'#4ade80':(dl<0?'#f87171':'#9ca3af'); html+='<span class="bd-score-pill" style="color:'+dc+'">'+(dl>0?'+':'')+dl+'</span>'; }
+    return html+'</div>'; }
   function actions(d){ var st=d.brief_status||'open';
     if(st==='open') return '<span class="bd-wait" style="color:#6b7280">Waiting to be assigned by the lead</span>';
-    if(st==='in_progress') return '<button class="bd-btn done" onclick="openSubmit('+d.page_id+')">Submit finished HTML</button><button class="bd-btn sec" onclick="reopen('+d.page_id+')">Release</button>';
-    if(st==='submitted') return '<button class="bd-btn sec" onclick="viewHtml('+d.page_id+')">View HTML</button><button class="bd-btn sec" onclick="openSubmit('+d.page_id+')">Re-submit</button><span class="bd-wait">Awaiting lead approval</span>';
+    if(st==='in_progress') return '<button class="bd-btn score" onclick="openScore('+d.page_id+')">📊 Score my work</button><button class="bd-btn done" onclick="openSubmit('+d.page_id+')">Submit finished HTML</button><button class="bd-btn sec" onclick="reopen('+d.page_id+')">Release</button>';
+    if(st==='submitted') return '<button class="bd-btn score" onclick="openScore('+d.page_id+')">📊 Re-score</button><button class="bd-btn sec" onclick="viewHtml('+d.page_id+')">View HTML</button><button class="bd-btn sec" onclick="openSubmit('+d.page_id+')">Re-submit</button><span class="bd-wait">Awaiting lead approval</span>';
     if(st==='approved') return '<button class="bd-btn pub" onclick="publish('+d.page_id+')">Publish</button><button class="bd-btn sec" onclick="viewHtml('+d.page_id+')">View HTML</button>';
     if(st==='published') return '<button class="bd-btn sec" onclick="viewHtml('+d.page_id+')">View HTML</button>';
     return '<button class="bd-btn sec" onclick="reopen('+d.page_id+')">Reopen</button>'; }
@@ -2870,7 +2930,7 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
     if(!list.length){ grid.innerHTML='<div class="bd-empty">'+(_filter==='mine'?'No work assigned to you yet. The lead assigns briefs from the Lead Panel — assigned work shows here, most urgent first.':(_filter!=='all'?'No briefs in this status.':'No briefs yet - they appear here after a scan.'))+'</div>'; return; }
     grid.innerHTML=list.map(function(d){
       var st=d.brief_status||'open'; var cls=st==='published'?'s-pub':st==='approved'?'s-appr':st==='submitted'?'s-subm':st==='done'?'s-done':st==='in_progress'?'s-progress':'s-open';
-      return '<div class="bw-card '+cls+'"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:6px"><div style="min-width:0"><div class="bw-url">'+esc(cleanUrl(d.url))+'</div><div class="bw-time">Scanned '+fmtTime(d.ts)+'</div></div><div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end;flex-shrink:0">'+badge(st,d.brief_claimed_by)+dlBadge(d)+'</div></div>'+rejBanner(d)+chips(d)+recs(d)+'<div class="bd-actions">'+actions(d)+'<button class="bd-btn sec" onclick="copyBrief('+d.page_id+',this)">Copy brief</button><a class="bd-btn sec" href="'+esc(d.url)+'" target="_blank" rel="noopener" style="text-decoration:none">Open page</a></div></div>';
+      return '<div class="bw-card '+cls+'"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:6px"><div style="min-width:0"><div class="bw-url">'+esc(cleanUrl(d.url))+'</div><div class="bw-time">Scanned '+fmtTime(d.ts)+'</div></div><div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end;flex-shrink:0">'+badge(st,d.brief_claimed_by)+dlBadge(d)+'</div></div>'+rejBanner(d)+chips(d)+scoreLine(d)+recs(d)+'<div class="bd-actions">'+actions(d)+'<button class="bd-btn sec" onclick="copyBrief('+d.page_id+',this)">Copy brief</button><a class="bd-btn sec" href="'+esc(d.url)+'" target="_blank" rel="noopener" style="text-decoration:none">Open page</a></div></div>';
     }).join('');
   }
   function ensureName(){ if(_name) return true; var n=prompt('Enter your name to see the work assigned to you:'); if(n&&n.trim()){ saveName(n); document.getElementById('bdName').value=_name; return true; } return false; }
@@ -2881,6 +2941,7 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
   function _ensureOv(){ var ov=document.getElementById('bdOv'); if(ov) return ov; ov=document.createElement('div'); ov.id='bdOv'; ov.className='bd-ov'; ov.innerHTML='<div class="bd-modal"><h3 id="bdOvTitle"></h3><div class="bd-body" id="bdOvBody"></div><div class="bd-foot" id="bdOvFoot"></div></div>'; document.body.appendChild(ov); ov.addEventListener('click',function(e){ if(e.target===ov) closeOv(); }); return ov; }
   function closeOv(){ var ov=document.getElementById('bdOv'); if(ov) ov.classList.remove('on'); }
   function openSubmit(pageId){ if(!ensureName())return; var ov=_ensureOv(); document.getElementById('bdOvTitle').textContent='Submit finished HTML'; document.getElementById('bdOvBody').innerHTML='<p style="font-size:12px;color:#9ca3af;margin-bottom:8px">Paste your finished, processed HTML. The lead reviews and approves it before you publish.</p><textarea id="bdHtmlIn" placeholder="<!-- paste your finished HTML here -->"></textarea>'; document.getElementById('bdOvFoot').innerHTML='<button class="bd-btn sec" onclick="closeOv()">Cancel</button><button class="bd-btn done" id="bdSubmitGo">Submit for review</button>'; ov.classList.add('on'); var ta=document.getElementById('bdHtmlIn'); fetch('/api/tracker-client/'+TOKEN+'/brief/'+pageId+'/deliverable').then(function(r){return r.json();}).then(function(d){ if(d&&d.html&&ta&&!ta.value) ta.value=d.html; }).catch(function(){}); document.getElementById('bdSubmitGo').onclick=function(){ var html=ta.value.trim(); if(!html){ alert('Paste your finished HTML first'); return; } this.textContent='Submitting...'; this.disabled=true; post(pageId,'submit-html',{name:_name,html:html}).then(function(r){ if(!r.success) alert(r.error||'Failed'); closeOv(); load(); }); }; }
+  function openScore(pageId){ var ov=_ensureOv(); document.getElementById('bdOvTitle').textContent='Score my work'; document.getElementById('bdOvBody').innerHTML='<p style="font-size:12px;color:#9ca3af;margin-bottom:6px">Add the brief + score recommendations to your improved HTML, paste it below, then Scan. We score it with the real GRAAF engine \\u2014 no manual numbers. Before = your live page now; After = your improved HTML.</p><p style="font-size:11px;color:#6b7280;margin-bottom:8px">Tool: <a href="https://app.contentscale.site" target="_blank" rel="noopener" style="color:#a78bfa">app.contentscale.site</a></p><textarea id="bdScoreIn" placeholder="<!-- paste your IMPROVED HTML here -->"></textarea><div id="bdScoreResult" style="margin-top:10px"></div>'; document.getElementById('bdOvFoot').innerHTML='<button class="bd-btn sec" onclick="closeOv()">Close</button><button class="bd-btn score" id="bdScoreGo">Scan &amp; score</button>'; ov.classList.add('on'); var ta=document.getElementById('bdScoreIn'); fetch('/api/tracker-client/'+TOKEN+'/brief/'+pageId+'/deliverable').then(function(r){return r.json();}).then(function(d){ if(d&&d.html&&ta&&!ta.value) ta.value=d.html; }).catch(function(){}); document.getElementById('bdScoreGo').onclick=function(){ var html=ta.value.trim(); if(!html){ alert('Paste your improved HTML first'); return; } var btn=this; btn.textContent='Scanning...'; btn.disabled=true; var rb=document.getElementById('bdScoreResult'); rb.innerHTML='<span style="color:#9ca3af;font-size:12px">Running GRAAF scan...</span>'; post(pageId,'score-work',{html:html}).then(function(r){ btn.textContent='Scan & score'; btn.disabled=false; if(!r||!r.success){ rb.innerHTML='<span style="color:#f87171;font-size:12px">'+((r&&r.error)||'Could not score')+'</span>'; return; } var b=r.before,a=r.after,dl=r.delta; var h='<div class="bd-score-line" style="font-size:14px">'; if(b!=null) h+='<span class="bd-score-pill" style="color:#9ca3af">Before '+b+'</span>'; if(b!=null&&a!=null) h+='<span style="color:#6b7280">\\u2192</span>'; if(a!=null) h+='<span class="bd-score-pill" style="color:#4ade80">After '+a+'</span>'; if(dl!=null){ var dc=dl>0?'#4ade80':(dl<0?'#f87171':'#9ca3af'); h+='<span class="bd-score-pill" style="color:'+dc+'">'+(dl>0?'+':'')+dl+'</span>'; } h+='</div>'; if(b==null) h+='<p style="font-size:11px;color:#6b7280;margin-top:6px">Could not fetch your live page for a Before score \\u2014 the After score is still real.</p>'; rb.innerHTML=h; load(); }); }; }
   function viewHtml(pageId){ var ov=_ensureOv(); document.getElementById('bdOvTitle').textContent='Submitted HTML'; document.getElementById('bdOvBody').innerHTML='<div class="bd-prev" id="bdPrev">Loading...</div>'; document.getElementById('bdOvFoot').innerHTML='<button class="bd-btn sec" onclick="closeOv()">Close</button><button class="bd-btn sec" id="bdCopyHtml">Copy HTML</button>'; ov.classList.add('on'); fetch('/api/tracker-client/'+TOKEN+'/brief/'+pageId+'/deliverable').then(function(r){return r.json();}).then(function(d){ var pv=document.getElementById('bdPrev'); pv.textContent=(d&&d.html)?d.html:'(no HTML submitted yet)'; var cb=document.getElementById('bdCopyHtml'); if(cb) cb.onclick=function(){ navigator.clipboard.writeText((d&&d.html)||'').then(function(){ cb.textContent='Copied!'; setTimeout(function(){cb.textContent='Copy HTML';},1500); }); }; }).catch(function(){ document.getElementById('bdPrev').textContent='Could not load'; }); }
   function publish(pageId){ if(!confirm('Publish this brief? Do this once the page is live.')) return; post(pageId,'publish',{name:_name}).then(function(r){ if(!r.success) alert(r.error||'Could not publish'); load(); }); }
   function copyBrief(pageId, btn){
@@ -4561,6 +4622,9 @@ app.patch('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
   await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS brief_assigned_at TIMESTAMPTZ`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS brief_rejected_at TIMESTAMPTZ`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS brief_reject_reason TEXT`).catch(()=>{});
+  await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS brief_before_score INT`).catch(()=>{});
+  await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS brief_after_score INT`).catch(()=>{});
+  await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS brief_after_at TIMESTAMPTZ`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS priority VARCHAR(20) DEFAULT 'medium'`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS lead_name TEXT`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS lead_email TEXT`).catch(()=>{});
@@ -30590,7 +30654,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
                         <div>
                             <h2 style="font-size:1.1rem;font-weight:800;color:#f1f5f9;">Tracker Clients</h2>
-                            <p style="font-size:12px;color:#6b7280;margin-top:2px;">Self-service users registered via the free tracker · <span style="color:#34d399;font-weight:800;letter-spacing:.04em;">BUILD 2026-06-29-gscsync</span></p>
+                            <p style="font-size:12px;color:#6b7280;margin-top:2px;">Self-service users registered via the free tracker · <span style="color:#34d399;font-weight:800;letter-spacing:.04em;">BUILD 2026-06-29-scorecheck</span></p>
                         </div>
                         <div style="display:flex;gap:8px;flex-wrap:wrap;">
                             <button onclick="openNewOwnClient()" class="tr-btn" style="border-color:#4ade80;color:#4ade80;font-weight:700;">+ New Client</button>
@@ -30622,7 +30686,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
             <div id="tab-admin-settings" class="tab-content hidden">
                 <div style="padding:24px;max-width:600px;">
                     <h2 style="font-size:18px;font-weight:800;color:#f1f5f9;margin-bottom:4px;">⚙️ Settings</h2>
-                    <p style="font-size:12px;color:#6b7280;margin-bottom:24px;">Admin settings — stored in database, survive deploys · <span style="color:#34d399;font-weight:800;letter-spacing:.04em;">BUILD 2026-06-29-gscsync</span></p>
+                    <p style="font-size:12px;color:#6b7280;margin-bottom:24px;">Admin settings — stored in database, survive deploys · <span style="color:#34d399;font-weight:800;letter-spacing:.04em;">BUILD 2026-06-29-scorecheck</span></p>
 
                     <div style="background:#0d1117;border:1px solid #1f2937;border-radius:10px;padding:20px;margin-bottom:16px;">
                         <div style="font-size:13px;font-weight:700;color:#f1f5f9;margin-bottom:14px;">📧 Content Engine — Email Settings</div>
