@@ -1,4 +1,4 @@
-console.log('=== CONTENTSCALE BOOT v2026-06-29-prompts | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON ===');
+console.log('=== CONTENTSCALE BOOT v2026-06-29-emailfix | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON ===');
 // CONTENTSCALE SERVER.JS — ELITE EDITION v4 (FIXED v3)
 // ✅ FIX v7: secondary_keywords + related_keywords auto in Analyse JSON + Execute prompt
 // ✅ FIX v7: analysis_data JSONB safe parse in execute-rewrite
@@ -30593,7 +30593,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
                         <div>
                             <h2 style="font-size:1.1rem;font-weight:800;color:#f1f5f9;">Tracker Clients</h2>
-                            <p style="font-size:12px;color:#6b7280;margin-top:2px;">Self-service users registered via the free tracker · <span style="color:#34d399;font-weight:800;letter-spacing:.04em;">BUILD 2026-06-29-prompts</span></p>
+                            <p style="font-size:12px;color:#6b7280;margin-top:2px;">Self-service users registered via the free tracker · <span style="color:#34d399;font-weight:800;letter-spacing:.04em;">BUILD 2026-06-29-emailfix</span></p>
                         </div>
                         <div style="display:flex;gap:8px;flex-wrap:wrap;">
                             <button onclick="openNewOwnClient()" class="tr-btn" style="border-color:#4ade80;color:#4ade80;font-weight:700;">+ New Client</button>
@@ -30625,7 +30625,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
             <div id="tab-admin-settings" class="tab-content hidden">
                 <div style="padding:24px;max-width:600px;">
                     <h2 style="font-size:18px;font-weight:800;color:#f1f5f9;margin-bottom:4px;">⚙️ Settings</h2>
-                    <p style="font-size:12px;color:#6b7280;margin-bottom:24px;">Admin settings — stored in database, survive deploys · <span style="color:#34d399;font-weight:800;letter-spacing:.04em;">BUILD 2026-06-29-prompts</span></p>
+                    <p style="font-size:12px;color:#6b7280;margin-bottom:24px;">Admin settings — stored in database, survive deploys · <span style="color:#34d399;font-weight:800;letter-spacing:.04em;">BUILD 2026-06-29-emailfix</span></p>
 
                     <div style="background:#0d1117;border:1px solid #1f2937;border-radius:10px;padding:20px;margin-bottom:16px;">
                         <div style="font-size:13px;font-weight:700;color:#f1f5f9;margin-bottom:14px;">📧 Content Engine — Email Settings</div>
@@ -36548,6 +36548,7 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
     const skipGemini = !resultsChanged && hasCachedBrief;
     if (skipGemini) {
       snapshot.recommendations = _cachedItems;
+      snapshot._unchanged = true;
       _trSetStep(pageId, 'recommendations', 'done', '✅ Results unchanged — using cached Citation Brief (saves API call)');
       console.log('[tracker] Gemini skipped for page', pageId, '— results unchanged');
     } else
@@ -37505,7 +37506,7 @@ Return ONLY JSON array (max 5 items): [{"title":"max 6 words","priority":"high"|
         // ── Email the brief to the client (previously briefs went ONLY to the live wall, never email) ──
         try {
           const _items = Array.isArray(brief2.items) ? brief2.items : [];
-          if (_items.length) {
+          if (_items.length && !snapshot._unchanged) {
             const _esc = s => String(s==null?'':s).replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
             const _recHtml = _items.map(it => {
               const _title = it.h2 || it.title || it.heading || it.action || 'Recommendation';
