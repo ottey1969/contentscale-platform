@@ -1,4 +1,4 @@
-console.log('=== CONTENTSCALE BOOT v2026-06-29-dedupe | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON ===');
+console.log('=== CONTENTSCALE BOOT v2026-06-29-importfix | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON ===');
 // CONTENTSCALE SERVER.JS — ELITE EDITION v4 (FIXED v3)
 // ✅ FIX v7: secondary_keywords + related_keywords auto in Analyse JSON + Execute prompt
 // ✅ FIX v7: analysis_data JSONB safe parse in execute-rewrite
@@ -1254,8 +1254,8 @@ app.get('/api/tracker-client/:token/fetch-sitemap', async (req, res) => {
     const _SKIP_FILE = /\.(jpg|jpeg|png|gif|webp|svg|css|js|pdf|xml|json)(\?|$)/i;
     urls = urls.filter(u => !_SKIP_ARCHIVE.test(u) && !_SKIP_FILE.test(u));
     urls = urls.slice(0, 100);
-    // Remember the sitemap URL on the client (shows the "added" check + lets briefs use it for internal links)
-    if (urls.length) { try { await pool.query('UPDATE tracker_clients SET sitemap_url=$1 WHERE token=$2', [sitemapUrl, req.params.token]); } catch(e){} }
+    // Remember the sitemap URL + the full resolved URL list on the client (used by briefs for internal links + cannibalisation; avoids re-fetching per scan)
+    if (urls.length) { try { await pool.query('UPDATE tracker_clients SET sitemap_url=$1, sitemap_urls=$2 WHERE token=$3', [sitemapUrl, JSON.stringify(urls), req.params.token]); } catch(e){} }
     res.json({ success: true, urls, count: urls.length });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
@@ -2066,7 +2066,7 @@ app.post('/api/tracker-client/:token/pages', async (req, res) => {
     );
     const count = parseInt(countR.rows[0].count);
     const maxPages = client.max_pages || 3;
-    if (count >= maxPages) return res.status(400).json({ success: false, error: `Tracker limit reached: ${count}/${maxPages} pages used. Contact Ottmar to upgrade your plan.` });
+    // NOTE: the page limit is enforced below for NEW pages only, so re-importing / updating pages you already track is never blocked.
 
     const { url, keyword, gsc_clicks, gsc_impressions, gsc_position, gsc_ctr, gsc_keyword } = req.body;
     if (!url) return res.status(400).json({ success: false, error: 'URL required' });
@@ -2106,6 +2106,9 @@ app.post('/api/tracker-client/:token/pages', async (req, res) => {
       res.json({ success: true, page_id: pageId, updated: true });
       return;
     }
+
+    // New URL (not already tracked) — enforce the page limit HERE so updates to existing pages are never blocked
+    if (count >= maxPages) return res.status(400).json({ success: false, error: `Tracker limit reached: ${count}/${maxPages} pages used. Contact Ottmar to upgrade your plan.` });
 
     let pr;
     try {
@@ -2812,7 +2815,7 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
   function fmtTime(t){ try{ var d=t?new Date(t):null; return d?(d.toLocaleDateString('en-GB',{day:'2-digit',month:'short'})+' '+d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})):''; }catch(e){ return ''; } }
   function chip(v,l,c){ return '<div class="bw-chip"><div class="v" style="color:'+c+'">'+v+'</div><div class="l">'+l+'</div></div>'; }
   function chips(d){ var pos=d.position||d.gsc_position; var pc=(!pos)?'#6b7280':pos<=3?'#4ade80':pos<=10?'#a3e635':pos<=20?'#fbbf24':'#f87171';
-    return '<div class="bw-chips">'+chip(pos?('#'+pos):'-','Position',pc)+chip(d.aio_cited?'YES':'NO','AIO',d.aio_cited?'#4ade80':'#6b7280')+chip(d.perp_cited?'YES':'NO','Perplexity',d.perp_cited?'#a78bfa':'#6b7280')+chip(d.bing_cited?'YES':'NO','Copilot',d.bing_cited?'#60a5fa':'#6b7280')+chip(d.brave_cited?'YES':'NO','Claude',d.brave_cited?'#f87171':'#6b7280')+chip(d.score?d.score:'-','GRAAF',d.score?'#a78bfa':'#6b7280')+'</div>'; }
+    return '<div class="bw-chips">'+chip(pos?('#'+pos):'-','Position',pc)+chip(d.aio_cited?'YES':'NO','AIO',d.aio_cited?'#4ade80':'#6b7280')+chip(d.perp_cited?'YES':'NO','Perplexity',d.perp_cited?'#a78bfa':'#6b7280')+chip(d.bing_cited?'YES':'NO','Copilot',d.bing_cited?'#60a5fa':'#6b7280')+chip(d.brave_cited?'YES':'NO','Claude',d.brave_cited?'#f87171':'#6b7280')+(d.score?chip(d.score,'GRAAF','#a78bfa'):'')+'</div>'; }
   function recs(d){ var items=d.passages||[]; if(!items.length) return ''; return items.map(function(p){ var t=p.title||p.h2||p.heading||'Recommendation'; var b=p.action||p.passage||p.body||p.text||''; if(b.length>200)b=b.slice(0,200)+'...'; return '<div class="bw-rec"><div class="bw-rec-t">'+esc(t)+'</div>'+(b?'<div class="bw-rec-b">'+esc(b)+'</div>':'')+'</div>'; }).join(''); }
   function badge(st,who){ if(st==='published')return '<span class="bd-badge pub">PUBLISHED</span>'; if(st==='approved')return '<span class="bd-badge appr">APPROVED'+(who?' - '+esc(who):'')+'</span>'; if(st==='submitted')return '<span class="bd-badge subm">SUBMITTED'+(who?' - '+esc(who):'')+'</span>'; if(st==='done')return '<span class="bd-badge done">DONE</span>'; if(st==='in_progress')return '<span class="bd-badge progress">IN PROGRESS'+(who?' - '+esc(who):'')+'</span>'; return '<span class="bd-badge open">OPEN</span>'; }
   function actions(d){ var st=d.brief_status||'open';
@@ -3127,7 +3130,7 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
       + chip(d.perp_cited?'YES':'NO','Perplexity',d.perp_cited?'#a78bfa':'#6b7280')
       + chip(d.bing_cited?'YES':'NO','Copilot',d.bing_cited?'#60a5fa':'#6b7280')
       + chip(d.brave_cited?'YES':'NO','Claude',d.brave_cited?'#f87171':'#6b7280')
-      + chip(d.score?d.score:'-','GRAAF',d.score?'#a78bfa':'#6b7280')
+      + (d.score?chip(d.score,'GRAAF','#a78bfa'):'')
       + '</div>';
   }
   function _bwRecsL(d, limit){
@@ -3217,7 +3220,7 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
         '<div class="lw-stat"><div class="lw-stat-val" style="color:' + (data.perp_cited ? '#a78bfa' : '#4b5563') + '">' + (data.perp_cited ? 'YES' : 'NO') + '</div><div class="lw-stat-lbl">Perplexity</div></div>' +
         '<div class="lw-stat"><div class="lw-stat-val" style="color:' + (data.bing_cited ? '#60a5fa' : '#4b5563') + '">' + (data.bing_cited ? 'YES' : 'NO') + '</div><div class="lw-stat-lbl">Copilot</div></div>' +
         '<div class="lw-stat"><div class="lw-stat-val" style="color:' + (data.brave_cited ? '#f87171' : '#4b5563') + '">' + (data.brave_cited ? 'YES' : 'NO') + '</div><div class="lw-stat-lbl">Claude</div></div>' +
-        '<div class="lw-stat"><div class="lw-stat-val" style="color:#fbbf24">' + (data.score || '—') + '</div><div class="lw-stat-lbl">GRAAF</div></div>' +
+        (data.score ? '<div class="lw-stat"><div class="lw-stat-val" style="color:#fbbf24">' + data.score + '</div><div class="lw-stat-lbl">GRAAF</div></div>' : '') +
       '</div>' +
       '<div class="lw-card-actions">' + actionsHtml + '</div>';
 
@@ -4582,6 +4585,7 @@ app.patch('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS extra_domains TEXT DEFAULT ''`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS brand_context TEXT DEFAULT ''`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS sitemap_url TEXT DEFAULT ''`).catch(()=>{});
+  await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS sitemap_urls TEXT`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS unsubscribe_token VARCHAR(64)`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS email_unsubscribed BOOLEAN DEFAULT FALSE`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS tracker_client_id INTEGER REFERENCES tracker_clients(id) ON DELETE SET NULL`).catch(()=>{});
@@ -28087,7 +28091,7 @@ function renderRecs(p) {
     html += '<div class="cb-istat"' + (perp ? ' style="animation:briefBlink 1.2s ease-in-out 4"' : '') + '><div class="cb-isv" style="color:' + (perp?'#818cf8':'#374151') + '">' + (perp?'&#10003;':'&#8212;') + '</div><div class="cb-isl">Perplexity</div></div>';
     html += '<div class="cb-istat"' + (cop ? ' style="animation:briefBlink 1.2s ease-in-out 4"' : '') + '><div class="cb-isv" style="color:' + (cop?'#60a5fa':'#374151') + '">' + (cop?'&#10003;':'&#8212;') + '</div><div class="cb-isl">Copilot</div></div>';
     html += '<div class="cb-istat"' + (cl ? ' style="animation:briefBlink 1.2s ease-in-out 4"' : '') + '><div class="cb-isv" style="color:' + (cl?'#a78bfa':'#374151') + '">' + (cl?'&#10003;':'&#8212;') + '</div><div class="cb-isl">Claude</div></div>';
-    html += '<div class="cb-istat"><div class="cb-isv" style="color:#f59e0b">' + (score || '&#8212;') + '</div><div class="cb-isl">GRAAF</div></div>';
+    if (score) html += '<div class="cb-istat"><div class="cb-isv" style="color:#f59e0b">' + score + '</div><div class="cb-isl">GRAAF</div></div>';
     html += '</div>';
 
     // What to add label
@@ -28637,12 +28641,12 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
     var pos = data.position;
     var posColor = pos ? (pos <= 3 ? '#4ade80' : pos <= 10 ? '#fbbf24' : '#f87171') : '#4b5563';
     statRow.innerHTML =
-      '<div class="cb-stat" style="animation:soStatPop .4s ease both"><div class="v" style="color:' + posColor + ';">' + (pos ? '#' + pos : 'N/A') + '</div><div class="l">Position</div></div>' +
+      '<div class="cb-stat" style="animation:soStatPop .4s ease both"><div class="v" style="color:' + posColor + ';' + ((pos&&data.page_id)?'cursor:pointer;':'') + '"' + ((pos&&data.page_id)?(' onclick="csPosHist(' + data.page_id + ')" title="See ranking history"'):'') + '>' + (pos ? '#' + pos : 'N/A') + '</div><div class="l">Position' + ((pos&&data.page_id)?' &#128200;':'') + '</div></div>' +
       '<div class="cb-stat" style="animation:soStatPop .4s ease .06s both"><div class="v" style="color:' + (data.aio_cited ? '#4ade80' : '#4b5563') + ';">' + (data.aio_cited ? '\\u2713 Cited' : 'No') + '</div><div class="l">Google AIO</div></div>' +
       '<div class="cb-stat" style="animation:soStatPop .4s ease .12s both"><div class="v" style="color:' + (data.perp_cited ? '#a78bfa' : '#4b5563') + ';">' + (data.perp_cited ? '\\u2713 Cited' : 'No') + '</div><div class="l">Perplexity</div></div>' +
       '<div class="cb-stat" style="animation:soStatPop .4s ease .18s both"><div class="v" style="color:' + (data.bing_cited ? '#60a5fa' : '#4b5563') + ';">' + (data.bing_cited ? '\\u2713 Cited' : 'No') + '</div><div class="l">Copilot</div></div>' +
       '<div class="cb-stat" style="animation:soStatPop .4s ease .24s both;position:relative;"><div class="v" style="color:' + (data.brave_cited ? '#f87171' : '#4b5563') + ';">' + (data.brave_cited ? '\\u2713 Cited' : 'No') + '</div><div class="l">Claude</div>' + (data.brave_cited ? '<span style="position:absolute;top:-4px;right:-4px;font-size:8px;background:#0a0a12;border:1px solid #1f2937;border-radius:3px;padding:0 3px;color:#6b7280;white-space:nowrap;">\\u1f441; see img</span>' : '') + '</div>' +
-      '<div class="cb-stat" style="animation:soStatPop .4s ease .3s both"><div class="v" style="color:#fbbf24;">' + (data.score || '\\u2014') + '</div><div class="l">GRAAF</div></div>';
+      (data.score ? '<div class="cb-stat" style="animation:soStatPop .4s ease .3s both"><div class="v" style="color:#fbbf24;">' + data.score + '</div><div class="l">GRAAF</div></div>' : '');
 
     // GSC section \\u2014 show if GSC is connected (even if values are 0)
     var hasGsc = GSC_ENABLED || data._gsc_enabled || (data.gsc_clicks != null) || (data.gsc_impressions != null) || (data.gsc_position != null);
@@ -28987,12 +28991,12 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
     var pos = data.position;
     var posColor = pos ? (pos <= 3 ? '#4ade80' : pos <= 10 ? '#fbbf24' : '#f87171') : '#4b5563';
     statRow.innerHTML =
-      '<div class="cb-stat" style="animation:soStatPop .3s ease both"><div class="v" style="color:' + posColor + ';">' + (pos ? '#' + pos : 'N/A') + '</div><div class="l">Position</div></div>' +
+      '<div class="cb-stat" style="animation:soStatPop .3s ease both"><div class="v" style="color:' + posColor + ';' + ((pos&&data.page_id)?'cursor:pointer;':'') + '"' + ((pos&&data.page_id)?(' onclick="csPosHist(' + data.page_id + ')" title="See ranking history"'):'') + '>' + (pos ? '#' + pos : 'N/A') + '</div><div class="l">Position' + ((pos&&data.page_id)?' &#128200;':'') + '</div></div>' +
       '<div class="cb-stat" style="animation:soStatPop .3s ease .05s both"><div class="v" style="color:' + (data.aio_cited ? '#4ade80' : '#4b5563') + ';">' + (data.aio_cited ? '\\u2713 Cited' : 'No') + '</div><div class="l">Google AIO</div></div>' +
       '<div class="cb-stat" style="animation:soStatPop .3s ease .1s both"><div class="v" style="color:' + (data.perp_cited ? '#a78bfa' : '#4b5563') + ';">' + (data.perp_cited ? '\\u2713 Cited' : 'No') + '</div><div class="l">Perplexity</div></div>' +
       '<div class="cb-stat" style="animation:soStatPop .3s ease .15s both"><div class="v" style="color:' + (data.bing_cited ? '#60a5fa' : '#4b5563') + ';">' + (data.bing_cited ? '\\u2713 Cited' : 'No') + '</div><div class="l">Copilot</div></div>' +
       '<div class="cb-stat" style="animation:soStatPop .3s ease .2s both"><div class="v" style="color:' + (data.brave_cited ? '#f87171' : '#4b5563') + ';">' + (data.brave_cited ? '\\u2713 Cited' : 'No') + '</div><div class="l">Claude</div></div>' +
-      '<div class="cb-stat" style="animation:soStatPop .3s ease .25s both"><div class="v" style="color:#fbbf24;">' + (data.score || '\\u2014') + '</div><div class="l">GRAAF</div></div>';
+      (data.score ? '<div class="cb-stat" style="animation:soStatPop .3s ease .25s both"><div class="v" style="color:#fbbf24;">' + data.score + '</div><div class="l">GRAAF</div></div>' : '');
 
     // GSC \\u2014 show if connected (even with 0 values)
     var hasGsc = GSC_ENABLED || data._gsc_enabled || (data.gsc_clicks != null) || (data.gsc_impressions != null) || (data.gsc_position != null);
@@ -30603,7 +30607,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
                         <div>
                             <h2 style="font-size:1.1rem;font-weight:800;color:#f1f5f9;">Tracker Clients</h2>
-                            <p style="font-size:12px;color:#6b7280;margin-top:2px;">Self-service users registered via the free tracker · <span style="color:#34d399;font-weight:800;letter-spacing:.04em;">BUILD 2026-06-29-dedupe</span></p>
+                            <p style="font-size:12px;color:#6b7280;margin-top:2px;">Self-service users registered via the free tracker · <span style="color:#34d399;font-weight:800;letter-spacing:.04em;">BUILD 2026-06-29-importfix</span></p>
                         </div>
                         <div style="display:flex;gap:8px;flex-wrap:wrap;">
                             <button onclick="openNewOwnClient()" class="tr-btn" style="border-color:#4ade80;color:#4ade80;font-weight:700;">+ New Client</button>
@@ -30635,7 +30639,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
             <div id="tab-admin-settings" class="tab-content hidden">
                 <div style="padding:24px;max-width:600px;">
                     <h2 style="font-size:18px;font-weight:800;color:#f1f5f9;margin-bottom:4px;">⚙️ Settings</h2>
-                    <p style="font-size:12px;color:#6b7280;margin-bottom:24px;">Admin settings — stored in database, survive deploys · <span style="color:#34d399;font-weight:800;letter-spacing:.04em;">BUILD 2026-06-29-dedupe</span></p>
+                    <p style="font-size:12px;color:#6b7280;margin-bottom:24px;">Admin settings — stored in database, survive deploys · <span style="color:#34d399;font-weight:800;letter-spacing:.04em;">BUILD 2026-06-29-importfix</span></p>
 
                     <div style="background:#0d1117;border:1px solid #1f2937;border-radius:10px;padding:20px;margin-bottom:16px;">
                         <div style="font-size:13px;font-weight:700;color:#f1f5f9;margin-bottom:14px;">📧 Content Engine — Email Settings</div>
@@ -36692,13 +36696,24 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
           // 1) Authoritative source = the client's sitemap
           let _smUrl = '';
           try {
-            const _cR = await pool.query('SELECT sitemap_url, domain FROM tracker_clients WHERE id=$1', [page.tracker_client_id]);
+            const _cR = await pool.query('SELECT sitemap_url, sitemap_urls, domain FROM tracker_clients WHERE id=$1', [page.tracker_client_id]);
             _smUrl = (_cR.rows[0] && _cR.rows[0].sitemap_url) || '';
+            // Prefer the full list cached at import time — complete set for cannibalisation, and no per-scan re-fetch
+            if (_cR.rows[0] && _cR.rows[0].sitemap_urls) {
+              try {
+                const _cached = JSON.parse(_cR.rows[0].sitemap_urls);
+                if (Array.isArray(_cached) && _cached.length) {
+                  _sitemapUrls = Array.from(new Set(_cached.filter(function(u){ return /^https?:\/\//i.test(u); })))
+                    .filter(function(u){ return u.replace(/\/$/, '') !== String(pageUrl || '').replace(/\/$/, ''); })
+                    .slice(0, 80);
+                }
+              } catch(e) {}
+            }
             if (!_smUrl && _cR.rows[0] && _cR.rows[0].domain) {
               _smUrl = 'https://' + String(_cR.rows[0].domain).replace(/^https?:\/\//, '').replace(/\/$/, '') + '/sitemap.xml';
             }
           } catch(e) {}
-          if (_smUrl) {
+          if (!_sitemapUrls.length && _smUrl) {
             try {
               const _smR = await fetch(_smUrl, { headers: { 'User-Agent': 'ContentScaleBot/1.0' }, signal: AbortSignal.timeout(8000) });
               if (_smR.ok) {
@@ -36708,7 +36723,7 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
                   .filter(function(u){ return /^https?:\/\//i.test(u) && !/\.(xml|jpe?g|png|webp|gif|svg|pdf)$/i.test(u) && !/\/(category|categories|tag|tags|author|authors|uncategorized)(\/|$)|\/page\/\d+|\/feed\/?$/i.test(u); });
                 _sitemapUrls = Array.from(new Set(_sitemapUrls))
                   .filter(function(u){ return u.replace(/\/$/, '') !== String(pageUrl || '').replace(/\/$/, ''); })
-                  .slice(0, 60);
+                  .slice(0, 80);
               }
             } catch(e) {}
           }
@@ -38227,8 +38242,9 @@ function startTrackerScheduler() {
         await new Promise(r => setTimeout(r, 5000));
       }
     } catch(e) { console.warn('[tracker-scheduler]', e.message); }
-  }, 15 * 60 * 1000);
-  console.log('[tracker-scheduler] '+(process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ENABLED (every 15min)':'DISABLED (set ENABLE_TRACKER_SCHEDULER=1 to turn on auto-scans)'));
+  }, (parseInt(process.env.TRACKER_SCHEDULER_MIN, 10) || 30) * 60 * 1000);
+  const _schedMin = parseInt(process.env.TRACKER_SCHEDULER_MIN, 10) || 30;
+  console.log('[tracker-scheduler] '+(process.env.ENABLE_TRACKER_SCHEDULER==='1'?('ENABLED (every '+_schedMin+'min)'):'DISABLED (set ENABLE_TRACKER_SCHEDULER=1 to turn on auto-scans)'));
   console.log('[tracker-keys] SERPAPI_KEY:', !!process.env.SERPAPI_KEY, '| SERPER_API_KEY:', !!process.env.SERPER_API_KEY, '| GEMINI:', !!process.env.GEMINI_API_KEY, '| PERPLEXITY:', !!process.env.PERPLEXITY_API_KEY);
 }
 
