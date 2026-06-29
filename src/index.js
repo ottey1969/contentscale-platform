@@ -1,4 +1,4 @@
-console.log('=== CONTENTSCALE BOOT v2026-06-29-importfix | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON ===');
+console.log('=== CONTENTSCALE BOOT v2026-06-29-gscsync | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON ===');
 // CONTENTSCALE SERVER.JS — ELITE EDITION v4 (FIXED v3)
 // ✅ FIX v7: secondary_keywords + related_keywords auto in Analyse JSON + Execute prompt
 // ✅ FIX v7: analysis_data JSONB safe parse in execute-rewrite
@@ -2191,12 +2191,16 @@ app.post('/api/tracker-client/:token/refresh-gsc', async (req, res) => {
 // Body: { pages: [{url, keyword, intent, clicks, impressions, position, priority}], ...] }
 app.post('/api/tracker-client/:token/import-gsc-pages', async (req, res) => {
   try {
-    const cr = await pool.query('SELECT id FROM tracker_clients WHERE token=$1', [req.params.token]);
+    const cr = await pool.query('SELECT id, max_pages FROM tracker_clients WHERE token=$1', [req.params.token]);
     if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Client not found' });
     
     const clientId = cr.rows[0].id;
     const { pages } = req.body;
     if (!Array.isArray(pages) || !pages.length) return res.status(400).json({ success: false, error: 'pages array required' });
+    // Existing pages are ALWAYS refreshed (no limit). The page limit applies only to NEW inserts.
+    const _cntR = await pool.query(`SELECT COUNT(*) FROM tracker_pages WHERE tracker_client_id=$1 AND (is_active=TRUE OR is_active IS NULL)`, [clientId]);
+    let _liveCount = parseInt(_cntR.rows[0].count) || 0;
+    const _maxPages = cr.rows[0].max_pages || 3;
     
     let imported = 0;
     let skipped = 0;
@@ -2204,10 +2208,21 @@ app.post('/api/tracker-client/:token/import-gsc-pages', async (req, res) => {
     
     for (const p of pages) {
       try {
-        // Check if page already exists
+        // Check if page already exists → OVERWRITE its GSC data (recognise + refresh the same URLs on re-import)
         const existing = await pool.query('SELECT id FROM tracker_pages WHERE tracker_client_id=$1 AND url=$2', [clientId, p.url]);
-        if (existing.rows.length) { skipped++; continue; }
+        if (existing.rows.length) {
+          await pool.query(
+            `UPDATE tracker_pages SET gsc_clicks=$3, gsc_impressions=$4, gsc_position=$5, gsc_keyword=COALESCE($6, gsc_keyword), keyword=COALESCE(keyword, $6), priority=COALESCE($7, priority) WHERE id=$1 AND tracker_client_id=$2`,
+            [existing.rows[0].id, clientId, p.clicks||0, p.impressions||0, p.position||null, p.keyword||null, p.priority||null]
+          ).catch(e => console.warn('[import-gsc] update', p.url, e.message));
+          imported++;
+          continue;
+        }
         
+        // New URL — only insert if the user selected it (add) AND a free slot exists; otherwise leave it out
+        if (p.add === false) { skipped++; continue; }
+        if (_liveCount >= _maxPages) { skipped++; warnings.push({ url: p.url, issue: 'Page limit reached (' + _liveCount + '/' + _maxPages + ')' }); continue; }
+
         // Check for intent overlap
         if (p.intent) {
           const intentOverlap = await pool.query(
@@ -2228,6 +2243,7 @@ app.post('/api/tracker-client/:token/import-gsc-pages', async (req, res) => {
            intent=EXCLUDED.intent, gsc_clicks=EXCLUDED.gsc_clicks, gsc_impressions=EXCLUDED.gsc_impressions, gsc_position=EXCLUDED.gsc_position, priority=EXCLUDED.priority`,
           [clientId, p.url, p.keyword||null, p.intent||null, p.keyword||null, p.clicks||0, p.impressions||0, p.position||null, p.priority||'medium']
         );
+        _liveCount++;
         imported++;
       } catch(e) { console.warn('[import-gsc] page', p.url, e.message); }
     }
@@ -2816,7 +2832,13 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
   function chip(v,l,c){ return '<div class="bw-chip"><div class="v" style="color:'+c+'">'+v+'</div><div class="l">'+l+'</div></div>'; }
   function chips(d){ var pos=d.position||d.gsc_position; var pc=(!pos)?'#6b7280':pos<=3?'#4ade80':pos<=10?'#a3e635':pos<=20?'#fbbf24':'#f87171';
     return '<div class="bw-chips">'+chip(pos?('#'+pos):'-','Position',pc)+chip(d.aio_cited?'YES':'NO','AIO',d.aio_cited?'#4ade80':'#6b7280')+chip(d.perp_cited?'YES':'NO','Perplexity',d.perp_cited?'#a78bfa':'#6b7280')+chip(d.bing_cited?'YES':'NO','Copilot',d.bing_cited?'#60a5fa':'#6b7280')+chip(d.brave_cited?'YES':'NO','Claude',d.brave_cited?'#f87171':'#6b7280')+(d.score?chip(d.score,'GRAAF','#a78bfa'):'')+'</div>'; }
-  function recs(d){ var items=d.passages||[]; if(!items.length) return ''; return items.map(function(p){ var t=p.title||p.h2||p.heading||'Recommendation'; var b=p.action||p.passage||p.body||p.text||''; if(b.length>200)b=b.slice(0,200)+'...'; return '<div class="bw-rec"><div class="bw-rec-t">'+esc(t)+'</div>'+(b?'<div class="bw-rec-b">'+esc(b)+'</div>':'')+'</div>'; }).join(''); }
+  function recs(d){ var out='';
+    var _lbl=function(t,c){ return '<div style="font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:'+c+';margin:8px 0 4px;font-weight:600">'+t+'</div>'; };
+    var items=d.passages||[];
+    if(items.length){ out+=_lbl('AI citations','#a78bfa')+items.map(function(p){ var t=p.title||p.h2||p.heading||'Recommendation'; var b=p.action||p.passage||p.body||p.text||''; if(b.length>200)b=b.slice(0,200)+'...'; return '<div class="bw-rec"><div class="bw-rec-t">'+esc(t)+'</div>'+(b?'<div class="bw-rec-b">'+esc(b)+'</div>':'')+'</div>'; }).join(''); }
+    var gsc=d.gsc_brief||[];
+    if(gsc.length){ out+=_lbl('GSC ranking','#a3e635')+gsc.map(function(g){ var t=g.title||'GSC recommendation'; var b=g.action||g.expected_impact||g.trigger||''; if(b.length>200)b=b.slice(0,200)+'...'; return '<div class="bw-rec"><div class="bw-rec-t">'+esc(t)+'</div>'+(b?'<div class="bw-rec-b">'+esc(b)+'</div>':'')+'</div>'; }).join(''); }
+    return out; }
   function badge(st,who){ if(st==='published')return '<span class="bd-badge pub">PUBLISHED</span>'; if(st==='approved')return '<span class="bd-badge appr">APPROVED'+(who?' - '+esc(who):'')+'</span>'; if(st==='submitted')return '<span class="bd-badge subm">SUBMITTED'+(who?' - '+esc(who):'')+'</span>'; if(st==='done')return '<span class="bd-badge done">DONE</span>'; if(st==='in_progress')return '<span class="bd-badge progress">IN PROGRESS'+(who?' - '+esc(who):'')+'</span>'; return '<span class="bd-badge open">OPEN</span>'; }
   function actions(d){ var st=d.brief_status||'open';
     if(st==='open') return '<span class="bd-wait" style="color:#6b7280">Waiting to be assigned by the lead</span>';
@@ -29633,73 +29655,34 @@ setInterval(loadPages, 120000); // auto-refresh every 2 min
 
   // -- GSC keyword import ----------------------------------------------------
   async function importGscKeywords() {
-    // Read from checked checkboxes (set by renderCheckList)
-    var cbs = document.querySelectorAll('.gsc-cb:checked');
-    if (!cbs || !cbs.length) { toast('Select at least one item', '#f87171'); return; }
-    var selected = [];
-    cbs.forEach(function(cb) {
-      try {
-        var val = JSON.parse(cb.value);
-        selected.push(val);
-      } catch(e) {
-        selected.push({ url: cb.value, keyword: '' });
+    // Send the FULL parsed list. Existing pages are always overwritten (refreshed);
+    // new pages are only added when ticked (add) AND a free slot exists (server enforces the limit).
+    var all = document.querySelectorAll('.gsc-cb');
+    if (!all || !all.length) { toast('Nothing to import — parse first', '#f87171'); return; }
+    var rows = [];
+    all.forEach(function(cb) {
+      var v;
+      try { v = JSON.parse(cb.value); } catch(e) { v = { url: cb.value, keyword: '' }; }
+      if (!v.url || v.url.indexOf('http') !== 0) {
+        if (!cb.checked) return; // skip unselected queries-only rows
+        v = { url: 'https://' + DOMAIN + '/', keyword: v.keyword || v.url };
       }
+      rows.push({ url: v.url, keyword: v.keyword || '', clicks: v.clicks || null, impressions: v.impressions || null, position: v.position || null, add: !!cb.checked });
     });
-    // Filter: only items with a URL (skip queries-only unless we have domain)
-    var toImport = selected.filter(function(p) {
-      return p.url && p.url.indexOf('http') === 0;
-    });
-    // For queries-only items (no proper URL), use homepage
-    var queriesOnly = selected.filter(function(p) {
-      return !p.url || p.url.indexOf('http') !== 0;
-    });
-    queriesOnly.forEach(function(p) {
-      toImport.push({ url: 'https://' + DOMAIN + '/', keyword: p.keyword || p.url });
-    });
-    if (!toImport.length) { toast('No valid URLs to import', '#f87171'); return; }
+    if (!rows.length) { toast('No valid URLs to import', '#f87171'); return; }
     var bt = document.getElementById('importGscBtn');
     if (bt) { bt.disabled = true; bt.textContent = 'Importing...'; }
-    var done = 0;
-    var errors = 0;
-    var total = toImport.length;
-    function doNext(idx) {
-      if (idx >= total) {
-        toast('Imported ' + done + ' page' + (done !== 1 ? 's' : '') + (errors ? ', ' + errors + ' failed' : ''), done > 0 ? '#4ade80' : '#f87171');
+    try {
+      var d = await api('/import-gsc-pages', 'POST', { pages: rows });
+      if (d && d.success) {
+        toast(d.message || ('Imported ' + (d.imported || 0)), '#4ade80');
         hideModal('importModal');
         setTimeout(loadPages, 800);
-        if (bt) { bt.disabled = false; bt.textContent = 'Import'; }
-        return;
+      } else {
+        toast((d && d.error) || 'Import failed', '#f87171');
       }
-      var p = toImport[idx];
-      if (bt) bt.textContent = 'Importing ' + (idx + 1) + '/' + total + '...';
-      api('/pages', 'POST', {
-        url: p.url,
-        keyword: p.keyword || '',
-        gsc_clicks: p.clicks || null,
-        gsc_impressions: p.impressions || null,
-        gsc_position: p.position || null,
-        gsc_ctr: p.ctr || null,
-        gsc_keyword: p.keyword || null
-      })
-        .then(function(d) {
-          if (d.success || d.already_tracked) { done++; doNext(idx + 1); }
-          else if (d.skipped) { doNext(idx + 1); } // silently skip domain mismatches
-          else {
-            errors++;
-            console.warn('[importGsc] page', idx, 'failed:', d.error, 'url:', p.url);
-            if (d.error && (d.error.indexOf('limit') > -1 || d.error.indexOf('maximum') > -1 || d.error.indexOf('full') > -1)) {
-              toast('Page limit reached (' + done + ' imported). Upgrade for more pages.', '#f59e0b');
-              hideModal('importModal');
-              setTimeout(loadPages, 800);
-              if (bt) { bt.disabled = false; bt.textContent = 'Import'; }
-              return;
-            }
-            doNext(idx + 1);
-          }
-        })
-        .catch(function(e) { errors++; console.warn('[importGsc] catch', e); doNext(idx + 1); });
-    }
-    doNext(0);
+    } catch(e) { console.warn('[importGsc]', e); toast('Import failed', '#f87171'); }
+    if (bt) { bt.disabled = false; bt.textContent = 'Import'; }
   }
 
   // \\u2500\\u2500 HTML upload \\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500
@@ -30607,7 +30590,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
                         <div>
                             <h2 style="font-size:1.1rem;font-weight:800;color:#f1f5f9;">Tracker Clients</h2>
-                            <p style="font-size:12px;color:#6b7280;margin-top:2px;">Self-service users registered via the free tracker · <span style="color:#34d399;font-weight:800;letter-spacing:.04em;">BUILD 2026-06-29-importfix</span></p>
+                            <p style="font-size:12px;color:#6b7280;margin-top:2px;">Self-service users registered via the free tracker · <span style="color:#34d399;font-weight:800;letter-spacing:.04em;">BUILD 2026-06-29-gscsync</span></p>
                         </div>
                         <div style="display:flex;gap:8px;flex-wrap:wrap;">
                             <button onclick="openNewOwnClient()" class="tr-btn" style="border-color:#4ade80;color:#4ade80;font-weight:700;">+ New Client</button>
@@ -30639,7 +30622,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
             <div id="tab-admin-settings" class="tab-content hidden">
                 <div style="padding:24px;max-width:600px;">
                     <h2 style="font-size:18px;font-weight:800;color:#f1f5f9;margin-bottom:4px;">⚙️ Settings</h2>
-                    <p style="font-size:12px;color:#6b7280;margin-bottom:24px;">Admin settings — stored in database, survive deploys · <span style="color:#34d399;font-weight:800;letter-spacing:.04em;">BUILD 2026-06-29-importfix</span></p>
+                    <p style="font-size:12px;color:#6b7280;margin-bottom:24px;">Admin settings — stored in database, survive deploys · <span style="color:#34d399;font-weight:800;letter-spacing:.04em;">BUILD 2026-06-29-gscsync</span></p>
 
                     <div style="background:#0d1117;border:1px solid #1f2937;border-radius:10px;padding:20px;margin-bottom:16px;">
                         <div style="font-size:13px;font-weight:700;color:#f1f5f9;margin-bottom:14px;">📧 Content Engine — Email Settings</div>
