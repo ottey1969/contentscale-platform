@@ -1,4 +1,4 @@
-console.log('=== CONTENTSCALE BOOT v2026-06-25-wall | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON ===');
+console.log('=== CONTENTSCALE BOOT v2026-06-29-rankgraph | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON ===');
 // CONTENTSCALE SERVER.JS — ELITE EDITION v4 (FIXED v3)
 // ✅ FIX v7: secondary_keywords + related_keywords auto in Analyse JSON + Execute prompt
 // ✅ FIX v7: analysis_data JSONB safe parse in execute-rewrite
@@ -3249,6 +3249,27 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
 </body>
 </html>`);
   } catch(e) { res.status(500).send('Error'); }
+});
+
+// ── Ranking history for one tracked page (public, scoped by tracker token) ───
+app.get('/track/:token/page/:pageId/history', async (req, res) => {
+  try {
+    const cr = await pool.query('SELECT id FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status <> $2)', [req.params.token, 'deleted']);
+    if (!cr.rows.length) return res.status(404).json({ ok:false, error:'tracker not found' });
+    const clientId = cr.rows[0].id;
+    const pr = await pool.query('SELECT id, url, keyword FROM tracker_pages WHERE id=$1 AND tracker_client_id=$2', [req.params.pageId, clientId]);
+    if (!pr.rows.length) return res.status(404).json({ ok:false, error:'page not found' });
+    const sr = await pool.query(
+      'SELECT checked_at, google_position, google_impressions, google_clicks, score FROM tracker_snapshots WHERE page_id=$1 AND google_position IS NOT NULL ORDER BY checked_at ASC LIMIT 400',
+      [req.params.pageId]
+    );
+    res.json({
+      ok: true,
+      url: pr.rows[0].url,
+      keyword: pr.rows[0].keyword || '',
+      series: sr.rows.map(function(r){ return { t: r.checked_at, pos: r.google_position != null ? Number(r.google_position) : null, impr: r.google_impressions, clicks: r.google_clicks, score: r.score }; })
+    });
+  } catch(e) { res.status(500).json({ ok:false, error: e.message }); }
 });
 
 app.get('/track/:token', async (req, res) => {
@@ -27221,6 +27242,63 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
 
 <script>
 var TOKEN = '__TOKEN__';
+// ── Ranking history modal + SVG graph (click a page's position number) ───────
+function csPosClose(){ var o=document.getElementById('csPosOv'); if(o) o.style.display='none'; }
+function _csEscH(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function _csTier(p){ return !p?'#6b7280':p<=3?'#4ade80':p<=10?'#a3e635':p<=20?'#fbbf24':'#f87171'; }
+function _csNum(p){ return (Math.round(p*10)/10); }
+function _csDateH(t){ try{ var d=new Date(t); return d.toLocaleDateString('en-GB',{day:'2-digit',month:'short'}); }catch(e){ return ''; } }
+function csPosHist(pageId){
+  var ov=document.getElementById('csPosOv');
+  if(!ov){
+    ov=document.createElement('div'); ov.id='csPosOv';
+    ov.style.cssText='position:fixed;inset:0;background:rgba(2,6,23,.78);z-index:99999;display:none;align-items:center;justify-content:center;padding:16px;';
+    ov.addEventListener('click',function(e){ if(e.target===ov) csPosClose(); });
+    ov.innerHTML='<div id="csPosBox" style="background:#0b1220;border:1px solid #1f2937;border-radius:14px;max-width:620px;width:100%;padding:20px 22px;color:#e5e7eb;font-family:system-ui,Arial,sans-serif;box-shadow:0 20px 60px rgba(0,0,0,.5)"></div>';
+    document.body.appendChild(ov);
+  }
+  var box=document.getElementById('csPosBox');
+  box.innerHTML='<div style="font-size:13px;color:#9ca3af">Loading ranking history\\u2026</div>';
+  ov.style.display='flex';
+  fetch('/track/'+TOKEN+'/page/'+pageId+'/history').then(function(r){ return r.json(); }).then(function(d){
+    box.innerHTML=(d&&d.ok)?_csHistRender(d):_csHistHead('Ranking history')+'<div style="font-size:13px;color:#9ca3af">Could not load history.</div>';
+  }).catch(function(){ box.innerHTML=_csHistHead('Ranking history')+'<div style="font-size:13px;color:#9ca3af">Network error.</div>'; });
+}
+function _csHistHead(title,sub){
+  return '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:12px"><div style="min-width:0"><div style="font-weight:800;font-size:15px">'+title+'</div>'+(sub?'<div style="font-size:12px;color:#9ca3af;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+sub+'</div>':'')+'</div><button onclick="csPosClose()" style="background:#1f2937;border:0;color:#e5e7eb;border-radius:8px;padding:6px 12px;cursor:pointer;flex-shrink:0">Close</button></div>';
+}
+function _csHistRender(d){
+  var s=(d.series||[]).filter(function(p){ return p.pos!=null; });
+  var head=_csHistHead('Ranking history',_csEscH(d.url||'')+(d.keyword?(' \\u00b7 '+_csEscH(d.keyword)):''));
+  if(s.length<1) return head+'<div style="font-size:13px;color:#9ca3af;line-height:1.6">No ranking history yet. Every scan adds a point \\u2014 scan again tomorrow to start the graph.</div>';
+  var last=s[s.length-1], prev=s.length>1?s[s.length-2]:null;
+  var delta=prev?(prev.pos-last.pos):0;
+  var arrow=delta>0?('\\u25b2 up '+_csNum(delta)):(delta<0?('\\u25bc down '+_csNum(-delta)):'\\u2014 no change');
+  var ac=delta>0?'#4ade80':(delta<0?'#f87171':'#9ca3af');
+  var sum='<div style="display:flex;gap:18px;margin-bottom:14px;flex-wrap:wrap">'
+    +'<div><div style="font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:.05em">Now</div><div style="font-size:20px;font-weight:800;color:'+_csTier(last.pos)+'">#'+_csNum(last.pos)+'</div></div>'
+    +(prev?('<div><div style="font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:.05em">Previous</div><div style="font-size:20px;font-weight:800;color:#9ca3af">#'+_csNum(prev.pos)+'</div></div><div><div style="font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:.05em">Change</div><div style="font-size:20px;font-weight:800;color:'+ac+'">'+arrow+'</div></div>'):'')
+    +'</div>';
+  return head+sum+_csChart(s)+'<div style="font-size:11px;color:#6b7280;margin-top:10px">Lower number = better. '+s.length+' scan'+(s.length>1?'s':'')+' shown.</div>';
+}
+function _csChart(s){
+  var W=560,H=240,pl=44,pr=14,pt=16,pb=34, iw=W-pl-pr, ih=H-pt-pb;
+  var ps=s.map(function(p){ return p.pos; });
+  var minP=Math.min.apply(null,ps), maxP=Math.max.apply(null,ps);
+  if(maxP-minP<3) maxP=minP+3;
+  var loP=Math.max(1,minP-1), hiP=maxP+1;
+  function X(i){ return pl + (s.length<=1?iw/2:(iw*i/(s.length-1))); }
+  function Y(pos){ return pt + ih*((pos-loP)/(hiP-loP)); }
+  var grid='';
+  [loP,Math.round((loP+hiP)/2),hiP].forEach(function(g){ var y=Y(g); grid+='<line x1="'+pl+'" y1="'+y+'" x2="'+(W-pr)+'" y2="'+y+'" stroke="#1f2937" stroke-width="1"/><text x="'+(pl-6)+'" y="'+(y+4)+'" text-anchor="end" font-size="10" fill="#6b7280">#'+g+'</text>'; });
+  var t10=''; if(10>=loP&&10<=hiP){ var y10=Y(10); t10='<line x1="'+pl+'" y1="'+y10+'" x2="'+(W-pr)+'" y2="'+y10+'" stroke="#334155" stroke-dasharray="4 4" stroke-width="1"/><text x="'+(W-pr)+'" y="'+(y10-4)+'" text-anchor="end" font-size="9" fill="#475569">page 1 (top 10)</text>'; }
+  var pts=s.map(function(p,i){ return X(i)+','+Y(p.pos); }).join(' ');
+  var line='<polyline points="'+pts+'" fill="none" stroke="#7c3aed" stroke-width="2"/>';
+  var dots='', xl='', step=Math.ceil(s.length/5);
+  s.forEach(function(p,i){ var x=X(i), y=Y(p.pos); dots+='<circle cx="'+x+'" cy="'+y+'" r="3.5" fill="'+_csTier(p.pos)+'"/>';
+    if(i===0||i===s.length-1||s.length<=6||i%step===0){ xl+='<text x="'+x+'" y="'+(H-pb+18)+'" text-anchor="middle" font-size="9" fill="#6b7280">'+_csDateH(p.t)+'</text>'; } });
+  return '<svg viewBox="0 0 '+W+' '+H+'" width="100%" style="background:#0a0f1c;border:1px solid #1f2937;border-radius:10px">'+grid+t10+line+dots+xl+'</svg>';
+}
 var DOMAIN = '__DOMAIN__';
 var GSC_ENABLED = __GSC_ENABLED__;
 var MAX_PAGES = __MAX_PAGES__;
@@ -27929,7 +28007,7 @@ function renderRecs(p) {
 
     // Stat row - cited items blink
     html += '<div class="cb-inline-stats">';
-    html += '<div class="cb-istat"' + posBlink + '><div class="cb-isv" style="color:' + posColor + '">' + (pos ? '#'+pos : '&#8212;') + '</div><div class="cb-isl">Position</div></div>';
+    html += '<div class="cb-istat"' + posBlink + '><div class="cb-isv" style="color:' + posColor + (pos?';cursor:pointer':'') + '"' + (pos?(' onclick="csPosHist(' + pageId + ')" title="See ranking history"'):'') + '>' + (pos ? '#'+pos : '&#8212;') + '</div><div class="cb-isl">Position' + (pos?' &#128200;':'') + '</div></div>';
     html += '<div class="cb-istat"' + (aio ? ' style="animation:briefBlink 1.2s ease-in-out 4"' : '') + '><div class="cb-isv" style="color:' + (aio?'#22c55e':'#374151') + '">' + (aio?'&#10003;':'&#8212;') + '</div><div class="cb-isl">Google AIO</div></div>';
     html += '<div class="cb-istat"' + (perp ? ' style="animation:briefBlink 1.2s ease-in-out 4"' : '') + '><div class="cb-isv" style="color:' + (perp?'#818cf8':'#374151') + '">' + (perp?'&#10003;':'&#8212;') + '</div><div class="cb-isl">Perplexity</div></div>';
     html += '<div class="cb-istat"' + (cop ? ' style="animation:briefBlink 1.2s ease-in-out 4"' : '') + '><div class="cb-isv" style="color:' + (cop?'#60a5fa':'#374151') + '">' + (cop?'&#10003;':'&#8212;') + '</div><div class="cb-isl">Copilot</div></div>';
@@ -30450,7 +30528,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
                         <div>
                             <h2 style="font-size:1.1rem;font-weight:800;color:#f1f5f9;">Tracker Clients</h2>
-                            <p style="font-size:12px;color:#6b7280;margin-top:2px;">Self-service users registered via the free tracker · <span style="color:#34d399;font-weight:800;letter-spacing:.04em;">BUILD 2026-06-25-wall</span></p>
+                            <p style="font-size:12px;color:#6b7280;margin-top:2px;">Self-service users registered via the free tracker · <span style="color:#34d399;font-weight:800;letter-spacing:.04em;">BUILD 2026-06-29-rankgraph</span></p>
                         </div>
                         <div style="display:flex;gap:8px;flex-wrap:wrap;">
                             <button onclick="openNewOwnClient()" class="tr-btn" style="border-color:#4ade80;color:#4ade80;font-weight:700;">+ New Client</button>
@@ -30482,7 +30560,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
             <div id="tab-admin-settings" class="tab-content hidden">
                 <div style="padding:24px;max-width:600px;">
                     <h2 style="font-size:18px;font-weight:800;color:#f1f5f9;margin-bottom:4px;">⚙️ Settings</h2>
-                    <p style="font-size:12px;color:#6b7280;margin-bottom:24px;">Admin settings — stored in database, survive deploys · <span style="color:#34d399;font-weight:800;letter-spacing:.04em;">BUILD 2026-06-25-wall</span></p>
+                    <p style="font-size:12px;color:#6b7280;margin-bottom:24px;">Admin settings — stored in database, survive deploys · <span style="color:#34d399;font-weight:800;letter-spacing:.04em;">BUILD 2026-06-29-rankgraph</span></p>
 
                     <div style="background:#0d1117;border:1px solid #1f2937;border-radius:10px;padding:20px;margin-bottom:16px;">
                         <div style="font-size:13px;font-weight:700;color:#f1f5f9;margin-bottom:14px;">📧 Content Engine — Email Settings</div>
