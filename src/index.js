@@ -1,4 +1,4 @@
-console.log('=== CONTENTSCALE BOOT v2026-06-29-viewlive | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON ===');
+console.log('=== CONTENTSCALE BOOT v2026-06-29-walldot | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON ===');
 // CONTENTSCALE SERVER.JS — ELITE EDITION v4 (FIXED v3)
 // ✅ FIX v7: secondary_keywords + related_keywords auto in Analyse JSON + Execute prompt
 // ✅ FIX v7: analysis_data JSONB safe parse in execute-rewrite
@@ -3427,7 +3427,7 @@ app.get('/track/:token/page/:pageId/history', async (req, res) => {
   } catch(e) { res.status(500).json({ ok:false, error: e.message }); }
 });
 
-// ── Read-only "viewer" page (TV view): Live-Brief-Wall design, click a card to open the full brief ──
+// ── Read-only "viewer" page (TV view): mirrors the Live Brief Wall (3-col, newest in the middle), click a card to open the full brief ──
 app.get('/view/:token', async (req, res) => {
   try {
     const cr = await pool.query('SELECT domain FROM tracker_clients WHERE token=$1', [req.params.token]);
@@ -3436,60 +3436,64 @@ app.get('/view/:token', async (req, res) => {
     res.send(`<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Brief — ${domain}</title>
 <style>
   body{margin:0;background:#070710;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif}
-  .wrap{max-width:760px;margin:0 auto;padding:18px 14px 60px}
+  .wrap{max-width:1200px;margin:0 auto;padding:18px 16px 60px}
   .hd{display:flex;justify-content:space-between;align-items:center;gap:12px}
   .ttl{font-size:13px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#fbbf24}
   .work{display:inline-block;background:#7c3aed;color:#fff;text-decoration:none;font-weight:800;padding:8px 14px;border-radius:9px;font-size:12px;white-space:nowrap}
-  .sub{font-size:11px;color:#6b7280;margin:4px 0 16px}
-  .card{background:#0d1117;border:1px solid #1f2937;border-radius:14px;padding:16px;margin-bottom:14px;cursor:pointer;transition:border-color .15s,transform .15s}
+  .sub{font-size:11px;color:#6b7280;margin:4px 0 18px}
+  .livedot{display:inline-block;width:7px;height:7px;border-radius:50%;background:#4ade80;margin-right:5px;vertical-align:middle;animation:lp 1.6s ease-in-out infinite}
+  @keyframes lp{0%,100%{opacity:1}50%{opacity:.25}}
+  .bw-wrap{display:flex;gap:14px;align-items:flex-start}
+  .bw-side{flex:1;display:flex;flex-direction:column;gap:14px;min-width:0}
+  .bw-feature{flex:1.7;min-width:0}
+  .card{background:#0d1117;border:1px solid #1f2937;border-radius:14px;padding:16px;cursor:pointer;transition:border-color .15s,transform .15s}
   .card:hover{border-color:#7c3aed;transform:translateY(-2px)}
-  .chd{padding:0}
+  .bw-feature>.card{border-color:#7c3aed;box-shadow:0 0 0 1px rgba(124,58,237,.25),0 10px 36px rgba(124,58,237,.18)}
+  .chead{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
   .url{font-size:12px;font-weight:700;color:#e5e7eb;word-break:break-all;line-height:1.4}
   .scanned{font-size:10px;color:#6b7280;margin-top:4px}
+  .new{background:#ef4444;color:#fff;font-size:9px;font-weight:800;padding:3px 8px;border-radius:999px;white-space:nowrap;letter-spacing:.05em}
   .stats{display:flex;gap:6px;flex-wrap:wrap;margin:12px 0}
   .stat{background:#0a0a12;border:1px solid #1f2937;border-radius:8px;padding:5px 9px;text-align:center;min-width:50px}
   .stat-val{font-size:12px;font-weight:800}
   .stat-lbl{font-size:8px;color:#6b7280;text-transform:uppercase;letter-spacing:.06em;margin-top:2px}
-  .grp{font-size:8px;text-transform:uppercase;letter-spacing:.06em;font-weight:800;margin:6px 0 0}
-  .rec{border-left:3px solid #7c3aed;padding:2px 0 2px 12px;margin:11px 0}
-  .rt{font-size:13px;font-weight:800;color:#f1f5f9;margin-bottom:4px}
-  .rb{font-size:12px;color:#9ca3af;line-height:1.55;display:none}
+  .grp{font-size:8px;text-transform:uppercase;letter-spacing:.06em;font-weight:800;margin:8px 0 0}
+  .rec{border-left:3px solid #7c3aed;padding:2px 0 2px 12px;margin:10px 0}
+  .rt{font-size:13px;font-weight:800;color:#f1f5f9}
+  .rb{font-size:12px;color:#9ca3af;line-height:1.55;margin-top:4px;display:none}
   .card.open .rb{display:block}
   .extra{display:none}
   .card.open .extra{display:block}
-  .more{font-size:12px;color:#a78bfa;font-weight:700;margin-top:6px}
+  .more{font-size:12px;color:#a78bfa;font-weight:700;margin-top:8px}
   .card.open .more{display:none}
   .empty{color:#6b7280;font-size:13px;text-align:center;padding:30px}
-  .livedot{display:inline-block;width:7px;height:7px;border-radius:50%;background:#4ade80;margin-right:5px;vertical-align:middle;animation:lp 1.6s ease-in-out infinite}
-  @keyframes lp{0%,100%{opacity:1}50%{opacity:.25}}
+  @media(max-width:860px){.bw-wrap{flex-direction:column}.bw-feature{order:-1;flex:1}.bw-side{flex:1}}
 </style></head><body><div class="wrap">
-<div class="hd"><div class="ttl">&#9889; AI Citation Briefs</div><a class="work" href="/track/${req.params.token}">Open tracker</a></div>
-<div class="sub"><span class="livedot"></span>Live &middot; ${domain} &middot; tap a card to open the brief</div>
+<div class="hd"><div class="ttl">&#9889; Live Brief Wall</div><a class="work" href="/track/${req.params.token}">Open tracker</a></div>
+<div class="sub"><span class="livedot"></span>Live &middot; ${domain} &middot; newest in the middle &middot; tap a card to open the brief</div>
 <div id="list"><div class="empty">Loading...</div></div>
 </div>
 <script>
-var TOKEN='${req.params.token}';
+var TOKEN='${req.params.token}', _open={};
 function esc(s){ return String(s==null?'':s).replace(/[<>&]/g,function(c){return {'<':'&lt;','>':'&gt;','&':'&amp;'}[c]; }); }
 function strip(s){ return String(s==null?'':s).replace(/<[^>]+>/g,' ').trim(); }
 function stat(val,lbl,color){ return '<div class="stat"><div class="stat-val" style="color:'+color+'">'+val+'</div><div class="stat-lbl">'+lbl+'</div></div>'; }
 function recItems(arr,color){ return (arr||[]).map(function(p){ var t=p.title||p.h2||p.heading||'Recommendation'; var b=strip(p.action||p.passage||p.body||p.content||p.text||''); return '<div class="rec" style="border-color:'+color+'"><div class="rt">'+esc(t)+'</div>'+(b?'<div class="rb">'+esc(b)+'</div>':'')+'</div>'; }); }
+function chips(b){ var pos=b.position; var posC=(pos&&pos<=3)?'#4ade80':(pos&&pos<=10)?'#fbbf24':'#f87171';
+  return stat(pos?('#'+pos):'N/A','Position',posC)+stat(b.aio_cited?'YES':'NO','AIO',b.aio_cited?'#4ade80':'#4b5563')+stat(b.perp_cited?'YES':'NO','Perplexity',b.perp_cited?'#a78bfa':'#4b5563')+stat(b.bing_cited?'YES':'NO','Copilot',b.bing_cited?'#60a5fa':'#4b5563')+stat(b.brave_cited?'YES':'NO','Claude',b.brave_cited?'#f87171':'#4b5563')+(b.brief_after_score!=null?stat(b.brief_after_score,'GRAAF','#fbbf24'):(b.score?stat(b.score,'GRAAF','#fbbf24'):'')); }
+function card(b,isFeature){ var oid=String(b.page_id||b.url);
+  var ai=recItems(b.passages,'#a78bfa'), gs=recItems(b.gsc_brief,'#a3e635');
+  var all=[]; if(ai.length){ all.push('<div class="grp" style="color:#a78bfa">AI citations</div>'); all=all.concat(ai); } if(gs.length){ all.push('<div class="grp" style="color:#a3e635">GSC ranking</div>'); all=all.concat(gs); }
+  var lim=isFeature?6:2; var body;
+  if(!all.length){ body='<div class="more" style="color:#6b7280">Brief pending next scan.</div>'; }
+  else { var total=ai.length+gs.length; var head=all.slice(0,lim).join(''); var rest=all.slice(lim).join(''); var moreN=total-Math.min(lim,total); body=head+(rest?'<div class="extra">'+rest+'</div>':'')+'<div class="more">'+(moreN>0?'+ '+moreN+' more &middot; ':'')+'click to view all</div>'; }
+  var date=b.ts?new Date(b.ts).toLocaleDateString('en-GB',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}):'';
+  var head='<div class="chead"><div style="min-width:0"><div class="url">'+esc(b.url)+'</div>'+(date?'<div class="scanned">Scanned '+date+'</div>':'')+'</div>'+(isFeature?'<span class="new">NEW</span>':'')+'</div>';
+  return '<div class="card'+(_open[oid]?' open':'')+'" data-id="'+esc(oid)+'">'+head+'<div class="stats">'+chips(b)+'</div>'+body+'</div>'; }
 function render(briefs){ var L=document.getElementById('list'); if(!briefs||!briefs.length){ L.innerHTML='<div class="empty">No briefs yet.</div>'; return; }
-  L.innerHTML=briefs.map(function(b){
-    var pos=b.position; var posC=(pos&&pos<=3)?'#4ade80':(pos&&pos<=10)?'#fbbf24':'#f87171';
-    var s=stat(pos?('#'+pos):'N/A','Position',posC)
-      +stat(b.aio_cited?'YES':'NO','AIO',b.aio_cited?'#4ade80':'#4b5563')
-      +stat(b.perp_cited?'YES':'NO','Perplexity',b.perp_cited?'#a78bfa':'#4b5563')
-      +stat(b.bing_cited?'YES':'NO','Copilot',b.bing_cited?'#60a5fa':'#4b5563')
-      +stat(b.brave_cited?'YES':'NO','Claude',b.brave_cited?'#f87171':'#4b5563')
-      +(b.brief_after_score!=null?stat(b.brief_after_score,'GRAAF','#fbbf24'):(b.score?stat(b.score,'GRAAF','#fbbf24'):''));
-    var ai=recItems(b.passages,'#a78bfa'); var gs=recItems(b.gsc_brief,'#a3e635');
-    var all=[]; if(ai.length){ all.push('<div class="grp" style="color:#a78bfa">AI citations</div>'); all=all.concat(ai); } if(gs.length){ all.push('<div class="grp" style="color:#a3e635">GSC ranking</div>'); all=all.concat(gs); }
-    var body=''; if(!all.length){ body='<div class="more" style="color:#6b7280">Brief pending next scan.</div>'; }
-    else { var head=all.slice(0,5).join(''); var rest=all.slice(5).join(''); var extraCount=ai.length+gs.length-Math.min(5,ai.length+gs.length); body=head+(rest?'<div class="extra">'+rest+'</div>':'')+'<div class="more">Tap to read the full brief'+(extraCount>0?' &middot; +'+extraCount+' more':'')+'</div>'; }
-    var date=b.ts?new Date(b.ts).toLocaleDateString('en-GB',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}):'';
-    var oid=String(b.page_id||b.url); return '<div class="card'+(_open[oid]?' open':'')+'" data-id="'+esc(oid)+'"><div class="chd"><div class="url">'+esc(b.url)+'</div>'+(date?'<div class="scanned">Scanned '+date+'</div>':'')+'</div><div class="stats">'+s+'</div>'+body+'</div>';
-  }).join(''); }
-var _open={};
+  briefs=briefs.slice().sort(function(a,b){ return (new Date(b.ts||0))-(new Date(a.ts||0)); });
+  var feature=briefs[0], rest=briefs.slice(1), left=[], right=[]; rest.forEach(function(p,i){ (i%2===0?left:right).push(p); });
+  L.innerHTML='<div class="bw-wrap"><div class="bw-side">'+left.map(function(p){return card(p,false);}).join('')+'</div><div class="bw-feature">'+card(feature,true)+'</div><div class="bw-side">'+right.map(function(p){return card(p,false);}).join('')+'</div></div>'; }
 function load(){ fetch('/api/tracker-client/'+TOKEN+'/latest-briefs').then(function(r){return r.json();}).then(function(d){ render(d&&d.briefs?d.briefs:[]); }).catch(function(){ var L=document.getElementById('list'); if(L && (!L.children.length || L.querySelector('.empty'))) L.innerHTML='<div class="empty">Could not load.</div>'; }); }
 load();
 setInterval(function(){ if(!document.hidden) load(); }, 60000);
@@ -27269,7 +27273,7 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
       .bw-mini{font-size:11px;color:#6b7280;margin-top:6px;}
       @media(max-width:820px){.bw-wrap{flex-direction:column;}.bw-feature{order:-1;flex:1;}.bw-side{flex:1;}}
     </style>
-    <div class="cs-section" style="display:flex;align-items:center;gap:10px;">&#9889; Live Brief Wall <span id="bwCount" style="color:#6b7280;font-weight:600;font-size:11px;"></span></div>
+    <div class="cs-section" style="display:flex;align-items:center;gap:10px;"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#4ade80;box-shadow:0 0 6px #4ade80;"></span> Live Brief Wall <span id="bwCount" style="color:#6b7280;font-weight:600;font-size:11px;"></span></div>
     <div id="briefWall"></div>
   </div>
 
@@ -30745,7 +30749,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
                         <div>
                             <h2 style="font-size:1.1rem;font-weight:800;color:#f1f5f9;">Tracker Clients</h2>
-                            <p style="font-size:12px;color:#6b7280;margin-top:2px;">Self-service users registered via the free tracker · <span style="color:#34d399;font-weight:800;letter-spacing:.04em;">BUILD 2026-06-29-viewlive</span></p>
+                            <p style="font-size:12px;color:#6b7280;margin-top:2px;">Self-service users registered via the free tracker · <span style="color:#34d399;font-weight:800;letter-spacing:.04em;">BUILD 2026-06-29-walldot</span></p>
                         </div>
                         <div style="display:flex;gap:8px;flex-wrap:wrap;">
                             <button onclick="openNewOwnClient()" class="tr-btn" style="border-color:#4ade80;color:#4ade80;font-weight:700;">+ New Client</button>
@@ -30777,7 +30781,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
             <div id="tab-admin-settings" class="tab-content hidden">
                 <div style="padding:24px;max-width:600px;">
                     <h2 style="font-size:18px;font-weight:800;color:#f1f5f9;margin-bottom:4px;">⚙️ Settings</h2>
-                    <p style="font-size:12px;color:#6b7280;margin-bottom:24px;">Admin settings — stored in database, survive deploys · <span style="color:#34d399;font-weight:800;letter-spacing:.04em;">BUILD 2026-06-29-viewlive</span></p>
+                    <p style="font-size:12px;color:#6b7280;margin-bottom:24px;">Admin settings — stored in database, survive deploys · <span style="color:#34d399;font-weight:800;letter-spacing:.04em;">BUILD 2026-06-29-walldot</span></p>
 
                     <div style="background:#0d1117;border:1px solid #1f2937;border-radius:10px;padding:20px;margin-bottom:16px;">
                         <div style="font-size:13px;font-weight:700;color:#f1f5f9;margin-bottom:14px;">📧 Content Engine — Email Settings</div>
