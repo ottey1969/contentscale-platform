@@ -1,4 +1,4 @@
-console.log('=== CONTENTSCALE BOOT v2026-06-30-badgefrozen | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON ===');
+console.log('=== CONTENTSCALE BOOT v2026-06-30-trklabels | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON ===');
 // CONTENTSCALE SERVER.JS — ELITE EDITION v4 (FIXED v3)
 // ✅ FIX v7: secondary_keywords + related_keywords auto in Analyse JSON + Execute prompt
 // ✅ FIX v7: analysis_data JSONB safe parse in execute-rewrite
@@ -1109,7 +1109,7 @@ app.post('/api/tracker-client/register', async (req, res) => {
         + '<div style="font-size:12px;font-weight:800;color:#6d28d9;text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px;">&#128278; Bookmark this — your working scanner</div>'
         + '<div style="font-size:13px;color:#374151;line-height:1.6;margin-bottom:10px;">This is where you <strong>add pages, keywords, and paste HTML</strong>. Save it as a bookmark — it is your private link, do not share it.</div>'
         + '<div style="font-size:11px;font-family:monospace;color:#7c3aed;word-break:break-all;margin-bottom:10px;">' + trackUrl + '</div>'
-        + '<a href="' + trackUrl + '" style="display:inline-block;background:#7c3aed;color:white;text-decoration:none;padding:10px 22px;border-radius:6px;font-size:13px;font-weight:700;">Open My Scanner &rarr;</a>'
+        + '<a href="' + trackUrl + '" style="display:inline-block;background:#7c3aed;color:white;text-decoration:none;padding:10px 22px;border-radius:6px;font-size:13px;font-weight:700;">Open tracker &rarr;</a>'
         + '</div>'
         + '<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:16px;margin-bottom:16px;">'
         + '<div style="font-size:12px;font-weight:800;color:#0f172a;text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px;">&#128250; View Tracker — live results (TV mode)</div>'
@@ -1618,7 +1618,7 @@ app.patch('/api/tracker-client/:token/pages/:pageId/done', async (req, res) => {
               + '<div style="font-size:12px;font-weight:700;color:#854d0e;margin-bottom:6px;">&#9888; Required: paste new HTML</div>'
               + '<div style="font-size:13px;color:#854d0e;line-height:1.6;">1. Open <strong>' + pageUrl + '</strong> in Chrome<br>2. Right-click &rarr; View Page Source<br>3. Ctrl+A &rarr; Ctrl+C<br>4. Go to your tracker &rarr; click <strong>Paste new HTML</strong></div>'
               + '</div>'
-              + '<a href="' + trackerUrl + '" style="display:inline-block;background:#7c3aed;color:white;text-decoration:none;padding:10px 22px;border-radius:6px;font-size:13px;font-weight:700;">Open tracker &rarr;</a>'
+              + '<a href="' + trackerUrl + '" style="display:inline-block;background:#7c3aed;color:white;text-decoration:none;padding:10px 22px;border-radius:6px;font-size:13px;font-weight:700;">View tracker &rarr;</a>'
               + '<p style="font-size:11px;color:#94a3b8;margin-top:14px;">Without the new HTML, the system cannot measure your improvements or generate the next Citation Brief.</p>';
             // Get telegram for done reminder
             const doneClientR = await pool.query('SELECT telegram_chat_id FROM tracker_clients WHERE id=$1', [cr.rows[0].id]);
@@ -3899,7 +3899,7 @@ app.post('/api/admin/tracker-clients/:id/regenerate-token', verifyAdmin, async (
         + '<p style="font-size:14px;color:#374151;line-height:1.7;margin-bottom:14px;">Your previous link has been deactivated. Here is your new personal tracker link for <strong>' + client.domain + '</strong>:</p>'
         + '<div style="background:#f5f3ff;border:1px solid #ddd6fe;border-radius:8px;padding:14px 16px;margin-bottom:16px;">'
         + '<div style="font-size:11px;font-family:monospace;color:#7c3aed;word-break:break-all;margin-bottom:10px;">' + newUrl + '</div>'
-        + '<a href="' + newUrl + '" style="display:inline-block;background:#7c3aed;color:white;text-decoration:none;padding:10px 22px;border-radius:6px;font-size:13px;font-weight:700;">Open My Tracker &rarr;</a>'
+        + '<a href="' + newUrl + '" style="display:inline-block;background:#7c3aed;color:white;text-decoration:none;padding:10px 22px;border-radius:6px;font-size:13px;font-weight:700;">Open tracker &rarr;</a>'
         + '</div>'
         + '<p style="font-size:13px;color:#374151;">All your pages, scans, and Citation Briefs are still there — nothing was lost. Bookmark this new link.</p>';
       await sendTrackerEmail(client.id, 'Your tracker link has been updated — ' + client.domain, html).catch(()=>{});
@@ -3976,7 +3976,7 @@ app.post('/api/admin/tracker-clients/create-own', verifyAdmin, async (req, res) 
           + '<p style="font-size:14px;color:#374151;line-height:1.7;margin-bottom:14px;">Hi ' + (name||'there') + ',<br><br>Your personal tracker for <strong>' + cleanDomain + '</strong> has been set up. Bookmark this link:</p>'
           + '<div style="background:#f5f3ff;border:1px solid #ddd6fe;border-radius:8px;padding:14px 16px;margin-bottom:16px;">'
           + '<div style="font-size:11px;font-family:monospace;color:#7c3aed;word-break:break-all;margin-bottom:10px;">' + trackUrl + '</div>'
-          + '<a href="' + trackUrl + '" style="display:inline-block;background:#7c3aed;color:white;text-decoration:none;padding:10px 22px;border-radius:6px;font-size:13px;font-weight:700;">Open My Tracker &rarr;</a>'
+          + '<a href="' + trackUrl + '" style="display:inline-block;background:#7c3aed;color:white;text-decoration:none;padding:10px 22px;border-radius:6px;font-size:13px;font-weight:700;">Open tracker &rarr;</a>'
           + '</div>'
           + '<p style="font-size:14px;color:#374151;line-height:1.7;margin-bottom:14px;"><strong>What happens next:</strong><br>'
           + '1. Add your pages and keywords<br>2. First scan runs in ~1 minute<br>3. Paste your page HTML for GRAAF score<br>4. Citation Brief arrives by email</p>'
@@ -30769,7 +30769,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
                         <div>
                             <h2 style="font-size:1.1rem;font-weight:800;color:#f1f5f9;">Tracker Clients</h2>
-                            <p style="font-size:12px;color:#6b7280;margin-top:2px;">Self-service users registered via the free tracker · <span style="color:#34d399;font-weight:800;letter-spacing:.04em;">BUILD 2026-06-30-badgefrozen</span></p>
+                            <p style="font-size:12px;color:#6b7280;margin-top:2px;">Self-service users registered via the free tracker · <span style="color:#34d399;font-weight:800;letter-spacing:.04em;">BUILD 2026-06-30-trklabels</span></p>
                         </div>
                         <div style="display:flex;gap:8px;flex-wrap:wrap;">
                             <button onclick="openNewOwnClient()" class="tr-btn" style="border-color:#4ade80;color:#4ade80;font-weight:700;">+ New Client</button>
@@ -30801,7 +30801,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
             <div id="tab-admin-settings" class="tab-content hidden">
                 <div style="padding:24px;max-width:600px;">
                     <h2 style="font-size:18px;font-weight:800;color:#f1f5f9;margin-bottom:4px;">⚙️ Settings</h2>
-                    <p style="font-size:12px;color:#6b7280;margin-bottom:24px;">Admin settings — stored in database, survive deploys · <span style="color:#34d399;font-weight:800;letter-spacing:.04em;">BUILD 2026-06-30-badgefrozen</span></p>
+                    <p style="font-size:12px;color:#6b7280;margin-bottom:24px;">Admin settings — stored in database, survive deploys · <span style="color:#34d399;font-weight:800;letter-spacing:.04em;">BUILD 2026-06-30-trklabels</span></p>
 
                     <div style="background:#0d1117;border:1px solid #1f2937;border-radius:10px;padding:20px;margin-bottom:16px;">
                         <div style="font-size:13px;font-weight:700;color:#f1f5f9;margin-bottom:14px;">📧 Content Engine — Email Settings</div>
@@ -34994,7 +34994,7 @@ app.post('/api/tracker/pages/:id/check', verifyEngineAccess, async (req, res) =>
                   recsHtml += '</div>';
                   return recsHtml;
                 })()
-              + '<div style="background:#f5f3ff;border:1px solid #ddd6fe;border-radius:8px;padding:12px 16px;margin-bottom:10px;"><div style="font-size:10px;color:#7c3aed;font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px;">Your tracker</div><div style="font-size:11px;font-family:monospace;color:#1e293b;word-break:break-all;margin-bottom:8px;">' + clientTrackUrl + '</div><a href="' + clientTrackUrl + '" style="display:inline-block;background:#7c3aed;color:white;text-decoration:none;padding:8px 18px;border-radius:6px;font-size:12px;font-weight:700;">Open tracker &rarr;</a></div>'
+              + '<div style="background:#f5f3ff;border:1px solid #ddd6fe;border-radius:8px;padding:12px 16px;margin-bottom:10px;"><div style="font-size:10px;color:#7c3aed;font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px;">Your tracker</div><div style="font-size:11px;font-family:monospace;color:#1e293b;word-break:break-all;margin-bottom:8px;">' + clientTrackUrl + '</div><a href="' + clientTrackUrl + '" style="display:inline-block;background:#7c3aed;color:white;text-decoration:none;padding:8px 18px;border-radius:6px;font-size:12px;font-weight:700;">View tracker &rarr;</a></div>'
               + '<div style="font-size:11px;color:#94a3b8;text-align:center;padding-top:8px;">Press <strong>Done</strong> in your tracker after implementing — the brief will reset and restart fresh.</div>';
 
             // Send email + Telegram
@@ -37652,13 +37652,22 @@ NEW: ${JSON.stringify(recsToUse.slice(0,3))}
 Return ONLY JSON array (max 5 items): [{"title":"max 6 words","priority":"high"|"medium"|"low","action":"exact 30+ word instruction","expected_impact":"ranking/AI impact"}]`;
           const gResp2 = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${geminiKey}`, {
             method: 'POST', headers: {'Content-Type':'application/json'},
-            body: JSON.stringify({ contents: [{ parts: [{ text: mergePrompt2 }] }], generationConfig: { temperature: 0.3, maxOutputTokens: 600 } }),
+            body: JSON.stringify({ contents: [{ parts: [{ text: mergePrompt2 }] }], generationConfig: { temperature: 0.3, maxOutputTokens: 1500 } }),
             signal: AbortSignal.timeout(15000)
           });
           if (gResp2.ok) {
             const gData2 = await gResp2.json();
             const gText2 = gData2.candidates?.[0]?.content?.parts?.[0]?.text || '';
-            const merged2 = JSON.parse(gText2.replace(/```json|```/g, '').trim());
+            // Tolerant parse: Gemini can truncate mid-string -> salvage to the last complete item instead of crashing
+            let _mtxt = gText2.replace(/```json|```/g, '').trim();
+            const _ai = _mtxt.indexOf('['); if (_ai > 0) _mtxt = _mtxt.slice(_ai);
+            let merged2;
+            try { merged2 = JSON.parse(_mtxt); }
+            catch (_pe) {
+              const _lo = _mtxt.lastIndexOf('}');
+              merged2 = (_lo > 0) ? JSON.parse(_mtxt.slice(0, _lo + 1) + ']') : null;
+            }
+            if (!merged2 || !merged2.length) throw new Error('no parseable merge items');
             brief2 = { items: merged2, position: pos2, aio: aio2, perp: perp2, bing_cited: bing2, brave_cited: brave2, score: score2,
               gsc_clicks: page.gsc_clicks, gsc_impressions: page.gsc_impressions, gsc_position: page.gsc_position, gsc_keyword: page.gsc_keyword,
               gsc_brief: gscBriefItems, merged: true };
@@ -37741,7 +37750,7 @@ Return ONLY JSON array (max 5 items): [{"title":"max 6 words","priority":"high"|
               + _recHtml
               + (_moreCount > 0 ? '<div style="font-size:13px;color:#7c3aed;font-weight:700;margin:4px 0 8px;">+ ' + _moreCount + ' more recommendation' + (_moreCount>1?'s':'') + ' in your tracker</div>' : '')
               + '<div style="text-align:center;margin-top:22px;">'
-              + '<a href="' + _trackerUrl + '" style="display:inline-block;background:#7c3aed;color:#fff;text-decoration:none;font-weight:800;padding:12px 28px;border-radius:10px;margin:4px;">Open tracker &rarr;</a>'
+              + '<a href="' + _trackerUrl + '" style="display:inline-block;background:#7c3aed;color:#fff;text-decoration:none;font-weight:800;padding:12px 28px;border-radius:10px;margin:4px;">View tracker &rarr;</a>'
               + '</div>';
             await notifyClient(
               page.tracker_client_id,
@@ -38272,7 +38281,7 @@ function startHtmlReminderScheduler() {
               + '<p style="font-size:14px;color:#374151;line-height:1.7;margin-bottom:14px;">To reactivate your tracker, contact Ottmar directly.</p>'
               + '<a href="https://wa.me/31628073996?text=Hi+Ottmar,+I+want+to+reactivate+my+tracker+for+' + encodeURIComponent(p.domain) + '" style="display:inline-block;background:#16a34a;color:white;text-decoration:none;padding:10px 22px;border-radius:6px;font-size:13px;font-weight:700;">WhatsApp Ottmar to reactivate &rarr;</a>'
               + '<p style="font-size:11px;color:#94a3b8;margin-top:12px;">Or let Ottmar implement everything for you — high-GRAAF, citation-ready content.</p>';
-            await notifyClient(p.tracker_client_id, subject, htmlBody, subject + '\n\n<a href="' + trackerUrl + '">Open tracker →</a>').catch(()=>{});
+            await notifyClient(p.tracker_client_id, subject, htmlBody, subject + '\n\n<a href="' + trackerUrl + '">View tracker →</a>').catch(()=>{});
 
             if (p.telegram_chat_id) {
             await sendTelegramNotification(p.telegram_chat_id, '⏸️ Your ContentScale tracker for ').catch(()=>{});
@@ -38293,10 +38302,10 @@ function startHtmlReminderScheduler() {
             + '<div style="background:#fef3c7;border:1px solid #fde68a;border-radius:8px;padding:14px 16px;margin-bottom:16px;font-size:13px;color:#92400e;">'
             + '<strong>To keep your tracker active:</strong><br>1. Implement at least the HIGH priority recommendation<br>2. Press <strong>Done</strong> in your tracker<br>3. Paste your updated page HTML'
             + '</div>'
-            + '<a href="' + trackerUrl + '" style="display:inline-block;background:#7c3aed;color:white;text-decoration:none;padding:10px 22px;border-radius:6px;font-size:13px;font-weight:700;margin-right:10px;">Open tracker &rarr;</a>'
+            + '<a href="' + trackerUrl + '" style="display:inline-block;background:#7c3aed;color:white;text-decoration:none;padding:10px 22px;border-radius:6px;font-size:13px;font-weight:700;margin-right:10px;">View tracker &rarr;</a>'
             + '<a href="https://wa.me/31628073996?text=Hi+Ottmar,+please+implement+my+Citation+Brief+for+' + encodeURIComponent(p.url) + '" style="display:inline-block;background:#16a34a;color:white;text-decoration:none;padding:10px 22px;border-radius:6px;font-size:13px;font-weight:700;">Let Ottmar do it for me &rarr;</a>'
             + '<p style="font-size:11px;color:#94a3b8;margin-top:14px;">Done-for-you AI citation optimization — high-GRAAF, citation-ready content.</p>';
-          await notifyClient(p.tracker_client_id, subject, htmlBody, subject + '\n\n<a href="' + trackerUrl + '">Open tracker →</a>', true).catch(()=>{});
+          await notifyClient(p.tracker_client_id, subject, htmlBody, subject + '\n\n<a href="' + trackerUrl + '">View tracker →</a>', true).catch(()=>{});
 
           if (p.telegram_chat_id) {
             await sendTelegramNotification(p.telegram_chat_id, '⚠️ Your ContentScale tracker for ').catch(()=>{});
@@ -38315,8 +38324,8 @@ function startHtmlReminderScheduler() {
             + '1. Open <strong>' + p.url + '</strong> in Chrome &rarr; Right-click &rarr; View Page Source<br>'
             + '2. Ctrl+A &rarr; Ctrl+C &rarr; Go to tracker &rarr; click <strong>Paste new HTML</strong>'
             + '</div>'
-            + '<a href="' + trackerUrl + '" style="display:inline-block;background:#7c3aed;color:white;text-decoration:none;padding:10px 22px;border-radius:6px;font-size:13px;font-weight:700;">Open tracker &rarr;</a>';
-          await notifyClient(p.tracker_client_id, subject, htmlBody, subject + '\n\n<a href="' + trackerUrl + '">Open tracker →</a>', true).catch(()=>{});
+            + '<a href="' + trackerUrl + '" style="display:inline-block;background:#7c3aed;color:white;text-decoration:none;padding:10px 22px;border-radius:6px;font-size:13px;font-weight:700;">View tracker &rarr;</a>';
+          await notifyClient(p.tracker_client_id, subject, htmlBody, subject + '\n\n<a href="' + trackerUrl + '">View tracker →</a>', true).catch(()=>{});
 
           if (p.telegram_chat_id) {
             await sendTelegramNotification(p.telegram_chat_id, '⚠️ Paste updated HTML for ').catch(()=>{});
