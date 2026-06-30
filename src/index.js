@@ -1,4 +1,4 @@
-console.log('=== CONTENTSCALE BOOT v2026-06-29-wallcap | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON ===');
+console.log('=== CONTENTSCALE BOOT v2026-06-29-idle | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON ===');
 // CONTENTSCALE SERVER.JS — ELITE EDITION v4 (FIXED v3)
 // ✅ FIX v7: secondary_keywords + related_keywords auto in Analyse JSON + Execute prompt
 // ✅ FIX v7: analysis_data JSONB safe parse in execute-rewrite
@@ -2785,7 +2785,7 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
   function reviewHtml(pageId){ var ov=_ldOv(); document.getElementById('ldOvTitle').textContent='Submitted work — review'; document.getElementById('ldOvBody').innerHTML='<div class="ld-prev" id="ldPrev">Loading...</div>'; document.getElementById('ldOvFoot').innerHTML='<button class="ld-btn" onclick="_ldClose()">Close</button><button class="ld-btn" style="border-color:#7f1d1d;color:#fca5a5" id="ldRejectGo">Reject</button><button class="ld-btn primary" id="ldApproveGo">Approve</button>'; ov.classList.add('on'); fetch('/api/tracker-client/'+TOKEN+'/brief/'+pageId+'/deliverable').then(function(r){return r.json();}).then(function(d){ document.getElementById('ldPrev').textContent=(d&&d.html)?d.html:'(no HTML submitted yet)'; var ga=document.getElementById('ldApproveGo'); if(ga) ga.onclick=function(){ approve(pageId); }; var gr=document.getElementById('ldRejectGo'); if(gr) gr.onclick=function(){ reject(pageId); }; }).catch(function(){ document.getElementById('ldPrev').textContent='Could not load'; }); }
   function approve(pageId){ if(!_ldEnsureName())return; fetch('/api/tracker-client/'+TOKEN+'/brief/'+pageId+'/approve',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:_ldName})}).then(function(r){return r.json();}).then(function(r){ if(!r.success) alert(r.error||'Could not approve'); _ldClose(); load(); }).catch(function(){ alert('Could not approve'); }); }
   function load(){ fetch('/api/tracker-client/'+TOKEN+'/latest-briefs').then(function(r){return r.json();}).then(function(d){ if(d&&d.briefs){ _briefs=d.briefs; render(); } }).catch(function(){}); }
-  loadSpecs(); load(); setInterval(load,15000);
+  loadSpecs(); load(); setInterval(function(){ if(!document.hidden) load(); },15000); document.addEventListener('visibilitychange',function(){ if(!document.hidden) load(); });
 </script>
 </body></html>`);
   } catch(e) { res.status(500).send('Lead panel error: ' + e.message); }
@@ -2956,7 +2956,7 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
   }
   function load(){ fetch('/api/tracker-client/'+TOKEN+'/latest-briefs').then(function(r){return r.json();}).then(function(d){ if(d&&d.briefs){ _briefs=d.briefs; render(); } }).catch(function(){}); }
   document.getElementById('bdName').value=_name;
-  load(); setInterval(load,12000);
+  load(); setInterval(function(){ if(!document.hidden) load(); },12000); document.addEventListener('visibilitychange',function(){ if(!document.hidden) load(); });
 </script>
 </body></html>`);
   } catch(e) { res.status(500).send('Board error: ' + e.message); }
@@ -3388,7 +3388,7 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
         });
       }).catch(function(){});
   }
-  setInterval(pollBriefs, 6000);
+  setInterval(function(){ if(!document.hidden) pollBriefs(); }, 6000); document.addEventListener('visibilitychange',function(){ if(!document.hidden) pollBriefs(); });
   pollBriefs();
 
   // Populate the wall on open with the client's existing briefs (newest last → most prominent)
@@ -26272,7 +26272,7 @@ function pollTrackerQueue(){
 }
 // Poll once on load + every 30s
 setTimeout(pollTrackerQueue, 3000);
-setInterval(pollTrackerQueue, 30000);
+setInterval(function(){ if(_trActive()) pollTrackerQueue(); }, 30000);
 
 function importFromWorkflow(){
   try{
@@ -28468,6 +28468,7 @@ async function addPage() {
     // Auto-refresh cycle
     var refreshCount = 0;
     var autoRefresh = setInterval(function() {
+      if (!_trActive()) return;
       refreshCount++;
       loadPages();
       if (refreshCount >= 8) clearInterval(autoRefresh);
@@ -28570,7 +28571,15 @@ if (window.location.search.indexOf('welcome=1') > -1) {
 } else {
   maybeShowWelcome();
 }
-setInterval(loadPages, 120000); // auto-refresh every 2 min
+// ── Idle auto-pause: stop polling after 5 min of no activity (saves Neon), resume on any activity ──
+var _idleMs = 300000, _lastAct = Date.now(), _idleBar = null;
+function _trActive(){ return !document.hidden && (Date.now() - _lastAct < _idleMs); }
+function _trIdleBar(show){ if (show) { if (!_idleBar) { _idleBar = document.createElement('div'); _idleBar.style.cssText = 'position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:#1f2937;color:#e5e7eb;border:1px solid #374151;border-radius:999px;padding:8px 16px;font-size:12px;font-weight:700;z-index:99999;box-shadow:0 8px 24px rgba(0,0,0,.4);cursor:pointer'; _idleBar.textContent = 'Live updates paused \u2014 move or click to resume'; _idleBar.onclick = _trResume; document.body.appendChild(_idleBar); } _idleBar.style.display = 'block'; } else if (_idleBar) { _idleBar.style.display = 'none'; } }
+function _trResume(){ var was = (Date.now() - _lastAct >= _idleMs); _lastAct = Date.now(); _trIdleBar(false); if (was) { try { loadPages(); } catch(e){} } }
+['mousemove','keydown','scroll','click','touchstart'].forEach(function(ev){ document.addEventListener(ev, _trResume, {passive:true}); });
+setInterval(function(){ _trIdleBar(!document.hidden && (Date.now() - _lastAct >= _idleMs)); }, 10000);
+setInterval(function(){ if(_trActive()) loadPages(); }, 120000);
+document.addEventListener('visibilitychange', function(){ if(!document.hidden){ _lastAct=Date.now(); _trIdleBar(false); loadPages(); } }); // auto-refresh, paused when tab hidden or idle
 
   // Live feed polling for this domain
   var _clientPollInterval = null;
@@ -30730,7 +30739,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
                         <div>
                             <h2 style="font-size:1.1rem;font-weight:800;color:#f1f5f9;">Tracker Clients</h2>
-                            <p style="font-size:12px;color:#6b7280;margin-top:2px;">Self-service users registered via the free tracker · <span style="color:#34d399;font-weight:800;letter-spacing:.04em;">BUILD 2026-06-29-wallcap</span></p>
+                            <p style="font-size:12px;color:#6b7280;margin-top:2px;">Self-service users registered via the free tracker · <span style="color:#34d399;font-weight:800;letter-spacing:.04em;">BUILD 2026-06-29-idle</span></p>
                         </div>
                         <div style="display:flex;gap:8px;flex-wrap:wrap;">
                             <button onclick="openNewOwnClient()" class="tr-btn" style="border-color:#4ade80;color:#4ade80;font-weight:700;">+ New Client</button>
@@ -30762,7 +30771,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
             <div id="tab-admin-settings" class="tab-content hidden">
                 <div style="padding:24px;max-width:600px;">
                     <h2 style="font-size:18px;font-weight:800;color:#f1f5f9;margin-bottom:4px;">⚙️ Settings</h2>
-                    <p style="font-size:12px;color:#6b7280;margin-bottom:24px;">Admin settings — stored in database, survive deploys · <span style="color:#34d399;font-weight:800;letter-spacing:.04em;">BUILD 2026-06-29-wallcap</span></p>
+                    <p style="font-size:12px;color:#6b7280;margin-bottom:24px;">Admin settings — stored in database, survive deploys · <span style="color:#34d399;font-weight:800;letter-spacing:.04em;">BUILD 2026-06-29-idle</span></p>
 
                     <div style="background:#0d1117;border:1px solid #1f2937;border-radius:10px;padding:20px;margin-bottom:16px;">
                         <div style="font-size:13px;font-weight:700;color:#f1f5f9;margin-bottom:14px;">📧 Content Engine — Email Settings</div>
