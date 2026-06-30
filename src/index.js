@@ -1,4 +1,4 @@
-console.log('=== CONTENTSCALE BOOT v2026-06-30-lang | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON ===');
+console.log('=== CONTENTSCALE BOOT v2026-06-30-mailbtn | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON ===');
 // CONTENTSCALE SERVER.JS — ELITE EDITION v4 (FIXED v3)
 // ✅ FIX v7: secondary_keywords + related_keywords auto in Analyse JSON + Execute prompt
 // ✅ FIX v7: analysis_data JSONB safe parse in execute-rewrite
@@ -30749,7 +30749,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
                         <div>
                             <h2 style="font-size:1.1rem;font-weight:800;color:#f1f5f9;">Tracker Clients</h2>
-                            <p style="font-size:12px;color:#6b7280;margin-top:2px;">Self-service users registered via the free tracker · <span style="color:#34d399;font-weight:800;letter-spacing:.04em;">BUILD 2026-06-30-lang</span></p>
+                            <p style="font-size:12px;color:#6b7280;margin-top:2px;">Self-service users registered via the free tracker · <span style="color:#34d399;font-weight:800;letter-spacing:.04em;">BUILD 2026-06-30-mailbtn</span></p>
                         </div>
                         <div style="display:flex;gap:8px;flex-wrap:wrap;">
                             <button onclick="openNewOwnClient()" class="tr-btn" style="border-color:#4ade80;color:#4ade80;font-weight:700;">+ New Client</button>
@@ -30781,7 +30781,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
             <div id="tab-admin-settings" class="tab-content hidden">
                 <div style="padding:24px;max-width:600px;">
                     <h2 style="font-size:18px;font-weight:800;color:#f1f5f9;margin-bottom:4px;">⚙️ Settings</h2>
-                    <p style="font-size:12px;color:#6b7280;margin-bottom:24px;">Admin settings — stored in database, survive deploys · <span style="color:#34d399;font-weight:800;letter-spacing:.04em;">BUILD 2026-06-30-lang</span></p>
+                    <p style="font-size:12px;color:#6b7280;margin-bottom:24px;">Admin settings — stored in database, survive deploys · <span style="color:#34d399;font-weight:800;letter-spacing:.04em;">BUILD 2026-06-30-mailbtn</span></p>
 
                     <div style="background:#0d1117;border:1px solid #1f2937;border-radius:10px;padding:20px;margin-bottom:16px;">
                         <div style="font-size:13px;font-weight:700;color:#f1f5f9;margin-bottom:14px;">📧 Content Engine — Email Settings</div>
@@ -37721,8 +37721,7 @@ Return ONLY JSON array (max 5 items): [{"title":"max 6 words","priority":"high"|
               + _recHtml
               + (_moreCount > 0 ? '<div style="font-size:13px;color:#7c3aed;font-weight:700;margin:4px 0 8px;">+ ' + _moreCount + ' more recommendation' + (_moreCount>1?'s':'') + ' in your tracker</div>' : '')
               + '<div style="text-align:center;margin-top:22px;">'
-              + '<a href="' + _viewUrl + '" style="display:inline-block;background:#0f172a;color:#fff;text-decoration:none;font-weight:800;padding:12px 22px;border-radius:10px;margin:4px;">View Brief</a>'
-              + '<a href="' + _trackerUrl + '" style="display:inline-block;background:#7c3aed;color:#fff;text-decoration:none;font-weight:800;padding:12px 22px;border-radius:10px;margin:4px;">Work in Tracker</a>'
+              + '<a href="' + _trackerUrl + '" style="display:inline-block;background:#7c3aed;color:#fff;text-decoration:none;font-weight:800;padding:12px 28px;border-radius:10px;margin:4px;">Open tracker &rarr;</a>'
               + '</div>';
             await notifyClient(
               page.tracker_client_id,
