@@ -1,4 +1,4 @@
-console.log('=== CONTENTSCALE BOOT v2026-06-30-mailbtn | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON ===');
+console.log('=== CONTENTSCALE BOOT v2026-06-30-badgecache | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON ===');
 // CONTENTSCALE SERVER.JS — ELITE EDITION v4 (FIXED v3)
 // ✅ FIX v7: secondary_keywords + related_keywords auto in Analyse JSON + Execute prompt
 // ✅ FIX v7: analysis_data JSONB safe parse in execute-rewrite
@@ -9167,6 +9167,10 @@ try { await pool.query('DELETE FROM campaigns WHERE id = $1', [id]); } catch(e) 
 res.json({ success: true });
 });
 // ── ContentScore Badge API ────────────────────────────────────────────────────
+// In-memory cache so repeated identical badge lookups don't hammer Neon (CU savings).
+// Scores only change on a fresh scan (minutes/hours apart), so a short TTL is safe.
+const _badgeCache = new Map();
+const _BADGE_TTL = 5 * 60 * 1000; // 5 minutes
 app.get('/api/score', async (req, res) => {
 res.setHeader('Access-Control-Allow-Origin', '*');
 // No server-side caching — badge must always show latest score
@@ -9189,6 +9193,12 @@ const norm = normalize(url);
 const domain = norm.split('/')[0];
 const isHomepage = norm === domain;
 
+// ── Cache: serve repeat lookups without touching Neon ──
+const _ckey = norm;
+const _cHit = _badgeCache.get(_ckey);
+if (_cHit && (Date.now() - _cHit.t) < _BADGE_TTL) { return res.json(_cHit.v); }
+const _J = (p) => { _badgeCache.set(_ckey, { t: Date.now(), v: p }); return res.json(p); };
+
 // Build all URL variations the page could be stored as
 const V = [url, url.replace(/\/$/, ''), url.replace(/\/$/, '') + '/'];
 if (/^https:\/\//.test(url)) { V.push(url.replace(/^https/, 'http')); V.push(url.replace(/^https/, 'http').replace(/\/$/, '')); }
@@ -9205,7 +9215,7 @@ const exact = await pool.query(
 );
 if (exact.rows.length) {
   console.log('[badge] exact hit:', url, '→', exact.rows[0].score, '| stored:', exact.rows[0].business_url);
-  return res.json({ success: true, url: exact.rows[0].business_url, score: exact.rows[0].score, last_scanned: exact.rows[0].created_at, source: 'scan_log_exact' });
+  return _J({ success: true, url: exact.rows[0].business_url, score: exact.rows[0].score, last_scanned: exact.rows[0].created_at, source: 'scan_log_exact' });
 }
 
 // ── Step 2: Domain-wide scan_log search with JS-level exact slug matching ──
@@ -9222,7 +9232,7 @@ const match = recent.rows.find(r => {
 });
 if (match && match.score != null) {
   console.log('[badge] slug hit:', url, '→', match.score, '| stored:', match.business_url);
-  return res.json({ success: true, url: match.business_url, score: match.score, last_scanned: match.created_at, source: 'scan_log_slug' });
+  return _J({ success: true, url: match.business_url, score: match.score, last_scanned: match.created_at, source: 'scan_log_slug' });
 }
 
 // ── Step 3: scans table fallback ──
@@ -9239,7 +9249,7 @@ const scansMatch = scansRows.rows.find(r => {
 });
 if (scansMatch && scansMatch.score != null) {
   console.log('[badge] scans hit:', url, '→', scansMatch.score);
-  return res.json({ success: true, url: scansMatch.url, score: scansMatch.score, last_scanned: scansMatch.created_at, source: 'scans_table' });
+  return _J({ success: true, url: scansMatch.url, score: scansMatch.score, last_scanned: scansMatch.created_at, source: 'scans_table' });
 }
 
 // ── Step 4: Leaderboard — only for homepage ──
@@ -9248,14 +9258,14 @@ const lb = await pool.query(`SELECT score, graaf_score, craft_score, technical_s
 const lbMatch = lb.rows.find(r => normalize(r.url) === domain);
 if (lbMatch) {
   console.log('[badge] leaderboard hit:', url, '→', lbMatch.score);
-  return res.json({ success: true, url: lbMatch.url, score: lbMatch.score,
+  return _J({ success: true, url: lbMatch.url, score: lbMatch.score,
     graaf: lbMatch.graaf_score, craft: lbMatch.craft_score, technical: lbMatch.technical_score, source: 'leaderboard' });
 }
 }
 
 // Nothing found
 console.log('[badge] miss:', url, '| norm:', norm);
-res.json({ success: false, error: 'Not scanned yet', hint: 'Scan at app.contentscale.site first' });
+_J({ success: false, error: 'Not scanned yet', hint: 'Scan at app.contentscale.site first' });
 } catch (e) {
 console.error('[badge] error:', e.message, '| url:', url);
 res.status(500).json({ success: false, error: e.message });
@@ -30749,7 +30759,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
                         <div>
                             <h2 style="font-size:1.1rem;font-weight:800;color:#f1f5f9;">Tracker Clients</h2>
-                            <p style="font-size:12px;color:#6b7280;margin-top:2px;">Self-service users registered via the free tracker · <span style="color:#34d399;font-weight:800;letter-spacing:.04em;">BUILD 2026-06-30-mailbtn</span></p>
+                            <p style="font-size:12px;color:#6b7280;margin-top:2px;">Self-service users registered via the free tracker · <span style="color:#34d399;font-weight:800;letter-spacing:.04em;">BUILD 2026-06-30-badgecache</span></p>
                         </div>
                         <div style="display:flex;gap:8px;flex-wrap:wrap;">
                             <button onclick="openNewOwnClient()" class="tr-btn" style="border-color:#4ade80;color:#4ade80;font-weight:700;">+ New Client</button>
@@ -30781,7 +30791,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
             <div id="tab-admin-settings" class="tab-content hidden">
                 <div style="padding:24px;max-width:600px;">
                     <h2 style="font-size:18px;font-weight:800;color:#f1f5f9;margin-bottom:4px;">⚙️ Settings</h2>
-                    <p style="font-size:12px;color:#6b7280;margin-bottom:24px;">Admin settings — stored in database, survive deploys · <span style="color:#34d399;font-weight:800;letter-spacing:.04em;">BUILD 2026-06-30-mailbtn</span></p>
+                    <p style="font-size:12px;color:#6b7280;margin-bottom:24px;">Admin settings — stored in database, survive deploys · <span style="color:#34d399;font-weight:800;letter-spacing:.04em;">BUILD 2026-06-30-badgecache</span></p>
 
                     <div style="background:#0d1117;border:1px solid #1f2937;border-radius:10px;padding:20px;margin-bottom:16px;">
                         <div style="font-size:13px;font-weight:700;color:#f1f5f9;margin-bottom:14px;">📧 Content Engine — Email Settings</div>
