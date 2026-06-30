@@ -1,4 +1,4 @@
-console.log('=== CONTENTSCALE BOOT v2026-06-29-idle | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON ===');
+console.log('=== CONTENTSCALE BOOT v2026-06-29-viewlive | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON ===');
 // CONTENTSCALE SERVER.JS — ELITE EDITION v4 (FIXED v3)
 // ✅ FIX v7: secondary_keywords + related_keywords auto in Analyse JSON + Execute prompt
 // ✅ FIX v7: analysis_data JSONB safe parse in execute-rewrite
@@ -3460,9 +3460,11 @@ app.get('/view/:token', async (req, res) => {
   .more{font-size:12px;color:#a78bfa;font-weight:700;margin-top:6px}
   .card.open .more{display:none}
   .empty{color:#6b7280;font-size:13px;text-align:center;padding:30px}
+  .livedot{display:inline-block;width:7px;height:7px;border-radius:50%;background:#4ade80;margin-right:5px;vertical-align:middle;animation:lp 1.6s ease-in-out infinite}
+  @keyframes lp{0%,100%{opacity:1}50%{opacity:.25}}
 </style></head><body><div class="wrap">
 <div class="hd"><div class="ttl">&#9889; AI Citation Briefs</div><a class="work" href="/track/${req.params.token}">Open tracker</a></div>
-<div class="sub">${domain} &middot; read-only &middot; tap a card to open the brief</div>
+<div class="sub"><span class="livedot"></span>Live &middot; ${domain} &middot; tap a card to open the brief</div>
 <div id="list"><div class="empty">Loading...</div></div>
 </div>
 <script>
@@ -3485,10 +3487,14 @@ function render(briefs){ var L=document.getElementById('list'); if(!briefs||!bri
     var body=''; if(!all.length){ body='<div class="more" style="color:#6b7280">Brief pending next scan.</div>'; }
     else { var head=all.slice(0,5).join(''); var rest=all.slice(5).join(''); var extraCount=ai.length+gs.length-Math.min(5,ai.length+gs.length); body=head+(rest?'<div class="extra">'+rest+'</div>':'')+'<div class="more">Tap to read the full brief'+(extraCount>0?' &middot; +'+extraCount+' more':'')+'</div>'; }
     var date=b.ts?new Date(b.ts).toLocaleDateString('en-GB',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}):'';
-    return '<div class="card"><div class="chd"><div class="url">'+esc(b.url)+'</div>'+(date?'<div class="scanned">Scanned '+date+'</div>':'')+'</div><div class="stats">'+s+'</div>'+body+'</div>';
+    var oid=String(b.page_id||b.url); return '<div class="card'+(_open[oid]?' open':'')+'" data-id="'+esc(oid)+'"><div class="chd"><div class="url">'+esc(b.url)+'</div>'+(date?'<div class="scanned">Scanned '+date+'</div>':'')+'</div><div class="stats">'+s+'</div>'+body+'</div>';
   }).join(''); }
-fetch('/api/tracker-client/'+TOKEN+'/latest-briefs').then(function(r){return r.json();}).then(function(d){ render(d&&d.briefs?d.briefs:[]); }).catch(function(){ document.getElementById('list').innerHTML='<div class="empty">Could not load.</div>'; });
-document.getElementById('list').addEventListener('click', function(e){ var c=e.target.closest('.card'); if(c) c.classList.toggle('open'); });
+var _open={};
+function load(){ fetch('/api/tracker-client/'+TOKEN+'/latest-briefs').then(function(r){return r.json();}).then(function(d){ render(d&&d.briefs?d.briefs:[]); }).catch(function(){ var L=document.getElementById('list'); if(L && (!L.children.length || L.querySelector('.empty'))) L.innerHTML='<div class="empty">Could not load.</div>'; }); }
+load();
+setInterval(function(){ if(!document.hidden) load(); }, 60000);
+document.addEventListener('visibilitychange', function(){ if(!document.hidden) load(); });
+document.getElementById('list').addEventListener('click', function(e){ var c=e.target.closest('.card'); if(!c) return; var id=c.getAttribute('data-id'); if(c.classList.toggle('open')) _open[id]=1; else delete _open[id]; });
 </script></body></html>`);
   } catch(e) { res.status(500).send('error'); }
 });
@@ -30739,7 +30745,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
                         <div>
                             <h2 style="font-size:1.1rem;font-weight:800;color:#f1f5f9;">Tracker Clients</h2>
-                            <p style="font-size:12px;color:#6b7280;margin-top:2px;">Self-service users registered via the free tracker · <span style="color:#34d399;font-weight:800;letter-spacing:.04em;">BUILD 2026-06-29-idle</span></p>
+                            <p style="font-size:12px;color:#6b7280;margin-top:2px;">Self-service users registered via the free tracker · <span style="color:#34d399;font-weight:800;letter-spacing:.04em;">BUILD 2026-06-29-viewlive</span></p>
                         </div>
                         <div style="display:flex;gap:8px;flex-wrap:wrap;">
                             <button onclick="openNewOwnClient()" class="tr-btn" style="border-color:#4ade80;color:#4ade80;font-weight:700;">+ New Client</button>
@@ -30771,7 +30777,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
             <div id="tab-admin-settings" class="tab-content hidden">
                 <div style="padding:24px;max-width:600px;">
                     <h2 style="font-size:18px;font-weight:800;color:#f1f5f9;margin-bottom:4px;">⚙️ Settings</h2>
-                    <p style="font-size:12px;color:#6b7280;margin-bottom:24px;">Admin settings — stored in database, survive deploys · <span style="color:#34d399;font-weight:800;letter-spacing:.04em;">BUILD 2026-06-29-idle</span></p>
+                    <p style="font-size:12px;color:#6b7280;margin-bottom:24px;">Admin settings — stored in database, survive deploys · <span style="color:#34d399;font-weight:800;letter-spacing:.04em;">BUILD 2026-06-29-viewlive</span></p>
 
                     <div style="background:#0d1117;border:1px solid #1f2937;border-radius:10px;padding:20px;margin-bottom:16px;">
                         <div style="font-size:13px;font-weight:700;color:#f1f5f9;margin-bottom:14px;">📧 Content Engine — Email Settings</div>
