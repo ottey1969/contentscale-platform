@@ -1,4 +1,4 @@
-console.log('=== CONTENTSCALE BOOT v2026-06-29-wall3col | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON ===');
+console.log('=== CONTENTSCALE BOOT v2026-06-29-livewall3 | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON ===');
 // CONTENTSCALE SERVER.JS — ELITE EDITION v4 (FIXED v3)
 // ✅ FIX v7: secondary_keywords + related_keywords auto in Analyse JSON + Execute prompt
 // ✅ FIX v7: analysis_data JSONB safe parse in execute-rewrite
@@ -3038,7 +3038,7 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
 .bw-title-row{max-width:1600px;margin:0 auto 18px;display:flex;align-items:center;gap:10px;color:#a78bfa;font-size:12px;font-weight:800;letter-spacing:.12em;text-transform:uppercase}
 .bw-wrap{display:flex;gap:16px;align-items:flex-start;max-width:1600px;margin:0 auto}
 .bw-side{flex:1;display:flex;flex-direction:column;gap:16px;min-width:0}
-.bw-feature{flex:1.7;min-width:0}
+.bw-feature{flex:1.7;min-width:0;display:flex;flex-direction:column;gap:16px}
 .bw-card{background:#0d1117;border:1px solid #1f2937;border-radius:16px;padding:18px;box-shadow:0 16px 40px rgba(0,0,0,.45)}
 .bw-feature .bw-card{border-color:#7c3aed;box-shadow:0 0 0 1px rgba(124,58,237,.3),0 18px 50px rgba(124,58,237,.22)}
 .bw-url{font-size:14px;font-weight:800;color:#f1f5f9;word-break:break-all;line-height:1.4}
@@ -3245,11 +3245,11 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
     var cnt = document.getElementById('bwLiveCount'); if (cnt) cnt.textContent = _wallBriefs.length + ' brief' + (_wallBriefs.length>1?'s':'') + ' - newest in the middle';
     var feature = _wallBriefs[0];
     var rest = _wallBriefs.slice(1);
-    var left=[], right=[];
-    rest.forEach(function(d,i){ (i%2===0?left:right).push(d); });
+    var left=[], mid=[], right=[];
+    rest.forEach(function(d,i){ var m=i%3; if(m===0) left.push(d); else if(m===1) right.push(d); else mid.push(d); });
     el.innerHTML = '<div class="bw-wrap">'
       + '<div class="bw-side">'+left.map(function(d){return _bwCardL(d,false);}).join('')+'</div>'
-      + '<div class="bw-feature">'+_bwCardL(feature,true)+'</div>'
+      + '<div class="bw-feature">'+_bwCardL(feature,true)+mid.map(function(d){return _bwCardL(d,false);}).join('')+'</div>'
       + '<div class="bw-side">'+right.map(function(d){return _bwCardL(d,false);}).join('')+'</div>'
       + '</div>';
   }
@@ -30749,7 +30749,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
                         <div>
                             <h2 style="font-size:1.1rem;font-weight:800;color:#f1f5f9;">Tracker Clients</h2>
-                            <p style="font-size:12px;color:#6b7280;margin-top:2px;">Self-service users registered via the free tracker · <span style="color:#34d399;font-weight:800;letter-spacing:.04em;">BUILD 2026-06-29-wall3col</span></p>
+                            <p style="font-size:12px;color:#6b7280;margin-top:2px;">Self-service users registered via the free tracker · <span style="color:#34d399;font-weight:800;letter-spacing:.04em;">BUILD 2026-06-29-livewall3</span></p>
                         </div>
                         <div style="display:flex;gap:8px;flex-wrap:wrap;">
                             <button onclick="openNewOwnClient()" class="tr-btn" style="border-color:#4ade80;color:#4ade80;font-weight:700;">+ New Client</button>
@@ -30781,7 +30781,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
             <div id="tab-admin-settings" class="tab-content hidden">
                 <div style="padding:24px;max-width:600px;">
                     <h2 style="font-size:18px;font-weight:800;color:#f1f5f9;margin-bottom:4px;">⚙️ Settings</h2>
-                    <p style="font-size:12px;color:#6b7280;margin-bottom:24px;">Admin settings — stored in database, survive deploys · <span style="color:#34d399;font-weight:800;letter-spacing:.04em;">BUILD 2026-06-29-wall3col</span></p>
+                    <p style="font-size:12px;color:#6b7280;margin-bottom:24px;">Admin settings — stored in database, survive deploys · <span style="color:#34d399;font-weight:800;letter-spacing:.04em;">BUILD 2026-06-29-livewall3</span></p>
 
                     <div style="background:#0d1117;border:1px solid #1f2937;border-radius:10px;padding:20px;margin-bottom:16px;">
                         <div style="font-size:13px;font-weight:700;color:#f1f5f9;margin-bottom:14px;">📧 Content Engine — Email Settings</div>
