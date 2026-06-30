@@ -1,4 +1,4 @@
-console.log('=== CONTENTSCALE BOOT v2026-06-30-badgecache | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON ===');
+console.log('=== CONTENTSCALE BOOT v2026-06-30-badgefrozen | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON ===');
 // CONTENTSCALE SERVER.JS — ELITE EDITION v4 (FIXED v3)
 // ✅ FIX v7: secondary_keywords + related_keywords auto in Analyse JSON + Execute prompt
 // ✅ FIX v7: analysis_data JSONB safe parse in execute-rewrite
@@ -789,6 +789,14 @@ next();
 });
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+
+// ── Badge score cache ─────────────────────────────────────────────────────────
+// The badge holds the LAST scan score (frozen). It is served from memory so it
+// never touches Neon between scans. Whenever a scan writes a new score, the cache
+// is cleared (see _badgeCache.clear() at the scan-write sites) so the badge picks
+// up the fresh score on the next load and then stays frozen again.
+const _badgeCache = new Map();
+const _BADGE_TTL = 12 * 60 * 60 * 1000; // 12h safety fallback; real refresh is scan-driven
 
 // ── Public sitemap + robots (registered BEFORE express.static so it always wins) ──
 const SITEMAP_PATHS = ['/', '/blog', '/tools', '/handleiding', '/seo-audit']; // edit: public pages only, keep gated tools out
@@ -6200,6 +6208,7 @@ reportUrl
 ]
 );
 const scanLogId = insertResult.rows[0]?.id || null;
+_badgeCache.clear(); // fresh scan -> badge refreshes on next load
 // Update user's last scanned URL
 if (user_id && business_url) {
   pool.query('UPDATE users SET last_scanned_url=$1, last_seen_at=NOW() WHERE id=$2', [business_url.substring(0,500), user_id]).catch(()=>{});
@@ -6768,6 +6777,7 @@ headCount, footerCount, doctypeCount, htmlTagCount, bodyCount, csNavCount, csBad
         `INSERT INTO scan_log (business_url, score, source, created_at) VALUES ($1, $2, 'paste', NOW())`,
         [scanUrl, result.score]
       ).catch(err => console.error('[paste scan_log] insert failed:', err.message, '| url:', scanUrl));
+        _badgeCache.clear();
     }
   } catch (error) {
     console.error('❌ scan/paste error:', error.message);
@@ -7430,6 +7440,7 @@ recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', descriptio
                    `INSERT INTO scan_log (business_url, score, source, created_at) VALUES ($1, $2, 'bulk', NOW())`,
                    [result.url, result.score]
                  ).catch(err => console.error('[bulk scan_log] insert failed:', err.message, '| url:', result.url));
+                 _badgeCache.clear();
                }
                job.done++;
                if (!result || !result.success) job.failed++;
@@ -7641,6 +7652,7 @@ recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', descriptio
                    `INSERT INTO scan_log (business_url, score, source, created_at) VALUES ($1, $2, 'single', NOW())`,
                    [scanUrl, result.score]
                  ).catch(err => console.error('[scan_log] insert failed:', err.message, '| url:', scanUrl));
+                 _badgeCache.clear();
                }
                } catch (error) {
                console.error('❌ Scan error (outer):', error.message, error.stack);
@@ -8929,6 +8941,7 @@ if (result && result.success && pool) {
     `INSERT INTO scan_log (business_url, score, source, created_at) VALUES ($1, $2, 'sitemap', NOW())`,
     [result.url, result.score]
   ).catch(err => console.error('[sitemap scan_log] insert failed:', err.message, '| url:', result.url));
+  _badgeCache.clear();
 }
 job.done++;
 await delay();
@@ -9167,10 +9180,7 @@ try { await pool.query('DELETE FROM campaigns WHERE id = $1', [id]); } catch(e) 
 res.json({ success: true });
 });
 // ── ContentScore Badge API ────────────────────────────────────────────────────
-// In-memory cache so repeated identical badge lookups don't hammer Neon (CU savings).
-// Scores only change on a fresh scan (minutes/hours apart), so a short TTL is safe.
-const _badgeCache = new Map();
-const _BADGE_TTL = 5 * 60 * 1000; // 5 minutes
+// Served from _badgeCache (defined near the top) — frozen between scans, cleared on scan.
 app.get('/api/score', async (req, res) => {
 res.setHeader('Access-Control-Allow-Origin', '*');
 // No server-side caching — badge must always show latest score
@@ -30759,7 +30769,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
                         <div>
                             <h2 style="font-size:1.1rem;font-weight:800;color:#f1f5f9;">Tracker Clients</h2>
-                            <p style="font-size:12px;color:#6b7280;margin-top:2px;">Self-service users registered via the free tracker · <span style="color:#34d399;font-weight:800;letter-spacing:.04em;">BUILD 2026-06-30-badgecache</span></p>
+                            <p style="font-size:12px;color:#6b7280;margin-top:2px;">Self-service users registered via the free tracker · <span style="color:#34d399;font-weight:800;letter-spacing:.04em;">BUILD 2026-06-30-badgefrozen</span></p>
                         </div>
                         <div style="display:flex;gap:8px;flex-wrap:wrap;">
                             <button onclick="openNewOwnClient()" class="tr-btn" style="border-color:#4ade80;color:#4ade80;font-weight:700;">+ New Client</button>
@@ -30791,7 +30801,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
             <div id="tab-admin-settings" class="tab-content hidden">
                 <div style="padding:24px;max-width:600px;">
                     <h2 style="font-size:18px;font-weight:800;color:#f1f5f9;margin-bottom:4px;">⚙️ Settings</h2>
-                    <p style="font-size:12px;color:#6b7280;margin-bottom:24px;">Admin settings — stored in database, survive deploys · <span style="color:#34d399;font-weight:800;letter-spacing:.04em;">BUILD 2026-06-30-badgecache</span></p>
+                    <p style="font-size:12px;color:#6b7280;margin-bottom:24px;">Admin settings — stored in database, survive deploys · <span style="color:#34d399;font-weight:800;letter-spacing:.04em;">BUILD 2026-06-30-badgefrozen</span></p>
 
                     <div style="background:#0d1117;border:1px solid #1f2937;border-radius:10px;padding:20px;margin-bottom:16px;">
                         <div style="font-size:13px;font-weight:700;color:#f1f5f9;margin-bottom:14px;">📧 Content Engine — Email Settings</div>
