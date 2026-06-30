@@ -1,4 +1,4 @@
-console.log('=== CONTENTSCALE BOOT v2026-06-29-walldot | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON ===');
+console.log('=== CONTENTSCALE BOOT v2026-06-29-wall3col | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON ===');
 // CONTENTSCALE SERVER.JS — ELITE EDITION v4 (FIXED v3)
 // ✅ FIX v7: secondary_keywords + related_keywords auto in Analyse JSON + Execute prompt
 // ✅ FIX v7: analysis_data JSONB safe parse in execute-rewrite
@@ -3445,7 +3445,7 @@ app.get('/view/:token', async (req, res) => {
   @keyframes lp{0%,100%{opacity:1}50%{opacity:.25}}
   .bw-wrap{display:flex;gap:14px;align-items:flex-start}
   .bw-side{flex:1;display:flex;flex-direction:column;gap:14px;min-width:0}
-  .bw-feature{flex:1.7;min-width:0}
+  .bw-feature{flex:1.7;min-width:0;display:flex;flex-direction:column;gap:14px}
   .card{background:#0d1117;border:1px solid #1f2937;border-radius:14px;padding:16px;cursor:pointer;transition:border-color .15s,transform .15s}
   .card:hover{border-color:#7c3aed;transform:translateY(-2px)}
   .bw-feature>.card{border-color:#7c3aed;box-shadow:0 0 0 1px rgba(124,58,237,.25),0 10px 36px rgba(124,58,237,.18)}
@@ -3492,8 +3492,8 @@ function card(b,isFeature){ var oid=String(b.page_id||b.url);
   return '<div class="card'+(_open[oid]?' open':'')+'" data-id="'+esc(oid)+'">'+head+'<div class="stats">'+chips(b)+'</div>'+body+'</div>'; }
 function render(briefs){ var L=document.getElementById('list'); if(!briefs||!briefs.length){ L.innerHTML='<div class="empty">No briefs yet.</div>'; return; }
   briefs=briefs.slice().sort(function(a,b){ return (new Date(b.ts||0))-(new Date(a.ts||0)); });
-  var feature=briefs[0], rest=briefs.slice(1), left=[], right=[]; rest.forEach(function(p,i){ (i%2===0?left:right).push(p); });
-  L.innerHTML='<div class="bw-wrap"><div class="bw-side">'+left.map(function(p){return card(p,false);}).join('')+'</div><div class="bw-feature">'+card(feature,true)+'</div><div class="bw-side">'+right.map(function(p){return card(p,false);}).join('')+'</div></div>'; }
+  var feature=briefs[0], rest=briefs.slice(1), left=[], mid=[], right=[]; rest.forEach(function(p,i){ var m=i%3; if(m===0) left.push(p); else if(m===1) right.push(p); else mid.push(p); });
+  L.innerHTML='<div class="bw-wrap"><div class="bw-side">'+left.map(function(p){return card(p,false);}).join('')+'</div><div class="bw-feature">'+card(feature,true)+mid.map(function(p){return card(p,false);}).join('')+'</div><div class="bw-side">'+right.map(function(p){return card(p,false);}).join('')+'</div></div>'; }
 function load(){ fetch('/api/tracker-client/'+TOKEN+'/latest-briefs').then(function(r){return r.json();}).then(function(d){ render(d&&d.briefs?d.briefs:[]); }).catch(function(){ var L=document.getElementById('list'); if(L && (!L.children.length || L.querySelector('.empty'))) L.innerHTML='<div class="empty">Could not load.</div>'; }); }
 load();
 setInterval(function(){ if(!document.hidden) load(); }, 60000);
@@ -27256,7 +27256,7 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
     <style>
       .bw-wrap{display:flex;gap:14px;align-items:flex-start;}
       .bw-side{flex:1;display:flex;flex-direction:column;gap:14px;min-width:0;}
-      .bw-feature{flex:1.7;min-width:0;}
+      .bw-feature{flex:1.7;min-width:0;display:flex;flex-direction:column;gap:14px;}
       .bw-card{background:#0d1117;border:1px solid #1f2937;border-radius:14px;padding:16px;cursor:pointer;transition:border-color .15s,transform .15s,box-shadow .15s;}
       .bw-card:hover{border-color:#7c3aed;transform:translateY(-2px);}
       .bw-feature .bw-card{border-color:#7c3aed;box-shadow:0 0 0 1px rgba(124,58,237,.25),0 10px 36px rgba(124,58,237,.18);}
@@ -28037,11 +28037,11 @@ function renderBriefWall(){
   var cnt=document.getElementById('bwCount'); if(cnt) cnt.textContent = withB.length+' brief'+(withB.length>1?'s':'')+' \u00b7 newest in the middle';
   var feature = withB[0];
   var rest = withB.slice(1);
-  var left=[], right=[];
-  rest.forEach(function(p,i){ (i%2===0?left:right).push(p); });
+  var left=[], mid=[], right=[];
+  rest.forEach(function(p,i){ var m=i%3; if(m===0) left.push(p); else if(m===1) right.push(p); else mid.push(p); });
   wall.innerHTML = '<div class="bw-wrap">'
     + '<div class="bw-side">'+left.map(function(p){return _bwCard(p,false);}).join('')+'</div>'
-    + '<div class="bw-feature">'+_bwCard(feature,true)+'</div>'
+    + '<div class="bw-feature">'+_bwCard(feature,true)+mid.map(function(p){return _bwCard(p,false);}).join('')+'</div>'
     + '<div class="bw-side">'+right.map(function(p){return _bwCard(p,false);}).join('')+'</div>'
     + '</div>';
 }
@@ -30749,7 +30749,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
                         <div>
                             <h2 style="font-size:1.1rem;font-weight:800;color:#f1f5f9;">Tracker Clients</h2>
-                            <p style="font-size:12px;color:#6b7280;margin-top:2px;">Self-service users registered via the free tracker · <span style="color:#34d399;font-weight:800;letter-spacing:.04em;">BUILD 2026-06-29-walldot</span></p>
+                            <p style="font-size:12px;color:#6b7280;margin-top:2px;">Self-service users registered via the free tracker · <span style="color:#34d399;font-weight:800;letter-spacing:.04em;">BUILD 2026-06-29-wall3col</span></p>
                         </div>
                         <div style="display:flex;gap:8px;flex-wrap:wrap;">
                             <button onclick="openNewOwnClient()" class="tr-btn" style="border-color:#4ade80;color:#4ade80;font-weight:700;">+ New Client</button>
@@ -30781,7 +30781,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
             <div id="tab-admin-settings" class="tab-content hidden">
                 <div style="padding:24px;max-width:600px;">
                     <h2 style="font-size:18px;font-weight:800;color:#f1f5f9;margin-bottom:4px;">⚙️ Settings</h2>
-                    <p style="font-size:12px;color:#6b7280;margin-bottom:24px;">Admin settings — stored in database, survive deploys · <span style="color:#34d399;font-weight:800;letter-spacing:.04em;">BUILD 2026-06-29-walldot</span></p>
+                    <p style="font-size:12px;color:#6b7280;margin-bottom:24px;">Admin settings — stored in database, survive deploys · <span style="color:#34d399;font-weight:800;letter-spacing:.04em;">BUILD 2026-06-29-wall3col</span></p>
 
                     <div style="background:#0d1117;border:1px solid #1f2937;border-radius:10px;padding:20px;margin-bottom:16px;">
                         <div style="font-size:13px;font-weight:700;color:#f1f5f9;margin-bottom:14px;">📧 Content Engine — Email Settings</div>
