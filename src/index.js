@@ -1,4 +1,4 @@
-console.log('=== CONTENTSCALE BOOT v2026-06-29-tgscan | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON ===');
+console.log('=== CONTENTSCALE BOOT v2026-06-29-graaffix | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON ===');
 // CONTENTSCALE SERVER.JS — ELITE EDITION v4 (FIXED v3)
 // ✅ FIX v7: secondary_keywords + related_keywords auto in Analyse JSON + Execute prompt
 // ✅ FIX v7: analysis_data JSONB safe parse in execute-rewrite
@@ -3425,6 +3425,73 @@ app.get('/track/:token/page/:pageId/history', async (req, res) => {
       series: sr.rows.map(function(r){ return { t: r.checked_at, pos: r.google_position != null ? Number(r.google_position) : null, impr: r.google_impressions, clicks: r.google_clicks, score: r.score }; })
     });
   } catch(e) { res.status(500).json({ ok:false, error: e.message }); }
+});
+
+// ── Read-only "viewer" page (TV view): Live-Brief-Wall design, click a card to open the full brief ──
+app.get('/view/:token', async (req, res) => {
+  try {
+    const cr = await pool.query('SELECT domain FROM tracker_clients WHERE token=$1', [req.params.token]);
+    if (!cr.rows.length) return res.status(404).send('<h1>Not found</h1>');
+    const domain = cr.rows[0].domain || '';
+    res.send(`<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Brief — ${domain}</title>
+<style>
+  body{margin:0;background:#070710;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif}
+  .wrap{max-width:760px;margin:0 auto;padding:18px 14px 60px}
+  .hd{display:flex;justify-content:space-between;align-items:center;gap:12px}
+  .ttl{font-size:13px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#fbbf24}
+  .work{display:inline-block;background:#7c3aed;color:#fff;text-decoration:none;font-weight:800;padding:8px 14px;border-radius:9px;font-size:12px;white-space:nowrap}
+  .sub{font-size:11px;color:#6b7280;margin:4px 0 16px}
+  .card{background:#0d1117;border:1px solid #1f2937;border-radius:14px;overflow:hidden;margin-bottom:14px;cursor:pointer;transition:border-color .2s}
+  .card:hover{border-color:#374151}
+  .card::before{content:'';display:block;height:3px;background:linear-gradient(90deg,#7c3aed,#4ade80,#fbbf24,#ef4444);opacity:.6}
+  .chd{padding:14px 18px 8px}
+  .url{font-size:13px;font-weight:800;color:#f1f5f9;word-break:break-all}
+  .scanned{font-size:11px;color:#4b5563;margin-top:3px}
+  .stats{padding:10px 18px;display:flex;gap:8px;flex-wrap:wrap}
+  .stat{background:#111827;border:1px solid #1f2937;border-radius:8px;padding:8px 12px;text-align:center;min-width:66px}
+  .stat-val{font-size:16px;font-weight:800}
+  .stat-lbl{font-size:9px;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;margin-top:2px}
+  .grp{font-size:9px;text-transform:uppercase;letter-spacing:.06em;font-weight:800;padding:6px 18px 0}
+  .rec{border-left:3px solid #7c3aed;padding:1px 0 1px 12px;margin:9px 18px}
+  .rt{font-size:14px;font-weight:800;color:#f1f5f9}
+  .rb{font-size:12px;color:#9ca3af;line-height:1.55;margin-top:4px;display:none}
+  .card.open .rb{display:block}
+  .extra{display:none}
+  .card.open .extra{display:block}
+  .more{font-size:12px;color:#a78bfa;font-weight:700;padding:2px 18px 14px}
+  .card.open .more{display:none}
+  .empty{color:#6b7280;font-size:13px;text-align:center;padding:30px}
+</style></head><body><div class="wrap">
+<div class="hd"><div class="ttl">&#9889; AI Citation Briefs</div><a class="work" href="/track/${req.params.token}">Open tracker</a></div>
+<div class="sub">${domain} &middot; read-only &middot; tap a card to open the brief</div>
+<div id="list"><div class="empty">Loading...</div></div>
+</div>
+<script>
+var TOKEN='${req.params.token}';
+function esc(s){ return String(s==null?'':s).replace(/[<>&]/g,function(c){return {'<':'&lt;','>':'&gt;','&':'&amp;'}[c]; }); }
+function strip(s){ return String(s==null?'':s).replace(/<[^>]+>/g,' ').trim(); }
+function stat(val,lbl,color){ return '<div class="stat"><div class="stat-val" style="color:'+color+'">'+val+'</div><div class="stat-lbl">'+lbl+'</div></div>'; }
+function recItems(arr,color){ return (arr||[]).map(function(p){ var t=p.title||p.h2||p.heading||'Recommendation'; var b=strip(p.action||p.passage||p.body||p.content||p.text||''); return '<div class="rec" style="border-color:'+color+'"><div class="rt">'+esc(t)+'</div>'+(b?'<div class="rb">'+esc(b)+'</div>':'')+'</div>'; }); }
+function render(briefs){ var L=document.getElementById('list'); if(!briefs||!briefs.length){ L.innerHTML='<div class="empty">No briefs yet.</div>'; return; }
+  L.innerHTML=briefs.map(function(b){
+    var pos=b.position; var posC=(pos&&pos<=3)?'#4ade80':(pos&&pos<=10)?'#fbbf24':'#f87171';
+    var s=stat(pos?('#'+pos):'N/A','Position',posC)
+      +stat(b.aio_cited?'YES':'NO','AIO',b.aio_cited?'#4ade80':'#4b5563')
+      +stat(b.perp_cited?'YES':'NO','Perplexity',b.perp_cited?'#a78bfa':'#4b5563')
+      +stat(b.bing_cited?'YES':'NO','Copilot',b.bing_cited?'#60a5fa':'#4b5563')
+      +stat(b.brave_cited?'YES':'NO','Claude',b.brave_cited?'#f87171':'#4b5563')
+      +(b.brief_after_score!=null?stat(b.brief_after_score,'GRAAF','#fbbf24'):(b.score?stat(b.score,'GRAAF','#fbbf24'):''));
+    var ai=recItems(b.passages,'#a78bfa'); var gs=recItems(b.gsc_brief,'#a3e635');
+    var all=[]; if(ai.length){ all.push('<div class="grp" style="color:#a78bfa">AI citations</div>'); all=all.concat(ai); } if(gs.length){ all.push('<div class="grp" style="color:#a3e635">GSC ranking</div>'); all=all.concat(gs); }
+    var body=''; if(!all.length){ body='<div class="more" style="color:#6b7280">Brief pending next scan.</div>'; }
+    else { var head=all.slice(0,5).join(''); var rest=all.slice(5).join(''); var extraCount=ai.length+gs.length-Math.min(5,ai.length+gs.length); body=head+(rest?'<div class="extra">'+rest+'</div>':'')+'<div class="more">Tap to read the full brief'+(extraCount>0?' &middot; +'+extraCount+' more':'')+'</div>'; }
+    var date=b.ts?new Date(b.ts).toLocaleDateString('en-GB',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}):'';
+    return '<div class="card"><div class="chd"><div class="url">'+esc(b.url)+'</div>'+(date?'<div class="scanned">Scanned '+date+'</div>':'')+'</div><div class="stats">'+s+'</div>'+body+'</div>';
+  }).join(''); }
+fetch('/api/tracker-client/'+TOKEN+'/latest-briefs').then(function(r){return r.json();}).then(function(d){ render(d&&d.briefs?d.briefs:[]); }).catch(function(){ document.getElementById('list').innerHTML='<div class="empty">Could not load.</div>'; });
+document.getElementById('list').addEventListener('click', function(e){ var c=e.target.closest('.card'); if(c) c.classList.toggle('open'); });
+</script></body></html>`);
+  } catch(e) { res.status(500).send('error'); }
 });
 
 app.get('/track/:token', async (req, res) => {
@@ -27919,7 +27986,7 @@ function _bwChips(bd){
     + chip(bd.perp_cited?'YES':'NO','Perplexity',bd.perp_cited?'#4ade80':'#6b7280')
     + chip(bd.bing_cited?'YES':'NO','Copilot',bd.bing_cited?'#4ade80':'#6b7280')
     + chip(bd.brave_cited?'YES':'NO','Claude',bd.brave_cited?'#4ade80':'#6b7280')
-    + chip(bd.score?bd.score:'\u2014','GRAAF',bd.score?'#a78bfa':'#6b7280')
+    + (bd.score ? chip(bd.score,'GRAAF','#a78bfa') : '')
     + '</div>';
 }
 function _bwRecs(bd, limit){
@@ -30664,7 +30731,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
                         <div>
                             <h2 style="font-size:1.1rem;font-weight:800;color:#f1f5f9;">Tracker Clients</h2>
-                            <p style="font-size:12px;color:#6b7280;margin-top:2px;">Self-service users registered via the free tracker · <span style="color:#34d399;font-weight:800;letter-spacing:.04em;">BUILD 2026-06-29-tgscan</span></p>
+                            <p style="font-size:12px;color:#6b7280;margin-top:2px;">Self-service users registered via the free tracker · <span style="color:#34d399;font-weight:800;letter-spacing:.04em;">BUILD 2026-06-29-graaffix</span></p>
                         </div>
                         <div style="display:flex;gap:8px;flex-wrap:wrap;">
                             <button onclick="openNewOwnClient()" class="tr-btn" style="border-color:#4ade80;color:#4ade80;font-weight:700;">+ New Client</button>
@@ -30696,7 +30763,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
             <div id="tab-admin-settings" class="tab-content hidden">
                 <div style="padding:24px;max-width:600px;">
                     <h2 style="font-size:18px;font-weight:800;color:#f1f5f9;margin-bottom:4px;">⚙️ Settings</h2>
-                    <p style="font-size:12px;color:#6b7280;margin-bottom:24px;">Admin settings — stored in database, survive deploys · <span style="color:#34d399;font-weight:800;letter-spacing:.04em;">BUILD 2026-06-29-tgscan</span></p>
+                    <p style="font-size:12px;color:#6b7280;margin-bottom:24px;">Admin settings — stored in database, survive deploys · <span style="color:#34d399;font-weight:800;letter-spacing:.04em;">BUILD 2026-06-29-graaffix</span></p>
 
                     <div style="background:#0d1117;border:1px solid #1f2937;border-radius:10px;padding:20px;margin-bottom:16px;">
                         <div style="font-size:13px;font-weight:700;color:#f1f5f9;margin-bottom:14px;">📧 Content Engine — Email Settings</div>
@@ -36625,10 +36692,12 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
     const _shouldHaveGsc = (page.gsc_impressions || 0) > 0;
     const hasCachedBrief = _cachedItems.length > 0 && page.brief_check_count > 0 && (!_shouldHaveGsc || _cachedGsc.length > 0);
     const skipGemini = !resultsChanged && hasCachedBrief;
+    // Email/notify only on a REAL change (position/AIO/citations). Regenerating a missing GSC brief
+    // when results are unchanged must NOT trigger an email — otherwise self-heal = spam.
+    snapshot._unchanged = !resultsChanged;
     if (skipGemini) {
       snapshot.recommendations = _cachedItems;
       if (_cachedGsc.length) snapshot.gsc_brief = _cachedGsc;
-      snapshot._unchanged = true;
       _trSetStep(pageId, 'recommendations', 'done', '✅ Results unchanged — using cached Citation Brief (saves API call)');
       console.log('[tracker] Gemini skipped for page', pageId, '— results unchanged');
     } else
@@ -37605,27 +37674,39 @@ Return ONLY JSON array (max 5 items): [{"title":"max 6 words","priority":"high"|
           const _items = Array.isArray(brief2.items) ? brief2.items : [];
           if (_items.length && !snapshot._unchanged) {
             const _esc = s => String(s==null?'':s).replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
-            const _recHtml = _items.map(it => {
-              const _title = it.h2 || it.title || it.heading || it.action || 'Recommendation';
-              const _body  = it.body || it.content || it.text || it.detail || '';
-              const _why   = it.reason || it.why || it.impact || it.rationale || '';
-              return '<div style="border-left:3px solid #7c3aed;padding:4px 0 4px 14px;margin-bottom:18px;">'
-                + '<div style="font-size:14px;font-weight:800;color:#0f172a;margin-bottom:6px;">' + _esc(_title) + '</div>'
-                + (_body ? '<div style="font-size:13px;color:#374151;line-height:1.65;">' + _esc(_body) + '</div>' : '')
-                + (_why ? '<div style="font-size:12px;color:#7c3aed;font-style:italic;margin-top:6px;line-height:1.5;">' + _esc(_why) + '</div>' : '')
+            const _top = _items.slice(0, 3);
+            const _gscCount = Array.isArray(snapshot.gsc_brief) ? snapshot.gsc_brief.length : 0;
+            const _moreCount = Math.max(0, _items.length - _top.length) + _gscCount;
+            const _recHtml = _top.map(it => {
+              const _title = it.title || it.h2 || it.heading || 'Recommendation';
+              let _body = it.action || it.passage || it.body || it.content || it.text || it.detail || '';
+              _body = String(_body).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+              if (_body.length > 150) _body = _body.slice(0, 150).replace(/\s+\S*$/, '') + '\u2026';
+              return '<div style="border-left:3px solid #7c3aed;padding:2px 0 2px 14px;margin-bottom:16px;">'
+                + '<div style="font-size:14px;font-weight:800;color:#0f172a;margin-bottom:4px;">' + _esc(_title) + '</div>'
+                + (_body ? '<div style="font-size:13px;color:#374151;line-height:1.6;">' + _esc(_body) + '</div>' : '')
                 + '</div>';
             }).join('');
+            const _statusBits = ['Position ' + _esc(pos2 || 'unranked'), 'AIO ' + (aio2?'\u2713':'\u2717'), 'Perplexity ' + (perp2?'\u2713':'\u2717'), 'Copilot ' + (bing2?'\u2713':'\u2717'), 'Claude ' + (brave2?'\u2713':'\u2717')];
+            if (score2) _statusBits.push('GRAAF ' + _esc(score2) + '/100');
+            const _trackerUrl = 'https://app.contentscale.site/track/' + (_clientToken || '');
+            const _viewUrl = 'https://app.contentscale.site/view/' + (_clientToken || '');
             const _briefHtml =
-              '<div style="font-size:13px;color:#64748b;margin-bottom:6px;">AI Citation Brief — fresh scan</div>'
+              '<div style="font-size:13px;color:#64748b;margin-bottom:6px;">AI Citation Brief \u2014 fresh scan</div>'
               + '<div style="font-size:16px;font-weight:800;color:#0f172a;margin-bottom:4px;word-break:break-all;">' + _esc(pageUrl) + '</div>'
-              + '<div style="font-size:12px;color:#64748b;margin-bottom:20px;">Position ' + _esc(pos2 || '—')
-              + ' · AIO ' + (aio2?'✓':'✗') + ' · Perplexity ' + (perp2?'✓':'✗') + ' · Score ' + _esc(score2 || '—') + '/100</div>'
-              + _recHtml;
+              + '<div style="font-size:12px;color:#64748b;margin-bottom:20px;">' + _statusBits.join(' \u00b7 ') + '</div>'
+              + _recHtml
+              + (_moreCount > 0 ? '<div style="font-size:13px;color:#7c3aed;font-weight:700;margin:4px 0 8px;">+ ' + _moreCount + ' more recommendation' + (_moreCount>1?'s':'') + ' in your tracker</div>' : '')
+              + '<div style="text-align:center;margin-top:22px;">'
+              + '<a href="' + _viewUrl + '" style="display:inline-block;background:#0f172a;color:#fff;text-decoration:none;font-weight:800;padding:12px 22px;border-radius:10px;margin:4px;">View Brief</a>'
+              + '<a href="' + _trackerUrl + '" style="display:inline-block;background:#7c3aed;color:#fff;text-decoration:none;font-weight:800;padding:12px 22px;border-radius:10px;margin:4px;">Work in Tracker</a>'
+              + '</div>';
             await notifyClient(
               page.tracker_client_id,
-              'New AI Citation Brief — ' + (domain2 || pageUrl),
+              'New AI Citation Brief \u2014 ' + (domain2 || pageUrl),
               _briefHtml,
-              '🎯 New AI Citation Brief ready for ' + pageUrl
+              '\ud83c\udfaf New AI Citation Brief ready for ' + pageUrl,
+              true
             ).catch(e => console.warn('[brief-email]', e.message));
           }
         } catch(emailErr) { console.warn('[brief-email]', emailErr.message); }
