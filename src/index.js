@@ -1,4 +1,4 @@
-console.log('=== CONTENTSCALE BOOT v2026-07-01-coalesce | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON ===');
+console.log('=== CONTENTSCALE BOOT v2026-07-01-ownskip | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON ===');
 // CONTENTSCALE SERVER.JS — ELITE EDITION v4 (FIXED v3)
 // ✅ FIX v7: secondary_keywords + related_keywords auto in Analyse JSON + Execute prompt
 // ✅ FIX v7: analysis_data JSONB safe parse in execute-rewrite
@@ -805,6 +805,9 @@ const _badgeBust = u => { try { _badgeCache.delete(_badgeKey(u)); } catch(e){} }
 // requests for the SAME url share that one Promise instead of each firing their own query
 // (kills the cold-start "thundering herd" + the connection-timeout it caused).
 const _badgeInflight = new Map();
+// Our OWN domains: the badge on these pages costs Neon for no reason (it's meant for
+// client sites). Skip them entirely — no cache, no query — for people AND bots.
+const _badgeSkipDomains = new Set(['contentscale.site', 'app.contentscale.site']);
 
 // ── Public sitemap + robots (registered BEFORE express.static so it always wins) ──
 const SITEMAP_PATHS = ['/', '/blog', '/tools', '/handleiding', '/seo-audit']; // edit: public pages only, keep gated tools out
@@ -9210,6 +9213,9 @@ try {
 const norm = normalize(url);
 const domain = norm.split('/')[0];
 const isHomepage = norm === domain;
+
+// Skip our own marketing/app domains — no Neon, no logging, for people or bots alike.
+if (_badgeSkipDomains.has(domain)) { return res.json({ success: false, own: true }); }
 
 // ── Cache: serve repeat lookups without touching Neon ──
 const _ckey = norm;
@@ -30799,7 +30805,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
                         <div>
                             <h2 style="font-size:1.1rem;font-weight:800;color:#f1f5f9;">Tracker Clients</h2>
-                            <p style="font-size:12px;color:#6b7280;margin-top:2px;">Self-service users registered via the free tracker · <span style="color:#34d399;font-weight:800;letter-spacing:.04em;">BUILD 2026-07-01-coalesce</span></p>
+                            <p style="font-size:12px;color:#6b7280;margin-top:2px;">Self-service users registered via the free tracker · <span style="color:#34d399;font-weight:800;letter-spacing:.04em;">BUILD 2026-07-01-ownskip</span></p>
                         </div>
                         <div style="display:flex;gap:8px;flex-wrap:wrap;">
                             <button onclick="openNewOwnClient()" class="tr-btn" style="border-color:#4ade80;color:#4ade80;font-weight:700;">+ New Client</button>
@@ -30831,7 +30837,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
             <div id="tab-admin-settings" class="tab-content hidden">
                 <div style="padding:24px;max-width:600px;">
                     <h2 style="font-size:18px;font-weight:800;color:#f1f5f9;margin-bottom:4px;">⚙️ Settings</h2>
-                    <p style="font-size:12px;color:#6b7280;margin-bottom:24px;">Admin settings — stored in database, survive deploys · <span style="color:#34d399;font-weight:800;letter-spacing:.04em;">BUILD 2026-07-01-coalesce</span></p>
+                    <p style="font-size:12px;color:#6b7280;margin-bottom:24px;">Admin settings — stored in database, survive deploys · <span style="color:#34d399;font-weight:800;letter-spacing:.04em;">BUILD 2026-07-01-ownskip</span></p>
 
                     <div style="background:#0d1117;border:1px solid #1f2937;border-radius:10px;padding:20px;margin-bottom:16px;">
                         <div style="font-size:13px;font-weight:700;color:#f1f5f9;margin-bottom:14px;">📧 Content Engine — Email Settings</div>
