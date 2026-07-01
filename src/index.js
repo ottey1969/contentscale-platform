@@ -1,4 +1,4 @@
-console.log('=== CONTENTSCALE BOOT v2026-06-30-botskip | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON ===');
+console.log('=== CONTENTSCALE BOOT v2026-07-01-coalesce | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON ===');
 // CONTENTSCALE SERVER.JS — ELITE EDITION v4 (FIXED v3)
 // ✅ FIX v7: secondary_keywords + related_keywords auto in Analyse JSON + Execute prompt
 // ✅ FIX v7: analysis_data JSONB safe parse in execute-rewrite
@@ -801,6 +801,10 @@ const _BADGE_TTL = 12 * 60 * 60 * 1000; // 12h safety fallback; real refresh is 
 // (not the whole cache — that would re-query every marketing-page badge after each scan).
 const _badgeKey = u => !u ? '' : String(u).replace(/^https?:\/\//,'').replace(/^www\./,'').replace(/\/$/,'').toLowerCase();
 const _badgeBust = u => { try { _badgeCache.delete(_badgeKey(u)); } catch(e){} };
+// In-flight coalescing: while one request is doing the DB lookup for a URL, concurrent
+// requests for the SAME url share that one Promise instead of each firing their own query
+// (kills the cold-start "thundering herd" + the connection-timeout it caused).
+const _badgeInflight = new Map();
 
 // ── Public sitemap + robots (registered BEFORE express.static so it always wins) ──
 const SITEMAP_PATHS = ['/', '/blog', '/tools', '/handleiding', '/seo-audit']; // edit: public pages only, keep gated tools out
@@ -9217,7 +9221,21 @@ if (_cHit && (Date.now() - _cHit.t) < _BADGE_TTL) { return res.json(_cHit.v); }
 const _ua = req.headers['user-agent'] || '';
 const _isBot = /bot|crawl|spider|slurp|bingpreview|ahrefs|semrush|mj12|dotbot|petal|yandex|baidu|facebookexternal|embedly|monitor|uptime|pingdom|lighthouse|headless|python-requests|curl|wget|go-http|node-fetch|axios|scrapy/i.test(_ua);
 if (_isBot) return res.json({ success: false, bot: true });
-const _J = (p) => { _badgeCache.set(_ckey, { t: Date.now(), v: p }); return res.json(p); };
+// ── Coalesce: if this URL is already being looked up, wait for that result (no 2nd query) ──
+var _inflightKey = _ckey, _resolveInflight, _rejectInflight;
+const _existing = _badgeInflight.get(_ckey);
+if (_existing) {
+  try { return res.json(await _existing); }
+  catch (_) { return res.json({ success: false, error: 'temporarily unavailable' }); }
+}
+const _inflight = new Promise((rs, rj) => { _resolveInflight = rs; _rejectInflight = rj; });
+_badgeInflight.set(_ckey, _inflight);
+const _J = (p) => {
+  _badgeCache.set(_ckey, { t: Date.now(), v: p });
+  try { _resolveInflight && _resolveInflight(p); } catch (_) {}
+  _badgeInflight.delete(_ckey);
+  return res.json(p);
+};
 
 // Build all URL variations the page could be stored as
 const V = [url, url.replace(/\/$/, ''), url.replace(/\/$/, '') + '/'];
@@ -9288,6 +9306,8 @@ console.log('[badge] miss:', url, '| norm:', norm);
 _J({ success: false, error: 'Not scanned yet', hint: 'Scan at app.contentscale.site first' });
 } catch (e) {
 console.error('[badge] error:', e.message, '| url:', url);
+try { _rejectInflight && _rejectInflight(e); } catch (_) {}
+try { _badgeInflight.delete(_inflightKey); } catch (_) {}
 res.status(500).json({ success: false, error: e.message });
 }
 });
@@ -30779,7 +30799,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
                         <div>
                             <h2 style="font-size:1.1rem;font-weight:800;color:#f1f5f9;">Tracker Clients</h2>
-                            <p style="font-size:12px;color:#6b7280;margin-top:2px;">Self-service users registered via the free tracker · <span style="color:#34d399;font-weight:800;letter-spacing:.04em;">BUILD 2026-06-30-botskip</span></p>
+                            <p style="font-size:12px;color:#6b7280;margin-top:2px;">Self-service users registered via the free tracker · <span style="color:#34d399;font-weight:800;letter-spacing:.04em;">BUILD 2026-07-01-coalesce</span></p>
                         </div>
                         <div style="display:flex;gap:8px;flex-wrap:wrap;">
                             <button onclick="openNewOwnClient()" class="tr-btn" style="border-color:#4ade80;color:#4ade80;font-weight:700;">+ New Client</button>
@@ -30811,7 +30831,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
             <div id="tab-admin-settings" class="tab-content hidden">
                 <div style="padding:24px;max-width:600px;">
                     <h2 style="font-size:18px;font-weight:800;color:#f1f5f9;margin-bottom:4px;">⚙️ Settings</h2>
-                    <p style="font-size:12px;color:#6b7280;margin-bottom:24px;">Admin settings — stored in database, survive deploys · <span style="color:#34d399;font-weight:800;letter-spacing:.04em;">BUILD 2026-06-30-botskip</span></p>
+                    <p style="font-size:12px;color:#6b7280;margin-bottom:24px;">Admin settings — stored in database, survive deploys · <span style="color:#34d399;font-weight:800;letter-spacing:.04em;">BUILD 2026-07-01-coalesce</span></p>
 
                     <div style="background:#0d1117;border:1px solid #1f2937;border-radius:10px;padding:20px;margin-bottom:16px;">
                         <div style="font-size:13px;font-weight:700;color:#f1f5f9;margin-bottom:14px;">📧 Content Engine — Email Settings</div>
