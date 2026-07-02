@@ -1,4 +1,4 @@
-console.log('=== CONTENTSCALE BOOT v2026-07-02-fixes1 | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON ===');
+console.log('=== CONTENTSCALE BOOT v2026-07-02-fixes2 | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON ===');
 // CONTENTSCALE SERVER.JS — ELITE EDITION v4 (FIXED v3)
 // ✅ FIX v7: secondary_keywords + related_keywords auto in Analyse JSON + Execute prompt
 // ✅ FIX v7: analysis_data JSONB safe parse in execute-rewrite
@@ -1244,39 +1244,49 @@ app.get('/api/tracker-client/:token/fetch-sitemap', async (req, res) => {
     if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
     const sitemapUrl = req.query.url;
     if (!sitemapUrl) return res.status(400).json({ success: false, error: 'URL required' });
-    const ctrl = new AbortController();
-    setTimeout(() => ctrl.abort(), 10000);
-    const r = await fetch(sitemapUrl, { headers: { 'User-Agent': 'ContentScale-Bot/1.0' }, signal: ctrl.signal });
-    if (!r.ok) return res.status(400).json({ success: false, error: 'Could not fetch sitemap: HTTP ' + r.status });
-    const xml = await r.text();
+    const _zlib = require('zlib');
+    // Fetch + decompress a sitemap/​sub-sitemap (handles .xml.gz files and gzip byte streams)
+    async function _fetchSmXml(u){
+      const c = new AbortController();
+      const t = setTimeout(() => c.abort(), 12000);
+      try {
+        const rr = await fetch(u, { headers: { 'User-Agent': 'ContentScale-Bot/1.0' }, signal: c.signal });
+        if (!rr.ok) return '';
+        let buf = Buffer.from(await rr.arrayBuffer());
+        if (/\.gz(\?|$)/i.test(u) || (buf.length > 2 && buf[0] === 0x1f && buf[1] === 0x8b)) {
+          try { buf = _zlib.gunzipSync(buf); } catch(e) {}
+        }
+        return buf.toString('utf8');
+      } catch(e) { return ''; } finally { clearTimeout(t); }
+    }
+    const MAX_URLS = 2000, MAX_SUBMAPS = 50;
+    const xml = await _fetchSmXml(sitemapUrl);
+    if (!xml) return res.status(400).json({ success: false, error: 'Could not fetch sitemap (empty or unreachable)' });
     let urls = [];
     if (/<sitemapindex/i.test(xml)) {
-      // Sitemap INDEX — follow each sub-sitemap and collect real page URLs
-      const subSitemaps = [...xml.matchAll(/<loc>(https?:\/\/[^<]+\.xml[^<]*)<\/loc>/gi)].map(m => m[1].trim()).slice(0, 20);
+      // Sitemap INDEX — follow ALL sub-sitemaps (incl .xml.gz) and collect every real page URL
+      const subSitemaps = [...xml.matchAll(/<loc>\s*(https?:\/\/[^<\s]+?\.xml(?:\.gz)?[^<\s]*)\s*<\/loc>/gi)].map(m => m[1].trim()).slice(0, MAX_SUBMAPS);
       for (const sm of subSitemaps) {
-        try {
-          const ctrl2 = new AbortController();
-          setTimeout(() => ctrl2.abort(), 10000);
-          const sr = await fetch(sm, { headers: { 'User-Agent': 'ContentScale-Bot/1.0' }, signal: ctrl2.signal });
-          if (!sr.ok) continue;
-          const sx = await sr.text();
-          const subUrls = [...sx.matchAll(/<loc>(https?:\/\/[^<]+)<\/loc>/gi)].map(m => m[1].trim()).filter(u => !/\.xml(\?|$)/i.test(u));
-          urls.push(...subUrls);
-        } catch(e) {}
-        if (urls.length >= 100) break;
+        const sx = await _fetchSmXml(sm);
+        if (!sx) continue;
+        const subUrls = [...sx.matchAll(/<loc>\s*([^<\s]+)\s*<\/loc>/gi)].map(m => m[1].trim()).filter(u => /^https?:\/\//i.test(u) && !/\.xml(\.gz)?(\?|$)/i.test(u));
+        urls.push(...subUrls);
+        if (urls.length >= MAX_URLS) break;
       }
     } else {
       // Regular sitemap — extract page URLs, never the .xml files themselves
-      urls = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map(m => m[1].trim()).filter(u => u.startsWith('http') && !/\.xml(\?|$)/i.test(u));
+      urls = [...xml.matchAll(/<loc>\s*([^<\s]+)\s*<\/loc>/gi)].map(m => m[1].trim()).filter(u => /^https?:\/\//i.test(u) && !/\.xml(\.gz)?(\?|$)/i.test(u));
     }
     // Skip non-content archive URLs (WordPress categories, tags, author pages, pagination, feeds, media)
     const _SKIP_ARCHIVE = /\/(category|categories|tag|tags|author|authors|uncategorized)(\/|$)|\/page\/\d+|\/feed\/?$|\/wp-(json|admin|content|includes)\//i;
     const _SKIP_FILE = /\.(jpg|jpeg|png|gif|webp|svg|css|js|pdf|xml|json)(\?|$)/i;
     urls = urls.filter(u => !_SKIP_ARCHIVE.test(u) && !_SKIP_FILE.test(u));
-    urls = urls.slice(0, 100);
+    // Dedup (normalise trailing slash) — complete set, capped only as a hard safety ceiling
+    const _seenSm = new Set();
+    urls = urls.filter(u => { const k = u.replace(/\/$/, ''); if (_seenSm.has(k)) return false; _seenSm.add(k); return true; }).slice(0, MAX_URLS);
     // Remember the sitemap URL + the full resolved URL list on the client (used by briefs for internal links + cannibalisation; avoids re-fetching per scan)
     if (urls.length) { try { await pool.query('UPDATE tracker_clients SET sitemap_url=$1, sitemap_urls=$2 WHERE token=$3', [sitemapUrl, JSON.stringify(urls), req.params.token]); } catch(e){} }
-    res.json({ success: true, urls, count: urls.length });
+    res.json({ success: true, urls, count: urls.length, complete: urls.length < MAX_URLS });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
@@ -36992,7 +37002,7 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
                 if (Array.isArray(_cached) && _cached.length) {
                   _sitemapUrls = Array.from(new Set(_cached.filter(function(u){ return /^https?:\/\//i.test(u); })))
                     .filter(function(u){ return u.replace(/\/$/, '') !== String(pageUrl || '').replace(/\/$/, ''); })
-                    .slice(0, 80);
+                    .slice(0, 200);
                 }
               } catch(e) {}
             }
@@ -37010,7 +37020,7 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
                   .filter(function(u){ return /^https?:\/\//i.test(u) && !/\.(xml|jpe?g|png|webp|gif|svg|pdf)$/i.test(u) && !/\/(category|categories|tag|tags|author|authors|uncategorized)(\/|$)|\/page\/\d+|\/feed\/?$/i.test(u); });
                 _sitemapUrls = Array.from(new Set(_sitemapUrls))
                   .filter(function(u){ return u.replace(/\/$/, '') !== String(pageUrl || '').replace(/\/$/, ''); })
-                  .slice(0, 80);
+                  .slice(0, 200);
               }
             } catch(e) {}
           }
