@@ -1,4 +1,4 @@
-console.log('=== CONTENTSCALE BOOT v2026-07-02-fixes2 | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON ===');
+console.log('=== CONTENTSCALE BOOT v2026-07-02-fixes3 | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON ===');
 // CONTENTSCALE SERVER.JS — ELITE EDITION v4 (FIXED v3)
 // ✅ FIX v7: secondary_keywords + related_keywords auto in Analyse JSON + Execute prompt
 // ✅ FIX v7: analysis_data JSONB safe parse in execute-rewrite
@@ -13610,6 +13610,73 @@ app.post('/api/gsc/auto-fill', async (req, res) => {
     // Only return 500 for truly unexpected errors
     res.status(500).json({ success: false, error: msg });
   }
+});
+
+// ── GSC AUTO-DISCOVERY (no manual search, no CSV) ────────────────────────────
+// Reusable service-account access token (webmasters.readonly)
+async function _getGscAccessToken(){
+  if(!_gscServiceAccount) throw new Error('GSC_SERVICE_ACCOUNT_JSON not configured');
+  const now = Math.floor(Date.now()/1000);
+  const { createSign } = require('crypto');
+  const header = Buffer.from(JSON.stringify({ alg:'RS256', typ:'JWT' })).toString('base64url');
+  const payload = Buffer.from(JSON.stringify({
+    iss: _gscServiceAccount.client_email,
+    scope: 'https://www.googleapis.com/auth/webmasters.readonly',
+    aud: 'https://oauth2.googleapis.com/token',
+    exp: now + 3600, iat: now
+  })).toString('base64url');
+  const sign = createSign('RSA-SHA256'); sign.update(header + '.' + payload);
+  const signature = sign.sign(_gscServiceAccount.private_key, 'base64url');
+  const jwt = header + '.' + payload + '.' + signature;
+  const tokenResp = await axios.post('https://oauth2.googleapis.com/token',
+    new URLSearchParams({ grant_type:'urn:ietf:params:oauth:grant-type:jwt-bearer', assertion: jwt }).toString(),
+    { headers: { 'Content-Type':'application/x-www-form-urlencoded' } });
+  return tokenResp.data.access_token;
+}
+
+// GET /api/gsc/sites — auto-discover ALL GSC properties the service account can access
+app.get('/api/gsc/sites', verifyAdmin, async (req, res) => {
+  if(!_gscServiceAccount) return res.status(503).json({ success:false, error:'GSC_SERVICE_ACCOUNT_JSON not configured in Railway Variables' });
+  try {
+    const accessToken = await _getGscAccessToken();
+    const r = await fetch('https://www.googleapis.com/webmasters/v3/sites', { headers:{ Authorization:'Bearer ' + accessToken } });
+    if(!r.ok){ const e = await r.json().catch(()=>({})); return res.status(r.status).json({ success:false, error:(e.error&&e.error.message)||('HTTP '+r.status) }); }
+    const data = await r.json();
+    const entries = (data.siteEntry||[]).filter(s => s.permissionLevel && s.permissionLevel !== 'siteUnverifiedUser');
+    entries.sort((a,b)=>{
+      const ad = a.siteUrl.indexOf('sc-domain:')===0?0:1, bd = b.siteUrl.indexOf('sc-domain:')===0?0:1;
+      if(ad!==bd) return ad-bd;
+      return a.siteUrl.localeCompare(b.siteUrl);
+    });
+    res.json({ success:true, count:entries.length, sites: entries.map(s=>({ siteUrl:s.siteUrl, permission:s.permissionLevel, is_domain: s.siteUrl.indexOf('sc-domain:')===0 })) });
+  } catch(e){ res.status(500).json({ success:false, error:e.message }); }
+});
+
+// GET /api/gsc/site-pages?siteUrl=...&days=90&limit=200 — pull top pages for a property (auto-import source, no CSV)
+app.get('/api/gsc/site-pages', verifyAdmin, async (req, res) => {
+  if(!_gscServiceAccount) return res.status(503).json({ success:false, error:'GSC_SERVICE_ACCOUNT_JSON not configured' });
+  const siteUrl = req.query.siteUrl;
+  if(!siteUrl) return res.status(400).json({ success:false, error:'siteUrl required (get it from /api/gsc/sites)' });
+  const days = Math.min(parseInt(req.query.days,10)||90, 480);
+  const rowLimit = Math.min(parseInt(req.query.limit,10)||200, 1000);
+  try {
+    const accessToken = await _getGscAccessToken();
+    const endDate = new Date().toISOString().split('T')[0];
+    const startDate = new Date(Date.now() - days*864e5).toISOString().split('T')[0];
+    const body = { startDate, endDate, dimensions:['page'], rowLimit };
+    const r = await fetch('https://www.googleapis.com/webmasters/v3/sites/' + encodeURIComponent(siteUrl) + '/searchAnalytics/query',
+      { method:'POST', headers:{ Authorization:'Bearer ' + accessToken, 'Content-Type':'application/json' }, body: JSON.stringify(body) });
+    if(!r.ok){ const e = await r.json().catch(()=>({})); return res.status(r.status).json({ success:false, error:(e.error&&e.error.message)||('HTTP '+r.status) }); }
+    const data = await r.json();
+    const pages = (data.rows||[]).map(row=>({
+      url: (row.keys && row.keys[0]) || '',
+      clicks: Math.round(row.clicks||0),
+      impressions: Math.round(row.impressions||0),
+      ctr: parseFloat(((row.ctr||0)*100).toFixed(2)),
+      position: parseFloat((row.position||0).toFixed(1))
+    })).filter(p => p.url);
+    res.json({ success:true, siteUrl, days, count:pages.length, pages });
+  } catch(e){ res.status(500).json({ success:false, error:e.message }); }
 });
 
 
