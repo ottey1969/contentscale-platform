@@ -1,4 +1,4 @@
-console.log('=== CONTENTSCALE BOOT v2026-07-02-crawler4 | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON ===');
+console.log('=== CONTENTSCALE BOOT v2026-07-02-fixes1 | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON ===');
 // CONTENTSCALE SERVER.JS — ELITE EDITION v4 (FIXED v3)
 // ✅ FIX v7: secondary_keywords + related_keywords auto in Analyse JSON + Execute prompt
 // ✅ FIX v7: analysis_data JSONB safe parse in execute-rewrite
@@ -1160,6 +1160,7 @@ app.get('/api/tracker-client/:token', async (req, res) => {
   try {
     const cr = await pool.query('SELECT * FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status != $2)', [req.params.token, 'deleted']);
     if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Tracker not found. Check your link is correct.' });
+    if (cr.rows[0].status === 'disabled' || cr.rows[0].status === 'paused') return res.status(403).json({ success: false, disabled: true, error: 'This tracker is ' + cr.rows[0].status + '. Contact Ottmar to reactivate.' });
     const client = cr.rows[0];
 
     // Ensure tracker_client_id column exists before querying
@@ -3532,7 +3533,7 @@ app.get('/track/:token', async (req, res) => {
       return res.status(404).send(`<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ContentScale Tracker</title></head><body style="background:#0a0a0f;color:#f1f5f9;font-family:system-ui,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;padding:20px;box-sizing:border-box;"><div style="text-align:center;max-width:400px;"><div style="font-size:3rem;margin-bottom:16px;">🔒</div><h1 style="font-size:20px;font-weight:800;color:#f1f5f9;margin-bottom:8px;">Tracker link not found</h1><p style="font-size:14px;color:#6b7280;line-height:1.7;margin-bottom:28px;">This link has expired or is incorrect. Contact Ottmar to get your personal tracker link — usually within a few minutes.</p><div style="display:flex;flex-direction:column;gap:10px;"><a href="https://wa.me/31628073996?text=Hi%20Ottmar%2C%20I%20need%20my%20ContentScale%20tracker%20link" style="display:block;background:#25d366;color:#fff;text-decoration:none;padding:12px 20px;border-radius:8px;font-size:14px;font-weight:700;">💬 WhatsApp Ottmar — get my link</a><a href="mailto:info@contentscale.site?subject=My%20tracker%20link&body=Hi%20Ottmar%2C%20I%20need%20my%20ContentScale%20tracker%20link." style="display:block;background:#0d1117;border:1px solid #374151;color:#9ca3af;text-decoration:none;padding:12px 20px;border-radius:8px;font-size:14px;">✉️ Email info@contentscale.site</a></div><p style="font-size:11px;color:#374151;margin-top:20px;">ContentScale · contentscale.site</p></div></body></html>`);
     }
     const client = cr.rows[0];
-    if (client.status === 'paused') return res.send('<html><body style="background:#0a0a0f;color:#fbbf24;font-family:monospace;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;text-align:center;"><div><div style="font-size:2rem;margin-bottom:12px;">⏸️</div><div>Your tracker is paused</div><div style="font-size:12px;color:#6b7280;margin-top:8px;">Contact Ottmar to reactivate: <a href="https://wa.me/31628073996" style="color:#7c3aed;">wa.me/31628073996</a></div></div></body></html>');
+    if (client.status === 'paused' || client.status === 'disabled') return res.send('<html><body style="background:#0a0a0f;color:#fbbf24;font-family:monospace;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;text-align:center;"><div><div style="font-size:2rem;margin-bottom:12px;">⏸️</div><div>Your tracker is ' + (client.status === 'disabled' ? 'disabled' : 'paused') + '</div><div style="font-size:12px;color:#6b7280;margin-top:8px;">Contact Ottmar to reactivate: <a href="https://wa.me/31628073996" style="color:#7c3aed;">wa.me/31628073996</a></div></div></body></html>');
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     res.send(_CLIENT_TRACKER_HTML
       .replace(/__TOKEN__/g, req.params.token)
@@ -38465,7 +38466,7 @@ function startTrackerScheduler() {
          WHERE (p.is_active = TRUE OR p.is_active IS NULL)
          AND (p.engine_code_id IS NOT NULL OR p.tracker_client_id IS NOT NULL)
          AND (
-           (p.engine_code_id IS NOT NULL AND (p.next_check_at <= NOW() OR p.next_check_at IS NULL))
+           (p.engine_code_id IS NOT NULL AND (p.check_frequency IS NULL OR p.check_frequency NOT IN ('0','0days','off')) AND (p.next_check_at <= NOW() OR p.next_check_at IS NULL))
            OR
            (p.tracker_client_id IS NOT NULL AND p.last_checked_at IS NOT NULL AND p.next_check_at IS NOT NULL AND p.next_check_at <= NOW() AND (p.check_frequency IS NULL OR p.check_frequency NOT IN ('0','0days','off')))
          )
