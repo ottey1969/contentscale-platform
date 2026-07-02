@@ -1,4 +1,4 @@
-console.log('=== CONTENTSCALE BOOT v2026-07-02-fixes5 | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON ===');
+console.log('=== CONTENTSCALE BOOT v2026-07-02-fixes6 | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON ===');
 // CONTENTSCALE SERVER.JS — ELITE EDITION v4 (FIXED v3)
 // ✅ FIX v7: secondary_keywords + related_keywords auto in Analyse JSON + Execute prompt
 // ✅ FIX v7: analysis_data JSONB safe parse in execute-rewrite
@@ -2273,27 +2273,39 @@ app.post('/api/tracker-client/:token/import-gsc-pages', async (req, res) => {
     const _cntR = await pool.query(`SELECT COUNT(*) FROM tracker_pages WHERE tracker_client_id=$1 AND (is_active=TRUE OR is_active IS NULL)`, [clientId]);
     let _liveCount = parseInt(_cntR.rows[0].count) || 0;
     const _maxPages = cr.rows[0].max_pages || 3;
-    
-    let imported = 0;
+
+    // Preload existing tracked pages + build a normalized-URL index so a re-import
+    // recognises the SAME pages regardless of http/https, www, or trailing slash.
+    function _normTrackUrl(u){ try{ var x=new URL(String(u).trim()); return x.host.toLowerCase().replace(/^www\./,'') + x.pathname.replace(/\/+$/,'') + (x.search||''); }catch(e){ return String(u||'').trim().toLowerCase().replace(/^https?:\/\//,'').replace(/^www\./,'').replace(/\/+$/,''); } }
+    const _existR = await pool.query("SELECT id, url FROM tracker_pages WHERE tracker_client_id=$1 AND (is_active=TRUE OR is_active IS NULL)", [clientId]);
+    const _normMap = new Map();
+    _existR.rows.forEach(function(row){ _normMap.set(_normTrackUrl(row.url), row.id); });
+
+    let imported = 0;    // successfully processed (refreshed + new) — kept for compatibility
+    let refreshed = 0;   // existing pages recognised + refreshed on their own spot
+    let newAdded = 0;    // brand-new pages added
     let skipped = 0;
+    const results = [];
     const warnings = [];
     
     for (const p of pages) {
       try {
-        // Check if page already exists → OVERWRITE its GSC data (recognise + refresh the same URLs on re-import)
-        const existing = await pool.query("SELECT id FROM tracker_pages WHERE tracker_client_id=$1 AND rtrim(url,'/')=rtrim($2,'/')", [clientId, p.url]);
-        if (existing.rows.length) {
+        // Recognise existing tracked page by normalized URL → refresh on its own spot (never duplicate, never counts against the limit)
+        const _matchId = _normMap.get(_normTrackUrl(p.url));
+        if (_matchId) {
           await pool.query(
             `UPDATE tracker_pages SET gsc_clicks=$3, gsc_impressions=$4, gsc_position=$5, gsc_keyword=COALESCE($6, gsc_keyword), keyword=COALESCE(keyword, $6), priority=COALESCE($7, priority) WHERE id=$1 AND tracker_client_id=$2`,
-            [existing.rows[0].id, clientId, p.clicks||0, p.impressions||0, p.position||null, p.keyword||null, p.priority||null]
+            [_matchId, clientId, p.clicks||0, p.impressions||0, p.position||null, p.keyword||null, p.priority||null]
           ).catch(e => console.warn('[import-gsc] update', p.url, e.message));
           imported++;
+          refreshed++;
+          results.push({ url: p.url, id: _matchId, status: 'refreshed' });
           continue;
         }
         
         // New URL — only insert if the user selected it (add) AND a free slot exists; otherwise leave it out
-        if (p.add === false) { skipped++; continue; }
-        if (_liveCount >= _maxPages) { skipped++; warnings.push({ url: p.url, issue: 'Page limit reached (' + _liveCount + '/' + _maxPages + ')' }); continue; }
+        if (p.add === false) { skipped++; results.push({ url: p.url, status: 'skipped_not_selected' }); continue; }
+        if (_liveCount >= _maxPages) { skipped++; warnings.push({ url: p.url, issue: 'Page limit reached (' + _liveCount + '/' + _maxPages + ')' }); results.push({ url: p.url, status: 'skipped_limit' }); continue; }
 
         // Check for intent overlap
         if (p.intent) {
@@ -2303,30 +2315,38 @@ app.post('/api/tracker-client/:token/import-gsc-pages', async (req, res) => {
           );
           if (intentOverlap.rows.length) {
             warnings.push({ url: p.url, issue: 'Intent overlap with ' + intentOverlap.rows[0].url });
+            results.push({ url: p.url, status: 'skipped_intent_overlap' });
             continue; // Skip to avoid cannibalization
           }
         }
         
         // Insert new page with GSC data + intent
-        await pool.query(
+        const _insR = await pool.query(
           `INSERT INTO tracker_pages (tracker_client_id, url, keyword, intent, gsc_keyword, gsc_clicks, gsc_impressions, gsc_position, priority, created_at)
            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())
            ON CONFLICT(tracker_client_id, url) DO UPDATE SET 
-           intent=EXCLUDED.intent, gsc_clicks=EXCLUDED.gsc_clicks, gsc_impressions=EXCLUDED.gsc_impressions, gsc_position=EXCLUDED.gsc_position, priority=EXCLUDED.priority`,
+           intent=EXCLUDED.intent, gsc_clicks=EXCLUDED.gsc_clicks, gsc_impressions=EXCLUDED.gsc_impressions, gsc_position=EXCLUDED.gsc_position, priority=EXCLUDED.priority
+           RETURNING id`,
           [clientId, p.url, p.keyword||null, p.intent||null, p.keyword||null, p.clicks||0, p.impressions||0, p.position||null, p.priority||'medium']
         );
+        if (_insR.rows[0]) _normMap.set(_normTrackUrl(p.url), _insR.rows[0].id); // prevent duplicate inserts within this same batch
         _liveCount++;
         imported++;
+        newAdded++;
+        results.push({ url: p.url, id: _insR.rows[0] ? _insR.rows[0].id : null, status: 'new' });
       } catch(e) { console.warn('[import-gsc] page', p.url, e.message); }
     }
     
     res.json({ 
       success: true, 
       imported, 
+      refreshed,
+      new_added: newAdded,
       skipped,
       total: pages.length, 
+      results,
       warnings: warnings.length > 0 ? warnings : undefined,
-      message: `Imported ${imported}/${pages.length} pages (${skipped} skipped)` + (warnings.length > 0 ? ` — ${warnings.length} intent overlaps` : '')
+      message: `Refreshed ${refreshed} existing + added ${newAdded} new` + (skipped > 0 ? ` (${skipped} skipped)` : '') + (warnings.length > 0 ? ` — ${warnings.length} intent overlaps` : '')
     });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
