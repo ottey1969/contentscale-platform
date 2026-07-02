@@ -128,6 +128,18 @@
          .call-btn{font-family:'IBM Plex Mono',monospace;font-size:10px;background:rgba(74,222,128,0.1);border:1px solid rgba(74,222,128,0.3);color:var(--green);padding:8px 14px;border-radius:4px;cursor:pointer;transition:all .2s;font-weight:700;}
          .call-btn:hover{background:var(--green);color:#000;}
          .call-btn.calling{background:var(--orange);color:#000;border-color:var(--orange);animation:pulse-orange 1s infinite;}
+.queue-bar{display:none;position:fixed;bottom:0;left:0;right:0;background:#0f172a;border-top:2px solid var(--green);padding:12px 20px;z-index:9999;align-items:center;gap:14px;flex-wrap:wrap;}
+.queue-bar.active{display:flex;}
+.queue-stat{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);}
+.queue-stat strong{color:var(--green);}
+.queue-stat.warn strong{color:var(--gold);}
+.queue-status{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--gold);flex:1;}
+.btn-queue-start{background:var(--green);color:#000;border:none;font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.08em;text-transform:uppercase;padding:8px 18px;border-radius:5px;cursor:pointer;font-weight:700;}
+.btn-queue-stop{background:rgba(244,63,63,.15);color:var(--red);border:1px solid rgba(244,63,63,.3);font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.08em;text-transform:uppercase;padding:8px 18px;border-radius:5px;cursor:pointer;}
+.lead-tz{font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted);margin-top:3px;}
+.lead-tz.open{color:var(--green);}
+.lead-tz.blocked{color:var(--red);}
+.lead-tz.waiting{color:var(--gold);}
          /* ── Call Log & Persistence ── */
          .calllog{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:24px;margin-bottom:32px;display:none;box-shadow:0 10px 25px rgba(0,0,0,0.4);}
          .calllog.visible{display:block;}
@@ -187,6 +199,49 @@
          .empty-state p{font-size:15px;color:var(--muted);line-height:1.8;max-width:480px;margin:0 auto;}
          /* ══ ERROR LOG ══ */
          .err-log{background:rgba(244,63,63,.05);border:1px solid rgba(244,63,63,.2);border-radius:8px;padding:16px 20px;margin-bottom:20px;}
+      /* ══ CALL SHEET (integrated) ══ */
+.cs-wrap{max-width:1400px;margin:0 auto;padding:8px 24px 90px;}
+.cs-panel{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:24px;margin-top:24px;box-shadow:0 10px 30px rgba(0,0,0,.4);}
+.cs-top{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px;}
+.cs-title{font-family:'Bebas Neue',sans-serif;font-size:30px;letter-spacing:.04em;}
+.cs-title span{color:var(--gold);}
+.cs-count{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);}
+.cs-toggle{display:inline-flex;border:1px solid var(--border);border-radius:6px;overflow:hidden;}
+.cs-toggle button{background:var(--surface);color:var(--muted);border:none;font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.05em;text-transform:uppercase;padding:8px 14px;cursor:pointer;}
+.cs-toggle button.on{background:var(--gold);color:#000;font-weight:700;}
+.cs-filters{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:16px;}
+.cs-inp{background:var(--bg);border:1px solid var(--border);border-radius:5px;padding:8px 10px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--ink);outline:none;min-width:130px;}
+.cs-inp:focus{border-color:var(--gold);}
+.cs-fbtn{background:var(--surface);border:1px solid var(--border);color:var(--muted);font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.05em;text-transform:uppercase;padding:7px 12px;border-radius:5px;cursor:pointer;}
+.cs-fbtn.on{background:var(--purple);border-color:var(--purple);color:#fff;font-weight:700;}
+.cs-fbtn.exp{border-color:rgba(74,222,128,.35);color:var(--green);}
+.cs-group{margin-bottom:18px;}
+.cs-grouphead{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--sub);margin:14px 0 8px;padding-bottom:6px;border-bottom:1px solid var(--border);}
+.cs-lead{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px 14px;margin-bottom:8px;cursor:pointer;transition:border-color .15s;}
+.cs-lead:hover{border-color:var(--sub);}
+.cs-lead.active{border-color:var(--gold);background:var(--gold-glow);}
+.cs-lead.dnc{border-color:#7F1D1D;background:rgba(127,29,29,.12);}
+.cs-lead-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.cs-nm{font-size:15px;font-weight:700;flex:1;min-width:120px;}
+.cs-ph{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--green);text-decoration:none;background:rgba(74,222,128,.08);border:1px solid rgba(74,222,128,.2);border-radius:4px;padding:3px 8px;}
+.cs-nophone{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--sub);}
+.cs-btag{font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:.06em;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:rgba(255,255,255,.05);color:var(--muted);}
+.cs-oc{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.05em;text-transform:uppercase;padding:2px 8px;border-radius:3px;}
+.cs-dncpill{background:#7F1D1D;color:#fff;font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:.06em;padding:2px 7px;border-radius:3px;margin-left:6px;}
+.cs-script{margin-top:12px;padding-top:12px;border-top:1px solid var(--border);display:none;}
+.cs-lead.active .cs-script{display:block;}
+.cs-seg{background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:10px 12px;margin-bottom:8px;}
+.cs-seg .lbl{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--sub);margin-bottom:5px;}
+.cs-seg p{font-size:14px;line-height:1.55;color:var(--ink);margin:0;}
+.cs-seg.ref{background:rgba(255,255,255,.02);}
+.cs-seg.ref ul{margin:0;padding-left:16px;}
+.cs-seg.ref li{font-size:12px;color:var(--muted);}
+.cs-var{color:var(--purple2);font-weight:700;}
+.cs-obtns{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;}
+.cs-ob{background:var(--surface);border:1px solid var(--border);color:var(--muted);font-size:12px;padding:6px 12px;border-radius:5px;cursor:pointer;}
+.cs-ob:hover{color:var(--ink);}
+.cs-ob.dnc{color:#fca5a5;}
+
       </style>
    </head>
    </head>
@@ -200,10 +255,10 @@
             <div class="logo-block">
                <div class="eyebrow"><span class="ldot"></span> ContentScale — Powered by Google Gemini (Free)</div>
                <h1>LEAD<br>CRAWLER <span class="pro-tag">PRO</span></h1>
-               <p class="tagline">Enter any city + country. 20 industries searched in parallel. Every lead bucketed by content desperation — with a pitch angle ready to copy.</p>
+               <p class="tagline">Enter any city + country. 37 niches searched sequentially. Every lead bucketed by content desperation — with a pitch angle ready to copy.</p>
             </div>
             <div class="hbadges">
-               <div class="hb g">✓ 20 Parallel Searches</div>
+               <div class="hb g">✓ 37 Niche Searches</div>
                <div class="hb g">✓ 200–500 Leads / Run</div>
                <div class="hb y">✓ Pitch Angle Per Lead</div>
                <div class="hb p">✓ 6 Smart Buckets</div>
@@ -442,109 +497,21 @@
             </div>
             <!-- ══ END VAPI ══ -->
 
-            <!-- ══ TEST CALL SECTION ══ -->
-            <div id="testCallSection" style="background:rgba(167,139,250,0.06);border:1.5px solid rgba(167,139,250,0.25);border-radius:8px;padding:20px 24px;margin-bottom:20px;">
-               <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap;">
-                  <span style="font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--purple);line-height:1;">🧪 TEST CALL — NO REAL LEAD NEEDED</span>
-                  <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;background:rgba(167,139,250,.12);color:var(--purple);border:1px solid rgba(167,139,250,.3);border-radius:3px;padding:3px 8px;">Safe to test</span>
-                  <button onclick="toggleTestCall()" id="testCallToggleBtn"
-                     style="margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;
-                     background:var(--surface);border:1px solid var(--border);color:var(--muted);padding:6px 12px;border-radius:3px;cursor:pointer;">
-                     ▼ expand
-                  </button>
-               </div>
-               <div id="testCallBody" style="display:none;">
-                  <!-- Sample lead buttons -->
-                  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;">
-                     <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--sub);align-self:center;">Load sample:</span>
-                     <button onclick="loadSampleLead('skeleton')"
-                        style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;
-                        background:rgba(96,165,250,.1);border:1px solid rgba(96,165,250,.3);color:var(--blue);
-                        padding:5px 12px;border-radius:3px;cursor:pointer;">🔥 Skeleton Law Firm</button>
-                     <button onclick="loadSampleLead('brochure')"
-                        style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;
-                        background:rgba(251,191,36,.1);border:1px solid rgba(251,191,36,.3);color:var(--gold);
-                        padding:5px 12px;border-radius:3px;cursor:pointer;">📄 Brochure Dentist</button>
-                     <button onclick="loadSampleLead('ghost')"
-                        style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;
-                        background:rgba(148,163,184,.1);border:1px solid rgba(148,163,184,.3);color:var(--muted);
-                        padding:5px 12px;border-radius:3px;cursor:pointer;">👻 Ghost Site Gym</button>
-                     <button onclick="loadSampleLead('clear')"
-                        style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;
-                        background:var(--surface);border:1px solid var(--border);color:var(--sub);
-                        padding:5px 12px;border-radius:3px;cursor:pointer;">✕ Clear</button>
-                  </div>
-                  <!-- Manual lead form -->
-                  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
-                     <div>
-                        <label style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--sub);display:block;margin-bottom:6px;">Business Name</label>
-                        <input type="text" id="tc_name" placeholder="e.g. Van der Berg Law Firm"
-                           style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:10px 12px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--ink);outline:none;"
-                           onfocus="this.style.borderColor='var(--purple)'" onblur="this.style.borderColor='var(--border)'"/>
-                     </div>
-                     <div>
-                        <label style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--sub);display:block;margin-bottom:6px;">Website</label>
-                        <input type="text" id="tc_website" placeholder="https://vandenberg-law.nl"
-                           style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:10px 12px;font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--ink);outline:none;"
-                           onfocus="this.style.borderColor='var(--purple)'" onblur="this.style.borderColor='var(--border)'"/>
-                     </div>
-                     <div>
-                        <label style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--sub);display:block;margin-bottom:6px;">📞 Phone Number to Call</label>
-                        <input type="text" id="tc_phone" placeholder="+31628073996"
-                           style="width:100%;background:var(--bg);border:1px solid rgba(167,139,250,.4);border-radius:4px;padding:10px 12px;font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--ink);outline:none;"
-                           onfocus="this.style.borderColor='var(--purple)'" onblur="this.style.borderColor='rgba(167,139,250,.4)'"/>
-                     </div>
-                     <div>
-                        <label style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--sub);display:block;margin-bottom:6px;">Est. Pages</label>
-                        <input type="number" id="tc_pages" placeholder="4" value="4"
-                           style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:10px 12px;font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--ink);outline:none;"
-                           onfocus="this.style.borderColor='var(--purple)'" onblur="this.style.borderColor='var(--border)'"/>
-                     </div>
-                  </div>
-                  <!-- Opportunity / pitch angle -->
-                  <div style="margin-bottom:12px;">
-                     <label style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--sub);display:block;margin-bottom:6px;">Content Gap / Opportunity (what Otto will mention)</label>
-                     <textarea id="tc_opportunity" rows="2"
-                        placeholder="Google Business Site only — no blog, no proper service pages, no FAQ, no case studies, and no location-specific content for family law, criminal, or probate services."
-                        style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:10px 12px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--ink);outline:none;resize:vertical;line-height:1.5;"
-                        onfocus="this.style.borderColor='var(--purple)'" onblur="this.style.borderColor='var(--border)'"></textarea>
-                  </div>
-                  <div style="margin-bottom:16px;">
-                     <label style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--sub);display:block;margin-bottom:6px;">Pitch Angle (Otto's hook)</label>
-                     <input type="text" id="tc_pitch" placeholder="Your website has almost no content — I can write the pages that get you found for family law in Amsterdam."
-                        style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:10px 12px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--ink);outline:none;"
-                        onfocus="this.style.borderColor='var(--purple)'" onblur="this.style.borderColor='var(--border)'"/>
-                  </div>
-                  <!-- Call button -->
-                  <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
-                     <button onclick="triggerTestCall()" id="testCallBtn"
-                        style="background:var(--purple);color:#fff;border:none;font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:.05em;
-                        padding:14px 32px;border-radius:6px;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:10px;">
-                        📞 CALL THIS NUMBER NOW
-                     </button>
-                     <button onclick="previewPitch()" id="previewBtn"
-                        style="background:rgba(74,222,128,.15);border:1px solid rgba(74,222,128,.4);color:var(--green);font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:.05em;
-                        padding:14px 24px;border-radius:6px;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:8px;"
-                        title="No phone? Hear Otto's pitch on your speaker">
-                        🔊 HEAR PITCH ON SPEAKER
-                     </button>
-                  </div>
-                  <div id="testCallStatus" style="margin-top:10px;font-family:'IBM Plex Mono',monospace;font-size:11px;min-height:16px;color:var(--muted);"></div>
-               </div>
-            </div>
-            <!-- ══ END TEST CALL ══ -->
+
             <div style="height:3px;background:linear-gradient(90deg,var(--red),var(--gold),var(--green));border-radius:2px;margin:28px 0;opacity:0.7;"></div>
 
 
-            <div class="panel-title">Target Location — Fires 20 Industry Searches In Parallel</div>
+            <div class="panel-title">Target Location — Searches 37 Niches Sequentially</div>
             <input type="hidden" id="apiKey" value="">
             <div class="form-row">
                <div class="field"><label>City</label><input type="text" id="city" placeholder="e.g. Amsterdam" /></div>
                <div class="field"><label>Country</label><input type="text" id="country" placeholder="e.g. Netherlands" /></div>
                <button class="crawl-btn" id="crawlBtn" onclick="startCrawl()">FIND LEADS →</button>
                <button class="stop-btn" id="stopBtn" onclick="stopCrawl()">■ STOP</button>
+               <button type="button" id="importBtn" onclick="triggerImport()" style="background:var(--surface);color:var(--muted);border:1px solid var(--border);font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:.08em;text-transform:uppercase;padding:0 20px;border-radius:6px;cursor:pointer;height:52px;">&#8593; Import</button>
+               <input type="file" id="importFile" accept=".json,application/json" style="display:none;" onchange="importJSON(event)">
             </div>
-            <div class="wave-label">20 Industry Searches — Live Status</div>
+            <div class="wave-label">37 Industry Searches — Live Status</div>
             <div class="waves" id="waves"></div>
          </div>
          <div class="err-log" id="errLog" style="display:none;"></div>
@@ -571,6 +538,7 @@
                      <span class="prog-liveLabel">Live Crawl</span>
                   </div>
                   <div class="prog-msg" id="progMsg">Starting...</div>
+                  <button id="progStopBtn" onclick="stopCrawl()" style="margin-left:auto;background:rgba(244,63,63,.1);color:var(--red);border:1px solid rgba(244,63,63,.35);font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.1em;text-transform:uppercase;padding:8px 18px;border-radius:6px;cursor:pointer;font-weight:700;">&#9632; Stop crawl</button>
                </div>
                <div class="prog-stats-grid">
                   <div class="prog-stat">
@@ -578,7 +546,7 @@
                      <div class="prog-statLabel">Leads Found</div>
                   </div>
                   <div class="prog-stat">
-                     <div class="prog-statNum purple" id="progPct">0 / 20</div>
+                     <div class="prog-statNum purple" id="progPct">0 / 37</div>
                      <div class="prog-statLabel">Industries</div>
                   </div>
                   <div class="prog-stat">
@@ -623,6 +591,7 @@
                <span class="tbl">Export:</span>
                <button class="tbtn gold" onclick="exportCSV()">↓ CSV (all)</button>
                <button class="tbtn gold" onclick="exportJSON()">↓ JSON (all)</button>
+               <button class="tbtn" onclick="triggerImport()">↑ Import JSON</button>
                <button class="tbtn" onclick="copyAll()">⧉ Copy All URLs</button>
                <button class="tbtn" id="resolveBtn" onclick="sitemapResolutionActive=false;resolveSitemapsPhase2()" style="border-color:rgba(96,165,250,.35);color:var(--blue);">⟳ Resolve Sitemaps</button>
                <div class="tb-sep"></div>
@@ -636,43 +605,92 @@
          <div class="empty-state" id="emptyState">
             <div class="ebig">FIND<br>LEADS</div>
             <p>Enter any city + country and hit <strong>FIND LEADS</strong>.<br>
-               20 industry searches fire simultaneously — results stream in live.<br><br>
+               37 niche searches fire one by one — no rate limits — results stream in live.<br><br>
                <strong style="color:var(--gold)">Focus on the 🔥 5–30 page buckets.</strong><br>
                Real businesses, almost no web content — the easiest content writing pitch ever.
             </p>
          </div>
       </div>
+      <div class="cs-wrap">
+  <div class="cs-panel" id="callSheet" style="display:none;">
+    <div class="cs-top">
+      <div class="cs-title">&#128222; CALL <span>SHEET</span></div>
+      <span class="cs-count" id="csCount">0 leads</span>
+      <div class="cs-toggle" id="csToggle" style="margin-left:auto;">
+        <button data-sc="dfy" class="on" onclick="csSetScript('dfy',this)">Content &middot; DFY</button>
+        <button data-sc="training" onclick="csSetScript('training',this)">Claude Training</button>
+      </div>
+    </div>
+    <div class="cs-filters">
+      <input class="cs-inp" id="csService" placeholder="Service (e.g. roofing)" oninput="csRender()">
+      <input class="cs-inp" id="csCallback" placeholder="Callback number" oninput="csRender()">
+      <span style="width:1px;height:22px;background:var(--border);"></span>
+      <button class="cs-fbtn on" data-f="all" onclick="csSetFilter('all',this)">All</button>
+      <button class="cs-fbtn" data-f="phone" onclick="csSetFilter('phone',this)">&#128222; Has phone</button>
+      <button class="cs-fbtn" data-f="nophone" onclick="csSetFilter('nophone',this)">&#10005; No phone</button>
+      <button class="cs-fbtn exp" onclick="csExportCSV()" style="margin-left:auto;">&#8595; Export CSV</button>
+    </div>
+    <div id="csBody"></div>
+  </div>
+</div>
+
       <div class="selbar" id="selbar" style="display:none;">
          <div class="selinfo"><strong id="selCount">0</strong> leads selected</div>
          <div class="selactions">
             <button class="selbtn" onclick="exportSelCSV()">↓ CSV Selected</button>
-            <button class="selbtn" onclick="callSelected()" style="background:rgba(74,222,128,.12);color:var(--green);border-color:rgba(74,222,128,.35);">🤖 Call All Selected</button>
+            <button class="selbtn" onclick="callSelected()" style="background:rgba(74,222,128,.12);color:var(--green);border-color:rgba(74,222,128,.35);">🤖 Call Now</button>
+            <button class="selbtn" onclick="openQueuePanel();startQueue();" style="background:rgba(251,191,36,.12);color:var(--gold);border-color:rgba(251,191,36,.35);">⏱ Auto-Queue</button>
             <button class="selbtn p" onclick="clearSel()">✕ Clear</button>
          </div>
       </div>
       <div class="toast" id="toast"></div>
       <script>
          const INDUSTRIES=[
-         {id:'restaurants', label:'Restaurants / Cafes',   q:'restaurants cafes bars bistros'},
-         {id:'hotels',      label:'Hotels / B&Bs',         q:'hotels bed breakfast guesthouses'},
-         {id:'marketing',   label:'Marketing Agencies',    q:'marketing digital advertising agencies'},
-         {id:'law',         label:'Law Firms',             q:'law firms solicitors lawyers'},
-         {id:'realestate',  label:'Real Estate',           q:'real estate property estate agencies'},
-         {id:'dental',      label:'Dental / Medical',      q:'dental clinics doctors medical practices'},
-         {id:'gyms',        label:'Gyms / Fitness',        q:'gyms fitness studios personal trainers yoga'},
-         {id:'accounting',  label:'Accounting / Finance',  q:'accounting bookkeeping financial advisors'},
-         {id:'ecommerce',   label:'E-commerce / Retail',   q:'ecommerce online shops retail boutiques'},
-         {id:'construction',label:'Construction / Trades', q:'construction builders plumbers electricians'},
-         {id:'education',   label:'Education / Tutoring',  q:'tutoring schools education training centres'},
-         {id:'beauty',      label:'Beauty / Wellness',     q:'hair salons beauty spas nail studios wellness'},
-         {id:'tech',        label:'Tech / IT Services',    q:'IT services tech companies software development'},
-         {id:'events',      label:'Events / Venues',       q:'event venues wedding planners catering companies'},
-         {id:'automotive',  label:'Automotive',            q:'car dealerships auto repair garages mechanics'},
-         {id:'consulting',  label:'Consulting / HR',       q:'business consulting HR recruitment management'},
-         {id:'photography', label:'Photography / Video',   q:'photographers videographers creative studios'},
-         {id:'logistics',   label:'Logistics / Transport', q:'logistics transport courier delivery companies'},
-         {id:'architecture',label:'Architecture / Design', q:'architecture interior design landscape firms'},
-         {id:'nonprofit',   label:'Nonprofits / Charity',  q:'nonprofits charities community foundations'},
+         // ── ⚖️ Legal & Finance ──────────────────────────────────────────
+         {id:'law',         label:'Law Firms',             q:'law firms solicitors lawyers attorneys',           value:'💰💰💰', vol:'🟢'},
+         {id:'accounting',  label:'Accountants',           q:'accountants bookkeepers financial admin firms',    value:'💰💰💰', vol:'🟢'},
+         {id:'financial',   label:'Financial Advisors',    q:'financial advisors wealth management planners',    value:'💰💰💰', vol:'🟡'},
+         {id:'notary',      label:'Notaries',              q:'notaries notary offices civil law notary',         value:'💰💰',   vol:'🟡'},
+         {id:'mortgage',    label:'Mortgage Advisors',     q:'mortgage advisors brokers home loan consultants',  value:'💰💰💰', vol:'🟢'},
+         // ── 🏥 Health & Wellness ────────────────────────────────────────
+         {id:'physio',      label:'Physiotherapists',      q:'physiotherapy physical therapy rehabilitation',    value:'💰💰',   vol:'🟢'},
+         {id:'dental',      label:'Dentists',              q:'dental clinics dentists oral surgery practices',   value:'💰💰💰', vol:'🟢'},
+         {id:'psychology',  label:'Psychologists',         q:'psychologists therapists counsellors mental health',value:'💰💰', vol:'🟢'},
+         {id:'clinic',      label:'Clinics / Aesthetics',  q:'aesthetic clinics cosmetic surgery beauty clinics',value:'💰💰💰', vol:'🟡'},
+         {id:'dietitian',   label:'Dietitians / Coaches',  q:'dietitians nutritionists health coaches wellness', value:'💰',     vol:'🟡'},
+         // ── 🏗️ Construction & Real Estate ──────────────────────────────
+         {id:'construction',label:'Contractors / Builders', q:'construction contractors builders renovation',    value:'💰💰💰', vol:'🟢'},
+         {id:'realestate',  label:'Real Estate Agents',    q:'real estate agents property brokers estate agency',value:'💰💰💰', vol:'🟢'},
+         {id:'roofing',     label:'Roofers',               q:'roofing contractors roof repair roof installation', value:'💰💰',  vol:'🟡'},
+         {id:'interior',    label:'Interior Designers',    q:'interior designers decorators furnishing studios',  value:'💰💰',  vol:'🟡'},
+         {id:'installation',label:'Installation Companies', q:'installation companies HVAC plumbing electrical',  value:'💰💰',  vol:'🟢'},
+         // ── 💼 Business Services ────────────────────────────────────────
+         {id:'recruitment', label:'Recruitment Agencies',  q:'recruitment agencies staffing headhunters HR',    value:'💰💰💰', vol:'🟢'},
+         {id:'it',          label:'IT Consultancy',        q:'IT consultancy tech services software companies',  value:'💰💰💰', vol:'🟢'},
+         {id:'marketing',   label:'Marketing Agencies',    q:'marketing digital agencies advertising branding',  value:'💰💰',  vol:'🟢'},
+         {id:'management',  label:'Management Consultants', q:'management consultants strategy business advisory',value:'💰💰💰', vol:'🟡'},
+         {id:'coaching',    label:'Business Coaches',      q:'business coaches executive coaching entrepreneurs', value:'💰💰',  vol:'🟡'},
+         {id:'seo',         label:'SEO / Web Agencies',    q:'SEO agencies web development digital marketing',   value:'💰💰',  vol:'🟢'},
+         // ── 🔧 Trades & Local Services ──────────────────────────────────
+         {id:'cleaning',    label:'Cleaning Companies',    q:'cleaning companies commercial office cleaning',    value:'💰💰',  vol:'🟢'},
+         {id:'plumbing',    label:'Plumbers',              q:'plumbers plumbing services emergency plumber',     value:'💰💰',  vol:'🟢'},
+         {id:'automotive',  label:'Auto Repair / Garages', q:'auto repair garages mechanics car service',        value:'💰💰',  vol:'🟢'},
+         {id:'landscaping', label:'Landscaping / Gardens', q:'landscaping garden design horticulture grounds',   value:'💰',    vol:'🟡'},
+         // ── 🎓 Education & Coaching ─────────────────────────────────────
+         {id:'drivingschool',label:'Driving Schools',      q:'driving schools instructors learner driver lessons',value:'💰💰', vol:'🟢'},
+         {id:'language',    label:'Language Schools',      q:'language schools tutors English courses training',  value:'💰',   vol:'🟡'},
+         {id:'elearning',   label:'Online Course Providers',q:'online courses e-learning training providers',    value:'💰💰',  vol:'🟡'},
+         // ── 🏨 Hospitality & Lifestyle ──────────────────────────────────
+         {id:'restaurants', label:'Restaurants / Cafes',   q:'restaurants cafes bars bistros dining',            value:'💰',    vol:'🟢'},
+         {id:'hotels',      label:'Hotels / B&Bs',         q:'hotels bed breakfast guesthouses boutique hotels', value:'💰💰',  vol:'🟢'},
+         {id:'gyms',        label:'Gyms / Fitness Studios', q:'gyms fitness studios personal trainers yoga pilates',value:'💰💰', vol:'🟢'},
+         {id:'beauty',      label:'Beauty / Hair / Nails',  q:'hair salons beauty spas nail studios barbershops', value:'💰',   vol:'🟢'},
+         {id:'events',      label:'Events / Wedding',       q:'event venues wedding planners catering photography',value:'💰💰', vol:'🟡'},
+         // ── 🛒 Retail & Ecommerce ────────────────────────────────────────
+         {id:'ecommerce',   label:'E-commerce / Retail',   q:'ecommerce online shops retail boutiques stores',   value:'💰💰',  vol:'🟢'},
+         {id:'architecture',label:'Architecture / Design',  q:'architecture firms urban planning landscape design',value:'💰💰', vol:'🟡'},
+         {id:'logistics',   label:'Logistics / Transport',  q:'logistics transport courier freight delivery',     value:'💰💰',  vol:'🟡'},
+         {id:'photography', label:'Photography / Video',    q:'photographers videographers creative studios film',value:'💰',   vol:'🟡'},
          ];
          const PITCH={
          ghost:    'Your site has almost no content — I help businesses like yours get written up from scratch and start showing up on Google.',
@@ -691,241 +709,21 @@
          {key:'estab',    label:'LARGE LIBRARY',  sublabel:'Established',    range:'150+ Pages',     cls:'bk-estab',    icon:'🏢', hot:'↗ High Ticket',    action:'Content audit pitch',           desc:'Big content library. Likely has writers. Pitch an audit — 30% is probably hurting rankings.'},
          ];
          let allLeads=[],selected=new Set(),stopped=false,fiveHourHit=false;
-         // ══ TEST CALL FUNCTIONS ══════════════════════════════════════════
-         function toggleTestCall(){
-           const body = document.getElementById('testCallBody');
-           const btn  = document.getElementById('testCallToggleBtn');
-           const open = body.style.display === 'none';
-           body.style.display = open ? 'block' : 'none';
-           btn.textContent = open ? '▲ collapse' : '▼ expand';
-         }
-
-         const SAMPLE_LEADS = {
-           skeleton: {
-             name: 'Van der Berg Law Firm',
-             website: 'https://vandenberg-law.nl',
-             pages: 4,
-             opportunity: 'Google Business Site only — no blog, no proper service pages, no FAQ, no case studies, and no location-specific content for family law, criminal, or probate services. No Blog · No FAQ · Zero Case Studies · Thin Service Pages · Not AI-Citation Ready · Poor SEO Copy · No How-To Content · Thin About Page',
-             pitch: 'Your website has almost no content — I can write the pages that get you found for family law, criminal defence, and probate in your area.'
-           },
-           brochure: {
-             name: 'Smile Perfect Dental',
-             website: 'https://smileperfect-dental.nl',
-             pages: 18,
-             opportunity: 'Basic homepage and 3 service pages — no blog, no patient FAQs, no before/after case studies, no local landing pages for surrounding cities.',
-             pitch: "Your site covers the basics but Google can't find you for \"dentist near me\" — a content strategy would double your new patient enquiries."
-           },
-           ghost: {
-             name: 'FitZone Gym',
-             website: 'https://fitzone-gym.nl',
-             pages: 2,
-             opportunity: 'Homepage and contact page only. No class schedules, no trainer bios, no membership info, no blog. Essentially invisible online.',
-             pitch: 'You have a great gym but your website says almost nothing — let me build the content that gets people through your door.'
-           },
-           clear: { name:'', website:'', pages:'', opportunity:'', pitch:'' }
-         };
-
-         function loadSampleLead(type){
-           const s = SAMPLE_LEADS[type];
-           if(!s) return;
-           document.getElementById('tc_name').value        = s.name;
-           document.getElementById('tc_website').value     = s.website;
-           document.getElementById('tc_pages').value       = s.pages;
-           document.getElementById('tc_opportunity').value = s.opportunity;
-           document.getElementById('tc_pitch').value       = s.pitch;
-           if(type !== 'clear') toast('Sample loaded — add your phone number and call!');
-         }
-
-         async function triggerTestCall(){
-           if(!hasAcceptedTerms()){showTermsModal();toast('⚖ Accept the Operator Terms first');return;}
-           const name        = document.getElementById('tc_name').value.trim();
-           const website     = document.getElementById('tc_website').value.trim();
-           const phone       = document.getElementById('tc_phone').value.trim();
-           const pages       = document.getElementById('tc_pages').value.trim() || '4';
-           const opportunity = document.getElementById('tc_opportunity').value.trim();
-           const pitch       = document.getElementById('tc_pitch').value.trim();
-           const statusEl    = document.getElementById('testCallStatus');
-
-           if(!phone){ toast('⚠ Enter a phone number first'); document.getElementById('tc_phone').focus(); return; }
-           if(!name) { toast('⚠ Enter a business name'); return; }
-
-           const btn = document.getElementById('testCallBtn');
-           btn.textContent = '⏳ CONNECTING...';
-           btn.disabled = true;
-           statusEl.innerHTML = '<span style="color:var(--gold)">⟳ Initiating call...</span>';
-
-           const API_BASE = 'https://app.contentscale.site';
-           try {
-             const resp = await fetch(`${API_BASE}/api/cs-agent/call`, {
-               method: 'POST',
-               headers: { 'Content-Type': 'application/json' },
-               body: JSON.stringify({
-                 customerPhone:  phone,
-                 customerName:   name || 'there',
-                 customerDomain: website.replace(/^https?:\/\//, '').replace(/\/$/, '') || 'your website',
-                 customerPages:  pages,
-                 customerCity:   document.getElementById('city')?.value || 'your city',
-                 customerType:   'business',
-                 pitchAngle:     pitch,
-                 opportunity:    opportunity,
-                 bucket:         getBucket(parseInt(pages)),
-                 leadId:         'test-' + Date.now(),
-               })
-             });
-             const data = await resp.json();
-             if(!resp.ok || !data.callId){
-               statusEl.innerHTML = '<span style="color:var(--red)">❌ ' + (data.error||'Call failed — check Vapi config') + '</span>';
-               toast('❌ ' + (data.error || 'Call failed'));
-             } else {
-               statusEl.innerHTML = '<span style="color:var(--green)">✅ Call connected! ID: ' + data.callId + '</span>';
-               toast('📞 Calling ' + phone + '...');
-             }
-           } catch(e){
-             statusEl.innerHTML = '<span style="color:var(--red)">❌ ' + e.message + '</span>';
-             toast('❌ ' + e.message);
-           } finally {
-             btn.textContent = '📞 CALL THIS NUMBER NOW';
-             btn.disabled = false;
-           }
-         }
-         // ── SPEAKER PREVIEW ──────────────────────────────────────────────────
-         var _previewWs = null;
-         var _previewAudioCtx = null;
-         var _previewNextStart = 0;
-
-         function previewPitch() {
-           const btn = document.getElementById('previewBtn');
-           const statusEl = document.getElementById('testCallStatus');
-
-           // If already playing, stop
-           if (_previewWs && _previewWs.readyState < 2) {
-             _previewWs.close();
-             _previewWs = null;
-             btn.textContent = '🔊 HEAR PITCH ON SPEAKER';
-             statusEl.innerHTML = '';
-             return;
-           }
-
-           const name = document.getElementById('tc_name')?.value.trim() || 'there';
-           const website = document.getElementById('tc_website')?.value.trim() || 'your website';
-
-           btn.textContent = '⏳ Connecting Otto...';
-           btn.disabled = true;
-           statusEl.innerHTML = '<span style="color:var(--gold)">⟳ Connecting to Otto AI...</span>';
-
-           fetch('https://app.contentscale.site/api/gemini-live-token')
-             .then(r => r.json())
-             .then(function(keyData) {
-               if (!keyData.key) throw new Error(keyData.error || 'No key');
-               var model = keyData.model || 'gemini-3.1-flash-live-preview';
-               var wsUrl = 'wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent?key=' + encodeURIComponent(keyData.key);
-
-               _previewWs = new WebSocket(wsUrl);
-               _previewWs.binaryType = 'arraybuffer';
-               _previewWs.binaryType = 'arraybuffer';
-               _previewAudioCtx = new AudioContext({ sampleRate: 24000 });
-               _previewNextStart = 0;
-
-               _previewWs.onopen = function() {
-                 statusEl.innerHTML = '<span style="color:var(--gold)">⟳ Otto is preparing pitch...</span>';
-                 var pitchText = 'You are Otto, a male AI voice assistant of ContentScale. Deliver this pitch ONCE naturally then stop. Say: Hey ' + name + '! I am Otto from ContentScale. We help businesses like yours recover lost SEO traffic with our free GRAAF Framework scan. We can also help with leads, outbound calls, and making sure you never miss clients again. If you like how I sound, contact Ottmar via WhatsApp at plus 31 6 28 07 39 96. Cheers! Then say goodbye.';
-                 var previewSetup = {
-                   setup: {
-                     model: 'models/' + model,
-                     generation_config: {
-                       response_modalities: ['AUDIO'],
-                       speech_config: {
-                         voice_config: {
-                           prebuilt_voice_config: { voice_name: 'Fenrir' }
-                         }
-                       }
-                     },
-                     system_instruction: {
-                       parts: [{ text: pitchText }]
-                     }
-                   }
-                 };
-                 console.log('[preview] sending setup:', JSON.stringify(previewSetup));
-                 _previewWs.send(JSON.stringify(previewSetup));
-               };
-
-               _previewWs.onmessage = function(evt) {
-                 try {
-                   var raw = evt.data instanceof ArrayBuffer ? new TextDecoder().decode(new Uint8Array(evt.data)) : evt.data;
-                   var msg = JSON.parse(raw);
-                   if (msg.setupComplete) {
-                     statusEl.innerHTML = '<span style="color:var(--green)">🔊 Otto is speaking — listen on your speaker!</span>';
-                     btn.textContent = '⏹ STOP';
-                     btn.disabled = false;
-                     // Send empty audio to trigger Otto to start talking
-                     _previewWs.send(JSON.stringify({ clientContent: { turns: [{ role: 'user', parts: [{ text: 'Please deliver your pitch now.' }] }], turnComplete: true } }));
-                   }
-                   if (msg.serverContent) {
-                     var sc = msg.serverContent;
-                     if (sc.modelTurn && sc.modelTurn.parts) {
-                       sc.modelTurn.parts.forEach(function(p) {
-                         if (p.inlineData && p.inlineData.data) {
-                           // Play audio chunk
-                           try {
-                             var raw2 = atob(p.inlineData.data);
-                             var bytes = new Uint8Array(raw2.length);
-                             for (var i = 0; i < raw2.length; i++) bytes[i] = raw2.charCodeAt(i);
-                             var pcm16 = new Int16Array(bytes.buffer);
-                             var float32 = new Float32Array(pcm16.length);
-                             for (var j = 0; j < pcm16.length; j++) float32[j] = pcm16[j] / 32768.0;
-                             var buf = _previewAudioCtx.createBuffer(1, float32.length, 24000);
-                             buf.copyToChannel(float32, 0);
-                             var src = _previewAudioCtx.createBufferSource();
-                             src.buffer = buf;
-                             src.connect(_previewAudioCtx.destination);
-                             var now = _previewAudioCtx.currentTime;
-                             var when = Math.max(now, _previewNextStart);
-                             src.start(when);
-                             _previewNextStart = when + buf.duration;
-                           } catch(e) {}
-                         }
-                       });
-                     }
-                     if (sc.turnComplete) {
-                       statusEl.innerHTML = '<span style="color:var(--green)">✅ Pitch complete!</span>';
-                       setTimeout(function() {
-                         if (_previewWs) { _previewWs.close(); _previewWs = null; }
-                         btn.textContent = '🔊 HEAR PITCH ON SPEAKER';
-                         btn.disabled = false;
-                       }, 3000);
-                     }
-                   }
-                 } catch(e) {}
-               };
-
-               _previewWs.onerror = function() {
-                 statusEl.innerHTML = '<span style="color:var(--red)">❌ Connection error</span>';
-                 btn.textContent = '🔊 HEAR PITCH ON SPEAKER';
-                 btn.disabled = false;
-               };
-
-               _previewWs.onclose = function(evt) {
-                 if (evt.code !== 1000) {
-                   statusEl.innerHTML = '<span style="color:var(--red)">❌ Disconnected (code ' + evt.code + ')</span>';
-                 }
-                 btn.textContent = '🔊 HEAR PITCH ON SPEAKER';
-                 btn.disabled = false;
-               };
-             })
-             .catch(function(e) {
-               statusEl.innerHTML = '<span style="color:var(--red)">❌ ' + e.message + '</span>';
-               btn.textContent = '🔊 HEAR PITCH ON SPEAKER';
-               btn.disabled = false;
-             });
-         }
-         // ══ END TEST CALL ═══════════════════════════════════════════════════
-
+ 
          function stopCrawl(){
            stopped=true;
            document.getElementById('crawlBtn').disabled=false;
            document.getElementById('stopBtn').style.display='none';
            document.getElementById('progWrap').style.display='none';
-           toast('⏹ Crawl gestopt');
+           if(typeof allLeads!=='undefined' && allLeads.length){
+             document.getElementById('results').innerHTML='';
+             renderAll();
+             try{ if(typeof csRender==='function') csRender(); }catch(e){}
+             toast('⏹ Gestopt — '+allLeads.length+' leads tot nu toe getoond');
+           } else {
+             document.getElementById('emptyState').style.display='block';
+             toast('⏹ Crawl gestopt');
+           }
          }
          let activeBucket='all',activeSearch='',sortField='score',stratOpen=true,errors=[];
          let completedIndustries=new Set();
@@ -1051,7 +849,7 @@
          banner.style.display='flex';
          document.getElementById('resumeText').innerHTML=
          '<strong>'+s.leads.length+' leads</strong> saved for <strong>'+s.city+', '+s.country+'</strong> — '+
-         done+'/20 industries done'+(remaining>0?' ('+remaining+' can still run)':' (complete)')+' — saved '+ageStr;
+         done+'/'+INDUSTRIES.length+' industries done'+(remaining>0?' ('+remaining+' can still run)':' (complete)')+' — saved '+ageStr;
          document.getElementById('city').value=s.city;
          document.getElementById('country').value=s.country;
          }
@@ -1250,9 +1048,9 @@ Return ONLY a raw JSON array — no markdown, no code fences, no explanation:
          while(idx < pending.length && !stopped && !fiveHourHit){
          const ind = pending[idx++];
          await runOne(ind);
-         // 3s cooldown between requests to stay well under token/min limit
+         // 5s cooldown between requests — safe for Claude + Gemini rate limits
          if(idx < pending.length && !stopped && !fiveHourHit){
-           await new Promise(r=>setTimeout(r, 3000));
+           await new Promise(r=>setTimeout(r, 5000));
          }
          }
          }
@@ -1583,7 +1381,45 @@ Return ONLY a raw JSON array — no markdown, no code fences, no explanation:
          }
          function dl(content,name,type){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([content],{type}));a.download=name;a.click();}
          function exportCSV(){dl(toCSV(allLeads),'leads-'+document.getElementById('city').value+'-'+Date.now()+'.csv','text/csv');toast('Exported '+allLeads.length+' leads');}
-         function exportJSON(){dl(JSON.stringify(allLeads,null,2),'leads-'+document.getElementById('city').value+'-'+Date.now()+'.json','application/json');toast('Exported '+allLeads.length+' leads');}
+         function exportJSON(){
+           var bundle={_type:'contentscale-leadcrawler',version:1,exportedAt:Date.now(),
+             city:document.getElementById('city').value,country:document.getElementById('country').value,
+             leads:allLeads,completed:[...completedIndustries],outcomes:{}};
+           try{bundle.outcomes=JSON.parse(localStorage.getItem('lc_callsheet_outcomes')||'{}');}catch(e){}
+           dl(JSON.stringify(bundle,null,2),'leadcrawler-'+(document.getElementById('city').value||'export')+'-'+Date.now()+'.json','application/json');
+           toast('Exported '+allLeads.length+' leads + call outcomes');
+         }
+         function triggerImport(){var el=document.getElementById('importFile');if(el)el.click();}
+         function importJSON(ev){
+           var file=ev.target.files&&ev.target.files[0];if(!file)return;
+           var reader=new FileReader();
+           reader.onload=function(){
+             var data;try{data=JSON.parse(reader.result);}catch(e){toast('❌ Invalid JSON file');ev.target.value='';return;}
+             var incoming=Array.isArray(data)?data:(data.leads||[]);
+             if(!incoming.length){toast('❌ No leads found in file');ev.target.value='';return;}
+             var added=dedup(incoming);
+             allLeads=allLeads.concat(added);
+             if(!Array.isArray(data)){
+               (data.completed||[]).forEach(function(c){completedIndustries.add(c);});
+               if(data.city && !document.getElementById('city').value)document.getElementById('city').value=data.city;
+               if(data.country && !document.getElementById('country').value)document.getElementById('country').value=data.country;
+               if(data.outcomes){
+                 try{var cur=JSON.parse(localStorage.getItem('lc_callsheet_outcomes')||'{}');
+                   Object.keys(data.outcomes).forEach(function(k){cur[k]=data.outcomes[k];});
+                   localStorage.setItem('lc_callsheet_outcomes',JSON.stringify(cur));
+                 }catch(e){}
+               }
+             }
+             document.getElementById('emptyState').style.display='none';
+             document.getElementById('resumeBanner').style.display='none';
+             saveSession(document.getElementById('city').value,document.getElementById('country').value);
+             renderAll();
+             try{if(typeof csReloadOutcomes==='function')csReloadOutcomes();else if(typeof csRender==='function')csRender();}catch(e){}
+             toast('Imported '+added.length+' new leads ('+allLeads.length+' total)');
+             ev.target.value='';
+           };
+           reader.readAsText(file);
+         }
          function exportSelCSV(){const s=getSelLeads();dl(toCSV(s),'selected-leads-'+Date.now()+'.csv','text/csv');toast('Exported '+s.length+' leads');}
          
          // ════════════════════════════════════════════════════════
@@ -1740,15 +1576,15 @@ Return ONLY a raw JSON array — no markdown, no code fences, no explanation:
            if(!lead){toast('Lead not found');return;}
            if(!lead.phone){toast('No phone number for this lead — resolve contacts first');return;}
          
-           // ── Gate 2: Calling hours + Compliance Mode ───────────────
-           const now=new Date();
-           const hour=now.getHours();
-           if(hour<8||hour>=20){
+           // ── Gate 2: Calling hours — checks PROSPECT'S local time, not yours ──
+           const _tz = getLeadTimezone(lead.phone);
+           const _tzCheck = isCallingHours(_tz);
+           if(!_tzCheck.ok){
              if(isComplianceModeOn()){
-               toast('🛡 Compliance Mode: calls blocked outside 8am–8pm. It is currently '+now.toLocaleTimeString());
-               return; // HARD BLOCK — cannot override in compliance mode
+               toast('🛡 Compliance Mode: blocked — it is '+_tzCheck.label+' for this prospect. Call between 8am–8pm their time.');
+               return; // HARD BLOCK
              } else {
-               const proceed=confirm('⚠ Outside Legal Calling Hours\n\nIt is '+now.toLocaleTimeString()+' your local time.\nLegal hours: 8am–8pm in the recipient\'s time zone.\n\nCompliance Mode is OFF — you bear full legal risk.\nContinue anyway?');
+               const proceed=confirm('⚠ Outside Legal Calling Hours\n\nIt is '+_tzCheck.label+' for this prospect.\nLegal hours: 8am–8pm in their timezone.\n\nCompliance Mode is OFF — you bear full legal risk.\nContinue anyway?');
                if(!proceed)return;
              }
            }
@@ -2078,7 +1914,181 @@ Return ONLY a raw JSON array — no markdown, no code fences, no explanation:
          // ════════════════════════════════════════════════════════════════
          // CALL STATE HELPERS
          // ════════════════════════════════════════════════════════════════
-         function getCallState(id){return(callStates.get(id)||{}).state||'ready';}
+ 
+        // ═══════════════════════════════════════════════════════════════════
+        // AUTO-CALL QUEUE — timezone-aware, TCPA compliant
+        // ═══════════════════════════════════════════════════════════════════
+        let _queueRunning = false;
+        let _queueTimer   = null;
+        let _queueLeads   = []; // [{leadId, lead}]
+
+        // US area code → IANA timezone
+        const AREA_TZ = {};
+        [['America/New_York',['201','202','203','207','212','215','216','217','219','224','225','228','229','231','234','239','240','248','251','252','267','269','272','276','281','301','302','304','305','309','313','315','321','323','330','336','339','347','351','352','380','401','404','407','410','412','413','414','419','423','434','440','443','445','470','478','484','502','513','516','517','518','540','551','561','571','585','586','609','610','614','615','617','631','646','678','681','689','703','704','706','708','716','718','724','727','732','734','740','743','754','757','762','770','772','774','781','786','803','804','813','814','828','843','845','848','856','857','859','860','862','863','864','865','878','904','908','910','912','914','917','919','929','931','937','941','947','954','959','973','978','980','984']],
+         ['America/Chicago',['205','214','218','262','270','309','312','314','316','318','319','320','325','334','337','361','402','405','409','417','430','432','479','501','504','507','515','563','573','580','601','608','612','618','620','636','641','651','660','662','682','712','713','715','731','806','815','816','817','830','832','847','870','901','903','920','936','940','952','956','972','979','985']],
+         ['America/Denver',  ['208','303','307','385','406','435','480','505','520','575','602','623','702','719','720','801','928','970']],
+         ['America/Los_Angeles',['209','213','310','323','341','360','408','415','424','442','458','503','509','510','530','541','559','562','619','626','650','657','661','669','707','714','747','760','775','805','818','831','858','909','916','925','949','951','971']]
+        ].forEach(([tz,codes])=>codes.forEach(c=>AREA_TZ[c]=tz));
+
+        const COUNTRY_TZ = {
+          '+31':'Europe/Amsterdam','+44':'Europe/London','+49':'Europe/Berlin',
+          '+33':'Europe/Paris','+39':'Europe/Rome','+34':'Europe/Madrid',
+          '+61':'Australia/Sydney','+63':'Asia/Manila','+64':'Pacific/Auckland',
+          '+65':'Asia/Singapore','+81':'Asia/Tokyo','+82':'Asia/Seoul',
+          '+86':'Asia/Shanghai','+91':'Asia/Kolkata','+971':'Asia/Dubai',
+        };
+
+        function getLeadTimezone(phone) {
+          if (!phone) return null;
+          const p = phone.replace(/[\s\-().]/g,'');
+          if (p.startsWith('+1') && p.length >= 5) {
+            return AREA_TZ[p.slice(2,5)] || 'America/New_York';
+          }
+          const keys = Object.keys(COUNTRY_TZ).sort((a,b)=>b.length-a.length);
+          for (const k of keys) if (p.startsWith(k)) return COUNTRY_TZ[k];
+          return null;
+        }
+
+        function isCallingHours(tz) {
+          if (!tz) return { ok: false, label: 'Unknown timezone — cannot verify calling hours', open: false };
+          const now = new Date();
+          const parts = {};
+          new Intl.DateTimeFormat('en-US',{timeZone:tz,hour:'numeric',minute:'2-digit',hour12:false,weekday:'long'})
+            .formatToParts(now).forEach(p=>parts[p.type]=p.value);
+          const hour = parseInt(parts.hour);
+          const day  = parts.weekday;
+          const timeStr = parts.hour+':'+parts.minute+' '+day;
+          if (day==='Saturday'||day==='Sunday') return {ok:false, label:timeStr+' (weekend)', open:false};
+          if (hour<8||hour>=20) return {ok:false, label:timeStr+' (outside hours)', open:false};
+          return {ok:true, label:timeStr, open:true};
+        }
+
+        function getLeadLocalTime(lead) {
+          const tz = getLeadTimezone(lead.phone);
+          const check = isCallingHours(tz);
+          return { tz, ...check };
+        }
+
+        function startQueue() {
+          if (_queueRunning) return;
+          if (!hasAcceptedTerms()) { showTermsModal(); return; }
+          const cfg = JSON.parse(localStorage.getItem(LS_VAPI)||'null');
+          if (!cfg||!cfg.vapiKey) {
+            toast('⚠ Configure Voicebot first');
+            document.getElementById('vapiPanel').classList.add('visible');
+            return;
+          }
+          // Build queue from all uncalled leads with phone
+          const all = getSelLeads().filter(l=>l.phone);
+          if (!all.length) { toast('Select leads first'); return; }
+          _queueLeads = all
+            .filter(l => {
+              const id = makeId(l);
+              const s = callStates.get(id);
+              return !s || s.state==='ready' || s.state==='failed';
+            })
+            .map(l => ({ leadId: makeId(l), lead: l }));
+
+          if (!_queueLeads.length) { toast('All selected leads already called'); return; }
+          _queueRunning = true;
+          document.getElementById('queueStartBtn').style.display = 'none';
+          document.getElementById('queueStopBtn').style.display  = 'inline-block';
+          document.getElementById('queueBar').classList.add('active');
+          toast('▶ Queue started — '+_queueLeads.length+' leads, fires when local time is 8am–8pm');
+          runQueueTick();
+        }
+
+        function stopQueue() {
+          _queueRunning = false;
+          clearTimeout(_queueTimer);
+          document.getElementById('queueStartBtn').style.display = 'inline-block';
+          document.getElementById('queueStopBtn').style.display  = 'none';
+          document.getElementById('queueStatus').textContent = '⏹ Queue stopped';
+          toast('⏹ Queue stopped');
+        }
+
+        function dismissQueue() {
+          stopQueue();
+          document.getElementById('queueBar').classList.remove('active');
+        }
+
+        async function runQueueTick() {
+          if (!_queueRunning) return;
+
+          let waiting = 0, called = 0, blocked = 0;
+
+          for (let i = _queueLeads.length - 1; i >= 0; i--) {
+            const { leadId, lead } = _queueLeads[i];
+            const s = callStates.get(leadId);
+            if (s && s.state !== 'ready' && s.state !== 'failed') {
+              // already called/calling — remove from queue
+              called++;
+              _queueLeads.splice(i, 1);
+              continue;
+            }
+            const { ok, label, tz } = getLeadLocalTime(lead);
+            if (ok) {
+              // Fire the call
+              _queueLeads.splice(i, 1);
+              called++;
+              document.getElementById('queueStatus').textContent =
+                '📞 Calling ' + (lead.name||lead.phone) + ' — ' + label + ' (' + (tz||'?') + ')';
+              triggerCall(leadId);
+              await new Promise(r => setTimeout(r, 4000)); // 4s gap between calls
+            } else {
+              blocked++;
+            }
+          }
+
+          waiting = _queueLeads.length - blocked;
+          document.getElementById('qStat_waiting').textContent = Math.max(0, _queueLeads.length);
+          document.getElementById('qStat_called').textContent  = called;
+          document.getElementById('qStat_blocked').textContent = blocked;
+
+          if (!_queueLeads.length) {
+            document.getElementById('queueStatus').textContent = '✅ Queue complete — all leads called';
+            stopQueue();
+            return;
+          }
+
+          // Next tick in 60 seconds
+          const nextTime = new Date(Date.now() + 60000).toLocaleTimeString();
+          document.getElementById('queueStatus').textContent =
+            '⏳ '+_queueLeads.length+' leads waiting — next check at '+nextTime;
+          _queueTimer = setTimeout(runQueueTick, 60000);
+        }
+
+        // ── Show local time badge on each lead card ──────────────────────────
+        function getLeadTzBadge(lead) {
+          const tz = getLeadTimezone(lead.phone);
+          if (!tz) return '';
+          const { ok, label } = isCallingHours(tz);
+          const cls = ok ? 'open' : (label.includes('weekend') ? 'blocked' : 'waiting');
+          const icon = ok ? '🟢' : (label.includes('weekend') ? '🔴' : '🟡');
+          return '<div class="lead-tz '+cls+'">'+icon+' '+label+' · '+(tz.split('/')[1]||tz).replace('_',' ')+'</div>';
+        }
+
+        // ── Deduplicate by phone on import ────────────────────────────────────
+        function deduplicateLeads(newLeads) {
+          const existing = new Set(
+            (JSON.parse(localStorage.getItem('lc_leads')||'[]'))
+              .map(l => l.phone).filter(Boolean)
+          );
+          const dupes = [], fresh = [];
+          newLeads.forEach(l => {
+            if (l.phone && existing.has(l.phone)) dupes.push(l);
+            else fresh.push(l);
+          });
+          if (dupes.length) toast('⚠ '+dupes.length+' duplicate phone number(s) skipped');
+          return fresh;
+        }
+
+        // ── Wire up "Open Queue" button in selbar ─────────────────────────────
+        function openQueuePanel() {
+          document.getElementById('queueBar').classList.add('active');
+        }
+
+                function getCallState(id){return(callStates.get(id)||{}).state||'ready';}
          function getCallLabel(id){
            const s=callStates.get(id);
            if(!s||s.state==='ready')return '🤖 Call';
@@ -2217,5 +2227,149 @@ Return ONLY a raw JSON array — no markdown, no code fences, no explanation:
             </div>
          </div>
       </footer>
-   </body>
+   
+<!-- ── AUTO-CALL QUEUE BAR ──────────────────────────────────────── -->
+<div class="queue-bar" id="queueBar">
+  <button class="btn-queue-start" id="queueStartBtn" onclick="startQueue()">▶ Start Queue</button>
+  <button class="btn-queue-stop" id="queueStopBtn" onclick="stopQueue()" style="display:none;">⏹ Stop</button>
+  <div class="queue-stat">Waiting: <strong id="qStat_waiting">0</strong></div>
+  <div class="queue-stat">Called: <strong id="qStat_called">0</strong></div>
+  <div class="queue-stat warn">Blocked: <strong id="qStat_blocked">0</strong></div>
+  <div class="queue-status" id="queueStatus">Queue ready</div>
+  <button class="btn-queue-stop" onclick="dismissQueue()" title="Close queue bar">✕</button>
+</div>
+<script>
+document.addEventListener('DOMContentLoaded',function(){
+  ['keyPanel','licenseLocked','licenseActiveBar','vapiToggleRow','vapiPanel','callLog','queueBar'].forEach(function(id){
+    var el=document.getElementById(id);
+    if(el){el.style.setProperty('display','none','important');}
+  });
+});
+</script>
+<script>
+(function(){
+  var CS_LSK='lc_callsheet_outcomes';
+  var CS_SCRIPTS={
+    dfy:[
+      {lbl:'Opener',t:"Hi, is this {{name}}? This is Ottmar from ContentScale \u2014 got twenty seconds?"},
+      {lbl:'Hook',t:"I had a quick look at {{company}}'s site \u2014 you've clearly got the business, but only a handful of pages. So when someone asks ChatGPT or Google's AI for a {{service}} in {{city}}, there's almost nothing there for it to pull from. You're basically invisible to AI search right now."},
+      {lbl:'Offer \u2014 done-for-you',t:"Here's the good part: we fix that done-for-you. We build the content so Google and the AI assistants start naming {{company}} \u2014 you don't lift a finger."},
+      {lbl:'Close \u2192 book the live demo',t:"Best next step is a quick 15-minute live demo \u2014 I'll show you exactly where you stand today and what we'd build. What suits you better, later this week or early next?"},
+      {lbl:'If hesitant',t:"No pressure at all \u2014 I can send you a free snapshot first so you see it for yourself. What's the best email?"},
+      {lbl:'Bucket angle',ref:true,bucket:true}
+    ],
+    training:[
+      {lbl:'Opener',t:"Hi, is this {{name}}? This is Ottmar from ContentScale \u2014 got twenty seconds?"},
+      {lbl:'Hook',t:"Most teams have AI like Claude now, but use a fraction of it. I run short, hands-on training so a team like yours at {{company}} actually gets productive with it \u2014 usually a few hours a week saved per person."},
+      {lbl:'Offer',t:"It's done around your real, day-to-day work, tailored per role \u2014 not generic theory."},
+      {lbl:'Close \u2192 book the live demo',t:"Worth a quick 15-minute live demo to show you what it'd look like for your team? What suits you this week?"},
+      {lbl:'If hesitant',t:"No worries \u2014 I can send a short overview by email first. What's the best address?"}
+    ]
+  };
+  var BUCKET_ANGLE={
+    ghost:"\uD83D\uDC7B Nearly empty (0\u20135): \u201Calmost nothing indexed \u2014 we'd build it from scratch.\u201D",
+    skeleton:"\uD83D\uDD25 Bare bones (5\u201315): \u201Creal business, site says almost nothing \u2014 easiest win, we write your missing pages.\u201D",
+    brochure:"\uD83D\uDD25 Built & forgot (15\u201330): \u201Cbasics are there but no blog, thin copy \u2014 we add the content that ranks.\u201D",
+    stale:"\uD83D\uDD70 Gone quiet (30\u201360): \u201Cyou started content then stopped \u2014 we restart your engine.\u201D",
+    active:"\u26A1 Needs quality (60\u2013150): \u201Cyou publish, but inconsistently \u2014 we audit and lift the quality.\u201D",
+    estab:"\uD83C\uDFE2 Large library (150+): \u201Cbig library \u2014 we audit; a chunk is probably hurting rankings.\u201D"
+  };
+  var csScript='dfy', csFilter='all', csActive=null, csOutcomes={};
+  try{csOutcomes=JSON.parse(localStorage.getItem(CS_LSK)||'{}');}catch(e){csOutcomes={};}
+  function csSave(){try{localStorage.setItem(CS_LSK,JSON.stringify(csOutcomes));}catch(e){}}
+  function nicheLabel(id){ if(typeof INDUSTRIES!=='undefined'){var f=INDUSTRIES.find(function(i){return i.id===id;}); if(f)return f.label;} return id||'Other'; }
+  function esc(s){return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+  function fill(t,l){
+    var svc=(document.getElementById('csService')||{}).value||nicheLabel(l.industry_id)||'your service';
+    var city=(document.getElementById('city')||{}).value||'your city';
+    var cb=(document.getElementById('csCallback')||{}).value||'';
+    var name=l.name||'there', company=l.name||'your business';
+    return esc(t).replace(/{{name}}/g,'<span class="cs-var">'+esc(name)+'</span>')
+      .replace(/{{company}}/g,'<span class="cs-var">'+esc(company)+'</span>')
+      .replace(/{{service}}/g,'<span class="cs-var">'+esc(svc)+'</span>')
+      .replace(/{{city}}/g,'<span class="cs-var">'+esc(city)+'</span>')
+      .replace(/{{callback}}/g,esc(cb));
+  }
+  function scriptHTML(l){
+    var segs=CS_SCRIPTS[csScript];
+    var bk=(typeof getBucket==='function')?getBucket(l.estimated_pages):'skeleton';
+    return segs.map(function(s){
+      if(s.ref&&s.bucket){ return '<div class="cs-seg ref"><div class="lbl">Bucket angle \u2014 this lead</div><ul><li>'+(BUCKET_ANGLE[bk]||'')+'</li></ul></div>'; }
+      return '<div class="cs-seg"><div class="lbl">'+s.lbl+'</div><p>'+fill(s.t,l)+'</p></div>';
+    }).join('');
+  }
+  function ocLabel(v){return ({interested:'Interested',callback:'Callback',voicemail:'Voicemail',noanswer:'No answer',no:'Not interested',dnc:'DO NOT CALL'})[v]||'';}
+  function ocColor(v){return ({interested:'rgba(74,222,128,.15);color:var(--green)',callback:'rgba(251,191,36,.15);color:var(--gold)',voicemail:'rgba(167,139,250,.15);color:var(--purple)',noanswer:'rgba(148,163,184,.15);color:var(--muted)',no:'rgba(244,63,63,.15);color:var(--red)',dnc:'#7F1D1D;color:#fff'})[v]||'rgba(255,255,255,.05)';}
+  function lid(l){return (typeof makeId==='function')?makeId(l):encodeURIComponent((l.name||'x')+(l.website||'y')).replace(/[^a-z0-9]/gi,'_');}
+
+  window.csSetScript=function(v,btn){csScript=v;var t=document.getElementById('csToggle');if(t)t.querySelectorAll('button').forEach(function(b){b.classList.toggle('on',b===btn);});csRender();};
+  window.csSetFilter=function(v,btn){csFilter=v;document.querySelectorAll('.cs-filters .cs-fbtn[data-f]').forEach(function(b){b.classList.toggle('on',b===btn);});csRender();};
+  window.csSelect=function(id){csActive=(csActive===id?null:id);csRender();};
+  window.csOutcome=function(id,v,ev){if(ev&&ev.stopPropagation)ev.stopPropagation();csOutcomes[id]=v;csSave();csRender();if(typeof toast==='function')toast('Saved \u2014 '+ocLabel(v));};
+
+  window.csRender=function(){
+    var panel=document.getElementById('callSheet'); if(!panel)return;
+    if(typeof allLeads==='undefined'||!allLeads.length){panel.style.display='none';return;}
+    panel.style.display='block';
+    var leads=allLeads.slice();
+    if(csFilter==='phone')leads=leads.filter(function(l){return l.phone;});
+    if(csFilter==='nophone')leads=leads.filter(function(l){return !l.phone;});
+    var cEl=document.getElementById('csCount');
+    if(cEl)cEl.textContent=leads.length+' lead'+(leads.length!==1?'s':'')+(csFilter==='all'?'':' ('+csFilter+')');
+    var groups={};
+    leads.forEach(function(l){var k=l.industry_id||'other';(groups[k]=groups[k]||[]).push(l);});
+    var order=Object.keys(groups).sort(function(a,b){return nicheLabel(a).localeCompare(nicheLabel(b));});
+    var html='';
+    order.forEach(function(k){
+      var items=groups[k];
+      items.sort(function(a,b){return (b.phone?1:0)-(a.phone?1:0);});
+      html+='<div class="cs-group"><div class="cs-grouphead">'+esc(nicheLabel(k))+' &middot; '+items.length+'</div>';
+      items.forEach(function(l){
+        var id=lid(l), oc=csOutcomes[id], isDnc=(oc==='dnc'), active=(csActive===id);
+        var bk=(typeof getBucket==='function')?getBucket(l.estimated_pages):'';
+        html+='<div class="cs-lead'+(active?' active':'')+(isDnc?' dnc':'')+'" onclick="csSelect(\''+id+'\')">';
+        html+='<div class="cs-lead-row">';
+        html+='<span class="cs-nm">'+esc(l.name||'Unknown')+(isDnc?' <span class="cs-dncpill">DNC</span>':'')+'</span>';
+        if(l.phone){html+='<a class="cs-ph" href="tel:'+esc(l.phone)+'" onclick="event.stopPropagation()">\uD83D\uDCDE '+esc(l.phone)+'</a>';}
+        else{html+='<span class="cs-nophone">no number</span>';}
+        if(bk)html+='<span class="cs-btag">'+bk+'</span>';
+        if(oc)html+='<span class="cs-oc" style="background:'+ocColor(oc)+'">'+ocLabel(oc)+'</span>';
+        html+='</div>';
+        html+='<div class="cs-script">'+scriptHTML(l);
+        html+='<div class="cs-obtns">'
+          +'<button class="cs-ob" onclick="csOutcome(\''+id+'\',\'interested\',event)">\u2705 Interested</button>'
+          +'<button class="cs-ob" onclick="csOutcome(\''+id+'\',\'callback\',event)">\u23F0 Callback</button>'
+          +'<button class="cs-ob" onclick="csOutcome(\''+id+'\',\'voicemail\',event)">\uD83D\uDCEE Voicemail</button>'
+          +'<button class="cs-ob" onclick="csOutcome(\''+id+'\',\'noanswer\',event)">\u2026 No answer</button>'
+          +'<button class="cs-ob" onclick="csOutcome(\''+id+'\',\'no\',event)">\u2715 Not interested</button>'
+          +'<button class="cs-ob dnc" onclick="csOutcome(\''+id+'\',\'dnc\',event)">\uD83D\uDEAB Do Not Call</button>'
+          +'</div>';
+        html+='</div></div>';
+      });
+      html+='</div>';
+    });
+    var body=document.getElementById('csBody'); if(body)body.innerHTML=html;
+  };
+
+  window.csExportCSV=function(){
+    if(typeof allLeads==='undefined'||!allLeads.length)return;
+    var rows=[['Name','Phone','Niche','Website','Est Pages','Bucket','Outcome','Do Not Call']];
+    allLeads.forEach(function(l){
+      var id=lid(l), oc=csOutcomes[id]||'';
+      var bk=(typeof getBucket==='function')?getBucket(l.estimated_pages):'';
+      rows.push([l.name||'',l.phone||'',nicheLabel(l.industry_id),l.website||'',l.estimated_pages||'',bk,ocLabel(oc),(oc==='dnc'?'YES':'')]);
+    });
+    var csv=rows.map(function(r){return r.map(function(c){return '"'+String(c).replace(/"/g,'""')+'"';}).join(',');}).join('\n');
+    var a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download='call-sheet-'+Date.now()+'.csv';a.click();
+    if(typeof toast==='function')toast('Exported '+allLeads.length+' leads');
+  };
+
+  window.csReloadOutcomes=function(){try{csOutcomes=JSON.parse(localStorage.getItem(CS_LSK)||'{}');}catch(e){csOutcomes={};}csRender();};
+  var _csLast=-1;
+  setInterval(function(){ if(typeof allLeads!=='undefined'&&allLeads.length!==_csLast){_csLast=allLeads.length;try{csRender();}catch(e){}} },1500);
+  document.addEventListener('DOMContentLoaded',function(){setTimeout(function(){try{csRender();}catch(e){}},700);});
+})();
+</script>
+
+</body>
 </html>
