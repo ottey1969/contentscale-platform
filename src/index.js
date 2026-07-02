@@ -1,4 +1,4 @@
-console.log('=== CONTENTSCALE BOOT v2026-07-02-fixes3 | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON ===');
+console.log('=== CONTENTSCALE BOOT v2026-07-02-fixes4 | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON ===');
 // CONTENTSCALE SERVER.JS — ELITE EDITION v4 (FIXED v3)
 // ✅ FIX v7: secondary_keywords + related_keywords auto in Analyse JSON + Execute prompt
 // ✅ FIX v7: analysis_data JSONB safe parse in execute-rewrite
@@ -30775,11 +30775,22 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 <button onclick="switchTab('tracker-clients')" id="tabTrackerClientsBtn" class="sidebar-btn"><i class="fas fa-users"></i><span>Tracker Clients</span></button>
                 <button onclick="switchTab('enginecodes')" id="tabEnginecodesBtn" class="sidebar-btn"><i class="fas fa-key"></i><span>Engine Access</span></button>
                 <button onclick="switchTab('giveaccess')" id="tabGiveaccessBtn" class="sidebar-btn"><i class="fas fa-share-alt"></i><span>Give Access</span></button>
+                <button onclick="switchTab('gsc');loadGscSites();" id="tabGscBtn" class="sidebar-btn"><i class="fas fa-magnifying-glass-chart"></i><span>GSC Sites</span></button>
                 <button onclick="switchTab('admin-settings');loadAdminSettings();" id="tabAdminSettingsBtn" class="sidebar-btn"><i class="fas fa-cog"></i><span>Settings</span></button>
 
 
             </nav>
             <div id="tab-area">
+
+            <!-- GSC SITES (auto-discovery) -->
+            <div id="tab-gsc" class="tab-content hidden">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-3xl font-bold">🔍 GSC Sites</h2>
+                    <button onclick="loadGscSites()" class="btn btn-primary"><i class="fas fa-rotate mr-2"></i> Find my GSC sites</button>
+                </div>
+                <p style="color:#94a3b8;font-size:13px;margin-bottom:16px;">Automatically discovers every Search Console property your service account can access — no manual searching. Click <strong>Load pages</strong> on a site to pull its top pages (clicks, impressions, position) without exporting a CSV.</p>
+                <div id="gscSitesBox"><div style="color:#64748b;padding:12px;">Click "Find my GSC sites" to load your properties.</div></div>
+            </div>
 
             <!-- LEADERBOARD -->
             <div id="tab-leaderboard" class="tab-content">
@@ -33745,6 +33756,66 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 await apiCall('/api/admin/tracker-clients/' + id, 'DELETE');
                 loadTrackerClients();
             } catch(e) { alert('Error: ' + e.message); }
+        }
+
+        // ── GSC AUTO-DISCOVERY ──────────────────────────────────────────────
+        var _gscSites = [];
+        function _gscKey(){ return localStorage.getItem('admin_id') || ''; }
+        function _gscEsc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+        async function loadGscSites(){
+            var box = document.getElementById('gscSitesBox');
+            if(!box) return;
+            box.innerHTML = '<div style="color:#94a3b8;padding:12px;">Loading your GSC properties…</div>';
+            try{
+                var r = await fetch('/api/gsc/sites', { headers: { 'x-admin-key': _gscKey() } });
+                var d = await r.json();
+                if(!r.ok || !d.success){ box.innerHTML = '<div style="color:#f87171;padding:12px;">'+_gscEsc((d&&d.error)||('HTTP '+r.status))+'</div>'; return; }
+                _gscSites = d.sites || [];
+                if(!_gscSites.length){ box.innerHTML = '<div style="color:#fbbf24;padding:12px;">No properties found. Add your service account as a user in each Search Console property (Restricted is enough).</div>'; return; }
+                var h = '<div style="color:#94a3b8;font-size:12px;margin-bottom:10px;">'+_gscSites.length+' properties found</div>';
+                for(var i=0;i<_gscSites.length;i++){
+                    var s = _gscSites[i];
+                    var badge = s.is_domain
+                        ? '<span style="background:rgba(167,139,250,.15);color:#a78bfa;border:1px solid rgba(167,139,250,.3);border-radius:4px;font-size:10px;padding:2px 7px;margin-left:8px;">DOMAIN</span>'
+                        : '<span style="background:rgba(96,165,250,.12);color:#60a5fa;border:1px solid rgba(96,165,250,.3);border-radius:4px;font-size:10px;padding:2px 7px;margin-left:8px;">URL-PREFIX</span>';
+                    h += '<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid #334155;border-radius:8px;margin-bottom:6px;background:#0f172a;">'
+                        + '<div style="flex:1;font-family:monospace;font-size:13px;color:#f9fafb;word-break:break-all;">'+_gscEsc(s.siteUrl)+badge+'</div>'
+                        + '<button onclick="loadGscSitePages('+i+')" class="btn btn-primary" style="white-space:nowrap;">Load pages</button>'
+                        + '</div>'
+                        + '<div id="gscPages_'+i+'" style="margin:0 0 12px 0;"></div>';
+                }
+                box.innerHTML = h;
+            }catch(e){ box.innerHTML = '<div style="color:#f87171;padding:12px;">'+_gscEsc(e.message)+'</div>'; }
+        }
+        async function loadGscSitePages(i){
+            var s = _gscSites[i]; if(!s) return;
+            var box = document.getElementById('gscPages_'+i); if(!box) return;
+            box.innerHTML = '<div style="color:#94a3b8;padding:8px 12px;">Loading pages…</div>';
+            try{
+                var r = await fetch('/api/gsc/site-pages?siteUrl='+encodeURIComponent(s.siteUrl)+'&days=90&limit=200', { headers: { 'x-admin-key': _gscKey() } });
+                var d = await r.json();
+                if(!r.ok || !d.success){ box.innerHTML = '<div style="color:#f87171;padding:8px 12px;">'+_gscEsc((d&&d.error)||('HTTP '+r.status))+'</div>'; return; }
+                if(!d.pages.length){ box.innerHTML = '<div style="color:#fbbf24;padding:8px 12px;">No page data in the last 90 days.</div>'; return; }
+                var rows = '', urls = '';
+                for(var j=0;j<d.pages.length;j++){
+                    var p = d.pages[j];
+                    urls += p.url + String.fromCharCode(10);
+                    rows += '<tr>'
+                        + '<td style="padding:6px 8px;font-family:monospace;font-size:11px;color:#cbd5e1;word-break:break-all;">'+_gscEsc(p.url)+'</td>'
+                        + '<td style="padding:6px 8px;text-align:right;color:#4ade80;">'+p.clicks+'</td>'
+                        + '<td style="padding:6px 8px;text-align:right;color:#60a5fa;">'+p.impressions+'</td>'
+                        + '<td style="padding:6px 8px;text-align:right;color:#fbbf24;">'+p.position+'</td>'
+                        + '</tr>';
+                }
+                box.innerHTML = '<div style="border:1px solid #334155;border-radius:8px;padding:12px;background:#0b1220;margin-bottom:6px;">'
+                    + '<div style="color:#94a3b8;font-size:12px;margin-bottom:8px;">'+d.count+' pages (last '+d.days+' days) — newest GSC data</div>'
+                    + '<div style="max-height:300px;overflow:auto;"><table style="width:100%;border-collapse:collapse;font-size:12px;">'
+                    + '<thead><tr style="color:#64748b;font-size:10px;text-transform:uppercase;letter-spacing:.06em;"><th style="text-align:left;padding:6px 8px;">URL</th><th style="padding:6px 8px;">Clicks</th><th style="padding:6px 8px;">Impr</th><th style="padding:6px 8px;">Pos</th></tr></thead>'
+                    + '<tbody>'+rows+'</tbody></table></div>'
+                    + '<div style="color:#64748b;font-size:11px;margin:10px 0 4px;">All URLs (copy into the tracker import):</div>'
+                    + '<textarea readonly style="width:100%;height:90px;background:#0f172a;border:1px solid #334155;border-radius:6px;color:#cbd5e1;font-family:monospace;font-size:11px;padding:8px;">'+_gscEsc(urls)+'</textarea>'
+                    + '</div>';
+            }catch(e){ box.innerHTML = '<div style="color:#f87171;padding:8px 12px;">'+_gscEsc(e.message)+'</div>'; }
         }
     <\/script>
 </body>
