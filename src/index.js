@@ -1,4 +1,4 @@
-console.log('=== CONTENTSCALE BOOT v2026-07-02-fixes4 | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON ===');
+console.log('=== CONTENTSCALE BOOT v2026-07-02-fixes5 | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON ===');
 // CONTENTSCALE SERVER.JS — ELITE EDITION v4 (FIXED v3)
 // ✅ FIX v7: secondary_keywords + related_keywords auto in Analyse JSON + Execute prompt
 // ✅ FIX v7: analysis_data JSONB safe parse in execute-rewrite
@@ -13626,7 +13626,8 @@ async function _getGscAccessToken(){
     exp: now + 3600, iat: now
   })).toString('base64url');
   const sign = createSign('RSA-SHA256'); sign.update(header + '.' + payload);
-  const signature = sign.sign(_gscServiceAccount.private_key, 'base64url');
+  const _pk = String(_gscServiceAccount.private_key || '').replace(/\\n/g, '\n');
+  const signature = sign.sign(_pk, 'base64url');
   const jwt = header + '.' + payload + '.' + signature;
   const tokenResp = await axios.post('https://oauth2.googleapis.com/token',
     new URLSearchParams({ grant_type:'urn:ietf:params:oauth:grant-type:jwt-bearer', assertion: jwt }).toString(),
@@ -13649,7 +13650,7 @@ app.get('/api/gsc/sites', verifyAdmin, async (req, res) => {
       return a.siteUrl.localeCompare(b.siteUrl);
     });
     res.json({ success:true, count:entries.length, sites: entries.map(s=>({ siteUrl:s.siteUrl, permission:s.permissionLevel, is_domain: s.siteUrl.indexOf('sc-domain:')===0 })) });
-  } catch(e){ res.status(500).json({ success:false, error:e.message }); }
+  } catch(e){ const detail = (e && e.response && e.response.data && (e.response.data.error_description || e.response.data.error || JSON.stringify(e.response.data))) || (e && e.message) || 'Unknown error'; console.error('[gsc/sites]', detail); res.status(500).json({ success:false, error: detail }); }
 });
 
 // GET /api/gsc/site-pages?siteUrl=...&days=90&limit=200 — pull top pages for a property (auto-import source, no CSV)
@@ -13676,7 +13677,7 @@ app.get('/api/gsc/site-pages', verifyAdmin, async (req, res) => {
       position: parseFloat((row.position||0).toFixed(1))
     })).filter(p => p.url);
     res.json({ success:true, siteUrl, days, count:pages.length, pages });
-  } catch(e){ res.status(500).json({ success:false, error:e.message }); }
+  } catch(e){ const detail = (e && e.response && e.response.data && (e.response.data.error_description || e.response.data.error || JSON.stringify(e.response.data))) || (e && e.message) || 'Unknown error'; console.error('[gsc/site-pages]', detail); res.status(500).json({ success:false, error: detail }); }
 });
 
 
