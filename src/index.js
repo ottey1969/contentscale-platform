@@ -29028,14 +29028,26 @@ function jumpToPage(pageId) {
   var card = document.querySelector('.cs-page-card[data-page-id="' + pageId + '"]');
   if (!card) { setMdFilter('all'); card = document.querySelector('.cs-page-card[data-page-id="' + pageId + '"]'); }
   if (!card) return;
-  card.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  // Highlight EXACTLY the URL line — tight, not the whole card
+  // Cards are tall — block:'center' overshoots and lands the viewport mid-card, which reads as "scrolled past it".
+  // Scroll the TOP of the card just under the top of the viewport instead, so the highlighted URL is the first thing you see.
+  card.style.scrollMarginTop = '72px';
+  card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  // Exact highlight: crisp 2px outline on the card edge (no glow spread) + the URL line itself
+  var prevOutline = card.style.outline, prevOffset = card.style.outlineOffset;
+  card.style.outline = '2px solid #f97316';
+  card.style.outlineOffset = '0px';
   var urlEl = card.querySelector('.cs-url-line') || card;
   var prevBg = urlEl.style.background, prevSh = urlEl.style.boxShadow, prevCo = urlEl.style.color;
   urlEl.style.background = 'rgba(249,115,22,.18)';
   urlEl.style.boxShadow = 'inset 0 -2px 0 #f97316';
   urlEl.style.color = '#fed7aa';
-  setTimeout(function(){ urlEl.style.background = prevBg || ''; urlEl.style.boxShadow = prevSh || ''; urlEl.style.color = prevCo || ''; }, 2200);
+  setTimeout(function(){
+    card.style.outline = prevOutline || '';
+    card.style.outlineOffset = prevOffset || '';
+    urlEl.style.background = prevBg || '';
+    urlEl.style.boxShadow = prevSh || '';
+    urlEl.style.color = prevCo || '';
+  }, 2200);
 }
 
 async function setAllManualDone(on) {
