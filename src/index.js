@@ -2311,6 +2311,27 @@ app.post('/api/tracker-client/:token/import-gsc-pages', async (req, res) => {
     const _normMap = new Map();
     _existR.rows.forEach(function(row){ _normMap.set(_normTrackUrl(row.url), row.id); });
 
+    // Defense in depth: dedupe the incoming payload by normalized URL. If the same page arrives twice
+    // in one batch (http/https/www variants, or a query-only fallback pointing at the homepage),
+    // merge instead of letting the LAST row overwrite the correct totals:
+    // sum clicks/impressions, impressions-weighted position, keyword from the row with most impressions.
+    const _seen = new Map();
+    const _deduped = [];
+    for (const p of pages) {
+      const k = _normTrackUrl(p.url);
+      if (!_seen.has(k)) { _seen.set(k, p); _deduped.push(p); continue; }
+      const e = _seen.get(k);
+      const eImpr = e.impressions || 0, pImpr = p.impressions || 0;
+      if (e.position && p.position && (eImpr + pImpr) > 0) e.position = Math.round(((e.position * eImpr + p.position * pImpr) / (eImpr + pImpr)) * 10) / 10;
+      else if (p.position && !e.position) e.position = p.position;
+      if (pImpr > eImpr && p.keyword) e.keyword = p.keyword;
+      else if (!e.keyword && p.keyword) e.keyword = p.keyword;
+      e.clicks = (e.clicks || 0) + (p.clicks || 0);
+      e.impressions = eImpr + pImpr;
+      if (p.add) e.add = true;
+    }
+    const _pagesIn = _deduped;
+
     let imported = 0;    // successfully processed (refreshed + new) — kept for compatibility
     let refreshed = 0;   // existing pages recognised + refreshed on their own spot
     let newAdded = 0;    // brand-new pages added
@@ -2319,7 +2340,7 @@ app.post('/api/tracker-client/:token/import-gsc-pages', async (req, res) => {
     const results = [];
     const warnings = [];
     
-    for (const p of pages) {
+    for (const p of _pagesIn) {
       try {
         // Recognise existing tracked page by normalized URL → refresh on its own spot (never duplicate, never counts against the limit)
         const _matchId = _normMap.get(_normTrackUrl(p.url));
@@ -30208,7 +30229,8 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
 
     if (!pairs.length) { toast('No valid data found. Try: GSC Queries CSV, Pages CSV, or URL | keyword format', '#f87171'); return; }
 
-    // Merge duplicate URLs \\u2014 GSC often splits one page across http/https/www/trailing-slash variants. Sum the metrics.
+    // Merge duplicate URLs \\u2014 GSC often splits one page across http/https/www/trailing-slash variants.
+    // Sum the metrics; position = impressions-weighted average (NOT best-of, which flatters the numbers).
     var _byUrl = {}; var _merged = [];
     pairs.forEach(function(p){
       if (p.isQueryOnly) { _merged.push(p); return; }
@@ -30216,10 +30238,16 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
       if (!key) { _merged.push(p); return; }
       if (_byUrl[key]) {
         var e = _byUrl[key];
+        // weighted position across variants
+        var eImpr = e.impressions || 0, pImpr = p.impressions || 0;
+        if (e.position && p.position && (eImpr + pImpr) > 0) {
+          e.position = Math.round(((e.position * eImpr + p.position * pImpr) / (eImpr + pImpr)) * 10) / 10;
+        } else if (p.position && !e.position) e.position = p.position;
         e.clicks = (e.clicks||0) + (p.clicks||0);
-        e.impressions = (e.impressions||0) + (p.impressions||0);
-        if (p.position && (!e.position || p.position < e.position)) e.position = p.position;
+        e.impressions = eImpr + pImpr;
         if (!e.keyword && p.keyword) e.keyword = p.keyword;
+        // prefer https non-www as canonical
+        if (String(p.url||'').indexOf('https://') === 0 && String(p.url||'').indexOf('https://www.') !== 0) e.url = p.url;
       } else { _byUrl[key] = p; _merged.push(p); }
     });
     pairs = _merged;
@@ -30305,19 +30333,55 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
 
   // -- GSC keyword import ----------------------------------------------------
   async function importGscKeywords() {
-    // Send the FULL parsed list. Existing pages are always overwritten (refreshed);
-    // new pages are only added when ticked (add) AND a free slot exists (server enforces the limit).
+    // Send ONE row per URL with correct merged metrics. Rules:
+    // 1. Page rows (from a Pages CSV) carry the REAL page metrics -> sum clicks/impressions across
+    //    http/https/www variants, position = impressions-weighted average.
+    // 2. Query-only rows (from a Queries CSV) fall back to the homepage URL, but their metrics are
+    //    query-level, NOT page-level. They must NEVER overwrite page metrics -> they only contribute
+    //    the keyword (the query with the most impressions wins).
+    // 3. If a URL has ONLY query rows, use the top query's metrics as a best effort.
     var all = document.querySelectorAll('.gsc-cb');
     if (!all || !all.length) { toast('Nothing to import — parse first', '#f87171'); return; }
-    var rows = [];
+    var _norm = function(u){ try { var x = new URL(String(u).trim()); return x.host.toLowerCase().replace(/^www[.]/,'') + x.pathname.toLowerCase().replace(/[/]+$/,'') + (x.search||''); } catch(e) { return String(u||'').trim().toLowerCase().replace(/^https?:[/][/]/,'').replace(/^www[.]/,'').replace(/[/]+$/,''); } };
+    var groups = {};
     all.forEach(function(cb) {
       var v;
       try { v = JSON.parse(cb.value); } catch(e) { v = { url: cb.value, keyword: '' }; }
+      var isQuery = !!v.isQueryOnly;
       if (!v.url || v.url.indexOf('http') !== 0) {
         if (!cb.checked) return; // skip unselected queries-only rows
-        v = { url: 'https://' + DOMAIN + '/', keyword: v.keyword || v.url };
+        isQuery = true;
+        v = { url: 'https://' + DOMAIN + '/', keyword: v.keyword || v.url, clicks: v.clicks, impressions: v.impressions, position: v.position };
       }
-      rows.push({ url: v.url, keyword: v.keyword || '', clicks: v.clicks || null, impressions: v.impressions || null, position: v.position || null, add: !!cb.checked });
+      var key = _norm(v.url);
+      if (!groups[key]) groups[key] = { url: v.url, pageClicks: 0, pageImpr: 0, posWeighted: 0, posImprSum: 0, hasPage: false, pageKw: '', topQueryKw: '', topQueryImpr: -1, qClicks: 0, qImpr: 0, qPos: null, checked: false };
+      var g = groups[key];
+      if (cb.checked) g.checked = true;
+      if (isQuery) {
+        // keyword contribution only; remember best query as metric fallback
+        if ((v.impressions || 0) > g.topQueryImpr) { g.topQueryImpr = v.impressions || 0; g.topQueryKw = v.keyword || ''; g.qClicks = v.clicks || 0; g.qImpr = v.impressions || 0; g.qPos = v.position || null; }
+      } else {
+        g.hasPage = true;
+        g.pageClicks += (v.clicks || 0);
+        g.pageImpr += (v.impressions || 0);
+        if (v.position && v.impressions) { g.posWeighted += v.position * v.impressions; g.posImprSum += v.impressions; }
+        else if (v.position && !g.posImprSum) { g.posWeighted += v.position; g.posImprSum += 1; }
+        if (!g.pageKw && v.keyword) g.pageKw = v.keyword;
+        // prefer the https non-www variant as the canonical URL to store
+        if (v.url.indexOf('https://') === 0 && v.url.indexOf('https://www.') !== 0) g.url = v.url;
+      }
+    });
+    var rows = [];
+    Object.keys(groups).forEach(function(key) {
+      var g = groups[key];
+      var kw = g.pageKw || g.topQueryKw || '';
+      if (g.hasPage) {
+        var pos = g.posImprSum > 0 ? Math.round((g.posWeighted / g.posImprSum) * 10) / 10 : null;
+        rows.push({ url: g.url, keyword: kw, clicks: g.pageClicks || null, impressions: g.pageImpr || null, position: pos, add: g.checked });
+      } else {
+        // query-only URL (homepage fallback without a page row): best-effort top query metrics
+        rows.push({ url: g.url, keyword: kw, clicks: g.qClicks || null, impressions: g.qImpr || null, position: g.qPos, add: g.checked });
+      }
     });
     if (!rows.length) { toast('No valid URLs to import', '#f87171'); return; }
     var bt = document.getElementById('importGscBtn');
