@@ -34572,26 +34572,30 @@ ${ourPageText || '(no HTML stored — paste HTML first)'}
 
 ${citedPageText ? 'TOP CITED COMPETITOR CONTENT:\n' + citedPageText.substring(0, 2000) : ''}
 
-KEY CITATION FACTS:
-- 44% of AI citations come from first 30% of page text — front-load the answer
-- Optimal passage: 134-167 words, self-contained, direct answer format
-- Content under 90 days = 3x more likely to be cited
-- Perplexity prefers specific data + expert attribution
-- ChatGPT/Bing prefer clear entity definitions + structured content
+CITATION RULES — each rule appears once, all are mandatory:
+1. ANSWER-FIRST: the FIRST sentence of every improved_version answers the query in ≤25 words, form [entity] + [verb] + [answer]. Never open with context, history, or "When it comes to...".
+2. SELF-CONTAINED, 134-167 WORDS: the passage must make complete sense quoted alone. No pronouns pointing outside it ("it", "this company", "they" → name the entity). AI engines lift ONE passage; if it needs the rest of the page it will not be cited.
+3. ENTITY-ANCHORED: name the business/brand and its location or service area at least once per passage — engines only cite entities they can disambiguate.
+4. VERIFIABLE, NEVER INVENTED: every number, price or timeframe must come from OUR CURRENT CONTENT, the data above, or your Google Search grounding. If a figure is not verifiable, write [OWNER: insert real figure — e.g. years in business, jobs completed, response time]. A fabricated statistic gets the page demoted — this rule outranks everything else.
+5. SPECIFIC ≠ GENERIC: at least one concrete number, named standard, timeframe or comparison per passage. If it would be equally true on a competitor's site, rewrite until it would not be.
+6. FRESHNESS: reference the current period where natural (content updated within 90 days is ~3x more likely to be cited).
+7. PLACEMENT IS EXACT: 44% of citations come from the first 30% of page text, so the primary answer passage goes at the top. Every placement must point to a LITERAL element from OUR CURRENT CONTENT: quote the exact H1/H2/H3 text or the first words of the paragraph to insert after or replace. "Near the top" or "in the FAQ" without the exact heading is a fail.
+8. PLATFORM ANGLES: Perplexity favors specific data + expert attribution; ChatGPT/Bing favor clear entity definitions + structured content. Cover both angles across the passage set — do not write five passages of the same type.
 
-NON-NEGOTIABLE QUALITY BAR — every improved_version MUST pass ALL of these before you output it:
-1. ANSWER-FIRST: the FIRST sentence directly answers the query in ≤25 words, in the form [entity] + [verb] + [answer]. Never open with context, history, or "When it comes to...".
-2. SELF-CONTAINED: the passage must make complete sense when quoted alone. No pronouns pointing outside the passage ("it", "this company", "they" → name the entity). An AI engine lifts ONE passage — if it needs the rest of the page, it will not be cited.
-3. ENTITY-ANCHORED: name the business/brand and its location or service area at least once per passage. Engines cite entities they can disambiguate; anonymous text is interchangeable and gets skipped.
-4. VERIFIABLE, NEVER INVENTED: every number, price, timeframe or statistic must come from OUR CURRENT CONTENT, the GSC data above, or your Google Search grounding. If a needed figure is not verifiable, write [OWNER: insert real figure — e.g. years in business, jobs completed, response time] instead of inventing one. A fabricated statistic gets the page DEMOTED and destroys trust — this rule outranks everything else.
-5. SPECIFIC ≠ GENERIC: at least one concrete number, named standard, timeframe or comparison per passage. If the passage would be equally true on a competitor's site, rewrite it until it would not be.
-6. FRESHNESS SIGNAL: where natural, reference the current year/period so the passage reads as current, not evergreen filler.
+WORKED EXAMPLE — this is the standard. The business below is FICTIONAL: copy the STRUCTURE, never the entity — always use the real business name, location and services from OUR URL and OUR CURRENT CONTENT.
+CORRECT improved_version (type: direct_answer, example query "water heater replacement austin"):
+"Water heater replacement in Austin, TX costs between [OWNER: insert your real price range] for most homes, and Summit Plumbing Co. completes standard replacements within [OWNER: insert real timeframe]. Based in Austin, Summit Plumbing Co. installs tank and tankless systems across Travis and Williamson County. Licensed and insured in Texas (License [OWNER: real license number]), the company provides free written quotes before any work begins, and emergency crews respond [OWNER: insert real response time], including weekends. Homeowners can verify licensing through the Texas State Board of Plumbing Examiners. As of ${new Date().toLocaleDateString('en-US',{month:'long', year:'numeric'})}, Summit Plumbing Co. serves [OWNER: number] neighborhoods across the Austin metro."
+CORRECT placement for it: 'Insert immediately after the H1 "Water Heater Replacement in Austin" and before the paragraph starting "For over..."'
+Why this passes: first sentence answers the query, entity + location named, zero invented numbers (placeholders where data is missing), self-contained, current date, exact insertion point.
+
+FAIL EXAMPLE — never output anything like this:
+"This company offers high-quality roofing services. It is important to have a good roof. Adding more relevant content and improving user experience will help the page rank better." (No answer, pronouns without entity, no numbers, no placement — worthless.)
 
 HARD FAIL CONDITIONS — output containing ANY of these is rejected:
-- Advice like "improve content quality", "add relevant keywords", "enhance user experience" (says nothing)
-- A structural_fix without an exact element name AND a copy-pasteable example
+- Advice like "improve content quality", "add relevant keywords", "enhance user experience"
+- A structural_fix or placement without an exact element/heading quote AND copy-pasteable text
 - An improved_version whose first sentence does not answer the query
-- Any statistic that cannot be traced to the page, the data above, or a grounding source
+- Any statistic not traceable to the page, the data above, or a grounding source
 
 TASK: Use Google Search to check current AI Overview for "${keyword}". Generate passages that work across ALL THREE platforms.
 
@@ -34609,8 +34613,8 @@ Return ONLY valid JSON — no markdown:
     {
       "type": "direct_answer|statistic|definition|how_to|faq_answer",
       "passage": "exact passage from AI Overview or top cited source",
-      "improved_version": "our 134-167 word self-contained version — works for all 3 platforms",
-      "placement": "immediately after H1|in FAQ section|as H2 answer paragraph|in TL;DR",
+      "improved_version": "our version following the CITATION RULES above",
+      "placement": "exact insertion point quoting the literal H1/H2/H3 or paragraph opening from OUR CURRENT CONTENT, e.g. 'Insert immediately after the H2 \\"...\\"'",
       "why": "why this triggers citation across Google + Perplexity + ChatGPT",
       "word_count_target": 150,
       "platforms": ["google","perplexity","chatgpt"]
