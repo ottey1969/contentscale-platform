@@ -1663,6 +1663,21 @@ app.patch('/api/tracker-client/:token/pages/:pageId/done', async (req, res) => {
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
+// PATCH /api/tracker-client/:token/pages/manual-done-all — bulk set/clear the user's own checkmarks.
+// Same rule as single toggle: only the user's explicit action reaches this, nothing automated.
+app.patch('/api/tracker-client/:token/pages/manual-done-all', async (req, res) => {
+  try {
+    const cr = await pool.query('SELECT id FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status != $2)', [req.params.token, 'deleted']);
+    if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
+    const on = !!req.body.manual_done;
+    const r = await pool.query(
+      'UPDATE tracker_pages SET manual_done=$1, manual_done_at=' + (on ? 'NOW()' : 'NULL') + ' WHERE tracker_client_id=$2 AND (is_active=TRUE OR is_active IS NULL)',
+      [on, cr.rows[0].id]
+    );
+    res.json({ success: true, manual_done: on, updated: r.rowCount });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
 // PATCH /api/tracker-client/:token/pages/:pageId/manual-done — user-owned persistent checkmark.
 // Completely separate from is_done/needs_html/scan lights. ONLY this endpoint (i.e. the user's own click)
 // may change manual_done. Scans, HTML paste, brief generation, runTrackerCheck never touch it.
@@ -28140,6 +28155,8 @@ async function saveBrandCtx() {
 document.addEventListener('DOMContentLoaded', function(){ loadBrandCtx(); });
 
 var _ctSearchQuery = '';
+var _mdFilter = 'all'; // 'all' | 'todo' | 'done' — filter on the user's own persistent checkmarks
+  function setMdFilter(f) { _mdFilter = f; renderPages(); }
   function filterPages(q) { _ctSearchQuery = (q||'').toLowerCase().trim(); renderPages(); }
 
   async function loadPages() {
@@ -28326,11 +28343,50 @@ function renderPages() {
     var hay = [(p.url||''),(p.keyword||'')].join(' ').toLowerCase();
     return hay.indexOf(_ctSearchQuery) > -1;
   }) : _pages;
-  if (countEl) countEl.textContent = displayPages.length + (_ctSearchQuery ? ' of '+_pages.length : '') + ' pages tracked';
 
-  // Sort by OPPORTUNITY: highest GSC impressions first (most demand = highest priority),
-  // then clicks desc, then position asc (lower = better). Pages without GSC data sink to the bottom.
+  // ── My-check progress + filter (persistent, DB-backed manual_done) ──
+  var _isMd = function(p){ return p.manual_done === true || p.manual_done === 't' || p.manual_done === 'true' || p.manual_done === 1; };
+  var _mdDone = _pages.filter(_isMd).length;
+  var _mdTotal = _pages.length;
+  if (_mdFilter === 'todo') displayPages = displayPages.filter(function(p){ return !_isMd(p); });
+  else if (_mdFilter === 'done') displayPages = displayPages.filter(_isMd);
+  var _mdPct = _mdTotal ? Math.round((_mdDone/_mdTotal)*100) : 0;
+  var _mdBtn = function(key,label){
+    var on = _mdFilter === key;
+    return '<button onclick="setMdFilter(\'' + key + '\')" style="font-size:10px;font-weight:700;padding:3px 10px;border-radius:5px;cursor:pointer;'
+      + (on ? 'background:#7c3aed;border:1px solid #8b5cf6;color:#fff;' : 'background:none;border:1px solid #374151;color:#6b7280;')
+      + '">' + label + '</button>';
+  };
+  var mdBarHtml = '<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:#0d1117;border:1px solid #1f2937;border-radius:8px;padding:8px 14px;margin-bottom:12px;">'
+    + '<span style="font-size:10px;font-weight:800;letter-spacing:.06em;color:#4ade80;text-transform:uppercase;flex-shrink:0;">My checks</span>'
+    + '<span style="font-size:12px;font-weight:800;color:' + (_mdDone === _mdTotal && _mdTotal > 0 ? '#4ade80' : '#e5e7eb') + ';flex-shrink:0;">' + _mdDone + ' / ' + _mdTotal + '</span>'
+    + '<div style="flex:1;min-width:80px;height:6px;background:#1f2937;border-radius:3px;overflow:hidden;"><div style="width:' + _mdPct + '%;height:100%;background:linear-gradient(90deg,#16a34a,#4ade80);border-radius:3px;"></div></div>'
+    + '<div style="display:flex;gap:6px;flex-shrink:0;">'
+    + _mdBtn('all','All') + _mdBtn('todo','\\u25cb To do (' + (_mdTotal - _mdDone) + ')') + _mdBtn('done','\\u2713 Checked (' + _mdDone + ')')
+    + '</div>'
+    + '<div style="display:flex;gap:6px;flex-shrink:0;margin-left:auto;">'
+    + '<button onclick="setAllManualDone(true)" title="Set your checkmark on ALL pages" style="font-size:10px;font-weight:700;padding:3px 10px;border-radius:5px;cursor:pointer;background:none;border:1px solid #16a34a;color:#4ade80;">\\u2713 Check all</button>'
+    + '<button onclick="setAllManualDone(false)" title="Remove your checkmark from ALL pages" style="font-size:10px;font-weight:700;padding:3px 10px;border-radius:5px;cursor:pointer;background:none;border:1px solid #7f1d1d;color:#f87171;">\\u2715 Clear all</button>'
+    + '</div>'
+    + '<span style="font-size:9px;color:#4b5563;flex-basis:100%;">Your own checkmarks \\u2014 saved in the database, survive restarts and scans. Only you set or clear them.</span>'
+    + '</div>';
+
+  if (countEl) countEl.textContent = displayPages.length + (_ctSearchQuery || _mdFilter !== 'all' ? ' of '+_pages.length : '') + ' pages tracked';
+
+  // Sort: pages WITHOUT your checkmark first (open work on top), QUICK WINS on top of those
+  // (page-1 position + impressions but no clicks = fastest lead opportunity), then by OPPORTUNITY:
+  // highest GSC impressions first, then clicks desc, then position asc. Pages without GSC data sink.
+  var _isQw = function(p){
+    var i = p.gsc_impressions || 0, c = p.gsc_clicks || 0;
+    var ps = p.gsc_position ? parseFloat(p.gsc_position) : null;
+    var ctr = i > 0 ? (c / i) * 100 : null;
+    return ps !== null && ps <= 10 && i >= 100 && (ctr === null || ctr < 1);
+  };
   var sorted = displayPages.slice().sort(function(a,b) {
+    var aMd = _isMd(a) ? 1 : 0, bMd = _isMd(b) ? 1 : 0;
+    if (aMd !== bMd) return aMd - bMd;
+    var aQw = _isQw(a) ? 0 : 1, bQw = _isQw(b) ? 0 : 1;
+    if (aQw !== bQw) return aQw - bQw;
     var aImpr = a.gsc_impressions || 0;
     var bImpr = b.gsc_impressions || 0;
     if (bImpr !== aImpr) return bImpr - aImpr;
@@ -28341,7 +28397,7 @@ function renderPages() {
     var bPos = b.google_position || 999;
     return aPos - bPos;
   });
-  el.innerHTML = sorted.map(function(p, pageIdx) {
+  el.innerHTML = mdBarHtml + sorted.map(function(p, pageIdx) {
     var pos = p.google_position;
     var score = p.graaf_score;
     // Populate brief cache so the View Brief button + popup work (full data when available)
@@ -28372,6 +28428,26 @@ function renderPages() {
 
     // Citation badges
     var badges = '';
+    // QUICK WIN: GSC says page 1 (pos <= 10) with real demand (impressions) but (almost) no clicks.
+    // Google already ranks it — only the click is missing. Fix title/meta + get into the AI Overview = fastest leads.
+    var _qwImpr = p.gsc_impressions || 0;
+    var _qwClicks = p.gsc_clicks || 0;
+    var _qwPos = p.gsc_position ? parseFloat(p.gsc_position) : null;
+    var _qwCtr = _qwImpr > 0 ? (_qwClicks / _qwImpr) * 100 : null;
+    var isQuickWin = _qwPos !== null && _qwPos <= 10 && _qwImpr >= 100 && (_qwCtr === null || _qwCtr < 1);
+    // LOW DEMAND: good position but (almost) nobody searches it. Position averages over impressions,
+    // so pos 2.2 on ~0 impressions is statistically meaningless. Not a CTR problem — a keyword problem.
+    var isLowDemand = !isQuickWin && _qwPos !== null && _qwPos <= 10 && _qwImpr > 0 && _qwImpr < 50;
+    if (isQuickWin) {
+      badges += '<span class="cs-cs-badge" style="background:linear-gradient(90deg,#7c2d12,#9a3412);color:#fed7aa;border:1px solid #f97316;font-weight:800;animation:donePulse 2.5s ease-in-out infinite;" '
+        + 'title="Page 1 (pos ' + _qwPos.toFixed(1) + ') with ' + Math.round(_qwImpr).toLocaleString() + ' impressions but only ' + _qwClicks + ' clicks. Google already ranks you \\u2014 the click is missing. Fix: rewrite title/meta for the search intent + follow the Citation Brief to get cited in the AI Overview.">'
+        + '\\ud83c\\udfaf QUICK WIN \\u2014 page 1, no clicks</span> ';
+    }
+    if (isLowDemand) {
+      badges += '<span class="cs-cs-badge" style="background:#0c1a2e;color:#93c5fd;border:1px solid #1d4ed8;font-weight:700;" '
+        + 'title="Ranks pos ' + _qwPos.toFixed(1) + ' but only ' + Math.round(_qwImpr) + ' impressions \\u2014 almost nobody searches this keyword. The position looks good but brings zero leads. Fix: check GSC Queries for related terms WITH volume and retarget/expand the page \\u2014 or merge it into a stronger page.">'
+        + '\\ud83d\\udd0d LOW DEMAND \\u2014 ranks well, nobody searches</span> ';
+    }
     if (pos) badges += '<span class="cs-badge" style="color:' + posColor + ';background:#0d1117;border:1px solid ' + posColor + '44;">#' + pos + '</span> ';
     else badges += '<span class="cs-cs-badge grey">Not ranked</span> ';
     // Only show "No AIO / No Perplexity / ..." once a real AI-citation check has actually run.
@@ -28439,7 +28515,8 @@ function renderPages() {
     // No flashing banner \\u2014 just a button state
     var needsHtmlBanner = '';
 
-    return '<div class="cs-page-card' + (isDone ? ' done' : '') + '" data-page-id="' + p.id + '" style="position:relative;background:#0d1117;border:1px solid #1f2937;border-radius:10px;margin-bottom:12px;overflow:hidden;">'
+    var _mdOn = p.manual_done === true || p.manual_done === 't' || p.manual_done === 'true' || p.manual_done === 1;
+    return '<div class="cs-page-card' + (isDone ? ' done' : '') + '" data-page-id="' + p.id + '" style="position:relative;background:#0d1117;border:1px solid #1f2937;' + (_mdOn ? 'border-left:4px solid #16a34a;' : 'border-left:4px solid #374151;') + 'border-radius:10px;margin-bottom:12px;overflow:hidden;">'
       + pendingBanner
       + needsHtmlBanner
       + (isDone ? '<div style="display:flex;align-items:center;gap:6px;padding:5px 14px;background:rgba(74,222,128,.06);border-bottom:1px solid #166534;font-size:10px;color:#4ade80;letter-spacing:.06em;"><span>\\u2713</span> DONE &mdash; marked as implemented. Tracking continues.</div>' : '')
@@ -28788,6 +28865,21 @@ function markSitemapDone() {
   b.style.color = '#4ade80';
   b.innerHTML = '<i class="fas fa-list"></i> Sitemap \\u2713';
   b.title = 'Sitemap imported';
+}
+
+async function setAllManualDone(on) {
+  var msg = on ? 'Set your checkmark on ALL pages?' : 'Remove your checkmark from ALL pages? (Your work status resets to \\u25cb everywhere)';
+  if (!confirm(msg)) return;
+  try {
+    var data = await api('/pages/manual-done-all', 'PATCH', { manual_done: on });
+    if (data && data.success) {
+      (_pages||[]).forEach(function(p){ p.manual_done = on; p.manual_done_at = on ? new Date().toISOString() : null; });
+      toast((on ? 'All checked' : 'All checks cleared') + ' (' + (data.updated || 0) + ' pages)', on ? '#4ade80' : '#9ca3af');
+      renderPages();
+    } else {
+      toast((data && data.error) || 'Could not update', '#f87171');
+    }
+  } catch(e) { toast('Could not update', '#f87171'); }
 }
 
 async function toggleManualDone(pageId, current) {
