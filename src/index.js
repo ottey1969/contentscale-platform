@@ -29287,13 +29287,23 @@ function _computeCannibal() {
     for (var j = i + 1; j < pages.length; j++) {
       var a = kwOf(pages[i]), b = kwOf(pages[j]);
       if (!a || !b) continue;
-      var wa = a.split(' ').filter(function(w){ return w.length > 2; });
-      var wb = b.split(' ').filter(function(w){ return w.length > 2; });
+      var wa = a.split(' ').filter(function(w){ return w.length >= 2; });
+      var wb = b.split(' ').filter(function(w){ return w.length >= 2; });
       if (!wa.length || !wb.length) continue;
       var inter = wa.filter(function(w){ return wb.indexOf(w) > -1; }).length;
       var jac = inter / (wa.length + wb.length - inter);
       var contained = (inter === wa.length) || (inter === wb.length);
-      if (jac >= 0.7 || (contained && Math.min(wa.length, wb.length) >= 2)) {
+      var sameLength = wa.length === wb.length;
+      if (contained && !sameLength) {
+        // GENERIC ↔ SPECIFIC (e.g. "roofing services" vs "bergen county roofing services").
+        // This is usually the CORRECT hub-and-spoke structure, not cannibalization — flag as a structure check, not a merge case.
+        var genericIsI = wa.length < wb.length;
+        var hub = genericIsI ? slugOf(pages[i]) : slugOf(pages[j]);
+        var spoke = genericIsI ? slugOf(pages[j]) : slugOf(pages[i]);
+        _cannibalIssues.push({ level: 'STRUCTURE', color: '#60a5fa', key: (pages[i].keyword||pages[i].gsc_keyword) + '  \\u2194  ' + (pages[j].keyword||pages[j].gsc_keyword),
+          pages: [{ slug: hub }, { slug: spoke }],
+          advice: 'Generic hub vs specific spoke \\u2014 this structure is usually CORRECT, no merge needed. Checklist: 1) the hub ' + hub + ' links to ' + spoke + ' with the specific keyword as anchor text; 2) the hub does NOT have its own content sections targeting the specific term (one mentioning sentence + link is enough); 3) the spoke is genuinely unique (local projects, place names \\u2014 not find-and-replace copy). VERIFY: export the per-page Queries CSV of ' + hub + ' \\u2014 if the specific query appears there, the hub competes with the spoke and its competing section must be cut. If not, this row can be ignored.' });
+      } else if (jac >= 0.7) {
         _cannibalIssues.push({ level: 'LIKELY', color: '#fb923c', key: (pages[i].keyword||pages[i].gsc_keyword) + '  \\u2194  ' + (pages[j].keyword||pages[j].gsc_keyword),
           pages: [{ slug: slugOf(pages[i]) }, { slug: slugOf(pages[j]) }],
           advice: 'Two tracked pages target near-identical keywords. Differentiate the intent (e.g. one = service, one = location or cost) and update the keyword of one page \\u2014 or merge them.' });
@@ -29328,32 +29338,41 @@ function _computeCannibal() {
     }
   });
 
-  var order = { PROVEN: 0, LIKELY: 1, POSSIBLE: 2 };
+  var order = { PROVEN: 0, LIKELY: 1, POSSIBLE: 2, STRUCTURE: 3 };
   _cannibalIssues.sort(function(a,b){ return order[a.level] - order[b.level]; });
   _cannibalIssues = _cannibalIssues.slice(0, 15);
   renderCannibal();
+}
+function toggleCannAdvice(i) {
+  var el = document.getElementById('cannAdvice' + i);
+  if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
 }
 function renderCannibal() {
   var host = document.getElementById('cannibalPanel');
   if (!host) return;
   if (!_cannibalIssues.length) { host.innerHTML = ''; return; }
   var rows = _cannibalIssues.map(function(c, i){
-    return '<div style="display:flex;align-items:flex-start;gap:10px;padding:8px 12px;border-bottom:1px solid #1f2937;" title="' + c.advice.replace(/"/g,'&quot;') + '">'
+    return '<div onclick="toggleCannAdvice(' + i + ')" style="padding:8px 12px;border-bottom:1px solid #1f2937;cursor:pointer;">'
+      + '<div style="display:flex;align-items:flex-start;gap:10px;">'
       + '<span style="font-size:12px;font-weight:800;color:#4b5563;width:22px;flex-shrink:0;text-align:right;">' + (i+1) + '</span>'
       + '<span style="font-size:9px;font-weight:800;color:' + c.color + ';border:1px solid ' + c.color + '55;border-radius:4px;padding:2px 7px;flex-shrink:0;white-space:nowrap;">' + c.level + '</span>'
       + '<div style="flex:1;min-width:0;">'
       + '<div style="font-size:11px;color:#e5e7eb;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + String(c.key).replace(/</g,'&lt;') + '</div>'
       + '<div style="font-size:10px;color:#6b7280;font-family:monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + c.pages.map(function(p){ return p.slug + (p.pos != null ? ' (pos ' + p.pos.toFixed(1) + ')' : ''); }).join('  vs  ') + '</div>'
-      + '</div></div>';
+      + '</div>'
+      + '<span style="font-size:10px;color:#4b5563;flex-shrink:0;">what to do \\u25be</span>'
+      + '</div>'
+      + '<div id="cannAdvice' + i + '" style="display:none;font-size:11px;color:#9ca3af;line-height:1.65;margin:8px 0 2px 32px;padding:8px 12px;background:#0a0e14;border-left:3px solid ' + c.color + ';border-radius:6px;">' + c.advice.replace(/</g,'&lt;') + '</div>'
+      + '</div>';
   }).join('');
   host.innerHTML = '<div style="background:#0d1117;border:1px solid #1f2937;border-radius:8px;margin-bottom:12px;overflow:hidden;">'
     + '<div onclick="var b=document.getElementById(&quot;cannBody2&quot;);b.style.display=b.style.display===&quot;none&quot;?&quot;block&quot;:&quot;none&quot;;" style="display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer;background:linear-gradient(90deg,rgba(248,113,113,.08),transparent);">'
     + '<span style="font-size:11px;font-weight:800;letter-spacing:.06em;color:#f87171;text-transform:uppercase;">\\u2694 Cannibalization</span>'
     + '<span style="font-size:11px;color:#6b7280;">' + _cannibalIssues.length + ' conflict' + (_cannibalIssues.length>1?'s':'') + ' \\u00b7 pages competing for the same query</span>'
-    + '<span style="margin-left:auto;font-size:10px;color:#4b5563;">hover a row for the fix</span>'
+    + '<span style="margin-left:auto;font-size:10px;color:#4b5563;">click a row for what to do</span>'
     + '</div>'
     + '<div id="cannBody2" style="display:none;">' + rows
-    + '<div style="font-size:10px;color:#4b5563;padding:8px 14px;line-height:1.6;">PROVEN = same query in two per-page CSV exports (Google shows both). LIKELY = near-identical tracked keywords. POSSIBLE = a site-wide query fits two pages equally \\u2014 confirm with a per-page export. Fix pattern: pick ONE owner, strengthen it, and link or 301 the loser.</div>'
+    + '<div style="font-size:10px;color:#4b5563;padding:8px 14px;line-height:1.6;">PROVEN = same query in two per-page CSV exports (Google shows both) \\u2014 fix required. LIKELY = near-identical tracked keywords \\u2014 differentiate or merge. POSSIBLE = a site-wide query fits two pages equally \\u2014 confirm with a per-page export. STRUCTURE = generic hub vs specific spoke \\u2014 usually correct; run the checklist in the row instead of merging.</div>'
     + '</div></div>';
 }
 
