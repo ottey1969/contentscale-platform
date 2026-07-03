@@ -28353,7 +28353,7 @@ function renderPages() {
   var _mdPct = _mdTotal ? Math.round((_mdDone/_mdTotal)*100) : 0;
   var _mdBtn = function(key,label){
     var on = _mdFilter === key;
-    return '<button onclick="setMdFilter(\'' + key + '\')" style="font-size:10px;font-weight:700;padding:3px 10px;border-radius:5px;cursor:pointer;'
+    return '<button onclick="setMdFilter(&quot;' + key + '&quot;)" style="font-size:10px;font-weight:700;padding:3px 10px;border-radius:5px;cursor:pointer;'
       + (on ? 'background:#7c3aed;border:1px solid #8b5cf6;color:#fff;' : 'background:none;border:1px solid #374151;color:#6b7280;')
       + '">' + label + '</button>';
   };
