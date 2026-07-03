@@ -1166,7 +1166,7 @@ app.get('/api/tracker-client/:token', async (req, res) => {
     // Ensure tracker_client_id column exists before querying
     const pagesR = await pool.query(
       `SELECT p.id, p.url, p.keyword, p.gsc_keyword, p.created_at, p.next_check_at, p.last_checked_at,
-              p.is_done, p.fetch_reliable, p.check_frequency, p.gsc_clicks, p.gsc_impressions, p.gsc_position,
+              p.is_done, p.manual_done, p.manual_done_at, p.fetch_reliable, p.check_frequency, p.gsc_clicks, p.gsc_impressions, p.gsc_position,
               p.ranking_brief, p.needs_html, p.brief_started_at, p.brief_content, p.brief_check_count,
               p.html_pasted_at, p.html_source, p.last_graaf_score,
               (p.html_content IS NOT NULL AND p.html_content != '') as has_html_content,
@@ -1660,6 +1660,21 @@ app.patch('/api/tracker-client/:token/pages/:pageId/done', async (req, res) => {
       await pool.query('UPDATE tracker_pages SET is_done=FALSE, needs_html=FALSE WHERE id=$1', [req.params.pageId]);
       res.json({ success: true });
     }
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// PATCH /api/tracker-client/:token/pages/:pageId/manual-done — user-owned persistent checkmark.
+// Completely separate from is_done/needs_html/scan lights. ONLY this endpoint (i.e. the user's own click)
+// may change manual_done. Scans, HTML paste, brief generation, runTrackerCheck never touch it.
+app.patch('/api/tracker-client/:token/pages/:pageId/manual-done', async (req, res) => {
+  try {
+    const cr = await pool.query('SELECT id FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status != $2)', [req.params.token, 'deleted']);
+    if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
+    const own = await pool.query('SELECT id FROM tracker_pages WHERE id=$1 AND tracker_client_id=$2', [req.params.pageId, cr.rows[0].id]);
+    if (!own.rows.length) return res.status(403).json({ success: false, error: 'Not your page' });
+    const on = !!req.body.manual_done;
+    await pool.query('UPDATE tracker_pages SET manual_done=$1, manual_done_at=' + (on ? 'NOW()' : 'NULL') + ' WHERE id=$2', [on, req.params.pageId]);
+    res.json({ success: true, manual_done: on });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
@@ -2276,7 +2291,7 @@ app.post('/api/tracker-client/:token/import-gsc-pages', async (req, res) => {
 
     // Preload existing tracked pages + build a normalized-URL index so a re-import
     // recognises the SAME pages regardless of http/https, www, or trailing slash.
-    function _normTrackUrl(u){ try{ var x=new URL(String(u).trim()); return x.host.toLowerCase().replace(/^www\./,'') + x.pathname.replace(/\/+$/,'') + (x.search||''); }catch(e){ return String(u||'').trim().toLowerCase().replace(/^https?:\/\//,'').replace(/^www\./,'').replace(/\/+$/,''); } }
+    function _normTrackUrl(u){ try{ var x=new URL(String(u).trim()); return x.host.toLowerCase().replace(/^www\./,'') + x.pathname.toLowerCase().replace(/\/+$/,'') + (x.search||''); }catch(e){ return String(u||'').trim().toLowerCase().replace(/^https?:\/\//,'').replace(/^www\./,'').replace(/\/+$/,''); } }
     const _existR = await pool.query("SELECT id, url FROM tracker_pages WHERE tracker_client_id=$1 AND (is_active=TRUE OR is_active IS NULL)", [clientId]);
     const _normMap = new Map();
     _existR.rows.forEach(function(row){ _normMap.set(_normTrackUrl(row.url), row.id); });
@@ -2285,6 +2300,7 @@ app.post('/api/tracker-client/:token/import-gsc-pages', async (req, res) => {
     let refreshed = 0;   // existing pages recognised + refreshed on their own spot
     let newAdded = 0;    // brand-new pages added
     let skipped = 0;
+    let failed = 0;      // per-page DB errors — MUST be surfaced, never swallowed
     const results = [];
     const warnings = [];
     
@@ -2293,13 +2309,19 @@ app.post('/api/tracker-client/:token/import-gsc-pages', async (req, res) => {
         // Recognise existing tracked page by normalized URL → refresh on its own spot (never duplicate, never counts against the limit)
         const _matchId = _normMap.get(_normTrackUrl(p.url));
         if (_matchId) {
-          await pool.query(
-            `UPDATE tracker_pages SET gsc_clicks=$3, gsc_impressions=$4, gsc_position=$5, gsc_keyword=COALESCE($6, gsc_keyword), keyword=COALESCE(keyword, $6), priority=COALESCE($7, priority) WHERE id=$1 AND tracker_client_id=$2`,
-            [_matchId, clientId, p.clicks||0, p.impressions||0, p.position||null, p.keyword||null, p.priority||null]
-          ).catch(e => console.warn('[import-gsc] update', p.url, e.message));
-          imported++;
-          refreshed++;
-          results.push({ url: p.url, id: _matchId, status: 'refreshed' });
+          try {
+            await pool.query(
+              `UPDATE tracker_pages SET gsc_clicks=$3, gsc_impressions=$4, gsc_position=$5, gsc_keyword=COALESCE($6, gsc_keyword), keyword=COALESCE(keyword, $6), priority=COALESCE($7, priority) WHERE id=$1 AND tracker_client_id=$2`,
+              [_matchId, clientId, p.clicks||0, p.impressions||0, p.position||null, p.keyword||null, p.priority||null]
+            );
+            imported++;
+            refreshed++;
+            results.push({ url: p.url, id: _matchId, status: 'refreshed' });
+          } catch(e) {
+            console.warn('[import-gsc] update', p.url, e.message);
+            failed++;
+            results.push({ url: p.url, status: 'failed', error: e.message });
+          }
           continue;
         }
         
@@ -2321,10 +2343,13 @@ app.post('/api/tracker-client/:token/import-gsc-pages', async (req, res) => {
         }
         
         // Insert new page with GSC data + intent
+        // NOTE: the unique index tracker_pages_client_url_idx is PARTIAL (WHERE tracker_client_id IS NOT NULL),
+        // so ON CONFLICT must repeat that predicate — otherwise Postgres throws
+        // "no unique or exclusion constraint matching the ON CONFLICT specification" and the insert silently dies.
         const _insR = await pool.query(
           `INSERT INTO tracker_pages (tracker_client_id, url, keyword, intent, gsc_keyword, gsc_clicks, gsc_impressions, gsc_position, priority, created_at)
            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())
-           ON CONFLICT(tracker_client_id, url) DO UPDATE SET 
+           ON CONFLICT (tracker_client_id, url) WHERE tracker_client_id IS NOT NULL DO UPDATE SET 
            intent=EXCLUDED.intent, gsc_clicks=EXCLUDED.gsc_clicks, gsc_impressions=EXCLUDED.gsc_impressions, gsc_position=EXCLUDED.gsc_position, priority=EXCLUDED.priority
            RETURNING id`,
           [clientId, p.url, p.keyword||null, p.intent||null, p.keyword||null, p.clicks||0, p.impressions||0, p.position||null, p.priority||'medium']
@@ -2334,19 +2359,24 @@ app.post('/api/tracker-client/:token/import-gsc-pages', async (req, res) => {
         imported++;
         newAdded++;
         results.push({ url: p.url, id: _insR.rows[0] ? _insR.rows[0].id : null, status: 'new' });
-      } catch(e) { console.warn('[import-gsc] page', p.url, e.message); }
+      } catch(e) {
+        console.warn('[import-gsc] page', p.url, e.message);
+        failed++;
+        results.push({ url: p.url, status: 'failed', error: e.message });
+      }
     }
     
     res.json({ 
-      success: true, 
+      success: failed < pages.length, // only "success" if at least something landed
       imported, 
       refreshed,
       new_added: newAdded,
       skipped,
+      failed,
       total: pages.length, 
       results,
       warnings: warnings.length > 0 ? warnings : undefined,
-      message: `Refreshed ${refreshed} existing + added ${newAdded} new` + (skipped > 0 ? ` (${skipped} skipped)` : '') + (warnings.length > 0 ? ` — ${warnings.length} intent overlaps` : '')
+      message: `Updated ${refreshed} existing` + (newAdded > 0 ? ` + added ${newAdded} new` : '') + (skipped > 0 ? ` · ${skipped} skipped (no free slot / not selected)` : '') + (failed > 0 ? ` · ${failed} FAILED — check server logs` : '')
     });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
@@ -4752,6 +4782,11 @@ app.patch('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
   await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS brief_after_score INT`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS brief_after_at TIMESTAMPTZ`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS priority VARCHAR(20) DEFAULT 'medium'`).catch(()=>{});
+  await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS intent VARCHAR(100)`).catch(()=>{});
+  // manual_done: user-owned persistent checkmark. NOTHING resets this except the user's own click —
+  // scans, HTML paste, brief generation and runTrackerCheck must never touch this column.
+  await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS manual_done BOOLEAN DEFAULT FALSE`).catch(()=>{});
+  await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS manual_done_at TIMESTAMPTZ`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS lead_name TEXT`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS lead_email TEXT`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS live_wall_enabled BOOLEAN DEFAULT TRUE`).catch(()=>{});
@@ -28413,7 +28448,17 @@ function renderPages() {
       + '<div style="display:flex;align-items:flex-start;gap:8px;flex:1;min-width:0;">'
       + '<input type="checkbox" class="page-select-cb" data-id="' + p.id + '" onchange="updateBulkBar()" style="width:14px;height:14px;margin-top:3px;accent-color:#ef4444;cursor:pointer;flex-shrink:0;">'
       + '<div style="flex:1;min-width:0;">'
-      + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;"><span style="font-size:10px;font-weight:700;color:#4b5563;background:#1f2937;border-radius:4px;padding:1px 7px;flex-shrink:0;">#' + pageNum + '</span><div style="font-size:12px;' + (isDone ? 'text-decoration:line-through;color:#4b5563;' : 'color:#e5e7eb;') + 'font-family:monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;" title="' + rawUrl + '">' + urlShort + '</div></div>'
+      + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;"><span style="font-size:10px;font-weight:700;color:#4b5563;background:#1f2937;border-radius:4px;padding:1px 7px;flex-shrink:0;">#' + pageNum + '</span>'
+      + (function(){
+          var md = p.manual_done === true || p.manual_done === 't' || p.manual_done === 'true' || p.manual_done === 1;
+          var mdAt = (md && p.manual_done_at) ? new Date(p.manual_done_at).toLocaleDateString('en-GB',{day:'2-digit',month:'short'}) : '';
+          return '<button onclick="toggleManualDone(' + p.id + ',' + (md ? 'true' : 'false') + ')" '
+            + 'title="' + (md ? 'Your own checkmark — set ' + mdAt + '. Stays until YOU click it off. Scans and HTML never reset this.' : 'Your own checkmark — mark this page as handled by you. Nothing resets it except you.') + '" '
+            + 'style="flex-shrink:0;cursor:pointer;font-size:10px;font-weight:800;border-radius:4px;padding:1px 8px;letter-spacing:.04em;'
+            + (md ? 'background:rgba(74,222,128,.15);border:1px solid #16a34a;color:#4ade80;' : 'background:none;border:1px dashed #374151;color:#4b5563;')
+            + '">' + (md ? '\\u2713 MY CHECK' + (mdAt ? ' \\u00b7 ' + mdAt : '') : '\\u25cb my check') + '</button>';
+        })()
+      + '<div style="font-size:12px;' + (isDone ? 'text-decoration:line-through;color:#4b5563;' : 'color:#e5e7eb;') + 'font-family:monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;" title="' + rawUrl + '">' + urlShort + '</div></div>'
       + '<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:4px;">' + badges + '</div>'
       + gscHtml
       + '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:4px;">'
@@ -28743,6 +28788,21 @@ function markSitemapDone() {
   b.style.color = '#4ade80';
   b.innerHTML = '<i class="fas fa-list"></i> Sitemap \\u2713';
   b.title = 'Sitemap imported';
+}
+
+async function toggleManualDone(pageId, current) {
+  var next = !current;
+  try {
+    var data = await api('/pages/' + pageId + '/manual-done', 'PATCH', { manual_done: next });
+    if (data && data.success) {
+      var p = (_pages||[]).find(function(x){ return x.id == pageId; });
+      if (p) { p.manual_done = next; p.manual_done_at = next ? new Date().toISOString() : null; }
+      toast(next ? 'Checked \\u2014 this stays until you uncheck it yourself.' : 'Check removed.', next ? '#4ade80' : '#9ca3af');
+      setTimeout(loadPages, 300);
+    } else {
+      toast((data && data.error) || 'Could not save check', '#f87171');
+    }
+  } catch(e) { toast('Could not save check', '#f87171'); }
 }
 
 async function markDone(pageId, btn, currentDone) {
@@ -29995,6 +30055,18 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
     var list = document.getElementById('gscList');
     if (list) list.style.display = 'block';
     var maxSel = Math.min(MAX_PAGES, pairs.length);
+
+    // Match each parsed URL against the pages already in the tracker (same normalization as the server)
+    // so the preview shows UPDATE (refresh existing slot) vs NEW (needs a free slot) before importing.
+    var _normCli = function(u){ try { var x = new URL(String(u).trim()); return x.host.toLowerCase().replace(/^www[.]/,'') + x.pathname.toLowerCase().replace(/[/]+$/,'') + (x.search||''); } catch(e) { return String(u||'').trim().toLowerCase().replace(/^https?:[/][/]/,'').replace(/^www[.]/,'').replace(/[/]+$/,''); } };
+    var _trackedSet = {};
+    (_pages||[]).forEach(function(tp){ if (tp && tp.url) _trackedSet[_normCli(tp.url)] = true; });
+    var _updCount = 0, _newCount = 0;
+    pairs.forEach(function(p){
+      p._isTracked = !p.isQueryOnly && !!_trackedSet[_normCli(p.url)];
+      if (p._isTracked) _updCount++; else _newCount++;
+    });
+
     renderCheckList(pairs, container, 'gsc-cb',
       function(p) {
         var path = '';
@@ -30005,11 +30077,13 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
         if (p.impressions) m.push(Math.round(p.impressions).toLocaleString() + ' impr');
         if (p.clicks) m.push(p.clicks + ' clk');
         if (p.position) m.push('pos ' + p.position.toFixed(1));
-        return '#' + (p._rank||'?') + '  ' + who + (m.length ? '  \\u00b7  ' + m.join(' \\u00b7 ') : '');
+        var tag = p._isTracked ? '[\\u21bb UPDATE]' : '[+ NEW]';
+        return tag + ' #' + (p._rank||'?') + '  ' + who + (m.length ? '  \\u00b7  ' + m.join(' \\u00b7 ') : '');
       },
       countEl,
       maxSel
     );
+    if (countEl) countEl.textContent = pairs.length + ' found \\u2014 ' + _updCount + ' match your tracked pages (will update in place) \\u00b7 ' + _newCount + ' new \\u00b7 ' + maxSel + ' slots max';
     updateSelectCount('gsc-cb', maxSel);
   }
 
@@ -30062,11 +30136,11 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
     try {
       var d = await api('/import-gsc-pages', 'POST', { pages: rows });
       if (d && d.success) {
-        toast(d.message || ('Imported ' + (d.imported || 0)), '#4ade80');
+        toast(d.message || ('Imported ' + (d.imported || 0)), (d.failed > 0) ? '#fbbf24' : '#4ade80');
         hideModal('importModal');
         setTimeout(loadPages, 800);
       } else {
-        toast((d && d.error) || 'Import failed', '#f87171');
+        toast((d && (d.message || d.error)) || 'Import failed', '#f87171');
       }
     } catch(e) { console.warn('[importGsc]', e); toast('Import failed', '#f87171'); }
     if (bt) { bt.disabled = false; bt.textContent = 'Import'; }
