@@ -28692,7 +28692,7 @@ function renderPages() {
             + (md ? 'background:rgba(74,222,128,.15);border:1px solid #16a34a;color:#4ade80;' : 'background:none;border:1px dashed #374151;color:#4b5563;')
             + '">' + (md ? '\\u2713 MY CHECK' + (mdAt ? ' \\u00b7 ' + mdAt : '') : '\\u25cb my check') + '</button>';
         })()
-      + '<div style="font-size:12px;' + (isDone ? 'text-decoration:line-through;color:#4b5563;' : 'color:#e5e7eb;') + 'font-family:monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;" title="' + rawUrl + '">' + urlShort + '</div></div>'
+      + '<div class="cs-url-line" style="font-size:12px;' + (isDone ? 'text-decoration:line-through;color:#4b5563;' : 'color:#e5e7eb;') + 'font-family:monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;border-radius:4px;padding:1px 4px;margin-left:-4px;" title="' + rawUrl + '">' + urlShort + '</div></div>'
       + '<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:4px;">' + badges + '</div>'
       + gscHtml
       + '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:4px;">'
@@ -29029,9 +29029,13 @@ function jumpToPage(pageId) {
   if (!card) { setMdFilter('all'); card = document.querySelector('.cs-page-card[data-page-id="' + pageId + '"]'); }
   if (!card) return;
   card.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  var prev = card.style.boxShadow;
-  card.style.boxShadow = '0 0 0 2px #f97316, 0 0 24px rgba(249,115,22,.5)';
-  setTimeout(function(){ card.style.boxShadow = prev || ''; }, 2200);
+  // Highlight EXACTLY the URL line — tight, not the whole card
+  var urlEl = card.querySelector('.cs-url-line') || card;
+  var prevBg = urlEl.style.background, prevSh = urlEl.style.boxShadow, prevCo = urlEl.style.color;
+  urlEl.style.background = 'rgba(249,115,22,.18)';
+  urlEl.style.boxShadow = 'inset 0 -2px 0 #f97316';
+  urlEl.style.color = '#fed7aa';
+  setTimeout(function(){ urlEl.style.background = prevBg || ''; urlEl.style.boxShadow = prevSh || ''; urlEl.style.color = prevCo || ''; }, 2200);
 }
 
 async function setAllManualDone(on) {
