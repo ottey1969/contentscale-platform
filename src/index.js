@@ -3551,7 +3551,7 @@ app.get('/view/:token', async (req, res) => {
     const domain = cr.rows[0].domain || '';
     res.send(`<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Brief — ${domain}</title>
 <style>
-  body{margin:0;background:#070710;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif}
+  body{margin:0;background:#070710;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;-webkit-user-select:none;-moz-user-select:none;user-select:none}
   .wrap{max-width:1200px;margin:0 auto;padding:18px 16px 60px}
   .hd{display:flex;justify-content:space-between;align-items:center;gap:12px}
   .ttl{font-size:13px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#fbbf24}
@@ -3615,6 +3615,8 @@ load();
 setInterval(function(){ if(!document.hidden) load(); }, 60000);
 document.addEventListener('visibilitychange', function(){ if(!document.hidden) load(); });
 document.getElementById('list').addEventListener('click', function(e){ var c=e.target.closest('.card'); if(!c) return; var id=c.getAttribute('data-id'); if(c.classList.toggle('open')) _open[id]=1; else delete _open[id]; });
+// Read-only wall: briefs open on click but cannot be copied out of this view.
+['copy','cut','contextmenu','dragstart'].forEach(function(ev){ document.addEventListener(ev, function(e){ e.preventDefault(); }); });
 </script></body></html>`);
   } catch(e) { res.status(500).send('error'); }
 });
@@ -28323,9 +28325,11 @@ function _bwCard(p, isFeature){
   return '<div class="bw-card" onclick="viewLastBrief('+p.id+')">'+head+body+'</div>';
 }
 function renderBriefWall(){
+  // Removed from the tracker page per Ot — the Live Brief Wall lives on the TV view (/view/:token) only.
+  // Function kept as no-op because loadPages and the scan stream still call it.
   var sec = document.getElementById('briefWallSection');
-  var wall = document.getElementById('briefWall');
-  if (!sec || !wall) return;
+  if (sec) sec.style.display = 'none';
+  return;
   var withB = (_pages||[]).filter(function(p){ return p.brief_content; });
   if (!withB.length){ sec.style.display='none'; return; }
   sec.style.display='block';
@@ -30159,6 +30163,40 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
     if (!raw) { toast('Paste or drop GSC data first', '#f87171'); return; }
     var nl = String.fromCharCode(10);
     var lines = raw.split(nl).map(function(l){ return l.trim(); }).filter(Boolean);
+
+    // ── GSC web-UI copy-paste support ─────────────────────────────────────
+    // Copying the table straight from the GSC Performance page (not the CSV export) produces:
+    //   header words each on their OWN line (Top pages / Clicks / Impressions / CTR / Position),
+    //   then a bare URL (or query) line, followed by a metrics line like "33\t6,211" or "33 6,211 0.5% 20.9".
+    // Normalize that into one tab-joined record per page BEFORE format detection,
+    // otherwise the URL row parses as 0 clicks / 0 impressions and the numbers row is thrown away.
+    var _headerWords = { 'top pages':1, 'top queries':1, 'clicks':1, 'impressions':1, 'ctr':1, 'position':1 };
+    var _isNumLine = function(l){ return /^[0-9][0-9.,%\t ]*$/.test(l); };
+    var _sawPagesHdr = false, _sawQueriesHdr = false, _uiNorm = [], _i;
+    for (_i = 0; _i < lines.length; _i++) {
+      var _l = lines[_i];
+      var _lw = _l.toLowerCase().replace(/^"|"$/g,'');
+      if (_headerWords[_lw]) { if (_lw === 'top pages') _sawPagesHdr = true; if (_lw === 'top queries') _sawQueriesHdr = true; continue; }
+      var _isUrl = _l.indexOf('http') === 0 && _l.indexOf(String.fromCharCode(9)) === -1 && _l.indexOf(',') === -1;
+      var _nextNum = (_i + 1 < lines.length) && _isNumLine(lines[_i + 1]);
+      if (_isUrl && _nextNum) {
+        // bare URL + metrics on the next line -> join with tabs; extract numbers keeping "6,211" intact
+        var _nums = lines[_i + 1].match(/[0-9][0-9,]*(?:[.][0-9]+)?%?/g) || [];
+        _uiNorm.push(_l + String.fromCharCode(9) + _nums.join(String.fromCharCode(9)));
+        _i++; continue;
+      }
+      if (_sawQueriesHdr && !_isUrl && !_isNumLine(_l) && _nextNum) {
+        var _nums2 = lines[_i + 1].match(/[0-9][0-9,]*(?:[.][0-9]+)?%?/g) || [];
+        _uiNorm.push(_l + String.fromCharCode(9) + _nums2.join(String.fromCharCode(9)));
+        _i++; continue;
+      }
+      _uiNorm.push(_l);
+    }
+    lines = _uiNorm;
+    if (_sawPagesHdr && (!lines[0] || lines[0].toLowerCase().indexOf('top pages') !== 0)) lines.unshift('Top pages,Clicks,Impressions,CTR,Position');
+    if (_sawQueriesHdr && !_sawPagesHdr && (!lines[0] || lines[0].toLowerCase().indexOf('top queries') !== 0)) lines.unshift('Top queries,Clicks,Impressions,CTR,Position');
+    // ──────────────────────────────────────────────────────────────────────
+
     var pairs = [];
     var domain = DOMAIN || '';
 
@@ -30179,8 +30217,10 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
       // Strip BOM and quotes
       line = line.replace(/^\\ufeff/, '').replace(/^"|"$/g, '');
 
-      // Split on comma or tab
-      var parts = line.split(/[,	]/).map(function(p){ return p.replace(/^"|"$/g,'').trim(); });
+      // Split tab-first: a tab-separated line (UI paste) may contain thousand separators like "6,211"
+      // that a blind comma-split would destroy. Only split on comma when there is no tab.
+      var _tab = String.fromCharCode(9);
+      var parts = (line.indexOf(_tab) > -1 ? line.split(_tab) : line.split(',')).map(function(p){ return p.replace(/^"|"$/g,'').trim(); });
 
       if (isQueriesCSV) {
         // Format: query, clicks, impressions, CTR, position
@@ -34539,6 +34579,20 @@ KEY CITATION FACTS:
 - Perplexity prefers specific data + expert attribution
 - ChatGPT/Bing prefer clear entity definitions + structured content
 
+NON-NEGOTIABLE QUALITY BAR — every improved_version MUST pass ALL of these before you output it:
+1. ANSWER-FIRST: the FIRST sentence directly answers the query in ≤25 words, in the form [entity] + [verb] + [answer]. Never open with context, history, or "When it comes to...".
+2. SELF-CONTAINED: the passage must make complete sense when quoted alone. No pronouns pointing outside the passage ("it", "this company", "they" → name the entity). An AI engine lifts ONE passage — if it needs the rest of the page, it will not be cited.
+3. ENTITY-ANCHORED: name the business/brand and its location or service area at least once per passage. Engines cite entities they can disambiguate; anonymous text is interchangeable and gets skipped.
+4. VERIFIABLE, NEVER INVENTED: every number, price, timeframe or statistic must come from OUR CURRENT CONTENT, the GSC data above, or your Google Search grounding. If a needed figure is not verifiable, write [OWNER: insert real figure — e.g. years in business, jobs completed, response time] instead of inventing one. A fabricated statistic gets the page DEMOTED and destroys trust — this rule outranks everything else.
+5. SPECIFIC ≠ GENERIC: at least one concrete number, named standard, timeframe or comparison per passage. If the passage would be equally true on a competitor's site, rewrite it until it would not be.
+6. FRESHNESS SIGNAL: where natural, reference the current year/period so the passage reads as current, not evergreen filler.
+
+HARD FAIL CONDITIONS — output containing ANY of these is rejected:
+- Advice like "improve content quality", "add relevant keywords", "enhance user experience" (says nothing)
+- A structural_fix without an exact element name AND a copy-pasteable example
+- An improved_version whose first sentence does not answer the query
+- Any statistic that cannot be traced to the page, the data above, or a grounding source
+
 TASK: Use Google Search to check current AI Overview for "${keyword}". Generate passages that work across ALL THREE platforms.
 
 Return ONLY valid JSON — no markdown:
@@ -34632,7 +34686,7 @@ Return ONLY valid JSON — no markdown:
 
       // ── STEP 4a-2: Convert plain text analysis to structured JSON ───────────
       if (groundingText.length > 100) {
-        const step2Prompt = 'Convert this citation analysis into the exact JSON format below. Use the analysis text as your source of truth.\n\nANALYSIS:\n' + groundingText + '\n\nGROUNDING SOURCES FOUND:\n' + groundingChunks.map((c,i) => (i+1)+'. '+c.url+' — '+c.title).join('\n') + '\n\nReturn ONLY this JSON (no markdown, no explanation):\n' + '{"citation_source":{"domain":"","why_cited":"","key_difference":""},"passages_to_add":[{"type":"direct_answer|statistic|definition|how_to|faq_answer","passage":"exact passage from AI Overview or top cited source","improved_version":"our better 134-167 word version","placement":"immediately after H1|in FAQ section|as H2 answer paragraph","why":"why this triggers AI citation","word_count_target":150}],"structural_fixes":[{"fix":"","reason":"","example":""}],"primary_reason_not_cited":"","freshness_issue":true,"intro_weight_issue":true,"confidence":"high|medium|low","estimated_impact":"","grounding_sources":["url1","url2"],"model_searched_google":true}';
+        const step2Prompt = 'Convert this citation analysis into the exact JSON format below. Use the analysis text as your source of truth. Copy passage texts VERBATIM from the analysis — do not shorten, soften, or genericize them, and never remove entity names, numbers, or [OWNER: ...] placeholders.\n\nANALYSIS:\n' + groundingText + '\n\nGROUNDING SOURCES FOUND:\n' + groundingChunks.map((c,i) => (i+1)+'. '+c.url+' — '+c.title).join('\n') + '\n\nReturn ONLY this JSON (no markdown, no explanation):\n' + '{"citation_source":{"domain":"","why_cited":"","key_difference":""},"passages_to_add":[{"type":"direct_answer|statistic|definition|how_to|faq_answer","passage":"exact passage from AI Overview or top cited source","improved_version":"our better 134-167 word version","placement":"immediately after H1|in FAQ section|as H2 answer paragraph","why":"why this triggers AI citation","word_count_target":150}],"structural_fixes":[{"fix":"","reason":"","example":""}],"primary_reason_not_cited":"","freshness_issue":true,"intro_weight_issue":true,"confidence":"high|medium|low","estimated_impact":"","grounding_sources":["url1","url2"],"model_searched_google":true}';
 
         try {
           const t3 = Date.now();
