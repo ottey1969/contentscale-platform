@@ -1663,6 +1663,39 @@ app.patch('/api/tracker-client/:token/pages/:pageId/done', async (req, res) => {
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
+// POST /api/tracker-client/:token/gsc-queries — replace the client's full GSC query list (fed automatically at Queries CSV import)
+app.post('/api/tracker-client/:token/gsc-queries', async (req, res) => {
+  try {
+    const cr = await pool.query('SELECT id FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status != $2)', [req.params.token, 'deleted']);
+    if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
+    const clientId = cr.rows[0].id;
+    const queries = Array.isArray(req.body.queries) ? req.body.queries.slice(0, 500) : [];
+    if (!queries.length) return res.json({ success: true, saved: 0 });
+    await pool.query('DELETE FROM tracker_gsc_queries WHERE tracker_client_id=$1', [clientId]);
+    let saved = 0;
+    for (const q of queries) {
+      const text = String(q.query || '').trim().substring(0, 300);
+      if (!text) continue;
+      await pool.query(
+        'INSERT INTO tracker_gsc_queries (tracker_client_id, query, clicks, impressions, position) VALUES ($1,$2,$3,$4,$5)',
+        [clientId, text, Math.round(q.clicks || 0), Math.round(q.impressions || 0), q.position || null]
+      ).catch(()=>{});
+      saved++;
+    }
+    res.json({ success: true, saved });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// GET /api/tracker-client/:token/gsc-queries — query list for the Impression Gap panel
+app.get('/api/tracker-client/:token/gsc-queries', async (req, res) => {
+  try {
+    const cr = await pool.query('SELECT id FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status != $2)', [req.params.token, 'deleted']);
+    if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
+    const r = await pool.query('SELECT query, clicks, impressions, position, imported_at FROM tracker_gsc_queries WHERE tracker_client_id=$1 ORDER BY impressions DESC LIMIT 500', [cr.rows[0].id]);
+    res.json({ success: true, queries: r.rows });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
 // PATCH /api/tracker-client/:token/pages/manual-done-all — bulk set/clear the user's own checkmarks.
 // Same rule as single toggle: only the user's explicit action reaches this, nothing automated.
 app.patch('/api/tracker-client/:token/pages/manual-done-all', async (req, res) => {
@@ -4825,6 +4858,17 @@ app.patch('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
   // scans, HTML paste, brief generation and runTrackerCheck must never touch this column.
   await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS manual_done BOOLEAN DEFAULT FALSE`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS manual_done_at TIMESTAMPTZ`).catch(()=>{});
+  // Full GSC query list per client — fuels the Impression Gap panel. Replaced wholesale on each Queries CSV import.
+  await client.query(`CREATE TABLE IF NOT EXISTS tracker_gsc_queries (
+    id SERIAL PRIMARY KEY,
+    tracker_client_id INTEGER NOT NULL,
+    query TEXT NOT NULL,
+    clicks INTEGER DEFAULT 0,
+    impressions INTEGER DEFAULT 0,
+    position NUMERIC,
+    imported_at TIMESTAMPTZ DEFAULT NOW()
+  )`).catch(()=>{});
+  await client.query(`CREATE INDEX IF NOT EXISTS tracker_gsc_queries_client_idx ON tracker_gsc_queries(tracker_client_id)`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS lead_name TEXT`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS lead_email TEXT`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS live_wall_enabled BOOLEAN DEFAULT TRUE`).catch(()=>{});
@@ -27578,6 +27622,7 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
   </div>
 
   <div class="cs-section">Your tracked pages <span id="pageCountLabel2" style="color:#cbd5e1;"></span></div>
+  <div id="impressionGap" style="width:100%;"></div>
   <div id="pagesList" style="width:100%;"></div>
 
   <!-- Upsell -->
@@ -29004,6 +29049,71 @@ async function setAllManualDone(on) {
   } catch(e) { toast('Could not update', '#f87171'); }
 }
 
+// ── IMPRESSION GAP — queries with real demand that no tracked page targets yet ──
+// Fed automatically when a Queries CSV is imported. No user action needed beyond the import itself.
+var _gapQueries = null;
+async function loadImpressionGap() {
+  try {
+    var d = await api('/gsc-queries', 'GET');
+    _gapQueries = (d && d.queries) || [];
+    renderImpressionGap();
+  } catch(e) { _gapQueries = []; }
+}
+function _gapNorm(s){ return String(s||'').toLowerCase().replace(/[^a-z0-9 ]/g,' ').replace(/ +/g,' ').trim(); }
+function renderImpressionGap() {
+  var host = document.getElementById('impressionGap');
+  if (!host) return;
+  if (!_gapQueries || !_gapQueries.length) { host.innerHTML = ''; return; }
+  // Build the coverage set from tracked pages: keywords + gsc keywords + url slug words
+  var covered = [];
+  (_pages||[]).forEach(function(p){
+    if (p.keyword) covered.push(_gapNorm(p.keyword));
+    if (p.gsc_keyword) covered.push(_gapNorm(p.gsc_keyword));
+    try { var path = new URL(p.url).pathname.replace(/[-_/]/g,' '); covered.push(_gapNorm(path)); } catch(e) {}
+  });
+  covered = covered.filter(Boolean);
+  var isCovered = function(q) {
+    var qn = _gapNorm(q); if (!qn) return true;
+    var qWords = qn.split(' ').filter(function(w){ return w.length > 2; });
+    for (var i = 0; i < covered.length; i++) {
+      var c = covered[i];
+      if (c.indexOf(qn) > -1 || qn.indexOf(c) > -1) return true;
+      if (qWords.length) {
+        var hit = 0;
+        qWords.forEach(function(w){ if (c.indexOf(w) > -1) hit++; });
+        if (hit / qWords.length >= 0.6) return true;
+      }
+    }
+    return false;
+  };
+  var gaps = _gapQueries.filter(function(q){ return (q.impressions||0) >= 20 && !isCovered(q.query); });
+  gaps.sort(function(a,b){ return (b.impressions||0) - (a.impressions||0); });
+  gaps = gaps.slice(0, 20);
+  if (!gaps.length) { host.innerHTML = ''; return; }
+  var totImpr = 0; gaps.forEach(function(g){ totImpr += (g.impressions||0); });
+  var rows = gaps.map(function(g, i){
+    var ps = g.position ? parseFloat(g.position) : null;
+    var hint = (ps !== null && ps <= 20)
+      ? { t: 'ADD SECTION', c: '#4ade80', d: 'Google already shows you (pos ' + ps.toFixed(1) + '). Add a question-form H2 answering this on your closest tracked page \\u2014 fastest impression growth there is.' }
+      : { t: 'NEW PAGE', c: '#60a5fa', d: 'Real demand, no eligible page. A dedicated page for this intent unlocks these impressions' + (ps !== null ? ' (currently pos ' + ps.toFixed(1) + ')' : '') + '.' };
+    return '<div style="display:flex;align-items:center;gap:10px;padding:7px 12px;border-bottom:1px solid #1f2937;" title="' + hint.d + '">'
+      + '<span style="font-size:12px;font-weight:800;color:#4b5563;width:22px;flex-shrink:0;text-align:right;">' + (i+1) + '</span>'
+      + '<span style="font-size:9px;font-weight:800;color:' + hint.c + ';border:1px solid ' + hint.c + '55;border-radius:4px;padding:2px 7px;flex-shrink:0;white-space:nowrap;">' + hint.t + '</span>'
+      + '<span style="font-size:11px;color:#e5e7eb;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;">' + g.query.replace(/</g,'&lt;') + '</span>'
+      + '<span style="font-size:10px;color:#6b7280;flex-shrink:0;white-space:nowrap;">' + (g.position ? 'pos ' + parseFloat(g.position).toFixed(1) + ' \\u00b7 ' : '') + (g.impressions||0).toLocaleString() + ' impr \\u00b7 ' + (g.clicks||0) + ' clk</span>'
+      + '</div>';
+  }).join('');
+  host.innerHTML = '<div style="background:#0d1117;border:1px solid #1f2937;border-radius:8px;margin-bottom:12px;overflow:hidden;">'
+    + '<div onclick="var b=document.getElementById(&quot;impGapBody&quot;);b.style.display=b.style.display===&quot;none&quot;?&quot;block&quot;:&quot;none&quot;;" style="display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer;background:linear-gradient(90deg,rgba(96,165,250,.08),transparent);">'
+    + '<span style="font-size:11px;font-weight:800;letter-spacing:.06em;color:#60a5fa;text-transform:uppercase;">\\ud83d\\udce1 Impression Gap</span>'
+    + '<span style="font-size:11px;color:#6b7280;">' + gaps.length + ' queries \\u00b7 ' + totImpr.toLocaleString() + ' impressions/mo none of your tracked pages target</span>'
+    + '<span style="margin-left:auto;font-size:10px;color:#4b5563;">from your Queries CSV \\u00b7 hover a row for the action</span>'
+    + '</div>'
+    + '<div id="impGapBody" style="display:none;">' + rows
+    + '<div style="font-size:10px;color:#4b5563;padding:8px 14px;line-height:1.6;">ADD SECTION = Google already tests you for this query \\u2014 answer it with a question-form H2 on your closest page. NEW PAGE = demand exists but no page is eligible. Re-import your Queries CSV monthly to keep this current.</div>'
+    + '</div></div>';
+}
+
 async function toggleManualDone(pageId, current) {
   var next = !current;
   try {
@@ -29075,7 +29185,7 @@ async function deletePage(pageId) {
   loadPages();
 }
 
-loadPages();
+loadPages().then(function(){ try { loadImpressionGap(); } catch(e) {} });
 // Show welcome on first visit (or force with ?welcome=1)
 if (window.location.search.indexOf('welcome=1') > -1) {
   try { localStorage.removeItem('cs_welcome_seen'); } catch(e) {}
@@ -30268,6 +30378,7 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
     });
 
     if (!pairs.length) { toast('No valid data found. Try: GSC Queries CSV, Pages CSV, or URL | keyword format', '#f87171'); return; }
+    window._lastGscPairs = pairs; // full parsed set — import ships the query rows to the Impression Gap store
 
     // Merge duplicate URLs \\u2014 GSC often splits one page across http/https/www/trailing-slash variants.
     // Sum the metrics; position = impressions-weighted average (NOT best-of, which flatters the numbers).
@@ -30430,6 +30541,12 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
       var d = await api('/import-gsc-pages', 'POST', { pages: rows });
       if (d && d.success) {
         toast(d.message || ('Imported ' + (d.imported || 0)), (d.failed > 0) ? '#fbbf24' : '#4ade80');
+        // Automatically persist the FULL query list (Queries CSV rows) for the Impression Gap panel — no extra user action
+        try {
+          var qRows = (window._lastGscPairs || []).filter(function(p){ return p.isQueryOnly && p.keyword; })
+            .map(function(p){ return { query: p.keyword, clicks: p.clicks || 0, impressions: p.impressions || 0, position: p.position || null }; });
+          if (qRows.length) { api('/gsc-queries', 'POST', { queries: qRows }).then(function(){ try { loadImpressionGap(); } catch(e) {} }); }
+        } catch(e) {}
         hideModal('importModal');
         setTimeout(loadPages, 800);
       } else {
@@ -37763,8 +37880,14 @@ WHAT DRIVES RANK #1 IN 2025-2026:
 7. Keyword in title tag, H1, first 100 words, URL slug
 8. Outbound links to authoritative sources (signals trust)
 
+IMPRESSION GROWTH — the other lever (more queries surfaced, not just more clicks from current ones):
+Impressions grow when the page becomes eligible for MORE queries. Every directly answered question is a new query surface, and pages covering adjacent intents get shown for their long-tail variants. Therefore exactly ONE of your actions must be an impression-growth action:
+- ADD one new question-form H2 targeting an ADJACENT search intent of "${kw}" that the page does not answer yet (check the HTML above first — never duplicate an existing section), followed by a 40-60 word direct answer that opens by naming the subject.
+- Choose the intent the way a searcher would ask it (cost / how long / vs alternative / near me / is it worth it / requirements). If the page has FAQ schema, also extend it with this Q&A; if not, do not force schema into this action.
+- HONESTY RULE: you only have page-level aggregates and the single top query above — you do NOT have the full GSC query list. Never present an expansion query as "GSC data shows..."; frame it as an adjacent-intent expansion. If the owner imports their Queries CSV, real position 11-50 queries take priority over guessed intents — say so in the caveat.
+
 TASK:
-Analyze the GSC data and create a GSC Brief with 4-5 actions to reach rank #1 for "${kw}" (ALWAYS include the Meta Title & Description action).
+Analyze the GSC data and create a GSC Brief with 4-5 actions to reach rank #1 for "${kw}" (ALWAYS include the Meta Title & Description action AND exactly one IMPRESSION GROWTH action as defined above).
 
 Each action must include:
 1. The specific GSC signal that triggered this recommendation (e.g. "CTR of 2.7% at position 14 = title problem")
