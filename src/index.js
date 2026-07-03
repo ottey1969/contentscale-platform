@@ -27636,6 +27636,7 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
   </div>
 
   <div class="cs-section">Your tracked pages <span id="pageCountLabel2" style="color:#cbd5e1;"></span></div>
+  <div id="cannibalPanel" style="width:100%;"></div>
   <div id="impressionGap" style="width:100%;"></div>
   <div id="pagesList" style="width:100%;"></div>
 
@@ -29111,6 +29112,7 @@ async function loadImpressionGap() {
     _sitemapSlugs = (d && d.sitemap_slugs) || [];
     renderImpressionGap();
     _computePushables();
+    _computeCannibal();
     renderPages(); // page cards now show their pushable-query blocks
   } catch(e) { _gapQueries = []; }
 }
@@ -29246,6 +29248,113 @@ function _computePushables() {
     _pushByPage[best.id].push({ query: g.query, pos: ps, impr: g.impressions||0, clicks: g.clicks||0, routeTo: routeTo });
   });
   Object.keys(_pushByPage).forEach(function(k){ _pushByPage[k].sort(function(a,b){ return b.impr - a.impr; }); });
+}
+
+// ── CANNIBALIZATION — pages competing for the same query/keyword. Three evidence levels:
+// PROVEN: the same query appears in TWO pages' per-page Queries CSV exports (Google shows both).
+// LIKELY: two tracked pages target (near-)identical keywords.
+// POSSIBLE: a site-wide query matches two pages almost equally (ambiguous ownership).
+var _cannibalIssues = [];
+function _computeCannibal() {
+  _cannibalIssues = [];
+  var pages = _pages || [];
+  if (pages.length < 2) { renderCannibal(); return; }
+  var pById = {}; pages.forEach(function(p){ pById[p.id] = p; });
+  var slugOf = function(p){ try { return new URL(p.url).pathname || '/'; } catch(e) { return p.url; } };
+
+  // LEVEL 1 — PROVEN: same normalized query under 2+ different page_ids (per-page CSV evidence)
+  var byQuery = {};
+  (_gapQueries||[]).forEach(function(g){
+    if (!g.page_id || !pById[g.page_id]) return;
+    var k = _gapNorm(g.query);
+    if (!k) return;
+    if (!byQuery[k]) byQuery[k] = {};
+    var ps = g.position ? parseFloat(g.position) : null;
+    if (!byQuery[k][g.page_id] || (ps !== null && ps < byQuery[k][g.page_id].pos)) byQuery[k][g.page_id] = { pos: ps, impr: g.impressions||0 };
+  });
+  Object.keys(byQuery).forEach(function(q){
+    var ids = Object.keys(byQuery[q]);
+    if (ids.length < 2) return;
+    var involved = ids.map(function(id){ return { slug: slugOf(pById[id]), pos: byQuery[q][id].pos, impr: byQuery[q][id].impr, id: id }; });
+    involved.sort(function(a,b){ return (a.pos===null?99:a.pos) - (b.pos===null?99:b.pos); });
+    _cannibalIssues.push({ level: 'PROVEN', color: '#f87171', key: q, pages: involved,
+      advice: 'Google shows BOTH pages for this query \\u2014 they split each other\\u2019s ranking signals. Keep ' + involved[0].slug + ' (best position) as the owner; on the other page, remove/rewrite the competing section, link it to the owner with this query as anchor text, or 301 if the page has no other purpose.' });
+  });
+
+  // LEVEL 2 — LIKELY: tracked keywords that are (near-)identical between pages
+  var kwOf = function(p){ return _gapNorm(p.keyword || p.gsc_keyword || ''); };
+  for (var i = 0; i < pages.length; i++) {
+    for (var j = i + 1; j < pages.length; j++) {
+      var a = kwOf(pages[i]), b = kwOf(pages[j]);
+      if (!a || !b) continue;
+      var wa = a.split(' ').filter(function(w){ return w.length > 2; });
+      var wb = b.split(' ').filter(function(w){ return w.length > 2; });
+      if (!wa.length || !wb.length) continue;
+      var inter = wa.filter(function(w){ return wb.indexOf(w) > -1; }).length;
+      var jac = inter / (wa.length + wb.length - inter);
+      var contained = (inter === wa.length) || (inter === wb.length);
+      if (jac >= 0.7 || (contained && Math.min(wa.length, wb.length) >= 2)) {
+        _cannibalIssues.push({ level: 'LIKELY', color: '#fb923c', key: (pages[i].keyword||pages[i].gsc_keyword) + '  \\u2194  ' + (pages[j].keyword||pages[j].gsc_keyword),
+          pages: [{ slug: slugOf(pages[i]) }, { slug: slugOf(pages[j]) }],
+          advice: 'Two tracked pages target near-identical keywords. Differentiate the intent (e.g. one = service, one = location or cost) and update the keyword of one page \\u2014 or merge them.' });
+      }
+    }
+  }
+
+  // LEVEL 3 — POSSIBLE: site-wide query matching two pages almost equally
+  var pageText = pages.map(function(p){
+    var t = [];
+    if (p.keyword) t.push(_gapNorm(p.keyword));
+    if (p.gsc_keyword) t.push(_gapNorm(p.gsc_keyword));
+    try { t.push(_gapNorm(new URL(p.url).pathname.replace(/[-_/]/g,' '))); } catch(e) {}
+    return { id: p.id, slug: slugOf(p), text: t.filter(Boolean).join(' ') };
+  });
+  var seen = {};
+  (_gapQueries||[]).forEach(function(g){
+    if (g.page_id) return;
+    if ((g.impressions||0) < 50) return;
+    var qn = _gapNorm(g.query); if (!qn || seen[qn]) return;
+    var qWords = qn.split(' ').filter(function(w){ return w.length > 2; });
+    if (!qWords.length) return;
+    var scored = pageText.map(function(pt){
+      var hit = 0; qWords.forEach(function(w){ if (pt.text.indexOf(w) > -1) hit++; });
+      return { pt: pt, s: hit / qWords.length };
+    }).filter(function(x){ return x.s >= 0.6; }).sort(function(x,y){ return y.s - x.s; });
+    if (scored.length >= 2 && (scored[0].s - scored[1].s) <= 0.15) {
+      seen[qn] = 1;
+      _cannibalIssues.push({ level: 'POSSIBLE', color: '#facc15', key: g.query, impr: g.impressions||0,
+        pages: [{ slug: scored[0].pt.slug }, { slug: scored[1].pt.slug }],
+        advice: 'This query fits two pages almost equally (' + (g.impressions||0).toLocaleString() + ' impr). Decide the owner, answer it explicitly there, and internally link the other page to the owner. Verify with a per-page Queries CSV export for proof.' });
+    }
+  });
+
+  var order = { PROVEN: 0, LIKELY: 1, POSSIBLE: 2 };
+  _cannibalIssues.sort(function(a,b){ return order[a.level] - order[b.level]; });
+  _cannibalIssues = _cannibalIssues.slice(0, 15);
+  renderCannibal();
+}
+function renderCannibal() {
+  var host = document.getElementById('cannibalPanel');
+  if (!host) return;
+  if (!_cannibalIssues.length) { host.innerHTML = ''; return; }
+  var rows = _cannibalIssues.map(function(c, i){
+    return '<div style="display:flex;align-items:flex-start;gap:10px;padding:8px 12px;border-bottom:1px solid #1f2937;" title="' + c.advice.replace(/"/g,'&quot;') + '">'
+      + '<span style="font-size:12px;font-weight:800;color:#4b5563;width:22px;flex-shrink:0;text-align:right;">' + (i+1) + '</span>'
+      + '<span style="font-size:9px;font-weight:800;color:' + c.color + ';border:1px solid ' + c.color + '55;border-radius:4px;padding:2px 7px;flex-shrink:0;white-space:nowrap;">' + c.level + '</span>'
+      + '<div style="flex:1;min-width:0;">'
+      + '<div style="font-size:11px;color:#e5e7eb;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + String(c.key).replace(/</g,'&lt;') + '</div>'
+      + '<div style="font-size:10px;color:#6b7280;font-family:monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + c.pages.map(function(p){ return p.slug + (p.pos != null ? ' (pos ' + p.pos.toFixed(1) + ')' : ''); }).join('  vs  ') + '</div>'
+      + '</div></div>';
+  }).join('');
+  host.innerHTML = '<div style="background:#0d1117;border:1px solid #1f2937;border-radius:8px;margin-bottom:12px;overflow:hidden;">'
+    + '<div onclick="var b=document.getElementById(&quot;cannBody2&quot;);b.style.display=b.style.display===&quot;none&quot;?&quot;block&quot;:&quot;none&quot;;" style="display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer;background:linear-gradient(90deg,rgba(248,113,113,.08),transparent);">'
+    + '<span style="font-size:11px;font-weight:800;letter-spacing:.06em;color:#f87171;text-transform:uppercase;">\\u2694 Cannibalization</span>'
+    + '<span style="font-size:11px;color:#6b7280;">' + _cannibalIssues.length + ' conflict' + (_cannibalIssues.length>1?'s':'') + ' \\u00b7 pages competing for the same query</span>'
+    + '<span style="margin-left:auto;font-size:10px;color:#4b5563;">hover a row for the fix</span>'
+    + '</div>'
+    + '<div id="cannBody2" style="display:none;">' + rows
+    + '<div style="font-size:10px;color:#4b5563;padding:8px 14px;line-height:1.6;">PROVEN = same query in two per-page CSV exports (Google shows both). LIKELY = near-identical tracked keywords. POSSIBLE = a site-wide query fits two pages equally \\u2014 confirm with a per-page export. Fix pattern: pick ONE owner, strengthen it, and link or 301 the loser.</div>'
+    + '</div></div>';
 }
 
 async function toggleManualDone(pageId, current) {
