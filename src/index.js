@@ -1663,7 +1663,9 @@ app.patch('/api/tracker-client/:token/pages/:pageId/done', async (req, res) => {
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
-// POST /api/tracker-client/:token/gsc-queries — replace the client's full GSC query list (fed automatically at Queries CSV import)
+// POST /api/tracker-client/:token/gsc-queries — save GSC queries.
+// Without page_id: site-wide Queries CSV (replaces the site-wide set).
+// With page_id: per-page Queries CSV from GSC → Pages → [page] → Queries → Export (replaces only that page's set — EXACT ownership, no matching needed).
 app.post('/api/tracker-client/:token/gsc-queries', async (req, res) => {
   try {
     const cr = await pool.query('SELECT id FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status != $2)', [req.params.token, 'deleted']);
@@ -1671,28 +1673,39 @@ app.post('/api/tracker-client/:token/gsc-queries', async (req, res) => {
     const clientId = cr.rows[0].id;
     const queries = Array.isArray(req.body.queries) ? req.body.queries.slice(0, 500) : [];
     if (!queries.length) return res.json({ success: true, saved: 0 });
-    await pool.query('DELETE FROM tracker_gsc_queries WHERE tracker_client_id=$1', [clientId]);
+    let pageId = null;
+    if (req.body.page_id) {
+      const own = await pool.query('SELECT id FROM tracker_pages WHERE id=$1 AND tracker_client_id=$2', [req.body.page_id, clientId]);
+      if (own.rows.length) pageId = own.rows[0].id;
+    }
+    if (pageId) await pool.query('DELETE FROM tracker_gsc_queries WHERE tracker_client_id=$1 AND page_id=$2', [clientId, pageId]);
+    else await pool.query('DELETE FROM tracker_gsc_queries WHERE tracker_client_id=$1 AND page_id IS NULL', [clientId]);
     let saved = 0;
     for (const q of queries) {
       const text = String(q.query || '').trim().substring(0, 300);
       if (!text) continue;
       await pool.query(
-        'INSERT INTO tracker_gsc_queries (tracker_client_id, query, clicks, impressions, position) VALUES ($1,$2,$3,$4,$5)',
-        [clientId, text, Math.round(q.clicks || 0), Math.round(q.impressions || 0), q.position || null]
+        'INSERT INTO tracker_gsc_queries (tracker_client_id, page_id, query, clicks, impressions, position) VALUES ($1,$2,$3,$4,$5,$6)',
+        [clientId, pageId, text, Math.round(q.clicks || 0), Math.round(q.impressions || 0), q.position || null]
       ).catch(()=>{});
       saved++;
     }
-    res.json({ success: true, saved });
+    res.json({ success: true, saved, page_id: pageId });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
-// GET /api/tracker-client/:token/gsc-queries — query list for the Impression Gap panel
+// GET /api/tracker-client/:token/gsc-queries — query list + sitemap slugs (so "new page" suggestions can see what already exists)
 app.get('/api/tracker-client/:token/gsc-queries', async (req, res) => {
   try {
-    const cr = await pool.query('SELECT id FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status != $2)', [req.params.token, 'deleted']);
+    const cr = await pool.query('SELECT id, sitemap_urls FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status != $2)', [req.params.token, 'deleted']);
     if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
-    const r = await pool.query('SELECT query, clicks, impressions, position, imported_at FROM tracker_gsc_queries WHERE tracker_client_id=$1 ORDER BY impressions DESC LIMIT 500', [cr.rows[0].id]);
-    res.json({ success: true, queries: r.rows });
+    const r = await pool.query('SELECT query, clicks, impressions, position, page_id, imported_at FROM tracker_gsc_queries WHERE tracker_client_id=$1 ORDER BY impressions DESC LIMIT 500', [cr.rows[0].id]);
+    let sitemapSlugs = [];
+    try {
+      const sm = JSON.parse(cr.rows[0].sitemap_urls || '[]');
+      if (Array.isArray(sm)) sitemapSlugs = sm.slice(0, 300).map(u => { try { return new URL(u).pathname; } catch(e) { return null; } }).filter(Boolean);
+    } catch(e) {}
+    res.json({ success: true, queries: r.rows, sitemap_slugs: sitemapSlugs });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
@@ -4869,6 +4882,7 @@ app.patch('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
     imported_at TIMESTAMPTZ DEFAULT NOW()
   )`).catch(()=>{});
   await client.query(`CREATE INDEX IF NOT EXISTS tracker_gsc_queries_client_idx ON tracker_gsc_queries(tracker_client_id)`).catch(()=>{});
+  await client.query(`ALTER TABLE tracker_gsc_queries ADD COLUMN IF NOT EXISTS page_id INTEGER`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS lead_name TEXT`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS lead_email TEXT`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS live_wall_enabled BOOLEAN DEFAULT TRUE`).catch(()=>{});
@@ -27737,6 +27751,7 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
       </div>
       <textarea id="importGscData" class="cs-input" rows="5" placeholder="Top queries,Clicks,Impressions,CTR,Position&#10;seo content strategy,45,1200,3.8%,4.2&#10;ai citations tracker,12,340,3.5%,6.1&#10;&#10;Or paste: https://domain.com/page | keyword" style="resize:vertical;font-family:monospace;font-size:11px;margin-bottom:8px;"></textarea>
       <button class="cs-btn primary" onclick="parseGscData()" style="width:100%;margin-bottom:10px;">Parse &amp; Preview</button>
+      <div id="gscAssignWrap" style="display:none;margin-bottom:10px;"></div>
       <div id="gscList" style="max-height:220px;overflow-y:auto;display:none;">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
           <span style="font-size:11px;color:#6b7280;" id="gscCount"></span>
@@ -28673,6 +28688,25 @@ function renderPages() {
     var needsHtmlBanner = '';
 
     var _mdOn = p.manual_done === true || p.manual_done === 't' || p.manual_done === 'true' || p.manual_done === 1;
+    // Pushable queries block — replaces the manual "GSC → Pages → Queries" digging.
+    var _pushHtml = '';
+    var _pushList = _pushByPage[p.id];
+    if (_pushList && _pushList.length) {
+      var _pRows = _pushList.slice(0, 5).map(function(q){
+        return '<div style="display:flex;align-items:center;gap:8px;padding:3px 0;min-width:0;">'
+          + (q.exact ? '<span style="font-size:9px;color:#4ade80;flex-shrink:0;" title="Exact: from this page\\u2019s own Queries CSV export \\u2014 no matching guesswork">\\u2713</span>' : '')
+          + '<span style="font-size:11px;color:#e5e7eb;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;">' + String(q.query).replace(/</g,'&lt;') + '</span>'
+          + '<span style="font-size:10px;color:#facc15;flex-shrink:0;white-space:nowrap;">pos ' + q.pos.toFixed(1) + '</span>'
+          + '<span style="font-size:10px;color:#6b7280;flex-shrink:0;white-space:nowrap;">' + q.impr.toLocaleString() + ' impr</span>'
+          + (q.routeTo ? '<span style="font-size:9px;font-weight:800;color:#fb923c;border:1px solid #9a341255;border-radius:4px;padding:1px 6px;flex-shrink:0;white-space:nowrap;" title="Generic commercial query \\u2014 belongs on this service page, not the homepage. Add the answering section + internal link there.">\\u2192 ' + q.routeTo + '</span>' : '')
+          + '</div>';
+      }).join('');
+      _pushHtml = '<div style="background:#0a0e14;border:1px solid #1f2937;border-left:3px solid #facc15;border-radius:6px;padding:8px 12px;margin:8px 0;">'
+        + '<div style="font-size:9px;font-weight:800;letter-spacing:.06em;color:#facc15;text-transform:uppercase;margin-bottom:4px;" title="Non-branded queries at position 11-25 with real impressions, matched to this page from your Queries CSV. One quality push (question-form H2 answering the query + internal link) moves them to page 1. Approximate matching \\u2014 verify in GSC per page for certainty.">\\u2b06 Pushable queries \\u00b7 page 2 \\u2192 page 1</div>'
+        + _pRows
+        + (_pushList.length > 5 ? '<div style="font-size:9px;color:#4b5563;margin-top:3px;">+ ' + (_pushList.length - 5) + ' more in your Queries CSV</div>' : '')
+        + '</div>';
+    }
     return '<div class="cs-page-card' + (isDone ? ' done' : '') + '" data-page-id="' + p.id + '" style="position:relative;background:#0d1117;border:1px solid #1f2937;' + (_mdOn ? 'border-left:4px solid #16a34a;' : 'border-left:4px solid #374151;') + 'border-radius:10px;margin-bottom:12px;overflow:hidden;">'
       + pendingBanner
       + needsHtmlBanner
@@ -28694,6 +28728,7 @@ function renderPages() {
         })()
       + '<div class="cs-url-line" style="font-size:12px;' + (isDone ? 'text-decoration:line-through;color:#4b5563;' : 'color:#e5e7eb;') + 'font-family:monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;border-radius:4px;padding:1px 4px;margin-left:-4px;" title="' + rawUrl + '">' + urlShort + '</div></div>'
       + '<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:4px;">' + badges + '</div>'
+      + _pushHtml
       + gscHtml
       + '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:4px;">'
       + (kw ? '<span style="font-size:10px;color:#4b5563;">kw: <span style="color:#a78bfa;">' + kw + '</span></span><button onclick="editKeyword(' + p.id + ',this)" style="font-size:9px;background:none;border:none;color:#374151;cursor:pointer;text-decoration:underline;">edit</button>'
@@ -29068,11 +29103,15 @@ async function setAllManualDone(on) {
 // ── IMPRESSION GAP — queries with real demand that no tracked page targets yet ──
 // Fed automatically when a Queries CSV is imported. No user action needed beyond the import itself.
 var _gapQueries = null;
+var _sitemapSlugs = [];
 async function loadImpressionGap() {
   try {
     var d = await api('/gsc-queries', 'GET');
     _gapQueries = (d && d.queries) || [];
+    _sitemapSlugs = (d && d.sitemap_slugs) || [];
     renderImpressionGap();
+    _computePushables();
+    renderPages(); // page cards now show their pushable-query blocks
   } catch(e) { _gapQueries = []; }
 }
 function _gapNorm(s){ return String(s||'').toLowerCase().replace(/[^a-z0-9 ]/g,' ').replace(/ +/g,' ').trim(); }
@@ -29102,20 +29141,42 @@ function renderImpressionGap() {
     }
     return false;
   };
-  var gaps = _gapQueries.filter(function(q){ return (q.impressions||0) >= 20 && !isCovered(q.query); });
+  var gaps = _gapQueries.filter(function(q){ return !q.page_id && (q.impressions||0) >= 20 && !isCovered(q.query); });
   gaps.sort(function(a,b){ return (b.impressions||0) - (a.impressions||0); });
   gaps = gaps.slice(0, 20);
   if (!gaps.length) { host.innerHTML = ''; return; }
+  // Sitemap awareness: before advising a NEW PAGE, check whether a matching page already EXISTS
+  // in the sitemap (uploaded at import) but simply isn't tracked yet.
+  var _slugMatch = function(q) {
+    var qn = _gapNorm(q); var qWords = qn.split(' ').filter(function(w){ return w.length > 2; });
+    if (!qWords.length) return null;
+    var best = null, bestScore = 0;
+    for (var i = 0; i < _sitemapSlugs.length; i++) {
+      var sn = _gapNorm(String(_sitemapSlugs[i]).replace(/[-_/]/g,' '));
+      if (!sn) continue;
+      var hit = 0; qWords.forEach(function(w){ if (sn.indexOf(w) > -1) hit++; });
+      var sc = hit / qWords.length;
+      if (sc > bestScore) { bestScore = sc; best = _sitemapSlugs[i]; }
+    }
+    return bestScore >= 0.6 ? best : null;
+  };
   var totImpr = 0; gaps.forEach(function(g){ totImpr += (g.impressions||0); });
   var rows = gaps.map(function(g, i){
     var ps = g.position ? parseFloat(g.position) : null;
-    var hint = (ps !== null && ps <= 20)
-      ? { t: 'ADD SECTION', c: '#4ade80', d: 'Google already shows you (pos ' + ps.toFixed(1) + '). Add a question-form H2 answering this on your closest tracked page \\u2014 fastest impression growth there is.' }
-      : { t: 'NEW PAGE', c: '#60a5fa', d: 'Real demand, no eligible page. A dedicated page for this intent unlocks these impressions' + (ps !== null ? ' (currently pos ' + ps.toFixed(1) + ')' : '') + '.' };
+    var existsSlug = _slugMatch(g.query);
+    var hint;
+    if (ps !== null && ps <= 20) {
+      hint = { t: 'ADD SECTION', c: '#4ade80', d: 'Google already shows you (pos ' + ps.toFixed(1) + '). Add a question-form H2 answering this on your closest tracked page \\u2014 fastest impression growth there is.' };
+    } else if (existsSlug) {
+      hint = { t: 'EXISTS \\u00b7 NOT TRACKED', c: '#a78bfa', d: 'A matching page already exists in your sitemap: ' + existsSlug + ' \\u2014 it is just not in the tracker. Add it to the tracker and improve it instead of building a new page.' };
+    } else {
+      hint = { t: 'NEW PAGE', c: '#60a5fa', d: 'Real demand, no eligible page anywhere in your sitemap. A dedicated page for this intent unlocks these impressions' + (ps !== null ? ' (currently pos ' + ps.toFixed(1) + ')' : '') + '.' };
+    }
     return '<div style="display:flex;align-items:center;gap:10px;padding:7px 12px;border-bottom:1px solid #1f2937;" title="' + hint.d + '">'
       + '<span style="font-size:12px;font-weight:800;color:#4b5563;width:22px;flex-shrink:0;text-align:right;">' + (i+1) + '</span>'
       + '<span style="font-size:9px;font-weight:800;color:' + hint.c + ';border:1px solid ' + hint.c + '55;border-radius:4px;padding:2px 7px;flex-shrink:0;white-space:nowrap;">' + hint.t + '</span>'
       + '<span style="font-size:11px;color:#e5e7eb;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;">' + g.query.replace(/</g,'&lt;') + '</span>'
+      + (existsSlug && !(ps !== null && ps <= 20) ? '<span style="font-size:10px;color:#a78bfa;font-family:monospace;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:180px;">' + existsSlug + '</span>' : '')
       + '<span style="font-size:10px;color:#6b7280;flex-shrink:0;white-space:nowrap;">' + (g.position ? 'pos ' + parseFloat(g.position).toFixed(1) + ' \\u00b7 ' : '') + (g.impressions||0).toLocaleString() + ' impr \\u00b7 ' + (g.clicks||0) + ' clk</span>'
       + '</div>';
   }).join('');
@@ -29128,6 +29189,63 @@ function renderImpressionGap() {
     + '<div id="impGapBody" style="display:none;">' + rows
     + '<div style="font-size:10px;color:#4b5563;padding:8px 14px;line-height:1.6;">ADD SECTION = Google already tests you for this query \\u2014 answer it with a question-form H2 on your closest page. NEW PAGE = demand exists but no page is eligible. Re-import your Queries CSV monthly to keep this current.</div>'
     + '</div></div>';
+}
+
+// ── PUSHABLE QUERIES — automates the manual GSC workflow: per page, which non-branded
+// queries sit at position 11-25 with real impressions (= one push from page 1), and where
+// a query actually belongs (homepage vs service page routing).
+// Matching is an approximation: the Queries CSV is site-wide, so queries are assigned to the
+// tracked page whose keyword/slug they overlap most. Good enough to replace the manual GSC digging.
+var _pushByPage = {};
+function _computePushables() {
+  _pushByPage = {};
+  if (!_gapQueries || !_gapQueries.length || !_pages || !_pages.length) return;
+  var brand = _gapNorm(DOMAIN).replace(/ (com|net|org|site|nl)$/,'').replace(/[^a-z0-9]/g,'');
+  var isBranded = function(q) {
+    var flat = _gapNorm(q).replace(/ /g,'');
+    return flat.length > 3 && (flat.indexOf(brand) > -1 || brand.indexOf(flat) > -1);
+  };
+  // per page: matchable text
+  var pageText = (_pages||[]).map(function(p){
+    var t = [];
+    if (p.keyword) t.push(_gapNorm(p.keyword));
+    if (p.gsc_keyword) t.push(_gapNorm(p.gsc_keyword));
+    var isHome = false;
+    try { var u = new URL(p.url); isHome = (u.pathname === '/' || u.pathname === ''); t.push(_gapNorm(u.pathname.replace(/[-_/]/g,' '))); } catch(e) {}
+    return { id: p.id, text: t.filter(Boolean).join(' '), isHome: isHome, slug: (function(){ try { return new URL(p.url).pathname; } catch(e) { return p.url; } })() };
+  });
+  var scoreFor = function(qWords, pt) {
+    if (!qWords.length || !pt.text) return 0;
+    var hit = 0; qWords.forEach(function(w){ if (pt.text.indexOf(w) > -1) hit++; });
+    return hit / qWords.length;
+  };
+  _gapQueries.forEach(function(g) {
+    var ps = g.position ? parseFloat(g.position) : null;
+    if (ps === null || ps < 11 || ps > 25) return;      // striking distance only
+    if ((g.impressions||0) < 30) return;                 // real demand only
+    if (isBranded(g.query)) return;                      // non-branded only
+    // EXACT ownership: query came from a per-page Queries CSV export — no matching needed
+    if (g.page_id) {
+      if (!_pushByPage[g.page_id]) _pushByPage[g.page_id] = [];
+      _pushByPage[g.page_id].push({ query: g.query, pos: ps, impr: g.impressions||0, clicks: g.clicks||0, routeTo: null, exact: true });
+      return;
+    }
+    var qWords = _gapNorm(g.query).split(' ').filter(function(w){ return w.length > 2; });
+    var best = null, bestScore = 0, bestSvc = null, bestSvcScore = 0;
+    pageText.forEach(function(pt){
+      var s = scoreFor(qWords, pt);
+      if (s > bestScore) { bestScore = s; best = pt; }
+      if (!pt.isHome && s > bestSvcScore) { bestSvcScore = s; bestSvc = pt; }
+    });
+    if (!best || bestScore < 0.4) return;                // no confident owner -> Impression Gap territory
+    // Routing rule: generic commercial query landing on the homepage while a service page
+    // matches nearly as well -> it belongs on the service page.
+    var routeTo = null;
+    if (best.isHome && bestSvc && bestSvcScore >= Math.max(0.4, bestScore - 0.15)) routeTo = bestSvc.slug;
+    if (!_pushByPage[best.id]) _pushByPage[best.id] = [];
+    _pushByPage[best.id].push({ query: g.query, pos: ps, impr: g.impressions||0, clicks: g.clicks||0, routeTo: routeTo });
+  });
+  Object.keys(_pushByPage).forEach(function(k){ _pushByPage[k].sort(function(a,b){ return b.impr - a.impr; }); });
 }
 
 async function toggleManualDone(pageId, current) {
@@ -30395,6 +30513,20 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
 
     if (!pairs.length) { toast('No valid data found. Try: GSC Queries CSV, Pages CSV, or URL | keyword format', '#f87171'); return; }
     window._lastGscPairs = pairs; // full parsed set — import ships the query rows to the Impression Gap store
+    // Per-page assignment: a Queries CSV exported from GSC → Pages → [one page] → Queries belongs to ONE page.
+    // Show the selector only when query rows are present, so the owner can be set exactly (no matching guesswork).
+    var _assignWrap = document.getElementById('gscAssignWrap');
+    var _hasQueryRows = pairs.some(function(p){ return p.isQueryOnly; });
+    if (_assignWrap) {
+      if (_hasQueryRows && (_pages||[]).length) {
+        var _sel = '<select id="gscAssignPage" style="width:100%;background:#0d1117;border:1px solid #374151;border-radius:6px;color:#e5e7eb;font-size:11px;padding:6px;">'
+          + '<option value="">Whole site (site-wide Queries CSV \\u2014 queries matched to pages automatically)</option>'
+          + (_pages||[]).map(function(tp){ var path=''; try { path = new URL(tp.url).pathname || '/'; } catch(e) { path = tp.url; } return '<option value="' + tp.id + '">These queries belong to: ' + path + ' (exported from GSC \\u2192 Pages \\u2192 this page)</option>'; }).join('')
+          + '</select>';
+        _assignWrap.innerHTML = '<div style="font-size:10px;font-weight:700;color:#9ca3af;margin:8px 0 4px;">Query ownership</div>' + _sel;
+        _assignWrap.style.display = 'block';
+      } else { _assignWrap.style.display = 'none'; _assignWrap.innerHTML = ''; }
+    }
 
     // Merge duplicate URLs \\u2014 GSC often splits one page across http/https/www/trailing-slash variants.
     // Sum the metrics; position = impressions-weighted average (NOT best-of, which flatters the numbers).
@@ -30509,12 +30641,15 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
     // 3. If a URL has ONLY query rows, use the top query's metrics as a best effort.
     var all = document.querySelectorAll('.gsc-cb');
     if (!all || !all.length) { toast('Nothing to import — parse first', '#f87171'); return; }
+    var _assignSel = document.getElementById('gscAssignPage');
+    var _assignPageId = _assignSel && _assignSel.value ? parseInt(_assignSel.value, 10) : null;
     var _norm = function(u){ try { var x = new URL(String(u).trim()); return x.host.toLowerCase().replace(/^www[.]/,'') + x.pathname.toLowerCase().replace(/[/]+$/,'') + (x.search||''); } catch(e) { return String(u||'').trim().toLowerCase().replace(/^https?:[/][/]/,'').replace(/^www[.]/,'').replace(/[/]+$/,''); } };
     var groups = {};
     all.forEach(function(cb) {
       var v;
       try { v = JSON.parse(cb.value); } catch(e) { v = { url: cb.value, keyword: '' }; }
       var isQuery = !!v.isQueryOnly;
+      if (isQuery && _assignPageId) return; // page-assigned queries go to the query store, NOT into the homepage fallback
       if (!v.url || v.url.indexOf('http') !== 0) {
         if (!cb.checked) return; // skip unselected queries-only rows
         isQuery = true;
@@ -30550,18 +30685,30 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
         rows.push({ url: g.url, keyword: kw, clicks: g.qClicks || null, impressions: g.qImpr || null, position: g.qPos, add: g.checked });
       }
     });
-    if (!rows.length) { toast('No valid URLs to import', '#f87171'); return; }
+    var _qRows = (window._lastGscPairs || []).filter(function(p){ return p.isQueryOnly && p.keyword; })
+      .map(function(p){ return { query: p.keyword, clicks: p.clicks || 0, impressions: p.impressions || 0, position: p.position || null }; });
+    if (!rows.length) {
+      // Pure per-page Queries CSV: nothing to import into page slots — just store the queries with their exact owner
+      if (_qRows.length) {
+        var dq = await api('/gsc-queries', 'POST', { queries: _qRows, page_id: _assignPageId || undefined });
+        if (dq && dq.success) {
+          toast('Saved ' + (dq.saved || _qRows.length) + ' queries' + (_assignPageId ? ' for the selected page' : '') + ' \\u2014 pushable queries update now', '#4ade80');
+          hideModal('importModal');
+          try { loadImpressionGap(); } catch(e) {}
+        } else { toast((dq && dq.error) || 'Could not save queries', '#f87171'); }
+        return;
+      }
+      toast('No valid URLs to import', '#f87171'); return;
+    }
     var bt = document.getElementById('importGscBtn');
     if (bt) { bt.disabled = true; bt.textContent = 'Importing...'; }
     try {
       var d = await api('/import-gsc-pages', 'POST', { pages: rows });
       if (d && d.success) {
         toast(d.message || ('Imported ' + (d.imported || 0)), (d.failed > 0) ? '#fbbf24' : '#4ade80');
-        // Automatically persist the FULL query list (Queries CSV rows) for the Impression Gap panel — no extra user action
+        // Automatically persist the query rows for the Impression Gap panel / pushables — no extra user action
         try {
-          var qRows = (window._lastGscPairs || []).filter(function(p){ return p.isQueryOnly && p.keyword; })
-            .map(function(p){ return { query: p.keyword, clicks: p.clicks || 0, impressions: p.impressions || 0, position: p.position || null }; });
-          if (qRows.length) { api('/gsc-queries', 'POST', { queries: qRows }).then(function(){ try { loadImpressionGap(); } catch(e) {} }); }
+          if (_qRows.length) { api('/gsc-queries', 'POST', { queries: _qRows, page_id: _assignPageId || undefined }).then(function(){ try { loadImpressionGap(); } catch(e) {} }); }
         } catch(e) {}
         hideModal('importModal');
         setTimeout(loadPages, 800);
