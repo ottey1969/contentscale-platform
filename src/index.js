@@ -28397,13 +28397,41 @@ function renderPages() {
         + (q.missed > 0 ? '<span style="font-size:10px;font-weight:800;color:#4ade80;flex-shrink:0;white-space:nowrap;" title="Estimated clicks per month you are missing at this demand level">+' + q.missed.toLocaleString() + ' clk/mo</span>' : '')
         + '</div>';
     }).join('');
+    var legendRow = function(color, label, when, why, fix){
+      return '<tr>'
+        + '<td style="padding:8px 10px;border-bottom:1px solid #1f2937;white-space:nowrap;vertical-align:top;"><span style="font-size:9px;font-weight:800;color:' + color + ';border:1px solid ' + color + '55;border-radius:4px;padding:2px 7px;">' + label + '</span></td>'
+        + '<td style="padding:8px 10px;border-bottom:1px solid #1f2937;font-size:11px;color:#9ca3af;vertical-align:top;white-space:nowrap;">' + when + '</td>'
+        + '<td style="padding:8px 10px;border-bottom:1px solid #1f2937;font-size:11px;color:#6b7280;vertical-align:top;">' + why + '</td>'
+        + '<td style="padding:8px 10px;border-bottom:1px solid #1f2937;font-size:11px;color:#e5e7eb;vertical-align:top;">' + fix + '</td>'
+        + '</tr>';
+    };
+    var legendHtml = '<div id="leadQueueLegend" style="display:none;border-top:1px solid #1f2937;background:#0a0e14;padding:14px 16px;">'
+      + '<div style="font-size:11px;font-weight:800;color:#e5e7eb;margin-bottom:4px;letter-spacing:.04em;text-transform:uppercase;">How the Lead Queue ranks your pages</div>'
+      + '<div style="font-size:11px;color:#6b7280;line-height:1.7;margin-bottom:12px;">Every page is placed in a tier based on your live Google Search Console data. Within each tier, pages are ordered by <span style="color:#4ade80;font-weight:700;">+clicks/mo</span> \\u2014 the estimated clicks per month you are currently missing (search demand \\u00d7 the click-through rate a top position earns, minus the clicks you already get). Work from top to bottom: the highest entry is always your fastest route to new leads. When you finish a page, mark it with \\u25cb my check \\u2014 it leaves the queue and the next opportunity moves up.</div>'
+      + '<table style="width:100%;border-collapse:collapse;background:#0d1117;border:1px solid #1f2937;border-radius:6px;overflow:hidden;">'
+      + '<tr style="background:#111827;">'
+      + '<th style="padding:7px 10px;font-size:9px;font-weight:800;color:#6b7280;text-transform:uppercase;letter-spacing:.06em;text-align:left;">Tier</th>'
+      + '<th style="padding:7px 10px;font-size:9px;font-weight:800;color:#6b7280;text-transform:uppercase;letter-spacing:.06em;text-align:left;">Criteria (GSC)</th>'
+      + '<th style="padding:7px 10px;font-size:9px;font-weight:800;color:#6b7280;text-transform:uppercase;letter-spacing:.06em;text-align:left;">What it means</th>'
+      + '<th style="padding:7px 10px;font-size:9px;font-weight:800;color:#6b7280;text-transform:uppercase;letter-spacing:.06em;text-align:left;">Your action</th>'
+      + '</tr>'
+      + legendRow('#f97316','1 \\u00b7 \\ud83c\\udfaf QUICK WIN','Position \\u226410 \\u00b7 \\u2265100 impressions \\u00b7 CTR &lt;1%','Google already shows you on page 1 for real search demand, but searchers are not clicking. The ranking work is done \\u2014 only the click is missing.','Rewrite the title &amp; meta description around the exact search intent, then follow the Citation Brief to get cited in the AI Overview. Fastest possible leads.')
+      + legendRow('#facc15','2 \\u00b7 \\u26a1 STRIKING DISTANCE','Position 11\\u201320 \\u00b7 \\u2265100 impressions','You are on page 2 for a query people actually search. One quality push moves you onto page 1, where the clicks are.','Execute the Citation Brief recommendations and add internal links from your strongest pages to this one.')
+      + legendRow('#60a5fa','3 \\u00b7 \\ud83d\\udcc8 HIGH DEMAND','\\u2265500 impressions \\u00b7 weak position','Large search demand exists, but your page is not competitive yet. Biggest long-term prize, more work required.','Full content rebuild via the brief: depth, E-E-A-T signals, schema markup, expert sourcing.')
+      + legendRow('#9ca3af','4 \\u00b7 \\ud83d\\udd28 BUILD','Moderate demand \\u00b7 weak position','Worth improving, but the return is smaller than the tiers above.','Work through the brief once tiers 1\\u20133 are cleared.')
+      + legendRow('#6b7280','5 \\u00b7 \\ud83d\\udd0d LOW DEMAND','Position \\u226410 \\u00b7 &lt;50 impressions','The position looks great, but almost nobody searches this query \\u2014 a good ranking with no demand produces zero leads.','Retarget the page to a related query with real volume (check GSC Queries), or merge it into a stronger page.')
+      + '</table>'
+      + '<div style="font-size:10px;color:#4b5563;margin-top:10px;line-height:1.6;">Formula: rule of thumb based on industry CTR curves \\u2014 position 1\\u20133 \\u2248 20% CTR, 4\\u20135 \\u2248 12%, 6\\u201310 \\u2248 6%. Estimates, not guarantees; refresh your GSC import regularly to keep the queue current.</div>'
+      + '</div>';
     leadQueueHtml = '<div style="background:#0d1117;border:1px solid #1f2937;border-radius:8px;margin-bottom:12px;overflow:hidden;">'
-      + '<div onclick="var b=document.getElementById(&quot;leadQueueBody&quot;);b.style.display=b.style.display===&quot;none&quot;?&quot;block&quot;:&quot;none&quot;;" style="display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer;background:linear-gradient(90deg,rgba(249,115,22,.08),transparent);">'
-      + '<span style="font-size:11px;font-weight:800;letter-spacing:.06em;color:#f97316;text-transform:uppercase;">\\ud83c\\udfaf Lead Queue</span>'
+      + '<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:linear-gradient(90deg,rgba(249,115,22,.08),transparent);">'
+      + '<span onclick="var b=document.getElementById(&quot;leadQueueBody&quot;);b.style.display=b.style.display===&quot;none&quot;?&quot;block&quot;:&quot;none&quot;;" style="cursor:pointer;font-size:11px;font-weight:800;letter-spacing:.06em;color:#f97316;text-transform:uppercase;">\\ud83c\\udfaf Lead Queue</span>'
       + '<span style="font-size:11px;color:#6b7280;">' + _leadQueue.length + ' open \\u00b7 work top to bottom \\u00b7 check off with \\u25cb my check</span>'
       + '<span style="margin-left:auto;font-size:10px;color:#4b5563;">click row to jump \\u00b7 hover for the fix</span>'
+      + '<button onclick="var l=document.getElementById(&quot;leadQueueLegend&quot;);l.style.display=l.style.display===&quot;none&quot;?&quot;block&quot;:&quot;none&quot;;" style="flex-shrink:0;cursor:pointer;font-size:10px;font-weight:700;padding:3px 10px;border-radius:5px;background:none;border:1px solid #374151;color:#9ca3af;" title="What do the tiers mean and how is the ranking calculated?">? How ranking works</button>'
       + '</div>'
       + '<div id="leadQueueBody">' + rows + '</div>'
+      + legendHtml
       + '</div>';
   }
 
