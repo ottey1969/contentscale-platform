@@ -28348,6 +28348,65 @@ function renderPages() {
   var _isMd = function(p){ return p.manual_done === true || p.manual_done === 't' || p.manual_done === 'true' || p.manual_done === 1; };
   var _mdDone = _pages.filter(_isMd).length;
   var _mdTotal = _pages.length;
+
+  // ── LEAD QUEUE: one ranked worklist. Rank = estimated missed clicks per month
+  // (impressions x expected CTR for a top spot, minus clicks you already get).
+  // Checked pages (my check) drop out automatically, so the queue always shows the NEXT job on top.
+  var _leadQueue = [];
+  _pages.forEach(function(p){
+    if (_isMd(p)) return; // done by you -> out of the queue
+    var impr = p.gsc_impressions || 0;
+    var clicks = p.gsc_clicks || 0;
+    var ps = p.gsc_position ? parseFloat(p.gsc_position) : null;
+    if (!impr && ps === null) return; // no GSC data -> nothing to rank on
+    var tier, tierLabel, tierColor, action;
+    if (ps !== null && ps <= 10 && impr >= 100 && (clicks / Math.max(impr,1)) * 100 < 1) {
+      tier = 1; tierLabel = '\\ud83c\\udfaf QUICK WIN'; tierColor = '#f97316';
+      action = 'Rewrite title/meta for the search intent + get cited in the AI Overview (Citation Brief). Google already ranks you \\u2014 only the click is missing.';
+    } else if (ps !== null && ps > 10 && ps <= 20 && impr >= 100) {
+      tier = 2; tierLabel = '\\u26a1 STRIKING DISTANCE'; tierColor = '#facc15';
+      action = 'Page 2 with real demand. Execute the Citation Brief + strengthen internal links to this page \\u2014 one push to page 1.';
+    } else if (impr >= 500) {
+      tier = 3; tierLabel = '\\ud83d\\udcc8 HIGH DEMAND'; tierColor = '#60a5fa';
+      action = 'Big search demand, weak position. Full content rebuild via the brief: depth, E-E-A-T, schema.';
+    } else if (ps !== null && ps <= 10 && impr > 0 && impr < 50) {
+      tier = 5; tierLabel = '\\ud83d\\udd0d LOW DEMAND'; tierColor = '#6b7280';
+      action = 'Ranks well but nobody searches it. Retarget to a query WITH volume (check GSC Queries) or merge into a stronger page.';
+    } else {
+      tier = 4; tierLabel = '\\ud83d\\udd28 BUILD'; tierColor = '#9ca3af';
+      action = 'Moderate demand, weak position. Work through the brief when tiers above are cleared.';
+    }
+    // Expected CTR at a good spot: pos 1-3 ~20%, 4-5 ~12%, 6-10 ~6%, page 2+ potential if pushed to top ~15%
+    var expCtr = (ps !== null && ps <= 3) ? 0.20 : (ps !== null && ps <= 5) ? 0.12 : (ps !== null && ps <= 10) ? 0.06 : 0.15;
+    var missed = Math.max(0, Math.round(impr * expCtr - clicks));
+    _leadQueue.push({ p: p, tier: tier, tierLabel: tierLabel, tierColor: tierColor, action: action, missed: missed, impr: impr, clicks: clicks, ps: ps });
+  });
+  _leadQueue.sort(function(a,b){ if (a.tier !== b.tier) return a.tier - b.tier; return b.missed - a.missed; });
+
+  var leadQueueHtml = '';
+  if (_leadQueue.length) {
+    var rows = _leadQueue.map(function(q, i){
+      var path = ''; try { path = new URL(q.p.url).pathname; } catch(e) { path = q.p.url; }
+      if (path === '/' || !path) path = '(homepage)';
+      return '<div onclick="jumpToPage(' + q.p.id + ')" style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid #1f2937;cursor:pointer;" '
+        + 'onmouseover="this.style.background=&quot;#111827&quot;" onmouseout="this.style.background=&quot;none&quot;">'
+        + '<span style="font-size:13px;font-weight:800;color:#4b5563;width:24px;flex-shrink:0;text-align:right;">' + (i+1) + '</span>'
+        + '<span style="font-size:9px;font-weight:800;color:' + q.tierColor + ';border:1px solid ' + q.tierColor + '55;border-radius:4px;padding:2px 7px;flex-shrink:0;white-space:nowrap;">' + q.tierLabel + '</span>'
+        + '<span style="font-size:11px;color:#e5e7eb;font-family:monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;" title="' + q.action + '">' + path + '</span>'
+        + '<span style="font-size:10px;color:#6b7280;flex-shrink:0;white-space:nowrap;">' + (q.ps !== null ? 'pos ' + q.ps.toFixed(1) + ' \\u00b7 ' : '') + q.impr.toLocaleString() + ' impr \\u00b7 ' + q.clicks + ' clk</span>'
+        + (q.missed > 0 ? '<span style="font-size:10px;font-weight:800;color:#4ade80;flex-shrink:0;white-space:nowrap;" title="Estimated clicks per month you are missing at this demand level">+' + q.missed.toLocaleString() + ' clk/mo</span>' : '')
+        + '</div>';
+    }).join('');
+    leadQueueHtml = '<div style="background:#0d1117;border:1px solid #1f2937;border-radius:8px;margin-bottom:12px;overflow:hidden;">'
+      + '<div onclick="var b=document.getElementById(&quot;leadQueueBody&quot;);b.style.display=b.style.display===&quot;none&quot;?&quot;block&quot;:&quot;none&quot;;" style="display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer;background:linear-gradient(90deg,rgba(249,115,22,.08),transparent);">'
+      + '<span style="font-size:11px;font-weight:800;letter-spacing:.06em;color:#f97316;text-transform:uppercase;">\\ud83c\\udfaf Lead Queue</span>'
+      + '<span style="font-size:11px;color:#6b7280;">' + _leadQueue.length + ' open \\u00b7 work top to bottom \\u00b7 check off with \\u25cb my check</span>'
+      + '<span style="margin-left:auto;font-size:10px;color:#4b5563;">click row to jump \\u00b7 hover for the fix</span>'
+      + '</div>'
+      + '<div id="leadQueueBody">' + rows + '</div>'
+      + '</div>';
+  }
+
   if (_mdFilter === 'todo') displayPages = displayPages.filter(function(p){ return !_isMd(p); });
   else if (_mdFilter === 'done') displayPages = displayPages.filter(_isMd);
   var _mdPct = _mdTotal ? Math.round((_mdDone/_mdTotal)*100) : 0;
@@ -28397,7 +28456,7 @@ function renderPages() {
     var bPos = b.google_position || 999;
     return aPos - bPos;
   });
-  el.innerHTML = mdBarHtml + sorted.map(function(p, pageIdx) {
+  el.innerHTML = leadQueueHtml + mdBarHtml + sorted.map(function(p, pageIdx) {
     var pos = p.google_position;
     var score = p.graaf_score;
     // Populate brief cache so the View Brief button + popup work (full data when available)
@@ -28865,6 +28924,16 @@ function markSitemapDone() {
   b.style.color = '#4ade80';
   b.innerHTML = '<i class="fas fa-list"></i> Sitemap \\u2713';
   b.title = 'Sitemap imported';
+}
+
+function jumpToPage(pageId) {
+  var card = document.querySelector('.cs-page-card[data-page-id="' + pageId + '"]');
+  if (!card) { setMdFilter('all'); card = document.querySelector('.cs-page-card[data-page-id="' + pageId + '"]'); }
+  if (!card) return;
+  card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  var prev = card.style.boxShadow;
+  card.style.boxShadow = '0 0 0 2px #f97316, 0 0 24px rgba(249,115,22,.5)';
+  setTimeout(function(){ card.style.boxShadow = prev || ''; }, 2200);
 }
 
 async function setAllManualDone(on) {
