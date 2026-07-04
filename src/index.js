@@ -3592,7 +3592,8 @@ app.get('/track/:token/page/:pageId/history', async (req, res) => {
 // ── Read-only "viewer" page (TV view): mirrors the Live Brief Wall (3-col, newest in the middle), click a card to open the full brief ──
 app.get('/view/:token', async (req, res) => {
   try {
-    const cr = await pool.query('SELECT domain FROM tracker_clients WHERE token=$1', [req.params.token]);
+    // Always available on EVERY plan (this link ships in the welcome email) — only deleted clients 404.
+    const cr = await pool.query("SELECT domain FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status != 'deleted')", [req.params.token]);
     if (!cr.rows.length) return res.status(404).send('<h1>Not found</h1>');
     const domain = cr.rows[0].domain || '';
     res.send(`<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Brief — ${domain}</title>
@@ -4117,9 +4118,10 @@ app.post('/api/admin/tracker-clients/create-own', verifyAdmin, async (req, res) 
 
     const token = generateClientToken();
     const maxPg = parseInt(max_pages) || 10;
+    // Plan rule: free = 3 pages -> GSC off; any paid tier (>3 pages) -> GSC on automatically.
     await pool.query(
-      `INSERT INTO tracker_clients (token, domain, name, email, max_pages, status) VALUES ($1,$2,$3,$4,$5,'active')`,
-      [token, cleanDomain, name||null, email||null, maxPg]
+      `INSERT INTO tracker_clients (token, domain, name, email, max_pages, status, gsc_enabled) VALUES ($1,$2,$3,$4,$5,'active',$6)`,
+      [token, cleanDomain, name||null, email||null, maxPg, maxPg > 3]
     );
 
     const trackUrl = (process.env.APP_URL || 'https://app.contentscale.site') + '/track/' + token;
@@ -4593,6 +4595,11 @@ app.patch('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
       }
     }
     if (req.body.gsc_enabled !== undefined) { updates.push(`gsc_enabled=$${i++}`); vals.push(!!req.body.gsc_enabled); }
+    else if (max_pages !== undefined) {
+      // Plan changed without an explicit GSC choice -> follow the plan rule automatically (free ≤3 off, paid >3 on)
+      updates.push(`gsc_enabled=$${i++}`); vals.push(parseInt(max_pages) > 3);
+      console.log('[admin] gsc_enabled auto-set to', parseInt(max_pages) > 3, 'from max_pages', max_pages);
+    }
     if (req.body.cc_emails !== undefined) { updates.push(`cc_emails=$${i++}`); vals.push(req.body.cc_emails || ''); }
     if (req.body.lead_name !== undefined) { updates.push(`lead_name=$${i++}`); vals.push(req.body.lead_name || ''); }
     if (req.body.lead_email !== undefined) { updates.push(`lead_email=$${i++}`); vals.push(req.body.lead_email || ''); }
@@ -4905,6 +4912,16 @@ app.patch('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS paused_at TIMESTAMPTZ`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS dealify_codes VARCHAR(500)`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS gsc_enabled BOOLEAN DEFAULT FALSE`).catch(()=>{});
+  // One-time sync of gsc_enabled with the plan rule (free ≤3 pages off, paid >3 on).
+  // Guarded by a migration flag so it runs exactly ONCE — manual per-client overrides made afterwards survive every deploy.
+  await client.query(`CREATE TABLE IF NOT EXISTS migration_flags (key TEXT PRIMARY KEY, applied_at TIMESTAMPTZ DEFAULT NOW())`).catch(()=>{});
+  try {
+    const _gsync = await client.query(`INSERT INTO migration_flags (key) VALUES ('gsc_plan_auto_sync_v1') ON CONFLICT (key) DO NOTHING RETURNING key`);
+    if (_gsync.rows && _gsync.rows.length) {
+      const _gr = await client.query(`UPDATE tracker_clients SET gsc_enabled = (COALESCE(max_pages, 3) > 3) WHERE (status IS NULL OR status != 'deleted')`);
+      console.log('[migrate] gsc_enabled synced to plan rule for', _gr.rowCount, 'clients (one-time)');
+    }
+  } catch(e) { console.warn('[migrate] gsc sync', e.message); }
   // Fix invalid check_frequency values in DB
   await client.query(`
     UPDATE tracker_pages SET check_frequency='3days'
@@ -34245,7 +34262,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 var gscBtn = document.createElement('button');
                 gscBtn.className = 'tr-btn';
                 gscBtn.textContent = c.gsc_enabled ? 'GSC \u2713' : 'GSC off';
-                gscBtn.title = c.gsc_enabled ? 'GSC enabled — click to disable' : 'Enable GSC for this client (Tier 2+; free & Tier 1 have no GSC)';
+                gscBtn.title = c.gsc_enabled ? 'GSC enabled (automatic on paid plans — click to override off)' : 'GSC off (automatic on free plan — click to override on)';
                 gscBtn.style.cssText = 'font-size:10px;padding:3px 8px;border-color:' + (c.gsc_enabled ? '#4ade80' : '#374151') + ';color:' + (c.gsc_enabled ? '#4ade80' : '#6b7280') + ';';
                 gscBtn.onclick = (function(id, current){ return function(){
                     var newVal = !current;
