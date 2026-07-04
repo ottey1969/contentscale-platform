@@ -28764,7 +28764,7 @@ function renderPages() {
             + '</div>'
           : ''
         )
-      + '</div>';
+      + '</div></div>'; // closes the inner padding div AND the outer cs-page-card div — one missing close nested every card into the previous one (the "funnel")
   }).join('');
 }
 
@@ -29302,11 +29302,11 @@ function _computeCannibal() {
         var spoke = genericIsI ? slugOf(pages[j]) : slugOf(pages[i]);
         _cannibalIssues.push({ level: 'STRUCTURE', color: '#60a5fa', key: (pages[i].keyword||pages[i].gsc_keyword) + '  \\u2194  ' + (pages[j].keyword||pages[j].gsc_keyword),
           pages: [{ slug: hub }, { slug: spoke }],
-          advice: 'Generic hub vs specific spoke \\u2014 this structure is usually CORRECT, no merge needed. Checklist: 1) the hub ' + hub + ' links to ' + spoke + ' with the specific keyword as anchor text; 2) the hub does NOT have its own content sections targeting the specific term (one mentioning sentence + link is enough); 3) the spoke is genuinely unique (local projects, place names \\u2014 not find-and-replace copy). VERIFY: export the per-page Queries CSV of ' + hub + ' \\u2014 if the specific query appears there, the hub competes with the spoke and its competing section must be cut. If not, this row can be ignored.' });
+          advice: 'Hub ' + hub + ' + spoke ' + spoke + ' \\u2014 usually the CORRECT structure, no merge needed. You do not need to fix this by hand: the tracker passes this conflict into the briefs. On the next scan, the brief of ' + hub + ' will contain the exact internal-link action (with "' + (genericIsI ? (pages[j].keyword||pages[j].gsc_keyword) : (pages[i].keyword||pages[i].gsc_keyword)) + '" as anchor text) and the brief of ' + spoke + ' will contain the uniqueness actions \\u2014 copy-paste ready. Optional certainty check: export the per-page Queries CSV of ' + hub + ' (GSC \\u2192 Pages \\u2192 click ' + hub + ' \\u2192 Queries \\u2192 Export) and import it here with Query ownership set to ' + hub + '. If the specific query shows up, this row upgrades to PROVEN.' });
       } else if (jac >= 0.7) {
         _cannibalIssues.push({ level: 'LIKELY', color: '#fb923c', key: (pages[i].keyword||pages[i].gsc_keyword) + '  \\u2194  ' + (pages[j].keyword||pages[j].gsc_keyword),
           pages: [{ slug: slugOf(pages[i]) }, { slug: slugOf(pages[j]) }],
-          advice: 'Two tracked pages target near-identical keywords. Differentiate the intent (e.g. one = service, one = location or cost) and update the keyword of one page \\u2014 or merge them.' });
+          advice: 'Two tracked pages target near-identical keywords \\u2014 they compete with each other. The tracker feeds this into both pages\\u2019 briefs on the next scan: expect a differentiation action (new title/H1 proposal, exact text) and an internal-link action. If both pages truly serve the same intent, merging (301 the weaker into the stronger) is the alternative \\u2014 the brief will say which is stronger based on position.' });
       }
     }
   }
@@ -37940,6 +37940,7 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
 
       // ── Internal-link candidates: ONLY real URLs from the client's sitemap (never invented) ──
       let _otherPagesList = '';
+      let _cannibalContext = ''; // hub/spoke or duplicate-keyword conflicts involving THIS page — injected into both briefs so the fix comes out as concrete actions
       let _sitemapUrls = [];
       try {
         if (page.tracker_client_id) {
@@ -37987,6 +37988,39 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
             _opR.rows.forEach(function(r){ var k = r.keyword || r.gsc_keyword; if (k) _topicByUrl[String(r.url).replace(/\/$/, '')] = k; });
             if (!_sitemapUrls.length) _sitemapUrls = _opR.rows.map(function(r){ return r.url; }).filter(Boolean); // fallback: still REAL urls, never invented
             _otherPagesList = _sitemapUrls.map(function(u){ var t = _topicByUrl[u.replace(/\/$/, '')]; return '- ' + u + (t ? ' [topic: ' + t + ']' : ''); }).join('\n');
+
+            // ── Cannibalization context for THIS page vs its siblings (same rules as the tracker panel) ──
+            try {
+              const _cnorm = function(s){ return String(s||'').toLowerCase().replace(/[^a-z0-9 ]/g,' ').replace(/ +/g,' ').trim(); };
+              const _myKw = _cnorm(page.keyword || page.gsc_keyword || keyword || '');
+              if (_myKw) {
+                const _myW = _myKw.split(' ').filter(function(w){ return w.length >= 2; });
+                const _conf = [];
+                _opR.rows.forEach(function(r){
+                  const _oKw = _cnorm(r.keyword || r.gsc_keyword || '');
+                  if (!_oKw || !r.url) return;
+                  const _oW = _oKw.split(' ').filter(function(w){ return w.length >= 2; });
+                  if (!_myW.length || !_oW.length) return;
+                  const _inter = _myW.filter(function(w){ return _oW.indexOf(w) > -1; }).length;
+                  const _jac = _inter / (_myW.length + _oW.length - _inter);
+                  const _contained = (_inter === _myW.length) || (_inter === _oW.length);
+                  const _sameLen = _myW.length === _oW.length;
+                  if (_contained && !_sameLen) {
+                    const _iAmHub = _myW.length < _oW.length;
+                    const _spokeKw = _iAmHub ? (r.keyword || r.gsc_keyword) : (page.keyword || page.gsc_keyword);
+                    if (_iAmHub) _conf.push('THIS PAGE IS THE HUB. Spoke: ' + r.url + ' (keyword: "' + _spokeKw + '"). Required actions in this brief: (a) an internal-link action adding a link FROM this page TO ' + r.url + ' with EXACT anchor text "' + _spokeKw + '"; (b) if this page has its own content section targeting "' + _spokeKw + '", an action to cut or rewrite that section so this page does not compete with its spoke.');
+                    else _conf.push('THIS PAGE IS A SPOKE of hub ' + r.url + '. Required action in this brief: strengthen what makes this page UNIQUE for "' + (page.keyword || page.gsc_keyword) + '" (specific local details, projects, place names) so it cannot be mistaken for the generic hub content.');
+                  } else if (_jac >= 0.7) {
+                    _conf.push('DUPLICATE-KEYWORD CONFLICT with ' + r.url + ' (keyword: "' + (r.keyword || r.gsc_keyword) + '"). Required action in this brief: differentiate the intent of this page (e.g. service vs cost vs location) with an exact new title/H1 proposal, and add an internal link to ' + r.url + ' with its keyword as anchor text.');
+                  }
+                });
+                if (_conf.length) {
+                  _cannibalContext = '\n\nCANNIBALIZATION CONTEXT (detected by the tracker — MUST be addressed in this brief):\n'
+                    + _conf.slice(0, 4).map(function(c, i){ return (i+1) + '. ' + c; }).join('\n')
+                    + '\nRules: use the EXACT URLs and anchor texts given above — never say "the hub" or "the relevant page" without naming the URL. Output the fix as normal actions (LABEL + exact text + exact location) so the owner can copy-paste without understanding SEO theory.';
+                }
+              }
+            } catch(e) {}
           } catch(e) {}
         }
       } catch(e) { _otherPagesList = ''; }
@@ -38022,6 +38056,8 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
 CURRENT DATE: Today is ${_briefToday} — treat ${_briefYear} as the current year. For any freshness, recency, or "last updated" recommendation, use ${_briefYear}; NEVER describe an earlier year as "current", "latest", or "this year", and never suggest adding a date that is not ${_briefYear}. If the page content shows an older year (e.g. ${_briefYear - 1} or earlier) anywhere — a heading (H1/H2/H3), title tag, meta description, intro, "last updated", or any "current/latest" claim — explicitly flag it as stale and give the exact replacement text using ${_briefYear} (e.g. rewrite an H1 like "... ${_briefYear - 1}" to "... ${_briefYear}").
 
 A Citation Brief tells the content owner EXACTLY what to change so that Google AI Overview, Perplexity, Microsoft Copilot, and Claude all cite this page in their answers.
+
+${_cannibalContext}
 
 INPUT DATA:
 - Page URL: ${pageUrl}
@@ -38131,6 +38167,7 @@ QUALITY BAR: Every action must be so specific that the user can implement it in 
       const gscPrompt = `You are a Google Search Console Analyst and SEO Strategist. Your job is to create a GSC Brief — a data-driven action plan to move a page from its current position to RANK #1.
 
 CURRENT DATE: Today is ${_briefToday} — treat ${_briefYear} as the current year. Use ${_briefYear} for any freshness or "last updated" recommendation; never reference an older year as current.
+${_cannibalContext}
 
 INPUT DATA:
 - Page URL: ${pageUrl}
