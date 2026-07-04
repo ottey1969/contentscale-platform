@@ -28639,7 +28639,7 @@ function renderPages() {
         + 'title="Ranks pos ' + _qwPos.toFixed(1) + ' but only ' + Math.round(_qwImpr) + ' impressions \\u2014 almost nobody searches this keyword. The position looks good but brings zero leads. Fix: check GSC Queries for related terms WITH volume and retarget/expand the page \\u2014 or merge it into a stronger page.">'
         + '\\ud83d\\udd0d LOW DEMAND \\u2014 ranks well, nobody searches</span> ';
     }
-    if (pos) badges += '<span class="cs-badge" style="color:' + posColor + ';background:#0d1117;border:1px solid ' + posColor + '44;">#' + pos + '</span> ';
+    if (pos) badges += '<span class="cs-badge" title="LIVE Google position for your tracked keyword \\u201c' + (p.keyword||'') + '\\u201d \\u2014 measured at the last scan. Note: the GSC \\u201cpos\\u201d below is different: an average across ALL queries this page appears for (28 days), so it is usually worse than this number." style="color:' + posColor + ';background:#0d1117;border:1px solid ' + posColor + '44;">#' + pos + '</span> ';
     else badges += '<span class="cs-cs-badge grey">Not ranked</span> ';
     // Only show "No AIO / No Perplexity / ..." once a real AI-citation check has actually run.
     var aiChecked = (p.brief_check_count > 0)
@@ -28671,7 +28671,7 @@ function renderPages() {
         + '<span style="font-size:12px;color:#4ade80;font-weight:600;">&#8595; ' + gscClicks.toLocaleString() + ' clicks</span>'
         + '<span style="font-size:12px;color:#60a5fa;">' + gscImpr.toLocaleString() + ' impr</span>'
         + (gscCtr ? '<span style="font-size:12px;color:#a78bfa;">CTR ' + gscCtr + '</span>' : '')
-        + (gscPos ? '<span style="font-size:12px;color:#f59e0b;">pos ' + gscPos + '</span>' : '')
+        + (gscPos ? '<span style="font-size:12px;color:#f59e0b;" title="Average position across ALL search queries this page appeared for in the last 28 days (impressions-weighted, from GSC). Your main keyword can rank #1 while this average is higher \\u2014 side-queries with worse positions pull it up. See the pushable queries above for exactly which ones.">pos ' + gscPos + '</span>' : '')
         + (gscKw ? '<span style="font-size:11px;color:#4b5563;font-style:italic;">top kw: ' + gscKw + '</span>' : '')
         + '</div>';
     }
@@ -28721,7 +28721,7 @@ function renderPages() {
           + '</div>';
       }).join('');
       _pushHtml = '<div style="background:#0a0e14;border:1px solid #1f2937;border-left:3px solid #facc15;border-radius:6px;padding:8px 12px;margin:8px 0;">'
-        + '<div style="font-size:9px;font-weight:800;letter-spacing:.06em;color:#facc15;text-transform:uppercase;margin-bottom:4px;" title="Non-branded queries at position 11-25 with real impressions, matched to this page from your Queries CSV. One quality push (question-form H2 answering the query + internal link) moves them to page 1. Approximate matching \\u2014 verify in GSC per page for certainty.">\\u2b06 Pushable queries \\u00b7 page 2 \\u2192 page 1</div>'
+        + '<div style="font-size:9px;font-weight:800;letter-spacing:.06em;color:#facc15;text-transform:uppercase;margin-bottom:4px;" title="Each row is ONE search query where this page sits at position 11-25 (page 2). The page itself may already rank #1 for its main keyword \\u2014 these are OTHER searches it almost ranks for. Add a question-form H2 answering the query (+ internal link) and this page\\u2019s existing authority pushes it onto page 1. Non-branded, \\u226530 impressions, from your Queries CSV; \\u2713 = exact per-page data.">\\u2b06 Pushable queries \\u2014 extra searches this page can win</div>'
         + _pRows
         + (_pushList.length > 5 ? '<div style="font-size:9px;color:#4b5563;margin-top:3px;">+ ' + (_pushList.length - 5) + ' more in your Queries CSV</div>' : '')
         + '</div>';
@@ -29278,7 +29278,7 @@ function _computeCannibal() {
   var pages = _pages || [];
   if (pages.length < 2) { renderCannibal(); return; }
   var pById = {}; pages.forEach(function(p){ pById[p.id] = p; });
-  var slugOf = function(p){ try { return new URL(p.url).pathname || '/'; } catch(e) { return p.url; } };
+  var slugOf = function(p){ try { var s = new URL(p.url).pathname || '/'; return (s === '/' ? '(homepage)' : s); } catch(e) { return p.url; } };
 
   // LEVEL 1 — PROVEN: same normalized query under 2+ different page_ids (per-page CSV evidence)
   var byQuery = {};
@@ -29296,7 +29296,7 @@ function _computeCannibal() {
     var involved = ids.map(function(id){ return { slug: slugOf(pById[id]), pos: byQuery[q][id].pos, impr: byQuery[q][id].impr, id: id }; });
     involved.sort(function(a,b){ return (a.pos===null?99:a.pos) - (b.pos===null?99:b.pos); });
     _cannibalIssues.push({ level: 'PROVEN', color: '#f87171', key: q, pages: involved,
-      advice: 'Google shows BOTH pages for this query \\u2014 they split each other\\u2019s ranking signals. Keep ' + involved[0].slug + ' (best position) as the owner; on the other page, remove/rewrite the competing section, link it to the owner with this query as anchor text, or 301 if the page has no other purpose.' });
+      advice: 'SCAN BOTH PAGES \\u2014 the fix will be written into their briefs, nothing to upload (this is already proven by your own per-page exports). Owner = ' + involved[0].slug + ' (best position). The brief of the other page will tell you to remove/rewrite its competing section and link to ' + involved[0].slug + ' with this query as anchor text.' });
   });
 
   // LEVEL 2 — LIKELY: tracked keywords that are (near-)identical between pages
@@ -29318,13 +29318,14 @@ function _computeCannibal() {
         var genericIsI = wa.length < wb.length;
         var hub = genericIsI ? slugOf(pages[i]) : slugOf(pages[j]);
         var spoke = genericIsI ? slugOf(pages[j]) : slugOf(pages[i]);
+        var _spokeKwSafe = genericIsI ? (pages[j].keyword||pages[j].gsc_keyword||'') : (pages[i].keyword||pages[i].gsc_keyword||'');
         _cannibalIssues.push({ level: 'STRUCTURE', color: '#60a5fa', key: (pages[i].keyword||pages[i].gsc_keyword) + '  \\u2194  ' + (pages[j].keyword||pages[j].gsc_keyword),
           pages: [{ slug: hub }, { slug: spoke }],
-          advice: 'Hub ' + hub + ' + spoke ' + spoke + ' \\u2014 usually the CORRECT structure, no merge needed. You do not need to fix this by hand: the tracker passes this conflict into the briefs. On the next scan, the brief of ' + hub + ' will contain the exact internal-link action (with "' + (genericIsI ? (pages[j].keyword||pages[j].gsc_keyword) : (pages[i].keyword||pages[i].gsc_keyword)) + '" as anchor text) and the brief of ' + spoke + ' will contain the uniqueness actions \\u2014 copy-paste ready. Optional certainty check: export the per-page Queries CSV of ' + hub + ' (GSC \\u2192 Pages \\u2192 click ' + hub + ' \\u2192 Queries \\u2192 Export) and import it here with Query ownership set to ' + hub + '. If the specific query shows up, this row upgrades to PROVEN.' });
+          advice: 'CHECK: does ' + hub + ' contain a link to ' + spoke + '? Direction matters \\u2014 the GENERAL page must link to the SPECIFIC page, not the other way around (Google follows links from broad to narrow to learn which page owns \\u201c' + _spokeKwSafe + '\\u201d; a back-link from the specific page adds nothing here). Link exists \\u2192 ignore this row forever. Missing \\u2192 open ' + hub + ', find where \\u201c' + _spokeKwSafe + '\\u201d is mentioned and make those words the link to ' + spoke + '. Not mentioned at all \\u2192 add one sentence, e.g. \\u201cSee our ' + _spokeKwSafe + ' guide\\u201d with the link. No merge, no 301 \\u2014 this setup is normally correct.' });
       } else if (jac >= 0.7) {
         _cannibalIssues.push({ level: 'LIKELY', color: '#fb923c', key: (pages[i].keyword||pages[i].gsc_keyword) + '  \\u2194  ' + (pages[j].keyword||pages[j].gsc_keyword),
           pages: [{ slug: slugOf(pages[i]) }, { slug: slugOf(pages[j]) }],
-          advice: 'Two tracked pages target near-identical keywords \\u2014 they compete with each other. The tracker feeds this into both pages\\u2019 briefs on the next scan: expect a differentiation action (new title/H1 proposal, exact text) and an internal-link action. If both pages truly serve the same intent, merging (301 the weaker into the stronger) is the alternative \\u2014 the brief will say which is stronger based on position.' });
+          advice: 'SCAN BOTH PAGES \\u2014 the briefs will contain the fix (a new title/H1 for one of them + an internal link), copy-paste ready. Background: these two pages target near-identical keywords and compete with each other. If they truly serve the same purpose, merging (301 the weaker into the stronger) is the alternative; the briefs use the positions to say which one is stronger.' });
       }
     }
   }
@@ -29358,7 +29359,7 @@ function _computeCannibal() {
       seen[qn] = 1;
       _cannibalIssues.push({ level: 'POSSIBLE', color: '#facc15', key: g.query, impr: g.impressions||0,
         pages: [{ slug: scored[0].pt.slug }, { slug: scored[1].pt.slug }],
-        advice: 'This query fits two pages almost equally (' + (g.impressions||0).toLocaleString() + ' impr). Decide the owner, answer it explicitly there, and internally link the other page to the owner. Verify with a per-page Queries CSV export for proof.' });
+        advice: 'ADD THE STANDALONE GSC QUERIES OF ' + scored[0].pt.slug + ' AND ' + scored[1].pt.slug + ' TO THE TRACKER. Why? The site-wide CSV cannot tell WHICH page Google actually shows for \\u201c' + g.query + '\\u201d \\u2014 only the per-page export can. How: GSC \\u2192 Performance \\u2192 Pages \\u2192 click the page \\u2192 Queries tab \\u2192 Export \\u2192 import here with Query ownership set to that page (one import per page). Then: query shows up for BOTH pages \\u2192 row turns PROVEN and the briefs contain the fix. Only ONE \\u2192 no conflict, ignore this row. Until then: change nothing on your pages. (' + (g.impressions||0).toLocaleString() + ' impressions at stake.)' });
     }
   });
 
@@ -29371,10 +29372,30 @@ function toggleCannAdvice(i) {
   var el = document.getElementById('cannAdvice' + i);
   if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
 }
+var _cannMeaning = {
+  PROVEN: 'Google is showing BOTH of these pages for this exact search (proof from their own per-page exports). They steal each other\\u2019s ranking power \\u2014 this one needs fixing.',
+  LIKELY: 'Two of your pages target almost the same keyword. They probably compete with each other in Google.',
+  POSSIBLE: 'One search term fits two of your pages equally well, so it is UNCLEAR which page owns it. Nothing is broken yet \\u2014 first verify, then act.',
+  STRUCTURE: 'A general page and a more specific page (hub + spoke). This is usually the CORRECT setup, not a problem \\u2014 just run the quick check.'
+};
 function renderCannibal() {
   var host = document.getElementById('cannibalPanel');
   if (!host) return;
   if (!_cannibalIssues.length) { host.innerHTML = ''; return; }
+  // Shortcut: many yellow rows share the same page pair — count the UNIQUE pages one needs to export
+  var _possPages = {};
+  _cannibalIssues.forEach(function(c){ if (c.level === 'POSSIBLE') c.pages.forEach(function(p){ _possPages[p.slug] = 1; }); });
+  var _possList = Object.keys(_possPages);
+  var _possCount = _cannibalIssues.filter(function(c){ return c.level === 'POSSIBLE'; }).length;
+  var shortcutStrip = (_possList.length && _possCount)
+    ? '<div style="padding:8px 14px;border-bottom:1px solid #1f2937;background:rgba(250,204,21,.06);font-size:11px;color:#facc15;line-height:1.6;">\\u26a1 Shortcut: all ' + _possCount + ' yellow POSSIBLE rows are verified with just <b>' + _possList.length + ' GSC page exports</b>: <span style="font-family:monospace;color:#fde68a;">' + _possList.join(' \\u00b7 ') + '</span> \\u2014 per page: GSC \\u2192 Pages \\u2192 click it \\u2192 Queries \\u2192 Export \\u2192 import here with Query ownership set to that page.</div>'
+    : '';
+  var legendStrip = '<div style="display:flex;gap:14px;flex-wrap:wrap;padding:7px 14px;border-bottom:1px solid #1f2937;background:#0a0e14;">'
+    + '<span style="font-size:10px;color:#9ca3af;"><b style="color:#f87171;">PROVEN</b> \\u2192 scan both pages, fix comes in the briefs</span>'
+    + '<span style="font-size:10px;color:#9ca3af;"><b style="color:#fb923c;">LIKELY</b> \\u2192 scan both pages, briefs differentiate them</span>'
+    + '<span style="font-size:10px;color:#9ca3af;"><b style="color:#facc15;">POSSIBLE</b> \\u2192 upload BOTH pages\\u2019 Queries CSV first, then see</span>'
+    + '<span style="font-size:10px;color:#9ca3af;"><b style="color:#60a5fa;">STRUCTURE</b> \\u2192 check ONE link: general page \\u2192 specific page</span>'
+    + '</div>';
   var rows = _cannibalIssues.map(function(c, i){
     return '<div onclick="toggleCannAdvice(' + i + ')" style="padding:8px 12px;border-bottom:1px solid #1f2937;cursor:pointer;">'
       + '<div style="display:flex;align-items:flex-start;gap:10px;">'
@@ -29386,7 +29407,10 @@ function renderCannibal() {
       + '</div>'
       + '<span style="font-size:10px;color:#4b5563;flex-shrink:0;">what to do \\u25be</span>'
       + '</div>'
-      + '<div id="cannAdvice' + i + '" style="display:none;font-size:11px;color:#9ca3af;line-height:1.65;margin:8px 0 2px 32px;padding:8px 12px;background:#0a0e14;border-left:3px solid ' + c.color + ';border-radius:6px;">' + c.advice.replace(/</g,'&lt;') + '</div>'
+      + '<div id="cannAdvice' + i + '" style="display:none;font-size:11px;color:#9ca3af;line-height:1.65;margin:8px 0 2px 32px;padding:8px 12px;background:#0a0e14;border-left:3px solid ' + c.color + ';border-radius:6px;">'
+      + '<div style="margin-bottom:6px;"><span style="font-weight:800;color:#e5e7eb;">What this means: </span>' + (_cannMeaning[c.level] || '') + '</div>'
+      + '<div><span style="font-weight:800;color:#e5e7eb;">What to do: </span>' + c.advice.replace(/</g,'&lt;') + '</div>'
+      + '</div>'
       + '</div>';
   }).join('');
   host.innerHTML = '<div style="background:#0d1117;border:1px solid #1f2937;border-radius:8px;margin-bottom:12px;overflow:hidden;">'
@@ -29395,6 +29419,8 @@ function renderCannibal() {
     + '<span style="font-size:11px;color:#6b7280;">' + _cannibalIssues.length + ' conflict' + (_cannibalIssues.length>1?'s':'') + ' \\u00b7 pages competing for the same query</span>'
     + '<span style="margin-left:auto;font-size:10px;color:#4b5563;">click a row for what to do</span>'
     + '</div>'
+    + legendStrip
+    + shortcutStrip
     + '<div id="cannBody2" style="display:none;">' + rows
     + '<div style="font-size:10px;color:#4b5563;padding:8px 14px;line-height:1.6;">PROVEN = same query in two per-page CSV exports (Google shows both) \\u2014 fix required. LIKELY = near-identical tracked keywords \\u2014 differentiate or merge. POSSIBLE = a site-wide query fits two pages equally \\u2014 confirm with a per-page export. STRUCTURE = generic hub vs specific spoke \\u2014 usually correct; run the checklist in the row instead of merging.</div>'
     + '</div></div>';
