@@ -29330,6 +29330,11 @@ function _computeCannibal() {
   }
 
   // LEVEL 3 — POSSIBLE: site-wide query matching two pages almost equally
+  var brand3 = _gapNorm(DOMAIN).replace(/ (com|net|org|site|nl)$/,'').replace(/[^a-z0-9]/g,'');
+  var isBranded3 = function(q) {
+    var flat = _gapNorm(q).replace(/ /g,'');
+    return flat.length > 3 && (flat.indexOf(brand3) > -1 || brand3.indexOf(flat) > -1);
+  };
   var pageText = pages.map(function(p){
     var t = [];
     if (p.keyword) t.push(_gapNorm(p.keyword));
@@ -29341,6 +29346,7 @@ function _computeCannibal() {
   (_gapQueries||[]).forEach(function(g){
     if (g.page_id) return;
     if ((g.impressions||0) < 50) return;
+    if (isBranded3(g.query)) return; // branded queries belong to the homepage by definition — not a conflict
     var qn = _gapNorm(g.query); if (!qn || seen[qn]) return;
     var qWords = qn.split(' ').filter(function(w){ return w.length > 2; });
     if (!qWords.length) return;
