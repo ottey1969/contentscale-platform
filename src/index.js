@@ -27564,6 +27564,7 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
     <button class="cs-btn" onclick="showImportModal('paste')" style="border-color:#6b7280;color:#6b7280;"><i class="fas fa-paste"></i> Paste</button>
     <button id="sitemapBtn" class="cs-btn" onclick="showImportModal('sitemap')" style="border-color:#38bdf8;color:#38bdf8;" title="Import from sitemap"><i class="fas fa-list"></i> Sitemap</button>
     <button class="cs-btn" onclick="loadPages()" style="margin-left:4px;" title="Refresh"><i class="fas fa-sync-alt"></i></button>
+    <button id="tourBtn" class="cs-btn" onclick="startTour(true)" style="border-color:#7c3aed;color:#a78bfa;" title="Step-by-step walkthrough of the tracker">? Tour</button>
     <button class="cs-btn" onclick="scanAllPages()" style="border-color:#4ade80;color:#4ade80;font-weight:700;" title="Scan all pages one by one">&#x26a1; Scan All</button>
     <button class="cs-btn" onclick="mergePages()" style="border-color:#38bdf8;color:#38bdf8;" title="Merge duplicate URLs &#x2014; keep best">&#x2295; Merge</button>
     <button class="cs-btn" onclick="cleanPages()" style="border-color:#f59e0b;color:#f59e0b;" title="Remove junk (.jpg, /category/, feeds) &amp; pages not in sitemap/GSC &#x2014; keep only live content">&#x1f9f9; Clean</button>
@@ -28509,7 +28510,7 @@ function renderPages() {
       + '</table>'
       + '<div style="font-size:10px;color:#4b5563;margin-top:10px;line-height:1.6;">Formula: rule of thumb based on industry CTR curves \\u2014 position 1\\u20133 \\u2248 20% CTR, 4\\u20135 \\u2248 12%, 6\\u201310 \\u2248 6%. Estimates, not guarantees; refresh your GSC import regularly to keep the queue current.</div>'
       + '</div>';
-    leadQueueHtml = '<div style="background:#0d1117;border:1px solid #1f2937;border-radius:8px;margin-bottom:12px;overflow:hidden;">'
+    leadQueueHtml = '<div id="leadQueuePanel" style="background:#0d1117;border:1px solid #1f2937;border-radius:8px;margin-bottom:12px;overflow:hidden;">'
       + '<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:linear-gradient(90deg,rgba(249,115,22,.08),transparent);">'
       + '<span onclick="var b=document.getElementById(&quot;leadQueueBody&quot;);b.style.display=b.style.display===&quot;none&quot;?&quot;block&quot;:&quot;none&quot;;" style="cursor:pointer;font-size:11px;font-weight:800;letter-spacing:.06em;color:#f97316;text-transform:uppercase;">\\ud83c\\udfaf Lead Queue</span>'
       + '<span style="font-size:11px;color:#6b7280;">' + _leadQueue.length + ' open \\u00b7 work top to bottom \\u00b7 check off with \\u25cb my check</span>'
@@ -28530,7 +28531,7 @@ function renderPages() {
       + (on ? 'background:#7c3aed;border:1px solid #8b5cf6;color:#fff;' : 'background:none;border:1px solid #374151;color:#6b7280;')
       + '">' + label + '</button>';
   };
-  var mdBarHtml = '<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:#0d1117;border:1px solid #1f2937;border-radius:8px;padding:8px 14px;margin-bottom:12px;">'
+  var mdBarHtml = '<div id="myChecksBar" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:#0d1117;border:1px solid #1f2937;border-radius:8px;padding:8px 14px;margin-bottom:12px;">'
     + '<span style="font-size:10px;font-weight:800;letter-spacing:.06em;color:#4ade80;text-transform:uppercase;flex-shrink:0;">My checks</span>'
     + '<span style="font-size:12px;font-weight:800;color:' + (_mdDone === _mdTotal && _mdTotal > 0 ? '#4ade80' : '#e5e7eb') + ';flex-shrink:0;">' + _mdDone + ' / ' + _mdTotal + '</span>'
     + '<div style="flex:1;min-width:80px;height:6px;background:#1f2937;border-radius:3px;overflow:hidden;"><div style="width:' + _mdPct + '%;height:100%;background:linear-gradient(90deg,#16a34a,#4ade80);border-radius:3px;"></div></div>'
@@ -28721,7 +28722,7 @@ function renderPages() {
       + (function(){
           var md = p.manual_done === true || p.manual_done === 't' || p.manual_done === 'true' || p.manual_done === 1;
           var mdAt = (md && p.manual_done_at) ? new Date(p.manual_done_at).toLocaleDateString('en-GB',{day:'2-digit',month:'short'}) : '';
-          return '<button onclick="toggleManualDone(' + p.id + ',' + (md ? 'true' : 'false') + ')" '
+          return '<button class="cs-mycheck-btn" onclick="toggleManualDone(' + p.id + ',' + (md ? 'true' : 'false') + ')" '
             + 'title="' + (md ? 'Your own checkmark — set ' + mdAt + '. Stays until YOU click it off. Scans and HTML never reset this.' : 'Your own checkmark — mark this page as handled by you. Nothing resets it except you.') + '" '
             + 'style="flex-shrink:0;cursor:pointer;font-size:10px;font-weight:800;border-radius:4px;padding:1px 8px;letter-spacing:.04em;'
             + (md ? 'background:rgba(74,222,128,.15);border:1px solid #16a34a;color:#4ade80;' : 'background:none;border:1px dashed #374151;color:#4b5563;')
@@ -29376,6 +29377,88 @@ function renderCannibal() {
     + '</div></div>';
 }
 
+// ── GUIDED TOUR — spotlight walkthrough. Auto-starts once for new visitors (dismiss = never again),
+// restartable any time via the "? Tour" toolbar button. Steps with a missing target are skipped.
+var _tourSteps = [
+  { sel: '#gscBtn', title: 'Start here \\u2014 your data', text: 'Everything in this tracker is built from your Google Search Console data. Import it here: the Pages CSV (all pages) and the Queries CSV (all search terms). Copy-paste straight from the GSC screen works too. Refresh this monthly \\u2014 it is the fuel for everything below.' },
+  { sel: '#leadQueuePanel', title: 'Lead Queue \\u2014 your worklist', text: 'Every page, ranked by the clicks you are missing per month. Work strictly top to bottom: row 1 is always your fastest route to new leads. Click a row to jump to its page. Click \\u201c? How ranking works\\u201d in this panel for what each tier means.' },
+  { sel: '#cannibalPanel', title: 'Cannibalization \\u2014 conflicts', text: 'Pages competing with each other for the same search. Click a row to see exactly what to do \\u2014 and you rarely need to fix it by hand: the tracker feeds each conflict into the briefs of the affected pages on their next scan.' },
+  { sel: '#impressionGap', title: 'Impression Gap \\u2014 growth', text: 'Search demand none of your pages target yet. ADD SECTION = answer it on an existing page. EXISTS = the page exists but is not tracked. NEW PAGE = build one. This is how you grow impressions, not just clicks.' },
+  { sel: '.cs-page-card', title: 'A page card', text: 'One tracked page: its position and citation badges, GSC numbers, and \\u2014 in the yellow block \\u2014 its pushable queries: searches sitting on page 2 that one good push moves to page 1.' },
+  { sel: '.cs-page-card .cs-card-actions', title: 'View Brief \\u2014 where the work happens', text: 'The brief gives you copy-paste actions: exact text, exact location on the page. Execute them, update your page, then paste the new HTML here so the next scan verifies it. You never need to invent anything yourself.' },
+  { sel: '.cs-mycheck-btn', title: 'Your own checkmark', text: 'Click this when YOU are done with a page. It never resets \\u2014 not by scans, not by HTML updates, not by restarts. Only you set or clear it. Checked pages drop out of the Lead Queue so the next job rises to the top.' },
+  { sel: '#myChecksBar', title: 'Progress & filters', text: 'Your progress bar. Filter to \\u201cTo do\\u201d to see only open work, and use Check all / Clear all for bulk changes. That is the whole loop: import data \\u2192 work the queue \\u2192 brief \\u2192 paste HTML \\u2192 check off. Good luck!' }
+];
+var _tourIdx = -1;
+function _tourEls() {
+  var box = document.getElementById('tourSpot'), tip = document.getElementById('tourTip');
+  if (!box) {
+    box = document.createElement('div'); box.id = 'tourSpot';
+    box.style.cssText = 'position:absolute;z-index:9998;border:2px solid #7c3aed;border-radius:10px;box-shadow:0 0 0 9999px rgba(0,0,0,.68);pointer-events:none;transition:all .25s ease;';
+    document.body.appendChild(box);
+    tip = document.createElement('div'); tip.id = 'tourTip';
+    tip.style.cssText = 'position:absolute;z-index:9999;max-width:340px;background:#0d1117;border:1px solid #7c3aed;border-radius:10px;padding:14px 16px;box-shadow:0 8px 32px rgba(0,0,0,.6);font-family:inherit;';
+    document.body.appendChild(tip);
+  }
+  return { box: box, tip: document.getElementById('tourTip') };
+}
+function _tourVisibleSteps() {
+  return _tourSteps.filter(function(s){ var el = document.querySelector(s.sel); return el && el.offsetParent !== null; });
+}
+function startTour(manual) {
+  var steps = _tourVisibleSteps();
+  if (!steps.length) { if (manual) toast('Nothing to tour yet \\u2014 add pages first', '#9ca3af'); return; }
+  _tourIdx = 0;
+  _tourShow();
+}
+function _tourShow() {
+  var steps = _tourVisibleSteps();
+  if (_tourIdx < 0 || _tourIdx >= steps.length) { endTour(); return; }
+  var s = steps[_tourIdx];
+  var el = document.querySelector(s.sel);
+  if (!el) { _tourIdx++; _tourShow(); return; }
+  el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  var ui = _tourEls();
+  setTimeout(function(){
+    var r = el.getBoundingClientRect();
+    var sx = window.scrollX || window.pageXOffset, sy = window.scrollY || window.pageYOffset;
+    ui.box.style.left = (r.left + sx - 6) + 'px';
+    ui.box.style.top = (r.top + sy - 6) + 'px';
+    ui.box.style.width = (r.width + 12) + 'px';
+    ui.box.style.height = (r.height + 12) + 'px';
+    ui.box.style.display = 'block';
+    var tip = ui.tip;
+    tip.innerHTML = '<div style="font-size:10px;font-weight:800;letter-spacing:.06em;color:#a78bfa;text-transform:uppercase;margin-bottom:4px;">Step ' + (_tourIdx+1) + ' of ' + _tourVisibleSteps().length + '</div>'
+      + '<div style="font-size:13px;font-weight:800;color:#f1f5f9;margin-bottom:6px;">' + s.title + '</div>'
+      + '<div style="font-size:12px;color:#9ca3af;line-height:1.65;margin-bottom:12px;">' + s.text + '</div>'
+      + '<div style="display:flex;gap:8px;align-items:center;">'
+      + (_tourIdx > 0 ? '<button onclick="tourNav(-1)" style="cursor:pointer;font-size:11px;font-weight:700;padding:6px 12px;border-radius:6px;background:none;border:1px solid #374151;color:#9ca3af;">\\u2190 Back</button>' : '')
+      + '<button onclick="tourNav(1)" style="cursor:pointer;font-size:11px;font-weight:800;padding:6px 16px;border-radius:6px;background:#7c3aed;border:1px solid #8b5cf6;color:#fff;">' + (_tourIdx === _tourVisibleSteps().length - 1 ? 'Finish \\u2713' : 'Next \\u2192') + '</button>'
+      + '<button onclick="endTour()" style="cursor:pointer;font-size:11px;padding:6px 10px;border-radius:6px;background:none;border:none;color:#4b5563;margin-left:auto;">Skip tour \\u2715</button>'
+      + '</div>';
+    tip.style.display = 'block';
+    var tipW = Math.min(340, window.innerWidth - 24);
+    var below = r.bottom + sy + 14;
+    var left = Math.max(12 + sx, Math.min(r.left + sx, sx + window.innerWidth - tipW - 12));
+    // place below the target; if that falls off-screen, place above
+    if (r.bottom + 220 > window.innerHeight && r.top > 240) { tip.style.top = ''; tip.style.top = (r.top + sy - tip.offsetHeight - 14) + 'px'; }
+    else tip.style.top = below + 'px';
+    tip.style.left = left + 'px';
+  }, 350);
+}
+function tourNav(d) { _tourIdx += d; _tourShow(); }
+function endTour() {
+  _tourIdx = -1;
+  var b = document.getElementById('tourSpot'), t = document.getElementById('tourTip');
+  if (b) b.style.display = 'none';
+  if (t) t.style.display = 'none';
+  try { localStorage.setItem('cs_tour_done', '1'); } catch(e) {}
+}
+function _tourMaybeAutoStart() {
+  try { if (localStorage.getItem('cs_tour_done')) return; } catch(e) {}
+  setTimeout(function(){ if (_tourIdx === -1) startTour(false); }, 1200);
+}
+
 async function toggleManualDone(pageId, current) {
   var next = !current;
   try {
@@ -29447,7 +29530,7 @@ async function deletePage(pageId) {
   loadPages();
 }
 
-loadPages().then(function(){ try { loadImpressionGap(); } catch(e) {} });
+loadPages().then(function(){ try { loadImpressionGap(); } catch(e) {} try { _tourMaybeAutoStart(); } catch(e) {} });
 // Show welcome on first visit (or force with ?welcome=1)
 if (window.location.search.indexOf('welcome=1') > -1) {
   try { localStorage.removeItem('cs_welcome_seen'); } catch(e) {}
