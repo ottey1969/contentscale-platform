@@ -1726,7 +1726,7 @@ app.post('/api/tracker-client/:token/gsc-queries', async (req, res) => {
 // GET /api/tracker-client/:token/gsc-queries — query list + sitemap slugs (so "new page" suggestions can see what already exists)
 app.get('/api/tracker-client/:token/gsc-queries', async (req, res) => {
   try {
-    const cr = await pool.query('SELECT id, sitemap_urls, gap_analysis, gap_analysis_at FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status != $2)', [req.params.token, 'deleted']);
+    const cr = await pool.query('SELECT id, sitemap_urls, gap_analysis, gap_analysis_at, gap_done_queries FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status != $2)', [req.params.token, 'deleted']);
     if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
     const r = await pool.query('SELECT query, clicks, impressions, position, page_id, imported_at FROM tracker_gsc_queries WHERE tracker_client_id=$1 ORDER BY impressions DESC LIMIT 500', [cr.rows[0].id]);
     let sitemapSlugs = [];
@@ -1736,7 +1736,9 @@ app.get('/api/tracker-client/:token/gsc-queries', async (req, res) => {
     } catch(e) {}
     let gapAnalysis = null;
     try { gapAnalysis = cr.rows[0].gap_analysis ? JSON.parse(cr.rows[0].gap_analysis) : null; } catch(e) {}
-    res.json({ success: true, queries: r.rows, sitemap_slugs: sitemapSlugs, gap_analysis: gapAnalysis, gap_analysis_at: cr.rows[0].gap_analysis_at });
+    let gapDone = [];
+    try { gapDone = JSON.parse(cr.rows[0].gap_done_queries || '[]'); } catch(e) {}
+    res.json({ success: true, queries: r.rows, sitemap_slugs: sitemapSlugs, gap_analysis: gapAnalysis, gap_analysis_at: cr.rows[0].gap_analysis_at, gap_done: gapDone });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
@@ -1753,6 +1755,12 @@ app.post('/api/tracker-client/:token/analyze-gaps', async (req, res) => {
 
     const qR = await pool.query('SELECT query, clicks, impressions, position FROM tracker_gsc_queries WHERE tracker_client_id=$1 AND page_id IS NULL AND impressions >= 20 ORDER BY impressions DESC LIMIT 60', [client.id]);
     if (!qR.rows.length) return res.json({ success: false, error: 'No site-wide queries imported yet \u2014 import your Queries CSV first.' });
+    // Skip queries the owner already handled (their gap my-checks) — re-analysis only sees OPEN work
+    let _doneSet = [];
+    try { const dcr = await pool.query('SELECT gap_done_queries FROM tracker_clients WHERE id=$1', [client.id]); _doneSet = JSON.parse(dcr.rows[0].gap_done_queries || '[]'); } catch(e) {}
+    const _dNorm = s => String(s||'').toLowerCase().replace(/\s+/g,' ').trim();
+    qR.rows = qR.rows.filter(q => _doneSet.indexOf(_dNorm(q.query)) === -1);
+    if (!qR.rows.length) return res.json({ success: false, error: 'Nothing open to analyze \u2014 all gap queries are checked off. Import a fresh Queries CSV for new data.' });
     const pR = await pool.query('SELECT url, keyword, gsc_keyword FROM tracker_pages WHERE tracker_client_id=$1 AND (is_active=TRUE OR is_active IS NULL) LIMIT 100', [client.id]);
     let sitemapSlugs = [];
     try { const sm = JSON.parse(client.sitemap_urls || '[]'); if (Array.isArray(sm)) sitemapSlugs = sm.slice(0, 150); } catch(e) {}
@@ -1787,6 +1795,26 @@ app.post('/api/tracker-client/:token/analyze-gaps', async (req, res) => {
     });
     await pool.query('UPDATE tracker_clients SET gap_analysis=$1, gap_analysis_at=NOW() WHERE id=$2', [JSON.stringify(parsed), client.id]);
     res.json({ success: true, analysis: parsed, analyzed_at: new Date().toISOString() });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// POST /api/tracker-client/:token/gap-family-done — the user's own checkmark on an AI gap family.
+// Stores the family's queries in a persistent handled-set: they disappear from the raw gap list and
+// are EXCLUDED from the next AI analysis, so re-running "Sort this out for me" only sees open work.
+app.post('/api/tracker-client/:token/gap-family-done', async (req, res) => {
+  try {
+    const cr = await pool.query("SELECT id, gap_done_queries FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status != 'deleted')", [req.params.token]);
+    if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
+    const norm = s => String(s||'').toLowerCase().replace(/\s+/g,' ').trim();
+    let done = [];
+    try { done = JSON.parse(cr.rows[0].gap_done_queries || '[]'); } catch(e) {}
+    const qs = (Array.isArray(req.body.queries) ? req.body.queries : []).map(norm).filter(Boolean);
+    if (!qs.length) return res.json({ success: false, error: 'No queries given' });
+    if (req.body.done === false) done = done.filter(d => qs.indexOf(d) === -1);
+    else qs.forEach(q => { if (done.indexOf(q) === -1) done.push(q); });
+    done = done.slice(0, 2000);
+    await pool.query('UPDATE tracker_clients SET gap_done_queries=$1 WHERE id=$2', [JSON.stringify(done), cr.rows[0].id]);
+    res.json({ success: true, done_count: done.length });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
@@ -5026,6 +5054,7 @@ app.patch('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS ro_last_view TIMESTAMPTZ`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS gap_analysis TEXT`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS gap_analysis_at TIMESTAMPTZ`).catch(()=>{});
+  await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS gap_done_queries TEXT`).catch(()=>{});
   // One-time sync of gsc_enabled with the plan rule (free ≤3 pages off, paid >3 on).
   // Guarded by a migration flag so it runs exactly ONCE — manual per-client overrides made afterwards survive every deploy.
   await client.query(`CREATE TABLE IF NOT EXISTS migration_flags (key TEXT PRIMARY KEY, applied_at TIMESTAMPTZ DEFAULT NOW())`).catch(()=>{});
@@ -29272,6 +29301,28 @@ async function setAllManualDone(on) {
 var _gapQueries = null;
 var _sitemapSlugs = [];
 var _gapAnalysis = null;
+var _gapDone = [];
+function _gapQNorm(s){ return String(s||'').toLowerCase().replace(/\s+/g,' ').trim(); }
+function _famIsDone(f){
+  var qs = (f.queries||[]).map(_gapQNorm).filter(Boolean);
+  if (!qs.length) return false;
+  var hit = 0; qs.forEach(function(q){ if (_gapDone.indexOf(q) > -1) hit++; });
+  return hit >= qs.length; // done only when ALL its queries are checked off
+}
+async function toggleGapFamily(idx, makeDone) {
+  var f = _gapAnalysis && _gapAnalysis.families && _gapAnalysis.families[idx];
+  if (!f) return;
+  try {
+    var d = await api('/gap-family-done', 'POST', { queries: f.queries || [], done: makeDone });
+    if (d && d.success) {
+      var qs = (f.queries||[]).map(_gapQNorm);
+      if (makeDone) { qs.forEach(function(q){ if (_gapDone.indexOf(q) === -1) _gapDone.push(q); }); }
+      else { _gapDone = _gapDone.filter(function(q){ return qs.indexOf(q) === -1; }); }
+      toast(makeDone ? 'Family checked \u2014 excluded from the next AI analysis.' : 'Check removed \u2014 family is open work again.', makeDone ? '#4ade80' : '#9ca3af');
+      renderImpressionGap();
+    } else { toast((d && d.error) || 'Could not save', '#f87171'); }
+  } catch(e) { toast('Could not save', '#f87171'); }
+}
 async function runGapAnalysis() {
   var btn = document.getElementById('gapAiBtn');
   if (btn) { btn.disabled = true; btn.textContent = '\u23f3 Analyzing\u2026'; }
@@ -29293,17 +29344,21 @@ function _gapFamiliesHtml() {
     TRACK_EXISTING: { c: '#a78bfa', l: 'TRACK EXISTING' },
     IGNORE: { c: '#6b7280', l: 'IGNORE' }
   };
-  var fams = _gapAnalysis.families.slice().sort(function(a,b){
+  var famsIdx = _gapAnalysis.families.map(function(f, i){ return { f: f, idx: i, done: _famIsDone(f) }; });
+  famsIdx.sort(function(a,b){
+    if (a.done !== b.done) return a.done ? 1 : -1; // checked-off families sink to the bottom
     var o = { SECTION: 0, TRACK_EXISTING: 1, NEW_PAGE: 2, IGNORE: 3 };
-    if (o[a.verdict] !== o[b.verdict]) return (o[a.verdict]||9) - (o[b.verdict]||9);
-    return (b.total_impressions||0) - (a.total_impressions||0);
+    if (o[a.f.verdict] !== o[b.f.verdict]) return (o[a.f.verdict]||9) - (o[b.f.verdict]||9);
+    return (b.f.total_impressions||0) - (a.f.total_impressions||0);
   });
-  var rows = fams.map(function(f, i){
+  var rows = famsIdx.map(function(x){
+    var f = x.f; var isDone = x.done;
     var m = vMeta[f.verdict] || vMeta.IGNORE;
-    return '<div style="padding:8px 12px;border-bottom:1px solid #1f2937;">'
+    return '<div style="padding:8px 12px;border-bottom:1px solid #1f2937;' + (isDone ? 'opacity:.45;' : '') + '">'
       + '<div style="display:flex;align-items:center;gap:10px;">'
+      + '<button onclick="toggleGapFamily(' + x.idx + ',' + (isDone ? 'false' : 'true') + ')" title="' + (isDone ? 'Checked \u2014 excluded from the next AI analysis. Click to reopen.' : 'Mark this family as handled by you \u2014 it drops out of the next AI analysis and sinks to the bottom.') + '" style="flex-shrink:0;cursor:pointer;font-size:9px;font-weight:800;border-radius:4px;padding:2px 8px;' + (isDone ? 'background:rgba(74,222,128,.15);border:1px solid #16a34a;color:#4ade80;' : 'background:none;border:1px dashed #374151;color:#4b5563;') + '">' + (isDone ? '\u2713 DONE' : '\u25cb my check') + '</button>'
       + '<span style="font-size:9px;font-weight:800;color:' + m.c + ';border:1px solid ' + m.c + '55;border-radius:4px;padding:2px 7px;flex-shrink:0;white-space:nowrap;">' + m.l + '</span>'
-      + '<span style="font-size:11px;font-weight:700;color:#e5e7eb;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;">' + String(f.name||'').replace(/</g,'&lt;') + '</span>'
+      + '<span style="font-size:11px;font-weight:700;color:#e5e7eb;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;' + (isDone ? 'text-decoration:line-through;' : '') + '">' + String(f.name||'').replace(/</g,'&lt;') + '</span>'
       + (f.target ? '<span style="font-size:10px;color:' + m.c + ';font-family:monospace;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px;">\u2192 ' + String(f.target).replace(/</g,'&lt;') + '</span>' : '')
       + '<span style="font-size:10px;color:#6b7280;flex-shrink:0;white-space:nowrap;">' + (f.total_impressions||0).toLocaleString() + ' impr \u00b7 ' + ((f.queries||[]).length) + ' queries</span>'
       + '</div>'
@@ -29321,6 +29376,7 @@ async function loadImpressionGap() {
     _gapQueries = (d && d.queries) || [];
     _sitemapSlugs = (d && d.sitemap_slugs) || [];
     _gapAnalysis = (d && d.gap_analysis) || null;
+    _gapDone = (d && d.gap_done) || [];
     renderImpressionGap();
     _computePushables();
     _computeCannibal();
@@ -29359,7 +29415,7 @@ function renderImpressionGap() {
     }
     return false;
   };
-  var gaps = _gapQueries.filter(function(q){ return !q.page_id && (q.impressions||0) >= 20 && !isCovered(q.query); });
+  var gaps = _gapQueries.filter(function(q){ return !q.page_id && (q.impressions||0) >= 20 && !isCovered(q.query) && _gapDone.indexOf(_gapQNorm(q.query)) === -1; });
   gaps.sort(function(a,b){ return (b.impressions||0) - (a.impressions||0); });
   gaps = gaps.slice(0, 20);
   if (!gaps.length) { host.innerHTML = ''; return; }
@@ -38350,6 +38406,7 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
       // ── Internal-link candidates: ONLY real URLs from the client's sitemap (never invented) ──
       let _otherPagesList = '';
       let _cannibalContext = ''; // hub/spoke or duplicate-keyword conflicts involving THIS page — injected into both briefs so the fix comes out as concrete actions
+      let _gapContext = ''; // OPEN impression-gap families (AI verdict: SECTION on this page) — the brief must build its impression-growth action from these REAL queries, not a guess
       let _sitemapUrls = [];
       try {
         if (page.tracker_client_id) {
@@ -38397,6 +38454,39 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
             _opR.rows.forEach(function(r){ var k = r.keyword || r.gsc_keyword; if (k) _topicByUrl[String(r.url).replace(/\/$/, '')] = k; });
             if (!_sitemapUrls.length) _sitemapUrls = _opR.rows.map(function(r){ return r.url; }).filter(Boolean); // fallback: still REAL urls, never invented
             _otherPagesList = _sitemapUrls.map(function(u){ var t = _topicByUrl[u.replace(/\/$/, '')]; return '- ' + u + (t ? ' [topic: ' + t + ']' : ''); }).join('\n');
+
+            // ── Impression-gap context: open SECTION families targeting THIS page ──
+            // The owner ran "Sort this out for me"; families they did NOT check off are open work.
+            // Their queries are real GSC data with impressions — the brief's impression-growth action
+            // must target these instead of guessing an adjacent intent.
+            try {
+              if (page.tracker_client_id) {
+                const _gcr = await pool.query('SELECT gap_analysis, gap_done_queries FROM tracker_clients WHERE id=$1', [page.tracker_client_id]);
+                if (_gcr.rows.length && _gcr.rows[0].gap_analysis) {
+                  let _ga = null, _gd = [];
+                  try { _ga = JSON.parse(_gcr.rows[0].gap_analysis); } catch(e) {}
+                  try { _gd = JSON.parse(_gcr.rows[0].gap_done_queries || '[]'); } catch(e) {}
+                  const _gn = s => String(s||'').toLowerCase().replace(/\s+/g,' ').trim();
+                  const _pageNorm = String(page.url||'').replace(/^https?:\/\//,'').replace(/^www\./,'').replace(/\/+$/,'').toLowerCase();
+                  if (_ga && Array.isArray(_ga.families)) {
+                    const _open = _ga.families.filter(f => {
+                      if (f.verdict !== 'SECTION' || !f.target) return false;
+                      const _tNorm = String(f.target).replace(/^https?:\/\//,'').replace(/^www\./,'').replace(/\/+$/,'').toLowerCase();
+                      if (_pageNorm.indexOf(_tNorm) === -1 && _tNorm.indexOf(_pageNorm) === -1) return false;
+                      const qs = (f.queries||[]).map(_gn).filter(Boolean);
+                      if (!qs.length) return false;
+                      return qs.some(q => _gd.indexOf(q) === -1); // at least one query still open
+                    });
+                    if (_open.length) {
+                      _gapContext = '\n\nIMPRESSION-GAP QUERIES FOR THIS PAGE (real GSC data, owner-verified as open work — do NOT guess an adjacent intent, use these):\n'
+                        + _open.slice(0, 3).map((f, i) => (i+1) + '. Family "' + (f.name||'') + '" (' + (f.total_impressions||0) + ' impressions): ' + (f.queries||[]).slice(0, 5).join(' | '))
+                          .join('\n')
+                        + '\nRule: your impression-growth action MUST be a question-form H2 (with 40-60 word answer) targeting the highest-impression family above. Quote the query verbatim in the heading where natural. These are proven searches Google already shows this site for.';
+                    }
+                  }
+                }
+              }
+            } catch(e) {}
 
             // ── Cannibalization context for THIS page vs its siblings (same rules as the tracker panel) ──
             try {
@@ -38576,7 +38666,7 @@ QUALITY BAR: Every action must be so specific that the user can implement it in 
       const gscPrompt = `You are a Google Search Console Analyst and SEO Strategist. Your job is to create a GSC Brief — a data-driven action plan to move a page from its current position to RANK #1.
 
 CURRENT DATE: Today is ${_briefToday} — treat ${_briefYear} as the current year. Use ${_briefYear} for any freshness or "last updated" recommendation; never reference an older year as current.
-${_cannibalContext}
+${_cannibalContext}${_gapContext}
 
 INPUT DATA:
 - Page URL: ${pageUrl}
