@@ -1028,6 +1028,21 @@ function generateClientToken() {
 }
 
 // POST /api/tracker-client/register — create new client tracker
+// ── DEMO READ-ONLY GUARD ─────────────────────────────────────────────────
+// A client flagged demo_readonly=TRUE (admin toggle) gets a fully browsable tracker,
+// but every mutation (POST/PATCH/PUT/DELETE) is blocked server-side. This makes the
+// share link safe to hand to prospects: they can look at everything, change nothing.
+app.use('/api/tracker-client/:token', async (req, res, next) => {
+  if (req.method === 'GET' || req.params.token === 'register') return next();
+  try {
+    const r = await pool.query('SELECT demo_readonly FROM tracker_clients WHERE token=$1', [req.params.token]);
+    if (r.rows.length && r.rows[0].demo_readonly === true) {
+      return res.status(403).json({ success: false, error: 'Demo mode \u2014 this tracker is read-only. Changes are disabled on shared demo links.' });
+    }
+  } catch(e) {}
+  next();
+});
+
 app.post('/api/tracker-client/register', async (req, res) => {
   try {
     const { domain, name, email, whatsapp, dealify_code } = req.body;
@@ -3692,6 +3707,7 @@ app.get('/track/:token', async (req, res) => {
       .replace(/__MAX_PAGES__/g, String(client.max_pages || 3))
       .replace(/__CLIENT_NAME__/g, (client.name || client.domain || '').replace(/[`'\\]/g, ''))
       .replace(/__GSC_ENABLED__/g, client.gsc_enabled ? 'true' : 'false')
+      .replace(/__DEMO_RO__/g, client.demo_readonly ? 'true' : 'false')
       .replace(/__STREAM_TOKEN__/g, req.params.token || '')
     );
   } catch(e) {
@@ -4595,6 +4611,7 @@ app.patch('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
       }
     }
     if (req.body.gsc_enabled !== undefined) { updates.push(`gsc_enabled=$${i++}`); vals.push(!!req.body.gsc_enabled); }
+    if (req.body.demo_readonly !== undefined) { updates.push(`demo_readonly=$${i++}`); vals.push(!!req.body.demo_readonly); }
     else if (max_pages !== undefined) {
       // Plan changed without an explicit GSC choice -> follow the plan rule automatically (free ≤3 off, paid >3 on)
       updates.push(`gsc_enabled=$${i++}`); vals.push(parseInt(max_pages) > 3);
@@ -4912,6 +4929,7 @@ app.patch('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS paused_at TIMESTAMPTZ`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS dealify_codes VARCHAR(500)`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS gsc_enabled BOOLEAN DEFAULT FALSE`).catch(()=>{});
+  await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS demo_readonly BOOLEAN DEFAULT FALSE`).catch(()=>{});
   // One-time sync of gsc_enabled with the plan rule (free ≤3 pages off, paid >3 on).
   // Guarded by a migration flag so it runs exactly ONCE — manual per-client overrides made afterwards survive every deploy.
   await client.query(`CREATE TABLE IF NOT EXISTS migration_flags (key TEXT PRIMARY KEY, applied_at TIMESTAMPTZ DEFAULT NOW())`).catch(()=>{});
@@ -27921,6 +27939,15 @@ function _csChart(s){
 }
 var DOMAIN = '__DOMAIN__';
 var GSC_ENABLED = __GSC_ENABLED__;
+var DEMO_RO = __DEMO_RO__;
+if (DEMO_RO) {
+  document.addEventListener('DOMContentLoaded', function(){
+    var b = document.createElement('div');
+    b.style.cssText = 'position:sticky;top:0;z-index:999;background:linear-gradient(90deg,#4c1d95,#6d28d9);color:#ede9fe;font-size:12px;font-weight:700;text-align:center;padding:8px 14px;letter-spacing:.03em;';
+    b.innerHTML = '\ud83d\udc41 DEMO \u2014 read-only view. Everything is live data; editing is disabled on this shared link.';
+    document.body.insertBefore(b, document.body.firstChild);
+  });
+}
 var MAX_PAGES = __MAX_PAGES__;
 var _pages = [];
 
@@ -29134,7 +29161,7 @@ async function loadImpressionGap() {
     renderPages(); // page cards now show their pushable-query blocks
   } catch(e) { _gapQueries = []; }
 }
-function _gapNorm(s){ return String(s||'').toLowerCase().replace(/[^a-z0-9 ]/g,' ').replace(/ +/g,' ').trim(); }
+function _gapNorm(s){ try { return String(s||'').toLowerCase().replace(/[^\\p{L}\\p{N} ]/gu,' ').replace(/ +/g,' ').trim(); } catch(e) { return String(s||'').toLowerCase().replace(/[^a-z0-9 ]/g,' ').replace(/ +/g,' ').trim(); } }
 function renderImpressionGap() {
   var host = document.getElementById('impressionGap');
   if (!host) return;
@@ -29149,10 +29176,15 @@ function renderImpressionGap() {
   covered = covered.filter(Boolean);
   var isCovered = function(q) {
     var qn = _gapNorm(q); if (!qn) return true;
+    var qFlat = qn.replace(/ /g,'');
     var qWords = qn.split(' ').filter(function(w){ return w.length > 2; });
     for (var i = 0; i < covered.length; i++) {
       var c = covered[i];
       if (c.indexOf(qn) > -1 || qn.indexOf(c) > -1) return true;
+      // flat (space-stripped) match: catches compound spellings ("contentatscale" vs "content at scale")
+      // and is the primary matcher for languages without spaces (Chinese, Japanese)
+      var cFlat = c.replace(/ /g,'');
+      if (qFlat.length >= 4 && cFlat.length >= 4 && (cFlat.indexOf(qFlat) > -1 || qFlat.indexOf(cFlat) > -1)) return true;
       if (qWords.length) {
         var hit = 0;
         qWords.forEach(function(w){ if (c.indexOf(w) > -1) hit++; });
@@ -29167,6 +29199,28 @@ function renderImpressionGap() {
   if (!gaps.length) { host.innerHTML = ''; return; }
   // Sitemap awareness: before advising a NEW PAGE, check whether a matching page already EXISTS
   // in the sitemap (uploaded at import) but simply isn't tracked yet.
+  // Closest tracked page for ADD SECTION targets — best word/flat overlap, even below coverage threshold
+  var _closestPage = function(q) {
+    var qn = _gapNorm(q); if (!qn) return null;
+    var qWords = qn.split(' ').filter(function(w){ return w.length > 2; });
+    var qFlat = qn.replace(/ /g,'');
+    var best = null, bestScore = 0;
+    (_pages||[]).forEach(function(p){
+      var t = [];
+      if (p.keyword) t.push(_gapNorm(p.keyword));
+      if (p.gsc_keyword) t.push(_gapNorm(p.gsc_keyword));
+      try { t.push(_gapNorm(new URL(p.url).pathname.replace(/[-_/]/g,' '))); } catch(e) {}
+      var txt = t.filter(Boolean).join(' ');
+      if (!txt) return;
+      var s = 0;
+      if (qWords.length) { var hit = 0; qWords.forEach(function(w){ if (txt.indexOf(w) > -1) hit++; }); s = hit / qWords.length; }
+      var txtFlat = txt.replace(/ /g,'');
+      if (qFlat.length >= 4 && txtFlat.indexOf(qFlat) > -1) s = Math.max(s, 0.9);
+      if (s > bestScore) { bestScore = s; best = p; }
+    });
+    if (!best || bestScore < 0.25) return null;
+    try { var sl = new URL(best.url).pathname || '/'; return sl === '/' ? '(homepage)' : sl; } catch(e) { return best.url; }
+  };
   var _slugMatch = function(q) {
     var qn = _gapNorm(q); var qWords = qn.split(' ').filter(function(w){ return w.length > 2; });
     if (!qWords.length) return null;
@@ -29185,8 +29239,10 @@ function renderImpressionGap() {
     var ps = g.position ? parseFloat(g.position) : null;
     var existsSlug = _slugMatch(g.query);
     var hint;
+    var targetSlug = null;
     if (ps !== null && ps <= 20) {
-      hint = { t: 'ADD SECTION', c: '#4ade80', d: 'Google already shows you (pos ' + ps.toFixed(1) + '). Add a question-form H2 answering this on your closest tracked page \\u2014 fastest impression growth there is.' };
+      targetSlug = _closestPage(g.query);
+      hint = { t: 'ADD SECTION', c: '#4ade80', d: 'Google already shows you (pos ' + ps.toFixed(1) + '). Add a question-form H2 answering this' + (targetSlug ? ' on ' + targetSlug : ' on your most related tracked page') + ' \\u2014 fastest impression growth there is.' };
     } else if (existsSlug) {
       hint = { t: 'EXISTS \\u00b7 NOT TRACKED', c: '#a78bfa', d: 'A matching page already exists in your sitemap: ' + existsSlug + ' \\u2014 it is just not in the tracker. Add it to the tracker and improve it instead of building a new page.' };
     } else {
@@ -29196,6 +29252,7 @@ function renderImpressionGap() {
       + '<span style="font-size:12px;font-weight:800;color:#4b5563;width:22px;flex-shrink:0;text-align:right;">' + (i+1) + '</span>'
       + '<span style="font-size:9px;font-weight:800;color:' + hint.c + ';border:1px solid ' + hint.c + '55;border-radius:4px;padding:2px 7px;flex-shrink:0;white-space:nowrap;">' + hint.t + '</span>'
       + '<span style="font-size:11px;color:#e5e7eb;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;">' + g.query.replace(/</g,'&lt;') + '</span>'
+      + (targetSlug ? '<span style="font-size:10px;color:#4ade80;font-family:monospace;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px;" title="Add the section on this page">\\u2192 on ' + targetSlug + '</span>' : '')
       + (existsSlug && !(ps !== null && ps <= 20) ? '<span style="font-size:10px;color:#a78bfa;font-family:monospace;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:180px;">' + existsSlug + '</span>' : '')
       + '<span style="font-size:10px;color:#6b7280;flex-shrink:0;white-space:nowrap;">' + (g.position ? 'pos ' + parseFloat(g.position).toFixed(1) + ' \\u00b7 ' : '') + (g.impressions||0).toLocaleString() + ' impr \\u00b7 ' + (g.clicks||0) + ' clk</span>'
       + '</div>';
@@ -29319,7 +29376,8 @@ function _computeCannibal() {
         var hub = genericIsI ? slugOf(pages[i]) : slugOf(pages[j]);
         var spoke = genericIsI ? slugOf(pages[j]) : slugOf(pages[i]);
         var _spokeKwSafe = genericIsI ? (pages[j].keyword||pages[j].gsc_keyword||'') : (pages[i].keyword||pages[i].gsc_keyword||'');
-        _cannibalIssues.push({ level: 'STRUCTURE', color: '#60a5fa', key: (pages[i].keyword||pages[i].gsc_keyword) + '  \\u2194  ' + (pages[j].keyword||pages[j].gsc_keyword),
+        var _hubKwSafe = genericIsI ? (pages[i].keyword||pages[i].gsc_keyword||'') : (pages[j].keyword||pages[j].gsc_keyword||'');
+        _cannibalIssues.push({ level: 'STRUCTURE', color: '#60a5fa', key: _hubKwSafe + '  \\u2192  ' + _spokeKwSafe,
           pages: [{ slug: hub }, { slug: spoke }],
           advice: 'CHECK: does ' + hub + ' contain a link to ' + spoke + '? Direction matters \\u2014 the GENERAL page must link to the SPECIFIC page, not the other way around (Google follows links from broad to narrow to learn which page owns \\u201c' + _spokeKwSafe + '\\u201d; a back-link from the specific page adds nothing here). Link exists \\u2192 ignore this row forever. Missing \\u2192 open ' + hub + ', find where \\u201c' + _spokeKwSafe + '\\u201d is mentioned and make those words the link to ' + spoke + '. Not mentioned at all \\u2192 add one sentence, e.g. \\u201cSee our ' + _spokeKwSafe + ' guide\\u201d with the link. No merge, no 301 \\u2014 this setup is normally correct.' });
       } else if (jac >= 0.7) {
@@ -29403,7 +29461,7 @@ function renderCannibal() {
       + '<span style="font-size:9px;font-weight:800;color:' + c.color + ';border:1px solid ' + c.color + '55;border-radius:4px;padding:2px 7px;flex-shrink:0;white-space:nowrap;">' + c.level + '</span>'
       + '<div style="flex:1;min-width:0;">'
       + '<div style="font-size:11px;color:#e5e7eb;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + String(c.key).replace(/</g,'&lt;') + '</div>'
-      + '<div style="font-size:10px;color:#6b7280;font-family:monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + c.pages.map(function(p){ return p.slug + (p.pos != null ? ' (pos ' + p.pos.toFixed(1) + ')' : ''); }).join('  vs  ') + '</div>'
+      + '<div style="font-size:10px;color:#6b7280;font-family:monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + c.pages.map(function(p){ return p.slug + (p.pos != null ? ' (pos ' + p.pos.toFixed(1) + ')' : ''); }).join(c.level === 'STRUCTURE' ? '  \\u2192 must link to \\u2192  ' : '  vs  ') + '</div>'
       + '</div>'
       + '<span style="font-size:10px;color:#4b5563;flex-shrink:0;">what to do \\u25be</span>'
       + '</div>'
@@ -30692,7 +30750,8 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
         _uiNorm.push(_l + String.fromCharCode(9) + _nums.join(String.fromCharCode(9)));
         _i++; continue;
       }
-      if (_sawQueriesHdr && !_isUrl && !_isNumLine(_l) && _nextNum) {
+      var _pasteHasUrls = lines.some(function(x){ return String(x).indexOf('http') === 0; });
+      if ((_sawQueriesHdr || !_pasteHasUrls) && !_isUrl && !_isNumLine(_l) && _nextNum) {
         var _nums2 = lines[_i + 1].match(/[0-9][0-9,]*(?:[.][0-9]+)?%?/g) || [];
         _uiNorm.push(_l + String.fromCharCode(9) + _nums2.join(String.fromCharCode(9)));
         _i++; continue;
@@ -30717,6 +30776,22 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
 
     var isQueriesCSV = lines[0] && (lines[0].toLowerCase().startsWith('top queries') || lines[0].toLowerCase().startsWith('query,') || lines[0].toLowerCase().startsWith('"top queries"'));
     var isPagesCSV = lines[0] && (lines[0].toLowerCase().startsWith('top pages') || lines[0].toLowerCase().startsWith('"top pages"'));
+    // Language-independent fallback: GSC exports headers in the UI language (Chinese, Dutch, ...).
+    // If no English header matched, detect the format structurally: URLs in column 1 = Pages CSV,
+    // text + numbers = Queries CSV. Works for any language.
+    if (!isPagesCSV && !isQueriesCSV && lines.length > 1) {
+      var _tb = String.fromCharCode(9);
+      var _dataLines = lines.slice(0, 6).filter(function(l){ return /[0-9]/.test(l); });
+      var _urlish = 0, _textish = 0;
+      _dataLines.forEach(function(l){
+        var first = (l.indexOf(_tb) > -1 ? l.split(_tb)[0] : l.split(',')[0]).replace(/^"|"$/g,'').trim();
+        if (first.indexOf('http') === 0) _urlish++;
+        else if (first && !/^[0-9][0-9.,% ]*$/.test(first)) _textish++;
+      });
+      if (_urlish > 0 && _urlish >= _textish) { isPagesCSV = true; }
+      else if (_textish > 0) { isQueriesCSV = true; }
+      // header row in a foreign language (first line without digits) is skipped naturally by the number checks
+    }
 
     lines.forEach(function(line, idx) {
       if (idx === 0 && (isQueriesCSV || isPagesCSV)) return; // skip header
@@ -34302,6 +34377,18 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     setTimeout(loadTrackerClients, 400);
                 }; })(c.id, !!c.gsc_enabled);
                 togglesRow.appendChild(gscBtn);
+
+                // ── Demo read-only toggle: safe share link for prospects ──
+                var roBtn = document.createElement('button');
+                roBtn.className = 'tr-btn';
+                roBtn.textContent = c.demo_readonly ? '\ud83d\udc41 Demo RO' : 'Demo off';
+                roBtn.title = c.demo_readonly ? 'READ-ONLY demo is ON \u2014 the /track link can be shared safely: visitors see everything, can change nothing. Click to turn off.' : 'Turn this client into a read-only demo: share the /track link with prospects, all edits are blocked server-side. Click to enable.';
+                roBtn.style.cssText = 'font-size:10px;padding:3px 8px;border-color:' + (c.demo_readonly ? '#a78bfa' : '#374151') + ';color:' + (c.demo_readonly ? '#a78bfa' : '#6b7280') + ';';
+                roBtn.onclick = (function(id, current){ return function(){
+                    updateTcClient(id, {demo_readonly: !current});
+                    setTimeout(loadTrackerClients, 400);
+                }; })(c.id, !!c.demo_readonly);
+                togglesRow.appendChild(roBtn);
 
                 // ── Extra Citation-Brief recipients ──
                 var emailsBtn = document.createElement('button');
