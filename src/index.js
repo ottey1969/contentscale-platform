@@ -1033,7 +1033,19 @@ function generateClientToken() {
 // but every mutation (POST/PATCH/PUT/DELETE) is blocked server-side. This makes the
 // share link safe to hand to prospects: they can look at everything, change nothing.
 app.use('/api/tracker-client/:token', async (req, res, next) => {
-  if (req.method === 'GET' || req.params.token === 'register') return next();
+  if (req.params.token === 'register') return next();
+  try {
+    // Read-only SHARE token: same live data as the owner, strictly view-only.
+    // GETs are transparently rewritten to the owner token so every existing endpoint works unchanged;
+    // any mutation gets 403. The owner keeps full access on the normal token.
+    const ro = await pool.query('SELECT token FROM tracker_clients WHERE readonly_token=$1', [req.params.token]);
+    if (ro.rows.length) {
+      if (req.method !== 'GET') return res.status(403).json({ success: false, error: 'Read-only link \u2014 viewing is live, changes are disabled.' });
+      req.url = req.url.replace(req.params.token, ro.rows[0].token);
+      return next();
+    }
+  } catch(e) {}
+  if (req.method === 'GET') return next();
   try {
     const r = await pool.query('SELECT demo_readonly FROM tracker_clients WHERE token=$1', [req.params.token]);
     if (r.rows.length && r.rows[0].demo_readonly === true) {
@@ -3685,8 +3697,8 @@ document.getElementById('list').addEventListener('click', function(e){ var c=e.t
 
 app.get('/track/:token', async (req, res) => {
   try {
-    // Find client by token — accept any status except explicitly deleted
-    const cr = await pool.query('SELECT * FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status != $2)', [req.params.token, 'deleted']);
+    // Find client by main token OR read-only share token — accept any status except explicitly deleted
+    const cr = await pool.query('SELECT * FROM tracker_clients WHERE (token=$1 OR readonly_token=$1) AND (status IS NULL OR status != $2)', [req.params.token, 'deleted']);
     if (!cr.rows.length) {
       // Debug: log which token was not found
       console.warn('[track] Client not found for token:', req.params.token.substring(0,16)+'...');
@@ -3707,7 +3719,13 @@ app.get('/track/:token', async (req, res) => {
       .replace(/__MAX_PAGES__/g, String(client.max_pages || 3))
       .replace(/__CLIENT_NAME__/g, (client.name || client.domain || '').replace(/[`'\\]/g, ''))
       .replace(/__GSC_ENABLED__/g, client.gsc_enabled ? 'true' : 'false')
-      .replace(/__DEMO_RO__/g, client.demo_readonly ? 'true' : 'false')
+      .replace(/__DEMO_RO__/g, (function(){
+        const isRO = client.demo_readonly || (client.readonly_token && client.readonly_token === req.params.token);
+        if (client.readonly_token && client.readonly_token === req.params.token) {
+          pool.query('UPDATE tracker_clients SET ro_views=COALESCE(ro_views,0)+1, ro_last_view=NOW() WHERE id=$1', [client.id]).catch(()=>{});
+        }
+        return isRO ? 'true' : 'false';
+      })())
       .replace(/__STREAM_TOKEN__/g, req.params.token || '')
     );
   } catch(e) {
@@ -4584,6 +4602,22 @@ app.get('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
     res.json({ success: true, client: r.rows[0] });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
+// POST /api/admin/tracker-clients/:id/readonly-link — create (or return existing) live read-only share link.
+// The owner keeps working on the main token; this second token shows the SAME live data, view-only.
+app.post('/api/admin/tracker-clients/:id/readonly-link', verifyAdmin, async (req, res) => {
+  try {
+    const r = await pool.query('SELECT readonly_token FROM tracker_clients WHERE id=$1', [req.params.id]);
+    if (!r.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
+    let roToken = r.rows[0].readonly_token;
+    if (req.body && req.body.regenerate) roToken = null; // rotate: old shared links stop working
+    if (!roToken) {
+      roToken = 'ro_' + generateClientToken();
+      await pool.query('UPDATE tracker_clients SET readonly_token=$1 WHERE id=$2', [roToken, req.params.id]);
+    }
+    res.json({ success: true, readonly_token: roToken, url: 'https://app.contentscale.site/track/' + roToken });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
 app.patch('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
   try {
     const { max_pages, status, reset_ip } = req.body;
@@ -4930,6 +4964,10 @@ app.patch('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS dealify_codes VARCHAR(500)`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS gsc_enabled BOOLEAN DEFAULT FALSE`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS demo_readonly BOOLEAN DEFAULT FALSE`).catch(()=>{});
+  await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS readonly_token TEXT`).catch(()=>{});
+  await client.query(`CREATE UNIQUE INDEX IF NOT EXISTS tracker_clients_ro_token_idx ON tracker_clients(readonly_token) WHERE readonly_token IS NOT NULL`).catch(()=>{});
+  await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS ro_views INTEGER DEFAULT 0`).catch(()=>{});
+  await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS ro_last_view TIMESTAMPTZ`).catch(()=>{});
   // One-time sync of gsc_enabled with the plan rule (free ≤3 pages off, paid >3 on).
   // Guarded by a migration flag so it runs exactly ONCE — manual per-client overrides made afterwards survive every deploy.
   await client.query(`CREATE TABLE IF NOT EXISTS migration_flags (key TEXT PRIMARY KEY, applied_at TIMESTAMPTZ DEFAULT NOW())`).catch(()=>{});
@@ -27941,11 +27979,35 @@ var DOMAIN = '__DOMAIN__';
 var GSC_ENABLED = __GSC_ENABLED__;
 var DEMO_RO = __DEMO_RO__;
 if (DEMO_RO) {
+  // Neon compute saver: viewers don't need 8-second freshness. Clamp every polling interval
+  // registered after this point to >= 60s, and skip poll ticks while the tab is hidden.
+  // Cuts database wake-time for an open viewer tab by ~90%+; the owner's own link is unaffected.
+  (function(){
+    var _si = window.setInterval;
+    window.setInterval = function(fn, ms){
+      var wrapped = (typeof fn === 'function') ? function(){ if (document.hidden) return; return fn(); } : fn;
+      return _si(wrapped, Math.max(ms || 0, 60000));
+    };
+  })();
   document.addEventListener('DOMContentLoaded', function(){
+    // Banner with CTA \u2014 the demo should sell, not just inform
     var b = document.createElement('div');
     b.style.cssText = 'position:sticky;top:0;z-index:999;background:linear-gradient(90deg,#4c1d95,#6d28d9);color:#ede9fe;font-size:12px;font-weight:700;text-align:center;padding:8px 14px;letter-spacing:.03em;';
-    b.innerHTML = '\ud83d\udc41 DEMO \u2014 read-only view. Everything is live data; editing is disabled on this shared link.';
+    b.innerHTML = '\ud83d\udc41 LIVE DEMO \u2014 real data, read-only. Like what you see? <a href="https://contentscale.site/free-ai-citations-tracker/" target="_blank" rel="noopener" style="color:#fde68a;text-decoration:underline;font-weight:800;">Get your own tracker free \u2192</a>';
     document.body.insertBefore(b, document.body.firstChild);
+    // Floating CTA \u2014 stays in view while they scroll through queue, briefs, conflicts
+    var f = document.createElement('a');
+    f.href = 'https://contentscale.site/free-ai-citations-tracker/';
+    f.target = '_blank'; f.rel = 'noopener';
+    f.style.cssText = 'position:fixed;bottom:20px;right:20px;z-index:998;background:#7c3aed;color:#fff;font-size:13px;font-weight:800;padding:12px 20px;border-radius:10px;box-shadow:0 6px 24px rgba(124,58,237,.5);text-decoration:none;';
+    f.textContent = '\ud83c\udfaf Track my own site \u2192';
+    document.body.appendChild(f);
+    // View everything, copy nothing: briefs stay readable on screen, but selection,
+    // copy/cut, right-click and drag are blocked on this shared link.
+    var st = document.createElement('style');
+    st.textContent = 'body{-webkit-user-select:none;-moz-user-select:none;user-select:none} input,textarea{-webkit-user-select:text;user-select:text}';
+    document.head.appendChild(st);
+    ['copy','cut','contextmenu','dragstart'].forEach(function(ev){ document.addEventListener(ev, function(e){ e.preventDefault(); }); });
   });
 }
 var MAX_PAGES = __MAX_PAGES__;
@@ -34389,6 +34451,24 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     setTimeout(loadTrackerClients, 400);
                 }; })(c.id, !!c.demo_readonly);
                 togglesRow.appendChild(roBtn);
+
+                // ── Live read-only share link (owner keeps full access; viewers see live data, cannot change) ──
+                var roLinkBtn = document.createElement('button');
+                roLinkBtn.className = 'tr-btn';
+                roLinkBtn.textContent = c.readonly_token ? ('\ud83d\udd17 RO link \u00b7 ' + (c.ro_views || 0) + ' views') : '\ud83d\udd17 Make RO link';
+                roLinkBtn.title = 'Live read-only share link \u2014 visitors see live data, cannot change or copy anything. Views so far: ' + (c.ro_views || 0) + (c.ro_last_view ? ' \u00b7 last: ' + new Date(c.ro_last_view).toLocaleString() : '') + '. Viewer tabs poll slowly (60s, paused when hidden) to save Neon compute.';
+                roLinkBtn.style.cssText = 'font-size:10px;padding:3px 8px;border-color:' + (c.readonly_token ? '#38bdf8' : '#374151') + ';color:' + (c.readonly_token ? '#38bdf8' : '#6b7280') + ';';
+                roLinkBtn.onclick = (function(id){ return function(){
+                    apiCall('/api/admin/tracker-clients/' + id + '/readonly-link', 'POST', {})
+                      .then(function(d){
+                        if (d && d.success) {
+                          try { navigator.clipboard.writeText(d.url); } catch(e) {}
+                          prompt('Live read-only link (copied to clipboard):', d.url);
+                          loadTrackerClients();
+                        } else alert((d && d.error) || 'Failed');
+                      }).catch(function(e){ alert('Failed: ' + e.message); });
+                }; })(c.id);
+                togglesRow.appendChild(roLinkBtn);
 
                 // ── Extra Citation-Brief recipients ──
                 var emailsBtn = document.createElement('button');
