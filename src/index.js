@@ -1032,24 +1032,26 @@ function generateClientToken() {
 // A client flagged demo_readonly=TRUE (admin toggle) gets a fully browsable tracker,
 // but every mutation (POST/PATCH/PUT/DELETE) is blocked server-side. This makes the
 // share link safe to hand to prospects: they can look at everything, change nothing.
-app.use('/api/tracker-client/:token', async (req, res, next) => {
-  if (req.params.token === 'register') return next();
+app.use(async (req, res, next) => {
+  // Read-only SHARE token guard. NOTE: must be a GLOBAL middleware — mounting on
+  // '/api/tracker-client/:token' makes Express strip the prefix from req.url, so a
+  // rewrite there never reaches the routers (the original bug: "Tracker not found").
+  const m = req.path.match(/^\/api\/tracker-client\/([^\/]+)/);
+  if (!m || m[1] === 'register') return next();
+  const tok = m[1];
   try {
-    // Read-only SHARE token: same live data as the owner, strictly view-only.
-    // GETs are transparently rewritten to the owner token so every existing endpoint works unchanged;
-    // any mutation gets 403. The owner keeps full access on the normal token.
-    const ro = await pool.query('SELECT token FROM tracker_clients WHERE readonly_token=$1', [req.params.token]);
+    const ro = await pool.query('SELECT token FROM tracker_clients WHERE readonly_token=$1', [tok]);
     if (ro.rows.length) {
       if (req.method !== 'GET') return res.status(403).json({ success: false, error: 'Read-only link \u2014 viewing is live, changes are disabled.' });
-      req.url = req.url.replace(req.params.token, ro.rows[0].token);
+      // Transparently rewrite to the owner token so every existing GET endpoint works unchanged
+      req.url = req.url.replace('/api/tracker-client/' + tok, '/api/tracker-client/' + ro.rows[0].token);
       return next();
     }
-  } catch(e) {}
-  if (req.method === 'GET') return next();
-  try {
-    const r = await pool.query('SELECT demo_readonly FROM tracker_clients WHERE token=$1', [req.params.token]);
-    if (r.rows.length && r.rows[0].demo_readonly === true) {
-      return res.status(403).json({ success: false, error: 'Demo mode \u2014 this tracker is read-only. Changes are disabled on shared demo links.' });
+    if (req.method !== 'GET') {
+      const r = await pool.query('SELECT demo_readonly FROM tracker_clients WHERE token=$1', [tok]);
+      if (r.rows.length && r.rows[0].demo_readonly === true) {
+        return res.status(403).json({ success: false, error: 'Demo mode \u2014 this tracker is read-only. Changes are disabled on shared demo links.' });
+      }
     }
   } catch(e) {}
   next();
@@ -4435,7 +4437,7 @@ app.post('/api/admin/tracker-clients/recalc-max-pages', verifyAdmin, async (req,
       const dealifyCount = c.dealify_codes ? c.dealify_codes.split(',').filter(x => x.trim()).length : 0;
       const basePerDomain = dealifyCount > 0 ? dealifyCount * 10 : 3;
       const correctMax = domainCount * basePerDomain;
-      if (c.max_pages !== correctMax) {
+      if ((c.max_pages || 0) < correctMax) { // only raise — a manually increased limit (e.g. 100) is sacred
         await pool.query('UPDATE tracker_clients SET max_pages=$1 WHERE id=$2', [correctMax, c.id]);
         console.log(`[recalc] ${c.domain}: ${c.max_pages} → ${correctMax} (${domainCount} domains × ${basePerDomain})`);
         fixed++;
@@ -4637,10 +4639,12 @@ app.patch('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
           const cur = curR.rows[0];
           const dealifyBonus = cur.dealify_codes ? (cur.dealify_codes.split(',').filter(c => c.trim()).length * 10) : 0;
           const basePages = dealifyBonus > 0 ? dealifyBonus : 3; // Dealify clients get 10/code, free clients get 3
-          const newMax = domainCount * basePages;
+          // Never LOWER a manually raised limit — auto-calc may only raise (fixes: admin sets 100, a later
+          // extra_domains save silently reset it to domains×base)
+          const newMax = Math.max(domainCount * basePages, cur.max_pages || 0);
           updates.push(`max_pages=$${i++}`);
           vals.push(newMax);
-          console.log(`[admin] Auto-updated max_pages: ${domainCount} domains × ${basePages} = ${newMax}`);
+          console.log(`[admin] Auto-updated max_pages: ${domainCount} domains × ${basePages} → ${newMax} (never lowered)`);
         }
       }
     }
@@ -7529,7 +7533,7 @@ recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', descriptio
                if (job.createdAt < cutoff) bulkJobs.delete(id);
                }
                }
-               setInterval(cleanOldJobs, 60*60*1000); // hourly
+               setInterval(cleanOldJobs, 6*60*60*1000); // every 6h — hourly ticks kept Neon awake ~2h/day for nothing
                // ── Own browser per job — no shared state ────────────────────
                async function launchJobBrowser() {
                return puppeteer.launch({
@@ -27637,7 +27641,8 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
     <button class="cs-btn" onclick="showImportModal('paste')" style="border-color:#6b7280;color:#6b7280;"><i class="fas fa-paste"></i> Paste</button>
     <button id="sitemapBtn" class="cs-btn" onclick="showImportModal('sitemap')" style="border-color:#38bdf8;color:#38bdf8;" title="Import from sitemap"><i class="fas fa-list"></i> Sitemap</button>
     <button class="cs-btn" onclick="loadPages()" style="margin-left:4px;" title="Refresh"><i class="fas fa-sync-alt"></i></button>
-    <button id="tourBtn" class="cs-btn" onclick="startTour(true)" style="border-color:#7c3aed;color:#a78bfa;" title="Step-by-step walkthrough of the tracker">? Tour</button>
+    <button id="tourBtn" class="cs-btn" onclick="startTour(true)" style="border-color:#7c3aed;color:#a78bfa;animation:tourPulse 2s ease-in-out infinite;" title="Step-by-step walkthrough of the tracker">? Tour</button>
+    <style>@keyframes tourPulse{0%,100%{box-shadow:0 0 0 0 rgba(124,58,237,.55);}50%{box-shadow:0 0 0 7px rgba(124,58,237,0);}}</style>
     <button id="scanAllBtn" class="cs-btn" onclick="scanAllPages()" style="border-color:#4ade80;color:#4ade80;font-weight:700;" title="Scan all pages one by one">&#x26a1; Scan All</button>
     <button class="cs-btn" onclick="mergePages()" style="border-color:#38bdf8;color:#38bdf8;" title="Merge duplicate URLs &#x2014; keep best">&#x2295; Merge</button>
     <button class="cs-btn" onclick="cleanPages()" style="border-color:#f59e0b;color:#f59e0b;" title="Remove junk (.jpg, /category/, feeds) &amp; pages not in sitemap/GSC &#x2014; keep only live content">&#x1f9f9; Clean</button>
