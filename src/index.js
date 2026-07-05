@@ -1726,7 +1726,7 @@ app.post('/api/tracker-client/:token/gsc-queries', async (req, res) => {
 // GET /api/tracker-client/:token/gsc-queries — query list + sitemap slugs (so "new page" suggestions can see what already exists)
 app.get('/api/tracker-client/:token/gsc-queries', async (req, res) => {
   try {
-    const cr = await pool.query('SELECT id, sitemap_urls FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status != $2)', [req.params.token, 'deleted']);
+    const cr = await pool.query('SELECT id, sitemap_urls, gap_analysis, gap_analysis_at FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status != $2)', [req.params.token, 'deleted']);
     if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
     const r = await pool.query('SELECT query, clicks, impressions, position, page_id, imported_at FROM tracker_gsc_queries WHERE tracker_client_id=$1 ORDER BY impressions DESC LIMIT 500', [cr.rows[0].id]);
     let sitemapSlugs = [];
@@ -1734,7 +1734,59 @@ app.get('/api/tracker-client/:token/gsc-queries', async (req, res) => {
       const sm = JSON.parse(cr.rows[0].sitemap_urls || '[]');
       if (Array.isArray(sm)) sitemapSlugs = sm.slice(0, 300).map(u => { try { return new URL(u).pathname; } catch(e) { return null; } }).filter(Boolean);
     } catch(e) {}
-    res.json({ success: true, queries: r.rows, sitemap_slugs: sitemapSlugs });
+    let gapAnalysis = null;
+    try { gapAnalysis = cr.rows[0].gap_analysis ? JSON.parse(cr.rows[0].gap_analysis) : null; } catch(e) {}
+    res.json({ success: true, queries: r.rows, sitemap_slugs: sitemapSlugs, gap_analysis: gapAnalysis, gap_analysis_at: cr.rows[0].gap_analysis_at });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// POST /api/tracker-client/:token/analyze-gaps — Gemini clusters the impression-gap queries into
+// intent families and gives ONE verdict per family, so the owner never has to do this thinking:
+// SECTION on an existing page / NEW_PAGE / TRACK_EXISTING (sitemap) / IGNORE (competitor brand or junk).
+app.post('/api/tracker-client/:token/analyze-gaps', async (req, res) => {
+  try {
+    const cr = await pool.query("SELECT id, domain, sitemap_urls FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status != 'deleted')", [req.params.token]);
+    if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
+    const client = cr.rows[0];
+    const geminiKey = process.env.GEMINI_API_KEY;
+    if (!geminiKey) return res.status(400).json({ success: false, error: 'AI analysis not available' });
+
+    const qR = await pool.query('SELECT query, clicks, impressions, position FROM tracker_gsc_queries WHERE tracker_client_id=$1 AND page_id IS NULL AND impressions >= 20 ORDER BY impressions DESC LIMIT 60', [client.id]);
+    if (!qR.rows.length) return res.json({ success: false, error: 'No site-wide queries imported yet \u2014 import your Queries CSV first.' });
+    const pR = await pool.query('SELECT url, keyword, gsc_keyword FROM tracker_pages WHERE tracker_client_id=$1 AND (is_active=TRUE OR is_active IS NULL) LIMIT 100', [client.id]);
+    let sitemapSlugs = [];
+    try { const sm = JSON.parse(client.sitemap_urls || '[]'); if (Array.isArray(sm)) sitemapSlugs = sm.slice(0, 150); } catch(e) {}
+
+    const prompt = 'You are an SEO strategist. Group these Google Search Console queries into INTENT FAMILIES (queries a single page should own together) and give exactly ONE verdict per family.\n\n'
+      + 'BUSINESS DOMAIN: ' + client.domain + ' (queries containing this brand belong to the homepage \u2014 verdict IGNORE with reason "own brand"; queries that are OTHER companies\u2019 names get verdict IGNORE with reason "competitor brand").\n\n'
+      + 'TRACKED PAGES (the ONLY pages you may name for SECTION verdicts):\n' + pR.rows.map(p => '- ' + p.url + (p.keyword||p.gsc_keyword ? ' [keyword: ' + (p.keyword||p.gsc_keyword) + ']' : '')).join('\n') + '\n\n'
+      + (sitemapSlugs.length ? 'SITEMAP PAGES (exist but untracked \u2014 the ONLY pages you may name for TRACK_EXISTING):\n' + sitemapSlugs.map(u => '- ' + u).join('\n') + '\n\n' : '')
+      + 'QUERIES (query | impressions | position):\n' + qR.rows.map(q => q.query + ' | ' + q.impressions + ' | ' + (q.position ? parseFloat(q.position).toFixed(1) : '?')).join('\n') + '\n\n'
+      + 'RULES: 1) Treat close variants (roofer/roofing/roof repair, singular/plural, nj/new jersey) as ONE family. 2) Prefer SECTION on an existing tracked page over NEW_PAGE \u2014 only advise NEW_PAGE when no tracked or sitemap page can own the intent. 3) NEVER invent URLs: SECTION target must be copied verbatim from TRACKED PAGES, TRACK_EXISTING verbatim from SITEMAP PAGES. 4) For NEW_PAGE propose a lowercase-hyphen slug. 5) Every family needs a one-sentence action in plain language a non-SEO owner can execute.\n\n'
+      + 'Return ONLY JSON, no markdown: {"families":[{"name":"short family name","queries":["..."],"total_impressions":123,"verdict":"SECTION|NEW_PAGE|TRACK_EXISTING|IGNORE","target":"url or slug or empty","reason":"one sentence","action":"one sentence, imperative"}]}';
+
+    const gResp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${geminiKey}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { temperature: 0.2, maxOutputTokens: 3000 } })
+    });
+    const gData = await gResp.json();
+    let txt = '';
+    try { txt = gData.candidates[0].content.parts.map(p => p.text || '').join(''); } catch(e) {}
+    txt = txt.replace(/```json|```/g, '').trim();
+    let parsed = null;
+    try { parsed = JSON.parse(txt); } catch(e) {
+      const mJ = txt.match(/\{[\s\S]*\}/); if (mJ) { try { parsed = JSON.parse(mJ[0]); } catch(e2) {} }
+    }
+    if (!parsed || !Array.isArray(parsed.families)) return res.status(500).json({ success: false, error: 'AI returned an unusable answer \u2014 try again.' });
+    // Hard safety: drop any SECTION/TRACK_EXISTING whose target is not a real known URL
+    const known = new Set(pR.rows.map(p => p.url).concat(sitemapSlugs));
+    parsed.families = parsed.families.filter(f => {
+      if (f.verdict === 'SECTION' || f.verdict === 'TRACK_EXISTING') return f.target && [...known].some(u => String(u).indexOf(String(f.target)) > -1 || String(f.target).indexOf(String(u)) > -1);
+      return true;
+    });
+    await pool.query('UPDATE tracker_clients SET gap_analysis=$1, gap_analysis_at=NOW() WHERE id=$2', [JSON.stringify(parsed), client.id]);
+    res.json({ success: true, analysis: parsed, analyzed_at: new Date().toISOString() });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
@@ -4972,6 +5024,8 @@ app.patch('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
   await client.query(`CREATE UNIQUE INDEX IF NOT EXISTS tracker_clients_ro_token_idx ON tracker_clients(readonly_token) WHERE readonly_token IS NOT NULL`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS ro_views INTEGER DEFAULT 0`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS ro_last_view TIMESTAMPTZ`).catch(()=>{});
+  await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS gap_analysis TEXT`).catch(()=>{});
+  await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS gap_analysis_at TIMESTAMPTZ`).catch(()=>{});
   // One-time sync of gsc_enabled with the plan rule (free ≤3 pages off, paid >3 on).
   // Guarded by a migration flag so it runs exactly ONCE — manual per-client overrides made afterwards survive every deploy.
   await client.query(`CREATE TABLE IF NOT EXISTS migration_flags (key TEXT PRIMARY KEY, applied_at TIMESTAMPTZ DEFAULT NOW())`).catch(()=>{});
@@ -29217,11 +29271,56 @@ async function setAllManualDone(on) {
 // Fed automatically when a Queries CSV is imported. No user action needed beyond the import itself.
 var _gapQueries = null;
 var _sitemapSlugs = [];
+var _gapAnalysis = null;
+async function runGapAnalysis() {
+  var btn = document.getElementById('gapAiBtn');
+  if (btn) { btn.disabled = true; btn.textContent = '\u23f3 Analyzing\u2026'; }
+  try {
+    var d = await api('/analyze-gaps', 'POST', {});
+    if (d && d.success) {
+      _gapAnalysis = d.analysis;
+      toast('Gap analysis ready \u2014 one verdict per intent family', '#4ade80');
+      renderImpressionGap();
+    } else { toast((d && d.error) || 'Analysis failed', '#f87171'); }
+  } catch(e) { toast('Analysis failed', '#f87171'); }
+  if (btn) { btn.disabled = false; btn.textContent = '\ud83e\udd16 Sort this out for me'; }
+}
+function _gapFamiliesHtml() {
+  if (!_gapAnalysis || !_gapAnalysis.families || !_gapAnalysis.families.length) return '';
+  var vMeta = {
+    SECTION: { c: '#4ade80', l: 'ADD SECTION' },
+    NEW_PAGE: { c: '#60a5fa', l: 'NEW PAGE' },
+    TRACK_EXISTING: { c: '#a78bfa', l: 'TRACK EXISTING' },
+    IGNORE: { c: '#6b7280', l: 'IGNORE' }
+  };
+  var fams = _gapAnalysis.families.slice().sort(function(a,b){
+    var o = { SECTION: 0, TRACK_EXISTING: 1, NEW_PAGE: 2, IGNORE: 3 };
+    if (o[a.verdict] !== o[b.verdict]) return (o[a.verdict]||9) - (o[b.verdict]||9);
+    return (b.total_impressions||0) - (a.total_impressions||0);
+  });
+  var rows = fams.map(function(f, i){
+    var m = vMeta[f.verdict] || vMeta.IGNORE;
+    return '<div style="padding:8px 12px;border-bottom:1px solid #1f2937;">'
+      + '<div style="display:flex;align-items:center;gap:10px;">'
+      + '<span style="font-size:9px;font-weight:800;color:' + m.c + ';border:1px solid ' + m.c + '55;border-radius:4px;padding:2px 7px;flex-shrink:0;white-space:nowrap;">' + m.l + '</span>'
+      + '<span style="font-size:11px;font-weight:700;color:#e5e7eb;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;">' + String(f.name||'').replace(/</g,'&lt;') + '</span>'
+      + (f.target ? '<span style="font-size:10px;color:' + m.c + ';font-family:monospace;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px;">\u2192 ' + String(f.target).replace(/</g,'&lt;') + '</span>' : '')
+      + '<span style="font-size:10px;color:#6b7280;flex-shrink:0;white-space:nowrap;">' + (f.total_impressions||0).toLocaleString() + ' impr \u00b7 ' + ((f.queries||[]).length) + ' queries</span>'
+      + '</div>'
+      + '<div style="font-size:10px;color:#9ca3af;margin:4px 0 0 0;line-height:1.55;"><b style="color:#e5e7eb;">Do this:</b> ' + String(f.action||'').replace(/</g,'&lt;') + ' <span style="color:#4b5563;">(' + String(f.reason||'').replace(/</g,'&lt;') + ')</span></div>'
+      + '<div style="font-size:9px;color:#374151;margin-top:2px;font-family:monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + (f.queries||[]).slice(0,6).join(' \u00b7 ').replace(/</g,'&lt;') + '</div>'
+      + '</div>';
+  }).join('');
+  return '<div style="border-bottom:1px solid #1f2937;">'
+    + '<div style="padding:7px 14px;background:rgba(74,222,128,.05);font-size:10px;font-weight:800;letter-spacing:.05em;color:#4ade80;text-transform:uppercase;">\ud83e\udd16 AI verdicts \u2014 one decision per intent family, nothing left to figure out</div>'
+    + rows + '</div>';
+}
 async function loadImpressionGap() {
   try {
     var d = await api('/gsc-queries', 'GET');
     _gapQueries = (d && d.queries) || [];
     _sitemapSlugs = (d && d.sitemap_slugs) || [];
+    _gapAnalysis = (d && d.gap_analysis) || null;
     renderImpressionGap();
     _computePushables();
     _computeCannibal();
@@ -29329,8 +29428,11 @@ function renderImpressionGap() {
     + '<span style="font-size:11px;font-weight:800;letter-spacing:.06em;color:#60a5fa;text-transform:uppercase;">\\ud83d\\udce1 Impression Gap</span>'
     + '<span style="font-size:11px;color:#6b7280;">' + gaps.length + ' queries \\u00b7 ' + totImpr.toLocaleString() + ' impressions/mo none of your tracked pages target</span>'
     + '<span style="margin-left:auto;font-size:10px;color:#4b5563;">from your Queries CSV \\u00b7 hover a row for the action</span>'
+    + '<button id="gapAiBtn" onclick="event.stopPropagation();runGapAnalysis()" style="flex-shrink:0;cursor:pointer;font-size:10px;font-weight:800;padding:4px 12px;border-radius:6px;background:#166534;border:1px solid #16a34a;color:#bbf7d0;" title="Let AI group these queries into intent families and give one clear verdict per family: add a section (and where), new page (which slug), track an existing page, or ignore (competitor brands, junk). One Gemini call, result is saved.">\ud83e\udd16 Sort this out for me</button>'
     + '</div>'
-    + '<div id="impGapBody" style="display:none;">' + rows
+    + '<div id="impGapBody" style="display:none;">'
+    + _gapFamiliesHtml()
+    + rows
     + '<div style="font-size:10px;color:#4b5563;padding:8px 14px;line-height:1.6;">ADD SECTION = Google already tests you for this query \\u2014 answer it with a question-form H2 on your closest page. NEW PAGE = demand exists but no page is eligible. Re-import your Queries CSV monthly to keep this current.</div>'
     + '</div></div>';
 }
