@@ -28981,7 +28981,26 @@ function renderPages() {
         })()
       + '<div class="cs-url-line" style="font-size:12px;' + (isDone ? 'text-decoration:line-through;color:#4b5563;' : 'color:#e5e7eb;') + 'font-family:monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;border-radius:4px;padding:1px 4px;margin-left:-4px;" title="' + rawUrl + '">' + urlShort + '</div></div>'
       + '<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:4px;">' + badges + '</div>'
-      + (p.redirects_to ? '<div style="background:rgba(248,113,113,.1);border:1px solid #7f1d1d;border-radius:6px;padding:7px 10px;margin:4px 0;font-size:11px;color:#fca5a5;line-height:1.5;">\\u21aa\\ufe0f <b>This URL is a 301 redirect</b> \\u2192 <span style="font-family:monospace;color:#fecaca;">' + String(p.redirects_to).replace(/</g,"&lt;") + '</span><br>It is a dead URL and should not be tracked. <button onclick="removeRedirectedPage(' + p.id + ')" style="margin-top:4px;cursor:pointer;font-size:10px;font-weight:700;padding:3px 10px;border-radius:5px;background:#7f1d1d;border:1px solid #b91c1c;color:#fecaca;">Remove this dead page</button> then add the destination URL instead.</div>' : '')
+      + (p.redirects_to ? (function(){
+          var destPath = ''; try { destPath = new URL(isCanon ? canonUrl : p.redirects_to).pathname.replace(/\/+$/,''); } catch(e) {}
+          var destTracked = isDead404 ? true : (_pages||[]).some(function(o){ if (o.id === p.id || !o.url) return false; try { return new URL(o.url).pathname.replace(/\/+$/,'') === destPath; } catch(e) { return false; } });
+          var isDead404 = String(p.redirects_to).indexOf('(dead') === 0;
+          var isCanon = String(p.redirects_to).indexOf('(canonical') === 0;
+          var canonUrl = ''; if (isCanon) { var _cmm = String(p.redirects_to).match(/canonical \u2192 ([^)]+)/); canonUrl = _cmm ? _cmm[1].trim() : ''; }
+          var _head = isDead404
+            ? '\\u274c <b>This URL no longer exists</b> ' + String(p.redirects_to).replace(/</g,"&lt;")
+            : isCanon
+            ? '\\ud83d\\udd17 <b>Canonical duplicate</b> \\u2014 Google treats <span style="font-family:monospace;color:#fecaca;">' + canonUrl.replace(/</g,"&lt;") + '</span> as the real page. Not a conflict; you only need to track the canonical.'
+            : '\\u21aa\\ufe0f <b>This URL is a 301 redirect</b> \\u2192 <span style="font-family:monospace;color:#fecaca;">' + String(p.redirects_to).replace(/</g,"&lt;") + '</span>';
+          var _bg = isCanon ? 'rgba(96,165,250,.1)' : 'rgba(248,113,113,.1)';
+          var _bd = isCanon ? '#1e3a8a' : '#7f1d1d';
+          var _fg = isCanon ? '#93c5fd' : '#fca5a5';
+          return '<div style="background:' + _bg + ';border:1px solid ' + _bd + ';border-radius:6px;padding:7px 10px;margin:4px 0;font-size:11px;color:' + _fg + ';line-height:1.5;">' + _head + '<br>'
+            + (destTracked
+                ? 'The destination is <b>already tracked</b> \\u2014 just remove this dead URL. <button onclick="removeRedirectedPage(' + p.id + ',null)" style="margin-top:4px;cursor:pointer;font-size:10px;font-weight:700;padding:3px 10px;border-radius:5px;background:#7f1d1d;border:1px solid #b91c1c;color:#fecaca;">Remove this dead page</button>'
+                : 'One click swaps the dead URL for its destination: <button onclick="removeRedirectedPage(' + p.id + ',&quot;' + String(p.redirects_to).replace(/"/g,"&quot;") + '&quot;)" style="margin-top:4px;cursor:pointer;font-size:10px;font-weight:800;padding:3px 12px;border-radius:5px;background:#166534;border:1px solid #16a34a;color:#bbf7d0;">\\u2713 Track destination instead</button> <button onclick="removeRedirectedPage(' + p.id + ',null)" style="margin-top:4px;cursor:pointer;font-size:10px;font-weight:700;padding:3px 10px;border-radius:5px;background:#7f1d1d;border:1px solid #b91c1c;color:#fecaca;">Just remove</button>')
+            + '</div>';
+        })() : '')
       + _pushHtml
       + gscHtml
       + '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:4px;">'
@@ -29876,13 +29895,17 @@ function _tourMaybeAutoStart() {
   setTimeout(function(){ if (_tourIdx === -1) startTour(false); }, 1200);
 }
 
-async function removeRedirectedPage(pageId) {
-  if (!confirm('Remove this redirected (dead) URL from the tracker? Add the destination URL as a new page afterwards.')) return;
+async function removeRedirectedPage(pageId, addUrl) {
+  var msg = addUrl ? 'Swap this dead URL for its destination (' + addUrl + ')?' : 'Remove this redirected (dead) URL from the tracker?';
+  if (!confirm(msg)) return;
   try {
+    if (addUrl) {
+      try { await api('/pages', 'POST', { url: addUrl }); } catch(e) {}
+    }
     await api('/pages/' + pageId, 'DELETE');
-    toast('Dead redirect removed \u2014 add the destination URL to track it.', '#4ade80');
+    toast(addUrl ? 'Swapped \u2014 now tracking the destination URL.' : 'Dead redirect removed.', '#4ade80');
     loadPages();
-  } catch(e) { toast('Could not remove', '#f87171'); }
+  } catch(e) { toast('Could not update', '#f87171'); }
 }
 async function toggleManualDone(pageId, current) {
   var next = !current;
@@ -37898,20 +37921,43 @@ async function runTrackerCheck(page, geminiKey, keys, forceRescan = false) {
         signal: AbortSignal.timeout(15000)
       });
 
-      // Redirect detection: fetch follows 301/302, so a differing final URL means this tracked URL is dead.
+      // Dead-URL detection during scan:
+      //  - 404/410 => the tracked URL no longer exists (flagged like a redirect so it leaves cannibalization)
+      //  - 301/302 => fetch followed it; a differing final URL means this tracked URL is dead, track the destination
       try {
-        const _reqPath = new URL(page.url).pathname.replace(/\/+$/,'');
-        const _finPath = new URL(liveResp.url).pathname.replace(/\/+$/,'');
-        if (liveResp.url && _finPath && _reqPath && _finPath.toLowerCase() !== _reqPath.toLowerCase()) {
-          await pool.query('UPDATE tracker_pages SET redirects_to=$1, redirect_checked_at=NOW() WHERE id=$2', [liveResp.url, pageId]).catch(()=>{});
-          _trSetStep(pageId, 'html_hash', 'done', '\u21aa\ufe0f Redirects to ' + liveResp.url + ' \u2014 this tracked URL is a 301; track the destination instead.');
+        if (liveResp.status === 404 || liveResp.status === 410) {
+          await pool.query('UPDATE tracker_pages SET redirects_to=$1, redirect_checked_at=NOW() WHERE id=$2', ['(dead ' + liveResp.status + ' \u2014 page not found)', pageId]).catch(()=>{});
+          _trSetStep(pageId, 'html_hash', 'done', '\u274c ' + liveResp.status + ' \u2014 this URL no longer exists; remove it from the tracker.');
         } else {
-          await pool.query('UPDATE tracker_pages SET redirects_to=NULL, redirect_checked_at=NOW() WHERE id=$1', [pageId]).catch(()=>{});
+          const _reqPath = new URL(page.url).pathname.replace(/\/+$/,'');
+          const _finPath = new URL(liveResp.url).pathname.replace(/\/+$/,'');
+          if (liveResp.url && _finPath && _reqPath && _finPath.toLowerCase() !== _reqPath.toLowerCase()) {
+            await pool.query('UPDATE tracker_pages SET redirects_to=$1, redirect_checked_at=NOW() WHERE id=$2', [liveResp.url, pageId]).catch(()=>{});
+            _trSetStep(pageId, 'html_hash', 'done', '\u21aa\ufe0f Redirects to ' + liveResp.url + ' \u2014 this tracked URL is a 301; track the destination instead.');
+          } else {
+            await pool.query('UPDATE tracker_pages SET redirects_to=NULL, redirect_checked_at=NOW() WHERE id=$1', [pageId]).catch(()=>{});
+          }
         }
       } catch(e) {}
 
       if (liveResp.ok) {
         const liveHtml = await liveResp.text();
+        // Canonical-duplicate detection: if this page's canonical points to a DIFFERENT URL,
+        // Google already treats the canonical as the real one — this URL is not a competitor, just a duplicate.
+        try {
+          const _cm = liveHtml.match(/<link[^>]+rel=["']canonical["'][^>]*>/i);
+          if (_cm) {
+            const _hm = _cm[0].match(/href=["']([^"']+)["']/i);
+            if (_hm && _hm[1]) {
+              const _canonPath = new URL(_hm[1], page.url).pathname.replace(/\/+$/,'').toLowerCase();
+              const _selfPath = new URL(page.url).pathname.replace(/\/+$/,'').toLowerCase();
+              if (_canonPath && _selfPath && _canonPath !== _selfPath) {
+                await pool.query('UPDATE tracker_pages SET redirects_to=$1, redirect_checked_at=NOW() WHERE id=$2', ['(canonical \u2192 ' + _hm[1] + ')', pageId]).catch(()=>{});
+                _trSetStep(pageId, 'html_hash', 'done', '\ud83d\udd17 Canonical points to ' + _hm[1] + ' \u2014 Google treats THAT as the real page; track the canonical, not this duplicate.');
+              }
+            }
+          }
+        } catch(e) {}
         const suspicion = isSuspiciousHtml(liveHtml);
 
         if (!suspicion) {
