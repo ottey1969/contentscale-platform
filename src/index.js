@@ -1798,6 +1798,41 @@ app.post('/api/tracker-client/:token/analyze-gaps', async (req, res) => {
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
+// GET /api/tracker-client/:token/link-check — AUTOMATIC hub→spoke internal-link verification.
+// The tracker already holds each page's pasted HTML, so nobody needs to open pages by hand:
+// for every generic↔specific keyword pair, we check whether the hub's stored HTML links to the spoke.
+app.get('/api/tracker-client/:token/link-check', async (req, res) => {
+  try {
+    const cr = await pool.query("SELECT id FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status != 'deleted')", [req.params.token]);
+    if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
+    const pR = await pool.query("SELECT id, url, keyword, gsc_keyword, html_content FROM tracker_pages WHERE tracker_client_id=$1 AND (is_active=TRUE OR is_active IS NULL) LIMIT 100", [cr.rows[0].id]);
+    const norm = s => { try { return String(s||'').toLowerCase().replace(/[^\p{L}\p{N} ]/gu,' ').replace(/ +/g,' ').trim(); } catch(e) { return String(s||'').toLowerCase(); } };
+    const pathOf = u => { try { return new URL(u).pathname.replace(/\/+$/,'') || '/'; } catch(e) { return String(u||''); } };
+    const results = [];
+    for (let i = 0; i < pR.rows.length; i++) {
+      for (let j = 0; j < pR.rows.length; j++) {
+        if (i === j) continue;
+        const a = pR.rows[i], b = pR.rows[j];
+        const ka = norm(a.keyword || a.gsc_keyword), kb = norm(b.keyword || b.gsc_keyword);
+        if (!ka || !kb) continue;
+        const wa = ka.split(' ').filter(w => w.length >= 2), wb = kb.split(' ').filter(w => w.length >= 2);
+        if (!wa.length || !wb.length || wa.length >= wb.length) continue; // a must be the GENERIC one (fewer words)
+        const inter = wa.filter(w => wb.indexOf(w) > -1).length;
+        if (inter !== wa.length) continue; // containment: generic fully inside specific
+        // hub = a, spoke = b — does a's stored HTML link to b's path?
+        const spokePath = pathOf(b.url);
+        let status = 'no_html';
+        if (a.html_content) {
+          const html = a.html_content.toLowerCase();
+          status = (spokePath !== '/' && html.indexOf(spokePath.toLowerCase()) > -1) ? 'found' : 'missing';
+        }
+        results.push({ hub: pathOf(a.url) === '/' ? '(homepage)' : pathOf(a.url), spoke: spokePath === '/' ? '(homepage)' : spokePath, spoke_keyword: b.keyword || b.gsc_keyword, status, hub_id: a.id });
+      }
+    }
+    res.json({ success: true, checks: results, checked_at: new Date().toISOString() });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
 // POST /api/tracker-client/:token/gap-family-done — the user's own checkmark on an AI gap family.
 // Stores the family's queries in a persistent handled-set: they disappear from the raw gap list and
 // are EXCLUDED from the next AI analysis, so re-running "Sort this out for me" only sees open work.
@@ -29302,6 +29337,14 @@ var _gapQueries = null;
 var _sitemapSlugs = [];
 var _gapAnalysis = null;
 var _gapDone = [];
+var _linkChecks = [];
+function _linkStatusFor(hubSlug, spokeSlug) {
+  for (var i = 0; i < _linkChecks.length; i++) {
+    var c = _linkChecks[i];
+    if (c.hub === hubSlug && c.spoke === spokeSlug) return c.status;
+  }
+  return null;
+}
 function _gapQNorm(s){ return String(s||'').toLowerCase().replace(/\s+/g,' ').trim(); }
 function _famIsDone(f){
   var qs = (f.queries||[]).map(_gapQNorm).filter(Boolean);
@@ -29377,6 +29420,10 @@ async function loadImpressionGap() {
     _sitemapSlugs = (d && d.sitemap_slugs) || [];
     _gapAnalysis = (d && d.gap_analysis) || null;
     _gapDone = (d && d.gap_done) || [];
+    try {
+      var lc = await api('/link-check', 'GET');
+      _linkChecks = (lc && lc.checks) || [];
+    } catch(e) { _linkChecks = []; }
     renderImpressionGap();
     _computePushables();
     _computeCannibal();
@@ -29602,9 +29649,14 @@ function _computeCannibal() {
         var spoke = genericIsI ? slugOf(pages[j]) : slugOf(pages[i]);
         var _spokeKwSafe = genericIsI ? (pages[j].keyword||pages[j].gsc_keyword||'') : (pages[i].keyword||pages[i].gsc_keyword||'');
         var _hubKwSafe = genericIsI ? (pages[i].keyword||pages[i].gsc_keyword||'') : (pages[j].keyword||pages[j].gsc_keyword||'');
-        _cannibalIssues.push({ level: 'STRUCTURE', color: '#60a5fa', key: _hubKwSafe + '  \\u2192  ' + _spokeKwSafe,
+        var _autoLink = _linkStatusFor(hub, spoke);
+        _cannibalIssues.push({ level: 'STRUCTURE', color: _autoLink === 'found' ? '#16a34a' : '#60a5fa', autoLink: _autoLink, key: _hubKwSafe + '  \\u2192  ' + _spokeKwSafe,
           pages: [{ slug: hub }, { slug: spoke }],
-          advice: 'CHECK: does ' + hub + ' contain a link to ' + spoke + '? Direction matters \\u2014 the GENERAL page must link to the SPECIFIC page, not the other way around (Google follows links from broad to narrow to learn which page owns \\u201c' + _spokeKwSafe + '\\u201d; a back-link from the specific page adds nothing here). Link exists \\u2192 ignore this row forever. Missing \\u2192 open ' + hub + ', find where \\u201c' + _spokeKwSafe + '\\u201d is mentioned and make those words the link to ' + spoke + '. Not mentioned at all \\u2192 add one sentence, e.g. \\u201cSee our ' + _spokeKwSafe + ' guide\\u201d with the link. No merge, no 301 \\u2014 this setup is normally correct.' });
+          advice: (_autoLink === 'found'
+              ? 'AUTO-VERIFIED \\u2713 \\u2014 the stored HTML of ' + hub + ' already links to ' + spoke + '. Nothing to do; this row is resolved. (Re-verified automatically every time you paste fresh HTML.)'
+              : _autoLink === 'missing'
+              ? 'AUTO-CHECKED \\u2717 \\u2014 the stored HTML of ' + hub + ' contains NO link to ' + spoke + '. Add one sentence on ' + hub + ' where \\u201c' + _spokeKwSafe + '\\u201d is mentioned (or add it), with those words linking to ' + spoke + '. Then paste the new HTML \\u2014 this row resolves itself.'
+              : 'CANNOT AUTO-CHECK \\u2014 no HTML stored for ' + hub + ' yet. Paste its HTML (the HTML button on its card) and this check runs automatically. Manual alternative: does ' + hub + ' contain a link to ' + spoke + '? Direction matters \\u2014 the GENERAL page must link to the SPECIFIC page (Google follows links from broad to narrow to learn which page owns \\u201c' + _spokeKwSafe + '\\u201d). No merge, no 301 \\u2014 this setup is normally correct.') });
       } else if (jac >= 0.7) {
         _cannibalIssues.push({ level: 'LIKELY', color: '#fb923c', key: (pages[i].keyword||pages[i].gsc_keyword) + '  \\u2194  ' + (pages[j].keyword||pages[j].gsc_keyword),
           pages: [{ slug: slugOf(pages[i]) }, { slug: slugOf(pages[j]) }],
@@ -29647,7 +29699,11 @@ function _computeCannibal() {
   });
 
   var order = { PROVEN: 0, LIKELY: 1, POSSIBLE: 2, STRUCTURE: 3 };
-  _cannibalIssues.sort(function(a,b){ return order[a.level] - order[b.level]; });
+  _cannibalIssues.sort(function(a,b){
+    if (order[a.level] !== order[b.level]) return order[a.level] - order[b.level];
+    var av = a.autoLink === 'found' ? 1 : 0, bv = b.autoLink === 'found' ? 1 : 0;
+    return av - bv; // auto-verified structure rows sink below open ones
+  });
   _cannibalIssues = _cannibalIssues.slice(0, 15);
   renderCannibal();
 }
@@ -29684,6 +29740,8 @@ function renderCannibal() {
       + '<div style="display:flex;align-items:flex-start;gap:10px;">'
       + '<span style="font-size:12px;font-weight:800;color:#4b5563;width:22px;flex-shrink:0;text-align:right;">' + (i+1) + '</span>'
       + '<span style="font-size:9px;font-weight:800;color:' + c.color + ';border:1px solid ' + c.color + '55;border-radius:4px;padding:2px 7px;flex-shrink:0;white-space:nowrap;">' + c.level + '</span>'
+      + (c.autoLink === 'found' ? '<span style="font-size:9px;font-weight:800;color:#4ade80;flex-shrink:0;white-space:nowrap;" title="Auto-verified against the stored HTML: the link exists. Re-checked on every HTML paste.">\\u2713 LINK OK</span>' : '')
+      + (c.autoLink === 'missing' ? '<span style="font-size:9px;font-weight:800;color:#f87171;flex-shrink:0;white-space:nowrap;" title="Auto-checked against the stored HTML: the link is missing. Click the row for the exact fix.">\\u2717 LINK MISSING</span>' : '')
       + '<div style="flex:1;min-width:0;">'
       + '<div style="font-size:11px;color:#e5e7eb;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + String(c.key).replace(/</g,'&lt;') + '</div>'
       + '<div style="font-size:10px;color:#6b7280;font-family:monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + c.pages.map(function(p){ return p.slug + (p.pos != null ? ' (pos ' + p.pos.toFixed(1) + ')' : ''); }).join(c.level === 'STRUCTURE' ? '  \\u2192 must link to \\u2192  ' : '  vs  ') + '</div>'
