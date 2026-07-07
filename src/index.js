@@ -1199,6 +1199,7 @@ app.get('/api/tracker-client/:token', async (req, res) => {
               p.ranking_brief, p.needs_html, p.brief_started_at, p.brief_content, p.brief_check_count,
               p.html_pasted_at, p.html_source, p.last_graaf_score,
               (p.html_content IS NOT NULL AND p.html_content != '') as has_html_content,
+              p.redirects_to,
               s.google_position, s.ai_google_overview_cited, s.ai_perplexity_cited,
               s.ai_bing_cited, s.ai_brave_cited,
               s.score as graaf_score, s.checked_at as last_checked,
@@ -5090,6 +5091,8 @@ app.patch('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS gap_analysis TEXT`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS gap_analysis_at TIMESTAMPTZ`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS gap_done_queries TEXT`).catch(()=>{});
+  await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS redirects_to TEXT`).catch(()=>{});
+  await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS redirect_checked_at TIMESTAMPTZ`).catch(()=>{});
   // One-time sync of gsc_enabled with the plan rule (free ≤3 pages off, paid >3 on).
   // Guarded by a migration flag so it runs exactly ONCE — manual per-client overrides made afterwards survive every deploy.
   await client.query(`CREATE TABLE IF NOT EXISTS migration_flags (key TEXT PRIMARY KEY, applied_at TIMESTAMPTZ DEFAULT NOW())`).catch(()=>{});
@@ -21307,8 +21310,18 @@ function kickBulkWorker() {
 // Start the recurring worker
 // SAFETY: on boot, fail any bulk jobs stuck mid-run so they cannot resume a runaway loop
 (async () => { try { if (pool) { const rr = await pool.query("UPDATE content_bulk_jobs SET status='failed' WHERE status IN ('analysing','executing') RETURNING id"); if (rr.rowCount) console.warn('[bulk] Failed', rr.rowCount, 'stuck job(s) on boot'); } } catch(e) { console.warn('[bulk] boot cleanup:', e.message); } })();
-setInterval(bulkWorkerTick, BULK_WORKER_INTERVAL_MS);
-console.log(`[bulk] Worker interval started (every ${BULK_WORKER_INTERVAL_MS}ms)`);
+if (process.env.ENABLE_BULK_WORKER === '1') {
+  setInterval(bulkWorkerTick, BULK_WORKER_INTERVAL_MS);
+  console.log(`[bulk] Worker interval started (every ${BULK_WORKER_INTERVAL_MS}ms) — NOTE: this polls the DB every 5s and keeps Neon awake 24/7 (~6-9 CU-hrs/day). Disable ENABLE_BULK_WORKER when not actively using bulk jobs.`);
+} else {
+  console.log('[bulk] Worker DISABLED (ENABLE_BULK_WORKER != 1) — no interval registered, zero DB polling.');
+}
+// ── COMPUTE AUDIT (printed once at boot so Railway logs always show what can keep Neon awake) ──
+console.log('[compute-audit] Background DB touchers:'
+  + ' bulkWorker=' + (process.env.ENABLE_BULK_WORKER === '1' ? 'ON(5s!! keeps Neon awake 24/7)' : 'off')
+  + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER === '1' ? ('ON(every ' + (parseInt(process.env.TRACKER_SCHEDULER_MIN,10)||30) + 'min)') : 'off')
+  + ' | jobCleanup=6h | sessionCleanup=6h | htmlReminder=daily'
+  + ' | Open browser tabs poll only while VISIBLE (hidden tabs are silent). A visible TV wall (/view) polls every 60s and keeps Neon awake by design.');
 
 // ═══════════════════════════════════════════════════════════════════════
 // END BULK AUTOPILOT
@@ -28101,6 +28114,15 @@ function _csChart(s){
 var DOMAIN = '__DOMAIN__';
 var GSC_ENABLED = __GSC_ENABLED__;
 var DEMO_RO = __DEMO_RO__;
+// Neon compute saver for EVERYONE (owner included): a tab that is not visible stops polling completely.
+// One forgotten background tab used to keep the database awake 24/7 — the single biggest silent compute cost.
+(function(){
+  var _si0 = window.setInterval;
+  window.setInterval = function(fn, ms){
+    var wrapped = (typeof fn === 'function') ? function(){ if (document.hidden) return; return fn(); } : fn;
+    return _si0(wrapped, ms);
+  };
+})();
 if (DEMO_RO) {
   // Neon compute saver: viewers don't need 8-second freshness. Clamp every polling interval
   // registered after this point to >= 60s, and skip poll ticks while the tab is hidden.
@@ -28959,6 +28981,7 @@ function renderPages() {
         })()
       + '<div class="cs-url-line" style="font-size:12px;' + (isDone ? 'text-decoration:line-through;color:#4b5563;' : 'color:#e5e7eb;') + 'font-family:monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;border-radius:4px;padding:1px 4px;margin-left:-4px;" title="' + rawUrl + '">' + urlShort + '</div></div>'
       + '<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:4px;">' + badges + '</div>'
+      + (p.redirects_to ? '<div style="background:rgba(248,113,113,.1);border:1px solid #7f1d1d;border-radius:6px;padding:7px 10px;margin:4px 0;font-size:11px;color:#fca5a5;line-height:1.5;">\\u21aa\\ufe0f <b>This URL is a 301 redirect</b> \\u2192 <span style="font-family:monospace;color:#fecaca;">' + String(p.redirects_to).replace(/</g,"&lt;") + '</span><br>It is a dead URL and should not be tracked. <button onclick="removeRedirectedPage(' + p.id + ')" style="margin-top:4px;cursor:pointer;font-size:10px;font-weight:700;padding:3px 10px;border-radius:5px;background:#7f1d1d;border:1px solid #b91c1c;color:#fecaca;">Remove this dead page</button> then add the destination URL instead.</div>' : '')
       + _pushHtml
       + gscHtml
       + '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:4px;">'
@@ -29604,7 +29627,8 @@ function _computePushables() {
 var _cannibalIssues = [];
 function _computeCannibal() {
   _cannibalIssues = [];
-  var pages = _pages || [];
+  // Skip pages that are known 301 redirects — a dead URL is not a competing page (removes false conflicts)
+  var pages = (_pages || []).filter(function(p){ return !p.redirects_to; });
   if (pages.length < 2) { renderCannibal(); return; }
   var pById = {}; pages.forEach(function(p){ pById[p.id] = p; });
   var slugOf = function(p){ try { var s = new URL(p.url).pathname || '/'; return (s === '/' ? '(homepage)' : s); } catch(e) { return p.url; } };
@@ -29852,6 +29876,14 @@ function _tourMaybeAutoStart() {
   setTimeout(function(){ if (_tourIdx === -1) startTour(false); }, 1200);
 }
 
+async function removeRedirectedPage(pageId) {
+  if (!confirm('Remove this redirected (dead) URL from the tracker? Add the destination URL as a new page afterwards.')) return;
+  try {
+    await api('/pages/' + pageId, 'DELETE');
+    toast('Dead redirect removed \u2014 add the destination URL to track it.', '#4ade80');
+    loadPages();
+  } catch(e) { toast('Could not remove', '#f87171'); }
+}
 async function toggleManualDone(pageId, current) {
   var next = !current;
   try {
@@ -37865,6 +37897,18 @@ async function runTrackerCheck(page, geminiKey, keys, forceRescan = false) {
         },
         signal: AbortSignal.timeout(15000)
       });
+
+      // Redirect detection: fetch follows 301/302, so a differing final URL means this tracked URL is dead.
+      try {
+        const _reqPath = new URL(page.url).pathname.replace(/\/+$/,'');
+        const _finPath = new URL(liveResp.url).pathname.replace(/\/+$/,'');
+        if (liveResp.url && _finPath && _reqPath && _finPath.toLowerCase() !== _reqPath.toLowerCase()) {
+          await pool.query('UPDATE tracker_pages SET redirects_to=$1, redirect_checked_at=NOW() WHERE id=$2', [liveResp.url, pageId]).catch(()=>{});
+          _trSetStep(pageId, 'html_hash', 'done', '\u21aa\ufe0f Redirects to ' + liveResp.url + ' \u2014 this tracked URL is a 301; track the destination instead.');
+        } else {
+          await pool.query('UPDATE tracker_pages SET redirects_to=NULL, redirect_checked_at=NOW() WHERE id=$1', [pageId]).catch(()=>{});
+        }
+      } catch(e) {}
 
       if (liveResp.ok) {
         const liveHtml = await liveResp.text();
