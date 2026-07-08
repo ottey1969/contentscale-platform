@@ -31451,12 +31451,15 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
     var _hasQueryRows = pairs.some(function(p){ return p.isQueryOnly; });
     if (_assignWrap) {
       if (_hasQueryRows && (_pages||[]).length) {
+        // Sort pages A-Z by path so a long tracked-page list is easy to scan/find in the dropdown.
+        var _pagesSorted = (_pages||[]).map(function(tp){ var path=''; try { path = new URL(tp.url).pathname || '/'; } catch(e) { path = tp.url; } return { tp: tp, path: path }; })
+          .sort(function(a,b){ return a.path.localeCompare(b.path); });
         var _sel = '<select id="gscAssignPage" style="width:100%;background:#0d1117;border:1px solid #374151;border-radius:6px;color:#e5e7eb;font-size:11px;padding:6px;">'
           + '<option value="">Whole site (site-wide Queries CSV \\u2014 queries matched to pages automatically)</option>'
-          + (_pages||[]).map(function(tp){ var path=''; try { path = new URL(tp.url).pathname || '/'; } catch(e) { path = tp.url; } return '<option value="' + tp.id + '">These queries belong to: ' + path + ' (exported from GSC \\u2192 Pages \\u2192 this page)</option>'; }).join('')
+          + _pagesSorted.map(function(x){ return '<option value="' + x.tp.id + '">These queries belong to: ' + x.path + ' (exported from GSC \u2192 Pages \u2192 this page)</option>'; }).join('')
           + '</select>';
         var _existingSiteWide = (_gapQueries || []).filter(function(g){ return !g.page_id; }).length;
-        var _warnNote = _existingSiteWide > 20 ? '<div style="font-size:10px;color:#f59e0b;margin-top:4px;">\u26a0 You have ' + _existingSiteWide + ' site-wide queries stored. Leaving this on \u201cWhole site\u201d will DELETE and replace all of them \u2014 pick a specific page above if this paste is a per-page export.</div>' : '';
+        var _warnNote = _existingSiteWide > 20 ? '<div style="font-size:10px;color:#f59e0b;margin-top:4px;">\u26a0 You have ' + _existingSiteWide + ' site-wide queries stored. Leaving this on \u201cWhole site\u201d will DELETE and replace all of them \u2014 pick the specific page in the Query ownership dropdown above if this paste is a per-page export.</div>' : '';
         _assignWrap.innerHTML = '<div style="font-size:10px;font-weight:700;color:#9ca3af;margin:8px 0 4px;">Query ownership</div>' + _sel + _warnNote;
         _assignWrap.style.display = 'block';
       } else { _assignWrap.style.display = 'none'; _assignWrap.innerHTML = ''; }
@@ -31543,7 +31546,7 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
         _hdr.innerHTML = '\\u2713 This CSV updates <b>' + _uniqMatched.length + '</b> tracked page' + (_uniqMatched.length>1?'s':'') + ': <span style="font-family:monospace;color:#4ade80;">' + _uniqMatched.join(', ').replace(/</g,'&lt;') + '</span>';
       } else if (pairs[0] && pairs[0].isQueryOnly) {
         _hdr.style.cssText = 'background:rgba(251,191,36,.08);border:1px solid #f59e0b;border-radius:8px;padding:9px 12px;margin-bottom:10px;font-size:12px;color:#fde68a;line-height:1.5;';
-        _hdr.innerHTML = '\\u26a0 Queries-only CSV (no page column). These keywords attach to your homepage \\u2014 set the right page per row after import, or paste a Pages+Queries export to auto-match.';
+        _hdr.innerHTML = '\\u26a0 Queries-only CSV (no page column). These keywords attach to your homepage by default \\u2014 pick the correct page in the Query ownership dropdown above before importing, or paste a Pages+Queries export to auto-match.';
       } else {
         _hdr.style.cssText = 'background:rgba(96,165,250,.08);border:1px solid #3b82f6;border-radius:8px;padding:9px 12px;margin-bottom:10px;font-size:12px;color:#bfdbfe;line-height:1.5;';
         _hdr.innerHTML = '\\u2139 None of these URLs match a tracked page yet \\u2014 they will be added as NEW pages (uses free slots).';
