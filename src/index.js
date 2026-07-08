@@ -31495,10 +31495,6 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
     });
     pairs.forEach(function(p,i){ p._rank = i+1; });
 
-    // If queries-only, show info
-    if (pairs[0] && pairs[0].isQueryOnly) {
-      toast('Queries CSV detected \\u2014 ' + pairs.length + ' keywords found. URLs will be set to your homepage. Edit per page after import.', '#fbbf24');
-    }
 
     var container = document.getElementById('gscItems');
     var countEl = document.getElementById('gscCount');
