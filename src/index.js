@@ -1,4 +1,4 @@
-console.log('=== CONTENTSCALE BOOT v2026-07-02-fixes7 | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON ===');
+console.log('=== CONTENTSCALE BOOT v2026-07-08-cannibal-possible-fix | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON | possibleThreshold=20impr ===');
 // CONTENTSCALE SERVER.JS — ELITE EDITION v4 (FIXED v3)
 // ✅ FIX v7: secondary_keywords + related_keywords auto in Analyse JSON + Execute prompt
 // ✅ FIX v7: analysis_data JSONB safe parse in execute-rewrite
@@ -29913,7 +29913,7 @@ function renderCannibal() {
   var _diagGapQ50 = (_gapQueries||[]).filter(function(g){ return !g.page_id && (g.impressions||0) >= 20; }).length;
   var _diagPoss = _cannibalIssues.filter(function(c){ return c.level === 'POSSIBLE'; }).length;
   if (!_cannibalIssues.length) {
-    host.innerHTML = '<div style="padding:10px 14px;font-size:11px;color:#6b7280;line-height:1.6;">No cannibalization rows right now. <span style="color:#4b5563;">(' + _diagTotal + ' pages, ' + _diagRedir + ' redirected/excluded, ' + _diagGapQ + ' site-wide queries of which ' + _diagGapQ50 + ' have \u226550 impressions \u2014 POSSIBLE rows need \u226520 impr and a query that fits two live pages within 15%.)</span></div>';
+    host.innerHTML = '<div style="padding:10px 14px;font-size:11px;color:#6b7280;line-height:1.6;">No cannibalization rows right now. <span style="color:#4b5563;">(' + _diagTotal + ' pages, ' + _diagRedir + ' redirected/excluded, ' + _diagGapQ + ' site-wide queries of which ' + _diagGapQ50 + ' have \u226520 impressions \u2014 POSSIBLE rows need \u226520 impr and a query that fits two live pages within 15%.)</span></div>';
     return;
   }
   // Shortcut: many yellow rows share the same page pair — count the UNIQUE pages one needs to export
@@ -29930,7 +29930,7 @@ function renderCannibal() {
     + '<span style="font-size:10px;color:#9ca3af;"><b style="color:#facc15;">POSSIBLE</b> \\u2192 upload BOTH pages\\u2019 Queries CSV first, then see</span>'
     + '<span style="font-size:10px;color:#9ca3af;"><b style="color:#60a5fa;">STRUCTURE</b> \\u2192 check ONE link: general page \\u2192 specific page</span>'
     + '</div>'
-    + '<div style="padding:6px 14px;border-bottom:1px solid #1f2937;background:#0a0e14;font-size:10px;color:#6b7280;line-height:1.5;">\\ud83d\\udd0e ' + _diagTotal + ' pages \\u00b7 ' + _diagRedir + ' redirected/excluded \\u00b7 ' + _diagGapQ + ' site-wide queries (' + _diagGapQ50 + ' with \\u226550 impr) \\u00b7 ' + _diagPoss + ' POSSIBLE found. <span style="color:#4b5563;">POSSIBLE needs a query \\u226550 impr that fits two LIVE pages within 15%. If 0: either impressions are under 50, or the matching pages are redirected/excluded.</span></div>';
+    + '<div style="padding:6px 14px;border-bottom:1px solid #1f2937;background:#0a0e14;font-size:10px;color:#6b7280;line-height:1.5;">\\ud83d\\udd0e ' + _diagTotal + ' pages \\u00b7 ' + _diagRedir + ' redirected/excluded \\u00b7 ' + _diagGapQ + ' site-wide queries (' + _diagGapQ50 + ' with \\u226520 impr) \\u00b7 ' + _diagPoss + ' POSSIBLE found. <span style="color:#4b5563;">POSSIBLE needs a query \\u226520 impr that fits two LIVE pages within 15%. If 0: either impressions are under 20, or the matching pages are redirected/excluded.</span></div>';
   var rows = _cannibalIssues.map(function(c, i){
     return '<div onclick="toggleCannAdvice(' + i + ')" style="padding:8px 12px;border-bottom:1px solid #1f2937;cursor:pointer;">'
       + '<div style="display:flex;align-items:flex-start;gap:10px;">'
