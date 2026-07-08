@@ -4373,6 +4373,17 @@ app.post('/api/admin/tracker-clients/:id/live-wall', verifyAdmin, async (req, re
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
+// POST /api/admin/tracker-clients/:id/brief-language — sets the language BOTH the GSC Brief and
+// Citation Brief are written in for this client. A Spanish client gets a Spanish brief, a Dutch
+// client a Dutch one, etc. — the owner reads it in their own language without needing to translate.
+app.post('/api/admin/tracker-clients/:id/brief-language', verifyAdmin, async (req, res) => {
+  try {
+    const lang = String(req.body.language || 'en').trim().toLowerCase().slice(0, 10);
+    await pool.query('UPDATE tracker_clients SET brief_language = $1 WHERE id = $2', [lang, req.params.id]);
+    res.json({ success: true, brief_language: lang });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
 app.post('/api/admin/tracker-clients/:id/board-toggle', verifyAdmin, async (req, res) => {
   try {
     const enabled = req.body.enabled === true || req.body.enabled === 'true';
@@ -5279,6 +5290,7 @@ app.patch('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS ro_views INTEGER DEFAULT 0`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS ro_last_view TIMESTAMPTZ`).catch(()=>{});
   console.log('[boot-stamp] before gap/redirect columns');
+  await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS brief_language VARCHAR(10) DEFAULT 'en'`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS gap_analysis TEXT`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS gap_analysis_at TIMESTAMPTZ`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS gap_done_queries TEXT`).catch(()=>{});
@@ -35161,6 +35173,28 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 }; })(c.id, !!c.gsc_enabled);
                 togglesRow.appendChild(gscBtn);
 
+                // ── Brief language: which language the GSC + Citation brief are WRITTEN in. Default
+                // "Auto" detects from the page's own content (<html lang>, text fallback) — set a
+                // specific language to override, e.g. a Spanish-speaking owner reading English-content
+                // pages in Spanish. Applies to every scan/brief for this client going forward.
+                var langSel = document.createElement('select');
+                langSel.className = 'tr-btn';
+                langSel.title = 'Brief language \\u2014 what language the GSC Brief and Citation Brief are written in. Auto detects the page\\u2019s own language automatically; pick a specific one to override (e.g. a Spanish-reading owner whose pages are in English).';
+                langSel.style.cssText = 'font-size:10px;padding:3px 6px;background:#0d1117;border:1px solid #374151;color:#9ca3af;border-radius:6px;';
+                var _langOpts = [['auto','\\ud83c\\udf10 Auto'],['en','English'],['es','Espa\\u00f1ol'],['nl','Nederlands'],['de','Deutsch'],['fr','Fran\\u00e7ais'],['pt','Portugu\\u00eas'],['it','Italiano'],['pl','Polski'],['tr','T\\u00fcrk\\u00e7e'],['ar','\\u0627\\u0644\\u0639\\u0631\\u0628\\u064a\\u0629'],['zh','\\u4e2d\\u6587'],['ja','\\u65e5\\u672c\\u8a9e'],['ko','\\ud55c\\uad6d\\uc5b4'],['ru','\\u0420\\u0443\\u0441\\u0441\\u043a\\u0438\\u0439'],['hi','\\u0939\\u093f\\u0928\\u094d\\u0926\\u0940']];
+                var _curLang = c.brief_language || 'auto';
+                langSel.innerHTML = _langOpts.map(function(o){ return '<option value="' + o[0] + '"' + (o[0]===_curLang?' selected':'') + '>' + o[1] + '</option>'; }).join('');
+                langSel.onchange = (function(id){ return function(){
+                    var selEl = this;
+                    apiCall('/api/admin/tracker-clients/' + id + '/brief-language', 'POST', { language: this.value })
+                      .then(function(){
+                        selEl.style.borderColor = '#4ade80';
+                        setTimeout(function(){ selEl.style.borderColor = '#374151'; }, 1200);
+                      })
+                      .catch(function(e){ alert('Failed to update brief language: ' + e.message); });
+                }; })(c.id);
+                togglesRow.appendChild(langSel);
+
                 // ── Demo read-only toggle: safe share link for prospects ──
                 var roBtn = document.createElement('button');
                 roBtn.className = 'tr-btn';
@@ -38898,10 +38932,18 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
       const rawHtml = page.html_content || '';
       const htmlExcerpt = rawHtml.substring(0, 8000);
       // ── Auto language: write the brief in the page's OWN language (from <html lang>, content fallback) ──
-      const _briefLang = detectContentLanguage(rawHtml);
-      const _langNames = { en:'English', nl:'Dutch', de:'German', fr:'French', es:'Spanish', it:'Italian', pt:'Portuguese', pl:'Polish', da:'Danish', sv:'Swedish', no:'Norwegian', fi:'Finnish' };
+      // OVERRIDE: if the client explicitly set a brief_language (owner reads a different language than
+      // the page content itself, e.g. an English page for a Spanish-speaking client), that wins.
+      let _briefLang = detectContentLanguage(rawHtml);
+      try {
+        if (page.tracker_client_id) {
+          const _langR = await pool.query('SELECT brief_language FROM tracker_clients WHERE id=$1', [page.tracker_client_id]);
+          if (_langR.rows.length && _langR.rows[0].brief_language && _langR.rows[0].brief_language !== 'auto') _briefLang = _langR.rows[0].brief_language;
+        }
+      } catch(e) {}
+      const _langNames = { en:'English', nl:'Dutch', de:'German', fr:'French', es:'Spanish', it:'Italian', pt:'Portuguese', pl:'Polish', da:'Danish', sv:'Swedish', no:'Norwegian', fi:'Finnish', tr:'Turkish', ar:'Arabic', zh:'Chinese', ja:'Japanese', ko:'Korean', ru:'Russian', hi:'Hindi' };
       const _langName = _langNames[_briefLang] || 'English';
-      const _langDirective = (_briefLang === 'en') ? '' : ('\n\nLANGUAGE REQUIREMENT: This page is written in ' + _langName + '. Write ALL brief output — every title, action, passage, signal and impact line — in ' + _langName + '. Keep URLs, brand names, HTML tags/attributes, schema and code exactly as-is (do not translate those).');
+      const _langDirective = (_briefLang === 'en') ? '' : ('\n\nLANGUAGE REQUIREMENT: Write ALL brief output — every title, action, passage, signal and impact line — in ' + _langName + '. Keep URLs, brand names, HTML tags/attributes, schema and code exactly as-is (do not translate those).');
       // ── Presence detection on the FULL page so the brief never re-recommends what already exists ──
       const _onPage = {
         def: /id=["']?direct-answer|class=["'][^"']*direct-answer|is (a|the) (leading|strategic|systematic|premier|content)/i.test(rawHtml),
