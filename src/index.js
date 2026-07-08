@@ -1758,17 +1758,20 @@ app.post('/api/tracker-client/:token/gsc-queries', async (req, res) => {
     }
     if (pageId) await pool.query('DELETE FROM tracker_gsc_queries WHERE tracker_client_id=$1 AND page_id=$2', [clientId, pageId]);
     else await pool.query('DELETE FROM tracker_gsc_queries WHERE tracker_client_id=$1 AND page_id IS NULL', [clientId]);
-    let saved = 0;
+    let saved = 0, failed = 0;
     for (const q of queries) {
       const text = String(q.query || '').trim().substring(0, 300);
       if (!text) continue;
-      await pool.query(
-        'INSERT INTO tracker_gsc_queries (tracker_client_id, page_id, query, clicks, impressions, position) VALUES ($1,$2,$3,$4,$5,$6)',
-        [clientId, pageId, text, Math.round(q.clicks || 0), Math.round(q.impressions || 0), q.position || null]
-      ).catch(()=>{});
-      saved++;
+      try {
+        await pool.query(
+          'INSERT INTO tracker_gsc_queries (tracker_client_id, page_id, query, clicks, impressions, position) VALUES ($1,$2,$3,$4,$5,$6)',
+          [clientId, pageId, text, Math.round(q.clicks || 0), Math.round(q.impressions || 0), q.position || null]
+        );
+        saved++;
+      } catch(e) { failed++; console.error('[gsc-queries] insert failed:', text.slice(0,60), e.message); }
     }
-    res.json({ success: true, saved, page_id: pageId });
+    if (failed > 0) console.warn('[gsc-queries] ' + failed + ' of ' + queries.length + ' rows failed to save for client ' + clientId);
+    res.json({ success: true, saved, failed, total: queries.length, page_id: pageId });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
@@ -31219,7 +31222,24 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
     var raw = document.getElementById('importGscData').value.trim();
     if (!raw) { toast('Paste or drop GSC data first', '#f87171'); return; }
     var nl = String.fromCharCode(10);
-    var lines = raw.split(nl).map(function(l){ return l.trim(); }).filter(Boolean);
+    var _rawLines = raw.split(nl);
+    // Quote-aware line reconstruction: a CSV field containing a comma (e.g. "roof repair near
+    // hasbrouck heights, nj") or an embedded newline is wrapped in double quotes per CSV spec, but a
+    // blind split('\\n') breaks a multi-line quoted field into several garbled fragments \\u2014 one bad
+    // export row could otherwise corrupt or silently truncate everything parsed after it. Re-merge any
+    // line with an unterminated (odd) quote count into the following line(s) until quotes balance.
+    var lines = [];
+    for (var _li = 0; _li < _rawLines.length; _li++) {
+      var _cur = _rawLines[_li];
+      var _quotes = (_cur.match(/"/g) || []).length;
+      while (_quotes % 2 === 1 && _li + 1 < _rawLines.length) {
+        _li++;
+        _cur += ' ' + _rawLines[_li];
+        _quotes = (_cur.match(/"/g) || []).length;
+      }
+      var _t = _cur.trim();
+      if (_t) lines.push(_t);
+    }
 
     // ── GSC web-UI copy-paste support ─────────────────────────────────────
     // Copying the table straight from the GSC Performance page (not the CSV export) produces:
@@ -31288,13 +31308,28 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
     lines.forEach(function(line, idx) {
       if (idx === 0 && (isQueriesCSV || isPagesCSV)) return; // skip header
 
-      // Strip BOM and quotes
-      line = line.replace(/^\\ufeff/, '').replace(/^"|"$/g, '');
+      // Strip BOM
+      line = line.replace(/^\ufeff/, '');
 
       // Split tab-first: a tab-separated line (UI paste) may contain thousand separators like "6,211"
       // that a blind comma-split would destroy. Only split on comma when there is no tab.
       var _tab = String.fromCharCode(9);
-      var parts = (line.indexOf(_tab) > -1 ? line.split(_tab) : line.split(',')).map(function(p){ return p.replace(/^"|"$/g,'').trim(); });
+      var parts;
+      if (line.indexOf(_tab) > -1) {
+        parts = line.split(_tab).map(function(p){ return p.replace(/^"|"$/g,'').trim(); });
+      } else {
+        // Quote-aware comma split: a query like "roof repair near hasbrouck heights, nj" is CSV-quoted
+        // because it contains a comma \u2014 a blind split(',') would break it into two fields and shift
+        // every column after it (clicks becomes the city name, impressions becomes the real clicks, etc).
+        parts = []; var _cur = ''; var _inQ = false;
+        for (var _ci = 0; _ci < line.length; _ci++) {
+          var _ch = line[_ci];
+          if (_ch === '"') { _inQ = !_inQ; continue; }
+          if (_ch === ',' && !_inQ) { parts.push(_cur.trim()); _cur = ''; continue; }
+          _cur += _ch;
+        }
+        parts.push(_cur.trim());
+      }
 
       if (isQueriesCSV) {
         // Format: query, clicks, impressions, CTR, position
@@ -31343,6 +31378,7 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
 
     if (!pairs.length) { toast('No valid data found. Try: GSC Queries CSV, Pages CSV, or URL | keyword format', '#f87171'); return; }
     window._lastGscPairs = pairs; // full parsed set — import ships the query rows to the Impression Gap store
+    toast('Parsed ' + pairs.length + ' row' + (pairs.length===1?'':'s') + ' from your paste \u2014 review the list below before importing.', '#60a5fa');
     // Per-page assignment: a Queries CSV exported from GSC → Pages → [one page] → Queries belongs to ONE page.
     // Show the selector only when query rows are present, so the owner can be set exactly (no matching guesswork).
     var _assignWrap = document.getElementById('gscAssignWrap');
@@ -31540,7 +31576,7 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
       if (_qRows.length) {
         var dq = await api('/gsc-queries', 'POST', { queries: _qRows, page_id: _assignPageId || undefined });
         if (dq && dq.success) {
-          toast('Saved ' + (dq.saved || _qRows.length) + ' queries' + (_assignPageId ? ' for the selected page' : '') + ' \\u2014 pushable queries update now', '#4ade80');
+          toast('Saved ' + (dq.saved || 0) + ' of ' + _qRows.length + ' queries' + (_assignPageId ? ' for the selected page' : '') + ' \u2014 pushable queries update now', (dq.saved === _qRows.length) ? '#4ade80' : '#f59e0b');
           hideModal('importModal');
           try { loadImpressionGap(); } catch(e) {}
         } else { toast((dq && dq.error) || 'Could not save queries', '#f87171'); }
