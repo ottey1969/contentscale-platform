@@ -31436,7 +31436,8 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
     var countEl = document.getElementById('gscCount');
     var list = document.getElementById('gscList');
     if (list) list.style.display = 'block';
-    var maxSel = Math.min(MAX_PAGES, pairs.length);
+    var _isPureQueryImport = pairs.length && pairs.every(function(p){ return p.isQueryOnly; });
+    var maxSel = _isPureQueryImport ? Math.min(500, pairs.length) : Math.min(MAX_PAGES, pairs.length);
 
     // Match each parsed URL against the pages already in the tracker (same normalization as the server)
     // so the preview shows UPDATE (refresh existing slot) vs NEW (needs a free slot) before importing.
@@ -31465,7 +31466,7 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
       countEl,
       maxSel
     );
-    if (countEl) countEl.textContent = pairs.length + ' found \\u2014 ' + _updCount + ' match your tracked pages (will update in place) \\u00b7 ' + _newCount + ' new \\u00b7 ' + maxSel + ' slots max';
+    if (countEl) countEl.textContent = pairs.length + ' found \u2014 ' + _updCount + ' match your tracked pages (will update in place) \u00b7 ' + _newCount + ' new \u00b7 ' + maxSel + (_isPureQueryImport ? ' keywords selected (no page-slot limit for query-only data)' : ' slots max');
     // Certainty banner: name the exact tracked pages this CSV will update, so the owner can confirm
     // they pasted the right export before importing (prevents "is this roof-leak or roof-repair?" doubt).
     var _hdr = document.getElementById('gscMatchHdr');
