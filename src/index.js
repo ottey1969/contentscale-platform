@@ -1779,15 +1779,29 @@ app.post('/api/tracker-client/:token/analyze-gaps', async (req, res) => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { temperature: 0.2, maxOutputTokens: 3000 } })
     });
-    const gData = await gResp.json();
+    const gRawText = await gResp.text();
+    let gData = null;
+    try { gData = JSON.parse(gRawText); } catch(e) {
+      console.error('[analyze-gaps] Gemini returned non-JSON response:', gRawText.slice(0, 500));
+      return res.status(502).json({ success: false, error: 'AI service returned an invalid response \u2014 try again in a moment.' });
+    }
+    if (!gResp.ok || gData.error) {
+      console.error('[analyze-gaps] Gemini API error:', JSON.stringify(gData.error || gData).slice(0, 500));
+      return res.status(502).json({ success: false, error: 'AI service error: ' + (gData.error?.message || ('HTTP ' + gResp.status)) });
+    }
     let txt = '';
-    try { txt = gData.candidates[0].content.parts.map(p => p.text || '').join(''); } catch(e) {}
+    try { txt = gData.candidates[0].content.parts.map(p => p.text || '').join(''); } catch(e) {
+      console.error('[analyze-gaps] Unexpected Gemini response shape:', JSON.stringify(gData).slice(0, 500));
+    }
     txt = txt.replace(/```json|```/g, '').trim();
     let parsed = null;
     try { parsed = JSON.parse(txt); } catch(e) {
       const mJ = txt.match(/\{[\s\S]*\}/); if (mJ) { try { parsed = JSON.parse(mJ[0]); } catch(e2) {} }
     }
-    if (!parsed || !Array.isArray(parsed.families)) return res.status(500).json({ success: false, error: 'AI returned an unusable answer \u2014 try again.' });
+    if (!parsed || !Array.isArray(parsed.families)) {
+      console.error('[analyze-gaps] Could not parse families JSON from Gemini text:', txt.slice(0, 500));
+      return res.status(502).json({ success: false, error: 'AI returned an unusable answer \u2014 try again.' });
+    }
     // Hard safety: drop any SECTION/TRACK_EXISTING whose target is not a real known URL
     const known = new Set(pR.rows.map(p => p.url).concat(sitemapSlugs));
     parsed.families = parsed.families.filter(f => {
@@ -1796,7 +1810,10 @@ app.post('/api/tracker-client/:token/analyze-gaps', async (req, res) => {
     });
     await pool.query('UPDATE tracker_clients SET gap_analysis=$1, gap_analysis_at=NOW() WHERE id=$2', [JSON.stringify(parsed), client.id]);
     res.json({ success: true, analysis: parsed, analyzed_at: new Date().toISOString() });
-  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+  } catch(e) {
+    console.error('[analyze-gaps] Unhandled error:', e.message, e.stack ? e.stack.split('\n').slice(0,3).join(' | ') : '');
+    res.status(500).json({ success: false, error: e.message });
+  }
 });
 
 // GET /api/tracker-client/:token/link-check — AUTOMATIC hub→spoke internal-link verification.
