@@ -1771,13 +1771,13 @@ app.post('/api/tracker-client/:token/analyze-gaps', async (req, res) => {
       + 'TRACKED PAGES (the ONLY pages you may name for SECTION verdicts):\n' + pR.rows.map(p => '- ' + p.url + (p.keyword||p.gsc_keyword ? ' [keyword: ' + (p.keyword||p.gsc_keyword) + ']' : '')).join('\n') + '\n\n'
       + (sitemapSlugs.length ? 'SITEMAP PAGES (exist but untracked \u2014 the ONLY pages you may name for TRACK_EXISTING):\n' + sitemapSlugs.map(u => '- ' + u).join('\n') + '\n\n' : '')
       + 'QUERIES (query | impressions | position):\n' + qR.rows.map(q => q.query + ' | ' + q.impressions + ' | ' + (q.position ? parseFloat(q.position).toFixed(1) : '?')).join('\n') + '\n\n'
-      + 'RULES: 1) Treat close variants (roofer/roofing/roof repair, singular/plural, nj/new jersey) as ONE family. 2) Prefer SECTION on an existing tracked page over NEW_PAGE \u2014 only advise NEW_PAGE when no tracked or sitemap page can own the intent. 3) NEVER invent URLs: SECTION target must be copied verbatim from TRACKED PAGES, TRACK_EXISTING verbatim from SITEMAP PAGES. 4) For NEW_PAGE propose a lowercase-hyphen slug. 5) Every family needs a one-sentence action in plain language a non-SEO owner can execute.\n\n'
+      + 'RULES: 1) Treat close variants (roofer/roofing/roof repair, singular/plural, nj/new jersey) as ONE family. 2) Prefer SECTION on an existing tracked page over NEW_PAGE \u2014 only advise NEW_PAGE when no tracked or sitemap page can own the intent. 3) NEVER invent URLs: SECTION target must be copied verbatim from TRACKED PAGES, TRACK_EXISTING verbatim from SITEMAP PAGES. 4) For NEW_PAGE propose a lowercase-hyphen slug. 5) Every family needs a one-sentence action in plain language a non-SEO owner can execute. 6) KEEP THE JSON COMPACT: list at most 8 example queries per family (never all of them), and keep "reason" and "action" each under 20 words. This is critical \u2014 an oversized response gets cut off and becomes unusable.\n\n'
       + 'Return ONLY JSON, no markdown: {"families":[{"name":"short family name","queries":["..."],"total_impressions":123,"verdict":"SECTION|NEW_PAGE|TRACK_EXISTING|IGNORE","target":"url or slug or empty","reason":"one sentence","action":"one sentence, imperative"}]}';
 
     const gResp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${geminiKey}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { temperature: 0.2, maxOutputTokens: 3000 } })
+      body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { temperature: 0.2, maxOutputTokens: 8000 } })
     });
     const gRawText = await gResp.text();
     let gData = null;
@@ -1798,8 +1798,29 @@ app.post('/api/tracker-client/:token/analyze-gaps', async (req, res) => {
     try { parsed = JSON.parse(txt); } catch(e) {
       const mJ = txt.match(/\{[\s\S]*\}/); if (mJ) { try { parsed = JSON.parse(mJ[0]); } catch(e2) {} }
     }
+    // Repair attempt: Gemini hit the token limit mid-object. Salvage every COMPLETE family object
+    // (i.e. everything up to the last balanced '},' before the cutoff) instead of discarding the whole response.
     if (!parsed || !Array.isArray(parsed.families)) {
-      console.error('[analyze-gaps] Could not parse families JSON from Gemini text:', txt.slice(0, 500));
+      try {
+        const arrStart = txt.indexOf('"families"');
+        if (arrStart > -1) {
+          const bracketStart = txt.indexOf('[', arrStart);
+          if (bracketStart > -1) {
+            let depth = 0, lastCompleteEnd = -1;
+            for (let ci = bracketStart; ci < txt.length; ci++) {
+              if (txt[ci] === '{') depth++;
+              else if (txt[ci] === '}') { depth--; if (depth === 0) lastCompleteEnd = ci; }
+            }
+            if (lastCompleteEnd > -1) {
+              const repaired = '{"families":' + txt.slice(bracketStart, lastCompleteEnd + 1) + ']}';
+              try { parsed = JSON.parse(repaired); console.warn('[analyze-gaps] Repaired a truncated response \u2014 salvaged', parsed.families.length, 'complete families.'); } catch(e3) {}
+            }
+          }
+        }
+      } catch(e4) {}
+    }
+    if (!parsed || !Array.isArray(parsed.families) || !parsed.families.length) {
+      console.error('[analyze-gaps] Could not parse families JSON from Gemini text (length ' + txt.length + '):', txt.slice(0, 800));
       return res.status(502).json({ success: false, error: 'AI returned an unusable answer \u2014 try again.' });
     }
     // Hard safety: drop any SECTION/TRACK_EXISTING whose target is not a real known URL
