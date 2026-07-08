@@ -1050,7 +1050,7 @@ app.use(async (req, res, next) => {
     if (req.method !== 'GET') {
       const r = await pool.query('SELECT demo_readonly FROM tracker_clients WHERE token=$1', [tok]);
       if (r.rows.length && r.rows[0].demo_readonly === true) {
-        return res.status(403).json({ success: false, error: 'Demo mode \u2014 this tracker is read-only. Changes are disabled on shared demo links.' });
+        return res.status(403).json({ success: false, error: 'This is a read-only view \u2014 the live data is real, but editing is disabled on the shared link.' });
       }
     }
   } catch(e) {}
@@ -28138,7 +28138,7 @@ if (DEMO_RO) {
     // Banner with CTA \u2014 the demo should sell, not just inform
     var b = document.createElement('div');
     b.style.cssText = 'position:sticky;top:0;z-index:999;background:linear-gradient(90deg,#4c1d95,#6d28d9);color:#ede9fe;font-size:12px;font-weight:700;text-align:center;padding:8px 14px;letter-spacing:.03em;';
-    b.innerHTML = '\ud83d\udc41 LIVE DEMO \u2014 real data, read-only. Like what you see? <a href="https://contentscale.site/free-ai-citations-tracker/" target="_blank" rel="noopener" style="color:#fde68a;text-decoration:underline;font-weight:800;">Get your own tracker free \u2192</a>';
+    b.innerHTML = '\ud83d\udc41 LIVE \u00b7 read-only view of real tracking data. Want this for your own site? <a href="https://contentscale.site/free-ai-citations-tracker/" target="_blank" rel="noopener" style="color:#fde68a;text-decoration:underline;font-weight:800;">Start free \u2192</a>';
     document.body.insertBefore(b, document.body.firstChild);
     // Floating CTA \u2014 stays in view while they scroll through queue, briefs, conflicts
     var f = document.createElement('a');
@@ -34763,8 +34763,8 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 // ── Demo read-only toggle: safe share link for prospects ──
                 var roBtn = document.createElement('button');
                 roBtn.className = 'tr-btn';
-                roBtn.textContent = c.demo_readonly ? '\ud83d\udc41 Demo RO' : 'Demo off';
-                roBtn.title = c.demo_readonly ? 'READ-ONLY demo is ON \u2014 the /track link can be shared safely: visitors see everything, can change nothing. Click to turn off.' : 'Turn this client into a read-only demo: share the /track link with prospects, all edits are blocked server-side. Click to enable.';
+                roBtn.textContent = c.demo_readonly ? '\ud83d\udc41 Read-only ON' : 'Read-only off';
+                roBtn.title = c.demo_readonly ? 'Read-only mode is ON \u2014 the /track link shows real live data but blocks all edits. Safe to share. Click to turn off.' : 'Make the /track link read-only: visitors see the real live tracker, all edits blocked server-side. Nothing fake, just view-only. Click to enable.';
                 roBtn.style.cssText = 'font-size:10px;padding:3px 8px;border-color:' + (c.demo_readonly ? '#a78bfa' : '#374151') + ';color:' + (c.demo_readonly ? '#a78bfa' : '#6b7280') + ';';
                 roBtn.onclick = (function(id, current){ return function(){
                     updateTcClient(id, {demo_readonly: !current});
