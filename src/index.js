@@ -38711,7 +38711,10 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
                       _gapContext = '\n\nIMPRESSION-GAP QUERIES FOR THIS PAGE (real GSC data, owner-verified as open work — do NOT guess an adjacent intent, use these):\n'
                         + _open.slice(0, 3).map((f, i) => (i+1) + '. Family "' + (f.name||'') + '" (' + (f.total_impressions||0) + ' impressions): ' + (f.queries||[]).slice(0, 5).join(' | '))
                           .join('\n')
-                        + '\nRule: your impression-growth action MUST be a question-form H2 (with 40-60 word answer) targeting the highest-impression family above. Quote the query verbatim in the heading where natural. These are proven searches Google already shows this site for.';
+                        + '\n\nWRITE THE SECTION, DO NOT JUST DESCRIBE IT. For the highest-impression family above, output a ready-to-paste section INSIDE this brief, clearly marked, containing:\n'
+                        + '  \u2022 One question-form H2 that quotes the query verbatim where natural (e.g. "<h2>How fast can you get emergency roof repair in NJ?</h2>").\n'
+                        + '  \u2022 A 40-60 word answer directly below it, answer-first, specific, entity-anchored to this business.\n'
+                        + 'HARD RULES for the written section: (1) NEVER invent numbers, dates, prices, certifications, review counts or guarantees \u2014 if a real figure would strengthen it, write a placeholder like [OWNER: insert response time] so the owner fills the real value. (2) No fluff, no "in today\u2019s world" openers. (3) Plain HTML only (<h2>, <p>). (4) Label it exactly as "\u2500\u2500 READY-TO-PASTE SECTION \u2500\u2500" so it is easy to find and copy. This lets the owner paste it as-is, edit it, or hand it to an external writer \u2014 their choice.';
                     }
                   }
                 }
@@ -38746,7 +38749,7 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
                 if (_conf.length) {
                   _cannibalContext = '\n\nCANNIBALIZATION CONTEXT (detected by the tracker — MUST be addressed in this brief):\n'
                     + _conf.slice(0, 4).map(function(c, i){ return (i+1) + '. ' + c; }).join('\n')
-                    + '\nRules: use the EXACT URLs and anchor texts given above — never say "the hub" or "the relevant page" without naming the URL. Output the fix as normal actions (LABEL + exact text + exact location) so the owner can copy-paste without understanding SEO theory.';
+                    + '\nRules: use the EXACT URLs and anchor texts given above — never say "the hub" or "the relevant page" without naming the URL. For every internal-link action, OUTPUT THE READY-TO-PASTE HTML LINE, e.g. <p>For urgent help see our <a href="FULL_URL">EXACT ANCHOR</a>.</p>, so the owner pastes it directly. Mark each with "\u2500\u2500 READY-TO-PASTE \u2500\u2500". No SEO theory needed.';
                 }
               }
             } catch(e) {}
@@ -38891,6 +38894,8 @@ OUTPUT FORMAT — return ONLY this JSON, no markdown, no explanation, no preambl
 
 IMPACT HONESTY RULE: AI citation is never guaranteed. NEVER write that an engine "will cite" the page, and never promise a fixed number of crawl cycles. Use likelihood language ("increases the likelihood", "makes the page eligible", "improves the chance") and always name the dependency (ranking into the top 10 for AIO/ChatGPT; being indexed in Bing/Brave for Copilot/Claude). An honest, qualified impact line is required — an over-promise is a failed action.
 
+EVERYTHING WRITTEN OUT (hard rule): the "action" field must contain the literal final text the owner pastes — exact passage, exact FAQ Q&A, exact blockquote, exact schema JSON, exact <a href> line. NEVER output a task-description ("add an FAQ", "include statistics", "strengthen E-E-A-T", "add author credentials") without the finished text beside it. The ONLY allowed placeholders are square-bracket owner-facts you genuinely cannot know — [OWNER: insert years in business], [AUTHOR NAME], [real source URL] — used only for verifiable facts, never to skip writing prose. Write the full sentence with the placeholder inside it, e.g. "With [OWNER: insert number] completed NJ roofing projects, our team…".
+
 QUALITY BAR: Every action must be so specific that the user can implement it in under 10 minutes without asking any follow-up questions. If you write "improve your introduction" you have failed. Write the introduction FOR them.`;
       // ── CALL 2: GSC Ranking Brief ──────────────────────────────────────
       const gscPrompt = `You are a Google Search Console Analyst and SEO Strategist. Your job is to create a GSC Brief — a data-driven action plan to move a page from its current position to RANK #1.
@@ -38965,8 +38970,8 @@ Each action must include:
 REQUIRED ACTION TYPES (include all of these):
 - A "Meta Title & Description (Rank Math)" action — ALWAYS include this. Give the EXACT SEO Title (max 60 characters, must contain "${kw}") and the EXACT Meta Description (max 155 characters, compelling, includes "${kw}"). Format the action as: "[FOR GOOGLE RANKING] REPLACE in Rank Math → SEO Title: <title>  |  REPLACE in Rank Math → Meta Description: <description>". This is where the client pastes it in WordPress (Rank Math plugin), so be explicit.
 - One "Quick Win" action completable in under 5 minutes
-- One "Content Gap" action based on what competitor #1 has that this page lacks
-- A freshness recommendation if the page content appears dated
+- One "Content Gap" action based on what competitor #1 has that this page lacks — you MUST write the full replacement/new section (the actual <h2> and 2-4 paragraphs), not merely name the gap. "Add a section about X" without the written section is a failed action.
+- A freshness recommendation if the page content appears dated — write the EXACT updated sentence(s)/paragraph to paste, not "update the intro".
 
 WORDPRESS-SAFE OUTPUT — any HTML/copy inside an "action" is pasted into a WordPress Custom HTML block behind LiteSpeed Cache:
 - Fragments only: NEVER output a doctype, <html>, <head>, <body>, a <title> tag, a <style> block, or external CSS (LiteSpeed strips <style>). Style everything with inline style="" attributes and literal hex colours.
@@ -38976,6 +38981,8 @@ WORDPRESS-SAFE OUTPUT — any HTML/copy inside an "action" is pasted into a Word
 NO FABRICATION (hard rule): NEVER invent a statistic, figure, date, quote, name, organisation, award, or ranking, and NEVER add an unverifiable superiority claim ("#1", "best", "leading", "top-rated") in a title, description, or body unless it is already proven. The SEO Title and Meta Description especially must be truthful — no unverifiable "#1" or "best". If unsure, omit the claim.
 
 TOOL/APP SAFETY: if the page is a functional tool/app/calculator rather than an article, restrict content actions to INSERTS that add sections above/below the tool; never rewrite its structure, IDs, or scripts.
+
+EVERYTHING WRITTEN OUT (hard rule, applies to EVERY action): the "action" field must contain the literal final text the owner pastes — the exact title, the exact paragraph(s) with real sentences, the exact FAQ Q&A, the exact <a href> line, the exact schema JSON. NEVER output a task-description like "expand the content", "add FAQs", "improve the intro", "rewrite for depth", "build internal links", "add backlinks" without the finished text beside it. The only allowed placeholders are square-bracket owner-facts for things you genuinely cannot know: [OWNER: insert real response time], [OWNER: insert years in business], [OWNER: insert license number] — used ONLY for verifiable facts, never to avoid writing prose. If an action would need a real figure to be complete, write the full sentence with the [OWNER: ...] placeholder in place, e.g. "Our crews reach most NJ sites within [OWNER: insert typical response time] of your call." A backlink cannot be pasted, so instead of "get backlinks" write the concrete outreach step: which type of site to contact and the exact anchor text to request.
 
 OUTPUT FORMAT — return ONLY this JSON, no markdown:
 [{"title":"6 words max","priority":"high","trigger":"Specific GSC signal that triggered this (e.g. '9,196 impressions, 2.7% CTR = title mismatch')","action":"Starts with [FOR GOOGLE RANKING] + OPERATION + LOCATION, e.g. 'REPLACE in Rank Math → SEO Title: ...' or 'ADD after your H1: ...' or 'MERGE into your opening paragraph: ...' — always copy-paste ready text","expected_impact":"Honest, qualified effect — direction + dependency, e.g. 'Should improve CTR and support a climb toward page 1 after re-crawl; the exact gain depends on competition'. NEVER a guaranteed position or a fixed deadline","effort":"quick_win"}]
