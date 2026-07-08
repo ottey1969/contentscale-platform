@@ -1,4 +1,4 @@
-console.log('=== CONTENTSCALE BOOT v2026-07-08-possible-prioritized-shortcut | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON | possibleThreshold=20impr | shortcutPrioritized=v2 | gscAutoFetchRoutesLoaded=true ===');
+console.log('=== CONTENTSCALE BOOT v2026-07-08-possible-prioritized-shortcut | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON | possibleThreshold=20impr | shortcutPrioritized=v2 | gscAutoFetchRemoved=true | linkCheckActive=true ===');
 // CONTENTSCALE SERVER.JS — ELITE EDITION v4 (FIXED v3)
 // ✅ FIX v7: secondary_keywords + related_keywords auto in Analyse JSON + Execute prompt
 // ✅ FIX v7: analysis_data JSONB safe parse in execute-rewrite
@@ -1892,6 +1892,38 @@ app.post('/api/tracker-client/:token/analyze-gaps', async (req, res) => {
 // GET /api/tracker-client/:token/link-check — AUTOMATIC hub→spoke internal-link verification.
 // The tracker already holds each page's pasted HTML, so nobody needs to open pages by hand:
 // for every generic↔specific keyword pair, we check whether the hub's stored HTML links to the spoke.
+app.get('/api/tracker-client/:token/link-check', async (req, res) => {
+  try {
+    const cr = await pool.query("SELECT id FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status != 'deleted')", [req.params.token]);
+    if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
+    const pR = await pool.query("SELECT id, url, keyword, gsc_keyword, html_content FROM tracker_pages WHERE tracker_client_id=$1 AND (is_active=TRUE OR is_active IS NULL) LIMIT 100", [cr.rows[0].id]);
+    const norm = s => { try { return String(s||'').toLowerCase().replace(/[^\p{L}\p{N} ]/gu,' ').replace(/ +/g,' ').trim(); } catch(e) { return String(s||'').toLowerCase(); } };
+    const pathOf = u => { try { return new URL(u).pathname.replace(/\/+$/,'') || '/'; } catch(e) { return String(u||''); } };
+    const results = [];
+    for (let i = 0; i < pR.rows.length; i++) {
+      for (let j = 0; j < pR.rows.length; j++) {
+        if (i === j) continue;
+        const a = pR.rows[i], b = pR.rows[j];
+        const ka = norm(a.keyword || a.gsc_keyword), kb = norm(b.keyword || b.gsc_keyword);
+        if (!ka || !kb) continue;
+        const wa = ka.split(' ').filter(w => w.length >= 2), wb = kb.split(' ').filter(w => w.length >= 2);
+        if (!wa.length || !wb.length || wa.length >= wb.length) continue; // a must be the GENERIC one (fewer words)
+        const inter = wa.filter(w => wb.indexOf(w) > -1).length;
+        if (inter !== wa.length) continue; // containment: generic fully inside specific
+        // hub = a, spoke = b — does a's stored HTML link to b's path?
+        const spokePath = pathOf(b.url);
+        let status = 'no_html';
+        if (a.html_content) {
+          const html = a.html_content.toLowerCase();
+          status = (spokePath !== '/' && html.indexOf(spokePath.toLowerCase()) > -1) ? 'found' : 'missing';
+        }
+        results.push({ hub: pathOf(a.url) === '/' ? '(homepage)' : pathOf(a.url), spoke: spokePath === '/' ? '(homepage)' : spokePath, spoke_keyword: b.keyword || b.gsc_keyword, status, hub_id: a.id });
+      }
+    }
+    res.json({ success: true, checks: results, checked_at: new Date().toISOString() });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
 app.post('/api/tracker-client/:token/gap-family-done', async (req, res) => {
   try {
     const cr = await pool.query("SELECT id, gap_done_queries FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status != 'deleted')", [req.params.token]);
