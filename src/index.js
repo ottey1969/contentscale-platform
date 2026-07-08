@@ -167,55 +167,6 @@ try {
   console.error('❌ GSC Service Account parse error:', e.message);
 }
 
-// Reusable GSC Search Analytics API helpers — shared by /api/gsc/auto-fill and the tracker's
-// auto-fetch-per-page-queries endpoint, so both use the exact same auth + site-format-detection
-// logic instead of duplicating ~40 lines of JWT signing and property-format guessing.
-async function _gscGetAccessToken() {
-  if (!_gscServiceAccount) throw new Error('GSC_SERVICE_ACCOUNT_JSON not configured');
-  const { createSign } = require('crypto');
-  const now = Math.floor(Date.now() / 1000);
-  const header = Buffer.from(JSON.stringify({ alg: 'RS256', typ: 'JWT' })).toString('base64url');
-  const payload = Buffer.from(JSON.stringify({
-    iss: _gscServiceAccount.client_email,
-    scope: 'https://www.googleapis.com/auth/webmasters.readonly',
-    aud: 'https://oauth2.googleapis.com/token',
-    exp: now + 3600, iat: now
-  })).toString('base64url');
-  const sign = createSign('RSA-SHA256');
-  sign.update(`${header}.${payload}`);
-  const signature = sign.sign(_gscServiceAccount.private_key, 'base64url');
-  const jwt = `${header}.${payload}.${signature}`;
-  const tokenResp = await axios.post('https://oauth2.googleapis.com/token',
-    new URLSearchParams({ grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer', assertion: jwt }).toString(),
-    { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
-  );
-  return tokenResp.data.access_token;
-}
-async function _gscQueryRows(accessToken, siteUrl, pageUrl, dims, startDate, endDate, rowLimit) {
-  const body = { startDate, endDate, dimensions: dims,
-    dimensionFilterGroups: pageUrl ? [{ filters: [{ dimension: 'page', operator: 'equals', expression: pageUrl }] }] : [],
-    rowLimit: rowLimit || 20 };
-  const r = await fetch(
-    `https://www.googleapis.com/webmasters/v3/sites/${encodeURIComponent(siteUrl)}/searchAnalytics/query`,
-    { method: 'POST', headers: { Authorization: `Bearer ${accessToken}` }, body: JSON.stringify(body) }
-  );
-  if (!r.ok) { const e = await r.json(); throw new Error(e.error?.message || r.status); }
-  return (await r.json()).rows || [];
-}
-async function _gscFindSiteFormat(accessToken, pageUrl) {
-  const urlObj = new URL(pageUrl);
-  const formats = [
-    `https://${urlObj.hostname}/`, `http://${urlObj.hostname}/`,
-    `sc-domain:${urlObj.hostname.replace(/^www\./, '')}`,
-    `https://www.${urlObj.hostname.replace(/^www\./, '')}/`,
-  ];
-  for (const fmt of formats) {
-    try { await _gscQueryRows(accessToken, fmt, pageUrl, ['page'], new Date(Date.now()-7*86400000).toISOString().split('T')[0], new Date().toISOString().split('T')[0], 1); return fmt; }
-    catch(e) { /* try next format */ }
-  }
-  return null;
-}
-
 const PORT = process.env.PORT || 3000;
 
 // ============================================
@@ -1941,89 +1892,6 @@ app.post('/api/tracker-client/:token/analyze-gaps', async (req, res) => {
 // GET /api/tracker-client/:token/link-check — AUTOMATIC hub→spoke internal-link verification.
 // The tracker already holds each page's pasted HTML, so nobody needs to open pages by hand:
 // for every generic↔specific keyword pair, we check whether the hub's stored HTML links to the spoke.
-app.get('/api/tracker-client/:token/link-check', async (req, res) => {
-  try {
-    const cr = await pool.query("SELECT id FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status != 'deleted')", [req.params.token]);
-    if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
-    const pR = await pool.query("SELECT id, url, keyword, gsc_keyword, html_content FROM tracker_pages WHERE tracker_client_id=$1 AND (is_active=TRUE OR is_active IS NULL) LIMIT 100", [cr.rows[0].id]);
-    const norm = s => { try { return String(s||'').toLowerCase().replace(/[^\p{L}\p{N} ]/gu,' ').replace(/ +/g,' ').trim(); } catch(e) { return String(s||'').toLowerCase(); } };
-    const pathOf = u => { try { return new URL(u).pathname.replace(/\/+$/,'') || '/'; } catch(e) { return String(u||''); } };
-    const results = [];
-    for (let i = 0; i < pR.rows.length; i++) {
-      for (let j = 0; j < pR.rows.length; j++) {
-        if (i === j) continue;
-        const a = pR.rows[i], b = pR.rows[j];
-        const ka = norm(a.keyword || a.gsc_keyword), kb = norm(b.keyword || b.gsc_keyword);
-        if (!ka || !kb) continue;
-        const wa = ka.split(' ').filter(w => w.length >= 2), wb = kb.split(' ').filter(w => w.length >= 2);
-        if (!wa.length || !wb.length || wa.length >= wb.length) continue; // a must be the GENERIC one (fewer words)
-        const inter = wa.filter(w => wb.indexOf(w) > -1).length;
-        if (inter !== wa.length) continue; // containment: generic fully inside specific
-        // hub = a, spoke = b — does a's stored HTML link to b's path?
-        const spokePath = pathOf(b.url);
-        let status = 'no_html';
-        if (a.html_content) {
-          const html = a.html_content.toLowerCase();
-          status = (spokePath !== '/' && html.indexOf(spokePath.toLowerCase()) > -1) ? 'found' : 'missing';
-        }
-        results.push({ hub: pathOf(a.url) === '/' ? '(homepage)' : pathOf(a.url), spoke: spokePath === '/' ? '(homepage)' : spokePath, spoke_keyword: b.keyword || b.gsc_keyword, status, hub_id: a.id });
-      }
-    }
-    res.json({ success: true, checks: results, checked_at: new Date().toISOString() });
-  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
-});
-
-// POST /api/tracker-client/:token/gap-family-done — the user's own checkmark on an AI gap family.
-// Stores the family's queries in a persistent handled-set: they disappear from the raw gap list and
-// are EXCLUDED from the next AI analysis, so re-running "Sort this out for me" only sees open work.
-// POST /api/tracker-client/:token/gsc-autofetch-page — pulls the FULL query breakdown for ONE
-// specific page directly from the Search Console API via the Service Account (same data a manual
-// GSC → Pages → click page → Queries → Export gives), and saves it with page_id set \u2014 exactly
-// what a per-page CSV import does, but with zero manual export/paste. This is what makes a POSSIBLE
-// row provable without the owner leaving the tracker, PROVIDED the Service Account has access to
-// this property in Search Console (falls back to a clear error telling them to use manual CSV import
-// otherwise \u2014 never a silent failure).
-app.post('/api/tracker-client/:token/gsc-autofetch-page', async (req, res) => {
-  if (!_gscServiceAccount) return res.status(503).json({ success: false, error: 'GSC auto-fetch is not configured on this server \u2014 use manual CSV import instead.' });
-  try {
-    const cr = await pool.query("SELECT id FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status != 'deleted')", [req.params.token]);
-    if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
-    const pageId = parseInt(req.body.page_id, 10);
-    if (!pageId) return res.status(400).json({ success: false, error: 'page_id required' });
-    const pr = await pool.query('SELECT id, url FROM tracker_pages WHERE id=$1 AND tracker_client_id=$2', [pageId, cr.rows[0].id]);
-    if (!pr.rows.length) return res.status(404).json({ success: false, error: 'Page not found' });
-    const pageUrl = pr.rows[0].url;
-
-    const accessToken = await _gscGetAccessToken();
-    const siteFmt = await _gscFindSiteFormat(accessToken, pageUrl);
-    if (!siteFmt) {
-      return res.status(404).json({ success: false, error: 'No Search Console property matched this site \u2014 the service account may not have access. Use manual CSV import instead.', code: 'GSC_PROPERTY_NOT_FOUND' });
-    }
-    const endDate = new Date().toISOString().split('T')[0];
-    const startDate = new Date(Date.now() - 90*24*60*60*1000).toISOString().split('T')[0];
-    const rows = await _gscQueryRows(accessToken, siteFmt, pageUrl, ['query'], startDate, endDate, 500);
-
-    await pool.query('DELETE FROM tracker_gsc_queries WHERE tracker_client_id=$1 AND page_id=$2', [cr.rows[0].id, pageId]);
-    let saved = 0;
-    for (const r of rows) {
-      const text = String(r.keys?.[0] || '').trim().substring(0, 300);
-      if (!text) continue;
-      try {
-        await pool.query(
-          'INSERT INTO tracker_gsc_queries (tracker_client_id, page_id, query, clicks, impressions, position) VALUES ($1,$2,$3,$4,$5,$6)',
-          [cr.rows[0].id, pageId, text, Math.round(r.clicks||0), Math.round(r.impressions||0), r.position||null]
-        );
-        saved++;
-      } catch(e) {}
-    }
-    console.log(`[gsc-autofetch] ${pageUrl} => ${saved} queries saved (site format: ${siteFmt})`);
-    res.json({ success: true, saved, total: rows.length, page_url: pageUrl });
-  } catch(e) {
-    console.error('[gsc-autofetch] error:', e.message);
-    res.status(502).json({ success: false, error: 'GSC API error: ' + e.message + ' \u2014 use manual CSV import instead.' });
-  }
-});
-
 app.post('/api/tracker-client/:token/gap-family-done', async (req, res) => {
   try {
     const cr = await pool.query("SELECT id, gap_done_queries FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status != 'deleted')", [req.params.token]);
@@ -4024,7 +3892,6 @@ app.get('/track/:token', async (req, res) => {
       .replace(/__MAX_PAGES__/g, String(client.max_pages || 3))
       .replace(/__CLIENT_NAME__/g, (client.name || client.domain || '').replace(/[`'\\]/g, ''))
       .replace(/__GSC_ENABLED__/g, client.gsc_enabled ? 'true' : 'false')
-      .replace(/__GSC_AUTOFETCH__/g, _gscServiceAccount ? 'true' : 'false')
       .replace(/__DEMO_RO__/g, (function(){
         const isRO = client.demo_readonly || (client.readonly_token && client.readonly_token === req.params.token);
         if (client.readonly_token && client.readonly_token === req.params.token) {
@@ -28346,23 +28213,6 @@ if (DEMO_RO) {
   });
 }
 var MAX_PAGES = __MAX_PAGES__;
-var _gscAutoFetchAvailable = __GSC_AUTOFETCH__;
-async function _gscAutoFetchPage(pageId, btnEl) {
-  if (btnEl) { btnEl.disabled = true; btnEl.textContent = '\u23f3 Fetching\u2026'; }
-  try {
-    var d = await api('/gsc-autofetch-page', 'POST', { page_id: pageId });
-    if (d && d.success) {
-      toast('\u2713 Pulled ' + d.saved + ' queries for this page from Search Console \u2014 no CSV needed', '#4ade80');
-      try { await loadImpressionGap(); } catch(e) {}
-    } else {
-      toast((d && d.error) || 'Auto-fetch failed \u2014 try manual CSV import instead', '#f87171');
-      if (btnEl) { btnEl.disabled = false; btnEl.textContent = '\u26a1 Auto-fetch'; }
-    }
-  } catch(e) {
-    toast('Auto-fetch failed \u2014 try manual CSV import instead', '#f87171');
-    if (btnEl) { btnEl.disabled = false; btnEl.textContent = '\u26a1 Auto-fetch'; }
-  }
-}
 var _pages = [];
 
 // GSC status indicator \\u2014 lit green when enabled, grey when off
@@ -30063,22 +29913,13 @@ function renderCannibal() {
   var _possCount = _cannibalIssues.filter(function(c){ return c.level === 'POSSIBLE'; }).length;
   var _possDoneCount = _possList.length - _possRemaining.length;
   var _possCount = _cannibalIssues.filter(function(c){ return c.level === 'POSSIBLE'; }).length;
-  var _slugToPageId = {}; (_pages||[]).forEach(function(p){ _slugToPageId[slugOf(p)] = p.id; });
   var shortcutStrip = (_possList.length && _possCount)
     ? '<div style="padding:8px 14px;border-bottom:1px solid #1f2937;background:rgba(250,204,21,.06);font-size:11px;color:#facc15;line-height:1.7;">'
       + '\u26a1 ' + _possCount + ' yellow POSSIBLE rows touch <b>' + _possList.length + ' unique pages</b>'
       + (_possDoneCount ? ' \u2014 <b style="color:#4ade80;">' + _possDoneCount + ' already exported</b>, ' + _possRemaining.length + ' left' : '')
-      + '. ' + (_gscAutoFetchAvailable ? 'Click \u26a1 to pull each page\u2019s queries straight from Search Console \u2014 no manual export needed:' : 'Export the biggest first (per page: GSC \u2192 Pages \u2192 click it \u2192 Queries \u2192 Export \u2192 import here with Query ownership set to that page):')
-      + '<div style="margin-top:6px;display:flex;flex-direction:column;gap:3px;">'
-      + _possRemaining.slice(0, 15).map(function(s){
-          var pid = _slugToPageId[s];
-          var label = s + ' <span style="color:#a16207;">(' + Math.round(_possPageStats[s].impr).toLocaleString() + ' impr, ' + _possPageStats[s].rows + ' rows)</span>';
-          var btn = (_gscAutoFetchAvailable && pid) ? ('<button onclick="_gscAutoFetchPage(' + pid + ',this)" style="flex-shrink:0;cursor:pointer;font-size:9px;font-weight:800;padding:2px 8px;border-radius:4px;background:#166534;border:1px solid #16a34a;color:#bbf7d0;margin-right:8px;">\u26a1 Auto-fetch</button>') : '';
-          return '<div style="display:flex;align-items:center;font-family:monospace;">' + btn + '<span>' + label + '</span></div>';
-        }).join('')
-      + (_possRemaining.length > 15 ? '<div style="color:#a16207;">+' + (_possRemaining.length-15) + ' more (scroll or resolve the top ones first)</div>' : '')
-      + '</div>'
-      + (_possRemaining.length === 0 ? '<div style="margin-top:6px;"><b style="color:#4ade80;">All pages exported \u2014 re-run the cannibalization check to see which rows resolved to PROVEN or cleared.</b></div>' : '')
+      + '. Export the biggest first (per page: GSC \u2192 Pages \u2192 click it \u2192 Queries \u2192 Export \u2192 import here with Query ownership set to that page):<br>'
+      + '<span style="font-family:monospace;color:#fde68a;">' + _possRemaining.slice(0, 15).map(function(s){ return s + ' (' + Math.round(_possPageStats[s].impr).toLocaleString() + ' impr, ' + _possPageStats[s].rows + ' rows)'; }).join(' \u00b7 ') + (_possRemaining.length > 15 ? ' \u00b7 +' + (_possRemaining.length-15) + ' more' : '') + '</span>'
+      + (_possRemaining.length === 0 ? '<br><b style="color:#4ade80;">All pages exported \u2014 re-run the cannibalization check to see which rows resolved to PROVEN or cleared.</b>' : '')
       + '</div>'
     : '';
   var legendStrip = '<div style="display:flex;gap:14px;flex-wrap:wrap;padding:7px 14px;border-bottom:1px solid #1f2937;background:#0a0e14;">'
