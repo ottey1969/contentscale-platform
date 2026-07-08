@@ -28045,7 +28045,7 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
         <strong style="color:#e5e7eb;">GSC export &rarr; drop or paste CSV:</strong><br>
         <span style="color:#4b5563;">Option A:</span> GSC &rarr; Performance &rarr; Queries tab &rarr; Export CSV &rarr; paste here<br>
         <span style="color:#4b5563;">Option B:</span> GSC &rarr; Performance &rarr; Pages tab &rarr; Export CSV &rarr; paste here<br>
-        <span style="color:#4b5563;">Option C:</span> Type: <code style="background:#1f2937;padding:1px 5px;border-radius:3px;">URL | keyword</code> one per line
+        <span style="color:#4b5563;">Option C:</span> Type: <code style="background:#1f2937;padding:1px 5px;border-radius:3px;">URL | keyword</code> one per line<br><span style="color:#f59e0b;">One table at a time \u2014 do NOT paste Queries and Pages together, import them separately.</span>
       </div>
       <div id="gscDropZone" ondragover="event.preventDefault();this.style.borderColor='#7c3aed'" ondragleave="this.style.borderColor='#374151'" ondrop="handleGscDrop(event)" style="border:2px dashed #374151;border-radius:8px;padding:12px;text-align:center;font-size:11px;color:#6b7280;margin-bottom:8px;cursor:pointer;transition:border-color .15s;" onclick="document.getElementById('gscFileInput').click()">
         <div>&#128196; Drop one or more CSV files here, or click to browse</div>
@@ -31398,6 +31398,18 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
       }
     });
 
+    // Mixed-paste guard: pasting a Queries table and a Pages table together (two separate copy\u2011paste
+    // actions combined into one box) makes the checkbox pre-selection unpredictable \u2014 whichever
+    // section happens to come first fills the default-checked quota, silently leaving the other
+    // section unchecked. Rather than guess, refuse clearly and tell the owner exactly what to do.
+    var _hasQ = pairs.some(function(p){ return p.isQueryOnly; });
+    var _hasP = pairs.some(function(p){ return !p.isQueryOnly; });
+    if (_hasQ && _hasP) {
+      var textarea = document.getElementById('importGscData');
+      if (textarea) textarea.style.borderColor = '#f59e0b';
+      toast('This paste mixes Queries and Pages data \u2014 import them ONE AT A TIME for reliable results: clear this box, paste ONLY the Queries table, Parse & Import, then reopen and paste ONLY the Pages table.', '#f59e0b');
+      return;
+    }
     if (!pairs.length) { toast('No valid data found. Try: GSC Queries CSV, Pages CSV, or URL | keyword format', '#f87171'); return; }
     window._lastGscPairs = pairs; // full parsed set — import ships the query rows to the Impression Gap store
     toast('Parsed ' + pairs.length + ' row' + (pairs.length===1?'':'s') + ' from your paste \u2014 review the list below before importing.', '#60a5fa');
