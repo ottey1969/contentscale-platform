@@ -28854,12 +28854,15 @@ function renderPages() {
     var rows = _leadQueue.map(function(q, i){
       var path = ''; try { path = new URL(q.p.url).pathname; } catch(e) { path = q.p.url; }
       if (path === '/' || !path) path = '(homepage)';
-      return '<div onclick="jumpToPage(' + q.p.id + ')" style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid #1f2937;cursor:pointer;" '
+      // Mobile fix: 5 non-shrinking elements (rank, tier, metrics, missed-badge) plus the page path
+      // don't fit on a narrow screen. flex-wrap lets the metrics/badge drop to a 2nd line instead of
+      // squishing the page path unreadable or overflowing the viewport horizontally.
+      return '<div onclick="jumpToPage(' + q.p.id + ')" style="display:flex;align-items:center;flex-wrap:wrap;gap:6px 10px;padding:9px 12px;border-bottom:1px solid #1f2937;cursor:pointer;" '
         + 'onmouseover="this.style.background=&quot;#111827&quot;" onmouseout="this.style.background=&quot;none&quot;">'
         + '<span style="font-size:13px;font-weight:800;color:#4b5563;width:24px;flex-shrink:0;text-align:right;">' + (i+1) + '</span>'
         + '<span style="font-size:9px;font-weight:800;color:' + q.tierColor + ';border:1px solid ' + q.tierColor + '55;border-radius:4px;padding:2px 7px;flex-shrink:0;white-space:nowrap;">' + q.tierLabel + '</span>'
-        + '<span style="font-size:11px;color:#e5e7eb;font-family:monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;" title="' + q.action + '">' + path + '</span>'
-        + '<span style="font-size:10px;color:#6b7280;flex-shrink:0;white-space:nowrap;">' + (q.ps !== null ? 'pos ' + q.ps.toFixed(1) + ' \\u00b7 ' : '') + q.impr.toLocaleString() + ' impr \\u00b7 ' + q.clicks + ' clk</span>'
+        + '<span style="font-size:11px;color:#e5e7eb;font-family:monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:80px;" title="' + q.action + '">' + path + '</span>'
+        + '<span style="font-size:10px;color:#6b7280;flex-shrink:0;white-space:nowrap;margin-left:34px;">' + (q.ps !== null ? 'pos ' + q.ps.toFixed(1) + ' \\u00b7 ' : '') + q.impr.toLocaleString() + ' impr \\u00b7 ' + q.clicks + ' clk</span>'
         + (q.missed > 0 ? '<span style="font-size:10px;font-weight:800;color:#4ade80;flex-shrink:0;white-space:nowrap;" title="Estimated clicks per month you are missing at this demand level">+' + q.missed.toLocaleString() + ' clk/mo</span>' : '')
         + '</div>';
     }).join('');
@@ -31112,12 +31115,14 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
     items.forEach(function(item, idx) {
       var checked = idx < maxN;
       var label = document.createElement('label');
-      label.style.cssText = 'display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #1f2937;font-size:11px;cursor:pointer;';
+      // Mobile tap target: the whole row is clickable (not just the tiny checkbox), and padding is
+      // bumped to keep the row near the ~44px recommended minimum touch height on phones.
+      label.style.cssText = 'display:flex;align-items:center;gap:10px;padding:11px 4px;border-bottom:1px solid #1f2937;font-size:11px;cursor:pointer;min-height:22px;';
       var cb = document.createElement('input');
       cb.type = 'checkbox';
       cb.className = cbClass;
       cb.checked = checked;
-      cb.style.cursor = 'pointer';
+      cb.style.cssText = 'cursor:pointer;width:18px;height:18px;flex-shrink:0;';
       cb.value = typeof item === 'object' ? JSON.stringify(item) : item;
       cb.onchange = function() { updateSelectCount(cbClass, maxN); };
       var span = document.createElement('span');
