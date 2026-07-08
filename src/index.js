@@ -38029,17 +38029,27 @@ async function runTrackerCheck(page, geminiKey, keys, forceRescan = false) {
         const liveHtml = await liveResp.text();
         // Canonical-duplicate detection: if this page's canonical points to a DIFFERENT URL,
         // Google already treats the canonical as the real one — this URL is not a competitor, just a duplicate.
+        // Only evaluate canonical if the 301/404 block above did NOT already flag this page as dead.
         try {
-          const _cm = liveHtml.match(/<link[^>]+rel=["']canonical["'][^>]*>/i);
-          if (_cm) {
-            const _hm = _cm[0].match(/href=["']([^"']+)["']/i);
-            if (_hm && _hm[1]) {
-              const _canonPath = new URL(_hm[1], page.url).pathname.replace(/\/+$/,'').toLowerCase();
-              const _selfPath = new URL(page.url).pathname.replace(/\/+$/,'').toLowerCase();
-              if (_canonPath && _selfPath && _canonPath !== _selfPath) {
-                await pool.query('UPDATE tracker_pages SET redirects_to=$1, redirect_checked_at=NOW() WHERE id=$2', ['(canonical \u2192 ' + _hm[1] + ')', pageId]).catch(()=>{});
-                _trSetStep(pageId, 'html_hash', 'done', '\ud83d\udd17 Canonical points to ' + _hm[1] + ' \u2014 Google treats THAT as the real page; track the canonical, not this duplicate.');
+          const _rc = await pool.query('SELECT redirects_to FROM tracker_pages WHERE id=$1', [pageId]);
+          const _alreadyDead = _rc.rows.length && _rc.rows[0].redirects_to && !String(_rc.rows[0].redirects_to).startsWith('(canonical');
+          if (!_alreadyDead) {
+            let _canonMismatch = null;
+            const _cm = liveHtml.match(/<link[^>]+rel=["']canonical["'][^>]*>/i);
+            if (_cm) {
+              const _hm = _cm[0].match(/href=["']([^"']+)["']/i);
+              if (_hm && _hm[1]) {
+                const _canonPath = new URL(_hm[1], page.url).pathname.replace(/\/+$/,'').toLowerCase();
+                const _selfPath = new URL(page.url).pathname.replace(/\/+$/,'').toLowerCase();
+                if (_canonPath && _selfPath && _canonPath !== _selfPath) _canonMismatch = _hm[1];
               }
+            }
+            if (_canonMismatch) {
+              await pool.query('UPDATE tracker_pages SET redirects_to=$1, redirect_checked_at=NOW() WHERE id=$2', ['(canonical \u2192 ' + _canonMismatch + ')', pageId]).catch(()=>{});
+              _trSetStep(pageId, 'html_hash', 'done', '\ud83d\udd17 Canonical points to ' + _canonMismatch + ' \u2014 Google treats THAT as the real page; track the canonical, not this duplicate.');
+            } else {
+              // canonical is self-referencing or absent, and not a 301/404 → ensure any STALE canonical flag is cleared
+              await pool.query("UPDATE tracker_pages SET redirects_to=NULL WHERE id=$1 AND redirects_to LIKE '(canonical%'", [pageId]).catch(()=>{});
             }
           }
         } catch(e) {}
