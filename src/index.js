@@ -1027,6 +1027,42 @@ function generateClientToken() {
   return require('crypto').randomBytes(24).toString('hex');
 }
 
+// Ensure a client has a read-only share token; create one if missing. Returns the token.
+// Called at account creation and lazily in any email path, so the RO link ALWAYS exists.
+async function ensureReadonlyToken(clientId) {
+  try {
+    const r = await pool.query('SELECT readonly_token FROM tracker_clients WHERE id=$1', [clientId]);
+    if (!r.rows.length) return null;
+    if (r.rows[0].readonly_token) return r.rows[0].readonly_token;
+    const roToken = 'ro_' + generateClientToken();
+    await pool.query('UPDATE tracker_clients SET readonly_token=$1 WHERE id=$2', [roToken, clientId]);
+    return roToken;
+  } catch(e) { return null; }
+}
+
+// Reusable email block showing BOTH links with an unmistakable distinction.
+// Every email is self-contained: the owner can always edit AND always share, no matter which email they open.
+function emailLinkBlock(editToken, roToken) {
+  const base = process.env.APP_URL || 'https://app.contentscale.site';
+  const editUrl = base + '/track/' + editToken;
+  const roUrl = roToken ? base + '/track/' + roToken : null;
+  let html = '<table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;margin:16px 0;border-collapse:separate;">';
+  html += '<tr><td style="background:#f5f3ff;border:1px solid #ddd6fe;border-radius:10px;padding:14px 16px;">'
+    + '<div style="font-size:13px;font-weight:800;color:#6d28d9;margin-bottom:2px;">\u270f\ufe0f Your tracker \u2014 edit, scan, add pages</div>'
+    + '<div style="font-size:11px;color:#7c3aed;margin-bottom:8px;">Keep this one private \u2014 anyone with it can make changes.</div>'
+    + '<a href="' + editUrl + '" style="display:inline-block;background:#7c3aed;color:#fff;font-size:13px;font-weight:700;text-decoration:none;padding:9px 18px;border-radius:7px;">Open my tracker \u2192</a>'
+    + '</td></tr>';
+  if (roUrl) {
+    html += '<tr><td style="padding-top:10px;"><table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;"><tr><td style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:14px 16px;">'
+      + '<div style="font-size:13px;font-weight:800;color:#334155;margin-bottom:2px;">\ud83d\udc41 Share link \u2014 read-only</div>'
+      + '<div style="font-size:11px;color:#64748b;margin-bottom:8px;">Safe to send to clients or colleagues. They see live data but cannot change anything.</div>'
+      + '<a href="' + roUrl + '" style="display:inline-block;background:#334155;color:#fff;font-size:13px;font-weight:700;text-decoration:none;padding:9px 18px;border-radius:7px;">Open read-only view \u2192</a>'
+      + '</td></tr></table></td></tr>';
+  }
+  html += '</table>';
+  return html;
+}
+
 // POST /api/tracker-client/register — create new client tracker
 // ── DEMO READ-ONLY GUARD ─────────────────────────────────────────────────
 // A client flagged demo_readonly=TRUE (admin toggle) gets a fully browsable tracker,
@@ -4331,13 +4367,11 @@ app.post('/api/admin/tracker-clients/create-own', verifyAdmin, async (req, res) 
     // Send welcome email
     if (email) {
       const clientId = (await pool.query('SELECT id FROM tracker_clients WHERE token=$1', [token])).rows[0]?.id;
+      const _roToken = clientId ? await ensureReadonlyToken(clientId) : null; // RO link exists from day one
       if (clientId) {
         const welcomeHtml = '<h2 style="font-size:17px;font-weight:800;color:#0f172a;margin-bottom:10px;">Your AI Citations Tracker is ready</h2>'
-          + '<p style="font-size:14px;color:#374151;line-height:1.7;margin-bottom:14px;">Hi ' + (name||'there') + ',<br><br>Your personal tracker for <strong>' + cleanDomain + '</strong> has been set up. Bookmark this link:</p>'
-          + '<div style="background:#f5f3ff;border:1px solid #ddd6fe;border-radius:8px;padding:14px 16px;margin-bottom:16px;">'
-          + '<div style="font-size:11px;font-family:monospace;color:#7c3aed;word-break:break-all;margin-bottom:10px;">' + trackUrl + '</div>'
-          + '<a href="' + trackUrl + '" style="display:inline-block;background:#7c3aed;color:white;text-decoration:none;padding:10px 22px;border-radius:6px;font-size:13px;font-weight:700;">Open tracker &rarr;</a>'
-          + '</div>'
+          + '<p style="font-size:14px;color:#374151;line-height:1.7;margin-bottom:6px;">Hi ' + (name||'there') + ',<br><br>Your personal tracker for <strong>' + cleanDomain + '</strong> has been set up. You have two links \u2014 bookmark the first, share the second:</p>'
+          + emailLinkBlock(token, _roToken)
           + '<p style="font-size:14px;color:#374151;line-height:1.7;margin-bottom:14px;"><strong>What happens next:</strong><br>'
           + '1. Add your pages and keywords<br>2. First scan runs in ~1 minute<br>3. Paste your page HTML for GRAAF score<br>4. Citation Brief arrives by email</p>'
           + '<p style="font-size:13px;color:#374151;">Questions? WhatsApp Ottmar: <a href="https://wa.me/31628073996" style="color:#7c3aed;">wa.me/31628073996</a></p>';
@@ -29740,6 +29774,7 @@ function _computePushables() {
 // LIKELY: two tracked pages target (near-)identical keywords.
 // POSSIBLE: a site-wide query matches two pages almost equally (ambiguous ownership).
 var _cannibalIssues = [];
+var _cannibalTruncated = 0;
 function _computeCannibal() {
   _cannibalIssues = [];
   // Skip pages that are known 301 redirects — a dead URL is not a competing page (removes false conflicts)
@@ -29843,7 +29878,15 @@ function _computeCannibal() {
     var av = a.autoLink === 'found' ? 1 : 0, bv = b.autoLink === 'found' ? 1 : 0;
     return av - bv; // auto-verified structure rows sink below open ones
   });
-  _cannibalIssues = _cannibalIssues.slice(0, 15);
+  // Keep every actionable row (PROVEN/LIKELY/POSSIBLE) — losing a POSSIBLE row hides work you must verify.
+  // Only STRUCTURE rows (usually-correct hub/spoke) are capped, since they can be numerous on big sites.
+  var _actionable = _cannibalIssues.filter(function(c){ return c.level !== 'STRUCTURE'; });
+  var _structure = _cannibalIssues.filter(function(c){ return c.level === 'STRUCTURE'; });
+  var _structOpen = _structure.filter(function(c){ return c.autoLink !== 'found'; });
+  var _structDone = _structure.filter(function(c){ return c.autoLink === 'found'; });
+  // show all actionable + up to 20 open structure + up to 5 resolved structure (as proof they were checked)
+  _cannibalIssues = _actionable.concat(_structOpen.slice(0, 20)).concat(_structDone.slice(0, 5));
+  _cannibalTruncated = (_structOpen.length > 20) ? (_structOpen.length - 20) : 0;
   renderCannibal();
 }
 function toggleCannAdvice(i) {
@@ -31373,6 +31416,24 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
       maxSel
     );
     if (countEl) countEl.textContent = pairs.length + ' found \\u2014 ' + _updCount + ' match your tracked pages (will update in place) \\u00b7 ' + _newCount + ' new \\u00b7 ' + maxSel + ' slots max';
+    // Certainty banner: name the exact tracked pages this CSV will update, so the owner can confirm
+    // they pasted the right export before importing (prevents "is this roof-leak or roof-repair?" doubt).
+    var _hdr = document.getElementById('gscMatchHdr');
+    if (!_hdr && list) { _hdr = document.createElement('div'); _hdr.id = 'gscMatchHdr'; list.insertBefore(_hdr, list.firstChild); }
+    if (_hdr) {
+      var _matched = pairs.filter(function(p){ return p._isTracked; }).map(function(p){ try { var pp = new URL(p.url).pathname; return pp === '/' ? '(homepage)' : pp; } catch(e){ return p.url; } });
+      var _uniqMatched = _matched.filter(function(v,i){ return _matched.indexOf(v) === i; });
+      if (_uniqMatched.length) {
+        _hdr.style.cssText = 'background:rgba(74,222,128,.08);border:1px solid #16a34a;border-radius:8px;padding:9px 12px;margin-bottom:10px;font-size:12px;color:#bbf7d0;line-height:1.5;';
+        _hdr.innerHTML = '\\u2713 This CSV updates <b>' + _uniqMatched.length + '</b> tracked page' + (_uniqMatched.length>1?'s':'') + ': <span style="font-family:monospace;color:#4ade80;">' + _uniqMatched.join(', ').replace(/</g,'&lt;') + '</span>';
+      } else if (pairs[0] && pairs[0].isQueryOnly) {
+        _hdr.style.cssText = 'background:rgba(251,191,36,.08);border:1px solid #f59e0b;border-radius:8px;padding:9px 12px;margin-bottom:10px;font-size:12px;color:#fde68a;line-height:1.5;';
+        _hdr.innerHTML = '\\u26a0 Queries-only CSV (no page column). These keywords attach to your homepage \\u2014 set the right page per row after import, or paste a Pages+Queries export to auto-match.';
+      } else {
+        _hdr.style.cssText = 'background:rgba(96,165,250,.08);border:1px solid #3b82f6;border-radius:8px;padding:9px 12px;margin-bottom:10px;font-size:12px;color:#bfdbfe;line-height:1.5;';
+        _hdr.innerHTML = '\\u2139 None of these URLs match a tracked page yet \\u2014 they will be added as NEW pages (uses free slots).';
+      }
+    }
     updateSelectCount('gsc-cb', maxSel);
   }
 
