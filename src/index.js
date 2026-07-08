@@ -5081,6 +5081,7 @@ app.patch('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
   await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS html_source VARCHAR(20) DEFAULT 'live'`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS html_pasted_at TIMESTAMPTZ`).catch(()=>{});
 
+  console.log('[boot-stamp] before tracker_clients table');
   // ── Tracker clients — self-service users (WhatsApp flow) ─────────────────
   await client.query(`CREATE TABLE IF NOT EXISTS tracker_clients (
     id SERIAL PRIMARY KEY,
@@ -5169,9 +5170,12 @@ app.patch('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS gsc_enabled BOOLEAN DEFAULT FALSE`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS demo_readonly BOOLEAN DEFAULT FALSE`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS readonly_token TEXT`).catch(()=>{});
+  console.log('[boot-stamp] before ro_token index');
   await client.query(`CREATE UNIQUE INDEX IF NOT EXISTS tracker_clients_ro_token_idx ON tracker_clients(readonly_token) WHERE readonly_token IS NOT NULL`).catch(()=>{});
+  console.log('[boot-stamp] after ro_token index');
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS ro_views INTEGER DEFAULT 0`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS ro_last_view TIMESTAMPTZ`).catch(()=>{});
+  console.log('[boot-stamp] before gap/redirect columns');
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS gap_analysis TEXT`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS gap_analysis_at TIMESTAMPTZ`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS gap_done_queries TEXT`).catch(()=>{});
@@ -29902,7 +29906,16 @@ var _cannMeaning = {
 function renderCannibal() {
   var host = document.getElementById('cannibalPanel');
   if (!host) return;
-  if (!_cannibalIssues.length) { host.innerHTML = ''; return; }
+  // Diagnostic: count what's in play so nothing silently disappears without explanation.
+  var _diagTotal = (_pages||[]).length;
+  var _diagRedir = (_pages||[]).filter(function(p){ return p.redirects_to; }).length;
+  var _diagGapQ = (_gapQueries||[]).filter(function(g){ return !g.page_id; }).length;
+  var _diagGapQ50 = (_gapQueries||[]).filter(function(g){ return !g.page_id && (g.impressions||0) >= 50; }).length;
+  var _diagPoss = _cannibalIssues.filter(function(c){ return c.level === 'POSSIBLE'; }).length;
+  if (!_cannibalIssues.length) {
+    host.innerHTML = '<div style="padding:10px 14px;font-size:11px;color:#6b7280;line-height:1.6;">No cannibalization rows right now. <span style="color:#4b5563;">(' + _diagTotal + ' pages, ' + _diagRedir + ' redirected/excluded, ' + _diagGapQ + ' site-wide queries of which ' + _diagGapQ50 + ' have \u226550 impressions \u2014 POSSIBLE rows need \u226550 impr and a query that fits two live pages within 15%.)</span></div>';
+    return;
+  }
   // Shortcut: many yellow rows share the same page pair — count the UNIQUE pages one needs to export
   var _possPages = {};
   _cannibalIssues.forEach(function(c){ if (c.level === 'POSSIBLE') c.pages.forEach(function(p){ _possPages[p.slug] = 1; }); });
