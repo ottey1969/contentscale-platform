@@ -29658,7 +29658,10 @@ function renderImpressionGap() {
     + '</div>'
     + '<div id="impGapBody" style="display:none;">'
     + _gapFamiliesHtml()
-    + rows
+    + ((_gapAnalysis && _gapAnalysis.families && _gapAnalysis.families.length)
+        ? '<div onclick="var r=document.getElementById(&quot;impGapRaw&quot;);var t=this.querySelector(&quot;.rawtog&quot;);if(r.style.display===&quot;none&quot;){r.style.display=&quot;block&quot;;t.textContent=&quot;\\u25be hide raw queries&quot;;}else{r.style.display=&quot;none&quot;;t.textContent=&quot;\\u25b8 show raw queries&quot;;}" style="cursor:pointer;padding:8px 14px;border-top:1px solid #1f2937;font-size:11px;color:#6b7280;user-select:none;">The AI grouped these into the families above. <span class="rawtog" style="color:#60a5fa;font-weight:700;">\\u25b8 show raw queries</span></div>'
+          + '<div id="impGapRaw" style="display:none;">' + rows + '</div>'
+        : rows)
     + '<div style="font-size:10px;color:#4b5563;padding:8px 14px;line-height:1.6;">ADD SECTION = Google already tests you for this query \\u2014 answer it with a question-form H2 on your closest page. NEW PAGE = demand exists but no page is eligible. Re-import your Queries CSV monthly to keep this current.</div>'
     + '</div></div>';
 }
