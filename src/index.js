@@ -1,4 +1,4 @@
-console.log('=== CONTENTSCALE BOOT v2026-07-08-possible-prioritized-shortcut | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON | possibleThreshold=20impr | shortcutPrioritized=v2 | gscAutoFetchRemoved=true | linkCheckActive=true ===');
+console.log('=== CONTENTSCALE BOOT v2026-07-08-possible-prioritized-shortcut | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON | possibleThreshold=20impr | shortcutPrioritized=v2 | gscAutoFetchRemoved=true | linkCheckActive=true | wholeSiteWipeGuard=true ===');
 // CONTENTSCALE SERVER.JS — ELITE EDITION v4 (FIXED v3)
 // ✅ FIX v7: secondary_keywords + related_keywords auto in Analyse JSON + Execute prompt
 // ✅ FIX v7: analysis_data JSONB safe parse in execute-rewrite
@@ -31450,7 +31450,9 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
           + '<option value="">Whole site (site-wide Queries CSV \\u2014 queries matched to pages automatically)</option>'
           + (_pages||[]).map(function(tp){ var path=''; try { path = new URL(tp.url).pathname || '/'; } catch(e) { path = tp.url; } return '<option value="' + tp.id + '">These queries belong to: ' + path + ' (exported from GSC \\u2192 Pages \\u2192 this page)</option>'; }).join('')
           + '</select>';
-        _assignWrap.innerHTML = '<div style="font-size:10px;font-weight:700;color:#9ca3af;margin:8px 0 4px;">Query ownership</div>' + _sel;
+        var _existingSiteWide = (_gapQueries || []).filter(function(g){ return !g.page_id; }).length;
+        var _warnNote = _existingSiteWide > 20 ? '<div style="font-size:10px;color:#f59e0b;margin-top:4px;">\u26a0 You have ' + _existingSiteWide + ' site-wide queries stored. Leaving this on \u201cWhole site\u201d will DELETE and replace all of them \u2014 pick a specific page above if this paste is a per-page export.</div>' : '';
+        _assignWrap.innerHTML = '<div style="font-size:10px;font-weight:700;color:#9ca3af;margin:8px 0 4px;">Query ownership</div>' + _sel + _warnNote;
         _assignWrap.style.display = 'block';
       } else { _assignWrap.style.display = 'none'; _assignWrap.innerHTML = ''; }
     }
@@ -31589,6 +31591,22 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
     if (!all || !all.length) { toast('Nothing to import — parse first', '#f87171'); return; }
     var _assignSel = document.getElementById('gscAssignPage');
     var _assignPageId = _assignSel && _assignSel.value ? parseInt(_assignSel.value, 10) : null;
+    // Safety guard: a "Whole site" import DELETES the entire existing site-wide query pool before
+    // re-inserting. If the owner pasted a per-page export (small row count) but forgot to pick the
+    // page in the dropdown above, this would silently destroy hundreds of unrelated queries that other
+    // POSSIBLE/PROVEN rows depend on. Detect the mismatch and force an explicit confirmation.
+    if (!_assignPageId && _assignSel) {
+      var _newRowCount = document.querySelectorAll('.gsc-cb:checked').length;
+      var _existingCount = (_gapQueries || []).filter(function(g){ return !g.page_id; }).length;
+      if (_existingCount > 20 && _newRowCount < _existingCount * 0.5) {
+        var _ok = confirm(
+          'This is set to "Whole site" \u2014 importing will DELETE your current ' + _existingCount + ' site-wide queries and replace them with only ' + _newRowCount + ' new ones.\\n\\n'
+          + 'If this paste is actually a PER-PAGE export (queries for just one page), cancel now and pick that page in the "Query ownership" dropdown above instead \u2014 otherwise you will lose data other cannibalization rows depend on.\\n\\n'
+          + 'Continue and replace all ' + _existingCount + ' site-wide queries with these ' + _newRowCount + '?'
+        );
+        if (!_ok) { toast('Import cancelled \u2014 pick the correct page above, then import again', '#f59e0b'); return; }
+      }
+    }
     var _norm = function(u){ try { var x = new URL(String(u).trim()); return x.host.toLowerCase().replace(/^www[.]/,'') + x.pathname.toLowerCase().replace(/[/]+$/,'') + (x.search||''); } catch(e) { return String(u||'').trim().toLowerCase().replace(/^https?:[/][/]/,'').replace(/^www[.]/,'').replace(/[/]+$/,''); } };
     var groups = {};
     all.forEach(function(cb) {
