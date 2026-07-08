@@ -1762,7 +1762,7 @@ app.post('/api/tracker-client/:token/analyze-gaps', async (req, res) => {
     const _dNorm = s => String(s||'').toLowerCase().replace(/\s+/g,' ').trim();
     qR.rows = qR.rows.filter(q => _doneSet.indexOf(_dNorm(q.query)) === -1);
     if (!qR.rows.length) return res.json({ success: false, error: 'Nothing open to analyze \u2014 all gap queries are checked off. Import a fresh Queries CSV for new data.' });
-    const pR = await pool.query('SELECT url, keyword, gsc_keyword FROM tracker_pages WHERE tracker_client_id=$1 AND (is_active=TRUE OR is_active IS NULL) LIMIT 100', [client.id]);
+    const pR = await pool.query('SELECT url, keyword, gsc_keyword FROM tracker_pages WHERE tracker_client_id=$1 AND (is_active=TRUE OR is_active IS NULL) AND redirects_to IS NULL LIMIT 100', [client.id]);
     let sitemapSlugs = [];
     try { const sm = JSON.parse(client.sitemap_urls || '[]'); if (Array.isArray(sm)) sitemapSlugs = sm.slice(0, 150); } catch(e) {}
 
@@ -27773,7 +27773,7 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
     <button id="sitemapBtn" class="cs-btn" onclick="showImportModal('sitemap')" style="border-color:#38bdf8;color:#38bdf8;" title="Import from sitemap"><i class="fas fa-list"></i> Sitemap</button>
     <button class="cs-btn" onclick="loadPages()" style="margin-left:4px;" title="Refresh"><i class="fas fa-sync-alt"></i></button>
     <button id="tourBtn" class="cs-btn" onclick="startTour(true)" style="border-color:#7c3aed;color:#a78bfa;animation:tourPulse 2s ease-in-out infinite;" title="Step-by-step walkthrough of the tracker">? Tour</button>
-    <style>@keyframes tourPulse{0%,100%{box-shadow:0 0 0 0 rgba(124,58,237,.55);}50%{box-shadow:0 0 0 7px rgba(124,58,237,0);}}</style>
+    <style>@keyframes tourPulse{0%,100%{box-shadow:0 0 0 0 rgba(124,58,237,.55);}50%{box-shadow:0 0 0 7px rgba(124,58,237,0);}}@keyframes scanPulse{0%,100%{box-shadow:0 0 0 0 rgba(74,222,128,.55);}50%{box-shadow:0 0 0 7px rgba(74,222,128,0);}}</style>
     <button id="scanAllBtn" class="cs-btn" onclick="scanAllPages()" style="border-color:#4ade80;color:#4ade80;font-weight:700;" title="Scan all pages one by one">&#x26a1; Scan All</button>
     <button class="cs-btn" onclick="mergePages()" style="border-color:#38bdf8;color:#38bdf8;" title="Merge duplicate URLs &#x2014; keep best">&#x2295; Merge</button>
     <button class="cs-btn" onclick="cleanPages()" style="border-color:#f59e0b;color:#f59e0b;" title="Remove junk (.jpg, /category/, feeds) &amp; pages not in sitemap/GSC &#x2014; keep only live content">&#x1f9f9; Clean</button>
@@ -28259,15 +28259,54 @@ function editKeyword(pageId, el) {
   }).catch(function(e){ toast('Update failed: ' + e.message, '#f87171'); });
 }
 
+var _scanAllActive = false;
+var _scanAllTotal = 0;
+var _scanAllDone = 0;
+function _scanAllBtn(){ return document.getElementById('scanAllBtn'); }
+function _setScanAllBtn(html, disabled, animate){
+  var b = _scanAllBtn(); if (!b) return;
+  b.innerHTML = html;
+  b.disabled = !!disabled;
+  b.style.opacity = disabled ? '0.85' : '1';
+  b.style.cursor = disabled ? 'default' : 'pointer';
+  b.style.animation = animate ? 'scanPulse 1.2s ease-in-out infinite' : 'none';
+}
 function scanAllPages() {
-  if (!confirm('Scan all tracked pages now? They run one by one and this can take a few minutes.')) return;
+  if (_scanAllActive) { toast('A full scan is already running \u2014 please wait for it to finish.', '#f59e0b'); return; }
+  if (!confirm('Scan all tracked pages now? They run one by one and this can take a few minutes. You will see live progress on the button.')) return;
+  _scanAllActive = true; _scanAllDone = 0; _scanAllTotal = 0;
+  _setScanAllBtn('\u23f3 Starting scan\u2026', true, true);
   api('/scan-all', 'POST').then(function(d){
     if (d && d.success) {
-      toast(d.message || ('Scanning ' + (d.queued||0) + ' pages...'), '#4ade80');
+      _scanAllTotal = d.queued || 0;
+      toast('Scanning ' + _scanAllTotal + ' pages \u2014 watch the button and Live Activity.', '#4ade80');
+      _setScanAllBtn('\u23f3 Scanning 0/' + _scanAllTotal + '\u2026', true, true);
+      // Safety fallback: if SSE misses events, stop the spinner after a generous timeout
+      clearTimeout(window._scanAllFallback);
+      window._scanAllFallback = setTimeout(_finishScanAll, Math.max(60000, _scanAllTotal * 20000));
       var n = 0;
-      var iv = setInterval(function(){ n++; loadPages(); if (n >= 12) clearInterval(iv); }, 10000);
-    } else { toast((d && d.error) || 'Scan failed to start', '#f87171'); }
-  }).catch(function(e){ toast('Scan failed: ' + e.message, '#f87171'); });
+      var iv = setInterval(function(){ n++; loadPages(); if (n >= 18 || !_scanAllActive) clearInterval(iv); }, 10000);
+    } else {
+      _scanAllActive = false;
+      _setScanAllBtn('\u26a1 Scan All', false, false);
+      toast((d && d.error) || 'Scan failed to start', '#f87171');
+    }
+  }).catch(function(e){ _scanAllActive = false; _setScanAllBtn('\u26a1 Scan All', false, false); toast('Scan failed: ' + e.message, '#f87171'); });
+}
+function _scanAllProgress(){
+  if (!_scanAllActive) return;
+  _scanAllDone++;
+  if (_scanAllTotal && _scanAllDone >= _scanAllTotal) { _finishScanAll(); return; }
+  _setScanAllBtn('\u23f3 Scanning ' + _scanAllDone + '/' + (_scanAllTotal||'?') + '\u2026', true, true);
+}
+function _finishScanAll(){
+  if (!_scanAllActive) return;
+  _scanAllActive = false;
+  clearTimeout(window._scanAllFallback);
+  loadPages();
+  _setScanAllBtn('\u2713 Scan complete', true, false);
+  toast('All pages scanned \u2014 results updated below.', '#4ade80');
+  setTimeout(function(){ _setScanAllBtn('\u26a1 Scan All', false, false); }, 6000);
 }
 
 function openTelegramSetup() {
@@ -29517,6 +29556,7 @@ function renderImpressionGap() {
     var qFlat = qn.replace(/ /g,'');
     var best = null, bestScore = 0;
     (_pages||[]).forEach(function(p){
+      if (p.redirects_to) return; // never target a redirected/dead/canonical-duplicate page
       var t = [];
       if (p.keyword) t.push(_gapNorm(p.keyword));
       if (p.gsc_keyword) t.push(_gapNorm(p.gsc_keyword));
@@ -29532,11 +29572,14 @@ function renderImpressionGap() {
     if (!best || bestScore < 0.25) return null;
     try { var sl = new URL(best.url).pathname || '/'; return sl === '/' ? '(homepage)' : sl; } catch(e) { return best.url; }
   };
+  var _deadPaths = {};
+  (_pages||[]).forEach(function(p){ if (p.redirects_to) { try { _deadPaths[new URL(p.url).pathname.replace(/\/+$/,'').toLowerCase()] = 1; } catch(e) {} } });
   var _slugMatch = function(q) {
     var qn = _gapNorm(q); var qWords = qn.split(' ').filter(function(w){ return w.length > 2; });
     if (!qWords.length) return null;
     var best = null, bestScore = 0;
     for (var i = 0; i < _sitemapSlugs.length; i++) {
+      try { var _sp = new URL(_sitemapSlugs[i], 'https://x/').pathname.replace(/\/+$/,'').toLowerCase(); if (_deadPaths[_sp]) continue; } catch(e) {}
       var sn = _gapNorm(String(_sitemapSlugs[i]).replace(/[-_/]/g,' '));
       if (!sn) continue;
       var hit = 0; qWords.forEach(function(w){ if (sn.indexOf(w) > -1) hit++; });
@@ -30082,6 +30125,7 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
                 setTimeout(loadPages, 500);
                 showNotification('Scan complete: ' + (ev.url||''), 'scan', '#4ade80');
                 addLine('Scan complete: ' + (ev.url||''), '#4ade80', null);
+                try { _scanAllProgress(); } catch(e) {}
                 return;
               }
               var text = '', color = '#6b7280', isLink = false, linkUrl = '';
