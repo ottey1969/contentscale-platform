@@ -1,4 +1,4 @@
-console.log('=== CONTENTSCALE BOOT v2026-07-08-possible-prioritized-shortcut | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON | possibleThreshold=20impr | shortcutPrioritized=v2 | gscAutoFetchRemoved=true | linkCheckActive=true | wholeSiteWipeGuard=true | gscAutoFetchRestored=true | reminderOffFix=true ===');
+console.log('=== CONTENTSCALE BOOT v2026-07-08-possible-prioritized-shortcut | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON | possibleThreshold=20impr | shortcutPrioritized=v2 | gscAutoFetchRemoved=true | linkCheckActive=true | wholeSiteWipeGuard=true | gscAutoFetchRestored=true | reminderOffFix=true | claudeRemoved=true | bingWebmaster=true | competitorPanel=true ===');
 // CONTENTSCALE SERVER.JS — ELITE EDITION v4 (FIXED v3)
 // ✅ FIX v7: secondary_keywords + related_keywords auto in Analyse JSON + Execute prompt
 // ✅ FIX v7: analysis_data JSONB safe parse in execute-rewrite
@@ -1301,7 +1301,8 @@ app.get('/api/tracker-client/:token', async (req, res) => {
               s.ai_bing_cited, s.ai_brave_cited,
               s.score as graaf_score, s.checked_at as last_checked,
               s.recommendations, s.source_suggestions, s.discovered_sources,
-              s.gsc_brief, s.author_trust_score, s.author_trust_findings
+              s.gsc_brief, s.author_trust_score, s.author_trust_findings,
+              s.google_competitors, s.ai_perplexity_competitors
        FROM tracker_pages p
        LEFT JOIN LATERAL (
          SELECT * FROM tracker_snapshots WHERE page_id = p.id ORDER BY checked_at DESC LIMIT 1
@@ -1560,7 +1561,8 @@ app.get('/api/tracker-client/:token/pages/:pageId', async (req, res) => {
              s.ai_bing_cited, s.ai_brave_cited, s.score as graaf_score,
              s.checked_at as last_checked, s.recommendations,
              s.source_suggestions, s.discovered_sources, s.gsc_brief,
-             s.author_trust_score, s.author_trust_findings
+             s.author_trust_score, s.author_trust_findings,
+             s.google_competitors, s.ai_perplexity_competitors
       FROM tracker_pages p
       LEFT JOIN LATERAL (
         SELECT * FROM tracker_snapshots WHERE page_id = p.id ORDER BY checked_at DESC LIMIT 1
@@ -3379,7 +3381,7 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
   function fmtTime(t){ try{ var d=t?new Date(t):null; return d?(d.toLocaleDateString('en-GB',{day:'2-digit',month:'short'})+' '+d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})):''; }catch(e){ return ''; } }
   function chip(v,l,c){ return '<div class="bw-chip"><div class="v" style="color:'+c+'">'+v+'</div><div class="l">'+l+'</div></div>'; }
   function chips(d){ var pos=d.position||d.gsc_position; var pc=(!pos)?'#6b7280':pos<=3?'#4ade80':pos<=10?'#a3e635':pos<=20?'#fbbf24':'#f87171';
-    return '<div class="bw-chips">'+chip(pos?('#'+pos):'-','Position',pc)+chip(d.aio_cited?'YES':'NO','AIO',d.aio_cited?'#4ade80':'#6b7280')+chip(d.perp_cited?'YES':'NO','Perplexity',d.perp_cited?'#a78bfa':'#6b7280')+chip(d.bing_cited?'YES':'NO','Copilot',d.bing_cited?'#60a5fa':'#6b7280')+chip(d.brave_cited?'YES':'NO','Claude',d.brave_cited?'#f87171':'#6b7280')+(d.score?chip(d.score,'GRAAF','#a78bfa'):'')+'</div>'; }
+    return '<div class="bw-chips">'+chip(pos?('#'+pos):'-','Position',pc)+chip(d.aio_cited?'YES':'NO','AIO',d.aio_cited?'#4ade80':'#6b7280')+chip(d.perp_cited?'YES':'NO','Perplexity',d.perp_cited?'#a78bfa':'#6b7280')+chip(d.bing_cited?'YES':'NO','Copilot',d.bing_cited?'#60a5fa':'#6b7280')+(d.score?chip(d.score,'GRAAF','#a78bfa'):'')+'</div>'; }
   function recs(d){ var out='';
     var _lbl=function(t,c){ return '<div style="font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:'+c+';margin:8px 0 4px;font-weight:600">'+t+'</div>'; };
     var items=d.passages||[];
@@ -3707,7 +3709,6 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
       + chip(d.aio_cited?'YES':'NO','AIO',d.aio_cited?'#4ade80':'#6b7280')
       + chip(d.perp_cited?'YES':'NO','Perplexity',d.perp_cited?'#a78bfa':'#6b7280')
       + chip(d.bing_cited?'YES':'NO','Copilot',d.bing_cited?'#60a5fa':'#6b7280')
-      + chip(d.brave_cited?'YES':'NO','Claude',d.brave_cited?'#f87171':'#6b7280')
       + (d.score?chip(d.score,'GRAAF','#a78bfa'):'')
       + '</div>';
   }
@@ -3797,7 +3798,6 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
         '<div class="lw-stat"><div class="lw-stat-val" style="color:' + (data.aio_cited ? '#4ade80' : '#4b5563') + '">' + (data.aio_cited ? 'YES' : 'NO') + '</div><div class="lw-stat-lbl">AIO</div></div>' +
         '<div class="lw-stat"><div class="lw-stat-val" style="color:' + (data.perp_cited ? '#a78bfa' : '#4b5563') + '">' + (data.perp_cited ? 'YES' : 'NO') + '</div><div class="lw-stat-lbl">Perplexity</div></div>' +
         '<div class="lw-stat"><div class="lw-stat-val" style="color:' + (data.bing_cited ? '#60a5fa' : '#4b5563') + '">' + (data.bing_cited ? 'YES' : 'NO') + '</div><div class="lw-stat-lbl">Copilot</div></div>' +
-        '<div class="lw-stat"><div class="lw-stat-val" style="color:' + (data.brave_cited ? '#f87171' : '#4b5563') + '">' + (data.brave_cited ? 'YES' : 'NO') + '</div><div class="lw-stat-lbl">Claude</div></div>' +
         (data.score ? '<div class="lw-stat"><div class="lw-stat-val" style="color:#fbbf24">' + data.score + '</div><div class="lw-stat-lbl">GRAAF</div></div>' : '') +
       '</div>' +
       '<div class="lw-card-actions">' + actionsHtml + '</div>';
@@ -3976,7 +3976,7 @@ function strip(s){ return String(s==null?'':s).replace(/<[^>]+>/g,' ').trim(); }
 function stat(val,lbl,color){ return '<div class="stat"><div class="stat-val" style="color:'+color+'">'+val+'</div><div class="stat-lbl">'+lbl+'</div></div>'; }
 function recItems(arr,color){ return (arr||[]).map(function(p){ var t=p.title||p.h2||p.heading||'Recommendation'; var b=strip(p.action||p.passage||p.body||p.content||p.text||''); return '<div class="rec" style="border-color:'+color+'"><div class="rt">'+esc(t)+'</div>'+(b?'<div class="rb">'+esc(b)+'</div>':'')+'</div>'; }); }
 function chips(b){ var pos=b.position; var posC=(pos&&pos<=3)?'#4ade80':(pos&&pos<=10)?'#fbbf24':'#f87171';
-  return stat(pos?('#'+pos):'N/A','Position',posC)+stat(b.aio_cited?'YES':'NO','AIO',b.aio_cited?'#4ade80':'#4b5563')+stat(b.perp_cited?'YES':'NO','Perplexity',b.perp_cited?'#a78bfa':'#4b5563')+stat(b.bing_cited?'YES':'NO','Copilot',b.bing_cited?'#60a5fa':'#4b5563')+stat(b.brave_cited?'YES':'NO','Claude',b.brave_cited?'#f87171':'#4b5563')+(b.brief_after_score!=null?stat(b.brief_after_score,'GRAAF','#fbbf24'):(b.score?stat(b.score,'GRAAF','#fbbf24'):'')); }
+  return stat(pos?('#'+pos):'N/A','Position',posC)+stat(b.aio_cited?'YES':'NO','AIO',b.aio_cited?'#4ade80':'#4b5563')+stat(b.perp_cited?'YES':'NO','Perplexity',b.perp_cited?'#a78bfa':'#4b5563')+stat(b.bing_cited?'YES':'NO','Copilot',b.bing_cited?'#60a5fa':'#4b5563')+(b.brief_after_score!=null?stat(b.brief_after_score,'GRAAF','#fbbf24'):(b.score?stat(b.score,'GRAAF','#fbbf24'):'')); }
 function card(b,isFeature){ var oid=String(b.page_id||b.url);
   var ai=recItems(b.passages,'#a78bfa'), gs=recItems(b.gsc_brief,'#a3e635');
   var all=[]; if(ai.length){ all.push('<div class="grp" style="color:#a78bfa">AI citations</div>'); all=all.concat(ai); } if(gs.length){ all.push('<div class="grp" style="color:#a3e635">GSC ranking</div>'); all=all.concat(gs); }
@@ -5386,6 +5386,11 @@ app.patch('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
    await client.query(`ALTER TABLE tracker_snapshots ADD COLUMN IF NOT EXISTS ai_brave_cited BOOLEAN DEFAULT FALSE`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_snapshots ADD COLUMN IF NOT EXISTS ai_brave_found BOOLEAN DEFAULT FALSE`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_snapshots ADD COLUMN IF NOT EXISTS content_diff JSONB`).catch(()=>{});
+  // Competitor visibility: who else is currently cited for this query — data already fetched from
+  // Google (Serper organic results) and Perplexity (its citations array), previously discarded after
+  // only checking for our own domain. Now persisted so the owner can actually see it.
+  await client.query(`ALTER TABLE tracker_snapshots ADD COLUMN IF NOT EXISTS google_competitors JSONB`).catch(()=>{});
+  await client.query(`ALTER TABLE tracker_snapshots ADD COLUMN IF NOT EXISTS ai_perplexity_competitors JSONB`).catch(()=>{});
 
    await client.query(`CREATE TABLE IF NOT EXISTS tracker_changes (
      id SERIAL PRIMARY KEY,
@@ -27963,7 +27968,6 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
     <div class="cs-stat"><div class="val" id="statCitedG" style="color:#0284c7;">&mdash;</div><div class="lbl">Google AIO</div></div>
     <div class="cs-stat"><div class="val" id="statCitedP" style="color:#7c3aed;">&mdash;</div><div class="lbl">Perplexity</div></div>
     <div class="cs-stat"><div class="val" id="statCitedB" style="color:#2563eb;">&mdash;</div><div class="lbl">Copilot</div></div>
-    <div class="cs-stat"><div class="val" id="statCitedC" style="color:#dc2626;">&mdash;</div><div class="lbl">Claude</div></div>
     <div class="cs-stat"><div class="val" id="statRemaining" style="color:#16a34a;">&mdash;</div><div class="lbl">Slots left</div></div>
   </div>
 
@@ -28088,7 +28092,6 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
       <div class="so-step" id="soStep_google"><span class="so-step-icon pending" id="soIcon_google">&#9675;</span><span class="so-step-label" id="soLabel_google">Google position + AIO check</span></div>
       <div class="so-step" id="soStep_perplexity"><span class="so-step-icon pending" id="soIcon_perplexity">&#9675;</span><span class="so-step-label" id="soLabel_perplexity">Perplexity citation check</span></div>
       <div class="so-step" id="soStep_copilot"><span class="so-step-icon pending" id="soIcon_copilot">&#9675;</span><span class="so-step-label" id="soLabel_copilot">Copilot citation check</span></div>
-      <div class="so-step" id="soStep_brave"><span class="so-step-icon pending" id="soIcon_brave">&#9675;</span><span class="so-step-label" id="soLabel_brave">Claude / Brave citation check</span></div>
       <div class="so-step" id="soStep_ai"><span class="so-step-icon pending" id="soIcon_ai">&#9675;</span><span class="so-step-label" id="soLabel_ai">AI recommendations generation</span></div>
     </div>
     <div class="so-status" id="soStatus">Initializing scan...</div>
@@ -28223,7 +28226,6 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
       <div id="cbSteps">
         <div class="cb-step" id="cbStep1"><span class="cb-step-icon pending" id="cbStep1Icon"></span><span>Checking Google position &amp; AI Overview&#x2026;</span></div>
         <div class="cb-step" id="cbStep2"><span class="cb-step-icon pending" id="cbStep2Icon"></span><span>Scanning Perplexity &amp; Copilot citations&#x2026;</span></div>
-        <div class="cb-step" id="cbStep3"><span class="cb-step-icon pending" id="cbStep3Icon"></span><span>Analyzing Claude/Brave citations&#x2026;</span></div>
         <div class="cb-step" id="cbStep4"><span class="cb-step-icon pending" id="cbStep4Icon"></span><span>Generating your Citation Brief&#x2026;</span></div>
         <div class="cb-progress"><div class="cb-progress-bar" id="cbProgressBar"></div></div>
       </div>
@@ -28819,12 +28821,10 @@ function renderStats(data) {
   var citedG = pages.filter(function(p){ return p.ai_google_overview_cited; }).length;
   var citedP = pages.filter(function(p){ return p.ai_perplexity_cited; }).length;
   var citedB = pages.filter(function(p){ return p.ai_bing_cited; }).length;
-  var citedC = pages.filter(function(p){ return p.ai_brave_cited; }).length;
   document.getElementById('statTotal').textContent = pages.length;
   document.getElementById('statCitedG').textContent = citedG;
   document.getElementById('statCitedP').textContent = citedP;
   var elB = document.getElementById('statCitedB'); if(elB) elB.textContent = citedB;
-  var elC = document.getElementById('statCitedC'); if(elC) elC.textContent = citedC;
 
   // Slots left \\u2014 MAX_PAGES is total across all domains
   // Show: used/total and per-domain breakdown if multiple domains
@@ -28870,7 +28870,6 @@ function _bwChips(bd){
     + chip(bd.aio_cited?'YES':'NO','AIO',bd.aio_cited?'#4ade80':'#6b7280')
     + chip(bd.perp_cited?'YES':'NO','Perplexity',bd.perp_cited?'#4ade80':'#6b7280')
     + chip(bd.bing_cited?'YES':'NO','Copilot',bd.bing_cited?'#4ade80':'#6b7280')
-    + chip(bd.brave_cited?'YES':'NO','Claude',bd.brave_cited?'#4ade80':'#6b7280')
     + (bd.score ? chip(bd.score,'GRAAF','#a78bfa') : '')
     + '</div>';
 }
@@ -29142,12 +29141,11 @@ function renderPages() {
     // Only show "No AIO / No Perplexity / ..." once a real AI-citation check has actually run.
     var aiChecked = (p.brief_check_count > 0)
       || p.ai_google_overview_cited === true || p.ai_perplexity_cited === true
-      || p.ai_bing_cited === true || p.ai_brave_cited === true;
+      || p.ai_bing_cited === true;
     if (aiChecked) {
       badges += p.ai_google_overview_cited ? '<span class="cs-cs-badge green">&#10003; Google AIO</span> ' : '<span class="cs-cs-badge grey">No AIO</span> ';
       badges += p.ai_perplexity_cited ? '<span class="cs-cs-badge purple" style="border:1px solid #7c3aed;">&#10003; Perplexity</span> ' : '<span class="cs-cs-badge grey">No Perplexity</span> ';
       badges += p.ai_bing_cited ? '<span class="cs-cs-badge" style="background:#0c2340;color:#60a5fa;border:1px solid #1d4ed8;">&#10003; Copilot</span> ' : '<span class="cs-cs-badge grey">No Copilot</span> ';
-      badges += p.ai_brave_cited ? '<span class="cs-cs-badge" style="background:#1a0e2e;color:#c4b5fd;border:1px solid #6d28d9;">&#10003; Claude</span> ' : '<span class="cs-cs-badge grey">No Claude</span> ';
     } else {
       badges += '<span class="cs-cs-badge grey" title="No AI citation check has run yet \u2014 paste HTML or Scan All">AI citations: not checked yet</span> ';
     }
@@ -29316,7 +29314,6 @@ function renderRecs(p) {
     var aio = !!(p.ai_google_overview_cited || snap.ai_google_overview_cited);
     var perp = !!(p.ai_perplexity_cited || snap.ai_perplexity_cited);
     var cop = !!(p.ai_bing_cited || snap.ai_bing_cited);
-    var cl = !!(p.ai_brave_cited || snap.ai_brave_cited);
     var score = p.graaf_score || snap.score || snap.graaf_score || p.last_graaf_score || null;
     var posColor = pos ? (pos<=3?'#22c55e':pos<=10?'#f59e0b':'#ef4444') : '#4b5563';
     var posBlink = pos ? ' style="animation:briefBlink 1.2s ease-in-out 4"' : '';
@@ -29341,9 +29338,37 @@ function renderRecs(p) {
     html += '<div class="cb-istat"' + (aio ? ' style="animation:briefBlink 1.2s ease-in-out 4"' : '') + '><div class="cb-isv" style="color:' + (aio?'#22c55e':'#374151') + '">' + (aio?'&#10003;':'&#8212;') + '</div><div class="cb-isl">Google AIO</div></div>';
     html += '<div class="cb-istat"' + (perp ? ' style="animation:briefBlink 1.2s ease-in-out 4"' : '') + '><div class="cb-isv" style="color:' + (perp?'#818cf8':'#374151') + '">' + (perp?'&#10003;':'&#8212;') + '</div><div class="cb-isl">Perplexity</div></div>';
     html += '<div class="cb-istat"' + (cop ? ' style="animation:briefBlink 1.2s ease-in-out 4"' : '') + '><div class="cb-isv" style="color:' + (cop?'#60a5fa':'#374151') + '">' + (cop?'&#10003;':'&#8212;') + '</div><div class="cb-isl">Copilot</div></div>';
-    html += '<div class="cb-istat"' + (cl ? ' style="animation:briefBlink 1.2s ease-in-out 4"' : '') + '><div class="cb-isv" style="color:' + (cl?'#a78bfa':'#374151') + '">' + (cl?'&#10003;':'&#8212;') + '</div><div class="cb-isl">Claude</div></div>';
     if (score) html += '<div class="cb-istat"><div class="cb-isv" style="color:#f59e0b">' + score + '</div><div class="cb-isl">GRAAF</div></div>';
     html += '</div>';
+
+    // ── Who's currently cited: real competitor data already fetched from Google (organic top-5)
+    // and Perplexity (its citations array) during the scan — previously discarded, now shown so the
+    // owner sees WHO wins the query and WHY, not just their own pass/fail status.
+    var _gComp = (function(){ try { return typeof p.google_competitors === 'string' ? JSON.parse(p.google_competitors) : (p.google_competitors||snap.google_competitors||[]); } catch(e){ return []; } })();
+    var _pComp = (function(){ try { return typeof p.ai_perplexity_competitors === 'string' ? JSON.parse(p.ai_perplexity_competitors) : (p.ai_perplexity_competitors||snap.ai_perplexity_competitors||[]); } catch(e){ return []; } })();
+    if ((_gComp && _gComp.length) || (_pComp && _pComp.length)) {
+      html += '<div style="margin:10px 0;padding:10px 12px;background:#0a0e14;border:1px solid #1f2937;border-radius:8px;">';
+      html += '<div style="font-size:10px;font-weight:800;letter-spacing:.05em;color:#818cf8;text-transform:uppercase;margin-bottom:8px;">\\u{1F441}\\uFE0F Who\\u2019s currently cited for this query</div>';
+      if (_gComp && _gComp.length) {
+        html += '<div style="font-size:10px;color:#6b7280;margin-bottom:3px;">Google top results:</div>';
+        html += '<div style="display:flex;flex-direction:column;gap:2px;margin-bottom:8px;">';
+        _gComp.slice(0,5).forEach(function(c, ci){
+          var host = ''; try { host = new URL(c.url).hostname.replace(/^www\\./,''); } catch(e) { host = c.url||''; }
+          html += '<div style="font-size:11px;color:#9ca3af;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + String(c.title||'').replace(/"/g,'&quot;') + '">#' + (c.position||ci+1) + ' <span style="color:#60a5fa;">' + host.replace(/</g,'&lt;') + '</span></div>';
+        });
+        html += '</div>';
+      }
+      if (_pComp && _pComp.length) {
+        html += '<div style="font-size:10px;color:#6b7280;margin-bottom:3px;">Perplexity cited:</div>';
+        html += '<div style="display:flex;flex-direction:column;gap:2px;">';
+        _pComp.slice(0,5).forEach(function(u){
+          var host = ''; try { host = new URL(u).hostname.replace(/^www\\./,''); } catch(e) { host = u; }
+          html += '<div style="font-size:11px;color:#9ca3af;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + '<span style="color:#a78bfa;">' + host.replace(/</g,'&lt;') + '</span></div>';
+        });
+        html += '</div>';
+      }
+      html += '</div>';
+    }
 
     // What to add label
     html += '<div class="cb-inline-phd">&#10024; What to add to get cited</div>';
@@ -29474,7 +29499,6 @@ function copyBrief(pageId) {
   lines.push('- Google AIO: ' + (p.ai_google_overview_cited ? 'CITED' : 'Not cited'));
   lines.push('- Perplexity: ' + (p.ai_perplexity_cited ? 'CITED' : 'Not cited'));
   lines.push('- Copilot: ' + (p.ai_bing_cited ? 'CITED' : 'Not cited'));
-  lines.push('- Claude: ' + (p.ai_brave_cited ? 'CITED' : 'Not cited'));
   if (pos) lines.push('- Google Position: #' + pos);
   if (score) lines.push('- GRAAF Score: ' + score + '/100');
   if (p.gsc_clicks != null || p.gsc_impressions != null || p.gsc_position != null) {
@@ -30583,7 +30607,6 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
       '<div class="cb-stat" style="animation:soStatPop .4s ease .06s both"><div class="v" style="color:' + (data.aio_cited ? '#4ade80' : '#4b5563') + ';">' + (data.aio_cited ? '\\u2713 Cited' : 'No') + '</div><div class="l">Google AIO</div></div>' +
       '<div class="cb-stat" style="animation:soStatPop .4s ease .12s both"><div class="v" style="color:' + (data.perp_cited ? '#a78bfa' : '#4b5563') + ';">' + (data.perp_cited ? '\\u2713 Cited' : 'No') + '</div><div class="l">Perplexity</div></div>' +
       '<div class="cb-stat" style="animation:soStatPop .4s ease .18s both"><div class="v" style="color:' + (data.bing_cited ? '#60a5fa' : '#4b5563') + ';">' + (data.bing_cited ? '\\u2713 Cited' : 'No') + '</div><div class="l">Copilot</div></div>' +
-      '<div class="cb-stat" style="animation:soStatPop .4s ease .24s both;position:relative;"><div class="v" style="color:' + (data.brave_cited ? '#f87171' : '#4b5563') + ';">' + (data.brave_cited ? '\\u2713 Cited' : 'No') + '</div><div class="l">Claude</div>' + (data.brave_cited ? '<span style="position:absolute;top:-4px;right:-4px;font-size:8px;background:#0a0a12;border:1px solid #1f2937;border-radius:3px;padding:0 3px;color:#6b7280;white-space:nowrap;">\\u1f441; see img</span>' : '') + '</div>' +
       (data.score ? '<div class="cb-stat" style="animation:soStatPop .4s ease .3s both"><div class="v" style="color:#fbbf24;">' + data.score + '</div><div class="l">GRAAF</div></div>' : '');
 
     // GSC section \\u2014 show if GSC is connected (even if values are 0)
@@ -30697,7 +30720,6 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
         lines.push('- Google AIO: ' + (data.aio_cited ? 'CITED' : 'Not cited'));
         lines.push('- Perplexity: ' + (data.perp_cited ? 'CITED' : 'Not cited'));
         lines.push('- Copilot: ' + (data.bing_cited ? 'CITED' : 'Not cited'));
-        lines.push('- Claude: ' + (data.brave_cited ? 'CITED' : 'Not cited'));
         if (data.position) lines.push('- Google Position: #' + data.position);
         if (data.score) lines.push('- GRAAF Score: ' + data.score + '/100');
         if (hasGsc) {
@@ -30933,7 +30955,6 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
       '<div class="cb-stat" style="animation:soStatPop .3s ease .05s both"><div class="v" style="color:' + (data.aio_cited ? '#4ade80' : '#4b5563') + ';">' + (data.aio_cited ? '\\u2713 Cited' : 'No') + '</div><div class="l">Google AIO</div></div>' +
       '<div class="cb-stat" style="animation:soStatPop .3s ease .1s both"><div class="v" style="color:' + (data.perp_cited ? '#a78bfa' : '#4b5563') + ';">' + (data.perp_cited ? '\\u2713 Cited' : 'No') + '</div><div class="l">Perplexity</div></div>' +
       '<div class="cb-stat" style="animation:soStatPop .3s ease .15s both"><div class="v" style="color:' + (data.bing_cited ? '#60a5fa' : '#4b5563') + ';">' + (data.bing_cited ? '\\u2713 Cited' : 'No') + '</div><div class="l">Copilot</div></div>' +
-      '<div class="cb-stat" style="animation:soStatPop .3s ease .2s both"><div class="v" style="color:' + (data.brave_cited ? '#f87171' : '#4b5563') + ';">' + (data.brave_cited ? '\\u2713 Cited' : 'No') + '</div><div class="l">Claude</div></div>' +
       (data.score ? '<div class="cb-stat" style="animation:soStatPop .3s ease .25s both"><div class="v" style="color:#fbbf24;">' + data.score + '</div><div class="l">GRAAF</div></div>' : '');
 
     // GSC \\u2014 show if connected (even with 0 values)
@@ -31087,7 +31108,6 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
       lines.push('- Google AIO: ' + (data.aio_cited ? 'CITED' : 'Not cited'));
       lines.push('- Perplexity: ' + (data.perp_cited ? 'CITED' : 'Not cited'));
       lines.push('- Copilot: ' + (data.bing_cited ? 'CITED' : 'Not cited'));
-      lines.push('- Claude: ' + (data.brave_cited ? 'CITED' : 'Not cited'));
       if (data.position) lines.push('- Google Position: #' + data.position);
       if (data.score) lines.push('- GRAAF Score: ' + data.score + '/100');
       if (hasGsc) {
@@ -33784,7 +33804,6 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
             const citedG = withLatest.filter(p => p.latest_snapshot?.ai_google_overview_cited).length;
             const citedP = withLatest.filter(p => p.latest_snapshot?.ai_perplexity_cited).length;
             const citedB = withLatest.filter(p => p.latest_snapshot?.ai_bing_cited).length;
-            const citedC = withLatest.filter(p => p.latest_snapshot?.ai_brave_cited).length;
             const today = new Date().toDateString();
             const checkedToday = pages.filter(p => p.last_checked_at && new Date(p.last_checked_at).toDateString()===today).length;
             const pending = pages.reduce((a,p) => a + parseInt(p.pending_changes||0), 0);
@@ -33793,7 +33812,6 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
             if(el('trStatCitedGoogle')) el('trStatCitedGoogle').textContent = citedG;
             if(el('trStatCitedPerplexity')) el('trStatCitedPerplexity').textContent = citedP;
             if(el('trStatCitedCopilot')) el('trStatCitedCopilot').textContent = citedB;
-            if(el('trStatCitedClaude')) el('trStatCitedClaude').textContent = citedC;
             if(el('trStatCheckedToday')) el('trStatCheckedToday').textContent = checkedToday;
             if(el('trStatPendingChanges')) el('trStatPendingChanges').textContent = pending;
 
@@ -35973,37 +35991,11 @@ app.post('/api/tracker/pages/:id/citation-brief', verifyEngineAccess, async (req
       } catch(e) { console.warn('[citation-brief] Bing API failed:', e.message); }
     }
 
-    // ── Step 3d: Brave Search API — covers Claude (Anthropic uses Brave) ─────
+    // Claude citation checking removed \u2014 no reliable API exists to verify what Claude actually cites.
+    // Brave Search was previously used as an inaccurate proxy; kept these as false/empty rather than guessing.
     let claudeCited = false;
     let claudeText = '';
     let claudeCitations = [];
-    const braveKey = process.env.BRAVE_SEARCH_API_KEY || '';
-    if (braveKey) {
-      const braveCacheKey = 'brave:' + keyword.toLowerCase().trim() + ':' + domain;
-      const braveCached = _cacheGet(braveCacheKey);
-      if (braveCached) {
-        ({ claudeCited, claudeText, claudeCitations } = braveCached);
-        _trackAiCall('brave', 'brave-cache', true, null, 0);
-      } else
-      try {
-        const t_brave = Date.now();
-        const brResp = await fetch(
-          'https://api.search.brave.com/res/v1/web/search?q=' + encodeURIComponent(keyword) + '&count=10',
-          { headers: { 'Accept': 'application/json', 'Accept-Encoding': 'gzip', 'X-Subscription-Token': braveKey }, signal: AbortSignal.timeout(10000) }
-        );
-        _trackAiCall('brave', 'brave-api', brResp.ok, brResp.ok ? null : 'HTTP '+brResp.status, Date.now()-t_brave);
-        if (brResp.ok) {
-          const brData = await brResp.json();
-          const results = (brData.web && brData.web.results) || [];
-          claudeCitations = results.map(r => r.url || '').filter(Boolean);
-          claudeCited = claudeCitations.some(u => u.includes(domain));
-          claudeText = 'Brave top results: ' + claudeCitations.slice(0, 3).map(u => u.replace(/^https?:\/\//, '').split('/')[0]).join(', ');
-          // Cache result
-          _cacheSet(braveCacheKey, { claudeCited, claudeText, claudeCitations }, CACHE_TTL.brave);
-          console.log('[citation-brief] Brave/Claude: cited=' + claudeCited + ', results=' + results.length);
-        }
-      } catch(e) { console.warn('[citation-brief] Brave API failed:', e.message); }
-    }
 
     // ── Step 4a: Gemini 2.5 Pro with Google Search Grounding ─────────────────
     let brief = null;
@@ -36020,7 +36012,6 @@ CITATION STATUS ACROSS ALL AI PLATFORMS:
 - Perplexity: ${perplexityCited ? '✅ CITED' : perplexityKey ? '❌ NOT cited' : '⚠️ No key configured'}
 - ChatGPT Plus (Google): ${aioCited ? '✅ Likely cited (uses Google)' : '❌ Likely not cited (uses Google index)'}
 - Copilot/Bing: ${copilotCited ? '✅ CITED' : bingApiKey ? '❌ NOT in Bing top 10' : '⚠️ No Bing API key'}
-- Claude (Brave): ${claudeCited ? '✅ CITED' : braveKey ? '❌ NOT in Brave top 10' : '⚠️ No Brave API key'}
 
 ${aioText ? 'GOOGLE AI OVERVIEW TEXT: "' + aioText + '"' : ''}
 ${aioSourceUrl ? 'GOOGLE CITING: ' + aioSourceUrl : ''}
@@ -37091,7 +37082,6 @@ app.post('/api/tracker/pages/:id/check', verifyEngineAccess, async (req, res) =>
               + statCellE('Google AIO', aio ? 'Cited' : 'No', aio ? '#16a34a' : '#94a3b8')
               + statCellE('Perplexity', perp ? 'Cited' : 'No', perp ? '#7c3aed' : '#94a3b8')
               + statCellE('Copilot', bing ? 'Cited' : 'No', bing ? '#2563eb' : '#94a3b8')
-              + statCellE('Claude', brave ? 'Cited' : 'No', brave ? '#dc2626' : '#94a3b8')
               + statCellE('GRAAF', score ? score + '/100' : 'N/A', score >= 70 ? '#16a34a' : score >= 50 ? '#f59e0b' : '#ef4444')
               + '</tr></table>'
               + (aio ? '<div style="background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:12px 16px;margin-bottom:12px;font-size:13px;color:#166534;"><strong>Cited in Google AI Overview</strong> for &ldquo;' + kw + '&rdquo;.</div>' : (!isFirst && !aioLost ? '' : '<div style="background:#fefce8;border:1px solid #fde047;border-radius:8px;padding:12px 16px;margin-bottom:12px;font-size:13px;color:#854d0e;"><strong>Not yet cited</strong> in Google AI Overview. Use the Citation Brief below.</div>'))
@@ -38735,6 +38725,11 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
             const match = citations.find(function(c){ return (c||'').includes(domain); });
             snapshot.ai_perplexity_text = match ? 'Cited: ' + match : 'Domain in Perplexity answer';
           }
+          // Store the OTHER sources Perplexity cited (not our own domain) — this is the "who's
+          // currently cited" competitor visibility that was previously fetched and thrown away.
+          snapshot.ai_perplexity_competitors = citations
+            .filter(function(c){ return c && !(c.replace(/^https?:\/\//, '').startsWith(domain)); })
+            .slice(0, 10);
           const label = cited ? '✅ Cited (' + citations.length + ' citations)' : ('❌ Not cited (' + citations.length + ' citations found)');
           _trSetStep(pageId, 'perplexity', 'done', label);
           // Cache Perplexity result
@@ -38758,11 +38753,50 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
 
     // ── 4. You.com Smart API citation ────────────────────────────────────────
     // ── 4. Microsoft Bing / Copilot citation ───────────────────────────────────
-    // Uses Bing Web Search API (Azure) — free tier 1000 calls/mo
-    // Add BING_SEARCH_API_KEY to Railway (get at portal.azure.com → Bing Search v7)
-    _trSetStep(pageId, 'youcom', 'running', 'Checking Bing / Copilot index: ' + keyword);
+    // ── Bing Webmaster Tools API (real, authoritative) — checks if Bing actually
+    // has impression/click data for this exact query on this site. This is the
+    // legitimate signal behind "Copilot" (Copilot's web-grounding runs on Bing's
+    // index) — far stronger than a generic web-search hit, and completely free
+    // (API key only, no billing account, unlike Google Cloud).
+    _trSetStep(pageId, 'youcom', 'running', 'Checking Bing Webmaster (Copilot index): ' + keyword);
+    const _bwKey = process.env.BING_WEBMASTER_API_KEY || '';
     const _bingKey = keys.bingKey || process.env.BING_SEARCH_API_KEY || process.env.YOU_API_KEY || '';
-    if(_bingKey) {
+    if (_bwKey) {
+      const bwCacheKey = 'bingwebmaster:' + keyword.toLowerCase().trim() + ':' + domain;
+      const bwCached = _cacheGet(bwCacheKey);
+      if (bwCached) {
+        Object.assign(snapshot, bwCached);
+        _trSetStep(pageId, 'youcom', 'done', (snapshot.ai_bing_cited ? '✅' : '❌') + ' Bing Webmaster cached');
+      } else {
+        try {
+          const siteUrl = 'https://' + domain + '/';
+          const bwResp = await fetch(
+            `https://ssl.bing.com/webmaster/api.svc/json/GetQueryTrafficStats?siteUrl=${encodeURIComponent(siteUrl)}&query=${encodeURIComponent(keyword)}&apikey=${_bwKey}`,
+            { signal: AbortSignal.timeout(12000) }
+          );
+          if (bwResp.ok) {
+            const bwData = await bwResp.json();
+            const stats = bwData.d || [];
+            const totalImpressions = stats.reduce(function(sum, s){ return sum + (s.Impressions||0); }, 0);
+            const totalClicks = stats.reduce(function(sum, s){ return sum + (s.Clicks||0); }, 0);
+            snapshot.ai_bing_found = stats.length > 0;
+            snapshot.ai_bing_cited = totalImpressions > 0;
+            const label = totalImpressions > 0
+              ? `Bing index confirmed: ${totalImpressions} impressions, ${totalClicks} clicks (real Bing Webmaster data)`
+              : 'No Bing impressions found for this exact query yet';
+            _trSetStep(pageId, 'youcom', 'done', label);
+            _cacheSet(bwCacheKey, { ai_bing_found: snapshot.ai_bing_found, ai_bing_cited: snapshot.ai_bing_cited }, CACHE_TTL.bing);
+          } else {
+            const errTxt = await bwResp.text().catch(()=>'');
+            _trSetStep(pageId, 'youcom', 'error', `Bing Webmaster API ${bwResp.status}: ${errTxt.substring(0,100)} — check your site is verified in Bing Webmaster Tools`);
+            snapshot.ai_bing_cited = false;
+          }
+        } catch(e) {
+          _trSetStep(pageId, 'youcom', 'error', 'Bing Webmaster failed: ' + e.message);
+          snapshot.ai_bing_cited = false;
+        }
+      }
+    } else if(_bingKey) {
       const bingCacheKey2 = 'bing:tracker:' + keyword.toLowerCase().trim() + ':' + domain;
       const bingCached2 = _cacheGet(bingCacheKey2);
       if (bingCached2) {
@@ -38789,7 +38823,7 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
           snapshot.ai_bing_found = webResults.length > 0;
           snapshot.ai_bing_cited = inResults || inSnippets;
           const pos = webResults.findIndex(function(r){ return (r.url||'').includes(domain); });
-          const label = inResults ? `Cited in Bing #${pos+1}` : (inSnippets ? 'Mentioned in snippet' : 'Not found in Bing');
+          const label = inResults ? `Cited in Bing #${pos+1} (generic search, add BING_WEBMASTER_API_KEY for real index data)` : (inSnippets ? 'Mentioned in snippet' : 'Not found in Bing');
           _trSetStep(pageId, 'youcom', 'done', label);
           // Cache Bing result
           _cacheSet(bingCacheKey2, { ai_bing_found: snapshot.ai_bing_found, ai_bing_cited: snapshot.ai_bing_cited }, CACHE_TTL.bing);
@@ -38805,61 +38839,10 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
         console.warn('[tracker] Bing failed:', e.message);
       }
     } else {
-      _trSetStep(pageId, 'youcom', 'error', 'BING_SEARCH_API_KEY not set — free at portal.azure.com (1000 calls/mo)');
+      _trSetStep(pageId, 'youcom', 'error', 'No Bing key set — add BING_WEBMASTER_API_KEY (free, real data) or BING_SEARCH_API_KEY (generic fallback)');
       snapshot.ai_bing_cited = false;
     }
     })(),
-    (async function(){
-
-    // ── 4b. Brave Search citation ──────────────────────────────────────────────
-    if (!runBrave && prevSnap) {
-      snapshot.ai_brave_cited = prevSnap.ai_brave_cited;
-      _trSetStep(pageId, 'brave', 'done', (prevSnap.ai_brave_cited ? '✅' : '❌') + ' Cached result (scan ' + scanCount + ')');
-    } else {
-    _trSetStep(pageId, 'brave', 'running', 'Checking Brave Search (Claude index): ' + keyword);
-    const _bk = keys.braveKey || process.env.BRAVE_SEARCH_API_KEY || '';
-    if(_bk) {
-      try {
-        // Brave Search API v1 — only q and count are required params
-        const bResp = await fetch(
-          `https://api.search.brave.com/res/v1/web/search?q=${encodeURIComponent(keyword)}&count=10`,
-          {
-            headers: {
-              'Accept': 'application/json',
-              'Accept-Encoding': 'gzip',
-              'X-Subscription-Token': _bk
-            },
-            signal: AbortSignal.timeout(12000)
-          }
-        );
-        if(bResp.ok) {
-          const bData = await bResp.json();
-          const results = (bData.web && bData.web.results) || [];
-          const inResults = results.some(function(r){
-            return (r.url||'').replace(/^https?:\/\//, '').startsWith(domain);
-          });
-          const inSnippets = results.some(function(r){
-            return (r.description||'').includes(domain);
-          });
-          snapshot.ai_brave_cited = inResults || inSnippets;
-          snapshot.ai_brave_found = results.length > 0;
-          const bPos = results.findIndex(function(r){ return (r.url||'').includes(domain); });
-          const label = inResults ? `Cited in Brave #${bPos+1}` : (inSnippets ? 'Mentioned in snippet' : 'Not found in Brave');
-          _trSetStep(pageId, 'brave', 'done', label);
-        } else {
-          const err = await bResp.text().catch(()=>'');
-          _trSetStep(pageId, 'brave', 'error', 'Brave API ' + bResp.status + ': ' + err.substring(0,80));
-        }
-      } catch(e) {
-        _trSetStep(pageId, 'brave', 'error', e.message);
-        console.warn('[tracker] Brave failed:', e.message);
-      }
-    } else {
-      _trSetStep(pageId, 'brave', 'error', 'BRAVE_SEARCH_API_KEY not set — add to Railway env vars');
-      snapshot.ai_brave_cited = false;
-    }
-    } // end brave else block
-    })()
     ]);
 
   } else {
@@ -39709,13 +39692,15 @@ If no unanchored claims found, return empty array: []`;
     `INSERT INTO tracker_snapshots
       (page_id,checked_at,google_position,ai_google_overview_found,ai_google_overview_cited,ai_google_overview_text,
        ai_perplexity_found,ai_perplexity_cited,ai_perplexity_text,ai_bing_found,ai_bing_cited,ai_bing_text,
-       ai_brave_found,ai_brave_cited,
+       ai_brave_found,ai_brave_cited,google_competitors,ai_perplexity_competitors,
        recommendations,gsc_brief,source_suggestions,author_trust_score,author_trust_findings,discovered_sources,html_hash,score,graaf_breakdown,graaf_recommendations,content_changed,content_diff)
-     VALUES ($1,NOW(),$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25) RETURNING *`,
+     VALUES ($1,NOW(),$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27) RETURNING *`,
     [page.id, snapshot.google_position, snapshot.ai_google_overview_found, snapshot.ai_google_overview_cited,
      snapshot.ai_google_overview_text, snapshot.ai_perplexity_found, snapshot.ai_perplexity_cited,
      snapshot.ai_perplexity_text, snapshot.ai_bing_found, snapshot.ai_bing_cited, snapshot.ai_bing_text,
      !!snapshot.ai_brave_found, !!snapshot.ai_brave_cited,
+     safeJSONB(snapshot._competitors),
+     safeJSONB(snapshot.ai_perplexity_competitors),
      safeJSONB(snapshot.recommendations),
      safeJSONB(snapshot.gsc_brief),
      safeJSONB(snapshot.source_suggestions),
