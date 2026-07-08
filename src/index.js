@@ -1,4 +1,4 @@
-console.log('=== CONTENTSCALE BOOT v2026-07-08-cannibal-possible-fix | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON | possibleThreshold=20impr ===');
+console.log('=== CONTENTSCALE BOOT v2026-07-08-possible-prioritized-shortcut | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON | possibleThreshold=20impr | shortcutPrioritized=v2 ===');
 // CONTENTSCALE SERVER.JS — ELITE EDITION v4 (FIXED v3)
 // ✅ FIX v7: secondary_keywords + related_keywords auto in Analyse JSON + Execute prompt
 // ✅ FIX v7: analysis_data JSONB safe parse in execute-rewrite
@@ -29919,13 +29919,40 @@ function renderCannibal() {
     host.innerHTML = '<div style="padding:10px 14px;font-size:11px;color:#6b7280;line-height:1.6;">No cannibalization rows right now. <span style="color:#4b5563;">(' + _diagTotal + ' pages, ' + _diagRedir + ' redirected/excluded, ' + _diagGapQ + ' site-wide queries of which ' + _diagGapQ50 + ' have \u226520 impressions \u2014 POSSIBLE rows need \u226520 impr and a query that fits two live pages within 15%.)</span></div>';
     return;
   }
-  // Shortcut: many yellow rows share the same page pair — count the UNIQUE pages one needs to export
-  var _possPages = {};
-  _cannibalIssues.forEach(function(c){ if (c.level === 'POSSIBLE') c.pages.forEach(function(p){ _possPages[p.slug] = 1; }); });
-  var _possList = Object.keys(_possPages);
+  // Shortcut: many yellow rows share the same page pair. Verifying a POSSIBLE row strictly requires
+  // BOTH of its pages to have their own per-page Queries export imported (no way around that \u2014
+  // the site-wide CSV cannot tell which page Google actually shows for a shared query). What we CAN
+  // do: (1) prioritize by impressions at stake so the highest-value exports come first, and
+  // (2) auto-detect pages already exported (page_id-owned rows exist in _gapQueries) and cross them
+  // off, so the visible remaining work shrinks as the owner works through the list instead of always
+  // showing the full original count.
+  var _possPageStats = {};
+  _cannibalIssues.forEach(function(c){
+    if (c.level !== 'POSSIBLE') return;
+    c.pages.forEach(function(p){
+      if (!_possPageStats[p.slug]) _possPageStats[p.slug] = { impr: 0, rows: 0 };
+      _possPageStats[p.slug].impr += (c.impr || 0);
+      _possPageStats[p.slug].rows += 1;
+    });
+  });
+  var _exportedSlugs = {};
+  (_gapQueries||[]).forEach(function(g){
+    if (!g.page_id) return;
+    var pg = (_pages||[]).find(function(p){ return p.id === g.page_id; });
+    if (pg) _exportedSlugs[slugOf(pg)] = 1;
+  });
+  var _possList = Object.keys(_possPageStats).sort(function(a,b){ return _possPageStats[b].impr - _possPageStats[a].impr; });
+  var _possRemaining = _possList.filter(function(s){ return !_exportedSlugs[s]; });
+  var _possDoneCount = _possList.length - _possRemaining.length;
   var _possCount = _cannibalIssues.filter(function(c){ return c.level === 'POSSIBLE'; }).length;
   var shortcutStrip = (_possList.length && _possCount)
-    ? '<div style="padding:8px 14px;border-bottom:1px solid #1f2937;background:rgba(250,204,21,.06);font-size:11px;color:#facc15;line-height:1.6;">\\u26a1 Shortcut: all ' + _possCount + ' yellow POSSIBLE rows are verified with just <b>' + _possList.length + ' GSC page exports</b>: <span style="font-family:monospace;color:#fde68a;">' + _possList.join(' \\u00b7 ') + '</span> \\u2014 per page: GSC \\u2192 Pages \\u2192 click it \\u2192 Queries \\u2192 Export \\u2192 import here with Query ownership set to that page.</div>'
+    ? '<div style="padding:8px 14px;border-bottom:1px solid #1f2937;background:rgba(250,204,21,.06);font-size:11px;color:#facc15;line-height:1.7;">'
+      + '\u26a1 ' + _possCount + ' yellow POSSIBLE rows touch <b>' + _possList.length + ' unique pages</b>'
+      + (_possDoneCount ? ' \u2014 <b style="color:#4ade80;">' + _possDoneCount + ' already exported</b>, ' + _possRemaining.length + ' left' : '')
+      + '. Export the biggest first (per page: GSC \u2192 Pages \u2192 click it \u2192 Queries \u2192 Export \u2192 import here with Query ownership set to that page):<br>'
+      + '<span style="font-family:monospace;color:#fde68a;">' + _possRemaining.slice(0, 12).map(function(s){ return s + ' (' + Math.round(_possPageStats[s].impr).toLocaleString() + ' impr, ' + _possPageStats[s].rows + ' rows)'; }).join(' \u00b7 ') + (_possRemaining.length > 12 ? ' \u00b7 +' + (_possRemaining.length-12) + ' more' : '') + '</span>'
+      + (_possRemaining.length === 0 ? '<br><b style="color:#4ade80;">All pages exported \u2014 re-run the cannibalization check to see which rows resolved to PROVEN or cleared.</b>' : '')
+      + '</div>'
     : '';
   var legendStrip = '<div style="display:flex;gap:14px;flex-wrap:wrap;padding:7px 14px;border-bottom:1px solid #1f2937;background:#0a0e14;">'
     + '<span style="font-size:10px;color:#9ca3af;"><b style="color:#f87171;">PROVEN</b> \\u2192 scan both pages, fix comes in the briefs</span>'
