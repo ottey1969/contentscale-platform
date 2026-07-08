@@ -40334,6 +40334,7 @@ function startHtmlReminderScheduler() {
         AND (p.is_done = FALSE OR p.is_done IS NULL)
         AND p.brief_content IS NOT NULL
         AND tc.email IS NOT NULL
+        AND (p.check_frequency IS NULL OR p.check_frequency NOT IN ('0','off'))
       `);
 
       console.log('[html-reminder] Checking', pages.rows.length, 'active briefs');
