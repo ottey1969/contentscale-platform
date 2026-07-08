@@ -1,4 +1,4 @@
-console.log('=== CONTENTSCALE BOOT v2026-07-08-possible-prioritized-shortcut | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON | possibleThreshold=20impr | shortcutPrioritized=v2 | gscAutoFetchRemoved=true | linkCheckActive=true | wholeSiteWipeGuard=true ===');
+console.log('=== CONTENTSCALE BOOT v2026-07-08-possible-prioritized-shortcut | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON | possibleThreshold=20impr | shortcutPrioritized=v2 | gscAutoFetchRemoved=true | linkCheckActive=true | wholeSiteWipeGuard=true | gscAutoFetchRestored=true | reminderOffFix=true ===');
 // CONTENTSCALE SERVER.JS — ELITE EDITION v4 (FIXED v3)
 // ✅ FIX v7: secondary_keywords + related_keywords auto in Analyse JSON + Execute prompt
 // ✅ FIX v7: analysis_data JSONB safe parse in execute-rewrite
@@ -165,6 +165,54 @@ try {
   }
 } catch(e) {
   console.error('❌ GSC Service Account parse error:', e.message);
+}
+
+// Reusable GSC Search Analytics API helpers — shared by the tracker's auto-fetch-per-page-queries
+// endpoint. Kept separate from the older /api/gsc/auto-fill endpoint's own inline JWT logic.
+async function _gscGetAccessToken() {
+  if (!_gscServiceAccount) throw new Error('GSC_SERVICE_ACCOUNT_JSON not configured');
+  const { createSign } = require('crypto');
+  const now = Math.floor(Date.now() / 1000);
+  const header = Buffer.from(JSON.stringify({ alg: 'RS256', typ: 'JWT' })).toString('base64url');
+  const payload = Buffer.from(JSON.stringify({
+    iss: _gscServiceAccount.client_email,
+    scope: 'https://www.googleapis.com/auth/webmasters.readonly',
+    aud: 'https://oauth2.googleapis.com/token',
+    exp: now + 3600, iat: now
+  })).toString('base64url');
+  const sign = createSign('RSA-SHA256');
+  sign.update(`${header}.${payload}`);
+  const signature = sign.sign(_gscServiceAccount.private_key, 'base64url');
+  const jwt = `${header}.${payload}.${signature}`;
+  const tokenResp = await axios.post('https://oauth2.googleapis.com/token',
+    new URLSearchParams({ grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer', assertion: jwt }).toString(),
+    { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
+  );
+  return tokenResp.data.access_token;
+}
+async function _gscQueryRows(accessToken, siteUrl, pageUrl, dims, startDate, endDate, rowLimit) {
+  const body = { startDate, endDate, dimensions: dims,
+    dimensionFilterGroups: pageUrl ? [{ filters: [{ dimension: 'page', operator: 'equals', expression: pageUrl }] }] : [],
+    rowLimit: rowLimit || 20 };
+  const r = await fetch(
+    `https://www.googleapis.com/webmasters/v3/sites/${encodeURIComponent(siteUrl)}/searchAnalytics/query`,
+    { method: 'POST', headers: { Authorization: `Bearer ${accessToken}` }, body: JSON.stringify(body) }
+  );
+  if (!r.ok) { const e = await r.json(); throw new Error(e.error?.message || r.status); }
+  return (await r.json()).rows || [];
+}
+async function _gscFindSiteFormat(accessToken, pageUrl) {
+  const urlObj = new URL(pageUrl);
+  const formats = [
+    `https://${urlObj.hostname}/`, `http://${urlObj.hostname}/`,
+    `sc-domain:${urlObj.hostname.replace(/^www\./, '')}`,
+    `https://www.${urlObj.hostname.replace(/^www\./, '')}/`,
+  ];
+  for (const fmt of formats) {
+    try { await _gscQueryRows(accessToken, fmt, pageUrl, ['page'], new Date(Date.now()-7*86400000).toISOString().split('T')[0], new Date().toISOString().split('T')[0], 1); return fmt; }
+    catch(e) { /* try next format */ }
+  }
+  return null;
 }
 
 const PORT = process.env.PORT || 3000;
@@ -1892,6 +1940,59 @@ app.post('/api/tracker-client/:token/analyze-gaps', async (req, res) => {
 // GET /api/tracker-client/:token/link-check — AUTOMATIC hub→spoke internal-link verification.
 // The tracker already holds each page's pasted HTML, so nobody needs to open pages by hand:
 // for every generic↔specific keyword pair, we check whether the hub's stored HTML links to the spoke.
+// GET /api/tracker-client/:token/gsc-autofetch-status — tells the owner exactly what to do to enable
+// one-click GSC auto-fetch: the service account's email must be added as a Search Console user on
+// THEIR property. Showing the exact email up front turns a support question into a self-serve step.
+app.get('/api/tracker-client/:token/gsc-autofetch-status', async (req, res) => {
+  if (!_gscServiceAccount) return res.json({ success: true, available: false });
+  res.json({ success: true, available: true, service_account_email: _gscServiceAccount.client_email || null });
+});
+
+// POST /api/tracker-client/:token/gsc-autofetch-page — pulls the FULL query breakdown for ONE
+// specific page directly from the Search Console API via the Service Account (same data a manual
+// GSC → Pages → click page → Queries → Export gives), and saves it with page_id set — exactly
+// what a per-page CSV import does, but with zero manual export/paste.
+app.post('/api/tracker-client/:token/gsc-autofetch-page', async (req, res) => {
+  if (!_gscServiceAccount) return res.status(503).json({ success: false, error: 'GSC auto-fetch is not configured on this server — use manual CSV import instead.' });
+  try {
+    const cr = await pool.query("SELECT id FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status != 'deleted')", [req.params.token]);
+    if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
+    const pageId = parseInt(req.body.page_id, 10);
+    if (!pageId) return res.status(400).json({ success: false, error: 'page_id required' });
+    const pr = await pool.query('SELECT id, url FROM tracker_pages WHERE id=$1 AND tracker_client_id=$2', [pageId, cr.rows[0].id]);
+    if (!pr.rows.length) return res.status(404).json({ success: false, error: 'Page not found' });
+    const pageUrl = pr.rows[0].url;
+
+    const accessToken = await _gscGetAccessToken();
+    const siteFmt = await _gscFindSiteFormat(accessToken, pageUrl);
+    if (!siteFmt) {
+      return res.status(404).json({ success: false, error: 'This Search Console property has not granted access to ' + (_gscServiceAccount.client_email || 'the service account') + ' yet. Add it as a user in GSC → Settings → Users and permissions → Add user (Restricted is enough) — or use manual CSV import instead.', code: 'GSC_PROPERTY_NOT_FOUND', service_account_email: _gscServiceAccount.client_email || null });
+    }
+    const endDate = new Date().toISOString().split('T')[0];
+    const startDate = new Date(Date.now() - 90*24*60*60*1000).toISOString().split('T')[0];
+    const rows = await _gscQueryRows(accessToken, siteFmt, pageUrl, ['query'], startDate, endDate, 500);
+
+    await pool.query('DELETE FROM tracker_gsc_queries WHERE tracker_client_id=$1 AND page_id=$2', [cr.rows[0].id, pageId]);
+    let saved = 0, failed = 0;
+    for (const r of rows) {
+      const text = String(r.keys?.[0] || '').trim().substring(0, 300);
+      if (!text) continue;
+      try {
+        await pool.query(
+          'INSERT INTO tracker_gsc_queries (tracker_client_id, page_id, query, clicks, impressions, position) VALUES ($1,$2,$3,$4,$5,$6)',
+          [cr.rows[0].id, pageId, text, Math.round(r.clicks||0), Math.round(r.impressions||0), r.position||null]
+        );
+        saved++;
+      } catch(e) { failed++; }
+    }
+    console.log(`[gsc-autofetch] ${pageUrl} => ${saved} queries saved, ${failed} failed (site format: ${siteFmt})`);
+    res.json({ success: true, saved, failed, total: rows.length, page_url: pageUrl });
+  } catch(e) {
+    console.error('[gsc-autofetch] error:', e.message);
+    res.status(502).json({ success: false, error: 'GSC API error: ' + e.message + ' — use manual CSV import instead.' });
+  }
+});
+
 app.get('/api/tracker-client/:token/link-check', async (req, res) => {
   try {
     const cr = await pool.query("SELECT id FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status != 'deleted')", [req.params.token]);
@@ -3924,6 +4025,7 @@ app.get('/track/:token', async (req, res) => {
       .replace(/__MAX_PAGES__/g, String(client.max_pages || 3))
       .replace(/__CLIENT_NAME__/g, (client.name || client.domain || '').replace(/[`'\\]/g, ''))
       .replace(/__GSC_ENABLED__/g, client.gsc_enabled ? 'true' : 'false')
+      .replace(/__GSC_AUTOFETCH__/g, _gscServiceAccount ? 'true' : 'false')
       .replace(/__DEMO_RO__/g, (function(){
         const isRO = client.demo_readonly || (client.readonly_token && client.readonly_token === req.params.token);
         if (client.readonly_token && client.readonly_token === req.params.token) {
@@ -27935,6 +28037,7 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
   </div>
 
   <div class="cs-section">Your tracked pages <span id="pageCountLabel2" style="color:#cbd5e1;"></span></div>
+  <div id="gscSetupBanner"></div>
   <div id="cannibalPanel" style="width:100%;"></div>
   <div id="impressionGap" style="width:100%;"></div>
   <div id="pagesList" style="width:100%;"></div>
@@ -28245,6 +28348,24 @@ if (DEMO_RO) {
   });
 }
 var MAX_PAGES = __MAX_PAGES__;
+var _gscAutoFetchAvailable = __GSC_AUTOFETCH__;
+var _gscServiceAccountEmail = null;
+async function _gscAutoFetchPage(pageId, btnEl) {
+  if (btnEl) { btnEl.disabled = true; btnEl.textContent = '\u23f3 Fetching\u2026'; }
+  try {
+    var d = await api('/gsc-autofetch-page', 'POST', { page_id: pageId });
+    if (d && d.success) {
+      toast('\u2713 Pulled ' + d.saved + ' queries for this page from Search Console \u2014 no CSV needed', '#4ade80');
+      try { await loadImpressionGap(); } catch(e) {}
+    } else {
+      toast((d && d.error) || 'Auto-fetch failed \u2014 try manual CSV import instead', '#f87171');
+      if (btnEl) { btnEl.disabled = false; btnEl.textContent = '\u26a1 Auto-fetch'; }
+    }
+  } catch(e) {
+    toast('Auto-fetch failed \u2014 try manual CSV import instead', '#f87171');
+    if (btnEl) { btnEl.disabled = false; btnEl.textContent = '\u26a1 Auto-fetch'; }
+  }
+}
 var _pages = [];
 
 // GSC status indicator \\u2014 lit green when enabled, grey when off
@@ -29956,13 +30077,22 @@ function renderCannibal() {
   var _possRemaining = _possList.filter(function(s){ return !_exportedSlugs[s]; });
   var _possDoneCount = _possList.length - _possRemaining.length;
   var _possCount = _cannibalIssues.filter(function(c){ return c.level === 'POSSIBLE'; }).length;
+  var _slugToPageId = {}; (_pages||[]).forEach(function(p){ _slugToPageId[slugOf(p)] = p.id; });
   var shortcutStrip = (_possList.length && _possCount)
     ? '<div style="padding:8px 14px;border-bottom:1px solid #1f2937;background:rgba(250,204,21,.06);font-size:11px;color:#facc15;line-height:1.7;">'
       + '\u26a1 ' + _possCount + ' yellow POSSIBLE rows touch <b>' + _possList.length + ' unique pages</b>'
       + (_possDoneCount ? ' \u2014 <b style="color:#4ade80;">' + _possDoneCount + ' already exported</b>, ' + _possRemaining.length + ' left' : '')
-      + '. Export the biggest first (per page: GSC \u2192 Pages \u2192 click it \u2192 Queries \u2192 Export \u2192 import here with Query ownership set to that page):<br>'
-      + '<span style="font-family:monospace;color:#fde68a;">' + _possRemaining.slice(0, 15).map(function(s){ return s + ' (' + Math.round(_possPageStats[s].impr).toLocaleString() + ' impr, ' + _possPageStats[s].rows + ' rows)'; }).join(' \u00b7 ') + (_possRemaining.length > 15 ? ' \u00b7 +' + (_possRemaining.length-15) + ' more' : '') + '</span>'
-      + (_possRemaining.length === 0 ? '<br><b style="color:#4ade80;">All pages exported \u2014 re-run the cannibalization check to see which rows resolved to PROVEN or cleared.</b>' : '')
+      + '. ' + (_gscAutoFetchAvailable ? 'Click \u26a1 to pull each page\u2019s queries straight from Search Console \u2014 no manual export needed:' : 'Export the biggest first (per page: GSC \u2192 Pages \u2192 click it \u2192 Queries \u2192 Export \u2192 import here with Query ownership set to that page):')
+      + '<div style="margin-top:6px;display:flex;flex-direction:column;gap:3px;">'
+      + _possRemaining.slice(0, 15).map(function(s){
+          var pid = _slugToPageId[s];
+          var label = s + ' <span style="color:#a16207;">(' + Math.round(_possPageStats[s].impr).toLocaleString() + ' impr, ' + _possPageStats[s].rows + ' rows)</span>';
+          var btn = (_gscAutoFetchAvailable && pid) ? ('<button onclick="_gscAutoFetchPage(' + pid + ',this)" style="flex-shrink:0;cursor:pointer;font-size:9px;font-weight:800;padding:2px 8px;border-radius:4px;background:#166534;border:1px solid #16a34a;color:#bbf7d0;margin-right:8px;">\u26a1 Auto-fetch</button>') : '';
+          return '<div style="display:flex;align-items:center;font-family:monospace;">' + btn + '<span>' + label + '</span></div>';
+        }).join('')
+      + (_possRemaining.length > 15 ? '<div style="color:#a16207;">+' + (_possRemaining.length-15) + ' more (scroll or resolve the top ones first)</div>' : '')
+      + '</div>'
+      + (_possRemaining.length === 0 ? '<div style="margin-top:6px;"><b style="color:#4ade80;">All pages exported \u2014 re-run the cannibalization check to see which rows resolved to PROVEN or cleared.</b></div>' : '')
       + '</div>'
     : '';
   var legendStrip = '<div style="display:flex;gap:14px;flex-wrap:wrap;padding:7px 14px;border-bottom:1px solid #1f2937;background:#0a0e14;">'
@@ -30173,6 +30303,21 @@ async function deletePage(pageId) {
 }
 
 loadPages().then(function(){ try { loadImpressionGap(); } catch(e) {} try { _tourMaybeAutoStart(); } catch(e) {} });
+if (_gscAutoFetchAvailable) {
+  api('/gsc-autofetch-status', 'GET').then(function(d){
+    if (d && d.success && d.service_account_email) { _gscServiceAccountEmail = d.service_account_email; _renderGscSetupBanner(); }
+  }).catch(function(){});
+}
+function _renderGscSetupBanner() {
+  var host = document.getElementById('gscSetupBanner');
+  if (!host || !_gscServiceAccountEmail) return;
+  host.innerHTML = '<div style="background:rgba(96,165,250,.08);border:1px solid #3b82f6;border-radius:8px;padding:10px 14px;margin-bottom:10px;font-size:11px;color:#bfdbfe;line-height:1.6;">'
+    + '<b>\u26a1 One-click GSC data (no CSV exports)</b> \u2014 add this address as a Search Console user on your property (Settings \u2192 Users and permissions \u2192 Add user, \u201cRestricted\u201d is enough):<br>'
+    + '<code style="background:#0d1117;padding:3px 8px;border-radius:4px;color:#93c5fd;font-family:monospace;display:inline-block;margin:4px 0;">' + _gscServiceAccountEmail.replace(/</g,'&lt;') + '</code> '
+    + '<button onclick="navigator.clipboard.writeText(&quot;' + _gscServiceAccountEmail.replace(/"/g,'&quot;') + '&quot;);toast(&quot;Copied\u2014 paste it into GSC \u2192 Settings \u2192 Users and permissions&quot;,&quot;#4ade80&quot;)" style="cursor:pointer;font-size:10px;font-weight:700;padding:3px 10px;border-radius:5px;background:#1e3a8a;border:1px solid #3b82f6;color:#bfdbfe;">Copy</button>'
+    + '<br>Once added, every \u26a1 Auto-fetch button in this tracker skips the manual CSV steps entirely.'
+    + '</div>';
+}
 // Show welcome on first visit (or force with ?welcome=1)
 if (window.location.search.indexOf('welcome=1') > -1) {
   try { localStorage.removeItem('cs_welcome_seen'); } catch(e) {}
