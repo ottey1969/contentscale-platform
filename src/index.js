@@ -31305,8 +31305,24 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
       // header row in a foreign language (first line without digits) is skipped naturally by the number checks
     }
 
+    // Multi-section support: exporting/copying "Queries" and "Pages" together (or selecting both
+    // GSC tabs at once) produces ONE paste with TWO header rows back to back \u2014 a Top queries
+    // table followed later by a Top pages table (or vice versa). A single global format flag would
+    // misread the second table entirely (URLs parsed as queries, or queries parsed as URLs). Instead,
+    // detect a section header on EVERY line, so the format can switch mid-paste.
+    var _sectionAt = []; // per-line: 'queries' | 'pages' | null (null = continue previous section)
+    var _curSection = isQueriesCSV ? 'queries' : (isPagesCSV ? 'pages' : null);
+    lines.forEach(function(l, li){
+      var _lw = l.toLowerCase().replace(/^"|"$/g,'');
+      if (_lw.startsWith('top queries') || _lw.startsWith('query,') || _lw === 'query') { _curSection = 'queries'; _sectionAt[li] = 'HEADER'; }
+      else if (_lw.startsWith('top pages') || _lw === 'page') { _curSection = 'pages'; _sectionAt[li] = 'HEADER'; }
+      else { _sectionAt[li] = _curSection; }
+    });
+
     lines.forEach(function(line, idx) {
-      if (idx === 0 && (isQueriesCSV || isPagesCSV)) return; // skip header
+      if (_sectionAt[idx] === 'HEADER') return; // this line IS a section header \u2014 skip it, not data
+      var isQueriesCSV = _sectionAt[idx] === 'queries';
+      var isPagesCSV = _sectionAt[idx] === 'pages';
 
       // Strip BOM
       line = line.replace(/^\ufeff/, '');
