@@ -31133,20 +31133,26 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
   }
 
   function selectAllGsc(val) {
+    // Query-only rows never consume a page slot (see parseGscData) \u2014 the All/None buttons
+    // must use the SAME uncapped limit, or clicking All silently reverts a correct 500-selection
+    // back down to the page-tracking plan limit (the bug that showed 100 after 500 was already selected).
+    var _pairsNow = window._lastGscPairs || [];
+    var _pureQ = _pairsNow.length && _pairsNow.every(function(p){ return p.isQueryOnly; });
+    var _cap = _pureQ ? Math.min(500, _pairsNow.length) : MAX_PAGES;
     var cbs = document.querySelectorAll('.gsc-cb');
     var count = 0;
     cbs.forEach(function(cb) {
-      if (val && count < MAX_PAGES) { cb.checked = true; count++; }
+      if (val && count < _cap) { cb.checked = true; count++; }
       else if (!val) { cb.checked = false; }
-      // If val=true and count >= MAX_PAGES, uncheck remaining
       else { cb.checked = false; }
     });
-    updateSelectCount('gsc-cb', MAX_PAGES);
+    updateSelectCount('gsc-cb', _cap);
     // Show warning if more pages than allowed
-    if (val && cbs.length > MAX_PAGES) {
-      toast('Showing top ' + MAX_PAGES + ' pages (your limit). Upgrade for more.', '#f59e0b');
+    if (val && cbs.length > _cap) {
+      toast((_pureQ ? 'Showing top ' + _cap + ' keywords (query-data cap).' : 'Showing top ' + _cap + ' pages (your limit). Upgrade for more.'), '#f59e0b');
     }
   }
+
 
   // Lightweight inline progress spinner for long fetches/imports (sitemap + GSC)
   function _csSpinner(btn, label) {
