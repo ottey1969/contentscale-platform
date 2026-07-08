@@ -29614,6 +29614,7 @@ async function loadImpressionGap() {
   try { renderPages(); } catch(e) { console.error('[renderPages] failed:', e.message, e.stack); }
 }
 function _gapNorm(s){ try { return String(s||'').toLowerCase().replace(/[^\\p{L}\\p{N} ]/gu,' ').replace(/ +/g,' ').trim(); } catch(e) { return String(s||'').toLowerCase().replace(/[^a-z0-9 ]/g,' ').replace(/ +/g,' ').trim(); } }
+function slugOf(p){ try { var s = new URL(p.url).pathname || '/'; return (s === '/' ? '(homepage)' : s); } catch(e) { return p.url; } } // shared: used by BOTH _computeCannibal() and renderCannibal() — must be global, not function-local
 function renderImpressionGap() {
   var host = document.getElementById('impressionGap');
   if (!host) return;
@@ -29799,7 +29800,6 @@ function _computeCannibal() {
   var pages = (_pages || []).filter(function(p){ return !p.redirects_to; });
   if (pages.length < 2) { renderCannibal(); return; }
   var pById = {}; pages.forEach(function(p){ pById[p.id] = p; });
-  var slugOf = function(p){ try { var s = new URL(p.url).pathname || '/'; return (s === '/' ? '(homepage)' : s); } catch(e) { return p.url; } };
 
   // LEVEL 1 — PROVEN: same normalized query under 2+ different page_ids (per-page CSV evidence)
   var byQuery = {};
