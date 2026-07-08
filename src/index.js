@@ -29593,15 +29593,25 @@ async function loadImpressionGap() {
     _sitemapSlugs = (d && d.sitemap_slugs) || [];
     _gapAnalysis = (d && d.gap_analysis) || null;
     _gapDone = (d && d.gap_done) || [];
-    try {
-      var lc = await api('/link-check', 'GET');
-      _linkChecks = (lc && lc.checks) || [];
-    } catch(e) { _linkChecks = []; }
-    renderImpressionGap();
-    _computePushables();
+  } catch(e) { console.error('[loadImpressionGap] fetch failed:', e.message); _gapQueries = []; }
+  try {
+    var lc = await api('/link-check', 'GET');
+    _linkChecks = (lc && lc.checks) || [];
+  } catch(e) { console.error('[loadImpressionGap] link-check failed:', e.message); _linkChecks = []; }
+  // Each render/compute step now fails independently — one broken step (e.g. a data-shape issue
+  // after several imports) no longer silently blanks out the OTHER panels too. Any failure is logged
+  // to console with a clear tag instead of vanishing, and the affected panel shows an explicit error
+  // instead of staying blank forever.
+  try { renderImpressionGap(); } catch(e) { console.error('[renderImpressionGap] failed:', e.message, e.stack); }
+  try { _computePushables(); } catch(e) { console.error('[_computePushables] failed:', e.message, e.stack); }
+  try {
     _computeCannibal();
-    renderPages(); // page cards now show their pushable-query blocks
-  } catch(e) { _gapQueries = []; }
+  } catch(e) {
+    console.error('[_computeCannibal] failed:', e.message, e.stack);
+    var _host = document.getElementById('cannibalPanel');
+    if (_host) _host.innerHTML = '<div style="padding:10px 14px;font-size:11px;color:#f87171;background:rgba(248,113,113,.08);border:1px solid #f87171;border-radius:8px;">\u26a0 Cannibalization check hit an error and could not run: ' + String(e.message||e).replace(/</g,'&lt;') + '. Open the browser console (F12) for details, or refresh the page.</div>';
+  }
+  try { renderPages(); } catch(e) { console.error('[renderPages] failed:', e.message, e.stack); }
 }
 function _gapNorm(s){ try { return String(s||'').toLowerCase().replace(/[^\\p{L}\\p{N} ]/gu,' ').replace(/ +/g,' ').trim(); } catch(e) { return String(s||'').toLowerCase().replace(/[^a-z0-9 ]/g,' ').replace(/ +/g,' ').trim(); } }
 function renderImpressionGap() {
@@ -29944,8 +29954,6 @@ function renderCannibal() {
   });
   var _possList = Object.keys(_possPageStats).sort(function(a,b){ return _possPageStats[b].impr - _possPageStats[a].impr; });
   var _possRemaining = _possList.filter(function(s){ return !_exportedSlugs[s]; });
-  var _possDoneCount = _possList.length - _possRemaining.length;
-  var _possCount = _cannibalIssues.filter(function(c){ return c.level === 'POSSIBLE'; }).length;
   var _possDoneCount = _possList.length - _possRemaining.length;
   var _possCount = _cannibalIssues.filter(function(c){ return c.level === 'POSSIBLE'; }).length;
   var shortcutStrip = (_possList.length && _possCount)
