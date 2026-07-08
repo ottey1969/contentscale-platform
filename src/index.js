@@ -29024,8 +29024,8 @@ function renderPages() {
           var isDead404 = String(p.redirects_to).indexOf('(dead') === 0;
           var isCanon = String(p.redirects_to).indexOf('(canonical') === 0;
           var canonUrl = ''; if (isCanon) { var _cmm = String(p.redirects_to).match(/canonical \u2192 ([^)]+)/); canonUrl = _cmm ? _cmm[1].trim() : ''; }
-          var destPath = ''; try { destPath = new URL(isCanon ? canonUrl : p.redirects_to).pathname.replace(/\/+$/,''); } catch(e) {}
-          var destTracked = isDead404 ? true : (_pages||[]).some(function(o){ if (o.id === p.id || !o.url) return false; try { return new URL(o.url).pathname.replace(/\/+$/,'') === destPath; } catch(e) { return false; } });
+          var destPath = ''; try { destPath = new URL(isCanon ? canonUrl : p.redirects_to).pathname.replace(/\\/+$/,''); } catch(e) {}
+          var destTracked = isDead404 ? true : (_pages||[]).some(function(o){ if (o.id === p.id || !o.url) return false; try { return new URL(o.url).pathname.replace(/\\/+$/,'') === destPath; } catch(e) { return false; } });
           var _head = isDead404
             ? '\\u274c <b>This URL no longer exists</b> ' + String(p.redirects_to).replace(/</g,"&lt;")
             : isCanon
@@ -29573,13 +29573,13 @@ function renderImpressionGap() {
     try { var sl = new URL(best.url).pathname || '/'; return sl === '/' ? '(homepage)' : sl; } catch(e) { return best.url; }
   };
   var _deadPaths = {};
-  (_pages||[]).forEach(function(p){ if (p.redirects_to) { try { _deadPaths[new URL(p.url).pathname.replace(/\/+$/,'').toLowerCase()] = 1; } catch(e) {} } });
+  (_pages||[]).forEach(function(p){ if (p.redirects_to) { try { _deadPaths[new URL(p.url).pathname.replace(/\\/+$/,'').toLowerCase()] = 1; } catch(e) {} } });
   var _slugMatch = function(q) {
     var qn = _gapNorm(q); var qWords = qn.split(' ').filter(function(w){ return w.length > 2; });
     if (!qWords.length) return null;
     var best = null, bestScore = 0;
     for (var i = 0; i < _sitemapSlugs.length; i++) {
-      try { var _sp = new URL(_sitemapSlugs[i], 'https://x/').pathname.replace(/\/+$/,'').toLowerCase(); if (_deadPaths[_sp]) continue; } catch(e) {}
+      try { var _sp = new URL(_sitemapSlugs[i], 'https://x/').pathname.replace(/\\/+$/,'').toLowerCase(); if (_deadPaths[_sp]) continue; } catch(e) {}
       var sn = _gapNorm(String(_sitemapSlugs[i]).replace(/[-_/]/g,' '));
       if (!sn) continue;
       var hit = 0; qWords.forEach(function(w){ if (sn.indexOf(w) > -1) hit++; });
