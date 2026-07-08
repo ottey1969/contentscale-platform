@@ -1032,6 +1032,11 @@ function generateClientToken() {
 // A client flagged demo_readonly=TRUE (admin toggle) gets a fully browsable tracker,
 // but every mutation (POST/PATCH/PUT/DELETE) is blocked server-side. This makes the
 // share link safe to hand to prospects: they can look at everything, change nothing.
+// Small in-memory cache for the RO-token lookup: avoids one extra DB roundtrip per tracker request
+// (this middleware runs on EVERY /api/tracker-client/* call, including the owner's own normal traffic).
+// 60s TTL — a freshly created RO link works within a minute; negative results cache too, so a normal
+// owner token (99% of traffic) costs one cheap Map lookup instead of a query after the first hit.
+const _roTokenCache = new Map(); // tok -> { owner: string|null, at: number }
 app.use(async (req, res, next) => {
   // Read-only SHARE token guard. NOTE: must be a GLOBAL middleware — mounting on
   // '/api/tracker-client/:token' makes Express strip the prefix from req.url, so a
@@ -1040,7 +1045,14 @@ app.use(async (req, res, next) => {
   if (!m || m[1] === 'register') return next();
   const tok = m[1];
   try {
-    const ro = await pool.query('SELECT token FROM tracker_clients WHERE readonly_token=$1', [tok]);
+    let _cached = _roTokenCache.get(tok);
+    if (!_cached || (Date.now() - _cached.at) > 60000) {
+      const _ro = await pool.query('SELECT token FROM tracker_clients WHERE readonly_token=$1', [tok]);
+      _cached = { owner: _ro.rows.length ? _ro.rows[0].token : null, at: Date.now() };
+      _roTokenCache.set(tok, _cached);
+      if (_roTokenCache.size > 5000) _roTokenCache.clear(); // simple guard against unbounded growth
+    }
+    const ro = { rows: _cached.owner ? [{ token: _cached.owner }] : [] };
     if (ro.rows.length) {
       if (req.method !== 'GET') return res.status(403).json({ success: false, error: 'Read-only link \u2014 viewing is live, changes are disabled.' });
       // Transparently rewrite to the owner token so every existing GET endpoint works unchanged
