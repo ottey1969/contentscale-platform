@@ -29021,11 +29021,11 @@ function renderPages() {
       + '<div class="cs-url-line" style="font-size:12px;' + (isDone ? 'text-decoration:line-through;color:#4b5563;' : 'color:#e5e7eb;') + 'font-family:monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;border-radius:4px;padding:1px 4px;margin-left:-4px;" title="' + rawUrl + '">' + urlShort + '</div></div>'
       + '<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:4px;">' + badges + '</div>'
       + (p.redirects_to ? (function(){
-          var destPath = ''; try { destPath = new URL(isCanon ? canonUrl : p.redirects_to).pathname.replace(/\/+$/,''); } catch(e) {}
-          var destTracked = isDead404 ? true : (_pages||[]).some(function(o){ if (o.id === p.id || !o.url) return false; try { return new URL(o.url).pathname.replace(/\/+$/,'') === destPath; } catch(e) { return false; } });
           var isDead404 = String(p.redirects_to).indexOf('(dead') === 0;
           var isCanon = String(p.redirects_to).indexOf('(canonical') === 0;
           var canonUrl = ''; if (isCanon) { var _cmm = String(p.redirects_to).match(/canonical \u2192 ([^)]+)/); canonUrl = _cmm ? _cmm[1].trim() : ''; }
+          var destPath = ''; try { destPath = new URL(isCanon ? canonUrl : p.redirects_to).pathname.replace(/\/+$/,''); } catch(e) {}
+          var destTracked = isDead404 ? true : (_pages||[]).some(function(o){ if (o.id === p.id || !o.url) return false; try { return new URL(o.url).pathname.replace(/\/+$/,'') === destPath; } catch(e) { return false; } });
           var _head = isDead404
             ? '\\u274c <b>This URL no longer exists</b> ' + String(p.redirects_to).replace(/</g,"&lt;")
             : isCanon
