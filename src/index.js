@@ -1,4 +1,4 @@
-console.log('=== CONTENTSCALE BOOT v2026-07-08-possible-prioritized-shortcut | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON | possibleThreshold=20impr | shortcutPrioritized=v2 | gscAutoFetchRemoved=true | linkCheckActive=true | wholeSiteWipeGuard=true | gscAutoFetchRestored=true | reminderOffFix=true | claudeRemoved=true | bingWebmaster=true | competitorPanel=true | zeroResultFix=true | pagesRefreshFix=true | recheckButton=true | provenScanStrip=true | provenScanState=true | scanAllProven=true | doEverythingBtn=true | panelOrderFix=true | workflowGuide=true | preScanGuard=true | scanAllGuard=true | earlyGuard=true | emptyStateTeaser=true | provenScopeFix=true | numberedButtons=true | clearerButtons=true | scanAnimFix=true ===');
+console.log('=== CONTENTSCALE BOOT v2026-07-08-possible-prioritized-shortcut | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON | possibleThreshold=20impr | shortcutPrioritized=v2 | gscAutoFetchRemoved=true | linkCheckActive=true | wholeSiteWipeGuard=true | gscAutoFetchRestored=true | reminderOffFix=true | claudeRemoved=true | bingWebmaster=true | competitorPanel=true | zeroResultFix=true | pagesRefreshFix=true | recheckButton=true | provenScanStrip=true | provenScanState=true | scanAllProven=true | doEverythingBtn=true | panelOrderFix=true | workflowGuide=true | preScanGuard=true | scanAllGuard=true | earlyGuard=true | emptyStateTeaser=true | provenScopeFix=true | numberedButtons=true | clearerButtons=true | scanAnimFix=true | promptClaudeCleanup=true | bonusTip=true | realProvenContext=true | competitorContext=true | unifiedBrief=true | diagnosticFirst=true | fullCompetitorBreakdown=true ===');
 // CONTENTSCALE SERVER.JS — ELITE EDITION v4 (FIXED v3)
 // ✅ FIX v7: secondary_keywords + related_keywords auto in Analyse JSON + Execute prompt
 // ✅ FIX v7: analysis_data JSONB safe parse in execute-rewrite
@@ -28256,6 +28256,9 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
         <div id="cbCopySection" style="display:none;margin-top:16px;">
           <div style="font-size:11px;font-weight:700;color:#7c3aed;margin-bottom:6px;">&#x1f4cb; Copy Brief</div>
           <textarea id="cbCopyText" readonly style="width:100%;height:120px;background:#0a0a12;border:1px solid #1f2937;border-radius:8px;padding:10px;font-size:11px;color:#9ca3af;font-family:monospace;resize:vertical;"></textarea>
+          <div style="background:rgba(96,165,250,.08);border:1px solid #3b82f6;border-radius:8px;padding:8px 10px;margin-top:10px;font-size:10.5px;color:#bfdbfe;line-height:1.6;">
+            <b style="color:#93c5fd;">\u2728 Bonus:</b> for a deeper content audit, scan this URL or its HTML in the GRAAF SEO Content Score tool separately. Copy its recommendations into an external AI (or apply them by hand) and fold them into your content <b>before</b> pasting the finished HTML back into the tracker.
+          </div>
           <button onclick="copyBriefToClipboard()" class="cs-btn" style="margin-top:8px;border-color:#7c3aed;color:#7c3aed;font-size:11px;">Copy to Clipboard</button>
         </div>
       </div>
@@ -39199,6 +39202,29 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
       let _otherPagesList = '';
       let _cannibalContext = ''; // hub/spoke or duplicate-keyword conflicts involving THIS page — injected into both briefs so the fix comes out as concrete actions
       let _gapContext = ''; // OPEN impression-gap families (AI verdict: SECTION on this page) — the brief must build its impression-growth action from these REAL queries, not a guess
+      // ── Competitor gap: ALL 5 Google organic competitors + Perplexity's cited sources, so the
+      // brief names WHO is winning, WHAT they have, and WHAT this page is missing — for both Google
+      // Search and AI citation systems. Previously only "Competitor #1" was referenced; the other 4
+      // Google competitors and every Perplexity-cited source were fetched and stored but never used.
+      let _competitorContext = '';
+      try {
+        const _gComp = (snapshot._competitors || []).filter(function(c){ return c && c.url; });
+        const _pComp = (snapshot.ai_perplexity_competitors || []).filter(Boolean);
+        if (_gComp.length || _pComp.length) {
+          _competitorContext = '\n\nCOMPETITOR GAP (real data from this scan — name specifics, never generic \"add more content\"):\n';
+          if (_gComp.length) {
+            _competitorContext += 'Google top ' + _gComp.length + ' organic results for this keyword:\n'
+              + _gComp.slice(0, 5).map(function(c, i){ return '#' + (c.position || i+1) + ' ' + c.url + ' \u2014 "' + (c.title||'') + '"' + (c.snippet ? ' \u2014 snippet: "' + c.snippet.substring(0,160) + '"' : ''); }).join('\n')
+              + '\n';
+          }
+          if (_pComp.length) {
+            _competitorContext += 'Sources Perplexity currently cites for this topic (this page is NOT among them):\n'
+              + _pComp.slice(0, 5).map(function(u){ return '- ' + u; }).join('\n')
+              + '\n';
+          }
+          _competitorContext += '\nTASK: this is DIAGNOSTIC, not just prescriptive \u2014 the owner needs to see the actual competitive landscape, not one compressed sentence. Write ONE action (system \"Competitor Gap\", priority high or medium) whose \"action\" field is a structured breakdown with these exact labeled parts, in order:\n(1) \"GOOGLE SEARCH \u2014 top results:\" then ONE short line PER competitor listed above (all of them, not just the top one): \"#<position> <url> \u2014 wins because <the specific claim/structure/credential/stat that makes THIS result rank, inferred from its title+snippet>.\"\n(2) \"AI OVERVIEW / AI AGGREGATION \u2014 sourcing:\" 1-2 sentences on what AI Overview and Perplexity actually pull from (a self-contained quotable answer, not just ranking position) \u2014 name the Perplexity-cited sources from the list above if present, or state that this page has no visibility there yet if the list is empty.\n(3) \"YOUR GAP:\" 1-2 sentences naming the ONE specific, recurring thing across these competitors that this page lacks.\n(4) \"FIX:\" the exact copy-paste text that closes that specific gap.\nNever skip straight to the fix \u2014 parts (1)-(3) must stand on their own as genuine competitive findings a human can read and understand BEFORE seeing what to paste.';
+        }
+      } catch(e) {}
       let _sitemapUrls = [];
       try {
         if (page.tracker_client_id) {
@@ -39285,11 +39311,41 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
 
             // ── Cannibalization context for THIS page vs its siblings (same rules as the tracker panel) ──
             try {
+              const _conf = [];
+              // REAL EVIDENCE FIRST: same query text owned by BOTH this page AND another page's per-page
+              // GSC data — this is the exact PROVEN definition used in the tracker's Cannibalization panel.
+              // The keyword-text heuristic below only catches BROAD hub/spoke relationships from the single
+              // manually-set keyword field; it has no way to see that two pages share an ACTUAL search query
+              // unless their target keywords happen to overlap in text — which is why a page like "24 hour
+              // emergency roof repair nj" got NO cannibalization context against "wind damage roof repair nj"
+              // despite both pages sharing dozens of PROVEN queries (their keyword text alone doesn't overlap).
+              try {
+                const _provenR = await pool.query(
+                  `SELECT q1.query, q1.impressions, p2.url AS other_url, p2.keyword AS other_keyword
+                   FROM tracker_gsc_queries q1
+                   JOIN tracker_gsc_queries q2 ON LOWER(TRIM(q1.query)) = LOWER(TRIM(q2.query))
+                     AND q2.page_id IS NOT NULL AND q2.page_id <> q1.page_id AND q2.tracker_client_id = q1.tracker_client_id
+                   JOIN tracker_pages p2 ON p2.id = q2.page_id
+                   WHERE q1.page_id = $1 AND q1.tracker_client_id = $2
+                   ORDER BY q1.impressions DESC NULLS LAST LIMIT 12`,
+                  [page.id, page.tracker_client_id]
+                );
+                if (_provenR.rows.length) {
+                  const _byUrl = {};
+                  _provenR.rows.forEach(function(r){
+                    if (!_byUrl[r.other_url]) _byUrl[r.other_url] = { kw: r.other_keyword, queries: [] };
+                    _byUrl[r.other_url].queries.push(r.query);
+                  });
+                  Object.keys(_byUrl).slice(0, 3).forEach(function(u){
+                    const _b = _byUrl[u];
+                    _conf.push('PROVEN CONFLICT with ' + u + (_b.kw ? ' (keyword: "' + _b.kw + '")' : '') + '. Both pages already share ' + _b.queries.length + ' identical search quer' + (_b.queries.length===1?'y':'ies') + ' in real GSC data: "' + _b.queries.slice(0,5).join('", "') + '". Required actions in this brief: (a) an internal-link action FROM this page TO ' + u + ' with an anchor naming its distinct angle; (b) differentiate THIS page\'s intent from ' + u + ' with an exact new title/H1/opening-paragraph proposal so Google stops treating them as duplicates.');
+                  });
+                }
+              } catch(e) {}
               const _cnorm = function(s){ return String(s||'').toLowerCase().replace(/[^a-z0-9 ]/g,' ').replace(/ +/g,' ').trim(); };
               const _myKw = _cnorm(page.keyword || page.gsc_keyword || keyword || '');
               if (_myKw) {
                 const _myW = _myKw.split(' ').filter(function(w){ return w.length >= 2; });
-                const _conf = [];
                 _opR.rows.forEach(function(r){
                   const _oKw = _cnorm(r.keyword || r.gsc_keyword || '');
                   if (!_oKw || !r.url) return;
@@ -39308,11 +39364,11 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
                     _conf.push('DUPLICATE-KEYWORD CONFLICT with ' + r.url + ' (keyword: "' + (r.keyword || r.gsc_keyword) + '"). Required action in this brief: differentiate the intent of this page (e.g. service vs cost vs location) with an exact new title/H1 proposal, and add an internal link to ' + r.url + ' with its keyword as anchor text.');
                   }
                 });
-                if (_conf.length) {
-                  _cannibalContext = '\n\nCANNIBALIZATION CONTEXT (detected by the tracker — MUST be addressed in this brief):\n'
-                    + _conf.slice(0, 4).map(function(c, i){ return (i+1) + '. ' + c; }).join('\n')
-                    + '\nRules: use the EXACT URLs and anchor texts given above — never say "the hub" or "the relevant page" without naming the URL. For every internal-link action, OUTPUT THE READY-TO-PASTE HTML LINE, e.g. <p>For urgent help see our <a href="FULL_URL">EXACT ANCHOR</a>.</p>, so the owner pastes it directly. Mark each with "\u2500\u2500 READY-TO-PASTE \u2500\u2500". No SEO theory needed.';
-                }
+              }
+              if (_conf.length) {
+                _cannibalContext = '\n\nCANNIBALIZATION CONTEXT (detected by the tracker — MUST be addressed in this brief):\n'
+                  + _conf.slice(0, 4).map(function(c, i){ return (i+1) + '. ' + c; }).join('\n')
+                  + '\nRules: use the EXACT URLs and anchor texts given above — never say "the hub" or "the relevant page" without naming the URL. For every internal-link action, OUTPUT THE READY-TO-PASTE HTML LINE, e.g. <p>For urgent help see our <a href="FULL_URL">EXACT ANCHOR</a>.</p>, so the owner pastes it directly. Mark each with "\u2500\u2500 READY-TO-PASTE \u2500\u2500". No SEO theory needed.';
               }
             } catch(e) {}
           } catch(e) {}
@@ -39327,7 +39383,6 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
         if (!snapshot.ai_google_overview_cited) _items.push({ title:'Win Google AI Overview citation', priority:'high', system:'Google AIO', action:'Add a direct, quotable 2-3 sentence definition answering "what is '+_ckw+'" within the first 100 words, right after the H1. AI Overviews quote concise, self-contained answers.', expected_impact:'Eligible for AIO citation within 2-3 crawl cycles' });
         if (!snapshot.ai_perplexity_cited) _items.push({ title:'Win Perplexity citation', priority:'medium', system:'Perplexity', action:'Add an "About the Author" block with a named author, credentials and 1-2 verifiable stats. Perplexity favors clear E-E-A-T signals.', expected_impact:'Stronger author trust → Perplexity citation' });
         if (!snapshot.ai_bing_cited) _items.push({ title:'Win Microsoft Copilot citation', priority:'medium', system:'Microsoft Copilot', action:'Add a 50-60 word summary paragraph near the top that directly matches the search query for "'+_ckw+'".', expected_impact:'Concise top-of-page summary → Copilot citation' });
-        if (!snapshot.ai_brave_cited) _items.push({ title:'Win Claude / Brave citation', priority:'low', system:'Claude/Brave', action:'Add verifiable facts with named sources and a clear author byline. Claude and Brave prioritize factual, well-sourced content.', expected_impact:'Factual sourcing → Claude/Brave citation' });
         if (_cpos != null && parseFloat(_cpos) > 3) _items.push({ title:'Improve Google rank for "'+_ckw+'"', priority:'high', system:'Google AIO', action:'Rewrite the <title> and H1 to lead with "'+_ckw+'" plus a clear benefit. Currently ranking #'+_cpos+'.', expected_impact:'Position #'+_cpos+' → top 3 after recrawl' });
         if (Array.isArray(snapshot.graaf_recommendations)) snapshot.graaf_recommendations.slice(0,2).forEach(function(g){ var t=typeof g==='string'?g:(g&&(g.title||g.text||g.name))||''; var a=typeof g==='string'?g:(g&&(g.action||g.fix||g.text||g.detail))||''; if(t||a) _items.push({title:String(t||'Content improvement').substring(0,60),priority:'medium',system:'Content Quality',action:a,expected_impact:''}); });
         snapshot.recommendations = _items.slice(0,6);
@@ -39349,9 +39404,9 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
 
 CURRENT DATE: Today is ${_briefToday} — treat ${_briefYear} as the current year. For any freshness, recency, or "last updated" recommendation, use ${_briefYear}; NEVER describe an earlier year as "current", "latest", or "this year", and never suggest adding a date that is not ${_briefYear}. If the page content shows an older year (e.g. ${_briefYear - 1} or earlier) anywhere — a heading (H1/H2/H3), title tag, meta description, intro, "last updated", or any "current/latest" claim — explicitly flag it as stale and give the exact replacement text using ${_briefYear} (e.g. rewrite an H1 like "... ${_briefYear - 1}" to "... ${_briefYear}").
 
-A Citation Brief tells the content owner EXACTLY what to change so that Google AI Overview, Perplexity, Microsoft Copilot, and Claude all cite this page in their answers.
+A Citation Brief tells the content owner EXACTLY what to change so that Google AI Overview, Perplexity, and Microsoft Copilot all cite this page in their answers.
 
-${_cannibalContext}
+${_cannibalContext}${_gapContext}${_competitorContext}
 
 INPUT DATA:
 - Page URL: ${pageUrl}
@@ -39360,7 +39415,6 @@ INPUT DATA:
 - Google AI Overview cited: ${snapshot.ai_google_overview_cited ? 'YES' : 'NO'}
 - Perplexity cited: ${snapshot.ai_perplexity_cited ? 'YES' : 'NO'}
 - Microsoft Copilot cited: ${snapshot.ai_bing_cited ? 'YES' : 'NO'}
-- Claude/Brave cited: ${snapshot.ai_brave_cited ? 'YES' : 'NO'}
 - GRAAF score: ${snapshot.score || '?'}/100
 - Page HTML content (first 8000 chars): ${htmlExcerpt.substring(0,8000) || '(no HTML)'}
 - Previous brief actions (if any): ${JSON.stringify((page.brief_content?.items || []).slice(0,3))}
@@ -39373,7 +39427,7 @@ DIAGNOSE THE REAL BLOCKER BEFORE PRESCRIBING (most important step):
 A "Not cited" result has THREE possible root causes, and the correct fix differs for each. Identify the cause per engine from the data above, then make the #1 (HIGH) action address the ACTUAL cause — not a generic "add a passage".
 1. NOT VISIBLE — an engine cannot cite a page it does not surface.
    - Google AI Overview and ChatGPT draw from Google's top results. If Google position is worse than ~10 (current: ${snapshot.google_position || 'not ranked'}), AIO will almost never cite this page no matter how quotable it is. Then the gating action is to RANK INTO THE TOP 10 first — say so plainly as the dependency (the GSC Brief covers the how). Citeability passages are secondary until the page reaches the top ~10.
-   - Microsoft Copilot reads the Bing index; Claude reads the Brave index. If Copilot/Claude are "Not cited" and the page may not be in those indexes, the fix is to GET INDEXED THERE — submit the URL in Bing Webmaster Tools and via IndexNow (Brave honors IndexNow) — NOT to add on-page passages.
+   - Microsoft Copilot reads the Bing index. If Copilot is "Not cited" and the page may not be in that index, the fix is to GET INDEXED THERE — submit the URL in Bing Webmaster Tools — NOT to add on-page passages.
 2. VISIBLE BUT NOT EXTRACTABLE — the page ranks/indexes but the answer is not in a liftable, self-contained form. Then apply the citeability passage/structure/schema actions below.
 3. VISIBLE & EXTRACTABLE BUT OUTCOMPETED — a competitor's passage is more direct or more authoritative. Then match and beat the cited competitor's passage and strengthen author E-E-A-T.
 Be honest about which blocker applies. If position is poor, do NOT imply a passage edit alone will earn an AIO citation — name ranking into the top 10 as the prerequisite.
@@ -39406,13 +39460,6 @@ Microsoft Copilot:
 - Needs the keyword in H1, first paragraph, and meta title
 - Pulls from the Bing index — the page MUST be indexed in Bing first. If Copilot shows "Not cited", recommend submitting the URL in Bing Webmaster Tools and via IndexNow before any passage edits
 
-Claude/Brave:
-- Needs factual, verifiable claims with sources
-- Needs a clear "About the author" section
-- Needs the page to load fast and be mobile-optimized
-- Pulls from the Brave index — if "Not cited", recommend IndexNow submission (Brave honors it) so the page is discoverable before passage work
-- Prefers pages with consistent publishing history
-
 TASK:
 Analyze the input data and create a Citation Brief with exactly 5 actions. Each action must be:
 1. Specific to ONE citation system (or ranking)
@@ -39428,7 +39475,6 @@ ACTIONS THAT ARE ALREADY RESOLVED — DO NOT INCLUDE THESE:`
 + (snapshot.ai_google_overview_cited ? '\n- AIO cites this page → SKIP all Google AIO actions' : '')
 + (snapshot.ai_perplexity_cited ? '\n- Perplexity cites this page → SKIP all Perplexity actions' : '')
 + (snapshot.ai_bing_cited ? '\n- Copilot cites this page → SKIP all Copilot actions' : '')
-+ (snapshot.ai_brave_cited ? '\n- Claude/Brave cites this page → SKIP all Claude actions' : '')
 + (snapshot.google_position && snapshot.google_position <= 3 ? '\n- Position #'+snapshot.google_position+' → SKIP basic ranking actions' : '')
 + _alreadyOnPage
 + `\n- Remove any actions from previous brief that are now done
@@ -39454,7 +39500,7 @@ NO FABRICATION (hard rule, overrides everything): NEVER invent a statistic, perc
 OUTPUT FORMAT — return ONLY this JSON, no markdown, no explanation, no preamble:
 [{"title":"6 words max describing the gap","priority":"high","system":"Google AIO","action":"[OPERATION] + [LOCATION] + exact copy-paste text. Pick the operation that fits the GAP — if the element already exists (definition, micro-answer, FAQ, schema, author), use MODIFY or REPLACE on it, NEVER ADD a duplicate. e.g. 'MODIFY your existing direct-answer block to: ...' or 'ADD as a new FAQ answer: ...'. End with: This makes the page more citeable for Google AI Overview because [specific reason based on AIO requirements above].","expected_impact":"Increases the likelihood of an AIO citation once the page ranks in the top ~10 and is re-crawled — state the honest dependency, not a guarantee"}]
 
-IMPACT HONESTY RULE: AI citation is never guaranteed. NEVER write that an engine "will cite" the page, and never promise a fixed number of crawl cycles. Use likelihood language ("increases the likelihood", "makes the page eligible", "improves the chance") and always name the dependency (ranking into the top 10 for AIO/ChatGPT; being indexed in Bing/Brave for Copilot/Claude). An honest, qualified impact line is required — an over-promise is a failed action.
+IMPACT HONESTY RULE: AI citation is never guaranteed. NEVER write that an engine "will cite" the page, and never promise a fixed number of crawl cycles. Use likelihood language ("increases the likelihood", "makes the page eligible", "improves the chance") and always name the dependency (ranking into the top 10 for AIO/ChatGPT; being indexed in Bing for Copilot). An honest, qualified impact line is required — an over-promise is a failed action.
 
 EVERYTHING WRITTEN OUT (hard rule): the "action" field must contain the literal final text the owner pastes — exact passage, exact FAQ Q&A, exact blockquote, exact schema JSON, exact <a href> line. NEVER output a task-description ("add an FAQ", "include statistics", "strengthen E-E-A-T", "add author credentials") without the finished text beside it. The ONLY allowed placeholders are square-bracket owner-facts you genuinely cannot know — [OWNER: insert years in business], [AUTHOR NAME], [real source URL] — used only for verifiable facts, never to skip writing prose. Write the full sentence with the placeholder inside it, e.g. "With [OWNER: insert number] completed NJ roofing projects, our team…".
 
@@ -39463,7 +39509,7 @@ QUALITY BAR: Every action must be so specific that the user can implement it in 
       const gscPrompt = `You are a Google Search Console Analyst and SEO Strategist. Your job is to create a GSC Brief — a data-driven action plan to move a page from its current position to RANK #1.
 
 CURRENT DATE: Today is ${_briefToday} — treat ${_briefYear} as the current year. Use ${_briefYear} for any freshness or "last updated" recommendation; never reference an older year as current.
-${_cannibalContext}${_gapContext}
+${_cannibalContext}${_gapContext}${_competitorContext}
 
 INPUT DATA:
 - Page URL: ${pageUrl}
@@ -39681,7 +39727,7 @@ GOAL: Rank #1 for "${kw}" and capture the maximum clicks from ${gscImpr || 'the 
           snapshot.author_trust_findings.slice(0,2).forEach(function(f){
             var a = (f && (f.fix || f.recommendation || f.action || f.detail)) || '';
             var t = (f && (f.title || f.issue || f.label)) || 'Strengthen author trust (E-E-A-T)';
-            if (a || t) _fb.push({ title: String(t).substring(0,60), priority: (f && f.priority) || 'medium', system: 'Claude/Brave', action: a, expected_impact: 'Stronger E-E-A-T trust signals for AI citation' });
+            if (a || t) _fb.push({ title: String(t).substring(0,60), priority: (f && f.priority) || 'medium', system: 'Author Trust', action: a, expected_impact: 'Stronger E-E-A-T trust signals for AI citation' });
           });
         }
         if (Array.isArray(snapshot.graaf_recommendations)) {
@@ -39698,7 +39744,6 @@ GOAL: Rank #1 for "${kw}" and capture the maximum clicks from ${gscImpr || 'the 
           if (!snapshot.ai_google_overview_cited) _fb.push({ title: 'Win Google AI Overview citation', priority: 'high', system: 'Google AIO', action: 'Add a direct, quotable 2-3 sentence definition answering "what is ' + _ckw + '" within the first 100 words, right after the H1. AI Overviews quote concise, self-contained answers.', expected_impact: 'Eligible for AIO citation within 2-3 crawl cycles' });
           if (!snapshot.ai_perplexity_cited) _fb.push({ title: 'Win Perplexity citation', priority: 'medium', system: 'Perplexity', action: 'Add an "About the Author" block with a named author, credentials, and 1-2 verifiable stats. Perplexity favors pages with clear E-E-A-T signals.', expected_impact: 'Stronger author trust → Perplexity citation' });
           if (!snapshot.ai_bing_cited) _fb.push({ title: 'Win Microsoft Copilot citation', priority: 'medium', system: 'Microsoft Copilot', action: 'Add a 50-60 word summary paragraph near the top that directly matches the search query for "' + _ckw + '".', expected_impact: 'Concise top-of-page summary → Copilot citation' });
-          if (!snapshot.ai_brave_cited) _fb.push({ title: 'Win Claude / Brave citation', priority: 'low', system: 'Claude/Brave', action: 'Add verifiable facts with named sources and a clear author byline. Claude and Brave prioritize factual, well-sourced content.', expected_impact: 'Factual sourcing → Claude/Brave citation' });
           if (_cpos != null && parseFloat(_cpos) > 3) _fb.push({ title: 'Improve Google rank for "' + _ckw + '"', priority: 'high', system: 'Google AIO', action: 'Rewrite the <title> and H1 to lead with "' + _ckw + '" plus a clear benefit. Currently ranking #' + _cpos + '.', expected_impact: 'Position #' + _cpos + ' → top 3 after recrawl' });
         }
         if (_fb.length) {
