@@ -1,4 +1,4 @@
-console.log('=== CONTENTSCALE BOOT v2026-07-08-possible-prioritized-shortcut | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON | possibleThreshold=20impr | shortcutPrioritized=v2 | gscAutoFetchRemoved=true | linkCheckActive=true | wholeSiteWipeGuard=true | gscAutoFetchRestored=true | reminderOffFix=true | claudeRemoved=true | bingWebmaster=true | competitorPanel=true | zeroResultFix=true | pagesRefreshFix=true | recheckButton=true | provenScanStrip=true | provenScanState=true | scanAllProven=true | doEverythingBtn=true | panelOrderFix=true | workflowGuide=true | preScanGuard=true | scanAllGuard=true | earlyGuard=true | emptyStateTeaser=true | provenScopeFix=true | numberedButtons=true | clearerButtons=true | scanAnimFix=true | promptClaudeCleanup=true | bonusTip=true | realProvenContext=true | competitorContext=true | unifiedBrief=true | diagnosticFirst=true | fullCompetitorBreakdown=true | serpSpyV3=true | transparencyBlock=true | emailsPausedToggle=true ===');
+console.log('=== CONTENTSCALE BOOT v2026-07-08-possible-prioritized-shortcut | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON | possibleThreshold=20impr | shortcutPrioritized=v2 | gscAutoFetchRemoved=true | linkCheckActive=true | wholeSiteWipeGuard=true | gscAutoFetchRestored=true | reminderOffFix=true | claudeRemoved=true | bingWebmaster=true | competitorPanel=true | zeroResultFix=true | pagesRefreshFix=true | recheckButton=true | provenScanStrip=true | provenScanState=true | scanAllProven=true | doEverythingBtn=true | panelOrderFix=true | workflowGuide=true | preScanGuard=true | scanAllGuard=true | earlyGuard=true | emptyStateTeaser=true | provenScopeFix=true | numberedButtons=true | clearerButtons=true | scanAnimFix=true | promptClaudeCleanup=true | bonusTip=true | realProvenContext=true | competitorContext=true | unifiedBrief=true | diagnosticFirst=true | fullCompetitorBreakdown=true | serpSpyV3=true | transparencyBlock=true | emailsPausedToggle=true | competitorDedup=true ===');
 // CONTENTSCALE SERVER.JS — ELITE EDITION v4 (FIXED v3)
 // ✅ FIX v7: secondary_keywords + related_keywords auto in Analyse JSON + Execute prompt
 // ✅ FIX v7: analysis_data JSONB safe parse in execute-rewrite
@@ -29554,11 +29554,11 @@ function copyBrief(pageId) {
   (function(){
     try {
       var _gc = typeof p.google_competitors === 'string' ? JSON.parse(p.google_competitors) : (p.google_competitors||[]);
-      if (_gc && _gc.length) lines.push('- Google top ' + _gc.length + ' competitors checked: ' + _gc.slice(0,5).map(function(c){return c.url;}).join(', '));
+      if (_gc && _gc.length) lines.push('- Google: ' + _gc.length + ' top competitors checked (full breakdown with reasons in the Competitor Gap action below)');
     } catch(e) {}
     try {
       var _pc = typeof p.ai_perplexity_competitors === 'string' ? JSON.parse(p.ai_perplexity_competitors) : (p.ai_perplexity_competitors||[]);
-      if (_pc && _pc.length) lines.push('- Perplexity currently cites: ' + _pc.slice(0,5).join(', '));
+      if (_pc && _pc.length) lines.push('- Perplexity: ' + _pc.length + ' cited source' + (_pc.length>1?'s':'') + ' found (this page not among them yet)');
     } catch(e) {}
   })();
   lines.push('AI Citation Results:');
@@ -30912,11 +30912,11 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
         (function(){
           try {
             var _gc = typeof data.google_competitors === 'string' ? JSON.parse(data.google_competitors) : (data.google_competitors||[]);
-            if (_gc && _gc.length) lines.push('- Google top ' + _gc.length + ' competitors checked: ' + _gc.slice(0,5).map(function(c){return c.url;}).join(', '));
+            if (_gc && _gc.length) lines.push('- Google: ' + _gc.length + ' top competitors checked (full breakdown with reasons in the Competitor Gap action below)');
           } catch(e) {}
           try {
             var _pc = typeof data.perp_competitors === 'string' ? JSON.parse(data.perp_competitors) : (data.perp_competitors||[]);
-            if (_pc && _pc.length) lines.push('- Perplexity currently cites: ' + _pc.slice(0,5).join(', '));
+            if (_pc && _pc.length) lines.push('- Perplexity: ' + _pc.length + ' cited source' + (_pc.length>1?'s':'') + ' found (this page not among them yet)');
           } catch(e) {}
         })();
         lines.push('AI Citation Results:');
@@ -31315,11 +31315,11 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
       (function(){
         try {
           var _gc = typeof data.google_competitors === 'string' ? JSON.parse(data.google_competitors) : (data.google_competitors||[]);
-          if (_gc && _gc.length) lines.push('- Google top ' + _gc.length + ' competitors checked: ' + _gc.slice(0,5).map(function(c){return c.url;}).join(', '));
+          if (_gc && _gc.length) lines.push('- Google: ' + _gc.length + ' top competitors checked (full breakdown with reasons in the Competitor Gap action below)');
         } catch(e) {}
         try {
           var _pc = typeof data.perp_competitors === 'string' ? JSON.parse(data.perp_competitors) : (data.perp_competitors||[]);
-          if (_pc && _pc.length) lines.push('- Perplexity currently cites: ' + _pc.slice(0,5).join(', '));
+          if (_pc && _pc.length) lines.push('- Perplexity: ' + _pc.length + ' cited source' + (_pc.length>1?'s':'') + ' found (this page not among them yet)');
         } catch(e) {}
       })();
       lines.push('AI Citation Results:');
