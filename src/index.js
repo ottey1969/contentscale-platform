@@ -1,4 +1,4 @@
-console.log('=== CONTENTSCALE BOOT v2026-07-08-possible-prioritized-shortcut | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON | possibleThreshold=20impr | shortcutPrioritized=v2 | gscAutoFetchRemoved=true | linkCheckActive=true | wholeSiteWipeGuard=true | gscAutoFetchRestored=true | reminderOffFix=true | claudeRemoved=true | bingWebmaster=true | competitorPanel=true | zeroResultFix=true | pagesRefreshFix=true | recheckButton=true | provenScanStrip=true | provenScanState=true | scanAllProven=true | doEverythingBtn=true ===');
+console.log('=== CONTENTSCALE BOOT v2026-07-08-possible-prioritized-shortcut | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON | possibleThreshold=20impr | shortcutPrioritized=v2 | gscAutoFetchRemoved=true | linkCheckActive=true | wholeSiteWipeGuard=true | gscAutoFetchRestored=true | reminderOffFix=true | claudeRemoved=true | bingWebmaster=true | competitorPanel=true | zeroResultFix=true | pagesRefreshFix=true | recheckButton=true | provenScanStrip=true | provenScanState=true | scanAllProven=true | doEverythingBtn=true | panelOrderFix=true | workflowGuide=true | preScanGuard=true | scanAllGuard=true | earlyGuard=true | emptyStateTeaser=true ===');
 // CONTENTSCALE SERVER.JS — ELITE EDITION v4 (FIXED v3)
 // ✅ FIX v7: secondary_keywords + related_keywords auto in Analyse JSON + Execute prompt
 // ✅ FIX v7: analysis_data JSONB safe parse in execute-rewrite
@@ -28062,8 +28062,8 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
 
   <div class="cs-section">Your tracked pages <span id="pageCountLabel2" style="color:#cbd5e1;"></span></div>
   <div id="gscSetupBanner"></div>
-  <div id="cannibalPanel" style="width:100%;"></div>
   <div id="impressionGap" style="width:100%;"></div>
+  <div id="cannibalPanel" style="width:100%;"></div>
   <div id="pagesList" style="width:100%;"></div>
 
   <!-- Upsell -->
@@ -28509,6 +28509,23 @@ function _setScanAllBtn(html, disabled, animate){
 }
 function scanAllPages() {
   if (_scanAllActive) { toast('A full scan is already running \u2014 please wait for it to finish.', '#f59e0b'); return; }
+  // Same "don't scan 3 times" guard as checkPage() \u2014 but broader. Early in the workflow there is NO
+  // PROVEN yet (it only appears after GSC auto-fetch on paired pages), so checking _provenList alone
+  // misses the most common case: someone hits Scan All before EVER touching Cannibalization or
+  // Impression Gap. Catch that too \u2014 unresolved POSSIBLE rows (GSC auto-fetch not done) and/or the
+  // gap analysis not run both mean scanning now wastes the pass and needs redoing later.
+  var _gapDoneForAll = _gapAnalysis && _gapAnalysis.families && _gapAnalysis.families.length;
+  var _hasOpenPossible = typeof _possRemaining !== 'undefined' && _possRemaining && _possRemaining.length;
+  var _hasProvenWork = typeof _provenList !== 'undefined' && _provenList && _provenList.length;
+  var _hasGapDataToSort = typeof _gapQueries !== 'undefined' && _gapQueries && _gapQueries.filter(function(g){ return !g.page_id; }).length > 0;
+  var _cannibalOrGapUnfinished = (_hasOpenPossible || _hasProvenWork || _hasGapDataToSort) && !_gapDoneForAll;
+  if (_cannibalOrGapUnfinished) {
+    var _reason = _hasOpenPossible
+      ? (_possRemaining.length + ' POSSIBLE page' + (_possRemaining.length>1?'s':'') + ' still need GSC auto-fetch, and ')
+      : '';
+    var _proceedAnyway = confirm('The Cannibalization and Impression Gap panels above aren\\'t finished yet \\u2014 ' + _reason + '\\ud83e\\udd16 Sort this out for me hasn\\'t run. Scanning all pages now means some of them will need a second scan later once that work is done.\\n\\nFinish those panels first (GSC auto-fetch any POSSIBLE pages, then \\ud83e\\udd16 Sort this out for me, then \\ud83d\\ude80 Do everything) \\u2014 that way every page gets its complete brief in one pass.\\n\\nScan all anyway right now?');
+    if (!_proceedAnyway) return;
+  }
   if (!confirm('Scan all tracked pages now? They run one by one and this can take a few minutes. You will see live progress on the button.')) return;
   _scanAllActive = true; _scanAllDone = 0; _scanAllTotal = 0;
   _setScanAllBtn('\u23f3 Starting scan\u2026', true, true);
@@ -29788,7 +29805,14 @@ function slugOf(p){ try { var s = new URL(p.url).pathname || '/'; return (s === 
 function renderImpressionGap() {
   var host = document.getElementById('impressionGap');
   if (!host) return;
-  if (!_gapQueries || !_gapQueries.length) { host.innerHTML = ''; return; }
+  if (!_gapQueries || !_gapQueries.length) {
+    host.innerHTML = '<div style="padding:16px;background:#0d1117;border:1px dashed #374151;border-radius:10px;margin-bottom:10px;text-align:center;">'
+      + '<div style="font-size:13px;font-weight:800;color:#e5e7eb;margin-bottom:6px;">\ud83d\udce1 Impression Gap \u2014 unlock this by connecting real search data</div>'
+      + '<div style="font-size:11px;color:#9ca3af;line-height:1.6;max-width:480px;margin:0 auto 10px;">Once connected, this finds real queries Google already shows your site for that none of your tracked pages target \u2014 free traffic you\u2019re leaving on the table. It also powers Cannibalization detection and the Lead Queue below.</div>'
+      + '<button onclick="showImportModal(\\'gsc\\')" style="cursor:pointer;font-size:11px;font-weight:800;padding:6px 16px;border-radius:6px;background:#1e3a8a;border:1px solid #3b82f6;color:#bfdbfe;">Connect search data \u2192</button>'
+      + '</div>';
+    return;
+  }
   // Build the coverage set from tracked pages: keywords + gsc keywords + url slug words
   var covered = [];
   (_pages||[]).forEach(function(p){
@@ -30097,7 +30121,13 @@ function renderCannibal() {
   var _diagGapQ50 = (_gapQueries||[]).filter(function(g){ return !g.page_id && (g.impressions||0) >= 20; }).length;
   var _diagPoss = _cannibalIssues.filter(function(c){ return c.level === 'POSSIBLE'; }).length;
   if (!_cannibalIssues.length) {
-    host.innerHTML = '<div style="padding:10px 14px;font-size:11px;color:#6b7280;line-height:1.6;">No cannibalization rows right now. <span style="color:#4b5563;">(' + _diagTotal + ' pages, ' + _diagRedir + ' redirected/excluded, ' + _diagGapQ + ' site-wide queries of which ' + _diagGapQ50 + ' have \u226520 impressions \u2014 POSSIBLE rows need \u226520 impr and a query that fits two live pages within 15%.)</span></div>';
+    host.innerHTML = (_diagGapQ === 0)
+      ? '<div style="padding:16px;background:#0d1117;border:1px dashed #374151;border-radius:10px;text-align:center;">'
+        + '<div style="font-size:13px;font-weight:800;color:#e5e7eb;margin-bottom:6px;">\u2694\ufe0f Cannibalization detection \u2014 unlock this by connecting real search data</div>'
+        + '<div style="font-size:11px;color:#9ca3af;line-height:1.6;max-width:480px;margin:0 auto 10px;">Once connected, this finds pages competing with each other for the same search \u2014 a common, invisible traffic leak. Fixes get written straight into each page\u2019s brief automatically.</div>'
+        + '<button onclick="showImportModal(\\'gsc\\')" style="cursor:pointer;font-size:11px;font-weight:800;padding:6px 16px;border-radius:6px;background:#1e3a8a;border:1px solid #3b82f6;color:#bfdbfe;">Connect search data \u2192</button>'
+        + '</div>'
+      : '<div style="padding:10px 14px;font-size:11px;color:#6b7280;line-height:1.6;">No cannibalization rows right now. <span style="color:#4b5563;">(' + _diagTotal + ' pages, ' + _diagRedir + ' redirected/excluded, ' + _diagGapQ + ' site-wide queries of which ' + _diagGapQ50 + ' have \u226520 impressions \u2014 POSSIBLE rows need \u226520 impr and a query that fits two live pages within 15%.)</span></div>';
     return;
   }
   // Shortcut: many yellow rows share the same page pair. Verifying a POSSIBLE row strictly requires
@@ -30362,10 +30392,24 @@ async function markDone(pageId, btn, currentDone) {
 // Track active checks per page
   var _checkAnimations = {};
 
-  async function checkPage(pageId) {
+  async function checkPage(pageId, _skipGapWarning) {
     if (_briefIsOpen) {
       toast('Finish the current brief first \\u2014 then scan this page', '#f59e0b');
       return;
+    }
+    // Guard against the exact "scan 3 times" scenario: this page has PROVEN cannibalization issues
+    // AND the gap analysis hasn't run yet AND this call did NOT come from _provenScanAll (which
+    // already guarantees Sort ran first). Scanning now would miss the gap-family sections, requiring
+    // a second scan later to pick them up \u2014 so ask first instead of silently doing the wasteful thing.
+    if (!_skipGapWarning) {
+      var _pSlug = null;
+      try { var _pp = (_pages||[]).find(function(x){ return x.id == pageId; }); if (_pp) _pSlug = slugOf(_pp); } catch(e) {}
+      var _isProvenPage = _pSlug && typeof _provenList !== 'undefined' && _provenList.indexOf(_pSlug) > -1;
+      var _gapDone = _gapAnalysis && _gapAnalysis.families && _gapAnalysis.families.length;
+      if (_isProvenPage && !_gapDone) {
+        var _ok = confirm('This page has PROVEN cannibalization conflicts. Scanning now will miss the Impression Gap sections (Sort this out for me hasn\\'t run yet) \\u2014 you\\'d likely need to scan this page again later.\\n\\nUse \\ud83d\\ude80 Do everything in the Cannibalization panel instead \\u2014 it runs Sort first, then scans, so this page only needs one scan.\\n\\nScan anyway right now?');
+        if (!_ok) return;
+      }
     }
     var p = (_pages||[]).find(function(x){ return x.id == pageId; });
     if (p && !p.last_checked && !p.check_frequency) {
@@ -30403,7 +30447,7 @@ async function markDone(pageId, btn, currentDone) {
     var pageIds = (_provenList||[]).map(function(s){ return _slugToPageId[s]; }).filter(Boolean);
     for (var i = 0; i < pageIds.length; i++) {
       if (btnEl) btnEl.textContent = '\u23f3 Scanning ' + (i+1) + '/' + pageIds.length + '\u2026';
-      try { await checkPage(pageIds[i]); } catch(e) {}
+      try { await checkPage(pageIds[i], true); } catch(e) {}
       if (i < pageIds.length - 1) await new Promise(function(r){ setTimeout(r, 1500); });
     }
     if (btnEl) { btnEl.textContent = '\u2713 All ' + pageIds.length + ' scans queued'; }
@@ -30421,17 +30465,26 @@ async function deletePage(pageId) {
 loadPages().then(function(){ try { loadImpressionGap(); } catch(e) {} try { _tourMaybeAutoStart(); } catch(e) {} });
 if (_gscAutoFetchAvailable) {
   api('/gsc-autofetch-status', 'GET').then(function(d){
-    if (d && d.success && d.service_account_email) { _gscServiceAccountEmail = d.service_account_email; _renderGscSetupBanner(); }
-  }).catch(function(){});
+    if (d && d.success && d.service_account_email) { _gscServiceAccountEmail = d.service_account_email; }
+    _renderGscSetupBanner();
+  }).catch(function(){ _renderGscSetupBanner(); });
+} else {
+  _renderGscSetupBanner();
 }
 function _renderGscSetupBanner() {
   var host = document.getElementById('gscSetupBanner');
-  if (!host || !_gscServiceAccountEmail) return;
+  if (!host) return;
+  var _step1 = _gscServiceAccountEmail
+    ? ('<div style="margin-bottom:8px;"><b style="color:#93c5fd;">Step 1 \u2014 One-click GSC data (optional, skips manual CSV exports):</b> add this address as a Search Console user on your property (Settings \u2192 Users and permissions \u2192 Add user, \u201cRestricted\u201d is enough):<br>'
+        + '<code style="background:#0d1117;padding:3px 8px;border-radius:4px;color:#93c5fd;font-family:monospace;display:inline-block;margin:4px 0;">' + _gscServiceAccountEmail.replace(/</g,'&lt;') + '</code> '
+        + '<button onclick="navigator.clipboard.writeText(&quot;' + _gscServiceAccountEmail.replace(/"/g,'&quot;') + '&quot;);toast(&quot;Copied\u2014 paste it into GSC \u2192 Settings \u2192 Users and permissions&quot;,&quot;#4ade80&quot;)" style="cursor:pointer;font-size:10px;font-weight:700;padding:3px 10px;border-radius:5px;background:#1e3a8a;border:1px solid #3b82f6;color:#bfdbfe;">Copy</button>'
+        + '<br>Once added, every \u26a1 Auto-fetch button below skips manual CSV steps entirely.</div>')
+    : '<div style="margin-bottom:8px;"><b style="color:#93c5fd;">Step 1 \u2014 Import your GSC data:</b> paste your Queries CSV via \u201cAdd pages to track\u201d (manual, since one-click auto-fetch isn\u2019t configured on this server yet).</div>';
   host.innerHTML = '<div style="background:rgba(96,165,250,.08);border:1px solid #3b82f6;border-radius:8px;padding:10px 14px;margin-bottom:10px;font-size:11px;color:#bfdbfe;line-height:1.6;">'
-    + '<b>\u26a1 One-click GSC data (no CSV exports)</b> \u2014 add this address as a Search Console user on your property (Settings \u2192 Users and permissions \u2192 Add user, \u201cRestricted\u201d is enough):<br>'
-    + '<code style="background:#0d1117;padding:3px 8px;border-radius:4px;color:#93c5fd;font-family:monospace;display:inline-block;margin:4px 0;">' + _gscServiceAccountEmail.replace(/</g,'&lt;') + '</code> '
-    + '<button onclick="navigator.clipboard.writeText(&quot;' + _gscServiceAccountEmail.replace(/"/g,'&quot;') + '&quot;);toast(&quot;Copied\u2014 paste it into GSC \u2192 Settings \u2192 Users and permissions&quot;,&quot;#4ade80&quot;)" style="cursor:pointer;font-size:10px;font-weight:700;padding:3px 10px;border-radius:5px;background:#1e3a8a;border:1px solid #3b82f6;color:#bfdbfe;">Copy</button>'
-    + '<br>Once added, every \u26a1 Auto-fetch button in this tracker skips the manual CSV steps entirely.'
+    + '<div style="font-size:10px;font-weight:800;letter-spacing:.05em;color:#60a5fa;text-transform:uppercase;margin-bottom:8px;">How this tracker works \u2014 do these in order</div>'
+    + _step1
+    + '<div style="margin-bottom:8px;"><b style="color:#93c5fd;">Step 2 \u2014 Sort this out for me:</b> click it in the Impression Gap panel below \u2014 groups your queries into intent families with one clear verdict each.</div>'
+    + '<div><b style="color:#93c5fd;">Step 3 \u2014 Scan:</b> in the Cannibalization panel, use \ud83d\ude80 <b>Do everything</b> on any PROVEN group \u2014 it runs Step 2 first if you skipped it, then scans every affected page so the brief has the full fix.</div>'
     + '</div>';
 }
 // Show welcome on first visit (or force with ?welcome=1)
