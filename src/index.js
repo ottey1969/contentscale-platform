@@ -1,4 +1,4 @@
-console.log('=== CONTENTSCALE BOOT v2026-07-08-possible-prioritized-shortcut | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON | possibleThreshold=20impr | shortcutPrioritized=v2 | gscAutoFetchRemoved=true | linkCheckActive=true | wholeSiteWipeGuard=true | gscAutoFetchRestored=true | reminderOffFix=true | claudeRemoved=true | bingWebmaster=true | competitorPanel=true | zeroResultFix=true | pagesRefreshFix=true | recheckButton=true | provenScanStrip=true | provenScanState=true | scanAllProven=true | doEverythingBtn=true | panelOrderFix=true | workflowGuide=true | preScanGuard=true | scanAllGuard=true | earlyGuard=true | emptyStateTeaser=true | provenScopeFix=true | numberedButtons=true | clearerButtons=true | scanAnimFix=true | promptClaudeCleanup=true | bonusTip=true | realProvenContext=true | competitorContext=true | unifiedBrief=true | diagnosticFirst=true | fullCompetitorBreakdown=true | serpSpyV3=true | transparencyBlock=true | emailsPausedToggle=true | competitorDedup=true | provenScanDebug=true ===');
+console.log('=== CONTENTSCALE BOOT v2026-07-08-possible-prioritized-shortcut | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON | possibleThreshold=20impr | shortcutPrioritized=v2 | gscAutoFetchRemoved=true | linkCheckActive=true | wholeSiteWipeGuard=true | gscAutoFetchRestored=true | reminderOffFix=true | claudeRemoved=true | bingWebmaster=true | competitorPanel=true | zeroResultFix=true | pagesRefreshFix=true | recheckButton=true | provenScanStrip=true | provenScanState=true | scanAllProven=true | doEverythingBtn=true | panelOrderFix=true | workflowGuide=true | preScanGuard=true | scanAllGuard=true | earlyGuard=true | emptyStateTeaser=true | provenScopeFix=true | numberedButtons=true | clearerButtons=true | scanAnimFix=true | promptClaudeCleanup=true | bonusTip=true | realProvenContext=true | competitorContext=true | unifiedBrief=true | diagnosticFirst=true | fullCompetitorBreakdown=true | serpSpyV3=true | transparencyBlock=true | emailsPausedToggle=true | competitorDedup=true | provenScanDebug=true | serializedScans=true | claudeCleanupV2=true ===');
 // CONTENTSCALE SERVER.JS — ELITE EDITION v4 (FIXED v3)
 // ✅ FIX v7: secondary_keywords + related_keywords auto in Analyse JSON + Execute prompt
 // ✅ FIX v7: analysis_data JSONB safe parse in execute-rewrite
@@ -3572,7 +3572,7 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
   <div class="lw-saver-clock" id="lwSaverClock">00:00</div>
   <div class="lw-saver-label">Waiting for next scan</div>
   <div class="lw-saver-tips">
-    <div class="lw-saver-tip" id="lwTip">Pages scanned by AI are analyzed for Google, Perplexity, Copilot &amp; Claude citations</div>
+    <div class="lw-saver-tip" id="lwTip">Pages scanned by AI are analyzed for Google, Perplexity &amp; Copilot citations</div>
   </div>
 </div>
 
@@ -3610,7 +3610,7 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
   var hasBriefs = false;
 
   var tips = [
-    'Pages scanned by AI are analyzed for Google, Perplexity, Copilot & Claude citations',
+    'Pages scanned by AI are analyzed for Google, Perplexity & Copilot citations',
     'Add FAQ schema to increase chances of being cited in Google AI Overview',
     'Pages with definitions in the first 100 words get cited more often',
     'Include author bios with credentials to boost E-E-A-T trust signals',
@@ -27921,7 +27921,7 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
           <div class="wl-step-num">2</div>
           <div class="wl-step-content">
             <div class="wl-step-title">Run the Scan</div>
-            <div class="wl-step-desc">The system checks Google AI Overview, Perplexity, Microsoft Copilot & Claude to see if you are cited.</div>
+            <div class="wl-step-desc">The system checks Google AI Overview, Perplexity & Microsoft Copilot to see if you are cited.</div>
           </div>
         </div>
         <div class="wl-step" style="animation-delay:0.3s">
@@ -30309,7 +30309,7 @@ var _tourSteps = [
   { sel: '#scanAllBtn', title: '4 \\u00b7 Scan All', text: 'Scans every tracked page one by one \\u2014 useful with many pages, and ideal for a lead or manager who assigns work to specialists: one click refreshes every brief so the whole team has up-to-date instructions.' },
   { sel: '.cs-live', title: '5 \\u00b7 Live Activity', text: 'Your window into what the tracker is doing right now: which page is being scanned, what just finished, what is queued. Auto-updates every 8 seconds \\u2014 no need to refresh.' },
   { sel: '#brandCtxPanel', title: '6 \\u00b7 Brand & author info', text: 'Store the real facts about your business here \\u2014 name, author, credentials, service area, anything the AI must respect. Every brief uses these facts instead of inventing details. Optional, but it makes the generated text noticeably more accurate.' },
-  { sel: '.cs-page-card', title: '7 \\u00b7 Your tracked pages', text: 'Each card is one tracked page: its Google position, AI citation badges (AI Overview, Perplexity, Copilot, Claude), GSC clicks and impressions, and in the yellow block its pushable queries \\u2014 searches on page 2 that one good push moves to page 1.' },
+  { sel: '.cs-page-card', title: '7 \\u00b7 Your tracked pages', text: 'Each card is one tracked page: its Google position, AI citation badges (AI Overview, Perplexity, Copilot), GSC clicks and impressions, and in the yellow block its pushable queries \\u2014 searches on page 2 that one good push moves to page 1.' },
   { sel: '#cannibalPanel', title: '8 \\u00b7 Cannibalization', text: 'Pages competing with each other for the same search. Click any row for exactly what to do \\u2014 and in most cases you do nothing by hand: the tracker feeds each conflict into the briefs of the affected pages on their next scan, as ready-made actions.' },
   { sel: '#leadQueuePanel', title: '9 \\u00b7 Lead Queue', text: 'Every page ranked by the clicks you are missing per month \\u2014 your worklist. Work strictly top to bottom: row 1 is always the fastest route to new leads. Click a row to jump to that page; click \\u201c? How ranking works\\u201d for what each tier means.' },
   { sel: '#myChecksBar', title: '10 \\u00b7 My checks', text: 'Your personal progress. The checkmarks are yours alone \\u2014 scans, HTML updates and restarts never reset them. Filter to \\u201cTo do\\u201d to see only open work; checked pages leave the Lead Queue so the next job rises to the top.' },
@@ -30434,7 +30434,7 @@ async function markDone(pageId, btn, currentDone) {
 // Track active checks per page
   var _checkAnimations = {};
 
-  async function checkPage(pageId, _skipGapWarning, _fast) {
+  async function checkPage(pageId, _skipGapWarning, _fast, _waitForFull) {
     if (_briefIsOpen) {
       toast('Finish the current brief first \\u2014 then scan this page', '#f59e0b');
       return;
@@ -30461,9 +30461,22 @@ async function markDone(pageId, btn, currentDone) {
     }
     var btn = document.querySelector('[data-check-btn="' + pageId + '"]');
     if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i>'; }
-    runScanAnimation(p ? p.url : '', function() {
-      pollAndShowBrief(pageId, 15, 4000);
-    }, _fast);
+    // _waitForFull: when true, this function's returned promise only resolves once the ENTIRE
+    // scan+poll cycle actually finishes (brief opened or timeout reached) \u2014 not just once the scan
+    // was successfully STARTED. Without this, bulk callers (like _provenScanAll) would fire off the
+    // next page's scan while the previous page's animation+poll was still running in the background,
+    // all fighting over the same shared overlay \u2014 which is exactly what caused the "stuck on last
+    // page" symptom: several overlapping polls all trying to control one DOM element at once.
+    var _fullDonePromise = _waitForFull ? new Promise(function(resolve){
+      runScanAnimation(p ? p.url : '', function() {
+        pollAndShowBrief(pageId, 15, 4000, resolve);
+      }, _fast);
+    }) : null;
+    if (!_waitForFull) {
+      runScanAnimation(p ? p.url : '', function() {
+        pollAndShowBrief(pageId, 15, 4000);
+      }, _fast);
+    }
     try {
       var data = await api('/check/' + pageId, 'POST');
       if (!data.success) toast(data.error || 'Check failed', '#f87171');
@@ -30472,6 +30485,7 @@ async function markDone(pageId, btn, currentDone) {
     } finally {
       if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-sync-alt"></i>'; }
     }
+    if (_fullDonePromise) await _fullDonePromise;
   }
 
   // Bulk-trigger checkPage() for every unique PROVEN page, one at a time with a short gap between
@@ -30489,14 +30503,16 @@ async function markDone(pageId, btn, currentDone) {
     var pageIds = (_provenList||[]).map(function(s){ return _slugToPageId[s]; }).filter(Boolean);
     for (var i = 0; i < pageIds.length; i++) {
       if (btnEl) btnEl.textContent = '\u23f3 Scanning ' + (i+1) + '/' + pageIds.length + '\u2026';
-      try { await checkPage(pageIds[i], true, true); } catch(e) {}
-      // Delay matches the fast-mode animation's own ~4.5s cycle (see runScanAnimation) so each page's
-      // mini-animation actually finishes before the next one resets the same overlay \u2014 without this,
-      // pages a few seconds apart would visually stomp on each other's progress bar.
-      if (i < pageIds.length - 1) await new Promise(function(r){ setTimeout(r, 4700); });
+      // _waitForFull=true: this now genuinely waits for the ENTIRE scan+poll cycle to finish (brief
+      // opened or its own timeout reached) before moving to the next page \u2014 no more overlapping
+      // polls fighting over the shared overlay, no more "stuck on the last page" symptom. A tiny
+      // buffer between pages is still polite to the server, but the real serialization now comes
+      // from actually awaiting completion, not from a fixed guess at animation timing.
+      try { await checkPage(pageIds[i], true, true, true); } catch(e) {}
+      if (i < pageIds.length - 1) await new Promise(function(r){ setTimeout(r, 500); });
     }
-    if (btnEl) { btnEl.textContent = '\u2713 All ' + pageIds.length + ' scans queued'; }
-    toast('All PROVEN pages queued for scanning \u2014 briefs will appear as each one finishes', '#4ade80');
+    if (btnEl) { btnEl.textContent = '\u2713 All ' + pageIds.length + ' pages scanned'; }
+    toast('All PROVEN pages scanned \u2014 briefs are ready', '#4ade80');
   }
 
 async function deletePage(pageId) {
@@ -32209,17 +32225,18 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
   (function(){ var _soc = document.getElementById('soClose'); if (_soc) _soc.addEventListener('click', function(){ hideScanOverlay(); if (typeof loadPages === 'function') loadPages(); }); })();
 
   // Poll for server results \\u2014 brief opens as soon as data is ready
-  function pollAndShowBrief(pageId, maxPolls, intervalMs) {
+  function pollAndShowBrief(pageId, maxPolls, intervalMs, onDone) {
     var pollCount = 0;
     var timer = setInterval(function() {
       pollCount++;
       if (pollCount > maxPolls) {
         clearInterval(timer);
-        // Timeout \\u2014 open brief with whatever data we have
+        // Timeout \u2014 open brief with whatever data we have
         api('/pages/' + pageId).then(function(d2) {
           if (d2.success && d2.page) { openBriefFromPoll(d2.page); }
-          else { hideScanOverlay(); loadPages(); toast('Scan complete \\u2014 brief ready', '#4ade80'); }
-        }).catch(function() { hideScanOverlay(); toast('Connection issue', '#f87171'); });
+          else { hideScanOverlay(); loadPages(); toast('Scan complete \u2014 brief ready', '#4ade80'); }
+          if (onDone) onDone();
+        }).catch(function() { hideScanOverlay(); toast('Connection issue', '#f87171'); if (onDone) onDone(); });
         return;
       }
       api('/pages/' + pageId).then(function(d2) {
@@ -32228,6 +32245,7 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
           if (Date.now() - t < 300000) {
             clearInterval(timer);
             openBriefFromPoll(d2.page);
+            if (onDone) onDone();
           }
         }
       }).catch(function(){});
@@ -34232,11 +34250,6 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     : '<span class="tr-badge" style="background:#1f2937;color:#4b5563;">Copilot - not cited</span>')
                 : '';
 
-            const brBadge = snap
-                ? (snap.ai_brave_cited
-                    ? '<span class="tr-badge" style="background:#1a0e2e;color:#c4b5fd;border:1px solid #6d28d9;">OK Claude cited</span>'
-                    : '<span class="tr-badge" style="background:#1f2937;color:#4b5563;">Claude - not cited</span>')
-                : '';
 
             // Pending changes button
             const changesBtn = pending > 0
@@ -34296,7 +34309,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 +'</div>'
                 +manualCta
                 +'<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">'
-                +posPill+gBadge+pBadge+bBadge+brBadge
+                +posPill+gBadge+pBadge+bBadge
                 +'</div></div>'
                 +'<div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">'
                 +'<div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;">'
@@ -34497,7 +34510,6 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                         +'<td style="padding:7px 10px;">'+(s.ai_google_overview_cited?'<span style="color:#38bdf8;">v Cited</span>':s.ai_google_overview_found?'<span style="color:#6b7280;">Found</span>':'<span style="color:#374151;">-</span>')+'</td>'
                         +'<td style="padding:7px 10px;">'+(s.ai_perplexity_cited?'<span style="color:#a78bfa;">v Cited</span>':'<span style="color:#374151;">-</span>')+'</td>'
                         +'<td style="padding:7px 10px;">'+(s.ai_bing_cited?'<span style="color:#60a5fa;">v Cited</span>':'<span style="color:#374151;">-</span>')+'</td>'
-                        +'<td style="padding:7px 10px;">'+(s.ai_brave_cited?'<span style="color:#c4b5fd;">v Cited</span>':'<span style="color:#374151;">-</span>')+'</td>'
                         +'</tr>';
                 }).join('');
                 html += '<div style="margin-bottom:20px;">'
@@ -34509,7 +34521,6 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     +'<th style="padding:6px 10px;text-align:left;">Google AI</th>'
                     +'<th style="padding:6px 10px;text-align:left;">Perplexity</th>'
                     +'<th style="padding:6px 10px;text-align:left;">Copilot</th>'
-                    +'<th style="padding:6px 10px;text-align:left;">Claude</th>'
                     +'</tr></thead><tbody>'+rows+'</tbody></table></div></div>';
             }
 
@@ -36273,7 +36284,6 @@ ${aioSourceUrl ? 'GOOGLE CITING: ' + aioSourceUrl : ''}
 ${perplexityText ? 'PERPLEXITY ANSWER: "' + perplexityText + '"' : ''}
 ${perplexityCitations.length ? 'PERPLEXITY CITING: ' + perplexityCitations.slice(0,3).join(', ') : ''}
 ${copilotText ? 'BING/COPILOT: ' + copilotText : ''}
-${claudeText ? 'BRAVE/CLAUDE: ' + claudeText : ''}
 
 COMPETITOR SNIPPETS (Google SERP):
 ${serpCompetitors.slice(0,3).map(c => '#' + c.position + ' ' + c.domain + ': "' + c.snippet + '"').join('\n')}
@@ -36317,8 +36327,7 @@ Return ONLY valid JSON — no markdown:
     "google_aio": "specific reason not in Google AI Overview",
     "perplexity": "specific reason not in Perplexity",
     "chatgpt": "ChatGPT uses Google — same as Google AIO gap",
-    "copilot_bing": "specific reason not in Bing top 10 / Copilot",
-    "claude_brave": "specific reason not in Brave top 10 / Claude"
+    "copilot_bing": "specific reason not in Bing top 10 / Copilot"
   },
   "passages_to_add": [
     {
@@ -37297,7 +37306,6 @@ app.post('/api/tracker/pages/:id/check', verifyEngineAccess, async (req, res) =>
             else if (aioGained) subject = 'You are now cited in Google AI Overview — ' + domainFin;
             else if (aioLost) subject = 'Citation lost in Google AI Overview — ' + domainFin;
             else if (perpGained) subject = 'New citation in Perplexity — ' + domainFin;
-            else if (braveGained) subject = 'New citation in Claude/Brave — ' + domainFin;
             else if (bingGained) subject = 'New citation in Copilot/Bing — ' + domainFin;
             else if (posChanged) { const diff = Math.round(prev.google_position - curr.google_position); subject = (diff > 0 ? 'Position up ' + diff + ' places' : 'Position down ' + Math.abs(diff) + ' places') + ' — ' + domainFin; }
             else subject = 'Tracker update — ' + domainFin;
@@ -37316,7 +37324,6 @@ app.post('/api/tracker/pages/:id/check', verifyEngineAccess, async (req, res) =>
               if (aioLost) changes.push('<span style="color:#ef4444;">Lost citation</span> in Google AI Overview');
               if (perpGained) changes.push('<span style="color:#16a34a;">New citation</span> in Perplexity');
               if (bingGained) changes.push('<span style="color:#16a34a;">New citation</span> in Copilot/Bing');
-              if (braveGained) changes.push('<span style="color:#16a34a;">New citation</span> in Claude/Brave');
               if (scoreChanged) { const diff = curr.score - prev.score; changes.push('GRAAF score ' + (diff > 0 ? '<span style="color:#16a34a;">+' + diff + '</span>' : '<span style="color:#ef4444;">' + diff + '</span>') + ' (' + curr.score + '/100)'); }
               if (changes.length) changeSummary = '<div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:12px 16px;margin-bottom:14px;"><div style="font-size:10px;color:#0369a1;font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;">What changed</div>' + changes.map(function(c){ return '<div style="font-size:13px;color:#1e293b;margin-bottom:3px;">' + c + '</div>'; }).join('') + '</div>';
             }
@@ -37416,20 +37423,21 @@ app.post('/api/tracker/pages/:id/check', verifyEngineAccess, async (req, res) =>
                       const mergePrompt = 'You are upgrading a Citation Brief. Merge old + new actions into the best 5 for this page.\n\n' +
                         'PAGE: ' + pageUrl + '\n' +
                         'KEYWORD: "' + kw + '"\n' +
-                        'STATUS: pos=' + (pos||'unranked') + ', AIO=' + (aio?'YES':'NO') + ', Perplexity=' + (perp?'YES':'NO') + ', Copilot=' + (bing?'YES':'NO') + ', Claude=' + (brave?'YES':'NO') + ', GRAAF=' + (score||'?') + '/100\n' +
+                        'STATUS: pos=' + (pos||'unranked') + ', AIO=' + (aio?'YES':'NO') + ', Perplexity=' + (perp?'YES':'NO') + ', Copilot=' + (bing?'YES':'NO') + ', GRAAF=' + (score||'?') + '/100\n' +
                         (gscContext ? gscContext + '\n' : '') +
                         '\nPREVIOUS BRIEF (keep if still relevant):\n' + JSON.stringify((existingBrief?.items||[]).slice(0,3)) + '\n' +
-                        '\nNEW BRIEF (higher priority — generated today):\n' + JSON.stringify(recs.slice(0,5)) + '\n\n' +
+                        '\nNEW BRIEF (higher priority \u2014 generated today, includes fresh Cannibalization/Competitor Gap/Impression Gap findings from the tracker):\n' + JSON.stringify(recs.slice(0,5)) + '\n\n' +
                         'MERGE RULES:\n' +
                         '1. Drop actions for systems now showing YES above\n' +
                         '2. Drop previous actions superseded by newer ones\n' +
                         '3. Max 5 items, HIGH first\n' +
-                        '4. Every action must be EXACT copy-paste text — no vague suggestions\n' +
-                        '5. Add system field: Google AIO | Perplexity | Copilot | Claude | Ranking\n\n' +
+                        '4. Every action must be EXACT copy-paste text \u2014 no vague suggestions\n' +
+                        '5. Add system field: Google AIO | Perplexity | Copilot | Ranking | Cannibalization | Competitor Gap | Internal Link\n' +
+                        '6. ALWAYS KEEP any NEW BRIEF item with system "Cannibalization", "Competitor Gap", or "Internal Link" \u2014 these are evidence-based findings from real tracker data (shared search queries, live SERP competitors), not generic suggestions, and must never be dropped or replaced by an older, less specific action.\n\n' +
                         'CORRECT action format example:\n' +
                         '{"title":"Add definition after H1","priority":"high","system":"Google AIO","action":"Add this exact sentence immediately after your H1: \"[keyword] is [specific 40-word definition based on page content].\" This triggers AIO because it provides a quotable definition in the first 100 words.","expected_impact":"Google AIO cites pages with definitions in first 100 words — this puts you in that category"}\n\n' +
                         'Return ONLY valid JSON array, no markdown:\n' +
-                        '[{"title":"max 6 words","priority":"high|medium|low","system":"Google AIO|Perplexity|Copilot|Claude|Ranking","action":"EXACT text min 50 words","expected_impact":"[System] cites/ranks because [specific reason]"}]';
+                        '[{"title":"max 6 words","priority":"high|medium|low","system":"Google AIO|Perplexity|Copilot|Ranking|Cannibalization|Competitor Gap|Internal Link","action":"EXACT text min 50 words","expected_impact":"[System] cites/ranks because [specific reason]"}]';
 
                       const gResp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${gemKey}`, {
                         method: 'POST',
@@ -37762,7 +37770,7 @@ Return ONLY valid JSON, no markdown, no preamble. Replace every <...> with your 
     } catch(e) {}
     res.json({success:true,spy,live_position:(spy&&spy.live_position)||null,competitors_scraped:top5.length});
   } catch(e){
-    console.error('[serp-spy] Claude analysis failed, returning data-only brief:', e.message);
+    console.error('[serp-spy] Gemini analysis failed, returning data-only brief:', e.message);
     try {
       let _livePos = null;
       if (myUrl) { const _norm = u => String(u||'').replace(/^https?:\/\//,'').replace(/^www\./,'').replace(/\/+$/,'').toLowerCase(); const _myHost = _norm(myUrl).split('/')[0]; const _m = serpUrls.find(r=>_norm(r.url)===_norm(myUrl))||serpUrls.find(r=>String(r.domain||'').replace(/^www\./,'').toLowerCase()===_myHost)||serpUrls.find(r=>_norm(r.url).split('/')[0]===_myHost); if(_m) _livePos=_m.rank; console.log('[serp-spy fallback] live_position: myHost=' + _myHost + ' result=' + (_m?('#'+_m.rank):('NOT in top-'+serpUrls.length))); }
@@ -38302,7 +38310,7 @@ function authorTrustAnalyzeHtml(html, pageUrl) {
         priority: c.max >= 15 ? 'high' : 'medium',
         system: 'Author Trust',
         action: c.why + '. Fix: ' + getAuthorTrustFix(c.name),
-        expected_impact: 'Improves E-E-A-T signals that Perplexity, Claude, and Google AI Overview use to determine author credibility'
+        expected_impact: 'Improves E-E-A-T signals that Perplexity and Google AI Overview use to determine author credibility'
       });
     }
   });
@@ -38936,7 +38944,6 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
     const prevPrevSnap = prevSnapR.rows[1] || null;
     const scanCount = page.brief_check_count || 0;
     const runPerplexity = !prevSnap || scanCount % 2 === 0; // every other scan
-    const runBrave = !prevSnap || scanCount % 2 === 0;      // every other scan
 
     // OPTIMISATION: skip Gemini brief if results unchanged vs previous scan
     resultsChanged = !prevSnap ||
@@ -39109,7 +39116,6 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
     _trSetStep(pageId, 'google', 'error', 'No keyword set — add a target keyword to this page');
     _trSetStep(pageId, 'perplexity', 'error', 'No keyword — skipped');
     _trSetStep(pageId, 'youcom', 'error', 'No keyword — skipped');
-    _trSetStep(pageId, 'brave', 'error', 'No keyword — skipped');
   }
 
   // 4b. Author Trust Score — E-E-A-T signal analysis
@@ -40199,7 +40205,7 @@ If no unanchored claims found, return empty array: []`;
       } else {
         try {
           const mergePrompt2 = `Merge these two AI citation briefs for ${pageUrl} (keyword: "${kw2}").
-Status: pos=${pos2||'unranked'}, AIO=${aio2}, Perplexity=${perp2}, Copilot=${bing2}, Claude=${brave2}, GRAAF=${score2||'?'}/100${gscCtx}
+Status: pos=${pos2||'unranked'}, AIO=${aio2}, Perplexity=${perp2}, Copilot=${bing2}, GRAAF=${score2||'?'}/100${gscCtx}
 Goal: rank #1 and be cited in all AI systems.
 PREVIOUS: ${JSON.stringify((existingBrief2?.items||[]).slice(0,3))}
 NEW: ${JSON.stringify(recsToUse.slice(0,3))}
@@ -40293,7 +40299,7 @@ Return ONLY JSON array (max 5 items): [{"title":"max 6 words","priority":"high"|
                 + (_body ? '<div style="font-size:13px;color:#374151;line-height:1.6;">' + _esc(_body) + '</div>' : '')
                 + '</div>';
             }).join('');
-            const _statusBits = ['Position ' + _esc(pos2 || 'unranked'), 'AIO ' + (aio2?'\u2713':'\u2717'), 'Perplexity ' + (perp2?'\u2713':'\u2717'), 'Copilot ' + (bing2?'\u2713':'\u2717'), 'Claude ' + (brave2?'\u2713':'\u2717')];
+            const _statusBits = ['Position ' + _esc(pos2 || 'unranked'), 'AIO ' + (aio2?'\u2713':'\u2717'), 'Perplexity ' + (perp2?'\u2713':'\u2717'), 'Copilot ' + (bing2?'\u2713':'\u2717')];
             if (score2) _statusBits.push('GRAAF ' + _esc(score2) + '/100');
             const _trackerUrl = 'https://app.contentscale.site/track/' + (_clientToken || '');
             const _viewUrl = 'https://app.contentscale.site/view/' + (_clientToken || '');
@@ -40450,7 +40456,7 @@ async function _startAlwaysOnMonitor() {
       { title: 'Perplexity reaches 780M monthly queries in 2026', url: 'https://searchengineland.com' },
       { title: 'Zero-click searches hit 65% of all Google searches', url: 'https://www.seroundtable.com' },
       { title: 'E-E-A-T signals critical for AI Overview citations', url: 'https://searchengineland.com' },
-      { title: 'Brave Search index now powers Claude web search', url: 'https://www.seroundtable.com' },
+      { title: 'Bing index now directly powers Microsoft Copilot answers', url: 'https://www.seroundtable.com' },
       { title: 'AI Overviews reduce position 1 CTR by 58%', url: 'https://ahrefs.com/blog' }
     ];
   }
