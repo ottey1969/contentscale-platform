@@ -1,4 +1,4 @@
-console.log('=== CONTENTSCALE BOOT v2026-07-08-possible-prioritized-shortcut | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON | possibleThreshold=20impr | shortcutPrioritized=v2 | gscAutoFetchRemoved=true | linkCheckActive=true | wholeSiteWipeGuard=true | gscAutoFetchRestored=true | reminderOffFix=true | claudeRemoved=true | bingWebmaster=true | competitorPanel=true | zeroResultFix=true | pagesRefreshFix=true | recheckButton=true | provenScanStrip=true | provenScanState=true | scanAllProven=true | doEverythingBtn=true | panelOrderFix=true | workflowGuide=true | preScanGuard=true | scanAllGuard=true | earlyGuard=true | emptyStateTeaser=true ===');
+console.log('=== CONTENTSCALE BOOT v2026-07-08-possible-prioritized-shortcut | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON | possibleThreshold=20impr | shortcutPrioritized=v2 | gscAutoFetchRemoved=true | linkCheckActive=true | wholeSiteWipeGuard=true | gscAutoFetchRestored=true | reminderOffFix=true | claudeRemoved=true | bingWebmaster=true | competitorPanel=true | zeroResultFix=true | pagesRefreshFix=true | recheckButton=true | provenScanStrip=true | provenScanState=true | scanAllProven=true | doEverythingBtn=true | panelOrderFix=true | workflowGuide=true | preScanGuard=true | scanAllGuard=true | earlyGuard=true | emptyStateTeaser=true | provenScopeFix=true ===');
 // CONTENTSCALE SERVER.JS — ELITE EDITION v4 (FIXED v3)
 // ✅ FIX v7: secondary_keywords + related_keywords auto in Analyse JSON + Execute prompt
 // ✅ FIX v7: analysis_data JSONB safe parse in execute-rewrite
@@ -29696,6 +29696,11 @@ var _gapQueries = null;
 var _sitemapSlugs = [];
 var _gapAnalysis = null;
 var _provenScannedSlugs = {}; // persists across cannibal panel re-renders within this browser session
+// These three were declared with the var keyword INSIDE renderCannibal() (function-scoped, invisible to
+// _provenScanAll() and any other sibling function) \u2014 promoted to global so they're readable
+// anywhere, always reflecting the most recent renderCannibal() computation.
+var _provenList = [];
+var _slugToPageId = {};
 var _gapDone = [];
 var _linkChecks = [];
 function _linkStatusFor(hubSlug, spokeSlug) {
@@ -30161,7 +30166,7 @@ function renderCannibal() {
   var _possRemaining = _possList.filter(function(s){ return !_exportedSlugs[s]; });
   var _possDoneCount = _possList.length - _possRemaining.length;
   var _possCount = _cannibalIssues.filter(function(c){ return c.level === 'POSSIBLE'; }).length;
-  var _slugToPageId = {}; (_pages||[]).forEach(function(p){ _slugToPageId[slugOf(p)] = p.id; });
+  _slugToPageId = {}; (_pages||[]).forEach(function(p){ _slugToPageId[slugOf(p)] = p.id; });
   var shortcutStrip = (_possList.length && _possCount)
     ? '<div style="padding:8px 14px;border-bottom:1px solid #1f2937;background:rgba(250,204,21,.06);font-size:11px;color:#facc15;line-height:1.7;">'
       + '\u26a1 ' + _possCount + ' yellow POSSIBLE rows touch <b>' + _possList.length + ' unique pages</b>'
@@ -30192,7 +30197,7 @@ function renderCannibal() {
       _provenPageStats[p.slug].rows += 1;
     });
   });
-  var _provenList = Object.keys(_provenPageStats).sort(function(a,b){ return _provenPageStats[b].rows - _provenPageStats[a].rows; });
+  _provenList = Object.keys(_provenPageStats).sort(function(a,b){ return _provenPageStats[b].rows - _provenPageStats[a].rows; });
   var _provenCount = _cannibalIssues.filter(function(c){ return c.level === 'PROVEN'; }).length;
   var _gapNotRunYet = !(_gapAnalysis && _gapAnalysis.families && _gapAnalysis.families.length);
   var provenStrip = (_provenList.length && _provenCount)
