@@ -1,4 +1,4 @@
-console.log('=== CONTENTSCALE BOOT v2026-07-08-possible-prioritized-shortcut | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON | possibleThreshold=20impr | shortcutPrioritized=v2 | gscAutoFetchRemoved=true | linkCheckActive=true | wholeSiteWipeGuard=true | gscAutoFetchRestored=true | reminderOffFix=true | claudeRemoved=true | bingWebmaster=true | competitorPanel=true ===');
+console.log('=== CONTENTSCALE BOOT v2026-07-08-possible-prioritized-shortcut | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON | possibleThreshold=20impr | shortcutPrioritized=v2 | gscAutoFetchRemoved=true | linkCheckActive=true | wholeSiteWipeGuard=true | gscAutoFetchRestored=true | reminderOffFix=true | claudeRemoved=true | bingWebmaster=true | competitorPanel=true | zeroResultFix=true ===');
 // CONTENTSCALE SERVER.JS — ELITE EDITION v4 (FIXED v3)
 // ✅ FIX v7: secondary_keywords + related_keywords auto in Analyse JSON + Execute prompt
 // ✅ FIX v7: analysis_data JSONB safe parse in execute-rewrite
@@ -1297,6 +1297,7 @@ app.get('/api/tracker-client/:token', async (req, res) => {
               p.html_pasted_at, p.html_source, p.last_graaf_score,
               (p.html_content IS NOT NULL AND p.html_content != '') as has_html_content,
               p.redirects_to,
+              p.gsc_autofetch_checked_at,
               s.google_position, s.ai_google_overview_cited, s.ai_perplexity_cited,
               s.ai_bing_cited, s.ai_brave_cited,
               s.score as graaf_score, s.checked_at as last_checked,
@@ -1988,6 +1989,9 @@ app.post('/api/tracker-client/:token/gsc-autofetch-page', async (req, res) => {
       } catch(e) { failed++; }
     }
     console.log(`[gsc-autofetch] ${pageUrl} => ${saved} queries saved, ${failed} failed (site format: ${siteFmt})`);
+    // Mark this page as checked EVEN when GSC had zero data — otherwise a low-traffic page
+    // (genuinely nothing to fetch) stays stuck showing "left" forever with no way to dismiss it.
+    await pool.query('UPDATE tracker_pages SET gsc_autofetch_checked_at=NOW() WHERE id=$1', [pageId]).catch(()=>{});
     res.json({ success: true, saved, failed, total: rows.length, page_url: pageUrl });
   } catch(e) {
     console.error('[gsc-autofetch] error:', e.message);
@@ -5295,6 +5299,10 @@ app.patch('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS gap_analysis_at TIMESTAMPTZ`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS gap_done_queries TEXT`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS redirects_to TEXT`).catch(()=>{});
+  // Tracks that an auto-fetch WAS attempted for this page, even when GSC had zero data to return —
+  // without this, a page with genuinely no per-page query data stays stuck in "X left" forever,
+  // since the "already exported" check only looked at whether any query row got this page_id.
+  await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS gsc_autofetch_checked_at TIMESTAMPTZ`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS redirect_checked_at TIMESTAMPTZ`).catch(()=>{});
   // One-time sync of gsc_enabled with the plan rule (free ≤3 pages off, paid >3 on).
   // Guarded by a migration flag so it runs exactly ONCE — manual per-client overrides made afterwards survive every deploy.
@@ -30108,6 +30116,11 @@ function renderCannibal() {
     if (!g.page_id) return;
     var pg = (_pages||[]).find(function(p){ return p.id === g.page_id; });
     if (pg) _exportedSlugs[slugOf(pg)] = 1;
+  });
+  // Also count a page as "handled" if it was auto-fetched but genuinely had zero GSC data —
+  // otherwise a low-traffic page stays stuck in the "left" list with no way to ever clear it.
+  (_pages||[]).forEach(function(p){
+    if (p.gsc_autofetch_checked_at) _exportedSlugs[slugOf(p)] = 1;
   });
   var _possList = Object.keys(_possPageStats).sort(function(a,b){ return _possPageStats[b].impr - _possPageStats[a].impr; });
   var _possRemaining = _possList.filter(function(s){ return !_exportedSlugs[s]; });
