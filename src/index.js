@@ -1,4 +1,4 @@
-console.log('=== CONTENTSCALE BOOT v2026-07-08-possible-prioritized-shortcut | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON | possibleThreshold=20impr | shortcutPrioritized=v2 | gscAutoFetchRemoved=true | linkCheckActive=true | wholeSiteWipeGuard=true | gscAutoFetchRestored=true | reminderOffFix=true | claudeRemoved=true | bingWebmaster=true | competitorPanel=true | zeroResultFix=true | pagesRefreshFix=true | recheckButton=true | provenScanStrip=true | provenScanState=true | scanAllProven=true | doEverythingBtn=true | panelOrderFix=true | workflowGuide=true | preScanGuard=true | scanAllGuard=true | earlyGuard=true | emptyStateTeaser=true | provenScopeFix=true | numberedButtons=true | clearerButtons=true ===');
+console.log('=== CONTENTSCALE BOOT v2026-07-08-possible-prioritized-shortcut | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON | possibleThreshold=20impr | shortcutPrioritized=v2 | gscAutoFetchRemoved=true | linkCheckActive=true | wholeSiteWipeGuard=true | gscAutoFetchRestored=true | reminderOffFix=true | claudeRemoved=true | bingWebmaster=true | competitorPanel=true | zeroResultFix=true | pagesRefreshFix=true | recheckButton=true | provenScanStrip=true | provenScanState=true | scanAllProven=true | doEverythingBtn=true | panelOrderFix=true | workflowGuide=true | preScanGuard=true | scanAllGuard=true | earlyGuard=true | emptyStateTeaser=true | provenScopeFix=true | numberedButtons=true | clearerButtons=true | scanAnimFix=true ===');
 // CONTENTSCALE SERVER.JS — ELITE EDITION v4 (FIXED v3)
 // ✅ FIX v7: secondary_keywords + related_keywords auto in Analyse JSON + Execute prompt
 // ✅ FIX v7: analysis_data JSONB safe parse in execute-rewrite
@@ -30397,7 +30397,7 @@ async function markDone(pageId, btn, currentDone) {
 // Track active checks per page
   var _checkAnimations = {};
 
-  async function checkPage(pageId, _skipGapWarning) {
+  async function checkPage(pageId, _skipGapWarning, _fast) {
     if (_briefIsOpen) {
       toast('Finish the current brief first \\u2014 then scan this page', '#f59e0b');
       return;
@@ -30426,7 +30426,7 @@ async function markDone(pageId, btn, currentDone) {
     if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i>'; }
     runScanAnimation(p ? p.url : '', function() {
       pollAndShowBrief(pageId, 15, 4000);
-    });
+    }, _fast);
     try {
       var data = await api('/check/' + pageId, 'POST');
       if (!data.success) toast(data.error || 'Check failed', '#f87171');
@@ -30452,8 +30452,11 @@ async function markDone(pageId, btn, currentDone) {
     var pageIds = (_provenList||[]).map(function(s){ return _slugToPageId[s]; }).filter(Boolean);
     for (var i = 0; i < pageIds.length; i++) {
       if (btnEl) btnEl.textContent = '\u23f3 Scanning ' + (i+1) + '/' + pageIds.length + '\u2026';
-      try { await checkPage(pageIds[i], true); } catch(e) {}
-      if (i < pageIds.length - 1) await new Promise(function(r){ setTimeout(r, 1500); });
+      try { await checkPage(pageIds[i], true, true); } catch(e) {}
+      // Delay matches the fast-mode animation's own ~4.5s cycle (see runScanAnimation) so each page's
+      // mini-animation actually finishes before the next one resets the same overlay \u2014 without this,
+      // pages a few seconds apart would visually stomp on each other's progress bar.
+      if (i < pageIds.length - 1) await new Promise(function(r){ setTimeout(r, 4700); });
     }
     if (btnEl) { btnEl.textContent = '\u2713 All ' + pageIds.length + ' scans queued'; }
     toast('All PROVEN pages queued for scanning \u2014 briefs will appear as each one finishes', '#4ade80');
@@ -32043,7 +32046,7 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
     setTimeout(function(){ if (cEl) cEl.focus(); }, 100);
   }
   // Cinematic scan animation overlay
-  function runScanAnimation(url, onComplete) {
+  function runScanAnimation(url, onComplete, fast) {
     var overlay = document.getElementById('soOverlay');
     var urlEl = document.getElementById('soUrl');
     var bar = document.getElementById('soProgressBar');
@@ -32051,7 +32054,10 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
     var title = document.getElementById('soHeaderTitle');
     var statusEl = document.getElementById('soStatus');
     if (!overlay) { if (onComplete) onComplete(); return; }
-    var stepIds = ['html','graaf','google','perplexity','copilot','brave','ai'];
+    // 'brave' removed \u2014 the Claude/Brave citation check no longer exists server-side (Brave Search
+    // was never actually Claude; that step was removed entirely). Keeping it here left a phantom
+    // status line ("Claude / Brave citation check...") with no matching row, which is what showed up.
+    var stepIds = ['html','graaf','google','perplexity','copilot','ai'];
     stepIds.forEach(function(sid) {
       var step = document.getElementById('soStep_' + sid);
       var icon = document.getElementById('soIcon_' + sid);
@@ -32068,17 +32074,27 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
     overlay.classList.remove('hiding');
     overlay.classList.add('show');
     var steps = [
-      { id: 'html',       label: 'Fetching page HTML',            pct: 8  },
-      { id: 'graaf',      label: 'GRAAF content scan',            pct: 22 },
-      { id: 'google',     label: 'Google position + AIO check',   pct: 40 },
-      { id: 'perplexity', label: 'Perplexity citation check',     pct: 55 },
-      { id: 'copilot',    label: 'Copilot citation check',        pct: 68 },
-      { id: 'brave',      label: 'Claude / Brave citation check', pct: 80 },
-      { id: 'ai',         label: 'AI recommendations',            pct: 92 },
+      { id: 'html',       label: 'Fetching page HTML',            pct: 10 },
+      { id: 'graaf',      label: 'GRAAF content scan',             pct: 26 },
+      { id: 'google',     label: 'Google position + AIO check',   pct: 46 },
+      { id: 'perplexity', label: 'Perplexity citation check',     pct: 64 },
+      { id: 'copilot',    label: 'Copilot citation check',        pct: 80 },
+      { id: 'ai',         label: 'AI recommendations',            pct: 94 },
     ];
-    // Realistic timing \\u2014 total ~35s so animation overlaps server work
-    var timings = [0, 1500, 5000, 10000, 16000, 22000, 28000];
-    var durations = [1200, 3000, 4000, 4500, 4500, 4500, 5000];
+    // Two speeds: the realistic ~34s cycle for a single manual scan (matches real backend timing so
+    // it doesn't feel rushed), and a compressed ~4s cycle for Scan All / Do everything, where a NEW
+    // page starts every ~1.5-2s \u2014 without this, each new page's animation call was resetting the
+    // SAME overlay mid-cycle, making the whole thing look broken and chaotic (exactly what was seen).
+    var timings, durations, totalMs;
+    if (fast) {
+      timings   = [0, 250, 900, 1700, 2500, 3300];
+      durations = [200, 600, 700, 700, 700, 700];
+      totalMs = 4200;
+    } else {
+      timings   = [0, 1500, 5000, 10000, 16000, 22000];
+      durations = [1200, 3000, 4000, 4500, 4500, 5000];
+      totalMs = 34000;
+    }
     steps.forEach(function(s, idx) {
       setTimeout(function() {
         var step = document.getElementById('soStep_' + s.id);
@@ -32107,8 +32123,8 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
       // Brief opens as soon as data arrives via pollAndShowBrief
       setTimeout(function() {
         if (onComplete) onComplete();
-      }, 1200);
-    }, 34000);
+      }, fast ? 300 : 1200);
+    }, totalMs);
   }
 
   function hideScanOverlay() {
