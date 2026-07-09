@@ -1,4 +1,4 @@
-console.log('=== CONTENTSCALE BOOT v2026-07-08-possible-prioritized-shortcut | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON | possibleThreshold=20impr | shortcutPrioritized=v2 | gscAutoFetchRemoved=true | linkCheckActive=true | wholeSiteWipeGuard=true | gscAutoFetchRestored=true | reminderOffFix=true | claudeRemoved=true | bingWebmaster=true | competitorPanel=true | zeroResultFix=true | pagesRefreshFix=true | recheckButton=true | provenScanStrip=true | provenScanState=true | scanAllProven=true | doEverythingBtn=true | panelOrderFix=true | workflowGuide=true | preScanGuard=true | scanAllGuard=true | earlyGuard=true | emptyStateTeaser=true | provenScopeFix=true | numberedButtons=true | clearerButtons=true | scanAnimFix=true | promptClaudeCleanup=true | bonusTip=true | realProvenContext=true | competitorContext=true | unifiedBrief=true | diagnosticFirst=true | fullCompetitorBreakdown=true ===');
+console.log('=== CONTENTSCALE BOOT v2026-07-08-possible-prioritized-shortcut | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON | possibleThreshold=20impr | shortcutPrioritized=v2 | gscAutoFetchRemoved=true | linkCheckActive=true | wholeSiteWipeGuard=true | gscAutoFetchRestored=true | reminderOffFix=true | claudeRemoved=true | bingWebmaster=true | competitorPanel=true | zeroResultFix=true | pagesRefreshFix=true | recheckButton=true | provenScanStrip=true | provenScanState=true | scanAllProven=true | doEverythingBtn=true | panelOrderFix=true | workflowGuide=true | preScanGuard=true | scanAllGuard=true | earlyGuard=true | emptyStateTeaser=true | provenScopeFix=true | numberedButtons=true | clearerButtons=true | scanAnimFix=true | promptClaudeCleanup=true | bonusTip=true | realProvenContext=true | competitorContext=true | unifiedBrief=true | diagnosticFirst=true | fullCompetitorBreakdown=true | serpSpyV3=true | transparencyBlock=true | emailsPausedToggle=true ===');
 // CONTENTSCALE SERVER.JS — ELITE EDITION v4 (FIXED v3)
 // ✅ FIX v7: secondary_keywords + related_keywords auto in Analyse JSON + Execute prompt
 // ✅ FIX v7: analysis_data JSONB safe parse in execute-rewrite
@@ -988,9 +988,9 @@ async function sendTrackerEmail(clientId, subject, htmlBody, hideViewBtn) {
     // Robust query — handle missing columns gracefully
     let client;
     try {
-      const cr = await pool.query('SELECT * FROM tracker_clients WHERE id=$1 AND (email_unsubscribed IS NULL OR email_unsubscribed=FALSE) AND email IS NOT NULL', [clientId]);
+      const cr = await pool.query('SELECT * FROM tracker_clients WHERE id=$1 AND (email_unsubscribed IS NULL OR email_unsubscribed=FALSE) AND (emails_paused IS NULL OR emails_paused=FALSE) AND email IS NOT NULL', [clientId]);
       if (!cr.rows.length) {
-        console.warn('[tracker-email] No client found or unsubscribed for id:', clientId);
+        console.warn('[tracker-email] No client found, unsubscribed, or paused for id:', clientId);
         return;
       }
       client = cr.rows[0];
@@ -1298,12 +1298,12 @@ app.get('/api/tracker-client/:token', async (req, res) => {
               (p.html_content IS NOT NULL AND p.html_content != '') as has_html_content,
               p.redirects_to,
               p.gsc_autofetch_checked_at,
-              s.google_position, s.ai_google_overview_cited, s.ai_perplexity_cited,
-              s.ai_bing_cited, s.ai_brave_cited,
+              s.google_position, s.ai_google_overview_cited, s.ai_google_overview_text, s.ai_perplexity_cited,
+              s.ai_bing_cited, s.ai_bing_text, s.ai_brave_cited,
               s.score as graaf_score, s.checked_at as last_checked,
               s.recommendations, s.source_suggestions, s.discovered_sources,
               s.gsc_brief, s.author_trust_score, s.author_trust_findings,
-              s.google_competitors, s.ai_perplexity_competitors
+              s.google_competitors, s.ai_perplexity_competitors, s.ai_perplexity_answer_excerpt
        FROM tracker_pages p
        LEFT JOIN LATERAL (
          SELECT * FROM tracker_snapshots WHERE page_id = p.id ORDER BY checked_at DESC LIMIT 1
@@ -1558,12 +1558,12 @@ app.get('/api/tracker-client/:token/pages/:pageId', async (req, res) => {
     if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
     const r = await pool.query(`
       SELECT p.*, p.check_frequency,
-             s.google_position, s.ai_google_overview_cited, s.ai_perplexity_cited,
-             s.ai_bing_cited, s.ai_brave_cited, s.score as graaf_score,
+             s.google_position, s.ai_google_overview_cited, s.ai_google_overview_text, s.ai_perplexity_cited,
+             s.ai_bing_cited, s.ai_bing_text, s.ai_brave_cited, s.score as graaf_score,
              s.checked_at as last_checked, s.recommendations,
              s.source_suggestions, s.discovered_sources, s.gsc_brief,
              s.author_trust_score, s.author_trust_findings,
-             s.google_competitors, s.ai_perplexity_competitors
+             s.google_competitors, s.ai_perplexity_competitors, s.ai_perplexity_answer_excerpt
       FROM tracker_pages p
       LEFT JOIN LATERAL (
         SELECT * FROM tracker_snapshots WHERE page_id = p.id ORDER BY checked_at DESC LIMIT 1
@@ -2130,7 +2130,7 @@ app.get('/api/tracker-client/:token/latest-briefs', async (req, res) => {
               p.brief_deadline, p.brief_assigned_at, p.brief_rejected_at, p.brief_reject_reason, p.priority,
               p.brief_before_score, p.brief_after_score, p.brief_after_at,
               (p.specialist_html IS NOT NULL AND p.specialist_html != '') AS has_deliverable,
-              s.checked_at, s.google_position, s.ai_google_overview_cited, s.ai_perplexity_cited, s.ai_bing_cited, s.ai_brave_cited,
+              s.checked_at, s.google_position, s.ai_google_overview_cited, s.ai_perplexity_cited, s.ai_bing_cited, s.ai_bing_text, s.ai_brave_cited,
               s.score, s.recommendations, s.gsc_brief, s.source_suggestions
        FROM tracker_pages p
        LEFT JOIN LATERAL (
@@ -4388,6 +4388,18 @@ app.post('/api/admin/tracker-clients/:id/brief-language', verifyAdmin, async (re
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
+// POST /api/admin/tracker-clients/:id/emails-paused — temporarily silences ALL automated emails for
+// this client (reminders, brief-ready notifications, everything routed through sendTrackerEmail) —
+// useful while manually testing/scanning a client so they don't get a flood of real notifications.
+// Does not affect the tracker itself; scans, briefs, and data collection continue as normal.
+app.post('/api/admin/tracker-clients/:id/emails-paused', verifyAdmin, async (req, res) => {
+  try {
+    const paused = req.body.paused === true || req.body.paused === 'true';
+    await pool.query('UPDATE tracker_clients SET emails_paused = $1 WHERE id = $2', [paused, req.params.id]);
+    res.json({ success: true, emails_paused: paused });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
 app.post('/api/admin/tracker-clients/:id/board-toggle', verifyAdmin, async (req, res) => {
   try {
     const enabled = req.body.enabled === true || req.body.enabled === 'true';
@@ -5295,6 +5307,7 @@ app.patch('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS ro_last_view TIMESTAMPTZ`).catch(()=>{});
   console.log('[boot-stamp] before gap/redirect columns');
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS brief_language VARCHAR(10) DEFAULT 'en'`).catch(()=>{});
+  await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS emails_paused BOOLEAN DEFAULT FALSE`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS gap_analysis TEXT`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS gap_analysis_at TIMESTAMPTZ`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS gap_done_queries TEXT`).catch(()=>{});
@@ -5399,6 +5412,7 @@ app.patch('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
   // only checking for our own domain. Now persisted so the owner can actually see it.
   await client.query(`ALTER TABLE tracker_snapshots ADD COLUMN IF NOT EXISTS google_competitors JSONB`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_snapshots ADD COLUMN IF NOT EXISTS ai_perplexity_competitors JSONB`).catch(()=>{});
+  await client.query(`ALTER TABLE tracker_snapshots ADD COLUMN IF NOT EXISTS ai_perplexity_answer_excerpt TEXT`).catch(()=>{});
 
    await client.query(`CREATE TABLE IF NOT EXISTS tracker_changes (
      id SERIAL PRIMARY KEY,
@@ -29512,6 +29526,11 @@ function _buildBriefData(p) {
     gsc_position: p.gsc_position != null ? p.gsc_position : null,
     gsc_keyword: p.gsc_keyword || null,
     _gsc_enabled: GSC_ENABLED || (p.gsc_clicks != null) || (p.gsc_impressions != null) || (p.gsc_position != null),
+    aio_text: p.ai_google_overview_text || '',
+    perp_excerpt: p.ai_perplexity_answer_excerpt || '',
+    google_competitors: p.google_competitors || null,
+    perp_competitors: p.ai_perplexity_competitors || null,
+    last_checked: p.last_checked || null,
     type: 'brief_ready'
   };
 }
@@ -29527,6 +29546,21 @@ function copyBrief(pageId) {
   var score = d.score || p.graaf_score || p.last_graaf_score || null;
   var lines = ['AI Citation Brief \\u2014 ' + (p.url||''), ''];
   if (p.keyword || p.gsc_keyword) lines.push('Keyword: ' + (p.keyword||p.gsc_keyword));
+  lines.push('', '\ud83d\udd0d What We Actually Checked (transparency):');
+  lines.push('- Query tested: "' + (p.keyword||p.gsc_keyword||'') + '"');
+  if (p.last_checked) lines.push('- Checked: ' + new Date(p.last_checked).toLocaleString());
+  if (p.ai_google_overview_text) lines.push('- Google AI Overview currently shows: "' + p.ai_google_overview_text.substring(0,200) + (p.ai_google_overview_text.length>200?'...':'') + '"');
+  if (p.ai_perplexity_answer_excerpt) lines.push('- Perplexity\\'s actual answer excerpt: "' + p.ai_perplexity_answer_excerpt.substring(0,200) + (p.ai_perplexity_answer_excerpt.length>200?'...':'') + '"');
+  (function(){
+    try {
+      var _gc = typeof p.google_competitors === 'string' ? JSON.parse(p.google_competitors) : (p.google_competitors||[]);
+      if (_gc && _gc.length) lines.push('- Google top ' + _gc.length + ' competitors checked: ' + _gc.slice(0,5).map(function(c){return c.url;}).join(', '));
+    } catch(e) {}
+    try {
+      var _pc = typeof p.ai_perplexity_competitors === 'string' ? JSON.parse(p.ai_perplexity_competitors) : (p.ai_perplexity_competitors||[]);
+      if (_pc && _pc.length) lines.push('- Perplexity currently cites: ' + _pc.slice(0,5).join(', '));
+    } catch(e) {}
+  })();
   lines.push('AI Citation Results:');
   lines.push('- Google AIO: ' + (p.ai_google_overview_cited ? 'CITED' : 'Not cited'));
   lines.push('- Perplexity: ' + (p.ai_perplexity_cited ? 'CITED' : 'Not cited'));
@@ -30870,6 +30904,21 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
         var _n = String.fromCharCode(10);
         var lines = ['AI Citation Brief \\u2014 ' + (data.url || ''), ''];
         if (data.keyword) lines.push('Keyword: ' + data.keyword);
+        lines.push('', '\ud83d\udd0d What We Actually Checked (transparency):');
+        lines.push('- Query tested: "' + (data.keyword||'') + '"');
+        if (data.last_checked) lines.push('- Checked: ' + new Date(data.last_checked).toLocaleString());
+        if (data.aio_text) lines.push('- Google AI Overview currently shows: "' + data.aio_text.substring(0,200) + (data.aio_text.length>200?'...':'') + '"');
+        if (data.perp_excerpt) lines.push('- Perplexity\\'s actual answer excerpt: "' + data.perp_excerpt.substring(0,200) + (data.perp_excerpt.length>200?'...':'') + '"');
+        (function(){
+          try {
+            var _gc = typeof data.google_competitors === 'string' ? JSON.parse(data.google_competitors) : (data.google_competitors||[]);
+            if (_gc && _gc.length) lines.push('- Google top ' + _gc.length + ' competitors checked: ' + _gc.slice(0,5).map(function(c){return c.url;}).join(', '));
+          } catch(e) {}
+          try {
+            var _pc = typeof data.perp_competitors === 'string' ? JSON.parse(data.perp_competitors) : (data.perp_competitors||[]);
+            if (_pc && _pc.length) lines.push('- Perplexity currently cites: ' + _pc.slice(0,5).join(', '));
+          } catch(e) {}
+        })();
         lines.push('AI Citation Results:');
         lines.push('- Google AIO: ' + (data.aio_cited ? 'CITED' : 'Not cited'));
         lines.push('- Perplexity: ' + (data.perp_cited ? 'CITED' : 'Not cited'));
@@ -31258,6 +31307,21 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
       var _n = String.fromCharCode(10);
       var lines = ['AI Citation Brief \\u2014 ' + (data.url || ''), ''];
       if (data.keyword) lines.push('Keyword: ' + data.keyword);
+      lines.push('', '\ud83d\udd0d What We Actually Checked (transparency):');
+      lines.push('- Query tested: "' + (data.keyword||'') + '"');
+      if (data.last_checked) lines.push('- Checked: ' + new Date(data.last_checked).toLocaleString());
+      if (data.aio_text) lines.push('- Google AI Overview currently shows: "' + data.aio_text.substring(0,200) + (data.aio_text.length>200?'...':'') + '"');
+      if (data.perp_excerpt) lines.push('- Perplexity\\'s actual answer excerpt: "' + data.perp_excerpt.substring(0,200) + (data.perp_excerpt.length>200?'...':'') + '"');
+      (function(){
+        try {
+          var _gc = typeof data.google_competitors === 'string' ? JSON.parse(data.google_competitors) : (data.google_competitors||[]);
+          if (_gc && _gc.length) lines.push('- Google top ' + _gc.length + ' competitors checked: ' + _gc.slice(0,5).map(function(c){return c.url;}).join(', '));
+        } catch(e) {}
+        try {
+          var _pc = typeof data.perp_competitors === 'string' ? JSON.parse(data.perp_competitors) : (data.perp_competitors||[]);
+          if (_pc && _pc.length) lines.push('- Perplexity currently cites: ' + _pc.slice(0,5).join(', '));
+        } catch(e) {}
+      })();
       lines.push('AI Citation Results:');
       lines.push('- Google AIO: ' + (data.aio_cited ? 'CITED' : 'Not cited'));
       lines.push('- Perplexity: ' + (data.perp_cited ? 'CITED' : 'Not cited'));
@@ -35380,6 +35444,28 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 }; })(c.id);
                 togglesRow.appendChild(langSel);
 
+                // ── Emails paused: silences ALL automated emails for this client (reminders, brief-ready
+                // notifications) while you're manually testing/scanning — scanning and briefs still work,
+                // only the notification emails are held back. Toggle back off when done testing.
+                var emailPauseBtn = document.createElement('button');
+                emailPauseBtn.className = 'tr-btn';
+                var _isPaused = !!c.emails_paused;
+                emailPauseBtn.textContent = _isPaused ? '\\ud83d\\udd15 Emails paused' : '\\ud83d\\udce7 Emails on';
+                emailPauseBtn.title = _isPaused
+                  ? 'This client\\'s automated emails (reminders, brief-ready) are currently silenced. Click to turn them back on.'
+                  : 'Click to temporarily silence ALL automated emails for this client \\u2014 useful while manually testing/scanning. Scans and briefs still work as normal.';
+                emailPauseBtn.style.cssText = 'font-size:10px;padding:3px 8px;border-radius:6px;' + (_isPaused ? 'background:#7c2d12;border:1px solid #ea580c;color:#fed7aa;' : 'background:#0d1117;border:1px solid #374151;color:#9ca3af;');
+                emailPauseBtn.onclick = (function(id, btn){ return function(){
+                    var next = !(btn.textContent.indexOf('paused') > -1);
+                    apiCall('/api/admin/tracker-clients/' + id + '/emails-paused', 'POST', { paused: next })
+                      .then(function(){
+                        btn.textContent = next ? '\\ud83d\\udd15 Emails paused' : '\\ud83d\\udce7 Emails on';
+                        btn.style.cssText = 'font-size:10px;padding:3px 8px;border-radius:6px;' + (next ? 'background:#7c2d12;border:1px solid #ea580c;color:#fed7aa;' : 'background:#0d1117;border:1px solid #374151;color:#9ca3af;');
+                      })
+                      .catch(function(e){ alert('Failed to update emails-paused: ' + e.message); });
+                }; })(c.id, emailPauseBtn);
+                togglesRow.appendChild(emailPauseBtn);
+
                 // ── Demo read-only toggle: safe share link for prospects ──
                 var roBtn = document.createElement('button');
                 roBtn.className = 'tr-btn';
@@ -37641,14 +37727,16 @@ MANDATORY PROCESSING ORDER:
 STEP 1 - Read the CLIENT PAGE above fully. It is your ground truth for existing content, structure and format.
 STEP 2 - PAGE TYPE: classify the client page as content_page (prose/headings meant to rank) or functional_tool_page (scanner/dashboard/form/calculator where text only supports the tool). If functional_tool_page: recommended_format must NOT be a full blog/guide rewrite, and must_have_h2s must be empty or only small additive subsections - never a full restructure. State the classification in the output.
 STEP 3 - ENTITY VERIFICATION: for every ENTITY GAP term, search the CLIENT PAGE text (including plurals, -ing forms, optimize/optimise spelling, synonyms). If it already appears in any form, do NOT list it as a gap - omit it, or if the mention is weak/buried, change the action to "strengthen existing mention". This check has failed before: entities reported missing that were already present in feature lists, tables and schema. Guard against it actively.
-STEP 4 - Only now analyse the SERP: ranking pattern, outlier, traits missing versus competitors.
+STEP 4 - Analyse the SERP: ranking pattern, outlier, traits missing versus competitors.
+STEP 4B - DEPTH CHECK: for the top 3 topics shared between the client page and rank-1, judge how deeply rank-1 treats each versus the client page (surface/moderate/deep - word count, examples, numbers, step-by-step detail) - this is what usually separates #2 from #1, not just entity presence.
+STEP 4C - INTENT DECOMPOSITION: list the 5-7 real sub-questions a searcher typing "${keyword}" actually wants answered (not just the main topic). For each, note whether the client page answers it and whether rank-1 answers it. Where the client page is silent and rank-1 is not, that is a genuine #1 gap.
 
 PRECISION OVER FALSE COMPLETENESS: if the live data does not support a confident, specific answer for a field, output the JSON string "insufficient_data" for that field instead of inventing a plausible-but-unfounded one - especially for ai_overview_blueprint, step3_outlier and entity_gaps_priority. Never invent a domain, URL, snippet, statistic, schema type or competitor trait that is not in the input above; use "insufficient_data" or an empty array instead.
 
 FINAL CHECK before output: re-read entity_gaps_priority and must_have_h2s against the CLIENT PAGE text and remove or downgrade anything already present; confirm recommended_format does not contradict page_type_classification.
 
 Return ONLY valid JSON, no markdown, no preamble. Replace every <...> with your real analysis or "insufficient_data" - never leave angle brackets, placeholder words, or invented examples in the output.
-{"keyword":"${keyword}","search_intent":"informational|commercial|transactional","page_type_classification":{"type":"content_page|functional_tool_page","evidence":"<1 sentence: what you observed on the client page that supports this>"},"ai_overview_blueprint":"<3-5 specific concrete actions THIS page must take to get cited, grounded in competitor snippets, entities and the AI-citation data above - or 'insufficient_data' if the live data does not support specific claims>","step1_catalog":[{"rank":1,"domain":"<real domain>","url":"<real URL>","title":"<real page title>","content_type":"service page|guide|landing page|blog","estimated_word_count":2000,"serp_features":["<real SERP features; empty array if none>"],"schema_types":["<real schema types; empty array if unknown>"],"freshness":"<real date signal or 'not visible'>","ai_overview_eligible":true,"snippet_text":"<real snippet text>"}],"step2_pattern":{"the_ranking_formula":"<one sentence grounded in the live snippets, or 'insufficient_data'>","dominant_content_format":"<from the data, or 'insufficient_data'>","dominant_schema":"<from the data, or 'insufficient_data'>","dominant_word_count_range":"<from the data, or 'insufficient_data'>","top3_shared_traits":["<concrete traits from the data>"],"bottom_missing_traits":["<concrete traits from the data>"],"freshness_pattern":"<from the data, or 'insufficient_data'>"},"step3_outlier":{"domain":"<real domain, or 'insufficient_data' if no outlier exists>","rank":4,"why_breaks_pattern":"<grounded in data>","why_it_ranks_anyway":"<grounded in data, or 'insufficient_data'>","signal_type":"warning|opportunity","what_to_learn":"<concrete lesson, or 'insufficient_data'>"},"step4_missing":[{"gap":"<real concept the client page is missing, verified absent in STEP 1>","gap_type":"warning|opportunity","how_to_exploit":"<concrete action>"}],"entity_gaps_priority":[{"entity":"<real ENTITY GAP term, VERIFIED ABSENT from the client page in STEP 3>","priority":"high|medium|low","where_to_add":"<an exact section that actually exists on the client page>"}],"content_brief":{"recommended_format":"<must align with page_type_classification - never a full blog rewrite if functional_tool_page>","recommended_word_count":2200,"recommended_schema":["<schema types not already present on the client page>"],"must_have_h2s":["<empty array if functional_tool_page and existing H2s suffice; otherwise specific headings>"],"must_cover_entities":["<real entities, verified absent or weak in STEP 3>"],"faq_questions":["<real FAQ questions, checked against any existing FAQPage schema on the client page>"]},"paa_questions":["<real People-Also-Ask questions for this keyword>"],"action_plan":[{"step":1,"priority":"high|medium|low","action":"<specific action grounded in the analysis>","effort":"low|medium|high","time_to_impact":"days|weeks"}],"quick_wins":[{"win":"<specific do-today action, targeting a section that actually exists on the client page>","reason":"<why it helps rank or get cited>","effort_minutes":20}],"client_vs_best":"${myUrl?'specific gap vs the rank-1 page, entity by entity':'insufficient_data'}","confidence":"high|medium|low"}`;
+{"keyword":"${keyword}","search_intent":"informational|commercial|transactional","page_type_classification":{"type":"content_page|functional_tool_page","evidence":"<1 sentence: what you observed on the client page that supports this>"},"ai_overview_blueprint":"<3-5 specific concrete actions THIS page must take to get cited, grounded in competitor snippets, entities and the AI-citation data above - or 'insufficient_data' if the live data does not support specific claims>","step1_catalog":[{"rank":1,"domain":"<real domain>","url":"<real URL>","title":"<real page title>","content_type":"service page|guide|landing page|blog","estimated_word_count":2000,"serp_features":["<real SERP features; empty array if none>"],"schema_types":["<real schema types; empty array if unknown>"],"freshness":"<real date signal or 'not visible'>","ai_overview_eligible":true,"snippet_text":"<real snippet text>"}],"step2_pattern":{"the_ranking_formula":"<one sentence grounded in the live snippets, or 'insufficient_data'>","dominant_content_format":"<from the data, or 'insufficient_data'>","dominant_schema":"<from the data, or 'insufficient_data'>","dominant_word_count_range":"<from the data, or 'insufficient_data'>","top3_shared_traits":["<concrete traits from the data>"],"bottom_missing_traits":["<concrete traits from the data>"],"freshness_pattern":"<from the data, or 'insufficient_data'>","depth_per_topic":[{"topic":"<a topic shared between the client page and rank-1>","rank1_treatment":"surface|moderate|deep","client_treatment":"surface|moderate|deep","gap":"<what specifically rank-1 covers that the client page doesn't - examples, numbers, steps>"}]},"step3_outlier":{"domain":"<real domain, or 'insufficient_data' if no outlier exists>","rank":4,"why_breaks_pattern":"<grounded in data>","why_it_ranks_anyway":"<grounded in data, or 'insufficient_data'>","signal_type":"warning|opportunity","what_to_learn":"<concrete lesson, or 'insufficient_data'>"},"step4_missing":[{"gap":"<real concept the client page is missing, verified absent in STEP 1>","gap_type":"warning|opportunity","how_to_exploit":"<concrete action>"}],"intent_decomposition":[{"sub_question":"<a real sub-question searchers of this keyword want answered>","client_page_answers_it":true,"rank1_answers_it":true,"gap_note":"<if client page is silent and rank-1 answers it, say so; else 'no gap'>"}],"entity_gaps_priority":[{"entity":"<real ENTITY GAP term, VERIFIED ABSENT from the client page in STEP 3>","priority":"high|medium|low","where_to_add":"<an exact section that actually exists on the client page>"}],"content_brief":{"recommended_format":"<must align with page_type_classification - never a full blog rewrite if functional_tool_page>","recommended_word_count":2200,"recommended_schema":["<schema types not already present on the client page>"],"must_have_h2s":["<empty array if functional_tool_page and existing H2s suffice; otherwise specific headings>"],"must_cover_entities":["<real entities, verified absent or weak in STEP 3>"],"faq_questions":["<real FAQ questions, checked against any existing FAQPage schema on the client page>"],"beat_number1_instructions":[{"topic":"<a shared topic from depth_per_topic>","rank1_treats_it_as":"surface|moderate|deep","to_beat_write":"<concrete instruction: exactly what to add, what kind of evidence to use, how deep to go - not generic advice>"}]},"citation_targets":[{"query_variant":"<a specific question Google AI Overview or Perplexity could cite this page for>","passage_to_write":"<exactly how that passage should read - length, direct-answer format, source attribution>"}],"paa_questions":["<real People-Also-Ask questions for this keyword>"],"action_plan":[{"step":1,"priority":"high|medium|low","action":"<specific action grounded in the analysis>","effort":"low|medium|high","time_to_impact":"days|weeks"}],"quick_wins":[{"win":"<specific do-today action, targeting a section that actually exists on the client page>","reason":"<why it helps rank or get cited>","effort_minutes":20}],"client_vs_best":"${myUrl?'specific gap vs the rank-1 page, entity by entity':'insufficient_data'}","confidence":"high|medium|low"}`;
   try {
     const ctrl2=new AbortController();setTimeout(()=>ctrl2.abort(),45000);
     const geminiKey=process.env.GEMINI_API_KEY; if(!geminiKey) throw new Error('GEMINI_API_KEY required for SERP brief');
@@ -38885,6 +38973,9 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
           const citations = pData.citations || [];
           const answerText = (pData.choices && pData.choices[0] && pData.choices[0].message && pData.choices[0].message.content) || '';
           snapshot.ai_perplexity_found = citations.length > 0 || answerText.length > 100;
+          // Store the actual answer text (not just cited/not) — real evidence for the transparency
+          // panel, so a viewer can SEE what Perplexity literally said, not just trust a badge.
+          snapshot.ai_perplexity_answer_excerpt = answerText.substring(0, 400);
           const cited = citations.some(function(c){ return (c||'').replace(/^https?:\/\//, '').startsWith(domain); })
             || answerText.includes(domain);
           snapshot.ai_perplexity_cited = cited;
@@ -39902,8 +39993,8 @@ If no unanchored claims found, return empty array: []`;
       (page_id,checked_at,google_position,ai_google_overview_found,ai_google_overview_cited,ai_google_overview_text,
        ai_perplexity_found,ai_perplexity_cited,ai_perplexity_text,ai_bing_found,ai_bing_cited,ai_bing_text,
        ai_brave_found,ai_brave_cited,google_competitors,ai_perplexity_competitors,
-       recommendations,gsc_brief,source_suggestions,author_trust_score,author_trust_findings,discovered_sources,html_hash,score,graaf_breakdown,graaf_recommendations,content_changed,content_diff)
-     VALUES ($1,NOW(),$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27) RETURNING *`,
+       recommendations,gsc_brief,source_suggestions,author_trust_score,author_trust_findings,discovered_sources,html_hash,score,graaf_breakdown,graaf_recommendations,content_changed,content_diff,ai_perplexity_answer_excerpt)
+     VALUES ($1,NOW(),$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28) RETURNING *`,
     [page.id, snapshot.google_position, snapshot.ai_google_overview_found, snapshot.ai_google_overview_cited,
      snapshot.ai_google_overview_text, snapshot.ai_perplexity_found, snapshot.ai_perplexity_cited,
      snapshot.ai_perplexity_text, snapshot.ai_bing_found, snapshot.ai_bing_cited, snapshot.ai_bing_text,
@@ -39921,7 +40012,8 @@ If no unanchored claims found, return empty array: []`;
      safeJSONB(snapshot.graaf_breakdown),
      safeJSONB(snapshot.graaf_recommendations),
      contentChanged,
-     safeJSONB(contentDiff)]
+     safeJSONB(contentDiff),
+     snapshot.ai_perplexity_answer_excerpt || null]
   );
   const snapId = snapR.rows[0].id;
   _trSetStep(pageId, 'save', 'done', 'Snapshot #' + snapId + ' saved');
