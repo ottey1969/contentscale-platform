@@ -1,4 +1,4 @@
-console.log('=== CONTENTSCALE BOOT v2026-07-08-possible-prioritized-shortcut | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON | possibleThreshold=20impr | shortcutPrioritized=v2 | gscAutoFetchRemoved=true | linkCheckActive=true | wholeSiteWipeGuard=true | gscAutoFetchRestored=true | reminderOffFix=true | claudeRemoved=true | bingWebmaster=true | competitorPanel=true | zeroResultFix=true | pagesRefreshFix=true | recheckButton=true | provenScanStrip=true ===');
+console.log('=== CONTENTSCALE BOOT v2026-07-08-possible-prioritized-shortcut | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON | possibleThreshold=20impr | shortcutPrioritized=v2 | gscAutoFetchRemoved=true | linkCheckActive=true | wholeSiteWipeGuard=true | gscAutoFetchRestored=true | reminderOffFix=true | claudeRemoved=true | bingWebmaster=true | competitorPanel=true | zeroResultFix=true | pagesRefreshFix=true | recheckButton=true | provenScanStrip=true | provenScanState=true | scanAllProven=true | doEverythingBtn=true ===');
 // CONTENTSCALE SERVER.JS — ELITE EDITION v4 (FIXED v3)
 // ✅ FIX v7: secondary_keywords + related_keywords auto in Analyse JSON + Execute prompt
 // ✅ FIX v7: analysis_data JSONB safe parse in execute-rewrite
@@ -29678,6 +29678,7 @@ async function setAllManualDone(on) {
 var _gapQueries = null;
 var _sitemapSlugs = [];
 var _gapAnalysis = null;
+var _provenScannedSlugs = {}; // persists across cannibal panel re-renders within this browser session
 var _gapDone = [];
 var _linkChecks = [];
 function _linkStatusFor(hubSlug, spokeSlug) {
@@ -30163,14 +30164,24 @@ function renderCannibal() {
   });
   var _provenList = Object.keys(_provenPageStats).sort(function(a,b){ return _provenPageStats[b].rows - _provenPageStats[a].rows; });
   var _provenCount = _cannibalIssues.filter(function(c){ return c.level === 'PROVEN'; }).length;
+  var _gapNotRunYet = !(_gapAnalysis && _gapAnalysis.families && _gapAnalysis.families.length);
   var provenStrip = (_provenList.length && _provenCount)
     ? '<div style="padding:8px 14px;border-bottom:1px solid #1f2937;background:rgba(248,113,113,.06);font-size:11px;color:#fca5a5;line-height:1.7;">'
-      + '\ud83d\udd34 ' + _provenCount + ' PROVEN rows touch <b>' + _provenList.length + ' unique pages</b>. Scan a page to generate its brief with the exact fix \\u2014 no need to search for it below:'
+      + '\ud83d\udd34 ' + _provenCount + ' PROVEN rows touch <b>' + _provenList.length + ' unique pages</b>. Scan a page to generate its brief with the exact fix \u2014 no need to search for it below:'
+      + (_gapNotRunYet ? '<div style="margin-top:4px;color:#fbbf24;">\u26a0\ufe0f If you use the individual Scan buttons below, run \ud83e\udd16 <b>Sort this out for me</b> first (Impression Gap panel above) so each brief captures the gap-family sections too. <b>Scan all</b> does this for you automatically.</div>' : '')
+      + '<div style="margin-top:8px;">'
+      + '<button onclick="_provenScanAll(this)" title="Runs Sort this out for me first if needed, then scans every page below in order \u2014 one click for the whole cycle." style="cursor:pointer;font-size:10px;font-weight:800;padding:4px 12px;border-radius:5px;background:#7f1d1d;border:1px solid #b91c1c;color:#fecaca;">\ud83d\ude80 Do everything: sort + scan all ' + _provenList.length + ' pages</button>'
+      + '</div>'
       + '<div style="margin-top:6px;display:flex;flex-direction:column;gap:3px;">'
       + _provenList.slice(0, 15).map(function(s){
           var pid = _slugToPageId[s];
-          var label = s + ' <span style="color:#f87171;">(' + _provenPageStats[s].rows + ' row' + (_provenPageStats[s].rows>1?'s':'') + ')</span>';
-          var btn = pid ? ('<button onclick="checkPage(' + pid + ')" style="flex-shrink:0;cursor:pointer;font-size:9px;font-weight:800;padding:2px 8px;border-radius:4px;background:#7f1d1d;border:1px solid #b91c1c;color:#fecaca;margin-right:8px;">\ud83d\udd0d Scan</button>') : '';
+          var isScanned = !!_provenScannedSlugs[s];
+          var label = s + ' <span style="color:' + (isScanned?'#4ade80':'#f87171') + ';">(' + _provenPageStats[s].rows + ' row' + (_provenPageStats[s].rows>1?'s':'') + ')</span>';
+          var btn = pid
+            ? (isScanned
+                ? ('<button onclick="checkPage(' + pid + ')" data-proven-scan="' + pid + '" title="Already scanned this session \u2014 click to scan again" style="flex-shrink:0;cursor:pointer;font-size:9px;font-weight:800;padding:2px 8px;border-radius:4px;background:#166534;border:1px solid #16a34a;color:#bbf7d0;margin-right:8px;">\u2713 Scanned</button>')
+                : ('<button onclick="checkPage(' + pid + ')" data-proven-scan="' + pid + '" style="flex-shrink:0;cursor:pointer;font-size:9px;font-weight:800;padding:2px 8px;border-radius:4px;background:#7f1d1d;border:1px solid #b91c1c;color:#fecaca;margin-right:8px;">\ud83d\udd0d Scan</button>'))
+            : '';
           return '<div style="display:flex;align-items:center;font-family:monospace;">' + btn + '<span>' + label + '</span></div>';
         }).join('')
       + (_provenList.length > 15 ? '<div style="color:#f87171;">+' + (_provenList.length-15) + ' more</div>' : '')
@@ -30377,6 +30388,28 @@ async function markDone(pageId, btn, currentDone) {
     }
   }
 
+  // Bulk-trigger checkPage() for every unique PROVEN page, one at a time with a short gap between
+  // each so the server (and Gemini) aren't hit with N simultaneous scans at once. If the Impression
+  // Gap AI analysis hasn't run yet, do THAT first automatically — so every scan below captures both
+  // the cannibalization fix AND the gap-family sections in one brief, no second scan needed.
+  async function _provenScanAll(btnEl) {
+    if (btnEl) { btnEl.disabled = true; }
+    var _needsGapSort = !(_gapAnalysis && _gapAnalysis.families && _gapAnalysis.families.length);
+    if (_needsGapSort) {
+      if (btnEl) btnEl.textContent = '\ud83e\udd16 Sorting gap queries first\u2026';
+      try { await runGapAnalysis(); } catch(e) {}
+    }
+    if (btnEl) btnEl.textContent = '\u23f3 Queuing scans\u2026';
+    var pageIds = (_provenList||[]).map(function(s){ return _slugToPageId[s]; }).filter(Boolean);
+    for (var i = 0; i < pageIds.length; i++) {
+      if (btnEl) btnEl.textContent = '\u23f3 Scanning ' + (i+1) + '/' + pageIds.length + '\u2026';
+      try { await checkPage(pageIds[i]); } catch(e) {}
+      if (i < pageIds.length - 1) await new Promise(function(r){ setTimeout(r, 1500); });
+    }
+    if (btnEl) { btnEl.textContent = '\u2713 All ' + pageIds.length + ' scans queued'; }
+    toast('All PROVEN pages queued for scanning \u2014 briefs will appear as each one finishes', '#4ade80');
+  }
+
 async function deletePage(pageId) {
   if (!confirm('Remove this page from tracking?')) return;
   var data = await api('/pages/' + pageId, 'DELETE').catch(function(){ return { success: false }; });
@@ -30505,6 +30538,16 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
                 showNotification('Scan complete: ' + (ev.url||''), 'scan', '#4ade80');
                 addLine('Scan complete: ' + (ev.url||''), '#4ade80', null);
                 try { _scanAllProgress(); } catch(e) {}
+                // Mark this page as scanned for the PROVEN strip (persists across re-renders, since
+                // the strip is rebuilt fresh from _cannibalIssues each time) and refresh the whole
+                // cannibalization panel so resolved rows disappear automatically \u2014 that IS the
+                // "done" signal: a row that's still there after a scan just wasn't fully fixed yet,
+                // but the page itself is marked \u2713 Scanned so the owner knows they got its brief.
+                try {
+                  var _p = (_pages||[]).find(function(x){ return x.id === ev.pageId; });
+                  if (_p) { var _s = slugOf(_p); _provenScannedSlugs[_s] = true; }
+                  setTimeout(function(){ try { loadImpressionGap(); } catch(e) {} }, 700);
+                } catch(e) {}
                 return;
               }
               var text = '', color = '#6b7280', isLink = false, linkUrl = '';
