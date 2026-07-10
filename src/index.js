@@ -1,4 +1,4 @@
-console.log('=== CONTENTSCALE BOOT v2026-07-08-possible-prioritized-shortcut | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON | possibleThreshold=20impr | shortcutPrioritized=v2 | gscAutoFetchRemoved=true | linkCheckActive=true | wholeSiteWipeGuard=true | gscAutoFetchRestored=true | reminderOffFix=true | claudeRemoved=true | bingWebmaster=true | competitorPanel=true | zeroResultFix=true | pagesRefreshFix=true | recheckButton=true | provenScanStrip=true | provenScanState=true | scanAllProven=true | doEverythingBtn=true | panelOrderFix=true | workflowGuide=true | preScanGuard=true | scanAllGuard=true | earlyGuard=true | emptyStateTeaser=true | provenScopeFix=true | numberedButtons=true | clearerButtons=true | scanAnimFix=true | promptClaudeCleanup=true | bonusTip=true | realProvenContext=true | competitorContext=true | unifiedBrief=true | diagnosticFirst=true | fullCompetitorBreakdown=true | serpSpyV3=true | transparencyBlock=true | emailsPausedToggle=true | competitorDedup=true | provenScanDebug=true | serializedScans=true | claudeCleanupV2=true | mergeClaudeStrip=true | visualTransparency=true | aboveFoldPriority=true | competitorComparisonTable=true | redGreenTracking=true | aioExplicitState=true | perpCopilotState=true | realMergePromptFixed=true | briefContextDebug=true | forceRescanBypass=true | gscPosFallback=true | cannibalDedup=true | gscAccessGated=true | gapConfirmShown=true | noPlaceholders=true | rowNumContrast=true | codeCannibalDedup=true | provenDebugRemoved=true | broaderCannibalDedup=true | competitorGapFallback=true | competitorPrevSnapFallback=true | hubSpokeDedup=true | compGapRegexBroadened=true ===');
+console.log('=== CONTENTSCALE BOOT v2026-07-08-possible-prioritized-shortcut | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON | possibleThreshold=20impr | shortcutPrioritized=v2 | gscAutoFetchRemoved=true | linkCheckActive=true | wholeSiteWipeGuard=true | gscAutoFetchRestored=true | reminderOffFix=true | claudeRemoved=true | bingWebmaster=true | competitorPanel=true | zeroResultFix=true | pagesRefreshFix=true | recheckButton=true | provenScanStrip=true | provenScanState=true | scanAllProven=true | doEverythingBtn=true | panelOrderFix=true | workflowGuide=true | preScanGuard=true | scanAllGuard=true | earlyGuard=true | emptyStateTeaser=true | provenScopeFix=true | numberedButtons=true | clearerButtons=true | scanAnimFix=true | promptClaudeCleanup=true | bonusTip=true | realProvenContext=true | competitorContext=true | unifiedBrief=true | diagnosticFirst=true | fullCompetitorBreakdown=true | serpSpyV3=true | transparencyBlock=true | emailsPausedToggle=true | competitorDedup=true | provenScanDebug=true | serializedScans=true | claudeCleanupV2=true | mergeClaudeStrip=true | visualTransparency=true | aboveFoldPriority=true | competitorComparisonTable=true | redGreenTracking=true | aioExplicitState=true | perpCopilotState=true | realMergePromptFixed=true | briefContextDebug=true | forceRescanBypass=true | gscPosFallback=true | cannibalDedup=true | gscAccessGated=true | gapConfirmShown=true | noPlaceholders=true | rowNumContrast=true | codeCannibalDedup=true | provenDebugRemoved=true | broaderCannibalDedup=true | competitorGapFallback=true | competitorPrevSnapFallback=true | hubSpokeDedup=true | compGapRegexBroadened=true | gapFixLabelFallback=true | geminiProForBriefs=true ===');
 // CONTENTSCALE SERVER.JS — ELITE EDITION v4 (FIXED v3)
 // ✅ FIX v7: secondary_keywords + related_keywords auto in Analyse JSON + Execute prompt
 // ✅ FIX v7: analysis_data JSONB safe parse in execute-rewrite
@@ -224,6 +224,12 @@ const PORT = process.env.PORT || 3000;
 // Nooit meer handmatig aanpassen
 // ============================================
 let GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash-lite'; // primary — cheapest; set GEMINI_MODEL env to override
+// Dedicated, stronger model for the AI Citations Tracker specifically (citation/GSC/source briefs,
+// merge, ranking) — these need reliable multi-part structural compliance (exact headings, exact
+// system labels) more than raw speed. Kept SEPARATE from the platform-wide GEMINI_MODEL so a change
+// here never affects the Content Engine, SEO Audit, or any other feature. Falls back to GEMINI_MODEL
+// automatically per-call if a gemini-2.5-pro request ever 404s (not available on this API key/tier).
+let GEMINI_MODEL_BRIEF = process.env.GEMINI_MODEL_BRIEF || 'gemini-2.5-pro';
 
 async function detectBestGeminiModel(apiKey) {
   if (!apiKey) return;
@@ -265,7 +271,7 @@ async function callGeminiWithFallback(apiKey, body, primaryModel, fallbackModel,
   const FALLBACK = fallbackModel || 'gemini-2.5-flash';
   const primary = primaryModel || GEMINI_MODEL;
   const shouldRetry = (status, errMsg) => {
-    if (status === 0 || status === 408 || status === 503 || status === 429 || status === 500 || status === 502) return true; // 0 = network/fetch error
+    if (status === 0 || status === 404 || status === 408 || status === 503 || status === 429 || status === 500 || status === 502) return true; // 0 = network/fetch error, 404 = model not found/unavailable on this key
     const m = (errMsg || '').toLowerCase();
     return m.includes('fetch failed') || m.includes('network') || m.includes('econnreset') || m.includes('enotfound') || m.includes('socket') || m.includes('overload') || m.includes('high demand') || m.includes('unavailable') || m.includes('rate limit') || m.includes('quota') || m.includes('timeout') || m.includes('timed out');
   };
@@ -37684,13 +37690,12 @@ DO NOT be generic. Every action must reference the actual keyword "${kw}" and ac
 Return ONLY a JSON array, no markdown:
 [{"title":"specific gap max 8 words","priority":"high"|"medium"|"low","action":"exact change to make — copy-paste ready, min 25 words","expected_impact":"estimated position improvement and why"}]`;
 
-                  const gRankResp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${geminiKey}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ contents: [{ parts: [{ text: rankingPrompt }] }], generationConfig: { temperature: 0.3, maxOutputTokens: 800 } })
-                  });
+                  const gRankResp = await callGeminiWithFallback(geminiKey, {
+                    contents: [{ parts: [{ text: rankingPrompt }] }],
+                    generationConfig: { temperature: 0.3, maxOutputTokens: 800 }
+                  }, GEMINI_MODEL_BRIEF, null, 1);
                   if (gRankResp.ok) {
-                    const gRankData = await gRankResp.json();
+                    const gRankData = gRankResp.data;
                     const gRankText = gRankData.candidates?.[0]?.content?.parts?.[0]?.text || '';
                     const rankingRecs = JSON.parse(gRankText.replace(/```json|```/g, '').trim());
                     await pool.query(
@@ -39906,11 +39911,11 @@ GOAL: Rank #1 for "${kw}" and capture the maximum clicks from ${gscImpr || 'the 
         Promise.race([ callGeminiWithFallback(geminiKey, {
           contents: [{ role: 'user', parts: [{ text: citationPrompt + _langDirective }] }],
           generationConfig: { temperature: 0.3, maxOutputTokens: 8192, responseMimeType: 'application/json' }
-        }, null, null, 1), _briefTimeout() ]),
+        }, GEMINI_MODEL_BRIEF, null, 1), _briefTimeout() ]),
         Promise.race([ callGeminiWithFallback(geminiKey, {
           contents: [{ role: 'user', parts: [{ text: gscPrompt + _langDirective }] }],
           generationConfig: { temperature: 0.2, maxOutputTokens: 8192, responseMimeType: 'application/json' }
-        }, null, null, 1), _briefTimeout() ])
+        }, GEMINI_MODEL_BRIEF, null, 1), _briefTimeout() ])
       ]);
 
       // Parse Citation Brief
@@ -40069,6 +40074,14 @@ GOAL: Rank #1 for "${kw}" and capture the maximum clicks from ${gscImpr || 'the 
               + (_pComp.length ? 'Perplexity currently cites: ' + _pComp.slice(0,5).join(', ') + '. This page is not among them yet.' : 'No AI Overview/Perplexity visibility detected for this page yet.')
               + '\n\n';
           }
+          // If Gemini's own text never labeled its gap/fix content either, don't try to algorithmically
+          // split the remaining prose into "gap" vs "fix" — that risks cutting mid-sentence in the wrong
+          // place. Instead, safely wrap whatever prose IS there with a single clear label so the owner
+          // can at least see where the analysis ends and the actionable text begins.
+          if (!_hasGap && !_hasFix && _action.trim()) {
+            item.action = _built + 'YOUR GAP / FIX:\n' + _action;
+            return item;
+          }
           // Keep whatever Gemini wrote for YOUR GAP / FIX (or the whole thing, if those headings
           // were present but Google/AIO were missing) — we only fill in what was genuinely absent.
           item.action = _built + _action;
@@ -40076,6 +40089,21 @@ GOAL: Rank #1 for "${kw}" and capture the maximum clicks from ${gscImpr || 'the 
         };
         if (Array.isArray(snapshot.recommendations)) snapshot.recommendations = snapshot.recommendations.map(_fixCompetitorGapItem);
         if (Array.isArray(snapshot.gsc_brief)) snapshot.gsc_brief = snapshot.gsc_brief.map(_fixCompetitorGapItem);
+
+        // ── Same safe "label what's missing, don't restructure" fallback for Impression Gap items:
+        // the gap-context instruction requires a "── READY-TO-PASTE SECTION ──" marker, but Gemini
+        // sometimes drops it, leaving prose that starts mid-thought with no clear boundary.
+        const _fixImpressionGapItem = (item) => {
+          if (!item) return item;
+          const _isImprGap = /impression.{0,15}gap|impression.{0,15}growth|adjacent intent/i.test((item.title||'') + ' ' + (item.system||''));
+          if (!_isImprGap) return item;
+          const _action = item.action || '';
+          if (/ready-to-paste section/i.test(_action) || !_action.trim()) return item;
+          item.action = '── READY-TO-PASTE SECTION ──\n' + _action;
+          return item;
+        };
+        if (Array.isArray(snapshot.recommendations)) snapshot.recommendations = snapshot.recommendations.map(_fixImpressionGapItem);
+        if (Array.isArray(snapshot.gsc_brief)) snapshot.gsc_brief = snapshot.gsc_brief.map(_fixImpressionGapItem);
       } catch(_cgFixErr) {}
 
       // ── GUARANTEED local GSC brief — never empty when we have a keyword + position ──
@@ -40192,7 +40220,7 @@ If no unanchored claims found, return empty array: []`;
         sourceResp = await Promise.race([ callGeminiWithFallback(geminiKey, {
           contents: [{ role: 'user', parts: [{ text: sourcePrompt }] }],
           generationConfig: { temperature: 0.2, maxOutputTokens: 1500 }
-        }, null, null, 1), new Promise(function(res){ setTimeout(function(){ res({ ok:false, status:408, errorMessage:'source time budget exceeded' }); }, 12000); }) ]);
+        }, GEMINI_MODEL_BRIEF, null, 1), new Promise(function(res){ setTimeout(function(){ res({ ok:false, status:408, errorMessage:'source time budget exceeded' }); }, 12000); }) ]);
         if (sourceResp.ok) {
           let srcRecs = sourceResp.data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
           srcRecs = srcRecs.replace(/^\`\`\`json\n?/i,'').replace(/\`\`\`\s*$/,'').trim();
@@ -40498,13 +40526,12 @@ MERGE RULES:
 6. If a NEW item has system "Competitor Gap" AND includes a "comparison_table" field, KEEP that field exactly as given \u2014 it is a structured per-competitor breakdown the owner reads as a lesson, do not summarize it away.
 
 Return ONLY JSON array (max 5 items): [{"title":"max 6 words","priority":"high"|"medium"|"low","system":"Google AIO|Perplexity|Copilot|Ranking|Cannibalization|Competitor Gap|Internal Link|Visibility","action":"exact 30+ word instruction","expected_impact":"ranking/AI impact","comparison_table (ONLY if carried over from a Competitor Gap NEW item, omit otherwise)":[{"competitor":"bare domain","what_they_do_well":"specific strength","our_gap":"what this page lacks","what_to_do":"concrete instruction"}]}]`;
-          const gResp2 = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${geminiKey}`, {
-            method: 'POST', headers: {'Content-Type':'application/json'},
-            body: JSON.stringify({ contents: [{ parts: [{ text: mergePrompt2 }] }], generationConfig: { temperature: 0.3, maxOutputTokens: 3000 } }),
-            signal: AbortSignal.timeout(15000)
-          });
+          const gResp2 = await callGeminiWithFallback(geminiKey, {
+            contents: [{ parts: [{ text: mergePrompt2 }] }],
+            generationConfig: { temperature: 0.3, maxOutputTokens: 3000 }
+          }, GEMINI_MODEL_BRIEF, null, 1);
           if (gResp2.ok) {
-            const gData2 = await gResp2.json();
+            const gData2 = gResp2.data;
             const gText2 = gData2.candidates?.[0]?.content?.parts?.[0]?.text || '';
             // Tolerant parse: Gemini can truncate mid-string -> salvage to the last complete item instead of crashing
             let _mtxt = gText2.replace(/```json|```/g, '').trim();
