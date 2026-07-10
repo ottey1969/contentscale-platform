@@ -1,4 +1,4 @@
-console.log('=== CONTENTSCALE BOOT v2026-07-08-possible-prioritized-shortcut | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON | possibleThreshold=20impr | shortcutPrioritized=v2 | gscAutoFetchRemoved=true | linkCheckActive=true | wholeSiteWipeGuard=true | gscAutoFetchRestored=true | reminderOffFix=true | claudeRemoved=true | bingWebmaster=true | competitorPanel=true | zeroResultFix=true | pagesRefreshFix=true | recheckButton=true | provenScanStrip=true | provenScanState=true | scanAllProven=true | doEverythingBtn=true | panelOrderFix=true | workflowGuide=true | preScanGuard=true | scanAllGuard=true | earlyGuard=true | emptyStateTeaser=true | provenScopeFix=true | numberedButtons=true | clearerButtons=true | scanAnimFix=true | promptClaudeCleanup=true | bonusTip=true | realProvenContext=true | competitorContext=true | unifiedBrief=true | diagnosticFirst=true | fullCompetitorBreakdown=true | serpSpyV3=true | transparencyBlock=true | emailsPausedToggle=true | competitorDedup=true | provenScanDebug=true | serializedScans=true | claudeCleanupV2=true | mergeClaudeStrip=true | visualTransparency=true | aboveFoldPriority=true | competitorComparisonTable=true | redGreenTracking=true | aioExplicitState=true | perpCopilotState=true | realMergePromptFixed=true | briefContextDebug=true | forceRescanBypass=true | gscPosFallback=true | cannibalDedup=true | gscAccessGated=true | gapConfirmShown=true | noPlaceholders=true | rowNumContrast=true | codeCannibalDedup=true | provenDebugRemoved=true ===');
+console.log('=== CONTENTSCALE BOOT v2026-07-08-possible-prioritized-shortcut | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON | possibleThreshold=20impr | shortcutPrioritized=v2 | gscAutoFetchRemoved=true | linkCheckActive=true | wholeSiteWipeGuard=true | gscAutoFetchRestored=true | reminderOffFix=true | claudeRemoved=true | bingWebmaster=true | competitorPanel=true | zeroResultFix=true | pagesRefreshFix=true | recheckButton=true | provenScanStrip=true | provenScanState=true | scanAllProven=true | doEverythingBtn=true | panelOrderFix=true | workflowGuide=true | preScanGuard=true | scanAllGuard=true | earlyGuard=true | emptyStateTeaser=true | provenScopeFix=true | numberedButtons=true | clearerButtons=true | scanAnimFix=true | promptClaudeCleanup=true | bonusTip=true | realProvenContext=true | competitorContext=true | unifiedBrief=true | diagnosticFirst=true | fullCompetitorBreakdown=true | serpSpyV3=true | transparencyBlock=true | emailsPausedToggle=true | competitorDedup=true | provenScanDebug=true | serializedScans=true | claudeCleanupV2=true | mergeClaudeStrip=true | visualTransparency=true | aboveFoldPriority=true | competitorComparisonTable=true | redGreenTracking=true | aioExplicitState=true | perpCopilotState=true | realMergePromptFixed=true | briefContextDebug=true | forceRescanBypass=true | gscPosFallback=true | cannibalDedup=true | gscAccessGated=true | gapConfirmShown=true | noPlaceholders=true | rowNumContrast=true | codeCannibalDedup=true | provenDebugRemoved=true | broaderCannibalDedup=true | competitorGapFallback=true ===');
 // CONTENTSCALE SERVER.JS — ELITE EDITION v4 (FIXED v3)
 // ✅ FIX v7: secondary_keywords + related_keywords auto in Analyse JSON + Execute prompt
 // ✅ FIX v7: analysis_data JSONB safe parse in execute-rewrite
@@ -39495,7 +39495,7 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
               + _pComp.slice(0, 5).map(function(u){ return '- ' + u; }).join('\n')
               + '\n';
           }
-          _competitorContext += '\nTASK: this is DIAGNOSTIC, not just prescriptive \u2014 the owner needs to see the actual competitive landscape, not one compressed sentence. Write ONE action (system \"Competitor Gap\", priority high or medium) whose \"action\" field is a structured breakdown with these exact labeled parts, in order:\n(1) \"GOOGLE SEARCH \u2014 top results:\" then ONE short line PER competitor listed above (all of them, not just the top one): \"#<position> <url> \u2014 wins because <the specific claim/structure/credential/stat that makes THIS result rank, inferred from its title+snippet>.\"\n(2) \"AI OVERVIEW / AI AGGREGATION \u2014 sourcing:\" 1-2 sentences on what AI Overview and Perplexity actually pull from (a self-contained quotable answer, not just ranking position) \u2014 name the Perplexity-cited sources from the list above if present, or state that this page has no visibility there yet if the list is empty.\n(3) \"YOUR GAP:\" 1-2 sentences naming the ONE specific, recurring thing across these competitors that this page lacks.\n(4) \"FIX:\" the exact copy-paste text that closes that specific gap.\nNever skip straight to the fix \u2014 parts (1)-(3) must stand on their own as genuine competitive findings a human can read and understand BEFORE seeing what to paste.';
+          _competitorContext += '\nTASK: this is DIAGNOSTIC, not just prescriptive \u2014 the owner needs to see the actual competitive landscape, not one compressed sentence. Write ONE action (system \"Competitor Gap\", priority high or medium) whose \"action\" field is a structured breakdown with these EXACT FOUR LABELED HEADINGS, IN THIS ORDER, EVERY TIME \u2014 this is a strict template, not a style suggestion:\n\"GOOGLE SEARCH \u2014 top results:\"\nthen ONE short line PER competitor listed above (all of them, not just the top one), each starting with \"#<position>\": \"#1 <url> \u2014 wins because <specific claim/structure/credential/stat>.\"\n\"AI OVERVIEW / AI AGGREGATION \u2014 sourcing:\"\n1-2 sentences on what AI Overview and Perplexity actually pull from \u2014 name the Perplexity-cited sources from the list above if present, or state this page has no visibility there yet if the list is empty.\n\"YOUR GAP:\"\n1-2 sentences naming the ONE specific, recurring thing across these competitors that this page lacks.\n\"FIX:\"\nthe exact copy-paste text that closes that specific gap.\nDo not merge headings, do not skip a heading even if brief, do not go straight to the fix. All four headings must appear as their own line, verbatim, before their content. This structure is mandatory, not optional.';
           _competitorContext += '\n\nTABLE REQUIREMENT: this same Competitor Gap action must ALSO include a \"comparison_table\" field \u2014 a JSON array, one row per Google competitor listed above (all of them), each row: {\"competitor\": \"<bare domain, e.g. example.com>\", \"what_they_do_well\": \"<one specific, concrete strength \u2014 a claim, structure, credential, or stat, NOT a vague quality>\", \"our_gap\": \"<what THIS page specifically lacks by comparison>\", \"what_to_do\": \"<one concrete, specific instruction to close that gap for this row>\"}. This is a teaching tool for the owner \u2014 every field must be specific enough that a non-SEO person understands exactly why that competitor outranks them and exactly what to change. Never write \"better content\" or \"more optimized\" \u2014 name the actual claim, number, structure, or credential.';
         }
       } catch(e) {}
@@ -39986,19 +39986,23 @@ GOAL: Rank #1 for "${kw}" and capture the maximum clicks from ${gscImpr || 'the 
         // targets the SAME conflicting URL as an AIO Brief cannibalization item, drop the GSC one.
         try {
           if (Array.isArray(snapshot.gsc_brief) && Array.isArray(snapshot.recommendations)) {
+            const _normCannibalUrl = u => u.replace(/#.*$/,'').replace(/\/+$/,'').toLowerCase();
             const _citCannibalUrls = [];
             snapshot.recommendations.forEach(r => {
               if (/cannib/i.test(r.system||'')) {
                 const _urls = ((r.title||'') + ' ' + (r.action||'')).match(/https?:\/\/[^\s"'<>]+/g) || [];
-                _urls.forEach(u => _citCannibalUrls.push(u.replace(/\/+$/,'').toLowerCase()));
+                _urls.forEach(u => _citCannibalUrls.push(_normCannibalUrl(u)));
               }
             });
             if (_citCannibalUrls.length) {
               snapshot.gsc_brief = snapshot.gsc_brief.filter(g => {
-                const _isCannibalLike = /cannib|differentiat/i.test((g.title||'') + ' ' + (g.action||'') + ' ' + (g.trigger||''));
+                // Broader than just the literal words "cannibalization"/"differentiate" — Gemini
+                // sometimes covers the exact same ground using hub/spoke or "make this page unique"
+                // framing instead. Catch that too, since it's the same underlying duplicate work.
+                const _isCannibalLike = /cannib|differentiat|\bunique\b|\bdistinct\b|\bspoke\b|\bhub\b|mistaken for/i.test((g.title||'') + ' ' + (g.action||'') + ' ' + (g.trigger||''));
                 if (!_isCannibalLike) return true;
                 const _gUrls = ((g.title||'') + ' ' + (g.action||'') + ' ' + (g.trigger||'')).match(/https?:\/\/[^\s"'<>]+/g) || [];
-                const _overlaps = _gUrls.some(u => _citCannibalUrls.includes(u.replace(/\/+$/,'').toLowerCase()));
+                const _overlaps = _gUrls.some(u => _citCannibalUrls.includes(_normCannibalUrl(u)));
                 return !_overlaps; // drop it if it targets the same URL the Citation Brief already covered
               });
             }
@@ -40007,6 +40011,41 @@ GOAL: Rank #1 for "${kw}" and capture the maximum clicks from ${gscImpr || 'the 
       } else {
         console.warn('[tracker] GSC Gemini failed:', gscResp.status, gscResp.errorMessage || '');
       }
+
+      // ── CODE-LEVEL FALLBACK: enforce the Competitor Gap structure ──────────
+      // Gemini does not always follow the 4-heading template reliably (title/AI-overview/gap/fix).
+      // Rather than hope the prompt is followed, check the actual output and, if a heading is
+      // missing, PREPEND a programmatically-built section using the real competitor data this
+      // scan already fetched (snapshot._competitors) — so the owner always sees who's winning and
+      // why, even on a run where Gemini's own formatting fell short.
+      try {
+        const _fixCompetitorGapItem = (item) => {
+          if (!item || !/competitor gap/i.test(item.system||'')) return item;
+          const _action = item.action || '';
+          const _hasGoogle = /google search/i.test(_action);
+          const _hasAio = /ai overview|ai aggregation/i.test(_action);
+          const _hasGap = /your gap/i.test(_action);
+          const _hasFix = /\bfix:/i.test(_action);
+          if (_hasGoogle && _hasAio && _hasGap && _hasFix) return item; // already compliant
+          const _gComp = (snapshot._competitors || []).filter(c => c && c.url);
+          if (!_gComp.length) return item; // nothing to build a fallback from
+          let _built = 'GOOGLE SEARCH — top results:\n'
+            + _gComp.slice(0, 5).map((c, i) => '#' + (c.position || i + 1) + ' ' + c.url + (c.title ? ' — "' + String(c.title).substring(0,80) + '"' : '')).join('\n')
+            + '\n\n';
+          if (!_hasAio) {
+            const _pComp = (snapshot.ai_perplexity_competitors || []);
+            _built += 'AI OVERVIEW / AI AGGREGATION — sourcing:\n'
+              + (_pComp.length ? 'Perplexity currently cites: ' + _pComp.slice(0,5).join(', ') + '. This page is not among them yet.' : 'No AI Overview/Perplexity visibility detected for this page yet.')
+              + '\n\n';
+          }
+          // Keep whatever Gemini wrote for YOUR GAP / FIX (or the whole thing, if those headings
+          // were present but Google/AIO were missing) — we only fill in what was genuinely absent.
+          item.action = _built + _action;
+          return item;
+        };
+        if (Array.isArray(snapshot.recommendations)) snapshot.recommendations = snapshot.recommendations.map(_fixCompetitorGapItem);
+        if (Array.isArray(snapshot.gsc_brief)) snapshot.gsc_brief = snapshot.gsc_brief.map(_fixCompetitorGapItem);
+      } catch(_cgFixErr) {}
 
       // ── GUARANTEED local GSC brief — never empty when we have a keyword + position ──
       if (!Array.isArray(snapshot.gsc_brief) || !snapshot.gsc_brief.length) {
