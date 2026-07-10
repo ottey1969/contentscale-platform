@@ -1,4 +1,4 @@
-console.log('=== CONTENTSCALE BOOT v2026-07-08-possible-prioritized-shortcut | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON | possibleThreshold=20impr | shortcutPrioritized=v2 | gscAutoFetchRemoved=true | linkCheckActive=true | wholeSiteWipeGuard=true | gscAutoFetchRestored=true | reminderOffFix=true | claudeRemoved=true | bingWebmaster=true | competitorPanel=true | zeroResultFix=true | pagesRefreshFix=true | recheckButton=true | provenScanStrip=true | provenScanState=true | scanAllProven=true | doEverythingBtn=true | panelOrderFix=true | workflowGuide=true | preScanGuard=true | scanAllGuard=true | earlyGuard=true | emptyStateTeaser=true | provenScopeFix=true | numberedButtons=true | clearerButtons=true | scanAnimFix=true | promptClaudeCleanup=true | bonusTip=true | realProvenContext=true | competitorContext=true | unifiedBrief=true | diagnosticFirst=true | fullCompetitorBreakdown=true | serpSpyV3=true | transparencyBlock=true | emailsPausedToggle=true | competitorDedup=true | provenScanDebug=true | serializedScans=true | claudeCleanupV2=true | mergeClaudeStrip=true | visualTransparency=true | aboveFoldPriority=true | competitorComparisonTable=true | redGreenTracking=true | aioExplicitState=true ===');
+console.log('=== CONTENTSCALE BOOT v2026-07-08-possible-prioritized-shortcut | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON | possibleThreshold=20impr | shortcutPrioritized=v2 | gscAutoFetchRemoved=true | linkCheckActive=true | wholeSiteWipeGuard=true | gscAutoFetchRestored=true | reminderOffFix=true | claudeRemoved=true | bingWebmaster=true | competitorPanel=true | zeroResultFix=true | pagesRefreshFix=true | recheckButton=true | provenScanStrip=true | provenScanState=true | scanAllProven=true | doEverythingBtn=true | panelOrderFix=true | workflowGuide=true | preScanGuard=true | scanAllGuard=true | earlyGuard=true | emptyStateTeaser=true | provenScopeFix=true | numberedButtons=true | clearerButtons=true | scanAnimFix=true | promptClaudeCleanup=true | bonusTip=true | realProvenContext=true | competitorContext=true | unifiedBrief=true | diagnosticFirst=true | fullCompetitorBreakdown=true | serpSpyV3=true | transparencyBlock=true | emailsPausedToggle=true | competitorDedup=true | provenScanDebug=true | serializedScans=true | claudeCleanupV2=true | mergeClaudeStrip=true | visualTransparency=true | aboveFoldPriority=true | competitorComparisonTable=true | redGreenTracking=true | aioExplicitState=true | perpCopilotState=true ===');
 // CONTENTSCALE SERVER.JS — ELITE EDITION v4 (FIXED v3)
 // ✅ FIX v7: secondary_keywords + related_keywords auto in Analyse JSON + Execute prompt
 // ✅ FIX v7: analysis_data JSONB safe parse in execute-rewrite
@@ -30902,8 +30902,13 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
             _transparencyHtml += '<div style="font-size:10px;color:#6b7280;margin-bottom:10px;">Google AI Overview: checked \u2014 Google is not showing an AI Overview for this exact query right now.</div>';
           }
           if (data.perp_excerpt) {
-            _transparencyHtml += '<div style="font-size:10px;color:#9ca3af;margin-bottom:4px;font-weight:700;">Perplexity\\u2019s actual answer:</div>'
-              + '<div style="font-size:11px;color:#cbd5e1;font-style:italic;background:#0d1117;border-left:2px solid #a78bfa;padding:6px 10px;margin-bottom:10px;">\\u201c' + data.perp_excerpt.substring(0,220).replace(/</g,'&lt;') + (data.perp_excerpt.length>220?'\\u2026':'') + '\\u201d</div>';
+            _transparencyHtml += '<div style="font-size:10px;color:#9ca3af;margin-bottom:4px;font-weight:700;">Perplexity\u2019s actual answer:</div>'
+              + '<div style="font-size:11px;color:#cbd5e1;font-style:italic;background:#0d1117;border-left:2px solid #a78bfa;padding:6px 10px;margin-bottom:10px;">\u201c' + data.perp_excerpt.substring(0,220).replace(/</g,'&lt;') + (data.perp_excerpt.length>220?'\u2026':'') + '\u201d</div>';
+          } else {
+            _transparencyHtml += '<div style="font-size:10px;color:#6b7280;margin-bottom:10px;">Perplexity: checked \u2014 no answer excerpt captured for this query.</div>';
+          }
+          if (data.bing_cited !== undefined && data.bing_cited !== null) {
+            _transparencyHtml += '<div style="font-size:10px;color:#9ca3af;margin-bottom:10px;">Copilot (Bing index): ' + (data.bing_cited ? '<span style="color:#4ade80;">confirmed indexed</span>' : '<span style="color:#6b7280;">not confirmed yet</span>') + ' \u2014 Copilot has no separate quotable text like AIO/Perplexity, only index presence.</div>';
           }
           if (_pc && _pc.length) {
             _transparencyHtml += '<div style="font-size:10px;color:#9ca3af;margin-bottom:4px;font-weight:700;">Perplexity currently cites (' + _pc.length + '), this page not among them yet:</div>'
@@ -31011,6 +31016,7 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
         if (data.aio_text) lines.push('- Google AI Overview currently shows: "' + data.aio_text.substring(0,200) + (data.aio_text.length>200?'...':'') + '"');
         else lines.push('- Google AI Overview: checked \u2014 not shown for this exact query right now.');
         if (data.perp_excerpt) lines.push('- Perplexity\\'s actual answer excerpt: "' + data.perp_excerpt.substring(0,200) + (data.perp_excerpt.length>200?'...':'') + '"');
+        else lines.push('- Perplexity: checked \u2014 no answer excerpt captured for this query.');
         (function(){
           try {
             var _gc = typeof data.google_competitors === 'string' ? JSON.parse(data.google_competitors) : (data.google_competitors||[]);
@@ -31322,8 +31328,13 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
             _transparencyHtml2 += '<div style="font-size:10px;color:#6b7280;margin-bottom:10px;">Google AI Overview: checked \u2014 Google is not showing an AI Overview for this exact query right now.</div>';
           }
           if (data.perp_excerpt) {
-            _transparencyHtml2 += '<div style="font-size:10px;color:#9ca3af;margin-bottom:4px;font-weight:700;">Perplexity\\u2019s actual answer:</div>'
-              + '<div style="font-size:11px;color:#cbd5e1;font-style:italic;background:#0d1117;border-left:2px solid #a78bfa;padding:6px 10px;margin-bottom:10px;">\\u201c' + data.perp_excerpt.substring(0,220).replace(/</g,'&lt;') + (data.perp_excerpt.length>220?'\\u2026':'') + '\\u201d</div>';
+            _transparencyHtml2 += '<div style="font-size:10px;color:#9ca3af;margin-bottom:4px;font-weight:700;">Perplexity\u2019s actual answer:</div>'
+              + '<div style="font-size:11px;color:#cbd5e1;font-style:italic;background:#0d1117;border-left:2px solid #a78bfa;padding:6px 10px;margin-bottom:10px;">\u201c' + data.perp_excerpt.substring(0,220).replace(/</g,'&lt;') + (data.perp_excerpt.length>220?'\u2026':'') + '\u201d</div>';
+          } else {
+            _transparencyHtml2 += '<div style="font-size:10px;color:#6b7280;margin-bottom:10px;">Perplexity: checked \u2014 no answer excerpt captured for this query.</div>';
+          }
+          if (data.bing_cited !== undefined && data.bing_cited !== null) {
+            _transparencyHtml2 += '<div style="font-size:10px;color:#9ca3af;margin-bottom:10px;">Copilot (Bing index): ' + (data.bing_cited ? '<span style="color:#4ade80;">confirmed indexed</span>' : '<span style="color:#6b7280;">not confirmed yet</span>') + ' \u2014 Copilot has no separate quotable text like AIO/Perplexity, only index presence.</div>';
           }
           if (_pc2 && _pc2.length) {
             _transparencyHtml2 += '<div style="font-size:10px;color:#9ca3af;margin-bottom:4px;font-weight:700;">Perplexity currently cites (' + _pc2.length + '), this page not among them yet:</div>'
@@ -31479,6 +31490,7 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
       if (data.aio_text) lines.push('- Google AI Overview currently shows: "' + data.aio_text.substring(0,200) + (data.aio_text.length>200?'...':'') + '"');
       else lines.push('- Google AI Overview: checked \u2014 not shown for this exact query right now.');
       if (data.perp_excerpt) lines.push('- Perplexity\\'s actual answer excerpt: "' + data.perp_excerpt.substring(0,200) + (data.perp_excerpt.length>200?'...':'') + '"');
+      else lines.push('- Perplexity: checked \u2014 no answer excerpt captured for this query.');
       (function(){
         try {
           var _gc = typeof data.google_competitors === 'string' ? JSON.parse(data.google_competitors) : (data.google_competitors||[]);
