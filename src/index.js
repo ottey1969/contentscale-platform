@@ -1,4 +1,4 @@
-console.log('=== CONTENTSCALE BOOT v2026-07-08-possible-prioritized-shortcut | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON | possibleThreshold=20impr | shortcutPrioritized=v2 | gscAutoFetchRemoved=true | linkCheckActive=true | wholeSiteWipeGuard=true | gscAutoFetchRestored=true | reminderOffFix=true | claudeRemoved=true | bingWebmaster=true | competitorPanel=true | zeroResultFix=true | pagesRefreshFix=true | recheckButton=true | provenScanStrip=true | provenScanState=true | scanAllProven=true | doEverythingBtn=true | panelOrderFix=true | workflowGuide=true | preScanGuard=true | scanAllGuard=true | earlyGuard=true | emptyStateTeaser=true | provenScopeFix=true | numberedButtons=true | clearerButtons=true | scanAnimFix=true | promptClaudeCleanup=true | bonusTip=true | realProvenContext=true | competitorContext=true | unifiedBrief=true | diagnosticFirst=true | fullCompetitorBreakdown=true | serpSpyV3=true | transparencyBlock=true | emailsPausedToggle=true | competitorDedup=true | provenScanDebug=true | serializedScans=true | claudeCleanupV2=true | mergeClaudeStrip=true | visualTransparency=true | aboveFoldPriority=true | competitorComparisonTable=true | redGreenTracking=true | aioExplicitState=true | perpCopilotState=true | realMergePromptFixed=true ===');
+console.log('=== CONTENTSCALE BOOT v2026-07-08-possible-prioritized-shortcut | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON | possibleThreshold=20impr | shortcutPrioritized=v2 | gscAutoFetchRemoved=true | linkCheckActive=true | wholeSiteWipeGuard=true | gscAutoFetchRestored=true | reminderOffFix=true | claudeRemoved=true | bingWebmaster=true | competitorPanel=true | zeroResultFix=true | pagesRefreshFix=true | recheckButton=true | provenScanStrip=true | provenScanState=true | scanAllProven=true | doEverythingBtn=true | panelOrderFix=true | workflowGuide=true | preScanGuard=true | scanAllGuard=true | earlyGuard=true | emptyStateTeaser=true | provenScopeFix=true | numberedButtons=true | clearerButtons=true | scanAnimFix=true | promptClaudeCleanup=true | bonusTip=true | realProvenContext=true | competitorContext=true | unifiedBrief=true | diagnosticFirst=true | fullCompetitorBreakdown=true | serpSpyV3=true | transparencyBlock=true | emailsPausedToggle=true | competitorDedup=true | provenScanDebug=true | serializedScans=true | claudeCleanupV2=true | mergeClaudeStrip=true | visualTransparency=true | aboveFoldPriority=true | competitorComparisonTable=true | redGreenTracking=true | aioExplicitState=true | perpCopilotState=true | realMergePromptFixed=true | briefContextDebug=true ===');
 // CONTENTSCALE SERVER.JS — ELITE EDITION v4 (FIXED v3)
 // ✅ FIX v7: secondary_keywords + related_keywords auto in Analyse JSON + Execute prompt
 // ✅ FIX v7: analysis_data JSONB safe parse in execute-rewrite
@@ -39664,6 +39664,16 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
       // ── CALL 1: Citation Brief ─────────────────────────────────────────
       const _briefToday = new Date().toISOString().slice(0,10);
       const _briefYear = new Date().getFullYear();
+      console.log('[brief-context-debug]', JSON.stringify({
+        page: page.id, url: pageUrl,
+        cannibalContext_len: _cannibalContext.length,
+        gapContext_len: _gapContext.length,
+        competitorContext_len: _competitorContext.length,
+        snapshot_competitors: (snapshot._competitors||[]).length,
+        snapshot_perp_competitors: (snapshot.ai_perplexity_competitors||[]).length,
+        google_position: snapshot.google_position,
+        tracker_client_id: page.tracker_client_id
+      }));
       const citationPrompt = `You are an AI Citation Strategist. Your job is to create an actionable Citation Brief for a single web page.
 
 CURRENT DATE: Today is ${_briefToday} — treat ${_briefYear} as the current year. For any freshness, recency, or "last updated" recommendation, use ${_briefYear}; NEVER describe an earlier year as "current", "latest", or "this year", and never suggest adding a date that is not ${_briefYear}. If the page content shows an older year (e.g. ${_briefYear - 1} or earlier) anywhere — a heading (H1/H2/H3), title tag, meta description, intro, "last updated", or any "current/latest" claim — explicitly flag it as stale and give the exact replacement text using ${_briefYear} (e.g. rewrite an H1 like "... ${_briefYear - 1}" to "... ${_briefYear}").
@@ -39887,6 +39897,9 @@ GOAL: Rank #1 for "${kw}" and capture the maximum clicks from ${gscImpr || 'the 
         if (arrMatch) recs = arrMatch[0];
         try {
           snapshot.recommendations = JSON.parse(recs);
+          try {
+            console.log('[brief-context-debug] systems returned:', JSON.stringify((snapshot.recommendations||[]).map(r => r.system)));
+          } catch(e) {}
         } catch(e) {
           snapshot.recommendations = [{ title: 'Citation Brief', priority: 'medium', system: 'All', action: recs.substring(0,4000), expected_impact: 'See above' }];
         }
