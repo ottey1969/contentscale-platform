@@ -1,4 +1,4 @@
-console.log('=== CONTENTSCALE BOOT v2026-07-08-possible-prioritized-shortcut | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON | possibleThreshold=20impr | shortcutPrioritized=v2 | gscAutoFetchRemoved=true | linkCheckActive=true | wholeSiteWipeGuard=true | gscAutoFetchRestored=true | reminderOffFix=true | claudeRemoved=true | bingWebmaster=true | competitorPanel=true | zeroResultFix=true | pagesRefreshFix=true | recheckButton=true | provenScanStrip=true | provenScanState=true | scanAllProven=true | doEverythingBtn=true | panelOrderFix=true | workflowGuide=true | preScanGuard=true | scanAllGuard=true | earlyGuard=true | emptyStateTeaser=true | provenScopeFix=true | numberedButtons=true | clearerButtons=true | scanAnimFix=true | promptClaudeCleanup=true | bonusTip=true | realProvenContext=true | competitorContext=true | unifiedBrief=true | diagnosticFirst=true | fullCompetitorBreakdown=true | serpSpyV3=true | transparencyBlock=true | emailsPausedToggle=true | competitorDedup=true | provenScanDebug=true | serializedScans=true | claudeCleanupV2=true ===');
+console.log('=== CONTENTSCALE BOOT v2026-07-08-possible-prioritized-shortcut | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON | possibleThreshold=20impr | shortcutPrioritized=v2 | gscAutoFetchRemoved=true | linkCheckActive=true | wholeSiteWipeGuard=true | gscAutoFetchRestored=true | reminderOffFix=true | claudeRemoved=true | bingWebmaster=true | competitorPanel=true | zeroResultFix=true | pagesRefreshFix=true | recheckButton=true | provenScanStrip=true | provenScanState=true | scanAllProven=true | doEverythingBtn=true | panelOrderFix=true | workflowGuide=true | preScanGuard=true | scanAllGuard=true | earlyGuard=true | emptyStateTeaser=true | provenScopeFix=true | numberedButtons=true | clearerButtons=true | scanAnimFix=true | promptClaudeCleanup=true | bonusTip=true | realProvenContext=true | competitorContext=true | unifiedBrief=true | diagnosticFirst=true | fullCompetitorBreakdown=true | serpSpyV3=true | transparencyBlock=true | emailsPausedToggle=true | competitorDedup=true | provenScanDebug=true | serializedScans=true | claudeCleanupV2=true | mergeClaudeStrip=true | visualTransparency=true | aboveFoldPriority=true | competitorComparisonTable=true ===');
 // CONTENTSCALE SERVER.JS — ELITE EDITION v4 (FIXED v3)
 // ✅ FIX v7: secondary_keywords + related_keywords auto in Analyse JSON + Execute prompt
 // ✅ FIX v7: analysis_data JSONB safe parse in execute-rewrite
@@ -30863,7 +30863,45 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
         var pb = (b.priority || b.p || 'low').toLowerCase();
         return (priOrder[pa] || 2) - (priOrder[pb] || 2);
       });
-      passDiv.innerHTML = '<div style="font-size:11px;font-weight:800;color:#7c3aed;text-transform:uppercase;letter-spacing:.08em;margin:18px 0 14px;">\\u2728 What to do next \\u2014 ranked by impact</div>';
+      var _transparencyHtml = '';
+      try {
+        var _gc = typeof data.google_competitors === 'string' ? JSON.parse(data.google_competitors) : (data.google_competitors||[]);
+        var _pc = typeof data.perp_competitors === 'string' ? JSON.parse(data.perp_competitors) : (data.perp_competitors||[]);
+        if ((_gc && _gc.length) || data.aio_text || data.perp_excerpt || (_pc && _pc.length)) {
+          _transparencyHtml = '<div style="background:linear-gradient(135deg,#0c1220,#0f172a);border:1px solid #1f2937;border-radius:10px;padding:14px 16px;margin-bottom:16px;">'
+            + '<div style="display:flex;align-items:center;gap:6px;margin-bottom:10px;"><span style="font-size:14px;">\\ud83d\\udd0d</span><span style="font-size:11px;font-weight:800;letter-spacing:.06em;color:#60a5fa;text-transform:uppercase;">What we actually checked</span><span style="margin-left:auto;font-size:9px;color:#4b5563;">' + (data.last_checked ? new Date(data.last_checked).toLocaleString() : '') + '</span></div>';
+          if (_gc && _gc.length) {
+            _transparencyHtml += '<div style="font-size:10px;color:#9ca3af;margin-bottom:6px;font-weight:700;">Google top ' + _gc.length + ' \\u2014 who ranks and why:</div>'
+              + '<div style="display:flex;flex-direction:column;gap:3px;margin-bottom:10px;">'
+              + _gc.slice(0,5).map(function(c,i){
+                  var host = ''; try { host = new URL(c.url).hostname.replace(/^www\\./,''); } catch(e) { host = c.url||''; }
+                  return '<div style="font-size:11px;color:#cbd5e1;"><span style="color:#f59e0b;font-weight:700;">#' + (c.position||i+1) + '</span> <span style="color:#60a5fa;">' + host.replace(/</g,'&lt;') + '</span>' + (c.title ? ' \\u2014 <span style="color:#6b7280;">' + c.title.replace(/</g,'&lt;').substring(0,70) + '</span>' : '') + '</div>';
+                }).join('')
+              + '</div>';
+          }
+          if (data.aio_text) {
+            _transparencyHtml += '<div style="font-size:10px;color:#9ca3af;margin-bottom:4px;font-weight:700;">Google AI Overview currently shows:</div>'
+              + '<div style="font-size:11px;color:#cbd5e1;font-style:italic;background:#0d1117;border-left:2px solid #3b82f6;padding:6px 10px;margin-bottom:10px;">\\u201c' + data.aio_text.substring(0,220).replace(/</g,'&lt;') + (data.aio_text.length>220?'\\u2026':'') + '\\u201d</div>';
+          }
+          if (data.perp_excerpt) {
+            _transparencyHtml += '<div style="font-size:10px;color:#9ca3af;margin-bottom:4px;font-weight:700;">Perplexity\\u2019s actual answer:</div>'
+              + '<div style="font-size:11px;color:#cbd5e1;font-style:italic;background:#0d1117;border-left:2px solid #a78bfa;padding:6px 10px;margin-bottom:10px;">\\u201c' + data.perp_excerpt.substring(0,220).replace(/</g,'&lt;') + (data.perp_excerpt.length>220?'\\u2026':'') + '\\u201d</div>';
+          }
+          if (_pc && _pc.length) {
+            _transparencyHtml += '<div style="font-size:10px;color:#9ca3af;margin-bottom:4px;font-weight:700;">Perplexity currently cites (' + _pc.length + '), this page not among them yet:</div>'
+              + '<div style="font-size:11px;color:#cbd5e1;">' + _pc.slice(0,5).map(function(u){ try { return new URL(u).hostname.replace(/^www\\./,''); } catch(e) { return u; } }).join(', ') + '</div>';
+          }
+          var _hasCannibal = allItems.some(function(p){ return /cannib/i.test(p.system||''); });
+          var _hasCompGap = allItems.some(function(p){ return /competitor gap/i.test(p.system||''); });
+          if (_hasCannibal || _hasCompGap) {
+            _transparencyHtml += '<div style="font-size:10px;color:#4ade80;margin-top:4px;">\\u2713 ' + (_hasCannibal?'Cannibalization conflict found and addressed below. ':'') + (_hasCompGap?'Competitor Gap analysis included below.':'') + '</div>';
+          } else {
+            _transparencyHtml += '<div style="font-size:10px;color:#6b7280;margin-top:4px;">No cannibalization conflicts detected for this page against your other tracked pages.</div>';
+          }
+          _transparencyHtml += '</div>';
+        }
+      } catch(e) {}
+      passDiv.innerHTML = _transparencyHtml + '<div style="font-size:11px;font-weight:800;color:#7c3aed;text-transform:uppercase;letter-spacing:.08em;margin:18px 0 14px;">\\u2728 What to do next \\u2014 ranked by impact</div>';
       allItems.slice(0, 7).forEach(function(p, idx) {
         setTimeout(function() {
           var pri = (p.priority || p.p || 'low').toLowerCase();
@@ -30892,6 +30930,33 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
             (action ? '<span class="rec-action">' + action + '</span>' : '') +
             (impact ? '<span class="rec-impact">' + impact + '</span>' : '');
           passDiv.appendChild(el);
+          // Comparison table \u2014 only present on the Competitor Gap action. A real, scannable
+          // lesson for the owner: who beats them, why, and what to do about it \u2014 instead of
+          // burying that in prose they have to parse themselves.
+          try {
+            var _ct = p.comparison_table;
+            if (typeof _ct === 'string') { try { _ct = JSON.parse(_ct); } catch(e) { _ct = null; } }
+            if (_ct && Array.isArray(_ct) && _ct.length) {
+              var tblWrap = document.createElement('div');
+              tblWrap.style.cssText = 'margin:10px 0 4px;overflow-x:auto;border:1px solid #1f2937;border-radius:8px;';
+              var rowsHtml = _ct.map(function(r){
+                return '<tr style="border-top:1px solid #1f2937;">'
+                  + '<td style="padding:8px 10px;font-size:11px;color:#60a5fa;font-weight:700;white-space:nowrap;">' + _escHtml(r.competitor||'') + '</td>'
+                  + '<td style="padding:8px 10px;font-size:11px;color:#86efac;">' + _escHtml(r.what_they_do_well||'') + '</td>'
+                  + '<td style="padding:8px 10px;font-size:11px;color:#fca5a5;">' + _escHtml(r.our_gap||'') + '</td>'
+                  + '<td style="padding:8px 10px;font-size:11px;color:#cbd5e1;">' + _escHtml(r.what_to_do||'') + '</td>'
+                  + '</tr>';
+              }).join('');
+              tblWrap.innerHTML = '<table style="width:100%;border-collapse:collapse;background:#0d1117;">'
+                + '<thead><tr style="background:#161b22;">'
+                + '<th style="padding:8px 10px;font-size:10px;text-align:left;color:#93c5fd;text-transform:uppercase;letter-spacing:.04em;">Competitor</th>'
+                + '<th style="padding:8px 10px;font-size:10px;text-align:left;color:#93c5fd;text-transform:uppercase;letter-spacing:.04em;">What they do well</th>'
+                + '<th style="padding:8px 10px;font-size:10px;text-align:left;color:#93c5fd;text-transform:uppercase;letter-spacing:.04em;">Our gap</th>'
+                + '<th style="padding:8px 10px;font-size:10px;text-align:left;color:#93c5fd;text-transform:uppercase;letter-spacing:.04em;">What to do</th>'
+                + '</tr></thead><tbody>' + rowsHtml + '</tbody></table>';
+              passDiv.appendChild(tblWrap);
+            }
+          } catch(e) {}
         }, idx * 300);
       });
     } else {
@@ -31215,7 +31280,45 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
         var pb = (b.priority || b.p || 'low').toLowerCase();
         return (priOrder[pa] || 2) - (priOrder[pb] || 2);
       });
-      passDiv.innerHTML = '<div style="font-size:11px;font-weight:800;color:#7c3aed;text-transform:uppercase;letter-spacing:.08em;margin:18px 0 14px;">\\u2728 What to do next \\u2014 ranked by impact</div>';
+      var _transparencyHtml2 = '';
+      try {
+        var _gc2 = typeof data.google_competitors === 'string' ? JSON.parse(data.google_competitors) : (data.google_competitors||[]);
+        var _pc2 = typeof data.perp_competitors === 'string' ? JSON.parse(data.perp_competitors) : (data.perp_competitors||[]);
+        if ((_gc2 && _gc2.length) || data.aio_text || data.perp_excerpt || (_pc2 && _pc2.length)) {
+          _transparencyHtml2 = '<div style="background:linear-gradient(135deg,#0c1220,#0f172a);border:1px solid #1f2937;border-radius:10px;padding:14px 16px;margin-bottom:16px;">'
+            + '<div style="display:flex;align-items:center;gap:6px;margin-bottom:10px;"><span style="font-size:14px;">\\ud83d\\udd0d</span><span style="font-size:11px;font-weight:800;letter-spacing:.06em;color:#60a5fa;text-transform:uppercase;">What we actually checked</span><span style="margin-left:auto;font-size:9px;color:#4b5563;">' + (data.last_checked ? new Date(data.last_checked).toLocaleString() : '') + '</span></div>';
+          if (_gc2 && _gc2.length) {
+            _transparencyHtml2 += '<div style="font-size:10px;color:#9ca3af;margin-bottom:6px;font-weight:700;">Google top ' + _gc2.length + ' \\u2014 who ranks and why:</div>'
+              + '<div style="display:flex;flex-direction:column;gap:3px;margin-bottom:10px;">'
+              + _gc2.slice(0,5).map(function(c,i){
+                  var host = ''; try { host = new URL(c.url).hostname.replace(/^www\\./,''); } catch(e) { host = c.url||''; }
+                  return '<div style="font-size:11px;color:#cbd5e1;"><span style="color:#f59e0b;font-weight:700;">#' + (c.position||i+1) + '</span> <span style="color:#60a5fa;">' + host.replace(/</g,'&lt;') + '</span>' + (c.title ? ' \\u2014 <span style="color:#6b7280;">' + c.title.replace(/</g,'&lt;').substring(0,70) + '</span>' : '') + '</div>';
+                }).join('')
+              + '</div>';
+          }
+          if (data.aio_text) {
+            _transparencyHtml2 += '<div style="font-size:10px;color:#9ca3af;margin-bottom:4px;font-weight:700;">Google AI Overview currently shows:</div>'
+              + '<div style="font-size:11px;color:#cbd5e1;font-style:italic;background:#0d1117;border-left:2px solid #3b82f6;padding:6px 10px;margin-bottom:10px;">\\u201c' + data.aio_text.substring(0,220).replace(/</g,'&lt;') + (data.aio_text.length>220?'\\u2026':'') + '\\u201d</div>';
+          }
+          if (data.perp_excerpt) {
+            _transparencyHtml2 += '<div style="font-size:10px;color:#9ca3af;margin-bottom:4px;font-weight:700;">Perplexity\\u2019s actual answer:</div>'
+              + '<div style="font-size:11px;color:#cbd5e1;font-style:italic;background:#0d1117;border-left:2px solid #a78bfa;padding:6px 10px;margin-bottom:10px;">\\u201c' + data.perp_excerpt.substring(0,220).replace(/</g,'&lt;') + (data.perp_excerpt.length>220?'\\u2026':'') + '\\u201d</div>';
+          }
+          if (_pc2 && _pc2.length) {
+            _transparencyHtml2 += '<div style="font-size:10px;color:#9ca3af;margin-bottom:4px;font-weight:700;">Perplexity currently cites (' + _pc2.length + '), this page not among them yet:</div>'
+              + '<div style="font-size:11px;color:#cbd5e1;">' + _pc2.slice(0,5).map(function(u){ try { return new URL(u).hostname.replace(/^www\\./,''); } catch(e) { return u; } }).join(', ') + '</div>';
+          }
+          var _hasCannibal2 = allItems.some(function(p){ return /cannib/i.test(p.system||''); });
+          var _hasCompGap2 = allItems.some(function(p){ return /competitor gap/i.test(p.system||''); });
+          if (_hasCannibal2 || _hasCompGap2) {
+            _transparencyHtml2 += '<div style="font-size:10px;color:#4ade80;margin-top:4px;">\\u2713 ' + (_hasCannibal2?'Cannibalization conflict found and addressed below. ':'') + (_hasCompGap2?'Competitor Gap analysis included below.':'') + '</div>';
+          } else {
+            _transparencyHtml2 += '<div style="font-size:10px;color:#6b7280;margin-top:4px;">No cannibalization conflicts detected for this page against your other tracked pages.</div>';
+          }
+          _transparencyHtml2 += '</div>';
+        }
+      } catch(e) {}
+      passDiv.innerHTML = _transparencyHtml2 + '<div style="font-size:11px;font-weight:800;color:#7c3aed;text-transform:uppercase;letter-spacing:.08em;margin:18px 0 14px;">\\u2728 What to do next \\u2014 ranked by impact</div>';
       allItems.slice(0, 7).forEach(function(p) {
         var pri = (p.priority || p.p || 'low').toLowerCase();
         var priKey = (pri === 'high' || pri === 'h') ? 'high' : (pri === 'medium' || pri === 'med' || pri === 'm') ? 'medium' : 'low';
@@ -31243,6 +31346,30 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
           (action ? '<span class="rec-action">' + action + '</span>' : '') +
           (impact ? '<span class="rec-impact">' + impact + '</span>' : '');
         passDiv.appendChild(el);
+        try {
+          var _ct2 = p.comparison_table;
+          if (typeof _ct2 === 'string') { try { _ct2 = JSON.parse(_ct2); } catch(e) { _ct2 = null; } }
+          if (_ct2 && Array.isArray(_ct2) && _ct2.length) {
+            var tblWrap2 = document.createElement('div');
+            tblWrap2.style.cssText = 'margin:10px 0 4px;overflow-x:auto;border:1px solid #1f2937;border-radius:8px;';
+            var rowsHtml2 = _ct2.map(function(r){
+              return '<tr style="border-top:1px solid #1f2937;">'
+                + '<td style="padding:8px 10px;font-size:11px;color:#60a5fa;font-weight:700;white-space:nowrap;">' + _escHtml(r.competitor||'') + '</td>'
+                + '<td style="padding:8px 10px;font-size:11px;color:#86efac;">' + _escHtml(r.what_they_do_well||'') + '</td>'
+                + '<td style="padding:8px 10px;font-size:11px;color:#fca5a5;">' + _escHtml(r.our_gap||'') + '</td>'
+                + '<td style="padding:8px 10px;font-size:11px;color:#cbd5e1;">' + _escHtml(r.what_to_do||'') + '</td>'
+                + '</tr>';
+            }).join('');
+            tblWrap2.innerHTML = '<table style="width:100%;border-collapse:collapse;background:#0d1117;">'
+              + '<thead><tr style="background:#161b22;">'
+              + '<th style="padding:8px 10px;font-size:10px;text-align:left;color:#93c5fd;text-transform:uppercase;letter-spacing:.04em;">Competitor</th>'
+              + '<th style="padding:8px 10px;font-size:10px;text-align:left;color:#93c5fd;text-transform:uppercase;letter-spacing:.04em;">What they do well</th>'
+              + '<th style="padding:8px 10px;font-size:10px;text-align:left;color:#93c5fd;text-transform:uppercase;letter-spacing:.04em;">Our gap</th>'
+              + '<th style="padding:8px 10px;font-size:10px;text-align:left;color:#93c5fd;text-transform:uppercase;letter-spacing:.04em;">What to do</th>'
+              + '</tr></thead><tbody>' + rowsHtml2 + '</tbody></table>';
+            passDiv.appendChild(tblWrap2);
+          }
+        } catch(e) {}
       });
     } else {
       passDiv.innerHTML = '<div class="cb-passage">No recommendations yet \\u2014 run a scan first.</div>';
@@ -37433,11 +37560,14 @@ app.post('/api/tracker/pages/:id/check', verifyEngineAccess, async (req, res) =>
                         '3. Max 5 items, HIGH first\n' +
                         '4. Every action must be EXACT copy-paste text \u2014 no vague suggestions\n' +
                         '5. Add system field: Google AIO | Perplexity | Copilot | Ranking | Cannibalization | Competitor Gap | Internal Link\n' +
-                        '6. ALWAYS KEEP any NEW BRIEF item with system "Cannibalization", "Competitor Gap", or "Internal Link" \u2014 these are evidence-based findings from real tracker data (shared search queries, live SERP competitors), not generic suggestions, and must never be dropped or replaced by an older, less specific action.\n\n' +
+                        '6. ALWAYS KEEP any NEW BRIEF item with system "Cannibalization", "Competitor Gap", or "Internal Link" \u2014 these are evidence-based findings from real tracker data (shared search queries, live SERP competitors), not generic suggestions, and must never be dropped or replaced by an older, less specific action.\n' +
+
+                        '7. If ANY item in PREVIOUS BRIEF has a system that is NOT one of: Google AIO, Perplexity, Copilot, Ranking, Cannibalization, Competitor Gap, Internal Link (for example "Claude", "Brave", or "Claude/Brave") \u2014 DISCARD that item completely, do not carry it into the merged output under any label. Claude citation checking does not exist in this system; never generate or preserve an action about it.\n' +
+                        '8. ABOVE-THE-FOLD PRIORITY: prefer locations closer to the H1/opening paragraph over ones further down the page \u2014 AI extraction weights the first ~30% of a page far more heavily than the rest. Only place content lower (like a full FAQ section) when it genuinely belongs there structurally.\n\n' +
                         'CORRECT action format example:\n' +
                         '{"title":"Add definition after H1","priority":"high","system":"Google AIO","action":"Add this exact sentence immediately after your H1: \"[keyword] is [specific 40-word definition based on page content].\" This triggers AIO because it provides a quotable definition in the first 100 words.","expected_impact":"Google AIO cites pages with definitions in first 100 words — this puts you in that category"}\n\n' +
                         'Return ONLY valid JSON array, no markdown:\n' +
-                        '[{"title":"max 6 words","priority":"high|medium|low","system":"Google AIO|Perplexity|Copilot|Ranking|Cannibalization|Competitor Gap|Internal Link","action":"EXACT text min 50 words","expected_impact":"[System] cites/ranks because [specific reason]"}]';
+                        '[{"title":"max 6 words","priority":"high|medium|low","system":"Google AIO|Perplexity|Copilot|Ranking|Cannibalization|Competitor Gap|Internal Link","action":"EXACT text min 50 words","expected_impact":"[System] cites/ranks because [specific reason]", "comparison_table (ONLY on the Competitor Gap item, omit for all others)":[{"competitor":"bare domain","what_they_do_well":"specific concrete strength","our_gap":"what this page lacks by comparison","what_to_do":"concrete instruction for this row"}]}]';
 
                       const gResp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${gemKey}`, {
                         method: 'POST',
@@ -39322,6 +39452,7 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
               + '\n';
           }
           _competitorContext += '\nTASK: this is DIAGNOSTIC, not just prescriptive \u2014 the owner needs to see the actual competitive landscape, not one compressed sentence. Write ONE action (system \"Competitor Gap\", priority high or medium) whose \"action\" field is a structured breakdown with these exact labeled parts, in order:\n(1) \"GOOGLE SEARCH \u2014 top results:\" then ONE short line PER competitor listed above (all of them, not just the top one): \"#<position> <url> \u2014 wins because <the specific claim/structure/credential/stat that makes THIS result rank, inferred from its title+snippet>.\"\n(2) \"AI OVERVIEW / AI AGGREGATION \u2014 sourcing:\" 1-2 sentences on what AI Overview and Perplexity actually pull from (a self-contained quotable answer, not just ranking position) \u2014 name the Perplexity-cited sources from the list above if present, or state that this page has no visibility there yet if the list is empty.\n(3) \"YOUR GAP:\" 1-2 sentences naming the ONE specific, recurring thing across these competitors that this page lacks.\n(4) \"FIX:\" the exact copy-paste text that closes that specific gap.\nNever skip straight to the fix \u2014 parts (1)-(3) must stand on their own as genuine competitive findings a human can read and understand BEFORE seeing what to paste.';
+          _competitorContext += '\n\nTABLE REQUIREMENT: this same Competitor Gap action must ALSO include a \"comparison_table\" field \u2014 a JSON array, one row per Google competitor listed above (all of them), each row: {\"competitor\": \"<bare domain, e.g. example.com>\", \"what_they_do_well\": \"<one specific, concrete strength \u2014 a claim, structure, credential, or stat, NOT a vague quality>\", \"our_gap\": \"<what THIS page specifically lacks by comparison>\", \"what_to_do\": \"<one concrete, specific instruction to close that gap for this row>\"}. This is a teaching tool for the owner \u2014 every field must be specific enough that a non-SEO person understands exactly why that competitor outranks them and exactly what to change. Never write \"better content\" or \"more optimized\" \u2014 name the actual claim, number, structure, or credential.';
         }
       } catch(e) {}
       let _sitemapUrls = [];
@@ -39569,6 +39700,7 @@ Analyze the input data and create a Citation Brief with exactly 5 actions. Each 
 6. NO DUPLICATES: never output two actions that touch the same page element or repeat the same change. Each of the 5 actions must target a DISTINCT element/section. If the relevant content already exists on the page, use MODIFY or REPLACE on it — never tell the user to ADD a second copy of something that is already there.
 7. STAY IN YOUR LANE: this is the AI-CITATION brief only. Generate AI-citation passage/structure/schema actions. Do NOT include Google ranking, meta-title, or CTR actions — a separate GSC Brief covers those.
 ${(snapshot.google_position && snapshot.google_position > 10) ? `8. VISIBILITY GATE (REQUIRED FIRST ACTION): this page ranks at #${snapshot.google_position}. Google AI Overview and ChatGPT cite almost only from the top ~10, so passage edits alone will NOT earn an AIO/ChatGPT citation yet. Make ACTION #1 a status item — title like "Rank into top 10 first (AIO gate)", system "Visibility", priority "high" — that states plainly: at #${snapshot.google_position} AIO/ChatGPT will not cite this page until it reaches the top ~10; the ranking work is in the separate GSC Brief; the remaining citation actions below PREPARE the page so it becomes citeable the moment it ranks. Do NOT give ranking how-to here (that belongs in the GSC Brief) — only state the dependency and point to it. The other 4 actions stay citation-focused.` : ''}
+9. ABOVE-THE-FOLD PRIORITY: AI crawlers and extraction systems weight the first ~30% of a page's content far more heavily than the rest — a quotable answer buried at the bottom is far less likely to be lifted than the same answer near the top. So LOCATION is not just about clarity, it is about citation odds: whenever a fix could reasonably go in more than one place, choose the one closer to the H1/opening paragraph over one further down the page, and say so explicitly — e.g. "ADD immediately after your H1 (not further down — AI extraction weights the first ~30% of the page)". Only place something later on the page (e.g. an FAQ near the footer) when it genuinely belongs there structurally (like a full FAQPage block) — never bury a core quotable answer low on the page just for tidiness.
 
 ACTIONS THAT ARE ALREADY RESOLVED — DO NOT INCLUDE THESE:`
 + (snapshot.ai_google_overview_cited ? '\n- AIO cites this page → SKIP all Google AIO actions' : '')
@@ -39597,7 +39729,7 @@ CANNIBALISATION: if one of the sitemap candidate URLs above clearly already targ
 NO FABRICATION (hard rule, overrides everything): NEVER invent a statistic, percentage, figure, date, quote, name, job title, organisation, award, certification, or ranking, and NEVER add an unverifiable superiority claim such as "#1", "best", "top-rated", or "leading" unless it is already proven on the page. If a number or quote would strengthen a passage but you cannot verify it from the page content or cite a real, named source with a real URL, write it with a [bracketed placeholder] for the owner to fill, or leave it out. A fabricated fact is a failed brief.
 
 OUTPUT FORMAT — return ONLY this JSON, no markdown, no explanation, no preamble:
-[{"title":"6 words max describing the gap","priority":"high","system":"Google AIO","action":"[OPERATION] + [LOCATION] + exact copy-paste text. Pick the operation that fits the GAP — if the element already exists (definition, micro-answer, FAQ, schema, author), use MODIFY or REPLACE on it, NEVER ADD a duplicate. e.g. 'MODIFY your existing direct-answer block to: ...' or 'ADD as a new FAQ answer: ...'. End with: This makes the page more citeable for Google AI Overview because [specific reason based on AIO requirements above].","expected_impact":"Increases the likelihood of an AIO citation once the page ranks in the top ~10 and is re-crawled — state the honest dependency, not a guarantee"}]
+[{"title":"6 words max describing the gap","priority":"high","system":"Google AIO","action":"[OPERATION] + [LOCATION] + exact copy-paste text. Pick the operation that fits the GAP — if the element already exists (definition, micro-answer, FAQ, schema, author), use MODIFY or REPLACE on it, NEVER ADD a duplicate. e.g. 'MODIFY your existing direct-answer block to: ...' or 'ADD as a new FAQ answer: ...'. End with: This makes the page more citeable for Google AI Overview because [specific reason based on AIO requirements above].","expected_impact":"Increases the likelihood of an AIO citation once the page ranks in the top ~10 and is re-crawled — state the honest dependency, not a guarantee", "comparison_table (ONLY on the Competitor Gap item, omit for all others)":[{"competitor":"bare domain","what_they_do_well":"specific concrete strength","our_gap":"what this page lacks by comparison","what_to_do":"concrete instruction for this row"}]}]
 
 IMPACT HONESTY RULE: AI citation is never guaranteed. NEVER write that an engine "will cite" the page, and never promise a fixed number of crawl cycles. Use likelihood language ("increases the likelihood", "makes the page eligible", "improves the chance") and always name the dependency (ranking into the top 10 for AIO/ChatGPT; being indexed in Bing for Copilot). An honest, qualified impact line is required — an over-promise is a failed action.
 
@@ -39672,7 +39804,8 @@ Each action must include:
    - "NEW BLOCK before the footer: <content>"
    Never give content without naming WHERE it goes and WHETHER it is added, merged, or replaced.
 6. NO DUPLICATES: never output two actions that touch the same page element or repeat the same change. Each action must target a DISTINCT element/section. If the relevant content already exists, use MODIFY or REPLACE on it — never tell the user to ADD a second copy of something already there.
-7. STAY IN YOUR LANE: this is the GOOGLE-RANKING brief only. Generate ranking/CTR/meta/content-gap actions. Do NOT repeat AI-citation passage additions (Perplexity/AIO/Copilot text) — a separate Citation Brief covers those.${_alreadyOnPage ? '\n\nALREADY ON PAGE — do NOT recommend adding any of these (skip entirely, or MODIFY/REPLACE only when genuinely weak; re-recommending existing content wastes the owner time and causes duplicates):' + _alreadyOnPage : ''}
+7. STAY IN YOUR LANE: this is the GOOGLE-RANKING brief only. Generate ranking/CTR/meta/content-gap actions. Do NOT repeat AI-citation passage additions (Perplexity/AIO/Copilot text) — a separate Citation Brief covers those.
+8. ABOVE-THE-FOLD PRIORITY: AI extraction and Google's own snippet/AIO selection weight the first ~30% of a page's content far more heavily than the rest. When a content-gap fix could reasonably go in more than one place, prefer the location closer to the H1/opening paragraph and say so — e.g. "ADD immediately after your H1 (not further down the page)". Only place content later (like a full FAQ section) when it genuinely belongs there structurally.${_alreadyOnPage ? '\n\nALREADY ON PAGE — do NOT recommend adding any of these (skip entirely, or MODIFY/REPLACE only when genuinely weak; re-recommending existing content wastes the owner time and causes duplicates):' + _alreadyOnPage : ''}
 
 REQUIRED ACTION TYPES (include all of these):
 - A "Meta Title & Description (Rank Math)" action — ALWAYS include this. Give the EXACT SEO Title (max 60 characters, must contain "${kw}") and the EXACT Meta Description (max 155 characters, compelling, includes "${kw}"). Format the action as: "[FOR GOOGLE RANKING] REPLACE in Rank Math → SEO Title: <title>  |  REPLACE in Rank Math → Meta Description: <description>". This is where the client pastes it in WordPress (Rank Math plugin), so be explicit.
@@ -39692,7 +39825,7 @@ TOOL/APP SAFETY: if the page is a functional tool/app/calculator rather than an 
 EVERYTHING WRITTEN OUT (hard rule, applies to EVERY action): the "action" field must contain the literal final text the owner pastes — the exact title, the exact paragraph(s) with real sentences, the exact FAQ Q&A, the exact <a href> line, the exact schema JSON. NEVER output a task-description like "expand the content", "add FAQs", "improve the intro", "rewrite for depth", "build internal links", "add backlinks" without the finished text beside it. The only allowed placeholders are square-bracket owner-facts for things you genuinely cannot know: [OWNER: insert real response time], [OWNER: insert years in business], [OWNER: insert license number] — used ONLY for verifiable facts, never to avoid writing prose. If an action would need a real figure to be complete, write the full sentence with the [OWNER: ...] placeholder in place, e.g. "Our crews reach most NJ sites within [OWNER: insert typical response time] of your call." A backlink cannot be pasted, so instead of "get backlinks" write the concrete outreach step: which type of site to contact and the exact anchor text to request.
 
 OUTPUT FORMAT — return ONLY this JSON, no markdown:
-[{"title":"6 words max","priority":"high","trigger":"Specific GSC signal that triggered this (e.g. '9,196 impressions, 2.7% CTR = title mismatch')","action":"Starts with [FOR GOOGLE RANKING] + OPERATION + LOCATION, e.g. 'REPLACE in Rank Math → SEO Title: ...' or 'ADD after your H1: ...' or 'MERGE into your opening paragraph: ...' — always copy-paste ready text","expected_impact":"Honest, qualified effect — direction + dependency, e.g. 'Should improve CTR and support a climb toward page 1 after re-crawl; the exact gain depends on competition'. NEVER a guaranteed position or a fixed deadline","effort":"quick_win"}]
+[{"title":"6 words max","priority":"high","trigger":"Specific GSC signal that triggered this (e.g. '9,196 impressions, 2.7% CTR = title mismatch')","action":"Starts with [FOR GOOGLE RANKING] + OPERATION + LOCATION, e.g. 'REPLACE in Rank Math → SEO Title: ...' or 'ADD after your H1: ...' or 'MERGE into your opening paragraph: ...' — always copy-paste ready text","expected_impact":"Honest, qualified effect — direction + dependency, e.g. 'Should improve CTR and support a climb toward page 1 after re-crawl; the exact gain depends on competition'. NEVER a guaranteed position or a fixed deadline","effort":"quick_win", "comparison_table (ONLY on the Competitor Content Gap item, omit for all others)":[{"competitor":"bare domain","what_they_do_well":"specific concrete strength","our_gap":"what this page lacks by comparison","what_to_do":"concrete instruction for this row"}]}]
 
 IMPACT HONESTY RULE: ranking improvement is never guaranteed. NEVER write a fixed "position X → Y" target or a fixed "within N weeks" deadline. Use honest, qualified language ("should help", "supports a climb toward", "addresses the gap that holds it back") and always name the dependency (Google re-crawl, keyword competition). A guaranteed number or deadline is a failed action.
 
