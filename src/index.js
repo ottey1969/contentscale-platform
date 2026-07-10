@@ -1,4 +1,4 @@
-console.log('=== CONTENTSCALE BOOT v2026-07-08-possible-prioritized-shortcut | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON | possibleThreshold=20impr | shortcutPrioritized=v2 | gscAutoFetchRemoved=true | linkCheckActive=true | wholeSiteWipeGuard=true | gscAutoFetchRestored=true | reminderOffFix=true | claudeRemoved=true | bingWebmaster=true | competitorPanel=true | zeroResultFix=true | pagesRefreshFix=true | recheckButton=true | provenScanStrip=true | provenScanState=true | scanAllProven=true | doEverythingBtn=true | panelOrderFix=true | workflowGuide=true | preScanGuard=true | scanAllGuard=true | earlyGuard=true | emptyStateTeaser=true | provenScopeFix=true | numberedButtons=true | clearerButtons=true | scanAnimFix=true | promptClaudeCleanup=true | bonusTip=true | realProvenContext=true | competitorContext=true | unifiedBrief=true | diagnosticFirst=true | fullCompetitorBreakdown=true | serpSpyV3=true | transparencyBlock=true | emailsPausedToggle=true | competitorDedup=true | provenScanDebug=true | serializedScans=true | claudeCleanupV2=true | mergeClaudeStrip=true | visualTransparency=true | aboveFoldPriority=true | competitorComparisonTable=true | redGreenTracking=true | aioExplicitState=true | perpCopilotState=true | realMergePromptFixed=true | briefContextDebug=true | forceRescanBypass=true | gscPosFallback=true | cannibalDedup=true | gscAccessGated=true | gapConfirmShown=true | noPlaceholders=true | rowNumContrast=true ===');
+console.log('=== CONTENTSCALE BOOT v2026-07-08-possible-prioritized-shortcut | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON | possibleThreshold=20impr | shortcutPrioritized=v2 | gscAutoFetchRemoved=true | linkCheckActive=true | wholeSiteWipeGuard=true | gscAutoFetchRestored=true | reminderOffFix=true | claudeRemoved=true | bingWebmaster=true | competitorPanel=true | zeroResultFix=true | pagesRefreshFix=true | recheckButton=true | provenScanStrip=true | provenScanState=true | scanAllProven=true | doEverythingBtn=true | panelOrderFix=true | workflowGuide=true | preScanGuard=true | scanAllGuard=true | earlyGuard=true | emptyStateTeaser=true | provenScopeFix=true | numberedButtons=true | clearerButtons=true | scanAnimFix=true | promptClaudeCleanup=true | bonusTip=true | realProvenContext=true | competitorContext=true | unifiedBrief=true | diagnosticFirst=true | fullCompetitorBreakdown=true | serpSpyV3=true | transparencyBlock=true | emailsPausedToggle=true | competitorDedup=true | provenScanDebug=true | serializedScans=true | claudeCleanupV2=true | mergeClaudeStrip=true | visualTransparency=true | aboveFoldPriority=true | competitorComparisonTable=true | redGreenTracking=true | aioExplicitState=true | perpCopilotState=true | realMergePromptFixed=true | briefContextDebug=true | forceRescanBypass=true | gscPosFallback=true | cannibalDedup=true | gscAccessGated=true | gapConfirmShown=true | noPlaceholders=true | rowNumContrast=true | codeCannibalDedup=true ===');
 // CONTENTSCALE SERVER.JS — ELITE EDITION v4 (FIXED v3)
 // ✅ FIX v7: secondary_keywords + related_keywords auto in Analyse JSON + Execute prompt
 // ✅ FIX v7: analysis_data JSONB safe parse in execute-rewrite
@@ -39982,6 +39982,30 @@ GOAL: Rank #1 for "${kw}" and capture the maximum clicks from ${gscImpr || 'the 
         } catch(e) {
           snapshot.gsc_brief = [{ title: 'GSC Brief', priority: 'medium', trigger: 'See text', action: gscRecs.substring(0,4000), expected_impact: 'Ranking improvement', effort: 'content' }];
         }
+        // ── CODE-LEVEL DEDUPE: cannibalization is meant to live ONLY in the Citation Brief (it writes
+        // the actual differentiation passage). The prompt asks GSC Brief to skip it, but that
+        // instruction is not always followed reliably — so enforce it here too: if a GSC Brief item
+        // targets the SAME conflicting URL as an AIO Brief cannibalization item, drop the GSC one.
+        try {
+          if (Array.isArray(snapshot.gsc_brief) && Array.isArray(snapshot.recommendations)) {
+            const _citCannibalUrls = [];
+            snapshot.recommendations.forEach(r => {
+              if (/cannib/i.test(r.system||'')) {
+                const _urls = ((r.title||'') + ' ' + (r.action||'')).match(/https?:\/\/[^\s"'<>]+/g) || [];
+                _urls.forEach(u => _citCannibalUrls.push(u.replace(/\/+$/,'').toLowerCase()));
+              }
+            });
+            if (_citCannibalUrls.length) {
+              snapshot.gsc_brief = snapshot.gsc_brief.filter(g => {
+                const _isCannibalLike = /cannib|differentiat/i.test((g.title||'') + ' ' + (g.action||'') + ' ' + (g.trigger||''));
+                if (!_isCannibalLike) return true;
+                const _gUrls = ((g.title||'') + ' ' + (g.action||'') + ' ' + (g.trigger||'')).match(/https?:\/\/[^\s"'<>]+/g) || [];
+                const _overlaps = _gUrls.some(u => _citCannibalUrls.includes(u.replace(/\/+$/,'').toLowerCase()));
+                return !_overlaps; // drop it if it targets the same URL the Citation Brief already covered
+              });
+            }
+          }
+        } catch(_dedupErr) {}
       } else {
         console.warn('[tracker] GSC Gemini failed:', gscResp.status, gscResp.errorMessage || '');
       }
