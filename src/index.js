@@ -1,4 +1,4 @@
-console.log('=== CONTENTSCALE BOOT v2026-07-08-possible-prioritized-shortcut | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON | possibleThreshold=20impr | shortcutPrioritized=v2 | gscAutoFetchRemoved=true | linkCheckActive=true | wholeSiteWipeGuard=true | gscAutoFetchRestored=true | reminderOffFix=true | claudeRemoved=true | bingWebmaster=true | competitorPanel=true | zeroResultFix=true | pagesRefreshFix=true | recheckButton=true | provenScanStrip=true | provenScanState=true | scanAllProven=true | doEverythingBtn=true | panelOrderFix=true | workflowGuide=true | preScanGuard=true | scanAllGuard=true | earlyGuard=true | emptyStateTeaser=true | provenScopeFix=true | numberedButtons=true | clearerButtons=true | scanAnimFix=true | promptClaudeCleanup=true | bonusTip=true | realProvenContext=true | competitorContext=true | unifiedBrief=true | diagnosticFirst=true | fullCompetitorBreakdown=true | serpSpyV3=true | transparencyBlock=true | emailsPausedToggle=true | competitorDedup=true | provenScanDebug=true | serializedScans=true | claudeCleanupV2=true | mergeClaudeStrip=true | visualTransparency=true | aboveFoldPriority=true | competitorComparisonTable=true | redGreenTracking=true | aioExplicitState=true | perpCopilotState=true | realMergePromptFixed=true | briefContextDebug=true | forceRescanBypass=true | gscPosFallback=true ===');
+console.log('=== CONTENTSCALE BOOT v2026-07-08-possible-prioritized-shortcut | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON | possibleThreshold=20impr | shortcutPrioritized=v2 | gscAutoFetchRemoved=true | linkCheckActive=true | wholeSiteWipeGuard=true | gscAutoFetchRestored=true | reminderOffFix=true | claudeRemoved=true | bingWebmaster=true | competitorPanel=true | zeroResultFix=true | pagesRefreshFix=true | recheckButton=true | provenScanStrip=true | provenScanState=true | scanAllProven=true | doEverythingBtn=true | panelOrderFix=true | workflowGuide=true | preScanGuard=true | scanAllGuard=true | earlyGuard=true | emptyStateTeaser=true | provenScopeFix=true | numberedButtons=true | clearerButtons=true | scanAnimFix=true | promptClaudeCleanup=true | bonusTip=true | realProvenContext=true | competitorContext=true | unifiedBrief=true | diagnosticFirst=true | fullCompetitorBreakdown=true | serpSpyV3=true | transparencyBlock=true | emailsPausedToggle=true | competitorDedup=true | provenScanDebug=true | serializedScans=true | claudeCleanupV2=true | mergeClaudeStrip=true | visualTransparency=true | aboveFoldPriority=true | competitorComparisonTable=true | redGreenTracking=true | aioExplicitState=true | perpCopilotState=true | realMergePromptFixed=true | briefContextDebug=true | forceRescanBypass=true | gscPosFallback=true | cannibalDedup=true | gscAccessGated=true | gapConfirmShown=true | noPlaceholders=true ===');
 // CONTENTSCALE SERVER.JS — ELITE EDITION v4 (FIXED v3)
 // ✅ FIX v7: secondary_keywords + related_keywords auto in Analyse JSON + Execute prompt
 // ✅ FIX v7: analysis_data JSONB safe parse in execute-rewrite
@@ -1798,8 +1798,13 @@ app.patch('/api/tracker-client/:token/pages/:pageId/done', async (req, res) => {
 // With page_id: per-page Queries CSV from GSC → Pages → [page] → Queries → Export (replaces only that page's set — EXACT ownership, no matching needed).
 app.post('/api/tracker-client/:token/gsc-queries', async (req, res) => {
   try {
-    const cr = await pool.query('SELECT id FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status != $2)', [req.params.token, 'deleted']);
+    const cr = await pool.query('SELECT id, gsc_enabled FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status != $2)', [req.params.token, 'deleted']);
     if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
+    // This endpoint feeds Impression Gap, cannibalization detection, and the Lead Queue — all
+    // paid-tier features gated behind the admin's gsc_enabled toggle. Without this check, a
+    // free-tier account could paste a Queries CSV and unlock those features without ever being
+    // granted access.
+    if (!cr.rows[0].gsc_enabled) return res.status(403).json({ success: false, error: 'GSC data import is not enabled for this account — ask your admin to enable it.' });
     const clientId = cr.rows[0].id;
     const queries = Array.isArray(req.body.queries) ? req.body.queries.slice(0, 500) : [];
     if (!queries.length) return res.json({ success: true, saved: 0 });
@@ -1958,8 +1963,9 @@ app.get('/api/tracker-client/:token/gsc-autofetch-status', async (req, res) => {
 app.post('/api/tracker-client/:token/gsc-autofetch-page', async (req, res) => {
   if (!_gscServiceAccount) return res.status(503).json({ success: false, error: 'GSC auto-fetch is not configured on this server — use manual CSV import instead.' });
   try {
-    const cr = await pool.query("SELECT id FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status != 'deleted')", [req.params.token]);
+    const cr = await pool.query("SELECT id, gsc_enabled FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status != 'deleted')", [req.params.token]);
     if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
+    if (!cr.rows[0].gsc_enabled) return res.status(403).json({ success: false, error: 'GSC is not enabled for this account — ask your admin to enable it.' });
     const pageId = parseInt(req.body.page_id, 10);
     if (!pageId) return res.status(400).json({ success: false, error: 'page_id required' });
     const pr = await pool.query('SELECT id, url FROM tracker_pages WHERE id=$1 AND tracker_client_id=$2', [pageId, cr.rows[0].id]);
@@ -2678,9 +2684,13 @@ app.post('/api/tracker-client/:token/refresh-gsc', async (req, res) => {
 // Body: { pages: [{url, keyword, intent, clicks, impressions, position, priority}], ...] }
 app.post('/api/tracker-client/:token/import-gsc-pages', async (req, res) => {
   try {
-    const cr = await pool.query('SELECT id, max_pages FROM tracker_clients WHERE token=$1', [req.params.token]);
+    const cr = await pool.query('SELECT id, max_pages, gsc_enabled FROM tracker_clients WHERE token=$1', [req.params.token]);
     if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Client not found' });
-    
+    // Admin's gsc_enabled toggle is authoritative — a client cannot unlock GSC-gated features (GSC
+    // Brief, Impression Gap, cannibalization detection via query overlap) by simply importing data
+    // that LOOKS like GSC data. Free-tier accounts must not gain paid-tier features this way.
+    if (!cr.rows[0].gsc_enabled) return res.status(403).json({ success: false, error: 'GSC import is not enabled for this account — ask your admin to enable it.' });
+
     const clientId = cr.rows[0].id;
     const { pages } = req.body;
     if (!Array.isArray(pages) || !pages.length) return res.status(400).json({ success: false, error: 'pages array required' });
@@ -30916,10 +30926,11 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
           }
           var _hasCannibal = allItems.some(function(p){ return /cannib/i.test(p.system||''); });
           var _hasCompGap = allItems.some(function(p){ return /competitor gap/i.test(p.system||''); });
-          if (_hasCannibal || _hasCompGap) {
-            _transparencyHtml += '<div style="font-size:10px;color:#4ade80;margin-top:4px;">\\u2713 ' + (_hasCannibal?'Cannibalization conflict found and addressed below. ':'') + (_hasCompGap?'Competitor Gap analysis included below.':'') + '</div>';
+          var _hasImprGap = allItems.some(function(p){ return /impression.?gap|impression.?growth|ready-to-paste section/i.test((p.title||'')+' '+(p.action||'')); });
+          if (_hasCannibal || _hasCompGap || _hasImprGap) {
+            _transparencyHtml += '<div style="font-size:10px;color:#4ade80;margin-top:4px;">\\u2713 ' + (_hasCannibal?'Cannibalization conflict found and addressed below. ':'') + (_hasCompGap?'Competitor Gap analysis included below. ':'') + (_hasImprGap?'Impression Gap opportunity included below.':'') + '</div>';
           } else {
-            _transparencyHtml += '<div style="font-size:10px;color:#6b7280;margin-top:4px;">No cannibalization conflicts detected for this page against your other tracked pages.</div>';
+            _transparencyHtml += '<div style="font-size:10px;color:#6b7280;margin-top:4px;">No cannibalization conflicts or open Impression Gap families detected for this page.</div>';
           }
           _transparencyHtml += '</div>';
         }
@@ -31342,10 +31353,11 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
           }
           var _hasCannibal2 = allItems.some(function(p){ return /cannib/i.test(p.system||''); });
           var _hasCompGap2 = allItems.some(function(p){ return /competitor gap/i.test(p.system||''); });
-          if (_hasCannibal2 || _hasCompGap2) {
-            _transparencyHtml2 += '<div style="font-size:10px;color:#4ade80;margin-top:4px;">\\u2713 ' + (_hasCannibal2?'Cannibalization conflict found and addressed below. ':'') + (_hasCompGap2?'Competitor Gap analysis included below.':'') + '</div>';
+          var _hasImprGap2 = allItems.some(function(p){ return /impression.?gap|impression.?growth|ready-to-paste section/i.test((p.title||'')+' '+(p.action||'')); });
+          if (_hasCannibal2 || _hasCompGap2 || _hasImprGap2) {
+            _transparencyHtml2 += '<div style="font-size:10px;color:#4ade80;margin-top:4px;">\\u2713 ' + (_hasCannibal2?'Cannibalization conflict found and addressed below. ':'') + (_hasCompGap2?'Competitor Gap analysis included below. ':'') + (_hasImprGap2?'Impression Gap opportunity included below.':'') + '</div>';
           } else {
-            _transparencyHtml2 += '<div style="font-size:10px;color:#6b7280;margin-top:4px;">No cannibalization conflicts detected for this page against your other tracked pages.</div>';
+            _transparencyHtml2 += '<div style="font-size:10px;color:#6b7280;margin-top:4px;">No cannibalization conflicts or open Impression Gap families detected for this page.</div>';
           }
           _transparencyHtml2 += '</div>';
         }
@@ -39423,9 +39435,9 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
       if (_realAuthor) {
         _alreadyOnPage += '\n\nAUTHOR — USE ONLY THESE VERIFIED DETAILS (do NOT add any other author numbers): ' + _realAuthor;
       } else if (!_brandContext) {
-        _alreadyOnPage += '\n\nAUTHOR / E-E-A-T RULE: You do NOT know this site\'s author. If you recommend adding author credentials, NEVER invent specific numbers (years of experience, number of clients, sites, success percentages, countries, certifications). Output a fill-in TEMPLATE with [bracketed placeholders] for the owner to complete with their own verifiable details — e.g. "About the Author: [Name], [role] with [X] years in [field]. [Verifiable result or credential]." Never present invented statistics as if they were facts.';
+        _alreadyOnPage += '\n\nAUTHOR / E-E-A-T RULE: You do NOT know this site\'s author. NEVER invent specific numbers (years of experience, number of clients, sites, success percentages, countries, certifications), and NEVER output a placeholder template with brackets. Instead, if you recommend strengthening E-E-A-T, write it around what CAN be verified — the company/team name and service area, e.g. "Written by the [Company Name] team, a licensed [service area] contractor." If no company details are available either, skip the author-credentials action entirely rather than emit a fill-in-the-blank.';
       } else {
-        _alreadyOnPage += '\n\nAUTHOR / E-E-A-T RULE: Use only author details found in the OWNER-PROVIDED CONTEXT above. If a specific author number is not written there, do NOT invent it — use a [placeholder] instead.';
+        _alreadyOnPage += '\n\nAUTHOR / E-E-A-T RULE: Use only author details found in the OWNER-PROVIDED CONTEXT above. If a specific author number is not written there, do NOT invent it and do NOT use a placeholder — write around it using only what is verifiable, or skip that specific claim.';
       }
 
       // Stripped text for content comparison
@@ -39566,7 +39578,7 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
                         + '\n\nWRITE THE SECTION, DO NOT JUST DESCRIBE IT. For the highest-impression family above, output a ready-to-paste section INSIDE this brief, clearly marked, containing:\n'
                         + '  \u2022 One question-form H2 that quotes the query verbatim where natural (e.g. "<h2>How fast can you get emergency roof repair in NJ?</h2>").\n'
                         + '  \u2022 A 40-60 word answer directly below it, answer-first, specific, entity-anchored to this business.\n'
-                        + 'HARD RULES for the written section: (1) NEVER invent numbers, dates, prices, certifications, review counts or guarantees \u2014 if a real figure would strengthen it, write a placeholder like [OWNER: insert response time] so the owner fills the real value. (2) No fluff, no "in today\u2019s world" openers. (3) Plain HTML only (<h2>, <p>). (4) Label it exactly as "\u2500\u2500 READY-TO-PASTE SECTION \u2500\u2500" so it is easy to find and copy. This lets the owner paste it as-is, edit it, or hand it to an external writer \u2014 their choice.';
+                        + 'HARD RULES for the written section: (1) NEVER invent numbers, dates, prices, certifications, review counts or guarantees \u2014 and NEVER use a bracketed placeholder either. If a real figure would strengthen a sentence but is not verifiable, rewrite the sentence so it reads naturally without that figure (e.g. \"same-day dispatch\" instead of a specific made-up response time). (2) No fluff, no "in today\u2019s world" openers. (3) Plain HTML only (<h2>, <p>). (4) Label it exactly as "\u2500\u2500 READY-TO-PASTE SECTION \u2500\u2500" so it is easy to find and copy. This lets the owner paste it as-is, edit it, or hand it to an external writer \u2014 their choice.';
                     }
                   }
                 }
@@ -39718,7 +39730,7 @@ Perplexity:
 - Needs clear author credentials and E-E-A-T signals with specifics (years, clients count, notable results)
 - Needs specific data points, statistics, or original research
 - Needs outbound links to authoritative sources
-- Strongly benefits from 2-4 attributed EXPERT QUOTES (blockquote + cite) from REAL, NAMED sources with real URLs — e.g. a published study, or a named author at a known publication (Ahrefs, Search Engine Land, Google Search Central). Recommend adding these. CRITICAL: never fabricate a quote, name, title, organization, statistic, or URL. If you cannot supply a real, verifiable source, output the blockquote with [bracketed placeholders] for the owner to fill — never invent one.
+- Strongly benefits from 2-4 attributed EXPERT QUOTES (blockquote + cite) from REAL, NAMED sources with real URLs — e.g. a published study, or a named author at a known publication (Ahrefs, Search Engine Land, Google Search Central). Recommend adding these. CRITICAL: never fabricate a quote, name, title, organization, statistic, or URL. If you cannot supply a real, verifiable quote with a real named source and real URL, do NOT recommend adding a quote at all for this action — skip that idea entirely rather than write a placeholder or invented one.
 - Loves numbered lists and step-by-step formats
 
 Microsoft Copilot:
@@ -39763,14 +39775,14 @@ TOOL/APP SAFETY (decide this first): if the page is a functional tool, calculato
 
 CANNIBALISATION: if one of the sitemap candidate URLs above clearly already targets the SAME keyword/intent as "${kw}", do NOT suggest linking to it. Instead output ONE action (system "Cannibalisation", priority "medium") that names the conflicting URL and recommends differentiating the two pages' intent or canonicalising, so two of the owner's own pages stop competing for the same query.
 
-NO FABRICATION (hard rule, overrides everything): NEVER invent a statistic, percentage, figure, date, quote, name, job title, organisation, award, certification, or ranking, and NEVER add an unverifiable superiority claim such as "#1", "best", "top-rated", or "leading" unless it is already proven on the page. If a number or quote would strengthen a passage but you cannot verify it from the page content or cite a real, named source with a real URL, write it with a [bracketed placeholder] for the owner to fill, or leave it out. A fabricated fact is a failed brief.
+NO FABRICATION (hard rule, overrides everything): NEVER invent a statistic, percentage, figure, date, quote, name, job title, organisation, award, certification, or ranking, and NEVER add an unverifiable superiority claim such as "#1", "best", "top-rated", or "leading" unless it is already proven on the page. If a number or quote would strengthen a passage but you cannot verify it from the page content or cite a real, named source with a real URL, DO NOT use a placeholder or bracket — rewrite the sentence so it reads naturally WITHOUT that specific detail (e.g. instead of "with [X] years of experience" write "with years of hands-on experience"; instead of a fake response time, write "fast, same-day dispatch" if that is supported by the page, or omit the claim). Every sentence delivered must be finished, real prose the owner can paste as-is — never a fill-in-the-blank. A fabricated fact is a failed brief; so is a bracketed placeholder.
 
 OUTPUT FORMAT — return ONLY this JSON, no markdown, no explanation, no preamble:
 [{"title":"6 words max describing the gap","priority":"high","system":"Google AIO","action":"[OPERATION] + [LOCATION] + exact copy-paste text. Pick the operation that fits the GAP — if the element already exists (definition, micro-answer, FAQ, schema, author), use MODIFY or REPLACE on it, NEVER ADD a duplicate. e.g. 'MODIFY your existing direct-answer block to: ...' or 'ADD as a new FAQ answer: ...'. End with: This makes the page more citeable for Google AI Overview because [specific reason based on AIO requirements above].","expected_impact":"Increases the likelihood of an AIO citation once the page ranks in the top ~10 and is re-crawled — state the honest dependency, not a guarantee", "comparison_table (ONLY on the Competitor Gap item, omit for all others)":[{"competitor":"bare domain","what_they_do_well":"specific concrete strength","our_gap":"what this page lacks by comparison","what_to_do":"concrete instruction for this row"}]}]
 
 IMPACT HONESTY RULE: AI citation is never guaranteed. NEVER write that an engine "will cite" the page, and never promise a fixed number of crawl cycles. Use likelihood language ("increases the likelihood", "makes the page eligible", "improves the chance") and always name the dependency (ranking into the top 10 for AIO/ChatGPT; being indexed in Bing for Copilot). An honest, qualified impact line is required — an over-promise is a failed action.
 
-EVERYTHING WRITTEN OUT (hard rule): the "action" field must contain the literal final text the owner pastes — exact passage, exact FAQ Q&A, exact blockquote, exact schema JSON, exact <a href> line. NEVER output a task-description ("add an FAQ", "include statistics", "strengthen E-E-A-T", "add author credentials") without the finished text beside it. The ONLY allowed placeholders are square-bracket owner-facts you genuinely cannot know — [OWNER: insert years in business], [AUTHOR NAME], [real source URL] — used only for verifiable facts, never to skip writing prose. Write the full sentence with the placeholder inside it, e.g. "With [OWNER: insert number] completed NJ roofing projects, our team…".
+EVERYTHING WRITTEN OUT (hard rule): the "action" field must contain the literal final text the owner pastes — exact passage, exact FAQ Q&A, exact blockquote, exact schema JSON, exact <a href> line. NEVER output a task-description ("add an FAQ", "include statistics", "strengthen E-E-A-T", "add author credentials") without the finished text beside it. NO PLACEHOLDERS OF ANY KIND — not [OWNER: ...], not [AUTHOR NAME], not [insert X]. If a specific fact (years in business, project count, a name, a URL) is not verifiable from the page or profile, rewrite the sentence so it does not need that fact — e.g. instead of "With [OWNER: insert number] completed NJ roofing projects" write "With a strong track record of completed NJ roofing projects". Deliver only finished, ready-to-paste prose — never a fill-in-the-blank.
 
 QUALITY BAR: Every action must be so specific that the user can implement it in under 10 minutes without asking any follow-up questions. If you write "improve your introduction" you have failed. Write the introduction FOR them.`;
       // ── CALL 2: GSC Ranking Brief ──────────────────────────────────────
@@ -39842,6 +39854,7 @@ Each action must include:
    Never give content without naming WHERE it goes and WHETHER it is added, merged, or replaced.
 6. NO DUPLICATES: never output two actions that touch the same page element or repeat the same change. Each action must target a DISTINCT element/section. If the relevant content already exists, use MODIFY or REPLACE on it — never tell the user to ADD a second copy of something already there.
 7. STAY IN YOUR LANE: this is the GOOGLE-RANKING brief only. Generate ranking/CTR/meta/content-gap actions. Do NOT repeat AI-citation passage additions (Perplexity/AIO/Copilot text) — a separate Citation Brief covers those.
+9. CANNIBALIZATION IS OWNED BY THE CITATION BRIEF: if the cannibalization context above lists a conflicting page, do NOT write your own "Differentiate from X page" action here — the Citation Brief already writes that exact passage. Only touch a cannibalization-related page here if the fix is a DIFFERENT, genuinely GSC-specific thing (e.g. a meta title clash, not intent/content overlap). When in doubt, skip it here rather than duplicate.
 8. ABOVE-THE-FOLD PRIORITY: AI extraction and Google's own snippet/AIO selection weight the first ~30% of a page's content far more heavily than the rest. When a content-gap fix could reasonably go in more than one place, prefer the location closer to the H1/opening paragraph and say so — e.g. "ADD immediately after your H1 (not further down the page)". Only place content later (like a full FAQ section) when it genuinely belongs there structurally.${_alreadyOnPage ? '\n\nALREADY ON PAGE — do NOT recommend adding any of these (skip entirely, or MODIFY/REPLACE only when genuinely weak; re-recommending existing content wastes the owner time and causes duplicates):' + _alreadyOnPage : ''}
 
 REQUIRED ACTION TYPES (include all of these):
@@ -39859,7 +39872,7 @@ NO FABRICATION (hard rule): NEVER invent a statistic, figure, date, quote, name,
 
 TOOL/APP SAFETY: if the page is a functional tool/app/calculator rather than an article, restrict content actions to INSERTS that add sections above/below the tool; never rewrite its structure, IDs, or scripts.
 
-EVERYTHING WRITTEN OUT (hard rule, applies to EVERY action): the "action" field must contain the literal final text the owner pastes — the exact title, the exact paragraph(s) with real sentences, the exact FAQ Q&A, the exact <a href> line, the exact schema JSON. NEVER output a task-description like "expand the content", "add FAQs", "improve the intro", "rewrite for depth", "build internal links", "add backlinks" without the finished text beside it. The only allowed placeholders are square-bracket owner-facts for things you genuinely cannot know: [OWNER: insert real response time], [OWNER: insert years in business], [OWNER: insert license number] — used ONLY for verifiable facts, never to avoid writing prose. If an action would need a real figure to be complete, write the full sentence with the [OWNER: ...] placeholder in place, e.g. "Our crews reach most NJ sites within [OWNER: insert typical response time] of your call." A backlink cannot be pasted, so instead of "get backlinks" write the concrete outreach step: which type of site to contact and the exact anchor text to request.
+EVERYTHING WRITTEN OUT (hard rule, applies to EVERY action): the "action" field must contain the literal final text the owner pastes — the exact title, the exact paragraph(s) with real sentences, the exact FAQ Q&A, the exact <a href> line, the exact schema JSON. NEVER output a task-description like "expand the content", "add FAQs", "improve the intro", "rewrite for depth", "build internal links", "add backlinks" without the finished text beside it. NO PLACEHOLDERS OF ANY KIND — not [OWNER: ...], not [insert X]. If an action would otherwise need an unverifiable figure (a specific response time, years in business, a license number), rewrite the sentence so it does not depend on that number — e.g. instead of "within [OWNER: insert typical response time] of your call" write "with fast, same-day dispatch" if that is supported by the page, or drop the specific claim entirely. Deliver only finished, ready-to-paste prose. A backlink cannot be pasted, so instead of "get backlinks" write the concrete outreach step: which type of site to contact and the exact anchor text to request.
 
 OUTPUT FORMAT — return ONLY this JSON, no markdown:
 [{"title":"6 words max","priority":"high","trigger":"Specific GSC signal that triggered this (e.g. '9,196 impressions, 2.7% CTR = title mismatch')","action":"Starts with [FOR GOOGLE RANKING] + OPERATION + LOCATION, e.g. 'REPLACE in Rank Math → SEO Title: ...' or 'ADD after your H1: ...' or 'MERGE into your opening paragraph: ...' — always copy-paste ready text","expected_impact":"Honest, qualified effect — direction + dependency, e.g. 'Should improve CTR and support a climb toward page 1 after re-crawl; the exact gain depends on competition'. NEVER a guaranteed position or a fixed deadline","effort":"quick_win", "comparison_table (ONLY on the Competitor Content Gap item, omit for all others)":[{"competitor":"bare domain","what_they_do_well":"specific concrete strength","our_gap":"what this page lacks by comparison","what_to_do":"concrete instruction for this row"}]}]
