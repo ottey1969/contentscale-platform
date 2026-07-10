@@ -1,4 +1,4 @@
-console.log('=== CONTENTSCALE BOOT v2026-07-08-possible-prioritized-shortcut | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON | possibleThreshold=20impr | shortcutPrioritized=v2 | gscAutoFetchRemoved=true | linkCheckActive=true | wholeSiteWipeGuard=true | gscAutoFetchRestored=true | reminderOffFix=true | claudeRemoved=true | bingWebmaster=true | competitorPanel=true | zeroResultFix=true | pagesRefreshFix=true | recheckButton=true | provenScanStrip=true | provenScanState=true | scanAllProven=true | doEverythingBtn=true | panelOrderFix=true | workflowGuide=true | preScanGuard=true | scanAllGuard=true | earlyGuard=true | emptyStateTeaser=true | provenScopeFix=true | numberedButtons=true | clearerButtons=true | scanAnimFix=true | promptClaudeCleanup=true | bonusTip=true | realProvenContext=true | competitorContext=true | unifiedBrief=true | diagnosticFirst=true | fullCompetitorBreakdown=true | serpSpyV3=true | transparencyBlock=true | emailsPausedToggle=true | competitorDedup=true | provenScanDebug=true | serializedScans=true | claudeCleanupV2=true | mergeClaudeStrip=true | visualTransparency=true | aboveFoldPriority=true | competitorComparisonTable=true | redGreenTracking=true | aioExplicitState=true | perpCopilotState=true | realMergePromptFixed=true | briefContextDebug=true | forceRescanBypass=true | gscPosFallback=true | cannibalDedup=true | gscAccessGated=true | gapConfirmShown=true | noPlaceholders=true | rowNumContrast=true | codeCannibalDedup=true | provenDebugRemoved=true | broaderCannibalDedup=true | competitorGapFallback=true | competitorPrevSnapFallback=true | hubSpokeDedup=true | compGapRegexBroadened=true | gapFixLabelFallback=true | geminiProForBriefs=true | timeoutBudgetFixed=true ===');
+console.log('=== CONTENTSCALE BOOT v2026-07-08-possible-prioritized-shortcut | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON | possibleThreshold=20impr | shortcutPrioritized=v2 | gscAutoFetchRemoved=true | linkCheckActive=true | wholeSiteWipeGuard=true | gscAutoFetchRestored=true | reminderOffFix=true | claudeRemoved=true | bingWebmaster=true | competitorPanel=true | zeroResultFix=true | pagesRefreshFix=true | recheckButton=true | provenScanStrip=true | provenScanState=true | scanAllProven=true | doEverythingBtn=true | panelOrderFix=true | workflowGuide=true | preScanGuard=true | scanAllGuard=true | earlyGuard=true | emptyStateTeaser=true | provenScopeFix=true | numberedButtons=true | clearerButtons=true | scanAnimFix=true | promptClaudeCleanup=true | bonusTip=true | realProvenContext=true | competitorContext=true | unifiedBrief=true | diagnosticFirst=true | fullCompetitorBreakdown=true | serpSpyV3=true | transparencyBlock=true | emailsPausedToggle=true | competitorDedup=true | provenScanDebug=true | serializedScans=true | claudeCleanupV2=true | mergeClaudeStrip=true | visualTransparency=true | aboveFoldPriority=true | competitorComparisonTable=true | redGreenTracking=true | aioExplicitState=true | perpCopilotState=true | realMergePromptFixed=true | briefContextDebug=true | forceRescanBypass=true | gscPosFallback=true | cannibalDedup=true | gscAccessGated=true | gapConfirmShown=true | noPlaceholders=true | rowNumContrast=true | codeCannibalDedup=true | provenDebugRemoved=true | broaderCannibalDedup=true | competitorGapFallback=true | competitorPrevSnapFallback=true | hubSpokeDedup=true | compGapRegexBroadened=true | gapFixLabelFallback=true | geminiProForBriefs=true | timeoutBudgetFixed=true | perAttemptTimeout45s=true ===');
 // CONTENTSCALE SERVER.JS — ELITE EDITION v4 (FIXED v3)
 // ✅ FIX v7: secondary_keywords + related_keywords auto in Analyse JSON + Execute prompt
 // ✅ FIX v7: analysis_data JSONB safe parse in execute-rewrite
@@ -279,7 +279,7 @@ async function callGeminiWithFallback(apiKey, body, primaryModel, fallbackModel,
 
   const tryModel = async (model, attemptNum) => {
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 28000);
+    const timer = setTimeout(() => controller.abort(), 45000);
     try {
       const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
         method: 'POST',
@@ -293,7 +293,7 @@ async function callGeminiWithFallback(apiKey, body, primaryModel, fallbackModel,
     } catch (fetchErr) {
       clearTimeout(timer);
       if (fetchErr.name === 'AbortError') {
-        return { ok: false, status: 408, data: {}, modelUsed: model, errorMessage: 'Gemini request timed out after 28s' };
+        return { ok: false, status: 408, data: {}, modelUsed: model, errorMessage: 'Gemini request timed out after 45s' };
       }
       return { ok: false, status: 0, data: {}, modelUsed: model, errorMessage: fetchErr.message || 'Network error' };
     }
@@ -39906,11 +39906,12 @@ QUALITY BAR: A user with zero SEO knowledge must be able to implement every acti
 
 GOAL: Rank #1 for "${kw}" and capture the maximum clicks from ${gscImpr || 'the available'} monthly impressions.`;
       // Run both in parallel
-      // 65s — must comfortably exceed the WORST case inside callGeminiWithFallback: a 28s attempt on
-      // the slower gemini-2.5-pro, then (if that fails/times out) a full second 28s attempt on the
-      // gemini-2.5-flash fallback. 30s was sized for flash-lite-only and cut the flash fallback off
-      // before it could ever finish, which is exactly what caused the "all providers busy" failure.
-      var _briefTimeout = function(){ return new Promise(function(res){ setTimeout(function(){ res({ ok:false, status:408, errorMessage:'brief time budget exceeded' }); }, 65000); }); };
+      // 100s — must comfortably exceed the worst case: a 45s attempt on gemini-2.5-pro, then (if
+      // that fails) a full second 45s attempt on the gemini-2.5-flash fallback. The per-attempt
+      // ceiling itself was raised from 28s to 45s because today's prompts have grown large enough
+      // (cannibalization evidence, competitor data, gap context, above-the-fold rules, etc.) that
+      // even the faster flash model was brushing up against the old 28s limit on its own.
+      var _briefTimeout = function(){ return new Promise(function(res){ setTimeout(function(){ res({ ok:false, status:408, errorMessage:'brief time budget exceeded' }); }, 100000); }); };
       const [citResp, gscResp] = await Promise.all([
         Promise.race([ callGeminiWithFallback(geminiKey, {
           contents: [{ role: 'user', parts: [{ text: citationPrompt + _langDirective }] }],
@@ -40224,7 +40225,7 @@ If no unanchored claims found, return empty array: []`;
         sourceResp = await Promise.race([ callGeminiWithFallback(geminiKey, {
           contents: [{ role: 'user', parts: [{ text: sourcePrompt }] }],
           generationConfig: { temperature: 0.2, maxOutputTokens: 1500 }
-        }, GEMINI_MODEL_BRIEF, null, 1), new Promise(function(res){ setTimeout(function(){ res({ ok:false, status:408, errorMessage:'source time budget exceeded' }); }, 60000); }) ]);
+        }, GEMINI_MODEL_BRIEF, null, 1), new Promise(function(res){ setTimeout(function(){ res({ ok:false, status:408, errorMessage:'source time budget exceeded' }); }, 100000); }) ]);
         if (sourceResp.ok) {
           let srcRecs = sourceResp.data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
           srcRecs = srcRecs.replace(/^\`\`\`json\n?/i,'').replace(/\`\`\`\s*$/,'').trim();
