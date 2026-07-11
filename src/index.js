@@ -1,4 +1,4 @@
-console.log('=== CONTENTSCALE BOOT ' + new Date().toISOString() + ' v2026-07-08-possible-prioritized-shortcut | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON | possibleThreshold=20impr | shortcutPrioritized=v2 | gscAutoFetchRemoved=true | linkCheckActive=true | wholeSiteWipeGuard=true | gscAutoFetchRestored=true | reminderOffFix=true | claudeRemoved=true | bingWebmaster=true | competitorPanel=true | zeroResultFix=true | pagesRefreshFix=true | recheckButton=true | provenScanStrip=true | provenScanState=true | scanAllProven=true | doEverythingBtn=true | panelOrderFix=true | workflowGuide=true | preScanGuard=true | scanAllGuard=true | earlyGuard=true | emptyStateTeaser=true | provenScopeFix=true | numberedButtons=true | clearerButtons=true | scanAnimFix=true | promptClaudeCleanup=true | bonusTip=true | realProvenContext=true | competitorContext=true | unifiedBrief=true | diagnosticFirst=true | fullCompetitorBreakdown=true | serpSpyV3=true | transparencyBlock=true | emailsPausedToggle=true | competitorDedup=true | provenScanDebug=true | serializedScans=true | claudeCleanupV2=true | mergeClaudeStrip=true | visualTransparency=true | aboveFoldPriority=true | competitorComparisonTable=true | redGreenTracking=true | aioExplicitState=true | perpCopilotState=true | realMergePromptFixed=true | briefContextDebug=true | forceRescanBypass=true | gscPosFallback=true | cannibalDedup=true | gscAccessGated=true | gapConfirmShown=true | noPlaceholders=true | rowNumContrast=true | codeCannibalDedup=true | provenDebugRemoved=true | broaderCannibalDedup=true | competitorGapFallback=true | competitorPrevSnapFallback=true | hubSpokeDedup=true | compGapRegexBroadened=true | gapFixLabelFallback=true | geminiProForBriefs=true | timeoutBudgetFixed=true | perAttemptTimeout45s=true | revertToFlashLite=true | tokenLimitDoubled=true | urlNormFix=true | impactFieldChecked=true | broaderHubPattern=true | cannibalContextRemovedFromGSC=true | scanStateDerivedFromDB=true ===');
+console.log('=== CONTENTSCALE BOOT ' + new Date().toISOString() + ' v2026-07-08-possible-prioritized-shortcut | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON | possibleThreshold=20impr | shortcutPrioritized=v2 | gscAutoFetchRemoved=true | linkCheckActive=true | wholeSiteWipeGuard=true | gscAutoFetchRestored=true | reminderOffFix=true | claudeRemoved=true | bingWebmaster=true | competitorPanel=true | zeroResultFix=true | pagesRefreshFix=true | recheckButton=true | provenScanStrip=true | provenScanState=true | scanAllProven=true | doEverythingBtn=true | panelOrderFix=true | workflowGuide=true | preScanGuard=true | scanAllGuard=true | earlyGuard=true | emptyStateTeaser=true | provenScopeFix=true | numberedButtons=true | clearerButtons=true | scanAnimFix=true | promptClaudeCleanup=true | bonusTip=true | realProvenContext=true | competitorContext=true | unifiedBrief=true | diagnosticFirst=true | fullCompetitorBreakdown=true | serpSpyV3=true | transparencyBlock=true | emailsPausedToggle=true | competitorDedup=true | provenScanDebug=true | serializedScans=true | claudeCleanupV2=true | mergeClaudeStrip=true | visualTransparency=true | aboveFoldPriority=true | competitorComparisonTable=true | redGreenTracking=true | aioExplicitState=true | perpCopilotState=true | realMergePromptFixed=true | briefContextDebug=true | forceRescanBypass=true | gscPosFallback=true | cannibalDedup=true | gscAccessGated=true | gapConfirmShown=true | noPlaceholders=true | rowNumContrast=true | codeCannibalDedup=true | provenDebugRemoved=true | broaderCannibalDedup=true | competitorGapFallback=true | competitorPrevSnapFallback=true | hubSpokeDedup=true | compGapRegexBroadened=true | gapFixLabelFallback=true | geminiProForBriefs=true | timeoutBudgetFixed=true | perAttemptTimeout45s=true | revertToFlashLite=true | tokenLimitDoubled=true | urlNormFix=true | impactFieldChecked=true | broaderHubPattern=true | cannibalContextRemovedFromGSC=true | scanStateDerivedFromDB=true | boardBriefRestyled=true ===');
 // CONTENTSCALE SERVER.JS — ELITE EDITION v4 (FIXED v3)
 // ✅ FIX v7: secondary_keywords + related_keywords auto in Analyse JSON + Execute prompt
 // ✅ FIX v7: analysis_data JSONB safe parse in execute-rewrite
@@ -2143,7 +2143,8 @@ app.get('/api/tracker-client/:token/latest-briefs', async (req, res) => {
               p.brief_before_score, p.brief_after_score, p.brief_after_at,
               (p.specialist_html IS NOT NULL AND p.specialist_html != '') AS has_deliverable,
               s.checked_at, s.google_position, s.ai_google_overview_cited, s.ai_perplexity_cited, s.ai_bing_cited, s.ai_bing_text, s.ai_brave_cited,
-              s.score, s.recommendations, s.gsc_brief, s.source_suggestions
+              s.score, s.recommendations, s.gsc_brief, s.source_suggestions,
+              s.google_competitors, s.ai_perplexity_competitors, s.ai_google_overview_text, s.ai_perplexity_text, s.ai_google_overview_found
        FROM tracker_pages p
        LEFT JOIN LATERAL (
          SELECT * FROM tracker_snapshots WHERE page_id = p.id ORDER BY checked_at DESC LIMIT 1
@@ -2177,6 +2178,13 @@ app.get('/api/tracker-client/:token/latest-briefs', async (req, res) => {
         gsc_brief: gscB,
         source_suggestions: srcB,
         gsc_clicks: p.gsc_clicks, gsc_impressions: p.gsc_impressions, gsc_position: p.gsc_position,
+        // Transparency data so the board card can render the same "What we actually checked"
+        // competitor block the full Citation Brief shows — same evidence, same trust, no rescan.
+        competitors: _arr(p.google_competitors),
+        perp_competitors: _arr(p.ai_perplexity_competitors),
+        aio_text: p.ai_google_overview_text || '',
+        perp_text: p.ai_perplexity_text || '',
+        aio_found: !!p.ai_google_overview_found,
         page_id: p.id,
         brief_status: p.brief_status || 'open',
         brief_before_score: p.brief_before_score,
@@ -3335,6 +3343,26 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
 .bd-name input{background:#0d1117;border:1px solid #1f2937;border-radius:8px;padding:7px 11px;color:#e5e7eb;font-size:12px;width:150px}
 .bd-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:16px;padding:20px;max-width:1700px;margin:0 auto}
 .bw-card{background:#0d1117;border:1px solid #1f2937;border-radius:16px;padding:18px;display:flex;flex-direction:column}
+.bw-scroll{max-height:420px;overflow-y:auto;overflow-x:hidden;margin:8px 0;padding-right:6px}
+.bw-scroll::-webkit-scrollbar{width:8px}
+.bw-scroll::-webkit-scrollbar-track{background:#0b0f16;border-radius:4px}
+.bw-scroll::-webkit-scrollbar-thumb{background:#374151;border-radius:4px}
+.bw-scroll::-webkit-scrollbar-thumb:hover{background:#4b5563}
+.bw-trans{background:rgba(30,58,138,.14);border:1px solid rgba(59,130,246,.30);border-radius:10px;padding:11px 13px;margin:10px 0}
+.bw-trans-h{font-size:11px;font-weight:800;color:#60a5fa;letter-spacing:.04em;margin-bottom:7px}
+.bw-trans-sub{font-size:11px;font-weight:700;color:#cbd5e1;margin:6px 0 4px}
+.bw-comp{font-size:11px;line-height:1.6;color:#94a3b8;word-break:break-word}
+.bw-comp-n{color:#60a5fa;font-weight:800}
+.bw-comp-u{color:#93c5fd;text-decoration:none;font-weight:600}
+.bw-comp-u:hover{text-decoration:underline}
+.bw-comp-t{color:#94a3b8}
+.bw-trans-line{font-size:10.5px;color:#94a3b8;line-height:1.55;margin-top:5px}
+.bw-sec-h{font-size:11px;font-weight:800;letter-spacing:.05em;margin:12px 0 7px}
+.bw-rec-meta{display:flex;gap:6px;align-items:center;margin-bottom:5px;flex-wrap:wrap}
+.bw-prio{font-size:9px;font-weight:800;padding:2px 7px;border-radius:4px;border:1px solid;letter-spacing:.04em}
+.bw-sys{font-size:9px;font-weight:700;padding:2px 7px;border-radius:4px;background:rgba(124,58,237,.15);color:#c4b5fd}
+.bw-rec-sig{font-size:10.5px;color:#94a3b8;font-style:italic;margin-bottom:5px;line-height:1.5}
+.bw-rec-imp{font-size:10.5px;color:#a78bfa;margin-top:6px;line-height:1.5}
 .bw-card.s-open{border-color:rgba(22,163,74,.4)}
 .bw-card.s-progress{border-color:rgba(217,119,6,.45)}
 .bw-card.s-done{opacity:.55}
@@ -3365,7 +3393,7 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
 .bw-chip .l{font-size:8px;color:#6b7280;text-transform:uppercase;letter-spacing:.06em;margin-top:2px}
 .bw-rec{border-left:3px solid #7c3aed;padding:2px 0 2px 12px;margin-bottom:11px}
 .bw-rec-t{font-size:13px;font-weight:800;color:#f1f5f9;margin-bottom:3px}
-.bw-rec-b{font-size:12px;color:#9ca3af;line-height:1.5}
+.bw-rec-b{font-size:12px;color:#cbd5e1;line-height:1.6;background:#0b0f16;border:1px solid #1f2937;border-radius:8px;padding:9px 11px;margin-top:4px;white-space:pre-wrap;word-break:break-word}
 .bd-actions{margin-top:auto;padding-top:14px;display:flex;gap:8px;flex-wrap:wrap}
 .bd-btn{border:none;border-radius:9px;padding:9px 15px;font-size:12px;font-weight:800;cursor:pointer}
 .bd-btn.claim{background:#7c3aed;color:#fff}
@@ -3402,13 +3430,45 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
   function chip(v,l,c){ return '<div class="bw-chip"><div class="v" style="color:'+c+'">'+v+'</div><div class="l">'+l+'</div></div>'; }
   function chips(d){ var pos=d.position||d.gsc_position; var pc=(!pos)?'#6b7280':pos<=3?'#4ade80':pos<=10?'#a3e635':pos<=20?'#fbbf24':'#f87171';
     return '<div class="bw-chips">'+chip(pos?('#'+pos):'-','Position',pc)+chip(d.aio_cited?'YES':'NO','AIO',d.aio_cited?'#4ade80':'#6b7280')+chip(d.perp_cited?'YES':'NO','Perplexity',d.perp_cited?'#a78bfa':'#6b7280')+chip(d.bing_cited?'YES':'NO','Copilot',d.bing_cited?'#60a5fa':'#6b7280')+(d.score?chip(d.score,'GRAAF','#a78bfa'):'')+'</div>'; }
+  function transparency(d){
+    var comp=d.competitors||[]; var pcomp=d.perp_competitors||[];
+    if(!comp.length && !pcomp.length && !d.aio_text && !d.perp_text) return '';
+    var h='<div class="bw-trans"><div class="bw-trans-h">&#128269; WHAT WE ACTUALLY CHECKED</div>';
+    if(comp.length){
+      h+='<div class="bw-trans-sub">Google top 5 &mdash; who ranks and why:</div>';
+      h+=comp.slice(0,5).map(function(c,i){
+        var host=''; try{ host=String(c.url||'').split('/')[2]||''; }catch(e){ host=''; }
+        var ttl=c.title?(' &mdash; '+esc(String(c.title).slice(0,70))):'';
+        return '<div class="bw-comp"><span class="bw-comp-n">#'+(c.position||i+1)+'</span> <a href="'+esc(c.url||'#')+'" target="_blank" rel="noopener" class="bw-comp-u">'+esc(host)+'</a><span class="bw-comp-t">'+ttl+'</span></div>';
+      }).join('');
+    }
+    h+='<div class="bw-trans-line">Google AI Overview: '+(d.aio_text?('shown &mdash; '+esc(String(d.aio_text).slice(0,150))+'...'):'checked &mdash; not shown for this exact query right now.')+'</div>';
+    h+='<div class="bw-trans-line">Perplexity: '+(d.perp_text?('&ldquo;'+esc(String(d.perp_text).slice(0,150))+'...&rdquo;'):'checked &mdash; no answer excerpt captured for this query.')+'</div>';
+    if(pcomp.length){ h+='<div class="bw-trans-line">Perplexity currently cites ('+pcomp.length+'), this page not among them yet: '+esc(pcomp.slice(0,5).join(', '))+'</div>'; }
+    return h+'</div>';
+  }
   function recs(d){ var out='';
-    var _lbl=function(t,c){ return '<div style="font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:'+c+';margin:8px 0 4px;font-weight:600">'+t+'</div>'; };
+    var _card=function(p,sysColor){
+      var t=p.title||p.h2||p.heading||'Recommendation';
+      var b=p.action||p.passage||p.body||p.text||'';
+      var prio=(p.priority||'medium').toUpperCase();
+      var pc=prio==='HIGH'?'#f87171':(prio==='LOW'?'#6b7280':'#fbbf24');
+      var sys=p.system||'';
+      var imp=p.expected_impact||'';
+      var sig=p.trigger||p.signal||'';
+      return '<div class="bw-rec" style="border-left:3px solid '+sysColor+'">'
+        + '<div class="bw-rec-meta"><span class="bw-prio" style="color:'+pc+';border-color:'+pc+'">'+esc(prio)+'</span>'+(sys?'<span class="bw-sys">'+esc(sys)+'</span>':'')+'</div>'
+        + '<div class="bw-rec-t">'+esc(t)+'</div>'
+        + (sig?'<div class="bw-rec-sig">'+esc(sig)+'</div>':'')
+        + (b?'<div class="bw-rec-b">'+esc(b)+'</div>':'')
+        + (imp?'<div class="bw-rec-imp">&rarr; '+esc(imp)+'</div>':'')
+        + '</div>';
+    };
     var items=d.passages||[];
-    if(items.length){ out+=_lbl('AI citations','#a78bfa')+items.map(function(p){ var t=p.title||p.h2||p.heading||'Recommendation'; var b=p.action||p.passage||p.body||p.text||''; if(b.length>200)b=b.slice(0,200)+'...'; return '<div class="bw-rec"><div class="bw-rec-t">'+esc(t)+'</div>'+(b?'<div class="bw-rec-b">'+esc(b)+'</div>':'')+'</div>'; }).join(''); }
+    if(items.length){ out+='<div class="bw-sec-h" style="color:#a78bfa">&#10024; WHAT TO DO NEXT &mdash; AI CITATIONS</div>'+items.map(function(p){ return _card(p,'#7c3aed'); }).join(''); }
     var gsc=d.gsc_brief||[];
-    if(gsc.length){ out+=_lbl('GSC ranking','#a3e635')+gsc.map(function(g){ var t=g.title||'GSC recommendation'; var b=g.action||g.expected_impact||g.trigger||''; if(b.length>200)b=b.slice(0,200)+'...'; return '<div class="bw-rec"><div class="bw-rec-t">'+esc(t)+'</div>'+(b?'<div class="bw-rec-b">'+esc(b)+'</div>':'')+'</div>'; }).join(''); }
-    return out; }
+    if(gsc.length){ out+='<div class="bw-sec-h" style="color:#a3e635">&#128200; GOOGLE RANKING (GSC)</div>'+gsc.map(function(g){ return _card(g,'#65a30d'); }).join(''); }
+    return out?('<div class="bw-scroll">'+out+'</div>'):''; }
   function badge(st,who){ if(st==='published')return '<span class="bd-badge pub">PUBLISHED</span>'; if(st==='approved')return '<span class="bd-badge appr">APPROVED'+(who?' - '+esc(who):'')+'</span>'; if(st==='submitted')return '<span class="bd-badge subm">SUBMITTED'+(who?' - '+esc(who):'')+'</span>'; if(st==='done')return '<span class="bd-badge done">DONE</span>'; if(st==='in_progress')return '<span class="bd-badge progress">IN PROGRESS'+(who?' - '+esc(who):'')+'</span>'; return '<span class="bd-badge open">OPEN</span>'; }
   function scoreLine(d){ var a=d.brief_after_score, b=d.brief_before_score;
     if(a==null && b==null) return '';
@@ -3447,7 +3507,7 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
     if(!list.length){ grid.innerHTML='<div class="bd-empty">'+(_filter==='mine'?'No work assigned to you yet. The lead assigns briefs from the Lead Panel — assigned work shows here, most urgent first.':(_filter!=='all'?'No briefs in this status.':'No briefs yet - they appear here after a scan.'))+'</div>'; return; }
     grid.innerHTML=list.map(function(d){
       var st=d.brief_status||'open'; var cls=st==='published'?'s-pub':st==='approved'?'s-appr':st==='submitted'?'s-subm':st==='done'?'s-done':st==='in_progress'?'s-progress':'s-open';
-      return '<div class="bw-card '+cls+'"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:6px"><div style="min-width:0"><div class="bw-url">'+esc(cleanUrl(d.url))+'</div><div class="bw-time">Scanned '+fmtTime(d.ts)+'</div></div><div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end;flex-shrink:0">'+badge(st,d.brief_claimed_by)+dlBadge(d)+'</div></div>'+rejBanner(d)+chips(d)+scoreLine(d)+recs(d)+'<div class="bd-actions">'+actions(d)+'<button class="bd-btn sec" onclick="copyBrief('+d.page_id+',this)">Copy brief</button><a class="bd-btn sec" href="'+esc(d.url)+'" target="_blank" rel="noopener" style="text-decoration:none">Open page</a></div></div>';
+      return '<div class="bw-card '+cls+'"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:6px"><div style="min-width:0"><div class="bw-url">'+esc(cleanUrl(d.url))+'</div><div class="bw-time">Scanned '+fmtTime(d.ts)+'</div></div><div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end;flex-shrink:0">'+badge(st,d.brief_claimed_by)+dlBadge(d)+'</div></div>'+rejBanner(d)+chips(d)+scoreLine(d)+transparency(d)+recs(d)+'<div class="bd-actions">'+actions(d)+'<a class="bd-btn sec" href="'+esc(d.url)+'" target="_blank" rel="noopener" style="text-decoration:none">Open page</a></div></div>';
     }).join('');
   }
   function ensureName(){ if(_name) return true; var n=prompt('Enter your name to see the work assigned to you:'); if(n&&n.trim()){ saveName(n); document.getElementById('bdName').value=_name; return true; } return false; }
