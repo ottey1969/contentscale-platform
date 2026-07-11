@@ -1,4 +1,4 @@
-console.log('=== CONTENTSCALE BOOT ' + new Date().toISOString() + ' v2026-07-08-possible-prioritized-shortcut | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON | possibleThreshold=20impr | shortcutPrioritized=v2 | gscAutoFetchRemoved=true | linkCheckActive=true | wholeSiteWipeGuard=true | gscAutoFetchRestored=true | reminderOffFix=true | claudeRemoved=true | bingWebmaster=true | competitorPanel=true | zeroResultFix=true | pagesRefreshFix=true | recheckButton=true | provenScanStrip=true | provenScanState=true | scanAllProven=true | doEverythingBtn=true | panelOrderFix=true | workflowGuide=true | preScanGuard=true | scanAllGuard=true | earlyGuard=true | emptyStateTeaser=true | provenScopeFix=true | numberedButtons=true | clearerButtons=true | scanAnimFix=true | promptClaudeCleanup=true | bonusTip=true | realProvenContext=true | competitorContext=true | unifiedBrief=true | diagnosticFirst=true | fullCompetitorBreakdown=true | serpSpyV3=true | transparencyBlock=true | emailsPausedToggle=true | competitorDedup=true | provenScanDebug=true | serializedScans=true | claudeCleanupV2=true | mergeClaudeStrip=true | visualTransparency=true | aboveFoldPriority=true | competitorComparisonTable=true | redGreenTracking=true | aioExplicitState=true | perpCopilotState=true | realMergePromptFixed=true | briefContextDebug=true | forceRescanBypass=true | gscPosFallback=true | cannibalDedup=true | gscAccessGated=true | gapConfirmShown=true | noPlaceholders=true | rowNumContrast=true | codeCannibalDedup=true | provenDebugRemoved=true | broaderCannibalDedup=true | competitorGapFallback=true | competitorPrevSnapFallback=true | hubSpokeDedup=true | compGapRegexBroadened=true | gapFixLabelFallback=true | geminiProForBriefs=true | timeoutBudgetFixed=true | perAttemptTimeout45s=true | revertToFlashLite=true | tokenLimitDoubled=true | urlNormFix=true | impactFieldChecked=true | broaderHubPattern=true | cannibalContextRemovedFromGSC=true ===');
+console.log('=== CONTENTSCALE BOOT ' + new Date().toISOString() + ' v2026-07-08-possible-prioritized-shortcut | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON | possibleThreshold=20impr | shortcutPrioritized=v2 | gscAutoFetchRemoved=true | linkCheckActive=true | wholeSiteWipeGuard=true | gscAutoFetchRestored=true | reminderOffFix=true | claudeRemoved=true | bingWebmaster=true | competitorPanel=true | zeroResultFix=true | pagesRefreshFix=true | recheckButton=true | provenScanStrip=true | provenScanState=true | scanAllProven=true | doEverythingBtn=true | panelOrderFix=true | workflowGuide=true | preScanGuard=true | scanAllGuard=true | earlyGuard=true | emptyStateTeaser=true | provenScopeFix=true | numberedButtons=true | clearerButtons=true | scanAnimFix=true | promptClaudeCleanup=true | bonusTip=true | realProvenContext=true | competitorContext=true | unifiedBrief=true | diagnosticFirst=true | fullCompetitorBreakdown=true | serpSpyV3=true | transparencyBlock=true | emailsPausedToggle=true | competitorDedup=true | provenScanDebug=true | serializedScans=true | claudeCleanupV2=true | mergeClaudeStrip=true | visualTransparency=true | aboveFoldPriority=true | competitorComparisonTable=true | redGreenTracking=true | aioExplicitState=true | perpCopilotState=true | realMergePromptFixed=true | briefContextDebug=true | forceRescanBypass=true | gscPosFallback=true | cannibalDedup=true | gscAccessGated=true | gapConfirmShown=true | noPlaceholders=true | rowNumContrast=true | codeCannibalDedup=true | provenDebugRemoved=true | broaderCannibalDedup=true | competitorGapFallback=true | competitorPrevSnapFallback=true | hubSpokeDedup=true | compGapRegexBroadened=true | gapFixLabelFallback=true | geminiProForBriefs=true | timeoutBudgetFixed=true | perAttemptTimeout45s=true | revertToFlashLite=true | tokenLimitDoubled=true | urlNormFix=true | impactFieldChecked=true | broaderHubPattern=true | cannibalContextRemovedFromGSC=true | scanStateDerivedFromDB=true ===');
 // CONTENTSCALE SERVER.JS — ELITE EDITION v4 (FIXED v3)
 // ✅ FIX v7: secondary_keywords + related_keywords auto in Analyse JSON + Execute prompt
 // ✅ FIX v7: analysis_data JSONB safe parse in execute-rewrite
@@ -29749,7 +29749,22 @@ async function setAllManualDone(on) {
 var _gapQueries = null;
 var _sitemapSlugs = [];
 var _gapAnalysis = null;
-var _provenScannedSlugs = {}; // persists across cannibal panel re-renders within this browser session
+// A page counts as "scanned" when the database shows it has a recent snapshot with a real brief.
+// This is DERIVED from the server data (_pages), not stored separately: it's automatically correct
+// across every device/browser, updates itself when a fresh scan lands, and needs no manual reset —
+// re-scanning a page overwrites its snapshot, and the green state simply follows the data.
+function _isSlugScanned(slug){
+  try {
+    var pid = _slugToPageId[slug];
+    if (!pid) return false;
+    var p = (_pages || []).find(function(x){ return x.id === pid || String(x.id) === String(pid); });
+    if (!p) return false;
+    // Scanned = has a snapshot timestamp AND has actual brief recommendations (not an empty shell).
+    var hasBrief = false;
+    try { var r = typeof p.recommendations === 'string' ? JSON.parse(p.recommendations) : p.recommendations; hasBrief = Array.isArray(r) ? r.length > 0 : !!r; } catch(e) { hasBrief = false; }
+    return !!(p.last_checked && hasBrief);
+  } catch(e) { return false; }
+}
 // These three were declared with the var keyword INSIDE renderCannibal() (function-scoped, invisible to
 // _provenScanAll() and any other sibling function) \u2014 promoted to global so they're readable
 // anywhere, always reflecting the most recent renderCannibal() computation.
@@ -30267,7 +30282,7 @@ function renderCannibal() {
       + (_gapNotRunYet ? '<div style="margin-top:4px;color:#fbbf24;">\u26a0\ufe0f If you use the individual Scan buttons below, run \ud83e\udd16 <b>Sort this out for me</b> first (Impression Gap panel above) so each brief captures the gap-family sections too. <b>Scan all</b> does this for you automatically.</div>' : '')
       + '<div style="margin-top:8px;display:flex;justify-content:flex-end;">'
       + (function(){
-          var _allScanned = _provenList.length > 0 && _provenList.every(function(s){ return !!_provenScannedSlugs[s]; });
+          var _allScanned = _provenList.length > 0 && _provenList.every(function(s){ return _isSlugScanned(s); });
           var _bg = _allScanned ? '#166534' : '#7f1d1d';
           var _bd = _allScanned ? '#16a34a' : '#ef4444';
           var _fg = _allScanned ? '#bbf7d0' : '#fecaca';
@@ -30279,7 +30294,7 @@ function renderCannibal() {
       + '<div style="margin-top:6px;display:flex;flex-direction:column;gap:3px;">'
       + _provenList.slice(0, 15).map(function(s){
           var pid = _slugToPageId[s];
-          var isScanned = !!_provenScannedSlugs[s];
+          var isScanned = _isSlugScanned(s);
           var label = s + ' <span style="color:' + (isScanned?'#4ade80':'#f87171') + ';">(' + _provenPageStats[s].rows + ' row' + (_provenPageStats[s].rows>1?'s':'') + ')</span>';
           var btn = pid
             ? (isScanned
@@ -30684,16 +30699,17 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
                 showNotification('Scan complete: ' + (ev.url||''), 'scan', '#4ade80');
                 addLine('Scan complete: ' + (ev.url||''), '#4ade80', null);
                 try { _scanAllProgress(); } catch(e) {}
-                // Mark this page as scanned for the PROVEN strip (persists across re-renders, since
-                // the strip is rebuilt fresh from _cannibalIssues each time) and refresh the whole
-                // cannibalization panel so resolved rows disappear automatically \u2014 that IS the
-                // "done" signal: a row that's still there after a scan just wasn't fully fixed yet,
-                // but the page itself is marked \u2713 Scanned so the owner knows they got its brief.
+                // Refresh the page list so the DERIVED scanned status (see _isSlugScanned) picks up
+                // this page's new snapshot + brief, then refresh the cannibalization panel so the
+                // green checkmark and any resolved rows update automatically. No separate state to
+                // set — the status simply follows the database, correct on every device.
                 try {
-                  var _p = (_pages||[]).find(function(x){ return x.id === ev.pageId || String(x.id) === String(ev.pageId); });
-                  if (_p) { var _s = slugOf(_p); _provenScannedSlugs[_s] = true; }
-                  setTimeout(function(){ try { loadImpressionGap(); } catch(e) {} }, 700);
-                } catch(e) {}
+                  if (typeof loadPages === 'function') {
+                    Promise.resolve(loadPages()).then(function(){ try { loadImpressionGap(); } catch(e) {} });
+                  } else {
+                    setTimeout(function(){ try { loadImpressionGap(); } catch(e) {} }, 700);
+                  }
+                } catch(e) { setTimeout(function(){ try { loadImpressionGap(); } catch(e) {} }, 700); }
                 return;
               }
               var text = '', color = '#6b7280', isLink = false, linkUrl = '';
