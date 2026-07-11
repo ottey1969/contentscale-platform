@@ -1,4 +1,4 @@
-console.log('=== CONTENTSCALE BOOT ' + new Date().toISOString() + ' v2026-07-08-possible-prioritized-shortcut | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON | possibleThreshold=20impr | shortcutPrioritized=v2 | gscAutoFetchRemoved=true | linkCheckActive=true | wholeSiteWipeGuard=true | gscAutoFetchRestored=true | reminderOffFix=true | claudeRemoved=true | bingWebmaster=true | competitorPanel=true | zeroResultFix=true | pagesRefreshFix=true | recheckButton=true | provenScanStrip=true | provenScanState=true | scanAllProven=true | doEverythingBtn=true | panelOrderFix=true | workflowGuide=true | preScanGuard=true | scanAllGuard=true | earlyGuard=true | emptyStateTeaser=true | provenScopeFix=true | numberedButtons=true | clearerButtons=true | scanAnimFix=true | promptClaudeCleanup=true | bonusTip=true | realProvenContext=true | competitorContext=true | unifiedBrief=true | diagnosticFirst=true | fullCompetitorBreakdown=true | serpSpyV3=true | transparencyBlock=true | emailsPausedToggle=true | competitorDedup=true | provenScanDebug=true | serializedScans=true | claudeCleanupV2=true | mergeClaudeStrip=true | visualTransparency=true | aboveFoldPriority=true | competitorComparisonTable=true | redGreenTracking=true | aioExplicitState=true | perpCopilotState=true | realMergePromptFixed=true | briefContextDebug=true | forceRescanBypass=true | gscPosFallback=true | cannibalDedup=true | gscAccessGated=true | gapConfirmShown=true | noPlaceholders=true | rowNumContrast=true | codeCannibalDedup=true | provenDebugRemoved=true | broaderCannibalDedup=true | competitorGapFallback=true | competitorPrevSnapFallback=true | hubSpokeDedup=true | compGapRegexBroadened=true | gapFixLabelFallback=true | geminiProForBriefs=true | timeoutBudgetFixed=true | perAttemptTimeout45s=true | revertToFlashLite=true | tokenLimitDoubled=true | urlNormFix=true | impactFieldChecked=true | broaderHubPattern=true | cannibalContextRemovedFromGSC=true | scanStateDerivedFromDB=true | boardBriefRestyled=true | liveWallBriefModal=true | modalScopeFix=true ===');
+console.log('=== CONTENTSCALE BOOT ' + new Date().toISOString() + ' v2026-07-08-possible-prioritized-shortcut | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON | possibleThreshold=20impr | shortcutPrioritized=v2 | gscAutoFetchRemoved=true | linkCheckActive=true | wholeSiteWipeGuard=true | gscAutoFetchRestored=true | reminderOffFix=true | claudeRemoved=true | bingWebmaster=true | competitorPanel=true | zeroResultFix=true | pagesRefreshFix=true | recheckButton=true | provenScanStrip=true | provenScanState=true | scanAllProven=true | doEverythingBtn=true | panelOrderFix=true | workflowGuide=true | preScanGuard=true | scanAllGuard=true | earlyGuard=true | emptyStateTeaser=true | provenScopeFix=true | numberedButtons=true | clearerButtons=true | scanAnimFix=true | promptClaudeCleanup=true | bonusTip=true | realProvenContext=true | competitorContext=true | unifiedBrief=true | diagnosticFirst=true | fullCompetitorBreakdown=true | serpSpyV3=true | transparencyBlock=true | emailsPausedToggle=true | competitorDedup=true | provenScanDebug=true | serializedScans=true | claudeCleanupV2=true | mergeClaudeStrip=true | visualTransparency=true | aboveFoldPriority=true | competitorComparisonTable=true | redGreenTracking=true | aioExplicitState=true | perpCopilotState=true | realMergePromptFixed=true | briefContextDebug=true | forceRescanBypass=true | gscPosFallback=true | cannibalDedup=true | gscAccessGated=true | gapConfirmShown=true | noPlaceholders=true | rowNumContrast=true | codeCannibalDedup=true | provenDebugRemoved=true | broaderCannibalDedup=true | competitorGapFallback=true | competitorPrevSnapFallback=true | hubSpokeDedup=true | compGapRegexBroadened=true | gapFixLabelFallback=true | geminiProForBriefs=true | timeoutBudgetFixed=true | perAttemptTimeout45s=true | revertToFlashLite=true | tokenLimitDoubled=true | urlNormFix=true | impactFieldChecked=true | broaderHubPattern=true | cannibalContextRemovedFromGSC=true | scanStateDerivedFromDB=true | boardBriefRestyled=true | liveWallBriefModal=true | modalScopeFix=true | cardTransparency=true ===');
 // CONTENTSCALE SERVER.JS — ELITE EDITION v4 (FIXED v3)
 // ✅ FIX v7: secondary_keywords + related_keywords auto in Analyse JSON + Execute prompt
 // ✅ FIX v7: analysis_data JSONB safe parse in execute-rewrite
@@ -3618,6 +3618,15 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
 .bw-feature{flex:1.7;min-width:0;display:flex;flex-direction:column;gap:16px}
 .bw-card{background:#0d1117;border:1px solid #1f2937;border-radius:16px;padding:18px;box-shadow:0 16px 40px rgba(0,0,0,.45);cursor:pointer;transition:border-color .15s,transform .15s}
 .bw-card:hover{border-color:#7c3aed;transform:translateY(-2px)}
+.bwc-trans{background:rgba(30,58,138,.13);border:1px solid rgba(59,130,246,.28);border-radius:9px;padding:9px 11px;margin:10px 0}
+.bwc-trans-h{font-size:9.5px;font-weight:800;color:#60a5fa;letter-spacing:.05em;margin-bottom:6px}
+.bwc-sub{font-size:10px;font-weight:700;color:#cbd5e1;margin-bottom:3px}
+.bwc-comp{font-size:10px;line-height:1.55;color:#94a3b8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bwc-cn{color:#60a5fa;font-weight:800}
+.bwc-cu{color:#93c5fd;font-weight:600}
+.bwc-ct{color:#6b7280}
+.bwc-line{font-size:9.5px;color:#94a3b8;line-height:1.5;margin-top:4px}
+.bwc-more{font-size:10px;color:#a78bfa;font-weight:700;text-align:center;margin-top:10px;padding-top:9px;border-top:1px solid #1f2937;letter-spacing:.02em}
 .bwm-ov{position:fixed;inset:0;background:rgba(0,0,0,.82);backdrop-filter:blur(4px);z-index:9999;display:none;align-items:center;justify-content:center;padding:24px}
 .bwm-ov.on{display:flex}
 .bwm-card{background:#0d1117;border:1px solid #2d1b69;border-radius:18px;width:min(860px,100%);max-height:88vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 30px 90px rgba(0,0,0,.7);cursor:default}
@@ -3912,6 +3921,23 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
     if (items.length>limit) html += '<div style="font-size:11px;color:#6b7280">+ '+(items.length-limit)+' more</div>';
     return html;
   }
+  // Compact transparency for the WALL CARD itself — the competitor evidence stays visible on the
+  // wall (not hidden behind a click), matching the full brief. The modal then shows everything.
+  function _bwTransL(d){
+    var comp = d.competitors||[]; var pcomp = d.perp_competitors||[];
+    if (!comp.length && !pcomp.length && !d.aio_text && !d.perp_text) return '';
+    var h = '<div class="bwc-trans"><div class="bwc-trans-h">&#128269; WHAT WE ACTUALLY CHECKED</div>';
+    if (comp.length) {
+      h += '<div class="bwc-sub">Google top 5 &mdash; who ranks and why:</div>';
+      h += comp.slice(0,5).map(function(c,i){
+        var host=''; try { host = String(c.url||'').split('/')[2]||''; } catch(e){ host=''; }
+        return '<div class="bwc-comp"><span class="bwc-cn">#'+(c.position||i+1)+'</span> <span class="bwc-cu">'+_bwEscL(host)+'</span>'+(c.title?(' <span class="bwc-ct">&mdash; '+_bwEscL(String(c.title).slice(0,52))+'</span>'):'')+'</div>';
+      }).join('');
+    }
+    h += '<div class="bwc-line">Google AI Overview: '+(d.aio_text?'shown for this query':'checked &mdash; not shown right now')+'</div>';
+    h += '<div class="bwc-line">Perplexity: '+(d.perp_text?'answer captured':'checked &mdash; no excerpt')+(pcomp.length?(' &middot; cites '+pcomp.length+' sources, not this page yet'):'')+'</div>';
+    return h + '</div>';
+  }
   function _bwCardL(d, isFeature){
     var head = '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">'
       + '<div style="min-width:0"><div class="bw-url">'+_bwEscL(_bwCleanUrlL(d.url||d.domain||''))+'</div>'
@@ -3919,7 +3945,8 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
       + (isFeature?'<span class="bw-new">NEW</span>':'')
       + '</div>';
     var pk = d.page_id || d.url || d.domain || '';
-    return '<div class="bw-card" data-bwkey="'+_bwEscL(String(pk))+'" onclick="_bwOpen(this.dataset.bwkey)" title="Click to open the full brief">'+head+_bwChipsL(d)+_bwRecsL(d, isFeature?5:1)+'</div>';
+    var foot = '<div class="bwc-more">&#128070; Click to see the complete brief</div>';
+    return '<div class="bw-card" data-bwkey="'+_bwEscL(String(pk))+'" onclick="_bwOpen(this.dataset.bwkey)" title="Click to open the full brief">'+head+_bwChipsL(d)+_bwTransL(d)+_bwRecsL(d, isFeature?5:1)+foot+'</div>';
   }
   function renderLiveWall(){
     var wrap = document.getElementById('bwLiveWrap');
