@@ -1,4 +1,4 @@
-console.log('=== CONTENTSCALE BOOT ' + new Date().toISOString() + ' v2026-07-08-possible-prioritized-shortcut | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON | possibleThreshold=20impr | shortcutPrioritized=v2 | gscAutoFetchRemoved=true | linkCheckActive=true | wholeSiteWipeGuard=true | gscAutoFetchRestored=true | reminderOffFix=true | claudeRemoved=true | bingWebmaster=true | competitorPanel=true | zeroResultFix=true | pagesRefreshFix=true | recheckButton=true | provenScanStrip=true | provenScanState=true | scanAllProven=true | doEverythingBtn=true | panelOrderFix=true | workflowGuide=true | preScanGuard=true | scanAllGuard=true | earlyGuard=true | emptyStateTeaser=true | provenScopeFix=true | numberedButtons=true | clearerButtons=true | scanAnimFix=true | promptClaudeCleanup=true | bonusTip=true | realProvenContext=true | competitorContext=true | unifiedBrief=true | diagnosticFirst=true | fullCompetitorBreakdown=true | serpSpyV3=true | transparencyBlock=true | emailsPausedToggle=true | competitorDedup=true | provenScanDebug=true | serializedScans=true | claudeCleanupV2=true | mergeClaudeStrip=true | visualTransparency=true | aboveFoldPriority=true | competitorComparisonTable=true | redGreenTracking=true | aioExplicitState=true | perpCopilotState=true | realMergePromptFixed=true | briefContextDebug=true | forceRescanBypass=true | gscPosFallback=true | cannibalDedup=true | gscAccessGated=true | gapConfirmShown=true | noPlaceholders=true | rowNumContrast=true | codeCannibalDedup=true | provenDebugRemoved=true | broaderCannibalDedup=true | competitorGapFallback=true | competitorPrevSnapFallback=true | hubSpokeDedup=true | compGapRegexBroadened=true | gapFixLabelFallback=true | geminiProForBriefs=true | timeoutBudgetFixed=true | perAttemptTimeout45s=true | revertToFlashLite=true | tokenLimitDoubled=true | urlNormFix=true | impactFieldChecked=true | broaderHubPattern=true | cannibalContextRemovedFromGSC=true | scanStateDerivedFromDB=true | boardBriefRestyled=true ===');
+console.log('=== CONTENTSCALE BOOT ' + new Date().toISOString() + ' v2026-07-08-possible-prioritized-shortcut | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON | possibleThreshold=20impr | shortcutPrioritized=v2 | gscAutoFetchRemoved=true | linkCheckActive=true | wholeSiteWipeGuard=true | gscAutoFetchRestored=true | reminderOffFix=true | claudeRemoved=true | bingWebmaster=true | competitorPanel=true | zeroResultFix=true | pagesRefreshFix=true | recheckButton=true | provenScanStrip=true | provenScanState=true | scanAllProven=true | doEverythingBtn=true | panelOrderFix=true | workflowGuide=true | preScanGuard=true | scanAllGuard=true | earlyGuard=true | emptyStateTeaser=true | provenScopeFix=true | numberedButtons=true | clearerButtons=true | scanAnimFix=true | promptClaudeCleanup=true | bonusTip=true | realProvenContext=true | competitorContext=true | unifiedBrief=true | diagnosticFirst=true | fullCompetitorBreakdown=true | serpSpyV3=true | transparencyBlock=true | emailsPausedToggle=true | competitorDedup=true | provenScanDebug=true | serializedScans=true | claudeCleanupV2=true | mergeClaudeStrip=true | visualTransparency=true | aboveFoldPriority=true | competitorComparisonTable=true | redGreenTracking=true | aioExplicitState=true | perpCopilotState=true | realMergePromptFixed=true | briefContextDebug=true | forceRescanBypass=true | gscPosFallback=true | cannibalDedup=true | gscAccessGated=true | gapConfirmShown=true | noPlaceholders=true | rowNumContrast=true | codeCannibalDedup=true | provenDebugRemoved=true | broaderCannibalDedup=true | competitorGapFallback=true | competitorPrevSnapFallback=true | hubSpokeDedup=true | compGapRegexBroadened=true | gapFixLabelFallback=true | geminiProForBriefs=true | timeoutBudgetFixed=true | perAttemptTimeout45s=true | revertToFlashLite=true | tokenLimitDoubled=true | urlNormFix=true | impactFieldChecked=true | broaderHubPattern=true | cannibalContextRemovedFromGSC=true | scanStateDerivedFromDB=true | boardBriefRestyled=true | liveWallBriefModal=true ===');
 // CONTENTSCALE SERVER.JS — ELITE EDITION v4 (FIXED v3)
 // ✅ FIX v7: secondary_keywords + related_keywords auto in Analyse JSON + Execute prompt
 // ✅ FIX v7: analysis_data JSONB safe parse in execute-rewrite
@@ -3616,7 +3616,41 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
 .bw-wrap{display:flex;gap:16px;align-items:flex-start;max-width:1600px;margin:0 auto}
 .bw-side{flex:1;display:flex;flex-direction:column;gap:16px;min-width:0}
 .bw-feature{flex:1.7;min-width:0;display:flex;flex-direction:column;gap:16px}
-.bw-card{background:#0d1117;border:1px solid #1f2937;border-radius:16px;padding:18px;box-shadow:0 16px 40px rgba(0,0,0,.45)}
+.bw-card{background:#0d1117;border:1px solid #1f2937;border-radius:16px;padding:18px;box-shadow:0 16px 40px rgba(0,0,0,.45);cursor:pointer;transition:border-color .15s,transform .15s}
+.bw-card:hover{border-color:#7c3aed;transform:translateY(-2px)}
+.bwm-ov{position:fixed;inset:0;background:rgba(0,0,0,.82);backdrop-filter:blur(4px);z-index:9999;display:none;align-items:center;justify-content:center;padding:24px}
+.bwm-ov.on{display:flex}
+.bwm-card{background:#0d1117;border:1px solid #2d1b69;border-radius:18px;width:min(860px,100%);max-height:88vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 30px 90px rgba(0,0,0,.7);cursor:default}
+.bwm-head{background:linear-gradient(135deg,#5b21b6,#7c3aed);padding:16px 20px;display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-shrink:0}
+.bwm-title{font-size:15px;font-weight:800;color:#fff}
+.bwm-url{font-size:12px;color:#ddd6fe;word-break:break-all;margin-top:2px}
+.bwm-kw{font-size:11px;color:#c4b5fd;margin-top:2px}
+.bwm-x{background:transparent;border:0;color:#fff;font-size:26px;line-height:1;cursor:pointer;padding:0 4px;flex-shrink:0}
+.bwm-body{overflow-y:auto;padding:18px 20px 24px}
+.bwm-body::-webkit-scrollbar{width:9px}
+.bwm-body::-webkit-scrollbar-track{background:#0b0f16}
+.bwm-body::-webkit-scrollbar-thumb{background:#374151;border-radius:5px}
+.bwm-tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:9px;margin-bottom:14px}
+.bwm-tile{background:#111827;border:1px solid #1f2937;border-radius:10px;padding:11px;text-align:center}
+.bwm-tv{font-size:17px;font-weight:800}
+.bwm-tl{font-size:9px;color:#6b7280;text-transform:uppercase;letter-spacing:.06em;margin-top:3px}
+.bwm-trans{background:rgba(30,58,138,.14);border:1px solid rgba(59,130,246,.3);border-radius:11px;padding:12px 14px;margin-bottom:14px}
+.bwm-trans-h{font-size:11px;font-weight:800;color:#60a5fa;letter-spacing:.04em;margin-bottom:8px}
+.bwm-sub{font-size:11.5px;font-weight:700;color:#cbd5e1;margin:6px 0 5px}
+.bwm-comp{font-size:11.5px;line-height:1.65;color:#94a3b8;word-break:break-word}
+.bwm-cn{color:#60a5fa;font-weight:800}
+.bwm-cu{color:#93c5fd;text-decoration:none;font-weight:600}
+.bwm-cu:hover{text-decoration:underline}
+.bwm-line{font-size:11px;color:#94a3b8;line-height:1.6;margin-top:6px}
+.bwm-sech{font-size:11.5px;font-weight:800;letter-spacing:.05em;margin:16px 0 9px}
+.bwm-rec{background:#111827;border:1px solid #1f2937;border-radius:10px;padding:12px 14px;margin-bottom:11px}
+.bwm-rmeta{display:flex;gap:6px;align-items:center;margin-bottom:6px;flex-wrap:wrap}
+.bwm-prio{font-size:9px;font-weight:800;padding:2px 8px;border-radius:4px;border:1px solid;letter-spacing:.04em}
+.bwm-sys{font-size:9px;font-weight:700;padding:2px 8px;border-radius:4px;background:rgba(124,58,237,.15);color:#c4b5fd}
+.bwm-rt{font-size:14px;font-weight:800;color:#f1f5f9;margin-bottom:5px}
+.bwm-rsig{font-size:11px;color:#94a3b8;font-style:italic;line-height:1.55;margin-bottom:6px}
+.bwm-rb{font-size:12px;color:#cbd5e1;line-height:1.65;background:#0b0f16;border:1px solid #1f2937;border-radius:8px;padding:10px 12px;white-space:pre-wrap;word-break:break-word}
+.bwm-rimp{font-size:11px;color:#a78bfa;line-height:1.55;margin-top:7px}
 .bw-feature .bw-card{border-color:#7c3aed;box-shadow:0 0 0 1px rgba(124,58,237,.3),0 18px 50px rgba(124,58,237,.22)}
 .bw-url{font-size:14px;font-weight:800;color:#f1f5f9;word-break:break-all;line-height:1.4}
 .bw-time{font-size:11px;color:#6b7280;margin-top:4px}
@@ -3632,6 +3666,9 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
 </style>
 </head>
 <body>
+<div id="bwModal" class="bwm-ov" onclick="if(event.target===this)_bwCloseModal()">
+  <div id="bwModalCard" class="bwm-card" onclick="event.stopPropagation()"></div>
+</div>
 <div class="lw-particles" id="lwParticles"></div>
 <div class="lw-header">
   <div class="lw-header-left">
@@ -3774,6 +3811,72 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
     renderLiveWall();
   }
 
+  // ── FULL BRIEF MODAL (live wall) ────────────────────────────────────────────
+  // Clicking a wall card opens the complete brief: status tiles, the "what we actually
+  // checked" competitor evidence, then every action in full (no 200-char truncation).
+  // Deliberately has NO copy buttons — this is a read-only viewing surface.
+  function _bwCloseModal(){ var o=document.getElementById('bwModal'); if(o) o.classList.remove('on'); }
+  function _bwOpen(pk){
+    var d = _wallBriefs.filter(function(b){ return String(b.page_id||b.url||b.domain) === String(pk); })[0];
+    if (!d) return;
+    var o = document.getElementById('bwModal');
+    if (!o) return;
+    var pos = d.position||d.pos||d.gsc_position;
+    var pc = (!pos||pos==='N/A') ? '#6b7280' : pos<=3?'#4ade80':pos<=10?'#a3e635':pos<=20?'#fbbf24':'#f87171';
+    function tile(v,l,c){ return '<div class="bwm-tile"><div class="bwm-tv" style="color:'+c+'">'+v+'</div><div class="bwm-tl">'+l+'</div></div>'; }
+    var h = '<div class="bwm-head"><div style="min-width:0"><div class="bwm-title">Citation Brief</div>'
+      + '<div class="bwm-url">'+_bwEscL(_bwCleanUrlL(d.url||d.domain||''))+'</div>'
+      + (d.keyword?'<div class="bwm-kw">Keyword: '+_bwEscL(d.keyword)+'</div>':'')
+      + '</div><button class="bwm-x" onclick="event.stopPropagation();_bwCloseModal()">&times;</button></div>';
+    h += '<div class="bwm-body">';
+    h += '<div class="bwm-tiles">'
+      + tile((pos&&pos!=='N/A')?('#'+pos):'-','Position',pc)
+      + tile(d.aio_cited?'Cited':'No','Google AIO',d.aio_cited?'#4ade80':'#6b7280')
+      + tile(d.perp_cited?'Cited':'No','Perplexity',d.perp_cited?'#a78bfa':'#6b7280')
+      + tile(d.bing_cited?'Cited':'No','Copilot',d.bing_cited?'#60a5fa':'#6b7280')
+      + (d.score?tile(d.score,'GRAAF','#a78bfa'):'')
+      + '</div>';
+    // Transparency: who ranks and why
+    var comp = d.competitors||[]; var pcomp = d.perp_competitors||[];
+    if (comp.length || pcomp.length || d.aio_text || d.perp_text) {
+      h += '<div class="bwm-trans"><div class="bwm-trans-h">&#128269; WHAT WE ACTUALLY CHECKED</div>';
+      if (comp.length) {
+        h += '<div class="bwm-sub">Google top 5 &mdash; who ranks and why:</div>';
+        h += comp.slice(0,5).map(function(c,i){
+          var host=''; try { host = String(c.url||'').split('/')[2]||''; } catch(e){ host=''; }
+          return '<div class="bwm-comp"><span class="bwm-cn">#'+(c.position||i+1)+'</span> <a href="'+_bwEscL(c.url||'#')+'" target="_blank" rel="noopener" class="bwm-cu" onclick="event.stopPropagation()">'+_bwEscL(host)+'</a>'+(c.title?(' &mdash; '+_bwEscL(String(c.title).slice(0,70))):'')+'</div>';
+        }).join('');
+      }
+      h += '<div class="bwm-line">Google AI Overview: '+(d.aio_text?('shown &mdash; '+_bwEscL(String(d.aio_text).slice(0,160))+'...'):'checked &mdash; not shown for this exact query right now.')+'</div>';
+      h += '<div class="bwm-line">Perplexity: '+(d.perp_text?('&ldquo;'+_bwEscL(String(d.perp_text).slice(0,160))+'...&rdquo;'):'checked &mdash; no answer excerpt captured for this query.')+'</div>';
+      if (pcomp.length) h += '<div class="bwm-line">Perplexity currently cites ('+pcomp.length+'), this page not among them yet: '+_bwEscL(pcomp.slice(0,5).join(', '))+'</div>';
+      h += '</div>';
+    }
+    function actionCard(p, accent){
+      var t = p.title||p.h2||p.heading||'Recommendation';
+      var b = p.action||p.passage||p.body||p.text||'';
+      var prio = String(p.priority||'medium').toUpperCase();
+      var prc = prio==='HIGH'?'#f87171':(prio==='LOW'?'#6b7280':'#fbbf24');
+      var sig = p.trigger||p.signal||'';
+      var imp = p.expected_impact||'';
+      return '<div class="bwm-rec" style="border-left:3px solid '+accent+'">'
+        + '<div class="bwm-rmeta"><span class="bwm-prio" style="color:'+prc+';border-color:'+prc+'">'+_bwEscL(prio)+'</span>'+(p.system?'<span class="bwm-sys">'+_bwEscL(p.system)+'</span>':'')+'</div>'
+        + '<div class="bwm-rt">'+_bwEscL(t)+'</div>'
+        + (sig?'<div class="bwm-rsig">'+_bwEscL(sig)+'</div>':'')
+        + (b?'<div class="bwm-rb">'+_bwEscL(b)+'</div>':'')
+        + (imp?'<div class="bwm-rimp">&rarr; '+_bwEscL(imp)+'</div>':'')
+        + '</div>';
+    }
+    var items = d.passages || d.recommendations || [];
+    if (items.length) h += '<div class="bwm-sech" style="color:#a78bfa">&#10024; WHAT TO DO NEXT &mdash; AI CITATIONS</div>' + items.map(function(p){ return actionCard(p,'#7c3aed'); }).join('');
+    var gsc = d.gsc_brief || [];
+    if (gsc.length) h += '<div class="bwm-sech" style="color:#a3e635">&#128200; GOOGLE RANKING (GSC)</div>' + gsc.map(function(g){ return actionCard(g,'#65a30d'); }).join('');
+    if (!items.length && !gsc.length) h += '<div class="bwm-line" style="padding:20px 0">No brief actions recorded for this page yet.</div>';
+    h += '</div>';
+    document.getElementById('bwModalCard').innerHTML = h;
+    o.classList.add('on');
+  }
+
   function _bwEscL(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
   function _bwCleanUrlL(u){ return String(u||'').replace(/^https?:[/][/]/,'').replace(/^www[.]/,''); }
   function _bwTimeL(d){
@@ -3810,7 +3913,8 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
       + '<div class="bw-time">Scanned '+_bwTimeL(d)+'</div></div>'
       + (isFeature?'<span class="bw-new">NEW</span>':'')
       + '</div>';
-    return '<div class="bw-card">'+head+_bwChipsL(d)+_bwRecsL(d, isFeature?5:1)+'</div>';
+    var pk = d.page_id || d.url || d.domain || '';
+    return '<div class="bw-card" data-bwkey="'+_bwEscL(String(pk))+'" onclick="_bwOpen(this.dataset.bwkey)" title="Click to open the full brief">'+head+_bwChipsL(d)+_bwRecsL(d, isFeature?5:1)+'</div>';
   }
   function renderLiveWall(){
     var wrap = document.getElementById('bwLiveWrap');
