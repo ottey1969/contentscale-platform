@@ -575,6 +575,12 @@
                   <input type="text" id="cliGreeting" placeholder="Thanks for calling {{business}}, this is Otto — how can I help?" />
                 </div>
 
+                <div class="client-field" style="grid-column:1/-1;">
+                  <label>What counts as URGENT for this business?</label>
+                  <input type="text" id="cliUrgency" placeholder="e.g. active leak, storm damage, water inside the house" />
+                  <small>The agent flags calls matching this as urgent in the SMS. Non-matching calls are marked "can wait".</small>
+                </div>
+
                 <div class="client-status-line" id="cliStatusLine">Not saved yet.</div>
 
                 <button class="client-save-btn" onclick="saveClient()">SAVE CLIENT CONFIG</button>
@@ -644,6 +650,7 @@
               document.getElementById('cliSmsTo').value = c.smsTo || '';
               document.getElementById('cliBizName').value = c.bizName || '';
               document.getElementById('cliGreeting').value = c.greeting || '';
+              document.getElementById('cliUrgency').value = c.urgencyCriteria || '';
               setClientMode(c.mode || 'inbound');
               document.getElementById('cliStatusLine').textContent =
                 c.savedAt ? ('Last saved: ' + new Date(c.savedAt).toLocaleString()) : 'Not saved yet.';
@@ -655,7 +662,7 @@
               document.getElementById('clientForm').style.display = 'grid';
               document.getElementById('deleteClientBtn').style.display = 'none';
               document.getElementById('clientSwitcher').value = '';
-              ['cliName','cliAgentId','cliPhoneId','cliSmsTo','cliBizName','cliGreeting'].forEach(id => document.getElementById(id).value = '');
+              ['cliName','cliAgentId','cliPhoneId','cliSmsTo','cliBizName','cliGreeting','cliUrgency'].forEach(id => document.getElementById(id).value = '');
               setClientMode('inbound');
               document.getElementById('cliStatusLine').textContent = 'New client — not saved yet.';
             }
@@ -681,6 +688,7 @@
                 smsTo: document.getElementById('cliSmsTo').value.trim(),
                 bizName: document.getElementById('cliBizName').value.trim(),
                 greeting: document.getElementById('cliGreeting').value.trim(),
+                urgencyCriteria: document.getElementById('cliUrgency').value.trim(),
                 savedAt: Date.now(),
               };
               const idx = clients.findIndex(c => c.id === data.id);
