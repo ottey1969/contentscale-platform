@@ -5883,8 +5883,10 @@ app.patch('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
      sms_to VARCHAR(50),
      biz_name VARCHAR(255),
      greeting TEXT,
+     urgency_criteria TEXT,
      saved_at TIMESTAMP DEFAULT NOW()
    )`).catch(() => {});
+   await client.query(`ALTER TABLE voice_clients ADD COLUMN IF NOT EXISTS urgency_criteria TEXT`).catch(()=>{});
 
    // Access codes tables
    await client.query(`CREATE TABLE IF NOT EXISTS access_codes (id SERIAL PRIMARY KEY, code VARCHAR(50) UNIQUE NOT NULL, type VARCHAR(20) DEFAULT 'write', client_name VARCHAR(255), is_active BOOLEAN DEFAULT TRUE, ai_calls_used INTEGER DEFAULT 0, ai_calls_limit INTEGER DEFAULT 0, expires_at TIMESTAMP, created_at TIMESTAMP DEFAULT NOW())`);
@@ -10429,13 +10431,13 @@ app.post('/api/voicebot/webhook', (req, res) => {
 
 // POST /api/voice-clients — save/upsert a client's voice config
 app.post('/api/voice-clients', async (req, res) => {
-  const { id, name, mode, agentId, phoneId, smsTo, bizName, greeting } = req.body || {};
+  const { id, name, mode, agentId, phoneId, smsTo, bizName, greeting, urgencyCriteria } = req.body || {};
   if (!id || !name) return res.status(400).json({ error: 'id and name are required' });
 
   try {
     await pool.query(
-      `INSERT INTO voice_clients (id, name, mode, agent_id, phone_id, sms_to, biz_name, greeting, saved_at)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8, now())
+      `INSERT INTO voice_clients (id, name, mode, agent_id, phone_id, sms_to, biz_name, greeting, urgency_criteria, saved_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9, now())
        ON CONFLICT (id) DO UPDATE SET
          name = EXCLUDED.name,
          mode = EXCLUDED.mode,
@@ -10444,8 +10446,9 @@ app.post('/api/voice-clients', async (req, res) => {
          sms_to = EXCLUDED.sms_to,
          biz_name = EXCLUDED.biz_name,
          greeting = EXCLUDED.greeting,
+         urgency_criteria = EXCLUDED.urgency_criteria,
          saved_at = now()`,
-      [id, name, mode || 'inbound', agentId || '', phoneId || '', smsTo || '', bizName || '', greeting || '']
+      [id, name, mode || 'inbound', agentId || '', phoneId || '', smsTo || '', bizName || '', greeting || '', urgencyCriteria || '']
     );
     console.log(`[voice-clients] saved → ${name} (${mode || 'inbound'})`);
     res.json({ ok: true });
@@ -10498,6 +10501,10 @@ app.post('/api/elevenlabs/inbound-webhook', async (req, res) => {
       dynamic_variables: {
         business: clientRow.biz_name || clientRow.name,
         greeting: clientRow.greeting || `Thanks for calling ${clientRow.biz_name || clientRow.name}, how can I help?`,
+        urgency_criteria: clientRow.urgency_criteria || '',
+        // Agent's system prompt should reference {{urgency_criteria}} and be told:
+        // "At the end of the call, start your summary with URGENT: or NORMAL: based on
+        //  whether the caller's request matches {{urgency_criteria}}."
       },
     });
   } catch (err) {
@@ -10514,7 +10521,7 @@ app.post('/api/elevenlabs/call-ended-webhook', async (req, res) => {
   try {
     const incomingPhoneId = req.body.phone_number_id || req.body.phoneNumberId || '';
     const callerNumber   = req.body.caller_number   || req.body.from || 'unknown number';
-    const summary        = req.body.summary || req.body.transcript_summary || 'No summary available';
+    let summary           = req.body.summary || req.body.transcript_summary || 'No summary available';
 
     const { rows } = await pool.query(
       `SELECT * FROM voice_clients WHERE phone_id = $1 LIMIT 1`,
@@ -10527,12 +10534,30 @@ app.post('/api/elevenlabs/call-ended-webhook', async (req, res) => {
       return res.json({ ok: true, note: 'No SMS target configured' });
     }
 
-    await sendTwilioSms(
-      clientRow.sms_to,
-      `📞 New call for ${clientRow.biz_name || clientRow.name}\nFrom: ${callerNumber}\n\n${summary}`
-    );
+    // Agent is instructed (via urgency_criteria dynamic variable) to prefix its
+    // summary with "URGENT:" or "NORMAL:" — strip that prefix and use it as a badge.
+    let urgencyBadge = '';
+    const urgentMatch = summary.match(/^\s*URGENT:\s*/i);
+    const normalMatch  = summary.match(/^\s*NORMAL:\s*/i);
+    if (urgentMatch) {
+      urgencyBadge = '⚠️ URGENT';
+      summary = summary.replace(urgentMatch[0], '').trim();
+    } else if (normalMatch) {
+      urgencyBadge = '✅ Can wait';
+      summary = summary.replace(normalMatch[0], '').trim();
+    }
 
-    console.log(`[elevenlabs call-ended-webhook] SMS sent to ${clientRow.sms_to} for ${clientRow.name}`);
+    const smsBody = [
+      `📞 ${clientRow.biz_name || clientRow.name}`,
+      `From: ${callerNumber}`,
+      urgencyBadge ? urgencyBadge : null,
+      '',
+      summary,
+    ].filter(line => line !== null).join('\n');
+
+    await sendTwilioSms(clientRow.sms_to, smsBody);
+
+    console.log(`[elevenlabs call-ended-webhook] SMS sent to ${clientRow.sms_to} for ${clientRow.name}${urgencyBadge ? ' [' + urgencyBadge + ']' : ''}`);
     res.json({ ok: true });
   } catch (err) {
     console.error('[elevenlabs call-ended-webhook] error:', err.message);
