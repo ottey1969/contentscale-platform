@@ -485,6 +485,262 @@
                   </span>
                </div>
             </div>
+
+<!-- ════════════════════════════════════════════════════════════════
+     CLIENT & VOICE AGENT MANAGER (ElevenLabs)
+     Paste this whole block into lead-crawler.html, right after the
+     "VAPI VOICEBOT CONFIG" panel (before <!-- ══ CALL LOG ══ -->).
+     Requires backend routes — see elevenlabs-backend-routes.js
+════════════════════════════════════════════════════════════════ -->
+
+<style>
+/* ── Client Manager ── */
+.client-panel{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:32px;margin-bottom:24px;border-left:5px solid #7c3aed;box-shadow:0 15px 35px rgba(0,0,0,0.6);}
+.client-panel-head{display:flex;align-items:center;gap:15px;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--border);flex-wrap:wrap;}
+.client-panel-head h3{font-family:'Bebas Neue',sans-serif;font-size:28px;letter-spacing:1px;flex:1;}
+.client-switcher{display:flex;gap:8px;align-items:center;margin-bottom:20px;flex-wrap:wrap;}
+.client-select{flex:1;min-width:220px;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:12px 14px;font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--ink);outline:none;}
+.client-select:focus{border-color:#7c3aed;}
+.client-btn{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.08em;text-transform:uppercase;padding:12px 18px;border-radius:6px;cursor:pointer;border:1px solid var(--border);background:var(--surface);color:var(--muted);white-space:nowrap;}
+.client-btn:hover{color:var(--ink);}
+.client-btn.primary{background:#7c3aed;color:#fff;border-color:#7c3aed;}
+.client-btn.primary:hover{background:#6d28d9;}
+.client-btn.danger{color:var(--red);border-color:rgba(244,63,63,.3);}
+.client-btn.danger:hover{background:var(--red);color:#fff;}
+.client-active-badge{display:inline-flex;align-items:center;gap:8px;background:rgba(124,58,237,.1);border:1px solid rgba(124,58,237,.3);border-radius:20px;padding:6px 16px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:#a78bfa;margin-bottom:16px;}
+.client-active-badge .dot{width:7px;height:7px;border-radius:50%;background:#4ade80;animation:blink 1.5s ease-in-out infinite;}
+.client-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:18px;}
+@media(max-width:640px){.client-grid{grid-template-columns:1fr;}}
+.client-field label{font-family:'IBM Plex Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.15em;color:var(--sub);display:block;margin-bottom:8px;}
+.client-field label .req{color:var(--red);}
+.client-field input,.client-field select{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:12px 14px;font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--ink);outline:none;}
+.client-field input:focus,.client-field select:focus{border-color:#7c3aed;}
+.client-field small{display:block;margin-top:6px;font-size:10.5px;color:var(--sub);line-height:1.5;}
+.client-mode-toggle{display:flex;gap:8px;grid-column:1/-1;}
+.client-mode-btn{flex:1;background:var(--surface);border:1px solid var(--border);color:var(--muted);font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.06em;text-transform:uppercase;padding:12px;border-radius:6px;cursor:pointer;text-align:center;}
+.client-mode-btn.on{background:rgba(124,58,237,.15);border-color:#7c3aed;color:#a78bfa;font-weight:700;}
+.client-save-btn{grid-column:1/-1;background:#7c3aed;color:#fff;border:none;font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:.05em;padding:15px;border-radius:6px;cursor:pointer;margin-top:6px;transition:all .2s;}
+.client-save-btn:hover{background:#6d28d9;transform:translateY(-1px);}
+.client-list-empty{font-size:13px;color:var(--muted);text-align:center;padding:20px;}
+.client-status-line{grid-column:1/-1;font-size:11px;color:var(--sub);font-family:'IBM Plex Mono',monospace;background:rgba(255,255,255,.02);border:1px solid var(--border);border-radius:6px;padding:10px 14px;}
+</style>
+
+<div class="client-panel" id="clientPanel">
+  <div class="client-panel-head">
+    <span style="font-size:20px;">🎙️</span>
+    <h3>Client Voice Agent Manager</h3>
+    <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--sub);">ElevenLabs — inbound calls + SMS routing</span>
+  </div>
+
+  <div id="clientActiveBadgeWrap"></div>
+
+  <div class="client-switcher">
+    <select class="client-select" id="clientSwitcher" onchange="switchClient(this.value)">
+      <option value="">— Select a client —</option>
+    </select>
+    <button class="client-btn primary" onclick="newClient()">+ New Client</button>
+    <button class="client-btn danger" id="deleteClientBtn" onclick="deleteClient()" style="display:none;">Delete</button>
+  </div>
+
+  <div class="client-grid" id="clientForm" style="display:none;">
+    <div class="client-field" style="grid-column:1/-1;">
+      <label>Client Name <span class="req">*required</span></label>
+      <input type="text" id="cliName" placeholder="e.g. Perfect Roofing Team" />
+    </div>
+
+    <div class="client-mode-toggle">
+      <button type="button" class="client-mode-btn on" id="modeInbound" onclick="setClientMode('inbound')">📞 Inbound only</button>
+      <button type="button" class="client-mode-btn" id="modeOutbound" onclick="setClientMode('outbound')">📤 Outbound only</button>
+      <button type="button" class="client-mode-btn" id="modeBoth" onclick="setClientMode('both')">🔁 Both</button>
+    </div>
+
+    <div class="client-field">
+      <label>ElevenLabs Agent ID</label>
+      <input type="text" id="cliAgentId" placeholder="agent_xxxxxxxxxxxx" />
+      <small>Dashboard → Conversational AI → Agents → copy the Agent ID</small>
+    </div>
+    <div class="client-field">
+      <label>ElevenLabs Phone Number ID</label>
+      <input type="text" id="cliPhoneId" placeholder="phnum_xxxxxxxxxxxx" />
+      <small>The number this client's callers dial — from ElevenLabs → Phone Numbers</small>
+    </div>
+
+    <div class="client-field">
+      <label>Forward Notification SMS To</label>
+      <input type="text" id="cliSmsTo" placeholder="+1 555 000 0000" />
+      <small>Every call summary/lead is texted to this number — pick per client</small>
+    </div>
+    <div class="client-field">
+      <label>Business Name (agent introduces as)</label>
+      <input type="text" id="cliBizName" placeholder="e.g. Perfect Roofing Team" />
+    </div>
+
+    <div class="client-field" style="grid-column:1/-1;">
+      <label>Opening Line / Greeting</label>
+      <input type="text" id="cliGreeting" placeholder="Thanks for calling {{business}}, this is Otto — how can I help?" />
+    </div>
+
+    <div class="client-status-line" id="cliStatusLine">Not saved yet.</div>
+
+    <button class="client-save-btn" onclick="saveClient()">SAVE CLIENT CONFIG</button>
+  </div>
+
+  <div class="client-list-empty" id="clientEmptyMsg">No clients yet — click "+ New Client" to add your first one.</div>
+</div>
+
+<script>
+// ════════════════════════════════════════════════════════════════
+// CLIENT & VOICE AGENT MANAGER (ElevenLabs)
+// ════════════════════════════════════════════════════════════════
+const LS_CLIENTS = 'cs_voice_clients';
+const LS_ACTIVE_CLIENT = 'cs_active_client';
+let editingClientId = null;
+
+function loadClients(){
+  try{ return JSON.parse(localStorage.getItem(LS_CLIENTS)||'[]'); }catch(e){ return []; }
+}
+function saveClients(list){
+  localStorage.setItem(LS_CLIENTS, JSON.stringify(list));
+}
+function getActiveClientId(){
+  return localStorage.getItem(LS_ACTIVE_CLIENT) || '';
+}
+function setActiveClientId(id){
+  localStorage.setItem(LS_ACTIVE_CLIENT, id);
+  renderClientActiveBadge();
+}
+
+function renderClientSwitcher(){
+  const clients = loadClients();
+  const sel = document.getElementById('clientSwitcher');
+  const activeId = getActiveClientId();
+  sel.innerHTML = '<option value="">— Select a client —</option>' +
+    clients.map(c => `<option value="${c.id}"${c.id===activeId?' selected':''}>${escHtml(c.name)} (${c.mode})</option>`).join('');
+  document.getElementById('clientEmptyMsg').style.display = clients.length ? 'none' : 'block';
+  renderClientActiveBadge();
+}
+
+function renderClientActiveBadge(){
+  const clients = loadClients();
+  const activeId = getActiveClientId();
+  const active = clients.find(c => c.id === activeId);
+  const wrap = document.getElementById('clientActiveBadgeWrap');
+  if(!active){ wrap.innerHTML = ''; return; }
+  wrap.innerHTML = `<div class="client-active-badge"><span class="dot"></span> Active client: <strong>${escHtml(active.name)}</strong> — ${active.mode}</div>`;
+}
+
+function switchClient(id){
+  if(!id){
+    document.getElementById('clientForm').style.display = 'none';
+    document.getElementById('deleteClientBtn').style.display = 'none';
+    setActiveClientId('');
+    return;
+  }
+  const clients = loadClients();
+  const c = clients.find(x => x.id === id);
+  if(!c) return;
+  editingClientId = id;
+  setActiveClientId(id);
+  document.getElementById('clientForm').style.display = 'grid';
+  document.getElementById('deleteClientBtn').style.display = 'inline-block';
+  document.getElementById('cliName').value = c.name || '';
+  document.getElementById('cliAgentId').value = c.agentId || '';
+  document.getElementById('cliPhoneId').value = c.phoneId || '';
+  document.getElementById('cliSmsTo').value = c.smsTo || '';
+  document.getElementById('cliBizName').value = c.bizName || '';
+  document.getElementById('cliGreeting').value = c.greeting || '';
+  setClientMode(c.mode || 'inbound');
+  document.getElementById('cliStatusLine').textContent =
+    c.savedAt ? ('Last saved: ' + new Date(c.savedAt).toLocaleString()) : 'Not saved yet.';
+  toast('Switched to ' + c.name);
+}
+
+function newClient(){
+  editingClientId = 'new_' + Date.now();
+  document.getElementById('clientForm').style.display = 'grid';
+  document.getElementById('deleteClientBtn').style.display = 'none';
+  document.getElementById('clientSwitcher').value = '';
+  ['cliName','cliAgentId','cliPhoneId','cliSmsTo','cliBizName','cliGreeting'].forEach(id => document.getElementById(id).value = '');
+  setClientMode('inbound');
+  document.getElementById('cliStatusLine').textContent = 'New client — not saved yet.';
+}
+
+function setClientMode(mode){
+  document.querySelectorAll('.client-mode-btn').forEach(b => b.classList.remove('on'));
+  const map = {inbound:'modeInbound', outbound:'modeOutbound', both:'modeBoth'};
+  document.getElementById(map[mode]).classList.add('on');
+  document.getElementById('clientForm').dataset.mode = mode;
+}
+
+function saveClient(){
+  const name = document.getElementById('cliName').value.trim();
+  if(!name){ toast('⚠ Client name is required'); return; }
+  const clients = loadClients();
+  const mode = document.getElementById('clientForm').dataset.mode || 'inbound';
+  const data = {
+    id: editingClientId && !editingClientId.startsWith('new_') ? editingClientId : 'client_' + Date.now(),
+    name,
+    mode,
+    agentId: document.getElementById('cliAgentId').value.trim(),
+    phoneId: document.getElementById('cliPhoneId').value.trim(),
+    smsTo: document.getElementById('cliSmsTo').value.trim(),
+    bizName: document.getElementById('cliBizName').value.trim(),
+    greeting: document.getElementById('cliGreeting').value.trim(),
+    savedAt: Date.now(),
+  };
+  const idx = clients.findIndex(c => c.id === data.id);
+  if(idx >= 0) clients[idx] = data; else clients.push(data);
+  saveClients(clients);
+  editingClientId = data.id;
+  setActiveClientId(data.id);
+  renderClientSwitcher();
+  document.getElementById('cliStatusLine').textContent = 'Last saved: ' + new Date(data.savedAt).toLocaleString();
+  toast('✅ Saved ' + name);
+
+  // Push config to backend so inbound webhook knows which agent/number/SMS to use
+  syncClientToServer(data);
+}
+
+function deleteClient(){
+  if(!editingClientId) return;
+  const clients = loadClients();
+  const c = clients.find(x => x.id === editingClientId);
+  if(!c || !confirm('Delete client "' + c.name + '"? This cannot be undone.')) return;
+  const remaining = clients.filter(x => x.id !== editingClientId);
+  saveClients(remaining);
+  if(getActiveClientId() === editingClientId) setActiveClientId('');
+  editingClientId = null;
+  document.getElementById('clientForm').style.display = 'none';
+  renderClientSwitcher();
+  toast('Client deleted');
+}
+
+function escHtml(s){
+  return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ── Push client config to the Railway backend ──
+// This is what makes inbound calls/SMS actually route correctly —
+// without this, the config only lives in your browser.
+async function syncClientToServer(client){
+  try{
+    const resp = await fetch('https://app.contentscale.site/api/voice-clients', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(client)
+    });
+    if(!resp.ok) throw new Error('HTTP ' + resp.status);
+    document.getElementById('cliStatusLine').textContent += ' · synced to server ✓';
+  }catch(e){
+    document.getElementById('cliStatusLine').innerHTML += ' · <span style="color:var(--red)">⚠ server sync failed — backend route may not exist yet</span>';
+    console.warn('[ClientManager] Server sync failed:', e.message);
+  }
+}
+
+document.addEventListener('DOMContentLoaded', renderClientSwitcher);
+</script>
+
+            
             <!-- ══ CALL LOG ══ -->
             <div class="calllog" id="callLog">
                <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap;">
