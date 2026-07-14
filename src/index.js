@@ -5884,9 +5884,13 @@ app.patch('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
      biz_name VARCHAR(255),
      greeting TEXT,
      urgency_criteria TEXT,
+     outbound_pitch TEXT,
+     outbound_caller_name VARCHAR(255),
      saved_at TIMESTAMP DEFAULT NOW()
    )`).catch(() => {});
    await client.query(`ALTER TABLE voice_clients ADD COLUMN IF NOT EXISTS urgency_criteria TEXT`).catch(()=>{});
+   await client.query(`ALTER TABLE voice_clients ADD COLUMN IF NOT EXISTS outbound_pitch TEXT`).catch(()=>{});
+   await client.query(`ALTER TABLE voice_clients ADD COLUMN IF NOT EXISTS outbound_caller_name VARCHAR(255)`).catch(()=>{});
 
    // Access codes tables
    await client.query(`CREATE TABLE IF NOT EXISTS access_codes (id SERIAL PRIMARY KEY, code VARCHAR(50) UNIQUE NOT NULL, type VARCHAR(20) DEFAULT 'write', client_name VARCHAR(255), is_active BOOLEAN DEFAULT TRUE, ai_calls_used INTEGER DEFAULT 0, ai_calls_limit INTEGER DEFAULT 0, expires_at TIMESTAMP, created_at TIMESTAMP DEFAULT NOW())`);
@@ -10431,13 +10435,13 @@ app.post('/api/voicebot/webhook', (req, res) => {
 
 // POST /api/voice-clients — save/upsert a client's voice config
 app.post('/api/voice-clients', async (req, res) => {
-  const { id, name, mode, agentId, phoneId, smsTo, bizName, greeting, urgencyCriteria } = req.body || {};
+  const { id, name, mode, agentId, phoneId, smsTo, bizName, greeting, urgencyCriteria, outboundPitch, outboundCallerName } = req.body || {};
   if (!id || !name) return res.status(400).json({ error: 'id and name are required' });
 
   try {
     await pool.query(
-      `INSERT INTO voice_clients (id, name, mode, agent_id, phone_id, sms_to, biz_name, greeting, urgency_criteria, saved_at)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9, now())
+      `INSERT INTO voice_clients (id, name, mode, agent_id, phone_id, sms_to, biz_name, greeting, urgency_criteria, outbound_pitch, outbound_caller_name, saved_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11, now())
        ON CONFLICT (id) DO UPDATE SET
          name = EXCLUDED.name,
          mode = EXCLUDED.mode,
@@ -10447,8 +10451,10 @@ app.post('/api/voice-clients', async (req, res) => {
          biz_name = EXCLUDED.biz_name,
          greeting = EXCLUDED.greeting,
          urgency_criteria = EXCLUDED.urgency_criteria,
+         outbound_pitch = EXCLUDED.outbound_pitch,
+         outbound_caller_name = EXCLUDED.outbound_caller_name,
          saved_at = now()`,
-      [id, name, mode || 'inbound', agentId || '', phoneId || '', smsTo || '', bizName || '', greeting || '', urgencyCriteria || '']
+      [id, name, mode || 'inbound', agentId || '', phoneId || '', smsTo || '', bizName || '', greeting || '', urgencyCriteria || '', outboundPitch || '', outboundCallerName || '']
     );
     console.log(`[voice-clients] saved → ${name} (${mode || 'inbound'})`);
     res.json({ ok: true });
@@ -10567,6 +10573,102 @@ app.post('/api/elevenlabs/call-ended-webhook', async (req, res) => {
 
 // ── Twilio SMS helper — reuses TWILIO_ACCOUNT_SID / TWILIO_AUTH_TOKEN ────────
 // Requires TWILIO_FROM_NUMBER to also be set in Railway (the number SMS sends FROM).
+// POST /api/elevenlabs/outbound-call — trigger an outbound call using a SPECIFIC
+// client's ElevenLabs agent + identity + pitch (used by Lead Crawler's
+// "Call as: [Client]" selector, so each client's outbound calls sound like
+// that client, not ContentScale).
+//
+// NOTE: verify the exact ElevenLabs outbound-call endpoint/payload shape against
+// their current docs (https://elevenlabs.io/docs/conversational-ai) — this uses
+// their documented Twilio-native outbound pattern as of the agent's knowledge,
+// but ElevenLabs' API surface changes; adjust the fetch URL/body below if needed.
+app.post('/api/elevenlabs/outbound-call', async (req, res) => {
+  try {
+    const { clientId, targetPhone, targetName, directAgentId, directPhoneId, directBizName, directCallerName, directPitch } = req.body || {};
+    if (!targetPhone) {
+      return res.status(400).json({ error: 'targetPhone is required' });
+    }
+    if (!clientId && !directAgentId) {
+      return res.status(400).json({ error: 'Either clientId or directAgentId is required' });
+    }
+
+    let agentId, phoneId, callerName, bizName, pitch;
+
+    if (clientId) {
+      const { rows } = await pool.query('SELECT * FROM voice_clients WHERE id = $1', [clientId]);
+      const clientRow = rows[0];
+      if (!clientRow) return res.status(404).json({ error: 'Client not found' });
+      if (!['outbound', 'both'].includes(clientRow.mode)) {
+        return res.status(400).json({ error: `Client "${clientRow.name}" is not configured for outbound (mode: ${clientRow.mode})` });
+      }
+      if (!clientRow.agent_id || !clientRow.phone_id) {
+        return res.status(400).json({ error: `Client "${clientRow.name}" is missing Agent ID or Phone Number ID` });
+      }
+      agentId    = clientRow.agent_id;
+      phoneId    = clientRow.phone_id;
+      callerName = clientRow.outbound_caller_name || clientRow.biz_name || clientRow.name;
+      bizName    = clientRow.biz_name || clientRow.name;
+      pitch      = clientRow.outbound_pitch || `Hi, is this ${targetName || 'there'}? This is ${callerName} calling from ${bizName}.`;
+    } else {
+      // Direct mode — used for ContentScale's own ElevenLabs agent (no DB row needed)
+      agentId    = directAgentId;
+      phoneId    = directPhoneId;
+      callerName = directCallerName || 'ContentScale';
+      bizName    = directBizName || 'ContentScale';
+      pitch      = directPitch || `Hi, is this ${targetName || 'there'}? This is ${callerName} calling from ${bizName}.`;
+      if (!agentId || !phoneId) {
+        return res.status(400).json({ error: 'directAgentId and directPhoneId are required in direct mode' });
+      }
+    }
+
+    const elevenResp = await fetch('https://api.elevenlabs.io/v1/convai/twilio/outbound-call', {
+      method: 'POST',
+      headers: {
+        'xi-api-key': process.env.ELEVENLABS_API_KEY,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        agent_id: agentId,
+        agent_phone_number_id: phoneId,
+        to_number: targetPhone,
+        conversation_initiation_client_data: {
+          dynamic_variables: {
+            business: bizName,
+            caller_name: callerName,
+            target_name: targetName || '',
+            pitch,
+          },
+        },
+      }),
+    });
+
+    if (!elevenResp.ok) {
+      const errText = await elevenResp.text();
+      throw new Error('ElevenLabs outbound call failed: ' + errText);
+    }
+    const data = await elevenResp.json();
+
+    console.log(`[elevenlabs outbound-call] ${clientRow.name} → ${targetPhone}`);
+    res.json({ ok: true, callId: data.conversation_id || data.call_sid || null, raw: data });
+  } catch (err) {
+    console.error('[elevenlabs outbound-call] error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/voice-clients/outbound-ready — list only clients configured for outbound,
+// used by the Lead Crawler to populate its "Call as:" dropdown.
+app.get('/api/voice-clients/outbound-ready', async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      `SELECT id, name, biz_name FROM voice_clients WHERE mode IN ('outbound','both') AND agent_id != '' ORDER BY name`
+    );
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 async function sendTwilioSms(to, body) {
   const accountSid = process.env.TWILIO_ACCOUNT_SID;
   const authToken  = process.env.TWILIO_AUTH_TOKEN;
