@@ -900,11 +900,74 @@
                 el.style.display = admin ? '' : 'none';
               });
 
-              renderClientSwitcher();
-              loadOutboundClients();
+              // A client's browser has no localStorage — pull their config from the server.
+              hydrateClientsFromServer().then(() => {
+                renderClientSwitcher();
+                loadOutboundClients();
+              });
             }
 
-            document.addEventListener('DOMContentLoaded', applyLockState);
+            // Fetch client configs from the DB and merge into local state.
+            // Admin gets every client; a client gets only their own row (server-enforced).
+            async function hydrateClientsFromServer(){
+              if(!isUnlocked()) return;
+              try{
+                const resp = await fetch('https://app.contentscale.site/api/voice-clients', {
+                  headers: adminHeaders()
+                });
+                if(!resp.ok) throw new Error('HTTP ' + resp.status);
+                const rows = await resp.json();
+                if(!Array.isArray(rows) || !rows.length) return;
+
+                // Map DB snake_case → the shape the panel expects.
+                const mapped = rows.map(r => ({
+                  id: r.id,
+                  name: r.name,
+                  mode: r.mode || 'inbound',
+                  agentId: r.agent_id || '',
+                  phoneId: r.phone_id || '',
+                  smsTo: r.sms_to || '',
+                  bizName: r.biz_name || '',
+                  greeting: r.greeting || '',
+                  urgencyCriteria: r.urgency_criteria || '',
+                  outboundCallerName: r.outbound_caller_name || '',
+                  outboundPitch: r.outbound_pitch || '',
+                  savedAt: r.saved_at ? new Date(r.saved_at).getTime() : Date.now(),
+                }));
+
+                const local = loadClients();
+                mapped.forEach(m => {
+                  const i = local.findIndex(x => x.id === m.id);
+                  if(i >= 0) local[i] = m; else local.push(m);
+                });
+                saveClients(local);
+
+                // A client only ever has one — open it for them automatically.
+                if(!isAdmin() && mapped.length === 1){
+                  setActiveClientId(mapped[0].id);
+                  switchClient(mapped[0].id);
+                }
+              }catch(e){
+                console.warn('[ClientManager] Could not load clients from server:', e.message);
+                toast('⚠ Could not load your config from the server');
+              }
+            }
+
+            // The voice panel sits inside #crawlerZone in the markup, but it must be
+            // visible to CLIENTS too — and clients never see the crawler. So on load
+            // we lift it out and re-insert it as a sibling right after the zone.
+            function relocateVoicePanel(){
+              const zone  = document.getElementById('crawlerZone');
+              const panel = document.getElementById('clientPanel');
+              if(!zone || !panel) return;
+              if(!zone.contains(panel)) return; // already moved
+              zone.parentNode.insertBefore(panel, zone.nextSibling);
+            }
+
+            document.addEventListener('DOMContentLoaded', () => {
+              relocateVoicePanel();
+              applyLockState();
+            });
 
             let activeCallerIdentity = localStorage.getItem('lc_caller_identity') || '';
 
