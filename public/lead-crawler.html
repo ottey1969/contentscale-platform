@@ -130,6 +130,7 @@
          .call-btn{font-family:'IBM Plex Mono',monospace;font-size:10px;background:rgba(74,222,128,0.1);border:1px solid rgba(74,222,128,0.3);color:var(--green);padding:8px 14px;border-radius:4px;cursor:pointer;transition:all .2s;font-weight:700;}
          .call-btn:hover{background:var(--green);color:#000;}
          .call-btn.calling{background:var(--orange);color:#000;border-color:var(--orange);animation:pulse-orange 1s infinite;}
+.call-btn.mobile-warn{background:rgba(251,191,36,.1);border-color:rgba(251,191,36,.4);color:var(--gold);}
 .queue-bar{display:none;position:fixed;bottom:0;left:0;right:0;background:#0f172a;border-top:2px solid var(--green);padding:12px 20px;z-index:9999;align-items:center;gap:14px;flex-wrap:wrap;}
 .queue-bar.active{display:flex;}
 .queue-stat{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);}
@@ -796,8 +797,8 @@
               const provider = getContentScaleProvider();
               const hint = document.getElementById('callerIdentityHint');
               hint.textContent = provider==='vapi'
-                ? 'All calls will say "ContentScale\\'s AI voice assistant" — via Vapi'
-                : 'All calls will say "ContentScale\\'s AI voice assistant" — via ElevenLabs';
+                ? 'All calls will say "ContentScale\'s AI voice assistant" — via Vapi'
+                : 'All calls will say "ContentScale\'s AI voice assistant" — via ElevenLabs';
             }
 
             function saveCsElevenConfig(){
@@ -949,6 +950,7 @@
                <button class="tbtn" onclick="triggerImport()">↑ Import JSON</button>
                <button class="tbtn" onclick="copyAll()">⧉ Copy All URLs</button>
                <button class="tbtn" id="resolveBtn" onclick="sitemapResolutionActive=false;resolveSitemapsPhase2()" style="border-color:rgba(96,165,250,.35);color:var(--blue);">⟳ Resolve Sitemaps</button>
+               <button class="tbtn" id="verifyPhoneBtn" onclick="verifyPhoneTypes()" style="border-color:rgba(74,222,128,.35);color:var(--green);">📱 Verify Mobile/Landline</button>
                <div class="tb-sep"></div>
                <span class="tbl">Select:</span>
                <button class="tbtn" onclick="selAll()">Select All</button>
@@ -1096,7 +1098,7 @@
            document.getElementById('lc-'+id)?.classList.toggle('manual', manualLeads.has(id));
            const cb=document.getElementById('manual-'+id);
            if(cb) cb.checked=manualLeads.has(id);
-           toast(manualLeads.has(id) ? '📌 Marked — you\\'ll call this one yourself' : 'Unmarked — back in auto-call pool');
+           toast(manualLeads.has(id) ? '📌 Marked — you\'ll call this one yourself' : 'Unmarked — back in auto-call pool');
          }
  
          function stopCrawl(){
@@ -1457,6 +1459,7 @@ Return ONLY a raw JSON array — no markdown, no code fences, no explanation:
          document.getElementById('results').innerHTML='';
          renderAll();
          setTimeout(()=>resolveSitemapsPhase2(), 800);
+         setTimeout(()=>verifyPhoneTypes(), 1600);
          } else document.getElementById('emptyState').style.display='block';
          }
          // ── PHASE 2: SITEMAP RESOLUTION ─────────────
@@ -1496,6 +1499,53 @@ Return ONLY a raw JSON array — no markdown, no code fences, no explanation:
          saveSession(document.getElementById('city').value, document.getElementById('country').value);
          updateResolveBtn(false, 0);
          toast('✓ Sitemaps resolved for ' + resolved + ' leads');
+         }
+         // ── PHASE 3: MOBILE/LANDLINE VERIFICATION (Twilio Lookup) ──────────────────
+         let phoneVerificationActive = false;
+         async function verifyPhoneTypes(){
+           if(phoneVerificationActive) return;
+           const unverified = allLeads.filter(l => l.phone && !l.phoneType);
+           if(!unverified.length){ toast('✓ All phone numbers already verified'); return; }
+           phoneVerificationActive = true;
+           updateVerifyBtn(true, unverified.length);
+           let verified = 0, failed = 0;
+           const CONCURRENCY = 5;
+           for(let i=0; i<unverified.length; i+=CONCURRENCY){
+             const chunk = unverified.slice(i, i+CONCURRENCY);
+             await Promise.allSettled(chunk.map(async lead => {
+               try{
+                 const resp = await fetch('/api/lookup/number?phone='+encodeURIComponent(lead.phone));
+                 if(!resp.ok) throw new Error('HTTP '+resp.status);
+                 const data = await resp.json();
+                 lead.phoneType = data.lineType || 'unknown';
+                 lead.aiCallAllowed = data.aiCallAllowed !== false;
+                 lead.phoneBadge = data.badge || '';
+                 updateLeadCard(lead);
+                 verified++;
+               }catch(e){
+                 failed++;
+                 console.warn('[verifyPhoneTypes] lookup failed for', lead.phone, e.message);
+               }
+             }));
+             updateVerifyBtn(true, unverified.length - verified - failed);
+           }
+           phoneVerificationActive = false;
+           saveSession(document.getElementById('city').value, document.getElementById('country').value);
+           updateVerifyBtn(false, 0);
+           toast('✓ Verified '+verified+' numbers'+(failed?' ('+failed+' lookup failed)':''));
+         }
+         function updateVerifyBtn(active, remaining){
+           const btn = document.getElementById('verifyPhoneBtn');
+           if(!btn) return;
+           if(active){
+             btn.textContent = '📱 Verifying phones... (' + remaining + ' left)';
+             btn.style.opacity = '0.6';
+             btn.disabled = true;
+           } else {
+             btn.textContent = '📱 Verify Mobile/Landline';
+             btn.style.opacity = '1';
+             btn.disabled = false;
+           }
          }
          async function resolveBatch(leads){
          const domains = leads.map(l => l.website).join('\n');
@@ -1554,7 +1604,10 @@ Return ONLY a raw JSON array — no markdown, no code fences, no explanation:
          }
          contactRow.innerHTML =
          (lead.phone ? `<a href="tel:${lead.phone}" onclick="event.stopPropagation()" style="display:flex;align-items:center;gap:4px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--green);background:rgba(74,222,128,.08);border:1px solid rgba(74,222,128,.2);border-radius:3px;padding:3px 8px;text-decoration:none;">📞 ${lead.phone}</a>` : '') +
+         (lead.phoneBadge ? `<span style="display:flex;align-items:center;font-family:'IBM Plex Mono',monospace;font-size:9px;color:${lead.aiCallAllowed?'var(--muted)':'var(--gold)'};background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:3px;padding:3px 8px;">${lead.phoneBadge}</span>` : '') +
          (lead.email ? `<a href="mailto:${lead.email}" onclick="event.stopPropagation()" style="display:flex;align-items:center;gap:4px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--gold);background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.2);border-radius:3px;padding:3px 8px;text-decoration:none;">✉ ${lead.email}</a>` : '');
+         const btn = document.getElementById('callbtn-'+id);
+         if(btn && lead.aiCallAllowed===false) btn.classList.add('mobile-warn');
          }
          }
          function updateResolveBtn(active, remaining){
@@ -1707,6 +1760,7 @@ Return ONLY a raw JSON array — no markdown, no code fences, no explanation:
          <div class="pitch-banner">${pitch}</div>
          ${(l.phone||l.email)?`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;">
          ${l.phone?`<a href="tel:${l.phone}" onclick="event.stopPropagation()" style="display:flex;align-items:center;gap:4px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--green);background:rgba(74,222,128,.08);border:1px solid rgba(74,222,128,.2);border-radius:3px;padding:3px 8px;text-decoration:none;" title="Call">📞 ${l.phone}</a>`:''}
+         ${l.phoneBadge?`<span id="phonebadge-${id}" style="display:flex;align-items:center;font-family:'IBM Plex Mono',monospace;font-size:9px;color:${l.aiCallAllowed?'var(--muted)':'var(--gold)'};background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:3px;padding:3px 8px;" title="${l.aiCallAllowed?'AI calling allowed':'Mobile number — AI auto-calling not allowed, manual only'}">${l.phoneBadge}</span>`:''}
          ${l.email?`<a href="mailto:${l.email}" onclick="event.stopPropagation()" style="display:flex;align-items:center;gap:4px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--gold);background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.2);border-radius:3px;padding:3px 8px;text-decoration:none;" title="Send email">✉ ${l.email}</a>`:''}
          </div>`:''}
          <div class="srow" onclick="event.stopPropagation();window.open('${url}','_blank','noopener')" style="cursor:pointer" title="Open in new tab">
@@ -1723,9 +1777,9 @@ Return ONLY a raw JSON array — no markdown, no code fences, no explanation:
          <input type="checkbox" id="manual-${id}" ${manualLeads.has(id)?'checked':''} onchange="toggleManual('${id}',event)" style="cursor:pointer;" />
          📌 I'll call
          </label>
-         ${l.phone?`<button class="call-btn ${getCallState(id)}" id="callbtn-${id}"
+         ${l.phone?`<button class="call-btn ${getCallState(id)}${l.aiCallAllowed===false?' mobile-warn':''}" id="callbtn-${id}"
            onclick="event.stopPropagation();triggerCall('${id}')"
-           title="Call ${l.phone}">${getCallIcon(id)} ${getCallLabel(id)}</button>`:''}
+           title="${l.aiCallAllowed===false?'Mobile number — click to call manually or confirm AI override':'Call '+l.phone}">${getCallIcon(id)} ${getCallLabel(id)}</button>`:''}
          <div class="cscore ${sc}" title="Estimated content score — based on site type and page count">${l.content_score||'?'}<span style="font-size:7px;opacity:.5;margin-left:2px;">est</span></div>
          </div>
          </div>
@@ -1966,6 +2020,12 @@ Return ONLY a raw JSON array — no markdown, no code fences, no explanation:
            if(!lead){toast('Lead not found');return;}
            if(!lead.phone){toast('No phone number for this lead — resolve contacts first');return;}
          
+           // ── Gate 1b: Mobile numbers — AI auto-calling not allowed, confirm override ──
+           if(lead.aiCallAllowed===false){
+             const proceed=confirm('⚠ Mobile Number Detected\n\n'+lead.phone+' is a mobile number ('+(lead.phoneType||'mobile')+').\nAI auto-calling to mobile numbers carries higher compliance risk (TCPA etc.) in most jurisdictions.\n\nRecommended: call this one yourself instead (use the 📌 "I\'ll call" checkbox).\n\nContinue with AI call anyway?');
+             if(!proceed)return;
+           }
+         
            // ── Gate 2: Calling hours — checks PROSPECT'S local time, not yours ──
            const _tz = getLeadTimezone(lead.phone);
            const _tzCheck = isCallingHours(_tz);
@@ -2012,7 +2072,7 @@ Return ONLY a raw JSON array — no markdown, no code fences, no explanation:
              const csAgentId=localStorage.getItem('lc_cs_eleven_agent')||'';
              const csPhoneId=localStorage.getItem('lc_cs_eleven_phone')||'';
              if(!csAgentId||!csPhoneId){
-               toast('⚠ Enter ContentScale\\'s ElevenLabs Agent ID + Phone Number ID first');
+               toast('⚠ Enter ContentScale\'s ElevenLabs Agent ID + Phone Number ID first');
                return;
              }
              try{
