@@ -8501,11 +8501,19 @@ recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', descriptio
 // into this route. Tries a few common locations so it works whether the file
 // sits next to index.js, in /public, or in /views.
 const LEAD_CRAWLER_CANDIDATES = [
+  // next to index.js (e.g. /app/src/)
   path.join(__dirname, 'lead-crawler.html'),
   path.join(__dirname, 'public', 'lead-crawler.html'),
   path.join(__dirname, 'views', 'lead-crawler.html'),
   path.join(__dirname, 'static', 'lead-crawler.html'),
+  // one level up — repo root (e.g. /app/), where public/ usually lives
+  path.join(__dirname, '..', 'lead-crawler.html'),
+  path.join(__dirname, '..', 'public', 'lead-crawler.html'),
+  path.join(__dirname, '..', 'views', 'lead-crawler.html'),
+  path.join(__dirname, '..', 'static', 'lead-crawler.html'),
+  // process working directory fallbacks
   path.join(process.cwd(), 'lead-crawler.html'),
+  path.join(process.cwd(), 'public', 'lead-crawler.html'),
 ];
 
 app.get('/lead-crawler', (req, res) => {
