@@ -8517,6 +8517,9 @@ const LEAD_CRAWLER_CANDIDATES = [
   path.join(process.cwd(), 'public', 'lead-crawler.html'),
 ];
 
+// Alias: /leadcrawler (no hyphen) → same page, so either URL works when shared.
+app.get('/leadcrawler', (req, res) => res.redirect(301, '/lead-crawler'));
+
 app.get('/lead-crawler', (req, res) => {
   const found = LEAD_CRAWLER_CANDIDATES.find(p => {
     try { return fs.existsSync(p); } catch (e) { return false; }
