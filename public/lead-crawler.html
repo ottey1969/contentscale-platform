@@ -255,7 +255,7 @@
          </nav>
          <header>
             <div class="logo-block">
-               <div class="eyebrow"><span class="ldot"></span> ContentScale — Powered by Google Gemini (Free)</div>
+               <div class="eyebrow"><span class="ldot"></span> ContentScale — Lead Crawler &amp; Voice Agents</div>
                <h1>LEAD<br>CRAWLER <span class="pro-tag">PRO</span></h1>
                <p class="tagline">Enter any city + country. 37 niches searched sequentially. Every lead bucketed by content desperation — with a pitch angle ready to copy.</p>
             </div>
@@ -266,6 +266,23 @@
                <div class="hb p">✓ 6 Smart Buckets</div>
             </div>
          </header>
+         <!-- ══ ADMIN LOCK — everything below is hidden until the code is entered ══ -->
+         <div id="lockBar" style="background:var(--card);border:1px solid var(--border);border-left:4px solid var(--purple);border-radius:8px;padding:20px 24px;margin-bottom:24px;">
+            <div style="font-family:'Bebas Neue',sans-serif;font-size:24px;color:var(--purple);margin-bottom:6px;">🔒 Crawler — Locked</div>
+            <div style="font-size:12px;color:var(--muted);margin-bottom:14px;line-height:1.6;">
+               The lead crawler and its results are private. Enter the access code to unlock.<br>
+               <span style="color:var(--sub);font-size:11px;">The Client Voice Agent Manager below stays available without a code.</span>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+               <input type="password" id="lockCode" placeholder="Access code" autocomplete="off"
+                  onkeydown="if(event.key==='Enter')tryUnlock()"
+                  style="flex:1;min-width:200px;background:var(--bg);border:1px solid var(--border);border-radius:5px;padding:11px 14px;font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--ink);outline:none;" />
+               <button onclick="tryUnlock()" style="background:var(--purple);color:#fff;border:none;font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:.04em;padding:11px 26px;border-radius:5px;cursor:pointer;">UNLOCK</button>
+            </div>
+            <div id="lockStatus" style="margin-top:9px;font-family:'IBM Plex Mono',monospace;font-size:10px;min-height:14px;"></div>
+         </div>
+
+         <div id="crawlerZone" style="display:none;">
          <div class="strategy">
             <div class="strategy-head" onclick="toggleStrategy()">
                <h3>🎯 The 6 Buckets — What They Mean & How to Pitch Each</h3>
@@ -530,6 +547,10 @@
                 <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--sub);">ElevenLabs — inbound calls + SMS routing</span>
               </div>
 
+              <div id="voiceGateNotice" style="display:none;background:rgba(167,139,250,.08);border:1px solid rgba(167,139,250,.25);border-radius:6px;padding:12px 16px;margin-bottom:14px;font-size:12px;color:var(--muted);line-height:1.6;">
+                🔒 <strong style="color:var(--purple);">Client configs are locked.</strong> Unlock the crawler above with your access code to load, add or edit clients. Without it the server will refuse every request.
+              </div>
+
               <div id="clientActiveBadgeWrap"></div>
 
               <div class="client-switcher">
@@ -748,7 +769,7 @@
               try{
                 const resp = await fetch('https://app.contentscale.site/api/voice-clients', {
                   method: 'POST',
-                  headers: {'Content-Type':'application/json'},
+                  headers: adminHeaders({'Content-Type':'application/json'}),
                   body: JSON.stringify(client)
                 });
                 if(!resp.ok) throw new Error('HTTP ' + resp.status);
@@ -760,6 +781,82 @@
             }
 
             // ── Outbound caller identity (ContentScale/Vapi vs a specific client/ElevenLabs) ──
+            // ── ADMIN LOCK ────────────────────────────────────────────────────────
+            // The code itself lives on the server (LC_ADMIN_CODE env var). The browser
+            // only ever sends a guess and receives ok/false — so the code is NOT in
+            // this page's source and visitors cannot read it.
+            const LS_ADMIN = 'lc_admin_code';
+            function adminCode(){ return sessionStorage.getItem(LS_ADMIN) || ''; }
+            function isUnlocked(){ return !!adminCode(); }
+
+            // Every admin API call must carry this header, or the server rejects it.
+            function adminHeaders(extra){
+              const h = Object.assign({}, extra || {});
+              h['x-admin-code'] = adminCode();
+              return h;
+            }
+
+            async function tryUnlock(){
+              const inp = document.getElementById('lockCode');
+              const st  = document.getElementById('lockStatus');
+              const code = (inp.value || '').trim();
+              if(!code){ st.innerHTML = '<span style="color:var(--gold)">Enter the code</span>'; return; }
+              st.innerHTML = '<span style="color:var(--gold)">⟳ Checking...</span>';
+              try{
+                const resp = await fetch('/api/admin/verify', {
+                  method:'POST',
+                  headers:{'Content-Type':'application/json'},
+                  body:JSON.stringify({code})
+                });
+                const data = await resp.json();
+                if(data.ok){
+                  // sessionStorage: cleared when the tab closes — safer than localStorage
+                  sessionStorage.setItem(LS_ADMIN, code);
+                  inp.value = '';
+                  applyLockState();
+                  toast('🔓 Unlocked');
+                } else {
+                  st.innerHTML = '<span style="color:var(--red)">❌ Wrong code</span>';
+                  inp.value = '';
+                }
+              }catch(e){
+                st.innerHTML = '<span style="color:var(--red)">❌ ' + e.message + '</span>';
+              }
+            }
+
+            function lockCrawler(){
+              sessionStorage.removeItem(LS_ADMIN);
+              applyLockState();
+              toast('🔒 Locked');
+            }
+
+            function applyLockState(){
+              const zone = document.getElementById('crawlerZone');
+              const bar  = document.getElementById('lockBar');
+              const unlocked = isUnlocked();
+              if(zone) zone.style.display = unlocked ? 'block' : 'none';
+              if(bar){
+                if(unlocked){
+                  bar.style.borderLeftColor = 'var(--green)';
+                  bar.innerHTML = '<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">'
+                    + '<span style="font-family:\'Bebas Neue\',sans-serif;font-size:22px;color:var(--green);">🔓 Crawler — Unlocked</span>'
+                    + '<span style="font-family:\'IBM Plex Mono\',monospace;font-size:10px;color:var(--sub);flex:1;">Session only — closing this tab locks it again.</span>'
+                    + '<button onclick="lockCrawler()" style="background:var(--surface);border:1px solid var(--border);color:var(--muted);font-family:\'IBM Plex Mono\',monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;padding:7px 14px;border-radius:4px;cursor:pointer;">🔒 Lock again</button>'
+                    + '</div>';
+                }
+              }
+              // The voice-agent admin panel is also gated: visitors see it, but can't
+              // load or save client configs without the code.
+              const clientPanel = document.getElementById('clientPanel');
+              if(clientPanel){
+                const gate = document.getElementById('voiceGateNotice');
+                if(gate) gate.style.display = unlocked ? 'none' : 'block';
+              }
+              if(unlocked) loadOutboundClients();
+            }
+
+            document.addEventListener('DOMContentLoaded', applyLockState);
+
             let activeCallerIdentity = localStorage.getItem('lc_caller_identity') || '';
 
             function setCallerIdentity(clientId){
@@ -821,7 +918,7 @@
 
             async function loadOutboundClients(){
               try{
-                const resp = await fetch('https://app.contentscale.site/api/voice-clients/outbound-ready');
+                const resp = await fetch('https://app.contentscale.site/api/voice-clients/outbound-ready', { headers: adminHeaders() });
                 if(!resp.ok) return;
                 const clients = await resp.json();
                 const sel = document.getElementById('callerIdentitySelect');
@@ -988,6 +1085,8 @@
                Real businesses, almost no web content — the easiest content writing pitch ever.
             </p>
          </div>
+         </div>
+         <!-- ══ END ADMIN LOCK ══ -->
       </div>
       <div class="cs-wrap">
   <div class="cs-panel" id="callSheet" style="display:none;">
@@ -1779,7 +1878,7 @@ Return ONLY a raw JSON array — no markdown, no code fences, no explanation:
          </label>
          ${l.phone?`<button class="call-btn ${getCallState(id)}${l.aiCallAllowed===false?' mobile-warn':''}" id="callbtn-${id}"
            onclick="event.stopPropagation();triggerCall('${id}')"
-           title="${l.aiCallAllowed===false?'Mobile number — click to call manually or confirm AI override':'Call '+l.phone}">${getCallIcon(id)} ${getCallLabel(id)}</button>`:''}
+           title="${l.aiCallAllowed===false?'📱 Mobile — AI calling blocked. Tap the number above to call it yourself.':'Call '+l.phone}">${getCallIcon(id)} ${getCallLabel(id)}</button>`:''}
          <div class="cscore ${sc}" title="Estimated content score — based on site type and page count">${l.content_score||'?'}<span style="font-size:7px;opacity:.5;margin-left:2px;">est</span></div>
          </div>
          </div>
@@ -2020,10 +2119,16 @@ Return ONLY a raw JSON array — no markdown, no code fences, no explanation:
            if(!lead){toast('Lead not found');return;}
            if(!lead.phone){toast('No phone number for this lead — resolve contacts first');return;}
          
-           // ── Gate 1b: Mobile numbers — AI auto-calling not allowed, confirm override ──
+           // ── Gate 1b: HARD BLOCK — AI may never auto-call mobile numbers ──────────
+           // Line type comes from Twilio Lookup (line_type_intelligence). Mobile = manual only.
            if(lead.aiCallAllowed===false){
-             const proceed=confirm('⚠ Mobile Number Detected\n\n'+lead.phone+' is a mobile number ('+(lead.phoneType||'mobile')+').\nAI auto-calling to mobile numbers carries higher compliance risk (TCPA etc.) in most jurisdictions.\n\nRecommended: call this one yourself instead (use the 📌 "I\'ll call" checkbox).\n\nContinue with AI call anyway?');
-             if(!proceed)return;
+             toast('🚫 Mobile number — AI calling blocked. Tap the number to call it yourself.');
+             return; // HARD BLOCK — no override
+           }
+           // Unverified numbers: we don't know the line type yet, so we can't prove it's not mobile.
+           if(!lead.phoneType){
+             toast('⚠ Line type unknown — run 📱 Verify Mobile/Landline first');
+             return;
            }
          
            // ── Gate 2: Calling hours — checks PROSPECT'S local time, not yours ──
@@ -2049,7 +2154,7 @@ Return ONLY a raw JSON array — no markdown, no code fences, no explanation:
              try{
                const resp=await fetch('/api/elevenlabs/outbound-call',{
                  method:'POST',
-                 headers:{'Content-Type':'application/json'},
+                 headers:adminHeaders({'Content-Type':'application/json'}),
                  body:JSON.stringify({clientId:activeCallerIdentity, targetPhone:lead.phone, targetName:lead.name||''})
                });
                const data=await resp.json();
@@ -2078,7 +2183,7 @@ Return ONLY a raw JSON array — no markdown, no code fences, no explanation:
              try{
                const resp=await fetch('/api/elevenlabs/outbound-call',{
                  method:'POST',
-                 headers:{'Content-Type':'application/json'},
+                 headers:adminHeaders({'Content-Type':'application/json'}),
                  body:JSON.stringify({
                    directAgentId:csAgentId, directPhoneId:csPhoneId,
                    directBizName:'ContentScale', directCallerName:'Ottmar from ContentScale',
@@ -2212,7 +2317,8 @@ Return ONLY a raw JSON array — no markdown, no code fences, no explanation:
          // ── Bulk call selected leads ─────────────────────────────
          async function callSelected(){
            if(!hasAcceptedTerms()){showTermsModal();toast('⚖ Accept the Operator Terms first');return;}
-           const sel=getSelLeads().filter(l=>l.phone && !manualLeads.has(makeId(l)));
+           // AI never calls mobile: only verified non-mobile lines are eligible
+           const sel=getSelLeads().filter(l=>l.phone && !manualLeads.has(makeId(l)) && l.phoneType && l.aiCallAllowed!==false);
            if(!sel.length){toast('No selected leads with phone numbers (or all marked "I\'ll call")');return;}
            const cfg=JSON.parse(localStorage.getItem(LS_VAPI)||'null');
            if(!cfg||!cfg.vapiKey){
@@ -2492,7 +2598,8 @@ Return ONLY a raw JSON array — no markdown, no code fences, no explanation:
             return;
           }
           // Build queue from all uncalled leads with phone, excluding manually-marked leads
-          const all = getSelLeads().filter(l=>l.phone && !manualLeads.has(makeId(l)));
+          // AI never calls mobile: only verified non-mobile lines are eligible
+          const all = getSelLeads().filter(l=>l.phone && !manualLeads.has(makeId(l)) && l.phoneType && l.aiCallAllowed!==false);
           if (!all.length) { toast('Select leads first (or all marked "I\'ll call")'); return; }
           _queueLeads = all
             .filter(l => {
