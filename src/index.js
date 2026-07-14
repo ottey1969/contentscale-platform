@@ -10494,6 +10494,11 @@ async function resolveRole(code) {
       [code]
     );
     if (rows[0]) return { role: 'client', clientId: rows[0].id, clientName: rows[0].name };
+    // No match — report how many client codes actually exist, so a miss is diagnosable.
+    const { rows: cnt } = await pool.query(
+      'SELECT COUNT(*)::int AS n FROM voice_clients WHERE access_code IS NOT NULL AND access_code <> \'\''
+    );
+    console.warn('[auth] no client matches that code | clients with a code in DB:', cnt[0].n);
   } catch (e) {
     console.error('[auth] client code lookup failed:', e.message);
   }
@@ -10552,7 +10557,7 @@ app.post('/api/voice-clients', requireAuth, async (req, res) => {
     return res.status(403).json({ error: 'You can only edit your own client config' });
   }
   // Only an admin may set/change a client's access code.
-  const codeToSet = req.role === 'admin' ? (accessCode || null) : undefined;
+  const codeToSet = req.role === 'admin' ? ((accessCode && String(accessCode).trim()) || null) : undefined;
 
   try {
     await pool.query(
@@ -10574,7 +10579,7 @@ app.post('/api/voice-clients', requireAuth, async (req, res) => {
          saved_at = now()`,
       [id, name, mode || 'inbound', agentId || '', phoneId || '', smsTo || '', bizName || '', greeting || '', urgencyCriteria || '', outboundPitch || '', outboundCallerName || '', codeToSet === undefined ? null : codeToSet]
     );
-    console.log(`[voice-clients] saved → ${name} (${mode || 'inbound'})`);
+    console.log(`[voice-clients] saved → ${name} (${mode || 'inbound'}) | access code: ${codeToSet ? 'SET (' + String(codeToSet).length + ' chars)' : 'none'} | by: ${req.role}`);
     res.json({ ok: true });
   } catch (err) {
     console.error('[voice-clients] save error:', err.message);
