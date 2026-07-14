@@ -5891,6 +5891,7 @@ app.patch('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
    await client.query(`ALTER TABLE voice_clients ADD COLUMN IF NOT EXISTS urgency_criteria TEXT`).catch(()=>{});
    await client.query(`ALTER TABLE voice_clients ADD COLUMN IF NOT EXISTS outbound_pitch TEXT`).catch(()=>{});
    await client.query(`ALTER TABLE voice_clients ADD COLUMN IF NOT EXISTS outbound_caller_name VARCHAR(255)`).catch(()=>{});
+   await client.query(`ALTER TABLE voice_clients ADD COLUMN IF NOT EXISTS access_code VARCHAR(255)`).catch(()=>{});
 
    // Access codes tables
    await client.query(`CREATE TABLE IF NOT EXISTS access_codes (id SERIAL PRIMARY KEY, code VARCHAR(50) UNIQUE NOT NULL, type VARCHAR(20) DEFAULT 'write', client_name VARCHAR(255), is_active BOOLEAN DEFAULT TRUE, ai_calls_used INTEGER DEFAULT 0, ai_calls_limit INTEGER DEFAULT 0, expires_at TIMESTAMP, created_at TIMESTAMP DEFAULT NOW())`);
@@ -10475,21 +10476,55 @@ app.post('/api/voicebot/webhook', (req, res) => {
 // convenience for first boot — change it in Railway, don't rely on it.
 const LC_ADMIN_CODE = process.env.LC_ADMIN_CODE || 'Utrecht160011.@';
 
-// The browser never receives the code — it POSTs a guess and gets ok/false back.
-// That means the code is NOT in the page source and cannot be read by visitors.
-app.post('/api/admin/verify', (req, res) => {
+// Two roles:
+//   admin  → LC_ADMIN_CODE. Sees the crawler + every client's voice config.
+//   client → a per-client code stored in voice_clients.access_code. Sees ONLY
+//            the Voice Agent Manager, scoped to their own client row.
+// The browser never receives any code — it POSTs a guess and gets a role back.
+// So no code is in the page source and visitors cannot read one.
+async function resolveRole(code) {
+  if (!code || typeof code !== 'string') return { role: null };
+  if (code === LC_ADMIN_CODE) return { role: 'admin', clientId: null };
+  try {
+    const { rows } = await pool.query(
+      'SELECT id, name FROM voice_clients WHERE access_code = $1 LIMIT 1',
+      [code]
+    );
+    if (rows[0]) return { role: 'client', clientId: rows[0].id, clientName: rows[0].name };
+  } catch (e) {
+    console.error('[auth] client code lookup failed:', e.message);
+  }
+  return { role: null };
+}
+
+app.post('/api/admin/verify', async (req, res) => {
   const guess = (req.body && req.body.code) || '';
-  const ok = typeof guess === 'string' && guess === LC_ADMIN_CODE;
-  if (!ok) console.warn('[admin] failed unlock attempt from', req.ip);
-  res.json({ ok });
+  const { role, clientId, clientName } = await resolveRole(guess);
+  if (!role) {
+    console.warn('[auth] failed unlock attempt from', req.ip);
+    return res.json({ ok: false });
+  }
+  res.json({ ok: true, role, clientId: clientId || null, clientName: clientName || null });
 });
 
-// Middleware: every admin-only route below requires the code in the x-admin-code header.
-function requireAdmin(req, res, next) {
-  const code = req.headers['x-admin-code'] || '';
-  if (code !== LC_ADMIN_CODE) {
+// Admin only — the crawler surface and anything touching all clients.
+async function requireAdmin(req, res, next) {
+  const { role } = await resolveRole(req.headers['x-admin-code'] || '');
+  if (role !== 'admin') {
     return res.status(401).json({ error: 'Unauthorized — admin code required' });
   }
+  req.role = 'admin';
+  next();
+}
+
+// Admin OR a client (scoped). Sets req.role / req.clientId for the route to use.
+async function requireAuth(req, res, next) {
+  const { role, clientId } = await resolveRole(req.headers['x-admin-code'] || '');
+  if (!role) {
+    return res.status(401).json({ error: 'Unauthorized — access code required' });
+  }
+  req.role = role;
+  req.clientId = clientId || null;
   next();
 }
 
@@ -10501,14 +10536,21 @@ function requireAdmin(req, res, next) {
 // ══════════════════════════════════════════════════════════════════════
 
 // POST /api/voice-clients — save/upsert a client's voice config
-app.post('/api/voice-clients', requireAdmin, async (req, res) => {
-  const { id, name, mode, agentId, phoneId, smsTo, bizName, greeting, urgencyCriteria, outboundPitch, outboundCallerName } = req.body || {};
+app.post('/api/voice-clients', requireAuth, async (req, res) => {
+  const { id, name, mode, agentId, phoneId, smsTo, bizName, greeting, urgencyCriteria, outboundPitch, outboundCallerName, accessCode } = req.body || {};
   if (!id || !name) return res.status(400).json({ error: 'id and name are required' });
+
+  // A client may only edit their own row — never create or touch another one.
+  if (req.role === 'client' && req.clientId !== id) {
+    return res.status(403).json({ error: 'You can only edit your own client config' });
+  }
+  // Only an admin may set/change a client's access code.
+  const codeToSet = req.role === 'admin' ? (accessCode || null) : undefined;
 
   try {
     await pool.query(
-      `INSERT INTO voice_clients (id, name, mode, agent_id, phone_id, sms_to, biz_name, greeting, urgency_criteria, outbound_pitch, outbound_caller_name, saved_at)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11, now())
+      `INSERT INTO voice_clients (id, name, mode, agent_id, phone_id, sms_to, biz_name, greeting, urgency_criteria, outbound_pitch, outbound_caller_name, access_code, saved_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12, now())
        ON CONFLICT (id) DO UPDATE SET
          name = EXCLUDED.name,
          mode = EXCLUDED.mode,
@@ -10520,8 +10562,10 @@ app.post('/api/voice-clients', requireAdmin, async (req, res) => {
          urgency_criteria = EXCLUDED.urgency_criteria,
          outbound_pitch = EXCLUDED.outbound_pitch,
          outbound_caller_name = EXCLUDED.outbound_caller_name,
+         -- only an admin sends accessCode; a client's save leaves it untouched
+         access_code = COALESCE(EXCLUDED.access_code, voice_clients.access_code),
          saved_at = now()`,
-      [id, name, mode || 'inbound', agentId || '', phoneId || '', smsTo || '', bizName || '', greeting || '', urgencyCriteria || '', outboundPitch || '', outboundCallerName || '']
+      [id, name, mode || 'inbound', agentId || '', phoneId || '', smsTo || '', bizName || '', greeting || '', urgencyCriteria || '', outboundPitch || '', outboundCallerName || '', codeToSet === undefined ? null : codeToSet]
     );
     console.log(`[voice-clients] saved → ${name} (${mode || 'inbound'})`);
     res.json({ ok: true });
@@ -10532,9 +10576,13 @@ app.post('/api/voice-clients', requireAdmin, async (req, res) => {
 });
 
 // GET /api/voice-clients — list all clients
-app.get('/api/voice-clients', requireAdmin, async (req, res) => {
+app.get('/api/voice-clients', requireAuth, async (req, res) => {
   try {
-    const { rows } = await pool.query('SELECT * FROM voice_clients ORDER BY saved_at DESC');
+    const { rows } = req.role === 'admin'
+      ? await pool.query('SELECT * FROM voice_clients ORDER BY saved_at DESC')
+      : await pool.query('SELECT * FROM voice_clients WHERE id = $1', [req.clientId]);
+    // Never leak access codes back to the browser.
+    rows.forEach(r => { delete r.access_code; });
     res.json(rows);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -10649,7 +10697,7 @@ app.post('/api/elevenlabs/call-ended-webhook', async (req, res) => {
 // their current docs (https://elevenlabs.io/docs/conversational-ai) — this uses
 // their documented Twilio-native outbound pattern as of the agent's knowledge,
 // but ElevenLabs' API surface changes; adjust the fetch URL/body below if needed.
-app.post('/api/elevenlabs/outbound-call', requireAdmin, async (req, res) => {
+app.post('/api/elevenlabs/outbound-call', requireAuth, async (req, res) => {
   try {
     const { clientId, targetPhone, targetName, directAgentId, directPhoneId, directBizName, directCallerName, directPitch } = req.body || {};
     if (!targetPhone) {
@@ -10657,6 +10705,16 @@ app.post('/api/elevenlabs/outbound-call', requireAdmin, async (req, res) => {
     }
     if (!clientId && !directAgentId) {
       return res.status(400).json({ error: 'Either clientId or directAgentId is required' });
+    }
+    // A client may only place calls as themselves — and never in direct mode,
+    // which would let them supply an arbitrary agent/phone on our account.
+    if (req.role === 'client') {
+      if (directAgentId) {
+        return res.status(403).json({ error: 'Not allowed' });
+      }
+      if (clientId !== req.clientId) {
+        return res.status(403).json({ error: 'You can only place calls as your own client' });
+      }
     }
 
     let agentId, phoneId, callerName, bizName, pitch;
@@ -10725,11 +10783,16 @@ app.post('/api/elevenlabs/outbound-call', requireAdmin, async (req, res) => {
 
 // GET /api/voice-clients/outbound-ready — list only clients configured for outbound,
 // used by the Lead Crawler to populate its "Call as:" dropdown.
-app.get('/api/voice-clients/outbound-ready', requireAdmin, async (req, res) => {
+app.get('/api/voice-clients/outbound-ready', requireAuth, async (req, res) => {
   try {
-    const { rows } = await pool.query(
-      `SELECT id, name, biz_name FROM voice_clients WHERE mode IN ('outbound','both') AND agent_id != '' ORDER BY name`
-    );
+    const { rows } = req.role === 'admin'
+      ? await pool.query(
+          `SELECT id, name, biz_name FROM voice_clients WHERE mode IN ('outbound','both') AND agent_id != '' ORDER BY name`
+        )
+      : await pool.query(
+          `SELECT id, name, biz_name FROM voice_clients WHERE id = $1 AND mode IN ('outbound','both') AND agent_id != ''`,
+          [req.clientId]
+        );
     res.json(rows);
   } catch (err) {
     res.status(500).json({ error: err.message });
