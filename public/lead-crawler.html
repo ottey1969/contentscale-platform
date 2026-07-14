@@ -540,7 +540,7 @@
             .client-status-line{grid-column:1/-1;font-size:11px;color:var(--sub);font-family:'IBM Plex Mono',monospace;background:rgba(255,255,255,.02);border:1px solid var(--border);border-radius:6px;padding:10px 14px;}
             </style>
 
-            <div class="client-panel" id="clientPanel">
+            <div class="client-panel" id="clientPanel" style="display:none;">
               <div class="client-panel-head">
                 <span style="font-size:20px;">🎙️</span>
                 <h3>Client Voice Agent Manager</h3>
@@ -557,8 +557,8 @@
                 <select class="client-select" id="clientSwitcher" onchange="switchClient(this.value)">
                   <option value="">— Select a client —</option>
                 </select>
-                <button class="client-btn primary" onclick="newClient()">+ New Client</button>
-                <button class="client-btn danger" id="deleteClientBtn" onclick="deleteClient()" style="display:none;">Delete</button>
+                <button class="client-btn primary client-admin-only" onclick="newClient()">+ New Client</button>
+                <button class="client-btn danger client-admin-only" id="deleteClientBtn" onclick="deleteClient()" style="display:none;">Delete</button>
               </div>
 
               <div class="client-grid" id="clientForm" style="display:none;">
@@ -619,6 +619,12 @@
                   <label>Outbound Pitch / Script — what this client's calls are about</label>
                   <input type="text" id="cliOutboundPitch" placeholder="e.g. Following up on your roof inspection request from last week" />
                   <small>Different clients sell different things — this is the specific reason for THIS client's outbound calls (only used in Outbound/Both mode)</small>
+                </div>
+
+                <div class="client-field" id="cliAccessCodeWrap" style="grid-column:1/-1;">
+                  <label>Client Access Code — lets this client view their own Voice Agent Manager</label>
+                  <input type="text" id="cliAccessCode" placeholder="e.g. Perfect160011.@" />
+                  <small>Give this code to the client. It opens ONLY their voice agent panel — never the crawler, never another client. Admin-only field.</small>
                 </div>
 
                 <div class="client-status-line" id="cliStatusLine">Not saved yet.</div>
@@ -704,7 +710,7 @@
               document.getElementById('clientForm').style.display = 'grid';
               document.getElementById('deleteClientBtn').style.display = 'none';
               document.getElementById('clientSwitcher').value = '';
-              ['cliName','cliAgentId','cliPhoneId','cliSmsTo','cliBizName','cliGreeting','cliUrgency','cliOutboundCaller','cliOutboundPitch'].forEach(id => document.getElementById(id).value = '');
+              ['cliName','cliAgentId','cliPhoneId','cliSmsTo','cliBizName','cliGreeting','cliUrgency','cliOutboundCaller','cliOutboundPitch','cliAccessCode'].forEach(id => document.getElementById(id).value = '');
               setClientMode('inbound');
               document.getElementById('cliStatusLine').textContent = 'New client — not saved yet.';
             }
@@ -733,6 +739,7 @@
                 urgencyCriteria: document.getElementById('cliUrgency').value.trim(),
                 outboundCallerName: document.getElementById('cliOutboundCaller').value.trim(),
                 outboundPitch: document.getElementById('cliOutboundPitch').value.trim(),
+                accessCode: isAdmin() ? (document.getElementById('cliAccessCode').value.trim() || null) : undefined,
                 savedAt: Date.now(),
               };
               const idx = clients.findIndex(c => c.id === data.id);
@@ -786,8 +793,12 @@
             // only ever sends a guess and receives ok/false — so the code is NOT in
             // this page's source and visitors cannot read it.
             const LS_ADMIN = 'lc_admin_code';
+            const LS_ROLE  = 'lc_role';
+            const LS_CNAME = 'lc_client_name';
             function adminCode(){ return sessionStorage.getItem(LS_ADMIN) || ''; }
+            function userRole(){ return sessionStorage.getItem(LS_ROLE) || ''; }
             function isUnlocked(){ return !!adminCode(); }
+            function isAdmin(){ return userRole() === 'admin'; }
 
             // Every admin API call must carry this header, or the server rejects it.
             function adminHeaders(extra){
@@ -812,9 +823,13 @@
                 if(data.ok){
                   // sessionStorage: cleared when the tab closes — safer than localStorage
                   sessionStorage.setItem(LS_ADMIN, code);
+                  sessionStorage.setItem(LS_ROLE, data.role || '');
+                  if(data.clientName) sessionStorage.setItem(LS_CNAME, data.clientName);
                   inp.value = '';
                   applyLockState();
-                  toast('🔓 Unlocked');
+                  toast(data.role === 'admin'
+                    ? '🔓 Unlocked — full access'
+                    : '🔓 Unlocked — Voice Agent Manager (' + (data.clientName || 'your account') + ')');
                 } else {
                   st.innerHTML = '<span style="color:var(--red)">❌ Wrong code</span>';
                   inp.value = '';
@@ -826,33 +841,64 @@
 
             function lockCrawler(){
               sessionStorage.removeItem(LS_ADMIN);
+              sessionStorage.removeItem(LS_ROLE);
+              sessionStorage.removeItem(LS_CNAME);
               applyLockState();
               toast('🔒 Locked');
             }
 
             function applyLockState(){
-              const zone = document.getElementById('crawlerZone');
-              const bar  = document.getElementById('lockBar');
-              const unlocked = isUnlocked();
-              if(zone) zone.style.display = unlocked ? 'block' : 'none';
-              if(bar){
-                if(unlocked){
-                  bar.style.borderLeftColor = 'var(--green)';
-                  bar.innerHTML = '<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">'
-                    + '<span style="font-family:\'Bebas Neue\',sans-serif;font-size:22px;color:var(--green);">🔓 Crawler — Unlocked</span>'
-                    + '<span style="font-family:\'IBM Plex Mono\',monospace;font-size:10px;color:var(--sub);flex:1;">Session only — closing this tab locks it again.</span>'
-                    + '<button onclick="lockCrawler()" style="background:var(--surface);border:1px solid var(--border);color:var(--muted);font-family:\'IBM Plex Mono\',monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;padding:7px 14px;border-radius:4px;cursor:pointer;">🔒 Lock again</button>'
-                    + '</div>';
-                }
+              const zone   = document.getElementById('crawlerZone');
+              const bar    = document.getElementById('lockBar');
+              const panel  = document.getElementById('clientPanel');
+              const gate   = document.getElementById('voiceGateNotice');
+              const admin  = isAdmin();
+              const anyone = isUnlocked();
+
+              // Crawler: ADMIN ONLY. A client code never reveals it.
+              if(zone) zone.style.display = admin ? 'block' : 'none';
+
+              // Voice Agent Manager: visible to admin AND to a client with their code.
+              if(panel) panel.style.display = anyone ? 'block' : 'none';
+              if(gate)  gate.style.display  = 'none';
+
+              if(!bar) return;
+
+              if(!anyone){
+                // Locked — show the code prompt.
+                bar.style.borderLeftColor = 'var(--purple)';
+                bar.innerHTML =
+                  '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:24px;color:var(--purple);margin-bottom:6px;">🔒 Crawler &amp; AI Voice Agent — Locked</div>'
+                  + '<div style="font-size:12px;color:var(--muted);margin-bottom:14px;line-height:1.6;">Enter your access code to continue.<br>'
+                  + '<span style="color:var(--sub);font-size:11px;">Client codes open the Voice Agent Manager only.</span></div>'
+                  + '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">'
+                  + '<input type="password" id="lockCode" placeholder="Access code" autocomplete="off" onkeydown="if(event.key===\'Enter\')tryUnlock()" style="flex:1;min-width:200px;background:var(--bg);border:1px solid var(--border);border-radius:5px;padding:11px 14px;font-family:\'IBM Plex Mono\',monospace;font-size:13px;color:var(--ink);outline:none;" />'
+                  + '<button onclick="tryUnlock()" style="background:var(--purple);color:#fff;border:none;font-family:\'Bebas Neue\',sans-serif;font-size:18px;letter-spacing:.04em;padding:11px 26px;border-radius:5px;cursor:pointer;">UNLOCK</button>'
+                  + '</div><div id="lockStatus" style="margin-top:9px;font-family:\'IBM Plex Mono\',monospace;font-size:10px;min-height:14px;"></div>';
+                return;
               }
-              // The voice-agent admin panel is also gated: visitors see it, but can't
-              // load or save client configs without the code.
-              const clientPanel = document.getElementById('clientPanel');
-              if(clientPanel){
-                const gate = document.getElementById('voiceGateNotice');
-                if(gate) gate.style.display = unlocked ? 'none' : 'block';
-              }
-              if(unlocked) loadOutboundClients();
+
+              // Unlocked — show who you are and what you can see.
+              const cname = sessionStorage.getItem(LS_CNAME) || '';
+              bar.style.borderLeftColor = 'var(--green)';
+              bar.innerHTML = '<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">'
+                + '<span style="font-family:\'Bebas Neue\',sans-serif;font-size:22px;color:var(--green);">🔓 '
+                + (admin ? 'Full access' : 'Voice Agent Manager') + '</span>'
+                + '<span style="font-family:\'IBM Plex Mono\',monospace;font-size:10px;color:var(--sub);flex:1;">'
+                + (admin ? 'Crawler + all client configs.' : 'Signed in as ' + escHtml(cname) + ' — your voice agent only.')
+                + ' Closing this tab locks it again.</span>'
+                + '<button onclick="lockCrawler()" style="background:var(--surface);border:1px solid var(--border);color:var(--muted);font-family:\'IBM Plex Mono\',monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;padding:7px 14px;border-radius:4px;cursor:pointer;">🔒 Lock</button>'
+                + '</div>';
+
+              // Clients don't get admin controls: no code field, no new/delete client.
+              const codeWrap = document.getElementById('cliAccessCodeWrap');
+              if(codeWrap) codeWrap.style.display = admin ? 'block' : 'none';
+              document.querySelectorAll('.client-admin-only').forEach(el => {
+                el.style.display = admin ? '' : 'none';
+              });
+
+              renderClientSwitcher();
+              loadOutboundClients();
             }
 
             document.addEventListener('DOMContentLoaded', applyLockState);
