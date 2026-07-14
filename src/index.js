@@ -10469,12 +10469,39 @@ app.post('/api/voicebot/webhook', (req, res) => {
 
 
 // ══════════════════════════════════════════════════════════════════════
+// ADMIN GATE — protects the Lead Crawler admin surface
+// ══════════════════════════════════════════════════════════════════════
+// Set LC_ADMIN_CODE in Railway Variables. The fallback below is only a
+// convenience for first boot — change it in Railway, don't rely on it.
+const LC_ADMIN_CODE = process.env.LC_ADMIN_CODE || 'Utrecht160011.@';
+
+// The browser never receives the code — it POSTs a guess and gets ok/false back.
+// That means the code is NOT in the page source and cannot be read by visitors.
+app.post('/api/admin/verify', (req, res) => {
+  const guess = (req.body && req.body.code) || '';
+  const ok = typeof guess === 'string' && guess === LC_ADMIN_CODE;
+  if (!ok) console.warn('[admin] failed unlock attempt from', req.ip);
+  res.json({ ok });
+});
+
+// Middleware: every admin-only route below requires the code in the x-admin-code header.
+function requireAdmin(req, res, next) {
+  const code = req.headers['x-admin-code'] || '';
+  if (code !== LC_ADMIN_CODE) {
+    return res.status(401).json({ error: 'Unauthorized — admin code required' });
+  }
+  next();
+}
+
+// ══════════════════════════════════════════════════════════════════════
 // ELEVENLABS VOICE CLIENTS — per-client inbound calls + SMS routing
 // Used by the Lead Crawler's "Client Voice Agent Manager" panel.
+// NOTE: these are admin-only. The inbound/call-ended webhooks further down
+// stay PUBLIC on purpose — ElevenLabs calls those, and it can't send our header.
 // ══════════════════════════════════════════════════════════════════════
 
 // POST /api/voice-clients — save/upsert a client's voice config
-app.post('/api/voice-clients', async (req, res) => {
+app.post('/api/voice-clients', requireAdmin, async (req, res) => {
   const { id, name, mode, agentId, phoneId, smsTo, bizName, greeting, urgencyCriteria, outboundPitch, outboundCallerName } = req.body || {};
   if (!id || !name) return res.status(400).json({ error: 'id and name are required' });
 
@@ -10505,7 +10532,7 @@ app.post('/api/voice-clients', async (req, res) => {
 });
 
 // GET /api/voice-clients — list all clients
-app.get('/api/voice-clients', async (req, res) => {
+app.get('/api/voice-clients', requireAdmin, async (req, res) => {
   try {
     const { rows } = await pool.query('SELECT * FROM voice_clients ORDER BY saved_at DESC');
     res.json(rows);
@@ -10515,7 +10542,7 @@ app.get('/api/voice-clients', async (req, res) => {
 });
 
 // DELETE /api/voice-clients/:id
-app.delete('/api/voice-clients/:id', async (req, res) => {
+app.delete('/api/voice-clients/:id', requireAdmin, async (req, res) => {
   try {
     await pool.query('DELETE FROM voice_clients WHERE id = $1', [req.params.id]);
     res.json({ ok: true });
@@ -10622,7 +10649,7 @@ app.post('/api/elevenlabs/call-ended-webhook', async (req, res) => {
 // their current docs (https://elevenlabs.io/docs/conversational-ai) — this uses
 // their documented Twilio-native outbound pattern as of the agent's knowledge,
 // but ElevenLabs' API surface changes; adjust the fetch URL/body below if needed.
-app.post('/api/elevenlabs/outbound-call', async (req, res) => {
+app.post('/api/elevenlabs/outbound-call', requireAdmin, async (req, res) => {
   try {
     const { clientId, targetPhone, targetName, directAgentId, directPhoneId, directBizName, directCallerName, directPitch } = req.body || {};
     if (!targetPhone) {
@@ -10698,7 +10725,7 @@ app.post('/api/elevenlabs/outbound-call', async (req, res) => {
 
 // GET /api/voice-clients/outbound-ready — list only clients configured for outbound,
 // used by the Lead Crawler to populate its "Call as:" dropdown.
-app.get('/api/voice-clients/outbound-ready', async (req, res) => {
+app.get('/api/voice-clients/outbound-ready', requireAdmin, async (req, res) => {
   try {
     const { rows } = await pool.query(
       `SELECT id, name, biz_name FROM voice_clients WHERE mode IN ('outbound','both') AND agent_id != '' ORDER BY name`
