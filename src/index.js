@@ -8498,16 +8498,37 @@ recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', descriptio
 // ── 1. Serve the standalone lead-crawler page ─────────────────────────────────
 // Reads lead-crawler.html from disk on every request, so future edits to that
 // file go live immediately after deploy — no more re-encoding a base64 snapshot
-// into this route. Place lead-crawler.html in the same folder as this index.js
-// (or adjust the path below to wherever you keep it in the repo).
+// into this route. Tries a few common locations so it works whether the file
+// sits next to index.js, in /public, or in /views.
+const LEAD_CRAWLER_CANDIDATES = [
+  path.join(__dirname, 'lead-crawler.html'),
+  path.join(__dirname, 'public', 'lead-crawler.html'),
+  path.join(__dirname, 'views', 'lead-crawler.html'),
+  path.join(__dirname, 'static', 'lead-crawler.html'),
+  path.join(process.cwd(), 'lead-crawler.html'),
+];
+
 app.get('/lead-crawler', (req, res) => {
-  const leadCrawlerPath = path.join(__dirname, 'lead-crawler.html');
-  fs.readFile(leadCrawlerPath, 'utf8', (err, html) => {
+  const found = LEAD_CRAWLER_CANDIDATES.find(p => {
+    try { return fs.existsSync(p); } catch (e) { return false; }
+  });
+
+  if (!found) {
+    console.error('[lead-crawler] lead-crawler.html not found. Looked in:', LEAD_CRAWLER_CANDIDATES);
+    return res.status(500).type('text/plain').send(
+      'lead-crawler.html not found on the server.\n\n' +
+      'Commit lead-crawler.html to your repo (next to index.js is easiest), then redeploy.\n\n' +
+      'Looked in:\n  ' + LEAD_CRAWLER_CANDIDATES.join('\n  ')
+    );
+  }
+
+  fs.readFile(found, 'utf8', (err, html) => {
     if (err) {
-      console.error('[lead-crawler] Failed to read lead-crawler.html:', err.message);
-      return res.status(500).send('lead-crawler.html not found on server — make sure it is committed to the repo next to index.js.');
+      console.error('[lead-crawler] Failed to read', found, err.message);
+      return res.status(500).type('text/plain').send('Could not read lead-crawler.html: ' + err.message);
     }
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.setHeader('Cache-Control', 'no-store');
     res.send(html);
   });
 });
