@@ -3,9 +3,22 @@
    <head>
       <meta charset="UTF-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Lead Crawler — ContentScale (Gemini)</title>
-      <meta name="description" content="Find 200–500 content writing leads in any city. 20 industries, AI-powered, bucketed by urgency. Free tool by ContentScale.">
+      <title>AI Voice Agents for Local Business | ContentScale</title>
+      <meta name="description" content="24/7 AI voice agents that answer your calls, qualify every caller and text you the urgent ones instantly. Never miss another job. By ContentScale.">
       <link rel="canonical" href="https://contentscale.site/lead-crawler">
+
+      <!-- Social preview — this is what shows when the link is shared -->
+      <meta property="og:type" content="website">
+      <meta property="og:url" content="https://contentscale.site/lead-crawler">
+      <meta property="og:site_name" content="ContentScale">
+      <meta property="og:title" content="AI Voice Agents for Local Business | ContentScale">
+      <meta property="og:description" content="24/7 AI voice agents that answer your calls, qualify every caller and text you the urgent ones instantly. Never miss another job.">
+      <meta name="twitter:card" content="summary_large_image">
+      <meta name="twitter:title" content="AI Voice Agents for Local Business | ContentScale">
+      <meta name="twitter:description" content="24/7 AI voice agents that answer your calls, qualify every caller and text you the urgent ones instantly. Never miss another job.">
+
+      <!-- This page is private (client area) — keep it out of search results -->
+      <meta name="robots" content="noindex, nofollow">
       <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;700&family=IBM+Plex+Mono:wght@400;700&display=swap" rel="stylesheet">
       <style>
          *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -893,12 +906,17 @@
                 + '<button onclick="lockCrawler()" style="background:var(--surface);border:1px solid var(--border);color:var(--muted);font-family:\'IBM Plex Mono\',monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;padding:7px 14px;border-radius:4px;cursor:pointer;">🔒 Lock</button>'
                 + '</div>';
 
-              // Clients don't get admin controls: no code field, no new/delete client.
+              // Clients don't get admin controls: no code field, no new/delete client,
+              // and no client switcher — they have exactly one config: their own.
               const codeWrap = document.getElementById('cliAccessCodeWrap');
               if(codeWrap) codeWrap.style.display = admin ? 'block' : 'none';
               document.querySelectorAll('.client-admin-only').forEach(el => {
                 el.style.display = admin ? '' : 'none';
               });
+              const switcher = document.querySelector('.client-switcher');
+              if(switcher) switcher.style.display = admin ? '' : 'none';
+              const emptyMsg = document.getElementById('clientEmptyMsg');
+              if(emptyMsg && !admin) emptyMsg.style.display = 'none';
 
               // A client's browser has no localStorage — pull their config from the server.
               hydrateClientsFromServer().then(() => {
