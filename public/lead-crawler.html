@@ -779,11 +779,14 @@
                   headers: adminHeaders({'Content-Type':'application/json'}),
                   body: JSON.stringify(client)
                 });
-                if(!resp.ok) throw new Error('HTTP ' + resp.status);
-                document.getElementById('cliStatusLine').textContent += ' · synced to server ✓';
+                const body = await resp.text();
+                if(!resp.ok) throw new Error('HTTP ' + resp.status + ' — ' + body);
+                document.getElementById('cliStatusLine').innerHTML += ' · <span style="color:var(--green)">synced to server ✓</span>';
+                toast('☁ Saved to server — access code is live');
               }catch(e){
-                document.getElementById('cliStatusLine').innerHTML += ' · <span style="color:var(--red)">⚠ server sync failed — backend route may not exist yet</span>';
-                console.warn('[ClientManager] Server sync failed:', e.message);
+                document.getElementById('cliStatusLine').innerHTML += ' · <span style="color:var(--red)">⚠ NOT saved to server</span>';
+                toast('❌ Server save failed — client exists only in this browser. ' + e.message);
+                console.error('[ClientManager] Server sync failed:', e.message);
               }
             }
 
