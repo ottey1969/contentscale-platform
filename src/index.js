@@ -10474,7 +10474,9 @@ app.post('/api/voicebot/webhook', (req, res) => {
 // ══════════════════════════════════════════════════════════════════════
 // Set LC_ADMIN_CODE in Railway Variables. The fallback below is only a
 // convenience for first boot — change it in Railway, don't rely on it.
-const LC_ADMIN_CODE = process.env.LC_ADMIN_CODE || 'Utrecht160011.@';
+const LC_ADMIN_CODE = (process.env.LC_ADMIN_CODE || 'Utrecht160011.@').trim();
+console.log('[auth] admin code source:', process.env.LC_ADMIN_CODE ? 'LC_ADMIN_CODE env var' : 'built-in fallback',
+            '| length:', LC_ADMIN_CODE.length);
 
 // Two roles:
 //   admin  → LC_ADMIN_CODE. Sees the crawler + every client's voice config.
@@ -10484,6 +10486,7 @@ const LC_ADMIN_CODE = process.env.LC_ADMIN_CODE || 'Utrecht160011.@';
 // So no code is in the page source and visitors cannot read one.
 async function resolveRole(code) {
   if (!code || typeof code !== 'string') return { role: null };
+  code = code.trim();
   if (code === LC_ADMIN_CODE) return { role: 'admin', clientId: null };
   try {
     const { rows } = await pool.query(
@@ -10501,7 +10504,11 @@ app.post('/api/admin/verify', async (req, res) => {
   const guess = (req.body && req.body.code) || '';
   const { role, clientId, clientName } = await resolveRole(guess);
   if (!role) {
-    console.warn('[auth] failed unlock attempt from', req.ip);
+    // Never log the code itself — just enough to diagnose a mismatch.
+    const g = (typeof guess === 'string' ? guess.trim() : '');
+    console.warn('[auth] failed unlock from', req.ip,
+                 '| got length:', g.length, '| admin code length:', LC_ADMIN_CODE.length,
+                 g.length === LC_ADMIN_CODE.length ? '(same length — characters differ)' : '(length differs)');
     return res.json({ ok: false });
   }
   res.json({ ok: true, role, clientId: clientId || null, clientName: clientName || null });
