@@ -113,6 +113,8 @@
          .lcard{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:20px;transition:all .2s;position:relative;cursor:pointer;display:flex;flex-direction:column;gap:10px;}
          .lcard:hover{border-color:var(--sub);transform:translateY(-4px);box-shadow:0 12px 30px rgba(0,0,0,0.5);}
          .lcard.sel{border-color:var(--gold);background:var(--gold-glow);box-shadow:0 0 20px rgba(251,191,36,0.05);}
+         .lcard.manual{border-color:var(--purple);background:rgba(167,139,250,0.05);}
+         .lcard.manual::before{content:'📌 You\'re calling this one';position:absolute;top:-1px;left:12px;background:var(--purple);color:#fff;font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:.05em;text-transform:uppercase;padding:2px 8px;border-radius:0 0 4px 4px;}
          .chk{position:absolute;top:15px;right:15px;width:18px;height:18px;border:2px solid var(--border);border-radius:4px;background:var(--bg);transition:all .2s;}
          .chk.on{background:var(--gold);border-color:var(--gold);}
          .chk.on::after{content:'✓';font-size:11px;color:#000;position:absolute;left:3px;top:-1px;font-weight:900;}
@@ -581,6 +583,22 @@
                   <small>The agent flags calls matching this as urgent in the SMS. Non-matching calls are marked "can wait".</small>
                 </div>
 
+                <div class="client-field">
+                  <label>Outbound Caller Name</label>
+                  <input type="text" id="cliOutboundCaller" placeholder="e.g. Mike from Perfect Roofing Team" />
+                  <small>Only used for Outbound/Both mode — who the AI says it's calling on behalf of</small>
+                </div>
+                <div class="client-field">
+                  <label>&nbsp;</label>
+                  <small style="margin-top:12px;display:block;">Disclosure line becomes: "I'm {{Business}}'s AI voice assistant, calling on behalf of {{Outbound Caller Name}}"</small>
+                </div>
+
+                <div class="client-field" style="grid-column:1/-1;">
+                  <label>Outbound Pitch / Script — what this client's calls are about</label>
+                  <input type="text" id="cliOutboundPitch" placeholder="e.g. Following up on your roof inspection request from last week" />
+                  <small>Different clients sell different things — this is the specific reason for THIS client's outbound calls (only used in Outbound/Both mode)</small>
+                </div>
+
                 <div class="client-status-line" id="cliStatusLine">Not saved yet.</div>
 
                 <button class="client-save-btn" onclick="saveClient()">SAVE CLIENT CONFIG</button>
@@ -651,6 +669,8 @@
               document.getElementById('cliBizName').value = c.bizName || '';
               document.getElementById('cliGreeting').value = c.greeting || '';
               document.getElementById('cliUrgency').value = c.urgencyCriteria || '';
+              document.getElementById('cliOutboundCaller').value = c.outboundCallerName || '';
+              document.getElementById('cliOutboundPitch').value = c.outboundPitch || '';
               setClientMode(c.mode || 'inbound');
               document.getElementById('cliStatusLine').textContent =
                 c.savedAt ? ('Last saved: ' + new Date(c.savedAt).toLocaleString()) : 'Not saved yet.';
@@ -662,7 +682,7 @@
               document.getElementById('clientForm').style.display = 'grid';
               document.getElementById('deleteClientBtn').style.display = 'none';
               document.getElementById('clientSwitcher').value = '';
-              ['cliName','cliAgentId','cliPhoneId','cliSmsTo','cliBizName','cliGreeting','cliUrgency'].forEach(id => document.getElementById(id).value = '');
+              ['cliName','cliAgentId','cliPhoneId','cliSmsTo','cliBizName','cliGreeting','cliUrgency','cliOutboundCaller','cliOutboundPitch'].forEach(id => document.getElementById(id).value = '');
               setClientMode('inbound');
               document.getElementById('cliStatusLine').textContent = 'New client — not saved yet.';
             }
@@ -689,6 +709,8 @@
                 bizName: document.getElementById('cliBizName').value.trim(),
                 greeting: document.getElementById('cliGreeting').value.trim(),
                 urgencyCriteria: document.getElementById('cliUrgency').value.trim(),
+                outboundCallerName: document.getElementById('cliOutboundCaller').value.trim(),
+                outboundPitch: document.getElementById('cliOutboundPitch').value.trim(),
                 savedAt: Date.now(),
               };
               const idx = clients.findIndex(c => c.id === data.id);
@@ -700,6 +722,7 @@
               document.getElementById('cliStatusLine').textContent = 'Last saved: ' + new Date(data.savedAt).toLocaleString();
               toast('✅ Saved ' + name);
               syncClientToServer(data);
+              loadOutboundClients();
             }
 
             function deleteClient(){
@@ -735,7 +758,85 @@
               }
             }
 
+            // ── Outbound caller identity (ContentScale/Vapi vs a specific client/ElevenLabs) ──
+            let activeCallerIdentity = localStorage.getItem('lc_caller_identity') || '';
+
+            function setCallerIdentity(clientId){
+              activeCallerIdentity = clientId || '';
+              localStorage.setItem('lc_caller_identity', activeCallerIdentity);
+              const hint = document.getElementById('callerIdentityHint');
+              const toggle = document.getElementById('csProviderToggle');
+              if(!clientId){
+                toggle.style.display = 'flex';
+                updateCsProviderHint();
+                return;
+              }
+              toggle.style.display = 'none';
+              document.getElementById('csElevenConfigRow').style.display = 'none';
+              const sel = document.getElementById('callerIdentitySelect');
+              const label = sel.selectedOptions[0]?.textContent || 'this client';
+              hint.textContent = `All calls will say "${label}'s AI voice assistant" — using their own script`;
+              toast('📞 Now calling as: ' + label);
+            }
+
+            function getContentScaleProvider(){
+              return localStorage.getItem('lc_cs_provider') || 'vapi';
+            }
+
+            function setContentScaleProvider(provider){
+              localStorage.setItem('lc_cs_provider', provider);
+              document.getElementById('csProvVapi').classList.toggle('on', provider==='vapi');
+              document.getElementById('csProvEleven').classList.toggle('on', provider==='elevenlabs');
+              document.getElementById('csElevenConfigRow').style.display = provider==='elevenlabs' ? 'flex' : 'none';
+              updateCsProviderHint();
+              toast('📞 ContentScale calls now use: ' + (provider==='vapi'?'Vapi':'ElevenLabs'));
+            }
+
+            function updateCsProviderHint(){
+              const provider = getContentScaleProvider();
+              const hint = document.getElementById('callerIdentityHint');
+              hint.textContent = provider==='vapi'
+                ? 'All calls will say "ContentScale\\'s AI voice assistant" — via Vapi'
+                : 'All calls will say "ContentScale\\'s AI voice assistant" — via ElevenLabs';
+            }
+
+            function saveCsElevenConfig(){
+              localStorage.setItem('lc_cs_eleven_agent', document.getElementById('csElevenAgentId').value.trim());
+              localStorage.setItem('lc_cs_eleven_phone', document.getElementById('csElevenPhoneId').value.trim());
+            }
+
+            function loadCsElevenConfig(){
+              document.getElementById('csElevenAgentId').value = localStorage.getItem('lc_cs_eleven_agent') || '';
+              document.getElementById('csElevenPhoneId').value = localStorage.getItem('lc_cs_eleven_phone') || '';
+              const provider = getContentScaleProvider();
+              document.getElementById('csProvVapi').classList.toggle('on', provider==='vapi');
+              document.getElementById('csProvEleven').classList.toggle('on', provider==='elevenlabs');
+              document.getElementById('csElevenConfigRow').style.display = provider==='elevenlabs' ? 'flex' : 'none';
+              if(!activeCallerIdentity){
+                document.getElementById('csProviderToggle').style.display = 'flex';
+                updateCsProviderHint();
+              }
+            }
+
+            async function loadOutboundClients(){
+              try{
+                const resp = await fetch('https://app.contentscale.site/api/voice-clients/outbound-ready');
+                if(!resp.ok) return;
+                const clients = await resp.json();
+                const sel = document.getElementById('callerIdentitySelect');
+                if(!sel) return;
+                const savedId = localStorage.getItem('lc_caller_identity') || '';
+                sel.innerHTML = '<option value="">ContentScale (default — Vapi)</option>' +
+                  clients.map(c => `<option value="${c.id}"${c.id===savedId?' selected':''}>${escHtml(c.biz_name||c.name)}</option>`).join('');
+                if(savedId && clients.some(c=>c.id===savedId)) setCallerIdentity(savedId);
+              }catch(e){
+                console.warn('[loadOutboundClients] failed:', e.message);
+              }
+            }
+
             document.addEventListener('DOMContentLoaded', renderClientSwitcher);
+            document.addEventListener('DOMContentLoaded', loadOutboundClients);
+            document.addEventListener('DOMContentLoaded', loadCsElevenConfig);
             </script>
             <!-- ══ END CLIENT & VOICE AGENT MANAGER ══ -->
 
@@ -854,6 +955,27 @@
                <button class="tbtn" onclick="clearSel()">Clear</button>
                <button class="tbtn" onclick="exportSelCSV()">↓ CSV (selected)</button>
             </div>
+            <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;width:100%;padding-top:10px;border-top:1px solid var(--border);margin-top:4px;">
+               <span class="tbl">📞 Call as:</span>
+               <select id="callerIdentitySelect" onchange="setCallerIdentity(this.value)"
+                  style="background:var(--surface);border:1px solid var(--border);border-radius:4px;color:var(--ink);font-family:'IBM Plex Mono',monospace;font-size:11px;padding:7px 10px;">
+                  <option value="">ContentScale (default — Vapi)</option>
+               </select>
+               <span id="callerIdentityHint" style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);">All calls will say "ContentScale's AI voice assistant"</span>
+               <div id="csProviderToggle" style="display:none;align-items:center;gap:6px;margin-left:8px;">
+                  <span class="tbl">Provider:</span>
+                  <button type="button" class="tbtn on" id="csProvVapi" onclick="setContentScaleProvider('vapi')">Vapi</button>
+                  <button type="button" class="tbtn" id="csProvEleven" onclick="setContentScaleProvider('elevenlabs')">ElevenLabs</button>
+               </div>
+            </div>
+            <div id="csElevenConfigRow" style="display:none;flex-wrap:wrap;gap:8px;align-items:center;width:100%;padding-top:10px;border-top:1px solid var(--border);margin-top:4px;">
+               <span class="tbl" style="color:var(--purple);">ContentScale's own ElevenLabs agent:</span>
+               <input type="text" id="csElevenAgentId" placeholder="agent_xxxxxxxxxxxx" oninput="saveCsElevenConfig()"
+                  style="background:var(--surface);border:1px solid var(--border);border-radius:4px;color:var(--ink);font-family:'IBM Plex Mono',monospace;font-size:11px;padding:7px 10px;min-width:200px;" />
+               <input type="text" id="csElevenPhoneId" placeholder="phnum_xxxxxxxxxxxx" oninput="saveCsElevenConfig()"
+                  style="background:var(--surface);border:1px solid var(--border);border-radius:4px;color:var(--ink);font-family:'IBM Plex Mono',monospace;font-size:11px;padding:7px 10px;min-width:200px;" />
+               <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--sub);">saved automatically, used only when Provider = ElevenLabs</span>
+            </div>
          </div>
          <div id="results"></div>
          <div class="empty-state" id="emptyState">
@@ -963,6 +1085,19 @@
          {key:'estab',    label:'LARGE LIBRARY',  sublabel:'Established',    range:'150+ Pages',     cls:'bk-estab',    icon:'🏢', hot:'↗ High Ticket',    action:'Content audit pitch',           desc:'Big content library. Likely has writers. Pitch an audit — 30% is probably hurting rankings.'},
          ];
          let allLeads=[],selected=new Set(),stopped=false,fiveHourHit=false;
+         const LS_MANUAL_LEADS='lc_manual_leads';
+         let manualLeads=new Set();
+         try{ manualLeads=new Set(JSON.parse(localStorage.getItem(LS_MANUAL_LEADS)||'[]')); }catch(e){}
+         function saveManualLeads(){ try{ localStorage.setItem(LS_MANUAL_LEADS, JSON.stringify([...manualLeads])); }catch(e){} }
+         function toggleManual(id,e){
+           if(e&&e.stopPropagation)e.stopPropagation();
+           manualLeads.has(id) ? manualLeads.delete(id) : manualLeads.add(id);
+           saveManualLeads();
+           document.getElementById('lc-'+id)?.classList.toggle('manual', manualLeads.has(id));
+           const cb=document.getElementById('manual-'+id);
+           if(cb) cb.checked=manualLeads.has(id);
+           toast(manualLeads.has(id) ? '📌 Marked — you\\'ll call this one yourself' : 'Unmarked — back in auto-call pool');
+         }
  
          function stopCrawl(){
            stopped=true;
@@ -1565,7 +1700,7 @@ Return ONLY a raw JSON array — no markdown, no code fences, no explanation:
          const[srcLabel,srcStyle]=srcMap[l.sitemap_source]||['?','background:rgba(82,82,110,.12);color:#52526e;border:1px solid rgba(82,82,110,.2)'];
          const url=l.sitemap||(l.website?l.website+'/sitemap.xml':'#');
          return `
-         <div class="lcard${isSel?' sel':''}" id="lc-${id}" onclick="toggleSel('${id}',event)">
+         <div class="lcard${isSel?' sel':''}${manualLeads.has(id)?' manual':''}" id="lc-${id}" onclick="toggleSel('${id}',event)">
          <div class="chk${isSel?' on':''}" id="chk-${id}"></div>
          <div class="cn">${l.name||'Unknown'}</div>
          <div class="ct">${l.type||''}</div>
@@ -1584,6 +1719,10 @@ Return ONLY a raw JSON array — no markdown, no code fences, no explanation:
          <div class="cfoot">
          <div class="cpages">~<strong>${l.estimated_pages||'?'}</strong> pages</div>
          <div style="display:flex;align-items:center;gap:6px;">
+         <label onclick="event.stopPropagation()" style="display:flex;align-items:center;gap:4px;font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted);cursor:pointer;user-select:none;" title="Exclude from Auto-Queue and bulk calling — you'll call this one yourself">
+         <input type="checkbox" id="manual-${id}" ${manualLeads.has(id)?'checked':''} onchange="toggleManual('${id}',event)" style="cursor:pointer;" />
+         📌 I'll call
+         </label>
          ${l.phone?`<button class="call-btn ${getCallState(id)}" id="callbtn-${id}"
            onclick="event.stopPropagation();triggerCall('${id}')"
            title="Call ${l.phone}">${getCallIcon(id)} ${getCallLabel(id)}</button>`:''}
@@ -1604,7 +1743,7 @@ Return ONLY a raw JSON array — no markdown, no code fences, no explanation:
          document.getElementById('selCount').textContent=selected.size;
          document.getElementById('selbar').classList.toggle('show',selected.size>0);
          }
-         function selAll(){getFiltered().forEach(l=>selected.add(makeId(l)));renderBuckets();updateSelbar();toast('Selected '+selected.size+' leads');}
+         function selAll(){getFiltered().forEach(l=>{if(!manualLeads.has(makeId(l)))selected.add(makeId(l));});renderBuckets();updateSelbar();toast('Selected '+selected.size+' leads (excluding '+manualLeads.size+' marked "I\'ll call")');}
          function clearSel(){selected.clear();renderBuckets();updateSelbar();}
          function setBucket(btn,key){document.querySelectorAll('.tbtn[data-bk]').forEach(b=>b.classList.remove('on'));btn.classList.add('on');activeBucket=key;renderBuckets();}
          function doSort(f){sortField=f;renderBuckets();toast('Sorted by '+f);}
@@ -1741,58 +1880,61 @@ Return ONLY a raw JSON array — no markdown, no code fences, no explanation:
            const type    = lead.type||'business';
            const pitch   = lead.pitch_angle||`Your website only has about ${pages} pages and could use more content to rank on Google.`;
          
-           const opening = (cfg.openingLine||`Hi, just to be transparent — I'm an AI assistant calling on behalf of Ottmar from ContentScale. Is this {name}? I just scanned your website and spotted something that could help you get more clients — do you have 2 minutes?`)
+           const opening = (cfg.openingLine||`Hi, just to be transparent — I'm ContentScale's AI voice assistant, calling on behalf of Ottmar. Is this {name}? I just scanned your website and spotted something that could help you get more clients — do you have 2 minutes?`)
              .replace('{name}',name).replace('{score}',score).replace('{pages}',pages).replace('{city}',city);
          
            const systemPrompt=`You are an AI assistant calling on behalf of ${cfg.callerName} from ${cfg.company||'ContentScale'}.
          
          LEGAL COMPLIANCE — MANDATORY:
-         - ALWAYS start with: "Hi, just to be transparent — I'm an AI assistant calling on behalf of ${cfg.callerName} from ${cfg.company}."
+         - ALWAYS start with: "Hi, just to be transparent — I'm ${cfg.company}'s AI voice assistant, calling on behalf of ${cfg.callerName}."
          - ALWAYS offer opt-out early: "If you'd prefer not to be called, just say 'stop' and I'll remove you immediately."
          - NEVER pretend to be human if asked directly
          - NEVER call outside 8am–8pm local time
          - If they say stop/not interested/remove me: confirm removal, end call immediately, log as opt-out
+         
+         LANGUAGE:
+         - Detect the caller's language from their VERY FIRST response after your opening line.
+         - Commit to that language for the entire rest of the call — do NOT switch languages mid-call, even if the caller mixes languages later.
+         - If genuinely unclear from their first response, ask once: "Which language would you prefer — I speak most languages."
+         - Say the opening line itself in English (or the number's default market language) since you don't know their language yet — the switch happens right after their first reply.
          
          You are calling ${name}, a ${type} in ${city}.
          Their website: ${domain}
          Pages found: ~${pages}
          Key gap: ${pitch}
          
-         YOUR GOAL: Have a genuine conversation. Qualify them. Get their email with permission.
+         YOUR GOAL: Keep it short. Get ONE outcome — a booked appointment or a callback time with ${cfg.callerName}. That's it. Don't over-explain, don't ask more than 1-2 discovery questions.
          
-         CALL FLOW:
+         CALL FLOW (aim for under 2 minutes total):
          
          1. OPENING (always start with AI disclosure):
-         "Hi, just to be transparent — I'm an AI assistant calling on behalf of ${cfg.callerName} from ${cfg.company}. Is this ${name}? I just did a quick scan of ${domain} and found that your website has about ${pages} pages — most businesses your size in ${city} that rank well on Google have 3 to 4 times more content. I can share exactly what's missing. Do you have 2 minutes?"
+         "Hi, just to be transparent — I'm ${cfg.company}'s AI voice assistant, calling on behalf of ${cfg.callerName}. Is this ${name}? I did a quick scan of ${domain} — ${pitch} Got 60 seconds?"
          
-         2. IF THEY ENGAGE — discovery questions (pick naturally, don't interrogate):
-         - "Are you currently getting clients from Google, or mostly referrals?"
-         - "Have you tried blogging or content marketing before?"
-         - "What's the biggest challenge with your online visibility right now?"
-         - "Is growing your client base from search something you're focused on this year?"
+         2. IF THEY ENGAGE — ONE quick qualifying question, then go straight to the ask:
+         - "Is growing traffic from Google something you're actively looking at right now?"
+         - Then immediately: "${cfg.callerName} can walk you through exactly what's missing in a quick 15-minute call — what works better for you, a call this week or would you rather he calls you back at a specific time?"
          
-         3. PITCH — based on what they said:
-         - If no blog: "The good news is you have a clean site — adding a blog with the right content could get you showing up for searches your competitors own right now."
-         - If outdated content: "A lot of your existing pages could be refreshed to meet what Google and AI assistants like ChatGPT now look for — that's exactly what we do."
-         - If interested: "I'd love to send you a free 1-page audit showing exactly what to fix first. What's the best email to send it to?" [GET EMAIL WITH PERMISSION]
+         3. IF THEY ASK "HOW DOES THIS WORK?" — one short, concrete answer:
+         "We use our in-house tool that combines Google Search data with an AI Citations Tracker — it shows exactly where your site is losing traffic and where AI tools like ChatGPT and Google's AI Overviews aren't citing you, then tells you exactly what to fix." Then go straight back to booking.
          
-         4. CLOSING:
-         - "Great — I'll have Ottmar send that over today. Is there a good time this week for a quick 15-minute call with Ottmar to go through it?"
-         - Log their email and preferred call time
+         4. BOOK IT — this is the whole point of the call:
+         - Get a day/time that works, or "call me back at [time]"
+         - Confirm the best number to reach them: "And this is the best number for ${cfg.callerName} to reach you on?"
+         - "Perfect — I'll get that booked in for ${cfg.callerName}."
          
          5. IF BUSY/HESITANT:
-         - "Totally understand — I can send a quick summary by email instead, no call needed. What email works best?" 
-         - Or: "No problem at all. I'll let Ottmar know you're not the right fit right now."
+         - "No problem — when's a better time for ${cfg.callerName} to call you back?"
+         - If still no: "Understood, I'll leave it there. Have a good one."
          
-         6. IF NO ANSWER — voicemail:
-         "Hi ${name}, this is an AI assistant calling on behalf of ${cfg.callerName} from ${cfg.company}. I scanned ${domain} and found some specific ways to help you rank better on Google and get found by AI assistants like ChatGPT. Call ${cfg.callback} to speak with ${cfg.callerName} directly, or I can send the details by email — just call back and leave your email. Have a great day!"
+         6. IF NO ANSWER — voicemail (keep to 15 seconds):
+         "Hi ${name}, this is ${cfg.company}'s AI voice assistant, calling on behalf of ${cfg.callerName}. Quick one — I scanned ${domain} and found something worth a 5-minute chat. Call ${cfg.callback} back whenever suits, or I'll try again another time."
          
          RULES:
          - Warm, conversational, human-feeling — not robotic or salesy
-         - Short — max 3-4 minutes, respect their time
-         - If they ask "are you a real person?" — be honest: "I'm an AI assistant, yes — but the audit and follow-up call are with a real person."
+         - SHORT — target under 2 minutes, hard cap 3 minutes. Don't ramble.
+         - If they ask "are you a real person?" — be honest: "I'm an AI assistant, yes — but the callback/appointment is with ${cfg.callerName} directly."
          - Opt-out is immediate — no pushback ever
-         - EMAIL COLLECTION: Only ask for email after they show interest. Always frame it as "I'll send you something useful" not "sign up for marketing"`;
+         - THE GOAL IS ALWAYS AN APPOINTMENT OR CALLBACK TIME — not an email, not a brochure. If they hesitate, offer a callback time instead of pushing for a meeting.`;
          
            return {
              firstMessage: opening,
@@ -1808,7 +1950,7 @@ Return ONLY a raw JSON array — no markdown, no code fences, no explanation:
              },
              endCallMessage:'Thanks for your time, have a great day!',
              voicemailMessage:`Hi, this is ${cfg.callerName} from ${cfg.company||'ContentScale'}. I analysed ${domain} and found some great opportunities to help with your online visibility. Call me back on ${cfg.callback||'our website'} — have a great day!`,
-             maxDurationSeconds:240,
+             maxDurationSeconds:180,
              backgroundSound:'off',
              backchannelingEnabled:true,
              endCallFunctionEnabled:true,
@@ -1819,12 +1961,6 @@ Return ONLY a raw JSON array — no markdown, no code fences, no explanation:
          async function triggerCall(leadId){
            // ── Gate 1: Terms must be accepted first ─────────────────
            if(!hasAcceptedTerms()){showTermsModal();toast('⚖ Accept the Operator Terms first');return;}
-         
-           const cfg=JSON.parse(localStorage.getItem(LS_VAPI)||'null');
-           if(!cfg||!cfg.vapiKey||!cfg.phoneId){
-             toast('⚠ Configure your Voicebot first — click "Configure Voicebot" above');
-             document.getElementById('vapiPanel').classList.add('visible');return;
-           }
          
            const lead=allLeads.find(l=>makeId(l)===leadId);
            if(!lead){toast('Lead not found');return;}
@@ -1847,6 +1983,69 @@ Return ONLY a raw JSON array — no markdown, no code fences, no explanation:
            if(existing&&existing.state==='calling'){toast('Already calling this lead');return;}
          
            setCallState(leadId,'calling','Connecting...');
+         
+           // ── Branch 1: calling AS a specific client (their own ElevenLabs agent) ──
+           if(activeCallerIdentity){
+             try{
+               const resp=await fetch('/api/elevenlabs/outbound-call',{
+                 method:'POST',
+                 headers:{'Content-Type':'application/json'},
+                 body:JSON.stringify({clientId:activeCallerIdentity, targetPhone:lead.phone, targetName:lead.name||''})
+               });
+               const data=await resp.json();
+               if(!resp.ok){
+                 setCallState(leadId,'failed','Failed: '+(data.error||resp.status));
+                 toast('❌ Call failed: '+(data.error||resp.status));return;
+               }
+               setCallState(leadId,'calling','Ringing...',data.callId);
+               addCallLog(lead,leadId,data.callId||('el_'+Date.now()),'calling');
+               toast('📞 Calling '+lead.name+' as '+(document.getElementById('callerIdentitySelect').selectedOptions[0]?.textContent||'client')+'...');
+             }catch(e){
+               setCallState(leadId,'failed','Error: '+e.message);
+               toast('❌ '+e.message);
+             }
+             return;
+           }
+         
+           // ── Branch 2: ContentScale via ElevenLabs (provider toggle set to ElevenLabs) ──
+           if(getContentScaleProvider()==='elevenlabs'){
+             const csAgentId=localStorage.getItem('lc_cs_eleven_agent')||'';
+             const csPhoneId=localStorage.getItem('lc_cs_eleven_phone')||'';
+             if(!csAgentId||!csPhoneId){
+               toast('⚠ Enter ContentScale\\'s ElevenLabs Agent ID + Phone Number ID first');
+               return;
+             }
+             try{
+               const resp=await fetch('/api/elevenlabs/outbound-call',{
+                 method:'POST',
+                 headers:{'Content-Type':'application/json'},
+                 body:JSON.stringify({
+                   directAgentId:csAgentId, directPhoneId:csPhoneId,
+                   directBizName:'ContentScale', directCallerName:'Ottmar from ContentScale',
+                   targetPhone:lead.phone, targetName:lead.name||''
+                 })
+               });
+               const data=await resp.json();
+               if(!resp.ok){
+                 setCallState(leadId,'failed','Failed: '+(data.error||resp.status));
+                 toast('❌ Call failed: '+(data.error||resp.status));return;
+               }
+               setCallState(leadId,'calling','Ringing...',data.callId);
+               addCallLog(lead,leadId,data.callId||('el_'+Date.now()),'calling');
+               toast('📞 Calling '+lead.name+' as ContentScale (via ElevenLabs)...');
+             }catch(e){
+               setCallState(leadId,'failed','Error: '+e.message);
+               toast('❌ '+e.message);
+             }
+             return;
+           }
+         
+           // ── Branch 3: ContentScale via Vapi (default) ──
+           const cfg=JSON.parse(localStorage.getItem(LS_VAPI)||'null');
+           if(!cfg||!cfg.vapiKey||!cfg.phoneId){
+             toast('⚠ Configure your Voicebot first — click "Configure Voicebot" above');
+             document.getElementById('vapiPanel').classList.add('visible');return;
+           }
          
            // CS-Agent mode: use server-side call (no user Vapi key needed) — for Ottmar
            const csAgentMode = !cfg || !cfg.vapiKey || cfg.vapiKey.length < 10;
@@ -1953,8 +2152,8 @@ Return ONLY a raw JSON array — no markdown, no code fences, no explanation:
          // ── Bulk call selected leads ─────────────────────────────
          async function callSelected(){
            if(!hasAcceptedTerms()){showTermsModal();toast('⚖ Accept the Operator Terms first');return;}
-           const sel=getSelLeads().filter(l=>l.phone);
-           if(!sel.length){toast('No selected leads with phone numbers');return;}
+           const sel=getSelLeads().filter(l=>l.phone && !manualLeads.has(makeId(l)));
+           if(!sel.length){toast('No selected leads with phone numbers (or all marked "I\'ll call")');return;}
            const cfg=JSON.parse(localStorage.getItem(LS_VAPI)||'null');
            if(!cfg||!cfg.vapiKey){
              toast('⚠ Configure Voicebot first');
@@ -2232,9 +2431,9 @@ Return ONLY a raw JSON array — no markdown, no code fences, no explanation:
             document.getElementById('vapiPanel').classList.add('visible');
             return;
           }
-          // Build queue from all uncalled leads with phone
-          const all = getSelLeads().filter(l=>l.phone);
-          if (!all.length) { toast('Select leads first'); return; }
+          // Build queue from all uncalled leads with phone, excluding manually-marked leads
+          const all = getSelLeads().filter(l=>l.phone && !manualLeads.has(makeId(l)));
+          if (!all.length) { toast('Select leads first (or all marked "I\'ll call")'); return; }
           _queueLeads = all
             .filter(l => {
               const id = makeId(l);
@@ -2369,7 +2568,7 @@ Return ONLY a raw JSON array — no markdown, no code fences, no explanation:
              document.getElementById('vapiCallerName').value    = 'Ottmar from ContentScale';
              document.getElementById('vapiCompany').value       = 'ContentScale';
              document.getElementById('vapiCallbackNumber').value= '+1 (279) 499 8736';
-             document.getElementById('vapiOpeningLine').value   = `Hi, just to be transparent — I'm an AI assistant calling on behalf of Ottmar from ContentScale. Is this {name}? I just scanned your website and spotted something that could help you get more clients — do you have 2 minutes?`;
+             document.getElementById('vapiOpeningLine').value   = `Hi, just to be transparent — I'm ContentScale's AI voice assistant, calling on behalf of Ottmar. Is this {name}? I just scanned your website and spotted something that could help you get more clients — do you have 2 minutes?`;
            } else {
              loadVapiConfig();
            }
