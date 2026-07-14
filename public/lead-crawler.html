@@ -3,19 +3,19 @@
    <head>
       <meta charset="UTF-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>AI Voice Agents for Local Business | ContentScale</title>
-      <meta name="description" content="24/7 AI voice agents that answer your calls, qualify every caller and text you the urgent ones instantly. Never miss another job. By ContentScale.">
-      <link rel="canonical" href="https://contentscale.site/lead-crawler">
+      <title>AI Voice Agents &amp; Lead Generation | ContentScale</title>
+      <meta name="description" content="AI voice agents answer every call 24/7, qualify callers and text you the urgent ones. Plus a lead crawler that finds businesses worth calling.">
+      <link rel="canonical" href="https://app.contentscale.site/lead-crawler">
 
       <!-- Social preview — this is what shows when the link is shared -->
       <meta property="og:type" content="website">
-      <meta property="og:url" content="https://contentscale.site/lead-crawler">
+      <meta property="og:url" content="https://app.contentscale.site/lead-crawler">
       <meta property="og:site_name" content="ContentScale">
-      <meta property="og:title" content="AI Voice Agents for Local Business | ContentScale">
-      <meta property="og:description" content="24/7 AI voice agents that answer your calls, qualify every caller and text you the urgent ones instantly. Never miss another job.">
+      <meta property="og:title" content="AI Voice Agents &amp; Lead Generation | ContentScale">
+      <meta property="og:description" content="AI voice agents answer every call 24/7, qualify callers and text you the urgent ones. Plus a lead crawler that finds businesses worth calling.">
       <meta name="twitter:card" content="summary_large_image">
-      <meta name="twitter:title" content="AI Voice Agents for Local Business | ContentScale">
-      <meta name="twitter:description" content="24/7 AI voice agents that answer your calls, qualify every caller and text you the urgent ones instantly. Never miss another job.">
+      <meta name="twitter:title" content="AI Voice Agents &amp; Lead Generation | ContentScale">
+      <meta name="twitter:description" content="AI voice agents answer every call 24/7, qualify callers and text you the urgent ones. Plus a lead crawler that finds businesses worth calling.">
 
       <!-- This page is private (client area) — keep it out of search results -->
       <meta name="robots" content="noindex, nofollow">
@@ -266,17 +266,17 @@
             <a href="https://contentscale.site" class="brand">ContentScale<span class="pro-tag"> PRO</span></a>
             <a href="/" class="back">← Back to ContentScale</a>
          </nav>
-         <header>
+         <header id="pageHeader">
             <div class="logo-block">
-               <div class="eyebrow"><span class="ldot"></span> ContentScale — Lead Crawler &amp; Voice Agents</div>
-               <h1>LEAD<br>CRAWLER <span class="pro-tag">PRO</span></h1>
-               <p class="tagline">Enter any city + country. 37 niches searched sequentially. Every lead bucketed by content desperation — with a pitch angle ready to copy.</p>
+               <div class="eyebrow"><span class="ldot"></span> ContentScale — AI Voice Agents &amp; Lead Generation</div>
+               <h1 id="pageTitle">AI VOICE<br>AGENTS &amp; LEAD CRAWLER <span class="pro-tag">PRO</span></h1>
+               <p class="tagline" id="pageTagline">Your AI agent answers every call, 24/7 — qualifies the caller, flags the urgent ones, and texts you a summary before you've even picked up.</p>
             </div>
-            <div class="hbadges">
-               <div class="hb g">✓ 37 Niche Searches</div>
-               <div class="hb g">✓ 200–500 Leads / Run</div>
-               <div class="hb y">✓ Pitch Angle Per Lead</div>
-               <div class="hb p">✓ 6 Smart Buckets</div>
+            <div class="hbadges" id="pageBadges">
+               <div class="hb g">✓ Answers 24/7</div>
+               <div class="hb g">✓ Urgent Calls Flagged</div>
+               <div class="hb y">✓ Instant SMS Summary</div>
+               <div class="hb p">✓ Speaks Any Language</div>
             </div>
          </header>
          <!-- ══ ADMIN LOCK — everything below is hidden until the code is entered ══ -->
@@ -863,7 +863,33 @@
               toast('🔒 Locked');
             }
 
+            // Header swaps with the role: visitors/clients see the voice-agent pitch,
+            // admin sees the crawler they actually came for.
+            function applyHeaderForRole(){
+              const admin = isAdmin();
+              const h  = document.getElementById('pageTitle');
+              const t  = document.getElementById('pageTagline');
+              const b  = document.getElementById('pageBadges');
+              if(!h || !t || !b) return;
+              if(admin){
+                h.innerHTML = 'AI VOICE<br>AGENTS &amp; LEAD CRAWLER <span class="pro-tag">PRO</span>';
+                t.textContent = "Enter any city + country. 37 niches searched sequentially. Every lead bucketed by content desperation — with a pitch angle ready to copy.";
+                b.innerHTML = '<div class="hb g">✓ 37 Niche Searches</div>'
+                            + '<div class="hb g">✓ 200–500 Leads / Run</div>'
+                            + '<div class="hb y">✓ Pitch Angle Per Lead</div>'
+                            + '<div class="hb p">✓ 6 Smart Buckets</div>';
+              } else {
+                h.innerHTML = 'AI VOICE<br>AGENTS &amp; LEAD CRAWLER <span class="pro-tag">PRO</span>';
+                t.textContent = "Your AI agent answers every call, 24/7 — qualifies the caller, flags the urgent ones, and texts you a summary before you've even picked up.";
+                b.innerHTML = '<div class="hb g">✓ Answers 24/7</div>'
+                            + '<div class="hb g">✓ Urgent Calls Flagged</div>'
+                            + '<div class="hb y">✓ Instant SMS Summary</div>'
+                            + '<div class="hb p">✓ Speaks Any Language</div>';
+              }
+            }
+
             function applyLockState(){
+              applyHeaderForRole();
               const zone   = document.getElementById('crawlerZone');
               const bar    = document.getElementById('lockBar');
               const panel  = document.getElementById('clientPanel');
