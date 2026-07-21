@@ -689,12 +689,12 @@
       <div class="vam-grid">
         <div class="vam-field">
           <label>Agent ID <span class="req">*</span></label>
-          <input type="text" id="cliAgentId" data-field-type="inbound" placeholder="agent_xxxxxxxxxxxx" />
+          <input type="text" id="cliAgentId" data-field-type="both" placeholder="agent_xxxxxxxxxxxx" />
           <span class="vam-help">Where to find it: Dashboard → Conversational AI → Agents → copy the <strong>Agent ID</strong>. This is the brain handling your calls.</span>
         </div>
         <div class="vam-field">
           <label>Phone Number ID <span class="req">*</span></label>
-          <input type="text" id="cliPhoneId" data-field-type="inbound" placeholder="phnum_xxxxxxxxxxxx" />
+          <input type="text" id="cliPhoneId" data-field-type="both" placeholder="phnum_xxxxxxxxxxxx" />
           <span class="vam-help">The phone number your callers dial. From ElevenLabs → Phone Numbers. Make sure it's linked to your agent.</span>
         </div>
       </div>
@@ -708,7 +708,7 @@
 
         <div class="vam-field full">
           <label>Business Name</label>
-          <input type="text" id="cliBizName" placeholder="e.g. Perfect Roofing Team" />
+          <input type="text" id="cliBizName" data-field-type="both" placeholder="e.g. Perfect Roofing Team" />
           <span class="vam-help">How the agent introduces the business. Appears in call summaries and SMS. Leave blank to use "Client Name" above.</span>
         </div>
 
@@ -866,7 +866,13 @@ function hideNonMatchingFields(mode) {
       return;
     }
     
-    // Client: hide non-matching
+    // "both" fields always visible (Client Name, Agent ID, Phone ID, Business Name)
+    if (fieldType === 'both') {
+      wrapper.style.display = 'block';
+      return;
+    }
+    
+    // Client: hide non-matching mode fields
     if (mode === 'inbound' && fieldType === 'outbound') wrapper.style.display = 'none';
     else if (mode === 'outbound' && fieldType === 'inbound') wrapper.style.display = 'none';
     else wrapper.style.display = 'block';
@@ -887,10 +893,9 @@ function setClientMode(mode) {
   document.getElementById('sectionInbound').style.display = showInbound ? 'block' : 'none';
   document.getElementById('sectionOutbound').style.display = showOutbound ? 'block' : 'none';
   
-  // DIRECT FIELD HIDING - pure DOM, no classes, no updateFieldVisibility
+  // Hide/show fields based on data-field-type attribute
   const isAdminUser = (typeof isAdmin === 'function') ? isAdmin() : false;
   
-  // Hide/show fields based on data-field-type attribute
   document.querySelectorAll('[data-field-type]').forEach(input => {
     const fieldType = input.getAttribute('data-field-type');
     const fieldWrapper = input.closest('.vam-field');
@@ -900,7 +905,11 @@ function setClientMode(mode) {
     if (isAdminUser) {
       fieldWrapper.style.display = 'block';
     }
-    // Client sees only fields matching their mode
+    // "both" fields always visible
+    else if (fieldType === 'both') {
+      fieldWrapper.style.display = 'block';
+    }
+    // Client: show/hide based on mode
     else if (mode === 'inbound' && fieldType === 'inbound') {
       fieldWrapper.style.display = 'block';
     } else if (mode === 'outbound' && fieldType === 'outbound') {
