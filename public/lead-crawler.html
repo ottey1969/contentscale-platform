@@ -865,8 +865,30 @@ function setClientMode(mode) {
   document.getElementById('sectionInbound').style.display = showInbound ? 'block' : 'none';
   document.getElementById('sectionOutbound').style.display = showOutbound ? 'block' : 'none';
   
-  // Update field visibility per mode (clients only — admins see everything)
-  updateFieldVisibility();
+  // DIRECT FIELD HIDING - pure DOM, no classes, no updateFieldVisibility
+  const isAdminUser = (typeof isAdmin === 'function') ? isAdmin() : false;
+  
+  // Hide/show fields based on data-field-type attribute
+  document.querySelectorAll('[data-field-type]').forEach(input => {
+    const fieldType = input.getAttribute('data-field-type');
+    const fieldWrapper = input.closest('.vam-field');
+    if (!fieldWrapper) return;
+    
+    // Admin sees everything always
+    if (isAdminUser) {
+      fieldWrapper.style.display = 'block';
+    }
+    // Client sees only fields matching their mode
+    else if (mode === 'inbound' && fieldType === 'inbound') {
+      fieldWrapper.style.display = 'block';
+    } else if (mode === 'outbound' && fieldType === 'outbound') {
+      fieldWrapper.style.display = 'block';
+    } else if (mode === 'both') {
+      fieldWrapper.style.display = 'block';
+    } else {
+      fieldWrapper.style.display = 'none';
+    }
+  });
   
   // Update status
   updateClientStatus();
@@ -969,8 +991,6 @@ function switchClient(id) {
   document.getElementById('cliOutboundCaller').value = c.outboundCallerName || '';
   document.getElementById('cliOutboundPitch').value = c.outboundPitch || '';
   setClientMode(c.mode || 'inbound');
-  // NOW update field visibility based on user role + mode
-  updateFieldVisibility();
   document.getElementById('clientStatus').textContent =
     c.savedAt ? ('Last saved: ' + new Date(c.savedAt).toLocaleString()) : 'Not saved yet.';
   if (typeof toast === 'function') toast('Switched to ' + c.name);
@@ -995,7 +1015,6 @@ function renderClientSwitcher() {
 // Initialize on load
 document.addEventListener('DOMContentLoaded', () => {
   setClientMode('inbound');
-  updateFieldVisibility();
   updateClientStatus();
 });
 
@@ -3057,6 +3076,3 @@ document.addEventListener('DOMContentLoaded',function(){
 
 </body>
 </html>
-/* Force rebuild at Tue Jul 21 15:28:52 UTC 2026 */
-
-
