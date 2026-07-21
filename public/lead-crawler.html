@@ -852,30 +852,25 @@ let currentClientId = null;
 let currentMode = 'inbound';
 
 function hideNonMatchingFields(mode) {
-  // Get all inputs with data-field-type
   document.querySelectorAll('[data-field-type]').forEach(input => {
     const fieldType = input.getAttribute('data-field-type');
     const wrapper = input.closest('.vam-field');
     if (!wrapper) return;
     
-    const isAdmin = (typeof isAdmin === 'function') ? isAdmin() : false;
-    
-    // Admin always sees all
-    if (isAdmin) {
-      wrapper.style.display = 'block';
-      return;
-    }
-    
-    // "both" fields always visible (Client Name, Agent ID, Phone ID, Business Name)
+    // "both" fields ALWAYS visible (Agent ID, Phone ID, Business Name)
     if (fieldType === 'both') {
       wrapper.style.display = 'block';
       return;
     }
     
-    // Client: hide non-matching mode fields
-    if (mode === 'inbound' && fieldType === 'outbound') wrapper.style.display = 'none';
-    else if (mode === 'outbound' && fieldType === 'inbound') wrapper.style.display = 'none';
-    else wrapper.style.display = 'block';
+    // Hide non-matching fields based on mode
+    if (mode === 'inbound' && fieldType === 'outbound') {
+      wrapper.style.display = 'none';
+    } else if (mode === 'outbound' && fieldType === 'inbound') {
+      wrapper.style.display = 'none';
+    } else {
+      wrapper.style.display = 'block';
+    }
   });
 }
 
