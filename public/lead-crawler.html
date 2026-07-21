@@ -593,6 +593,10 @@
 
 /* ── Lock notice ────────────────────────────────────────────────────────────────── */
 #voiceGateNotice{display:none;background:rgba(167,139,250,.08);border:1px solid rgba(167,139,250,.25);border-radius:6px;padding:12px 16px;margin-bottom:14px;font-size:12px;color:var(--muted);line-height:1.6;}
+
+/* ── Field Visibility Control (Role + Mode) ───────────────────────────────── */
+.vam-field.hidden{display:none !important;}
+.vam-section.hidden{display:none !important;}
 </style>
 
 <div class="client-panel" id="clientPanel" style="display:none;">
@@ -685,12 +689,12 @@
       <div class="vam-grid">
         <div class="vam-field">
           <label>Agent ID <span class="req">*</span></label>
-          <input type="text" id="cliAgentId" placeholder="agent_xxxxxxxxxxxx" />
+          <input type="text" id="cliAgentId" data-field-type="inbound" placeholder="agent_xxxxxxxxxxxx" />
           <span class="vam-help">Where to find it: Dashboard → Conversational AI → Agents → copy the <strong>Agent ID</strong>. This is the brain handling your calls.</span>
         </div>
         <div class="vam-field">
           <label>Phone Number ID <span class="req">*</span></label>
-          <input type="text" id="cliPhoneId" placeholder="phnum_xxxxxxxxxxxx" />
+          <input type="text" id="cliPhoneId" data-field-type="inbound" placeholder="phnum_xxxxxxxxxxxx" />
           <span class="vam-help">The phone number your callers dial. From ElevenLabs → Phone Numbers. Make sure it's linked to your agent.</span>
         </div>
       </div>
@@ -710,7 +714,7 @@
 
         <div class="vam-field full">
           <label>Opening Line / Greeting</label>
-          <textarea id="cliGreeting" placeholder="Thanks for calling {{business}}, this is Otto — how can I help?"></textarea>
+          <textarea id="cliGreeting" data-field-type="inbound" placeholder="Thanks for calling {{business}}, this is Otto — how can I help?"></textarea>
           <span class="vam-help"><strong>Dynamic tags:</strong> {{business}} = Business Name, {{name}} = first name from call data. Agent says this when call connects.</span>
           <div class="template-picker">
             <button type="button" class="template-btn" onclick="fillTemplate('greeting','roofing')">🏠 Roofing</button>
@@ -723,7 +727,7 @@
 
         <div class="vam-field full">
           <label>Urgency Keywords</label>
-          <textarea id="cliUrgency" placeholder="active leak, storm damage, water inside the house"></textarea>
+          <textarea id="cliUrgency" data-field-type="inbound" placeholder="active leak, storm damage, water inside the house"></textarea>
           <span class="vam-help">Comma-separated phrases that signal urgent calls. Agent flags these in the SMS notification with ⚠️ URGENT. Non-matches get ✅ Can wait. This tells YOU which calls to prioritize.</span>
           <div class="template-picker">
             <button type="button" class="template-btn" onclick="fillTemplate('urgency','roofing')">🏠 Roofing</button>
@@ -735,7 +739,7 @@
 
         <div class="vam-field full">
           <label>SMS Notification Number</label>
-          <input type="text" id="cliSmsTo" placeholder="+1 555 000 0000" />
+          <input type="text" id="cliSmsTo" data-field-type="inbound" placeholder="+1 555 000 0000" />
           <span class="vam-help">Every call summary is texted to this number. Your team gets urgent/normal badges so you know what to act on first. Phone format: +1 (country) area-code number.</span>
         </div>
       </div>
@@ -753,7 +757,7 @@
       <div class="vam-grid">
         <div class="vam-field">
           <label>Caller Name</label>
-          <input type="text" id="cliOutboundCaller" placeholder="e.g. Mike from Perfect Roofing Team" />
+          <input type="text" id="cliOutboundCaller" data-field-type="outbound" placeholder="e.g. Mike from Perfect Roofing Team" />
           <span class="vam-help">The human the agent says it's calling on behalf of. Calls will say: <em>"I'm [Business]'s AI assistant, calling for [Caller Name]"</em></span>
         </div>
         <div class="vam-field">
@@ -768,7 +772,7 @@
       <div class="vam-grid">
         <div class="vam-field full">
           <label>Outbound Pitch / Script</label>
-          <textarea id="cliOutboundPitch" placeholder="e.g. Following up on your roof inspection request from last week. We've found some issues and I wanted to walk you through them."></textarea>
+          <textarea id="cliOutboundPitch" data-field-type="outbound" placeholder="e.g. Following up on your roof inspection request from last week. We've found some issues and I wanted to walk you through them."></textarea>
           <span class="vam-help">Why the agent is calling this person. Be specific — different clients pitch different things. Agent uses this as context for the conversation.</span>
           <div class="template-picker">
             <button type="button" class="template-btn" onclick="fillTemplate('pitch','roofing')">🏠 Roofing</button>
@@ -861,8 +865,41 @@ function setClientMode(mode) {
   document.getElementById('sectionInbound').style.display = showInbound ? 'block' : 'none';
   document.getElementById('sectionOutbound').style.display = showOutbound ? 'block' : 'none';
   
+  // Update field visibility per mode (clients only — admins see everything)
+  updateFieldVisibility();
+  
   // Update status
   updateClientStatus();
+}
+
+function updateFieldVisibility() {
+  const isAdminUser = (typeof isAdmin === 'function') ? isAdmin() : false;
+  const mode = currentMode;
+  
+  // If admin, show all fields — they need to see everything to configure both modes
+  if (isAdminUser) {
+    document.querySelectorAll('[data-field-type]').forEach(el => {
+      el.closest('.vam-field').classList.remove('hidden');
+    });
+    return;
+  }
+  
+  // If client, show ONLY fields for their mode
+  document.querySelectorAll('[data-field-type]').forEach(el => {
+    const fieldType = el.getAttribute('data-field-type');
+    const fieldElement = el.closest('.vam-field');
+    
+    if (!fieldElement) return;
+    
+    // Hide if field doesn't match current mode
+    if (mode === 'inbound' && fieldType === 'outbound') {
+      fieldElement.classList.add('hidden');
+    } else if (mode === 'outbound' && fieldType === 'inbound') {
+      fieldElement.classList.add('hidden');
+    } else {
+      fieldElement.classList.remove('hidden');
+    }
+  });
 }
 
 function fillTemplate(field, category) {
@@ -909,7 +946,34 @@ function updateClientStatus() {
 
 // Existing backend functions (preserved from original) ────────────────────────
 function switchClient(id) {
-  // ... existing implementation from original code ...
+  if(!id){
+    document.getElementById('clientForm').style.display = 'none';
+    document.getElementById('deleteClientBtn').style.display = 'none';
+    setActiveClientId('');
+    return;
+  }
+  const clients = loadClients();
+  const c = clients.find(x => x.id === id);
+  if(!c) return;
+  editingClientId = id;
+  setActiveClientId(id);
+  document.getElementById('clientForm').style.display = 'grid';
+  document.getElementById('deleteClientBtn').style.display = 'inline-block';
+  document.getElementById('cliName').value = c.name || '';
+  document.getElementById('cliAgentId').value = c.agentId || '';
+  document.getElementById('cliPhoneId').value = c.phoneId || '';
+  document.getElementById('cliSmsTo').value = c.smsTo || '';
+  document.getElementById('cliBizName').value = c.bizName || '';
+  document.getElementById('cliGreeting').value = c.greeting || '';
+  document.getElementById('cliUrgency').value = c.urgencyCriteria || '';
+  document.getElementById('cliOutboundCaller').value = c.outboundCallerName || '';
+  document.getElementById('cliOutboundPitch').value = c.outboundPitch || '';
+  setClientMode(c.mode || 'inbound');
+  // NOW update field visibility based on user role + mode
+  updateFieldVisibility();
+  document.getElementById('clientStatus').textContent =
+    c.savedAt ? ('Last saved: ' + new Date(c.savedAt).toLocaleString()) : 'Not saved yet.';
+  if (typeof toast === 'function') toast('Switched to ' + c.name);
 }
 
 function saveClient() {
@@ -931,6 +995,7 @@ function renderClientSwitcher() {
 // Initialize on load
 document.addEventListener('DOMContentLoaded', () => {
   setClientMode('inbound');
+  updateFieldVisibility();
   updateClientStatus();
 });
 
