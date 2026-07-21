@@ -653,9 +653,9 @@
          SECTION 1: MODE SELECTOR
          ────────────────────────────────────────────────────────────────────────── -->
     <div class="mode-selector">
-      <button type="button" class="mode-btn active" id="modeInbound" onclick="setClientMode('inbound'); hideNonMatchingFields('inbound');">📞<br>Inbound Only</button>
-      <button type="button" class="mode-btn" id="modeOutbound" onclick="setClientMode('outbound'); hideNonMatchingFields('outbound');">📤<br>Outbound Only</button>
-      <button type="button" class="mode-btn" id="modeBoth" onclick="setClientMode('both'); hideNonMatchingFields('both');">🔁<br>Both</button>
+      <button type="button" class="mode-btn active" id="modeInbound" onclick="setClientMode('inbound')">📞<br>Inbound Only</button>
+      <button type="button" class="mode-btn" id="modeOutbound" onclick="setClientMode('outbound')">📤<br>Outbound Only</button>
+      <button type="button" class="mode-btn" id="modeBoth" onclick="setClientMode('both')">🔁<br>Both</button>
     </div>
 
     <!-- ──────────────────────────────────────────────────────────────────────────
@@ -851,29 +851,6 @@ const TEMPLATES = {
 let currentClientId = null;
 let currentMode = 'inbound';
 
-function hideNonMatchingFields(mode) {
-  document.querySelectorAll('[data-field-type]').forEach(input => {
-    const fieldType = input.getAttribute('data-field-type');
-    const wrapper = input.closest('.vam-field');
-    if (!wrapper) return;
-    
-    // "both" fields ALWAYS visible (Agent ID, Phone ID, Business Name)
-    if (fieldType === 'both') {
-      wrapper.style.display = 'block';
-      return;
-    }
-    
-    // Hide non-matching fields based on mode
-    if (mode === 'inbound' && fieldType === 'outbound') {
-      wrapper.style.display = 'none';
-    } else if (mode === 'outbound' && fieldType === 'inbound') {
-      wrapper.style.display = 'none';
-    } else {
-      wrapper.style.display = 'block';
-    }
-  });
-}
-
 function setClientMode(mode) {
   currentMode = mode;
   
@@ -888,31 +865,25 @@ function setClientMode(mode) {
   document.getElementById('sectionInbound').style.display = showInbound ? 'block' : 'none';
   document.getElementById('sectionOutbound').style.display = showOutbound ? 'block' : 'none';
   
-  // Hide/show fields based on data-field-type attribute
-  const isAdminUser = (typeof isAdmin === 'function') ? isAdmin() : false;
-  
+  // HIDE/SHOW FIELDS BASED ON MODE
   document.querySelectorAll('[data-field-type]').forEach(input => {
     const fieldType = input.getAttribute('data-field-type');
-    const fieldWrapper = input.closest('.vam-field');
-    if (!fieldWrapper) return;
+    const wrapper = input.closest('.vam-field');
+    if (!wrapper) return;
     
-    // Admin sees everything always
-    if (isAdminUser) {
-      fieldWrapper.style.display = 'block';
-    }
     // "both" fields always visible
-    else if (fieldType === 'both') {
-      fieldWrapper.style.display = 'block';
+    if (fieldType === 'both') {
+      wrapper.style.display = 'block';
+      return;
     }
-    // Client: show/hide based on mode
-    else if (mode === 'inbound' && fieldType === 'inbound') {
-      fieldWrapper.style.display = 'block';
-    } else if (mode === 'outbound' && fieldType === 'outbound') {
-      fieldWrapper.style.display = 'block';
-    } else if (mode === 'both') {
-      fieldWrapper.style.display = 'block';
+    
+    // Hide non-matching fields
+    if (mode === 'inbound' && fieldType === 'outbound') {
+      wrapper.style.display = 'none';
+    } else if (mode === 'outbound' && fieldType === 'inbound') {
+      wrapper.style.display = 'none';
     } else {
-      fieldWrapper.style.display = 'none';
+      wrapper.style.display = 'block';
     }
   });
   
@@ -1017,7 +988,6 @@ function switchClient(id) {
   document.getElementById('cliOutboundCaller').value = c.outboundCallerName || '';
   document.getElementById('cliOutboundPitch').value = c.outboundPitch || '';
   setClientMode(c.mode || 'inbound');
-  hideNonMatchingFields(c.mode || 'inbound');
   document.getElementById('clientStatus').textContent =
     c.savedAt ? ('Last saved: ' + new Date(c.savedAt).toLocaleString()) : 'Not saved yet.';
   if (typeof toast === 'function') toast('Switched to ' + c.name);
@@ -1042,7 +1012,6 @@ function renderClientSwitcher() {
 // Initialize on load
 document.addEventListener('DOMContentLoaded', () => {
   setClientMode('inbound');
-  hideNonMatchingFields('inbound');
   updateClientStatus();
 });
 
