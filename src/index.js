@@ -3440,7 +3440,7 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
         return '<div class="bw-comp"><span class="bw-comp-n">#'+(c.position||i+1)+'</span> <a href="'+esc(c.url||'#')+'" target="_blank" rel="noopener" class="bw-comp-u">'+esc(host)+'</a><span class="bw-comp-t">'+ttl+'</span></div>';
       }).join('');
     }
-    h+='<div class="bw-trans-line">Google AI Overview: '+(d.aio_text?('shown &mdash; '+esc(String(d.aio_text).slice(0,150))+'...'):'not detected via our current data source (Serper.dev doesn\'t capture AI Overview content) &mdash; a manual Google check is more reliable for this signal right now.')+'</div>';
+    h+='<div class="bw-trans-line">Google AI Overview: '+(d.aio_text?('shown &mdash; '+esc(String(d.aio_text).slice(0,150))+'...'):'not detected via our current data source (Serper.dev does not capture AI Overview content) &mdash; a manual Google check is more reliable for this signal right now.')+'</div>';
     h+='<div class="bw-trans-line">Perplexity: '+(d.perp_text?('&ldquo;'+esc(String(d.perp_text).slice(0,150))+'...&rdquo;'):'checked &mdash; no answer excerpt captured for this query.')+'</div>';
     if(pcomp.length){ h+='<div class="bw-trans-line">Perplexity currently cites ('+pcomp.length+'), this page not among them yet: '+esc(pcomp.slice(0,5).join(', '))+'</div>'; }
     return h+'</div>';
@@ -3858,7 +3858,7 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
           return '<div class="bwm-comp"><span class="bwm-cn">#'+(c.position||i+1)+'</span> <a href="'+_bwEscL(c.url||'#')+'" target="_blank" rel="noopener" class="bwm-cu" onclick="event.stopPropagation()">'+_bwEscL(host)+'</a>'+(c.title?(' &mdash; '+_bwEscL(String(c.title).slice(0,70))):'')+'</div>';
         }).join('');
       }
-      h += '<div class="bwm-line">Google AI Overview: '+(d.aio_text?('shown &mdash; '+_bwEscL(String(d.aio_text).slice(0,160))+'...'):'not detected via our current data source (Serper.dev doesn\'t capture AI Overview content) &mdash; a manual Google check is more reliable for this signal right now.')+'</div>';
+      h += '<div class="bwm-line">Google AI Overview: '+(d.aio_text?('shown &mdash; '+_bwEscL(String(d.aio_text).slice(0,160))+'...'):'not detected via our current data source (Serper.dev does not capture AI Overview content) &mdash; a manual Google check is more reliable for this signal right now.')+'</div>';
       h += '<div class="bwm-line">Perplexity: '+(d.perp_text?('&ldquo;'+_bwEscL(String(d.perp_text).slice(0,160))+'...&rdquo;'):'checked &mdash; no answer excerpt captured for this query.')+'</div>';
       if (pcomp.length) h += '<div class="bwm-line">Perplexity currently cites ('+pcomp.length+'), this page not among them yet: '+_bwEscL(pcomp.slice(0,5).join(', '))+'</div>';
       h += '</div>';
