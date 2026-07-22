@@ -480,9 +480,9 @@ const claudeGuard = (() => {
   const COOLDOWN_MS = parseInt(process.env.CLAUDE_COOLDOWN_MS) || 600000;
   let calls = [], trippedUntil = 0, lastAlert = 0;
   function notify(msg){
-    try{ const p=process.env.CALLMEBOT_PHONE,k=process.env.CALLMEBOT_APIKEY;
-      if(p&&k&&Date.now()-lastAlert>60000){ lastAlert=Date.now();
-        fetch('https://api.callmebot.com/whatsapp.php?phone='+encodeURIComponent(p)+'&apikey='+encodeURIComponent(k)+'&text='+encodeURIComponent(msg)).catch(()=>{}); } }catch(_){}
+    try{
+      if(Date.now()-lastAlert>60000){ lastAlert=Date.now();
+        notifyOttmar('⚠️ Claude circuit breaker', '<p>' + msg + '</p>', msg).catch(()=>{}); } }catch(_){}
   }
   return {
     gate(){
@@ -1189,12 +1189,12 @@ app.post('/api/tracker-client/register', async (req, res) => {
     if (existing.rows.length) {
       // Never return existing tracker URL on public registration
       // Always direct to Ottmar — he handles it via admin
-      const cbPhone = process.env.CALLMEBOT_PHONE;
-      const cbKey = process.env.CALLMEBOT_KEY;
-      if (cbPhone && cbKey) {
-        const ex = existing.rows[0];
-        fetch(`https://api.callmebot.com/whatsapp.php?phone=${cbPhone}&text=${encodeURIComponent('⚠️ Re-registration attempt: ' + cleanDomain + ' (status: ' + ex.status + ') — email: ' + (email||'none'))}&apikey=${cbKey}`).catch(()=>{});
-      }
+      const ex = existing.rows[0];
+      notifyOttmar(
+        '⚠️ Re-registration attempt: ' + cleanDomain,
+        '<p>Domain: ' + cleanDomain + '<br>Status: ' + ex.status + '<br>Email: ' + (email || 'none') + '</p>',
+        'Re-registration attempt: ' + cleanDomain + ' (status: ' + ex.status + ') — email: ' + (email || 'none')
+      ).catch(() => {});
       return res.status(409).json({
         success: false,
         error: 'A tracker for ' + cleanDomain + ' already exists. Contact Ottmar to recover or reset your tracker: wa.me/31628073996'
@@ -1271,16 +1271,14 @@ app.post('/api/tracker-client/register', async (req, res) => {
       if (clientId) await sendTrackerEmail(clientId, 'Your AI Citations Tracker is ready — ' + cleanDomain, welcomeHtml, true).catch(() => {});
     }
 
-    // Notify Ottmar via WA
-    const cbPhone = process.env.CALLMEBOT_PHONE;
-    const cbKey = process.env.CALLMEBOT_KEY;
-    if (cbPhone && cbKey) {
+    // Notify Ottmar
+    {
       // Detect platform from code prefix
       const platformMap = { 'APPSUMO-': 'AppSumo', 'AS-': 'AppSumo', 'PG-': 'PitchGround', 'PITCHGROUND-': 'PitchGround', 'SM-': 'SaasMantra', 'SAASMANTRA-': 'SaasMantra', 'DEALIFY-': 'Dealify', 'CS-': 'Direct', 'LTD-': 'LTD', 'PRIME-': 'Prime' };
       const detectedPlatform = codes.length > 0 ? (Object.entries(platformMap).find(([p]) => codes[0].startsWith(p)) || ['','Direct'])[1] : 'Direct';
 
       const msg = `New tracker: ${cleanDomain} (${name||'anon'}) ${isDealify ? '🎯 ' + detectedPlatform + ' ' + dealifyCodesCount + ' codes / ' + maxPages + ' pages' : '🆓 free'} — ${trackUrl}`;
-      fetch(`https://api.callmebot.com/whatsapp.php?phone=${cbPhone}&text=${encodeURIComponent(msg)}&apikey=${cbKey}`).catch(()=>{});
+      notifyOttmar('⭐ New tracker: ' + cleanDomain, '<p>' + msg + '</p>', msg).catch(() => {});
     }
 
     res.json({ success: true, token, domain: cleanDomain, url: trackUrl, existing: false, max_pages: maxPages, dealify: isDealify });
@@ -4721,12 +4719,12 @@ app.post('/api/admin/tracker-clients/create-own', verifyAdmin, async (req, res) 
       }
     }
 
-    // Notify Ottmar
-    const cbPhone = process.env.CALLMEBOT_PHONE;
-    const cbKey = process.env.CALLMEBOT_KEY;
-    if (cbPhone && cbKey) {
-      fetch(`https://api.callmebot.com/whatsapp.php?phone=${cbPhone}&text=${encodeURIComponent('⭐ Own client added: ' + cleanDomain + ' / ' + (name||'anon') + ' / ' + maxPg + ' pages — ' + trackUrl)}&apikey=${cbKey}`).catch(()=>{});
-    }
+    // Notify Ottmar — email + Telegram (CallMeBot free tier is unreliable, replaced 2026-07-22)
+    notifyOttmar(
+      '⭐ New tracker client: ' + cleanDomain,
+      '<p><strong>New own-client tracker created.</strong></p><p>Domain: ' + cleanDomain + '<br>Name: ' + (name || 'anon') + '<br>Pages: ' + maxPg + '</p><p><a href="' + trackUrl + '">' + trackUrl + '</a></p>',
+      'Domain: ' + cleanDomain + ' | Name: ' + (name || 'anon') + ' | Pages: ' + maxPg + '\n' + trackUrl
+    ).catch(() => {});
 
     res.json({ success: true, token, url: trackUrl });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
@@ -28649,6 +28647,8 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
   <!-- Toolbar -->
   <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap;">
     <button id="addUrlBtn" class="cs-btn primary" onclick="showAddModal()">+ Add URL</button>
+    <div style="width:1px;height:22px;background:#374151;margin:0 2px;"></div>
+    <button id="prewriteBriefBtn" class="cs-btn" onclick="showPrewriteBriefModal()" style="border-color:#f59e0b;color:#fbbf24;font-weight:700;" title="No page yet? Get a brief for a keyword before you write anything.">&#x1f3af; Pre-Write Brief</button>
     <button id="gscBtn" class="cs-btn" onclick="gscAction()" title="Google Search Console" style="border-color:#374151;color:#6b7280;"><i class="fas fa-chart-line"></i> GSC off</button>
     <button class="cs-btn" onclick="showImportModal('paste')" style="border-color:#6b7280;color:#6b7280;"><i class="fas fa-paste"></i> Paste</button>
     <button id="sitemapBtn" class="cs-btn" onclick="showImportModal('sitemap')" style="border-color:#38bdf8;color:#38bdf8;" title="Import from sitemap"><i class="fas fa-list"></i> Sitemap</button>
@@ -28791,6 +28791,63 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
       <button class="cs-btn primary" onclick="addPage()" style="flex:1;">Add &amp; start tracking</button>
       <button class="cs-btn" onclick="hideModal('addModal')">Cancel</button>
     </div>
+  </div>
+</div>
+
+<!-- Pre-Write Brief modal — keyword-only, no page yet -->
+<div class="cs-modal" id="prewriteBriefModal">
+  <div class="cs-modal-box" onclick="event.stopPropagation()" style="max-width:520px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+      <h3 style="font-size:15px;font-weight:800;color:#f1f5f9;">&#x1f3af; Pre-Write Brief</h3>
+      <button onclick="hideModal('prewriteBriefModal')" style="background:none;border:none;color:#94a3b8;cursor:pointer;font-size:1.2rem;">&#x2715;</button>
+    </div>
+    <div style="font-size:11px;color:#6b7280;margin-bottom:16px;line-height:1.5;">No page yet? See what it needs to beat the current top 10 before you write a single word.</div>
+    <div style="margin-bottom:12px;">
+      <label style="font-size:11px;color:#9ca3af;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.06em;">Keyword <span style="color:#f87171;">*</span></label>
+      <input id="pwbKeyword" type="text" class="cs-input" placeholder="e.g. free ai citation tracker">
+    </div>
+    <div style="margin-bottom:12px;">
+      <label style="font-size:11px;color:#9ca3af;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.06em;">Working title / H1 <span style="color:#cbd5e1;font-weight:400;text-transform:none;">(optional)</span></label>
+      <input id="pwbTitle" type="text" class="cs-input" placeholder="e.g. best free tool to check AI citations">
+    </div>
+    <div style="display:flex;gap:10px;margin-bottom:16px;">
+      <div style="flex:1;">
+        <label style="font-size:11px;color:#9ca3af;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.06em;">Output language</label>
+        <input id="pwbLanguage" type="text" list="pwbLangList" class="cs-input" placeholder="English">
+        <datalist id="pwbLangList">
+          <option value="English"></option>
+          <option value="Dutch"></option>
+          <option value="Spanish"></option>
+          <option value="Arabic — MSA"></option>
+          <option value="Arabic — Gulf"></option>
+          <option value="Arabic — Egyptian"></option>
+          <option value="Arabic — Levantine"></option>
+          <option value="German"></option>
+          <option value="French"></option>
+          <option value="Finnish"></option>
+        </datalist>
+      </div>
+      <div style="flex:1;">
+        <label style="font-size:11px;color:#9ca3af;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.06em;">SERP region</label>
+        <input id="pwbRegion" type="text" list="pwbRegionList" class="cs-input" placeholder="United States">
+        <datalist id="pwbRegionList">
+          <option value="us — United States"></option>
+          <option value="gb — United Kingdom"></option>
+          <option value="ae — United Arab Emirates"></option>
+          <option value="sa — Saudi Arabia"></option>
+          <option value="eg — Egypt"></option>
+          <option value="qa — Qatar"></option>
+          <option value="nl — Netherlands"></option>
+          <option value="es — Spain"></option>
+        </datalist>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button class="cs-btn primary" onclick="generatePrewriteBrief()" id="pwbGenerateBtn" style="flex:1;">Generate brief</button>
+      <button class="cs-btn" onclick="hideModal('prewriteBriefModal')">Cancel</button>
+    </div>
+    <div id="pwbStatus" style="font-size:11px;color:#9ca3af;margin-top:10px;"></div>
+    <div id="pwbResult" style="margin-top:14px;"></div>
   </div>
 </div>
 
@@ -29390,6 +29447,70 @@ function maybeShowWelcome() {
 }
 
 function showAddModal() { document.getElementById('addModal').classList.add('show'); }
+
+function showPrewriteBriefModal() {
+  document.getElementById('pwbResult').innerHTML = '';
+  document.getElementById('pwbStatus').textContent = '';
+  document.getElementById('prewriteBriefModal').classList.add('show');
+}
+
+async function generatePrewriteBrief() {
+  var kw = document.getElementById('pwbKeyword').value.trim();
+  var title = document.getElementById('pwbTitle').value.trim();
+  var lang = document.getElementById('pwbLanguage').value.trim();
+  var regionRaw = document.getElementById('pwbRegion').value.trim();
+  // Accept either a plain code ("ae") or the "code — Label" datalist format.
+  var region = (regionRaw.match(/^([a-z]{2})\s*[—-]/i) || [null, regionRaw])[1] || regionRaw;
+
+  if (!kw) { document.getElementById('pwbStatus').textContent = '\u26a0 Enter a keyword first.'; return; }
+
+  var btn = document.getElementById('pwbGenerateBtn');
+  var stat = document.getElementById('pwbStatus');
+  var result = document.getElementById('pwbResult');
+  btn.disabled = true; btn.textContent = 'Analysing SERP\u2026';
+  stat.textContent = 'Fetching live competitors and building your brief \u2014 20\u201340 seconds\u2026';
+  result.innerHTML = '';
+
+  try {
+    var data = await api('/prewrite-brief', 'POST', { keyword: kw, workingTitle: title, language: lang, region: region });
+    btn.disabled = false; btn.textContent = 'Generate brief';
+    if (!data || !data.success || !data.brief) {
+      stat.textContent = '\u274c ' + ((data && data.error) || 'Could not generate a brief. Try again.');
+      return;
+    }
+    stat.textContent = '\u2713 Brief ready \u00b7 ' + (data.competitors_scraped || 0) + ' competitors analysed \u00b7 region: ' + (data.region || 'us');
+    result.innerHTML = renderPrewriteBrief(data.brief);
+  } catch (e) {
+    btn.disabled = false; btn.textContent = 'Generate brief';
+    stat.textContent = '\u274c ' + e.message;
+  }
+}
+
+function renderPrewriteBrief(b) {
+  var esc = function(s) { return (s == null ? '' : String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); };
+  var html = '<div style="background:#0d1117;border:1px solid #1f2937;border-radius:8px;padding:14px 16px;font-size:12px;color:#e5e7eb;line-height:1.6;">';
+  if (b.recommended_title_h1) html += '<div style="font-weight:800;color:#f1f5f9;margin-bottom:10px;font-size:13px;">' + esc(b.recommended_title_h1) + '</div>';
+  if (b.top10_gap) html += '<div style="margin-bottom:10px;"><span style="color:#fbbf24;font-weight:700;">Top 10 gap:</span> ' + esc(b.top10_gap) + '</div>';
+  if (b.ai_overview_status) html += '<div style="margin-bottom:10px;"><span style="color:#a78bfa;font-weight:700;">AI Overview:</span> ' + esc(b.ai_overview_status) + '</div>';
+  if (b.recommended_structure) {
+    var s = b.recommended_structure;
+    html += '<div style="margin-bottom:10px;"><span style="color:#34d399;font-weight:700;">Structure:</span> ' + esc(s.format||'') + (s.recommended_word_count ? ' \u00b7 ~' + s.recommended_word_count + ' words' : '') + '</div>';
+    if (Array.isArray(s.must_have_h2s) && s.must_have_h2s.length) {
+      html += '<div style="margin-bottom:10px;"><div style="color:#9ca3af;font-size:10px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">Must-have H2s</div><ul style="margin:0;padding-left:18px;">' + s.must_have_h2s.map(function(h){return '<li>'+esc(h)+'</li>';}).join('') + '</ul></div>';
+    }
+  }
+  if (Array.isArray(b.must_cover_entities) && b.must_cover_entities.length) {
+    html += '<div style="margin-bottom:10px;"><div style="color:#9ca3af;font-size:10px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">Entities to cover</div>' + b.must_cover_entities.map(function(e){return '<span style="display:inline-block;background:#1f2937;border:1px solid #374151;border-radius:999px;padding:2px 9px;margin:2px 3px 2px 0;font-size:10.5px;">'+esc(e)+'</span>';}).join('') + '</div>';
+  }
+  if (Array.isArray(b.faq_questions) && b.faq_questions.length) {
+    html += '<div style="margin-bottom:10px;"><div style="color:#9ca3af;font-size:10px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">FAQ questions</div><ul style="margin:0;padding-left:18px;">' + b.faq_questions.map(function(q){return '<li>'+esc(q)+'</li>';}).join('') + '</ul></div>';
+  }
+  if (Array.isArray(b.action_plan) && b.action_plan.length) {
+    html += '<div><div style="color:#9ca3af;font-size:10px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">Action plan</div><ol style="margin:0;padding-left:18px;">' + b.action_plan.map(function(a){return '<li>'+esc(a.action||'')+'</li>';}).join('') + '</ol></div>';
+  }
+  html += '</div>';
+  return html;
+}
 function showImportModal(mode) { var _im = document.getElementById('importModal'); _im.classList.add('show'); _im.style.display = 'flex'; setImportMode(mode || 'paste'); if (mode === 'sitemap') { var si = document.getElementById('sitemapUrl'); if (si && !si.value) si.value = 'https://' + DOMAIN + '/sitemap.xml'; } }
 function hideModal(id) {
   var el = document.getElementById(id);
@@ -38630,6 +38751,113 @@ Return ONLY valid JSON, no markdown, no preamble. Replace every <...> with your 
   }
 });
 
+// ── POST /api/tracker-client/:token/prewrite-brief ───────────────────────────
+// Keyword-only brief — no existing page required. Reuses the same SERP-fetch
+// + competitor-scrape pipeline as /api/tracker/serp-spy, but with its own
+// prompt (no "existing client page" framing) and its own client-token auth,
+// since regular tracker clients don't hold an engine access code.
+app.post('/api/tracker-client/:token/prewrite-brief', async (req, res) => {
+  try {
+    const cr = await pool.query('SELECT * FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status != $2)', [req.params.token, 'deleted']);
+    if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Tracker not found. Check your link is correct.' });
+    if (cr.rows[0].status === 'disabled' || cr.rows[0].status === 'paused') return res.status(403).json({ success: false, error: 'This tracker is ' + cr.rows[0].status + '. Contact Ottmar to reactivate.' });
+    const client = cr.rows[0];
+
+    const { keyword, workingTitle, language, region } = req.body || {};
+    if (!keyword) return res.status(400).json({ success: false, error: 'keyword required' });
+    if (!process.env.GEMINI_API_KEY) return res.status(500).json({ success: false, error: 'GEMINI_API_KEY not set' });
+
+    // TODO(pricing): gate here once the premium plan/credits column exists,
+    // e.g. check client.prewrite_briefs_used < client.prewrite_briefs_limit
+    // and increment on success — mirrors the max_pages pattern already used
+    // for tracked pages on this same tracker_clients row.
+
+    const serperKey = process.env.SERPAPI_KEY;
+    const glParam = String(region || 'us').toLowerCase().replace(/[^a-z]/g, '') || 'us';
+    let serpUrls = [];
+    if (serperKey) {
+      try {
+        const ctrl1 = new AbortController(); setTimeout(() => ctrl1.abort(), 15000);
+        const r1 = await fetch('https://google.serper.dev/search', {
+          method: 'POST',
+          headers: { 'X-API-KEY': serperKey, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ q: keyword, num: 10, hl: 'en', gl: glParam }),
+          signal: ctrl1.signal
+        });
+        if (r1.ok) {
+          const d1 = await r1.json();
+          const organic = d1.organic || [];
+          serpUrls = organic.map((r, i) => ({
+            rank: r.position || (i + 1),
+            url: r.link || '',
+            domain: (r.link || '').replace(/^https?:\/\//, '').split('/')[0].replace(/^www\./, ''),
+            title: r.title || '',
+            snippet: r.snippet || ''
+          })).filter(r => r.url);
+          console.log('[prewrite-brief] Serper.dev returned', serpUrls.length, 'results for:', keyword, '| gl=' + glParam);
+        } else {
+          const err = await r1.text().catch(() => '');
+          console.warn('[prewrite-brief] Serper.dev error:', r1.status, err.substring(0, 200));
+        }
+      } catch (e) { console.warn('[prewrite-brief] Serper.dev failed:', e.message); }
+    } else {
+      console.warn('[prewrite-brief] SERPAPI_KEY not set — cannot fetch SERP results');
+    }
+    if (!serpUrls.length) return res.status(502).json({ success: false, error: 'Could not fetch SERP results — check SERPAPI_KEY is set in Railway environment' });
+
+    const top5 = serpUrls
+      .filter(r => !/youtube\.com|reddit\.com|facebook\.com|linkedin\.com|twitter\.com|x\.com|pinterest\.|quora\.com|instagram\.com|tiktok\.com/i.test(r.url))
+      .slice(0, 5);
+    const compScrapes = await Promise.all(top5.map(e => scrapeBodyText(e.url, 6000)));
+    const _detectSchema = h => Array.from(new Set(((h || '').match(/"@type"\s*:\s*"([^"]+)"/g) || []).map(x => x.replace(/.*"([^"]+)"$/, '$1')))).slice(0, 6);
+    const compSummary = top5.map((e, i) => {
+      const sc = compScrapes[i] || {};
+      const schema = _detectSchema(sc.fullHtml);
+      const body = (sc.text || '').slice(0, 1500);
+      return `RANK ${e.rank}: ${e.domain}\n  Title: "${e.title || ''}"\n  Snippet: "${(e.snippet || '')}"\n  Word count: ${sc.wordCount || '?'}\n  Schema detected: ${schema.length ? schema.join(', ') : 'none'}\n  Body excerpt: ${body || '(not captured)'}`;
+    }).join('\n\n');
+
+    const prompt = `You are an elite SEO and AEO strategist. There is NO existing page for this keyword yet — you are specifying what a brand-new page must contain to outrank and out-cite everything currently ranking, from the very first draft. Never frame anything as a "fix" — there is nothing to fix, only something to build correctly the first time. Every claim must be traceable to the SERP data below; never invent a domain, URL, snippet, statistic or schema type not present in the input.
+
+KEYWORD: "${keyword}"
+${workingTitle ? 'WORKING TITLE / ANGLE SUPPLIED: "' + workingTitle + '"' : 'No working title supplied — infer the strongest angle from search intent and the competitor gap.'}
+
+LIVE SERP — CURRENT TOP RESULTS:
+${compSummary}
+
+MANDATORY PROCESSING ORDER:
+STEP 1 — Analyse the SERP: what pattern do the top results share (format, depth, schema, freshness)?
+STEP 2 — INTENT DECOMPOSITION: list the 5-7 real sub-questions a searcher typing "${keyword}" actually wants answered.
+STEP 3 — GAP ACROSS THE WHOLE TOP 10: what does NONE of the current top 10 cover well — the opening this new page can own?
+STEP 4 — Specify the exact structure, entities, and schema the new page needs to beat rank 1 on day one.
+
+PRECISION OVER FALSE COMPLETENESS: if the live data does not support a confident, specific answer for a field, output "insufficient_data" instead of inventing one.
+
+Return ONLY valid JSON, no markdown, no preamble.
+{"keyword":"${keyword}","search_intent":"informational|commercial|transactional","top10_gap":"<what none of the current top 10 cover well — the opening for a new page, or 'insufficient_data'>","ai_overview_status":"<is an AI Overview likely already showing for this keyword based on the SERP data — and what would it take to be cited, or 'insufficient_data'>","recommended_title_h1":"<the strongest working title/H1 for this page, considering the supplied angle if any>","recommended_structure":{"format":"<content_page|comparison|how_to|tool_landing — from the SERP pattern>","recommended_word_count":2200,"must_have_h2s":["<specific headings needed to beat rank 1>"],"recommended_schema":["<schema types, e.g. FAQPage, Article, HowTo>"]},"must_cover_entities":["<specific terms/entities present in 2+ competitors that this page must include>"],"faq_questions":["<real People-Also-Ask style questions this page should answer>"],"citation_targets":[{"query_variant":"<a specific question Google AI Overview or Perplexity could cite this page for>","passage_to_write":"<exactly how that passage should read — length, direct-answer format>"}],"beat_number1_instructions":[{"topic":"<a topic rank-1 covers>","rank1_treats_it_as":"surface|moderate|deep","to_beat_write":"<concrete instruction — what to add, what depth, what evidence>"}],"action_plan":[{"step":1,"priority":"high|medium|low","action":"<specific action>"}],"confidence":"high|medium|low"}`;
+
+    const ctrl2 = new AbortController(); setTimeout(() => ctrl2.abort(), 45000);
+    const geminiKey = process.env.GEMINI_API_KEY;
+    const r2 = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${geminiKey}`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contents: [{ parts: [{ text: _langPrefix(language) + prompt }] }], generationConfig: { temperature: 0.4, maxOutputTokens: 16384, responseMimeType: 'application/json', thinkingConfig: { thinkingBudget: 0 } } }),
+      signal: ctrl2.signal
+    });
+    const d2 = await r2.json().catch(() => ({}));
+    if (!r2.ok) throw new Error((d2.error && d2.error.message) || 'Gemini ' + r2.status);
+    const rawText = (d2.candidates && d2.candidates[0] && d2.candidates[0].content && d2.candidates[0].content.parts && d2.candidates[0].content.parts[0] && d2.candidates[0].content.parts[0].text) || '';
+    let brief = null;
+    try { const m2 = rawText.match(/\{[\s\S]*\}/); if (m2) brief = JSON.parse(m2[0]); } catch (e) {}
+    if (!brief) return res.status(502).json({ success: false, error: 'Could not parse brief from AI response' });
+
+    console.log(`[prewrite-brief] generated for "${keyword}" | client=${client.name || client.id} | gl=${glParam} | lang=${language || 'en'}`);
+    res.json({ success: true, brief, competitors_scraped: top5.length, region: glParam });
+  } catch (e) {
+    console.error('[prewrite-brief] error:', e.message);
+    res.status(502).json({ success: false, error: e.message });
+  }
+});
+
 // ── POST /api/tracker/meta-intel — AI-powered best title/desc/H1 ────────────
 app.post('/api/tracker/meta-intel', verifyEngineAccess, async (req, res) => {
   const { page_id, url, keyword } = req.body;
@@ -41570,6 +41798,39 @@ async function sendTelegramNotification(chatId, message) {
     return false;
   }
 }
+
+// ── notifyOttmar — Ottmar's own admin alert channel ──────────────────────
+// Replaces CallMeBot (unreliable on free tier, 2026-07-22). Fires email
+// (via the same Brevo key used for client tracker emails) and Telegram
+// (ADMIN_TELEGRAM_CHAT_ID — Ottmar's own chat id, set once in Railway,
+// separate from any client's telegram_chat_id) in parallel. Best-effort:
+// never throws, so a failed notification never breaks the calling flow.
+async function notifyOttmar(subject, htmlOrText, plainTextFallback) {
+  const plain = plainTextFallback || String(htmlOrText || '').replace(/<[^>]+>/g, '');
+  try {
+    const brevoKey = process.env.BREVO_API_KEY;
+    if (brevoKey) {
+      const r = await fetch('https://api.brevo.com/v3/smtp/email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'api-key': brevoKey },
+        body: JSON.stringify({
+          to: [{ email: 'otteyfrancisca@gmail.com', name: 'Ottmar' }],
+          sender: { email: process.env.FROM_EMAIL || 'info@contentscale.site', name: 'ContentScale Tracker' },
+          subject: subject,
+          htmlContent: '<div style="font-family:Verdana,Geneva,sans-serif;font-size:14px;color:#1e293b;">' + (htmlOrText || '') + '</div>'
+        })
+      });
+      if (!r.ok) console.warn('[notifyOttmar] Brevo email failed', r.status);
+    } else {
+      console.warn('[notifyOttmar] BREVO_API_KEY not set — admin email skipped');
+    }
+  } catch (e) { console.warn('[notifyOttmar] email error:', e.message); }
+
+  try {
+    const adminChatId = process.env.ADMIN_TELEGRAM_CHAT_ID;
+    if (adminChatId) await sendTelegramNotification(adminChatId, '⭐ <b>' + subject + '</b>\n' + plain);
+  } catch (e) { console.warn('[notifyOttmar] telegram error:', e.message); }
+}
 // ── Telegram webhook — /start handler ────────────────────────────────────────
 app.post('/api/telegram/webhook', async (req, res) => {
   res.json({ ok: true }); // Always respond quickly
@@ -42076,19 +42337,11 @@ async function notifyAllUsers(message) {
   } catch(e) { console.warn('[Notify] notifyAllUsers error:', e.message); }
 }
 
-// ── WHATSAPP NOTIFICATION (CallMeBot) ────────────────────────────────────
+// ── WHATSAPP NOTIFICATION — kept as a thin wrapper so existing call sites
+// don't need to change. Internally now uses notifyOttmar (email + Telegram)
+// instead of CallMeBot, which is unreliable on the free tier (2026-07-22).
 async function notifyOttmarWhatsApp(message) {
-  const phone  = process.env.CALLMEBOT_PHONE;
-  const apiKey = process.env.CALLMEBOT_KEY;
-  if (!phone || !apiKey) return; // silently skip if not configured
-
-  try {
-    const url = `https://api.callmebot.com/whatsapp.php?phone=${phone}&text=${encodeURIComponent(message)}&apikey=${apiKey}`;
-    await fetch(url);
-    console.log('[Notify] WhatsApp sent to Ottmar');
-  } catch(e) {
-    console.warn('[Notify] WhatsApp failed:', e.message);
-  }
+  await notifyOttmar('📣 ContentScale notification', '<p>' + message + '</p>', message).catch(() => {});
 }
 
 // ── SELF REGISTRATION ────────────────────────────────────────────────────
