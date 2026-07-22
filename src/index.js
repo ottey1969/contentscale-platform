@@ -3440,7 +3440,7 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
         return '<div class="bw-comp"><span class="bw-comp-n">#'+(c.position||i+1)+'</span> <a href="'+esc(c.url||'#')+'" target="_blank" rel="noopener" class="bw-comp-u">'+esc(host)+'</a><span class="bw-comp-t">'+ttl+'</span></div>';
       }).join('');
     }
-    h+='<div class="bw-trans-line">Google AI Overview: '+(d.aio_text?('shown &mdash; '+esc(String(d.aio_text).slice(0,150))+'...'):'checked &mdash; not shown for this exact query right now.')+'</div>';
+    h+='<div class="bw-trans-line">Google AI Overview: '+(d.aio_text?('shown &mdash; '+esc(String(d.aio_text).slice(0,150))+'...'):'not detected via our current data source (Serper.dev doesn\'t capture AI Overview content) &mdash; a manual Google check is more reliable for this signal right now.')+'</div>';
     h+='<div class="bw-trans-line">Perplexity: '+(d.perp_text?('&ldquo;'+esc(String(d.perp_text).slice(0,150))+'...&rdquo;'):'checked &mdash; no answer excerpt captured for this query.')+'</div>';
     if(pcomp.length){ h+='<div class="bw-trans-line">Perplexity currently cites ('+pcomp.length+'), this page not among them yet: '+esc(pcomp.slice(0,5).join(', '))+'</div>'; }
     return h+'</div>';
@@ -3858,7 +3858,7 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
           return '<div class="bwm-comp"><span class="bwm-cn">#'+(c.position||i+1)+'</span> <a href="'+_bwEscL(c.url||'#')+'" target="_blank" rel="noopener" class="bwm-cu" onclick="event.stopPropagation()">'+_bwEscL(host)+'</a>'+(c.title?(' &mdash; '+_bwEscL(String(c.title).slice(0,70))):'')+'</div>';
         }).join('');
       }
-      h += '<div class="bwm-line">Google AI Overview: '+(d.aio_text?('shown &mdash; '+_bwEscL(String(d.aio_text).slice(0,160))+'...'):'checked &mdash; not shown for this exact query right now.')+'</div>';
+      h += '<div class="bwm-line">Google AI Overview: '+(d.aio_text?('shown &mdash; '+_bwEscL(String(d.aio_text).slice(0,160))+'...'):'not detected via our current data source (Serper.dev doesn\'t capture AI Overview content) &mdash; a manual Google check is more reliable for this signal right now.')+'</div>';
       h += '<div class="bwm-line">Perplexity: '+(d.perp_text?('&ldquo;'+_bwEscL(String(d.perp_text).slice(0,160))+'...&rdquo;'):'checked &mdash; no answer excerpt captured for this query.')+'</div>';
       if (pcomp.length) h += '<div class="bwm-line">Perplexity currently cites ('+pcomp.length+'), this page not among them yet: '+_bwEscL(pcomp.slice(0,5).join(', '))+'</div>';
       h += '</div>';
@@ -3932,7 +3932,7 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
         return '<div class="bwc-comp"><span class="bwc-cn">#'+(c.position||i+1)+'</span> <span class="bwc-cu">'+_bwEscL(host)+'</span>'+(c.title?(' <span class="bwc-ct">&mdash; '+_bwEscL(String(c.title).slice(0,52))+'</span>'):'')+'</div>';
       }).join('');
     }
-    h += '<div class="bwc-line">Google AI Overview: '+(d.aio_text?'shown for this query':'checked &mdash; not shown right now')+'</div>';
+    h += '<div class="bwc-line">Google AI Overview: '+(d.aio_text?'shown for this query':'not detected via our data source (Serper.dev limitation)')+'</div>';
     h += '<div class="bwc-line">Perplexity: '+(d.perp_text?'answer captured':'checked &mdash; no excerpt')+(pcomp.length?(' &middot; cites '+pcomp.length+' sources, not this page yet'):'')+'</div>';
     return h + '</div>';
   }
@@ -39090,7 +39090,7 @@ ${compSummary}
 PERPLEXITY — LIVE CHECK:
 ${perplexity.checked ? (perplexity.answer_excerpt ? 'Answer excerpt: "' + perplexity.answer_excerpt + '"\nCurrently cites: ' + (perplexity.cited_domains.join(', ') || 'no domains returned') : 'Checked — no answer excerpt captured for this query.') : 'Not checked — PERPLEXITY_API_KEY not configured.'}
 
-GOOGLE DIRECT-ANSWER BLOCK: ${aioDetected ? 'detected for this exact query' : 'not detected for this exact query right now'}
+GOOGLE DIRECT-ANSWER BLOCK: ${aioDetected ? 'detected for this exact query' : 'not detected via our data source (Serper.dev does not reliably capture AI Overview content — this does not mean Google shows none, only that our check could not confirm it)'}
 
 MANDATORY PROCESSING ORDER:
 STEP 1 — Analyse the SERP: what pattern do the top results share (format, depth, schema, freshness)?
@@ -39124,7 +39124,7 @@ Return ONLY valid JSON, no markdown, no preamble.
     brief.what_we_checked = {
       query_tested: keyword,
       checked_at: checkedAt,
-      google_direct_answer: aioDetected ? 'detected for this exact query' : 'checked — not detected for this exact query right now',
+      google_direct_answer: aioDetected ? 'detected for this exact query' : 'not detected via our data source (Serper.dev limitation — does not confirm absence, only that our check could not detect it)',
       perplexity: perplexity.checked
         ? (perplexity.answer_excerpt ? 'checked — answer captured' : 'checked — no answer excerpt captured for this query')
         : 'not checked — Perplexity key not configured',
@@ -40244,16 +40244,6 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
         if(sResp.ok) {
           const sData = await sResp.json();
 
-          // ── TEMP DEBUG (2026-07-22) — user confirmed a real Google AI Overview
-          // exists for "content at scale" but our detection reports "not shown".
-          // Log the full raw Serper response once so we can see the actual field
-          // shape and fix the ai_overview detection condition below. Remove after.
-          console.log('[AIO-DEBUG] keyword="' + keyword + '" | top-level keys: ' + Object.keys(sData).join(', '));
-          console.log('[AIO-DEBUG] answerBox:', JSON.stringify(sData.answerBox || null));
-          console.log('[AIO-DEBUG] knowledgeGraph present:', !!sData.knowledgeGraph);
-          if (sData.aiOverview) console.log('[AIO-DEBUG] FOUND top-level aiOverview field:', JSON.stringify(sData.aiOverview).substring(0, 500));
-          if (sData.ai_overview) console.log('[AIO-DEBUG] FOUND top-level ai_overview field:', JSON.stringify(sData.ai_overview).substring(0, 500));
-
           // ── Position: find our URL in organic results ──────────────────────
           const organic = sData.organic || [];
           let bestMatchIndex = -1;
@@ -40276,6 +40266,12 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
           }
 
           // ── AI Overview: Serper returns answerBox with type 'ai_overview' ──
+          // Confirmed 2026-07-22 via live debug: Serper.dev does not reliably
+          // return AI Overview content (no answerBox/knowledgeGraph field at all
+          // for queries known to show a real Google AI Overview). This is a
+          // documented data-source limitation, not a detection bug — see the
+          // render-time wording fix that reflects this honestly. Kept as a
+          // best-effort check in case Serper adds AIO support later.
           // Also check knowledgeGraph and organic snippets for our domain
           const ab = sData.answerBox || null;
           const kg = sData.knowledgeGraph || null;
