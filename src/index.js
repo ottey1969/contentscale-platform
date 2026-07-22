@@ -5165,6 +5165,7 @@ app.patch('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
     const { max_pages, status, reset_ip } = req.body;
     const updates = []; const vals = []; let i = 1;
     if (max_pages !== undefined) { updates.push(`max_pages=$${i++}`); vals.push(max_pages); }
+    if (req.body.prewrite_briefs_paid !== undefined) { updates.push(`prewrite_briefs_paid=$${i++}`); vals.push(parseInt(req.body.prewrite_briefs_paid) || 0); }
     if (req.body.extra_domains !== undefined) {
       updates.push(`extra_domains=$${i++}`);
       vals.push(req.body.extra_domains || '');
@@ -28248,7 +28249,7 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
 /* Modal */
 .cs-modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:30000; align-items:center; justify-content:center; }
 .cs-modal.show { display:flex; }
-.cs-modal-box { background:#111827; border:1px solid #374151; border-radius:12px; padding:24px; width:min(480px,95vw); box-shadow:0 20px 60px rgba(0,0,0,.15); }
+.cs-modal-box { background:#111827; border:1px solid #374151; border-radius:12px; padding:24px; width:min(480px,95vw); max-height:90vh; overflow-y:auto; -webkit-overflow-scrolling:touch; box-shadow:0 20px 60px rgba(0,0,0,.15); }
 .cs-input { width:100%; background:#0d1117; border:1px solid #374151; border-radius:6px; padding:9px 12px; color:#f1f5f9; font-size:13px; font-family:Verdana,sans-serif; outline:none; }
 .cs-input:focus { border-color:#7c3aed; }
 
@@ -28801,7 +28802,7 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
 <!-- Pre-Write Brief modal — keyword-only, no page yet -->
 <div class="cs-modal" id="prewriteBriefModal">
   <div class="cs-modal-box" onclick="event.stopPropagation()" style="max-width:520px;">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;position:sticky;top:-24px;background:#111827;padding-top:24px;margin-top:-24px;z-index:2;">
       <h3 style="font-size:15px;font-weight:800;color:#f1f5f9;">&#x1f3af; Pre-Write Brief</h3>
       <button onclick="hideModal('prewriteBriefModal')" style="background:none;border:none;color:#94a3b8;cursor:pointer;font-size:1.2rem;">&#x2715;</button>
     </div>
@@ -28814,8 +28815,8 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
       <label style="font-size:11px;color:#9ca3af;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.06em;">Working title / H1 <span style="color:#cbd5e1;font-weight:400;text-transform:none;">(optional)</span></label>
       <input id="pwbTitle" type="text" class="cs-input" placeholder="e.g. best free tool to check AI citations">
     </div>
-    <div style="display:flex;gap:10px;margin-bottom:16px;">
-      <div style="flex:1;">
+    <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:16px;">
+      <div style="flex:1 1 140px;">
         <label style="font-size:11px;color:#9ca3af;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.06em;">Output language</label>
         <input id="pwbLanguage" type="text" list="pwbLangList" class="cs-input" placeholder="English">
         <datalist id="pwbLangList">
@@ -28831,7 +28832,7 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
           <option value="Finnish"></option>
         </datalist>
       </div>
-      <div style="flex:1;">
+      <div style="flex:1 1 140px;">
         <label style="font-size:11px;color:#9ca3af;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.06em;">SERP region</label>
         <input id="pwbRegion" type="text" list="pwbRegionList" class="cs-input" placeholder="United States">
         <datalist id="pwbRegionList">
@@ -28851,7 +28852,7 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
       <button class="cs-btn" onclick="hideModal('prewriteBriefModal')">Cancel</button>
     </div>
     <div id="pwbStatus" style="font-size:11px;color:#9ca3af;margin-top:10px;"></div>
-    <div id="pwbResult" style="margin-top:14px;"></div>
+    <div id="pwbResult" style="margin-top:14px;max-height:52vh;overflow-y:auto;-webkit-overflow-scrolling:touch;"></div>
   </div>
 </div>
 
@@ -29501,9 +29502,42 @@ async function generatePrewriteBrief() {
   }
 }
 
+var _lastPrewriteBriefText = '';
 function renderPrewriteBrief(b) {
   var esc = function(s) { return (s == null ? '' : String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); };
-  var html = '<div style="background:#0d1117;border:1px solid #1f2937;border-radius:8px;padding:14px 16px;font-size:12px;color:#e5e7eb;line-height:1.6;">';
+
+  // Plain-text version for the Copy button — mirrors the HTML sections below.
+  var lines = [];
+  if (b.recommended_title_h1) lines.push(b.recommended_title_h1, '');
+  if (b.top10_gap) lines.push('TOP 10 GAP', b.top10_gap, '');
+  if (b.ai_overview_status) lines.push('AI OVERVIEW', b.ai_overview_status, '');
+  if (b.recommended_structure) {
+    var s = b.recommended_structure;
+    lines.push('STRUCTURE', (s.format||'') + (s.recommended_word_count ? ' \u00b7 ~' + s.recommended_word_count + ' words' : ''), '');
+    if (Array.isArray(s.must_have_h2s) && s.must_have_h2s.length) {
+      lines.push('MUST-HAVE H2s');
+      s.must_have_h2s.forEach(function(h){ lines.push('- ' + h); });
+      lines.push('');
+    }
+  }
+  if (Array.isArray(b.must_cover_entities) && b.must_cover_entities.length) {
+    lines.push('ENTITIES TO COVER', b.must_cover_entities.join(', '), '');
+  }
+  if (Array.isArray(b.faq_questions) && b.faq_questions.length) {
+    lines.push('FAQ QUESTIONS');
+    b.faq_questions.forEach(function(q){ lines.push('- ' + q); });
+    lines.push('');
+  }
+  if (Array.isArray(b.action_plan) && b.action_plan.length) {
+    lines.push('ACTION PLAN');
+    b.action_plan.forEach(function(a, i){ lines.push((i+1) + '. ' + (a.action||'')); });
+  }
+  _lastPrewriteBriefText = lines.join('\n');
+
+  var html = '<div style="display:flex;justify-content:flex-end;margin-bottom:8px;">'
+    + '<button onclick="copyPrewriteBrief(this)" style="background:#1f2937;border:1px solid #374151;border-radius:6px;color:#e5e7eb;font-size:11px;padding:5px 12px;cursor:pointer;">\uD83D\uDCCB Copy Brief</button>'
+    + '</div>';
+  html += '<div style="background:#0d1117;border:1px solid #1f2937;border-radius:8px;padding:14px 16px;font-size:12px;color:#e5e7eb;line-height:1.6;">';
   if (b.recommended_title_h1) html += '<div style="font-weight:800;color:#f1f5f9;margin-bottom:10px;font-size:13px;">' + esc(b.recommended_title_h1) + '</div>';
   if (b.top10_gap) html += '<div style="margin-bottom:10px;"><span style="color:#fbbf24;font-weight:700;">Top 10 gap:</span> ' + esc(b.top10_gap) + '</div>';
   if (b.ai_overview_status) html += '<div style="margin-bottom:10px;"><span style="color:#a78bfa;font-weight:700;">AI Overview:</span> ' + esc(b.ai_overview_status) + '</div>';
@@ -29525,6 +29559,28 @@ function renderPrewriteBrief(b) {
   }
   html += '</div>';
   return html;
+}
+function copyPrewriteBrief(btn) {
+  var text = _lastPrewriteBriefText || '';
+  var done = function(ok) {
+    if (!btn) return;
+    var orig = btn.textContent;
+    btn.textContent = ok ? '\u2713 Copied' : '\u26a0 Copy failed';
+    setTimeout(function(){ btn.textContent = orig; }, 1800);
+  };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(function(){ done(true); }).catch(function(){ done(false); });
+  } else {
+    // Fallback for older browsers / non-secure contexts
+    try {
+      var ta = document.createElement('textarea');
+      ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.appendChild(ta); ta.focus(); ta.select();
+      var ok = document.execCommand('copy');
+      document.body.removeChild(ta);
+      done(ok);
+    } catch(e) { done(false); }
+  }
 }
 function showImportModal(mode) { var _im = document.getElementById('importModal'); _im.classList.add('show'); _im.style.display = 'flex'; setImportMode(mode || 'paste'); if (mode === 'sitemap') { var si = document.getElementById('sitemapUrl'); if (si && !si.value) si.value = 'https://' + DOMAIN + '/sitemap.xml'; } }
 function hideModal(id) {
@@ -36323,6 +36379,34 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 maxWrap.appendChild(presets);
                 maxCell.appendChild(maxWrap);
 
+                // ── Pre-Write Brief allowance — admin sets extra briefs on top of the 1 free lifetime brief ──
+                var pwbWrap = document.createElement('div');
+                pwbWrap.style.cssText = 'display:flex;flex-direction:column;gap:3px;align-items:center;';
+                var pwbInput = document.createElement('input');
+                pwbInput.type = 'number';
+                pwbInput.value = c.prewrite_briefs_paid || 0;
+                pwbInput.min = 0; pwbInput.max = 2000;
+                pwbInput.title = 'Extra Pre-Write Briefs on top of the 1 free lifetime brief. E.g. set 799 for a client writing 800 pages themselves.';
+                pwbInput.style.cssText = 'width:54px;background:#0d1117;border:1px solid #374151;border-radius:4px;padding:3px 6px;color:#e5e7eb;font-size:12px;text-align:center;';
+                pwbInput.onchange = (function(id){ return function(){ updateTcClient(id, {prewrite_briefs_paid: parseInt(this.value)||0}); }; })(c.id);
+                var pwbPresets = document.createElement('div');
+                pwbPresets.style.cssText = 'display:flex;gap:2px;';
+                [0,20,50,100,799].forEach(function(n) {
+                    var btn = document.createElement('button');
+                    btn.textContent = n === 0 ? '\u2298' : n;
+                    btn.title = n === 0 ? 'Free tier only (1 lifetime brief)' : (n + 1) + ' briefs total';
+                    btn.style.cssText = 'font-size:9px;padding:1px 5px;background:' + ((c.prewrite_briefs_paid||0)==n?'#374151':'none') + ';border:1px solid #374151;border-radius:3px;color:#9ca3af;cursor:pointer;';
+                    btn.onclick = (function(id, val, inp, pBtns){ return function(){
+                        inp.value = val;
+                        updateTcClient(id, {prewrite_briefs_paid: val});
+                        pBtns.querySelectorAll('button').forEach(function(b){ b.style.background='none'; });
+                        this.style.background = '#374151';
+                    }; })(c.id, n, pwbInput, pwbPresets);
+                    pwbPresets.appendChild(btn);
+                });
+                pwbWrap.appendChild(pwbInput);
+                pwbWrap.appendChild(pwbPresets);
+
                 // -- Actions (grouped: toggles · stacked links · buttons) --
                 var actionsDiv = document.createElement('div');
                 actionsDiv.style.cssText = 'display:flex;flex-direction:column;gap:10px;min-width:360px;max-width:560px;';
@@ -36834,6 +36918,17 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 maxBlock.appendChild(maxLbl);
                 maxBlock.appendChild(maxWrap);
                 detailWrap.appendChild(maxBlock);
+
+                var pwbBlock = document.createElement('div');
+                pwbBlock.style.cssText = 'display:flex;align-items:center;gap:8px;';
+                var pwbLbl = document.createElement('span');
+                pwbLbl.textContent = 'Pre-Write Briefs (+free)';
+                pwbLbl.title = 'Extra briefs on top of the 1 free lifetime brief every client already gets';
+                pwbLbl.style.cssText = 'font-size:10px;color:#6b7280;text-transform:uppercase;letter-spacing:.06em;';
+                pwbBlock.appendChild(pwbLbl);
+                pwbBlock.appendChild(pwbWrap);
+                detailWrap.appendChild(pwbBlock);
+
                 detailWrap.appendChild(actionsDiv);
                 detailTd.appendChild(detailWrap);
                 detailTr.appendChild(detailTd);
