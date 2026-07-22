@@ -4396,6 +4396,57 @@ const title = (html.match(/<title>([^<]+)<\/title>/) || [])[1]?.replace(/ — Co
    }
    });
    // Admin Auth Middleware
+const verifyEngineAccess = async (req, res, next) => {
+  const adminKey = req.headers['x-admin-key'];
+  if (adminKey) {
+    // Try with is_active first, fall back without it for backward compat
+    let isAdmin;
+    try {
+      isAdmin = await pool.query('SELECT id FROM super_admins WHERE session_token=$1 AND is_active=TRUE', [adminKey]);
+    } catch(e) {
+      try { isAdmin = await pool.query('SELECT id FROM super_admins WHERE session_token=$1', [adminKey]); }
+      catch(e2) { isAdmin = { rows: [] }; }
+    }
+    if (isAdmin.rows.length) { req.engineUser = { isAdmin: true, codeId: null }; return next(); }
+  }
+
+  // Accept token (from sessionStorage) or code (from URL/header)
+  const engineToken = req.headers['x-engine-token'];
+  const engineCode = req.headers['x-engine-code'] || req.query.code;
+  const lookupCode = engineToken || engineCode;
+
+  if (!lookupCode) {
+    return res.status(401).json({ success: false, error: 'Engine access code required' });
+  }
+
+  try {
+    // Token IS the raw code (ENG-XXXXXX) — verify it exists and is active
+    let codeResult;
+    try {
+      codeResult = await pool.query(
+        'SELECT * FROM engine_access_codes WHERE code = $1 AND is_active = TRUE AND (expires_at IS NULL OR expires_at > NOW())',
+        [lookupCode.trim().toUpperCase()]
+      );
+    } catch(q1err) {
+      // is_active column may be missing — try without it
+      try {
+        codeResult = await pool.query(
+          'SELECT * FROM engine_access_codes WHERE code = $1 AND (expires_at IS NULL OR expires_at > NOW())',
+          [lookupCode.trim().toUpperCase()]
+        );
+      } catch(q2err) { codeResult = { rows: [] }; }
+    }
+    if (!codeResult || codeResult.rows.length === 0) {
+      return res.status(403).json({ success: false, error: 'Engine access code not found. The database was reset — please get a new code from your admin dashboard.' });
+    }
+    const code = codeResult.rows[0];
+    req.engineUser = { isAdmin: false, codeId: code.id, code: code };
+    next();
+  } catch (error) {
+    return res.status(500).json({ success: false, error: 'Server error: ' + error.message });
+  }
+};
+
    const verifyAdmin = async (req, res, next) => {
    const adminKey = req.headers['x-admin-key'];
    if (!adminKey) return res.status(401).json({ success: false, error: 'Admin auth required' });
@@ -15858,56 +15909,6 @@ function doLogin(){
 
 
 // ── Engine Access Middleware ──────────────────────────────────────────────────
-const verifyEngineAccess = async (req, res, next) => {
-  const adminKey = req.headers['x-admin-key'];
-  if (adminKey) {
-    // Try with is_active first, fall back without it for backward compat
-    let isAdmin;
-    try {
-      isAdmin = await pool.query('SELECT id FROM super_admins WHERE session_token=$1 AND is_active=TRUE', [adminKey]);
-    } catch(e) {
-      try { isAdmin = await pool.query('SELECT id FROM super_admins WHERE session_token=$1', [adminKey]); }
-      catch(e2) { isAdmin = { rows: [] }; }
-    }
-    if (isAdmin.rows.length) { req.engineUser = { isAdmin: true, codeId: null }; return next(); }
-  }
-
-  // Accept token (from sessionStorage) or code (from URL/header)
-  const engineToken = req.headers['x-engine-token'];
-  const engineCode = req.headers['x-engine-code'] || req.query.code;
-  const lookupCode = engineToken || engineCode;
-
-  if (!lookupCode) {
-    return res.status(401).json({ success: false, error: 'Engine access code required' });
-  }
-
-  try {
-    // Token IS the raw code (ENG-XXXXXX) — verify it exists and is active
-    let codeResult;
-    try {
-      codeResult = await pool.query(
-        'SELECT * FROM engine_access_codes WHERE code = $1 AND is_active = TRUE AND (expires_at IS NULL OR expires_at > NOW())',
-        [lookupCode.trim().toUpperCase()]
-      );
-    } catch(q1err) {
-      // is_active column may be missing — try without it
-      try {
-        codeResult = await pool.query(
-          'SELECT * FROM engine_access_codes WHERE code = $1 AND (expires_at IS NULL OR expires_at > NOW())',
-          [lookupCode.trim().toUpperCase()]
-        );
-      } catch(q2err) { codeResult = { rows: [] }; }
-    }
-    if (!codeResult || codeResult.rows.length === 0) {
-      return res.status(403).json({ success: false, error: 'Engine access code not found. The database was reset — please get a new code from your admin dashboard.' });
-    }
-    const code = codeResult.rows[0];
-    req.engineUser = { isAdmin: false, codeId: code.id, code: code };
-    next();
-  } catch (error) {
-    return res.status(500).json({ success: false, error: 'Server error: ' + error.message });
-  }
-};
 
 // ── GSC Auto-Stat Matching ──
 app.post('/api/gsc/match-stats', verifyEngineAccess, async (req, res) => {
