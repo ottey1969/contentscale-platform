@@ -591,7 +591,6 @@
                 <div class="client-mode-toggle">
                   <button type="button" class="client-mode-btn on" id="modeInbound" onclick="setClientMode('inbound')">📞 Inbound only</button>
                   <button type="button" class="client-mode-btn" id="modeOutbound" onclick="setClientMode('outbound')">📤 Outbound only</button>
-                  <button type="button" class="client-mode-btn" id="modeBoth" onclick="setClientMode('both')">🔁 Both</button>
                 </div>
 
                 <!-- ══ INBOUND SECTION ══ -->
@@ -705,10 +704,6 @@
                 <!-- ══ OUTBOUND SECTION ══ -->
                 <div class="client-section-outbound" id="sectionOutbound" style="grid-column:1/-1;display:none;">
 
-                  <div id="outboundSeparator" style="display:none;grid-column:1/-1;border-top:2px solid rgba(124,58,237,.3);margin:12px 0 8px;padding-top:14px;">
-                    <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#a78bfa;font-weight:700;">📤 Outbound Settings</span>
-                  </div>
-
                   <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;">
                     <div class="client-field client-outbound-agent" style="display:none;">
                       <label>ElevenLabs Agent ID</label>
@@ -798,6 +793,20 @@
               wrap.innerHTML = `<div class="client-active-badge"><span class="dot"></span> Active client: <strong>${escHtml(active.name)}</strong> — ${active.mode}</div>`;
             }
 
+            // Updates just the mode text in the badge live as the user toggles
+            // Inbound/Outbound/Both — without needing to hit Save first. Shows
+            // "(unsaved)" when it differs from what's actually stored.
+            function updateActiveBadgeModeLive(mode){
+              const clients = loadClients();
+              const activeId = getActiveClientId();
+              const active = clients.find(c => c.id === activeId);
+              const wrap = document.getElementById('clientActiveBadgeWrap');
+              if(!active){ return; }
+              const unsaved = mode !== active.mode
+                ? ' <span style="color:var(--gold);font-size:9px;">(unsaved)</span>' : '';
+              wrap.innerHTML = `<div class="client-active-badge"><span class="dot"></span> Active client: <strong>${escHtml(active.name)}</strong> — ${mode}${unsaved}</div>`;
+            }
+
             // ── INDUSTRY PRESETS ──────────────────────────────────────
             const INDUSTRY_PRESETS = {
               roofing: {
@@ -860,33 +869,33 @@
             }
 
             // ── SECTION VISIBILITY PER MODE ─────────────────────────
+            // Only two modes now: inbound or outbound. (Both was removed —
+            // confusing in practice. A client is either a receiver or a caller.)
             function updateSectionVisibility(mode) {
               const inbound = document.getElementById('sectionInbound');
               const outbound = document.getElementById('sectionOutbound');
-              const separator = document.getElementById('outboundSeparator');
               const outAgentFields = document.querySelectorAll('.client-outbound-agent');
-              if (mode === 'inbound') {
-                inbound.style.display = 'contents';
-                outbound.style.display = 'none';
-              } else if (mode === 'outbound') {
+              if (mode === 'outbound') {
                 inbound.style.display = 'none';
                 outbound.style.display = 'contents';
-                separator.style.display = 'none';
                 outAgentFields.forEach(f => f.style.display = 'block');
               } else {
                 inbound.style.display = 'contents';
-                outbound.style.display = 'contents';
-                separator.style.display = 'block';
-                outAgentFields.forEach(f => f.style.display = 'none');
+                outbound.style.display = 'none';
               }
             }
 
             function setClientMode(mode){
+              // Legacy safety: any client saved before "Both" was removed
+              // falls back to Inbound so the toggle never points at a
+              // button that no longer exists.
+              if (mode !== 'inbound' && mode !== 'outbound') mode = 'inbound';
               document.querySelectorAll('.client-mode-btn').forEach(b => b.classList.remove('on'));
-              const map = {inbound:'modeInbound', outbound:'modeOutbound', both:'modeBoth'};
+              const map = {inbound:'modeInbound', outbound:'modeOutbound'};
               document.getElementById(map[mode]).classList.add('on');
               document.getElementById('clientForm').dataset.mode = mode;
               updateSectionVisibility(mode);
+              updateActiveBadgeModeLive(mode);
             }
 
             function switchClient(id){
@@ -1558,6 +1567,10 @@
            document.getElementById('lc-'+id)?.classList.toggle('manual', manualLeads.has(id));
            const cb=document.getElementById('manual-'+id);
            if(cb) cb.checked=manualLeads.has(id);
+           // Call Sheet (lead buckets) shows the same checkbox under a
+           // cs-prefixed id — keep that in sync too.
+           const csCb=document.getElementById('cs-manual-'+id);
+           if(csCb) csCb.checked=manualLeads.has(id);
            toast(manualLeads.has(id) ? '📌 Marked — you\'ll call this one yourself' : 'Unmarked — back in auto-call pool');
          }
  
@@ -2628,6 +2641,18 @@ Return ONLY a raw JSON array — no markdown, no code fences, no explanation:
              statusEl.textContent=statusText||'';
              statusEl.className='call-status '+state+(statusText?' show':'');
            }
+           // Call Sheet (lead buckets) shows the same lead with its own
+           // cs-prefixed element IDs — keep that view in sync too.
+           const csBtn=document.getElementById('cs-callbtn-'+id);
+           const csStatusEl=document.getElementById('cs-callstatus-'+id);
+           if(csBtn){
+             csBtn.className='call-btn '+state;
+             csBtn.innerHTML=getCallLabel(id);
+           }
+           if(csStatusEl){
+             csStatusEl.textContent=statusText||'';
+             csStatusEl.className='call-status '+state+(statusText?' show':'');
+           }
          }
          
          // ── Poll Vapi for call outcome ───────────────────────────
@@ -3311,11 +3336,27 @@ document.addEventListener('DOMContentLoaded',function(){
         html+='<div class="cs-lead'+(active?' active':'')+(isDnc?' dnc':'')+'" onclick="csSelect(\''+id+'\')">';
         html+='<div class="cs-lead-row">';
         html+='<span class="cs-nm">'+esc(l.name||'Unknown')+(isDnc?' <span class="cs-dncpill">DNC</span>':'')+'</span>';
+        html+='<label onclick="event.stopPropagation()" style="display:flex;align-items:center;gap:3px;font-family:\'IBM Plex Mono\',monospace;font-size:9px;color:var(--muted);cursor:pointer;user-select:none;" title="Mark as manual \u2014 excludes from AI auto-call, you call this one yourself">'
+          +'<input type="checkbox" id="cs-manual-'+id+'" '+((typeof manualLeads!=='undefined'&&manualLeads.has(id))?'checked':'')+' onchange="toggleManual(\''+id+'\',event)" style="cursor:pointer;" />'
+          +'\uD83D\uDCCC</label>';
         if(l.phone){html+='<a class="cs-ph" href="tel:'+esc(l.phone)+'" onclick="event.stopPropagation()">\uD83D\uDCDE '+esc(l.phone)+'</a>';}
         else{html+='<span class="cs-nophone">no number</span>';}
         if(bk)html+='<span class="cs-btag">'+bk+'</span>';
         if(oc)html+='<span class="cs-oc" style="background:'+ocColor(oc)+'">'+ocLabel(oc)+'</span>';
+        // AI call button — same triggerCall() used in the main results view, so
+        // the same compliance gates apply here too (terms, mobile block, calling
+        // hours, line-type check). Only appears once the lead has a phone number.
+        if(l.phone && typeof getCallState==='function'){
+          var _cs=getCallState(id), _mw=(l.aiCallAllowed===false?' mobile-warn':'');
+          html+='<button class="call-btn '+_cs+_mw+'" id="cs-callbtn-'+id+'"'
+            +' onclick="event.stopPropagation();triggerCall(\''+id+'\')"'
+            +' title="'+(l.aiCallAllowed===false?'\uD83D\uDCF1 Mobile \u2014 AI calling blocked. Tap the number above to call it yourself.':'Call '+esc(l.phone))+'">'
+            +getCallIcon(id)+' '+getCallLabel(id)+'</button>';
+        }
         html+='</div>';
+        if(l.phone && typeof getCallStatusText==='function' && getCallStatusText(id)){
+          html+='<div class="call-status '+getCallStatusClass(id)+' show" id="cs-callstatus-'+id+'">'+getCallStatusText(id)+'</div>';
+        }
         html+='<div class="cs-script">'+scriptHTML(l);
         html+='<div class="cs-obtns">'
           +'<button class="cs-ob" onclick="csOutcome(\''+id+'\',\'interested\',event)">\u2705 Interested</button>'
