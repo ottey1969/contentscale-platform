@@ -5500,6 +5500,20 @@ app.patch('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
   // Paid Tier 3 clients bypass this via prewrite_briefs_paid (set by admin after payment).
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS prewrite_briefs_used INTEGER DEFAULT 0`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS prewrite_briefs_paid INTEGER DEFAULT 0`).catch(()=>{});
+  // Stores every generated Pre-Write Brief so a client can reopen a past
+  // brief later instead of losing it when the modal closes.
+  await client.query(`CREATE TABLE IF NOT EXISTS prewrite_briefs (
+    id SERIAL PRIMARY KEY,
+    client_id INTEGER REFERENCES tracker_clients(id) ON DELETE CASCADE,
+    keyword TEXT NOT NULL,
+    working_title TEXT,
+    language TEXT,
+    region TEXT,
+    brief_json JSONB NOT NULL,
+    competitors_scraped INTEGER,
+    created_at TIMESTAMP DEFAULT NOW()
+  )`).catch(()=>{});
+  await client.query(`CREATE INDEX IF NOT EXISTS idx_prewrite_briefs_client ON prewrite_briefs(client_id, created_at DESC)`).catch(()=>{});
   // Brief merge system
   await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS brief_content JSONB`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS brief_started_at TIMESTAMPTZ`).catch(()=>{});
@@ -28854,6 +28868,10 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
       <button class="cs-btn" onclick="hideModal('prewriteBriefModal')">Cancel</button>
     </div>
     <div id="pwbStatus" style="font-size:11px;color:#9ca3af;margin-top:10px;"></div>
+    <div id="pwbRecentWrap" style="margin-top:12px;display:none;">
+      <div style="font-size:10px;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">&#x1F553; Recent briefs — click a keyword to reopen</div>
+      <div id="pwbRecentList" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
+    </div>
     <div id="pwbResult" style="margin-top:14px;max-height:52vh;overflow-y:auto;-webkit-overflow-scrolling:touch;"></div>
   </div>
 </div>
@@ -29459,6 +29477,51 @@ function showPrewriteBriefModal() {
   document.getElementById('pwbResult').innerHTML = '';
   document.getElementById('pwbStatus').textContent = '';
   document.getElementById('prewriteBriefModal').classList.add('show');
+  loadRecentPrewriteBriefs();
+}
+
+async function loadRecentPrewriteBriefs() {
+  var wrap = document.getElementById('pwbRecentWrap');
+  var list = document.getElementById('pwbRecentList');
+  try {
+    var data = await api('/prewrite-briefs', 'GET');
+    if (!data || !data.success || !Array.isArray(data.briefs) || !data.briefs.length) {
+      wrap.style.display = 'none';
+      return;
+    }
+    list.innerHTML = data.briefs.map(function(b) {
+      var d = new Date(b.created_at);
+      var dLabel = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+      var esc = function(s) { return (s == null ? '' : String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); };
+      return '<button onclick="reopenPrewriteBrief(' + b.id + ')" style="background:#1f2937;border:1px solid #374151;border-radius:20px;color:#e5e7eb;font-size:11px;padding:5px 12px;cursor:pointer;" title="' + esc(b.keyword) + ' \u00b7 ' + dLabel + '">'
+        + esc(b.keyword.length > 28 ? b.keyword.slice(0, 28) + '\u2026' : b.keyword) + ' <span style="color:#6b7280;">\u00b7 ' + dLabel + '</span></button>';
+    }).join('');
+    wrap.style.display = 'block';
+  } catch (e) {
+    wrap.style.display = 'none';
+  }
+}
+
+async function reopenPrewriteBrief(id) {
+  var stat = document.getElementById('pwbStatus');
+  var result = document.getElementById('pwbResult');
+  stat.textContent = 'Loading saved brief\u2026';
+  result.innerHTML = '';
+  try {
+    var data = await api('/prewrite-briefs/' + id, 'GET');
+    if (!data || !data.success || !data.brief) {
+      stat.textContent = '\u274c Could not load that brief.';
+      return;
+    }
+    document.getElementById('pwbKeyword').value = data.keyword || '';
+    document.getElementById('pwbTitle').value = data.working_title || '';
+    var d = new Date(data.created_at);
+    stat.textContent = '\u2713 Reopened \u00b7 originally generated ' + d.toLocaleString();
+    result.innerHTML = renderPrewriteBrief(data.brief);
+    result.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  } catch (e) {
+    stat.textContent = '\u274c ' + e.message;
+  }
 }
 
 async function generatePrewriteBrief() {
@@ -29487,6 +29550,7 @@ async function generatePrewriteBrief() {
     }
     stat.textContent = '\u2713 Brief ready \u00b7 ' + (data.competitors_scraped || 0) + ' competitors analysed \u00b7 region: ' + (data.region || 'us') + (data.briefs_allowed ? ' \u00b7 ' + data.briefs_used + '/' + data.briefs_allowed + ' briefs used' : '');
     result.innerHTML = renderPrewriteBrief(data.brief);
+    loadRecentPrewriteBriefs();
   } catch (e) {
     btn.disabled = false; btn.textContent = 'Generate brief';
     if (/separate service/i.test(e.message)) {
@@ -29510,9 +29574,28 @@ function renderPrewriteBrief(b) {
 
   // Plain-text version for the Copy button — mirrors the HTML sections below.
   var lines = [];
+  if (b.what_we_checked) {
+    var wc = b.what_we_checked;
+    lines.push('WHAT WE ACTUALLY CHECKED', 'Query tested: "' + (wc.query_tested||'') + '"', 'Checked: ' + (wc.checked_at||''));
+    lines.push('Google direct answer: ' + (wc.google_direct_answer||''));
+    lines.push('Perplexity: ' + (wc.perplexity||''));
+    if (wc.perplexity_excerpt) lines.push('Perplexity excerpt: "' + wc.perplexity_excerpt + '"');
+    if (Array.isArray(wc.perplexity_currently_cites) && wc.perplexity_currently_cites.length) lines.push('Perplexity currently cites: ' + wc.perplexity_currently_cites.join(', '));
+    lines.push('');
+  }
   if (b.recommended_title_h1) lines.push(b.recommended_title_h1, '');
   if (b.top10_gap) lines.push('TOP 10 GAP', b.top10_gap, '');
   if (b.ai_overview_status) lines.push('AI OVERVIEW', b.ai_overview_status, '');
+  if (Array.isArray(b.competitor_table) && b.competitor_table.length) {
+    lines.push('COMPETITOR TABLE');
+    b.competitor_table.forEach(function(c){
+      lines.push('#' + c.rank + ' ' + c.domain);
+      lines.push('  Has: ' + (c.what_they_have||''));
+      lines.push('  Gap: ' + (c.the_gap||''));
+      lines.push('  Add: ' + (c.what_to_add||''));
+    });
+    lines.push('');
+  }
   if (b.recommended_structure) {
     var s = b.recommended_structure;
     lines.push('STRUCTURE', (s.format||'') + (s.recommended_word_count ? ' \\u00b7 ~' + s.recommended_word_count + ' words' : ''), '');
@@ -29539,10 +29622,35 @@ function renderPrewriteBrief(b) {
   var html = '<div style="display:flex;justify-content:flex-end;margin-bottom:8px;">'
     + '<button onclick="copyPrewriteBrief(this)" style="background:#1f2937;border:1px solid #374151;border-radius:6px;color:#e5e7eb;font-size:11px;padding:5px 12px;cursor:pointer;">\\uD83D\\uDCCB Copy Brief</button>'
     + '</div>';
+
+  if (b.what_we_checked) {
+    var wc2 = b.what_we_checked;
+    html += '<div style="background:#0b1220;border:1px solid #1e3a5f;border-radius:8px;padding:12px 14px;margin-bottom:12px;font-size:11.5px;color:#9ca3af;line-height:1.7;">';
+    html += '<div style="color:#60a5fa;font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">\\uD83D\\uDD0D What We Actually Checked</div>';
+    html += '<div>Query tested: <span style="color:#e5e7eb;">"' + esc(wc2.query_tested) + '"</span></div>';
+    html += '<div>Checked: ' + esc(wc2.checked_at) + '</div>';
+    html += '<div>Google AI Overview: ' + esc(wc2.google_direct_answer) + '</div>';
+    html += '<div>Perplexity: ' + esc(wc2.perplexity) + '</div>';
+    if (wc2.perplexity_excerpt) html += '<div style="margin-top:4px;font-style:italic;color:#cbd5e1;">"' + esc(wc2.perplexity_excerpt) + '"</div>';
+    if (Array.isArray(wc2.perplexity_currently_cites) && wc2.perplexity_currently_cites.length) {
+      html += '<div style="margin-top:4px;">Perplexity currently cites: ' + wc2.perplexity_currently_cites.map(function(d){return esc(d);}).join(', ') + '</div>';
+    }
+    html += '</div>';
+  }
+
   html += '<div style="background:#0d1117;border:1px solid #1f2937;border-radius:8px;padding:14px 16px;font-size:12px;color:#e5e7eb;line-height:1.6;">';
   if (b.recommended_title_h1) html += '<div style="font-weight:800;color:#f1f5f9;margin-bottom:10px;font-size:13px;">' + esc(b.recommended_title_h1) + '</div>';
   if (b.top10_gap) html += '<div style="margin-bottom:10px;"><span style="color:#fbbf24;font-weight:700;">Top 10 gap:</span> ' + esc(b.top10_gap) + '</div>';
   if (b.ai_overview_status) html += '<div style="margin-bottom:10px;"><span style="color:#a78bfa;font-weight:700;">AI Overview:</span> ' + esc(b.ai_overview_status) + '</div>';
+  if (Array.isArray(b.competitor_table) && b.competitor_table.length) {
+    html += '<div style="margin-bottom:12px;"><div style="color:#9ca3af;font-size:10px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">Competitor Table</div>';
+    html += '<table style="width:100%;border-collapse:collapse;font-size:11px;">';
+    html += '<tr style="border-bottom:1px solid #1f2937;"><th style="text-align:left;padding:4px 6px;color:#6b7280;">#</th><th style="text-align:left;padding:4px 6px;color:#6b7280;">Domain</th><th style="text-align:left;padding:4px 6px;color:#34d399;">Has</th><th style="text-align:left;padding:4px 6px;color:#f87171;">Gap</th><th style="text-align:left;padding:4px 6px;color:#60a5fa;">Add</th></tr>';
+    b.competitor_table.forEach(function(c){
+      html += '<tr style="border-bottom:1px solid #1a2332;"><td style="padding:5px 6px;color:#9ca3af;">' + esc(c.rank) + '</td><td style="padding:5px 6px;font-weight:700;">' + esc(c.domain) + '</td><td style="padding:5px 6px;color:#a7f3d0;">' + esc(c.what_they_have) + '</td><td style="padding:5px 6px;color:#fca5a5;">' + esc(c.the_gap) + '</td><td style="padding:5px 6px;color:#93c5fd;">' + esc(c.what_to_add) + '</td></tr>';
+    });
+    html += '</table></div>';
+  }
   if (b.recommended_structure) {
     var s = b.recommended_structure;
     html += '<div style="margin-bottom:10px;"><span style="color:#34d399;font-weight:700;">Structure:</span> ' + esc(s.format||'') + (s.recommended_word_count ? ' \\u00b7 ~' + s.recommended_word_count + ' words' : '') + '</div>';
@@ -38896,6 +39004,7 @@ app.post('/api/tracker-client/:token/prewrite-brief', async (req, res) => {
     const serperKey = process.env.SERPAPI_KEY;
     const glParam = String(region || 'us').toLowerCase().replace(/[^a-z]/g, '') || 'us';
     let serpUrls = [];
+    let aioDetected = false;
     if (serperKey) {
       try {
         const ctrl1 = new AbortController(); setTimeout(() => ctrl1.abort(), 15000);
@@ -38915,7 +39024,11 @@ app.post('/api/tracker-client/:token/prewrite-brief', async (req, res) => {
             title: r.title || '',
             snippet: r.snippet || ''
           })).filter(r => r.url);
-          console.log('[prewrite-brief] Serper.dev returned', serpUrls.length, 'results for:', keyword, '| gl=' + glParam);
+          // Serper surfaces a direct-answer block (answerBox) when Google shows one for
+          // this exact query — the closest signal available for AI Overview presence
+          // without a dedicated AIO endpoint. Honest phrasing either way in the output.
+          aioDetected = !!(d1.answerBox || d1.knowledgeGraph);
+          console.log('[prewrite-brief] Serper.dev returned', serpUrls.length, 'results for:', keyword, '| gl=' + glParam, '| answerBox=' + !!d1.answerBox);
         } else {
           const err = await r1.text().catch(() => '');
           console.warn('[prewrite-brief] Serper.dev error:', r1.status, err.substring(0, 200));
@@ -38925,6 +39038,34 @@ app.post('/api/tracker-client/:token/prewrite-brief', async (req, res) => {
       console.warn('[prewrite-brief] SERPAPI_KEY not set — cannot fetch SERP results');
     }
     if (!serpUrls.length) return res.status(502).json({ success: false, error: 'Could not fetch SERP results — check SERPAPI_KEY is set in Railway environment' });
+
+    // Real Perplexity check — same call the tracker's own citation-checker makes.
+    // This is verified evidence, not an LLM guess, matching the "no promises without
+    // evidence" transparency principle used across the rest of the tracker.
+    const checkedAt = new Date().toISOString();
+    let perplexity = { checked: false, answer_excerpt: '', cited_domains: [] };
+    const pxKey = process.env.PERPLEXITY_API_KEY;
+    if (pxKey) {
+      try {
+        const ctrlP = new AbortController(); setTimeout(() => ctrlP.abort(), 20000);
+        const pResp = await fetch('https://api.perplexity.ai/chat/completions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + pxKey },
+          body: JSON.stringify({ model: 'sonar', messages: [{ role: 'user', content: keyword }], max_tokens: 400, return_citations: true, return_related_questions: false }),
+          signal: ctrlP.signal
+        });
+        if (pResp.ok) {
+          const pData = await pResp.json();
+          const citations = pData.citations || [];
+          const answerText = (pData.choices && pData.choices[0] && pData.choices[0].message && pData.choices[0].message.content) || '';
+          perplexity = {
+            checked: true,
+            answer_excerpt: answerText.substring(0, 400),
+            cited_domains: citations.slice(0, 10).map(c => (c || '').replace(/^https?:\/\//, '').split('/')[0])
+          };
+        }
+      } catch (e) { console.warn('[prewrite-brief] Perplexity check failed:', e.message); }
+    }
 
     const top5 = serpUrls
       .filter(r => !/youtube\.com|reddit\.com|facebook\.com|linkedin\.com|twitter\.com|x\.com|pinterest\.|quora\.com|instagram\.com|tiktok\.com/i.test(r.url))
@@ -38946,16 +39087,22 @@ ${workingTitle ? 'WORKING TITLE / ANGLE SUPPLIED: "' + workingTitle + '"' : 'No 
 LIVE SERP — CURRENT TOP RESULTS:
 ${compSummary}
 
+PERPLEXITY — LIVE CHECK:
+${perplexity.checked ? (perplexity.answer_excerpt ? 'Answer excerpt: "' + perplexity.answer_excerpt + '"\nCurrently cites: ' + (perplexity.cited_domains.join(', ') || 'no domains returned') : 'Checked — no answer excerpt captured for this query.') : 'Not checked — PERPLEXITY_API_KEY not configured.'}
+
+GOOGLE DIRECT-ANSWER BLOCK: ${aioDetected ? 'detected for this exact query' : 'not detected for this exact query right now'}
+
 MANDATORY PROCESSING ORDER:
 STEP 1 — Analyse the SERP: what pattern do the top results share (format, depth, schema, freshness)?
 STEP 2 — INTENT DECOMPOSITION: list the 5-7 real sub-questions a searcher typing "${keyword}" actually wants answered.
 STEP 3 — GAP ACROSS THE WHOLE TOP 10: what does NONE of the current top 10 cover well — the opening this new page can own?
-STEP 4 — Specify the exact structure, entities, and schema the new page needs to beat rank 1 on day one.
+STEP 4 — For EACH of the top 5 competitors, state ONE concrete thing they do well and ONE concrete gap — grounded only in their scraped content above.
+STEP 5 — Specify the exact structure, entities, and schema the new page needs to beat rank 1 on day one.
 
 PRECISION OVER FALSE COMPLETENESS: if the live data does not support a confident, specific answer for a field, output "insufficient_data" instead of inventing one.
 
 Return ONLY valid JSON, no markdown, no preamble.
-{"keyword":"${keyword}","search_intent":"informational|commercial|transactional","top10_gap":"<what none of the current top 10 cover well — the opening for a new page, or 'insufficient_data'>","ai_overview_status":"<is an AI Overview likely already showing for this keyword based on the SERP data — and what would it take to be cited, or 'insufficient_data'>","recommended_title_h1":"<the strongest working title/H1 for this page, considering the supplied angle if any>","recommended_structure":{"format":"<content_page|comparison|how_to|tool_landing — from the SERP pattern>","recommended_word_count":2200,"must_have_h2s":["<specific headings needed to beat rank 1>"],"recommended_schema":["<schema types, e.g. FAQPage, Article, HowTo>"]},"must_cover_entities":["<specific terms/entities present in 2+ competitors that this page must include>"],"faq_questions":["<real People-Also-Ask style questions this page should answer>"],"citation_targets":[{"query_variant":"<a specific question Google AI Overview or Perplexity could cite this page for>","passage_to_write":"<exactly how that passage should read — length, direct-answer format>"}],"beat_number1_instructions":[{"topic":"<a topic rank-1 covers>","rank1_treats_it_as":"surface|moderate|deep","to_beat_write":"<concrete instruction — what to add, what depth, what evidence>"}],"action_plan":[{"step":1,"priority":"high|medium|low","action":"<specific action>"}],"confidence":"high|medium|low"}`;
+{"keyword":"${keyword}","search_intent":"informational|commercial|transactional","top10_gap":"<what none of the current top 10 cover well — the opening for a new page, or 'insufficient_data'>","ai_overview_status":"<synthesise the Perplexity live check and Google direct-answer block above into one sentence — what it means for this new page's citation chances>","competitor_table":[{"rank":1,"domain":"<real domain from the SERP data>","what_they_have":"<one concrete thing this competitor does well, grounded in their scraped content>","the_gap":"<one concrete thing missing or weak in their content>","what_to_add":"<what the new page should do instead/better>"}],"recommended_title_h1":"<the strongest working title/H1 for this page, considering the supplied angle if any>","recommended_structure":{"format":"<content_page|comparison|how_to|tool_landing — from the SERP pattern>","recommended_word_count":2200,"must_have_h2s":["<specific headings needed to beat rank 1>"],"recommended_schema":["<schema types, e.g. FAQPage, Article, HowTo>"]},"must_cover_entities":["<specific terms/entities present in 2+ competitors that this page must include>"],"faq_questions":["<real People-Also-Ask style questions this page should answer>"],"citation_targets":[{"query_variant":"<a specific question Google AI Overview or Perplexity could cite this page for>","passage_to_write":"<exactly how that passage should read — length, direct-answer format>"}],"beat_number1_instructions":[{"topic":"<a topic rank-1 covers>","rank1_treats_it_as":"surface|moderate|deep","to_beat_write":"<concrete instruction — what to add, what depth, what evidence>"}],"action_plan":[{"step":1,"priority":"high|medium|low","action":"<specific action>"}],"confidence":"high|medium|low"}`;
 
     const ctrl2 = new AbortController(); setTimeout(() => ctrl2.abort(), 45000);
     const geminiKey = process.env.GEMINI_API_KEY;
@@ -38971,16 +39118,71 @@ Return ONLY valid JSON, no markdown, no preamble.
     try { const m2 = rawText.match(/\{[\s\S]*\}/); if (m2) brief = JSON.parse(m2[0]); } catch (e) {}
     if (!brief) return res.status(502).json({ success: false, error: 'Could not parse brief from AI response' });
 
+    // What We Actually Checked — built from REAL, verified data fetched above,
+    // never from the LLM's own claims. Matches the transparency block already
+    // used on the regular Citation Brief.
+    brief.what_we_checked = {
+      query_tested: keyword,
+      checked_at: checkedAt,
+      google_direct_answer: aioDetected ? 'detected for this exact query' : 'checked — not detected for this exact query right now',
+      perplexity: perplexity.checked
+        ? (perplexity.answer_excerpt ? 'checked — answer captured' : 'checked — no answer excerpt captured for this query')
+        : 'not checked — Perplexity key not configured',
+      perplexity_excerpt: perplexity.answer_excerpt || '',
+      perplexity_currently_cites: perplexity.cited_domains,
+      competitors_analysed: top5.length
+    };
+
     // Only count against the free/paid allowance on a SUCCESSFUL generation —
     // a failed SERP fetch or Gemini error above never consumes the client's brief.
     await pool.query('UPDATE tracker_clients SET prewrite_briefs_used = COALESCE(prewrite_briefs_used,0) + 1 WHERE id=$1', [client.id]).catch(() => {});
 
+    // Persist the brief so it can be reopened later from the Recent Briefs list —
+    // otherwise it's lost the moment the modal closes.
+    let savedBriefId = null;
+    try {
+      const saved = await pool.query(
+        'INSERT INTO prewrite_briefs (client_id, keyword, working_title, language, region, brief_json, competitors_scraped) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id',
+        [client.id, keyword, workingTitle || '', language || '', glParam, JSON.stringify(brief), top5.length]
+      );
+      savedBriefId = saved.rows[0]?.id || null;
+    } catch (e) { console.warn('[prewrite-brief] Could not save brief for recall:', e.message); }
+
     console.log(`[prewrite-brief] generated for "${keyword}" | client=${client.name || client.id} | gl=${glParam} | lang=${language || 'en'} | brief ${briefsUsed + 1}/${briefsAllowed}`);
-    res.json({ success: true, brief, competitors_scraped: top5.length, region: glParam, briefs_used: briefsUsed + 1, briefs_allowed: briefsAllowed });
+    res.json({ success: true, brief, brief_id: savedBriefId, competitors_scraped: top5.length, region: glParam, briefs_used: briefsUsed + 1, briefs_allowed: briefsAllowed });
   } catch (e) {
     console.error('[prewrite-brief] error:', e.message);
     res.status(502).json({ success: false, error: e.message });
   }
+});
+
+// ── GET /api/tracker-client/:token/prewrite-briefs — list past briefs ───────
+// Lightweight list (no full brief_json) for the "Recent Briefs" recall UI.
+app.get('/api/tracker-client/:token/prewrite-briefs', async (req, res) => {
+  try {
+    const cr = await pool.query('SELECT id FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status != $2)', [req.params.token, 'deleted']);
+    if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Tracker not found.' });
+    const r = await pool.query(
+      'SELECT id, keyword, working_title, language, region, competitors_scraped, created_at FROM prewrite_briefs WHERE client_id=$1 ORDER BY created_at DESC LIMIT 50',
+      [cr.rows[0].id]
+    );
+    res.json({ success: true, briefs: r.rows });
+  } catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// ── GET /api/tracker-client/:token/prewrite-briefs/:id — reopen one brief ───
+app.get('/api/tracker-client/:token/prewrite-briefs/:id', async (req, res) => {
+  try {
+    const cr = await pool.query('SELECT id FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status != $2)', [req.params.token, 'deleted']);
+    if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Tracker not found.' });
+    const r = await pool.query(
+      'SELECT id, keyword, working_title, language, region, brief_json, competitors_scraped, created_at FROM prewrite_briefs WHERE id=$1 AND client_id=$2',
+      [req.params.id, cr.rows[0].id]
+    );
+    if (!r.rows.length) return res.status(404).json({ success: false, error: 'Brief not found.' });
+    const row = r.rows[0];
+    res.json({ success: true, brief: row.brief_json, keyword: row.keyword, working_title: row.working_title, region: row.region, competitors_scraped: row.competitors_scraped, created_at: row.created_at });
+  } catch (e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
 // ── POST /api/tracker/meta-intel — AI-powered best title/desc/H1 ────────────
