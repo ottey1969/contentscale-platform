@@ -2613,7 +2613,7 @@ app.post('/api/tracker-client/:token/pages', async (req, res) => {
     }
 
     // New URL (not already tracked) — enforce the page limit HERE so updates to existing pages are never blocked
-    if (count >= maxPages) return res.status(400).json({ success: false, error: `Tracker limit reached: ${count}/${maxPages} pages used. Contact Ottmar to upgrade your plan.` });
+    if (count >= maxPages) return res.status(400).json({ success: false, error: `Tracker limit reached: ${count}/${maxPages} pages used. Contact Ottmar to upgrade your plan, or check all pricing options on contentscale.site/free-ai-citations-tracker.` });
 
     let pr;
     try {
@@ -5443,6 +5443,10 @@ app.patch('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
   await client.query(`UPDATE tracker_clients SET max_pages=3 WHERE max_pages IS NULL`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS registered_ip VARCHAR(45)`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS cc_emails TEXT`).catch(()=>{});
+  // Pre-Write Brief — free tier gets exactly 1 lifetime brief, tracked here.
+  // Paid Tier 3 clients bypass this via prewrite_briefs_paid (set by admin after payment).
+  await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS prewrite_briefs_used INTEGER DEFAULT 0`).catch(()=>{});
+  await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS prewrite_briefs_paid INTEGER DEFAULT 0`).catch(()=>{});
   // Brief merge system
   await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS brief_content JSONB`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS brief_started_at TIMESTAMPTZ`).catch(()=>{});
@@ -29478,11 +29482,22 @@ async function generatePrewriteBrief() {
       stat.textContent = '\u274c ' + ((data && data.error) || 'Could not generate a brief. Try again.');
       return;
     }
-    stat.textContent = '\u2713 Brief ready \u00b7 ' + (data.competitors_scraped || 0) + ' competitors analysed \u00b7 region: ' + (data.region || 'us');
+    stat.textContent = '\u2713 Brief ready \u00b7 ' + (data.competitors_scraped || 0) + ' competitors analysed \u00b7 region: ' + (data.region || 'us') + (data.briefs_allowed ? ' \u00b7 ' + data.briefs_used + '/' + data.briefs_allowed + ' briefs used' : '');
     result.innerHTML = renderPrewriteBrief(data.brief);
   } catch (e) {
     btn.disabled = false; btn.textContent = 'Generate brief';
-    stat.textContent = '\u274c ' + e.message;
+    if (/separate service/i.test(e.message)) {
+      stat.textContent = '';
+      result.innerHTML = '<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:16px 18px;font-size:12.5px;color:#92400e;line-height:1.7;">'
+        + '\uD83D\uDD12 <strong>Your free Pre-Write Brief has been used.</strong><br>'
+        + 'Pre-Write Brief is a separate service. '
+        + '<a href="https://wa.me/31628073996?text=Hi+Ottmar%2C+I%27d+like+more+Pre-Write+Briefs" target="_blank" rel="noopener" style="color:#b45309;font-weight:700;">Contact Ottmar</a>'
+        + ' or check all pricing options on '
+        + '<a href="https://contentscale.site/free-ai-citations-tracker/#dealify" target="_blank" rel="noopener" style="color:#b45309;font-weight:700;">contentscale.site/free-ai-citations-tracker</a>.'
+        + '</div>';
+    } else {
+      stat.textContent = '\u274c ' + e.message;
+    }
   }
 }
 
@@ -38767,10 +38782,18 @@ app.post('/api/tracker-client/:token/prewrite-brief', async (req, res) => {
     if (!keyword) return res.status(400).json({ success: false, error: 'keyword required' });
     if (!process.env.GEMINI_API_KEY) return res.status(500).json({ success: false, error: 'GEMINI_API_KEY not set' });
 
-    // TODO(pricing): gate here once the premium plan/credits column exists,
-    // e.g. check client.prewrite_briefs_used < client.prewrite_briefs_limit
-    // and increment on success — mirrors the max_pages pattern already used
-    // for tracked pages on this same tracker_clients row.
+    // Free tier: exactly 1 lifetime brief. Paid Tier 3 clients get more via
+    // prewrite_briefs_paid (set by admin after a bundle purchase — mirrors
+    // the max_pages pattern already used for tracked pages on this row).
+    const briefsUsed = client.prewrite_briefs_used || 0;
+    const briefsAllowed = 1 + (client.prewrite_briefs_paid || 0);
+    if (briefsUsed >= briefsAllowed) {
+      return res.status(403).json({
+        success: false,
+        limit_reached: true,
+        error: 'Pre-Write Brief is a separate service — you\'ve used your free brief. Contact Ottmar, or check all pricing options on contentscale.site/free-ai-citations-tracker.'
+      });
+    }
 
     const serperKey = process.env.SERPAPI_KEY;
     const glParam = String(region || 'us').toLowerCase().replace(/[^a-z]/g, '') || 'us';
@@ -38850,8 +38873,12 @@ Return ONLY valid JSON, no markdown, no preamble.
     try { const m2 = rawText.match(/\{[\s\S]*\}/); if (m2) brief = JSON.parse(m2[0]); } catch (e) {}
     if (!brief) return res.status(502).json({ success: false, error: 'Could not parse brief from AI response' });
 
-    console.log(`[prewrite-brief] generated for "${keyword}" | client=${client.name || client.id} | gl=${glParam} | lang=${language || 'en'}`);
-    res.json({ success: true, brief, competitors_scraped: top5.length, region: glParam });
+    // Only count against the free/paid allowance on a SUCCESSFUL generation —
+    // a failed SERP fetch or Gemini error above never consumes the client's brief.
+    await pool.query('UPDATE tracker_clients SET prewrite_briefs_used = COALESCE(prewrite_briefs_used,0) + 1 WHERE id=$1', [client.id]).catch(() => {});
+
+    console.log(`[prewrite-brief] generated for "${keyword}" | client=${client.name || client.id} | gl=${glParam} | lang=${language || 'en'} | brief ${briefsUsed + 1}/${briefsAllowed}`);
+    res.json({ success: true, brief, competitors_scraped: top5.length, region: glParam, briefs_used: briefsUsed + 1, briefs_allowed: briefsAllowed });
   } catch (e) {
     console.error('[prewrite-brief] error:', e.message);
     res.status(502).json({ success: false, error: e.message });
