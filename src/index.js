@@ -40244,6 +40244,16 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
         if(sResp.ok) {
           const sData = await sResp.json();
 
+          // ── TEMP DEBUG (2026-07-22) — user confirmed a real Google AI Overview
+          // exists for "content at scale" but our detection reports "not shown".
+          // Log the full raw Serper response once so we can see the actual field
+          // shape and fix the ai_overview detection condition below. Remove after.
+          console.log('[AIO-DEBUG] keyword="' + keyword + '" | top-level keys: ' + Object.keys(sData).join(', '));
+          console.log('[AIO-DEBUG] answerBox:', JSON.stringify(sData.answerBox || null));
+          console.log('[AIO-DEBUG] knowledgeGraph present:', !!sData.knowledgeGraph);
+          if (sData.aiOverview) console.log('[AIO-DEBUG] FOUND top-level aiOverview field:', JSON.stringify(sData.aiOverview).substring(0, 500));
+          if (sData.ai_overview) console.log('[AIO-DEBUG] FOUND top-level ai_overview field:', JSON.stringify(sData.ai_overview).substring(0, 500));
+
           // ── Position: find our URL in organic results ──────────────────────
           const organic = sData.organic || [];
           let bestMatchIndex = -1;
