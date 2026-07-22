@@ -4401,6 +4401,29 @@ const title = (html.match(/<title>([^<]+)<\/title>/) || [])[1]?.replace(/ — Co
    if (!adminKey) return res.status(401).json({ success: false, error: 'Admin auth required' });
    if (!pool) return res.status(503).json({ success: false, error: 'DB unavailable' });
    try {
+   let result;
+   // Query 1: try with is_active (normal case)
+   try {
+     result = await pool.query('SELECT * FROM super_admins WHERE session_token = $1 AND is_active = TRUE', [adminKey]);
+   } catch(q1err) {
+     // Column missing or other error — try without is_active
+     try {
+       result = await pool.query('SELECT * FROM super_admins WHERE session_token = $1', [adminKey]);
+     } catch(q2err) {
+       // Table probably missing too
+       return res.status(500).json({ success: false, error: 'Database initializing — please retry in 30 seconds' });
+     }
+   }
+   if (!result || result.rows.length === 0) return res.status(401).json({ success: false, error: 'Invalid credentials' });
+   req.admin = result.rows[0];
+   next();
+   } catch (error) {
+   console.error('Auth middleware error:', error);
+   const msg = error.code ? `${error.message} (db code ${error.code})` : error.message;
+   res.status(500).json({ success: false, error: `Auth error: ${msg}` });
+   }
+   };
+
 
 // Admin: list all clients
 app.get('/api/admin/tracker-clients', verifyAdmin, async (req, res) => {
@@ -5225,28 +5248,6 @@ app.patch('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
-   let result;
-   // Query 1: try with is_active (normal case)
-   try {
-     result = await pool.query('SELECT * FROM super_admins WHERE session_token = $1 AND is_active = TRUE', [adminKey]);
-   } catch(q1err) {
-     // Column missing or other error — try without is_active
-     try {
-       result = await pool.query('SELECT * FROM super_admins WHERE session_token = $1', [adminKey]);
-     } catch(q2err) {
-       // Table probably missing too
-       return res.status(500).json({ success: false, error: 'Database initializing — please retry in 30 seconds' });
-     }
-   }
-   if (!result || result.rows.length === 0) return res.status(401).json({ success: false, error: 'Invalid credentials' });
-   req.admin = result.rows[0];
-   next();
-   } catch (error) {
-   console.error('Auth middleware error:', error);
-   const msg = error.code ? `${error.message} (db code ${error.code})` : error.message;
-   res.status(500).json({ success: false, error: `Auth error: ${msg}` });
-   }
-   };
    // Puppeteer Browser
    let browserInstance = null;
    async function getBrowser() {
