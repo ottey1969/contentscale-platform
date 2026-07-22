@@ -5892,6 +5892,9 @@ app.patch('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
    await client.query(`ALTER TABLE voice_clients ADD COLUMN IF NOT EXISTS outbound_pitch TEXT`).catch(()=>{});
    await client.query(`ALTER TABLE voice_clients ADD COLUMN IF NOT EXISTS outbound_caller_name VARCHAR(255)`).catch(()=>{});
    await client.query(`ALTER TABLE voice_clients ADD COLUMN IF NOT EXISTS access_code VARCHAR(255)`).catch(()=>{});
+   await client.query(`ALTER TABLE voice_clients ADD COLUMN IF NOT EXISTS routing_mode VARCHAR(20) DEFAULT 'direct'`).catch(()=>{});
+   await client.query(`ALTER TABLE voice_clients ADD COLUMN IF NOT EXISTS owner_phone VARCHAR(50)`).catch(()=>{});
+   await client.query(`ALTER TABLE voice_clients ADD COLUMN IF NOT EXISTS failover_seconds INTEGER DEFAULT 15`).catch(()=>{});
 
    // Access codes tables
    await client.query(`CREATE TABLE IF NOT EXISTS access_codes (id SERIAL PRIMARY KEY, code VARCHAR(50) UNIQUE NOT NULL, type VARCHAR(20) DEFAULT 'write', client_name VARCHAR(255), is_active BOOLEAN DEFAULT TRUE, ai_calls_used INTEGER DEFAULT 0, ai_calls_limit INTEGER DEFAULT 0, expires_at TIMESTAMP, created_at TIMESTAMP DEFAULT NOW())`);
@@ -10552,7 +10555,7 @@ async function requireAuth(req, res, next) {
 
 // POST /api/voice-clients — save/upsert a client's voice config
 app.post('/api/voice-clients', requireAuth, async (req, res) => {
-  const { id, name, mode, agentId, phoneId, smsTo, bizName, greeting, urgencyCriteria, outboundPitch, outboundCallerName, accessCode } = req.body || {};
+  const { id, name, mode, agentId, phoneId, smsTo, bizName, greeting, urgencyCriteria, outboundPitch, outboundCallerName, accessCode, routingMode, ownerPhone, failoverSeconds } = req.body || {};
   if (!id || !name) return res.status(400).json({ error: 'id and name are required' });
 
   // A client may only edit their own row — never create or touch another one.
@@ -10564,8 +10567,8 @@ app.post('/api/voice-clients', requireAuth, async (req, res) => {
 
   try {
     await pool.query(
-      `INSERT INTO voice_clients (id, name, mode, agent_id, phone_id, sms_to, biz_name, greeting, urgency_criteria, outbound_pitch, outbound_caller_name, access_code, saved_at)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12, now())
+      `INSERT INTO voice_clients (id, name, mode, agent_id, phone_id, sms_to, biz_name, greeting, urgency_criteria, outbound_pitch, outbound_caller_name, access_code, routing_mode, owner_phone, failover_seconds, saved_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15, now())
        ON CONFLICT (id) DO UPDATE SET
          name = EXCLUDED.name,
          mode = EXCLUDED.mode,
@@ -10579,8 +10582,11 @@ app.post('/api/voice-clients', requireAuth, async (req, res) => {
          outbound_caller_name = EXCLUDED.outbound_caller_name,
          -- only an admin sends accessCode; a client's save leaves it untouched
          access_code = COALESCE(EXCLUDED.access_code, voice_clients.access_code),
+         routing_mode = EXCLUDED.routing_mode,
+         owner_phone = EXCLUDED.owner_phone,
+         failover_seconds = EXCLUDED.failover_seconds,
          saved_at = now()`,
-      [id, name, mode || 'inbound', agentId || '', phoneId || '', smsTo || '', bizName || '', greeting || '', urgencyCriteria || '', outboundPitch || '', outboundCallerName || '', codeToSet === undefined ? null : codeToSet]
+      [id, name, mode || 'inbound', agentId || '', phoneId || '', smsTo || '', bizName || '', greeting || '', urgencyCriteria || '', outboundPitch || '', outboundCallerName || '', codeToSet === undefined ? null : codeToSet, routingMode || 'direct', ownerPhone || '', parseInt(failoverSeconds) || 15]
     );
     console.log(`[voice-clients] saved → ${name} (${mode || 'inbound'}) | access code: ${codeToSet ? 'SET (' + String(codeToSet).length + ' chars)' : 'none'} | by: ${req.role}`);
     res.json({ ok: true });
