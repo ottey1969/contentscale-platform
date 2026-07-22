@@ -29513,7 +29513,7 @@ function renderPrewriteBrief(b) {
   if (b.ai_overview_status) lines.push('AI OVERVIEW', b.ai_overview_status, '');
   if (b.recommended_structure) {
     var s = b.recommended_structure;
-    lines.push('STRUCTURE', (s.format||'') + (s.recommended_word_count ? ' \u00b7 ~' + s.recommended_word_count + ' words' : ''), '');
+    lines.push('STRUCTURE', (s.format||'') + (s.recommended_word_count ? ' \\u00b7 ~' + s.recommended_word_count + ' words' : ''), '');
     if (Array.isArray(s.must_have_h2s) && s.must_have_h2s.length) {
       lines.push('MUST-HAVE H2s');
       s.must_have_h2s.forEach(function(h){ lines.push('- ' + h); });
@@ -29532,10 +29532,10 @@ function renderPrewriteBrief(b) {
     lines.push('ACTION PLAN');
     b.action_plan.forEach(function(a, i){ lines.push((i+1) + '. ' + (a.action||'')); });
   }
-  _lastPrewriteBriefText = lines.join('\n');
+  _lastPrewriteBriefText = lines.join('\\n');
 
   var html = '<div style="display:flex;justify-content:flex-end;margin-bottom:8px;">'
-    + '<button onclick="copyPrewriteBrief(this)" style="background:#1f2937;border:1px solid #374151;border-radius:6px;color:#e5e7eb;font-size:11px;padding:5px 12px;cursor:pointer;">\uD83D\uDCCB Copy Brief</button>'
+    + '<button onclick="copyPrewriteBrief(this)" style="background:#1f2937;border:1px solid #374151;border-radius:6px;color:#e5e7eb;font-size:11px;padding:5px 12px;cursor:pointer;">\\uD83D\\uDCCB Copy Brief</button>'
     + '</div>';
   html += '<div style="background:#0d1117;border:1px solid #1f2937;border-radius:8px;padding:14px 16px;font-size:12px;color:#e5e7eb;line-height:1.6;">';
   if (b.recommended_title_h1) html += '<div style="font-weight:800;color:#f1f5f9;margin-bottom:10px;font-size:13px;">' + esc(b.recommended_title_h1) + '</div>';
@@ -29543,7 +29543,7 @@ function renderPrewriteBrief(b) {
   if (b.ai_overview_status) html += '<div style="margin-bottom:10px;"><span style="color:#a78bfa;font-weight:700;">AI Overview:</span> ' + esc(b.ai_overview_status) + '</div>';
   if (b.recommended_structure) {
     var s = b.recommended_structure;
-    html += '<div style="margin-bottom:10px;"><span style="color:#34d399;font-weight:700;">Structure:</span> ' + esc(s.format||'') + (s.recommended_word_count ? ' \u00b7 ~' + s.recommended_word_count + ' words' : '') + '</div>';
+    html += '<div style="margin-bottom:10px;"><span style="color:#34d399;font-weight:700;">Structure:</span> ' + esc(s.format||'') + (s.recommended_word_count ? ' \\u00b7 ~' + s.recommended_word_count + ' words' : '') + '</div>';
     if (Array.isArray(s.must_have_h2s) && s.must_have_h2s.length) {
       html += '<div style="margin-bottom:10px;"><div style="color:#9ca3af;font-size:10px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">Must-have H2s</div><ul style="margin:0;padding-left:18px;">' + s.must_have_h2s.map(function(h){return '<li>'+esc(h)+'</li>';}).join('') + '</ul></div>';
     }
@@ -29565,7 +29565,7 @@ function copyPrewriteBrief(btn) {
   var done = function(ok) {
     if (!btn) return;
     var orig = btn.textContent;
-    btn.textContent = ok ? '\u2713 Copied' : '\u26a0 Copy failed';
+    btn.textContent = ok ? '\\u2713 Copied' : '\\u26a0 Copy failed';
     setTimeout(function(){ btn.textContent = orig; }, 1800);
   };
   if (navigator.clipboard && navigator.clipboard.writeText) {
