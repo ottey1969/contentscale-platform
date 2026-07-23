@@ -3263,6 +3263,7 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
 <div class="ld-head">
   <div><div class="ld-title">Lead Panel - ${client.domain || ''}</div><div class="ld-sub">Assign work to your specialists, review &amp; approve. Add &amp; scan pages in your scanner.</div></div>
   <a class="ld-btn primary" href="/track/${client.token}" target="_blank" rel="noopener" style="text-decoration:none">&#10133; Add &amp; scan pages</a>
+  <a class="ld-btn" href="/track/${client.token}?openPrewrite=1" target="_blank" rel="noopener" style="text-decoration:none;border-color:#f59e0b;color:#fbbf24;">&#x1f3af; Pre-Write Brief</a>
 </div>
 <div class="ld-body">
   <div class="ld-panel">
@@ -3287,7 +3288,8 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
   function cleanUrl(u){ return String(u||'').replace(/^https?:[/][/]/,'').replace(/^www[.]/,''); }
   function fmtTime(t){ try{ var d=t?new Date(t):null; return d?(d.toLocaleDateString('en-GB',{day:'2-digit',month:'short'})+' '+d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})):''; }catch(e){ return ''; } }
   function loadSpecs(){ fetch('/api/tracker-client/'+TOKEN+'/lead/specialists').then(function(r){return r.json();}).then(function(d){ if(d&&d.specialists){ _specs=d.specialists; renderSpecs(); render(); } }).catch(function(){}); }
-  function renderSpecs(){ var el=document.getElementById('specList'); el.innerHTML=_specs.length?_specs.map(function(n){return '<span class="ld-chip">'+esc(n)+'</span>';}).join(''):'<span style="color:#6b7280;font-size:12px">No specialists yet - add some above.</span>'; var inp=document.getElementById('specInput'); if(inp&&!inp.value)inp.value=_specs.join(', '); }
+  function renderSpecs(){ var el=document.getElementById('specList'); el.innerHTML=_specs.length?_specs.map(function(n){return '<span class="ld-chip" style="display:inline-flex;align-items:center;gap:6px;">'+esc(n)+'<button onclick="removeSpec(\''+esc(n).replace(/'/g,"\\'")+'\')" title="Remove" style="background:none;border:none;color:#c4b5fd;font-size:12px;cursor:pointer;padding:0;line-height:1;">\u2715</button></span>';}).join(''):'<span style="color:#6b7280;font-size:12px">No specialists yet - add some above.</span>'; var inp=document.getElementById('specInput'); if(inp&&!inp.value)inp.value=_specs.join(', '); }
+  function removeSpec(name){ _specs=_specs.filter(function(n){return n!==name;}); document.getElementById('specInput').value=_specs.join(', '); saveSpecs(); }
   function saveSpecs(){ var v=document.getElementById('specInput').value; var m=document.getElementById('specMsg'); m.textContent='Saving...'; fetch('/api/tracker-client/'+TOKEN+'/lead/specialists',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({specialists:v})}).then(function(r){return r.json();}).then(function(d){ if(d&&d.specialists){ _specs=d.specialists; renderSpecs(); render(); m.textContent='Saved'; setTimeout(function(){m.textContent='';},1500); } }).catch(function(){ m.textContent='Failed'; }); }
   function scanAll(){ var b=document.getElementById('scanBtn'); b.textContent='Scanning...'; b.disabled=true; fetch('/api/tracker-client/'+TOKEN+'/scan-all',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({})}).then(function(r){return r.json();}).then(function(){ b.textContent='Scan started'; setTimeout(function(){ b.textContent='Scan all now'; b.disabled=false; load(); },4000); }).catch(function(){ b.textContent='Scan all now'; b.disabled=false; }); }
   function addPages(){ var raw=document.getElementById('urlInput').value; var urls=raw.split(NL).map(function(s){return s.trim();}).filter(Boolean); var msg=document.getElementById('addMsg'); if(!urls.length){ msg.textContent='Paste at least one URL'; return; } var i=0, ok=0; (function next(){ if(i>=urls.length){ msg.textContent='Added '+ok+'/'+urls.length; document.getElementById('urlInput').value=''; load(); return; } var u=urls[i++]; if(u.indexOf('http')!==0)u='https://'+u; fetch('/api/tracker-client/'+TOKEN+'/pages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url:u})}).then(function(r){return r.json();}).then(function(d){ if(d&&d.success)ok++; msg.textContent='Adding '+i+'/'+urls.length; next(); }).catch(function(){ msg.textContent='Adding '+i+'/'+urls.length; next(); }); })(); }
@@ -3317,15 +3319,16 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
   function render(){
     var grid=document.getElementById('ldGrid');
     if(!_briefs.length){ grid.innerHTML='<div class="ld-empty">No briefs yet &mdash; add &amp; scan pages in your scanner; they appear here to assign.</div>'; return; }
-    var list=_briefs.slice().sort(function(a,b){ var da=_dlValL(a),db=_dlValL(b); if(da!==db)return da-db; var pa=_prioRankL[(a.priority||'medium').toLowerCase()]; if(pa==null)pa=1; var pb=_prioRankL[(b.priority||'medium').toLowerCase()]; if(pb==null)pb=1; if(pa!==pb)return pa-pb; return (b.gsc_impressions||0)-(a.gsc_impressions||0); });
+    var list=_briefs.slice().sort(function(a,b){ var da=_dlValL(a),db=_dlValL(b); if(da!==db)return da-db; var pa=_prioRankL[(a.priority||'medium').toLowerCase()]; if(pa==null)pa=1; var pb=_prioRankL[(b.priority||'medium').toLowerCase()]; if(pb==null)pb=1; if(pa!==pb)return pa-pb; var ta=a.ts?new Date(a.ts).getTime():0, tb=b.ts?new Date(b.ts).getTime():0; return ta-tb; });
     grid.innerHTML=list.map(function(d){
       var st=d.brief_status||'open'; var cls=st==='published'?'s-pub':st==='approved'?'s-appr':st==='submitted'?'s-subm':st==='done'?'s-done':st==='in_progress'?'s-progress':'';
       return '<div class="ld-card '+cls+'"><div class="ld-url">'+esc(cleanUrl(d.url))+'</div><div class="ld-time">Scanned '+fmtTime(d.ts)+'</div>'+badge(st,d.brief_claimed_by)+' '+dlBadgeL(d)+ldScoreL(d)
         +'<div class="ld-assign"><span style="font-size:11px;color:#6b7280">Assign:</span><select class="ld-select" onchange="assign('+d.page_id+',this)">'+options(d.brief_claimed_by||'')+'</select></div>'
         +ldActions(d)+rejNoteL(d)
-        +'<div style="margin-top:10px"><a class="ld-link" href="'+esc(d.url)+'" target="_blank" rel="noopener">Open page</a></div></div>';
+        +'<div style="margin-top:10px;display:flex;justify-content:space-between;align-items:center"><a class="ld-link" href="'+esc(d.url)+'" target="_blank" rel="noopener">Open page</a><button onclick="deleteLeadPage('+d.page_id+')" style="background:none;border:1px solid #374151;border-radius:6px;color:#f87171;font-size:11px;padding:4px 9px;cursor:pointer;">Delete</button></div></div>';
     }).join('');
   }
+  function deleteLeadPage(pageId){ if(!confirm('Delete this page and its brief? This cannot be undone.')) return; fetch('/api/tracker-client/'+TOKEN+'/pages/'+pageId,{method:'DELETE'}).then(function(r){return r.json();}).then(function(r){ if(!r||!r.success){ alert((r&&r.error)||'Could not delete'); return; } load(); }).catch(function(){ alert('Could not delete'); }); }
   var _ldName=(function(){ try{ return localStorage.getItem('cs_lead_name')||''; }catch(e){ return ''; } })();
   function _ldEnsureName(){ if(_ldName) return true; var n=prompt('Your name (so the specialist sees who approved):'); if(n&&n.trim()){ _ldName=n.trim(); try{ localStorage.setItem('cs_lead_name',_ldName); }catch(e){} return true; } return false; }
   function _ldOv(){ var ov=document.getElementById('ldOv'); if(ov) return ov; ov=document.createElement('div'); ov.id='ldOv'; ov.className='ld-ov'; ov.innerHTML='<div class="ld-modal"><h3 id="ldOvTitle"></h3><div class="ld-mbody" id="ldOvBody"></div><div class="ld-mfoot" id="ldOvFoot"></div></div>'; document.body.appendChild(ov); ov.addEventListener('click',function(e){ if(e.target===ov) _ldClose(); }); return ov; }
@@ -3432,8 +3435,8 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
   <div><div class="bd-title">My Work - ${client.domain || ''}</div><div class="bd-sub">Work assigned to you, most urgent first. The lead assigns &amp; reviews — you do the work and submit.</div></div>
   <div class="bd-filters">
     <button class="bd-fbtn" data-f="all" onclick="setFilter('all')">All</button>
-    <button class="bd-fbtn on" data-f="mine" onclick="setFilter('mine')">My work</button>
-    <button class="bd-fbtn" data-f="open" onclick="setFilter('open')">Open</button>
+    <button class="bd-fbtn" data-f="mine" onclick="setFilter('mine')">My work</button>
+    <button class="bd-fbtn on" data-f="open" onclick="setFilter('open')">Open</button>
     <button class="bd-fbtn" data-f="in_progress" onclick="setFilter('in_progress')">In progress</button>
     <button class="bd-fbtn" data-f="done" onclick="setFilter('done')">Done</button>
   </div>
@@ -3443,7 +3446,7 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
 <script>
   var TOKEN='${req.params.token}';
   var NL=String.fromCharCode(10);
-  var _name='', _filter='mine', _briefs=[];
+  var _name='', _filter='open', _briefs=[];
   try{ _name=localStorage.getItem('csBoardName')||''; }catch(e){}
   function saveName(v){ _name=(v||'').trim(); try{ localStorage.setItem('csBoardName',_name); }catch(e){} }
   function setFilter(f){ _filter=f; var bs=document.querySelectorAll('.bd-fbtn'); for(var i=0;i<bs.length;i++){ bs[i].classList.toggle('on', bs[i].getAttribute('data-f')===f); } render(); }
@@ -29522,13 +29525,25 @@ async function loadRecentPrewriteBriefs() {
       var d = new Date(b.created_at);
       var dLabel = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
       var esc = function(s) { return (s == null ? '' : String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); };
-      return '<button onclick="reopenPrewriteBrief(' + b.id + ')" style="background:#1f2937;border:1px solid #374151;border-radius:20px;color:#e5e7eb;font-size:11px;padding:5px 12px;cursor:pointer;" title="' + esc(b.keyword) + ' \u00b7 ' + dLabel + '">'
-        + esc(b.keyword.length > 28 ? b.keyword.slice(0, 28) + '\u2026' : b.keyword) + ' <span style="color:#6b7280;">\u00b7 ' + dLabel + '</span></button>';
+      return '<span style="display:inline-flex;align-items:center;background:#1f2937;border:1px solid #374151;border-radius:20px;overflow:hidden;">'
+        + '<button onclick="reopenPrewriteBrief(' + b.id + ')" style="background:none;border:none;color:#e5e7eb;font-size:11px;padding:5px 4px 5px 12px;cursor:pointer;" title="' + esc(b.keyword) + ' \u00b7 ' + dLabel + '">'
+        + esc(b.keyword.length > 28 ? b.keyword.slice(0, 28) + '\u2026' : b.keyword) + ' <span style="color:#6b7280;">\u00b7 ' + dLabel + '</span></button>'
+        + '<button onclick="deletePrewriteBrief(event, ' + b.id + ')" title="Remove" style="background:none;border:none;color:#6b7280;font-size:13px;padding:5px 10px 5px 4px;cursor:pointer;line-height:1;">\u2715</button>'
+        + '</span>';
     }).join('');
     wrap.style.display = 'block';
   } catch (e) {
     wrap.style.display = 'none';
   }
+}
+
+async function deletePrewriteBrief(ev, id) {
+  ev.stopPropagation();
+  if (!confirm('Remove this saved brief?')) return;
+  try {
+    await api('/prewrite-briefs/' + id, 'DELETE');
+    loadRecentPrewriteBriefs();
+  } catch (e) {}
 }
 
 async function reopenPrewriteBrief(id) {
@@ -29781,7 +29796,7 @@ async function saveBrandCtx() {
   }
   if (msg) setTimeout(function(){ msg.textContent = ''; }, 4000);
 }
-document.addEventListener('DOMContentLoaded', function(){ loadBrandCtx(); });
+document.addEventListener('DOMContentLoaded', function(){ loadBrandCtx(); try{ if(new URLSearchParams(window.location.search).get('openPrewrite')==='1') showPrewriteBriefModal(); }catch(e){} });
 
 var _ctSearchQuery = '';
 var _mdFilter = 'all'; // 'all' | 'todo' | 'done' — filter on the user's own persistent checkmarks
@@ -39254,6 +39269,17 @@ app.get('/api/tracker-client/:token/prewrite-briefs/:id', async (req, res) => {
     if (!r.rows.length) return res.status(404).json({ success: false, error: 'Brief not found.' });
     const row = r.rows[0];
     res.json({ success: true, brief: row.brief_json, keyword: row.keyword, working_title: row.working_title, region: row.region, competitors_scraped: row.competitors_scraped, created_at: row.created_at });
+  } catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// ── DELETE /api/tracker-client/:token/prewrite-briefs/:id — remove one brief ─
+app.delete('/api/tracker-client/:token/prewrite-briefs/:id', async (req, res) => {
+  try {
+    const cr = await pool.query('SELECT id FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status != $2)', [req.params.token, 'deleted']);
+    if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Tracker not found.' });
+    const r = await pool.query('DELETE FROM prewrite_briefs WHERE id=$1 AND client_id=$2 RETURNING id', [req.params.id, cr.rows[0].id]);
+    if (!r.rows.length) return res.status(404).json({ success: false, error: 'Brief not found.' });
+    res.json({ success: true });
   } catch (e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
