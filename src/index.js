@@ -3465,7 +3465,7 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
         return '<div class="bw-comp"><span class="bw-comp-n">#'+(c.position||i+1)+'</span> <a href="'+esc(c.url||'#')+'" target="_blank" rel="noopener" class="bw-comp-u">'+esc(host)+'</a><span class="bw-comp-t">'+ttl+'</span></div>';
       }).join('');
     }
-    h+='<div class="bw-trans-line">Google AI Overview: '+(d.aio_text?('shown &mdash; '+esc(String(d.aio_text).slice(0,150))+'...'):'not detected via our current data source (Serper.dev does not capture AI Overview content) &mdash; a manual Google check is more reliable for this signal right now.')+'</div>';
+    h+='<div class="bw-trans-line">Google AI Overview: '+(d.aio_text?('shown &mdash; '+esc(String(d.aio_text).slice(0,150))+'...'):'not detected for this query.')+'</div>';
     h+='<div class="bw-trans-line">Perplexity: '+(d.perp_cited?(d.perp_text?('&ldquo;'+esc(String(d.perp_text).slice(0,150))+'&rdquo;'):'cited'):(d.perp_text?'mentioned in answer but not formally cited':'checked &mdash; no answer excerpt captured for this query.'))+'</div>';
     if(pcomp.length){ h+='<div class="bw-trans-line">Perplexity also cites ('+pcomp.length+')'+(d.perp_cited?'':' &mdash; this page not among them')+': '+esc(pcomp.slice(0,5).join(', '))+'</div>'; }
     return h+'</div>';
@@ -3883,7 +3883,7 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
           return '<div class="bwm-comp"><span class="bwm-cn">#'+(c.position||i+1)+'</span> <a href="'+_bwEscL(c.url||'#')+'" target="_blank" rel="noopener" class="bwm-cu" onclick="event.stopPropagation()">'+_bwEscL(host)+'</a>'+(c.title?(' &mdash; '+_bwEscL(String(c.title).slice(0,70))):'')+'</div>';
         }).join('');
       }
-      h += '<div class="bwm-line">Google AI Overview: '+(d.aio_text?('shown &mdash; '+_bwEscL(String(d.aio_text).slice(0,160))+'...'):'not detected via our current data source (Serper.dev does not capture AI Overview content) &mdash; a manual Google check is more reliable for this signal right now.')+'</div>';
+      h += '<div class="bwm-line">Google AI Overview: '+(d.aio_text?('shown &mdash; '+_bwEscL(String(d.aio_text).slice(0,160))+'...'):'not detected for this query.')+'</div>';
       h += '<div class="bwm-line">Perplexity: '+(d.perp_cited?(d.perp_text?('&ldquo;'+_bwEscL(String(d.perp_text).slice(0,160))+'&rdquo;'):'cited'):(d.perp_text?'mentioned in answer but not formally cited':'checked &mdash; no answer excerpt captured for this query.'))+'</div>';
       if (pcomp.length) h += '<div class="bwm-line">Perplexity also cites ('+pcomp.length+')'+(d.perp_cited?'':' &mdash; this page not among them')+': '+_bwEscL(pcomp.slice(0,5).join(', '))+'</div>';
       h += '</div>';
@@ -3957,7 +3957,7 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
         return '<div class="bwc-comp"><span class="bwc-cn">#'+(c.position||i+1)+'</span> <span class="bwc-cu">'+_bwEscL(host)+'</span>'+(c.title?(' <span class="bwc-ct">&mdash; '+_bwEscL(String(c.title).slice(0,52))+'</span>'):'')+'</div>';
       }).join('');
     }
-    h += '<div class="bwc-line">Google AI Overview: '+(d.aio_text?'shown for this query':'not detected via our data source (Serper.dev limitation)')+'</div>';
+    h += '<div class="bwc-line">Google AI Overview: '+(d.aio_text?'shown for this query':'not detected')+'</div>';
     h += '<div class="bwc-line">Perplexity: '+(d.perp_cited?'cited':'not cited')+(d.perp_text&&!d.perp_cited?' &mdash; mentioned in answer':'')+(pcomp.length?(' &middot; also cites '+pcomp.length+' other sources'):'')+'</div>';
     return h + '</div>';
   }
