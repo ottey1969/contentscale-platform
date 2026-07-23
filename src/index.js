@@ -2387,6 +2387,31 @@ app.get('/api/tracker-client/:token/brief/:pageId/deliverable', async (req, res)
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
+// ── Manual AIO text: paste Google AI Overview text for a page ────────────────
+app.post('/api/tracker-client/:token/page/:pageId/aio-manual', async (req, res) => {
+  try {
+    const cr = await pool.query('SELECT id FROM tracker_clients WHERE (token=$1 OR lead_token=$1) AND (status IS NULL OR status != $2)', [req.params.token, 'deleted']);
+    if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
+    const clientId = cr.rows[0].id;
+    const pg = await pool.query('SELECT id, url FROM tracker_pages WHERE id=$1 AND tracker_client_id=$2', [req.params.pageId, clientId]);
+    if (!pg.rows.length) return res.status(404).json({ success: false, error: 'Page not found' });
+    const text = String((req.body && req.body.text) || '').trim();
+    const domain = (() => { try { return new URL(pg.rows[0].url).hostname.replace(/^www\./, ''); } catch(e) { return ''; } })();
+    // Empty = clear manual AIO; text = AIO found, auto-detect cited
+    if (!text) {
+      await pool.query('UPDATE tracker_pages SET aio_manual_text=NULL WHERE id=$1', [pg.rows[0].id]);
+      return res.json({ success: true, aio_found: false, aio_cited: false, cleared: true });
+    }
+    const pageUrl = pg.rows[0].url;
+    var pageNorm = '';
+    try { var pu = new URL(pageUrl); pageNorm = pu.hostname.replace(/^www\./, '') + pu.pathname.replace(/\/+$/, ''); } catch(e) { pageNorm = domain; }
+    const cited = text.toLowerCase().includes(pageNorm.toLowerCase()) || text.includes(domain);
+    await pool.query('UPDATE tracker_pages SET aio_manual_text=$1, ai_google_overview_found=TRUE, ai_google_overview_cited=$2, ai_google_overview_text=$3 WHERE id=$4',
+      [text, cited, ('Manual AIO: ' + text).substring(0, 600), pg.rows[0].id]);
+    res.json({ success: true, aio_found: true, aio_cited: cited });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
 // ── Lead approves the submitted work → status 'approved' ─────────────────────
 app.post('/api/tracker-client/:token/brief/:pageId/approve', async (req, res) => {
   try {
@@ -28863,6 +28888,10 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
         </datalist>
       </div>
     </div>
+    <div style="margin-bottom:16px;">
+      <label style="font-size:11px;color:#f59e0b;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.06em;">&#x1F50D; Google AI Overview <span style="color:#cbd5e1;font-weight:400;text-transform:none;">(optional — paste if you checked manually)</span></label>
+      <textarea id="pwbAioText" class="cs-input" style="min-height:70px;resize:vertical;font-family:inherit;" placeholder="Paste the AI Overview text from Google here if you checked manually. Leave empty if there's no AIO or you didn't check."></textarea>
+    </div>
     <div style="display:flex;gap:8px;">
       <button class="cs-btn primary" onclick="generatePrewriteBrief()" id="pwbGenerateBtn" style="flex:1;">Generate brief</button>
       <button class="cs-btn" onclick="hideModal('prewriteBriefModal')">Cancel</button>
@@ -29531,6 +29560,7 @@ async function generatePrewriteBrief() {
   var regionRaw = document.getElementById('pwbRegion').value.trim();
   // Accept either a plain code ("ae") or the "code — Label" datalist format.
   var region = (regionRaw.match(/^([a-z]{2})\s*[—-]/i) || [null, regionRaw])[1] || regionRaw;
+  var aioText = document.getElementById('pwbAioText').value.trim();
 
   if (!kw) { document.getElementById('pwbStatus').textContent = '\u26a0 Enter a keyword first.'; return; }
 
@@ -29542,7 +29572,7 @@ async function generatePrewriteBrief() {
   result.innerHTML = '';
 
   try {
-    var data = await api('/prewrite-brief', 'POST', { keyword: kw, workingTitle: title, language: lang, region: region });
+    var data = await api('/prewrite-brief', 'POST', { keyword: kw, workingTitle: title, language: lang, region: region, manualAioText: aioText });
     btn.disabled = false; btn.textContent = 'Generate brief';
     if (!data || !data.success || !data.brief) {
       stat.textContent = '\u274c ' + ((data && data.error) || 'Could not generate a brief. Try again.');
@@ -30341,6 +30371,18 @@ function renderRecs(p) {
     if (score) html += '<div class="cb-istat"><div class="cb-isv" style="color:#f59e0b">' + score + '</div><div class="cb-isl">GRAAF</div></div>';
     html += '</div>';
 
+    // ── Manual AIO text input ──────────────────────────────────────────────
+    var _aioManual = p.aio_manual_text || '';
+    html += '<div style="margin:8px 0;padding:8px 12px;background:#0a0e14;border:1px solid #1f2937;border-radius:8px;">';
+    html += '<div style="font-size:10px;font-weight:700;color:#f59e0b;margin-bottom:4px;">&#x1F50D; Google AI Overview (manual)</div>';
+    html += '<div style="font-size:10px;color:#6b7280;margin-bottom:4px;">Paste the AI Overview text from Google. Empty = no AIO. The system auto-detects if your page is cited.</div>';
+    html += '<textarea id="aioManual_' + pageId + '" style="width:100%;min-height:60px;background:#111827;color:#e5e7eb;border:1px solid #374151;border-radius:6px;padding:6px 8px;font-size:11px;font-family:inherit;resize:vertical;" placeholder="Paste Google AI Overview text here...">' + (String(_aioManual||'').replace(/</g,'&lt;').replace(/>/g,'&gt;')) + '</textarea>';
+    html += '<div style="display:flex;gap:6px;margin-top:4px;align-items:center;">';
+    html += '<button onclick="saveAioManual(' + pageId + ')" style="background:#f59e0b;color:#000;border:none;border-radius:4px;padding:3px 10px;font-size:10px;font-weight:700;cursor:pointer;">Save AIO</button>';
+    html += '<button onclick="clearAioManual(' + pageId + ')" style="background:#374151;color:#9ca3af;border:none;border-radius:4px;padding:3px 10px;font-size:10px;cursor:pointer;">Clear</button>';
+    html += '<span id="aioManualStatus_' + pageId + '" style="font-size:10px;color:#6b7280;"></span>';
+    html += '</div></div>';
+
     // ── Who's currently cited: real competitor data already fetched from Google (organic top-5)
     // and Perplexity (its citations array) during the scan — previously discarded, now shown so the
     // owner sees WHO wins the query and WHY, not just their own pass/fail status.
@@ -30488,6 +30530,30 @@ function _buildBriefData(p) {
     last_checked: p.last_checked || null,
     type: 'brief_ready'
   };
+}
+
+function saveAioManual(pageId) {
+  var ta = document.getElementById('aioManual_' + pageId);
+  var st = document.getElementById('aioManualStatus_' + pageId);
+  if (!ta) return;
+  var text = ta.value.trim();
+  st.textContent = 'Saving...';
+  st.style.color = '#f59e0b';
+  fetch('/api/tracker-client/' + TOKEN + '/page/' + pageId + '/aio-manual', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ text: text })
+  }).then(function(r){ return r.json(); }).then(function(d){
+    if (d.success) {
+      st.textContent = d.cleared ? 'Cleared — rescan to update badge' : (d.aio_cited ? '✅ AIO found + CITED' : '⚠️ AIO found, not cited');
+      st.style.color = d.aio_cited ? '#4ade80' : '#f59e0b';
+    } else { st.textContent = d.error || 'Error'; st.style.color = '#f87171'; }
+  }).catch(function(){ st.textContent = 'Network error'; st.style.color = '#f87171'; });
+}
+
+function clearAioManual(pageId) {
+  var ta = document.getElementById('aioManual_' + pageId);
+  if (ta) ta.value = '';
+  saveAioManual(pageId);
 }
 
 function copyBrief(pageId) {
@@ -38984,7 +39050,7 @@ app.post('/api/tracker-client/:token/prewrite-brief', async (req, res) => {
     if (cr.rows[0].status === 'disabled' || cr.rows[0].status === 'paused') return res.status(403).json({ success: false, error: 'This tracker is ' + cr.rows[0].status + '. Contact Ottmar to reactivate.' });
     const client = cr.rows[0];
 
-    const { keyword, workingTitle, language, region } = req.body || {};
+    const { keyword, workingTitle, language, region, manualAioText } = req.body || {};
     if (!keyword) return res.status(400).json({ success: false, error: 'keyword required' });
     if (!process.env.GEMINI_API_KEY) return res.status(500).json({ success: false, error: 'GEMINI_API_KEY not set' });
 
@@ -39005,6 +39071,11 @@ app.post('/api/tracker-client/:token/prewrite-brief', async (req, res) => {
     const glParam = String(region || 'us').toLowerCase().replace(/[^a-z]/g, '') || 'us';
     let serpUrls = [];
     let aioDetected = false;
+    let aioManualText = String(manualAioText || '').trim();
+    if (aioManualText) {
+      aioDetected = true;
+      console.log('[prewrite-brief] Using manual AIO text for:', keyword, '(' + aioManualText.length + ' chars)');
+    }
     if (serperKey) {
       try {
         const ctrl1 = new AbortController(); setTimeout(() => ctrl1.abort(), 15000);
@@ -39027,7 +39098,7 @@ app.post('/api/tracker-client/:token/prewrite-brief', async (req, res) => {
           // Serper surfaces a direct-answer block (answerBox) when Google shows one for
           // this exact query — the closest signal available for AI Overview presence
           // without a dedicated AIO endpoint. Honest phrasing either way in the output.
-          aioDetected = !!(d1.answerBox || d1.knowledgeGraph);
+          aioDetected = aioManualText ? true : !!(d1.answerBox || d1.knowledgeGraph);
           console.log('[prewrite-brief] Serper.dev returned', serpUrls.length, 'results for:', keyword, '| gl=' + glParam, '| answerBox=' + !!d1.answerBox);
         } else {
           const err = await r1.text().catch(() => '');
@@ -39090,7 +39161,7 @@ ${compSummary}
 PERPLEXITY — LIVE CHECK:
 ${perplexity.checked ? (perplexity.answer_excerpt ? 'Answer excerpt: "' + perplexity.answer_excerpt + '"\nCurrently cites: ' + (perplexity.cited_domains.join(', ') || 'no domains returned') : 'Checked — no answer excerpt captured for this query.') : 'Not checked — PERPLEXITY_API_KEY not configured.'}
 
-GOOGLE DIRECT-ANSWER BLOCK: ${aioDetected ? 'detected for this exact query' : 'not detected via our data source (Serper.dev does not reliably capture AI Overview content — this does not mean Google shows none, only that our check could not confirm it)'}
+GOOGLE DIRECT-ANSWER BLOCK: ${aioManualText ? ('manually captured by the user — full text below:\n"' + aioManualText.slice(0, 1500) + '"') : (aioDetected ? 'detected for this exact query' : 'not detected via our data source (Serper.dev does not reliably capture AI Overview content — this does not mean Google shows none, only that our check could not confirm it)')}
 
 MANDATORY PROCESSING ORDER:
 STEP 1 — Analyse the SERP: what pattern do the top results share (format, depth, schema, freshness)?
@@ -39124,7 +39195,8 @@ Return ONLY valid JSON, no markdown, no preamble.
     brief.what_we_checked = {
       query_tested: keyword,
       checked_at: checkedAt,
-      google_direct_answer: aioDetected ? 'detected for this exact query' : 'not detected via our data source (Serper.dev limitation — does not confirm absence, only that our check could not detect it)',
+      google_direct_answer: aioManualText ? 'manually captured by user (' + aioManualText.length + ' chars)' : (aioDetected ? 'detected for this exact query' : 'not detected via our data source (Serper.dev limitation — does not confirm absence, only that our check could not detect it)'),
+      google_direct_answer_manual_text: aioManualText || '',
       perplexity: perplexity.checked
         ? (perplexity.answer_excerpt ? 'checked — answer captured' : 'checked — no answer excerpt captured for this query')
         : 'not checked — Perplexity key not configured',
@@ -39286,6 +39358,7 @@ app.post('/api/intelligence/ai-citation', verifyEngineAccess, async (req, res) =
 // ── DB migrations ────────────────────────────────────────────────────────────
 pool.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS serp_spy JSONB`).catch(()=>{});
 pool.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS serp_spy_at TIMESTAMPTZ`).catch(()=>{});
+pool.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS aio_manual_text TEXT`).catch(()=>{});
 
 
 // ── Server-side GRAAF HTML analyser (no Puppeteer) ──────────────────────────
@@ -40266,6 +40339,15 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
           }
 
           // ── AI Overview: Serper returns answerBox with type 'ai_overview' ──
+          // If manual AIO text was pasted by the user, use that instead of Serper
+          if(page.aio_manual_text) {
+            snapshot.ai_google_overview_found = true;
+            var _aioPageNorm = '';
+            try { var _apu = new URL(page.url); _aioPageNorm = _apu.hostname.replace(/^www\./, '') + _apu.pathname.replace(/\/+$/, ''); } catch(e) { _aioPageNorm = domain; }
+            snapshot.ai_google_overview_cited = page.aio_manual_text.toLowerCase().includes(_aioPageNorm.toLowerCase()) || page.aio_manual_text.includes(domain);
+            snapshot.ai_google_overview_text = ('Manual AIO: ' + page.aio_manual_text).substring(0, 600);
+            console.log('[tracker] AIO manual override for ' + page.url + ' — cited=' + snapshot.ai_google_overview_cited);
+          } else {
           // Confirmed 2026-07-22 via live debug: Serper.dev does not reliably
           // return AI Overview content (no answerBox/knowledgeGraph field at all
           // for queries known to show a real Google AI Overview). This is a
@@ -40295,6 +40377,7 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
             snapshot.ai_google_overview_cited = true;
             snapshot.ai_google_overview_text = ('Knowledge Graph: ' + (kg.title || kg.description || '')).substring(0, 600);
           }
+          } // end else (no manual AIO)
 
           // Capture top 5 competitor snippets for Gemini to analyze
           snapshot._competitors = organic.slice(0, 5).map(function(r) {
