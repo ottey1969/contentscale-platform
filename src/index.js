@@ -3441,8 +3441,8 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
       }).join('');
     }
     h+='<div class="bw-trans-line">Google AI Overview: '+(d.aio_text?('shown &mdash; '+esc(String(d.aio_text).slice(0,150))+'...'):'not detected via our current data source (Serper.dev does not capture AI Overview content) &mdash; a manual Google check is more reliable for this signal right now.')+'</div>';
-    h+='<div class="bw-trans-line">Perplexity: '+(d.perp_text?('&ldquo;'+esc(String(d.perp_text).slice(0,150))+'...&rdquo;'):'checked &mdash; no answer excerpt captured for this query.')+'</div>';
-    if(pcomp.length){ h+='<div class="bw-trans-line">Perplexity currently cites ('+pcomp.length+'), this page not among them yet: '+esc(pcomp.slice(0,5).join(', '))+'</div>'; }
+    h+='<div class="bw-trans-line">Perplexity: '+(d.perp_cited?('&ldquo;'+esc(String(d.perp_text||'').slice(0,150))+'&rdquo;'):(d.perp_text?'mentioned in answer but not formally cited':'checked &mdash; no answer excerpt captured for this query.'))+'</div>';
+    if(pcomp.length){ h+='<div class="bw-trans-line">Perplexity also cites ('+pcomp.length+')'+(d.perp_cited?'':' &mdash; this page not among them')+': '+esc(pcomp.slice(0,5).join(', '))+'</div>'; }
     return h+'</div>';
   }
   function recs(d){ var out='';
@@ -3859,8 +3859,8 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
         }).join('');
       }
       h += '<div class="bwm-line">Google AI Overview: '+(d.aio_text?('shown &mdash; '+_bwEscL(String(d.aio_text).slice(0,160))+'...'):'not detected via our current data source (Serper.dev does not capture AI Overview content) &mdash; a manual Google check is more reliable for this signal right now.')+'</div>';
-      h += '<div class="bwm-line">Perplexity: '+(d.perp_text?('&ldquo;'+_bwEscL(String(d.perp_text).slice(0,160))+'...&rdquo;'):'checked &mdash; no answer excerpt captured for this query.')+'</div>';
-      if (pcomp.length) h += '<div class="bwm-line">Perplexity currently cites ('+pcomp.length+'), this page not among them yet: '+_bwEscL(pcomp.slice(0,5).join(', '))+'</div>';
+      h += '<div class="bwm-line">Perplexity: '+(d.perp_cited?('&ldquo;'+_bwEscL(String(d.perp_text||'').slice(0,160))+'&rdquo;'):(d.perp_text?'mentioned in answer but not formally cited':'checked &mdash; no answer excerpt captured for this query.'))+'</div>';
+      if (pcomp.length) h += '<div class="bwm-line">Perplexity also cites ('+pcomp.length+')'+(d.perp_cited?'':' &mdash; this page not among them')+': '+_bwEscL(pcomp.slice(0,5).join(', '))+'</div>';
       h += '</div>';
     }
     function actionCard(p, accent){
@@ -3933,7 +3933,7 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
       }).join('');
     }
     h += '<div class="bwc-line">Google AI Overview: '+(d.aio_text?'shown for this query':'not detected via our data source (Serper.dev limitation)')+'</div>';
-    h += '<div class="bwc-line">Perplexity: '+(d.perp_text?'answer captured':'checked &mdash; no excerpt')+(pcomp.length?(' &middot; cites '+pcomp.length+' sources, not this page yet'):'')+'</div>';
+    h += '<div class="bwc-line">Perplexity: '+(d.perp_cited?'cited':'not cited')+(d.perp_text&&!d.perp_cited?' &mdash; mentioned in answer':'')+(pcomp.length?(' &middot; also cites '+pcomp.length+' other sources'):'')+'</div>';
     return h + '</div>';
   }
   function _bwCardL(d, isFeature){
@@ -30513,7 +30513,7 @@ function copyBrief(pageId) {
     } catch(e) {}
     try {
       var _pc = typeof p.ai_perplexity_competitors === 'string' ? JSON.parse(p.ai_perplexity_competitors) : (p.ai_perplexity_competitors||[]);
-      if (_pc && _pc.length) lines.push('- Perplexity: ' + _pc.length + ' cited source' + (_pc.length>1?'s':'') + ' found (this page not among them yet)');
+      if (_pc && _pc.length) lines.push('- Perplexity: ' + _pc.length + ' cited source' + (_pc.length>1?'s':'') + ' found' + (p.ai_perplexity_cited ? ' (this page IS cited)' : ' (this page not among them yet)') + '');
     } catch(e) {}
   })();
   lines.push('AI Citation Results:');
@@ -31883,7 +31883,7 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
             _transparencyHtml += '<div style="font-size:10px;color:#9ca3af;margin-bottom:10px;">Copilot (Bing index): ' + (data.bing_cited ? '<span style="color:#4ade80;">confirmed indexed</span>' : '<span style="color:#6b7280;">not confirmed yet</span>') + ' \u2014 Copilot has no separate quotable text like AIO/Perplexity, only index presence.</div>';
           }
           if (_pc && _pc.length) {
-            _transparencyHtml += '<div style="font-size:10px;color:#9ca3af;margin-bottom:4px;font-weight:700;">Perplexity currently cites (' + _pc.length + '), this page not among them yet:</div>'
+            _transparencyHtml += '<div style="font-size:10px;color:#9ca3af;margin-bottom:4px;font-weight:700;">Perplexity also cites (' + _pc.length + ')' + (data.ai_perplexity_cited ? '' : ', this page not among them') + ':</div>'
               + '<div style="font-size:11px;color:#cbd5e1;">' + _pc.slice(0,5).map(function(u){ try { return new URL(u).hostname.replace(/^www\\./,''); } catch(e) { return u; } }).join(', ') + '</div>';
           }
           var _hasCannibal = allItems.some(function(p){ return /cannib/i.test(p.system||''); });
@@ -31997,7 +31997,7 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
           } catch(e) {}
           try {
             var _pc = typeof data.perp_competitors === 'string' ? JSON.parse(data.perp_competitors) : (data.perp_competitors||[]);
-            if (_pc && _pc.length) lines.push('- Perplexity: ' + _pc.length + ' cited source' + (_pc.length>1?'s':'') + ' found (this page not among them yet)');
+            if (_pc && _pc.length) lines.push('- Perplexity: ' + _pc.length + ' cited source' + (_pc.length>1?'s':'') + (data.ai_perplexity_cited ? ' (this page IS cited)' : ' found (this page not among them yet)'));
           } catch(e) {}
         })();
         lines.push('AI Citation Results:');
@@ -32310,7 +32310,7 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
             _transparencyHtml2 += '<div style="font-size:10px;color:#9ca3af;margin-bottom:10px;">Copilot (Bing index): ' + (data.bing_cited ? '<span style="color:#4ade80;">confirmed indexed</span>' : '<span style="color:#6b7280;">not confirmed yet</span>') + ' \u2014 Copilot has no separate quotable text like AIO/Perplexity, only index presence.</div>';
           }
           if (_pc2 && _pc2.length) {
-            _transparencyHtml2 += '<div style="font-size:10px;color:#9ca3af;margin-bottom:4px;font-weight:700;">Perplexity currently cites (' + _pc2.length + '), this page not among them yet:</div>'
+            _transparencyHtml2 += '<div style="font-size:10px;color:#9ca3af;margin-bottom:4px;font-weight:700;">Perplexity also cites (' + _pc2.length + ')' + (data.ai_perplexity_cited ? '' : ', this page not among them') + ':</div>'
               + '<div style="font-size:11px;color:#cbd5e1;">' + _pc2.slice(0,5).map(function(u){ try { return new URL(u).hostname.replace(/^www\\./,''); } catch(e) { return u; } }).join(', ') + '</div>';
           }
           var _hasCannibal2 = allItems.some(function(p){ return /cannib/i.test(p.system||''); });
@@ -32472,7 +32472,7 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
         } catch(e) {}
         try {
           var _pc = typeof data.perp_competitors === 'string' ? JSON.parse(data.perp_competitors) : (data.perp_competitors||[]);
-          if (_pc && _pc.length) lines.push('- Perplexity: ' + _pc.length + ' cited source' + (_pc.length>1?'s':'') + ' found (this page not among them yet)');
+          if (_pc && _pc.length) lines.push('- Perplexity: ' + _pc.length + ' cited source' + (_pc.length>1?'s':'') + (data.ai_perplexity_cited ? ' (this page IS cited)' : ' found (this page not among them yet)'));
         } catch(e) {}
       })();
       lines.push('AI Citation Results:');
@@ -40400,12 +40400,16 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
           // Store the actual answer text (not just cited/not) — real evidence for the transparency
           // panel, so a viewer can SEE what Perplexity literally said, not just trust a badge.
           snapshot.ai_perplexity_answer_excerpt = answerText.substring(0, 400);
-          const cited = citations.some(function(c){ return (c||'').replace(/^https?:\/\//, '').startsWith(domain); })
-            || answerText.includes(domain);
+          const cited = citations.some(function(c){ return (c||'').replace(/^https?:\/\//, '').startsWith(domain); });
+          const mentioned = !cited && answerText.includes(domain);
           snapshot.ai_perplexity_cited = cited;
           if(cited) {
             const match = citations.find(function(c){ return (c||'').includes(domain); });
-            snapshot.ai_perplexity_text = match ? 'Cited: ' + match : 'Domain in Perplexity answer';
+            var citedPath = match;
+            try { citedPath = new URL(match).pathname; } catch(e) {}
+            snapshot.ai_perplexity_text = 'Cited: ' + domain + citedPath;
+          } else if(mentioned) {
+            snapshot.ai_perplexity_text = 'Mentioned in answer but not formally cited as source';
           }
           // Store the OTHER sources Perplexity cited (not our own domain) — this is the "who's
           // currently cited" competitor visibility that was previously fetched and thrown away.
@@ -41292,7 +41296,7 @@ GOAL: Rank #1 for "${kw}" and capture the maximum clicks from ${gscImpr || 'the 
           if (!_hasAio) {
             const _pComp = (snapshot.ai_perplexity_competitors || []);
             _built += 'AI OVERVIEW / AI AGGREGATION — sourcing:\n'
-              + (_pComp.length ? 'Perplexity currently cites: ' + _pComp.slice(0,5).join(', ') + '. This page is not among them yet.' : 'No AI Overview/Perplexity visibility detected for this page yet.')
+              + (_pComp.length ? 'Perplexity currently cites: ' + _pComp.slice(0,5).join(', ') + '. ' + (snapshot.ai_perplexity_cited ? 'This page IS cited by Perplexity.' : 'This page is not among them yet.') : 'No AI Overview/Perplexity visibility detected for this page yet.')
               + '\n\n';
           }
           // If Gemini's own text never labeled its gap/fix content either, don't try to algorithmically
