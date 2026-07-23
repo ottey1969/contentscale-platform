@@ -1,4 +1,4 @@
-console.log('=== CONTENTSCALE BOOT ' + new Date().toISOString() + ' v2026-07-08-possible-prioritized-shortcut | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON | possibleThreshold=20impr | shortcutPrioritized=v2 | gscAutoFetchRemoved=true | linkCheckActive=true | wholeSiteWipeGuard=true | gscAutoFetchRestored=true | reminderOffFix=true | claudeRemoved=true | bingWebmaster=true | competitorPanel=true | zeroResultFix=true | pagesRefreshFix=true | recheckButton=true | provenScanStrip=true | provenScanState=true | scanAllProven=true | doEverythingBtn=true | panelOrderFix=true | workflowGuide=true | preScanGuard=true | scanAllGuard=true | earlyGuard=true | emptyStateTeaser=true | provenScopeFix=true | numberedButtons=true | clearerButtons=true | scanAnimFix=true | promptClaudeCleanup=true | bonusTip=true | realProvenContext=true | competitorContext=true | unifiedBrief=true | diagnosticFirst=true | fullCompetitorBreakdown=true | serpSpyV3=true | transparencyBlock=true | emailsPausedToggle=true | competitorDedup=true | provenScanDebug=true | serializedScans=true | claudeCleanupV2=true | mergeClaudeStrip=true | visualTransparency=true | aboveFoldPriority=true | competitorComparisonTable=true | redGreenTracking=true | aioExplicitState=true | perpCopilotState=true | realMergePromptFixed=true | briefContextDebug=true | forceRescanBypass=true | gscPosFallback=true | cannibalDedup=true | gscAccessGated=true | gapConfirmShown=true | noPlaceholders=true | rowNumContrast=true | codeCannibalDedup=true | provenDebugRemoved=true | broaderCannibalDedup=true | competitorGapFallback=true | competitorPrevSnapFallback=true | hubSpokeDedup=true | compGapRegexBroadened=true | gapFixLabelFallback=true | geminiProForBriefs=true | timeoutBudgetFixed=true | perAttemptTimeout45s=true | revertToFlashLite=true | tokenLimitDoubled=true | urlNormFix=true | impactFieldChecked=true | broaderHubPattern=true | cannibalContextRemovedFromGSC=true | scanStateDerivedFromDB=true | boardBriefRestyled=true | liveWallBriefModal=true | modalScopeFix=true | cardTransparency=true | CLAUDE-FIX-2307=true | CLAUDE-FIX-2307B-specquote=true ===');
+console.log('=== CONTENTSCALE BOOT ' + new Date().toISOString() + ' v2026-07-08-possible-prioritized-shortcut | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON | possibleThreshold=20impr | shortcutPrioritized=v2 | gscAutoFetchRemoved=true | linkCheckActive=true | wholeSiteWipeGuard=true | gscAutoFetchRestored=true | reminderOffFix=true | claudeRemoved=true | bingWebmaster=true | competitorPanel=true | zeroResultFix=true | pagesRefreshFix=true | recheckButton=true | provenScanStrip=true | provenScanState=true | scanAllProven=true | doEverythingBtn=true | panelOrderFix=true | workflowGuide=true | preScanGuard=true | scanAllGuard=true | earlyGuard=true | emptyStateTeaser=true | provenScopeFix=true | numberedButtons=true | clearerButtons=true | scanAnimFix=true | promptClaudeCleanup=true | bonusTip=true | realProvenContext=true | competitorContext=true | unifiedBrief=true | diagnosticFirst=true | fullCompetitorBreakdown=true | serpSpyV3=true | transparencyBlock=true | emailsPausedToggle=true | competitorDedup=true | provenScanDebug=true | serializedScans=true | claudeCleanupV2=true | mergeClaudeStrip=true | visualTransparency=true | aboveFoldPriority=true | competitorComparisonTable=true | redGreenTracking=true | aioExplicitState=true | perpCopilotState=true | realMergePromptFixed=true | briefContextDebug=true | forceRescanBypass=true | gscPosFallback=true | cannibalDedup=true | gscAccessGated=true | gapConfirmShown=true | noPlaceholders=true | rowNumContrast=true | codeCannibalDedup=true | provenDebugRemoved=true | broaderCannibalDedup=true | competitorGapFallback=true | competitorPrevSnapFallback=true | hubSpokeDedup=true | compGapRegexBroadened=true | gapFixLabelFallback=true | geminiProForBriefs=true | timeoutBudgetFixed=true | perAttemptTimeout45s=true | revertToFlashLite=true | tokenLimitDoubled=true | urlNormFix=true | impactFieldChecked=true | broaderHubPattern=true | cannibalContextRemovedFromGSC=true | scanStateDerivedFromDB=true | boardBriefRestyled=true | liveWallBriefModal=true | modalScopeFix=true | cardTransparency=true | CLAUDE-FIX-2307=true | CLAUDE-FIX-2307B-specquote=true | CLAUDE-FIX-2307C-pwboard=true | CLAUDE-FIX-2307D-typefilter=true | CLAUDE-FIX-2307E-scanneraio=true ===');
 // CONTENTSCALE SERVER.JS — ELITE EDITION v4 (FIXED v3)
 // ✅ FIX v7: secondary_keywords + related_keywords auto in Analyse JSON + Execute prompt
 // ✅ FIX v7: analysis_data JSONB safe parse in execute-rewrite
@@ -2204,7 +2204,48 @@ app.get('/api/tracker-client/:token/latest-briefs', async (req, res) => {
         ts: p.checked_at ? new Date(p.checked_at).toISOString() : ''
       };
     }).filter(function(b) { return b.passages.length || b.position != null || b.score != null; });
-    res.json({ success: true, briefs });
+    // ── Merge in Pre-Write Briefs so the lead can assign them and specialists
+    // see them in the Board exactly like scanned-page briefs, with a visual accent
+    // to tell them apart (no URL yet — they're for a page that doesn't exist).
+    const pwr = await pool.query(
+      `SELECT id, keyword, working_title, region, status, claimed_by, claimed_at, assigned_at, deadline,
+              priority, submitted_at, approved_at, approved_by, rejected_at, reject_reason, published_at,
+              (specialist_html IS NOT NULL AND specialist_html != '') AS has_deliverable, created_at
+       FROM prewrite_briefs WHERE client_id=$1 ORDER BY created_at DESC LIMIT 50`,
+      [cr.rows[0].id]
+    );
+    const pwBriefs = pwr.rows.map(function(b) {
+      return {
+        type: 'prewrite_brief',
+        is_prewrite: true,
+        url: null,
+        keyword: b.keyword || '',
+        working_title: b.working_title || '',
+        region: b.region || '',
+        position: null, aio_cited: false, perp_cited: false, bing_cited: false, brave_cited: false, score: null,
+        passages: [], gsc_brief: [], source_suggestions: [], competitors: [], perp_competitors: [],
+        aio_text: '', perp_text: '', aio_found: false,
+        page_id: null,
+        pw_id: b.id,
+        brief_status: b.status || 'open',
+        brief_before_score: null, brief_after_score: null,
+        brief_claimed_by: b.claimed_by || null,
+        brief_claimed_at: b.claimed_at || null,
+        brief_done_at: null,
+        brief_submitted_at: b.submitted_at || null,
+        brief_approved_at: b.approved_at || null,
+        brief_approved_by: b.approved_by || null,
+        brief_published_at: b.published_at || null,
+        brief_deadline: b.deadline || null,
+        brief_assigned_at: b.assigned_at || null,
+        brief_rejected_at: b.rejected_at || null,
+        brief_reject_reason: b.reject_reason || null,
+        priority: b.priority || 'medium',
+        has_deliverable: !!b.has_deliverable,
+        ts: b.created_at ? new Date(b.created_at).toISOString() : ''
+      };
+    });
+    res.json({ success: true, briefs: briefs.concat(pwBriefs) });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
@@ -2216,6 +2257,103 @@ async function _resolveBoardPage(token, pageId) {
   if (!pr.rows.length) return { error: 'Page not found for this tracker', code: 404 };
   return { clientId: cr.rows[0].id, pageId: pr.rows[0].id };
 }
+async function _resolvePWBrief(token, briefId) {
+  const cr = await pool.query('SELECT id FROM tracker_clients WHERE (token=$1 OR board_token=$1 OR lead_token=$1) AND (status IS NULL OR status != $2)', [token, 'deleted']);
+  if (!cr.rows.length) return { error: 'Tracker not found', code: 404 };
+  const pr = await pool.query('SELECT id FROM prewrite_briefs WHERE id=$1 AND client_id=$2', [briefId, cr.rows[0].id]);
+  if (!pr.rows.length) return { error: 'Brief not found for this tracker', code: 404 };
+  return { clientId: cr.rows[0].id, briefId: pr.rows[0].id };
+}
+// ── Pre-Write Brief workflow: claim / assign / submit / approve / reject / publish ──
+// Mirrors the scanned-page brief workflow above so a Pre-Write Brief can be
+// handed to a specialist exactly like a regular Citation Brief.
+app.post('/api/tracker-client/:token/prewrite-brief/:id/claim', async (req, res) => {
+  try {
+    const r = await _resolvePWBrief(req.params.token, req.params.id);
+    if (r.error) return res.status(r.code).json({ success: false, error: r.error });
+    const name = String((req.body && req.body.name) || '').trim().slice(0, 80);
+    if (!name) return res.status(400).json({ success: false, error: 'Name required to claim' });
+    const cur = await pool.query('SELECT status, claimed_by FROM prewrite_briefs WHERE id=$1', [r.briefId]);
+    const row = cur.rows[0] || {};
+    if (row.status === 'in_progress' && row.claimed_by && row.claimed_by !== name) {
+      return res.status(409).json({ success: false, error: 'Already claimed by ' + row.claimed_by, claimed_by: row.claimed_by });
+    }
+    await pool.query("UPDATE prewrite_briefs SET status='in_progress', claimed_by=$1, claimed_at=NOW() WHERE id=$2", [name, r.briefId]);
+    res.json({ success: true, status: 'in_progress', claimed_by: name });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+app.post('/api/tracker-client/:token/prewrite-brief/:id/assign', async (req, res) => {
+  try {
+    const r = await _resolvePWBrief(req.params.token, req.params.id);
+    if (r.error) return res.status(r.code).json({ success: false, error: r.error });
+    const name = String((req.body && req.body.name) || '').trim().slice(0, 80);
+    if (!name) {
+      await pool.query("UPDATE prewrite_briefs SET status='open', claimed_by=NULL, claimed_at=NULL, assigned_at=NULL, deadline=NULL, rejected_at=NULL, reject_reason=NULL WHERE id=$1", [r.briefId]);
+      return res.json({ success: true, status: 'open' });
+    }
+    await pool.query("UPDATE prewrite_briefs SET status='in_progress', claimed_by=$1, claimed_at=NOW(), assigned_at=NOW(), deadline=COALESCE(deadline, NOW()+interval '24 hours'), rejected_at=NULL, reject_reason=NULL WHERE id=$2", [name, r.briefId]);
+    const pr = await pool.query('SELECT deadline FROM prewrite_briefs WHERE id=$1', [r.briefId]);
+    res.json({ success: true, status: 'in_progress', claimed_by: name, deadline: (pr.rows[0]||{}).deadline });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+app.post('/api/tracker-client/:token/prewrite-brief/:id/submit', async (req, res) => {
+  try {
+    const r = await _resolvePWBrief(req.params.token, req.params.id);
+    if (r.error) return res.status(r.code).json({ success: false, error: r.error });
+    const html = String((req.body && req.body.html) || '');
+    if (!html.trim()) return res.status(400).json({ success: false, error: 'Paste your written content first' });
+    await pool.query("UPDATE prewrite_briefs SET status='submitted', specialist_html=$1, submitted_at=NOW() WHERE id=$2", [html, r.briefId]);
+    res.json({ success: true, status: 'submitted' });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+app.get('/api/tracker-client/:token/prewrite-brief/:id/deliverable', async (req, res) => {
+  try {
+    const r = await _resolvePWBrief(req.params.token, req.params.id);
+    if (r.error) return res.status(r.code).json({ success: false, error: r.error });
+    const pr = await pool.query('SELECT specialist_html, status, claimed_by, submitted_at, approved_by FROM prewrite_briefs WHERE id=$1', [r.briefId]);
+    const pg = pr.rows[0] || {};
+    res.json({ success: true, html: pg.specialist_html || '', status: pg.status || 'open', claimed_by: pg.claimed_by || null, submitted_at: pg.submitted_at || null, approved_by: pg.approved_by || null });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+app.post('/api/tracker-client/:token/prewrite-brief/:id/approve', async (req, res) => {
+  try {
+    const r = await _resolvePWBrief(req.params.token, req.params.id);
+    if (r.error) return res.status(r.code).json({ success: false, error: r.error });
+    const name = String((req.body && req.body.name) || '').trim().slice(0, 80) || 'Lead';
+    await pool.query("UPDATE prewrite_briefs SET status='approved', approved_at=NOW(), approved_by=$1 WHERE id=$2", [name, r.briefId]);
+    res.json({ success: true, status: 'approved', approved_by: name });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+app.post('/api/tracker-client/:token/prewrite-brief/:id/reject', async (req, res) => {
+  try {
+    const r = await _resolvePWBrief(req.params.token, req.params.id);
+    if (r.error) return res.status(r.code).json({ success: false, error: r.error });
+    const reason = String((req.body && req.body.reason) || '').trim().slice(0, 600);
+    await pool.query("UPDATE prewrite_briefs SET status='in_progress', rejected_at=NOW(), reject_reason=$1, submitted_at=NULL, specialist_html=NULL WHERE id=$2", [reason || null, r.briefId]);
+    res.json({ success: true, status: 'in_progress', reason: reason });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+app.post('/api/tracker-client/:token/prewrite-brief/:id/publish', async (req, res) => {
+  try {
+    const r = await _resolvePWBrief(req.params.token, req.params.id);
+    if (r.error) return res.status(r.code).json({ success: false, error: r.error });
+    const cur = await pool.query('SELECT status FROM prewrite_briefs WHERE id=$1', [r.briefId]);
+    const st = (cur.rows[0] || {}).status;
+    if (st !== 'approved' && st !== 'published') return res.status(409).json({ success: false, error: 'Brief must be approved by the lead before publishing' });
+    await pool.query("UPDATE prewrite_briefs SET status='published', published_at=NOW() WHERE id=$1", [r.briefId]);
+    res.json({ success: true, status: 'published' });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+app.post('/api/tracker-client/:token/prewrite-brief/:id/deadline', async (req, res) => {
+  try {
+    const r = await _resolvePWBrief(req.params.token, req.params.id);
+    if (r.error) return res.status(r.code).json({ success: false, error: r.error });
+    const hours = parseFloat(req.body && req.body.hours);
+    if (isNaN(hours)) return res.status(400).json({ success: false, error: 'hours required' });
+    await pool.query("UPDATE prewrite_briefs SET deadline=NOW()+ ($1 || ' hours')::interval WHERE id=$2", [hours, r.briefId]);
+    res.json({ success: true });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
 app.post('/api/tracker-client/:token/brief/:pageId/claim', async (req, res) => {
   try {
     const r = await _resolveBoardPage(req.params.token, req.params.pageId);
@@ -3278,10 +3416,19 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
     <a class="ld-btn primary" href="/track/${client.token}" target="_blank" rel="noopener" style="text-decoration:none;display:inline-block">Open scanner &rarr;</a>
   </div>
 </div>
-<div class="ld-h2">Briefs &amp; assignments</div>
+<div class="ld-h2" style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+  <span>Briefs &amp; assignments</span>
+  <span style="display:flex;gap:6px;">
+    <button class="ld-fbtn on" data-f="all" onclick="setLdFilter('all')" style="background:#0a0a12;border:1px solid #374151;border-radius:99px;padding:5px 13px;font-size:10px;font-weight:800;color:#c4b5fd;cursor:pointer;text-transform:none;letter-spacing:0;">All</button>
+    <button class="ld-fbtn" data-f="pages" onclick="setLdFilter('pages')" style="background:#0a0a12;border:1px solid #374151;border-radius:99px;padding:5px 13px;font-size:10px;font-weight:800;color:#6b7280;cursor:pointer;text-transform:none;letter-spacing:0;">Pages only</button>
+    <button class="ld-fbtn" data-f="prewrite" onclick="setLdFilter('prewrite')" style="background:#0a0a12;border:1px solid #374151;border-radius:99px;padding:5px 13px;font-size:10px;font-weight:800;color:#6b7280;cursor:pointer;text-transform:none;letter-spacing:0;">\u{1f3af} Pre-Write only</button>
+  </span>
+</div>
 <div class="ld-grid" id="ldGrid"></div>
 <script>
   var TOKEN='${req.params.token}';
+  var _ldFilter='all';
+  function setLdFilter(f){ _ldFilter=f; var bs=document.querySelectorAll('.ld-fbtn'); for(var i=0;i<bs.length;i++){ var on=bs[i].getAttribute('data-f')===f; bs[i].classList.toggle('on',on); bs[i].style.color=on?'#c4b5fd':'#6b7280'; bs[i].style.borderColor=on?'#7c3aed':'#374151'; } render(); }
   var NL=String.fromCharCode(10);
   var _briefs=[], _specs=[];
   function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
@@ -3295,17 +3442,17 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
   function addPages(){ var raw=document.getElementById('urlInput').value; var urls=raw.split(NL).map(function(s){return s.trim();}).filter(Boolean); var msg=document.getElementById('addMsg'); if(!urls.length){ msg.textContent='Paste at least one URL'; return; } var i=0, ok=0; (function next(){ if(i>=urls.length){ msg.textContent='Added '+ok+'/'+urls.length; document.getElementById('urlInput').value=''; load(); return; } var u=urls[i++]; if(u.indexOf('http')!==0)u='https://'+u; fetch('/api/tracker-client/'+TOKEN+'/pages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url:u})}).then(function(r){return r.json();}).then(function(d){ if(d&&d.success)ok++; msg.textContent='Adding '+i+'/'+urls.length; next(); }).catch(function(){ msg.textContent='Adding '+i+'/'+urls.length; next(); }); })(); }
   function badge(st,who){ if(st==='published')return '<span class="ld-badge pub">PUBLISHED</span>'; if(st==='approved')return '<span class="ld-badge appr">APPROVED'+(who?' - '+esc(who):'')+'</span>'; if(st==='submitted')return '<span class="ld-badge subm">SUBMITTED'+(who?' - '+esc(who):'')+'</span>'; if(st==='done')return '<span class="ld-badge done">DONE</span>'; if(st==='in_progress')return '<span class="ld-badge progress">IN PROGRESS'+(who?' - '+esc(who):'')+'</span>'; return '<span class="ld-badge open">OPEN</span>'; }
   function options(cur){ var o='<option value="">- Unassigned -</option>'; var found=false; _specs.forEach(function(n){ var sel=(n===cur); if(sel)found=true; o+='<option value="'+esc(n)+'"'+(sel?' selected':'')+'>'+esc(n)+'</option>'; }); if(cur&&!found)o+='<option value="'+esc(cur)+'" selected>'+esc(cur)+' (not in list)</option>'; return o; }
-  function assign(pageId, sel){ fetch('/api/tracker-client/'+TOKEN+'/brief/'+pageId+'/assign',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:sel.value})}).then(function(r){return r.json();}).then(function(){ load(); }).catch(function(){}); }
-  function ldActions(d){ var st=d.brief_status||'open';
-    if(st==='submitted') return '<div class="ld-rev"><button class="ld-btn" onclick="reviewHtml('+d.page_id+')">Review HTML</button><button class="ld-btn primary" onclick="approve('+d.page_id+')">Approve</button><button class="ld-btn" style="border-color:#7f1d1d;color:#fca5a5" onclick="reject('+d.page_id+')">Reject</button></div>';
-    if(st==='approved') return '<div class="ld-rev"><span class="ld-note appr">Approved'+(d.brief_approved_by?' by '+esc(d.brief_approved_by):'')+' — specialist can publish</span><button class="ld-btn" onclick="reviewHtml('+d.page_id+')">Review HTML</button></div>';
-    if(st==='published') return '<div class="ld-rev"><span class="ld-note pub">Published &#10003;</span><button class="ld-btn" onclick="reviewHtml('+d.page_id+')">Review HTML</button></div>';
+  function assign(id, sel, pw){ fetch('/api/tracker-client/'+TOKEN+'/'+(pw?'prewrite-brief':'brief')+'/'+id+'/assign',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:sel.value})}).then(function(r){return r.json();}).then(function(){ load(); }).catch(function(){}); }
+  function ldActions(d){ var st=d.brief_status||'open'; var id=d.is_prewrite?d.pw_id:d.page_id; var pw=!!d.is_prewrite;
+    if(st==='submitted') return '<div class="ld-rev"><button class="ld-btn" onclick="reviewHtml('+id+','+pw+')">Review</button><button class="ld-btn primary" onclick="approve('+id+','+pw+')">Approve</button><button class="ld-btn" style="border-color:#7f1d1d;color:#fca5a5" onclick="reject('+id+','+pw+')">Reject</button></div>';
+    if(st==='approved') return '<div class="ld-rev"><span class="ld-note appr">Approved'+(d.brief_approved_by?' by '+esc(d.brief_approved_by):'')+' — specialist can publish</span><button class="ld-btn" onclick="reviewHtml('+id+','+pw+')">Review</button></div>';
+    if(st==='published') return '<div class="ld-rev"><span class="ld-note pub">Published &#10003;</span><button class="ld-btn" onclick="reviewHtml('+id+','+pw+')">Review</button></div>';
     return ''; }
   function _hrsLeftL(t){ if(!t) return null; try{ return (new Date(t).getTime()-Date.now())/3600000; }catch(e){ return null; } }
-  function dlBadgeL(d){ var h=_hrsLeftL(d.brief_deadline); if(h==null) return ''; var st=d.brief_status||'open'; if(st==='approved'||st==='published') return ''; var c=h<0?'#f87171':(h<6?'#fbbf24':'#4ade80'); var lab; if(h<0){ var o=Math.round(-h); lab='Overdue '+(o>=24?(Math.round(o/24)+'d'):(o+'h')); } else { lab=(h>=24?(Math.round(h/24)+'d'):(Math.max(1,Math.round(h))+'h'))+' left'; } return '<span class="ld-badge" style="cursor:pointer;background:rgba(124,58,237,.10);color:'+c+';border:1px solid '+c+'" title="Click to change the deadline" onclick="editDeadline('+d.page_id+')">\\u23f1 '+lab+'</span>'; }
+  function dlBadgeL(d){ var h=_hrsLeftL(d.brief_deadline); if(h==null) return ''; var st=d.brief_status||'open'; if(st==='approved'||st==='published') return ''; var c=h<0?'#f87171':(h<6?'#fbbf24':'#4ade80'); var lab; if(h<0){ var o=Math.round(-h); lab='Overdue '+(o>=24?(Math.round(o/24)+'d'):(o+'h')); } else { lab=(h>=24?(Math.round(h/24)+'d'):(Math.max(1,Math.round(h))+'h'))+' left'; } var id=d.is_prewrite?d.pw_id:d.page_id; var pw=!!d.is_prewrite; return '<span class="ld-badge" style="cursor:pointer;background:rgba(124,58,237,.10);color:'+c+';border:1px solid '+c+'" title="Click to change the deadline" onclick="editDeadline('+id+','+pw+')">\\u23f1 '+lab+'</span>'; }
   function rejNoteL(d){ if(!d.brief_rejected_at) return ''; return '<div style="background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.3);border-radius:8px;padding:6px 9px;margin-top:8px;font-size:11px;color:#fca5a5">Sent back to '+esc(d.brief_claimed_by||'specialist')+': '+esc(d.brief_reject_reason||'')+'</div>'; }
-  function reject(pageId){ if(!_ldEnsureName())return; var why=prompt('Why send it back to the specialist? (this reason is shown to them)'); if(why===null) return; fetch('/api/tracker-client/'+TOKEN+'/brief/'+pageId+'/reject',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:_ldName,reason:(why||'').trim()})}).then(function(r){return r.json();}).then(function(r){ if(!r.success) alert(r.error||'Could not reject'); _ldClose(); load(); }).catch(function(){ alert('Could not reject'); }); }
-  function editDeadline(pageId){ var h=prompt('Hours from now until the deadline (e.g. 24):','24'); if(h===null) return; var n=parseFloat(h); if(isNaN(n)){ alert('Enter a number of hours'); return; } fetch('/api/tracker-client/'+TOKEN+'/brief/'+pageId+'/deadline',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({hours:n})}).then(function(r){return r.json();}).then(function(){ load(); }).catch(function(){}); }
+  function reject(id,pw){ if(!_ldEnsureName())return; var why=prompt('Why send it back to the specialist? (this reason is shown to them)'); if(why===null) return; fetch('/api/tracker-client/'+TOKEN+'/'+(pw?'prewrite-brief':'brief')+'/'+id+'/reject',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:_ldName,reason:(why||'').trim()})}).then(function(r){return r.json();}).then(function(r){ if(!r.success) alert(r.error||'Could not reject'); _ldClose(); load(); }).catch(function(){ alert('Could not reject'); }); }
+  function editDeadline(id,pw){ var h=prompt('Hours from now until the deadline (e.g. 24):','24'); if(h===null) return; var n=parseFloat(h); if(isNaN(n)){ alert('Enter a number of hours'); return; } fetch('/api/tracker-client/'+TOKEN+'/'+(pw?'prewrite-brief':'brief')+'/'+id+'/deadline',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({hours:n})}).then(function(r){return r.json();}).then(function(){ load(); }).catch(function(){}); }
   var _prioRankL={high:0,h:0,medium:1,med:1,m:1,low:2,l:2};
   function _dlValL(d){ var t=d.brief_deadline; return t?new Date(t).getTime():Infinity; }
   function ldScoreL(d){ var a=d.brief_after_score,b=d.brief_before_score; var st=d.brief_status||'open';
@@ -3318,23 +3465,36 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
     return h+'</div>'; }
   function render(){
     var grid=document.getElementById('ldGrid');
-    if(!_briefs.length){ grid.innerHTML='<div class="ld-empty">No briefs yet &mdash; add &amp; scan pages in your scanner; they appear here to assign.</div>'; return; }
-    var list=_briefs.slice().sort(function(a,b){ var da=_dlValL(a),db=_dlValL(b); if(da!==db)return da-db; var pa=_prioRankL[(a.priority||'medium').toLowerCase()]; if(pa==null)pa=1; var pb=_prioRankL[(b.priority||'medium').toLowerCase()]; if(pb==null)pb=1; if(pa!==pb)return pa-pb; var ta=a.ts?new Date(a.ts).getTime():0, tb=b.ts?new Date(b.ts).getTime():0; return ta-tb; });
+    if(!_briefs.length){ grid.innerHTML='<div class="ld-empty">No briefs yet &mdash; add &amp; scan pages in your scanner, or generate a Pre-Write Brief; they appear here to assign.</div>'; return; }
+    var filtered=_briefs.filter(function(d){ if(_ldFilter==='pages') return !d.is_prewrite; if(_ldFilter==='prewrite') return !!d.is_prewrite; return true; });
+    if(!filtered.length){ grid.innerHTML='<div class="ld-empty">'+(_ldFilter==='prewrite'?'No Pre-Write Briefs yet.':'No scanned pages yet.')+'</div>'; return; }
+    var list=filtered.slice().sort(function(a,b){ var da=_dlValL(a),db=_dlValL(b); if(da!==db)return da-db; var pa=_prioRankL[(a.priority||'medium').toLowerCase()]; if(pa==null)pa=1; var pb=_prioRankL[(b.priority||'medium').toLowerCase()]; if(pb==null)pb=1; if(pa!==pb)return pa-pb; var ta=a.ts?new Date(a.ts).getTime():0, tb=b.ts?new Date(b.ts).getTime():0; return ta-tb; });
     grid.innerHTML=list.map(function(d){
       var st=d.brief_status||'open'; var cls=st==='published'?'s-pub':st==='approved'?'s-appr':st==='submitted'?'s-subm':st==='done'?'s-done':st==='in_progress'?'s-progress':'';
-      return '<div class="ld-card '+cls+'"><div class="ld-url">'+esc(cleanUrl(d.url))+'</div><div class="ld-time">Scanned '+fmtTime(d.ts)+'</div>'+badge(st,d.brief_claimed_by)+' '+dlBadgeL(d)+ldScoreL(d)
-        +'<div class="ld-assign"><span style="font-size:11px;color:#6b7280">Assign:</span><select class="ld-select" onchange="assign('+d.page_id+',this)">'+options(d.brief_claimed_by||'')+'</select></div>'
+      var pw=!!d.is_prewrite; var id=pw?d.pw_id:d.page_id;
+      var pwStyle=pw?' style="border-left:3px solid #f59e0b;"':'';
+      var titleLine=pw
+        ? '<div class="ld-url"><span style="color:#fbbf24;font-size:10px;font-weight:800;letter-spacing:.05em;margin-right:6px;">\\u{1f3af} PRE-WRITE</span>'+esc(d.keyword)+'</div>'
+        : '<div class="ld-url">'+esc(cleanUrl(d.url))+'</div>';
+      var openLink=pw
+        ? '<button class="ld-link" style="background:none;border:none;cursor:pointer;padding:0;" onclick="viewPWBrief('+id+')">View brief</button>'
+        : '<a class="ld-link" href="'+esc(d.url)+'" target="_blank" rel="noopener">Open page</a>';
+      var delFn=pw?'deletePWBrief('+id+')':'deleteLeadPage('+id+')';
+      return '<div class="ld-card '+cls+'"'+pwStyle+'>'+titleLine+'<div class="ld-time">'+(pw?'Generated ':'Scanned ')+fmtTime(d.ts)+'</div>'+badge(st,d.brief_claimed_by)+' '+dlBadgeL(d)+ldScoreL(d)
+        +'<div class="ld-assign"><span style="font-size:11px;color:#6b7280">Assign:</span><select class="ld-select" onchange="assign('+id+',this,'+pw+')">'+options(d.brief_claimed_by||'')+'</select></div>'
         +ldActions(d)+rejNoteL(d)
-        +'<div style="margin-top:10px;display:flex;justify-content:space-between;align-items:center"><a class="ld-link" href="'+esc(d.url)+'" target="_blank" rel="noopener">Open page</a><button onclick="deleteLeadPage('+d.page_id+')" style="background:none;border:1px solid #374151;border-radius:6px;color:#f87171;font-size:11px;padding:4px 9px;cursor:pointer;">Delete</button></div></div>';
+        +'<div style="margin-top:10px;display:flex;justify-content:space-between;align-items:center">'+openLink+'<button onclick="'+delFn+'" style="background:none;border:1px solid #374151;border-radius:6px;color:#f87171;font-size:11px;padding:4px 9px;cursor:pointer;">Delete</button></div></div>';
     }).join('');
   }
   function deleteLeadPage(pageId){ if(!confirm('Delete this page and its brief? This cannot be undone.')) return; fetch('/api/tracker-client/'+TOKEN+'/pages/'+pageId,{method:'DELETE'}).then(function(r){return r.json();}).then(function(r){ if(!r||!r.success){ alert((r&&r.error)||'Could not delete'); return; } load(); }).catch(function(){ alert('Could not delete'); }); }
+  function deletePWBrief(id){ if(!confirm('Delete this Pre-Write Brief? This cannot be undone.')) return; fetch('/api/tracker-client/'+TOKEN+'/prewrite-briefs/'+id,{method:'DELETE'}).then(function(r){return r.json();}).then(function(r){ if(!r||!r.success){ alert((r&&r.error)||'Could not delete'); return; } load(); }).catch(function(){ alert('Could not delete'); }); }
+  function viewPWBrief(id){ var ov=_ldOv(); document.getElementById('ldOvTitle').textContent='Pre-Write Brief'; document.getElementById('ldOvBody').innerHTML='<div class="ld-prev" id="ldPWPrev">Loading...</div>'; document.getElementById('ldOvFoot').innerHTML='<button class="ld-btn" onclick="_ldClose()">Close</button>'; ov.classList.add('on'); fetch('/api/tracker-client/'+TOKEN+'/prewrite-briefs/'+id).then(function(r){return r.json();}).then(function(d){ document.getElementById('ldPWPrev').textContent=(d&&d.brief)?JSON.stringify(d.brief,null,2):'(could not load brief)'; }).catch(function(){ document.getElementById('ldPWPrev').textContent='Could not load'; }); }
   var _ldName=(function(){ try{ return localStorage.getItem('cs_lead_name')||''; }catch(e){ return ''; } })();
   function _ldEnsureName(){ if(_ldName) return true; var n=prompt('Your name (so the specialist sees who approved):'); if(n&&n.trim()){ _ldName=n.trim(); try{ localStorage.setItem('cs_lead_name',_ldName); }catch(e){} return true; } return false; }
   function _ldOv(){ var ov=document.getElementById('ldOv'); if(ov) return ov; ov=document.createElement('div'); ov.id='ldOv'; ov.className='ld-ov'; ov.innerHTML='<div class="ld-modal"><h3 id="ldOvTitle"></h3><div class="ld-mbody" id="ldOvBody"></div><div class="ld-mfoot" id="ldOvFoot"></div></div>'; document.body.appendChild(ov); ov.addEventListener('click',function(e){ if(e.target===ov) _ldClose(); }); return ov; }
   function _ldClose(){ var ov=document.getElementById('ldOv'); if(ov) ov.classList.remove('on'); }
-  function reviewHtml(pageId){ var ov=_ldOv(); document.getElementById('ldOvTitle').textContent='Submitted work — review'; document.getElementById('ldOvBody').innerHTML='<div class="ld-prev" id="ldPrev">Loading...</div>'; document.getElementById('ldOvFoot').innerHTML='<button class="ld-btn" onclick="_ldClose()">Close</button><button class="ld-btn" style="border-color:#7f1d1d;color:#fca5a5" id="ldRejectGo">Reject</button><button class="ld-btn primary" id="ldApproveGo">Approve</button>'; ov.classList.add('on'); fetch('/api/tracker-client/'+TOKEN+'/brief/'+pageId+'/deliverable').then(function(r){return r.json();}).then(function(d){ document.getElementById('ldPrev').textContent=(d&&d.html)?d.html:'(no HTML submitted yet)'; var ga=document.getElementById('ldApproveGo'); if(ga) ga.onclick=function(){ approve(pageId); }; var gr=document.getElementById('ldRejectGo'); if(gr) gr.onclick=function(){ reject(pageId); }; }).catch(function(){ document.getElementById('ldPrev').textContent='Could not load'; }); }
-  function approve(pageId){ if(!_ldEnsureName())return; fetch('/api/tracker-client/'+TOKEN+'/brief/'+pageId+'/approve',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:_ldName})}).then(function(r){return r.json();}).then(function(r){ if(!r.success) alert(r.error||'Could not approve'); _ldClose(); load(); }).catch(function(){ alert('Could not approve'); }); }
+  function reviewHtml(id,pw){ var ov=_ldOv(); document.getElementById('ldOvTitle').textContent='Submitted work — review'; document.getElementById('ldOvBody').innerHTML='<div class="ld-prev" id="ldPrev">Loading...</div>'; document.getElementById('ldOvFoot').innerHTML='<button class="ld-btn" onclick="_ldClose()">Close</button><button class="ld-btn" style="border-color:#7f1d1d;color:#fca5a5" id="ldRejectGo">Reject</button><button class="ld-btn primary" id="ldApproveGo">Approve</button>'; ov.classList.add('on'); fetch('/api/tracker-client/'+TOKEN+'/'+(pw?'prewrite-brief':'brief')+'/'+id+'/deliverable').then(function(r){return r.json();}).then(function(d){ document.getElementById('ldPrev').textContent=(d&&d.html)?d.html:'(no content submitted yet)'; var ga=document.getElementById('ldApproveGo'); if(ga) ga.onclick=function(){ approve(id,pw); }; var gr=document.getElementById('ldRejectGo'); if(gr) gr.onclick=function(){ reject(id,pw); }; }).catch(function(){ document.getElementById('ldPrev').textContent='Could not load'; }); }
+  function approve(id,pw){ if(!_ldEnsureName())return; fetch('/api/tracker-client/'+TOKEN+'/'+(pw?'prewrite-brief':'brief')+'/'+id+'/approve',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:_ldName})}).then(function(r){return r.json();}).then(function(r){ if(!r.success) alert(r.error||'Could not approve'); _ldClose(); load(); }).catch(function(){ alert('Could not approve'); }); }
   function load(){ fetch('/api/tracker-client/'+TOKEN+'/latest-briefs').then(function(r){return r.json();}).then(function(d){ if(d&&d.briefs){ _briefs=d.briefs; render(); } }).catch(function(){}); }
   loadSpecs(); load(); setInterval(function(){ if(!document.hidden) load(); },15000); document.addEventListener('visibilitychange',function(){ if(!document.hidden) load(); });
 </script>
@@ -3439,9 +3599,14 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
     <button class="bd-fbtn on" data-f="open" onclick="setFilter('open')">Open</button>
     <button class="bd-fbtn" data-f="in_progress" onclick="setFilter('in_progress')">In progress</button>
     <button class="bd-fbtn" data-f="done" onclick="setFilter('done')">Done</button>
+    <span style="width:1px;background:#374151;align-self:stretch;margin:0 4px;"></span>
+    <button class="bd-tbtn on" data-t="all" onclick="setTypeFilter('all')">All types</button>
+    <button class="bd-tbtn" data-t="pages" onclick="setTypeFilter('pages')">Pages only</button>
+    <button class="bd-tbtn" data-t="prewrite" onclick="setTypeFilter('prewrite')">&#x1f3af; Pre-Write only</button>
   </div>
   <div class="bd-name"><span style="font-size:11px;color:#6b7280">You:</span><input id="bdName" placeholder="Your name" oninput="saveName(this.value)"></div>
 </div>
+<style>.bd-tbtn{background:#0a0a12;border:1px solid #374151;border-radius:99px;padding:6px 14px;font-size:11px;font-weight:800;color:#6b7280;cursor:pointer;}.bd-tbtn.on{color:#c4b5fd;border-color:#7c3aed;}</style>
 <div class="bd-grid" id="bdGrid"></div>
 <script>
   var TOKEN='${req.params.token}';
@@ -3450,6 +3615,8 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
   try{ _name=localStorage.getItem('csBoardName')||''; }catch(e){}
   function saveName(v){ _name=(v||'').trim(); try{ localStorage.setItem('csBoardName',_name); }catch(e){} }
   function setFilter(f){ _filter=f; var bs=document.querySelectorAll('.bd-fbtn'); for(var i=0;i<bs.length;i++){ bs[i].classList.toggle('on', bs[i].getAttribute('data-f')===f); } render(); }
+  var _typeFilter='all';
+  function setTypeFilter(t){ _typeFilter=t; var bs=document.querySelectorAll('.bd-tbtn'); for(var i=0;i<bs.length;i++){ bs[i].classList.toggle('on', bs[i].getAttribute('data-t')===t); } render(); }
   function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
   function cleanUrl(u){ return String(u||'').replace(/^https?:[/][/]/,'').replace(/^www[.]/,''); }
   function fmtTime(t){ try{ var d=t?new Date(t):null; return d?(d.toLocaleDateString('en-GB',{day:'2-digit',month:'short'})+' '+d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})):''; }catch(e){ return ''; } }
@@ -3503,13 +3670,13 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
     if(a!=null){ if(b!=null) html+='<span style="color:#6b7280">\\\\u2192</span>'; html+='<span class="bd-score-pill" style="color:#4ade80">After '+a+'</span>'; }
     if(a!=null && b!=null){ var dl=a-b; var dc=dl>0?'#4ade80':(dl<0?'#f87171':'#9ca3af'); html+='<span class="bd-score-pill" style="color:'+dc+'">'+(dl>0?'+':'')+dl+'</span>'; }
     return html+'</div>'; }
-  function actions(d){ var st=d.brief_status||'open';
+  function actions(d){ var st=d.brief_status||'open'; var id=d.is_prewrite?d.pw_id:d.page_id; var pw=!!d.is_prewrite;
     if(st==='open') return '<span class="bd-wait" style="color:#6b7280">Waiting to be assigned by the lead</span>';
-    if(st==='in_progress') return '<button class="bd-btn score" onclick="openScore('+d.page_id+')">📊 Score my work</button><button class="bd-btn done" onclick="openSubmit('+d.page_id+')">Submit finished HTML</button><button class="bd-btn sec" onclick="reopen('+d.page_id+')">Release</button>';
-    if(st==='submitted') return '<button class="bd-btn score" onclick="openScore('+d.page_id+')">📊 Re-score</button><button class="bd-btn sec" onclick="viewHtml('+d.page_id+')">View HTML</button><button class="bd-btn sec" onclick="openSubmit('+d.page_id+')">Re-submit</button><span class="bd-wait">Awaiting lead approval</span>';
-    if(st==='approved') return '<button class="bd-btn pub" onclick="publish('+d.page_id+')">Publish</button><button class="bd-btn sec" onclick="viewHtml('+d.page_id+')">View HTML</button>';
-    if(st==='published') return '<button class="bd-btn sec" onclick="viewHtml('+d.page_id+')">View HTML</button>';
-    return '<button class="bd-btn sec" onclick="reopen('+d.page_id+')">Reopen</button>'; }
+    if(st==='in_progress') return (pw?'':'<button class="bd-btn score" onclick="openScore('+id+')">📊 Score my work</button>')+'<button class="bd-btn done" onclick="openSubmit('+id+','+pw+')">'+(pw?'Submit written content':'Submit finished HTML')+'</button><button class="bd-btn sec" onclick="reopen('+id+','+pw+')">Release</button>';
+    if(st==='submitted') return (pw?'':'<button class="bd-btn score" onclick="openScore('+id+')">📊 Re-score</button>')+'<button class="bd-btn sec" onclick="viewHtml('+id+','+pw+')">View</button><button class="bd-btn sec" onclick="openSubmit('+id+','+pw+')">Re-submit</button><span class="bd-wait">Awaiting lead approval</span>';
+    if(st==='approved') return '<button class="bd-btn pub" onclick="publish('+id+','+pw+')">Publish</button><button class="bd-btn sec" onclick="viewHtml('+id+','+pw+')">View</button>';
+    if(st==='published') return '<button class="bd-btn sec" onclick="viewHtml('+id+','+pw+')">View</button>';
+    return '<button class="bd-btn sec" onclick="reopen('+id+','+pw+')">Reopen</button>'; }
   function _hrsLeft(t){ if(!t) return null; try{ return (new Date(t).getTime()-Date.now())/3600000; }catch(e){ return null; } }
   function dlBadge(d){ var h=_hrsLeft(d.brief_deadline); if(h==null) return ''; var st=d.brief_status||'open'; if(st==='approved'||st==='published') return ''; var c=h<0?'#f87171':(h<6?'#fbbf24':'#4ade80'); var lab; if(h<0){ var o=Math.round(-h); lab='Overdue '+(o>=24?(Math.round(o/24)+'d'):(o+'h')); } else { lab=(h>=24?(Math.round(h/24)+'d'):(Math.max(1,Math.round(h))+'h'))+' left'; } return '<span class="bd-badge" style="background:rgba(124,58,237,.10);color:'+c+';border:1px solid '+c+'">\\u23f1 '+lab+'</span>'; }
   function rejBanner(d){ if(!d.brief_rejected_at) return ''; return '<div style="background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.4);border-radius:8px;padding:8px 10px;margin:8px 0;font-size:12px;color:#fca5a5"><strong>Sent back by the lead:</strong> '+esc(d.brief_reject_reason||'Please revise and resubmit.')+'</div>'; }
@@ -3518,6 +3685,8 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
   function render(){
     var grid=document.getElementById('bdGrid');
     var list=_briefs.filter(function(d){
+      if(_typeFilter==='pages' && d.is_prewrite) return false;
+      if(_typeFilter==='prewrite' && !d.is_prewrite) return false;
       if(_filter==='all') return true;
       if(_filter==='mine') return d.brief_claimed_by && _name && String(d.brief_claimed_by).toLowerCase()===_name.toLowerCase();
       return (d.brief_status||'open')===_filter;
@@ -3533,20 +3702,29 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
     if(!list.length){ grid.innerHTML='<div class="bd-empty">'+(_filter==='mine'?'No work assigned to you yet. The lead assigns briefs from the Lead Panel — assigned work shows here, most urgent first.':(_filter!=='all'?'No briefs in this status.':'No briefs yet - they appear here after a scan.'))+'</div>'; return; }
     grid.innerHTML=list.map(function(d){
       var st=d.brief_status||'open'; var cls=st==='published'?'s-pub':st==='approved'?'s-appr':st==='submitted'?'s-subm':st==='done'?'s-done':st==='in_progress'?'s-progress':'s-open';
-      return '<div class="bw-card '+cls+'"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:6px"><div style="min-width:0"><div class="bw-url">'+esc(cleanUrl(d.url))+'</div><div class="bw-time">Scanned '+fmtTime(d.ts)+'</div></div><div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end;flex-shrink:0">'+badge(st,d.brief_claimed_by)+dlBadge(d)+'</div></div>'+rejBanner(d)+chips(d)+scoreLine(d)+transparency(d)+recs(d)+'<div class="bd-actions">'+actions(d)+'<a class="bd-btn sec" href="'+esc(d.url)+'" target="_blank" rel="noopener" style="text-decoration:none">Open page</a></div></div>';
+      var pw=!!d.is_prewrite; var id=pw?d.pw_id:d.page_id;
+      var pwStyle=pw?'border-left:3px solid #f59e0b;':'';
+      var titleLine=pw
+        ? '<div class="bw-url"><span style="color:#fbbf24;font-size:10px;font-weight:800;letter-spacing:.05em;margin-right:6px;">\\u{1f3af} PRE-WRITE</span>'+esc(d.keyword)+'</div>'
+        : '<div class="bw-url">'+esc(cleanUrl(d.url))+'</div>';
+      var openLink=pw
+        ? '<button class="bd-btn sec" onclick="viewPWDetail('+id+')" style="text-decoration:none">View brief</button>'
+        : '<a class="bd-btn sec" href="'+esc(d.url)+'" target="_blank" rel="noopener" style="text-decoration:none">Open page</a>';
+      return '<div class="bw-card '+cls+'" style="'+pwStyle+'"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:6px"><div style="min-width:0">'+titleLine+'<div class="bw-time">'+(pw?'Generated ':'Scanned ')+fmtTime(d.ts)+'</div></div><div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end;flex-shrink:0">'+badge(st,d.brief_claimed_by)+dlBadge(d)+'</div></div>'+rejBanner(d)+chips(d)+scoreLine(d)+transparency(d)+recs(d)+'<div class="bd-actions">'+actions(d)+openLink+'</div></div>';
     }).join('');
   }
+  function viewPWDetail(id){ var ov=_ensureOv(); document.getElementById('bdOvTitle').textContent='Pre-Write Brief'; document.getElementById('bdOvBody').innerHTML='<div class="bd-prev" id="bdPWPrev">Loading...</div>'; document.getElementById('bdOvFoot').innerHTML='<button class="bd-btn sec" onclick="closeOv()">Close</button>'; ov.classList.add('on'); fetch('/api/tracker-client/'+TOKEN+'/prewrite-briefs/'+id).then(function(r){return r.json();}).then(function(d){ document.getElementById('bdPWPrev').textContent=(d&&d.brief)?JSON.stringify(d.brief,null,2):'(could not load brief)'; }).catch(function(){ document.getElementById('bdPWPrev').textContent='Could not load'; }); }
   function ensureName(){ if(_name) return true; var n=prompt('Enter your name to see the work assigned to you:'); if(n&&n.trim()){ saveName(n); document.getElementById('bdName').value=_name; return true; } return false; }
-  function post(pageId,action,body){ return fetch('/api/tracker-client/'+TOKEN+'/brief/'+pageId+'/'+action,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body||{})}).then(function(r){return r.json();}); }
-  function claim(pageId){ if(!ensureName())return; post(pageId,'claim',{name:_name}).then(function(r){ if(!r.success) alert(r.error||'Could not claim'); load(); }); }
-  function markDone(pageId){ post(pageId,'done',{name:_name}).then(function(){ load(); }); }
-  function reopen(pageId){ post(pageId,'reopen',{}).then(function(){ load(); }); }
+  function post(id,action,body,pw){ return fetch('/api/tracker-client/'+TOKEN+'/'+(pw?'prewrite-brief':'brief')+'/'+id+'/'+action,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body||{})}).then(function(r){return r.json();}); }
+  function claim(id,pw){ if(!ensureName())return; post(id,'claim',{name:_name},pw).then(function(r){ if(!r.success) alert(r.error||'Could not claim'); load(); }); }
+  function markDone(id,pw){ post(id,'done',{name:_name},pw).then(function(){ load(); }); }
+  function reopen(id,pw){ post(id,'reopen',{},pw).then(function(){ load(); }); }
   function _ensureOv(){ var ov=document.getElementById('bdOv'); if(ov) return ov; ov=document.createElement('div'); ov.id='bdOv'; ov.className='bd-ov'; ov.innerHTML='<div class="bd-modal"><h3 id="bdOvTitle"></h3><div class="bd-body" id="bdOvBody"></div><div class="bd-foot" id="bdOvFoot"></div></div>'; document.body.appendChild(ov); ov.addEventListener('click',function(e){ if(e.target===ov) closeOv(); }); return ov; }
   function closeOv(){ var ov=document.getElementById('bdOv'); if(ov) ov.classList.remove('on'); }
-  function openSubmit(pageId){ if(!ensureName())return; var ov=_ensureOv(); document.getElementById('bdOvTitle').textContent='Submit finished HTML'; document.getElementById('bdOvBody').innerHTML='<p style="font-size:12px;color:#9ca3af;margin-bottom:8px">Paste your finished, processed HTML. The lead reviews and approves it before you publish.</p><textarea id="bdHtmlIn" placeholder="<!-- paste your finished HTML here -->"></textarea>'; document.getElementById('bdOvFoot').innerHTML='<button class="bd-btn sec" onclick="closeOv()">Cancel</button><button class="bd-btn done" id="bdSubmitGo">Submit for review</button>'; ov.classList.add('on'); var ta=document.getElementById('bdHtmlIn'); fetch('/api/tracker-client/'+TOKEN+'/brief/'+pageId+'/deliverable').then(function(r){return r.json();}).then(function(d){ if(d&&d.html&&ta&&!ta.value) ta.value=d.html; }).catch(function(){}); document.getElementById('bdSubmitGo').onclick=function(){ var html=ta.value.trim(); if(!html){ alert('Paste your finished HTML first'); return; } this.textContent='Submitting...'; this.disabled=true; post(pageId,'submit-html',{name:_name,html:html}).then(function(r){ if(!r.success) alert(r.error||'Failed'); closeOv(); load(); }); }; }
+  function openSubmit(id,pw){ if(!ensureName())return; var ov=_ensureOv(); document.getElementById('bdOvTitle').textContent=pw?'Submit written content':'Submit finished HTML'; document.getElementById('bdOvBody').innerHTML='<p style="font-size:12px;color:#9ca3af;margin-bottom:8px">'+(pw?'Paste the page content you wrote from this brief. The lead reviews and approves it before you publish.':'Paste your finished, processed HTML. The lead reviews and approves it before you publish.')+'</p><textarea id="bdHtmlIn" placeholder="'+(pw?'<!-- paste your written content here -->':'<!-- paste your finished HTML here -->')+'"></textarea>'; document.getElementById('bdOvFoot').innerHTML='<button class="bd-btn sec" onclick="closeOv()">Cancel</button><button class="bd-btn done" id="bdSubmitGo">Submit for review</button>'; ov.classList.add('on'); var ta=document.getElementById('bdHtmlIn'); fetch('/api/tracker-client/'+TOKEN+'/'+(pw?'prewrite-brief':'brief')+'/'+id+'/deliverable').then(function(r){return r.json();}).then(function(d){ if(d&&d.html&&ta&&!ta.value) ta.value=d.html; }).catch(function(){}); document.getElementById('bdSubmitGo').onclick=function(){ var html=ta.value.trim(); if(!html){ alert('Paste your content first'); return; } this.textContent='Submitting...'; this.disabled=true; post(id,pw?'submit':'submit-html',pw?{html:html}:{name:_name,html:html},pw).then(function(r){ if(!r.success) alert(r.error||'Failed'); closeOv(); load(); }); }; }
   function openScore(pageId){ var ov=_ensureOv(); document.getElementById('bdOvTitle').textContent='Score my work'; document.getElementById('bdOvBody').innerHTML='<p style="font-size:12px;color:#9ca3af;margin-bottom:6px">Add the brief + score recommendations to your improved HTML, paste it below, then Scan. We score it with the real GRAAF engine \\u2014 no manual numbers. Before = your live page now; After = your improved HTML.</p><p style="font-size:11px;color:#6b7280;margin-bottom:8px">Tool: <a href="https://app.contentscale.site" target="_blank" rel="noopener" style="color:#a78bfa">app.contentscale.site</a></p><textarea id="bdScoreIn" placeholder="<!-- paste your IMPROVED HTML here -->"></textarea><div id="bdScoreResult" style="margin-top:10px"></div>'; document.getElementById('bdOvFoot').innerHTML='<button class="bd-btn sec" onclick="closeOv()">Close</button><button class="bd-btn score" id="bdScoreGo">Scan &amp; score</button>'; ov.classList.add('on'); var ta=document.getElementById('bdScoreIn'); fetch('/api/tracker-client/'+TOKEN+'/brief/'+pageId+'/deliverable').then(function(r){return r.json();}).then(function(d){ if(d&&d.html&&ta&&!ta.value) ta.value=d.html; }).catch(function(){}); document.getElementById('bdScoreGo').onclick=function(){ var html=ta.value.trim(); if(!html){ alert('Paste your improved HTML first'); return; } var btn=this; btn.textContent='Scanning...'; btn.disabled=true; var rb=document.getElementById('bdScoreResult'); rb.innerHTML='<span style="color:#9ca3af;font-size:12px">Running GRAAF scan...</span>'; post(pageId,'score-work',{html:html}).then(function(r){ btn.textContent='Scan & score'; btn.disabled=false; if(!r||!r.success){ rb.innerHTML='<span style="color:#f87171;font-size:12px">'+((r&&r.error)||'Could not score')+'</span>'; return; } var b=r.before,a=r.after,dl=r.delta; var h='<div class="bd-score-line" style="font-size:14px">'; if(b!=null) h+='<span class="bd-score-pill" style="color:#9ca3af">Before '+b+'</span>'; if(b!=null&&a!=null) h+='<span style="color:#6b7280">\\u2192</span>'; if(a!=null) h+='<span class="bd-score-pill" style="color:#4ade80">After '+a+'</span>'; if(dl!=null){ var dc=dl>0?'#4ade80':(dl<0?'#f87171':'#9ca3af'); h+='<span class="bd-score-pill" style="color:'+dc+'">'+(dl>0?'+':'')+dl+'</span>'; } h+='</div>'; if(b==null) h+='<p style="font-size:11px;color:#6b7280;margin-top:6px">Could not fetch your live page for a Before score \\u2014 the After score is still real.</p>'; rb.innerHTML=h; load(); }); }; }
-  function viewHtml(pageId){ var ov=_ensureOv(); document.getElementById('bdOvTitle').textContent='Submitted HTML'; document.getElementById('bdOvBody').innerHTML='<div class="bd-prev" id="bdPrev">Loading...</div>'; document.getElementById('bdOvFoot').innerHTML='<button class="bd-btn sec" onclick="closeOv()">Close</button><button class="bd-btn sec" id="bdCopyHtml">Copy HTML</button>'; ov.classList.add('on'); fetch('/api/tracker-client/'+TOKEN+'/brief/'+pageId+'/deliverable').then(function(r){return r.json();}).then(function(d){ var pv=document.getElementById('bdPrev'); pv.textContent=(d&&d.html)?d.html:'(no HTML submitted yet)'; var cb=document.getElementById('bdCopyHtml'); if(cb) cb.onclick=function(){ navigator.clipboard.writeText((d&&d.html)||'').then(function(){ cb.textContent='Copied!'; setTimeout(function(){cb.textContent='Copy HTML';},1500); }); }; }).catch(function(){ document.getElementById('bdPrev').textContent='Could not load'; }); }
-  function publish(pageId){ if(!confirm('Publish this brief? Do this once the page is live.')) return; post(pageId,'publish',{name:_name}).then(function(r){ if(!r.success) alert(r.error||'Could not publish'); load(); }); }
+  function viewHtml(id,pw){ var ov=_ensureOv(); document.getElementById('bdOvTitle').textContent=pw?'Submitted content':'Submitted HTML'; document.getElementById('bdOvBody').innerHTML='<div class="bd-prev" id="bdPrev">Loading...</div>'; document.getElementById('bdOvFoot').innerHTML='<button class="bd-btn sec" onclick="closeOv()">Close</button><button class="bd-btn sec" id="bdCopyHtml">Copy</button>'; ov.classList.add('on'); fetch('/api/tracker-client/'+TOKEN+'/'+(pw?'prewrite-brief':'brief')+'/'+id+'/deliverable').then(function(r){return r.json();}).then(function(d){ var pv=document.getElementById('bdPrev'); pv.textContent=(d&&d.html)?d.html:'(nothing submitted yet)'; var cb=document.getElementById('bdCopyHtml'); if(cb) cb.onclick=function(){ navigator.clipboard.writeText((d&&d.html)||'').then(function(){ cb.textContent='Copied!'; setTimeout(function(){cb.textContent='Copy';},1500); }); }; }).catch(function(){ document.getElementById('bdPrev').textContent='Could not load'; }); }
+  function publish(id,pw){ if(!confirm('Publish this brief? Do this once the page is live.')) return; post(id,'publish',{name:_name},pw).then(function(r){ if(!r.success) alert(r.error||'Could not publish'); load(); }); }
   function copyBrief(pageId, btn){
     var d=_briefs.filter(function(x){return String(x.page_id)===String(pageId);})[0];
     if(!d){ if(btn){ btn.textContent='Not found'; } return; }
@@ -5542,6 +5720,20 @@ app.patch('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
     created_at TIMESTAMP DEFAULT NOW()
   )`).catch(()=>{});
   await client.query(`CREATE INDEX IF NOT EXISTS idx_prewrite_briefs_client ON prewrite_briefs(client_id, created_at DESC)`).catch(()=>{});
+  // Workflow columns so Pre-Write Briefs can be assigned/claimed/reviewed like scanned-page briefs
+  await client.query(`ALTER TABLE prewrite_briefs ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'open'`).catch(()=>{});
+  await client.query(`ALTER TABLE prewrite_briefs ADD COLUMN IF NOT EXISTS claimed_by VARCHAR(120)`).catch(()=>{});
+  await client.query(`ALTER TABLE prewrite_briefs ADD COLUMN IF NOT EXISTS claimed_at TIMESTAMPTZ`).catch(()=>{});
+  await client.query(`ALTER TABLE prewrite_briefs ADD COLUMN IF NOT EXISTS assigned_at TIMESTAMPTZ`).catch(()=>{});
+  await client.query(`ALTER TABLE prewrite_briefs ADD COLUMN IF NOT EXISTS deadline TIMESTAMPTZ`).catch(()=>{});
+  await client.query(`ALTER TABLE prewrite_briefs ADD COLUMN IF NOT EXISTS priority VARCHAR(10) DEFAULT 'medium'`).catch(()=>{});
+  await client.query(`ALTER TABLE prewrite_briefs ADD COLUMN IF NOT EXISTS specialist_html TEXT`).catch(()=>{});
+  await client.query(`ALTER TABLE prewrite_briefs ADD COLUMN IF NOT EXISTS submitted_at TIMESTAMPTZ`).catch(()=>{});
+  await client.query(`ALTER TABLE prewrite_briefs ADD COLUMN IF NOT EXISTS approved_at TIMESTAMPTZ`).catch(()=>{});
+  await client.query(`ALTER TABLE prewrite_briefs ADD COLUMN IF NOT EXISTS approved_by VARCHAR(120)`).catch(()=>{});
+  await client.query(`ALTER TABLE prewrite_briefs ADD COLUMN IF NOT EXISTS rejected_at TIMESTAMPTZ`).catch(()=>{});
+  await client.query(`ALTER TABLE prewrite_briefs ADD COLUMN IF NOT EXISTS reject_reason TEXT`).catch(()=>{});
+  await client.query(`ALTER TABLE prewrite_briefs ADD COLUMN IF NOT EXISTS published_at TIMESTAMPTZ`).catch(()=>{});
   // Brief merge system
   await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS brief_content JSONB`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS brief_started_at TIMESTAMPTZ`).catch(()=>{});
@@ -29020,6 +29212,17 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
       <!-- Results -->
       <div id="cbResult" class="cb-result">
         <div class="cb-stat-row" id="cbStatRow"></div>
+        <!-- Manual AIO input -->
+        <div id="cbAioManualWrap" style="margin:0 0 14px;padding:10px 12px;background:#0a0e14;border:1px solid #1f2937;border-radius:8px;">
+          <div style="font-size:10px;font-weight:700;color:#f59e0b;margin-bottom:4px;">&#x1F50D; Google AI Overview (manual)</div>
+          <div style="font-size:10px;color:#6b7280;margin-bottom:6px;">Paste the AI Overview text from Google. Empty = no AIO. We auto-detect if your page is cited.</div>
+          <textarea id="cbAioManualInput" style="width:100%;min-height:60px;background:#111827;color:#e5e7eb;border:1px solid #374151;border-radius:6px;padding:6px 8px;font-size:11px;font-family:inherit;resize:vertical;" placeholder="Paste Google AI Overview text here..."></textarea>
+          <div style="display:flex;gap:6px;margin-top:6px;align-items:center;">
+            <button onclick="saveCbAioManual()" style="background:#f59e0b;color:#000;border:none;border-radius:4px;padding:4px 12px;font-size:10px;font-weight:700;cursor:pointer;">Save AIO</button>
+            <button onclick="clearCbAioManual()" style="background:#374151;color:#9ca3af;border:none;border-radius:4px;padding:4px 12px;font-size:10px;cursor:pointer;">Clear</button>
+            <span id="cbAioManualStatus" style="font-size:10px;color:#6b7280;"></span>
+          </div>
+        </div>
         <!-- GSC section -->
         <div id="cbGscSection" style="display:none;margin-bottom:14px;">
           <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;cursor:pointer;" onclick="toggleGscPanel()">
@@ -30539,6 +30742,7 @@ function _buildBriefData(p) {
     _gsc_enabled: GSC_ENABLED || (p.gsc_clicks != null) || (p.gsc_impressions != null) || (p.gsc_position != null),
     aio_text: p.ai_google_overview_text || '',
     aio_found: !!p.ai_google_overview_found,
+    aio_manual_text: p.aio_manual_text || '',
     perp_excerpt: p.ai_perplexity_answer_excerpt || '',
     google_competitors: p.google_competitors || null,
     perp_competitors: p.ai_perplexity_competitors || null,
@@ -32275,6 +32479,30 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
   }
 
   // Show saved brief instantly \\u2014 no animation, immediate display
+  function saveCbAioManual() {
+    var pageId = _currentBriefPageId;
+    if (!pageId) return;
+    var ta = document.getElementById('cbAioManualInput');
+    var st = document.getElementById('cbAioManualStatus');
+    if (!ta) return;
+    var text = ta.value.trim();
+    if (st) { st.textContent = 'Saving...'; st.style.color = '#f59e0b'; }
+    fetch('/api/tracker-client/' + TOKEN + '/page/' + pageId + '/aio-manual', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ text: text })
+    }).then(function(r){ return r.json(); }).then(function(d){
+      if (d.success) {
+        if (st) { st.textContent = d.cleared ? 'Cleared \\u2014 rescan to update badge' : (d.aio_cited ? '\\u2705 AIO found + CITED' : '\\u26a0\\ufe0f AIO found, not cited'); st.style.color = d.aio_cited ? '#4ade80' : '#f59e0b'; }
+        if (_lastBriefData[pageId]) _lastBriefData[pageId].aio_manual_text = text;
+        loadPages();
+      } else if (st) { st.textContent = d.error || 'Error'; st.style.color = '#f87171'; }
+    }).catch(function(){ if (st) { st.textContent = 'Network error'; st.style.color = '#f87171'; } });
+  }
+  function clearCbAioManual() {
+    var ta = document.getElementById('cbAioManualInput');
+    if (ta) ta.value = '';
+    saveCbAioManual();
+  }
   function viewLastBrief(pageId) {
     var data = _lastBriefData[pageId];
     if (!data) {
@@ -32290,6 +32518,12 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
 
     _briefIsOpen = true;
     _currentBriefPageId = pageId;
+
+    // Populate manual AIO textarea from stored value
+    var aioIn = document.getElementById('cbAioManualInput');
+    var aioSt = document.getElementById('cbAioManualStatus');
+    if (aioIn) aioIn.value = data.aio_manual_text || '';
+    if (aioSt) aioSt.textContent = '';
 
     // Show card immediately
     card.classList.remove('hide');
