@@ -40400,14 +40400,27 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
           // Store the actual answer text (not just cited/not) — real evidence for the transparency
           // panel, so a viewer can SEE what Perplexity literally said, not just trust a badge.
           snapshot.ai_perplexity_answer_excerpt = answerText.substring(0, 400);
-          const cited = citations.some(function(c){ return (c||'').replace(/^https?:\/\//, '').startsWith(domain); });
-          const mentioned = !cited && answerText.includes(domain);
-          snapshot.ai_perplexity_cited = cited;
-          if(cited) {
+          // Normalize the scanned page URL for comparison
+          var _pageNorm = '';
+          try { var _pu = new URL(page.url); _pageNorm = _pu.hostname.replace(/^www\./,'') + _pu.pathname.replace(/\/+$/,''); } catch(e) { _pageNorm = domain; }
+          // Check if THIS SPECIFIC PAGE is cited (not just the domain)
+          const exactCited = citations.some(function(c){
+            try { var _cu = new URL(c); var _cn = _cu.hostname.replace(/^www\./,'') + _cu.pathname.replace(/\/+$/,''); return _cn === _pageNorm; } catch(e) { return false; }
+          });
+          // Also check if ANY page on the domain is cited (useful context)
+          const domainCited = citations.some(function(c){ return (c||'').replace(/^https?:\/\//, '').startsWith(domain); });
+          const mentioned = !domainCited && answerText.includes(domain);
+          snapshot.ai_perplexity_cited = exactCited;
+          if(exactCited) {
             const match = citations.find(function(c){ return (c||'').includes(domain); });
             var citedPath = match;
             try { citedPath = new URL(match).pathname; } catch(e) {}
             snapshot.ai_perplexity_text = 'Cited: ' + domain + citedPath;
+          } else if(domainCited) {
+            const match = citations.find(function(c){ return (c||'').includes(domain); });
+            var otherPath = match;
+            try { otherPath = new URL(match).pathname; } catch(e) {}
+            snapshot.ai_perplexity_text = 'Domain cited but different page: ' + domain + otherPath;
           } else if(mentioned) {
             snapshot.ai_perplexity_text = 'Mentioned in answer but not formally cited as source';
           }
@@ -40416,7 +40429,7 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
           snapshot.ai_perplexity_competitors = citations
             .filter(function(c){ return c && !(c.replace(/^https?:\/\//, '').startsWith(domain)); })
             .slice(0, 10);
-          const label = cited ? '✅ Cited (' + citations.length + ' citations)' : ('❌ Not cited (' + citations.length + ' citations found)');
+          const label = exactCited ? '✅ Cited (' + citations.length + ' citations)' : (domainCited ? '⚠️ Domain cited, not this page (' + citations.length + ')' : ('❌ Not cited (' + citations.length + ' citations found)'));
           _trSetStep(pageId, 'perplexity', 'done', label);
           // Cache Perplexity result
           _cacheSet('perplexity:tracker:' + keyword.toLowerCase().trim() + ':' + domain,
