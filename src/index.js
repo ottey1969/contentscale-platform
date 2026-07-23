@@ -235,7 +235,7 @@ async function detectBestGeminiModel(apiKey) {
   if (!apiKey) return;
   // Priority: cheapest postpay models first (billing enabled account)
   // gemini-2.0-flash = $0.075/1M tokens — best price/quality for postpay
-  const PRIORITY = ['gemini-2.5-flash-lite', 'gemini-2.5-flash', 'gemini-2.5-pro'];
+  const PRIORITY = ['gemini-3.5-flash', 'gemini-3.5-flash-lite', 'gemini-3.1-flash-lite', 'gemini-2.5-flash'];
   try {
     const resp = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`,
@@ -279,7 +279,7 @@ async function callGeminiWithFallback(apiKey, body, primaryModel, fallbackModel,
 
   const tryModel = async (model, attemptNum) => {
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 45000);
+    const timer = setTimeout(() => controller.abort(), 90000);
     try {
       const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
         method: 'POST',
@@ -293,7 +293,7 @@ async function callGeminiWithFallback(apiKey, body, primaryModel, fallbackModel,
     } catch (fetchErr) {
       clearTimeout(timer);
       if (fetchErr.name === 'AbortError') {
-        return { ok: false, status: 408, data: {}, modelUsed: model, errorMessage: 'Gemini request timed out after 45s' };
+        return { ok: false, status: 408, data: {}, modelUsed: model, errorMessage: 'Gemini request timed out after 90s' };
       }
       return { ok: false, status: 0, data: {}, modelUsed: model, errorMessage: fetchErr.message || 'Network error' };
     }
