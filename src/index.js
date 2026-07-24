@@ -1,4 +1,4 @@
-console.log('=== CONTENTSCALE BOOT ' + new Date().toISOString() + ' v2026-07-08-possible-prioritized-shortcut | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON | possibleThreshold=20impr | shortcutPrioritized=v2 | gscAutoFetchRemoved=true | linkCheckActive=true | wholeSiteWipeGuard=true | gscAutoFetchRestored=true | reminderOffFix=true | claudeRemoved=true | bingWebmaster=true | competitorPanel=true | zeroResultFix=true | pagesRefreshFix=true | recheckButton=true | provenScanStrip=true | provenScanState=true | scanAllProven=true | doEverythingBtn=true | panelOrderFix=true | workflowGuide=true | preScanGuard=true | scanAllGuard=true | earlyGuard=true | emptyStateTeaser=true | provenScopeFix=true | numberedButtons=true | clearerButtons=true | scanAnimFix=true | promptClaudeCleanup=true | bonusTip=true | realProvenContext=true | competitorContext=true | unifiedBrief=true | diagnosticFirst=true | fullCompetitorBreakdown=true | serpSpyV3=true | transparencyBlock=true | emailsPausedToggle=true | competitorDedup=true | provenScanDebug=true | serializedScans=true | claudeCleanupV2=true | mergeClaudeStrip=true | visualTransparency=true | aboveFoldPriority=true | competitorComparisonTable=true | redGreenTracking=true | aioExplicitState=true | perpCopilotState=true | realMergePromptFixed=true | briefContextDebug=true | forceRescanBypass=true | gscPosFallback=true | cannibalDedup=true | gscAccessGated=true | gapConfirmShown=true | noPlaceholders=true | rowNumContrast=true | codeCannibalDedup=true | provenDebugRemoved=true | broaderCannibalDedup=true | competitorGapFallback=true | competitorPrevSnapFallback=true | hubSpokeDedup=true | compGapRegexBroadened=true | gapFixLabelFallback=true | geminiProForBriefs=true | timeoutBudgetFixed=true | perAttemptTimeout45s=true | revertToFlashLite=true | tokenLimitDoubled=true | urlNormFix=true | impactFieldChecked=true | broaderHubPattern=true | cannibalContextRemovedFromGSC=true | scanStateDerivedFromDB=true | boardBriefRestyled=true | liveWallBriefModal=true | modalScopeFix=true | cardTransparency=true | CLAUDE-FIX-2307=true | CLAUDE-FIX-2307B-specquote=true | CLAUDE-FIX-2307C-pwboard=true | CLAUDE-FIX-2307D-typefilter=true | CLAUDE-FIX-2307E-scanneraio=true | CLAUDE-FIX-2307F-urlstrip=true | CLAUDE-FIX-2307G-aiobeforeScan=true | CLAUDE-FIX-2307H-aioInPrompt=true | CLAUDE-FIX-2307I-escHtml=true | CLAUDE-FIX-2307J-escAlias-noStale=true | CLAUDE-FIX-2407A-perpCitedConsistency=true | CLAUDE-FIX-2407B-perpCacheBug=true | CLAUDE-FIX-2407C-domainVsPageNuance=true | CLAUDE-FIX-2407D-wallModalNoReshuffle=true | CLAUDE-FIX-2407E-buildBriefSafetyNet=true | CLAUDE-FIX-2407F-modalFullText=true | CLAUDE-FIX-2407G-aioPasteModal=true | CLAUDE-FIX-2407H-aioDefinitionView=true | CLAUDE-FIX-2407I-aioBlueprintMining=true | CLAUDE-FIX-2407J-aioReferences=true | CLAUDE-FIX-2407K-aioCitationGap=true | CLAUDE-FIX-2407L-compGapTableAllModals=true | CLAUDE-FIX-2407M-honestAioManualOnly=true | CLAUDE-FIX-2407N-regexEscapeInTemplate=true | CLAUDE-FIX-2507A-jsonRepair-mergeTokens4096=true | CLAUDE-FIX-2507B-cardButtonsWorkflowOrder=true | CLAUDE-FIX-2507C-cardButtonsPillColors=true | CLAUDE-FIX-2507D-aioReloadFull-limit8000=true | CLAUDE-FIX-2507E-briefModalTransparency=true | CLAUDE-FIX-2507F-aioGapTable4col=true | CLAUDE-FIX-2507G-htmlScanTickCycle=true | CLAUDE-FIX-2507H-briefViewedPersisted=true | CLAUDE-FIX-2507I-fixCardRenderVarInExpr=true | CLAUDE-FIX-2507J-briefsUnified-manualAioGap=true ===');
+console.log('=== CONTENTSCALE BOOT ' + new Date().toISOString() + ' v2026-07-08-possible-prioritized-shortcut | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON | possibleThreshold=20impr | shortcutPrioritized=v2 | gscAutoFetchRemoved=true | linkCheckActive=true | wholeSiteWipeGuard=true | gscAutoFetchRestored=true | reminderOffFix=true | claudeRemoved=true | bingWebmaster=true | competitorPanel=true | zeroResultFix=true | pagesRefreshFix=true | recheckButton=true | provenScanStrip=true | provenScanState=true | scanAllProven=true | doEverythingBtn=true | panelOrderFix=true | workflowGuide=true | preScanGuard=true | scanAllGuard=true | earlyGuard=true | emptyStateTeaser=true | provenScopeFix=true | numberedButtons=true | clearerButtons=true | scanAnimFix=true | promptClaudeCleanup=true | bonusTip=true | realProvenContext=true | competitorContext=true | unifiedBrief=true | diagnosticFirst=true | fullCompetitorBreakdown=true | serpSpyV3=true | transparencyBlock=true | emailsPausedToggle=true | competitorDedup=true | provenScanDebug=true | serializedScans=true | claudeCleanupV2=true | mergeClaudeStrip=true | visualTransparency=true | aboveFoldPriority=true | competitorComparisonTable=true | redGreenTracking=true | aioExplicitState=true | perpCopilotState=true | realMergePromptFixed=true | briefContextDebug=true | forceRescanBypass=true | gscPosFallback=true | cannibalDedup=true | gscAccessGated=true | gapConfirmShown=true | noPlaceholders=true | rowNumContrast=true | codeCannibalDedup=true | provenDebugRemoved=true | broaderCannibalDedup=true | competitorGapFallback=true | competitorPrevSnapFallback=true | hubSpokeDedup=true | compGapRegexBroadened=true | gapFixLabelFallback=true | geminiProForBriefs=true | timeoutBudgetFixed=true | perAttemptTimeout45s=true | revertToFlashLite=true | tokenLimitDoubled=true | urlNormFix=true | impactFieldChecked=true | broaderHubPattern=true | cannibalContextRemovedFromGSC=true | scanStateDerivedFromDB=true | boardBriefRestyled=true | liveWallBriefModal=true | modalScopeFix=true | cardTransparency=true | CLAUDE-FIX-2307=true | CLAUDE-FIX-2307B-specquote=true | CLAUDE-FIX-2307C-pwboard=true | CLAUDE-FIX-2307D-typefilter=true | CLAUDE-FIX-2307E-scanneraio=true | CLAUDE-FIX-2307F-urlstrip=true | CLAUDE-FIX-2307G-aiobeforeScan=true | CLAUDE-FIX-2307H-aioInPrompt=true | CLAUDE-FIX-2307I-escHtml=true | CLAUDE-FIX-2307J-escAlias-noStale=true | CLAUDE-FIX-2407A-perpCitedConsistency=true | CLAUDE-FIX-2407B-perpCacheBug=true | CLAUDE-FIX-2407C-domainVsPageNuance=true | CLAUDE-FIX-2407D-wallModalNoReshuffle=true | CLAUDE-FIX-2407E-buildBriefSafetyNet=true | CLAUDE-FIX-2407F-modalFullText=true | CLAUDE-FIX-2407G-aioPasteModal=true | CLAUDE-FIX-2407H-aioDefinitionView=true | CLAUDE-FIX-2407I-aioBlueprintMining=true | CLAUDE-FIX-2407J-aioReferences=true | CLAUDE-FIX-2407K-aioCitationGap=true | CLAUDE-FIX-2407L-compGapTableAllModals=true | CLAUDE-FIX-2407M-honestAioManualOnly=true | CLAUDE-FIX-2407N-regexEscapeInTemplate=true | CLAUDE-FIX-2507A-jsonRepair-mergeTokens4096=true | CLAUDE-FIX-2507B-cardButtonsWorkflowOrder=true | CLAUDE-FIX-2507C-cardButtonsPillColors=true | CLAUDE-FIX-2507D-aioReloadFull-limit8000=true | CLAUDE-FIX-2507E-briefModalTransparency=true | CLAUDE-FIX-2507F-aioGapTable4col=true | CLAUDE-FIX-2507G-htmlScanTickCycle=true | CLAUDE-FIX-2507H-briefViewedPersisted=true | CLAUDE-FIX-2507I-fixCardRenderVarInExpr=true | CLAUDE-FIX-2507J-briefsUnified-manualAioGap=true | CLAUDE-FIX-2507K-gscCompTableInTracker=true | CLAUDE-FIX-2507L-trackerSplitSections=true | CLAUDE-FIX-2507M-copyBriefClarity=true ===');
 
 // Repair common LLM-JSON defects (raw newlines/tabs inside strings, trailing commas)
 function _repairJsonG(str){
@@ -30988,38 +30988,118 @@ function copyBrief(pageId) {
     if (p.gsc_impressions != null) lines.push('- Impressions: ' + p.gsc_impressions);
     if (p.gsc_position != null) lines.push('- Position: ' + parseFloat(p.gsc_position).toFixed(1));
   }
+  // ── Helpers to make the external brief clear for BOTH a specialist and an AI ──
+  // Strip stray HTML tags from prose fields (keep real copy-paste HTML only inside the WRITE block).
+  var _stripTags = function(t){ return String(t||'').replace(/<[^>]+>/g, ' ').replace(/[ \\t]{2,}/g,' ').trim(); };
+  // Split a raw action field into labelled parts. Many actions arrive as one blob containing
+  // "GOOGLE SEARCH — top results: ... YOUR GAP: ... FIX: <html>". Break it into WHAT/CONTEXT/WRITE.
+  var _parseAction = function(raw){
+    var t = String(raw||'').trim();
+    var out = { what:'', context:'', write:'' };
+    var up = t.toUpperCase();
+    // FIX / READY-TO-PASTE marks the copy-paste HTML section (string search, no regex)
+    var fixIdx = -1, fixLen = 0;
+    var fixMarks = ['READY-TO-PASTE SECTION', 'READY TO PASTE SECTION', 'READY-TO-PASTE', 'FIX:', 'FIX —', 'FIX -'];
+    for (var fi=0; fi<fixMarks.length; fi++){ var mi = up.indexOf(fixMarks[fi]); if (mi>=0){ fixIdx=mi; fixLen=fixMarks[fi].length; break; } }
+    if (fixIdx>=0){
+      var after = t.slice(fixIdx+fixLen);
+      // trim leading separators/dashes/colons/spaces
+      var _seps = [':','-',String.fromCharCode(8212),' ',String.fromCharCode(10),String.fromCharCode(9)];
+      while (after.length && _seps.indexOf(after.charAt(0))>=0) after = after.slice(1);
+      out.write = after.trim();
+      t = t.slice(0, fixIdx).trim();
+      up = t.toUpperCase();
+    }
+    // YOUR GAP / AI OVERVIEW / GOOGLE SEARCH context markers -> context
+    var ctxMarks = ['YOUR GAP', 'AI OVERVIEW', 'AI AGGREGATION', 'GOOGLE SEARCH'];
+    var ctxIdx = -1;
+    for (var ci=0; ci<ctxMarks.length; ci++){ var xi = up.indexOf(ctxMarks[ci]); if (xi>=0 && (ctxIdx<0 || xi<ctxIdx)) ctxIdx = xi; }
+    if (ctxIdx>=0){
+      out.what = _stripTags(t.slice(0, ctxIdx)).trim();
+      out.context = _stripTags(t.slice(ctxIdx)).trim();
+    } else {
+      out.what = _stripTags(t);
+    }
+    return out;
+  };
+  var _emitAction = function(i, r, sysLabel){
+    var pri = String(r.priority||r.p||'').toUpperCase();
+    var title = _stripTags(r.title||r.t||'');
+    var sys = sysLabel || (r.system||r.sys||'');
+    lines.push((i) + '. [' + pri + ']' + (sys?(' ['+sys+']'):'') + ' ' + title);
+    var parts = _parseAction(r.action||r.passage||'');
+    if (parts.what) lines.push('   WHAT: ' + parts.what);
+    if (r.where) lines.push('   WHERE: ' + _stripTags(r.where));
+    if (parts.context) lines.push('   CONTEXT: ' + parts.context);
+    if (parts.write) { lines.push('   WRITE (copy-paste):'); parts.write.split(String.fromCharCode(10)).forEach(function(ln){ if(ln.trim()) lines.push('     ' + ln.trim()); }); }
+    // Competitor comparison table as readable plain text (was missing from the copy brief)
+    var ct = r.comparison_table; if (typeof ct === 'string'){ try { ct = JSON.parse(ct); } catch(e){ ct=null; } }
+    if (Array.isArray(ct) && ct.length) {
+      lines.push('   COMPETITOR GAP TABLE:');
+      ct.forEach(function(row){
+        lines.push('     \u2022 ' + (row.competitor||'') + ' \u2014 does well: ' + _stripTags(row.what_they_do_well||''));
+        lines.push('       our gap: ' + _stripTags(row.our_gap||'') + ' | do: ' + _stripTags(row.what_to_do||''));
+      });
+    }
+    var why = _stripTags(r.expected_impact||r.impact||r.why||'');
+    if (why) lines.push('   WHY: ' + why);
+  };
+  // De-duplicate the near-identical Competitor Gap action that appears in BOTH the AIO and GSC
+  // briefs: if an AIO item and a GSC item share a competitor-gap signature, keep the AIO one and
+  // tag it as covering both, and drop the GSC duplicate.
+  var _sig = function(x){ return _stripTags((x.title||'') ).toLowerCase().replace(/[^a-z0-9]+/g,' ').split(' ').filter(function(w){ return w.length>3; }).slice(0,4).join(' '); };
+  var _compGapish = function(x){ var t=((x.system||x.sys||'')+' '+(x.title||'')).toLowerCase(); return /competitor|content gap/.test(t) || (Array.isArray(x.comparison_table)&&x.comparison_table.length); };
+
   var _isInt3 = function(x){ var s=(x.system||x.sys||'').toLowerCase(); return s.indexOf('internal')>=0; };
   var _aio3 = (Array.isArray(recs)?recs:[]).filter(function(x){ return !_isInt3(x); });
   var _link3 = (Array.isArray(recs)?recs:[]).filter(_isInt3);
-  var _gsc3 = (Array.isArray(d.gsc_brief)&&d.gsc_brief.length)?d.gsc_brief:(Array.isArray(p.gsc_brief)?p.gsc_brief:[]);
+  var _gsc3raw = (Array.isArray(d.gsc_brief)&&d.gsc_brief.length)?d.gsc_brief:(Array.isArray(p.gsc_brief)?p.gsc_brief:[]);
   var _src3 = (Array.isArray(d.source_suggestions)&&d.source_suggestions.length)?d.source_suggestions:(Array.isArray(p.source_suggestions)?p.source_suggestions:[]);
 
-  lines.push('', '=== AIO BRIEF ===');
-  if (_aio3.length) { _aio3.forEach(function(r, i) {
-    lines.push((i+1) + '. [' + (r.priority||r.p||'').toUpperCase() + '] ' + (r.title||r.t||'') + ((r.system||r.sys)?' ('+(r.system||r.sys)+')':''));
-    if (r.action||r.passage) lines.push('   ' + (r.action||r.passage));
-    if (r.expected_impact||r.impact) lines.push('   Impact: ' + (r.expected_impact||r.impact));
-  }); } else { lines.push('(no citation actions)'); }
+  // Drop GSC items whose competitor-gap signature already appears in the AIO brief.
+  var _aioSigs = {};
+  _aio3.forEach(function(x){ if (_compGapish(x)) { var g=_sig(x); if(g) _aioSigs[g]=true; } });
+  var _dupNote = false;
+  var _gsc3 = _gsc3raw.filter(function(g){
+    if (_compGapish(g)) { var sig=_sig(g); if (sig && _aioSigs[sig]) { _dupNote = true; return false; } }
+    return true;
+  });
 
-  lines.push('', '=== GSC BRIEF ===');
+  lines.push('', '=== AIO BRIEF (AI citations: Google AI Overview, Perplexity, Copilot) ===');
+  if (_aio3.length) { _aio3.forEach(function(r, i) { _emitAction(i+1, r, r.system||r.sys||''); lines.push(''); }); }
+  else { lines.push('(no citation actions)'); }
+
+  lines.push('=== GSC BRIEF (traditional Google ranking) ===');
+  if (_dupNote) lines.push('(Competitor Content Gap is covered once in the AIO brief above — it improves both AI citations and ranking.)', '');
   if (_gsc3.length) { _gsc3.forEach(function(g, i) {
-    lines.push((i+1) + '. [' + (g.priority||'').toUpperCase() + '] ' + (g.title||''));
-    if (g.trigger) lines.push('   Signal: ' + g.trigger);
-    if (g.action) lines.push('   ' + g.action);
-    if (g.expected_impact) lines.push('   Impact: ' + g.expected_impact);
+    var _title = _stripTags(g.title||'');
+    var pri = String(g.priority||'').toUpperCase();
+    lines.push((i+1) + '. [' + pri + '] ' + _title);
+    if (g.trigger) lines.push('   SIGNAL: ' + _stripTags(g.trigger));
+    var parts = _parseAction(g.action||'');
+    if (parts.what) lines.push('   WHAT: ' + parts.what);
+    if (parts.context) lines.push('   CONTEXT: ' + parts.context);
+    if (parts.write) { lines.push('   WRITE (copy-paste):'); parts.write.split(String.fromCharCode(10)).forEach(function(ln){ if(ln.trim()) lines.push('     ' + ln.trim()); }); }
+    var ct = g.comparison_table; if (typeof ct === 'string'){ try { ct = JSON.parse(ct); } catch(e){ ct=null; } }
+    if (Array.isArray(ct) && ct.length) { lines.push('   COMPETITOR GAP TABLE:'); ct.forEach(function(row){ lines.push('     \u2022 ' + (row.competitor||'') + ' \u2014 does well: ' + _stripTags(row.what_they_do_well||'')); lines.push('       our gap: ' + _stripTags(row.our_gap||'') + ' | do: ' + _stripTags(row.what_to_do||'')); }); }
+    var why = _stripTags(g.expected_impact||g.impact||'');
+    if (why) lines.push('   WHY: ' + why);
+    lines.push('');
   }); } else { lines.push('(no GSC ranking actions)'); }
 
-  lines.push('', '=== SOURCE BRIEF ===');
-  if (_src3.length) { _src3.forEach(function(s, i) {
-    lines.push((i+1) + '. [' + (s.priority||'medium').toUpperCase() + '] ' + (s.claim||'Unverified claim'));
-    if (s.why) lines.push('   Issue: ' + s.why);
-    if (s.sources && s.sources.length) lines.push('   Suggested sources: ' + s.sources.map(function(x){ return x.name||x.url; }).join(', '));
+  lines.push('=== SOURCE BRIEF (claims to verify) ===');
+  if (_src3.length) { _src3.forEach(function(s2, i) {
+    lines.push((i+1) + '. [' + (s2.priority||'medium').toUpperCase() + '] ' + _stripTags(s2.claim||'Unverified claim'));
+    if (s2.why) lines.push('   ISSUE: ' + _stripTags(s2.why));
+    if (s2.sources && s2.sources.length) lines.push('   SUGGESTED SOURCES: ' + s2.sources.map(function(x){ return x.name||x.url; }).join(', '));
   }); } else { lines.push('(no unverified claims)'); }
 
   lines.push('', '=== INTERNAL LINKING ===');
   if (_link3.length) { _link3.forEach(function(r, i) {
-    lines.push((i+1) + '. ' + (r.title||'Internal link'));
-    if (r.action||r.passage) lines.push('   ' + (r.action||r.passage));
+    lines.push((i+1) + '. ' + _stripTags(r.title||'Internal link'));
+    var parts = _parseAction(r.action||r.passage||'');
+    if (parts.what) lines.push('   ' + parts.what);
+    if (parts.write) { lines.push('   WRITE (copy-paste):'); parts.write.split(String.fromCharCode(10)).forEach(function(ln){ if(ln.trim()) lines.push('     ' + ln.trim()); }); }
   }); } else { lines.push('(no internal link suggestions)'); }
   lines.push('', '---', 'Generated by ContentScale AI Citations Tracker');
   var text = lines.join(_n);
@@ -32287,27 +32367,16 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
     // Recommendations \\u2014 Citation Brief + GSC Brief combined
     var passages = data.passages || data.recommendations;
     var passDiv = document.getElementById('cbPassages');
-    var allItems = [];
-    if (passages && Array.isArray(passages) && passages.length) {
-      allItems = allItems.concat(passages);
-    }
+    // Split like the TV modal: AI-citation actions in one section, GSC ranking actions in another.
+    var aiItems = (passages && Array.isArray(passages)) ? passages.slice() : [];
     var gscBriefItems = data.gsc_brief || [];
     var isGscEnabled = GSC_ENABLED || data._gsc_enabled || !!(data.gsc_clicks || data.gsc_impressions || data.gsc_position);
-    if (isGscEnabled && gscBriefItems.length) {
-      gscBriefItems.forEach(function(g) {
-        allItems.push({
-          title: g.title || '',
-          priority: g.priority || 'medium',
-          system: 'GSC Ranking',
-          action: g.action || '',
-          expected_impact: g.expected_impact || '',
-          trigger: g.trigger || '',
-          effort: g.effort || ''
-        });
-      });
-    }
+    var gscItems = (isGscEnabled && Array.isArray(gscBriefItems)) ? gscBriefItems.map(function(g){
+      return { title: g.title || '', priority: g.priority || 'medium', system: 'GSC Ranking', action: g.action || '', expected_impact: g.expected_impact || '', trigger: g.trigger || '', effort: g.effort || '', comparison_table: g.comparison_table || null, aio_citation_gap: g.aio_citation_gap || null };
+    }) : [];
+    var allItems = aiItems.concat(gscItems); // kept for downstream checks (cannibal/compGap flags)
 
-    if (allItems.length) {
+    if (aiItems.length || gscItems.length) {
       var priOrder = { high: 0, h: 0, medium: 1, med: 1, m: 1, low: 2, l: 2 };
       allItems.sort(function(a, b) {
         var pa = (a.priority || a.p || 'low').toLowerCase();
@@ -32412,8 +32481,9 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
           _transparencyHtml += '</div>';
         }
       } catch(e) {}
-      passDiv.innerHTML = _transparencyHtml + '<div style="font-size:11px;font-weight:800;color:#7c3aed;text-transform:uppercase;letter-spacing:.08em;margin:18px 0 14px;">\\u2728 What to do next \\u2014 ranked by impact</div>';
-      allItems.slice(0, 7).forEach(function(p, idx) {
+      passDiv.innerHTML = _transparencyHtml;
+      // Reusable per-card renderer (identical markup for both sections).
+      function _renderBriefCard(p, idx) {
         setTimeout(function() {
           var pri = (p.priority || p.p || 'low').toLowerCase();
           var priKey = (pri === 'high' || pri === 'h') ? 'high' : (pri === 'medium' || pri === 'med' || pri === 'm') ? 'medium' : 'low';
@@ -32469,7 +32539,23 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
             }
           } catch(e) {}
         }, idx * 300);
-      });
+      }
+      function _sectionHeader(txt, color) {
+        var hd = document.createElement('div');
+        hd.style.cssText = 'font-size:11px;font-weight:800;color:'+color+';text-transform:uppercase;letter-spacing:.08em;margin:18px 0 14px;';
+        hd.innerHTML = txt;
+        passDiv.appendChild(hd);
+      }
+      var _idxBase = 0;
+      if (aiItems.length) {
+        _sectionHeader('\\u2728 WHAT TO DO NEXT \\u2014 AI CITATIONS', '#a78bfa');
+        aiItems.slice(0, 8).forEach(function(p, i){ _renderBriefCard(p, _idxBase + i); });
+        _idxBase += Math.min(aiItems.length, 8);
+      }
+      if (gscItems.length) {
+        _sectionHeader('\\ud83d\\udcc8 GOOGLE RANKING (GSC)', '#a3e635');
+        gscItems.slice(0, 8).forEach(function(p, i){ _renderBriefCard(p, _idxBase + i); });
+      }
     } else {
       document.getElementById('cbPassages').innerHTML = '<div class="cb-passage" style="animation:soStatPop .5s ease;font-size:13px;">Your Citation Brief has been generated. Copy it below to share with your team or AI assistant.</div>';
     }
@@ -32810,7 +32896,7 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
     if (passages && Array.isArray(passages)) allItems = allItems.concat(passages);
     if (isGscEnabled && gscBriefItems.length) {
       gscBriefItems.forEach(function(g) {
-        allItems.push({ title: g.title || '', priority: g.priority || 'medium', system: 'GSC Ranking', action: g.action || '', expected_impact: g.expected_impact || '', trigger: g.trigger || '', effort: g.effort || '' });
+        allItems.push({ title: g.title || '', priority: g.priority || 'medium', system: 'GSC Ranking', action: g.action || '', expected_impact: g.expected_impact || '', trigger: g.trigger || '', effort: g.effort || '', comparison_table: g.comparison_table || null, aio_citation_gap: g.aio_citation_gap || null });
       });
     }
     var passDiv = document.getElementById('cbPassages');
