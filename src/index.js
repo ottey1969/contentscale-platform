@@ -4027,7 +4027,7 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
   // Clicking a wall card opens the complete brief: status tiles, the "what we actually
   // checked" competitor evidence, then every action in full (no 200-char truncation).
   // Deliberately has NO copy buttons — this is a read-only viewing surface.
-  function _bwCloseModal(){ var o=document.getElementById('bwModal'); if(o) o.classList.remove('on'); }
+  function _bwCloseModal(){ var o=document.getElementById('bwModal'); if(o) o.classList.remove('on'); if(_wallDirty){ _wallDirty=false; renderLiveWall(); } }
   // The whole live-wall script runs inside an IIFE, so these are NOT global by default — but the
   // card's inline onclick="_bwOpen(...)" is resolved against window. Expose them explicitly or the
   // click silently does nothing.
@@ -4063,8 +4063,8 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
           return '<div class="bwm-comp"><span class="bwm-cn">#'+(c.position||i+1)+'</span> <a href="'+_bwEscL(c.url||'#')+'" target="_blank" rel="noopener" class="bwm-cu" onclick="event.stopPropagation()">'+_bwEscL(host)+'</a>'+(c.title?(' &mdash; '+_bwEscL(String(c.title).slice(0,70))):'')+'</div>';
         }).join('');
       }
-      h += '<div class="bwm-line">Google AI Overview: '+(d.aio_text?('shown &mdash; '+_bwEscL(String(d.aio_text).slice(0,160))+'...'):'not detected for this query.')+'</div>';
-      h += '<div class="bwm-line">Perplexity: '+(d.perp_cited?(d.perp_text?('&ldquo;'+_bwEscL(String(d.perp_text).slice(0,160))+'&rdquo;'):'cited'):(d.perp_text?'mentioned in answer but not formally cited':'checked &mdash; no answer excerpt captured for this query.'))+'</div>';
+      h += '<div class="bwm-line">Google AI Overview: '+(d.aio_text?('shown &mdash; '+_bwEscL(String(d.aio_text))):'not detected for this query.')+'</div>';
+      h += '<div class="bwm-line">Perplexity: '+(d.perp_cited?(d.perp_text?('&ldquo;'+_bwEscL(String(d.perp_text))+'&rdquo;'):'cited'):(d.perp_text?'mentioned in answer but not formally cited':'checked &mdash; no answer excerpt captured for this query.'))+'</div>';
       if (pcomp.length) h += '<div class="bwm-line">Perplexity also cites ('+pcomp.length+')'+(d.perp_cited?'':' &mdash; this page not among them')+': '+_bwEscL(pcomp.slice(0,5).join(', '))+'</div>';
       h += '</div>';
     }
@@ -4151,10 +4151,15 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
     var foot = '<div class="bwc-more">&#128070; Click to see the complete brief</div>';
     return '<div class="bw-card" data-bwkey="'+_bwEscL(String(pk))+'" onclick="_bwOpen(this.dataset.bwkey)" title="Click to open the full brief">'+head+_bwChipsL(d)+_bwTransL(d)+_bwRecsL(d, isFeature?5:1)+foot+'</div>';
   }
+  var _wallDirty = false;
   function renderLiveWall(){
     var wrap = document.getElementById('bwLiveWrap');
     var el = document.getElementById('bwLive');
     if (!wrap || !el) return;
+    // If the full-brief modal is open, defer re-rendering — rebuilding the wall DOM
+    // underneath reshuffles the middle-newest columns and makes the layout jump on close.
+    var _mo = document.getElementById('bwModal');
+    if (_mo && _mo.classList.contains('on')) { _wallDirty = true; return; }
     if (!_wallBriefs.length){ wrap.style.display='none'; return; }
     wrap.style.display='block';
     var cnt = document.getElementById('bwLiveCount'); if (cnt) cnt.textContent = _wallBriefs.length + ' brief' + (_wallBriefs.length>1?'s':'') + ' - newest in the middle';
@@ -30746,6 +30751,7 @@ function _buildBriefData(p) {
     aio_found: !!p.ai_google_overview_found,
     aio_manual_text: p.aio_manual_text || '',
     perp_excerpt: p.ai_perplexity_answer_excerpt || '',
+    perp_text: p.ai_perplexity_text || '',
     google_competitors: p.google_competitors || null,
     perp_competitors: p.ai_perplexity_competitors || null,
     last_checked: p.last_checked || null,
@@ -32166,11 +32172,15 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
           } else {
             _transparencyHtml += '<div style="font-size:10px;color:#6b7280;margin-bottom:10px;">Perplexity: checked \u2014 no answer excerpt captured for this query.</div>';
           }
+          var _perpState = data.perp_text || '';
+          if (_perpState && /domain cited but different page/i.test(_perpState)) {
+            _transparencyHtml += '<div style="font-size:10px;color:#fbbf24;margin-bottom:10px;">Perplexity cites your <strong>domain</strong> \u2014 but a <strong>different page</strong>, not this one. This URL is not yet the cited source for this query.</div>';
+          }
           if (data.bing_cited !== undefined && data.bing_cited !== null) {
             _transparencyHtml += '<div style="font-size:10px;color:#9ca3af;margin-bottom:10px;">Copilot (Bing index): ' + (data.bing_cited ? '<span style="color:#4ade80;">confirmed indexed</span>' : '<span style="color:#6b7280;">not confirmed yet</span>') + ' \u2014 Copilot has no separate quotable text like AIO/Perplexity, only index presence.</div>';
           }
           if (_pc && _pc.length) {
-            _transparencyHtml += '<div style="font-size:10px;color:#9ca3af;margin-bottom:4px;font-weight:700;">Perplexity also cites (' + _pc.length + ')' + (data.ai_perplexity_cited ? '' : ', this page not among them') + ':</div>'
+            _transparencyHtml += '<div style="font-size:10px;color:#9ca3af;margin-bottom:4px;font-weight:700;">Perplexity also cites (' + _pc.length + ')' + (data.perp_cited ? '' : ', this page not among them') + ':</div>'
               + '<div style="font-size:11px;color:#cbd5e1;">' + _pc.slice(0,5).map(function(u){ try { return new URL(u).hostname.replace(/^www\\./,''); } catch(e) { return u; } }).join(', ') + '</div>';
           }
           var _hasCannibal = allItems.some(function(p){ return /cannib/i.test(p.system||''); });
@@ -32617,7 +32627,7 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
             _transparencyHtml2 += '<div style="font-size:10px;color:#9ca3af;margin-bottom:10px;">Copilot (Bing index): ' + (data.bing_cited ? '<span style="color:#4ade80;">confirmed indexed</span>' : '<span style="color:#6b7280;">not confirmed yet</span>') + ' \u2014 Copilot has no separate quotable text like AIO/Perplexity, only index presence.</div>';
           }
           if (_pc2 && _pc2.length) {
-            _transparencyHtml2 += '<div style="font-size:10px;color:#9ca3af;margin-bottom:4px;font-weight:700;">Perplexity also cites (' + _pc2.length + ')' + (data.ai_perplexity_cited ? '' : ', this page not among them') + ':</div>'
+            _transparencyHtml2 += '<div style="font-size:10px;color:#9ca3af;margin-bottom:4px;font-weight:700;">Perplexity also cites (' + _pc2.length + ')' + ((data.perp_cited || data.ai_perplexity_cited) ? '' : ', this page not among them') + ':</div>'
               + '<div style="font-size:11px;color:#cbd5e1;">' + _pc2.slice(0,5).map(function(u){ try { return new URL(u).hostname.replace(/^www\\./,''); } catch(e) { return u; } }).join(', ') + '</div>';
           }
           var _hasCannibal2 = allItems.some(function(p){ return /cannib/i.test(p.system||''); });
@@ -33646,7 +33656,29 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
       if (dot) dot.className = 'so-header-dot done';
       if (title) { title.textContent = 'Scan Complete'; title.className = 'so-header-title done'; }
       if (statusEl) { statusEl.textContent = 'Building your Citation Brief...'; statusEl.className = 'so-status complete'; }
-      // If server is still busy, show "Building brief..." instead of "Waiting"
+      // Reassure the viewer while the server finishes — the text used to freeze on
+      // "Building..." with no sign of life if the brief was slow, which read as a hang.
+      var _buildStart = Date.now();
+      if (window._soBuildTick) clearInterval(window._soBuildTick);
+      window._soBuildTick = setInterval(function(){
+        var se = document.getElementById('soStatus');
+        var ov = document.getElementById('soOverlay');
+        if (!ov || !ov.classList.contains('show')) { clearInterval(window._soBuildTick); return; }
+        var secs = Math.round((Date.now() - _buildStart)/1000);
+        if (se) se.textContent = 'Building your Citation Brief\\u2026 (' + secs + 's)';
+      }, 1000);
+      // HARD SAFETY NET: whatever happens with polling, never leave the overlay stuck.
+      // After a generous ceiling, close it and refresh so the inline brief can show.
+      if (window._soSafety) clearTimeout(window._soSafety);
+      window._soSafety = setTimeout(function(){
+        var ov = document.getElementById('soOverlay');
+        if (ov && ov.classList.contains('show')) {
+          if (window._soBuildTick) clearInterval(window._soBuildTick);
+          hideScanOverlay();
+          if (typeof loadPages === 'function') loadPages();
+          if (typeof toast === 'function') toast('Brief ready \\u2014 opening your pages', '#4ade80');
+        }
+      }, fast ? 20000 : 90000);
       // Brief opens as soon as data arrives via pollAndShowBrief
       setTimeout(function() {
         if (onComplete) onComplete();
@@ -33657,6 +33689,8 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
   function hideScanOverlay() {
     var overlay = document.getElementById('soOverlay');
     if (!overlay) return;
+    if (window._soBuildTick) { clearInterval(window._soBuildTick); window._soBuildTick = null; }
+    if (window._soSafety) { clearTimeout(window._soSafety); window._soSafety = null; }
     overlay.classList.add('hiding');
     setTimeout(function() {
       overlay.classList.remove('show');
@@ -40771,7 +40805,7 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
           _trSetStep(pageId, 'perplexity', 'done', label);
           // Cache Perplexity result
           _cacheSet('perplexity:tracker:' + keyword.toLowerCase().trim() + ':' + domain,
-            { ai_perplexity_cited: cited, ai_perplexity_found: snapshot.ai_perplexity_found, ai_perplexity_text: snapshot.ai_perplexity_text },
+            { ai_perplexity_cited: exactCited, ai_perplexity_found: snapshot.ai_perplexity_found, ai_perplexity_text: snapshot.ai_perplexity_text },
             CACHE_TTL.perplexity
           );
         } else {
