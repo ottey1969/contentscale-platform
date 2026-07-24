@@ -4034,6 +4034,13 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
   // card's inline onclick="_bwOpen(...)" is resolved against window. Expose them explicitly or the
   // click silently does nothing.
   window._bwCloseModal = _bwCloseModal;
+  function _bwToggleAio(id){
+    var f=document.getElementById(id+'_f'), s=document.getElementById(id+'_s'), b=document.getElementById(id+'_b');
+    if(!f||!s) return;
+    if(f.style.display==='none'){ f.style.display='block'; s.style.display='none'; if(b) b.textContent='\u2296 show less'; }
+    else { f.style.display='none'; s.style.display='block'; if(b) b.textContent='\u2295 show full AI Overview'; }
+  }
+  window._bwToggleAio = _bwToggleAio;
   function _bwOpen(pk){
     var d = _wallBriefs.filter(function(b){ return String(b.page_id||b.url||b.domain) === String(pk); })[0];
     if (!d) return;
@@ -4071,7 +4078,7 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
         var _aioId = 'bwmaio_' + Math.random().toString(36).slice(2,8);
         h += '<div class="bwm-line">Google AI Overview \\u2014 what it currently says (this is what your page must match or beat to get cited):'
           + '<div id="' + _aioId + '_s" style="margin-top:4px;color:#cbd5e1;font-style:italic;">' + _aioShort + '</div>'
-          + (_aioFull.length > 240 ? '<div id="' + _aioId + '_f" style="display:none;margin-top:4px;color:#cbd5e1;font-style:italic;">' + _aioFull + '</div><span onclick="event.stopPropagation();var f=document.getElementById(\\''+_aioId+'_f\\');var s=document.getElementById(\\''+_aioId+'_s\\');if(f.style.display===\\'none\\'){f.style.display=\\'block\\';s.style.display=\\'none\\';this.textContent=\\'\\u2296 show less\\';}else{f.style.display=\\'none\\';s.style.display=\\'block\\';this.textContent=\\'\\u2295 show full AI Overview\\';}" style="cursor:pointer;color:#60a5fa;font-size:10px;">\\u2295 show full AI Overview</span>' : '')
+          + (_aioFull.length > 240 ? '<div id="' + _aioId + '_f" style="display:none;margin-top:4px;color:#cbd5e1;font-style:italic;">' + _aioFull + '</div><span id="' + _aioId + '_b" onclick="event.stopPropagation();_bwToggleAio(this.id.slice(0,-2))" style="cursor:pointer;color:#60a5fa;font-size:10px;">\\u2295 show full AI Overview</span>' : '')
           + '</div>';
       } else {
         h += '<div class="bwm-line">Google AI Overview: not detected for this query.</div>';
