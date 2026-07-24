@@ -1,4 +1,4 @@
-console.log('=== CONTENTSCALE BOOT ' + new Date().toISOString() + ' v2026-07-08-possible-prioritized-shortcut | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON | possibleThreshold=20impr | shortcutPrioritized=v2 | gscAutoFetchRemoved=true | linkCheckActive=true | wholeSiteWipeGuard=true | gscAutoFetchRestored=true | reminderOffFix=true | claudeRemoved=true | bingWebmaster=true | competitorPanel=true | zeroResultFix=true | pagesRefreshFix=true | recheckButton=true | provenScanStrip=true | provenScanState=true | scanAllProven=true | doEverythingBtn=true | panelOrderFix=true | workflowGuide=true | preScanGuard=true | scanAllGuard=true | earlyGuard=true | emptyStateTeaser=true | provenScopeFix=true | numberedButtons=true | clearerButtons=true | scanAnimFix=true | promptClaudeCleanup=true | bonusTip=true | realProvenContext=true | competitorContext=true | unifiedBrief=true | diagnosticFirst=true | fullCompetitorBreakdown=true | serpSpyV3=true | transparencyBlock=true | emailsPausedToggle=true | competitorDedup=true | provenScanDebug=true | serializedScans=true | claudeCleanupV2=true | mergeClaudeStrip=true | visualTransparency=true | aboveFoldPriority=true | competitorComparisonTable=true | redGreenTracking=true | aioExplicitState=true | perpCopilotState=true | realMergePromptFixed=true | briefContextDebug=true | forceRescanBypass=true | gscPosFallback=true | cannibalDedup=true | gscAccessGated=true | gapConfirmShown=true | noPlaceholders=true | rowNumContrast=true | codeCannibalDedup=true | provenDebugRemoved=true | broaderCannibalDedup=true | competitorGapFallback=true | competitorPrevSnapFallback=true | hubSpokeDedup=true | compGapRegexBroadened=true | gapFixLabelFallback=true | geminiProForBriefs=true | timeoutBudgetFixed=true | perAttemptTimeout45s=true | revertToFlashLite=true | tokenLimitDoubled=true | urlNormFix=true | impactFieldChecked=true | broaderHubPattern=true | cannibalContextRemovedFromGSC=true | scanStateDerivedFromDB=true | boardBriefRestyled=true | liveWallBriefModal=true | modalScopeFix=true | cardTransparency=true | CLAUDE-FIX-2307=true | CLAUDE-FIX-2307B-specquote=true | CLAUDE-FIX-2307C-pwboard=true | CLAUDE-FIX-2307D-typefilter=true | CLAUDE-FIX-2307E-scanneraio=true | CLAUDE-FIX-2307F-urlstrip=true | CLAUDE-FIX-2307G-aiobeforeScan=true | CLAUDE-FIX-2307H-aioInPrompt=true | CLAUDE-FIX-2307I-escHtml=true | CLAUDE-FIX-2307J-escAlias-noStale=true ===');
+console.log('=== CONTENTSCALE BOOT ' + new Date().toISOString() + ' v2026-07-08-possible-prioritized-shortcut | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON | possibleThreshold=20impr | shortcutPrioritized=v2 | gscAutoFetchRemoved=true | linkCheckActive=true | wholeSiteWipeGuard=true | gscAutoFetchRestored=true | reminderOffFix=true | claudeRemoved=true | bingWebmaster=true | competitorPanel=true | zeroResultFix=true | pagesRefreshFix=true | recheckButton=true | provenScanStrip=true | provenScanState=true | scanAllProven=true | doEverythingBtn=true | panelOrderFix=true | workflowGuide=true | preScanGuard=true | scanAllGuard=true | earlyGuard=true | emptyStateTeaser=true | provenScopeFix=true | numberedButtons=true | clearerButtons=true | scanAnimFix=true | promptClaudeCleanup=true | bonusTip=true | realProvenContext=true | competitorContext=true | unifiedBrief=true | diagnosticFirst=true | fullCompetitorBreakdown=true | serpSpyV3=true | transparencyBlock=true | emailsPausedToggle=true | competitorDedup=true | provenScanDebug=true | serializedScans=true | claudeCleanupV2=true | mergeClaudeStrip=true | visualTransparency=true | aboveFoldPriority=true | competitorComparisonTable=true | redGreenTracking=true | aioExplicitState=true | perpCopilotState=true | realMergePromptFixed=true | briefContextDebug=true | forceRescanBypass=true | gscPosFallback=true | cannibalDedup=true | gscAccessGated=true | gapConfirmShown=true | noPlaceholders=true | rowNumContrast=true | codeCannibalDedup=true | provenDebugRemoved=true | broaderCannibalDedup=true | competitorGapFallback=true | competitorPrevSnapFallback=true | hubSpokeDedup=true | compGapRegexBroadened=true | gapFixLabelFallback=true | geminiProForBriefs=true | timeoutBudgetFixed=true | perAttemptTimeout45s=true | revertToFlashLite=true | tokenLimitDoubled=true | urlNormFix=true | impactFieldChecked=true | broaderHubPattern=true | cannibalContextRemovedFromGSC=true | scanStateDerivedFromDB=true | boardBriefRestyled=true | liveWallBriefModal=true | modalScopeFix=true | cardTransparency=true | CLAUDE-FIX-2307=true | CLAUDE-FIX-2307B-specquote=true | CLAUDE-FIX-2307C-pwboard=true | CLAUDE-FIX-2307D-typefilter=true | CLAUDE-FIX-2307E-scanneraio=true | CLAUDE-FIX-2307F-urlstrip=true | CLAUDE-FIX-2307G-aiobeforeScan=true | CLAUDE-FIX-2307H-aioInPrompt=true | CLAUDE-FIX-2307I-escHtml=true | CLAUDE-FIX-2307J-escAlias-noStale=true | CLAUDE-FIX-2407A-perpCitedConsistency=true | CLAUDE-FIX-2407B-perpCacheBug=true | CLAUDE-FIX-2407C-domainVsPageNuance=true | CLAUDE-FIX-2407D-wallModalNoReshuffle=true | CLAUDE-FIX-2407E-buildBriefSafetyNet=true | CLAUDE-FIX-2407F-modalFullText=true | CLAUDE-FIX-2407G-aioPasteModal=true ===');
 // CONTENTSCALE SERVER.JS — ELITE EDITION v4 (FIXED v3)
 // ✅ FIX v7: secondary_keywords + related_keywords auto in Analyse JSON + Execute prompt
 // ✅ FIX v7: analysis_data JSONB safe parse in execute-rewrite
@@ -29191,6 +29191,26 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
   </div>
 </div>
 
+<div class="cs-modal" id="aioPasteModal">
+  <div class="cs-modal-box" onclick="event.stopPropagation()" style="max-width:580px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+      <h3 style="font-size:15px;font-weight:800;color:#f1f5f9;">&#x1F50D; Paste Google AI Overview</h3>
+      <button onclick="hideModal('aioPasteModal')" style="background:none;border:none;color:#94a3b8;cursor:pointer;font-size:1.2rem;">&#x2715;</button>
+    </div>
+    <p style="font-size:12px;color:#6b7280;margin-bottom:6px;">Search your keyword on Google, copy the AI Overview text and paste it here <strong>before scanning</strong>. This lets the scan detect whether your page is cited in the AI Overview and tailor the brief.</p>
+    <div id="aioPasteContext" style="font-size:11px;color:#a78bfa;margin-bottom:10px;font-style:italic;"></div>
+    <textarea id="aioPasteContent" placeholder="Paste the Google AI Overview text here..." class="cs-input" rows="8" style="width:100%;font-size:12px;resize:vertical;"></textarea>
+    <div style="display:flex;gap:8px;margin-top:12px;justify-content:space-between;align-items:center;">
+      <span id="aioPasteStatus" style="font-size:11px;color:#6b7280;"></span>
+      <div style="display:flex;gap:8px;">
+        <button onclick="clearAioPaste()" class="cs-btn" style="border-color:#374151;color:#6b7280;">Clear</button>
+        <button onclick="hideModal('aioPasteModal')" class="cs-btn" style="border-color:#374151;color:#6b7280;">Cancel</button>
+        <button onclick="submitAioPaste()" class="cs-btn" style="border-color:#f59e0b;color:#fbbf24;font-weight:600;">Save AI Overview</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- &#x2550;&#x2550;&#x2550; Citation Brief Overlay &#x2550;&#x2550;&#x2550; -->
 <div id="cbOverlay" class="cb-overlay" style="display:none;">
   <div id="cbCard" class="cb-card hide">
@@ -30515,20 +30535,8 @@ function renderPages() {
       + '</div>'
       + '</div>'
       + '</div>'
-      + '<div style="margin:6px 0;padding:8px 10px;background:#0a0e14;border:1px solid #1f2937;border-radius:6px;">'
-      + '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">'
-      + '<span style="font-size:10px;font-weight:700;color:#f59e0b;">&#x1F50D; AI Overview</span>'
-      + '<span style="font-size:9px;color:#4b5563;">'
-      + (p.aio_manual_text ? '(' + p.aio_manual_text.length + ' chars saved)' : 'paste before scanning')
-      + '</span>'
-      + '</div>'
-      + '<textarea id="aioManual_' + p.id + '" style="width:100%;min-height:40px;background:#111827;color:#e5e7eb;border:1px solid #374151;border-radius:4px;padding:4px 6px;font-size:10px;font-family:inherit;resize:vertical;" placeholder="Paste Google AI Overview here before scanning...">' + (_escHtml(p.aio_manual_text || '')) + '</textarea>'
-      + '<div style="display:flex;gap:4px;margin-top:4px;align-items:center;">'
-      + '<button onclick="event.stopPropagation();savePageAio(' + p.id + ')" style="background:#f59e0b;color:#000;border:none;border-radius:3px;padding:2px 8px;font-size:9px;font-weight:700;cursor:pointer;">Save</button>'
-      + '<button onclick="event.stopPropagation();clearPageAio(' + p.id + ')" style="background:#374151;color:#6b7280;border:none;border-radius:3px;padding:2px 8px;font-size:9px;cursor:pointer;">Clear</button>'
-      + '<span id="aioStatus_' + p.id + '" style="font-size:9px;color:#4b5563;"></span>'
-      + '</div></div>'
       + '<div class="cs-card-actions" style="display:flex;gap:5px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;align-items:flex-start;">'
+      + '<button class="cs-aio-btn" onclick="event.stopPropagation();openAioPaste(' + p.id + ')" style="background:none;border:1px solid ' + (p.aio_manual_text ? '#22c55e' : '#f59e0b') + ';border-radius:5px;color:' + (p.aio_manual_text ? '#4ade80' : '#fbbf24') + ';cursor:pointer;font-size:11px;padding:3px 10px;font-weight:600;" title="' + (p.aio_manual_text ? 'AI Overview saved \\u2014 click to edit' : 'Paste the Google AI Overview before scanning') + '">\\ud83d\\udd0d ' + (p.aio_manual_text ? 'AIO \\u2713' : 'Add AIO') + '</button>'
       + ((hasBrief || _lastBriefData[p.id]) ? '<button onclick="viewLastBrief(' + p.id + ')" style="background:#7c3aed;border:1px solid #8b5cf6;border-radius:6px;color:#fff;cursor:pointer;font-size:12px;padding:6px 14px;font-weight:700;box-shadow:0 2px 10px rgba(124,58,237,.45);" title="View Citation Brief">\\ud83d\\udcc4 View Brief</button>' : '')
       + '<button class="cs-html-btn" onclick="openHtmlUpload(' + p.id + ')" style="background:none;border:1px solid ' + (htmlNeeded ? '#f59e0b' : '#374151') + ';border-radius:5px;color:' + (htmlNeeded ? '#fbbf24' : '#4b5563') + ';cursor:pointer;font-size:11px;padding:3px 10px;font-weight:' + (htmlNeeded ? '700' : '400') + ';" title="' + (htmlNeeded ? 'Paste HTML for the first scan' : 'Update HTML') + '">\\ud83d\\udccb ' + (htmlNeeded ? 'Add HTML' : 'HTML') + '</button>'
       + (lastChecked ? '<button onclick="checkPage(' + p.id + ')" style="background:none;border:1px solid #374151;border-radius:5px;color:#6b7280;cursor:pointer;font-size:11px;padding:3px 8px;" title="Rescan now">\\u21bb</button>' : '')
@@ -33582,6 +33590,56 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
     mEl.style.display = 'flex';
     setTimeout(function(){ if (cEl) cEl.focus(); }, 100);
   }
+
+  // ── AI Overview paste (modal, mirrors HTML upload) ─────────────────────────
+  var _aioPastePageId = null;
+  function openAioPaste(pageId) {
+    _aioPastePageId = pageId;
+    var _cb = document.getElementById('cbOverlay'); if (_cb) _cb.style.display = 'none';
+    var _so = document.getElementById('soOverlay'); if (_so) { _so.classList.remove('show'); _so.style.display = ''; }
+    _briefIsOpen = false;
+    var page = (_pages||[]).find(function(p){ return p.id == pageId; }) || {};
+    var mEl = document.getElementById('aioPasteModal');
+    if (!mEl) { toast('AI Overview panel not available', '#f87171'); return; }
+    var ctx = document.getElementById('aioPasteContext');
+    var ta = document.getElementById('aioPasteContent');
+    var st = document.getElementById('aioPasteStatus');
+    var kw = page.keyword || page.gsc_keyword || '';
+    if (ctx) ctx.innerHTML = kw ? ('Keyword: ' + kw.replace(/</g,'&lt;')) : '';
+    if (ta) ta.value = page.aio_manual_text || '';
+    if (st) { st.textContent = page.aio_manual_text ? (page.aio_manual_text.length + ' chars saved') : ''; st.style.color = '#6b7280'; }
+    mEl.classList.add('show');
+    mEl.style.display = 'flex';
+    setTimeout(function(){ if (ta) ta.focus(); }, 100);
+  }
+  function submitAioPaste() {
+    var pageId = _aioPastePageId;
+    if (!pageId) return;
+    var ta = document.getElementById('aioPasteContent');
+    var st = document.getElementById('aioPasteStatus');
+    var text = ta ? ta.value.trim() : '';
+    if (st) { st.textContent = 'Saving...'; st.style.color = '#f59e0b'; }
+    fetch('/api/tracker-client/' + TOKEN + '/page/' + pageId + '/aio-manual', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ text: text })
+    }).then(function(r){ return r.json(); }).then(function(d){
+      if (d.success) {
+        var p = (_pages||[]).find(function(x){ return x.id == pageId; });
+        if (p) p.aio_manual_text = d.cleared ? '' : text;
+        if (st) { st.textContent = d.cleared ? 'Cleared' : (d.aio_cited_preview ? 'Saved \\u2014 your page appears cited. Run a scan.' : 'Saved \\u2014 not cited yet. Run a scan for recommendations.'); st.style.color = d.aio_cited_preview ? '#4ade80' : '#f59e0b'; }
+        if (typeof loadPages === 'function') loadPages();
+        setTimeout(function(){ hideModal('aioPasteModal'); }, 700);
+      } else if (st) { st.textContent = d.error || 'Error'; st.style.color = '#f87171'; }
+    }).catch(function(){ if (st) { st.textContent = 'Network error'; st.style.color = '#f87171'; } });
+  }
+  function clearAioPaste() {
+    var ta = document.getElementById('aioPasteContent');
+    if (ta) ta.value = '';
+    submitAioPaste();
+  }
+  window.openAioPaste = openAioPaste;
+  window.submitAioPaste = submitAioPaste;
+  window.clearAioPaste = clearAioPaste;
   // Cinematic scan animation overlay
   function runScanAnimation(url, onComplete, fast) {
     var overlay = document.getElementById('soOverlay');
