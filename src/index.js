@@ -1,4 +1,4 @@
-console.log('=== CONTENTSCALE BOOT ' + new Date().toISOString() + ' v2026-07-08-possible-prioritized-shortcut | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON | possibleThreshold=20impr | shortcutPrioritized=v2 | gscAutoFetchRemoved=true | linkCheckActive=true | wholeSiteWipeGuard=true | gscAutoFetchRestored=true | reminderOffFix=true | claudeRemoved=true | bingWebmaster=true | competitorPanel=true | zeroResultFix=true | pagesRefreshFix=true | recheckButton=true | provenScanStrip=true | provenScanState=true | scanAllProven=true | doEverythingBtn=true | panelOrderFix=true | workflowGuide=true | preScanGuard=true | scanAllGuard=true | earlyGuard=true | emptyStateTeaser=true | provenScopeFix=true | numberedButtons=true | clearerButtons=true | scanAnimFix=true | promptClaudeCleanup=true | bonusTip=true | realProvenContext=true | competitorContext=true | unifiedBrief=true | diagnosticFirst=true | fullCompetitorBreakdown=true | serpSpyV3=true | transparencyBlock=true | emailsPausedToggle=true | competitorDedup=true | provenScanDebug=true | serializedScans=true | claudeCleanupV2=true | mergeClaudeStrip=true | visualTransparency=true | aboveFoldPriority=true | competitorComparisonTable=true | redGreenTracking=true | aioExplicitState=true | perpCopilotState=true | realMergePromptFixed=true | briefContextDebug=true | forceRescanBypass=true | gscPosFallback=true | cannibalDedup=true | gscAccessGated=true | gapConfirmShown=true | noPlaceholders=true | rowNumContrast=true | codeCannibalDedup=true | provenDebugRemoved=true | broaderCannibalDedup=true | competitorGapFallback=true | competitorPrevSnapFallback=true | hubSpokeDedup=true | compGapRegexBroadened=true | gapFixLabelFallback=true | geminiProForBriefs=true | timeoutBudgetFixed=true | perAttemptTimeout45s=true | revertToFlashLite=true | tokenLimitDoubled=true | urlNormFix=true | impactFieldChecked=true | broaderHubPattern=true | cannibalContextRemovedFromGSC=true | scanStateDerivedFromDB=true | boardBriefRestyled=true | liveWallBriefModal=true | modalScopeFix=true | cardTransparency=true | CLAUDE-FIX-2307=true | CLAUDE-FIX-2307B-specquote=true | CLAUDE-FIX-2307C-pwboard=true | CLAUDE-FIX-2307D-typefilter=true | CLAUDE-FIX-2307E-scanneraio=true | CLAUDE-FIX-2307F-urlstrip=true | CLAUDE-FIX-2307G-aiobeforeScan=true | CLAUDE-FIX-2307H-aioInPrompt=true | CLAUDE-FIX-2307I-escHtml=true | CLAUDE-FIX-2307J-escAlias-noStale=true | CLAUDE-FIX-2407A-perpCitedConsistency=true | CLAUDE-FIX-2407B-perpCacheBug=true | CLAUDE-FIX-2407C-domainVsPageNuance=true | CLAUDE-FIX-2407D-wallModalNoReshuffle=true | CLAUDE-FIX-2407E-buildBriefSafetyNet=true | CLAUDE-FIX-2407F-modalFullText=true | CLAUDE-FIX-2407G-aioPasteModal=true | CLAUDE-FIX-2407H-aioDefinitionView=true | CLAUDE-FIX-2407I-aioBlueprintMining=true | CLAUDE-FIX-2407J-aioReferences=true | CLAUDE-FIX-2407K-aioCitationGap=true | CLAUDE-FIX-2407L-compGapTableAllModals=true | CLAUDE-FIX-2407M-honestAioManualOnly=true | CLAUDE-FIX-2407N-regexEscapeInTemplate=true | CLAUDE-FIX-2507A-jsonRepair-mergeTokens4096=true | CLAUDE-FIX-2507B-cardButtonsWorkflowOrder=true | CLAUDE-FIX-2507C-cardButtonsPillColors=true | CLAUDE-FIX-2507D-aioReloadFull-limit8000=true | CLAUDE-FIX-2507E-briefModalTransparency=true | CLAUDE-FIX-2507F-aioGapTable4col=true | CLAUDE-FIX-2507G-htmlScanTickCycle=true | CLAUDE-FIX-2507H-briefViewedPersisted=true | CLAUDE-FIX-2507I-fixCardRenderVarInExpr=true ===');
+console.log('=== CONTENTSCALE BOOT ' + new Date().toISOString() + ' v2026-07-08-possible-prioritized-shortcut | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON | possibleThreshold=20impr | shortcutPrioritized=v2 | gscAutoFetchRemoved=true | linkCheckActive=true | wholeSiteWipeGuard=true | gscAutoFetchRestored=true | reminderOffFix=true | claudeRemoved=true | bingWebmaster=true | competitorPanel=true | zeroResultFix=true | pagesRefreshFix=true | recheckButton=true | provenScanStrip=true | provenScanState=true | scanAllProven=true | doEverythingBtn=true | panelOrderFix=true | workflowGuide=true | preScanGuard=true | scanAllGuard=true | earlyGuard=true | emptyStateTeaser=true | provenScopeFix=true | numberedButtons=true | clearerButtons=true | scanAnimFix=true | promptClaudeCleanup=true | bonusTip=true | realProvenContext=true | competitorContext=true | unifiedBrief=true | diagnosticFirst=true | fullCompetitorBreakdown=true | serpSpyV3=true | transparencyBlock=true | emailsPausedToggle=true | competitorDedup=true | provenScanDebug=true | serializedScans=true | claudeCleanupV2=true | mergeClaudeStrip=true | visualTransparency=true | aboveFoldPriority=true | competitorComparisonTable=true | redGreenTracking=true | aioExplicitState=true | perpCopilotState=true | realMergePromptFixed=true | briefContextDebug=true | forceRescanBypass=true | gscPosFallback=true | cannibalDedup=true | gscAccessGated=true | gapConfirmShown=true | noPlaceholders=true | rowNumContrast=true | codeCannibalDedup=true | provenDebugRemoved=true | broaderCannibalDedup=true | competitorGapFallback=true | competitorPrevSnapFallback=true | hubSpokeDedup=true | compGapRegexBroadened=true | gapFixLabelFallback=true | geminiProForBriefs=true | timeoutBudgetFixed=true | perAttemptTimeout45s=true | revertToFlashLite=true | tokenLimitDoubled=true | urlNormFix=true | impactFieldChecked=true | broaderHubPattern=true | cannibalContextRemovedFromGSC=true | scanStateDerivedFromDB=true | boardBriefRestyled=true | liveWallBriefModal=true | modalScopeFix=true | cardTransparency=true | CLAUDE-FIX-2307=true | CLAUDE-FIX-2307B-specquote=true | CLAUDE-FIX-2307C-pwboard=true | CLAUDE-FIX-2307D-typefilter=true | CLAUDE-FIX-2307E-scanneraio=true | CLAUDE-FIX-2307F-urlstrip=true | CLAUDE-FIX-2307G-aiobeforeScan=true | CLAUDE-FIX-2307H-aioInPrompt=true | CLAUDE-FIX-2307I-escHtml=true | CLAUDE-FIX-2307J-escAlias-noStale=true | CLAUDE-FIX-2407A-perpCitedConsistency=true | CLAUDE-FIX-2407B-perpCacheBug=true | CLAUDE-FIX-2407C-domainVsPageNuance=true | CLAUDE-FIX-2407D-wallModalNoReshuffle=true | CLAUDE-FIX-2407E-buildBriefSafetyNet=true | CLAUDE-FIX-2407F-modalFullText=true | CLAUDE-FIX-2407G-aioPasteModal=true | CLAUDE-FIX-2407H-aioDefinitionView=true | CLAUDE-FIX-2407I-aioBlueprintMining=true | CLAUDE-FIX-2407J-aioReferences=true | CLAUDE-FIX-2407K-aioCitationGap=true | CLAUDE-FIX-2407L-compGapTableAllModals=true | CLAUDE-FIX-2407M-honestAioManualOnly=true | CLAUDE-FIX-2407N-regexEscapeInTemplate=true | CLAUDE-FIX-2507A-jsonRepair-mergeTokens4096=true | CLAUDE-FIX-2507B-cardButtonsWorkflowOrder=true | CLAUDE-FIX-2507C-cardButtonsPillColors=true | CLAUDE-FIX-2507D-aioReloadFull-limit8000=true | CLAUDE-FIX-2507E-briefModalTransparency=true | CLAUDE-FIX-2507F-aioGapTable4col=true | CLAUDE-FIX-2507G-htmlScanTickCycle=true | CLAUDE-FIX-2507H-briefViewedPersisted=true | CLAUDE-FIX-2507I-fixCardRenderVarInExpr=true | CLAUDE-FIX-2507J-briefsUnified-manualAioGap=true ===');
 
 // Repair common LLM-JSON defects (raw newlines/tabs inside strings, trailing commas)
 function _repairJsonG(str){
@@ -2145,7 +2145,7 @@ app.get('/api/tracker-client/:token/latest-briefs', async (req, res) => {
     const cr = await pool.query('SELECT id FROM tracker_clients WHERE (token=$1 OR board_token=$1 OR lead_token=$1) AND (status IS NULL OR status != $2)', [req.params.token, 'deleted']);
     if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
     const r = await pool.query(
-      `SELECT p.id, p.url, p.keyword, p.gsc_keyword, p.brief_content, p.gsc_clicks, p.gsc_impressions, p.gsc_position,
+      `SELECT p.id, p.url, p.keyword, p.gsc_keyword, p.gsc_ctr, p.brief_content, p.gsc_clicks, p.gsc_impressions, p.gsc_position,
               p.brief_status, p.brief_claimed_by, p.brief_claimed_at, p.brief_started_at,
               p.brief_done_at, p.brief_submitted_at, p.brief_approved_at, p.brief_approved_by, p.brief_published_at,
               p.brief_deadline, p.brief_assigned_at, p.brief_rejected_at, p.brief_reject_reason, p.priority,
@@ -2153,7 +2153,7 @@ app.get('/api/tracker-client/:token/latest-briefs', async (req, res) => {
               (p.specialist_html IS NOT NULL AND p.specialist_html != '') AS has_deliverable,
               s.checked_at, s.google_position, s.ai_google_overview_cited, s.ai_perplexity_cited, s.ai_bing_cited, s.ai_bing_text, s.ai_brave_cited,
               s.score, s.recommendations, s.gsc_brief, s.source_suggestions,
-              s.google_competitors, s.ai_perplexity_competitors, s.ai_google_overview_text, s.ai_perplexity_text, s.ai_google_overview_found, s.ai_google_overview_references
+              s.google_competitors, s.ai_perplexity_competitors, s.ai_google_overview_text, s.ai_perplexity_text, s.ai_google_overview_found, s.ai_google_overview_references, s.ai_perplexity_answer_excerpt
        FROM tracker_pages p
        LEFT JOIN LATERAL (
          SELECT * FROM tracker_snapshots WHERE page_id = p.id ORDER BY checked_at DESC LIMIT 1
@@ -2187,12 +2187,20 @@ app.get('/api/tracker-client/:token/latest-briefs', async (req, res) => {
         gsc_brief: gscB,
         source_suggestions: srcB,
         gsc_clicks: p.gsc_clicks, gsc_impressions: p.gsc_impressions, gsc_position: p.gsc_position,
+        gsc_ctr: p.gsc_ctr, gsc_keyword: p.gsc_keyword || p.keyword || '',
+        _gsc_enabled: (p.gsc_clicks != null) || (p.gsc_impressions != null) || (p.gsc_position != null),
+        recommendations: items,
         // Transparency data so the board card can render the same "What we actually checked"
         // competitor block the full Citation Brief shows — same evidence, same trust, no rescan.
         competitors: _arr(p.google_competitors),
+        google_competitors: _arr(p.google_competitors),
         perp_competitors: _arr(p.ai_perplexity_competitors),
+        perp_excerpt: p.ai_perplexity_answer_excerpt || '',
         aio_references: (Array.isArray(bc.aio_references) && bc.aio_references.length) ? bc.aio_references : _arr(p.ai_google_overview_references),
         aio_citation_gap: Array.isArray(bc.aio_citation_gap) ? bc.aio_citation_gap : [],
+        ai_overview_blueprint: Array.isArray(bc.ai_overview_blueprint) ? bc.ai_overview_blueprint : [],
+        citation_targets: Array.isArray(bc.citation_targets) ? bc.citation_targets : [],
+        aio_manual: !!bc.aio_manual,
         aio_text: p.ai_google_overview_text || '',
         perp_text: p.ai_perplexity_text || '',
         aio_found: !!p.ai_google_overview_found,
@@ -4159,6 +4167,14 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
                 + '<td style="padding:6px 8px;font-size:10px;color:#cbd5e1;vertical-align:top;">'+_bwEscL(String(whatToDo).slice(0,200))+'</td>'
                 + '</tr>';
             }).join('') + '</tbody></table></div>';
+      } else if (d.aio_text || d.aio_manual) {
+        var _bpT = Array.isArray(d.ai_overview_blueprint) ? d.ai_overview_blueprint : [];
+        var _ctT = Array.isArray(d.citation_targets) ? d.citation_targets : [];
+        var _th2b = 'padding:6px 8px;font-size:9px;text-align:left;color:#93c5fd;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap;';
+        h += '<div class="bwm-line" style="margin-top:8px;"><strong style="color:#f59e0b;">Google AI Overview &mdash; how to get cited</strong> (from your pasted overview):</div>';
+        if (_bpT.length) h += '<ul style="margin:2px 0 8px;padding-left:16px;">' + _bpT.slice(0,6).map(function(b){ return '<li style="font-size:10px;color:#cbd5e1;margin-bottom:3px;">' + _bwEscL(String(b).slice(0,220)) + '</li>'; }).join('') + '</ul>';
+        if (_ctT.length) h += '<div style="overflow-x:auto;border:1px solid #1f2937;border-radius:8px;margin:4px 0 2px;"><table style="width:100%;border-collapse:collapse;background:#0d1117;"><thead><tr style="background:#161b22;"><th style="'+_th2b+'">Query it could be cited for</th><th style="'+_th2b+'">Passage to write</th></tr></thead><tbody>' + _ctT.slice(0,6).map(function(c){ return '<tr style="border-top:1px solid #1f2937;"><td style="padding:6px 8px;font-size:10px;color:#93c5fd;vertical-align:top;">' + _bwEscL(String(c.query_variant||c.query||'').slice(0,120)) + '</td><td style="padding:6px 8px;font-size:10px;color:#cbd5e1;vertical-align:top;">' + _bwEscL(String(c.passage_to_write||c.passage||'').slice(0,240)) + '</td></tr>'; }).join('') + '</tbody></table></div>';
+        if (!_bpT.length && !_ctT.length) h += '<div class="bwm-line" style="color:#6b7280;">AI Overview saved. The blueprint appears here after the next scan generates it.</div>';
       }
       h += '<div class="bwm-line">Perplexity: '+(d.perp_cited?(d.perp_text?('&ldquo;'+_bwEscL(String(d.perp_text))+'&rdquo;'):'cited'):(d.perp_text?'mentioned in answer but not formally cited':'checked &mdash; no answer excerpt captured for this query.'))+'</div>';
       if (pcomp.length) h += '<div class="bwm-line">Perplexity also cites ('+pcomp.length+')'+(d.perp_cited?'':' &mdash; this page not among them')+': '+_bwEscL(pcomp.slice(0,5).join(', '))+'</div>';
@@ -30192,6 +30208,9 @@ var _mdFilter = 'all'; // 'all' | 'todo' | 'done' — filter on the user's own p
         aio_found: !!p.ai_google_overview_found,
         aio_references: p.ai_google_overview_references || null,
         aio_citation_gap: (brief && brief.aio_citation_gap) || null,
+        ai_overview_blueprint: (brief && brief.ai_overview_blueprint) || null,
+        citation_targets: (brief && brief.citation_targets) || null,
+        aio_manual: !!(brief && brief.aio_manual),
         perp_excerpt: p.ai_perplexity_answer_excerpt || '',
         perp_text: p.ai_perplexity_text || '',
         last_checked: p.last_checked || null,
@@ -32345,6 +32364,25 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
               + '<div style="overflow-x:auto;border:1px solid #1f2937;border-radius:8px;margin-bottom:10px;"><table style="width:100%;border-collapse:collapse;background:#0d1117;">'
               + '<thead><tr style="background:#161b22;"><th style="'+_th+'">Source</th><th style="'+_th+'">What they do</th><th style="'+_th+'">Our gap</th><th style="'+_th+'">What to do</th></tr></thead>'
               + '<tbody>' + _rowsHtml + '</tbody></table></div>';
+          } else if (data.aio_text || data.aio_manual) {
+            // Manual AIO paste (no source URLs to compare): show the blueprint + citation targets —
+            // WHAT to write and WHERE to earn the citation. Same section renders in the TV modal.
+            var _bp = Array.isArray(data.ai_overview_blueprint) ? data.ai_overview_blueprint : [];
+            var _ct = Array.isArray(data.citation_targets) ? data.citation_targets : [];
+            _transparencyHtml += '<div style="font-size:10px;color:#9ca3af;margin-bottom:4px;font-weight:700;">Google AI Overview \\u2014 how to get cited (from your pasted overview):</div>';
+            if (_bp.length) {
+              _transparencyHtml += '<ul style="margin:2px 0 8px;padding-left:16px;">' + _bp.slice(0,6).map(function(b){ return '<li style="font-size:10px;color:#cbd5e1;margin-bottom:3px;">' + String(b).slice(0,220).replace(/</g,'&lt;') + '</li>'; }).join('') + '</ul>';
+            }
+            if (_ct.length) {
+              _transparencyHtml += '<div style="font-size:10px;color:#9ca3af;margin-bottom:4px;font-weight:700;">Passages to write (query \\u2192 what to say):</div>'
+                + '<div style="overflow-x:auto;border:1px solid #1f2937;border-radius:8px;margin-bottom:10px;"><table style="width:100%;border-collapse:collapse;background:#0d1117;">'
+                + '<thead><tr style="background:#161b22;"><th style="'+_th+'">Query it could be cited for</th><th style="'+_th+'">Passage to write</th></tr></thead><tbody>'
+                + _ct.slice(0,6).map(function(c){ return '<tr style="border-top:1px solid #1f2937;"><td style="padding:6px 8px;font-size:10px;color:#93c5fd;vertical-align:top;">' + String(c.query_variant||c.query||'').slice(0,120).replace(/</g,'&lt;') + '</td><td style="padding:6px 8px;font-size:10px;color:#cbd5e1;vertical-align:top;">' + String(c.passage_to_write||c.passage||'').slice(0,240).replace(/</g,'&lt;') + '</td></tr>'; }).join('')
+                + '</tbody></table></div>';
+            }
+            if (!_bp.length && !_ct.length) {
+              _transparencyHtml += '<div style="font-size:10px;color:#6b7280;margin-bottom:10px;">AI Overview saved. The blueprint appears here after the next scan generates it from your pasted overview.</div>';
+            }
           }
           if (data.perp_excerpt) {
             _transparencyHtml += '<div style="font-size:10px;color:#9ca3af;margin-bottom:4px;font-weight:700;">Perplexity\u2019s actual answer:</div>'
@@ -39243,6 +39281,17 @@ app.post('/api/tracker/pages/:id/check', verifyEngineAccess, async (req, res) =>
                       what_to_do: mine ? 'Keep this passage fresh, factual and above the fold so you keep the citation.' : 'Cover the same point on your page in a quotable 40\u201360 word passage, placed in the first 30% of the content, more directly than this source.'
                     };
                   });
+                } else if (snapshot.ai_google_overview_text) {
+                  // Manual AIO paste (no source URLs): build the AIO guidance from the brief's own
+                  // blueprint + citation targets, so the AIO section still shows WHAT to write and WHY,
+                  // identical in both the tracker and TV modals.
+                  var _bp = Array.isArray(bc && bc.ai_overview_blueprint) ? bc.ai_overview_blueprint
+                          : (Array.isArray(mergedBrief.ai_overview_blueprint) ? mergedBrief.ai_overview_blueprint : []);
+                  var _ct = Array.isArray(bc && bc.citation_targets) ? bc.citation_targets
+                          : (Array.isArray(mergedBrief.citation_targets) ? mergedBrief.citation_targets : []);
+                  mergedBrief.ai_overview_blueprint = _bp;
+                  mergedBrief.citation_targets = _ct;
+                  mergedBrief.aio_manual = true;
                 }
                 await pool.query(
                   `UPDATE tracker_pages SET brief_content=$1, brief_started_at=COALESCE(brief_started_at, NOW()), brief_check_count=$2 WHERE id=$3`,
