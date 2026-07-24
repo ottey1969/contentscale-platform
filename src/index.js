@@ -1,4 +1,4 @@
-console.log('=== CONTENTSCALE BOOT ' + new Date().toISOString() + ' v2026-07-08-possible-prioritized-shortcut | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON | possibleThreshold=20impr | shortcutPrioritized=v2 | gscAutoFetchRemoved=true | linkCheckActive=true | wholeSiteWipeGuard=true | gscAutoFetchRestored=true | reminderOffFix=true | claudeRemoved=true | bingWebmaster=true | competitorPanel=true | zeroResultFix=true | pagesRefreshFix=true | recheckButton=true | provenScanStrip=true | provenScanState=true | scanAllProven=true | doEverythingBtn=true | panelOrderFix=true | workflowGuide=true | preScanGuard=true | scanAllGuard=true | earlyGuard=true | emptyStateTeaser=true | provenScopeFix=true | numberedButtons=true | clearerButtons=true | scanAnimFix=true | promptClaudeCleanup=true | bonusTip=true | realProvenContext=true | competitorContext=true | unifiedBrief=true | diagnosticFirst=true | fullCompetitorBreakdown=true | serpSpyV3=true | transparencyBlock=true | emailsPausedToggle=true | competitorDedup=true | provenScanDebug=true | serializedScans=true | claudeCleanupV2=true | mergeClaudeStrip=true | visualTransparency=true | aboveFoldPriority=true | competitorComparisonTable=true | redGreenTracking=true | aioExplicitState=true | perpCopilotState=true | realMergePromptFixed=true | briefContextDebug=true | forceRescanBypass=true | gscPosFallback=true | cannibalDedup=true | gscAccessGated=true | gapConfirmShown=true | noPlaceholders=true | rowNumContrast=true | codeCannibalDedup=true | provenDebugRemoved=true | broaderCannibalDedup=true | competitorGapFallback=true | competitorPrevSnapFallback=true | hubSpokeDedup=true | compGapRegexBroadened=true | gapFixLabelFallback=true | geminiProForBriefs=true | timeoutBudgetFixed=true | perAttemptTimeout45s=true | revertToFlashLite=true | tokenLimitDoubled=true | urlNormFix=true | impactFieldChecked=true | broaderHubPattern=true | cannibalContextRemovedFromGSC=true | scanStateDerivedFromDB=true | boardBriefRestyled=true | liveWallBriefModal=true | modalScopeFix=true | cardTransparency=true | CLAUDE-FIX-2307=true | CLAUDE-FIX-2307B-specquote=true | CLAUDE-FIX-2307C-pwboard=true | CLAUDE-FIX-2307D-typefilter=true | CLAUDE-FIX-2307E-scanneraio=true | CLAUDE-FIX-2307F-urlstrip=true | CLAUDE-FIX-2307G-aiobeforeScan=true | CLAUDE-FIX-2307H-aioInPrompt=true | CLAUDE-FIX-2307I-escHtml=true | CLAUDE-FIX-2307J-escAlias-noStale=true | CLAUDE-FIX-2407A-perpCitedConsistency=true | CLAUDE-FIX-2407B-perpCacheBug=true | CLAUDE-FIX-2407C-domainVsPageNuance=true | CLAUDE-FIX-2407D-wallModalNoReshuffle=true | CLAUDE-FIX-2407E-buildBriefSafetyNet=true | CLAUDE-FIX-2407F-modalFullText=true | CLAUDE-FIX-2407G-aioPasteModal=true | CLAUDE-FIX-2407H-aioDefinitionView=true | CLAUDE-FIX-2407I-aioBlueprintMining=true | CLAUDE-FIX-2407J-aioReferences=true | CLAUDE-FIX-2407K-aioCitationGap=true ===');
+console.log('=== CONTENTSCALE BOOT ' + new Date().toISOString() + ' v2026-07-08-possible-prioritized-shortcut | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON | possibleThreshold=20impr | shortcutPrioritized=v2 | gscAutoFetchRemoved=true | linkCheckActive=true | wholeSiteWipeGuard=true | gscAutoFetchRestored=true | reminderOffFix=true | claudeRemoved=true | bingWebmaster=true | competitorPanel=true | zeroResultFix=true | pagesRefreshFix=true | recheckButton=true | provenScanStrip=true | provenScanState=true | scanAllProven=true | doEverythingBtn=true | panelOrderFix=true | workflowGuide=true | preScanGuard=true | scanAllGuard=true | earlyGuard=true | emptyStateTeaser=true | provenScopeFix=true | numberedButtons=true | clearerButtons=true | scanAnimFix=true | promptClaudeCleanup=true | bonusTip=true | realProvenContext=true | competitorContext=true | unifiedBrief=true | diagnosticFirst=true | fullCompetitorBreakdown=true | serpSpyV3=true | transparencyBlock=true | emailsPausedToggle=true | competitorDedup=true | provenScanDebug=true | serializedScans=true | claudeCleanupV2=true | mergeClaudeStrip=true | visualTransparency=true | aboveFoldPriority=true | competitorComparisonTable=true | redGreenTracking=true | aioExplicitState=true | perpCopilotState=true | realMergePromptFixed=true | briefContextDebug=true | forceRescanBypass=true | gscPosFallback=true | cannibalDedup=true | gscAccessGated=true | gapConfirmShown=true | noPlaceholders=true | rowNumContrast=true | codeCannibalDedup=true | provenDebugRemoved=true | broaderCannibalDedup=true | competitorGapFallback=true | competitorPrevSnapFallback=true | hubSpokeDedup=true | compGapRegexBroadened=true | gapFixLabelFallback=true | geminiProForBriefs=true | timeoutBudgetFixed=true | perAttemptTimeout45s=true | revertToFlashLite=true | tokenLimitDoubled=true | urlNormFix=true | impactFieldChecked=true | broaderHubPattern=true | cannibalContextRemovedFromGSC=true | scanStateDerivedFromDB=true | boardBriefRestyled=true | liveWallBriefModal=true | modalScopeFix=true | cardTransparency=true | CLAUDE-FIX-2307=true | CLAUDE-FIX-2307B-specquote=true | CLAUDE-FIX-2307C-pwboard=true | CLAUDE-FIX-2307D-typefilter=true | CLAUDE-FIX-2307E-scanneraio=true | CLAUDE-FIX-2307F-urlstrip=true | CLAUDE-FIX-2307G-aiobeforeScan=true | CLAUDE-FIX-2307H-aioInPrompt=true | CLAUDE-FIX-2307I-escHtml=true | CLAUDE-FIX-2307J-escAlias-noStale=true | CLAUDE-FIX-2407A-perpCitedConsistency=true | CLAUDE-FIX-2407B-perpCacheBug=true | CLAUDE-FIX-2407C-domainVsPageNuance=true | CLAUDE-FIX-2407D-wallModalNoReshuffle=true | CLAUDE-FIX-2407E-buildBriefSafetyNet=true | CLAUDE-FIX-2407F-modalFullText=true | CLAUDE-FIX-2407G-aioPasteModal=true | CLAUDE-FIX-2407H-aioDefinitionView=true | CLAUDE-FIX-2407I-aioBlueprintMining=true | CLAUDE-FIX-2407J-aioReferences=true | CLAUDE-FIX-2407K-aioCitationGap=true | CLAUDE-FIX-2407L-compGapTableAllModals=true ===');
 // CONTENTSCALE SERVER.JS — ELITE EDITION v4 (FIXED v3)
 // ✅ FIX v7: secondary_keywords + related_keywords auto in Analyse JSON + Execute prompt
 // ✅ FIX v7: analysis_data JSONB safe parse in execute-rewrite
@@ -3642,6 +3642,24 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
     return h+'</div>';
   }
   function recs(d){ var out='';
+    var _compTbl=function(p){
+      var ct=p.comparison_table;
+      if(typeof ct==='string'){ try{ ct=JSON.parse(ct); }catch(e){ ct=null; } }
+      if(!ct||!Array.isArray(ct)||!ct.length) return '';
+      var th='padding:7px 9px;font-size:9px;text-align:left;color:#93c5fd;text-transform:uppercase;letter-spacing:.04em;';
+      var rows=ct.map(function(r){
+        return '<tr style="border-top:1px solid #1f2937;">'
+          + '<td style="padding:7px 9px;font-size:10px;color:#60a5fa;font-weight:700;white-space:nowrap;vertical-align:top;">'+esc(r.competitor||'')+'</td>'
+          + '<td style="padding:7px 9px;font-size:10px;color:#86efac;vertical-align:top;">'+esc(r.what_they_do_well||'')+'</td>'
+          + '<td style="padding:7px 9px;font-size:10px;color:#fca5a5;vertical-align:top;">'+esc(r.our_gap||'')+'</td>'
+          + '<td style="padding:7px 9px;font-size:10px;color:#cbd5e1;vertical-align:top;">'+esc(r.what_to_do||'')+'</td>'
+          + '</tr>';
+      }).join('');
+      return '<div style="margin:8px 0 2px;overflow-x:auto;border:1px solid #1f2937;border-radius:8px;">'
+        + '<table style="width:100%;border-collapse:collapse;background:#0d1117;">'
+        + '<thead><tr style="background:#161b22;"><th style="'+th+'">Competitor</th><th style="'+th+'">What they do well</th><th style="'+th+'">Our gap</th><th style="'+th+'">What to do</th></tr></thead>'
+        + '<tbody>'+rows+'</tbody></table></div>';
+    };
     var _card=function(p,sysColor){
       var t=p.title||p.h2||p.heading||'Recommendation';
       var b=p.action||p.passage||p.body||p.text||'';
@@ -3655,6 +3673,7 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
         + '<div class="bw-rec-t">'+esc(t)+'</div>'
         + (sig?'<div class="bw-rec-sig">'+esc(sig)+'</div>':'')
         + (b?'<div class="bw-rec-b">'+esc(b)+'</div>':'')
+        + _compTbl(p)
         + (imp?'<div class="bw-rec-imp">&rarr; '+esc(imp)+'</div>':'')
         + '</div>';
     };
@@ -4118,6 +4137,24 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
       if (pcomp.length) h += '<div class="bwm-line">Perplexity also cites ('+pcomp.length+')'+(d.perp_cited?'':' &mdash; this page not among them')+': '+_bwEscL(pcomp.slice(0,5).join(', '))+'</div>';
       h += '</div>';
     }
+    function _bwCompTable(p){
+      var ct = p.comparison_table;
+      if (typeof ct === 'string') { try { ct = JSON.parse(ct); } catch(e){ ct = null; } }
+      if (!ct || !Array.isArray(ct) || !ct.length) return '';
+      var th = 'padding:7px 9px;font-size:9px;text-align:left;color:#93c5fd;text-transform:uppercase;letter-spacing:.04em;';
+      var rows = ct.map(function(r){
+        return '<tr style="border-top:1px solid #1f2937;">'
+          + '<td style="padding:7px 9px;font-size:10px;color:#60a5fa;font-weight:700;white-space:nowrap;vertical-align:top;">' + _bwEscL(r.competitor||'') + '</td>'
+          + '<td style="padding:7px 9px;font-size:10px;color:#86efac;vertical-align:top;">' + _bwEscL(r.what_they_do_well||'') + '</td>'
+          + '<td style="padding:7px 9px;font-size:10px;color:#fca5a5;vertical-align:top;">' + _bwEscL(r.our_gap||'') + '</td>'
+          + '<td style="padding:7px 9px;font-size:10px;color:#cbd5e1;vertical-align:top;">' + _bwEscL(r.what_to_do||'') + '</td>'
+          + '</tr>';
+      }).join('');
+      return '<div style="margin:8px 0 2px;overflow-x:auto;border:1px solid #1f2937;border-radius:8px;">'
+        + '<table style="width:100%;border-collapse:collapse;background:#0d1117;">'
+        + '<thead><tr style="background:#161b22;"><th style="' + th + '">Competitor</th><th style="' + th + '">What they do well</th><th style="' + th + '">Our gap</th><th style="' + th + '">What to do</th></tr></thead>'
+        + '<tbody>' + rows + '</tbody></table></div>';
+    }
     function actionCard(p, accent){
       var t = p.title||p.h2||p.heading||'Recommendation';
       var b = p.action||p.passage||p.body||p.text||'';
@@ -4130,6 +4167,7 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
         + '<div class="bwm-rt">'+_bwEscL(t)+'</div>'
         + (sig?'<div class="bwm-rsig">'+_bwEscL(sig)+'</div>':'')
         + (b?'<div class="bwm-rb">'+_bwEscL(b)+'</div>':'')
+        + _bwCompTable(p)
         + (imp?'<div class="bwm-rimp">&rarr; '+_bwEscL(imp)+'</div>':'')
         + '</div>';
     }
