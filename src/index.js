@@ -1,4 +1,15 @@
-console.log('=== CONTENTSCALE BOOT ' + new Date().toISOString() + ' v2026-07-08-possible-prioritized-shortcut | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON | possibleThreshold=20impr | shortcutPrioritized=v2 | gscAutoFetchRemoved=true | linkCheckActive=true | wholeSiteWipeGuard=true | gscAutoFetchRestored=true | reminderOffFix=true | claudeRemoved=true | bingWebmaster=true | competitorPanel=true | zeroResultFix=true | pagesRefreshFix=true | recheckButton=true | provenScanStrip=true | provenScanState=true | scanAllProven=true | doEverythingBtn=true | panelOrderFix=true | workflowGuide=true | preScanGuard=true | scanAllGuard=true | earlyGuard=true | emptyStateTeaser=true | provenScopeFix=true | numberedButtons=true | clearerButtons=true | scanAnimFix=true | promptClaudeCleanup=true | bonusTip=true | realProvenContext=true | competitorContext=true | unifiedBrief=true | diagnosticFirst=true | fullCompetitorBreakdown=true | serpSpyV3=true | transparencyBlock=true | emailsPausedToggle=true | competitorDedup=true | provenScanDebug=true | serializedScans=true | claudeCleanupV2=true | mergeClaudeStrip=true | visualTransparency=true | aboveFoldPriority=true | competitorComparisonTable=true | redGreenTracking=true | aioExplicitState=true | perpCopilotState=true | realMergePromptFixed=true | briefContextDebug=true | forceRescanBypass=true | gscPosFallback=true | cannibalDedup=true | gscAccessGated=true | gapConfirmShown=true | noPlaceholders=true | rowNumContrast=true | codeCannibalDedup=true | provenDebugRemoved=true | broaderCannibalDedup=true | competitorGapFallback=true | competitorPrevSnapFallback=true | hubSpokeDedup=true | compGapRegexBroadened=true | gapFixLabelFallback=true | geminiProForBriefs=true | timeoutBudgetFixed=true | perAttemptTimeout45s=true | revertToFlashLite=true | tokenLimitDoubled=true | urlNormFix=true | impactFieldChecked=true | broaderHubPattern=true | cannibalContextRemovedFromGSC=true | scanStateDerivedFromDB=true | boardBriefRestyled=true | liveWallBriefModal=true | modalScopeFix=true | cardTransparency=true | CLAUDE-FIX-2307=true | CLAUDE-FIX-2307B-specquote=true | CLAUDE-FIX-2307C-pwboard=true | CLAUDE-FIX-2307D-typefilter=true | CLAUDE-FIX-2307E-scanneraio=true | CLAUDE-FIX-2307F-urlstrip=true | CLAUDE-FIX-2307G-aiobeforeScan=true | CLAUDE-FIX-2307H-aioInPrompt=true | CLAUDE-FIX-2307I-escHtml=true | CLAUDE-FIX-2307J-escAlias-noStale=true | CLAUDE-FIX-2407A-perpCitedConsistency=true | CLAUDE-FIX-2407B-perpCacheBug=true | CLAUDE-FIX-2407C-domainVsPageNuance=true | CLAUDE-FIX-2407D-wallModalNoReshuffle=true | CLAUDE-FIX-2407E-buildBriefSafetyNet=true | CLAUDE-FIX-2407F-modalFullText=true | CLAUDE-FIX-2407G-aioPasteModal=true | CLAUDE-FIX-2407H-aioDefinitionView=true | CLAUDE-FIX-2407I-aioBlueprintMining=true | CLAUDE-FIX-2407J-aioReferences=true | CLAUDE-FIX-2407K-aioCitationGap=true | CLAUDE-FIX-2407L-compGapTableAllModals=true | CLAUDE-FIX-2407M-honestAioManualOnly=true | CLAUDE-FIX-2407N-regexEscapeInTemplate=true ===');
+console.log('=== CONTENTSCALE BOOT ' + new Date().toISOString() + ' v2026-07-08-possible-prioritized-shortcut | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON | possibleThreshold=20impr | shortcutPrioritized=v2 | gscAutoFetchRemoved=true | linkCheckActive=true | wholeSiteWipeGuard=true | gscAutoFetchRestored=true | reminderOffFix=true | claudeRemoved=true | bingWebmaster=true | competitorPanel=true | zeroResultFix=true | pagesRefreshFix=true | recheckButton=true | provenScanStrip=true | provenScanState=true | scanAllProven=true | doEverythingBtn=true | panelOrderFix=true | workflowGuide=true | preScanGuard=true | scanAllGuard=true | earlyGuard=true | emptyStateTeaser=true | provenScopeFix=true | numberedButtons=true | clearerButtons=true | scanAnimFix=true | promptClaudeCleanup=true | bonusTip=true | realProvenContext=true | competitorContext=true | unifiedBrief=true | diagnosticFirst=true | fullCompetitorBreakdown=true | serpSpyV3=true | transparencyBlock=true | emailsPausedToggle=true | competitorDedup=true | provenScanDebug=true | serializedScans=true | claudeCleanupV2=true | mergeClaudeStrip=true | visualTransparency=true | aboveFoldPriority=true | competitorComparisonTable=true | redGreenTracking=true | aioExplicitState=true | perpCopilotState=true | realMergePromptFixed=true | briefContextDebug=true | forceRescanBypass=true | gscPosFallback=true | cannibalDedup=true | gscAccessGated=true | gapConfirmShown=true | noPlaceholders=true | rowNumContrast=true | codeCannibalDedup=true | provenDebugRemoved=true | broaderCannibalDedup=true | competitorGapFallback=true | competitorPrevSnapFallback=true | hubSpokeDedup=true | compGapRegexBroadened=true | gapFixLabelFallback=true | geminiProForBriefs=true | timeoutBudgetFixed=true | perAttemptTimeout45s=true | revertToFlashLite=true | tokenLimitDoubled=true | urlNormFix=true | impactFieldChecked=true | broaderHubPattern=true | cannibalContextRemovedFromGSC=true | scanStateDerivedFromDB=true | boardBriefRestyled=true | liveWallBriefModal=true | modalScopeFix=true | cardTransparency=true | CLAUDE-FIX-2307=true | CLAUDE-FIX-2307B-specquote=true | CLAUDE-FIX-2307C-pwboard=true | CLAUDE-FIX-2307D-typefilter=true | CLAUDE-FIX-2307E-scanneraio=true | CLAUDE-FIX-2307F-urlstrip=true | CLAUDE-FIX-2307G-aiobeforeScan=true | CLAUDE-FIX-2307H-aioInPrompt=true | CLAUDE-FIX-2307I-escHtml=true | CLAUDE-FIX-2307J-escAlias-noStale=true | CLAUDE-FIX-2407A-perpCitedConsistency=true | CLAUDE-FIX-2407B-perpCacheBug=true | CLAUDE-FIX-2407C-domainVsPageNuance=true | CLAUDE-FIX-2407D-wallModalNoReshuffle=true | CLAUDE-FIX-2407E-buildBriefSafetyNet=true | CLAUDE-FIX-2407F-modalFullText=true | CLAUDE-FIX-2407G-aioPasteModal=true | CLAUDE-FIX-2407H-aioDefinitionView=true | CLAUDE-FIX-2407I-aioBlueprintMining=true | CLAUDE-FIX-2407J-aioReferences=true | CLAUDE-FIX-2407K-aioCitationGap=true | CLAUDE-FIX-2407L-compGapTableAllModals=true | CLAUDE-FIX-2407M-honestAioManualOnly=true | CLAUDE-FIX-2407N-regexEscapeInTemplate=true | CLAUDE-FIX-2507A-jsonRepair-mergeTokens4096=true ===');
+
+// Repair common LLM-JSON defects (raw newlines/tabs inside strings, trailing commas)
+function _repairJsonG(str){
+  let out='', inStr=false, esc=false;
+  for (let i=0;i<str.length;i++){ const ch=str[i];
+    if(inStr){ if(esc){out+=ch;esc=false;continue;} if(ch==='\\'){out+=ch;esc=true;continue;}
+      if(ch==='"'){inStr=false;out+=ch;continue;} if(ch==='\n'){out+='\\n';continue;}
+      if(ch==='\r'){continue;} if(ch==='\t'){out+='\\t';continue;} out+=ch; continue; }
+    if(ch==='"'){inStr=true;out+=ch;continue;} out+=ch; }
+  return out.replace(/,\s*([\]}])/g,'$1');
+}
 // CONTENTSCALE SERVER.JS — ELITE EDITION v4 (FIXED v3)
 // ✅ FIX v7: secondary_keywords + related_keywords auto in Analyse JSON + Execute prompt
 // ✅ FIX v7: analysis_data JSONB safe parse in execute-rewrite
@@ -39134,13 +39145,15 @@ app.post('/api/tracker/pages/:id/check', verifyEngineAccess, async (req, res) =>
                       const gResp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${gemKey}`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ contents: [{ parts: [{ text: mergePrompt }] }], generationConfig: { temperature: 0.3, maxOutputTokens: 800 } })
+                        body: JSON.stringify({ contents: [{ parts: [{ text: mergePrompt }] }], generationConfig: { temperature: 0.3, maxOutputTokens: 4096 } })
                       });
                       if (gResp.ok) {
                         const gData = await gResp.json();
                         const gText = gData.candidates?.[0]?.content?.parts?.[0]?.text || '';
                         const cleaned = gText.replace(/```json|```/g, '').trim();
-                        const merged = JSON.parse(cleaned);
+                        let merged;
+                        try { merged = JSON.parse(cleaned); }
+                        catch(pe){ merged = JSON.parse(_repairJsonG(cleaned)); console.log('[brief-merge] JSON repaired'); }
                         mergedBrief = { items: merged, position: pos, aio, perp, bing_cited: bing, brave_cited: brave, score,
                           gsc_clicks: page.gsc_clicks, gsc_impressions: page.gsc_impressions, gsc_position: page.gsc_position, gsc_keyword: page.gsc_keyword,
                           merged: true };
@@ -41746,6 +41759,27 @@ GOAL: Rank #1 for "${kw}" and capture the maximum clicks from ${gscImpr || 'the 
         }, GEMINI_MODEL_BRIEF, null, 1), _briefTimeout() ])
       ]);
 
+      // Repair common Gemini JSON defects that break JSON.parse and used to collapse the whole
+      // brief into one raw-text item: literal newlines/tabs INSIDE string literals (the #1 cause
+      // — visible as \"...parameter.\n\nFIX:...\" in exported briefs) and trailing commas.
+      const _repairJson = (str) => {
+        let out = '', inStr = false, esc = false;
+        for (let ci = 0; ci < str.length; ci++) {
+          const ch = str[ci];
+          if (inStr) {
+            if (esc) { out += ch; esc = false; continue; }
+            if (ch === '\\') { out += ch; esc = true; continue; }
+            if (ch === '"') { inStr = false; out += ch; continue; }
+            if (ch === '\n') { out += '\\n'; continue; }
+            if (ch === '\r') { continue; }
+            if (ch === '\t') { out += '\\t'; continue; }
+            out += ch; continue;
+          }
+          if (ch === '"') { inStr = true; out += ch; continue; }
+          out += ch;
+        }
+        return out.replace(/,\s*([\]}])/g, '$1');
+      };
       // Parse Citation Brief
       if (citResp.ok) {
         let recs = citResp.data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
@@ -41755,7 +41789,12 @@ GOAL: Rank #1 for "${kw}" and capture the maximum clicks from ${gscImpr || 'the 
         try {
           snapshot.recommendations = JSON.parse(recs);
         } catch(e) {
-          snapshot.recommendations = [{ title: 'Citation Brief', priority: 'medium', system: 'All', action: recs.substring(0,4000), expected_impact: 'See above' }];
+          try {
+            snapshot.recommendations = JSON.parse(_repairJson(recs));
+            console.log('[brief-parse] citation JSON repaired successfully');
+          } catch(e2) {
+            snapshot.recommendations = [{ title: 'Citation Brief', priority: 'medium', system: 'All', action: recs.substring(0,4000), expected_impact: 'See above' }];
+          }
         }
 
         // ── SERVER-SIDE HARD FIX: enforce visibility-gate + strip duplicate/no-op AIO actions ──
@@ -41831,7 +41870,12 @@ GOAL: Rank #1 for "${kw}" and capture the maximum clicks from ${gscImpr || 'the 
         try {
           snapshot.gsc_brief = JSON.parse(gscRecs);
         } catch(e) {
-          snapshot.gsc_brief = [{ title: 'GSC Brief', priority: 'medium', trigger: 'See text', action: gscRecs.substring(0,4000), expected_impact: 'Ranking improvement', effort: 'content' }];
+          try {
+            snapshot.gsc_brief = JSON.parse(_repairJson(gscRecs));
+            console.log('[brief-parse] gsc JSON repaired successfully');
+          } catch(e2) {
+            snapshot.gsc_brief = [{ title: 'GSC Brief', priority: 'medium', trigger: 'See text', action: gscRecs.substring(0,4000), expected_impact: 'Ranking improvement', effort: 'content' }];
+          }
         }
         // ── CODE-LEVEL DEDUPE: cannibalization is meant to live ONLY in the Citation Brief (it writes
         // the actual differentiation passage). The prompt asks GSC Brief to skip it, but that
