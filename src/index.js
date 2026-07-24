@@ -1,4 +1,4 @@
-console.log('=== CONTENTSCALE BOOT ' + new Date().toISOString() + ' v2026-07-08-possible-prioritized-shortcut | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON | possibleThreshold=20impr | shortcutPrioritized=v2 | gscAutoFetchRemoved=true | linkCheckActive=true | wholeSiteWipeGuard=true | gscAutoFetchRestored=true | reminderOffFix=true | claudeRemoved=true | bingWebmaster=true | competitorPanel=true | zeroResultFix=true | pagesRefreshFix=true | recheckButton=true | provenScanStrip=true | provenScanState=true | scanAllProven=true | doEverythingBtn=true | panelOrderFix=true | workflowGuide=true | preScanGuard=true | scanAllGuard=true | earlyGuard=true | emptyStateTeaser=true | provenScopeFix=true | numberedButtons=true | clearerButtons=true | scanAnimFix=true | promptClaudeCleanup=true | bonusTip=true | realProvenContext=true | competitorContext=true | unifiedBrief=true | diagnosticFirst=true | fullCompetitorBreakdown=true | serpSpyV3=true | transparencyBlock=true | emailsPausedToggle=true | competitorDedup=true | provenScanDebug=true | serializedScans=true | claudeCleanupV2=true | mergeClaudeStrip=true | visualTransparency=true | aboveFoldPriority=true | competitorComparisonTable=true | redGreenTracking=true | aioExplicitState=true | perpCopilotState=true | realMergePromptFixed=true | briefContextDebug=true | forceRescanBypass=true | gscPosFallback=true | cannibalDedup=true | gscAccessGated=true | gapConfirmShown=true | noPlaceholders=true | rowNumContrast=true | codeCannibalDedup=true | provenDebugRemoved=true | broaderCannibalDedup=true | competitorGapFallback=true | competitorPrevSnapFallback=true | hubSpokeDedup=true | compGapRegexBroadened=true | gapFixLabelFallback=true | geminiProForBriefs=true | timeoutBudgetFixed=true | perAttemptTimeout45s=true | revertToFlashLite=true | tokenLimitDoubled=true | urlNormFix=true | impactFieldChecked=true | broaderHubPattern=true | cannibalContextRemovedFromGSC=true | scanStateDerivedFromDB=true | boardBriefRestyled=true | liveWallBriefModal=true | modalScopeFix=true | cardTransparency=true | CLAUDE-FIX-2307=true | CLAUDE-FIX-2307B-specquote=true | CLAUDE-FIX-2307C-pwboard=true | CLAUDE-FIX-2307D-typefilter=true | CLAUDE-FIX-2307E-scanneraio=true | CLAUDE-FIX-2307F-urlstrip=true | CLAUDE-FIX-2307G-aiobeforeScan=true | CLAUDE-FIX-2307H-aioInPrompt=true | CLAUDE-FIX-2307I-escHtml=true | CLAUDE-FIX-2307J-escAlias-noStale=true | CLAUDE-FIX-2407A-perpCitedConsistency=true | CLAUDE-FIX-2407B-perpCacheBug=true | CLAUDE-FIX-2407C-domainVsPageNuance=true | CLAUDE-FIX-2407D-wallModalNoReshuffle=true | CLAUDE-FIX-2407E-buildBriefSafetyNet=true | CLAUDE-FIX-2407F-modalFullText=true | CLAUDE-FIX-2407G-aioPasteModal=true | CLAUDE-FIX-2407H-aioDefinitionView=true | CLAUDE-FIX-2407I-aioBlueprintMining=true | CLAUDE-FIX-2407J-aioReferences=true | CLAUDE-FIX-2407K-aioCitationGap=true | CLAUDE-FIX-2407L-compGapTableAllModals=true | CLAUDE-FIX-2407M-honestAioManualOnly=true | CLAUDE-FIX-2407N-regexEscapeInTemplate=true | CLAUDE-FIX-2507A-jsonRepair-mergeTokens4096=true | CLAUDE-FIX-2507B-cardButtonsWorkflowOrder=true | CLAUDE-FIX-2507C-cardButtonsPillColors=true | CLAUDE-FIX-2507D-aioReloadFull-limit8000=true | CLAUDE-FIX-2507E-briefModalTransparency=true ===');
+console.log('=== CONTENTSCALE BOOT ' + new Date().toISOString() + ' v2026-07-08-possible-prioritized-shortcut | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON | possibleThreshold=20impr | shortcutPrioritized=v2 | gscAutoFetchRemoved=true | linkCheckActive=true | wholeSiteWipeGuard=true | gscAutoFetchRestored=true | reminderOffFix=true | claudeRemoved=true | bingWebmaster=true | competitorPanel=true | zeroResultFix=true | pagesRefreshFix=true | recheckButton=true | provenScanStrip=true | provenScanState=true | scanAllProven=true | doEverythingBtn=true | panelOrderFix=true | workflowGuide=true | preScanGuard=true | scanAllGuard=true | earlyGuard=true | emptyStateTeaser=true | provenScopeFix=true | numberedButtons=true | clearerButtons=true | scanAnimFix=true | promptClaudeCleanup=true | bonusTip=true | realProvenContext=true | competitorContext=true | unifiedBrief=true | diagnosticFirst=true | fullCompetitorBreakdown=true | serpSpyV3=true | transparencyBlock=true | emailsPausedToggle=true | competitorDedup=true | provenScanDebug=true | serializedScans=true | claudeCleanupV2=true | mergeClaudeStrip=true | visualTransparency=true | aboveFoldPriority=true | competitorComparisonTable=true | redGreenTracking=true | aioExplicitState=true | perpCopilotState=true | realMergePromptFixed=true | briefContextDebug=true | forceRescanBypass=true | gscPosFallback=true | cannibalDedup=true | gscAccessGated=true | gapConfirmShown=true | noPlaceholders=true | rowNumContrast=true | codeCannibalDedup=true | provenDebugRemoved=true | broaderCannibalDedup=true | competitorGapFallback=true | competitorPrevSnapFallback=true | hubSpokeDedup=true | compGapRegexBroadened=true | gapFixLabelFallback=true | geminiProForBriefs=true | timeoutBudgetFixed=true | perAttemptTimeout45s=true | revertToFlashLite=true | tokenLimitDoubled=true | urlNormFix=true | impactFieldChecked=true | broaderHubPattern=true | cannibalContextRemovedFromGSC=true | scanStateDerivedFromDB=true | boardBriefRestyled=true | liveWallBriefModal=true | modalScopeFix=true | cardTransparency=true | CLAUDE-FIX-2307=true | CLAUDE-FIX-2307B-specquote=true | CLAUDE-FIX-2307C-pwboard=true | CLAUDE-FIX-2307D-typefilter=true | CLAUDE-FIX-2307E-scanneraio=true | CLAUDE-FIX-2307F-urlstrip=true | CLAUDE-FIX-2307G-aiobeforeScan=true | CLAUDE-FIX-2307H-aioInPrompt=true | CLAUDE-FIX-2307I-escHtml=true | CLAUDE-FIX-2307J-escAlias-noStale=true | CLAUDE-FIX-2407A-perpCitedConsistency=true | CLAUDE-FIX-2407B-perpCacheBug=true | CLAUDE-FIX-2407C-domainVsPageNuance=true | CLAUDE-FIX-2407D-wallModalNoReshuffle=true | CLAUDE-FIX-2407E-buildBriefSafetyNet=true | CLAUDE-FIX-2407F-modalFullText=true | CLAUDE-FIX-2407G-aioPasteModal=true | CLAUDE-FIX-2407H-aioDefinitionView=true | CLAUDE-FIX-2407I-aioBlueprintMining=true | CLAUDE-FIX-2407J-aioReferences=true | CLAUDE-FIX-2407K-aioCitationGap=true | CLAUDE-FIX-2407L-compGapTableAllModals=true | CLAUDE-FIX-2407M-honestAioManualOnly=true | CLAUDE-FIX-2407N-regexEscapeInTemplate=true | CLAUDE-FIX-2507A-jsonRepair-mergeTokens4096=true | CLAUDE-FIX-2507B-cardButtonsWorkflowOrder=true | CLAUDE-FIX-2507C-cardButtonsPillColors=true | CLAUDE-FIX-2507D-aioReloadFull-limit8000=true | CLAUDE-FIX-2507E-briefModalTransparency=true | CLAUDE-FIX-2507F-aioGapTable4col=true ===');
 
 // Repair common LLM-JSON defects (raw newlines/tabs inside strings, trailing commas)
 function _repairJsonG(str){
@@ -4126,23 +4126,25 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
           if (gk) _gapBy[gk] = g;
         });
         h += '<div class="bwm-line" style="margin-top:8px;"><strong style="color:#f59e0b;">Google AI Overview cites (' + aioref.length + ')</strong>' + (_aioCitedHere ? ' &mdash; <span style="color:#4ade80;">your page is one of them</span>' : ' &mdash; <span style="color:#fbbf24;">your page is not among them yet</span>') + ' &mdash; the gap per source:</div>';
-        h += '<div style="display:flex;flex-direction:column;gap:8px;margin-top:4px;">' + aioref.slice(0,10).map(function(r,i){
-          var host=''; try { host = String(r.url||'').split('/')[2]||_bwCleanUrlL(r.url); } catch(e){ host=_bwCleanUrlL(r.url); }
-          var hostKey = _bwCleanUrlL(r.url||'').split('/')[0];
-          var mine = hostKey === _mydom;
-          var g = _gapBy[hostKey] || null;
-          var whatTheyDo = (g && (g.what_they_do_well||g.what_they_do)) || r.snippet || '';
-          var whatToDo = (g && (g.what_to_do||g.our_move)) || '';
-          var ourGap = (g && (g.our_gap||g.gap)) || '';
-          var head = '<div class="bwm-comp" style="' + (mine?'color:#4ade80;font-weight:700;':'') + '"><span class="bwm-cn">' + (i+1) + '</span> <a href="'+_bwEscL(r.url||'#')+'" target="_blank" rel="noopener" class="bwm-cu" onclick="event.stopPropagation()" style="'+(mine?'color:#4ade80;':'')+'">'+_bwEscL(host)+'</a>'+(r.organic_position?(' <span style="color:#6b7280;">#'+r.organic_position+' organic</span>'):'')+(mine?' <span style="color:#4ade80;">(that\\u2019s you)</span>':'')+'</div>';
-          if (mine) return '<div style="border-left:2px solid #22c55e;padding-left:8px;">' + head + '<div style="font-size:10px;color:#4ade80;margin-top:2px;">You already hold this citation \\u2014 keep this passage fresh and defended.</div></div>';
-          var body = '';
-          if (whatTheyDo) body += '<div style="font-size:10px;color:#9ca3af;margin-top:2px;"><span style="color:#f59e0b;">They:</span> ' + _bwEscL(String(whatTheyDo).slice(0,220)) + '</div>';
-          if (ourGap) body += '<div style="font-size:10px;color:#9ca3af;margin-top:1px;"><span style="color:#f87171;">Gap:</span> ' + _bwEscL(String(ourGap).slice(0,200)) + '</div>';
-          if (whatToDo) body += '<div style="font-size:10px;color:#cbd5e1;margin-top:1px;"><span style="color:#4ade80;">Do:</span> ' + _bwEscL(String(whatToDo).slice(0,220)) + '</div>';
-          if (!whatToDo && !ourGap && whatTheyDo) body += '<div style="font-size:10px;color:#6b7280;margin-top:1px;">Cover this same point on your page, earlier and more directly, to compete for the citation.</div>';
-          return '<div style="border-left:2px solid #374151;padding-left:8px;">' + head + body + '</div>';
-        }).join('') + '</div>';
+        var _th2 = 'padding:6px 8px;font-size:9px;text-align:left;color:#93c5fd;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap;';
+        h += '<div style="overflow-x:auto;border:1px solid #1f2937;border-radius:8px;margin:4px 0 2px;"><table style="width:100%;border-collapse:collapse;background:#0d1117;"><thead><tr style="background:#161b22;"><th style="'+_th2+'">Source</th><th style="'+_th2+'">What they do</th><th style="'+_th2+'">Our gap</th><th style="'+_th2+'">What to do</th></tr></thead><tbody>'
+          + aioref.slice(0,10).map(function(r,i){
+              var host=''; try { host = String(r.url||'').split('/')[2]||_bwCleanUrlL(r.url); } catch(e){ host=_bwCleanUrlL(r.url); }
+              var hostKey = _bwCleanUrlL(r.url||'').split('/')[0];
+              var mine = hostKey === _mydom;
+              var g = _gapBy[hostKey] || null;
+              var whatTheyDo = (g && (g.what_they_do_well||g.what_they_do)) || r.snippet || '';
+              var ourGap = mine ? 'You already hold this citation.' : ((g && (g.our_gap||g.gap)) || '');
+              var whatToDo = mine ? 'Keep this passage fresh and above the fold.' : ((g && (g.what_to_do||g.our_move)) || (whatTheyDo ? 'Cover this same point earlier and more directly to compete for the citation.' : ''));
+              var rank = r.organic_position ? ('#'+r.organic_position) : '\\u2014';
+              var nameCell = _bwEscL(host) + (mine?' <span style="color:#4ade80;">(you)</span>':'');
+              return '<tr style="border-top:1px solid #1f2937;'+(mine?'background:rgba(34,197,94,.06);':'')+'">'
+                + '<td style="padding:6px 8px;font-size:10px;color:'+(mine?'#4ade80':'#60a5fa')+';font-weight:700;vertical-align:top;white-space:nowrap;">'+(i+1)+'. '+nameCell+'</td>'
+                + '<td style="padding:6px 8px;font-size:10px;color:#86efac;vertical-align:top;">'+_bwEscL(String(whatTheyDo).slice(0,200))+'</td>'
+                + '<td style="padding:6px 8px;font-size:10px;color:#fca5a5;vertical-align:top;">'+_bwEscL(String(ourGap).slice(0,180))+'</td>'
+                + '<td style="padding:6px 8px;font-size:10px;color:#cbd5e1;vertical-align:top;">'+_bwEscL(String(whatToDo).slice(0,200))+'</td>'
+                + '</tr>';
+            }).join('') + '</tbody></table></div>';
       }
       h += '<div class="bwm-line">Perplexity: '+(d.perp_cited?(d.perp_text?('&ldquo;'+_bwEscL(String(d.perp_text))+'&rdquo;'):'cited'):(d.perp_text?'mentioned in answer but not formally cited':'checked &mdash; no answer excerpt captured for this query.'))+'</div>';
       if (pcomp.length) h += '<div class="bwm-line">Perplexity also cites ('+pcomp.length+')'+(d.perp_cited?'':' &mdash; this page not among them')+': '+_bwEscL(pcomp.slice(0,5).join(', '))+'</div>';
@@ -32290,26 +32292,28 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
             var _aioMine = _aioRef.some(function(r){ return String(r.url||'').replace(/^https?:\\/\\//,'').replace(/^www\\./,'').split('/')[0] === _myDom; });
             var _agap = Array.isArray(data.aio_citation_gap) ? data.aio_citation_gap : ((data.brief_content && Array.isArray(data.brief_content.aio_citation_gap)) ? data.brief_content.aio_citation_gap : []);
             var _agapBy = {}; _agap.forEach(function(g){ var k=String(g.source||g.competitor||g.domain||'').replace(/^www\\./,'').split('/')[0]; if(k)_agapBy[k]=g; });
-            _transparencyHtml += '<div style="font-size:10px;color:#9ca3af;margin-bottom:4px;font-weight:700;">Google AI Overview cites (' + _aioRef.length + ')' + (_aioMine ? ', <span style="color:#4ade80;">including your page</span>' : ', <span style="color:#fbbf24;">this page not among them</span>') + ' \u2014 the gap per source:</div>'
-              + '<div style="display:flex;flex-direction:column;gap:7px;margin-bottom:10px;">'
-              + _aioRef.slice(0,10).map(function(r,i){
-                  var host=''; try { host = new URL(r.url).hostname.replace(/^www\\./,''); } catch(e){ host = r.url||''; }
-                  var hk = String(r.url||'').replace(/^https?:\\/\\//,'').replace(/^www\\./,'').split('/')[0];
-                  var mine = hk === _myDom;
-                  var g = _agapBy[hk] || null;
-                  var they = (g && (g.what_they_do_well||g.what_they_do)) || r.snippet || '';
-                  var gap = (g && (g.our_gap||g.gap)) || '';
-                  var todo = (g && (g.what_to_do||g.our_move)) || '';
-                  var head = '<div style="font-size:11px;color:' + (mine?'#4ade80':'#cbd5e1') + ';' + (mine?'font-weight:700;':'') + '"><span style="color:#f59e0b;font-weight:700;">' + (i+1) + '</span> ' + host.replace(/</g,'&lt;') + (r.organic_position?(' <span style="color:#6b7280;">#'+r.organic_position+' organic</span>'):'') + (mine?' <span style="color:#4ade80;">(you)</span>':'') + '</div>';
-                  if (mine) return '<div style="border-left:2px solid #22c55e;padding-left:8px;">' + head + '<div style="font-size:10px;color:#4ade80;margin-top:1px;">You already hold this citation \u2014 keep the passage fresh and above the fold.</div></div>';
-                  var body='';
-                  if (they) body += '<div style="font-size:10px;color:#9ca3af;margin-top:1px;"><span style="color:#f59e0b;">They:</span> ' + String(they).slice(0,220).replace(/</g,'&lt;') + '</div>';
-                  if (gap) body += '<div style="font-size:10px;color:#9ca3af;margin-top:1px;"><span style="color:#f87171;">Gap:</span> ' + String(gap).slice(0,200).replace(/</g,'&lt;') + '</div>';
-                  if (todo) body += '<div style="font-size:10px;color:#cbd5e1;margin-top:1px;"><span style="color:#4ade80;">Do:</span> ' + String(todo).slice(0,220).replace(/</g,'&lt;') + '</div>';
-                  if (!todo && !gap && they) body += '<div style="font-size:10px;color:#6b7280;margin-top:1px;">Cover this same point on your page, earlier and more directly, to compete for the citation.</div>';
-                  return '<div style="border-left:2px solid #374151;padding-left:8px;">' + head + body + '</div>';
-                }).join('')
-              + '</div>';
+            var _th = 'padding:6px 8px;font-size:9px;text-align:left;color:#93c5fd;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap;';
+            var _rowsHtml = _aioRef.slice(0,10).map(function(r,i){
+              var host=''; try { host = new URL(r.url).hostname.replace(/^www\\./,''); } catch(e){ host = r.url||''; }
+              var hk = String(r.url||'').replace(/^https?:\\/\\//,'').replace(/^www\\./,'').split('/')[0];
+              var mine = hk === _myDom;
+              var g = _agapBy[hk] || null;
+              var they = (g && (g.what_they_do_well||g.what_they_do)) || r.snippet || '';
+              var gap = mine ? 'You already hold this citation.' : ((g && (g.our_gap||g.gap)) || '');
+              var todo = mine ? 'Keep this passage fresh and above the fold.' : ((g && (g.what_to_do||g.our_move)) || (they ? 'Cover this same point on your page, earlier and more directly, to compete for the citation.' : ''));
+              var rank = r.organic_position ? ('#'+r.organic_position) : '\\u2014';
+              var nameCell = host.replace(/</g,'&lt;') + (mine?' <span style="color:#4ade80;">(you)</span>':'');
+              return '<tr style="border-top:1px solid #1f2937;'+(mine?'background:rgba(34,197,94,.06);':'')+'">'
+                + '<td style="padding:6px 8px;font-size:10px;color:'+(mine?'#4ade80':'#60a5fa')+';font-weight:700;vertical-align:top;white-space:nowrap;">'+(i+1)+'. '+nameCell+'</td>'
+                + '<td style="padding:6px 8px;font-size:10px;color:#86efac;vertical-align:top;">'+String(they).slice(0,200).replace(/</g,'&lt;')+'</td>'
+                + '<td style="padding:6px 8px;font-size:10px;color:#fca5a5;vertical-align:top;">'+String(gap).slice(0,180).replace(/</g,'&lt;')+'</td>'
+                + '<td style="padding:6px 8px;font-size:10px;color:#cbd5e1;vertical-align:top;">'+String(todo).slice(0,200).replace(/</g,'&lt;')+'</td>'
+                + '</tr>';
+            }).join('');
+            _transparencyHtml += '<div style="font-size:10px;color:#9ca3af;margin-bottom:4px;font-weight:700;">Google AI Overview cites (' + _aioRef.length + ')' + (_aioMine ? ', <span style="color:#4ade80;">including your page</span>' : ', <span style="color:#fbbf24;">this page not among them</span>') + ' \\u2014 the gap per source:</div>'
+              + '<div style="overflow-x:auto;border:1px solid #1f2937;border-radius:8px;margin-bottom:10px;"><table style="width:100%;border-collapse:collapse;background:#0d1117;">'
+              + '<thead><tr style="background:#161b22;"><th style="'+_th+'">Source</th><th style="'+_th+'">What they do</th><th style="'+_th+'">Our gap</th><th style="'+_th+'">What to do</th></tr></thead>'
+              + '<tbody>' + _rowsHtml + '</tbody></table></div>';
           }
           if (data.perp_excerpt) {
             _transparencyHtml += '<div style="font-size:10px;color:#9ca3af;margin-bottom:4px;font-weight:700;">Perplexity\u2019s actual answer:</div>'
