@@ -1,4 +1,4 @@
-console.log('=== CONTENTSCALE BOOT ' + new Date().toISOString() + ' v2026-07-08-possible-prioritized-shortcut | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON | possibleThreshold=20impr | shortcutPrioritized=v2 | gscAutoFetchRemoved=true | linkCheckActive=true | wholeSiteWipeGuard=true | gscAutoFetchRestored=true | reminderOffFix=true | claudeRemoved=true | bingWebmaster=true | competitorPanel=true | zeroResultFix=true | pagesRefreshFix=true | recheckButton=true | provenScanStrip=true | provenScanState=true | scanAllProven=true | doEverythingBtn=true | panelOrderFix=true | workflowGuide=true | preScanGuard=true | scanAllGuard=true | earlyGuard=true | emptyStateTeaser=true | provenScopeFix=true | numberedButtons=true | clearerButtons=true | scanAnimFix=true | promptClaudeCleanup=true | bonusTip=true | realProvenContext=true | competitorContext=true | unifiedBrief=true | diagnosticFirst=true | fullCompetitorBreakdown=true | serpSpyV3=true | transparencyBlock=true | emailsPausedToggle=true | competitorDedup=true | provenScanDebug=true | serializedScans=true | claudeCleanupV2=true | mergeClaudeStrip=true | visualTransparency=true | aboveFoldPriority=true | competitorComparisonTable=true | redGreenTracking=true | aioExplicitState=true | perpCopilotState=true | realMergePromptFixed=true | briefContextDebug=true | forceRescanBypass=true | gscPosFallback=true | cannibalDedup=true | gscAccessGated=true | gapConfirmShown=true | noPlaceholders=true | rowNumContrast=true | codeCannibalDedup=true | provenDebugRemoved=true | broaderCannibalDedup=true | competitorGapFallback=true | competitorPrevSnapFallback=true | hubSpokeDedup=true | compGapRegexBroadened=true | gapFixLabelFallback=true | geminiProForBriefs=true | timeoutBudgetFixed=true | perAttemptTimeout45s=true | revertToFlashLite=true | tokenLimitDoubled=true | urlNormFix=true | impactFieldChecked=true | broaderHubPattern=true | cannibalContextRemovedFromGSC=true | scanStateDerivedFromDB=true | boardBriefRestyled=true | liveWallBriefModal=true | modalScopeFix=true | cardTransparency=true | CLAUDE-FIX-2307=true | CLAUDE-FIX-2307B-specquote=true | CLAUDE-FIX-2307C-pwboard=true | CLAUDE-FIX-2307D-typefilter=true | CLAUDE-FIX-2307E-scanneraio=true | CLAUDE-FIX-2307F-urlstrip=true | CLAUDE-FIX-2307G-aiobeforeScan=true | CLAUDE-FIX-2307H-aioInPrompt=true | CLAUDE-FIX-2307I-escHtml=true | CLAUDE-FIX-2307J-escAlias-noStale=true | CLAUDE-FIX-2407A-perpCitedConsistency=true | CLAUDE-FIX-2407B-perpCacheBug=true | CLAUDE-FIX-2407C-domainVsPageNuance=true | CLAUDE-FIX-2407D-wallModalNoReshuffle=true | CLAUDE-FIX-2407E-buildBriefSafetyNet=true | CLAUDE-FIX-2407F-modalFullText=true | CLAUDE-FIX-2407G-aioPasteModal=true | CLAUDE-FIX-2407H-aioDefinitionView=true | CLAUDE-FIX-2407I-aioBlueprintMining=true | CLAUDE-FIX-2407J-aioReferences=true | CLAUDE-FIX-2407K-aioCitationGap=true | CLAUDE-FIX-2407L-compGapTableAllModals=true ===');
+console.log('=== CONTENTSCALE BOOT ' + new Date().toISOString() + ' v2026-07-08-possible-prioritized-shortcut | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON | possibleThreshold=20impr | shortcutPrioritized=v2 | gscAutoFetchRemoved=true | linkCheckActive=true | wholeSiteWipeGuard=true | gscAutoFetchRestored=true | reminderOffFix=true | claudeRemoved=true | bingWebmaster=true | competitorPanel=true | zeroResultFix=true | pagesRefreshFix=true | recheckButton=true | provenScanStrip=true | provenScanState=true | scanAllProven=true | doEverythingBtn=true | panelOrderFix=true | workflowGuide=true | preScanGuard=true | scanAllGuard=true | earlyGuard=true | emptyStateTeaser=true | provenScopeFix=true | numberedButtons=true | clearerButtons=true | scanAnimFix=true | promptClaudeCleanup=true | bonusTip=true | realProvenContext=true | competitorContext=true | unifiedBrief=true | diagnosticFirst=true | fullCompetitorBreakdown=true | serpSpyV3=true | transparencyBlock=true | emailsPausedToggle=true | competitorDedup=true | provenScanDebug=true | serializedScans=true | claudeCleanupV2=true | mergeClaudeStrip=true | visualTransparency=true | aboveFoldPriority=true | competitorComparisonTable=true | redGreenTracking=true | aioExplicitState=true | perpCopilotState=true | realMergePromptFixed=true | briefContextDebug=true | forceRescanBypass=true | gscPosFallback=true | cannibalDedup=true | gscAccessGated=true | gapConfirmShown=true | noPlaceholders=true | rowNumContrast=true | codeCannibalDedup=true | provenDebugRemoved=true | broaderCannibalDedup=true | competitorGapFallback=true | competitorPrevSnapFallback=true | hubSpokeDedup=true | compGapRegexBroadened=true | gapFixLabelFallback=true | geminiProForBriefs=true | timeoutBudgetFixed=true | perAttemptTimeout45s=true | revertToFlashLite=true | tokenLimitDoubled=true | urlNormFix=true | impactFieldChecked=true | broaderHubPattern=true | cannibalContextRemovedFromGSC=true | scanStateDerivedFromDB=true | boardBriefRestyled=true | liveWallBriefModal=true | modalScopeFix=true | cardTransparency=true | CLAUDE-FIX-2307=true | CLAUDE-FIX-2307B-specquote=true | CLAUDE-FIX-2307C-pwboard=true | CLAUDE-FIX-2307D-typefilter=true | CLAUDE-FIX-2307E-scanneraio=true | CLAUDE-FIX-2307F-urlstrip=true | CLAUDE-FIX-2307G-aiobeforeScan=true | CLAUDE-FIX-2307H-aioInPrompt=true | CLAUDE-FIX-2307I-escHtml=true | CLAUDE-FIX-2307J-escAlias-noStale=true | CLAUDE-FIX-2407A-perpCitedConsistency=true | CLAUDE-FIX-2407B-perpCacheBug=true | CLAUDE-FIX-2407C-domainVsPageNuance=true | CLAUDE-FIX-2407D-wallModalNoReshuffle=true | CLAUDE-FIX-2407E-buildBriefSafetyNet=true | CLAUDE-FIX-2407F-modalFullText=true | CLAUDE-FIX-2407G-aioPasteModal=true | CLAUDE-FIX-2407H-aioDefinitionView=true | CLAUDE-FIX-2407I-aioBlueprintMining=true | CLAUDE-FIX-2407J-aioReferences=true | CLAUDE-FIX-2407K-aioCitationGap=true | CLAUDE-FIX-2407L-compGapTableAllModals=true | CLAUDE-FIX-2407M-honestAioManualOnly=true ===');
 // CONTENTSCALE SERVER.JS — ELITE EDITION v4 (FIXED v3)
 // ✅ FIX v7: secondary_keywords + related_keywords auto in Analyse JSON + Execute prompt
 // ✅ FIX v7: analysis_data JSONB safe parse in execute-rewrite
@@ -3636,7 +3636,7 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
         return '<div class="bw-comp"><span class="bw-comp-n">#'+(c.position||i+1)+'</span> <a href="'+esc(c.url||'#')+'" target="_blank" rel="noopener" class="bw-comp-u">'+esc(host)+'</a><span class="bw-comp-t">'+ttl+'</span></div>';
       }).join('');
     }
-    h+='<div class="bw-trans-line">Google AI Overview: '+(d.aio_text?('shown &mdash; '+esc(String(d.aio_text).slice(0,150))+'...'):'not detected for this query.')+'</div>';
+    h+='<div class="bw-trans-line">Google AI Overview: '+(d.aio_text?('shown &mdash; '+esc(String(d.aio_text).slice(0,150))+'...'):'no data &mdash; paste the AI Overview you see on Google (Add AIO) for an exact check.')+'</div>';
     h+='<div class="bw-trans-line">Perplexity: '+(d.perp_cited?(d.perp_text?('&ldquo;'+esc(String(d.perp_text).slice(0,150))+'&rdquo;'):'cited'):(d.perp_text?'mentioned in answer but not formally cited':'checked &mdash; no answer excerpt captured for this query.'))+'</div>';
     if(pcomp.length){ h+='<div class="bw-trans-line">Perplexity also cites ('+pcomp.length+')'+(d.perp_cited?'':' &mdash; this page not among them')+': '+esc(pcomp.slice(0,5).join(', '))+'</div>'; }
     return h+'</div>';
@@ -4100,7 +4100,7 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
           + (_aioFull.length > 240 ? '<div id="' + _aioId + '_f" style="display:none;margin-top:4px;color:#cbd5e1;font-style:italic;">' + _aioFull + '</div><span id="' + _aioId + '_b" onclick="event.stopPropagation();_bwToggleAio(this.id.slice(0,-2))" style="cursor:pointer;color:#60a5fa;font-size:10px;">\\u2295 show full AI Overview</span>' : '')
           + '</div>';
       } else {
-        h += '<div class="bwm-line">Google AI Overview: not detected for this query.</div>';
+        h += '<div class="bwm-line">Google AI Overview: no data \\u2014 paste the AI Overview you see on Google (Add AIO on the page card) for an exact check. Automated tools can\\u2019t see your personalized AI Overview.</div>';
       }
       var aioref = d.aio_references || [];
       if (aioref.length) {
@@ -4225,7 +4225,7 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
         return '<div class="bwc-comp"><span class="bwc-cn">#'+(c.position||i+1)+'</span> <span class="bwc-cu">'+_bwEscL(host)+'</span>'+(c.title?(' <span class="bwc-ct">&mdash; '+_bwEscL(String(c.title).slice(0,52))+'</span>'):'')+'</div>';
       }).join('');
     }
-    h += '<div class="bwc-line">Google AI Overview: '+(d.aio_text?'shown for this query':'not detected')+(aioref.length?(' &middot; cites '+aioref.length+' source'+(aioref.length>1?'s':'')):'')+'</div>';
+    h += '<div class="bwc-line">Google AI Overview: '+(d.aio_text?'shown for this query':'no data \\u2014 paste yours via Add AIO')+(aioref.length?(' &middot; cites '+aioref.length+' source'+(aioref.length>1?'s':'')):'')+'</div>';
     h += '<div class="bwc-line">Perplexity: '+(d.perp_cited?'cited':'not cited')+(d.perp_text&&!d.perp_cited?' &mdash; mentioned in answer':'')+(pcomp.length?(' &middot; also cites '+pcomp.length+' other sources'):'')+'</div>';
     return h + '</div>';
   }
@@ -32262,7 +32262,7 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
             _transparencyHtml += '<div style="font-size:10px;color:#9ca3af;margin-bottom:4px;font-weight:700;">Google AI Overview currently shows:</div>'
               + '<div style="font-size:11px;color:#cbd5e1;font-style:italic;background:#0d1117;border-left:2px solid #3b82f6;padding:6px 10px;margin-bottom:10px;">\u201c' + data.aio_text.substring(0,220).replace(/</g,'&lt;') + (data.aio_text.length>220?'\u2026':'') + '\u201d</div>';
           } else {
-            _transparencyHtml += '<div style="font-size:10px;color:#6b7280;margin-bottom:10px;">Google AI Overview: checked \u2014 Google is not showing an AI Overview for this exact query right now.</div>';
+            _transparencyHtml += '<div style="font-size:10px;color:#6b7280;margin-bottom:10px;">Google AI Overview: no data \u2014 paste the AI Overview you see on Google (Add AIO) for an exact check; automated tools can\u2019t see your personalized AI Overview.</div>';
           }
           var _aioRef = typeof data.aio_references === 'string' ? JSON.parse(data.aio_references) : (data.aio_references||[]);
           if (_aioRef && _aioRef.length) {
@@ -32740,7 +32740,7 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
             _transparencyHtml2 += '<div style="font-size:10px;color:#9ca3af;margin-bottom:4px;font-weight:700;">Google AI Overview currently shows:</div>'
               + '<div style="font-size:11px;color:#cbd5e1;font-style:italic;background:#0d1117;border-left:2px solid #3b82f6;padding:6px 10px;margin-bottom:10px;">\u201c' + data.aio_text.substring(0,220).replace(/</g,'&lt;') + (data.aio_text.length>220?'\u2026':'') + '\u201d</div>';
           } else {
-            _transparencyHtml2 += '<div style="font-size:10px;color:#6b7280;margin-bottom:10px;">Google AI Overview: checked \u2014 Google is not showing an AI Overview for this exact query right now.</div>';
+            _transparencyHtml2 += '<div style="font-size:10px;color:#6b7280;margin-bottom:10px;">Google AI Overview: no data \u2014 paste the AI Overview you see on Google (Add AIO) for an exact check; automated tools can\u2019t see your personalized AI Overview.</div>';
           }
           if (data.perp_excerpt) {
             _transparencyHtml2 += '<div style="font-size:10px;color:#9ca3af;margin-bottom:4px;font-weight:700;">Perplexity\u2019s actual answer:</div>'
@@ -37851,47 +37851,13 @@ app.post('/api/tracker/pages/:id/citation-brief', verifyEngineAccess, async (req
           const sData = await sResp.json();
           const organic = sData.organic || [];
           const ab = sData.answerBox || null;
-          const aiov = sData.aiOverview || null;
-          for (let i = 0; i < organic.length; i++) {
-            if ((organic[i].link||'').replace(/^https?:\/\//, '').includes(domain)) {
-              googlePosition = organic[i].position || i + 1; break;
-            }
-          }
-          // Google's real AI Overview block (Serper `aiOverview`) carries a references[] list —
-          // the exact domains Google cites INSIDE the AI Overview. This is the AIO equivalent of
-          // the SERP top-5, and was previously fetched by Serper but never read.
-          if (aiov) {
-            aioFound = true;
-            var _aioBlocksTxt = '';
-            if (Array.isArray(aiov.textBlocks)) {
-              _aioBlocksTxt = aiov.textBlocks.map(function(b){
-                if (b && b.snippet) return b.snippet;
-                if (b && Array.isArray(b.list)) return b.list.map(function(li){ return (li && (li.title? (li.title+': ') : '')) + (li && li.snippet ? li.snippet : ''); }).join(' ');
-                return '';
-              }).filter(Boolean).join('\n\n');
-            }
-            if (_aioBlocksTxt) aioText = _aioBlocksTxt;
-            var _hostOf2 = function(u){ try { return new URL(u).hostname.replace(/^www\./,''); } catch(e){ return String(u||'').replace(/^https?:\/\//,'').replace(/^www\./,'').split('/')[0]; } };
-            var _organicByHost2 = {};
-            (organic||[]).forEach(function(o){ var hh=_hostOf2(o.link||''); if(hh && !_organicByHost2[hh]) _organicByHost2[hh] = o; });
-            aioReferences = (Array.isArray(aiov.references) ? aiov.references : [])
-              .map(function(r){
-                var _u = r.link || r.url || '';
-                var _h = _hostOf2(_u);
-                var _m = _organicByHost2[_h] || null;
-                return { url: _u, title: r.title || (_m && _m.title) || '', source: r.source || _h, snippet: (_m && _m.snippet) || '', organic_position: (_m && _m.position) || null };
-              })
-              .filter(function(r){ return r.url; })
-              .slice(0, 10);
-            aioCited = aioReferences.some(function(r){ return (r.url||'').replace(/^https?:\/\//,'').replace(/^www\./,'').startsWith(domain); }) || (aioText||'').includes(domain);
-          }
-          if (ab && !aioText) {
+          // NOTE (2026-07-24): Serper does not return aiOverview — AIO comes from
+          // manual paste only (personalized AIOs cannot be scraped exactly).
+          if (ab) {
             aioFound = true;
             aioText = ab.answer || ab.snippet || ab.title || JSON.stringify(ab).substring(0, 600);
             aioSourceUrl = ab.link || (ab.sitelinks && ab.sitelinks[0] && ab.sitelinks[0].link) || '';
             aioCited = JSON.stringify(ab).includes(domain);
-          } else if (ab) {
-            aioSourceUrl = aioSourceUrl || ab.link || '';
           }
           serpCompetitors = organic.slice(0, 5).map(r2 => ({
             url: r2.link, domain: (r2.link||'').replace(/^https?:\/\//, '').split('/')[0].replace(/^www\./, ''),
@@ -40875,46 +40841,10 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
           // Also check knowledgeGraph and organic snippets for our domain
           const ab = sData.answerBox || null;
           const kg = sData.knowledgeGraph || null;
-          const aiov = sData.aiOverview || null;
-
-          // ── Google AI Overview references: the domains Google cites INSIDE the AI Overview.
-          // Serper returns these under `aiOverview.references`. This is the AIO equivalent of the
-          // organic top-5 — "who Google is quoting to answer this query". Store them so the panel
-          // can show them the same way it shows Perplexity's cited sources.
-          if (aiov && Array.isArray(aiov.references) && aiov.references.length) {
-            var _hostOf = function(u){ try { return new URL(u).hostname.replace(/^www\./,''); } catch(e){ return String(u||'').replace(/^https?:\/\//,'').replace(/^www\./,'').split('/')[0]; } };
-            var _organicByHost = {};
-            (organic||[]).forEach(function(o){ var hh=_hostOf(o.link||''); if(hh && !_organicByHost[hh]) _organicByHost[hh] = o; });
-            snapshot.ai_google_overview_references = aiov.references
-              .map(function(r){
-                var _u = r.link || r.url || '';
-                var _h = _hostOf(_u);
-                var _match = _organicByHost[_h] || null;
-                return {
-                  url: _u,
-                  title: r.title || (_match && _match.title) || '',
-                  source: r.source || _h,
-                  snippet: (_match && _match.snippet) || '',           // what they say for this query
-                  organic_position: (_match && _match.position) || null // where they rank organically
-                };
-              })
-              .filter(function(r){ return r.url; })
-              .slice(0, 10);
-            if (!snapshot.ai_google_overview_found) {
-              snapshot.ai_google_overview_found = true;
-              var _aiovTxt = '';
-              if (Array.isArray(aiov.textBlocks)) {
-                _aiovTxt = aiov.textBlocks.map(function(b){
-                  if (b && b.snippet) return b.snippet;
-                  if (b && Array.isArray(b.list)) return b.list.map(function(li){ return (li && li.title ? (li.title+': ') : '') + (li && li.snippet ? li.snippet : ''); }).join(' ');
-                  return '';
-                }).filter(Boolean).join('\n\n');
-              }
-              if (_aiovTxt && !page.aio_manual_text) snapshot.ai_google_overview_text = _aiovTxt.substring(0, 3000);
-              snapshot.ai_google_overview_cited = snapshot.ai_google_overview_references.some(function(r){ return (r.url||'').replace(/^https?:\/\//,'').replace(/^www\./,'').startsWith(domain); });
-            }
-          }
-
+          // NOTE (2026-07-24): Serper does NOT return an aiOverview field — confirmed
+          // by live debug and provider docs. AIO data comes exclusively from the
+          // user's manual paste (Add AIO), which is also the only EXACT source since
+          // AI Overviews are personalized per user/location and cannot be scraped 1:1.
           if(ab && (ab.type === 'ai_overview' || ab.type === 'aiOverview' || ab.answerType === 'ai_overview')) {
             // Explicit AI Overview block
             snapshot.ai_google_overview_found = true;
