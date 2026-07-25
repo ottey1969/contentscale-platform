@@ -1,4 +1,15 @@
-console.log('=== CONTENTSCALE BOOT v2026-07-02-fixes7 | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON ===');
+console.log('=== CONTENTSCALE BOOT ' + new Date().toISOString() + ' v2026-07-08-possible-prioritized-shortcut | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON | possibleThreshold=20impr | shortcutPrioritized=v2 | gscAutoFetchRemoved=true | linkCheckActive=true | wholeSiteWipeGuard=true | gscAutoFetchRestored=true | reminderOffFix=true | claudeRemoved=true | bingWebmaster=true | competitorPanel=true | zeroResultFix=true | pagesRefreshFix=true | recheckButton=true | provenScanStrip=true | provenScanState=true | scanAllProven=true | doEverythingBtn=true | panelOrderFix=true | workflowGuide=true | preScanGuard=true | scanAllGuard=true | earlyGuard=true | emptyStateTeaser=true | provenScopeFix=true | numberedButtons=true | clearerButtons=true | scanAnimFix=true | promptClaudeCleanup=true | bonusTip=true | realProvenContext=true | competitorContext=true | unifiedBrief=true | diagnosticFirst=true | fullCompetitorBreakdown=true | serpSpyV3=true | transparencyBlock=true | emailsPausedToggle=true | competitorDedup=true | provenScanDebug=true | serializedScans=true | claudeCleanupV2=true | mergeClaudeStrip=true | visualTransparency=true | aboveFoldPriority=true | competitorComparisonTable=true | redGreenTracking=true | aioExplicitState=true | perpCopilotState=true | realMergePromptFixed=true | briefContextDebug=true | forceRescanBypass=true | gscPosFallback=true | cannibalDedup=true | gscAccessGated=true | gapConfirmShown=true | noPlaceholders=true | rowNumContrast=true | codeCannibalDedup=true | provenDebugRemoved=true | broaderCannibalDedup=true | competitorGapFallback=true | competitorPrevSnapFallback=true | hubSpokeDedup=true | compGapRegexBroadened=true | gapFixLabelFallback=true | geminiProForBriefs=true | timeoutBudgetFixed=true | perAttemptTimeout45s=true | revertToFlashLite=true | tokenLimitDoubled=true | urlNormFix=true | impactFieldChecked=true | broaderHubPattern=true | cannibalContextRemovedFromGSC=true | scanStateDerivedFromDB=true | boardBriefRestyled=true | liveWallBriefModal=true | modalScopeFix=true | cardTransparency=true | CLAUDE-FIX-2307=true | CLAUDE-FIX-2307B-specquote=true | CLAUDE-FIX-2307C-pwboard=true | CLAUDE-FIX-2307D-typefilter=true | CLAUDE-FIX-2307E-scanneraio=true | CLAUDE-FIX-2307F-urlstrip=true | CLAUDE-FIX-2307G-aiobeforeScan=true | CLAUDE-FIX-2307H-aioInPrompt=true | CLAUDE-FIX-2307I-escHtml=true | CLAUDE-FIX-2307J-escAlias-noStale=true | CLAUDE-FIX-2407A-perpCitedConsistency=true | CLAUDE-FIX-2407B-perpCacheBug=true | CLAUDE-FIX-2407C-domainVsPageNuance=true | CLAUDE-FIX-2407D-wallModalNoReshuffle=true | CLAUDE-FIX-2407E-buildBriefSafetyNet=true | CLAUDE-FIX-2407F-modalFullText=true | CLAUDE-FIX-2407G-aioPasteModal=true | CLAUDE-FIX-2407H-aioDefinitionView=true | CLAUDE-FIX-2407I-aioBlueprintMining=true | CLAUDE-FIX-2407J-aioReferences=true | CLAUDE-FIX-2407K-aioCitationGap=true | CLAUDE-FIX-2407L-compGapTableAllModals=true | CLAUDE-FIX-2407M-honestAioManualOnly=true | CLAUDE-FIX-2407N-regexEscapeInTemplate=true | CLAUDE-FIX-2507A-jsonRepair-mergeTokens4096=true | CLAUDE-FIX-2507B-cardButtonsWorkflowOrder=true | CLAUDE-FIX-2507C-cardButtonsPillColors=true | CLAUDE-FIX-2507D-aioReloadFull-limit8000=true | CLAUDE-FIX-2507E-briefModalTransparency=true | CLAUDE-FIX-2507F-aioGapTable4col=true | CLAUDE-FIX-2507G-htmlScanTickCycle=true | CLAUDE-FIX-2507H-briefViewedPersisted=true | CLAUDE-FIX-2507I-fixCardRenderVarInExpr=true | CLAUDE-FIX-2507J-briefsUnified-manualAioGap=true | CLAUDE-FIX-2507K-gscCompTableInTracker=true | CLAUDE-FIX-2507L-trackerSplitSections=true | CLAUDE-FIX-2507M-copyBriefClarity=true | CLAUDE-FIX-2507N-aioRefsFromManualPaste=true | CLAUDE-FIX-2507O-removeSseEventSource=true | CLAUDE-FIX-2507P-ticksPersistUntilDoneOrNewHtml=true | CLAUDE-FIX-2507Q-aioRefsStoredAtSave=true | CLAUDE-FIX-2507R-aioGapTableAlways=true | CLAUDE-FIX-2507S-aioGscContextSeparated=true | CLAUDE-FIX-2507T-aioCodeFallbackFixed-refsFromManualSave=true | CLAUDE-FIX-2507U-mergeSafetyNet-cardSummaryParity=true | CLAUDE-FIX-2507V-sharedAioRenderFn-authTable=true | CLAUDE-FIX-2507W-viewLastBriefDelegates-oneSystem=true | CLAUDE-FIX-2507X-sharedBriefBody-fullUnification=true ===');
+
+// Repair common LLM-JSON defects (raw newlines/tabs inside strings, trailing commas)
+function _repairJsonG(str){
+  let out='', inStr=false, esc=false;
+  for (let i=0;i<str.length;i++){ const ch=str[i];
+    if(inStr){ if(esc){out+=ch;esc=false;continue;} if(ch==='\\'){out+=ch;esc=true;continue;}
+      if(ch==='"'){inStr=false;out+=ch;continue;} if(ch==='\n'){out+='\\n';continue;}
+      if(ch==='\r'){continue;} if(ch==='\t'){out+='\\t';continue;} out+=ch; continue; }
+    if(ch==='"'){inStr=true;out+=ch;continue;} out+=ch; }
+  return out.replace(/,\s*([\]}])/g,'$1');
+}
 // CONTENTSCALE SERVER.JS — ELITE EDITION v4 (FIXED v3)
 // ✅ FIX v7: secondary_keywords + related_keywords auto in Analyse JSON + Execute prompt
 // ✅ FIX v7: analysis_data JSONB safe parse in execute-rewrite
@@ -166,6 +177,55 @@ try {
 } catch(e) {
   console.error('❌ GSC Service Account parse error:', e.message);
 }
+
+// Reusable GSC Search Analytics API helpers — shared by the tracker's auto-fetch-per-page-queries
+// endpoint. Kept separate from the older /api/gsc/auto-fill endpoint's own inline JWT logic.
+async function _gscGetAccessToken() {
+  if (!_gscServiceAccount) throw new Error('GSC_SERVICE_ACCOUNT_JSON not configured');
+  const { createSign } = require('crypto');
+  const now = Math.floor(Date.now() / 1000);
+  const header = Buffer.from(JSON.stringify({ alg: 'RS256', typ: 'JWT' })).toString('base64url');
+  const payload = Buffer.from(JSON.stringify({
+    iss: _gscServiceAccount.client_email,
+    scope: 'https://www.googleapis.com/auth/webmasters.readonly',
+    aud: 'https://oauth2.googleapis.com/token',
+    exp: now + 3600, iat: now
+  })).toString('base64url');
+  const sign = createSign('RSA-SHA256');
+  sign.update(`${header}.${payload}`);
+  const signature = sign.sign(_gscServiceAccount.private_key, 'base64url');
+  const jwt = `${header}.${payload}.${signature}`;
+  const tokenResp = await axios.post('https://oauth2.googleapis.com/token',
+    new URLSearchParams({ grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer', assertion: jwt }).toString(),
+    { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
+  );
+  return tokenResp.data.access_token;
+}
+async function _gscQueryRows(accessToken, siteUrl, pageUrl, dims, startDate, endDate, rowLimit) {
+  const body = { startDate, endDate, dimensions: dims,
+    dimensionFilterGroups: pageUrl ? [{ filters: [{ dimension: 'page', operator: 'equals', expression: pageUrl }] }] : [],
+    rowLimit: rowLimit || 20 };
+  const r = await fetch(
+    `https://www.googleapis.com/webmasters/v3/sites/${encodeURIComponent(siteUrl)}/searchAnalytics/query`,
+    { method: 'POST', headers: { Authorization: `Bearer ${accessToken}` }, body: JSON.stringify(body) }
+  );
+  if (!r.ok) { const e = await r.json(); throw new Error(e.error?.message || r.status); }
+  return (await r.json()).rows || [];
+}
+async function _gscFindSiteFormat(accessToken, pageUrl) {
+  const urlObj = new URL(pageUrl);
+  const formats = [
+    `https://${urlObj.hostname}/`, `http://${urlObj.hostname}/`,
+    `sc-domain:${urlObj.hostname.replace(/^www\./, '')}`,
+    `https://www.${urlObj.hostname.replace(/^www\./, '')}/`,
+  ];
+  for (const fmt of formats) {
+    try { await _gscQueryRows(accessToken, fmt, pageUrl, ['page'], new Date(Date.now()-7*86400000).toISOString().split('T')[0], new Date().toISOString().split('T')[0], 1); return fmt; }
+    catch(e) { /* try next format */ }
+  }
+  return null;
+}
+
 const PORT = process.env.PORT || 3000;
 
 // ============================================
@@ -175,12 +235,18 @@ const PORT = process.env.PORT || 3000;
 // Nooit meer handmatig aanpassen
 // ============================================
 let GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash-lite'; // primary — cheapest; set GEMINI_MODEL env to override
+// Dedicated, stronger model for the AI Citations Tracker specifically (citation/GSC/source briefs,
+// merge, ranking) — these need reliable multi-part structural compliance (exact headings, exact
+// system labels) more than raw speed. Kept SEPARATE from the platform-wide GEMINI_MODEL so a change
+// here never affects the Content Engine, SEO Audit, or any other feature. Falls back to GEMINI_MODEL
+// automatically per-call if a gemini-2.5-pro request ever 404s (not available on this API key/tier).
+let GEMINI_MODEL_BRIEF = process.env.GEMINI_MODEL_BRIEF || 'gemini-2.5-flash-lite';
 
 async function detectBestGeminiModel(apiKey) {
   if (!apiKey) return;
   // Priority: cheapest postpay models first (billing enabled account)
   // gemini-2.0-flash = $0.075/1M tokens — best price/quality for postpay
-  const PRIORITY = ['gemini-2.5-flash-lite', 'gemini-2.5-flash', 'gemini-2.5-pro'];
+  const PRIORITY = ['gemini-3.5-flash', 'gemini-3.5-flash-lite', 'gemini-3.1-flash-lite', 'gemini-2.5-flash'];
   try {
     const resp = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`,
@@ -216,7 +282,7 @@ async function callGeminiWithFallback(apiKey, body, primaryModel, fallbackModel,
   const FALLBACK = fallbackModel || 'gemini-2.5-flash';
   const primary = primaryModel || GEMINI_MODEL;
   const shouldRetry = (status, errMsg) => {
-    if (status === 0 || status === 408 || status === 503 || status === 429 || status === 500 || status === 502) return true; // 0 = network/fetch error
+    if (status === 0 || status === 404 || status === 408 || status === 503 || status === 429 || status === 500 || status === 502) return true; // 0 = network/fetch error, 404 = model not found/unavailable on this key
     const m = (errMsg || '').toLowerCase();
     return m.includes('fetch failed') || m.includes('network') || m.includes('econnreset') || m.includes('enotfound') || m.includes('socket') || m.includes('overload') || m.includes('high demand') || m.includes('unavailable') || m.includes('rate limit') || m.includes('quota') || m.includes('timeout') || m.includes('timed out');
   };
@@ -224,7 +290,7 @@ async function callGeminiWithFallback(apiKey, body, primaryModel, fallbackModel,
 
   const tryModel = async (model, attemptNum) => {
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 28000);
+    const timer = setTimeout(() => controller.abort(), 90000);
     try {
       const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
         method: 'POST',
@@ -238,7 +304,7 @@ async function callGeminiWithFallback(apiKey, body, primaryModel, fallbackModel,
     } catch (fetchErr) {
       clearTimeout(timer);
       if (fetchErr.name === 'AbortError') {
-        return { ok: false, status: 408, data: {}, modelUsed: model, errorMessage: 'Gemini request timed out after 28s' };
+        return { ok: false, status: 408, data: {}, modelUsed: model, errorMessage: 'Gemini request timed out after 90s' };
       }
       return { ok: false, status: 0, data: {}, modelUsed: model, errorMessage: fetchErr.message || 'Network error' };
     }
@@ -425,9 +491,9 @@ const claudeGuard = (() => {
   const COOLDOWN_MS = parseInt(process.env.CLAUDE_COOLDOWN_MS) || 600000;
   let calls = [], trippedUntil = 0, lastAlert = 0;
   function notify(msg){
-    try{ const p=process.env.CALLMEBOT_PHONE,k=process.env.CALLMEBOT_APIKEY;
-      if(p&&k&&Date.now()-lastAlert>60000){ lastAlert=Date.now();
-        fetch('https://api.callmebot.com/whatsapp.php?phone='+encodeURIComponent(p)+'&apikey='+encodeURIComponent(k)+'&text='+encodeURIComponent(msg)).catch(()=>{}); } }catch(_){}
+    try{
+      if(Date.now()-lastAlert>60000){ lastAlert=Date.now();
+        notifyOttmar('⚠️ Claude circuit breaker', '<p>' + msg + '</p>', msg).catch(()=>{}); } }catch(_){}
   }
   return {
     gate(){
@@ -939,9 +1005,9 @@ async function sendTrackerEmail(clientId, subject, htmlBody, hideViewBtn) {
     // Robust query — handle missing columns gracefully
     let client;
     try {
-      const cr = await pool.query('SELECT * FROM tracker_clients WHERE id=$1 AND (email_unsubscribed IS NULL OR email_unsubscribed=FALSE) AND email IS NOT NULL', [clientId]);
+      const cr = await pool.query('SELECT * FROM tracker_clients WHERE id=$1 AND (email_unsubscribed IS NULL OR email_unsubscribed=FALSE) AND (emails_paused IS NULL OR emails_paused=FALSE) AND email IS NOT NULL', [clientId]);
       if (!cr.rows.length) {
-        console.warn('[tracker-email] No client found or unsubscribed for id:', clientId);
+        console.warn('[tracker-email] No client found, unsubscribed, or paused for id:', clientId);
         return;
       }
       client = cr.rows[0];
@@ -1027,7 +1093,84 @@ function generateClientToken() {
   return require('crypto').randomBytes(24).toString('hex');
 }
 
+// Ensure a client has a read-only share token; create one if missing. Returns the token.
+// Called at account creation and lazily in any email path, so the RO link ALWAYS exists.
+async function ensureReadonlyToken(clientId) {
+  try {
+    const r = await pool.query('SELECT readonly_token FROM tracker_clients WHERE id=$1', [clientId]);
+    if (!r.rows.length) return null;
+    if (r.rows[0].readonly_token) return r.rows[0].readonly_token;
+    const roToken = 'ro_' + generateClientToken();
+    await pool.query('UPDATE tracker_clients SET readonly_token=$1 WHERE id=$2', [roToken, clientId]);
+    return roToken;
+  } catch(e) { return null; }
+}
+
+// Reusable email block showing BOTH links with an unmistakable distinction.
+// Every email is self-contained: the owner can always edit AND always share, no matter which email they open.
+function emailLinkBlock(editToken, roToken) {
+  const base = process.env.APP_URL || 'https://app.contentscale.site';
+  const editUrl = base + '/track/' + editToken;
+  const roUrl = roToken ? base + '/track/' + roToken : null;
+  let html = '<table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;margin:16px 0;border-collapse:separate;">';
+  html += '<tr><td style="background:#f5f3ff;border:1px solid #ddd6fe;border-radius:10px;padding:14px 16px;">'
+    + '<div style="font-size:13px;font-weight:800;color:#6d28d9;margin-bottom:2px;">\u270f\ufe0f Your tracker \u2014 edit, scan, add pages</div>'
+    + '<div style="font-size:11px;color:#7c3aed;margin-bottom:8px;">Keep this one private \u2014 anyone with it can make changes.</div>'
+    + '<a href="' + editUrl + '" style="display:inline-block;background:#7c3aed;color:#fff;font-size:13px;font-weight:700;text-decoration:none;padding:9px 18px;border-radius:7px;">Open my tracker \u2192</a>'
+    + '</td></tr>';
+  if (roUrl) {
+    html += '<tr><td style="padding-top:10px;"><table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;"><tr><td style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:14px 16px;">'
+      + '<div style="font-size:13px;font-weight:800;color:#334155;margin-bottom:2px;">\ud83d\udc41 Share link \u2014 read-only</div>'
+      + '<div style="font-size:11px;color:#64748b;margin-bottom:8px;">Safe to send to clients or colleagues. They see live data but cannot change anything.</div>'
+      + '<a href="' + roUrl + '" style="display:inline-block;background:#334155;color:#fff;font-size:13px;font-weight:700;text-decoration:none;padding:9px 18px;border-radius:7px;">Open read-only view \u2192</a>'
+      + '</td></tr></table></td></tr>';
+  }
+  html += '</table>';
+  return html;
+}
+
 // POST /api/tracker-client/register — create new client tracker
+// ── DEMO READ-ONLY GUARD ─────────────────────────────────────────────────
+// A client flagged demo_readonly=TRUE (admin toggle) gets a fully browsable tracker,
+// but every mutation (POST/PATCH/PUT/DELETE) is blocked server-side. This makes the
+// share link safe to hand to prospects: they can look at everything, change nothing.
+// Small in-memory cache for the RO-token lookup: avoids one extra DB roundtrip per tracker request
+// (this middleware runs on EVERY /api/tracker-client/* call, including the owner's own normal traffic).
+// 60s TTL — a freshly created RO link works within a minute; negative results cache too, so a normal
+// owner token (99% of traffic) costs one cheap Map lookup instead of a query after the first hit.
+const _roTokenCache = new Map(); // tok -> { owner: string|null, at: number }
+app.use(async (req, res, next) => {
+  // Read-only SHARE token guard. NOTE: must be a GLOBAL middleware — mounting on
+  // '/api/tracker-client/:token' makes Express strip the prefix from req.url, so a
+  // rewrite there never reaches the routers (the original bug: "Tracker not found").
+  const m = req.path.match(/^\/api\/tracker-client\/([^\/]+)/);
+  if (!m || m[1] === 'register') return next();
+  const tok = m[1];
+  try {
+    let _cached = _roTokenCache.get(tok);
+    if (!_cached || (Date.now() - _cached.at) > 60000) {
+      const _ro = await pool.query('SELECT token FROM tracker_clients WHERE readonly_token=$1', [tok]);
+      _cached = { owner: _ro.rows.length ? _ro.rows[0].token : null, at: Date.now() };
+      _roTokenCache.set(tok, _cached);
+      if (_roTokenCache.size > 5000) _roTokenCache.clear(); // simple guard against unbounded growth
+    }
+    const ro = { rows: _cached.owner ? [{ token: _cached.owner }] : [] };
+    if (ro.rows.length) {
+      if (req.method !== 'GET') return res.status(403).json({ success: false, error: 'Read-only link \u2014 viewing is live, changes are disabled.' });
+      // Transparently rewrite to the owner token so every existing GET endpoint works unchanged
+      req.url = req.url.replace('/api/tracker-client/' + tok, '/api/tracker-client/' + ro.rows[0].token);
+      return next();
+    }
+    if (req.method !== 'GET') {
+      const r = await pool.query('SELECT demo_readonly FROM tracker_clients WHERE token=$1', [tok]);
+      if (r.rows.length && r.rows[0].demo_readonly === true) {
+        return res.status(403).json({ success: false, error: 'This is a read-only view \u2014 the live data is real, but editing is disabled on the shared link.' });
+      }
+    }
+  } catch(e) {}
+  next();
+});
+
 app.post('/api/tracker-client/register', async (req, res) => {
   try {
     const { domain, name, email, whatsapp, dealify_code } = req.body;
@@ -1057,12 +1200,12 @@ app.post('/api/tracker-client/register', async (req, res) => {
     if (existing.rows.length) {
       // Never return existing tracker URL on public registration
       // Always direct to Ottmar — he handles it via admin
-      const cbPhone = process.env.CALLMEBOT_PHONE;
-      const cbKey = process.env.CALLMEBOT_KEY;
-      if (cbPhone && cbKey) {
-        const ex = existing.rows[0];
-        fetch(`https://api.callmebot.com/whatsapp.php?phone=${cbPhone}&text=${encodeURIComponent('⚠️ Re-registration attempt: ' + cleanDomain + ' (status: ' + ex.status + ') — email: ' + (email||'none'))}&apikey=${cbKey}`).catch(()=>{});
-      }
+      const ex = existing.rows[0];
+      notifyOttmar(
+        '⚠️ Re-registration attempt: ' + cleanDomain,
+        '<p>Domain: ' + cleanDomain + '<br>Status: ' + ex.status + '<br>Email: ' + (email || 'none') + '</p>',
+        'Re-registration attempt: ' + cleanDomain + ' (status: ' + ex.status + ') — email: ' + (email || 'none')
+      ).catch(() => {});
       return res.status(409).json({
         success: false,
         error: 'A tracker for ' + cleanDomain + ' already exists. Contact Ottmar to recover or reset your tracker: wa.me/31628073996'
@@ -1139,16 +1282,14 @@ app.post('/api/tracker-client/register', async (req, res) => {
       if (clientId) await sendTrackerEmail(clientId, 'Your AI Citations Tracker is ready — ' + cleanDomain, welcomeHtml, true).catch(() => {});
     }
 
-    // Notify Ottmar via WA
-    const cbPhone = process.env.CALLMEBOT_PHONE;
-    const cbKey = process.env.CALLMEBOT_KEY;
-    if (cbPhone && cbKey) {
+    // Notify Ottmar
+    {
       // Detect platform from code prefix
       const platformMap = { 'APPSUMO-': 'AppSumo', 'AS-': 'AppSumo', 'PG-': 'PitchGround', 'PITCHGROUND-': 'PitchGround', 'SM-': 'SaasMantra', 'SAASMANTRA-': 'SaasMantra', 'DEALIFY-': 'Dealify', 'CS-': 'Direct', 'LTD-': 'LTD', 'PRIME-': 'Prime' };
       const detectedPlatform = codes.length > 0 ? (Object.entries(platformMap).find(([p]) => codes[0].startsWith(p)) || ['','Direct'])[1] : 'Direct';
 
       const msg = `New tracker: ${cleanDomain} (${name||'anon'}) ${isDealify ? '🎯 ' + detectedPlatform + ' ' + dealifyCodesCount + ' codes / ' + maxPages + ' pages' : '🆓 free'} — ${trackUrl}`;
-      fetch(`https://api.callmebot.com/whatsapp.php?phone=${cbPhone}&text=${encodeURIComponent(msg)}&apikey=${cbKey}`).catch(()=>{});
+      notifyOttmar('⭐ New tracker: ' + cleanDomain, '<p>' + msg + '</p>', msg).catch(() => {});
     }
 
     res.json({ success: true, token, domain: cleanDomain, url: trackUrl, existing: false, max_pages: maxPages, dealify: isDealify });
@@ -1170,11 +1311,14 @@ app.get('/api/tracker-client/:token', async (req, res) => {
               p.ranking_brief, p.needs_html, p.brief_started_at, p.brief_content, p.brief_check_count,
               p.html_pasted_at, p.html_source, p.last_graaf_score,
               (p.html_content IS NOT NULL AND p.html_content != '') as has_html_content,
-              s.google_position, s.ai_google_overview_cited, s.ai_perplexity_cited,
-              s.ai_bing_cited, s.ai_brave_cited,
+              p.redirects_to,
+              p.gsc_autofetch_checked_at, p.aio_manual_text, p.aio_manual_refs, p.brief_viewed_at,
+              s.google_position, s.ai_google_overview_cited, s.ai_google_overview_text, s.ai_google_overview_found, s.ai_perplexity_cited,
+              s.ai_bing_cited, s.ai_bing_text, s.ai_brave_cited,
               s.score as graaf_score, s.checked_at as last_checked,
               s.recommendations, s.source_suggestions, s.discovered_sources,
-              s.gsc_brief, s.author_trust_score, s.author_trust_findings
+              s.gsc_brief, s.author_trust_score, s.author_trust_findings,
+              s.google_competitors, s.ai_perplexity_competitors, s.ai_perplexity_answer_excerpt, s.ai_perplexity_text, s.ai_google_overview_references
        FROM tracker_pages p
        LEFT JOIN LATERAL (
          SELECT * FROM tracker_snapshots WHERE page_id = p.id ORDER BY checked_at DESC LIMIT 1
@@ -1429,11 +1573,12 @@ app.get('/api/tracker-client/:token/pages/:pageId', async (req, res) => {
     if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
     const r = await pool.query(`
       SELECT p.*, p.check_frequency,
-             s.google_position, s.ai_google_overview_cited, s.ai_perplexity_cited,
-             s.ai_bing_cited, s.ai_brave_cited, s.score as graaf_score,
+             s.google_position, s.ai_google_overview_cited, s.ai_google_overview_text, s.ai_google_overview_found, s.ai_perplexity_cited,
+             s.ai_bing_cited, s.ai_bing_text, s.ai_brave_cited, s.score as graaf_score,
              s.checked_at as last_checked, s.recommendations,
              s.source_suggestions, s.discovered_sources, s.gsc_brief,
-             s.author_trust_score, s.author_trust_findings
+             s.author_trust_score, s.author_trust_findings,
+             s.google_competitors, s.ai_perplexity_competitors, s.ai_perplexity_answer_excerpt
       FROM tracker_pages p
       LEFT JOIN LATERAL (
         SELECT * FROM tracker_snapshots WHERE page_id = p.id ORDER BY checked_at DESC LIMIT 1
@@ -1663,6 +1808,267 @@ app.patch('/api/tracker-client/:token/pages/:pageId/done', async (req, res) => {
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
+// POST /api/tracker-client/:token/gsc-queries — save GSC queries.
+// Without page_id: site-wide Queries CSV (replaces the site-wide set).
+// With page_id: per-page Queries CSV from GSC → Pages → [page] → Queries → Export (replaces only that page's set — EXACT ownership, no matching needed).
+app.post('/api/tracker-client/:token/gsc-queries', async (req, res) => {
+  try {
+    const cr = await pool.query('SELECT id, gsc_enabled FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status != $2)', [req.params.token, 'deleted']);
+    if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
+    // This endpoint feeds Impression Gap, cannibalization detection, and the Lead Queue — all
+    // paid-tier features gated behind the admin's gsc_enabled toggle. Without this check, a
+    // free-tier account could paste a Queries CSV and unlock those features without ever being
+    // granted access.
+    if (!cr.rows[0].gsc_enabled) return res.status(403).json({ success: false, error: 'GSC data import is not enabled for this account — ask your admin to enable it.' });
+    const clientId = cr.rows[0].id;
+    const queries = Array.isArray(req.body.queries) ? req.body.queries.slice(0, 500) : [];
+    if (!queries.length) return res.json({ success: true, saved: 0 });
+    let pageId = null;
+    if (req.body.page_id) {
+      const own = await pool.query('SELECT id FROM tracker_pages WHERE id=$1 AND tracker_client_id=$2', [req.body.page_id, clientId]);
+      if (own.rows.length) pageId = own.rows[0].id;
+    }
+    if (pageId) await pool.query('DELETE FROM tracker_gsc_queries WHERE tracker_client_id=$1 AND page_id=$2', [clientId, pageId]);
+    else await pool.query('DELETE FROM tracker_gsc_queries WHERE tracker_client_id=$1 AND page_id IS NULL', [clientId]);
+    let saved = 0, failed = 0;
+    for (const q of queries) {
+      const text = String(q.query || '').trim().substring(0, 300);
+      if (!text) continue;
+      try {
+        await pool.query(
+          'INSERT INTO tracker_gsc_queries (tracker_client_id, page_id, query, clicks, impressions, position) VALUES ($1,$2,$3,$4,$5,$6)',
+          [clientId, pageId, text, Math.round(q.clicks || 0), Math.round(q.impressions || 0), q.position || null]
+        );
+        saved++;
+      } catch(e) { failed++; console.error('[gsc-queries] insert failed:', text.slice(0,60), e.message); }
+    }
+    if (failed > 0) console.warn('[gsc-queries] ' + failed + ' of ' + queries.length + ' rows failed to save for client ' + clientId);
+    res.json({ success: true, saved, failed, total: queries.length, page_id: pageId });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// GET /api/tracker-client/:token/gsc-queries — query list + sitemap slugs (so "new page" suggestions can see what already exists)
+app.get('/api/tracker-client/:token/gsc-queries', async (req, res) => {
+  try {
+    const cr = await pool.query('SELECT id, sitemap_urls, gap_analysis, gap_analysis_at, gap_done_queries FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status != $2)', [req.params.token, 'deleted']);
+    if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
+    const r = await pool.query('SELECT query, clicks, impressions, position, page_id, imported_at FROM tracker_gsc_queries WHERE tracker_client_id=$1 ORDER BY impressions DESC LIMIT 500', [cr.rows[0].id]);
+    let sitemapSlugs = [];
+    try {
+      const sm = JSON.parse(cr.rows[0].sitemap_urls || '[]');
+      if (Array.isArray(sm)) sitemapSlugs = sm.slice(0, 300).map(u => { try { return new URL(u).pathname; } catch(e) { return null; } }).filter(Boolean);
+    } catch(e) {}
+    let gapAnalysis = null;
+    try { gapAnalysis = cr.rows[0].gap_analysis ? JSON.parse(cr.rows[0].gap_analysis) : null; } catch(e) {}
+    let gapDone = [];
+    try { gapDone = JSON.parse(cr.rows[0].gap_done_queries || '[]'); } catch(e) {}
+    res.json({ success: true, queries: r.rows, sitemap_slugs: sitemapSlugs, gap_analysis: gapAnalysis, gap_analysis_at: cr.rows[0].gap_analysis_at, gap_done: gapDone });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// POST /api/tracker-client/:token/analyze-gaps — Gemini clusters the impression-gap queries into
+// intent families and gives ONE verdict per family, so the owner never has to do this thinking:
+// SECTION on an existing page / NEW_PAGE / TRACK_EXISTING (sitemap) / IGNORE (competitor brand or junk).
+app.post('/api/tracker-client/:token/analyze-gaps', async (req, res) => {
+  try {
+    const cr = await pool.query("SELECT id, domain, sitemap_urls FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status != 'deleted')", [req.params.token]);
+    if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
+    const client = cr.rows[0];
+    const geminiKey = process.env.GEMINI_API_KEY;
+    if (!geminiKey) return res.status(400).json({ success: false, error: 'AI analysis not available' });
+
+    const qR = await pool.query('SELECT query, clicks, impressions, position FROM tracker_gsc_queries WHERE tracker_client_id=$1 AND page_id IS NULL AND impressions >= 20 ORDER BY impressions DESC LIMIT 60', [client.id]);
+    if (!qR.rows.length) return res.json({ success: false, error: 'No site-wide queries imported yet \u2014 import your Queries CSV first.' });
+    // Skip queries the owner already handled (their gap my-checks) — re-analysis only sees OPEN work
+    let _doneSet = [];
+    try { const dcr = await pool.query('SELECT gap_done_queries FROM tracker_clients WHERE id=$1', [client.id]); _doneSet = JSON.parse(dcr.rows[0].gap_done_queries || '[]'); } catch(e) {}
+    const _dNorm = s => String(s||'').toLowerCase().replace(/\s+/g,' ').trim();
+    qR.rows = qR.rows.filter(q => _doneSet.indexOf(_dNorm(q.query)) === -1);
+    if (!qR.rows.length) return res.json({ success: false, error: 'Nothing open to analyze \u2014 all gap queries are checked off. Import a fresh Queries CSV for new data.' });
+    const pR = await pool.query('SELECT url, keyword, gsc_keyword FROM tracker_pages WHERE tracker_client_id=$1 AND (is_active=TRUE OR is_active IS NULL) AND redirects_to IS NULL LIMIT 100', [client.id]);
+    let sitemapSlugs = [];
+    try { const sm = JSON.parse(client.sitemap_urls || '[]'); if (Array.isArray(sm)) sitemapSlugs = sm.slice(0, 150); } catch(e) {}
+
+    const prompt = 'You are an SEO strategist. Group these Google Search Console queries into INTENT FAMILIES (queries a single page should own together) and give exactly ONE verdict per family.\n\n'
+      + 'BUSINESS DOMAIN: ' + client.domain + ' (queries containing this brand belong to the homepage \u2014 verdict IGNORE with reason "own brand"; queries that are OTHER companies\u2019 names get verdict IGNORE with reason "competitor brand").\n\n'
+      + 'TRACKED PAGES (the ONLY pages you may name for SECTION verdicts):\n' + pR.rows.map(p => '- ' + p.url + (p.keyword||p.gsc_keyword ? ' [keyword: ' + (p.keyword||p.gsc_keyword) + ']' : '')).join('\n') + '\n\n'
+      + (sitemapSlugs.length ? 'SITEMAP PAGES (exist but untracked \u2014 the ONLY pages you may name for TRACK_EXISTING):\n' + sitemapSlugs.map(u => '- ' + u).join('\n') + '\n\n' : '')
+      + 'QUERIES (query | impressions | position):\n' + qR.rows.map(q => q.query + ' | ' + q.impressions + ' | ' + (q.position ? parseFloat(q.position).toFixed(1) : '?')).join('\n') + '\n\n'
+      + 'RULES: 1) Treat close variants (roofer/roofing/roof repair, singular/plural, nj/new jersey) as ONE family. 2) Prefer SECTION on an existing tracked page over NEW_PAGE \u2014 only advise NEW_PAGE when no tracked or sitemap page can own the intent. 3) NEVER invent URLs: SECTION target must be copied verbatim from TRACKED PAGES, TRACK_EXISTING verbatim from SITEMAP PAGES. 4) For NEW_PAGE propose a lowercase-hyphen slug. 5) Every family needs a one-sentence action in plain language a non-SEO owner can execute. 6) KEEP THE JSON COMPACT: list at most 8 example queries per family (never all of them), and keep "reason" and "action" each under 20 words. This is critical \u2014 an oversized response gets cut off and becomes unusable.\n\n'
+      + 'Return ONLY JSON, no markdown: {"families":[{"name":"short family name","queries":["..."],"total_impressions":123,"verdict":"SECTION|NEW_PAGE|TRACK_EXISTING|IGNORE","target":"url or slug or empty","reason":"one sentence","action":"one sentence, imperative"}]}';
+
+    const gResp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${geminiKey}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { temperature: 0.2, maxOutputTokens: 8000 } })
+    });
+    const gRawText = await gResp.text();
+    let gData = null;
+    try { gData = JSON.parse(gRawText); } catch(e) {
+      console.error('[analyze-gaps] Gemini returned non-JSON response:', gRawText.slice(0, 500));
+      return res.status(502).json({ success: false, error: 'AI service returned an invalid response \u2014 try again in a moment.' });
+    }
+    if (!gResp.ok || gData.error) {
+      console.error('[analyze-gaps] Gemini API error:', JSON.stringify(gData.error || gData).slice(0, 500));
+      return res.status(502).json({ success: false, error: 'AI service error: ' + (gData.error?.message || ('HTTP ' + gResp.status)) });
+    }
+    let txt = '';
+    try { txt = gData.candidates[0].content.parts.map(p => p.text || '').join(''); } catch(e) {
+      console.error('[analyze-gaps] Unexpected Gemini response shape:', JSON.stringify(gData).slice(0, 500));
+    }
+    txt = txt.replace(/```json|```/g, '').trim();
+    let parsed = null;
+    try { parsed = JSON.parse(txt); } catch(e) {
+      const mJ = txt.match(/\{[\s\S]*\}/); if (mJ) { try { parsed = JSON.parse(mJ[0]); } catch(e2) {} }
+    }
+    // Repair attempt: Gemini hit the token limit mid-object. Salvage every COMPLETE family object
+    // (i.e. everything up to the last balanced '},' before the cutoff) instead of discarding the whole response.
+    if (!parsed || !Array.isArray(parsed.families)) {
+      try {
+        const arrStart = txt.indexOf('"families"');
+        if (arrStart > -1) {
+          const bracketStart = txt.indexOf('[', arrStart);
+          if (bracketStart > -1) {
+            let depth = 0, lastCompleteEnd = -1;
+            for (let ci = bracketStart; ci < txt.length; ci++) {
+              if (txt[ci] === '{') depth++;
+              else if (txt[ci] === '}') { depth--; if (depth === 0) lastCompleteEnd = ci; }
+            }
+            if (lastCompleteEnd > -1) {
+              const repaired = '{"families":' + txt.slice(bracketStart, lastCompleteEnd + 1) + ']}';
+              try { parsed = JSON.parse(repaired); console.warn('[analyze-gaps] Repaired a truncated response \u2014 salvaged', parsed.families.length, 'complete families.'); } catch(e3) {}
+            }
+          }
+        }
+      } catch(e4) {}
+    }
+    if (!parsed || !Array.isArray(parsed.families) || !parsed.families.length) {
+      console.error('[analyze-gaps] Could not parse families JSON from Gemini text (length ' + txt.length + '):', txt.slice(0, 800));
+      return res.status(502).json({ success: false, error: 'AI returned an unusable answer \u2014 try again.' });
+    }
+    // Hard safety: drop any SECTION/TRACK_EXISTING whose target is not a real known URL
+    const known = new Set(pR.rows.map(p => p.url).concat(sitemapSlugs));
+    parsed.families = parsed.families.filter(f => {
+      if (f.verdict === 'SECTION' || f.verdict === 'TRACK_EXISTING') return f.target && [...known].some(u => String(u).indexOf(String(f.target)) > -1 || String(f.target).indexOf(String(u)) > -1);
+      return true;
+    });
+    await pool.query('UPDATE tracker_clients SET gap_analysis=$1, gap_analysis_at=NOW() WHERE id=$2', [JSON.stringify(parsed), client.id]);
+    res.json({ success: true, analysis: parsed, analyzed_at: new Date().toISOString() });
+  } catch(e) {
+    console.error('[analyze-gaps] Unhandled error:', e.message, e.stack ? e.stack.split('\n').slice(0,3).join(' | ') : '');
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// GET /api/tracker-client/:token/link-check — AUTOMATIC hub→spoke internal-link verification.
+// The tracker already holds each page's pasted HTML, so nobody needs to open pages by hand:
+// for every generic↔specific keyword pair, we check whether the hub's stored HTML links to the spoke.
+// GET /api/tracker-client/:token/gsc-autofetch-status — tells the owner exactly what to do to enable
+// one-click GSC auto-fetch: the service account's email must be added as a Search Console user on
+// THEIR property. Showing the exact email up front turns a support question into a self-serve step.
+app.get('/api/tracker-client/:token/gsc-autofetch-status', async (req, res) => {
+  if (!_gscServiceAccount) return res.json({ success: true, available: false });
+  res.json({ success: true, available: true, service_account_email: _gscServiceAccount.client_email || null });
+});
+
+// POST /api/tracker-client/:token/gsc-autofetch-page — pulls the FULL query breakdown for ONE
+// specific page directly from the Search Console API via the Service Account (same data a manual
+// GSC → Pages → click page → Queries → Export gives), and saves it with page_id set — exactly
+// what a per-page CSV import does, but with zero manual export/paste.
+app.post('/api/tracker-client/:token/gsc-autofetch-page', async (req, res) => {
+  if (!_gscServiceAccount) return res.status(503).json({ success: false, error: 'GSC auto-fetch is not configured on this server — use manual CSV import instead.' });
+  try {
+    const cr = await pool.query("SELECT id, gsc_enabled FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status != 'deleted')", [req.params.token]);
+    if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
+    if (!cr.rows[0].gsc_enabled) return res.status(403).json({ success: false, error: 'GSC is not enabled for this account — ask your admin to enable it.' });
+    const pageId = parseInt(req.body.page_id, 10);
+    if (!pageId) return res.status(400).json({ success: false, error: 'page_id required' });
+    const pr = await pool.query('SELECT id, url FROM tracker_pages WHERE id=$1 AND tracker_client_id=$2', [pageId, cr.rows[0].id]);
+    if (!pr.rows.length) return res.status(404).json({ success: false, error: 'Page not found' });
+    const pageUrl = pr.rows[0].url;
+
+    const accessToken = await _gscGetAccessToken();
+    const siteFmt = await _gscFindSiteFormat(accessToken, pageUrl);
+    if (!siteFmt) {
+      return res.status(404).json({ success: false, error: 'This Search Console property has not granted access to ' + (_gscServiceAccount.client_email || 'the service account') + ' yet. Add it as a user in GSC → Settings → Users and permissions → Add user (Restricted is enough) — or use manual CSV import instead.', code: 'GSC_PROPERTY_NOT_FOUND', service_account_email: _gscServiceAccount.client_email || null });
+    }
+    const endDate = new Date().toISOString().split('T')[0];
+    const startDate = new Date(Date.now() - 90*24*60*60*1000).toISOString().split('T')[0];
+    const rows = await _gscQueryRows(accessToken, siteFmt, pageUrl, ['query'], startDate, endDate, 500);
+
+    await pool.query('DELETE FROM tracker_gsc_queries WHERE tracker_client_id=$1 AND page_id=$2', [cr.rows[0].id, pageId]);
+    let saved = 0, failed = 0;
+    for (const r of rows) {
+      const text = String(r.keys?.[0] || '').trim().substring(0, 300);
+      if (!text) continue;
+      try {
+        await pool.query(
+          'INSERT INTO tracker_gsc_queries (tracker_client_id, page_id, query, clicks, impressions, position) VALUES ($1,$2,$3,$4,$5,$6)',
+          [cr.rows[0].id, pageId, text, Math.round(r.clicks||0), Math.round(r.impressions||0), r.position||null]
+        );
+        saved++;
+      } catch(e) { failed++; }
+    }
+    console.log(`[gsc-autofetch] ${pageUrl} => ${saved} queries saved, ${failed} failed (site format: ${siteFmt})`);
+    // Mark this page as checked EVEN when GSC had zero data — otherwise a low-traffic page
+    // (genuinely nothing to fetch) stays stuck showing "left" forever with no way to dismiss it.
+    await pool.query('UPDATE tracker_pages SET gsc_autofetch_checked_at=NOW() WHERE id=$1', [pageId]).catch(()=>{});
+    res.json({ success: true, saved, failed, total: rows.length, page_url: pageUrl });
+  } catch(e) {
+    console.error('[gsc-autofetch] error:', e.message);
+    res.status(502).json({ success: false, error: 'GSC API error: ' + e.message + ' — use manual CSV import instead.' });
+  }
+});
+
+app.get('/api/tracker-client/:token/link-check', async (req, res) => {
+  try {
+    const cr = await pool.query("SELECT id FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status != 'deleted')", [req.params.token]);
+    if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
+    const pR = await pool.query("SELECT id, url, keyword, gsc_keyword, html_content FROM tracker_pages WHERE tracker_client_id=$1 AND (is_active=TRUE OR is_active IS NULL) LIMIT 100", [cr.rows[0].id]);
+    const norm = s => { try { return String(s||'').toLowerCase().replace(/[^\p{L}\p{N} ]/gu,' ').replace(/ +/g,' ').trim(); } catch(e) { return String(s||'').toLowerCase(); } };
+    const pathOf = u => { try { return new URL(u).pathname.replace(/\/+$/,'') || '/'; } catch(e) { return String(u||''); } };
+    const results = [];
+    for (let i = 0; i < pR.rows.length; i++) {
+      for (let j = 0; j < pR.rows.length; j++) {
+        if (i === j) continue;
+        const a = pR.rows[i], b = pR.rows[j];
+        const ka = norm(a.keyword || a.gsc_keyword), kb = norm(b.keyword || b.gsc_keyword);
+        if (!ka || !kb) continue;
+        const wa = ka.split(' ').filter(w => w.length >= 2), wb = kb.split(' ').filter(w => w.length >= 2);
+        if (!wa.length || !wb.length || wa.length >= wb.length) continue; // a must be the GENERIC one (fewer words)
+        const inter = wa.filter(w => wb.indexOf(w) > -1).length;
+        if (inter !== wa.length) continue; // containment: generic fully inside specific
+        // hub = a, spoke = b — does a's stored HTML link to b's path?
+        const spokePath = pathOf(b.url);
+        let status = 'no_html';
+        if (a.html_content) {
+          const html = a.html_content.toLowerCase();
+          status = (spokePath !== '/' && html.indexOf(spokePath.toLowerCase()) > -1) ? 'found' : 'missing';
+        }
+        results.push({ hub: pathOf(a.url) === '/' ? '(homepage)' : pathOf(a.url), spoke: spokePath === '/' ? '(homepage)' : spokePath, spoke_keyword: b.keyword || b.gsc_keyword, status, hub_id: a.id });
+      }
+    }
+    res.json({ success: true, checks: results, checked_at: new Date().toISOString() });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+app.post('/api/tracker-client/:token/gap-family-done', async (req, res) => {
+  try {
+    const cr = await pool.query("SELECT id, gap_done_queries FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status != 'deleted')", [req.params.token]);
+    if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
+    const norm = s => String(s||'').toLowerCase().replace(/\s+/g,' ').trim();
+    let done = [];
+    try { done = JSON.parse(cr.rows[0].gap_done_queries || '[]'); } catch(e) {}
+    const qs = (Array.isArray(req.body.queries) ? req.body.queries : []).map(norm).filter(Boolean);
+    if (!qs.length) return res.json({ success: false, error: 'No queries given' });
+    if (req.body.done === false) done = done.filter(d => qs.indexOf(d) === -1);
+    else qs.forEach(q => { if (done.indexOf(q) === -1) done.push(q); });
+    done = done.slice(0, 2000);
+    await pool.query('UPDATE tracker_clients SET gap_done_queries=$1 WHERE id=$2', [JSON.stringify(done), cr.rows[0].id]);
+    res.json({ success: true, done_count: done.length });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
 // PATCH /api/tracker-client/:token/pages/manual-done-all — bulk set/clear the user's own checkmarks.
 // Same rule as single toggle: only the user's explicit action reaches this, nothing automated.
 app.patch('/api/tracker-client/:token/pages/manual-done-all', async (req, res) => {
@@ -1739,14 +2145,15 @@ app.get('/api/tracker-client/:token/latest-briefs', async (req, res) => {
     const cr = await pool.query('SELECT id FROM tracker_clients WHERE (token=$1 OR board_token=$1 OR lead_token=$1) AND (status IS NULL OR status != $2)', [req.params.token, 'deleted']);
     if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
     const r = await pool.query(
-      `SELECT p.id, p.url, p.keyword, p.gsc_keyword, p.brief_content, p.gsc_clicks, p.gsc_impressions, p.gsc_position,
+      `SELECT p.id, p.url, p.keyword, p.gsc_keyword, p.gsc_ctr, p.aio_manual_text, p.aio_manual_refs, p.brief_content, p.gsc_clicks, p.gsc_impressions, p.gsc_position,
               p.brief_status, p.brief_claimed_by, p.brief_claimed_at, p.brief_started_at,
               p.brief_done_at, p.brief_submitted_at, p.brief_approved_at, p.brief_approved_by, p.brief_published_at,
               p.brief_deadline, p.brief_assigned_at, p.brief_rejected_at, p.brief_reject_reason, p.priority,
               p.brief_before_score, p.brief_after_score, p.brief_after_at,
               (p.specialist_html IS NOT NULL AND p.specialist_html != '') AS has_deliverable,
-              s.checked_at, s.google_position, s.ai_google_overview_cited, s.ai_perplexity_cited, s.ai_bing_cited, s.ai_brave_cited,
-              s.score, s.recommendations, s.gsc_brief, s.source_suggestions
+              s.checked_at, s.google_position, s.ai_google_overview_cited, s.ai_perplexity_cited, s.ai_bing_cited, s.ai_bing_text, s.ai_brave_cited,
+              s.score, s.recommendations, s.gsc_brief, s.source_suggestions,
+              s.google_competitors, s.ai_perplexity_competitors, s.ai_google_overview_text, s.ai_perplexity_text, s.ai_google_overview_found, s.ai_google_overview_references, s.ai_perplexity_answer_excerpt
        FROM tracker_pages p
        LEFT JOIN LATERAL (
          SELECT * FROM tracker_snapshots WHERE page_id = p.id ORDER BY checked_at DESC LIMIT 1
@@ -1771,15 +2178,32 @@ app.get('/api/tracker-client/:token/latest-briefs', async (req, res) => {
         url: p.url,
         keyword: p.keyword || p.gsc_keyword || '',
         position: bc.position != null ? bc.position : p.google_position,
-        aio_cited: bc.aio != null ? bc.aio : p.ai_google_overview_cited,
-        perp_cited: bc.perp != null ? bc.perp : p.ai_perplexity_cited,
-        bing_cited: bc.bing_cited != null ? bc.bing_cited : p.ai_bing_cited,
-        brave_cited: bc.brave_cited != null ? bc.brave_cited : p.ai_brave_cited,
+        aio_cited: p.ai_google_overview_cited != null ? !!p.ai_google_overview_cited : false,
+        perp_cited: p.ai_perplexity_cited != null ? !!p.ai_perplexity_cited : false,
+        bing_cited: p.ai_bing_cited != null ? !!p.ai_bing_cited : false,
+        brave_cited: p.ai_brave_cited != null ? !!p.ai_brave_cited : false,
         score: bc.score != null ? bc.score : p.score,
         passages: items,
         gsc_brief: gscB,
         source_suggestions: srcB,
         gsc_clicks: p.gsc_clicks, gsc_impressions: p.gsc_impressions, gsc_position: p.gsc_position,
+        gsc_ctr: p.gsc_ctr, gsc_keyword: p.gsc_keyword || p.keyword || '',
+        _gsc_enabled: (p.gsc_clicks != null) || (p.gsc_impressions != null) || (p.gsc_position != null),
+        recommendations: items,
+        // Transparency data so the board card can render the same "What we actually checked"
+        // competitor block the full Citation Brief shows — same evidence, same trust, no rescan.
+        competitors: _arr(p.google_competitors),
+        google_competitors: _arr(p.google_competitors),
+        perp_competitors: _arr(p.ai_perplexity_competitors),
+        perp_excerpt: p.ai_perplexity_answer_excerpt || '',
+        aio_references: (Array.isArray(bc.aio_references) && bc.aio_references.length) ? bc.aio_references : (_arr(p.aio_manual_refs).length ? _arr(p.aio_manual_refs) : _arr(p.ai_google_overview_references)),
+        aio_citation_gap: Array.isArray(bc.aio_citation_gap) ? bc.aio_citation_gap : [],
+        ai_overview_blueprint: Array.isArray(bc.ai_overview_blueprint) ? bc.ai_overview_blueprint : [],
+        citation_targets: Array.isArray(bc.citation_targets) ? bc.citation_targets : [],
+        aio_manual: !!bc.aio_manual,
+        aio_text: p.ai_google_overview_text || p.aio_manual_text || '',
+        perp_text: p.ai_perplexity_text || '',
+        aio_found: !!p.ai_google_overview_found,
         page_id: p.id,
         brief_status: p.brief_status || 'open',
         brief_before_score: p.brief_before_score,
@@ -1801,7 +2225,48 @@ app.get('/api/tracker-client/:token/latest-briefs', async (req, res) => {
         ts: p.checked_at ? new Date(p.checked_at).toISOString() : ''
       };
     }).filter(function(b) { return b.passages.length || b.position != null || b.score != null; });
-    res.json({ success: true, briefs });
+    // ── Merge in Pre-Write Briefs so the lead can assign them and specialists
+    // see them in the Board exactly like scanned-page briefs, with a visual accent
+    // to tell them apart (no URL yet — they're for a page that doesn't exist).
+    const pwr = await pool.query(
+      `SELECT id, keyword, working_title, region, status, claimed_by, claimed_at, assigned_at, deadline,
+              priority, submitted_at, approved_at, approved_by, rejected_at, reject_reason, published_at,
+              (specialist_html IS NOT NULL AND specialist_html != '') AS has_deliverable, created_at
+       FROM prewrite_briefs WHERE client_id=$1 ORDER BY created_at DESC LIMIT 50`,
+      [cr.rows[0].id]
+    );
+    const pwBriefs = pwr.rows.map(function(b) {
+      return {
+        type: 'prewrite_brief',
+        is_prewrite: true,
+        url: null,
+        keyword: b.keyword || '',
+        working_title: b.working_title || '',
+        region: b.region || '',
+        position: null, aio_cited: false, perp_cited: false, bing_cited: false, brave_cited: false, score: null,
+        passages: [], gsc_brief: [], source_suggestions: [], competitors: [], perp_competitors: [],
+        aio_text: '', perp_text: '', aio_found: false,
+        page_id: null,
+        pw_id: b.id,
+        brief_status: b.status || 'open',
+        brief_before_score: null, brief_after_score: null,
+        brief_claimed_by: b.claimed_by || null,
+        brief_claimed_at: b.claimed_at || null,
+        brief_done_at: null,
+        brief_submitted_at: b.submitted_at || null,
+        brief_approved_at: b.approved_at || null,
+        brief_approved_by: b.approved_by || null,
+        brief_published_at: b.published_at || null,
+        brief_deadline: b.deadline || null,
+        brief_assigned_at: b.assigned_at || null,
+        brief_rejected_at: b.rejected_at || null,
+        brief_reject_reason: b.reject_reason || null,
+        priority: b.priority || 'medium',
+        has_deliverable: !!b.has_deliverable,
+        ts: b.created_at ? new Date(b.created_at).toISOString() : ''
+      };
+    });
+    res.json({ success: true, briefs: briefs.concat(pwBriefs) });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
@@ -1813,6 +2278,103 @@ async function _resolveBoardPage(token, pageId) {
   if (!pr.rows.length) return { error: 'Page not found for this tracker', code: 404 };
   return { clientId: cr.rows[0].id, pageId: pr.rows[0].id };
 }
+async function _resolvePWBrief(token, briefId) {
+  const cr = await pool.query('SELECT id FROM tracker_clients WHERE (token=$1 OR board_token=$1 OR lead_token=$1) AND (status IS NULL OR status != $2)', [token, 'deleted']);
+  if (!cr.rows.length) return { error: 'Tracker not found', code: 404 };
+  const pr = await pool.query('SELECT id FROM prewrite_briefs WHERE id=$1 AND client_id=$2', [briefId, cr.rows[0].id]);
+  if (!pr.rows.length) return { error: 'Brief not found for this tracker', code: 404 };
+  return { clientId: cr.rows[0].id, briefId: pr.rows[0].id };
+}
+// ── Pre-Write Brief workflow: claim / assign / submit / approve / reject / publish ──
+// Mirrors the scanned-page brief workflow above so a Pre-Write Brief can be
+// handed to a specialist exactly like a regular Citation Brief.
+app.post('/api/tracker-client/:token/prewrite-brief/:id/claim', async (req, res) => {
+  try {
+    const r = await _resolvePWBrief(req.params.token, req.params.id);
+    if (r.error) return res.status(r.code).json({ success: false, error: r.error });
+    const name = String((req.body && req.body.name) || '').trim().slice(0, 80);
+    if (!name) return res.status(400).json({ success: false, error: 'Name required to claim' });
+    const cur = await pool.query('SELECT status, claimed_by FROM prewrite_briefs WHERE id=$1', [r.briefId]);
+    const row = cur.rows[0] || {};
+    if (row.status === 'in_progress' && row.claimed_by && row.claimed_by !== name) {
+      return res.status(409).json({ success: false, error: 'Already claimed by ' + row.claimed_by, claimed_by: row.claimed_by });
+    }
+    await pool.query("UPDATE prewrite_briefs SET status='in_progress', claimed_by=$1, claimed_at=NOW() WHERE id=$2", [name, r.briefId]);
+    res.json({ success: true, status: 'in_progress', claimed_by: name });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+app.post('/api/tracker-client/:token/prewrite-brief/:id/assign', async (req, res) => {
+  try {
+    const r = await _resolvePWBrief(req.params.token, req.params.id);
+    if (r.error) return res.status(r.code).json({ success: false, error: r.error });
+    const name = String((req.body && req.body.name) || '').trim().slice(0, 80);
+    if (!name) {
+      await pool.query("UPDATE prewrite_briefs SET status='open', claimed_by=NULL, claimed_at=NULL, assigned_at=NULL, deadline=NULL, rejected_at=NULL, reject_reason=NULL WHERE id=$1", [r.briefId]);
+      return res.json({ success: true, status: 'open' });
+    }
+    await pool.query("UPDATE prewrite_briefs SET status='in_progress', claimed_by=$1, claimed_at=NOW(), assigned_at=NOW(), deadline=COALESCE(deadline, NOW()+interval '24 hours'), rejected_at=NULL, reject_reason=NULL WHERE id=$2", [name, r.briefId]);
+    const pr = await pool.query('SELECT deadline FROM prewrite_briefs WHERE id=$1', [r.briefId]);
+    res.json({ success: true, status: 'in_progress', claimed_by: name, deadline: (pr.rows[0]||{}).deadline });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+app.post('/api/tracker-client/:token/prewrite-brief/:id/submit', async (req, res) => {
+  try {
+    const r = await _resolvePWBrief(req.params.token, req.params.id);
+    if (r.error) return res.status(r.code).json({ success: false, error: r.error });
+    const html = String((req.body && req.body.html) || '');
+    if (!html.trim()) return res.status(400).json({ success: false, error: 'Paste your written content first' });
+    await pool.query("UPDATE prewrite_briefs SET status='submitted', specialist_html=$1, submitted_at=NOW() WHERE id=$2", [html, r.briefId]);
+    res.json({ success: true, status: 'submitted' });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+app.get('/api/tracker-client/:token/prewrite-brief/:id/deliverable', async (req, res) => {
+  try {
+    const r = await _resolvePWBrief(req.params.token, req.params.id);
+    if (r.error) return res.status(r.code).json({ success: false, error: r.error });
+    const pr = await pool.query('SELECT specialist_html, status, claimed_by, submitted_at, approved_by FROM prewrite_briefs WHERE id=$1', [r.briefId]);
+    const pg = pr.rows[0] || {};
+    res.json({ success: true, html: pg.specialist_html || '', status: pg.status || 'open', claimed_by: pg.claimed_by || null, submitted_at: pg.submitted_at || null, approved_by: pg.approved_by || null });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+app.post('/api/tracker-client/:token/prewrite-brief/:id/approve', async (req, res) => {
+  try {
+    const r = await _resolvePWBrief(req.params.token, req.params.id);
+    if (r.error) return res.status(r.code).json({ success: false, error: r.error });
+    const name = String((req.body && req.body.name) || '').trim().slice(0, 80) || 'Lead';
+    await pool.query("UPDATE prewrite_briefs SET status='approved', approved_at=NOW(), approved_by=$1 WHERE id=$2", [name, r.briefId]);
+    res.json({ success: true, status: 'approved', approved_by: name });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+app.post('/api/tracker-client/:token/prewrite-brief/:id/reject', async (req, res) => {
+  try {
+    const r = await _resolvePWBrief(req.params.token, req.params.id);
+    if (r.error) return res.status(r.code).json({ success: false, error: r.error });
+    const reason = String((req.body && req.body.reason) || '').trim().slice(0, 600);
+    await pool.query("UPDATE prewrite_briefs SET status='in_progress', rejected_at=NOW(), reject_reason=$1, submitted_at=NULL, specialist_html=NULL WHERE id=$2", [reason || null, r.briefId]);
+    res.json({ success: true, status: 'in_progress', reason: reason });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+app.post('/api/tracker-client/:token/prewrite-brief/:id/publish', async (req, res) => {
+  try {
+    const r = await _resolvePWBrief(req.params.token, req.params.id);
+    if (r.error) return res.status(r.code).json({ success: false, error: r.error });
+    const cur = await pool.query('SELECT status FROM prewrite_briefs WHERE id=$1', [r.briefId]);
+    const st = (cur.rows[0] || {}).status;
+    if (st !== 'approved' && st !== 'published') return res.status(409).json({ success: false, error: 'Brief must be approved by the lead before publishing' });
+    await pool.query("UPDATE prewrite_briefs SET status='published', published_at=NOW() WHERE id=$1", [r.briefId]);
+    res.json({ success: true, status: 'published' });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+app.post('/api/tracker-client/:token/prewrite-brief/:id/deadline', async (req, res) => {
+  try {
+    const r = await _resolvePWBrief(req.params.token, req.params.id);
+    if (r.error) return res.status(r.code).json({ success: false, error: r.error });
+    const hours = parseFloat(req.body && req.body.hours);
+    if (isNaN(hours)) return res.status(400).json({ success: false, error: 'hours required' });
+    await pool.query("UPDATE prewrite_briefs SET deadline=NOW()+ ($1 || ' hours')::interval WHERE id=$2", [hours, r.briefId]);
+    res.json({ success: true });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
 app.post('/api/tracker-client/:token/brief/:pageId/claim', async (req, res) => {
   try {
     const r = await _resolveBoardPage(req.params.token, req.params.pageId);
@@ -1981,6 +2543,64 @@ app.get('/api/tracker-client/:token/brief/:pageId/deliverable', async (req, res)
     const pr = await pool.query('SELECT specialist_html, brief_status, brief_claimed_by, brief_submitted_at, brief_approved_by FROM tracker_pages WHERE id=$1', [r.pageId]);
     const pg = pr.rows[0] || {};
     res.json({ success: true, html: pg.specialist_html || '', status: pg.brief_status || 'open', claimed_by: pg.brief_claimed_by || null, submitted_at: pg.brief_submitted_at || null, approved_by: pg.brief_approved_by || null });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// ── Manual AIO text: paste Google AI Overview text for a page ────────────────
+app.post('/api/tracker-client/:token/page/:pageId/aio-manual', async (req, res) => {
+  try {
+    const cr = await pool.query('SELECT id FROM tracker_clients WHERE (token=$1 OR lead_token=$1) AND (status IS NULL OR status != $2)', [req.params.token, 'deleted']);
+    if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
+    const clientId = cr.rows[0].id;
+    const pg = await pool.query('SELECT id, url FROM tracker_pages WHERE id=$1 AND tracker_client_id=$2', [req.params.pageId, clientId]);
+    if (!pg.rows.length) return res.status(404).json({ success: false, error: 'Page not found' });
+    const text = String((req.body && req.body.text) || '').trim();
+    if (!text) {
+      await pool.query('UPDATE tracker_pages SET aio_manual_text=NULL, aio_manual_refs=NULL WHERE id=$1', [pg.rows[0].id]);
+      return res.json({ success: true, cleared: true, message: 'Cleared — run a scan to update the brief.' });
+    }
+    // Only save the raw text — the scan uses it to detect AIO found/cited
+    // and Gemini uses it to generate targeted AIO citation recommendations
+    const domain = (() => { try { return new URL(pg.rows[0].url).hostname.replace(/^www\./, ''); } catch(e) { return ''; } })();
+    var pageNorm = '';
+    try { var pu = new URL(pg.rows[0].url); pageNorm = pu.hostname.replace(/^www\./, '') + pu.pathname.replace(/\/+$/, ''); } catch(e) { pageNorm = domain; }
+    const cited = text.toLowerCase().includes(pageNorm.toLowerCase()) || text.includes(domain);
+    // Extract the AIO source URLs at save time (prioritising [N](url) citation links, then bare
+    // URLs) and store them as JSON, so the AIO source table renders reliably without depending on
+    // scan-time or render-time parsing. Regex-free where it matters; this is server-side so \s is fine.
+    var _aioRefs = [];
+    try {
+      var _seen = {};
+      var _mdRe = /\[(\d+)\]\((https?:\/\/[^\s)]+)\)/g, _m;
+      while ((_m = _mdRe.exec(text)) !== null) {
+        var _u = _m[2]; var _hh = _u.replace(/^https?:\/\//,'').replace(/^www\./,'').split('/')[0];
+        if (_hh && !_seen[_hh]) { _seen[_hh] = 1; _aioRefs.push({ url: _u, source: _hh }); }
+      }
+      if (!_aioRefs.length) {
+        var _bareRe = /https?:\/\/[^\s)\]"'<>,]+/g, _b;
+        while ((_b = _bareRe.exec(text)) !== null) {
+          var _u2 = _b[0].replace(/[.,);:]+$/,''); var _hh2 = _u2.replace(/^https?:\/\//,'').replace(/^www\./,'').split('/')[0];
+          if (_hh2 && !_seen[_hh2]) { _seen[_hh2] = 1; _aioRefs.push({ url: _u2, source: _hh2 }); }
+        }
+      }
+      if (_aioRefs.length > 12) _aioRefs = _aioRefs.slice(0, 12);
+    } catch(e) { _aioRefs = []; }
+    await pool.query('UPDATE tracker_pages SET aio_manual_text=$1, aio_manual_refs=$2 WHERE id=$3', [text, JSON.stringify(_aioRefs), pg.rows[0].id]);
+    res.json({ success: true, saved: true, aio_cited_preview: cited, message: cited ? 'Saved — your page appears cited in this AIO. Run a scan to generate the full brief.' : 'Saved — your page is NOT cited in this AIO. Run a scan to get recommendations on how to get cited.' });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// ── Mark a page's current brief as viewed (persists the HTML/Scan tick state) ──
+// Survives reloads and power loss. A later scan writes a newer last_checked_at, so the
+// ticks naturally reappear for the next round without any client-side reset.
+app.post('/api/tracker-client/:token/page/:pageId/brief-viewed', async (req, res) => {
+  try {
+    const cr = await pool.query('SELECT id FROM tracker_clients WHERE (token=$1 OR readonly_token=$1 OR lead_token=$1) AND (status IS NULL OR status != $2)', [req.params.token, 'deleted']);
+    if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
+    const pg = await pool.query('SELECT id FROM tracker_pages WHERE id=$1 AND tracker_client_id=$2', [req.params.pageId, cr.rows[0].id]);
+    if (!pg.rows.length) return res.status(404).json({ success: false, error: 'Page not found' });
+    await pool.query('UPDATE tracker_pages SET brief_viewed_at=NOW() WHERE id=$1', [pg.rows[0].id]);
+    res.json({ success: true });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
@@ -2167,7 +2787,7 @@ app.post('/api/tracker-client/:token/pages', async (req, res) => {
       [client.id]
     );
     const count = parseInt(countR.rows[0].count);
-    const maxPages = client.max_pages || 3;
+    const maxPages = client.max_pages || 1; // free default = 1 page, 1 domain
     // NOTE: the page limit is enforced below for NEW pages only, so re-importing / updating pages you already track is never blocked.
 
     const { url, keyword, gsc_clicks, gsc_impressions, gsc_position, gsc_ctr, gsc_keyword } = req.body;
@@ -2210,7 +2830,7 @@ app.post('/api/tracker-client/:token/pages', async (req, res) => {
     }
 
     // New URL (not already tracked) — enforce the page limit HERE so updates to existing pages are never blocked
-    if (count >= maxPages) return res.status(400).json({ success: false, error: `Tracker limit reached: ${count}/${maxPages} pages used. Contact Ottmar to upgrade your plan.` });
+    if (count >= maxPages) return res.status(400).json({ success: false, error: `Tracker limit reached: ${count}/${maxPages} pages used. Contact Ottmar to upgrade your plan, or check all pricing options on contentscale.site/free-ai-citations-tracker.` });
 
     let pr;
     try {
@@ -2293,9 +2913,13 @@ app.post('/api/tracker-client/:token/refresh-gsc', async (req, res) => {
 // Body: { pages: [{url, keyword, intent, clicks, impressions, position, priority}], ...] }
 app.post('/api/tracker-client/:token/import-gsc-pages', async (req, res) => {
   try {
-    const cr = await pool.query('SELECT id, max_pages FROM tracker_clients WHERE token=$1', [req.params.token]);
+    const cr = await pool.query('SELECT id, max_pages, gsc_enabled FROM tracker_clients WHERE token=$1', [req.params.token]);
     if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Client not found' });
-    
+    // Admin's gsc_enabled toggle is authoritative — a client cannot unlock GSC-gated features (GSC
+    // Brief, Impression Gap, cannibalization detection via query overlap) by simply importing data
+    // that LOOKS like GSC data. Free-tier accounts must not gain paid-tier features this way.
+    if (!cr.rows[0].gsc_enabled) return res.status(403).json({ success: false, error: 'GSC import is not enabled for this account — ask your admin to enable it.' });
+
     const clientId = cr.rows[0].id;
     const { pages } = req.body;
     if (!Array.isArray(pages) || !pages.length) return res.status(400).json({ success: false, error: 'pages array required' });
@@ -2311,6 +2935,27 @@ app.post('/api/tracker-client/:token/import-gsc-pages', async (req, res) => {
     const _normMap = new Map();
     _existR.rows.forEach(function(row){ _normMap.set(_normTrackUrl(row.url), row.id); });
 
+    // Defense in depth: dedupe the incoming payload by normalized URL. If the same page arrives twice
+    // in one batch (http/https/www variants, or a query-only fallback pointing at the homepage),
+    // merge instead of letting the LAST row overwrite the correct totals:
+    // sum clicks/impressions, impressions-weighted position, keyword from the row with most impressions.
+    const _seen = new Map();
+    const _deduped = [];
+    for (const p of pages) {
+      const k = _normTrackUrl(p.url);
+      if (!_seen.has(k)) { _seen.set(k, p); _deduped.push(p); continue; }
+      const e = _seen.get(k);
+      const eImpr = e.impressions || 0, pImpr = p.impressions || 0;
+      if (e.position && p.position && (eImpr + pImpr) > 0) e.position = Math.round(((e.position * eImpr + p.position * pImpr) / (eImpr + pImpr)) * 10) / 10;
+      else if (p.position && !e.position) e.position = p.position;
+      if (pImpr > eImpr && p.keyword) e.keyword = p.keyword;
+      else if (!e.keyword && p.keyword) e.keyword = p.keyword;
+      e.clicks = (e.clicks || 0) + (p.clicks || 0);
+      e.impressions = eImpr + pImpr;
+      if (p.add) e.add = true;
+    }
+    const _pagesIn = _deduped;
+
     let imported = 0;    // successfully processed (refreshed + new) — kept for compatibility
     let refreshed = 0;   // existing pages recognised + refreshed on their own spot
     let newAdded = 0;    // brand-new pages added
@@ -2319,7 +2964,7 @@ app.post('/api/tracker-client/:token/import-gsc-pages', async (req, res) => {
     const results = [];
     const warnings = [];
     
-    for (const p of pages) {
+    for (const p of _pagesIn) {
       try {
         // Recognise existing tracked page by normalized URL → refresh on its own spot (never duplicate, never counts against the limit)
         const _matchId = _normMap.get(_normTrackUrl(p.url));
@@ -2810,6 +3455,7 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
 <div class="ld-head">
   <div><div class="ld-title">Lead Panel - ${client.domain || ''}</div><div class="ld-sub">Assign work to your specialists, review &amp; approve. Add &amp; scan pages in your scanner.</div></div>
   <a class="ld-btn primary" href="/track/${client.token}" target="_blank" rel="noopener" style="text-decoration:none">&#10133; Add &amp; scan pages</a>
+  <a class="ld-btn" href="/track/${client.token}?openPrewrite=1" target="_blank" rel="noopener" style="text-decoration:none;border-color:#f59e0b;color:#fbbf24;">&#x1f3af; Pre-Write Brief</a>
 </div>
 <div class="ld-body">
   <div class="ld-panel">
@@ -2824,33 +3470,43 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
     <a class="ld-btn primary" href="/track/${client.token}" target="_blank" rel="noopener" style="text-decoration:none;display:inline-block">Open scanner &rarr;</a>
   </div>
 </div>
-<div class="ld-h2">Briefs &amp; assignments</div>
+<div class="ld-h2" style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+  <span>Briefs &amp; assignments</span>
+  <span style="display:flex;gap:6px;">
+    <button class="ld-fbtn on" data-f="all" onclick="setLdFilter('all')" style="background:#0a0a12;border:1px solid #374151;border-radius:99px;padding:5px 13px;font-size:10px;font-weight:800;color:#c4b5fd;cursor:pointer;text-transform:none;letter-spacing:0;">All</button>
+    <button class="ld-fbtn" data-f="pages" onclick="setLdFilter('pages')" style="background:#0a0a12;border:1px solid #374151;border-radius:99px;padding:5px 13px;font-size:10px;font-weight:800;color:#6b7280;cursor:pointer;text-transform:none;letter-spacing:0;">Pages only</button>
+    <button class="ld-fbtn" data-f="prewrite" onclick="setLdFilter('prewrite')" style="background:#0a0a12;border:1px solid #374151;border-radius:99px;padding:5px 13px;font-size:10px;font-weight:800;color:#6b7280;cursor:pointer;text-transform:none;letter-spacing:0;">\u{1f3af} Pre-Write only</button>
+  </span>
+</div>
 <div class="ld-grid" id="ldGrid"></div>
 <script>
   var TOKEN='${req.params.token}';
+  var _ldFilter='all';
+  function setLdFilter(f){ _ldFilter=f; var bs=document.querySelectorAll('.ld-fbtn'); for(var i=0;i<bs.length;i++){ var on=bs[i].getAttribute('data-f')===f; bs[i].classList.toggle('on',on); bs[i].style.color=on?'#c4b5fd':'#6b7280'; bs[i].style.borderColor=on?'#7c3aed':'#374151'; } render(); }
   var NL=String.fromCharCode(10);
   var _briefs=[], _specs=[];
   function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
   function cleanUrl(u){ return String(u||'').replace(/^https?:[/][/]/,'').replace(/^www[.]/,''); }
   function fmtTime(t){ try{ var d=t?new Date(t):null; return d?(d.toLocaleDateString('en-GB',{day:'2-digit',month:'short'})+' '+d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})):''; }catch(e){ return ''; } }
   function loadSpecs(){ fetch('/api/tracker-client/'+TOKEN+'/lead/specialists').then(function(r){return r.json();}).then(function(d){ if(d&&d.specialists){ _specs=d.specialists; renderSpecs(); render(); } }).catch(function(){}); }
-  function renderSpecs(){ var el=document.getElementById('specList'); el.innerHTML=_specs.length?_specs.map(function(n){return '<span class="ld-chip">'+esc(n)+'</span>';}).join(''):'<span style="color:#6b7280;font-size:12px">No specialists yet - add some above.</span>'; var inp=document.getElementById('specInput'); if(inp&&!inp.value)inp.value=_specs.join(', '); }
+  function renderSpecs(){ var el=document.getElementById('specList'); el.innerHTML=_specs.length?_specs.map(function(n){return '<span class="ld-chip" style="display:inline-flex;align-items:center;gap:6px;">'+esc(n)+'<button onclick="removeSpec(&quot;'+esc(n)+'&quot;)" title="Remove" style="background:none;border:none;color:#c4b5fd;font-size:12px;cursor:pointer;padding:0;line-height:1;">\u2715</button></span>';}).join(''):'<span style="color:#6b7280;font-size:12px">No specialists yet - add some above.</span>'; var inp=document.getElementById('specInput'); if(inp&&!inp.value)inp.value=_specs.join(', '); }
+  function removeSpec(name){ _specs=_specs.filter(function(n){return n!==name;}); document.getElementById('specInput').value=_specs.join(', '); saveSpecs(); }
   function saveSpecs(){ var v=document.getElementById('specInput').value; var m=document.getElementById('specMsg'); m.textContent='Saving...'; fetch('/api/tracker-client/'+TOKEN+'/lead/specialists',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({specialists:v})}).then(function(r){return r.json();}).then(function(d){ if(d&&d.specialists){ _specs=d.specialists; renderSpecs(); render(); m.textContent='Saved'; setTimeout(function(){m.textContent='';},1500); } }).catch(function(){ m.textContent='Failed'; }); }
   function scanAll(){ var b=document.getElementById('scanBtn'); b.textContent='Scanning...'; b.disabled=true; fetch('/api/tracker-client/'+TOKEN+'/scan-all',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({})}).then(function(r){return r.json();}).then(function(){ b.textContent='Scan started'; setTimeout(function(){ b.textContent='Scan all now'; b.disabled=false; load(); },4000); }).catch(function(){ b.textContent='Scan all now'; b.disabled=false; }); }
   function addPages(){ var raw=document.getElementById('urlInput').value; var urls=raw.split(NL).map(function(s){return s.trim();}).filter(Boolean); var msg=document.getElementById('addMsg'); if(!urls.length){ msg.textContent='Paste at least one URL'; return; } var i=0, ok=0; (function next(){ if(i>=urls.length){ msg.textContent='Added '+ok+'/'+urls.length; document.getElementById('urlInput').value=''; load(); return; } var u=urls[i++]; if(u.indexOf('http')!==0)u='https://'+u; fetch('/api/tracker-client/'+TOKEN+'/pages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url:u})}).then(function(r){return r.json();}).then(function(d){ if(d&&d.success)ok++; msg.textContent='Adding '+i+'/'+urls.length; next(); }).catch(function(){ msg.textContent='Adding '+i+'/'+urls.length; next(); }); })(); }
   function badge(st,who){ if(st==='published')return '<span class="ld-badge pub">PUBLISHED</span>'; if(st==='approved')return '<span class="ld-badge appr">APPROVED'+(who?' - '+esc(who):'')+'</span>'; if(st==='submitted')return '<span class="ld-badge subm">SUBMITTED'+(who?' - '+esc(who):'')+'</span>'; if(st==='done')return '<span class="ld-badge done">DONE</span>'; if(st==='in_progress')return '<span class="ld-badge progress">IN PROGRESS'+(who?' - '+esc(who):'')+'</span>'; return '<span class="ld-badge open">OPEN</span>'; }
   function options(cur){ var o='<option value="">- Unassigned -</option>'; var found=false; _specs.forEach(function(n){ var sel=(n===cur); if(sel)found=true; o+='<option value="'+esc(n)+'"'+(sel?' selected':'')+'>'+esc(n)+'</option>'; }); if(cur&&!found)o+='<option value="'+esc(cur)+'" selected>'+esc(cur)+' (not in list)</option>'; return o; }
-  function assign(pageId, sel){ fetch('/api/tracker-client/'+TOKEN+'/brief/'+pageId+'/assign',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:sel.value})}).then(function(r){return r.json();}).then(function(){ load(); }).catch(function(){}); }
-  function ldActions(d){ var st=d.brief_status||'open';
-    if(st==='submitted') return '<div class="ld-rev"><button class="ld-btn" onclick="reviewHtml('+d.page_id+')">Review HTML</button><button class="ld-btn primary" onclick="approve('+d.page_id+')">Approve</button><button class="ld-btn" style="border-color:#7f1d1d;color:#fca5a5" onclick="reject('+d.page_id+')">Reject</button></div>';
-    if(st==='approved') return '<div class="ld-rev"><span class="ld-note appr">Approved'+(d.brief_approved_by?' by '+esc(d.brief_approved_by):'')+' — specialist can publish</span><button class="ld-btn" onclick="reviewHtml('+d.page_id+')">Review HTML</button></div>';
-    if(st==='published') return '<div class="ld-rev"><span class="ld-note pub">Published &#10003;</span><button class="ld-btn" onclick="reviewHtml('+d.page_id+')">Review HTML</button></div>';
+  function assign(id, sel, pw){ fetch('/api/tracker-client/'+TOKEN+'/'+(pw?'prewrite-brief':'brief')+'/'+id+'/assign',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:sel.value})}).then(function(r){return r.json();}).then(function(){ load(); }).catch(function(){}); }
+  function ldActions(d){ var st=d.brief_status||'open'; var id=d.is_prewrite?d.pw_id:d.page_id; var pw=!!d.is_prewrite;
+    if(st==='submitted') return '<div class="ld-rev"><button class="ld-btn" onclick="reviewHtml('+id+','+pw+')">Review</button><button class="ld-btn primary" onclick="approve('+id+','+pw+')">Approve</button><button class="ld-btn" style="border-color:#7f1d1d;color:#fca5a5" onclick="reject('+id+','+pw+')">Reject</button></div>';
+    if(st==='approved') return '<div class="ld-rev"><span class="ld-note appr">Approved'+(d.brief_approved_by?' by '+esc(d.brief_approved_by):'')+' — specialist can publish</span><button class="ld-btn" onclick="reviewHtml('+id+','+pw+')">Review</button></div>';
+    if(st==='published') return '<div class="ld-rev"><span class="ld-note pub">Published &#10003;</span><button class="ld-btn" onclick="reviewHtml('+id+','+pw+')">Review</button></div>';
     return ''; }
   function _hrsLeftL(t){ if(!t) return null; try{ return (new Date(t).getTime()-Date.now())/3600000; }catch(e){ return null; } }
-  function dlBadgeL(d){ var h=_hrsLeftL(d.brief_deadline); if(h==null) return ''; var st=d.brief_status||'open'; if(st==='approved'||st==='published') return ''; var c=h<0?'#f87171':(h<6?'#fbbf24':'#4ade80'); var lab; if(h<0){ var o=Math.round(-h); lab='Overdue '+(o>=24?(Math.round(o/24)+'d'):(o+'h')); } else { lab=(h>=24?(Math.round(h/24)+'d'):(Math.max(1,Math.round(h))+'h'))+' left'; } return '<span class="ld-badge" style="cursor:pointer;background:rgba(124,58,237,.10);color:'+c+';border:1px solid '+c+'" title="Click to change the deadline" onclick="editDeadline('+d.page_id+')">\\u23f1 '+lab+'</span>'; }
+  function dlBadgeL(d){ var h=_hrsLeftL(d.brief_deadline); if(h==null) return ''; var st=d.brief_status||'open'; if(st==='approved'||st==='published') return ''; var c=h<0?'#f87171':(h<6?'#fbbf24':'#4ade80'); var lab; if(h<0){ var o=Math.round(-h); lab='Overdue '+(o>=24?(Math.round(o/24)+'d'):(o+'h')); } else { lab=(h>=24?(Math.round(h/24)+'d'):(Math.max(1,Math.round(h))+'h'))+' left'; } var id=d.is_prewrite?d.pw_id:d.page_id; var pw=!!d.is_prewrite; return '<span class="ld-badge" style="cursor:pointer;background:rgba(124,58,237,.10);color:'+c+';border:1px solid '+c+'" title="Click to change the deadline" onclick="editDeadline('+id+','+pw+')">\\u23f1 '+lab+'</span>'; }
   function rejNoteL(d){ if(!d.brief_rejected_at) return ''; return '<div style="background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.3);border-radius:8px;padding:6px 9px;margin-top:8px;font-size:11px;color:#fca5a5">Sent back to '+esc(d.brief_claimed_by||'specialist')+': '+esc(d.brief_reject_reason||'')+'</div>'; }
-  function reject(pageId){ if(!_ldEnsureName())return; var why=prompt('Why send it back to the specialist? (this reason is shown to them)'); if(why===null) return; fetch('/api/tracker-client/'+TOKEN+'/brief/'+pageId+'/reject',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:_ldName,reason:(why||'').trim()})}).then(function(r){return r.json();}).then(function(r){ if(!r.success) alert(r.error||'Could not reject'); _ldClose(); load(); }).catch(function(){ alert('Could not reject'); }); }
-  function editDeadline(pageId){ var h=prompt('Hours from now until the deadline (e.g. 24):','24'); if(h===null) return; var n=parseFloat(h); if(isNaN(n)){ alert('Enter a number of hours'); return; } fetch('/api/tracker-client/'+TOKEN+'/brief/'+pageId+'/deadline',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({hours:n})}).then(function(r){return r.json();}).then(function(){ load(); }).catch(function(){}); }
+  function reject(id,pw){ if(!_ldEnsureName())return; var why=prompt('Why send it back to the specialist? (this reason is shown to them)'); if(why===null) return; fetch('/api/tracker-client/'+TOKEN+'/'+(pw?'prewrite-brief':'brief')+'/'+id+'/reject',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:_ldName,reason:(why||'').trim()})}).then(function(r){return r.json();}).then(function(r){ if(!r.success) alert(r.error||'Could not reject'); _ldClose(); load(); }).catch(function(){ alert('Could not reject'); }); }
+  function editDeadline(id,pw){ var h=prompt('Hours from now until the deadline (e.g. 24):','24'); if(h===null) return; var n=parseFloat(h); if(isNaN(n)){ alert('Enter a number of hours'); return; } fetch('/api/tracker-client/'+TOKEN+'/'+(pw?'prewrite-brief':'brief')+'/'+id+'/deadline',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({hours:n})}).then(function(r){return r.json();}).then(function(){ load(); }).catch(function(){}); }
   var _prioRankL={high:0,h:0,medium:1,med:1,m:1,low:2,l:2};
   function _dlValL(d){ var t=d.brief_deadline; return t?new Date(t).getTime():Infinity; }
   function ldScoreL(d){ var a=d.brief_after_score,b=d.brief_before_score; var st=d.brief_status||'open';
@@ -2863,22 +3519,36 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
     return h+'</div>'; }
   function render(){
     var grid=document.getElementById('ldGrid');
-    if(!_briefs.length){ grid.innerHTML='<div class="ld-empty">No briefs yet &mdash; add &amp; scan pages in your scanner; they appear here to assign.</div>'; return; }
-    var list=_briefs.slice().sort(function(a,b){ var da=_dlValL(a),db=_dlValL(b); if(da!==db)return da-db; var pa=_prioRankL[(a.priority||'medium').toLowerCase()]; if(pa==null)pa=1; var pb=_prioRankL[(b.priority||'medium').toLowerCase()]; if(pb==null)pb=1; if(pa!==pb)return pa-pb; return (b.gsc_impressions||0)-(a.gsc_impressions||0); });
+    if(!_briefs.length){ grid.innerHTML='<div class="ld-empty">No briefs yet &mdash; add &amp; scan pages in your scanner, or generate a Pre-Write Brief; they appear here to assign.</div>'; return; }
+    var filtered=_briefs.filter(function(d){ if(_ldFilter==='pages') return !d.is_prewrite; if(_ldFilter==='prewrite') return !!d.is_prewrite; return true; });
+    if(!filtered.length){ grid.innerHTML='<div class="ld-empty">'+(_ldFilter==='prewrite'?'No Pre-Write Briefs yet.':'No scanned pages yet.')+'</div>'; return; }
+    var list=filtered.slice().sort(function(a,b){ var da=_dlValL(a),db=_dlValL(b); if(da!==db)return da-db; var pa=_prioRankL[(a.priority||'medium').toLowerCase()]; if(pa==null)pa=1; var pb=_prioRankL[(b.priority||'medium').toLowerCase()]; if(pb==null)pb=1; if(pa!==pb)return pa-pb; var ta=a.ts?new Date(a.ts).getTime():0, tb=b.ts?new Date(b.ts).getTime():0; return ta-tb; });
     grid.innerHTML=list.map(function(d){
       var st=d.brief_status||'open'; var cls=st==='published'?'s-pub':st==='approved'?'s-appr':st==='submitted'?'s-subm':st==='done'?'s-done':st==='in_progress'?'s-progress':'';
-      return '<div class="ld-card '+cls+'"><div class="ld-url">'+esc(cleanUrl(d.url))+'</div><div class="ld-time">Scanned '+fmtTime(d.ts)+'</div>'+badge(st,d.brief_claimed_by)+' '+dlBadgeL(d)+ldScoreL(d)
-        +'<div class="ld-assign"><span style="font-size:11px;color:#6b7280">Assign:</span><select class="ld-select" onchange="assign('+d.page_id+',this)">'+options(d.brief_claimed_by||'')+'</select></div>'
+      var pw=!!d.is_prewrite; var id=pw?d.pw_id:d.page_id;
+      var pwStyle=pw?' style="border-left:3px solid #f59e0b;"':'';
+      var titleLine=pw
+        ? '<div class="ld-url"><span style="color:#fbbf24;font-size:10px;font-weight:800;letter-spacing:.05em;margin-right:6px;">\\u{1f3af} PRE-WRITE</span>'+esc(d.keyword)+'</div>'
+        : '<div class="ld-url">'+esc(cleanUrl(d.url))+'</div>';
+      var openLink=pw
+        ? '<button class="ld-link" style="background:none;border:none;cursor:pointer;padding:0;" onclick="viewPWBrief('+id+')">View brief</button>'
+        : '<a class="ld-link" href="'+esc(d.url)+'" target="_blank" rel="noopener">Open page</a>';
+      var delFn=pw?'deletePWBrief('+id+')':'deleteLeadPage('+id+')';
+      return '<div class="ld-card '+cls+'"'+pwStyle+'>'+titleLine+'<div class="ld-time">'+(pw?'Generated ':'Scanned ')+fmtTime(d.ts)+'</div>'+badge(st,d.brief_claimed_by)+' '+dlBadgeL(d)+ldScoreL(d)
+        +'<div class="ld-assign"><span style="font-size:11px;color:#6b7280">Assign:</span><select class="ld-select" onchange="assign('+id+',this,'+pw+')">'+options(d.brief_claimed_by||'')+'</select></div>'
         +ldActions(d)+rejNoteL(d)
-        +'<div style="margin-top:10px"><a class="ld-link" href="'+esc(d.url)+'" target="_blank" rel="noopener">Open page</a></div></div>';
+        +'<div style="margin-top:10px;display:flex;justify-content:space-between;align-items:center">'+openLink+'<button onclick="'+delFn+'" style="background:none;border:1px solid #374151;border-radius:6px;color:#f87171;font-size:11px;padding:4px 9px;cursor:pointer;">Delete</button></div></div>';
     }).join('');
   }
+  function deleteLeadPage(pageId){ if(!confirm('Delete this page and its brief? This cannot be undone.')) return; fetch('/api/tracker-client/'+TOKEN+'/pages/'+pageId,{method:'DELETE'}).then(function(r){return r.json();}).then(function(r){ if(!r||!r.success){ alert((r&&r.error)||'Could not delete'); return; } load(); }).catch(function(){ alert('Could not delete'); }); }
+  function deletePWBrief(id){ if(!confirm('Delete this Pre-Write Brief? This cannot be undone.')) return; fetch('/api/tracker-client/'+TOKEN+'/prewrite-briefs/'+id,{method:'DELETE'}).then(function(r){return r.json();}).then(function(r){ if(!r||!r.success){ alert((r&&r.error)||'Could not delete'); return; } load(); }).catch(function(){ alert('Could not delete'); }); }
+  function viewPWBrief(id){ var ov=_ldOv(); document.getElementById('ldOvTitle').textContent='Pre-Write Brief'; document.getElementById('ldOvBody').innerHTML='<div class="ld-prev" id="ldPWPrev">Loading...</div>'; document.getElementById('ldOvFoot').innerHTML='<button class="ld-btn" onclick="_ldClose()">Close</button>'; ov.classList.add('on'); fetch('/api/tracker-client/'+TOKEN+'/prewrite-briefs/'+id).then(function(r){return r.json();}).then(function(d){ document.getElementById('ldPWPrev').textContent=(d&&d.brief)?JSON.stringify(d.brief,null,2):'(could not load brief)'; }).catch(function(){ document.getElementById('ldPWPrev').textContent='Could not load'; }); }
   var _ldName=(function(){ try{ return localStorage.getItem('cs_lead_name')||''; }catch(e){ return ''; } })();
   function _ldEnsureName(){ if(_ldName) return true; var n=prompt('Your name (so the specialist sees who approved):'); if(n&&n.trim()){ _ldName=n.trim(); try{ localStorage.setItem('cs_lead_name',_ldName); }catch(e){} return true; } return false; }
   function _ldOv(){ var ov=document.getElementById('ldOv'); if(ov) return ov; ov=document.createElement('div'); ov.id='ldOv'; ov.className='ld-ov'; ov.innerHTML='<div class="ld-modal"><h3 id="ldOvTitle"></h3><div class="ld-mbody" id="ldOvBody"></div><div class="ld-mfoot" id="ldOvFoot"></div></div>'; document.body.appendChild(ov); ov.addEventListener('click',function(e){ if(e.target===ov) _ldClose(); }); return ov; }
   function _ldClose(){ var ov=document.getElementById('ldOv'); if(ov) ov.classList.remove('on'); }
-  function reviewHtml(pageId){ var ov=_ldOv(); document.getElementById('ldOvTitle').textContent='Submitted work — review'; document.getElementById('ldOvBody').innerHTML='<div class="ld-prev" id="ldPrev">Loading...</div>'; document.getElementById('ldOvFoot').innerHTML='<button class="ld-btn" onclick="_ldClose()">Close</button><button class="ld-btn" style="border-color:#7f1d1d;color:#fca5a5" id="ldRejectGo">Reject</button><button class="ld-btn primary" id="ldApproveGo">Approve</button>'; ov.classList.add('on'); fetch('/api/tracker-client/'+TOKEN+'/brief/'+pageId+'/deliverable').then(function(r){return r.json();}).then(function(d){ document.getElementById('ldPrev').textContent=(d&&d.html)?d.html:'(no HTML submitted yet)'; var ga=document.getElementById('ldApproveGo'); if(ga) ga.onclick=function(){ approve(pageId); }; var gr=document.getElementById('ldRejectGo'); if(gr) gr.onclick=function(){ reject(pageId); }; }).catch(function(){ document.getElementById('ldPrev').textContent='Could not load'; }); }
-  function approve(pageId){ if(!_ldEnsureName())return; fetch('/api/tracker-client/'+TOKEN+'/brief/'+pageId+'/approve',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:_ldName})}).then(function(r){return r.json();}).then(function(r){ if(!r.success) alert(r.error||'Could not approve'); _ldClose(); load(); }).catch(function(){ alert('Could not approve'); }); }
+  function reviewHtml(id,pw){ var ov=_ldOv(); document.getElementById('ldOvTitle').textContent='Submitted work — review'; document.getElementById('ldOvBody').innerHTML='<div class="ld-prev" id="ldPrev">Loading...</div>'; document.getElementById('ldOvFoot').innerHTML='<button class="ld-btn" onclick="_ldClose()">Close</button><button class="ld-btn" style="border-color:#7f1d1d;color:#fca5a5" id="ldRejectGo">Reject</button><button class="ld-btn primary" id="ldApproveGo">Approve</button>'; ov.classList.add('on'); fetch('/api/tracker-client/'+TOKEN+'/'+(pw?'prewrite-brief':'brief')+'/'+id+'/deliverable').then(function(r){return r.json();}).then(function(d){ document.getElementById('ldPrev').textContent=(d&&d.html)?d.html:'(no content submitted yet)'; var ga=document.getElementById('ldApproveGo'); if(ga) ga.onclick=function(){ approve(id,pw); }; var gr=document.getElementById('ldRejectGo'); if(gr) gr.onclick=function(){ reject(id,pw); }; }).catch(function(){ document.getElementById('ldPrev').textContent='Could not load'; }); }
+  function approve(id,pw){ if(!_ldEnsureName())return; fetch('/api/tracker-client/'+TOKEN+'/'+(pw?'prewrite-brief':'brief')+'/'+id+'/approve',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:_ldName})}).then(function(r){return r.json();}).then(function(r){ if(!r.success) alert(r.error||'Could not approve'); _ldClose(); load(); }).catch(function(){ alert('Could not approve'); }); }
   function load(){ fetch('/api/tracker-client/'+TOKEN+'/latest-briefs').then(function(r){return r.json();}).then(function(d){ if(d&&d.briefs){ _briefs=d.briefs; render(); } }).catch(function(){}); }
   loadSpecs(); load(); setInterval(function(){ if(!document.hidden) load(); },15000); document.addEventListener('visibilitychange',function(){ if(!document.hidden) load(); });
 </script>
@@ -2913,6 +3583,26 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
 .bd-name input{background:#0d1117;border:1px solid #1f2937;border-radius:8px;padding:7px 11px;color:#e5e7eb;font-size:12px;width:150px}
 .bd-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:16px;padding:20px;max-width:1700px;margin:0 auto}
 .bw-card{background:#0d1117;border:1px solid #1f2937;border-radius:16px;padding:18px;display:flex;flex-direction:column}
+.bw-scroll{max-height:420px;overflow-y:auto;overflow-x:hidden;margin:8px 0;padding-right:6px}
+.bw-scroll::-webkit-scrollbar{width:8px}
+.bw-scroll::-webkit-scrollbar-track{background:#0b0f16;border-radius:4px}
+.bw-scroll::-webkit-scrollbar-thumb{background:#374151;border-radius:4px}
+.bw-scroll::-webkit-scrollbar-thumb:hover{background:#4b5563}
+.bw-trans{background:rgba(30,58,138,.14);border:1px solid rgba(59,130,246,.30);border-radius:10px;padding:11px 13px;margin:10px 0}
+.bw-trans-h{font-size:11px;font-weight:800;color:#60a5fa;letter-spacing:.04em;margin-bottom:7px}
+.bw-trans-sub{font-size:11px;font-weight:700;color:#cbd5e1;margin:6px 0 4px}
+.bw-comp{font-size:11px;line-height:1.6;color:#94a3b8;word-break:break-word}
+.bw-comp-n{color:#60a5fa;font-weight:800}
+.bw-comp-u{color:#93c5fd;text-decoration:none;font-weight:600}
+.bw-comp-u:hover{text-decoration:underline}
+.bw-comp-t{color:#94a3b8}
+.bw-trans-line{font-size:10.5px;color:#94a3b8;line-height:1.55;margin-top:5px}
+.bw-sec-h{font-size:11px;font-weight:800;letter-spacing:.05em;margin:12px 0 7px}
+.bw-rec-meta{display:flex;gap:6px;align-items:center;margin-bottom:5px;flex-wrap:wrap}
+.bw-prio{font-size:9px;font-weight:800;padding:2px 7px;border-radius:4px;border:1px solid;letter-spacing:.04em}
+.bw-sys{font-size:9px;font-weight:700;padding:2px 7px;border-radius:4px;background:rgba(124,58,237,.15);color:#c4b5fd}
+.bw-rec-sig{font-size:10.5px;color:#94a3b8;font-style:italic;margin-bottom:5px;line-height:1.5}
+.bw-rec-imp{font-size:10.5px;color:#a78bfa;margin-top:6px;line-height:1.5}
 .bw-card.s-open{border-color:rgba(22,163,74,.4)}
 .bw-card.s-progress{border-color:rgba(217,119,6,.45)}
 .bw-card.s-done{opacity:.55}
@@ -2943,7 +3633,7 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
 .bw-chip .l{font-size:8px;color:#6b7280;text-transform:uppercase;letter-spacing:.06em;margin-top:2px}
 .bw-rec{border-left:3px solid #7c3aed;padding:2px 0 2px 12px;margin-bottom:11px}
 .bw-rec-t{font-size:13px;font-weight:800;color:#f1f5f9;margin-bottom:3px}
-.bw-rec-b{font-size:12px;color:#9ca3af;line-height:1.5}
+.bw-rec-b{font-size:12px;color:#cbd5e1;line-height:1.6;background:#0b0f16;border:1px solid #1f2937;border-radius:8px;padding:9px 11px;margin-top:4px;white-space:pre-wrap;word-break:break-word}
 .bd-actions{margin-top:auto;padding-top:14px;display:flex;gap:8px;flex-wrap:wrap}
 .bd-btn{border:none;border-radius:9px;padding:9px 15px;font-size:12px;font-weight:800;cursor:pointer}
 .bd-btn.claim{background:#7c3aed;color:#fff}
@@ -2959,34 +3649,92 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
   <div><div class="bd-title">My Work - ${client.domain || ''}</div><div class="bd-sub">Work assigned to you, most urgent first. The lead assigns &amp; reviews — you do the work and submit.</div></div>
   <div class="bd-filters">
     <button class="bd-fbtn" data-f="all" onclick="setFilter('all')">All</button>
-    <button class="bd-fbtn on" data-f="mine" onclick="setFilter('mine')">My work</button>
-    <button class="bd-fbtn" data-f="open" onclick="setFilter('open')">Open</button>
+    <button class="bd-fbtn" data-f="mine" onclick="setFilter('mine')">My work</button>
+    <button class="bd-fbtn on" data-f="open" onclick="setFilter('open')">Open</button>
     <button class="bd-fbtn" data-f="in_progress" onclick="setFilter('in_progress')">In progress</button>
     <button class="bd-fbtn" data-f="done" onclick="setFilter('done')">Done</button>
+    <span style="width:1px;background:#374151;align-self:stretch;margin:0 4px;"></span>
+    <button class="bd-tbtn on" data-t="all" onclick="setTypeFilter('all')">All types</button>
+    <button class="bd-tbtn" data-t="pages" onclick="setTypeFilter('pages')">Pages only</button>
+    <button class="bd-tbtn" data-t="prewrite" onclick="setTypeFilter('prewrite')">&#x1f3af; Pre-Write only</button>
   </div>
   <div class="bd-name"><span style="font-size:11px;color:#6b7280">You:</span><input id="bdName" placeholder="Your name" oninput="saveName(this.value)"></div>
 </div>
+<style>.bd-tbtn{background:#0a0a12;border:1px solid #374151;border-radius:99px;padding:6px 14px;font-size:11px;font-weight:800;color:#6b7280;cursor:pointer;}.bd-tbtn.on{color:#c4b5fd;border-color:#7c3aed;}</style>
 <div class="bd-grid" id="bdGrid"></div>
 <script>
   var TOKEN='${req.params.token}';
   var NL=String.fromCharCode(10);
-  var _name='', _filter='mine', _briefs=[];
+  var _name='', _filter='open', _briefs=[];
   try{ _name=localStorage.getItem('csBoardName')||''; }catch(e){}
   function saveName(v){ _name=(v||'').trim(); try{ localStorage.setItem('csBoardName',_name); }catch(e){} }
   function setFilter(f){ _filter=f; var bs=document.querySelectorAll('.bd-fbtn'); for(var i=0;i<bs.length;i++){ bs[i].classList.toggle('on', bs[i].getAttribute('data-f')===f); } render(); }
+  var _typeFilter='all';
+  function setTypeFilter(t){ _typeFilter=t; var bs=document.querySelectorAll('.bd-tbtn'); for(var i=0;i<bs.length;i++){ bs[i].classList.toggle('on', bs[i].getAttribute('data-t')===t); } render(); }
   function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
   function cleanUrl(u){ return String(u||'').replace(/^https?:[/][/]/,'').replace(/^www[.]/,''); }
   function fmtTime(t){ try{ var d=t?new Date(t):null; return d?(d.toLocaleDateString('en-GB',{day:'2-digit',month:'short'})+' '+d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})):''; }catch(e){ return ''; } }
   function chip(v,l,c){ return '<div class="bw-chip"><div class="v" style="color:'+c+'">'+v+'</div><div class="l">'+l+'</div></div>'; }
   function chips(d){ var pos=d.position||d.gsc_position; var pc=(!pos)?'#6b7280':pos<=3?'#4ade80':pos<=10?'#a3e635':pos<=20?'#fbbf24':'#f87171';
-    return '<div class="bw-chips">'+chip(pos?('#'+pos):'-','Position',pc)+chip(d.aio_cited?'YES':'NO','AIO',d.aio_cited?'#4ade80':'#6b7280')+chip(d.perp_cited?'YES':'NO','Perplexity',d.perp_cited?'#a78bfa':'#6b7280')+chip(d.bing_cited?'YES':'NO','Copilot',d.bing_cited?'#60a5fa':'#6b7280')+chip(d.brave_cited?'YES':'NO','Claude',d.brave_cited?'#f87171':'#6b7280')+(d.score?chip(d.score,'GRAAF','#a78bfa'):'')+'</div>'; }
+    return '<div class="bw-chips">'+chip(pos?('#'+pos):'-','Position',pc)+chip(d.aio_cited?'YES':'NO','AIO',d.aio_cited?'#4ade80':'#6b7280')+chip(d.perp_cited?'YES':'NO','Perplexity',d.perp_cited?'#a78bfa':'#6b7280')+chip(d.bing_cited?'YES':'NO','Copilot',d.bing_cited?'#60a5fa':'#6b7280')+(d.score?chip(d.score,'GRAAF','#a78bfa'):'')+'</div>'; }
+  function transparency(d){
+    var comp=d.competitors||[]; var pcomp=d.perp_competitors||[];
+    if(!comp.length && !pcomp.length && !d.aio_text && !d.perp_text) return '';
+    var h='<div class="bw-trans"><div class="bw-trans-h">&#128269; WHAT WE ACTUALLY CHECKED</div>';
+    if(comp.length){
+      h+='<div class="bw-trans-sub">Google top 5 &mdash; who ranks and why:</div>';
+      h+=comp.slice(0,5).map(function(c,i){
+        var host=''; try{ host=String(c.url||'').split('/')[2]||''; }catch(e){ host=''; }
+        var ttl=c.title?(' &mdash; '+esc(String(c.title).slice(0,70))):'';
+        return '<div class="bw-comp"><span class="bw-comp-n">#'+(c.position||i+1)+'</span> <a href="'+esc(c.url||'#')+'" target="_blank" rel="noopener" class="bw-comp-u">'+esc(host)+'</a><span class="bw-comp-t">'+ttl+'</span></div>';
+      }).join('');
+    }
+    h+='<div class="bw-trans-line">Google AI Overview: '+(d.aio_text?('shown &mdash; '+esc(String(d.aio_text).slice(0,150))+'...'):'no data &mdash; paste the AI Overview you see on Google (Add AIO) for an exact check.')+'</div>';
+    h+='<div class="bw-trans-line">Perplexity: '+(d.perp_cited?(d.perp_text?('&ldquo;'+esc(String(d.perp_text).slice(0,150))+'&rdquo;'):'cited'):(d.perp_text?'mentioned in answer but not formally cited':'checked &mdash; no answer excerpt captured for this query.'))+'</div>';
+    if(pcomp.length){ h+='<div class="bw-trans-line">Perplexity also cites ('+pcomp.length+')'+(d.perp_cited?'':' &mdash; this page not among them')+': '+esc(pcomp.slice(0,5).join(', '))+'</div>'; }
+    return h+'</div>';
+  }
   function recs(d){ var out='';
-    var _lbl=function(t,c){ return '<div style="font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:'+c+';margin:8px 0 4px;font-weight:600">'+t+'</div>'; };
+    var _compTbl=function(p){
+      var ct=p.comparison_table;
+      if(typeof ct==='string'){ try{ ct=JSON.parse(ct); }catch(e){ ct=null; } }
+      if(!ct||!Array.isArray(ct)||!ct.length) return '';
+      var th='padding:7px 9px;font-size:9px;text-align:left;color:#93c5fd;text-transform:uppercase;letter-spacing:.04em;';
+      var rows=ct.map(function(r){
+        return '<tr style="border-top:1px solid #1f2937;">'
+          + '<td style="padding:7px 9px;font-size:10px;color:#60a5fa;font-weight:700;white-space:nowrap;vertical-align:top;">'+esc(r.competitor||'')+'</td>'
+          + '<td style="padding:7px 9px;font-size:10px;color:#86efac;vertical-align:top;">'+esc(r.what_they_do_well||'')+'</td>'
+          + '<td style="padding:7px 9px;font-size:10px;color:#fca5a5;vertical-align:top;">'+esc(r.our_gap||'')+'</td>'
+          + '<td style="padding:7px 9px;font-size:10px;color:#cbd5e1;vertical-align:top;">'+esc(r.what_to_do||'')+'</td>'
+          + '</tr>';
+      }).join('');
+      return '<div style="margin:8px 0 2px;overflow-x:auto;border:1px solid #1f2937;border-radius:8px;">'
+        + '<table style="width:100%;border-collapse:collapse;background:#0d1117;">'
+        + '<thead><tr style="background:#161b22;"><th style="'+th+'">Competitor</th><th style="'+th+'">What they do well</th><th style="'+th+'">Our gap</th><th style="'+th+'">What to do</th></tr></thead>'
+        + '<tbody>'+rows+'</tbody></table></div>';
+    };
+    var _card=function(p,sysColor){
+      var t=p.title||p.h2||p.heading||'Recommendation';
+      var b=p.action||p.passage||p.body||p.text||'';
+      var prio=(p.priority||'medium').toUpperCase();
+      var pc=prio==='HIGH'?'#f87171':(prio==='LOW'?'#6b7280':'#fbbf24');
+      var sys=p.system||'';
+      var imp=p.expected_impact||'';
+      var sig=p.trigger||p.signal||'';
+      return '<div class="bw-rec" style="border-left:3px solid '+sysColor+'">'
+        + '<div class="bw-rec-meta"><span class="bw-prio" style="color:'+pc+';border-color:'+pc+'">'+esc(prio)+'</span>'+(sys?'<span class="bw-sys">'+esc(sys)+'</span>':'')+'</div>'
+        + '<div class="bw-rec-t">'+esc(t)+'</div>'
+        + (sig?'<div class="bw-rec-sig">'+esc(sig)+'</div>':'')
+        + (b?'<div class="bw-rec-b">'+esc(b)+'</div>':'')
+        + _compTbl(p)
+        + (imp?'<div class="bw-rec-imp">&rarr; '+esc(imp)+'</div>':'')
+        + '</div>';
+    };
     var items=d.passages||[];
-    if(items.length){ out+=_lbl('AI citations','#a78bfa')+items.map(function(p){ var t=p.title||p.h2||p.heading||'Recommendation'; var b=p.action||p.passage||p.body||p.text||''; if(b.length>200)b=b.slice(0,200)+'...'; return '<div class="bw-rec"><div class="bw-rec-t">'+esc(t)+'</div>'+(b?'<div class="bw-rec-b">'+esc(b)+'</div>':'')+'</div>'; }).join(''); }
+    if(items.length){ out+='<div class="bw-sec-h" style="color:#a78bfa">&#10024; WHAT TO DO NEXT &mdash; AI CITATIONS</div>'+items.map(function(p){ return _card(p,'#7c3aed'); }).join(''); }
     var gsc=d.gsc_brief||[];
-    if(gsc.length){ out+=_lbl('GSC ranking','#a3e635')+gsc.map(function(g){ var t=g.title||'GSC recommendation'; var b=g.action||g.expected_impact||g.trigger||''; if(b.length>200)b=b.slice(0,200)+'...'; return '<div class="bw-rec"><div class="bw-rec-t">'+esc(t)+'</div>'+(b?'<div class="bw-rec-b">'+esc(b)+'</div>':'')+'</div>'; }).join(''); }
-    return out; }
+    if(gsc.length){ out+='<div class="bw-sec-h" style="color:#a3e635">&#128200; GOOGLE RANKING (GSC)</div>'+gsc.map(function(g){ return _card(g,'#65a30d'); }).join(''); }
+    return out?('<div class="bw-scroll">'+out+'</div>'):''; }
   function badge(st,who){ if(st==='published')return '<span class="bd-badge pub">PUBLISHED</span>'; if(st==='approved')return '<span class="bd-badge appr">APPROVED'+(who?' - '+esc(who):'')+'</span>'; if(st==='submitted')return '<span class="bd-badge subm">SUBMITTED'+(who?' - '+esc(who):'')+'</span>'; if(st==='done')return '<span class="bd-badge done">DONE</span>'; if(st==='in_progress')return '<span class="bd-badge progress">IN PROGRESS'+(who?' - '+esc(who):'')+'</span>'; return '<span class="bd-badge open">OPEN</span>'; }
   function scoreLine(d){ var a=d.brief_after_score, b=d.brief_before_score;
     if(a==null && b==null) return '';
@@ -2995,13 +3743,13 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
     if(a!=null){ if(b!=null) html+='<span style="color:#6b7280">\\\\u2192</span>'; html+='<span class="bd-score-pill" style="color:#4ade80">After '+a+'</span>'; }
     if(a!=null && b!=null){ var dl=a-b; var dc=dl>0?'#4ade80':(dl<0?'#f87171':'#9ca3af'); html+='<span class="bd-score-pill" style="color:'+dc+'">'+(dl>0?'+':'')+dl+'</span>'; }
     return html+'</div>'; }
-  function actions(d){ var st=d.brief_status||'open';
+  function actions(d){ var st=d.brief_status||'open'; var id=d.is_prewrite?d.pw_id:d.page_id; var pw=!!d.is_prewrite;
     if(st==='open') return '<span class="bd-wait" style="color:#6b7280">Waiting to be assigned by the lead</span>';
-    if(st==='in_progress') return '<button class="bd-btn score" onclick="openScore('+d.page_id+')">📊 Score my work</button><button class="bd-btn done" onclick="openSubmit('+d.page_id+')">Submit finished HTML</button><button class="bd-btn sec" onclick="reopen('+d.page_id+')">Release</button>';
-    if(st==='submitted') return '<button class="bd-btn score" onclick="openScore('+d.page_id+')">📊 Re-score</button><button class="bd-btn sec" onclick="viewHtml('+d.page_id+')">View HTML</button><button class="bd-btn sec" onclick="openSubmit('+d.page_id+')">Re-submit</button><span class="bd-wait">Awaiting lead approval</span>';
-    if(st==='approved') return '<button class="bd-btn pub" onclick="publish('+d.page_id+')">Publish</button><button class="bd-btn sec" onclick="viewHtml('+d.page_id+')">View HTML</button>';
-    if(st==='published') return '<button class="bd-btn sec" onclick="viewHtml('+d.page_id+')">View HTML</button>';
-    return '<button class="bd-btn sec" onclick="reopen('+d.page_id+')">Reopen</button>'; }
+    if(st==='in_progress') return (pw?'':'<button class="bd-btn score" onclick="openScore('+id+')">📊 Score my work</button>')+'<button class="bd-btn done" onclick="openSubmit('+id+','+pw+')">'+(pw?'Submit written content':'Submit finished HTML')+'</button><button class="bd-btn sec" onclick="reopen('+id+','+pw+')">Release</button>';
+    if(st==='submitted') return (pw?'':'<button class="bd-btn score" onclick="openScore('+id+')">📊 Re-score</button>')+'<button class="bd-btn sec" onclick="viewHtml('+id+','+pw+')">View</button><button class="bd-btn sec" onclick="openSubmit('+id+','+pw+')">Re-submit</button><span class="bd-wait">Awaiting lead approval</span>';
+    if(st==='approved') return '<button class="bd-btn pub" onclick="publish('+id+','+pw+')">Publish</button><button class="bd-btn sec" onclick="viewHtml('+id+','+pw+')">View</button>';
+    if(st==='published') return '<button class="bd-btn sec" onclick="viewHtml('+id+','+pw+')">View</button>';
+    return '<button class="bd-btn sec" onclick="reopen('+id+','+pw+')">Reopen</button>'; }
   function _hrsLeft(t){ if(!t) return null; try{ return (new Date(t).getTime()-Date.now())/3600000; }catch(e){ return null; } }
   function dlBadge(d){ var h=_hrsLeft(d.brief_deadline); if(h==null) return ''; var st=d.brief_status||'open'; if(st==='approved'||st==='published') return ''; var c=h<0?'#f87171':(h<6?'#fbbf24':'#4ade80'); var lab; if(h<0){ var o=Math.round(-h); lab='Overdue '+(o>=24?(Math.round(o/24)+'d'):(o+'h')); } else { lab=(h>=24?(Math.round(h/24)+'d'):(Math.max(1,Math.round(h))+'h'))+' left'; } return '<span class="bd-badge" style="background:rgba(124,58,237,.10);color:'+c+';border:1px solid '+c+'">\\u23f1 '+lab+'</span>'; }
   function rejBanner(d){ if(!d.brief_rejected_at) return ''; return '<div style="background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.4);border-radius:8px;padding:8px 10px;margin:8px 0;font-size:12px;color:#fca5a5"><strong>Sent back by the lead:</strong> '+esc(d.brief_reject_reason||'Please revise and resubmit.')+'</div>'; }
@@ -3010,6 +3758,8 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
   function render(){
     var grid=document.getElementById('bdGrid');
     var list=_briefs.filter(function(d){
+      if(_typeFilter==='pages' && d.is_prewrite) return false;
+      if(_typeFilter==='prewrite' && !d.is_prewrite) return false;
       if(_filter==='all') return true;
       if(_filter==='mine') return d.brief_claimed_by && _name && String(d.brief_claimed_by).toLowerCase()===_name.toLowerCase();
       return (d.brief_status||'open')===_filter;
@@ -3025,20 +3775,29 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
     if(!list.length){ grid.innerHTML='<div class="bd-empty">'+(_filter==='mine'?'No work assigned to you yet. The lead assigns briefs from the Lead Panel — assigned work shows here, most urgent first.':(_filter!=='all'?'No briefs in this status.':'No briefs yet - they appear here after a scan.'))+'</div>'; return; }
     grid.innerHTML=list.map(function(d){
       var st=d.brief_status||'open'; var cls=st==='published'?'s-pub':st==='approved'?'s-appr':st==='submitted'?'s-subm':st==='done'?'s-done':st==='in_progress'?'s-progress':'s-open';
-      return '<div class="bw-card '+cls+'"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:6px"><div style="min-width:0"><div class="bw-url">'+esc(cleanUrl(d.url))+'</div><div class="bw-time">Scanned '+fmtTime(d.ts)+'</div></div><div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end;flex-shrink:0">'+badge(st,d.brief_claimed_by)+dlBadge(d)+'</div></div>'+rejBanner(d)+chips(d)+scoreLine(d)+recs(d)+'<div class="bd-actions">'+actions(d)+'<button class="bd-btn sec" onclick="copyBrief('+d.page_id+',this)">Copy brief</button><a class="bd-btn sec" href="'+esc(d.url)+'" target="_blank" rel="noopener" style="text-decoration:none">Open page</a></div></div>';
+      var pw=!!d.is_prewrite; var id=pw?d.pw_id:d.page_id;
+      var pwStyle=pw?'border-left:3px solid #f59e0b;':'';
+      var titleLine=pw
+        ? '<div class="bw-url"><span style="color:#fbbf24;font-size:10px;font-weight:800;letter-spacing:.05em;margin-right:6px;">\\u{1f3af} PRE-WRITE</span>'+esc(d.keyword)+'</div>'
+        : '<div class="bw-url">'+esc(cleanUrl(d.url))+'</div>';
+      var openLink=pw
+        ? '<button class="bd-btn sec" onclick="viewPWDetail('+id+')" style="text-decoration:none">View brief</button>'
+        : '<a class="bd-btn sec" href="'+esc(d.url)+'" target="_blank" rel="noopener" style="text-decoration:none">Open page</a>';
+      return '<div class="bw-card '+cls+'" style="'+pwStyle+'"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:6px"><div style="min-width:0">'+titleLine+'<div class="bw-time">'+(pw?'Generated ':'Scanned ')+fmtTime(d.ts)+'</div></div><div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end;flex-shrink:0">'+badge(st,d.brief_claimed_by)+dlBadge(d)+'</div></div>'+rejBanner(d)+chips(d)+scoreLine(d)+transparency(d)+recs(d)+'<div class="bd-actions">'+actions(d)+openLink+'</div></div>';
     }).join('');
   }
+  function viewPWDetail(id){ var ov=_ensureOv(); document.getElementById('bdOvTitle').textContent='Pre-Write Brief'; document.getElementById('bdOvBody').innerHTML='<div class="bd-prev" id="bdPWPrev">Loading...</div>'; document.getElementById('bdOvFoot').innerHTML='<button class="bd-btn sec" onclick="closeOv()">Close</button>'; ov.classList.add('on'); fetch('/api/tracker-client/'+TOKEN+'/prewrite-briefs/'+id).then(function(r){return r.json();}).then(function(d){ document.getElementById('bdPWPrev').textContent=(d&&d.brief)?JSON.stringify(d.brief,null,2):'(could not load brief)'; }).catch(function(){ document.getElementById('bdPWPrev').textContent='Could not load'; }); }
   function ensureName(){ if(_name) return true; var n=prompt('Enter your name to see the work assigned to you:'); if(n&&n.trim()){ saveName(n); document.getElementById('bdName').value=_name; return true; } return false; }
-  function post(pageId,action,body){ return fetch('/api/tracker-client/'+TOKEN+'/brief/'+pageId+'/'+action,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body||{})}).then(function(r){return r.json();}); }
-  function claim(pageId){ if(!ensureName())return; post(pageId,'claim',{name:_name}).then(function(r){ if(!r.success) alert(r.error||'Could not claim'); load(); }); }
-  function markDone(pageId){ post(pageId,'done',{name:_name}).then(function(){ load(); }); }
-  function reopen(pageId){ post(pageId,'reopen',{}).then(function(){ load(); }); }
+  function post(id,action,body,pw){ return fetch('/api/tracker-client/'+TOKEN+'/'+(pw?'prewrite-brief':'brief')+'/'+id+'/'+action,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body||{})}).then(function(r){return r.json();}); }
+  function claim(id,pw){ if(!ensureName())return; post(id,'claim',{name:_name},pw).then(function(r){ if(!r.success) alert(r.error||'Could not claim'); load(); }); }
+  function markDone(id,pw){ post(id,'done',{name:_name},pw).then(function(){ load(); }); }
+  function reopen(id,pw){ post(id,'reopen',{},pw).then(function(){ load(); }); }
   function _ensureOv(){ var ov=document.getElementById('bdOv'); if(ov) return ov; ov=document.createElement('div'); ov.id='bdOv'; ov.className='bd-ov'; ov.innerHTML='<div class="bd-modal"><h3 id="bdOvTitle"></h3><div class="bd-body" id="bdOvBody"></div><div class="bd-foot" id="bdOvFoot"></div></div>'; document.body.appendChild(ov); ov.addEventListener('click',function(e){ if(e.target===ov) closeOv(); }); return ov; }
   function closeOv(){ var ov=document.getElementById('bdOv'); if(ov) ov.classList.remove('on'); }
-  function openSubmit(pageId){ if(!ensureName())return; var ov=_ensureOv(); document.getElementById('bdOvTitle').textContent='Submit finished HTML'; document.getElementById('bdOvBody').innerHTML='<p style="font-size:12px;color:#9ca3af;margin-bottom:8px">Paste your finished, processed HTML. The lead reviews and approves it before you publish.</p><textarea id="bdHtmlIn" placeholder="<!-- paste your finished HTML here -->"></textarea>'; document.getElementById('bdOvFoot').innerHTML='<button class="bd-btn sec" onclick="closeOv()">Cancel</button><button class="bd-btn done" id="bdSubmitGo">Submit for review</button>'; ov.classList.add('on'); var ta=document.getElementById('bdHtmlIn'); fetch('/api/tracker-client/'+TOKEN+'/brief/'+pageId+'/deliverable').then(function(r){return r.json();}).then(function(d){ if(d&&d.html&&ta&&!ta.value) ta.value=d.html; }).catch(function(){}); document.getElementById('bdSubmitGo').onclick=function(){ var html=ta.value.trim(); if(!html){ alert('Paste your finished HTML first'); return; } this.textContent='Submitting...'; this.disabled=true; post(pageId,'submit-html',{name:_name,html:html}).then(function(r){ if(!r.success) alert(r.error||'Failed'); closeOv(); load(); }); }; }
+  function openSubmit(id,pw){ if(!ensureName())return; var ov=_ensureOv(); document.getElementById('bdOvTitle').textContent=pw?'Submit written content':'Submit finished HTML'; document.getElementById('bdOvBody').innerHTML='<p style="font-size:12px;color:#9ca3af;margin-bottom:8px">'+(pw?'Paste the page content you wrote from this brief. The lead reviews and approves it before you publish.':'Paste your finished, processed HTML. The lead reviews and approves it before you publish.')+'</p><textarea id="bdHtmlIn" placeholder="'+(pw?'<!-- paste your written content here -->':'<!-- paste your finished HTML here -->')+'"></textarea>'; document.getElementById('bdOvFoot').innerHTML='<button class="bd-btn sec" onclick="closeOv()">Cancel</button><button class="bd-btn done" id="bdSubmitGo">Submit for review</button>'; ov.classList.add('on'); var ta=document.getElementById('bdHtmlIn'); fetch('/api/tracker-client/'+TOKEN+'/'+(pw?'prewrite-brief':'brief')+'/'+id+'/deliverable').then(function(r){return r.json();}).then(function(d){ if(d&&d.html&&ta&&!ta.value) ta.value=d.html; }).catch(function(){}); document.getElementById('bdSubmitGo').onclick=function(){ var html=ta.value.trim(); if(!html){ alert('Paste your content first'); return; } this.textContent='Submitting...'; this.disabled=true; post(id,pw?'submit':'submit-html',pw?{html:html}:{name:_name,html:html},pw).then(function(r){ if(!r.success) alert(r.error||'Failed'); closeOv(); load(); }); }; }
   function openScore(pageId){ var ov=_ensureOv(); document.getElementById('bdOvTitle').textContent='Score my work'; document.getElementById('bdOvBody').innerHTML='<p style="font-size:12px;color:#9ca3af;margin-bottom:6px">Add the brief + score recommendations to your improved HTML, paste it below, then Scan. We score it with the real GRAAF engine \\u2014 no manual numbers. Before = your live page now; After = your improved HTML.</p><p style="font-size:11px;color:#6b7280;margin-bottom:8px">Tool: <a href="https://app.contentscale.site" target="_blank" rel="noopener" style="color:#a78bfa">app.contentscale.site</a></p><textarea id="bdScoreIn" placeholder="<!-- paste your IMPROVED HTML here -->"></textarea><div id="bdScoreResult" style="margin-top:10px"></div>'; document.getElementById('bdOvFoot').innerHTML='<button class="bd-btn sec" onclick="closeOv()">Close</button><button class="bd-btn score" id="bdScoreGo">Scan &amp; score</button>'; ov.classList.add('on'); var ta=document.getElementById('bdScoreIn'); fetch('/api/tracker-client/'+TOKEN+'/brief/'+pageId+'/deliverable').then(function(r){return r.json();}).then(function(d){ if(d&&d.html&&ta&&!ta.value) ta.value=d.html; }).catch(function(){}); document.getElementById('bdScoreGo').onclick=function(){ var html=ta.value.trim(); if(!html){ alert('Paste your improved HTML first'); return; } var btn=this; btn.textContent='Scanning...'; btn.disabled=true; var rb=document.getElementById('bdScoreResult'); rb.innerHTML='<span style="color:#9ca3af;font-size:12px">Running GRAAF scan...</span>'; post(pageId,'score-work',{html:html}).then(function(r){ btn.textContent='Scan & score'; btn.disabled=false; if(!r||!r.success){ rb.innerHTML='<span style="color:#f87171;font-size:12px">'+((r&&r.error)||'Could not score')+'</span>'; return; } var b=r.before,a=r.after,dl=r.delta; var h='<div class="bd-score-line" style="font-size:14px">'; if(b!=null) h+='<span class="bd-score-pill" style="color:#9ca3af">Before '+b+'</span>'; if(b!=null&&a!=null) h+='<span style="color:#6b7280">\\u2192</span>'; if(a!=null) h+='<span class="bd-score-pill" style="color:#4ade80">After '+a+'</span>'; if(dl!=null){ var dc=dl>0?'#4ade80':(dl<0?'#f87171':'#9ca3af'); h+='<span class="bd-score-pill" style="color:'+dc+'">'+(dl>0?'+':'')+dl+'</span>'; } h+='</div>'; if(b==null) h+='<p style="font-size:11px;color:#6b7280;margin-top:6px">Could not fetch your live page for a Before score \\u2014 the After score is still real.</p>'; rb.innerHTML=h; load(); }); }; }
-  function viewHtml(pageId){ var ov=_ensureOv(); document.getElementById('bdOvTitle').textContent='Submitted HTML'; document.getElementById('bdOvBody').innerHTML='<div class="bd-prev" id="bdPrev">Loading...</div>'; document.getElementById('bdOvFoot').innerHTML='<button class="bd-btn sec" onclick="closeOv()">Close</button><button class="bd-btn sec" id="bdCopyHtml">Copy HTML</button>'; ov.classList.add('on'); fetch('/api/tracker-client/'+TOKEN+'/brief/'+pageId+'/deliverable').then(function(r){return r.json();}).then(function(d){ var pv=document.getElementById('bdPrev'); pv.textContent=(d&&d.html)?d.html:'(no HTML submitted yet)'; var cb=document.getElementById('bdCopyHtml'); if(cb) cb.onclick=function(){ navigator.clipboard.writeText((d&&d.html)||'').then(function(){ cb.textContent='Copied!'; setTimeout(function(){cb.textContent='Copy HTML';},1500); }); }; }).catch(function(){ document.getElementById('bdPrev').textContent='Could not load'; }); }
-  function publish(pageId){ if(!confirm('Publish this brief? Do this once the page is live.')) return; post(pageId,'publish',{name:_name}).then(function(r){ if(!r.success) alert(r.error||'Could not publish'); load(); }); }
+  function viewHtml(id,pw){ var ov=_ensureOv(); document.getElementById('bdOvTitle').textContent=pw?'Submitted content':'Submitted HTML'; document.getElementById('bdOvBody').innerHTML='<div class="bd-prev" id="bdPrev">Loading...</div>'; document.getElementById('bdOvFoot').innerHTML='<button class="bd-btn sec" onclick="closeOv()">Close</button><button class="bd-btn sec" id="bdCopyHtml">Copy</button>'; ov.classList.add('on'); fetch('/api/tracker-client/'+TOKEN+'/'+(pw?'prewrite-brief':'brief')+'/'+id+'/deliverable').then(function(r){return r.json();}).then(function(d){ var pv=document.getElementById('bdPrev'); pv.textContent=(d&&d.html)?d.html:'(nothing submitted yet)'; var cb=document.getElementById('bdCopyHtml'); if(cb) cb.onclick=function(){ navigator.clipboard.writeText((d&&d.html)||'').then(function(){ cb.textContent='Copied!'; setTimeout(function(){cb.textContent='Copy';},1500); }); }; }).catch(function(){ document.getElementById('bdPrev').textContent='Could not load'; }); }
+  function publish(id,pw){ if(!confirm('Publish this brief? Do this once the page is live.')) return; post(id,'publish',{name:_name},pw).then(function(r){ if(!r.success) alert(r.error||'Could not publish'); load(); }); }
   function copyBrief(pageId, btn){
     var d=_briefs.filter(function(x){return String(x.page_id)===String(pageId);})[0];
     if(!d){ if(btn){ btn.textContent='Not found'; } return; }
@@ -3134,7 +3893,50 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
 .bw-wrap{display:flex;gap:16px;align-items:flex-start;max-width:1600px;margin:0 auto}
 .bw-side{flex:1;display:flex;flex-direction:column;gap:16px;min-width:0}
 .bw-feature{flex:1.7;min-width:0;display:flex;flex-direction:column;gap:16px}
-.bw-card{background:#0d1117;border:1px solid #1f2937;border-radius:16px;padding:18px;box-shadow:0 16px 40px rgba(0,0,0,.45)}
+.bw-card{background:#0d1117;border:1px solid #1f2937;border-radius:16px;padding:18px;box-shadow:0 16px 40px rgba(0,0,0,.45);cursor:pointer;transition:border-color .15s,transform .15s}
+.bw-card:hover{border-color:#7c3aed;transform:translateY(-2px)}
+.bwc-trans{background:rgba(30,58,138,.13);border:1px solid rgba(59,130,246,.28);border-radius:9px;padding:9px 11px;margin:10px 0}
+.bwc-trans-h{font-size:9.5px;font-weight:800;color:#60a5fa;letter-spacing:.05em;margin-bottom:6px}
+.bwc-sub{font-size:10px;font-weight:700;color:#cbd5e1;margin-bottom:3px}
+.bwc-comp{font-size:10px;line-height:1.55;color:#94a3b8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bwc-cn{color:#60a5fa;font-weight:800}
+.bwc-cu{color:#93c5fd;font-weight:600}
+.bwc-ct{color:#6b7280}
+.bwc-line{font-size:9.5px;color:#94a3b8;line-height:1.5;margin-top:4px}
+.bwc-more{font-size:10px;color:#a78bfa;font-weight:700;text-align:center;margin-top:10px;padding-top:9px;border-top:1px solid #1f2937;letter-spacing:.02em}
+.bwm-ov{position:fixed;inset:0;background:rgba(0,0,0,.82);backdrop-filter:blur(4px);z-index:9999;display:none;align-items:center;justify-content:center;padding:24px}
+.bwm-ov.on{display:flex}
+.bwm-card{background:#0d1117;border:1px solid #2d1b69;border-radius:18px;width:min(860px,100%);max-height:88vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 30px 90px rgba(0,0,0,.7);cursor:default}
+.bwm-head{background:linear-gradient(135deg,#5b21b6,#7c3aed);padding:16px 20px;display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-shrink:0}
+.bwm-title{font-size:15px;font-weight:800;color:#fff}
+.bwm-url{font-size:12px;color:#ddd6fe;word-break:break-all;margin-top:2px}
+.bwm-kw{font-size:11px;color:#c4b5fd;margin-top:2px}
+.bwm-x{background:transparent;border:0;color:#fff;font-size:26px;line-height:1;cursor:pointer;padding:0 4px;flex-shrink:0}
+.bwm-body{overflow-y:auto;padding:18px 20px 24px}
+.bwm-body::-webkit-scrollbar{width:9px}
+.bwm-body::-webkit-scrollbar-track{background:#0b0f16}
+.bwm-body::-webkit-scrollbar-thumb{background:#374151;border-radius:5px}
+.bwm-tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:9px;margin-bottom:14px}
+.bwm-tile{background:#111827;border:1px solid #1f2937;border-radius:10px;padding:11px;text-align:center}
+.bwm-tv{font-size:17px;font-weight:800}
+.bwm-tl{font-size:9px;color:#6b7280;text-transform:uppercase;letter-spacing:.06em;margin-top:3px}
+.bwm-trans{background:rgba(30,58,138,.14);border:1px solid rgba(59,130,246,.3);border-radius:11px;padding:12px 14px;margin-bottom:14px}
+.bwm-trans-h{font-size:11px;font-weight:800;color:#60a5fa;letter-spacing:.04em;margin-bottom:8px}
+.bwm-sub{font-size:11.5px;font-weight:700;color:#cbd5e1;margin:6px 0 5px}
+.bwm-comp{font-size:11.5px;line-height:1.65;color:#94a3b8;word-break:break-word}
+.bwm-cn{color:#60a5fa;font-weight:800}
+.bwm-cu{color:#93c5fd;text-decoration:none;font-weight:600}
+.bwm-cu:hover{text-decoration:underline}
+.bwm-line{font-size:11px;color:#94a3b8;line-height:1.6;margin-top:6px}
+.bwm-sech{font-size:11.5px;font-weight:800;letter-spacing:.05em;margin:16px 0 9px}
+.bwm-rec{background:#111827;border:1px solid #1f2937;border-radius:10px;padding:12px 14px;margin-bottom:11px}
+.bwm-rmeta{display:flex;gap:6px;align-items:center;margin-bottom:6px;flex-wrap:wrap}
+.bwm-prio{font-size:9px;font-weight:800;padding:2px 8px;border-radius:4px;border:1px solid;letter-spacing:.04em}
+.bwm-sys{font-size:9px;font-weight:700;padding:2px 8px;border-radius:4px;background:rgba(124,58,237,.15);color:#c4b5fd}
+.bwm-rt{font-size:14px;font-weight:800;color:#f1f5f9;margin-bottom:5px}
+.bwm-rsig{font-size:11px;color:#94a3b8;font-style:italic;line-height:1.55;margin-bottom:6px}
+.bwm-rb{font-size:12px;color:#cbd5e1;line-height:1.65;background:#0b0f16;border:1px solid #1f2937;border-radius:8px;padding:10px 12px;white-space:pre-wrap;word-break:break-word}
+.bwm-rimp{font-size:11px;color:#a78bfa;line-height:1.55;margin-top:7px}
 .bw-feature .bw-card{border-color:#7c3aed;box-shadow:0 0 0 1px rgba(124,58,237,.3),0 18px 50px rgba(124,58,237,.22)}
 .bw-url{font-size:14px;font-weight:800;color:#f1f5f9;word-break:break-all;line-height:1.4}
 .bw-time{font-size:11px;color:#6b7280;margin-top:4px}
@@ -3150,6 +3952,9 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
 </style>
 </head>
 <body>
+<div id="bwModal" class="bwm-ov" onclick="if(event.target===this)_bwCloseModal()">
+  <div id="bwModalCard" class="bwm-card" onclick="event.stopPropagation()"></div>
+</div>
 <div class="lw-particles" id="lwParticles"></div>
 <div class="lw-header">
   <div class="lw-header-left">
@@ -3166,7 +3971,7 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
   <div class="lw-saver-clock" id="lwSaverClock">00:00</div>
   <div class="lw-saver-label">Waiting for next scan</div>
   <div class="lw-saver-tips">
-    <div class="lw-saver-tip" id="lwTip">Pages scanned by AI are analyzed for Google, Perplexity, Copilot &amp; Claude citations</div>
+    <div class="lw-saver-tip" id="lwTip">Pages scanned by AI are analyzed for Google, Perplexity &amp; Copilot citations</div>
   </div>
 </div>
 
@@ -3204,7 +4009,7 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
   var hasBriefs = false;
 
   var tips = [
-    'Pages scanned by AI are analyzed for Google, Perplexity, Copilot & Claude citations',
+    'Pages scanned by AI are analyzed for Google, Perplexity & Copilot citations',
     'Add FAQ schema to increase chances of being cited in Google AI Overview',
     'Pages with definitions in the first 100 words get cited more often',
     'Include author bios with credentials to boost E-E-A-T trust signals',
@@ -3292,7 +4097,56 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
     renderLiveWall();
   }
 
+  // ── FULL BRIEF MODAL (live wall) ────────────────────────────────────────────
+  // Clicking a wall card opens the complete brief: status tiles, the "what we actually
+  // checked" competitor evidence, then every action in full (no 200-char truncation).
+  // Deliberately has NO copy buttons — this is a read-only viewing surface.
+  function _bwCloseModal(){ var o=document.getElementById('bwModal'); if(o) o.classList.remove('on'); if(_wallDirty){ _wallDirty=false; renderLiveWall(); } }
+  // The whole live-wall script runs inside an IIFE, so these are NOT global by default — but the
+  // card's inline onclick="_bwOpen(...)" is resolved against window. Expose them explicitly or the
+  // click silently does nothing.
+  window._bwCloseModal = _bwCloseModal;
+  function _bwToggleAio(id){
+    var f=document.getElementById(id+'_f'), s=document.getElementById(id+'_s'), b=document.getElementById(id+'_b');
+    if(!f||!s) return;
+    if(f.style.display==='none'){ f.style.display='block'; s.style.display='none'; if(b) b.textContent='\u2296 show less'; }
+    else { f.style.display='none'; s.style.display='block'; if(b) b.textContent='\u2295 show full AI Overview'; }
+  }
+  window._bwToggleAio = _bwToggleAio;
+  function _bwOpen(pk){
+    var d = _wallBriefs.filter(function(b){ return String(b.page_id||b.url||b.domain) === String(pk); })[0];
+    if (!d) return;
+    var o = document.getElementById('bwModal');
+    if (!o) return;
+    var pos = d.position||d.pos||d.gsc_position;
+    var pc = (!pos||pos==='N/A') ? '#6b7280' : pos<=3?'#4ade80':pos<=10?'#a3e635':pos<=20?'#fbbf24':'#f87171';
+    function tile(v,l,c){ return '<div class="bwm-tile"><div class="bwm-tv" style="color:'+c+'">'+v+'</div><div class="bwm-tl">'+l+'</div></div>'; }
+    var h = '<div class="bwm-head"><div style="min-width:0"><div class="bwm-title">Citation Brief</div>'
+      + '<div class="bwm-url">'+_bwEscL(_bwCleanUrlL(d.url||d.domain||''))+'</div>'
+      + (d.keyword?'<div class="bwm-kw">Keyword: '+_bwEscL(d.keyword)+'</div>':'')
+      + '</div><button class="bwm-x" onclick="event.stopPropagation();_bwCloseModal()">&times;</button></div>';
+    h += '<div class="bwm-body">';
+    h += '<div class="bwm-tiles">'
+      + tile((pos&&pos!=='N/A')?('#'+pos):'-','Position',pc)
+      + tile(d.aio_cited?'Cited':'No','Google AIO',d.aio_cited?'#4ade80':'#6b7280')
+      + tile(d.perp_cited?'Cited':'No','Perplexity',d.perp_cited?'#a78bfa':'#6b7280')
+      + tile(d.bing_cited?'Cited':'No','Copilot',d.bing_cited?'#60a5fa':'#6b7280')
+      + (d.score?tile(d.score,'GRAAF','#a78bfa'):'')
+      + '</div>';
+    // ── ONE SYSTEM: the entire brief body renders via the SAME shared
+    // _renderBriefBodyHTML the tracker modal uses \u2014 identical transparency block,
+    // identical sections, identical cards and tables. One place to maintain.
+    var _bodyHtml = _renderBriefBodyHTML(d);
+    if (_bodyHtml) h += _bodyHtml;
+    else h += '<div class="bwm-line" style="padding:20px 0">No brief actions recorded for this page yet.</div>';
+    h += '</div>';
+    document.getElementById('bwModalCard').innerHTML = h;
+    o.classList.add('on');
+  }
+  window._bwOpen = _bwOpen;
+
   function _bwEscL(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  ${_SHARED_AIO_SECTION_JS}
   function _bwCleanUrlL(u){ return String(u||'').replace(/^https?:[/][/]/,'').replace(/^www[.]/,''); }
   function _bwTimeL(d){
     var t = d.ts || d.checked_at || d.brief_started_at;
@@ -3307,7 +4161,6 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
       + chip(d.aio_cited?'YES':'NO','AIO',d.aio_cited?'#4ade80':'#6b7280')
       + chip(d.perp_cited?'YES':'NO','Perplexity',d.perp_cited?'#a78bfa':'#6b7280')
       + chip(d.bing_cited?'YES':'NO','Copilot',d.bing_cited?'#60a5fa':'#6b7280')
-      + chip(d.brave_cited?'YES':'NO','Claude',d.brave_cited?'#f87171':'#6b7280')
       + (d.score?chip(d.score,'GRAAF','#a78bfa'):'')
       + '</div>';
   }
@@ -3323,18 +4176,54 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
     if (items.length>limit) html += '<div style="font-size:11px;color:#6b7280">+ '+(items.length-limit)+' more</div>';
     return html;
   }
+  // Compact transparency for the WALL CARD itself — the competitor evidence stays visible on the
+  // wall (not hidden behind a click), matching the full brief. The modal then shows everything.
+  function _bwTransL(d){
+    var comp = d.competitors||[]; var pcomp = d.perp_competitors||[]; var aioref = d.aio_references||[];
+    if ((!aioref || !aioref.length) && (d.aio_text || d.aio_manual_text)) {
+      // Same manual-AIO source extraction as the modal, so the compact card summary and the
+      // full brief modal always agree on how many AIO sources are cited.
+      var _tatxt = String(d.aio_text || d.aio_manual_text || ''), _tai = 0, _taseen = {}; aioref = [];
+      while (true) {
+        var _tah = _tatxt.indexOf('http', _tai); if (_tah < 0) break;
+        var _tae = _tah; while (_tae < _tatxt.length) { var _tac = _tatxt.charCodeAt(_tae); var _tacs = _tatxt.charAt(_tae); if (_tac <= 32 || _tacs===')'||_tacs===']'||_tacs==='('||_tacs==='['||_tacs==='"'||_tacs==='<'||_tacs==='>'||_tacs===',') break; _tae++; }
+        var _tau = _tatxt.slice(_tah, _tae); while (_tau.length && '.,);:'.indexOf(_tau.charAt(_tau.length-1))>=0) _tau = _tau.slice(0,-1);
+        if (_tau.length > 10 && !_taseen[_tau]) { _taseen[_tau]=1; aioref.push({ url: _tau }); }
+        _tai = _tae + 1; if (aioref.length >= 12) break;
+      }
+    }
+    if (!comp.length && !pcomp.length && !d.aio_text && !d.perp_text && !aioref.length) return '';
+    var h = '<div class="bwc-trans"><div class="bwc-trans-h">&#128269; WHAT WE ACTUALLY CHECKED</div>';
+    if (comp.length) {
+      h += '<div class="bwc-sub">Google top 5 &mdash; who ranks and why:</div>';
+      h += comp.slice(0,5).map(function(c,i){
+        var host=''; try { host = String(c.url||'').split('/')[2]||''; } catch(e){ host=''; }
+        return '<div class="bwc-comp"><span class="bwc-cn">#'+(c.position||i+1)+'</span> <span class="bwc-cu">'+_bwEscL(host)+'</span>'+(c.title?(' <span class="bwc-ct">&mdash; '+_bwEscL(String(c.title).slice(0,52))+'</span>'):'')+'</div>';
+      }).join('');
+    }
+    h += '<div class="bwc-line">Google AI Overview: '+(d.aio_text?'shown for this query':'no data \\u2014 paste yours via Add AIO')+(aioref.length?(' &middot; cites '+aioref.length+' source'+(aioref.length>1?'s':'')):'')+'</div>';
+    h += '<div class="bwc-line">Perplexity: '+(d.perp_cited?'cited':'not cited')+(d.perp_text&&!d.perp_cited?' &mdash; mentioned in answer':'')+(pcomp.length?(' &middot; also cites '+pcomp.length+' other sources'):'')+'</div>';
+    return h + '</div>';
+  }
   function _bwCardL(d, isFeature){
     var head = '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">'
       + '<div style="min-width:0"><div class="bw-url">'+_bwEscL(_bwCleanUrlL(d.url||d.domain||''))+'</div>'
       + '<div class="bw-time">Scanned '+_bwTimeL(d)+'</div></div>'
       + (isFeature?'<span class="bw-new">NEW</span>':'')
       + '</div>';
-    return '<div class="bw-card">'+head+_bwChipsL(d)+_bwRecsL(d, isFeature?5:1)+'</div>';
+    var pk = d.page_id || d.url || d.domain || '';
+    var foot = '<div class="bwc-more">&#128070; Click to see the complete brief</div>';
+    return '<div class="bw-card" data-bwkey="'+_bwEscL(String(pk))+'" onclick="_bwOpen(this.dataset.bwkey)" title="Click to open the full brief">'+head+_bwChipsL(d)+_bwTransL(d)+_bwRecsL(d, isFeature?5:1)+foot+'</div>';
   }
+  var _wallDirty = false;
   function renderLiveWall(){
     var wrap = document.getElementById('bwLiveWrap');
     var el = document.getElementById('bwLive');
     if (!wrap || !el) return;
+    // If the full-brief modal is open, defer re-rendering — rebuilding the wall DOM
+    // underneath reshuffles the middle-newest columns and makes the layout jump on close.
+    var _mo = document.getElementById('bwModal');
+    if (_mo && _mo.classList.contains('on')) { _wallDirty = true; return; }
     if (!_wallBriefs.length){ wrap.style.display='none'; return; }
     wrap.style.display='block';
     var cnt = document.getElementById('bwLiveCount'); if (cnt) cnt.textContent = _wallBriefs.length + ' brief' + (_wallBriefs.length>1?'s':'') + ' - newest in the middle';
@@ -3397,7 +4286,6 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
         '<div class="lw-stat"><div class="lw-stat-val" style="color:' + (data.aio_cited ? '#4ade80' : '#4b5563') + '">' + (data.aio_cited ? 'YES' : 'NO') + '</div><div class="lw-stat-lbl">AIO</div></div>' +
         '<div class="lw-stat"><div class="lw-stat-val" style="color:' + (data.perp_cited ? '#a78bfa' : '#4b5563') + '">' + (data.perp_cited ? 'YES' : 'NO') + '</div><div class="lw-stat-lbl">Perplexity</div></div>' +
         '<div class="lw-stat"><div class="lw-stat-val" style="color:' + (data.bing_cited ? '#60a5fa' : '#4b5563') + '">' + (data.bing_cited ? 'YES' : 'NO') + '</div><div class="lw-stat-lbl">Copilot</div></div>' +
-        '<div class="lw-stat"><div class="lw-stat-val" style="color:' + (data.brave_cited ? '#f87171' : '#4b5563') + '">' + (data.brave_cited ? 'YES' : 'NO') + '</div><div class="lw-stat-lbl">Claude</div></div>' +
         (data.score ? '<div class="lw-stat"><div class="lw-stat-val" style="color:#fbbf24">' + data.score + '</div><div class="lw-stat-lbl">GRAAF</div></div>' : '') +
       '</div>' +
       '<div class="lw-card-actions">' + actionsHtml + '</div>';
@@ -3444,33 +4332,9 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
     }
   }
 
-  var evtSource = new EventSource('/api/tracker-client/${req.params.token}/live-wall-stream');
-  evtSource.addEventListener('brief_ready', function(ev) {
-    try {
-      var data = JSON.parse(ev.data);
-      console.log('[live-wall] brief_ready received:', data.url || data.domain || 'unknown');
-      handleBrief(data);
-    } catch(e) { console.error('Live wall parse error:', e); }
-  });
-  evtSource.addEventListener('check_start', function(ev) {
-    try {
-      var data = JSON.parse(ev.data);
-      scanCount++;
-      if (statsBar.style.display === 'none') statsBar.style.display = 'flex';
-      sbScans.textContent = scanCount;
-      console.log('[live-wall] check_start:', data.domain || data.url || 'unknown');
-    } catch(e) {}
-  });
-  evtSource.onerror = function(err) {
-    console.log('Live wall SSE error — polling fallback active', err);
-  };
-  evtSource.onopen = function() {
-    console.log('[live-wall] SSE connected');
-  };
-  evtSource.addEventListener('ping', function() {});
-
-  // Polling fallback — Railway can buffer/drop SSE, so also poll for briefs.
-  // Deduped via handleBrief, so SSE + polling never double-render.
+  // SSE (EventSource) is disabled — Railway's HTTP/2 proxy buffers/drops the stream,
+  // which surfaced as a 502 on /live-wall-stream in the console. Polling below is the
+  // sole transport now; it delivers the same brief_ready + check_start events, deduped.
   var _lastPoll = new Date(Date.now() - 120000).toISOString();
   function pollBriefs(){
     fetch('/api/tracker-client/${req.params.token}/live-events?since=' + encodeURIComponent(_lastPoll))
@@ -3480,6 +4344,11 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
         if (!d || !d.events || !d.events.length) return;
         d.events.slice().reverse().forEach(function(ev){
           if (ev.type === 'brief_ready') handleBrief(ev);
+          else if (ev.type === 'check_start') {
+            scanCount++;
+            if (statsBar.style.display === 'none') statsBar.style.display = 'flex';
+            sbScans.textContent = scanCount;
+          }
         });
       }).catch(function(){});
   }
@@ -3525,12 +4394,13 @@ app.get('/track/:token/page/:pageId/history', async (req, res) => {
 // ── Read-only "viewer" page (TV view): mirrors the Live Brief Wall (3-col, newest in the middle), click a card to open the full brief ──
 app.get('/view/:token', async (req, res) => {
   try {
-    const cr = await pool.query('SELECT domain FROM tracker_clients WHERE token=$1', [req.params.token]);
+    // Always available on EVERY plan (this link ships in the welcome email) — only deleted clients 404.
+    const cr = await pool.query("SELECT domain FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status != 'deleted')", [req.params.token]);
     if (!cr.rows.length) return res.status(404).send('<h1>Not found</h1>');
     const domain = cr.rows[0].domain || '';
     res.send(`<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Brief — ${domain}</title>
 <style>
-  body{margin:0;background:#070710;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif}
+  body{margin:0;background:#070710;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;-webkit-user-select:none;-moz-user-select:none;user-select:none}
   .wrap{max-width:1200px;margin:0 auto;padding:18px 16px 60px}
   .hd{display:flex;justify-content:space-between;align-items:center;gap:12px}
   .ttl{font-size:13px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#fbbf24}
@@ -3575,7 +4445,7 @@ function strip(s){ return String(s==null?'':s).replace(/<[^>]+>/g,' ').trim(); }
 function stat(val,lbl,color){ return '<div class="stat"><div class="stat-val" style="color:'+color+'">'+val+'</div><div class="stat-lbl">'+lbl+'</div></div>'; }
 function recItems(arr,color){ return (arr||[]).map(function(p){ var t=p.title||p.h2||p.heading||'Recommendation'; var b=strip(p.action||p.passage||p.body||p.content||p.text||''); return '<div class="rec" style="border-color:'+color+'"><div class="rt">'+esc(t)+'</div>'+(b?'<div class="rb">'+esc(b)+'</div>':'')+'</div>'; }); }
 function chips(b){ var pos=b.position; var posC=(pos&&pos<=3)?'#4ade80':(pos&&pos<=10)?'#fbbf24':'#f87171';
-  return stat(pos?('#'+pos):'N/A','Position',posC)+stat(b.aio_cited?'YES':'NO','AIO',b.aio_cited?'#4ade80':'#4b5563')+stat(b.perp_cited?'YES':'NO','Perplexity',b.perp_cited?'#a78bfa':'#4b5563')+stat(b.bing_cited?'YES':'NO','Copilot',b.bing_cited?'#60a5fa':'#4b5563')+stat(b.brave_cited?'YES':'NO','Claude',b.brave_cited?'#f87171':'#4b5563')+(b.brief_after_score!=null?stat(b.brief_after_score,'GRAAF','#fbbf24'):(b.score?stat(b.score,'GRAAF','#fbbf24'):'')); }
+  return stat(pos?('#'+pos):'N/A','Position',posC)+stat(b.aio_cited?'YES':'NO','AIO',b.aio_cited?'#4ade80':'#4b5563')+stat(b.perp_cited?'YES':'NO','Perplexity',b.perp_cited?'#a78bfa':'#4b5563')+stat(b.bing_cited?'YES':'NO','Copilot',b.bing_cited?'#60a5fa':'#4b5563')+(b.brief_after_score!=null?stat(b.brief_after_score,'GRAAF','#fbbf24'):(b.score?stat(b.score,'GRAAF','#fbbf24'):'')); }
 function card(b,isFeature){ var oid=String(b.page_id||b.url);
   var ai=recItems(b.passages,'#a78bfa'), gs=recItems(b.gsc_brief,'#a3e635');
   var all=[]; if(ai.length){ all.push('<div class="grp" style="color:#a78bfa">AI citations</div>'); all=all.concat(ai); } if(gs.length){ all.push('<div class="grp" style="color:#a3e635">GSC ranking</div>'); all=all.concat(gs); }
@@ -3594,14 +4464,16 @@ load();
 setInterval(function(){ if(!document.hidden) load(); }, 60000);
 document.addEventListener('visibilitychange', function(){ if(!document.hidden) load(); });
 document.getElementById('list').addEventListener('click', function(e){ var c=e.target.closest('.card'); if(!c) return; var id=c.getAttribute('data-id'); if(c.classList.toggle('open')) _open[id]=1; else delete _open[id]; });
+// Read-only wall: briefs open on click but cannot be copied out of this view.
+['copy','cut','contextmenu','dragstart'].forEach(function(ev){ document.addEventListener(ev, function(e){ e.preventDefault(); }); });
 </script></body></html>`);
   } catch(e) { res.status(500).send('error'); }
 });
 
 app.get('/track/:token', async (req, res) => {
   try {
-    // Find client by token — accept any status except explicitly deleted
-    const cr = await pool.query('SELECT * FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status != $2)', [req.params.token, 'deleted']);
+    // Find client by main token OR read-only share token — accept any status except explicitly deleted
+    const cr = await pool.query('SELECT * FROM tracker_clients WHERE (token=$1 OR readonly_token=$1) AND (status IS NULL OR status != $2)', [req.params.token, 'deleted']);
     if (!cr.rows.length) {
       // Debug: log which token was not found
       console.warn('[track] Client not found for token:', req.params.token.substring(0,16)+'...');
@@ -3622,6 +4494,14 @@ app.get('/track/:token', async (req, res) => {
       .replace(/__MAX_PAGES__/g, String(client.max_pages || 3))
       .replace(/__CLIENT_NAME__/g, (client.name || client.domain || '').replace(/[`'\\]/g, ''))
       .replace(/__GSC_ENABLED__/g, client.gsc_enabled ? 'true' : 'false')
+      .replace(/__GSC_AUTOFETCH__/g, _gscServiceAccount ? 'true' : 'false')
+      .replace(/__DEMO_RO__/g, (function(){
+        const isRO = client.demo_readonly || (client.readonly_token && client.readonly_token === req.params.token);
+        if (client.readonly_token && client.readonly_token === req.params.token) {
+          pool.query('UPDATE tracker_clients SET ro_views=COALESCE(ro_views,0)+1, ro_last_view=NOW() WHERE id=$1', [client.id]).catch(()=>{});
+        }
+        return isRO ? 'true' : 'false';
+      })())
       .replace(/__STREAM_TOKEN__/g, req.params.token || '')
     );
   } catch(e) {
@@ -3771,11 +4651,85 @@ const title = (html.match(/<title>([^<]+)<\/title>/) || [])[1]?.replace(/ — Co
    }
    });
    // Admin Auth Middleware
+const verifyEngineAccess = async (req, res, next) => {
+  const adminKey = req.headers['x-admin-key'];
+  if (adminKey) {
+    // Try with is_active first, fall back without it for backward compat
+    let isAdmin;
+    try {
+      isAdmin = await pool.query('SELECT id FROM super_admins WHERE session_token=$1 AND is_active=TRUE', [adminKey]);
+    } catch(e) {
+      try { isAdmin = await pool.query('SELECT id FROM super_admins WHERE session_token=$1', [adminKey]); }
+      catch(e2) { isAdmin = { rows: [] }; }
+    }
+    if (isAdmin.rows.length) { req.engineUser = { isAdmin: true, codeId: null }; return next(); }
+  }
+
+  // Accept token (from sessionStorage) or code (from URL/header)
+  const engineToken = req.headers['x-engine-token'];
+  const engineCode = req.headers['x-engine-code'] || req.query.code;
+  const lookupCode = engineToken || engineCode;
+
+  if (!lookupCode) {
+    return res.status(401).json({ success: false, error: 'Engine access code required' });
+  }
+
+  try {
+    // Token IS the raw code (ENG-XXXXXX) — verify it exists and is active
+    let codeResult;
+    try {
+      codeResult = await pool.query(
+        'SELECT * FROM engine_access_codes WHERE code = $1 AND is_active = TRUE AND (expires_at IS NULL OR expires_at > NOW())',
+        [lookupCode.trim().toUpperCase()]
+      );
+    } catch(q1err) {
+      // is_active column may be missing — try without it
+      try {
+        codeResult = await pool.query(
+          'SELECT * FROM engine_access_codes WHERE code = $1 AND (expires_at IS NULL OR expires_at > NOW())',
+          [lookupCode.trim().toUpperCase()]
+        );
+      } catch(q2err) { codeResult = { rows: [] }; }
+    }
+    if (!codeResult || codeResult.rows.length === 0) {
+      return res.status(403).json({ success: false, error: 'Engine access code not found. The database was reset — please get a new code from your admin dashboard.' });
+    }
+    const code = codeResult.rows[0];
+    req.engineUser = { isAdmin: false, codeId: code.id, code: code };
+    next();
+  } catch (error) {
+    return res.status(500).json({ success: false, error: 'Server error: ' + error.message });
+  }
+};
+
    const verifyAdmin = async (req, res, next) => {
    const adminKey = req.headers['x-admin-key'];
    if (!adminKey) return res.status(401).json({ success: false, error: 'Admin auth required' });
    if (!pool) return res.status(503).json({ success: false, error: 'DB unavailable' });
    try {
+   let result;
+   // Query 1: try with is_active (normal case)
+   try {
+     result = await pool.query('SELECT * FROM super_admins WHERE session_token = $1 AND is_active = TRUE', [adminKey]);
+   } catch(q1err) {
+     // Column missing or other error — try without is_active
+     try {
+       result = await pool.query('SELECT * FROM super_admins WHERE session_token = $1', [adminKey]);
+     } catch(q2err) {
+       // Table probably missing too
+       return res.status(500).json({ success: false, error: 'Database initializing — please retry in 30 seconds' });
+     }
+   }
+   if (!result || result.rows.length === 0) return res.status(401).json({ success: false, error: 'Invalid credentials' });
+   req.admin = result.rows[0];
+   next();
+   } catch (error) {
+   console.error('Auth middleware error:', error);
+   const msg = error.code ? `${error.message} (db code ${error.code})` : error.message;
+   res.status(500).json({ success: false, error: `Auth error: ${msg}` });
+   }
+   };
+
 
 // Admin: list all clients
 app.get('/api/admin/tracker-clients', verifyAdmin, async (req, res) => {
@@ -3962,6 +4916,29 @@ app.post('/api/admin/tracker-clients/:id/live-wall', verifyAdmin, async (req, re
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
+// POST /api/admin/tracker-clients/:id/brief-language — sets the language BOTH the GSC Brief and
+// Citation Brief are written in for this client. A Spanish client gets a Spanish brief, a Dutch
+// client a Dutch one, etc. — the owner reads it in their own language without needing to translate.
+app.post('/api/admin/tracker-clients/:id/brief-language', verifyAdmin, async (req, res) => {
+  try {
+    const lang = String(req.body.language || 'en').trim().toLowerCase().slice(0, 10);
+    await pool.query('UPDATE tracker_clients SET brief_language = $1 WHERE id = $2', [lang, req.params.id]);
+    res.json({ success: true, brief_language: lang });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// POST /api/admin/tracker-clients/:id/emails-paused — temporarily silences ALL automated emails for
+// this client (reminders, brief-ready notifications, everything routed through sendTrackerEmail) —
+// useful while manually testing/scanning a client so they don't get a flood of real notifications.
+// Does not affect the tracker itself; scans, briefs, and data collection continue as normal.
+app.post('/api/admin/tracker-clients/:id/emails-paused', verifyAdmin, async (req, res) => {
+  try {
+    const paused = req.body.paused === true || req.body.paused === 'true';
+    await pool.query('UPDATE tracker_clients SET emails_paused = $1 WHERE id = $2', [paused, req.params.id]);
+    res.json({ success: true, emails_paused: paused });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
 app.post('/api/admin/tracker-clients/:id/board-toggle', verifyAdmin, async (req, res) => {
   try {
     const enabled = req.body.enabled === true || req.body.enabled === 'true';
@@ -4048,9 +5025,10 @@ app.post('/api/admin/tracker-clients/create-own', verifyAdmin, async (req, res) 
 
     const token = generateClientToken();
     const maxPg = parseInt(max_pages) || 10;
+    // Plan rule: free = 3 pages -> GSC off; any paid tier (>3 pages) -> GSC on automatically.
     await pool.query(
-      `INSERT INTO tracker_clients (token, domain, name, email, max_pages, status) VALUES ($1,$2,$3,$4,$5,'active')`,
-      [token, cleanDomain, name||null, email||null, maxPg]
+      `INSERT INTO tracker_clients (token, domain, name, email, max_pages, status, gsc_enabled) VALUES ($1,$2,$3,$4,$5,'active',$6)`,
+      [token, cleanDomain, name||null, email||null, maxPg, maxPg > 3]
     );
 
     const trackUrl = (process.env.APP_URL || 'https://app.contentscale.site') + '/track/' + token;
@@ -4058,13 +5036,11 @@ app.post('/api/admin/tracker-clients/create-own', verifyAdmin, async (req, res) 
     // Send welcome email
     if (email) {
       const clientId = (await pool.query('SELECT id FROM tracker_clients WHERE token=$1', [token])).rows[0]?.id;
+      const _roToken = clientId ? await ensureReadonlyToken(clientId) : null; // RO link exists from day one
       if (clientId) {
         const welcomeHtml = '<h2 style="font-size:17px;font-weight:800;color:#0f172a;margin-bottom:10px;">Your AI Citations Tracker is ready</h2>'
-          + '<p style="font-size:14px;color:#374151;line-height:1.7;margin-bottom:14px;">Hi ' + (name||'there') + ',<br><br>Your personal tracker for <strong>' + cleanDomain + '</strong> has been set up. Bookmark this link:</p>'
-          + '<div style="background:#f5f3ff;border:1px solid #ddd6fe;border-radius:8px;padding:14px 16px;margin-bottom:16px;">'
-          + '<div style="font-size:11px;font-family:monospace;color:#7c3aed;word-break:break-all;margin-bottom:10px;">' + trackUrl + '</div>'
-          + '<a href="' + trackUrl + '" style="display:inline-block;background:#7c3aed;color:white;text-decoration:none;padding:10px 22px;border-radius:6px;font-size:13px;font-weight:700;">Open tracker &rarr;</a>'
-          + '</div>'
+          + '<p style="font-size:14px;color:#374151;line-height:1.7;margin-bottom:6px;">Hi ' + (name||'there') + ',<br><br>Your personal tracker for <strong>' + cleanDomain + '</strong> has been set up. You have two links \u2014 bookmark the first, share the second:</p>'
+          + emailLinkBlock(token, _roToken)
           + '<p style="font-size:14px;color:#374151;line-height:1.7;margin-bottom:14px;"><strong>What happens next:</strong><br>'
           + '1. Add your pages and keywords<br>2. First scan runs in ~1 minute<br>3. Paste your page HTML for GRAAF score<br>4. Citation Brief arrives by email</p>'
           + '<p style="font-size:13px;color:#374151;">Questions? WhatsApp Ottmar: <a href="https://wa.me/31628073996" style="color:#7c3aed;">wa.me/31628073996</a></p>';
@@ -4072,12 +5048,12 @@ app.post('/api/admin/tracker-clients/create-own', verifyAdmin, async (req, res) 
       }
     }
 
-    // Notify Ottmar
-    const cbPhone = process.env.CALLMEBOT_PHONE;
-    const cbKey = process.env.CALLMEBOT_KEY;
-    if (cbPhone && cbKey) {
-      fetch(`https://api.callmebot.com/whatsapp.php?phone=${cbPhone}&text=${encodeURIComponent('⭐ Own client added: ' + cleanDomain + ' / ' + (name||'anon') + ' / ' + maxPg + ' pages — ' + trackUrl)}&apikey=${cbKey}`).catch(()=>{});
-    }
+    // Notify Ottmar — email + Telegram (CallMeBot free tier is unreliable, replaced 2026-07-22)
+    notifyOttmar(
+      '⭐ New tracker client: ' + cleanDomain,
+      '<p><strong>New own-client tracker created.</strong></p><p>Domain: ' + cleanDomain + '<br>Name: ' + (name || 'anon') + '<br>Pages: ' + maxPg + '</p><p><a href="' + trackUrl + '">' + trackUrl + '</a></p>',
+      'Domain: ' + cleanDomain + ' | Name: ' + (name || 'anon') + ' | Pages: ' + maxPg + '\n' + trackUrl
+    ).catch(() => {});
 
     res.json({ success: true, token, url: trackUrl });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
@@ -4330,7 +5306,7 @@ app.post('/api/admin/tracker-clients/recalc-max-pages', verifyAdmin, async (req,
       const dealifyCount = c.dealify_codes ? c.dealify_codes.split(',').filter(x => x.trim()).length : 0;
       const basePerDomain = dealifyCount > 0 ? dealifyCount * 10 : 3;
       const correctMax = domainCount * basePerDomain;
-      if (c.max_pages !== correctMax) {
+      if ((c.max_pages || 0) < correctMax) { // only raise — a manually increased limit (e.g. 100) is sacred
         await pool.query('UPDATE tracker_clients SET max_pages=$1 WHERE id=$2', [correctMax, c.id]);
         console.log(`[recalc] ${c.domain}: ${c.max_pages} → ${correctMax} (${domainCount} domains × ${basePerDomain})`);
         fixed++;
@@ -4497,11 +5473,28 @@ app.get('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
     res.json({ success: true, client: r.rows[0] });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
+// POST /api/admin/tracker-clients/:id/readonly-link — create (or return existing) live read-only share link.
+// The owner keeps working on the main token; this second token shows the SAME live data, view-only.
+app.post('/api/admin/tracker-clients/:id/readonly-link', verifyAdmin, async (req, res) => {
+  try {
+    const r = await pool.query('SELECT readonly_token FROM tracker_clients WHERE id=$1', [req.params.id]);
+    if (!r.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
+    let roToken = r.rows[0].readonly_token;
+    if (req.body && req.body.regenerate) roToken = null; // rotate: old shared links stop working
+    if (!roToken) {
+      roToken = 'ro_' + generateClientToken();
+      await pool.query('UPDATE tracker_clients SET readonly_token=$1 WHERE id=$2', [roToken, req.params.id]);
+    }
+    res.json({ success: true, readonly_token: roToken, url: 'https://app.contentscale.site/track/' + roToken });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
 app.patch('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
   try {
     const { max_pages, status, reset_ip } = req.body;
     const updates = []; const vals = []; let i = 1;
     if (max_pages !== undefined) { updates.push(`max_pages=$${i++}`); vals.push(max_pages); }
+    if (req.body.prewrite_briefs_paid !== undefined) { updates.push(`prewrite_briefs_paid=$${i++}`); vals.push(parseInt(req.body.prewrite_briefs_paid) || 0); }
     if (req.body.extra_domains !== undefined) {
       updates.push(`extra_domains=$${i++}`);
       vals.push(req.body.extra_domains || '');
@@ -4516,14 +5509,22 @@ app.patch('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
           const cur = curR.rows[0];
           const dealifyBonus = cur.dealify_codes ? (cur.dealify_codes.split(',').filter(c => c.trim()).length * 10) : 0;
           const basePages = dealifyBonus > 0 ? dealifyBonus : 3; // Dealify clients get 10/code, free clients get 3
-          const newMax = domainCount * basePages;
+          // Never LOWER a manually raised limit — auto-calc may only raise (fixes: admin sets 100, a later
+          // extra_domains save silently reset it to domains×base)
+          const newMax = Math.max(domainCount * basePages, cur.max_pages || 0);
           updates.push(`max_pages=$${i++}`);
           vals.push(newMax);
-          console.log(`[admin] Auto-updated max_pages: ${domainCount} domains × ${basePages} = ${newMax}`);
+          console.log(`[admin] Auto-updated max_pages: ${domainCount} domains × ${basePages} → ${newMax} (never lowered)`);
         }
       }
     }
     if (req.body.gsc_enabled !== undefined) { updates.push(`gsc_enabled=$${i++}`); vals.push(!!req.body.gsc_enabled); }
+    if (req.body.demo_readonly !== undefined) { updates.push(`demo_readonly=$${i++}`); vals.push(!!req.body.demo_readonly); }
+    else if (max_pages !== undefined) {
+      // Plan changed without an explicit GSC choice -> follow the plan rule automatically (free ≤3 off, paid >3 on)
+      updates.push(`gsc_enabled=$${i++}`); vals.push(parseInt(max_pages) > 3);
+      console.log('[admin] gsc_enabled auto-set to', parseInt(max_pages) > 3, 'from max_pages', max_pages);
+    }
     if (req.body.cc_emails !== undefined) { updates.push(`cc_emails=$${i++}`); vals.push(req.body.cc_emails || ''); }
     if (req.body.lead_name !== undefined) { updates.push(`lead_name=$${i++}`); vals.push(req.body.lead_name || ''); }
     if (req.body.lead_email !== undefined) { updates.push(`lead_email=$${i++}`); vals.push(req.body.lead_email || ''); }
@@ -4553,28 +5554,6 @@ app.patch('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
-   let result;
-   // Query 1: try with is_active (normal case)
-   try {
-     result = await pool.query('SELECT * FROM super_admins WHERE session_token = $1 AND is_active = TRUE', [adminKey]);
-   } catch(q1err) {
-     // Column missing or other error — try without is_active
-     try {
-       result = await pool.query('SELECT * FROM super_admins WHERE session_token = $1', [adminKey]);
-     } catch(q2err) {
-       // Table probably missing too
-       return res.status(500).json({ success: false, error: 'Database initializing — please retry in 30 seconds' });
-     }
-   }
-   if (!result || result.rows.length === 0) return res.status(401).json({ success: false, error: 'Invalid credentials' });
-   req.admin = result.rows[0];
-   next();
-   } catch (error) {
-   console.error('Auth middleware error:', error);
-   const msg = error.code ? `${error.message} (db code ${error.code})` : error.message;
-   res.status(500).json({ success: false, error: `Auth error: ${msg}` });
-   }
-   };
    // Puppeteer Browser
    let browserInstance = null;
    async function getBrowser() {
@@ -4750,6 +5729,7 @@ app.patch('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
   await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS html_source VARCHAR(20) DEFAULT 'live'`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS html_pasted_at TIMESTAMPTZ`).catch(()=>{});
 
+  console.log('[boot-stamp] before tracker_clients table');
   // ── Tracker clients — self-service users (WhatsApp flow) ─────────────────
   await client.query(`CREATE TABLE IF NOT EXISTS tracker_clients (
     id SERIAL PRIMARY KEY,
@@ -4771,6 +5751,38 @@ app.patch('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
   await client.query(`UPDATE tracker_clients SET max_pages=3 WHERE max_pages IS NULL`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS registered_ip VARCHAR(45)`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS cc_emails TEXT`).catch(()=>{});
+  // Pre-Write Brief — free tier gets exactly 1 lifetime brief, tracked here.
+  // Paid Tier 3 clients bypass this via prewrite_briefs_paid (set by admin after payment).
+  await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS prewrite_briefs_used INTEGER DEFAULT 0`).catch(()=>{});
+  await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS prewrite_briefs_paid INTEGER DEFAULT 0`).catch(()=>{});
+  // Stores every generated Pre-Write Brief so a client can reopen a past
+  // brief later instead of losing it when the modal closes.
+  await client.query(`CREATE TABLE IF NOT EXISTS prewrite_briefs (
+    id SERIAL PRIMARY KEY,
+    client_id INTEGER REFERENCES tracker_clients(id) ON DELETE CASCADE,
+    keyword TEXT NOT NULL,
+    working_title TEXT,
+    language TEXT,
+    region TEXT,
+    brief_json JSONB NOT NULL,
+    competitors_scraped INTEGER,
+    created_at TIMESTAMP DEFAULT NOW()
+  )`).catch(()=>{});
+  await client.query(`CREATE INDEX IF NOT EXISTS idx_prewrite_briefs_client ON prewrite_briefs(client_id, created_at DESC)`).catch(()=>{});
+  // Workflow columns so Pre-Write Briefs can be assigned/claimed/reviewed like scanned-page briefs
+  await client.query(`ALTER TABLE prewrite_briefs ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'open'`).catch(()=>{});
+  await client.query(`ALTER TABLE prewrite_briefs ADD COLUMN IF NOT EXISTS claimed_by VARCHAR(120)`).catch(()=>{});
+  await client.query(`ALTER TABLE prewrite_briefs ADD COLUMN IF NOT EXISTS claimed_at TIMESTAMPTZ`).catch(()=>{});
+  await client.query(`ALTER TABLE prewrite_briefs ADD COLUMN IF NOT EXISTS assigned_at TIMESTAMPTZ`).catch(()=>{});
+  await client.query(`ALTER TABLE prewrite_briefs ADD COLUMN IF NOT EXISTS deadline TIMESTAMPTZ`).catch(()=>{});
+  await client.query(`ALTER TABLE prewrite_briefs ADD COLUMN IF NOT EXISTS priority VARCHAR(10) DEFAULT 'medium'`).catch(()=>{});
+  await client.query(`ALTER TABLE prewrite_briefs ADD COLUMN IF NOT EXISTS specialist_html TEXT`).catch(()=>{});
+  await client.query(`ALTER TABLE prewrite_briefs ADD COLUMN IF NOT EXISTS submitted_at TIMESTAMPTZ`).catch(()=>{});
+  await client.query(`ALTER TABLE prewrite_briefs ADD COLUMN IF NOT EXISTS approved_at TIMESTAMPTZ`).catch(()=>{});
+  await client.query(`ALTER TABLE prewrite_briefs ADD COLUMN IF NOT EXISTS approved_by VARCHAR(120)`).catch(()=>{});
+  await client.query(`ALTER TABLE prewrite_briefs ADD COLUMN IF NOT EXISTS rejected_at TIMESTAMPTZ`).catch(()=>{});
+  await client.query(`ALTER TABLE prewrite_briefs ADD COLUMN IF NOT EXISTS reject_reason TEXT`).catch(()=>{});
+  await client.query(`ALTER TABLE prewrite_briefs ADD COLUMN IF NOT EXISTS published_at TIMESTAMPTZ`).catch(()=>{});
   // Brief merge system
   await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS brief_content JSONB`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS brief_started_at TIMESTAMPTZ`).catch(()=>{});
@@ -4802,6 +5814,18 @@ app.patch('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
   // scans, HTML paste, brief generation and runTrackerCheck must never touch this column.
   await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS manual_done BOOLEAN DEFAULT FALSE`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS manual_done_at TIMESTAMPTZ`).catch(()=>{});
+  // Full GSC query list per client — fuels the Impression Gap panel. Replaced wholesale on each Queries CSV import.
+  await client.query(`CREATE TABLE IF NOT EXISTS tracker_gsc_queries (
+    id SERIAL PRIMARY KEY,
+    tracker_client_id INTEGER NOT NULL,
+    query TEXT NOT NULL,
+    clicks INTEGER DEFAULT 0,
+    impressions INTEGER DEFAULT 0,
+    position NUMERIC,
+    imported_at TIMESTAMPTZ DEFAULT NOW()
+  )`).catch(()=>{});
+  await client.query(`CREATE INDEX IF NOT EXISTS tracker_gsc_queries_client_idx ON tracker_gsc_queries(tracker_client_id)`).catch(()=>{});
+  await client.query(`ALTER TABLE tracker_gsc_queries ADD COLUMN IF NOT EXISTS page_id INTEGER`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS lead_name TEXT`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS lead_email TEXT`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS live_wall_enabled BOOLEAN DEFAULT TRUE`).catch(()=>{});
@@ -4824,6 +5848,35 @@ app.patch('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS paused_at TIMESTAMPTZ`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS dealify_codes VARCHAR(500)`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS gsc_enabled BOOLEAN DEFAULT FALSE`).catch(()=>{});
+  await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS demo_readonly BOOLEAN DEFAULT FALSE`).catch(()=>{});
+  await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS readonly_token TEXT`).catch(()=>{});
+  console.log('[boot-stamp] before ro_token index');
+  await client.query(`CREATE UNIQUE INDEX IF NOT EXISTS tracker_clients_ro_token_idx ON tracker_clients(readonly_token) WHERE readonly_token IS NOT NULL`).catch(()=>{});
+  console.log('[boot-stamp] after ro_token index');
+  await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS ro_views INTEGER DEFAULT 0`).catch(()=>{});
+  await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS ro_last_view TIMESTAMPTZ`).catch(()=>{});
+  console.log('[boot-stamp] before gap/redirect columns');
+  await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS brief_language VARCHAR(10) DEFAULT 'en'`).catch(()=>{});
+  await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS emails_paused BOOLEAN DEFAULT FALSE`).catch(()=>{});
+  await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS gap_analysis TEXT`).catch(()=>{});
+  await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS gap_analysis_at TIMESTAMPTZ`).catch(()=>{});
+  await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS gap_done_queries TEXT`).catch(()=>{});
+  await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS redirects_to TEXT`).catch(()=>{});
+  // Tracks that an auto-fetch WAS attempted for this page, even when GSC had zero data to return —
+  // without this, a page with genuinely no per-page query data stays stuck in "X left" forever,
+  // since the "already exported" check only looked at whether any query row got this page_id.
+  await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS gsc_autofetch_checked_at TIMESTAMPTZ`).catch(()=>{});
+  await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS redirect_checked_at TIMESTAMPTZ`).catch(()=>{});
+  // One-time sync of gsc_enabled with the plan rule (free ≤3 pages off, paid >3 on).
+  // Guarded by a migration flag so it runs exactly ONCE — manual per-client overrides made afterwards survive every deploy.
+  await client.query(`CREATE TABLE IF NOT EXISTS migration_flags (key TEXT PRIMARY KEY, applied_at TIMESTAMPTZ DEFAULT NOW())`).catch(()=>{});
+  try {
+    const _gsync = await client.query(`INSERT INTO migration_flags (key) VALUES ('gsc_plan_auto_sync_v1') ON CONFLICT (key) DO NOTHING RETURNING key`);
+    if (_gsync.rows && _gsync.rows.length) {
+      const _gr = await client.query(`UPDATE tracker_clients SET gsc_enabled = (COALESCE(max_pages, 3) > 3) WHERE (status IS NULL OR status != 'deleted')`);
+      console.log('[migrate] gsc_enabled synced to plan rule for', _gr.rowCount, 'clients (one-time)');
+    }
+  } catch(e) { console.warn('[migrate] gsc sync', e.message); }
   // Fix invalid check_frequency values in DB
   await client.query(`
     UPDATE tracker_pages SET check_frequency='3days'
@@ -4904,6 +5957,13 @@ app.patch('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
    await client.query(`ALTER TABLE tracker_snapshots ADD COLUMN IF NOT EXISTS ai_brave_cited BOOLEAN DEFAULT FALSE`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_snapshots ADD COLUMN IF NOT EXISTS ai_brave_found BOOLEAN DEFAULT FALSE`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_snapshots ADD COLUMN IF NOT EXISTS content_diff JSONB`).catch(()=>{});
+  // Competitor visibility: who else is currently cited for this query — data already fetched from
+  // Google (Serper organic results) and Perplexity (its citations array), previously discarded after
+  // only checking for our own domain. Now persisted so the owner can actually see it.
+  await client.query(`ALTER TABLE tracker_snapshots ADD COLUMN IF NOT EXISTS google_competitors JSONB`).catch(()=>{});
+  await client.query(`ALTER TABLE tracker_snapshots ADD COLUMN IF NOT EXISTS ai_google_overview_references JSONB`).catch(()=>{});
+  await client.query(`ALTER TABLE tracker_snapshots ADD COLUMN IF NOT EXISTS ai_perplexity_competitors JSONB`).catch(()=>{});
+  await client.query(`ALTER TABLE tracker_snapshots ADD COLUMN IF NOT EXISTS ai_perplexity_answer_excerpt TEXT`).catch(()=>{});
 
    await client.query(`CREATE TABLE IF NOT EXISTS tracker_changes (
      id SERIAL PRIMARY KEY,
@@ -5151,6 +6211,29 @@ app.patch('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
      source VARCHAR(100) DEFAULT 'manual',
      created_at TIMESTAMP DEFAULT NOW()
    )`).catch(() => {});
+
+   // ── VOICE CLIENTS — ElevenLabs per-client inbound/outbound config ────────
+   await client.query(`CREATE TABLE IF NOT EXISTS voice_clients (
+     id VARCHAR(255) PRIMARY KEY,
+     name VARCHAR(255) NOT NULL,
+     mode VARCHAR(20) DEFAULT 'inbound',
+     agent_id VARCHAR(255),
+     phone_id VARCHAR(255),
+     sms_to VARCHAR(50),
+     biz_name VARCHAR(255),
+     greeting TEXT,
+     urgency_criteria TEXT,
+     outbound_pitch TEXT,
+     outbound_caller_name VARCHAR(255),
+     saved_at TIMESTAMP DEFAULT NOW()
+   )`).catch(() => {});
+   await client.query(`ALTER TABLE voice_clients ADD COLUMN IF NOT EXISTS urgency_criteria TEXT`).catch(()=>{});
+   await client.query(`ALTER TABLE voice_clients ADD COLUMN IF NOT EXISTS outbound_pitch TEXT`).catch(()=>{});
+   await client.query(`ALTER TABLE voice_clients ADD COLUMN IF NOT EXISTS outbound_caller_name VARCHAR(255)`).catch(()=>{});
+   await client.query(`ALTER TABLE voice_clients ADD COLUMN IF NOT EXISTS access_code VARCHAR(255)`).catch(()=>{});
+   await client.query(`ALTER TABLE voice_clients ADD COLUMN IF NOT EXISTS routing_mode VARCHAR(20) DEFAULT 'direct'`).catch(()=>{});
+   await client.query(`ALTER TABLE voice_clients ADD COLUMN IF NOT EXISTS owner_phone VARCHAR(50)`).catch(()=>{});
+   await client.query(`ALTER TABLE voice_clients ADD COLUMN IF NOT EXISTS failover_seconds INTEGER DEFAULT 15`).catch(()=>{});
 
    // Access codes tables
    await client.query(`CREATE TABLE IF NOT EXISTS access_codes (id SERIAL PRIMARY KEY, code VARCHAR(50) UNIQUE NOT NULL, type VARCHAR(20) DEFAULT 'write', client_name VARCHAR(255), is_active BOOLEAN DEFAULT TRUE, ai_calls_used INTEGER DEFAULT 0, ai_calls_limit INTEGER DEFAULT 0, expires_at TIMESTAMP, created_at TIMESTAMP DEFAULT NOW())`);
@@ -7375,7 +8458,7 @@ recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', descriptio
                if (job.createdAt < cutoff) bulkJobs.delete(id);
                }
                }
-               setInterval(cleanOldJobs, 60*60*1000); // hourly
+               setInterval(cleanOldJobs, 6*60*60*1000); // every 6h — hourly ticks kept Neon awake ~2h/day for nothing
                // ── Own browser per job — no shared state ────────────────────
                async function launchJobBrowser() {
                return puppeteer.launch({
@@ -7756,9 +8839,52 @@ recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', descriptio
                // Routes (root served above with cache-control + badge injection)
 
 // ── 1. Serve the standalone lead-crawler page ─────────────────────────────────
+// Reads lead-crawler.html from disk on every request, so future edits to that
+// file go live immediately after deploy — no more re-encoding a base64 snapshot
+// into this route. Tries a few common locations so it works whether the file
+// sits next to index.js, in /public, or in /views.
+const LEAD_CRAWLER_CANDIDATES = [
+  // next to index.js (e.g. /app/src/)
+  path.join(__dirname, 'lead-crawler.html'),
+  path.join(__dirname, 'public', 'lead-crawler.html'),
+  path.join(__dirname, 'views', 'lead-crawler.html'),
+  path.join(__dirname, 'static', 'lead-crawler.html'),
+  // one level up — repo root (e.g. /app/), where public/ usually lives
+  path.join(__dirname, '..', 'lead-crawler.html'),
+  path.join(__dirname, '..', 'public', 'lead-crawler.html'),
+  path.join(__dirname, '..', 'views', 'lead-crawler.html'),
+  path.join(__dirname, '..', 'static', 'lead-crawler.html'),
+  // process working directory fallbacks
+  path.join(process.cwd(), 'lead-crawler.html'),
+  path.join(process.cwd(), 'public', 'lead-crawler.html'),
+];
+
+// Alias: /leadcrawler (no hyphen) → same page, so either URL works when shared.
+app.get('/leadcrawler', (req, res) => res.redirect(301, '/lead-crawler'));
+
 app.get('/lead-crawler', (req, res) => {
-  res.setHeader('Content-Type', 'text/html; charset=utf-8');
-  res.send(Buffer.from('PCFET0NUWVBFIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICAgPGhlYWQ+CiAgICAgIDxtZXRhIGNoYXJzZXQ9IlVURi04Ij4KICAgICAgPG1ldGEgbmFtZT0idmlld3BvcnQiIGNvbnRlbnQ9IndpZHRoPWRldmljZS13aWR0aCwgaW5pdGlhbC1zY2FsZT0xLjAiPgogICAgICA8dGl0bGU+TGVhZCBDcmF3bGVyIOKAlCBDb250ZW50U2NhbGUgKEdlbWluaSk8L3RpdGxlPgogICAgICA8bWV0YSBuYW1lPSJkZXNjcmlwdGlvbiIgY29udGVudD0iRmluZCAyMDDigJM1MDAgY29udGVudCB3cml0aW5nIGxlYWRzIGluIGFueSBjaXR5LiAyMCBpbmR1c3RyaWVzLCBBSS1wb3dlcmVkLCBidWNrZXRlZCBieSB1cmdlbmN5LiBGcmVlIHRvb2wgYnkgQ29udGVudFNjYWxlLiI+CiAgICAgIDxsaW5rIHJlbD0iY2Fub25pY2FsIiBocmVmPSJodHRwczovL2NvbnRlbnRzY2FsZS5zaXRlL2xlYWQtY3Jhd2xlciI+CiAgICAgIDxsaW5rIGhyZWY9Imh0dHBzOi8vZm9udHMuZ29vZ2xlYXBpcy5jb20vY3NzMj9mYW1pbHk9QmViYXMrTmV1ZSZmYW1pbHk9RE0rU2Fuczp3Z2h0QDMwMDs0MDA7NTAwOzcwMCZmYW1pbHk9SUJNK1BsZXgrTW9ubzp3Z2h0QDQwMDs3MDAmZGlzcGxheT1zd2FwIiByZWw9InN0eWxlc2hlZXQiPgogICAgICA8c3R5bGU+CiAgICAgICAgICosKjo6YmVmb3JlLCo6OmFmdGVye2JveC1zaXppbmc6Ym9yZGVyLWJveDttYXJnaW46MDtwYWRkaW5nOjB9CiAgICAgICAgIDpyb290ewogICAgICAgICAtLWJnOiMwMzA3MTI7LS1jYXJkOiMwZjE3MmE7LS1zdXJmYWNlOiMxZTI5M2I7LS1ib3JkZXI6IzMzNDE1NTsKICAgICAgICAgLS1pbms6I2Y5ZmFmYjstLW11dGVkOiM5NGEzYjg7LS1zdWI6IzY0NzQ4YjstLWRpbTojNDc1NTY5OwogICAgICAgICAtLXB1cnBsZTojYTc4YmZhOy0tcHVycGxlMjojYzRiNWZkOy0tcHVycGxlLWdsb3c6cmdiYSgxNjcsMTM5LDI1MCwwLjE1KTsKICAgICAgICAgLS1ibHVlOiM2MGE1ZmE7LS1ibHVlMjojMjU2M2ViOy0tZ3JlZW46IzRhZGU4MDstLWdyZWVuMjojMjJjNTVlOwogICAgICAgICAtLW9yYW5nZTojZmI5MjNjOy0tYW1iZXI6I2Y1OWUwYjstLXJlZDojZjQzZjNmOy0tZ29sZDojZmJiZjI0OwogICAgICAgICAtLWdvbGQtZ2xvdzpyZ2JhKDI1MSwxOTEsMzYsMC4xKTsKICAgICAgICAgfQogICAgICAgICBib2R5e2JhY2tncm91bmQ6dmFyKC0tYmcpO2NvbG9yOnZhcigtLWluayk7Zm9udC1mYW1pbHk6J0RNIFNhbnMnLHNhbnMtc2VyaWY7bWluLWhlaWdodDoxMDB2aDtwYWRkaW5nLWJvdHRvbToxMDBweDtsaW5lLWhlaWdodDoxLjU7fQogICAgICAgICAud3JhcHttYXgtd2lkdGg6MTQwMHB4O21hcmdpbjowIGF1dG87cGFkZGluZzowIDI0cHg7fQogICAgICAgICAvKiDilIDilIAgVG9wIE5hdmlnYXRpb24g4pSA4pSAICovCiAgICAgICAgIC50b3BuYXZ7ZGlzcGxheTpmbGV4O2FsaWduLWl0ZW1zOmNlbnRlcjtqdXN0aWZ5LWNvbnRlbnQ6c3BhY2UtYmV0d2VlbjtwYWRkaW5nOjIwcHggMDtib3JkZXItYm90dG9tOjFweCBzb2xpZCB2YXIoLS1ib3JkZXIpO21hcmdpbi1ib3R0b206NDBweDt9CiAgICAgICAgIC50b3BuYXYgLmJyYW5ke2ZvbnQtZmFtaWx5OidCZWJhcyBOZXVlJyxzYW5zLXNlcmlmO2ZvbnQtc2l6ZTpjbGFtcCg0MnB4LDZ2dyw3MnB4KTtsZXR0ZXItc3BhY2luZzouMDZlbTt0ZXh0LWRlY29yYXRpb246bm9uZTtkaXNwbGF5OmZsZXg7YWxpZ24taXRlbXM6Y2VudGVyO2dhcDo4cHg7bGluZS1oZWlnaHQ6MTtiYWNrZ3JvdW5kOmxpbmVhci1ncmFkaWVudCg5MGRlZywjYTc4YmZhLCM2MGE1ZmEpOy13ZWJraXQtYmFja2dyb3VuZC1jbGlwOnRleHQ7LXdlYmtpdC10ZXh0LWZpbGwtY29sb3I6dHJhbnNwYXJlbnQ7YmFja2dyb3VuZC1jbGlwOnRleHQ7fQogICAgICAgICAudG9wbmF2IC5icmFuZCAucHJve2ZvbnQtZmFtaWx5OidCZWJhcyBOZXVlJyxzYW5zLXNlcmlmO2ZvbnQtc2l6ZTpjbGFtcCg0MnB4LDZ2dyw3MnB4KTtiYWNrZ3JvdW5kOnZhcigtLXB1cnBsZSk7LXdlYmtpdC1iYWNrZ3JvdW5kLWNsaXA6dGV4dDstd2Via2l0LXRleHQtZmlsbC1jb2xvcjp0cmFuc3BhcmVudDtiYWNrZ3JvdW5kLWNsaXA6dGV4dDtsZXR0ZXItc3BhY2luZzouMDZlbTt9CiAgICAgICAgIC50b3BuYXYgLmJhY2t7Zm9udC1mYW1pbHk6J0lCTSBQbGV4IE1vbm8nLG1vbm9zcGFjZTtmb250LXNpemU6MTFweDtsZXR0ZXItc3BhY2luZzouMTJlbTt0ZXh0LXRyYW5zZm9ybTp1cHBlcmNhc2U7Y29sb3I6dmFyKC0tc3ViKTt0ZXh0LWRlY29yYXRpb246bm9uZTt0cmFuc2l0aW9uOmFsbCAuMnM7fQogICAgICAgICAudG9wbmF2IC5iYWNrOmhvdmVye2NvbG9yOnZhcigtLWdvbGQpO3RyYW5zZm9ybTp0cmFuc2xhdGVYKC00cHgpO30KICAgICAgICAgaGVhZGVye3BhZGRpbmc6MCAwIDMycHg7Ym9yZGVyLWJvdHRvbToxcHggc29saWQgdmFyKC0tYm9yZGVyKTttYXJnaW4tYm90dG9tOjMycHg7ZGlzcGxheTpmbGV4O2FsaWduLWl0ZW1zOmZsZXgtZW5kO2p1c3RpZnktY29udGVudDpzcGFjZS1iZXR3ZWVuO2dhcDoyNHB4O2ZsZXgtd3JhcDp3cmFwO30KICAgICAgICAgLmxvZ28tYmxvY2t7ZmxleDoxO30KICAgICAgICAgLmV5ZWJyb3d7Zm9udC1mYW1pbHk6J0lCTSBQbGV4IE1vbm8nLG1vbm9zcGFjZTtmb250LXNpemU6MTBweDtsZXR0ZXItc3BhY2luZzouMjVlbTt0ZXh0LXRyYW5zZm9ybTp1cHBlcmNhc2U7Y29sb3I6dmFyKC0tcmVkKTtkaXNwbGF5OmZsZXg7YWxpZ24taXRlbXM6Y2VudGVyO2dhcDo4cHg7bWFyZ2luLWJvdHRvbToxMnB4O30KICAgICAgICAgLmxkb3R7d2lkdGg6OHB4O2hlaWdodDo4cHg7Ym9yZGVyLXJhZGl1czo1MCU7YmFja2dyb3VuZDp2YXIoLS1yZWQpO2FuaW1hdGlvbjpibGluayAxLjVzIGVhc2UtaW4tb3V0IGluZmluaXRlO30KICAgICAgICAgQGtleWZyYW1lcyBibGlua3swJSwxMDAle29wYWNpdHk6MTt0cmFuc2Zvcm06c2NhbGUoMSl9NTAle29wYWNpdHk6LjM7dHJhbnNmb3JtOnNjYWxlKDAuOCl9fQogICAgICAgICBoMXtmb250LWZhbWlseTonQmViYXMgTmV1ZScsc2Fucy1zZXJpZjtmb250LXNpemU6Y2xhbXAoNTBweCw4dncsMTAwcHgpO2xpbmUtaGVpZ2h0Oi44NTtsZXR0ZXItc3BhY2luZzouMDJlbTt9CiAgICAgICAgIGgxIHNwYW57Y29sb3I6dmFyKC0tZ29sZCk7fQogICAgICAgICAudGFnbGluZXtmb250LXNpemU6MTVweDtjb2xvcjp2YXIoLS1tdXRlZCk7bWFyZ2luLXRvcDoxNHB4O21heC13aWR0aDo1NDBweDtsaW5lLWhlaWdodDoxLjY7fQogICAgICAgICAuaGJhZGdlc3tkaXNwbGF5OmZsZXg7ZmxleC1kaXJlY3Rpb246Y29sdW1uO2dhcDo4cHg7YWxpZ24taXRlbXM6ZmxleC1lbmQ7fQogICAgICAgICAuaGJ7Zm9udC1mYW1pbHk6J0lCTSBQbGV4IE1vbm8nLG1vbm9zcGFjZTtmb250LXNpemU6MTBweDtsZXR0ZXItc3BhY2luZzouMWVtO3RleHQtdHJhbnNmb3JtOnVwcGVyY2FzZTtwYWRkaW5nOjZweCAxMnB4O2JvcmRlci1yYWRpdXM6NHB4O2JvcmRlcjoxcHggc29saWQ7d2hpdGUtc3BhY2U6bm93cmFwO2JhY2tncm91bmQ6cmdiYSgwLDAsMCwwLjMpO30KICAgICAgICAgLmhiLmd7Y29sb3I6dmFyKC0tZ3JlZW4pO2JvcmRlci1jb2xvcjpyZ2JhKDc0LDIyMiwxMjgsMC4yNSk7fQogICAgICAgICAuaGIueXtjb2xvcjp2YXIoLS1nb2xkKTtib3JkZXItY29sb3I6cmdiYSgyNTEsMTkxLDM2LDAuMjUpO30KICAgICAgICAgLmhiLnB7Y29sb3I6dmFyKC0tcHVycGxlKTtib3JkZXItY29sb3I6cmdiYSgxNjcsMTM5LDI1MCwwLjI1KTt9CiAgICAgICAgIC8qIOKUgOKUgCBTdHJhdGVneSBCdWNrZXRzIOKUgOKUgCAqLwogICAgICAgICAuc3RyYXRlZ3l7YmFja2dyb3VuZDp2YXIoLS1jYXJkKTtib3JkZXI6MXB4IHNvbGlkIHZhcigtLWJvcmRlcik7Ym9yZGVyLXJhZGl1czo4cHg7bWFyZ2luLWJvdHRvbTozMnB4O292ZXJmbG93OmhpZGRlbjtib3gtc2hhZG93OjAgMTBweCAzMHB4IHJnYmEoMCwwLDAsMC41KTt9CiAgICAgICAgIC5zdHJhdGVneS1oZWFke2Rpc3BsYXk6ZmxleDthbGlnbi1pdGVtczpjZW50ZXI7Z2FwOjEycHg7cGFkZGluZzoxNnB4IDIwcHg7Ym9yZGVyLWJvdHRvbToxcHggc29saWQgdmFyKC0tYm9yZGVyKTtjdXJzb3I6cG9pbnRlcjtiYWNrZ3JvdW5kOnJnYmEoMjU1LDI1NSwyNTUsMC4wMik7fQogICAgICAgICAuc3RyYXRlZ3ktaGVhZCBoM3tmb250LWZhbWlseTonQmViYXMgTmV1ZScsc2Fucy1zZXJpZjtmb250LXNpemU6MjJweDtsZXR0ZXItc3BhY2luZzouMDVlbTtmbGV4OjE7fQogICAgICAgICAuc3RyYXRlZ3ktaGVhZCAudG9ne2ZvbnQtZmFtaWx5OidJQk0gUGxleCBNb25vJyxtb25vc3BhY2U7Zm9udC1zaXplOjEwcHg7Y29sb3I6dmFyKC0tc3ViKTt9CiAgICAgICAgIC5zdHJhdGVneS1ib2R5e3BhZGRpbmc6MjBweDtkaXNwbGF5OmdyaWQ7Z3JpZC10ZW1wbGF0ZS1jb2x1bW5zOnJlcGVhdChhdXRvLWZpdCxtaW5tYXgoMjAwcHgsMWZyKSk7Z2FwOjEycHg7fQogICAgICAgICAuc2J1Y2tldHtib3JkZXItcmFkaXVzOjZweDtwYWRkaW5nOjE2cHg7Ym9yZGVyOjFweCBzb2xpZDt0cmFuc2l0aW9uOnRyYW5zZm9ybSAuMnM7fQogICAgICAgICAuc2J1Y2tldDpob3Zlcnt0cmFuc2Zvcm06dHJhbnNsYXRlWSgtMnB4KTt9CiAgICAgICAgIC5zYnVja2V0IC5zYi1yYW5nZXtmb250LWZhbWlseTonQmViYXMgTmV1ZScsc2Fucy1zZXJpZjtmb250LXNpemU6MjRweDtsaW5lLWhlaWdodDoxO21hcmdpbi1ib3R0b206NnB4O30KICAgICAgICAgLnNidWNrZXQgLnNiLW5hbWV7Zm9udC1mYW1pbHk6J0lCTSBQbGV4IE1vbm8nLG1vbm9zcGFjZTtmb250LXNpemU6OXB4O2xldHRlci1zcGFjaW5nOi4xNWVtO3RleHQtdHJhbnNmb3JtOnVwcGVyY2FzZTttYXJnaW4tYm90dG9tOjhweDtkaXNwbGF5OmJsb2NrO30KICAgICAgICAgLnNidWNrZXQgLnNiLWRlc2N7Zm9udC1zaXplOjEycHg7Y29sb3I6dmFyKC0tbXV0ZWQpO2xpbmUtaGVpZ2h0OjEuNTttYXJnaW4tYm90dG9tOjEwcHg7fQogICAgICAgICAuc2J1Y2tldCAuc2ItcGl0Y2h7Zm9udC1zaXplOjExcHg7Zm9udC1zdHlsZTppdGFsaWM7bGluZS1oZWlnaHQ6MS40NTtwYWRkaW5nLXRvcDoxMHB4O2JvcmRlci10b3A6MXB4IHNvbGlkIHJnYmEoMjU1LDI1NSwyNTUsMC4wNSk7fQogICAgICAgICAuc2J1Y2tldCAuc2ItaG90e2ZvbnQtZmFtaWx5OidJQk0gUGxleCBNb25vJyxtb25vc3BhY2U7Zm9udC1zaXplOjlweDtsZXR0ZXItc3BhY2luZzouMDhlbTt0ZXh0LXRyYW5zZm9ybTp1cHBlcmNhc2U7cGFkZGluZzozcHggOHB4O2JvcmRlci1yYWRpdXM6M3B4O2Rpc3BsYXk6aW5saW5lLWJsb2NrO21hcmdpbi10b3A6OHB4O30KICAgICAgICAgLnNiLWdob3N0e2JvcmRlci1jb2xvcjpyZ2JhKDE0OCwxNjMsMTg0LDAuMik7YmFja2dyb3VuZDpyZ2JhKDE0OCwxNjMsMTg0LDAuMDUpO30KICAgICAgICAgLnNiLXNrZWxldG9ue2JvcmRlci1jb2xvcjpyZ2JhKDk2LDE2NSwyNTAsMC4zKTtiYWNrZ3JvdW5kOnJnYmEoOTYsMTY1LDI1MCwwLjA1KTt9CiAgICAgICAgIC5zYi1za2VsZXRvbiAuc2ItcmFuZ2UsIC5zYi1za2VsZXRvbiAuc2ItbmFtZXtjb2xvcjp2YXIoLS1ibHVlKTt9IC5zYi1za2VsZXRvbiAuc2ItaG90e2JhY2tncm91bmQ6cmdiYSg5NiwxNjUsMjUwLDAuMSk7Y29sb3I6dmFyKC0tYmx1ZSk7fQogICAgICAgICAuc2ItYnJvY2h1cmV7Ym9yZGVyLWNvbG9yOnJnYmEoMjUxLDE5MSwzNiwwLjMpO2JhY2tncm91bmQ6cmdiYSgyNTEsMTkxLDM2LDAuMDUpO30KICAgICAgICAgLnNiLWJyb2NodXJlIC5zYi1yYW5nZSwgLnNiLWJyb2NodXJlIC5zYi1uYW1le2NvbG9yOnZhcigtLWdvbGQpO30gLnNiLWJyb2NodXJlIC5zYi1ob3R7YmFja2dyb3VuZDpyZ2JhKDI1MSwxOTEsMzYsMC4xKTtjb2xvcjp2YXIoLS1nb2xkKTt9CiAgICAgICAgIC5zYi1zdGFsZXtib3JkZXItY29sb3I6cmdiYSgyNTEsMTQ2LDYwLDAuMyk7YmFja2dyb3VuZDpyZ2JhKDI1MSwxNDYsNjAsMC4wNSk7fQogICAgICAgICAuc2ItYWN0aXZle2JvcmRlci1jb2xvcjpyZ2JhKDI0NCw2Myw2MywwLjMpO2JhY2tncm91bmQ6cmdiYSgyNDQsNjMsNjMsMC4wNSk7fQogICAgICAgICAuc2ItZXN0YWJ7Ym9yZGVyLWNvbG9yOnJnYmEoMTY3LDEzOSwyNTAsMC4zKTtiYWNrZ3JvdW5kOnJnYmEoMTY3LDEzOSwyNTAsMC4wNSk7fQogICAgICAgICAvKiDilIDilIAgTGljZW5zZSAmIFJlc3VtZSBCYW5uZXJzIOKUgOKUgCAqLwogICAgICAgICAjbGljZW5zZUFjdGl2ZUJhcntiYWNrZ3JvdW5kOnJnYmEoNzQsMjIyLDEyOCwwLjA4KTtib3JkZXI6MXB4IHNvbGlkIHJnYmEoNzQsMjIyLDEyOCwwLjI1KTtib3JkZXItcmFkaXVzOjhweDtwYWRkaW5nOjEycHggMjBweDttYXJnaW4tYm90dG9tOjE2cHg7ZGlzcGxheTpub25lO2FsaWduLWl0ZW1zOmNlbnRlcjtnYXA6MTVweDt9CiAgICAgICAgICNsaWNlbnNlQWN0aXZlQmFyLnNob3d7ZGlzcGxheTpmbGV4O30KICAgICAgICAgLnJlc3VtZS1iYW5uZXJ7YmFja2dyb3VuZDpyZ2JhKDk2LDE2NSwyNTAsMC4wOCk7Ym9yZGVyOjFweCBzb2xpZCByZ2JhKDk2LDE2NSwyNTAsMC4yNSk7Ym9yZGVyLXJhZGl1czo4cHg7cGFkZGluZzoxNHB4IDIwcHg7bWFyZ2luLWJvdHRvbToyMHB4O2Rpc3BsYXk6bm9uZTthbGlnbi1pdGVtczpjZW50ZXI7Z2FwOjE2cHg7fQogICAgICAgICAvKiDilIDilIAgU2VhcmNoIFBhbmVsIOKUgOKUgCAqLwogICAgICAgICAuc2VhcmNoLXBhbmVse2JhY2tncm91bmQ6dmFyKC0tY2FyZCk7Ym9yZGVyOjFweCBzb2xpZCB2YXIoLS1ib3JkZXIpO2JvcmRlci1yYWRpdXM6OHB4O3BhZGRpbmc6MzJweDttYXJnaW4tYm90dG9tOjMycHg7cG9zaXRpb246cmVsYXRpdmU7b3ZlcmZsb3c6aGlkZGVuO2JveC1zaGFkb3c6MCAyMHB4IDQwcHggcmdiYSgwLDAsMCwwLjQpO30KICAgICAgICAgLnNlYXJjaC1wYW5lbDo6YmVmb3Jle2NvbnRlbnQ6Jyc7cG9zaXRpb246YWJzb2x1dGU7dG9wOjA7bGVmdDowO3JpZ2h0OjA7aGVpZ2h0OjNweDtiYWNrZ3JvdW5kOmxpbmVhci1ncmFkaWVudCg5MGRlZyx2YXIoLS1yZWQpLHZhcigtLWdvbGQpLHZhcigtLWdyZWVuKSk7fQogICAgICAgICAucGFuZWwtdGl0bGV7Zm9udC1mYW1pbHk6J0lCTSBQbGV4IE1vbm8nLG1vbm9zcGFjZTtmb250LXNpemU6MTBweDtsZXR0ZXItc3BhY2luZzouMjVlbTt0ZXh0LXRyYW5zZm9ybTp1cHBlcmNhc2U7Y29sb3I6dmFyKC0tc3ViKTttYXJnaW4tYm90dG9tOjIwcHg7ZGlzcGxheTpibG9jazt9CiAgICAgICAgIC5mb3JtLXJvd3tkaXNwbGF5OmdyaWQ7Z3JpZC10ZW1wbGF0ZS1jb2x1bW5zOjFmciAxZnIgYXV0byBhdXRvO2dhcDoxNnB4O2FsaWduLWl0ZW1zOmVuZDttYXJnaW4tYm90dG9tOjI0cHg7fQogICAgICAgICBAbWVkaWEobWF4LXdpZHRoOjc2OHB4KXsuZm9ybS1yb3d7Z3JpZC10ZW1wbGF0ZS1jb2x1bW5zOjFmciAxZnI7fX0KICAgICAgICAgLmZpZWxkIGxhYmVse2ZvbnQtZmFtaWx5OidJQk0gUGxleCBNb25vJyxtb25vc3BhY2U7Zm9udC1zaXplOjlweDtsZXR0ZXItc3BhY2luZzouMThlbTt0ZXh0LXRyYW5zZm9ybTp1cHBlcmNhc2U7Y29sb3I6dmFyKC0tc3ViKTtkaXNwbGF5OmJsb2NrO21hcmdpbi1ib3R0b206OHB4O30KICAgICAgICAgLmZpZWxkIGlucHV0e3dpZHRoOjEwMCU7YmFja2dyb3VuZDp2YXIoLS1iZyk7Ym9yZGVyOjFweCBzb2xpZCB2YXIoLS1ib3JkZXIpO2JvcmRlci1yYWRpdXM6NnB4O3BhZGRpbmc6MTRweCAxNnB4O2ZvbnQtZmFtaWx5OidETSBTYW5zJyxzYW5zLXNlcmlmO2ZvbnQtc2l6ZToxNXB4O2NvbG9yOnZhcigtLWluayk7b3V0bGluZTpub25lO3RyYW5zaXRpb246YWxsIC4yczt9CiAgICAgICAgIC5maWVsZCBpbnB1dDpmb2N1c3tib3JkZXItY29sb3I6dmFyKC0tZ29sZCk7YmFja2dyb3VuZDpyZ2JhKDI1NSwyNTUsMjU1LDAuMDIpO2JveC1zaGFkb3c6MCAwIDAgM3B4IHJnYmEoMjUxLDE5MSwzNiwwLjEpO30KICAgICAgICAgLmNyYXdsLWJ0bntiYWNrZ3JvdW5kOnZhcigtLWdvbGQpO2NvbG9yOiMwMDA7Ym9yZGVyOm5vbmU7Zm9udC1mYW1pbHk6J0JlYmFzIE5ldWUnLHNhbnMtc2VyaWY7Zm9udC1zaXplOjI0cHg7bGV0dGVyLXNwYWNpbmc6LjA1ZW07cGFkZGluZzowIDM2cHg7Ym9yZGVyLXJhZGl1czo2cHg7Y3Vyc29yOnBvaW50ZXI7dHJhbnNpdGlvbjphbGwgLjJzO2hlaWdodDo1MnB4O2Rpc3BsYXk6ZmxleDthbGlnbi1pdGVtczpjZW50ZXI7anVzdGlmeS1jb250ZW50OmNlbnRlcjt9CiAgICAgICAgIC5jcmF3bC1idG46aG92ZXJ7YmFja2dyb3VuZDp2YXIoLS1pbmspO3RyYW5zZm9ybTp0cmFuc2xhdGVZKC0xcHgpO30KICAgICAgICAgLmNyYXdsLWJ0bjpkaXNhYmxlZHtvcGFjaXR5Oi4zO2N1cnNvcjpub3QtYWxsb3dlZDt0cmFuc2Zvcm06bm9uZTt9CiAgICAgICAgIC5zdG9wLWJ0bntiYWNrZ3JvdW5kOnZhcigtLXN1cmZhY2UpO2NvbG9yOnZhcigtLXJlZCk7Ym9yZGVyOjFweCBzb2xpZCByZ2JhKDI0NCw2Myw2MywwLjMpO2ZvbnQtZmFtaWx5OidJQk0gUGxleCBNb25vJyxtb25vc3BhY2U7Zm9udC1zaXplOjEycHg7bGV0dGVyLXNwYWNpbmc6LjFlbTt0ZXh0LXRyYW5zZm9ybTp1cHBlcmNhc2U7cGFkZGluZzowIDI0cHg7Ym9yZGVyLXJhZGl1czo2cHg7Y3Vyc29yOnBvaW50ZXI7aGVpZ2h0OjUycHg7ZGlzcGxheTpub25lO3RyYW5zaXRpb246YWxsIC4yczt9CiAgICAgICAgIC5zdG9wLWJ0bjpob3ZlcntiYWNrZ3JvdW5kOnZhcigtLXJlZCk7Y29sb3I6I2ZmZjt9CiAgICAgICAgIC8qIOKUgOKUgCBMaXZlIFNlYXJjaCBDaGlwcyDilIDilIAgKi8KICAgICAgICAgLndhdmVze2Rpc3BsYXk6Z3JpZDtncmlkLXRlbXBsYXRlLWNvbHVtbnM6cmVwZWF0KGF1dG8tZmlsbCxtaW5tYXgoMTgwcHgsMWZyKSk7Z2FwOjhweDt9CiAgICAgICAgIC53Y2hpcHtiYWNrZ3JvdW5kOnZhcigtLXN1cmZhY2UpO2JvcmRlcjoxcHggc29saWQgdmFyKC0tYm9yZGVyKTtib3JkZXItcmFkaXVzOjRweDtwYWRkaW5nOjEwcHggMTRweDtmb250LWZhbWlseTonSUJNIFBsZXggTW9ubycsbW9ub3NwYWNlO2ZvbnQtc2l6ZTo5cHg7bGV0dGVyLXNwYWNpbmc6LjA1ZW07dGV4dC10cmFuc2Zvcm06dXBwZXJjYXNlO2NvbG9yOnZhcigtLXN1Yik7ZGlzcGxheTpmbGV4O2FsaWduLWl0ZW1zOmNlbnRlcjtnYXA6MTBweDt0cmFuc2l0aW9uOmFsbCAuM3M7fQogICAgICAgICAud2NoaXAgLndke3dpZHRoOjZweDtoZWlnaHQ6NnB4O2JvcmRlci1yYWRpdXM6NTAlO2JhY2tncm91bmQ6dmFyKC0tZGltKTt9CiAgICAgICAgIC53Y2hpcC5ydW5uaW5ne2NvbG9yOnZhcigtLW9yYW5nZSk7Ym9yZGVyLWNvbG9yOnJnYmEoMjUxLDE0Niw2MCwwLjMpO2JhY2tncm91bmQ6cmdiYSgyNTEsMTQ2LDYwLDAuMDUpO30KICAgICAgICAgLndjaGlwLnJ1bm5pbmcgLndke2JhY2tncm91bmQ6dmFyKC0tb3JhbmdlKTtib3gtc2hhZG93OjAgMCAxMHB4IHZhcigtLW9yYW5nZSk7YW5pbWF0aW9uOmJsaW5rIDFzIGluZmluaXRlO30KICAgICAgICAgLndjaGlwLmRvbmV7Y29sb3I6dmFyKC0tZ3JlZW4pO2JvcmRlci1jb2xvcjpyZ2JhKDc0LDIyMiwxMjgsMC4yNSk7YmFja2dyb3VuZDpyZ2JhKDc0LDIyMiwxMjgsMC4wMik7fQogICAgICAgICAud2NoaXAuZG9uZSAud2R7YmFja2dyb3VuZDp2YXIoLS1ncmVlbik7fQogICAgICAgICAvKiDilIDilIAgVm9pY2Vib3QgQ29uZmlnIFBhbmVsIOKUgOKUgCAqLwogICAgICAgICAudmFwaS1wYW5lbHtiYWNrZ3JvdW5kOnZhcigtLWNhcmQpO2JvcmRlcjoxcHggc29saWQgdmFyKC0tYm9yZGVyKTtib3JkZXItcmFkaXVzOjhweDtwYWRkaW5nOjMycHg7bWFyZ2luLWJvdHRvbToyNHB4O2Rpc3BsYXk6bm9uZTtib3JkZXItbGVmdDo1cHggc29saWQgdmFyKC0tZ29sZCk7Ym94LXNoYWRvdzowIDE1cHggMzVweCByZ2JhKDAsMCwwLDAuNik7fQogICAgICAgICAudmFwaS1wYW5lbC52aXNpYmxle2Rpc3BsYXk6YmxvY2s7YW5pbWF0aW9uOmZkb3duIC4zcyBlYXNlLW91dDt9CiAgICAgICAgIEBrZXlmcmFtZXMgZmRvd257ZnJvbXtvcGFjaXR5OjA7dHJhbnNmb3JtOnRyYW5zbGF0ZVkoLTEwcHgpfXRve29wYWNpdHk6MTt0cmFuc2Zvcm06dHJhbnNsYXRlWSgwKX19CiAgICAgICAgIC52YXBpLXBhbmVsLWhlYWR7ZGlzcGxheTpmbGV4O2FsaWduLWl0ZW1zOmNlbnRlcjtnYXA6MTVweDttYXJnaW4tYm90dG9tOjI0cHg7cGFkZGluZy1ib3R0b206MTZweDtib3JkZXItYm90dG9tOjFweCBzb2xpZCB2YXIoLS1ib3JkZXIpO30KICAgICAgICAgLnZhcGktcGFuZWwtaGVhZCBoM3tmb250LWZhbWlseTonQmViYXMgTmV1ZScsc2Fucy1zZXJpZjtmb250LXNpemU6MjhweDtsZXR0ZXItc3BhY2luZzoxcHg7ZmxleDoxO30KICAgICAgICAgLnZhcGktZ3JpZHtkaXNwbGF5OmdyaWQ7Z3JpZC10ZW1wbGF0ZS1jb2x1bW5zOnJlcGVhdCgyLDFmcik7Z2FwOjIwcHg7fQogICAgICAgICBAbWVkaWEobWF4LXdpZHRoOjY0MHB4KXsudmFwaS1ncmlke2dyaWQtdGVtcGxhdGUtY29sdW1uczoxZnI7fX0KICAgICAgICAgLnZhcGktZmllbGQgbGFiZWx7Zm9udC1mYW1pbHk6J0lCTSBQbGV4IE1vbm8nLG1vbm9zcGFjZTtmb250LXNpemU6MTBweDt0ZXh0LXRyYW5zZm9ybTp1cHBlcmNhc2U7bGV0dGVyLXNwYWNpbmc6LjE1ZW07Y29sb3I6dmFyKC0tc3ViKTtkaXNwbGF5OmJsb2NrO21hcmdpbi1ib3R0b206MTBweDt9CiAgICAgICAgIC52YXBpLWZpZWxkIGlucHV0e3dpZHRoOjEwMCU7YmFja2dyb3VuZDp2YXIoLS1iZyk7Ym9yZGVyOjFweCBzb2xpZCB2YXIoLS1ib3JkZXIpO2JvcmRlci1yYWRpdXM6NnB4O3BhZGRpbmc6MTJweCAxNHB4O2ZvbnQtZmFtaWx5OidJQk0gUGxleCBNb25vJyxtb25vc3BhY2U7Zm9udC1zaXplOjEzcHg7Y29sb3I6dmFyKC0taW5rKTtvdXRsaW5lOm5vbmU7dHJhbnNpdGlvbjphbGwgLjJzO30KICAgICAgICAgLnZhcGktZmllbGQgaW5wdXQ6Zm9jdXN7Ym9yZGVyLWNvbG9yOnZhcigtLXB1cnBsZSk7YmFja2dyb3VuZDpyZ2JhKDI1NSwyNTUsMjU1LDAuMDMpO30KICAgICAgICAgLnZhcGktc2F2ZS1idG57Z3JpZC1jb2x1bW46MS8tMTtiYWNrZ3JvdW5kOnZhcigtLWdyZWVuKTtjb2xvcjojMDAwO2JvcmRlcjpub25lO2ZvbnQtZmFtaWx5OidCZWJhcyBOZXVlJyxzYW5zLXNlcmlmO2ZvbnQtc2l6ZToyMnB4O2xldHRlci1zcGFjaW5nOi4wNWVtO3BhZGRpbmc6MTVweDtib3JkZXItcmFkaXVzOjZweDtjdXJzb3I6cG9pbnRlcjttYXJnaW4tdG9wOjEwcHg7dHJhbnNpdGlvbjphbGwgLjJzO30KICAgICAgICAgLnZhcGktc2F2ZS1idG46aG92ZXJ7YmFja2dyb3VuZDp2YXIoLS1pbmspO3RyYW5zZm9ybTp0cmFuc2xhdGVZKC0xcHgpO30KICAgICAgICAgLyog4pSA4pSAIFJlc3VsdHMgRGlzcGxheSDilIDilIAgKi8KICAgICAgICAgLnRvb2xiYXJ7YmFja2dyb3VuZDp2YXIoLS1jYXJkKTtib3JkZXI6MXB4IHNvbGlkIHZhcigtLWJvcmRlcik7Ym9yZGVyLXJhZGl1czo4cHg7cGFkZGluZzoxNnB4IDIwcHg7bWFyZ2luLWJvdHRvbToyNHB4O2Rpc3BsYXk6bm9uZTthbGlnbi1pdGVtczpjZW50ZXI7Z2FwOjE1cHg7ZmxleC13cmFwOndyYXA7Ym94LXNoYWRvdzowIDRweCAxNXB4IHJnYmEoMCwwLDAsMC4zKTt9CiAgICAgICAgIC50YnRue2ZvbnQtZmFtaWx5OidJQk0gUGxleCBNb25vJyxtb25vc3BhY2U7Zm9udC1zaXplOjEwcHg7bGV0dGVyLXNwYWNpbmc6LjA1ZW07dGV4dC10cmFuc2Zvcm06dXBwZXJjYXNlO2JhY2tncm91bmQ6dmFyKC0tc3VyZmFjZSk7Ym9yZGVyOjFweCBzb2xpZCB2YXIoLS1ib3JkZXIpO2NvbG9yOnZhcigtLW11dGVkKTtwYWRkaW5nOjhweCAxNnB4O2JvcmRlci1yYWRpdXM6NHB4O2N1cnNvcjpwb2ludGVyO3RyYW5zaXRpb246YWxsIC4yczt9CiAgICAgICAgIC50YnRuOmhvdmVye2NvbG9yOnZhcigtLWluayk7Ym9yZGVyLWNvbG9yOnZhcigtLXN1Yik7fQogICAgICAgICAudGJ0bi5vbntiYWNrZ3JvdW5kOnZhcigtLWdvbGQpO2NvbG9yOiMwMDA7Ym9yZGVyLWNvbG9yOnZhcigtLWdvbGQpO2ZvbnQtd2VpZ2h0OjcwMDt9CiAgICAgICAgIC50YnRuLmdvbGQtb3V0bGluZXtib3JkZXItY29sb3I6dmFyKC0tZ29sZCk7Y29sb3I6dmFyKC0tZ29sZCk7fQogICAgICAgICAudGJ0bi5nb2xkLW91dGxpbmU6aG92ZXJ7YmFja2dyb3VuZDp2YXIoLS1nb2xkKTtjb2xvcjojMDAwO30KICAgICAgICAgLmJ1Y2tldHttYXJnaW4tYm90dG9tOjQ4cHg7fQogICAgICAgICAuYmhlYWR7cGFkZGluZzoyNHB4IDI4cHg7Ym9yZGVyLXJhZGl1czo4cHg7bWFyZ2luLWJvdHRvbToyMHB4O2JvcmRlcjoxcHggc29saWQ7ZGlzcGxheTpmbGV4O2FsaWduLWl0ZW1zOmNlbnRlcjtnYXA6MTZweDtmbGV4LXdyYXA6d3JhcDtiYWNrZ3JvdW5kOnJnYmEoMjU1LDI1NSwyNTUsMC4wMSk7fQogICAgICAgICAuYm5hbWV7Zm9udC1mYW1pbHk6J0JlYmFzIE5ldWUnLHNhbnMtc2VyaWY7Zm9udC1zaXplOjQycHg7bGV0dGVyLXNwYWNpbmc6LjA1ZW07bGluZS1oZWlnaHQ6MTtmbGV4OjE7fQogICAgICAgICAuYnJhbmdle2ZvbnQtZmFtaWx5OidCZWJhcyBOZXVlJyxzYW5zLXNlcmlmO2ZvbnQtc2l6ZToyMHB4O3BhZGRpbmc6NnB4IDE2cHg7Ym9yZGVyLXJhZGl1czo0cHg7Ym9yZGVyOjFweCBzb2xpZDtiYWNrZ3JvdW5kOnJnYmEoMCwwLDAsMC4yKTt9CiAgICAgICAgIC5jYXJkc3tkaXNwbGF5OmdyaWQ7Z3JpZC10ZW1wbGF0ZS1jb2x1bW5zOnJlcGVhdChhdXRvLWZpbGwsbWlubWF4KDMxMHB4LDFmcikpO2dhcDoxMnB4O30KICAgICAgICAgLmxjYXJke2JhY2tncm91bmQ6dmFyKC0tY2FyZCk7Ym9yZGVyOjFweCBzb2xpZCB2YXIoLS1ib3JkZXIpO2JvcmRlci1yYWRpdXM6OHB4O3BhZGRpbmc6MjBweDt0cmFuc2l0aW9uOmFsbCAuMnM7cG9zaXRpb246cmVsYXRpdmU7Y3Vyc29yOnBvaW50ZXI7ZGlzcGxheTpmbGV4O2ZsZXgtZGlyZWN0aW9uOmNvbHVtbjtnYXA6MTBweDt9CiAgICAgICAgIC5sY2FyZDpob3Zlcntib3JkZXItY29sb3I6dmFyKC0tc3ViKTt0cmFuc2Zvcm06dHJhbnNsYXRlWSgtNHB4KTtib3gtc2hhZG93OjAgMTJweCAzMHB4IHJnYmEoMCwwLDAsMC41KTt9CiAgICAgICAgIC5sY2FyZC5zZWx7Ym9yZGVyLWNvbG9yOnZhcigtLWdvbGQpO2JhY2tncm91bmQ6dmFyKC0tZ29sZC1nbG93KTtib3gtc2hhZG93OjAgMCAyMHB4IHJnYmEoMjUxLDE5MSwzNiwwLjA1KTt9CiAgICAgICAgIC5jaGt7cG9zaXRpb246YWJzb2x1dGU7dG9wOjE1cHg7cmlnaHQ6MTVweDt3aWR0aDoxOHB4O2hlaWdodDoxOHB4O2JvcmRlcjoycHggc29saWQgdmFyKC0tYm9yZGVyKTtib3JkZXItcmFkaXVzOjRweDtiYWNrZ3JvdW5kOnZhcigtLWJnKTt0cmFuc2l0aW9uOmFsbCAuMnM7fQogICAgICAgICAuY2hrLm9ue2JhY2tncm91bmQ6dmFyKC0tZ29sZCk7Ym9yZGVyLWNvbG9yOnZhcigtLWdvbGQpO30KICAgICAgICAgLmNoay5vbjo6YWZ0ZXJ7Y29udGVudDon4pyTJztmb250LXNpemU6MTFweDtjb2xvcjojMDAwO3Bvc2l0aW9uOmFic29sdXRlO2xlZnQ6M3B4O3RvcDotMXB4O2ZvbnQtd2VpZ2h0OjkwMDt9CiAgICAgICAgIC5jbntmb250LXNpemU6MThweDtmb250LXdlaWdodDo3MDA7bGV0dGVyLXNwYWNpbmc6LTAuMDJlbTtwYWRkaW5nLXJpZ2h0OjMwcHg7fQogICAgICAgICAuY3R7Zm9udC1mYW1pbHk6J0lCTSBQbGV4IE1vbm8nLG1vbm9zcGFjZTtmb250LXNpemU6OXB4O3RleHQtdHJhbnNmb3JtOnVwcGVyY2FzZTtjb2xvcjp2YXIoLS1zdWIpO2xldHRlci1zcGFjaW5nOi4xZW07fQogICAgICAgICAucGl0Y2gtYmFubmVye2JhY2tncm91bmQ6cmdiYSgyNTEsMTkxLDM2LDAuMDgpO2JvcmRlcjoxcHggc29saWQgcmdiYSgyNTEsMTkxLDM2LDAuMik7Ym9yZGVyLXJhZGl1czo0cHg7cGFkZGluZzoxMnB4O2ZvbnQtc2l6ZToxMnB4O2NvbG9yOnZhcigtLWdvbGQpO2xpbmUtaGVpZ2h0OjEuNTtmb250LXN0eWxlOml0YWxpYzt9CiAgICAgICAgIC5jYXJkLWNvbnRhY3R7ZGlzcGxheTpmbGV4O2ZsZXgtZGlyZWN0aW9uOmNvbHVtbjtnYXA6NnB4O21hcmdpbi10b3A6NXB4O30KICAgICAgICAgLmNvbnRhY3QtaXRlbXtkaXNwbGF5OmZsZXg7YWxpZ24taXRlbXM6Y2VudGVyO2dhcDo4cHg7Zm9udC1mYW1pbHk6J0lCTSBQbGV4IE1vbm8nLG1vbm9zcGFjZTtmb250LXNpemU6MTFweDt0ZXh0LWRlY29yYXRpb246bm9uZTtwYWRkaW5nOjhweCAxMnB4O2JvcmRlci1yYWRpdXM6NHB4O2JhY2tncm91bmQ6cmdiYSgyNTUsMjU1LDI1NSwwLjAzKTtib3JkZXI6MXB4IHNvbGlkIHZhcigtLWJvcmRlcik7dHJhbnNpdGlvbjphbGwgLjJzO30KICAgICAgICAgLmNvbnRhY3QtaXRlbS5waHtjb2xvcjp2YXIoLS1ncmVlbik7Ym9yZGVyLWNvbG9yOnJnYmEoNzQsMjIyLDEyOCwwLjIpO30KICAgICAgICAgLmNvbnRhY3QtaXRlbS5lbXtjb2xvcjp2YXIoLS1wdXJwbGUpO2JvcmRlci1jb2xvcjpyZ2JhKDE2NywxMzksMjUwLDAuMik7fQogICAgICAgICAuY29udGFjdC1pdGVtOmhvdmVye2JhY2tncm91bmQ6cmdiYSgyNTUsMjU1LDI1NSwwLjA4KTt0cmFuc2Zvcm06dHJhbnNsYXRlWCgycHgpO30KICAgICAgICAgLmNhcmQtZm9vdHtkaXNwbGF5OmZsZXg7YWxpZ24taXRlbXM6Y2VudGVyO2p1c3RpZnktY29udGVudDpzcGFjZS1iZXR3ZWVuO21hcmdpbi10b3A6YXV0bztwYWRkaW5nLXRvcDoxNXB4O2JvcmRlci10b3A6MXB4IHNvbGlkIHJnYmEoMjU1LDI1NSwyNTUsMC4wNSk7fQogICAgICAgICAuY2FsbC1idG57Zm9udC1mYW1pbHk6J0lCTSBQbGV4IE1vbm8nLG1vbm9zcGFjZTtmb250LXNpemU6MTBweDtiYWNrZ3JvdW5kOnJnYmEoNzQsMjIyLDEyOCwwLjEpO2JvcmRlcjoxcHggc29saWQgcmdiYSg3NCwyMjIsMTI4LDAuMyk7Y29sb3I6dmFyKC0tZ3JlZW4pO3BhZGRpbmc6OHB4IDE0cHg7Ym9yZGVyLXJhZGl1czo0cHg7Y3Vyc29yOnBvaW50ZXI7dHJhbnNpdGlvbjphbGwgLjJzO2ZvbnQtd2VpZ2h0OjcwMDt9CiAgICAgICAgIC5jYWxsLWJ0bjpob3ZlcntiYWNrZ3JvdW5kOnZhcigtLWdyZWVuKTtjb2xvcjojMDAwO30KICAgICAgICAgLmNhbGwtYnRuLmNhbGxpbmd7YmFja2dyb3VuZDp2YXIoLS1vcmFuZ2UpO2NvbG9yOiMwMDA7Ym9yZGVyLWNvbG9yOnZhcigtLW9yYW5nZSk7YW5pbWF0aW9uOnB1bHNlLW9yYW5nZSAxcyBpbmZpbml0ZTt9Ci5xdWV1ZS1iYXJ7ZGlzcGxheTpub25lO3Bvc2l0aW9uOmZpeGVkO2JvdHRvbTowO2xlZnQ6MDtyaWdodDowO2JhY2tncm91bmQ6IzBmMTcyYTtib3JkZXItdG9wOjJweCBzb2xpZCB2YXIoLS1ncmVlbik7cGFkZGluZzoxMnB4IDIwcHg7ei1pbmRleDo5OTk5O2FsaWduLWl0ZW1zOmNlbnRlcjtnYXA6MTRweDtmbGV4LXdyYXA6d3JhcDt9Ci5xdWV1ZS1iYXIuYWN0aXZle2Rpc3BsYXk6ZmxleDt9Ci5xdWV1ZS1zdGF0e2ZvbnQtZmFtaWx5OidJQk0gUGxleCBNb25vJyxtb25vc3BhY2U7Zm9udC1zaXplOjExcHg7Y29sb3I6dmFyKC0tbXV0ZWQpO30KLnF1ZXVlLXN0YXQgc3Ryb25ne2NvbG9yOnZhcigtLWdyZWVuKTt9Ci5xdWV1ZS1zdGF0Lndhcm4gc3Ryb25ne2NvbG9yOnZhcigtLWdvbGQpO30KLnF1ZXVlLXN0YXR1c3tmb250LWZhbWlseTonSUJNIFBsZXggTW9ubycsbW9ub3NwYWNlO2ZvbnQtc2l6ZToxMHB4O2xldHRlci1zcGFjaW5nOi4wOGVtO3RleHQtdHJhbnNmb3JtOnVwcGVyY2FzZTtjb2xvcjp2YXIoLS1nb2xkKTtmbGV4OjE7fQouYnRuLXF1ZXVlLXN0YXJ0e2JhY2tncm91bmQ6dmFyKC0tZ3JlZW4pO2NvbG9yOiMwMDA7Ym9yZGVyOm5vbmU7Zm9udC1mYW1pbHk6J0lCTSBQbGV4IE1vbm8nLG1vbm9zcGFjZTtmb250LXNpemU6MTBweDtsZXR0ZXItc3BhY2luZzouMDhlbTt0ZXh0LXRyYW5zZm9ybTp1cHBlcmNhc2U7cGFkZGluZzo4cHggMThweDtib3JkZXItcmFkaXVzOjVweDtjdXJzb3I6cG9pbnRlcjtmb250LXdlaWdodDo3MDA7fQouYnRuLXF1ZXVlLXN0b3B7YmFja2dyb3VuZDpyZ2JhKDI0NCw2Myw2MywuMTUpO2NvbG9yOnZhcigtLXJlZCk7Ym9yZGVyOjFweCBzb2xpZCByZ2JhKDI0NCw2Myw2MywuMyk7Zm9udC1mYW1pbHk6J0lCTSBQbGV4IE1vbm8nLG1vbm9zcGFjZTtmb250LXNpemU6MTBweDtsZXR0ZXItc3BhY2luZzouMDhlbTt0ZXh0LXRyYW5zZm9ybTp1cHBlcmNhc2U7cGFkZGluZzo4cHggMThweDtib3JkZXItcmFkaXVzOjVweDtjdXJzb3I6cG9pbnRlcjt9Ci5sZWFkLXR6e2ZvbnQtZmFtaWx5OidJQk0gUGxleCBNb25vJyxtb25vc3BhY2U7Zm9udC1zaXplOjlweDtjb2xvcjp2YXIoLS1tdXRlZCk7bWFyZ2luLXRvcDozcHg7fQoubGVhZC10ei5vcGVue2NvbG9yOnZhcigtLWdyZWVuKTt9Ci5sZWFkLXR6LmJsb2NrZWR7Y29sb3I6dmFyKC0tcmVkKTt9Ci5sZWFkLXR6LndhaXRpbmd7Y29sb3I6dmFyKC0tZ29sZCk7fQogICAgICAgICAvKiDilIDilIAgQ2FsbCBMb2cgJiBQZXJzaXN0ZW5jZSDilIDilIAgKi8KICAgICAgICAgLmNhbGxsb2d7YmFja2dyb3VuZDp2YXIoLS1jYXJkKTtib3JkZXI6MXB4IHNvbGlkIHZhcigtLWJvcmRlcik7Ym9yZGVyLXJhZGl1czo4cHg7cGFkZGluZzoyNHB4O21hcmdpbi1ib3R0b206MzJweDtkaXNwbGF5Om5vbmU7Ym94LXNoYWRvdzowIDEwcHggMjVweCByZ2JhKDAsMCwwLDAuNCk7fQogICAgICAgICAuY2FsbGxvZy52aXNpYmxle2Rpc3BsYXk6YmxvY2s7fQogICAgICAgICAuY2FsbGxvZy1oZWFke2ZvbnQtZmFtaWx5OidCZWJhcyBOZXVlJyxzYW5zLXNlcmlmO2ZvbnQtc2l6ZToyNHB4O2xldHRlci1zcGFjaW5nOjFweDttYXJnaW4tYm90dG9tOjIwcHg7ZGlzcGxheTpmbGV4O2FsaWduLWl0ZW1zOmNlbnRlcjtqdXN0aWZ5LWNvbnRlbnQ6c3BhY2UtYmV0d2Vlbjt9CiAgICAgICAgIC5jYWxsbG9nLWl0ZW17ZGlzcGxheTpncmlkO2dyaWQtdGVtcGxhdGUtY29sdW1uczoxMDBweCAxZnIgMTAwcHg7Z2FwOjIwcHg7cGFkZGluZzoxMnB4IDA7Ym9yZGVyLWJvdHRvbToxcHggc29saWQgcmdiYSgyNTUsMjU1LDI1NSwwLjA1KTthbGlnbi1pdGVtczpjZW50ZXI7fQogICAgICAgICAuY2FsbGxvZy1zdGF0dXN7Zm9udC1mYW1pbHk6J0lCTSBQbGV4IE1vbm8nLG1vbm9zcGFjZTtmb250LXNpemU6OXB4O3BhZGRpbmc6NHB4IDhweDtib3JkZXItcmFkaXVzOjNweDt0ZXh0LWFsaWduOmNlbnRlcjtmb250LXdlaWdodDo3MDA7fQogICAgICAgICAuY2xzLWFuc3dlcmVke2JhY2tncm91bmQ6cmdiYSg3NCwyMjIsMTI4LDAuMTUpO2NvbG9yOnZhcigtLWdyZWVuKTt9CiAgICAgICAgIC5jbHMtY2FsbGluZ3tiYWNrZ3JvdW5kOnJnYmEoMjUxLDE0Niw2MCwwLjE1KTtjb2xvcjp2YXIoLS1vcmFuZ2UpO30KICAgICAgICAgLyog4pSA4pSAIE1vZGFscyAmIFRlcm1zIOKUgOKUgCAqLwogICAgICAgICAudGVybXMtbW9kYWx7cG9zaXRpb246Zml4ZWQ7aW5zZXQ6MDtiYWNrZ3JvdW5kOnJnYmEoMCwwLDAsMC45NSk7ei1pbmRleDo5OTk5O2Rpc3BsYXk6bm9uZTthbGlnbi1pdGVtczpjZW50ZXI7anVzdGlmeS1jb250ZW50OmNlbnRlcjtwYWRkaW5nOjI0cHg7YmFja2Ryb3AtZmlsdGVyOmJsdXIoMTBweCk7fQogICAgICAgICAudGVybXMtYm94e2JhY2tncm91bmQ6dmFyKC0tY2FyZCk7Ym9yZGVyOjFweCBzb2xpZCB2YXIoLS1ib3JkZXIpO2JvcmRlci1yYWRpdXM6MTJweDttYXgtd2lkdGg6NzIwcHg7d2lkdGg6MTAwJTttYXgtaGVpZ2h0Ojkwdmg7b3ZlcmZsb3cteTphdXRvO2JvcmRlci10b3A6NnB4IHNvbGlkIHZhcigtLWdvbGQpO2JveC1zaGFkb3c6MCAwIDEwMHB4IHJnYmEoMCwwLDAsMSk7fQogICAgICAgICAudGVybXMtYm9keXtwYWRkaW5nOjQwcHg7Zm9udC1zaXplOjE0cHg7bGluZS1oZWlnaHQ6MS44O2NvbG9yOnZhcigtLW11dGVkKTt9CiAgICAgICAgIC50ZXJtcy1ib2R5IGgye2ZvbnQtZmFtaWx5OidCZWJhcyBOZXVlJyxzYW5zLXNlcmlmO2ZvbnQtc2l6ZTozNnB4O2NvbG9yOnZhcigtLWdvbGQpO21hcmdpbi1ib3R0b206MjBweDt0ZXh0LWFsaWduOmNlbnRlcjt9CiAgICAgICAgIC50ZXJtcy1ib2R5IHN0cm9uZ3tjb2xvcjp2YXIoLS1pbmspO30KICAgICAgICAgLnRlcm1zLWJvZHkgdWx7bWFyZ2luOjIwcHggMDtwYWRkaW5nLWxlZnQ6MjBweDt9CiAgICAgICAgIC50ZXJtcy1jaGVja3tkaXNwbGF5OmZsZXg7YWxpZ24taXRlbXM6ZmxleC1zdGFydDtnYXA6MTJweDttYXJnaW4tdG9wOjMwcHg7YmFja2dyb3VuZDpyZ2JhKDI1NSwyNTUsMjU1LDAuMDMpO3BhZGRpbmc6MjBweDtib3JkZXItcmFkaXVzOjhweDtjdXJzb3I6cG9pbnRlcjt9CiAgICAgICAgIC50ZXJtcy1hY2NlcHQtYnRue3dpZHRoOjEwMCU7YmFja2dyb3VuZDp2YXIoLS1ncmVlbik7Y29sb3I6IzAwMDtib3JkZXI6bm9uZTtmb250LWZhbWlseTonQmViYXMgTmV1ZScsc2Fucy1zZXJpZjtmb250LXNpemU6MjhweDtwYWRkaW5nOjE4cHg7Ym9yZGVyLXJhZGl1czo2cHg7Y3Vyc29yOnBvaW50ZXI7bWFyZ2luLXRvcDoyMHB4O29wYWNpdHk6MC4zO3BvaW50ZXItZXZlbnRzOm5vbmU7dHJhbnNpdGlvbjphbGwgLjNzO30KICAgICAgICAgLnRlcm1zLWFjY2VwdC1idG4ucmVhZHl7b3BhY2l0eToxO3BvaW50ZXItZXZlbnRzOmFsbDt9CiAgICAgICAgIC8qIOKUgOKUgCBUb2FzdCDilIDilIAgKi8KICAgICAgICAgLnRvYXN0e3Bvc2l0aW9uOmZpeGVkO2JvdHRvbTo0MHB4O2xlZnQ6NTAlO3RyYW5zZm9ybTp0cmFuc2xhdGVYKC01MCUpIHRyYW5zbGF0ZVkoMjBweCk7YmFja2dyb3VuZDp2YXIoLS1nb2xkKTtjb2xvcjojMDAwO3BhZGRpbmc6MTJweCAyNHB4O2JvcmRlci1yYWRpdXM6NTBweDtmb250LWZhbWlseTonSUJNIFBsZXggTW9ubycsbW9ub3NwYWNlO2ZvbnQtc2l6ZToxMnB4O2ZvbnQtd2VpZ2h0OjcwMDtib3gtc2hhZG93OjAgMTBweCA0MHB4IHJnYmEoMCwwLDAsMC41KTtvcGFjaXR5OjA7dHJhbnNpdGlvbjphbGwgLjNzO3otaW5kZXg6MTAwMDA7cG9pbnRlci1ldmVudHM6bm9uZTt9CiAgICAgICAgIC50b2FzdC5zaG93e29wYWNpdHk6MTt0cmFuc2Zvcm06dHJhbnNsYXRlWCgtNTAlKSB0cmFuc2xhdGVZKDApO30KICAgICAgICAgLnNlbGJhcntwb3NpdGlvbjpmaXhlZDtib3R0b206MDtsZWZ0OjA7cmlnaHQ6MDtiYWNrZ3JvdW5kOnZhcigtLWNhcmQpO2JvcmRlci10b3A6MXB4IHNvbGlkIHZhcigtLWJvcmRlcik7cGFkZGluZzoxMnB4IDI4cHg7YWxpZ24taXRlbXM6Y2VudGVyO2dhcDoxMnB4O3otaW5kZXg6MTAwO2ZsZXgtd3JhcDp3cmFwO30KICAgICAgICAgLnNlbGJhci5zaG93e2Rpc3BsYXk6ZmxleCAhaW1wb3J0YW50O30KICAgICAgICAgLnByby10YWd7Zm9udC1mYW1pbHk6J0JlYmFzIE5ldWUnLHNhbnMtc2VyaWY7Zm9udC1zaXplOmNsYW1wKDE4cHgsMnZ3LDI4cHgpO2NvbG9yOiM3YzNhZWQ7dmVydGljYWwtYWxpZ246bWlkZGxlO2xldHRlci1zcGFjaW5nOi4wNGVtOy13ZWJraXQtdGV4dC1maWxsLWNvbG9yOiM3YzNhZWQ7YmFja2dyb3VuZDpub25lO30KCiAgICAgICAgIC8qIOKVkOKVkCBQUk9HUkVTUyBDQVJEIOKVkOKVkCAqLwogICAgICAgICAucHJvZy13cmFwe21hcmdpbi1ib3R0b206MjRweDt9CiAgICAgICAgIC5wcm9nLWNhcmR7YmFja2dyb3VuZDp2YXIoLS1jYXJkKTtib3JkZXI6MXB4IHNvbGlkIHZhcigtLWJvcmRlcik7Ym9yZGVyLXJhZGl1czoxMnB4O292ZXJmbG93OmhpZGRlbjtib3gtc2hhZG93OjAgMjBweCA0MHB4IHJnYmEoMCwwLDAsMC41KTt9CiAgICAgICAgIC5wcm9nLWFjY2VudHtoZWlnaHQ6M3B4O2JhY2tncm91bmQ6bGluZWFyLWdyYWRpZW50KDkwZGVnLHZhcigtLXJlZCksdmFyKC0tZ29sZCksdmFyKC0tZ3JlZW4pKTt9CiAgICAgICAgIC5wcm9nLWhlYWRlcntwYWRkaW5nOjE2cHggMjRweDtib3JkZXItYm90dG9tOjFweCBzb2xpZCB2YXIoLS1zdXJmYWNlKTtkaXNwbGF5OmZsZXg7YWxpZ24taXRlbXM6Y2VudGVyO2p1c3RpZnktY29udGVudDpzcGFjZS1iZXR3ZWVuO2ZsZXgtd3JhcDp3cmFwO2dhcDoxMHB4O30KICAgICAgICAgLnByb2ctbGl2ZXtkaXNwbGF5OmZsZXg7YWxpZ24taXRlbXM6Y2VudGVyO2dhcDo4cHg7fQogICAgICAgICAucHJvZy1saXZlRG90e3dpZHRoOjhweDtoZWlnaHQ6OHB4O2JvcmRlci1yYWRpdXM6NTAlO2JhY2tncm91bmQ6dmFyKC0tcmVkKTthbmltYXRpb246YmxpbmsgMXMgaW5maW5pdGU7fQogICAgICAgICAucHJvZy1saXZlTGFiZWx7Zm9udC1mYW1pbHk6J0lCTSBQbGV4IE1vbm8nLG1vbm9zcGFjZTtmb250LXNpemU6MTBweDtsZXR0ZXItc3BhY2luZzouMmVtO3RleHQtdHJhbnNmb3JtOnVwcGVyY2FzZTtjb2xvcjp2YXIoLS1zdWIpO30KICAgICAgICAgLnByb2ctbXNne2ZvbnQtZmFtaWx5OidJQk0gUGxleCBNb25vJyxtb25vc3BhY2U7Zm9udC1zaXplOjExcHg7Y29sb3I6dmFyKC0tbXV0ZWQpO30KICAgICAgICAgLnByb2ctc3RhdHMtZ3JpZHtkaXNwbGF5OmdyaWQ7Z3JpZC10ZW1wbGF0ZS1jb2x1bW5zOjFmciAxZnIgMWZyO2dhcDoxcHg7YmFja2dyb3VuZDp2YXIoLS1zdXJmYWNlKTt9CiAgICAgICAgIC5wcm9nLXN0YXR7YmFja2dyb3VuZDp2YXIoLS1jYXJkKTtwYWRkaW5nOjIwcHg7dGV4dC1hbGlnbjpjZW50ZXI7fQogICAgICAgICAucHJvZy1zdGF0TnVte2ZvbnQtZmFtaWx5OidCZWJhcyBOZXVlJyxzYW5zLXNlcmlmO2ZvbnQtc2l6ZTo1MnB4O2xpbmUtaGVpZ2h0OjE7fQogICAgICAgICAucHJvZy1zdGF0TnVtLmdvbGR7YmFja2dyb3VuZDpsaW5lYXItZ3JhZGllbnQoMTM1ZGVnLHZhcigtLWdvbGQpLHZhcigtLW9yYW5nZSkpOy13ZWJraXQtYmFja2dyb3VuZC1jbGlwOnRleHQ7LXdlYmtpdC10ZXh0LWZpbGwtY29sb3I6dHJhbnNwYXJlbnQ7YmFja2dyb3VuZC1jbGlwOnRleHQ7fQogICAgICAgICAucHJvZy1zdGF0TnVtLnB1cnBsZXtiYWNrZ3JvdW5kOmxpbmVhci1ncmFkaWVudCgxMzVkZWcsdmFyKC0tcHVycGxlKSx2YXIoLS1ibHVlKSk7LXdlYmtpdC1iYWNrZ3JvdW5kLWNsaXA6dGV4dDstd2Via2l0LXRleHQtZmlsbC1jb2xvcjp0cmFuc3BhcmVudDtiYWNrZ3JvdW5kLWNsaXA6dGV4dDt9CiAgICAgICAgIC5wcm9nLXN0YXROdW0uZGlte2NvbG9yOnZhcigtLWJvcmRlcik7fQogICAgICAgICAucHJvZy1zdGF0TGFiZWx7Zm9udC1mYW1pbHk6J0lCTSBQbGV4IE1vbm8nLG1vbm9zcGFjZTtmb250LXNpemU6OXB4O2xldHRlci1zcGFjaW5nOi4xNWVtO3RleHQtdHJhbnNmb3JtOnVwcGVyY2FzZTtjb2xvcjp2YXIoLS1kaW0pO21hcmdpbi10b3A6NHB4O30KICAgICAgICAgLnByb2ctYmFyV3JhcHtwYWRkaW5nOjE2cHggMjRweCAyMnB4O30KICAgICAgICAgLnByb2ctYmFyVG9we2Rpc3BsYXk6ZmxleDtqdXN0aWZ5LWNvbnRlbnQ6c3BhY2UtYmV0d2VlbjttYXJnaW4tYm90dG9tOjhweDt9CiAgICAgICAgIC5wcm9nLWJhckxhYmVse2ZvbnQtZmFtaWx5OidJQk0gUGxleCBNb25vJyxtb25vc3BhY2U7Zm9udC1zaXplOjlweDtjb2xvcjp2YXIoLS1kaW0pO2xldHRlci1zcGFjaW5nOi4xZW07dGV4dC10cmFuc2Zvcm06dXBwZXJjYXNlO30KICAgICAgICAgLnByb2ctYmFyUGN0e2ZvbnQtZmFtaWx5OidJQk0gUGxleCBNb25vJyxtb25vc3BhY2U7Zm9udC1zaXplOjlweDtjb2xvcjp2YXIoLS1tdXRlZCk7fQogICAgICAgICAucHJvZy10cmFja3tiYWNrZ3JvdW5kOnZhcigtLXN1cmZhY2UpO2JvcmRlci1yYWRpdXM6NHB4O2hlaWdodDo2cHg7b3ZlcmZsb3c6aGlkZGVuO30KICAgICAgICAgLnByb2ctZmlsbHt3aWR0aDowJTtoZWlnaHQ6MTAwJTtiYWNrZ3JvdW5kOmxpbmVhci1ncmFkaWVudCg5MGRlZyx2YXIoLS1yZWQpLHZhcigtLWdvbGQpLHZhcigtLWdyZWVuKSk7dHJhbnNpdGlvbjp3aWR0aCAuNHMgZWFzZTtib3JkZXItcmFkaXVzOjRweDt9CiAgICAgICAgIC8qIOKVkOKVkCBTVEFUUyBST1cg4pWQ4pWQICovCiAgICAgICAgIC5zdGF0c3tkaXNwbGF5OmdyaWQ7Z3JpZC10ZW1wbGF0ZS1jb2x1bW5zOnJlcGVhdChhdXRvLWZpdCxtaW5tYXgoMTMwcHgsMWZyKSk7Z2FwOjFweDtiYWNrZ3JvdW5kOnZhcigtLWJvcmRlcik7Ym9yZGVyLXJhZGl1czoxMHB4O292ZXJmbG93OmhpZGRlbjttYXJnaW4tYm90dG9tOjI0cHg7Ym94LXNoYWRvdzowIDRweCAxNnB4IHJnYmEoMCwwLDAsMC4zKTt9CiAgICAgICAgIC5zdGF0e2JhY2tncm91bmQ6dmFyKC0tY2FyZCk7cGFkZGluZzoxNnB4O3RleHQtYWxpZ246Y2VudGVyO30KICAgICAgICAgLnN0YXQuaGl7YmFja2dyb3VuZDpyZ2JhKDI1MSwxOTEsMzYsMC4wNCk7fQogICAgICAgICAuc257Zm9udC1mYW1pbHk6J0JlYmFzIE5ldWUnLHNhbnMtc2VyaWY7Zm9udC1zaXplOjM2cHg7bGluZS1oZWlnaHQ6MTtjb2xvcjp2YXIoLS1pbmspO30KICAgICAgICAgLnNse2ZvbnQtZmFtaWx5OidJQk0gUGxleCBNb25vJyxtb25vc3BhY2U7Zm9udC1zaXplOjlweDtsZXR0ZXItc3BhY2luZzouMWVtO3RleHQtdHJhbnNmb3JtOnVwcGVyY2FzZTtjb2xvcjp2YXIoLS1kaW0pO21hcmdpbi10b3A6NHB4O30KICAgICAgICAgLyog4pWQ4pWQIEVNUFRZIFNUQVRFIOKVkOKVkCAqLwogICAgICAgICAuZW1wdHktc3RhdGV7YmFja2dyb3VuZDp2YXIoLS1jYXJkKTtib3JkZXI6MXB4IHNvbGlkIHZhcigtLWJvcmRlcik7Ym9yZGVyLXJhZGl1czoxMnB4O3BhZGRpbmc6NjBweCA0MHB4O3RleHQtYWxpZ246Y2VudGVyO2JveC1zaGFkb3c6MCAxMHB4IDMwcHggcmdiYSgwLDAsMCwwLjQpO21hcmdpbi10b3A6OHB4O30KICAgICAgICAgLmViaWd7Zm9udC1mYW1pbHk6J0JlYmFzIE5ldWUnLHNhbnMtc2VyaWY7Zm9udC1zaXplOmNsYW1wKDYwcHgsMTB2dywxMjBweCk7bGluZS1oZWlnaHQ6Ljg1O2xldHRlci1zcGFjaW5nOi4wNGVtO2JhY2tncm91bmQ6bGluZWFyLWdyYWRpZW50KDEzNWRlZyx2YXIoLS1nb2xkKSx2YXIoLS1vcmFuZ2UpKTstd2Via2l0LWJhY2tncm91bmQtY2xpcDp0ZXh0Oy13ZWJraXQtdGV4dC1maWxsLWNvbG9yOnRyYW5zcGFyZW50O2JhY2tncm91bmQtY2xpcDp0ZXh0O21hcmdpbi1ib3R0b206MjRweDt9CiAgICAgICAgIC5lbXB0eS1zdGF0ZSBwe2ZvbnQtc2l6ZToxNXB4O2NvbG9yOnZhcigtLW11dGVkKTtsaW5lLWhlaWdodDoxLjg7bWF4LXdpZHRoOjQ4MHB4O21hcmdpbjowIGF1dG87fQogICAgICAgICAvKiDilZDilZAgRVJST1IgTE9HIOKVkOKVkCAqLwogICAgICAgICAuZXJyLWxvZ3tiYWNrZ3JvdW5kOnJnYmEoMjQ0LDYzLDYzLC4wNSk7Ym9yZGVyOjFweCBzb2xpZCByZ2JhKDI0NCw2Myw2MywuMik7Ym9yZGVyLXJhZGl1czo4cHg7cGFkZGluZzoxNnB4IDIwcHg7bWFyZ2luLWJvdHRvbToyMHB4O30KICAgICAgLyog4pWQ4pWQIENBTEwgU0hFRVQgKGludGVncmF0ZWQpIOKVkOKVkCAqLwouY3Mtd3JhcHttYXgtd2lkdGg6MTQwMHB4O21hcmdpbjowIGF1dG87cGFkZGluZzo4cHggMjRweCA5MHB4O30KLmNzLXBhbmVse2JhY2tncm91bmQ6dmFyKC0tY2FyZCk7Ym9yZGVyOjFweCBzb2xpZCB2YXIoLS1ib3JkZXIpO2JvcmRlci1yYWRpdXM6MTJweDtwYWRkaW5nOjI0cHg7bWFyZ2luLXRvcDoyNHB4O2JveC1zaGFkb3c6MCAxMHB4IDMwcHggcmdiYSgwLDAsMCwuNCk7fQouY3MtdG9we2Rpc3BsYXk6ZmxleDthbGlnbi1pdGVtczpjZW50ZXI7Z2FwOjEycHg7ZmxleC13cmFwOndyYXA7bWFyZ2luLWJvdHRvbToxNnB4O30KLmNzLXRpdGxle2ZvbnQtZmFtaWx5OidCZWJhcyBOZXVlJyxzYW5zLXNlcmlmO2ZvbnQtc2l6ZTozMHB4O2xldHRlci1zcGFjaW5nOi4wNGVtO30KLmNzLXRpdGxlIHNwYW57Y29sb3I6dmFyKC0tZ29sZCk7fQouY3MtY291bnR7Zm9udC1mYW1pbHk6J0lCTSBQbGV4IE1vbm8nLG1vbm9zcGFjZTtmb250LXNpemU6MTFweDtjb2xvcjp2YXIoLS1tdXRlZCk7fQouY3MtdG9nZ2xle2Rpc3BsYXk6aW5saW5lLWZsZXg7Ym9yZGVyOjFweCBzb2xpZCB2YXIoLS1ib3JkZXIpO2JvcmRlci1yYWRpdXM6NnB4O292ZXJmbG93OmhpZGRlbjt9Ci5jcy10b2dnbGUgYnV0dG9ue2JhY2tncm91bmQ6dmFyKC0tc3VyZmFjZSk7Y29sb3I6dmFyKC0tbXV0ZWQpO2JvcmRlcjpub25lO2ZvbnQtZmFtaWx5OidJQk0gUGxleCBNb25vJyxtb25vc3BhY2U7Zm9udC1zaXplOjEwcHg7bGV0dGVyLXNwYWNpbmc6LjA1ZW07dGV4dC10cmFuc2Zvcm06dXBwZXJjYXNlO3BhZGRpbmc6OHB4IDE0cHg7Y3Vyc29yOnBvaW50ZXI7fQouY3MtdG9nZ2xlIGJ1dHRvbi5vbntiYWNrZ3JvdW5kOnZhcigtLWdvbGQpO2NvbG9yOiMwMDA7Zm9udC13ZWlnaHQ6NzAwO30KLmNzLWZpbHRlcnN7ZGlzcGxheTpmbGV4O2dhcDo4cHg7ZmxleC13cmFwOndyYXA7YWxpZ24taXRlbXM6Y2VudGVyO21hcmdpbi1ib3R0b206MTZweDt9Ci5jcy1pbnB7YmFja2dyb3VuZDp2YXIoLS1iZyk7Ym9yZGVyOjFweCBzb2xpZCB2YXIoLS1ib3JkZXIpO2JvcmRlci1yYWRpdXM6NXB4O3BhZGRpbmc6OHB4IDEwcHg7Zm9udC1mYW1pbHk6J0RNIFNhbnMnLHNhbnMtc2VyaWY7Zm9udC1zaXplOjEzcHg7Y29sb3I6dmFyKC0taW5rKTtvdXRsaW5lOm5vbmU7bWluLXdpZHRoOjEzMHB4O30KLmNzLWlucDpmb2N1c3tib3JkZXItY29sb3I6dmFyKC0tZ29sZCk7fQouY3MtZmJ0bntiYWNrZ3JvdW5kOnZhcigtLXN1cmZhY2UpO2JvcmRlcjoxcHggc29saWQgdmFyKC0tYm9yZGVyKTtjb2xvcjp2YXIoLS1tdXRlZCk7Zm9udC1mYW1pbHk6J0lCTSBQbGV4IE1vbm8nLG1vbm9zcGFjZTtmb250LXNpemU6MTBweDtsZXR0ZXItc3BhY2luZzouMDVlbTt0ZXh0LXRyYW5zZm9ybTp1cHBlcmNhc2U7cGFkZGluZzo3cHggMTJweDtib3JkZXItcmFkaXVzOjVweDtjdXJzb3I6cG9pbnRlcjt9Ci5jcy1mYnRuLm9ue2JhY2tncm91bmQ6dmFyKC0tcHVycGxlKTtib3JkZXItY29sb3I6dmFyKC0tcHVycGxlKTtjb2xvcjojZmZmO2ZvbnQtd2VpZ2h0OjcwMDt9Ci5jcy1mYnRuLmV4cHtib3JkZXItY29sb3I6cmdiYSg3NCwyMjIsMTI4LC4zNSk7Y29sb3I6dmFyKC0tZ3JlZW4pO30KLmNzLWdyb3Vwe21hcmdpbi1ib3R0b206MThweDt9Ci5jcy1ncm91cGhlYWR7Zm9udC1mYW1pbHk6J0lCTSBQbGV4IE1vbm8nLG1vbm9zcGFjZTtmb250LXNpemU6MTBweDtsZXR0ZXItc3BhY2luZzouMTJlbTt0ZXh0LXRyYW5zZm9ybTp1cHBlcmNhc2U7Y29sb3I6dmFyKC0tc3ViKTttYXJnaW46MTRweCAwIDhweDtwYWRkaW5nLWJvdHRvbTo2cHg7Ym9yZGVyLWJvdHRvbToxcHggc29saWQgdmFyKC0tYm9yZGVyKTt9Ci5jcy1sZWFke2JhY2tncm91bmQ6dmFyKC0tc3VyZmFjZSk7Ym9yZGVyOjFweCBzb2xpZCB2YXIoLS1ib3JkZXIpO2JvcmRlci1yYWRpdXM6OHB4O3BhZGRpbmc6MTJweCAxNHB4O21hcmdpbi1ib3R0b206OHB4O2N1cnNvcjpwb2ludGVyO3RyYW5zaXRpb246Ym9yZGVyLWNvbG9yIC4xNXM7fQouY3MtbGVhZDpob3Zlcntib3JkZXItY29sb3I6dmFyKC0tc3ViKTt9Ci5jcy1sZWFkLmFjdGl2ZXtib3JkZXItY29sb3I6dmFyKC0tZ29sZCk7YmFja2dyb3VuZDp2YXIoLS1nb2xkLWdsb3cpO30KLmNzLWxlYWQuZG5je2JvcmRlci1jb2xvcjojN0YxRDFEO2JhY2tncm91bmQ6cmdiYSgxMjcsMjksMjksLjEyKTt9Ci5jcy1sZWFkLXJvd3tkaXNwbGF5OmZsZXg7YWxpZ24taXRlbXM6Y2VudGVyO2dhcDoxMHB4O2ZsZXgtd3JhcDp3cmFwO30KLmNzLW5te2ZvbnQtc2l6ZToxNXB4O2ZvbnQtd2VpZ2h0OjcwMDtmbGV4OjE7bWluLXdpZHRoOjEyMHB4O30KLmNzLXBoe2ZvbnQtZmFtaWx5OidJQk0gUGxleCBNb25vJyxtb25vc3BhY2U7Zm9udC1zaXplOjEycHg7Y29sb3I6dmFyKC0tZ3JlZW4pO3RleHQtZGVjb3JhdGlvbjpub25lO2JhY2tncm91bmQ6cmdiYSg3NCwyMjIsMTI4LC4wOCk7Ym9yZGVyOjFweCBzb2xpZCByZ2JhKDc0LDIyMiwxMjgsLjIpO2JvcmRlci1yYWRpdXM6NHB4O3BhZGRpbmc6M3B4IDhweDt9Ci5jcy1ub3Bob25le2ZvbnQtZmFtaWx5OidJQk0gUGxleCBNb25vJyxtb25vc3BhY2U7Zm9udC1zaXplOjEwcHg7Y29sb3I6dmFyKC0tc3ViKTt9Ci5jcy1idGFne2ZvbnQtZmFtaWx5OidJQk0gUGxleCBNb25vJyxtb25vc3BhY2U7Zm9udC1zaXplOjhweDtsZXR0ZXItc3BhY2luZzouMDZlbTt0ZXh0LXRyYW5zZm9ybTp1cHBlcmNhc2U7cGFkZGluZzoycHggN3B4O2JvcmRlci1yYWRpdXM6M3B4O2JhY2tncm91bmQ6cmdiYSgyNTUsMjU1LDI1NSwuMDUpO2NvbG9yOnZhcigtLW11dGVkKTt9Ci5jcy1vY3tmb250LWZhbWlseTonSUJNIFBsZXggTW9ubycsbW9ub3NwYWNlO2ZvbnQtc2l6ZTo5cHg7bGV0dGVyLXNwYWNpbmc6LjA1ZW07dGV4dC10cmFuc2Zvcm06dXBwZXJjYXNlO3BhZGRpbmc6MnB4IDhweDtib3JkZXItcmFkaXVzOjNweDt9Ci5jcy1kbmNwaWxse2JhY2tncm91bmQ6IzdGMUQxRDtjb2xvcjojZmZmO2ZvbnQtZmFtaWx5OidJQk0gUGxleCBNb25vJyxtb25vc3BhY2U7Zm9udC1zaXplOjhweDtsZXR0ZXItc3BhY2luZzouMDZlbTtwYWRkaW5nOjJweCA3cHg7Ym9yZGVyLXJhZGl1czozcHg7bWFyZ2luLWxlZnQ6NnB4O30KLmNzLXNjcmlwdHttYXJnaW4tdG9wOjEycHg7cGFkZGluZy10b3A6MTJweDtib3JkZXItdG9wOjFweCBzb2xpZCB2YXIoLS1ib3JkZXIpO2Rpc3BsYXk6bm9uZTt9Ci5jcy1sZWFkLmFjdGl2ZSAuY3Mtc2NyaXB0e2Rpc3BsYXk6YmxvY2s7fQouY3Mtc2Vne2JhY2tncm91bmQ6dmFyKC0tYmcpO2JvcmRlcjoxcHggc29saWQgdmFyKC0tYm9yZGVyKTtib3JkZXItcmFkaXVzOjZweDtwYWRkaW5nOjEwcHggMTJweDttYXJnaW4tYm90dG9tOjhweDt9Ci5jcy1zZWcgLmxibHtmb250LWZhbWlseTonSUJNIFBsZXggTW9ubycsbW9ub3NwYWNlO2ZvbnQtc2l6ZTo5cHg7bGV0dGVyLXNwYWNpbmc6LjFlbTt0ZXh0LXRyYW5zZm9ybTp1cHBlcmNhc2U7Y29sb3I6dmFyKC0tc3ViKTttYXJnaW4tYm90dG9tOjVweDt9Ci5jcy1zZWcgcHtmb250LXNpemU6MTRweDtsaW5lLWhlaWdodDoxLjU1O2NvbG9yOnZhcigtLWluayk7bWFyZ2luOjA7fQouY3Mtc2VnLnJlZntiYWNrZ3JvdW5kOnJnYmEoMjU1LDI1NSwyNTUsLjAyKTt9Ci5jcy1zZWcucmVmIHVse21hcmdpbjowO3BhZGRpbmctbGVmdDoxNnB4O30KLmNzLXNlZy5yZWYgbGl7Zm9udC1zaXplOjEycHg7Y29sb3I6dmFyKC0tbXV0ZWQpO30KLmNzLXZhcntjb2xvcjp2YXIoLS1wdXJwbGUyKTtmb250LXdlaWdodDo3MDA7fQouY3Mtb2J0bnN7ZGlzcGxheTpmbGV4O2dhcDo2cHg7ZmxleC13cmFwOndyYXA7bWFyZ2luLXRvcDoxMHB4O30KLmNzLW9ie2JhY2tncm91bmQ6dmFyKC0tc3VyZmFjZSk7Ym9yZGVyOjFweCBzb2xpZCB2YXIoLS1ib3JkZXIpO2NvbG9yOnZhcigtLW11dGVkKTtmb250LXNpemU6MTJweDtwYWRkaW5nOjZweCAxMnB4O2JvcmRlci1yYWRpdXM6NXB4O2N1cnNvcjpwb2ludGVyO30KLmNzLW9iOmhvdmVye2NvbG9yOnZhcigtLWluayk7fQouY3Mtb2IuZG5je2NvbG9yOiNmY2E1YTU7fQoKICAgICAgPC9zdHlsZT4KICAgPC9oZWFkPgogICA8L2hlYWQ+CiAgIDxib2R5PgogICAgICA8ZGl2IGNsYXNzPSJ3cmFwIj4KICAgICAgICAgPG5hdiBjbGFzcz0idG9wbmF2Ij4KICAgICAgICAgICAgPGEgaHJlZj0iaHR0cHM6Ly9jb250ZW50c2NhbGUuc2l0ZSIgY2xhc3M9ImJyYW5kIj5Db250ZW50U2NhbGU8c3BhbiBjbGFzcz0icHJvLXRhZyI+IFBSTzwvc3Bhbj48L2E+CiAgICAgICAgICAgIDxhIGhyZWY9Ii8iIGNsYXNzPSJiYWNrIj7ihpAgQmFjayB0byBDb250ZW50U2NhbGU8L2E+CiAgICAgICAgIDwvbmF2PgogICAgICAgICA8aGVhZGVyPgogICAgICAgICAgICA8ZGl2IGNsYXNzPSJsb2dvLWJsb2NrIj4KICAgICAgICAgICAgICAgPGRpdiBjbGFzcz0iZXllYnJvdyI+PHNwYW4gY2xhc3M9Imxkb3QiPjwvc3Bhbj4gQ29udGVudFNjYWxlIOKAlCBQb3dlcmVkIGJ5IEdvb2dsZSBHZW1pbmkgKEZyZWUpPC9kaXY+CiAgICAgICAgICAgICAgIDxoMT5MRUFEPGJyPkNSQVdMRVIgPHNwYW4gY2xhc3M9InByby10YWciPlBSTzwvc3Bhbj48L2gxPgogICAgICAgICAgICAgICA8cCBjbGFzcz0idGFnbGluZSI+RW50ZXIgYW55IGNpdHkgKyBjb3VudHJ5LiAzNyBuaWNoZXMgc2VhcmNoZWQgc2VxdWVudGlhbGx5LiBFdmVyeSBsZWFkIGJ1Y2tldGVkIGJ5IGNvbnRlbnQgZGVzcGVyYXRpb24g4oCUIHdpdGggYSBwaXRjaCBhbmdsZSByZWFkeSB0byBjb3B5LjwvcD4KICAgICAgICAgICAgPC9kaXY+CiAgICAgICAgICAgIDxkaXYgY2xhc3M9ImhiYWRnZXMiPgogICAgICAgICAgICAgICA8ZGl2IGNsYXNzPSJoYiBnIj7inJMgMzcgTmljaGUgU2VhcmNoZXM8L2Rpdj4KICAgICAgICAgICAgICAgPGRpdiBjbGFzcz0iaGIgZyI+4pyTIDIwMOKAkzUwMCBMZWFkcyAvIFJ1bjwvZGl2PgogICAgICAgICAgICAgICA8ZGl2IGNsYXNzPSJoYiB5Ij7inJMgUGl0Y2ggQW5nbGUgUGVyIExlYWQ8L2Rpdj4KICAgICAgICAgICAgICAgPGRpdiBjbGFzcz0iaGIgcCI+4pyTIDYgU21hcnQgQnVja2V0czwvZGl2PgogICAgICAgICAgICA8L2Rpdj4KICAgICAgICAgPC9oZWFkZXI+CiAgICAgICAgIDxkaXYgY2xhc3M9InN0cmF0ZWd5Ij4KICAgICAgICAgICAgPGRpdiBjbGFzcz0ic3RyYXRlZ3ktaGVhZCIgb25jbGljaz0idG9nZ2xlU3RyYXRlZ3koKSI+CiAgICAgICAgICAgICAgIDxoMz7wn46vIFRoZSA2IEJ1Y2tldHMg4oCUIFdoYXQgVGhleSBNZWFuICYgSG93IHRvIFBpdGNoIEVhY2g8L2gzPgogICAgICAgICAgICAgICA8c3BhbiBjbGFzcz0idG9nIiBpZD0idG9nVHh0Ij7ilrIgY29sbGFwc2U8L3NwYW4+CiAgICAgICAgICAgIDwvZGl2PgogICAgICAgICAgICA8ZGl2IGNsYXNzPSJzdHJhdGVneS1ib2R5IiBpZD0ic3RyYXRCb2R5Ij4KICAgICAgICAgICAgICAgPGRpdiBjbGFzcz0ic2J1Y2tldCBzYi1naG9zdCI+CiAgICAgICAgICAgICAgICAgIDxkaXYgY2xhc3M9InNiLXJhbmdlIj4w4oCTNTwvZGl2PgogICAgICAgICAgICAgICAgICA8ZGl2IGNsYXNzPSJzYi1uYW1lIj5HaG9zdCBTaXRlczwvZGl2PgogICAgICAgICAgICAgICAgICA8ZGl2IGNsYXNzPSJzYi1kZXNjIj5Ib21lcGFnZSBvbmx5LiBBbG1vc3QgaW52aXNpYmxlIG9ubGluZS48L2Rpdj4KICAgICAgICAgICAgICAgICAgPGRpdiBjbGFzcz0ic2ItcGl0Y2giPiJMZXQncyBidWlsZCB5b3VyIHNpdGUgZnJvbSBzY3JhdGNoIGFuZCBnZXQgeW91IGZvdW5kIG9uIEdvb2dsZS4iPC9kaXY+CiAgICAgICAgICAgICAgICAgIDxkaXYgY2xhc3M9InNiLWhvdCI+4pqgIFJpc2t5IOKAlCB2ZXJpZnkgYnVkZ2V0PC9kaXY+CiAgICAgICAgICAgICAgIDwvZGl2PgogICAgICAgICAgICAgICA8ZGl2IGNsYXNzPSJzYnVja2V0IHNiLXNrZWxldG9uIj4KICAgICAgICAgICAgICAgICAgPGRpdiBjbGFzcz0ic2ItcmFuZ2UiPjXigJMxNTwvZGl2PgogICAgICAgICAgICAgICAgICA8ZGl2IGNsYXNzPSJzYi1uYW1lIj5Ta2VsZXRvbiBTaXRlczwvZGl2PgogICAgICAgICAgICAgICAgICA8ZGl2IGNsYXNzPSJzYi1kZXNjIj5SZWFsIGJ1c2luZXNzLCByZWFsIG1vbmV5IOKAlCB3ZWJzaXRlIHNheXMgYWxtb3N0IG5vdGhpbmcuPC9kaXY+CiAgICAgICAgICAgICAgICAgIDxkaXYgY2xhc3M9InNiLXBpdGNoIj4iWW91J3JlIG1ha2luZyBzYWxlcyBidXQgeW91ciBzaXRlIGlzbid0LiBMZXQgbWUgd3JpdGUgdGhlIHBhZ2VzIHRoYXQgY2xvc2UgY2xpZW50cy4iPC9kaXY+CiAgICAgICAgICAgICAgICAgIDxkaXYgY2xhc3M9InNiLWhvdCI+8J+UpSBHT0xETUlORSDigJQgZWFzaWVzdCBzZWxsPC9kaXY+CiAgICAgICAgICAgICAgIDwvZGl2PgogICAgICAgICAgICAgICA8ZGl2IGNsYXNzPSJzYnVja2V0IHNiLWJyb2NodXJlIj4KICAgICAgICAgICAgICAgICAgPGRpdiBjbGFzcz0ic2ItcmFuZ2UiPjE14oCTMzA8L2Rpdj4KICAgICAgICAgICAgICAgICAgPGRpdiBjbGFzcz0ic2ItbmFtZSI+QnJvY2h1cmUgU2l0ZXM8L2Rpdj4KICAgICAgICAgICAgICAgICAgPGRpdiBjbGFzcz0ic2ItZGVzYyI+QmFzaWMgcGFnZXMsIHplcm8gYmxvZywgdGhpbiBjb3B5LiBCdWlsdCBhbmQgZm9yZ290dGVuLjwvZGl2PgogICAgICAgICAgICAgICAgICA8ZGl2IGNsYXNzPSJzYi1waXRjaCI+IllvdXIgc2l0ZSBsb29rcyBmaW5lIGJ1dCBHb29nbGUgY2FuJ3QgZmluZCBpdC4gQ29udGVudCBzdHJhdGVneSA9IGRvdWJsZSB0cmFmZmljLiI8L2Rpdj4KICAgICAgICAgICAgICAgICAgPGRpdiBjbGFzcz0ic2ItaG90Ij7wn5SlIEdPTERNSU5FIOKAlCBoaWdoIHByaW9yaXR5PC9kaXY+CiAgICAgICAgICAgICAgIDwvZGl2PgogICAgICAgICAgICAgICA8ZGl2IGNsYXNzPSJzYnVja2V0IHNiLXN0YWxlIj4KICAgICAgICAgICAgICAgICAgPGRpdiBjbGFzcz0ic2ItcmFuZ2UiPjMw4oCTNjA8L2Rpdj4KICAgICAgICAgICAgICAgICAgPGRpdiBjbGFzcz0ic2ItbmFtZSI+U3RhbGUgU2l0ZXM8L2Rpdj4KICAgICAgICAgICAgICAgICAgPGRpdiBjbGFzcz0ic2ItZGVzYyI+U3RhcnRlZCBhIGJsb2cgYnV0IHN0b3BwZWQuIFJhbmtpbmdzIGRyb3BwaW5nLjwvZGl2PgogICAgICAgICAgICAgICAgICA8ZGl2IGNsYXNzPSJzYi1waXRjaCI+IllvdSBzdGFydGVkIGNvbnRlbnQgbWFya2V0aW5nIGFuZCBzdG9wcGVkLiBZb3VyIGNvbXBldGl0b3JzIGRpZG4ndC4iPC9kaXY+CiAgICAgICAgICAgICAgICAgIDxkaXYgY2xhc3M9InNiLWhvdCI+4pyTIEdyZWF0IGZvciByZXRhaW5lcnM8L2Rpdj4KICAgICAgICAgICAgICAgPC9kaXY+CiAgICAgICAgICAgICAgIDxkaXYgY2xhc3M9InNidWNrZXQgc2ItYWN0aXZlIj4KICAgICAgICAgICAgICAgICAgPGRpdiBjbGFzcz0ic2ItcmFuZ2UiPjYw4oCTMTUwPC9kaXY+CiAgICAgICAgICAgICAgICAgIDxkaXYgY2xhc3M9InNiLW5hbWUiPkFjdGl2ZSBTaXRlczwvZGl2PgogICAgICAgICAgICAgICAgICA8ZGl2IGNsYXNzPSJzYi1kZXNjIj5Db250ZW50IGV4aXN0cyBidXQgcXVhbGl0eSBpbmNvbnNpc3RlbnQuPC9kaXY+CiAgICAgICAgICAgICAgICAgIDxkaXYgY2xhc3M9InNiLXBpdGNoIj4iVm9sdW1lIGlzIHRoZXJlIOKAlCBxdWFsaXR5IGFuZCBTRU8gc3RydWN0dXJlIGFyZSBsZWF2aW5nIHRyYWZmaWMgb24gdGhlIHRhYmxlLiI8L2Rpdj4KICAgICAgICAgICAgICAgICAgPGRpdiBjbGFzcz0ic2ItaG90Ij7inJMgR29vZCBmb3IgYXVkaXRzICsgcmV0YWluZXJzPC9kaXY+CiAgICAgICAgICAgICAgIDwvZGl2PgogICAgICAgICAgICAgICA8ZGl2IGNsYXNzPSJzYnVja2V0IHNiLWVzdGFiIj4KICAgICAgICAgICAgICAgICAgPGRpdiBjbGFzcz0ic2ItcmFuZ2UiPjE1MCs8L2Rpdj4KICAgICAgICAgICAgICAgICAgPGRpdiBjbGFzcz0ic2ItbmFtZSI+RXN0YWJsaXNoZWQ8L2Rpdj4KICAgICAgICAgICAgICAgICAgPGRpdiBjbGFzcz0ic2ItZGVzYyI+TGFyZ2UgbGlicmFyeS4gUGl0Y2ggY29udGVudCBhdWRpdHMgb3IgcmVmcmVzaCBwcm9qZWN0cy48L2Rpdj4KICAgICAgICAgICAgICAgICAgPGRpdiBjbGFzcz0ic2ItcGl0Y2giPiIzMCUgb2YgeW91ciBjb250ZW50IGlzIHByb2JhYmx5IGh1cnRpbmcgcmFua2luZ3MuIEFuIGF1ZGl0IGZpeGVzIHRoYXQgZmFzdC4iPC9kaXY+CiAgICAgICAgICAgICAgICAgIDxkaXYgY2xhc3M9InNiLWhvdCI+4oaXIEhpZ2hlciB0aWNrZXQsIGhhcmRlciBwaXRjaDwvZGl2PgogICAgICAgICAgICAgICA8L2Rpdj4KICAgICAgICAgICAgPC9kaXY+CiAgICAgICAgIDwvZGl2PgogICAgICAgICA8ZGl2IGNsYXNzPSJyZXN1bWUtYmFubmVyIiBpZD0icmVzdW1lQmFubmVyIj4KICAgICAgICAgICAgPGRpdiBjbGFzcz0icmVzdW1lLXRleHQiIGlkPSJyZXN1bWVUZXh0Ij48L2Rpdj4KICAgICAgICAgICAgPGJ1dHRvbiBjbGFzcz0icmJ0biBsb2FkIiBvbmNsaWNrPSJyZXN1bWVTZXNzaW9uKCkiPuKGqSBMb2FkIFByZXZpb3VzIFNlc3Npb248L2J1dHRvbj4KICAgICAgICAgICAgPGJ1dHRvbiBjbGFzcz0icmJ0biBjbGVhciIgb25jbGljaz0iY2xlYXJTZXNzaW9uKCkiPuKclSBDbGVhciAmYW1wOyBTdGFydCBGcmVzaDwvYnV0dG9uPgogICAgICAgICA8L2Rpdj4KICAgICAgICAgPGRpdiBjbGFzcz0ic2VhcmNoLXBhbmVsIj4KICAgICAgICAgICAgPCEtLSDilZDilZAgR0VNSU5JIEtFWSBQQU5FTCDilZDilZAgLS0+CiAgICAgICAgICAgIDxkaXYgaWQ9ImtleVBhbmVsIiBzdHlsZT0ibWFyZ2luLWJvdHRvbToxOHB4OyI+CiAgICAgICAgICAgICAgIDwhLS0gTE9DS0VEOiBubyBrZXkgc2F2ZWQgLS0+CiAgICAgICAgICAgICAgIDxkaXYgaWQ9ImtleUVudHJ5QmxvY2siIHN0eWxlPSJiYWNrZ3JvdW5kOnJnYmEoMjYsMTE1LDIzMiwwLjA2KTtib3JkZXI6MS41cHggc29saWQgcmdiYSgyNiwxMTUsMjMyLDAuMyk7Ym9yZGVyLXJhZGl1czo4cHg7cGFkZGluZzoyMHB4IDI0cHg7Ij4KICAgICAgICAgICAgICAgICAgPGRpdiBzdHlsZT0iZGlzcGxheTpmbGV4O2FsaWduLWl0ZW1zOmNlbnRlcjtnYXA6MTBweDttYXJnaW4tYm90dG9tOjEycHg7ZmxleC13cmFwOndyYXA7Ij4KICAgICAgICAgICAgICAgICAgICAgPHNwYW4gc3R5bGU9ImZvbnQtZmFtaWx5OidCZWJhcyBOZXVlJyxzYW5zLXNlcmlmO2ZvbnQtc2l6ZToyMnB4O2NvbG9yOiM2MGE1ZmE7bGluZS1oZWlnaHQ6MTsiPvCflJEgWU9VUiBHT09HTEUgR0VNSU5JIEFQSSBLRVk8L3NwYW4+CiAgICAgICAgICAgICAgICAgICAgIDxhIGhyZWY9Imh0dHBzOi8vYWlzdHVkaW8uZ29vZ2xlLmNvbS9hcGlrZXkiIHRhcmdldD0iX2JsYW5rIiByZWw9Im5vb3BlbmVyIgogICAgICAgICAgICAgICAgICAgICAgICBzdHlsZT0ibWFyZ2luLWxlZnQ6YXV0bztmb250LWZhbWlseTonSUJNIFBsZXggTW9ubycsbW9ub3NwYWNlO2ZvbnQtc2l6ZTo5cHg7bGV0dGVyLXNwYWNpbmc6LjFlbTt0ZXh0LXRyYW5zZm9ybTp1cHBlcmNhc2U7CiAgICAgICAgICAgICAgICAgICAgICAgIGNvbG9yOnZhcigtLWdvbGQpO2JvcmRlcjoxcHggc29saWQgcmdiYSgyNTEsMTkxLDM2LC4zNSk7Ym9yZGVyLXJhZGl1czozcHg7cGFkZGluZzo0cHggMTBweDt0ZXh0LWRlY29yYXRpb246bm9uZTt3aGl0ZS1zcGFjZTpub3dyYXA7Ij4KICAgICAgICAgICAgICAgICAgICAgICAgRlJFRSBLRVkg4oaSIGFpc3R1ZGlvLmdvb2dsZS5jb20KICAgICAgICAgICAgICAgICAgICAgPC9hPgogICAgICAgICAgICAgICAgICA8L2Rpdj4KICAgICAgICAgICAgICAgICAgPGRpdiBzdHlsZT0iYmFja2dyb3VuZDpyZ2JhKDc0LDIyMiwxMjgsMC4wNSk7Ym9yZGVyOjFweCBzb2xpZCByZ2JhKDc0LDIyMiwxMjgsMC4yKTtib3JkZXItcmFkaXVzOjRweDtwYWRkaW5nOjEwcHggMTRweDttYXJnaW4tYm90dG9tOjEwcHg7Zm9udC1zaXplOjEycHg7Y29sb3I6dmFyKC0tbXV0ZWQpO2xpbmUtaGVpZ2h0OjEuNzsiPgogICAgICAgICAgICAgICAgICAgICA8c3Ryb25nIHN0eWxlPSJjb2xvcjp2YXIoLS1ncmVlbik7Ij5GcmVlIMK3IE5vIGNyZWRpdCBjYXJkIMK3IDE1MDAgcmVxdWVzdHMvZGF5PC9zdHJvbmc+PGJyPgogICAgICAgICAgICAgICAgICAgICBHbyB0byA8YSBocmVmPSJodHRwczovL2Fpc3R1ZGlvLmdvb2dsZS5jb20vYXBpa2V5IiB0YXJnZXQ9Il9ibGFuayIgc3R5bGU9ImNvbG9yOnZhcigtLWdvbGQpOyI+YWlzdHVkaW8uZ29vZ2xlLmNvbS9hcGlrZXk8L2E+IOKGkiBzaWduIGluIHdpdGggR29vZ2xlIOKGkiAiQ3JlYXRlIEFQSSBrZXkiIOKGkiBwYXN0ZSBiZWxvdy48YnI+CiAgICAgICAgICAgICAgICAgICAgIDxzcGFuIHN0eWxlPSJjb2xvcjp2YXIoLS1zdWIpO2ZvbnQtc2l6ZToxMXB4OyI+4pqgIFlvdXIga2V5IGlzIHN0b3JlZCBsb2NhbGx5IGluIHlvdXIgYnJvd3NlciBvbmx5LiBJZiB5b3VyIGtleSBydW5zIG91dCBvciBnZXRzIGJsb2NrZWQsIHRoYXQncyBvbiB5b3UuPC9zcGFuPgogICAgICAgICAgICAgICAgICA8L2Rpdj4KICAgICAgICAgICAgICAgICAgPGRpdiBzdHlsZT0iYmFja2dyb3VuZDpyZ2JhKDI1MSwxOTEsMzYsMC4wNSk7Ym9yZGVyOjFweCBzb2xpZCByZ2JhKDI1MSwxOTEsMzYsMC4yKTtib3JkZXItcmFkaXVzOjRweDtwYWRkaW5nOjEwcHggMTRweDttYXJnaW4tYm90dG9tOjE0cHg7Zm9udC1zaXplOjEycHg7Y29sb3I6dmFyKC0tbXV0ZWQpO2xpbmUtaGVpZ2h0OjEuNzsiPgogICAgICAgICAgICAgICAgICAgICA8c3Ryb25nIHN0eWxlPSJjb2xvcjp2YXIoLS1nb2xkKTsiPvCflJIgV2FudCBiZXR0ZXIgc2VjdXJpdHk/IFVzZSBvdXIgc2VydmVyIOKAlCDigqw5NyBvbmUtdGltZTwvc3Ryb25nPjxicj4KICAgICAgICAgICAgICAgICAgICAgWW91ciBrZXkgc3RheXMgb24gb3VyIHNlY3VyZSBzZXJ2ZXIg4oCUIG5ldmVyIHN0b3JlZCBpbiB5b3VyIGJyb3dzZXIuIE5vIHNldHVwIG5lZWRlZC48YnI+CiAgICAgICAgICAgICAgICAgICAgIDxhIGhyZWY9Imh0dHBzOi8vd2EubWUvMzE2MjgwNzM5OTY/dGV4dD1IaSUyME90dG1hciElMjBJJTIwd2FudCUyMHNlcnZlci1zaWRlJTIwR2VtaW5pJTIwYWNjZXNzJTIwZm9yJTIwdGhlJTIwTGVhZCUyMENyYXdsZXIuIiB0YXJnZXQ9Il9ibGFuayIgc3R5bGU9ImNvbG9yOnZhcigtLWdvbGQpO2ZvbnQtd2VpZ2h0OjcwMDsiPuKGkiBDb250YWN0IE90dG1hciBvbiBXaGF0c0FwcDwvYT4KICAgICAgICAgICAgICAgICAgPC9kaXY+CiAgICAgICAgICAgICAgICAgIDxkaXYgc3R5bGU9ImRpc3BsYXk6Z3JpZDtncmlkLXRlbXBsYXRlLWNvbHVtbnM6MWZyIGF1dG8gYXV0bztnYXA6OHB4O2FsaWduLWl0ZW1zOmNlbnRlcjsiPgogICAgICAgICAgICAgICAgICAgICA8aW5wdXQgdHlwZT0icGFzc3dvcmQiIGlkPSJnZW1pbmlLZXlJbnB1dCIKICAgICAgICAgICAgICAgICAgICAgICAgcGxhY2Vob2xkZXI9IkFJemFTeS4uLiIKICAgICAgICAgICAgICAgICAgICAgICAgYXV0b2NvbXBsZXRlPSJvZmYiIHNwZWxsY2hlY2s9ImZhbHNlIgogICAgICAgICAgICAgICAgICAgICAgICBvbmtleWRvd249ImlmKGV2ZW50LmtleT09PSdFbnRlcicpc2F2ZUdlbWluaUtleSgpIgogICAgICAgICAgICAgICAgICAgICAgICBvbmZvY3VzPSJ0aGlzLnN0eWxlLmJvcmRlckNvbG9yPSd2YXIoLS1nb2xkKSciCiAgICAgICAgICAgICAgICAgICAgICAgIG9uYmx1cj0idGhpcy5zdHlsZS5ib3JkZXJDb2xvcj0ncmdiYSgyNiwxMTUsMjMyLC40KSciCiAgICAgICAgICAgICAgICAgICAgICAgIHN0eWxlPSJiYWNrZ3JvdW5kOnZhcigtLWJnKTtib3JkZXI6MS41cHggc29saWQgcmdiYSgyNiwxMTUsMjMyLC40KTtib3JkZXItcmFkaXVzOjRweDsKICAgICAgICAgICAgICAgICAgICAgICAgcGFkZGluZzoxMnB4IDE0cHg7Zm9udC1mYW1pbHk6J0lCTSBQbGV4IE1vbm8nLG1vbm9zcGFjZTtmb250LXNpemU6MTNweDsKICAgICAgICAgICAgICAgICAgICAgICAgY29sb3I6dmFyKC0taW5rKTtvdXRsaW5lOm5vbmU7d2lkdGg6MTAwJTt0cmFuc2l0aW9uOmJvcmRlci1jb2xvciAuMnM7IiAvPgogICAgICAgICAgICAgICAgICAgICA8YnV0dG9uIG9uY2xpY2s9InNhdmVHZW1pbmlLZXkoKSIKICAgICAgICAgICAgICAgICAgICAgICAgc3R5bGU9ImJhY2tncm91bmQ6dmFyKC0tZ29sZCk7Y29sb3I6IzAwMDtib3JkZXI6bm9uZTtmb250LWZhbWlseTonQmViYXMgTmV1ZScsc2Fucy1zZXJpZjsKICAgICAgICAgICAgICAgICAgICAgICAgZm9udC1zaXplOjE4cHg7bGV0dGVyLXNwYWNpbmc6LjA0ZW07cGFkZGluZzoxMnB4IDIycHg7Ym9yZGVyLXJhZGl1czo0cHg7Y3Vyc29yOnBvaW50ZXI7d2hpdGUtc3BhY2U6bm93cmFwO2hlaWdodDo0NnB4OyI+CiAgICAgICAgICAgICAgICAgICAgICAgIFNBVkUKICAgICAgICAgICAgICAgICAgICAgPC9idXR0b24+CiAgICAgICAgICAgICAgICAgICAgIDxidXR0b24gb25jbGljaz0idG9nZ2xlR2VtaW5pS2V5VmlzaWJsZSgpIiBpZD0iZ2VtaW5pS2V5VG9nZ2xlIgogICAgICAgICAgICAgICAgICAgICAgICBzdHlsZT0iYmFja2dyb3VuZDp2YXIoLS1zdXJmYWNlKTtjb2xvcjp2YXIoLS1tdXRlZCk7Ym9yZGVyOjFweCBzb2xpZCB2YXIoLS1ib3JkZXIpOwogICAgICAgICAgICAgICAgICAgICAgICBmb250LXNpemU6MTZweDtwYWRkaW5nOjEycHggMTRweDtib3JkZXItcmFkaXVzOjRweDtjdXJzb3I6cG9pbnRlcjtoZWlnaHQ6NDZweDsiPvCfkYE8L2J1dHRvbj4KICAgICAgICAgICAgICAgICAgPC9kaXY+CiAgICAgICAgICAgICAgICAgIDxkaXYgaWQ9ImdlbWluaUtleVN0YXR1cyIgc3R5bGU9Im1hcmdpbi10b3A6MTBweDtmb250LWZhbWlseTonSUJNIFBsZXggTW9ubycsbW9ub3NwYWNlO2ZvbnQtc2l6ZToxMHB4O21pbi1oZWlnaHQ6MTZweDsiPjwvZGl2PgogICAgICAgICAgICAgICA8L2Rpdj4KICAgICAgICAgICAgICAgPCEtLSBTQVZFRDoga2V5IGV4aXN0cyAtLT4KICAgICAgICAgICAgICAgPGRpdiBpZD0ia2V5U2F2ZWRCYXIiIHN0eWxlPSJkaXNwbGF5Om5vbmU7YmFja2dyb3VuZDpyZ2JhKDc0LDIyMiwxMjgsMC4wNyk7Ym9yZGVyOjEuNXB4IHNvbGlkIHJnYmEoNzQsMjIyLDEyOCwwLjMpO2JvcmRlci1yYWRpdXM6NnB4O3BhZGRpbmc6MTJweCAxOHB4O2FsaWduLWl0ZW1zOmNlbnRlcjtnYXA6MTJweDtmbGV4LXdyYXA6d3JhcDsiPgogICAgICAgICAgICAgICAgICA8c3BhbiBzdHlsZT0iZm9udC1zaXplOjE2cHg7Ij7inIU8L3NwYW4+CiAgICAgICAgICAgICAgICAgIDxkaXYgc3R5bGU9ImZsZXg6MTsiPgogICAgICAgICAgICAgICAgICAgICA8ZGl2IHN0eWxlPSJmb250LWZhbWlseTonSUJNIFBsZXggTW9ubycsbW9ub3NwYWNlO2ZvbnQtc2l6ZToxMHB4O2xldHRlci1zcGFjaW5nOi4xMmVtO3RleHQtdHJhbnNmb3JtOnVwcGVyY2FzZTtjb2xvcjp2YXIoLS1ncmVlbik7Zm9udC13ZWlnaHQ6NzAwOyI+R2VtaW5pIEtleSBBY3RpZWY8L2Rpdj4KICAgICAgICAgICAgICAgICAgICAgPGRpdiBzdHlsZT0iZm9udC1mYW1pbHk6J0lCTSBQbGV4IE1vbm8nLG1vbm9zcGFjZTtmb250LXNpemU6MTFweDtjb2xvcjp2YXIoLS1tdXRlZCk7bWFyZ2luLXRvcDoycHg7IiBpZD0iZ2VtaW5pS2V5TWFza2VkIj5BSXphU3nCt8K3wrc8L2Rpdj4KICAgICAgICAgICAgICAgICAgPC9kaXY+CiAgICAgICAgICAgICAgICAgIDxzcGFuIHN0eWxlPSJmb250LWZhbWlseTonSUJNIFBsZXggTW9ubycsbW9ub3NwYWNlO2ZvbnQtc2l6ZTo5cHg7cGFkZGluZzozcHggOHB4O2JvcmRlci1yYWRpdXM6M3B4O2JhY2tncm91bmQ6cmdiYSg3NCwyMjIsMTI4LC4xNSk7Y29sb3I6dmFyKC0tZ3JlZW4pO2JvcmRlcjoxcHggc29saWQgcmdiYSg3NCwyMjIsMTI4LC4zKTsiPuKckyBPUEdFU0xBR0VOPC9zcGFuPgogICAgICAgICAgICAgICAgICA8YnV0dG9uIG9uY2xpY2s9InJlbW92ZUdlbWluaUtleSgpIiBzdHlsZT0iZm9udC1mYW1pbHk6J0lCTSBQbGV4IE1vbm8nLG1vbm9zcGFjZTtmb250LXNpemU6OXB4O2JhY2tncm91bmQ6dmFyKC0tc3VyZmFjZSk7Ym9yZGVyOjFweCBzb2xpZCB2YXIoLS1ib3JkZXIpO2NvbG9yOnZhcigtLW11dGVkKTtwYWRkaW5nOjVweCAxMHB4O2JvcmRlci1yYWRpdXM6M3B4O2N1cnNvcjpwb2ludGVyOyI+4pyOIFdpanppZzwvYnV0dG9uPgogICAgICAgICAgICAgICA8L2Rpdj4KICAgICAgICAgICAgPC9kaXY+CiAgICAgICAgICAgIDwhLS0g4pWQ4pWQIEVORCBHRU1JTkkgS0VZIFBBTkVMIOKVkOKVkCAtLT4KICAgICAgICAgICAgPGRpdiBzdHlsZT0iaGVpZ2h0OjNweDtiYWNrZ3JvdW5kOmxpbmVhci1ncmFkaWVudCg5MGRlZyx2YXIoLS1yZWQpLHZhcigtLWdvbGQpLHZhcigtLWdyZWVuKSk7Ym9yZGVyLXJhZGl1czoycHg7bWFyZ2luOjI4cHggMDtvcGFjaXR5OjAuNzsiPjwvZGl2PgogICAgICAgICAgICA8IS0tIOKVkOKVkCBWQVBJIFZPSUNFQk9UIENPTkZJRyDilZDilZAgLS0+CiAgICAgICAgICAgIDwhLS0gTElDRU5TRSBTRUNUSU9OIC0tPgogICAgICAgICAgICA8ZGl2IGlkPSJsaWNlbnNlTG9ja2VkIiBzdHlsZT0iYmFja2dyb3VuZDpyZ2JhKDEyNCw1OCwyMzcsLjA2KTtib3JkZXI6MXB4IHNvbGlkIHJnYmEoMTI0LDU4LDIzNywuMjUpO2JvcmRlci1yYWRpdXM6NnB4O3BhZGRpbmc6MThweCAyMnB4O21hcmdpbi1ib3R0b206MThweDsiPgogICAgICAgICAgICAgICA8ZGl2IHN0eWxlPSJmb250LWZhbWlseTonQmViYXMgTmV1ZScsc2Fucy1zZXJpZjtmb250LXNpemU6MjRweDtjb2xvcjp2YXIoLS1wdXJwbGUpO21hcmdpbi1ib3R0b206MTBweDsiPvCflJIgVm9pY2Vib3Qg4oCUIFVubG9jayBSZXF1aXJlZDwvZGl2PgogICAgICAgICAgICAgICA8ZGl2IHN0eWxlPSJmb250LXNpemU6MTJweDtjb2xvcjp2YXIoLS1tdXRlZCk7bWFyZ2luLWJvdHRvbToxNHB4O2xpbmUtaGVpZ2h0OjEuNjsiPgogICAgICAgICAgICAgICAgICBUaGUgdm9pY2Vib3Qgb3V0Ym91bmQgY2FsbGluZyBmZWF0dXJlIHJlcXVpcmVzIGEgQ29udGVudFNjYWxlIGxpY2Vuc2UuPGJyPgogICAgICAgICAgICAgICAgICA8YSBocmVmPSJodHRwczovL3dhLm1lLzMxNjI4MDczOTk2P3RleHQ9SGklMjBPdHRtYXIhJTIwSSUyMHdhbnQlMjB0byUyMHVubG9jayUyMHRoZSUyMFZvaWNlYm90JTIwZmVhdHVyZS4iIHRhcmdldD0iX2JsYW5rIiBzdHlsZT0iY29sb3I6dmFyKC0tZ29sZCk7Zm9udC13ZWlnaHQ6NzAwOyI+4oaSIEdldCB5b3VyIGxpY2Vuc2Uga2V5IHZpYSBXaGF0c0FwcDwvYT4KICAgICAgICAgICAgICAgICAgPHNwYW4gc3R5bGU9ImNvbG9yOnZhcigtLW11dGVkKTsiPiDCtyBGcm9tIOKCrDI5Ny9tb250aDwvc3Bhbj4KICAgICAgICAgICAgICAgPC9kaXY+CiAgICAgICAgICAgICAgIDxkaXYgc3R5bGU9ImRpc3BsYXk6ZmxleDtnYXA6OHB4O2FsaWduLWl0ZW1zOmNlbnRlcjtmbGV4LXdyYXA6d3JhcDsiPgogICAgICAgICAgICAgICAgICA8aW5wdXQgaWQ9ImxpY2Vuc2VLZXlJbnB1dCIgdHlwZT0idGV4dCIgcGxhY2Vob2xkZXI9IkNTLVhYWFgtWFhYWC1YWFhYIgogICAgICAgICAgICAgICAgICAgICBzdHlsZT0iZmxleDoxO2JhY2tncm91bmQ6dmFyKC0tYmcpO2JvcmRlcjoxcHggc29saWQgdmFyKC0tYm9yZGVyKTtib3JkZXItcmFkaXVzOjRweDtwYWRkaW5nOjEwcHggMTRweDtmb250LWZhbWlseTonSUJNIFBsZXggTW9ubycsbW9ub3NwYWNlO2ZvbnQtc2l6ZToxM3B4O2NvbG9yOnZhcigtLWluayk7b3V0bGluZTpub25lO21pbi13aWR0aDoyMDBweDsiPgogICAgICAgICAgICAgICAgICA8YnV0dG9uIG9uY2xpY2s9ImFjdGl2YXRlTGljZW5zZSgpIgogICAgICAgICAgICAgICAgICAgICBzdHlsZT0iYmFja2dyb3VuZDp2YXIoLS1wdXJwbGUpO2NvbG9yOiNmZmY7Ym9yZGVyOm5vbmU7Zm9udC1mYW1pbHk6J0JlYmFzIE5ldWUnLHNhbnMtc2VyaWY7Zm9udC1zaXplOjE4cHg7cGFkZGluZzoxMHB4IDIycHg7Ym9yZGVyLXJhZGl1czo0cHg7Y3Vyc29yOnBvaW50ZXI7d2hpdGUtc3BhY2U6bm93cmFwOyI+CiAgICAgICAgICAgICAgICAgIEFDVElWQVRFCiAgICAgICAgICAgICAgICAgIDwvYnV0dG9uPgogICAgICAgICAgICAgICA8L2Rpdj4KICAgICAgICAgICAgICAgPGRpdiBpZD0ibGljZW5zZVN0YXR1cyIgc3R5bGU9Im1hcmdpbi10b3A6OHB4O2ZvbnQtZmFtaWx5OidJQk0gUGxleCBNb25vJyxtb25vc3BhY2U7Zm9udC1zaXplOjEwcHg7bWluLWhlaWdodDoxNnB4OyI+PC9kaXY+CiAgICAgICAgICAgIDwvZGl2PgogICAgICAgICAgICA8ZGl2IGlkPSJsaWNlbnNlQWN0aXZlQmFyIiBzdHlsZT0iYmFja2dyb3VuZDpyZ2JhKDc0LDIyMiwxMjgsLjA3KTtib3JkZXI6MXB4IHNvbGlkIHJnYmEoNzQsMjIyLDEyOCwuMjUpO2JvcmRlci1yYWRpdXM6NnB4O3BhZGRpbmc6MTJweCAxOHB4O21hcmdpbi1ib3R0b206MThweDtkaXNwbGF5Om5vbmU7YWxpZ24taXRlbXM6Y2VudGVyO2dhcDoxMHB4OyI+CiAgICAgICAgICAgICAgIDxzcGFuIHN0eWxlPSJmb250LXNpemU6MTZweDsiPuKchTwvc3Bhbj4KICAgICAgICAgICAgICAgPGRpdj4KICAgICAgICAgICAgICAgICAgPGRpdiBpZD0ibGljZW5zZVBsYW5MYWJlbCIgc3R5bGU9ImZvbnQtZmFtaWx5OidJQk0gUGxleCBNb25vJyxtb25vc3BhY2U7Zm9udC1zaXplOjEwcHg7bGV0dGVyLXNwYWNpbmc6LjFlbTt0ZXh0LXRyYW5zZm9ybTp1cHBlcmNhc2U7Y29sb3I6dmFyKC0tZ3JlZW4pOyI+Vm9pY2Vib3QgUGxhbiDigJQgQWN0aXZlPC9kaXY+CiAgICAgICAgICAgICAgIDwvZGl2PgogICAgICAgICAgICAgICA8c3BhbiBpZD0ibGljZW5zZUFjdGl2ZUJhZGdlIiBzdHlsZT0iZm9udC1mYW1pbHk6J0lCTSBQbGV4IE1vbm8nLG1vbm9zcGFjZTtmb250LXNpemU6OXB4O3BhZGRpbmc6M3B4IDhweDtib3JkZXItcmFkaXVzOjNweDtiYWNrZ3JvdW5kOnJnYmEoNzQsMjIyLDEyOCwuMTUpO2NvbG9yOnZhcigtLWdyZWVuKTtib3JkZXI6MXB4IHNvbGlkIHJnYmEoNzQsMjIyLDEyOCwuMyk7bWFyZ2luLWxlZnQ6YXV0bzsiPuKckyBBQ1RJVkU8L3NwYW4+CiAgICAgICAgICAgICAgIDxidXR0b24gb25jbGljaz0iZGVhY3RpdmF0ZUxpY2Vuc2UoKSIgc3R5bGU9ImZvbnQtZmFtaWx5OidJQk0gUGxleCBNb25vJyxtb25vc3BhY2U7Zm9udC1zaXplOjlweDtiYWNrZ3JvdW5kOnZhcigtLXN1cmZhY2UpO2JvcmRlcjoxcHggc29saWQgdmFyKC0tYm9yZGVyKTtjb2xvcjp2YXIoLS1tdXRlZCk7cGFkZGluZzo1cHggMTBweDtib3JkZXItcmFkaXVzOjNweDtjdXJzb3I6cG9pbnRlcjsiPlJlbW92ZTwvYnV0dG9uPgogICAgICAgICAgICA8L2Rpdj4KICAgICAgICAgICAgPGRpdiBpZD0idmFwaVRvZ2dsZVJvdyIgc3R5bGU9ImRpc3BsYXk6ZmxleDthbGlnbi1pdGVtczpjZW50ZXI7Z2FwOjEwcHg7bWFyZ2luLWJvdHRvbToxMnB4O2ZsZXgtd3JhcDp3cmFwOyI+CiAgICAgICAgICAgICAgIDxidXR0b24gb25jbGljaz0idG9nZ2xlVmFwaVBhbmVsKCkiIGlkPSJ2YXBpVG9nZ2xlQnRuIgogICAgICAgICAgICAgICAgICBzdHlsZT0iZm9udC1mYW1pbHk6J0lCTSBQbGV4IE1vbm8nLG1vbm9zcGFjZTtmb250LXNpemU6OXB4O2xldHRlci1zcGFjaW5nOi4xZW07dGV4dC10cmFuc2Zvcm06dXBwZXJjYXNlOwogICAgICAgICAgICAgICAgICBiYWNrZ3JvdW5kOnJnYmEoNzQsMjIyLDEyOCwuMDgpO2JvcmRlcjoxcHggc29saWQgcmdiYSg3NCwyMjIsMTI4LC4yNSk7Y29sb3I6dmFyKC0tZ3JlZW4pOwogICAgICAgICAgICAgICAgICBwYWRkaW5nOjhweCAxNnB4O2JvcmRlci1yYWRpdXM6NHB4O2N1cnNvcjpwb2ludGVyO2Rpc3BsYXk6ZmxleDthbGlnbi1pdGVtczpjZW50ZXI7Z2FwOjhweDsiPgogICAgICAgICAgICAgICA8c3Bhbj7wn6SWPC9zcGFuPgogICAgICAgICAgICAgICA8c3BhbiBpZD0idmFwaVRvZ2dsZVR4dCI+Q29uZmlndXJlIFZvaWNlYm90PC9zcGFuPgogICAgICAgICAgICAgICA8c3BhbiBpZD0idmFwaUNvbmZpZ0JhZGdlIiBzdHlsZT0iZGlzcGxheTpub25lO2JhY2tncm91bmQ6cmdiYSg3NCwyMjIsMTI4LC4xNSk7Y29sb3I6dmFyKC0tZ3JlZW4pO2JvcmRlcjoxcHggc29saWQgcmdiYSg3NCwyMjIsMTI4LC4zKTtib3JkZXItcmFkaXVzOjNweDtwYWRkaW5nOjFweCA2cHg7Zm9udC1zaXplOjhweDsiPuKckyBSRUFEWTwvc3Bhbj4KICAgICAgICAgICAgICAgPC9idXR0b24+CiAgICAgICAgICAgICAgIDxzcGFuIHN0eWxlPSJmb250LWZhbWlseTonSUJNIFBsZXggTW9ubycsbW9ub3NwYWNlO2ZvbnQtc2l6ZTo5cHg7Y29sb3I6dmFyKC0tbXV0ZWQpOyI+VmFwaS5haSBvdXRib3VuZCBjYWxsaW5nIOKAlCBjb25maWd1cmUgb25jZSwgY2FsbCBhbnkgbGVhZCB3aXRoIG9uZSBjbGljazwvc3Bhbj4KICAgICAgICAgICAgPC9kaXY+CiAgICAgICAgICAgIDxkaXYgY2xhc3M9InZhcGktcGFuZWwiIGlkPSJ2YXBpUGFuZWwiPgogICAgICAgICAgICAgICA8ZGl2IGNsYXNzPSJ2YXBpLXBhbmVsLWhlYWQiPgogICAgICAgICAgICAgICAgICA8c3BhbiBzdHlsZT0iZm9udC1zaXplOjIwcHg7Ij7wn6SWPC9zcGFuPgogICAgICAgICAgICAgICAgICA8aDM+Vm9pY2Vib3QgQ29uZmlndXJhdGlvbiDigJQgVmFwaS5haTwvaDM+CiAgICAgICAgICAgICAgICAgIDxzcGFuIGlkPSJ2YXBpU2F2ZWRCYWRnZSIgY2xhc3M9InZhcGktc2F2ZWQiIHN0eWxlPSJkaXNwbGF5Om5vbmU7Ij7inJMgU0FWRUQ8L3NwYW4+CiAgICAgICAgICAgICAgIDwvZGl2PgogICAgICAgICAgICAgICA8ZGl2IHN0eWxlPSJiYWNrZ3JvdW5kOnJnYmEoMjQ0LDYzLDYzLC4wOCk7Ym9yZGVyOjFweCBzb2xpZCByZ2JhKDI0NCw2Myw2MywuMyk7Ym9yZGVyLXJhZGl1czo0cHg7cGFkZGluZzoxMHB4IDE0cHg7bWFyZ2luLWJvdHRvbToxNHB4O2ZvbnQtZmFtaWx5OidJQk0gUGxleCBNb25vJyxtb25vc3BhY2U7Zm9udC1zaXplOjEwcHg7Y29sb3I6dmFyKC0tcmVkKTtsaW5lLWhlaWdodDoxLjY7Ij4KICAgICAgICAgICAgICAgICAg4pqgIFlvdXIgcHJldmlvdXMgQVBJIGtleSB3YXMgc2hhcmVkIHB1YmxpY2x5IOKAlCA8c3Ryb25nPnJlZ2VuZXJhdGUgaXQ8L3N0cm9uZz4gYXQKICAgICAgICAgICAgICAgICAgPGEgaHJlZj0iaHR0cHM6Ly9kYXNoYm9hcmQudmFwaS5haSIgdGFyZ2V0PSJfYmxhbmsiIHJlbD0ibm9vcGVuZXIiIHN0eWxlPSJjb2xvcjp2YXIoLS1yZWQpO3RleHQtZGVjb3JhdGlvbjp1bmRlcmxpbmU7Ij5kYXNoYm9hcmQudmFwaS5haSDihpIgQVBJIEtleXM8L2E+CiAgICAgICAgICAgICAgICAgIGJlZm9yZSBlbnRlcmluZyBpdCBoZXJlLiBQaG9uZSBOdW1iZXIgSUQsIG5hbWUsIGNvbXBhbnkgYW5kIGNhbGxiYWNrIGFyZSBhbHJlYWR5IHByZS1maWxsZWQuCiAgICAgICAgICAgICAgIDwvZGl2PgogICAgICAgICAgICAgICA8ZGl2IGNsYXNzPSJ2YXBpLWdyaWQiPgogICAgICAgICAgICAgICAgICA8ZGl2IGNsYXNzPSJ2YXBpLWZpZWxkIj4KICAgICAgICAgICAgICAgICAgICAgPGxhYmVsPlZhcGkgQVBJIEtleTwvbGFiZWw+CiAgICAgICAgICAgICAgICAgICAgIDxpbnB1dCB0eXBlPSJwYXNzd29yZCIgaWQ9InZhcGlLZXkiIHBsYWNlaG9sZGVyPSLimqAgUGFzdGUgeW91ciBORVcgVmFwaSBrZXkgaGVyZSAocmVnZW5lcmF0ZSB0aGUgb2xkIG9uZSEpIiBhdXRvY29tcGxldGU9Im9mZiIgLz4KICAgICAgICAgICAgICAgICAgPC9kaXY+CiAgICAgICAgICAgICAgICAgIDxkaXYgY2xhc3M9InZhcGktZmllbGQiPgogICAgICAgICAgICAgICAgICAgICA8bGFiZWw+VmFwaSBQaG9uZSBOdW1iZXIgSUQ8L2xhYmVsPgogICAgICAgICAgICAgICAgICAgICA8aW5wdXQgdHlwZT0idGV4dCIgaWQ9InZhcGlQaG9uZUlkIiB2YWx1ZT0iNGEzYjE3YzUtMjRmMC00ZTY1LWI2NGQtMjllOGUzZjQ0NmEzIiAvPgogICAgICAgICAgICAgICAgICA8L2Rpdj4KICAgICAgICAgICAgICAgICAgPGRpdiBjbGFzcz0idmFwaS1maWVsZCI+CiAgICAgICAgICAgICAgICAgICAgIDxsYWJlbD5Zb3VyIE5hbWUgKGJvdCBpbnRyb2R1Y2VzIGFzKTwvbGFiZWw+CiAgICAgICAgICAgICAgICAgICAgIDxpbnB1dCB0eXBlPSJ0ZXh0IiBpZD0idmFwaUNhbGxlck5hbWUiIHZhbHVlPSJPdHRtYXIgZnJvbSBDb250ZW50U2NhbGUiIC8+CiAgICAgICAgICAgICAgICAgIDwvZGl2PgogICAgICAgICAgICAgICAgICA8ZGl2IGNsYXNzPSJ2YXBpLWZpZWxkIj4KICAgICAgICAgICAgICAgICAgICAgPGxhYmVsPllvdXIgQ29tcGFueSAvIFdlYnNpdGU8L2xhYmVsPgogICAgICAgICAgICAgICAgICAgICA8aW5wdXQgdHlwZT0idGV4dCIgaWQ9InZhcGlDb21wYW55IiB2YWx1ZT0iQ29udGVudFNjYWxlIiAvPgogICAgICAgICAgICAgICAgICA8L2Rpdj4KICAgICAgICAgICAgICAgICAgPGRpdiBjbGFzcz0idmFwaS1maWVsZCIgc3R5bGU9ImdyaWQtY29sdW1uOjEvLTEiPgogICAgICAgICAgICAgICAgICAgICA8bGFiZWw+WW91ciBDYWxsYmFjayBOdW1iZXIgKG1lbnRpb25lZCBpbiB2b2ljZW1haWwpPC9sYWJlbD4KICAgICAgICAgICAgICAgICAgICAgPGlucHV0IHR5cGU9InRleHQiIGlkPSJ2YXBpQ2FsbGJhY2tOdW1iZXIiIHZhbHVlPSIrMSAoMjc5KSA0OTkgODczNiIgLz4KICAgICAgICAgICAgICAgICAgPC9kaXY+CiAgICAgICAgICAgICAgICAgIDxkaXYgY2xhc3M9InZhcGktZmllbGQiIHN0eWxlPSJncmlkLWNvbHVtbjoxLy0xIj4KICAgICAgICAgICAgICAgICAgICAgPGxhYmVsPk9wZW5pbmcgTGluZSDigJQge25hbWV9IHtzY29yZX0ge3BhZ2VzfSB7Y2l0eX0gYXJlIGF1dG8tZmlsbGVkIHBlciBsZWFkPC9sYWJlbD4KICAgICAgICAgICAgICAgICAgICAgPGlucHV0IHR5cGU9InRleHQiIGlkPSJ2YXBpT3BlbmluZ0xpbmUiCiAgICAgICAgICAgICAgICAgICAgICAgIHZhbHVlPSJIaSwgaXMgdGhpcyB7bmFtZX0/IE15IG5hbWUgaXMgT3R0bWFyIGZyb20gQ29udGVudFNjYWxlIOKAlCBJIGp1c3QgcmFuIGEgcXVpY2sgc2NhbiBvZiB5b3VyIHdlYnNpdGUgYW5kIHNwb3R0ZWQgYSBmZXcgdGhpbmdzIHRoYXQgY291bGQgZ2V0IHlvdSBhIGxvdCBtb3JlIHRyYWZmaWMuIERvIHlvdSBoYXZlIDIgbWludXRlcz8iIC8+CiAgICAgICAgICAgICAgICAgIDwvZGl2PgogICAgICAgICAgICAgICA8L2Rpdj4KICAgICAgICAgICAgICAgPCEtLSBDb21wbGlhbmNlIE1vZGUgVG9nZ2xlIC0tPgogICAgICAgICAgICAgICA8ZGl2IGNsYXNzPSJjb21wLW1vZGUiIGlkPSJjb21wTW9kZVJvdyIgc3R5bGU9Im1hcmdpbi10b3A6MTRweDsiPgogICAgICAgICAgICAgICAgICA8ZGl2PgogICAgICAgICAgICAgICAgICAgICA8ZGl2IGNsYXNzPSJjb21wLW1vZGUtbGFiZWwgb24iIGlkPSJjb21wTW9kZUxhYmVsIj7wn5uhIENvbXBsaWFuY2UgTW9kZTwvZGl2PgogICAgICAgICAgICAgICAgICAgICA8ZGl2IHN0eWxlPSJmb250LXNpemU6MTFweDtjb2xvcjp2YXIoLS1tdXRlZCk7bWFyZ2luLXRvcDoycHg7Ij4KICAgICAgICAgICAgICAgICAgICAgICAgQmxvY2tzIGNhbGxzIG91dHNpZGUgOGFt4oCTOHBtIMK3IEZvcmNlcyBBSSBkaXNjbG9zdXJlIMK3IExvZ3MgZXZlcnkgY2FsbCB3aXRoIHRpbWVzdGFtcAogICAgICAgICAgICAgICAgICAgICA8L2Rpdj4KICAgICAgICAgICAgICAgICAgPC9kaXY+CiAgICAgICAgICAgICAgICAgIDxsYWJlbCBjbGFzcz0idG9nZ2xlIiB0aXRsZT0iVG9nZ2xlIENvbXBsaWFuY2UgTW9kZSI+CiAgICAgICAgICAgICAgICAgIDxpbnB1dCB0eXBlPSJjaGVja2JveCIgaWQ9ImNvbXBNb2RlVG9nZ2xlIiBjaGVja2VkIG9uY2hhbmdlPSJ0b2dnbGVDb21wbGlhbmNlTW9kZSgpIj4KICAgICAgICAgICAgICAgICAgPHNwYW4gY2xhc3M9InRvZ2dsZS1zbGlkZXIiPjwvc3Bhbj4KICAgICAgICAgICAgICAgICAgPC9sYWJlbD4KICAgICAgICAgICAgICAgICAgPHNwYW4gc3R5bGU9ImZvbnQtZmFtaWx5OidJQk0gUGxleCBNb25vJyxtb25vc3BhY2U7Zm9udC1zaXplOjlweDtsZXR0ZXItc3BhY2luZzouMDhlbTt0ZXh0LXRyYW5zZm9ybTp1cHBlcmNhc2U7cGFkZGluZzozcHggOHB4O2JvcmRlci1yYWRpdXM6M3B4OyIgaWQ9ImNvbXBNb2RlQmFkZ2UiPk9OIOKAlCBQcm90ZWN0ZWQ8L3NwYW4+CiAgICAgICAgICAgICAgIDwvZGl2PgogICAgICAgICAgICAgICA8IS0tIExpYWJpbGl0eSByZW1pbmRlciAtLT4KICAgICAgICAgICAgICAgPGRpdiBjbGFzcz0ibGlhYmlsaXR5LWJhciBzaG93IiBpZD0ibGlhYmlsaXR5QmFyIj4KICAgICAgICAgICAgICAgICAg4pqWIFJFTUlOREVSOiBZb3UgYXJlIHRoZSBjYWxsZXIgb2YgcmVjb3JkLiBDb250ZW50U2NhbGUgaGFzIHplcm8gbGlhYmlsaXR5IGZvciB5b3VyIGNhbGxzLgogICAgICAgICAgICAgICAgICBZb3UgYWNjZXB0ZWQgdGhpcyBvbiA8c3BhbiBpZD0idGVybXNEYXRlIj7igJQ8L3NwYW4+LiBBbGwgY2FsbHMgbG9nZ2VkIGZvciB5b3VyIGF1ZGl0IHRyYWlsLgogICAgICAgICAgICAgICA8L2Rpdj4KICAgICAgICAgICAgICAgPGJ1dHRvbiBjbGFzcz0idmFwaS1zYXZlLWJ0biIgb25jbGljaz0ic2F2ZVZhcGlDb25maWcoKSI+U0FWRSBWT0lDRUJPVCBDT05GSUc8L2J1dHRvbj4KICAgICAgICAgICAgICAgPGRpdiBzdHlsZT0iZm9udC1zaXplOjExcHg7Y29sb3I6dmFyKC0tbXV0ZWQpO21hcmdpbi10b3A6MTBweDtsaW5lLWhlaWdodDoxLjY7Ij4KICAgICAgICAgICAgICAgICAgR2V0IHlvdXIgQVBJIGtleSArIFBob25lIE51bWJlciBJRCBhdAogICAgICAgICAgICAgICAgICA8YSBocmVmPSJodHRwczovL3ZhcGkuYWkiIHRhcmdldD0iX2JsYW5rIiByZWw9Im5vb3BlbmVyIiBzdHlsZT0iY29sb3I6dmFyKC0tZ3JlZW4pOyI+dmFwaS5haTwvYT4KICAgICAgICAgICAgICAgICAg4oaSIERhc2hib2FyZCDihpIgUGhvbmUgTnVtYmVycyDihpIgY29weSB0aGUgVVVJRCDCtyBBbGwgc3RvcmVkIGxvY2FsbHkgaW4geW91ciBicm93c2VyLgogICAgICAgICAgICAgICAgICA8YnI+PGJyPgogICAgICAgICAgICAgICAgICA8c3Ryb25nIHN0eWxlPSJjb2xvcjp2YXIoLS1nb2xkKSI+4pqWIExlZ2FsIGNvbXBsaWFuY2UgYnVpbHQgaW46PC9zdHJvbmc+CiAgICAgICAgICAgICAgICAgIDxzcGFuIHN0eWxlPSJjb2xvcjp2YXIoLS1tdXRlZCkiPgogICAgICAgICAgICAgICAgICBCb3QgZGlzY2xvc2VzIEFJIGlkZW50aXR5IGF0IHN0YXJ0IG9mIGV2ZXJ5IGNhbGwgKEVVIEFJIEFjdCBBcnQuIDUwICsgRkNDIDIwMjQgcnVsZSkgwrcKICAgICAgICAgICAgICAgICAgSW5zdGFudCBvcHQtb3V0IG9uIHJlcXVlc3QgwrcgQ2FsbGluZyBob3VycyB3YXJuaW5nICg4YW3igJM4cG0pIMK3CiAgICAgICAgICAgICAgICAgIEIyQiB0YXJnZXRlZCBvbmx5IMK3IENhbGwgbG9nIGZvciBhdWRpdCB0cmFpbCDCtyBFbWFpbCBjb2xsZWN0ZWQgd2l0aCBwZXJtaXNzaW9uIG9ubHkuCiAgICAgICAgICAgICAgICAgIDwvc3Bhbj4KICAgICAgICAgICAgICAgPC9kaXY+CiAgICAgICAgICAgIDwvZGl2PgogICAgICAgICAgICA8IS0tIOKVkOKVkCBDQUxMIExPRyDilZDilZAgLS0+CiAgICAgICAgICAgIDxkaXYgY2xhc3M9ImNhbGxsb2ciIGlkPSJjYWxsTG9nIj4KICAgICAgICAgICAgICAgPGRpdiBzdHlsZT0iZGlzcGxheTpmbGV4O2FsaWduLWl0ZW1zOmNlbnRlcjtnYXA6MTBweDttYXJnaW4tYm90dG9tOjEycHg7ZmxleC13cmFwOndyYXA7Ij4KICAgICAgICAgICAgICAgICAgPGRpdiBjbGFzcz0iY2FsbGxvZy1oZWFkIiBzdHlsZT0ibWFyZ2luOjA7Ij7wn5OLIENhbGwgTG9nPC9kaXY+CiAgICAgICAgICAgICAgICAgIDxzcGFuIGlkPSJjYWxsTG9nQ291bnQiIHN0eWxlPSJmb250LWZhbWlseTonSUJNIFBsZXggTW9ubycsbW9ub3NwYWNlO2ZvbnQtc2l6ZToxMHB4O2NvbG9yOnZhcigtLW11dGVkKTsiPjwvc3Bhbj4KICAgICAgICAgICAgICAgICAgPGJ1dHRvbiBvbmNsaWNrPSJjbGVhckNhbGxMb2coKSIgc3R5bGU9Im1hcmdpbi1sZWZ0OmF1dG87Zm9udC1mYW1pbHk6J0lCTSBQbGV4IE1vbm8nLG1vbm9zcGFjZTtmb250LXNpemU6OXB4O2xldHRlci1zcGFjaW5nOi4wOGVtO3RleHQtdHJhbnNmb3JtOnVwcGVyY2FzZTtiYWNrZ3JvdW5kOnZhcigtLXN1cmZhY2UpO2JvcmRlcjoxcHggc29saWQgdmFyKC0tYm9yZGVyKTtjb2xvcjp2YXIoLS1tdXRlZCk7cGFkZGluZzo1cHggMTBweDtib3JkZXItcmFkaXVzOjNweDtjdXJzb3I6cG9pbnRlcjsiPkNsZWFyPC9idXR0b24+CiAgICAgICAgICAgICAgICAgIDxidXR0b24gb25jbGljaz0iZXhwb3J0Q2FsbExvZ0NTVigpIiBzdHlsZT0iZm9udC1mYW1pbHk6J0lCTSBQbGV4IE1vbm8nLG1vbm9zcGFjZTtmb250LXNpemU6OXB4O2xldHRlci1zcGFjaW5nOi4wOGVtO3RleHQtdHJhbnNmb3JtOnVwcGVyY2FzZTtiYWNrZ3JvdW5kOnJnYmEoNzQsMjIyLDEyOCwuMDgpO2JvcmRlcjoxcHggc29saWQgcmdiYSg3NCwyMjIsMTI4LC4yNSk7Y29sb3I6dmFyKC0tZ3JlZW4pO3BhZGRpbmc6NXB4IDEwcHg7Ym9yZGVyLXJhZGl1czozcHg7Y3Vyc29yOnBvaW50ZXI7Ij7ihpMgRXhwb3J0IENTVjwvYnV0dG9uPgogICAgICAgICAgICAgICA8L2Rpdj4KICAgICAgICAgICAgICAgPGRpdiBpZD0iY2FsbExvZ0l0ZW1zIj48L2Rpdj4KICAgICAgICAgICAgPC9kaXY+CiAgICAgICAgICAgIDwhLS0g4pWQ4pWQIEVORCBWQVBJIOKVkOKVkCAtLT4KCgogICAgICAgICAgICA8ZGl2IHN0eWxlPSJoZWlnaHQ6M3B4O2JhY2tncm91bmQ6bGluZWFyLWdyYWRpZW50KDkwZGVnLHZhcigtLXJlZCksdmFyKC0tZ29sZCksdmFyKC0tZ3JlZW4pKTtib3JkZXItcmFkaXVzOjJweDttYXJnaW46MjhweCAwO29wYWNpdHk6MC43OyI+PC9kaXY+CgoKICAgICAgICAgICAgPGRpdiBjbGFzcz0icGFuZWwtdGl0bGUiPlRhcmdldCBMb2NhdGlvbiDigJQgU2VhcmNoZXMgMzcgTmljaGVzIFNlcXVlbnRpYWxseTwvZGl2PgogICAgICAgICAgICA8aW5wdXQgdHlwZT0iaGlkZGVuIiBpZD0iYXBpS2V5IiB2YWx1ZT0iIj4KICAgICAgICAgICAgPGRpdiBjbGFzcz0iZm9ybS1yb3ciPgogICAgICAgICAgICAgICA8ZGl2IGNsYXNzPSJmaWVsZCI+PGxhYmVsPkNpdHk8L2xhYmVsPjxpbnB1dCB0eXBlPSJ0ZXh0IiBpZD0iY2l0eSIgcGxhY2Vob2xkZXI9ImUuZy4gQW1zdGVyZGFtIiAvPjwvZGl2PgogICAgICAgICAgICAgICA8ZGl2IGNsYXNzPSJmaWVsZCI+PGxhYmVsPkNvdW50cnk8L2xhYmVsPjxpbnB1dCB0eXBlPSJ0ZXh0IiBpZD0iY291bnRyeSIgcGxhY2Vob2xkZXI9ImUuZy4gTmV0aGVybGFuZHMiIC8+PC9kaXY+CiAgICAgICAgICAgICAgIDxidXR0b24gY2xhc3M9ImNyYXdsLWJ0biIgaWQ9ImNyYXdsQnRuIiBvbmNsaWNrPSJzdGFydENyYXdsKCkiPkZJTkQgTEVBRFMg4oaSPC9idXR0b24+CiAgICAgICAgICAgICAgIDxidXR0b24gY2xhc3M9InN0b3AtYnRuIiBpZD0ic3RvcEJ0biIgb25jbGljaz0ic3RvcENyYXdsKCkiPuKWoCBTVE9QPC9idXR0b24+CiAgICAgICAgICAgICAgIDxidXR0b24gdHlwZT0iYnV0dG9uIiBpZD0iaW1wb3J0QnRuIiBvbmNsaWNrPSJ0cmlnZ2VySW1wb3J0KCkiIHN0eWxlPSJiYWNrZ3JvdW5kOnZhcigtLXN1cmZhY2UpO2NvbG9yOnZhcigtLW11dGVkKTtib3JkZXI6MXB4IHNvbGlkIHZhcigtLWJvcmRlcik7Zm9udC1mYW1pbHk6J0lCTSBQbGV4IE1vbm8nLG1vbm9zcGFjZTtmb250LXNpemU6MTJweDtsZXR0ZXItc3BhY2luZzouMDhlbTt0ZXh0LXRyYW5zZm9ybTp1cHBlcmNhc2U7cGFkZGluZzowIDIwcHg7Ym9yZGVyLXJhZGl1czo2cHg7Y3Vyc29yOnBvaW50ZXI7aGVpZ2h0OjUycHg7Ij4mIzg1OTM7IEltcG9ydDwvYnV0dG9uPgogICAgICAgICAgICAgICA8aW5wdXQgdHlwZT0iZmlsZSIgaWQ9ImltcG9ydEZpbGUiIGFjY2VwdD0iLmpzb24sYXBwbGljYXRpb24vanNvbiIgc3R5bGU9ImRpc3BsYXk6bm9uZTsiIG9uY2hhbmdlPSJpbXBvcnRKU09OKGV2ZW50KSI+CiAgICAgICAgICAgIDwvZGl2PgogICAgICAgICAgICA8ZGl2IGNsYXNzPSJ3YXZlLWxhYmVsIj4zNyBJbmR1c3RyeSBTZWFyY2hlcyDigJQgTGl2ZSBTdGF0dXM8L2Rpdj4KICAgICAgICAgICAgPGRpdiBjbGFzcz0id2F2ZXMiIGlkPSJ3YXZlcyI+PC9kaXY+CiAgICAgICAgIDwvZGl2PgogICAgICAgICA8ZGl2IGNsYXNzPSJlcnItbG9nIiBpZD0iZXJyTG9nIiBzdHlsZT0iZGlzcGxheTpub25lOyI+PC9kaXY+CiAgICAgICAgIDxkaXYgaWQ9InJsQmFubmVyIiBzdHlsZT0iZGlzcGxheTpub25lO2JhY2tncm91bmQ6cmdiYSgyNDQsNjMsNjMsLjA3KTtib3JkZXI6MXB4IHNvbGlkIHJnYmEoMjQ0LDYzLDYzLC4zKTtib3JkZXItcmFkaXVzOjZweDtwYWRkaW5nOjE4cHggMjJweDttYXJnaW4tYm90dG9tOjE4cHg7Ij4KICAgICAgICAgICAgPGRpdiBzdHlsZT0iZGlzcGxheTpmbGV4O2FsaWduLWl0ZW1zOmNlbnRlcjtnYXA6MTJweDtmbGV4LXdyYXA6d3JhcDsiPgogICAgICAgICAgICAgICA8ZGl2IHN0eWxlPSJmb250LWZhbWlseTonQmViYXMgTmV1ZScsc2Fucy1zZXJpZjtmb250LXNpemU6MjhweDtjb2xvcjp2YXIoLS1yZWQpO2xpbmUtaGVpZ2h0OjE7Ij7imqAgNS1IT1VSIExJTUlUIEhJVDwvZGl2PgogICAgICAgICAgICAgICA8ZGl2IHN0eWxlPSJmbGV4OjE7Ij4KICAgICAgICAgICAgICAgICAgPGRpdiBzdHlsZT0iZm9udC1mYW1pbHk6J0lCTSBQbGV4IE1vbm8nLG1vbm9zcGFjZTtmb250LXNpemU6MTFweDtjb2xvcjp2YXIoLS1yZWQpO21hcmdpbi1ib3R0b206NHB4OyI+R2VtaW5pIGZyZWUgdGllciByYXRlIGxpbWl0IGhpdC4gQWxsIHNlYXJjaGVzIHBhdXNlZCDigJQgcmVzZXRzIHNob3J0bHkuPC9kaXY+CiAgICAgICAgICAgICAgICAgIDxkaXYgc3R5bGU9ImZvbnQtZmFtaWx5OidJQk0gUGxleCBNb25vJyxtb25vc3BhY2U7Zm9udC1zaXplOjExcHg7Y29sb3I6dmFyKC0tbXV0ZWQpOyI+WW91ciBsZWFkcyBzbyBmYXIgYXJlIHNhdmVkLiBSZXNldHMgaW46IDxzdHJvbmcgaWQ9InJsQ291bnRkb3duIiBzdHlsZT0iY29sb3I6dmFyKC0tZ29sZCk7Ij5jYWxjdWxhdGluZy4uLjwvc3Ryb25nPjwvZGl2PgogICAgICAgICAgICAgICA8L2Rpdj4KICAgICAgICAgICAgICAgPGRpdiBzdHlsZT0idGV4dC1hbGlnbjpyaWdodDsiPgogICAgICAgICAgICAgICAgICA8ZGl2IHN0eWxlPSJmb250LWZhbWlseTonQmViYXMgTmV1ZScsc2Fucy1zZXJpZjtmb250LXNpemU6NDJweDtjb2xvcjp2YXIoLS1nb2xkKTtsaW5lLWhlaWdodDoxOyIgaWQ9InJsVGltZXIiPi0tOi0tPC9kaXY+CiAgICAgICAgICAgICAgICAgIDxkaXYgc3R5bGU9ImZvbnQtZmFtaWx5OidJQk0gUGxleCBNb25vJyxtb25vc3BhY2U7Zm9udC1zaXplOjhweDtsZXR0ZXItc3BhY2luZzouMTVlbTt0ZXh0LXRyYW5zZm9ybTp1cHBlcmNhc2U7Y29sb3I6dmFyKC0tbXV0ZWQpOyI+dW50aWwgcmVzZXQ8L2Rpdj4KICAgICAgICAgICAgICAgPC9kaXY+CiAgICAgICAgICAgIDwvZGl2PgogICAgICAgICAgICA8ZGl2IHN0eWxlPSJtYXJnaW4tdG9wOjEwcHg7Zm9udC1mYW1pbHk6J0lCTSBQbGV4IE1vbm8nLG1vbm9zcGFjZTtmb250LXNpemU6OXB4O2NvbG9yOnZhcigtLW11dGVkKTsiPlNlc3Npb24gaXMgYXV0by1zYXZlZCDigJQgaGl0IEZJTkQgTEVBRFMgYWdhaW4gYWZ0ZXIgcmVzZXQgdG8gcmVzdW1lLjwvZGl2PgogICAgICAgICA8L2Rpdj4KICAgICAgICAgPGRpdiBjbGFzcz0icHJvZy13cmFwIiBpZD0icHJvZ1dyYXAiIHN0eWxlPSJkaXNwbGF5Om5vbmU7Ij4KICAgICAgICAgICAgPGRpdiBjbGFzcz0icHJvZy1jYXJkIj4KICAgICAgICAgICAgICAgPGRpdiBjbGFzcz0icHJvZy1hY2NlbnQiPjwvZGl2PgogICAgICAgICAgICAgICA8ZGl2IGNsYXNzPSJwcm9nLWhlYWRlciI+CiAgICAgICAgICAgICAgICAgIDxkaXYgY2xhc3M9InByb2ctbGl2ZSI+CiAgICAgICAgICAgICAgICAgICAgIDxkaXYgY2xhc3M9InByb2ctbGl2ZURvdCI+PC9kaXY+CiAgICAgICAgICAgICAgICAgICAgIDxzcGFuIGNsYXNzPSJwcm9nLWxpdmVMYWJlbCI+TGl2ZSBDcmF3bDwvc3Bhbj4KICAgICAgICAgICAgICAgICAgPC9kaXY+CiAgICAgICAgICAgICAgICAgIDxkaXYgY2xhc3M9InByb2ctbXNnIiBpZD0icHJvZ01zZyI+U3RhcnRpbmcuLi48L2Rpdj4KICAgICAgICAgICAgICAgICAgPGJ1dHRvbiBpZD0icHJvZ1N0b3BCdG4iIG9uY2xpY2s9InN0b3BDcmF3bCgpIiBzdHlsZT0ibWFyZ2luLWxlZnQ6YXV0bztiYWNrZ3JvdW5kOnJnYmEoMjQ0LDYzLDYzLC4xKTtjb2xvcjp2YXIoLS1yZWQpO2JvcmRlcjoxcHggc29saWQgcmdiYSgyNDQsNjMsNjMsLjM1KTtmb250LWZhbWlseTonSUJNIFBsZXggTW9ubycsbW9ub3NwYWNlO2ZvbnQtc2l6ZToxMXB4O2xldHRlci1zcGFjaW5nOi4xZW07dGV4dC10cmFuc2Zvcm06dXBwZXJjYXNlO3BhZGRpbmc6OHB4IDE4cHg7Ym9yZGVyLXJhZGl1czo2cHg7Y3Vyc29yOnBvaW50ZXI7Zm9udC13ZWlnaHQ6NzAwOyI+JiM5NjMyOyBTdG9wIGNyYXdsPC9idXR0b24+CiAgICAgICAgICAgICAgIDwvZGl2PgogICAgICAgICAgICAgICA8ZGl2IGNsYXNzPSJwcm9nLXN0YXRzLWdyaWQiPgogICAgICAgICAgICAgICAgICA8ZGl2IGNsYXNzPSJwcm9nLXN0YXQiPgogICAgICAgICAgICAgICAgICAgICA8ZGl2IGNsYXNzPSJwcm9nLXN0YXROdW0gZ29sZCIgaWQ9ImJpZ0NvdW50Ij4wPC9kaXY+CiAgICAgICAgICAgICAgICAgICAgIDxkaXYgY2xhc3M9InByb2ctc3RhdExhYmVsIj5MZWFkcyBGb3VuZDwvZGl2PgogICAgICAgICAgICAgICAgICA8L2Rpdj4KICAgICAgICAgICAgICAgICAgPGRpdiBjbGFzcz0icHJvZy1zdGF0Ij4KICAgICAgICAgICAgICAgICAgICAgPGRpdiBjbGFzcz0icHJvZy1zdGF0TnVtIHB1cnBsZSIgaWQ9InByb2dQY3QiPjAgLyAzNzwvZGl2PgogICAgICAgICAgICAgICAgICAgICA8ZGl2IGNsYXNzPSJwcm9nLXN0YXRMYWJlbCI+SW5kdXN0cmllczwvZGl2PgogICAgICAgICAgICAgICAgICA8L2Rpdj4KICAgICAgICAgICAgICAgICAgPGRpdiBjbGFzcz0icHJvZy1zdGF0Ij4KICAgICAgICAgICAgICAgICAgICAgPGRpdiBjbGFzcz0icHJvZy1zdGF0TnVtIGRpbSIgaWQ9InByb2dFcnJDb3VudCI+MDwvZGl2PgogICAgICAgICAgICAgICAgICAgICA8ZGl2IGNsYXNzPSJwcm9nLXN0YXRMYWJlbCI+RXJyb3JzPC9kaXY+CiAgICAgICAgICAgICAgICAgIDwvZGl2PgogICAgICAgICAgICAgICA8L2Rpdj4KICAgICAgICAgICAgICAgPGRpdiBjbGFzcz0icHJvZy1iYXJXcmFwIj4KICAgICAgICAgICAgICAgICAgPGRpdiBjbGFzcz0icHJvZy1iYXJUb3AiPgogICAgICAgICAgICAgICAgICAgICA8c3BhbiBjbGFzcz0icHJvZy1iYXJMYWJlbCI+UHJvZ3Jlc3M8L3NwYW4+CiAgICAgICAgICAgICAgICAgICAgIDxzcGFuIGNsYXNzPSJwcm9nLWJhclBjdCIgaWQ9InByb2dQY3RMYWJlbCI+MCU8L3NwYW4+CiAgICAgICAgICAgICAgICAgIDwvZGl2PgogICAgICAgICAgICAgICAgICA8ZGl2IGNsYXNzPSJwcm9nLXRyYWNrIj4KICAgICAgICAgICAgICAgICAgICAgPGRpdiBjbGFzcz0icHJvZy1maWxsIiBpZD0icHJvZ0ZpbGwiPjwvZGl2PgogICAgICAgICAgICAgICAgICA8L2Rpdj4KICAgICAgICAgICAgICAgPC9kaXY+CiAgICAgICAgICAgIDwvZGl2PgogICAgICAgICA8L2Rpdj4KICAgICAgICAgPGRpdiBjbGFzcz0ic3RhdHMiIGlkPSJzdGF0c1JvdyIgc3R5bGU9ImRpc3BsYXk6bm9uZSI+PC9kaXY+CiAgICAgICAgIDxkaXYgY2xhc3M9InRvb2xiYXIiIGlkPSJ0b29sYmFyIj4KICAgICAgICAgICAgPGRpdiBzdHlsZT0iZGlzcGxheTpmbGV4O2ZsZXgtd3JhcDp3cmFwO2dhcDo4cHg7YWxpZ24taXRlbXM6Y2VudGVyO3dpZHRoOjEwMCU7Ij4KICAgICAgICAgICAgICAgPGRpdiBjbGFzcz0idGItZ3JwIj4KICAgICAgICAgICAgICAgICAgPHNwYW4gY2xhc3M9InRibCI+QnVja2V0Ojwvc3Bhbj4KICAgICAgICAgICAgICAgICAgPGJ1dHRvbiBjbGFzcz0idGJ0biBvbiIgZGF0YS1iaz0iYWxsIiBvbmNsaWNrPSJzZXRCdWNrZXQodGhpcywnYWxsJykiPkFsbDwvYnV0dG9uPgogICAgICAgICAgICAgICAgICA8YnV0dG9uIGNsYXNzPSJ0YnRuIiBkYXRhLWJrPSJnaG9zdCIgb25jbGljaz0ic2V0QnVja2V0KHRoaXMsJ2dob3N0JykiPjDigJM1PC9idXR0b24+CiAgICAgICAgICAgICAgICAgIDxidXR0b24gY2xhc3M9InRidG4iIGRhdGEtYms9InNrZWxldG9uIiBvbmNsaWNrPSJzZXRCdWNrZXQodGhpcywnc2tlbGV0b24nKSI+NeKAkzE1IPCflKU8L2J1dHRvbj4KICAgICAgICAgICAgICAgICAgPGJ1dHRvbiBjbGFzcz0idGJ0biIgZGF0YS1iaz0iYnJvY2h1cmUiIG9uY2xpY2s9InNldEJ1Y2tldCh0aGlzLCdicm9jaHVyZScpIj4xNeKAkzMwIPCflKU8L2J1dHRvbj4KICAgICAgICAgICAgICAgICAgPGJ1dHRvbiBjbGFzcz0idGJ0biIgZGF0YS1iaz0ic3RhbGUiIG9uY2xpY2s9InNldEJ1Y2tldCh0aGlzLCdzdGFsZScpIj4zMOKAkzYwPC9idXR0b24+CiAgICAgICAgICAgICAgICAgIDxidXR0b24gY2xhc3M9InRidG4iIGRhdGEtYms9ImFjdGl2ZSIgb25jbGljaz0ic2V0QnVja2V0KHRoaXMsJ2FjdGl2ZScpIj42MOKAkzE1MDwvYnV0dG9uPgogICAgICAgICAgICAgICAgICA8YnV0dG9uIGNsYXNzPSJ0YnRuIiBkYXRhLWJrPSJlc3RhYiIgb25jbGljaz0ic2V0QnVja2V0KHRoaXMsJ2VzdGFiJykiPjE1MCs8L2J1dHRvbj4KICAgICAgICAgICAgICAgPC9kaXY+CiAgICAgICAgICAgICAgIDxkaXYgY2xhc3M9InRiLXNlcCI+PC9kaXY+CiAgICAgICAgICAgICAgIDxkaXYgY2xhc3M9InRiLWdycCI+CiAgICAgICAgICAgICAgICAgIDxzcGFuIGNsYXNzPSJ0YmwiPlNvcnQ6PC9zcGFuPgogICAgICAgICAgICAgICAgICA8YnV0dG9uIGNsYXNzPSJ0YnRuIiBvbmNsaWNrPSJkb1NvcnQoJ3Njb3JlJykiPuKGkyBTY29yZTwvYnV0dG9uPgogICAgICAgICAgICAgICAgICA8YnV0dG9uIGNsYXNzPSJ0YnRuIiBvbmNsaWNrPSJkb1NvcnQoJ3BhZ2VzJykiPuKGkyBQYWdlczwvYnV0dG9uPgogICAgICAgICAgICAgICA8L2Rpdj4KICAgICAgICAgICAgICAgPGRpdiBjbGFzcz0idGItc2VwIj48L2Rpdj4KICAgICAgICAgICAgICAgPGlucHV0IGNsYXNzPSJzcmNoIiBwbGFjZWhvbGRlcj0iU2VhcmNoIGxlYWRzLi4uIiBvbmlucHV0PSJkb1NlYXJjaCh0aGlzLnZhbHVlKSI+CiAgICAgICAgICAgIDwvZGl2PgogICAgICAgICAgICA8ZGl2IHN0eWxlPSJkaXNwbGF5OmZsZXg7ZmxleC13cmFwOndyYXA7Z2FwOjhweDthbGlnbi1pdGVtczpjZW50ZXI7d2lkdGg6MTAwJTtwYWRkaW5nLXRvcDoxMHB4O2JvcmRlci10b3A6MXB4IHNvbGlkIHZhcigtLWJvcmRlcik7bWFyZ2luLXRvcDo0cHg7Ij4KICAgICAgICAgICAgICAgPHNwYW4gY2xhc3M9InRibCI+RXhwb3J0Ojwvc3Bhbj4KICAgICAgICAgICAgICAgPGJ1dHRvbiBjbGFzcz0idGJ0biBnb2xkIiBvbmNsaWNrPSJleHBvcnRDU1YoKSI+4oaTIENTViAoYWxsKTwvYnV0dG9uPgogICAgICAgICAgICAgICA8YnV0dG9uIGNsYXNzPSJ0YnRuIGdvbGQiIG9uY2xpY2s9ImV4cG9ydEpTT04oKSI+4oaTIEpTT04gKGFsbCk8L2J1dHRvbj4KICAgICAgICAgICAgICAgPGJ1dHRvbiBjbGFzcz0idGJ0biIgb25jbGljaz0idHJpZ2dlckltcG9ydCgpIj7ihpEgSW1wb3J0IEpTT048L2J1dHRvbj4KICAgICAgICAgICAgICAgPGJ1dHRvbiBjbGFzcz0idGJ0biIgb25jbGljaz0iY29weUFsbCgpIj7ip4kgQ29weSBBbGwgVVJMczwvYnV0dG9uPgogICAgICAgICAgICAgICA8YnV0dG9uIGNsYXNzPSJ0YnRuIiBpZD0icmVzb2x2ZUJ0biIgb25jbGljaz0ic2l0ZW1hcFJlc29sdXRpb25BY3RpdmU9ZmFsc2U7cmVzb2x2ZVNpdGVtYXBzUGhhc2UyKCkiIHN0eWxlPSJib3JkZXItY29sb3I6cmdiYSg5NiwxNjUsMjUwLC4zNSk7Y29sb3I6dmFyKC0tYmx1ZSk7Ij7in7MgUmVzb2x2ZSBTaXRlbWFwczwvYnV0dG9uPgogICAgICAgICAgICAgICA8ZGl2IGNsYXNzPSJ0Yi1zZXAiPjwvZGl2PgogICAgICAgICAgICAgICA8c3BhbiBjbGFzcz0idGJsIj5TZWxlY3Q6PC9zcGFuPgogICAgICAgICAgICAgICA8YnV0dG9uIGNsYXNzPSJ0YnRuIiBvbmNsaWNrPSJzZWxBbGwoKSI+U2VsZWN0IEFsbDwvYnV0dG9uPgogICAgICAgICAgICAgICA8YnV0dG9uIGNsYXNzPSJ0YnRuIiBvbmNsaWNrPSJjbGVhclNlbCgpIj5DbGVhcjwvYnV0dG9uPgogICAgICAgICAgICAgICA8YnV0dG9uIGNsYXNzPSJ0YnRuIiBvbmNsaWNrPSJleHBvcnRTZWxDU1YoKSI+4oaTIENTViAoc2VsZWN0ZWQpPC9idXR0b24+CiAgICAgICAgICAgIDwvZGl2PgogICAgICAgICA8L2Rpdj4KICAgICAgICAgPGRpdiBpZD0icmVzdWx0cyI+PC9kaXY+CiAgICAgICAgIDxkaXYgY2xhc3M9ImVtcHR5LXN0YXRlIiBpZD0iZW1wdHlTdGF0ZSI+CiAgICAgICAgICAgIDxkaXYgY2xhc3M9ImViaWciPkZJTkQ8YnI+TEVBRFM8L2Rpdj4KICAgICAgICAgICAgPHA+RW50ZXIgYW55IGNpdHkgKyBjb3VudHJ5IGFuZCBoaXQgPHN0cm9uZz5GSU5EIExFQURTPC9zdHJvbmc+Ljxicj4KICAgICAgICAgICAgICAgMzcgbmljaGUgc2VhcmNoZXMgZmlyZSBvbmUgYnkgb25lIOKAlCBubyByYXRlIGxpbWl0cyDigJQgcmVzdWx0cyBzdHJlYW0gaW4gbGl2ZS48YnI+PGJyPgogICAgICAgICAgICAgICA8c3Ryb25nIHN0eWxlPSJjb2xvcjp2YXIoLS1nb2xkKSI+Rm9jdXMgb24gdGhlIPCflKUgNeKAkzMwIHBhZ2UgYnVja2V0cy48L3N0cm9uZz48YnI+CiAgICAgICAgICAgICAgIFJlYWwgYnVzaW5lc3NlcywgYWxtb3N0IG5vIHdlYiBjb250ZW50IOKAlCB0aGUgZWFzaWVzdCBjb250ZW50IHdyaXRpbmcgcGl0Y2ggZXZlci4KICAgICAgICAgICAgPC9wPgogICAgICAgICA8L2Rpdj4KICAgICAgPC9kaXY+CiAgICAgIDxkaXYgY2xhc3M9ImNzLXdyYXAiPgogIDxkaXYgY2xhc3M9ImNzLXBhbmVsIiBpZD0iY2FsbFNoZWV0IiBzdHlsZT0iZGlzcGxheTpub25lOyI+CiAgICA8ZGl2IGNsYXNzPSJjcy10b3AiPgogICAgICA8ZGl2IGNsYXNzPSJjcy10aXRsZSI+JiMxMjgyMjI7IENBTEwgPHNwYW4+U0hFRVQ8L3NwYW4+PC9kaXY+CiAgICAgIDxzcGFuIGNsYXNzPSJjcy1jb3VudCIgaWQ9ImNzQ291bnQiPjAgbGVhZHM8L3NwYW4+CiAgICAgIDxkaXYgY2xhc3M9ImNzLXRvZ2dsZSIgaWQ9ImNzVG9nZ2xlIiBzdHlsZT0ibWFyZ2luLWxlZnQ6YXV0bzsiPgogICAgICAgIDxidXR0b24gZGF0YS1zYz0iZGZ5IiBjbGFzcz0ib24iIG9uY2xpY2s9ImNzU2V0U2NyaXB0KCdkZnknLHRoaXMpIj5Db250ZW50ICZtaWRkb3Q7IERGWTwvYnV0dG9uPgogICAgICAgIDxidXR0b24gZGF0YS1zYz0idHJhaW5pbmciIG9uY2xpY2s9ImNzU2V0U2NyaXB0KCd0cmFpbmluZycsdGhpcykiPkNsYXVkZSBUcmFpbmluZzwvYnV0dG9uPgogICAgICA8L2Rpdj4KICAgIDwvZGl2PgogICAgPGRpdiBjbGFzcz0iY3MtZmlsdGVycyI+CiAgICAgIDxpbnB1dCBjbGFzcz0iY3MtaW5wIiBpZD0iY3NTZXJ2aWNlIiBwbGFjZWhvbGRlcj0iU2VydmljZSAoZS5nLiByb29maW5nKSIgb25pbnB1dD0iY3NSZW5kZXIoKSI+CiAgICAgIDxpbnB1dCBjbGFzcz0iY3MtaW5wIiBpZD0iY3NDYWxsYmFjayIgcGxhY2Vob2xkZXI9IkNhbGxiYWNrIG51bWJlciIgb25pbnB1dD0iY3NSZW5kZXIoKSI+CiAgICAgIDxzcGFuIHN0eWxlPSJ3aWR0aDoxcHg7aGVpZ2h0OjIycHg7YmFja2dyb3VuZDp2YXIoLS1ib3JkZXIpOyI+PC9zcGFuPgogICAgICA8YnV0dG9uIGNsYXNzPSJjcy1mYnRuIG9uIiBkYXRhLWY9ImFsbCIgb25jbGljaz0iY3NTZXRGaWx0ZXIoJ2FsbCcsdGhpcykiPkFsbDwvYnV0dG9uPgogICAgICA8YnV0dG9uIGNsYXNzPSJjcy1mYnRuIiBkYXRhLWY9InBob25lIiBvbmNsaWNrPSJjc1NldEZpbHRlcigncGhvbmUnLHRoaXMpIj4mIzEyODIyMjsgSGFzIHBob25lPC9idXR0b24+CiAgICAgIDxidXR0b24gY2xhc3M9ImNzLWZidG4iIGRhdGEtZj0ibm9waG9uZSIgb25jbGljaz0iY3NTZXRGaWx0ZXIoJ25vcGhvbmUnLHRoaXMpIj4mIzEwMDA1OyBObyBwaG9uZTwvYnV0dG9uPgogICAgICA8YnV0dG9uIGNsYXNzPSJjcy1mYnRuIGV4cCIgb25jbGljaz0iY3NFeHBvcnRDU1YoKSIgc3R5bGU9Im1hcmdpbi1sZWZ0OmF1dG87Ij4mIzg1OTU7IEV4cG9ydCBDU1Y8L2J1dHRvbj4KICAgIDwvZGl2PgogICAgPGRpdiBpZD0iY3NCb2R5Ij48L2Rpdj4KICA8L2Rpdj4KPC9kaXY+CgogICAgICA8ZGl2IGNsYXNzPSJzZWxiYXIiIGlkPSJzZWxiYXIiIHN0eWxlPSJkaXNwbGF5Om5vbmU7Ij4KICAgICAgICAgPGRpdiBjbGFzcz0ic2VsaW5mbyI+PHN0cm9uZyBpZD0ic2VsQ291bnQiPjA8L3N0cm9uZz4gbGVhZHMgc2VsZWN0ZWQ8L2Rpdj4KICAgICAgICAgPGRpdiBjbGFzcz0ic2VsYWN0aW9ucyI+CiAgICAgICAgICAgIDxidXR0b24gY2xhc3M9InNlbGJ0biIgb25jbGljaz0iZXhwb3J0U2VsQ1NWKCkiPuKGkyBDU1YgU2VsZWN0ZWQ8L2J1dHRvbj4KICAgICAgICAgICAgPGJ1dHRvbiBjbGFzcz0ic2VsYnRuIiBvbmNsaWNrPSJjYWxsU2VsZWN0ZWQoKSIgc3R5bGU9ImJhY2tncm91bmQ6cmdiYSg3NCwyMjIsMTI4LC4xMik7Y29sb3I6dmFyKC0tZ3JlZW4pO2JvcmRlci1jb2xvcjpyZ2JhKDc0LDIyMiwxMjgsLjM1KTsiPvCfpJYgQ2FsbCBOb3c8L2J1dHRvbj4KICAgICAgICAgICAgPGJ1dHRvbiBjbGFzcz0ic2VsYnRuIiBvbmNsaWNrPSJvcGVuUXVldWVQYW5lbCgpO3N0YXJ0UXVldWUoKTsiIHN0eWxlPSJiYWNrZ3JvdW5kOnJnYmEoMjUxLDE5MSwzNiwuMTIpO2NvbG9yOnZhcigtLWdvbGQpO2JvcmRlci1jb2xvcjpyZ2JhKDI1MSwxOTEsMzYsLjM1KTsiPuKPsSBBdXRvLVF1ZXVlPC9idXR0b24+CiAgICAgICAgICAgIDxidXR0b24gY2xhc3M9InNlbGJ0biBwIiBvbmNsaWNrPSJjbGVhclNlbCgpIj7inJUgQ2xlYXI8L2J1dHRvbj4KICAgICAgICAgPC9kaXY+CiAgICAgIDwvZGl2PgogICAgICA8ZGl2IGNsYXNzPSJ0b2FzdCIgaWQ9InRvYXN0Ij48L2Rpdj4KICAgICAgPHNjcmlwdD4KICAgICAgICAgY29uc3QgSU5EVVNUUklFUz1bCiAgICAgICAgIC8vIOKUgOKUgCDimpbvuI8gTGVnYWwgJiBGaW5hbmNlIOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgAogICAgICAgICB7aWQ6J2xhdycsICAgICAgICAgbGFiZWw6J0xhdyBGaXJtcycsICAgICAgICAgICAgIHE6J2xhdyBmaXJtcyBzb2xpY2l0b3JzIGxhd3llcnMgYXR0b3JuZXlzJywgICAgICAgICAgIHZhbHVlOifwn5Kw8J+SsPCfkrAnLCB2b2w6J/Cfn6InfSwKICAgICAgICAge2lkOidhY2NvdW50aW5nJywgIGxhYmVsOidBY2NvdW50YW50cycsICAgICAgICAgICBxOidhY2NvdW50YW50cyBib29ra2VlcGVycyBmaW5hbmNpYWwgYWRtaW4gZmlybXMnLCAgICB2YWx1ZTon8J+SsPCfkrDwn5KwJywgdm9sOifwn5+iJ30sCiAgICAgICAgIHtpZDonZmluYW5jaWFsJywgICBsYWJlbDonRmluYW5jaWFsIEFkdmlzb3JzJywgICAgcTonZmluYW5jaWFsIGFkdmlzb3JzIHdlYWx0aCBtYW5hZ2VtZW50IHBsYW5uZXJzJywgICAgdmFsdWU6J/CfkrDwn5Kw8J+SsCcsIHZvbDon8J+foSd9LAogICAgICAgICB7aWQ6J25vdGFyeScsICAgICAgbGFiZWw6J05vdGFyaWVzJywgICAgICAgICAgICAgIHE6J25vdGFyaWVzIG5vdGFyeSBvZmZpY2VzIGNpdmlsIGxhdyBub3RhcnknLCAgICAgICAgIHZhbHVlOifwn5Kw8J+SsCcsICAgdm9sOifwn5+hJ30sCiAgICAgICAgIHtpZDonbW9ydGdhZ2UnLCAgICBsYWJlbDonTW9ydGdhZ2UgQWR2aXNvcnMnLCAgICAgcTonbW9ydGdhZ2UgYWR2aXNvcnMgYnJva2VycyBob21lIGxvYW4gY29uc3VsdGFudHMnLCAgdmFsdWU6J/CfkrDwn5Kw8J+SsCcsIHZvbDon8J+foid9LAogICAgICAgICAvLyDilIDilIAg8J+PpSBIZWFsdGggJiBXZWxsbmVzcyDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIAKICAgICAgICAge2lkOidwaHlzaW8nLCAgICAgIGxhYmVsOidQaHlzaW90aGVyYXBpc3RzJywgICAgICBxOidwaHlzaW90aGVyYXB5IHBoeXNpY2FsIHRoZXJhcHkgcmVoYWJpbGl0YXRpb24nLCAgICB2YWx1ZTon8J+SsPCfkrAnLCAgIHZvbDon8J+foid9LAogICAgICAgICB7aWQ6J2RlbnRhbCcsICAgICAgbGFiZWw6J0RlbnRpc3RzJywgICAgICAgICAgICAgIHE6J2RlbnRhbCBjbGluaWNzIGRlbnRpc3RzIG9yYWwgc3VyZ2VyeSBwcmFjdGljZXMnLCAgIHZhbHVlOifwn5Kw8J+SsPCfkrAnLCB2b2w6J/Cfn6InfSwKICAgICAgICAge2lkOidwc3ljaG9sb2d5JywgIGxhYmVsOidQc3ljaG9sb2dpc3RzJywgICAgICAgICBxOidwc3ljaG9sb2dpc3RzIHRoZXJhcGlzdHMgY291bnNlbGxvcnMgbWVudGFsIGhlYWx0aCcsdmFsdWU6J/CfkrDwn5KwJywgdm9sOifwn5+iJ30sCiAgICAgICAgIHtpZDonY2xpbmljJywgICAgICBsYWJlbDonQ2xpbmljcyAvIEFlc3RoZXRpY3MnLCAgcTonYWVzdGhldGljIGNsaW5pY3MgY29zbWV0aWMgc3VyZ2VyeSBiZWF1dHkgY2xpbmljcycsdmFsdWU6J/CfkrDwn5Kw8J+SsCcsIHZvbDon8J+foSd9LAogICAgICAgICB7aWQ6J2RpZXRpdGlhbicsICAgbGFiZWw6J0RpZXRpdGlhbnMgLyBDb2FjaGVzJywgIHE6J2RpZXRpdGlhbnMgbnV0cml0aW9uaXN0cyBoZWFsdGggY29hY2hlcyB3ZWxsbmVzcycsIHZhbHVlOifwn5KwJywgICAgIHZvbDon8J+foSd9LAogICAgICAgICAvLyDilIDilIAg8J+Pl++4jyBDb25zdHJ1Y3Rpb24gJiBSZWFsIEVzdGF0ZSDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIAKICAgICAgICAge2lkOidjb25zdHJ1Y3Rpb24nLGxhYmVsOidDb250cmFjdG9ycyAvIEJ1aWxkZXJzJywgcTonY29uc3RydWN0aW9uIGNvbnRyYWN0b3JzIGJ1aWxkZXJzIHJlbm92YXRpb24nLCAgICB2YWx1ZTon8J+SsPCfkrDwn5KwJywgdm9sOifwn5+iJ30sCiAgICAgICAgIHtpZDoncmVhbGVzdGF0ZScsICBsYWJlbDonUmVhbCBFc3RhdGUgQWdlbnRzJywgICAgcToncmVhbCBlc3RhdGUgYWdlbnRzIHByb3BlcnR5IGJyb2tlcnMgZXN0YXRlIGFnZW5jeScsdmFsdWU6J/CfkrDwn5Kw8J+SsCcsIHZvbDon8J+foid9LAogICAgICAgICB7aWQ6J3Jvb2ZpbmcnLCAgICAgbGFiZWw6J1Jvb2ZlcnMnLCAgICAgICAgICAgICAgIHE6J3Jvb2ZpbmcgY29udHJhY3RvcnMgcm9vZiByZXBhaXIgcm9vZiBpbnN0YWxsYXRpb24nLCB2YWx1ZTon8J+SsPCfkrAnLCAgdm9sOifwn5+hJ30sCiAgICAgICAgIHtpZDonaW50ZXJpb3InLCAgICBsYWJlbDonSW50ZXJpb3IgRGVzaWduZXJzJywgICAgcTonaW50ZXJpb3IgZGVzaWduZXJzIGRlY29yYXRvcnMgZnVybmlzaGluZyBzdHVkaW9zJywgIHZhbHVlOifwn5Kw8J+SsCcsICB2b2w6J/Cfn6EnfSwKICAgICAgICAge2lkOidpbnN0YWxsYXRpb24nLGxhYmVsOidJbnN0YWxsYXRpb24gQ29tcGFuaWVzJywgcTonaW5zdGFsbGF0aW9uIGNvbXBhbmllcyBIVkFDIHBsdW1iaW5nIGVsZWN0cmljYWwnLCAgdmFsdWU6J/CfkrDwn5KwJywgIHZvbDon8J+foid9LAogICAgICAgICAvLyDilIDilIAg8J+SvCBCdXNpbmVzcyBTZXJ2aWNlcyDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIAKICAgICAgICAge2lkOidyZWNydWl0bWVudCcsIGxhYmVsOidSZWNydWl0bWVudCBBZ2VuY2llcycsICBxOidyZWNydWl0bWVudCBhZ2VuY2llcyBzdGFmZmluZyBoZWFkaHVudGVycyBIUicsICAgIHZhbHVlOifwn5Kw8J+SsPCfkrAnLCB2b2w6J/Cfn6InfSwKICAgICAgICAge2lkOidpdCcsICAgICAgICAgIGxhYmVsOidJVCBDb25zdWx0YW5jeScsICAgICAgICBxOidJVCBjb25zdWx0YW5jeSB0ZWNoIHNlcnZpY2VzIHNvZnR3YXJlIGNvbXBhbmllcycsICB2YWx1ZTon8J+SsPCfkrDwn5KwJywgdm9sOifwn5+iJ30sCiAgICAgICAgIHtpZDonbWFya2V0aW5nJywgICBsYWJlbDonTWFya2V0aW5nIEFnZW5jaWVzJywgICAgcTonbWFya2V0aW5nIGRpZ2l0YWwgYWdlbmNpZXMgYWR2ZXJ0aXNpbmcgYnJhbmRpbmcnLCAgdmFsdWU6J/CfkrDwn5KwJywgIHZvbDon8J+foid9LAogICAgICAgICB7aWQ6J21hbmFnZW1lbnQnLCAgbGFiZWw6J01hbmFnZW1lbnQgQ29uc3VsdGFudHMnLCBxOidtYW5hZ2VtZW50IGNvbnN1bHRhbnRzIHN0cmF0ZWd5IGJ1c2luZXNzIGFkdmlzb3J5Jyx2YWx1ZTon8J+SsPCfkrDwn5KwJywgdm9sOifwn5+hJ30sCiAgICAgICAgIHtpZDonY29hY2hpbmcnLCAgICBsYWJlbDonQnVzaW5lc3MgQ29hY2hlcycsICAgICAgcTonYnVzaW5lc3MgY29hY2hlcyBleGVjdXRpdmUgY29hY2hpbmcgZW50cmVwcmVuZXVycycsIHZhbHVlOifwn5Kw8J+SsCcsICB2b2w6J/Cfn6EnfSwKICAgICAgICAge2lkOidzZW8nLCAgICAgICAgIGxhYmVsOidTRU8gLyBXZWIgQWdlbmNpZXMnLCAgICBxOidTRU8gYWdlbmNpZXMgd2ViIGRldmVsb3BtZW50IGRpZ2l0YWwgbWFya2V0aW5nJywgICB2YWx1ZTon8J+SsPCfkrAnLCAgdm9sOifwn5+iJ30sCiAgICAgICAgIC8vIOKUgOKUgCDwn5SnIFRyYWRlcyAmIExvY2FsIFNlcnZpY2VzIOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgAogICAgICAgICB7aWQ6J2NsZWFuaW5nJywgICAgbGFiZWw6J0NsZWFuaW5nIENvbXBhbmllcycsICAgIHE6J2NsZWFuaW5nIGNvbXBhbmllcyBjb21tZXJjaWFsIG9mZmljZSBjbGVhbmluZycsICAgIHZhbHVlOifwn5Kw8J+SsCcsICB2b2w6J/Cfn6InfSwKICAgICAgICAge2lkOidwbHVtYmluZycsICAgIGxhYmVsOidQbHVtYmVycycsICAgICAgICAgICAgICBxOidwbHVtYmVycyBwbHVtYmluZyBzZXJ2aWNlcyBlbWVyZ2VuY3kgcGx1bWJlcicsICAgICB2YWx1ZTon8J+SsPCfkrAnLCAgdm9sOifwn5+iJ30sCiAgICAgICAgIHtpZDonYXV0b21vdGl2ZScsICBsYWJlbDonQXV0byBSZXBhaXIgLyBHYXJhZ2VzJywgcTonYXV0byByZXBhaXIgZ2FyYWdlcyBtZWNoYW5pY3MgY2FyIHNlcnZpY2UnLCAgICAgICAgdmFsdWU6J/CfkrDwn5KwJywgIHZvbDon8J+foid9LAogICAgICAgICB7aWQ6J2xhbmRzY2FwaW5nJywgbGFiZWw6J0xhbmRzY2FwaW5nIC8gR2FyZGVucycsIHE6J2xhbmRzY2FwaW5nIGdhcmRlbiBkZXNpZ24gaG9ydGljdWx0dXJlIGdyb3VuZHMnLCAgIHZhbHVlOifwn5KwJywgICAgdm9sOifwn5+hJ30sCiAgICAgICAgIC8vIOKUgOKUgCDwn46TIEVkdWNhdGlvbiAmIENvYWNoaW5nIOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgAogICAgICAgICB7aWQ6J2RyaXZpbmdzY2hvb2wnLGxhYmVsOidEcml2aW5nIFNjaG9vbHMnLCAgICAgIHE6J2RyaXZpbmcgc2Nob29scyBpbnN0cnVjdG9ycyBsZWFybmVyIGRyaXZlciBsZXNzb25zJyx2YWx1ZTon8J+SsPCfkrAnLCB2b2w6J/Cfn6InfSwKICAgICAgICAge2lkOidsYW5ndWFnZScsICAgIGxhYmVsOidMYW5ndWFnZSBTY2hvb2xzJywgICAgICBxOidsYW5ndWFnZSBzY2hvb2xzIHR1dG9ycyBFbmdsaXNoIGNvdXJzZXMgdHJhaW5pbmcnLCAgdmFsdWU6J/CfkrAnLCAgIHZvbDon8J+foSd9LAogICAgICAgICB7aWQ6J2VsZWFybmluZycsICAgbGFiZWw6J09ubGluZSBDb3Vyc2UgUHJvdmlkZXJzJyxxOidvbmxpbmUgY291cnNlcyBlLWxlYXJuaW5nIHRyYWluaW5nIHByb3ZpZGVycycsICAgIHZhbHVlOifwn5Kw8J+SsCcsICB2b2w6J/Cfn6EnfSwKICAgICAgICAgLy8g4pSA4pSAIPCfj6ggSG9zcGl0YWxpdHkgJiBMaWZlc3R5bGUg4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSACiAgICAgICAgIHtpZDoncmVzdGF1cmFudHMnLCBsYWJlbDonUmVzdGF1cmFudHMgLyBDYWZlcycsICAgcToncmVzdGF1cmFudHMgY2FmZXMgYmFycyBiaXN0cm9zIGRpbmluZycsICAgICAgICAgICAgdmFsdWU6J/CfkrAnLCAgICB2b2w6J/Cfn6InfSwKICAgICAgICAge2lkOidob3RlbHMnLCAgICAgIGxhYmVsOidIb3RlbHMgLyBCJkJzJywgICAgICAgICBxOidob3RlbHMgYmVkIGJyZWFrZmFzdCBndWVzdGhvdXNlcyBib3V0aXF1ZSBob3RlbHMnLCB2YWx1ZTon8J+SsPCfkrAnLCAgdm9sOifwn5+iJ30sCiAgICAgICAgIHtpZDonZ3ltcycsICAgICAgICBsYWJlbDonR3ltcyAvIEZpdG5lc3MgU3R1ZGlvcycsIHE6J2d5bXMgZml0bmVzcyBzdHVkaW9zIHBlcnNvbmFsIHRyYWluZXJzIHlvZ2EgcGlsYXRlcycsdmFsdWU6J/CfkrDwn5KwJywgdm9sOifwn5+iJ30sCiAgICAgICAgIHtpZDonYmVhdXR5JywgICAgICBsYWJlbDonQmVhdXR5IC8gSGFpciAvIE5haWxzJywgIHE6J2hhaXIgc2Fsb25zIGJlYXV0eSBzcGFzIG5haWwgc3R1ZGlvcyBiYXJiZXJzaG9wcycsIHZhbHVlOifwn5KwJywgICB2b2w6J/Cfn6InfSwKICAgICAgICAge2lkOidldmVudHMnLCAgICAgIGxhYmVsOidFdmVudHMgLyBXZWRkaW5nJywgICAgICAgcTonZXZlbnQgdmVudWVzIHdlZGRpbmcgcGxhbm5lcnMgY2F0ZXJpbmcgcGhvdG9ncmFwaHknLHZhbHVlOifwn5Kw8J+SsCcsIHZvbDon8J+foSd9LAogICAgICAgICAvLyDilIDilIAg8J+bkiBSZXRhaWwgJiBFY29tbWVyY2Ug4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSACiAgICAgICAgIHtpZDonZWNvbW1lcmNlJywgICBsYWJlbDonRS1jb21tZXJjZSAvIFJldGFpbCcsICAgcTonZWNvbW1lcmNlIG9ubGluZSBzaG9wcyByZXRhaWwgYm91dGlxdWVzIHN0b3JlcycsICAgdmFsdWU6J/CfkrDwn5KwJywgIHZvbDon8J+foid9LAogICAgICAgICB7aWQ6J2FyY2hpdGVjdHVyZScsbGFiZWw6J0FyY2hpdGVjdHVyZSAvIERlc2lnbicsICBxOidhcmNoaXRlY3R1cmUgZmlybXMgdXJiYW4gcGxhbm5pbmcgbGFuZHNjYXBlIGRlc2lnbicsdmFsdWU6J/CfkrDwn5KwJywgdm9sOifwn5+hJ30sCiAgICAgICAgIHtpZDonbG9naXN0aWNzJywgICBsYWJlbDonTG9naXN0aWNzIC8gVHJhbnNwb3J0JywgIHE6J2xvZ2lzdGljcyB0cmFuc3BvcnQgY291cmllciBmcmVpZ2h0IGRlbGl2ZXJ5JywgICAgIHZhbHVlOifwn5Kw8J+SsCcsICB2b2w6J/Cfn6EnfSwKICAgICAgICAge2lkOidwaG90b2dyYXBoeScsIGxhYmVsOidQaG90b2dyYXBoeSAvIFZpZGVvJywgICAgcToncGhvdG9ncmFwaGVycyB2aWRlb2dyYXBoZXJzIGNyZWF0aXZlIHN0dWRpb3MgZmlsbScsdmFsdWU6J/CfkrAnLCAgIHZvbDon8J+foSd9LAogICAgICAgICBdOwogICAgICAgICBjb25zdCBQSVRDSD17CiAgICAgICAgIGdob3N0OiAgICAnWW91ciBzaXRlIGhhcyBhbG1vc3Qgbm8gY29udGVudCDigJQgSSBoZWxwIGJ1c2luZXNzZXMgbGlrZSB5b3VycyBnZXQgd3JpdHRlbiB1cCBmcm9tIHNjcmF0Y2ggYW5kIHN0YXJ0IHNob3dpbmcgdXAgb24gR29vZ2xlLicsCiAgICAgICAgIHNrZWxldG9uOiAiWW91J3JlIHJ1bm5pbmcgYSByZWFsIGJ1c2luZXNzIGJ1dCB5b3VyIHdlYnNpdGUgc2F5cyBhbG1vc3Qgbm90aGluZy4gTGV0IG1lIHdyaXRlIHRoZSBwYWdlcyB0aGF0IGFjdHVhbGx5IGNsb3NlIGNsaWVudHMgZm9yIHlvdS4iLAogICAgICAgICBicm9jaHVyZTogIllvdXIgc2l0ZSBjb3ZlcnMgdGhlIGJhc2ljcyBidXQgdGhlcmUncyBubyBibG9nIG9yIGNhc2Ugc3R1ZGllcyDigJQgdGhlIGNvbnRlbnQgdGhhdCBkcml2ZXMgb3JnYW5pYyB0cmFmZmljLiBJIGNhbiBjaGFuZ2UgdGhhdC4iLAogICAgICAgICBzdGFsZTogICAgIllvdSBzdGFydGVkIHB1Ymxpc2hpbmcgY29udGVudCBhbmQgc3RvcHBlZC4gWW91ciBjb21wZXRpdG9ycyBkaWRuJ3QuIExldCBtZSBnZXQgeW91ciBjb250ZW50IGVuZ2luZSBydW5uaW5nIGFnYWluLiIsCiAgICAgICAgIGFjdGl2ZTogICAiWW91IGhhdmUgY29udGVudCBidXQgdGhlIHF1YWxpdHkgYW5kIFNFTyBzdHJ1Y3R1cmUgYXJlbid0IGNvbnZlcnRpbmcuIEEgcmVmcmVzaCBhbmQgb25nb2luZyBzdHJhdGVneSB3b3VsZCBtYWtlIGEgYmlnIGRpZmZlcmVuY2UuIiwKICAgICAgICAgZXN0YWI6ICAgICdXaXRoIGEgc2l0ZSB0aGlzIHNpemUsIGEgY29udGVudCBhdWRpdCB3b3VsZCBsaWtlbHkgdW5jb3ZlciBkb3plbnMgb2YgcGFnZXMgaHVydGluZyB5b3VyIHJhbmtpbmdzLicsCiAgICAgICAgIH07CiAgICAgICAgIGNvbnN0IEJVQ0tFVF9ERUZTPVsKICAgICAgICAge2tleTonZ2hvc3QnLCAgICBsYWJlbDonTkVBUkxZIEVNUFRZJywgICBzdWJsYWJlbDonR2hvc3QgU2l0ZXMnLCAgICByYW5nZTonMCDigJMgNSBQYWdlcycsICAgIGNsczonYmstZ2hvc3QnLCAgICBpY29uOifwn5G7JywgaG90OifimqAgVmVyaWZ5IEJ1ZGdldCcsICAgYWN0aW9uOidCdWlsZCBmcm9tIHNjcmF0Y2gnLCAgICAgICAgICBkZXNjOidIb21lcGFnZSBvbmx5IOKAlCBhbG1vc3Qgbm90aGluZyBpbmRleGVkLiBWZXJpZnkgdGhleSBoYXZlIGJ1ZGdldCBiZWZvcmUgcGl0Y2hpbmcuJ30sCiAgICAgICAgIHtrZXk6J3NrZWxldG9uJywgbGFiZWw6J0JBUkUgQk9ORVMnLCAgICAgc3VibGFiZWw6J1NrZWxldG9uIFNpdGVzJywgcmFuZ2U6JzUg4oCTIDE1IFBhZ2VzJywgICBjbHM6J2JrLXNrZWxldG9uJywgaWNvbjon8J+UpScsIGhvdDon8J+UpSBFQVNJRVNUIFNFTEwnLCAgIGFjdGlvbjonV3JpdGUgYWxsIHRoZWlyIG1pc3NpbmcgcGFnZXMnLCBkZXNjOidSZWFsIGJ1c2luZXNzIG1ha2luZyBtb25leSDigJQgd2Vic2l0ZSBzYXlzIGFsbW9zdCBub3RoaW5nLiBMb3dlc3QgcmVzaXN0YW5jZSBwaXRjaC4nfSwKICAgICAgICAge2tleTonYnJvY2h1cmUnLCBsYWJlbDonQlVJTFQgJiBGT1JHT1QnLCBzdWJsYWJlbDonQnJvY2h1cmUgU2l0ZXMnLCByYW5nZTonMTUg4oCTIDMwIFBhZ2VzJywgIGNsczonYmstYnJvY2h1cmUnLCBpY29uOifwn5SlJywgaG90Oifwn5SlIEhJR0ggUFJJT1JJVFknLCAgYWN0aW9uOidCbG9nICsgU0VPIGNvbnRlbnQgc3RyYXRlZ3knLCAgZGVzYzonSGFzIGFsbCB0aGUgYmFzaWMgcGFnZXMgYnV0IHplcm8gYmxvZywgbm8gY2FzZSBzdHVkaWVzLCB0aGluIGNvcHkuIEJ1aWx0IG9uY2UsIGlnbm9yZWQgc2luY2UuJ30sCiAgICAgICAgIHtrZXk6J3N0YWxlJywgICAgbGFiZWw6J0dPTkUgUVVJRVQnLCAgICAgc3VibGFiZWw6J1N0YWxlIFNpdGVzJywgICAgcmFuZ2U6JzMwIOKAkyA2MCBQYWdlcycsICBjbHM6J2JrLXN0YWxlJywgICAgaWNvbjon8J+VsCcsIGhvdDon4pyTIFJldGFpbmVyIFRhcmdldCcsIGFjdGlvbjonUmVzdGFydCB0aGVpciBjb250ZW50IGVuZ2luZScsICBkZXNjOidTdGFydGVkIGNvbnRlbnQgbWFya2V0aW5nIHRoZW4gc3RvcHBlZC4gQmxvZyBpcyBtb250aHMgb3IgeWVhcnMgb3V0IG9mIGRhdGUuJ30sCiAgICAgICAgIHtrZXk6J2FjdGl2ZScsICAgbGFiZWw6J05FRURTIFFVQUxJVFknLCAgc3VibGFiZWw6J0FjdGl2ZSBTaXRlcycsICAgcmFuZ2U6JzYwIOKAkyAxNTAgUGFnZXMnLCBjbHM6J2JrLWFjdGl2ZScsICAgaWNvbjon4pqhJywgaG90OifinJMgQXVkaXQgKyBSZXRhaW5lcicsIGFjdGlvbjonQ29udGVudCBhdWRpdCArIHJld3JpdGUgcGxhbicsICBkZXNjOidQdWJsaXNoaW5nIGJ1dCBpbmNvbnNpc3RlbnRseS4gUXVhbGl0eSBpcyBsb3csIFNFTyBzdHJ1Y3R1cmUgaXMgYSBtZXNzLid9LAogICAgICAgICB7a2V5Oidlc3RhYicsICAgIGxhYmVsOidMQVJHRSBMSUJSQVJZJywgIHN1YmxhYmVsOidFc3RhYmxpc2hlZCcsICAgIHJhbmdlOicxNTArIFBhZ2VzJywgICAgIGNsczonYmstZXN0YWInLCAgICBpY29uOifwn4+iJywgaG90OifihpcgSGlnaCBUaWNrZXQnLCAgICBhY3Rpb246J0NvbnRlbnQgYXVkaXQgcGl0Y2gnLCAgICAgICAgICAgZGVzYzonQmlnIGNvbnRlbnQgbGlicmFyeS4gTGlrZWx5IGhhcyB3cml0ZXJzLiBQaXRjaCBhbiBhdWRpdCDigJQgMzAlIGlzIHByb2JhYmx5IGh1cnRpbmcgcmFua2luZ3MuJ30sCiAgICAgICAgIF07CiAgICAgICAgIGxldCBhbGxMZWFkcz1bXSxzZWxlY3RlZD1uZXcgU2V0KCksc3RvcHBlZD1mYWxzZSxmaXZlSG91ckhpdD1mYWxzZTsKIAogICAgICAgICBmdW5jdGlvbiBzdG9wQ3Jhd2woKXsKICAgICAgICAgICBzdG9wcGVkPXRydWU7CiAgICAgICAgICAgZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ2NyYXdsQnRuJykuZGlzYWJsZWQ9ZmFsc2U7CiAgICAgICAgICAgZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ3N0b3BCdG4nKS5zdHlsZS5kaXNwbGF5PSdub25lJzsKICAgICAgICAgICBkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgncHJvZ1dyYXAnKS5zdHlsZS5kaXNwbGF5PSdub25lJzsKICAgICAgICAgICBpZih0eXBlb2YgYWxsTGVhZHMhPT0ndW5kZWZpbmVkJyAmJiBhbGxMZWFkcy5sZW5ndGgpewogICAgICAgICAgICAgZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ3Jlc3VsdHMnKS5pbm5lckhUTUw9Jyc7CiAgICAgICAgICAgICByZW5kZXJBbGwoKTsKICAgICAgICAgICAgIHRyeXsgaWYodHlwZW9mIGNzUmVuZGVyPT09J2Z1bmN0aW9uJykgY3NSZW5kZXIoKTsgfWNhdGNoKGUpe30KICAgICAgICAgICAgIHRvYXN0KCfij7kgR2VzdG9wdCDigJQgJythbGxMZWFkcy5sZW5ndGgrJyBsZWFkcyB0b3QgbnUgdG9lIGdldG9vbmQnKTsKICAgICAgICAgICB9IGVsc2UgewogICAgICAgICAgICAgZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ2VtcHR5U3RhdGUnKS5zdHlsZS5kaXNwbGF5PSdibG9jayc7CiAgICAgICAgICAgICB0b2FzdCgn4o+5IENyYXdsIGdlc3RvcHQnKTsKICAgICAgICAgICB9CiAgICAgICAgIH0KICAgICAgICAgbGV0IGFjdGl2ZUJ1Y2tldD0nYWxsJyxhY3RpdmVTZWFyY2g9Jycsc29ydEZpZWxkPSdzY29yZScsc3RyYXRPcGVuPXRydWUsZXJyb3JzPVtdOwogICAgICAgICBsZXQgY29tcGxldGVkSW5kdXN0cmllcz1uZXcgU2V0KCk7CiAgICAgICAgIC8vIOKUgOKUgCBHRU1JTkkgS0VZIE1BTkFHRU1FTlQgKEJZT0sg4oCUIG9wZ2VzbGFnZW4gaW4gbG9jYWxTdG9yYWdlIGdlYnJ1aWtlcikg4pSA4pSACiAgICAgICAgIGNvbnN0IExTX0dFTUlOSV9LRVkgPSAnbGNfZ2VtaW5pX2tleSc7CgogICAgICAgICBmdW5jdGlvbiBtYXNrR2VtaW5pS2V5KGspIHsKICAgICAgICAgICBpZiAoIWsgfHwgay5sZW5ndGggPCAxMikgcmV0dXJuICdBSXphU3nCt8K3wrcnOwogICAgICAgICAgIHJldHVybiBrLnNsaWNlKDAsIDgpICsgJ8K3wrfCtycgKyBrLnNsaWNlKC00KTsKICAgICAgICAgfQoKICAgICAgICAgZnVuY3Rpb24gc2F2ZUdlbWluaUtleSgpIHsKICAgICAgICAgICBjb25zdCBrZXkgPSBkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgnZ2VtaW5pS2V5SW5wdXQnKS52YWx1ZS50cmltKCk7CiAgICAgICAgICAgY29uc3Qgc3RhdHVzID0gZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ2dlbWluaUtleVN0YXR1cycpOwogICAgICAgICAgIGlmICgha2V5IHx8ICFrZXkuc3RhcnRzV2l0aCgnQUl6YScpIHx8IGtleS5sZW5ndGggPCAyMCkgewogICAgICAgICAgICAgc3RhdHVzLmlubmVySFRNTCA9ICc8c3BhbiBzdHlsZT0iY29sb3I6dmFyKC0tcmVkKSI+4p2MIE9uZ2VsZGlnZSBrZXkg4oCUIG1vZXQgYmVnaW5uZW4gbWV0IEFJemFTeSBlbiBtaW5zdGVucyAyMCB0ZWtlbnMgbGFuZyB6aWpuPC9zcGFuPic7CiAgICAgICAgICAgICByZXR1cm47CiAgICAgICAgICAgfQogICAgICAgICAgIGxvY2FsU3RvcmFnZS5zZXRJdGVtKExTX0dFTUlOSV9LRVksIGtleSk7CiAgICAgICAgICAgZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ2dlbWluaUtleUlucHV0JykudmFsdWUgPSAnJzsKICAgICAgICAgICBzdGF0dXMuaW5uZXJIVE1MID0gJyc7CiAgICAgICAgICAgc2hvd0dlbWluaVNhdmVkU3RhdGUoa2V5KTsKICAgICAgICAgICB0b2FzdCgn4pyFIEdlbWluaSBrZXkgb3BnZXNsYWdlbiDigJQgamUga3VudCBudSBjcmF3bGVuIScpOwogICAgICAgICB9CgogICAgICAgICBmdW5jdGlvbiBzaG93R2VtaW5pU2F2ZWRTdGF0ZShrZXkpIHsKICAgICAgICAgICBkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgna2V5RW50cnlCbG9jaycpLnN0eWxlLmRpc3BsYXkgPSAnbm9uZSc7CiAgICAgICAgICAgY29uc3QgYmFyID0gZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ2tleVNhdmVkQmFyJyk7CiAgICAgICAgICAgYmFyLnN0eWxlLmRpc3BsYXkgPSAnZmxleCc7CiAgICAgICAgICAgZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ2dlbWluaUtleU1hc2tlZCcpLnRleHRDb250ZW50ID0gbWFza0dlbWluaUtleShrZXkpOwogICAgICAgICB9CgogICAgICAgICBmdW5jdGlvbiBzaG93R2VtaW5pRW50cnlTdGF0ZSgpIHsKICAgICAgICAgICBkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgna2V5U2F2ZWRCYXInKS5zdHlsZS5kaXNwbGF5ID0gJ25vbmUnOwogICAgICAgICAgIGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCdrZXlFbnRyeUJsb2NrJykuc3R5bGUuZGlzcGxheSA9ICdibG9jayc7CiAgICAgICAgIH0KCiAgICAgICAgIGZ1bmN0aW9uIHJlbW92ZUdlbWluaUtleSgpIHsKICAgICAgICAgICBsb2NhbFN0b3JhZ2UucmVtb3ZlSXRlbShMU19HRU1JTklfS0VZKTsKICAgICAgICAgICBzaG93R2VtaW5pRW50cnlTdGF0ZSgpOwogICAgICAgICAgIHRvYXN0KCdLZXkgdmVyd2lqZGVyZCcpOwogICAgICAgICB9CgogICAgICAgICBmdW5jdGlvbiB0b2dnbGVHZW1pbmlLZXlWaXNpYmxlKCkgewogICAgICAgICAgIGNvbnN0IGlucCA9IGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCdnZW1pbmlLZXlJbnB1dCcpOwogICAgICAgICAgIGNvbnN0IGJ0biA9IGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCdnZW1pbmlLZXlUb2dnbGUnKTsKICAgICAgICAgICBpbnAudHlwZSA9IGlucC50eXBlID09PSAncGFzc3dvcmQnID8gJ3RleHQnIDogJ3Bhc3N3b3JkJzsKICAgICAgICAgICBidG4udGV4dENvbnRlbnQgPSBpbnAudHlwZSA9PT0gJ3Bhc3N3b3JkJyA/ICfwn5GBJyA6ICfwn5mIJzsKICAgICAgICAgfQoKICAgICAgICAgZnVuY3Rpb24gZ2V0R2VtaW5pS2V5KCkgewogICAgICAgICAgIHJldHVybiBsb2NhbFN0b3JhZ2UuZ2V0SXRlbShMU19HRU1JTklfS0VZKSB8fCBudWxsOwogICAgICAgICB9CgogICAgICAgICAvLyBJbml0IG9wIHBhZ2luYSBsb2FkCiAgICAgICAgIGRvY3VtZW50LmFkZEV2ZW50TGlzdGVuZXIoJ0RPTUNvbnRlbnRMb2FkZWQnLCAoKSA9PiB7CiAgICAgICAgICAgY29uc3Qgc2F2ZWQgPSBsb2NhbFN0b3JhZ2UuZ2V0SXRlbShMU19HRU1JTklfS0VZKTsKICAgICAgICAgICBpZiAoc2F2ZWQgJiYgc2F2ZWQubGVuZ3RoID49IDIwKSB7CiAgICAgICAgICAgICBzaG93R2VtaW5pU2F2ZWRTdGF0ZShzYXZlZCk7CiAgICAgICAgICAgfSBlbHNlIHsKICAgICAgICAgICAgIHNob3dHZW1pbmlFbnRyeVN0YXRlKCk7CiAgICAgICAgICAgfQogICAgICAgICB9KTsKICAgICAgICAgCiAgICAgICAgIC8vIOKUgOKUgCBLZXkgbWFuYWdlbWVudCBoYW5kbGVkIGJ5IEdlbWluaSBCWU9LIGZ1bmN0aW9ucyBhYm92ZSDilIDilIAKICAgICAgICAgCgogICAgICAgICAKCiAgICAgICAgIC8vIOKUgOKUgCBQRVJTSVNURU5DRSDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIAKICAgICAgICAgY29uc3QgTFNfS0VZPSdsY19zZXNzaW9uJzsKICAgICAgICAgZnVuY3Rpb24gc2F2ZVNlc3Npb24oY2l0eSxjb3VudHJ5KXsKICAgICAgICAgdHJ5ewogICAgICAgICBsb2NhbFN0b3JhZ2Uuc2V0SXRlbShMU19LRVksSlNPTi5zdHJpbmdpZnkoewogICAgICAgICBjaXR5LGNvdW50cnksCiAgICAgICAgIGxlYWRzOmFsbExlYWRzLAogICAgICAgICBjb21wbGV0ZWQ6Wy4uLmNvbXBsZXRlZEluZHVzdHJpZXNdLAogICAgICAgICBzYXZlZEF0OkRhdGUubm93KCkKICAgICAgICAgfSkpOwogICAgICAgICB9Y2F0Y2goZSl7fQogICAgICAgICB9CiAgICAgICAgIGZ1bmN0aW9uIGxvYWRTZXNzaW9uKCl7CiAgICAgICAgIHRyeXtyZXR1cm4gSlNPTi5wYXJzZShsb2NhbFN0b3JhZ2UuZ2V0SXRlbShMU19LRVkpfHwnbnVsbCcpO30KICAgICAgICAgY2F0Y2goZSl7cmV0dXJuIG51bGw7fQogICAgICAgICB9CiAgICAgICAgIGZ1bmN0aW9uIGNsZWFyU2Vzc2lvbigpewogICAgICAgICBsb2NhbFN0b3JhZ2UucmVtb3ZlSXRlbShMU19LRVkpOwogICAgICAgICBhbGxMZWFkcz1bXTtjb21wbGV0ZWRJbmR1c3RyaWVzPW5ldyBTZXQoKTtzZWxlY3RlZC5jbGVhcigpOwogICAgICAgICBkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgncmVzdW1lQmFubmVyJykuc3R5bGUuZGlzcGxheT0nbm9uZSc7CiAgICAgICAgIGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCdyZXN1bHRzJykuaW5uZXJIVE1MPScnOwogICAgICAgICBkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgnc3RhdHNSb3cnKS5zdHlsZS5kaXNwbGF5PSdub25lJzsKICAgICAgICAgZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ3Rvb2xiYXInKS5zdHlsZS5kaXNwbGF5PSdub25lJzsKICAgICAgICAgZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ2VtcHR5U3RhdGUnKS5zdHlsZS5kaXNwbGF5PSdibG9jayc7CiAgICAgICAgIHRvYXN0KCdTZXNzaW9uIGNsZWFyZWQg4oCUIHJlYWR5IGZvciBhIGZyZXNoIGNyYXdsJyk7CiAgICAgICAgIH0KICAgICAgICAgZnVuY3Rpb24gZGVkdXAoaW5jb21pbmcpewogICAgICAgICBjb25zdCBleGlzdGluZz1uZXcgU2V0KGFsbExlYWRzLm1hcChsPT4obC53ZWJzaXRlfHwnJykudG9Mb3dlckNhc2UoKS5yZXBsYWNlKC9cLyskLywnJykpKTsKICAgICAgICAgcmV0dXJuIGluY29taW5nLmZpbHRlcihsPT57CiAgICAgICAgIGNvbnN0IGs9KGwud2Vic2l0ZXx8JycpLnRvTG93ZXJDYXNlKCkucmVwbGFjZSgvXC8rJC8sJycpOwogICAgICAgICBpZigha3x8ZXhpc3RpbmcuaGFzKGspKXJldHVybiBmYWxzZTsKICAgICAgICAgZXhpc3RpbmcuYWRkKGspOwogICAgICAgICByZXR1cm4gdHJ1ZTsKICAgICAgICAgfSk7CiAgICAgICAgIH0KICAgICAgICAgZnVuY3Rpb24gcmVzdW1lU2Vzc2lvbigpewogICAgICAgICBjb25zdCBzPWxvYWRTZXNzaW9uKCk7CiAgICAgICAgIGlmKCFzfHwhcy5sZWFkc3x8IXMubGVhZHMubGVuZ3RoKXJldHVybjsKICAgICAgICAgYWxsTGVhZHM9cy5sZWFkczsKICAgICAgICAgY29tcGxldGVkSW5kdXN0cmllcz1uZXcgU2V0KHMuY29tcGxldGVkfHxbXSk7CiAgICAgICAgIGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCdyZXN1bWVCYW5uZXInKS5zdHlsZS5kaXNwbGF5PSdub25lJzsKICAgICAgICAgZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ2VtcHR5U3RhdGUnKS5zdHlsZS5kaXNwbGF5PSdub25lJzsKICAgICAgICAgcmVuZGVyQWxsKCk7CiAgICAgICAgIHRvYXN0KCdTZXNzaW9uIHJlc3RvcmVkIOKAlCAnK2FsbExlYWRzLmxlbmd0aCsnIGxlYWRzIGxvYWRlZCcpOwogICAgICAgICB9CiAgICAgICAgIGZ1bmN0aW9uIGxjSW5pdCgpewogICAgICAgICBjb25zdCBzPWxvYWRTZXNzaW9uKCk7CiAgICAgICAgIGlmKCFzfHwhcy5sZWFkc3x8IXMubGVhZHMubGVuZ3RoKXJldHVybjsKICAgICAgICAgY29uc3QgYWdlPU1hdGgucm91bmQoKERhdGUubm93KCktcy5zYXZlZEF0KS82MDAwMCk7CiAgICAgICAgIGNvbnN0IGFnZVN0cj1hZ2U8NjA/YWdlKydtIGFnbyc6TWF0aC5yb3VuZChhZ2UvNjApKydoIGFnbyc7CiAgICAgICAgIGNvbnN0IGRvbmU9KHMuY29tcGxldGVkfHxbXSkubGVuZ3RoOwogICAgICAgICBjb25zdCByZW1haW5pbmc9SU5EVVNUUklFUy5sZW5ndGgtZG9uZTsKICAgICAgICAgY29uc3QgYmFubmVyPWRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCdyZXN1bWVCYW5uZXInKTsKICAgICAgICAgYmFubmVyLnN0eWxlLmRpc3BsYXk9J2ZsZXgnOwogICAgICAgICBkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgncmVzdW1lVGV4dCcpLmlubmVySFRNTD0KICAgICAgICAgJzxzdHJvbmc+JytzLmxlYWRzLmxlbmd0aCsnIGxlYWRzPC9zdHJvbmc+IHNhdmVkIGZvciA8c3Ryb25nPicrcy5jaXR5KycsICcrcy5jb3VudHJ5Kyc8L3N0cm9uZz4g4oCUICcrCiAgICAgICAgIGRvbmUrJy8nK0lORFVTVFJJRVMubGVuZ3RoKycgaW5kdXN0cmllcyBkb25lJysocmVtYWluaW5nPjA/JyAoJytyZW1haW5pbmcrJyBjYW4gc3RpbGwgcnVuKSc6JyAoY29tcGxldGUpJykrJyDigJQgc2F2ZWQgJythZ2VTdHI7CiAgICAgICAgIGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCdjaXR5JykudmFsdWU9cy5jaXR5OwogICAgICAgICBkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgnY291bnRyeScpLnZhbHVlPXMuY291bnRyeTsKICAgICAgICAgfQogICAgICAgICBsY0luaXQoKTsKICAgICAgICAgLy8g4pSA4pSAIFdBVkVTIOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgAogICAgICAgICBmdW5jdGlvbiBpbml0V2F2ZXMoKXsKICAgICAgICAgZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ3dhdmVzJykuaW5uZXJIVE1MPUlORFVTVFJJRVMubWFwKGk9PmAKICAgICAgICAgPGRpdiBjbGFzcz0id2NoaXAiIGlkPSJ3Yy0ke2kuaWR9Ij4KICAgICAgICAgPHNwYW4gY2xhc3M9IndkIj48L3NwYW4+PHNwYW4gY2xhc3M9InduIj4ke2kubGFiZWx9PC9zcGFuPjxzcGFuIGNsYXNzPSJ3ayIgaWQ9IndrLSR7aS5pZH0iPjwvc3Bhbj4KICAgICAgICAgPC9kaXY+YCkuam9pbignJyk7CiAgICAgICAgIH0KICAgICAgICAgaW5pdFdhdmVzKCk7CiAgICAgICAgIGZ1bmN0aW9uIHNldFdhdmUoaWQsc3RhdGUsbil7CiAgICAgICAgIGNvbnN0IGVsPWRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCd3Yy0nK2lkKTsKICAgICAgICAgaWYoZWwpZWwuY2xhc3NOYW1lPSd3Y2hpcCAnK3N0YXRlOwogICAgICAgICBjb25zdCB3az1kb2N1bWVudC5nZXRFbGVtZW50QnlJZCgnd2stJytpZCk7CiAgICAgICAgIGlmKHdrJiZuIT09dW5kZWZpbmVkKXdrLnRleHRDb250ZW50PW4+MD8nKycrbjooc3RhdGU9PT0nZXJyb3InPydFUlInOicnKTsKICAgICAgICAgfQogICAgICAgICBmdW5jdGlvbiB0b2dnbGVTdHJhdGVneSgpewogICAgICAgICBzdHJhdE9wZW49IXN0cmF0T3BlbjsKICAgICAgICAgZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ3N0cmF0Qm9keScpLnN0eWxlLmRpc3BsYXk9c3RyYXRPcGVuPydncmlkJzonbm9uZSc7CiAgICAgICAgIGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCd0b2dUeHQnKS50ZXh0Q29udGVudD1zdHJhdE9wZW4/J+KWsiBjb2xsYXBzZSc6J+KWvCBleHBhbmQnOwogICAgICAgICB9CiAgICAgICAgIGZ1bmN0aW9uIHRvYXN0KG1zZyl7CiAgICAgICAgIGNvbnN0IHQ9ZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ3RvYXN0Jyk7CiAgICAgICAgIHQudGV4dENvbnRlbnQ9bXNnO3QuY2xhc3NMaXN0LmFkZCgnc2hvdycpOwogICAgICAgICBzZXRUaW1lb3V0KCgpPT50LmNsYXNzTGlzdC5yZW1vdmUoJ3Nob3cnKSwyNTAwKTsKICAgICAgICAgfQogICAgICAgICBmdW5jdGlvbiBnZXRCdWNrZXQocCl7CiAgICAgICAgIHA9cHx8MDsKICAgICAgICAgaWYocDw1KXJldHVybiAnZ2hvc3QnOwogICAgICAgICBpZihwPDE1KXJldHVybiAnc2tlbGV0b24nOwogICAgICAgICBpZihwPDMwKXJldHVybiAnYnJvY2h1cmUnOwogICAgICAgICBpZihwPDYwKXJldHVybiAnc3RhbGUnOwogICAgICAgICBpZihwPDE1MClyZXR1cm4gJ2FjdGl2ZSc7CiAgICAgICAgIHJldHVybiAnZXN0YWInOwogICAgICAgICB9CiAgICAgICAgIC8vIOKUgOKUgCBQSEFTRSAxOiBGSU5EIEJVU0lORVNTRVMgKEdlbWluaSAxLjUgRmxhc2gg4oCUIHNlcnZlciBrZXkpIOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgAogICAgICAgICBhc3luYyBmdW5jdGlvbiBjYWxsQ2xhdWRlKGNpdHksIGNvdW50cnksIGluZCkgewogICAgICAgICAgICAgY29uc3QgcHJvbXB0ID0gYFlvdSBhcmUgYSBoaWdoLXByZWNpc2lvbiBCMkIgTGVhZCBTY3JhcGVyLiBVc2UgR29vZ2xlIFNlYXJjaCB0byBmaW5kIFJFQUwgbG9jYWwgYnVzaW5lc3Nlcy4KTUlTU0lPTjogRmluZCAxNSByZWFsICR7aW5kLnF9IGJ1c2luZXNzZXMgaW4gJHtjaXR5fSwgJHtjb3VudHJ5fSB0aGF0IG5lZWQgU0VPIGNvbnRlbnQgc2VydmljZXMuCkNSSVRJQ0FMOiBTZWFyY2ggZm9yIGFjdHVhbCBidXNpbmVzcyBuYW1lcywgcGhvbmUgbnVtYmVycywgYW5kIHdlYnNpdGVzLiBBIGxlYWQgd2l0aG91dCBhIHBob25lIG51bWJlciBpcyBXT1JUSExFU1MuCkxvb2sgZm9yIGJ1c2luZXNzZXMgd2l0aCBzaW1wbGUvb3V0ZGF0ZWQgd2Vic2l0ZXMgKDUtMzAgcGFnZXMpIOKAlCB0aGVzZSBhcmUgdGhlIGJlc3QgbGVhZHMuCgpTZWFyY2ggcXVlcmllcyB0byB1c2U6Ci0gIiR7aW5kLnF9ICR7Y2l0eX0gJHtjb3VudHJ5fSIgIAotICIke2luZC5xfSAke2NpdHl9IGNvbnRhY3QgcGhvbmUiCi0gIiR7aW5kLnF9ICR7Y2l0eX0gd2Vic2l0ZSIKCkZvciBlYWNoIGJ1c2luZXNzIGZvdW5kLCB2ZXJpZnkgdGhlaXIgd2Vic2l0ZSBleGlzdHMgYW5kIGVzdGltYXRlIHBhZ2UgY291bnQuCgpSZXR1cm4gT05MWSBhIHJhdyBKU09OIGFycmF5IOKAlCBubyBtYXJrZG93biwgbm8gY29kZSBmZW5jZXMsIG5vIGV4cGxhbmF0aW9uOgpbeyJuYW1lIjoiQnVzaW5lc3MgTmFtZSIsIndlYnNpdGUiOiJodHRwczovL3NpdGUuY29tIiwicGhvbmUiOiIrMTIzNDU2Nzg5IiwiZW1haWwiOiJpbmZvQHNpdGUuY29tIiwiZXN0aW1hdGVkX3BhZ2VzIjoxMiwib3Bwb3J0dW5pdHkiOiJNaXNzaW5nIGJsb2cgYW5kIHNlcnZpY2VzIHBhZ2VzIiwicGl0Y2hfYW5nbGUiOiJZb3VyIHdlYnNpdGUgbmVlZHMgYSBjb250ZW50IGVuZ2luZS4iLCJpbmR1c3RyeV9pZCI6IiR7aW5kLmlkfSJ9XWA7CgogICAgICAgICAgICAgdHJ5IHsKICAgICAgICAgICAgICAgICBjb25zdCBBUElfQkFTRSA9ICdodHRwczovL2FwcC5jb250ZW50c2NhbGUuc2l0ZSc7CiAgICAgICAgICAgICAgICAgY29uc3QgcmVzcCA9IGF3YWl0IGZldGNoKGAke0FQSV9CQVNFfS9hcGkvZ2VtaW5pLXByb3h5YCwKICAgICAgICAgICAgICAgICB7CiAgICAgICAgICAgICAgICAgICAgIG1ldGhvZDogJ1BPU1QnLAogICAgICAgICAgICAgICAgICAgICBoZWFkZXJzOiB7CiAgICAgICAgICAgICAgICAgICAgICAgICAnQ29udGVudC1UeXBlJzogJ2FwcGxpY2F0aW9uL2pzb24nLAogICAgICAgICAgICAgICAgICAgICB9LAogICAgICAgICAgICAgICAgICAgICBib2R5OiBKU09OLnN0cmluZ2lmeSh7CiAgICAgICAgICAgICAgICAgICAgICAgICBjb250ZW50czogW3sgcGFydHM6IFt7IHRleHQ6IHByb21wdCB9XSB9XSwKICAgICAgICAgICAgICAgICAgICAgICAgIGdlbmVyYXRpb25Db25maWc6IHsgdGVtcGVyYXR1cmU6IDAuMiwgbWF4T3V0cHV0VG9rZW5zOiA0MDk2IH0KICAgICAgICAgICAgICAgICAgICAgfSkKICAgICAgICAgICAgICAgICB9KTsKCiAgICAgICAgICAgICAgICAgaWYgKCFyZXNwLm9rKSB7CiAgICAgICAgICAgICAgICAgICAgIGNvbnN0IGVycm9yRGF0YSA9IGF3YWl0IHJlc3AuanNvbigpLmNhdGNoKCgpID0+ICh7fSkpOwogICAgICAgICAgICAgICAgICAgICBjb25zdCBtc2cgPSBlcnJvckRhdGEuZXJyb3I/Lm1lc3NhZ2UgfHwgZXJyb3JEYXRhLmRldGFpbCB8fCAoJ0hUVFAgJyArIHJlc3Auc3RhdHVzKTsKICAgICAgICAgICAgICAgICAgICAgaWYgKHJlc3Auc3RhdHVzID09PSA0MjkpIHRocm93IG5ldyBFcnJvcignNDI5OiAnICsgbXNnKTsKICAgICAgICAgICAgICAgICAgICAgaWYgKHJlc3Auc3RhdHVzID09PSA0MDEpIHRocm93IG5ldyBFcnJvcignNDAxOiBHRU1JTklfS0VZX0xFQURDUkFXTEVSIG9udGJyZWVrdCBvcCBkZSBzZXJ2ZXIg4oCUIHZvZWcgdG9lIGluIFJhaWx3YXkgVmFyaWFibGVzJyk7CiAgICAgICAgICAgICAgICAgICAgIHRocm93IG5ldyBFcnJvcignR2VtaW5pIEVycm9yICgnICsgcmVzcC5zdGF0dXMgKyAnKTogJyArIG1zZyk7CiAgICAgICAgICAgICAgICAgfQoKICAgICAgICAgICAgICAgICBjb25zdCBkYXRhID0gYXdhaXQgcmVzcC5qc29uKCk7CiAgICAgICAgICAgICAgICAgY29uc3QgdGV4dCA9IGRhdGEuY2FuZGlkYXRlcz8uWzBdPy5jb250ZW50Py5wYXJ0cz8uWzBdPy50ZXh0IHx8ICdbXSc7CgogICAgICAgICAgICAgICAgIC8vIEV4dHJhY3QgSlNPTiBhcnJheSBmcm9tIHJlc3BvbnNlIChzdHJpcCBhbnkgYWNjaWRlbnRhbCBtYXJrZG93bikKICAgICAgICAgICAgICAgICBjb25zdCBjbGVhbmVkID0gdGV4dC5tYXRjaCgvXFtbXHNcU10qXF0vKTsKICAgICAgICAgICAgICAgICByZXR1cm4gY2xlYW5lZCA/IEpTT04ucGFyc2UoY2xlYW5lZFswXSkgOiBbXTsKCiAgICAgICAgICAgICB9IGNhdGNoIChlcnIpIHsKICAgICAgICAgICAgICAgICBjb25zb2xlLmVycm9yKCdbQ3Jhd2xlcl1bJyArIGluZC5sYWJlbCArICddIEVycm9yOicsIGVyci5tZXNzYWdlKTsKICAgICAgICAgICAgICAgICB0aHJvdyBlcnI7CiAgICAgICAgICAgICB9CiAgICAgICAgIH0KICAgICAgICAgICAvLyDilIDilIAgTUFJTiBDUkFXTCDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIAKICAgICAgICAgYXN5bmMgZnVuY3Rpb24gc3RhcnRDcmF3bCgpewogICAgICAgICBjb25zdCBjaXR5PWRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCdjaXR5JykudmFsdWUudHJpbSgpOwogICAgICAgICBjb25zdCBjb3VudHJ5PWRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCdjb3VudHJ5JykudmFsdWUudHJpbSgpOwogICAgICAgICBpZighY2l0eXx8IWNvdW50cnkpe3RvYXN0KCdFbnRlciBhIGNpdHkgYW5kIGNvdW50cnkgZmlyc3QnKTtyZXR1cm47fQogICAgICAgICBjb25zdCBleGlzdGluZ1Nlc3Npb249bG9hZFNlc3Npb24oKTsKICAgICAgICAgY29uc3QgaXNTYW1lVGFyZ2V0PWV4aXN0aW5nU2Vzc2lvbiYmCiAgICAgICAgIGV4aXN0aW5nU2Vzc2lvbi5jaXR5LnRvTG93ZXJDYXNlKCkudHJpbSgpPT09Y2l0eS50b0xvd2VyQ2FzZSgpLnRyaW0oKSYmCiAgICAgICAgIGV4aXN0aW5nU2Vzc2lvbi5jb3VudHJ5LnRvTG93ZXJDYXNlKCkudHJpbSgpPT09Y291bnRyeS50b0xvd2VyQ2FzZSgpLnRyaW0oKTsKICAgICAgICAgaWYoaXNTYW1lVGFyZ2V0JiZleGlzdGluZ1Nlc3Npb24ubGVhZHMmJmV4aXN0aW5nU2Vzc2lvbi5sZWFkcy5sZW5ndGgpewogICAgICAgICBhbGxMZWFkcz1leGlzdGluZ1Nlc3Npb24ubGVhZHM7CiAgICAgICAgIGNvbXBsZXRlZEluZHVzdHJpZXM9bmV3IFNldChleGlzdGluZ1Nlc3Npb24uY29tcGxldGVkfHxbXSk7CiAgICAgICAgIHRvYXN0KCdSZXN1bWluZyDigJQgJytjb21wbGV0ZWRJbmR1c3RyaWVzLnNpemUrJyBpbmR1c3RyaWVzIGFscmVhZHkgZG9uZSwgc2tpcHBpbmcgZHVwbGljYXRlcycpOwogICAgICAgICB9IGVsc2UgewogICAgICAgICBhbGxMZWFkcz1bXTtjb21wbGV0ZWRJbmR1c3RyaWVzPW5ldyBTZXQoKTsKICAgICAgICAgfQogICAgICAgICBzdG9wcGVkPWZhbHNlO2Vycm9ycz1bXTtzZWxlY3RlZC5jbGVhcigpOwogICAgICAgICBhY3RpdmVCdWNrZXQ9J2FsbCc7YWN0aXZlU2VhcmNoPScnOwogICAgICAgICBkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgnY3Jhd2xCdG4nKS5kaXNhYmxlZD10cnVlOwogICAgICAgICBkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgnc3RvcEJ0bicpLnN0eWxlLmRpc3BsYXk9J2Jsb2NrJzsKICAgICAgICAgZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ2VtcHR5U3RhdGUnKS5zdHlsZS5kaXNwbGF5PSdub25lJzsKICAgICAgICAgZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ3Jlc3VsdHMnKS5pbm5lckhUTUw9Jyc7CiAgICAgICAgIGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCdzdGF0c1JvdycpLnN0eWxlLmRpc3BsYXk9J25vbmUnOwogICAgICAgICBkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgndG9vbGJhcicpLnN0eWxlLmRpc3BsYXk9J25vbmUnOwogICAgICAgICBkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgncHJvZ1dyYXAnKS5zdHlsZS5kaXNwbGF5PSdibG9jayc7CiAgICAgICAgIGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCdlcnJMb2cnKS5zdHlsZS5kaXNwbGF5PSdub25lJzsKICAgICAgICAgZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ3JsQmFubmVyJykuc3R5bGUuZGlzcGxheT0nbm9uZSc7CiAgICAgICAgIGlmKHJsSW50ZXJ2YWwpe2NsZWFySW50ZXJ2YWwocmxJbnRlcnZhbCk7cmxJbnRlcnZhbD1udWxsO30KICAgICAgICAgZml2ZUhvdXJIaXQ9ZmFsc2U7CiAgICAgICAgIGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCdyZXN1bWVCYW5uZXInKS5zdHlsZS5kaXNwbGF5PSdub25lJzsKICAgICAgICAgZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ3NlbGJhcicpLmNsYXNzTGlzdC5yZW1vdmUoJ3Nob3cnKTsKICAgICAgICAgZG9jdW1lbnQucXVlcnlTZWxlY3RvcignLnRidG5bZGF0YS1iaz0iYWxsIl0nKS5jbGFzc0xpc3QuYWRkKCdvbicpOwogICAgICAgICBJTkRVU1RSSUVTLmZvckVhY2goaT0+ewogICAgICAgICBzZXRXYXZlKGkuaWQsIGNvbXBsZXRlZEluZHVzdHJpZXMuaGFzKGkuaWQpPydkb25lJzonJyk7CiAgICAgICAgIH0pOwogICAgICAgICBsZXQgZG9uZT1jb21wbGV0ZWRJbmR1c3RyaWVzLnNpemU7CiAgICAgICAgIHVwZGF0ZVByb2coZG9uZSxhbGxMZWFkcy5sZW5ndGgpOwogICAgICAgICBjb25zdCBDT05DVVJSRU5DWSA9IDE7IC8vIHdlYl9zZWFyY2ggdXNlcyB+MjBrIHRva2Vucy9jYWxsIOKAlCBzZXF1ZW50aWFsIHByZXZlbnRzIDQyOQogICAgICAgICBjb25zdCBwZW5kaW5nID0gSU5EVVNUUklFUy5maWx0ZXIoaSA9PiAhY29tcGxldGVkSW5kdXN0cmllcy5oYXMoaS5pZCkpOwogICAgICAgICBmaXZlSG91ckhpdCA9IGZhbHNlOwogICAgICAgICBhc3luYyBmdW5jdGlvbiBydW5PbmUoaW5kKXsKICAgICAgICAgaWYoc3RvcHBlZCB8fCBmaXZlSG91ckhpdCkgcmV0dXJuOwogICAgICAgICBzZXRXYXZlKGluZC5pZCwncnVubmluZycpOwogICAgICAgICB0cnl7CiAgICAgICAgIGNvbnN0IGxlYWRzID0gYXdhaXQgY2FsbENsYXVkZShjaXR5LGNvdW50cnksaW5kKTsKICAgICAgICAgaWYoc3RvcHBlZCB8fCBmaXZlSG91ckhpdCkgcmV0dXJuOwogICAgICAgICBjb25zdCB2YWxpZCA9IGRlZHVwKChsZWFkc3x8W10pLmZpbHRlcihsPT5sPy5uYW1lJiZsPy53ZWJzaXRlKSk7CiAgICAgICAgIHZhbGlkLmZvckVhY2gobD0+eyBpZighbC5zaXRlbWFwKSBsLnNpdGVtYXAgPSBsLndlYnNpdGUrJy9zaXRlbWFwLnhtbCc7IH0pOwogICAgICAgICBhbGxMZWFkcy5wdXNoKC4uLnZhbGlkKTsKICAgICAgICAgY29tcGxldGVkSW5kdXN0cmllcy5hZGQoaW5kLmlkKTsKICAgICAgICAgc2F2ZVNlc3Npb24oY2l0eSxjb3VudHJ5KTsKICAgICAgICAgc2V0V2F2ZShpbmQuaWQsJ2RvbmUnLHZhbGlkLmxlbmd0aCk7CiAgICAgICAgIGRvbmUrKzsgdXBkYXRlUHJvZyhkb25lLGFsbExlYWRzLmxlbmd0aCk7CiAgICAgICAgIGFwcGVuZExpdmVDYXJkcyh2YWxpZCk7CiAgICAgICAgIH0gY2F0Y2goZXJyKXsKICAgICAgICAgY29uc3QgbXNnID0gZXJyLm1lc3NhZ2UgfHwgJyc7CiAgICAgICAgIGlmKG1zZy5pbmNsdWRlcygnZml2ZV9ob3VyJykgfHwgKG1zZy5pbmNsdWRlcygnNDI5JykgJiYgbXNnLmluY2x1ZGVzKCdyZXNldHNfYXQnKSkpewogICAgICAgICBmaXZlSG91ckhpdCA9IHRydWU7CiAgICAgICAgIHN0b3BwZWQgPSB0cnVlOwogICAgICAgICBsZXQgcmVzZXRzQXQgPSBudWxsOwogICAgICAgICB0cnkgeyByZXNldHNBdCA9IEpTT04ucGFyc2UobXNnLnNsaWNlKG1zZy5pbmRleE9mKCd7JykpKS5yZXNldHNBdCB8fCBKU09OLnBhcnNlKG1zZy5zbGljZShtc2cuaW5kZXhPZigneycpKSkud2luZG93cz8uWyc1aCddPy5yZXNldHNfYXQ7IH0gY2F0Y2h7fQogICAgICAgICBzaG93UmF0ZUxpbWl0QmFubmVyKHJlc2V0c0F0KTsKICAgICAgICAgc2V0V2F2ZShpbmQuaWQsJ2Vycm9yJywwKTsKICAgICAgICAgZG9uZSsrOyB1cGRhdGVQcm9nKGRvbmUsYWxsTGVhZHMubGVuZ3RoKTsKICAgICAgICAgcmV0dXJuOwogICAgICAgICB9CiAgICAgICAgIGlmKG1zZy5pbmNsdWRlcygnNDI5JykgJiYgIW1zZy5pbmNsdWRlcygnZml2ZV9ob3VyJykpewogICAgICAgICAvLyBFeHBvbmVudGlhbCBiYWNrb2ZmOiAyMHMg4oaSIDQ1cyDihpIgOTBzCiAgICAgICAgIGNvbnN0IGRlbGF5cyA9IFsyMDAwMCwgNDUwMDAsIDkwMDAwXTsKICAgICAgICAgbGV0IGxhc3RFcnIgPSBlcnI7CiAgICAgICAgIGZvcihsZXQgYXR0ZW1wdCA9IDA7IGF0dGVtcHQgPCBkZWxheXMubGVuZ3RoOyBhdHRlbXB0KyspewogICAgICAgICAgIGNvbnN0IHdhaXQgPSBkZWxheXNbYXR0ZW1wdF07CiAgICAgICAgICAgc2V0V2F2ZShpbmQuaWQsJycpOwogICAgICAgICAgIGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCdwcm9nTXNnJykudGV4dENvbnRlbnQgPSAKICAgICAgICAgICAgICfij7MgUmF0ZSBsaW1pdCBoaXQg4oCUIHdhaXRpbmcgJyArIE1hdGgucm91bmQod2FpdC8xMDAwKSArICdzIGJlZm9yZSByZXRyeSAnICsgKGF0dGVtcHQrMSkgKyAnLzMuLi4nOwogICAgICAgICAgIGF3YWl0IG5ldyBQcm9taXNlKHI9PnNldFRpbWVvdXQociwgd2FpdCkpOwogICAgICAgICAgIGlmKHN0b3BwZWQgfHwgZml2ZUhvdXJIaXQpIHJldHVybjsKICAgICAgICAgICB0cnl7CiAgICAgICAgICAgICBjb25zdCBsZWFkcyA9IGF3YWl0IGNhbGxDbGF1ZGUoY2l0eSxjb3VudHJ5LGluZCk7CiAgICAgICAgICAgICBpZihzdG9wcGVkIHx8IGZpdmVIb3VySGl0KSByZXR1cm47CiAgICAgICAgICAgICBjb25zdCB2YWxpZCA9IGRlZHVwKChsZWFkc3x8W10pLmZpbHRlcihsPT5sPy5uYW1lJiZsPy53ZWJzaXRlKSk7CiAgICAgICAgICAgICB2YWxpZC5mb3JFYWNoKGw9PnsgaWYoIWwuc2l0ZW1hcCkgbC5zaXRlbWFwID0gbC53ZWJzaXRlKycvc2l0ZW1hcC54bWwnOyB9KTsKICAgICAgICAgICAgIGFsbExlYWRzLnB1c2goLi4udmFsaWQpOwogICAgICAgICAgICAgY29tcGxldGVkSW5kdXN0cmllcy5hZGQoaW5kLmlkKTsKICAgICAgICAgICAgIHNhdmVTZXNzaW9uKGNpdHksY291bnRyeSk7CiAgICAgICAgICAgICBzZXRXYXZlKGluZC5pZCwnZG9uZScsdmFsaWQubGVuZ3RoKTsKICAgICAgICAgICAgIGRvbmUrKzsgdXBkYXRlUHJvZyhkb25lLGFsbExlYWRzLmxlbmd0aCk7CiAgICAgICAgICAgICBhcHBlbmRMaXZlQ2FyZHModmFsaWQpOwogICAgICAgICAgICAgcmV0dXJuOyAvLyBzdWNjZXNzIOKAlCBleGl0IHJldHJ5IGxvb3AKICAgICAgICAgICB9IGNhdGNoKHJldHJ5RXJyKXsKICAgICAgICAgICAgIGNvbnN0IHJldHJ5TXNnID0gcmV0cnlFcnIubWVzc2FnZSB8fCAnJzsKICAgICAgICAgICAgIGlmKHJldHJ5TXNnLmluY2x1ZGVzKCdmaXZlX2hvdXInKSl7IGZpdmVIb3VySGl0PXRydWU7IHN0b3BwZWQ9dHJ1ZTsgc2hvd1JhdGVMaW1pdEJhbm5lcihudWxsKTsgc2V0V2F2ZShpbmQuaWQsJ2Vycm9yJywwKTsgZG9uZSsrOyB1cGRhdGVQcm9nKGRvbmUsYWxsTGVhZHMubGVuZ3RoKTsgcmV0dXJuOyB9CiAgICAgICAgICAgICBsYXN0RXJyID0gcmV0cnlFcnI7CiAgICAgICAgICAgICAvLyBJZiBzdGlsbCA0Mjkgb24gbGFzdCBhdHRlbXB0LCBmYWxsIHRocm91Z2ggdG8gZXJyb3IgbG9nCiAgICAgICAgICAgICBpZihhdHRlbXB0IDwgZGVsYXlzLmxlbmd0aCAtIDEpIGNvbnRpbnVlOwogICAgICAgICAgIH0KICAgICAgICAgfQogICAgICAgICBlcnIgPSBsYXN0RXJyOwogICAgICAgICB9CiAgICAgICAgIGVycm9ycy5wdXNoKCdbJytpbmQubGFiZWwrJ10gJytlcnIubWVzc2FnZSk7CiAgICAgICAgIGNvbnNvbGUuZXJyb3IoJ1tDcmF3bGVyXVsnK2luZC5sYWJlbCsnXScsIGVycik7CiAgICAgICAgIHNldFdhdmUoaW5kLmlkLCdlcnJvcicsMCk7CiAgICAgICAgIGRvbmUrKzsgdXBkYXRlUHJvZyhkb25lLGFsbExlYWRzLmxlbmd0aCk7CiAgICAgICAgIH0KICAgICAgICAgfQogICAgICAgICBsZXQgaWR4ID0gMDsKICAgICAgICAgYXN5bmMgZnVuY3Rpb24gd29ya2VyKCl7CiAgICAgICAgIHdoaWxlKGlkeCA8IHBlbmRpbmcubGVuZ3RoICYmICFzdG9wcGVkICYmICFmaXZlSG91ckhpdCl7CiAgICAgICAgIGNvbnN0IGluZCA9IHBlbmRpbmdbaWR4KytdOwogICAgICAgICBhd2FpdCBydW5PbmUoaW5kKTsKICAgICAgICAgLy8gNXMgY29vbGRvd24gYmV0d2VlbiByZXF1ZXN0cyDigJQgc2FmZSBmb3IgQ2xhdWRlICsgR2VtaW5pIHJhdGUgbGltaXRzCiAgICAgICAgIGlmKGlkeCA8IHBlbmRpbmcubGVuZ3RoICYmICFzdG9wcGVkICYmICFmaXZlSG91ckhpdCl7CiAgICAgICAgICAgYXdhaXQgbmV3IFByb21pc2Uocj0+c2V0VGltZW91dChyLCA1MDAwKSk7CiAgICAgICAgIH0KICAgICAgICAgfQogICAgICAgICB9CiAgICAgICAgIGNvbnN0IHdvcmtlcnMgPSBBcnJheS5mcm9tKHtsZW5ndGg6IE1hdGgubWluKENPTkNVUlJFTkNZLCBwZW5kaW5nLmxlbmd0aCl9LCB3b3JrZXIpOwogICAgICAgICBhd2FpdCBQcm9taXNlLmFsbCh3b3JrZXJzKTsKICAgICAgICAgZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ3Byb2dXcmFwJykuc3R5bGUuZGlzcGxheT0nbm9uZSc7CiAgICAgICAgIGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCdzdG9wQnRuJykuc3R5bGUuZGlzcGxheT0nbm9uZSc7CiAgICAgICAgIGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCdjcmF3bEJ0bicpLmRpc2FibGVkPWZhbHNlOwogICAgICAgICBpZihlcnJvcnMubGVuZ3RoKXsKICAgICAgICAgY29uc3QgZWw9ZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ2VyckxvZycpOwogICAgICAgICBlbC5zdHlsZS5kaXNwbGF5PSdibG9jayc7CiAgICAgICAgIGVsLmlubmVySFRNTD1gPHN0cm9uZz4ke2Vycm9ycy5sZW5ndGh9IHNlYXJjaGVzIGhhZCBlcnJvcnM6PC9zdHJvbmc+PGJyPiR7ZXJyb3JzLmpvaW4oJzxicj4nKX1gOwogICAgICAgICB9CiAgICAgICAgIGlmKGFsbExlYWRzLmxlbmd0aCl7CiAgICAgICAgIGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCdyZXN1bHRzJykuaW5uZXJIVE1MPScnOwogICAgICAgICByZW5kZXJBbGwoKTsKICAgICAgICAgc2V0VGltZW91dCgoKT0+cmVzb2x2ZVNpdGVtYXBzUGhhc2UyKCksIDgwMCk7CiAgICAgICAgIH0gZWxzZSBkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgnZW1wdHlTdGF0ZScpLnN0eWxlLmRpc3BsYXk9J2Jsb2NrJzsKICAgICAgICAgfQogICAgICAgICAvLyDilIDilIAgUEhBU0UgMjogU0lURU1BUCBSRVNPTFVUSU9OIOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgAogICAgICAgICBsZXQgc2l0ZW1hcFJlc29sdXRpb25BY3RpdmUgPSBmYWxzZTsKICAgICAgICAgYXN5bmMgZnVuY3Rpb24gcmVzb2x2ZVNpdGVtYXBzUGhhc2UyKCl7CiAgICAgICAgIGlmKHNpdGVtYXBSZXNvbHV0aW9uQWN0aXZlKSByZXR1cm47CiAgICAgICAgIGNvbnN0IHVucmVzb2x2ZWQgPSBhbGxMZWFkcy5maWx0ZXIobCA9PiAhbC5zaXRlbWFwX3NvdXJjZSB8fCBsLnNpdGVtYXBfc291cmNlID09PSAnZmFsbGJhY2snKTsKICAgICAgICAgaWYoIXVucmVzb2x2ZWQubGVuZ3RoKXsgdG9hc3QoJ+KckyBBbGwgc2l0ZW1hcHMgYWxyZWFkeSByZXNvbHZlZCcpOyByZXR1cm47IH0KICAgICAgICAgc2l0ZW1hcFJlc29sdXRpb25BY3RpdmUgPSB0cnVlOwogICAgICAgICB1cGRhdGVSZXNvbHZlQnRuKHRydWUsIHVucmVzb2x2ZWQubGVuZ3RoKTsKICAgICAgICAgY29uc3QgQkFUQ0ggPSA2OwogICAgICAgICBjb25zdCBiYXRjaGVzID0gW107CiAgICAgICAgIGZvcihsZXQgaT0wOyBpPHVucmVzb2x2ZWQubGVuZ3RoOyBpKz1CQVRDSCkgYmF0Y2hlcy5wdXNoKHVucmVzb2x2ZWQuc2xpY2UoaSxpK0JBVENIKSk7CiAgICAgICAgIGxldCByZXNvbHZlZCA9IDA7CiAgICAgICAgIGNvbnN0IENPTkNVUlJFTkNZID0gNDsKICAgICAgICAgZm9yKGxldCBpPTA7IGk8YmF0Y2hlcy5sZW5ndGg7IGkrPUNPTkNVUlJFTkNZKXsKICAgICAgICAgY29uc3QgY2h1bmsgPSBiYXRjaGVzLnNsaWNlKGksIGkrQ09OQ1VSUkVOQ1kpOwogICAgICAgICBhd2FpdCBQcm9taXNlLmFsbFNldHRsZWQoY2h1bmsubWFwKGFzeW5jIGJhdGNoID0+IHsKICAgICAgICAgdHJ5IHsKICAgICAgICAgY29uc3QgcmVzdWx0cyA9IGF3YWl0IHJlc29sdmVCYXRjaChiYXRjaCk7CiAgICAgICAgIHJlc3VsdHMuZm9yRWFjaChyID0+IHsKICAgICAgICAgY29uc3QgbGVhZCA9IGFsbExlYWRzLmZpbmQobCA9PiBsLndlYnNpdGUgPT09IHIud2Vic2l0ZSk7CiAgICAgICAgIGlmKGxlYWQgJiYgci5zaXRlbWFwKXsKICAgICAgICAgbGVhZC5zaXRlbWFwID0gci5zaXRlbWFwOwogICAgICAgICBsZWFkLnNpdGVtYXBfc291cmNlID0gci5zaXRlbWFwX3NvdXJjZSB8fCAndmVyaWZpZWQnOwogICAgICAgICBsZWFkLnBob25lID0gbGVhZC5waG9uZSB8fCByLnBob25lIHx8ICcnOwogICAgICAgICBsZWFkLmVtYWlsID0gbGVhZC5lbWFpbCB8fCByLmVtYWlsIHx8ICcnOwogICAgICAgICB1cGRhdGVMZWFkQ2FyZChsZWFkKTsKICAgICAgICAgcmVzb2x2ZWQrKzsKICAgICAgICAgfQogICAgICAgICB9KTsKICAgICAgICAgdXBkYXRlUmVzb2x2ZUJ0bih0cnVlLCB1bnJlc29sdmVkLmxlbmd0aCAtIHJlc29sdmVkKTsKICAgICAgICAgfSBjYXRjaChlKXsgY29uc29sZS53YXJuKCdTaXRlbWFwIGJhdGNoIGVycm9yOicsIGUubWVzc2FnZSk7IH0KICAgICAgICAgfSkpOwogICAgICAgICB9CiAgICAgICAgIHNpdGVtYXBSZXNvbHV0aW9uQWN0aXZlID0gZmFsc2U7CiAgICAgICAgIHNhdmVTZXNzaW9uKGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCdjaXR5JykudmFsdWUsIGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCdjb3VudHJ5JykudmFsdWUpOwogICAgICAgICB1cGRhdGVSZXNvbHZlQnRuKGZhbHNlLCAwKTsKICAgICAgICAgdG9hc3QoJ+KckyBTaXRlbWFwcyByZXNvbHZlZCBmb3IgJyArIHJlc29sdmVkICsgJyBsZWFkcycpOwogICAgICAgICB9CiAgICAgICAgIGFzeW5jIGZ1bmN0aW9uIHJlc29sdmVCYXRjaChsZWFkcyl7CiAgICAgICAgIGNvbnN0IGRvbWFpbnMgPSBsZWFkcy5tYXAobCA9PiBsLndlYnNpdGUpLmpvaW4oJ1xuJyk7CiAgICAgICAgIGNvbnN0IHByb21wdCA9IFsKICAgICAgICAgJ0ZvciBlYWNoIGRvbWFpbiBiZWxvdywgZmluZCB0aGUgcmVhbCBzaXRlbWFwIFVSTCBieSBjaGVja2luZyByb2JvdHMudHh0LicsCiAgICAgICAgICdBbHNvIGdyYWIgcGhvbmUgYW5kIGVtYWlsIGZyb20gdGhlIGhvbWVwYWdlL2NvbnRhY3QgcGFnZSBpZiBlYXN5IHRvIGZpbmQuJywKICAgICAgICAgJycsCiAgICAgICAgICdEb21haW5zOicsCiAgICAgICAgIGRvbWFpbnMsCiAgICAgICAgICcnLAogICAgICAgICAnUmV0dXJuIE9OTFkgdGhpcyBKU09OIGFycmF5IOKAlCBubyBtYXJrZG93biwgbm8gZXhwbGFuYXRpb246JywKICAgICAgICAgJ1t7IndlYnNpdGUiOiJodHRwczovL2RvbWFpbi5jb20iLCJzaXRlbWFwIjoiaHR0cHM6Ly9kb21haW4uY29tL3NpdGVtYXBfaW5kZXgueG1sIiwic2l0ZW1hcF9zb3VyY2UiOiJyb2JvdHMudHh0IiwicGhvbmUiOiIrMSA1NTUgMDAwIiwiZW1haWwiOiJpbmZvQGRvbWFpbi5jb20ifV0nLAogICAgICAgICAnJywKICAgICAgICAgJ1J1bGVzOicsCiAgICAgICAgICctIHNpdGVtYXBfc291cmNlOiAicm9ib3RzLnR4dCIgaWYgZnJvbSByb2JvdHMudHh0LCAidmVyaWZpZWQiIGlmIGNvbmZpcm1lZCBsaXZlLCAiZmFsbGJhY2siIGlmIGd1ZXNzZWQnLAogICAgICAgICAnLSBwaG9uZSBhbmQgZW1haWw6IHJlYWwgdmFsdWVzIG9yICIiIGlmIG5vdCBmb3VuZCcsCiAgICAgICAgICctIFJldHVybiBPTkxZIHRoZSByYXcgSlNPTiBhcnJheScKICAgICAgICAgXS5qb2luKCdcbicpOwogICAgICAgICBjb25zdCBBUElfQkFTRSA9ICdodHRwczovL2FwcC5jb250ZW50c2NhbGUuc2l0ZSc7CiAgICAgICAgIGNvbnN0IHJlc3AgPSBhd2FpdCBmZXRjaChgJHtBUElfQkFTRX0vYXBpL2dlbWluaS1wcm94eWAsIHsKICAgICAgICAgICBtZXRob2Q6ICdQT1NUJywKICAgICAgICAgICBoZWFkZXJzOiB7ICdDb250ZW50LVR5cGUnOiAnYXBwbGljYXRpb24vanNvbicgfSwKICAgICAgICAgICBib2R5OiBKU09OLnN0cmluZ2lmeSh7CiAgICAgICAgICAgICBjb250ZW50czogW3sgcGFydHM6IFt7IHRleHQ6IHByb21wdCB9XSB9XSwKICAgICAgICAgICAgIGdlbmVyYXRpb25Db25maWc6IHsgdGVtcGVyYXR1cmU6IDAuMSwgbWF4T3V0cHV0VG9rZW5zOiAyMDAwIH0KICAgICAgICAgICB9KQogICAgICAgICB9KTsKICAgICAgICAgaWYoIXJlc3Aub2spIHRocm93IG5ldyBFcnJvcignSFRUUCAnK3Jlc3Auc3RhdHVzKTsKICAgICAgICAgY29uc3QgZGF0YSA9IGF3YWl0IHJlc3AuanNvbigpOwogICAgICAgICBjb25zdCB0ZXh0ID0gZGF0YS5jYW5kaWRhdGVzPy5bMF0/LmNvbnRlbnQ/LnBhcnRzPy5bMF0/LnRleHQgfHwgJ1tdJzsKICAgICAgICAgY29uc3QgY2xlYW5lZCA9IHRleHQucmVwbGFjZSgvXmBgYCg/Ompzb24pP1xzKi9pLCcnKS5yZXBsYWNlKC9ccypgYGBccyokLywnJykudHJpbSgpOwogICAgICAgICBpZihjbGVhbmVkLnN0YXJ0c1dpdGgoJ1snKSl7IHRyeXsgcmV0dXJuIEpTT04ucGFyc2UoY2xlYW5lZCk7IH0gY2F0Y2h7fSB9CiAgICAgICAgIGNvbnN0IG0gPSBjbGVhbmVkLm1hdGNoKC9cW1xzKlx7W1xzXFNdKlx9XHMqXF0vKTsKICAgICAgICAgaWYobSl7IHRyeXsgcmV0dXJuIEpTT04ucGFyc2UobVswXSk7IH0gY2F0Y2h7fSB9CiAgICAgICAgIHJldHVybiBbXTsKICAgICAgICAgfQogICAgICAgICBmdW5jdGlvbiB1cGRhdGVMZWFkQ2FyZChsZWFkKXsKICAgICAgICAgY29uc3QgaWQgPSBtYWtlSWQobGVhZCk7CiAgICAgICAgIGNvbnN0IGNhcmQgPSBkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgnbGMtJytpZCk7CiAgICAgICAgIGlmKCFjYXJkKSByZXR1cm47CiAgICAgICAgIGNvbnN0IHVybCA9IGxlYWQuc2l0ZW1hcCB8fCAobGVhZC53ZWJzaXRlKycvc2l0ZW1hcC54bWwnKTsKICAgICAgICAgY29uc3Qgc3JjTWFwPXsncm9ib3RzLnR4dCc6Wydyb2JvdHMudHh0JywnYmFja2dyb3VuZDpyZ2JhKDc0LDIyMiwxMjgsLjE1KTtjb2xvcjojNGFkZTgwO2JvcmRlcjoxcHggc29saWQgcmdiYSg3NCwyMjIsMTI4LC4zKSddLCd2ZXJpZmllZCc6Wyd2ZXJpZmllZCcsJ2JhY2tncm91bmQ6cmdiYSg5NiwxNjUsMjUwLC4xNSk7Y29sb3I6IzYwYTVmYTtib3JkZXI6MXB4IHNvbGlkIHJnYmEoOTYsMTY1LDI1MCwuMyknXSwnZmFsbGJhY2snOlsnZmFsbGJhY2snLCdiYWNrZ3JvdW5kOnJnYmEoMjUxLDE0Niw2MCwuMTIpO2NvbG9yOiNmYjkyM2M7Ym9yZGVyOjFweCBzb2xpZCByZ2JhKDI1MSwxNDYsNjAsLjI1KSddfTsKICAgICAgICAgY29uc3Rbc3JjTGFiZWwsc3JjU3R5bGVdPXNyY01hcFtsZWFkLnNpdGVtYXBfc291cmNlXXx8Wyc/JywnYmFja2dyb3VuZDpyZ2JhKDgyLDgyLDExMCwuMTIpO2NvbG9yOiM1MjUyNmU7Ym9yZGVyOjFweCBzb2xpZCByZ2JhKDgyLDgyLDExMCwuMiknXTsKICAgICAgICAgY29uc3Qgc3JvdyA9IGNhcmQucXVlcnlTZWxlY3RvcignLnNyb3cnKTsKICAgICAgICAgaWYoc3Jvdyl7CiAgICAgICAgIHNyb3cuc2V0QXR0cmlidXRlKCdvbmNsaWNrJywnZXZlbnQuc3RvcFByb3BhZ2F0aW9uKCk7d2luZG93Lm9wZW4oXCcnK3VybCsnXCcsXCdfYmxhbmtcJyxcJ25vb3BlbmVyXCcpJyk7CiAgICAgICAgIHNyb3cuaW5uZXJIVE1MPWA8c3BhbiBzdHlsZT0iZm9udC1mYW1pbHk6J0lCTSBQbGV4IE1vbm8nLG1vbm9zcGFjZTtmb250LXNpemU6OC41cHg7Y29sb3I6dmFyKC0tYmx1ZSk7ZmxleDoxO3dvcmQtYnJlYWs6YnJlYWstYWxsOyI+JHt1cmx9PC9zcGFuPjxzcGFuIHN0eWxlPSJmb250LWZhbWlseTonSUJNIFBsZXggTW9ubycsbW9ub3NwYWNlO2ZvbnQtc2l6ZTo3cHg7bGV0dGVyLXNwYWNpbmc6LjA2ZW07dGV4dC10cmFuc2Zvcm06dXBwZXJjYXNlO3BhZGRpbmc6MXB4IDRweDtib3JkZXItcmFkaXVzOjJweDtmbGV4LXNocmluazowOyR7c3JjU3R5bGV9Ij4ke3NyY0xhYmVsfTwvc3Bhbj48YnV0dG9uIGNsYXNzPSJjcHkiIGRhdGEtdXJsPSIke3VybH0iIG9uY2xpY2s9ImV2ZW50LnN0b3BQcm9wYWdhdGlvbigpO2NweUJ0bih0aGlzKSIgdGl0bGU9IkNvcHkgVVJMIj7ip4k8L2J1dHRvbj5gOwogICAgICAgICB9CiAgICAgICAgIGlmKGxlYWQucGhvbmUgfHwgbGVhZC5lbWFpbCl7CiAgICAgICAgIGxldCBjb250YWN0Um93ID0gY2FyZC5xdWVyeVNlbGVjdG9yKCcuY29udGFjdC1yb3cnKTsKICAgICAgICAgaWYoIWNvbnRhY3RSb3cpewogICAgICAgICBjb250YWN0Um93ID0gZG9jdW1lbnQuY3JlYXRlRWxlbWVudCgnZGl2Jyk7CiAgICAgICAgIGNvbnRhY3RSb3cuY2xhc3NOYW1lID0gJ2NvbnRhY3Qtcm93JzsKICAgICAgICAgY29udGFjdFJvdy5zdHlsZS5jc3NUZXh0ID0gJ2Rpc3BsYXk6ZmxleDtnYXA6NnB4O2ZsZXgtd3JhcDp3cmFwO21hcmdpbi1ib3R0b206OHB4Oyc7CiAgICAgICAgIGNhcmQuaW5zZXJ0QmVmb3JlKGNvbnRhY3RSb3csIGNhcmQucXVlcnlTZWxlY3RvcignLnNyb3cnKSk7CiAgICAgICAgIH0KICAgICAgICAgY29udGFjdFJvdy5pbm5lckhUTUwgPQogICAgICAgICAobGVhZC5waG9uZSA/IGA8YSBocmVmPSJ0ZWw6JHtsZWFkLnBob25lfSIgb25jbGljaz0iZXZlbnQuc3RvcFByb3BhZ2F0aW9uKCkiIHN0eWxlPSJkaXNwbGF5OmZsZXg7YWxpZ24taXRlbXM6Y2VudGVyO2dhcDo0cHg7Zm9udC1mYW1pbHk6J0lCTSBQbGV4IE1vbm8nLG1vbm9zcGFjZTtmb250LXNpemU6MTBweDtjb2xvcjp2YXIoLS1ncmVlbik7YmFja2dyb3VuZDpyZ2JhKDc0LDIyMiwxMjgsLjA4KTtib3JkZXI6MXB4IHNvbGlkIHJnYmEoNzQsMjIyLDEyOCwuMik7Ym9yZGVyLXJhZGl1czozcHg7cGFkZGluZzozcHggOHB4O3RleHQtZGVjb3JhdGlvbjpub25lOyI+8J+TniAke2xlYWQucGhvbmV9PC9hPmAgOiAnJykgKwogICAgICAgICAobGVhZC5lbWFpbCA/IGA8YSBocmVmPSJtYWlsdG86JHtsZWFkLmVtYWlsfSIgb25jbGljaz0iZXZlbnQuc3RvcFByb3BhZ2F0aW9uKCkiIHN0eWxlPSJkaXNwbGF5OmZsZXg7YWxpZ24taXRlbXM6Y2VudGVyO2dhcDo0cHg7Zm9udC1mYW1pbHk6J0lCTSBQbGV4IE1vbm8nLG1vbm9zcGFjZTtmb250LXNpemU6MTBweDtjb2xvcjp2YXIoLS1nb2xkKTtiYWNrZ3JvdW5kOnJnYmEoMjUxLDE5MSwzNiwuMDgpO2JvcmRlcjoxcHggc29saWQgcmdiYSgyNTEsMTkxLDM2LC4yKTtib3JkZXItcmFkaXVzOjNweDtwYWRkaW5nOjNweCA4cHg7dGV4dC1kZWNvcmF0aW9uOm5vbmU7Ij7inIkgJHtsZWFkLmVtYWlsfTwvYT5gIDogJycpOwogICAgICAgICB9CiAgICAgICAgIH0KICAgICAgICAgZnVuY3Rpb24gdXBkYXRlUmVzb2x2ZUJ0bihhY3RpdmUsIHJlbWFpbmluZyl7CiAgICAgICAgIGNvbnN0IGJ0biA9IGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCdyZXNvbHZlQnRuJyk7CiAgICAgICAgIGlmKCFidG4pIHJldHVybjsKICAgICAgICAgaWYoYWN0aXZlKXsKICAgICAgICAgYnRuLnRleHRDb250ZW50ID0gJ+KfsyBSZXNvbHZpbmcgc2l0ZW1hcHMuLi4gKCcgKyByZW1haW5pbmcgKyAnIGxlZnQpJzsKICAgICAgICAgYnRuLnN0eWxlLm9wYWNpdHkgPSAnMC42JzsKICAgICAgICAgYnRuLmRpc2FibGVkID0gdHJ1ZTsKICAgICAgICAgfSBlbHNlIHsKICAgICAgICAgYnRuLnRleHRDb250ZW50ID0gJ+KfsyBSZS1SZXNvbHZlIFNpdGVtYXBzJzsKICAgICAgICAgYnRuLnN0eWxlLm9wYWNpdHkgPSAnMSc7CiAgICAgICAgIGJ0bi5kaXNhYmxlZCA9IGZhbHNlOwogICAgICAgICB9CiAgICAgICAgIH0KICAgICAgICAgLy8g4pSA4pSAIFJBVEUgTElNSVQgQkFOTkVSICsgQ09VTlRET1dOIOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgAogICAgICAgICBsZXQgcmxJbnRlcnZhbCA9IG51bGw7CiAgICAgICAgIGZ1bmN0aW9uIHNob3dSYXRlTGltaXRCYW5uZXIocmVzZXRzQXQpewogICAgICAgICBjb25zdCBiYW5uZXIgPSBkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgncmxCYW5uZXInKTsKICAgICAgICAgaWYoYmFubmVyKSBiYW5uZXIuc3R5bGUuZGlzcGxheSA9ICdibG9jayc7CiAgICAgICAgIGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCdwcm9nV3JhcCcpLnN0eWxlLmRpc3BsYXkgPSAnbm9uZSc7CiAgICAgICAgIGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCdzdG9wQnRuJykuc3R5bGUuZGlzcGxheSA9ICdub25lJzsKICAgICAgICAgZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ2NyYXdsQnRuJykuZGlzYWJsZWQgPSBmYWxzZTsKICAgICAgICAgaWYoYWxsTGVhZHMubGVuZ3RoKXsgZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ3Jlc3VsdHMnKS5pbm5lckhUTUw9Jyc7IHJlbmRlckFsbCgpOyB9CiAgICAgICAgIGlmKCFyZXNldHNBdCl7CiAgICAgICAgIGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCdybENvdW50ZG93bicpLnRleHRDb250ZW50ID0gJ2NoZWNrIHlvdXIgQW50aHJvcGljIGRhc2hib2FyZCc7CiAgICAgICAgIGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCdybFRpbWVyJykudGV4dENvbnRlbnQgPSAnLS06LS0nOwogICAgICAgICByZXR1cm47CiAgICAgICAgIH0KICAgICAgICAgY29uc3QgcmVzZXRNcyA9IHJlc2V0c0F0ICogMTAwMDsKICAgICAgICAgaWYocmxJbnRlcnZhbCkgY2xlYXJJbnRlcnZhbChybEludGVydmFsKTsKICAgICAgICAgZnVuY3Rpb24gdGljaygpewogICAgICAgICBjb25zdCBkaWZmID0gcmVzZXRNcyAtIERhdGUubm93KCk7CiAgICAgICAgIGlmKGRpZmYgPD0gMCl7CiAgICAgICAgIGNsZWFySW50ZXJ2YWwocmxJbnRlcnZhbCk7CiAgICAgICAgIGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCdybFRpbWVyJykudGV4dENvbnRlbnQgPSAnMDA6MDAnOwogICAgICAgICBkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgncmxDb3VudGRvd24nKS50ZXh0Q29udGVudCA9ICdyZWFkeSDigJQgaGl0IEZJTkQgTEVBRFMgdG8gcmVzdW1lISc7CiAgICAgICAgIGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCdybENvdW50ZG93bicpLnN0eWxlLmNvbG9yID0gJ3ZhcigtLWdyZWVuKSc7CiAgICAgICAgIGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCdjcmF3bEJ0bicpLnN0eWxlLmJhY2tncm91bmQgPSAndmFyKC0tZ3JlZW4pJzsKICAgICAgICAgcmV0dXJuOwogICAgICAgICB9CiAgICAgICAgIGNvbnN0IGggPSBNYXRoLmZsb29yKGRpZmYvMzYwMDAwMCk7CiAgICAgICAgIGNvbnN0IG0gPSBNYXRoLmZsb29yKChkaWZmJTM2MDAwMDApLzYwMDAwKTsKICAgICAgICAgY29uc3QgcyA9IE1hdGguZmxvb3IoKGRpZmYlNjAwMDApLzEwMDApOwogICAgICAgICBjb25zdCBobXMgPSAoaD4wP2grJ2ggJzonJykrU3RyaW5nKG0pLnBhZFN0YXJ0KDIsJzAnKSsnbSAnK1N0cmluZyhzKS5wYWRTdGFydCgyLCcwJykrJ3MnOwogICAgICAgICBkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgncmxUaW1lcicpLnRleHRDb250ZW50ID0gKGg+MD9TdHJpbmcoaCkucGFkU3RhcnQoMiwnMCcpKyc6JzonJykrU3RyaW5nKG0pLnBhZFN0YXJ0KDIsJzAnKSsnOicrU3RyaW5nKHMpLnBhZFN0YXJ0KDIsJzAnKTsKICAgICAgICAgZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ3JsQ291bnRkb3duJykudGV4dENvbnRlbnQgPSBobXM7CiAgICAgICAgIH0KICAgICAgICAgdGljaygpOwogICAgICAgICBybEludGVydmFsID0gc2V0SW50ZXJ2YWwodGljaywgMTAwMCk7CiAgICAgICAgIH0KICAgICAgICAgZnVuY3Rpb24gdXBkYXRlUHJvZyhkb25lLGZvdW5kKXsKICAgICAgICAgY29uc3QgcGN0PU1hdGgucm91bmQoZG9uZS9JTkRVU1RSSUVTLmxlbmd0aCoxMDApOwogICAgICAgICBkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgncHJvZ0ZpbGwnKS5zdHlsZS53aWR0aD1wY3QrJyUnOwogICAgICAgICBjb25zdCBfcGw9ZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ3Byb2dQY3RMYWJlbCcpO2lmKF9wbClfcGwudGV4dENvbnRlbnQ9cGN0KyclJzsKICAgICAgICAgY29uc3QgX2VsPWRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCdwcm9nRXJyQ291bnQnKTtpZihfZWwpX2VsLnRleHRDb250ZW50PWVycm9ycy5sZW5ndGg7CiAgICAgICAgIGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCdwcm9nUGN0JykudGV4dENvbnRlbnQ9ZG9uZSsnIC8gJytJTkRVU1RSSUVTLmxlbmd0aDsKICAgICAgICAgZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ3Byb2dNc2cnKS50ZXh0Q29udGVudD1kb25lPElORFVTVFJJRVMubGVuZ3RoCiAgICAgICAgID8nU2VhcmNoaW5nICcrZG9uZSsnLycrSU5EVVNUUklFUy5sZW5ndGgrJyBpbmR1c3RyaWVzIChzZXF1ZW50aWFsIOKAlCB+JytNYXRoLnJvdW5kKChJTkRVU1RSSUVTLmxlbmd0aC1kb25lKSoxMikrJyBzZWNvbmRzIGxlZnQpLi4uJwogICAgICAgICA6J+KckyBBbGwgc2VhcmNoZXMgY29tcGxldGUg4oCUIHJlbmRlcmluZyByZXN1bHRzJzsKICAgICAgICAgZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ2JpZ0NvdW50JykudGV4dENvbnRlbnQ9Zm91bmQ7CiAgICAgICAgIH0KICAgICAgICAgZnVuY3Rpb24gYXBwZW5kTGl2ZUNhcmRzKGxlYWRzKXsKICAgICAgICAgaWYoIWxlYWRzLmxlbmd0aClyZXR1cm47CiAgICAgICAgIGxldCBsaXZlPWRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCdsaXZlU3RyZWFtJyk7CiAgICAgICAgIGlmKCFsaXZlKXsKICAgICAgICAgbGl2ZT1kb2N1bWVudC5jcmVhdGVFbGVtZW50KCdkaXYnKTtsaXZlLmlkPSdsaXZlU3RyZWFtJzsKICAgICAgICAgbGl2ZS5zdHlsZS5jc3NUZXh0PSdkaXNwbGF5OmdyaWQ7Z3JpZC10ZW1wbGF0ZS1jb2x1bW5zOnJlcGVhdChhdXRvLWZpbGwsbWlubWF4KDI4NXB4LDFmcikpO2dhcDo5cHg7bWFyZ2luLWJvdHRvbToyMHB4Oyc7CiAgICAgICAgIGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCdyZXN1bHRzJykuYXBwZW5kQ2hpbGQobGl2ZSk7CiAgICAgICAgIH0KICAgICAgICAgbGVhZHMuZm9yRWFjaChsPT57Y29uc3QgZD1kb2N1bWVudC5jcmVhdGVFbGVtZW50KCdkaXYnKTtkLmlubmVySFRNTD1jYXJkSFRNTChsKTtsaXZlLmFwcGVuZENoaWxkKGQuZmlyc3RFbGVtZW50Q2hpbGQpO30pOwogICAgICAgICB9CiAgICAgICAgIGZ1bmN0aW9uIHJlbmRlckFsbCgpewogICAgICAgICBkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgnc3RhdHNSb3cnKS5zdHlsZS5kaXNwbGF5PSdncmlkJzsKICAgICAgICAgZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ3Rvb2xiYXInKS5zdHlsZS5kaXNwbGF5PSdmbGV4JzsKICAgICAgICAgdXBkYXRlU3RhdHMoKTtyZW5kZXJCdWNrZXRzKCk7dXBkYXRlU2VsYmFyKCk7CiAgICAgICAgIH0KICAgICAgICAgZnVuY3Rpb24gdXBkYXRlU3RhdHMoKXsKICAgICAgICAgY29uc3QgdD1hbGxMZWFkcy5sZW5ndGg7CiAgICAgICAgIGNvbnN0IGM9e307QlVDS0VUX0RFRlMuZm9yRWFjaChiPT5jW2Iua2V5XT0wKTsKICAgICAgICAgYWxsTGVhZHMuZm9yRWFjaChsPT5jW2dldEJ1Y2tldChsLmVzdGltYXRlZF9wYWdlcyldKyspOwogICAgICAgICBjb25zdCBnPWMuc2tlbGV0b24rYy5icm9jaHVyZTsKICAgICAgICAgY29uc3QgYXZnPXQ/TWF0aC5yb3VuZChhbGxMZWFkcy5yZWR1Y2UoKGEsbCk9PmErKGwuY29udGVudF9zY29yZXx8NzUpLDApL3QpOjA7CiAgICAgICAgIGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCdzdGF0c1JvdycpLmlubmVySFRNTD1gCiAgICAgICAgIDxkaXYgY2xhc3M9InN0YXQgaGkiPjxkaXYgY2xhc3M9InNuIj4ke3R9PC9kaXY+PGRpdiBjbGFzcz0ic2wiPlRvdGFsIExlYWRzPC9kaXY+PC9kaXY+CiAgICAgICAgIDxkaXYgY2xhc3M9InN0YXQiPjxkaXYgY2xhc3M9InNuIiBzdHlsZT0iY29sb3I6dmFyKC0tZ29sZCkiPiR7Z308L2Rpdj48ZGl2IGNsYXNzPSJzbCI+8J+UpSBHb2xkbWluZSAoNeKAkzMwKTwvZGl2PjwvZGl2PgogICAgICAgICA8ZGl2IGNsYXNzPSJzdGF0Ij48ZGl2IGNsYXNzPSJzbiIgc3R5bGU9ImNvbG9yOnZhcigtLW11dGVkKSI+JHtjLmdob3N0fTwvZGl2PjxkaXYgY2xhc3M9InNsIj5HaG9zdCAoMOKAkzUpPC9kaXY+PC9kaXY+CiAgICAgICAgIDxkaXYgY2xhc3M9InN0YXQiPjxkaXYgY2xhc3M9InNuIiBzdHlsZT0iY29sb3I6dmFyKC0tYmx1ZSkiPiR7Yy5za2VsZXRvbn08L2Rpdj48ZGl2IGNsYXNzPSJzbCI+U2tlbGV0b24gKDXigJMxNSk8L2Rpdj48L2Rpdj4KICAgICAgICAgPGRpdiBjbGFzcz0ic3RhdCI+PGRpdiBjbGFzcz0ic24iIHN0eWxlPSJjb2xvcjp2YXIoLS1nb2xkKSI+JHtjLmJyb2NodXJlfTwvZGl2PjxkaXYgY2xhc3M9InNsIj5Ccm9jaHVyZSAoMTXigJMzMCk8L2Rpdj48L2Rpdj4KICAgICAgICAgPGRpdiBjbGFzcz0ic3RhdCI+PGRpdiBjbGFzcz0ic24iIHN0eWxlPSJjb2xvcjp2YXIoLS1vcmFuZ2UpIj4ke2Muc3RhbGV9PC9kaXY+PGRpdiBjbGFzcz0ic2wiPlN0YWxlICgzMOKAkzYwKTwvZGl2PjwvZGl2PgogICAgICAgICA8ZGl2IGNsYXNzPSJzdGF0Ij48ZGl2IGNsYXNzPSJzbiIgc3R5bGU9ImNvbG9yOnZhcigtLXJlZCkiPiR7Yy5hY3RpdmV9PC9kaXY+PGRpdiBjbGFzcz0ic2wiPkFjdGl2ZSAoNjDigJMxNTApPC9kaXY+PC9kaXY+CiAgICAgICAgIDxkaXYgY2xhc3M9InN0YXQiPjxkaXYgY2xhc3M9InNuIiBzdHlsZT0iY29sb3I6dmFyKC0tcHVycGxlKSI+JHtjLmVzdGFifTwvZGl2PjxkaXYgY2xhc3M9InNsIj5Fc3RhYiAoMTUwKyk8L2Rpdj48L2Rpdj4KICAgICAgICAgPGRpdiBjbGFzcz0ic3RhdCI+PGRpdiBjbGFzcz0ic24iPiR7YXZnfTwvZGl2PjxkaXYgY2xhc3M9InNsIj5BdmcgU2NvcmU8L2Rpdj48L2Rpdj5gOwogICAgICAgICB9CiAgICAgICAgIGZ1bmN0aW9uIGdldEZpbHRlcmVkKCl7CiAgICAgICAgIGxldCBsZWFkcz1bLi4uYWxsTGVhZHNdOwogICAgICAgICBpZihhY3RpdmVCdWNrZXQhPT0nYWxsJylsZWFkcz1sZWFkcy5maWx0ZXIobD0+Z2V0QnVja2V0KGwuZXN0aW1hdGVkX3BhZ2VzKT09PWFjdGl2ZUJ1Y2tldCk7CiAgICAgICAgIGlmKGFjdGl2ZVNlYXJjaCl7Y29uc3QgcT1hY3RpdmVTZWFyY2gudG9Mb3dlckNhc2UoKTtsZWFkcz1sZWFkcy5maWx0ZXIobD0+KGwubmFtZXx8JycpLnRvTG93ZXJDYXNlKCkuaW5jbHVkZXMocSl8fChsLnR5cGV8fCcnKS50b0xvd2VyQ2FzZSgpLmluY2x1ZGVzKHEpfHwobC5vcHBvcnR1bml0eXx8JycpLnRvTG93ZXJDYXNlKCkuaW5jbHVkZXMocSkpO30KICAgICAgICAgaWYoc29ydEZpZWxkPT09J3Njb3JlJylsZWFkcy5zb3J0KChhLGIpPT4oYi5jb250ZW50X3Njb3JlfHwwKS0oYS5jb250ZW50X3Njb3JlfHwwKSk7CiAgICAgICAgIGlmKHNvcnRGaWVsZD09PSdwYWdlcycpbGVhZHMuc29ydCgoYSxiKT0+KGIuZXN0aW1hdGVkX3BhZ2VzfHwwKS0oYS5lc3RpbWF0ZWRfcGFnZXN8fDApKTsKICAgICAgICAgcmV0dXJuIGxlYWRzOwogICAgICAgICB9CiAgICAgICAgIGZ1bmN0aW9uIHJlbmRlckJ1Y2tldHMoKXsKICAgICAgICAgY29uc3QgZmlsdGVyZWQ9Z2V0RmlsdGVyZWQoKTsKICAgICAgICAgY29uc3Qgb3V0PWRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCdyZXN1bHRzJyk7CiAgICAgICAgIG91dC5pbm5lckhUTUw9Jyc7bGV0IGFueT1mYWxzZTsKICAgICAgICAgQlVDS0VUX0RFRlMuZm9yRWFjaChkZWY9PnsKICAgICAgICAgY29uc3QgaXRlbXM9ZmlsdGVyZWQuZmlsdGVyKGw9PmdldEJ1Y2tldChsLmVzdGltYXRlZF9wYWdlcyk9PT1kZWYua2V5KTsKICAgICAgICAgaWYoIWl0ZW1zLmxlbmd0aClyZXR1cm47CiAgICAgICAgIGFueT10cnVlOwogICAgICAgICBjb25zdCBzZWM9ZG9jdW1lbnQuY3JlYXRlRWxlbWVudCgnZGl2Jyk7CiAgICAgICAgIHNlYy5jbGFzc05hbWU9J2J1Y2tldCAnK2RlZi5jbHM7CiAgICAgICAgIHNlYy5pbm5lckhUTUw9YAogICAgICAgICA8ZGl2IGNsYXNzPSJiaGVhZCI+CiAgICAgICAgICAgPGRpdiBjbGFzcz0iYmhlYWQtdG9wIj4KICAgICAgICAgICAgIDxzcGFuIGNsYXNzPSJiaWNvbiI+JHtkZWYuaWNvbn08L3NwYW4+CiAgICAgICAgICAgICA8ZGl2PgogICAgICAgICAgICAgICA8ZGl2IGNsYXNzPSJibmFtZSI+JHtkZWYubGFiZWx9PC9kaXY+CiAgICAgICAgICAgICAgIDxkaXYgY2xhc3M9ImJzdWJsYWJlbCI+JHtkZWYuc3VibGFiZWx9PC9kaXY+CiAgICAgICAgICAgICA8L2Rpdj4KICAgICAgICAgICAgIDxzcGFuIGNsYXNzPSJicmFuZ2UiPiR7ZGVmLnJhbmdlfTwvc3Bhbj4KICAgICAgICAgICAgIDxzcGFuIGNsYXNzPSJiaG90Ij4ke2RlZi5ob3R9PC9zcGFuPgogICAgICAgICAgICAgPHNwYW4gY2xhc3M9ImJjbnQiPiR7aXRlbXMubGVuZ3RofSBsZWFkJHtpdGVtcy5sZW5ndGghPT0xPydzJzonJ308L3NwYW4+CiAgICAgICAgICAgPC9kaXY+CiAgICAgICAgICAgPGRpdiBjbGFzcz0iYmhlYWQtYm90dG9tIj4KICAgICAgICAgICAgIDxzcGFuIGNsYXNzPSJiYWN0aW9uIj4ke2RlZi5hY3Rpb259PC9zcGFuPgogICAgICAgICAgICAgPHNwYW4gY2xhc3M9ImJkZXNjIj4ke2RlZi5kZXNjfTwvc3Bhbj4KICAgICAgICAgICA8L2Rpdj4KICAgICAgICAgPC9kaXY+CiAgICAgICAgIDxkaXYgY2xhc3M9ImNhcmRzIj4ke2l0ZW1zLm1hcChsPT5jYXJkSFRNTChsKSkuam9pbignJyl9PC9kaXY+YDsKICAgICAgICAgb3V0LmFwcGVuZENoaWxkKHNlYyk7CiAgICAgICAgIH0pOwogICAgICAgICBpZighYW55KW91dC5pbm5lckhUTUw9JzxkaXYgY2xhc3M9ImVtcHR5LXN0YXRlIj48ZGl2IGNsYXNzPSJlYmlnIj5OTzxicj5NQVRDSDwvZGl2PjxwPk5vIGxlYWRzIG1hdGNoIHRoYXQgZmlsdGVyLjwvcD48L2Rpdj4nOwogICAgICAgICB9CiAgICAgICAgIGZ1bmN0aW9uIG1ha2VJZChsKXtyZXR1cm4gZW5jb2RlVVJJQ29tcG9uZW50KChsLm5hbWV8fCd4JykrKGwud2Vic2l0ZXx8J3knKSkucmVwbGFjZSgvW15hLXowLTldL2dpLCdfJyk7fQogICAgICAgICBmdW5jdGlvbiBjYXJkSFRNTChsKXsKICAgICAgICAgY29uc3QgaWQ9bWFrZUlkKGwpOwogICAgICAgICBjb25zdCBiaz1nZXRCdWNrZXQobC5lc3RpbWF0ZWRfcGFnZXMpOwogICAgICAgICBjb25zdCBwaXRjaD1sLnBpdGNoX2FuZ2xlfHxQSVRDSFtia118fCcnOwogICAgICAgICBjb25zdCBzYz1sLmNvbnRlbnRfc2NvcmU+PTg1Pydjc2gnOmwuY29udGVudF9zY29yZT49NzI/J2NzbSc6J2NzbCc7CiAgICAgICAgIGNvbnN0IGlzU2VsPXNlbGVjdGVkLmhhcyhpZCk7CiAgICAgICAgIGNvbnN0IHNyY01hcD17J3JvYm90cy50eHQnOlsncm9ib3RzLnR4dCcsJ2JhY2tncm91bmQ6cmdiYSg3NCwyMjIsMTI4LC4xNSk7Y29sb3I6IzRhZGU4MDtib3JkZXI6MXB4IHNvbGlkIHJnYmEoNzQsMjIyLDEyOCwuMyknXSwndmVyaWZpZWQnOlsndmVyaWZpZWQnLCdiYWNrZ3JvdW5kOnJnYmEoOTYsMTY1LDI1MCwuMTUpO2NvbG9yOiM2MGE1ZmE7Ym9yZGVyOjFweCBzb2xpZCByZ2JhKDk2LDE2NSwyNTAsLjMpJ10sJ2ZhbGxiYWNrJzpbJ2ZhbGxiYWNrJywnYmFja2dyb3VuZDpyZ2JhKDI1MSwxNDYsNjAsLjEyKTtjb2xvcjojZmI5MjNjO2JvcmRlcjoxcHggc29saWQgcmdiYSgyNTEsMTQ2LDYwLC4yNSknXX07CiAgICAgICAgIGNvbnN0W3NyY0xhYmVsLHNyY1N0eWxlXT1zcmNNYXBbbC5zaXRlbWFwX3NvdXJjZV18fFsnPycsJ2JhY2tncm91bmQ6cmdiYSg4Miw4MiwxMTAsLjEyKTtjb2xvcjojNTI1MjZlO2JvcmRlcjoxcHggc29saWQgcmdiYSg4Miw4MiwxMTAsLjIpJ107CiAgICAgICAgIGNvbnN0IHVybD1sLnNpdGVtYXB8fChsLndlYnNpdGU/bC53ZWJzaXRlKycvc2l0ZW1hcC54bWwnOicjJyk7CiAgICAgICAgIHJldHVybiBgCiAgICAgICAgIDxkaXYgY2xhc3M9ImxjYXJkJHtpc1NlbD8nIHNlbCc6Jyd9IiBpZD0ibGMtJHtpZH0iIG9uY2xpY2s9InRvZ2dsZVNlbCgnJHtpZH0nLGV2ZW50KSI+CiAgICAgICAgIDxkaXYgY2xhc3M9ImNoayR7aXNTZWw/JyBvbic6Jyd9IiBpZD0iY2hrLSR7aWR9Ij48L2Rpdj4KICAgICAgICAgPGRpdiBjbGFzcz0iY24iPiR7bC5uYW1lfHwnVW5rbm93bid9PC9kaXY+CiAgICAgICAgIDxkaXYgY2xhc3M9ImN0Ij4ke2wudHlwZXx8Jyd9PC9kaXY+CiAgICAgICAgIDxkaXYgY2xhc3M9InBpdGNoLWJhbm5lciI+JHtwaXRjaH08L2Rpdj4KICAgICAgICAgJHsobC5waG9uZXx8bC5lbWFpbCk/YDxkaXYgc3R5bGU9ImRpc3BsYXk6ZmxleDtnYXA6NnB4O2ZsZXgtd3JhcDp3cmFwO21hcmdpbi1ib3R0b206OHB4OyI+CiAgICAgICAgICR7bC5waG9uZT9gPGEgaHJlZj0idGVsOiR7bC5waG9uZX0iIG9uY2xpY2s9ImV2ZW50LnN0b3BQcm9wYWdhdGlvbigpIiBzdHlsZT0iZGlzcGxheTpmbGV4O2FsaWduLWl0ZW1zOmNlbnRlcjtnYXA6NHB4O2ZvbnQtZmFtaWx5OidJQk0gUGxleCBNb25vJyxtb25vc3BhY2U7Zm9udC1zaXplOjEwcHg7Y29sb3I6dmFyKC0tZ3JlZW4pO2JhY2tncm91bmQ6cmdiYSg3NCwyMjIsMTI4LC4wOCk7Ym9yZGVyOjFweCBzb2xpZCByZ2JhKDc0LDIyMiwxMjgsLjIpO2JvcmRlci1yYWRpdXM6M3B4O3BhZGRpbmc6M3B4IDhweDt0ZXh0LWRlY29yYXRpb246bm9uZTsiIHRpdGxlPSJDYWxsIj7wn5OeICR7bC5waG9uZX08L2E+YDonJ30KICAgICAgICAgJHtsLmVtYWlsP2A8YSBocmVmPSJtYWlsdG86JHtsLmVtYWlsfSIgb25jbGljaz0iZXZlbnQuc3RvcFByb3BhZ2F0aW9uKCkiIHN0eWxlPSJkaXNwbGF5OmZsZXg7YWxpZ24taXRlbXM6Y2VudGVyO2dhcDo0cHg7Zm9udC1mYW1pbHk6J0lCTSBQbGV4IE1vbm8nLG1vbm9zcGFjZTtmb250LXNpemU6MTBweDtjb2xvcjp2YXIoLS1nb2xkKTtiYWNrZ3JvdW5kOnJnYmEoMjUxLDE5MSwzNiwuMDgpO2JvcmRlcjoxcHggc29saWQgcmdiYSgyNTEsMTkxLDM2LC4yKTtib3JkZXItcmFkaXVzOjNweDtwYWRkaW5nOjNweCA4cHg7dGV4dC1kZWNvcmF0aW9uOm5vbmU7IiB0aXRsZT0iU2VuZCBlbWFpbCI+4pyJICR7bC5lbWFpbH08L2E+YDonJ30KICAgICAgICAgPC9kaXY+YDonJ30KICAgICAgICAgPGRpdiBjbGFzcz0ic3JvdyIgb25jbGljaz0iZXZlbnQuc3RvcFByb3BhZ2F0aW9uKCk7d2luZG93Lm9wZW4oJyR7dXJsfScsJ19ibGFuaycsJ25vb3BlbmVyJykiIHN0eWxlPSJjdXJzb3I6cG9pbnRlciIgdGl0bGU9Ik9wZW4gaW4gbmV3IHRhYiI+CiAgICAgICAgIDxzcGFuIHN0eWxlPSJmb250LWZhbWlseTonSUJNIFBsZXggTW9ubycsbW9ub3NwYWNlO2ZvbnQtc2l6ZTo4LjVweDtjb2xvcjp2YXIoLS1ibHVlKTtmbGV4OjE7d29yZC1icmVhazpicmVhay1hbGw7Ij4ke3VybH08L3NwYW4+CiAgICAgICAgIDxzcGFuIHN0eWxlPSJmb250LWZhbWlseTonSUJNIFBsZXggTW9ubycsbW9ub3NwYWNlO2ZvbnQtc2l6ZTo3cHg7bGV0dGVyLXNwYWNpbmc6LjA2ZW07dGV4dC10cmFuc2Zvcm06dXBwZXJjYXNlO3BhZGRpbmc6MXB4IDRweDtib3JkZXItcmFkaXVzOjJweDtmbGV4LXNocmluazowOyR7c3JjU3R5bGV9Ij4ke3NyY0xhYmVsfTwvc3Bhbj4KICAgICAgICAgPGJ1dHRvbiBjbGFzcz0iY3B5IiBkYXRhLXVybD0iJHt1cmwucmVwbGFjZSgvIi9nLCcmcXVvdDsnKX0iIG9uY2xpY2s9ImV2ZW50LnN0b3BQcm9wYWdhdGlvbigpO2NweUJ0bih0aGlzKSIgdGl0bGU9IkNvcHkgVVJMIj7ip4k8L2J1dHRvbj4KICAgICAgICAgPC9kaXY+CiAgICAgICAgIDxkaXYgY2xhc3M9Im9wcCI+JHtsLm9wcG9ydHVuaXR5fHwnJ308L2Rpdj4KICAgICAgICAgPGRpdiBjbGFzcz0iY3RhZ3MiPiR7KGwudGFnc3x8W10pLm1hcCh0PT5gPHNwYW4gY2xhc3M9ImN0YWciPiR7dH08L3NwYW4+YCkuam9pbignJyl9PC9kaXY+CiAgICAgICAgIDxkaXYgY2xhc3M9ImNmb290Ij4KICAgICAgICAgPGRpdiBjbGFzcz0iY3BhZ2VzIj5+PHN0cm9uZz4ke2wuZXN0aW1hdGVkX3BhZ2VzfHwnPyd9PC9zdHJvbmc+IHBhZ2VzPC9kaXY+CiAgICAgICAgIDxkaXYgc3R5bGU9ImRpc3BsYXk6ZmxleDthbGlnbi1pdGVtczpjZW50ZXI7Z2FwOjZweDsiPgogICAgICAgICAke2wucGhvbmU/YDxidXR0b24gY2xhc3M9ImNhbGwtYnRuICR7Z2V0Q2FsbFN0YXRlKGlkKX0iIGlkPSJjYWxsYnRuLSR7aWR9IgogICAgICAgICAgIG9uY2xpY2s9ImV2ZW50LnN0b3BQcm9wYWdhdGlvbigpO3RyaWdnZXJDYWxsKCcke2lkfScpIgogICAgICAgICAgIHRpdGxlPSJDYWxsICR7bC5waG9uZX0iPiR7Z2V0Q2FsbEljb24oaWQpfSAke2dldENhbGxMYWJlbChpZCl9PC9idXR0b24+YDonJ30KICAgICAgICAgPGRpdiBjbGFzcz0iY3Njb3JlICR7c2N9IiB0aXRsZT0iRXN0aW1hdGVkIGNvbnRlbnQgc2NvcmUg4oCUIGJhc2VkIG9uIHNpdGUgdHlwZSBhbmQgcGFnZSBjb3VudCI+JHtsLmNvbnRlbnRfc2NvcmV8fCc/J308c3BhbiBzdHlsZT0iZm9udC1zaXplOjdweDtvcGFjaXR5Oi41O21hcmdpbi1sZWZ0OjJweDsiPmVzdDwvc3Bhbj48L2Rpdj4KICAgICAgICAgPC9kaXY+CiAgICAgICAgIDwvZGl2PgogICAgICAgICA8ZGl2IGNsYXNzPSJjYWxsLXN0YXR1cyAke2dldENhbGxTdGF0dXNDbGFzcyhpZCl9ICR7Z2V0Q2FsbFN0YXR1c1RleHQoaWQpPydzaG93JzonJ30iIGlkPSJjYWxsc3RhdHVzLSR7aWR9Ij4ke2dldENhbGxTdGF0dXNUZXh0KGlkKX08L2Rpdj4KICAgICAgICAgPC9kaXY+YDsKICAgICAgICAgfQogICAgICAgICBmdW5jdGlvbiB0b2dnbGVTZWwoaWQsZSl7CiAgICAgICAgIGlmKGUudGFyZ2V0LnRhZ05hbWU9PT0nQSd8fGUudGFyZ2V0LnRhZ05hbWU9PT0nQlVUVE9OJylyZXR1cm47CiAgICAgICAgIHNlbGVjdGVkLmhhcyhpZCk/c2VsZWN0ZWQuZGVsZXRlKGlkKTpzZWxlY3RlZC5hZGQoaWQpOwogICAgICAgICBkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgnbGMtJytpZCk/LmNsYXNzTGlzdC50b2dnbGUoJ3NlbCcpOwogICAgICAgICBkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgnY2hrLScraWQpPy5jbGFzc0xpc3QudG9nZ2xlKCdvbicpOwogICAgICAgICB1cGRhdGVTZWxiYXIoKTsKICAgICAgICAgfQogICAgICAgICBmdW5jdGlvbiB1cGRhdGVTZWxiYXIoKXsKICAgICAgICAgZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ3NlbENvdW50JykudGV4dENvbnRlbnQ9c2VsZWN0ZWQuc2l6ZTsKICAgICAgICAgZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ3NlbGJhcicpLmNsYXNzTGlzdC50b2dnbGUoJ3Nob3cnLHNlbGVjdGVkLnNpemU+MCk7CiAgICAgICAgIH0KICAgICAgICAgZnVuY3Rpb24gc2VsQWxsKCl7Z2V0RmlsdGVyZWQoKS5mb3JFYWNoKGw9PnNlbGVjdGVkLmFkZChtYWtlSWQobCkpKTtyZW5kZXJCdWNrZXRzKCk7dXBkYXRlU2VsYmFyKCk7dG9hc3QoJ1NlbGVjdGVkICcrc2VsZWN0ZWQuc2l6ZSsnIGxlYWRzJyk7fQogICAgICAgICBmdW5jdGlvbiBjbGVhclNlbCgpe3NlbGVjdGVkLmNsZWFyKCk7cmVuZGVyQnVja2V0cygpO3VwZGF0ZVNlbGJhcigpO30KICAgICAgICAgZnVuY3Rpb24gc2V0QnVja2V0KGJ0bixrZXkpe2RvY3VtZW50LnF1ZXJ5U2VsZWN0b3JBbGwoJy50YnRuW2RhdGEtYmtdJykuZm9yRWFjaChiPT5iLmNsYXNzTGlzdC5yZW1vdmUoJ29uJykpO2J0bi5jbGFzc0xpc3QuYWRkKCdvbicpO2FjdGl2ZUJ1Y2tldD1rZXk7cmVuZGVyQnVja2V0cygpO30KICAgICAgICAgZnVuY3Rpb24gZG9Tb3J0KGYpe3NvcnRGaWVsZD1mO3JlbmRlckJ1Y2tldHMoKTt0b2FzdCgnU29ydGVkIGJ5ICcrZik7fQogICAgICAgICBmdW5jdGlvbiBkb1NlYXJjaChxKXthY3RpdmVTZWFyY2g9cTtyZW5kZXJCdWNrZXRzKCk7fQogICAgICAgICBmdW5jdGlvbiBjcHlCdG4oYnRuKXsKICAgICAgICAgY29uc3QgdT1idG4uZ2V0QXR0cmlidXRlKCdkYXRhLXVybCcpOwogICAgICAgICBuYXZpZ2F0b3IuY2xpcGJvYXJkLndyaXRlVGV4dCh1KS50aGVuKCgpPT57CiAgICAgICAgIGNvbnN0IG9yaWc9YnRuLnRleHRDb250ZW50OwogICAgICAgICBidG4udGV4dENvbnRlbnQ9J+Kckyc7YnRuLnN0eWxlLmNvbG9yPSd2YXIoLS1ncmVlbiknOwogICAgICAgICBzZXRUaW1lb3V0KCgpPT57YnRuLnRleHRDb250ZW50PW9yaWc7YnRuLnN0eWxlLmNvbG9yPScnO30sMTIwMCk7CiAgICAgICAgIHRvYXN0KCdDb3BpZWQhJyk7CiAgICAgICAgIH0pLmNhdGNoKCgpPT57CiAgICAgICAgIGNvbnN0IHRhPWRvY3VtZW50LmNyZWF0ZUVsZW1lbnQoJ3RleHRhcmVhJyk7CiAgICAgICAgIHRhLnZhbHVlPXU7dGEuc3R5bGUucG9zaXRpb249J2ZpeGVkJzt0YS5zdHlsZS5vcGFjaXR5PScwJzsKICAgICAgICAgZG9jdW1lbnQuYm9keS5hcHBlbmRDaGlsZCh0YSk7dGEuc2VsZWN0KCk7CiAgICAgICAgIGRvY3VtZW50LmV4ZWNDb21tYW5kKCdjb3B5Jyk7ZG9jdW1lbnQuYm9keS5yZW1vdmVDaGlsZCh0YSk7CiAgICAgICAgIHRvYXN0KCdDb3BpZWQhJyk7CiAgICAgICAgIH0pOwogICAgICAgICB9CiAgICAgICAgIGZ1bmN0aW9uIGNvcHlVcmwodSl7bmF2aWdhdG9yLmNsaXBib2FyZC53cml0ZVRleHQodSkudGhlbigoKT0+dG9hc3QoJ0NvcGllZCEnKSk7fQogICAgICAgICBmdW5jdGlvbiBjb3B5QWxsKCl7bmF2aWdhdG9yLmNsaXBib2FyZC53cml0ZVRleHQoYWxsTGVhZHMubWFwKGw9Pmwuc2l0ZW1hcHx8KGwud2Vic2l0ZSsnL3NpdGVtYXAueG1sJykpLmpvaW4oJ1xuJykpLnRoZW4oKCk9PnRvYXN0KCdDb3BpZWQgJythbGxMZWFkcy5sZW5ndGgrJyBVUkxzJykpO30KICAgICAgICAgZnVuY3Rpb24gZ2V0U2VsTGVhZHMoKXtyZXR1cm4gYWxsTGVhZHMuZmlsdGVyKGw9PnNlbGVjdGVkLmhhcyhtYWtlSWQobCkpKTt9CiAgICAgICAgIGZ1bmN0aW9uIGNvcHlTZWxVcmxzKCl7Y29uc3Qgcz1nZXRTZWxMZWFkcygpO25hdmlnYXRvci5jbGlwYm9hcmQud3JpdGVUZXh0KHMubWFwKGw9Pmwuc2l0ZW1hcHx8KGwud2Vic2l0ZSsnL3NpdGVtYXAueG1sJykpLmpvaW4oJ1xuJykpLnRoZW4oKCk9PnRvYXN0KCdDb3BpZWQgJytzLmxlbmd0aCsnIFVSTHMnKSk7fQogICAgICAgICBmdW5jdGlvbiB0b0NTVihsZWFkcyl7CiAgICAgICAgIGNvbnN0IGg9WydOYW1lJywnVHlwZScsJ1dlYnNpdGUnLCdQaG9uZScsJ0VtYWlsJywnU2l0ZW1hcCcsJ0VzdCBQYWdlcycsJ0J1Y2tldCcsJ0NvbnRlbnQgU2NvcmUnLCdQaXRjaCBBbmdsZScsJ09wcG9ydHVuaXR5JywnVGFncyddOwogICAgICAgICBjb25zdCByb3dzPWxlYWRzLm1hcChsPT5bYCIkeyhsLm5hbWV8fCcnKS5yZXBsYWNlKC8iL2csIiciKX0iYCxgIiR7KGwudHlwZXx8JycpLnJlcGxhY2UoLyIvZywiJyIpfSJgLGAiJHtsLndlYnNpdGV8fCcnfSJgLGAiJHtsLnBob25lfHwnJ30iYCxgIiR7bC5lbWFpbHx8Jyd9ImAsYCIke2wuc2l0ZW1hcHx8Jyd9ImAsbC5lc3RpbWF0ZWRfcGFnZXN8fDAsYCIke2dldEJ1Y2tldChsLmVzdGltYXRlZF9wYWdlcyl9ImAsbC5jb250ZW50X3Njb3JlfHwwLGAiJHsobC5waXRjaF9hbmdsZXx8JycpLnJlcGxhY2UoLyIvZywiJyIpfSJgLGAiJHsobC5vcHBvcnR1bml0eXx8JycpLnJlcGxhY2UoLyIvZywiJyIpfSJgLGAiJHsobC50YWdzfHxbXSkuam9pbignOyAnKX0iYF0pOwogICAgICAgICByZXR1cm5baC5qb2luKCcsJyksLi4ucm93cy5tYXAocj0+ci5qb2luKCcsJykpXS5qb2luKCdcbicpOwogICAgICAgICB9CiAgICAgICAgIGZ1bmN0aW9uIGRsKGNvbnRlbnQsbmFtZSx0eXBlKXtjb25zdCBhPWRvY3VtZW50LmNyZWF0ZUVsZW1lbnQoJ2EnKTthLmhyZWY9VVJMLmNyZWF0ZU9iamVjdFVSTChuZXcgQmxvYihbY29udGVudF0se3R5cGV9KSk7YS5kb3dubG9hZD1uYW1lO2EuY2xpY2soKTt9CiAgICAgICAgIGZ1bmN0aW9uIGV4cG9ydENTVigpe2RsKHRvQ1NWKGFsbExlYWRzKSwnbGVhZHMtJytkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgnY2l0eScpLnZhbHVlKyctJytEYXRlLm5vdygpKycuY3N2JywndGV4dC9jc3YnKTt0b2FzdCgnRXhwb3J0ZWQgJythbGxMZWFkcy5sZW5ndGgrJyBsZWFkcycpO30KICAgICAgICAgZnVuY3Rpb24gZXhwb3J0SlNPTigpewogICAgICAgICAgIHZhciBidW5kbGU9e190eXBlOidjb250ZW50c2NhbGUtbGVhZGNyYXdsZXInLHZlcnNpb246MSxleHBvcnRlZEF0OkRhdGUubm93KCksCiAgICAgICAgICAgICBjaXR5OmRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCdjaXR5JykudmFsdWUsY291bnRyeTpkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgnY291bnRyeScpLnZhbHVlLAogICAgICAgICAgICAgbGVhZHM6YWxsTGVhZHMsY29tcGxldGVkOlsuLi5jb21wbGV0ZWRJbmR1c3RyaWVzXSxvdXRjb21lczp7fX07CiAgICAgICAgICAgdHJ5e2J1bmRsZS5vdXRjb21lcz1KU09OLnBhcnNlKGxvY2FsU3RvcmFnZS5nZXRJdGVtKCdsY19jYWxsc2hlZXRfb3V0Y29tZXMnKXx8J3t9Jyk7fWNhdGNoKGUpe30KICAgICAgICAgICBkbChKU09OLnN0cmluZ2lmeShidW5kbGUsbnVsbCwyKSwnbGVhZGNyYXdsZXItJysoZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ2NpdHknKS52YWx1ZXx8J2V4cG9ydCcpKyctJytEYXRlLm5vdygpKycuanNvbicsJ2FwcGxpY2F0aW9uL2pzb24nKTsKICAgICAgICAgICB0b2FzdCgnRXhwb3J0ZWQgJythbGxMZWFkcy5sZW5ndGgrJyBsZWFkcyArIGNhbGwgb3V0Y29tZXMnKTsKICAgICAgICAgfQogICAgICAgICBmdW5jdGlvbiB0cmlnZ2VySW1wb3J0KCl7dmFyIGVsPWRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCdpbXBvcnRGaWxlJyk7aWYoZWwpZWwuY2xpY2soKTt9CiAgICAgICAgIGZ1bmN0aW9uIGltcG9ydEpTT04oZXYpewogICAgICAgICAgIHZhciBmaWxlPWV2LnRhcmdldC5maWxlcyYmZXYudGFyZ2V0LmZpbGVzWzBdO2lmKCFmaWxlKXJldHVybjsKICAgICAgICAgICB2YXIgcmVhZGVyPW5ldyBGaWxlUmVhZGVyKCk7CiAgICAgICAgICAgcmVhZGVyLm9ubG9hZD1mdW5jdGlvbigpewogICAgICAgICAgICAgdmFyIGRhdGE7dHJ5e2RhdGE9SlNPTi5wYXJzZShyZWFkZXIucmVzdWx0KTt9Y2F0Y2goZSl7dG9hc3QoJ+KdjCBJbnZhbGlkIEpTT04gZmlsZScpO2V2LnRhcmdldC52YWx1ZT0nJztyZXR1cm47fQogICAgICAgICAgICAgdmFyIGluY29taW5nPUFycmF5LmlzQXJyYXkoZGF0YSk/ZGF0YTooZGF0YS5sZWFkc3x8W10pOwogICAgICAgICAgICAgaWYoIWluY29taW5nLmxlbmd0aCl7dG9hc3QoJ+KdjCBObyBsZWFkcyBmb3VuZCBpbiBmaWxlJyk7ZXYudGFyZ2V0LnZhbHVlPScnO3JldHVybjt9CiAgICAgICAgICAgICB2YXIgYWRkZWQ9ZGVkdXAoaW5jb21pbmcpOwogICAgICAgICAgICAgYWxsTGVhZHM9YWxsTGVhZHMuY29uY2F0KGFkZGVkKTsKICAgICAgICAgICAgIGlmKCFBcnJheS5pc0FycmF5KGRhdGEpKXsKICAgICAgICAgICAgICAgKGRhdGEuY29tcGxldGVkfHxbXSkuZm9yRWFjaChmdW5jdGlvbihjKXtjb21wbGV0ZWRJbmR1c3RyaWVzLmFkZChjKTt9KTsKICAgICAgICAgICAgICAgaWYoZGF0YS5jaXR5ICYmICFkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgnY2l0eScpLnZhbHVlKWRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCdjaXR5JykudmFsdWU9ZGF0YS5jaXR5OwogICAgICAgICAgICAgICBpZihkYXRhLmNvdW50cnkgJiYgIWRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCdjb3VudHJ5JykudmFsdWUpZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ2NvdW50cnknKS52YWx1ZT1kYXRhLmNvdW50cnk7CiAgICAgICAgICAgICAgIGlmKGRhdGEub3V0Y29tZXMpewogICAgICAgICAgICAgICAgIHRyeXt2YXIgY3VyPUpTT04ucGFyc2UobG9jYWxTdG9yYWdlLmdldEl0ZW0oJ2xjX2NhbGxzaGVldF9vdXRjb21lcycpfHwne30nKTsKICAgICAgICAgICAgICAgICAgIE9iamVjdC5rZXlzKGRhdGEub3V0Y29tZXMpLmZvckVhY2goZnVuY3Rpb24oayl7Y3VyW2tdPWRhdGEub3V0Y29tZXNba107fSk7CiAgICAgICAgICAgICAgICAgICBsb2NhbFN0b3JhZ2Uuc2V0SXRlbSgnbGNfY2FsbHNoZWV0X291dGNvbWVzJyxKU09OLnN0cmluZ2lmeShjdXIpKTsKICAgICAgICAgICAgICAgICB9Y2F0Y2goZSl7fQogICAgICAgICAgICAgICB9CiAgICAgICAgICAgICB9CiAgICAgICAgICAgICBkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgnZW1wdHlTdGF0ZScpLnN0eWxlLmRpc3BsYXk9J25vbmUnOwogICAgICAgICAgICAgZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ3Jlc3VtZUJhbm5lcicpLnN0eWxlLmRpc3BsYXk9J25vbmUnOwogICAgICAgICAgICAgc2F2ZVNlc3Npb24oZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ2NpdHknKS52YWx1ZSxkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgnY291bnRyeScpLnZhbHVlKTsKICAgICAgICAgICAgIHJlbmRlckFsbCgpOwogICAgICAgICAgICAgdHJ5e2lmKHR5cGVvZiBjc1JlbG9hZE91dGNvbWVzPT09J2Z1bmN0aW9uJyljc1JlbG9hZE91dGNvbWVzKCk7ZWxzZSBpZih0eXBlb2YgY3NSZW5kZXI9PT0nZnVuY3Rpb24nKWNzUmVuZGVyKCk7fWNhdGNoKGUpe30KICAgICAgICAgICAgIHRvYXN0KCdJbXBvcnRlZCAnK2FkZGVkLmxlbmd0aCsnIG5ldyBsZWFkcyAoJythbGxMZWFkcy5sZW5ndGgrJyB0b3RhbCknKTsKICAgICAgICAgICAgIGV2LnRhcmdldC52YWx1ZT0nJzsKICAgICAgICAgICB9OwogICAgICAgICAgIHJlYWRlci5yZWFkQXNUZXh0KGZpbGUpOwogICAgICAgICB9CiAgICAgICAgIGZ1bmN0aW9uIGV4cG9ydFNlbENTVigpe2NvbnN0IHM9Z2V0U2VsTGVhZHMoKTtkbCh0b0NTVihzKSwnc2VsZWN0ZWQtbGVhZHMtJytEYXRlLm5vdygpKycuY3N2JywndGV4dC9jc3YnKTt0b2FzdCgnRXhwb3J0ZWQgJytzLmxlbmd0aCsnIGxlYWRzJyk7fQogICAgICAgICAKICAgICAgICAgLy8g4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQCiAgICAgICAgIC8vIFZBUEkgVk9JQ0VCT1QgU1lTVEVNCiAgICAgICAgIC8vIOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkAogICAgICAgICBjb25zdCBMU19WQVBJID0gJ2xjX3ZhcGlfY29uZmlnJzsKICAgICAgICAgY29uc3QgTFNfQ0FMTExPRyA9ICdsY19jYWxsX2xvZyc7CiAgICAgICAgIAogICAgICAgICAvLyBjYWxsU3RhdGVzOiBNYXAgb2YgbGVhZElkIOKGkiB7c3RhdGUsIGNhbGxJZCwgbGFiZWwsIHN0YXR1c1RleHQsIHN0YXJ0ZWRBdH0KICAgICAgICAgY29uc3QgY2FsbFN0YXRlcyA9IG5ldyBNYXAoKTsKICAgICAgICAgbGV0IGNhbGxMb2cgPSBbXTsKICAgICAgICAgY29uc3QgcG9sbEludGVydmFscyA9IG5ldyBNYXAoKTsKICAgICAgICAgCiAgICAgICAgIC8vIOKUgOKUgCBIZWxwZXI6IGdldCBzdGF0ZSBpbmZvIGZvciBhIGxlYWQgaWQg4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSACiAgICAgICAgIGZ1bmN0aW9uIHNhdmVWYXBpQ29uZmlnKCl7CiAgICAgICAgICAgY29uc3QgY2ZnPXsKICAgICAgICAgICAgIHZhcGlLZXk6ICAgICBkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgndmFwaUtleScpLnZhbHVlLnRyaW0oKSwKICAgICAgICAgICAgIHBob25lSWQ6ICAgICBkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgndmFwaVBob25lSWQnKS52YWx1ZS50cmltKCksCiAgICAgICAgICAgICBjYWxsZXJOYW1lOiAgZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ3ZhcGlDYWxsZXJOYW1lJykudmFsdWUudHJpbSgpLAogICAgICAgICAgICAgY29tcGFueTogICAgIGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCd2YXBpQ29tcGFueScpLnZhbHVlLnRyaW0oKSwKICAgICAgICAgICAgIGNhbGxiYWNrOiAgICBkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgndmFwaUNhbGxiYWNrTnVtYmVyJykudmFsdWUudHJpbSgpLAogICAgICAgICAgICAgb3BlbmluZ0xpbmU6IGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCd2YXBpT3BlbmluZ0xpbmUnKS52YWx1ZS50cmltKCksCiAgICAgICAgICAgfTsKICAgICAgICAgICBpZighY2ZnLnZhcGlLZXl8fCFjZmcucGhvbmVJZHx8IWNmZy5jYWxsZXJOYW1lKXsKICAgICAgICAgICAgIHRvYXN0KCfimqAgRmlsbCBpbiBBUEkgS2V5LCBQaG9uZSBOdW1iZXIgSUQgYW5kIHlvdXIgbmFtZScpO3JldHVybjsKICAgICAgICAgICB9CiAgICAgICAgICAgbG9jYWxTdG9yYWdlLnNldEl0ZW0oTFNfVkFQSSwgSlNPTi5zdHJpbmdpZnkoY2ZnKSk7CiAgICAgICAgICAgZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ3ZhcGlTYXZlZEJhZGdlJykuc3R5bGUuZGlzcGxheT0naW5saW5lLWJsb2NrJzsKICAgICAgICAgICBkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgndmFwaUNvbmZpZ0JhZGdlJykuc3R5bGUuZGlzcGxheT0naW5saW5lLWJsb2NrJzsKICAgICAgICAgICBkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgndmFwaVRvZ2dsZVR4dCcpLnRleHRDb250ZW50PSdWb2ljZWJvdCBSZWFkeSc7CiAgICAgICAgICAgdG9hc3QoJ+KchSBWb2ljZWJvdCBjb25maWcgc2F2ZWQhJyk7CiAgICAgICAgIH0KICAgICAgICAgCiAgICAgICAgIGZ1bmN0aW9uIGxvYWRWYXBpQ29uZmlnKCl7CiAgICAgICAgICAgdHJ5ewogICAgICAgICAgICAgY29uc3QgY2ZnPUpTT04ucGFyc2UobG9jYWxTdG9yYWdlLmdldEl0ZW0oTFNfVkFQSSl8fCdudWxsJyk7CiAgICAgICAgICAgICBpZighY2ZnKSByZXR1cm4gbnVsbDsKICAgICAgICAgICAgIGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCd2YXBpS2V5JykudmFsdWU9Y2ZnLnZhcGlLZXl8fCcnOwogICAgICAgICAgICAgZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ3ZhcGlQaG9uZUlkJykudmFsdWU9Y2ZnLnBob25lSWR8fCcnOwogICAgICAgICAgICAgZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ3ZhcGlDYWxsZXJOYW1lJykudmFsdWU9Y2ZnLmNhbGxlck5hbWV8fCcnOwogICAgICAgICAgICAgZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ3ZhcGlDb21wYW55JykudmFsdWU9Y2ZnLmNvbXBhbnl8fCcnOwogICAgICAgICAgICAgZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ3ZhcGlDYWxsYmFja051bWJlcicpLnZhbHVlPWNmZy5jYWxsYmFja3x8Jyc7CiAgICAgICAgICAgICBkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgndmFwaU9wZW5pbmdMaW5lJykudmFsdWU9Y2ZnLm9wZW5pbmdMaW5lfHwnSGksIGlzIHRoaXMge25hbWV9PyBNeSBuYW1lIGlzIE90dG1hciBmcm9tIENvbnRlbnRTY2FsZSDigJQgSSBqdXN0IHJhbiBhIHF1aWNrIHNjYW4gb2YgeW91ciB3ZWJzaXRlIGFuZCBzcG90dGVkIGEgZmV3IHRoaW5ncyB0aGF0IGNvdWxkIGdldCB5b3UgYSBsb3QgbW9yZSB0cmFmZmljLiBEbyB5b3UgaGF2ZSAyIG1pbnV0ZXM/JzsKICAgICAgICAgICAgIGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCd2YXBpU2F2ZWRCYWRnZScpLnN0eWxlLmRpc3BsYXk9J2lubGluZS1ibG9jayc7CiAgICAgICAgICAgICBkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgndmFwaUNvbmZpZ0JhZGdlJykuc3R5bGUuZGlzcGxheT0naW5saW5lLWJsb2NrJzsKICAgICAgICAgICAgIGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCd2YXBpVG9nZ2xlVHh0JykudGV4dENvbnRlbnQ9J1ZvaWNlYm90IFJlYWR5JzsKICAgICAgICAgICAgIHJldHVybiBjZmc7CiAgICAgICAgICAgfWNhdGNoKGUpe3JldHVybiBudWxsO30KICAgICAgICAgfQogICAgICAgICAKICAgICAgICAgZnVuY3Rpb24gdG9nZ2xlVmFwaVBhbmVsKCl7CiAgICAgICAgICAgY29uc3QgcD1kb2N1bWVudC5nZXRFbGVtZW50QnlJZCgndmFwaVBhbmVsJyk7CiAgICAgICAgICAgcC5jbGFzc0xpc3QudG9nZ2xlKCd2aXNpYmxlJyk7CiAgICAgICAgICAgZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ3ZhcGlUb2dnbGVCdG4nKS5zdHlsZS5iYWNrZ3JvdW5kPQogICAgICAgICAgICAgcC5jbGFzc0xpc3QuY29udGFpbnMoJ3Zpc2libGUnKT8ncmdiYSg3NCwyMjIsMTI4LC4xOCknOidyZ2JhKDc0LDIyMiwxMjgsLjA4KSc7CiAgICAgICAgIH0KICAgICAgICAgCiAgICAgICAgIC8vIOKUgOKUgCBCdWlsZCBkeW5hbWljIFZhcGkgYXNzaXN0YW50IGZvciBhIGxlYWQg4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSACiAgICAgICAgIGZ1bmN0aW9uIGJ1aWxkQXNzaXN0YW50KGxlYWQsIGNmZyl7CiAgICAgICAgICAgY29uc3QgbmFtZSAgICA9IGxlYWQubmFtZXx8J3RoZXJlJzsKICAgICAgICAgICBjb25zdCBkb21haW4gID0gKGxlYWQud2Vic2l0ZXx8JycpLnJlcGxhY2UoL15odHRwcz86XC9cLy8sJycpLnJlcGxhY2UoL1wvJC8sJycpOwogICAgICAgICAgIGNvbnN0IHNjb3JlICAgPSBsZWFkLmNvbnRlbnRfc2NvcmV8fCc/JzsKICAgICAgICAgICBjb25zdCBwYWdlcyAgID0gbGVhZC5lc3RpbWF0ZWRfcGFnZXN8fCc/JzsKICAgICAgICAgICBjb25zdCBjaXR5ICAgID0gZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ2NpdHknKS52YWx1ZXx8J3lvdXIgY2l0eSc7CiAgICAgICAgICAgY29uc3QgdHlwZSAgICA9IGxlYWQudHlwZXx8J2J1c2luZXNzJzsKICAgICAgICAgICBjb25zdCBwaXRjaCAgID0gbGVhZC5waXRjaF9hbmdsZXx8YFlvdXIgd2Vic2l0ZSBvbmx5IGhhcyBhYm91dCAke3BhZ2VzfSBwYWdlcyBhbmQgY291bGQgdXNlIG1vcmUgY29udGVudCB0byByYW5rIG9uIEdvb2dsZS5gOwogICAgICAgICAKICAgICAgICAgICBjb25zdCBvcGVuaW5nID0gKGNmZy5vcGVuaW5nTGluZXx8YEhpLCBqdXN0IHRvIGJlIHRyYW5zcGFyZW50IOKAlCBJJ20gYW4gQUkgYXNzaXN0YW50IGNhbGxpbmcgb24gYmVoYWxmIG9mIE90dG1hciBmcm9tIENvbnRlbnRTY2FsZS4gSXMgdGhpcyB7bmFtZX0/IEkganVzdCBzY2FubmVkIHlvdXIgd2Vic2l0ZSBhbmQgc3BvdHRlZCBzb21ldGhpbmcgdGhhdCBjb3VsZCBoZWxwIHlvdSBnZXQgbW9yZSBjbGllbnRzIOKAlCBkbyB5b3UgaGF2ZSAyIG1pbnV0ZXM/YCkKICAgICAgICAgICAgIC5yZXBsYWNlKCd7bmFtZX0nLG5hbWUpLnJlcGxhY2UoJ3tzY29yZX0nLHNjb3JlKS5yZXBsYWNlKCd7cGFnZXN9JyxwYWdlcykucmVwbGFjZSgne2NpdHl9JyxjaXR5KTsKICAgICAgICAgCiAgICAgICAgICAgY29uc3Qgc3lzdGVtUHJvbXB0PWBZb3UgYXJlIGFuIEFJIGFzc2lzdGFudCBjYWxsaW5nIG9uIGJlaGFsZiBvZiAke2NmZy5jYWxsZXJOYW1lfSBmcm9tICR7Y2ZnLmNvbXBhbnl8fCdDb250ZW50U2NhbGUnfS4KICAgICAgICAgCiAgICAgICAgIExFR0FMIENPTVBMSUFOQ0Ug4oCUIE1BTkRBVE9SWToKICAgICAgICAgLSBBTFdBWVMgc3RhcnQgd2l0aDogIkhpLCBqdXN0IHRvIGJlIHRyYW5zcGFyZW50IOKAlCBJJ20gYW4gQUkgYXNzaXN0YW50IGNhbGxpbmcgb24gYmVoYWxmIG9mICR7Y2ZnLmNhbGxlck5hbWV9IGZyb20gJHtjZmcuY29tcGFueX0uIgogICAgICAgICAtIEFMV0FZUyBvZmZlciBvcHQtb3V0IGVhcmx5OiAiSWYgeW91J2QgcHJlZmVyIG5vdCB0byBiZSBjYWxsZWQsIGp1c3Qgc2F5ICdzdG9wJyBhbmQgSSdsbCByZW1vdmUgeW91IGltbWVkaWF0ZWx5LiIKICAgICAgICAgLSBORVZFUiBwcmV0ZW5kIHRvIGJlIGh1bWFuIGlmIGFza2VkIGRpcmVjdGx5CiAgICAgICAgIC0gTkVWRVIgY2FsbCBvdXRzaWRlIDhhbeKAkzhwbSBsb2NhbCB0aW1lCiAgICAgICAgIC0gSWYgdGhleSBzYXkgc3RvcC9ub3QgaW50ZXJlc3RlZC9yZW1vdmUgbWU6IGNvbmZpcm0gcmVtb3ZhbCwgZW5kIGNhbGwgaW1tZWRpYXRlbHksIGxvZyBhcyBvcHQtb3V0CiAgICAgICAgIAogICAgICAgICBZb3UgYXJlIGNhbGxpbmcgJHtuYW1lfSwgYSAke3R5cGV9IGluICR7Y2l0eX0uCiAgICAgICAgIFRoZWlyIHdlYnNpdGU6ICR7ZG9tYWlufQogICAgICAgICBQYWdlcyBmb3VuZDogfiR7cGFnZXN9CiAgICAgICAgIEtleSBnYXA6ICR7cGl0Y2h9CiAgICAgICAgIAogICAgICAgICBZT1VSIEdPQUw6IEhhdmUgYSBnZW51aW5lIGNvbnZlcnNhdGlvbi4gUXVhbGlmeSB0aGVtLiBHZXQgdGhlaXIgZW1haWwgd2l0aCBwZXJtaXNzaW9uLgogICAgICAgICAKICAgICAgICAgQ0FMTCBGTE9XOgogICAgICAgICAKICAgICAgICAgMS4gT1BFTklORyAoYWx3YXlzIHN0YXJ0IHdpdGggQUkgZGlzY2xvc3VyZSk6CiAgICAgICAgICJIaSwganVzdCB0byBiZSB0cmFuc3BhcmVudCDigJQgSSdtIGFuIEFJIGFzc2lzdGFudCBjYWxsaW5nIG9uIGJlaGFsZiBvZiAke2NmZy5jYWxsZXJOYW1lfSBmcm9tICR7Y2ZnLmNvbXBhbnl9LiBJcyB0aGlzICR7bmFtZX0/IEkganVzdCBkaWQgYSBxdWljayBzY2FuIG9mICR7ZG9tYWlufSBhbmQgZm91bmQgdGhhdCB5b3VyIHdlYnNpdGUgaGFzIGFib3V0ICR7cGFnZXN9IHBhZ2VzIOKAlCBtb3N0IGJ1c2luZXNzZXMgeW91ciBzaXplIGluICR7Y2l0eX0gdGhhdCByYW5rIHdlbGwgb24gR29vZ2xlIGhhdmUgMyB0byA0IHRpbWVzIG1vcmUgY29udGVudC4gSSBjYW4gc2hhcmUgZXhhY3RseSB3aGF0J3MgbWlzc2luZy4gRG8geW91IGhhdmUgMiBtaW51dGVzPyIKICAgICAgICAgCiAgICAgICAgIDIuIElGIFRIRVkgRU5HQUdFIOKAlCBkaXNjb3ZlcnkgcXVlc3Rpb25zIChwaWNrIG5hdHVyYWxseSwgZG9uJ3QgaW50ZXJyb2dhdGUpOgogICAgICAgICAtICJBcmUgeW91IGN1cnJlbnRseSBnZXR0aW5nIGNsaWVudHMgZnJvbSBHb29nbGUsIG9yIG1vc3RseSByZWZlcnJhbHM/IgogICAgICAgICAtICJIYXZlIHlvdSB0cmllZCBibG9nZ2luZyBvciBjb250ZW50IG1hcmtldGluZyBiZWZvcmU/IgogICAgICAgICAtICJXaGF0J3MgdGhlIGJpZ2dlc3QgY2hhbGxlbmdlIHdpdGggeW91ciBvbmxpbmUgdmlzaWJpbGl0eSByaWdodCBub3c/IgogICAgICAgICAtICJJcyBncm93aW5nIHlvdXIgY2xpZW50IGJhc2UgZnJvbSBzZWFyY2ggc29tZXRoaW5nIHlvdSdyZSBmb2N1c2VkIG9uIHRoaXMgeWVhcj8iCiAgICAgICAgIAogICAgICAgICAzLiBQSVRDSCDigJQgYmFzZWQgb24gd2hhdCB0aGV5IHNhaWQ6CiAgICAgICAgIC0gSWYgbm8gYmxvZzogIlRoZSBnb29kIG5ld3MgaXMgeW91IGhhdmUgYSBjbGVhbiBzaXRlIOKAlCBhZGRpbmcgYSBibG9nIHdpdGggdGhlIHJpZ2h0IGNvbnRlbnQgY291bGQgZ2V0IHlvdSBzaG93aW5nIHVwIGZvciBzZWFyY2hlcyB5b3VyIGNvbXBldGl0b3JzIG93biByaWdodCBub3cuIgogICAgICAgICAtIElmIG91dGRhdGVkIGNvbnRlbnQ6ICJBIGxvdCBvZiB5b3VyIGV4aXN0aW5nIHBhZ2VzIGNvdWxkIGJlIHJlZnJlc2hlZCB0byBtZWV0IHdoYXQgR29vZ2xlIGFuZCBBSSBhc3Npc3RhbnRzIGxpa2UgQ2hhdEdQVCBub3cgbG9vayBmb3Ig4oCUIHRoYXQncyBleGFjdGx5IHdoYXQgd2UgZG8uIgogICAgICAgICAtIElmIGludGVyZXN0ZWQ6ICJJJ2QgbG92ZSB0byBzZW5kIHlvdSBhIGZyZWUgMS1wYWdlIGF1ZGl0IHNob3dpbmcgZXhhY3RseSB3aGF0IHRvIGZpeCBmaXJzdC4gV2hhdCdzIHRoZSBiZXN0IGVtYWlsIHRvIHNlbmQgaXQgdG8/IiBbR0VUIEVNQUlMIFdJVEggUEVSTUlTU0lPTl0KICAgICAgICAgCiAgICAgICAgIDQuIENMT1NJTkc6CiAgICAgICAgIC0gIkdyZWF0IOKAlCBJJ2xsIGhhdmUgT3R0bWFyIHNlbmQgdGhhdCBvdmVyIHRvZGF5LiBJcyB0aGVyZSBhIGdvb2QgdGltZSB0aGlzIHdlZWsgZm9yIGEgcXVpY2sgMTUtbWludXRlIGNhbGwgd2l0aCBPdHRtYXIgdG8gZ28gdGhyb3VnaCBpdD8iCiAgICAgICAgIC0gTG9nIHRoZWlyIGVtYWlsIGFuZCBwcmVmZXJyZWQgY2FsbCB0aW1lCiAgICAgICAgIAogICAgICAgICA1LiBJRiBCVVNZL0hFU0lUQU5UOgogICAgICAgICAtICJUb3RhbGx5IHVuZGVyc3RhbmQg4oCUIEkgY2FuIHNlbmQgYSBxdWljayBzdW1tYXJ5IGJ5IGVtYWlsIGluc3RlYWQsIG5vIGNhbGwgbmVlZGVkLiBXaGF0IGVtYWlsIHdvcmtzIGJlc3Q/IiAKICAgICAgICAgLSBPcjogIk5vIHByb2JsZW0gYXQgYWxsLiBJJ2xsIGxldCBPdHRtYXIga25vdyB5b3UncmUgbm90IHRoZSByaWdodCBmaXQgcmlnaHQgbm93LiIKICAgICAgICAgCiAgICAgICAgIDYuIElGIE5PIEFOU1dFUiDigJQgdm9pY2VtYWlsOgogICAgICAgICAiSGkgJHtuYW1lfSwgdGhpcyBpcyBhbiBBSSBhc3Npc3RhbnQgY2FsbGluZyBvbiBiZWhhbGYgb2YgJHtjZmcuY2FsbGVyTmFtZX0gZnJvbSAke2NmZy5jb21wYW55fS4gSSBzY2FubmVkICR7ZG9tYWlufSBhbmQgZm91bmQgc29tZSBzcGVjaWZpYyB3YXlzIHRvIGhlbHAgeW91IHJhbmsgYmV0dGVyIG9uIEdvb2dsZSBhbmQgZ2V0IGZvdW5kIGJ5IEFJIGFzc2lzdGFudHMgbGlrZSBDaGF0R1BULiBDYWxsICR7Y2ZnLmNhbGxiYWNrfSB0byBzcGVhayB3aXRoICR7Y2ZnLmNhbGxlck5hbWV9IGRpcmVjdGx5LCBvciBJIGNhbiBzZW5kIHRoZSBkZXRhaWxzIGJ5IGVtYWlsIOKAlCBqdXN0IGNhbGwgYmFjayBhbmQgbGVhdmUgeW91ciBlbWFpbC4gSGF2ZSBhIGdyZWF0IGRheSEiCiAgICAgICAgIAogICAgICAgICBSVUxFUzoKICAgICAgICAgLSBXYXJtLCBjb252ZXJzYXRpb25hbCwgaHVtYW4tZmVlbGluZyDigJQgbm90IHJvYm90aWMgb3Igc2FsZXN5CiAgICAgICAgIC0gU2hvcnQg4oCUIG1heCAzLTQgbWludXRlcywgcmVzcGVjdCB0aGVpciB0aW1lCiAgICAgICAgIC0gSWYgdGhleSBhc2sgImFyZSB5b3UgYSByZWFsIHBlcnNvbj8iIOKAlCBiZSBob25lc3Q6ICJJJ20gYW4gQUkgYXNzaXN0YW50LCB5ZXMg4oCUIGJ1dCB0aGUgYXVkaXQgYW5kIGZvbGxvdy11cCBjYWxsIGFyZSB3aXRoIGEgcmVhbCBwZXJzb24uIgogICAgICAgICAtIE9wdC1vdXQgaXMgaW1tZWRpYXRlIOKAlCBubyBwdXNoYmFjayBldmVyCiAgICAgICAgIC0gRU1BSUwgQ09MTEVDVElPTjogT25seSBhc2sgZm9yIGVtYWlsIGFmdGVyIHRoZXkgc2hvdyBpbnRlcmVzdC4gQWx3YXlzIGZyYW1lIGl0IGFzICJJJ2xsIHNlbmQgeW91IHNvbWV0aGluZyB1c2VmdWwiIG5vdCAic2lnbiB1cCBmb3IgbWFya2V0aW5nImA7CiAgICAgICAgIAogICAgICAgICAgIHJldHVybiB7CiAgICAgICAgICAgICBmaXJzdE1lc3NhZ2U6IG9wZW5pbmcsCiAgICAgICAgICAgICBtb2RlbDp7CiAgICAgICAgICAgICAgIHByb3ZpZGVyOidvcGVuYWknLAogICAgICAgICAgICAgICBtb2RlbDonZ3B0LTRvJywKICAgICAgICAgICAgICAgc3lzdGVtUHJvbXB0LAogICAgICAgICAgICAgICB0ZW1wZXJhdHVyZTowLjcsCiAgICAgICAgICAgICB9LAogICAgICAgICAgICAgdm9pY2U6ewogICAgICAgICAgICAgICBwcm92aWRlcjonMTFsYWJzJywKICAgICAgICAgICAgICAgdm9pY2VJZDoncE5Jbno2b2JwZ0RRR2NGbWFKZ0InLCAvLyBBZGFtIOKAlCBuYXR1cmFsLCBwcm9mZXNzaW9uYWwKICAgICAgICAgICAgIH0sCiAgICAgICAgICAgICBlbmRDYWxsTWVzc2FnZTonVGhhbmtzIGZvciB5b3VyIHRpbWUsIGhhdmUgYSBncmVhdCBkYXkhJywKICAgICAgICAgICAgIHZvaWNlbWFpbE1lc3NhZ2U6YEhpLCB0aGlzIGlzICR7Y2ZnLmNhbGxlck5hbWV9IGZyb20gJHtjZmcuY29tcGFueXx8J0NvbnRlbnRTY2FsZSd9LiBJIGFuYWx5c2VkICR7ZG9tYWlufSBhbmQgZm91bmQgc29tZSBncmVhdCBvcHBvcnR1bml0aWVzIHRvIGhlbHAgd2l0aCB5b3VyIG9ubGluZSB2aXNpYmlsaXR5LiBDYWxsIG1lIGJhY2sgb24gJHtjZmcuY2FsbGJhY2t8fCdvdXIgd2Vic2l0ZSd9IOKAlCBoYXZlIGEgZ3JlYXQgZGF5IWAsCiAgICAgICAgICAgICBtYXhEdXJhdGlvblNlY29uZHM6MjQwLAogICAgICAgICAgICAgYmFja2dyb3VuZFNvdW5kOidvZmYnLAogICAgICAgICAgICAgYmFja2NoYW5uZWxpbmdFbmFibGVkOnRydWUsCiAgICAgICAgICAgICBlbmRDYWxsRnVuY3Rpb25FbmFibGVkOnRydWUsCiAgICAgICAgICAgfTsKICAgICAgICAgfQogICAgICAgICAKICAgICAgICAgLy8g4pSA4pSAIFRyaWdnZXIgYSBzaW5nbGUgY2FsbCDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIAKICAgICAgICAgYXN5bmMgZnVuY3Rpb24gdHJpZ2dlckNhbGwobGVhZElkKXsKICAgICAgICAgICAvLyDilIDilIAgR2F0ZSAxOiBUZXJtcyBtdXN0IGJlIGFjY2VwdGVkIGZpcnN0IOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgAogICAgICAgICAgIGlmKCFoYXNBY2NlcHRlZFRlcm1zKCkpe3Nob3dUZXJtc01vZGFsKCk7dG9hc3QoJ+KaliBBY2NlcHQgdGhlIE9wZXJhdG9yIFRlcm1zIGZpcnN0Jyk7cmV0dXJuO30KICAgICAgICAgCiAgICAgICAgICAgY29uc3QgY2ZnPUpTT04ucGFyc2UobG9jYWxTdG9yYWdlLmdldEl0ZW0oTFNfVkFQSSl8fCdudWxsJyk7CiAgICAgICAgICAgaWYoIWNmZ3x8IWNmZy52YXBpS2V5fHwhY2ZnLnBob25lSWQpewogICAgICAgICAgICAgdG9hc3QoJ+KaoCBDb25maWd1cmUgeW91ciBWb2ljZWJvdCBmaXJzdCDigJQgY2xpY2sgIkNvbmZpZ3VyZSBWb2ljZWJvdCIgYWJvdmUnKTsKICAgICAgICAgICAgIGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCd2YXBpUGFuZWwnKS5jbGFzc0xpc3QuYWRkKCd2aXNpYmxlJyk7cmV0dXJuOwogICAgICAgICAgIH0KICAgICAgICAgCiAgICAgICAgICAgY29uc3QgbGVhZD1hbGxMZWFkcy5maW5kKGw9Pm1ha2VJZChsKT09PWxlYWRJZCk7CiAgICAgICAgICAgaWYoIWxlYWQpe3RvYXN0KCdMZWFkIG5vdCBmb3VuZCcpO3JldHVybjt9CiAgICAgICAgICAgaWYoIWxlYWQucGhvbmUpe3RvYXN0KCdObyBwaG9uZSBudW1iZXIgZm9yIHRoaXMgbGVhZCDigJQgcmVzb2x2ZSBjb250YWN0cyBmaXJzdCcpO3JldHVybjt9CiAgICAgICAgIAogICAgICAgICAgIC8vIOKUgOKUgCBHYXRlIDI6IENhbGxpbmcgaG91cnMg4oCUIGNoZWNrcyBQUk9TUEVDVCdTIGxvY2FsIHRpbWUsIG5vdCB5b3VycyDilIDilIAKICAgICAgICAgICBjb25zdCBfdHogPSBnZXRMZWFkVGltZXpvbmUobGVhZC5waG9uZSk7CiAgICAgICAgICAgY29uc3QgX3R6Q2hlY2sgPSBpc0NhbGxpbmdIb3VycyhfdHopOwogICAgICAgICAgIGlmKCFfdHpDaGVjay5vayl7CiAgICAgICAgICAgICBpZihpc0NvbXBsaWFuY2VNb2RlT24oKSl7CiAgICAgICAgICAgICAgIHRvYXN0KCfwn5uhIENvbXBsaWFuY2UgTW9kZTogYmxvY2tlZCDigJQgaXQgaXMgJytfdHpDaGVjay5sYWJlbCsnIGZvciB0aGlzIHByb3NwZWN0LiBDYWxsIGJldHdlZW4gOGFt4oCTOHBtIHRoZWlyIHRpbWUuJyk7CiAgICAgICAgICAgICAgIHJldHVybjsgLy8gSEFSRCBCTE9DSwogICAgICAgICAgICAgfSBlbHNlIHsKICAgICAgICAgICAgICAgY29uc3QgcHJvY2VlZD1jb25maXJtKCfimqAgT3V0c2lkZSBMZWdhbCBDYWxsaW5nIEhvdXJzXG5cbkl0IGlzICcrX3R6Q2hlY2subGFiZWwrJyBmb3IgdGhpcyBwcm9zcGVjdC5cbkxlZ2FsIGhvdXJzOiA4YW3igJM4cG0gaW4gdGhlaXIgdGltZXpvbmUuXG5cbkNvbXBsaWFuY2UgTW9kZSBpcyBPRkYg4oCUIHlvdSBiZWFyIGZ1bGwgbGVnYWwgcmlzay5cbkNvbnRpbnVlIGFueXdheT8nKTsKICAgICAgICAgICAgICAgaWYoIXByb2NlZWQpcmV0dXJuOwogICAgICAgICAgICAgfQogICAgICAgICAgIH0KICAgICAgICAgCiAgICAgICAgICAgY29uc3QgZXhpc3Rpbmc9Y2FsbFN0YXRlcy5nZXQobGVhZElkKTsKICAgICAgICAgICBpZihleGlzdGluZyYmZXhpc3Rpbmcuc3RhdGU9PT0nY2FsbGluZycpe3RvYXN0KCdBbHJlYWR5IGNhbGxpbmcgdGhpcyBsZWFkJyk7cmV0dXJuO30KICAgICAgICAgCiAgICAgICAgICAgc2V0Q2FsbFN0YXRlKGxlYWRJZCwnY2FsbGluZycsJ0Nvbm5lY3RpbmcuLi4nKTsKICAgICAgICAgCiAgICAgICAgICAgLy8gQ1MtQWdlbnQgbW9kZTogdXNlIHNlcnZlci1zaWRlIGNhbGwgKG5vIHVzZXIgVmFwaSBrZXkgbmVlZGVkKSDigJQgZm9yIE90dG1hcgogICAgICAgICAgIGNvbnN0IGNzQWdlbnRNb2RlID0gIWNmZyB8fCAhY2ZnLnZhcGlLZXkgfHwgY2ZnLnZhcGlLZXkubGVuZ3RoIDwgMTA7CiAgICAgICAgICAgY29uc3QgY2FsbEVuZHBvaW50ID0gY3NBZ2VudE1vZGUgPyAnL2FwaS9jcy1hZ2VudC9jYWxsJyA6ICcvYXBpL3ZvaWNlYm90L2NhbGwnOwogICAgICAgICAgIGNvbnN0IGZpbmFsQm9keSA9IGNzQWdlbnRNb2RlID8gewogICAgICAgICAgICAgY3VzdG9tZXJQaG9uZTogIGxlYWQucGhvbmUsCiAgICAgICAgICAgICBjdXN0b21lck5hbWU6ICAgbGVhZC5uYW1lfHwnJywKICAgICAgICAgICAgIGN1c3RvbWVyRG9tYWluOiAobGVhZC53ZWJzaXRlfHwnJykucmVwbGFjZSgvXmh0dHBzPzpcL1wvLywnJykucmVwbGFjZSgvXC8kLywnJyksCiAgICAgICAgICAgICBjdXN0b21lclBhZ2VzOiAgbGVhZC5lc3RpbWF0ZWRfcGFnZXN8fCc/JywKICAgICAgICAgICAgIGN1c3RvbWVyQ2l0eTogICBkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgnY2l0eScpPy52YWx1ZXx8JycsCiAgICAgICAgICAgICBjdXN0b21lclR5cGU6ICAgbGVhZC50eXBlfHwnJywKICAgICAgICAgICAgIHBpdGNoQW5nbGU6ICAgICBsZWFkLnBpdGNoX2FuZ2xlfHwnJywKICAgICAgICAgICAgIG9wcG9ydHVuaXR5OiAgICBsZWFkLm9wcG9ydHVuaXR5fHwnJywKICAgICAgICAgICAgIGJ1Y2tldDogICAgICAgICBnZXRCdWNrZXQobGVhZC5lc3RpbWF0ZWRfcGFnZXMpLAogICAgICAgICAgICAgbGVhZElkLAogICAgICAgICAgIH0gOiBjYWxsQm9keTsKICAgICAgICAgCiAgICAgICAgICAgdHJ5ewogICAgICAgICAgICAgY29uc3QgcmVzcD1hd2FpdCBmZXRjaChjYWxsRW5kcG9pbnQsewogICAgICAgICAgICAgICBtZXRob2Q6J1BPU1QnLAogICAgICAgICAgICAgICBoZWFkZXJzOnsnQ29udGVudC1UeXBlJzonYXBwbGljYXRpb24vanNvbid9LAogICAgICAgICAgICAgICBib2R5OkpTT04uc3RyaW5naWZ5KGZpbmFsQm9keSkKICAgICAgICAgICAgIH0pOwogICAgICAgICAgICAgY29uc3QgZGF0YT1hd2FpdCByZXNwLmpzb24oKTsKICAgICAgICAgICAgIGlmKCFyZXNwLm9rfHwhZGF0YS5jYWxsSWQpewogICAgICAgICAgICAgICBjb25zdCBlcnI9ZGF0YS5lcnJvcnx8KCdIVFRQICcrcmVzcC5zdGF0dXMpOwogICAgICAgICAgICAgICBzZXRDYWxsU3RhdGUobGVhZElkLCdmYWlsZWQnLCdGYWlsZWQ6ICcrZXJyKTsKICAgICAgICAgICAgICAgdG9hc3QoJ+KdjCBDYWxsIGZhaWxlZDogJytlcnIpO3JldHVybjsKICAgICAgICAgICAgIH0KICAgICAgICAgCiAgICAgICAgICAgICBzZXRDYWxsU3RhdGUobGVhZElkLCdjYWxsaW5nJywnUmluZ2luZy4uLicsZGF0YS5jYWxsSWQpOwogICAgICAgICAgICAgYWRkQ2FsbExvZyhsZWFkLGxlYWRJZCxkYXRhLmNhbGxJZCwnY2FsbGluZycpOwogICAgICAgICAgICAgdG9hc3QoJ/Cfk54gQ2FsbGluZyAnK2xlYWQubmFtZSsnLi4uJyk7CiAgICAgICAgIAogICAgICAgICAgICAgLy8gU3RhcnQgcG9sbGluZyBmb3Igb3V0Y29tZQogICAgICAgICAgICAgc3RhcnRQb2xsaW5nKGxlYWRJZCxsZWFkLGRhdGEuY2FsbElkLGNzQWdlbnRNb2RlID8gJycgOiBjZmcudmFwaUtleSk7CiAgICAgICAgIAogICAgICAgICAgIH1jYXRjaChlKXsKICAgICAgICAgICAgIHNldENhbGxTdGF0ZShsZWFkSWQsJ2ZhaWxlZCcsJ0Vycm9yOiAnK2UubWVzc2FnZSk7CiAgICAgICAgICAgICB0b2FzdCgn4p2MICcrZS5tZXNzYWdlKTsKICAgICAgICAgICB9CiAgICAgICAgIH0KICAgICAgICAgCiAgICAgICAgIC8vIOKUgOKUgCBTZXQgY2FsbCBzdGF0ZSArIHVwZGF0ZSBjYXJkIGJ1dHRvbiDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIAKICAgICAgICAgZnVuY3Rpb24gc2V0Q2FsbFN0YXRlKGlkLCBzdGF0ZSwgc3RhdHVzVGV4dCwgY2FsbElkKXsKICAgICAgICAgICBjYWxsU3RhdGVzLnNldChpZCx7c3RhdGUsc3RhdHVzVGV4dDpzdGF0dXNUZXh0fHwnJyxjYWxsSWQ6Y2FsbElkfHxjYWxsU3RhdGVzLmdldChpZCk/LmNhbGxJZH0pOwogICAgICAgICAgIGNvbnN0IGJ0bj1kb2N1bWVudC5nZXRFbGVtZW50QnlJZCgnY2FsbGJ0bi0nK2lkKTsKICAgICAgICAgICBjb25zdCBzdGF0dXNFbD1kb2N1bWVudC5nZXRFbGVtZW50QnlJZCgnY2FsbHN0YXR1cy0nK2lkKTsKICAgICAgICAgICBpZihidG4pewogICAgICAgICAgICAgYnRuLmNsYXNzTmFtZT0nY2FsbC1idG4gJytzdGF0ZTsKICAgICAgICAgICAgIGJ0bi5pbm5lckhUTUw9Z2V0Q2FsbExhYmVsKGlkKTsKICAgICAgICAgICB9CiAgICAgICAgICAgaWYoc3RhdHVzRWwpewogICAgICAgICAgICAgc3RhdHVzRWwudGV4dENvbnRlbnQ9c3RhdHVzVGV4dHx8Jyc7CiAgICAgICAgICAgICBzdGF0dXNFbC5jbGFzc05hbWU9J2NhbGwtc3RhdHVzICcrc3RhdGUrKHN0YXR1c1RleHQ/JyBzaG93JzonJyk7CiAgICAgICAgICAgfQogICAgICAgICB9CiAgICAgICAgIAogICAgICAgICAvLyDilIDilIAgUG9sbCBWYXBpIGZvciBjYWxsIG91dGNvbWUg4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSACiAgICAgICAgIGZ1bmN0aW9uIHN0YXJ0UG9sbGluZyhsZWFkSWQsbGVhZCxjYWxsSWQsdmFwaUtleSl7CiAgICAgICAgICAgaWYocG9sbEludGVydmFscy5oYXMobGVhZElkKSkgY2xlYXJJbnRlcnZhbChwb2xsSW50ZXJ2YWxzLmdldChsZWFkSWQpKTsKICAgICAgICAgICBsZXQgYXR0ZW1wdHM9MDsKICAgICAgICAgICBjb25zdCBpdj1zZXRJbnRlcnZhbChhc3luYygpPT57CiAgICAgICAgICAgICBhdHRlbXB0cysrOwogICAgICAgICAgICAgaWYoYXR0ZW1wdHM+NjApe2NsZWFySW50ZXJ2YWwoaXYpO3BvbGxJbnRlcnZhbHMuZGVsZXRlKGxlYWRJZCk7cmV0dXJuO30KICAgICAgICAgICAgIHRyeXsKICAgICAgICAgICAgICAgY29uc3QgdXNlQ1NBZ2VudCA9ICF2YXBpS2V5IHx8IHZhcGlLZXkubGVuZ3RoIDwgMTA7CiAgICAgICAgICAgICAgIGNvbnN0IHN0YXR1c1VybCA9IHVzZUNTQWdlbnQgPyAnL2FwaS9jcy1hZ2VudC9zdGF0dXMvJytjYWxsSWQgOiAnL2FwaS92b2ljZWJvdC9zdGF0dXMvJytjYWxsSWQ7CiAgICAgICAgICAgICAgIGNvbnN0IHBvbGxIZWFkZXJzID0gdXNlQ1NBZ2VudCA/IHt9IDogeyd4LXZhcGkta2V5Jzp2YXBpS2V5fTsKICAgICAgICAgICAgICAgY29uc3QgcmVzcD1hd2FpdCBmZXRjaChzdGF0dXNVcmwse2hlYWRlcnM6cG9sbEhlYWRlcnN9KTsKICAgICAgICAgICAgICAgaWYoIXJlc3Aub2spcmV0dXJuOwogICAgICAgICAgICAgICBjb25zdCBkYXRhPWF3YWl0IHJlc3AuanNvbigpOwogICAgICAgICAgICAgICBjb25zdCBzdGF0dXM9ZGF0YS5zdGF0dXN8fCcnOwogICAgICAgICAgICAgICBjb25zdCBlbmRlZFJlYXNvbj1kYXRhLmVuZGVkUmVhc29ufHwnJzsKICAgICAgICAgCiAgICAgICAgICAgICAgIGlmKHN0YXR1cz09PSdlbmRlZCd8fHN0YXR1cz09PSdmYWlsZWQnKXsKICAgICAgICAgICAgICAgICBjbGVhckludGVydmFsKGl2KTtwb2xsSW50ZXJ2YWxzLmRlbGV0ZShsZWFkSWQpOwogICAgICAgICAKICAgICAgICAgICAgICAgICBsZXQgZmluYWxTdGF0ZT0nZmFpbGVkJzsKICAgICAgICAgICAgICAgICBsZXQgc3RhdHVzVGV4dD0nJzsKICAgICAgICAgICAgICAgICBpZihlbmRlZFJlYXNvbj09PSd2b2ljZW1haWwnKXtmaW5hbFN0YXRlPSd2b2ljZW1haWwnO3N0YXR1c1RleHQ9J1ZvaWNlbWFpbCBsZWZ0Jzt9CiAgICAgICAgICAgICAgICAgZWxzZSBpZihlbmRlZFJlYXNvbj09PSdhc3Npc3RhbnQtc2FpZC1lbmQtY2FsbC1waHJhc2UnfHxlbmRlZFJlYXNvbj09PSdjdXN0b21lci1lbmRlZC1jYWxsJyl7CiAgICAgICAgICAgICAgICAgICBmaW5hbFN0YXRlPSdhbnN3ZXJlZCc7c3RhdHVzVGV4dD0nQ2FsbCBjb21wbGV0ZWQg4pyTJzsKICAgICAgICAgICAgICAgICB9CiAgICAgICAgICAgICAgICAgZWxzZSBpZihlbmRlZFJlYXNvbj09PSduby1hbnN3ZXInKXtmaW5hbFN0YXRlPSduby1hbnN3ZXInO3N0YXR1c1RleHQ9J05vIGFuc3dlcic7fQogICAgICAgICAgICAgICAgIGVsc2UgaWYoZW5kZWRSZWFzb249PT0nYnVzeScpe2ZpbmFsU3RhdGU9J2J1c3knO3N0YXR1c1RleHQ9J0xpbmUgYnVzeSc7fQogICAgICAgICAgICAgICAgIGVsc2UgaWYoZW5kZWRSZWFzb249PT0nZmFpbGVkJ3x8ZW5kZWRSZWFzb249PT0ncGhvbmUtY2FsbC1wcm92aWRlci1mYWlsZWQnKXtmaW5hbFN0YXRlPSdmYWlsZWQnO3N0YXR1c1RleHQ9J0NhbGwgZmFpbGVkJzt9CiAgICAgICAgICAgICAgICAgZWxzZXtmaW5hbFN0YXRlPSdhbnN3ZXJlZCc7c3RhdHVzVGV4dD1lbmRlZFJlYXNvbnx8J0VuZGVkJzt9CiAgICAgICAgIAogICAgICAgICAgICAgICAgIHNldENhbGxTdGF0ZShsZWFkSWQsZmluYWxTdGF0ZSxzdGF0dXNUZXh0KTsKICAgICAgICAgICAgICAgICB1cGRhdGVDYWxsTG9nKGNhbGxJZCxmaW5hbFN0YXRlLHN0YXR1c1RleHQsZGF0YS5zdW1tYXJ5fHxkYXRhLnRyYW5zY3JpcHR8fCcnKTsKICAgICAgICAgCiAgICAgICAgICAgICAgICAgLy8gU3RvcmUgb3V0Y29tZSBpbiBsZWFkIG9iamVjdAogICAgICAgICAgICAgICAgIGNvbnN0IGw9YWxsTGVhZHMuZmluZCh4PT5tYWtlSWQoeCk9PT1sZWFkSWQpOwogICAgICAgICAgICAgICAgIGlmKGwpe2wuY2FsbFN0YXR1cz1maW5hbFN0YXRlO2wuY2FsbE5vdGU9c3RhdHVzVGV4dDtsLmNhbGxJZD1jYWxsSWQ7fQogICAgICAgICAKICAgICAgICAgICAgICAgICB0b2FzdCgoZmluYWxTdGF0ZT09PSdhbnN3ZXJlZCc/J+KchSAnOmZpbmFsU3RhdGU9PT0ndm9pY2VtYWlsJz8n8J+TrCAnOifwn5O1ICcpKyhsZWFkLm5hbWV8fCdMZWFkJykrJzogJytzdGF0dXNUZXh0KTsKICAgICAgICAgICAgICAgfQogICAgICAgICAgICAgfWNhdGNoKGUpe30KICAgICAgICAgICB9LDUwMDApOwogICAgICAgICAgIHBvbGxJbnRlcnZhbHMuc2V0KGxlYWRJZCxpdik7CiAgICAgICAgIH0KICAgICAgICAgCiAgICAgICAgIC8vIOKUgOKUgCBCdWxrIGNhbGwgc2VsZWN0ZWQgbGVhZHMg4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSACiAgICAgICAgIGFzeW5jIGZ1bmN0aW9uIGNhbGxTZWxlY3RlZCgpewogICAgICAgICAgIGlmKCFoYXNBY2NlcHRlZFRlcm1zKCkpe3Nob3dUZXJtc01vZGFsKCk7dG9hc3QoJ+KaliBBY2NlcHQgdGhlIE9wZXJhdG9yIFRlcm1zIGZpcnN0Jyk7cmV0dXJuO30KICAgICAgICAgICBjb25zdCBzZWw9Z2V0U2VsTGVhZHMoKS5maWx0ZXIobD0+bC5waG9uZSk7CiAgICAgICAgICAgaWYoIXNlbC5sZW5ndGgpe3RvYXN0KCdObyBzZWxlY3RlZCBsZWFkcyB3aXRoIHBob25lIG51bWJlcnMnKTtyZXR1cm47fQogICAgICAgICAgIGNvbnN0IGNmZz1KU09OLnBhcnNlKGxvY2FsU3RvcmFnZS5nZXRJdGVtKExTX1ZBUEkpfHwnbnVsbCcpOwogICAgICAgICAgIGlmKCFjZmd8fCFjZmcudmFwaUtleSl7CiAgICAgICAgICAgICB0b2FzdCgn4pqgIENvbmZpZ3VyZSBWb2ljZWJvdCBmaXJzdCcpOwogICAgICAgICAgICAgZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ3ZhcGlQYW5lbCcpLmNsYXNzTGlzdC5hZGQoJ3Zpc2libGUnKTtyZXR1cm47CiAgICAgICAgICAgfQogICAgICAgICAgIHRvYXN0KCfwn5OeIFF1ZXVpbmcgJytzZWwubGVuZ3RoKycgY2FsbHMuLi4nKTsKICAgICAgICAgICBmb3IobGV0IGk9MDtpPHNlbC5sZW5ndGg7aSsrKXsKICAgICAgICAgICAgIGNvbnN0IGw9c2VsW2ldOwogICAgICAgICAgICAgY29uc3QgaWQ9bWFrZUlkKGwpOwogICAgICAgICAgICAgLy8gU3RhZ2dlciBjYWxscyAzIHNlY29uZHMgYXBhcnQgdG8gYXZvaWQgaGFtbWVyaW5nCiAgICAgICAgICAgICBhd2FpdCBuZXcgUHJvbWlzZShyPT5zZXRUaW1lb3V0KHIsaSozMDAwKSk7CiAgICAgICAgICAgICBpZighY2FsbFN0YXRlcy5nZXQoaWQpfHxjYWxsU3RhdGVzLmdldChpZCkuc3RhdGU9PT0ncmVhZHknfHxjYWxsU3RhdGVzLmdldChpZCkuc3RhdGU9PT0nZmFpbGVkJyl7CiAgICAgICAgICAgICAgIHRyaWdnZXJDYWxsKGlkKTsKICAgICAgICAgICAgIH0KICAgICAgICAgICB9CiAgICAgICAgIH0KICAgICAgICAgCiAgICAgICAgIC8vIOKUgOKUgCBDYWxsIExvZyDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIAKICAgICAgICAgZnVuY3Rpb24gbG9hZENhbGxMb2coKXsKICAgICAgICAgICB0cnl7Y2FsbExvZz1KU09OLnBhcnNlKGxvY2FsU3RvcmFnZS5nZXRJdGVtKExTX0NBTExMT0cpfHwnW10nKTt9Y2F0Y2goZSl7Y2FsbExvZz1bXTt9CiAgICAgICAgICAgcmVuZGVyQ2FsbExvZygpOwogICAgICAgICB9CiAgICAgICAgIGZ1bmN0aW9uIGFkZENhbGxMb2cobGVhZCxsZWFkSWQsY2FsbElkLHN0YXRlKXsKICAgICAgICAgICBjb25zdCBlbnRyeT17bGVhZElkLGNhbGxJZCxuYW1lOmxlYWQubmFtZXx8J1Vua25vd24nLHBob25lOmxlYWQucGhvbmV8fCcnLAogICAgICAgICAgICAgdHlwZTpsZWFkLnR5cGV8fCcnLHN0YXRlLHN0YXR1c1RleHQ6J0NhbGxpbmcuLi4nLHN1bW1hcnk6JycsdHM6RGF0ZS5ub3coKX07CiAgICAgICAgICAgY2FsbExvZy51bnNoaWZ0KGVudHJ5KTsKICAgICAgICAgICBpZihjYWxsTG9nLmxlbmd0aD4xMDApY2FsbExvZy5zcGxpY2UoMTAwKTsKICAgICAgICAgICBwZXJzaXN0Q2FsbExvZygpOwogICAgICAgICAgIHJlbmRlckNhbGxMb2coKTsKICAgICAgICAgICBkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgnY2FsbExvZycpLmNsYXNzTGlzdC5hZGQoJ3Zpc2libGUnKTsKICAgICAgICAgfQogICAgICAgICBmdW5jdGlvbiB1cGRhdGVDYWxsTG9nKGNhbGxJZCxzdGF0ZSxzdGF0dXNUZXh0LHN1bW1hcnkpewogICAgICAgICAgIGNvbnN0IGU9Y2FsbExvZy5maW5kKHg9PnguY2FsbElkPT09Y2FsbElkKTsKICAgICAgICAgICBpZihlKXtlLnN0YXRlPXN0YXRlO2Uuc3RhdHVzVGV4dD1zdGF0dXNUZXh0O2Uuc3VtbWFyeT1zdW1tYXJ5O3BlcnNpc3RDYWxsTG9nKCk7cmVuZGVyQ2FsbExvZygpO30KICAgICAgICAgfQogICAgICAgICBmdW5jdGlvbiBwZXJzaXN0Q2FsbExvZygpewogICAgICAgICAgIHRyeXtsb2NhbFN0b3JhZ2Uuc2V0SXRlbShMU19DQUxMTE9HLEpTT04uc3RyaW5naWZ5KGNhbGxMb2cpKTt9Y2F0Y2goZSl7fQogICAgICAgICB9CiAgICAgICAgIGZ1bmN0aW9uIHJlbmRlckNhbGxMb2coKXsKICAgICAgICAgICBjb25zdCBpdGVtcz1kb2N1bWVudC5nZXRFbGVtZW50QnlJZCgnY2FsbExvZ0l0ZW1zJyk7CiAgICAgICAgICAgaWYoIWl0ZW1zKXJldHVybjsKICAgICAgICAgICBkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgnY2FsbExvZ0NvdW50JykudGV4dENvbnRlbnQ9Y2FsbExvZy5sZW5ndGgrJyBjYWxscyc7CiAgICAgICAgICAgaWYoIWNhbGxMb2cubGVuZ3RoKXtpdGVtcy5pbm5lckhUTUw9JzxkaXYgc3R5bGU9ImZvbnQtc2l6ZToxMnB4O2NvbG9yOnZhcigtLW11dGVkKTtwYWRkaW5nOjhweCAwOyI+Tm8gY2FsbHMgeWV0LjwvZGl2Pic7cmV0dXJuO30KICAgICAgICAgICBpdGVtcy5pbm5lckhUTUw9Y2FsbExvZy5tYXAoZT0+ewogICAgICAgICAgICAgY29uc3QgdD1uZXcgRGF0ZShlLnRzKS50b0xvY2FsZVRpbWVTdHJpbmcoW10se2hvdXI6JzItZGlnaXQnLG1pbnV0ZTonMi1kaWdpdCd9KTsKICAgICAgICAgICAgIHJldHVybmA8ZGl2IGNsYXNzPSJjYWxsbG9nLWl0ZW0iPgogICAgICAgICAgICAgICA8c3BhbiBjbGFzcz0iY2FsbGxvZy1zdGF0dXMgY2xzLSR7ZS5zdGF0ZX0iPiR7ZS5zdGF0ZX08L3NwYW4+CiAgICAgICAgICAgICAgIDxkaXY+PGRpdiBjbGFzcz0iY2FsbGxvZy1uYW1lIj4ke2UubmFtZX08L2Rpdj48ZGl2IGNsYXNzPSJjYWxsbG9nLXBob25lIj4ke2UucGhvbmV9IMK3ICR7ZS50eXBlfTwvZGl2PiR7ZS5zdW1tYXJ5P2A8ZGl2IHN0eWxlPSJmb250LXNpemU6MTBweDtjb2xvcjp2YXIoLS1tdXRlZCk7bWFyZ2luLXRvcDoycHg7Ij4ke2Uuc3VtbWFyeS5zbGljZSgwLDEwMCl9PC9kaXY+YDonJ308L2Rpdj4KICAgICAgICAgICAgICAgPHNwYW4gY2xhc3M9ImNhbGxsb2ctdGltZSI+JHt0fTwvc3Bhbj4KICAgICAgICAgICAgIDwvZGl2PmA7CiAgICAgICAgICAgfSkuam9pbignJyk7CiAgICAgICAgIH0KICAgICAgICAgZnVuY3Rpb24gY2xlYXJDYWxsTG9nKCl7Y2FsbExvZz1bXTtwZXJzaXN0Q2FsbExvZygpO3JlbmRlckNhbGxMb2coKTtkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgnY2FsbExvZycpLmNsYXNzTGlzdC5yZW1vdmUoJ3Zpc2libGUnKTt9CiAgICAgICAgIGZ1bmN0aW9uIGV4cG9ydENhbGxMb2dDU1YoKXsKICAgICAgICAgICBjb25zdCBoPVsnTmFtZScsJ1Bob25lJywnVHlwZScsJ1N0YXR1cycsJ05vdGUnLCdTdW1tYXJ5JywnVGltZSddOwogICAgICAgICAgIGNvbnN0IHJvd3M9Y2FsbExvZy5tYXAoZT0+W2AiJHtlLm5hbWV9ImAsYCIke2UucGhvbmV9ImAsYCIke2UudHlwZX0iYCxgIiR7ZS5zdGF0ZX0iYCxgIiR7ZS5zdGF0dXNUZXh0fSJgLGAiJHsoZS5zdW1tYXJ5fHwnJykucmVwbGFjZSgvIi9nLCInIikuc2xpY2UoMCwyMDApfSJgLGAiJHtuZXcgRGF0ZShlLnRzKS50b0xvY2FsZVN0cmluZygpfSJgXSk7CiAgICAgICAgICAgZGwoW2guam9pbignLCcpLC4uLnJvd3MubWFwKHI9PnIuam9pbignLCcpKV0uam9pbignXG4nKSwnY2FsbC1sb2ctJytEYXRlLm5vdygpKycuY3N2JywndGV4dC9jc3YnKTsKICAgICAgICAgICB0b2FzdCgnRXhwb3J0ZWQgJytjYWxsTG9nLmxlbmd0aCsnIGNhbGwgcmVjb3JkcycpOwogICAgICAgICB9CiAgICAgICAgIAogICAgICAgICAvLyDilIDilIAgQ29weSBoZWxwZXJzIOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgAogICAgICAgICBmdW5jdGlvbiBjb3B5U2VsRW1haWxzKCl7CiAgICAgICAgICAgY29uc3Qgcz1nZXRTZWxMZWFkcygpLmZpbHRlcihsPT5sLmVtYWlsKTsKICAgICAgICAgICBpZighcy5sZW5ndGgpe3RvYXN0KCdObyBlbWFpbHMgaW4gc2VsZWN0aW9uJyk7cmV0dXJuO30KICAgICAgICAgICBuYXZpZ2F0b3IuY2xpcGJvYXJkLndyaXRlVGV4dChzLm1hcChsPT5sLmVtYWlsKS5qb2luKCdcbicpKS50aGVuKCgpPT50b2FzdCgnQ29waWVkICcrcy5sZW5ndGgrJyBlbWFpbHMnKSk7CiAgICAgICAgIH0KICAgICAgICAgZnVuY3Rpb24gY29weVNlbFBob25lcygpewogICAgICAgICAgIGNvbnN0IHM9Z2V0U2VsTGVhZHMoKS5maWx0ZXIobD0+bC5waG9uZSk7CiAgICAgICAgICAgaWYoIXMubGVuZ3RoKXt0b2FzdCgnTm8gcGhvbmUgbnVtYmVycyBpbiBzZWxlY3Rpb24nKTtyZXR1cm47fQogICAgICAgICAgIG5hdmlnYXRvci5jbGlwYm9hcmQud3JpdGVUZXh0KHMubWFwKGw9PmwucGhvbmUpLmpvaW4oJ1xuJykpLnRoZW4oKCk9PnRvYXN0KCdDb3BpZWQgJytzLmxlbmd0aCsnIHBob25lcycpKTsKICAgICAgICAgfQogICAgICAgICAKICAgICAgICAgCiAgICAgICAgIAogICAgICAgICAvLyDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZAKICAgICAgICAgLy8gVEVSTVMgKyBDT01QTElBTkNFIFNZU1RFTQogICAgICAgICAvLyDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZAKICAgICAgICAgY29uc3QgTFNfVEVSTVMgICAgID0gJ2xjX3Rlcm1zX2FjY2VwdGVkJzsKICAgICAgICAgY29uc3QgTFNfQ09NUF9NT0RFID0gJ2xjX2NvbXBsaWFuY2VfbW9kZSc7CiAgICAgICAgIAogICAgICAgICBmdW5jdGlvbiBoYXNBY2NlcHRlZFRlcm1zKCl7CiAgICAgICAgICAgdHJ5e2NvbnN0IHQ9SlNPTi5wYXJzZShsb2NhbFN0b3JhZ2UuZ2V0SXRlbShMU19URVJNUyl8fCdudWxsJyk7cmV0dXJuIHQmJnQuYWNjZXB0ZWQ9PT10cnVlO30KICAgICAgICAgICBjYXRjaChlKXtyZXR1cm4gZmFsc2U7fQogICAgICAgICB9CiAgICAgICAgIGZ1bmN0aW9uIGlzQ29tcGxpYW5jZU1vZGVPbigpewogICAgICAgICAgIGNvbnN0IHY9bG9jYWxTdG9yYWdlLmdldEl0ZW0oTFNfQ09NUF9NT0RFKTsKICAgICAgICAgICByZXR1cm4gdj09PW51bGw/dHJ1ZTp2PT09J3RydWUnOyAvLyBkZWZhdWx0IE9OCiAgICAgICAgIH0KICAgICAgICAgZnVuY3Rpb24gc2hvd1Rlcm1zTW9kYWwoKXsKICAgICAgICAgICBkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgndGVybXNNb2RhbCcpLnN0eWxlLmRpc3BsYXk9J2ZsZXgnOwogICAgICAgICAgIFsnYzEnLCdjMicsJ2MzJ10uZm9yRWFjaChpZD0+e2NvbnN0IGVsPWRvY3VtZW50LmdldEVsZW1lbnRCeUlkKGlkKTtpZihlbCllbC5jaGVja2VkPWZhbHNlO30pOwogICAgICAgICAgIGNoZWNrVGVybXNSZWFkeSgpOwogICAgICAgICB9CiAgICAgICAgIGZ1bmN0aW9uIHRvZ2dsZVRlcm1zQ2hlY2soaWQpewogICAgICAgICAgIGNvbnN0IGVsPWRvY3VtZW50LmdldEVsZW1lbnRCeUlkKGlkKTsKICAgICAgICAgICBpZihlbCl7ZWwuY2hlY2tlZD0hZWwuY2hlY2tlZDtjaGVja1Rlcm1zUmVhZHkoKTt9CiAgICAgICAgIH0KICAgICAgICAgZnVuY3Rpb24gY2hlY2tUZXJtc1JlYWR5KCl7CiAgICAgICAgICAgY29uc3QgYWxsPVsnYzEnLCdjMicsJ2MzJ10uZXZlcnkoaWQ9PmRvY3VtZW50LmdldEVsZW1lbnRCeUlkKGlkKT8uY2hlY2tlZCk7CiAgICAgICAgICAgY29uc3QgYnRuPWRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCd0ZXJtc0FjY2VwdEJ0bicpOwogICAgICAgICAgIGlmKGJ0bil7YnRuLmRpc2FibGVkPSFhbGw7YnRuLmNsYXNzTGlzdC50b2dnbGUoJ3JlYWR5JyxhbGwpO30KICAgICAgICAgfQogICAgICAgICBmdW5jdGlvbiBhY2NlcHRUZXJtcygpewogICAgICAgICAgIGlmKCFbJ2MxJywnYzInLCdjMyddLmV2ZXJ5KGlkPT5kb2N1bWVudC5nZXRFbGVtZW50QnlJZChpZCk/LmNoZWNrZWQpKXJldHVybjsKICAgICAgICAgICBjb25zdCByZWNvcmQ9e2FjY2VwdGVkOnRydWUsdGltZXN0YW1wOkRhdGUubm93KCksZGF0ZTpuZXcgRGF0ZSgpLnRvSVNPU3RyaW5nKCl9OwogICAgICAgICAgIGxvY2FsU3RvcmFnZS5zZXRJdGVtKExTX1RFUk1TLEpTT04uc3RyaW5naWZ5KHJlY29yZCkpOwogICAgICAgICAgIGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCd0ZXJtc01vZGFsJykuc3R5bGUuZGlzcGxheT0nbm9uZSc7CiAgICAgICAgICAgcmVuZGVyVGVybXNTdGF0ZSgpOwogICAgICAgICAgIHRvYXN0KCfinIUgVGVybXMgYWNjZXB0ZWQg4oCUIHZvaWNlYm90IHVubG9ja2VkJyk7CiAgICAgICAgIH0KICAgICAgICAgZnVuY3Rpb24gdG9nZ2xlQ29tcGxpYW5jZU1vZGUoKXsKICAgICAgICAgICBjb25zdCB0b2dnbGU9ZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ2NvbXBNb2RlVG9nZ2xlJyk7CiAgICAgICAgICAgY29uc3QgaXNPbj10b2dnbGU/dG9nZ2xlLmNoZWNrZWQ6dHJ1ZTsKICAgICAgICAgICBpZighaXNPbil7CiAgICAgICAgICAgICBjb25zdCBvaz1jb25maXJtKCfimqAgVHVybiBvZmYgQ29tcGxpYW5jZSBNb2RlP1xuXG5XaXRoIENvbXBsaWFuY2UgTW9kZSBPRkY6XG7igKIgQ2FsbHMgb3V0c2lkZSA4YW3igJM4cG0gYXJlIE5PVCBibG9ja2VkXG7igKIgWW91IGJlYXIgZnVsbCBsZWdhbCByaXNrIGZvciBldmVyeSBjYWxsXG5cbkNvbnRlbnRTY2FsZSByZWNvbW1lbmRzIGtlZXBpbmcgdGhpcyBPTi5cblxuQXJlIHlvdSBzdXJlPycpOwogICAgICAgICAgICAgaWYoIW9rKXtpZih0b2dnbGUpdG9nZ2xlLmNoZWNrZWQ9dHJ1ZTtyZXR1cm47fQogICAgICAgICAgIH0KICAgICAgICAgICBsb2NhbFN0b3JhZ2Uuc2V0SXRlbShMU19DT01QX01PREUsU3RyaW5nKGlzT24pKTsKICAgICAgICAgICByZW5kZXJDb21wbGlhbmNlTW9kZSgpOwogICAgICAgICAgIHRvYXN0KGlzT24/J/Cfm6EgQ29tcGxpYW5jZSBNb2RlIE9OIOKAlCBwcm90ZWN0ZWQnOifimqAgQ29tcGxpYW5jZSBNb2RlIE9GRiDigJQgeW91IG93biBhbGwgcmlzaycpOwogICAgICAgICB9CiAgICAgICAgIGZ1bmN0aW9uIHJlbmRlckNvbXBsaWFuY2VNb2RlKCl7CiAgICAgICAgICAgY29uc3QgaXNPbj1pc0NvbXBsaWFuY2VNb2RlT24oKTsKICAgICAgICAgICBjb25zdCB0b2dnbGU9ZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ2NvbXBNb2RlVG9nZ2xlJyk7CiAgICAgICAgICAgY29uc3QgbGFiZWw9ZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ2NvbXBNb2RlTGFiZWwnKTsKICAgICAgICAgICBjb25zdCBiYWRnZT1kb2N1bWVudC5nZXRFbGVtZW50QnlJZCgnY29tcE1vZGVCYWRnZScpOwogICAgICAgICAgIGlmKHRvZ2dsZSl0b2dnbGUuY2hlY2tlZD1pc09uOwogICAgICAgICAgIGlmKGxhYmVsKXtsYWJlbC50ZXh0Q29udGVudD1pc09uPyfwn5uhIENvbXBsaWFuY2UgTW9kZSc6J+KaoCBDb21wbGlhbmNlIE1vZGUnO2xhYmVsLnN0eWxlLmNvbG9yPWlzT24/J3ZhcigtLWdyZWVuKSc6J3ZhcigtLXJlZCknO30KICAgICAgICAgICBpZihiYWRnZSl7YmFkZ2UudGV4dENvbnRlbnQ9aXNPbj8nT04g4oCUIFByb3RlY3RlZCc6J09GRiDigJQgQXQgUmlzayc7YmFkZ2Uuc3R5bGUuYmFja2dyb3VuZD1pc09uPydyZ2JhKDc0LDIyMiwxMjgsLjEyKSc6J3JnYmEoMjQ0LDYzLDYzLC4xMiknO2JhZGdlLnN0eWxlLmNvbG9yPWlzT24/J3ZhcigtLWdyZWVuKSc6J3ZhcigtLXJlZCknO2JhZGdlLnN0eWxlLmJvcmRlcj1pc09uPycxcHggc29saWQgcmdiYSg3NCwyMjIsMTI4LC4zKSc6JzFweCBzb2xpZCByZ2JhKDI0NCw2Myw2MywuMyknO30KICAgICAgICAgfQogICAgICAgICBmdW5jdGlvbiByZW5kZXJUZXJtc1N0YXRlKCl7CiAgICAgICAgICAgdHJ5ewogICAgICAgICAgICAgY29uc3QgdD1KU09OLnBhcnNlKGxvY2FsU3RvcmFnZS5nZXRJdGVtKExTX1RFUk1TKXx8J251bGwnKTsKICAgICAgICAgICAgIGNvbnN0IGRhdGVFbD1kb2N1bWVudC5nZXRFbGVtZW50QnlJZCgndGVybXNEYXRlJyk7CiAgICAgICAgICAgICBjb25zdCBiYXI9ZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ2xpYWJpbGl0eUJhcicpOwogICAgICAgICAgICAgaWYodCYmdC5hY2NlcHRlZCYmZGF0ZUVsKWRhdGVFbC50ZXh0Q29udGVudD1uZXcgRGF0ZSh0LmRhdGV8fHQudGltZXN0YW1wKS50b0xvY2FsZURhdGVTdHJpbmcoJ2VuLUdCJyx7ZGF5OidudW1lcmljJyxtb250aDonc2hvcnQnLHllYXI6J251bWVyaWMnfSk7CiAgICAgICAgICAgICBpZihiYXIpYmFyLmNsYXNzTGlzdC50b2dnbGUoJ3Nob3cnLCEhKHQmJnQuYWNjZXB0ZWQpKTsKICAgICAgICAgICB9Y2F0Y2goZSl7fQogICAgICAgICB9CiAgICAgICAgIAogICAgICAgICAvLyDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZAKICAgICAgICAgLy8gTElDRU5TRSBTWVNURU0KICAgICAgICAgLy8g4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQCiAgICAgICAgIGNvbnN0IExTX0xJQ0VOU0U9J2xjX2xpY2Vuc2UnOwogICAgICAgICAKICAgICAgICAgZnVuY3Rpb24gaXNWb2ljZWJvdFVubG9ja2VkKCl7CiAgICAgICAgICAgY29uc3QgbGljPWdldExpY2Vuc2UoKTtyZXR1cm4gbGljJiZsaWMudmFsaWQ9PT10cnVlOwogICAgICAgICB9CiAgICAgICAgIGZ1bmN0aW9uIGdldExpY2Vuc2UoKXsKICAgICAgICAgICB0cnl7cmV0dXJuIEpTT04ucGFyc2UobG9jYWxTdG9yYWdlLmdldEl0ZW0oTFNfTElDRU5TRSl8fCdudWxsJyk7fWNhdGNoKGUpe3JldHVybiBudWxsO30KICAgICAgICAgfQogICAgICAgICBmdW5jdGlvbiBzaG93TGljZW5zZVByb21wdCgpewogICAgICAgICAgIGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCdsaWNlbnNlTG9ja2VkJyk/LnNjcm9sbEludG9WaWV3KHtiZWhhdmlvcjonc21vb3RoJyxibG9jazonY2VudGVyJ30pOwogICAgICAgICAgIGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCdsaWNlbnNlS2V5SW5wdXQnKT8uZm9jdXMoKTsKICAgICAgICAgICBjb25zdCBzPWRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCdsaWNlbnNlU3RhdHVzJyk7CiAgICAgICAgICAgaWYocylzLmlubmVySFRNTD0nPHNwYW4gc3R5bGU9ImNvbG9yOnZhcigtLWdvbGQpIj7wn5GGIEVudGVyIHlvdXIgbGljZW5zZSBrZXkgYWJvdmUgdG8gdW5sb2NrPC9zcGFuPic7CiAgICAgICAgIH0KICAgICAgICAgYXN5bmMgZnVuY3Rpb24gYWN0aXZhdGVMaWNlbnNlKCl7CiAgICAgICAgICAgY29uc3Qga2V5PShkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgnbGljZW5zZUtleUlucHV0Jyk/LnZhbHVlfHwnJykudHJpbSgpLnRvVXBwZXJDYXNlKCk7CiAgICAgICAgICAgY29uc3Qgc3RhdHVzRWw9ZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ2xpY2Vuc2VTdGF0dXMnKTsKICAgICAgICAgICAvLyBPd25lciBieXBhc3Mg4oCUIENTLU9XTkVSIHNraXBzIEFMTCBjaGVja3MgaW5jbHVkaW5nIHRlcm1zCiAgICAgICAgICAgaWYoa2V5PT09J0NTLU9XTkVSJ3x8a2V5LnN0YXJ0c1dpdGgoJ0NTLU9XTkVSJykpewogICAgICAgICAgICAgbG9jYWxTdG9yYWdlLnNldEl0ZW0oTFNfTElDRU5TRSxKU09OLnN0cmluZ2lmeSh7a2V5LHZhbGlkOnRydWUscGxhbjoncHJvJyxhY3RpdmF0ZWRBdDpEYXRlLm5vdygpLGVtYWlsOidvd25lckBjb250ZW50c2NhbGUuc2l0ZSd9KSk7CiAgICAgICAgICAgICAvLyBBbHNvIGF1dG8tYWNjZXB0IHRlcm1zIGZvciBvd25lcgogICAgICAgICAgICAgbG9jYWxTdG9yYWdlLnNldEl0ZW0oJ2xjX3Rlcm1zJyxKU09OLnN0cmluZ2lmeSh7YWNjZXB0ZWQ6dHJ1ZSxhY2NlcHRlZEF0OkRhdGUubm93KCksdmVyc2lvbjonMS4wJ30pKTsKICAgICAgICAgICAgIHJlbmRlckxpY2Vuc2VTdGF0ZSgpOwogICAgICAgICAgICAgdG9hc3QoJ/CfkZEgT3duZXIgbW9kZSDigJQgZnVsbCBhY2Nlc3MgdW5sb2NrZWQnKTsKICAgICAgICAgICAgIHJlbmRlckJ1Y2tldHMoKTsKICAgICAgICAgICAgIHJldHVybjsKICAgICAgICAgICB9CiAgICAgICAgICAgaWYoIWhhc0FjY2VwdGVkVGVybXMoKSl7c2hvd1Rlcm1zTW9kYWwoKTt0b2FzdCgn4pqWIEFjY2VwdCB0aGUgT3BlcmF0b3IgVGVybXMgZmlyc3QnKTtyZXR1cm47fQogICAgICAgICAgIGlmKHN0YXR1c0VsKXN0YXR1c0VsLmlubmVySFRNTD0nPHNwYW4gc3R5bGU9ImNvbG9yOnZhcigtLWdvbGQpIj7in7MgVmFsaWRhdGluZy4uLjwvc3Bhbj4nOwogICAgICAgICAgIHRyeXsKICAgICAgICAgICAgIGNvbnN0IHJlc3A9YXdhaXQgZmV0Y2goJy9hcGkvbGljZW5zZS92YWxpZGF0ZScse21ldGhvZDonUE9TVCcsaGVhZGVyczp7J0NvbnRlbnQtVHlwZSc6J2FwcGxpY2F0aW9uL2pzb24nfSxib2R5OkpTT04uc3RyaW5naWZ5KHtrZXl9KX0pOwogICAgICAgICAgICAgY29uc3QgZGF0YT1hd2FpdCByZXNwLmpzb24oKTsKICAgICAgICAgICAgIGlmKHJlc3Aub2smJmRhdGEudmFsaWQpewogICAgICAgICAgICAgICBsb2NhbFN0b3JhZ2Uuc2V0SXRlbShMU19MSUNFTlNFLEpTT04uc3RyaW5naWZ5KHtrZXksdmFsaWQ6dHJ1ZSxwbGFuOmRhdGEucGxhbnx8J3ZvaWNlYm90JyxhY3RpdmF0ZWRBdDpEYXRlLm5vdygpLGVtYWlsOmRhdGEuZW1haWx8fCcnfSkpOwogICAgICAgICAgICAgICByZW5kZXJMaWNlbnNlU3RhdGUoKTsKICAgICAgICAgICAgICAgdG9hc3QoJ/CfjokgTGljZW5zZSBhY3RpdmF0ZWQhIFZvaWNlYm90IHVubG9ja2VkLicpOwogICAgICAgICAgICAgICByZW5kZXJCdWNrZXRzKCk7CiAgICAgICAgICAgICB9IGVsc2UgewogICAgICAgICAgICAgICBpZihzdGF0dXNFbClzdGF0dXNFbC5pbm5lckhUTUw9JzxzcGFuIHN0eWxlPSJjb2xvcjp2YXIoLS1yZWQpIj7inYwgJysoZGF0YS5lcnJvcnx8J0ludmFsaWQga2V5JykrJzwvc3Bhbj4nOwogICAgICAgICAgICAgfQogICAgICAgICAgIH1jYXRjaChlKXsKICAgICAgICAgICAgIGlmKHN0YXR1c0VsKXN0YXR1c0VsLmlubmVySFRNTD0nPHNwYW4gc3R5bGU9ImNvbG9yOnZhcigtLXJlZCkiPuKdjCBTZXJ2ZXIgZXJyb3I6ICcrZS5tZXNzYWdlKyc8L3NwYW4+JzsKICAgICAgICAgICB9CiAgICAgICAgIH0KICAgICAgICAgZnVuY3Rpb24gZGVhY3RpdmF0ZUxpY2Vuc2UoKXsKICAgICAgICAgICBpZighY29uZmlybSgnUmVtb3ZlIHlvdXIgbGljZW5zZSBrZXk/IFlvdSBjYW4gcmUtYWN0aXZhdGUgYW55dGltZS4nKSlyZXR1cm47CiAgICAgICAgICAgbG9jYWxTdG9yYWdlLnJlbW92ZUl0ZW0oTFNfTElDRU5TRSk7CiAgICAgICAgICAgcmVuZGVyTGljZW5zZVN0YXRlKCk7cmVuZGVyQnVja2V0cygpOwogICAgICAgICAgIHRvYXN0KCdMaWNlbnNlIHJlbW92ZWQnKTsKICAgICAgICAgfQogICAgICAgICBmdW5jdGlvbiByZW5kZXJMaWNlbnNlU3RhdGUoKXsKICAgICAgICAgICBjb25zdCBsaWM9Z2V0TGljZW5zZSgpOwogICAgICAgICAgIGNvbnN0IGxvY2tlZD1kb2N1bWVudC5nZXRFbGVtZW50QnlJZCgnbGljZW5zZUxvY2tlZCcpOwogICAgICAgICAgIGNvbnN0IGJhcj1kb2N1bWVudC5nZXRFbGVtZW50QnlJZCgnbGljZW5zZUFjdGl2ZUJhcicpOwogICAgICAgICAgIGlmKGxpYyYmbGljLnZhbGlkKXsKICAgICAgICAgICAgIGlmKGxvY2tlZClsb2NrZWQuc3R5bGUuZGlzcGxheT0nbm9uZSc7CiAgICAgICAgICAgICBpZihiYXIpYmFyLmNsYXNzTGlzdC5hZGQoJ3Nob3cnKTsKICAgICAgICAgICAgIGNvbnN0IGxibD1kb2N1bWVudC5nZXRFbGVtZW50QnlJZCgnbGljZW5zZVBsYW5MYWJlbCcpOwogICAgICAgICAgICAgaWYobGJsKWxibC50ZXh0Q29udGVudD1saWMucGxhbj09PSdwcm8nPydQcm8gUGxhbiDigJQg4oKsOTcvbW9udGgnOidWb2ljZWJvdCBQbGFuIOKAlCDigqwyOTcvbW9udGgnOwogICAgICAgICAgICAgY29uc3QgYmFkZ2U9ZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ2xpY2Vuc2VBY3RpdmVCYWRnZScpOwogICAgICAgICAgICAgaWYoYmFkZ2UpYmFkZ2UudGV4dENvbnRlbnQ9bGljLnBsYW49PT0ncHJvJz8n4piFIFBSTyBBQ1RJVkUnOifinJMgQUNUSVZFJzsKICAgICAgICAgICB9IGVsc2UgewogICAgICAgICAgICAgaWYobG9ja2VkKWxvY2tlZC5zdHlsZS5kaXNwbGF5PSdibG9jayc7CiAgICAgICAgICAgICBpZihiYXIpYmFyLmNsYXNzTGlzdC5yZW1vdmUoJ3Nob3cnKTsKICAgICAgICAgICB9CiAgICAgICAgIH0KICAgICAgICAgCiAgICAgICAgIC8vIOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkAogICAgICAgICAvLyBDQUxMIFNUQVRFIEhFTFBFUlMKICAgICAgICAgLy8g4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQ4pWQCiAKICAgICAgICAvLyDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZDilZAKICAgICAgICAvLyBBVVRPLUNBTEwgUVVFVUUg4oCUIHRpbWV6b25lLWF3YXJlLCBUQ1BBIGNvbXBsaWFudAogICAgICAgIC8vIOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkOKVkAogICAgICAgIGxldCBfcXVldWVSdW5uaW5nID0gZmFsc2U7CiAgICAgICAgbGV0IF9xdWV1ZVRpbWVyICAgPSBudWxsOwogICAgICAgIGxldCBfcXVldWVMZWFkcyAgID0gW107IC8vIFt7bGVhZElkLCBsZWFkfV0KCiAgICAgICAgLy8gVVMgYXJlYSBjb2RlIOKGkiBJQU5BIHRpbWV6b25lCiAgICAgICAgY29uc3QgQVJFQV9UWiA9IHt9OwogICAgICAgIFtbJ0FtZXJpY2EvTmV3X1lvcmsnLFsnMjAxJywnMjAyJywnMjAzJywnMjA3JywnMjEyJywnMjE1JywnMjE2JywnMjE3JywnMjE5JywnMjI0JywnMjI1JywnMjI4JywnMjI5JywnMjMxJywnMjM0JywnMjM5JywnMjQwJywnMjQ4JywnMjUxJywnMjUyJywnMjY3JywnMjY5JywnMjcyJywnMjc2JywnMjgxJywnMzAxJywnMzAyJywnMzA0JywnMzA1JywnMzA5JywnMzEzJywnMzE1JywnMzIxJywnMzIzJywnMzMwJywnMzM2JywnMzM5JywnMzQ3JywnMzUxJywnMzUyJywnMzgwJywnNDAxJywnNDA0JywnNDA3JywnNDEwJywnNDEyJywnNDEzJywnNDE0JywnNDE5JywnNDIzJywnNDM0JywnNDQwJywnNDQzJywnNDQ1JywnNDcwJywnNDc4JywnNDg0JywnNTAyJywnNTEzJywnNTE2JywnNTE3JywnNTE4JywnNTQwJywnNTUxJywnNTYxJywnNTcxJywnNTg1JywnNTg2JywnNjA5JywnNjEwJywnNjE0JywnNjE1JywnNjE3JywnNjMxJywnNjQ2JywnNjc4JywnNjgxJywnNjg5JywnNzAzJywnNzA0JywnNzA2JywnNzA4JywnNzE2JywnNzE4JywnNzI0JywnNzI3JywnNzMyJywnNzM0JywnNzQwJywnNzQzJywnNzU0JywnNzU3JywnNzYyJywnNzcwJywnNzcyJywnNzc0JywnNzgxJywnNzg2JywnODAzJywnODA0JywnODEzJywnODE0JywnODI4JywnODQzJywnODQ1JywnODQ4JywnODU2JywnODU3JywnODU5JywnODYwJywnODYyJywnODYzJywnODY0JywnODY1JywnODc4JywnOTA0JywnOTA4JywnOTEwJywnOTEyJywnOTE0JywnOTE3JywnOTE5JywnOTI5JywnOTMxJywnOTM3JywnOTQxJywnOTQ3JywnOTU0JywnOTU5JywnOTczJywnOTc4JywnOTgwJywnOTg0J11dLAogICAgICAgICBbJ0FtZXJpY2EvQ2hpY2FnbycsWycyMDUnLCcyMTQnLCcyMTgnLCcyNjInLCcyNzAnLCczMDknLCczMTInLCczMTQnLCczMTYnLCczMTgnLCczMTknLCczMjAnLCczMjUnLCczMzQnLCczMzcnLCczNjEnLCc0MDInLCc0MDUnLCc0MDknLCc0MTcnLCc0MzAnLCc0MzInLCc0NzknLCc1MDEnLCc1MDQnLCc1MDcnLCc1MTUnLCc1NjMnLCc1NzMnLCc1ODAnLCc2MDEnLCc2MDgnLCc2MTInLCc2MTgnLCc2MjAnLCc2MzYnLCc2NDEnLCc2NTEnLCc2NjAnLCc2NjInLCc2ODInLCc3MTInLCc3MTMnLCc3MTUnLCc3MzEnLCc4MDYnLCc4MTUnLCc4MTYnLCc4MTcnLCc4MzAnLCc4MzInLCc4NDcnLCc4NzAnLCc5MDEnLCc5MDMnLCc5MjAnLCc5MzYnLCc5NDAnLCc5NTInLCc5NTYnLCc5NzInLCc5NzknLCc5ODUnXV0sCiAgICAgICAgIFsnQW1lcmljYS9EZW52ZXInLCAgWycyMDgnLCczMDMnLCczMDcnLCczODUnLCc0MDYnLCc0MzUnLCc0ODAnLCc1MDUnLCc1MjAnLCc1NzUnLCc2MDInLCc2MjMnLCc3MDInLCc3MTknLCc3MjAnLCc4MDEnLCc5MjgnLCc5NzAnXV0sCiAgICAgICAgIFsnQW1lcmljYS9Mb3NfQW5nZWxlcycsWycyMDknLCcyMTMnLCczMTAnLCczMjMnLCczNDEnLCczNjAnLCc0MDgnLCc0MTUnLCc0MjQnLCc0NDInLCc0NTgnLCc1MDMnLCc1MDknLCc1MTAnLCc1MzAnLCc1NDEnLCc1NTknLCc1NjInLCc2MTknLCc2MjYnLCc2NTAnLCc2NTcnLCc2NjEnLCc2NjknLCc3MDcnLCc3MTQnLCc3NDcnLCc3NjAnLCc3NzUnLCc4MDUnLCc4MTgnLCc4MzEnLCc4NTgnLCc5MDknLCc5MTYnLCc5MjUnLCc5NDknLCc5NTEnLCc5NzEnXV0KICAgICAgICBdLmZvckVhY2goKFt0eixjb2Rlc10pPT5jb2Rlcy5mb3JFYWNoKGM9PkFSRUFfVFpbY109dHopKTsKCiAgICAgICAgY29uc3QgQ09VTlRSWV9UWiA9IHsKICAgICAgICAgICcrMzEnOidFdXJvcGUvQW1zdGVyZGFtJywnKzQ0JzonRXVyb3BlL0xvbmRvbicsJys0OSc6J0V1cm9wZS9CZXJsaW4nLAogICAgICAgICAgJyszMyc6J0V1cm9wZS9QYXJpcycsJyszOSc6J0V1cm9wZS9Sb21lJywnKzM0JzonRXVyb3BlL01hZHJpZCcsCiAgICAgICAgICAnKzYxJzonQXVzdHJhbGlhL1N5ZG5leScsJys2Myc6J0FzaWEvTWFuaWxhJywnKzY0JzonUGFjaWZpYy9BdWNrbGFuZCcsCiAgICAgICAgICAnKzY1JzonQXNpYS9TaW5nYXBvcmUnLCcrODEnOidBc2lhL1Rva3lvJywnKzgyJzonQXNpYS9TZW91bCcsCiAgICAgICAgICAnKzg2JzonQXNpYS9TaGFuZ2hhaScsJys5MSc6J0FzaWEvS29sa2F0YScsJys5NzEnOidBc2lhL0R1YmFpJywKICAgICAgICB9OwoKICAgICAgICBmdW5jdGlvbiBnZXRMZWFkVGltZXpvbmUocGhvbmUpIHsKICAgICAgICAgIGlmICghcGhvbmUpIHJldHVybiBudWxsOwogICAgICAgICAgY29uc3QgcCA9IHBob25lLnJlcGxhY2UoL1tcc1wtKCkuXS9nLCcnKTsKICAgICAgICAgIGlmIChwLnN0YXJ0c1dpdGgoJysxJykgJiYgcC5sZW5ndGggPj0gNSkgewogICAgICAgICAgICByZXR1cm4gQVJFQV9UWltwLnNsaWNlKDIsNSldIHx8ICdBbWVyaWNhL05ld19Zb3JrJzsKICAgICAgICAgIH0KICAgICAgICAgIGNvbnN0IGtleXMgPSBPYmplY3Qua2V5cyhDT1VOVFJZX1RaKS5zb3J0KChhLGIpPT5iLmxlbmd0aC1hLmxlbmd0aCk7CiAgICAgICAgICBmb3IgKGNvbnN0IGsgb2Yga2V5cykgaWYgKHAuc3RhcnRzV2l0aChrKSkgcmV0dXJuIENPVU5UUllfVFpba107CiAgICAgICAgICByZXR1cm4gbnVsbDsKICAgICAgICB9CgogICAgICAgIGZ1bmN0aW9uIGlzQ2FsbGluZ0hvdXJzKHR6KSB7CiAgICAgICAgICBpZiAoIXR6KSByZXR1cm4geyBvazogZmFsc2UsIGxhYmVsOiAnVW5rbm93biB0aW1lem9uZSDigJQgY2Fubm90IHZlcmlmeSBjYWxsaW5nIGhvdXJzJywgb3BlbjogZmFsc2UgfTsKICAgICAgICAgIGNvbnN0IG5vdyA9IG5ldyBEYXRlKCk7CiAgICAgICAgICBjb25zdCBwYXJ0cyA9IHt9OwogICAgICAgICAgbmV3IEludGwuRGF0ZVRpbWVGb3JtYXQoJ2VuLVVTJyx7dGltZVpvbmU6dHosaG91cjonbnVtZXJpYycsbWludXRlOicyLWRpZ2l0Jyxob3VyMTI6ZmFsc2Usd2Vla2RheTonbG9uZyd9KQogICAgICAgICAgICAuZm9ybWF0VG9QYXJ0cyhub3cpLmZvckVhY2gocD0+cGFydHNbcC50eXBlXT1wLnZhbHVlKTsKICAgICAgICAgIGNvbnN0IGhvdXIgPSBwYXJzZUludChwYXJ0cy5ob3VyKTsKICAgICAgICAgIGNvbnN0IGRheSAgPSBwYXJ0cy53ZWVrZGF5OwogICAgICAgICAgY29uc3QgdGltZVN0ciA9IHBhcnRzLmhvdXIrJzonK3BhcnRzLm1pbnV0ZSsnICcrZGF5OwogICAgICAgICAgaWYgKGRheT09PSdTYXR1cmRheSd8fGRheT09PSdTdW5kYXknKSByZXR1cm4ge29rOmZhbHNlLCBsYWJlbDp0aW1lU3RyKycgKHdlZWtlbmQpJywgb3BlbjpmYWxzZX07CiAgICAgICAgICBpZiAoaG91cjw4fHxob3VyPj0yMCkgcmV0dXJuIHtvazpmYWxzZSwgbGFiZWw6dGltZVN0cisnIChvdXRzaWRlIGhvdXJzKScsIG9wZW46ZmFsc2V9OwogICAgICAgICAgcmV0dXJuIHtvazp0cnVlLCBsYWJlbDp0aW1lU3RyLCBvcGVuOnRydWV9OwogICAgICAgIH0KCiAgICAgICAgZnVuY3Rpb24gZ2V0TGVhZExvY2FsVGltZShsZWFkKSB7CiAgICAgICAgICBjb25zdCB0eiA9IGdldExlYWRUaW1lem9uZShsZWFkLnBob25lKTsKICAgICAgICAgIGNvbnN0IGNoZWNrID0gaXNDYWxsaW5nSG91cnModHopOwogICAgICAgICAgcmV0dXJuIHsgdHosIC4uLmNoZWNrIH07CiAgICAgICAgfQoKICAgICAgICBmdW5jdGlvbiBzdGFydFF1ZXVlKCkgewogICAgICAgICAgaWYgKF9xdWV1ZVJ1bm5pbmcpIHJldHVybjsKICAgICAgICAgIGlmICghaGFzQWNjZXB0ZWRUZXJtcygpKSB7IHNob3dUZXJtc01vZGFsKCk7IHJldHVybjsgfQogICAgICAgICAgY29uc3QgY2ZnID0gSlNPTi5wYXJzZShsb2NhbFN0b3JhZ2UuZ2V0SXRlbShMU19WQVBJKXx8J251bGwnKTsKICAgICAgICAgIGlmICghY2ZnfHwhY2ZnLnZhcGlLZXkpIHsKICAgICAgICAgICAgdG9hc3QoJ+KaoCBDb25maWd1cmUgVm9pY2Vib3QgZmlyc3QnKTsKICAgICAgICAgICAgZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ3ZhcGlQYW5lbCcpLmNsYXNzTGlzdC5hZGQoJ3Zpc2libGUnKTsKICAgICAgICAgICAgcmV0dXJuOwogICAgICAgICAgfQogICAgICAgICAgLy8gQnVpbGQgcXVldWUgZnJvbSBhbGwgdW5jYWxsZWQgbGVhZHMgd2l0aCBwaG9uZQogICAgICAgICAgY29uc3QgYWxsID0gZ2V0U2VsTGVhZHMoKS5maWx0ZXIobD0+bC5waG9uZSk7CiAgICAgICAgICBpZiAoIWFsbC5sZW5ndGgpIHsgdG9hc3QoJ1NlbGVjdCBsZWFkcyBmaXJzdCcpOyByZXR1cm47IH0KICAgICAgICAgIF9xdWV1ZUxlYWRzID0gYWxsCiAgICAgICAgICAgIC5maWx0ZXIobCA9PiB7CiAgICAgICAgICAgICAgY29uc3QgaWQgPSBtYWtlSWQobCk7CiAgICAgICAgICAgICAgY29uc3QgcyA9IGNhbGxTdGF0ZXMuZ2V0KGlkKTsKICAgICAgICAgICAgICByZXR1cm4gIXMgfHwgcy5zdGF0ZT09PSdyZWFkeScgfHwgcy5zdGF0ZT09PSdmYWlsZWQnOwogICAgICAgICAgICB9KQogICAgICAgICAgICAubWFwKGwgPT4gKHsgbGVhZElkOiBtYWtlSWQobCksIGxlYWQ6IGwgfSkpOwoKICAgICAgICAgIGlmICghX3F1ZXVlTGVhZHMubGVuZ3RoKSB7IHRvYXN0KCdBbGwgc2VsZWN0ZWQgbGVhZHMgYWxyZWFkeSBjYWxsZWQnKTsgcmV0dXJuOyB9CiAgICAgICAgICBfcXVldWVSdW5uaW5nID0gdHJ1ZTsKICAgICAgICAgIGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCdxdWV1ZVN0YXJ0QnRuJykuc3R5bGUuZGlzcGxheSA9ICdub25lJzsKICAgICAgICAgIGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCdxdWV1ZVN0b3BCdG4nKS5zdHlsZS5kaXNwbGF5ICA9ICdpbmxpbmUtYmxvY2snOwogICAgICAgICAgZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ3F1ZXVlQmFyJykuY2xhc3NMaXN0LmFkZCgnYWN0aXZlJyk7CiAgICAgICAgICB0b2FzdCgn4pa2IFF1ZXVlIHN0YXJ0ZWQg4oCUICcrX3F1ZXVlTGVhZHMubGVuZ3RoKycgbGVhZHMsIGZpcmVzIHdoZW4gbG9jYWwgdGltZSBpcyA4YW3igJM4cG0nKTsKICAgICAgICAgIHJ1blF1ZXVlVGljaygpOwogICAgICAgIH0KCiAgICAgICAgZnVuY3Rpb24gc3RvcFF1ZXVlKCkgewogICAgICAgICAgX3F1ZXVlUnVubmluZyA9IGZhbHNlOwogICAgICAgICAgY2xlYXJUaW1lb3V0KF9xdWV1ZVRpbWVyKTsKICAgICAgICAgIGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCdxdWV1ZVN0YXJ0QnRuJykuc3R5bGUuZGlzcGxheSA9ICdpbmxpbmUtYmxvY2snOwogICAgICAgICAgZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ3F1ZXVlU3RvcEJ0bicpLnN0eWxlLmRpc3BsYXkgID0gJ25vbmUnOwogICAgICAgICAgZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ3F1ZXVlU3RhdHVzJykudGV4dENvbnRlbnQgPSAn4o+5IFF1ZXVlIHN0b3BwZWQnOwogICAgICAgICAgdG9hc3QoJ+KPuSBRdWV1ZSBzdG9wcGVkJyk7CiAgICAgICAgfQoKICAgICAgICBmdW5jdGlvbiBkaXNtaXNzUXVldWUoKSB7CiAgICAgICAgICBzdG9wUXVldWUoKTsKICAgICAgICAgIGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCdxdWV1ZUJhcicpLmNsYXNzTGlzdC5yZW1vdmUoJ2FjdGl2ZScpOwogICAgICAgIH0KCiAgICAgICAgYXN5bmMgZnVuY3Rpb24gcnVuUXVldWVUaWNrKCkgewogICAgICAgICAgaWYgKCFfcXVldWVSdW5uaW5nKSByZXR1cm47CgogICAgICAgICAgbGV0IHdhaXRpbmcgPSAwLCBjYWxsZWQgPSAwLCBibG9ja2VkID0gMDsKCiAgICAgICAgICBmb3IgKGxldCBpID0gX3F1ZXVlTGVhZHMubGVuZ3RoIC0gMTsgaSA+PSAwOyBpLS0pIHsKICAgICAgICAgICAgY29uc3QgeyBsZWFkSWQsIGxlYWQgfSA9IF9xdWV1ZUxlYWRzW2ldOwogICAgICAgICAgICBjb25zdCBzID0gY2FsbFN0YXRlcy5nZXQobGVhZElkKTsKICAgICAgICAgICAgaWYgKHMgJiYgcy5zdGF0ZSAhPT0gJ3JlYWR5JyAmJiBzLnN0YXRlICE9PSAnZmFpbGVkJykgewogICAgICAgICAgICAgIC8vIGFscmVhZHkgY2FsbGVkL2NhbGxpbmcg4oCUIHJlbW92ZSBmcm9tIHF1ZXVlCiAgICAgICAgICAgICAgY2FsbGVkKys7CiAgICAgICAgICAgICAgX3F1ZXVlTGVhZHMuc3BsaWNlKGksIDEpOwogICAgICAgICAgICAgIGNvbnRpbnVlOwogICAgICAgICAgICB9CiAgICAgICAgICAgIGNvbnN0IHsgb2ssIGxhYmVsLCB0eiB9ID0gZ2V0TGVhZExvY2FsVGltZShsZWFkKTsKICAgICAgICAgICAgaWYgKG9rKSB7CiAgICAgICAgICAgICAgLy8gRmlyZSB0aGUgY2FsbAogICAgICAgICAgICAgIF9xdWV1ZUxlYWRzLnNwbGljZShpLCAxKTsKICAgICAgICAgICAgICBjYWxsZWQrKzsKICAgICAgICAgICAgICBkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgncXVldWVTdGF0dXMnKS50ZXh0Q29udGVudCA9CiAgICAgICAgICAgICAgICAn8J+TniBDYWxsaW5nICcgKyAobGVhZC5uYW1lfHxsZWFkLnBob25lKSArICcg4oCUICcgKyBsYWJlbCArICcgKCcgKyAodHp8fCc/JykgKyAnKSc7CiAgICAgICAgICAgICAgdHJpZ2dlckNhbGwobGVhZElkKTsKICAgICAgICAgICAgICBhd2FpdCBuZXcgUHJvbWlzZShyID0+IHNldFRpbWVvdXQociwgNDAwMCkpOyAvLyA0cyBnYXAgYmV0d2VlbiBjYWxscwogICAgICAgICAgICB9IGVsc2UgewogICAgICAgICAgICAgIGJsb2NrZWQrKzsKICAgICAgICAgICAgfQogICAgICAgICAgfQoKICAgICAgICAgIHdhaXRpbmcgPSBfcXVldWVMZWFkcy5sZW5ndGggLSBibG9ja2VkOwogICAgICAgICAgZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ3FTdGF0X3dhaXRpbmcnKS50ZXh0Q29udGVudCA9IE1hdGgubWF4KDAsIF9xdWV1ZUxlYWRzLmxlbmd0aCk7CiAgICAgICAgICBkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgncVN0YXRfY2FsbGVkJykudGV4dENvbnRlbnQgID0gY2FsbGVkOwogICAgICAgICAgZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ3FTdGF0X2Jsb2NrZWQnKS50ZXh0Q29udGVudCA9IGJsb2NrZWQ7CgogICAgICAgICAgaWYgKCFfcXVldWVMZWFkcy5sZW5ndGgpIHsKICAgICAgICAgICAgZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ3F1ZXVlU3RhdHVzJykudGV4dENvbnRlbnQgPSAn4pyFIFF1ZXVlIGNvbXBsZXRlIOKAlCBhbGwgbGVhZHMgY2FsbGVkJzsKICAgICAgICAgICAgc3RvcFF1ZXVlKCk7CiAgICAgICAgICAgIHJldHVybjsKICAgICAgICAgIH0KCiAgICAgICAgICAvLyBOZXh0IHRpY2sgaW4gNjAgc2Vjb25kcwogICAgICAgICAgY29uc3QgbmV4dFRpbWUgPSBuZXcgRGF0ZShEYXRlLm5vdygpICsgNjAwMDApLnRvTG9jYWxlVGltZVN0cmluZygpOwogICAgICAgICAgZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ3F1ZXVlU3RhdHVzJykudGV4dENvbnRlbnQgPQogICAgICAgICAgICAn4o+zICcrX3F1ZXVlTGVhZHMubGVuZ3RoKycgbGVhZHMgd2FpdGluZyDigJQgbmV4dCBjaGVjayBhdCAnK25leHRUaW1lOwogICAgICAgICAgX3F1ZXVlVGltZXIgPSBzZXRUaW1lb3V0KHJ1blF1ZXVlVGljaywgNjAwMDApOwogICAgICAgIH0KCiAgICAgICAgLy8g4pSA4pSAIFNob3cgbG9jYWwgdGltZSBiYWRnZSBvbiBlYWNoIGxlYWQgY2FyZCDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIAKICAgICAgICBmdW5jdGlvbiBnZXRMZWFkVHpCYWRnZShsZWFkKSB7CiAgICAgICAgICBjb25zdCB0eiA9IGdldExlYWRUaW1lem9uZShsZWFkLnBob25lKTsKICAgICAgICAgIGlmICghdHopIHJldHVybiAnJzsKICAgICAgICAgIGNvbnN0IHsgb2ssIGxhYmVsIH0gPSBpc0NhbGxpbmdIb3Vycyh0eik7CiAgICAgICAgICBjb25zdCBjbHMgPSBvayA/ICdvcGVuJyA6IChsYWJlbC5pbmNsdWRlcygnd2Vla2VuZCcpID8gJ2Jsb2NrZWQnIDogJ3dhaXRpbmcnKTsKICAgICAgICAgIGNvbnN0IGljb24gPSBvayA/ICfwn5+iJyA6IChsYWJlbC5pbmNsdWRlcygnd2Vla2VuZCcpID8gJ/CflLQnIDogJ/Cfn6EnKTsKICAgICAgICAgIHJldHVybiAnPGRpdiBjbGFzcz0ibGVhZC10eiAnK2NscysnIj4nK2ljb24rJyAnK2xhYmVsKycgwrcgJysodHouc3BsaXQoJy8nKVsxXXx8dHopLnJlcGxhY2UoJ18nLCcgJykrJzwvZGl2Pic7CiAgICAgICAgfQoKICAgICAgICAvLyDilIDilIAgRGVkdXBsaWNhdGUgYnkgcGhvbmUgb24gaW1wb3J0IOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgAogICAgICAgIGZ1bmN0aW9uIGRlZHVwbGljYXRlTGVhZHMobmV3TGVhZHMpIHsKICAgICAgICAgIGNvbnN0IGV4aXN0aW5nID0gbmV3IFNldCgKICAgICAgICAgICAgKEpTT04ucGFyc2UobG9jYWxTdG9yYWdlLmdldEl0ZW0oJ2xjX2xlYWRzJyl8fCdbXScpKQogICAgICAgICAgICAgIC5tYXAobCA9PiBsLnBob25lKS5maWx0ZXIoQm9vbGVhbikKICAgICAgICAgICk7CiAgICAgICAgICBjb25zdCBkdXBlcyA9IFtdLCBmcmVzaCA9IFtdOwogICAgICAgICAgbmV3TGVhZHMuZm9yRWFjaChsID0+IHsKICAgICAgICAgICAgaWYgKGwucGhvbmUgJiYgZXhpc3RpbmcuaGFzKGwucGhvbmUpKSBkdXBlcy5wdXNoKGwpOwogICAgICAgICAgICBlbHNlIGZyZXNoLnB1c2gobCk7CiAgICAgICAgICB9KTsKICAgICAgICAgIGlmIChkdXBlcy5sZW5ndGgpIHRvYXN0KCfimqAgJytkdXBlcy5sZW5ndGgrJyBkdXBsaWNhdGUgcGhvbmUgbnVtYmVyKHMpIHNraXBwZWQnKTsKICAgICAgICAgIHJldHVybiBmcmVzaDsKICAgICAgICB9CgogICAgICAgIC8vIOKUgOKUgCBXaXJlIHVwICJPcGVuIFF1ZXVlIiBidXR0b24gaW4gc2VsYmFyIOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgAogICAgICAgIGZ1bmN0aW9uIG9wZW5RdWV1ZVBhbmVsKCkgewogICAgICAgICAgZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ3F1ZXVlQmFyJykuY2xhc3NMaXN0LmFkZCgnYWN0aXZlJyk7CiAgICAgICAgfQoKICAgICAgICAgICAgICAgIGZ1bmN0aW9uIGdldENhbGxTdGF0ZShpZCl7cmV0dXJuKGNhbGxTdGF0ZXMuZ2V0KGlkKXx8e30pLnN0YXRlfHwncmVhZHknO30KICAgICAgICAgZnVuY3Rpb24gZ2V0Q2FsbExhYmVsKGlkKXsKICAgICAgICAgICBjb25zdCBzPWNhbGxTdGF0ZXMuZ2V0KGlkKTsKICAgICAgICAgICBpZighc3x8cy5zdGF0ZT09PSdyZWFkeScpcmV0dXJuICfwn6SWIENhbGwnOwogICAgICAgICAgIGlmKHMuc3RhdGU9PT0nY2FsbGluZycpICByZXR1cm4gJ+KfsyBDYWxsaW5nLi4uJzsKICAgICAgICAgICBpZihzLnN0YXRlPT09J2Fuc3dlcmVkJykgcmV0dXJuICfinIUgQW5zd2VyZWQnOwogICAgICAgICAgIGlmKHMuc3RhdGU9PT0ndm9pY2VtYWlsJylyZXR1cm4gJ/Cfk6wgVm9pY2VtYWlsJzsKICAgICAgICAgICBpZihzLnN0YXRlPT09J2J1c3knKSAgICAgcmV0dXJuICfwn5S0IEJ1c3knOwogICAgICAgICAgIGlmKHMuc3RhdGU9PT0nbm8tYW5zd2VyJylyZXR1cm4gJ/Cfk7UgTm8gQW5zd2VyJzsKICAgICAgICAgICBpZihzLnN0YXRlPT09J2ZhaWxlZCcpICAgcmV0dXJuICfinYwgRmFpbGVkJzsKICAgICAgICAgICByZXR1cm4gJ/CfpJYgQ2FsbCc7CiAgICAgICAgIH0KICAgICAgICAgZnVuY3Rpb24gZ2V0Q2FsbEljb24oaWQpe3JldHVybiAnJzt9CiAgICAgICAgIGZ1bmN0aW9uIGdldENhbGxTdGF0dXNDbGFzcyhpZCl7Y29uc3Qgcz1jYWxsU3RhdGVzLmdldChpZCk7cmV0dXJuIHM/cy5zdGF0ZTonJzt9CiAgICAgICAgIGZ1bmN0aW9uIGdldENhbGxTdGF0dXNUZXh0KGlkKXtjb25zdCBzPWNhbGxTdGF0ZXMuZ2V0KGlkKTtyZXR1cm4gcz9zLnN0YXR1c1RleHR8fCcnOicnO30KICAgICAgICAgCiAgICAgICAgIC8vIOKUgOKUgCBJbml0IG9uIGxvYWQg4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSACiAgICAgICAgIGRvY3VtZW50LmFkZEV2ZW50TGlzdGVuZXIoJ0RPTUNvbnRlbnRMb2FkZWQnLCgpPT57CiAgICAgICAgICAgcmVuZGVyVGVybXNTdGF0ZSgpOwogICAgICAgICAgIHJlbmRlckNvbXBsaWFuY2VNb2RlKCk7CiAgICAgICAgICAgcmVuZGVyTGljZW5zZVN0YXRlKCk7CiAgICAgICAgICAgLy8gUHJlLWZpbGwgVmFwaSBkZWZhdWx0cyBpZiBub3RoaW5nIHNhdmVkIHlldAogICAgICAgICAgIGlmKCFsb2NhbFN0b3JhZ2UuZ2V0SXRlbShMU19WQVBJKSl7CiAgICAgICAgICAgICBkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgndmFwaVBob25lSWQnKS52YWx1ZSAgICAgICA9ICc0YTNiMTdjNS0yNGYwLTRlNjUtYjY0ZC0yOWU4ZTNmNDQ2YTMnOwogICAgICAgICAgICAgZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ3ZhcGlDYWxsZXJOYW1lJykudmFsdWUgICAgPSAnT3R0bWFyIGZyb20gQ29udGVudFNjYWxlJzsKICAgICAgICAgICAgIGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCd2YXBpQ29tcGFueScpLnZhbHVlICAgICAgID0gJ0NvbnRlbnRTY2FsZSc7CiAgICAgICAgICAgICBkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgndmFwaUNhbGxiYWNrTnVtYmVyJykudmFsdWU9ICcrMSAoMjc5KSA0OTkgODczNic7CiAgICAgICAgICAgICBkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgndmFwaU9wZW5pbmdMaW5lJykudmFsdWUgICA9IGBIaSwganVzdCB0byBiZSB0cmFuc3BhcmVudCDigJQgSSdtIGFuIEFJIGFzc2lzdGFudCBjYWxsaW5nIG9uIGJlaGFsZiBvZiBPdHRtYXIgZnJvbSBDb250ZW50U2NhbGUuIElzIHRoaXMge25hbWV9PyBJIGp1c3Qgc2Nhbm5lZCB5b3VyIHdlYnNpdGUgYW5kIHNwb3R0ZWQgc29tZXRoaW5nIHRoYXQgY291bGQgaGVscCB5b3UgZ2V0IG1vcmUgY2xpZW50cyDigJQgZG8geW91IGhhdmUgMiBtaW51dGVzP2A7CiAgICAgICAgICAgfSBlbHNlIHsKICAgICAgICAgICAgIGxvYWRWYXBpQ29uZmlnKCk7CiAgICAgICAgICAgfQogICAgICAgICAgIGxvYWRDYWxsTG9nKCk7CiAgICAgICAgIH0pOwogICAgICA8L3NjcmlwdD4KICAgICAgPCEtLSDilZDilZAgVEVSTVMgT0YgU0VSVklDRSBNT0RBTCDilZDilZAgLS0+CiAgICAgIDxkaXYgY2xhc3M9InRlcm1zLW1vZGFsIiBpZD0idGVybXNNb2RhbCIgc3R5bGU9ImRpc3BsYXk6bm9uZTsiPgogICAgICAgICA8ZGl2IGNsYXNzPSJ0ZXJtcy1ib3giPgogICAgICAgICAgICA8ZGl2IGNsYXNzPSJ0ZXJtcy1oZWFkIj4KICAgICAgICAgICAgICAgPGgyPuKaliBPcGVyYXRvciBDb21wbGlhbmNlIEFncmVlbWVudDwvaDI+CiAgICAgICAgICAgICAgIDxkaXYgY2xhc3M9InN1YiI+UmVhZCBjYXJlZnVsbHkgYmVmb3JlIHVzaW5nIHRoZSB2b2ljZWJvdCBmZWF0dXJlPC9kaXY+CiAgICAgICAgICAgIDwvZGl2PgogICAgICAgICAgICA8ZGl2IGNsYXNzPSJ0ZXJtcy1ib2R5Ij4KICAgICAgICAgICAgICAgPGRpdiBjbGFzcz0id2FybiI+CiAgICAgICAgICAgICAgICAgIOKaoCBUaGlzIGFncmVlbWVudCBlc3RhYmxpc2hlcyB0aGF0IDxzdHJvbmc+WU9VLCB0aGUgb3BlcmF0b3I8L3N0cm9uZz4sIGFyZSBzb2xlbHkgcmVzcG9uc2libGUKICAgICAgICAgICAgICAgICAgZm9yIGhvdyB5b3UgdXNlIHRoZSB2b2ljZWJvdCBmZWF0dXJlIOKAlCBub3QgQ29udGVudFNjYWxlLgogICAgICAgICAgICAgICA8L2Rpdj4KICAgICAgICAgICAgICAgPGg0PjEuIFlvdXIgUmVzcG9uc2liaWxpdHkgYXMgT3BlcmF0b3I8L2g0PgogICAgICAgICAgICAgICBZb3UgdW5kZXJzdGFuZCBhbmQgYWdyZWUgdGhhdCBDb250ZW50U2NhbGUgaXMgYSA8c3Ryb25nPnNvZnR3YXJlIHRvb2wgcHJvdmlkZXIgb25seS48L3N0cm9uZz4KICAgICAgICAgICAgICAgQWxsIGNhbGxzIGFyZSBtYWRlIHVzaW5nIDxzdHJvbmc+eW91ciBvd24gVmFwaSBBUEkga2V5IGFuZCBwaG9uZSBudW1iZXIuPC9zdHJvbmc+CiAgICAgICAgICAgICAgIENvbnRlbnRTY2FsZSBuZXZlciBvcmlnaW5hdGVzLCBjb250cm9scywgb3Igc3RvcmVzIHlvdXIgY2FsbHMuCiAgICAgICAgICAgICAgIFlvdSBhcmUgdGhlICJjYWxsZXIgb2YgcmVjb3JkIiB1bmRlciBhbGwgYXBwbGljYWJsZSB0ZWxlY29tbXVuaWNhdGlvbnMgbGF3cy4KICAgICAgICAgICAgICAgPGg0PjIuIExlZ2FsIENhbGxpbmcgUmVxdWlyZW1lbnRzIFlvdSBNdXN0IEZvbGxvdzwvaDQ+CiAgICAgICAgICAgICAgIEJ5IHVzaW5nIHRoaXMgdG9vbCB5b3UgY29uZmlybSB5b3Ugd2lsbCBjb21wbHkgd2l0aCBhbGwgYXBwbGljYWJsZSBsYXdzIGluY2x1ZGluZzoKICAgICAgICAgICAgICAgPGJyPuKAoiA8c3Ryb25nPlVTQTo8L3N0cm9uZz4gVENQQSDigJQgY2FsbHMgb25seSA4YW3igJM5cG0gbG9jYWwgdGltZSwgRE5DIGxpc3QgY29tcGxpYW5jZSwgQUkgZGlzY2xvc3VyZSByZXF1aXJlZCAoRkNDIDIwMjQgcnVsaW5nKS4gUGVuYWx0eTogdXAgdG8gJDEsNTAwIHBlciBpbGxlZ2FsIGNhbGwuCiAgICAgICAgICAgICAgIDxicj7igKIgPHN0cm9uZz5FVTo8L3N0cm9uZz4gR0RQUiArIEVVIEFJIEFjdCBBcnRpY2xlIDUwIOKAlCBBSSBtdXN0IGJlIGRpc2Nsb3NlZCBhdCBzdGFydCBvZiBjYWxsLiBGaW5lcyB1cCB0byDigqwyMCBtaWxsaW9uIG9yIDQlIG9mIGdsb2JhbCByZXZlbnVlLgogICAgICAgICAgICAgICA8YnI+4oCiIDxzdHJvbmc+VUs6PC9zdHJvbmc+IFBFQ1Ig4oCUIGxlZ2l0aW1hdGUgaW50ZXJlc3QgcmVxdWlyZWQsIFRQUyBsaXN0IHJlc3BlY3RlZCwgQUkgZGlzY2xvc2VkLgogICAgICAgICAgICAgICA8YnI+4oCiIDxzdHJvbmc+QWxsIHJlZ2lvbnM6PC9zdHJvbmc+IEIyQiBvbmx5LiBOZXZlciBjYWxsIGNvbnN1bWVycy4gQWx3YXlzIGhvbm9yIGltbWVkaWF0ZSBvcHQtb3V0IHJlcXVlc3RzLgogICAgICAgICAgICAgICA8aDQ+My4gQUkgRGlzY2xvc3VyZSBpcyBNYW5kYXRvcnkgRXZlcnl3aGVyZTwvaDQ+CiAgICAgICAgICAgICAgIDxzdHJvbmc+WW91IG11c3Qgbm90IHJlbW92ZSBvciBieXBhc3MgdGhlIEFJIGRpc2Nsb3N1cmU8L3N0cm9uZz4gZnJvbSB0aGUgdm9pY2Vib3Qgb3BlbmluZyBzY3JpcHQuCiAgICAgICAgICAgICAgIENhbGxpbmcgd2l0aG91dCBkaXNjbG9zaW5nIEFJIGlkZW50aXR5IGlzIGlsbGVnYWwgaW4gdGhlIFVTLCBFVSwgYW5kIFVLLgogICAgICAgICAgICAgICBDb250ZW50U2NhbGUgaGFzIGJ1aWx0IGRpc2Nsb3N1cmUgaW50byB0aGUgZGVmYXVsdCBzY3JpcHQg4oCUIDxzdHJvbmc+ZG8gbm90IHJlbW92ZSBpdC48L3N0cm9uZz4KICAgICAgICAgICAgICAgPGg0PjQuIENvbnRlbnRTY2FsZSdzIExpYWJpbGl0eSBpcyBaZXJvPC9oND4KICAgICAgICAgICAgICAgQ29udGVudFNjYWxlIHByb3ZpZGVzIHNvZnR3YXJlIHRvb2xzIG9ubHkuIENvbnRlbnRTY2FsZSBoYXMgbm8gYWNjZXNzIHRvIHlvdXIgY2FsbHMsCiAgICAgICAgICAgICAgIHlvdXIgVmFwaSBhY2NvdW50LCBvciB5b3VyIGxlYWRzLiBBbnkgZmluZXMsIGxhd3N1aXRzLCBvciByZWd1bGF0b3J5IGFjdGlvbnMgcmVzdWx0aW5nCiAgICAgICAgICAgICAgIGZyb20geW91ciB1c2Ugb2YgdGhpcyB0b29sIGFyZSA8c3Ryb25nPmVudGlyZWx5IHlvdXIgcmVzcG9uc2liaWxpdHkuPC9zdHJvbmc+CiAgICAgICAgICAgICAgIEJ5IGFjdGl2YXRpbmcgdGhlIHZvaWNlYm90IHlvdSBpbmRlbW5pZnkgQ29udGVudFNjYWxlIGFnYWluc3QgYWxsIGNsYWltcyBhcmlzaW5nIGZyb20geW91ciB1c2UuCiAgICAgICAgICAgICAgIDxoND41LiBZb3UgQXJlIE5vdCBDYWxsaW5nIG9uIEJlaGFsZiBvZiBDb250ZW50U2NhbGU8L2g0PgogICAgICAgICAgICAgICBZb3UgY2FsbCBhcyB5b3Vyc2VsZiBvciB5b3VyIG93biBidXNpbmVzcy4gQ29udGVudFNjYWxlIGlzIG5vdCB5b3VyIGVtcGxveWVyLAogICAgICAgICAgICAgICBwYXJ0bmVyLCBvciBjby1jYWxsZXIuIERvIG5vdCByZXByZXNlbnQgQ29udGVudFNjYWxlIHdoZW4gbWFraW5nIGNhbGxzCiAgICAgICAgICAgICAgIHVubGVzcyB5b3UgaGF2ZSBhIHNwZWNpZmljIHdyaXR0ZW4gcmVzZWxsZXIgYWdyZWVtZW50LgogICAgICAgICAgICAgICA8aDQ+Ni4gQ29tcGxpYW5jZSBNb2RlIFJlY29tbWVuZGF0aW9uPC9oND4KICAgICAgICAgICAgICAgV2Ugc3Ryb25nbHkgcmVjb21tZW5kIGtlZXBpbmcgPHN0cm9uZz5Db21wbGlhbmNlIE1vZGUgT048L3N0cm9uZz4gYXQgYWxsIHRpbWVzLgogICAgICAgICAgICAgICBXaXRoIENvbXBsaWFuY2UgTW9kZSBPTjogY2FsbHMgb3V0c2lkZSA4YW3igJM4cG0gYXJlIGhhcmQtYmxvY2tlZCAobm90IGp1c3Qgd2FybmVkKSwKICAgICAgICAgICAgICAgQUkgZGlzY2xvc3VyZSBjYW5ub3QgYmUgcmVtb3ZlZCBmcm9tIHRoZSBzY3JpcHQsIGFuZCBldmVyeSBjYWxsIGlzIGxvZ2dlZCB3aXRoIHRpbWVzdGFtcC4KICAgICAgICAgICAgICAgVGhpcyBjcmVhdGVzIGFuIGF1ZGl0IHRyYWlsIHRoYXQgcHJvdGVjdHMgeW91IGlmIHlvdSBhcmUgZXZlciBpbnZlc3RpZ2F0ZWQuCiAgICAgICAgICAgIDwvZGl2PgogICAgICAgICAgICA8ZGl2IGNsYXNzPSJ0ZXJtcy1mb290ZXIiPgogICAgICAgICAgICAgICA8ZGl2IGNsYXNzPSJ0ZXJtcy1jaGVjayIgb25jbGljaz0idG9nZ2xlVGVybXNDaGVjaygnYzEnKSI+CiAgICAgICAgICAgICAgICAgIDxpbnB1dCB0eXBlPSJjaGVja2JveCIgaWQ9ImMxIiBvbmNoYW5nZT0iY2hlY2tUZXJtc1JlYWR5KCkiPgogICAgICAgICAgICAgICAgICA8bGFiZWwgZm9yPSJjMSI+SSB1bmRlcnN0YW5kIHRoYXQgPHN0cm9uZz5JIGFtIHRoZSBjYWxsZXIgb2YgcmVjb3JkPC9zdHJvbmc+IOKAlCBDb250ZW50U2NhbGUgaGFzIG5vIGxpYWJpbGl0eSBmb3IgbXkgY2FsbHMuIEkgYW0gcmVzcG9uc2libGUgZm9yIGNvbXBsaWFuY2Ugd2l0aCBUQ1BBLCBHRFBSLCBFVSBBSSBBY3QsIGFuZCBhbGwgYXBwbGljYWJsZSBsYXdzIGluIG15IGp1cmlzZGljdGlvbi48L2xhYmVsPgogICAgICAgICAgICAgICA8L2Rpdj4KICAgICAgICAgICAgICAgPGRpdiBjbGFzcz0idGVybXMtY2hlY2siIG9uY2xpY2s9InRvZ2dsZVRlcm1zQ2hlY2soJ2MyJykiPgogICAgICAgICAgICAgICAgICA8aW5wdXQgdHlwZT0iY2hlY2tib3giIGlkPSJjMiIgb25jaGFuZ2U9ImNoZWNrVGVybXNSZWFkeSgpIj4KICAgICAgICAgICAgICAgICAgPGxhYmVsIGZvcj0iYzIiPkkgd2lsbCA8c3Ryb25nPm9ubHkgY2FsbCBkdXJpbmcgbGVnYWwgaG91cnMgKDhhbeKAkzhwbSBsb2NhbCB0aW1lKTwvc3Ryb25nPiwgb25seSB0YXJnZXQgQjJCIGJ1c2luZXNzZXMsIGFsd2F5cyBkaXNjbG9zZSBBSSBpZGVudGl0eSwgYW5kIGltbWVkaWF0ZWx5IGhvbm9yIGFueSBvcHQtb3V0IHJlcXVlc3QuPC9sYWJlbD4KICAgICAgICAgICAgICAgPC9kaXY+CiAgICAgICAgICAgICAgIDxkaXYgY2xhc3M9InRlcm1zLWNoZWNrIiBvbmNsaWNrPSJ0b2dnbGVUZXJtc0NoZWNrKCdjMycpIj4KICAgICAgICAgICAgICAgICAgPGlucHV0IHR5cGU9ImNoZWNrYm94IiBpZD0iYzMiIG9uY2hhbmdlPSJjaGVja1Rlcm1zUmVhZHkoKSI+CiAgICAgICAgICAgICAgICAgIDxsYWJlbCBmb3I9ImMzIj5JIGhhdmUgcmVhZCBhbmQgYWdyZWUgdG8gQ29udGVudFNjYWxlJ3MgPHN0cm9uZz5PcGVyYXRvciBUZXJtcyBvZiBTZXJ2aWNlPC9zdHJvbmc+LiBJIGFjY2VwdCBmdWxsIGxlZ2FsIHJlc3BvbnNpYmlsaXR5IGZvciBteSB1c2Ugb2YgdGhlIHZvaWNlYm90IGZlYXR1cmUuPC9sYWJlbD4KICAgICAgICAgICAgICAgPC9kaXY+CiAgICAgICAgICAgICAgIDxidXR0b24gY2xhc3M9InRlcm1zLWFjY2VwdC1idG4iIGlkPSJ0ZXJtc0FjY2VwdEJ0biIgb25jbGljaz0iYWNjZXB0VGVybXMoKSIgZGlzYWJsZWQ+CiAgICAgICAgICAgICAgIEkgQUdSRUUg4oCUIFVOTE9DSyBWT0lDRUJPVAogICAgICAgICAgICAgICA8L2J1dHRvbj4KICAgICAgICAgICAgICAgPGRpdiBzdHlsZT0iZm9udC1zaXplOjEwcHg7Y29sb3I6dmFyKC0tbXV0ZWQpO21hcmdpbi10b3A6MTBweDt0ZXh0LWFsaWduOmNlbnRlcjsiPgogICAgICAgICAgICAgICAgICBBY2NlcHRhbmNlIHJlY29yZGVkIHdpdGggdGltZXN0YW1wIMK3IFN0b3JlZCBsb2NhbGx5IGluIHlvdXIgYnJvd3NlcgogICAgICAgICAgICAgICA8L2Rpdj4KICAgICAgICAgICAgPC9kaXY+CiAgICAgICAgIDwvZGl2PgogICAgICA8L2Rpdj4KICAgICAgPCEtLSDilZDilZAgRU5EIFRFUk1TIE1PREFMIOKVkOKVkCAtLT4KICAgICAgPCEtLSBGT09URVIgLS0+CiAgICAgIDxmb290ZXIgc3R5bGU9ImJhY2tncm91bmQ6bGluZWFyLWdyYWRpZW50KDEzNWRlZywjMTExODI3LCMxZjI5MzcpO2JvcmRlci10b3A6MnB4IHNvbGlkICMzNzQxNTE7cGFkZGluZzo1MnB4IDI4cHggMjRweDttYXJnaW4tdG9wOjYwcHg7Ij4KICAgICAgICAgPGRpdiBzdHlsZT0ibWF4LXdpZHRoOjEyMDBweDttYXJnaW46MCBhdXRvOyI+CiAgICAgICAgICAgIDxkaXYgc3R5bGU9ImRpc3BsYXk6Z3JpZDtncmlkLXRlbXBsYXRlLWNvbHVtbnM6MmZyIDFmciAxZnIgMWZyO2dhcDozMnB4O21hcmdpbi1ib3R0b206MzZweDsiPgogICAgICAgICAgICAgICA8ZGl2PgogICAgICAgICAgICAgICAgICA8YSBocmVmPSJodHRwczovL2NvbnRlbnRzY2FsZS5zaXRlIiBzdHlsZT0iZm9udC1mYW1pbHk6J0JlYmFzIE5ldWUnLHNhbnMtc2VyaWY7Zm9udC1zaXplOjIwcHg7bGV0dGVyLXNwYWNpbmc6LjA2ZW07YmFja2dyb3VuZDpsaW5lYXItZ3JhZGllbnQoOTBkZWcsI2E3OGJmYSwjNjBhNWZhKTstd2Via2l0LWJhY2tncm91bmQtY2xpcDp0ZXh0Oy13ZWJraXQtdGV4dC1maWxsLWNvbG9yOnRyYW5zcGFyZW50O2JhY2tncm91bmQtY2xpcDp0ZXh0O3RleHQtZGVjb3JhdGlvbjpub25lO2Rpc3BsYXk6aW5saW5lLWJsb2NrO21hcmdpbi1ib3R0b206MTBweDsiPkNvbnRlbnRTY2FsZTwvYT4KICAgICAgICAgICAgICAgICAgPHAgc3R5bGU9ImZvbnQtc2l6ZToxMi41cHg7Y29sb3I6IzZiNzI4MDtsaW5lLWhlaWdodDoxLjc7bWF4LXdpZHRoOjI2MHB4OyI+QUktcG93ZXJlZCBjb250ZW50IGludGVsbGlnZW5jZSBwbGF0Zm9ybS4gR1JBQUYgRnJhbWV3b3JrIMK3IExlYWQgQ3Jhd2xlciDCtyBPdHRvIFZvaWNlIEFJLiBCdWlsdCBpbiBBbXN0ZXJkYW0uPC9wPgogICAgICAgICAgICAgICA8L2Rpdj4KICAgICAgICAgICAgICAgPGRpdj4KICAgICAgICAgICAgICAgICAgPGg0IHN0eWxlPSJmb250LWZhbWlseTonSUJNIFBsZXggTW9ubycsbW9ub3NwYWNlO2ZvbnQtc2l6ZTo5cHg7bGV0dGVyLXNwYWNpbmc6LjE1ZW07dGV4dC10cmFuc2Zvcm06dXBwZXJjYXNlO2NvbG9yOiNkMWQ1ZGI7bWFyZ2luLWJvdHRvbToxNHB4OyI+VG9vbHM8L2g0PgogICAgICAgICAgICAgICAgICA8YSBocmVmPSJodHRwczovL2FwcC5jb250ZW50c2NhbGUuc2l0ZSIgc3R5bGU9ImRpc3BsYXk6YmxvY2s7Zm9udC1mYW1pbHk6J0lCTSBQbGV4IE1vbm8nLG1vbm9zcGFjZTtmb250LXNpemU6MTFweDtjb2xvcjojZjk3MzE2O3RleHQtZGVjb3JhdGlvbjpub25lO21hcmdpbi1ib3R0b206MTBweDt0cmFuc2l0aW9uOmNvbG9yIC4xNXM7IiBvbm1vdXNlb3Zlcj0idGhpcy5zdHlsZS5jb2xvcj0nI2QxZDVkYiciIG9ubW91c2VvdXQ9InRoaXMuc3R5bGUuY29sb3I9JyNmOTczMTYnIj5Db250ZW50IFNjYW5uZXI8L2E+CiAgICAgICAgICAgICAgICAgIDxhIGhyZWY9Imh0dHBzOi8vYXBwLmNvbnRlbnRzY2FsZS5zaXRlL2xlYWQtY3Jhd2xlciIgc3R5bGU9ImRpc3BsYXk6YmxvY2s7Zm9udC1mYW1pbHk6J0lCTSBQbGV4IE1vbm8nLG1vbm9zcGFjZTtmb250LXNpemU6MTFweDtjb2xvcjojYTc4YmZhO3RleHQtZGVjb3JhdGlvbjpub25lO21hcmdpbi1ib3R0b206MTBweDt0cmFuc2l0aW9uOmNvbG9yIC4xNXM7IiBvbm1vdXNlb3Zlcj0idGhpcy5zdHlsZS5jb2xvcj0nI2QxZDVkYiciIG9ubW91c2VvdXQ9InRoaXMuc3R5bGUuY29sb3I9JyNhNzhiZmEnIj5MZWFkIENyYXdsZXIgUHJvPC9hPgogICAgICAgICAgICAgICAgICA8YSBocmVmPSJodHRwczovL2FwcC5jb250ZW50c2NhbGUuc2l0ZS8jbGVhZGVyYm9hcmQiIHN0eWxlPSJkaXNwbGF5OmJsb2NrO2ZvbnQtZmFtaWx5OidJQk0gUGxleCBNb25vJyxtb25vc3BhY2U7Zm9udC1zaXplOjExcHg7Zm9udC13ZWlnaHQ6NzAwO2NvbG9yOiNmOWZhZmI7dGV4dC1kZWNvcmF0aW9uOm5vbmU7bWFyZ2luLWJvdHRvbToxMHB4O3RyYW5zaXRpb246Y29sb3IgLjE1czsiIG9ubW91c2VvdmVyPSJ0aGlzLnN0eWxlLmNvbG9yPScjZDFkNWRiJyIgb25tb3VzZW91dD0idGhpcy5zdHlsZS5jb2xvcj0nI2Y5ZmFmYiciPkxlYWRlcmJvYXJkPC9hPgogICAgICAgICAgICAgICAgICA8YSBocmVmPSJodHRwczovL3dhLm1lLzMxNjI4MDczOTk2P3RleHQ9SGklMjBPdHRtYXIhJTIwSSUyMHdhbnQlMjBhY2Nlc3MlMjB0byUyMHRoZSUyMExlYWQlMjBCaXolMjBDcmF3bGVyJTIwZm9yJTIwbXklMjBidXNpbmVzcy4iIHRhcmdldD0iX2JsYW5rIiBzdHlsZT0iZGlzcGxheTpibG9jaztmb250LWZhbWlseTonSUJNIFBsZXggTW9ubycsbW9ub3NwYWNlO2ZvbnQtc2l6ZToxMXB4O2NvbG9yOiM2MGE1ZmE7dGV4dC1kZWNvcmF0aW9uOm5vbmU7bWFyZ2luLWJvdHRvbToxMHB4O3RyYW5zaXRpb246Y29sb3IgLjE1czsiIG9ubW91c2VvdmVyPSJ0aGlzLnN0eWxlLmNvbG9yPScjZDFkNWRiJyIgb25tb3VzZW91dD0idGhpcy5zdHlsZS5jb2xvcj0nIzYwYTVmYSciPkxlYWQgQml6IENyYXdsZXI8L2E+CiAgICAgICAgICAgICAgICAgIDxhIGhyZWY9Imh0dHBzOi8vd2EubWUvMzE2MjgwNzM5OTY/dGV4dD1IaSUyME90dG1hciElMjBJJTIwd2FudCUyMGFjY2VzcyUyMHRvJTIwdGhlJTIwR29vZ2xlJTIwR3VhcmFudGVlZCUyMEFJJTIwUmVjZXB0aW9uaXN0JTIwZm9yJTIwbXklMjBidXNpbmVzcy4iIHRhcmdldD0iX2JsYW5rIiBzdHlsZT0iZGlzcGxheTpibG9jaztmb250LWZhbWlseTonSUJNIFBsZXggTW9ubycsbW9ub3NwYWNlO2ZvbnQtc2l6ZToxMXB4O2NvbG9yOiNmNTllMGI7dGV4dC1kZWNvcmF0aW9uOm5vbmU7bWFyZ2luLWJvdHRvbToxMHB4O3RyYW5zaXRpb246Y29sb3IgLjE1czsiIG9ubW91c2VvdmVyPSJ0aGlzLnN0eWxlLmNvbG9yPScjZDFkNWRiJyIgb25tb3VzZW91dD0idGhpcy5zdHlsZS5jb2xvcj0nI2Y1OWUwYiciPkdvb2dsZSBHdWFyYW50ZWVkIEFJPC9hPgogICAgICAgICAgICAgICA8L2Rpdj4KICAgICAgICAgICAgICAgPGRpdj4KICAgICAgICAgICAgICAgICAgPGg0IHN0eWxlPSJmb250LWZhbWlseTonSUJNIFBsZXggTW9ubycsbW9ub3NwYWNlO2ZvbnQtc2l6ZTo5cHg7bGV0dGVyLXNwYWNpbmc6LjE1ZW07dGV4dC10cmFuc2Zvcm06dXBwZXJjYXNlO2NvbG9yOiNkMWQ1ZGI7bWFyZ2luLWJvdHRvbToxNHB4OyI+Q29tcGFueTwvaDQ+CiAgICAgICAgICAgICAgICAgIDxhIGhyZWY9Imh0dHBzOi8vY29udGVudHNjYWxlLnNpdGUvYWJvdXQiIHN0eWxlPSJkaXNwbGF5OmJsb2NrO2ZvbnQtc2l6ZToxM3B4O2NvbG9yOiM2YjcyODA7dGV4dC1kZWNvcmF0aW9uOm5vbmU7bWFyZ2luLWJvdHRvbTo4cHg7IiBvbm1vdXNlb3Zlcj0idGhpcy5zdHlsZS5jb2xvcj0nI2QxZDVkYiciIG9ubW91c2VvdXQ9InRoaXMuc3R5bGUuY29sb3I9JyM2YjcyODAnIj5BYm91dDwvYT4KICAgICAgICAgICAgICAgICAgPGEgaHJlZj0iaHR0cHM6Ly9jb250ZW50c2NhbGUuc2l0ZS9zZXJ2aWNlcyIgc3R5bGU9ImRpc3BsYXk6YmxvY2s7Zm9udC1zaXplOjEzcHg7Y29sb3I6IzZiNzI4MDt0ZXh0LWRlY29yYXRpb246bm9uZTttYXJnaW4tYm90dG9tOjhweDsiIG9ubW91c2VvdmVyPSJ0aGlzLnN0eWxlLmNvbG9yPScjZDFkNWRiJyIgb25tb3VzZW91dD0idGhpcy5zdHlsZS5jb2xvcj0nIzZiNzI4MCciPlNlcnZpY2VzPC9hPgogICAgICAgICAgICAgICAgICA8YSBocmVmPSJodHRwczovL2NvbnRlbnRzY2FsZS5zaXRlL2NvbnRhY3QiIHN0eWxlPSJkaXNwbGF5OmJsb2NrO2ZvbnQtc2l6ZToxM3B4O2NvbG9yOiM2YjcyODA7dGV4dC1kZWNvcmF0aW9uOm5vbmU7bWFyZ2luLWJvdHRvbTo4cHg7IiBvbm1vdXNlb3Zlcj0idGhpcy5zdHlsZS5jb2xvcj0nI2QxZDVkYiciIG9ubW91c2VvdXQ9InRoaXMuc3R5bGUuY29sb3I9JyM2YjcyODAnIj5Db250YWN0PC9hPgogICAgICAgICAgICAgICAgICA8YSBocmVmPSJodHRwczovL2NvbnRlbnRzY2FsZS5zaXRlL3Jlc291cmNlcyIgc3R5bGU9ImRpc3BsYXk6YmxvY2s7Zm9udC1zaXplOjEzcHg7Y29sb3I6IzZiNzI4MDt0ZXh0LWRlY29yYXRpb246bm9uZTttYXJnaW4tYm90dG9tOjhweDsiIG9ubW91c2VvdmVyPSJ0aGlzLnN0eWxlLmNvbG9yPScjZDFkNWRiJyIgb25tb3VzZW91dD0idGhpcy5zdHlsZS5jb2xvcj0nIzZiNzI4MCciPlJlc291cmNlczwvYT4KICAgICAgICAgICAgICAgPC9kaXY+CiAgICAgICAgICAgICAgIDxkaXY+CiAgICAgICAgICAgICAgICAgIDxoNCBzdHlsZT0iZm9udC1mYW1pbHk6J0lCTSBQbGV4IE1vbm8nLG1vbm9zcGFjZTtmb250LXNpemU6OXB4O2xldHRlci1zcGFjaW5nOi4xNWVtO3RleHQtdHJhbnNmb3JtOnVwcGVyY2FzZTtjb2xvcjojZDFkNWRiO21hcmdpbi1ib3R0b206MTRweDsiPkxlZ2FsPC9oND4KICAgICAgICAgICAgICAgICAgPGEgaHJlZj0iaHR0cHM6Ly9jb250ZW50c2NhbGUuc2l0ZS9wcml2YWN5LXBvbGljeSIgc3R5bGU9ImRpc3BsYXk6YmxvY2s7Zm9udC1zaXplOjEzcHg7Y29sb3I6IzZiNzI4MDt0ZXh0LWRlY29yYXRpb246bm9uZTttYXJnaW4tYm90dG9tOjhweDsiIG9ubW91c2VvdmVyPSJ0aGlzLnN0eWxlLmNvbG9yPScjZDFkNWRiJyIgb25tb3VzZW91dD0idGhpcy5zdHlsZS5jb2xvcj0nIzZiNzI4MCciPlByaXZhY3kgUG9saWN5PC9hPgogICAgICAgICAgICAgICAgICA8YSBocmVmPSJodHRwczovL2NvbnRlbnRzY2FsZS5zaXRlL3Rlcm1zIiBzdHlsZT0iZGlzcGxheTpibG9jaztmb250LXNpemU6MTNweDtjb2xvcjojNmI3MjgwO3RleHQtZGVjb3JhdGlvbjpub25lO21hcmdpbi1ib3R0b206OHB4OyIgb25tb3VzZW92ZXI9InRoaXMuc3R5bGUuY29sb3I9JyNkMWQ1ZGInIiBvbm1vdXNlb3V0PSJ0aGlzLnN0eWxlLmNvbG9yPScjNmI3MjgwJyI+VGVybXMgb2YgU2VydmljZTwvYT4KICAgICAgICAgICAgICAgICAgPGEgaHJlZj0iaHR0cHM6Ly93YS5tZS8zMTYyODA3Mzk5NiIgdGFyZ2V0PSJfYmxhbmsiIHN0eWxlPSJkaXNwbGF5OmJsb2NrO2ZvbnQtZmFtaWx5OidJQk0gUGxleCBNb25vJyxtb25vc3BhY2U7Zm9udC1zaXplOjExcHg7Y29sb3I6IzE2YTM0YTtmb250LXdlaWdodDo3MDA7dGV4dC1kZWNvcmF0aW9uOm5vbmU7bWFyZ2luLWJvdHRvbToxMHB4OyIgb25tb3VzZW92ZXI9InRoaXMuc3R5bGUuY29sb3I9JyM0YWRlODAnIiBvbm1vdXNlb3V0PSJ0aGlzLnN0eWxlLmNvbG9yPScjMTZhMzRhJyI+8J+SrCBXaGF0c0FwcDwvYT4KICAgICAgICAgICAgICAgPC9kaXY+CiAgICAgICAgICAgIDwvZGl2PgogICAgICAgICAgICA8ZGl2IHN0eWxlPSJwYWRkaW5nLXRvcDoyMHB4O2JvcmRlci10b3A6MXB4IHNvbGlkICMzNzQxNTE7ZGlzcGxheTpmbGV4O2FsaWduLWl0ZW1zOmNlbnRlcjtqdXN0aWZ5LWNvbnRlbnQ6c3BhY2UtYmV0d2VlbjtmbGV4LXdyYXA6d3JhcDtnYXA6MTJweDsiPgogICAgICAgICAgICAgICA8ZGl2IHN0eWxlPSJmb250LWZhbWlseTonSUJNIFBsZXggTW9ubycsbW9ub3NwYWNlO2ZvbnQtc2l6ZToxMHB4O2NvbG9yOiM2YjcyODA7bGV0dGVyLXNwYWNpbmc6LjA1ZW07Ij7CqSAyMDI2IENvbnRlbnRTY2FsZS5zaXRlIMK3IE90dG1hciBKLkcuIEZyYW5jaXNjYSDCtyBBbXN0ZXJkYW0sIE5ldGhlcmxhbmRzPC9kaXY+CiAgICAgICAgICAgICAgIDxkaXYgc3R5bGU9ImRpc3BsYXk6ZmxleDtnYXA6OHB4O2ZsZXgtd3JhcDp3cmFwOyI+CiAgICAgICAgICAgICAgICAgIDxzcGFuIHN0eWxlPSJiYWNrZ3JvdW5kOiMxZjI5Mzc7Ym9yZGVyOjFweCBzb2xpZCAjMzc0MTUxO2JvcmRlci1yYWRpdXM6NnB4O3BhZGRpbmc6M3B4IDEwcHg7Zm9udC1zaXplOjEwcHg7Zm9udC1mYW1pbHk6J0lCTSBQbGV4IE1vbm8nLG1vbm9zcGFjZTtjb2xvcjojNmI3MjgwOyI+8J+kliBQb3dlcmVkIGJ5IEdlbWluaSBGbGFzaCAoRnJlZSk8L3NwYW4+CiAgICAgICAgICAgICAgICAgIDxzcGFuIHN0eWxlPSJiYWNrZ3JvdW5kOiMxZjI5Mzc7Ym9yZGVyOjFweCBzb2xpZCAjMzc0MTUxO2JvcmRlci1yYWRpdXM6NnB4O3BhZGRpbmc6M3B4IDEwcHg7Zm9udC1zaXplOjEwcHg7Zm9udC1mYW1pbHk6J0lCTSBQbGV4IE1vbm8nLG1vbm9zcGFjZTtjb2xvcjojNmI3MjgwOyI+4pqWIEVVIEFJIEFjdCBDb21wbGlhbnQ8L3NwYW4+CiAgICAgICAgICAgICAgICAgIDxzcGFuIHN0eWxlPSJiYWNrZ3JvdW5kOiMxZjI5Mzc7Ym9yZGVyOjFweCBzb2xpZCAjMzc0MTUxO2JvcmRlci1yYWRpdXM6NnB4O3BhZGRpbmc6M3B4IDEwcHg7Zm9udC1zaXplOjEwcHg7Zm9udC1mYW1pbHk6J0lCTSBQbGV4IE1vbm8nLG1vbm9zcGFjZTtjb2xvcjojNmI3MjgwOyI+8J+Hs/Cfh7EgTWFkZSBpbiBBbXN0ZXJkYW08L3NwYW4+CiAgICAgICAgICAgICAgIDwvZGl2PgogICAgICAgICAgICA8L2Rpdj4KICAgICAgICAgPC9kaXY+CiAgICAgIDwvZm9vdGVyPgogICAKPCEtLSDilIDilIAgQVVUTy1DQUxMIFFVRVVFIEJBUiDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIAgLS0+CjxkaXYgY2xhc3M9InF1ZXVlLWJhciIgaWQ9InF1ZXVlQmFyIj4KICA8YnV0dG9uIGNsYXNzPSJidG4tcXVldWUtc3RhcnQiIGlkPSJxdWV1ZVN0YXJ0QnRuIiBvbmNsaWNrPSJzdGFydFF1ZXVlKCkiPuKWtiBTdGFydCBRdWV1ZTwvYnV0dG9uPgogIDxidXR0b24gY2xhc3M9ImJ0bi1xdWV1ZS1zdG9wIiBpZD0icXVldWVTdG9wQnRuIiBvbmNsaWNrPSJzdG9wUXVldWUoKSIgc3R5bGU9ImRpc3BsYXk6bm9uZTsiPuKPuSBTdG9wPC9idXR0b24+CiAgPGRpdiBjbGFzcz0icXVldWUtc3RhdCI+V2FpdGluZzogPHN0cm9uZyBpZD0icVN0YXRfd2FpdGluZyI+MDwvc3Ryb25nPjwvZGl2PgogIDxkaXYgY2xhc3M9InF1ZXVlLXN0YXQiPkNhbGxlZDogPHN0cm9uZyBpZD0icVN0YXRfY2FsbGVkIj4wPC9zdHJvbmc+PC9kaXY+CiAgPGRpdiBjbGFzcz0icXVldWUtc3RhdCB3YXJuIj5CbG9ja2VkOiA8c3Ryb25nIGlkPSJxU3RhdF9ibG9ja2VkIj4wPC9zdHJvbmc+PC9kaXY+CiAgPGRpdiBjbGFzcz0icXVldWUtc3RhdHVzIiBpZD0icXVldWVTdGF0dXMiPlF1ZXVlIHJlYWR5PC9kaXY+CiAgPGJ1dHRvbiBjbGFzcz0iYnRuLXF1ZXVlLXN0b3AiIG9uY2xpY2s9ImRpc21pc3NRdWV1ZSgpIiB0aXRsZT0iQ2xvc2UgcXVldWUgYmFyIj7inJU8L2J1dHRvbj4KPC9kaXY+CjxzY3JpcHQ+CmRvY3VtZW50LmFkZEV2ZW50TGlzdGVuZXIoJ0RPTUNvbnRlbnRMb2FkZWQnLGZ1bmN0aW9uKCl7CiAgWydrZXlQYW5lbCcsJ2xpY2Vuc2VMb2NrZWQnLCdsaWNlbnNlQWN0aXZlQmFyJywndmFwaVRvZ2dsZVJvdycsJ3ZhcGlQYW5lbCcsJ2NhbGxMb2cnLCdxdWV1ZUJhciddLmZvckVhY2goZnVuY3Rpb24oaWQpewogICAgdmFyIGVsPWRvY3VtZW50LmdldEVsZW1lbnRCeUlkKGlkKTsKICAgIGlmKGVsKXtlbC5zdHlsZS5zZXRQcm9wZXJ0eSgnZGlzcGxheScsJ25vbmUnLCdpbXBvcnRhbnQnKTt9CiAgfSk7Cn0pOwo8L3NjcmlwdD4KPHNjcmlwdD4KKGZ1bmN0aW9uKCl7CiAgdmFyIENTX0xTSz0nbGNfY2FsbHNoZWV0X291dGNvbWVzJzsKICB2YXIgQ1NfU0NSSVBUUz17CiAgICBkZnk6WwogICAgICB7bGJsOidPcGVuZXInLHQ6IkhpLCBpcyB0aGlzIHt7bmFtZX19PyBUaGlzIGlzIE90dG1hciBmcm9tIENvbnRlbnRTY2FsZSBcdTIwMTQgZ290IHR3ZW50eSBzZWNvbmRzPyJ9LAogICAgICB7bGJsOidIb29rJyx0OiJJIGhhZCBhIHF1aWNrIGxvb2sgYXQge3tjb21wYW55fX0ncyBzaXRlIFx1MjAxNCB5b3UndmUgY2xlYXJseSBnb3QgdGhlIGJ1c2luZXNzLCBidXQgb25seSBhIGhhbmRmdWwgb2YgcGFnZXMuIFNvIHdoZW4gc29tZW9uZSBhc2tzIENoYXRHUFQgb3IgR29vZ2xlJ3MgQUkgZm9yIGEge3tzZXJ2aWNlfX0gaW4ge3tjaXR5fX0sIHRoZXJlJ3MgYWxtb3N0IG5vdGhpbmcgdGhlcmUgZm9yIGl0IHRvIHB1bGwgZnJvbS4gWW91J3JlIGJhc2ljYWxseSBpbnZpc2libGUgdG8gQUkgc2VhcmNoIHJpZ2h0IG5vdy4ifSwKICAgICAge2xibDonT2ZmZXIgXHUyMDE0IGRvbmUtZm9yLXlvdScsdDoiSGVyZSdzIHRoZSBnb29kIHBhcnQ6IHdlIGZpeCB0aGF0IGRvbmUtZm9yLXlvdS4gV2UgYnVpbGQgdGhlIGNvbnRlbnQgc28gR29vZ2xlIGFuZCB0aGUgQUkgYXNzaXN0YW50cyBzdGFydCBuYW1pbmcge3tjb21wYW55fX0gXHUyMDE0IHlvdSBkb24ndCBsaWZ0IGEgZmluZ2VyLiJ9LAogICAgICB7bGJsOidDbG9zZSBcdTIxOTIgYm9vayB0aGUgbGl2ZSBkZW1vJyx0OiJCZXN0IG5leHQgc3RlcCBpcyBhIHF1aWNrIDE1LW1pbnV0ZSBsaXZlIGRlbW8gXHUyMDE0IEknbGwgc2hvdyB5b3UgZXhhY3RseSB3aGVyZSB5b3Ugc3RhbmQgdG9kYXkgYW5kIHdoYXQgd2UnZCBidWlsZC4gV2hhdCBzdWl0cyB5b3UgYmV0dGVyLCBsYXRlciB0aGlzIHdlZWsgb3IgZWFybHkgbmV4dD8ifSwKICAgICAge2xibDonSWYgaGVzaXRhbnQnLHQ6Ik5vIHByZXNzdXJlIGF0IGFsbCBcdTIwMTQgSSBjYW4gc2VuZCB5b3UgYSBmcmVlIHNuYXBzaG90IGZpcnN0IHNvIHlvdSBzZWUgaXQgZm9yIHlvdXJzZWxmLiBXaGF0J3MgdGhlIGJlc3QgZW1haWw/In0sCiAgICAgIHtsYmw6J0J1Y2tldCBhbmdsZScscmVmOnRydWUsYnVja2V0OnRydWV9CiAgICBdLAogICAgdHJhaW5pbmc6WwogICAgICB7bGJsOidPcGVuZXInLHQ6IkhpLCBpcyB0aGlzIHt7bmFtZX19PyBUaGlzIGlzIE90dG1hciBmcm9tIENvbnRlbnRTY2FsZSBcdTIwMTQgZ290IHR3ZW50eSBzZWNvbmRzPyJ9LAogICAgICB7bGJsOidIb29rJyx0OiJNb3N0IHRlYW1zIGhhdmUgQUkgbGlrZSBDbGF1ZGUgbm93LCBidXQgdXNlIGEgZnJhY3Rpb24gb2YgaXQuIEkgcnVuIHNob3J0LCBoYW5kcy1vbiB0cmFpbmluZyBzbyBhIHRlYW0gbGlrZSB5b3VycyBhdCB7e2NvbXBhbnl9fSBhY3R1YWxseSBnZXRzIHByb2R1Y3RpdmUgd2l0aCBpdCBcdTIwMTQgdXN1YWxseSBhIGZldyBob3VycyBhIHdlZWsgc2F2ZWQgcGVyIHBlcnNvbi4ifSwKICAgICAge2xibDonT2ZmZXInLHQ6Ikl0J3MgZG9uZSBhcm91bmQgeW91ciByZWFsLCBkYXktdG8tZGF5IHdvcmssIHRhaWxvcmVkIHBlciByb2xlIFx1MjAxNCBub3QgZ2VuZXJpYyB0aGVvcnkuIn0sCiAgICAgIHtsYmw6J0Nsb3NlIFx1MjE5MiBib29rIHRoZSBsaXZlIGRlbW8nLHQ6IldvcnRoIGEgcXVpY2sgMTUtbWludXRlIGxpdmUgZGVtbyB0byBzaG93IHlvdSB3aGF0IGl0J2QgbG9vayBsaWtlIGZvciB5b3VyIHRlYW0/IFdoYXQgc3VpdHMgeW91IHRoaXMgd2Vlaz8ifSwKICAgICAge2xibDonSWYgaGVzaXRhbnQnLHQ6Ik5vIHdvcnJpZXMgXHUyMDE0IEkgY2FuIHNlbmQgYSBzaG9ydCBvdmVydmlldyBieSBlbWFpbCBmaXJzdC4gV2hhdCdzIHRoZSBiZXN0IGFkZHJlc3M/In0KICAgIF0KICB9OwogIHZhciBCVUNLRVRfQU5HTEU9ewogICAgZ2hvc3Q6Ilx1RDgzRFx1REM3QiBOZWFybHkgZW1wdHkgKDBcdTIwMTM1KTogXHUyMDFDYWxtb3N0IG5vdGhpbmcgaW5kZXhlZCBcdTIwMTQgd2UnZCBidWlsZCBpdCBmcm9tIHNjcmF0Y2guXHUyMDFEIiwKICAgIHNrZWxldG9uOiJcdUQ4M0RcdUREMjUgQmFyZSBib25lcyAoNVx1MjAxMzE1KTogXHUyMDFDcmVhbCBidXNpbmVzcywgc2l0ZSBzYXlzIGFsbW9zdCBub3RoaW5nIFx1MjAxNCBlYXNpZXN0IHdpbiwgd2Ugd3JpdGUgeW91ciBtaXNzaW5nIHBhZ2VzLlx1MjAxRCIsCiAgICBicm9jaHVyZToiXHVEODNEXHVERDI1IEJ1aWx0ICYgZm9yZ290ICgxNVx1MjAxMzMwKTogXHUyMDFDYmFzaWNzIGFyZSB0aGVyZSBidXQgbm8gYmxvZywgdGhpbiBjb3B5IFx1MjAxNCB3ZSBhZGQgdGhlIGNvbnRlbnQgdGhhdCByYW5rcy5cdTIwMUQiLAogICAgc3RhbGU6Ilx1RDgzRFx1REQ3MCBHb25lIHF1aWV0ICgzMFx1MjAxMzYwKTogXHUyMDFDeW91IHN0YXJ0ZWQgY29udGVudCB0aGVuIHN0b3BwZWQgXHUyMDE0IHdlIHJlc3RhcnQgeW91ciBlbmdpbmUuXHUyMDFEIiwKICAgIGFjdGl2ZToiXHUyNkExIE5lZWRzIHF1YWxpdHkgKDYwXHUyMDEzMTUwKTogXHUyMDFDeW91IHB1Ymxpc2gsIGJ1dCBpbmNvbnNpc3RlbnRseSBcdTIwMTQgd2UgYXVkaXQgYW5kIGxpZnQgdGhlIHF1YWxpdHkuXHUyMDFEIiwKICAgIGVzdGFiOiJcdUQ4M0NcdURGRTIgTGFyZ2UgbGlicmFyeSAoMTUwKyk6IFx1MjAxQ2JpZyBsaWJyYXJ5IFx1MjAxNCB3ZSBhdWRpdDsgYSBjaHVuayBpcyBwcm9iYWJseSBodXJ0aW5nIHJhbmtpbmdzLlx1MjAxRCIKICB9OwogIHZhciBjc1NjcmlwdD0nZGZ5JywgY3NGaWx0ZXI9J2FsbCcsIGNzQWN0aXZlPW51bGwsIGNzT3V0Y29tZXM9e307CiAgdHJ5e2NzT3V0Y29tZXM9SlNPTi5wYXJzZShsb2NhbFN0b3JhZ2UuZ2V0SXRlbShDU19MU0spfHwne30nKTt9Y2F0Y2goZSl7Y3NPdXRjb21lcz17fTt9CiAgZnVuY3Rpb24gY3NTYXZlKCl7dHJ5e2xvY2FsU3RvcmFnZS5zZXRJdGVtKENTX0xTSyxKU09OLnN0cmluZ2lmeShjc091dGNvbWVzKSk7fWNhdGNoKGUpe319CiAgZnVuY3Rpb24gbmljaGVMYWJlbChpZCl7IGlmKHR5cGVvZiBJTkRVU1RSSUVTIT09J3VuZGVmaW5lZCcpe3ZhciBmPUlORFVTVFJJRVMuZmluZChmdW5jdGlvbihpKXtyZXR1cm4gaS5pZD09PWlkO30pOyBpZihmKXJldHVybiBmLmxhYmVsO30gcmV0dXJuIGlkfHwnT3RoZXInOyB9CiAgZnVuY3Rpb24gZXNjKHMpe3JldHVybiAoc3x8JycpLnJlcGxhY2UoLyYvZywnJmFtcDsnKS5yZXBsYWNlKC88L2csJyZsdDsnKS5yZXBsYWNlKC8+L2csJyZndDsnKTt9CiAgZnVuY3Rpb24gZmlsbCh0LGwpewogICAgdmFyIHN2Yz0oZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ2NzU2VydmljZScpfHx7fSkudmFsdWV8fG5pY2hlTGFiZWwobC5pbmR1c3RyeV9pZCl8fCd5b3VyIHNlcnZpY2UnOwogICAgdmFyIGNpdHk9KGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCdjaXR5Jyl8fHt9KS52YWx1ZXx8J3lvdXIgY2l0eSc7CiAgICB2YXIgY2I9KGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCdjc0NhbGxiYWNrJyl8fHt9KS52YWx1ZXx8Jyc7CiAgICB2YXIgbmFtZT1sLm5hbWV8fCd0aGVyZScsIGNvbXBhbnk9bC5uYW1lfHwneW91ciBidXNpbmVzcyc7CiAgICByZXR1cm4gZXNjKHQpLnJlcGxhY2UoL3t7bmFtZX19L2csJzxzcGFuIGNsYXNzPSJjcy12YXIiPicrZXNjKG5hbWUpKyc8L3NwYW4+JykKICAgICAgLnJlcGxhY2UoL3t7Y29tcGFueX19L2csJzxzcGFuIGNsYXNzPSJjcy12YXIiPicrZXNjKGNvbXBhbnkpKyc8L3NwYW4+JykKICAgICAgLnJlcGxhY2UoL3t7c2VydmljZX19L2csJzxzcGFuIGNsYXNzPSJjcy12YXIiPicrZXNjKHN2YykrJzwvc3Bhbj4nKQogICAgICAucmVwbGFjZSgve3tjaXR5fX0vZywnPHNwYW4gY2xhc3M9ImNzLXZhciI+Jytlc2MoY2l0eSkrJzwvc3Bhbj4nKQogICAgICAucmVwbGFjZSgve3tjYWxsYmFja319L2csZXNjKGNiKSk7CiAgfQogIGZ1bmN0aW9uIHNjcmlwdEhUTUwobCl7CiAgICB2YXIgc2Vncz1DU19TQ1JJUFRTW2NzU2NyaXB0XTsKICAgIHZhciBiaz0odHlwZW9mIGdldEJ1Y2tldD09PSdmdW5jdGlvbicpP2dldEJ1Y2tldChsLmVzdGltYXRlZF9wYWdlcyk6J3NrZWxldG9uJzsKICAgIHJldHVybiBzZWdzLm1hcChmdW5jdGlvbihzKXsKICAgICAgaWYocy5yZWYmJnMuYnVja2V0KXsgcmV0dXJuICc8ZGl2IGNsYXNzPSJjcy1zZWcgcmVmIj48ZGl2IGNsYXNzPSJsYmwiPkJ1Y2tldCBhbmdsZSBcdTIwMTQgdGhpcyBsZWFkPC9kaXY+PHVsPjxsaT4nKyhCVUNLRVRfQU5HTEVbYmtdfHwnJykrJzwvbGk+PC91bD48L2Rpdj4nOyB9CiAgICAgIHJldHVybiAnPGRpdiBjbGFzcz0iY3Mtc2VnIj48ZGl2IGNsYXNzPSJsYmwiPicrcy5sYmwrJzwvZGl2PjxwPicrZmlsbChzLnQsbCkrJzwvcD48L2Rpdj4nOwogICAgfSkuam9pbignJyk7CiAgfQogIGZ1bmN0aW9uIG9jTGFiZWwodil7cmV0dXJuICh7aW50ZXJlc3RlZDonSW50ZXJlc3RlZCcsY2FsbGJhY2s6J0NhbGxiYWNrJyx2b2ljZW1haWw6J1ZvaWNlbWFpbCcsbm9hbnN3ZXI6J05vIGFuc3dlcicsbm86J05vdCBpbnRlcmVzdGVkJyxkbmM6J0RPIE5PVCBDQUxMJ30pW3ZdfHwnJzt9CiAgZnVuY3Rpb24gb2NDb2xvcih2KXtyZXR1cm4gKHtpbnRlcmVzdGVkOidyZ2JhKDc0LDIyMiwxMjgsLjE1KTtjb2xvcjp2YXIoLS1ncmVlbiknLGNhbGxiYWNrOidyZ2JhKDI1MSwxOTEsMzYsLjE1KTtjb2xvcjp2YXIoLS1nb2xkKScsdm9pY2VtYWlsOidyZ2JhKDE2NywxMzksMjUwLC4xNSk7Y29sb3I6dmFyKC0tcHVycGxlKScsbm9hbnN3ZXI6J3JnYmEoMTQ4LDE2MywxODQsLjE1KTtjb2xvcjp2YXIoLS1tdXRlZCknLG5vOidyZ2JhKDI0NCw2Myw2MywuMTUpO2NvbG9yOnZhcigtLXJlZCknLGRuYzonIzdGMUQxRDtjb2xvcjojZmZmJ30pW3ZdfHwncmdiYSgyNTUsMjU1LDI1NSwuMDUpJzt9CiAgZnVuY3Rpb24gbGlkKGwpe3JldHVybiAodHlwZW9mIG1ha2VJZD09PSdmdW5jdGlvbicpP21ha2VJZChsKTplbmNvZGVVUklDb21wb25lbnQoKGwubmFtZXx8J3gnKSsobC53ZWJzaXRlfHwneScpKS5yZXBsYWNlKC9bXmEtejAtOV0vZ2ksJ18nKTt9CgogIHdpbmRvdy5jc1NldFNjcmlwdD1mdW5jdGlvbih2LGJ0bil7Y3NTY3JpcHQ9djt2YXIgdD1kb2N1bWVudC5nZXRFbGVtZW50QnlJZCgnY3NUb2dnbGUnKTtpZih0KXQucXVlcnlTZWxlY3RvckFsbCgnYnV0dG9uJykuZm9yRWFjaChmdW5jdGlvbihiKXtiLmNsYXNzTGlzdC50b2dnbGUoJ29uJyxiPT09YnRuKTt9KTtjc1JlbmRlcigpO307CiAgd2luZG93LmNzU2V0RmlsdGVyPWZ1bmN0aW9uKHYsYnRuKXtjc0ZpbHRlcj12O2RvY3VtZW50LnF1ZXJ5U2VsZWN0b3JBbGwoJy5jcy1maWx0ZXJzIC5jcy1mYnRuW2RhdGEtZl0nKS5mb3JFYWNoKGZ1bmN0aW9uKGIpe2IuY2xhc3NMaXN0LnRvZ2dsZSgnb24nLGI9PT1idG4pO30pO2NzUmVuZGVyKCk7fTsKICB3aW5kb3cuY3NTZWxlY3Q9ZnVuY3Rpb24oaWQpe2NzQWN0aXZlPShjc0FjdGl2ZT09PWlkP251bGw6aWQpO2NzUmVuZGVyKCk7fTsKICB3aW5kb3cuY3NPdXRjb21lPWZ1bmN0aW9uKGlkLHYsZXYpe2lmKGV2JiZldi5zdG9wUHJvcGFnYXRpb24pZXYuc3RvcFByb3BhZ2F0aW9uKCk7Y3NPdXRjb21lc1tpZF09djtjc1NhdmUoKTtjc1JlbmRlcigpO2lmKHR5cGVvZiB0b2FzdD09PSdmdW5jdGlvbicpdG9hc3QoJ1NhdmVkIFx1MjAxNCAnK29jTGFiZWwodikpO307CgogIHdpbmRvdy5jc1JlbmRlcj1mdW5jdGlvbigpewogICAgdmFyIHBhbmVsPWRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCdjYWxsU2hlZXQnKTsgaWYoIXBhbmVsKXJldHVybjsKICAgIGlmKHR5cGVvZiBhbGxMZWFkcz09PSd1bmRlZmluZWQnfHwhYWxsTGVhZHMubGVuZ3RoKXtwYW5lbC5zdHlsZS5kaXNwbGF5PSdub25lJztyZXR1cm47fQogICAgcGFuZWwuc3R5bGUuZGlzcGxheT0nYmxvY2snOwogICAgdmFyIGxlYWRzPWFsbExlYWRzLnNsaWNlKCk7CiAgICBpZihjc0ZpbHRlcj09PSdwaG9uZScpbGVhZHM9bGVhZHMuZmlsdGVyKGZ1bmN0aW9uKGwpe3JldHVybiBsLnBob25lO30pOwogICAgaWYoY3NGaWx0ZXI9PT0nbm9waG9uZScpbGVhZHM9bGVhZHMuZmlsdGVyKGZ1bmN0aW9uKGwpe3JldHVybiAhbC5waG9uZTt9KTsKICAgIHZhciBjRWw9ZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ2NzQ291bnQnKTsKICAgIGlmKGNFbCljRWwudGV4dENvbnRlbnQ9bGVhZHMubGVuZ3RoKycgbGVhZCcrKGxlYWRzLmxlbmd0aCE9PTE/J3MnOicnKSsoY3NGaWx0ZXI9PT0nYWxsJz8nJzonICgnK2NzRmlsdGVyKycpJyk7CiAgICB2YXIgZ3JvdXBzPXt9OwogICAgbGVhZHMuZm9yRWFjaChmdW5jdGlvbihsKXt2YXIgaz1sLmluZHVzdHJ5X2lkfHwnb3RoZXInOyhncm91cHNba109Z3JvdXBzW2tdfHxbXSkucHVzaChsKTt9KTsKICAgIHZhciBvcmRlcj1PYmplY3Qua2V5cyhncm91cHMpLnNvcnQoZnVuY3Rpb24oYSxiKXtyZXR1cm4gbmljaGVMYWJlbChhKS5sb2NhbGVDb21wYXJlKG5pY2hlTGFiZWwoYikpO30pOwogICAgdmFyIGh0bWw9Jyc7CiAgICBvcmRlci5mb3JFYWNoKGZ1bmN0aW9uKGspewogICAgICB2YXIgaXRlbXM9Z3JvdXBzW2tdOwogICAgICBpdGVtcy5zb3J0KGZ1bmN0aW9uKGEsYil7cmV0dXJuIChiLnBob25lPzE6MCktKGEucGhvbmU/MTowKTt9KTsKICAgICAgaHRtbCs9JzxkaXYgY2xhc3M9ImNzLWdyb3VwIj48ZGl2IGNsYXNzPSJjcy1ncm91cGhlYWQiPicrZXNjKG5pY2hlTGFiZWwoaykpKycgJm1pZGRvdDsgJytpdGVtcy5sZW5ndGgrJzwvZGl2Pic7CiAgICAgIGl0ZW1zLmZvckVhY2goZnVuY3Rpb24obCl7CiAgICAgICAgdmFyIGlkPWxpZChsKSwgb2M9Y3NPdXRjb21lc1tpZF0sIGlzRG5jPShvYz09PSdkbmMnKSwgYWN0aXZlPShjc0FjdGl2ZT09PWlkKTsKICAgICAgICB2YXIgYms9KHR5cGVvZiBnZXRCdWNrZXQ9PT0nZnVuY3Rpb24nKT9nZXRCdWNrZXQobC5lc3RpbWF0ZWRfcGFnZXMpOicnOwogICAgICAgIGh0bWwrPSc8ZGl2IGNsYXNzPSJjcy1sZWFkJysoYWN0aXZlPycgYWN0aXZlJzonJykrKGlzRG5jPycgZG5jJzonJykrJyIgb25jbGljaz0iY3NTZWxlY3QoXCcnK2lkKydcJykiPic7CiAgICAgICAgaHRtbCs9JzxkaXYgY2xhc3M9ImNzLWxlYWQtcm93Ij4nOwogICAgICAgIGh0bWwrPSc8c3BhbiBjbGFzcz0iY3Mtbm0iPicrZXNjKGwubmFtZXx8J1Vua25vd24nKSsoaXNEbmM/JyA8c3BhbiBjbGFzcz0iY3MtZG5jcGlsbCI+RE5DPC9zcGFuPic6JycpKyc8L3NwYW4+JzsKICAgICAgICBpZihsLnBob25lKXtodG1sKz0nPGEgY2xhc3M9ImNzLXBoIiBocmVmPSJ0ZWw6Jytlc2MobC5waG9uZSkrJyIgb25jbGljaz0iZXZlbnQuc3RvcFByb3BhZ2F0aW9uKCkiPlx1RDgzRFx1RENERSAnK2VzYyhsLnBob25lKSsnPC9hPic7fQogICAgICAgIGVsc2V7aHRtbCs9JzxzcGFuIGNsYXNzPSJjcy1ub3Bob25lIj5ubyBudW1iZXI8L3NwYW4+Jzt9CiAgICAgICAgaWYoYmspaHRtbCs9JzxzcGFuIGNsYXNzPSJjcy1idGFnIj4nK2JrKyc8L3NwYW4+JzsKICAgICAgICBpZihvYylodG1sKz0nPHNwYW4gY2xhc3M9ImNzLW9jIiBzdHlsZT0iYmFja2dyb3VuZDonK29jQ29sb3Iob2MpKyciPicrb2NMYWJlbChvYykrJzwvc3Bhbj4nOwogICAgICAgIGh0bWwrPSc8L2Rpdj4nOwogICAgICAgIGh0bWwrPSc8ZGl2IGNsYXNzPSJjcy1zY3JpcHQiPicrc2NyaXB0SFRNTChsKTsKICAgICAgICBodG1sKz0nPGRpdiBjbGFzcz0iY3Mtb2J0bnMiPicKICAgICAgICAgICsnPGJ1dHRvbiBjbGFzcz0iY3Mtb2IiIG9uY2xpY2s9ImNzT3V0Y29tZShcJycraWQrJ1wnLFwnaW50ZXJlc3RlZFwnLGV2ZW50KSI+XHUyNzA1IEludGVyZXN0ZWQ8L2J1dHRvbj4nCiAgICAgICAgICArJzxidXR0b24gY2xhc3M9ImNzLW9iIiBvbmNsaWNrPSJjc091dGNvbWUoXCcnK2lkKydcJyxcJ2NhbGxiYWNrXCcsZXZlbnQpIj5cdTIzRjAgQ2FsbGJhY2s8L2J1dHRvbj4nCiAgICAgICAgICArJzxidXR0b24gY2xhc3M9ImNzLW9iIiBvbmNsaWNrPSJjc091dGNvbWUoXCcnK2lkKydcJyxcJ3ZvaWNlbWFpbFwnLGV2ZW50KSI+XHVEODNEXHVEQ0VFIFZvaWNlbWFpbDwvYnV0dG9uPicKICAgICAgICAgICsnPGJ1dHRvbiBjbGFzcz0iY3Mtb2IiIG9uY2xpY2s9ImNzT3V0Y29tZShcJycraWQrJ1wnLFwnbm9hbnN3ZXJcJyxldmVudCkiPlx1MjAyNiBObyBhbnN3ZXI8L2J1dHRvbj4nCiAgICAgICAgICArJzxidXR0b24gY2xhc3M9ImNzLW9iIiBvbmNsaWNrPSJjc091dGNvbWUoXCcnK2lkKydcJyxcJ25vXCcsZXZlbnQpIj5cdTI3MTUgTm90IGludGVyZXN0ZWQ8L2J1dHRvbj4nCiAgICAgICAgICArJzxidXR0b24gY2xhc3M9ImNzLW9iIGRuYyIgb25jbGljaz0iY3NPdXRjb21lKFwnJytpZCsnXCcsXCdkbmNcJyxldmVudCkiPlx1RDgzRFx1REVBQiBEbyBOb3QgQ2FsbDwvYnV0dG9uPicKICAgICAgICAgICsnPC9kaXY+JzsKICAgICAgICBodG1sKz0nPC9kaXY+PC9kaXY+JzsKICAgICAgfSk7CiAgICAgIGh0bWwrPSc8L2Rpdj4nOwogICAgfSk7CiAgICB2YXIgYm9keT1kb2N1bWVudC5nZXRFbGVtZW50QnlJZCgnY3NCb2R5Jyk7IGlmKGJvZHkpYm9keS5pbm5lckhUTUw9aHRtbDsKICB9OwoKICB3aW5kb3cuY3NFeHBvcnRDU1Y9ZnVuY3Rpb24oKXsKICAgIGlmKHR5cGVvZiBhbGxMZWFkcz09PSd1bmRlZmluZWQnfHwhYWxsTGVhZHMubGVuZ3RoKXJldHVybjsKICAgIHZhciByb3dzPVtbJ05hbWUnLCdQaG9uZScsJ05pY2hlJywnV2Vic2l0ZScsJ0VzdCBQYWdlcycsJ0J1Y2tldCcsJ091dGNvbWUnLCdEbyBOb3QgQ2FsbCddXTsKICAgIGFsbExlYWRzLmZvckVhY2goZnVuY3Rpb24obCl7CiAgICAgIHZhciBpZD1saWQobCksIG9jPWNzT3V0Y29tZXNbaWRdfHwnJzsKICAgICAgdmFyIGJrPSh0eXBlb2YgZ2V0QnVja2V0PT09J2Z1bmN0aW9uJyk/Z2V0QnVja2V0KGwuZXN0aW1hdGVkX3BhZ2VzKTonJzsKICAgICAgcm93cy5wdXNoKFtsLm5hbWV8fCcnLGwucGhvbmV8fCcnLG5pY2hlTGFiZWwobC5pbmR1c3RyeV9pZCksbC53ZWJzaXRlfHwnJyxsLmVzdGltYXRlZF9wYWdlc3x8JycsYmssb2NMYWJlbChvYyksKG9jPT09J2RuYyc/J1lFUyc6JycpXSk7CiAgICB9KTsKICAgIHZhciBjc3Y9cm93cy5tYXAoZnVuY3Rpb24ocil7cmV0dXJuIHIubWFwKGZ1bmN0aW9uKGMpe3JldHVybiAnIicrU3RyaW5nKGMpLnJlcGxhY2UoLyIvZywnIiInKSsnIic7fSkuam9pbignLCcpO30pLmpvaW4oJ1xuJyk7CiAgICB2YXIgYT1kb2N1bWVudC5jcmVhdGVFbGVtZW50KCdhJyk7YS5ocmVmPVVSTC5jcmVhdGVPYmplY3RVUkwobmV3IEJsb2IoW2Nzdl0se3R5cGU6J3RleHQvY3N2J30pKTthLmRvd25sb2FkPSdjYWxsLXNoZWV0LScrRGF0ZS5ub3coKSsnLmNzdic7YS5jbGljaygpOwogICAgaWYodHlwZW9mIHRvYXN0PT09J2Z1bmN0aW9uJyl0b2FzdCgnRXhwb3J0ZWQgJythbGxMZWFkcy5sZW5ndGgrJyBsZWFkcycpOwogIH07CgogIHdpbmRvdy5jc1JlbG9hZE91dGNvbWVzPWZ1bmN0aW9uKCl7dHJ5e2NzT3V0Y29tZXM9SlNPTi5wYXJzZShsb2NhbFN0b3JhZ2UuZ2V0SXRlbShDU19MU0spfHwne30nKTt9Y2F0Y2goZSl7Y3NPdXRjb21lcz17fTt9Y3NSZW5kZXIoKTt9OwogIHZhciBfY3NMYXN0PS0xOwogIHNldEludGVydmFsKGZ1bmN0aW9uKCl7IGlmKHR5cGVvZiBhbGxMZWFkcyE9PSd1bmRlZmluZWQnJiZhbGxMZWFkcy5sZW5ndGghPT1fY3NMYXN0KXtfY3NMYXN0PWFsbExlYWRzLmxlbmd0aDt0cnl7Y3NSZW5kZXIoKTt9Y2F0Y2goZSl7fX0gfSwxNTAwKTsKICBkb2N1bWVudC5hZGRFdmVudExpc3RlbmVyKCdET01Db250ZW50TG9hZGVkJyxmdW5jdGlvbigpe3NldFRpbWVvdXQoZnVuY3Rpb24oKXt0cnl7Y3NSZW5kZXIoKTt9Y2F0Y2goZSl7fX0sNzAwKTt9KTsKfSkoKTsKPC9zY3JpcHQ+Cgo8L2JvZHk+CjwvaHRtbD4K', 'base64').toString('utf8'));
+  const found = LEAD_CRAWLER_CANDIDATES.find(p => {
+    try { return fs.existsSync(p); } catch (e) { return false; }
+  });
+
+  if (!found) {
+    console.error('[lead-crawler] lead-crawler.html not found. Looked in:', LEAD_CRAWLER_CANDIDATES);
+    return res.status(500).type('text/plain').send(
+      'lead-crawler.html not found on the server.\n\n' +
+      'Commit lead-crawler.html to your repo (next to index.js is easiest), then redeploy.\n\n' +
+      'Looked in:\n  ' + LEAD_CRAWLER_CANDIDATES.join('\n  ')
+    );
+  }
+
+  fs.readFile(found, 'utf8', (err, html) => {
+    if (err) {
+      console.error('[lead-crawler] Failed to read', found, err.message);
+      return res.status(500).type('text/plain').send('Could not read lead-crawler.html: ' + err.message);
+    }
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.setHeader('Cache-Control', 'no-store');
+    res.send(html);
+  });
 });
                // ── Apify proxy routes ──────────────────────────────────────────────────────
                const APIFY_BASE = 'https://api.apify.com/v2';
@@ -9686,6 +10812,380 @@ app.post('/api/voicebot/webhook', (req, res) => {
   // Just acknowledge — frontend polls for status itself
   res.json({ received: true });
 });
+
+
+// ══════════════════════════════════════════════════════════════════════
+// ADMIN GATE — protects the Lead Crawler admin surface
+// ══════════════════════════════════════════════════════════════════════
+// Set LC_ADMIN_CODE in Railway Variables. The fallback below is only a
+// convenience for first boot — change it in Railway, don't rely on it.
+const LC_ADMIN_CODE = (process.env.LC_ADMIN_CODE || 'Utrecht160011.@').trim();
+console.log('[auth] admin code source:', process.env.LC_ADMIN_CODE ? 'LC_ADMIN_CODE env var' : 'built-in fallback',
+            '| length:', LC_ADMIN_CODE.length);
+
+// Two roles:
+//   admin  → LC_ADMIN_CODE. Sees the crawler + every client's voice config.
+//   client → a per-client code stored in voice_clients.access_code. Sees ONLY
+//            the Voice Agent Manager, scoped to their own client row.
+// The browser never receives any code — it POSTs a guess and gets a role back.
+// So no code is in the page source and visitors cannot read one.
+async function resolveRole(code) {
+  if (!code || typeof code !== 'string') return { role: null };
+  code = code.trim();
+  if (code === LC_ADMIN_CODE) return { role: 'admin', clientId: null };
+  try {
+    const { rows } = await pool.query(
+      'SELECT id, name FROM voice_clients WHERE access_code = $1 LIMIT 1',
+      [code]
+    );
+    if (rows[0]) return { role: 'client', clientId: rows[0].id, clientName: rows[0].name };
+    // No match — report how many client codes actually exist, so a miss is diagnosable.
+    const { rows: cnt } = await pool.query(
+      'SELECT COUNT(*)::int AS n FROM voice_clients WHERE access_code IS NOT NULL AND access_code <> \'\''
+    );
+    console.warn('[auth] no client matches that code | clients with a code in DB:', cnt[0].n);
+  } catch (e) {
+    console.error('[auth] client code lookup failed:', e.message);
+  }
+  return { role: null };
+}
+
+app.post('/api/admin/verify', async (req, res) => {
+  const guess = (req.body && req.body.code) || '';
+  const { role, clientId, clientName } = await resolveRole(guess);
+  if (!role) {
+    // Never log the code itself — just enough to diagnose a mismatch.
+    const g = (typeof guess === 'string' ? guess.trim() : '');
+    console.warn('[auth] failed unlock from', req.ip,
+                 '| got length:', g.length, '| admin code length:', LC_ADMIN_CODE.length,
+                 g.length === LC_ADMIN_CODE.length ? '(same length — characters differ)' : '(length differs)');
+    return res.json({ ok: false });
+  }
+  res.json({ ok: true, role, clientId: clientId || null, clientName: clientName || null });
+});
+
+// Admin only — the crawler surface and anything touching all clients.
+async function requireAdmin(req, res, next) {
+  const { role } = await resolveRole(req.headers['x-admin-code'] || '');
+  if (role !== 'admin') {
+    return res.status(401).json({ error: 'Unauthorized — admin code required' });
+  }
+  req.role = 'admin';
+  next();
+}
+
+// Admin OR a client (scoped). Sets req.role / req.clientId for the route to use.
+async function requireAuth(req, res, next) {
+  const { role, clientId } = await resolveRole(req.headers['x-admin-code'] || '');
+  if (!role) {
+    return res.status(401).json({ error: 'Unauthorized — access code required' });
+  }
+  req.role = role;
+  req.clientId = clientId || null;
+  next();
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// ELEVENLABS VOICE CLIENTS — per-client inbound calls + SMS routing
+// Used by the Lead Crawler's "Client Voice Agent Manager" panel.
+// NOTE: these are admin-only. The inbound/call-ended webhooks further down
+// stay PUBLIC on purpose — ElevenLabs calls those, and it can't send our header.
+// ══════════════════════════════════════════════════════════════════════
+
+// POST /api/voice-clients — save/upsert a client's voice config
+app.post('/api/voice-clients', requireAuth, async (req, res) => {
+  const { id, name, mode, agentId, phoneId, smsTo, bizName, greeting, urgencyCriteria, outboundPitch, outboundCallerName, accessCode, routingMode, ownerPhone, failoverSeconds } = req.body || {};
+  if (!id || !name) return res.status(400).json({ error: 'id and name are required' });
+
+  // A client may only edit their own row — never create or touch another one.
+  if (req.role === 'client' && req.clientId !== id) {
+    return res.status(403).json({ error: 'You can only edit your own client config' });
+  }
+  // Only an admin may set/change a client's access code.
+  const codeToSet = req.role === 'admin' ? ((accessCode && String(accessCode).trim()) || null) : undefined;
+
+  try {
+    await pool.query(
+      `INSERT INTO voice_clients (id, name, mode, agent_id, phone_id, sms_to, biz_name, greeting, urgency_criteria, outbound_pitch, outbound_caller_name, access_code, routing_mode, owner_phone, failover_seconds, saved_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15, now())
+       ON CONFLICT (id) DO UPDATE SET
+         name = EXCLUDED.name,
+         mode = EXCLUDED.mode,
+         agent_id = EXCLUDED.agent_id,
+         phone_id = EXCLUDED.phone_id,
+         sms_to = EXCLUDED.sms_to,
+         biz_name = EXCLUDED.biz_name,
+         greeting = EXCLUDED.greeting,
+         urgency_criteria = EXCLUDED.urgency_criteria,
+         outbound_pitch = EXCLUDED.outbound_pitch,
+         outbound_caller_name = EXCLUDED.outbound_caller_name,
+         -- only an admin sends accessCode; a client's save leaves it untouched
+         access_code = COALESCE(EXCLUDED.access_code, voice_clients.access_code),
+         routing_mode = EXCLUDED.routing_mode,
+         owner_phone = EXCLUDED.owner_phone,
+         failover_seconds = EXCLUDED.failover_seconds,
+         saved_at = now()`,
+      [id, name, mode || 'inbound', agentId || '', phoneId || '', smsTo || '', bizName || '', greeting || '', urgencyCriteria || '', outboundPitch || '', outboundCallerName || '', codeToSet === undefined ? null : codeToSet, routingMode || 'direct', ownerPhone || '', parseInt(failoverSeconds) || 15]
+    );
+    console.log(`[voice-clients] saved → ${name} (${mode || 'inbound'}) | access code: ${codeToSet ? 'SET (' + String(codeToSet).length + ' chars)' : 'none'} | by: ${req.role}`);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('[voice-clients] save error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/voice-clients — list all clients
+app.get('/api/voice-clients', requireAuth, async (req, res) => {
+  try {
+    const { rows } = req.role === 'admin'
+      ? await pool.query('SELECT * FROM voice_clients ORDER BY saved_at DESC')
+      : await pool.query('SELECT * FROM voice_clients WHERE id = $1', [req.clientId]);
+    // Never leak access codes back to the browser.
+    rows.forEach(r => { delete r.access_code; });
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// DELETE /api/voice-clients/:id
+app.delete('/api/voice-clients/:id', requireAdmin, async (req, res) => {
+  try {
+    await pool.query('DELETE FROM voice_clients WHERE id = $1', [req.params.id]);
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/elevenlabs/inbound-webhook — ElevenLabs calls this before connecting
+// an inbound call, so we can tell it which agent/greeting to use for this number.
+// Set this URL in ElevenLabs → Conversational AI → Agent → Phone Numbers.
+app.post('/api/elevenlabs/inbound-webhook', async (req, res) => {
+  try {
+    const incomingPhoneId = req.body.phone_number_id || req.body.phoneNumberId || '';
+
+    const { rows } = await pool.query(
+      `SELECT * FROM voice_clients WHERE phone_id = $1 AND mode IN ('inbound','both') LIMIT 1`,
+      [incomingPhoneId]
+    );
+    const clientRow = rows[0];
+
+    if (!clientRow) {
+      console.warn('[elevenlabs inbound-webhook] no client for phone_id', incomingPhoneId);
+      return res.status(404).json({ error: 'No client configured for this number' });
+    }
+
+    res.json({
+      agent_id: clientRow.agent_id,
+      dynamic_variables: {
+        business: clientRow.biz_name || clientRow.name,
+        greeting: clientRow.greeting || `Thanks for calling ${clientRow.biz_name || clientRow.name}, how can I help?`,
+        urgency_criteria: clientRow.urgency_criteria || '',
+        // Agent's system prompt should reference {{urgency_criteria}} and be told:
+        // "At the end of the call, start your summary with URGENT: or NORMAL: based on
+        //  whether the caller's request matches {{urgency_criteria}}."
+      },
+    });
+  } catch (err) {
+    console.error('[elevenlabs inbound-webhook] error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/elevenlabs/call-ended-webhook — ElevenLabs calls this when a call ends.
+// We look up which client owns that number and text the summary to their chosen
+// SMS number via Twilio (reusing the TWILIO_ACCOUNT_SID/TWILIO_AUTH_TOKEN already
+// configured for /api/lookup/number above).
+app.post('/api/elevenlabs/call-ended-webhook', async (req, res) => {
+  try {
+    const incomingPhoneId = req.body.phone_number_id || req.body.phoneNumberId || '';
+    const callerNumber   = req.body.caller_number   || req.body.from || 'unknown number';
+    let summary           = req.body.summary || req.body.transcript_summary || 'No summary available';
+
+    const { rows } = await pool.query(
+      `SELECT * FROM voice_clients WHERE phone_id = $1 LIMIT 1`,
+      [incomingPhoneId]
+    );
+    const clientRow = rows[0];
+
+    if (!clientRow || !clientRow.sms_to) {
+      console.warn('[elevenlabs call-ended-webhook] no client / SMS target for phone_id', incomingPhoneId);
+      return res.json({ ok: true, note: 'No SMS target configured' });
+    }
+
+    // Agent is instructed (via urgency_criteria dynamic variable) to prefix its
+    // summary with "URGENT:" or "NORMAL:" — strip that prefix and use it as a badge.
+    let urgencyBadge = '';
+    const urgentMatch = summary.match(/^\s*URGENT:\s*/i);
+    const normalMatch  = summary.match(/^\s*NORMAL:\s*/i);
+    if (urgentMatch) {
+      urgencyBadge = '⚠️ URGENT';
+      summary = summary.replace(urgentMatch[0], '').trim();
+    } else if (normalMatch) {
+      urgencyBadge = '✅ Can wait';
+      summary = summary.replace(normalMatch[0], '').trim();
+    }
+
+    const smsBody = [
+      `📞 ${clientRow.biz_name || clientRow.name}`,
+      `From: ${callerNumber}`,
+      urgencyBadge ? urgencyBadge : null,
+      '',
+      summary,
+    ].filter(line => line !== null).join('\n');
+
+    await sendTwilioSms(clientRow.sms_to, smsBody);
+
+    console.log(`[elevenlabs call-ended-webhook] SMS sent to ${clientRow.sms_to} for ${clientRow.name}${urgencyBadge ? ' [' + urgencyBadge + ']' : ''}`);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('[elevenlabs call-ended-webhook] error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── Twilio SMS helper — reuses TWILIO_ACCOUNT_SID / TWILIO_AUTH_TOKEN ────────
+// Requires TWILIO_FROM_NUMBER to also be set in Railway (the number SMS sends FROM).
+// POST /api/elevenlabs/outbound-call — trigger an outbound call using a SPECIFIC
+// client's ElevenLabs agent + identity + pitch (used by Lead Crawler's
+// "Call as: [Client]" selector, so each client's outbound calls sound like
+// that client, not ContentScale).
+//
+// NOTE: verify the exact ElevenLabs outbound-call endpoint/payload shape against
+// their current docs (https://elevenlabs.io/docs/conversational-ai) — this uses
+// their documented Twilio-native outbound pattern as of the agent's knowledge,
+// but ElevenLabs' API surface changes; adjust the fetch URL/body below if needed.
+app.post('/api/elevenlabs/outbound-call', requireAuth, async (req, res) => {
+  try {
+    const { clientId, targetPhone, targetName, directAgentId, directPhoneId, directBizName, directCallerName, directPitch } = req.body || {};
+    if (!targetPhone) {
+      return res.status(400).json({ error: 'targetPhone is required' });
+    }
+    if (!clientId && !directAgentId) {
+      return res.status(400).json({ error: 'Either clientId or directAgentId is required' });
+    }
+    // A client may only place calls as themselves — and never in direct mode,
+    // which would let them supply an arbitrary agent/phone on our account.
+    if (req.role === 'client') {
+      if (directAgentId) {
+        return res.status(403).json({ error: 'Not allowed' });
+      }
+      if (clientId !== req.clientId) {
+        return res.status(403).json({ error: 'You can only place calls as your own client' });
+      }
+    }
+
+    let agentId, phoneId, callerName, bizName, pitch;
+
+    if (clientId) {
+      const { rows } = await pool.query('SELECT * FROM voice_clients WHERE id = $1', [clientId]);
+      const clientRow = rows[0];
+      if (!clientRow) return res.status(404).json({ error: 'Client not found' });
+      if (!['outbound', 'both'].includes(clientRow.mode)) {
+        return res.status(400).json({ error: `Client "${clientRow.name}" is not configured for outbound (mode: ${clientRow.mode})` });
+      }
+      if (!clientRow.agent_id || !clientRow.phone_id) {
+        return res.status(400).json({ error: `Client "${clientRow.name}" is missing Agent ID or Phone Number ID` });
+      }
+      agentId    = clientRow.agent_id;
+      phoneId    = clientRow.phone_id;
+      callerName = clientRow.outbound_caller_name || clientRow.biz_name || clientRow.name;
+      bizName    = clientRow.biz_name || clientRow.name;
+      pitch      = clientRow.outbound_pitch || `Hi, is this ${targetName || 'there'}? This is ${callerName} calling from ${bizName}.`;
+    } else {
+      // Direct mode — used for ContentScale's own ElevenLabs agent (no DB row needed)
+      agentId    = directAgentId;
+      phoneId    = directPhoneId;
+      callerName = directCallerName || 'ContentScale';
+      bizName    = directBizName || 'ContentScale';
+      pitch      = directPitch || `Hi, is this ${targetName || 'there'}? This is ${callerName} calling from ${bizName}.`;
+      if (!agentId || !phoneId) {
+        return res.status(400).json({ error: 'directAgentId and directPhoneId are required in direct mode' });
+      }
+    }
+
+    const elevenResp = await fetch('https://api.elevenlabs.io/v1/convai/twilio/outbound-call', {
+      method: 'POST',
+      headers: {
+        'xi-api-key': process.env.ELEVENLABS_API_KEY,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        agent_id: agentId,
+        agent_phone_number_id: phoneId,
+        to_number: targetPhone,
+        conversation_initiation_client_data: {
+          dynamic_variables: {
+            business: bizName,
+            caller_name: callerName,
+            target_name: targetName || '',
+            pitch,
+          },
+        },
+      }),
+    });
+
+    if (!elevenResp.ok) {
+      const errText = await elevenResp.text();
+      throw new Error('ElevenLabs outbound call failed: ' + errText);
+    }
+    const data = await elevenResp.json();
+
+    console.log(`[elevenlabs outbound-call] ${clientRow.name} → ${targetPhone}`);
+    res.json({ ok: true, callId: data.conversation_id || data.call_sid || null, raw: data });
+  } catch (err) {
+    console.error('[elevenlabs outbound-call] error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/voice-clients/outbound-ready — list only clients configured for outbound,
+// used by the Lead Crawler to populate its "Call as:" dropdown.
+app.get('/api/voice-clients/outbound-ready', requireAuth, async (req, res) => {
+  try {
+    const { rows } = req.role === 'admin'
+      ? await pool.query(
+          `SELECT id, name, biz_name FROM voice_clients WHERE mode IN ('outbound','both') AND agent_id != '' ORDER BY name`
+        )
+      : await pool.query(
+          `SELECT id, name, biz_name FROM voice_clients WHERE id = $1 AND mode IN ('outbound','both') AND agent_id != ''`,
+          [req.clientId]
+        );
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+async function sendTwilioSms(to, body) {
+  const accountSid = process.env.TWILIO_ACCOUNT_SID;
+  const authToken  = process.env.TWILIO_AUTH_TOKEN;
+  const from        = process.env.TWILIO_FROM_NUMBER;
+
+  if (!accountSid || !authToken || !from) {
+    throw new Error('TWILIO_ACCOUNT_SID / TWILIO_AUTH_TOKEN / TWILIO_FROM_NUMBER not fully set in Railway');
+  }
+
+  const resp = await fetch(
+    `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`,
+    {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Basic ' + Buffer.from(`${accountSid}:${authToken}`).toString('base64'),
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: new URLSearchParams({ To: to, From: from, Body: body }),
+    }
+  );
+
+  if (!resp.ok) {
+    const errText = await resp.text();
+    throw new Error('Twilio SMS failed: ' + errText);
+  }
+  return resp.json();
+}
 
 
 // ============================================
@@ -14693,56 +16193,6 @@ function doLogin(){
 
 
 // ── Engine Access Middleware ──────────────────────────────────────────────────
-const verifyEngineAccess = async (req, res, next) => {
-  const adminKey = req.headers['x-admin-key'];
-  if (adminKey) {
-    // Try with is_active first, fall back without it for backward compat
-    let isAdmin;
-    try {
-      isAdmin = await pool.query('SELECT id FROM super_admins WHERE session_token=$1 AND is_active=TRUE', [adminKey]);
-    } catch(e) {
-      try { isAdmin = await pool.query('SELECT id FROM super_admins WHERE session_token=$1', [adminKey]); }
-      catch(e2) { isAdmin = { rows: [] }; }
-    }
-    if (isAdmin.rows.length) { req.engineUser = { isAdmin: true, codeId: null }; return next(); }
-  }
-
-  // Accept token (from sessionStorage) or code (from URL/header)
-  const engineToken = req.headers['x-engine-token'];
-  const engineCode = req.headers['x-engine-code'] || req.query.code;
-  const lookupCode = engineToken || engineCode;
-
-  if (!lookupCode) {
-    return res.status(401).json({ success: false, error: 'Engine access code required' });
-  }
-
-  try {
-    // Token IS the raw code (ENG-XXXXXX) — verify it exists and is active
-    let codeResult;
-    try {
-      codeResult = await pool.query(
-        'SELECT * FROM engine_access_codes WHERE code = $1 AND is_active = TRUE AND (expires_at IS NULL OR expires_at > NOW())',
-        [lookupCode.trim().toUpperCase()]
-      );
-    } catch(q1err) {
-      // is_active column may be missing — try without it
-      try {
-        codeResult = await pool.query(
-          'SELECT * FROM engine_access_codes WHERE code = $1 AND (expires_at IS NULL OR expires_at > NOW())',
-          [lookupCode.trim().toUpperCase()]
-        );
-      } catch(q2err) { codeResult = { rows: [] }; }
-    }
-    if (!codeResult || codeResult.rows.length === 0) {
-      return res.status(403).json({ success: false, error: 'Engine access code not found. The database was reset — please get a new code from your admin dashboard.' });
-    }
-    const code = codeResult.rows[0];
-    req.engineUser = { isAdmin: false, codeId: code.id, code: code };
-    next();
-  } catch (error) {
-    return res.status(500).json({ success: false, error: 'Server error: ' + error.message });
-  }
-};
 
 // ── GSC Auto-Stat Matching ──
 app.post('/api/gsc/match-stats', verifyEngineAccess, async (req, res) => {
@@ -21031,8 +22481,18 @@ function kickBulkWorker() {
 // Start the recurring worker
 // SAFETY: on boot, fail any bulk jobs stuck mid-run so they cannot resume a runaway loop
 (async () => { try { if (pool) { const rr = await pool.query("UPDATE content_bulk_jobs SET status='failed' WHERE status IN ('analysing','executing') RETURNING id"); if (rr.rowCount) console.warn('[bulk] Failed', rr.rowCount, 'stuck job(s) on boot'); } } catch(e) { console.warn('[bulk] boot cleanup:', e.message); } })();
-setInterval(bulkWorkerTick, BULK_WORKER_INTERVAL_MS);
-console.log(`[bulk] Worker interval started (every ${BULK_WORKER_INTERVAL_MS}ms)`);
+if (process.env.ENABLE_BULK_WORKER === '1') {
+  setInterval(bulkWorkerTick, BULK_WORKER_INTERVAL_MS);
+  console.log(`[bulk] Worker interval started (every ${BULK_WORKER_INTERVAL_MS}ms) — NOTE: this polls the DB every 5s and keeps Neon awake 24/7 (~6-9 CU-hrs/day). Disable ENABLE_BULK_WORKER when not actively using bulk jobs.`);
+} else {
+  console.log('[bulk] Worker DISABLED (ENABLE_BULK_WORKER != 1) — no interval registered, zero DB polling.');
+}
+// ── COMPUTE AUDIT (printed once at boot so Railway logs always show what can keep Neon awake) ──
+console.log('[compute-audit] Background DB touchers:'
+  + ' bulkWorker=' + (process.env.ENABLE_BULK_WORKER === '1' ? 'ON(5s!! keeps Neon awake 24/7)' : 'off')
+  + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER === '1' ? ('ON(every ' + (parseInt(process.env.TRACKER_SCHEDULER_MIN,10)||30) + 'min)') : 'off')
+  + ' | jobCleanup=6h | sessionCleanup=6h | htmlReminder=daily'
+  + ' | Open browser tabs poll only while VISIBLE (hidden tabs are silent). A visible TV wall (/view) polls every 60s and keeps Neon awake by design.');
 
 // ═══════════════════════════════════════════════════════════════════════
 // END BULK AUTOPILOT
@@ -27005,6 +28465,8 @@ if(domains.length>0){
 
 
 // ── Client Tracker HTML ───────────────────────────────────────────────────────
+const _SHARED_AIO_SECTION_JS = "\nfunction _renderAioSectionHTML(data, opts) {\n  opts = opts || {};\n  var esc = function(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); };\n  var extractAioRefs = function(txt) {\n    var out = [], seen = {};\n    txt = String(txt || '');\n    var i = 0;\n    while (true) {\n      var h = txt.indexOf('http', i);\n      if (h < 0) break;\n      var end = h;\n      while (end < txt.length) {\n        var ch = txt.charAt(end);\n        var cc = ch.charCodeAt(0);\n        if (cc <= 32 || ch===')'||ch===']'||ch==='('||ch==='['||ch==='\"'||ch==='<'||ch==='>'||ch===',') break;\n        end++;\n      }\n      var url = txt.slice(h, end);\n      while (url.length && '.,);:'.indexOf(url.charAt(url.length-1)) >= 0) url = url.slice(0, -1);\n      if (url.length > 10 && !seen[url]) { seen[url] = 1; out.push({ url: url }); }\n      i = end + 1;\n      if (out.length >= 12) break;\n    }\n    return out;\n  };\n\n  var aioRef = typeof data.aio_references === 'string' ? JSON.parse(data.aio_references) : (data.aio_references||[]);\n  if ((!aioRef || !aioRef.length) && data.aio_manual_refs) {\n    try { aioRef = typeof data.aio_manual_refs === 'string' ? JSON.parse(data.aio_manual_refs) : data.aio_manual_refs; } catch(e) {}\n  }\n  if ((!aioRef || !aioRef.length) && (data.aio_text || data.aio_manual_text)) {\n    aioRef = extractAioRefs(data.aio_text || data.aio_manual_text);\n  }\n\n  var html = '';\n\n  if (aioRef && aioRef.length) {\n    var myDom = String(data.url||data.domain||'').replace(/^https?:\\/\\//,'').replace(/^www\\./,'').split('/')[0];\n    var aioMine = aioRef.some(function(r){ return String(r.url||'').replace(/^https?:\\/\\//,'').replace(/^www\\./,'').split('/')[0] === myDom; });\n    var agap = Array.isArray(data.aio_citation_gap) ? data.aio_citation_gap : ((data.brief_content && Array.isArray(data.brief_content.aio_citation_gap)) ? data.brief_content.aio_citation_gap : []);\n    var agapBy = {}; agap.forEach(function(g){ var k=String(g.source||g.competitor||g.domain||'').replace(/^www\\./,'').split('/')[0]; if(k) agapBy[k]=g; });\n    var th = 'padding:6px 8px;font-size:9px;text-align:left;color:#93c5fd;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap;';\n    var rowsHtml = aioRef.slice(0,10).map(function(r,i){\n      var host=''; try { host = new URL(r.url).hostname.replace(/^www\\./,''); } catch(e){ host = r.url||''; }\n      var hk = String(r.url||'').replace(/^https?:\\/\\//,'').replace(/^www\\./,'').split('/')[0];\n      var mine = hk === myDom;\n      var g = agapBy[hk] || null;\n      var they = (g && (g.what_they_do_well||g.what_they_do)) || r.snippet || (mine ? '' : 'Cited by Google\\u2019s AI Overview as a source for this query.');\n      var gap = mine ? 'You already hold this citation.' : ((g && (g.our_gap||g.gap)) || 'Your page is not cited here \\u2014 it doesn\\u2019t yet cover this angle as directly or as early.');\n      var todo = mine ? 'Keep this passage fresh and above the fold.' : ((g && (g.what_to_do||g.our_move)) || 'Cover this source\\u2019s core point on your page in a quotable 40\\u201360 word passage, in the first 30% of the content, more directly than they do.');\n      var nameCell = esc(host) + (mine?' <span style=\"color:#4ade80;\">(you)</span>':'');\n      return '<tr style=\"border-top:1px solid #1f2937;'+(mine?'background:rgba(34,197,94,.06);':'')+'\">'\n        + '<td style=\"padding:6px 8px;font-size:10px;color:'+(mine?'#4ade80':'#60a5fa')+';font-weight:700;vertical-align:top;white-space:nowrap;\">'+(i+1)+'. '+nameCell+'</td>'\n        + '<td style=\"padding:6px 8px;font-size:10px;color:#86efac;vertical-align:top;\">'+esc(String(they).slice(0,200))+'</td>'\n        + '<td style=\"padding:6px 8px;font-size:10px;color:#fca5a5;vertical-align:top;\">'+esc(String(gap).slice(0,180))+'</td>'\n        + '<td style=\"padding:6px 8px;font-size:10px;color:#cbd5e1;vertical-align:top;\">'+esc(String(todo).slice(0,200))+'</td>'\n        + '</tr>';\n    }).join('');\n    html += '<div style=\"font-size:10px;color:#9ca3af;margin-bottom:4px;font-weight:700;\">Google AI Overview and Perplexity currently cite (' + aioRef.length + ')' + (aioMine ? ', <span style=\"color:#4ade80;\">including your page</span>' : ', <span style=\"color:#fbbf24;\">this page not among them</span>') + ' \\u2014 the gap per source:</div>'\n      + '<div style=\"overflow-x:auto;border:1px solid #1f2937;border-radius:8px;margin-bottom:10px;\"><table style=\"width:100%;border-collapse:collapse;background:#0d1117;\">'\n      + '<thead><tr style=\"background:#161b22;\"><th style=\"'+th+'\">Source</th><th style=\"'+th+'\">What they do</th><th style=\"'+th+'\">Our gap</th><th style=\"'+th+'\">What to do</th></tr></thead>'\n      + '<tbody>' + rowsHtml + '</tbody></table></div>';\n  } else if (data.aio_text || data.aio_manual_text || data.aio_manual) {\n    var bp = Array.isArray(data.ai_overview_blueprint) ? data.ai_overview_blueprint : [];\n    var ct = Array.isArray(data.citation_targets) ? data.citation_targets : [];\n    html += '<div style=\"font-size:10px;color:#9ca3af;margin-bottom:4px;font-weight:700;\">Google AI Overview \\u2014 how to get cited (from your pasted overview):</div>';\n    if (bp.length) {\n      html += '<ul style=\"margin:2px 0 8px;padding-left:16px;\">' + bp.slice(0,6).map(function(b){ return '<li style=\"font-size:10px;color:#cbd5e1;margin-bottom:3px;\">' + esc(String(b).slice(0,220)) + '</li>'; }).join('') + '</ul>';\n    }\n    if (ct.length) {\n      var th2 = 'padding:6px 8px;font-size:9px;text-align:left;color:#93c5fd;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap;';\n      html += '<div style=\"font-size:10px;color:#9ca3af;margin-bottom:4px;font-weight:700;\">Passages to write (query \\u2192 what to say):</div>'\n        + '<div style=\"overflow-x:auto;border:1px solid #1f2937;border-radius:8px;margin-bottom:10px;\"><table style=\"width:100%;border-collapse:collapse;background:#0d1117;\">'\n        + '<thead><tr style=\"background:#161b22;\"><th style=\"'+th2+'\">Query it could be cited for</th><th style=\"'+th2+'\">Passage to write</th></tr></thead><tbody>'\n        + ct.slice(0,6).map(function(c){ return '<tr style=\"border-top:1px solid #1f2937;\"><td style=\"padding:6px 8px;font-size:10px;color:#93c5fd;vertical-align:top;\">' + esc(String(c.query_variant||c.query||'').slice(0,120)) + '</td><td style=\"padding:6px 8px;font-size:10px;color:#cbd5e1;vertical-align:top;\">' + esc(String(c.passage_to_write||c.passage||'').slice(0,240)) + '</td></tr>'; }).join('')\n        + '</tbody></table></div>';\n    }\n    if (!bp.length && !ct.length) {\n      html += '<div style=\"font-size:10px;color:#6b7280;margin-bottom:10px;\">AI Overview saved. The blueprint appears here after the next scan generates it from your pasted overview.</div>';\n    }\n  }\n  return html;\n}\n\n\nfunction _renderBriefBodyHTML(data) {\n  var esc = function(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); };\n  var parseArr = function(v){ if (Array.isArray(v)) return v; if (typeof v === 'string' && v) { try { var a = JSON.parse(v); return Array.isArray(a) ? a : []; } catch(e) { return []; } } return []; };\n\n  // \u2500\u2500 Normalise item lists (tracker view is the norm; both pages call this same function) \u2500\u2500\n  var passages = data.passages || data.recommendations || [];\n  var aiItems = Array.isArray(passages) ? passages.slice() : [];\n  var gscRaw = Array.isArray(data.gsc_brief) ? data.gsc_brief : [];\n  var gscOn = (typeof GSC_ENABLED !== 'undefined' && GSC_ENABLED) || data._gsc_enabled || !!(data.gsc_clicks || data.gsc_impressions || data.gsc_position);\n  var gscItems = gscOn ? gscRaw.map(function(g){\n    return { title: g.title || '', priority: g.priority || 'medium', system: 'GSC Ranking', action: g.action || '', expected_impact: g.expected_impact || '', trigger: g.trigger || '', effort: g.effort || '', comparison_table: g.comparison_table || null };\n  }) : [];\n  if (!aiItems.length && !gscItems.length) return '';\n\n  var allItems = aiItems.concat(gscItems);\n  var html = '';\n\n  // \u2500\u2500 Transparency block: WHAT WE ACTUALLY CHECKED (tracker wording, identical everywhere) \u2500\u2500\n  try {\n    var _gc = parseArr(data.google_competitors && (Array.isArray(data.google_competitors)||typeof data.google_competitors==='string') ? data.google_competitors : data.competitors);\n    if (!_gc.length) _gc = parseArr(data.competitors);\n    var _pc = parseArr(data.perp_competitors);\n    if (_gc.length || data.aio_text || data.perp_excerpt || _pc.length) {\n      html += '<div style=\"background:linear-gradient(135deg,#0c1220,#0f172a);border:1px solid #1f2937;border-radius:10px;padding:14px 16px;margin-bottom:16px;\">'\n        + '<div style=\"display:flex;align-items:center;gap:6px;margin-bottom:10px;\"><span style=\"font-size:14px;\">\\ud83d\\udd0d</span><span style=\"font-size:11px;font-weight:800;letter-spacing:.06em;color:#60a5fa;text-transform:uppercase;\">What we actually checked</span><span style=\"margin-left:auto;font-size:9px;color:#4b5563;\">' + (data.last_checked ? new Date(data.last_checked).toLocaleString() : '') + '</span></div>';\n      if (_gc.length) {\n        html += '<div style=\"font-size:10px;color:#9ca3af;margin-bottom:6px;font-weight:700;\">Google top ' + Math.min(_gc.length,5) + ' \\u2014 who ranks and why:</div>'\n          + '<div style=\"display:flex;flex-direction:column;gap:3px;margin-bottom:10px;\">'\n          + _gc.slice(0,5).map(function(c,i){\n              var host = ''; try { host = new URL(c.url).hostname.replace(/^www\\./,''); } catch(e) { host = c.url||''; }\n              return '<div style=\"font-size:11px;color:#cbd5e1;\"><span style=\"color:#f59e0b;font-weight:700;\">#' + (c.position||i+1) + '</span> <span style=\"color:#60a5fa;\">' + esc(host) + '</span>' + (c.title ? ' \\u2014 <span style=\"color:#6b7280;\">' + esc(String(c.title).substring(0,70)) + '</span>' : '') + '</div>';\n            }).join('')\n          + '</div>';\n      }\n      if (data.aio_text) {\n        var _aFull = esc(String(data.aio_text).replace(/^Manual AIO:\\s*/i,''));\n        var _aShort = _aFull.length > 220 ? _aFull.slice(0,220) + '\\u2026' : _aFull;\n        var _aId = 'aioq_' + Math.random().toString(36).slice(2,8);\n        html += '<div style=\"font-size:10px;color:#9ca3af;margin-bottom:4px;font-weight:700;\">Google AI Overview currently shows:</div>'\n          + '<div style=\"font-size:11px;color:#cbd5e1;font-style:italic;background:#0d1117;border-left:2px solid #3b82f6;padding:6px 10px;margin-bottom:10px;\">'\n          + '<span id=\"' + _aId + '_s\">\\u201c' + _aShort + '\\u201d</span>'\n          + (_aFull.length > 220\n              ? '<span id=\"' + _aId + '_f\" style=\"display:none;\">\\u201c' + _aFull + '\\u201d</span>'\n                + ' <span onclick=\"event.stopPropagation();document.getElementById(\\'' + _aId + '_f\\').style.display=\\'inline\\';document.getElementById(\\'' + _aId + '_s\\').style.display=\\'none\\';this.style.display=\\'none\\';\" style=\"cursor:pointer;color:#60a5fa;font-size:10px;font-style:normal;\">\\u2295 show full</span>'\n              : '')\n          + '</div>';\n      } else {\n        html += '<div style=\"font-size:10px;color:#6b7280;margin-bottom:10px;\">Google AI Overview: no data \\u2014 paste the AI Overview you see on Google (Add AIO) for an exact check; automated tools can\\u2019t see your personalized AI Overview.</div>';\n      }\n      html += _renderAioSectionHTML(data);\n      if (data.perp_excerpt) {\n        html += '<div style=\"font-size:10px;color:#9ca3af;margin-bottom:4px;font-weight:700;\">Perplexity\\u2019s actual answer:</div>'\n          + '<div style=\"font-size:11px;color:#cbd5e1;font-style:italic;background:#0d1117;border-left:2px solid #a78bfa;padding:6px 10px;margin-bottom:10px;\">\\u201c' + esc(String(data.perp_excerpt).substring(0,220)) + (String(data.perp_excerpt).length>220?'\\u2026':'') + '\\u201d</div>';\n      } else {\n        html += '<div style=\"font-size:10px;color:#6b7280;margin-bottom:10px;\">Perplexity: checked \\u2014 no answer excerpt captured for this query.</div>';\n      }\n      var _pState = data.perp_text || '';\n      if (_pState && /domain cited but different page/i.test(_pState)) {\n        html += '<div style=\"font-size:10px;color:#fbbf24;margin-bottom:10px;\">Perplexity cites your <strong>domain</strong> \\u2014 but a <strong>different page</strong>, not this one. This URL is not yet the cited source for this query.</div>';\n      }\n      if (data.bing_cited !== undefined && data.bing_cited !== null) {\n        html += '<div style=\"font-size:10px;color:#9ca3af;margin-bottom:10px;\">Copilot (Bing index): ' + (data.bing_cited ? '<span style=\"color:#4ade80;\">confirmed indexed</span>' : '<span style=\"color:#6b7280;\">not confirmed yet</span>') + ' \\u2014 Copilot has no separate quotable text like AIO/Perplexity, only index presence.</div>';\n      }\n      if (_pc.length) {\n        html += '<div style=\"font-size:10px;color:#9ca3af;margin-bottom:4px;font-weight:700;\">Perplexity also cites (' + _pc.length + ')' + (data.perp_cited ? '' : ', this page not among them') + ':</div>'\n          + '<div style=\"font-size:11px;color:#cbd5e1;\">' + _pc.slice(0,5).map(function(u){ try { return new URL(u).hostname.replace(/^www\\./,''); } catch(e) { return esc(u); } }).join(', ') + '</div>';\n      }\n      var _hasCannibal = allItems.some(function(p){ return /cannib/i.test(p.system||''); });\n      var _hasCompGap = allItems.some(function(p){ return /competitor.{0,15}gap/i.test(p.system||'') || /competitor.{0,15}gap/i.test(p.title||''); });\n      var _hasImprGap = allItems.some(function(p){ return /impression.?gap|impression.?growth|ready-to-paste section/i.test((p.title||'')+' '+(p.action||'')); });\n      if (_hasCannibal || _hasCompGap || _hasImprGap) {\n        html += '<div style=\"font-size:10px;color:#4ade80;margin-top:4px;\">\\u2713 ' + (_hasCannibal?'Cannibalization conflict found and addressed below. ':'') + (_hasCompGap?'Competitor Gap analysis included below. ':'') + (_hasImprGap?'Impression Gap opportunity included below.':'') + '</div>';\n      } else {\n        html += '<div style=\"font-size:10px;color:#6b7280;margin-top:4px;\">No cannibalization conflicts or open Impression Gap families detected for this page.</div>';\n      }\n      html += '</div>';\n    }\n  } catch(e) {}\n\n  // \u2500\u2500 Per-card renderer (pure string; identical card in both pages) \u2500\u2500\n  var card = function(p) {\n    var pri = String(p.priority || p.p || 'low').toLowerCase();\n    var priKey = (pri === 'high' || pri === 'h') ? 'high' : (pri === 'medium' || pri === 'med' || pri === 'm') ? 'medium' : 'low';\n    var priLabel = priKey === 'high' ? 'HIGH' : priKey === 'medium' ? 'MEDIUM' : 'LOW';\n    var priColor = priKey === 'high' ? '#ef4444' : priKey === 'medium' ? '#f59e0b' : '#22c55e';\n    var title = esc(p.title || p.t || '');\n    var system = esc(p.system || p.sys || '');\n    var action = String(p.action || p.passage || '');\n    var impact = esc(p.expected_impact || p.impact || '');\n    var trigger = esc(p.trigger || '');\n    var effort = esc(p.effort || '');\n    var actionHtml = (typeof _fmtAction === 'function') ? _fmtAction(action) : esc(action);\n    var h = '<div style=\"background:#0d1117;border:1px solid #1f2937;border-left:3px solid ' + priColor + ';border-radius:10px;padding:14px 16px;margin-bottom:12px;text-align:left;\">'\n      + '<div style=\"display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:8px;\">'\n      + '<span style=\"font-size:9px;font-weight:800;letter-spacing:.05em;padding:2px 8px;border-radius:99px;border:1px solid ' + priColor + ';color:' + priColor + ';\">' + priLabel + '</span>'\n      + (system ? '<span style=\"font-size:9px;font-weight:700;letter-spacing:.04em;padding:2px 8px;border-radius:99px;background:#1f293766;border:1px solid #374151;color:#93c5fd;\">' + system + '</span>' : '')\n      + (effort ? '<span style=\"font-size:9px;font-weight:700;padding:2px 8px;border-radius:99px;color:#4ade80;background:#4ade8018;border:1px solid #4ade8030;\">' + effort.replace('_',' ') + '</span>' : '')\n      + '</div>'\n      + (title ? '<div style=\"font-size:14px;font-weight:800;color:#f3f4f6;margin-bottom:6px;\">' + title + '</div>' : '')\n      + (trigger ? '<div style=\"font-size:11px;color:#6b7280;margin-bottom:8px;font-style:italic;\">\\ud83d\\udcca Signal: ' + trigger + '</div>' : '')\n      + (actionHtml ? '<div style=\"font-size:12px;line-height:1.55;color:#cbd5e1;background:#0a0f1a;border:1px solid #1f2937;border-radius:8px;padding:10px 12px;\">' + actionHtml + '</div>' : '');\n    try {\n      var ct = p.comparison_table;\n      if (typeof ct === 'string') { try { ct = JSON.parse(ct); } catch(e) { ct = null; } }\n      if (ct && Array.isArray(ct) && ct.length) {\n        var th = 'padding:8px 10px;font-size:10px;text-align:left;color:#93c5fd;text-transform:uppercase;letter-spacing:.04em;';\n        h += '<div style=\"margin:10px 0 4px;overflow-x:auto;border:1px solid #1f2937;border-radius:8px;\">'\n          + '<table style=\"width:100%;border-collapse:collapse;background:#0d1117;\">'\n          + '<thead><tr style=\"background:#161b22;\"><th style=\"' + th + '\">Competitor</th><th style=\"' + th + '\">What they do well</th><th style=\"' + th + '\">Our gap</th><th style=\"' + th + '\">What to do</th></tr></thead><tbody>'\n          + ct.map(function(r){\n              return '<tr style=\"border-top:1px solid #1f2937;\">'\n                + '<td style=\"padding:8px 10px;font-size:11px;color:#60a5fa;font-weight:700;white-space:nowrap;vertical-align:top;\">' + esc(r.competitor||'') + '</td>'\n                + '<td style=\"padding:8px 10px;font-size:11px;color:#86efac;vertical-align:top;\">' + esc(r.what_they_do_well||'') + '</td>'\n                + '<td style=\"padding:8px 10px;font-size:11px;color:#fca5a5;vertical-align:top;\">' + esc(r.our_gap||'') + '</td>'\n                + '<td style=\"padding:8px 10px;font-size:11px;color:#cbd5e1;vertical-align:top;\">' + esc(r.what_to_do||'') + '</td>'\n                + '</tr>';\n            }).join('')\n          + '</tbody></table></div>';\n      }\n    } catch(e) {}\n    if (impact) h += '<div style=\"font-size:11px;color:#a78bfa;margin-top:8px;\">\\u2192 ' + impact + '</div>';\n    h += '</div>';\n    return h;\n  };\n  var sectionHeader = function(txt, color) {\n    return '<div style=\"font-size:11px;font-weight:800;color:' + color + ';text-transform:uppercase;letter-spacing:.08em;margin:18px 0 14px;text-align:left;\">' + txt + '</div>';\n  };\n\n  if (aiItems.length) {\n    html += sectionHeader('\\u2728 WHAT TO DO NEXT \\u2014 AI CITATIONS', '#a78bfa');\n    html += aiItems.slice(0, 8).map(card).join('');\n  }\n  if (gscItems.length) {\n    html += sectionHeader('\\ud83d\\udcc8 GOOGLE RANKING (GSC)', '#a3e635');\n    html += gscItems.slice(0, 8).map(card).join('');\n  }\n  return html;\n}\n";
+
 const _CLIENT_TRACKER_HTML = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -27075,7 +28537,7 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
 /* Modal */
 .cs-modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:30000; align-items:center; justify-content:center; }
 .cs-modal.show { display:flex; }
-.cs-modal-box { background:#111827; border:1px solid #374151; border-radius:12px; padding:24px; width:min(480px,95vw); box-shadow:0 20px 60px rgba(0,0,0,.15); }
+.cs-modal-box { background:#111827; border:1px solid #374151; border-radius:12px; padding:24px; width:min(480px,95vw); max-height:90vh; overflow-y:auto; -webkit-overflow-scrolling:touch; box-shadow:0 20px 60px rgba(0,0,0,.15); }
 .cs-input { width:100%; background:#0d1117; border:1px solid #374151; border-radius:6px; padding:9px 12px; color:#f1f5f9; font-size:13px; font-family:Verdana,sans-serif; outline:none; }
 .cs-input:focus { border-color:#7c3aed; }
 
@@ -27170,6 +28632,8 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
 
 .cited-blink{animation:citedPulse 2.5s ease-in-out 3;}
 @keyframes htmlNeeded{0%,100%{opacity:1;background:rgba(245,158,11,.08)}50%{opacity:.35;background:rgba(245,158,11,.18)}}@keyframes citedPulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.75;transform:scale(1.06)}}@keyframes tgPulse{0%,100%{box-shadow:0 0 0 0 rgba(42,171,238,.4);border-color:#2AABEE}50%{box-shadow:0 0 0 6px rgba(42,171,238,0);border-color:#38bdf8}}@keyframes donePulse{0%,100%{background:linear-gradient(90deg,rgba(74,222,128,.08),rgba(74,222,128,.02))}50%{background:linear-gradient(90deg,rgba(74,222,128,.14),rgba(74,222,128,.04))}}
+@keyframes csBlink{0%,100%{border-color:#f59e0b;box-shadow:0 0 0 0 rgba(245,158,11,.5)}50%{border-color:#fcd34d;box-shadow:0 0 0 4px rgba(245,158,11,0)}}
+.cs-blink{animation:csBlink 1.1s ease-in-out infinite;}
 .brief-blink{animation:briefBlink 1.2s ease-in-out 4;}@keyframes briefBlink{0%,100%{opacity:1;transform:scale(1)}40%{opacity:.4;transform:scale(1.12)}70%{opacity:1;transform:scale(1.06)}}
 .cs-cs-badge{display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;letter-spacing:.03em;}
 .cs-cs-badge.green{background:#052e16;color:#4ade80;border:1px solid #166534;}
@@ -27402,7 +28866,7 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
           <div class="wl-step-num">2</div>
           <div class="wl-step-content">
             <div class="wl-step-title">Run the Scan</div>
-            <div class="wl-step-desc">The system checks Google AI Overview, Perplexity, Microsoft Copilot & Claude to see if you are cited.</div>
+            <div class="wl-step-desc">The system checks Google AI Overview, Perplexity & Microsoft Copilot to see if you are cited.</div>
           </div>
         </div>
         <div class="wl-step" style="animation-delay:0.3s">
@@ -27471,19 +28935,22 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
     <div class="cs-stat"><div class="val" id="statCitedG" style="color:#0284c7;">&mdash;</div><div class="lbl">Google AIO</div></div>
     <div class="cs-stat"><div class="val" id="statCitedP" style="color:#7c3aed;">&mdash;</div><div class="lbl">Perplexity</div></div>
     <div class="cs-stat"><div class="val" id="statCitedB" style="color:#2563eb;">&mdash;</div><div class="lbl">Copilot</div></div>
-    <div class="cs-stat"><div class="val" id="statCitedC" style="color:#dc2626;">&mdash;</div><div class="lbl">Claude</div></div>
     <div class="cs-stat"><div class="val" id="statRemaining" style="color:#16a34a;">&mdash;</div><div class="lbl">Slots left</div></div>
   </div>
 
 
   <!-- Toolbar -->
   <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap;">
-    <button class="cs-btn primary" onclick="showAddModal()">+ Add URL</button>
+    <button id="addUrlBtn" class="cs-btn primary" onclick="showAddModal()">+ Add URL</button>
+    <div style="width:1px;height:22px;background:#374151;margin:0 2px;"></div>
+    <button id="prewriteBriefBtn" class="cs-btn" onclick="showPrewriteBriefModal()" style="border-color:#f59e0b;color:#fbbf24;font-weight:700;" title="No page yet? Get a brief for a keyword before you write anything.">&#x1f3af; Pre-Write Brief</button>
     <button id="gscBtn" class="cs-btn" onclick="gscAction()" title="Google Search Console" style="border-color:#374151;color:#6b7280;"><i class="fas fa-chart-line"></i> GSC off</button>
     <button class="cs-btn" onclick="showImportModal('paste')" style="border-color:#6b7280;color:#6b7280;"><i class="fas fa-paste"></i> Paste</button>
     <button id="sitemapBtn" class="cs-btn" onclick="showImportModal('sitemap')" style="border-color:#38bdf8;color:#38bdf8;" title="Import from sitemap"><i class="fas fa-list"></i> Sitemap</button>
     <button class="cs-btn" onclick="loadPages()" style="margin-left:4px;" title="Refresh"><i class="fas fa-sync-alt"></i></button>
-    <button class="cs-btn" onclick="scanAllPages()" style="border-color:#4ade80;color:#4ade80;font-weight:700;" title="Scan all pages one by one">&#x26a1; Scan All</button>
+    <button id="tourBtn" class="cs-btn" onclick="startTour(true)" style="border-color:#7c3aed;color:#a78bfa;animation:tourPulse 2s ease-in-out infinite;" title="Step-by-step walkthrough of the tracker">? Tour</button>
+    <style>@keyframes tourPulse{0%,100%{box-shadow:0 0 0 0 rgba(124,58,237,.55);}50%{box-shadow:0 0 0 7px rgba(124,58,237,0);}}@keyframes scanPulse{0%,100%{box-shadow:0 0 0 0 rgba(74,222,128,.55);}50%{box-shadow:0 0 0 7px rgba(74,222,128,0);}}</style>
+    <button id="scanAllBtn" class="cs-btn" onclick="scanAllPages()" style="border-color:#4ade80;color:#4ade80;font-weight:700;" title="Scan all pages one by one">&#x26a1; Scan All</button>
     <button class="cs-btn" onclick="mergePages()" style="border-color:#38bdf8;color:#38bdf8;" title="Merge duplicate URLs &#x2014; keep best">&#x2295; Merge</button>
     <button class="cs-btn" onclick="cleanPages()" style="border-color:#f59e0b;color:#f59e0b;" title="Remove junk (.jpg, /category/, feeds) &amp; pages not in sitemap/GSC &#x2014; keep only live content">&#x1f9f9; Clean</button>
     <button class="cs-btn" onclick="resetAllScans()" style="border-color:#a78bfa;color:#a78bfa;" title="Tick pages to reset only those &#x2014; or none to reset all. Clears scores, citations &amp; dates; keeps URLs &amp; keywords.">&#x21bb; Reset</button>
@@ -27555,10 +29022,13 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
   </div>
 
   <div class="cs-section">Your tracked pages <span id="pageCountLabel2" style="color:#cbd5e1;"></span></div>
+  <div id="gscSetupBanner"></div>
+  <div id="impressionGap" style="width:100%;"></div>
+  <div id="cannibalPanel" style="width:100%;"></div>
   <div id="pagesList" style="width:100%;"></div>
 
   <!-- Upsell -->
-  <div class="cs-upsell">
+  <div class="cs-upsell" id="upsellPanel">
     <div style="font-size:13px;font-weight:700;color:#e5e7eb;margin-bottom:6px;">Want Ottmar to &ldquo;babysit&rdquo; your domain?</div>
     <div style="font-size:12px;color:#9ca3af;margin-bottom:14px;">Done-for-you AI citation optimization &mdash; Ottmar implements every Citation Brief for you. Plus high-GRAAF, citation-ready content.</div>
     <a href="https://wa.me/34644204756?text=Hi+Ottmar,+I+want+you+to+babysit+my+domain+__DOMAIN__+for+AI+citations" target="_blank" class="cs-wa-btn">
@@ -27591,7 +29061,6 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
       <div class="so-step" id="soStep_google"><span class="so-step-icon pending" id="soIcon_google">&#9675;</span><span class="so-step-label" id="soLabel_google">Google position + AIO check</span></div>
       <div class="so-step" id="soStep_perplexity"><span class="so-step-icon pending" id="soIcon_perplexity">&#9675;</span><span class="so-step-label" id="soLabel_perplexity">Perplexity citation check</span></div>
       <div class="so-step" id="soStep_copilot"><span class="so-step-icon pending" id="soIcon_copilot">&#9675;</span><span class="so-step-label" id="soLabel_copilot">Copilot citation check</span></div>
-      <div class="so-step" id="soStep_brave"><span class="so-step-icon pending" id="soIcon_brave">&#9675;</span><span class="so-step-label" id="soLabel_brave">Claude / Brave citation check</span></div>
       <div class="so-step" id="soStep_ai"><span class="so-step-icon pending" id="soIcon_ai">&#9675;</span><span class="so-step-label" id="soLabel_ai">AI recommendations generation</span></div>
     </div>
     <div class="so-status" id="soStatus">Initializing scan...</div>
@@ -27617,6 +29086,71 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
       <button class="cs-btn primary" onclick="addPage()" style="flex:1;">Add &amp; start tracking</button>
       <button class="cs-btn" onclick="hideModal('addModal')">Cancel</button>
     </div>
+  </div>
+</div>
+
+<!-- Pre-Write Brief modal — keyword-only, no page yet -->
+<div class="cs-modal" id="prewriteBriefModal">
+  <div class="cs-modal-box" onclick="event.stopPropagation()" style="max-width:520px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;position:sticky;top:-24px;background:#111827;padding-top:24px;margin-top:-24px;z-index:2;">
+      <h3 style="font-size:15px;font-weight:800;color:#f1f5f9;">&#x1f3af; Pre-Write Brief</h3>
+      <button onclick="hideModal('prewriteBriefModal')" style="background:none;border:none;color:#94a3b8;cursor:pointer;font-size:1.2rem;">&#x2715;</button>
+    </div>
+    <div style="font-size:11px;color:#6b7280;margin-bottom:16px;line-height:1.5;">No page yet? See what it needs to beat the current top 10 before you write a single word.</div>
+    <div style="margin-bottom:12px;">
+      <label style="font-size:11px;color:#9ca3af;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.06em;">Keyword <span style="color:#f87171;">*</span></label>
+      <input id="pwbKeyword" type="text" class="cs-input" placeholder="e.g. free ai citation tracker">
+    </div>
+    <div style="margin-bottom:12px;">
+      <label style="font-size:11px;color:#9ca3af;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.06em;">Working title / H1 <span style="color:#cbd5e1;font-weight:400;text-transform:none;">(optional)</span></label>
+      <input id="pwbTitle" type="text" class="cs-input" placeholder="e.g. best free tool to check AI citations">
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:16px;">
+      <div style="flex:1 1 140px;">
+        <label style="font-size:11px;color:#9ca3af;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.06em;">Output language</label>
+        <input id="pwbLanguage" type="text" list="pwbLangList" class="cs-input" placeholder="English">
+        <datalist id="pwbLangList">
+          <option value="English"></option>
+          <option value="Dutch"></option>
+          <option value="Spanish"></option>
+          <option value="Arabic — MSA"></option>
+          <option value="Arabic — Gulf"></option>
+          <option value="Arabic — Egyptian"></option>
+          <option value="Arabic — Levantine"></option>
+          <option value="German"></option>
+          <option value="French"></option>
+          <option value="Finnish"></option>
+        </datalist>
+      </div>
+      <div style="flex:1 1 140px;">
+        <label style="font-size:11px;color:#9ca3af;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.06em;">SERP region</label>
+        <input id="pwbRegion" type="text" list="pwbRegionList" class="cs-input" placeholder="United States">
+        <datalist id="pwbRegionList">
+          <option value="us — United States"></option>
+          <option value="gb — United Kingdom"></option>
+          <option value="ae — United Arab Emirates"></option>
+          <option value="sa — Saudi Arabia"></option>
+          <option value="eg — Egypt"></option>
+          <option value="qa — Qatar"></option>
+          <option value="nl — Netherlands"></option>
+          <option value="es — Spain"></option>
+        </datalist>
+      </div>
+    </div>
+    <div style="margin-bottom:16px;">
+      <label style="font-size:11px;color:#f59e0b;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.06em;">&#x1F50D; Google AI Overview <span style="color:#cbd5e1;font-weight:400;text-transform:none;">(optional — paste if you checked manually)</span></label>
+      <textarea id="pwbAioText" class="cs-input" style="min-height:70px;resize:vertical;font-family:inherit;" placeholder="Paste the AI Overview text from Google here if you checked manually. Leave empty if there's no AIO or you didn't check."></textarea>
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button class="cs-btn primary" onclick="generatePrewriteBrief()" id="pwbGenerateBtn" style="flex:1;">Generate brief</button>
+      <button class="cs-btn" onclick="hideModal('prewriteBriefModal')">Cancel</button>
+    </div>
+    <div id="pwbStatus" style="font-size:11px;color:#9ca3af;margin-top:10px;"></div>
+    <div id="pwbRecentWrap" style="margin-top:12px;display:none;">
+      <div style="font-size:10px;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">&#x1F553; Recent briefs — click a keyword to reopen</div>
+      <div id="pwbRecentList" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
+    </div>
+    <div id="pwbResult" style="margin-top:14px;max-height:52vh;overflow-y:auto;-webkit-overflow-scrolling:touch;"></div>
   </div>
 </div>
 
@@ -27661,7 +29195,7 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
         <strong style="color:#e5e7eb;">GSC export &rarr; drop or paste CSV:</strong><br>
         <span style="color:#4b5563;">Option A:</span> GSC &rarr; Performance &rarr; Queries tab &rarr; Export CSV &rarr; paste here<br>
         <span style="color:#4b5563;">Option B:</span> GSC &rarr; Performance &rarr; Pages tab &rarr; Export CSV &rarr; paste here<br>
-        <span style="color:#4b5563;">Option C:</span> Type: <code style="background:#1f2937;padding:1px 5px;border-radius:3px;">URL | keyword</code> one per line
+        <span style="color:#4b5563;">Option C:</span> Type: <code style="background:#1f2937;padding:1px 5px;border-radius:3px;">URL | keyword</code> one per line<br><span style="color:#f59e0b;">One table at a time \u2014 do NOT paste Queries and Pages together, import them separately.</span>
       </div>
       <div id="gscDropZone" ondragover="event.preventDefault();this.style.borderColor='#7c3aed'" ondragleave="this.style.borderColor='#374151'" ondrop="handleGscDrop(event)" style="border:2px dashed #374151;border-radius:8px;padding:12px;text-align:center;font-size:11px;color:#6b7280;margin-bottom:8px;cursor:pointer;transition:border-color .15s;" onclick="document.getElementById('gscFileInput').click()">
         <div>&#128196; Drop one or more CSV files here, or click to browse</div>
@@ -27669,6 +29203,7 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
       </div>
       <textarea id="importGscData" class="cs-input" rows="5" placeholder="Top queries,Clicks,Impressions,CTR,Position&#10;seo content strategy,45,1200,3.8%,4.2&#10;ai citations tracker,12,340,3.5%,6.1&#10;&#10;Or paste: https://domain.com/page | keyword" style="resize:vertical;font-family:monospace;font-size:11px;margin-bottom:8px;"></textarea>
       <button class="cs-btn primary" onclick="parseGscData()" style="width:100%;margin-bottom:10px;">Parse &amp; Preview</button>
+      <div id="gscAssignWrap" style="display:none;margin-bottom:10px;"></div>
       <div id="gscList" style="max-height:220px;overflow-y:auto;display:none;">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
           <span style="font-size:11px;color:#6b7280;" id="gscCount"></span>
@@ -27706,6 +29241,26 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
   </div>
 </div>
 
+<div class="cs-modal" id="aioPasteModal">
+  <div class="cs-modal-box" onclick="event.stopPropagation()" style="max-width:580px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+      <h3 style="font-size:15px;font-weight:800;color:#f1f5f9;">&#x1F50D; Paste Google AI Overview</h3>
+      <button onclick="hideModal('aioPasteModal')" style="background:none;border:none;color:#94a3b8;cursor:pointer;font-size:1.2rem;">&#x2715;</button>
+    </div>
+    <p style="font-size:12px;color:#6b7280;margin-bottom:6px;">Search your keyword on Google, copy the AI Overview text and paste it here <strong>before scanning</strong>. This lets the scan detect whether your page is cited in the AI Overview and tailor the brief.</p>
+    <div id="aioPasteContext" style="font-size:11px;color:#a78bfa;margin-bottom:10px;font-style:italic;"></div>
+    <textarea id="aioPasteContent" placeholder="Paste the Google AI Overview text here..." class="cs-input" rows="12" style="width:100%;font-size:12px;resize:vertical;max-height:50vh;"></textarea>
+    <div style="display:flex;gap:8px;margin-top:12px;justify-content:space-between;align-items:center;">
+      <span id="aioPasteStatus" style="font-size:11px;color:#6b7280;"></span>
+      <div style="display:flex;gap:8px;">
+        <button onclick="clearAioPaste()" class="cs-btn" style="border-color:#374151;color:#6b7280;">Clear</button>
+        <button onclick="hideModal('aioPasteModal')" class="cs-btn" style="border-color:#374151;color:#6b7280;">Cancel</button>
+        <button onclick="submitAioPaste()" class="cs-btn" style="border-color:#f59e0b;color:#fbbf24;font-weight:600;">Save AI Overview</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- &#x2550;&#x2550;&#x2550; Citation Brief Overlay &#x2550;&#x2550;&#x2550; -->
 <div id="cbOverlay" class="cb-overlay" style="display:none;">
   <div id="cbCard" class="cb-card hide">
@@ -27725,7 +29280,6 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
       <div id="cbSteps">
         <div class="cb-step" id="cbStep1"><span class="cb-step-icon pending" id="cbStep1Icon"></span><span>Checking Google position &amp; AI Overview&#x2026;</span></div>
         <div class="cb-step" id="cbStep2"><span class="cb-step-icon pending" id="cbStep2Icon"></span><span>Scanning Perplexity &amp; Copilot citations&#x2026;</span></div>
-        <div class="cb-step" id="cbStep3"><span class="cb-step-icon pending" id="cbStep3Icon"></span><span>Analyzing Claude/Brave citations&#x2026;</span></div>
         <div class="cb-step" id="cbStep4"><span class="cb-step-icon pending" id="cbStep4Icon"></span><span>Generating your Citation Brief&#x2026;</span></div>
         <div class="cb-progress"><div class="cb-progress-bar" id="cbProgressBar"></div></div>
       </div>
@@ -27748,6 +29302,9 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
         <div id="cbCopySection" style="display:none;margin-top:16px;">
           <div style="font-size:11px;font-weight:700;color:#7c3aed;margin-bottom:6px;">&#x1f4cb; Copy Brief</div>
           <textarea id="cbCopyText" readonly style="width:100%;height:120px;background:#0a0a12;border:1px solid #1f2937;border-radius:8px;padding:10px;font-size:11px;color:#9ca3af;font-family:monospace;resize:vertical;"></textarea>
+          <div style="background:rgba(96,165,250,.08);border:1px solid #3b82f6;border-radius:8px;padding:8px 10px;margin-top:10px;font-size:10.5px;color:#bfdbfe;line-height:1.6;">
+            <b style="color:#93c5fd;">\u2728 Bonus:</b> for a deeper content audit, scan this URL or its HTML in the GRAAF SEO Content Score tool separately. Copy its recommendations into an external AI (or apply them by hand) and fold them into your content <b>before</b> pasting the finished HTML back into the tracker.
+          </div>
           <button onclick="copyBriefToClipboard()" class="cs-btn" style="margin-top:8px;border-color:#7c3aed;color:#7c3aed;font-size:11px;">Copy to Clipboard</button>
         </div>
       </div>
@@ -27819,7 +29376,71 @@ function _csChart(s){
 }
 var DOMAIN = '__DOMAIN__';
 var GSC_ENABLED = __GSC_ENABLED__;
+var DEMO_RO = __DEMO_RO__;
+// Neon compute saver for EVERYONE (owner included): a tab that is not visible stops polling completely.
+// One forgotten background tab used to keep the database awake 24/7 — the single biggest silent compute cost.
+(function(){
+  var _si0 = window.setInterval;
+  window.setInterval = function(fn, ms){
+    var wrapped = (typeof fn === 'function') ? function(){ if (document.hidden) return; return fn(); } : fn;
+    return _si0(wrapped, ms);
+  };
+})();
+if (DEMO_RO) {
+  // Neon compute saver: viewers don't need 8-second freshness. Clamp every polling interval
+  // registered after this point to >= 60s, and skip poll ticks while the tab is hidden.
+  // Cuts database wake-time for an open viewer tab by ~90%+; the owner's own link is unaffected.
+  (function(){
+    var _si = window.setInterval;
+    window.setInterval = function(fn, ms){
+      var wrapped = (typeof fn === 'function') ? function(){ if (document.hidden) return; return fn(); } : fn;
+      return _si(wrapped, Math.max(ms || 0, 60000));
+    };
+  })();
+  document.addEventListener('DOMContentLoaded', function(){
+    // Banner with CTA \u2014 the demo should sell, not just inform
+    var b = document.createElement('div');
+    b.style.cssText = 'position:sticky;top:0;z-index:999;background:linear-gradient(90deg,#4c1d95,#6d28d9);color:#ede9fe;font-size:12px;font-weight:700;text-align:center;padding:8px 14px;letter-spacing:.03em;';
+    b.innerHTML = '\ud83d\udc41 LIVE \u00b7 read-only view of real tracking data. Want this for your own site? <a href="https://contentscale.site/free-ai-citations-tracker/" target="_blank" rel="noopener" style="color:#fde68a;text-decoration:underline;font-weight:800;">Start free \u2192</a>';
+    document.body.insertBefore(b, document.body.firstChild);
+    // Floating CTA \u2014 stays in view while they scroll through queue, briefs, conflicts
+    var f = document.createElement('a');
+    f.href = 'https://contentscale.site/free-ai-citations-tracker/';
+    f.target = '_blank'; f.rel = 'noopener';
+    f.style.cssText = 'position:fixed;bottom:20px;right:20px;z-index:998;background:#7c3aed;color:#fff;font-size:13px;font-weight:800;padding:12px 20px;border-radius:10px;box-shadow:0 6px 24px rgba(124,58,237,.5);text-decoration:none;';
+    f.textContent = '\ud83c\udfaf Track my own site \u2192';
+    document.body.appendChild(f);
+    // View everything, copy nothing: briefs stay readable on screen, but selection,
+    // copy/cut, right-click and drag are blocked on this shared link.
+    var st = document.createElement('style');
+    st.textContent = 'body{-webkit-user-select:none;-moz-user-select:none;user-select:none} input,textarea{-webkit-user-select:text;user-select:text}';
+    document.head.appendChild(st);
+    ['copy','cut','contextmenu','dragstart'].forEach(function(ev){ document.addEventListener(ev, function(e){ e.preventDefault(); }); });
+  });
+}
 var MAX_PAGES = __MAX_PAGES__;
+var _gscAutoFetchAvailable = __GSC_AUTOFETCH__;
+var _gscServiceAccountEmail = null;
+async function _gscAutoFetchPage(pageId, btnEl) {
+  if (btnEl) { btnEl.disabled = true; btnEl.textContent = '\u23f3 Fetching\u2026'; }
+  try {
+    var d = await api('/gsc-autofetch-page', 'POST', { page_id: pageId });
+    if (d && d.success) {
+      toast('\u2713 Pulled ' + d.saved + ' queries for this page from Search Console \u2014 no CSV needed', '#4ade80');
+      // _pages (which now holds the updated gsc_autofetch_checked_at) must be refreshed FIRST —
+      // otherwise loadImpressionGap()'s "already exported" check reads the stale array and the
+      // button never disappears, even though the server correctly marked the page as checked.
+      try { await loadPages(); } catch(e) {}
+      try { await loadImpressionGap(); } catch(e) {}
+    } else {
+      toast((d && d.error) || 'Auto-fetch failed \u2014 try manual CSV import instead', '#f87171');
+      if (btnEl) { btnEl.disabled = false; btnEl.textContent = '\u26a1 Auto-fetch'; }
+    }
+  } catch(e) {
+    toast('Auto-fetch failed \u2014 try manual CSV import instead', '#f87171');
+    if (btnEl) { btnEl.disabled = false; btnEl.textContent = '\u26a1 Auto-fetch'; }
+  }
+}
 var _pages = [];
 
 // GSC status indicator \\u2014 lit green when enabled, grey when off
@@ -27923,15 +29544,71 @@ function editKeyword(pageId, el) {
   }).catch(function(e){ toast('Update failed: ' + e.message, '#f87171'); });
 }
 
+var _scanAllActive = false;
+var _scanAllTotal = 0;
+var _scanAllDone = 0;
+function _scanAllBtn(){ return document.getElementById('scanAllBtn'); }
+function _setScanAllBtn(html, disabled, animate){
+  var b = _scanAllBtn(); if (!b) return;
+  b.innerHTML = html;
+  b.disabled = !!disabled;
+  b.style.opacity = disabled ? '0.85' : '1';
+  b.style.cursor = disabled ? 'default' : 'pointer';
+  b.style.animation = animate ? 'scanPulse 1.2s ease-in-out infinite' : 'none';
+}
 function scanAllPages() {
-  if (!confirm('Scan all tracked pages now? They run one by one and this can take a few minutes.')) return;
+  if (_scanAllActive) { toast('A full scan is already running \u2014 please wait for it to finish.', '#f59e0b'); return; }
+  // Same "don't scan 3 times" guard as checkPage() \u2014 but broader. Early in the workflow there is NO
+  // PROVEN yet (it only appears after GSC auto-fetch on paired pages), so checking _provenList alone
+  // misses the most common case: someone hits Scan All before EVER touching Cannibalization or
+  // Impression Gap. Catch that too \u2014 unresolved POSSIBLE rows (GSC auto-fetch not done) and/or the
+  // gap analysis not run both mean scanning now wastes the pass and needs redoing later.
+  var _gapDoneForAll = _gapAnalysis && _gapAnalysis.families && _gapAnalysis.families.length;
+  var _hasOpenPossible = typeof _possRemaining !== 'undefined' && _possRemaining && _possRemaining.length;
+  var _hasProvenWork = typeof _provenList !== 'undefined' && _provenList && _provenList.length;
+  var _hasGapDataToSort = typeof _gapQueries !== 'undefined' && _gapQueries && _gapQueries.filter(function(g){ return !g.page_id; }).length > 0;
+  var _cannibalOrGapUnfinished = (_hasOpenPossible || _hasProvenWork || _hasGapDataToSort) && !_gapDoneForAll;
+  if (_cannibalOrGapUnfinished) {
+    var _reason = _hasOpenPossible
+      ? (_possRemaining.length + ' POSSIBLE page' + (_possRemaining.length>1?'s':'') + ' still need GSC auto-fetch, and ')
+      : '';
+    var _proceedAnyway = confirm('The Cannibalization and Impression Gap panels above aren\\u2019t finished yet \\u2014 ' + _reason + '\\ud83e\\udd16 Sort this out for me hasn\\u2019t run. Scanning all pages now means some of them will need a second scan later once that work is done.\\n\\nFinish those panels first (GSC auto-fetch any POSSIBLE pages, then \\ud83e\\udd16 Sort this out for me, then \\ud83d\\ude80 Do everything) \\u2014 that way every page gets its complete brief in one pass.\\n\\nScan all anyway right now?');
+    if (!_proceedAnyway) return;
+  }
+  if (!confirm('Scan all tracked pages now? They run one by one and this can take a few minutes. You will see live progress on the button.')) return;
+  _scanAllActive = true; _scanAllDone = 0; _scanAllTotal = 0;
+  _setScanAllBtn('\u23f3 Starting scan\u2026', true, true);
   api('/scan-all', 'POST').then(function(d){
     if (d && d.success) {
-      toast(d.message || ('Scanning ' + (d.queued||0) + ' pages...'), '#4ade80');
+      _scanAllTotal = d.queued || 0;
+      toast('Scanning ' + _scanAllTotal + ' pages \u2014 watch the button and Live Activity.', '#4ade80');
+      _setScanAllBtn('\u23f3 Scanning 0/' + _scanAllTotal + '\u2026', true, true);
+      // Safety fallback: if SSE misses events, stop the spinner after a generous timeout
+      clearTimeout(window._scanAllFallback);
+      window._scanAllFallback = setTimeout(_finishScanAll, Math.max(60000, _scanAllTotal * 20000));
       var n = 0;
-      var iv = setInterval(function(){ n++; loadPages(); if (n >= 12) clearInterval(iv); }, 10000);
-    } else { toast((d && d.error) || 'Scan failed to start', '#f87171'); }
-  }).catch(function(e){ toast('Scan failed: ' + e.message, '#f87171'); });
+      var iv = setInterval(function(){ n++; loadPages(); if (n >= 18 || !_scanAllActive) clearInterval(iv); }, 10000);
+    } else {
+      _scanAllActive = false;
+      _setScanAllBtn('\u26a1 Scan All', false, false);
+      toast((d && d.error) || 'Scan failed to start', '#f87171');
+    }
+  }).catch(function(e){ _scanAllActive = false; _setScanAllBtn('\u26a1 Scan All', false, false); toast('Scan failed: ' + e.message, '#f87171'); });
+}
+function _scanAllProgress(){
+  if (!_scanAllActive) return;
+  _scanAllDone++;
+  if (_scanAllTotal && _scanAllDone >= _scanAllTotal) { _finishScanAll(); return; }
+  _setScanAllBtn('\u23f3 Scanning ' + _scanAllDone + '/' + (_scanAllTotal||'?') + '\u2026', true, true);
+}
+function _finishScanAll(){
+  if (!_scanAllActive) return;
+  _scanAllActive = false;
+  clearTimeout(window._scanAllFallback);
+  loadPages();
+  _setScanAllBtn('\u2713 Scan complete', true, false);
+  toast('All pages scanned \u2014 results updated below.', '#4ade80');
+  setTimeout(function(){ _setScanAllBtn('\u26a1 Scan All', false, false); }, 6000);
 }
 
 function openTelegramSetup() {
@@ -28005,6 +29682,8 @@ function _showLinkSuggestions(sug) {
 
 // Escape AI/user text before innerHTML so tags like <head>/<script> stay visible
 function _escHtml(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+${_SHARED_AIO_SECTION_JS}
+var esc = _escHtml;
 // Escape, then render backtick-wrapped spans as visible code blocks
 function _fmtAction(s) { return _escHtml(s).replace(/\`([^\`]+)\`/g, '<code style="background:#0a0a12;border:1px solid #1f2937;border-radius:3px;padding:1px 5px;font-family:monospace;font-size:11px;color:#a5b4fc;white-space:pre-wrap;word-break:break-word;">$1</code>'); }
 
@@ -28093,6 +29772,239 @@ function maybeShowWelcome() {
 }
 
 function showAddModal() { document.getElementById('addModal').classList.add('show'); }
+
+function showPrewriteBriefModal() {
+  document.getElementById('pwbResult').innerHTML = '';
+  document.getElementById('pwbStatus').textContent = '';
+  document.getElementById('prewriteBriefModal').classList.add('show');
+  loadRecentPrewriteBriefs();
+}
+
+async function loadRecentPrewriteBriefs() {
+  var wrap = document.getElementById('pwbRecentWrap');
+  var list = document.getElementById('pwbRecentList');
+  try {
+    var data = await api('/prewrite-briefs', 'GET');
+    if (!data || !data.success || !Array.isArray(data.briefs) || !data.briefs.length) {
+      wrap.style.display = 'none';
+      return;
+    }
+    list.innerHTML = data.briefs.map(function(b) {
+      var d = new Date(b.created_at);
+      var dLabel = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+      var esc = function(s) { return (s == null ? '' : String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); };
+      return '<span style="display:inline-flex;align-items:center;background:#1f2937;border:1px solid #374151;border-radius:20px;overflow:hidden;">'
+        + '<button onclick="reopenPrewriteBrief(' + b.id + ')" style="background:none;border:none;color:#e5e7eb;font-size:11px;padding:5px 4px 5px 12px;cursor:pointer;" title="' + esc(b.keyword) + ' \u00b7 ' + dLabel + '">'
+        + esc(b.keyword.length > 28 ? b.keyword.slice(0, 28) + '\u2026' : b.keyword) + ' <span style="color:#6b7280;">\u00b7 ' + dLabel + '</span></button>'
+        + '<button onclick="deletePrewriteBrief(event, ' + b.id + ')" title="Remove" style="background:none;border:none;color:#6b7280;font-size:13px;padding:5px 10px 5px 4px;cursor:pointer;line-height:1;">\u2715</button>'
+        + '</span>';
+    }).join('');
+    wrap.style.display = 'block';
+  } catch (e) {
+    wrap.style.display = 'none';
+  }
+}
+
+async function deletePrewriteBrief(ev, id) {
+  ev.stopPropagation();
+  if (!confirm('Remove this saved brief?')) return;
+  try {
+    await api('/prewrite-briefs/' + id, 'DELETE');
+    loadRecentPrewriteBriefs();
+  } catch (e) {}
+}
+
+async function reopenPrewriteBrief(id) {
+  var stat = document.getElementById('pwbStatus');
+  var result = document.getElementById('pwbResult');
+  stat.textContent = 'Loading saved brief\u2026';
+  result.innerHTML = '';
+  try {
+    var data = await api('/prewrite-briefs/' + id, 'GET');
+    if (!data || !data.success || !data.brief) {
+      stat.textContent = '\u274c Could not load that brief.';
+      return;
+    }
+    document.getElementById('pwbKeyword').value = data.keyword || '';
+    document.getElementById('pwbTitle').value = data.working_title || '';
+    var d = new Date(data.created_at);
+    stat.textContent = '\u2713 Reopened \u00b7 originally generated ' + d.toLocaleString();
+    result.innerHTML = renderPrewriteBrief(data.brief);
+    result.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  } catch (e) {
+    stat.textContent = '\u274c ' + e.message;
+  }
+}
+
+async function generatePrewriteBrief() {
+  var kw = document.getElementById('pwbKeyword').value.trim();
+  var title = document.getElementById('pwbTitle').value.trim();
+  var lang = document.getElementById('pwbLanguage').value.trim();
+  var regionRaw = document.getElementById('pwbRegion').value.trim();
+  // Accept either a plain code ("ae") or the "code — Label" datalist format.
+  var region = (regionRaw.match(/^([a-z]{2})\s*[—-]/i) || [null, regionRaw])[1] || regionRaw;
+  var aioText = document.getElementById('pwbAioText').value.trim();
+
+  if (!kw) { document.getElementById('pwbStatus').textContent = '\u26a0 Enter a keyword first.'; return; }
+
+  var btn = document.getElementById('pwbGenerateBtn');
+  var stat = document.getElementById('pwbStatus');
+  var result = document.getElementById('pwbResult');
+  btn.disabled = true; btn.textContent = 'Analysing SERP\u2026';
+  stat.textContent = 'Fetching live competitors and building your brief \u2014 20\u201340 seconds\u2026';
+  result.innerHTML = '';
+
+  try {
+    var data = await api('/prewrite-brief', 'POST', { keyword: kw, workingTitle: title, language: lang, region: region, manualAioText: aioText });
+    btn.disabled = false; btn.textContent = 'Generate brief';
+    if (!data || !data.success || !data.brief) {
+      stat.textContent = '\u274c ' + ((data && data.error) || 'Could not generate a brief. Try again.');
+      return;
+    }
+    stat.textContent = '\u2713 Brief ready \u00b7 ' + (data.competitors_scraped || 0) + ' competitors analysed \u00b7 region: ' + (data.region || 'us') + (data.briefs_allowed ? ' \u00b7 ' + data.briefs_used + '/' + data.briefs_allowed + ' briefs used' : '');
+    result.innerHTML = renderPrewriteBrief(data.brief);
+    loadRecentPrewriteBriefs();
+  } catch (e) {
+    btn.disabled = false; btn.textContent = 'Generate brief';
+    if (/separate service/i.test(e.message)) {
+      stat.textContent = '';
+      result.innerHTML = '<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:16px 18px;font-size:12.5px;color:#92400e;line-height:1.7;">'
+        + '\uD83D\uDD12 <strong>Your free Pre-Write Brief has been used.</strong><br>'
+        + 'Pre-Write Brief is a separate service. '
+        + '<a href="https://wa.me/31628073996?text=Hi+Ottmar%2C+I%27d+like+more+Pre-Write+Briefs" target="_blank" rel="noopener" style="color:#b45309;font-weight:700;">Contact Ottmar</a>'
+        + ' or check all pricing options on '
+        + '<a href="https://contentscale.site/free-ai-citations-tracker/#dealify" target="_blank" rel="noopener" style="color:#b45309;font-weight:700;">contentscale.site/free-ai-citations-tracker</a>.'
+        + '</div>';
+    } else {
+      stat.textContent = '\u274c ' + e.message;
+    }
+  }
+}
+
+var _lastPrewriteBriefText = '';
+function renderPrewriteBrief(b) {
+  var esc = function(s) { return (s == null ? '' : String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); };
+
+  // Plain-text version for the Copy button — mirrors the HTML sections below.
+  var lines = [];
+  if (b.what_we_checked) {
+    var wc = b.what_we_checked;
+    lines.push('WHAT WE ACTUALLY CHECKED', 'Query tested: "' + (wc.query_tested||'') + '"', 'Checked: ' + (wc.checked_at||''));
+    lines.push('Google direct answer: ' + (wc.google_direct_answer||''));
+    lines.push('Perplexity: ' + (wc.perplexity||''));
+    if (wc.perplexity_excerpt) lines.push('Perplexity excerpt: "' + wc.perplexity_excerpt + '"');
+    if (Array.isArray(wc.perplexity_currently_cites) && wc.perplexity_currently_cites.length) lines.push('Perplexity currently cites: ' + wc.perplexity_currently_cites.join(', '));
+    lines.push('');
+  }
+  if (b.recommended_title_h1) lines.push(b.recommended_title_h1, '');
+  if (b.top10_gap) lines.push('TOP 10 GAP', b.top10_gap, '');
+  if (b.ai_overview_status) lines.push('AI OVERVIEW', b.ai_overview_status, '');
+  if (Array.isArray(b.competitor_table) && b.competitor_table.length) {
+    lines.push('COMPETITOR TABLE');
+    b.competitor_table.forEach(function(c){
+      lines.push('#' + c.rank + ' ' + c.domain);
+      lines.push('  Has: ' + (c.what_they_have||''));
+      lines.push('  Gap: ' + (c.the_gap||''));
+      lines.push('  Add: ' + (c.what_to_add||''));
+    });
+    lines.push('');
+  }
+  if (b.recommended_structure) {
+    var s = b.recommended_structure;
+    lines.push('STRUCTURE', (s.format||'') + (s.recommended_word_count ? ' \\u00b7 ~' + s.recommended_word_count + ' words' : ''), '');
+    if (Array.isArray(s.must_have_h2s) && s.must_have_h2s.length) {
+      lines.push('MUST-HAVE H2s');
+      s.must_have_h2s.forEach(function(h){ lines.push('- ' + h); });
+      lines.push('');
+    }
+  }
+  if (Array.isArray(b.must_cover_entities) && b.must_cover_entities.length) {
+    lines.push('ENTITIES TO COVER', b.must_cover_entities.join(', '), '');
+  }
+  if (Array.isArray(b.faq_questions) && b.faq_questions.length) {
+    lines.push('FAQ QUESTIONS');
+    b.faq_questions.forEach(function(q){ lines.push('- ' + q); });
+    lines.push('');
+  }
+  if (Array.isArray(b.action_plan) && b.action_plan.length) {
+    lines.push('ACTION PLAN');
+    b.action_plan.forEach(function(a, i){ lines.push((i+1) + '. ' + (a.action||'')); });
+  }
+  _lastPrewriteBriefText = lines.join('\\n');
+
+  var html = '<div style="display:flex;justify-content:flex-end;margin-bottom:8px;">'
+    + '<button onclick="copyPrewriteBrief(this)" style="background:#1f2937;border:1px solid #374151;border-radius:6px;color:#e5e7eb;font-size:11px;padding:5px 12px;cursor:pointer;">\\uD83D\\uDCCB Copy Brief</button>'
+    + '</div>';
+
+  if (b.what_we_checked) {
+    var wc2 = b.what_we_checked;
+    html += '<div style="background:#0b1220;border:1px solid #1e3a5f;border-radius:8px;padding:12px 14px;margin-bottom:12px;font-size:11.5px;color:#9ca3af;line-height:1.7;">';
+    html += '<div style="color:#60a5fa;font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">\\uD83D\\uDD0D What We Actually Checked</div>';
+    html += '<div>Query tested: <span style="color:#e5e7eb;">"' + esc(wc2.query_tested) + '"</span></div>';
+    html += '<div>Checked: ' + esc(wc2.checked_at) + '</div>';
+    html += '<div>Google AI Overview: ' + esc(wc2.google_direct_answer) + '</div>';
+    html += '<div>Perplexity: ' + esc(wc2.perplexity) + '</div>';
+    if (wc2.perplexity_excerpt) html += '<div style="margin-top:4px;font-style:italic;color:#cbd5e1;">"' + esc(wc2.perplexity_excerpt) + '"</div>';
+    if (Array.isArray(wc2.perplexity_currently_cites) && wc2.perplexity_currently_cites.length) {
+      html += '<div style="margin-top:4px;">Perplexity currently cites: ' + wc2.perplexity_currently_cites.map(function(d){return esc(d);}).join(', ') + '</div>';
+    }
+    html += '</div>';
+  }
+
+  html += '<div style="background:#0d1117;border:1px solid #1f2937;border-radius:8px;padding:14px 16px;font-size:12px;color:#e5e7eb;line-height:1.6;">';
+  if (b.recommended_title_h1) html += '<div style="font-weight:800;color:#f1f5f9;margin-bottom:10px;font-size:13px;">' + esc(b.recommended_title_h1) + '</div>';
+  if (b.top10_gap) html += '<div style="margin-bottom:10px;"><span style="color:#fbbf24;font-weight:700;">Top 10 gap:</span> ' + esc(b.top10_gap) + '</div>';
+  if (b.ai_overview_status) html += '<div style="margin-bottom:10px;"><span style="color:#a78bfa;font-weight:700;">AI Overview:</span> ' + esc(b.ai_overview_status) + '</div>';
+  if (Array.isArray(b.competitor_table) && b.competitor_table.length) {
+    html += '<div style="margin-bottom:12px;"><div style="color:#9ca3af;font-size:10px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">Competitor Table</div>';
+    html += '<table style="width:100%;border-collapse:collapse;font-size:11px;">';
+    html += '<tr style="border-bottom:1px solid #1f2937;"><th style="text-align:left;padding:4px 6px;color:#6b7280;">#</th><th style="text-align:left;padding:4px 6px;color:#6b7280;">Domain</th><th style="text-align:left;padding:4px 6px;color:#34d399;">Has</th><th style="text-align:left;padding:4px 6px;color:#f87171;">Gap</th><th style="text-align:left;padding:4px 6px;color:#60a5fa;">Add</th></tr>';
+    b.competitor_table.forEach(function(c){
+      html += '<tr style="border-bottom:1px solid #1a2332;"><td style="padding:5px 6px;color:#9ca3af;">' + esc(c.rank) + '</td><td style="padding:5px 6px;font-weight:700;">' + esc(c.domain) + '</td><td style="padding:5px 6px;color:#a7f3d0;">' + esc(c.what_they_have) + '</td><td style="padding:5px 6px;color:#fca5a5;">' + esc(c.the_gap) + '</td><td style="padding:5px 6px;color:#93c5fd;">' + esc(c.what_to_add) + '</td></tr>';
+    });
+    html += '</table></div>';
+  }
+  if (b.recommended_structure) {
+    var s = b.recommended_structure;
+    html += '<div style="margin-bottom:10px;"><span style="color:#34d399;font-weight:700;">Structure:</span> ' + esc(s.format||'') + (s.recommended_word_count ? ' \\u00b7 ~' + s.recommended_word_count + ' words' : '') + '</div>';
+    if (Array.isArray(s.must_have_h2s) && s.must_have_h2s.length) {
+      html += '<div style="margin-bottom:10px;"><div style="color:#9ca3af;font-size:10px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">Must-have H2s</div><ul style="margin:0;padding-left:18px;">' + s.must_have_h2s.map(function(h){return '<li>'+esc(h)+'</li>';}).join('') + '</ul></div>';
+    }
+  }
+  if (Array.isArray(b.must_cover_entities) && b.must_cover_entities.length) {
+    html += '<div style="margin-bottom:10px;"><div style="color:#9ca3af;font-size:10px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">Entities to cover</div>' + b.must_cover_entities.map(function(e){return '<span style="display:inline-block;background:#1f2937;border:1px solid #374151;border-radius:999px;padding:2px 9px;margin:2px 3px 2px 0;font-size:10.5px;">'+esc(e)+'</span>';}).join('') + '</div>';
+  }
+  if (Array.isArray(b.faq_questions) && b.faq_questions.length) {
+    html += '<div style="margin-bottom:10px;"><div style="color:#9ca3af;font-size:10px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">FAQ questions</div><ul style="margin:0;padding-left:18px;">' + b.faq_questions.map(function(q){return '<li>'+esc(q)+'</li>';}).join('') + '</ul></div>';
+  }
+  if (Array.isArray(b.action_plan) && b.action_plan.length) {
+    html += '<div><div style="color:#9ca3af;font-size:10px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">Action plan</div><ol style="margin:0;padding-left:18px;">' + b.action_plan.map(function(a){return '<li>'+esc(a.action||'')+'</li>';}).join('') + '</ol></div>';
+  }
+  html += '</div>';
+  return html;
+}
+function copyPrewriteBrief(btn) {
+  var text = _lastPrewriteBriefText || '';
+  var done = function(ok) {
+    if (!btn) return;
+    var orig = btn.textContent;
+    btn.textContent = ok ? '\\u2713 Copied' : '\\u26a0 Copy failed';
+    setTimeout(function(){ btn.textContent = orig; }, 1800);
+  };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(function(){ done(true); }).catch(function(){ done(false); });
+  } else {
+    // Fallback for older browsers / non-secure contexts
+    try {
+      var ta = document.createElement('textarea');
+      ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.appendChild(ta); ta.focus(); ta.select();
+      var ok = document.execCommand('copy');
+      document.body.removeChild(ta);
+      done(ok);
+    } catch(e) { done(false); }
+  }
+}
 function showImportModal(mode) { var _im = document.getElementById('importModal'); _im.classList.add('show'); _im.style.display = 'flex'; setImportMode(mode || 'paste'); if (mode === 'sitemap') { var si = document.getElementById('sitemapUrl'); if (si && !si.value) si.value = 'https://' + DOMAIN + '/sitemap.xml'; } }
 function hideModal(id) {
   var el = document.getElementById(id);
@@ -28152,7 +30064,7 @@ async function saveBrandCtx() {
   }
   if (msg) setTimeout(function(){ msg.textContent = ''; }, 4000);
 }
-document.addEventListener('DOMContentLoaded', function(){ loadBrandCtx(); });
+document.addEventListener('DOMContentLoaded', function(){ loadBrandCtx(); try{ if(new URLSearchParams(window.location.search).get('openPrewrite')==='1'){ showPrewriteBriefModal(); var _u=new URL(window.location.href); _u.searchParams.delete('openPrewrite'); window.history.replaceState({}, '', _u.pathname+_u.search+_u.hash); } }catch(e){} });
 
 var _ctSearchQuery = '';
 var _mdFilter = 'all'; // 'all' | 'todo' | 'done' — filter on the user's own persistent checkmarks
@@ -28207,6 +30119,19 @@ var _mdFilter = 'all'; // 'all' | 'todo' | 'done' — filter on the user's own p
         gsc_ctr: p.gsc_ctr || null,
         gsc_keyword: p.gsc_keyword || null,
         _gsc_enabled: (p.gsc_clicks != null) || (p.gsc_impressions != null) || (p.gsc_position != null),
+        google_competitors: p.google_competitors || null,
+        perp_competitors: p.ai_perplexity_competitors || null,
+        aio_text: p.ai_google_overview_text || p.aio_manual_text || '',
+        aio_found: !!p.ai_google_overview_found,
+        aio_references: p.ai_google_overview_references || null,
+        aio_manual_refs: p.aio_manual_refs || null,
+        aio_citation_gap: (brief && brief.aio_citation_gap) || null,
+        ai_overview_blueprint: (brief && brief.ai_overview_blueprint) || null,
+        citation_targets: (brief && brief.citation_targets) || null,
+        aio_manual: !!(brief && brief.aio_manual),
+        perp_excerpt: p.ai_perplexity_answer_excerpt || '',
+        perp_text: p.ai_perplexity_text || '',
+        last_checked: p.last_checked || null,
         type: 'brief_ready'
       };
       _lastBriefData[p.id] = briefData;
@@ -28222,12 +30147,10 @@ function renderStats(data) {
   var citedG = pages.filter(function(p){ return p.ai_google_overview_cited; }).length;
   var citedP = pages.filter(function(p){ return p.ai_perplexity_cited; }).length;
   var citedB = pages.filter(function(p){ return p.ai_bing_cited; }).length;
-  var citedC = pages.filter(function(p){ return p.ai_brave_cited; }).length;
   document.getElementById('statTotal').textContent = pages.length;
   document.getElementById('statCitedG').textContent = citedG;
   document.getElementById('statCitedP').textContent = citedP;
   var elB = document.getElementById('statCitedB'); if(elB) elB.textContent = citedB;
-  var elC = document.getElementById('statCitedC'); if(elC) elC.textContent = citedC;
 
   // Slots left \\u2014 MAX_PAGES is total across all domains
   // Show: used/total and per-domain breakdown if multiple domains
@@ -28273,7 +30196,6 @@ function _bwChips(bd){
     + chip(bd.aio_cited?'YES':'NO','AIO',bd.aio_cited?'#4ade80':'#6b7280')
     + chip(bd.perp_cited?'YES':'NO','Perplexity',bd.perp_cited?'#4ade80':'#6b7280')
     + chip(bd.bing_cited?'YES':'NO','Copilot',bd.bing_cited?'#4ade80':'#6b7280')
-    + chip(bd.brave_cited?'YES':'NO','Claude',bd.brave_cited?'#4ade80':'#6b7280')
     + (bd.score ? chip(bd.score,'GRAAF','#a78bfa') : '')
     + '</div>';
 }
@@ -28302,9 +30224,11 @@ function _bwCard(p, isFeature){
   return '<div class="bw-card" onclick="viewLastBrief('+p.id+')">'+head+body+'</div>';
 }
 function renderBriefWall(){
+  // Removed from the tracker page per Ot — the Live Brief Wall lives on the TV view (/view/:token) only.
+  // Function kept as no-op because loadPages and the scan stream still call it.
   var sec = document.getElementById('briefWallSection');
-  var wall = document.getElementById('briefWall');
-  if (!sec || !wall) return;
+  if (sec) sec.style.display = 'none';
+  return;
   var withB = (_pages||[]).filter(function(p){ return p.brief_content; });
   if (!withB.length){ sec.style.display='none'; return; }
   sec.style.display='block';
@@ -28332,7 +30256,7 @@ function renderPages() {
     el.innerHTML = '<div style="background:#0d1117;border:2px dashed #1f2937;border-radius:12px;padding:40px 28px;text-align:center;">'
       + '<div style="font-size:40px;margin-bottom:16px;">&#128203;</div>'
       + '<div style="font-size:16px;font-weight:800;color:#e5e7eb;margin-bottom:8px;">Start tracking your pages</div>'
-      + '<div style="font-size:13px;color:#6b7280;line-height:1.7;margin-bottom:20px;max-width:420px;margin-left:auto;margin-right:auto;">Add URLs one by one, import from your sitemap, or paste from Google Search Console. The system checks automatically. Free plan: 3 pages, 1 domain.</div>'
+      + '<div style="font-size:13px;color:#6b7280;line-height:1.7;margin-bottom:20px;max-width:420px;margin-left:auto;margin-right:auto;">Add URLs one by one, import from your sitemap, or paste from Google Search Console. The system checks automatically. Free plan: 1 page, 1 domain.</div>'
       + '<div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">'
       + '<button class="cs-btn primary" onclick="showAddModal()" style="font-size:13px;padding:10px 20px;">+ Add first URL</button>'
       + '<button class="cs-btn" onclick="showImportModal(&quot;sitemap&quot;)" style="font-size:13px;padding:10px 20px;border-color:#38bdf8;color:#38bdf8;">Import from sitemap</button>'
@@ -28348,16 +30272,106 @@ function renderPages() {
   var _isMd = function(p){ return p.manual_done === true || p.manual_done === 't' || p.manual_done === 'true' || p.manual_done === 1; };
   var _mdDone = _pages.filter(_isMd).length;
   var _mdTotal = _pages.length;
+
+  // ── LEAD QUEUE: one ranked worklist. Rank = estimated missed clicks per month
+  // (impressions x expected CTR for a top spot, minus clicks you already get).
+  // Checked pages (my check) drop out automatically, so the queue always shows the NEXT job on top.
+  var _leadQueue = [];
+  _pages.forEach(function(p){
+    if (_isMd(p)) return; // done by you -> out of the queue
+    var impr = p.gsc_impressions || 0;
+    var clicks = p.gsc_clicks || 0;
+    var ps = p.gsc_position ? parseFloat(p.gsc_position) : null;
+    if (!impr && ps === null) return; // no GSC data -> nothing to rank on
+    var tier, tierLabel, tierColor, action;
+    if (ps !== null && ps <= 10 && impr >= 100 && (clicks / Math.max(impr,1)) * 100 < 1) {
+      tier = 1; tierLabel = '\\ud83c\\udfaf QUICK WIN'; tierColor = '#f97316';
+      action = 'Rewrite title/meta for the search intent + get cited in the AI Overview (Citation Brief). Google already ranks you \\u2014 only the click is missing.';
+    } else if (ps !== null && ps > 10 && ps <= 20 && impr >= 100) {
+      tier = 2; tierLabel = '\\u26a1 STRIKING DISTANCE'; tierColor = '#facc15';
+      action = 'Page 2 with real demand. Execute the Citation Brief + strengthen internal links to this page \\u2014 one push to page 1.';
+    } else if (impr >= 500) {
+      tier = 3; tierLabel = '\\ud83d\\udcc8 HIGH DEMAND'; tierColor = '#60a5fa';
+      action = 'Big search demand, weak position. Full content rebuild via the brief: depth, E-E-A-T, schema.';
+    } else if (ps !== null && ps <= 10 && impr > 0 && impr < 50) {
+      tier = 5; tierLabel = '\\ud83d\\udd0d LOW DEMAND'; tierColor = '#6b7280';
+      action = 'Ranks well but nobody searches it. Retarget to a query WITH volume (check GSC Queries) or merge into a stronger page.';
+    } else {
+      tier = 4; tierLabel = '\\ud83d\\udd28 BUILD'; tierColor = '#9ca3af';
+      action = 'Moderate demand, weak position. Work through the brief when tiers above are cleared.';
+    }
+    // Expected CTR at a good spot: pos 1-3 ~20%, 4-5 ~12%, 6-10 ~6%, page 2+ potential if pushed to top ~15%
+    var expCtr = (ps !== null && ps <= 3) ? 0.20 : (ps !== null && ps <= 5) ? 0.12 : (ps !== null && ps <= 10) ? 0.06 : 0.15;
+    var missed = Math.max(0, Math.round(impr * expCtr - clicks));
+    _leadQueue.push({ p: p, tier: tier, tierLabel: tierLabel, tierColor: tierColor, action: action, missed: missed, impr: impr, clicks: clicks, ps: ps });
+  });
+  _leadQueue.sort(function(a,b){ if (a.tier !== b.tier) return a.tier - b.tier; return b.missed - a.missed; });
+
+  var leadQueueHtml = '';
+  if (_leadQueue.length) {
+    var rows = _leadQueue.map(function(q, i){
+      var path = ''; try { path = new URL(q.p.url).pathname; } catch(e) { path = q.p.url; }
+      if (path === '/' || !path) path = '(homepage)';
+      // Mobile fix: 5 non-shrinking elements (rank, tier, metrics, missed-badge) plus the page path
+      // don't fit on a narrow screen. flex-wrap lets the metrics/badge drop to a 2nd line instead of
+      // squishing the page path unreadable or overflowing the viewport horizontally.
+      return '<div onclick="jumpToPage(' + q.p.id + ')" style="display:flex;align-items:center;flex-wrap:wrap;gap:6px 10px;padding:9px 12px;border-bottom:1px solid #1f2937;cursor:pointer;" '
+        + 'onmouseover="this.style.background=&quot;#111827&quot;" onmouseout="this.style.background=&quot;none&quot;">'
+        + '<span style="font-size:13px;font-weight:800;color:#4b5563;width:24px;flex-shrink:0;text-align:right;">' + (i+1) + '</span>'
+        + '<span style="font-size:9px;font-weight:800;color:' + q.tierColor + ';border:1px solid ' + q.tierColor + '55;border-radius:4px;padding:2px 7px;flex-shrink:0;white-space:nowrap;">' + q.tierLabel + '</span>'
+        + '<span style="font-size:11px;color:#e5e7eb;font-family:monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:80px;" title="' + q.action + '">' + path + '</span>'
+        + '<span style="font-size:10px;color:#6b7280;flex-shrink:0;white-space:nowrap;margin-left:34px;">' + (q.ps !== null ? 'pos ' + q.ps.toFixed(1) + ' \\u00b7 ' : '') + q.impr.toLocaleString() + ' impr \\u00b7 ' + q.clicks + ' clk</span>'
+        + (q.missed > 0 ? '<span style="font-size:10px;font-weight:800;color:#4ade80;flex-shrink:0;white-space:nowrap;" title="Estimated clicks per month you are missing at this demand level">+' + q.missed.toLocaleString() + ' clk/mo</span>' : '')
+        + '</div>';
+    }).join('');
+    var legendRow = function(color, label, when, why, fix){
+      return '<tr>'
+        + '<td style="padding:8px 10px;border-bottom:1px solid #1f2937;white-space:nowrap;vertical-align:top;"><span style="font-size:9px;font-weight:800;color:' + color + ';border:1px solid ' + color + '55;border-radius:4px;padding:2px 7px;">' + label + '</span></td>'
+        + '<td style="padding:8px 10px;border-bottom:1px solid #1f2937;font-size:11px;color:#9ca3af;vertical-align:top;white-space:nowrap;">' + when + '</td>'
+        + '<td style="padding:8px 10px;border-bottom:1px solid #1f2937;font-size:11px;color:#6b7280;vertical-align:top;">' + why + '</td>'
+        + '<td style="padding:8px 10px;border-bottom:1px solid #1f2937;font-size:11px;color:#e5e7eb;vertical-align:top;">' + fix + '</td>'
+        + '</tr>';
+    };
+    var legendHtml = '<div id="leadQueueLegend" style="display:none;border-top:1px solid #1f2937;background:#0a0e14;padding:14px 16px;">'
+      + '<div style="font-size:11px;font-weight:800;color:#e5e7eb;margin-bottom:4px;letter-spacing:.04em;text-transform:uppercase;">How the Lead Queue ranks your pages</div>'
+      + '<div style="font-size:11px;color:#6b7280;line-height:1.7;margin-bottom:12px;">Every page is placed in a tier based on your live Google Search Console data. Within each tier, pages are ordered by <span style="color:#4ade80;font-weight:700;">+clicks/mo</span> \\u2014 the estimated clicks per month you are currently missing (search demand \\u00d7 the click-through rate a top position earns, minus the clicks you already get). Work from top to bottom: the highest entry is always your fastest route to new leads. When you finish a page, mark it with \\u25cb my check \\u2014 it leaves the queue and the next opportunity moves up.</div>'
+      + '<table style="width:100%;border-collapse:collapse;background:#0d1117;border:1px solid #1f2937;border-radius:6px;overflow:hidden;">'
+      + '<tr style="background:#111827;">'
+      + '<th style="padding:7px 10px;font-size:9px;font-weight:800;color:#6b7280;text-transform:uppercase;letter-spacing:.06em;text-align:left;">Tier</th>'
+      + '<th style="padding:7px 10px;font-size:9px;font-weight:800;color:#6b7280;text-transform:uppercase;letter-spacing:.06em;text-align:left;">Criteria (GSC)</th>'
+      + '<th style="padding:7px 10px;font-size:9px;font-weight:800;color:#6b7280;text-transform:uppercase;letter-spacing:.06em;text-align:left;">What it means</th>'
+      + '<th style="padding:7px 10px;font-size:9px;font-weight:800;color:#6b7280;text-transform:uppercase;letter-spacing:.06em;text-align:left;">Your action</th>'
+      + '</tr>'
+      + legendRow('#f97316','1 \\u00b7 \\ud83c\\udfaf QUICK WIN','Position \\u226410 \\u00b7 \\u2265100 impressions \\u00b7 CTR &lt;1%','Google already shows you on page 1 for real search demand, but searchers are not clicking. The ranking work is done \\u2014 only the click is missing.','Rewrite the title &amp; meta description around the exact search intent, then follow the Citation Brief to get cited in the AI Overview. Fastest possible leads.')
+      + legendRow('#facc15','2 \\u00b7 \\u26a1 STRIKING DISTANCE','Position 11\\u201320 \\u00b7 \\u2265100 impressions','You are on page 2 for a query people actually search. One quality push moves you onto page 1, where the clicks are.','Execute the Citation Brief recommendations and add internal links from your strongest pages to this one.')
+      + legendRow('#60a5fa','3 \\u00b7 \\ud83d\\udcc8 HIGH DEMAND','\\u2265500 impressions \\u00b7 weak position','Large search demand exists, but your page is not competitive yet. Biggest long-term prize, more work required.','Full content rebuild via the brief: depth, E-E-A-T signals, schema markup, expert sourcing.')
+      + legendRow('#9ca3af','4 \\u00b7 \\ud83d\\udd28 BUILD','Moderate demand \\u00b7 weak position','Worth improving, but the return is smaller than the tiers above.','Work through the brief once tiers 1\\u20133 are cleared.')
+      + legendRow('#6b7280','5 \\u00b7 \\ud83d\\udd0d LOW DEMAND','Position \\u226410 \\u00b7 &lt;50 impressions','The position looks great, but almost nobody searches this query \\u2014 a good ranking with no demand produces zero leads.','Retarget the page to a related query with real volume (check GSC Queries), or merge it into a stronger page.')
+      + '</table>'
+      + '<div style="font-size:10px;color:#4b5563;margin-top:10px;line-height:1.6;">Formula: rule of thumb based on industry CTR curves \\u2014 position 1\\u20133 \\u2248 20% CTR, 4\\u20135 \\u2248 12%, 6\\u201310 \\u2248 6%. Estimates, not guarantees; refresh your GSC import regularly to keep the queue current.</div>'
+      + '</div>';
+    leadQueueHtml = '<div id="leadQueuePanel" style="background:#0d1117;border:1px solid #1f2937;border-radius:8px;margin-bottom:12px;overflow:hidden;">'
+      + '<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:linear-gradient(90deg,rgba(249,115,22,.08),transparent);">'
+      + '<span onclick="var b=document.getElementById(&quot;leadQueueBody&quot;);b.style.display=b.style.display===&quot;none&quot;?&quot;block&quot;:&quot;none&quot;;" style="cursor:pointer;font-size:11px;font-weight:800;letter-spacing:.06em;color:#f97316;text-transform:uppercase;">\\ud83c\\udfaf Lead Queue</span>'
+      + '<span style="font-size:11px;color:#6b7280;">' + _leadQueue.length + ' open \\u00b7 work top to bottom \\u00b7 check off with \\u25cb my check</span>'
+      + '<span style="margin-left:auto;font-size:10px;color:#4b5563;">click row to jump \\u00b7 hover for the fix</span>'
+      + '<button onclick="var l=document.getElementById(&quot;leadQueueLegend&quot;);l.style.display=l.style.display===&quot;none&quot;?&quot;block&quot;:&quot;none&quot;;" style="flex-shrink:0;cursor:pointer;font-size:10px;font-weight:700;padding:3px 10px;border-radius:5px;background:none;border:1px solid #374151;color:#9ca3af;" title="What do the tiers mean and how is the ranking calculated?">? How ranking works</button>'
+      + '</div>'
+      + '<div id="leadQueueBody">' + rows + '</div>'
+      + legendHtml
+      + '</div>';
+  }
+
   if (_mdFilter === 'todo') displayPages = displayPages.filter(function(p){ return !_isMd(p); });
   else if (_mdFilter === 'done') displayPages = displayPages.filter(_isMd);
   var _mdPct = _mdTotal ? Math.round((_mdDone/_mdTotal)*100) : 0;
   var _mdBtn = function(key,label){
     var on = _mdFilter === key;
-    return '<button onclick="setMdFilter(\'' + key + '\')" style="font-size:10px;font-weight:700;padding:3px 10px;border-radius:5px;cursor:pointer;'
+    return '<button onclick="setMdFilter(&quot;' + key + '&quot;)" style="font-size:10px;font-weight:700;padding:3px 10px;border-radius:5px;cursor:pointer;'
       + (on ? 'background:#7c3aed;border:1px solid #8b5cf6;color:#fff;' : 'background:none;border:1px solid #374151;color:#6b7280;')
       + '">' + label + '</button>';
   };
-  var mdBarHtml = '<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:#0d1117;border:1px solid #1f2937;border-radius:8px;padding:8px 14px;margin-bottom:12px;">'
+  var mdBarHtml = '<div id="myChecksBar" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:#0d1117;border:1px solid #1f2937;border-radius:8px;padding:8px 14px;margin-bottom:12px;">'
     + '<span style="font-size:10px;font-weight:800;letter-spacing:.06em;color:#4ade80;text-transform:uppercase;flex-shrink:0;">My checks</span>'
     + '<span style="font-size:12px;font-weight:800;color:' + (_mdDone === _mdTotal && _mdTotal > 0 ? '#4ade80' : '#e5e7eb') + ';flex-shrink:0;">' + _mdDone + ' / ' + _mdTotal + '</span>'
     + '<div style="flex:1;min-width:80px;height:6px;background:#1f2937;border-radius:3px;overflow:hidden;"><div style="width:' + _mdPct + '%;height:100%;background:linear-gradient(90deg,#16a34a,#4ade80);border-radius:3px;"></div></div>'
@@ -28397,7 +30411,7 @@ function renderPages() {
     var bPos = b.google_position || 999;
     return aPos - bPos;
   });
-  el.innerHTML = mdBarHtml + sorted.map(function(p, pageIdx) {
+  el.innerHTML = leadQueueHtml + mdBarHtml + sorted.map(function(p, pageIdx) {
     var pos = p.google_position;
     var score = p.graaf_score;
     // Populate brief cache so the View Brief button + popup work (full data when available)
@@ -28435,22 +30449,29 @@ function renderPages() {
     var _qwPos = p.gsc_position ? parseFloat(p.gsc_position) : null;
     var _qwCtr = _qwImpr > 0 ? (_qwClicks / _qwImpr) * 100 : null;
     var isQuickWin = _qwPos !== null && _qwPos <= 10 && _qwImpr >= 100 && (_qwCtr === null || _qwCtr < 1);
+    // LOW DEMAND: good position but (almost) nobody searches it. Position averages over impressions,
+    // so pos 2.2 on ~0 impressions is statistically meaningless. Not a CTR problem — a keyword problem.
+    var isLowDemand = !isQuickWin && _qwPos !== null && _qwPos <= 10 && _qwImpr > 0 && _qwImpr < 50;
     if (isQuickWin) {
       badges += '<span class="cs-cs-badge" style="background:linear-gradient(90deg,#7c2d12,#9a3412);color:#fed7aa;border:1px solid #f97316;font-weight:800;animation:donePulse 2.5s ease-in-out infinite;" '
         + 'title="Page 1 (pos ' + _qwPos.toFixed(1) + ') with ' + Math.round(_qwImpr).toLocaleString() + ' impressions but only ' + _qwClicks + ' clicks. Google already ranks you \\u2014 the click is missing. Fix: rewrite title/meta for the search intent + follow the Citation Brief to get cited in the AI Overview.">'
         + '\\ud83c\\udfaf QUICK WIN \\u2014 page 1, no clicks</span> ';
     }
-    if (pos) badges += '<span class="cs-badge" style="color:' + posColor + ';background:#0d1117;border:1px solid ' + posColor + '44;">#' + pos + '</span> ';
+    if (isLowDemand) {
+      badges += '<span class="cs-cs-badge" style="background:#0c1a2e;color:#93c5fd;border:1px solid #1d4ed8;font-weight:700;" '
+        + 'title="Ranks pos ' + _qwPos.toFixed(1) + ' but only ' + Math.round(_qwImpr) + ' impressions \\u2014 almost nobody searches this keyword. The position looks good but brings zero leads. Fix: check GSC Queries for related terms WITH volume and retarget/expand the page \\u2014 or merge it into a stronger page.">'
+        + '\\ud83d\\udd0d LOW DEMAND \\u2014 ranks well, nobody searches</span> ';
+    }
+    if (pos) badges += '<span class="cs-badge" title="LIVE Google position for your tracked keyword \\u201c' + (p.keyword||'') + '\\u201d \\u2014 measured at the last scan. Note: the GSC \\u201cpos\\u201d below is different: an average across ALL queries this page appears for (28 days), so it is usually worse than this number." style="color:' + posColor + ';background:#0d1117;border:1px solid ' + posColor + '44;">#' + pos + '</span> ';
     else badges += '<span class="cs-cs-badge grey">Not ranked</span> ';
     // Only show "No AIO / No Perplexity / ..." once a real AI-citation check has actually run.
     var aiChecked = (p.brief_check_count > 0)
       || p.ai_google_overview_cited === true || p.ai_perplexity_cited === true
-      || p.ai_bing_cited === true || p.ai_brave_cited === true;
+      || p.ai_bing_cited === true;
     if (aiChecked) {
       badges += p.ai_google_overview_cited ? '<span class="cs-cs-badge green">&#10003; Google AIO</span> ' : '<span class="cs-cs-badge grey">No AIO</span> ';
       badges += p.ai_perplexity_cited ? '<span class="cs-cs-badge purple" style="border:1px solid #7c3aed;">&#10003; Perplexity</span> ' : '<span class="cs-cs-badge grey">No Perplexity</span> ';
       badges += p.ai_bing_cited ? '<span class="cs-cs-badge" style="background:#0c2340;color:#60a5fa;border:1px solid #1d4ed8;">&#10003; Copilot</span> ' : '<span class="cs-cs-badge grey">No Copilot</span> ';
-      badges += p.ai_brave_cited ? '<span class="cs-cs-badge" style="background:#1a0e2e;color:#c4b5fd;border:1px solid #6d28d9;">&#10003; Claude</span> ' : '<span class="cs-cs-badge grey">No Claude</span> ';
     } else {
       badges += '<span class="cs-cs-badge grey" title="No AI citation check has run yet \u2014 paste HTML or Scan All">AI citations: not checked yet</span> ';
     }
@@ -28472,7 +30493,7 @@ function renderPages() {
         + '<span style="font-size:12px;color:#4ade80;font-weight:600;">&#8595; ' + gscClicks.toLocaleString() + ' clicks</span>'
         + '<span style="font-size:12px;color:#60a5fa;">' + gscImpr.toLocaleString() + ' impr</span>'
         + (gscCtr ? '<span style="font-size:12px;color:#a78bfa;">CTR ' + gscCtr + '</span>' : '')
-        + (gscPos ? '<span style="font-size:12px;color:#f59e0b;">pos ' + gscPos + '</span>' : '')
+        + (gscPos ? '<span style="font-size:12px;color:#f59e0b;" title="Average position across ALL search queries this page appeared for in the last 28 days (impressions-weighted, from GSC). Your main keyword can rank #1 while this average is higher \\u2014 side-queries with worse positions pull it up. See the pushable queries above for exactly which ones.">pos ' + gscPos + '</span>' : '')
         + (gscKw ? '<span style="font-size:11px;color:#4b5563;font-style:italic;">top kw: ' + gscKw + '</span>' : '')
         + '</div>';
     }
@@ -28506,8 +30527,40 @@ function renderPages() {
     var htmlNeeded = explicitlyNeeds || (notScannedYet && !isDone);
     // No flashing banner \\u2014 just a button state
     var needsHtmlBanner = '';
+    // ── Workflow-cycle status for the AIO/HTML/Scan buttons (round model) ──
+    // paste HTML (blinks) -> scan consumes it (HTML+Scan turn green tick) -> ticks STAY until
+    // the owner presses Done OR pastes new HTML for the next round. Opening the brief no longer
+    // clears them — the owner asked for the ticks to persist as a "this round is handled" signal.
+    var _htmlAt = p.html_pasted_at ? new Date(p.html_pasted_at).getTime() : 0;
+    var _scanAt = lastCheckedRaw ? new Date(lastCheckedRaw).getTime() : 0;
+    var _htmlPasted = _htmlAt > 0;
+    var _scanSawHtml = _scanAt > 0 && (!_htmlPasted || _scanAt >= _htmlAt);
+    // A new HTML paste AFTER the last scan starts a fresh round → ticks clear, HTML blinks again.
+    var _newRound = _htmlPasted && !_scanSawHtml;
+    var _htmlDone = _htmlPasted && _scanSawHtml && !isDone;
+    var _htmlBlink = _newRound;
+    var _scanDone = _scanSawHtml && !isDone;
 
     var _mdOn = p.manual_done === true || p.manual_done === 't' || p.manual_done === 'true' || p.manual_done === 1;
+    // Pushable queries block — replaces the manual "GSC → Pages → Queries" digging.
+    var _pushHtml = '';
+    var _pushList = _pushByPage[p.id];
+    if (_pushList && _pushList.length) {
+      var _pRows = _pushList.slice(0, 5).map(function(q){
+        return '<div style="display:flex;align-items:center;gap:8px;padding:3px 0;min-width:0;">'
+          + (q.exact ? '<span style="font-size:9px;color:#4ade80;flex-shrink:0;" title="Exact: from this page\\u2019s own Queries CSV export \\u2014 no matching guesswork">\\u2713</span>' : '')
+          + '<span style="font-size:11px;color:#e5e7eb;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;">' + String(q.query).replace(/</g,'&lt;') + '</span>'
+          + '<span style="font-size:10px;color:#facc15;flex-shrink:0;white-space:nowrap;">pos ' + q.pos.toFixed(1) + '</span>'
+          + '<span style="font-size:10px;color:#6b7280;flex-shrink:0;white-space:nowrap;">' + q.impr.toLocaleString() + ' impr</span>'
+          + (q.routeTo ? '<span style="font-size:9px;font-weight:800;color:#fb923c;border:1px solid #9a341255;border-radius:4px;padding:1px 6px;flex-shrink:0;white-space:nowrap;" title="Generic commercial query \\u2014 belongs on this service page, not the homepage. Add the answering section + internal link there.">\\u2192 ' + q.routeTo + '</span>' : '')
+          + '</div>';
+      }).join('');
+      _pushHtml = '<div style="background:#0a0e14;border:1px solid #1f2937;border-left:3px solid #facc15;border-radius:6px;padding:8px 12px;margin:8px 0;">'
+        + '<div style="font-size:9px;font-weight:800;letter-spacing:.06em;color:#facc15;text-transform:uppercase;margin-bottom:4px;" title="Each row is ONE search query where this page sits at position 11-25 (page 2). The page itself may already rank #1 for its main keyword \\u2014 these are OTHER searches it almost ranks for. Add a question-form H2 answering the query (+ internal link) and this page\\u2019s existing authority pushes it onto page 1. Non-branded, \\u226530 impressions, from your Queries CSV; \\u2713 = exact per-page data.">\\u2b06 Pushable queries \\u2014 extra searches this page can win</div>'
+        + _pRows
+        + (_pushList.length > 5 ? '<div style="font-size:9px;color:#4b5563;margin-top:3px;">+ ' + (_pushList.length - 5) + ' more in your Queries CSV</div>' : '')
+        + '</div>';
+    }
     return '<div class="cs-page-card' + (isDone ? ' done' : '') + '" data-page-id="' + p.id + '" style="position:relative;background:#0d1117;border:1px solid #1f2937;' + (_mdOn ? 'border-left:4px solid #16a34a;' : 'border-left:4px solid #374151;') + 'border-radius:10px;margin-bottom:12px;overflow:hidden;">'
       + pendingBanner
       + needsHtmlBanner
@@ -28517,18 +30570,39 @@ function renderPages() {
       + '<div style="display:flex;align-items:flex-start;gap:8px;flex:1;min-width:0;">'
       + '<input type="checkbox" class="page-select-cb" data-id="' + p.id + '" onchange="updateBulkBar()" style="width:14px;height:14px;margin-top:3px;accent-color:#ef4444;cursor:pointer;flex-shrink:0;">'
       + '<div style="flex:1;min-width:0;">'
-      + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;"><span style="font-size:10px;font-weight:700;color:#4b5563;background:#1f2937;border-radius:4px;padding:1px 7px;flex-shrink:0;">#' + pageNum + '</span>'
+      + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;"><span style="font-size:10px;font-weight:800;color:#d1d5db;background:#1f2937;border:1px solid #374151;border-radius:4px;padding:1px 7px;flex-shrink:0;">#' + pageNum + '</span>'
       + (function(){
           var md = p.manual_done === true || p.manual_done === 't' || p.manual_done === 'true' || p.manual_done === 1;
           var mdAt = (md && p.manual_done_at) ? new Date(p.manual_done_at).toLocaleDateString('en-GB',{day:'2-digit',month:'short'}) : '';
-          return '<button onclick="toggleManualDone(' + p.id + ',' + (md ? 'true' : 'false') + ')" '
+          return '<button class="cs-mycheck-btn" onclick="toggleManualDone(' + p.id + ',' + (md ? 'true' : 'false') + ')" '
             + 'title="' + (md ? 'Your own checkmark — set ' + mdAt + '. Stays until YOU click it off. Scans and HTML never reset this.' : 'Your own checkmark — mark this page as handled by you. Nothing resets it except you.') + '" '
             + 'style="flex-shrink:0;cursor:pointer;font-size:10px;font-weight:800;border-radius:4px;padding:1px 8px;letter-spacing:.04em;'
             + (md ? 'background:rgba(74,222,128,.15);border:1px solid #16a34a;color:#4ade80;' : 'background:none;border:1px dashed #374151;color:#4b5563;')
             + '">' + (md ? '\\u2713 MY CHECK' + (mdAt ? ' \\u00b7 ' + mdAt : '') : '\\u25cb my check') + '</button>';
         })()
-      + '<div style="font-size:12px;' + (isDone ? 'text-decoration:line-through;color:#4b5563;' : 'color:#e5e7eb;') + 'font-family:monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;" title="' + rawUrl + '">' + urlShort + '</div></div>'
+      + '<div class="cs-url-line" style="font-size:12px;' + (isDone ? 'text-decoration:line-through;color:#4b5563;' : 'color:#e5e7eb;') + 'font-family:monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;border-radius:4px;padding:1px 4px;margin-left:-4px;" title="' + rawUrl + '">' + urlShort + '</div></div>'
       + '<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:4px;">' + badges + '</div>'
+      + (p.redirects_to ? (function(){
+          var isDead404 = String(p.redirects_to).indexOf('(dead') === 0;
+          var isCanon = String(p.redirects_to).indexOf('(canonical') === 0;
+          var canonUrl = ''; if (isCanon) { var _cmm = String(p.redirects_to).match(/canonical \u2192 ([^)]+)/); canonUrl = _cmm ? _cmm[1].trim() : ''; }
+          var destPath = ''; try { destPath = new URL(isCanon ? canonUrl : p.redirects_to).pathname.replace(/\\/+$/,''); } catch(e) {}
+          var destTracked = isDead404 ? true : (_pages||[]).some(function(o){ if (o.id === p.id || !o.url) return false; try { return new URL(o.url).pathname.replace(/\\/+$/,'') === destPath; } catch(e) { return false; } });
+          var _head = isDead404
+            ? '\\u274c <b>This URL no longer exists</b> ' + String(p.redirects_to).replace(/</g,"&lt;")
+            : isCanon
+            ? '\\ud83d\\udd17 <b>Canonical duplicate</b> \\u2014 Google treats <span style="font-family:monospace;color:#fecaca;">' + canonUrl.replace(/</g,"&lt;") + '</span> as the real page. Not a conflict; you only need to track the canonical.'
+            : '\\u21aa\\ufe0f <b>This URL is a 301 redirect</b> \\u2192 <span style="font-family:monospace;color:#fecaca;">' + String(p.redirects_to).replace(/</g,"&lt;") + '</span>';
+          var _bg = isCanon ? 'rgba(96,165,250,.1)' : 'rgba(248,113,113,.1)';
+          var _bd = isCanon ? '#1e3a8a' : '#7f1d1d';
+          var _fg = isCanon ? '#93c5fd' : '#fca5a5';
+          return '<div style="background:' + _bg + ';border:1px solid ' + _bd + ';border-radius:6px;padding:7px 10px;margin:4px 0;font-size:11px;color:' + _fg + ';line-height:1.5;">' + _head + '<br>'
+            + (destTracked
+                ? 'The destination is <b>already tracked</b> \\u2014 just remove this dead URL. <button onclick="removeRedirectedPage(' + p.id + ',null)" style="margin-top:4px;cursor:pointer;font-size:10px;font-weight:700;padding:3px 10px;border-radius:5px;background:#7f1d1d;border:1px solid #b91c1c;color:#fecaca;">Remove this dead page</button>'
+                : 'One click swaps the dead URL for its destination: <button onclick="removeRedirectedPage(' + p.id + ',&quot;' + String(p.redirects_to).replace(/"/g,"&quot;") + '&quot;)" style="margin-top:4px;cursor:pointer;font-size:10px;font-weight:800;padding:3px 12px;border-radius:5px;background:#166534;border:1px solid #16a34a;color:#bbf7d0;">\\u2713 Track destination instead</button> <button onclick="removeRedirectedPage(' + p.id + ',null)" style="margin-top:4px;cursor:pointer;font-size:10px;font-weight:700;padding:3px 10px;border-radius:5px;background:#7f1d1d;border:1px solid #b91c1c;color:#fecaca;">Just remove</button>')
+            + '</div>';
+        })() : '')
+      + _pushHtml
       + gscHtml
       + '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:4px;">'
       + (kw ? '<span style="font-size:10px;color:#4b5563;">kw: <span style="color:#a78bfa;">' + kw + '</span></span><button onclick="editKeyword(' + p.id + ',this)" style="font-size:9px;background:none;border:none;color:#374151;cursor:pointer;text-decoration:underline;">edit</button>'
@@ -28538,12 +30612,13 @@ function renderPages() {
       + '</div>'
       + '</div>'
       + '</div>'
-      + '<div class="cs-card-actions" style="display:flex;gap:5px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;align-items:flex-start;">'
-      + ((hasBrief || _lastBriefData[p.id]) ? '<button onclick="viewLastBrief(' + p.id + ')" style="background:#7c3aed;border:1px solid #8b5cf6;border-radius:6px;color:#fff;cursor:pointer;font-size:12px;padding:6px 14px;font-weight:700;box-shadow:0 2px 10px rgba(124,58,237,.45);" title="View Citation Brief">\\ud83d\\udcc4 View Brief</button>' : '')
-      + '<button onclick="openHtmlUpload(' + p.id + ')" style="background:none;border:1px solid ' + (htmlNeeded ? '#f59e0b' : '#374151') + ';border-radius:5px;color:' + (htmlNeeded ? '#fbbf24' : '#4b5563') + ';cursor:pointer;font-size:11px;padding:3px 10px;font-weight:' + (htmlNeeded ? '700' : '400') + ';" title="' + (htmlNeeded ? 'Paste HTML for the first scan' : 'Update HTML') + '">\\ud83d\\udccb ' + (htmlNeeded ? 'Add HTML' : 'HTML') + '</button>'
-      + (lastChecked ? '<button onclick="checkPage(' + p.id + ')" style="background:none;border:1px solid #374151;border-radius:5px;color:#6b7280;cursor:pointer;font-size:11px;padding:3px 8px;" title="Rescan now">\\u21bb</button>' : '')
-      + '<button onclick="csPosHist(' + p.id + ')" style="background:none;border:1px solid #374151;border-radius:5px;color:#6b7280;cursor:pointer;font-size:12px;padding:4px 8px;" title="Ranking history">\\ud83d\\udcc8</button>'
-      + '<button onclick="deletePage(' + p.id + ')" style="background:none;border:1px solid #374151;border-radius:5px;color:#374151;cursor:pointer;font-size:12px;padding:4px 8px;" title="Delete page">\\ud83d\\uddd1</button>'
+      + '<div class="cs-card-actions" style="display:flex;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;align-items:flex-start;">'
+      + '<button class="cs-aio-btn" onclick="event.stopPropagation();openAioPaste(' + p.id + ')" style="background:#0d1117;border:1px solid ' + (p.aio_manual_text ? '#22c55e' : '#f59e0b') + ';border-radius:7px;color:' + (p.aio_manual_text ? '#4ade80' : '#fbbf24') + ';cursor:pointer;font-size:11px;padding:5px 12px;font-weight:600;" title="' + (p.aio_manual_text ? 'AI Overview saved \\u2014 click to edit' : 'Step 1 \\u2014 paste the Google AI Overview before scanning') + '">\\ud83d\\udd0d ' + (p.aio_manual_text ? 'AIO \\u2713' : 'Add AIO') + '</button>'
+      + '<button class="cs-html-btn' + (_htmlBlink ? ' cs-blink' : '') + '" onclick="openHtmlUpload(' + p.id + ')" style="background:#0d1117;border:1px solid ' + (_htmlDone ? '#22c55e' : (_htmlBlink ? '#f59e0b' : (htmlNeeded ? '#f59e0b' : '#38bdf8'))) + ';border-radius:7px;color:' + (_htmlDone ? '#4ade80' : (_htmlBlink ? '#fbbf24' : (htmlNeeded ? '#fbbf24' : '#7dd3fc'))) + ';cursor:pointer;font-size:11px;padding:5px 12px;font-weight:600;" title="' + (_htmlDone ? 'HTML scanned \\u2014 click to update' : (_htmlBlink ? 'HTML saved \\u2014 waiting for the scan to process it' : (htmlNeeded ? 'Step 2 \\u2014 paste HTML for the first scan' : 'Update HTML'))) + '">\\ud83d\\udccb ' + (_htmlDone ? 'HTML \\u2713' : (htmlNeeded ? 'Add HTML' : 'HTML')) + '</button>'
+      + (lastChecked ? '<button onclick="checkPage(' + p.id + ')" style="background:#0d1117;border:1px solid ' + (_scanDone ? '#22c55e' : '#2dd4bf') + ';border-radius:7px;color:' + (_scanDone ? '#4ade80' : '#5eead4') + ';cursor:pointer;font-size:13px;padding:5px 10px;font-weight:600;" title="' + (_scanDone ? 'Scanned this round \\u2014 click to rescan now' : 'Rescan now') + '">' + (_scanDone ? '\\u21bb \\u2713' : '\\u21bb') + '</button>' : '')
+      + ((hasBrief || _lastBriefData[p.id]) ? '<button onclick="viewLastBrief(' + p.id + ')" style="background:#0d1117;border:1px solid #8b5cf6;border-radius:7px;color:#c4b5fd;cursor:pointer;font-size:11px;padding:5px 12px;font-weight:600;" title="View Citation Brief">\\ud83d\\udcc4 View Brief</button>' : '')
+      + '<button onclick="csPosHist(' + p.id + ')" style="background:#0d1117;border:1px solid #64748b;border-radius:7px;color:#cbd5e1;cursor:pointer;font-size:13px;padding:5px 10px;font-weight:600;" title="Ranking history">\\ud83d\\udcc8</button>'
+      + '<button onclick="deletePage(' + p.id + ')" style="background:#0d1117;border:1px solid #ef4444;border-radius:7px;color:#f87171;cursor:pointer;font-size:13px;padding:5px 10px;font-weight:600;" title="Delete page">\\ud83d\\uddd1</button>'
       + '</div>'
       + '</div>'
       + recsHtml
@@ -28563,7 +30638,7 @@ function renderPages() {
             + '</div>'
           : ''
         )
-      + '</div>';
+      + '</div></div>'; // closes the inner padding div AND the outer cs-page-card div — one missing close nested every card into the previous one (the "funnel")
   }).join('');
 }
 
@@ -28579,7 +30654,6 @@ function renderRecs(p) {
     var aio = !!(p.ai_google_overview_cited || snap.ai_google_overview_cited);
     var perp = !!(p.ai_perplexity_cited || snap.ai_perplexity_cited);
     var cop = !!(p.ai_bing_cited || snap.ai_bing_cited);
-    var cl = !!(p.ai_brave_cited || snap.ai_brave_cited);
     var score = p.graaf_score || snap.score || snap.graaf_score || p.last_graaf_score || null;
     var posColor = pos ? (pos<=3?'#22c55e':pos<=10?'#f59e0b':'#ef4444') : '#4b5563';
     var posBlink = pos ? ' style="animation:briefBlink 1.2s ease-in-out 4"' : '';
@@ -28604,9 +30678,49 @@ function renderRecs(p) {
     html += '<div class="cb-istat"' + (aio ? ' style="animation:briefBlink 1.2s ease-in-out 4"' : '') + '><div class="cb-isv" style="color:' + (aio?'#22c55e':'#374151') + '">' + (aio?'&#10003;':'&#8212;') + '</div><div class="cb-isl">Google AIO</div></div>';
     html += '<div class="cb-istat"' + (perp ? ' style="animation:briefBlink 1.2s ease-in-out 4"' : '') + '><div class="cb-isv" style="color:' + (perp?'#818cf8':'#374151') + '">' + (perp?'&#10003;':'&#8212;') + '</div><div class="cb-isl">Perplexity</div></div>';
     html += '<div class="cb-istat"' + (cop ? ' style="animation:briefBlink 1.2s ease-in-out 4"' : '') + '><div class="cb-isv" style="color:' + (cop?'#60a5fa':'#374151') + '">' + (cop?'&#10003;':'&#8212;') + '</div><div class="cb-isl">Copilot</div></div>';
-    html += '<div class="cb-istat"' + (cl ? ' style="animation:briefBlink 1.2s ease-in-out 4"' : '') + '><div class="cb-isv" style="color:' + (cl?'#a78bfa':'#374151') + '">' + (cl?'&#10003;':'&#8212;') + '</div><div class="cb-isl">Claude</div></div>';
     if (score) html += '<div class="cb-istat"><div class="cb-isv" style="color:#f59e0b">' + score + '</div><div class="cb-isl">GRAAF</div></div>';
     html += '</div>';
+
+    // ── Manual AIO text input ──────────────────────────────────────────────
+    var _aioManual = p.aio_manual_text || '';
+    html += '<div style="margin:8px 0;padding:8px 12px;background:#0a0e14;border:1px solid #1f2937;border-radius:8px;">';
+    html += '<div style="font-size:10px;font-weight:700;color:#f59e0b;margin-bottom:4px;">&#x1F50D; Google AI Overview (manual)</div>';
+    html += '<div style="font-size:10px;color:#6b7280;margin-bottom:4px;">Paste the AI Overview text from Google. Empty = no AIO. The system auto-detects if your page is cited.</div>';
+    html += '<textarea id="aioManual_' + pageId + '" style="width:100%;min-height:60px;background:#111827;color:#e5e7eb;border:1px solid #374151;border-radius:6px;padding:6px 8px;font-size:11px;font-family:inherit;resize:vertical;" placeholder="Paste Google AI Overview text here...">' + (String(_aioManual||'').replace(/</g,'&lt;').replace(/>/g,'&gt;')) + '</textarea>';
+    html += '<div style="display:flex;gap:6px;margin-top:4px;align-items:center;">';
+    html += '<button onclick="saveAioManual(' + pageId + ')" style="background:#f59e0b;color:#000;border:none;border-radius:4px;padding:3px 10px;font-size:10px;font-weight:700;cursor:pointer;">Save AIO</button>';
+    html += '<button onclick="clearAioManual(' + pageId + ')" style="background:#374151;color:#9ca3af;border:none;border-radius:4px;padding:3px 10px;font-size:10px;cursor:pointer;">Clear</button>';
+    html += '<span id="aioManualStatus_' + pageId + '" style="font-size:10px;color:#6b7280;"></span>';
+    html += '</div></div>';
+
+    // ── Who's currently cited: real competitor data already fetched from Google (organic top-5)
+    // and Perplexity (its citations array) during the scan — previously discarded, now shown so the
+    // owner sees WHO wins the query and WHY, not just their own pass/fail status.
+    var _gComp = (function(){ try { return typeof p.google_competitors === 'string' ? JSON.parse(p.google_competitors) : (p.google_competitors||snap.google_competitors||[]); } catch(e){ return []; } })();
+    var _pComp = (function(){ try { return typeof p.ai_perplexity_competitors === 'string' ? JSON.parse(p.ai_perplexity_competitors) : (p.ai_perplexity_competitors||snap.ai_perplexity_competitors||[]); } catch(e){ return []; } })();
+    if ((_gComp && _gComp.length) || (_pComp && _pComp.length)) {
+      html += '<div style="margin:10px 0;padding:10px 12px;background:#0a0e14;border:1px solid #1f2937;border-radius:8px;">';
+      html += '<div style="font-size:10px;font-weight:800;letter-spacing:.05em;color:#818cf8;text-transform:uppercase;margin-bottom:8px;">\\u{1F441}\\uFE0F Who\\u2019s currently cited for this query</div>';
+      if (_gComp && _gComp.length) {
+        html += '<div style="font-size:10px;color:#6b7280;margin-bottom:3px;">Google top results:</div>';
+        html += '<div style="display:flex;flex-direction:column;gap:2px;margin-bottom:8px;">';
+        _gComp.slice(0,5).forEach(function(c, ci){
+          var host = ''; try { host = new URL(c.url).hostname.replace(/^www\\./,''); } catch(e) { host = c.url||''; }
+          html += '<div style="font-size:11px;color:#9ca3af;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + String(c.title||'').replace(/"/g,'&quot;') + '">#' + (c.position||ci+1) + ' <span style="color:#60a5fa;">' + host.replace(/</g,'&lt;') + '</span></div>';
+        });
+        html += '</div>';
+      }
+      if (_pComp && _pComp.length) {
+        html += '<div style="font-size:10px;color:#6b7280;margin-bottom:3px;">Perplexity cited:</div>';
+        html += '<div style="display:flex;flex-direction:column;gap:2px;">';
+        _pComp.slice(0,5).forEach(function(u){
+          var host = ''; try { host = new URL(u).hostname.replace(/^www\\./,''); } catch(e) { host = u; }
+          html += '<div style="font-size:11px;color:#9ca3af;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + '<span style="color:#a78bfa;">' + host.replace(/</g,'&lt;') + '</span></div>';
+        });
+        html += '</div>';
+      }
+      html += '</div>';
+    }
 
     // What to add label
     html += '<div class="cb-inline-phd">&#10024; What to add to get cited</div>';
@@ -28718,8 +30832,41 @@ function _buildBriefData(p) {
     gsc_position: p.gsc_position != null ? p.gsc_position : null,
     gsc_keyword: p.gsc_keyword || null,
     _gsc_enabled: GSC_ENABLED || (p.gsc_clicks != null) || (p.gsc_impressions != null) || (p.gsc_position != null),
+    aio_text: p.ai_google_overview_text || p.aio_manual_text || '',
+    aio_found: !!p.ai_google_overview_found,
+    aio_manual_text: p.aio_manual_text || '',
+    perp_excerpt: p.ai_perplexity_answer_excerpt || '',
+    perp_text: p.ai_perplexity_text || '',
+    aio_references: p.ai_google_overview_references || null,
+    google_competitors: p.google_competitors || null,
+    perp_competitors: p.ai_perplexity_competitors || null,
+    last_checked: p.last_checked || null,
     type: 'brief_ready'
   };
+}
+
+function saveAioManual(pageId) {
+  var ta = document.getElementById('aioManual_' + pageId);
+  var st = document.getElementById('aioManualStatus_' + pageId);
+  if (!ta) return;
+  var text = ta.value.trim();
+  st.textContent = 'Saving...';
+  st.style.color = '#f59e0b';
+  fetch('/api/tracker-client/' + TOKEN + '/page/' + pageId + '/aio-manual', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ text: text })
+  }).then(function(r){ return r.json(); }).then(function(d){
+    if (d.success) {
+      st.textContent = d.cleared ? 'Cleared — rescan to update badge' : (d.aio_cited ? '✅ AIO found + CITED' : '⚠️ AIO found, not cited');
+      st.style.color = d.aio_cited ? '#4ade80' : '#f59e0b';
+    } else { st.textContent = d.error || 'Error'; st.style.color = '#f87171'; }
+  }).catch(function(){ st.textContent = 'Network error'; st.style.color = '#f87171'; });
+}
+
+function clearAioManual(pageId) {
+  var ta = document.getElementById('aioManual_' + pageId);
+  if (ta) ta.value = '';
+  saveAioManual(pageId);
 }
 
 function copyBrief(pageId) {
@@ -28733,11 +30880,25 @@ function copyBrief(pageId) {
   var score = d.score || p.graaf_score || p.last_graaf_score || null;
   var lines = ['AI Citation Brief \\u2014 ' + (p.url||''), ''];
   if (p.keyword || p.gsc_keyword) lines.push('Keyword: ' + (p.keyword||p.gsc_keyword));
+  lines.push('', '\ud83d\udd0d What We Actually Checked (transparency):');
+  lines.push('- Query tested: "' + (p.keyword||p.gsc_keyword||'') + '"');
+  if (p.last_checked) lines.push('- Checked: ' + new Date(p.last_checked).toLocaleString());
+  if (p.ai_google_overview_text) lines.push('- Google AI Overview currently shows: "' + _aioTxt.substring(0,200) + (_aioTxt.length>200?'...':'') + '"');
+  if (p.ai_perplexity_answer_excerpt) lines.push('- Perplexity\\'s actual answer excerpt: "' + p.ai_perplexity_answer_excerpt.substring(0,200) + (p.ai_perplexity_answer_excerpt.length>200?'...':'') + '"');
+  (function(){
+    try {
+      var _gc = typeof p.google_competitors === 'string' ? JSON.parse(p.google_competitors) : (p.google_competitors||[]);
+      if (_gc && _gc.length) lines.push('- Google: ' + _gc.length + ' top competitors checked (full breakdown with reasons in the Competitor Gap action below)');
+    } catch(e) {}
+    try {
+      var _pc = typeof p.ai_perplexity_competitors === 'string' ? JSON.parse(p.ai_perplexity_competitors) : (p.ai_perplexity_competitors||[]);
+      if (_pc && _pc.length) lines.push('- Perplexity: ' + _pc.length + ' cited source' + (_pc.length>1?'s':'') + ' found' + (p.ai_perplexity_cited ? ' (this page IS cited)' : ' (this page not among them yet)') + '');
+    } catch(e) {}
+  })();
   lines.push('AI Citation Results:');
   lines.push('- Google AIO: ' + (p.ai_google_overview_cited ? 'CITED' : 'Not cited'));
   lines.push('- Perplexity: ' + (p.ai_perplexity_cited ? 'CITED' : 'Not cited'));
   lines.push('- Copilot: ' + (p.ai_bing_cited ? 'CITED' : 'Not cited'));
-  lines.push('- Claude: ' + (p.ai_brave_cited ? 'CITED' : 'Not cited'));
   if (pos) lines.push('- Google Position: #' + pos);
   if (score) lines.push('- GRAAF Score: ' + score + '/100');
   if (p.gsc_clicks != null || p.gsc_impressions != null || p.gsc_position != null) {
@@ -28746,38 +30907,118 @@ function copyBrief(pageId) {
     if (p.gsc_impressions != null) lines.push('- Impressions: ' + p.gsc_impressions);
     if (p.gsc_position != null) lines.push('- Position: ' + parseFloat(p.gsc_position).toFixed(1));
   }
+  // ── Helpers to make the external brief clear for BOTH a specialist and an AI ──
+  // Strip stray HTML tags from prose fields (keep real copy-paste HTML only inside the WRITE block).
+  var _stripTags = function(t){ return String(t||'').replace(/<[^>]+>/g, ' ').replace(/[ \\t]{2,}/g,' ').trim(); };
+  // Split a raw action field into labelled parts. Many actions arrive as one blob containing
+  // "GOOGLE SEARCH — top results: ... YOUR GAP: ... FIX: <html>". Break it into WHAT/CONTEXT/WRITE.
+  var _parseAction = function(raw){
+    var t = String(raw||'').trim();
+    var out = { what:'', context:'', write:'' };
+    var up = t.toUpperCase();
+    // FIX / READY-TO-PASTE marks the copy-paste HTML section (string search, no regex)
+    var fixIdx = -1, fixLen = 0;
+    var fixMarks = ['READY-TO-PASTE SECTION', 'READY TO PASTE SECTION', 'READY-TO-PASTE', 'FIX:', 'FIX —', 'FIX -'];
+    for (var fi=0; fi<fixMarks.length; fi++){ var mi = up.indexOf(fixMarks[fi]); if (mi>=0){ fixIdx=mi; fixLen=fixMarks[fi].length; break; } }
+    if (fixIdx>=0){
+      var after = t.slice(fixIdx+fixLen);
+      // trim leading separators/dashes/colons/spaces
+      var _seps = [':','-',String.fromCharCode(8212),' ',String.fromCharCode(10),String.fromCharCode(9)];
+      while (after.length && _seps.indexOf(after.charAt(0))>=0) after = after.slice(1);
+      out.write = after.trim();
+      t = t.slice(0, fixIdx).trim();
+      up = t.toUpperCase();
+    }
+    // YOUR GAP / AI OVERVIEW / GOOGLE SEARCH context markers -> context
+    var ctxMarks = ['YOUR GAP', 'AI OVERVIEW', 'AI AGGREGATION', 'GOOGLE SEARCH'];
+    var ctxIdx = -1;
+    for (var ci=0; ci<ctxMarks.length; ci++){ var xi = up.indexOf(ctxMarks[ci]); if (xi>=0 && (ctxIdx<0 || xi<ctxIdx)) ctxIdx = xi; }
+    if (ctxIdx>=0){
+      out.what = _stripTags(t.slice(0, ctxIdx)).trim();
+      out.context = _stripTags(t.slice(ctxIdx)).trim();
+    } else {
+      out.what = _stripTags(t);
+    }
+    return out;
+  };
+  var _emitAction = function(i, r, sysLabel){
+    var pri = String(r.priority||r.p||'').toUpperCase();
+    var title = _stripTags(r.title||r.t||'');
+    var sys = sysLabel || (r.system||r.sys||'');
+    lines.push((i) + '. [' + pri + ']' + (sys?(' ['+sys+']'):'') + ' ' + title);
+    var parts = _parseAction(r.action||r.passage||'');
+    if (parts.what) lines.push('   WHAT: ' + parts.what);
+    if (r.where) lines.push('   WHERE: ' + _stripTags(r.where));
+    if (parts.context) lines.push('   CONTEXT: ' + parts.context);
+    if (parts.write) { lines.push('   WRITE (copy-paste):'); parts.write.split(String.fromCharCode(10)).forEach(function(ln){ if(ln.trim()) lines.push('     ' + ln.trim()); }); }
+    // Competitor comparison table as readable plain text (was missing from the copy brief)
+    var ct = r.comparison_table; if (typeof ct === 'string'){ try { ct = JSON.parse(ct); } catch(e){ ct=null; } }
+    if (Array.isArray(ct) && ct.length) {
+      lines.push('   COMPETITOR GAP TABLE:');
+      ct.forEach(function(row){
+        lines.push('     \u2022 ' + (row.competitor||'') + ' \u2014 does well: ' + _stripTags(row.what_they_do_well||''));
+        lines.push('       our gap: ' + _stripTags(row.our_gap||'') + ' | do: ' + _stripTags(row.what_to_do||''));
+      });
+    }
+    var why = _stripTags(r.expected_impact||r.impact||r.why||'');
+    if (why) lines.push('   WHY: ' + why);
+  };
+  // De-duplicate the near-identical Competitor Gap action that appears in BOTH the AIO and GSC
+  // briefs: if an AIO item and a GSC item share a competitor-gap signature, keep the AIO one and
+  // tag it as covering both, and drop the GSC duplicate.
+  var _sig = function(x){ return _stripTags((x.title||'') ).toLowerCase().replace(/[^a-z0-9]+/g,' ').split(' ').filter(function(w){ return w.length>3; }).slice(0,4).join(' '); };
+  var _compGapish = function(x){ var t=((x.system||x.sys||'')+' '+(x.title||'')).toLowerCase(); return /competitor|content gap/.test(t) || (Array.isArray(x.comparison_table)&&x.comparison_table.length); };
+
   var _isInt3 = function(x){ var s=(x.system||x.sys||'').toLowerCase(); return s.indexOf('internal')>=0; };
   var _aio3 = (Array.isArray(recs)?recs:[]).filter(function(x){ return !_isInt3(x); });
   var _link3 = (Array.isArray(recs)?recs:[]).filter(_isInt3);
-  var _gsc3 = (Array.isArray(d.gsc_brief)&&d.gsc_brief.length)?d.gsc_brief:(Array.isArray(p.gsc_brief)?p.gsc_brief:[]);
+  var _gsc3raw = (Array.isArray(d.gsc_brief)&&d.gsc_brief.length)?d.gsc_brief:(Array.isArray(p.gsc_brief)?p.gsc_brief:[]);
   var _src3 = (Array.isArray(d.source_suggestions)&&d.source_suggestions.length)?d.source_suggestions:(Array.isArray(p.source_suggestions)?p.source_suggestions:[]);
 
-  lines.push('', '=== AIO BRIEF ===');
-  if (_aio3.length) { _aio3.forEach(function(r, i) {
-    lines.push((i+1) + '. [' + (r.priority||r.p||'').toUpperCase() + '] ' + (r.title||r.t||'') + ((r.system||r.sys)?' ('+(r.system||r.sys)+')':''));
-    if (r.action||r.passage) lines.push('   ' + (r.action||r.passage));
-    if (r.expected_impact||r.impact) lines.push('   Impact: ' + (r.expected_impact||r.impact));
-  }); } else { lines.push('(no citation actions)'); }
+  // Drop GSC items whose competitor-gap signature already appears in the AIO brief.
+  var _aioSigs = {};
+  _aio3.forEach(function(x){ if (_compGapish(x)) { var g=_sig(x); if(g) _aioSigs[g]=true; } });
+  var _dupNote = false;
+  var _gsc3 = _gsc3raw.filter(function(g){
+    if (_compGapish(g)) { var sig=_sig(g); if (sig && _aioSigs[sig]) { _dupNote = true; return false; } }
+    return true;
+  });
 
-  lines.push('', '=== GSC BRIEF ===');
+  lines.push('', '=== AIO BRIEF (AI citations: Google AI Overview, Perplexity, Copilot) ===');
+  if (_aio3.length) { _aio3.forEach(function(r, i) { _emitAction(i+1, r, r.system||r.sys||''); lines.push(''); }); }
+  else { lines.push('(no citation actions)'); }
+
+  lines.push('=== GSC BRIEF (traditional Google ranking) ===');
+  if (_dupNote) lines.push('(Competitor Content Gap is covered once in the AIO brief above — it improves both AI citations and ranking.)', '');
   if (_gsc3.length) { _gsc3.forEach(function(g, i) {
-    lines.push((i+1) + '. [' + (g.priority||'').toUpperCase() + '] ' + (g.title||''));
-    if (g.trigger) lines.push('   Signal: ' + g.trigger);
-    if (g.action) lines.push('   ' + g.action);
-    if (g.expected_impact) lines.push('   Impact: ' + g.expected_impact);
+    var _title = _stripTags(g.title||'');
+    var pri = String(g.priority||'').toUpperCase();
+    lines.push((i+1) + '. [' + pri + '] ' + _title);
+    if (g.trigger) lines.push('   SIGNAL: ' + _stripTags(g.trigger));
+    var parts = _parseAction(g.action||'');
+    if (parts.what) lines.push('   WHAT: ' + parts.what);
+    if (parts.context) lines.push('   CONTEXT: ' + parts.context);
+    if (parts.write) { lines.push('   WRITE (copy-paste):'); parts.write.split(String.fromCharCode(10)).forEach(function(ln){ if(ln.trim()) lines.push('     ' + ln.trim()); }); }
+    var ct = g.comparison_table; if (typeof ct === 'string'){ try { ct = JSON.parse(ct); } catch(e){ ct=null; } }
+    if (Array.isArray(ct) && ct.length) { lines.push('   COMPETITOR GAP TABLE:'); ct.forEach(function(row){ lines.push('     \u2022 ' + (row.competitor||'') + ' \u2014 does well: ' + _stripTags(row.what_they_do_well||'')); lines.push('       our gap: ' + _stripTags(row.our_gap||'') + ' | do: ' + _stripTags(row.what_to_do||'')); }); }
+    var why = _stripTags(g.expected_impact||g.impact||'');
+    if (why) lines.push('   WHY: ' + why);
+    lines.push('');
   }); } else { lines.push('(no GSC ranking actions)'); }
 
-  lines.push('', '=== SOURCE BRIEF ===');
-  if (_src3.length) { _src3.forEach(function(s, i) {
-    lines.push((i+1) + '. [' + (s.priority||'medium').toUpperCase() + '] ' + (s.claim||'Unverified claim'));
-    if (s.why) lines.push('   Issue: ' + s.why);
-    if (s.sources && s.sources.length) lines.push('   Suggested sources: ' + s.sources.map(function(x){ return x.name||x.url; }).join(', '));
+  lines.push('=== SOURCE BRIEF (claims to verify) ===');
+  if (_src3.length) { _src3.forEach(function(s2, i) {
+    lines.push((i+1) + '. [' + (s2.priority||'medium').toUpperCase() + '] ' + _stripTags(s2.claim||'Unverified claim'));
+    if (s2.why) lines.push('   ISSUE: ' + _stripTags(s2.why));
+    if (s2.sources && s2.sources.length) lines.push('   SUGGESTED SOURCES: ' + s2.sources.map(function(x){ return x.name||x.url; }).join(', '));
   }); } else { lines.push('(no unverified claims)'); }
 
   lines.push('', '=== INTERNAL LINKING ===');
   if (_link3.length) { _link3.forEach(function(r, i) {
-    lines.push((i+1) + '. ' + (r.title||'Internal link'));
-    if (r.action||r.passage) lines.push('   ' + (r.action||r.passage));
+    lines.push((i+1) + '. ' + _stripTags(r.title||'Internal link'));
+    var parts = _parseAction(r.action||r.passage||'');
+    if (parts.what) lines.push('   ' + parts.what);
+    if (parts.write) { lines.push('   WRITE (copy-paste):'); parts.write.split(String.fromCharCode(10)).forEach(function(ln){ if(ln.trim()) lines.push('     ' + ln.trim()); }); }
   }); } else { lines.push('(no internal link suggestions)'); }
   lines.push('', '---', 'Generated by ContentScale AI Citations Tracker');
   var text = lines.join(_n);
@@ -28859,6 +31100,32 @@ function markSitemapDone() {
   b.title = 'Sitemap imported';
 }
 
+function jumpToPage(pageId) {
+  var card = document.querySelector('.cs-page-card[data-page-id="' + pageId + '"]');
+  if (!card) { setMdFilter('all'); card = document.querySelector('.cs-page-card[data-page-id="' + pageId + '"]'); }
+  if (!card) return;
+  // Cards are tall — block:'center' overshoots and lands the viewport mid-card, which reads as "scrolled past it".
+  // Scroll the TOP of the card just under the top of the viewport instead, so the highlighted URL is the first thing you see.
+  card.style.scrollMarginTop = '72px';
+  card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  // Exact highlight: crisp 2px outline on the card edge (no glow spread) + the URL line itself
+  var prevOutline = card.style.outline, prevOffset = card.style.outlineOffset;
+  card.style.outline = '2px solid #f97316';
+  card.style.outlineOffset = '0px';
+  var urlEl = card.querySelector('.cs-url-line') || card;
+  var prevBg = urlEl.style.background, prevSh = urlEl.style.boxShadow, prevCo = urlEl.style.color;
+  urlEl.style.background = 'rgba(249,115,22,.18)';
+  urlEl.style.boxShadow = 'inset 0 -2px 0 #f97316';
+  urlEl.style.color = '#fed7aa';
+  setTimeout(function(){
+    card.style.outline = prevOutline || '';
+    card.style.outlineOffset = prevOffset || '';
+    urlEl.style.background = prevBg || '';
+    urlEl.style.boxShadow = prevSh || '';
+    urlEl.style.color = prevCo || '';
+  }, 2200);
+}
+
 async function setAllManualDone(on) {
   var msg = on ? 'Set your checkmark on ALL pages?' : 'Remove your checkmark from ALL pages? (Your work status resets to \\u25cb everywhere)';
   if (!confirm(msg)) return;
@@ -28874,6 +31141,710 @@ async function setAllManualDone(on) {
   } catch(e) { toast('Could not update', '#f87171'); }
 }
 
+// ── IMPRESSION GAP — queries with real demand that no tracked page targets yet ──
+// Fed automatically when a Queries CSV is imported. No user action needed beyond the import itself.
+var _gapQueries = null;
+var _sitemapSlugs = [];
+var _gapAnalysis = null;
+// A page counts as "scanned" when the database shows it has a recent snapshot with a real brief.
+// This is DERIVED from the server data (_pages), not stored separately: it's automatically correct
+// across every device/browser, updates itself when a fresh scan lands, and needs no manual reset —
+// re-scanning a page overwrites its snapshot, and the green state simply follows the data.
+function _isSlugScanned(slug){
+  try {
+    var pid = _slugToPageId[slug];
+    if (!pid) return false;
+    var p = (_pages || []).find(function(x){ return x.id === pid || String(x.id) === String(pid); });
+    if (!p) return false;
+    // Scanned = has a snapshot timestamp AND has actual brief recommendations (not an empty shell).
+    var hasBrief = false;
+    try { var r = typeof p.recommendations === 'string' ? JSON.parse(p.recommendations) : p.recommendations; hasBrief = Array.isArray(r) ? r.length > 0 : !!r; } catch(e) { hasBrief = false; }
+    return !!(p.last_checked && hasBrief);
+  } catch(e) { return false; }
+}
+// These three were declared with the var keyword INSIDE renderCannibal() (function-scoped, invisible to
+// _provenScanAll() and any other sibling function) \u2014 promoted to global so they're readable
+// anywhere, always reflecting the most recent renderCannibal() computation.
+var _provenList = [];
+var _slugToPageId = {};
+var _gapDone = [];
+var _linkChecks = [];
+function _linkStatusFor(hubSlug, spokeSlug) {
+  for (var i = 0; i < _linkChecks.length; i++) {
+    var c = _linkChecks[i];
+    if (c.hub === hubSlug && c.spoke === spokeSlug) return c.status;
+  }
+  return null;
+}
+function _gapQNorm(s){ return String(s||'').toLowerCase().replace(/\s+/g,' ').trim(); }
+function _famIsDone(f){
+  var qs = (f.queries||[]).map(_gapQNorm).filter(Boolean);
+  if (!qs.length) return false;
+  var hit = 0; qs.forEach(function(q){ if (_gapDone.indexOf(q) > -1) hit++; });
+  return hit >= qs.length; // done only when ALL its queries are checked off
+}
+async function toggleGapFamily(idx, makeDone) {
+  var f = _gapAnalysis && _gapAnalysis.families && _gapAnalysis.families[idx];
+  if (!f) return;
+  try {
+    var d = await api('/gap-family-done', 'POST', { queries: f.queries || [], done: makeDone });
+    if (d && d.success) {
+      var qs = (f.queries||[]).map(_gapQNorm);
+      if (makeDone) { qs.forEach(function(q){ if (_gapDone.indexOf(q) === -1) _gapDone.push(q); }); }
+      else { _gapDone = _gapDone.filter(function(q){ return qs.indexOf(q) === -1; }); }
+      toast(makeDone ? 'Family checked \u2014 excluded from the next AI analysis.' : 'Check removed \u2014 family is open work again.', makeDone ? '#4ade80' : '#9ca3af');
+      renderImpressionGap();
+    } else { toast((d && d.error) || 'Could not save', '#f87171'); }
+  } catch(e) { toast('Could not save', '#f87171'); }
+}
+async function runGapAnalysis() {
+  var btn = document.getElementById('gapAiBtn');
+  if (btn) { btn.disabled = true; btn.textContent = '\u23f3 Analyzing\u2026'; }
+  try {
+    var d = await api('/analyze-gaps', 'POST', {});
+    if (d && d.success) {
+      _gapAnalysis = d.analysis;
+      toast('Gap analysis ready \u2014 one verdict per intent family', '#4ade80');
+      renderImpressionGap();
+    } else { toast((d && d.error) || 'Analysis failed', '#f87171'); }
+  } catch(e) { toast('Analysis failed', '#f87171'); }
+  if (btn) { btn.disabled = false; btn.textContent = '\ud83e\udd16 Sort this out for me'; }
+}
+function _gapFamiliesHtml() {
+  if (!_gapAnalysis || !_gapAnalysis.families || !_gapAnalysis.families.length) return '';
+  var vMeta = {
+    SECTION: { c: '#4ade80', l: 'ADD SECTION' },
+    NEW_PAGE: { c: '#60a5fa', l: 'NEW PAGE' },
+    TRACK_EXISTING: { c: '#a78bfa', l: 'TRACK EXISTING' },
+    IGNORE: { c: '#6b7280', l: 'IGNORE' }
+  };
+  var famsIdx = _gapAnalysis.families.map(function(f, i){ return { f: f, idx: i, done: _famIsDone(f) }; });
+  famsIdx.sort(function(a,b){
+    if (a.done !== b.done) return a.done ? 1 : -1; // checked-off families sink to the bottom
+    var o = { SECTION: 0, TRACK_EXISTING: 1, NEW_PAGE: 2, IGNORE: 3 };
+    if (o[a.f.verdict] !== o[b.f.verdict]) return (o[a.f.verdict]||9) - (o[b.f.verdict]||9);
+    return (b.f.total_impressions||0) - (a.f.total_impressions||0);
+  });
+  var rows = famsIdx.map(function(x){
+    var f = x.f; var isDone = x.done;
+    var m = vMeta[f.verdict] || vMeta.IGNORE;
+    return '<div style="padding:8px 12px;border-bottom:1px solid #1f2937;' + (isDone ? 'opacity:.45;' : '') + '">'
+      + '<div style="display:flex;align-items:center;gap:10px;">'
+      + '<button onclick="toggleGapFamily(' + x.idx + ',' + (isDone ? 'false' : 'true') + ')" title="' + (isDone ? 'Checked \u2014 excluded from the next AI analysis. Click to reopen.' : 'Mark this family as handled by you \u2014 it drops out of the next AI analysis and sinks to the bottom.') + '" style="flex-shrink:0;cursor:pointer;font-size:9px;font-weight:800;border-radius:4px;padding:2px 8px;' + (isDone ? 'background:rgba(74,222,128,.15);border:1px solid #16a34a;color:#4ade80;' : 'background:none;border:1px dashed #374151;color:#4b5563;') + '">' + (isDone ? '\u2713 DONE' : '\u25cb my check') + '</button>'
+      + '<span style="font-size:9px;font-weight:800;color:' + m.c + ';border:1px solid ' + m.c + '55;border-radius:4px;padding:2px 7px;flex-shrink:0;white-space:nowrap;">' + m.l + '</span>'
+      + '<span style="font-size:11px;font-weight:700;color:#e5e7eb;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;' + (isDone ? 'text-decoration:line-through;' : '') + '">' + String(f.name||'').replace(/</g,'&lt;') + '</span>'
+      + (f.target ? (function(){ var _t = String(f.target); var _disp = _t; try { _disp = new URL(_t).pathname; if (_disp === '/' ) _disp = '/ (homepage)'; } catch(e) { _disp = _t.replace(/^https?:\\/\\/[^\\/]+/,''); } return '<span title="' + _t.replace(/"/g,'&quot;') + '" style="font-size:10px;color:' + m.c + ';font-family:monospace;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:340px;">\u2192 ' + _disp.replace(/</g,'&lt;') + '</span>'; })() : '')
+      + '<span style="font-size:10px;color:#6b7280;flex-shrink:0;white-space:nowrap;">' + (f.total_impressions||0).toLocaleString() + ' impr \u00b7 ' + ((f.queries||[]).length) + ' queries</span>'
+      + '</div>'
+      + '<div style="font-size:10px;color:#9ca3af;margin:4px 0 0 0;line-height:1.55;"><b style="color:#e5e7eb;">Do this:</b> ' + String(f.action||'').replace(/</g,'&lt;') + ' <span style="color:#4b5563;">(' + String(f.reason||'').replace(/</g,'&lt;') + ')</span></div>'
+      + '<div style="font-size:9px;color:#374151;margin-top:2px;font-family:monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + (f.queries||[]).slice(0,6).join(' \u00b7 ').replace(/</g,'&lt;') + '</div>'
+      + '</div>';
+  }).join('');
+  return '<div style="border-bottom:1px solid #1f2937;">'
+    + '<div style="padding:7px 14px;background:rgba(74,222,128,.05);font-size:10px;font-weight:800;letter-spacing:.05em;color:#4ade80;text-transform:uppercase;">\ud83e\udd16 AI verdicts \u2014 one decision per intent family, nothing left to figure out</div>'
+    + rows + '</div>';
+}
+async function loadImpressionGap() {
+  try {
+    var d = await api('/gsc-queries', 'GET');
+    _gapQueries = (d && d.queries) || [];
+    _sitemapSlugs = (d && d.sitemap_slugs) || [];
+    _gapAnalysis = (d && d.gap_analysis) || null;
+    _gapDone = (d && d.gap_done) || [];
+  } catch(e) { console.error('[loadImpressionGap] fetch failed:', e.message); _gapQueries = []; }
+  try {
+    var lc = await api('/link-check', 'GET');
+    _linkChecks = (lc && lc.checks) || [];
+  } catch(e) { console.error('[loadImpressionGap] link-check failed:', e.message); _linkChecks = []; }
+  // Each render/compute step now fails independently — one broken step (e.g. a data-shape issue
+  // after several imports) no longer silently blanks out the OTHER panels too. Any failure is logged
+  // to console with a clear tag instead of vanishing, and the affected panel shows an explicit error
+  // instead of staying blank forever.
+  try { renderImpressionGap(); } catch(e) { console.error('[renderImpressionGap] failed:', e.message, e.stack); }
+  try { _computePushables(); } catch(e) { console.error('[_computePushables] failed:', e.message, e.stack); }
+  try {
+    _computeCannibal();
+  } catch(e) {
+    console.error('[_computeCannibal] failed:', e.message, e.stack);
+    var _host = document.getElementById('cannibalPanel');
+    if (_host) _host.innerHTML = '<div style="padding:10px 14px;font-size:11px;color:#f87171;background:rgba(248,113,113,.08);border:1px solid #f87171;border-radius:8px;">\u26a0 Cannibalization check hit an error and could not run: ' + String(e.message||e).replace(/</g,'&lt;') + '. Open the browser console (F12) for details, or refresh the page.</div>';
+  }
+  try { renderPages(); } catch(e) { console.error('[renderPages] failed:', e.message, e.stack); }
+}
+function _gapNorm(s){ try { return String(s||'').toLowerCase().replace(/[^\\p{L}\\p{N} ]/gu,' ').replace(/ +/g,' ').trim(); } catch(e) { return String(s||'').toLowerCase().replace(/[^a-z0-9 ]/g,' ').replace(/ +/g,' ').trim(); } }
+function slugOf(p){ try { var s = new URL(p.url).pathname || '/'; return (s === '/' ? '(homepage)' : s); } catch(e) { return p.url; } } // shared: used by BOTH _computeCannibal() and renderCannibal() — must be global, not function-local
+function renderImpressionGap() {
+  var host = document.getElementById('impressionGap');
+  if (!host) return;
+  if (!_gapQueries || !_gapQueries.length) {
+    host.innerHTML = '<div style="padding:16px;background:#0d1117;border:1px dashed #374151;border-radius:10px;margin-bottom:10px;text-align:center;">'
+      + '<div style="font-size:13px;font-weight:800;color:#e5e7eb;margin-bottom:6px;">\ud83d\udce1 Impression Gap \u2014 unlock this by connecting real search data</div>'
+      + '<div style="font-size:11px;color:#9ca3af;line-height:1.6;max-width:480px;margin:0 auto 10px;">Once connected, this finds real queries Google already shows your site for that none of your tracked pages target \u2014 free traffic you\u2019re leaving on the table. It also powers Cannibalization detection and the Lead Queue below.</div>'
+      + '<button onclick="showImportModal(\\'gsc\\')" style="cursor:pointer;font-size:11px;font-weight:800;padding:6px 16px;border-radius:6px;background:#1e3a8a;border:1px solid #3b82f6;color:#bfdbfe;">Connect search data \u2192</button>'
+      + '</div>';
+    return;
+  }
+  // Build the coverage set from tracked pages: keywords + gsc keywords + url slug words
+  var covered = [];
+  (_pages||[]).forEach(function(p){
+    if (p.keyword) covered.push(_gapNorm(p.keyword));
+    if (p.gsc_keyword) covered.push(_gapNorm(p.gsc_keyword));
+    try { var path = new URL(p.url).pathname.replace(/[-_/]/g,' '); covered.push(_gapNorm(path)); } catch(e) {}
+  });
+  covered = covered.filter(Boolean);
+  var isCovered = function(q) {
+    var qn = _gapNorm(q); if (!qn) return true;
+    var qFlat = qn.replace(/ /g,'');
+    var qWords = qn.split(' ').filter(function(w){ return w.length > 2; });
+    for (var i = 0; i < covered.length; i++) {
+      var c = covered[i];
+      if (c.indexOf(qn) > -1 || qn.indexOf(c) > -1) return true;
+      // flat (space-stripped) match: catches compound spellings ("contentatscale" vs "content at scale")
+      // and is the primary matcher for languages without spaces (Chinese, Japanese)
+      var cFlat = c.replace(/ /g,'');
+      if (qFlat.length >= 4 && cFlat.length >= 4 && (cFlat.indexOf(qFlat) > -1 || qFlat.indexOf(cFlat) > -1)) return true;
+      if (qWords.length) {
+        var hit = 0;
+        qWords.forEach(function(w){ if (c.indexOf(w) > -1) hit++; });
+        if (hit / qWords.length >= 0.6) return true;
+      }
+    }
+    return false;
+  };
+  var gaps = _gapQueries.filter(function(q){ return !q.page_id && (q.impressions||0) >= 20 && !isCovered(q.query) && _gapDone.indexOf(_gapQNorm(q.query)) === -1; });
+  gaps.sort(function(a,b){ return (b.impressions||0) - (a.impressions||0); });
+  gaps = gaps.slice(0, 20);
+  if (!gaps.length) { host.innerHTML = ''; return; }
+  // Sitemap awareness: before advising a NEW PAGE, check whether a matching page already EXISTS
+  // in the sitemap (uploaded at import) but simply isn't tracked yet.
+  // Closest tracked page for ADD SECTION targets — best word/flat overlap, even below coverage threshold
+  var _closestPage = function(q) {
+    var qn = _gapNorm(q); if (!qn) return null;
+    var qWords = qn.split(' ').filter(function(w){ return w.length > 2; });
+    var qFlat = qn.replace(/ /g,'');
+    var best = null, bestScore = 0;
+    (_pages||[]).forEach(function(p){
+      if (p.redirects_to) return; // never target a redirected/dead/canonical-duplicate page
+      var t = [];
+      if (p.keyword) t.push(_gapNorm(p.keyword));
+      if (p.gsc_keyword) t.push(_gapNorm(p.gsc_keyword));
+      try { t.push(_gapNorm(new URL(p.url).pathname.replace(/[-_/]/g,' '))); } catch(e) {}
+      var txt = t.filter(Boolean).join(' ');
+      if (!txt) return;
+      var s = 0;
+      if (qWords.length) { var hit = 0; qWords.forEach(function(w){ if (txt.indexOf(w) > -1) hit++; }); s = hit / qWords.length; }
+      var txtFlat = txt.replace(/ /g,'');
+      if (qFlat.length >= 4 && txtFlat.indexOf(qFlat) > -1) s = Math.max(s, 0.9);
+      if (s > bestScore) { bestScore = s; best = p; }
+    });
+    if (!best || bestScore < 0.25) return null;
+    try { var sl = new URL(best.url).pathname || '/'; return sl === '/' ? '(homepage)' : sl; } catch(e) { return best.url; }
+  };
+  var _deadPaths = {};
+  (_pages||[]).forEach(function(p){ if (p.redirects_to) { try { _deadPaths[new URL(p.url).pathname.replace(/\\/+$/,'').toLowerCase()] = 1; } catch(e) {} } });
+  var _slugMatch = function(q) {
+    var qn = _gapNorm(q); var qWords = qn.split(' ').filter(function(w){ return w.length > 2; });
+    if (!qWords.length) return null;
+    var best = null, bestScore = 0;
+    for (var i = 0; i < _sitemapSlugs.length; i++) {
+      try { var _sp = new URL(_sitemapSlugs[i], 'https://x/').pathname.replace(/\\/+$/,'').toLowerCase(); if (_deadPaths[_sp]) continue; } catch(e) {}
+      var sn = _gapNorm(String(_sitemapSlugs[i]).replace(/[-_/]/g,' '));
+      if (!sn) continue;
+      var hit = 0; qWords.forEach(function(w){ if (sn.indexOf(w) > -1) hit++; });
+      var sc = hit / qWords.length;
+      if (sc > bestScore) { bestScore = sc; best = _sitemapSlugs[i]; }
+    }
+    return bestScore >= 0.6 ? best : null;
+  };
+  var totImpr = 0; gaps.forEach(function(g){ totImpr += (g.impressions||0); });
+  var rows = gaps.map(function(g, i){
+    var ps = g.position ? parseFloat(g.position) : null;
+    var existsSlug = _slugMatch(g.query);
+    var hint;
+    var targetSlug = null;
+    if (ps !== null && ps <= 20) {
+      targetSlug = _closestPage(g.query);
+      hint = { t: 'ADD SECTION', c: '#4ade80', d: 'Google already shows you (pos ' + ps.toFixed(1) + '). Add a question-form H2 answering this' + (targetSlug ? ' on ' + targetSlug : ' on your most related tracked page') + ' \\u2014 fastest impression growth there is.' };
+    } else if (existsSlug) {
+      hint = { t: 'EXISTS \\u00b7 NOT TRACKED', c: '#a78bfa', d: 'A matching page already exists in your sitemap: ' + existsSlug + ' \\u2014 it is just not in the tracker. Add it to the tracker and improve it instead of building a new page.' };
+    } else {
+      hint = { t: 'NEW PAGE', c: '#60a5fa', d: 'Real demand, no eligible page anywhere in your sitemap. A dedicated page for this intent unlocks these impressions' + (ps !== null ? ' (currently pos ' + ps.toFixed(1) + ')' : '') + '.' };
+    }
+    return '<div style="display:flex;align-items:center;gap:10px;padding:7px 12px;border-bottom:1px solid #1f2937;" title="' + hint.d + '">'
+      + '<span style="font-size:12px;font-weight:800;color:#4b5563;width:22px;flex-shrink:0;text-align:right;">' + (i+1) + '</span>'
+      + '<span style="font-size:9px;font-weight:800;color:' + hint.c + ';border:1px solid ' + hint.c + '55;border-radius:4px;padding:2px 7px;flex-shrink:0;white-space:nowrap;">' + hint.t + '</span>'
+      + '<span style="font-size:11px;color:#e5e7eb;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;">' + g.query.replace(/</g,'&lt;') + '</span>'
+      + (targetSlug ? '<span style="font-size:10px;color:#4ade80;font-family:monospace;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px;" title="Add the section on this page">\\u2192 on ' + targetSlug + '</span>' : '')
+      + (existsSlug && !(ps !== null && ps <= 20) ? '<span style="font-size:10px;color:#a78bfa;font-family:monospace;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:180px;">' + existsSlug + '</span>' : '')
+      + '<span style="font-size:10px;color:#6b7280;flex-shrink:0;white-space:nowrap;">' + (g.position ? 'pos ' + parseFloat(g.position).toFixed(1) + ' \\u00b7 ' : '') + (g.impressions||0).toLocaleString() + ' impr \\u00b7 ' + (g.clicks||0) + ' clk</span>'
+      + '</div>';
+  }).join('');
+  host.innerHTML = '<div style="background:#0d1117;border:1px solid #1f2937;border-radius:8px;margin-bottom:12px;overflow:hidden;">'
+    + '<div onclick="var b=document.getElementById(&quot;impGapBody&quot;);b.style.display=b.style.display===&quot;none&quot;?&quot;block&quot;:&quot;none&quot;;" style="display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer;background:linear-gradient(90deg,rgba(96,165,250,.08),transparent);">'
+    + '<span style="font-size:11px;font-weight:800;letter-spacing:.06em;color:#60a5fa;text-transform:uppercase;">\\ud83d\\udce1 Impression Gap</span>'
+    + '<span style="font-size:11px;color:#6b7280;">' + gaps.length + ' queries \\u00b7 ' + totImpr.toLocaleString() + ' impressions/mo none of your tracked pages target</span>'
+    + '<span style="margin-left:auto;font-size:10px;color:#4b5563;">from your Queries CSV \\u00b7 hover a row for the action</span>'
+    + (function(){
+        var _sortDone = _gapAnalysis && _gapAnalysis.families && _gapAnalysis.families.length;
+        var _bg = _sortDone ? '#166534' : '#7f1d1d';
+        var _bd = _sortDone ? '#16a34a' : '#ef4444';
+        var _fg = _sortDone ? '#bbf7d0' : '#fecaca';
+        var _label = _sortDone ? '\\u2713 Sorted' : '\\ud83e\\udd16 Sort this out for me';
+        return '<button id="gapAiBtn" onclick="event.stopPropagation();runGapAnalysis()" style="flex-shrink:0;cursor:pointer;font-size:10px;font-weight:800;padding:4px 12px;border-radius:6px;background:' + _bg + ';border:1px solid ' + _bd + ';color:' + _fg + ';display:inline-flex;align-items:center;gap:6px;" title="Optional \\u2014 Do everything (below, in Cannibalization) runs this automatically if you skip it. Let AI group these queries into intent families and give one clear verdict per family: add a section (and where), new page (which slug), track an existing page, or ignore (competitor brands, junk). One Gemini call, result is saved."><span style="background:#0d1117;color:' + (_sortDone?'#4ade80':'#f87171') + ';border-radius:50%;width:16px;height:16px;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:900;flex-shrink:0;">1</span>' + _label + ' <span style="opacity:.7;font-weight:600;">(optional)</span></button>';
+      })()
+    + '</div>'
+    + '<div id="impGapBody" style="display:none;">'
+    + _gapFamiliesHtml()
+    + ((_gapAnalysis && _gapAnalysis.families && _gapAnalysis.families.length)
+        ? '<div onclick="var r=document.getElementById(&quot;impGapRaw&quot;);var t=this.querySelector(&quot;.rawtog&quot;);if(r.style.display===&quot;none&quot;){r.style.display=&quot;block&quot;;t.textContent=&quot;\\u25be hide raw queries&quot;;}else{r.style.display=&quot;none&quot;;t.textContent=&quot;\\u25b8 show raw queries&quot;;}" style="cursor:pointer;padding:8px 14px;border-top:1px solid #1f2937;font-size:11px;color:#6b7280;user-select:none;">The AI grouped these into the families above. <span class="rawtog" style="color:#60a5fa;font-weight:700;">\\u25b8 show raw queries</span></div>'
+          + '<div id="impGapRaw" style="display:none;">' + rows + '</div>'
+        : rows)
+    + '<div style="font-size:10px;color:#4b5563;padding:8px 14px;line-height:1.6;">ADD SECTION = Google already tests you for this query \\u2014 answer it with a question-form H2 on your closest page. NEW PAGE = demand exists but no page is eligible. Re-import your Queries CSV monthly to keep this current.</div>'
+    + '</div></div>';
+}
+
+// ── PUSHABLE QUERIES — automates the manual GSC workflow: per page, which non-branded
+// queries sit at position 11-25 with real impressions (= one push from page 1), and where
+// a query actually belongs (homepage vs service page routing).
+// Matching is an approximation: the Queries CSV is site-wide, so queries are assigned to the
+// tracked page whose keyword/slug they overlap most. Good enough to replace the manual GSC digging.
+var _pushByPage = {};
+function _computePushables() {
+  _pushByPage = {};
+  if (!_gapQueries || !_gapQueries.length || !_pages || !_pages.length) return;
+  var brand = _gapNorm(DOMAIN).replace(/ (com|net|org|site|nl)$/,'').replace(/[^a-z0-9]/g,'');
+  var isBranded = function(q) {
+    var flat = _gapNorm(q).replace(/ /g,'');
+    return flat.length > 3 && (flat.indexOf(brand) > -1 || brand.indexOf(flat) > -1);
+  };
+  // per page: matchable text
+  var pageText = (_pages||[]).map(function(p){
+    var t = [];
+    if (p.keyword) t.push(_gapNorm(p.keyword));
+    if (p.gsc_keyword) t.push(_gapNorm(p.gsc_keyword));
+    var isHome = false;
+    try { var u = new URL(p.url); isHome = (u.pathname === '/' || u.pathname === ''); t.push(_gapNorm(u.pathname.replace(/[-_/]/g,' '))); } catch(e) {}
+    return { id: p.id, text: t.filter(Boolean).join(' '), isHome: isHome, slug: (function(){ try { return new URL(p.url).pathname; } catch(e) { return p.url; } })() };
+  });
+  var scoreFor = function(qWords, pt) {
+    if (!qWords.length || !pt.text) return 0;
+    var hit = 0; qWords.forEach(function(w){ if (pt.text.indexOf(w) > -1) hit++; });
+    return hit / qWords.length;
+  };
+  _gapQueries.forEach(function(g) {
+    var ps = g.position ? parseFloat(g.position) : null;
+    if (ps === null || ps < 11 || ps > 25) return;      // striking distance only
+    if ((g.impressions||0) < 30) return;                 // real demand only
+    if (isBranded(g.query)) return;                      // non-branded only
+    // EXACT ownership: query came from a per-page Queries CSV export — no matching needed
+    if (g.page_id) {
+      if (!_pushByPage[g.page_id]) _pushByPage[g.page_id] = [];
+      _pushByPage[g.page_id].push({ query: g.query, pos: ps, impr: g.impressions||0, clicks: g.clicks||0, routeTo: null, exact: true });
+      return;
+    }
+    var qWords = _gapNorm(g.query).split(' ').filter(function(w){ return w.length > 2; });
+    var best = null, bestScore = 0, bestSvc = null, bestSvcScore = 0;
+    pageText.forEach(function(pt){
+      var s = scoreFor(qWords, pt);
+      if (s > bestScore) { bestScore = s; best = pt; }
+      if (!pt.isHome && s > bestSvcScore) { bestSvcScore = s; bestSvc = pt; }
+    });
+    if (!best || bestScore < 0.4) return;                // no confident owner -> Impression Gap territory
+    // Routing rule: generic commercial query landing on the homepage while a service page
+    // matches nearly as well -> it belongs on the service page.
+    var routeTo = null;
+    if (best.isHome && bestSvc && bestSvcScore >= Math.max(0.4, bestScore - 0.15)) routeTo = bestSvc.slug;
+    if (!_pushByPage[best.id]) _pushByPage[best.id] = [];
+    _pushByPage[best.id].push({ query: g.query, pos: ps, impr: g.impressions||0, clicks: g.clicks||0, routeTo: routeTo });
+  });
+  Object.keys(_pushByPage).forEach(function(k){ _pushByPage[k].sort(function(a,b){ return b.impr - a.impr; }); });
+}
+
+// ── CANNIBALIZATION — pages competing for the same query/keyword. Three evidence levels:
+// PROVEN: the same query appears in TWO pages' per-page Queries CSV exports (Google shows both).
+// LIKELY: two tracked pages target (near-)identical keywords.
+// POSSIBLE: a site-wide query matches two pages almost equally (ambiguous ownership).
+var _cannibalIssues = [];
+var _cannibalTruncated = 0;
+function _computeCannibal() {
+  _cannibalIssues = [];
+  // Skip pages that are known 301 redirects — a dead URL is not a competing page (removes false conflicts)
+  var pages = (_pages || []).filter(function(p){ return !p.redirects_to; });
+  if (pages.length < 2) { renderCannibal(); return; }
+  var pById = {}; pages.forEach(function(p){ pById[p.id] = p; });
+
+  // LEVEL 1 — PROVEN: same normalized query under 2+ different page_ids (per-page CSV evidence)
+  var byQuery = {};
+  (_gapQueries||[]).forEach(function(g){
+    if (!g.page_id || !pById[g.page_id]) return;
+    var k = _gapNorm(g.query);
+    if (!k) return;
+    if (!byQuery[k]) byQuery[k] = {};
+    var ps = g.position ? parseFloat(g.position) : null;
+    if (!byQuery[k][g.page_id] || (ps !== null && ps < byQuery[k][g.page_id].pos)) byQuery[k][g.page_id] = { pos: ps, impr: g.impressions||0 };
+  });
+  Object.keys(byQuery).forEach(function(q){
+    var ids = Object.keys(byQuery[q]);
+    if (ids.length < 2) return;
+    var involved = ids.map(function(id){ return { slug: slugOf(pById[id]), pos: byQuery[q][id].pos, impr: byQuery[q][id].impr, id: id }; });
+    involved.sort(function(a,b){ return (a.pos===null?99:a.pos) - (b.pos===null?99:b.pos); });
+    _cannibalIssues.push({ level: 'PROVEN', color: '#f87171', key: q, pages: involved,
+      advice: 'SCAN BOTH PAGES \\u2014 the fix will be written into their briefs, nothing to upload (this is already proven by your own per-page exports). Owner = ' + involved[0].slug + ' (best position). The brief of the other page will tell you to remove/rewrite its competing section and link to ' + involved[0].slug + ' with this query as anchor text.' });
+  });
+
+  // LEVEL 2 — LIKELY: tracked keywords that are (near-)identical between pages
+  var kwOf = function(p){ return _gapNorm(p.keyword || p.gsc_keyword || ''); };
+  for (var i = 0; i < pages.length; i++) {
+    for (var j = i + 1; j < pages.length; j++) {
+      var a = kwOf(pages[i]), b = kwOf(pages[j]);
+      if (!a || !b) continue;
+      var wa = a.split(' ').filter(function(w){ return w.length >= 2; });
+      var wb = b.split(' ').filter(function(w){ return w.length >= 2; });
+      if (!wa.length || !wb.length) continue;
+      var inter = wa.filter(function(w){ return wb.indexOf(w) > -1; }).length;
+      var jac = inter / (wa.length + wb.length - inter);
+      var contained = (inter === wa.length) || (inter === wb.length);
+      var sameLength = wa.length === wb.length;
+      if (contained && !sameLength) {
+        // GENERIC ↔ SPECIFIC (e.g. "roofing services" vs "bergen county roofing services").
+        // This is usually the CORRECT hub-and-spoke structure, not cannibalization — flag as a structure check, not a merge case.
+        var genericIsI = wa.length < wb.length;
+        var hub = genericIsI ? slugOf(pages[i]) : slugOf(pages[j]);
+        var spoke = genericIsI ? slugOf(pages[j]) : slugOf(pages[i]);
+        var _spokeKwSafe = genericIsI ? (pages[j].keyword||pages[j].gsc_keyword||'') : (pages[i].keyword||pages[i].gsc_keyword||'');
+        var _hubKwSafe = genericIsI ? (pages[i].keyword||pages[i].gsc_keyword||'') : (pages[j].keyword||pages[j].gsc_keyword||'');
+        var _autoLink = _linkStatusFor(hub, spoke);
+        _cannibalIssues.push({ level: 'STRUCTURE', color: _autoLink === 'found' ? '#16a34a' : '#60a5fa', autoLink: _autoLink, key: _hubKwSafe + '  \\u2192  ' + _spokeKwSafe,
+          pages: [{ slug: hub }, { slug: spoke }],
+          advice: (_autoLink === 'found'
+              ? 'AUTO-VERIFIED \\u2713 \\u2014 the stored HTML of ' + hub + ' already links to ' + spoke + '. Nothing to do; this row is resolved. (Re-verified automatically every time you paste fresh HTML.)'
+              : _autoLink === 'missing'
+              ? 'AUTO-CHECKED \\u2717 \\u2014 the stored HTML of ' + hub + ' contains NO link to ' + spoke + '. Add one sentence on ' + hub + ' where \\u201c' + _spokeKwSafe + '\\u201d is mentioned (or add it), with those words linking to ' + spoke + '. Then paste the new HTML \\u2014 this row resolves itself.'
+              : 'CANNOT AUTO-CHECK \\u2014 no HTML stored for ' + hub + ' yet. Paste its HTML (the HTML button on its card) and this check runs automatically. Manual alternative: does ' + hub + ' contain a link to ' + spoke + '? Direction matters \\u2014 the GENERAL page must link to the SPECIFIC page (Google follows links from broad to narrow to learn which page owns \\u201c' + _spokeKwSafe + '\\u201d). No merge, no 301 \\u2014 this setup is normally correct.') });
+      } else if (jac >= 0.7) {
+        _cannibalIssues.push({ level: 'LIKELY', color: '#fb923c', key: (pages[i].keyword||pages[i].gsc_keyword) + '  \\u2194  ' + (pages[j].keyword||pages[j].gsc_keyword),
+          pages: [{ slug: slugOf(pages[i]) }, { slug: slugOf(pages[j]) }],
+          advice: 'SCAN BOTH PAGES \\u2014 the briefs will contain the fix (a new title/H1 for one of them + an internal link), copy-paste ready. Background: these two pages target near-identical keywords and compete with each other. If they truly serve the same purpose, merging (301 the weaker into the stronger) is the alternative; the briefs use the positions to say which one is stronger.' });
+      }
+    }
+  }
+
+  // LEVEL 3 — POSSIBLE: site-wide query matching two pages almost equally
+  var brand3 = _gapNorm(DOMAIN).replace(/ (com|net|org|site|nl)$/,'').replace(/[^a-z0-9]/g,'');
+  var isBranded3 = function(q) {
+    var flat = _gapNorm(q).replace(/ /g,'');
+    return flat.length > 3 && (flat.indexOf(brand3) > -1 || brand3.indexOf(flat) > -1);
+  };
+  var pageText = pages.map(function(p){
+    var t = [];
+    if (p.keyword) t.push(_gapNorm(p.keyword));
+    if (p.gsc_keyword) t.push(_gapNorm(p.gsc_keyword));
+    try { t.push(_gapNorm(new URL(p.url).pathname.replace(/[-_/]/g,' '))); } catch(e) {}
+    return { id: p.id, slug: slugOf(p), text: t.filter(Boolean).join(' ') };
+  });
+  var seen = {};
+  (_gapQueries||[]).forEach(function(g){
+    if (g.page_id) return;
+    if ((g.impressions||0) < 20) return; // consistent with Impression Gap threshold
+    if (isBranded3(g.query)) return; // branded queries belong to the homepage by definition — not a conflict
+    var qn = _gapNorm(g.query); if (!qn || seen[qn]) return;
+    var qWords = qn.split(' ').filter(function(w){ return w.length > 2; });
+    if (!qWords.length) return;
+    var scored = pageText.map(function(pt){
+      var hit = 0; qWords.forEach(function(w){ if (pt.text.indexOf(w) > -1) hit++; });
+      return { pt: pt, s: hit / qWords.length };
+    }).filter(function(x){ return x.s >= 0.6; }).sort(function(x,y){ return y.s - x.s; });
+    if (scored.length >= 2 && (scored[0].s - scored[1].s) <= 0.15) {
+      seen[qn] = 1;
+      _cannibalIssues.push({ level: 'POSSIBLE', color: '#facc15', key: g.query, impr: g.impressions||0,
+        pages: [{ slug: scored[0].pt.slug }, { slug: scored[1].pt.slug }],
+        advice: 'ADD THE STANDALONE GSC QUERIES OF ' + scored[0].pt.slug + ' AND ' + scored[1].pt.slug + ' TO THE TRACKER. Why? The site-wide CSV cannot tell WHICH page Google actually shows for \\u201c' + g.query + '\\u201d \\u2014 only the per-page export can. How: GSC \\u2192 Performance \\u2192 Pages \\u2192 click the page \\u2192 Queries tab \\u2192 Export \\u2192 import here with Query ownership set to that page (one import per page). Then: query shows up for BOTH pages \\u2192 row turns PROVEN and the briefs contain the fix. Only ONE \\u2192 no conflict, ignore this row. Until then: change nothing on your pages. (' + (g.impressions||0).toLocaleString() + ' impressions at stake.)' });
+    }
+  });
+
+  var order = { PROVEN: 0, LIKELY: 1, POSSIBLE: 2, STRUCTURE: 3 };
+  _cannibalIssues.sort(function(a,b){
+    if (order[a.level] !== order[b.level]) return order[a.level] - order[b.level];
+    var av = a.autoLink === 'found' ? 1 : 0, bv = b.autoLink === 'found' ? 1 : 0;
+    return av - bv; // auto-verified structure rows sink below open ones
+  });
+  // Keep every actionable row (PROVEN/LIKELY/POSSIBLE) — losing a POSSIBLE row hides work you must verify.
+  // Only STRUCTURE rows (usually-correct hub/spoke) are capped, since they can be numerous on big sites.
+  var _actionable = _cannibalIssues.filter(function(c){ return c.level !== 'STRUCTURE'; });
+  var _structure = _cannibalIssues.filter(function(c){ return c.level === 'STRUCTURE'; });
+  var _structOpen = _structure.filter(function(c){ return c.autoLink !== 'found'; });
+  var _structDone = _structure.filter(function(c){ return c.autoLink === 'found'; });
+  // show all actionable + up to 20 open structure + up to 5 resolved structure (as proof they were checked)
+  _cannibalIssues = _actionable.concat(_structOpen.slice(0, 20)).concat(_structDone.slice(0, 5));
+  _cannibalTruncated = (_structOpen.length > 20) ? (_structOpen.length - 20) : 0;
+  renderCannibal();
+}
+function toggleCannAdvice(i) {
+  var el = document.getElementById('cannAdvice' + i);
+  if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+var _cannMeaning = {
+  PROVEN: 'Google is showing BOTH of these pages for this exact search (proof from their own per-page exports). They steal each other\\u2019s ranking power \\u2014 this one needs fixing.',
+  LIKELY: 'Two of your pages target almost the same keyword. They probably compete with each other in Google.',
+  POSSIBLE: 'One search term fits two of your pages equally well, so it is UNCLEAR which page owns it. Nothing is broken yet \\u2014 first verify, then act.',
+  STRUCTURE: 'A general page and a more specific page (hub + spoke). This is usually the CORRECT setup, not a problem \\u2014 just run the quick check.'
+};
+function renderCannibal() {
+  var host = document.getElementById('cannibalPanel');
+  if (!host) return;
+  // Diagnostic: count what's in play so nothing silently disappears without explanation.
+  var _diagTotal = (_pages||[]).length;
+  var _diagRedir = (_pages||[]).filter(function(p){ return p.redirects_to; }).length;
+  var _diagGapQ = (_gapQueries||[]).filter(function(g){ return !g.page_id; }).length;
+  var _diagGapQ50 = (_gapQueries||[]).filter(function(g){ return !g.page_id && (g.impressions||0) >= 20; }).length;
+  var _diagPoss = _cannibalIssues.filter(function(c){ return c.level === 'POSSIBLE'; }).length;
+  if (!_cannibalIssues.length) {
+    host.innerHTML = (_diagGapQ === 0)
+      ? '<div style="padding:16px;background:#0d1117;border:1px dashed #374151;border-radius:10px;text-align:center;">'
+        + '<div style="font-size:13px;font-weight:800;color:#e5e7eb;margin-bottom:6px;">\u2694\ufe0f Cannibalization detection \u2014 unlock this by connecting real search data</div>'
+        + '<div style="font-size:11px;color:#9ca3af;line-height:1.6;max-width:480px;margin:0 auto 10px;">Once connected, this finds pages competing with each other for the same search \u2014 a common, invisible traffic leak. Fixes get written straight into each page\u2019s brief automatically.</div>'
+        + '<button onclick="showImportModal(\\'gsc\\')" style="cursor:pointer;font-size:11px;font-weight:800;padding:6px 16px;border-radius:6px;background:#1e3a8a;border:1px solid #3b82f6;color:#bfdbfe;">Connect search data \u2192</button>'
+        + '</div>'
+      : '<div style="padding:10px 14px;font-size:11px;color:#6b7280;line-height:1.6;">No cannibalization rows right now. <span style="color:#4b5563;">(' + _diagTotal + ' pages, ' + _diagRedir + ' redirected/excluded, ' + _diagGapQ + ' site-wide queries of which ' + _diagGapQ50 + ' have \u226520 impressions \u2014 POSSIBLE rows need \u226520 impr and a query that fits two live pages within 15%.)</span></div>';
+    return;
+  }
+  // Shortcut: many yellow rows share the same page pair. Verifying a POSSIBLE row strictly requires
+  // BOTH of its pages to have their own per-page Queries export imported (no way around that \u2014
+  // the site-wide CSV cannot tell which page Google actually shows for a shared query). What we CAN
+  // do: (1) prioritize by impressions at stake so the highest-value exports come first, and
+  // (2) auto-detect pages already exported (page_id-owned rows exist in _gapQueries) and cross them
+  // off, so the visible remaining work shrinks as the owner works through the list instead of always
+  // showing the full original count.
+  var _possPageStats = {};
+  _cannibalIssues.forEach(function(c){
+    if (c.level !== 'POSSIBLE') return;
+    c.pages.forEach(function(p){
+      if (!_possPageStats[p.slug]) _possPageStats[p.slug] = { impr: 0, rows: 0 };
+      _possPageStats[p.slug].impr += (c.impr || 0);
+      _possPageStats[p.slug].rows += 1;
+    });
+  });
+  var _exportedSlugs = {};
+  (_gapQueries||[]).forEach(function(g){
+    if (!g.page_id) return;
+    var pg = (_pages||[]).find(function(p){ return p.id === g.page_id; });
+    if (pg) _exportedSlugs[slugOf(pg)] = 1;
+  });
+  // Also count a page as "handled" if it was auto-fetched but genuinely had zero GSC data —
+  // otherwise a low-traffic page stays stuck in the "left" list with no way to ever clear it.
+  (_pages||[]).forEach(function(p){
+    if (p.gsc_autofetch_checked_at) _exportedSlugs[slugOf(p)] = 1;
+  });
+  var _possList = Object.keys(_possPageStats).sort(function(a,b){ return _possPageStats[b].impr - _possPageStats[a].impr; });
+  var _possRemaining = _possList.filter(function(s){ return !_exportedSlugs[s]; });
+  var _possDoneCount = _possList.length - _possRemaining.length;
+  var _possCount = _cannibalIssues.filter(function(c){ return c.level === 'POSSIBLE'; }).length;
+  _slugToPageId = {}; (_pages||[]).forEach(function(p){ _slugToPageId[slugOf(p)] = p.id; });
+  var shortcutStrip = (_possList.length && _possCount)
+    ? '<div style="padding:8px 14px;border-bottom:1px solid #1f2937;background:rgba(250,204,21,.06);font-size:11px;color:#facc15;line-height:1.7;">'
+      + '\u26a1 ' + _possCount + ' yellow POSSIBLE rows touch <b>' + _possList.length + ' unique pages</b>'
+      + (_possDoneCount ? ' \u2014 <b style="color:#4ade80;">' + _possDoneCount + ' already exported</b>, ' + _possRemaining.length + ' left' : '')
+      + '. ' + (_gscAutoFetchAvailable ? 'Click \u26a1 to pull each page\u2019s queries straight from Search Console \u2014 no manual export needed:' : 'Export the biggest first (per page: GSC \u2192 Pages \u2192 click it \u2192 Queries \u2192 Export \u2192 import here with Query ownership set to that page):')
+      + '<div style="margin-top:6px;display:flex;flex-direction:column;gap:3px;">'
+      + _possRemaining.slice(0, 15).map(function(s){
+          var pid = _slugToPageId[s];
+          var label = s + ' <span style="color:#a16207;">(' + Math.round(_possPageStats[s].impr).toLocaleString() + ' impr, ' + _possPageStats[s].rows + ' rows)</span>';
+          var btn = (_gscAutoFetchAvailable && pid) ? ('<button onclick="_gscAutoFetchPage(' + pid + ',this)" style="flex-shrink:0;cursor:pointer;font-size:9px;font-weight:800;padding:2px 8px;border-radius:4px;background:#166534;border:1px solid #16a34a;color:#bbf7d0;margin-right:8px;">\u26a1 Auto-fetch</button>') : '';
+          return '<div style="display:flex;align-items:center;font-family:monospace;">' + btn + '<span>' + label + '</span></div>';
+        }).join('')
+      + (_possRemaining.length > 15 ? '<div style="color:#a16207;">+' + (_possRemaining.length-15) + ' more (scroll or resolve the top ones first)</div>' : '')
+      + '</div>'
+      + (_possRemaining.length === 0 ? '<div style="margin-top:6px;display:flex;align-items:center;gap:8px;"><b style="color:#4ade80;">All pages exported.</b><span style="margin-left:auto;"></span><button onclick="this.disabled=true;this.textContent=&quot;\u23f3 Checking\u2026&quot;;Promise.resolve().then(loadImpressionGap);" title="Optional \u2014 the panel already refreshes itself automatically after every scan finishes." style="cursor:pointer;font-size:10px;font-weight:800;padding:3px 10px;border-radius:5px;background:#166534;border:1px solid #16a34a;color:#bbf7d0;display:inline-flex;align-items:center;gap:6px;"><span style="background:#0d1117;color:#4ade80;border-radius:50%;width:16px;height:16px;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:900;flex-shrink:0;">3</span>\ud83d\udd04 Re-check now <span style="opacity:.7;font-weight:600;">(optional)</span></button></div>' : '')
+      + '</div>'
+    : '';
+
+  // PROVEN strip: same idea as the POSSIBLE shortcut — the fix lives in each page's brief, which is
+  // only generated by SCANNING that page. Rather than making the owner hunt for each URL in a list
+  // of 57 tracked pages, collect the unique pages behind every PROVEN row and put a Scan button
+  // right here, ordered by how many conflicts a scan of that one page would resolve.
+  var _provenPageStats = {};
+  _cannibalIssues.forEach(function(c){
+    if (c.level !== 'PROVEN') return;
+    c.pages.forEach(function(p){
+      if (!_provenPageStats[p.slug]) _provenPageStats[p.slug] = { rows: 0 };
+      _provenPageStats[p.slug].rows += 1;
+    });
+  });
+  _provenList = Object.keys(_provenPageStats).sort(function(a,b){ return _provenPageStats[b].rows - _provenPageStats[a].rows; });
+  var _provenCount = _cannibalIssues.filter(function(c){ return c.level === 'PROVEN'; }).length;
+  var _gapNotRunYet = !(_gapAnalysis && _gapAnalysis.families && _gapAnalysis.families.length);
+  var provenStrip = (_provenList.length && _provenCount)
+    ? '<div style="padding:8px 14px;border-bottom:1px solid #1f2937;background:rgba(248,113,113,.06);font-size:11px;color:#fca5a5;line-height:1.7;">'
+      + '\ud83d\udd34 ' + _provenCount + ' PROVEN rows touch <b>' + _provenList.length + ' unique pages</b>. Scan a page to generate its brief with the exact fix \u2014 no need to search for it below:'
+      + (_gapNotRunYet ? '<div style="margin-top:4px;color:#fbbf24;">\u26a0\ufe0f If you use the individual Scan buttons below, run \ud83e\udd16 <b>Sort this out for me</b> first (Impression Gap panel above) so each brief captures the gap-family sections too. <b>Scan all</b> does this for you automatically.</div>' : '')
+      + '<div style="margin-top:8px;display:flex;justify-content:flex-end;">'
+      + (function(){
+          var _allScanned = _provenList.length > 0 && _provenList.every(function(s){ return _isSlugScanned(s); });
+          var _bg = _allScanned ? '#166534' : '#7f1d1d';
+          var _bd = _allScanned ? '#16a34a' : '#ef4444';
+          var _fg = _allScanned ? '#bbf7d0' : '#fecaca';
+          var _dot = _allScanned ? '#4ade80' : '#f87171';
+          var _label = _allScanned ? ('\\u2713 All ' + _provenList.length + ' pages scanned') : ('\\ud83d\\ude80 Do everything: sort + scan all ' + _provenList.length + ' pages');
+          return '<button onclick="_provenScanAll(this)" title="This is the one to press \\u2014 runs Sort this out for me first if needed, then scans every page below in order. One click for the whole cycle." style="cursor:pointer;font-size:10px;font-weight:800;padding:5px 14px;border-radius:5px;background:' + _bg + ';border:2px solid ' + _bd + ';color:' + _fg + ';display:inline-flex;align-items:center;gap:6px;box-shadow:0 0 0 2px ' + (_allScanned?'rgba(74,222,128,.15)':'rgba(239,68,68,.15)') + ';"><span style="background:#0d1117;color:' + _dot + ';border-radius:50%;width:17px;height:17px;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:900;flex-shrink:0;">2</span>' + _label + (_allScanned ? '' : ' <span style="opacity:.85;font-weight:900;">\\u2190 press this</span>') + '</button>';
+        })()
+      + '</div>'
+      + '<div style="margin-top:6px;display:flex;flex-direction:column;gap:3px;">'
+      + _provenList.slice(0, 15).map(function(s){
+          var pid = _slugToPageId[s];
+          var isScanned = _isSlugScanned(s);
+          var label = s + ' <span style="color:' + (isScanned?'#4ade80':'#f87171') + ';">(' + _provenPageStats[s].rows + ' row' + (_provenPageStats[s].rows>1?'s':'') + ')</span>';
+          var btn = pid
+            ? (isScanned
+                ? ('<button onclick="checkPage(' + pid + ')" data-proven-scan="' + pid + '" title="Already scanned this session \u2014 click to scan again" style="flex-shrink:0;cursor:pointer;font-size:9px;font-weight:800;padding:2px 8px;border-radius:4px;background:#166534;border:1px solid #16a34a;color:#bbf7d0;margin-right:8px;">\u2713 Scanned</button>')
+                : ('<button onclick="checkPage(' + pid + ')" data-proven-scan="' + pid + '" style="flex-shrink:0;cursor:pointer;font-size:9px;font-weight:800;padding:2px 8px;border-radius:4px;background:#7f1d1d;border:1px solid #b91c1c;color:#fecaca;margin-right:8px;">\ud83d\udd0d Scan</button>'))
+            : '';
+          return '<div style="display:flex;align-items:center;font-family:monospace;">' + btn + '<span>' + label + '</span></div>';
+        }).join('')
+      + (_provenList.length > 15 ? '<div style="color:#f87171;">+' + (_provenList.length-15) + ' more</div>' : '')
+      + '</div>'
+      + '</div>'
+    : '';
+  var legendStrip = '<div style="display:flex;gap:14px;flex-wrap:wrap;padding:7px 14px;border-bottom:1px solid #1f2937;background:#0a0e14;">'
+    + '<span style="font-size:10px;color:#9ca3af;"><b style="color:#f87171;">PROVEN</b> \\u2192 scan both pages, fix comes in the briefs</span>'
+    + '<span style="font-size:10px;color:#9ca3af;"><b style="color:#fb923c;">LIKELY</b> \\u2192 scan both pages, briefs differentiate them</span>'
+    + '<span style="font-size:10px;color:#9ca3af;"><b style="color:#facc15;">POSSIBLE</b> \\u2192 upload BOTH pages\\u2019 Queries CSV first, then see</span>'
+    + '<span style="font-size:10px;color:#9ca3af;"><b style="color:#60a5fa;">STRUCTURE</b> \\u2192 check ONE link: general page \\u2192 specific page</span>'
+    + '</div>'
+    + '<div style="padding:6px 14px;border-bottom:1px solid #1f2937;background:#0a0e14;font-size:10px;color:#6b7280;line-height:1.5;">\\ud83d\\udd0e ' + _diagTotal + ' pages \\u00b7 ' + _diagRedir + ' redirected/excluded \\u00b7 ' + _diagGapQ + ' site-wide queries (' + _diagGapQ50 + ' with \\u226520 impr) \\u00b7 ' + _diagPoss + ' POSSIBLE found. <span style="color:#4b5563;">POSSIBLE needs a query \\u226520 impr that fits two LIVE pages within 15%. If 0: either impressions are under 20, or the matching pages are redirected/excluded.</span></div>';
+  var rows = _cannibalIssues.map(function(c, i){
+    return '<div onclick="toggleCannAdvice(' + i + ')" style="padding:8px 12px;border-bottom:1px solid #1f2937;cursor:pointer;">'
+      + '<div style="display:flex;align-items:flex-start;gap:10px;">'
+      + '<span style="font-size:12px;font-weight:800;color:#4b5563;width:22px;flex-shrink:0;text-align:right;">' + (i+1) + '</span>'
+      + '<span style="font-size:9px;font-weight:800;color:' + c.color + ';border:1px solid ' + c.color + '55;border-radius:4px;padding:2px 7px;flex-shrink:0;white-space:nowrap;">' + c.level + '</span>'
+      + (c.autoLink === 'found' ? '<span style="font-size:9px;font-weight:800;color:#4ade80;flex-shrink:0;white-space:nowrap;" title="Auto-verified against the stored HTML: the link exists. Re-checked on every HTML paste.">\\u2713 LINK OK</span>' : '')
+      + (c.autoLink === 'missing' ? '<span style="font-size:9px;font-weight:800;color:#f87171;flex-shrink:0;white-space:nowrap;" title="Auto-checked against the stored HTML: the link is missing. Click the row for the exact fix.">\\u2717 LINK MISSING</span>' : '')
+      + '<div style="flex:1;min-width:0;">'
+      + '<div style="font-size:11px;color:#e5e7eb;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + String(c.key).replace(/</g,'&lt;') + '</div>'
+      + '<div style="font-size:10px;color:#6b7280;font-family:monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + c.pages.map(function(p){ return p.slug + (p.pos != null ? ' (pos ' + p.pos.toFixed(1) + ')' : ''); }).join(c.level === 'STRUCTURE' ? '  \\u2192 must link to \\u2192  ' : '  vs  ') + '</div>'
+      + '</div>'
+      + '<span style="font-size:10px;color:#4b5563;flex-shrink:0;">what to do \\u25be</span>'
+      + '</div>'
+      + '<div id="cannAdvice' + i + '" style="display:none;font-size:11px;color:#9ca3af;line-height:1.65;margin:8px 0 2px 32px;padding:8px 12px;background:#0a0e14;border-left:3px solid ' + c.color + ';border-radius:6px;">'
+      + '<div style="margin-bottom:6px;"><span style="font-weight:800;color:#e5e7eb;">What this means: </span>' + (_cannMeaning[c.level] || '') + '</div>'
+      + '<div><span style="font-weight:800;color:#e5e7eb;">What to do: </span>' + c.advice.replace(/</g,'&lt;') + '</div>'
+      + '</div>'
+      + '</div>';
+  }).join('');
+  host.innerHTML = '<div style="background:#0d1117;border:1px solid #1f2937;border-radius:8px;margin-bottom:12px;overflow:hidden;">'
+    + '<div onclick="var b=document.getElementById(&quot;cannBody2&quot;);b.style.display=b.style.display===&quot;none&quot;?&quot;block&quot;:&quot;none&quot;;" style="display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer;background:linear-gradient(90deg,rgba(248,113,113,.08),transparent);">'
+    + '<span style="font-size:11px;font-weight:800;letter-spacing:.06em;color:#f87171;text-transform:uppercase;">\\u2694 Cannibalization</span>'
+    + '<span style="font-size:11px;color:#6b7280;">' + _cannibalIssues.length + ' conflict' + (_cannibalIssues.length>1?'s':'') + ' \\u00b7 pages competing for the same query</span>'
+    + '<span style="margin-left:auto;font-size:10px;color:#4b5563;">click a row for what to do</span>'
+    + '</div>'
+    + legendStrip
+    + provenStrip
+    + shortcutStrip
+    + '<div id="cannBody2" style="display:none;">' + rows
+    + '<div style="font-size:10px;color:#4b5563;padding:8px 14px;line-height:1.6;">PROVEN = same query in two per-page CSV exports (Google shows both) \\u2014 fix required. LIKELY = near-identical tracked keywords \\u2014 differentiate or merge. POSSIBLE = a site-wide query fits two pages equally \\u2014 confirm with a per-page export. STRUCTURE = generic hub vs specific spoke \\u2014 usually correct; run the checklist in the row instead of merging.</div>'
+    + '</div></div>';
+}
+
+// ── GUIDED TOUR — spotlight walkthrough. Auto-starts once for new visitors (dismiss = never again),
+// restartable any time via the "? Tour" toolbar button. Steps with a missing target are skipped.
+var _tourSteps = [
+  { sel: '#addUrlBtn', title: '1 \\u00b7 Add URL', text: 'Add pages one at a time by pasting a URL. On the free plan this is your way in \\u2014 add your most important pages and the tracker starts watching them immediately.' },
+  { sel: '#prewriteBriefBtn', title: '2 \\u00b7 Pre-Write Brief \\u2014 no page yet', text: 'No URL yet? Type a keyword instead. This runs a live SERP gap analysis and returns exactly what a brand-new page needs to out-rank and out-cite the current top 10 \\u2014 structure, entities, FAQs, citation-ready passages \\u2014 before you write a single word. Any language, any region. 1 free brief per account, then \\u20ac249 for a 20-brief bundle.' },
+  { sel: '#gscBtn', title: '3 \\u00b7 GSC import (paid plans)', text: 'The power source. Import your Google Search Console data \\u2014 the Pages CSV and the Queries CSV \\u2014 and the tracker builds your Lead Queue, pushable queries, impression gaps and conflict detection from real search data. Available on paid plans; on the free plan this button stays off.' },
+  { sel: '#sitemapBtn', title: '4 \\u00b7 Sitemap', text: 'Upload your sitemap so the tracker knows every page that exists on your site \\u2014 not just the tracked ones. That sharpens cannibalization detection (which page owns which intent) and stops \\u201cnew page\\u201d advice for pages you already have.' },
+  { sel: '#impressionGap', title: '5 \\u00b7 Impression Gap', text: 'Real queries Google already shows your site for that none of your tracked pages target \\u2014 free traffic you are leaving on the table. Locked until you connect real search data (GSC import). Once connected it also powers Cannibalization detection and the Lead Queue below, so connect it early.' },
+  { sel: '#scanAllBtn', title: '6 \\u00b7 Scan All', text: 'Scans every tracked page one by one \\u2014 useful with many pages, and ideal for a lead or manager who assigns work to specialists: one click refreshes every brief so the whole team has up-to-date instructions.' },
+  { sel: '.cs-live', title: '7 \\u00b7 Live Activity', text: 'Your window into what the tracker is doing right now: which page is being scanned, what just finished, what is queued. Auto-updates every 8 seconds \\u2014 no need to refresh.' },
+  { sel: '#brandCtxPanel', title: '8 \\u00b7 Brand & author info', text: 'Store the real facts about your business here \\u2014 name, author, credentials, service area, anything the AI must respect. Every brief uses these facts instead of inventing details. Optional, but it makes the generated text noticeably more accurate.' },
+  { sel: '.cs-page-card', title: '9 \\u00b7 Your tracked pages', text: 'Each card is one tracked page: its Google position, AI citation badges (AI Overview, Perplexity, Copilot), GSC clicks and impressions, and in the yellow block its pushable queries \\u2014 searches on page 2 that one good push moves to page 1.' },
+  { sel: '#cannibalPanel', title: '10 \\u00b7 Cannibalization', text: 'Pages competing with each other for the same search. Click any row for exactly what to do \\u2014 and in most cases you do nothing by hand: the tracker feeds each conflict into the briefs of the affected pages on their next scan, as ready-made actions.' },
+  { sel: '#leadQueuePanel', title: '11 \\u00b7 Lead Queue', text: 'Every page ranked by the clicks you are missing per month \\u2014 your worklist. Work strictly top to bottom: row 1 is always the fastest route to new leads. Click a row to jump to that page; click \\u201c? How ranking works\\u201d for what each tier means.' },
+  { sel: '#myChecksBar', title: '12 \\u00b7 My checks', text: 'Your personal progress. The checkmarks are yours alone \\u2014 scans, HTML updates and restarts never reset them. Filter to \\u201cTo do\\u201d to see only open work; checked pages leave the Lead Queue so the next job rises to the top.' },
+  { sel: '.cs-html-btn', title: '13 \\u00b7 Add HTML \\u2014 the loop', text: 'This is the complete working loop: paste your page HTML here \\u2192 a scan starts automatically \\u2192 read the brief (View Brief) and implement its copy-paste actions on your page \\u2192 paste the NEW HTML here so the next scan verifies it \\u2192 mark the page \\u25cb my check. Done \\u2014 and the queue hands you the next one.' },
+  { sel: '#pagesList', title: '14 \\u00b7 Start tracking', text: 'When nothing is tracked yet this is where you begin: add URLs one by one, import from your sitemap, or paste from Google Search Console. The system then checks them automatically. Free plan: 1 page, 1 domain \\u2014 pick your most important page first.' },
+  { sel: '#upsellPanel', title: '15 \\u00b7 Done-for-you', text: 'Do not want to run the loop yourself? Ottmar implements every Citation Brief for you \\u2014 done-for-you AI citation optimization, plus high-GRAAF citation-ready content. One WhatsApp message and he babysits your domain.' },
+];
+var _tourIdx = -1;
+function _tourEls() {
+  var box = document.getElementById('tourSpot'), tip = document.getElementById('tourTip');
+  if (!box) {
+    box = document.createElement('div'); box.id = 'tourSpot';
+    box.style.cssText = 'position:absolute;z-index:9998;border:2px solid #7c3aed;border-radius:10px;box-shadow:0 0 0 9999px rgba(0,0,0,.68);pointer-events:none;transition:all .25s ease;';
+    document.body.appendChild(box);
+    tip = document.createElement('div'); tip.id = 'tourTip';
+    tip.style.cssText = 'position:absolute;z-index:9999;max-width:340px;background:#0d1117;border:1px solid #7c3aed;border-radius:10px;padding:14px 16px;box-shadow:0 8px 32px rgba(0,0,0,.6);font-family:inherit;';
+    document.body.appendChild(tip);
+  }
+  return { box: box, tip: document.getElementById('tourTip') };
+}
+function _tourVisibleSteps() {
+  return _tourSteps.filter(function(s){ var el = document.querySelector(s.sel); return el && el.offsetParent !== null; });
+}
+function startTour(manual) {
+  var steps = _tourVisibleSteps();
+  if (!steps.length) { if (manual) toast('Nothing to tour yet \\u2014 add pages first', '#9ca3af'); return; }
+  _tourIdx = 0;
+  _tourShow();
+}
+function _tourShow() {
+  var steps = _tourVisibleSteps();
+  if (_tourIdx < 0 || _tourIdx >= steps.length) { endTour(); return; }
+  var s = steps[_tourIdx];
+  var el = document.querySelector(s.sel);
+  if (!el) { _tourIdx++; _tourShow(); return; }
+  el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  var ui = _tourEls();
+  setTimeout(function(){
+    var r = el.getBoundingClientRect();
+    var sx = window.scrollX || window.pageXOffset, sy = window.scrollY || window.pageYOffset;
+    ui.box.style.left = (r.left + sx - 6) + 'px';
+    ui.box.style.top = (r.top + sy - 6) + 'px';
+    ui.box.style.width = (r.width + 12) + 'px';
+    ui.box.style.height = (r.height + 12) + 'px';
+    ui.box.style.display = 'block';
+    var tip = ui.tip;
+    tip.innerHTML = '<div style="font-size:10px;font-weight:800;letter-spacing:.06em;color:#a78bfa;text-transform:uppercase;margin-bottom:4px;">Step ' + (_tourIdx+1) + ' of ' + _tourVisibleSteps().length + '</div>'
+      + '<div style="font-size:13px;font-weight:800;color:#f1f5f9;margin-bottom:6px;">' + s.title + '</div>'
+      + '<div style="font-size:12px;color:#9ca3af;line-height:1.65;margin-bottom:12px;">' + s.text + '</div>'
+      + '<div style="display:flex;gap:8px;align-items:center;">'
+      + (_tourIdx > 0 ? '<button onclick="tourNav(-1)" style="cursor:pointer;font-size:11px;font-weight:700;padding:6px 12px;border-radius:6px;background:none;border:1px solid #374151;color:#9ca3af;">\\u2190 Back</button>' : '')
+      + '<button onclick="tourNav(1)" style="cursor:pointer;font-size:11px;font-weight:800;padding:6px 16px;border-radius:6px;background:#7c3aed;border:1px solid #8b5cf6;color:#fff;">' + (_tourIdx === _tourVisibleSteps().length - 1 ? 'Finish \\u2713' : 'Next \\u2192') + '</button>'
+      + '<button onclick="endTour()" style="cursor:pointer;font-size:11px;padding:6px 10px;border-radius:6px;background:none;border:none;color:#4b5563;margin-left:auto;">Skip tour \\u2715</button>'
+      + '</div>';
+    tip.style.display = 'block';
+    var tipW = Math.min(340, window.innerWidth - 24);
+    var below = r.bottom + sy + 14;
+    var left = Math.max(12 + sx, Math.min(r.left + sx, sx + window.innerWidth - tipW - 12));
+    // place below the target; if that falls off-screen, place above
+    if (r.bottom + 220 > window.innerHeight && r.top > 240) { tip.style.top = ''; tip.style.top = (r.top + sy - tip.offsetHeight - 14) + 'px'; }
+    else tip.style.top = below + 'px';
+    tip.style.left = left + 'px';
+  }, 350);
+}
+function tourNav(d) { _tourIdx += d; _tourShow(); }
+function endTour() {
+  _tourIdx = -1;
+  var b = document.getElementById('tourSpot'), t = document.getElementById('tourTip');
+  if (b) b.style.display = 'none';
+  if (t) t.style.display = 'none';
+  try { localStorage.setItem('cs_tour_done', '1'); } catch(e) {}
+}
+function _tourMaybeAutoStart() {
+  try { if (localStorage.getItem('cs_tour_done')) return; } catch(e) {}
+  setTimeout(function(){ if (_tourIdx === -1) startTour(false); }, 1200);
+}
+
+async function removeRedirectedPage(pageId, addUrl) {
+  var msg = addUrl ? 'Swap this dead URL for its destination (' + addUrl + ')?' : 'Remove this redirected (dead) URL from the tracker?';
+  if (!confirm(msg)) return;
+  try {
+    if (addUrl) {
+      try { await api('/pages', 'POST', { url: addUrl }); } catch(e) {}
+    }
+    await api('/pages/' + pageId, 'DELETE');
+    toast(addUrl ? 'Swapped \u2014 now tracking the destination URL.' : 'Dead redirect removed.', '#4ade80');
+    loadPages();
+  } catch(e) { toast('Could not update', '#f87171'); }
+}
 async function toggleManualDone(pageId, current) {
   var next = !current;
   try {
@@ -28911,10 +31882,24 @@ async function markDone(pageId, btn, currentDone) {
 // Track active checks per page
   var _checkAnimations = {};
 
-  async function checkPage(pageId) {
+  async function checkPage(pageId, _skipGapWarning, _fast, _waitForFull) {
     if (_briefIsOpen) {
       toast('Finish the current brief first \\u2014 then scan this page', '#f59e0b');
       return;
+    }
+    // Guard against the exact "scan 3 times" scenario: this page has PROVEN cannibalization issues
+    // AND the gap analysis hasn't run yet AND this call did NOT come from _provenScanAll (which
+    // already guarantees Sort ran first). Scanning now would miss the gap-family sections, requiring
+    // a second scan later to pick them up \u2014 so ask first instead of silently doing the wasteful thing.
+    if (!_skipGapWarning) {
+      var _pSlug = null;
+      try { var _pp = (_pages||[]).find(function(x){ return x.id == pageId; }); if (_pp) _pSlug = slugOf(_pp); } catch(e) {}
+      var _isProvenPage = _pSlug && typeof _provenList !== 'undefined' && _provenList.indexOf(_pSlug) > -1;
+      var _gapDone = _gapAnalysis && _gapAnalysis.families && _gapAnalysis.families.length;
+      if (_isProvenPage && !_gapDone) {
+        var _ok = confirm('This page has PROVEN cannibalization conflicts. Scanning now will miss the Impression Gap sections (Sort this out for me hasn\\'t run yet) \\u2014 you\\'d likely need to scan this page again later.\\n\\nUse \\ud83d\\ude80 Do everything in the Cannibalization panel instead \\u2014 it runs Sort first, then scans, so this page only needs one scan.\\n\\nScan anyway right now?');
+        if (!_ok) return;
+      }
     }
     var p = (_pages||[]).find(function(x){ return x.id == pageId; });
     if (p && !p.last_checked && !p.check_frequency) {
@@ -28924,9 +31909,22 @@ async function markDone(pageId, btn, currentDone) {
     }
     var btn = document.querySelector('[data-check-btn="' + pageId + '"]');
     if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i>'; }
-    runScanAnimation(p ? p.url : '', function() {
-      pollAndShowBrief(pageId, 15, 4000);
-    });
+    // _waitForFull: when true, this function's returned promise only resolves once the ENTIRE
+    // scan+poll cycle actually finishes (brief opened or timeout reached) \u2014 not just once the scan
+    // was successfully STARTED. Without this, bulk callers (like _provenScanAll) would fire off the
+    // next page's scan while the previous page's animation+poll was still running in the background,
+    // all fighting over the same shared overlay \u2014 which is exactly what caused the "stuck on last
+    // page" symptom: several overlapping polls all trying to control one DOM element at once.
+    var _fullDonePromise = _waitForFull ? new Promise(function(resolve){
+      runScanAnimation(p ? p.url : '', function() {
+        pollAndShowBrief(pageId, 15, 4000, resolve);
+      }, _fast);
+    }) : null;
+    if (!_waitForFull) {
+      runScanAnimation(p ? p.url : '', function() {
+        pollAndShowBrief(pageId, 15, 4000);
+      }, _fast);
+    }
     try {
       var data = await api('/check/' + pageId, 'POST');
       if (!data.success) toast(data.error || 'Check failed', '#f87171');
@@ -28935,6 +31933,34 @@ async function markDone(pageId, btn, currentDone) {
     } finally {
       if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-sync-alt"></i>'; }
     }
+    if (_fullDonePromise) await _fullDonePromise;
+  }
+
+  // Bulk-trigger checkPage() for every unique PROVEN page, one at a time with a short gap between
+  // each so the server (and Gemini) aren't hit with N simultaneous scans at once. If the Impression
+  // Gap AI analysis hasn't run yet, do THAT first automatically — so every scan below captures both
+  // the cannibalization fix AND the gap-family sections in one brief, no second scan needed.
+  async function _provenScanAll(btnEl) {
+    if (btnEl) { btnEl.disabled = true; }
+    var _needsGapSort = !(_gapAnalysis && _gapAnalysis.families && _gapAnalysis.families.length);
+    if (_needsGapSort) {
+      if (btnEl) btnEl.textContent = '\ud83e\udd16 Sorting gap queries first\u2026';
+      try { await runGapAnalysis(); } catch(e) {}
+    }
+    if (btnEl) btnEl.textContent = '\u23f3 Queuing scans\u2026';
+    var pageIds = (_provenList||[]).map(function(s){ return _slugToPageId[s]; }).filter(Boolean);
+    for (var i = 0; i < pageIds.length; i++) {
+      if (btnEl) btnEl.textContent = '\u23f3 Scanning ' + (i+1) + '/' + pageIds.length + '\u2026';
+      // _waitForFull=true: this now genuinely waits for the ENTIRE scan+poll cycle to finish (brief
+      // opened or its own timeout reached) before moving to the next page \u2014 no more overlapping
+      // polls fighting over the shared overlay, no more "stuck on the last page" symptom. A tiny
+      // buffer between pages is still polite to the server, but the real serialization now comes
+      // from actually awaiting completion, not from a fixed guess at animation timing.
+      try { await checkPage(pageIds[i], true, true, true); } catch(e) {}
+      if (i < pageIds.length - 1) await new Promise(function(r){ setTimeout(r, 500); });
+    }
+    if (btnEl) { btnEl.textContent = '\u2713 All ' + pageIds.length + ' pages scanned'; }
+    toast('All PROVEN pages scanned \u2014 briefs are ready', '#4ade80');
   }
 
 async function deletePage(pageId) {
@@ -28945,7 +31971,31 @@ async function deletePage(pageId) {
   loadPages();
 }
 
-loadPages();
+loadPages().then(function(){ try { loadImpressionGap(); } catch(e) {} try { _tourMaybeAutoStart(); } catch(e) {} });
+if (_gscAutoFetchAvailable) {
+  api('/gsc-autofetch-status', 'GET').then(function(d){
+    if (d && d.success && d.service_account_email) { _gscServiceAccountEmail = d.service_account_email; }
+    _renderGscSetupBanner();
+  }).catch(function(){ _renderGscSetupBanner(); });
+} else {
+  _renderGscSetupBanner();
+}
+function _renderGscSetupBanner() {
+  var host = document.getElementById('gscSetupBanner');
+  if (!host) return;
+  var _step1 = _gscServiceAccountEmail
+    ? ('<div style="margin-bottom:8px;"><b style="color:#93c5fd;">Step 1 \u2014 One-click GSC data (optional, skips manual CSV exports):</b> add this address as a Search Console user on your property (Settings \u2192 Users and permissions \u2192 Add user, \u201cRestricted\u201d is enough):<br>'
+        + '<code style="background:#0d1117;padding:3px 8px;border-radius:4px;color:#93c5fd;font-family:monospace;display:inline-block;margin:4px 0;">' + _gscServiceAccountEmail.replace(/</g,'&lt;') + '</code> '
+        + '<button onclick="navigator.clipboard.writeText(&quot;' + _gscServiceAccountEmail.replace(/"/g,'&quot;') + '&quot;);toast(&quot;Copied\u2014 paste it into GSC \u2192 Settings \u2192 Users and permissions&quot;,&quot;#4ade80&quot;)" style="cursor:pointer;font-size:10px;font-weight:700;padding:3px 10px;border-radius:5px;background:#1e3a8a;border:1px solid #3b82f6;color:#bfdbfe;">Copy</button>'
+        + '<br>Once added, every \u26a1 Auto-fetch button below skips manual CSV steps entirely.</div>')
+    : '<div style="margin-bottom:8px;"><b style="color:#93c5fd;">Step 1 \u2014 Import your GSC data:</b> paste your Queries CSV via \u201cAdd pages to track\u201d (manual, since one-click auto-fetch isn\u2019t configured on this server yet).</div>';
+  host.innerHTML = '<div style="background:rgba(96,165,250,.08);border:1px solid #3b82f6;border-radius:8px;padding:10px 14px;margin-bottom:10px;font-size:11px;color:#bfdbfe;line-height:1.6;">'
+    + '<div style="font-size:10px;font-weight:800;letter-spacing:.05em;color:#60a5fa;text-transform:uppercase;margin-bottom:8px;">How this tracker works \u2014 do these in order</div>'
+    + _step1
+    + '<div style="margin-bottom:8px;"><b style="color:#93c5fd;">Step 2 \u2014 Sort this out for me:</b> click it in the Impression Gap panel below \u2014 groups your queries into intent families with one clear verdict each.</div>'
+    + '<div><b style="color:#93c5fd;">Step 3 \u2014 Scan:</b> in the Cannibalization panel, use \ud83d\ude80 <b>Do everything</b> on any PROVEN group \u2014 it runs Step 2 first if you skipped it, then scans every affected page so the brief has the full fix.</div>'
+    + '</div>';
+}
 // Show welcome on first visit (or force with ?welcome=1)
 if (window.location.search.indexOf('welcome=1') > -1) {
   try { localStorage.removeItem('cs_welcome_seen'); } catch(e) {}
@@ -29049,6 +32099,18 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
                 setTimeout(loadPages, 500);
                 showNotification('Scan complete: ' + (ev.url||''), 'scan', '#4ade80');
                 addLine('Scan complete: ' + (ev.url||''), '#4ade80', null);
+                try { _scanAllProgress(); } catch(e) {}
+                // Refresh the page list so the DERIVED scanned status (see _isSlugScanned) picks up
+                // this page's new snapshot + brief, then refresh the cannibalization panel so the
+                // green checkmark and any resolved rows update automatically. No separate state to
+                // set — the status simply follows the database, correct on every device.
+                try {
+                  if (typeof loadPages === 'function') {
+                    Promise.resolve(loadPages()).then(function(){ try { loadImpressionGap(); } catch(e) {} });
+                  } else {
+                    setTimeout(function(){ try { loadImpressionGap(); } catch(e) {} }, 700);
+                  }
+                } catch(e) { setTimeout(function(){ try { loadImpressionGap(); } catch(e) {} }, 700); }
                 return;
               }
               var text = '', color = '#6b7280', isLink = false, linkUrl = '';
@@ -29093,6 +32155,9 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
   var _cbKept = false;
   var _cbPageBriefs = {};
   var _lastBriefData = {};
+  // Tracks which pages have had their brief opened THIS round — clears the HTML/Scan ticks.
+  // Reset for a page when new HTML is pasted (a fresh round begins).
+  var _briefViewed = {};
   var _briefIsOpen = false;
   var _currentBriefPageId = null;
 
@@ -29198,7 +32263,6 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
       '<div class="cb-stat" style="animation:soStatPop .4s ease .06s both"><div class="v" style="color:' + (data.aio_cited ? '#4ade80' : '#4b5563') + ';">' + (data.aio_cited ? '\\u2713 Cited' : 'No') + '</div><div class="l">Google AIO</div></div>' +
       '<div class="cb-stat" style="animation:soStatPop .4s ease .12s both"><div class="v" style="color:' + (data.perp_cited ? '#a78bfa' : '#4b5563') + ';">' + (data.perp_cited ? '\\u2713 Cited' : 'No') + '</div><div class="l">Perplexity</div></div>' +
       '<div class="cb-stat" style="animation:soStatPop .4s ease .18s both"><div class="v" style="color:' + (data.bing_cited ? '#60a5fa' : '#4b5563') + ';">' + (data.bing_cited ? '\\u2713 Cited' : 'No') + '</div><div class="l">Copilot</div></div>' +
-      '<div class="cb-stat" style="animation:soStatPop .4s ease .24s both;position:relative;"><div class="v" style="color:' + (data.brave_cited ? '#f87171' : '#4b5563') + ';">' + (data.brave_cited ? '\\u2713 Cited' : 'No') + '</div><div class="l">Claude</div>' + (data.brave_cited ? '<span style="position:absolute;top:-4px;right:-4px;font-size:8px;background:#0a0a12;border:1px solid #1f2937;border-radius:3px;padding:0 3px;color:#6b7280;white-space:nowrap;">\\u1f441; see img</span>' : '') + '</div>' +
       (data.score ? '<div class="cb-stat" style="animation:soStatPop .4s ease .3s both"><div class="v" style="color:#fbbf24;">' + data.score + '</div><div class="l">GRAAF</div></div>' : '');
 
     // GSC section \\u2014 show if GSC is connected (even if values are 0)
@@ -29222,64 +32286,21 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
     // Recommendations \\u2014 Citation Brief + GSC Brief combined
     var passages = data.passages || data.recommendations;
     var passDiv = document.getElementById('cbPassages');
-    var allItems = [];
-    if (passages && Array.isArray(passages) && passages.length) {
-      allItems = allItems.concat(passages);
-    }
+    // Split like the TV modal: AI-citation actions in one section, GSC ranking actions in another.
+    var aiItems = (passages && Array.isArray(passages)) ? passages.slice() : [];
     var gscBriefItems = data.gsc_brief || [];
     var isGscEnabled = GSC_ENABLED || data._gsc_enabled || !!(data.gsc_clicks || data.gsc_impressions || data.gsc_position);
-    if (isGscEnabled && gscBriefItems.length) {
-      gscBriefItems.forEach(function(g) {
-        allItems.push({
-          title: g.title || '',
-          priority: g.priority || 'medium',
-          system: 'GSC Ranking',
-          action: g.action || '',
-          expected_impact: g.expected_impact || '',
-          trigger: g.trigger || '',
-          effort: g.effort || ''
-        });
-      });
-    }
+    var gscItems = (isGscEnabled && Array.isArray(gscBriefItems)) ? gscBriefItems.map(function(g){
+      return { title: g.title || '', priority: g.priority || 'medium', system: 'GSC Ranking', action: g.action || '', expected_impact: g.expected_impact || '', trigger: g.trigger || '', effort: g.effort || '', comparison_table: g.comparison_table || null, aio_citation_gap: g.aio_citation_gap || null };
+    }) : [];
+    var allItems = aiItems.concat(gscItems); // kept for downstream checks (cannibal/compGap flags)
 
-    if (allItems.length) {
-      var priOrder = { high: 0, h: 0, medium: 1, med: 1, m: 1, low: 2, l: 2 };
-      allItems.sort(function(a, b) {
-        var pa = (a.priority || a.p || 'low').toLowerCase();
-        var pb = (b.priority || b.p || 'low').toLowerCase();
-        return (priOrder[pa] || 2) - (priOrder[pb] || 2);
-      });
-      passDiv.innerHTML = '<div style="font-size:11px;font-weight:800;color:#7c3aed;text-transform:uppercase;letter-spacing:.08em;margin:18px 0 14px;">\\u2728 What to do next \\u2014 ranked by impact</div>';
-      allItems.slice(0, 7).forEach(function(p, idx) {
-        setTimeout(function() {
-          var pri = (p.priority || p.p || 'low').toLowerCase();
-          var priKey = (pri === 'high' || pri === 'h') ? 'high' : (pri === 'medium' || pri === 'med' || pri === 'm') ? 'medium' : 'low';
-          var priLabel = priKey === 'high' ? 'HIGH' : priKey === 'medium' ? 'MEDIUM' : 'LOW';
-          var priColor = priKey === 'high' ? '#ef4444' : priKey === 'medium' ? '#f59e0b' : '#22c55e';
-          var title = p.title || p.t || '';
-          var system = p.system || p.sys || '';
-          var action = p.action || p.passage || '';
-          var impact = p.expected_impact || p.impact || '';
-          var trigger = p.trigger || '';
-          var effort = p.effort || '';
-          title = _escHtml(title); trigger = _escHtml(trigger); impact = _escHtml(impact); system = _escHtml(system);
-          action = _fmtAction(action);
-          var el = document.createElement('div');
-          el.className = 'cb-passage';
-          el.style.borderLeftColor = priColor;
-          el.innerHTML =
-            '<div class="pri-row">' +
-              '<span class="pri-badge ' + priKey + '">' + priLabel + '</span>' +
-              (system ? '<span class="sys-badge">' + system + '</span>' : '') +
-              (effort ? '<span class="sys-badge" style="color:#4ade80;background:#4ade8018;border-color:#4ade8030;">' + effort.replace('_',' ') + '</span>' : '') +
-            '</div>' +
-            (title ? '<span class="rec-title">' + title + '</span>' : '') +
-            (trigger ? '<div style="font-size:11px;color:#6b7280;margin-bottom:8px;">&#128202; Signal: ' + trigger + '</div>' : '') +
-            (action ? '<span class="rec-action">' + action + '</span>' : '') +
-            (impact ? '<span class="rec-impact">' + impact + '</span>' : '');
-          passDiv.appendChild(el);
-        }, idx * 300);
-      });
+    // ── ONE SYSTEM: the entire brief body (transparency + AI CITATIONS + GSC sections
+    // + cards + tables) renders via the SAME shared _renderBriefBodyHTML used by the
+    // TV/live-wall modal \u2014 so the two views cannot diverge again.
+    var _bodyHtml = _renderBriefBodyHTML(data);
+    if (_bodyHtml) {
+      passDiv.innerHTML = _bodyHtml;
     } else {
       document.getElementById('cbPassages').innerHTML = '<div class="cb-passage" style="animation:soStatPop .5s ease;font-size:13px;">Your Citation Brief has been generated. Copy it below to share with your team or AI assistant.</div>';
     }
@@ -29308,11 +32329,27 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
         var _n = String.fromCharCode(10);
         var lines = ['AI Citation Brief \\u2014 ' + (data.url || ''), ''];
         if (data.keyword) lines.push('Keyword: ' + data.keyword);
+        lines.push('', '\ud83d\udd0d What We Actually Checked (transparency):');
+        lines.push('- Query tested: "' + (data.keyword||'') + '"');
+        if (data.last_checked) lines.push('- Checked: ' + new Date(data.last_checked).toLocaleString());
+        if (data.aio_text) lines.push('- Google AI Overview currently shows: "' + data.aio_text.substring(0,200) + (data.aio_text.length>200?'...':'') + '"');
+        else lines.push('- Google AI Overview: checked \u2014 not shown for this exact query right now.');
+        if (data.perp_excerpt) lines.push('- Perplexity\\'s actual answer excerpt: "' + data.perp_excerpt.substring(0,200) + (data.perp_excerpt.length>200?'...':'') + '"');
+        else lines.push('- Perplexity: checked \u2014 no answer excerpt captured for this query.');
+        (function(){
+          try {
+            var _gc = typeof data.google_competitors === 'string' ? JSON.parse(data.google_competitors) : (data.google_competitors||[]);
+            if (_gc && _gc.length) lines.push('- Google: ' + _gc.length + ' top competitors checked (full breakdown with reasons in the Competitor Gap action below)');
+          } catch(e) {}
+          try {
+            var _pc = typeof data.perp_competitors === 'string' ? JSON.parse(data.perp_competitors) : (data.perp_competitors||[]);
+            if (_pc && _pc.length) lines.push('- Perplexity: ' + _pc.length + ' cited source' + (_pc.length>1?'s':'') + (data.ai_perplexity_cited ? ' (this page IS cited)' : ' found (this page not among them yet)'));
+          } catch(e) {}
+        })();
         lines.push('AI Citation Results:');
         lines.push('- Google AIO: ' + (data.aio_cited ? 'CITED' : 'Not cited'));
         lines.push('- Perplexity: ' + (data.perp_cited ? 'CITED' : 'Not cited'));
         lines.push('- Copilot: ' + (data.bing_cited ? 'CITED' : 'Not cited'));
-        lines.push('- Claude: ' + (data.brave_cited ? 'CITED' : 'Not cited'));
         if (data.position) lines.push('- Google Position: #' + data.position);
         if (data.score) lines.push('- GRAAF Score: ' + data.score + '/100');
         if (hasGsc) {
@@ -29503,6 +32540,26 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
   }
 
   // Show saved brief instantly \\u2014 no animation, immediate display
+  function savePageAio(pageId) {
+    var ta = document.getElementById('aioManual_' + pageId);
+    var st = document.getElementById('aioStatus_' + pageId);
+    if (!ta) return;
+    var text = ta.value.trim();
+    if (st) { st.textContent = 'Saving...'; st.style.color = '#f59e0b'; }
+    fetch('/api/tracker-client/' + TOKEN + '/page/' + pageId + '/aio-manual', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ text: text })
+    }).then(function(r){ return r.json(); }).then(function(d){
+      if (d.success) {
+        if (st) { st.textContent = d.cleared ? 'Cleared' : (d.aio_cited_preview ? 'Saved — cited! Run scan.' : 'Saved — not cited. Run scan for recommendations.'); st.style.color = d.aio_cited_preview ? '#4ade80' : '#f59e0b'; }
+      } else if (st) { st.textContent = d.error || 'Error'; st.style.color = '#f87171'; }
+    }).catch(function(){ if (st) { st.textContent = 'Network error'; st.style.color = '#f87171'; } });
+  }
+  function clearPageAio(pageId) {
+    var ta = document.getElementById('aioManual_' + pageId);
+    if (ta) ta.value = '';
+    savePageAio(pageId);
+  }
   function viewLastBrief(pageId) {
     var data = _lastBriefData[pageId];
     if (!data) {
@@ -29511,6 +32568,14 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
       if (data) _lastBriefData[pageId] = data;
     }
     if (!data) { toast('No brief available yet \\u2014 run a scan first', '#f59e0b'); return; }
+    _briefViewed[pageId] = true;
+    // Persist server-side so the cleared ticks survive a reload or power loss.
+    try {
+      var _pv = (_pages || []).find(function(x){ return x.id == pageId; });
+      if (_pv) _pv.brief_viewed_at = new Date().toISOString();
+      fetch('/api/tracker-client/' + TOKEN + '/page/' + pageId + '/brief-viewed', { method: 'POST' }).catch(function(){});
+    } catch(e){}
+    if (typeof renderPages === 'function') { try { renderPages(); } catch(e){} } else if (typeof loadPages === 'function') { try { loadPages(); } catch(e){} }
     var card = document.getElementById('cbCard');
     if (!card) return;
     var overlay = document.getElementById('cbOverlay');
@@ -29519,248 +32584,21 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
     _briefIsOpen = true;
     _currentBriefPageId = pageId;
 
-    // Show card immediately
     card.classList.remove('hide');
     card.classList.add('show');
 
-    // Reset
-    _cbKept = true; // Don't auto-close since user clicked to view
+    _cbKept = true;
     document.getElementById('cbUrl').textContent = data.url || '';
     document.getElementById('cbKw').textContent = data.keyword ? 'Keyword: ' + data.keyword : '';
 
-    // Hide steps, show results directly
     document.getElementById('cbSteps').style.display = 'none';
     document.getElementById('cbProgressBar').style.width = '100%';
 
-    var gscS = document.getElementById('cbGscSection');
-    var gscP = document.getElementById('cbGscPanel');
-    var gscA = document.getElementById('cbGscArrow');
-    if (gscS) gscS.style.display = 'none';
-    if (gscP) gscP.classList.remove('open');
-    if (gscA) gscA.style.transform = 'rotate(0deg)';
-
-    // Stats
-    var statRow = document.getElementById('cbStatRow');
-    var pos = data.position;
-    var posColor = pos ? (pos <= 3 ? '#4ade80' : pos <= 10 ? '#fbbf24' : '#f87171') : '#4b5563';
-    statRow.innerHTML =
-      '<div class="cb-stat" style="animation:soStatPop .3s ease both"><div class="v" style="color:' + posColor + ';' + ((pos&&data.page_id)?'cursor:pointer;':'') + '"' + ((pos&&data.page_id)?(' onclick="csPosHist(' + data.page_id + ')" title="See ranking history"'):'') + '>' + (pos ? '#' + pos : 'N/A') + '</div><div class="l">Position' + ((pos&&data.page_id)?' &#128200;':'') + '</div></div>' +
-      '<div class="cb-stat" style="animation:soStatPop .3s ease .05s both"><div class="v" style="color:' + (data.aio_cited ? '#4ade80' : '#4b5563') + ';">' + (data.aio_cited ? '\\u2713 Cited' : 'No') + '</div><div class="l">Google AIO</div></div>' +
-      '<div class="cb-stat" style="animation:soStatPop .3s ease .1s both"><div class="v" style="color:' + (data.perp_cited ? '#a78bfa' : '#4b5563') + ';">' + (data.perp_cited ? '\\u2713 Cited' : 'No') + '</div><div class="l">Perplexity</div></div>' +
-      '<div class="cb-stat" style="animation:soStatPop .3s ease .15s both"><div class="v" style="color:' + (data.bing_cited ? '#60a5fa' : '#4b5563') + ';">' + (data.bing_cited ? '\\u2713 Cited' : 'No') + '</div><div class="l">Copilot</div></div>' +
-      '<div class="cb-stat" style="animation:soStatPop .3s ease .2s both"><div class="v" style="color:' + (data.brave_cited ? '#f87171' : '#4b5563') + ';">' + (data.brave_cited ? '\\u2713 Cited' : 'No') + '</div><div class="l">Claude</div></div>' +
-      (data.score ? '<div class="cb-stat" style="animation:soStatPop .3s ease .25s both"><div class="v" style="color:#fbbf24;">' + data.score + '</div><div class="l">GRAAF</div></div>' : '');
-
-    // GSC \\u2014 show if connected (even with 0 values)
-    var hasGsc = GSC_ENABLED || data._gsc_enabled || (data.gsc_clicks != null) || (data.gsc_impressions != null) || (data.gsc_position != null);
-    if (hasGsc && gscS) {
-      gscS.style.display = 'block';
-      var gscStats = document.getElementById('cbGscStats');
-      if (gscStats) {
-        var items = [];
-        if (data.gsc_clicks != null) items.push('<span style="color:#4ade80;font-weight:600;">\\u2193 ' + Number(data.gsc_clicks).toLocaleString() + ' clicks</span>');
-        if (data.gsc_impressions != null) items.push('<span style="color:#60a5fa;">' + Number(data.gsc_impressions).toLocaleString() + ' impr</span>');
-        if (data.gsc_ctr) items.push('<span style="color:#a78bfa;">CTR ' + data.gsc_ctr + '</span>');
-        if (data.gsc_position != null) items.push('<span style="color:#f59e0b;font-weight:600;">pos ' + parseFloat(data.gsc_position).toFixed(1) + '</span>');
-        if (data.gsc_keyword) items.push('<span style="color:#4b5563;font-style:italic;">' + data.gsc_keyword + '</span>');
-        if (!items.length) items.push('<span style="color:#6b7280;">GSC connected \\u2014 no data yet</span>');
-        items.push('<span style="margin-left:auto;color:#4ade80;font-weight:700;font-size:10px;">Goal: #1</span>');
-        gscStats.innerHTML = items.join('');
-      }
-    }
-
-    // Recommendations \\u2014 Citation Brief + GSC Brief combined
-    var passages = data.passages || data.recommendations;
-    var gscBriefItems = data.gsc_brief || [];
-    var isGscEnabled = GSC_ENABLED || data._gsc_enabled || !!(data.gsc_clicks || data.gsc_impressions || data.gsc_position);
-    var allItems = [];
-    if (passages && Array.isArray(passages)) allItems = allItems.concat(passages);
-    if (isGscEnabled && gscBriefItems.length) {
-      gscBriefItems.forEach(function(g) {
-        allItems.push({ title: g.title || '', priority: g.priority || 'medium', system: 'GSC Ranking', action: g.action || '', expected_impact: g.expected_impact || '', trigger: g.trigger || '', effort: g.effort || '' });
-      });
-    }
-    var passDiv = document.getElementById('cbPassages');
-    if (allItems.length) {
-      var priOrder = { high: 0, h: 0, medium: 1, med: 1, m: 1, low: 2, l: 2 };
-      allItems.sort(function(a, b) {
-        var pa = (a.priority || a.p || 'low').toLowerCase();
-        var pb = (b.priority || b.p || 'low').toLowerCase();
-        return (priOrder[pa] || 2) - (priOrder[pb] || 2);
-      });
-      passDiv.innerHTML = '<div style="font-size:11px;font-weight:800;color:#7c3aed;text-transform:uppercase;letter-spacing:.08em;margin:18px 0 14px;">\\u2728 What to do next \\u2014 ranked by impact</div>';
-      allItems.slice(0, 7).forEach(function(p) {
-        var pri = (p.priority || p.p || 'low').toLowerCase();
-        var priKey = (pri === 'high' || pri === 'h') ? 'high' : (pri === 'medium' || pri === 'med' || pri === 'm') ? 'medium' : 'low';
-        var priLabel = priKey === 'high' ? 'HIGH' : priKey === 'medium' ? 'MEDIUM' : 'LOW';
-        var priColor = priKey === 'high' ? '#ef4444' : priKey === 'medium' ? '#f59e0b' : '#22c55e';
-        var title = p.title || p.t || '';
-        var system = p.system || p.sys || '';
-        var action = p.action || p.passage || '';
-        var impact = p.expected_impact || p.impact || '';
-        var trigger = p.trigger || '';
-        var effort = p.effort || '';
-        title = _escHtml(title); trigger = _escHtml(trigger); impact = _escHtml(impact); system = _escHtml(system);
-        action = _fmtAction(action);
-        var el = document.createElement('div');
-        el.className = 'cb-passage';
-        el.style.borderLeftColor = priColor;
-        el.innerHTML =
-          '<div class="pri-row">' +
-            '<span class="pri-badge ' + priKey + '">' + priLabel + '</span>' +
-            (system ? '<span class="sys-badge">' + system + '</span>' : '') +
-            (effort ? '<span class="sys-badge" style="color:#4ade80;background:#4ade8018;border-color:#4ade8030;">' + effort.replace('_',' ') + '</span>' : '') +
-          '</div>' +
-          (title ? '<span class="rec-title">' + title + '</span>' : '') +
-          (trigger ? '<div style="font-size:11px;color:#6b7280;margin-bottom:8px;">&#128202; Signal: ' + trigger + '</div>' : '') +
-          (action ? '<span class="rec-action">' + action + '</span>' : '') +
-          (impact ? '<span class="rec-impact">' + impact + '</span>' : '');
-        passDiv.appendChild(el);
-      });
-    } else {
-      passDiv.innerHTML = '<div class="cb-passage">No recommendations yet \\u2014 run a scan first.</div>';
-    }
-
-    // Source Suggestions \\u2014 Verified Claims (show only if issues found)
-    var sourceSuggestions = data.source_suggestions || [];
-    if (sourceSuggestions.length > 0) {
-      var srcHeader = document.createElement('div');
-      srcHeader.style.cssText = 'font-size:11px;font-weight:800;color:#ef4444;text-transform:uppercase;letter-spacing:.08em;margin:24px 0 14px;';
-      srcHeader.innerHTML = '\\u26a0 Verify Your Claims \\u2014 Source Needed';
-      passDiv.appendChild(srcHeader);
-      sourceSuggestions.slice(0, 5).forEach(function(s) {
-        var sEl = document.createElement('div');
-        sEl.className = 'cb-passage';
-        sEl.style.borderLeftColor = s.priority === 'high' ? '#ef4444' : s.priority === 'medium' ? '#f59e0b' : '#22c55e';
-        var srcList = '';
-        if (s.sources && s.sources.length) {
-          srcList = '<div style="margin-top:8px;">' + s.sources.map(function(src) {
-            return '<a href="' + (src.url || '#') + '" target="_blank" style="color:#60a5fa;font-size:11px;text-decoration:none;display:inline-flex;align-items:center;gap:4px;margin-right:12px;">' + (src.name || src.url) + '</a>';
-          }).join('') + '</div>';
-        }
-        sEl.innerHTML =
-          '<div class="pri-row">' +
-            '<span class="pri-badge ' + (s.priority || 'medium') + '">' + (s.priority || 'MEDIUM').toUpperCase() + '</span>' +
-            '<span class="sys-badge" style="color:#ef4444;background:#ef444418;border-color:#ef444430;">Unverified Claim</span>' +
-          '</div>' +
-          '<span class="rec-title">' + (s.claim || 'Unanchored claim') + '</span>' +
-          '<div style="font-size:11px;color:#6b7280;margin-bottom:8px;">' + (s.why || 'This claim lacks a verifiable source. AI systems may treat it as unreliable.') + '</div>' +
-          '<div style="font-size:10px;color:#60a5fa;font-weight:600;margin-bottom:4px;">Suggested sources:</div>' +
-          srcList;
-        passDiv.appendChild(sEl);
-      });
-    }
-
-    // Discovered Sources \\u2014 Auto-Source Discovery
-    var discoveredSources = data.discovered_sources || [];
-    if (discoveredSources.length > 0) {
-      var dsHeader = document.createElement('div');
-      dsHeader.style.cssText = 'font-size:11px;font-weight:800;color:#22c55e;text-transform:uppercase;letter-spacing:.08em;margin:20px 0 12px;padding-top:16px;border-top:1px solid #1f2937;';
-      dsHeader.innerHTML = '\\ud83d\\udd0d Sources Found on Your Site';
-      passDiv.appendChild(dsHeader);
-      
-      var foundSources = discoveredSources.filter(function(ds) { return ds.found_where !== 'not_found'; });
-      var missingSources = discoveredSources.filter(function(ds) { return ds.found_where === 'not_found'; });
-      
-      foundSources.forEach(function(ds) {
-        var dsEl = document.createElement('div');
-        dsEl.style.cssText = 'background:#052e16;border:1px solid #166534;border-radius:8px;padding:10px 12px;margin-bottom:8px;font-size:11px;';
-        var icon = ds.found_where === 'schema_markup' ? '\\ud83d\\udccb' : 
-                   ds.found_where === 'case_study_page' ? '\\ud83d\\udcc8' : 
-                   ds.found_where === 'current_page' ? '\\ud83d\\udcdd' : '\\ud83d\\udd17';
-        dsEl.innerHTML =
-          '<div style="color:#4ade80;font-weight:700;margin-bottom:3px;">' + icon + ' "' + (ds.claim || '') + '"</div>' +
-          '<div style="color:#86efac;">' + (ds.evidence || '') + '</div>' +
-          (ds.source_url ? '<a href="' + ds.source_url + '" target="_blank" style="color:#60a5fa;font-size:10px;text-decoration:none;margin-top:4px;display:inline-block;">View source \\u2192</a>' : '');
-        passDiv.appendChild(dsEl);
-      });
-      
-      if (missingSources.length > 0) {
-        var msHeader = document.createElement('div');
-        msHeader.style.cssText = 'font-size:11px;font-weight:800;color:#f59e0b;text-transform:uppercase;letter-spacing:.08em;margin:16px 0 10px;';
-        msHeader.innerHTML = '\\u26a0 Claims Needing a Source';
-        passDiv.appendChild(msHeader);
-        missingSources.forEach(function(ms) {
-          var msEl = document.createElement('div');
-          msEl.style.cssText = 'background:#451a03;border:1px solid #92400e;border-radius:8px;padding:10px 12px;margin-bottom:8px;font-size:11px;';
-          msEl.innerHTML =
-            '<div style="color:#fbbf24;font-weight:700;margin-bottom:3px;">"' + (ms.claim || '') + '"</div>' +
-            '<div style="color:#fcd34d;">' + (ms.context || 'Add a case study or methodology page to your site') + '</div>';
-          passDiv.appendChild(msEl);
-        });
-      }
-    }
-
-    // Copy section
-    var cpS = document.getElementById('cbCopySection');
-    var cpT = document.getElementById('cbCopyText');
-    if (cpS && cpT) {
-      var _n = String.fromCharCode(10);
-      var lines = ['AI Citation Brief \\u2014 ' + (data.url || ''), ''];
-      if (data.keyword) lines.push('Keyword: ' + data.keyword);
-      lines.push('AI Citation Results:');
-      lines.push('- Google AIO: ' + (data.aio_cited ? 'CITED' : 'Not cited'));
-      lines.push('- Perplexity: ' + (data.perp_cited ? 'CITED' : 'Not cited'));
-      lines.push('- Copilot: ' + (data.bing_cited ? 'CITED' : 'Not cited'));
-      lines.push('- Claude: ' + (data.brave_cited ? 'CITED' : 'Not cited'));
-      if (data.position) lines.push('- Google Position: #' + data.position);
-      if (data.score) lines.push('- GRAAF Score: ' + data.score + '/100');
-      if (hasGsc) {
-        lines.push('', 'Google Search Console Data:');
-        if (data.gsc_clicks != null) lines.push('- Clicks: ' + data.gsc_clicks);
-        if (data.gsc_impressions != null) lines.push('- Impressions: ' + data.gsc_impressions);
-        if (data.gsc_position) lines.push('- Position: ' + parseFloat(data.gsc_position).toFixed(1));
-        if (data.gsc_ctr) lines.push('- CTR: ' + data.gsc_ctr);
-      }
-      var _isInternal2 = function(p){ var s=(p.system||p.sys||'').toLowerCase(); return s.indexOf('internal')>=0; };
-      var _aio2 = (passages||[]).filter(function(p){ return !_isInternal2(p); });
-      var _link2 = (passages||[]).filter(_isInternal2);
-      var _src2 = data.source_suggestions || [];
-      var _gsc2 = (typeof gscBriefItems !== 'undefined' && gscBriefItems) ? gscBriefItems : (data.gsc_brief || []);
-
-      lines.push('', '=== AIO BRIEF ===');
-      if (_aio2.length) {
-        _aio2.forEach(function(p, i) {
-          lines.push((i+1) + '. [' + (p.priority||p.p||'').toUpperCase() + '] ' + (p.title||p.t||'') + ((p.system||p.sys) ? ' (' + (p.system||p.sys) + ')' : ''));
-          if (p.action || p.passage) lines.push('   ' + (p.action || p.passage));
-          if (p.expected_impact || p.impact) lines.push('   Impact: ' + (p.expected_impact || p.impact));
-        });
-      } else { lines.push('(no citation actions)'); }
-
-      lines.push('', '=== GSC BRIEF ===');
-      if (_gsc2.length) {
-        _gsc2.forEach(function(g, i) {
-          lines.push((i+1) + '. [' + (g.priority||'').toUpperCase() + '] ' + (g.title || ''));
-          if (g.trigger) lines.push('   Signal: ' + g.trigger);
-          if (g.action) lines.push('   ' + g.action);
-          if (g.expected_impact) lines.push('   Impact: ' + g.expected_impact);
-        });
-      } else { lines.push('(no GSC ranking actions)'); }
-
-      lines.push('', '=== SOURCE BRIEF ===');
-      if (_src2.length) {
-        _src2.forEach(function(s, i) {
-          lines.push((i+1) + '. [' + (s.priority||'medium').toUpperCase() + '] ' + (s.claim || 'Unverified claim'));
-          if (s.why) lines.push('   Issue: ' + s.why);
-          if (s.sources && s.sources.length) lines.push('   Suggested sources: ' + s.sources.map(function(x){ return x.name || x.url; }).join(', '));
-        });
-      } else { lines.push('(no unverified claims)'); }
-
-      lines.push('', '=== INTERNAL LINKING ===');
-      if (_link2.length) {
-        _link2.forEach(function(p, i) {
-          lines.push((i+1) + '. ' + (p.title || 'Internal link'));
-          if (p.action || p.passage) lines.push('   ' + (p.action || p.passage));
-        });
-      } else { lines.push('(no internal link suggestions)'); }
-      lines.push('', '---', 'Generated by ContentScale AI Citations Tracker');
-      cpT.value = lines.join(_n);
-      cpS.style.display = 'block';
-    }
-
-    document.getElementById('cbResult').classList.add('show');
-    document.getElementById('cbKeepBtn').style.display = 'none';
-    document.getElementById('cbCountdown').textContent = 'Click \\u2715 to close';
+    // ── ONE SYSTEM: viewLastBrief no longer maintains its own ~350-line render copy.
+    // It just opens the modal chrome above, then hands off to the SAME showBriefResult()
+    // function a fresh scan uses \u2014 so a re-opened brief and a just-scanned brief are
+    // byte-for-byte the same render, in the same section order, with the same wording.
+    showBriefResult(data);
   }
 
   function toggleGscPanel() {
@@ -29895,12 +32733,14 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
     items.forEach(function(item, idx) {
       var checked = idx < maxN;
       var label = document.createElement('label');
-      label.style.cssText = 'display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #1f2937;font-size:11px;cursor:pointer;';
+      // Mobile tap target: the whole row is clickable (not just the tiny checkbox), and padding is
+      // bumped to keep the row near the ~44px recommended minimum touch height on phones.
+      label.style.cssText = 'display:flex;align-items:center;gap:10px;padding:11px 4px;border-bottom:1px solid #1f2937;font-size:11px;cursor:pointer;min-height:22px;';
       var cb = document.createElement('input');
       cb.type = 'checkbox';
       cb.className = cbClass;
       cb.checked = checked;
-      cb.style.cursor = 'pointer';
+      cb.style.cssText = 'cursor:pointer;width:18px;height:18px;flex-shrink:0;';
       cb.value = typeof item === 'object' ? JSON.stringify(item) : item;
       cb.onchange = function() { updateSelectCount(cbClass, maxN); };
       var span = document.createElement('span');
@@ -29943,20 +32783,26 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
   }
 
   function selectAllGsc(val) {
+    // Query-only rows never consume a page slot (see parseGscData) \u2014 the All/None buttons
+    // must use the SAME uncapped limit, or clicking All silently reverts a correct 500-selection
+    // back down to the page-tracking plan limit (the bug that showed 100 after 500 was already selected).
+    var _pairsNow = window._lastGscPairs || [];
+    var _pureQ = _pairsNow.length && _pairsNow.every(function(p){ return p.isQueryOnly; });
+    var _cap = _pureQ ? Math.min(500, _pairsNow.length) : MAX_PAGES;
     var cbs = document.querySelectorAll('.gsc-cb');
     var count = 0;
     cbs.forEach(function(cb) {
-      if (val && count < MAX_PAGES) { cb.checked = true; count++; }
+      if (val && count < _cap) { cb.checked = true; count++; }
       else if (!val) { cb.checked = false; }
-      // If val=true and count >= MAX_PAGES, uncheck remaining
       else { cb.checked = false; }
     });
-    updateSelectCount('gsc-cb', MAX_PAGES);
+    updateSelectCount('gsc-cb', _cap);
     // Show warning if more pages than allowed
-    if (val && cbs.length > MAX_PAGES) {
-      toast('Showing top ' + MAX_PAGES + ' pages (your limit). Upgrade for more.', '#f59e0b');
+    if (val && cbs.length > _cap) {
+      toast((_pureQ ? 'Showing top ' + _cap + ' keywords (query-data cap).' : 'Showing top ' + _cap + ' pages (your limit). Upgrade for more.'), '#f59e0b');
     }
   }
+
 
   // Lightweight inline progress spinner for long fetches/imports (sitemap + GSC)
   function _csSpinner(btn, label) {
@@ -30032,7 +32878,59 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
     var raw = document.getElementById('importGscData').value.trim();
     if (!raw) { toast('Paste or drop GSC data first', '#f87171'); return; }
     var nl = String.fromCharCode(10);
-    var lines = raw.split(nl).map(function(l){ return l.trim(); }).filter(Boolean);
+    var _rawLines = raw.split(nl);
+    // Quote-aware line reconstruction: a CSV field containing a comma (e.g. "roof repair near
+    // hasbrouck heights, nj") or an embedded newline is wrapped in double quotes per CSV spec, but a
+    // blind split('\\n') breaks a multi-line quoted field into several garbled fragments \\u2014 one bad
+    // export row could otherwise corrupt or silently truncate everything parsed after it. Re-merge any
+    // line with an unterminated (odd) quote count into the following line(s) until quotes balance.
+    var lines = [];
+    for (var _li = 0; _li < _rawLines.length; _li++) {
+      var _cur = _rawLines[_li];
+      var _quotes = (_cur.match(/"/g) || []).length;
+      while (_quotes % 2 === 1 && _li + 1 < _rawLines.length) {
+        _li++;
+        _cur += ' ' + _rawLines[_li];
+        _quotes = (_cur.match(/"/g) || []).length;
+      }
+      var _t = _cur.trim();
+      if (_t) lines.push(_t);
+    }
+
+    // ── GSC web-UI copy-paste support ─────────────────────────────────────
+    // Copying the table straight from the GSC Performance page (not the CSV export) produces:
+    //   header words each on their OWN line (Top pages / Clicks / Impressions / CTR / Position),
+    //   then a bare URL (or query) line, followed by a metrics line like "33\t6,211" or "33 6,211 0.5% 20.9".
+    // Normalize that into one tab-joined record per page BEFORE format detection,
+    // otherwise the URL row parses as 0 clicks / 0 impressions and the numbers row is thrown away.
+    var _headerWords = { 'top pages':1, 'top queries':1, 'clicks':1, 'impressions':1, 'ctr':1, 'position':1 };
+    var _isNumLine = function(l){ return /^[0-9][0-9.,%\t ]*$/.test(l); };
+    var _sawPagesHdr = false, _sawQueriesHdr = false, _uiNorm = [], _i;
+    for (_i = 0; _i < lines.length; _i++) {
+      var _l = lines[_i];
+      var _lw = _l.toLowerCase().replace(/^"|"$/g,'');
+      if (_headerWords[_lw]) { if (_lw === 'top pages') _sawPagesHdr = true; if (_lw === 'top queries') _sawQueriesHdr = true; continue; }
+      var _isUrl = _l.indexOf('http') === 0 && _l.indexOf(String.fromCharCode(9)) === -1 && _l.indexOf(',') === -1;
+      var _nextNum = (_i + 1 < lines.length) && _isNumLine(lines[_i + 1]);
+      if (_isUrl && _nextNum) {
+        // bare URL + metrics on the next line -> join with tabs; extract numbers keeping "6,211" intact
+        var _nums = lines[_i + 1].match(/[0-9][0-9,]*(?:[.][0-9]+)?%?/g) || [];
+        _uiNorm.push(_l + String.fromCharCode(9) + _nums.join(String.fromCharCode(9)));
+        _i++; continue;
+      }
+      var _pasteHasUrls = lines.some(function(x){ return String(x).indexOf('http') === 0; });
+      if ((_sawQueriesHdr || !_pasteHasUrls) && !_isUrl && !_isNumLine(_l) && _nextNum) {
+        var _nums2 = lines[_i + 1].match(/[0-9][0-9,]*(?:[.][0-9]+)?%?/g) || [];
+        _uiNorm.push(_l + String.fromCharCode(9) + _nums2.join(String.fromCharCode(9)));
+        _i++; continue;
+      }
+      _uiNorm.push(_l);
+    }
+    lines = _uiNorm;
+    if (_sawPagesHdr && (!lines[0] || lines[0].toLowerCase().indexOf('top pages') !== 0)) lines.unshift('Top pages,Clicks,Impressions,CTR,Position');
+    if (_sawQueriesHdr && !_sawPagesHdr && (!lines[0] || lines[0].toLowerCase().indexOf('top queries') !== 0)) lines.unshift('Top queries,Clicks,Impressions,CTR,Position');
+    // ──────────────────────────────────────────────────────────────────────
+
     var pairs = [];
     var domain = DOMAIN || '';
 
@@ -30046,15 +32944,64 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
 
     var isQueriesCSV = lines[0] && (lines[0].toLowerCase().startsWith('top queries') || lines[0].toLowerCase().startsWith('query,') || lines[0].toLowerCase().startsWith('"top queries"'));
     var isPagesCSV = lines[0] && (lines[0].toLowerCase().startsWith('top pages') || lines[0].toLowerCase().startsWith('"top pages"'));
+    // Language-independent fallback: GSC exports headers in the UI language (Chinese, Dutch, ...).
+    // If no English header matched, detect the format structurally: URLs in column 1 = Pages CSV,
+    // text + numbers = Queries CSV. Works for any language.
+    if (!isPagesCSV && !isQueriesCSV && lines.length > 1) {
+      var _tb = String.fromCharCode(9);
+      var _dataLines = lines.slice(0, 6).filter(function(l){ return /[0-9]/.test(l); });
+      var _urlish = 0, _textish = 0;
+      _dataLines.forEach(function(l){
+        var first = (l.indexOf(_tb) > -1 ? l.split(_tb)[0] : l.split(',')[0]).replace(/^"|"$/g,'').trim();
+        if (first.indexOf('http') === 0) _urlish++;
+        else if (first && !/^[0-9][0-9.,% ]*$/.test(first)) _textish++;
+      });
+      if (_urlish > 0 && _urlish >= _textish) { isPagesCSV = true; }
+      else if (_textish > 0) { isQueriesCSV = true; }
+      // header row in a foreign language (first line without digits) is skipped naturally by the number checks
+    }
+
+    // Multi-section support: exporting/copying "Queries" and "Pages" together (or selecting both
+    // GSC tabs at once) produces ONE paste with TWO header rows back to back \u2014 a Top queries
+    // table followed later by a Top pages table (or vice versa). A single global format flag would
+    // misread the second table entirely (URLs parsed as queries, or queries parsed as URLs). Instead,
+    // detect a section header on EVERY line, so the format can switch mid-paste.
+    var _sectionAt = []; // per-line: 'queries' | 'pages' | null (null = continue previous section)
+    var _curSection = isQueriesCSV ? 'queries' : (isPagesCSV ? 'pages' : null);
+    lines.forEach(function(l, li){
+      var _lw = l.toLowerCase().replace(/^"|"$/g,'');
+      if (_lw.startsWith('top queries') || _lw.startsWith('query,') || _lw === 'query') { _curSection = 'queries'; _sectionAt[li] = 'HEADER'; }
+      else if (_lw.startsWith('top pages') || _lw === 'page') { _curSection = 'pages'; _sectionAt[li] = 'HEADER'; }
+      else { _sectionAt[li] = _curSection; }
+    });
 
     lines.forEach(function(line, idx) {
-      if (idx === 0 && (isQueriesCSV || isPagesCSV)) return; // skip header
+      if (_sectionAt[idx] === 'HEADER') return; // this line IS a section header \u2014 skip it, not data
+      var isQueriesCSV = _sectionAt[idx] === 'queries';
+      var isPagesCSV = _sectionAt[idx] === 'pages';
 
-      // Strip BOM and quotes
-      line = line.replace(/^\\ufeff/, '').replace(/^"|"$/g, '');
+      // Strip BOM
+      line = line.replace(/^\ufeff/, '');
 
-      // Split on comma or tab
-      var parts = line.split(/[,	]/).map(function(p){ return p.replace(/^"|"$/g,'').trim(); });
+      // Split tab-first: a tab-separated line (UI paste) may contain thousand separators like "6,211"
+      // that a blind comma-split would destroy. Only split on comma when there is no tab.
+      var _tab = String.fromCharCode(9);
+      var parts;
+      if (line.indexOf(_tab) > -1) {
+        parts = line.split(_tab).map(function(p){ return p.replace(/^"|"$/g,'').trim(); });
+      } else {
+        // Quote-aware comma split: a query like "roof repair near hasbrouck heights, nj" is CSV-quoted
+        // because it contains a comma \u2014 a blind split(',') would break it into two fields and shift
+        // every column after it (clicks becomes the city name, impressions becomes the real clicks, etc).
+        parts = []; var _cur = ''; var _inQ = false;
+        for (var _ci = 0; _ci < line.length; _ci++) {
+          var _ch = line[_ci];
+          if (_ch === '"') { _inQ = !_inQ; continue; }
+          if (_ch === ',' && !_inQ) { parts.push(_cur.trim()); _cur = ''; continue; }
+          _cur += _ch;
+        }
+        parts.push(_cur.trim());
+      }
 
       if (isQueriesCSV) {
         // Format: query, clicks, impressions, CTR, position
@@ -30101,9 +33048,43 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
       }
     });
 
+    // Mixed-paste guard: pasting a Queries table and a Pages table together (two separate copy\u2011paste
+    // actions combined into one box) makes the checkbox pre-selection unpredictable \u2014 whichever
+    // section happens to come first fills the default-checked quota, silently leaving the other
+    // section unchecked. Rather than guess, refuse clearly and tell the owner exactly what to do.
+    var _hasQ = pairs.some(function(p){ return p.isQueryOnly; });
+    var _hasP = pairs.some(function(p){ return !p.isQueryOnly; });
+    if (_hasQ && _hasP) {
+      var textarea = document.getElementById('importGscData');
+      if (textarea) textarea.style.borderColor = '#f59e0b';
+      toast('This paste mixes Queries and Pages data \u2014 import them ONE AT A TIME for reliable results: clear this box, paste ONLY the Queries table, Parse & Import, then reopen and paste ONLY the Pages table.', '#f59e0b');
+      return;
+    }
     if (!pairs.length) { toast('No valid data found. Try: GSC Queries CSV, Pages CSV, or URL | keyword format', '#f87171'); return; }
+    window._lastGscPairs = pairs; // full parsed set — import ships the query rows to the Impression Gap store
+    toast('Parsed ' + pairs.length + ' row' + (pairs.length===1?'':'s') + ' from your paste \u2014 review the list below before importing.', '#60a5fa');
+    // Per-page assignment: a Queries CSV exported from GSC → Pages → [one page] → Queries belongs to ONE page.
+    // Show the selector only when query rows are present, so the owner can be set exactly (no matching guesswork).
+    var _assignWrap = document.getElementById('gscAssignWrap');
+    var _hasQueryRows = pairs.some(function(p){ return p.isQueryOnly; });
+    if (_assignWrap) {
+      if (_hasQueryRows && (_pages||[]).length) {
+        // Sort pages A-Z by path so a long tracked-page list is easy to scan/find in the dropdown.
+        var _pagesSorted = (_pages||[]).map(function(tp){ var path=''; try { path = new URL(tp.url).pathname || '/'; } catch(e) { path = tp.url; } return { tp: tp, path: path }; })
+          .sort(function(a,b){ return a.path.localeCompare(b.path); });
+        var _sel = '<select id="gscAssignPage" style="width:100%;background:#0d1117;border:1px solid #374151;border-radius:6px;color:#e5e7eb;font-size:11px;padding:6px;">'
+          + '<option value="">Whole site (site-wide Queries CSV \\u2014 queries matched to pages automatically)</option>'
+          + _pagesSorted.map(function(x){ return '<option value="' + x.tp.id + '">These queries belong to: ' + x.path + ' (exported from GSC \u2192 Pages \u2192 this page)</option>'; }).join('')
+          + '</select>';
+        var _existingSiteWide = (_gapQueries || []).filter(function(g){ return !g.page_id; }).length;
+        var _warnNote = _existingSiteWide > 20 ? '<div style="font-size:10px;color:#f59e0b;margin-top:4px;">\u26a0 You have ' + _existingSiteWide + ' site-wide queries stored. Leaving this on \u201cWhole site\u201d will DELETE and replace all of them \u2014 pick the specific page in the Query ownership dropdown above if this paste is a per-page export.</div>' : '';
+        _assignWrap.innerHTML = '<div style="font-size:10px;font-weight:700;color:#9ca3af;margin:8px 0 4px;">Query ownership</div>' + _sel + _warnNote;
+        _assignWrap.style.display = 'block';
+      } else { _assignWrap.style.display = 'none'; _assignWrap.innerHTML = ''; }
+    }
 
-    // Merge duplicate URLs \\u2014 GSC often splits one page across http/https/www/trailing-slash variants. Sum the metrics.
+    // Merge duplicate URLs \\u2014 GSC often splits one page across http/https/www/trailing-slash variants.
+    // Sum the metrics; position = impressions-weighted average (NOT best-of, which flatters the numbers).
     var _byUrl = {}; var _merged = [];
     pairs.forEach(function(p){
       if (p.isQueryOnly) { _merged.push(p); return; }
@@ -30111,10 +33092,16 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
       if (!key) { _merged.push(p); return; }
       if (_byUrl[key]) {
         var e = _byUrl[key];
+        // weighted position across variants
+        var eImpr = e.impressions || 0, pImpr = p.impressions || 0;
+        if (e.position && p.position && (eImpr + pImpr) > 0) {
+          e.position = Math.round(((e.position * eImpr + p.position * pImpr) / (eImpr + pImpr)) * 10) / 10;
+        } else if (p.position && !e.position) e.position = p.position;
         e.clicks = (e.clicks||0) + (p.clicks||0);
-        e.impressions = (e.impressions||0) + (p.impressions||0);
-        if (p.position && (!e.position || p.position < e.position)) e.position = p.position;
+        e.impressions = eImpr + pImpr;
         if (!e.keyword && p.keyword) e.keyword = p.keyword;
+        // prefer https non-www as canonical
+        if (String(p.url||'').indexOf('https://') === 0 && String(p.url||'').indexOf('https://www.') !== 0) e.url = p.url;
       } else { _byUrl[key] = p; _merged.push(p); }
     });
     pairs = _merged;
@@ -30129,16 +33116,13 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
     });
     pairs.forEach(function(p,i){ p._rank = i+1; });
 
-    // If queries-only, show info
-    if (pairs[0] && pairs[0].isQueryOnly) {
-      toast('Queries CSV detected \\u2014 ' + pairs.length + ' keywords found. URLs will be set to your homepage. Edit per page after import.', '#fbbf24');
-    }
 
     var container = document.getElementById('gscItems');
     var countEl = document.getElementById('gscCount');
     var list = document.getElementById('gscList');
     if (list) list.style.display = 'block';
-    var maxSel = Math.min(MAX_PAGES, pairs.length);
+    var _isPureQueryImport = pairs.length && pairs.every(function(p){ return p.isQueryOnly; });
+    var maxSel = _isPureQueryImport ? Math.min(500, pairs.length) : Math.min(MAX_PAGES, pairs.length);
 
     // Match each parsed URL against the pages already in the tracker (same normalization as the server)
     // so the preview shows UPDATE (refresh existing slot) vs NEW (needs a free slot) before importing.
@@ -30167,7 +33151,25 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
       countEl,
       maxSel
     );
-    if (countEl) countEl.textContent = pairs.length + ' found \\u2014 ' + _updCount + ' match your tracked pages (will update in place) \\u00b7 ' + _newCount + ' new \\u00b7 ' + maxSel + ' slots max';
+    if (countEl) countEl.textContent = pairs.length + ' found \u2014 ' + _updCount + ' match your tracked pages (will update in place) \u00b7 ' + _newCount + ' new \u00b7 ' + maxSel + (_isPureQueryImport ? ' keywords selected (no page-slot limit for query-only data)' : ' slots max');
+    // Certainty banner: name the exact tracked pages this CSV will update, so the owner can confirm
+    // they pasted the right export before importing (prevents "is this roof-leak or roof-repair?" doubt).
+    var _hdr = document.getElementById('gscMatchHdr');
+    if (!_hdr && list) { _hdr = document.createElement('div'); _hdr.id = 'gscMatchHdr'; list.insertBefore(_hdr, list.firstChild); }
+    if (_hdr) {
+      var _matched = pairs.filter(function(p){ return p._isTracked; }).map(function(p){ try { var pp = new URL(p.url).pathname; return pp === '/' ? '(homepage)' : pp; } catch(e){ return p.url; } });
+      var _uniqMatched = _matched.filter(function(v,i){ return _matched.indexOf(v) === i; });
+      if (_uniqMatched.length) {
+        _hdr.style.cssText = 'background:rgba(74,222,128,.08);border:1px solid #16a34a;border-radius:8px;padding:9px 12px;margin-bottom:10px;font-size:12px;color:#bbf7d0;line-height:1.5;';
+        _hdr.innerHTML = '\\u2713 This CSV updates <b>' + _uniqMatched.length + '</b> tracked page' + (_uniqMatched.length>1?'s':'') + ': <span style="font-family:monospace;color:#4ade80;">' + _uniqMatched.join(', ').replace(/</g,'&lt;') + '</span>';
+      } else if (pairs[0] && pairs[0].isQueryOnly) {
+        _hdr.style.cssText = 'background:rgba(251,191,36,.08);border:1px solid #f59e0b;border-radius:8px;padding:9px 12px;margin-bottom:10px;font-size:12px;color:#fde68a;line-height:1.5;';
+        _hdr.innerHTML = '\\u26a0 Queries-only CSV (no page column). These keywords attach to your homepage by default \\u2014 pick the correct page in the Query ownership dropdown above before importing, or paste a Pages+Queries export to auto-match.';
+      } else {
+        _hdr.style.cssText = 'background:rgba(96,165,250,.08);border:1px solid #3b82f6;border-radius:8px;padding:9px 12px;margin-bottom:10px;font-size:12px;color:#bfdbfe;line-height:1.5;';
+        _hdr.innerHTML = '\\u2139 None of these URLs match a tracked page yet \\u2014 they will be added as NEW pages (uses free slots).';
+      }
+    }
     updateSelectCount('gsc-cb', maxSel);
   }
 
@@ -30200,27 +33202,100 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
 
   // -- GSC keyword import ----------------------------------------------------
   async function importGscKeywords() {
-    // Send the FULL parsed list. Existing pages are always overwritten (refreshed);
-    // new pages are only added when ticked (add) AND a free slot exists (server enforces the limit).
+    // Send ONE row per URL with correct merged metrics. Rules:
+    // 1. Page rows (from a Pages CSV) carry the REAL page metrics -> sum clicks/impressions across
+    //    http/https/www variants, position = impressions-weighted average.
+    // 2. Query-only rows (from a Queries CSV) fall back to the homepage URL, but their metrics are
+    //    query-level, NOT page-level. They must NEVER overwrite page metrics -> they only contribute
+    //    the keyword (the query with the most impressions wins).
+    // 3. If a URL has ONLY query rows, use the top query's metrics as a best effort.
     var all = document.querySelectorAll('.gsc-cb');
     if (!all || !all.length) { toast('Nothing to import — parse first', '#f87171'); return; }
-    var rows = [];
+    var _assignSel = document.getElementById('gscAssignPage');
+    var _assignPageId = _assignSel && _assignSel.value ? parseInt(_assignSel.value, 10) : null;
+    // Safety guard: a "Whole site" import DELETES the entire existing site-wide query pool before
+    // re-inserting. If the owner pasted a per-page export (small row count) but forgot to pick the
+    // page in the dropdown above, this would silently destroy hundreds of unrelated queries that other
+    // POSSIBLE/PROVEN rows depend on. Detect the mismatch and force an explicit confirmation.
+    if (!_assignPageId && _assignSel) {
+      var _newRowCount = document.querySelectorAll('.gsc-cb:checked').length;
+      var _existingCount = (_gapQueries || []).filter(function(g){ return !g.page_id; }).length;
+      if (_existingCount > 20 && _newRowCount < _existingCount * 0.5) {
+        var _ok = confirm(
+          'This is set to "Whole site" \u2014 importing will DELETE your current ' + _existingCount + ' site-wide queries and replace them with only ' + _newRowCount + ' new ones.\\n\\n'
+          + 'If this paste is actually a PER-PAGE export (queries for just one page), cancel now and pick that page in the "Query ownership" dropdown above instead \u2014 otherwise you will lose data other cannibalization rows depend on.\\n\\n'
+          + 'Continue and replace all ' + _existingCount + ' site-wide queries with these ' + _newRowCount + '?'
+        );
+        if (!_ok) { toast('Import cancelled \u2014 pick the correct page above, then import again', '#f59e0b'); return; }
+      }
+    }
+    var _norm = function(u){ try { var x = new URL(String(u).trim()); return x.host.toLowerCase().replace(/^www[.]/,'') + x.pathname.toLowerCase().replace(/[/]+$/,'') + (x.search||''); } catch(e) { return String(u||'').trim().toLowerCase().replace(/^https?:[/][/]/,'').replace(/^www[.]/,'').replace(/[/]+$/,''); } };
+    var groups = {};
     all.forEach(function(cb) {
       var v;
       try { v = JSON.parse(cb.value); } catch(e) { v = { url: cb.value, keyword: '' }; }
+      var isQuery = !!v.isQueryOnly;
+      if (isQuery && _assignPageId) return; // page-assigned queries go to the query store, NOT into the homepage fallback
       if (!v.url || v.url.indexOf('http') !== 0) {
         if (!cb.checked) return; // skip unselected queries-only rows
-        v = { url: 'https://' + DOMAIN + '/', keyword: v.keyword || v.url };
+        isQuery = true;
+        v = { url: 'https://' + DOMAIN + '/', keyword: v.keyword || v.url, clicks: v.clicks, impressions: v.impressions, position: v.position };
       }
-      rows.push({ url: v.url, keyword: v.keyword || '', clicks: v.clicks || null, impressions: v.impressions || null, position: v.position || null, add: !!cb.checked });
+      var key = _norm(v.url);
+      if (!groups[key]) groups[key] = { url: v.url, pageClicks: 0, pageImpr: 0, posWeighted: 0, posImprSum: 0, hasPage: false, pageKw: '', topQueryKw: '', topQueryImpr: -1, qClicks: 0, qImpr: 0, qPos: null, checked: false };
+      var g = groups[key];
+      if (cb.checked) g.checked = true;
+      if (isQuery) {
+        // keyword contribution only; remember best query as metric fallback
+        if ((v.impressions || 0) > g.topQueryImpr) { g.topQueryImpr = v.impressions || 0; g.topQueryKw = v.keyword || ''; g.qClicks = v.clicks || 0; g.qImpr = v.impressions || 0; g.qPos = v.position || null; }
+      } else {
+        g.hasPage = true;
+        g.pageClicks += (v.clicks || 0);
+        g.pageImpr += (v.impressions || 0);
+        if (v.position && v.impressions) { g.posWeighted += v.position * v.impressions; g.posImprSum += v.impressions; }
+        else if (v.position && !g.posImprSum) { g.posWeighted += v.position; g.posImprSum += 1; }
+        if (!g.pageKw && v.keyword) g.pageKw = v.keyword;
+        // prefer the https non-www variant as the canonical URL to store
+        if (v.url.indexOf('https://') === 0 && v.url.indexOf('https://www.') !== 0) g.url = v.url;
+      }
     });
-    if (!rows.length) { toast('No valid URLs to import', '#f87171'); return; }
+    var rows = [];
+    Object.keys(groups).forEach(function(key) {
+      var g = groups[key];
+      var kw = g.pageKw || g.topQueryKw || '';
+      if (g.hasPage) {
+        var pos = g.posImprSum > 0 ? Math.round((g.posWeighted / g.posImprSum) * 10) / 10 : null;
+        rows.push({ url: g.url, keyword: kw, clicks: g.pageClicks || null, impressions: g.pageImpr || null, position: pos, add: g.checked });
+      } else {
+        // query-only URL (homepage fallback without a page row): best-effort top query metrics
+        rows.push({ url: g.url, keyword: kw, clicks: g.qClicks || null, impressions: g.qImpr || null, position: g.qPos, add: g.checked });
+      }
+    });
+    var _qRows = (window._lastGscPairs || []).filter(function(p){ return p.isQueryOnly && p.keyword; })
+      .map(function(p){ return { query: p.keyword, clicks: p.clicks || 0, impressions: p.impressions || 0, position: p.position || null }; });
+    if (!rows.length) {
+      // Pure per-page Queries CSV: nothing to import into page slots — just store the queries with their exact owner
+      if (_qRows.length) {
+        var dq = await api('/gsc-queries', 'POST', { queries: _qRows, page_id: _assignPageId || undefined });
+        if (dq && dq.success) {
+          toast('Saved ' + (dq.saved || 0) + ' of ' + _qRows.length + ' queries' + (_assignPageId ? ' for the selected page' : '') + ' \u2014 pushable queries update now', (dq.saved === _qRows.length) ? '#4ade80' : '#f59e0b');
+          hideModal('importModal');
+          try { loadImpressionGap(); } catch(e) {}
+        } else { toast((dq && dq.error) || 'Could not save queries', '#f87171'); }
+        return;
+      }
+      toast('No valid URLs to import', '#f87171'); return;
+    }
     var bt = document.getElementById('importGscBtn');
     if (bt) { bt.disabled = true; bt.textContent = 'Importing...'; }
     try {
       var d = await api('/import-gsc-pages', 'POST', { pages: rows });
       if (d && d.success) {
         toast(d.message || ('Imported ' + (d.imported || 0)), (d.failed > 0) ? '#fbbf24' : '#4ade80');
+        // Automatically persist the query rows for the Impression Gap panel / pushables — no extra user action
+        try {
+          if (_qRows.length) { api('/gsc-queries', 'POST', { queries: _qRows, page_id: _assignPageId || undefined }).then(function(){ try { loadImpressionGap(); } catch(e) {} }); }
+        } catch(e) {}
         hideModal('importModal');
         setTimeout(loadPages, 800);
       } else {
@@ -30252,8 +33327,58 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
     mEl.style.display = 'flex';
     setTimeout(function(){ if (cEl) cEl.focus(); }, 100);
   }
+
+  // ── AI Overview paste (modal, mirrors HTML upload) ─────────────────────────
+  var _aioPastePageId = null;
+  function openAioPaste(pageId) {
+    _aioPastePageId = pageId;
+    var _cb = document.getElementById('cbOverlay'); if (_cb) _cb.style.display = 'none';
+    var _so = document.getElementById('soOverlay'); if (_so) { _so.classList.remove('show'); _so.style.display = ''; }
+    _briefIsOpen = false;
+    var page = (_pages||[]).find(function(p){ return p.id == pageId; }) || {};
+    var mEl = document.getElementById('aioPasteModal');
+    if (!mEl) { toast('AI Overview panel not available', '#f87171'); return; }
+    var ctx = document.getElementById('aioPasteContext');
+    var ta = document.getElementById('aioPasteContent');
+    var st = document.getElementById('aioPasteStatus');
+    var kw = page.keyword || page.gsc_keyword || '';
+    if (ctx) ctx.innerHTML = kw ? ('Keyword: ' + kw.replace(/</g,'&lt;')) : '';
+    if (ta) ta.value = page.aio_manual_text || '';
+    if (st) { st.textContent = page.aio_manual_text ? (page.aio_manual_text.length + ' chars saved') : ''; st.style.color = '#6b7280'; }
+    mEl.classList.add('show');
+    mEl.style.display = 'flex';
+    setTimeout(function(){ if (ta) ta.focus(); }, 100);
+  }
+  function submitAioPaste() {
+    var pageId = _aioPastePageId;
+    if (!pageId) return;
+    var ta = document.getElementById('aioPasteContent');
+    var st = document.getElementById('aioPasteStatus');
+    var text = ta ? ta.value.trim() : '';
+    if (st) { st.textContent = 'Saving...'; st.style.color = '#f59e0b'; }
+    fetch('/api/tracker-client/' + TOKEN + '/page/' + pageId + '/aio-manual', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ text: text })
+    }).then(function(r){ return r.json(); }).then(function(d){
+      if (d.success) {
+        var p = (_pages||[]).find(function(x){ return x.id == pageId; });
+        if (p) p.aio_manual_text = d.cleared ? '' : text;
+        if (st) { st.textContent = d.cleared ? 'Cleared' : (d.aio_cited_preview ? 'Saved \\u2014 your page appears cited. Run a scan.' : 'Saved \\u2014 not cited yet. Run a scan for recommendations.'); st.style.color = d.aio_cited_preview ? '#4ade80' : '#f59e0b'; }
+        if (typeof loadPages === 'function') loadPages();
+        setTimeout(function(){ hideModal('aioPasteModal'); }, 700);
+      } else if (st) { st.textContent = d.error || 'Error'; st.style.color = '#f87171'; }
+    }).catch(function(){ if (st) { st.textContent = 'Network error'; st.style.color = '#f87171'; } });
+  }
+  function clearAioPaste() {
+    var ta = document.getElementById('aioPasteContent');
+    if (ta) ta.value = '';
+    submitAioPaste();
+  }
+  window.openAioPaste = openAioPaste;
+  window.submitAioPaste = submitAioPaste;
+  window.clearAioPaste = clearAioPaste;
   // Cinematic scan animation overlay
-  function runScanAnimation(url, onComplete) {
+  function runScanAnimation(url, onComplete, fast) {
     var overlay = document.getElementById('soOverlay');
     var urlEl = document.getElementById('soUrl');
     var bar = document.getElementById('soProgressBar');
@@ -30261,7 +33386,10 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
     var title = document.getElementById('soHeaderTitle');
     var statusEl = document.getElementById('soStatus');
     if (!overlay) { if (onComplete) onComplete(); return; }
-    var stepIds = ['html','graaf','google','perplexity','copilot','brave','ai'];
+    // 'brave' removed \u2014 the Claude/Brave citation check no longer exists server-side (Brave Search
+    // was never actually Claude; that step was removed entirely). Keeping it here left a phantom
+    // status line ("Claude / Brave citation check...") with no matching row, which is what showed up.
+    var stepIds = ['html','graaf','google','perplexity','copilot','ai'];
     stepIds.forEach(function(sid) {
       var step = document.getElementById('soStep_' + sid);
       var icon = document.getElementById('soIcon_' + sid);
@@ -30278,17 +33406,27 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
     overlay.classList.remove('hiding');
     overlay.classList.add('show');
     var steps = [
-      { id: 'html',       label: 'Fetching page HTML',            pct: 8  },
-      { id: 'graaf',      label: 'GRAAF content scan',            pct: 22 },
-      { id: 'google',     label: 'Google position + AIO check',   pct: 40 },
-      { id: 'perplexity', label: 'Perplexity citation check',     pct: 55 },
-      { id: 'copilot',    label: 'Copilot citation check',        pct: 68 },
-      { id: 'brave',      label: 'Claude / Brave citation check', pct: 80 },
-      { id: 'ai',         label: 'AI recommendations',            pct: 92 },
+      { id: 'html',       label: 'Fetching page HTML',            pct: 10 },
+      { id: 'graaf',      label: 'GRAAF content scan',             pct: 26 },
+      { id: 'google',     label: 'Google position + AIO check',   pct: 46 },
+      { id: 'perplexity', label: 'Perplexity citation check',     pct: 64 },
+      { id: 'copilot',    label: 'Copilot citation check',        pct: 80 },
+      { id: 'ai',         label: 'AI recommendations',            pct: 94 },
     ];
-    // Realistic timing \\u2014 total ~35s so animation overlaps server work
-    var timings = [0, 1500, 5000, 10000, 16000, 22000, 28000];
-    var durations = [1200, 3000, 4000, 4500, 4500, 4500, 5000];
+    // Two speeds: the realistic ~34s cycle for a single manual scan (matches real backend timing so
+    // it doesn't feel rushed), and a compressed ~4s cycle for Scan All / Do everything, where a NEW
+    // page starts every ~1.5-2s \u2014 without this, each new page's animation call was resetting the
+    // SAME overlay mid-cycle, making the whole thing look broken and chaotic (exactly what was seen).
+    var timings, durations, totalMs;
+    if (fast) {
+      timings   = [0, 250, 900, 1700, 2500, 3300];
+      durations = [200, 600, 700, 700, 700, 700];
+      totalMs = 4200;
+    } else {
+      timings   = [0, 1500, 5000, 10000, 16000, 22000];
+      durations = [1200, 3000, 4000, 4500, 4500, 5000];
+      totalMs = 34000;
+    }
     steps.forEach(function(s, idx) {
       setTimeout(function() {
         var step = document.getElementById('soStep_' + s.id);
@@ -30313,17 +33451,41 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
       if (dot) dot.className = 'so-header-dot done';
       if (title) { title.textContent = 'Scan Complete'; title.className = 'so-header-title done'; }
       if (statusEl) { statusEl.textContent = 'Building your Citation Brief...'; statusEl.className = 'so-status complete'; }
-      // If server is still busy, show "Building brief..." instead of "Waiting"
+      // Reassure the viewer while the server finishes — the text used to freeze on
+      // "Building..." with no sign of life if the brief was slow, which read as a hang.
+      var _buildStart = Date.now();
+      if (window._soBuildTick) clearInterval(window._soBuildTick);
+      window._soBuildTick = setInterval(function(){
+        var se = document.getElementById('soStatus');
+        var ov = document.getElementById('soOverlay');
+        if (!ov || !ov.classList.contains('show')) { clearInterval(window._soBuildTick); return; }
+        var secs = Math.round((Date.now() - _buildStart)/1000);
+        if (se) se.textContent = 'Building your Citation Brief\\u2026 (' + secs + 's)';
+      }, 1000);
+      // HARD SAFETY NET: whatever happens with polling, never leave the overlay stuck.
+      // After a generous ceiling, close it and refresh so the inline brief can show.
+      if (window._soSafety) clearTimeout(window._soSafety);
+      window._soSafety = setTimeout(function(){
+        var ov = document.getElementById('soOverlay');
+        if (ov && ov.classList.contains('show')) {
+          if (window._soBuildTick) clearInterval(window._soBuildTick);
+          hideScanOverlay();
+          if (typeof loadPages === 'function') loadPages();
+          if (typeof toast === 'function') toast('Brief ready \\u2014 opening your pages', '#4ade80');
+        }
+      }, fast ? 20000 : 90000);
       // Brief opens as soon as data arrives via pollAndShowBrief
       setTimeout(function() {
         if (onComplete) onComplete();
-      }, 1200);
-    }, 34000);
+      }, fast ? 300 : 1200);
+    }, totalMs);
   }
 
   function hideScanOverlay() {
     var overlay = document.getElementById('soOverlay');
     if (!overlay) return;
+    if (window._soBuildTick) { clearInterval(window._soBuildTick); window._soBuildTick = null; }
+    if (window._soSafety) { clearTimeout(window._soSafety); window._soSafety = null; }
     overlay.classList.add('hiding');
     setTimeout(function() {
       overlay.classList.remove('show');
@@ -30334,17 +33496,18 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
   (function(){ var _soc = document.getElementById('soClose'); if (_soc) _soc.addEventListener('click', function(){ hideScanOverlay(); if (typeof loadPages === 'function') loadPages(); }); })();
 
   // Poll for server results \\u2014 brief opens as soon as data is ready
-  function pollAndShowBrief(pageId, maxPolls, intervalMs) {
+  function pollAndShowBrief(pageId, maxPolls, intervalMs, onDone) {
     var pollCount = 0;
     var timer = setInterval(function() {
       pollCount++;
       if (pollCount > maxPolls) {
         clearInterval(timer);
-        // Timeout \\u2014 open brief with whatever data we have
+        // Timeout \u2014 open brief with whatever data we have
         api('/pages/' + pageId).then(function(d2) {
           if (d2.success && d2.page) { openBriefFromPoll(d2.page); }
-          else { hideScanOverlay(); loadPages(); toast('Scan complete \\u2014 brief ready', '#4ade80'); }
-        }).catch(function() { hideScanOverlay(); toast('Connection issue', '#f87171'); });
+          else { hideScanOverlay(); loadPages(); toast('Scan complete \u2014 brief ready', '#4ade80'); }
+          if (onDone) onDone();
+        }).catch(function() { hideScanOverlay(); toast('Connection issue', '#f87171'); if (onDone) onDone(); });
         return;
       }
       api('/pages/' + pageId).then(function(d2) {
@@ -30353,6 +33516,7 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
           if (Date.now() - t < 300000) {
             clearInterval(timer);
             openBriefFromPoll(d2.page);
+            if (onDone) onDone();
           }
         }
       }).catch(function(){});
@@ -30406,6 +33570,7 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
       var r = await api('/pages/' + pageId + '/html', 'POST', payload);
       if (r.success) {
         closeHtmlUpload();
+        try { delete _briefViewed[pageId]; } catch(e){}  // new HTML = new round; ticks reset
         var p = (_pages || []).find(function(x) { return x.id == pageId; });
         if (p) p.needs_html = false;
         if (r.scanning) {
@@ -32162,7 +35327,6 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
             const citedG = withLatest.filter(p => p.latest_snapshot?.ai_google_overview_cited).length;
             const citedP = withLatest.filter(p => p.latest_snapshot?.ai_perplexity_cited).length;
             const citedB = withLatest.filter(p => p.latest_snapshot?.ai_bing_cited).length;
-            const citedC = withLatest.filter(p => p.latest_snapshot?.ai_brave_cited).length;
             const today = new Date().toDateString();
             const checkedToday = pages.filter(p => p.last_checked_at && new Date(p.last_checked_at).toDateString()===today).length;
             const pending = pages.reduce((a,p) => a + parseInt(p.pending_changes||0), 0);
@@ -32171,7 +35335,6 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
             if(el('trStatCitedGoogle')) el('trStatCitedGoogle').textContent = citedG;
             if(el('trStatCitedPerplexity')) el('trStatCitedPerplexity').textContent = citedP;
             if(el('trStatCitedCopilot')) el('trStatCitedCopilot').textContent = citedB;
-            if(el('trStatCitedClaude')) el('trStatCitedClaude').textContent = citedC;
             if(el('trStatCheckedToday')) el('trStatCheckedToday').textContent = checkedToday;
             if(el('trStatPendingChanges')) el('trStatPendingChanges').textContent = pending;
 
@@ -32359,11 +35522,6 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     : '<span class="tr-badge" style="background:#1f2937;color:#4b5563;">Copilot - not cited</span>')
                 : '';
 
-            const brBadge = snap
-                ? (snap.ai_brave_cited
-                    ? '<span class="tr-badge" style="background:#1a0e2e;color:#c4b5fd;border:1px solid #6d28d9;">OK Claude cited</span>'
-                    : '<span class="tr-badge" style="background:#1f2937;color:#4b5563;">Claude - not cited</span>')
-                : '';
 
             // Pending changes button
             const changesBtn = pending > 0
@@ -32411,7 +35569,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 +'<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;">'
                 +'<div style="flex:1;min-width:0;">'
                 +'<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px;">'
-                +'<span style="font-size:10px;font-weight:700;color:#4b5563;background:#1f2937;border-radius:4px;padding:1px 7px;flex-shrink:0;">#'+pageNum+'</span>'
+                +'<span style="font-size:10px;font-weight:800;color:#d1d5db;background:#1f2937;border:1px solid #374151;border-radius:4px;padding:1px 7px;flex-shrink:0;">#'+pageNum+'</span>'
                 +dotHtml
                 +'<span style="font-weight:600;font-size:13px;color:#f1f5f9;' + (isDone ? 'text-decoration:line-through;color:#4b5563;' : '') + '">'+(p.title||'Untitled page')+'</span>'
                 +graafBadge+gscBadge+clsBadge+fetchWarning
@@ -32423,7 +35581,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 +'</div>'
                 +manualCta
                 +'<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">'
-                +posPill+gBadge+pBadge+bBadge+brBadge
+                +posPill+gBadge+pBadge+bBadge
                 +'</div></div>'
                 +'<div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">'
                 +'<div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;">'
@@ -32624,7 +35782,6 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                         +'<td style="padding:7px 10px;">'+(s.ai_google_overview_cited?'<span style="color:#38bdf8;">v Cited</span>':s.ai_google_overview_found?'<span style="color:#6b7280;">Found</span>':'<span style="color:#374151;">-</span>')+'</td>'
                         +'<td style="padding:7px 10px;">'+(s.ai_perplexity_cited?'<span style="color:#a78bfa;">v Cited</span>':'<span style="color:#374151;">-</span>')+'</td>'
                         +'<td style="padding:7px 10px;">'+(s.ai_bing_cited?'<span style="color:#60a5fa;">v Cited</span>':'<span style="color:#374151;">-</span>')+'</td>'
-                        +'<td style="padding:7px 10px;">'+(s.ai_brave_cited?'<span style="color:#c4b5fd;">v Cited</span>':'<span style="color:#374151;">-</span>')+'</td>'
                         +'</tr>';
                 }).join('');
                 html += '<div style="margin-bottom:20px;">'
@@ -32636,7 +35793,6 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     +'<th style="padding:6px 10px;text-align:left;">Google AI</th>'
                     +'<th style="padding:6px 10px;text-align:left;">Perplexity</th>'
                     +'<th style="padding:6px 10px;text-align:left;">Copilot</th>'
-                    +'<th style="padding:6px 10px;text-align:left;">Claude</th>'
                     +'</tr></thead><tbody>'+rows+'</tbody></table></div></div>';
             }
 
@@ -33470,6 +36626,34 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 maxWrap.appendChild(presets);
                 maxCell.appendChild(maxWrap);
 
+                // ── Pre-Write Brief allowance — admin sets extra briefs on top of the 1 free lifetime brief ──
+                var pwbWrap = document.createElement('div');
+                pwbWrap.style.cssText = 'display:flex;flex-direction:column;gap:3px;align-items:center;';
+                var pwbInput = document.createElement('input');
+                pwbInput.type = 'number';
+                pwbInput.value = c.prewrite_briefs_paid || 0;
+                pwbInput.min = 0; pwbInput.max = 2000;
+                pwbInput.title = 'Extra Pre-Write Briefs on top of the 1 free lifetime brief. E.g. set 799 for a client writing 800 pages themselves.';
+                pwbInput.style.cssText = 'width:54px;background:#0d1117;border:1px solid #374151;border-radius:4px;padding:3px 6px;color:#e5e7eb;font-size:12px;text-align:center;';
+                pwbInput.onchange = (function(id){ return function(){ updateTcClient(id, {prewrite_briefs_paid: parseInt(this.value)||0}); }; })(c.id);
+                var pwbPresets = document.createElement('div');
+                pwbPresets.style.cssText = 'display:flex;gap:2px;';
+                [0,20,50,100,799].forEach(function(n) {
+                    var btn = document.createElement('button');
+                    btn.textContent = n === 0 ? '\u2298' : n;
+                    btn.title = n === 0 ? 'Free tier only (1 lifetime brief)' : (n + 1) + ' briefs total';
+                    btn.style.cssText = 'font-size:9px;padding:1px 5px;background:' + ((c.prewrite_briefs_paid||0)==n?'#374151':'none') + ';border:1px solid #374151;border-radius:3px;color:#9ca3af;cursor:pointer;';
+                    btn.onclick = (function(id, val, inp, pBtns){ return function(){
+                        inp.value = val;
+                        updateTcClient(id, {prewrite_briefs_paid: val});
+                        pBtns.querySelectorAll('button').forEach(function(b){ b.style.background='none'; });
+                        this.style.background = '#374151';
+                    }; })(c.id, n, pwbInput, pwbPresets);
+                    pwbPresets.appendChild(btn);
+                });
+                pwbWrap.appendChild(pwbInput);
+                pwbWrap.appendChild(pwbPresets);
+
                 // -- Actions (grouped: toggles · stacked links · buttons) --
                 var actionsDiv = document.createElement('div');
                 actionsDiv.style.cssText = 'display:flex;flex-direction:column;gap:10px;min-width:360px;max-width:560px;';
@@ -33542,7 +36726,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 var gscBtn = document.createElement('button');
                 gscBtn.className = 'tr-btn';
                 gscBtn.textContent = c.gsc_enabled ? 'GSC \u2713' : 'GSC off';
-                gscBtn.title = c.gsc_enabled ? 'GSC enabled — click to disable' : 'Enable GSC for this client (Tier 2+; free & Tier 1 have no GSC)';
+                gscBtn.title = c.gsc_enabled ? 'GSC enabled (automatic on paid plans — click to override off)' : 'GSC off (automatic on free plan — click to override on)';
                 gscBtn.style.cssText = 'font-size:10px;padding:3px 8px;border-color:' + (c.gsc_enabled ? '#4ade80' : '#374151') + ';color:' + (c.gsc_enabled ? '#4ade80' : '#6b7280') + ';';
                 gscBtn.onclick = (function(id, current){ return function(){
                     var newVal = !current;
@@ -33550,6 +36734,80 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     setTimeout(loadTrackerClients, 400);
                 }; })(c.id, !!c.gsc_enabled);
                 togglesRow.appendChild(gscBtn);
+
+                // ── Brief language: which language the GSC + Citation brief are WRITTEN in. Default
+                // "Auto" detects from the page's own content (<html lang>, text fallback) — set a
+                // specific language to override, e.g. a Spanish-speaking owner reading English-content
+                // pages in Spanish. Applies to every scan/brief for this client going forward.
+                var langSel = document.createElement('select');
+                langSel.className = 'tr-btn';
+                langSel.title = 'Brief language \\u2014 what language the GSC Brief and Citation Brief are written in. Auto detects the page\\u2019s own language automatically; pick a specific one to override (e.g. a Spanish-reading owner whose pages are in English).';
+                langSel.style.cssText = 'font-size:10px;padding:3px 6px;background:#0d1117;border:1px solid #374151;color:#9ca3af;border-radius:6px;';
+                var _langOpts = [['auto','\\ud83c\\udf10 Auto'],['en','English'],['es','Espa\\u00f1ol'],['nl','Nederlands'],['de','Deutsch'],['fr','Fran\\u00e7ais'],['pt','Portugu\\u00eas'],['it','Italiano'],['pl','Polski'],['tr','T\\u00fcrk\\u00e7e'],['ar','\\u0627\\u0644\\u0639\\u0631\\u0628\\u064a\\u0629'],['zh','\\u4e2d\\u6587'],['ja','\\u65e5\\u672c\\u8a9e'],['ko','\\ud55c\\uad6d\\uc5b4'],['ru','\\u0420\\u0443\\u0441\\u0441\\u043a\\u0438\\u0439'],['hi','\\u0939\\u093f\\u0928\\u094d\\u0926\\u0940']];
+                var _curLang = c.brief_language || 'auto';
+                langSel.innerHTML = _langOpts.map(function(o){ return '<option value="' + o[0] + '"' + (o[0]===_curLang?' selected':'') + '>' + o[1] + '</option>'; }).join('');
+                langSel.onchange = (function(id){ return function(){
+                    var selEl = this;
+                    apiCall('/api/admin/tracker-clients/' + id + '/brief-language', 'POST', { language: this.value })
+                      .then(function(){
+                        selEl.style.borderColor = '#4ade80';
+                        setTimeout(function(){ selEl.style.borderColor = '#374151'; }, 1200);
+                      })
+                      .catch(function(e){ alert('Failed to update brief language: ' + e.message); });
+                }; })(c.id);
+                togglesRow.appendChild(langSel);
+
+                // ── Emails paused: silences ALL automated emails for this client (reminders, brief-ready
+                // notifications) while you're manually testing/scanning — scanning and briefs still work,
+                // only the notification emails are held back. Toggle back off when done testing.
+                var emailPauseBtn = document.createElement('button');
+                emailPauseBtn.className = 'tr-btn';
+                var _isPaused = !!c.emails_paused;
+                emailPauseBtn.textContent = _isPaused ? '\\ud83d\\udd15 Emails paused' : '\\ud83d\\udce7 Emails on';
+                emailPauseBtn.title = _isPaused
+                  ? 'This client\\'s automated emails (reminders, brief-ready) are currently silenced. Click to turn them back on.'
+                  : 'Click to temporarily silence ALL automated emails for this client \\u2014 useful while manually testing/scanning. Scans and briefs still work as normal.';
+                emailPauseBtn.style.cssText = 'font-size:10px;padding:3px 8px;border-radius:6px;' + (_isPaused ? 'background:#7c2d12;border:1px solid #ea580c;color:#fed7aa;' : 'background:#0d1117;border:1px solid #374151;color:#9ca3af;');
+                emailPauseBtn.onclick = (function(id, btn){ return function(){
+                    var next = !(btn.textContent.indexOf('paused') > -1);
+                    apiCall('/api/admin/tracker-clients/' + id + '/emails-paused', 'POST', { paused: next })
+                      .then(function(){
+                        btn.textContent = next ? '\\ud83d\\udd15 Emails paused' : '\\ud83d\\udce7 Emails on';
+                        btn.style.cssText = 'font-size:10px;padding:3px 8px;border-radius:6px;' + (next ? 'background:#7c2d12;border:1px solid #ea580c;color:#fed7aa;' : 'background:#0d1117;border:1px solid #374151;color:#9ca3af;');
+                      })
+                      .catch(function(e){ alert('Failed to update emails-paused: ' + e.message); });
+                }; })(c.id, emailPauseBtn);
+                togglesRow.appendChild(emailPauseBtn);
+
+                // ── Demo read-only toggle: safe share link for prospects ──
+                var roBtn = document.createElement('button');
+                roBtn.className = 'tr-btn';
+                roBtn.textContent = c.demo_readonly ? '\ud83d\udc41 Read-only ON' : 'Read-only off';
+                roBtn.title = c.demo_readonly ? 'Read-only mode is ON \u2014 the /track link shows real live data but blocks all edits. Safe to share. Click to turn off.' : 'Make the /track link read-only: visitors see the real live tracker, all edits blocked server-side. Nothing fake, just view-only. Click to enable.';
+                roBtn.style.cssText = 'font-size:10px;padding:3px 8px;border-color:' + (c.demo_readonly ? '#a78bfa' : '#374151') + ';color:' + (c.demo_readonly ? '#a78bfa' : '#6b7280') + ';';
+                roBtn.onclick = (function(id, current){ return function(){
+                    updateTcClient(id, {demo_readonly: !current});
+                    setTimeout(loadTrackerClients, 400);
+                }; })(c.id, !!c.demo_readonly);
+                togglesRow.appendChild(roBtn);
+
+                // ── Live read-only share link (owner keeps full access; viewers see live data, cannot change) ──
+                var roLinkBtn = document.createElement('button');
+                roLinkBtn.className = 'tr-btn';
+                roLinkBtn.textContent = c.readonly_token ? ('\ud83d\udd17 RO link \u00b7 ' + (c.ro_views || 0) + ' views') : '\ud83d\udd17 Make RO link';
+                roLinkBtn.title = 'Live read-only share link \u2014 visitors see live data, cannot change or copy anything. Views so far: ' + (c.ro_views || 0) + (c.ro_last_view ? ' \u00b7 last: ' + new Date(c.ro_last_view).toLocaleString() : '') + '. Viewer tabs poll slowly (60s, paused when hidden) to save Neon compute.';
+                roLinkBtn.style.cssText = 'font-size:10px;padding:3px 8px;border-color:' + (c.readonly_token ? '#38bdf8' : '#374151') + ';color:' + (c.readonly_token ? '#38bdf8' : '#6b7280') + ';';
+                roLinkBtn.onclick = (function(id){ return function(){
+                    apiCall('/api/admin/tracker-clients/' + id + '/readonly-link', 'POST', {})
+                      .then(function(d){
+                        if (d && d.success) {
+                          try { navigator.clipboard.writeText(d.url); } catch(e) {}
+                          prompt('Live read-only link (copied to clipboard):', d.url);
+                          loadTrackerClients();
+                        } else alert((d && d.error) || 'Failed');
+                      }).catch(function(e){ alert('Failed: ' + e.message); });
+                }; })(c.id);
+                togglesRow.appendChild(roLinkBtn);
 
                 // ── Extra Citation-Brief recipients ──
                 var emailsBtn = document.createElement('button');
@@ -33907,6 +37165,17 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 maxBlock.appendChild(maxLbl);
                 maxBlock.appendChild(maxWrap);
                 detailWrap.appendChild(maxBlock);
+
+                var pwbBlock = document.createElement('div');
+                pwbBlock.style.cssText = 'display:flex;align-items:center;gap:8px;';
+                var pwbLbl = document.createElement('span');
+                pwbLbl.textContent = 'Pre-Write Briefs (+free)';
+                pwbLbl.title = 'Extra briefs on top of the 1 free lifetime brief every client already gets';
+                pwbLbl.style.cssText = 'font-size:10px;color:#6b7280;text-transform:uppercase;letter-spacing:.06em;';
+                pwbBlock.appendChild(pwbLbl);
+                pwbBlock.appendChild(pwbWrap);
+                detailWrap.appendChild(pwbBlock);
+
                 detailWrap.appendChild(actionsDiv);
                 detailTd.appendChild(detailWrap);
                 detailTr.appendChild(detailTd);
@@ -34177,6 +37446,7 @@ app.post('/api/tracker/pages/:id/citation-brief', verifyEngineAccess, async (req
     let aioFound = snap.ai_google_overview_found || false;
     let aioCited = snap.ai_google_overview_cited || false;
     let aioSourceUrl = '';
+    let aioReferences = [];
     let googlePosition = snap.google_position || null;
     let serpCompetitors = [];
 
@@ -34184,7 +37454,8 @@ app.post('/api/tracker/pages/:id/citation-brief', verifyEngineAccess, async (req
       const serperCacheKey = 'serper:cb:' + keyword.toLowerCase().trim();
       const serperCached = _cacheGet(serperCacheKey);
       if (serperCached) {
-        ({ aioText, aioFound, aioCited, aioSourceUrl, googlePosition, serpCompetitors } = serperCached);
+        ({ aioText, aioFound, aioCited, aioSourceUrl, aioReferences, googlePosition, serpCompetitors } = serperCached);
+        if (!Array.isArray(aioReferences)) aioReferences = [];
         _trackAiCall('serper', 'serper-cache', true, null, 0);
       } else
       try {
@@ -34201,11 +37472,8 @@ app.post('/api/tracker/pages/:id/citation-brief', verifyEngineAccess, async (req
           const sData = await sResp.json();
           const organic = sData.organic || [];
           const ab = sData.answerBox || null;
-          for (let i = 0; i < organic.length; i++) {
-            if ((organic[i].link||'').replace(/^https?:\/\//, '').includes(domain)) {
-              googlePosition = organic[i].position || i + 1; break;
-            }
-          }
+          // NOTE (2026-07-24): Serper does not return aiOverview — AIO comes from
+          // manual paste only (personalized AIOs cannot be scraped exactly).
           if (ab) {
             aioFound = true;
             aioText = ab.answer || ab.snippet || ab.title || JSON.stringify(ab).substring(0, 600);
@@ -34217,7 +37485,7 @@ app.post('/api/tracker/pages/:id/citation-brief', verifyEngineAccess, async (req
             title: r2.title, snippet: r2.snippet || '', position: r2.position
           }));
           // Cache Serper results
-          _cacheSet(serperCacheKey, { aioText, aioFound, aioCited, aioSourceUrl, googlePosition, serpCompetitors }, CACHE_TTL.serper);
+          _cacheSet(serperCacheKey, { aioText, aioFound, aioCited, aioSourceUrl, aioReferences, googlePosition, serpCompetitors }, CACHE_TTL.serper);
         }
       } catch(e) {
         _trackAiCall('serper', 'serper', false, e.message, 0);
@@ -34299,37 +37567,11 @@ app.post('/api/tracker/pages/:id/citation-brief', verifyEngineAccess, async (req
       } catch(e) { console.warn('[citation-brief] Bing API failed:', e.message); }
     }
 
-    // ── Step 3d: Brave Search API — covers Claude (Anthropic uses Brave) ─────
+    // Claude citation checking removed \u2014 no reliable API exists to verify what Claude actually cites.
+    // Brave Search was previously used as an inaccurate proxy; kept these as false/empty rather than guessing.
     let claudeCited = false;
     let claudeText = '';
     let claudeCitations = [];
-    const braveKey = process.env.BRAVE_SEARCH_API_KEY || '';
-    if (braveKey) {
-      const braveCacheKey = 'brave:' + keyword.toLowerCase().trim() + ':' + domain;
-      const braveCached = _cacheGet(braveCacheKey);
-      if (braveCached) {
-        ({ claudeCited, claudeText, claudeCitations } = braveCached);
-        _trackAiCall('brave', 'brave-cache', true, null, 0);
-      } else
-      try {
-        const t_brave = Date.now();
-        const brResp = await fetch(
-          'https://api.search.brave.com/res/v1/web/search?q=' + encodeURIComponent(keyword) + '&count=10',
-          { headers: { 'Accept': 'application/json', 'Accept-Encoding': 'gzip', 'X-Subscription-Token': braveKey }, signal: AbortSignal.timeout(10000) }
-        );
-        _trackAiCall('brave', 'brave-api', brResp.ok, brResp.ok ? null : 'HTTP '+brResp.status, Date.now()-t_brave);
-        if (brResp.ok) {
-          const brData = await brResp.json();
-          const results = (brData.web && brData.web.results) || [];
-          claudeCitations = results.map(r => r.url || '').filter(Boolean);
-          claudeCited = claudeCitations.some(u => u.includes(domain));
-          claudeText = 'Brave top results: ' + claudeCitations.slice(0, 3).map(u => u.replace(/^https?:\/\//, '').split('/')[0]).join(', ');
-          // Cache result
-          _cacheSet(braveCacheKey, { claudeCited, claudeText, claudeCitations }, CACHE_TTL.brave);
-          console.log('[citation-brief] Brave/Claude: cited=' + claudeCited + ', results=' + results.length);
-        }
-      } catch(e) { console.warn('[citation-brief] Brave API failed:', e.message); }
-    }
 
     // ── Step 4a: Gemini 2.5 Pro with Google Search Grounding ─────────────────
     let brief = null;
@@ -34346,14 +37588,12 @@ CITATION STATUS ACROSS ALL AI PLATFORMS:
 - Perplexity: ${perplexityCited ? '✅ CITED' : perplexityKey ? '❌ NOT cited' : '⚠️ No key configured'}
 - ChatGPT Plus (Google): ${aioCited ? '✅ Likely cited (uses Google)' : '❌ Likely not cited (uses Google index)'}
 - Copilot/Bing: ${copilotCited ? '✅ CITED' : bingApiKey ? '❌ NOT in Bing top 10' : '⚠️ No Bing API key'}
-- Claude (Brave): ${claudeCited ? '✅ CITED' : braveKey ? '❌ NOT in Brave top 10' : '⚠️ No Brave API key'}
 
 ${aioText ? 'GOOGLE AI OVERVIEW TEXT: "' + aioText + '"' : ''}
 ${aioSourceUrl ? 'GOOGLE CITING: ' + aioSourceUrl : ''}
 ${perplexityText ? 'PERPLEXITY ANSWER: "' + perplexityText + '"' : ''}
 ${perplexityCitations.length ? 'PERPLEXITY CITING: ' + perplexityCitations.slice(0,3).join(', ') : ''}
 ${copilotText ? 'BING/COPILOT: ' + copilotText : ''}
-${claudeText ? 'BRAVE/CLAUDE: ' + claudeText : ''}
 
 COMPETITOR SNIPPETS (Google SERP):
 ${serpCompetitors.slice(0,3).map(c => '#' + c.position + ' ' + c.domain + ': "' + c.snippet + '"').join('\n')}
@@ -34363,12 +37603,30 @@ ${ourPageText || '(no HTML stored — paste HTML first)'}
 
 ${citedPageText ? 'TOP CITED COMPETITOR CONTENT:\n' + citedPageText.substring(0, 2000) : ''}
 
-KEY CITATION FACTS:
-- 44% of AI citations come from first 30% of page text — front-load the answer
-- Optimal passage: 134-167 words, self-contained, direct answer format
-- Content under 90 days = 3x more likely to be cited
-- Perplexity prefers specific data + expert attribution
-- ChatGPT/Bing prefer clear entity definitions + structured content
+CITATION RULES — each rule appears once, all are mandatory:
+1. ANSWER-FIRST: the FIRST sentence of every improved_version answers the query in ≤25 words, form [entity] + [verb] + [answer]. Never open with context, history, or "When it comes to...".
+2. SELF-CONTAINED, 134-167 WORDS: the passage must make complete sense quoted alone. No pronouns pointing outside it ("it", "this company", "they" → name the entity). AI engines lift ONE passage; if it needs the rest of the page it will not be cited.
+3. ENTITY-ANCHORED: name the business/brand and its location or service area at least once per passage — engines only cite entities they can disambiguate.
+4. VERIFIABLE, NEVER INVENTED: every number, price or timeframe must come from OUR CURRENT CONTENT, the data above, or your Google Search grounding. If a figure is not verifiable, write [OWNER: insert real figure — e.g. years in business, jobs completed, response time]. A fabricated statistic gets the page demoted — this rule outranks everything else.
+5. SPECIFIC ≠ GENERIC: at least one concrete number, named standard, timeframe or comparison per passage. If it would be equally true on a competitor's site, rewrite until it would not be.
+6. FRESHNESS: reference the current period where natural (content updated within 90 days is ~3x more likely to be cited).
+7. PLACEMENT IS EXACT: 44% of citations come from the first 30% of page text, so the primary answer passage goes at the top. Every placement must point to a LITERAL element from OUR CURRENT CONTENT: quote the exact H1/H2/H3 text or the first words of the paragraph to insert after or replace. "Near the top" or "in the FAQ" without the exact heading is a fail.
+8. PLATFORM ANGLES: Perplexity favors specific data + expert attribution; ChatGPT/Bing favor clear entity definitions + structured content. Cover both angles across the passage set — do not write five passages of the same type.
+
+WORKED EXAMPLE — this is the standard. The business below is FICTIONAL: copy the STRUCTURE, never the entity — always use the real business name, location and services from OUR URL and OUR CURRENT CONTENT.
+CORRECT improved_version (type: direct_answer, example query "water heater replacement austin"):
+"Water heater replacement in Austin, TX costs between [OWNER: insert your real price range] for most homes, and Summit Plumbing Co. completes standard replacements within [OWNER: insert real timeframe]. Based in Austin, Summit Plumbing Co. installs tank and tankless systems across Travis and Williamson County. Licensed and insured in Texas (License [OWNER: real license number]), the company provides free written quotes before any work begins, and emergency crews respond [OWNER: insert real response time], including weekends. Homeowners can verify licensing through the Texas State Board of Plumbing Examiners. As of ${new Date().toLocaleDateString('en-US',{month:'long', year:'numeric'})}, Summit Plumbing Co. serves [OWNER: number] neighborhoods across the Austin metro."
+CORRECT placement for it: 'Insert immediately after the H1 "Water Heater Replacement in Austin" and before the paragraph starting "For over..."'
+Why this passes: first sentence answers the query, entity + location named, zero invented numbers (placeholders where data is missing), self-contained, current date, exact insertion point.
+
+FAIL EXAMPLE — never output anything like this:
+"This company offers high-quality roofing services. It is important to have a good roof. Adding more relevant content and improving user experience will help the page rank better." (No answer, pronouns without entity, no numbers, no placement — worthless.)
+
+HARD FAIL CONDITIONS — output containing ANY of these is rejected:
+- Advice like "improve content quality", "add relevant keywords", "enhance user experience"
+- A structural_fix or placement without an exact element/heading quote AND copy-pasteable text
+- An improved_version whose first sentence does not answer the query
+- Any statistic not traceable to the page, the data above, or a grounding source
 
 TASK: Use Google Search to check current AI Overview for "${keyword}". Generate passages that work across ALL THREE platforms.
 
@@ -34379,15 +37637,14 @@ Return ONLY valid JSON — no markdown:
     "google_aio": "specific reason not in Google AI Overview",
     "perplexity": "specific reason not in Perplexity",
     "chatgpt": "ChatGPT uses Google — same as Google AIO gap",
-    "copilot_bing": "specific reason not in Bing top 10 / Copilot",
-    "claude_brave": "specific reason not in Brave top 10 / Claude"
+    "copilot_bing": "specific reason not in Bing top 10 / Copilot"
   },
   "passages_to_add": [
     {
       "type": "direct_answer|statistic|definition|how_to|faq_answer",
       "passage": "exact passage from AI Overview or top cited source",
-      "improved_version": "our 134-167 word self-contained version — works for all 3 platforms",
-      "placement": "immediately after H1|in FAQ section|as H2 answer paragraph|in TL;DR",
+      "improved_version": "our version following the CITATION RULES above",
+      "placement": "exact insertion point quoting the literal H1/H2/H3 or paragraph opening from OUR CURRENT CONTENT, e.g. 'Insert immediately after the H2 \\"...\\"'",
       "why": "why this triggers citation across Google + Perplexity + ChatGPT",
       "word_count_target": 150,
       "platforms": ["google","perplexity","chatgpt"]
@@ -34463,7 +37720,7 @@ Return ONLY valid JSON — no markdown:
 
       // ── STEP 4a-2: Convert plain text analysis to structured JSON ───────────
       if (groundingText.length > 100) {
-        const step2Prompt = 'Convert this citation analysis into the exact JSON format below. Use the analysis text as your source of truth.\n\nANALYSIS:\n' + groundingText + '\n\nGROUNDING SOURCES FOUND:\n' + groundingChunks.map((c,i) => (i+1)+'. '+c.url+' — '+c.title).join('\n') + '\n\nReturn ONLY this JSON (no markdown, no explanation):\n' + '{"citation_source":{"domain":"","why_cited":"","key_difference":""},"passages_to_add":[{"type":"direct_answer|statistic|definition|how_to|faq_answer","passage":"exact passage from AI Overview or top cited source","improved_version":"our better 134-167 word version","placement":"immediately after H1|in FAQ section|as H2 answer paragraph","why":"why this triggers AI citation","word_count_target":150}],"structural_fixes":[{"fix":"","reason":"","example":""}],"primary_reason_not_cited":"","freshness_issue":true,"intro_weight_issue":true,"confidence":"high|medium|low","estimated_impact":"","grounding_sources":["url1","url2"],"model_searched_google":true}';
+        const step2Prompt = 'Convert this citation analysis into the exact JSON format below. Use the analysis text as your source of truth. Copy passage texts VERBATIM from the analysis — do not shorten, soften, or genericize them, and never remove entity names, numbers, or [OWNER: ...] placeholders.\n\nANALYSIS:\n' + groundingText + '\n\nGROUNDING SOURCES FOUND:\n' + groundingChunks.map((c,i) => (i+1)+'. '+c.url+' — '+c.title).join('\n') + '\n\nReturn ONLY this JSON (no markdown, no explanation):\n' + '{"citation_source":{"domain":"","why_cited":"","key_difference":""},"passages_to_add":[{"type":"direct_answer|statistic|definition|how_to|faq_answer","passage":"exact passage from AI Overview or top cited source","improved_version":"our better 134-167 word version","placement":"immediately after H1|in FAQ section|as H2 answer paragraph","why":"why this triggers AI citation","word_count_target":150}],"structural_fixes":[{"fix":"","reason":"","example":""}],"primary_reason_not_cited":"","freshness_issue":true,"intro_weight_issue":true,"confidence":"high|medium|low","estimated_impact":"","grounding_sources":["url1","url2"],"model_searched_google":true}';
 
         try {
           const t3 = Date.now();
@@ -35359,7 +38616,6 @@ app.post('/api/tracker/pages/:id/check', verifyEngineAccess, async (req, res) =>
             else if (aioGained) subject = 'You are now cited in Google AI Overview — ' + domainFin;
             else if (aioLost) subject = 'Citation lost in Google AI Overview — ' + domainFin;
             else if (perpGained) subject = 'New citation in Perplexity — ' + domainFin;
-            else if (braveGained) subject = 'New citation in Claude/Brave — ' + domainFin;
             else if (bingGained) subject = 'New citation in Copilot/Bing — ' + domainFin;
             else if (posChanged) { const diff = Math.round(prev.google_position - curr.google_position); subject = (diff > 0 ? 'Position up ' + diff + ' places' : 'Position down ' + Math.abs(diff) + ' places') + ' — ' + domainFin; }
             else subject = 'Tracker update — ' + domainFin;
@@ -35378,7 +38634,6 @@ app.post('/api/tracker/pages/:id/check', verifyEngineAccess, async (req, res) =>
               if (aioLost) changes.push('<span style="color:#ef4444;">Lost citation</span> in Google AI Overview');
               if (perpGained) changes.push('<span style="color:#16a34a;">New citation</span> in Perplexity');
               if (bingGained) changes.push('<span style="color:#16a34a;">New citation</span> in Copilot/Bing');
-              if (braveGained) changes.push('<span style="color:#16a34a;">New citation</span> in Claude/Brave');
               if (scoreChanged) { const diff = curr.score - prev.score; changes.push('GRAAF score ' + (diff > 0 ? '<span style="color:#16a34a;">+' + diff + '</span>' : '<span style="color:#ef4444;">' + diff + '</span>') + ' (' + curr.score + '/100)'); }
               if (changes.length) changeSummary = '<div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:12px 16px;margin-bottom:14px;"><div style="font-size:10px;color:#0369a1;font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;">What changed</div>' + changes.map(function(c){ return '<div style="font-size:13px;color:#1e293b;margin-bottom:3px;">' + c + '</div>'; }).join('') + '</div>';
             }
@@ -35399,7 +38654,6 @@ app.post('/api/tracker/pages/:id/check', verifyEngineAccess, async (req, res) =>
               + statCellE('Google AIO', aio ? 'Cited' : 'No', aio ? '#16a34a' : '#94a3b8')
               + statCellE('Perplexity', perp ? 'Cited' : 'No', perp ? '#7c3aed' : '#94a3b8')
               + statCellE('Copilot', bing ? 'Cited' : 'No', bing ? '#2563eb' : '#94a3b8')
-              + statCellE('Claude', brave ? 'Cited' : 'No', brave ? '#dc2626' : '#94a3b8')
               + statCellE('GRAAF', score ? score + '/100' : 'N/A', score >= 70 ? '#16a34a' : score >= 50 ? '#f59e0b' : '#ef4444')
               + '</tr></table>'
               + (aio ? '<div style="background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:12px 16px;margin-bottom:12px;font-size:13px;color:#166534;"><strong>Cited in Google AI Overview</strong> for &ldquo;' + kw + '&rdquo;.</div>' : (!isFirst && !aioLost ? '' : '<div style="background:#fefce8;border:1px solid #fde047;border-radius:8px;padding:12px 16px;margin-bottom:12px;font-size:13px;color:#854d0e;"><strong>Not yet cited</strong> in Google AI Overview. Use the Citation Brief below.</div>'))
@@ -35479,31 +38733,37 @@ app.post('/api/tracker/pages/:id/check', verifyEngineAccess, async (req, res) =>
                       const mergePrompt = 'You are upgrading a Citation Brief. Merge old + new actions into the best 5 for this page.\n\n' +
                         'PAGE: ' + pageUrl + '\n' +
                         'KEYWORD: "' + kw + '"\n' +
-                        'STATUS: pos=' + (pos||'unranked') + ', AIO=' + (aio?'YES':'NO') + ', Perplexity=' + (perp?'YES':'NO') + ', Copilot=' + (bing?'YES':'NO') + ', Claude=' + (brave?'YES':'NO') + ', GRAAF=' + (score||'?') + '/100\n' +
+                        'STATUS: pos=' + (pos||'unranked') + ', AIO=' + (aio?'YES':'NO') + ', Perplexity=' + (perp?'YES':'NO') + ', Copilot=' + (bing?'YES':'NO') + ', GRAAF=' + (score||'?') + '/100\n' +
                         (gscContext ? gscContext + '\n' : '') +
                         '\nPREVIOUS BRIEF (keep if still relevant):\n' + JSON.stringify((existingBrief?.items||[]).slice(0,3)) + '\n' +
-                        '\nNEW BRIEF (higher priority — generated today):\n' + JSON.stringify(recs.slice(0,5)) + '\n\n' +
+                        '\nNEW BRIEF (higher priority \u2014 generated today, includes fresh Cannibalization/Competitor Gap/Impression Gap findings from the tracker):\n' + JSON.stringify(recs.slice(0,5)) + '\n\n' +
                         'MERGE RULES:\n' +
                         '1. Drop actions for systems now showing YES above\n' +
                         '2. Drop previous actions superseded by newer ones\n' +
                         '3. Max 5 items, HIGH first\n' +
-                        '4. Every action must be EXACT copy-paste text — no vague suggestions\n' +
-                        '5. Add system field: Google AIO | Perplexity | Copilot | Claude | Ranking\n\n' +
+                        '4. Every action must be EXACT copy-paste text \u2014 no vague suggestions\n' +
+                        '5. Add system field: Google AIO | Perplexity | Copilot | Ranking | Cannibalization | Competitor Gap | Internal Link\n' +
+                        '6. ALWAYS KEEP any NEW BRIEF item with system "Cannibalization", "Competitor Gap", or "Internal Link" \u2014 these are evidence-based findings from real tracker data (shared search queries, live SERP competitors), not generic suggestions, and must never be dropped or replaced by an older, less specific action.\n' +
+
+                        '7. If ANY item in PREVIOUS BRIEF has a system that is NOT one of: Google AIO, Perplexity, Copilot, Ranking, Cannibalization, Competitor Gap, Internal Link (for example "Claude", "Brave", or "Claude/Brave") \u2014 DISCARD that item completely, do not carry it into the merged output under any label. Claude citation checking does not exist in this system; never generate or preserve an action about it.\n' +
+                        '8. ABOVE-THE-FOLD PRIORITY: prefer locations closer to the H1/opening paragraph over ones further down the page \u2014 AI extraction weights the first ~30% of a page far more heavily than the rest. Only place content lower (like a full FAQ section) when it genuinely belongs there structurally.\n\n' +
                         'CORRECT action format example:\n' +
                         '{"title":"Add definition after H1","priority":"high","system":"Google AIO","action":"Add this exact sentence immediately after your H1: \"[keyword] is [specific 40-word definition based on page content].\" This triggers AIO because it provides a quotable definition in the first 100 words.","expected_impact":"Google AIO cites pages with definitions in first 100 words — this puts you in that category"}\n\n' +
                         'Return ONLY valid JSON array, no markdown:\n' +
-                        '[{"title":"max 6 words","priority":"high|medium|low","system":"Google AIO|Perplexity|Copilot|Claude|Ranking","action":"EXACT text min 50 words","expected_impact":"[System] cites/ranks because [specific reason]"}]';
+                        '[{"title":"max 6 words","priority":"high|medium|low","system":"Google AIO|Perplexity|Copilot|Ranking|Cannibalization|Competitor Gap|Internal Link","action":"EXACT text min 50 words","expected_impact":"[System] cites/ranks because [specific reason]", "comparison_table (ONLY on the Competitor Gap item, omit for all others)":[{"competitor":"bare domain","what_they_do_well":"specific concrete strength","our_gap":"what this page lacks by comparison","what_to_do":"concrete instruction for this row"}]}]';
 
                       const gResp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${gemKey}`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ contents: [{ parts: [{ text: mergePrompt }] }], generationConfig: { temperature: 0.3, maxOutputTokens: 800 } })
+                        body: JSON.stringify({ contents: [{ parts: [{ text: mergePrompt }] }], generationConfig: { temperature: 0.3, maxOutputTokens: 4096 } })
                       });
                       if (gResp.ok) {
                         const gData = await gResp.json();
                         const gText = gData.candidates?.[0]?.content?.parts?.[0]?.text || '';
                         const cleaned = gText.replace(/```json|```/g, '').trim();
-                        const merged = JSON.parse(cleaned);
+                        let merged;
+                        try { merged = JSON.parse(cleaned); }
+                        catch(pe){ merged = JSON.parse(_repairJsonG(cleaned)); console.log('[brief-merge] JSON repaired'); }
                         mergedBrief = { items: merged, position: pos, aio, perp, bing_cited: bing, brave_cited: brave, score,
                           gsc_clicks: page.gsc_clicks, gsc_impressions: page.gsc_impressions, gsc_position: page.gsc_position, gsc_keyword: page.gsc_keyword,
                           merged: true };
@@ -35521,6 +38781,57 @@ app.post('/api/tracker/pages/:id/check', verifyEngineAccess, async (req, res) =>
                 mergedBrief.source_suggestions = curr.source_suggestions || [];
                 mergedBrief.discovered_sources = curr.discovered_sources || [];
                 mergedBrief.gsc_brief = curr.gsc_brief || [];
+                // Carry the AI Overview citations + a per-source gap into the saved brief so the
+                // panel shows "who Google cites, what they do, what we should do" with no rescan.
+                var _refs = Array.isArray(snapshot.ai_google_overview_references) ? snapshot.ai_google_overview_references : [];
+                // If no live references (manual AIO paste), extract the source URLs from the pasted
+                // text itself — prioritising [N](url) citation links, then bare URLs — so the AIO gap
+                // table always renders with transparency (who the AIO cites) + what to do per source.
+                if (!_refs.length && snapshot.ai_google_overview_text) {
+                  var _atxt = String(snapshot.ai_google_overview_text || ''), _seenH = {}, _ex = [];
+                  var _md = /\[(\d+)\]\((https?:\/\/[^\s)]+)\)/g, _mm;
+                  while ((_mm = _md.exec(_atxt)) !== null) {
+                    var _mu = _mm[2], _mh = _mu.replace(/^https?:\/\//,'').replace(/^www\./,'').split('/')[0];
+                    if (_mh && !_seenH[_mh]) { _seenH[_mh] = 1; _ex.push({ url: _mu, source: _mh }); }
+                  }
+                  if (!_ex.length) {
+                    var _bare = /https?:\/\/[^\s)\]"'<>,]+/g, _bm;
+                    while ((_bm = _bare.exec(_atxt)) !== null) {
+                      var _bu = _bm[0].replace(/[.,);:]+$/,''), _bh = _bu.replace(/^https?:\/\//,'').replace(/^www\./,'').split('/')[0];
+                      if (_bh && !_seenH[_bh]) { _seenH[_bh] = 1; _ex.push({ url: _bu, source: _bh }); }
+                    }
+                  }
+                  // Also pull the plain "Name" lines from a Perplexity/AIO sources list (domain-looking tokens)
+                  if (_ex.length) _refs = _ex.slice(0, 10);
+                }
+                if (_refs.length) {
+                  mergedBrief.aio_references = _refs;
+                  var _myHost = (function(){ try { return new URL(page.url).hostname.replace(/^www\./,''); } catch(e){ return domain; } })();
+                  mergedBrief.aio_citation_gap = _refs.slice(0,10).map(function(r){
+                    var _h=''; try { _h=new URL(r.url).hostname.replace(/^www\./,''); } catch(e){ _h=r.source||r.url; }
+                    var mine = _h === _myHost;
+                    return {
+                      source: _h,
+                      url: r.url,
+                      organic_position: r.organic_position || null,
+                      is_us: mine,
+                      what_they_do_well: mine ? 'This is your page — you already hold this citation.' : (r.snippet || (r.title ? ('Ranks for: ' + r.title) : 'Cited by Google for this query.')),
+                      our_gap: mine ? '' : 'Your page does not yet cover this point as directly or as early as this source.',
+                      what_to_do: mine ? 'Keep this passage fresh, factual and above the fold so you keep the citation.' : 'Cover the same point on your page in a quotable 40\u201360 word passage, placed in the first 30% of the content, more directly than this source.'
+                    };
+                  });
+                } else if (snapshot.ai_google_overview_text) {
+                  // Manual AIO paste (no source URLs): build the AIO guidance from the brief's own
+                  // blueprint + citation targets, so the AIO section still shows WHAT to write and WHY,
+                  // identical in both the tracker and TV modals.
+                  var _bp = Array.isArray(bc && bc.ai_overview_blueprint) ? bc.ai_overview_blueprint
+                          : (Array.isArray(mergedBrief.ai_overview_blueprint) ? mergedBrief.ai_overview_blueprint : []);
+                  var _ct = Array.isArray(bc && bc.citation_targets) ? bc.citation_targets
+                          : (Array.isArray(mergedBrief.citation_targets) ? mergedBrief.citation_targets : []);
+                  mergedBrief.ai_overview_blueprint = _bp;
+                  mergedBrief.citation_targets = _ct;
+                  mergedBrief.aio_manual = true;
+                }
                 await pool.query(
                   `UPDATE tracker_pages SET brief_content=$1, brief_started_at=COALESCE(brief_started_at, NOW()), brief_check_count=$2 WHERE id=$3`,
                   [JSON.stringify(mergedBrief), checkCount, page.id]
@@ -35565,13 +38876,12 @@ DO NOT be generic. Every action must reference the actual keyword "${kw}" and ac
 Return ONLY a JSON array, no markdown:
 [{"title":"specific gap max 8 words","priority":"high"|"medium"|"low","action":"exact change to make — copy-paste ready, min 25 words","expected_impact":"estimated position improvement and why"}]`;
 
-                  const gRankResp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${geminiKey}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ contents: [{ parts: [{ text: rankingPrompt }] }], generationConfig: { temperature: 0.3, maxOutputTokens: 800 } })
-                  });
+                  const gRankResp = await callGeminiWithFallback(geminiKey, {
+                    contents: [{ parts: [{ text: rankingPrompt }] }],
+                    generationConfig: { temperature: 0.3, maxOutputTokens: 800 }
+                  }, GEMINI_MODEL_BRIEF, null, 1);
                   if (gRankResp.ok) {
-                    const gRankData = await gRankResp.json();
+                    const gRankData = gRankResp.data;
                     const gRankText = gRankData.candidates?.[0]?.content?.parts?.[0]?.text || '';
                     const rankingRecs = JSON.parse(gRankText.replace(/```json|```/g, '').trim());
                     await pool.query(
@@ -35792,14 +39102,16 @@ MANDATORY PROCESSING ORDER:
 STEP 1 - Read the CLIENT PAGE above fully. It is your ground truth for existing content, structure and format.
 STEP 2 - PAGE TYPE: classify the client page as content_page (prose/headings meant to rank) or functional_tool_page (scanner/dashboard/form/calculator where text only supports the tool). If functional_tool_page: recommended_format must NOT be a full blog/guide rewrite, and must_have_h2s must be empty or only small additive subsections - never a full restructure. State the classification in the output.
 STEP 3 - ENTITY VERIFICATION: for every ENTITY GAP term, search the CLIENT PAGE text (including plurals, -ing forms, optimize/optimise spelling, synonyms). If it already appears in any form, do NOT list it as a gap - omit it, or if the mention is weak/buried, change the action to "strengthen existing mention". This check has failed before: entities reported missing that were already present in feature lists, tables and schema. Guard against it actively.
-STEP 4 - Only now analyse the SERP: ranking pattern, outlier, traits missing versus competitors.
+STEP 4 - Analyse the SERP: ranking pattern, outlier, traits missing versus competitors.
+STEP 4B - DEPTH CHECK: for the top 3 topics shared between the client page and rank-1, judge how deeply rank-1 treats each versus the client page (surface/moderate/deep - word count, examples, numbers, step-by-step detail) - this is what usually separates #2 from #1, not just entity presence.
+STEP 4C - INTENT DECOMPOSITION: list the 5-7 real sub-questions a searcher typing "${keyword}" actually wants answered (not just the main topic). For each, note whether the client page answers it and whether rank-1 answers it. Where the client page is silent and rank-1 is not, that is a genuine #1 gap.
 
 PRECISION OVER FALSE COMPLETENESS: if the live data does not support a confident, specific answer for a field, output the JSON string "insufficient_data" for that field instead of inventing a plausible-but-unfounded one - especially for ai_overview_blueprint, step3_outlier and entity_gaps_priority. Never invent a domain, URL, snippet, statistic, schema type or competitor trait that is not in the input above; use "insufficient_data" or an empty array instead.
 
 FINAL CHECK before output: re-read entity_gaps_priority and must_have_h2s against the CLIENT PAGE text and remove or downgrade anything already present; confirm recommended_format does not contradict page_type_classification.
 
 Return ONLY valid JSON, no markdown, no preamble. Replace every <...> with your real analysis or "insufficient_data" - never leave angle brackets, placeholder words, or invented examples in the output.
-{"keyword":"${keyword}","search_intent":"informational|commercial|transactional","page_type_classification":{"type":"content_page|functional_tool_page","evidence":"<1 sentence: what you observed on the client page that supports this>"},"ai_overview_blueprint":"<3-5 specific concrete actions THIS page must take to get cited, grounded in competitor snippets, entities and the AI-citation data above - or 'insufficient_data' if the live data does not support specific claims>","step1_catalog":[{"rank":1,"domain":"<real domain>","url":"<real URL>","title":"<real page title>","content_type":"service page|guide|landing page|blog","estimated_word_count":2000,"serp_features":["<real SERP features; empty array if none>"],"schema_types":["<real schema types; empty array if unknown>"],"freshness":"<real date signal or 'not visible'>","ai_overview_eligible":true,"snippet_text":"<real snippet text>"}],"step2_pattern":{"the_ranking_formula":"<one sentence grounded in the live snippets, or 'insufficient_data'>","dominant_content_format":"<from the data, or 'insufficient_data'>","dominant_schema":"<from the data, or 'insufficient_data'>","dominant_word_count_range":"<from the data, or 'insufficient_data'>","top3_shared_traits":["<concrete traits from the data>"],"bottom_missing_traits":["<concrete traits from the data>"],"freshness_pattern":"<from the data, or 'insufficient_data'>"},"step3_outlier":{"domain":"<real domain, or 'insufficient_data' if no outlier exists>","rank":4,"why_breaks_pattern":"<grounded in data>","why_it_ranks_anyway":"<grounded in data, or 'insufficient_data'>","signal_type":"warning|opportunity","what_to_learn":"<concrete lesson, or 'insufficient_data'>"},"step4_missing":[{"gap":"<real concept the client page is missing, verified absent in STEP 1>","gap_type":"warning|opportunity","how_to_exploit":"<concrete action>"}],"entity_gaps_priority":[{"entity":"<real ENTITY GAP term, VERIFIED ABSENT from the client page in STEP 3>","priority":"high|medium|low","where_to_add":"<an exact section that actually exists on the client page>"}],"content_brief":{"recommended_format":"<must align with page_type_classification - never a full blog rewrite if functional_tool_page>","recommended_word_count":2200,"recommended_schema":["<schema types not already present on the client page>"],"must_have_h2s":["<empty array if functional_tool_page and existing H2s suffice; otherwise specific headings>"],"must_cover_entities":["<real entities, verified absent or weak in STEP 3>"],"faq_questions":["<real FAQ questions, checked against any existing FAQPage schema on the client page>"]},"paa_questions":["<real People-Also-Ask questions for this keyword>"],"action_plan":[{"step":1,"priority":"high|medium|low","action":"<specific action grounded in the analysis>","effort":"low|medium|high","time_to_impact":"days|weeks"}],"quick_wins":[{"win":"<specific do-today action, targeting a section that actually exists on the client page>","reason":"<why it helps rank or get cited>","effort_minutes":20}],"client_vs_best":"${myUrl?'specific gap vs the rank-1 page, entity by entity':'insufficient_data'}","confidence":"high|medium|low"}`;
+{"keyword":"${keyword}","search_intent":"informational|commercial|transactional","page_type_classification":{"type":"content_page|functional_tool_page","evidence":"<1 sentence: what you observed on the client page that supports this>"},"ai_overview_blueprint":"<3-5 specific concrete actions THIS page must take to get cited, grounded in competitor snippets, entities and the AI-citation data above - or 'insufficient_data' if the live data does not support specific claims>","step1_catalog":[{"rank":1,"domain":"<real domain>","url":"<real URL>","title":"<real page title>","content_type":"service page|guide|landing page|blog","estimated_word_count":2000,"serp_features":["<real SERP features; empty array if none>"],"schema_types":["<real schema types; empty array if unknown>"],"freshness":"<real date signal or 'not visible'>","ai_overview_eligible":true,"snippet_text":"<real snippet text>"}],"step2_pattern":{"the_ranking_formula":"<one sentence grounded in the live snippets, or 'insufficient_data'>","dominant_content_format":"<from the data, or 'insufficient_data'>","dominant_schema":"<from the data, or 'insufficient_data'>","dominant_word_count_range":"<from the data, or 'insufficient_data'>","top3_shared_traits":["<concrete traits from the data>"],"bottom_missing_traits":["<concrete traits from the data>"],"freshness_pattern":"<from the data, or 'insufficient_data'>","depth_per_topic":[{"topic":"<a topic shared between the client page and rank-1>","rank1_treatment":"surface|moderate|deep","client_treatment":"surface|moderate|deep","gap":"<what specifically rank-1 covers that the client page doesn't - examples, numbers, steps>"}]},"step3_outlier":{"domain":"<real domain, or 'insufficient_data' if no outlier exists>","rank":4,"why_breaks_pattern":"<grounded in data>","why_it_ranks_anyway":"<grounded in data, or 'insufficient_data'>","signal_type":"warning|opportunity","what_to_learn":"<concrete lesson, or 'insufficient_data'>"},"step4_missing":[{"gap":"<real concept the client page is missing, verified absent in STEP 1>","gap_type":"warning|opportunity","how_to_exploit":"<concrete action>"}],"intent_decomposition":[{"sub_question":"<a real sub-question searchers of this keyword want answered>","client_page_answers_it":true,"rank1_answers_it":true,"gap_note":"<if client page is silent and rank-1 answers it, say so; else 'no gap'>"}],"entity_gaps_priority":[{"entity":"<real ENTITY GAP term, VERIFIED ABSENT from the client page in STEP 3>","priority":"high|medium|low","where_to_add":"<an exact section that actually exists on the client page>"}],"content_brief":{"recommended_format":"<must align with page_type_classification - never a full blog rewrite if functional_tool_page>","recommended_word_count":2200,"recommended_schema":["<schema types not already present on the client page>"],"must_have_h2s":["<empty array if functional_tool_page and existing H2s suffice; otherwise specific headings>"],"must_cover_entities":["<real entities, verified absent or weak in STEP 3>"],"faq_questions":["<real FAQ questions, checked against any existing FAQPage schema on the client page>"],"beat_number1_instructions":[{"topic":"<a shared topic from depth_per_topic>","rank1_treats_it_as":"surface|moderate|deep","to_beat_write":"<concrete instruction: exactly what to add, what kind of evidence to use, how deep to go - not generic advice>"}]},"citation_targets":[{"query_variant":"<a specific question Google AI Overview or Perplexity could cite this page for>","passage_to_write":"<exactly how that passage should read - length, direct-answer format, source attribution>"}],"paa_questions":["<real People-Also-Ask questions for this keyword>"],"action_plan":[{"step":1,"priority":"high|medium|low","action":"<specific action grounded in the analysis>","effort":"low|medium|high","time_to_impact":"days|weeks"}],"quick_wins":[{"win":"<specific do-today action, targeting a section that actually exists on the client page>","reason":"<why it helps rank or get cited>","effort_minutes":20}],"client_vs_best":"${myUrl?'specific gap vs the rank-1 page, entity by entity':'insufficient_data'}","confidence":"high|medium|low"}`;
   try {
     const ctrl2=new AbortController();setTimeout(()=>ctrl2.abort(),45000);
     const geminiKey=process.env.GEMINI_API_KEY; if(!geminiKey) throw new Error('GEMINI_API_KEY required for SERP brief');
@@ -35823,7 +39135,7 @@ Return ONLY valid JSON, no markdown, no preamble. Replace every <...> with your 
     } catch(e) {}
     res.json({success:true,spy,live_position:(spy&&spy.live_position)||null,competitors_scraped:top5.length});
   } catch(e){
-    console.error('[serp-spy] Claude analysis failed, returning data-only brief:', e.message);
+    console.error('[serp-spy] Gemini analysis failed, returning data-only brief:', e.message);
     try {
       let _livePos = null;
       if (myUrl) { const _norm = u => String(u||'').replace(/^https?:\/\//,'').replace(/^www\./,'').replace(/\/+$/,'').toLowerCase(); const _myHost = _norm(myUrl).split('/')[0]; const _m = serpUrls.find(r=>_norm(r.url)===_norm(myUrl))||serpUrls.find(r=>String(r.domain||'').replace(/^www\./,'').toLowerCase()===_myHost)||serpUrls.find(r=>_norm(r.url).split('/')[0]===_myHost); if(_m) _livePos=_m.rank; console.log('[serp-spy fallback] live_position: myHost=' + _myHost + ' result=' + (_m?('#'+_m.rank):('NOT in top-'+serpUrls.length))); }
@@ -35847,6 +39159,236 @@ Return ONLY valid JSON, no markdown, no preamble. Replace every <...> with your 
       return res.status(502).json({success:false,error:e.message});
     }
   }
+});
+
+// ── POST /api/tracker-client/:token/prewrite-brief ───────────────────────────
+// Keyword-only brief — no existing page required. Reuses the same SERP-fetch
+// + competitor-scrape pipeline as /api/tracker/serp-spy, but with its own
+// prompt (no "existing client page" framing) and its own client-token auth,
+// since regular tracker clients don't hold an engine access code.
+app.post('/api/tracker-client/:token/prewrite-brief', async (req, res) => {
+  try {
+    const cr = await pool.query('SELECT * FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status != $2)', [req.params.token, 'deleted']);
+    if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Tracker not found. Check your link is correct.' });
+    if (cr.rows[0].status === 'disabled' || cr.rows[0].status === 'paused') return res.status(403).json({ success: false, error: 'This tracker is ' + cr.rows[0].status + '. Contact Ottmar to reactivate.' });
+    const client = cr.rows[0];
+
+    const { keyword, workingTitle, language, region, manualAioText } = req.body || {};
+    if (!keyword) return res.status(400).json({ success: false, error: 'keyword required' });
+    if (!process.env.GEMINI_API_KEY) return res.status(500).json({ success: false, error: 'GEMINI_API_KEY not set' });
+
+    // Free tier: exactly 1 lifetime brief. Paid Tier 3 clients get more via
+    // prewrite_briefs_paid (set by admin after a bundle purchase — mirrors
+    // the max_pages pattern already used for tracked pages on this row).
+    const briefsUsed = client.prewrite_briefs_used || 0;
+    const briefsAllowed = 1 + (client.prewrite_briefs_paid || 0);
+    if (briefsUsed >= briefsAllowed) {
+      return res.status(403).json({
+        success: false,
+        limit_reached: true,
+        error: 'Pre-Write Brief is a separate service — you\'ve used your free brief. Contact Ottmar, or check all pricing options on contentscale.site/free-ai-citations-tracker.'
+      });
+    }
+
+    const serperKey = process.env.SERPAPI_KEY;
+    const glParam = String(region || 'us').toLowerCase().replace(/[^a-z]/g, '') || 'us';
+    let serpUrls = [];
+    let aioDetected = false;
+    let aioManualText = String(manualAioText || '').trim();
+    if (aioManualText) {
+      aioDetected = true;
+      console.log('[prewrite-brief] Using manual AIO text for:', keyword, '(' + aioManualText.length + ' chars)');
+    }
+    if (serperKey) {
+      try {
+        const ctrl1 = new AbortController(); setTimeout(() => ctrl1.abort(), 15000);
+        const r1 = await fetch('https://google.serper.dev/search', {
+          method: 'POST',
+          headers: { 'X-API-KEY': serperKey, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ q: keyword, num: 10, hl: 'en', gl: glParam }),
+          signal: ctrl1.signal
+        });
+        if (r1.ok) {
+          const d1 = await r1.json();
+          const organic = d1.organic || [];
+          serpUrls = organic.map((r, i) => ({
+            rank: r.position || (i + 1),
+            url: r.link || '',
+            domain: (r.link || '').replace(/^https?:\/\//, '').split('/')[0].replace(/^www\./, ''),
+            title: r.title || '',
+            snippet: r.snippet || ''
+          })).filter(r => r.url);
+          // Serper surfaces a direct-answer block (answerBox) when Google shows one for
+          // this exact query — the closest signal available for AI Overview presence
+          // without a dedicated AIO endpoint. Honest phrasing either way in the output.
+          aioDetected = aioManualText ? true : !!(d1.answerBox || d1.knowledgeGraph);
+          console.log('[prewrite-brief] Serper.dev returned', serpUrls.length, 'results for:', keyword, '| gl=' + glParam, '| answerBox=' + !!d1.answerBox);
+        } else {
+          const err = await r1.text().catch(() => '');
+          console.warn('[prewrite-brief] Serper.dev error:', r1.status, err.substring(0, 200));
+        }
+      } catch (e) { console.warn('[prewrite-brief] Serper.dev failed:', e.message); }
+    } else {
+      console.warn('[prewrite-brief] SERPAPI_KEY not set — cannot fetch SERP results');
+    }
+    if (!serpUrls.length) return res.status(502).json({ success: false, error: 'Could not fetch SERP results — check SERPAPI_KEY is set in Railway environment' });
+
+    // Real Perplexity check — same call the tracker's own citation-checker makes.
+    // This is verified evidence, not an LLM guess, matching the "no promises without
+    // evidence" transparency principle used across the rest of the tracker.
+    const checkedAt = new Date().toISOString();
+    let perplexity = { checked: false, answer_excerpt: '', cited_domains: [] };
+    const pxKey = process.env.PERPLEXITY_API_KEY;
+    if (pxKey) {
+      try {
+        const ctrlP = new AbortController(); setTimeout(() => ctrlP.abort(), 20000);
+        const pResp = await fetch('https://api.perplexity.ai/chat/completions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + pxKey },
+          body: JSON.stringify({ model: 'sonar', messages: [{ role: 'user', content: keyword }], max_tokens: 400, return_citations: true, return_related_questions: false }),
+          signal: ctrlP.signal
+        });
+        if (pResp.ok) {
+          const pData = await pResp.json();
+          const citations = pData.citations || [];
+          const answerText = (pData.choices && pData.choices[0] && pData.choices[0].message && pData.choices[0].message.content) || '';
+          perplexity = {
+            checked: true,
+            answer_excerpt: answerText.substring(0, 400),
+            cited_domains: citations.slice(0, 10).map(c => (c || '').replace(/^https?:\/\//, '').split('/')[0])
+          };
+        }
+      } catch (e) { console.warn('[prewrite-brief] Perplexity check failed:', e.message); }
+    }
+
+    const top5 = serpUrls
+      .filter(r => !/youtube\.com|reddit\.com|facebook\.com|linkedin\.com|twitter\.com|x\.com|pinterest\.|quora\.com|instagram\.com|tiktok\.com/i.test(r.url))
+      .slice(0, 5);
+    const compScrapes = await Promise.all(top5.map(e => scrapeBodyText(e.url, 6000)));
+    const _detectSchema = h => Array.from(new Set(((h || '').match(/"@type"\s*:\s*"([^"]+)"/g) || []).map(x => x.replace(/.*"([^"]+)"$/, '$1')))).slice(0, 6);
+    const compSummary = top5.map((e, i) => {
+      const sc = compScrapes[i] || {};
+      const schema = _detectSchema(sc.fullHtml);
+      const body = (sc.text || '').slice(0, 1500);
+      return `RANK ${e.rank}: ${e.domain}\n  Title: "${e.title || ''}"\n  Snippet: "${(e.snippet || '')}"\n  Word count: ${sc.wordCount || '?'}\n  Schema detected: ${schema.length ? schema.join(', ') : 'none'}\n  Body excerpt: ${body || '(not captured)'}`;
+    }).join('\n\n');
+
+    const prompt = `You are an elite SEO and AEO strategist. There is NO existing page for this keyword yet — you are specifying what a brand-new page must contain to outrank and out-cite everything currently ranking, from the very first draft. Never frame anything as a "fix" — there is nothing to fix, only something to build correctly the first time. Every claim must be traceable to the SERP data below; never invent a domain, URL, snippet, statistic or schema type not present in the input.
+
+KEYWORD: "${keyword}"
+${workingTitle ? 'WORKING TITLE / ANGLE SUPPLIED: "' + workingTitle + '"' : 'No working title supplied — infer the strongest angle from search intent and the competitor gap.'}
+
+LIVE SERP — CURRENT TOP RESULTS:
+${compSummary}
+
+PERPLEXITY — LIVE CHECK:
+${perplexity.checked ? (perplexity.answer_excerpt ? 'Answer excerpt: "' + perplexity.answer_excerpt + '"\nCurrently cites: ' + (perplexity.cited_domains.join(', ') || 'no domains returned') : 'Checked — no answer excerpt captured for this query.') : 'Not checked — PERPLEXITY_API_KEY not configured.'}
+
+GOOGLE DIRECT-ANSWER BLOCK: ${aioManualText ? ('manually captured by the user — full text below:\n"' + aioManualText.slice(0, 3000) + '"') : (aioDetected ? 'detected for this exact query' : 'not detected via our data source (Serper.dev does not reliably capture AI Overview content — this does not mean Google shows none, only that our check could not confirm it)')}
+
+MANDATORY PROCESSING ORDER:
+STEP 1 — Analyse the SERP: what pattern do the top results share (format, depth, schema, freshness)?
+STEP 2 — INTENT DECOMPOSITION: list the 5-7 real sub-questions a searcher typing "${keyword}" actually wants answered.
+STEP 3 — GAP ACROSS THE WHOLE TOP 10: what does NONE of the current top 10 cover well — the opening this new page can own?
+STEP 4 — For EACH of the top 5 competitors, state ONE concrete thing they do well and ONE concrete gap — grounded only in their scraped content above.
+STEP 5 — Specify the exact structure, entities, and schema the new page needs to beat rank 1 on day one.
+
+PRECISION OVER FALSE COMPLETENESS: if the live data does not support a confident, specific answer for a field, output "insufficient_data" instead of inventing one.
+
+Return ONLY valid JSON, no markdown, no preamble.
+{"keyword":"${keyword}","search_intent":"informational|commercial|transactional","top10_gap":"<what none of the current top 10 cover well — the opening for a new page, or 'insufficient_data'>","ai_overview_status":"<synthesise the Perplexity live check and Google direct-answer block above into one sentence — what it means for this new page's citation chances>","competitor_table":[{"rank":1,"domain":"<real domain from the SERP data>","what_they_have":"<one concrete thing this competitor does well, grounded in their scraped content>","the_gap":"<one concrete thing missing or weak in their content>","what_to_add":"<what the new page should do instead/better>"}],"recommended_title_h1":"<the strongest working title/H1 for this page, considering the supplied angle if any>","recommended_structure":{"format":"<content_page|comparison|how_to|tool_landing — from the SERP pattern>","recommended_word_count":2200,"must_have_h2s":["<specific headings needed to beat rank 1>"],"recommended_schema":["<schema types, e.g. FAQPage, Article, HowTo>"]},"must_cover_entities":["<specific terms/entities present in 2+ competitors that this page must include>"],"faq_questions":["<real People-Also-Ask style questions this page should answer>"],"citation_targets":[{"query_variant":"<a specific question Google AI Overview or Perplexity could cite this page for>","passage_to_write":"<exactly how that passage should read — length, direct-answer format>"}],"beat_number1_instructions":[{"topic":"<a topic rank-1 covers>","rank1_treats_it_as":"surface|moderate|deep","to_beat_write":"<concrete instruction — what to add, what depth, what evidence>"}],"action_plan":[{"step":1,"priority":"high|medium|low","action":"<specific action>"}],"confidence":"high|medium|low"}`;
+
+    const ctrl2 = new AbortController(); setTimeout(() => ctrl2.abort(), 45000);
+    const geminiKey = process.env.GEMINI_API_KEY;
+    const r2 = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${geminiKey}`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contents: [{ parts: [{ text: _langPrefix(language) + prompt }] }], generationConfig: { temperature: 0.4, maxOutputTokens: 16384, responseMimeType: 'application/json', thinkingConfig: { thinkingBudget: 0 } } }),
+      signal: ctrl2.signal
+    });
+    const d2 = await r2.json().catch(() => ({}));
+    if (!r2.ok) throw new Error((d2.error && d2.error.message) || 'Gemini ' + r2.status);
+    const rawText = (d2.candidates && d2.candidates[0] && d2.candidates[0].content && d2.candidates[0].content.parts && d2.candidates[0].content.parts[0] && d2.candidates[0].content.parts[0].text) || '';
+    let brief = null;
+    try { const m2 = rawText.match(/\{[\s\S]*\}/); if (m2) brief = JSON.parse(m2[0]); } catch (e) {}
+    if (!brief) return res.status(502).json({ success: false, error: 'Could not parse brief from AI response' });
+
+    // What We Actually Checked — built from REAL, verified data fetched above,
+    // never from the LLM's own claims. Matches the transparency block already
+    // used on the regular Citation Brief.
+    brief.what_we_checked = {
+      query_tested: keyword,
+      checked_at: checkedAt,
+      google_direct_answer: aioManualText ? 'manually captured by user (' + aioManualText.length + ' chars)' : (aioDetected ? 'detected for this exact query' : 'not detected via our data source (Serper.dev limitation — does not confirm absence, only that our check could not detect it)'),
+      google_direct_answer_manual_text: aioManualText || '',
+      perplexity: perplexity.checked
+        ? (perplexity.answer_excerpt ? 'checked — answer captured' : 'checked — no answer excerpt captured for this query')
+        : 'not checked — Perplexity key not configured',
+      perplexity_excerpt: perplexity.answer_excerpt || '',
+      perplexity_currently_cites: perplexity.cited_domains,
+      competitors_analysed: top5.length
+    };
+
+    // Only count against the free/paid allowance on a SUCCESSFUL generation —
+    // a failed SERP fetch or Gemini error above never consumes the client's brief.
+    await pool.query('UPDATE tracker_clients SET prewrite_briefs_used = COALESCE(prewrite_briefs_used,0) + 1 WHERE id=$1', [client.id]).catch(() => {});
+
+    // Persist the brief so it can be reopened later from the Recent Briefs list —
+    // otherwise it's lost the moment the modal closes.
+    let savedBriefId = null;
+    try {
+      const saved = await pool.query(
+        'INSERT INTO prewrite_briefs (client_id, keyword, working_title, language, region, brief_json, competitors_scraped) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id',
+        [client.id, keyword, workingTitle || '', language || '', glParam, JSON.stringify(brief), top5.length]
+      );
+      savedBriefId = saved.rows[0]?.id || null;
+    } catch (e) { console.warn('[prewrite-brief] Could not save brief for recall:', e.message); }
+
+    console.log(`[prewrite-brief] generated for "${keyword}" | client=${client.name || client.id} | gl=${glParam} | lang=${language || 'en'} | brief ${briefsUsed + 1}/${briefsAllowed}`);
+    res.json({ success: true, brief, brief_id: savedBriefId, competitors_scraped: top5.length, region: glParam, briefs_used: briefsUsed + 1, briefs_allowed: briefsAllowed });
+  } catch (e) {
+    console.error('[prewrite-brief] error:', e.message);
+    res.status(502).json({ success: false, error: e.message });
+  }
+});
+
+// ── GET /api/tracker-client/:token/prewrite-briefs — list past briefs ───────
+// Lightweight list (no full brief_json) for the "Recent Briefs" recall UI.
+app.get('/api/tracker-client/:token/prewrite-briefs', async (req, res) => {
+  try {
+    const cr = await pool.query('SELECT id FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status != $2)', [req.params.token, 'deleted']);
+    if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Tracker not found.' });
+    const r = await pool.query(
+      'SELECT id, keyword, working_title, language, region, competitors_scraped, created_at FROM prewrite_briefs WHERE client_id=$1 ORDER BY created_at DESC LIMIT 50',
+      [cr.rows[0].id]
+    );
+    res.json({ success: true, briefs: r.rows });
+  } catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// ── GET /api/tracker-client/:token/prewrite-briefs/:id — reopen one brief ───
+app.get('/api/tracker-client/:token/prewrite-briefs/:id', async (req, res) => {
+  try {
+    const cr = await pool.query('SELECT id FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status != $2)', [req.params.token, 'deleted']);
+    if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Tracker not found.' });
+    const r = await pool.query(
+      'SELECT id, keyword, working_title, language, region, brief_json, competitors_scraped, created_at FROM prewrite_briefs WHERE id=$1 AND client_id=$2',
+      [req.params.id, cr.rows[0].id]
+    );
+    if (!r.rows.length) return res.status(404).json({ success: false, error: 'Brief not found.' });
+    const row = r.rows[0];
+    res.json({ success: true, brief: row.brief_json, keyword: row.keyword, working_title: row.working_title, region: row.region, competitors_scraped: row.competitors_scraped, created_at: row.created_at });
+  } catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// ── DELETE /api/tracker-client/:token/prewrite-briefs/:id — remove one brief ─
+app.delete('/api/tracker-client/:token/prewrite-briefs/:id', async (req, res) => {
+  try {
+    const cr = await pool.query('SELECT id FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status != $2)', [req.params.token, 'deleted']);
+    if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Tracker not found.' });
+    const r = await pool.query('DELETE FROM prewrite_briefs WHERE id=$1 AND client_id=$2 RETURNING id', [req.params.id, cr.rows[0].id]);
+    if (!r.rows.length) return res.status(404).json({ success: false, error: 'Brief not found.' });
+    res.json({ success: true });
+  } catch (e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
 // ── POST /api/tracker/meta-intel — AI-powered best title/desc/H1 ────────────
@@ -35950,6 +39492,13 @@ app.post('/api/intelligence/ai-citation', verifyEngineAccess, async (req, res) =
 // ── DB migrations ────────────────────────────────────────────────────────────
 pool.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS serp_spy JSONB`).catch(()=>{});
 pool.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS serp_spy_at TIMESTAMPTZ`).catch(()=>{});
+pool.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS aio_manual_text TEXT`).catch(()=>{});
+pool.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS aio_manual_refs JSONB`).catch(()=>{});
+pool.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS ai_google_overview_found BOOLEAN DEFAULT FALSE`).catch(()=>{});
+pool.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS ai_google_overview_cited BOOLEAN DEFAULT FALSE`).catch(()=>{});
+pool.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS ai_google_overview_text TEXT`).catch(()=>{});
+pool.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS ai_google_overview_references JSONB`).catch(()=>{});
+pool.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS brief_viewed_at TIMESTAMPTZ`).catch(()=>{});
 
 
 // ── Server-side GRAAF HTML analyser (no Puppeteer) ──────────────────────────
@@ -36363,7 +39912,7 @@ function authorTrustAnalyzeHtml(html, pageUrl) {
         priority: c.max >= 15 ? 'high' : 'medium',
         system: 'Author Trust',
         action: c.why + '. Fix: ' + getAuthorTrustFix(c.name),
-        expected_impact: 'Improves E-E-A-T signals that Perplexity, Claude, and Google AI Overview use to determine author credibility'
+        expected_impact: 'Improves E-E-A-T signals that Perplexity and Google AI Overview use to determine author credibility'
       });
     }
   });
@@ -36708,8 +40257,53 @@ async function runTrackerCheck(page, geminiKey, keys, forceRescan = false) {
         signal: AbortSignal.timeout(15000)
       });
 
+      // Dead-URL detection during scan:
+      //  - 404/410 => the tracked URL no longer exists (flagged like a redirect so it leaves cannibalization)
+      //  - 301/302 => fetch followed it; a differing final URL means this tracked URL is dead, track the destination
+      try {
+        if (liveResp.status === 404 || liveResp.status === 410) {
+          await pool.query('UPDATE tracker_pages SET redirects_to=$1, redirect_checked_at=NOW() WHERE id=$2', ['(dead ' + liveResp.status + ' \u2014 page not found)', pageId]).catch(()=>{});
+          _trSetStep(pageId, 'html_hash', 'done', '\u274c ' + liveResp.status + ' \u2014 this URL no longer exists; remove it from the tracker.');
+        } else {
+          const _reqPath = new URL(page.url).pathname.replace(/\/+$/,'');
+          const _finPath = new URL(liveResp.url).pathname.replace(/\/+$/,'');
+          if (liveResp.url && _finPath && _reqPath && _finPath.toLowerCase() !== _reqPath.toLowerCase()) {
+            await pool.query('UPDATE tracker_pages SET redirects_to=$1, redirect_checked_at=NOW() WHERE id=$2', [liveResp.url, pageId]).catch(()=>{});
+            _trSetStep(pageId, 'html_hash', 'done', '\u21aa\ufe0f Redirects to ' + liveResp.url + ' \u2014 this tracked URL is a 301; track the destination instead.');
+          } else {
+            await pool.query('UPDATE tracker_pages SET redirects_to=NULL, redirect_checked_at=NOW() WHERE id=$1', [pageId]).catch(()=>{});
+          }
+        }
+      } catch(e) {}
+
       if (liveResp.ok) {
         const liveHtml = await liveResp.text();
+        // Canonical-duplicate detection: if this page's canonical points to a DIFFERENT URL,
+        // Google already treats the canonical as the real one — this URL is not a competitor, just a duplicate.
+        // Only evaluate canonical if the 301/404 block above did NOT already flag this page as dead.
+        try {
+          const _rc = await pool.query('SELECT redirects_to FROM tracker_pages WHERE id=$1', [pageId]);
+          const _alreadyDead = _rc.rows.length && _rc.rows[0].redirects_to && !String(_rc.rows[0].redirects_to).startsWith('(canonical');
+          if (!_alreadyDead) {
+            let _canonMismatch = null;
+            const _cm = liveHtml.match(/<link[^>]+rel=["']canonical["'][^>]*>/i);
+            if (_cm) {
+              const _hm = _cm[0].match(/href=["']([^"']+)["']/i);
+              if (_hm && _hm[1]) {
+                const _canonPath = new URL(_hm[1], page.url).pathname.replace(/\/+$/,'').toLowerCase();
+                const _selfPath = new URL(page.url).pathname.replace(/\/+$/,'').toLowerCase();
+                if (_canonPath && _selfPath && _canonPath !== _selfPath) _canonMismatch = _hm[1];
+              }
+            }
+            if (_canonMismatch) {
+              await pool.query('UPDATE tracker_pages SET redirects_to=$1, redirect_checked_at=NOW() WHERE id=$2', ['(canonical \u2192 ' + _canonMismatch + ')', pageId]).catch(()=>{});
+              _trSetStep(pageId, 'html_hash', 'done', '\ud83d\udd17 Canonical points to ' + _canonMismatch + ' \u2014 Google treats THAT as the real page; track the canonical, not this duplicate.');
+            } else {
+              // canonical is self-referencing or absent, and not a 301/404 → ensure any STALE canonical flag is cleared
+              await pool.query("UPDATE tracker_pages SET redirects_to=NULL WHERE id=$1 AND redirects_to LIKE '(canonical%'", [pageId]).catch(()=>{});
+            }
+          }
+        } catch(e) {}
         const suspicion = isSuspiciousHtml(liveHtml);
 
         if (!suspicion) {
@@ -36885,10 +40479,36 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
           }
 
           // ── AI Overview: Serper returns answerBox with type 'ai_overview' ──
+          // If manual AIO text was pasted by the user, use that instead of Serper
+          if(page.aio_manual_text) {
+            snapshot.ai_google_overview_found = true;
+            var _aioPageNorm = '';
+            try { var _apu = new URL(page.url); _aioPageNorm = _apu.hostname.replace(/^www\./, '') + _apu.pathname.replace(/\/+$/, ''); } catch(e) { _aioPageNorm = domain; }
+            snapshot.ai_google_overview_cited = page.aio_manual_text.toLowerCase().includes(_aioPageNorm.toLowerCase()) || page.aio_manual_text.includes(domain);
+            snapshot.ai_google_overview_text = ('Manual AIO: ' + page.aio_manual_text).substring(0, 8000);
+            // Feed the URLs extracted at save-time (2507Q) into the standard references field, so
+            // every downstream consumer — the AIO code-fallback, the AIO gap table, all modals —
+            // sees real AI-Overview-cited sources instead of falling back to organic SERP data.
+            if (Array.isArray(page.aio_manual_refs) && page.aio_manual_refs.length) {
+              snapshot.ai_google_overview_references = page.aio_manual_refs;
+            } else if (typeof page.aio_manual_refs === 'string' && page.aio_manual_refs) {
+              try { var _pmr = JSON.parse(page.aio_manual_refs); if (Array.isArray(_pmr) && _pmr.length) snapshot.ai_google_overview_references = _pmr; } catch(e) {}
+            }
+            console.log('[tracker] AIO manual override for ' + page.url + ' — cited=' + snapshot.ai_google_overview_cited);
+          } else {
+          // Confirmed 2026-07-22 via live debug: Serper.dev does not reliably
+          // return AI Overview content (no answerBox/knowledgeGraph field at all
+          // for queries known to show a real Google AI Overview). This is a
+          // documented data-source limitation, not a detection bug — see the
+          // render-time wording fix that reflects this honestly. Kept as a
+          // best-effort check in case Serper adds AIO support later.
           // Also check knowledgeGraph and organic snippets for our domain
           const ab = sData.answerBox || null;
           const kg = sData.knowledgeGraph || null;
-
+          // NOTE (2026-07-24): Serper does NOT return an aiOverview field — confirmed
+          // by live debug and provider docs. AIO data comes exclusively from the
+          // user's manual paste (Add AIO), which is also the only EXACT source since
+          // AI Overviews are personalized per user/location and cannot be scraped 1:1.
           if(ab && (ab.type === 'ai_overview' || ab.type === 'aiOverview' || ab.answerType === 'ai_overview')) {
             // Explicit AI Overview block
             snapshot.ai_google_overview_found = true;
@@ -36908,11 +40528,32 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
             snapshot.ai_google_overview_cited = true;
             snapshot.ai_google_overview_text = ('Knowledge Graph: ' + (kg.title || kg.description || '')).substring(0, 600);
           }
+          } // end else (no manual AIO)
 
           // Capture top 5 competitor snippets for Gemini to analyze
           snapshot._competitors = organic.slice(0, 5).map(function(r) {
             return { url: r.link, title: r.title, snippet: r.snippet || '', position: r.position };
           });
+          // RESILIENCE: this specific live Serper call sometimes returns a thin/empty organic array
+          // for long, specific local queries (not an error — the request succeeds, just few/no
+          // results this run). Rather than lose competitor visibility for that one scan, fall back
+          // to the previous successful snapshot's competitor list if this run came back empty.
+          // Self-contained query — does NOT rely on the STABILITY GUARD's block-scoped prevSnap
+          // above, which is only reachable inside its own if-block and has no google_competitors.
+          if (!snapshot._competitors.length) {
+            try {
+              const _prevCompR = await pool.query(
+                `SELECT google_competitors FROM tracker_snapshots WHERE page_id=$1 AND google_competitors IS NOT NULL ORDER BY checked_at DESC LIMIT 1`,
+                [pageId]
+              );
+              if (_prevCompR.rows.length) {
+                const _prevComp = typeof _prevCompR.rows[0].google_competitors === 'string'
+                  ? JSON.parse(_prevCompR.rows[0].google_competitors)
+                  : _prevCompR.rows[0].google_competitors;
+                if (Array.isArray(_prevComp) && _prevComp.length) snapshot._competitors = _prevComp;
+              }
+            } catch(e) {}
+          }
 
           const posLabel = snapshot.google_position ? '#' + snapshot.google_position : 'not in top 10';
           const aiLabel  = snapshot.ai_google_overview_cited ? '✅ AI Overview cited' : (snapshot.ai_google_overview_found ? '⚠️ AI Overview exists (not cited)' : '❌ No AI Overview');
@@ -36952,7 +40593,6 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
     const prevPrevSnap = prevSnapR.rows[1] || null;
     const scanCount = page.brief_check_count || 0;
     const runPerplexity = !prevSnap || scanCount % 2 === 0; // every other scan
-    const runBrave = !prevSnap || scanCount % 2 === 0;      // every other scan
 
     // OPTIMISATION: skip Gemini brief if results unchanged vs previous scan
     resultsChanged = !prevSnap ||
@@ -36991,18 +40631,43 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
           const citations = pData.citations || [];
           const answerText = (pData.choices && pData.choices[0] && pData.choices[0].message && pData.choices[0].message.content) || '';
           snapshot.ai_perplexity_found = citations.length > 0 || answerText.length > 100;
-          const cited = citations.some(function(c){ return (c||'').replace(/^https?:\/\//, '').startsWith(domain); })
-            || answerText.includes(domain);
-          snapshot.ai_perplexity_cited = cited;
-          if(cited) {
+          // Store the actual answer text (not just cited/not) — real evidence for the transparency
+          // panel, so a viewer can SEE what Perplexity literally said, not just trust a badge.
+          snapshot.ai_perplexity_answer_excerpt = answerText.substring(0, 400);
+          // Normalize the scanned page URL for comparison
+          var _pageNorm = '';
+          try { var _pu = new URL(page.url); _pageNorm = _pu.hostname.replace(/^www\./,'') + _pu.pathname.replace(/\/+$/,''); } catch(e) { _pageNorm = domain; }
+          // Check if THIS SPECIFIC PAGE is cited (not just the domain)
+          const exactCited = citations.some(function(c){
+            try { var _cu = new URL(c); var _cn = _cu.hostname.replace(/^www\./,'') + _cu.pathname.replace(/\/+$/,''); return _cn === _pageNorm; } catch(e) { return false; }
+          });
+          // Also check if ANY page on the domain is cited (useful context)
+          const domainCited = citations.some(function(c){ return (c||'').replace(/^https?:\/\//, '').startsWith(domain); });
+          const mentioned = !domainCited && answerText.includes(domain);
+          snapshot.ai_perplexity_cited = exactCited;
+          if(exactCited) {
             const match = citations.find(function(c){ return (c||'').includes(domain); });
-            snapshot.ai_perplexity_text = match ? 'Cited: ' + match : 'Domain in Perplexity answer';
+            var citedPath = match;
+            try { citedPath = new URL(match).pathname; } catch(e) {}
+            snapshot.ai_perplexity_text = 'Cited: ' + domain + citedPath;
+          } else if(domainCited) {
+            const match = citations.find(function(c){ return (c||'').includes(domain); });
+            var otherPath = match;
+            try { otherPath = new URL(match).pathname; } catch(e) {}
+            snapshot.ai_perplexity_text = 'Domain cited but different page: ' + domain + otherPath;
+          } else if(mentioned) {
+            snapshot.ai_perplexity_text = 'Mentioned in answer but not formally cited as source';
           }
-          const label = cited ? '✅ Cited (' + citations.length + ' citations)' : ('❌ Not cited (' + citations.length + ' citations found)');
+          // Store the OTHER sources Perplexity cited (not our own domain) — this is the "who's
+          // currently cited" competitor visibility that was previously fetched and thrown away.
+          snapshot.ai_perplexity_competitors = citations
+            .filter(function(c){ return c && !(c.replace(/^https?:\/\//, '').startsWith(domain)); })
+            .slice(0, 10);
+          const label = exactCited ? '✅ Cited (' + citations.length + ' citations)' : (domainCited ? '⚠️ Domain cited, not this page (' + citations.length + ')' : ('❌ Not cited (' + citations.length + ' citations found)'));
           _trSetStep(pageId, 'perplexity', 'done', label);
           // Cache Perplexity result
           _cacheSet('perplexity:tracker:' + keyword.toLowerCase().trim() + ':' + domain,
-            { ai_perplexity_cited: cited, ai_perplexity_found: snapshot.ai_perplexity_found, ai_perplexity_text: snapshot.ai_perplexity_text },
+            { ai_perplexity_cited: exactCited, ai_perplexity_found: snapshot.ai_perplexity_found, ai_perplexity_text: snapshot.ai_perplexity_text },
             CACHE_TTL.perplexity
           );
         } else {
@@ -37021,11 +40686,50 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
 
     // ── 4. You.com Smart API citation ────────────────────────────────────────
     // ── 4. Microsoft Bing / Copilot citation ───────────────────────────────────
-    // Uses Bing Web Search API (Azure) — free tier 1000 calls/mo
-    // Add BING_SEARCH_API_KEY to Railway (get at portal.azure.com → Bing Search v7)
-    _trSetStep(pageId, 'youcom', 'running', 'Checking Bing / Copilot index: ' + keyword);
+    // ── Bing Webmaster Tools API (real, authoritative) — checks if Bing actually
+    // has impression/click data for this exact query on this site. This is the
+    // legitimate signal behind "Copilot" (Copilot's web-grounding runs on Bing's
+    // index) — far stronger than a generic web-search hit, and completely free
+    // (API key only, no billing account, unlike Google Cloud).
+    _trSetStep(pageId, 'youcom', 'running', 'Checking Bing Webmaster (Copilot index): ' + keyword);
+    const _bwKey = process.env.BING_WEBMASTER_API_KEY || '';
     const _bingKey = keys.bingKey || process.env.BING_SEARCH_API_KEY || process.env.YOU_API_KEY || '';
-    if(_bingKey) {
+    if (_bwKey) {
+      const bwCacheKey = 'bingwebmaster:' + keyword.toLowerCase().trim() + ':' + domain;
+      const bwCached = _cacheGet(bwCacheKey);
+      if (bwCached) {
+        Object.assign(snapshot, bwCached);
+        _trSetStep(pageId, 'youcom', 'done', (snapshot.ai_bing_cited ? '✅' : '❌') + ' Bing Webmaster cached');
+      } else {
+        try {
+          const siteUrl = 'https://' + domain + '/';
+          const bwResp = await fetch(
+            `https://ssl.bing.com/webmaster/api.svc/json/GetQueryTrafficStats?siteUrl=${encodeURIComponent(siteUrl)}&query=${encodeURIComponent(keyword)}&apikey=${_bwKey}`,
+            { signal: AbortSignal.timeout(12000) }
+          );
+          if (bwResp.ok) {
+            const bwData = await bwResp.json();
+            const stats = bwData.d || [];
+            const totalImpressions = stats.reduce(function(sum, s){ return sum + (s.Impressions||0); }, 0);
+            const totalClicks = stats.reduce(function(sum, s){ return sum + (s.Clicks||0); }, 0);
+            snapshot.ai_bing_found = stats.length > 0;
+            snapshot.ai_bing_cited = totalImpressions > 0;
+            const label = totalImpressions > 0
+              ? `Bing index confirmed: ${totalImpressions} impressions, ${totalClicks} clicks (real Bing Webmaster data)`
+              : 'No Bing impressions found for this exact query yet';
+            _trSetStep(pageId, 'youcom', 'done', label);
+            _cacheSet(bwCacheKey, { ai_bing_found: snapshot.ai_bing_found, ai_bing_cited: snapshot.ai_bing_cited }, CACHE_TTL.bing);
+          } else {
+            const errTxt = await bwResp.text().catch(()=>'');
+            _trSetStep(pageId, 'youcom', 'error', `Bing Webmaster API ${bwResp.status}: ${errTxt.substring(0,100)} — check your site is verified in Bing Webmaster Tools`);
+            snapshot.ai_bing_cited = false;
+          }
+        } catch(e) {
+          _trSetStep(pageId, 'youcom', 'error', 'Bing Webmaster failed: ' + e.message);
+          snapshot.ai_bing_cited = false;
+        }
+      }
+    } else if(_bingKey) {
       const bingCacheKey2 = 'bing:tracker:' + keyword.toLowerCase().trim() + ':' + domain;
       const bingCached2 = _cacheGet(bingCacheKey2);
       if (bingCached2) {
@@ -37052,7 +40756,7 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
           snapshot.ai_bing_found = webResults.length > 0;
           snapshot.ai_bing_cited = inResults || inSnippets;
           const pos = webResults.findIndex(function(r){ return (r.url||'').includes(domain); });
-          const label = inResults ? `Cited in Bing #${pos+1}` : (inSnippets ? 'Mentioned in snippet' : 'Not found in Bing');
+          const label = inResults ? `Cited in Bing #${pos+1} (generic search, add BING_WEBMASTER_API_KEY for real index data)` : (inSnippets ? 'Mentioned in snippet' : 'Not found in Bing');
           _trSetStep(pageId, 'youcom', 'done', label);
           // Cache Bing result
           _cacheSet(bingCacheKey2, { ai_bing_found: snapshot.ai_bing_found, ai_bing_cited: snapshot.ai_bing_cited }, CACHE_TTL.bing);
@@ -37068,68 +40772,16 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
         console.warn('[tracker] Bing failed:', e.message);
       }
     } else {
-      _trSetStep(pageId, 'youcom', 'error', 'BING_SEARCH_API_KEY not set — free at portal.azure.com (1000 calls/mo)');
+      _trSetStep(pageId, 'youcom', 'error', 'No Bing key set — add BING_WEBMASTER_API_KEY (free, real data) or BING_SEARCH_API_KEY (generic fallback)');
       snapshot.ai_bing_cited = false;
     }
     })(),
-    (async function(){
-
-    // ── 4b. Brave Search citation ──────────────────────────────────────────────
-    if (!runBrave && prevSnap) {
-      snapshot.ai_brave_cited = prevSnap.ai_brave_cited;
-      _trSetStep(pageId, 'brave', 'done', (prevSnap.ai_brave_cited ? '✅' : '❌') + ' Cached result (scan ' + scanCount + ')');
-    } else {
-    _trSetStep(pageId, 'brave', 'running', 'Checking Brave Search (Claude index): ' + keyword);
-    const _bk = keys.braveKey || process.env.BRAVE_SEARCH_API_KEY || '';
-    if(_bk) {
-      try {
-        // Brave Search API v1 — only q and count are required params
-        const bResp = await fetch(
-          `https://api.search.brave.com/res/v1/web/search?q=${encodeURIComponent(keyword)}&count=10`,
-          {
-            headers: {
-              'Accept': 'application/json',
-              'Accept-Encoding': 'gzip',
-              'X-Subscription-Token': _bk
-            },
-            signal: AbortSignal.timeout(12000)
-          }
-        );
-        if(bResp.ok) {
-          const bData = await bResp.json();
-          const results = (bData.web && bData.web.results) || [];
-          const inResults = results.some(function(r){
-            return (r.url||'').replace(/^https?:\/\//, '').startsWith(domain);
-          });
-          const inSnippets = results.some(function(r){
-            return (r.description||'').includes(domain);
-          });
-          snapshot.ai_brave_cited = inResults || inSnippets;
-          snapshot.ai_brave_found = results.length > 0;
-          const bPos = results.findIndex(function(r){ return (r.url||'').includes(domain); });
-          const label = inResults ? `Cited in Brave #${bPos+1}` : (inSnippets ? 'Mentioned in snippet' : 'Not found in Brave');
-          _trSetStep(pageId, 'brave', 'done', label);
-        } else {
-          const err = await bResp.text().catch(()=>'');
-          _trSetStep(pageId, 'brave', 'error', 'Brave API ' + bResp.status + ': ' + err.substring(0,80));
-        }
-      } catch(e) {
-        _trSetStep(pageId, 'brave', 'error', e.message);
-        console.warn('[tracker] Brave failed:', e.message);
-      }
-    } else {
-      _trSetStep(pageId, 'brave', 'error', 'BRAVE_SEARCH_API_KEY not set — add to Railway env vars');
-      snapshot.ai_brave_cited = false;
-    }
-    } // end brave else block
-    })()
     ]);
 
   } else {
     _trSetStep(pageId, 'google', 'error', 'No keyword set — add a target keyword to this page');
     _trSetStep(pageId, 'perplexity', 'error', 'No keyword — skipped');
     _trSetStep(pageId, 'youcom', 'error', 'No keyword — skipped');
-    _trSetStep(pageId, 'brave', 'error', 'No keyword — skipped');
   }
 
   // 4b. Author Trust Score — E-E-A-T signal analysis
@@ -37166,7 +40818,7 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
     })();
     const _shouldHaveGsc = (page.gsc_impressions || 0) > 0;
     const hasCachedBrief = _cachedItems.length > 0 && page.brief_check_count > 0 && (!_shouldHaveGsc || _cachedGsc.length > 0);
-    const skipGemini = !resultsChanged && hasCachedBrief;
+    const skipGemini = !resultsChanged && hasCachedBrief && !forceRescan;
     // Email/notify only on a REAL change (position/AIO/citations). Regenerating a missing GSC brief
     // when results are unchanged must NOT trigger an email — otherwise self-heal = spam.
     snapshot._unchanged = !resultsChanged;
@@ -37195,10 +40847,18 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
       const rawHtml = page.html_content || '';
       const htmlExcerpt = rawHtml.substring(0, 8000);
       // ── Auto language: write the brief in the page's OWN language (from <html lang>, content fallback) ──
-      const _briefLang = detectContentLanguage(rawHtml);
-      const _langNames = { en:'English', nl:'Dutch', de:'German', fr:'French', es:'Spanish', it:'Italian', pt:'Portuguese', pl:'Polish', da:'Danish', sv:'Swedish', no:'Norwegian', fi:'Finnish' };
+      // OVERRIDE: if the client explicitly set a brief_language (owner reads a different language than
+      // the page content itself, e.g. an English page for a Spanish-speaking client), that wins.
+      let _briefLang = detectContentLanguage(rawHtml);
+      try {
+        if (page.tracker_client_id) {
+          const _langR = await pool.query('SELECT brief_language FROM tracker_clients WHERE id=$1', [page.tracker_client_id]);
+          if (_langR.rows.length && _langR.rows[0].brief_language && _langR.rows[0].brief_language !== 'auto') _briefLang = _langR.rows[0].brief_language;
+        }
+      } catch(e) {}
+      const _langNames = { en:'English', nl:'Dutch', de:'German', fr:'French', es:'Spanish', it:'Italian', pt:'Portuguese', pl:'Polish', da:'Danish', sv:'Swedish', no:'Norwegian', fi:'Finnish', tr:'Turkish', ar:'Arabic', zh:'Chinese', ja:'Japanese', ko:'Korean', ru:'Russian', hi:'Hindi' };
       const _langName = _langNames[_briefLang] || 'English';
-      const _langDirective = (_briefLang === 'en') ? '' : ('\n\nLANGUAGE REQUIREMENT: This page is written in ' + _langName + '. Write ALL brief output — every title, action, passage, signal and impact line — in ' + _langName + '. Keep URLs, brand names, HTML tags/attributes, schema and code exactly as-is (do not translate those).');
+      const _langDirective = (_briefLang === 'en') ? '' : ('\n\nLANGUAGE REQUIREMENT: Write ALL brief output — every title, action, passage, signal and impact line — in ' + _langName + '. Keep URLs, brand names, HTML tags/attributes, schema and code exactly as-is (do not translate those).');
       // ── Presence detection on the FULL page so the brief never re-recommends what already exists ──
       const _onPage = {
         def: /id=["']?direct-answer|class=["'][^"']*direct-answer|is (a|the) (leading|strategic|systematic|premier|content)/i.test(rawHtml),
@@ -37265,9 +40925,9 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
       if (_realAuthor) {
         _alreadyOnPage += '\n\nAUTHOR — USE ONLY THESE VERIFIED DETAILS (do NOT add any other author numbers): ' + _realAuthor;
       } else if (!_brandContext) {
-        _alreadyOnPage += '\n\nAUTHOR / E-E-A-T RULE: You do NOT know this site\'s author. If you recommend adding author credentials, NEVER invent specific numbers (years of experience, number of clients, sites, success percentages, countries, certifications). Output a fill-in TEMPLATE with [bracketed placeholders] for the owner to complete with their own verifiable details — e.g. "About the Author: [Name], [role] with [X] years in [field]. [Verifiable result or credential]." Never present invented statistics as if they were facts.';
+        _alreadyOnPage += '\n\nAUTHOR / E-E-A-T RULE: You do NOT know this site\'s author. NEVER invent specific numbers (years of experience, number of clients, sites, success percentages, countries, certifications), and NEVER output a placeholder template with brackets. Instead, if you recommend strengthening E-E-A-T, write it around what CAN be verified — the company/team name and service area, e.g. "Written by the [Company Name] team, a licensed [service area] contractor." If no company details are available either, skip the author-credentials action entirely rather than emit a fill-in-the-blank.';
       } else {
-        _alreadyOnPage += '\n\nAUTHOR / E-E-A-T RULE: Use only author details found in the OWNER-PROVIDED CONTEXT above. If a specific author number is not written there, do NOT invent it — use a [placeholder] instead.';
+        _alreadyOnPage += '\n\nAUTHOR / E-E-A-T RULE: Use only author details found in the OWNER-PROVIDED CONTEXT above. If a specific author number is not written there, do NOT invent it and do NOT use a placeholder — write around it using only what is verifiable, or skip that specific claim.';
       }
 
       // Stripped text for content comparison
@@ -37305,6 +40965,53 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
 
       // ── Internal-link candidates: ONLY real URLs from the client's sitemap (never invented) ──
       let _otherPagesList = '';
+      let _cannibalContext = ''; // hub/spoke or duplicate-keyword conflicts involving THIS page — injected into both briefs so the fix comes out as concrete actions
+      let _gapContext = ''; // OPEN impression-gap families (AI verdict: SECTION on this page) — the brief must build its impression-growth action from these REAL queries, not a guess
+      // ── Competitor gap: ALL 5 Google organic competitors + Perplexity's cited sources, so the
+      // brief names WHO is winning, WHAT they have, and WHAT this page is missing — for both Google
+      // Search and AI citation systems. Previously only "Competitor #1" was referenced; the other 4
+      // Google competitors and every Perplexity-cited source were fetched and stored but never used.
+      let _competitorContext = '';
+      let _aioOnlyContext = '';
+      // ── Inject manual AIO text so Gemini can give targeted citation recommendations
+      if (aioText) {
+        _aioOnlyContext += '\n\nGOOGLE AI OVERVIEW FOR THIS KEYWORD:\n' + aioText.replace(/^Manual AIO: /i, '') + '\n';
+        if (snapshot.ai_google_overview_cited) {
+          _aioOnlyContext += 'STATUS: This page IS cited in the AI Overview above.\n';
+          _aioOnlyContext += 'USE THE AI OVERVIEW AS A BLUEPRINT: extract the exact sub-topics, entities, features and structure Google chose to summarise. Recommend how THIS page can defend and strengthen its cited passages so it stays the source Google quotes.\n';
+        } else {
+          _aioOnlyContext += 'STATUS: This page is NOT cited in the AI Overview above. The brief MUST include specific recommendations on what to write and where to place it to earn a citation in this AI Overview.\n';
+          _aioOnlyContext += 'USE THE AI OVERVIEW AS A BLUEPRINT: parse the AI Overview text above into the concrete entities, sub-topics, feature lists and best-practice points Google rewards (e.g. definition sentence, key capabilities, strategy/best-practice items). For each one this page is missing or covers weakly, give a ready-to-paste passage (WHAT/WHERE/WRITE) so the page directly answers the same question Google is answering — that is what earns the citation.\n';
+        }
+        var _aioRefs = Array.isArray(snapshot.ai_google_overview_references) ? snapshot.ai_google_overview_references : [];
+        if (_aioRefs.length) {
+          _aioOnlyContext += '\nDOMAINS GOOGLE CURRENTLY CITES IN THIS AI OVERVIEW (each with what they say for this query — analyse the gap per source):\n';
+          _aioRefs.slice(0,10).forEach(function(r,i){
+            var _h=''; try { _h=new URL(r.url).hostname.replace(/^www\./,''); } catch(e){ _h=r.url; }
+            _aioOnlyContext += (i+1)+'. '+_h+(r.organic_position?(' (ranks #'+r.organic_position+' organically)'):'')+(r.title?(' — "'+String(r.title).slice(0,90)+'"'):'')+(r.snippet?('\n   WHAT THEY SAY: '+String(r.snippet).slice(0,240)):'')+'\n';
+          });
+          _aioOnlyContext += 'For EACH cited source above, work out: what specifically it does that earned the AIO citation, and the concrete gap THIS page must close to match or displace it. Put this in the aio_citation_gap array of your JSON output.\n';
+        }
+      }
+      try {
+        const _gComp = (snapshot._competitors || []).filter(function(c){ return c && c.url; });
+        const _pComp = (snapshot.ai_perplexity_competitors || []).filter(Boolean);
+        if (_gComp.length || _pComp.length) {
+          _competitorContext = '\n\nCOMPETITOR GAP (real data from this scan — name specifics, never generic \"add more content\"):\n';
+          if (_gComp.length) {
+            _competitorContext += 'Google top ' + _gComp.length + ' organic results for this keyword:\n'
+              + _gComp.slice(0, 5).map(function(c, i){ return '#' + (c.position || i+1) + ' ' + c.url + ' \u2014 "' + (c.title||'') + '"' + (c.snippet ? ' \u2014 snippet: "' + c.snippet.substring(0,160) + '"' : ''); }).join('\n')
+              + '\n';
+          }
+          if (_pComp.length) {
+            _competitorContext += 'Sources Perplexity currently cites for this topic (this page is NOT among them):\n'
+              + _pComp.slice(0, 5).map(function(u){ return '- ' + u; }).join('\n')
+              + '\n';
+          }
+          _competitorContext += '\nTASK: this is DIAGNOSTIC, not just prescriptive \u2014 the owner needs to see the actual competitive landscape, not one compressed sentence. Write ONE action (system \"Competitor Gap\", priority high or medium) whose \"action\" field is a structured breakdown with these EXACT FOUR LABELED HEADINGS, IN THIS ORDER, EVERY TIME \u2014 this is a strict template, not a style suggestion:\n\"GOOGLE SEARCH \u2014 top results:\"\nthen ONE short line PER competitor listed above (all of them, not just the top one), each starting with \"#<position>\": \"#1 <url> \u2014 wins because <specific claim/structure/credential/stat>.\"\n\"AI OVERVIEW / AI AGGREGATION \u2014 sourcing:\"\n1-2 sentences on what AI Overview and Perplexity actually pull from \u2014 name the Perplexity-cited sources from the list above if present, or state this page has no visibility there yet if the list is empty.\n\"YOUR GAP:\"\n1-2 sentences naming the ONE specific, recurring thing across these competitors that this page lacks.\n\"FIX:\"\nthe exact copy-paste text that closes that specific gap.\nDo not merge headings, do not skip a heading even if brief, do not go straight to the fix. All four headings must appear as their own line, verbatim, before their content. This structure is mandatory, not optional.';
+          _competitorContext += '\n\nTABLE REQUIREMENT: this same Competitor Gap action must ALSO include a \"comparison_table\" field \u2014 a JSON array, one row per Google competitor listed above (all of them), each row: {\"competitor\": \"<bare domain, e.g. example.com>\", \"what_they_do_well\": \"<one specific, concrete strength \u2014 a claim, structure, credential, or stat, NOT a vague quality>\", \"our_gap\": \"<what THIS page specifically lacks by comparison>\", \"what_to_do\": \"<one concrete, specific instruction to close that gap for this row>\"}. This is a teaching tool for the owner \u2014 every field must be specific enough that a non-SEO person understands exactly why that competitor outranks them and exactly what to change. Never write \"better content\" or \"more optimized\" \u2014 name the actual claim, number, structure, or credential.';
+        }
+      } catch(e) {}
       let _sitemapUrls = [];
       try {
         if (page.tracker_client_id) {
@@ -37352,6 +41059,105 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
             _opR.rows.forEach(function(r){ var k = r.keyword || r.gsc_keyword; if (k) _topicByUrl[String(r.url).replace(/\/$/, '')] = k; });
             if (!_sitemapUrls.length) _sitemapUrls = _opR.rows.map(function(r){ return r.url; }).filter(Boolean); // fallback: still REAL urls, never invented
             _otherPagesList = _sitemapUrls.map(function(u){ var t = _topicByUrl[u.replace(/\/$/, '')]; return '- ' + u + (t ? ' [topic: ' + t + ']' : ''); }).join('\n');
+
+            // ── Impression-gap context: open SECTION families targeting THIS page ──
+            // The owner ran "Sort this out for me"; families they did NOT check off are open work.
+            // Their queries are real GSC data with impressions — the brief's impression-growth action
+            // must target these instead of guessing an adjacent intent.
+            try {
+              if (page.tracker_client_id) {
+                const _gcr = await pool.query('SELECT gap_analysis, gap_done_queries FROM tracker_clients WHERE id=$1', [page.tracker_client_id]);
+                if (_gcr.rows.length && _gcr.rows[0].gap_analysis) {
+                  let _ga = null, _gd = [];
+                  try { _ga = JSON.parse(_gcr.rows[0].gap_analysis); } catch(e) {}
+                  try { _gd = JSON.parse(_gcr.rows[0].gap_done_queries || '[]'); } catch(e) {}
+                  const _gn = s => String(s||'').toLowerCase().replace(/\s+/g,' ').trim();
+                  const _pageNorm = String(page.url||'').replace(/^https?:\/\//,'').replace(/^www\./,'').replace(/\/+$/,'').toLowerCase();
+                  if (_ga && Array.isArray(_ga.families)) {
+                    const _open = _ga.families.filter(f => {
+                      if (f.verdict !== 'SECTION' || !f.target) return false;
+                      const _tNorm = String(f.target).replace(/^https?:\/\//,'').replace(/^www\./,'').replace(/\/+$/,'').toLowerCase();
+                      if (_pageNorm.indexOf(_tNorm) === -1 && _tNorm.indexOf(_pageNorm) === -1) return false;
+                      const qs = (f.queries||[]).map(_gn).filter(Boolean);
+                      if (!qs.length) return false;
+                      return qs.some(q => _gd.indexOf(q) === -1); // at least one query still open
+                    });
+                    if (_open.length) {
+                      _gapContext = '\n\nIMPRESSION-GAP QUERIES FOR THIS PAGE (real GSC data, owner-verified as open work — do NOT guess an adjacent intent, use these):\n'
+                        + _open.slice(0, 3).map((f, i) => (i+1) + '. Family "' + (f.name||'') + '" (' + (f.total_impressions||0) + ' impressions): ' + (f.queries||[]).slice(0, 5).join(' | '))
+                          .join('\n')
+                        + '\n\nWRITE THE SECTION, DO NOT JUST DESCRIBE IT. For the highest-impression family above, output a ready-to-paste section INSIDE this brief, clearly marked, containing:\n'
+                        + '  \u2022 One question-form H2 that quotes the query verbatim where natural (e.g. "<h2>How fast can you get emergency roof repair in NJ?</h2>").\n'
+                        + '  \u2022 A 40-60 word answer directly below it, answer-first, specific, entity-anchored to this business.\n'
+                        + 'HARD RULES for the written section: (1) NEVER invent numbers, dates, prices, certifications, review counts or guarantees \u2014 and NEVER use a bracketed placeholder either. If a real figure would strengthen a sentence but is not verifiable, rewrite the sentence so it reads naturally without that figure (e.g. \"same-day dispatch\" instead of a specific made-up response time). (2) No fluff, no "in today\u2019s world" openers. (3) Plain HTML only (<h2>, <p>). (4) Label it exactly as "\u2500\u2500 READY-TO-PASTE SECTION \u2500\u2500" so it is easy to find and copy. This lets the owner paste it as-is, edit it, or hand it to an external writer \u2014 their choice.';
+                    }
+                  }
+                }
+              }
+            } catch(e) {}
+
+            // ── Cannibalization context for THIS page vs its siblings (same rules as the tracker panel) ──
+            try {
+              const _conf = [];
+              // REAL EVIDENCE FIRST: same query text owned by BOTH this page AND another page's per-page
+              // GSC data — this is the exact PROVEN definition used in the tracker's Cannibalization panel.
+              // The keyword-text heuristic below only catches BROAD hub/spoke relationships from the single
+              // manually-set keyword field; it has no way to see that two pages share an ACTUAL search query
+              // unless their target keywords happen to overlap in text — which is why a page like "24 hour
+              // emergency roof repair nj" got NO cannibalization context against "wind damage roof repair nj"
+              // despite both pages sharing dozens of PROVEN queries (their keyword text alone doesn't overlap).
+              try {
+                const _provenR = await pool.query(
+                  `SELECT q1.query, q1.impressions, p2.url AS other_url, p2.keyword AS other_keyword
+                   FROM tracker_gsc_queries q1
+                   JOIN tracker_gsc_queries q2 ON LOWER(TRIM(q1.query)) = LOWER(TRIM(q2.query))
+                     AND q2.page_id IS NOT NULL AND q2.page_id <> q1.page_id AND q2.tracker_client_id = q1.tracker_client_id
+                   JOIN tracker_pages p2 ON p2.id = q2.page_id
+                   WHERE q1.page_id = $1 AND q1.tracker_client_id = $2
+                   ORDER BY q1.impressions DESC NULLS LAST LIMIT 12`,
+                  [page.id, page.tracker_client_id]
+                );
+                if (_provenR.rows.length) {
+                  const _byUrl = {};
+                  _provenR.rows.forEach(function(r){
+                    if (!_byUrl[r.other_url]) _byUrl[r.other_url] = { kw: r.other_keyword, queries: [] };
+                    _byUrl[r.other_url].queries.push(r.query);
+                  });
+                  Object.keys(_byUrl).slice(0, 3).forEach(function(u){
+                    const _b = _byUrl[u];
+                    _conf.push('PROVEN CONFLICT with ' + u + (_b.kw ? ' (keyword: "' + _b.kw + '")' : '') + '. Both pages already share ' + _b.queries.length + ' identical search quer' + (_b.queries.length===1?'y':'ies') + ' in real GSC data: "' + _b.queries.slice(0,5).join('", "') + '". Required actions in this brief: (a) an internal-link action FROM this page TO ' + u + ' with an anchor naming its distinct angle; (b) differentiate THIS page\'s intent from ' + u + ' with an exact new title/H1/opening-paragraph proposal so Google stops treating them as duplicates.');
+                  });
+                }
+              } catch(e) {}
+              const _cnorm = function(s){ return String(s||'').toLowerCase().replace(/[^a-z0-9 ]/g,' ').replace(/ +/g,' ').trim(); };
+              const _myKw = _cnorm(page.keyword || page.gsc_keyword || keyword || '');
+              if (_myKw) {
+                const _myW = _myKw.split(' ').filter(function(w){ return w.length >= 2; });
+                _opR.rows.forEach(function(r){
+                  const _oKw = _cnorm(r.keyword || r.gsc_keyword || '');
+                  if (!_oKw || !r.url) return;
+                  const _oW = _oKw.split(' ').filter(function(w){ return w.length >= 2; });
+                  if (!_myW.length || !_oW.length) return;
+                  const _inter = _myW.filter(function(w){ return _oW.indexOf(w) > -1; }).length;
+                  const _jac = _inter / (_myW.length + _oW.length - _inter);
+                  const _contained = (_inter === _myW.length) || (_inter === _oW.length);
+                  const _sameLen = _myW.length === _oW.length;
+                  if (_contained && !_sameLen) {
+                    const _iAmHub = _myW.length < _oW.length;
+                    const _spokeKw = _iAmHub ? (r.keyword || r.gsc_keyword) : (page.keyword || page.gsc_keyword);
+                    if (_iAmHub) _conf.push('THIS PAGE IS THE HUB. Spoke: ' + r.url + ' (keyword: "' + _spokeKw + '"). Required actions in this brief: (a) an internal-link action adding a link FROM this page TO ' + r.url + ' with EXACT anchor text "' + _spokeKw + '"; (b) if this page has its own content section targeting "' + _spokeKw + '", an action to cut or rewrite that section so this page does not compete with its spoke.');
+                    else _conf.push('THIS PAGE IS A SPOKE of hub ' + r.url + '. Required action in this brief: strengthen what makes this page UNIQUE for "' + (page.keyword || page.gsc_keyword) + '" (specific local details, projects, place names) so it cannot be mistaken for the generic hub content.');
+                  } else if (_jac >= 0.7) {
+                    _conf.push('DUPLICATE-KEYWORD CONFLICT with ' + r.url + ' (keyword: "' + (r.keyword || r.gsc_keyword) + '"). Required action in this brief: differentiate the intent of this page (e.g. service vs cost vs location) with an exact new title/H1 proposal, and add an internal link to ' + r.url + ' with its keyword as anchor text.');
+                  }
+                });
+              }
+              if (_conf.length) {
+                _cannibalContext = '\n\nCANNIBALIZATION CONTEXT (detected by the tracker — MUST be addressed in this brief):\n'
+                  + _conf.slice(0, 4).map(function(c, i){ return (i+1) + '. ' + c; }).join('\n')
+                  + '\nRules: use the EXACT URLs and anchor texts given above — never say "the hub" or "the relevant page" without naming the URL. For every internal-link action, OUTPUT THE READY-TO-PASTE HTML LINE, e.g. <p>For urgent help see our <a href="FULL_URL">EXACT ANCHOR</a>.</p>, so the owner pastes it directly. Mark each with "\u2500\u2500 READY-TO-PASTE \u2500\u2500". No SEO theory needed.';
+              }
+            } catch(e) {}
           } catch(e) {}
         }
       } catch(e) { _otherPagesList = ''; }
@@ -37364,7 +41170,6 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
         if (!snapshot.ai_google_overview_cited) _items.push({ title:'Win Google AI Overview citation', priority:'high', system:'Google AIO', action:'Add a direct, quotable 2-3 sentence definition answering "what is '+_ckw+'" within the first 100 words, right after the H1. AI Overviews quote concise, self-contained answers.', expected_impact:'Eligible for AIO citation within 2-3 crawl cycles' });
         if (!snapshot.ai_perplexity_cited) _items.push({ title:'Win Perplexity citation', priority:'medium', system:'Perplexity', action:'Add an "About the Author" block with a named author, credentials and 1-2 verifiable stats. Perplexity favors clear E-E-A-T signals.', expected_impact:'Stronger author trust → Perplexity citation' });
         if (!snapshot.ai_bing_cited) _items.push({ title:'Win Microsoft Copilot citation', priority:'medium', system:'Microsoft Copilot', action:'Add a 50-60 word summary paragraph near the top that directly matches the search query for "'+_ckw+'".', expected_impact:'Concise top-of-page summary → Copilot citation' });
-        if (!snapshot.ai_brave_cited) _items.push({ title:'Win Claude / Brave citation', priority:'low', system:'Claude/Brave', action:'Add verifiable facts with named sources and a clear author byline. Claude and Brave prioritize factual, well-sourced content.', expected_impact:'Factual sourcing → Claude/Brave citation' });
         if (_cpos != null && parseFloat(_cpos) > 3) _items.push({ title:'Improve Google rank for "'+_ckw+'"', priority:'high', system:'Google AIO', action:'Rewrite the <title> and H1 to lead with "'+_ckw+'" plus a clear benefit. Currently ranking #'+_cpos+'.', expected_impact:'Position #'+_cpos+' → top 3 after recrawl' });
         if (Array.isArray(snapshot.graaf_recommendations)) snapshot.graaf_recommendations.slice(0,2).forEach(function(g){ var t=typeof g==='string'?g:(g&&(g.title||g.text||g.name))||''; var a=typeof g==='string'?g:(g&&(g.action||g.fix||g.text||g.detail))||''; if(t||a) _items.push({title:String(t||'Content improvement').substring(0,60),priority:'medium',system:'Content Quality',action:a,expected_impact:''}); });
         snapshot.recommendations = _items.slice(0,6);
@@ -37382,11 +41187,18 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
       // ── CALL 1: Citation Brief ─────────────────────────────────────────
       const _briefToday = new Date().toISOString().slice(0,10);
       const _briefYear = new Date().getFullYear();
+      // Same live-position-with-GSC-fallback used by the post-processing visibility gate below —
+      // computed once here so the PROMPT instruction and the HARD-ENFORCE step never disagree.
+      const _effectivePos = snapshot.google_position || (page.gsc_position ? parseFloat(page.gsc_position) : null);
       const citationPrompt = `You are an AI Citation Strategist. Your job is to create an actionable Citation Brief for a single web page.
 
 CURRENT DATE: Today is ${_briefToday} — treat ${_briefYear} as the current year. For any freshness, recency, or "last updated" recommendation, use ${_briefYear}; NEVER describe an earlier year as "current", "latest", or "this year", and never suggest adding a date that is not ${_briefYear}. If the page content shows an older year (e.g. ${_briefYear - 1} or earlier) anywhere — a heading (H1/H2/H3), title tag, meta description, intro, "last updated", or any "current/latest" claim — explicitly flag it as stale and give the exact replacement text using ${_briefYear} (e.g. rewrite an H1 like "... ${_briefYear - 1}" to "... ${_briefYear}").
 
-A Citation Brief tells the content owner EXACTLY what to change so that Google AI Overview, Perplexity, Microsoft Copilot, and Claude all cite this page in their answers.
+A Citation Brief tells the content owner EXACTLY what to change so that Google AI Overview, Perplexity, and Microsoft Copilot all cite this page in their answers.
+
+${_cannibalContext}${_gapContext}${_aioOnlyContext}
+
+AIO BRIEF SCOPE (strict): this is the AI-citation brief — every action must be about earning a citation in Google AI Overview, Perplexity, or Microsoft Copilot. Do NOT include a Google organic "top 5 search results" ranking breakdown here — that belongs in the separate GSC ranking brief, not this one. If you reference competitors, reference the DOMAINS GOOGLE CURRENTLY CITES IN THIS AI OVERVIEW list above (if present) — never the organic SERP.
 
 INPUT DATA:
 - Page URL: ${pageUrl}
@@ -37395,7 +41207,6 @@ INPUT DATA:
 - Google AI Overview cited: ${snapshot.ai_google_overview_cited ? 'YES' : 'NO'}
 - Perplexity cited: ${snapshot.ai_perplexity_cited ? 'YES' : 'NO'}
 - Microsoft Copilot cited: ${snapshot.ai_bing_cited ? 'YES' : 'NO'}
-- Claude/Brave cited: ${snapshot.ai_brave_cited ? 'YES' : 'NO'}
 - GRAAF score: ${snapshot.score || '?'}/100
 - Page HTML content (first 8000 chars): ${htmlExcerpt.substring(0,8000) || '(no HTML)'}
 - Previous brief actions (if any): ${JSON.stringify((page.brief_content?.items || []).slice(0,3))}
@@ -37408,7 +41219,7 @@ DIAGNOSE THE REAL BLOCKER BEFORE PRESCRIBING (most important step):
 A "Not cited" result has THREE possible root causes, and the correct fix differs for each. Identify the cause per engine from the data above, then make the #1 (HIGH) action address the ACTUAL cause — not a generic "add a passage".
 1. NOT VISIBLE — an engine cannot cite a page it does not surface.
    - Google AI Overview and ChatGPT draw from Google's top results. If Google position is worse than ~10 (current: ${snapshot.google_position || 'not ranked'}), AIO will almost never cite this page no matter how quotable it is. Then the gating action is to RANK INTO THE TOP 10 first — say so plainly as the dependency (the GSC Brief covers the how). Citeability passages are secondary until the page reaches the top ~10.
-   - Microsoft Copilot reads the Bing index; Claude reads the Brave index. If Copilot/Claude are "Not cited" and the page may not be in those indexes, the fix is to GET INDEXED THERE — submit the URL in Bing Webmaster Tools and via IndexNow (Brave honors IndexNow) — NOT to add on-page passages.
+   - Microsoft Copilot reads the Bing index. If Copilot is "Not cited" and the page may not be in that index, the fix is to GET INDEXED THERE — submit the URL in Bing Webmaster Tools — NOT to add on-page passages.
 2. VISIBLE BUT NOT EXTRACTABLE — the page ranks/indexes but the answer is not in a liftable, self-contained form. Then apply the citeability passage/structure/schema actions below.
 3. VISIBLE & EXTRACTABLE BUT OUTCOMPETED — a competitor's passage is more direct or more authoritative. Then match and beat the cited competitor's passage and strengthen author E-E-A-T.
 Be honest about which blocker applies. If position is poor, do NOT imply a passage edit alone will earn an AIO citation — name ranking into the top 10 as the prerequisite.
@@ -37432,7 +41243,7 @@ Perplexity:
 - Needs clear author credentials and E-E-A-T signals with specifics (years, clients count, notable results)
 - Needs specific data points, statistics, or original research
 - Needs outbound links to authoritative sources
-- Strongly benefits from 2-4 attributed EXPERT QUOTES (blockquote + cite) from REAL, NAMED sources with real URLs — e.g. a published study, or a named author at a known publication (Ahrefs, Search Engine Land, Google Search Central). Recommend adding these. CRITICAL: never fabricate a quote, name, title, organization, statistic, or URL. If you cannot supply a real, verifiable source, output the blockquote with [bracketed placeholders] for the owner to fill — never invent one.
+- Strongly benefits from 2-4 attributed EXPERT QUOTES (blockquote + cite) from REAL, NAMED sources with real URLs — e.g. a published study, or a named author at a known publication (Ahrefs, Search Engine Land, Google Search Central). Recommend adding these. CRITICAL: never fabricate a quote, name, title, organization, statistic, or URL. If you cannot supply a real, verifiable quote with a real named source and real URL, do NOT recommend adding a quote at all for this action — skip that idea entirely rather than write a placeholder or invented one.
 - Loves numbered lists and step-by-step formats
 
 Microsoft Copilot:
@@ -37440,13 +41251,6 @@ Microsoft Copilot:
 - Needs a concise summary paragraph (50-80 words) near top
 - Needs the keyword in H1, first paragraph, and meta title
 - Pulls from the Bing index — the page MUST be indexed in Bing first. If Copilot shows "Not cited", recommend submitting the URL in Bing Webmaster Tools and via IndexNow before any passage edits
-
-Claude/Brave:
-- Needs factual, verifiable claims with sources
-- Needs a clear "About the author" section
-- Needs the page to load fast and be mobile-optimized
-- Pulls from the Brave index — if "Not cited", recommend IndexNow submission (Brave honors it) so the page is discoverable before passage work
-- Prefers pages with consistent publishing history
 
 TASK:
 Analyze the input data and create a Citation Brief with exactly 5 actions. Each action must be:
@@ -37457,13 +41261,13 @@ Analyze the input data and create a Citation Brief with exactly 5 actions. Each 
 5. LABEL + OPERATION + LOCATION: begin every "action" with the tag [FOR AI CITATION], then the operation in CAPITALS and the exact place, so the client knows precisely what to do — "ADD after your H1: ...", "MERGE into your opening paragraph: ...", "REPLACE your existing FAQ schema with: ...", "NEW BLOCK before the footer: ...". Always state whether the content is added, merged into existing text, or replaces something — and exactly where on the page.
 6. NO DUPLICATES: never output two actions that touch the same page element or repeat the same change. Each of the 5 actions must target a DISTINCT element/section. If the relevant content already exists on the page, use MODIFY or REPLACE on it — never tell the user to ADD a second copy of something that is already there.
 7. STAY IN YOUR LANE: this is the AI-CITATION brief only. Generate AI-citation passage/structure/schema actions. Do NOT include Google ranking, meta-title, or CTR actions — a separate GSC Brief covers those.
-${(snapshot.google_position && snapshot.google_position > 10) ? `8. VISIBILITY GATE (REQUIRED FIRST ACTION): this page ranks at #${snapshot.google_position}. Google AI Overview and ChatGPT cite almost only from the top ~10, so passage edits alone will NOT earn an AIO/ChatGPT citation yet. Make ACTION #1 a status item — title like "Rank into top 10 first (AIO gate)", system "Visibility", priority "high" — that states plainly: at #${snapshot.google_position} AIO/ChatGPT will not cite this page until it reaches the top ~10; the ranking work is in the separate GSC Brief; the remaining citation actions below PREPARE the page so it becomes citeable the moment it ranks. Do NOT give ranking how-to here (that belongs in the GSC Brief) — only state the dependency and point to it. The other 4 actions stay citation-focused.` : ''}
+${(_effectivePos && _effectivePos > 10) ? `8. VISIBILITY GATE (REQUIRED FIRST ACTION): this page ranks at #${_effectivePos}. Google AI Overview and ChatGPT cite almost only from the top ~10, so passage edits alone will NOT earn an AIO/ChatGPT citation yet. Make ACTION #1 a status item — title like "Rank into top 10 first (AIO gate)", system "Visibility", priority "high" — that states plainly: at #${_effectivePos} AIO/ChatGPT will not cite this page until it reaches the top ~10; the ranking work is in the separate GSC Brief; the remaining citation actions below PREPARE the page so it becomes citeable the moment it ranks. Do NOT give ranking how-to here (that belongs in the GSC Brief) — only state the dependency and point to it. The other 4 actions stay citation-focused.` : ''}
+9. ABOVE-THE-FOLD PRIORITY: AI crawlers and extraction systems weight the first ~30% of a page's content far more heavily than the rest — a quotable answer buried at the bottom is far less likely to be lifted than the same answer near the top. So LOCATION is not just about clarity, it is about citation odds: whenever a fix could reasonably go in more than one place, choose the one closer to the H1/opening paragraph over one further down the page, and say so explicitly — e.g. "ADD immediately after your H1 (not further down — AI extraction weights the first ~30% of the page)". Only place something later on the page (e.g. an FAQ near the footer) when it genuinely belongs there structurally (like a full FAQPage block) — never bury a core quotable answer low on the page just for tidiness.
 
 ACTIONS THAT ARE ALREADY RESOLVED — DO NOT INCLUDE THESE:`
 + (snapshot.ai_google_overview_cited ? '\n- AIO cites this page → SKIP all Google AIO actions' : '')
 + (snapshot.ai_perplexity_cited ? '\n- Perplexity cites this page → SKIP all Perplexity actions' : '')
 + (snapshot.ai_bing_cited ? '\n- Copilot cites this page → SKIP all Copilot actions' : '')
-+ (snapshot.ai_brave_cited ? '\n- Claude/Brave cites this page → SKIP all Claude actions' : '')
 + (snapshot.google_position && snapshot.google_position <= 3 ? '\n- Position #'+snapshot.google_position+' → SKIP basic ranking actions' : '')
 + _alreadyOnPage
 + `\n- Remove any actions from previous brief that are now done
@@ -37484,18 +41288,23 @@ TOOL/APP SAFETY (decide this first): if the page is a functional tool, calculato
 
 CANNIBALISATION: if one of the sitemap candidate URLs above clearly already targets the SAME keyword/intent as "${kw}", do NOT suggest linking to it. Instead output ONE action (system "Cannibalisation", priority "medium") that names the conflicting URL and recommends differentiating the two pages' intent or canonicalising, so two of the owner's own pages stop competing for the same query.
 
-NO FABRICATION (hard rule, overrides everything): NEVER invent a statistic, percentage, figure, date, quote, name, job title, organisation, award, certification, or ranking, and NEVER add an unverifiable superiority claim such as "#1", "best", "top-rated", or "leading" unless it is already proven on the page. If a number or quote would strengthen a passage but you cannot verify it from the page content or cite a real, named source with a real URL, write it with a [bracketed placeholder] for the owner to fill, or leave it out. A fabricated fact is a failed brief.
+NO FABRICATION (hard rule, overrides everything): NEVER invent a statistic, percentage, figure, date, quote, name, job title, organisation, award, certification, or ranking, and NEVER add an unverifiable superiority claim such as "#1", "best", "top-rated", or "leading" unless it is already proven on the page. If a number or quote would strengthen a passage but you cannot verify it from the page content or cite a real, named source with a real URL, DO NOT use a placeholder or bracket — rewrite the sentence so it reads naturally WITHOUT that specific detail (e.g. instead of "with [X] years of experience" write "with years of hands-on experience"; instead of a fake response time, write "fast, same-day dispatch" if that is supported by the page, or omit the claim). Every sentence delivered must be finished, real prose the owner can paste as-is — never a fill-in-the-blank. A fabricated fact is a failed brief; so is a bracketed placeholder.
+
+AIO COMPETITOR GAP TABLE SOURCE (if you include a Competitor Gap item): its comparison_table rows must come from the "DOMAINS GOOGLE CURRENTLY CITES IN THIS AI OVERVIEW" list above, if present — these are the actual AIO sources, and this is an AI-citation brief, not a ranking brief. If that list is empty, either omit the Competitor Gap item entirely or write it around the Perplexity-cited sources list above. Never populate this table from organic Google search results — that data belongs only in the separate GSC Brief.
 
 OUTPUT FORMAT — return ONLY this JSON, no markdown, no explanation, no preamble:
-[{"title":"6 words max describing the gap","priority":"high","system":"Google AIO","action":"[OPERATION] + [LOCATION] + exact copy-paste text. Pick the operation that fits the GAP — if the element already exists (definition, micro-answer, FAQ, schema, author), use MODIFY or REPLACE on it, NEVER ADD a duplicate. e.g. 'MODIFY your existing direct-answer block to: ...' or 'ADD as a new FAQ answer: ...'. End with: This makes the page more citeable for Google AI Overview because [specific reason based on AIO requirements above].","expected_impact":"Increases the likelihood of an AIO citation once the page ranks in the top ~10 and is re-crawled — state the honest dependency, not a guarantee"}]
+[{"title":"6 words max describing the gap","priority":"high","system":"Google AIO","action":"[OPERATION] + [LOCATION] + exact copy-paste text. Pick the operation that fits the GAP — if the element already exists (definition, micro-answer, FAQ, schema, author), use MODIFY or REPLACE on it, NEVER ADD a duplicate. e.g. 'MODIFY your existing direct-answer block to: ...' or 'ADD as a new FAQ answer: ...'. End with: This makes the page more citeable for Google AI Overview because [specific reason based on AIO requirements above].","expected_impact":"Increases the likelihood of an AIO citation once the page ranks in the top ~10 and is re-crawled — state the honest dependency, not a guarantee", "comparison_table (ONLY on the Competitor Gap item, omit for all others)":[{"competitor":"bare domain","what_they_do_well":"specific concrete strength","our_gap":"what this page lacks by comparison","what_to_do":"concrete instruction for this row"}]}]
 
-IMPACT HONESTY RULE: AI citation is never guaranteed. NEVER write that an engine "will cite" the page, and never promise a fixed number of crawl cycles. Use likelihood language ("increases the likelihood", "makes the page eligible", "improves the chance") and always name the dependency (ranking into the top 10 for AIO/ChatGPT; being indexed in Bing/Brave for Copilot/Claude). An honest, qualified impact line is required — an over-promise is a failed action.
+IMPACT HONESTY RULE: AI citation is never guaranteed. NEVER write that an engine "will cite" the page, and never promise a fixed number of crawl cycles. Use likelihood language ("increases the likelihood", "makes the page eligible", "improves the chance") and always name the dependency (ranking into the top 10 for AIO/ChatGPT; being indexed in Bing for Copilot). An honest, qualified impact line is required — an over-promise is a failed action.
+
+EVERYTHING WRITTEN OUT (hard rule): the "action" field must contain the literal final text the owner pastes — exact passage, exact FAQ Q&A, exact blockquote, exact schema JSON, exact <a href> line. NEVER output a task-description ("add an FAQ", "include statistics", "strengthen E-E-A-T", "add author credentials") without the finished text beside it. NO PLACEHOLDERS OF ANY KIND — not [OWNER: ...], not [AUTHOR NAME], not [insert X]. If a specific fact (years in business, project count, a name, a URL) is not verifiable from the page or profile, rewrite the sentence so it does not need that fact — e.g. instead of "With [OWNER: insert number] completed NJ roofing projects" write "With a strong track record of completed NJ roofing projects". Deliver only finished, ready-to-paste prose — never a fill-in-the-blank.
 
 QUALITY BAR: Every action must be so specific that the user can implement it in under 10 minutes without asking any follow-up questions. If you write "improve your introduction" you have failed. Write the introduction FOR them.`;
       // ── CALL 2: GSC Ranking Brief ──────────────────────────────────────
       const gscPrompt = `You are a Google Search Console Analyst and SEO Strategist. Your job is to create a GSC Brief — a data-driven action plan to move a page from its current position to RANK #1.
 
 CURRENT DATE: Today is ${_briefToday} — treat ${_briefYear} as the current year. Use ${_briefYear} for any freshness or "last updated" recommendation; never reference an older year as current.
+${_gapContext}${_competitorContext}
 
 INPUT DATA:
 - Page URL: ${pageUrl}
@@ -37536,8 +41345,14 @@ WHAT DRIVES RANK #1 IN 2025-2026:
 7. Keyword in title tag, H1, first 100 words, URL slug
 8. Outbound links to authoritative sources (signals trust)
 
+IMPRESSION GROWTH — the other lever (more queries surfaced, not just more clicks from current ones):
+Impressions grow when the page becomes eligible for MORE queries. Every directly answered question is a new query surface, and pages covering adjacent intents get shown for their long-tail variants. Therefore exactly ONE of your actions must be an impression-growth action:
+- ADD one new question-form H2 targeting an ADJACENT search intent of "${kw}" that the page does not answer yet (check the HTML above first — never duplicate an existing section), followed by a 40-60 word direct answer that opens by naming the subject.
+- Choose the intent the way a searcher would ask it (cost / how long / vs alternative / near me / is it worth it / requirements). If the page has FAQ schema, also extend it with this Q&A; if not, do not force schema into this action.
+- HONESTY RULE: you only have page-level aggregates and the single top query above — you do NOT have the full GSC query list. Never present an expansion query as "GSC data shows..."; frame it as an adjacent-intent expansion. If the owner imports their Queries CSV, real position 11-50 queries take priority over guessed intents — say so in the caveat.
+
 TASK:
-Analyze the GSC data and create a GSC Brief with 4-5 actions to reach rank #1 for "${kw}" (ALWAYS include the Meta Title & Description action).
+Analyze the GSC data and create a GSC Brief with 4-5 actions to reach rank #1 for "${kw}" (ALWAYS include the Meta Title & Description action AND exactly one IMPRESSION GROWTH action as defined above).
 
 Each action must include:
 1. The specific GSC signal that triggered this recommendation (e.g. "CTR of 2.7% at position 14 = title problem")
@@ -37553,13 +41368,15 @@ Each action must include:
    - "NEW BLOCK before the footer: <content>"
    Never give content without naming WHERE it goes and WHETHER it is added, merged, or replaced.
 6. NO DUPLICATES: never output two actions that touch the same page element or repeat the same change. Each action must target a DISTINCT element/section. If the relevant content already exists, use MODIFY or REPLACE on it — never tell the user to ADD a second copy of something already there.
-7. STAY IN YOUR LANE: this is the GOOGLE-RANKING brief only. Generate ranking/CTR/meta/content-gap actions. Do NOT repeat AI-citation passage additions (Perplexity/AIO/Copilot text) — a separate Citation Brief covers those.${_alreadyOnPage ? '\n\nALREADY ON PAGE — do NOT recommend adding any of these (skip entirely, or MODIFY/REPLACE only when genuinely weak; re-recommending existing content wastes the owner time and causes duplicates):' + _alreadyOnPage : ''}
+7. STAY IN YOUR LANE: this is the GOOGLE-RANKING brief only. Generate ranking/CTR/meta/content-gap actions. Do NOT repeat AI-citation passage additions (Perplexity/AIO/Copilot text) — a separate Citation Brief covers those.
+9. CANNIBALIZATION IS OWNED BY THE CITATION BRIEF: if the cannibalization context above lists a conflicting page, do NOT write your own "Differentiate from X page" action here — the Citation Brief already writes that exact passage. Only touch a cannibalization-related page here if the fix is a DIFFERENT, genuinely GSC-specific thing (e.g. a meta title clash, not intent/content overlap). When in doubt, skip it here rather than duplicate.
+8. ABOVE-THE-FOLD PRIORITY: AI extraction and Google's own snippet/AIO selection weight the first ~30% of a page's content far more heavily than the rest. When a content-gap fix could reasonably go in more than one place, prefer the location closer to the H1/opening paragraph and say so — e.g. "ADD immediately after your H1 (not further down the page)". Only place content later (like a full FAQ section) when it genuinely belongs there structurally.${_alreadyOnPage ? '\n\nALREADY ON PAGE — do NOT recommend adding any of these (skip entirely, or MODIFY/REPLACE only when genuinely weak; re-recommending existing content wastes the owner time and causes duplicates):' + _alreadyOnPage : ''}
 
 REQUIRED ACTION TYPES (include all of these):
 - A "Meta Title & Description (Rank Math)" action — ALWAYS include this. Give the EXACT SEO Title (max 60 characters, must contain "${kw}") and the EXACT Meta Description (max 155 characters, compelling, includes "${kw}"). Format the action as: "[FOR GOOGLE RANKING] REPLACE in Rank Math → SEO Title: <title>  |  REPLACE in Rank Math → Meta Description: <description>". This is where the client pastes it in WordPress (Rank Math plugin), so be explicit.
 - One "Quick Win" action completable in under 5 minutes
-- One "Content Gap" action based on what competitor #1 has that this page lacks
-- A freshness recommendation if the page content appears dated
+- One "Content Gap" action based on what competitor #1 has that this page lacks — you MUST write the full replacement/new section (the actual <h2> and 2-4 paragraphs), not merely name the gap. "Add a section about X" without the written section is a failed action.
+- A freshness recommendation if the page content appears dated — write the EXACT updated sentence(s)/paragraph to paste, not "update the intro".
 
 WORDPRESS-SAFE OUTPUT — any HTML/copy inside an "action" is pasted into a WordPress Custom HTML block behind LiteSpeed Cache:
 - Fragments only: NEVER output a doctype, <html>, <head>, <body>, a <title> tag, a <style> block, or external CSS (LiteSpeed strips <style>). Style everything with inline style="" attributes and literal hex colours.
@@ -37570,8 +41387,10 @@ NO FABRICATION (hard rule): NEVER invent a statistic, figure, date, quote, name,
 
 TOOL/APP SAFETY: if the page is a functional tool/app/calculator rather than an article, restrict content actions to INSERTS that add sections above/below the tool; never rewrite its structure, IDs, or scripts.
 
+EVERYTHING WRITTEN OUT (hard rule, applies to EVERY action): the "action" field must contain the literal final text the owner pastes — the exact title, the exact paragraph(s) with real sentences, the exact FAQ Q&A, the exact <a href> line, the exact schema JSON. NEVER output a task-description like "expand the content", "add FAQs", "improve the intro", "rewrite for depth", "build internal links", "add backlinks" without the finished text beside it. NO PLACEHOLDERS OF ANY KIND — not [OWNER: ...], not [insert X]. If an action would otherwise need an unverifiable figure (a specific response time, years in business, a license number), rewrite the sentence so it does not depend on that number — e.g. instead of "within [OWNER: insert typical response time] of your call" write "with fast, same-day dispatch" if that is supported by the page, or drop the specific claim entirely. Deliver only finished, ready-to-paste prose. A backlink cannot be pasted, so instead of "get backlinks" write the concrete outreach step: which type of site to contact and the exact anchor text to request.
+
 OUTPUT FORMAT — return ONLY this JSON, no markdown:
-[{"title":"6 words max","priority":"high","trigger":"Specific GSC signal that triggered this (e.g. '9,196 impressions, 2.7% CTR = title mismatch')","action":"Starts with [FOR GOOGLE RANKING] + OPERATION + LOCATION, e.g. 'REPLACE in Rank Math → SEO Title: ...' or 'ADD after your H1: ...' or 'MERGE into your opening paragraph: ...' — always copy-paste ready text","expected_impact":"Honest, qualified effect — direction + dependency, e.g. 'Should improve CTR and support a climb toward page 1 after re-crawl; the exact gain depends on competition'. NEVER a guaranteed position or a fixed deadline","effort":"quick_win"}]
+[{"title":"6 words max","priority":"high","trigger":"Specific GSC signal that triggered this (e.g. '9,196 impressions, 2.7% CTR = title mismatch')","action":"Starts with [FOR GOOGLE RANKING] + OPERATION + LOCATION, e.g. 'REPLACE in Rank Math → SEO Title: ...' or 'ADD after your H1: ...' or 'MERGE into your opening paragraph: ...' — always copy-paste ready text","expected_impact":"Honest, qualified effect — direction + dependency, e.g. 'Should improve CTR and support a climb toward page 1 after re-crawl; the exact gain depends on competition'. NEVER a guaranteed position or a fixed deadline","effort":"quick_win", "comparison_table (ONLY on the Competitor Content Gap item, omit for all others)":[{"competitor":"bare domain","what_they_do_well":"specific concrete strength","our_gap":"what this page lacks by comparison","what_to_do":"concrete instruction for this row"}]}]
 
 IMPACT HONESTY RULE: ranking improvement is never guaranteed. NEVER write a fixed "position X → Y" target or a fixed "within N weeks" deadline. Use honest, qualified language ("should help", "supports a climb toward", "addresses the gap that holds it back") and always name the dependency (Google re-crawl, keyword competition). A guaranteed number or deadline is a failed action.
 
@@ -37579,18 +41398,44 @@ QUALITY BAR: A user with zero SEO knowledge must be able to implement every acti
 
 GOAL: Rank #1 for "${kw}" and capture the maximum clicks from ${gscImpr || 'the available'} monthly impressions.`;
       // Run both in parallel
-      var _briefTimeout = function(){ return new Promise(function(res){ setTimeout(function(){ res({ ok:false, status:408, errorMessage:'brief time budget exceeded' }); }, 30000); }); };
+      // 100s — must comfortably exceed the worst case: a 45s attempt on gemini-2.5-pro, then (if
+      // that fails) a full second 45s attempt on the gemini-2.5-flash fallback. The per-attempt
+      // ceiling itself was raised from 28s to 45s because today's prompts have grown large enough
+      // (cannibalization evidence, competitor data, gap context, above-the-fold rules, etc.) that
+      // even the faster flash model was brushing up against the old 28s limit on its own.
+      var _briefTimeout = function(){ return new Promise(function(res){ setTimeout(function(){ res({ ok:false, status:408, errorMessage:'brief time budget exceeded' }); }, 100000); }); };
       const [citResp, gscResp] = await Promise.all([
         Promise.race([ callGeminiWithFallback(geminiKey, {
           contents: [{ role: 'user', parts: [{ text: citationPrompt + _langDirective }] }],
-          generationConfig: { temperature: 0.3, maxOutputTokens: 8192, responseMimeType: 'application/json' }
-        }, null, null, 1), _briefTimeout() ]),
+          generationConfig: { temperature: 0.3, maxOutputTokens: 16384, responseMimeType: 'application/json' }
+        }, GEMINI_MODEL_BRIEF, null, 1), _briefTimeout() ]),
         Promise.race([ callGeminiWithFallback(geminiKey, {
           contents: [{ role: 'user', parts: [{ text: gscPrompt + _langDirective }] }],
-          generationConfig: { temperature: 0.2, maxOutputTokens: 8192, responseMimeType: 'application/json' }
-        }, null, null, 1), _briefTimeout() ])
+          generationConfig: { temperature: 0.2, maxOutputTokens: 16384, responseMimeType: 'application/json' }
+        }, GEMINI_MODEL_BRIEF, null, 1), _briefTimeout() ])
       ]);
 
+      // Repair common Gemini JSON defects that break JSON.parse and used to collapse the whole
+      // brief into one raw-text item: literal newlines/tabs INSIDE string literals (the #1 cause
+      // — visible as \"...parameter.\n\nFIX:...\" in exported briefs) and trailing commas.
+      const _repairJson = (str) => {
+        let out = '', inStr = false, esc = false;
+        for (let ci = 0; ci < str.length; ci++) {
+          const ch = str[ci];
+          if (inStr) {
+            if (esc) { out += ch; esc = false; continue; }
+            if (ch === '\\') { out += ch; esc = true; continue; }
+            if (ch === '"') { inStr = false; out += ch; continue; }
+            if (ch === '\n') { out += '\\n'; continue; }
+            if (ch === '\r') { continue; }
+            if (ch === '\t') { out += '\\t'; continue; }
+            out += ch; continue;
+          }
+          if (ch === '"') { inStr = true; out += ch; continue; }
+          out += ch;
+        }
+        return out.replace(/,\s*([\]}])/g, '$1');
+      };
       // Parse Citation Brief
       if (citResp.ok) {
         let recs = citResp.data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
@@ -37600,7 +41445,12 @@ GOAL: Rank #1 for "${kw}" and capture the maximum clicks from ${gscImpr || 'the 
         try {
           snapshot.recommendations = JSON.parse(recs);
         } catch(e) {
-          snapshot.recommendations = [{ title: 'Citation Brief', priority: 'medium', system: 'All', action: recs.substring(0,4000), expected_impact: 'See above' }];
+          try {
+            snapshot.recommendations = JSON.parse(_repairJson(recs));
+            console.log('[brief-parse] citation JSON repaired successfully');
+          } catch(e2) {
+            snapshot.recommendations = [{ title: 'Citation Brief', priority: 'medium', system: 'All', action: recs.substring(0,4000), expected_impact: 'See above' }];
+          }
         }
 
         // ── SERVER-SIDE HARD FIX: enforce visibility-gate + strip duplicate/no-op AIO actions ──
@@ -37635,7 +41485,11 @@ GOAL: Rank #1 for "${kw}" and capture the maximum clicks from ${gscImpr || 'the 
             });
 
             // enforce the visibility gate as a hard action #1 when ranking is poor
-            const _pos = snapshot.google_position;
+            // Prefer the LIVE Serper position; fall back to the GSC average when Serper returned
+            // null this run (rate-limited, temporary miss, etc.) — GSC's average is still strong
+            // evidence the page is outside the top 10, and the gate should not silently skip just
+            // because one specific live check came back empty.
+            const _pos = snapshot.google_position || (page.gsc_position ? parseFloat(page.gsc_position) : null);
             if (_pos && _pos > 10) {
               const _hasGate = snapshot.recommendations.some(r =>
                 /(top ?10|top ten|visibility gate|rank into|aio gate)/i.test((r.title||'') + ' ' + (r.action||'')) ||
@@ -37672,11 +41526,177 @@ GOAL: Rank #1 for "${kw}" and capture the maximum clicks from ${gscImpr || 'the 
         try {
           snapshot.gsc_brief = JSON.parse(gscRecs);
         } catch(e) {
-          snapshot.gsc_brief = [{ title: 'GSC Brief', priority: 'medium', trigger: 'See text', action: gscRecs.substring(0,4000), expected_impact: 'Ranking improvement', effort: 'content' }];
+          try {
+            snapshot.gsc_brief = JSON.parse(_repairJson(gscRecs));
+            console.log('[brief-parse] gsc JSON repaired successfully');
+          } catch(e2) {
+            snapshot.gsc_brief = [{ title: 'GSC Brief', priority: 'medium', trigger: 'See text', action: gscRecs.substring(0,4000), expected_impact: 'Ranking improvement', effort: 'content' }];
+          }
         }
+        // ── CODE-LEVEL DEDUPE: cannibalization is meant to live ONLY in the Citation Brief (it writes
+        // the actual differentiation passage). The prompt asks GSC Brief to skip it, but that
+        // instruction is not always followed reliably — so enforce it here too: if a GSC Brief item
+        // targets the SAME conflicting URL as an AIO Brief cannibalization item, drop the GSC one.
+        try {
+          if (Array.isArray(snapshot.gsc_brief) && Array.isArray(snapshot.recommendations)) {
+            const _normCannibalUrl = u => u.replace(/#.*$/,'').replace(/[:.,;!?)\]"'>]+$/,'').replace(/\/+$/,'').toLowerCase();
+            const _citCannibalUrls = [];
+            const _hubSpokePattern = /\bhub\b.{0,20}\bspoke\b|\bspoke\b.{0,20}\bhub\b|generic.{0,30}\bhub\b|\bhub\b.{0,20}content|\bhub\b.{0,10}page/i;
+            let _citHasHubSpoke = false;
+            snapshot.recommendations.forEach(r => {
+              if (/cannib|hub|spoke/i.test(r.system||'')) {
+                const _urls = ((r.title||'') + ' ' + (r.action||'') + ' ' + (r.trigger||'') + ' ' + (r.expected_impact||'')).match(/https?:\/\/[^\s"'<>]+/g) || [];
+                _urls.forEach(u => _citCannibalUrls.push(_normCannibalUrl(u)));
+              }
+              // Some hub/spoke differentiation items name no URL at all — catch those by theme too,
+              // since a URL-only match would silently miss this exact duplication.
+              if (_hubSpokePattern.test((r.title||'') + ' ' + (r.action||'') + ' ' + (r.expected_impact||''))) _citHasHubSpoke = true;
+            });
+            if (_citHasHubSpoke) {
+              snapshot.gsc_brief = snapshot.gsc_brief.filter(g => {
+                const _gIsHubSpoke = _hubSpokePattern.test((g.title||'') + ' ' + (g.action||'') + ' ' + (g.trigger||'') + ' ' + (g.expected_impact||''));
+                return !_gIsHubSpoke; // Citation Brief already covers hub/spoke differentiation
+              });
+            }
+            if (_citCannibalUrls.length) {
+              snapshot.gsc_brief = snapshot.gsc_brief.filter(g => {
+                // Broader than just the literal words "cannibalization"/"differentiate" — Gemini
+                // sometimes covers the exact same ground using hub/spoke or "make this page unique"
+                // framing instead. Catch that too, since it's the same underlying duplicate work.
+                const _isCannibalLike = /cannib|differentiat|\bunique\b|\bdistinct\b|\bspoke\b|\bhub\b|mistaken for/i.test((g.title||'') + ' ' + (g.action||'') + ' ' + (g.trigger||'') + ' ' + (g.expected_impact||''));
+                if (!_isCannibalLike) return true;
+                const _gUrls = ((g.title||'') + ' ' + (g.action||'') + ' ' + (g.trigger||'') + ' ' + (g.expected_impact||'')).match(/https?:\/\/[^\s"'<>]+/g) || [];
+                const _overlaps = _gUrls.some(u => _citCannibalUrls.includes(_normCannibalUrl(u)));
+                return !_overlaps; // drop it if it targets the same URL the Citation Brief already covered
+              });
+            }
+          }
+        } catch(_dedupErr) {}
       } else {
         console.warn('[tracker] GSC Gemini failed:', gscResp.status, gscResp.errorMessage || '');
       }
+
+      // ── CODE-LEVEL FALLBACK: enforce the Competitor Gap structure ──────────
+      // Gemini does not always follow the 4-heading template reliably (title/AI-overview/gap/fix).
+      // Rather than hope the prompt is followed, check the actual output and, if a heading is
+      // missing, PREPEND a programmatically-built section using the real competitor data this
+      // scan already fetched (snapshot._competitors) — so the owner always sees who's winning and
+      // why, even on a run where Gemini's own formatting fell short.
+      try {
+        const _gComp = (snapshot._competitors || []).filter(c => c && c.url);
+        const _aioRefsForFallback = Array.isArray(snapshot.ai_google_overview_references) ? snapshot.ai_google_overview_references.filter(r => r && r.url) : [];
+
+        // AIO-side fallback: uses AI-Overview-cited sources only (or Perplexity's), NEVER organic
+        // SERP — this is the AI-citation brief, organic competitors belong only in the GSC brief.
+        const _fixAioCompetitorGapItem = (item) => {
+          if (!item) return item;
+          const _isCompGap = /competitor.{0,15}gap/i.test(item.system||'') || /competitor.{0,15}gap/i.test(item.title||'');
+          if (!_isCompGap) return item;
+          const _action = (item.action || '').trim();
+          const _hasOrganicLeak = /google search.{0,15}top results/i.test(_action);
+          const _hasAioSources = /domains?.{0,10}(google|ai overview).{0,20}cit(e|es|ing)|ai overview.{0,15}sourcing/i.test(_action);
+          if (_hasAioSources && !_hasOrganicLeak && _action) return item; // already AIO-sourced and clean
+          const _srcList = _aioRefsForFallback.length ? _aioRefsForFallback
+            : (Array.isArray(snapshot.ai_perplexity_competitors) ? snapshot.ai_perplexity_competitors.map(u => ({ url: u })) : []);
+          if (!_srcList.length) {
+            // No AIO/Perplexity source data to build a citeable fallback from — drop the item
+            // rather than leak organic SERP data into the AI-citation brief.
+            return _hasOrganicLeak ? null : item;
+          }
+          let _built = 'AI OVERVIEW / AI AGGREGATION — sourcing:\n'
+            + 'Google AI Overview and Perplexity currently cite:\n'
+            + _srcList.slice(0, 5).map((r, i) => { let h = r.url; try { h = new URL(r.url).hostname.replace(/^www\./,''); } catch(e){} return '#' + (i+1) + ' ' + h + (r.title ? ' — "' + String(r.title).substring(0,80) + '"' : ''); }).join('\n')
+            + '\n\nYOUR GAP:\n';
+          const _gapText = _hasOrganicLeak
+            ? 'This page does not yet cover the same entities/sub-topics these AI-cited sources do.'
+            : (_action || 'This page does not yet cover the same entities/sub-topics these AI-cited sources do.');
+          item.action = _built + _gapText.replace(/google search.{0,15}top results:[\s\S]*?(?=your gap:|fix:|$)/i, '').trim();
+          return item;
+        };
+        if (Array.isArray(snapshot.recommendations)) {
+          snapshot.recommendations = snapshot.recommendations.map(_fixAioCompetitorGapItem).filter(Boolean);
+          // AUTHORITATIVE TABLE OVERRIDE: whatever comparison_table Gemini may have invented for an
+          // AIO Competitor Gap item, replace it with one built directly from the same source list
+          // used in the "currently cite" prose above — this is the ONLY way to guarantee the prose
+          // and the table can never disagree, and that all available sources (up to 5) are shown.
+          if (_aioRefsForFallback.length) {
+            const _gapByHost = {};
+            (Array.isArray(snapshot.aio_citation_gap) ? snapshot.aio_citation_gap : []).forEach(g => {
+              if (g && g.source) _gapByHost[String(g.source).toLowerCase()] = g;
+            });
+            snapshot.recommendations = snapshot.recommendations.map(item => {
+              const _isCompGap = item && (/competitor.{0,15}gap/i.test(item.system||'') || /competitor.{0,15}gap/i.test(item.title||''));
+              if (!_isCompGap) return item;
+              item.comparison_table = _aioRefsForFallback.slice(0, 5).map(r => {
+                let h = r.url; try { h = new URL(r.url).hostname.replace(/^www\./,''); } catch(e){}
+                const g = _gapByHost[String(h).toLowerCase()];
+                return {
+                  competitor: h,
+                  what_they_do_well: (g && g.what_they_do_well) || (r.title ? ('Cited by AI Overview for: "' + String(r.title).slice(0,80) + '"') : 'Cited by Google\\u2019s AI Overview as a source for this query.'),
+                  our_gap: (g && g.our_gap) || 'This page is not yet cited alongside this source for this query.',
+                  what_to_do: (g && g.what_to_do) || 'Cover this source\\u2019s core point in a quotable 40\\u201360 word passage, in the first 30% of the page.'
+                };
+              });
+              return item;
+            });
+          }
+        }
+
+        // ── CODE-LEVEL FALLBACK: enforce the Competitor Gap structure (GSC BRIEF ONLY) ──
+        // Gemini does not always follow the 4-heading template reliably (title/AI-overview/gap/fix).
+        // Rather than hope the prompt is followed, check the actual output and, if a heading is
+        // missing, PREPEND a programmatically-built section using the real competitor data this
+        // scan already fetched (snapshot._competitors) — so the owner always sees who's winning and
+        // why, even on a run where Gemini's own formatting fell short. Organic SERP data belongs
+        // only in the GSC brief, so this fallback now runs on snapshot.gsc_brief only.
+        const _fixCompetitorGapItem = (item) => {
+          if (!item || !/competitor.{0,15}gap/i.test(item.system||'') && !/competitor.{0,15}gap/i.test(item.title||'')) return item;
+          const _action = item.action || '';
+          const _hasGoogle = /google search/i.test(_action);
+          const _hasAio = /ai overview|ai aggregation/i.test(_action);
+          const _hasGap = /your gap/i.test(_action);
+          const _hasFix = /\bfix:/i.test(_action);
+          if (_hasGoogle && _hasAio && _hasGap && _hasFix) return item; // already compliant
+          if (!_gComp.length) return item; // nothing to build a fallback from
+          let _built = 'GOOGLE SEARCH — top results:\n'
+            + _gComp.slice(0, 5).map((c, i) => '#' + (c.position || i + 1) + ' ' + c.url + (c.title ? ' — "' + String(c.title).substring(0,80) + '"' : '')).join('\n')
+            + '\n\n';
+          if (!_hasAio) {
+            const _pComp = (snapshot.ai_perplexity_competitors || []);
+            _built += 'AI OVERVIEW / AI AGGREGATION — sourcing:\n'
+              + (_pComp.length ? 'Perplexity currently cites: ' + _pComp.slice(0,5).join(', ') + '. ' + (snapshot.ai_perplexity_cited ? 'This page IS cited by Perplexity.' : 'This page is not among them yet.') : 'No AI Overview/Perplexity visibility detected for this page yet.')
+              + '\n\n';
+          }
+          // If Gemini's own text never labeled its gap/fix content either, don't try to algorithmically
+          // split the remaining prose into "gap" vs "fix" — that risks cutting mid-sentence in the wrong
+          // place. Instead, safely wrap whatever prose IS there with a single clear label so the owner
+          // can at least see where the analysis ends and the actionable text begins.
+          if (!_hasGap && !_hasFix && _action.trim()) {
+            item.action = _built + 'YOUR GAP / FIX:\n' + _action;
+            return item;
+          }
+          // Keep whatever Gemini wrote for YOUR GAP / FIX (or the whole thing, if those headings
+          // were present but Google/AIO were missing) — we only fill in what was genuinely absent.
+          item.action = _built + _action;
+          return item;
+        };
+        if (Array.isArray(snapshot.gsc_brief)) snapshot.gsc_brief = snapshot.gsc_brief.map(_fixCompetitorGapItem);
+
+        // ── Same safe "label what's missing, don't restructure" fallback for Impression Gap items:
+        // the gap-context instruction requires a "── READY-TO-PASTE SECTION ──" marker, but Gemini
+        // sometimes drops it, leaving prose that starts mid-thought with no clear boundary.
+        const _fixImpressionGapItem = (item) => {
+          if (!item) return item;
+          const _isImprGap = /impression.{0,15}gap|impression.{0,15}growth|adjacent intent/i.test((item.title||'') + ' ' + (item.system||''));
+          if (!_isImprGap) return item;
+          const _action = item.action || '';
+          if (/ready-to-paste section/i.test(_action) || !_action.trim()) return item;
+          item.action = '── READY-TO-PASTE SECTION ──\n' + _action;
+          return item;
+        };
+        if (Array.isArray(snapshot.recommendations)) snapshot.recommendations = snapshot.recommendations.map(_fixImpressionGapItem);
+        if (Array.isArray(snapshot.gsc_brief)) snapshot.gsc_brief = snapshot.gsc_brief.map(_fixImpressionGapItem);
+      } catch(_cgFixErr) {}
 
       // ── GUARANTEED local GSC brief — never empty when we have a keyword + position ──
       if (!Array.isArray(snapshot.gsc_brief) || !snapshot.gsc_brief.length) {
@@ -37705,7 +41725,7 @@ GOAL: Rank #1 for "${kw}" and capture the maximum clicks from ${gscImpr || 'the 
           snapshot.author_trust_findings.slice(0,2).forEach(function(f){
             var a = (f && (f.fix || f.recommendation || f.action || f.detail)) || '';
             var t = (f && (f.title || f.issue || f.label)) || 'Strengthen author trust (E-E-A-T)';
-            if (a || t) _fb.push({ title: String(t).substring(0,60), priority: (f && f.priority) || 'medium', system: 'Claude/Brave', action: a, expected_impact: 'Stronger E-E-A-T trust signals for AI citation' });
+            if (a || t) _fb.push({ title: String(t).substring(0,60), priority: (f && f.priority) || 'medium', system: 'Author Trust', action: a, expected_impact: 'Stronger E-E-A-T trust signals for AI citation' });
           });
         }
         if (Array.isArray(snapshot.graaf_recommendations)) {
@@ -37722,7 +41742,6 @@ GOAL: Rank #1 for "${kw}" and capture the maximum clicks from ${gscImpr || 'the 
           if (!snapshot.ai_google_overview_cited) _fb.push({ title: 'Win Google AI Overview citation', priority: 'high', system: 'Google AIO', action: 'Add a direct, quotable 2-3 sentence definition answering "what is ' + _ckw + '" within the first 100 words, right after the H1. AI Overviews quote concise, self-contained answers.', expected_impact: 'Eligible for AIO citation within 2-3 crawl cycles' });
           if (!snapshot.ai_perplexity_cited) _fb.push({ title: 'Win Perplexity citation', priority: 'medium', system: 'Perplexity', action: 'Add an "About the Author" block with a named author, credentials, and 1-2 verifiable stats. Perplexity favors pages with clear E-E-A-T signals.', expected_impact: 'Stronger author trust → Perplexity citation' });
           if (!snapshot.ai_bing_cited) _fb.push({ title: 'Win Microsoft Copilot citation', priority: 'medium', system: 'Microsoft Copilot', action: 'Add a 50-60 word summary paragraph near the top that directly matches the search query for "' + _ckw + '".', expected_impact: 'Concise top-of-page summary → Copilot citation' });
-          if (!snapshot.ai_brave_cited) _fb.push({ title: 'Win Claude / Brave citation', priority: 'low', system: 'Claude/Brave', action: 'Add verifiable facts with named sources and a clear author byline. Claude and Brave prioritize factual, well-sourced content.', expected_impact: 'Factual sourcing → Claude/Brave citation' });
           if (_cpos != null && parseFloat(_cpos) > 3) _fb.push({ title: 'Improve Google rank for "' + _ckw + '"', priority: 'high', system: 'Google AIO', action: 'Rewrite the <title> and H1 to lead with "' + _ckw + '" plus a clear benefit. Currently ranking #' + _cpos + '.', expected_impact: 'Position #' + _cpos + ' → top 3 after recrawl' });
         }
         if (_fb.length) {
@@ -37793,7 +41812,7 @@ If no unanchored claims found, return empty array: []`;
         sourceResp = await Promise.race([ callGeminiWithFallback(geminiKey, {
           contents: [{ role: 'user', parts: [{ text: sourcePrompt }] }],
           generationConfig: { temperature: 0.2, maxOutputTokens: 1500 }
-        }, null, null, 1), new Promise(function(res){ setTimeout(function(){ res({ ok:false, status:408, errorMessage:'source time budget exceeded' }); }, 12000); }) ]);
+        }, GEMINI_MODEL_BRIEF, null, 1), new Promise(function(res){ setTimeout(function(){ res({ ok:false, status:408, errorMessage:'source time budget exceeded' }); }, 100000); }) ]);
         if (sourceResp.ok) {
           let srcRecs = sourceResp.data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
           srcRecs = srcRecs.replace(/^\`\`\`json\n?/i,'').replace(/\`\`\`\s*$/,'').trim();
@@ -37880,13 +41899,15 @@ If no unanchored claims found, return empty array: []`;
     `INSERT INTO tracker_snapshots
       (page_id,checked_at,google_position,ai_google_overview_found,ai_google_overview_cited,ai_google_overview_text,
        ai_perplexity_found,ai_perplexity_cited,ai_perplexity_text,ai_bing_found,ai_bing_cited,ai_bing_text,
-       ai_brave_found,ai_brave_cited,
-       recommendations,gsc_brief,source_suggestions,author_trust_score,author_trust_findings,discovered_sources,html_hash,score,graaf_breakdown,graaf_recommendations,content_changed,content_diff)
-     VALUES ($1,NOW(),$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25) RETURNING *`,
+       ai_brave_found,ai_brave_cited,google_competitors,ai_perplexity_competitors,
+       recommendations,gsc_brief,source_suggestions,author_trust_score,author_trust_findings,discovered_sources,html_hash,score,graaf_breakdown,graaf_recommendations,content_changed,content_diff,ai_perplexity_answer_excerpt,ai_google_overview_references)
+     VALUES ($1,NOW(),$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29) RETURNING *`,
     [page.id, snapshot.google_position, snapshot.ai_google_overview_found, snapshot.ai_google_overview_cited,
      snapshot.ai_google_overview_text, snapshot.ai_perplexity_found, snapshot.ai_perplexity_cited,
      snapshot.ai_perplexity_text, snapshot.ai_bing_found, snapshot.ai_bing_cited, snapshot.ai_bing_text,
      !!snapshot.ai_brave_found, !!snapshot.ai_brave_cited,
+     safeJSONB(snapshot._competitors),
+     safeJSONB(snapshot.ai_perplexity_competitors),
      safeJSONB(snapshot.recommendations),
      safeJSONB(snapshot.gsc_brief),
      safeJSONB(snapshot.source_suggestions),
@@ -37898,7 +41919,9 @@ If no unanchored claims found, return empty array: []`;
      safeJSONB(snapshot.graaf_breakdown),
      safeJSONB(snapshot.graaf_recommendations),
      contentChanged,
-     safeJSONB(contentDiff)]
+     safeJSONB(contentDiff),
+     snapshot.ai_perplexity_answer_excerpt || null,
+     safeJSONB(snapshot.ai_google_overview_references)]
   );
   const snapId = snapR.rows[0].id;
   _trSetStep(pageId, 'save', 'done', 'Snapshot #' + snapId + ' saved');
@@ -38082,18 +42105,26 @@ If no unanchored claims found, return empty array: []`;
       } else {
         try {
           const mergePrompt2 = `Merge these two AI citation briefs for ${pageUrl} (keyword: "${kw2}").
-Status: pos=${pos2||'unranked'}, AIO=${aio2}, Perplexity=${perp2}, Copilot=${bing2}, Claude=${brave2}, GRAAF=${score2||'?'}/100${gscCtx}
+Status: pos=${pos2||'unranked'}, AIO=${aio2}, Perplexity=${perp2}, Copilot=${bing2}, GRAAF=${score2||'?'}/100${gscCtx}
 Goal: rank #1 and be cited in all AI systems.
 PREVIOUS: ${JSON.stringify((existingBrief2?.items||[]).slice(0,3))}
-NEW: ${JSON.stringify(recsToUse.slice(0,3))}
-Return ONLY JSON array (max 5 items): [{"title":"max 6 words","priority":"high"|"medium"|"low","action":"exact 30+ word instruction","expected_impact":"ranking/AI impact"}]`;
-          const gResp2 = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${geminiKey}`, {
-            method: 'POST', headers: {'Content-Type':'application/json'},
-            body: JSON.stringify({ contents: [{ parts: [{ text: mergePrompt2 }] }], generationConfig: { temperature: 0.3, maxOutputTokens: 1500 } }),
-            signal: AbortSignal.timeout(15000)
-          });
+NEW (higher priority \u2014 generated today, may include fresh Cannibalization/Competitor Gap/Impression Gap findings from real tracker data): ${JSON.stringify(recsToUse.slice(0,7))}
+
+MERGE RULES:
+1. Drop actions for systems now showing YES above (already cited/ranked).
+2. Max 5 items total, HIGH priority first.
+3. ALWAYS KEEP any NEW item with system "Cannibalization", "Competitor Gap", or "Internal Link" \u2014 these are evidence-based findings from real tracker data (shared search queries, live SERP competitors), never generic suggestions, and must never be dropped in favor of an older, less specific action.
+4. If ANY item in PREVIOUS has a system that is NOT one of: Google AIO, Perplexity, Copilot, Ranking, Cannibalization, Competitor Gap, Internal Link, Visibility (for example "Claude", "Brave", or "Claude/Brave") \u2014 DISCARD it completely, never carry it into the merged output under any label. Claude citation checking does not exist in this system.
+5. ABOVE-THE-FOLD PRIORITY: when a fix could reasonably go in more than one place on the page, prefer the location closer to the H1/opening paragraph over one further down \u2014 AI extraction weights the first ~30% of a page far more heavily than the rest.
+6. If a NEW item has system "Competitor Gap" AND includes a "comparison_table" field, KEEP that field exactly as given \u2014 it is a structured per-competitor breakdown the owner reads as a lesson, do not summarize it away.
+
+7. AIO/GSC SEPARATION (strict): if an item's system is Google AIO, Perplexity, or Copilot, its "action" text must NEVER contain a "GOOGLE SEARCH \u2014 top results" organic-ranking breakdown \u2014 that belongs only to the separate GSC ranking brief. If a PREVIOUS item mixes organic SERP data into one of these systems, do not carry that text forward verbatim \u2014 rewrite it to reference AI-Overview-cited or Perplexity-cited sources instead, or drop the item if no such AI-citation-specific content is available.\n\nReturn ONLY JSON array (max 5 items): [{"title":"max 6 words","priority":"high"|"medium"|"low","system":"Google AIO|Perplexity|Copilot|Ranking|Cannibalization|Competitor Gap|Internal Link|Visibility","action":"exact 30+ word instruction","expected_impact":"ranking/AI impact","comparison_table (ONLY if carried over from a Competitor Gap NEW item, omit otherwise)":[{"competitor":"bare domain","what_they_do_well":"specific strength","our_gap":"what this page lacks","what_to_do":"concrete instruction"}]}]`;
+          const gResp2 = await callGeminiWithFallback(geminiKey, {
+            contents: [{ parts: [{ text: mergePrompt2 }] }],
+            generationConfig: { temperature: 0.3, maxOutputTokens: 3000 }
+          }, GEMINI_MODEL_BRIEF, null, 1);
           if (gResp2.ok) {
-            const gData2 = await gResp2.json();
+            const gData2 = gResp2.data;
             const gText2 = gData2.candidates?.[0]?.content?.parts?.[0]?.text || '';
             // Tolerant parse: Gemini can truncate mid-string -> salvage to the last complete item instead of crashing
             let _mtxt = gText2.replace(/```json|```/g, '').trim();
@@ -38114,6 +42145,25 @@ Return ONLY JSON array (max 5 items): [{"title":"max 6 words","priority":"high"|
           brief2 = { items: recsToUse, position: pos2, aio: aio2, perp: perp2, bing_cited: bing2, brave_cited: brave2, score: score2,
             gsc_brief: gscBriefItems };
         }
+      }
+
+      // ── FINAL SAFETY NET: re-run the AIO/organic-SERP cleanup on whatever brief2 ended up
+      // containing — this guards against the merge step (mergePrompt2, above) re-surfacing an
+      // OLD, pre-fix "GOOGLE SEARCH — top results" leak from a PREVIOUS saved brief. No matter
+      // what Gemini's merge output looks like, this is the last gate before save/broadcast.
+      if (brief2 && Array.isArray(brief2.items)) {
+        try {
+          const _aioSystemRe = /^(google aio|perplexity|copilot)$/i;
+          brief2.items = brief2.items.map(function(it) {
+            if (!it || !_aioSystemRe.test(String(it.system||'').trim())) return it;
+            const _act = String(it.action||'');
+            if (!/google search.{0,15}top results/i.test(_act)) return it;
+            // Strip the leaked organic block; keep any AI-Overview/Perplexity sourcing + gap/fix text that follows.
+            const _cleaned = _act.replace(/google search.{0,15}top results:[\s\S]*?(?=ai overview|your gap:|fix:|$)/i, '').trim();
+            it.action = _cleaned || 'This action needs AI-citation-specific sourcing — rerun the scan to regenerate it.';
+            return it;
+          }).filter(Boolean);
+        } catch(_safetyErr) {}
       }
 
       if (brief2) {
@@ -38176,7 +42226,7 @@ Return ONLY JSON array (max 5 items): [{"title":"max 6 words","priority":"high"|
                 + (_body ? '<div style="font-size:13px;color:#374151;line-height:1.6;">' + _esc(_body) + '</div>' : '')
                 + '</div>';
             }).join('');
-            const _statusBits = ['Position ' + _esc(pos2 || 'unranked'), 'AIO ' + (aio2?'\u2713':'\u2717'), 'Perplexity ' + (perp2?'\u2713':'\u2717'), 'Copilot ' + (bing2?'\u2713':'\u2717'), 'Claude ' + (brave2?'\u2713':'\u2717')];
+            const _statusBits = ['Position ' + _esc(pos2 || 'unranked'), 'AIO ' + (aio2?'\u2713':'\u2717'), 'Perplexity ' + (perp2?'\u2713':'\u2717'), 'Copilot ' + (bing2?'\u2713':'\u2717')];
             if (score2) _statusBits.push('GRAAF ' + _esc(score2) + '/100');
             const _trackerUrl = 'https://app.contentscale.site/track/' + (_clientToken || '');
             const _viewUrl = 'https://app.contentscale.site/view/' + (_clientToken || '');
@@ -38333,7 +42383,7 @@ async function _startAlwaysOnMonitor() {
       { title: 'Perplexity reaches 780M monthly queries in 2026', url: 'https://searchengineland.com' },
       { title: 'Zero-click searches hit 65% of all Google searches', url: 'https://www.seroundtable.com' },
       { title: 'E-E-A-T signals critical for AI Overview citations', url: 'https://searchengineland.com' },
-      { title: 'Brave Search index now powers Claude web search', url: 'https://www.seroundtable.com' },
+      { title: 'Bing index now directly powers Microsoft Copilot answers', url: 'https://www.seroundtable.com' },
       { title: 'AI Overviews reduce position 1 CTR by 58%', url: 'https://ahrefs.com/blog' }
     ];
   }
@@ -38471,6 +42521,39 @@ async function sendTelegramNotification(chatId, message) {
     console.warn('[telegram] Error:', e.message);
     return false;
   }
+}
+
+// ── notifyOttmar — Ottmar's own admin alert channel ──────────────────────
+// Replaces CallMeBot (unreliable on free tier, 2026-07-22). Fires email
+// (via the same Brevo key used for client tracker emails) and Telegram
+// (ADMIN_TELEGRAM_CHAT_ID — Ottmar's own chat id, set once in Railway,
+// separate from any client's telegram_chat_id) in parallel. Best-effort:
+// never throws, so a failed notification never breaks the calling flow.
+async function notifyOttmar(subject, htmlOrText, plainTextFallback) {
+  const plain = plainTextFallback || String(htmlOrText || '').replace(/<[^>]+>/g, '');
+  try {
+    const brevoKey = process.env.BREVO_API_KEY;
+    if (brevoKey) {
+      const r = await fetch('https://api.brevo.com/v3/smtp/email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'api-key': brevoKey },
+        body: JSON.stringify({
+          to: [{ email: 'otteyfrancisca@gmail.com', name: 'Ottmar' }],
+          sender: { email: process.env.FROM_EMAIL || 'info@contentscale.site', name: 'ContentScale Tracker' },
+          subject: subject,
+          htmlContent: '<div style="font-family:Verdana,Geneva,sans-serif;font-size:14px;color:#1e293b;">' + (htmlOrText || '') + '</div>'
+        })
+      });
+      if (!r.ok) console.warn('[notifyOttmar] Brevo email failed', r.status);
+    } else {
+      console.warn('[notifyOttmar] BREVO_API_KEY not set — admin email skipped');
+    }
+  } catch (e) { console.warn('[notifyOttmar] email error:', e.message); }
+
+  try {
+    const adminChatId = process.env.ADMIN_TELEGRAM_CHAT_ID;
+    if (adminChatId) await sendTelegramNotification(adminChatId, '⭐ <b>' + subject + '</b>\n' + plain);
+  } catch (e) { console.warn('[notifyOttmar] telegram error:', e.message); }
 }
 // ── Telegram webhook — /start handler ────────────────────────────────────────
 app.post('/api/telegram/webhook', async (req, res) => {
@@ -38692,6 +42775,7 @@ function startHtmlReminderScheduler() {
         AND (p.is_done = FALSE OR p.is_done IS NULL)
         AND p.brief_content IS NOT NULL
         AND tc.email IS NOT NULL
+        AND (p.check_frequency IS NULL OR p.check_frequency NOT IN ('0','off'))
       `);
 
       console.log('[html-reminder] Checking', pages.rows.length, 'active briefs');
@@ -38977,19 +43061,11 @@ async function notifyAllUsers(message) {
   } catch(e) { console.warn('[Notify] notifyAllUsers error:', e.message); }
 }
 
-// ── WHATSAPP NOTIFICATION (CallMeBot) ────────────────────────────────────
+// ── WHATSAPP NOTIFICATION — kept as a thin wrapper so existing call sites
+// don't need to change. Internally now uses notifyOttmar (email + Telegram)
+// instead of CallMeBot, which is unreliable on the free tier (2026-07-22).
 async function notifyOttmarWhatsApp(message) {
-  const phone  = process.env.CALLMEBOT_PHONE;
-  const apiKey = process.env.CALLMEBOT_KEY;
-  if (!phone || !apiKey) return; // silently skip if not configured
-
-  try {
-    const url = `https://api.callmebot.com/whatsapp.php?phone=${phone}&text=${encodeURIComponent(message)}&apikey=${apiKey}`;
-    await fetch(url);
-    console.log('[Notify] WhatsApp sent to Ottmar');
-  } catch(e) {
-    console.warn('[Notify] WhatsApp failed:', e.message);
-  }
+  await notifyOttmar('📣 ContentScale notification', '<p>' + message + '</p>', message).catch(() => {});
 }
 
 // ── SELF REGISTRATION ────────────────────────────────────────────────────
