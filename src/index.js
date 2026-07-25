@@ -1,4 +1,4 @@
-console.log('=== CONTENTSCALE BOOT ' + new Date().toISOString() + ' v2026-07-08-possible-prioritized-shortcut | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON | possibleThreshold=20impr | shortcutPrioritized=v2 | gscAutoFetchRemoved=true | linkCheckActive=true | wholeSiteWipeGuard=true | gscAutoFetchRestored=true | reminderOffFix=true | claudeRemoved=true | bingWebmaster=true | competitorPanel=true | zeroResultFix=true | pagesRefreshFix=true | recheckButton=true | provenScanStrip=true | provenScanState=true | scanAllProven=true | doEverythingBtn=true | panelOrderFix=true | workflowGuide=true | preScanGuard=true | scanAllGuard=true | earlyGuard=true | emptyStateTeaser=true | provenScopeFix=true | numberedButtons=true | clearerButtons=true | scanAnimFix=true | promptClaudeCleanup=true | bonusTip=true | realProvenContext=true | competitorContext=true | unifiedBrief=true | diagnosticFirst=true | fullCompetitorBreakdown=true | serpSpyV3=true | transparencyBlock=true | emailsPausedToggle=true | competitorDedup=true | provenScanDebug=true | serializedScans=true | claudeCleanupV2=true | mergeClaudeStrip=true | visualTransparency=true | aboveFoldPriority=true | competitorComparisonTable=true | redGreenTracking=true | aioExplicitState=true | perpCopilotState=true | realMergePromptFixed=true | briefContextDebug=true | forceRescanBypass=true | gscPosFallback=true | cannibalDedup=true | gscAccessGated=true | gapConfirmShown=true | noPlaceholders=true | rowNumContrast=true | codeCannibalDedup=true | provenDebugRemoved=true | broaderCannibalDedup=true | competitorGapFallback=true | competitorPrevSnapFallback=true | hubSpokeDedup=true | compGapRegexBroadened=true | gapFixLabelFallback=true | geminiProForBriefs=true | timeoutBudgetFixed=true | perAttemptTimeout45s=true | revertToFlashLite=true | tokenLimitDoubled=true | urlNormFix=true | impactFieldChecked=true | broaderHubPattern=true | cannibalContextRemovedFromGSC=true | scanStateDerivedFromDB=true | boardBriefRestyled=true | liveWallBriefModal=true | modalScopeFix=true | cardTransparency=true | CLAUDE-FIX-2307=true | CLAUDE-FIX-2307B-specquote=true | CLAUDE-FIX-2307C-pwboard=true | CLAUDE-FIX-2307D-typefilter=true | CLAUDE-FIX-2307E-scanneraio=true | CLAUDE-FIX-2307F-urlstrip=true | CLAUDE-FIX-2307G-aiobeforeScan=true | CLAUDE-FIX-2307H-aioInPrompt=true | CLAUDE-FIX-2307I-escHtml=true | CLAUDE-FIX-2307J-escAlias-noStale=true | CLAUDE-FIX-2407A-perpCitedConsistency=true | CLAUDE-FIX-2407B-perpCacheBug=true | CLAUDE-FIX-2407C-domainVsPageNuance=true | CLAUDE-FIX-2407D-wallModalNoReshuffle=true | CLAUDE-FIX-2407E-buildBriefSafetyNet=true | CLAUDE-FIX-2407F-modalFullText=true | CLAUDE-FIX-2407G-aioPasteModal=true | CLAUDE-FIX-2407H-aioDefinitionView=true | CLAUDE-FIX-2407I-aioBlueprintMining=true | CLAUDE-FIX-2407J-aioReferences=true | CLAUDE-FIX-2407K-aioCitationGap=true | CLAUDE-FIX-2407L-compGapTableAllModals=true | CLAUDE-FIX-2407M-honestAioManualOnly=true | CLAUDE-FIX-2407N-regexEscapeInTemplate=true | CLAUDE-FIX-2507A-jsonRepair-mergeTokens4096=true | CLAUDE-FIX-2507B-cardButtonsWorkflowOrder=true | CLAUDE-FIX-2507C-cardButtonsPillColors=true | CLAUDE-FIX-2507D-aioReloadFull-limit8000=true | CLAUDE-FIX-2507E-briefModalTransparency=true | CLAUDE-FIX-2507F-aioGapTable4col=true | CLAUDE-FIX-2507G-htmlScanTickCycle=true | CLAUDE-FIX-2507H-briefViewedPersisted=true | CLAUDE-FIX-2507I-fixCardRenderVarInExpr=true | CLAUDE-FIX-2507J-briefsUnified-manualAioGap=true | CLAUDE-FIX-2507K-gscCompTableInTracker=true | CLAUDE-FIX-2507L-trackerSplitSections=true | CLAUDE-FIX-2507M-copyBriefClarity=true | CLAUDE-FIX-2507N-aioRefsFromManualPaste=true | CLAUDE-FIX-2507O-removeSseEventSource=true | CLAUDE-FIX-2507P-ticksPersistUntilDoneOrNewHtml=true | CLAUDE-FIX-2507Q-aioRefsStoredAtSave=true | CLAUDE-FIX-2507R-aioGapTableAlways=true | CLAUDE-FIX-2507S-aioGscContextSeparated=true | CLAUDE-FIX-2507T-aioCodeFallbackFixed-refsFromManualSave=true | CLAUDE-FIX-2507U-mergeSafetyNet-cardSummaryParity=true | CLAUDE-FIX-2507V-sharedAioRenderFn-authTable=true | CLAUDE-FIX-2507W-viewLastBriefDelegates-oneSystem=true | CLAUDE-FIX-2507X-sharedBriefBody-fullUnification=true | CLAUDE-FIX-2507Y-aioTop5Table-definitionLabel=true | CLAUDE-FIX-2507Z-noRefsActionableMsg=true | CLAUDE-FIX-2508A-manualPasteWinsOverStaleSnapshot=true | CLAUDE-FIX-2508B-merge2Hardened-diagLog=true | CLAUDE-FIX-2508C-noStoreHeaders-freshClientJs=true | CLAUDE-FIX-2508D-saveEchoDiagnostic=true | CLAUDE-FIX-2508E-separateSourcesField=true | CLAUDE-FIX-2508F-diagSourcesField=true | CLAUDE-FIX-2508G-acceptSourceNames=true | CLAUDE-FIX-2508H-namesFromMainPaste-headingFilter=true ===');
+console.log('=== CONTENTSCALE BOOT ' + new Date().toISOString() + ' v2026-07-08-possible-prioritized-shortcut | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON | possibleThreshold=20impr | shortcutPrioritized=v2 | gscAutoFetchRemoved=true | linkCheckActive=true | wholeSiteWipeGuard=true | gscAutoFetchRestored=true | reminderOffFix=true | claudeRemoved=true | bingWebmaster=true | competitorPanel=true | zeroResultFix=true | pagesRefreshFix=true | recheckButton=true | provenScanStrip=true | provenScanState=true | scanAllProven=true | doEverythingBtn=true | panelOrderFix=true | workflowGuide=true | preScanGuard=true | scanAllGuard=true | earlyGuard=true | emptyStateTeaser=true | provenScopeFix=true | numberedButtons=true | clearerButtons=true | scanAnimFix=true | promptClaudeCleanup=true | bonusTip=true | realProvenContext=true | competitorContext=true | unifiedBrief=true | diagnosticFirst=true | fullCompetitorBreakdown=true | serpSpyV3=true | transparencyBlock=true | emailsPausedToggle=true | competitorDedup=true | provenScanDebug=true | serializedScans=true | claudeCleanupV2=true | mergeClaudeStrip=true | visualTransparency=true | aboveFoldPriority=true | competitorComparisonTable=true | redGreenTracking=true | aioExplicitState=true | perpCopilotState=true | realMergePromptFixed=true | briefContextDebug=true | forceRescanBypass=true | gscPosFallback=true | cannibalDedup=true | gscAccessGated=true | gapConfirmShown=true | noPlaceholders=true | rowNumContrast=true | codeCannibalDedup=true | provenDebugRemoved=true | broaderCannibalDedup=true | competitorGapFallback=true | competitorPrevSnapFallback=true | hubSpokeDedup=true | compGapRegexBroadened=true | gapFixLabelFallback=true | geminiProForBriefs=true | timeoutBudgetFixed=true | perAttemptTimeout45s=true | revertToFlashLite=true | tokenLimitDoubled=true | urlNormFix=true | impactFieldChecked=true | broaderHubPattern=true | cannibalContextRemovedFromGSC=true | scanStateDerivedFromDB=true | boardBriefRestyled=true | liveWallBriefModal=true | modalScopeFix=true | cardTransparency=true | CLAUDE-FIX-2307=true | CLAUDE-FIX-2307B-specquote=true | CLAUDE-FIX-2307C-pwboard=true | CLAUDE-FIX-2307D-typefilter=true | CLAUDE-FIX-2307E-scanneraio=true | CLAUDE-FIX-2307F-urlstrip=true | CLAUDE-FIX-2307G-aiobeforeScan=true | CLAUDE-FIX-2307H-aioInPrompt=true | CLAUDE-FIX-2307I-escHtml=true | CLAUDE-FIX-2307J-escAlias-noStale=true | CLAUDE-FIX-2407A-perpCitedConsistency=true | CLAUDE-FIX-2407B-perpCacheBug=true | CLAUDE-FIX-2407C-domainVsPageNuance=true | CLAUDE-FIX-2407D-wallModalNoReshuffle=true | CLAUDE-FIX-2407E-buildBriefSafetyNet=true | CLAUDE-FIX-2407F-modalFullText=true | CLAUDE-FIX-2407G-aioPasteModal=true | CLAUDE-FIX-2407H-aioDefinitionView=true | CLAUDE-FIX-2407I-aioBlueprintMining=true | CLAUDE-FIX-2407J-aioReferences=true | CLAUDE-FIX-2407K-aioCitationGap=true | CLAUDE-FIX-2407L-compGapTableAllModals=true | CLAUDE-FIX-2407M-honestAioManualOnly=true | CLAUDE-FIX-2407N-regexEscapeInTemplate=true | CLAUDE-FIX-2507A-jsonRepair-mergeTokens4096=true | CLAUDE-FIX-2507B-cardButtonsWorkflowOrder=true | CLAUDE-FIX-2507C-cardButtonsPillColors=true | CLAUDE-FIX-2507D-aioReloadFull-limit8000=true | CLAUDE-FIX-2507E-briefModalTransparency=true | CLAUDE-FIX-2507F-aioGapTable4col=true | CLAUDE-FIX-2507G-htmlScanTickCycle=true | CLAUDE-FIX-2507H-briefViewedPersisted=true | CLAUDE-FIX-2507I-fixCardRenderVarInExpr=true | CLAUDE-FIX-2507J-briefsUnified-manualAioGap=true | CLAUDE-FIX-2507K-gscCompTableInTracker=true | CLAUDE-FIX-2507L-trackerSplitSections=true | CLAUDE-FIX-2507M-copyBriefClarity=true | CLAUDE-FIX-2507N-aioRefsFromManualPaste=true | CLAUDE-FIX-2507O-removeSseEventSource=true | CLAUDE-FIX-2507P-ticksPersistUntilDoneOrNewHtml=true | CLAUDE-FIX-2507Q-aioRefsStoredAtSave=true | CLAUDE-FIX-2507R-aioGapTableAlways=true | CLAUDE-FIX-2507S-aioGscContextSeparated=true | CLAUDE-FIX-2507T-aioCodeFallbackFixed-refsFromManualSave=true | CLAUDE-FIX-2507U-mergeSafetyNet-cardSummaryParity=true | CLAUDE-FIX-2507V-sharedAioRenderFn-authTable=true | CLAUDE-FIX-2507W-viewLastBriefDelegates-oneSystem=true | CLAUDE-FIX-2507X-sharedBriefBody-fullUnification=true | CLAUDE-FIX-2507Y-aioTop5Table-definitionLabel=true | CLAUDE-FIX-2507Z-noRefsActionableMsg=true | CLAUDE-FIX-2508A-manualPasteWinsOverStaleSnapshot=true | CLAUDE-FIX-2508B-merge2Hardened-diagLog=true | CLAUDE-FIX-2508C-noStoreHeaders-freshClientJs=true | CLAUDE-FIX-2508D-saveEchoDiagnostic=true | CLAUDE-FIX-2508E-separateSourcesField=true | CLAUDE-FIX-2508F-diagSourcesField=true | CLAUDE-FIX-2508G-acceptSourceNames=true | CLAUDE-FIX-2508H-namesFromMainPaste-headingFilter=true | CLAUDE-FIX-2508I-cloroAioFetch=true | CLAUDE-FIX-2508J-namesFallback-autoSplit=true ===');
 
 // Repair common LLM-JSON defects (raw newlines/tabs inside strings, trailing commas)
 function _repairJsonG(str){
@@ -2628,6 +2628,70 @@ app.post('/api/tracker-client/:token/page/:pageId/aio-manual', async (req, res) 
     var _diagHttp = (_combined.match(/https?:\/\//g) || []).length;
     console.log('[aio-save] page ' + pg.rows[0].id + ' | text=' + text.length + 'ch | SOURCES-FIELD=' + _sources.length + 'ch (' + (_sources.match(/https?:\/\//g)||[]).length + ' http, first80="' + _sources.slice(0,80).replace(/\n/g,' ') + '") | ' + _diagMd + ' md-links | extracted ' + _aioRefs.length + ' refs');
     res.json({ success: true, saved: true, aio_cited_preview: cited, refs_extracted: _aioRefs.length, chars_received: text.length, md_links_received: _diagMd, http_received: _diagHttp, message: (cited ? 'Saved — page appears cited. ' : 'Saved — page not cited. ') + _aioRefs.length + ' source links detected.' });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// ── Fetch the AI Overview automatically via cloro (no manual paste) ──────────────
+// cloro renders the live Google SERP and returns the AI Overview answer + cited sources
+// as structured JSON, so the source URLs arrive intact — solving the copy-strips-links problem.
+// The result is stored in the same aio_manual_text / aio_manual_refs columns a manual paste uses,
+// so every downstream consumer (brief render, tables, both modals) works unchanged.
+app.post('/api/tracker-client/:token/page/:pageId/aio-fetch', async (req, res) => {
+  try {
+    const CLORO_KEY = process.env.CLORO_API_KEY;
+    if (!CLORO_KEY) return res.status(400).json({ success: false, error: 'cloro API key not configured. Add CLORO_API_KEY in the server environment.' });
+    const cr = await pool.query('SELECT id FROM tracker_clients WHERE (token=$1 OR lead_token=$1) AND (status IS NULL OR status != $2)', [req.params.token, 'deleted']);
+    if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
+    const pg = await pool.query('SELECT id, url, keyword, gsc_keyword FROM tracker_pages WHERE id=$1 AND tracker_client_id=$2', [req.params.pageId, cr.rows[0].id]);
+    if (!pg.rows.length) return res.status(404).json({ success: false, error: 'Page not found' });
+    const page = pg.rows[0];
+    const query = (req.body && req.body.query) || page.keyword || page.gsc_keyword || '';
+    if (!query) return res.status(400).json({ success: false, error: 'No keyword set for this page — add one first so cloro knows what to search.' });
+    const country = (req.body && req.body.country) || 'US';
+
+    // Call cloro (sync). AI Overview costs 5 credits incl. SERP.
+    let cloroData;
+    try {
+      const cResp = await fetch('https://api.cloro.dev/v1/monitor/google', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + CLORO_KEY, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: query, country: country, include: { aioverview: { markdown: true } } })
+      });
+      if (!cResp.ok) {
+        const _errTxt = await cResp.text().catch(()=> '');
+        return res.status(502).json({ success: false, error: 'cloro returned ' + cResp.status + (_errTxt ? (': ' + _errTxt.slice(0,200)) : '') });
+      }
+      cloroData = await cResp.json();
+    } catch(fe) {
+      return res.status(502).json({ success: false, error: 'cloro request failed: ' + fe.message });
+    }
+
+    const aio = cloroData && cloroData.result && cloroData.result.aioverview;
+    if (!aio || (!aio.text && !aio.markdown && !(aio.sources && aio.sources.length))) {
+      return res.json({ success: true, triggered: false, message: 'cloro ran, but Google showed no AI Overview for "' + query + '" (' + country + '). AI Overview only triggers for some queries/regions — try a different keyword or country, or paste manually.' });
+    }
+
+    // Build the stored text: the overview answer + a numbered source list with real URLs, so the
+    // existing extractor (which reads [N](url) links) captures every source cleanly.
+    const _sources = Array.isArray(aio.sources) ? aio.sources : [];
+    let _storedText = String(aio.markdown || aio.text || '').trim();
+    if (_sources.length) {
+      _storedText += '\n\nSources:\n' + _sources.map((s, i) => '[' + (i+1) + '](' + (s.url||'') + ') ' + (s.label || s.description || '')).join('\n');
+    }
+    // Structured refs straight from cloro — no parsing guesswork needed.
+    const _aioRefs = _sources.slice(0, 12).map((s, i) => {
+      let host = s.url || s.label || '';
+      try { host = new URL(s.url).hostname.replace(/^www\./,''); } catch(e) {}
+      return { url: s.url || '', source: host || (s.label || ''), label: s.label || '', description: s.description || '', position: s.position || (i+1) };
+    });
+
+    let _pageNorm = '';
+    try { const _pu = new URL(page.url); _pageNorm = _pu.hostname.replace(/^www\./,'') + _pu.pathname.replace(/\/+$/,''); } catch(e) {}
+    const _cited = _pageNorm ? _storedText.toLowerCase().includes(_pageNorm.toLowerCase()) : false;
+
+    await pool.query('UPDATE tracker_pages SET aio_manual_text=$1, aio_manual_refs=$2 WHERE id=$3', [_storedText, JSON.stringify(_aioRefs), page.id]);
+    console.log('[aio-fetch] page ' + page.id + ' via cloro | query="' + query + '" | ' + _sources.length + ' sources | cited=' + _cited);
+    res.json({ success: true, triggered: true, sources_found: _aioRefs.length, cited: _cited, query: query, message: 'AI Overview fetched — ' + _aioRefs.length + ' sources' + (_cited ? ', your page IS cited' : ', your page not cited yet') + '. Run a scan to generate the brief.' });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
@@ -29294,13 +29358,15 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
     <div id="aioPasteContext" style="font-size:11px;color:#a78bfa;margin-bottom:10px;font-style:italic;"></div>
     <textarea id="aioPasteContent" placeholder="Paste the Google AI Overview text here..." class="cs-input" rows="10" style="width:100%;font-size:12px;resize:vertical;max-height:40vh;"></textarea>
     <div style="margin-top:10px;">
-      <label style="font-size:11px;font-weight:700;color:#93c5fd;display:block;margin-bottom:4px;">Source links <span style="color:#6b7280;font-weight:400;">(optional but recommended — builds the AI Overview source table)</span></label>
-      <p style="font-size:11px;color:#6b7280;margin-bottom:6px;">Google&#x2019;s AI Overview shows numbered sources. Copying the overview often drops the links, so paste the source URLs here — one per line, or the whole source list. We&#x2019;ll pull the domains automatically.</p>
-      <textarea id="aioPasteSources" placeholder="https://www.venatus.com/...&#10;https://yieldbird.com/...&#10;recurly.com&#10;blog.google" class="cs-input" rows="4" style="width:100%;font-size:12px;resize:vertical;max-height:25vh;"></textarea>
+      <label style="font-size:11px;font-weight:700;color:#93c5fd;display:block;margin-bottom:4px;">Sources <span style="color:#6b7280;font-weight:400;">(one per line — builds the AI Overview source table)</span></label>
+      <p style="font-size:11px;color:#6b7280;margin-bottom:6px;">Google&#x2019;s AI Overview shows the sites it cites at the bottom. Copying usually loses the links, so just list the <strong>source names</strong> here, one per line (e.g. <em>Yieldbird</em>, <em>Venatus Media</em>, <em>blog.google</em>). URLs work too if you have them. We build the table from whatever you give — no guessing.</p>
+      <textarea id="aioPasteSources" placeholder="Yieldbird&#10;blog.google&#10;Mystic Cyber&#10;Venatus Media&#10;DealHub AI" class="cs-input" rows="5" style="width:100%;font-size:12px;resize:vertical;max-height:25vh;"></textarea>
+      <div style="margin-top:5px;"><button onclick="autoSplitSources()" type="button" class="cs-btn" style="border-color:#374151;color:#93c5fd;font-size:11px;padding:4px 10px;">&#x21B3; Auto-split pasted source list into names</button> <span style="font-size:10px;color:#6b7280;">paste the whole bottom source block, then click — review the names it finds</span></div>
     </div>
     <div style="display:flex;gap:8px;margin-top:12px;justify-content:space-between;align-items:center;">
       <span id="aioPasteStatus" style="font-size:11px;color:#6b7280;"></span>
       <div style="display:flex;gap:8px;">
+        <button onclick="fetchAioViaCloro()" class="cs-btn" style="border-color:#22c55e;color:#4ade80;font-weight:600;" title="Fetch the AI Overview automatically (no manual paste)">&#x26A1; Auto-fetch AIO</button>
         <button onclick="clearAioPaste()" class="cs-btn" style="border-color:#374151;color:#6b7280;">Clear</button>
         <button onclick="hideModal('aioPasteModal')" class="cs-btn" style="border-color:#374151;color:#6b7280;">Cancel</button>
         <button onclick="submitAioPaste()" class="cs-btn" style="border-color:#f59e0b;color:#fbbf24;font-weight:600;">Save AI Overview</button>
@@ -33430,6 +33496,62 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
     if (srcTa) srcTa.value = '';
     submitAioPaste();
   }
+  function fetchAioViaCloro() {
+    var pageId = _aioPastePageId;
+    if (!pageId) return;
+    var st = document.getElementById('aioPasteStatus');
+    var page = (_pages||[]).find(function(x){ return x.id == pageId; }) || {};
+    var kw = page.keyword || page.gsc_keyword || '';
+    if (!kw) { if (st) { st.textContent = 'No keyword set for this page — add one first.'; st.style.color = '#f87171'; } return; }
+    if (st) { st.textContent = 'Fetching AI Overview via cloro for "' + kw + '"... (30–60s)'; st.style.color = '#f59e0b'; }
+    fetch('/api/tracker-client/' + TOKEN + '/page/' + pageId + '/aio-fetch', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ query: kw })
+    }).then(function(r){ return r.json(); }).then(function(d){
+      if (d.success && d.triggered) {
+        if (st) { st.textContent = d.message || ('Fetched ' + (d.sources_found||0) + ' sources.'); st.style.color = '#4ade80'; }
+        if (typeof loadPages === 'function') loadPages();
+        setTimeout(function(){ hideModal('aioPasteModal'); }, 1800);
+      } else if (d.success && !d.triggered) {
+        if (st) { st.textContent = d.message || 'No AI Overview shown for this query.'; st.style.color = '#fbbf24'; }
+      } else if (st) { st.textContent = d.error || 'Fetch failed'; st.style.color = '#f87171'; }
+    }).catch(function(){ if (st) { st.textContent = 'Network error contacting cloro'; st.style.color = '#f87171'; } });
+  }
+  window.fetchAioViaCloro = fetchAioViaCloro;
+  function autoSplitSources() {
+    var srcTa = document.getElementById('aioPasteSources');
+    if (!srcTa) return;
+    var raw = srcTa.value.trim();
+    if (!raw) return;
+    // If it already has several lines, assume it's a clean list — leave it.
+    var _nlRe = new RegExp(String.fromCharCode(91,92,114,92,110,93) + '+');
+    if (raw.split(_nlRe).filter(function(l){ return l.trim(); }).length >= 3 && raw.indexOf('...') < 0) return;
+    // Google's source list glues Title...snippet...Name entries on one line. Split on '...' and take
+    // the leading brand token(s) of each following chunk. Best-effort — user reviews the result.
+    var body = raw;
+    var cut = body.indexOf('step-by-step plan.');
+    if (cut >= 0) body = body.slice(cut + 'step-by-step plan.'.length);
+    var chunks = body.split('...');
+    var names = [], seen = {};
+    chunks.forEach(function(seg, idx){
+      if (idx === 0) return;
+      seg = seg.trim(); if (!seg) return;
+      var lead = seg.match(/^((?:[A-Z][A-Za-z0-9&.]*|\.[a-z]+)(?:\s+[A-Z][A-Za-z0-9&.]*){0,3})/);
+      if (!lead) return;
+      var name = lead[1].slice(0, 40);
+      var m = name.match(/^(.*?[a-z])(?=[A-Z][a-z])/);
+      if (m) name = m[1];
+      name = name.trim();
+      var key = name.toLowerCase().replace(/[^a-z0-9]/g,'');
+      if (key.length >= 3 && !seen[key]) { seen[key] = 1; names.push(name); }
+    });
+    if (names.length) {
+      srcTa.value = names.join(String.fromCharCode(10));
+      var st = document.getElementById('aioPasteStatus');
+      if (st) { st.textContent = 'Split into ' + names.length + ' names — review/fix them, then Save.'; st.style.color = '#93c5fd'; }
+    }
+  }
+  window.autoSplitSources = autoSplitSources;
   window.openAioPaste = openAioPaste;
   window.submitAioPaste = submitAioPaste;
   window.clearAioPaste = clearAioPaste;
