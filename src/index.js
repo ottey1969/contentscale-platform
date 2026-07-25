@@ -1,4 +1,4 @@
-console.log('=== CONTENTSCALE BOOT ' + new Date().toISOString() + ' v2026-07-08-possible-prioritized-shortcut | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON | possibleThreshold=20impr | shortcutPrioritized=v2 | gscAutoFetchRemoved=true | linkCheckActive=true | wholeSiteWipeGuard=true | gscAutoFetchRestored=true | reminderOffFix=true | claudeRemoved=true | bingWebmaster=true | competitorPanel=true | zeroResultFix=true | pagesRefreshFix=true | recheckButton=true | provenScanStrip=true | provenScanState=true | scanAllProven=true | doEverythingBtn=true | panelOrderFix=true | workflowGuide=true | preScanGuard=true | scanAllGuard=true | earlyGuard=true | emptyStateTeaser=true | provenScopeFix=true | numberedButtons=true | clearerButtons=true | scanAnimFix=true | promptClaudeCleanup=true | bonusTip=true | realProvenContext=true | competitorContext=true | unifiedBrief=true | diagnosticFirst=true | fullCompetitorBreakdown=true | serpSpyV3=true | transparencyBlock=true | emailsPausedToggle=true | competitorDedup=true | provenScanDebug=true | serializedScans=true | claudeCleanupV2=true | mergeClaudeStrip=true | visualTransparency=true | aboveFoldPriority=true | competitorComparisonTable=true | redGreenTracking=true | aioExplicitState=true | perpCopilotState=true | realMergePromptFixed=true | briefContextDebug=true | forceRescanBypass=true | gscPosFallback=true | cannibalDedup=true | gscAccessGated=true | gapConfirmShown=true | noPlaceholders=true | rowNumContrast=true | codeCannibalDedup=true | provenDebugRemoved=true | broaderCannibalDedup=true | competitorGapFallback=true | competitorPrevSnapFallback=true | hubSpokeDedup=true | compGapRegexBroadened=true | gapFixLabelFallback=true | geminiProForBriefs=true | timeoutBudgetFixed=true | perAttemptTimeout45s=true | revertToFlashLite=true | tokenLimitDoubled=true | urlNormFix=true | impactFieldChecked=true | broaderHubPattern=true | cannibalContextRemovedFromGSC=true | scanStateDerivedFromDB=true | boardBriefRestyled=true | liveWallBriefModal=true | modalScopeFix=true | cardTransparency=true | CLAUDE-FIX-2307=true | CLAUDE-FIX-2307B-specquote=true | CLAUDE-FIX-2307C-pwboard=true | CLAUDE-FIX-2307D-typefilter=true | CLAUDE-FIX-2307E-scanneraio=true | CLAUDE-FIX-2307F-urlstrip=true | CLAUDE-FIX-2307G-aiobeforeScan=true | CLAUDE-FIX-2307H-aioInPrompt=true | CLAUDE-FIX-2307I-escHtml=true | CLAUDE-FIX-2307J-escAlias-noStale=true | CLAUDE-FIX-2407A-perpCitedConsistency=true | CLAUDE-FIX-2407B-perpCacheBug=true | CLAUDE-FIX-2407C-domainVsPageNuance=true | CLAUDE-FIX-2407D-wallModalNoReshuffle=true | CLAUDE-FIX-2407E-buildBriefSafetyNet=true | CLAUDE-FIX-2407F-modalFullText=true | CLAUDE-FIX-2407G-aioPasteModal=true | CLAUDE-FIX-2407H-aioDefinitionView=true | CLAUDE-FIX-2407I-aioBlueprintMining=true | CLAUDE-FIX-2407J-aioReferences=true | CLAUDE-FIX-2407K-aioCitationGap=true | CLAUDE-FIX-2407L-compGapTableAllModals=true | CLAUDE-FIX-2407M-honestAioManualOnly=true | CLAUDE-FIX-2407N-regexEscapeInTemplate=true | CLAUDE-FIX-2507A-jsonRepair-mergeTokens4096=true | CLAUDE-FIX-2507B-cardButtonsWorkflowOrder=true | CLAUDE-FIX-2507C-cardButtonsPillColors=true | CLAUDE-FIX-2507D-aioReloadFull-limit8000=true | CLAUDE-FIX-2507E-briefModalTransparency=true | CLAUDE-FIX-2507F-aioGapTable4col=true | CLAUDE-FIX-2507G-htmlScanTickCycle=true | CLAUDE-FIX-2507H-briefViewedPersisted=true | CLAUDE-FIX-2507I-fixCardRenderVarInExpr=true | CLAUDE-FIX-2507J-briefsUnified-manualAioGap=true | CLAUDE-FIX-2507K-gscCompTableInTracker=true | CLAUDE-FIX-2507L-trackerSplitSections=true | CLAUDE-FIX-2507M-copyBriefClarity=true | CLAUDE-FIX-2507N-aioRefsFromManualPaste=true | CLAUDE-FIX-2507O-removeSseEventSource=true | CLAUDE-FIX-2507P-ticksPersistUntilDoneOrNewHtml=true ===');
+console.log('=== CONTENTSCALE BOOT ' + new Date().toISOString() + ' v2026-07-08-possible-prioritized-shortcut | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON | possibleThreshold=20impr | shortcutPrioritized=v2 | gscAutoFetchRemoved=true | linkCheckActive=true | wholeSiteWipeGuard=true | gscAutoFetchRestored=true | reminderOffFix=true | claudeRemoved=true | bingWebmaster=true | competitorPanel=true | zeroResultFix=true | pagesRefreshFix=true | recheckButton=true | provenScanStrip=true | provenScanState=true | scanAllProven=true | doEverythingBtn=true | panelOrderFix=true | workflowGuide=true | preScanGuard=true | scanAllGuard=true | earlyGuard=true | emptyStateTeaser=true | provenScopeFix=true | numberedButtons=true | clearerButtons=true | scanAnimFix=true | promptClaudeCleanup=true | bonusTip=true | realProvenContext=true | competitorContext=true | unifiedBrief=true | diagnosticFirst=true | fullCompetitorBreakdown=true | serpSpyV3=true | transparencyBlock=true | emailsPausedToggle=true | competitorDedup=true | provenScanDebug=true | serializedScans=true | claudeCleanupV2=true | mergeClaudeStrip=true | visualTransparency=true | aboveFoldPriority=true | competitorComparisonTable=true | redGreenTracking=true | aioExplicitState=true | perpCopilotState=true | realMergePromptFixed=true | briefContextDebug=true | forceRescanBypass=true | gscPosFallback=true | cannibalDedup=true | gscAccessGated=true | gapConfirmShown=true | noPlaceholders=true | rowNumContrast=true | codeCannibalDedup=true | provenDebugRemoved=true | broaderCannibalDedup=true | competitorGapFallback=true | competitorPrevSnapFallback=true | hubSpokeDedup=true | compGapRegexBroadened=true | gapFixLabelFallback=true | geminiProForBriefs=true | timeoutBudgetFixed=true | perAttemptTimeout45s=true | revertToFlashLite=true | tokenLimitDoubled=true | urlNormFix=true | impactFieldChecked=true | broaderHubPattern=true | cannibalContextRemovedFromGSC=true | scanStateDerivedFromDB=true | boardBriefRestyled=true | liveWallBriefModal=true | modalScopeFix=true | cardTransparency=true | CLAUDE-FIX-2307=true | CLAUDE-FIX-2307B-specquote=true | CLAUDE-FIX-2307C-pwboard=true | CLAUDE-FIX-2307D-typefilter=true | CLAUDE-FIX-2307E-scanneraio=true | CLAUDE-FIX-2307F-urlstrip=true | CLAUDE-FIX-2307G-aiobeforeScan=true | CLAUDE-FIX-2307H-aioInPrompt=true | CLAUDE-FIX-2307I-escHtml=true | CLAUDE-FIX-2307J-escAlias-noStale=true | CLAUDE-FIX-2407A-perpCitedConsistency=true | CLAUDE-FIX-2407B-perpCacheBug=true | CLAUDE-FIX-2407C-domainVsPageNuance=true | CLAUDE-FIX-2407D-wallModalNoReshuffle=true | CLAUDE-FIX-2407E-buildBriefSafetyNet=true | CLAUDE-FIX-2407F-modalFullText=true | CLAUDE-FIX-2407G-aioPasteModal=true | CLAUDE-FIX-2407H-aioDefinitionView=true | CLAUDE-FIX-2407I-aioBlueprintMining=true | CLAUDE-FIX-2407J-aioReferences=true | CLAUDE-FIX-2407K-aioCitationGap=true | CLAUDE-FIX-2407L-compGapTableAllModals=true | CLAUDE-FIX-2407M-honestAioManualOnly=true | CLAUDE-FIX-2407N-regexEscapeInTemplate=true | CLAUDE-FIX-2507A-jsonRepair-mergeTokens4096=true | CLAUDE-FIX-2507B-cardButtonsWorkflowOrder=true | CLAUDE-FIX-2507C-cardButtonsPillColors=true | CLAUDE-FIX-2507D-aioReloadFull-limit8000=true | CLAUDE-FIX-2507E-briefModalTransparency=true | CLAUDE-FIX-2507F-aioGapTable4col=true | CLAUDE-FIX-2507G-htmlScanTickCycle=true | CLAUDE-FIX-2507H-briefViewedPersisted=true | CLAUDE-FIX-2507I-fixCardRenderVarInExpr=true | CLAUDE-FIX-2507J-briefsUnified-manualAioGap=true | CLAUDE-FIX-2507K-gscCompTableInTracker=true | CLAUDE-FIX-2507L-trackerSplitSections=true | CLAUDE-FIX-2507M-copyBriefClarity=true | CLAUDE-FIX-2507N-aioRefsFromManualPaste=true | CLAUDE-FIX-2507O-removeSseEventSource=true | CLAUDE-FIX-2507P-ticksPersistUntilDoneOrNewHtml=true | CLAUDE-FIX-2507Q-aioRefsStoredAtSave=true ===');
 
 // Repair common LLM-JSON defects (raw newlines/tabs inside strings, trailing commas)
 function _repairJsonG(str){
@@ -1312,7 +1312,7 @@ app.get('/api/tracker-client/:token', async (req, res) => {
               p.html_pasted_at, p.html_source, p.last_graaf_score,
               (p.html_content IS NOT NULL AND p.html_content != '') as has_html_content,
               p.redirects_to,
-              p.gsc_autofetch_checked_at, p.aio_manual_text, p.brief_viewed_at,
+              p.gsc_autofetch_checked_at, p.aio_manual_text, p.aio_manual_refs, p.brief_viewed_at,
               s.google_position, s.ai_google_overview_cited, s.ai_google_overview_text, s.ai_google_overview_found, s.ai_perplexity_cited,
               s.ai_bing_cited, s.ai_bing_text, s.ai_brave_cited,
               s.score as graaf_score, s.checked_at as last_checked,
@@ -2145,7 +2145,7 @@ app.get('/api/tracker-client/:token/latest-briefs', async (req, res) => {
     const cr = await pool.query('SELECT id FROM tracker_clients WHERE (token=$1 OR board_token=$1 OR lead_token=$1) AND (status IS NULL OR status != $2)', [req.params.token, 'deleted']);
     if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
     const r = await pool.query(
-      `SELECT p.id, p.url, p.keyword, p.gsc_keyword, p.gsc_ctr, p.aio_manual_text, p.brief_content, p.gsc_clicks, p.gsc_impressions, p.gsc_position,
+      `SELECT p.id, p.url, p.keyword, p.gsc_keyword, p.gsc_ctr, p.aio_manual_text, p.aio_manual_refs, p.brief_content, p.gsc_clicks, p.gsc_impressions, p.gsc_position,
               p.brief_status, p.brief_claimed_by, p.brief_claimed_at, p.brief_started_at,
               p.brief_done_at, p.brief_submitted_at, p.brief_approved_at, p.brief_approved_by, p.brief_published_at,
               p.brief_deadline, p.brief_assigned_at, p.brief_rejected_at, p.brief_reject_reason, p.priority,
@@ -2196,7 +2196,7 @@ app.get('/api/tracker-client/:token/latest-briefs', async (req, res) => {
         google_competitors: _arr(p.google_competitors),
         perp_competitors: _arr(p.ai_perplexity_competitors),
         perp_excerpt: p.ai_perplexity_answer_excerpt || '',
-        aio_references: (Array.isArray(bc.aio_references) && bc.aio_references.length) ? bc.aio_references : _arr(p.ai_google_overview_references),
+        aio_references: (Array.isArray(bc.aio_references) && bc.aio_references.length) ? bc.aio_references : (_arr(p.aio_manual_refs).length ? _arr(p.aio_manual_refs) : _arr(p.ai_google_overview_references)),
         aio_citation_gap: Array.isArray(bc.aio_citation_gap) ? bc.aio_citation_gap : [],
         ai_overview_blueprint: Array.isArray(bc.ai_overview_blueprint) ? bc.ai_overview_blueprint : [],
         citation_targets: Array.isArray(bc.citation_targets) ? bc.citation_targets : [],
@@ -2556,7 +2556,7 @@ app.post('/api/tracker-client/:token/page/:pageId/aio-manual', async (req, res) 
     if (!pg.rows.length) return res.status(404).json({ success: false, error: 'Page not found' });
     const text = String((req.body && req.body.text) || '').trim();
     if (!text) {
-      await pool.query('UPDATE tracker_pages SET aio_manual_text=NULL WHERE id=$1', [pg.rows[0].id]);
+      await pool.query('UPDATE tracker_pages SET aio_manual_text=NULL, aio_manual_refs=NULL WHERE id=$1', [pg.rows[0].id]);
       return res.json({ success: true, cleared: true, message: 'Cleared — run a scan to update the brief.' });
     }
     // Only save the raw text — the scan uses it to detect AIO found/cited
@@ -2565,7 +2565,27 @@ app.post('/api/tracker-client/:token/page/:pageId/aio-manual', async (req, res) 
     var pageNorm = '';
     try { var pu = new URL(pg.rows[0].url); pageNorm = pu.hostname.replace(/^www\./, '') + pu.pathname.replace(/\/+$/, ''); } catch(e) { pageNorm = domain; }
     const cited = text.toLowerCase().includes(pageNorm.toLowerCase()) || text.includes(domain);
-    await pool.query('UPDATE tracker_pages SET aio_manual_text=$1 WHERE id=$2', [text, pg.rows[0].id]);
+    // Extract the AIO source URLs at save time (prioritising [N](url) citation links, then bare
+    // URLs) and store them as JSON, so the AIO source table renders reliably without depending on
+    // scan-time or render-time parsing. Regex-free where it matters; this is server-side so \s is fine.
+    var _aioRefs = [];
+    try {
+      var _seen = {};
+      var _mdRe = /\[(\d+)\]\((https?:\/\/[^\s)]+)\)/g, _m;
+      while ((_m = _mdRe.exec(text)) !== null) {
+        var _u = _m[2]; var _hh = _u.replace(/^https?:\/\//,'').replace(/^www\./,'').split('/')[0];
+        if (_hh && !_seen[_hh]) { _seen[_hh] = 1; _aioRefs.push({ url: _u, source: _hh }); }
+      }
+      if (!_aioRefs.length) {
+        var _bareRe = /https?:\/\/[^\s)\]"'<>,]+/g, _b;
+        while ((_b = _bareRe.exec(text)) !== null) {
+          var _u2 = _b[0].replace(/[.,);:]+$/,''); var _hh2 = _u2.replace(/^https?:\/\//,'').replace(/^www\./,'').split('/')[0];
+          if (_hh2 && !_seen[_hh2]) { _seen[_hh2] = 1; _aioRefs.push({ url: _u2, source: _hh2 }); }
+        }
+      }
+      if (_aioRefs.length > 12) _aioRefs = _aioRefs.slice(0, 12);
+    } catch(e) { _aioRefs = []; }
+    await pool.query('UPDATE tracker_pages SET aio_manual_text=$1, aio_manual_refs=$2 WHERE id=$3', [text, JSON.stringify(_aioRefs), pg.rows[0].id]);
     res.json({ success: true, saved: true, aio_cited_preview: cited, message: cited ? 'Saved — your page appears cited in this AIO. Run a scan to generate the full brief.' : 'Saved — your page is NOT cited in this AIO. Run a scan to get recommendations on how to get cited.' });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
@@ -30199,6 +30219,7 @@ var _mdFilter = 'all'; // 'all' | 'todo' | 'done' — filter on the user's own p
         aio_text: p.ai_google_overview_text || p.aio_manual_text || '',
         aio_found: !!p.ai_google_overview_found,
         aio_references: p.ai_google_overview_references || null,
+        aio_manual_refs: p.aio_manual_refs || null,
         aio_citation_gap: (brief && brief.aio_citation_gap) || null,
         ai_overview_blueprint: (brief && brief.ai_overview_blueprint) || null,
         citation_targets: (brief && brief.citation_targets) || null,
@@ -32425,6 +32446,9 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
             return out;
           }
           var _aioRef = typeof data.aio_references === 'string' ? JSON.parse(data.aio_references) : (data.aio_references||[]);
+          if ((!_aioRef || !_aioRef.length) && data.aio_manual_refs) {
+            try { _aioRef = typeof data.aio_manual_refs === 'string' ? JSON.parse(data.aio_manual_refs) : data.aio_manual_refs; } catch(e) {}
+          }
           if ((!_aioRef || !_aioRef.length) && (data.aio_text || data.aio_manual_text)) {
             _aioRef = _extractAioRefs(data.aio_text || data.aio_manual_text);
           }
@@ -40062,6 +40086,7 @@ app.post('/api/intelligence/ai-citation', verifyEngineAccess, async (req, res) =
 pool.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS serp_spy JSONB`).catch(()=>{});
 pool.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS serp_spy_at TIMESTAMPTZ`).catch(()=>{});
 pool.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS aio_manual_text TEXT`).catch(()=>{});
+pool.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS aio_manual_refs JSONB`).catch(()=>{});
 pool.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS ai_google_overview_found BOOLEAN DEFAULT FALSE`).catch(()=>{});
 pool.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS ai_google_overview_cited BOOLEAN DEFAULT FALSE`).catch(()=>{});
 pool.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS ai_google_overview_text TEXT`).catch(()=>{});
