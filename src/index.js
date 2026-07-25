@@ -1,4 +1,4 @@
-console.log('=== CONTENTSCALE BOOT ' + new Date().toISOString() + ' v2026-07-08-possible-prioritized-shortcut | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON | possibleThreshold=20impr | shortcutPrioritized=v2 | gscAutoFetchRemoved=true | linkCheckActive=true | wholeSiteWipeGuard=true | gscAutoFetchRestored=true | reminderOffFix=true | claudeRemoved=true | bingWebmaster=true | competitorPanel=true | zeroResultFix=true | pagesRefreshFix=true | recheckButton=true | provenScanStrip=true | provenScanState=true | scanAllProven=true | doEverythingBtn=true | panelOrderFix=true | workflowGuide=true | preScanGuard=true | scanAllGuard=true | earlyGuard=true | emptyStateTeaser=true | provenScopeFix=true | numberedButtons=true | clearerButtons=true | scanAnimFix=true | promptClaudeCleanup=true | bonusTip=true | realProvenContext=true | competitorContext=true | unifiedBrief=true | diagnosticFirst=true | fullCompetitorBreakdown=true | serpSpyV3=true | transparencyBlock=true | emailsPausedToggle=true | competitorDedup=true | provenScanDebug=true | serializedScans=true | claudeCleanupV2=true | mergeClaudeStrip=true | visualTransparency=true | aboveFoldPriority=true | competitorComparisonTable=true | redGreenTracking=true | aioExplicitState=true | perpCopilotState=true | realMergePromptFixed=true | briefContextDebug=true | forceRescanBypass=true | gscPosFallback=true | cannibalDedup=true | gscAccessGated=true | gapConfirmShown=true | noPlaceholders=true | rowNumContrast=true | codeCannibalDedup=true | provenDebugRemoved=true | broaderCannibalDedup=true | competitorGapFallback=true | competitorPrevSnapFallback=true | hubSpokeDedup=true | compGapRegexBroadened=true | gapFixLabelFallback=true | geminiProForBriefs=true | timeoutBudgetFixed=true | perAttemptTimeout45s=true | revertToFlashLite=true | tokenLimitDoubled=true | urlNormFix=true | impactFieldChecked=true | broaderHubPattern=true | cannibalContextRemovedFromGSC=true | scanStateDerivedFromDB=true | boardBriefRestyled=true | liveWallBriefModal=true | modalScopeFix=true | cardTransparency=true | CLAUDE-FIX-2307=true | CLAUDE-FIX-2307B-specquote=true | CLAUDE-FIX-2307C-pwboard=true | CLAUDE-FIX-2307D-typefilter=true | CLAUDE-FIX-2307E-scanneraio=true | CLAUDE-FIX-2307F-urlstrip=true | CLAUDE-FIX-2307G-aiobeforeScan=true | CLAUDE-FIX-2307H-aioInPrompt=true | CLAUDE-FIX-2307I-escHtml=true | CLAUDE-FIX-2307J-escAlias-noStale=true | CLAUDE-FIX-2407A-perpCitedConsistency=true | CLAUDE-FIX-2407B-perpCacheBug=true | CLAUDE-FIX-2407C-domainVsPageNuance=true | CLAUDE-FIX-2407D-wallModalNoReshuffle=true | CLAUDE-FIX-2407E-buildBriefSafetyNet=true | CLAUDE-FIX-2407F-modalFullText=true | CLAUDE-FIX-2407G-aioPasteModal=true | CLAUDE-FIX-2407H-aioDefinitionView=true | CLAUDE-FIX-2407I-aioBlueprintMining=true | CLAUDE-FIX-2407J-aioReferences=true | CLAUDE-FIX-2407K-aioCitationGap=true | CLAUDE-FIX-2407L-compGapTableAllModals=true | CLAUDE-FIX-2407M-honestAioManualOnly=true | CLAUDE-FIX-2407N-regexEscapeInTemplate=true | CLAUDE-FIX-2507A-jsonRepair-mergeTokens4096=true | CLAUDE-FIX-2507B-cardButtonsWorkflowOrder=true | CLAUDE-FIX-2507C-cardButtonsPillColors=true | CLAUDE-FIX-2507D-aioReloadFull-limit8000=true | CLAUDE-FIX-2507E-briefModalTransparency=true | CLAUDE-FIX-2507F-aioGapTable4col=true | CLAUDE-FIX-2507G-htmlScanTickCycle=true | CLAUDE-FIX-2507H-briefViewedPersisted=true | CLAUDE-FIX-2507I-fixCardRenderVarInExpr=true | CLAUDE-FIX-2507J-briefsUnified-manualAioGap=true | CLAUDE-FIX-2507K-gscCompTableInTracker=true | CLAUDE-FIX-2507L-trackerSplitSections=true | CLAUDE-FIX-2507M-copyBriefClarity=true | CLAUDE-FIX-2507N-aioRefsFromManualPaste=true | CLAUDE-FIX-2507O-removeSseEventSource=true | CLAUDE-FIX-2507P-ticksPersistUntilDoneOrNewHtml=true | CLAUDE-FIX-2507Q-aioRefsStoredAtSave=true | CLAUDE-FIX-2507R-aioGapTableAlways=true | CLAUDE-FIX-2507S-aioGscContextSeparated=true ===');
+console.log('=== CONTENTSCALE BOOT ' + new Date().toISOString() + ' v2026-07-08-possible-prioritized-shortcut | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON | possibleThreshold=20impr | shortcutPrioritized=v2 | gscAutoFetchRemoved=true | linkCheckActive=true | wholeSiteWipeGuard=true | gscAutoFetchRestored=true | reminderOffFix=true | claudeRemoved=true | bingWebmaster=true | competitorPanel=true | zeroResultFix=true | pagesRefreshFix=true | recheckButton=true | provenScanStrip=true | provenScanState=true | scanAllProven=true | doEverythingBtn=true | panelOrderFix=true | workflowGuide=true | preScanGuard=true | scanAllGuard=true | earlyGuard=true | emptyStateTeaser=true | provenScopeFix=true | numberedButtons=true | clearerButtons=true | scanAnimFix=true | promptClaudeCleanup=true | bonusTip=true | realProvenContext=true | competitorContext=true | unifiedBrief=true | diagnosticFirst=true | fullCompetitorBreakdown=true | serpSpyV3=true | transparencyBlock=true | emailsPausedToggle=true | competitorDedup=true | provenScanDebug=true | serializedScans=true | claudeCleanupV2=true | mergeClaudeStrip=true | visualTransparency=true | aboveFoldPriority=true | competitorComparisonTable=true | redGreenTracking=true | aioExplicitState=true | perpCopilotState=true | realMergePromptFixed=true | briefContextDebug=true | forceRescanBypass=true | gscPosFallback=true | cannibalDedup=true | gscAccessGated=true | gapConfirmShown=true | noPlaceholders=true | rowNumContrast=true | codeCannibalDedup=true | provenDebugRemoved=true | broaderCannibalDedup=true | competitorGapFallback=true | competitorPrevSnapFallback=true | hubSpokeDedup=true | compGapRegexBroadened=true | gapFixLabelFallback=true | geminiProForBriefs=true | timeoutBudgetFixed=true | perAttemptTimeout45s=true | revertToFlashLite=true | tokenLimitDoubled=true | urlNormFix=true | impactFieldChecked=true | broaderHubPattern=true | cannibalContextRemovedFromGSC=true | scanStateDerivedFromDB=true | boardBriefRestyled=true | liveWallBriefModal=true | modalScopeFix=true | cardTransparency=true | CLAUDE-FIX-2307=true | CLAUDE-FIX-2307B-specquote=true | CLAUDE-FIX-2307C-pwboard=true | CLAUDE-FIX-2307D-typefilter=true | CLAUDE-FIX-2307E-scanneraio=true | CLAUDE-FIX-2307F-urlstrip=true | CLAUDE-FIX-2307G-aiobeforeScan=true | CLAUDE-FIX-2307H-aioInPrompt=true | CLAUDE-FIX-2307I-escHtml=true | CLAUDE-FIX-2307J-escAlias-noStale=true | CLAUDE-FIX-2407A-perpCitedConsistency=true | CLAUDE-FIX-2407B-perpCacheBug=true | CLAUDE-FIX-2407C-domainVsPageNuance=true | CLAUDE-FIX-2407D-wallModalNoReshuffle=true | CLAUDE-FIX-2407E-buildBriefSafetyNet=true | CLAUDE-FIX-2407F-modalFullText=true | CLAUDE-FIX-2407G-aioPasteModal=true | CLAUDE-FIX-2407H-aioDefinitionView=true | CLAUDE-FIX-2407I-aioBlueprintMining=true | CLAUDE-FIX-2407J-aioReferences=true | CLAUDE-FIX-2407K-aioCitationGap=true | CLAUDE-FIX-2407L-compGapTableAllModals=true | CLAUDE-FIX-2407M-honestAioManualOnly=true | CLAUDE-FIX-2407N-regexEscapeInTemplate=true | CLAUDE-FIX-2507A-jsonRepair-mergeTokens4096=true | CLAUDE-FIX-2507B-cardButtonsWorkflowOrder=true | CLAUDE-FIX-2507C-cardButtonsPillColors=true | CLAUDE-FIX-2507D-aioReloadFull-limit8000=true | CLAUDE-FIX-2507E-briefModalTransparency=true | CLAUDE-FIX-2507F-aioGapTable4col=true | CLAUDE-FIX-2507G-htmlScanTickCycle=true | CLAUDE-FIX-2507H-briefViewedPersisted=true | CLAUDE-FIX-2507I-fixCardRenderVarInExpr=true | CLAUDE-FIX-2507J-briefsUnified-manualAioGap=true | CLAUDE-FIX-2507K-gscCompTableInTracker=true | CLAUDE-FIX-2507L-trackerSplitSections=true | CLAUDE-FIX-2507M-copyBriefClarity=true | CLAUDE-FIX-2507N-aioRefsFromManualPaste=true | CLAUDE-FIX-2507O-removeSseEventSource=true | CLAUDE-FIX-2507P-ticksPersistUntilDoneOrNewHtml=true | CLAUDE-FIX-2507Q-aioRefsStoredAtSave=true | CLAUDE-FIX-2507R-aioGapTableAlways=true | CLAUDE-FIX-2507S-aioGscContextSeparated=true | CLAUDE-FIX-2507T-aioCodeFallbackFixed-refsFromManualSave=true | CLAUDE-FIX-2507U-mergeSafetyNet-cardSummaryParity=true ===');
 
 // Repair common LLM-JSON defects (raw newlines/tabs inside strings, trailing commas)
 function _repairJsonG(str){
@@ -4290,6 +4290,18 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
   // wall (not hidden behind a click), matching the full brief. The modal then shows everything.
   function _bwTransL(d){
     var comp = d.competitors||[]; var pcomp = d.perp_competitors||[]; var aioref = d.aio_references||[];
+    if ((!aioref || !aioref.length) && (d.aio_text || d.aio_manual_text)) {
+      // Same manual-AIO source extraction as the modal, so the compact card summary and the
+      // full brief modal always agree on how many AIO sources are cited.
+      var _tatxt = String(d.aio_text || d.aio_manual_text || ''), _tai = 0, _taseen = {}; aioref = [];
+      while (true) {
+        var _tah = _tatxt.indexOf('http', _tai); if (_tah < 0) break;
+        var _tae = _tah; while (_tae < _tatxt.length) { var _tac = _tatxt.charCodeAt(_tae); var _tacs = _tatxt.charAt(_tae); if (_tac <= 32 || _tacs===')'||_tacs===']'||_tacs==='('||_tacs==='['||_tacs==='"'||_tacs==='<'||_tacs==='>'||_tacs===',') break; _tae++; }
+        var _tau = _tatxt.slice(_tah, _tae); while (_tau.length && '.,);:'.indexOf(_tau.charAt(_tau.length-1))>=0) _tau = _tau.slice(0,-1);
+        if (_tau.length > 10 && !_taseen[_tau]) { _taseen[_tau]=1; aioref.push({ url: _tau }); }
+        _tai = _tae + 1; if (aioref.length >= 12) break;
+      }
+    }
     if (!comp.length && !pcomp.length && !d.aio_text && !d.perp_text && !aioref.length) return '';
     var h = '<div class="bwc-trans"><div class="bwc-trans-h">&#128269; WHAT WE ACTUALLY CHECKED</div>';
     if (comp.length) {
@@ -41099,6 +41111,14 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
             try { var _apu = new URL(page.url); _aioPageNorm = _apu.hostname.replace(/^www\./, '') + _apu.pathname.replace(/\/+$/, ''); } catch(e) { _aioPageNorm = domain; }
             snapshot.ai_google_overview_cited = page.aio_manual_text.toLowerCase().includes(_aioPageNorm.toLowerCase()) || page.aio_manual_text.includes(domain);
             snapshot.ai_google_overview_text = ('Manual AIO: ' + page.aio_manual_text).substring(0, 8000);
+            // Feed the URLs extracted at save-time (2507Q) into the standard references field, so
+            // every downstream consumer — the AIO code-fallback, the AIO gap table, all modals —
+            // sees real AI-Overview-cited sources instead of falling back to organic SERP data.
+            if (Array.isArray(page.aio_manual_refs) && page.aio_manual_refs.length) {
+              snapshot.ai_google_overview_references = page.aio_manual_refs;
+            } else if (typeof page.aio_manual_refs === 'string' && page.aio_manual_refs) {
+              try { var _pmr = JSON.parse(page.aio_manual_refs); if (Array.isArray(_pmr) && _pmr.length) snapshot.ai_google_overview_references = _pmr; } catch(e) {}
+            }
             console.log('[tracker] AIO manual override for ' + page.url + ' — cited=' + snapshot.ai_google_overview_cited);
           } else {
           // Confirmed 2026-07-22 via live debug: Serper.dev does not reliably
@@ -42188,6 +42208,47 @@ GOAL: Rank #1 for "${kw}" and capture the maximum clicks from ${gscImpr || 'the 
       // scan already fetched (snapshot._competitors) — so the owner always sees who's winning and
       // why, even on a run where Gemini's own formatting fell short.
       try {
+        const _gComp = (snapshot._competitors || []).filter(c => c && c.url);
+        const _aioRefsForFallback = Array.isArray(snapshot.ai_google_overview_references) ? snapshot.ai_google_overview_references.filter(r => r && r.url) : [];
+
+        // AIO-side fallback: uses AI-Overview-cited sources only (or Perplexity's), NEVER organic
+        // SERP — this is the AI-citation brief, organic competitors belong only in the GSC brief.
+        const _fixAioCompetitorGapItem = (item) => {
+          if (!item) return item;
+          const _isCompGap = /competitor.{0,15}gap/i.test(item.system||'') || /competitor.{0,15}gap/i.test(item.title||'');
+          if (!_isCompGap) return item;
+          const _action = (item.action || '').trim();
+          const _hasOrganicLeak = /google search.{0,15}top results/i.test(_action);
+          const _hasAioSources = /domains?.{0,10}(google|ai overview).{0,20}cit(e|es|ing)|ai overview.{0,15}sourcing/i.test(_action);
+          if (_hasAioSources && !_hasOrganicLeak && _action) return item; // already AIO-sourced and clean
+          const _srcList = _aioRefsForFallback.length ? _aioRefsForFallback
+            : (Array.isArray(snapshot.ai_perplexity_competitors) ? snapshot.ai_perplexity_competitors.map(u => ({ url: u })) : []);
+          if (!_srcList.length) {
+            // No AIO/Perplexity source data to build a citeable fallback from — drop the item
+            // rather than leak organic SERP data into the AI-citation brief.
+            return _hasOrganicLeak ? null : item;
+          }
+          let _built = 'AI OVERVIEW / AI AGGREGATION — sourcing:\n'
+            + 'Google AI Overview and Perplexity currently cite:\n'
+            + _srcList.slice(0, 5).map((r, i) => { let h = r.url; try { h = new URL(r.url).hostname.replace(/^www\./,''); } catch(e){} return '#' + (i+1) + ' ' + h + (r.title ? ' — "' + String(r.title).substring(0,80) + '"' : ''); }).join('\n')
+            + '\n\nYOUR GAP:\n';
+          const _gapText = _hasOrganicLeak
+            ? 'This page does not yet cover the same entities/sub-topics these AI-cited sources do.'
+            : (_action || 'This page does not yet cover the same entities/sub-topics these AI-cited sources do.');
+          item.action = _built + _gapText.replace(/google search.{0,15}top results:[\s\S]*?(?=your gap:|fix:|$)/i, '').trim();
+          return item;
+        };
+        if (Array.isArray(snapshot.recommendations)) {
+          snapshot.recommendations = snapshot.recommendations.map(_fixAioCompetitorGapItem).filter(Boolean);
+        }
+
+        // ── CODE-LEVEL FALLBACK: enforce the Competitor Gap structure (GSC BRIEF ONLY) ──
+        // Gemini does not always follow the 4-heading template reliably (title/AI-overview/gap/fix).
+        // Rather than hope the prompt is followed, check the actual output and, if a heading is
+        // missing, PREPEND a programmatically-built section using the real competitor data this
+        // scan already fetched (snapshot._competitors) — so the owner always sees who's winning and
+        // why, even on a run where Gemini's own formatting fell short. Organic SERP data belongs
+        // only in the GSC brief, so this fallback now runs on snapshot.gsc_brief only.
         const _fixCompetitorGapItem = (item) => {
           if (!item || !/competitor.{0,15}gap/i.test(item.system||'') && !/competitor.{0,15}gap/i.test(item.title||'')) return item;
           const _action = item.action || '';
@@ -42196,7 +42257,6 @@ GOAL: Rank #1 for "${kw}" and capture the maximum clicks from ${gscImpr || 'the 
           const _hasGap = /your gap/i.test(_action);
           const _hasFix = /\bfix:/i.test(_action);
           if (_hasGoogle && _hasAio && _hasGap && _hasFix) return item; // already compliant
-          const _gComp = (snapshot._competitors || []).filter(c => c && c.url);
           if (!_gComp.length) return item; // nothing to build a fallback from
           let _built = 'GOOGLE SEARCH — top results:\n'
             + _gComp.slice(0, 5).map((c, i) => '#' + (c.position || i + 1) + ' ' + c.url + (c.title ? ' — "' + String(c.title).substring(0,80) + '"' : '')).join('\n')
@@ -42220,7 +42280,6 @@ GOAL: Rank #1 for "${kw}" and capture the maximum clicks from ${gscImpr || 'the 
           item.action = _built + _action;
           return item;
         };
-        if (Array.isArray(snapshot.recommendations)) snapshot.recommendations = snapshot.recommendations.map(_fixCompetitorGapItem);
         if (Array.isArray(snapshot.gsc_brief)) snapshot.gsc_brief = snapshot.gsc_brief.map(_fixCompetitorGapItem);
 
         // ── Same safe "label what's missing, don't restructure" fallback for Impression Gap items:
@@ -42659,7 +42718,7 @@ MERGE RULES:
 5. ABOVE-THE-FOLD PRIORITY: when a fix could reasonably go in more than one place on the page, prefer the location closer to the H1/opening paragraph over one further down \u2014 AI extraction weights the first ~30% of a page far more heavily than the rest.
 6. If a NEW item has system "Competitor Gap" AND includes a "comparison_table" field, KEEP that field exactly as given \u2014 it is a structured per-competitor breakdown the owner reads as a lesson, do not summarize it away.
 
-Return ONLY JSON array (max 5 items): [{"title":"max 6 words","priority":"high"|"medium"|"low","system":"Google AIO|Perplexity|Copilot|Ranking|Cannibalization|Competitor Gap|Internal Link|Visibility","action":"exact 30+ word instruction","expected_impact":"ranking/AI impact","comparison_table (ONLY if carried over from a Competitor Gap NEW item, omit otherwise)":[{"competitor":"bare domain","what_they_do_well":"specific strength","our_gap":"what this page lacks","what_to_do":"concrete instruction"}]}]`;
+7. AIO/GSC SEPARATION (strict): if an item's system is Google AIO, Perplexity, or Copilot, its "action" text must NEVER contain a "GOOGLE SEARCH \u2014 top results" organic-ranking breakdown \u2014 that belongs only to the separate GSC ranking brief. If a PREVIOUS item mixes organic SERP data into one of these systems, do not carry that text forward verbatim \u2014 rewrite it to reference AI-Overview-cited or Perplexity-cited sources instead, or drop the item if no such AI-citation-specific content is available.\n\nReturn ONLY JSON array (max 5 items): [{"title":"max 6 words","priority":"high"|"medium"|"low","system":"Google AIO|Perplexity|Copilot|Ranking|Cannibalization|Competitor Gap|Internal Link|Visibility","action":"exact 30+ word instruction","expected_impact":"ranking/AI impact","comparison_table (ONLY if carried over from a Competitor Gap NEW item, omit otherwise)":[{"competitor":"bare domain","what_they_do_well":"specific strength","our_gap":"what this page lacks","what_to_do":"concrete instruction"}]}]`;
           const gResp2 = await callGeminiWithFallback(geminiKey, {
             contents: [{ parts: [{ text: mergePrompt2 }] }],
             generationConfig: { temperature: 0.3, maxOutputTokens: 3000 }
@@ -42686,6 +42745,25 @@ Return ONLY JSON array (max 5 items): [{"title":"max 6 words","priority":"high"|
           brief2 = { items: recsToUse, position: pos2, aio: aio2, perp: perp2, bing_cited: bing2, brave_cited: brave2, score: score2,
             gsc_brief: gscBriefItems };
         }
+      }
+
+      // ── FINAL SAFETY NET: re-run the AIO/organic-SERP cleanup on whatever brief2 ended up
+      // containing — this guards against the merge step (mergePrompt2, above) re-surfacing an
+      // OLD, pre-fix "GOOGLE SEARCH — top results" leak from a PREVIOUS saved brief. No matter
+      // what Gemini's merge output looks like, this is the last gate before save/broadcast.
+      if (brief2 && Array.isArray(brief2.items)) {
+        try {
+          const _aioSystemRe = /^(google aio|perplexity|copilot)$/i;
+          brief2.items = brief2.items.map(function(it) {
+            if (!it || !_aioSystemRe.test(String(it.system||'').trim())) return it;
+            const _act = String(it.action||'');
+            if (!/google search.{0,15}top results/i.test(_act)) return it;
+            // Strip the leaked organic block; keep any AI-Overview/Perplexity sourcing + gap/fix text that follows.
+            const _cleaned = _act.replace(/google search.{0,15}top results:[\s\S]*?(?=ai overview|your gap:|fix:|$)/i, '').trim();
+            it.action = _cleaned || 'This action needs AI-citation-specific sourcing — rerun the scan to regenerate it.';
+            return it;
+          }).filter(Boolean);
+        } catch(_safetyErr) {}
       }
 
       if (brief2) {
