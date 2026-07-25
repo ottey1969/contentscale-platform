@@ -1,4 +1,4 @@
-console.log('=== CONTENTSCALE BOOT ' + new Date().toISOString() + ' v2026-07-08-possible-prioritized-shortcut | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON | possibleThreshold=20impr | shortcutPrioritized=v2 | gscAutoFetchRemoved=true | linkCheckActive=true | wholeSiteWipeGuard=true | gscAutoFetchRestored=true | reminderOffFix=true | claudeRemoved=true | bingWebmaster=true | competitorPanel=true | zeroResultFix=true | pagesRefreshFix=true | recheckButton=true | provenScanStrip=true | provenScanState=true | scanAllProven=true | doEverythingBtn=true | panelOrderFix=true | workflowGuide=true | preScanGuard=true | scanAllGuard=true | earlyGuard=true | emptyStateTeaser=true | provenScopeFix=true | numberedButtons=true | clearerButtons=true | scanAnimFix=true | promptClaudeCleanup=true | bonusTip=true | realProvenContext=true | competitorContext=true | unifiedBrief=true | diagnosticFirst=true | fullCompetitorBreakdown=true | serpSpyV3=true | transparencyBlock=true | emailsPausedToggle=true | competitorDedup=true | provenScanDebug=true | serializedScans=true | claudeCleanupV2=true | mergeClaudeStrip=true | visualTransparency=true | aboveFoldPriority=true | competitorComparisonTable=true | redGreenTracking=true | aioExplicitState=true | perpCopilotState=true | realMergePromptFixed=true | briefContextDebug=true | forceRescanBypass=true | gscPosFallback=true | cannibalDedup=true | gscAccessGated=true | gapConfirmShown=true | noPlaceholders=true | rowNumContrast=true | codeCannibalDedup=true | provenDebugRemoved=true | broaderCannibalDedup=true | competitorGapFallback=true | competitorPrevSnapFallback=true | hubSpokeDedup=true | compGapRegexBroadened=true | gapFixLabelFallback=true | geminiProForBriefs=true | timeoutBudgetFixed=true | perAttemptTimeout45s=true | revertToFlashLite=true | tokenLimitDoubled=true | urlNormFix=true | impactFieldChecked=true | broaderHubPattern=true | cannibalContextRemovedFromGSC=true | scanStateDerivedFromDB=true | boardBriefRestyled=true | liveWallBriefModal=true | modalScopeFix=true | cardTransparency=true | CLAUDE-FIX-2307=true | CLAUDE-FIX-2307B-specquote=true | CLAUDE-FIX-2307C-pwboard=true | CLAUDE-FIX-2307D-typefilter=true | CLAUDE-FIX-2307E-scanneraio=true | CLAUDE-FIX-2307F-urlstrip=true | CLAUDE-FIX-2307G-aiobeforeScan=true | CLAUDE-FIX-2307H-aioInPrompt=true | CLAUDE-FIX-2307I-escHtml=true | CLAUDE-FIX-2307J-escAlias-noStale=true | CLAUDE-FIX-2407A-perpCitedConsistency=true | CLAUDE-FIX-2407B-perpCacheBug=true | CLAUDE-FIX-2407C-domainVsPageNuance=true | CLAUDE-FIX-2407D-wallModalNoReshuffle=true | CLAUDE-FIX-2407E-buildBriefSafetyNet=true | CLAUDE-FIX-2407F-modalFullText=true | CLAUDE-FIX-2407G-aioPasteModal=true | CLAUDE-FIX-2407H-aioDefinitionView=true | CLAUDE-FIX-2407I-aioBlueprintMining=true | CLAUDE-FIX-2407J-aioReferences=true | CLAUDE-FIX-2407K-aioCitationGap=true | CLAUDE-FIX-2407L-compGapTableAllModals=true | CLAUDE-FIX-2407M-honestAioManualOnly=true | CLAUDE-FIX-2407N-regexEscapeInTemplate=true | CLAUDE-FIX-2507A-jsonRepair-mergeTokens4096=true | CLAUDE-FIX-2507B-cardButtonsWorkflowOrder=true | CLAUDE-FIX-2507C-cardButtonsPillColors=true | CLAUDE-FIX-2507D-aioReloadFull-limit8000=true | CLAUDE-FIX-2507E-briefModalTransparency=true | CLAUDE-FIX-2507F-aioGapTable4col=true | CLAUDE-FIX-2507G-htmlScanTickCycle=true | CLAUDE-FIX-2507H-briefViewedPersisted=true | CLAUDE-FIX-2507I-fixCardRenderVarInExpr=true | CLAUDE-FIX-2507J-briefsUnified-manualAioGap=true | CLAUDE-FIX-2507K-gscCompTableInTracker=true | CLAUDE-FIX-2507L-trackerSplitSections=true | CLAUDE-FIX-2507M-copyBriefClarity=true ===');
+console.log('=== CONTENTSCALE BOOT ' + new Date().toISOString() + ' v2026-07-08-possible-prioritized-shortcut | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON | possibleThreshold=20impr | shortcutPrioritized=v2 | gscAutoFetchRemoved=true | linkCheckActive=true | wholeSiteWipeGuard=true | gscAutoFetchRestored=true | reminderOffFix=true | claudeRemoved=true | bingWebmaster=true | competitorPanel=true | zeroResultFix=true | pagesRefreshFix=true | recheckButton=true | provenScanStrip=true | provenScanState=true | scanAllProven=true | doEverythingBtn=true | panelOrderFix=true | workflowGuide=true | preScanGuard=true | scanAllGuard=true | earlyGuard=true | emptyStateTeaser=true | provenScopeFix=true | numberedButtons=true | clearerButtons=true | scanAnimFix=true | promptClaudeCleanup=true | bonusTip=true | realProvenContext=true | competitorContext=true | unifiedBrief=true | diagnosticFirst=true | fullCompetitorBreakdown=true | serpSpyV3=true | transparencyBlock=true | emailsPausedToggle=true | competitorDedup=true | provenScanDebug=true | serializedScans=true | claudeCleanupV2=true | mergeClaudeStrip=true | visualTransparency=true | aboveFoldPriority=true | competitorComparisonTable=true | redGreenTracking=true | aioExplicitState=true | perpCopilotState=true | realMergePromptFixed=true | briefContextDebug=true | forceRescanBypass=true | gscPosFallback=true | cannibalDedup=true | gscAccessGated=true | gapConfirmShown=true | noPlaceholders=true | rowNumContrast=true | codeCannibalDedup=true | provenDebugRemoved=true | broaderCannibalDedup=true | competitorGapFallback=true | competitorPrevSnapFallback=true | hubSpokeDedup=true | compGapRegexBroadened=true | gapFixLabelFallback=true | geminiProForBriefs=true | timeoutBudgetFixed=true | perAttemptTimeout45s=true | revertToFlashLite=true | tokenLimitDoubled=true | urlNormFix=true | impactFieldChecked=true | broaderHubPattern=true | cannibalContextRemovedFromGSC=true | scanStateDerivedFromDB=true | boardBriefRestyled=true | liveWallBriefModal=true | modalScopeFix=true | cardTransparency=true | CLAUDE-FIX-2307=true | CLAUDE-FIX-2307B-specquote=true | CLAUDE-FIX-2307C-pwboard=true | CLAUDE-FIX-2307D-typefilter=true | CLAUDE-FIX-2307E-scanneraio=true | CLAUDE-FIX-2307F-urlstrip=true | CLAUDE-FIX-2307G-aiobeforeScan=true | CLAUDE-FIX-2307H-aioInPrompt=true | CLAUDE-FIX-2307I-escHtml=true | CLAUDE-FIX-2307J-escAlias-noStale=true | CLAUDE-FIX-2407A-perpCitedConsistency=true | CLAUDE-FIX-2407B-perpCacheBug=true | CLAUDE-FIX-2407C-domainVsPageNuance=true | CLAUDE-FIX-2407D-wallModalNoReshuffle=true | CLAUDE-FIX-2407E-buildBriefSafetyNet=true | CLAUDE-FIX-2407F-modalFullText=true | CLAUDE-FIX-2407G-aioPasteModal=true | CLAUDE-FIX-2407H-aioDefinitionView=true | CLAUDE-FIX-2407I-aioBlueprintMining=true | CLAUDE-FIX-2407J-aioReferences=true | CLAUDE-FIX-2407K-aioCitationGap=true | CLAUDE-FIX-2407L-compGapTableAllModals=true | CLAUDE-FIX-2407M-honestAioManualOnly=true | CLAUDE-FIX-2407N-regexEscapeInTemplate=true | CLAUDE-FIX-2507A-jsonRepair-mergeTokens4096=true | CLAUDE-FIX-2507B-cardButtonsWorkflowOrder=true | CLAUDE-FIX-2507C-cardButtonsPillColors=true | CLAUDE-FIX-2507D-aioReloadFull-limit8000=true | CLAUDE-FIX-2507E-briefModalTransparency=true | CLAUDE-FIX-2507F-aioGapTable4col=true | CLAUDE-FIX-2507G-htmlScanTickCycle=true | CLAUDE-FIX-2507H-briefViewedPersisted=true | CLAUDE-FIX-2507I-fixCardRenderVarInExpr=true | CLAUDE-FIX-2507J-briefsUnified-manualAioGap=true | CLAUDE-FIX-2507K-gscCompTableInTracker=true | CLAUDE-FIX-2507L-trackerSplitSections=true | CLAUDE-FIX-2507M-copyBriefClarity=true | CLAUDE-FIX-2507N-aioRefsFromManualPaste=true | CLAUDE-FIX-2507O-removeSseEventSource=true ===');
 
 // Repair common LLM-JSON defects (raw newlines/tabs inside strings, trailing commas)
 function _repairJsonG(str){
@@ -2145,7 +2145,7 @@ app.get('/api/tracker-client/:token/latest-briefs', async (req, res) => {
     const cr = await pool.query('SELECT id FROM tracker_clients WHERE (token=$1 OR board_token=$1 OR lead_token=$1) AND (status IS NULL OR status != $2)', [req.params.token, 'deleted']);
     if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
     const r = await pool.query(
-      `SELECT p.id, p.url, p.keyword, p.gsc_keyword, p.gsc_ctr, p.brief_content, p.gsc_clicks, p.gsc_impressions, p.gsc_position,
+      `SELECT p.id, p.url, p.keyword, p.gsc_keyword, p.gsc_ctr, p.aio_manual_text, p.brief_content, p.gsc_clicks, p.gsc_impressions, p.gsc_position,
               p.brief_status, p.brief_claimed_by, p.brief_claimed_at, p.brief_started_at,
               p.brief_done_at, p.brief_submitted_at, p.brief_approved_at, p.brief_approved_by, p.brief_published_at,
               p.brief_deadline, p.brief_assigned_at, p.brief_rejected_at, p.brief_reject_reason, p.priority,
@@ -2201,7 +2201,7 @@ app.get('/api/tracker-client/:token/latest-briefs', async (req, res) => {
         ai_overview_blueprint: Array.isArray(bc.ai_overview_blueprint) ? bc.ai_overview_blueprint : [],
         citation_targets: Array.isArray(bc.citation_targets) ? bc.citation_targets : [],
         aio_manual: !!bc.aio_manual,
-        aio_text: p.ai_google_overview_text || '',
+        aio_text: p.ai_google_overview_text || p.aio_manual_text || '',
         perp_text: p.ai_perplexity_text || '',
         aio_found: !!p.ai_google_overview_found,
         page_id: p.id,
@@ -4136,6 +4136,17 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
         h += '<div class="bwm-line">Google AI Overview: no data \\u2014 paste the AI Overview you see on Google (Add AIO on the page card) for an exact check. Automated tools can\\u2019t see your personalized AI Overview.</div>';
       }
       var aioref = d.aio_references || [];
+      if ((!aioref || !aioref.length) && (d.aio_text || d.aio_manual_text)) {
+        // Build the AIO source table from URLs in the manually-pasted AI Overview.
+        var _atxt = String(d.aio_text || d.aio_manual_text || ''), _ai = 0, _aseen = {}; aioref = [];
+        while (true) {
+          var _ah = _atxt.indexOf('http', _ai); if (_ah < 0) break;
+          var _ae = _ah; while (_ae < _atxt.length) { var _ac = _atxt.charCodeAt(_ae); var _acs = _atxt.charAt(_ae); if (_ac <= 32 || _acs===')'||_acs===']'||_acs==='('||_acs==='['||_acs==='"'||_acs==='<'||_acs==='>'||_acs===',') break; _ae++; }
+          var _au = _atxt.slice(_ah, _ae); while (_au.length && '.,);:'.indexOf(_au.charAt(_au.length-1))>=0) _au = _au.slice(0,-1);
+          if (_au.length > 10 && !_aseen[_au]) { _aseen[_au]=1; aioref.push({ url: _au }); }
+          _ai = _ae + 1; if (aioref.length >= 12) break;
+        }
+      }
       if (aioref.length) {
         var _mydom = _bwCleanUrlL(d.url||d.domain||'').split('/')[0];
         var _aioCitedHere = aioref.some(function(r){ return _bwCleanUrlL(r.url||'').split('/')[0] === _mydom; });
@@ -4399,33 +4410,9 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
     }
   }
 
-  var evtSource = new EventSource('/api/tracker-client/${req.params.token}/live-wall-stream');
-  evtSource.addEventListener('brief_ready', function(ev) {
-    try {
-      var data = JSON.parse(ev.data);
-      console.log('[live-wall] brief_ready received:', data.url || data.domain || 'unknown');
-      handleBrief(data);
-    } catch(e) { console.error('Live wall parse error:', e); }
-  });
-  evtSource.addEventListener('check_start', function(ev) {
-    try {
-      var data = JSON.parse(ev.data);
-      scanCount++;
-      if (statsBar.style.display === 'none') statsBar.style.display = 'flex';
-      sbScans.textContent = scanCount;
-      console.log('[live-wall] check_start:', data.domain || data.url || 'unknown');
-    } catch(e) {}
-  });
-  evtSource.onerror = function(err) {
-    console.log('Live wall SSE error — polling fallback active', err);
-  };
-  evtSource.onopen = function() {
-    console.log('[live-wall] SSE connected');
-  };
-  evtSource.addEventListener('ping', function() {});
-
-  // Polling fallback — Railway can buffer/drop SSE, so also poll for briefs.
-  // Deduped via handleBrief, so SSE + polling never double-render.
+  // SSE (EventSource) is disabled — Railway's HTTP/2 proxy buffers/drops the stream,
+  // which surfaced as a 502 on /live-wall-stream in the console. Polling below is the
+  // sole transport now; it delivers the same brief_ready + check_start events, deduped.
   var _lastPoll = new Date(Date.now() - 120000).toISOString();
   function pollBriefs(){
     fetch('/api/tracker-client/${req.params.token}/live-events?since=' + encodeURIComponent(_lastPoll))
@@ -4435,6 +4422,11 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
         if (!d || !d.events || !d.events.length) return;
         d.events.slice().reverse().forEach(function(ev){
           if (ev.type === 'brief_ready') handleBrief(ev);
+          else if (ev.type === 'check_start') {
+            scanCount++;
+            if (statsBar.style.display === 'none') statsBar.style.display = 'flex';
+            sbScans.textContent = scanCount;
+          }
         });
       }).catch(function(){});
   }
@@ -30204,7 +30196,7 @@ var _mdFilter = 'all'; // 'all' | 'todo' | 'done' — filter on the user's own p
         _gsc_enabled: (p.gsc_clicks != null) || (p.gsc_impressions != null) || (p.gsc_position != null),
         google_competitors: p.google_competitors || null,
         perp_competitors: p.ai_perplexity_competitors || null,
-        aio_text: p.ai_google_overview_text || '',
+        aio_text: p.ai_google_overview_text || p.aio_manual_text || '',
         aio_found: !!p.ai_google_overview_found,
         aio_references: p.ai_google_overview_references || null,
         aio_citation_gap: (brief && brief.aio_citation_gap) || null,
@@ -30913,7 +30905,7 @@ function _buildBriefData(p) {
     gsc_position: p.gsc_position != null ? p.gsc_position : null,
     gsc_keyword: p.gsc_keyword || null,
     _gsc_enabled: GSC_ENABLED || (p.gsc_clicks != null) || (p.gsc_impressions != null) || (p.gsc_position != null),
-    aio_text: p.ai_google_overview_text || '',
+    aio_text: p.ai_google_overview_text || p.aio_manual_text || '',
     aio_found: !!p.ai_google_overview_found,
     aio_manual_text: p.aio_manual_text || '',
     perp_excerpt: p.ai_perplexity_answer_excerpt || '',
@@ -30964,7 +30956,7 @@ function copyBrief(pageId) {
   lines.push('', '\ud83d\udd0d What We Actually Checked (transparency):');
   lines.push('- Query tested: "' + (p.keyword||p.gsc_keyword||'') + '"');
   if (p.last_checked) lines.push('- Checked: ' + new Date(p.last_checked).toLocaleString());
-  if (p.ai_google_overview_text) lines.push('- Google AI Overview currently shows: "' + p.ai_google_overview_text.substring(0,200) + (p.ai_google_overview_text.length>200?'...':'') + '"');
+  if (p.ai_google_overview_text) lines.push('- Google AI Overview currently shows: "' + _aioTxt.substring(0,200) + (_aioTxt.length>200?'...':'') + '"');
   if (p.ai_perplexity_answer_excerpt) lines.push('- Perplexity\\'s actual answer excerpt: "' + p.ai_perplexity_answer_excerpt.substring(0,200) + (p.ai_perplexity_answer_excerpt.length>200?'...':'') + '"');
   (function(){
     try {
@@ -32405,7 +32397,36 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
           } else {
             _transparencyHtml += '<div style="font-size:10px;color:#6b7280;margin-bottom:10px;">Google AI Overview: no data \u2014 paste the AI Overview you see on Google (Add AIO) for an exact check; automated tools can\u2019t see your personalized AI Overview.</div>';
           }
+          // Extract source URLs from a manually-pasted AI Overview when no structured
+          // references exist. The pasted AIO text contains the citation URLs (e.g. [1](https://...)),
+          // so we can build the same numbered AIO source table from them.
+          function _extractAioRefs(txt) {
+            var out = [], seen = {};
+            txt = String(txt || '');
+            var i = 0;
+            while (true) {
+              var h = txt.indexOf('http', i);
+              if (h < 0) break;
+              var end = h;
+              while (end < txt.length) {
+                var ch = txt.charAt(end);
+                var _cc = ch.charCodeAt(0);
+                if (_cc <= 32 || ch === ')' || ch === ']' || ch === '(' || ch === '[' || ch === '"' || ch === '<' || ch === '>' || ch === ',') break;
+                end++;
+              }
+              var url = txt.slice(h, end);
+              // trim trailing punctuation
+              while (url.length && '.,);:'.indexOf(url.charAt(url.length-1)) >= 0) url = url.slice(0, -1);
+              if (url.length > 10 && !seen[url]) { seen[url] = 1; out.push({ url: url }); }
+              i = end + 1;
+              if (out.length >= 12) break;
+            }
+            return out;
+          }
           var _aioRef = typeof data.aio_references === 'string' ? JSON.parse(data.aio_references) : (data.aio_references||[]);
+          if ((!_aioRef || !_aioRef.length) && (data.aio_text || data.aio_manual_text)) {
+            _aioRef = _extractAioRefs(data.aio_text || data.aio_manual_text);
+          }
           if (_aioRef && _aioRef.length) {
             var _myDom = String(data.url||data.domain||'').replace(/^https?:\\/\\//,'').replace(/^www\\./,'').split('/')[0];
             var _aioMine = _aioRef.some(function(r){ return String(r.url||'').replace(/^https?:\\/\\//,'').replace(/^www\\./,'').split('/')[0] === _myDom; });
