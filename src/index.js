@@ -1,4 +1,4 @@
-console.log('=== CONTENTSCALE BOOT ' + new Date().toISOString() + ' v2026-07-08-possible-prioritized-shortcut | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON | possibleThreshold=20impr | shortcutPrioritized=v2 | gscAutoFetchRemoved=true | linkCheckActive=true | wholeSiteWipeGuard=true | gscAutoFetchRestored=true | reminderOffFix=true | claudeRemoved=true | bingWebmaster=true | competitorPanel=true | zeroResultFix=true | pagesRefreshFix=true | recheckButton=true | provenScanStrip=true | provenScanState=true | scanAllProven=true | doEverythingBtn=true | panelOrderFix=true | workflowGuide=true | preScanGuard=true | scanAllGuard=true | earlyGuard=true | emptyStateTeaser=true | provenScopeFix=true | numberedButtons=true | clearerButtons=true | scanAnimFix=true | promptClaudeCleanup=true | bonusTip=true | realProvenContext=true | competitorContext=true | unifiedBrief=true | diagnosticFirst=true | fullCompetitorBreakdown=true | serpSpyV3=true | transparencyBlock=true | emailsPausedToggle=true | competitorDedup=true | provenScanDebug=true | serializedScans=true | claudeCleanupV2=true | mergeClaudeStrip=true | visualTransparency=true | aboveFoldPriority=true | competitorComparisonTable=true | redGreenTracking=true | aioExplicitState=true | perpCopilotState=true | realMergePromptFixed=true | briefContextDebug=true | forceRescanBypass=true | gscPosFallback=true | cannibalDedup=true | gscAccessGated=true | gapConfirmShown=true | noPlaceholders=true | rowNumContrast=true | codeCannibalDedup=true | provenDebugRemoved=true | broaderCannibalDedup=true | competitorGapFallback=true | competitorPrevSnapFallback=true | hubSpokeDedup=true | compGapRegexBroadened=true | gapFixLabelFallback=true | geminiProForBriefs=true | timeoutBudgetFixed=true | perAttemptTimeout45s=true | revertToFlashLite=true | tokenLimitDoubled=true | urlNormFix=true | impactFieldChecked=true | broaderHubPattern=true | cannibalContextRemovedFromGSC=true | scanStateDerivedFromDB=true | boardBriefRestyled=true | liveWallBriefModal=true | modalScopeFix=true | cardTransparency=true | CLAUDE-FIX-2307=true | CLAUDE-FIX-2307B-specquote=true | CLAUDE-FIX-2307C-pwboard=true | CLAUDE-FIX-2307D-typefilter=true | CLAUDE-FIX-2307E-scanneraio=true | CLAUDE-FIX-2307F-urlstrip=true | CLAUDE-FIX-2307G-aiobeforeScan=true | CLAUDE-FIX-2307H-aioInPrompt=true | CLAUDE-FIX-2307I-escHtml=true | CLAUDE-FIX-2307J-escAlias-noStale=true | CLAUDE-FIX-2407A-perpCitedConsistency=true | CLAUDE-FIX-2407B-perpCacheBug=true | CLAUDE-FIX-2407C-domainVsPageNuance=true | CLAUDE-FIX-2407D-wallModalNoReshuffle=true | CLAUDE-FIX-2407E-buildBriefSafetyNet=true | CLAUDE-FIX-2407F-modalFullText=true | CLAUDE-FIX-2407G-aioPasteModal=true | CLAUDE-FIX-2407H-aioDefinitionView=true | CLAUDE-FIX-2407I-aioBlueprintMining=true | CLAUDE-FIX-2407J-aioReferences=true | CLAUDE-FIX-2407K-aioCitationGap=true | CLAUDE-FIX-2407L-compGapTableAllModals=true | CLAUDE-FIX-2407M-honestAioManualOnly=true | CLAUDE-FIX-2407N-regexEscapeInTemplate=true | CLAUDE-FIX-2507A-jsonRepair-mergeTokens4096=true | CLAUDE-FIX-2507B-cardButtonsWorkflowOrder=true | CLAUDE-FIX-2507C-cardButtonsPillColors=true | CLAUDE-FIX-2507D-aioReloadFull-limit8000=true | CLAUDE-FIX-2507E-briefModalTransparency=true | CLAUDE-FIX-2507F-aioGapTable4col=true | CLAUDE-FIX-2507G-htmlScanTickCycle=true | CLAUDE-FIX-2507H-briefViewedPersisted=true | CLAUDE-FIX-2507I-fixCardRenderVarInExpr=true | CLAUDE-FIX-2507J-briefsUnified-manualAioGap=true | CLAUDE-FIX-2507K-gscCompTableInTracker=true | CLAUDE-FIX-2507L-trackerSplitSections=true | CLAUDE-FIX-2507M-copyBriefClarity=true | CLAUDE-FIX-2507N-aioRefsFromManualPaste=true | CLAUDE-FIX-2507O-removeSseEventSource=true | CLAUDE-FIX-2507P-ticksPersistUntilDoneOrNewHtml=true | CLAUDE-FIX-2507Q-aioRefsStoredAtSave=true | CLAUDE-FIX-2507R-aioGapTableAlways=true | CLAUDE-FIX-2507S-aioGscContextSeparated=true | CLAUDE-FIX-2507T-aioCodeFallbackFixed-refsFromManualSave=true | CLAUDE-FIX-2507U-mergeSafetyNet-cardSummaryParity=true | CLAUDE-FIX-2507V-sharedAioRenderFn-authTable=true | CLAUDE-FIX-2507W-viewLastBriefDelegates-oneSystem=true | CLAUDE-FIX-2507X-sharedBriefBody-fullUnification=true | CLAUDE-FIX-2507Y-aioTop5Table-definitionLabel=true | CLAUDE-FIX-2507Z-noRefsActionableMsg=true | CLAUDE-FIX-2508A-manualPasteWinsOverStaleSnapshot=true | CLAUDE-FIX-2508B-merge2Hardened-diagLog=true | CLAUDE-FIX-2508C-noStoreHeaders-freshClientJs=true | CLAUDE-FIX-2508D-saveEchoDiagnostic=true ===');
+console.log('=== CONTENTSCALE BOOT ' + new Date().toISOString() + ' v2026-07-08-possible-prioritized-shortcut | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON | possibleThreshold=20impr | shortcutPrioritized=v2 | gscAutoFetchRemoved=true | linkCheckActive=true | wholeSiteWipeGuard=true | gscAutoFetchRestored=true | reminderOffFix=true | claudeRemoved=true | bingWebmaster=true | competitorPanel=true | zeroResultFix=true | pagesRefreshFix=true | recheckButton=true | provenScanStrip=true | provenScanState=true | scanAllProven=true | doEverythingBtn=true | panelOrderFix=true | workflowGuide=true | preScanGuard=true | scanAllGuard=true | earlyGuard=true | emptyStateTeaser=true | provenScopeFix=true | numberedButtons=true | clearerButtons=true | scanAnimFix=true | promptClaudeCleanup=true | bonusTip=true | realProvenContext=true | competitorContext=true | unifiedBrief=true | diagnosticFirst=true | fullCompetitorBreakdown=true | serpSpyV3=true | transparencyBlock=true | emailsPausedToggle=true | competitorDedup=true | provenScanDebug=true | serializedScans=true | claudeCleanupV2=true | mergeClaudeStrip=true | visualTransparency=true | aboveFoldPriority=true | competitorComparisonTable=true | redGreenTracking=true | aioExplicitState=true | perpCopilotState=true | realMergePromptFixed=true | briefContextDebug=true | forceRescanBypass=true | gscPosFallback=true | cannibalDedup=true | gscAccessGated=true | gapConfirmShown=true | noPlaceholders=true | rowNumContrast=true | codeCannibalDedup=true | provenDebugRemoved=true | broaderCannibalDedup=true | competitorGapFallback=true | competitorPrevSnapFallback=true | hubSpokeDedup=true | compGapRegexBroadened=true | gapFixLabelFallback=true | geminiProForBriefs=true | timeoutBudgetFixed=true | perAttemptTimeout45s=true | revertToFlashLite=true | tokenLimitDoubled=true | urlNormFix=true | impactFieldChecked=true | broaderHubPattern=true | cannibalContextRemovedFromGSC=true | scanStateDerivedFromDB=true | boardBriefRestyled=true | liveWallBriefModal=true | modalScopeFix=true | cardTransparency=true | CLAUDE-FIX-2307=true | CLAUDE-FIX-2307B-specquote=true | CLAUDE-FIX-2307C-pwboard=true | CLAUDE-FIX-2307D-typefilter=true | CLAUDE-FIX-2307E-scanneraio=true | CLAUDE-FIX-2307F-urlstrip=true | CLAUDE-FIX-2307G-aiobeforeScan=true | CLAUDE-FIX-2307H-aioInPrompt=true | CLAUDE-FIX-2307I-escHtml=true | CLAUDE-FIX-2307J-escAlias-noStale=true | CLAUDE-FIX-2407A-perpCitedConsistency=true | CLAUDE-FIX-2407B-perpCacheBug=true | CLAUDE-FIX-2407C-domainVsPageNuance=true | CLAUDE-FIX-2407D-wallModalNoReshuffle=true | CLAUDE-FIX-2407E-buildBriefSafetyNet=true | CLAUDE-FIX-2407F-modalFullText=true | CLAUDE-FIX-2407G-aioPasteModal=true | CLAUDE-FIX-2407H-aioDefinitionView=true | CLAUDE-FIX-2407I-aioBlueprintMining=true | CLAUDE-FIX-2407J-aioReferences=true | CLAUDE-FIX-2407K-aioCitationGap=true | CLAUDE-FIX-2407L-compGapTableAllModals=true | CLAUDE-FIX-2407M-honestAioManualOnly=true | CLAUDE-FIX-2407N-regexEscapeInTemplate=true | CLAUDE-FIX-2507A-jsonRepair-mergeTokens4096=true | CLAUDE-FIX-2507B-cardButtonsWorkflowOrder=true | CLAUDE-FIX-2507C-cardButtonsPillColors=true | CLAUDE-FIX-2507D-aioReloadFull-limit8000=true | CLAUDE-FIX-2507E-briefModalTransparency=true | CLAUDE-FIX-2507F-aioGapTable4col=true | CLAUDE-FIX-2507G-htmlScanTickCycle=true | CLAUDE-FIX-2507H-briefViewedPersisted=true | CLAUDE-FIX-2507I-fixCardRenderVarInExpr=true | CLAUDE-FIX-2507J-briefsUnified-manualAioGap=true | CLAUDE-FIX-2507K-gscCompTableInTracker=true | CLAUDE-FIX-2507L-trackerSplitSections=true | CLAUDE-FIX-2507M-copyBriefClarity=true | CLAUDE-FIX-2507N-aioRefsFromManualPaste=true | CLAUDE-FIX-2507O-removeSseEventSource=true | CLAUDE-FIX-2507P-ticksPersistUntilDoneOrNewHtml=true | CLAUDE-FIX-2507Q-aioRefsStoredAtSave=true | CLAUDE-FIX-2507R-aioGapTableAlways=true | CLAUDE-FIX-2507S-aioGscContextSeparated=true | CLAUDE-FIX-2507T-aioCodeFallbackFixed-refsFromManualSave=true | CLAUDE-FIX-2507U-mergeSafetyNet-cardSummaryParity=true | CLAUDE-FIX-2507V-sharedAioRenderFn-authTable=true | CLAUDE-FIX-2507W-viewLastBriefDelegates-oneSystem=true | CLAUDE-FIX-2507X-sharedBriefBody-fullUnification=true | CLAUDE-FIX-2507Y-aioTop5Table-definitionLabel=true | CLAUDE-FIX-2507Z-noRefsActionableMsg=true | CLAUDE-FIX-2508A-manualPasteWinsOverStaleSnapshot=true | CLAUDE-FIX-2508B-merge2Hardened-diagLog=true | CLAUDE-FIX-2508C-noStoreHeaders-freshClientJs=true | CLAUDE-FIX-2508D-saveEchoDiagnostic=true | CLAUDE-FIX-2508E-separateSourcesField=true ===');
 
 // Repair common LLM-JSON defects (raw newlines/tabs inside strings, trailing commas)
 function _repairJsonG(str){
@@ -2569,25 +2569,37 @@ app.post('/api/tracker-client/:token/page/:pageId/aio-manual', async (req, res) 
     // URLs) and store them as JSON, so the AIO source table renders reliably without depending on
     // scan-time or render-time parsing. Regex-free where it matters; this is server-side so \s is fine.
     var _aioRefs = [];
+    var _sources = String((req.body && req.body.sources) || '').trim();
+    // Combine the overview text and the dedicated sources field — Google AI Mode copy usually
+    // drops the inline [N](url) links, so the sources box is where the URLs actually arrive.
+    var _combined = text + '\n' + _sources;
     try {
       var _seen = {};
       var _mdRe = /\[(\d+)\]\((https?:\/\/[^\s)]+)\)/g, _m;
-      while ((_m = _mdRe.exec(text)) !== null) {
+      while ((_m = _mdRe.exec(_combined)) !== null) {
         var _u = _m[2]; var _hh = _u.replace(/^https?:\/\//,'').replace(/^www\./,'').split('/')[0];
         if (_hh && !_seen[_hh]) { _seen[_hh] = 1; _aioRefs.push({ url: _u, source: _hh }); }
       }
-      if (!_aioRefs.length) {
-        var _bareRe = /https?:\/\/[^\s)\]"'<>,]+/g, _b;
-        while ((_b = _bareRe.exec(text)) !== null) {
-          var _u2 = _b[0].replace(/[.,);:]+$/,''); var _hh2 = _u2.replace(/^https?:\/\//,'').replace(/^www\./,'').split('/')[0];
-          if (_hh2 && !_seen[_hh2]) { _seen[_hh2] = 1; _aioRefs.push({ url: _u2, source: _hh2 }); }
+      // Bare full URLs (http...)
+      var _bareRe = /https?:\/\/[^\s)\]"'<>,]+/g, _b;
+      while ((_b = _bareRe.exec(_combined)) !== null) {
+        var _u2 = _b[0].replace(/[.,);:]+$/,''); var _hh2 = _u2.replace(/^https?:\/\//,'').replace(/^www\./,'').split('/')[0];
+        if (_hh2 && !_seen[_hh2]) { _seen[_hh2] = 1; _aioRefs.push({ url: _u2, source: _hh2 }); }
+      }
+      // Bare domains (e.g. "recurly.com", "blog.google") — mostly from the sources box, so a user
+      // who only has a plain domain list still gets a source table.
+      var _domRe = /\b([a-z0-9][a-z0-9-]{1,}(?:\.[a-z0-9-]{2,}){1,})\b/gi, _dm;
+      while ((_dm = _domRe.exec(_sources)) !== null) {
+        var _dh = _dm[1].toLowerCase().replace(/^www\./,'');
+        if (/\.(com|io|net|org|co|ai|app|google|dev|news|blog|site)$/.test(_dh) && !_seen[_dh]) {
+          _seen[_dh] = 1; _aioRefs.push({ url: 'https://' + _dh, source: _dh });
         }
       }
       if (_aioRefs.length > 12) _aioRefs = _aioRefs.slice(0, 12);
     } catch(e) { _aioRefs = []; }
     await pool.query('UPDATE tracker_pages SET aio_manual_text=$1, aio_manual_refs=$2 WHERE id=$3', [text, JSON.stringify(_aioRefs), pg.rows[0].id]);
-    var _diagMd = (text.match(/\[(\d+)\]\((https?:\/\/[^\s)]+)\)/g) || []).length;
-    var _diagHttp = (text.match(/https?:\/\//g) || []).length;
+    var _diagMd = (_combined.match(/\[(\d+)\]\((https?:\/\/[^\s)]+)\)/g) || []).length;
+    var _diagHttp = (_combined.match(/https?:\/\//g) || []).length;
     console.log('[aio-save] page ' + pg.rows[0].id + ' received ' + text.length + ' chars, ' + _diagMd + ' [N](url) links, ' + _diagHttp + ' http, extracted ' + _aioRefs.length + ' refs');
     res.json({ success: true, saved: true, aio_cited_preview: cited, refs_extracted: _aioRefs.length, chars_received: text.length, md_links_received: _diagMd, http_received: _diagHttp, message: (cited ? 'Saved — page appears cited. ' : 'Saved — page not cited. ') + _aioRefs.length + ' source links detected.' });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
@@ -29254,7 +29266,12 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
     </div>
     <p style="font-size:12px;color:#6b7280;margin-bottom:6px;">Search your keyword on Google, copy the AI Overview text and paste it here <strong>before scanning</strong>. This lets the scan detect whether your page is cited in the AI Overview and tailor the brief.</p>
     <div id="aioPasteContext" style="font-size:11px;color:#a78bfa;margin-bottom:10px;font-style:italic;"></div>
-    <textarea id="aioPasteContent" placeholder="Paste the Google AI Overview text here..." class="cs-input" rows="12" style="width:100%;font-size:12px;resize:vertical;max-height:50vh;"></textarea>
+    <textarea id="aioPasteContent" placeholder="Paste the Google AI Overview text here..." class="cs-input" rows="10" style="width:100%;font-size:12px;resize:vertical;max-height:40vh;"></textarea>
+    <div style="margin-top:10px;">
+      <label style="font-size:11px;font-weight:700;color:#93c5fd;display:block;margin-bottom:4px;">Source links <span style="color:#6b7280;font-weight:400;">(optional but recommended — builds the AI Overview source table)</span></label>
+      <p style="font-size:11px;color:#6b7280;margin-bottom:6px;">Google&#x2019;s AI Overview shows numbered sources. Copying the overview often drops the links, so paste the source URLs here — one per line, or the whole source list. We&#x2019;ll pull the domains automatically.</p>
+      <textarea id="aioPasteSources" placeholder="https://www.venatus.com/...&#10;https://yieldbird.com/...&#10;recurly.com&#10;blog.google" class="cs-input" rows="4" style="width:100%;font-size:12px;resize:vertical;max-height:25vh;"></textarea>
+    </div>
     <div style="display:flex;gap:8px;margin-top:12px;justify-content:space-between;align-items:center;">
       <span id="aioPasteStatus" style="font-size:11px;color:#6b7280;"></span>
       <div style="display:flex;gap:8px;">
@@ -33349,6 +33366,12 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
     var kw = page.keyword || page.gsc_keyword || '';
     if (ctx) ctx.innerHTML = kw ? ('Keyword: ' + kw.replace(/</g,'&lt;')) : '';
     if (ta) ta.value = page.aio_manual_text || '';
+    var srcTa = document.getElementById('aioPasteSources');
+    if (srcTa) {
+      var _refs = page.aio_manual_refs;
+      if (typeof _refs === 'string') { try { _refs = JSON.parse(_refs); } catch(e) { _refs = null; } }
+      srcTa.value = (Array.isArray(_refs) && _refs.length) ? _refs.map(function(r){ return r.url || r.source || ''; }).filter(Boolean).join('\\n') : '';
+    }
     if (st) { st.textContent = page.aio_manual_text ? (page.aio_manual_text.length + ' chars saved') : ''; st.style.color = '#6b7280'; }
     mEl.classList.add('show');
     mEl.style.display = 'flex';
@@ -33363,20 +33386,22 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
     if (st) { st.textContent = 'Saving...'; st.style.color = '#f59e0b'; }
     fetch('/api/tracker-client/' + TOKEN + '/page/' + pageId + '/aio-manual', {
       method: 'POST', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ text: text })
+      body: JSON.stringify({ text: text, sources: (document.getElementById('aioPasteSources') ? document.getElementById('aioPasteSources').value.trim() : '') })
     }).then(function(r){ return r.json(); }).then(function(d){
       if (d.success) {
         var p = (_pages||[]).find(function(x){ return x.id == pageId; });
         if (p) p.aio_manual_text = d.cleared ? '' : text;
-        if (st) { st.textContent = d.cleared ? 'Cleared' : (d.aio_cited_preview ? 'Saved \\u2014 your page appears cited. Run a scan.' : 'Saved \\u2014 not cited yet. Run a scan for recommendations.'); st.style.color = d.aio_cited_preview ? '#4ade80' : '#f59e0b'; }
+        if (st) { var _refN = (typeof d.refs_extracted === 'number') ? d.refs_extracted : 0; st.textContent = d.cleared ? 'Cleared' : (_refN > 0 ? ('Saved \\u2014 ' + _refN + ' source links detected. Run a scan.') : 'Saved \\u2014 no source links found. Paste them in the Source links box for the AIO table. Run a scan.'); st.style.color = _refN > 0 ? '#4ade80' : '#f59e0b'; }
         if (typeof loadPages === 'function') loadPages();
-        setTimeout(function(){ hideModal('aioPasteModal'); }, 700);
+        setTimeout(function(){ hideModal('aioPasteModal'); }, 1400);
       } else if (st) { st.textContent = d.error || 'Error'; st.style.color = '#f87171'; }
     }).catch(function(){ if (st) { st.textContent = 'Network error'; st.style.color = '#f87171'; } });
   }
   function clearAioPaste() {
     var ta = document.getElementById('aioPasteContent');
     if (ta) ta.value = '';
+    var srcTa = document.getElementById('aioPasteSources');
+    if (srcTa) srcTa.value = '';
     submitAioPaste();
   }
   window.openAioPaste = openAioPaste;
