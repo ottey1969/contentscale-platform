@@ -1,4 +1,4 @@
-console.log('=== CONTENTSCALE BOOT ' + new Date().toISOString() + ' v2026-07-08-possible-prioritized-shortcut | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON | possibleThreshold=20impr | shortcutPrioritized=v2 | gscAutoFetchRemoved=true | linkCheckActive=true | wholeSiteWipeGuard=true | gscAutoFetchRestored=true | reminderOffFix=true | claudeRemoved=true | bingWebmaster=true | competitorPanel=true | zeroResultFix=true | pagesRefreshFix=true | recheckButton=true | provenScanStrip=true | provenScanState=true | scanAllProven=true | doEverythingBtn=true | panelOrderFix=true | workflowGuide=true | preScanGuard=true | scanAllGuard=true | earlyGuard=true | emptyStateTeaser=true | provenScopeFix=true | numberedButtons=true | clearerButtons=true | scanAnimFix=true | promptClaudeCleanup=true | bonusTip=true | realProvenContext=true | competitorContext=true | unifiedBrief=true | diagnosticFirst=true | fullCompetitorBreakdown=true | serpSpyV3=true | transparencyBlock=true | emailsPausedToggle=true | competitorDedup=true | provenScanDebug=true | serializedScans=true | claudeCleanupV2=true | mergeClaudeStrip=true | visualTransparency=true | aboveFoldPriority=true | competitorComparisonTable=true | redGreenTracking=true | aioExplicitState=true | perpCopilotState=true | realMergePromptFixed=true | briefContextDebug=true | forceRescanBypass=true | gscPosFallback=true | cannibalDedup=true | gscAccessGated=true | gapConfirmShown=true | noPlaceholders=true | rowNumContrast=true | codeCannibalDedup=true | provenDebugRemoved=true | broaderCannibalDedup=true | competitorGapFallback=true | competitorPrevSnapFallback=true | hubSpokeDedup=true | compGapRegexBroadened=true | gapFixLabelFallback=true | geminiProForBriefs=true | timeoutBudgetFixed=true | perAttemptTimeout45s=true | revertToFlashLite=true | tokenLimitDoubled=true | urlNormFix=true | impactFieldChecked=true | broaderHubPattern=true | cannibalContextRemovedFromGSC=true | scanStateDerivedFromDB=true | boardBriefRestyled=true | liveWallBriefModal=true | modalScopeFix=true | cardTransparency=true | CLAUDE-FIX-2307=true | CLAUDE-FIX-2307B-specquote=true | CLAUDE-FIX-2307C-pwboard=true | CLAUDE-FIX-2307D-typefilter=true | CLAUDE-FIX-2307E-scanneraio=true | CLAUDE-FIX-2307F-urlstrip=true | CLAUDE-FIX-2307G-aiobeforeScan=true | CLAUDE-FIX-2307H-aioInPrompt=true | CLAUDE-FIX-2307I-escHtml=true | CLAUDE-FIX-2307J-escAlias-noStale=true | CLAUDE-FIX-2407A-perpCitedConsistency=true | CLAUDE-FIX-2407B-perpCacheBug=true | CLAUDE-FIX-2407C-domainVsPageNuance=true | CLAUDE-FIX-2407D-wallModalNoReshuffle=true | CLAUDE-FIX-2407E-buildBriefSafetyNet=true | CLAUDE-FIX-2407F-modalFullText=true | CLAUDE-FIX-2407G-aioPasteModal=true | CLAUDE-FIX-2407H-aioDefinitionView=true | CLAUDE-FIX-2407I-aioBlueprintMining=true | CLAUDE-FIX-2407J-aioReferences=true | CLAUDE-FIX-2407K-aioCitationGap=true | CLAUDE-FIX-2407L-compGapTableAllModals=true | CLAUDE-FIX-2407M-honestAioManualOnly=true | CLAUDE-FIX-2407N-regexEscapeInTemplate=true | CLAUDE-FIX-2507A-jsonRepair-mergeTokens4096=true | CLAUDE-FIX-2507B-cardButtonsWorkflowOrder=true | CLAUDE-FIX-2507C-cardButtonsPillColors=true | CLAUDE-FIX-2507D-aioReloadFull-limit8000=true | CLAUDE-FIX-2507E-briefModalTransparency=true | CLAUDE-FIX-2507F-aioGapTable4col=true | CLAUDE-FIX-2507G-htmlScanTickCycle=true | CLAUDE-FIX-2507H-briefViewedPersisted=true | CLAUDE-FIX-2507I-fixCardRenderVarInExpr=true | CLAUDE-FIX-2507J-briefsUnified-manualAioGap=true | CLAUDE-FIX-2507K-gscCompTableInTracker=true | CLAUDE-FIX-2507L-trackerSplitSections=true | CLAUDE-FIX-2507M-copyBriefClarity=true | CLAUDE-FIX-2507N-aioRefsFromManualPaste=true | CLAUDE-FIX-2507O-removeSseEventSource=true | CLAUDE-FIX-2507P-ticksPersistUntilDoneOrNewHtml=true | CLAUDE-FIX-2507Q-aioRefsStoredAtSave=true | CLAUDE-FIX-2507R-aioGapTableAlways=true | CLAUDE-FIX-2507S-aioGscContextSeparated=true | CLAUDE-FIX-2507T-aioCodeFallbackFixed-refsFromManualSave=true | CLAUDE-FIX-2507U-mergeSafetyNet-cardSummaryParity=true ===');
+console.log('=== CONTENTSCALE BOOT ' + new Date().toISOString() + ' v2026-07-08-possible-prioritized-shortcut | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON | possibleThreshold=20impr | shortcutPrioritized=v2 | gscAutoFetchRemoved=true | linkCheckActive=true | wholeSiteWipeGuard=true | gscAutoFetchRestored=true | reminderOffFix=true | claudeRemoved=true | bingWebmaster=true | competitorPanel=true | zeroResultFix=true | pagesRefreshFix=true | recheckButton=true | provenScanStrip=true | provenScanState=true | scanAllProven=true | doEverythingBtn=true | panelOrderFix=true | workflowGuide=true | preScanGuard=true | scanAllGuard=true | earlyGuard=true | emptyStateTeaser=true | provenScopeFix=true | numberedButtons=true | clearerButtons=true | scanAnimFix=true | promptClaudeCleanup=true | bonusTip=true | realProvenContext=true | competitorContext=true | unifiedBrief=true | diagnosticFirst=true | fullCompetitorBreakdown=true | serpSpyV3=true | transparencyBlock=true | emailsPausedToggle=true | competitorDedup=true | provenScanDebug=true | serializedScans=true | claudeCleanupV2=true | mergeClaudeStrip=true | visualTransparency=true | aboveFoldPriority=true | competitorComparisonTable=true | redGreenTracking=true | aioExplicitState=true | perpCopilotState=true | realMergePromptFixed=true | briefContextDebug=true | forceRescanBypass=true | gscPosFallback=true | cannibalDedup=true | gscAccessGated=true | gapConfirmShown=true | noPlaceholders=true | rowNumContrast=true | codeCannibalDedup=true | provenDebugRemoved=true | broaderCannibalDedup=true | competitorGapFallback=true | competitorPrevSnapFallback=true | hubSpokeDedup=true | compGapRegexBroadened=true | gapFixLabelFallback=true | geminiProForBriefs=true | timeoutBudgetFixed=true | perAttemptTimeout45s=true | revertToFlashLite=true | tokenLimitDoubled=true | urlNormFix=true | impactFieldChecked=true | broaderHubPattern=true | cannibalContextRemovedFromGSC=true | scanStateDerivedFromDB=true | boardBriefRestyled=true | liveWallBriefModal=true | modalScopeFix=true | cardTransparency=true | CLAUDE-FIX-2307=true | CLAUDE-FIX-2307B-specquote=true | CLAUDE-FIX-2307C-pwboard=true | CLAUDE-FIX-2307D-typefilter=true | CLAUDE-FIX-2307E-scanneraio=true | CLAUDE-FIX-2307F-urlstrip=true | CLAUDE-FIX-2307G-aiobeforeScan=true | CLAUDE-FIX-2307H-aioInPrompt=true | CLAUDE-FIX-2307I-escHtml=true | CLAUDE-FIX-2307J-escAlias-noStale=true | CLAUDE-FIX-2407A-perpCitedConsistency=true | CLAUDE-FIX-2407B-perpCacheBug=true | CLAUDE-FIX-2407C-domainVsPageNuance=true | CLAUDE-FIX-2407D-wallModalNoReshuffle=true | CLAUDE-FIX-2407E-buildBriefSafetyNet=true | CLAUDE-FIX-2407F-modalFullText=true | CLAUDE-FIX-2407G-aioPasteModal=true | CLAUDE-FIX-2407H-aioDefinitionView=true | CLAUDE-FIX-2407I-aioBlueprintMining=true | CLAUDE-FIX-2407J-aioReferences=true | CLAUDE-FIX-2407K-aioCitationGap=true | CLAUDE-FIX-2407L-compGapTableAllModals=true | CLAUDE-FIX-2407M-honestAioManualOnly=true | CLAUDE-FIX-2407N-regexEscapeInTemplate=true | CLAUDE-FIX-2507A-jsonRepair-mergeTokens4096=true | CLAUDE-FIX-2507B-cardButtonsWorkflowOrder=true | CLAUDE-FIX-2507C-cardButtonsPillColors=true | CLAUDE-FIX-2507D-aioReloadFull-limit8000=true | CLAUDE-FIX-2507E-briefModalTransparency=true | CLAUDE-FIX-2507F-aioGapTable4col=true | CLAUDE-FIX-2507G-htmlScanTickCycle=true | CLAUDE-FIX-2507H-briefViewedPersisted=true | CLAUDE-FIX-2507I-fixCardRenderVarInExpr=true | CLAUDE-FIX-2507J-briefsUnified-manualAioGap=true | CLAUDE-FIX-2507K-gscCompTableInTracker=true | CLAUDE-FIX-2507L-trackerSplitSections=true | CLAUDE-FIX-2507M-copyBriefClarity=true | CLAUDE-FIX-2507N-aioRefsFromManualPaste=true | CLAUDE-FIX-2507O-removeSseEventSource=true | CLAUDE-FIX-2507P-ticksPersistUntilDoneOrNewHtml=true | CLAUDE-FIX-2507Q-aioRefsStoredAtSave=true | CLAUDE-FIX-2507R-aioGapTableAlways=true | CLAUDE-FIX-2507S-aioGscContextSeparated=true | CLAUDE-FIX-2507T-aioCodeFallbackFixed-refsFromManualSave=true | CLAUDE-FIX-2507U-mergeSafetyNet-cardSummaryParity=true | CLAUDE-FIX-2507V-sharedAioRenderFn-authTable=true ===');
 
 // Repair common LLM-JSON defects (raw newlines/tabs inside strings, trailing commas)
 function _repairJsonG(str){
@@ -4155,58 +4155,7 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
       } else {
         h += '<div class="bwm-line">Google AI Overview: no data \\u2014 paste the AI Overview you see on Google (Add AIO on the page card) for an exact check. Automated tools can\\u2019t see your personalized AI Overview.</div>';
       }
-      var aioref = d.aio_references || [];
-      if ((!aioref || !aioref.length) && (d.aio_text || d.aio_manual_text)) {
-        // Build the AIO source table from URLs in the manually-pasted AI Overview.
-        var _atxt = String(d.aio_text || d.aio_manual_text || ''), _ai = 0, _aseen = {}; aioref = [];
-        while (true) {
-          var _ah = _atxt.indexOf('http', _ai); if (_ah < 0) break;
-          var _ae = _ah; while (_ae < _atxt.length) { var _ac = _atxt.charCodeAt(_ae); var _acs = _atxt.charAt(_ae); if (_ac <= 32 || _acs===')'||_acs===']'||_acs==='('||_acs==='['||_acs==='"'||_acs==='<'||_acs==='>'||_acs===',') break; _ae++; }
-          var _au = _atxt.slice(_ah, _ae); while (_au.length && '.,);:'.indexOf(_au.charAt(_au.length-1))>=0) _au = _au.slice(0,-1);
-          if (_au.length > 10 && !_aseen[_au]) { _aseen[_au]=1; aioref.push({ url: _au }); }
-          _ai = _ae + 1; if (aioref.length >= 12) break;
-        }
-      }
-      if (aioref.length) {
-        var _mydom = _bwCleanUrlL(d.url||d.domain||'').split('/')[0];
-        var _aioCitedHere = aioref.some(function(r){ return _bwCleanUrlL(r.url||'').split('/')[0] === _mydom; });
-        // Gemini's per-source gap analysis, matched to a reference by domain (if the brief produced one)
-        var _gapBy = {};
-        var _gapArr = d.aio_citation_gap || (d.brief_content && d.brief_content.aio_citation_gap) || [];
-        try { if (typeof _gapArr === 'string') _gapArr = JSON.parse(_gapArr); } catch(e){ _gapArr = []; }
-        (Array.isArray(_gapArr)?_gapArr:[]).forEach(function(g){
-          var gk = _bwCleanUrlL(String(g.source||g.competitor||g.domain||'')).split('/')[0];
-          if (gk) _gapBy[gk] = g;
-        });
-        h += '<div class="bwm-line" style="margin-top:8px;"><strong style="color:#f59e0b;">Google AI Overview cites (' + aioref.length + ')</strong>' + (_aioCitedHere ? ' &mdash; <span style="color:#4ade80;">your page is one of them</span>' : ' &mdash; <span style="color:#fbbf24;">your page is not among them yet</span>') + ' &mdash; the gap per source:</div>';
-        var _th2 = 'padding:6px 8px;font-size:9px;text-align:left;color:#93c5fd;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap;';
-        h += '<div style="overflow-x:auto;border:1px solid #1f2937;border-radius:8px;margin:4px 0 2px;"><table style="width:100%;border-collapse:collapse;background:#0d1117;"><thead><tr style="background:#161b22;"><th style="'+_th2+'">Source</th><th style="'+_th2+'">What they do</th><th style="'+_th2+'">Our gap</th><th style="'+_th2+'">What to do</th></tr></thead><tbody>'
-          + aioref.slice(0,10).map(function(r,i){
-              var host=''; try { host = String(r.url||'').split('/')[2]||_bwCleanUrlL(r.url); } catch(e){ host=_bwCleanUrlL(r.url); }
-              var hostKey = _bwCleanUrlL(r.url||'').split('/')[0];
-              var mine = hostKey === _mydom;
-              var g = _gapBy[hostKey] || null;
-              var whatTheyDo = (g && (g.what_they_do_well||g.what_they_do)) || r.snippet || (mine ? '' : 'Cited by Google\\\\u2019s AI Overview as a source for this query.');
-              var ourGap = mine ? 'You already hold this citation.' : ((g && (g.our_gap||g.gap)) || 'Your page is not cited here — it doesn\\\\u2019t yet cover this angle as directly or as early.');
-              var whatToDo = mine ? 'Keep this passage fresh and above the fold.' : ((g && (g.what_to_do||g.our_move)) || 'Cover this source\\\\u2019s core point in a quotable 40\\\\u201360 word passage, in the first 30% of the page, more directly than they do.');
-              var rank = r.organic_position ? ('#'+r.organic_position) : '\\u2014';
-              var nameCell = _bwEscL(host) + (mine?' <span style="color:#4ade80;">(you)</span>':'');
-              return '<tr style="border-top:1px solid #1f2937;'+(mine?'background:rgba(34,197,94,.06);':'')+'">'
-                + '<td style="padding:6px 8px;font-size:10px;color:'+(mine?'#4ade80':'#60a5fa')+';font-weight:700;vertical-align:top;white-space:nowrap;">'+(i+1)+'. '+nameCell+'</td>'
-                + '<td style="padding:6px 8px;font-size:10px;color:#86efac;vertical-align:top;">'+_bwEscL(String(whatTheyDo).slice(0,200))+'</td>'
-                + '<td style="padding:6px 8px;font-size:10px;color:#fca5a5;vertical-align:top;">'+_bwEscL(String(ourGap).slice(0,180))+'</td>'
-                + '<td style="padding:6px 8px;font-size:10px;color:#cbd5e1;vertical-align:top;">'+_bwEscL(String(whatToDo).slice(0,200))+'</td>'
-                + '</tr>';
-            }).join('') + '</tbody></table></div>';
-      } else if (d.aio_text || d.aio_manual) {
-        var _bpT = Array.isArray(d.ai_overview_blueprint) ? d.ai_overview_blueprint : [];
-        var _ctT = Array.isArray(d.citation_targets) ? d.citation_targets : [];
-        var _th2b = 'padding:6px 8px;font-size:9px;text-align:left;color:#93c5fd;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap;';
-        h += '<div class="bwm-line" style="margin-top:8px;"><strong style="color:#f59e0b;">Google AI Overview &mdash; how to get cited</strong> (from your pasted overview):</div>';
-        if (_bpT.length) h += '<ul style="margin:2px 0 8px;padding-left:16px;">' + _bpT.slice(0,6).map(function(b){ return '<li style="font-size:10px;color:#cbd5e1;margin-bottom:3px;">' + _bwEscL(String(b).slice(0,220)) + '</li>'; }).join('') + '</ul>';
-        if (_ctT.length) h += '<div style="overflow-x:auto;border:1px solid #1f2937;border-radius:8px;margin:4px 0 2px;"><table style="width:100%;border-collapse:collapse;background:#0d1117;"><thead><tr style="background:#161b22;"><th style="'+_th2b+'">Query it could be cited for</th><th style="'+_th2b+'">Passage to write</th></tr></thead><tbody>' + _ctT.slice(0,6).map(function(c){ return '<tr style="border-top:1px solid #1f2937;"><td style="padding:6px 8px;font-size:10px;color:#93c5fd;vertical-align:top;">' + _bwEscL(String(c.query_variant||c.query||'').slice(0,120)) + '</td><td style="padding:6px 8px;font-size:10px;color:#cbd5e1;vertical-align:top;">' + _bwEscL(String(c.passage_to_write||c.passage||'').slice(0,240)) + '</td></tr>'; }).join('') + '</tbody></table></div>';
-        if (!_bpT.length && !_ctT.length) h += '<div class="bwm-line" style="color:#6b7280;">AI Overview saved. The blueprint appears here after the next scan generates it.</div>';
-      }
+      h += _renderAioSectionHTML(d);
       h += '<div class="bwm-line">Perplexity: '+(d.perp_cited?(d.perp_text?('&ldquo;'+_bwEscL(String(d.perp_text))+'&rdquo;'):'cited'):(d.perp_text?'mentioned in answer but not formally cited':'checked &mdash; no answer excerpt captured for this query.'))+'</div>';
       if (pcomp.length) h += '<div class="bwm-line">Perplexity also cites ('+pcomp.length+')'+(d.perp_cited?'':' &mdash; this page not among them')+': '+_bwEscL(pcomp.slice(0,5).join(', '))+'</div>';
       h += '</div>';
@@ -4257,6 +4206,7 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
   window._bwOpen = _bwOpen;
 
   function _bwEscL(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  ${_SHARED_AIO_SECTION_JS}
   function _bwCleanUrlL(u){ return String(u||'').replace(/^https?:[/][/]/,'').replace(/^www[.]/,''); }
   function _bwTimeL(d){
     var t = d.ts || d.checked_at || d.brief_started_at;
@@ -28575,6 +28525,8 @@ if(domains.length>0){
 
 
 // ── Client Tracker HTML ───────────────────────────────────────────────────────
+const _SHARED_AIO_SECTION_JS = "\nfunction _renderAioSectionHTML(data, opts) {\n  opts = opts || {};\n  var esc = function(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); };\n  var extractAioRefs = function(txt) {\n    var out = [], seen = {};\n    txt = String(txt || '');\n    var i = 0;\n    while (true) {\n      var h = txt.indexOf('http', i);\n      if (h < 0) break;\n      var end = h;\n      while (end < txt.length) {\n        var ch = txt.charAt(end);\n        var cc = ch.charCodeAt(0);\n        if (cc <= 32 || ch===')'||ch===']'||ch==='('||ch==='['||ch==='\"'||ch==='<'||ch==='>'||ch===',') break;\n        end++;\n      }\n      var url = txt.slice(h, end);\n      while (url.length && '.,);:'.indexOf(url.charAt(url.length-1)) >= 0) url = url.slice(0, -1);\n      if (url.length > 10 && !seen[url]) { seen[url] = 1; out.push({ url: url }); }\n      i = end + 1;\n      if (out.length >= 12) break;\n    }\n    return out;\n  };\n\n  var aioRef = typeof data.aio_references === 'string' ? JSON.parse(data.aio_references) : (data.aio_references||[]);\n  if ((!aioRef || !aioRef.length) && data.aio_manual_refs) {\n    try { aioRef = typeof data.aio_manual_refs === 'string' ? JSON.parse(data.aio_manual_refs) : data.aio_manual_refs; } catch(e) {}\n  }\n  if ((!aioRef || !aioRef.length) && (data.aio_text || data.aio_manual_text)) {\n    aioRef = extractAioRefs(data.aio_text || data.aio_manual_text);\n  }\n\n  var html = '';\n\n  if (aioRef && aioRef.length) {\n    var myDom = String(data.url||data.domain||'').replace(/^https?:\\/\\//,'').replace(/^www\\./,'').split('/')[0];\n    var aioMine = aioRef.some(function(r){ return String(r.url||'').replace(/^https?:\\/\\//,'').replace(/^www\\./,'').split('/')[0] === myDom; });\n    var agap = Array.isArray(data.aio_citation_gap) ? data.aio_citation_gap : ((data.brief_content && Array.isArray(data.brief_content.aio_citation_gap)) ? data.brief_content.aio_citation_gap : []);\n    var agapBy = {}; agap.forEach(function(g){ var k=String(g.source||g.competitor||g.domain||'').replace(/^www\\./,'').split('/')[0]; if(k) agapBy[k]=g; });\n    var th = 'padding:6px 8px;font-size:9px;text-align:left;color:#93c5fd;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap;';\n    var rowsHtml = aioRef.slice(0,10).map(function(r,i){\n      var host=''; try { host = new URL(r.url).hostname.replace(/^www\\./,''); } catch(e){ host = r.url||''; }\n      var hk = String(r.url||'').replace(/^https?:\\/\\//,'').replace(/^www\\./,'').split('/')[0];\n      var mine = hk === myDom;\n      var g = agapBy[hk] || null;\n      var they = (g && (g.what_they_do_well||g.what_they_do)) || r.snippet || (mine ? '' : 'Cited by Google\\u2019s AI Overview as a source for this query.');\n      var gap = mine ? 'You already hold this citation.' : ((g && (g.our_gap||g.gap)) || 'Your page is not cited here \\u2014 it doesn\\u2019t yet cover this angle as directly or as early.');\n      var todo = mine ? 'Keep this passage fresh and above the fold.' : ((g && (g.what_to_do||g.our_move)) || 'Cover this source\\u2019s core point on your page in a quotable 40\\u201360 word passage, in the first 30% of the content, more directly than they do.');\n      var nameCell = esc(host) + (mine?' <span style=\"color:#4ade80;\">(you)</span>':'');\n      return '<tr style=\"border-top:1px solid #1f2937;'+(mine?'background:rgba(34,197,94,.06);':'')+'\">'\n        + '<td style=\"padding:6px 8px;font-size:10px;color:'+(mine?'#4ade80':'#60a5fa')+';font-weight:700;vertical-align:top;white-space:nowrap;\">'+(i+1)+'. '+nameCell+'</td>'\n        + '<td style=\"padding:6px 8px;font-size:10px;color:#86efac;vertical-align:top;\">'+esc(String(they).slice(0,200))+'</td>'\n        + '<td style=\"padding:6px 8px;font-size:10px;color:#fca5a5;vertical-align:top;\">'+esc(String(gap).slice(0,180))+'</td>'\n        + '<td style=\"padding:6px 8px;font-size:10px;color:#cbd5e1;vertical-align:top;\">'+esc(String(todo).slice(0,200))+'</td>'\n        + '</tr>';\n    }).join('');\n    html += '<div style=\"font-size:10px;color:#9ca3af;margin-bottom:4px;font-weight:700;\">Google AI Overview and Perplexity currently cite (' + aioRef.length + ')' + (aioMine ? ', <span style=\"color:#4ade80;\">including your page</span>' : ', <span style=\"color:#fbbf24;\">this page not among them</span>') + ' \\u2014 the gap per source:</div>'\n      + '<div style=\"overflow-x:auto;border:1px solid #1f2937;border-radius:8px;margin-bottom:10px;\"><table style=\"width:100%;border-collapse:collapse;background:#0d1117;\">'\n      + '<thead><tr style=\"background:#161b22;\"><th style=\"'+th+'\">Source</th><th style=\"'+th+'\">What they do</th><th style=\"'+th+'\">Our gap</th><th style=\"'+th+'\">What to do</th></tr></thead>'\n      + '<tbody>' + rowsHtml + '</tbody></table></div>';\n  } else if (data.aio_text || data.aio_manual_text || data.aio_manual) {\n    var bp = Array.isArray(data.ai_overview_blueprint) ? data.ai_overview_blueprint : [];\n    var ct = Array.isArray(data.citation_targets) ? data.citation_targets : [];\n    html += '<div style=\"font-size:10px;color:#9ca3af;margin-bottom:4px;font-weight:700;\">Google AI Overview \\u2014 how to get cited (from your pasted overview):</div>';\n    if (bp.length) {\n      html += '<ul style=\"margin:2px 0 8px;padding-left:16px;\">' + bp.slice(0,6).map(function(b){ return '<li style=\"font-size:10px;color:#cbd5e1;margin-bottom:3px;\">' + esc(String(b).slice(0,220)) + '</li>'; }).join('') + '</ul>';\n    }\n    if (ct.length) {\n      var th2 = 'padding:6px 8px;font-size:9px;text-align:left;color:#93c5fd;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap;';\n      html += '<div style=\"font-size:10px;color:#9ca3af;margin-bottom:4px;font-weight:700;\">Passages to write (query \\u2192 what to say):</div>'\n        + '<div style=\"overflow-x:auto;border:1px solid #1f2937;border-radius:8px;margin-bottom:10px;\"><table style=\"width:100%;border-collapse:collapse;background:#0d1117;\">'\n        + '<thead><tr style=\"background:#161b22;\"><th style=\"'+th2+'\">Query it could be cited for</th><th style=\"'+th2+'\">Passage to write</th></tr></thead><tbody>'\n        + ct.slice(0,6).map(function(c){ return '<tr style=\"border-top:1px solid #1f2937;\"><td style=\"padding:6px 8px;font-size:10px;color:#93c5fd;vertical-align:top;\">' + esc(String(c.query_variant||c.query||'').slice(0,120)) + '</td><td style=\"padding:6px 8px;font-size:10px;color:#cbd5e1;vertical-align:top;\">' + esc(String(c.passage_to_write||c.passage||'').slice(0,240)) + '</td></tr>'; }).join('')\n        + '</tbody></table></div>';\n    }\n    if (!bp.length && !ct.length) {\n      html += '<div style=\"font-size:10px;color:#6b7280;margin-bottom:10px;\">AI Overview saved. The blueprint appears here after the next scan generates it from your pasted overview.</div>';\n    }\n  }\n  return html;\n}\n";
+
 const _CLIENT_TRACKER_HTML = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -29790,6 +29742,7 @@ function _showLinkSuggestions(sug) {
 
 // Escape AI/user text before innerHTML so tags like <head>/<script> stay visible
 function _escHtml(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+${_SHARED_AIO_SECTION_JS}
 var esc = _escHtml;
 // Escape, then render backtick-wrapped spans as visible code blocks
 function _fmtAction(s) { return _escHtml(s).replace(/\`([^\`]+)\`/g, '<code style="background:#0a0a12;border:1px solid #1f2937;border-radius:3px;padding:1px 5px;font-family:monospace;font-size:11px;color:#a5b4fc;white-space:pre-wrap;word-break:break-word;">$1</code>'); }
@@ -32434,83 +32387,7 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
           // Extract source URLs from a manually-pasted AI Overview when no structured
           // references exist. The pasted AIO text contains the citation URLs (e.g. [1](https://...)),
           // so we can build the same numbered AIO source table from them.
-          function _extractAioRefs(txt) {
-            var out = [], seen = {};
-            txt = String(txt || '');
-            var i = 0;
-            while (true) {
-              var h = txt.indexOf('http', i);
-              if (h < 0) break;
-              var end = h;
-              while (end < txt.length) {
-                var ch = txt.charAt(end);
-                var _cc = ch.charCodeAt(0);
-                if (_cc <= 32 || ch === ')' || ch === ']' || ch === '(' || ch === '[' || ch === '"' || ch === '<' || ch === '>' || ch === ',') break;
-                end++;
-              }
-              var url = txt.slice(h, end);
-              // trim trailing punctuation
-              while (url.length && '.,);:'.indexOf(url.charAt(url.length-1)) >= 0) url = url.slice(0, -1);
-              if (url.length > 10 && !seen[url]) { seen[url] = 1; out.push({ url: url }); }
-              i = end + 1;
-              if (out.length >= 12) break;
-            }
-            return out;
-          }
-          var _aioRef = typeof data.aio_references === 'string' ? JSON.parse(data.aio_references) : (data.aio_references||[]);
-          if ((!_aioRef || !_aioRef.length) && data.aio_manual_refs) {
-            try { _aioRef = typeof data.aio_manual_refs === 'string' ? JSON.parse(data.aio_manual_refs) : data.aio_manual_refs; } catch(e) {}
-          }
-          if ((!_aioRef || !_aioRef.length) && (data.aio_text || data.aio_manual_text)) {
-            _aioRef = _extractAioRefs(data.aio_text || data.aio_manual_text);
-          }
-          if (_aioRef && _aioRef.length) {
-            var _myDom = String(data.url||data.domain||'').replace(/^https?:\\/\\//,'').replace(/^www\\./,'').split('/')[0];
-            var _aioMine = _aioRef.some(function(r){ return String(r.url||'').replace(/^https?:\\/\\//,'').replace(/^www\\./,'').split('/')[0] === _myDom; });
-            var _agap = Array.isArray(data.aio_citation_gap) ? data.aio_citation_gap : ((data.brief_content && Array.isArray(data.brief_content.aio_citation_gap)) ? data.brief_content.aio_citation_gap : []);
-            var _agapBy = {}; _agap.forEach(function(g){ var k=String(g.source||g.competitor||g.domain||'').replace(/^www\\./,'').split('/')[0]; if(k)_agapBy[k]=g; });
-            var _th = 'padding:6px 8px;font-size:9px;text-align:left;color:#93c5fd;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap;';
-            var _rowsHtml = _aioRef.slice(0,10).map(function(r,i){
-              var host=''; try { host = new URL(r.url).hostname.replace(/^www\\./,''); } catch(e){ host = r.url||''; }
-              var hk = String(r.url||'').replace(/^https?:\\/\\//,'').replace(/^www\\./,'').split('/')[0];
-              var mine = hk === _myDom;
-              var g = _agapBy[hk] || null;
-              var they = (g && (g.what_they_do_well||g.what_they_do)) || r.snippet || (mine ? '' : 'Cited by Google\\u2019s AI Overview as a source for this query.');
-              var gap = mine ? 'You already hold this citation.' : ((g && (g.our_gap||g.gap)) || 'Your page is not cited here — it doesn\\u2019t yet cover this angle as directly or as early.');
-              var todo = mine ? 'Keep this passage fresh and above the fold.' : ((g && (g.what_to_do||g.our_move)) || 'Cover this source\\u2019s core point on your page in a quotable 40\\u201360 word passage, in the first 30% of the content, more directly than they do.');
-              var rank = r.organic_position ? ('#'+r.organic_position) : '\\u2014';
-              var nameCell = host.replace(/</g,'&lt;') + (mine?' <span style="color:#4ade80;">(you)</span>':'');
-              return '<tr style="border-top:1px solid #1f2937;'+(mine?'background:rgba(34,197,94,.06);':'')+'">'
-                + '<td style="padding:6px 8px;font-size:10px;color:'+(mine?'#4ade80':'#60a5fa')+';font-weight:700;vertical-align:top;white-space:nowrap;">'+(i+1)+'. '+nameCell+'</td>'
-                + '<td style="padding:6px 8px;font-size:10px;color:#86efac;vertical-align:top;">'+String(they).slice(0,200).replace(/</g,'&lt;')+'</td>'
-                + '<td style="padding:6px 8px;font-size:10px;color:#fca5a5;vertical-align:top;">'+String(gap).slice(0,180).replace(/</g,'&lt;')+'</td>'
-                + '<td style="padding:6px 8px;font-size:10px;color:#cbd5e1;vertical-align:top;">'+String(todo).slice(0,200).replace(/</g,'&lt;')+'</td>'
-                + '</tr>';
-            }).join('');
-            _transparencyHtml += '<div style="font-size:10px;color:#9ca3af;margin-bottom:4px;font-weight:700;">Google AI Overview cites (' + _aioRef.length + ')' + (_aioMine ? ', <span style="color:#4ade80;">including your page</span>' : ', <span style="color:#fbbf24;">this page not among them</span>') + ' \\u2014 the gap per source:</div>'
-              + '<div style="overflow-x:auto;border:1px solid #1f2937;border-radius:8px;margin-bottom:10px;"><table style="width:100%;border-collapse:collapse;background:#0d1117;">'
-              + '<thead><tr style="background:#161b22;"><th style="'+_th+'">Source</th><th style="'+_th+'">What they do</th><th style="'+_th+'">Our gap</th><th style="'+_th+'">What to do</th></tr></thead>'
-              + '<tbody>' + _rowsHtml + '</tbody></table></div>';
-          } else if (data.aio_text || data.aio_manual) {
-            // Manual AIO paste (no source URLs to compare): show the blueprint + citation targets —
-            // WHAT to write and WHERE to earn the citation. Same section renders in the TV modal.
-            var _bp = Array.isArray(data.ai_overview_blueprint) ? data.ai_overview_blueprint : [];
-            var _ct = Array.isArray(data.citation_targets) ? data.citation_targets : [];
-            _transparencyHtml += '<div style="font-size:10px;color:#9ca3af;margin-bottom:4px;font-weight:700;">Google AI Overview \\u2014 how to get cited (from your pasted overview):</div>';
-            if (_bp.length) {
-              _transparencyHtml += '<ul style="margin:2px 0 8px;padding-left:16px;">' + _bp.slice(0,6).map(function(b){ return '<li style="font-size:10px;color:#cbd5e1;margin-bottom:3px;">' + String(b).slice(0,220).replace(/</g,'&lt;') + '</li>'; }).join('') + '</ul>';
-            }
-            if (_ct.length) {
-              _transparencyHtml += '<div style="font-size:10px;color:#9ca3af;margin-bottom:4px;font-weight:700;">Passages to write (query \\u2192 what to say):</div>'
-                + '<div style="overflow-x:auto;border:1px solid #1f2937;border-radius:8px;margin-bottom:10px;"><table style="width:100%;border-collapse:collapse;background:#0d1117;">'
-                + '<thead><tr style="background:#161b22;"><th style="'+_th+'">Query it could be cited for</th><th style="'+_th+'">Passage to write</th></tr></thead><tbody>'
-                + _ct.slice(0,6).map(function(c){ return '<tr style="border-top:1px solid #1f2937;"><td style="padding:6px 8px;font-size:10px;color:#93c5fd;vertical-align:top;">' + String(c.query_variant||c.query||'').slice(0,120).replace(/</g,'&lt;') + '</td><td style="padding:6px 8px;font-size:10px;color:#cbd5e1;vertical-align:top;">' + String(c.passage_to_write||c.passage||'').slice(0,240).replace(/</g,'&lt;') + '</td></tr>'; }).join('')
-                + '</tbody></table></div>';
-            }
-            if (!_bp.length && !_ct.length) {
-              _transparencyHtml += '<div style="font-size:10px;color:#6b7280;margin-bottom:10px;">AI Overview saved. The blueprint appears here after the next scan generates it from your pasted overview.</div>';
-            }
-          }
+          _transparencyHtml += _renderAioSectionHTML(data);
           if (data.perp_excerpt) {
             _transparencyHtml += '<div style="font-size:10px;color:#9ca3af;margin-bottom:4px;font-weight:700;">Perplexity\u2019s actual answer:</div>'
               + '<div style="font-size:11px;color:#cbd5e1;font-style:italic;background:#0d1117;border-left:2px solid #a78bfa;padding:6px 10px;margin-bottom:10px;">\u201c' + data.perp_excerpt.substring(0,220).replace(/</g,'&lt;') + (data.perp_excerpt.length>220?'\u2026':'') + '\u201d</div>';
@@ -42240,6 +42117,31 @@ GOAL: Rank #1 for "${kw}" and capture the maximum clicks from ${gscImpr || 'the 
         };
         if (Array.isArray(snapshot.recommendations)) {
           snapshot.recommendations = snapshot.recommendations.map(_fixAioCompetitorGapItem).filter(Boolean);
+          // AUTHORITATIVE TABLE OVERRIDE: whatever comparison_table Gemini may have invented for an
+          // AIO Competitor Gap item, replace it with one built directly from the same source list
+          // used in the "currently cite" prose above — this is the ONLY way to guarantee the prose
+          // and the table can never disagree, and that all available sources (up to 5) are shown.
+          if (_aioRefsForFallback.length) {
+            const _gapByHost = {};
+            (Array.isArray(snapshot.aio_citation_gap) ? snapshot.aio_citation_gap : []).forEach(g => {
+              if (g && g.source) _gapByHost[String(g.source).toLowerCase()] = g;
+            });
+            snapshot.recommendations = snapshot.recommendations.map(item => {
+              const _isCompGap = item && (/competitor.{0,15}gap/i.test(item.system||'') || /competitor.{0,15}gap/i.test(item.title||''));
+              if (!_isCompGap) return item;
+              item.comparison_table = _aioRefsForFallback.slice(0, 5).map(r => {
+                let h = r.url; try { h = new URL(r.url).hostname.replace(/^www\./,''); } catch(e){}
+                const g = _gapByHost[String(h).toLowerCase()];
+                return {
+                  competitor: h,
+                  what_they_do_well: (g && g.what_they_do_well) || (r.title ? ('Cited by AI Overview for: "' + String(r.title).slice(0,80) + '"') : 'Cited by Google\\u2019s AI Overview as a source for this query.'),
+                  our_gap: (g && g.our_gap) || 'This page is not yet cited alongside this source for this query.',
+                  what_to_do: (g && g.what_to_do) || 'Cover this source\\u2019s core point in a quotable 40\\u201360 word passage, in the first 30% of the page.'
+                };
+              });
+              return item;
+            });
+          }
         }
 
         // ── CODE-LEVEL FALLBACK: enforce the Competitor Gap structure (GSC BRIEF ONLY) ──
