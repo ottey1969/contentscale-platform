@@ -1,4 +1,4 @@
-console.log('=== CONTENTSCALE BOOT ' + new Date().toISOString() + ' v2026-07-08-possible-prioritized-shortcut | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON | possibleThreshold=20impr | shortcutPrioritized=v2 | gscAutoFetchRemoved=true | linkCheckActive=true | wholeSiteWipeGuard=true | gscAutoFetchRestored=true | reminderOffFix=true | claudeRemoved=true | bingWebmaster=true | competitorPanel=true | zeroResultFix=true | pagesRefreshFix=true | recheckButton=true | provenScanStrip=true | provenScanState=true | scanAllProven=true | doEverythingBtn=true | panelOrderFix=true | workflowGuide=true | preScanGuard=true | scanAllGuard=true | earlyGuard=true | emptyStateTeaser=true | provenScopeFix=true | numberedButtons=true | clearerButtons=true | scanAnimFix=true | promptClaudeCleanup=true | bonusTip=true | realProvenContext=true | competitorContext=true | unifiedBrief=true | diagnosticFirst=true | fullCompetitorBreakdown=true | serpSpyV3=true | transparencyBlock=true | emailsPausedToggle=true | competitorDedup=true | provenScanDebug=true | serializedScans=true | claudeCleanupV2=true | mergeClaudeStrip=true | visualTransparency=true | aboveFoldPriority=true | competitorComparisonTable=true | redGreenTracking=true | aioExplicitState=true | perpCopilotState=true | realMergePromptFixed=true | briefContextDebug=true | forceRescanBypass=true | gscPosFallback=true | cannibalDedup=true | gscAccessGated=true | gapConfirmShown=true | noPlaceholders=true | rowNumContrast=true | codeCannibalDedup=true | provenDebugRemoved=true | broaderCannibalDedup=true | competitorGapFallback=true | competitorPrevSnapFallback=true | hubSpokeDedup=true | compGapRegexBroadened=true | gapFixLabelFallback=true | geminiProForBriefs=true | timeoutBudgetFixed=true | perAttemptTimeout45s=true | revertToFlashLite=true | tokenLimitDoubled=true | urlNormFix=true | impactFieldChecked=true | broaderHubPattern=true | cannibalContextRemovedFromGSC=true | scanStateDerivedFromDB=true | boardBriefRestyled=true | liveWallBriefModal=true | modalScopeFix=true | cardTransparency=true | CLAUDE-FIX-2307=true | CLAUDE-FIX-2307B-specquote=true | CLAUDE-FIX-2307C-pwboard=true | CLAUDE-FIX-2307D-typefilter=true | CLAUDE-FIX-2307E-scanneraio=true | CLAUDE-FIX-2307F-urlstrip=true | CLAUDE-FIX-2307G-aiobeforeScan=true | CLAUDE-FIX-2307H-aioInPrompt=true | CLAUDE-FIX-2307I-escHtml=true | CLAUDE-FIX-2307J-escAlias-noStale=true | CLAUDE-FIX-2407A-perpCitedConsistency=true | CLAUDE-FIX-2407B-perpCacheBug=true | CLAUDE-FIX-2407C-domainVsPageNuance=true | CLAUDE-FIX-2407D-wallModalNoReshuffle=true | CLAUDE-FIX-2407E-buildBriefSafetyNet=true | CLAUDE-FIX-2407F-modalFullText=true | CLAUDE-FIX-2407G-aioPasteModal=true | CLAUDE-FIX-2407H-aioDefinitionView=true | CLAUDE-FIX-2407I-aioBlueprintMining=true | CLAUDE-FIX-2407J-aioReferences=true | CLAUDE-FIX-2407K-aioCitationGap=true | CLAUDE-FIX-2407L-compGapTableAllModals=true | CLAUDE-FIX-2407M-honestAioManualOnly=true | CLAUDE-FIX-2407N-regexEscapeInTemplate=true | CLAUDE-FIX-2507A-jsonRepair-mergeTokens4096=true | CLAUDE-FIX-2507B-cardButtonsWorkflowOrder=true | CLAUDE-FIX-2507C-cardButtonsPillColors=true | CLAUDE-FIX-2507D-aioReloadFull-limit8000=true | CLAUDE-FIX-2507E-briefModalTransparency=true | CLAUDE-FIX-2507F-aioGapTable4col=true | CLAUDE-FIX-2507G-htmlScanTickCycle=true | CLAUDE-FIX-2507H-briefViewedPersisted=true | CLAUDE-FIX-2507I-fixCardRenderVarInExpr=true | CLAUDE-FIX-2507J-briefsUnified-manualAioGap=true | CLAUDE-FIX-2507K-gscCompTableInTracker=true | CLAUDE-FIX-2507L-trackerSplitSections=true | CLAUDE-FIX-2507M-copyBriefClarity=true | CLAUDE-FIX-2507N-aioRefsFromManualPaste=true | CLAUDE-FIX-2507O-removeSseEventSource=true | CLAUDE-FIX-2507P-ticksPersistUntilDoneOrNewHtml=true | CLAUDE-FIX-2507Q-aioRefsStoredAtSave=true | CLAUDE-FIX-2507R-aioGapTableAlways=true | CLAUDE-FIX-2507S-aioGscContextSeparated=true | CLAUDE-FIX-2507T-aioCodeFallbackFixed-refsFromManualSave=true | CLAUDE-FIX-2507U-mergeSafetyNet-cardSummaryParity=true | CLAUDE-FIX-2507V-sharedAioRenderFn-authTable=true | CLAUDE-FIX-2507W-viewLastBriefDelegates-oneSystem=true | CLAUDE-FIX-2507X-sharedBriefBody-fullUnification=true | CLAUDE-FIX-2507Y-aioTop5Table-definitionLabel=true | CLAUDE-FIX-2507Z-noRefsActionableMsg=true | CLAUDE-FIX-2508A-manualPasteWinsOverStaleSnapshot=true | CLAUDE-FIX-2508B-merge2Hardened-diagLog=true | CLAUDE-FIX-2508C-noStoreHeaders-freshClientJs=true | CLAUDE-FIX-2508D-saveEchoDiagnostic=true | CLAUDE-FIX-2508E-separateSourcesField=true | CLAUDE-FIX-2508F-diagSourcesField=true | CLAUDE-FIX-2508G-acceptSourceNames=true | CLAUDE-FIX-2508H-namesFromMainPaste-headingFilter=true | CLAUDE-FIX-2508I-cloroAioFetch=true | CLAUDE-FIX-2508J-namesFallback-autoSplit=true | CLAUDE-FIX-2508K-competitorGapAioFallback=true | CLAUDE-FIX-2508L-aioFallbackNoGscLeak-honestLabel=true | CLAUDE-FIX-2508M-gscRootDomainFallback=true | CLAUDE-FIX-2508N-sitemapLinks250-gscLiveFilter=true | CLAUDE-FIX-2508O-leadQueueCollapsedDefault=true | CLAUDE-FIX-2508P-leadQueueToggleRealFns=true ===');
+console.log('=== CONTENTSCALE BOOT ' + new Date().toISOString() + ' v2026-07-08-possible-prioritized-shortcut | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON | possibleThreshold=20impr | shortcutPrioritized=v2 | gscAutoFetchRemoved=true | linkCheckActive=true | wholeSiteWipeGuard=true | gscAutoFetchRestored=true | reminderOffFix=true | claudeRemoved=true | bingWebmaster=true | competitorPanel=true | zeroResultFix=true | pagesRefreshFix=true | recheckButton=true | provenScanStrip=true | provenScanState=true | scanAllProven=true | doEverythingBtn=true | panelOrderFix=true | workflowGuide=true | preScanGuard=true | scanAllGuard=true | earlyGuard=true | emptyStateTeaser=true | provenScopeFix=true | numberedButtons=true | clearerButtons=true | scanAnimFix=true | promptClaudeCleanup=true | bonusTip=true | realProvenContext=true | competitorContext=true | unifiedBrief=true | diagnosticFirst=true | fullCompetitorBreakdown=true | serpSpyV3=true | transparencyBlock=true | emailsPausedToggle=true | competitorDedup=true | provenScanDebug=true | serializedScans=true | claudeCleanupV2=true | mergeClaudeStrip=true | visualTransparency=true | aboveFoldPriority=true | competitorComparisonTable=true | redGreenTracking=true | aioExplicitState=true | perpCopilotState=true | realMergePromptFixed=true | briefContextDebug=true | forceRescanBypass=true | gscPosFallback=true | cannibalDedup=true | gscAccessGated=true | gapConfirmShown=true | noPlaceholders=true | rowNumContrast=true | codeCannibalDedup=true | provenDebugRemoved=true | broaderCannibalDedup=true | competitorGapFallback=true | competitorPrevSnapFallback=true | hubSpokeDedup=true | compGapRegexBroadened=true | gapFixLabelFallback=true | geminiProForBriefs=true | timeoutBudgetFixed=true | perAttemptTimeout45s=true | revertToFlashLite=true | tokenLimitDoubled=true | urlNormFix=true | impactFieldChecked=true | broaderHubPattern=true | cannibalContextRemovedFromGSC=true | scanStateDerivedFromDB=true | boardBriefRestyled=true | liveWallBriefModal=true | modalScopeFix=true | cardTransparency=true | CLAUDE-FIX-2307=true | CLAUDE-FIX-2307B-specquote=true | CLAUDE-FIX-2307C-pwboard=true | CLAUDE-FIX-2307D-typefilter=true | CLAUDE-FIX-2307E-scanneraio=true | CLAUDE-FIX-2307F-urlstrip=true | CLAUDE-FIX-2307G-aiobeforeScan=true | CLAUDE-FIX-2307H-aioInPrompt=true | CLAUDE-FIX-2307I-escHtml=true | CLAUDE-FIX-2307J-escAlias-noStale=true | CLAUDE-FIX-2407A-perpCitedConsistency=true | CLAUDE-FIX-2407B-perpCacheBug=true | CLAUDE-FIX-2407C-domainVsPageNuance=true | CLAUDE-FIX-2407D-wallModalNoReshuffle=true | CLAUDE-FIX-2407E-buildBriefSafetyNet=true | CLAUDE-FIX-2407F-modalFullText=true | CLAUDE-FIX-2407G-aioPasteModal=true | CLAUDE-FIX-2407H-aioDefinitionView=true | CLAUDE-FIX-2407I-aioBlueprintMining=true | CLAUDE-FIX-2407J-aioReferences=true | CLAUDE-FIX-2407K-aioCitationGap=true | CLAUDE-FIX-2407L-compGapTableAllModals=true | CLAUDE-FIX-2407M-honestAioManualOnly=true | CLAUDE-FIX-2407N-regexEscapeInTemplate=true | CLAUDE-FIX-2507A-jsonRepair-mergeTokens4096=true | CLAUDE-FIX-2507B-cardButtonsWorkflowOrder=true | CLAUDE-FIX-2507C-cardButtonsPillColors=true | CLAUDE-FIX-2507D-aioReloadFull-limit8000=true | CLAUDE-FIX-2507E-briefModalTransparency=true | CLAUDE-FIX-2507F-aioGapTable4col=true | CLAUDE-FIX-2507G-htmlScanTickCycle=true | CLAUDE-FIX-2507H-briefViewedPersisted=true | CLAUDE-FIX-2507I-fixCardRenderVarInExpr=true | CLAUDE-FIX-2507J-briefsUnified-manualAioGap=true | CLAUDE-FIX-2507K-gscCompTableInTracker=true | CLAUDE-FIX-2507L-trackerSplitSections=true | CLAUDE-FIX-2507M-copyBriefClarity=true | CLAUDE-FIX-2507N-aioRefsFromManualPaste=true | CLAUDE-FIX-2507O-removeSseEventSource=true | CLAUDE-FIX-2507P-ticksPersistUntilDoneOrNewHtml=true | CLAUDE-FIX-2507Q-aioRefsStoredAtSave=true | CLAUDE-FIX-2507R-aioGapTableAlways=true | CLAUDE-FIX-2507S-aioGscContextSeparated=true | CLAUDE-FIX-2507T-aioCodeFallbackFixed-refsFromManualSave=true | CLAUDE-FIX-2507U-mergeSafetyNet-cardSummaryParity=true | CLAUDE-FIX-2507V-sharedAioRenderFn-authTable=true | CLAUDE-FIX-2507W-viewLastBriefDelegates-oneSystem=true | CLAUDE-FIX-2507X-sharedBriefBody-fullUnification=true | CLAUDE-FIX-2507Y-aioTop5Table-definitionLabel=true | CLAUDE-FIX-2507Z-noRefsActionableMsg=true | CLAUDE-FIX-2508A-manualPasteWinsOverStaleSnapshot=true | CLAUDE-FIX-2508B-merge2Hardened-diagLog=true | CLAUDE-FIX-2508C-noStoreHeaders-freshClientJs=true | CLAUDE-FIX-2508D-saveEchoDiagnostic=true | CLAUDE-FIX-2508E-separateSourcesField=true | CLAUDE-FIX-2508F-diagSourcesField=true | CLAUDE-FIX-2508G-acceptSourceNames=true | CLAUDE-FIX-2508H-namesFromMainPaste-headingFilter=true | CLAUDE-FIX-2508I-cloroAioFetch=true | CLAUDE-FIX-2508J-namesFallback-autoSplit=true | CLAUDE-FIX-2508K-competitorGapAioFallback=true | CLAUDE-FIX-2508L-aioFallbackNoGscLeak-honestLabel=true | CLAUDE-FIX-2508M-gscRootDomainFallback=true | CLAUDE-FIX-2508N-sitemapLinks250-gscLiveFilter=true | CLAUDE-FIX-2508O-leadQueueCollapsedDefault=true | CLAUDE-FIX-2508P-leadQueueToggleRealFns=true | CLAUDE-FIX-2508Q-leadQueueHeaderWrap=true | CLAUDE-FIX-2508R-scanSelectedButton=true | CLAUDE-FIX-2508S-shiftClickRange=true ===');
 
 // Repair common LLM-JSON defects (raw newlines/tabs inside strings, trailing commas)
 function _repairJsonG(str){
@@ -1772,6 +1772,37 @@ app.post('/api/tracker-client/:token/scan-all', async (req, res) => {
       console.log('[scan-all] scanning page', i+1, '/', pages.rows.length, pages.rows[i].url);
       runTrackerCheck(pages.rows[i], process.env.GEMINI_API_KEY, checkKeys, true)
         .catch(e => console.warn('[scan-all] page', pages.rows[i].id, e.message));
+    }
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// POST /api/tracker-client/:token/scan-selected — scan only the ticked pages
+app.post('/api/tracker-client/:token/scan-selected', async (req, res) => {
+  try {
+    const cr = await pool.query('SELECT id FROM tracker_clients WHERE token=$1 OR lead_token=$1', [req.params.token]);
+    if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
+    const ids = (req.body && Array.isArray(req.body.page_ids)) ? req.body.page_ids.map(Number).filter(Boolean) : [];
+    if (!ids.length) return res.status(400).json({ success: false, error: 'No pages selected' });
+    // Only pages that belong to THIS client (security: don't scan another client's pages)
+    const pages = await pool.query(
+      'SELECT * FROM tracker_pages WHERE tracker_client_id=$1 AND id = ANY($2::int[]) AND (is_active=TRUE OR is_active IS NULL) ORDER BY created_at ASC',
+      [cr.rows[0].id, ids]
+    );
+    if (!pages.rows.length) return res.status(400).json({ success: false, error: 'No matching pages' });
+
+    res.json({ success: true, queued: pages.rows.length, message: 'Scanning ' + pages.rows.length + ' selected page' + (pages.rows.length>1?'s':'') + ' one by one (~' + Math.ceil(pages.rows.length * 3 / 60) + ' min)' });
+
+    const checkKeys = {
+      serpapiKey:    process.env.SERPAPI_KEY || process.env.SERPER_API_KEY,
+      perplexityKey: process.env.PERPLEXITY_API_KEY,
+      braveKey:      process.env.BRAVE_SEARCH_API_KEY,
+      youKey:        process.env.YOU_API_KEY
+    };
+    for (let i = 0; i < pages.rows.length; i++) {
+      await new Promise(r => setTimeout(r, i === 0 ? 100 : 3000));
+      console.log('[scan-selected] scanning page', i+1, '/', pages.rows.length, pages.rows[i].url);
+      runTrackerCheck(pages.rows[i], process.env.GEMINI_API_KEY, checkKeys, true)
+        .catch(e => console.warn('[scan-selected] page', pages.rows[i].id, e.message));
     }
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
@@ -25493,6 +25524,20 @@ function makePage(url,kw,pri,pos,impr){
     checks:checks,created:new Date().toISOString(),updated:new Date().toISOString()};
 }
 
+var _lastBulkCbIndex = null;
+function bulkCbClick(ev, cb){
+  var all = Array.prototype.slice.call(document.querySelectorAll('.page-bulk-cb'));
+  var idx = all.indexOf(cb);
+  // Shift-click: select every checkbox between the last click and this one (like file managers)
+  if (ev && ev.shiftKey && _lastBulkCbIndex !== null && _lastBulkCbIndex !== idx) {
+    var start = Math.min(_lastBulkCbIndex, idx);
+    var end   = Math.max(_lastBulkCbIndex, idx);
+    var state = cb.checked; // match the state of the box you just clicked
+    for (var i = start; i <= end; i++) { all[i].checked = state; }
+  }
+  _lastBulkCbIndex = idx;
+  updateBulkCount();
+}
 function updateBulkCount(){
   var checked = document.querySelectorAll('.page-bulk-cb:checked');
   var bar = document.getElementById('bulkBar');
@@ -25977,7 +26022,7 @@ function renderPages(){
 
       // Header
       +'<div class="card-head" style="display:flex;align-items:center;gap:6px;">'
-      +'<input type="checkbox" class="page-bulk-cb" data-id="'+p.id+'" onclick="event.stopPropagation();updateBulkCount()" style="width:14px;height:14px;accent-color:var(--red);flex-shrink:0;cursor:pointer;">'
+      +'<input type="checkbox" class="page-bulk-cb" data-id="'+p.id+'" onclick="event.stopPropagation();bulkCbClick(event,this)" style="width:14px;height:14px;accent-color:var(--red);flex-shrink:0;cursor:pointer;">'
       +'<div style="flex:1;display:flex;align-items:center;gap:6px;" onclick="toggleCard(\\''+p.id+'\\')">'
       +'<span class="card-rank">#'+(i+1)+'</span>'
       +'<span class="pri-dot '+priClass+'"></span>'
@@ -29086,6 +29131,7 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
     <button id="tourBtn" class="cs-btn" onclick="startTour(true)" style="border-color:#7c3aed;color:#a78bfa;animation:tourPulse 2s ease-in-out infinite;" title="Step-by-step walkthrough of the tracker">? Tour</button>
     <style>@keyframes tourPulse{0%,100%{box-shadow:0 0 0 0 rgba(124,58,237,.55);}50%{box-shadow:0 0 0 7px rgba(124,58,237,0);}}@keyframes scanPulse{0%,100%{box-shadow:0 0 0 0 rgba(74,222,128,.55);}50%{box-shadow:0 0 0 7px rgba(74,222,128,0);}}</style>
     <button id="scanAllBtn" class="cs-btn" onclick="scanAllPages()" style="border-color:#4ade80;color:#4ade80;font-weight:700;" title="Scan all pages one by one">&#x26a1; Scan All</button>
+    <button id="scanSelectedBtn" class="cs-btn" onclick="scanSelectedPages()" style="border-color:#60a5fa;color:#60a5fa;font-weight:700;" title="Tick the checkboxes on the pages you want, then scan only those">&#x2611; Scan Selected</button>
     <button class="cs-btn" onclick="mergePages()" style="border-color:#38bdf8;color:#38bdf8;" title="Merge duplicate URLs &#x2014; keep best">&#x2295; Merge</button>
     <button class="cs-btn" onclick="cleanPages()" style="border-color:#f59e0b;color:#f59e0b;" title="Remove junk (.jpg, /category/, feeds) &amp; pages not in sitemap/GSC &#x2014; keep only live content">&#x1f9f9; Clean</button>
     <button class="cs-btn" onclick="resetAllScans()" style="border-color:#a78bfa;color:#a78bfa;" title="Tick pages to reset only those &#x2014; or none to reset all. Clears scores, citations &amp; dates; keeps URLs &amp; keywords.">&#x21bb; Reset</button>
@@ -29718,7 +29764,7 @@ function scanAllPages() {
     if (!_proceedAnyway) return;
   }
   if (!confirm('Scan all tracked pages now? They run one by one and this can take a few minutes. You will see live progress on the button.')) return;
-  _scanAllActive = true; _scanAllDone = 0; _scanAllTotal = 0;
+  _scanAllActive = true; _scanAllDone = 0; _scanAllTotal = 0; window._scanMode = 'all';
   _setScanAllBtn('\u23f3 Starting scan\u2026', true, true);
   api('/scan-all', 'POST').then(function(d){
     if (d && d.success) {
@@ -29740,6 +29786,12 @@ function scanAllPages() {
 function _scanAllProgress(){
   if (!_scanAllActive) return;
   _scanAllDone++;
+  if (window._scanMode === 'selected') {
+    if (_scanAllTotal && _scanAllDone >= _scanAllTotal) { _finishScanSelected(); return; }
+    var sb = document.getElementById('scanSelectedBtn');
+    if (sb) sb.innerHTML = '\u23f3 Scanning ' + _scanAllDone + '/' + (_scanAllTotal||'?') + '\u2026';
+    return;
+  }
   if (_scanAllTotal && _scanAllDone >= _scanAllTotal) { _finishScanAll(); return; }
   _setScanAllBtn('\u23f3 Scanning ' + _scanAllDone + '/' + (_scanAllTotal||'?') + '\u2026', true, true);
 }
@@ -29751,6 +29803,43 @@ function _finishScanAll(){
   _setScanAllBtn('\u2713 Scan complete', true, false);
   toast('All pages scanned \u2014 results updated below.', '#4ade80');
   setTimeout(function(){ _setScanAllBtn('\u26a1 Scan All', false, false); }, 6000);
+}
+
+function scanSelectedPages() {
+  if (_scanAllActive) { toast('A scan is already running \\u2014 please wait for it to finish.', '#f59e0b'); return; }
+  var cbs = document.querySelectorAll('.page-bulk-cb:checked');
+  var ids = [];
+  for (var i=0;i<cbs.length;i++){ ids.push(cbs[i].getAttribute('data-id')); }
+  if (!ids.length) { toast('Tick the checkboxes on the pages you want to scan first.', '#f59e0b'); return; }
+  if (!confirm('Scan ' + ids.length + ' selected page' + (ids.length>1?'s':'') + ' now? They run one by one \\u2014 watch the button for progress.')) return;
+  var b = document.getElementById('scanSelectedBtn');
+  _scanAllActive = true; _scanAllDone = 0; _scanAllTotal = 0; window._scanMode = 'selected';
+  if (b){ b.innerHTML = '\\u23f3 Starting\\u2026'; b.disabled = true; b.style.opacity='0.85'; }
+  api('/scan-selected', 'POST', { page_ids: ids }).then(function(d){
+    if (d && d.success) {
+      _scanAllTotal = d.queued || 0;
+      toast('Scanning ' + _scanAllTotal + ' selected page' + (_scanAllTotal>1?'s':'') + ' \\u2014 watch Live Activity.', '#60a5fa');
+      if (b) b.innerHTML = '\\u23f3 Scanning 0/' + _scanAllTotal + '\\u2026';
+      clearTimeout(window._scanAllFallback);
+      window._scanAllFallback = setTimeout(_finishScanSelected, Math.max(60000, _scanAllTotal * 20000));
+      var n = 0;
+      var iv = setInterval(function(){ n++; loadPages(); if (n >= 18 || !_scanAllActive) clearInterval(iv); }, 10000);
+    } else {
+      _scanAllActive = false;
+      if (b){ b.innerHTML = '\\u2611 Scan Selected'; b.disabled=false; b.style.opacity='1'; }
+      toast((d && d.error) || 'Scan failed to start', '#f87171');
+    }
+  }).catch(function(e){ _scanAllActive = false; if (b){ b.innerHTML='\\u2611 Scan Selected'; b.disabled=false; b.style.opacity='1'; } toast('Scan failed: ' + e.message, '#f87171'); });
+}
+function _finishScanSelected(){
+  if (!_scanAllActive) return;
+  _scanAllActive = false;
+  clearTimeout(window._scanAllFallback);
+  loadPages();
+  var b = document.getElementById('scanSelectedBtn');
+  if (b){ b.innerHTML = '\\u2713 Scan complete'; }
+  toast('Selected pages scanned \\u2014 results updated below.', '#60a5fa');
+  setTimeout(function(){ var bb=document.getElementById('scanSelectedBtn'); if (bb){ bb.innerHTML='\\u2611 Scan Selected'; bb.disabled=false; bb.style.opacity='1'; } }, 6000);
 }
 
 function openTelegramSetup() {
@@ -30493,9 +30582,9 @@ function renderPages() {
       + '<div style="font-size:10px;color:#4b5563;margin-top:10px;line-height:1.6;">Formula: rule of thumb based on industry CTR curves \\u2014 position 1\\u20133 \\u2248 20% CTR, 4\\u20135 \\u2248 12%, 6\\u201310 \\u2248 6%. Estimates, not guarantees; refresh your GSC import regularly to keep the queue current.</div>'
       + '</div>';
     leadQueueHtml = '<div id="leadQueuePanel" style="background:#0d1117;border:1px solid #1f2937;border-radius:8px;margin-bottom:12px;overflow:hidden;">'
-      + '<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:linear-gradient(90deg,rgba(249,115,22,.08),transparent);">'
+      + '<div style="display:flex;align-items:center;gap:8px 10px;flex-wrap:wrap;padding:10px 14px;background:linear-gradient(90deg,rgba(249,115,22,.08),transparent);">'
       + '<span onclick="toggleLeadQueue()" style="cursor:pointer;font-size:11px;font-weight:800;letter-spacing:.06em;color:#f97316;text-transform:uppercase;"><span id="leadQueueArrow" style="display:inline-block;margin-right:5px;">▸</span>🎯 Lead Queue</span>'
-      + '<span style="font-size:11px;color:#6b7280;">' + _leadQueue.length + ' open \\u00b7 work top to bottom \\u00b7 check off with \\u25cb my check</span>'
+      + '<span style="font-size:11px;color:#6b7280;min-width:0;">' + _leadQueue.length + ' open \\u00b7 work top to bottom \\u00b7 check off with \\u25cb my check</span>'
       + '<span style="margin-left:auto;font-size:10px;color:#4b5563;">click row to jump \\u00b7 hover for the fix</span>'
       + '<button onclick="toggleLeadQueueLegend(event)" style="flex-shrink:0;cursor:pointer;font-size:10px;font-weight:700;padding:3px 10px;border-radius:5px;background:none;border:1px solid #374151;color:#9ca3af;" title="What do the tiers mean and how is the ranking calculated?">? How ranking works</button>'
       + '</div>'
