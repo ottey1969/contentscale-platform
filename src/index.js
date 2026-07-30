@@ -29068,6 +29068,18 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
   .cs-card-actions button{flex:0 0 auto;}
   .cb-card{max-width:96vw!important;}
   .cb-url{max-width:200px!important;}
+  /* wide brief tables scroll instead of overflowing the viewport */
+  .cs-modal table{display:block;overflow-x:auto;-webkit-overflow-scrolling:touch;max-width:100%;}
+  /* notification panel must not exceed the screen width */
+  #notifPanel{width:auto!important;left:8px!important;right:8px!important;}
+  /* modals with a wide inline max-width still fit the phone */
+  .cs-modal-box{max-width:96vw!important;width:96vw!important;}
+  .cs-modal-box textarea,.cs-modal-box .cs-input{max-width:100%!important;}
+  /* page cards: long URLs wrap instead of forcing horizontal scroll */
+  .cs-page-card{overflow:hidden;}
+  .cs-url-line,.cs-page-card a{word-break:break-word;overflow-wrap:anywhere;}
+  /* search drops to its own row under the wrapped toolbar buttons */
+  #ctSearch{order:99;}
 }
 @media(max-width:380px){
   .cs-stats{grid-template-columns:repeat(2,1fr)!important;}
@@ -32285,9 +32297,11 @@ var _tourSteps = [
   { sel: '#sitemapBtn', title: '4 \\u00b7 Sitemap', text: 'Upload your sitemap so the tracker knows every page that exists on your site \\u2014 not just the tracked ones. That sharpens cannibalization detection (which page owns which intent) and stops \\u201cnew page\\u201d advice for pages you already have.' },
   { sel: '#impressionGap', title: '5 \\u00b7 Impression Gap', text: 'Real queries Google already shows your site for that none of your tracked pages target \\u2014 free traffic you are leaving on the table. Locked until you connect real search data (GSC import). Once connected it also powers Cannibalization detection and the Lead Queue below, so connect it early.' },
   { sel: '#scanAllBtn', title: '6 \\u00b7 Scan All', text: 'Scans every tracked page one by one \\u2014 useful with many pages, and ideal for a lead or manager who assigns work to specialists: one click refreshes every brief so the whole team has up-to-date instructions.' },
+  { sel: '#scanSelectedBtn', title: '6b \\u00b7 Scan Selected', text: 'Do not want to scan everything? Tick the checkbox on just the pages you want (shift-click to select a range), then click Scan Selected \\u2014 only those pages get re-scanned. Saves time and scan budget when you are working one page at a time.' },
   { sel: '.cs-live', title: '7 \\u00b7 Live Activity', text: 'Your window into what the tracker is doing right now: which page is being scanned, what just finished, what is queued. Auto-updates every 8 seconds \\u2014 no need to refresh.' },
   { sel: '#brandCtxPanel', title: '8 \\u00b7 Brand & author info', text: 'Store the real facts about your business here \\u2014 name, author, credentials, service area, anything the AI must respect. Every brief uses these facts instead of inventing details. Optional, but it makes the generated text noticeably more accurate.' },
   { sel: '.cs-page-card', title: '9 \\u00b7 Your tracked pages', text: 'Each card is one tracked page: its Google position, AI citation badges (AI Overview, Perplexity, Copilot), GSC clicks and impressions, and in the yellow block its pushable queries \\u2014 searches on page 2 that one good push moves to page 1.' },
+  { sel: '.cs-aio-btn', title: '9a \\u00b7 Add AIO \\u2014 paste your AI Overview', text: 'Automated tools cannot see the personalized Google AI Overview you get \\u2014 so paste it here. On the card, click \\u201cAdd AIO\\u201d, copy the AI Overview Google shows you for this query (including its source links), and paste it. This is step 1 \\u2014 do it before scanning, and the brief then shows exactly who Google cites and the precise passage to write to get cited yourself. The button turns green (AIO \\u2713) once saved.' },
   { sel: '#cannibalPanel', title: '10 \\u00b7 Cannibalization', text: 'Pages competing with each other for the same search. Click any row for exactly what to do \\u2014 and in most cases you do nothing by hand: the tracker feeds each conflict into the briefs of the affected pages on their next scan, as ready-made actions.' },
   { sel: '#leadQueuePanel', title: '11 \\u00b7 Lead Queue', text: 'Every page ranked by the clicks you are missing per month \\u2014 your worklist. Work strictly top to bottom: row 1 is always the fastest route to new leads. Click a row to jump to that page; click \\u201c? How ranking works\\u201d for what each tier means.' },
   { sel: '#myChecksBar', title: '12 \\u00b7 My checks', text: 'Your personal progress. The checkmarks are yours alone \\u2014 scans, HTML updates and restarts never reset them. Filter to \\u201cTo do\\u201d to see only open work; checked pages leave the Lead Queue so the next job rises to the top.' },
