@@ -1,4 +1,4 @@
-console.log('=== CONTENTSCALE BOOT ' + new Date().toISOString() + ' v2026-07-08-possible-prioritized-shortcut | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON | possibleThreshold=20impr | shortcutPrioritized=v2 | gscAutoFetchRemoved=true | linkCheckActive=true | wholeSiteWipeGuard=true | gscAutoFetchRestored=true | reminderOffFix=true | claudeRemoved=true | bingWebmaster=true | competitorPanel=true | zeroResultFix=true | pagesRefreshFix=true | recheckButton=true | provenScanStrip=true | provenScanState=true | scanAllProven=true | doEverythingBtn=true | panelOrderFix=true | workflowGuide=true | preScanGuard=true | scanAllGuard=true | earlyGuard=true | emptyStateTeaser=true | provenScopeFix=true | numberedButtons=true | clearerButtons=true | scanAnimFix=true | promptClaudeCleanup=true | bonusTip=true | realProvenContext=true | competitorContext=true | unifiedBrief=true | diagnosticFirst=true | fullCompetitorBreakdown=true | serpSpyV3=true | transparencyBlock=true | emailsPausedToggle=true | competitorDedup=true | provenScanDebug=true | serializedScans=true | claudeCleanupV2=true | mergeClaudeStrip=true | visualTransparency=true | aboveFoldPriority=true | competitorComparisonTable=true | redGreenTracking=true | aioExplicitState=true | perpCopilotState=true | realMergePromptFixed=true | briefContextDebug=true | forceRescanBypass=true | gscPosFallback=true | cannibalDedup=true | gscAccessGated=true | gapConfirmShown=true | noPlaceholders=true | rowNumContrast=true | codeCannibalDedup=true | provenDebugRemoved=true | broaderCannibalDedup=true | competitorGapFallback=true | competitorPrevSnapFallback=true | hubSpokeDedup=true | compGapRegexBroadened=true | gapFixLabelFallback=true | geminiProForBriefs=true | timeoutBudgetFixed=true | perAttemptTimeout45s=true | revertToFlashLite=true | tokenLimitDoubled=true | urlNormFix=true | impactFieldChecked=true | broaderHubPattern=true | cannibalContextRemovedFromGSC=true | scanStateDerivedFromDB=true | boardBriefRestyled=true | liveWallBriefModal=true | modalScopeFix=true | cardTransparency=true | CLAUDE-FIX-2307=true | CLAUDE-FIX-2307B-specquote=true | CLAUDE-FIX-2307C-pwboard=true | CLAUDE-FIX-2307D-typefilter=true | CLAUDE-FIX-2307E-scanneraio=true | CLAUDE-FIX-2307F-urlstrip=true | CLAUDE-FIX-2307G-aiobeforeScan=true | CLAUDE-FIX-2307H-aioInPrompt=true | CLAUDE-FIX-2307I-escHtml=true | CLAUDE-FIX-2307J-escAlias-noStale=true | CLAUDE-FIX-2407A-perpCitedConsistency=true | CLAUDE-FIX-2407B-perpCacheBug=true | CLAUDE-FIX-2407C-domainVsPageNuance=true | CLAUDE-FIX-2407D-wallModalNoReshuffle=true | CLAUDE-FIX-2407E-buildBriefSafetyNet=true | CLAUDE-FIX-2407F-modalFullText=true | CLAUDE-FIX-2407G-aioPasteModal=true | CLAUDE-FIX-2407H-aioDefinitionView=true | CLAUDE-FIX-2407I-aioBlueprintMining=true | CLAUDE-FIX-2407J-aioReferences=true | CLAUDE-FIX-2407K-aioCitationGap=true | CLAUDE-FIX-2407L-compGapTableAllModals=true | CLAUDE-FIX-2407M-honestAioManualOnly=true | CLAUDE-FIX-2407N-regexEscapeInTemplate=true | CLAUDE-FIX-2507A-jsonRepair-mergeTokens4096=true | CLAUDE-FIX-2507B-cardButtonsWorkflowOrder=true | CLAUDE-FIX-2507C-cardButtonsPillColors=true | CLAUDE-FIX-2507D-aioReloadFull-limit8000=true | CLAUDE-FIX-2507E-briefModalTransparency=true | CLAUDE-FIX-2507F-aioGapTable4col=true | CLAUDE-FIX-2507G-htmlScanTickCycle=true | CLAUDE-FIX-2507H-briefViewedPersisted=true | CLAUDE-FIX-2507I-fixCardRenderVarInExpr=true | CLAUDE-FIX-2507J-briefsUnified-manualAioGap=true | CLAUDE-FIX-2507K-gscCompTableInTracker=true | CLAUDE-FIX-2507L-trackerSplitSections=true | CLAUDE-FIX-2507M-copyBriefClarity=true | CLAUDE-FIX-2507N-aioRefsFromManualPaste=true | CLAUDE-FIX-2507O-removeSseEventSource=true | CLAUDE-FIX-2507P-ticksPersistUntilDoneOrNewHtml=true | CLAUDE-FIX-2507Q-aioRefsStoredAtSave=true | CLAUDE-FIX-2507R-aioGapTableAlways=true | CLAUDE-FIX-2507S-aioGscContextSeparated=true | CLAUDE-FIX-2507T-aioCodeFallbackFixed-refsFromManualSave=true | CLAUDE-FIX-2507U-mergeSafetyNet-cardSummaryParity=true | CLAUDE-FIX-2507V-sharedAioRenderFn-authTable=true | CLAUDE-FIX-2507W-viewLastBriefDelegates-oneSystem=true | CLAUDE-FIX-2507X-sharedBriefBody-fullUnification=true | CLAUDE-FIX-2507Y-aioTop5Table-definitionLabel=true | CLAUDE-FIX-2507Z-noRefsActionableMsg=true | CLAUDE-FIX-2508A-manualPasteWinsOverStaleSnapshot=true | CLAUDE-FIX-2508B-merge2Hardened-diagLog=true | CLAUDE-FIX-2508C-noStoreHeaders-freshClientJs=true | CLAUDE-FIX-2508D-saveEchoDiagnostic=true | CLAUDE-FIX-2508E-separateSourcesField=true | CLAUDE-FIX-2508F-diagSourcesField=true | CLAUDE-FIX-2508G-acceptSourceNames=true | CLAUDE-FIX-2508H-namesFromMainPaste-headingFilter=true | CLAUDE-FIX-2508I-cloroAioFetch=true | CLAUDE-FIX-2508J-namesFallback-autoSplit=true | CLAUDE-FIX-2508K-competitorGapAioFallback=true | CLAUDE-FIX-2508L-aioFallbackNoGscLeak-honestLabel=true | CLAUDE-FIX-2508M-gscRootDomainFallback=true | CLAUDE-FIX-2508N-sitemapLinks250-gscLiveFilter=true | CLAUDE-FIX-2508O-leadQueueCollapsedDefault=true | CLAUDE-FIX-2508P-leadQueueToggleRealFns=true | CLAUDE-FIX-2508Q-leadQueueHeaderWrap=true | CLAUDE-FIX-2508R-scanSelectedButton=true | CLAUDE-FIX-2508S-shiftClickRange=true | CLAUDE-FIX-2508T-shiftClickCorrectClass-inTemplate=true | CLAUDE-FIX-2508U-brandHeadshotHubFields=true | CLAUDE-FIX-2508V-briefModeSelector=true | CLAUDE-FIX-2508W-intentSnapshot-ownerNote=true | CLAUDE-FIX-2508X-modeBtnQuoteFix=true | CLAUDE-FIX-2508Y-perpApostropheFix=true | CLAUDE-FIX-2508Z-sitemapRegexFix=true | CLAUDE-FIX-2508ZA-pageInSitemapRegexFix=true | CLAUDE-FIX-2508ZB-missingEntities=true | CLAUDE-FIX-2508ZC-briefSpacing=true | CLAUDE-FIX-2508ZD-pasteCodeBlocks=true | CLAUDE-FIX-2508ZE-fmtActionRegexFix=true | CLAUDE-FIX-2508ZF-ticksOnlyClearOnDone=true | CLAUDE-FIX-2508ZG-paa5-pwbWider-aioFallbackMsg=true | CLAUDE-FIX-2508ZH-numberedItemsOnOwnLines=true | CLAUDE-FIX-2508ZI-prewriteBuildFields-aioListNotUglyTable=true | CLAUDE-FIX-2508ZJ-cleanAioDefinitionText=true | CLAUDE-FIX-2508ZK-slugRegexCrashFix-sectionSplit=true | CLAUDE-FIX-2508ZL-tvModalFmtAction=true | CLAUDE-FIX-3007A-tourAioScanSelected-mobileFriendly=true | CLAUDE-FIX-3007B-htmlLangWhitelistNonLatin=true | CLAUDE-FIX-3007C-clientBriefLanguageSelector=true | CLAUDE-FIX-3007D-briefLanguageTourStep=true | CLAUDE-FIX-3007E-prewriteLangListFull=true | CLAUDE-FIX-3007F-prewriteAutoAioFetch=true | CLAUDE-FIX-3007G-serpRegionListFull=true | CLAUDE-FIX-3007H-prewriteMobilePolish=true ===');
+console.log('=== CONTENTSCALE BOOT ' + new Date().toISOString() + ' v2026-07-08-possible-prioritized-shortcut | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON | possibleThreshold=20impr | shortcutPrioritized=v2 | gscAutoFetchRemoved=true | linkCheckActive=true | wholeSiteWipeGuard=true | gscAutoFetchRestored=true | reminderOffFix=true | claudeRemoved=true | bingWebmaster=true | competitorPanel=true | zeroResultFix=true | pagesRefreshFix=true | recheckButton=true | provenScanStrip=true | provenScanState=true | scanAllProven=true | doEverythingBtn=true | panelOrderFix=true | workflowGuide=true | preScanGuard=true | scanAllGuard=true | earlyGuard=true | emptyStateTeaser=true | provenScopeFix=true | numberedButtons=true | clearerButtons=true | scanAnimFix=true | promptClaudeCleanup=true | bonusTip=true | realProvenContext=true | competitorContext=true | unifiedBrief=true | diagnosticFirst=true | fullCompetitorBreakdown=true | serpSpyV3=true | transparencyBlock=true | emailsPausedToggle=true | competitorDedup=true | provenScanDebug=true | serializedScans=true | claudeCleanupV2=true | mergeClaudeStrip=true | visualTransparency=true | aboveFoldPriority=true | competitorComparisonTable=true | redGreenTracking=true | aioExplicitState=true | perpCopilotState=true | realMergePromptFixed=true | briefContextDebug=true | forceRescanBypass=true | gscPosFallback=true | cannibalDedup=true | gscAccessGated=true | gapConfirmShown=true | noPlaceholders=true | rowNumContrast=true | codeCannibalDedup=true | provenDebugRemoved=true | broaderCannibalDedup=true | competitorGapFallback=true | competitorPrevSnapFallback=true | hubSpokeDedup=true | compGapRegexBroadened=true | gapFixLabelFallback=true | geminiProForBriefs=true | timeoutBudgetFixed=true | perAttemptTimeout45s=true | revertToFlashLite=true | tokenLimitDoubled=true | urlNormFix=true | impactFieldChecked=true | broaderHubPattern=true | cannibalContextRemovedFromGSC=true | scanStateDerivedFromDB=true | boardBriefRestyled=true | liveWallBriefModal=true | modalScopeFix=true | cardTransparency=true | CLAUDE-FIX-2307=true | CLAUDE-FIX-2307B-specquote=true | CLAUDE-FIX-2307C-pwboard=true | CLAUDE-FIX-2307D-typefilter=true | CLAUDE-FIX-2307E-scanneraio=true | CLAUDE-FIX-2307F-urlstrip=true | CLAUDE-FIX-2307G-aiobeforeScan=true | CLAUDE-FIX-2307H-aioInPrompt=true | CLAUDE-FIX-2307I-escHtml=true | CLAUDE-FIX-2307J-escAlias-noStale=true | CLAUDE-FIX-2407A-perpCitedConsistency=true | CLAUDE-FIX-2407B-perpCacheBug=true | CLAUDE-FIX-2407C-domainVsPageNuance=true | CLAUDE-FIX-2407D-wallModalNoReshuffle=true | CLAUDE-FIX-2407E-buildBriefSafetyNet=true | CLAUDE-FIX-2407F-modalFullText=true | CLAUDE-FIX-2407G-aioPasteModal=true | CLAUDE-FIX-2407H-aioDefinitionView=true | CLAUDE-FIX-2407I-aioBlueprintMining=true | CLAUDE-FIX-2407J-aioReferences=true | CLAUDE-FIX-2407K-aioCitationGap=true | CLAUDE-FIX-2407L-compGapTableAllModals=true | CLAUDE-FIX-2407M-honestAioManualOnly=true | CLAUDE-FIX-2407N-regexEscapeInTemplate=true | CLAUDE-FIX-2507A-jsonRepair-mergeTokens4096=true | CLAUDE-FIX-2507B-cardButtonsWorkflowOrder=true | CLAUDE-FIX-2507C-cardButtonsPillColors=true | CLAUDE-FIX-2507D-aioReloadFull-limit8000=true | CLAUDE-FIX-2507E-briefModalTransparency=true | CLAUDE-FIX-2507F-aioGapTable4col=true | CLAUDE-FIX-2507G-htmlScanTickCycle=true | CLAUDE-FIX-2507H-briefViewedPersisted=true | CLAUDE-FIX-2507I-fixCardRenderVarInExpr=true | CLAUDE-FIX-2507J-briefsUnified-manualAioGap=true | CLAUDE-FIX-2507K-gscCompTableInTracker=true | CLAUDE-FIX-2507L-trackerSplitSections=true | CLAUDE-FIX-2507M-copyBriefClarity=true | CLAUDE-FIX-2507N-aioRefsFromManualPaste=true | CLAUDE-FIX-2507O-removeSseEventSource=true | CLAUDE-FIX-2507P-ticksPersistUntilDoneOrNewHtml=true | CLAUDE-FIX-2507Q-aioRefsStoredAtSave=true | CLAUDE-FIX-2507R-aioGapTableAlways=true | CLAUDE-FIX-2507S-aioGscContextSeparated=true | CLAUDE-FIX-2507T-aioCodeFallbackFixed-refsFromManualSave=true | CLAUDE-FIX-2507U-mergeSafetyNet-cardSummaryParity=true | CLAUDE-FIX-2507V-sharedAioRenderFn-authTable=true | CLAUDE-FIX-2507W-viewLastBriefDelegates-oneSystem=true | CLAUDE-FIX-2507X-sharedBriefBody-fullUnification=true | CLAUDE-FIX-2507Y-aioTop5Table-definitionLabel=true | CLAUDE-FIX-2507Z-noRefsActionableMsg=true | CLAUDE-FIX-2508A-manualPasteWinsOverStaleSnapshot=true | CLAUDE-FIX-2508B-merge2Hardened-diagLog=true | CLAUDE-FIX-2508C-noStoreHeaders-freshClientJs=true | CLAUDE-FIX-2508D-saveEchoDiagnostic=true | CLAUDE-FIX-2508E-separateSourcesField=true | CLAUDE-FIX-2508F-diagSourcesField=true | CLAUDE-FIX-2508G-acceptSourceNames=true | CLAUDE-FIX-2508H-namesFromMainPaste-headingFilter=true | CLAUDE-FIX-2508I-cloroAioFetch=true | CLAUDE-FIX-2508J-namesFallback-autoSplit=true | CLAUDE-FIX-2508K-competitorGapAioFallback=true | CLAUDE-FIX-2508L-aioFallbackNoGscLeak-honestLabel=true | CLAUDE-FIX-2508M-gscRootDomainFallback=true | CLAUDE-FIX-2508N-sitemapLinks250-gscLiveFilter=true | CLAUDE-FIX-2508O-leadQueueCollapsedDefault=true | CLAUDE-FIX-2508P-leadQueueToggleRealFns=true | CLAUDE-FIX-2508Q-leadQueueHeaderWrap=true | CLAUDE-FIX-2508R-scanSelectedButton=true | CLAUDE-FIX-2508S-shiftClickRange=true | CLAUDE-FIX-2508T-shiftClickCorrectClass-inTemplate=true | CLAUDE-FIX-2508U-brandHeadshotHubFields=true | CLAUDE-FIX-2508V-briefModeSelector=true | CLAUDE-FIX-2508W-intentSnapshot-ownerNote=true | CLAUDE-FIX-2508X-modeBtnQuoteFix=true | CLAUDE-FIX-2508Y-perpApostropheFix=true | CLAUDE-FIX-2508Z-sitemapRegexFix=true | CLAUDE-FIX-2508ZA-pageInSitemapRegexFix=true | CLAUDE-FIX-2508ZB-missingEntities=true | CLAUDE-FIX-2508ZC-briefSpacing=true | CLAUDE-FIX-2508ZD-pasteCodeBlocks=true | CLAUDE-FIX-2508ZE-fmtActionRegexFix=true | CLAUDE-FIX-2508ZF-ticksOnlyClearOnDone=true | CLAUDE-FIX-2508ZG-paa5-pwbWider-aioFallbackMsg=true | CLAUDE-FIX-2508ZH-numberedItemsOnOwnLines=true | CLAUDE-FIX-2508ZI-prewriteBuildFields-aioListNotUglyTable=true | CLAUDE-FIX-2508ZJ-cleanAioDefinitionText=true | CLAUDE-FIX-2508ZK-slugRegexCrashFix-sectionSplit=true | CLAUDE-FIX-2508ZL-tvModalFmtAction=true | CLAUDE-FIX-3007A-tourAioScanSelected-mobileFriendly=true | CLAUDE-FIX-3007B-htmlLangWhitelistNonLatin=true | CLAUDE-FIX-3007C-clientBriefLanguageSelector=true | CLAUDE-FIX-3007D-briefLanguageTourStep=true | CLAUDE-FIX-3007E-prewriteLangListFull=true | CLAUDE-FIX-3007F-prewriteAutoAioFetch=true | CLAUDE-FIX-3007G-serpRegionListFull=true | CLAUDE-FIX-3007H-prewriteMobilePolish=true | CLAUDE-FIX-3007I-groupedComboDropdowns=true ===');
 
 // Repair common LLM-JSON defects (raw newlines/tabs inside strings, trailing commas)
 function _repairJsonG(str){
@@ -28786,6 +28786,21 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
 .cs-modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:30000; align-items:center; justify-content:center; }
 .cs-modal.show { display:flex; }
 .cs-modal-box { background:#111827; border:1px solid #374151; border-radius:12px; padding:24px; width:min(480px,95vw); max-height:90vh; overflow-y:auto; -webkit-overflow-scrolling:touch; box-shadow:0 20px 60px rgba(0,0,0,.15); }
+/* Custom grouped multi-column combo (replaces native <datalist> so we can style columns) */
+.cs-combo { position:relative; }
+.cs-combo .cs-combo-caret { position:absolute; right:10px; top:50%; transform:translateY(-50%); color:#9ca3af; font-size:12px; cursor:pointer; pointer-events:auto; user-select:none; }
+.cs-combo input { padding-right:26px; }
+.cs-combo-panel { display:none; position:absolute; z-index:40; top:calc(100% + 4px); left:0; background:#0d1117; border:1px solid #374151; border-radius:10px; box-shadow:0 16px 44px rgba(0,0,0,.5); padding:10px; max-height:min(58vh,420px); overflow-y:auto; -webkit-overflow-scrolling:touch; }
+.cs-combo-panel.on { display:block; }
+/* desktop: wide enough for a few columns, but never wider than the modal viewport allows */
+.cs-combo-panel { width:min(440px,86vw); }
+/* the region field sits in the right column — open its panel right-aligned so it can't spill off-screen */
+#pwbRegionPanel { left:auto; right:0; }
+.cs-combo-group-title { font-size:9px; letter-spacing:.08em; text-transform:uppercase; color:#6b7280; margin:8px 4px 4px; font-weight:800; }
+.cs-combo-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(128px,1fr)); gap:2px; }
+.cs-combo-opt { padding:6px 9px; font-size:12px; color:#e5e7eb; border-radius:6px; cursor:pointer; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.cs-combo-opt:hover, .cs-combo-opt.active { background:#7c3aed; color:#fff; }
+.cs-combo-empty { padding:10px; font-size:12px; color:#9ca3af; }
 .cs-input { width:100%; background:#0d1117; border:1px solid #374151; border-radius:6px; padding:9px 12px; color:#f1f5f9; font-size:13px; font-family:Verdana,sans-serif; outline:none; }
 .cs-input:focus { border-color:#7c3aed; }
 
@@ -29101,6 +29116,9 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
   #prewriteBriefModal .pwb-col{flex:1 1 100%!important;}
   /* Pre-Write AIO row: URL field and Auto-fetch button stack cleanly */
   #pwbAioFetchBtn{flex:1 1 100%!important;}
+  /* combo panel: single column, constrained to the field width on phones */
+  .cs-combo-panel{width:100%!important;max-height:50vh!important;}
+  .cs-combo-grid{grid-template-columns:1fr!important;}
 }
 @media(max-width:380px){
   .cs-stats{grid-template-columns:repeat(2,1fr)!important;}
@@ -29409,86 +29427,19 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
     <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:16px;">
       <div class="pwb-col" style="flex:1 1 140px;">
         <label style="font-size:11px;color:#9ca3af;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.06em;">Output language</label>
-        <input id="pwbLanguage" type="text" list="pwbLangList" class="cs-input" placeholder="English">
-        <datalist id="pwbLangList">
-          <option value="English"></option>
-          <option value="Dutch"></option>
-          <option value="German"></option>
-          <option value="French"></option>
-          <option value="Spanish"></option>
-          <option value="Italian"></option>
-          <option value="Portuguese"></option>
-          <option value="Polish"></option>
-          <option value="Swedish"></option>
-          <option value="Danish"></option>
-          <option value="Norwegian"></option>
-          <option value="Finnish"></option>
-          <option value="Turkish"></option>
-          <option value="Russian"></option>
-          <option value="Chinese (Simplified)"></option>
-          <option value="Chinese (Traditional)"></option>
-          <option value="Japanese"></option>
-          <option value="Korean"></option>
-          <option value="Hindi"></option>
-          <option value="Arabic"></option>
-          <option value="Arabic — MSA"></option>
-          <option value="Arabic — Gulf"></option>
-          <option value="Arabic — Egyptian"></option>
-          <option value="Arabic — Levantine"></option>
-        </datalist>
+        <div class="cs-combo" id="pwbLanguageCombo">
+          <input id="pwbLanguage" type="text" class="cs-input" placeholder="English" autocomplete="off" onfocus="csComboOpen('pwbLanguage')" oninput="csComboFilter('pwbLanguage')">
+          <span class="cs-combo-caret" onclick="csComboToggle('pwbLanguage')">&#x25be;</span>
+          <div class="cs-combo-panel" id="pwbLanguagePanel"></div>
+        </div>
       </div>
       <div class="pwb-col" style="flex:1 1 140px;">
         <label style="font-size:11px;color:#9ca3af;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.06em;">SERP region</label>
-        <input id="pwbRegion" type="text" list="pwbRegionList" class="cs-input" placeholder="United States">
-        <datalist id="pwbRegionList">
-          <option value="us — United States"></option>
-          <option value="gb — United Kingdom"></option>
-          <option value="ca — Canada"></option>
-          <option value="au — Australia"></option>
-          <option value="ie — Ireland"></option>
-          <option value="nl — Netherlands"></option>
-          <option value="be — Belgium"></option>
-          <option value="de — Germany"></option>
-          <option value="at — Austria"></option>
-          <option value="ch — Switzerland"></option>
-          <option value="fr — France"></option>
-          <option value="es — Spain"></option>
-          <option value="it — Italy"></option>
-          <option value="pt — Portugal"></option>
-          <option value="pl — Poland"></option>
-          <option value="se — Sweden"></option>
-          <option value="dk — Denmark"></option>
-          <option value="no — Norway"></option>
-          <option value="fi — Finland"></option>
-          <option value="tr — Turkey"></option>
-          <option value="ru — Russia"></option>
-          <option value="ae — United Arab Emirates"></option>
-          <option value="sa — Saudi Arabia"></option>
-          <option value="qa — Qatar"></option>
-          <option value="kw — Kuwait"></option>
-          <option value="bh — Bahrain"></option>
-          <option value="om — Oman"></option>
-          <option value="eg — Egypt"></option>
-          <option value="ma — Morocco"></option>
-          <option value="za — South Africa"></option>
-          <option value="in — India"></option>
-          <option value="cn — China"></option>
-          <option value="hk — Hong Kong"></option>
-          <option value="tw — Taiwan"></option>
-          <option value="jp — Japan"></option>
-          <option value="kr — South Korea"></option>
-          <option value="sg — Singapore"></option>
-          <option value="my — Malaysia"></option>
-          <option value="id — Indonesia"></option>
-          <option value="ph — Philippines"></option>
-          <option value="th — Thailand"></option>
-          <option value="vn — Vietnam"></option>
-          <option value="br — Brazil"></option>
-          <option value="mx — Mexico"></option>
-          <option value="ar — Argentina"></option>
-          <option value="cl — Chile"></option>
-          <option value="co — Colombia"></option>
-        </datalist>
+        <div class="cs-combo" id="pwbRegionCombo">
+          <input id="pwbRegion" type="text" class="cs-input" placeholder="United States" autocomplete="off" onfocus="csComboOpen('pwbRegion')" oninput="csComboFilter('pwbRegion')">
+          <span class="cs-combo-caret" onclick="csComboToggle('pwbRegion')">&#x25be;</span>
+          <div class="cs-combo-panel" id="pwbRegionPanel"></div>
+        </div>
       </div>
     </div>
     <div style="margin-bottom:16px;">
@@ -30295,6 +30246,79 @@ async function reopenPrewriteBrief(id) {
     stat.textContent = '\u274c ' + e.message;
   }
 }
+
+// ── Custom grouped multi-column combo (language + SERP region) ─────────────
+// Replaces the native <datalist> so the options can render in grouped columns.
+// The input keeps its id (pwbLanguage / pwbRegion) so all existing code still works.
+var CS_COMBO_DATA = {
+  pwbLanguage: [
+    { title: 'Common', items: ['English','Dutch','German','French','Spanish','Italian','Portuguese'] },
+    { title: 'Nordics & Europe', items: ['Polish','Swedish','Danish','Norwegian','Finnish','Turkish','Russian'] },
+    { title: 'Asia', items: ['Chinese (Simplified)','Chinese (Traditional)','Japanese','Korean','Hindi'] },
+    { title: 'Arabic', items: ['Arabic','Arabic — MSA','Arabic — Gulf','Arabic — Egyptian','Arabic — Levantine'] }
+  ],
+  pwbRegion: [
+    { title: 'English-speaking', items: ['us — United States','gb — United Kingdom','ca — Canada','au — Australia','ie — Ireland'] },
+    { title: 'Western Europe', items: ['nl — Netherlands','be — Belgium','de — Germany','at — Austria','ch — Switzerland','fr — France','es — Spain','it — Italy','pt — Portugal','pl — Poland'] },
+    { title: 'Northern Europe', items: ['se — Sweden','dk — Denmark','no — Norway','fi — Finland'] },
+    { title: 'Turkey & Russia', items: ['tr — Turkey','ru — Russia'] },
+    { title: 'Middle East & Africa', items: ['ae — United Arab Emirates','sa — Saudi Arabia','qa — Qatar','kw — Kuwait','bh — Bahrain','om — Oman','eg — Egypt','ma — Morocco','za — South Africa'] },
+    { title: 'Asia', items: ['in — India','cn — China','hk — Hong Kong','tw — Taiwan','jp — Japan','kr — South Korea','sg — Singapore','my — Malaysia','id — Indonesia','ph — Philippines','th — Thailand','vn — Vietnam'] },
+    { title: 'Latin America', items: ['br — Brazil','mx — Mexico','ar — Argentina','cl — Chile','co — Colombia'] }
+  ]
+};
+var _csComboOpenId = null;
+
+function _csComboRender(id, filter) {
+  var panel = document.getElementById(id + 'Panel');
+  if (!panel) return;
+  var groups = CS_COMBO_DATA[id] || [];
+  var q = (filter || '').trim().toLowerCase();
+  var html = '';
+  var any = false;
+  groups.forEach(function(g) {
+    var matches = g.items.filter(function(it) { return !q || it.toLowerCase().indexOf(q) > -1; });
+    if (!matches.length) return;
+    any = true;
+    html += '<div class="cs-combo-group-title">' + g.title + '</div><div class="cs-combo-grid">';
+    matches.forEach(function(it) {
+      var safe = it.replace(/"/g, '&quot;');
+      html += '<div class="cs-combo-opt" onmousedown="csComboPick(\'' + id + '\',&quot;' + safe + '&quot;)">' + it + '</div>';
+    });
+    html += '</div>';
+  });
+  panel.innerHTML = any ? html : '<div class="cs-combo-empty">No match \u2014 you can also just type it in.</div>';
+}
+function csComboOpen(id) {
+  if (_csComboOpenId && _csComboOpenId !== id) csComboClose(_csComboOpenId);
+  _csComboOpenId = id;
+  _csComboRender(id, document.getElementById(id).value);
+  var panel = document.getElementById(id + 'Panel');
+  if (panel) panel.classList.add('on');
+}
+function csComboClose(id) {
+  var panel = document.getElementById(id + 'Panel');
+  if (panel) panel.classList.remove('on');
+  if (_csComboOpenId === id) _csComboOpenId = null;
+}
+function csComboToggle(id) {
+  var panel = document.getElementById(id + 'Panel');
+  if (panel && panel.classList.contains('on')) { csComboClose(id); }
+  else { document.getElementById(id).focus(); csComboOpen(id); }
+}
+function csComboFilter(id) { _csComboRender(id, document.getElementById(id).value); var p = document.getElementById(id + 'Panel'); if (p) p.classList.add('on'); }
+function csComboPick(id, val) {
+  var inp = document.getElementById(id);
+  if (inp) inp.value = val;
+  csComboClose(id);
+}
+// Close on outside click / Escape.
+document.addEventListener('mousedown', function(e) {
+  if (!_csComboOpenId) return;
+  var combo = document.getElementById(_csComboOpenId + 'Combo');
+  if (combo && !combo.contains(e.target)) csComboClose(_csComboOpenId);
+});
+document.addEventListener('keydown', function(e) { if (e.key === 'Escape' && _csComboOpenId) csComboClose(_csComboOpenId); });
 
 async function prewriteAioFetch() {
   var kw = document.getElementById('pwbKeyword').value.trim();
