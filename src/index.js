@@ -1,4 +1,4 @@
-console.log('=== CONTENTSCALE BOOT ' + new Date().toISOString() + ' v2026-07-08-possible-prioritized-shortcut | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON | possibleThreshold=20impr | shortcutPrioritized=v2 | gscAutoFetchRemoved=true | linkCheckActive=true | wholeSiteWipeGuard=true | gscAutoFetchRestored=true | reminderOffFix=true | claudeRemoved=true | bingWebmaster=true | competitorPanel=true | zeroResultFix=true | pagesRefreshFix=true | recheckButton=true | provenScanStrip=true | provenScanState=true | scanAllProven=true | doEverythingBtn=true | panelOrderFix=true | workflowGuide=true | preScanGuard=true | scanAllGuard=true | earlyGuard=true | emptyStateTeaser=true | provenScopeFix=true | numberedButtons=true | clearerButtons=true | scanAnimFix=true | promptClaudeCleanup=true | bonusTip=true | realProvenContext=true | competitorContext=true | unifiedBrief=true | diagnosticFirst=true | fullCompetitorBreakdown=true | serpSpyV3=true | transparencyBlock=true | emailsPausedToggle=true | competitorDedup=true | provenScanDebug=true | serializedScans=true | claudeCleanupV2=true | mergeClaudeStrip=true | visualTransparency=true | aboveFoldPriority=true | competitorComparisonTable=true | redGreenTracking=true | aioExplicitState=true | perpCopilotState=true | realMergePromptFixed=true | briefContextDebug=true | forceRescanBypass=true | gscPosFallback=true | cannibalDedup=true | gscAccessGated=true | gapConfirmShown=true | noPlaceholders=true | rowNumContrast=true | codeCannibalDedup=true | provenDebugRemoved=true | broaderCannibalDedup=true | competitorGapFallback=true | competitorPrevSnapFallback=true | hubSpokeDedup=true | compGapRegexBroadened=true | gapFixLabelFallback=true | geminiProForBriefs=true | timeoutBudgetFixed=true | perAttemptTimeout45s=true | revertToFlashLite=true | tokenLimitDoubled=true | urlNormFix=true | impactFieldChecked=true | broaderHubPattern=true | cannibalContextRemovedFromGSC=true | scanStateDerivedFromDB=true | boardBriefRestyled=true | liveWallBriefModal=true | modalScopeFix=true | cardTransparency=true | CLAUDE-FIX-2307=true | CLAUDE-FIX-2307B-specquote=true | CLAUDE-FIX-2307C-pwboard=true | CLAUDE-FIX-2307D-typefilter=true | CLAUDE-FIX-2307E-scanneraio=true | CLAUDE-FIX-2307F-urlstrip=true | CLAUDE-FIX-2307G-aiobeforeScan=true | CLAUDE-FIX-2307H-aioInPrompt=true | CLAUDE-FIX-2307I-escHtml=true | CLAUDE-FIX-2307J-escAlias-noStale=true | CLAUDE-FIX-2407A-perpCitedConsistency=true | CLAUDE-FIX-2407B-perpCacheBug=true | CLAUDE-FIX-2407C-domainVsPageNuance=true | CLAUDE-FIX-2407D-wallModalNoReshuffle=true | CLAUDE-FIX-2407E-buildBriefSafetyNet=true | CLAUDE-FIX-2407F-modalFullText=true | CLAUDE-FIX-2407G-aioPasteModal=true | CLAUDE-FIX-2407H-aioDefinitionView=true | CLAUDE-FIX-2407I-aioBlueprintMining=true | CLAUDE-FIX-2407J-aioReferences=true | CLAUDE-FIX-2407K-aioCitationGap=true | CLAUDE-FIX-2407L-compGapTableAllModals=true | CLAUDE-FIX-2407M-honestAioManualOnly=true | CLAUDE-FIX-2407N-regexEscapeInTemplate=true | CLAUDE-FIX-2507A-jsonRepair-mergeTokens4096=true | CLAUDE-FIX-2507B-cardButtonsWorkflowOrder=true | CLAUDE-FIX-2507C-cardButtonsPillColors=true | CLAUDE-FIX-2507D-aioReloadFull-limit8000=true | CLAUDE-FIX-2507E-briefModalTransparency=true | CLAUDE-FIX-2507F-aioGapTable4col=true | CLAUDE-FIX-2507G-htmlScanTickCycle=true | CLAUDE-FIX-2507H-briefViewedPersisted=true | CLAUDE-FIX-2507I-fixCardRenderVarInExpr=true | CLAUDE-FIX-2507J-briefsUnified-manualAioGap=true | CLAUDE-FIX-2507K-gscCompTableInTracker=true | CLAUDE-FIX-2507L-trackerSplitSections=true | CLAUDE-FIX-2507M-copyBriefClarity=true | CLAUDE-FIX-2507N-aioRefsFromManualPaste=true | CLAUDE-FIX-2507O-removeSseEventSource=true | CLAUDE-FIX-2507P-ticksPersistUntilDoneOrNewHtml=true | CLAUDE-FIX-2507Q-aioRefsStoredAtSave=true | CLAUDE-FIX-2507R-aioGapTableAlways=true | CLAUDE-FIX-2507S-aioGscContextSeparated=true | CLAUDE-FIX-2507T-aioCodeFallbackFixed-refsFromManualSave=true | CLAUDE-FIX-2507U-mergeSafetyNet-cardSummaryParity=true | CLAUDE-FIX-2507V-sharedAioRenderFn-authTable=true | CLAUDE-FIX-2507W-viewLastBriefDelegates-oneSystem=true | CLAUDE-FIX-2507X-sharedBriefBody-fullUnification=true | CLAUDE-FIX-2507Y-aioTop5Table-definitionLabel=true | CLAUDE-FIX-2507Z-noRefsActionableMsg=true | CLAUDE-FIX-2508A-manualPasteWinsOverStaleSnapshot=true | CLAUDE-FIX-2508B-merge2Hardened-diagLog=true | CLAUDE-FIX-2508C-noStoreHeaders-freshClientJs=true | CLAUDE-FIX-2508D-saveEchoDiagnostic=true | CLAUDE-FIX-2508E-separateSourcesField=true | CLAUDE-FIX-2508F-diagSourcesField=true | CLAUDE-FIX-2508G-acceptSourceNames=true | CLAUDE-FIX-2508H-namesFromMainPaste-headingFilter=true | CLAUDE-FIX-2508I-cloroAioFetch=true | CLAUDE-FIX-2508J-namesFallback-autoSplit=true | CLAUDE-FIX-2508K-competitorGapAioFallback=true | CLAUDE-FIX-2508L-aioFallbackNoGscLeak-honestLabel=true | CLAUDE-FIX-2508M-gscRootDomainFallback=true | CLAUDE-FIX-2508N-sitemapLinks250-gscLiveFilter=true | CLAUDE-FIX-2508O-leadQueueCollapsedDefault=true | CLAUDE-FIX-2508P-leadQueueToggleRealFns=true | CLAUDE-FIX-2508Q-leadQueueHeaderWrap=true | CLAUDE-FIX-2508R-scanSelectedButton=true | CLAUDE-FIX-2508S-shiftClickRange=true | CLAUDE-FIX-2508T-shiftClickCorrectClass-inTemplate=true | CLAUDE-FIX-2508U-brandHeadshotHubFields=true | CLAUDE-FIX-2508V-briefModeSelector=true | CLAUDE-FIX-2508W-intentSnapshot-ownerNote=true | CLAUDE-FIX-2508X-modeBtnQuoteFix=true | CLAUDE-FIX-2508Y-perpApostropheFix=true | CLAUDE-FIX-2508Z-sitemapRegexFix=true | CLAUDE-FIX-2508ZA-pageInSitemapRegexFix=true | CLAUDE-FIX-2508ZB-missingEntities=true | CLAUDE-FIX-2508ZC-briefSpacing=true | CLAUDE-FIX-2508ZD-pasteCodeBlocks=true | CLAUDE-FIX-2508ZE-fmtActionRegexFix=true | CLAUDE-FIX-2508ZF-ticksOnlyClearOnDone=true | CLAUDE-FIX-2508ZG-paa5-pwbWider-aioFallbackMsg=true | CLAUDE-FIX-2508ZH-numberedItemsOnOwnLines=true | CLAUDE-FIX-2508ZI-prewriteBuildFields-aioListNotUglyTable=true | CLAUDE-FIX-2508ZJ-cleanAioDefinitionText=true | CLAUDE-FIX-2508ZK-slugRegexCrashFix-sectionSplit=true | CLAUDE-FIX-2508ZL-tvModalFmtAction=true | CLAUDE-FIX-3007A-tourAioScanSelected-mobileFriendly=true | CLAUDE-FIX-3007B-htmlLangWhitelistNonLatin=true | CLAUDE-FIX-3007C-clientBriefLanguageSelector=true | CLAUDE-FIX-3007D-briefLanguageTourStep=true | CLAUDE-FIX-3007E-prewriteLangListFull=true | CLAUDE-FIX-3007F-prewriteAutoAioFetch=true | CLAUDE-FIX-3007G-serpRegionListFull=true | CLAUDE-FIX-3007H-prewriteMobilePolish=true | CLAUDE-FIX-3007I-groupedComboDropdowns=true | CLAUDE-FIX-3007J-comboSyntaxFix=true | CLAUDE-FIX-3007K-multiLangBadges=true | CLAUDE-FIX-3007L-headerReportCTA=true | CLAUDE-FIX-3007M-tvViewReportCTA=true | CLAUDE-FIX-3007N-tvTopBarCTA=true | CLAUDE-FIX-3007O-realPaaInBrief=true ===');
+console.log('=== CONTENTSCALE BOOT ' + new Date().toISOString() + ' v2026-07-08-possible-prioritized-shortcut | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON | possibleThreshold=20impr | shortcutPrioritized=v2 | gscAutoFetchRemoved=true | linkCheckActive=true | wholeSiteWipeGuard=true | gscAutoFetchRestored=true | reminderOffFix=true | claudeRemoved=true | bingWebmaster=true | competitorPanel=true | zeroResultFix=true | pagesRefreshFix=true | recheckButton=true | provenScanStrip=true | provenScanState=true | scanAllProven=true | doEverythingBtn=true | panelOrderFix=true | workflowGuide=true | preScanGuard=true | scanAllGuard=true | earlyGuard=true | emptyStateTeaser=true | provenScopeFix=true | numberedButtons=true | clearerButtons=true | scanAnimFix=true | promptClaudeCleanup=true | bonusTip=true | realProvenContext=true | competitorContext=true | unifiedBrief=true | diagnosticFirst=true | fullCompetitorBreakdown=true | serpSpyV3=true | transparencyBlock=true | emailsPausedToggle=true | competitorDedup=true | provenScanDebug=true | serializedScans=true | claudeCleanupV2=true | mergeClaudeStrip=true | visualTransparency=true | aboveFoldPriority=true | competitorComparisonTable=true | redGreenTracking=true | aioExplicitState=true | perpCopilotState=true | realMergePromptFixed=true | briefContextDebug=true | forceRescanBypass=true | gscPosFallback=true | cannibalDedup=true | gscAccessGated=true | gapConfirmShown=true | noPlaceholders=true | rowNumContrast=true | codeCannibalDedup=true | provenDebugRemoved=true | broaderCannibalDedup=true | competitorGapFallback=true | competitorPrevSnapFallback=true | hubSpokeDedup=true | compGapRegexBroadened=true | gapFixLabelFallback=true | geminiProForBriefs=true | timeoutBudgetFixed=true | perAttemptTimeout45s=true | revertToFlashLite=true | tokenLimitDoubled=true | urlNormFix=true | impactFieldChecked=true | broaderHubPattern=true | cannibalContextRemovedFromGSC=true | scanStateDerivedFromDB=true | boardBriefRestyled=true | liveWallBriefModal=true | modalScopeFix=true | cardTransparency=true | CLAUDE-FIX-2307=true | CLAUDE-FIX-2307B-specquote=true | CLAUDE-FIX-2307C-pwboard=true | CLAUDE-FIX-2307D-typefilter=true | CLAUDE-FIX-2307E-scanneraio=true | CLAUDE-FIX-2307F-urlstrip=true | CLAUDE-FIX-2307G-aiobeforeScan=true | CLAUDE-FIX-2307H-aioInPrompt=true | CLAUDE-FIX-2307I-escHtml=true | CLAUDE-FIX-2307J-escAlias-noStale=true | CLAUDE-FIX-2407A-perpCitedConsistency=true | CLAUDE-FIX-2407B-perpCacheBug=true | CLAUDE-FIX-2407C-domainVsPageNuance=true | CLAUDE-FIX-2407D-wallModalNoReshuffle=true | CLAUDE-FIX-2407E-buildBriefSafetyNet=true | CLAUDE-FIX-2407F-modalFullText=true | CLAUDE-FIX-2407G-aioPasteModal=true | CLAUDE-FIX-2407H-aioDefinitionView=true | CLAUDE-FIX-2407I-aioBlueprintMining=true | CLAUDE-FIX-2407J-aioReferences=true | CLAUDE-FIX-2407K-aioCitationGap=true | CLAUDE-FIX-2407L-compGapTableAllModals=true | CLAUDE-FIX-2407M-honestAioManualOnly=true | CLAUDE-FIX-2407N-regexEscapeInTemplate=true | CLAUDE-FIX-2507A-jsonRepair-mergeTokens4096=true | CLAUDE-FIX-2507B-cardButtonsWorkflowOrder=true | CLAUDE-FIX-2507C-cardButtonsPillColors=true | CLAUDE-FIX-2507D-aioReloadFull-limit8000=true | CLAUDE-FIX-2507E-briefModalTransparency=true | CLAUDE-FIX-2507F-aioGapTable4col=true | CLAUDE-FIX-2507G-htmlScanTickCycle=true | CLAUDE-FIX-2507H-briefViewedPersisted=true | CLAUDE-FIX-2507I-fixCardRenderVarInExpr=true | CLAUDE-FIX-2507J-briefsUnified-manualAioGap=true | CLAUDE-FIX-2507K-gscCompTableInTracker=true | CLAUDE-FIX-2507L-trackerSplitSections=true | CLAUDE-FIX-2507M-copyBriefClarity=true | CLAUDE-FIX-2507N-aioRefsFromManualPaste=true | CLAUDE-FIX-2507O-removeSseEventSource=true | CLAUDE-FIX-2507P-ticksPersistUntilDoneOrNewHtml=true | CLAUDE-FIX-2507Q-aioRefsStoredAtSave=true | CLAUDE-FIX-2507R-aioGapTableAlways=true | CLAUDE-FIX-2507S-aioGscContextSeparated=true | CLAUDE-FIX-2507T-aioCodeFallbackFixed-refsFromManualSave=true | CLAUDE-FIX-2507U-mergeSafetyNet-cardSummaryParity=true | CLAUDE-FIX-2507V-sharedAioRenderFn-authTable=true | CLAUDE-FIX-2507W-viewLastBriefDelegates-oneSystem=true | CLAUDE-FIX-2507X-sharedBriefBody-fullUnification=true | CLAUDE-FIX-2507Y-aioTop5Table-definitionLabel=true | CLAUDE-FIX-2507Z-noRefsActionableMsg=true | CLAUDE-FIX-2508A-manualPasteWinsOverStaleSnapshot=true | CLAUDE-FIX-2508B-merge2Hardened-diagLog=true | CLAUDE-FIX-2508C-noStoreHeaders-freshClientJs=true | CLAUDE-FIX-2508D-saveEchoDiagnostic=true | CLAUDE-FIX-2508E-separateSourcesField=true | CLAUDE-FIX-2508F-diagSourcesField=true | CLAUDE-FIX-2508G-acceptSourceNames=true | CLAUDE-FIX-2508H-namesFromMainPaste-headingFilter=true | CLAUDE-FIX-2508I-cloroAioFetch=true | CLAUDE-FIX-2508J-namesFallback-autoSplit=true | CLAUDE-FIX-2508K-competitorGapAioFallback=true | CLAUDE-FIX-2508L-aioFallbackNoGscLeak-honestLabel=true | CLAUDE-FIX-2508M-gscRootDomainFallback=true | CLAUDE-FIX-2508N-sitemapLinks250-gscLiveFilter=true | CLAUDE-FIX-2508O-leadQueueCollapsedDefault=true | CLAUDE-FIX-2508P-leadQueueToggleRealFns=true | CLAUDE-FIX-2508Q-leadQueueHeaderWrap=true | CLAUDE-FIX-2508R-scanSelectedButton=true | CLAUDE-FIX-2508S-shiftClickRange=true | CLAUDE-FIX-2508T-shiftClickCorrectClass-inTemplate=true | CLAUDE-FIX-2508U-brandHeadshotHubFields=true | CLAUDE-FIX-2508V-briefModeSelector=true | CLAUDE-FIX-2508W-intentSnapshot-ownerNote=true | CLAUDE-FIX-2508X-modeBtnQuoteFix=true | CLAUDE-FIX-2508Y-perpApostropheFix=true | CLAUDE-FIX-2508Z-sitemapRegexFix=true | CLAUDE-FIX-2508ZA-pageInSitemapRegexFix=true | CLAUDE-FIX-2508ZB-missingEntities=true | CLAUDE-FIX-2508ZC-briefSpacing=true | CLAUDE-FIX-2508ZD-pasteCodeBlocks=true | CLAUDE-FIX-2508ZE-fmtActionRegexFix=true | CLAUDE-FIX-2508ZF-ticksOnlyClearOnDone=true | CLAUDE-FIX-2508ZG-paa5-pwbWider-aioFallbackMsg=true | CLAUDE-FIX-2508ZH-numberedItemsOnOwnLines=true | CLAUDE-FIX-2508ZI-prewriteBuildFields-aioListNotUglyTable=true | CLAUDE-FIX-2508ZJ-cleanAioDefinitionText=true | CLAUDE-FIX-2508ZK-slugRegexCrashFix-sectionSplit=true | CLAUDE-FIX-2508ZL-tvModalFmtAction=true | CLAUDE-FIX-3007A-tourAioScanSelected-mobileFriendly=true | CLAUDE-FIX-3007B-htmlLangWhitelistNonLatin=true | CLAUDE-FIX-3007C-clientBriefLanguageSelector=true | CLAUDE-FIX-3007D-briefLanguageTourStep=true | CLAUDE-FIX-3007E-prewriteLangListFull=true | CLAUDE-FIX-3007F-prewriteAutoAioFetch=true | CLAUDE-FIX-3007G-serpRegionListFull=true | CLAUDE-FIX-3007H-prewriteMobilePolish=true | CLAUDE-FIX-3007I-groupedComboDropdowns=true | CLAUDE-FIX-3007J-comboSyntaxFix=true | CLAUDE-FIX-3007K-multiLangBadges=true | CLAUDE-FIX-3007L-headerReportCTA=true | CLAUDE-FIX-3007M-tvViewReportCTA=true | CLAUDE-FIX-3007N-tvTopBarCTA=true | CLAUDE-FIX-3007O-realPaaInBrief=true | CLAUDE-FIX-0208-briefLangLeaks-item1AndTemplateLabels=true | CLAUDE-FIX-0208B-prewriteLabelsTranslated=true ===');
 
 // Repair common LLM-JSON defects (raw newlines/tabs inside strings, trailing commas)
 function _repairJsonG(str){
@@ -30444,78 +30444,100 @@ async function generatePrewriteBrief() {
 var _lastPrewriteBriefText = '';
 function renderPrewriteBrief(b) {
   var esc = function(s) { return (s == null ? '' : String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); };
+  // ── Pre-Write section labels per language (lek 2 — Pre-Write). Falls back to English. ──
+  var _PL_ALL = {
+    en: { checked:'WHAT WE ACTUALLY CHECKED', qtested:'Query tested', checkedAt:'Checked', gAnswer:'Google direct answer', perp:'Perplexity', perpEx:'Perplexity excerpt', perpCites:'Perplexity currently cites', metaPkg:'META PACKAGE', seoTitle:'SEO title', metaDesc:'Meta desc', h1:'H1', slug:'Slug', opening:'OPENING PASSAGE (first 40-60 words)', blueprint:'PAGE BLUEPRINT (write in this order)', purpose:'Purpose', cover:'Cover', hook:'Citation hook', words:'words', ilt:'INTERNAL LINK TARGETS', top10:'TOP 10 GAP', aio:'AI OVERVIEW', compTable:'COMPETITOR TABLE', has:'Has', gap:'Gap', add:'Add', structure:'STRUCTURE', mustH2:'MUST-HAVE H2s', entities:'ENTITIES TO COVER', faq:'FAQ QUESTIONS', plan:'ACTION PLAN' },
+    nl: { checked:'WAT WE ECHT HEBBEN GECONTROLEERD', qtested:'Geteste zoekterm', checkedAt:'Gecontroleerd', gAnswer:'Google direct antwoord', perp:'Perplexity', perpEx:'Perplexity-fragment', perpCites:'Perplexity citeert nu', metaPkg:'META-PAKKET', seoTitle:'SEO-titel', metaDesc:'Meta-omschrijving', h1:'H1', slug:'Slug', opening:'OPENINGSPASSAGE (eerste 40-60 woorden)', blueprint:'PAGINA-BLUEPRINT (schrijf in deze volgorde)', purpose:'Doel', cover:'Behandel', hook:'Citatie-haak', words:'woorden', ilt:'INTERNE LINK-DOELEN', top10:'TOP 10-GAT', aio:'AI OVERVIEW', compTable:'CONCURRENTEN-TABEL', has:'Heeft', gap:'Gat', add:'Toevoegen', structure:'STRUCTUUR', mustH2:'VERPLICHTE H2\'s', entities:'ENTITEITEN OM TE DEKKEN', faq:'FAQ-VRAGEN', plan:'ACTIEPLAN' },
+    es: { checked:'LO QUE REALMENTE COMPROBAMOS', qtested:'Consulta probada', checkedAt:'Comprobado', gAnswer:'Respuesta directa de Google', perp:'Perplexity', perpEx:'Extracto de Perplexity', perpCites:'Perplexity cita actualmente', metaPkg:'PAQUETE META', seoTitle:'Título SEO', metaDesc:'Meta descripción', h1:'H1', slug:'Slug', opening:'PASAJE DE APERTURA (primeras 40-60 palabras)', blueprint:'PLANO DE PÁGINA (escribe en este orden)', purpose:'Propósito', cover:'Cubrir', hook:'Gancho de citación', words:'palabras', ilt:'OBJETIVOS DE ENLACE INTERNO', top10:'BRECHA TOP 10', aio:'AI OVERVIEW', compTable:'TABLA DE COMPETIDORES', has:'Tiene', gap:'Brecha', add:'Añadir', structure:'ESTRUCTURA', mustH2:'H2 IMPRESCINDIBLES', entities:'ENTIDADES A CUBRIR', faq:'PREGUNTAS FAQ', plan:'PLAN DE ACCIÓN' },
+    de: { checked:'WAS WIR TATSÄCHLICH GEPRÜFT HABEN', qtested:'Getestete Suchanfrage', checkedAt:'Geprüft', gAnswer:'Google-Direktantwort', perp:'Perplexity', perpEx:'Perplexity-Auszug', perpCites:'Perplexity zitiert derzeit', metaPkg:'META-PAKET', seoTitle:'SEO-Titel', metaDesc:'Meta-Beschreibung', h1:'H1', slug:'Slug', opening:'ERÖFFNUNGSABSATZ (erste 40-60 Wörter)', blueprint:'SEITEN-BLUEPRINT (in dieser Reihenfolge schreiben)', purpose:'Zweck', cover:'Abdecken', hook:'Zitier-Haken', words:'Wörter', ilt:'INTERNE LINKZIELE', top10:'TOP-10-LÜCKE', aio:'AI OVERVIEW', compTable:'KONKURRENZ-TABELLE', has:'Hat', gap:'Lücke', add:'Hinzufügen', structure:'STRUKTUR', mustH2:'PFLICHT-H2s', entities:'ABZUDECKENDE ENTITÄTEN', faq:'FAQ-FRAGEN', plan:'AKTIONSPLAN' },
+    fr: { checked:'CE QUE NOUS AVONS RÉELLEMENT VÉRIFIÉ', qtested:'Requête testée', checkedAt:'Vérifié', gAnswer:'Réponse directe Google', perp:'Perplexity', perpEx:'Extrait Perplexity', perpCites:'Perplexity cite actuellement', metaPkg:'PACK META', seoTitle:'Titre SEO', metaDesc:'Méta-description', h1:'H1', slug:'Slug', opening:'PASSAGE D\'OUVERTURE (40-60 premiers mots)', blueprint:'PLAN DE PAGE (écrire dans cet ordre)', purpose:'Objectif', cover:'Couvrir', hook:'Accroche de citation', words:'mots', ilt:'CIBLES DE LIENS INTERNES', top10:'ÉCART TOP 10', aio:'AI OVERVIEW', compTable:'TABLEAU DES CONCURRENTS', has:'A', gap:'Écart', add:'Ajouter', structure:'STRUCTURE', mustH2:'H2 INDISPENSABLES', entities:'ENTITÉS À COUVRIR', faq:'QUESTIONS FAQ', plan:'PLAN D\'ACTION' },
+    pt: { checked:'O QUE REALMENTE VERIFICAMOS', qtested:'Consulta testada', checkedAt:'Verificado', gAnswer:'Resposta direta do Google', perp:'Perplexity', perpEx:'Trecho do Perplexity', perpCites:'Perplexity cita atualmente', metaPkg:'PACOTE META', seoTitle:'Título SEO', metaDesc:'Meta descrição', h1:'H1', slug:'Slug', opening:'PASSAGEM DE ABERTURA (primeiras 40-60 palavras)', blueprint:'PLANO DA PÁGINA (escreva nesta ordem)', purpose:'Objetivo', cover:'Cobrir', hook:'Gancho de citação', words:'palavras', ilt:'ALVOS DE LINK INTERNO', top10:'LACUNA TOP 10', aio:'AI OVERVIEW', compTable:'TABELA DE CONCORRENTES', has:'Tem', gap:'Lacuna', add:'Adicionar', structure:'ESTRUTURA', mustH2:'H2 OBRIGATÓRIOS', entities:'ENTIDADES A COBRIR', faq:'PERGUNTAS FAQ', plan:'PLANO DE AÇÃO' },
+    it: { checked:'COSA ABBIAMO EFFETTIVAMENTE CONTROLLATO', qtested:'Query testata', checkedAt:'Controllato', gAnswer:'Risposta diretta di Google', perp:'Perplexity', perpEx:'Estratto di Perplexity', perpCites:'Perplexity cita attualmente', metaPkg:'PACCHETTO META', seoTitle:'Titolo SEO', metaDesc:'Meta descrizione', h1:'H1', slug:'Slug', opening:'PASSAGGIO DI APERTURA (prime 40-60 parole)', blueprint:'BLUEPRINT DELLA PAGINA (scrivi in questo ordine)', purpose:'Scopo', cover:'Copri', hook:'Gancio di citazione', words:'parole', ilt:'OBIETTIVI DI LINK INTERNI', top10:'GAP TOP 10', aio:'AI OVERVIEW', compTable:'TABELLA CONCORRENTI', has:'Ha', gap:'Gap', add:'Aggiungi', structure:'STRUTTURA', mustH2:'H2 OBBLIGATORI', entities:'ENTITÀ DA COPRIRE', faq:'DOMANDE FAQ', plan:'PIANO D\'AZIONE' }
+  };
+  var _PL = _PL_ALL[(b && b.language ? String(b.language).slice(0,2).toLowerCase() : 'en')] || _PL_ALL.en;
+  // Richer HTML-side headings (with descriptive suffixes) per language.
+  var _PLH_ALL = {
+    en: { metaPkgH:'Meta package \u2014 paste-ready', openingH:'Opening passage \u2014 first 40-60 words, citeable', blueprintH:'Page blueprint \u2014 write in this order', iltH:'Internal link targets', compTableH:'Competitor Table', domain:'Domain', mustH2H:'Must-have H2s', entitiesH:'Entities to cover', structureH:'Structure', metaDescH:'Meta desc' },
+    nl: { metaPkgH:'Meta-pakket \u2014 kant-en-klaar', openingH:'Openingspassage \u2014 eerste 40-60 woorden, citeerbaar', blueprintH:'Pagina-blueprint \u2014 schrijf in deze volgorde', iltH:'Interne link-doelen', compTableH:'Concurrenten-tabel', domain:'Domein', mustH2H:'Verplichte H2\'s', entitiesH:'Entiteiten om te dekken', structureH:'Structuur', metaDescH:'Meta-omschrijving' },
+    es: { metaPkgH:'Paquete meta \u2014 listo para pegar', openingH:'Pasaje de apertura \u2014 primeras 40-60 palabras, citable', blueprintH:'Plano de p\u00e1gina \u2014 escribe en este orden', iltH:'Objetivos de enlace interno', compTableH:'Tabla de competidores', domain:'Dominio', mustH2H:'H2 imprescindibles', entitiesH:'Entidades a cubrir', structureH:'Estructura', metaDescH:'Meta descripci\u00f3n' },
+    de: { metaPkgH:'Meta-Paket \u2014 einf\u00fcgefertig', openingH:'Er\u00f6ffnungsabsatz \u2014 erste 40-60 W\u00f6rter, zitierf\u00e4hig', blueprintH:'Seiten-Blueprint \u2014 in dieser Reihenfolge schreiben', iltH:'Interne Linkziele', compTableH:'Konkurrenz-Tabelle', domain:'Domain', mustH2H:'Pflicht-H2s', entitiesH:'Abzudeckende Entit\u00e4ten', structureH:'Struktur', metaDescH:'Meta-Beschreibung' },
+    fr: { metaPkgH:'Pack m\u00e9ta \u2014 pr\u00eat \u00e0 coller', openingH:'Passage d\'ouverture \u2014 40-60 premiers mots, citable', blueprintH:'Plan de page \u2014 \u00e9crire dans cet ordre', iltH:'Cibles de liens internes', compTableH:'Tableau des concurrents', domain:'Domaine', mustH2H:'H2 indispensables', entitiesH:'Entit\u00e9s \u00e0 couvrir', structureH:'Structure', metaDescH:'M\u00e9ta-description' },
+    pt: { metaPkgH:'Pacote meta \u2014 pronto para colar', openingH:'Passagem de abertura \u2014 primeiras 40-60 palavras, cit\u00e1vel', blueprintH:'Plano da p\u00e1gina \u2014 escreva nesta ordem', iltH:'Alvos de link interno', compTableH:'Tabela de concorrentes', domain:'Dom\u00ednio', mustH2H:'H2 obrigat\u00f3rios', entitiesH:'Entidades a cobrir', structureH:'Estrutura', metaDescH:'Meta descri\u00e7\u00e3o' },
+    it: { metaPkgH:'Pacchetto meta \u2014 pronto da incollare', openingH:'Passaggio di apertura \u2014 prime 40-60 parole, citabile', blueprintH:'Blueprint della pagina \u2014 scrivi in questo ordine', iltH:'Obiettivi di link interni', compTableH:'Tabella concorrenti', domain:'Dominio', mustH2H:'H2 obbligatori', entitiesH:'Entit\u00e0 da coprire', structureH:'Struttura', metaDescH:'Meta descrizione' }
+  };
+  var _PLH = _PLH_ALL[(b && b.language ? String(b.language).slice(0,2).toLowerCase() : 'en')] || _PLH_ALL.en;
 
   // Plain-text version for the Copy button — mirrors the HTML sections below.
   var lines = [];
   if (b.what_we_checked) {
     var wc = b.what_we_checked;
-    lines.push('WHAT WE ACTUALLY CHECKED', 'Query tested: "' + (wc.query_tested||'') + '"', 'Checked: ' + (wc.checked_at||''));
-    lines.push('Google direct answer: ' + (wc.google_direct_answer||''));
-    lines.push('Perplexity: ' + (wc.perplexity||''));
-    if (wc.perplexity_excerpt) lines.push('Perplexity excerpt: "' + wc.perplexity_excerpt + '"');
-    if (Array.isArray(wc.perplexity_currently_cites) && wc.perplexity_currently_cites.length) lines.push('Perplexity currently cites: ' + wc.perplexity_currently_cites.join(', '));
+    lines.push(_PL.checked, _PL.qtested + ': "' + (wc.query_tested||'') + '"', _PL.checkedAt + ': ' + (wc.checked_at||''));
+    lines.push(_PL.gAnswer + ': ' + (wc.google_direct_answer||''));
+    lines.push(_PL.perp + ': ' + (wc.perplexity||''));
+    if (wc.perplexity_excerpt) lines.push(_PL.perpEx + ': "' + wc.perplexity_excerpt + '"');
+    if (Array.isArray(wc.perplexity_currently_cites) && wc.perplexity_currently_cites.length) lines.push(_PL.perpCites + ': ' + wc.perplexity_currently_cites.join(', '));
     lines.push('');
   }
   if (b.recommended_title_h1) lines.push(b.recommended_title_h1, '');
   if (b.meta_package) {
     var _mp = b.meta_package;
-    lines.push('META PACKAGE');
-    if (_mp.seo_title) lines.push('SEO title: ' + _mp.seo_title);
-    if (_mp.meta_description) lines.push('Meta desc: ' + _mp.meta_description);
-    if (_mp.h1) lines.push('H1: ' + _mp.h1);
-    if (_mp.url_slug) lines.push('Slug: /' + String(_mp.url_slug).replace(/^[/]+/,''));
+    lines.push(_PL.metaPkg);
+    if (_mp.seo_title) lines.push(_PL.seoTitle + ': ' + _mp.seo_title);
+    if (_mp.meta_description) lines.push(_PL.metaDesc + ': ' + _mp.meta_description);
+    if (_mp.h1) lines.push(_PL.h1 + ': ' + _mp.h1);
+    if (_mp.url_slug) lines.push(_PL.slug + ': /' + String(_mp.url_slug).replace(/^[/]+/,''));
     lines.push('');
   }
   if (b.opening_passage && b.opening_passage.direct_answer) {
-    lines.push('OPENING PASSAGE (first 40-60 words)', b.opening_passage.direct_answer, '');
+    lines.push(_PL.opening, b.opening_passage.direct_answer, '');
   }
   if (Array.isArray(b.page_blueprint) && b.page_blueprint.length) {
-    lines.push('PAGE BLUEPRINT (write in this order)');
+    lines.push(_PL.blueprint);
     b.page_blueprint.forEach(function(sec, i){
       if (!sec || !sec.h2) return;
-      lines.push('H2 ' + (i+1) + '. ' + sec.h2 + (sec.target_words ? ' (~' + sec.target_words + ' words)' : ''));
-      if (sec.purpose) lines.push('   Purpose: ' + sec.purpose);
-      if (Array.isArray(sec.cover) && sec.cover.length) lines.push('   Cover: ' + sec.cover.join(' · '));
-      if (sec.citation_hook) lines.push('   Citation hook: ' + sec.citation_hook);
+      lines.push('H2 ' + (i+1) + '. ' + sec.h2 + (sec.target_words ? ' (~' + sec.target_words + ' ' + _PL.words + ')' : ''));
+      if (sec.purpose) lines.push('   ' + _PL.purpose + ': ' + sec.purpose);
+      if (Array.isArray(sec.cover) && sec.cover.length) lines.push('   ' + _PL.cover + ': ' + sec.cover.join(' · '));
+      if (sec.citation_hook) lines.push('   ' + _PL.hook + ': ' + sec.citation_hook);
     });
     lines.push('');
   }
   if (Array.isArray(b.internal_link_targets) && b.internal_link_targets.length) {
-    lines.push('INTERNAL LINK TARGETS');
+    lines.push(_PL.ilt);
     b.internal_link_targets.forEach(function(lk){ if (lk && lk.anchor_text) lines.push('- ' + lk.anchor_text + (lk.link_to ? ' → ' + lk.link_to : '')); });
     lines.push('');
   }
-  if (b.top10_gap) lines.push('TOP 10 GAP', b.top10_gap, '');
-  if (b.ai_overview_status) lines.push('AI OVERVIEW', b.ai_overview_status, '');
+  if (b.top10_gap) lines.push(_PL.top10, b.top10_gap, '');
+  if (b.ai_overview_status) lines.push(_PL.aio, b.ai_overview_status, '');
   if (Array.isArray(b.competitor_table) && b.competitor_table.length) {
-    lines.push('COMPETITOR TABLE');
+    lines.push(_PL.compTable);
     b.competitor_table.forEach(function(c){
       lines.push('#' + c.rank + ' ' + c.domain);
-      lines.push('  Has: ' + (c.what_they_have||''));
-      lines.push('  Gap: ' + (c.the_gap||''));
-      lines.push('  Add: ' + (c.what_to_add||''));
+      lines.push('  ' + _PL.has + ': ' + (c.what_they_have||''));
+      lines.push('  ' + _PL.gap + ': ' + (c.the_gap||''));
+      lines.push('  ' + _PL.add + ': ' + (c.what_to_add||''));
     });
     lines.push('');
   }
   if (b.recommended_structure) {
     var s = b.recommended_structure;
-    lines.push('STRUCTURE', (s.format||'') + (s.recommended_word_count ? ' \\u00b7 ~' + s.recommended_word_count + ' words' : ''), '');
+    lines.push(_PL.structure, (s.format||'') + (s.recommended_word_count ? ' \\u00b7 ~' + s.recommended_word_count + ' ' + _PL.words : ''), '');
     if (Array.isArray(s.must_have_h2s) && s.must_have_h2s.length) {
-      lines.push('MUST-HAVE H2s');
+      lines.push(_PL.mustH2);
       s.must_have_h2s.forEach(function(h){ lines.push('- ' + h); });
       lines.push('');
     }
   }
   if (Array.isArray(b.must_cover_entities) && b.must_cover_entities.length) {
-    lines.push('ENTITIES TO COVER', b.must_cover_entities.join(', '), '');
+    lines.push(_PL.entities, b.must_cover_entities.join(', '), '');
   }
   if (Array.isArray(b.faq_questions) && b.faq_questions.length) {
-    lines.push('FAQ QUESTIONS');
+    lines.push(_PL.faq);
     b.faq_questions.forEach(function(q){ lines.push('- ' + q); });
     lines.push('');
   }
   if (Array.isArray(b.action_plan) && b.action_plan.length) {
-    lines.push('ACTION PLAN');
+    lines.push(_PL.plan);
     b.action_plan.forEach(function(a, i){ lines.push((i+1) + '. ' + (a.action||'')); });
   }
   _lastPrewriteBriefText = lines.join('\\n');
@@ -30528,13 +30550,13 @@ function renderPrewriteBrief(b) {
     var wc2 = b.what_we_checked;
     html += '<div style="background:#0b1220;border:1px solid #1e3a5f;border-radius:8px;padding:12px 14px;margin-bottom:12px;font-size:11.5px;color:#9ca3af;line-height:1.7;">';
     html += '<div style="color:#60a5fa;font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">\\uD83D\\uDD0D What We Actually Checked</div>';
-    html += '<div>Query tested: <span style="color:#e5e7eb;">"' + esc(wc2.query_tested) + '"</span></div>';
+    html += '<div>' + _PL.qtested + ': <span style="color:#e5e7eb;">"' + esc(wc2.query_tested) + '"</span></div>';
     html += '<div>Checked: ' + esc(wc2.checked_at) + '</div>';
     html += '<div>Google AI Overview: ' + esc(wc2.google_direct_answer) + '</div>';
     html += '<div>Perplexity: ' + esc(wc2.perplexity) + '</div>';
     if (wc2.perplexity_excerpt) html += '<div style="margin-top:4px;font-style:italic;color:#cbd5e1;">"' + esc(wc2.perplexity_excerpt) + '"</div>';
     if (Array.isArray(wc2.perplexity_currently_cites) && wc2.perplexity_currently_cites.length) {
-      html += '<div style="margin-top:4px;">Perplexity currently cites: ' + wc2.perplexity_currently_cites.map(function(d){return esc(d);}).join(', ') + '</div>';
+      html += '<div style="margin-top:4px;">' + _PL.perpCites + ': ' + wc2.perplexity_currently_cites.map(function(d){return esc(d);}).join(', ') + '</div>';
     }
     html += '</div>';
   }
@@ -30544,9 +30566,9 @@ function renderPrewriteBrief(b) {
   if (b.meta_package && (b.meta_package.seo_title || b.meta_package.h1)) {
     var mp = b.meta_package;
     html += '<div style="background:#0a1020;border:1px solid #1e3a5f;border-radius:8px;padding:11px 13px;margin-bottom:12px;">'
-      + '<div style="color:#60a5fa;font-size:10px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:7px;font-weight:700;">\\ud83c\\udff7\\ufe0f Meta package \\u2014 paste-ready</div>';
-    if (mp.seo_title) html += '<div style="margin-bottom:5px;"><span style="color:#9ca3af;">SEO title:</span> <span style="color:#e5e7eb;font-weight:600;">' + esc(mp.seo_title) + '</span> <span style="color:#6b7280;font-size:10px;">(' + String(mp.seo_title).length + ' chars)</span></div>';
-    if (mp.meta_description) html += '<div style="margin-bottom:5px;"><span style="color:#9ca3af;">Meta desc:</span> <span style="color:#e5e7eb;">' + esc(mp.meta_description) + '</span> <span style="color:#6b7280;font-size:10px;">(' + String(mp.meta_description).length + ' chars)</span></div>';
+      + '<div style="color:#60a5fa;font-size:10px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:7px;font-weight:700;">' + _PLH.metaPkgH + '</div>';
+    if (mp.seo_title) html += '<div style="margin-bottom:5px;"><span style="color:#9ca3af;">' + _PL.seoTitle + ':</span> <span style="color:#e5e7eb;font-weight:600;">' + esc(mp.seo_title) + '</span> <span style="color:#6b7280;font-size:10px;">(' + String(mp.seo_title).length + ' chars)</span></div>';
+    if (mp.meta_description) html += '<div style="margin-bottom:5px;"><span style="color:#9ca3af;">' + _PLH.metaDescH + ':</span> <span style="color:#e5e7eb;">' + esc(mp.meta_description) + '</span> <span style="color:#6b7280;font-size:10px;">(' + String(mp.meta_description).length + ' chars)</span></div>';
     if (mp.h1) html += '<div style="margin-bottom:5px;"><span style="color:#9ca3af;">H1:</span> <span style="color:#e5e7eb;">' + esc(mp.h1) + '</span></div>';
     if (mp.url_slug) html += '<div><span style="color:#9ca3af;">Slug:</span> <code style="background:#0a0a12;border:1px solid #1f2937;border-radius:3px;padding:1px 5px;font-size:11px;color:#a5b4fc;">/' + esc(String(mp.url_slug).replace(/^[/]+/,'')) + '</code></div>';
     html += '</div>';
@@ -30554,17 +30576,17 @@ function renderPrewriteBrief(b) {
   if (b.opening_passage && b.opening_passage.direct_answer) {
     var op = b.opening_passage;
     html += '<div style="background:#0f1e14;border:1px solid #14532d;border-radius:8px;padding:11px 13px;margin-bottom:12px;">'
-      + '<div style="color:#6ee7b7;font-size:10px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:7px;font-weight:700;">\\u2728 Opening passage \\u2014 first 40-60 words, citeable</div>'
+      + '<div style="color:#6ee7b7;font-size:10px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:7px;font-weight:700;">' + _PLH.openingH + '</div>'
       + '<div style="color:#e5e7eb;line-height:1.6;font-style:italic;border-left:3px solid #14532d;padding-left:10px;margin-bottom:6px;">' + esc(op.direct_answer) + '</div>';
     if (op.why_it_wins) html += '<div style="color:#86efac;font-size:11px;">\\u2192 ' + esc(op.why_it_wins) + '</div>';
     html += '</div>';
   }
-  if (b.top10_gap) html += '<div style="margin-bottom:10px;"><span style="color:#fbbf24;font-weight:700;">Top 10 gap:</span> ' + esc(b.top10_gap) + '</div>';
-  if (b.ai_overview_status) html += '<div style="margin-bottom:10px;"><span style="color:#a78bfa;font-weight:700;">AI Overview:</span> ' + esc(b.ai_overview_status) + '</div>';
+  if (b.top10_gap) html += '<div style="margin-bottom:10px;"><span style="color:#fbbf24;font-weight:700;">' + _PL.top10 + ':</span> ' + esc(b.top10_gap) + '</div>';
+  if (b.ai_overview_status) html += '<div style="margin-bottom:10px;"><span style="color:#a78bfa;font-weight:700;">' + _PL.aio + ':</span> ' + esc(b.ai_overview_status) + '</div>';
   if (Array.isArray(b.competitor_table) && b.competitor_table.length) {
-    html += '<div style="margin-bottom:12px;"><div style="color:#9ca3af;font-size:10px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">Competitor Table</div>';
+    html += '<div style="margin-bottom:12px;"><div style="color:#9ca3af;font-size:10px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">' + _PLH.compTableH + '</div>';
     html += '<table style="width:100%;border-collapse:collapse;font-size:11px;">';
-    html += '<tr style="border-bottom:1px solid #1f2937;"><th style="text-align:left;padding:4px 6px;color:#6b7280;">#</th><th style="text-align:left;padding:4px 6px;color:#6b7280;">Domain</th><th style="text-align:left;padding:4px 6px;color:#34d399;">Has</th><th style="text-align:left;padding:4px 6px;color:#f87171;">Gap</th><th style="text-align:left;padding:4px 6px;color:#60a5fa;">Add</th></tr>';
+    html += '<tr style="border-bottom:1px solid #1f2937;"><th style="text-align:left;padding:4px 6px;color:#6b7280;">#</th><th style="text-align:left;padding:4px 6px;color:#6b7280;">' + _PLH.domain + '</th><th style="text-align:left;padding:4px 6px;color:#34d399;">Has</th><th style="text-align:left;padding:4px 6px;color:#f87171;">Gap</th><th style="text-align:left;padding:4px 6px;color:#60a5fa;">Add</th></tr>';
     b.competitor_table.forEach(function(c){
       html += '<tr style="border-bottom:1px solid #1a2332;"><td style="padding:5px 6px;color:#9ca3af;">' + esc(c.rank) + '</td><td style="padding:5px 6px;font-weight:700;">' + esc(c.domain) + '</td><td style="padding:5px 6px;color:#a7f3d0;">' + esc(c.what_they_have) + '</td><td style="padding:5px 6px;color:#fca5a5;">' + esc(c.the_gap) + '</td><td style="padding:5px 6px;color:#93c5fd;">' + esc(c.what_to_add) + '</td></tr>';
     });
@@ -30572,13 +30594,13 @@ function renderPrewriteBrief(b) {
   }
   if (b.recommended_structure) {
     var s = b.recommended_structure;
-    html += '<div style="margin-bottom:10px;"><span style="color:#34d399;font-weight:700;">Structure:</span> ' + esc(s.format||'') + (s.recommended_word_count ? ' \\u00b7 ~' + s.recommended_word_count + ' words' : '') + '</div>';
+    html += '<div style="margin-bottom:10px;"><span style="color:#34d399;font-weight:700;">' + _PLH.structureH + ':</span> ' + esc(s.format||'') + (s.recommended_word_count ? ' \\u00b7 ~' + s.recommended_word_count + ' words' : '') + '</div>';
     if (Array.isArray(s.must_have_h2s) && s.must_have_h2s.length) {
-      html += '<div style="margin-bottom:10px;"><div style="color:#9ca3af;font-size:10px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">Must-have H2s</div><ul style="margin:0;padding-left:18px;">' + s.must_have_h2s.map(function(h){return '<li>'+esc(h)+'</li>';}).join('') + '</ul></div>';
+      html += '<div style="margin-bottom:10px;"><div style="color:#9ca3af;font-size:10px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">' + _PLH.mustH2H + '</div><ul style="margin:0;padding-left:18px;">' + s.must_have_h2s.map(function(h){return '<li>'+esc(h)+'</li>';}).join('') + '</ul></div>';
     }
   }
   if (Array.isArray(b.page_blueprint) && b.page_blueprint.length) {
-    html += '<div style="margin-bottom:12px;"><div style="color:#a78bfa;font-size:10px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;font-weight:700;">\\ud83d\\udcd0 Page blueprint \\u2014 write in this order</div>';
+    html += '<div style="margin-bottom:12px;"><div style="color:#a78bfa;font-size:10px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;font-weight:700;">' + _PLH.blueprintH + '</div>';
     b.page_blueprint.forEach(function(sec, i){
       var _h2 = esc(sec && sec.h2 || '');
       if (!_h2) return;
@@ -30589,14 +30611,14 @@ function renderPrewriteBrief(b) {
       html += '<div style="border-left:2px solid #4c1d95;padding-left:11px;margin-bottom:10px;">'
         + '<div style="font-weight:700;color:#e9d5ff;font-size:12px;"><span style="color:#a78bfa;">H2 ' + (i+1) + '.</span> ' + _h2 + '<span style="color:#6b7280;font-weight:400;font-size:10px;">' + _tw + '</span></div>';
       if (_purpose) html += '<div style="color:#c4b5fd;font-size:11px;margin-top:2px;">' + _purpose + '</div>';
-      if (_cover.length) html += '<div style="color:#9ca3af;font-size:10.5px;margin-top:3px;">Cover: ' + _cover.map(function(c){return esc(c);}).join(' \\u00b7 ') + '</div>';
-      if (_hook) html += '<div style="color:#6ee7b7;font-size:10.5px;margin-top:3px;">\\ud83d\\udd17 Citation hook: <span style="font-style:italic;">' + _hook + '</span></div>';
+      if (_cover.length) html += '<div style="color:#9ca3af;font-size:10.5px;margin-top:3px;">' + _PL.cover + ': ' + _cover.map(function(c){return esc(c);}).join(' \\u00b7 ') + '</div>';
+      if (_hook) html += '<div style="color:#6ee7b7;font-size:10.5px;margin-top:3px;">\\ud83d\\udd17 ' + _PL.hook + ': <span style="font-style:italic;">' + _hook + '</span></div>';
       html += '</div>';
     });
     html += '</div>';
   }
   if (Array.isArray(b.internal_link_targets) && b.internal_link_targets.length) {
-    html += '<div style="margin-bottom:12px;"><div style="color:#9ca3af;font-size:10px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">\\ud83d\\udd17 Internal link targets</div>';
+    html += '<div style="margin-bottom:12px;"><div style="color:#9ca3af;font-size:10px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">' + _PLH.iltH + '</div>';
     b.internal_link_targets.forEach(function(lk){
       var _at = esc(lk && lk.anchor_text || '');
       if (!_at) return;
@@ -30611,10 +30633,10 @@ function renderPrewriteBrief(b) {
     html += '</div>';
   }
   if (Array.isArray(b.must_cover_entities) && b.must_cover_entities.length) {
-    html += '<div style="margin-bottom:10px;"><div style="color:#9ca3af;font-size:10px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">Entities to cover</div>' + b.must_cover_entities.map(function(e){return '<span style="display:inline-block;background:#1f2937;border:1px solid #374151;border-radius:999px;padding:2px 9px;margin:2px 3px 2px 0;font-size:10.5px;">'+esc(e)+'</span>';}).join('') + '</div>';
+    html += '<div style="margin-bottom:10px;"><div style="color:#9ca3af;font-size:10px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">' + _PLH.entitiesH + '</div>' + b.must_cover_entities.map(function(e){return '<span style="display:inline-block;background:#1f2937;border:1px solid #374151;border-radius:999px;padding:2px 9px;margin:2px 3px 2px 0;font-size:10.5px;">'+esc(e)+'</span>';}).join('') + '</div>';
   }
   if (Array.isArray(b.faq_questions) && b.faq_questions.length) {
-    html += '<div style="margin-bottom:10px;"><div style="color:#9ca3af;font-size:10px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">FAQ questions</div><ul style="margin:0;padding-left:18px;">' + b.faq_questions.map(function(q){return '<li>'+esc(typeof q==='string'?q:(q&&q.q||''))+'</li>';}).join('') + '</ul></div>';
+    html += '<div style="margin-bottom:10px;"><div style="color:#9ca3af;font-size:10px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">' + _PL.faq + '</div><ul style="margin:0;padding-left:18px;">' + b.faq_questions.map(function(q){return '<li>'+esc(typeof q==='string'?q:(q&&q.q||''))+'</li>';}).join('') + '</ul></div>';
   }
   if (Array.isArray(b.people_also_ask) && b.people_also_ask.length) {
     html += '<div style="margin-bottom:10px;background:#0a1220;border:1px solid #1e3a5f;border-radius:8px;padding:10px 12px;">'
@@ -40253,6 +40275,9 @@ Return ONLY valid JSON, no markdown, no preamble.
     // Also surface the real Google PAA at the top level of the brief so the UI can
     // render a distinct "People Also Ask" block (separate from AI-authored FAQ).
     if (peopleAlsoAsk.length && !brief.people_also_ask) brief.people_also_ask = peopleAlsoAsk;
+    // Expose the chosen brief language to the client-side renderer so its section labels
+    // (META PACKAGE, PAGE BLUEPRINT, COMPETITOR TABLE, ...) render in that language too (lek 2 — Pre-Write).
+    brief.language = (language || 'en').toLowerCase().slice(0,5);
 
     // Only count against the free/paid allowance on a SUCCESSFUL generation —
     // a failed SERP fetch or Gemini error above never consumes the client's brief.
@@ -40302,6 +40327,9 @@ app.get('/api/tracker-client/:token/prewrite-briefs/:id', async (req, res) => {
     );
     if (!r.rows.length) return res.status(404).json({ success: false, error: 'Brief not found.' });
     const row = r.rows[0];
+    // Ensure the recalled brief carries its language so client-side labels render correctly,
+    // even for older briefs saved before brief.language was embedded (lek 2 — Pre-Write).
+    try { if (row.brief_json && typeof row.brief_json === 'object' && !row.brief_json.language) row.brief_json.language = (row.language || 'en'); } catch(e) {}
     res.json({ success: true, brief: row.brief_json, keyword: row.keyword, working_title: row.working_title, region: row.region, competitors_scraped: row.competitors_scraped, created_at: row.created_at });
   } catch (e) { res.status(500).json({ success: false, error: e.message }); }
 });
@@ -41785,7 +41813,18 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
       } catch(e) {}
       const _langNames = { en:'English', nl:'Dutch', de:'German', fr:'French', es:'Spanish', it:'Italian', pt:'Portuguese', pl:'Polish', da:'Danish', sv:'Swedish', no:'Norwegian', fi:'Finnish', tr:'Turkish', ar:'Arabic', zh:'Chinese', ja:'Japanese', ko:'Korean', ru:'Russian', hi:'Hindi' };
       const _langName = _langNames[_briefLang] || 'English';
-      const _langDirective = (_briefLang === 'en') ? '' : ('\n\nLANGUAGE REQUIREMENT: Write ALL brief output — every title, action, passage, signal and impact line — in ' + _langName + '. Keep URLs, brand names, HTML tags/attributes, schema and code exactly as-is (do not translate those).');
+      const _langDirective = (_briefLang === 'en') ? '' : ('\n\n⚠ LANGUAGE REQUIREMENT (STRICT, applies to EVERY item without exception — including the FIRST item and any keyword-mismatch or retarget advice): Write ALL brief output in ' + _langName + '. This means every single title, trigger, action, signal, passage and impact line of EVERY numbered item must be in ' + _langName + ' — do NOT leave the first item or any item in English. Keep only URLs, brand names, HTML tags/attributes, schema and code exactly as-is (do not translate those). If any item is written in English instead of ' + _langName + ', the output is wrong.');
+      // ── Translatable competitor-gap / section labels (lek 2 fix) ──
+      const _briefLabels = {
+        en: { gsearch:'GOOGLE SEARCH \u2014 top results:', aio:'AI OVERVIEW / AI AGGREGATION \u2014 sourcing:', gap:'YOUR GAP:', fix:'FIX:', gapfix:'YOUR GAP / FIX:', ready:'\u2500\u2500 READY-TO-PASTE SECTION \u2500\u2500', cite:'Google AI Overview and Perplexity currently cite:', perpCites:'Perplexity currently cites:', pageCited:'This page IS cited by Perplexity.', pageNot:'This page is not among them yet.', noVis:'No AI Overview/Perplexity visibility detected for this page yet.', noGap:'This page does not yet cover the same entities/sub-topics these AI-cited sources do.' },
+        nl: { gsearch:'GOOGLE SEARCH \u2014 topresultaten:', aio:'AI OVERVIEW / AI-AGGREGATIE \u2014 bronnen:', gap:'JOUW GAT:', fix:'OPLOSSING:', gapfix:'JOUW GAT / OPLOSSING:', ready:'\u2500\u2500 KANT-EN-KLARE SECTIE \u2500\u2500', cite:'Google AI Overview en Perplexity citeren nu:', perpCites:'Perplexity citeert nu:', pageCited:'Deze pagina WORDT geciteerd door Perplexity.', pageNot:'Deze pagina hoort er nog niet bij.', noVis:'Nog geen AI Overview/Perplexity-zichtbaarheid voor deze pagina gedetecteerd.', noGap:'Deze pagina dekt nog niet dezelfde entiteiten/subonderwerpen als deze door AI geciteerde bronnen.' },
+        es: { gsearch:'GOOGLE SEARCH \u2014 resultados principales:', aio:'AI OVERVIEW / AGREGACI\u00d3N DE IA \u2014 fuentes:', gap:'TU BRECHA:', fix:'SOLUCI\u00d3N:', gapfix:'TU BRECHA / SOLUCI\u00d3N:', ready:'\u2500\u2500 SECCI\u00d3N LISTA PARA PEGAR \u2500\u2500', cite:'Google AI Overview y Perplexity citan actualmente:', perpCites:'Perplexity cita actualmente:', pageCited:'Esta p\u00e1gina S\u00cd es citada por Perplexity.', pageNot:'Esta p\u00e1gina a\u00fan no est\u00e1 entre ellas.', noVis:'A\u00fan no se detecta visibilidad en AI Overview/Perplexity para esta p\u00e1gina.', noGap:'Esta p\u00e1gina a\u00fan no cubre las mismas entidades/subtemas que estas fuentes citadas por IA.' },
+        de: { gsearch:'GOOGLE SEARCH \u2014 Top-Ergebnisse:', aio:'AI OVERVIEW / KI-AGGREGATION \u2014 Quellen:', gap:'DEINE L\u00dcCKE:', fix:'L\u00d6SUNG:', gapfix:'DEINE L\u00dcCKE / L\u00d6SUNG:', ready:'\u2500\u2500 EINF\u00dcGEFERTIGER ABSCHNITT \u2500\u2500', cite:'Google AI Overview und Perplexity zitieren derzeit:', perpCites:'Perplexity zitiert derzeit:', pageCited:'Diese Seite WIRD von Perplexity zitiert.', pageNot:'Diese Seite geh\u00f6rt noch nicht dazu.', noVis:'Noch keine AI Overview/Perplexity-Sichtbarkeit f\u00fcr diese Seite erkannt.', noGap:'Diese Seite deckt noch nicht dieselben Entit\u00e4ten/Unterthemen ab wie diese KI-zitierten Quellen.' },
+        fr: { gsearch:'GOOGLE SEARCH \u2014 meilleurs r\u00e9sultats\u00a0:', aio:'AI OVERVIEW / AGR\u00c9GATION IA \u2014 sources\u00a0:', gap:'VOTRE LACUNE\u00a0:', fix:'SOLUTION\u00a0:', gapfix:'VOTRE LACUNE / SOLUTION\u00a0:', ready:'\u2500\u2500 SECTION PR\u00caTE \u00c0 COLLER \u2500\u2500', cite:'Google AI Overview et Perplexity citent actuellement\u00a0:', perpCites:'Perplexity cite actuellement\u00a0:', pageCited:'Cette page EST cit\u00e9e par Perplexity.', pageNot:'Cette page n\u2019en fait pas encore partie.', noVis:'Aucune visibilit\u00e9 AI Overview/Perplexity d\u00e9tect\u00e9e pour cette page pour l\u2019instant.', noGap:'Cette page ne couvre pas encore les m\u00eames entit\u00e9s/sous-th\u00e8mes que ces sources cit\u00e9es par l\u2019IA.' },
+        pt: { gsearch:'GOOGLE SEARCH \u2014 principais resultados:', aio:'AI OVERVIEW / AGREGA\u00c7\u00c3O DE IA \u2014 fontes:', gap:'SUA LACUNA:', fix:'SOLU\u00c7\u00c3O:', gapfix:'SUA LACUNA / SOLU\u00c7\u00c3O:', ready:'\u2500\u2500 SE\u00c7\u00c3O PRONTA PARA COLAR \u2500\u2500', cite:'Google AI Overview e Perplexity citam atualmente:', perpCites:'Perplexity cita atualmente:', pageCited:'Esta p\u00e1gina \u00c9 citada pelo Perplexity.', pageNot:'Esta p\u00e1gina ainda n\u00e3o est\u00e1 entre elas.', noVis:'Nenhuma visibilidade de AI Overview/Perplexity detectada para esta p\u00e1gina ainda.', noGap:'Esta p\u00e1gina ainda n\u00e3o cobre as mesmas entidades/subt\u00f3picos que estas fontes citadas por IA.' },
+        it: { gsearch:'GOOGLE SEARCH \u2014 risultati principali:', aio:'AI OVERVIEW / AGGREGAZIONE IA \u2014 fonti:', gap:'IL TUO GAP:', fix:'SOLUZIONE:', gapfix:'IL TUO GAP / SOLUZIONE:', ready:'\u2500\u2500 SEZIONE PRONTA DA INCOLLARE \u2500\u2500', cite:'Google AI Overview e Perplexity citano attualmente:', perpCites:'Perplexity cita attualmente:', pageCited:'Questa pagina \u00c8 citata da Perplexity.', pageNot:'Questa pagina non \u00e8 ancora tra queste.', noVis:'Nessuna visibilit\u00e0 AI Overview/Perplexity rilevata per questa pagina finora.', noGap:'Questa pagina non copre ancora le stesse entit\u00e0/sottotemi di queste fonti citate dall\u2019IA.' }
+      };
+      const _BL = _briefLabels[_briefLang] || _briefLabels.en;
       // ── Presence detection on the FULL page so the brief never re-recommends what already exists ──
       const _onPage = {
         def: /id=["']?direct-answer|class=["'][^"']*direct-answer|is (a|the) (leading|strategic|systematic|premier|content)/i.test(rawHtml),
@@ -41952,7 +41991,7 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
               + _pComp.slice(0, 5).map(function(u){ return '- ' + u; }).join('\n')
               + '\n';
           }
-          _competitorContext += '\nTASK: this is DIAGNOSTIC, not just prescriptive \u2014 the owner needs to see the actual competitive landscape, not one compressed sentence. Write ONE action (system \"Competitor Gap\", priority high or medium) whose \"action\" field is a structured breakdown with these EXACT FOUR LABELED HEADINGS, IN THIS ORDER, EVERY TIME \u2014 this is a strict template, not a style suggestion:\n\"GOOGLE SEARCH \u2014 top results:\"\nthen ONE short line PER competitor listed above (all of them, not just the top one), each starting with \"#<position>\": \"#1 <url> \u2014 wins because <specific claim/structure/credential/stat>.\"\n\"AI OVERVIEW / AI AGGREGATION \u2014 sourcing:\"\n1-2 sentences on what AI Overview and Perplexity actually pull from \u2014 name the Perplexity-cited sources from the list above if present, or state this page has no visibility there yet if the list is empty.\n\"YOUR GAP:\"\n1-2 sentences naming the ONE specific, recurring thing across these competitors that this page lacks.\n\"FIX:\"\nthe exact copy-paste text that closes that specific gap.\nDo not merge headings, do not skip a heading even if brief, do not go straight to the fix. All four headings must appear as their own line, verbatim, before their content. This structure is mandatory, not optional.';
+          _competitorContext += '\nTASK: this is DIAGNOSTIC, not just prescriptive \u2014 the owner needs to see the actual competitive landscape, not one compressed sentence. Write ONE action (system \"Competitor Gap\", priority high or medium) whose \"action\" field is a structured breakdown with these EXACT FOUR LABELED HEADINGS, IN THIS ORDER, EVERY TIME \u2014 this is a strict template, not a style suggestion. Use these headings VERBATIM (they are already in the correct language):\n\"' + _BL.gsearch + '\"\nthen ONE short line PER competitor listed above (all of them, not just the top one), each starting with \"#<position>\": \"#1 <url> \u2014 wins because <specific claim/structure/credential/stat>.\"\n\"' + _BL.aio + '\"\n1-2 sentences on what AI Overview and Perplexity actually pull from \u2014 name the Perplexity-cited sources from the list above if present, or state this page has no visibility there yet if the list is empty.\n\"' + _BL.gap + '\"\n1-2 sentences naming the ONE specific, recurring thing across these competitors that this page lacks.\n\"' + _BL.fix + '\"\nthe exact copy-paste text that closes that specific gap.\nDo not merge headings, do not skip a heading even if brief, do not go straight to the fix. All four headings must appear as their own line, verbatim, before their content. This structure is mandatory, not optional. Everything EXCEPT these four fixed headings, URLs and code must be written in the brief language.';
           _competitorContext += '\n\nTABLE REQUIREMENT: this same Competitor Gap action must ALSO include a \"comparison_table\" field \u2014 a JSON array, one row per Google competitor listed above (all of them), each row: {\"competitor\": \"<bare domain, e.g. example.com>\", \"what_they_do_well\": \"<one specific, concrete strength \u2014 a claim, structure, credential, or stat, NOT a vague quality>\", \"our_gap\": \"<what THIS page specifically lacks by comparison>\", \"what_to_do\": \"<one concrete, specific instruction to close that gap for this row>\"}. This is a teaching tool for the owner \u2014 every field must be specific enough that a non-SEO person understands exactly why that competitor outranks them and exactly what to change. Never write \"better content\" or \"more optimized\" \u2014 name the actual claim, number, structure, or credential.';
         }
       } catch(e) {}
@@ -42562,13 +42601,13 @@ GOAL: Rank #1 for "${kw}" and capture the maximum clicks from ${gscImpr || 'the 
             // rather than leak organic SERP data into the AI-citation brief.
             return _hasOrganicLeak ? null : item;
           }
-          let _built = 'AI OVERVIEW / AI AGGREGATION — sourcing:\n'
-            + 'Google AI Overview and Perplexity currently cite:\n'
+          let _built = _BL.aio + '\n'
+            + _BL.cite + '\n'
             + _srcList.slice(0, 5).map((r, i) => { let h = r.url; try { h = new URL(r.url).hostname.replace(/^www\./,''); } catch(e){} return '#' + (i+1) + ' ' + h + (r.title ? ' — "' + String(r.title).substring(0,80) + '"' : ''); }).join('\n')
-            + '\n\nYOUR GAP:\n';
+            + '\n\n' + _BL.gap + '\n';
           const _gapText = _hasOrganicLeak
-            ? 'This page does not yet cover the same entities/sub-topics these AI-cited sources do.'
-            : (_action || 'This page does not yet cover the same entities/sub-topics these AI-cited sources do.');
+            ? _BL.noGap
+            : (_action || _BL.noGap);
           item.action = _built + _gapText.replace(/google search.{0,15}top results:[\s\S]*?(?=your gap:|fix:|$)/i, '').trim();
           return item;
         };
@@ -42617,13 +42656,13 @@ GOAL: Rank #1 for "${kw}" and capture the maximum clicks from ${gscImpr || 'the 
           const _hasFix = /\bfix:/i.test(_action);
           if (_hasGoogle && _hasAio && _hasGap && _hasFix) return item; // already compliant
           if (!_gComp.length) return item; // nothing to build a fallback from
-          let _built = 'GOOGLE SEARCH — top results:\n'
+          let _built = _BL.gsearch + '\n'
             + _gComp.slice(0, 5).map((c, i) => '#' + (c.position || i + 1) + ' ' + c.url + (c.title ? ' — "' + String(c.title).substring(0,80) + '"' : '')).join('\n')
             + '\n\n';
           if (!_hasAio) {
             const _pComp = (snapshot.ai_perplexity_competitors || []);
-            _built += 'AI OVERVIEW / AI AGGREGATION — sourcing:\n'
-              + (_pComp.length ? 'Perplexity currently cites: ' + _pComp.slice(0,5).join(', ') + '. ' + (snapshot.ai_perplexity_cited ? 'This page IS cited by Perplexity.' : 'This page is not among them yet.') : 'No AI Overview/Perplexity visibility detected for this page yet.')
+            _built += _BL.aio + '\n'
+              + (_pComp.length ? _BL.perpCites + ' ' + _pComp.slice(0,5).join(', ') + '. ' + (snapshot.ai_perplexity_cited ? _BL.pageCited : _BL.pageNot) : _BL.noVis)
               + '\n\n';
           }
           // If Gemini's own text never labeled its gap/fix content either, don't try to algorithmically
@@ -42631,7 +42670,7 @@ GOAL: Rank #1 for "${kw}" and capture the maximum clicks from ${gscImpr || 'the 
           // place. Instead, safely wrap whatever prose IS there with a single clear label so the owner
           // can at least see where the analysis ends and the actionable text begins.
           if (!_hasGap && !_hasFix && _action.trim()) {
-            item.action = _built + 'YOUR GAP / FIX:\n' + _action;
+            item.action = _built + _BL.gapfix + '\n' + _action;
             return item;
           }
           // Keep whatever Gemini wrote for YOUR GAP / FIX (or the whole thing, if those headings
@@ -42650,7 +42689,7 @@ GOAL: Rank #1 for "${kw}" and capture the maximum clicks from ${gscImpr || 'the 
           if (!_isImprGap) return item;
           const _action = item.action || '';
           if (/ready-to-paste section/i.test(_action) || !_action.trim()) return item;
-          item.action = '── READY-TO-PASTE SECTION ──\n' + _action;
+          item.action = _BL.ready + '\n' + _action;
           return item;
         };
         if (Array.isArray(snapshot.recommendations)) snapshot.recommendations = snapshot.recommendations.map(_fixImpressionGapItem);
