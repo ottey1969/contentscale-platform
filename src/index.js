@@ -1388,6 +1388,52 @@ app.get('/api/tracker-client/:token/briefs/:pageId/:briefId', async (req, res) =
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
+// ── Shared sitemap resolver (CLAUDE-FIX-0808B) ─────────────────────────────
+// Same fetch + gzip + filter logic the /fetch-sitemap route uses, lifted to module
+// scope so the Pre-Write brief can resolve a client's sitemap on demand when the
+// tracker hasn't imported one yet. Returns [] on any failure — never throws.
+async function _resolveSitemapUrls(sitemapUrl, opts) {
+  opts = opts || {};
+  const MAX_URLS = opts.maxUrls || 2000, MAX_SUBMAPS = opts.maxSubmaps || 50;
+  const _zlib = require('zlib');
+  async function _fetchSmXml(u){
+    const c = new AbortController();
+    const t = setTimeout(() => c.abort(), opts.timeoutMs || 12000);
+    try {
+      const rr = await fetch(u, { headers: { 'User-Agent': 'ContentScale-Bot/1.0' }, signal: c.signal });
+      if (!rr.ok) return '';
+      let buf = Buffer.from(await rr.arrayBuffer());
+      if (/\.gz(\?|$)/i.test(u) || (buf.length > 2 && buf[0] === 0x1f && buf[1] === 0x8b)) {
+        try { buf = _zlib.gunzipSync(buf); } catch(e) {}
+      }
+      return buf.toString('utf8');
+    } catch(e) { return ''; } finally { clearTimeout(t); }
+  }
+  try {
+    const xml = await _fetchSmXml(sitemapUrl);
+    if (!xml) return [];
+    let urls = [];
+    if (/<sitemapindex/i.test(xml)) {
+      const subSitemaps = [...xml.matchAll(/<loc>\s*(https?:\/\/[^<\s]+?\.xml(?:\.gz)?[^<\s]*)\s*<\/loc>/gi)].map(m => m[1].trim()).slice(0, MAX_SUBMAPS);
+      for (const sm of subSitemaps) {
+        const sx = await _fetchSmXml(sm);
+        if (!sx) continue;
+        const subUrls = [...sx.matchAll(/<loc>\s*([^<\s]+)\s*<\/loc>/gi)].map(m => m[1].trim()).filter(u => /^https?:\/\//i.test(u) && !/\.xml(\.gz)?(\?|$)/i.test(u));
+        urls.push(...subUrls);
+        if (urls.length >= MAX_URLS) break;
+      }
+    } else {
+      urls = [...xml.matchAll(/<loc>\s*([^<\s]+)\s*<\/loc>/gi)].map(m => m[1].trim()).filter(u => /^https?:\/\//i.test(u) && !/\.xml(\.gz)?(\?|$)/i.test(u));
+    }
+    const _SKIP_ARCHIVE = /\/(category|categories|tag|tags|author|authors|uncategorized)(\/|$)|\/page\/\d+|\/feed\/?$|\/wp-(json|admin|content|includes)\//i;
+    const _SKIP_FILE = /\.(jpg|jpeg|png|gif|webp|svg|css|js|pdf|xml|json)(\?|$)/i;
+    urls = urls.filter(u => !_SKIP_ARCHIVE.test(u) && !_SKIP_FILE.test(u));
+    const _seen = new Set();
+    urls = urls.filter(u => { const k = u.replace(/\/$/, ''); if (_seen.has(k)) return false; _seen.add(k); return true; }).slice(0, MAX_URLS);
+    return urls;
+  } catch(e) { return []; }
+}
+
 // GET /api/tracker-client/:token/fetch-sitemap — fetch URLs from sitemap
 app.get('/api/tracker-client/:token/fetch-sitemap', async (req, res) => {
   try {
@@ -40277,6 +40323,43 @@ app.post('/api/tracker-client/:token/prewrite-brief', async (req, res) => {
 
     const serperKey = process.env.SERPAPI_KEY;
     const glParam = (String(region || 'us').toLowerCase().match(/[a-z]{2}/) || ['us'])[0];
+
+    // ── Client sitemap → real internal-link candidates (CLAUDE-FIX-0808-prewriteSitemapInternalLinks) ──
+    // The regular tracker already fetches and stores the client's sitemap on tracker_clients.sitemap_urls
+    // (see /fetch-sitemap). Feed a sample of those REAL URLs to the model so internal_link_targets point
+    // at pages that actually exist, instead of the model inventing plausible-looking slugs.
+    let clientSitemapUrls = [];
+    try {
+      const _su = client.sitemap_urls;
+      const _arr = Array.isArray(_su) ? _su : JSON.parse(_su || '[]');
+      if (Array.isArray(_arr)) clientSitemapUrls = _arr.filter(u => typeof u === 'string' && /^https?:\/\//.test(u));
+    } catch (e) { clientSitemapUrls = []; }
+    // Pre-Write is often the FIRST thing a new client runs — before the tracker ever
+    // imported a sitemap. In that case resolve it on demand from the client's domain so
+    // internal_link_targets still point at real pages. Best-effort: any failure leaves the
+    // list empty and the prompt then forbids inventing links. (CLAUDE-FIX-0808B)
+    if (!clientSitemapUrls.length && client.domain) {
+      try {
+        const _root = String(client.domain).replace(/^https?:\/\//, '').replace(/\/.*$/, '').trim();
+        if (_root) {
+          const _smUrl = 'https://' + _root + '/sitemap.xml';
+          const _resolved = await _resolveSitemapUrls(_smUrl, { timeoutMs: 8000, maxUrls: 300, maxSubmaps: 20 });
+          if (_resolved.length) {
+            clientSitemapUrls = _resolved;
+            // Persist so the next brief (and the tracker) reuses it instead of re-fetching.
+            try { await pool.query('UPDATE tracker_clients SET sitemap_url=COALESCE(sitemap_url,$1), sitemap_urls=$2 WHERE id=$3', [_smUrl, JSON.stringify(_resolved.slice(0, 2000)), client.id]); } catch(e){}
+            console.log('[prewrite-brief] resolved sitemap on demand for', _root, '\u2014', _resolved.length, 'URLs');
+          } else {
+            console.log('[prewrite-brief] no sitemap found at', _smUrl, '\u2014 internal links will be empty');
+          }
+        }
+      } catch (e) { console.warn('[prewrite-brief] on-demand sitemap fetch failed:', e.message); }
+    }
+    // Cap the list so it never blows the prompt budget; 60 URLs is plenty for link selection.
+    const _sitemapSample = clientSitemapUrls.slice(0, 60);
+    const sitemapBlock = _sitemapSample.length
+      ? 'CLIENT SITEMAP \u2014 REAL PAGES THAT EXIST ON THE CLIENT SITE (' + clientSitemapUrls.length + ' total, showing ' + _sitemapSample.length + '):\n' + _sitemapSample.join('\n') + '\nIn STEP 6, internal_link_targets MUST link_to URLs chosen ONLY from this list \u2014 copy the URL verbatim. Never invent a path not in this list.'
+      : 'CLIENT SITEMAP: not available for this tracker. Therefore output internal_link_targets as an EMPTY array [] \u2014 do NOT invent internal URLs or guess paths.';
     let serpUrls = [];
     let aioDetected = false;
     let peopleAlsoAsk = [];
@@ -40379,20 +40462,22 @@ GOOGLE "PEOPLE ALSO ASK" — REAL QUESTIONS FOR THIS QUERY (${glParam}):
 ${peopleAlsoAsk.length ? peopleAlsoAsk.map(function(q){ return '- ' + q.question; }).join('\n') : 'None returned by our data source for this query — infer the most likely PAA questions from search intent instead.'}
 When you build paa_questions in STEP 6, PREFER these real questions verbatim (translated to the page language if needed); only invent additional ones if fewer than 5 are provided.
 
+${sitemapBlock}
+
 MANDATORY PROCESSING ORDER:
 STEP 1 — Analyse the SERP: what pattern do the top results share (format, depth, schema, freshness)?
 STEP 2 — INTENT DECOMPOSITION: list the 5-7 real sub-questions a searcher typing "${keyword}" actually wants answered.
 STEP 3 — GAP ACROSS THE WHOLE TOP 10: what does NONE of the current top 10 cover well — the opening this new page can own?
 STEP 4 — For EACH of the top 5 competitors, state ONE concrete thing they do well and ONE concrete gap — grounded only in their scraped content above.
 STEP 5 — Specify the exact structure, entities, and schema the new page needs to beat rank 1 on day one.
-STEP 6 — BUILD THE PAGE (this makes the brief usable, not just diagnostic): produce (a) meta_package — a rank-ready title tag (<=60 chars, keyword near front), meta description (<=155 chars), on-page H1, url slug; (b) opening_passage — the literal first 40-60 words as a self-contained quotable direct answer that Google AI Overview and Perplexity can lift verbatim; (c) page_blueprint — the full H2 outline IN READING ORDER from intro to conclusion, each H2 with its purpose, a target word count, the exact sub-questions/entities it must cover, and a one-sentence citation_hook where it can earn a citation; (d) paa_questions — EXACTLY 5 People-Also-Ask questions each with a paste-ready 40-60 word answer; (e) internal_link_targets — real internal links with natural anchor text pointing only to topics/pages that plausibly exist on the client's own site, never invented URLs. The page_blueprint must collectively answer every sub-question from STEP 2 and place every must-cover entity. Do not pad the outline — every section must be justified by intent or competitor analysis.
+STEP 6 — BUILD THE PAGE (this makes the brief usable, not just diagnostic): produce (a) meta_package — a rank-ready title tag (<=60 chars, keyword near front), meta description (<=155 chars), on-page H1, url slug; (b) opening_passage — the literal first 40-60 words as a self-contained quotable direct answer that Google AI Overview and Perplexity can lift verbatim; (c) page_blueprint — the full H2 outline IN READING ORDER from intro to conclusion, each H2 with its purpose, a target word count, the exact sub-questions/entities it must cover, and a one-sentence citation_hook where it can earn a citation; (d) paa_questions — EXACTLY 5 People-Also-Ask questions each with a paste-ready 40-60 word answer; (e) internal_link_targets — internal links whose link_to is a URL copied VERBATIM from the CLIENT SITEMAP list above; pick pages genuinely related to this topic and write natural anchor text for each. If no sitemap was provided, output an empty array — never guess or invent a slug. The page_blueprint must collectively answer every sub-question from STEP 2 and place every must-cover entity. Do not pad the outline — every section must be justified by intent or competitor analysis.
 
 STEP 7 — MAKE IT CITEABLE, NOT JUST RANKABLE: AI systems cite pages that answer one question directly, name their entities, show evidence and stay balanced. Also produce: (f) ai_answer — the single question this page must own, the 4-7 real sub-questions under it, a 40-60 word direct_answer written to be lifted verbatim, why_it_matters, who_is_it_for, and 3-5 key_takeaways; (g) quick_facts — a label/value list of the hard facts a reader or model needs at a glance, using labels that fit THIS topic; only facts verifiable from the data above, and an empty array rather than an invented one; (h) entity_strategy — primary, secondary and supporting entities PLUS explicit subject-relation-object relationships between them, so a model can reconstruct the topic graph; (i) evidence — official_sources (only sources visible in the data), statistics with their source, experience_to_include (describe what first-hand experience the writer must add — an instruction, never fabricated experience) and trust_signals; (j) balance — limitations, who_should_not_use_it and the comparisons the page should draw, because a page that only praises is trusted and cited less; (k) use_cases — audience/scenario/benefit for 2-4 distinct reader types; (l) conclusion — recap, recommendation, outlook. Do NOT output any dates, freshness block or self-assessment score: those are added by the system after you respond.
 
 PRECISION OVER FALSE COMPLETENESS: if the live data does not support a confident, specific answer for a field, output "insufficient_data" instead of inventing one.
 
 Return ONLY valid JSON, no markdown, no preamble.
-{"keyword":"${keyword}","search_intent":"informational|commercial|transactional","top10_gap":"<what none of the current top 10 cover well — the opening for a new page, or 'insufficient_data'>","ai_overview_status":"<synthesise the Perplexity live check and Google direct-answer block above into one sentence — what it means for this new page's citation chances>","competitor_table":[{"rank":1,"domain":"<real domain from the SERP data>","what_they_have":"<one concrete thing this competitor does well, grounded in their scraped content>","the_gap":"<one concrete thing missing or weak in their content>","what_to_add":"<what the new page should do instead/better>"}],"recommended_title_h1":"<the strongest working title/H1 for this page, considering the supplied angle if any>","meta_package":{"seo_title":"<rank-ready title tag, max 60 chars, focus keyword near the front, compelling not stuffed>","meta_description":"<click-worthy meta description, max 155 chars, includes the keyword and a reason to click>","h1":"<the on-page H1, distinct from the title tag, natural phrasing a human reads>","url_slug":"<short hyphenated slug from the keyword, no stopwords>"},"opening_passage":{"direct_answer":"<the literal first 40-60 words of the page: a self-contained, quotable answer to the primary intent that Google AI Overview and Perplexity can lift verbatim — lead with the answer, no throat-clearing>","why_it_wins":"<one sentence: what makes this opening extractable as a citation>"},"recommended_structure":{"format":"<content_page|comparison|how_to|tool_landing — from the SERP pattern>","recommended_word_count":2200,"must_have_h2s":["<specific headings needed to beat rank 1>"],"recommended_schema":["<schema types, e.g. FAQPage, Article, HowTo>"]},"page_blueprint":[{"h2":"<section heading in READING ORDER, top to bottom, forming a complete page from intro to conclusion>","purpose":"<one line: what this section accomplishes for the reader and for ranking/citation>","target_words":300,"cover":["<the sub-questions and entities this section must answer/include>"],"citation_hook":"<the one quotable sentence to write here if this section can earn an AI citation; else empty string>"}],"must_cover_entities":["<specific terms/entities present in 2+ competitors that this page must include>"],"faq_questions":["<real People-Also-Ask style questions this page should answer>"],"paa_questions":[{"q":"<real People-Also-Ask question for this keyword — provide EXACTLY 5>","a":"<self-contained 40-60 word answer, ready to paste as an FAQ answer — factual, no placeholders>"}],"internal_link_targets":[{"anchor_text":"<natural anchor text a reader would click>","link_to":"<a topic/page that plausibly exists on the client's own site — never an invented URL>","why":"<the topical-authority or user-journey purpose>"}],"citation_targets":[{"query_variant":"<a specific question Google AI Overview or Perplexity could cite this page for>","passage_to_write":"<exactly how that passage should read — length, direct-answer format>"}],"ai_answer":{"primary_question":"<the one question this page must own>","secondary_questions":["<4-7 real sub-questions under it>"],"direct_answer":"<40-60 words, self-contained, quotable verbatim>","why_it_matters":"<one sentence>","who_is_it_for":"<one sentence>","key_takeaways":["<3-5 short factual takeaways>"]},"quick_facts":[{"label":"<a fact label that fits this topic>","value":"<the value, verifiable from the data above>"}],"entity_strategy":{"primary":["<entities this page is about>"],"secondary":["<entities it must mention>"],"supporting":["<context entities>"],"relationships":[{"subject":"<entity>","relation":"<verb phrase, e.g. provides / is part of / competes with>","object":"<entity>"}]},"evidence":{"official_sources":["<sources visible in the data above, never invented>"],"statistics":["<a real figure with its source, or omit>"],"experience_to_include":"<what first-hand experience the writer must add, written as an instruction>","trust_signals":["<concrete signals this page must show>"]},"balance":{"limitations":["<real limitations or caveats>"],"who_should_not_use_it":["<reader types this is not for>"],"comparisons":[{"a":"<option A>","b":"<option B>","why_it_matters":"<why the reader cares>"}]},"use_cases":[{"audience":"<a distinct reader type>","scenario":"<their concrete situation>","benefit":"<what they get>"}],"conclusion":{"recap":"<2-3 sentence recap>","recommendation":"<the concrete recommendation>","outlook":"<what changes next in this space>"},"beat_number1_instructions":[{"topic":"<a topic rank-1 covers>","rank1_treats_it_as":"surface|moderate|deep","to_beat_write":"<concrete instruction — what to add, what depth, what evidence>"}],"action_plan":[{"step":1,"priority":"high|medium|low","action":"<specific action>"}],"confidence":"high|medium|low"}`;
+{"keyword":"${keyword}","search_intent":"informational|commercial|transactional","top10_gap":"<what none of the current top 10 cover well — the opening for a new page, or 'insufficient_data'>","ai_overview_status":"<synthesise the Perplexity live check and Google direct-answer block above into one sentence — what it means for this new page's citation chances>","competitor_table":[{"rank":1,"domain":"<real domain from the SERP data>","what_they_have":"<one concrete thing this competitor does well, grounded in their scraped content>","the_gap":"<one concrete thing missing or weak in their content>","what_to_add":"<what the new page should do instead/better>"}],"recommended_title_h1":"<the strongest working title/H1 for this page, considering the supplied angle if any>","meta_package":{"seo_title":"<rank-ready title tag, max 60 chars, focus keyword near the front, compelling not stuffed>","meta_description":"<click-worthy meta description, max 155 chars, includes the keyword and a reason to click>","h1":"<the on-page H1, distinct from the title tag, natural phrasing a human reads>","url_slug":"<short hyphenated slug from the keyword, no stopwords>"},"opening_passage":{"direct_answer":"<the literal first 40-60 words of the page: a self-contained, quotable answer to the primary intent that Google AI Overview and Perplexity can lift verbatim — lead with the answer, no throat-clearing>","why_it_wins":"<one sentence: what makes this opening extractable as a citation>"},"recommended_structure":{"format":"<content_page|comparison|how_to|tool_landing — from the SERP pattern>","recommended_word_count":2200,"must_have_h2s":["<specific headings needed to beat rank 1>"],"recommended_schema":["<schema types, e.g. FAQPage, Article, HowTo>"]},"page_blueprint":[{"h2":"<section heading in READING ORDER, top to bottom, forming a complete page from intro to conclusion>","purpose":"<one line: what this section accomplishes for the reader and for ranking/citation>","target_words":300,"cover":["<the sub-questions and entities this section must answer/include>"],"citation_hook":"<the one quotable sentence to write here if this section can earn an AI citation; else empty string>"}],"must_cover_entities":["<specific terms/entities present in 2+ competitors that this page must include>"],"faq_questions":["<real People-Also-Ask style questions this page should answer>"],"paa_questions":[{"q":"<real People-Also-Ask question for this keyword — provide EXACTLY 5>","a":"<self-contained 40-60 word answer, ready to paste as an FAQ answer — factual, no placeholders>"}],"internal_link_targets":[{"anchor_text":"<natural anchor text a reader would click>","link_to":"<a URL copied verbatim from the CLIENT SITEMAP list; empty array if no sitemap was provided — never invent a path>","why":"<the topical-authority or user-journey purpose>"}],"citation_targets":[{"query_variant":"<a specific question Google AI Overview or Perplexity could cite this page for>","passage_to_write":"<exactly how that passage should read — length, direct-answer format>"}],"ai_answer":{"primary_question":"<the one question this page must own>","secondary_questions":["<4-7 real sub-questions under it>"],"direct_answer":"<40-60 words, self-contained, quotable verbatim>","why_it_matters":"<one sentence>","who_is_it_for":"<one sentence>","key_takeaways":["<3-5 short factual takeaways>"]},"quick_facts":[{"label":"<a fact label that fits this topic>","value":"<the value, verifiable from the data above>"}],"entity_strategy":{"primary":["<entities this page is about>"],"secondary":["<entities it must mention>"],"supporting":["<context entities>"],"relationships":[{"subject":"<entity>","relation":"<verb phrase, e.g. provides / is part of / competes with>","object":"<entity>"}]},"evidence":{"official_sources":["<sources visible in the data above, never invented>"],"statistics":["<a real figure with its source, or omit>"],"experience_to_include":"<what first-hand experience the writer must add, written as an instruction>","trust_signals":["<concrete signals this page must show>"]},"balance":{"limitations":["<real limitations or caveats>"],"who_should_not_use_it":["<reader types this is not for>"],"comparisons":[{"a":"<option A>","b":"<option B>","why_it_matters":"<why the reader cares>"}]},"use_cases":[{"audience":"<a distinct reader type>","scenario":"<their concrete situation>","benefit":"<what they get>"}],"conclusion":{"recap":"<2-3 sentence recap>","recommendation":"<the concrete recommendation>","outlook":"<what changes next in this space>"},"beat_number1_instructions":[{"topic":"<a topic rank-1 covers>","rank1_treats_it_as":"surface|moderate|deep","to_beat_write":"<concrete instruction — what to add, what depth, what evidence>"}],"action_plan":[{"step":1,"priority":"high|medium|low","action":"<specific action>"}],"confidence":"high|medium|low"}`;
 
     const ctrl2 = new AbortController(); setTimeout(() => ctrl2.abort(), 45000);
     const geminiKey = process.env.GEMINI_API_KEY;
