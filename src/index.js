@@ -40360,6 +40360,16 @@ app.post('/api/tracker-client/:token/prewrite-brief', async (req, res) => {
     const sitemapBlock = _sitemapSample.length
       ? 'CLIENT SITEMAP \u2014 REAL PAGES THAT EXIST ON THE CLIENT SITE (' + clientSitemapUrls.length + ' total, showing ' + _sitemapSample.length + '):\n' + _sitemapSample.join('\n') + '\nIn STEP 6, internal_link_targets MUST link_to URLs chosen ONLY from this list \u2014 copy the URL verbatim. Never invent a path not in this list.'
       : 'CLIENT SITEMAP: not available for this tracker. Therefore output internal_link_targets as an EMPTY array [] \u2014 do NOT invent internal URLs or guess paths.';
+
+    // ── Owner-provided brand & author facts (CLAUDE-FIX-0808C) ──────────────
+    // Same field the regular brief already respects (tracker_clients.brand_context,
+    // the "Brand & author info — help the AI use real facts" box). The pre-write brief
+    // was inventing brand/author details instead of using these. Inject them as FACTS.
+    let _pwbBrand = '';
+    try { _pwbBrand = ((client && client.brand_context) || '').toString().trim(); } catch(e) { _pwbBrand = ''; }
+    const brandBlock = _pwbBrand
+      ? 'BRAND & AUTHOR FACTS \u2014 owner-provided, treat as ground truth. Use these real details (brand name, author, credentials, numbers, USPs) wherever the brief names the business or its author. Do NOT invent brand facts, author bios, company size, or metrics that contradict or go beyond this:\n' + _pwbBrand
+      : 'BRAND & AUTHOR FACTS: none provided. Do NOT invent a brand backstory, author bio, team size, client counts, or metrics \u2014 keep the brief free of unverifiable business claims.';
     let serpUrls = [];
     let aioDetected = false;
     let peopleAlsoAsk = [];
@@ -40463,6 +40473,8 @@ ${peopleAlsoAsk.length ? peopleAlsoAsk.map(function(q){ return '- ' + q.question
 When you build paa_questions in STEP 6, PREFER these real questions verbatim (translated to the page language if needed); only invent additional ones if fewer than 5 are provided.
 
 ${sitemapBlock}
+
+${brandBlock}
 
 MANDATORY PROCESSING ORDER:
 STEP 1 — Analyse the SERP: what pattern do the top results share (format, depth, schema, freshness)?
