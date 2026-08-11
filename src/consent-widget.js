@@ -11,6 +11,15 @@
   var STORAGE_KEY = 'cs_consent';
   var WIDGET_ID   = 'cs-consent-widget';
 
+  // ── Double-load guard ───────────────────────────────────────────────────────
+  // If this script loads more than once (e.g. pasted twice in WPCode), stop the
+  // second run. Without this, a second copy builds a duplicate widget with the
+  // same IDs on top of the first — clicks then hit the wrong element and the
+  // banner won't close.
+  if (window.__csConsentLoaded) return;
+  window.__csConsentLoaded = true;
+  if (document.getElementById(WIDGET_ID)) return;
+
   // ── Already consented? ──────────────────────────────────────────────────────
   try {
     var existing = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');

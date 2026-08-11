@@ -844,11 +844,13 @@ if (typeof body === 'string' && body.includes('</body>') &&
 res.getHeader('Content-Type')?.includes('text/html') &&
 !req.path?.includes('content-engine')) {
 // Replace LAST </body> only — avoids hitting </body> inside JS template strings
+// Guard: skip if the scripts are already present (e.g. hardcoded in a page),
+// so they can never be injected twice (double consent-widget = banner that won't close).
 const lastIdx = body.lastIndexOf('</body>');
-if (lastIdx !== -1) {
+if (lastIdx !== -1 && !body.includes('consent-widget.js') && !body.includes('badge-loader.js')) {
 body = body.slice(0, lastIdx) +
 '<script src="https://app.contentscale.site/badge-loader.js?v=5"></script>' +
-'<script src="https://app.contentscale.site/consent-widget.js?v=1"></script></body>' +
+'<script src="https://app.contentscale.site/consent-widget.js?v=2"></script></body>' +
 body.slice(lastIdx + 7);
 }
 }
