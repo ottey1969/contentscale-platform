@@ -9349,6 +9349,63 @@ app.post('/api/gemini-proxy', async (req, res) => {
 
       // Success
       if (upstream.ok) {
+        // ── GROUNDING USAGE COUNTER ──────────────────────────────────────────
+        // Google bills Search grounding SEPARATELY from tokens. Free allowance:
+        //   Gemini 2.5 models : 1,500 grounded requests/DAY  (then $35 / 1,000)
+        //   Gemini 3.x models : 5,000 grounded prompts/MONTH (then $14 / 1,000)
+        // A single prompt can trigger several web searches; we count the REAL
+        // webSearchQueries Gemini reports, plus grounded-request count, so the
+        // client can show how close you are to the free limit. In-memory only —
+        // resets on redeploy; Google Cloud Console remains the billing source of truth.
+        try {
+          const is25 = /gemini-2\.5/.test(model);
+          const period = is25
+            ? new Date().toISOString().slice(0, 10)   // daily bucket for 2.5
+            : new Date().toISOString().slice(0, 7);    // monthly bucket for 3.x
+          const freeLimit = is25 ? 1500 : 5000;
+          const limitUnit = is25 ? 'requests/day' : 'prompts/month';
+
+          if (!global._groundUsage || global._groundUsage.period !== period) {
+            global._groundUsage = { period, groundedRequests: 0, searchQueries: 0 };
+          }
+
+          // Did THIS response actually use grounding? Count real search queries.
+          let qThisCall = 0;
+          const cands = data && data.candidates ? data.candidates : [];
+          for (const c of cands) {
+            const gm = c && c.groundingMetadata;
+            if (gm && Array.isArray(gm.webSearchQueries)) qThisCall += gm.webSearchQueries.length;
+          }
+          const grounded = qThisCall > 0;
+          if (grounded) {
+            global._groundUsage.groundedRequests += 1;    // Google bills per grounded PROMPT
+            global._groundUsage.searchQueries += qThisCall; // informational: actual searches run
+          }
+
+          const used = global._groundUsage.groundedRequests;
+          const remaining = Math.max(0, freeLimit - used);
+          const pct = Math.min(100, Math.round((used / freeLimit) * 100));
+          if (used === freeLimit || used === freeLimit - 50) {
+            console.warn(`[gemini-proxy] ⚠ Grounding free tier ${pct}% used: ${used}/${freeLimit} ${limitUnit} (${period})`);
+          }
+
+          // Attach a lightweight usage summary to the response for the UI.
+          data._grounding = {
+            usedThisCall: qThisCall,
+            groundedRequestsUsed: used,
+            searchQueriesUsed: global._groundUsage.searchQueries,
+            freeLimit,
+            freeRemaining: remaining,
+            limitUnit,
+            period,
+            pctUsed: pct,
+            overFreeTier: used > freeLimit,
+            model
+          };
+        } catch (e) {
+          console.warn('[gemini-proxy] grounding counter skipped:', e.message);
+        }
+        // ─────────────────────────────────────────────────────────────────────
         return res.status(200).json(data);
       }
 
@@ -9417,6 +9474,41 @@ app.post('/api/gemini-proxy', async (req, res) => {
   // All retries exhausted
   console.error('[gemini-proxy] All retries failed');
   res.status(503).json({ error: 'Gemini unavailable after retries — try again shortly', ...lastData });
+});
+
+// ── GROUNDING USAGE STATUS ────────────────────────────────────────────────
+// GET the current grounded-request tally vs the free allowance, without
+// running a crawl. Powers the live "free tier used" meter in the lead crawler.
+// In-memory (resets on redeploy) — Google Cloud Console is the billing truth.
+app.get('/api/gemini-proxy/grounding-usage', (req, res) => {
+  const model = req.query.model || GEMINI_MODEL || 'gemini-2.5-flash-lite';
+  const is25 = /gemini-2\.5/.test(model);
+  const period = is25 ? new Date().toISOString().slice(0, 10) : new Date().toISOString().slice(0, 7);
+  const freeLimit = is25 ? 1500 : 5000;
+  const limitUnit = is25 ? 'requests/day' : 'prompts/month';
+  const paidRate = is25 ? '$35 / 1,000' : '$14 / 1,000';
+
+  const u = (global._groundUsage && global._groundUsage.period === period)
+    ? global._groundUsage
+    : { period, groundedRequests: 0, searchQueries: 0 };
+
+  const used = u.groundedRequests;
+  const remaining = Math.max(0, freeLimit - used);
+  res.json({
+    model,
+    period,
+    groundedRequestsUsed: used,
+    searchQueriesUsed: u.searchQueries,
+    freeLimit,
+    freeRemaining: remaining,
+    limitUnit,
+    pctUsed: Math.min(100, Math.round((used / freeLimit) * 100)),
+    overFreeTier: used > freeLimit,
+    paidRateBeyondFree: paidRate,
+    note: is25
+      ? 'Gemini 2.5: 1,500 grounded requests/day free, then $35/1,000. Resets daily. 2.5 retires 16 Oct 2026.'
+      : 'Gemini 3.x: 5,000 grounded prompts/month free, then $14/1,000. Resets monthly.'
+  });
 });
 
 // ============================================
