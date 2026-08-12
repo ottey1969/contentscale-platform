@@ -32943,7 +32943,7 @@ async function markDone(pageId, btn, currentDone) {
       toast('All ' + pageIds.length + ' PROVEN pages scanned \u2014 briefs are ready', '#4ade80');
     } else {
       if (btnEl) { btnEl.textContent = '\u2713 ' + _okCount + '/' + pageIds.length + ' pages scanned'; btnEl.disabled = false; }
-      toast(_okCount + ' of ' + pageIds.length + ' pages scanned \u2014 ' + _failSlugs.length + ' didn\'t complete, click to retry', '#f59e0b');
+      toast(_okCount + ' of ' + pageIds.length + ' pages scanned \u2014 ' + _failSlugs.length + ' did not complete, click to retry', '#f59e0b');
     }
   }
 
