@@ -1305,6 +1305,7 @@
             document.addEventListener('DOMContentLoaded', renderClientSwitcher);
             document.addEventListener('DOMContentLoaded', loadOutboundClients);
             document.addEventListener('DOMContentLoaded', loadCsElevenConfig);
+            document.addEventListener('DOMContentLoaded', loadGroundingUsage);
             </script>
             <!-- ══ END CLIENT & VOICE AGENT MANAGER ══ -->
 
@@ -1375,6 +1376,10 @@
                   <div class="prog-stat">
                      <div class="prog-statNum dim" id="progErrCount">0</div>
                      <div class="prog-statLabel">Errors</div>
+                  </div>
+                  <div class="prog-stat">
+                     <div class="prog-statNum" id="progGrounding" style="color:#4ade80">0</div>
+                     <div class="prog-statLabel" id="progGroundingLabel">Free grounding left</div>
                   </div>
                </div>
                <div class="prog-barWrap">
@@ -1751,6 +1756,40 @@
          if(p<150)return 'active';
          return 'estab';
          }
+         // ── GROUNDING FREE-TIER METER ─────────────────────────────────────────
+         // Shows how much of your free Google Search grounding allowance is left.
+         // Gemini 2.5 = 1,500 requests/DAY free (then $35/1k). 3.x = 5,000/MONTH ($14/1k).
+         // Data comes from the server (_grounding), which counts REAL grounded requests.
+         function updateGroundingMeter(g){
+           if(!g) return;
+           const el = document.getElementById('progGrounding');
+           const lbl = document.getElementById('progGroundingLabel');
+           if(!el||!lbl) return;
+           const left = g.freeRemaining;
+           el.textContent = g.overFreeTier ? ('+' + (g.groundedRequestsUsed - g.freeLimit)) : left;
+           // colour: green > 20% left, orange 5-20%, red under 5% or over
+           const pctLeft = 100 - (g.pctUsed||0);
+           el.style.color = g.overFreeTier ? '#f43f3f' : (pctLeft <= 5 ? '#f43f3f' : (pctLeft <= 20 ? '#f59e0b' : '#4ade80'));
+           lbl.textContent = g.overFreeTier
+             ? ('PAID grounding — ' + g.limitUnit.split('/')[1])
+             : ('Free grounding left (' + g.limitUnit.split('/')[1] + ')');
+           lbl.title = g.groundedRequestsUsed + ' / ' + g.freeLimit + ' ' + g.limitUnit +
+                       ' used this ' + (g.limitUnit.includes('day')?'day':'month') +
+                       ' · ' + g.searchQueriesUsed + ' actual searches · model ' + g.model;
+         }
+
+         // Fetch the current grounding tally on page load (before any crawl)
+         async function loadGroundingUsage(){
+           try{
+             const r = await fetch('https://app.contentscale.site/api/gemini-proxy/grounding-usage');
+             if(r.ok){ const g = await r.json(); updateGroundingMeter({
+               freeRemaining: g.freeRemaining, groundedRequestsUsed: g.groundedRequestsUsed,
+               freeLimit: g.freeLimit, limitUnit: g.limitUnit, pctUsed: g.pctUsed,
+               overFreeTier: g.overFreeTier, searchQueriesUsed: g.searchQueriesUsed, model: g.model
+             }); }
+           }catch(e){ /* silent — meter just starts at 0 */ }
+         }
+
          // ── PHASE 1: FIND BUSINESSES (Gemini 1.5 Flash — server key) ──────────────
          async function callClaude(city, country, ind) {
              const prompt = `You are a high-precision B2B Lead Scraper. Use Google Search to find REAL local businesses.
@@ -1792,6 +1831,9 @@ Return ONLY a raw JSON array — no markdown, no code fences, no explanation:
 
                  const data = await resp.json();
                  const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '[]';
+
+                 // Update the live grounding free-tier meter (server attaches _grounding)
+                 if (data._grounding) updateGroundingMeter(data._grounding);
 
                  // Extract JSON array from response (strip any accidental markdown)
                  const cleaned = text.match(/\[[\s\S]*\]/);
