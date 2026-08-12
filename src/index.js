@@ -850,7 +850,7 @@ const lastIdx = body.lastIndexOf('</body>');
 if (lastIdx !== -1 && !body.includes('consent-widget.js') && !body.includes('badge-loader.js')) {
 body = body.slice(0, lastIdx) +
 '<script src="https://app.contentscale.site/badge-loader.js?v=5"></script>' +
-'<script src="https://app.contentscale.site/consent-widget.js?v=2"></script></body>' +
+'<script src="https://app.contentscale.site/consent-widget.js?v=3"></script></body>' +
 body.slice(lastIdx + 7);
 }
 }
