@@ -8141,7 +8141,19 @@ app.post('/api/scan/paste', async (req, res) => {
     const stripTags = (str) => str.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
     const cleanText = stripTags(bodyHtml);
     const wordCount = cleanText.split(/\s+/).filter(w => w.length > 0).length;
-
+    // Hidden content detectie (server-side, regex-gebaseerd — geen DOM/computed style).
+    // Vangt de meest voorkomende gevallen: display:none inline en hidden attribuut.
+    let hiddenWordCount = 0;
+    try {
+      const _hiddenMatches = bodyHtml.match(/<([a-z0-9]+)[^>]*(?:style=["'][^"']*display:\s*none[^"']*["']|\shidden(?:=|\s|>)|aria-hidden=["']true["'])[^>]*>([\s\S]*?)<\/\1>/gi) || [];
+      _hiddenMatches.forEach(block => {
+        const _ht = block.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+        const _hw = _ht ? _ht.split(/\s+/).filter(w => w.length > 0).length : 0;
+        hiddenWordCount += _hw;
+      });
+    } catch(e) { hiddenWordCount = 0; }
+    const totalWordCount = wordCount + hiddenWordCount;
+    const hiddenWordPct = totalWordCount > 0 ? Math.round((hiddenWordCount / totalWordCount) * 100) : 0;
     // Count headings
     const h1Matches = [...rawHtml.matchAll(/<h1[^>]*>([\s\S]*?)<\/h1>/gi)];
     const h1Count = h1Matches.length;
@@ -8176,6 +8188,21 @@ app.post('/api/scan/paste', async (req, res) => {
     const hasOpenGraph = /<meta[^>]*property=["']og:/i.test(rawHtml);
     const hasTwitterCard = /<meta[^>]*name=["']twitter:/i.test(rawHtml);
 
+    // ── DUPLICATE / NESTED-DOCUMENT CHECKS ──
+    // Bij het plakken van HTML-fragmenten (bv. in WordPress) ontstaan makkelijk
+    // dubbele tags of een genest document. Die verwarren Google. Detecteer ze.
+    const titleTagCount   = (rawHtml.match(/<title[\s>]/gi) || []).length;
+    const metaDescCount   = (rawHtml.match(/<meta[^>]*name=["']description["']/gi) || []).length;
+    const canonicalCount  = (rawHtml.match(/<link[^>]*rel=["']canonical["']/gi) || []).length;
+    const htmlTagCountDup = (rawHtml.match(/<html[\s>]/gi) || []).length;
+    const bodyTagCountDup = (rawHtml.match(/<body[\s>]/gi) || []).length;
+    const headTagCountDup = (rawHtml.match(/<head[\s>]/gi) || []).length;
+    const doctypeCountDup = (rawHtml.match(/<!doctype/gi) || []).length;
+    // Genest document = een fragment dat zelf <html>/<body>/<!doctype> bevat terwijl
+    // het al binnen de pagina zit → dubbel/nested document.
+    const isNestedDocument = htmlTagCountDup > 1 || bodyTagCountDup > 1 || headTagCountDup > 1 || doctypeCountDup > 1;
+    // Dubbele schema van hetzelfde @type (bv. 2× Article, 2× FAQPage)
+
     // Schema
     const schemaScripts = [];
     const schemaMatches = [...rawHtml.matchAll(/<script[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi)];
@@ -8186,6 +8213,12 @@ app.post('/api/scan/paste', async (req, res) => {
     const hasArticleSchema = flatSchemas.some(s => ['Article','NewsArticle','BlogPosting','TechArticle'].includes(s?.['@type']));
     const hasFAQPageSchema = flatSchemas.some(s => s?.['@type'] === 'FAQPage');
     const hasOrganizationSchema = flatSchemas.some(s => ['Organization','LocalBusiness','Corporation'].includes(s?.['@type']));
+    // Dubbele schema van hetzelfde @type detecteren (bv. 2× Article of 2× FAQPage
+    // verwart Google over welke de juiste is).
+    const _schemaTypeCounts = {};
+    flatSchemas.forEach(s => { const t = s?.['@type']; if (typeof t === 'string') _schemaTypeCounts[t] = (_schemaTypeCounts[t] || 0) + 1; });
+    const duplicateSchemaTypes = Object.keys(_schemaTypeCounts).filter(t => _schemaTypeCounts[t] > 1);
+    const hasDuplicateSchema = duplicateSchemaTypes.length > 0;
 
     // Content signals
     const bodyText = cleanText.toLowerCase();
@@ -8218,8 +8251,16 @@ app.post('/api/scan/paste', async (req, res) => {
     const citeCount = ([...rawHtml.matchAll(/<cite[\s>]/gi)]).length;
     const expertQuoteCount = Math.max(bqCount, citeCount);
 
-    const caseStudyKeywords = ['case study','challenge','solution','results','roi','recovered'];
-    const caseStudyCount = caseStudyKeywords.reduce((sum, kw) => sum + (bodyText.split(kw).length - 1), 0);
+    // Case study telling (tekstgebaseerd, server-side — geen DOM beschikbaar).
+    // Telt op basis van: (a) "case study" vermeldingen, en (b) Challenge/Solution/
+    // Results triplets nabij een metric. Robuust voor het × teken en losse structuren.
+    const _csMetRe = /\d+(\.\d+)?\s*%|\d+(\.\d+)?\s*[x×]\b|\d+(\.\d+)?\s*(times|fold)\b|[€$£]\s?[\d,.]+|\b\d{1,3}(,\d{3})+\b/i;
+    const _csHeadings = (bodyText.match(/case study|client (story|result)|success story/gi) || []).length;
+    const _hasTriplet = /\bchallenge\b/i.test(bodyText) && /\bsolution\b/i.test(bodyText) && /\bresults?\b/i.test(bodyText);
+    const _hasMetric = _csMetRe.test(bodyText);
+    // Elke "case study"-kop telt als 1; een triplet-met-metric telt als minstens 1.
+    let caseStudyCount = _csHeadings;
+    if (caseStudyCount === 0 && _hasTriplet && _hasMetric) caseStudyCount = 1;
 
     const statsPattern = /\d+%|\$[\d,.]+|€[\d,.]+|\d{1,3}(,\d{3})+|\d+x\s/g;
     const statsFound = (cleanText.match(statsPattern) || []).length;
@@ -8235,7 +8276,7 @@ app.post('/api/scan/paste', async (req, res) => {
 
     // Build analysis object matching the browser evaluate() output
     const analysis = {
-      wordCount, h1Count, h1Text, h1Length, 
+      wordCount, hiddenWordCount, totalWordCount, hiddenWordPct, titleTagCount, metaDescCount, canonicalCount, isNestedDocument, hasDuplicateSchema, duplicateSchemaTypes, h1Count, h1Text, h1Length, 
       h1IsHidden: false, h1VisibleCount: h1Count, 
       h1IsGeneric, h1IsTooShort, h1IsTooLong,
       h2Count, h3Count, listItemCount, avgParagraphLength,
@@ -8532,6 +8573,12 @@ recommendations.push({ title: '📝 Increase Content Depth', description: `${ana
 } else if (analysis.wordCount < 2500) {
 recommendations.push({ title: '📊 Content Length: Good But Not Elite', description: `${analysis.wordCount} words is solid. 400–800 more strategic words pushes you from Good to Elite tier.`, priority: 'low', action: "Add a case study with before/after metrics, an expert quote section, or a 'Key Takeaways' summary.", learning: "Long-form content earns 77% more backlinks than short content.", target: '2,500+ words for GRAAF Elite tier' });
 }
+// ── HIDDEN CONTENT WARNING ──
+// Als een noemenswaardig deel van de tekst verborgen is (display:none/toggles),
+// telt de scanner het niet en geeft Google het minder gewicht. Adviserend, niet alarmerend.
+if (analysis.hiddenWordCount && analysis.hiddenWordPct >= 10) {
+recommendations.push({ title: '👁️ Content Hidden Behind Toggles', description: `${analysis.hiddenWordCount} words (${analysis.hiddenWordPct}% of your content) are hidden by default behind display:none, collapsed accordions, or FAQ toggles. Your visible word count is ${analysis.wordCount}; total including hidden is ${analysis.totalWordCount}.`, priority: 'medium', action: "Make key content — especially FAQ answers — visible by default. Keep the toggle to collapse, but render answers open on page load so search engines and this scanner count the full text.", learning: "Google does index toggle content, but gives it reduced weight compared to immediately visible text. Content-quality scanners that measure rendered text miss it entirely. Making it visible recovers both the ranking signal and the scored word count.", target: 'Under 10% of content hidden; FAQ answers visible by default' });
+}
 if (analysis.statsFound < 3) {
 recommendations.push({ title: '📈 Add Data & Statistics', description: `Only ${analysis.statsFound} measurable data points found.`, priority: 'high', action: "Add 8+ statistics from 2023–2025 sources. Format: 'X% of [group] report [outcome] ([Source Name, Year])'.", learning: "Data-backed content earns 3x more backlinks. Statistics signal the Accuracy pillar of GRAAF.", target: '8+ cited statistics from reputable 2023–2025 sources' });
 } else if (analysis.statsFound < 8) {
@@ -8570,6 +8617,24 @@ recommendations.push({ title: '⚠️ H1 Is Too Generic — Add a Real Keyword',
 recommendations.push({ title: '⚠️ H1 Too Short — Expand With Keywords', description: `Your H1 "${analysis.h1Text}" is only ${analysis.h1Length} characters.`, priority: 'medium', action: "Expand your H1 to 30–70 characters.", learning: "H1s under 10 characters provide minimal keyword signal.", target: 'H1 of 30–70 characters with primary keyword' });
 } else if (analysis.h1IsTooLong) {
 recommendations.push({ title: '📝 H1 Too Long — Trim for Clarity', description: `Your H1 is ${analysis.h1Length} characters.`, priority: 'low', action: "Trim your H1 to 70 characters or fewer.", learning: "H1s over 70 characters reduce keyword density.", target: 'H1 under 70 characters' });
+}
+// ── DUPLICATE / NESTED-DOCUMENT WARNINGS ──
+// Deze verwarren Google over welke tag de juiste is. Vaak veroorzaakt door het
+// plakken van een volledig HTML-document waar een fragment hoort (bv. WordPress).
+if (analysis.isNestedDocument) {
+recommendations.push({ title: '🚨 Nested / Duplicate Document Detected', description: `The page contains more than one <html>, <body>, <head>, or <!doctype> — a nested or duplicated document structure. This usually happens when a full HTML document is pasted where only a content fragment belongs.`, priority: 'high', action: "Paste only the content fragment (headings, paragraphs, images, schema) — never a full <!doctype>/<html>/<head>/<body> wrapper. The site template already provides those.", learning: "A nested document gives Google two competing page structures, duplicate <head> metadata, and often duplicate titles — a strong signal of a broken or spammy page.", target: 'Exactly one document structure: no <html>/<body>/<head>/<!doctype> inside the content' });
+}
+if (analysis.titleTagCount > 1) {
+recommendations.push({ title: '🚨 Duplicate <title> Tags', description: `Found ${analysis.titleTagCount} <title> tags. Google will pick one unpredictably and may show the wrong one in search results.`, priority: 'high', action: "Keep exactly one <title>. In WordPress, set the title in your SEO plugin (Rank Math/Yoast) and remove any <title> from the pasted content.", learning: "Multiple title tags split your title signal and let Google override your intended title with one of its choosing.", target: 'Exactly 1 <title> tag per page' });
+}
+if (analysis.metaDescCount > 1) {
+recommendations.push({ title: '⚠️ Duplicate Meta Descriptions', description: `Found ${analysis.metaDescCount} meta description tags. Only one should exist; conflicting descriptions confuse which snippet Google shows.`, priority: 'medium', action: "Keep one meta description — ideally set in your SEO plugin, not in the pasted content.", learning: "Duplicate meta descriptions are a common WordPress paste artifact and dilute your snippet control.", target: 'Exactly 1 meta description per page' });
+}
+if (analysis.canonicalCount > 1) {
+recommendations.push({ title: '🚨 Conflicting Canonical Tags', description: `Found ${analysis.canonicalCount} canonical tags. Multiple canonicals can point Google to different URLs, undermining indexing of this page.`, priority: 'high', action: "Keep exactly one rel=canonical pointing to this page's preferred URL. Let your SEO plugin manage it and remove any canonical from the pasted content.", learning: "When canonicals conflict, Google may ignore all of them and choose its own canonical — which can deindex your intended URL.", target: 'Exactly 1 canonical tag pointing to the preferred URL' });
+}
+if (analysis.hasDuplicateSchema) {
+recommendations.push({ title: '⚠️ Duplicate Schema Types', description: `The same schema type appears more than once: ${(analysis.duplicateSchemaTypes||[]).join(', ')}. Duplicate JSON-LD of the same @type can confuse how Google interprets your structured data.`, priority: 'medium', action: "Keep one block per schema type. If the site template already outputs Article or FAQPage schema, remove the duplicate from the pasted content.", learning: "Two FAQPage or two Article blocks force Google to reconcile competing structured data, which can suppress rich results.", target: 'One JSON-LD block per schema @type' });
 }
 if (analysis.h2Count < 3) {
 recommendations.push({ title: '📑 Add More Section Headings (H2s)', description: `Only ${analysis.h2Count} H2 headings found.`, priority: 'medium', action: "Structure your content with 5+ H2 headings.", learning: "H2s are crawlability signals. Content with 5+ H2s ranks 23% higher for secondary keywords.", target: '5+ H2 headings with keyword-rich, descriptive text' });
@@ -8787,7 +8852,34 @@ recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', descriptio
                  const fbCount = fbText.split(/\s+/).filter(w => w.length > 0).length;
                  if (fbCount > wordCount) { wordCount = fbCount; cleanText = fbText; text = fbText; }
                }
-               const rawHtml = document.documentElement.outerHTML;
+               // ── HIDDEN CONTENT CHECK ──
+               // Detecteer tekst die verborgen is (display:none, visibility:hidden,
+               // hidden attr, aria-hidden, ingeklapte accordions). Search engines geven
+               // deze content minder gewicht; de scanner telt 'm niet in wordCount.
+               let hiddenWordCount = 0;
+               try {
+                 const _hiddenEls = document.querySelectorAll(
+                   '[hidden], [aria-hidden="true"], [style*="display:none"], [style*="display: none"], [style*="visibility:hidden"], [style*="visibility: hidden"], [class*="collapse"], [class*="accordion-body"], [class*="faq-answer"], [class*="sr-only"], [class*="hidden"]'
+                 );
+                 const _countedHidden = new Set();
+                 _hiddenEls.forEach(el => {
+                   // alleen tellen als daadwerkelijk niet-zichtbaar (getComputedStyle)
+                   const _st = window.getComputedStyle(el);
+                   const _isHidden = _st.display === 'none' || _st.visibility === 'hidden' ||
+                                     el.hasAttribute('hidden') || el.getAttribute('aria-hidden') === 'true' ||
+                                     (_st.maxHeight === '0px' && _st.overflow === 'hidden');
+                   if (!_isHidden) return;
+                   // vermijd dubbeltelling van geneste verborgen elementen
+                   let _parent = el.parentElement, _skip = false;
+                   while (_parent) { if (_countedHidden.has(_parent)) { _skip = true; break; } _parent = _parent.parentElement; }
+                   if (_skip) return;
+                   const _ht = (el.textContent || '').replace(/\s+/g, ' ').trim();
+                   const _hw = _ht ? _ht.split(/\s+/).filter(w => w.length > 0).length : 0;
+                   if (_hw > 0) { hiddenWordCount += _hw; _countedHidden.add(el); }
+                 });
+               } catch(e) { hiddenWordCount = 0; }
+               const totalWordCount = wordCount + hiddenWordCount;
+               const hiddenWordPct = totalWordCount > 0 ? Math.round((hiddenWordCount / totalWordCount) * 100) : 0;
                const h1Els = document.querySelectorAll('h1'); const h1Count = h1Els.length; let h1Text = ''; let h1IsHidden = false; let h1VisibleCount = 0;
                h1Els.forEach(el => { const s = window.getComputedStyle(el); const hidden = s.display==='none'||s.visibility==='hidden'||s.opacity==='0'||el.hasAttribute('hidden'); if(!hidden){h1VisibleCount++;if(!h1Text)h1Text=el.textContent.trim();}else{h1IsHidden=true;} });
                const h1Length=h1Text.length; const GENERIC=['welcome','home','hello','untitled','page','index','main','default','test','new page','coming soon'];
@@ -8839,24 +8931,39 @@ recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', descriptio
                ['[class*="review"]','[class*="testimonial"]','[class*="quote"]'].forEach(sel => {
                  try { document.querySelectorAll(sel).forEach(el => { if (el.textContent.trim().length > 40) expertQuoteCount++; }); } catch(e) {}
                });
-               // caseStudyCount — container-gebaseerd, identiek aan single scan
+               // caseStudyCount — verbeterde detectie: 3 methodes, robuust voor
+               // verschillende schrijfstijlen (container OF heading OF triplet).
+               // Fix: vangt × teken, korte case studies, en losse structuren.
                let caseStudyCount = 0;
-               const _caseKws = ['case study','challenge','solution','results','roi','recovered','recovery','success rate'];
+               const _metRe = /\d+(\.\d+)?\s*%|\d+(\.\d+)?\s*[x×]\b|\d+(\.\d+)?\s*(times|fold)\b|[€$£]\s?[\d,.]+|\b\d{1,3}(,\d{3})+\b|from\s+[\d.]+%?\s+to\s+[\d.]+%?/i;
+               const _kwRe = /\bcase study\b|\bchallenge\b|\bsolution\b|\bresults?\b|\bbefore\b.{0,40}\bafter\b|\bclient (result|success|story)\b|\broi\b|\brecovered?\b|\brecovery\b|\bthe problem\b|\bthe outcome\b|\bwhat (we|i) did\b|\bgrew\b|\bincrease[d]?\b|\bimprove(d|ment)?\b|\bwithin (a year|\d+ (days|weeks|months))\b/i;
                const _seen = new Set();
-               document.querySelectorAll('section, article, div[class*="case"], div[class*="study"], div[class*="card"], div[class*="result"]').forEach(el => {
+               // Methode 1: semantische containers (breed)
+               document.querySelectorAll('section, article, [class*="case"], [class*="study"], [class*="result"], [class*="story"], [class*="proof"], [class*="success"], [id*="case"], [id*="study"], [id*="result"]').forEach(el => {
                  if (_seen.has(el)) return;
-                 const _txt = el.textContent.toLowerCase();
-                 const _len = _txt.length;
-                 if (_len > 300 && _len < 6000) {
-                   const _hasKw = _caseKws.some(k => _txt.includes(k));
-                   const _hasMet = /\d+\s*%|\d+x\s|€[\d,.]+|\$[\d,.]+|\d{1,3}(,\d{3})+/.test(_txt);
-                   if (_hasKw && _hasMet) { caseStudyCount++; _seen.add(el); }
-                 }
+                 const _txt = el.textContent; const _len = _txt.length;
+                 if (_len > 80 && _len < 8000 && _kwRe.test(_txt) && _metRe.test(_txt)) { caseStudyCount++; _seen.add(el); }
                });
+               // Methode 2: heading-gebaseerd (case study kop zonder container)
+               document.querySelectorAll('h1,h2,h3,h4').forEach(h => {
+                 if (!/\bcase study\b|\bclient (story|result)\b|\bsuccess story\b/i.test(h.textContent)) return;
+                 // Sla over als deze kop al binnen een getelde container valt (voorkomt dubbeltelling)
+                 const _container = h.closest('section, article, [class*="case"], [class*="study"], [class*="result"], [class*="story"]');
+                 if (_container && _seen.has(_container)) return;
+                 let _block=''; let _n=h.nextElementSibling; let _g=0;
+                 while(_n && _g<15){ if(/^H[1-4]$/.test(_n.tagName)) break; _block+=' '+_n.textContent; _n=_n.nextElementSibling; _g++; }
+                 if(_block.length>100 && _metRe.test(_block) && !_seen.has(h)){ caseStudyCount++; _seen.add(h); }
+               });
+               // Methode 3: Challenge/Solution/Results triplet fallback
+               if (caseStudyCount === 0) {
+                 const _bh = document.body ? document.body.innerHTML : '';
+                 const _tc = [/\bchallenge\b/i.test(_bh), /\bsolution\b/i.test(_bh), /\bresults?\b/i.test(_bh)].filter(Boolean).length;
+                 if (_tc >= 2 && _metRe.test(document.body.textContent)) caseStudyCount++;
+               }
                const statsRegex=/\b\d+(\.\d+)?%|\b\d{4,}|\b\d+x\b|\$[\d,.]+/g; const statsFound=(bodyText.match(statsRegex)||[]).length;
                const emailRegex=/[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g;
                const allEmails=rawHtml.match(emailRegex)||[]; const uniqueEmails=[...new Set(allEmails)].filter(e=>!e.includes('sentry')&&!e.includes('example')&&!e.includes('domain.com')&&!e.includes('@2x'));
-               return {wordCount,h1Count,h1Text,h1Length,h1IsHidden,h1VisibleCount,h1IsGeneric,h1IsTooShort,h1IsTooLong,h2Count,h3Count,listItemCount,avgParagraphLength,metaTitle,metaTitleLength,metaDescription,metaDescriptionLength,hasCanonical,hasMetaViewport,hasArticleSchema,hasFAQPageSchema,hasOrganizationSchema,hasOpenGraph,hasTwitterCard,hasDirectAnswer,hasTLDR,hasTOC,hasAuthorBio,hasFAQContent,images,imagesWithAlt,internalLinks,externalLinks,expertQuoteCount,caseStudyCount,statsFound,extractedEmails:uniqueEmails};
+               return {wordCount,hiddenWordCount,totalWordCount,hiddenWordPct,h1Count,h1Text,h1Length,h1IsHidden,h1VisibleCount,h1IsGeneric,h1IsTooShort,h1IsTooLong,h2Count,h3Count,listItemCount,avgParagraphLength,metaTitle,metaTitleLength,metaDescription,metaDescriptionLength,hasCanonical,hasMetaViewport,hasArticleSchema,hasFAQPageSchema,hasOrganizationSchema,hasOpenGraph,hasTwitterCard,hasDirectAnswer,hasTLDR,hasTOC,hasAuthorBio,hasFAQContent,images,imagesWithAlt,internalLinks,externalLinks,expertQuoteCount,caseStudyCount,statsFound,extractedEmails:uniqueEmails};
                }, scanUrl);
                return computeScore(scanUrl, analysis);
                }
@@ -9101,8 +9208,12 @@ recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', descriptio
                document.querySelectorAll('blockquote').forEach(bq => { const cite=bq.querySelector('cite'); const txt=bq.textContent.trim(); if(txt.length>30&&(cite||txt.length>80))expertQuoteCount++; });
                document.querySelectorAll('cite').forEach(cite => { if(!cite.closest('blockquote')&&cite.textContent.trim().length>3)expertQuoteCount++; });
                ['.review','.testimonial','[class*="review"]','[class*="testimonial"]','[class*="quote"]'].forEach(sel => { try { document.querySelectorAll(sel).forEach(el=>{if(el.textContent.trim().length>40)expertQuoteCount++;}); } catch(e){} });
-               let caseStudyCount = 0; const seen=new Set(); const csKeywords=['case study','challenge','solution','results','roi','recovered','recovery','success rate'];
-               document.querySelectorAll('section, article, div[class*="case"], div[class*="study"], div[class*="card"]').forEach(el => { if(seen.has(el))return; const txt=el.textContent.toLowerCase(); const len=txt.length; if(len>300&&len<6000){ const hasK=csKeywords.some(k=>txt.includes(k)); const hasM=/\d+\s*%|\d+x\s|€[\d,.]+|\$[\d,.]+|\d{1,3}(,\d{3})+/.test(txt); if(hasK&&hasM){caseStudyCount++;seen.add(el);} } });
+               let caseStudyCount = 0; const seen=new Set();
+               const _mRe2=/\d+(\.\d+)?\s*%|\d+(\.\d+)?\s*[x×]\b|\d+(\.\d+)?\s*(times|fold)\b|[€$£]\s?[\d,.]+|\b\d{1,3}(,\d{3})+\b|from\s+[\d.]+%?\s+to\s+[\d.]+%?/i;
+               const _kRe2=/\bcase study\b|\bchallenge\b|\bsolution\b|\bresults?\b|\bbefore\b.{0,40}\bafter\b|\bclient (result|success|story)\b|\broi\b|\brecovered?\b|\brecovery\b|\bgrew\b|\bincrease[d]?\b|\bimprove(d|ment)?\b|\bwithin (a year|\d+ (days|weeks|months))\b/i;
+               document.querySelectorAll('section, article, [class*="case"], [class*="study"], [class*="result"], [class*="story"], [class*="proof"], [class*="success"], [id*="case"], [id*="study"], [id*="result"]').forEach(el => { if(seen.has(el))return; const txt=el.textContent; const len=txt.length; if(len>80&&len<8000&&_kRe2.test(txt)&&_mRe2.test(txt)){caseStudyCount++;seen.add(el);} });
+               document.querySelectorAll('h1,h2,h3,h4').forEach(h=>{ if(!/\bcase study\b|\bclient (story|result)\b|\bsuccess story\b/i.test(h.textContent))return; const _c=h.closest('section, article, [class*="case"], [class*="study"], [class*="result"], [class*="story"]'); if(_c&&seen.has(_c))return; let b='',n=h.nextElementSibling,g=0; while(n&&g<15){if(/^H[1-4]$/.test(n.tagName))break;b+=' '+n.textContent;n=n.nextElementSibling;g++;} if(b.length>100&&_mRe2.test(b)&&!seen.has(h)){caseStudyCount++;seen.add(h);} });
+               if(caseStudyCount===0){ const bh=document.body?document.body.innerHTML:''; const tc=[/\bchallenge\b/i.test(bh),/\bsolution\b/i.test(bh),/\bresults?\b/i.test(bh)].filter(Boolean).length; if(tc>=2&&_mRe2.test(document.body.textContent))caseStudyCount++; }
                const statsPattern = /\d+%|\$[\d,.]+|€[\d,.]+|\d{1,3}(,\d{3})+|\d+x\s/g;
                const statsFound = (cleanText.match(statsPattern) || []).length;
                const first300Words = cleanText.split(/\s+/).slice(0, 300).join(' ');
@@ -18296,7 +18407,7 @@ app.post('/api/content/graaf-scan', verifyEngineAccess, async (req, res) => {
       const externalLinks=Array.from(document.querySelectorAll('a[href]')).filter(a=>{try{const u=new URL(a.href);return u.hostname!==host&&u.protocol.startsWith('http');}catch(e){return false;}}).length;
       const bqCount=(rawHtml.match(/<blockquote/gi)||[]).length; const citeCount=(rawHtml.match(/<cite[\s>]/gi)||[]).length;
       const expertQuoteCount=Math.max(bqCount, citeCount);
-      const caseStudyCount=(bodyText.match(/case study|client result|before.{0,20}after|challenge|solution|results|roi|recovered/g)||[]).length;
+      const _csH=(bodyText.match(/case study|client (story|result)|success story/g)||[]).length;const _csTrip=/\bchallenge\b/.test(bodyText)&&/\bsolution\b/.test(bodyText)&&/\bresults?\b/.test(bodyText);const _csMet=/\d+(\.\d+)?\s*%|\d+(\.\d+)?\s*[x×]|[€$£]\s?[\d,.]+|\b\d{1,3}(,\d{3})+\b/.test(bodyText);let caseStudyCount=_csH;if(caseStudyCount===0&&_csTrip&&_csMet)caseStudyCount=1;
       const statsRegex=/\b\d+(\.\d+)?%|\b\d{4,}|\b\d+x\b|\$[\d,.]+/g; const statsFound=(bodyText.match(statsRegex)||[]).length;
       return {wordCount,h1Text,h1VisibleCount,h1IsGeneric,h1IsTooShort,h2Count,h3Count,listItemCount,avgParagraphLength,metaTitle,metaTitleLength,metaDescription,metaDescriptionLength,hasCanonical,hasMetaViewport,hasArticleSchema,hasFAQPageSchema,hasOpenGraph,hasTwitterCard,hasDirectAnswer,hasTLDR,hasTOC,hasAuthorBio,hasFAQContent,images,imagesWithAlt,internalLinks,externalLinks,expertQuoteCount,caseStudyCount,statsFound};
     }, scanUrl).catch(e => null);
@@ -21843,7 +21954,7 @@ Return ONLY the complete updated HTML. No markdown, no explanation.`;
             const browser2 = browserInstance || await puppeteer.launch({ executablePath: require('puppeteer').executablePath(), args: ['--no-sandbox','--disable-setuid-sandbox','--disable-dev-shm-usage'], headless: true });
             const pg2 = await browser2.newPage();
             await pg2.goto(scanUrl, { waitUntil: 'domcontentloaded', timeout: 20000 });
-            const an2 = await pg2.evaluate((su) => { const text=document.body?document.body.innerText:''; const cleanText=text.replace(/\s+/g,' ').trim(); const wordCount=cleanText.split(/\s+/).filter(w=>w.length>0).length; const rawHtml=document.documentElement.outerHTML; const h1Els=document.querySelectorAll('h1'); let h1Text='',h1VisibleCount=0; h1Els.forEach(el=>{const s=window.getComputedStyle(el);if(s.display!=='none'&&s.visibility!=='hidden'){h1VisibleCount++;if(!h1Text)h1Text=el.textContent.trim();}}); const h2Count=document.querySelectorAll('h2').length; const h3Count=document.querySelectorAll('h3').length; const listItemCount=document.querySelectorAll('li').length; const paragraphs=Array.from(document.querySelectorAll('p')); const avgParagraphLength=paragraphs.length>0?paragraphs.map(p=>p.textContent.trim().split(/\s+/).length).reduce((a,b)=>a+b,0)/paragraphs.length:0; const metaTitle=(document.querySelector('title')||{}).textContent||''; const metaTitleLength=metaTitle.length; const metaDescEl=document.querySelector('meta[name="description"]'); const metaDescriptionLength=metaDescEl?(metaDescEl.getAttribute('content')||'').length:0; const hasCanonical=!!document.querySelector('link[rel="canonical"]'); const hasMetaViewport=!!document.querySelector('meta[name="viewport"]'); const schemaScripts=Array.from(document.querySelectorAll('script[type="application/ld+json"]')).map(s=>{try{return JSON.parse(s.textContent);}catch(e){return null;}}).filter(Boolean); const flatSchemas=schemaScripts.flatMap(s=>Array.isArray(s)?s:(s['@graph']?s['@graph']:[s])); const hasArticleSchema=flatSchemas.some(s=>['Article','NewsArticle','BlogPosting','TechArticle','WebPage'].includes(s['@type'])); const hasFAQPageSchema=flatSchemas.some(s=>s['@type']==='FAQPage'); const hasOpenGraph=!!document.querySelector('meta[property="og:title"]'); const hasTwitterCard=!!document.querySelector('meta[name="twitter:card"]'); const bodyText=cleanText.toLowerCase(); const hasDirectAnswer=/^(a |an |the )?[a-z].{0,120}[.!?]/.test(bodyText.substring(0,300)); const hasTLDR=/tl;?dr|summary|key takeaway|in short|in brief/i.test(bodyText); const hasTOC=/table of contents|jump to|skip to|on this page/i.test(rawHtml.toLowerCase()); const hasAuthorBio=/written by|about the author|meet the author/i.test(rawHtml.toLowerCase()); const hasFAQContent=/frequently asked|faq|common questions/i.test(rawHtml.toLowerCase())||hasFAQPageSchema; const images=document.querySelectorAll('img').length; const imagesWithAlt=document.querySelectorAll('img[alt]').length; let host='';try{host=new URL(su).hostname;}catch(e){} const internalLinks=Array.from(document.querySelectorAll('a[href]')).filter(a=>{try{return new URL(a.href).hostname===host;}catch(e){return false;}}).length; const externalLinks=Array.from(document.querySelectorAll('a[href]')).filter(a=>{try{const u=new URL(a.href);return u.hostname!==host&&u.protocol.startsWith('http');}catch(e){return false;}}).length; const bqCount=(rawHtml.match(/<blockquote/gi)||[]).length; const citeCount=(rawHtml.match(/<cite[\s>]/gi)||[]).length; const expertQuoteCount=Math.max(bqCount,citeCount); const caseStudyCount=(bodyText.match(/case study|client result|before.{0,20}after|challenge|solution|results|roi|recovered/g)||[]).length; const statsRegex=/\d+(\.\d+)?%|\d{4,}|\d+x|\$[\d,.]+/g; const statsFound=(bodyText.match(statsRegex)||[]).length; return {wordCount,h1Text,h1VisibleCount,h1IsGeneric:false,h1IsTooShort:h1Text.length>0&&h1Text.length<10,h2Count,h3Count,listItemCount,avgParagraphLength,metaTitle,metaTitleLength,metaDescriptionLength,hasCanonical,hasMetaViewport,hasArticleSchema,hasFAQPageSchema,hasOpenGraph,hasTwitterCard,hasDirectAnswer,hasTLDR,hasTOC,hasAuthorBio,hasFAQContent,images,imagesWithAlt,internalLinks,externalLinks,expertQuoteCount,caseStudyCount,statsFound}; }, scanUrl).catch(()=>null);
+            const an2 = await pg2.evaluate((su) => { const text=document.body?document.body.innerText:''; const cleanText=text.replace(/\s+/g,' ').trim(); const wordCount=cleanText.split(/\s+/).filter(w=>w.length>0).length; const rawHtml=document.documentElement.outerHTML; const h1Els=document.querySelectorAll('h1'); let h1Text='',h1VisibleCount=0; h1Els.forEach(el=>{const s=window.getComputedStyle(el);if(s.display!=='none'&&s.visibility!=='hidden'){h1VisibleCount++;if(!h1Text)h1Text=el.textContent.trim();}}); const h2Count=document.querySelectorAll('h2').length; const h3Count=document.querySelectorAll('h3').length; const listItemCount=document.querySelectorAll('li').length; const paragraphs=Array.from(document.querySelectorAll('p')); const avgParagraphLength=paragraphs.length>0?paragraphs.map(p=>p.textContent.trim().split(/\s+/).length).reduce((a,b)=>a+b,0)/paragraphs.length:0; const metaTitle=(document.querySelector('title')||{}).textContent||''; const metaTitleLength=metaTitle.length; const metaDescEl=document.querySelector('meta[name="description"]'); const metaDescriptionLength=metaDescEl?(metaDescEl.getAttribute('content')||'').length:0; const hasCanonical=!!document.querySelector('link[rel="canonical"]'); const hasMetaViewport=!!document.querySelector('meta[name="viewport"]'); const schemaScripts=Array.from(document.querySelectorAll('script[type="application/ld+json"]')).map(s=>{try{return JSON.parse(s.textContent);}catch(e){return null;}}).filter(Boolean); const flatSchemas=schemaScripts.flatMap(s=>Array.isArray(s)?s:(s['@graph']?s['@graph']:[s])); const hasArticleSchema=flatSchemas.some(s=>['Article','NewsArticle','BlogPosting','TechArticle','WebPage'].includes(s['@type'])); const hasFAQPageSchema=flatSchemas.some(s=>s['@type']==='FAQPage'); const hasOpenGraph=!!document.querySelector('meta[property="og:title"]'); const hasTwitterCard=!!document.querySelector('meta[name="twitter:card"]'); const bodyText=cleanText.toLowerCase(); const hasDirectAnswer=/^(a |an |the )?[a-z].{0,120}[.!?]/.test(bodyText.substring(0,300)); const hasTLDR=/tl;?dr|summary|key takeaway|in short|in brief/i.test(bodyText); const hasTOC=/table of contents|jump to|skip to|on this page/i.test(rawHtml.toLowerCase()); const hasAuthorBio=/written by|about the author|meet the author/i.test(rawHtml.toLowerCase()); const hasFAQContent=/frequently asked|faq|common questions/i.test(rawHtml.toLowerCase())||hasFAQPageSchema; const images=document.querySelectorAll('img').length; const imagesWithAlt=document.querySelectorAll('img[alt]').length; let host='';try{host=new URL(su).hostname;}catch(e){} const internalLinks=Array.from(document.querySelectorAll('a[href]')).filter(a=>{try{return new URL(a.href).hostname===host;}catch(e){return false;}}).length; const externalLinks=Array.from(document.querySelectorAll('a[href]')).filter(a=>{try{const u=new URL(a.href);return u.hostname!==host&&u.protocol.startsWith('http');}catch(e){return false;}}).length; const bqCount=(rawHtml.match(/<blockquote/gi)||[]).length; const citeCount=(rawHtml.match(/<cite[\s>]/gi)||[]).length; const expertQuoteCount=Math.max(bqCount,citeCount); const _csH=(bodyText.match(/case study|client (story|result)|success story/g)||[]).length;const _csTrip=/\bchallenge\b/.test(bodyText)&&/\bsolution\b/.test(bodyText)&&/\bresults?\b/.test(bodyText);const _csMet=/\d+(\.\d+)?\s*%|\d+(\.\d+)?\s*[x×]|[€$£]\s?[\d,.]+|\b\d{1,3}(,\d{3})+\b/.test(bodyText);let caseStudyCount=_csH;if(caseStudyCount===0&&_csTrip&&_csMet)caseStudyCount=1; const statsRegex=/\d+(\.\d+)?%|\d{4,}|\d+x|\$[\d,.]+/g; const statsFound=(bodyText.match(statsRegex)||[]).length; return {wordCount,h1Text,h1VisibleCount,h1IsGeneric:false,h1IsTooShort:h1Text.length>0&&h1Text.length<10,h2Count,h3Count,listItemCount,avgParagraphLength,metaTitle,metaTitleLength,metaDescriptionLength,hasCanonical,hasMetaViewport,hasArticleSchema,hasFAQPageSchema,hasOpenGraph,hasTwitterCard,hasDirectAnswer,hasTLDR,hasTOC,hasAuthorBio,hasFAQContent,images,imagesWithAlt,internalLinks,externalLinks,expertQuoteCount,caseStudyCount,statsFound}; }, scanUrl).catch(()=>null);
             await pg2.close();
             _graafTempSlots.delete(token);
             if (an2) {
@@ -22753,7 +22864,7 @@ Return ONLY the complete updated HTML. No markdown.`;
             const browser3 = browserInstance || await puppeteer.launch({ executablePath: require('puppeteer').executablePath(), args: ['--no-sandbox','--disable-setuid-sandbox','--disable-dev-shm-usage'], headless: true });
             const pg3 = await browser3.newPage();
             await pg3.goto(scanUrl, { waitUntil: 'domcontentloaded', timeout: 20000 });
-            const an3 = await pg3.evaluate((su) => { const text=document.body?document.body.innerText:''; const cleanText=text.replace(/\s+/g,' ').trim(); const wordCount=cleanText.split(/\s+/).filter(w=>w.length>0).length; const rawHtml=document.documentElement.outerHTML; const h1Els=document.querySelectorAll('h1'); let h1Text='',h1VisibleCount=0; h1Els.forEach(el=>{const s=window.getComputedStyle(el);if(s.display!=='none'){h1VisibleCount++;if(!h1Text)h1Text=el.textContent.trim();}}); const h2Count=document.querySelectorAll('h2').length; const h3Count=document.querySelectorAll('h3').length; const listItemCount=document.querySelectorAll('li').length; const paragraphs=Array.from(document.querySelectorAll('p')); const avgParagraphLength=paragraphs.length>0?paragraphs.map(p=>p.textContent.trim().split(/\s+/).length).reduce((a,b)=>a+b,0)/paragraphs.length:0; const metaTitle=(document.querySelector('title')||{}).textContent||''; const metaTitleLength=metaTitle.length; const metaDescriptionLength=(document.querySelector('meta[name="description"]')?.getAttribute('content')||'').length; const hasCanonical=!!document.querySelector('link[rel="canonical"]'); const hasMetaViewport=!!document.querySelector('meta[name="viewport"]'); const schemaScripts=Array.from(document.querySelectorAll('script[type="application/ld+json"]')).map(s=>{try{return JSON.parse(s.textContent);}catch(e){return null;}}).filter(Boolean); const flatSchemas=schemaScripts.flatMap(s=>Array.isArray(s)?s:(s['@graph']?s['@graph']:[s])); const hasArticleSchema=flatSchemas.some(s=>['Article','NewsArticle','BlogPosting','TechArticle','WebPage'].includes(s['@type'])); const hasFAQPageSchema=flatSchemas.some(s=>s['@type']==='FAQPage'); const hasOpenGraph=!!document.querySelector('meta[property="og:title"]'); const hasTwitterCard=!!document.querySelector('meta[name="twitter:card"]'); const bodyText=cleanText.toLowerCase(); const hasDirectAnswer=/^(a |an |the )?[a-z].{0,120}[.!?]/.test(bodyText.substring(0,300)); const hasTLDR=/tl;?dr|summary|key takeaway|in short|in brief/i.test(bodyText); const hasTOC=/table of contents|jump to|skip to|on this page/i.test(rawHtml.toLowerCase()); const hasAuthorBio=/written by|about the author|meet the author/i.test(rawHtml.toLowerCase()); const hasFAQContent=/frequently asked|faq|common questions/i.test(rawHtml.toLowerCase())||hasFAQPageSchema; const images=document.querySelectorAll('img').length; const imagesWithAlt=document.querySelectorAll('img[alt]').length; const bqCount=(rawHtml.match(/<blockquote/gi)||[]).length; const citeCount=(rawHtml.match(/<cite[\s>]/gi)||[]).length; const expertQuoteCount=Math.max(bqCount,citeCount); const caseStudyCount=(bodyText.match(/case study|client result|challenge|solution|results|roi/g)||[]).length; const statsRegex=/\d+(\.\d+)?%|\d{4,}|\d+x|\$[\d,.]+/g; const statsFound=(bodyText.match(statsRegex)||[]).length; return {wordCount,h1Text,h1VisibleCount,h1IsGeneric:false,h1IsTooShort:h1Text.length>0&&h1Text.length<10,h2Count,h3Count,listItemCount,avgParagraphLength,metaTitle,metaTitleLength,metaDescriptionLength,hasCanonical,hasMetaViewport,hasArticleSchema,hasFAQPageSchema,hasOpenGraph,hasTwitterCard,hasDirectAnswer,hasTLDR,hasTOC,hasAuthorBio,hasFAQContent,images,imagesWithAlt,internalLinks:0,externalLinks:0,expertQuoteCount,caseStudyCount,statsFound}; }, scanUrl).catch(()=>null);
+            const an3 = await pg3.evaluate((su) => { const text=document.body?document.body.innerText:''; const cleanText=text.replace(/\s+/g,' ').trim(); const wordCount=cleanText.split(/\s+/).filter(w=>w.length>0).length; const rawHtml=document.documentElement.outerHTML; const h1Els=document.querySelectorAll('h1'); let h1Text='',h1VisibleCount=0; h1Els.forEach(el=>{const s=window.getComputedStyle(el);if(s.display!=='none'){h1VisibleCount++;if(!h1Text)h1Text=el.textContent.trim();}}); const h2Count=document.querySelectorAll('h2').length; const h3Count=document.querySelectorAll('h3').length; const listItemCount=document.querySelectorAll('li').length; const paragraphs=Array.from(document.querySelectorAll('p')); const avgParagraphLength=paragraphs.length>0?paragraphs.map(p=>p.textContent.trim().split(/\s+/).length).reduce((a,b)=>a+b,0)/paragraphs.length:0; const metaTitle=(document.querySelector('title')||{}).textContent||''; const metaTitleLength=metaTitle.length; const metaDescriptionLength=(document.querySelector('meta[name="description"]')?.getAttribute('content')||'').length; const hasCanonical=!!document.querySelector('link[rel="canonical"]'); const hasMetaViewport=!!document.querySelector('meta[name="viewport"]'); const schemaScripts=Array.from(document.querySelectorAll('script[type="application/ld+json"]')).map(s=>{try{return JSON.parse(s.textContent);}catch(e){return null;}}).filter(Boolean); const flatSchemas=schemaScripts.flatMap(s=>Array.isArray(s)?s:(s['@graph']?s['@graph']:[s])); const hasArticleSchema=flatSchemas.some(s=>['Article','NewsArticle','BlogPosting','TechArticle','WebPage'].includes(s['@type'])); const hasFAQPageSchema=flatSchemas.some(s=>s['@type']==='FAQPage'); const hasOpenGraph=!!document.querySelector('meta[property="og:title"]'); const hasTwitterCard=!!document.querySelector('meta[name="twitter:card"]'); const bodyText=cleanText.toLowerCase(); const hasDirectAnswer=/^(a |an |the )?[a-z].{0,120}[.!?]/.test(bodyText.substring(0,300)); const hasTLDR=/tl;?dr|summary|key takeaway|in short|in brief/i.test(bodyText); const hasTOC=/table of contents|jump to|skip to|on this page/i.test(rawHtml.toLowerCase()); const hasAuthorBio=/written by|about the author|meet the author/i.test(rawHtml.toLowerCase()); const hasFAQContent=/frequently asked|faq|common questions/i.test(rawHtml.toLowerCase())||hasFAQPageSchema; const images=document.querySelectorAll('img').length; const imagesWithAlt=document.querySelectorAll('img[alt]').length; const bqCount=(rawHtml.match(/<blockquote/gi)||[]).length; const citeCount=(rawHtml.match(/<cite[\s>]/gi)||[]).length; const expertQuoteCount=Math.max(bqCount,citeCount); const _csH=(bodyText.match(/case study|client (story|result)|success story/g)||[]).length;const _csTrip=/\bchallenge\b/.test(bodyText)&&/\bsolution\b/.test(bodyText)&&/\bresults?\b/.test(bodyText);const _csMet=/\d+(\.\d+)?\s*%|\d+(\.\d+)?\s*[x×]|[€$£]\s?[\d,.]+|\b\d{1,3}(,\d{3})+\b/.test(bodyText);let caseStudyCount=_csH;if(caseStudyCount===0&&_csTrip&&_csMet)caseStudyCount=1; const statsRegex=/\d+(\.\d+)?%|\d{4,}|\d+x|\$[\d,.]+/g; const statsFound=(bodyText.match(statsRegex)||[]).length; return {wordCount,h1Text,h1VisibleCount,h1IsGeneric:false,h1IsTooShort:h1Text.length>0&&h1Text.length<10,h2Count,h3Count,listItemCount,avgParagraphLength,metaTitle,metaTitleLength,metaDescriptionLength,hasCanonical,hasMetaViewport,hasArticleSchema,hasFAQPageSchema,hasOpenGraph,hasTwitterCard,hasDirectAnswer,hasTLDR,hasTOC,hasAuthorBio,hasFAQContent,images,imagesWithAlt,internalLinks:0,externalLinks:0,expertQuoteCount,caseStudyCount,statsFound}; }, scanUrl).catch(()=>null);
             await pg3.close();
             _graafTempSlots.delete(token);
             if (an3) {
@@ -40914,7 +41025,7 @@ function graafAnalyzeHtml(html, pageUrl) {
   const bqCount = (rawHtml.match(/<blockquote/gi)||[]).length;
   const citeCount = (rawHtml.match(/<cite[\s>]/gi)||[]).length;
   const expertQuoteCount = Math.max(bqCount, citeCount);
-  const caseStudyCount = (lower.match(/case study|client result|before.{0,20}after|challenge|solution|results|roi|recovered/g)||[]).length;
+  const _csH2=(lower.match(/case study|client (story|result)|success story/g)||[]).length;const _csTrip2=/\bchallenge\b/.test(lower)&&/\bsolution\b/.test(lower)&&/\bresults?\b/.test(lower);const _csMet2=/\d+(\.\d+)?\s*%|\d+(\.\d+)?\s*[x×]|[€$£]\s?[\d,.]+|\b\d{1,3}(,\d{3})+\b/.test(lower);let caseStudyCount=_csH2;if(caseStudyCount===0&&_csTrip2&&_csMet2)caseStudyCount=1;
 
   // Stats
   const statsRegex = /\b\d+(\.\d+)?%|\b\d{4,}|\b\d+x\b|\$[\d,.]+/g;
