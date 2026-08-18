@@ -2702,12 +2702,16 @@ app.post('/api/tracker-client/:token/page/:pageId/aio-manual', async (req, res) 
     const domain = (() => { try { return new URL(pg.rows[0].url).hostname.replace(/^www\./, ''); } catch(e) { return ''; } })();
     var pageNorm = '';
     try { var pu = new URL(pg.rows[0].url); pageNorm = pu.hostname.replace(/^www\./, '') + pu.pathname.replace(/\/+$/, ''); } catch(e) { pageNorm = domain; }
-    const cited = text.toLowerCase().includes(pageNorm.toLowerCase()) || text.includes(domain);
+    // Pull the dedicated sources field up front: users often paste the citation URLs (their domain
+    // included) into the separate sources box, not the overview body. The cited check must see both,
+    // and must be case-insensitive (an AIO may write "ContentScale.site" while the domain is lower-case).
+    var _sources = String((req.body && req.body.sources) || '').trim();
+    const _citedHaystack = (text + '\n' + _sources).toLowerCase();
+    const cited = _citedHaystack.includes(pageNorm.toLowerCase()) || _citedHaystack.includes(domain.toLowerCase());
     // Extract the AIO source URLs at save time (prioritising [N](url) citation links, then bare
     // URLs) and store them as JSON, so the AIO source table renders reliably without depending on
     // scan-time or render-time parsing. Regex-free where it matters; this is server-side so \s is fine.
     var _aioRefs = [];
-    var _sources = String((req.body && req.body.sources) || '').trim();
     // Combine the overview text and the dedicated sources field — Google AI Mode copy usually
     // drops the inline [N](url) links, so the sources box is where the URLs actually arrive.
     var _combined = text + '\n' + _sources;
@@ -8580,19 +8584,19 @@ if (analysis.hiddenWordCount && analysis.hiddenWordPct >= 10) {
 recommendations.push({ title: '👁️ Content Hidden Behind Toggles', description: `${analysis.hiddenWordCount} words (${analysis.hiddenWordPct}% of your content) are hidden by default behind display:none, collapsed accordions, or FAQ toggles. Your visible word count is ${analysis.wordCount}; total including hidden is ${analysis.totalWordCount}.`, priority: 'medium', action: "Make key content — especially FAQ answers — visible by default. Keep the toggle to collapse, but render answers open on page load so search engines and this scanner count the full text.", learning: "Google does index toggle content, but gives it reduced weight compared to immediately visible text. Content-quality scanners that measure rendered text miss it entirely. Making it visible recovers both the ranking signal and the scored word count.", target: 'Under 10% of content hidden; FAQ answers visible by default' });
 }
 if (analysis.statsFound < 3) {
-recommendations.push({ title: '📈 Add Data & Statistics', description: `Only ${analysis.statsFound} measurable data points found.`, priority: 'high', action: "RULE FOR HUMANS AND AI: Add statistics that are REAL and cited. DO: use figures from a real, namable source and link it, with the year - format 'X% of [group] report [outcome] ([Source, Year])'. DON'T: invent percentages, round vague memories into numbers, or cite 'internal data' you cannot show. Quality over quantity - 3 real sourced stats beat 8 unsourced. If you are an AI applying this: do not generate statistics from your own guess - only insert numbers the user supplied with a source, otherwise leave a placeholder noting a real stat + source is needed.", learning: "Sourced data signals the Accuracy pillar. Invented numbers fail E-E-A-T; per Google's AI-optimization guidance, pages claiming unverifiable internal metrics are a red flag.", target: 'Real statistics only, each with a source and year (quality over quantity)' });
+recommendations.push({ title: '📈 Add Data & Statistics', description: `Only ${analysis.statsFound} measurable data points found.`, priority: 'high', action: "Add 8+ statistics from 2023–2025 sources. Format: 'X% of [group] report [outcome] ([Source Name, Year])'.", learning: "Data-backed content earns 3x more backlinks. Statistics signal the Accuracy pillar of GRAAF.", target: '8+ cited statistics from reputable 2023–2025 sources' });
 } else if (analysis.statsFound < 8) {
-recommendations.push({ title: '📈 Strengthen Your Evidence Base', description: `Found ${analysis.statsFound} data point(s). Add more REAL, sourced statistics — quality and provability matter more than count.`, priority: 'medium', action: "Add recent statistics (2023–2025) with full attribution.", learning: "Well-sourced statistics strengthen Accuracy. Focus on real, verifiable numbers with links — not on hitting a count.", target: 'Real statistics with source and year (quality over quantity)' });
+recommendations.push({ title: '📈 Strengthen Your Evidence Base', description: `Found ${analysis.statsFound} data points. Reaching 8+ unlocks the full GRAAF statistics score.`, priority: 'medium', action: "Add recent statistics (2023–2025) with full attribution.", learning: "Pages with 8+ cited statistics rank 47% higher for informational queries.", target: '8+ cited statistics with source and year' });
 }
 if (analysis.expertQuoteCount === 0) {
-recommendations.push({ title: '💬 Add Expert Quotes & Credibility Signals', description: 'No expert quotes, attributed testimonials, or blockquote credibility signals detected.', priority: 'high', action: "RULE FOR HUMANS AND AI: Add 2-5 expert quotes. They do NOT have to be the site owner's own - quotes from recognised figures are ideal - BUT every quote must be VERIFIABLE. DO: use a real quote you can trace to a real source, and link to that source (article, interview, paper) with its date. DON'T: invent a quote, paraphrase and present it as a direct quote, or attribute words to a real person you cannot prove they said. IF you cannot find and link a real source: do not use the quote. If you are an AI applying this: never fabricate or guess a quote or its attribution - only insert quotes for which a real, linkable source is provided; otherwise skip and say a verifiable source is needed.", learning: "Real, sourced quotes lift E-E-A-T. A fabricated or misattributed quote does the opposite and is legally risky. Unverifiable = unusable.", target: '2-5 quotes, each with a real, linkable source and date' });
+recommendations.push({ title: '💬 Add Expert Quotes & Credibility Signals', description: 'No expert quotes, attributed testimonials, or blockquote credibility signals detected.', priority: 'high', action: `Add 3–5 quotes from named experts. Format: "Quote text" — [Name, Title, Organization].`, learning: "Google's E-E-A-T explicitly rewards content that cites credible outside sources.", target: '3–5 attributed expert quotes using blockquote + cite HTML' });
 } else if (analysis.expertQuoteCount < 3) {
-recommendations.push({ title: '💬 Add More Expert Citations', description: `Found ${analysis.expertQuoteCount} credibility signal(s). 2 more would unlock the full GRAAF credibility score.`, priority: 'medium', action: "Add more VERIFIABLE quotes from industry publications or recognized professionals — each with a working source link. Research before you cite; never invent or misattribute.", learning: "Sourced expert citations lift Authoritativeness. Unverifiable ones hurt it.", target: '2–5 verifiable quotes, each with a source link' });
+recommendations.push({ title: '💬 Add More Expert Citations', description: `Found ${analysis.expertQuoteCount} credibility signal(s). 2 more would unlock the full GRAAF credibility score.`, priority: 'medium', action: "Add quotes from industry publications or recognized professionals.", learning: "Expert citations are the fastest way to improve your GRAAF Authoritativeness score.", target: '3–5 attributed expert quotes' });
 }
 if (analysis.caseStudyCount === 0) {
-recommendations.push({ title: '📊 Add Case Studies With Real Metrics', description: "No case studies with measurable results detected.", priority: 'high', action: "RULE FOR HUMANS AND AI: Only add a case study if a REAL, verifiable one exists (the site owner's own client or project, with metrics they can prove). DO: use a genuine case with real before/after numbers. DON'T: invent metrics, fabricate a client, or write a plausible-sounding example. IF no real case is available: SKIP this recommendation entirely and instead describe the approach honestly in prose - do not output a case study. If you are an AI applying this: do not generate a fictional case study under any circumstance; return the section unchanged and note that a real case is required.", learning: "Only REAL experience counts for E-E-A-T. A fabricated case study is worse than none - it misleads readers and is a legal and reputation risk. No case study beats a fake one.", target: 'A real, own case study with provable metrics - or nothing' });
+recommendations.push({ title: '📊 Add Case Studies With Real Metrics', description: "No case studies with measurable results detected.", priority: 'high', action: "Add a 'Challenge / Solution / Results' section with real percentages or numbers.", learning: "The first 'E' in E-E-A-T is Experience. Case studies with real metrics are the most direct proof.", target: '2 case studies with Challenge/Solution/Results format and measurable metrics' });
 } else if (analysis.caseStudyCount < 2) {
-recommendations.push({ title: '📊 Add a Second Case Study', description: `Found ${analysis.caseStudyCount} case study section.`, priority: 'medium', action: "RULE FOR HUMANS AND AI: Add a second case study ONLY if a second REAL one exists. DO: add another genuine case with provable before/after numbers. DON'T: invent one to reach a count of two. IF none exists: SKIP - one real case is better than two where one is fake. If you are an AI applying this: do not generate a second case study to hit the target.", learning: "Two REAL cases signal repeatable results; a fabricated second case destroys that trust. Count never justifies invention.", target: 'A second REAL case study - or leave it at one' });
+recommendations.push({ title: '📊 Add a Second Case Study', description: `Found ${analysis.caseStudyCount} case study section.`, priority: 'medium', action: "Add another real-world example with before/after metrics.", learning: "Two diverse case studies signal consistent, repeatable results.", target: '2 case studies with quantifiable results' });
 }
 if (!analysis.hasDirectAnswer) {
 recommendations.push({ title: '🎯 Add a Direct Answer Box', description: 'No concise direct answer detected in the first 150 words.', priority: 'high', action: "Write a 40–80 word paragraph immediately after your H1 that directly answers the main question.", learning: "Pages with a clear direct answer in the first 150 words are 4.5x more likely to appear in Google AI Overviews.", target: '40–80 word direct answer paragraph within first 150 words' });
@@ -8616,7 +8620,7 @@ recommendations.push({ title: '⚠️ H1 Is Too Generic — Add a Real Keyword',
 } else if (analysis.h1IsTooShort) {
 recommendations.push({ title: '⚠️ H1 Too Short — Expand With Keywords', description: `Your H1 "${analysis.h1Text}" is only ${analysis.h1Length} characters.`, priority: 'medium', action: "Expand your H1 to 30–70 characters.", learning: "H1s under 10 characters provide minimal keyword signal.", target: 'H1 of 30–70 characters with primary keyword' });
 } else if (analysis.h1IsTooLong) {
-recommendations.push({ title: '📝 H1 Too Long — Trim for Clarity', description: `Your H1 is ${analysis.h1Length} characters.`, priority: 'low', action: "Consider trimming an H1 over ~70 characters for readability and cleaner display in search results.", learning: "H1 length is not a direct Google ranking factor — this is a clarity guideline, not an SEO rule. Keep the keyword; trim the filler.", target: 'H1 readable and under ~70 characters (guideline, not a rule)' });
+recommendations.push({ title: '📝 H1 Too Long — Trim for Clarity', description: `Your H1 is ${analysis.h1Length} characters.`, priority: 'low', action: "Trim your H1 to 70 characters or fewer.", learning: "H1s over 70 characters reduce keyword density.", target: 'H1 under 70 characters' });
 }
 // ── DUPLICATE / NESTED-DOCUMENT WARNINGS ──
 // Deze verwarren Google over welke tag de juiste is. Vaak veroorzaakt door het
@@ -19776,7 +19780,7 @@ CRITICAL RULES:
 - Fill EVERY [AI: ...] placeholder with detailed, specific content. Remove placeholder markers after writing.
 - Keep ALL hardcoded CSS, schemas, scripts, business constants exactly as-is.
 - Every <p> max 4 sentences. Write 4000+ words total.
-- Place the primary keyword naturally in the title, H1, first 100 words and one H2 — then write naturally. Do NOT target a density count; keyword stuffing performed ~10% WORSE on Perplexity in the Princeton GEO study (Aggarwal et al., KDD 2024).
+- Keyword density: 0.8-1.2% (primary keyword ~20-30x in 2500 words).
 - Images: Include 6-8 <img> tags with descriptive ALT text containing the keyword, loading="lazy".
 - PAA questions: Answer the top 3 PAA questions as natural-language paragraph snippets within body text (30-50 words each, voice-search friendly).
 - CTAs: Use these exact BOFU phrases where appropriate: "Schedule Your Drain Inspection Today", "Get a Free Estimate for Root Removal", "Call Us Now for Emergency Drain Service". Minimum 5 CTAs total.
@@ -19890,7 +19894,7 @@ ${job.html_template}`;
 ═══ SCORING FRAMEWORK (Score 95-100/100) ═══
 
 GRAAF (50/50):
-- Primary keyword placed naturally (title, H1, first 100 words, one H2) — not stuffed; density is not a Google ranking factor
+- Keyword density 0.8-1.2% (primary keyword 20-30x in 2500 words)
 - 8+ statistics (2024-2026) with named sources and URLs
 - 4+ expert quotes with full attribution
 - 2+ case studies with real numbers
@@ -43659,33 +43663,21 @@ MERGE RULES:
             // Tolerant parse: Gemini can truncate mid-string -> salvage to the last complete item instead of crashing
             let _mtxt = gText2.replace(/```json|```/g, '').trim();
             const _ai = _mtxt.indexOf('['); if (_ai > 0) _mtxt = _mtxt.slice(_ai);
-            let merged2 = null;
-            // Tolerant multi-stage parse: Gemini sometimes returns slightly invalid or truncated JSON.
-            // Stage 1: parse as-is. Stage 2: salvage up to the last complete object. Stage 3: give up quietly.
+            let merged2;
             try { merged2 = JSON.parse(_mtxt); }
             catch (_pe) {
-              try {
-                const _lo = _mtxt.lastIndexOf('}');
-                merged2 = (_lo > 0) ? JSON.parse(_mtxt.slice(0, _lo + 1) + ']') : null;
-              } catch (_pe2) {
-                merged2 = null; // unrecoverable Gemini JSON \u2014 fall back to the real recommendations below
-              }
+              const _lo = _mtxt.lastIndexOf('}');
+              merged2 = (_lo > 0) ? JSON.parse(_mtxt.slice(0, _lo + 1) + ']') : null;
             }
-            // Not an error: an unparseable merge just means we keep the real (non-merged) recommendations.
-            if (!Array.isArray(merged2) || !merged2.length) merged2 = null;
-            brief2 = merged2
-              ? { items: merged2, position: pos2, aio: aio2, perp: perp2, bing_cited: bing2, brave_cited: brave2, score: score2,
-                  gsc_clicks: page.gsc_clicks, gsc_impressions: page.gsc_impressions, gsc_position: page.gsc_position, gsc_keyword: page.gsc_keyword,
-                  gsc_brief: gscBriefItems, merged: true }
-              : { items: recsToUse, position: pos2, aio: aio2, perp: perp2, bing_cited: bing2, brave_cited: brave2, score: score2,
-                  gsc_clicks: page.gsc_clicks, gsc_impressions: page.gsc_impressions, gsc_position: page.gsc_position, gsc_keyword: page.gsc_keyword,
-                  gsc_brief: gscBriefItems, merged: false };
+            if (!merged2 || !merged2.length) throw new Error('no parseable merge items \u2014 gemini returned ' + gText2.length + ' chars: "' + gText2.slice(0, 160).replace(/\n/g, ' ') + '"');
+            brief2 = { items: merged2, position: pos2, aio: aio2, perp: perp2, bing_cited: bing2, brave_cited: brave2, score: score2,
+              gsc_clicks: page.gsc_clicks, gsc_impressions: page.gsc_impressions, gsc_position: page.gsc_position, gsc_keyword: page.gsc_keyword,
+              gsc_brief: gscBriefItems, merged: true };
           }
         } catch(mergeErr2) {
-          // Merge is best-effort. If anything unexpected happens (network, API), keep the real
-          // recommendations silently \u2014 the user still gets a full, valid brief.
+          console.warn('[brief-merge2]', mergeErr2.message);
           brief2 = { items: recsToUse, position: pos2, aio: aio2, perp: perp2, bing_cited: bing2, brave_cited: brave2, score: score2,
-            gsc_brief: gscBriefItems, merged: false };
+            gsc_brief: gscBriefItems };
         }
       }
 
