@@ -14289,7 +14289,7 @@ function runMetaCheck() {
       + '<span style="flex-shrink:0;font-size:13px;">'+icon+'</span>'
       + '<div style="flex:1;">'
       + '<div style="font-weight:700;font-size:13px;color:var(--ink);margin-bottom:2px;">'+r.label+'</div>'
-      + '<div style="font-family:\\'IBM Plex Mono\\',monospace;font-size:10px;color:var(--muted);word-break:break-all;">'+r.value+'</div>'
+      + '<div style="font-family:\'IBM Plex Mono\\',monospace;font-size:10px;color:var(--muted);word-break:break-all;">'+r.value+'</div>'
       + (r.fix ? '<div style="font-size:12px;color:var(--gold);margin-top:4px;">→ '+r.fix+'</div>' : '')
       + (r.note ? '<div style="font-size:11px;color:var(--green);margin-top:2px;">'+r.note+'</div>' : '')
       + '</div></div></div>';
@@ -14468,7 +14468,7 @@ function showCannibalization() {
   });
   const canns=Object.entries(groups).filter(([,pages])=>pages.length>=2).sort((a,b)=>b[1].length-a[1].length).slice(0,15);
   if (!canns.length) {
-    body.innerHTML='<p style="color:var(--green);font-family:\\'IBM Plex Mono\\',monospace;font-size:11px;">✓ No obvious cannibalization detected.</p>';
+    body.innerHTML='<p style="color:var(--green);font-family:\'IBM Plex Mono\\',monospace;font-size:11px;">✓ No obvious cannibalization detected.</p>';
     return;
   }
   body.innerHTML=canns.map(([seg,pages])=>\`
@@ -24603,7 +24603,7 @@ function showCannibalization() {
   });
   const canns=Object.entries(groups).filter(([,pages])=>pages.length>=2).sort((a,b)=>b[1].length-a[1].length).slice(0,15);
   if (!canns.length) {
-    body.innerHTML='<p style="color:var(--green);font-family:\\'IBM Plex Mono\\',monospace;font-size:11px;">✓ No obvious cannibalization detected.</p>';
+    body.innerHTML='<p style="color:var(--green);font-family:\'IBM Plex Mono\\',monospace;font-size:11px;">✓ No obvious cannibalization detected.</p>';
     return;
   }
   body.innerHTML=canns.map(([seg,pages])=>\`
@@ -25763,7 +25763,7 @@ img,table,iframe{max-width:100%;}
 (function(){ if(localStorage.getItem('admin_id')){ var el=document.getElementById('wfAdminLink'); if(el) el.style.display=''; } })();
 </script>
 
-<div id="syncStatus" style="font-family:\\'IBM Plex Mono\\',monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);text-align:right;margin-bottom:6px;"></div>
+<div id="syncStatus" style="font-family:\'IBM Plex Mono\\',monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);text-align:right;margin-bottom:6px;"></div>
 <div class="project-bar">
   <div class="pf"><label>Client / Project</label><input id="pClient" placeholder="ContentScale.site" oninput="save()"></div>
   <div class="pf" style="flex:2"><label>Website</label><input id="pSite" placeholder="https://contentscale.site" oninput="save()"></div>
@@ -25795,12 +25795,12 @@ img,table,iframe{max-width:100%;}
 
   <!-- Sitemap fetch -->
   <div style="margin-top:12px;padding:14px;background:rgba(96,165,250,.05);border:1px solid rgba(96,165,250,.2);border-radius:8px;">
-    <div style="font-family:\\'IBM Plex Mono\\',monospace;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--blue);margin-bottom:8px;">🗺 Import Sitemap</div>
+    <div style="font-family:\'IBM Plex Mono\\',monospace;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--blue);margin-bottom:8px;">🗺 Import Sitemap</div>
     <div class="add-row" style="flex-wrap:wrap;">
       <input id="sitemapUrl" placeholder="https://contentscale.site/sitemap.xml" style="flex:1;min-width:220px;background:var(--bg);border:1px solid var(--border);border-radius:5px;padding:9px 11px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink);outline:none;" onkeydown="if(event.key==='Enter')fetchSitemap()">
       <button class="btn btn-blue" onclick="fetchSitemap()" id="sitemapBtn">↓ Fetch Sitemap</button>
     </div>
-    <div id="sitemapStatus" style="font-family:\\'IBM Plex Mono\\',monospace;font-size:10px;color:var(--muted);margin-top:6px;"></div>
+    <div id="sitemapStatus" style="font-family:\'IBM Plex Mono\\',monospace;font-size:10px;color:var(--muted);margin-top:6px;"></div>
 
     <!-- Sitemap preview + filter -->
     <div id="sitemapPreview" style="display:none;margin-top:12px;">
@@ -25810,7 +25810,7 @@ img,table,iframe{max-width:100%;}
         <button class="btn btn-gold btn-sm" onclick="filterSitemapByGSC()" title="Show only sitemap URLs that are also in your GSC data">🔗 Filter by GSC</button>
         <button class="btn btn-muted btn-sm" onclick="selectAllSitemap()">✓ All</button>
         <button class="btn btn-muted btn-sm" onclick="deselectAllSitemap()">✕ None</button>
-        <span id="sitemapSelCount" style="font-family:\\'IBM Plex Mono\\',monospace;font-size:10px;color:var(--muted);"></span>
+        <span id="sitemapSelCount" style="font-family:\'IBM Plex Mono\\',monospace;font-size:10px;color:var(--muted);"></span>
       </div>
       <div id="sitemapUrlList" style="max-height:280px;overflow-y:auto;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:6px;"></div>
       <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;">
@@ -25824,11 +25824,11 @@ img,table,iframe{max-width:100%;}
 
   <!-- Bulk paste -->
   <div style="margin-top:10px;">
-    <div style="font-family:\\'IBM Plex Mono\\',monospace;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--sub);margin-bottom:6px;">📋 Bulk Paste</div>
+    <div style="font-family:\'IBM Plex Mono\\',monospace;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--sub);margin-bottom:6px;">📋 Bulk Paste</div>
     <textarea class="bulk-area" id="bulkArea" placeholder="Paste multiple URLs (één per line) — werkt met sitemap exports, GSC lijsten, etc."></textarea>
     <div style="display:flex;gap:8px;margin-top:7px;align-items:center;">
       <button class="btn btn-muted" onclick="bulkAdd()">+ Bulk Add</button>
-      <span style="font-family:\\'IBM Plex Mono\\',monospace;font-size:9px;color:var(--dim);">One URL per line</span>
+      <span style="font-family:\'IBM Plex Mono\\',monospace;font-size:9px;color:var(--dim);">One URL per line</span>
     </div>
   </div>
 </div>
@@ -26402,9 +26402,9 @@ function renderPages(){
     return items.map(function(c){
       var checked = p.checks[c.id];
       var badge = (c.phase===2&&c.points)
-        ? '<span style="font-family:\\'IBM Plex Mono\\',monospace;font-size:7px;padding:1px 5px;border-radius:3px;background:rgba(74,222,128,.12);color:var(--green);flex-shrink:0;">+score</span>'
+        ? '<span style="font-family:\'IBM Plex Mono\\',monospace;font-size:7px;padding:1px 5px;border-radius:3px;background:rgba(74,222,128,.12);color:var(--green);flex-shrink:0;">+score</span>'
         : (c.phase===2&&!c.points)
-        ? '<span style="font-family:\\'IBM Plex Mono\\',monospace;font-size:7px;padding:1px 5px;border-radius:3px;background:rgba(96,165,250,.1);color:var(--blue);flex-shrink:0;">CTR</span>'
+        ? '<span style="font-family:\'IBM Plex Mono\\',monospace;font-size:7px;padding:1px 5px;border-radius:3px;background:rgba(96,165,250,.1);color:var(--blue);flex-shrink:0;">CTR</span>'
         : '';
       return '<div class="cl-item'+(checked?' checked':'')+'" id="cli-'+p.id+'-'+c.id+'" onclick="toggleCheck(\\''+p.id+'\\',\\''+c.id+'\\')"'+(c.tip?' title="'+c.tip+'"':'')+'>'
         +'<input type="checkbox"'+(checked?' checked':'')+' onclick="event.stopPropagation();toggleCheck(\\''+p.id+'\\',\\''+c.id+'\\')">'
@@ -26418,17 +26418,17 @@ function renderPages(){
   var f2c = CL.filter(function(c){return c.phase===2&&!c.points;});
   var f3 = CL.filter(function(c){return c.phase===3;});
   var ph = function(label,color,border){
-    return '<div style="font-family:\\'IBM Plex Mono\\',monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:'+color+';padding:8px 0 4px;border-bottom:1px solid '+border+';margin-bottom:4px;margin-top:6px;">'+label+'</div>';
+    return '<div style="font-family:\'IBM Plex Mono\\',monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:'+color+';padding:8px 0 4px;border-bottom:1px solid '+border+';margin-bottom:4px;margin-top:6px;">'+label+'</div>';
   };
   var cl = ph('① Pre-audit','var(--blue)','rgba(96,165,250,.2)')
     + '<div class="cl-grid">'+renderClItems(f1)+'</div>'
     + ph('② Implementation — improves ContentScore','var(--green)','rgba(74,222,128,.2)')
-    + '<div style="font-family:\\'IBM Plex Mono\\',monospace;font-size:9px;color:var(--sub);padding:4px 0 6px;">✓ Add real content → score goes up. Meta/title only = no points.</div>'
+    + '<div style="font-family:\'IBM Plex Mono\\',monospace;font-size:9px;color:var(--sub);padding:4px 0 6px;">✓ Add real content → score goes up. Meta/title only = no points.</div>'
     + '<div class="cl-grid">'+renderClItems(f2p)+'</div>'
     + ph('② UX & CTR fixes — no score impact','var(--blue)','rgba(96,165,250,.15)')
     + '<div class="cl-grid">'+renderClItems(f2c)+'</div>'
     + ph('③ Go live + re-scan','var(--gold)','rgba(251,191,36,.2)')
-    + '<div style="font-family:\\'IBM Plex Mono\\',monospace;font-size:9px;color:var(--sub);padding:4px 0 6px;">⚠ Re-scan only AFTER the page is live and point items are completed.</div>'
+    + '<div style="font-family:\'IBM Plex Mono\\',monospace;font-size:9px;color:var(--sub);padding:4px 0 6px;">⚠ Re-scan only AFTER the page is live and point items are completed.</div>'
     + '<div class="cl-grid">'+renderClItems(f3)+'</div>';
 
     return '<div class="page-card s-'+p.status+'" id="card-'+p.id+'">'
@@ -26441,7 +26441,7 @@ function renderPages(){
       +'<span class="pri-dot '+priClass+'"></span>'
       +'<span class="card-url">'+shortUrl+'<span class="card-kw">'+( p.keyword?' — '+p.keyword:'')+'</span></span>'
       +(p.position?'<span class="card-gsc">pos '+Math.round(p.position)+(p.impressions?' · '+p.impressions.toLocaleString()+' impr':'')+'</span>':'')
-      +(p.scoreBefore?'<span style="font-family:\\'IBM Plex Mono\\',monospace;font-size:10px;font-weight:700;color:'+(p.scoreBefore<70?'var(--red)':p.scoreBefore<85?'var(--gold)':'var(--green)')+';">'+p.scoreBefore+'/100</span>':'')
+      +(p.scoreBefore?'<span style="font-family:\'IBM Plex Mono\\',monospace;font-size:10px;font-weight:700;color:'+(p.scoreBefore<70?'var(--red)':p.scoreBefore<85?'var(--gold)':'var(--green)')+';">'+p.scoreBefore+'/100</span>':'')
       +'<span class="card-chk" id="chk-'+p.id+'">'+prog.pct+'%</span>'
       +'<button class="status-btn" onclick="event.stopPropagation();cycleStatus(\\''+p.id+'\\')">'+STATUS_LABELS[p.status]+'</button>'
       +'<span class="chevron" id="chev-'+p.id+'">▾</span>'
@@ -26462,12 +26462,12 @@ function renderPages(){
       +'<div class="cb-field">'
       +'<label style="color:var(--blue)">① Pre-scan Score (BEFORE audit)</label>'
       +'<input type="number" min="0" max="100" value="'+p.scoreBefore+'" placeholder="Scan first, enter here" data-score-before="'+p.id+'" onchange="updateField(\\''+p.id+'\\',\\'scoreBefore\\',this.value)">'
-      +'<div style="font-family:\\'IBM Plex Mono\\',monospace;font-size:9px;color:var(--sub);margin-top:4px;">Scan via 📊 Scan Score button — do this BEFORE the audit</div>'
+      +'<div style="font-family:\'IBM Plex Mono\\',monospace;font-size:9px;color:var(--sub);margin-top:4px;">Scan via 📊 Scan Score button — do this BEFORE the audit</div>'
       +'</div>'
       +'<div class="cb-field">'
       +'<label style="color:'+(scoreAfterLocked(p)?'var(--dim)':'var(--green)')+'">③ Post-scan Score (AFTER implementation)</label>'
       +'<input type="number" min="0" max="100" value="'+p.scoreAfter+'" placeholder="'+(scoreAfterLocked(p)?'Complete point items first':'Scan after page is live')+'" '+(scoreAfterLocked(p)?'disabled style="opacity:.4;cursor:not-allowed"':'')+' onchange="updateField(\\''+p.id+'\\',\\'scoreAfter\\',this.value)">'
-      +'<div style="font-family:\\'IBM Plex Mono\\',monospace;font-size:9px;color:'+(scoreAfterLocked(p)?'var(--red)':'var(--sub)')+';margin-top:4px;">'+(scoreAfterLocked(p)?'⚠ Complete point items (②) first — meta/title alone does not change the score':'✓ Re-scan AFTER you have published the page')+'</div>'
+      +'<div style="font-family:\'IBM Plex Mono\\',monospace;font-size:9px;color:'+(scoreAfterLocked(p)?'var(--red)':'var(--sub)')+';margin-top:4px;">'+(scoreAfterLocked(p)?'⚠ Complete point items (②) first — meta/title alone does not change the score':'✓ Re-scan AFTER you have published the page')+'</div>'
       +'</div>'
       +'<div class="cb-field"><label>GSC Position</label><input type="number" value="'+p.position+'" placeholder="34" onchange="updateField(\\''+p.id+'\\',\\'position\\',this.value)"></div>'
       +'<div class="cb-field"><label>Impressions</label><input type="number" value="'+p.impressions+'" placeholder="12400" onchange="updateField(\\''+p.id+'\\',\\'impressions\\',this.value)"></div>'
@@ -26504,14 +26504,14 @@ function renderPages(){
             var anchorWords = kwWords.filter(function(w){ return targetKw.includes(w) || slug.toLowerCase().includes(w); });
             var anchor = anchorWords.length ? anchorWords.slice(0,3).join(' ') : (x.pg.keyword || slug).slice(0,30);
             return '<div style="display:flex;align-items:center;gap:8px;padding:5px 8px;background:rgba(96,165,250,.04);border-radius:4px;margin-bottom:3px;flex-wrap:wrap;">'
-              +'<span style="font-family:\\'IBM Plex Mono\\',monospace;font-size:8px;color:var(--dim);width:14px;flex-shrink:0;">#'+(i+1)+'</span>'
-              +'<span style="font-family:\\'IBM Plex Mono\\',monospace;font-size:9px;color:var(--blue);flex:1;word-break:break-all;">'+x.pg.url.replace(/^https?:\\/\\//,'').slice(0,60)+'</span>'
+              +'<span style="font-family:\'IBM Plex Mono\\',monospace;font-size:8px;color:var(--dim);width:14px;flex-shrink:0;">#'+(i+1)+'</span>'
+              +'<span style="font-family:\'IBM Plex Mono\\',monospace;font-size:9px;color:var(--blue);flex:1;word-break:break-all;">'+x.pg.url.replace(/^https?:\\/\\//,'').slice(0,60)+'</span>'
               +(x.pg.keyword?'<span style="font-size:9px;color:var(--muted);">'+x.pg.keyword.slice(0,30)+'</span>':'')
-              +'<span style="font-family:\\'IBM Plex Mono\\',monospace;font-size:8px;color:var(--gold);background:rgba(251,191,36,.1);padding:2px 6px;border-radius:3px;white-space:nowrap;">anchor: \\"'+anchor+'\\"</span>'
+              +'<span style="font-family:\'IBM Plex Mono\\',monospace;font-size:8px;color:var(--gold);background:rgba(251,191,36,.1);padding:2px 6px;border-radius:3px;white-space:nowrap;">anchor: \\"'+anchor+'\\"</span>'
               +'</div>';
           }).join('');
           return '<div style="margin-bottom:12px;padding:12px 14px;background:rgba(96,165,250,.04);border:1px solid rgba(96,165,250,.15);border-radius:7px;">'
-            +'<div style="font-family:\\'IBM Plex Mono\\',monospace;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--blue);margin-bottom:8px;">🔗 Internal Link Opportunities <span style=\\"font-weight:400;text-transform:none;letter-spacing:0;font-size:8px;color:var(--dim);\\">— other pages to link FROM/TO</span></div>'
+            +'<div style="font-family:\'IBM Plex Mono\\',monospace;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--blue);margin-bottom:8px;">🔗 Internal Link Opportunities <span style=\\"font-weight:400;text-transform:none;letter-spacing:0;font-size:8px;color:var(--dim);\\">— other pages to link FROM/TO</span></div>'
             +rows
             +'<div style="font-size:10px;color:var(--dim);margin-top:5px;">Add contextual links between these pages using the suggested anchor text. Pre-filled automatically in PULSE+NEXUS ⑤.</div>'
             +'</div>';
@@ -26519,7 +26519,7 @@ function renderPages(){
 
       // Checklist
       +'<div class="cl-header"><span>Audit Checklist — 3 phases</span>'
-      +'<span id="cl-prog-'+p.id+'" style="font-family:\\'IBM Plex Mono\\',monospace;font-size:9px;display:flex;gap:10px;">'
+      +'<span id="cl-prog-'+p.id+'" style="font-family:\'IBM Plex Mono\\',monospace;font-size:9px;display:flex;gap:10px;">'
       +'<span style="color:var(--green)">+pts: '+pointsDone(p)+'/'+pointsTotal()+'</span>'
       +'<span style="color:var(--muted)">totaal: '+prog.done+'/'+prog.total+'</span>'
       +'</span>'
@@ -27012,11 +27012,11 @@ function renderSitemapGrouped(inGSC, notInGSC){
   function rowHtml(u, defaultChecked, gscData){
     var shortUrl = u.replace(/^https?:\\/\\/[^/]+/,'') || '/';
     var gscInfo = gscData
-      ? '<span style="font-family:\\'IBM Plex Mono\\',monospace;font-size:9px;color:var(--green);margin-left:6px;">pos '+Math.round(gscData.pos)+(gscData.impr?' · '+gscData.impr.toLocaleString()+' impr':'')+'</span>'
-      : '<span style="font-family:\\'IBM Plex Mono\\',monospace;font-size:9px;color:var(--gold);margin-left:6px;">not in GSC</span>';
+      ? '<span style="font-family:\'IBM Plex Mono\\',monospace;font-size:9px;color:var(--green);margin-left:6px;">pos '+Math.round(gscData.pos)+(gscData.impr?' · '+gscData.impr.toLocaleString()+' impr':'')+'</span>'
+      : '<span style="font-family:\'IBM Plex Mono\\',monospace;font-size:9px;color:var(--gold);margin-left:6px;">not in GSC</span>';
     return '<div style="display:flex;align-items:center;gap:7px;padding:5px 8px;border-radius:4px;cursor:pointer;" onclick="this.querySelector(\\'input\\').click()">'
       +'<input type="checkbox" class="sitemap-cb" data-url="'+u+'"'+(defaultChecked?' checked':'')+' onclick="event.stopPropagation();updateSitemapCount()" style="width:13px;height:13px;accent-color:var(--gold);flex-shrink:0;">'
-      +'<span style="font-family:\\'IBM Plex Mono\\',monospace;font-size:10px;color:var(--blue);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="'+u+'">'+shortUrl+'</span>'
+      +'<span style="font-family:\'IBM Plex Mono\\',monospace;font-size:10px;color:var(--blue);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="'+u+'">'+shortUrl+'</span>'
       +gscInfo
       +'<button onclick="event.stopPropagation();removeSitemapUrl(\\''+u+'\\')" style="background:none;border:none;color:var(--dim);cursor:pointer;font-size:11px;padding:0 4px;flex-shrink:0;" title="Remove">✕</button>'
       +'</div>';
@@ -27034,7 +27034,7 @@ function renderSitemapGrouped(inGSC, notInGSC){
       var scoreB = (pb>=11&&pb<=30)?0:(pb>=1&&pb<=10)?1:(pb>30&&pb<=60)?2:3;
       return scoreA-scoreB || pa-pb;
     });
-    html += '<div style="font-family:\\'IBM Plex Mono\\',monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--green);padding:8px 8px 4px;border-bottom:1px solid rgba(74,222,128,.2);margin-bottom:4px;">'
+    html += '<div style="font-family:\'IBM Plex Mono\\',monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--green);padding:8px 8px 4px;border-bottom:1px solid rgba(74,222,128,.2);margin-bottom:4px;">'
       +'🟢 In GSC — '+inGSC.length+' pages (sorted by opportunity)'
       +'</div>';
     html += inGSC.map(function(u){ return rowHtml(u, true, _gscDataMap[u]); }).join('');
@@ -27042,14 +27042,14 @@ function renderSitemapGrouped(inGSC, notInGSC){
 
   // Group 2 — not in GSC
   if(notInGSC.length){
-    html += '<div style="font-family:\\'IBM Plex Mono\\',monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--gold);padding:12px 8px 4px;border-bottom:1px solid rgba(251,191,36,.2);margin-bottom:4px;margin-top:8px;">'
+    html += '<div style="font-family:\'IBM Plex Mono\\',monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--gold);padding:12px 8px 4px;border-bottom:1px solid rgba(251,191,36,.2);margin-bottom:4px;margin-top:8px;">'
       +'🟡 Not in GSC — '+notInGSC.length+' pages (not indexed or new)'
       +'</div>'
-      +'<div style="font-family:\\'IBM Plex Mono\\',monospace;font-size:9px;color:var(--sub);padding:2px 8px 8px;">Google does not know these pages yet. Add them to investigate why.</div>';
+      +'<div style="font-family:\'IBM Plex Mono\\',monospace;font-size:9px;color:var(--sub);padding:2px 8px 8px;">Google does not know these pages yet. Add them to investigate why.</div>';
     html += notInGSC.map(function(u){ return rowHtml(u, false, null); }).join('');
   }
 
-  list.innerHTML = html || '<div style="font-family:\\'IBM Plex Mono\\',monospace;font-size:10px;color:var(--dim);padding:8px;">No URLs found.</div>';
+  list.innerHTML = html || '<div style="font-family:\'IBM Plex Mono\\',monospace;font-size:10px;color:var(--dim);padding:8px;">No URLs found.</div>';
   updateSitemapCount();
 }
 
@@ -27118,7 +27118,7 @@ function renderSitemapList(urls, selectAll, preserveChecked) {
   var selCount = document.getElementById('sitemapSelCount');
 
   if (!urls.length) {
-    list.innerHTML = '<div style="font-family:\\'IBM Plex Mono\\',monospace;font-size:10px;color:var(--dim);padding:8px;">Geen URLs gevonden voor dit filter.</div>';
+    list.innerHTML = '<div style="font-family:\'IBM Plex Mono\\',monospace;font-size:10px;color:var(--dim);padding:8px;">Geen URLs gevonden voor dit filter.</div>';
     selCount.textContent = '';
     return;
   }
@@ -27131,7 +27131,7 @@ function renderSitemapList(urls, selectAll, preserveChecked) {
     if (skip) isChecked = false;
     return '<div style="display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:4px;cursor:pointer;" onclick="this.querySelector(&quot;input&quot;).click()">'
       + '<input type="checkbox" class="sitemap-cb" data-url="'+u+'"'+(isChecked?' checked':'')+' onclick="event.stopPropagation();updateSitemapCount()" style="width:13px;height:13px;accent-color:var(--gold);flex-shrink:0;">'
-      + '<span style="font-family:\\'IBM Plex Mono\\',monospace;font-size:10px;color:var(--blue);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="'+u+'">'+shortUrl+'</span>'
+      + '<span style="font-family:\'IBM Plex Mono\\',monospace;font-size:10px;color:var(--blue);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="'+u+'">'+shortUrl+'</span>'
       + '<button onclick="event.stopPropagation();removeSitemapUrl(\\''+u+'\\')" style="background:none;border:none;color:var(--dim);cursor:pointer;font-size:11px;padding:0 4px;flex-shrink:0;" title="Remove">✕</button>'
       + '</div>';
   }).join('');
@@ -27682,7 +27682,7 @@ function getActionSteps(p, rec){
     {sev:'med',title:'Add structured data for rich results',time:'30 min',
      desc:'FAQPage and LocalBusiness schema can increase CTR by 20-30% via rich results. Open PULSE+NEXUS → Step 8 for the exact JSON-LD to paste into your &lt;head&gt;.'},
     {sev:'low',title:'Build 3-5 internal links to this page',time:'20 min',
-     desc:'Internal links signal authority and help Google understand the page\\'s importance. Open PULSE+NEXUS → Step 6 for exact source pages and anchor text to use.'},
+     desc:'Internal links signal authority and help Google understand the page\'s importance. Open PULSE+NEXUS → Step 6 for exact source pages and anchor text to use.'},
   ];
   if(type==='rewrite') return [
     {sev:'high',title:'Run full audit BEFORE rewriting',time:'30 min',
@@ -27882,7 +27882,7 @@ function render(){
       +'<div class="rec-foot">'
       +'<a href="'+auditUrl+'" class="action-btn action-btn-gold">🔬 Pre-fill &amp; Open Audit →</a>'
       +'<a href="'+p.url+'" target="_blank" class="action-btn action-btn-dim">↗ View page</a>'
-      +(p.status==='done'?'<span style="font-family:\\'IBM Plex Mono\\',monospace;font-size:9px;color:var(--green);letter-spacing:.08em;text-transform:uppercase;">✅ Done</span>':'')
+      +(p.status==='done'?'<span style="font-family:\'IBM Plex Mono\\',monospace;font-size:9px;color:var(--green);letter-spacing:.08em;text-transform:uppercase;">✅ Done</span>':'')
       +'</div>'
       +'</div>';
   }).join('');
@@ -28472,7 +28472,7 @@ function addDomain(){
 
 function removeDomain(domainId){
   var dom=domains.find(function(d){return d.id===domainId;});
-  if(!confirm('Verwijder domein '+dom.name+' en alle '+dom.pages.length+' pagina\\'s?')) return;
+  if(!confirm('Verwijder domein '+dom.name+' en alle '+dom.pages.length+' pagina\'s?')) return;
   domains=domains.filter(function(d){return d.id!==domainId;});
   save(); render(); updateDomainSelect(); toast('Verwijderd');
 }
@@ -28568,7 +28568,7 @@ function processGSCUpdate(raw){
   });
 
   save(); render();
-  toast('✅ '+updated+' pagina\\'s bijgewerkt');
+  toast('✅ '+updated+' pagina\'s bijgewerkt');
   setTimeout(function(){trackerSyncToServer(true);},1000);
 }
 
@@ -28582,7 +28582,7 @@ function checkWorkflowImport(){
     if(!available.length) return;
     var banner=document.getElementById('importBanner');
     banner.style.display='flex';
-    document.getElementById('importCount').textContent=available.length+' pagina\\'s';
+    document.getElementById('importCount').textContent=available.length+' pagina\'s';
   }catch(e){}
 }
 
@@ -28606,7 +28606,7 @@ function pollTrackerQueue(){
       });
       localStorage.setItem('cs_wf_pages',JSON.stringify(wf));
       checkWorkflowImport();
-      toast('✅ '+newPages.length+' herschreven pagina\\'s klaar voor Pulse+Nexus import');
+      toast('✅ '+newPages.length+' herschreven pagina\'s klaar voor Pulse+Nexus import');
     }).catch(function(){});
   }catch(e){}
 }
@@ -28620,7 +28620,7 @@ function importFromWorkflow(){
     var wfPages=JSON.parse(wf);
     var allUrls=domains.flatMap(function(d){return d.pages.map(function(p){return p.url;});});
     var newPages=wfPages.filter(function(p){return p.url&&!allUrls.includes(p.url);});
-    if(!newPages.length){ toast('Geen nieuwe pagina\\'s'); return; }
+    if(!newPages.length){ toast('Geen nieuwe pagina\'s'); return; }
     // Group by domain
     var domainMap={};
     newPages.forEach(function(p){
@@ -28645,7 +28645,7 @@ function importFromWorkflow(){
     save(); render(); updateDomainSelect();
     document.getElementById('importBanner').style.display='none';
     setTimeout(function(){trackerSyncToServer(true);},500);
-    toast('✅ '+added+' pagina\\'s geïmporteerd in '+Object.keys(domainMap).length+' domein(en)');
+    toast('✅ '+added+' pagina\'s geïmporteerd in '+Object.keys(domainMap).length+' domein(en)');
   }catch(e){ toast('⚠ Import mislukt: '+e.message); }
 }
 
@@ -28675,7 +28675,7 @@ function renderMeasDash(){
     return '<div class="'+cls+'">'
       +'<div class="md-left">'
       +'<div class="md-name" style="display:flex;align-items:center;gap:8px;"><span style="width:8px;height:8px;border-radius:50%;background:'+color+';flex-shrink:0;display:inline-block;"></span>'+dom.name+'</div>'
-      +'<div class="md-meta">'+dom.pages.length+' pagina\\'s · start: '+dom.baseDate+(spiralCount>0?' · <span style="color:var(--red);">'+spiralCount+' spiraal</span>':'')+'</div>'
+      +'<div class="md-meta">'+dom.pages.length+' pagina\'s · start: '+dom.baseDate+(spiralCount>0?' · <span style="color:var(--red);">'+spiralCount+' spiraal</span>':'')+'</div>'
       +'<div class="md-next '+(info.overdue?'overdue':info.due?'due':info.date&&daysUntil<=7?'due':'future')+'" style="color:'+statusColor+';">'+statusText+(info.date?' ('+info.date+')':'')+'</div>'
       +'</div>'
       +'<button class="btn btn-muted" style="font-size:8px;" onclick="scrollToDomain(\\''+dom.id+'\\')">↓ Naar domein</button>'
@@ -28704,7 +28704,7 @@ function renderGSummary(){
   var avg=changes.length?Math.round(changes.reduce(function(a,b){return a+b;},0)/changes.length*10)/10:null;
   document.getElementById('gSummary').innerHTML=
     '<div class="gs-card"><div class="gs-n" style="color:var(--blue)">'+domains.length+'</div><div class="gs-l">Domeinen</div></div>'
-   +'<div class="gs-card"><div class="gs-n" style="color:var(--blue)">'+total+'</div><div class="gs-l">Pagina\\'s</div></div>'
+   +'<div class="gs-card"><div class="gs-n" style="color:var(--blue)">'+total+'</div><div class="gs-l">Pagina\'s</div></div>'
    +'<div class="gs-card"><div class="gs-n" style="color:var(--green)">'+improving+'</div><div class="gs-l">Stijgend</div></div>'
    +'<div class="gs-card"><div class="gs-n" style="color:var(--gold)">'+stagnant+'</div><div class="gs-l">Stabiel</div></div>'
    +'<div class="gs-card"><div class="gs-n" style="color:var(--orange)">'+declining+'</div><div class="gs-l">Dalend</div></div>'
@@ -28725,7 +28725,7 @@ function render(){
 
     var pagesHtml='';
     if(!dom.pages.length){
-      pagesHtml='<div style="padding:18px;font-family:\\'IBM Plex Mono\\',monospace;font-size:11px;color:var(--dim);text-align:center;">Nog geen pagina\\'s — voeg toe via het formulier hierboven.</div>';
+      pagesHtml='<div style="padding:18px;font-family:\'IBM Plex Mono\\',monospace;font-size:11px;color:var(--dim);text-align:center;">Nog geen pagina\'s — voeg toe via het formulier hierboven.</div>';
     } else {
       // Sort: spiral first, then declining, then rest
       var sorted=dom.pages.slice().sort(function(a,b){
@@ -28744,14 +28744,14 @@ function render(){
       +'<div class="domain-header" onclick="toggleDomain(\\'db-'+dom.id+'\\')">'
       +'<span class="domain-color" style="background:'+color+';"></span>'
       +'<span class="domain-name">'+dom.name+'</span>'
-      +'<span class="domain-meta">'+dom.pages.length+' pagina\\'s · start: '+dom.baseDate+(spiralCount>0?' · <span style="color:var(--red);font-weight:700;">'+spiralCount+' 🚨</span>':'')+'</span>'
-      +'<span style="font-family:\\'IBM Plex Mono\\',monospace;font-size:9px;margin-left:auto;">'+nextInfo+'</span>'
-      +'<span style="font-family:\\'IBM Plex Mono\\',monospace;font-size:14px;color:var(--dim);margin-left:8px;" id="chev-'+dom.id+'">▾</span>'
+      +'<span class="domain-meta">'+dom.pages.length+' pagina\'s · start: '+dom.baseDate+(spiralCount>0?' · <span style="color:var(--red);font-weight:700;">'+spiralCount+' 🚨</span>':'')+'</span>'
+      +'<span style="font-family:\'IBM Plex Mono\\',monospace;font-size:9px;margin-left:auto;">'+nextInfo+'</span>'
+      +'<span style="font-family:\'IBM Plex Mono\\',monospace;font-size:14px;color:var(--dim);margin-left:8px;" id="chev-'+dom.id+'">▾</span>'
       +'</div>'
       +'<div class="domain-body" id="db-'+dom.id+'">'
       // GSC import strip per domain
       +'<div class="gsc-strip">'
-      +'<span style="font-family:\\'IBM Plex Mono\\',monospace;font-size:8px;letter-spacing:.12em;text-transform:uppercase;color:var(--blue);">📊 GSC import voor '+dom.name+'</span>'
+      +'<span style="font-family:\'IBM Plex Mono\\',monospace;font-size:8px;letter-spacing:.12em;text-transform:uppercase;color:var(--blue);">📊 GSC import voor '+dom.name+'</span>'
       +'<input type="file" id="gsc-'+dom.id+'" accept=".csv" onchange="importGSCForDomain(this,\\''+dom.id+'\\')">'
       +'<button class="btn btn-blue" style="font-size:8px;" onclick="document.getElementById(\\'gsc-'+dom.id+'\\').click()">📊 Importeer CSV</button>'
       +'<button class="btn btn-red" style="font-size:8px;" onclick="removeDomain(\\''+dom.id+'\\')">✕ Verwijder domein</button>'
@@ -28807,7 +28807,7 @@ function processGSCForDomain(raw, domainId){
     updated++;
   });
   save(); render();
-  toast('✅ '+updated+' pagina\\'s bijgewerkt voor '+dom.name);
+  toast('✅ '+updated+' pagina\'s bijgewerkt voor '+dom.name);
   setTimeout(function(){trackerSyncToServer(true);},500);
 }
 
@@ -28914,9 +28914,9 @@ function renderPage(dom, page){
   return '<div class="page-card">'
     +'<div class="pc-head" onclick="togglePage(\\'pb-'+page.id+'\\')">'
     +'<div style="flex:1;min-width:0;"><div class="pc-url">'+shortUrl+'<span class="pc-kw">'+(page.keyword?' — '+page.keyword:'')+'</span></div>'
-    +'<div style="font-family:\\'IBM Plex Mono\\',monospace;font-size:8px;color:var(--dim);margin-top:2px;">'+(filled.length-1)+'/6 metingen · baseline: '+dom.baseDate+'</div></div>'
+    +'<div style="font-family:\'IBM Plex Mono\\',monospace;font-size:8px;color:var(--dim);margin-top:2px;">'+(filled.length-1)+'/6 metingen · baseline: '+dom.baseDate+'</div></div>'
     +'<span class="pc-status st-'+status+'">'+statusLabels[status]+'</span>'
-    +'<span style="font-family:\\'IBM Plex Mono\\',monospace;font-size:13px;color:var(--dim);" id="pchev-'+page.id+'">▾</span>'
+    +'<span style="font-family:\'IBM Plex Mono\\',monospace;font-size:13px;color:var(--dim);" id="pchev-'+page.id+'">▾</span>'
     +'</div>'
     +spiralHtml+warnHtml
     +'<div id="pb-'+page.id+'" style="display:none;">'
@@ -28960,8 +28960,8 @@ function showRecoveryBrief(domainId,pageId){
   var overlay=document.createElement('div');
   overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9000;display:flex;align-items:center;justify-content:center;padding:20px;';
   overlay.innerHTML='<div style="background:var(--card);border:1px solid rgba(244,63,63,.4);border-radius:12px;padding:24px;max-width:680px;width:100%;max-height:80vh;overflow-y:auto;">'
-    +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;"><div style="font-family:\\'IBM Plex Mono\\',monospace;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--red);">📋 Herstel schrijfbrief</div><button onclick="this.closest(\\'div[style*=fixed]\\').remove()" style="background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;">✕</button></div>'
-    +'<textarea style="width:100%;min-height:260px;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:12px;font-family:\\'IBM Plex Mono\\',monospace;font-size:11px;color:var(--ink);resize:vertical;outline:none;line-height:1.6;">'+brief+'</textarea>'
+    +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;"><div style="font-family:\'IBM Plex Mono\\',monospace;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--red);">📋 Herstel schrijfbrief</div><button onclick="this.closest(\\'div[style*=fixed]\\').remove()" style="background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;">✕</button></div>'
+    +'<textarea style="width:100%;min-height:260px;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:12px;font-family:\'IBM Plex Mono\\',monospace;font-size:11px;color:var(--ink);resize:vertical;outline:none;line-height:1.6;">'+brief+'</textarea>'
     +'<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;">'
     +'<button class="btn btn-gold" onclick="navigator.clipboard.writeText(this.closest(\\'div[style*=fixed]\\').querySelector(\\'textarea\\').value).then(function(){alert(\\'Gekopieerd!\\')})">⎘ Kopieer brief</button>'
     +'<a href="/audit-seo?url='+encodeURIComponent(page.url)+'&kw='+encodeURIComponent(page.keyword||'')+'&mode=recovery" class="btn btn-red">🔬 Open herstelaudit</a>'
@@ -28998,10 +28998,10 @@ function exportCSV(){
 function exportClientReport(){
   if(!domains.length){ toast('⚠ Geen data'); return; }
   var css='body{font-family:Arial,sans-serif;max-width:980px;margin:40px auto;color:#1f2937;padding:0 20px;line-height:1.6;}h1{color:#7c3aed;font-size:24px;border-bottom:3px solid #7c3aed;padding-bottom:8px;margin-bottom:4px;}.dm{margin-bottom:28px;border:1px solid #e5e7eb;border-radius:10px;overflow:hidden;}.dm-head{padding:14px 18px;background:#f9fafb;border-bottom:1px solid #e5e7eb;display:flex;align-items:center;gap:10px;}.dm-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}.dm-name{font-size:16px;font-weight:700;}.pc{border-bottom:1px solid #e5e7eb;padding:12px 18px;}.pc:last-child{border-bottom:none;}.pc-url{font-size:11px;color:#2563eb;font-family:monospace;word-break:break-all;}.tl{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;margin-top:8px;}.tl-c{text-align:center;background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;padding:6px 3px;}.tl-c.filled{background:#f0fdf4;border-color:#86efac;}.tl-c.down{background:#fef2f2;border-color:#fca5a5;}.tl-wk{font-size:8px;color:#9ca3af;font-family:monospace;}.tl-p{font-size:16px;font-weight:900;color:#374151;}.tl-p.good{color:#16a34a;}.tl-p.warn{color:#b45309;}.tl-p.bad{color:#dc2626;}.up{color:#16a34a;}.dn{color:#dc2626;}.spiral{background:#fee2e2;border-left:4px solid #dc2626;}footer{margin-top:40px;padding-top:16px;border-top:1px solid #e5e7eb;color:#9ca3af;font-size:11px;text-align:center;}';
-  var body='<h1>SEO Voortgang Rapport</h1><p style="color:#6b7280;font-size:13px;margin-bottom:24px;">'+new Date().toLocaleDateString('nl-NL',{day:'numeric',month:'long',year:'numeric'})+' · '+domains.length+' domeinen · '+domains.reduce(function(t,d){return t+d.pages.length;},0)+' pagina\\'s</p>';
+  var body='<h1>SEO Voortgang Rapport</h1><p style="color:#6b7280;font-size:13px;margin-bottom:24px;">'+new Date().toLocaleDateString('nl-NL',{day:'numeric',month:'long',year:'numeric'})+' · '+domains.length+' domeinen · '+domains.reduce(function(t,d){return t+d.pages.length;},0)+' pagina\'s</p>';
   domains.forEach(function(dom,di){
     var color=DOMAIN_COLORS[dom.colorIdx%DOMAIN_COLORS.length];
-    body+='<div class="dm"><div class="dm-head"><span class="dm-dot" style="background:'+color+';"></span><span class="dm-name">'+dom.name+'</span><span style="font-size:12px;color:#6b7280;margin-left:auto;">'+dom.pages.length+' pagina\\'s · start: '+dom.baseDate+'</span></div>';
+    body+='<div class="dm"><div class="dm-head"><span class="dm-dot" style="background:'+color+';"></span><span class="dm-name">'+dom.name+'</span><span style="font-size:12px;color:#6b7280;margin-left:auto;">'+dom.pages.length+' pagina\'s · start: '+dom.baseDate+'</span></div>';
     dom.pages.forEach(function(page){
       var status=getSpiralStatus(page);
       var base=page.checkpoints.w0;
@@ -30836,21 +30836,21 @@ function renderPrewriteBrief(b) {
   // ── Pre-Write section labels per language (lek 2 — Pre-Write). Falls back to English. ──
   var _PL_ALL = {
     en: { checked:'WHAT WE ACTUALLY CHECKED', qtested:'Query tested', checkedAt:'Checked', gAnswer:'Google direct answer', perp:'Perplexity', perpEx:'Perplexity excerpt', perpCites:'Perplexity currently cites', metaPkg:'META PACKAGE', seoTitle:'SEO title', metaDesc:'Meta desc', h1:'H1', slug:'Slug', opening:'OPENING PASSAGE (first 40-60 words)', blueprint:'PAGE BLUEPRINT (write in this order)', purpose:'Purpose', cover:'Cover', hook:'Citation hook', words:'words', ilt:'INTERNAL LINK TARGETS', top10:'TOP 10 GAP', aio:'AI OVERVIEW', compTable:'COMPETITOR TABLE', has:'Has', gap:'Gap', add:'Add', structure:'STRUCTURE', mustH2:'MUST-HAVE H2s', entities:'ENTITIES TO COVER', faq:'FAQ QUESTIONS', plan:'ACTION PLAN' },
-    nl: { checked:'WAT WE ECHT HEBBEN GECONTROLEERD', qtested:'Geteste zoekterm', checkedAt:'Gecontroleerd', gAnswer:'Google direct antwoord', perp:'Perplexity', perpEx:'Perplexity-fragment', perpCites:'Perplexity citeert nu', metaPkg:'META-PAKKET', seoTitle:'SEO-titel', metaDesc:'Meta-omschrijving', h1:'H1', slug:'Slug', opening:'OPENINGSPASSAGE (eerste 40-60 woorden)', blueprint:'PAGINA-BLUEPRINT (schrijf in deze volgorde)', purpose:'Doel', cover:'Behandel', hook:'Citatie-haak', words:'woorden', ilt:'INTERNE LINK-DOELEN', top10:'TOP 10-GAT', aio:'AI OVERVIEW', compTable:'CONCURRENTEN-TABEL', has:'Heeft', gap:'Gat', add:'Toevoegen', structure:'STRUCTUUR', mustH2:'VERPLICHTE H2\\'s', entities:'ENTITEITEN OM TE DEKKEN', faq:'FAQ-VRAGEN', plan:'ACTIEPLAN' },
+    nl: { checked:'WAT WE ECHT HEBBEN GECONTROLEERD', qtested:'Geteste zoekterm', checkedAt:'Gecontroleerd', gAnswer:'Google direct antwoord', perp:'Perplexity', perpEx:'Perplexity-fragment', perpCites:'Perplexity citeert nu', metaPkg:'META-PAKKET', seoTitle:'SEO-titel', metaDesc:'Meta-omschrijving', h1:'H1', slug:'Slug', opening:'OPENINGSPASSAGE (eerste 40-60 woorden)', blueprint:'PAGINA-BLUEPRINT (schrijf in deze volgorde)', purpose:'Doel', cover:'Behandel', hook:'Citatie-haak', words:'woorden', ilt:'INTERNE LINK-DOELEN', top10:'TOP 10-GAT', aio:'AI OVERVIEW', compTable:'CONCURRENTEN-TABEL', has:'Heeft', gap:'Gat', add:'Toevoegen', structure:'STRUCTUUR', mustH2:'VERPLICHTE H2\'s', entities:'ENTITEITEN OM TE DEKKEN', faq:'FAQ-VRAGEN', plan:'ACTIEPLAN' },
     es: { checked:'LO QUE REALMENTE COMPROBAMOS', qtested:'Consulta probada', checkedAt:'Comprobado', gAnswer:'Respuesta directa de Google', perp:'Perplexity', perpEx:'Extracto de Perplexity', perpCites:'Perplexity cita actualmente', metaPkg:'PAQUETE META', seoTitle:'Título SEO', metaDesc:'Meta descripción', h1:'H1', slug:'Slug', opening:'PASAJE DE APERTURA (primeras 40-60 palabras)', blueprint:'PLANO DE PÁGINA (escribe en este orden)', purpose:'Propósito', cover:'Cubrir', hook:'Gancho de citación', words:'palabras', ilt:'OBJETIVOS DE ENLACE INTERNO', top10:'BRECHA TOP 10', aio:'AI OVERVIEW', compTable:'TABLA DE COMPETIDORES', has:'Tiene', gap:'Brecha', add:'Añadir', structure:'ESTRUCTURA', mustH2:'H2 IMPRESCINDIBLES', entities:'ENTIDADES A CUBRIR', faq:'PREGUNTAS FAQ', plan:'PLAN DE ACCIÓN' },
     de: { checked:'WAS WIR TATSÄCHLICH GEPRÜFT HABEN', qtested:'Getestete Suchanfrage', checkedAt:'Geprüft', gAnswer:'Google-Direktantwort', perp:'Perplexity', perpEx:'Perplexity-Auszug', perpCites:'Perplexity zitiert derzeit', metaPkg:'META-PAKET', seoTitle:'SEO-Titel', metaDesc:'Meta-Beschreibung', h1:'H1', slug:'Slug', opening:'ERÖFFNUNGSABSATZ (erste 40-60 Wörter)', blueprint:'SEITEN-BLUEPRINT (in dieser Reihenfolge schreiben)', purpose:'Zweck', cover:'Abdecken', hook:'Zitier-Haken', words:'Wörter', ilt:'INTERNE LINKZIELE', top10:'TOP-10-LÜCKE', aio:'AI OVERVIEW', compTable:'KONKURRENZ-TABELLE', has:'Hat', gap:'Lücke', add:'Hinzufügen', structure:'STRUKTUR', mustH2:'PFLICHT-H2s', entities:'ABZUDECKENDE ENTITÄTEN', faq:'FAQ-FRAGEN', plan:'AKTIONSPLAN' },
-    fr: { checked:'CE QUE NOUS AVONS RÉELLEMENT VÉRIFIÉ', qtested:'Requête testée', checkedAt:'Vérifié', gAnswer:'Réponse directe Google', perp:'Perplexity', perpEx:'Extrait Perplexity', perpCites:'Perplexity cite actuellement', metaPkg:'PACK META', seoTitle:'Titre SEO', metaDesc:'Méta-description', h1:'H1', slug:'Slug', opening:'PASSAGE D\\'OUVERTURE (40-60 premiers mots)', blueprint:'PLAN DE PAGE (écrire dans cet ordre)', purpose:'Objectif', cover:'Couvrir', hook:'Accroche de citation', words:'mots', ilt:'CIBLES DE LIENS INTERNES', top10:'ÉCART TOP 10', aio:'AI OVERVIEW', compTable:'TABLEAU DES CONCURRENTS', has:'A', gap:'Écart', add:'Ajouter', structure:'STRUCTURE', mustH2:'H2 INDISPENSABLES', entities:'ENTITÉS À COUVRIR', faq:'QUESTIONS FAQ', plan:'PLAN D\\'ACTION' },
+    fr: { checked:'CE QUE NOUS AVONS RÉELLEMENT VÉRIFIÉ', qtested:'Requête testée', checkedAt:'Vérifié', gAnswer:'Réponse directe Google', perp:'Perplexity', perpEx:'Extrait Perplexity', perpCites:'Perplexity cite actuellement', metaPkg:'PACK META', seoTitle:'Titre SEO', metaDesc:'Méta-description', h1:'H1', slug:'Slug', opening:'PASSAGE D\'OUVERTURE (40-60 premiers mots)', blueprint:'PLAN DE PAGE (écrire dans cet ordre)', purpose:'Objectif', cover:'Couvrir', hook:'Accroche de citation', words:'mots', ilt:'CIBLES DE LIENS INTERNES', top10:'ÉCART TOP 10', aio:'AI OVERVIEW', compTable:'TABLEAU DES CONCURRENTS', has:'A', gap:'Écart', add:'Ajouter', structure:'STRUCTURE', mustH2:'H2 INDISPENSABLES', entities:'ENTITÉS À COUVRIR', faq:'QUESTIONS FAQ', plan:'PLAN D\'ACTION' },
     pt: { checked:'O QUE REALMENTE VERIFICAMOS', qtested:'Consulta testada', checkedAt:'Verificado', gAnswer:'Resposta direta do Google', perp:'Perplexity', perpEx:'Trecho do Perplexity', perpCites:'Perplexity cita atualmente', metaPkg:'PACOTE META', seoTitle:'Título SEO', metaDesc:'Meta descrição', h1:'H1', slug:'Slug', opening:'PASSAGEM DE ABERTURA (primeiras 40-60 palavras)', blueprint:'PLANO DA PÁGINA (escreva nesta ordem)', purpose:'Objetivo', cover:'Cobrir', hook:'Gancho de citação', words:'palavras', ilt:'ALVOS DE LINK INTERNO', top10:'LACUNA TOP 10', aio:'AI OVERVIEW', compTable:'TABELA DE CONCORRENTES', has:'Tem', gap:'Lacuna', add:'Adicionar', structure:'ESTRUTURA', mustH2:'H2 OBRIGATÓRIOS', entities:'ENTIDADES A COBRIR', faq:'PERGUNTAS FAQ', plan:'PLANO DE AÇÃO' },
-    it: { checked:'COSA ABBIAMO EFFETTIVAMENTE CONTROLLATO', qtested:'Query testata', checkedAt:'Controllato', gAnswer:'Risposta diretta di Google', perp:'Perplexity', perpEx:'Estratto di Perplexity', perpCites:'Perplexity cita attualmente', metaPkg:'PACCHETTO META', seoTitle:'Titolo SEO', metaDesc:'Meta descrizione', h1:'H1', slug:'Slug', opening:'PASSAGGIO DI APERTURA (prime 40-60 parole)', blueprint:'BLUEPRINT DELLA PAGINA (scrivi in questo ordine)', purpose:'Scopo', cover:'Copri', hook:'Gancio di citazione', words:'parole', ilt:'OBIETTIVI DI LINK INTERNI', top10:'GAP TOP 10', aio:'AI OVERVIEW', compTable:'TABELLA CONCORRENTI', has:'Ha', gap:'Gap', add:'Aggiungi', structure:'STRUTTURA', mustH2:'H2 OBBLIGATORI', entities:'ENTITÀ DA COPRIRE', faq:'DOMANDE FAQ', plan:'PIANO D\\'AZIONE' }
+    it: { checked:'COSA ABBIAMO EFFETTIVAMENTE CONTROLLATO', qtested:'Query testata', checkedAt:'Controllato', gAnswer:'Risposta diretta di Google', perp:'Perplexity', perpEx:'Estratto di Perplexity', perpCites:'Perplexity cita attualmente', metaPkg:'PACCHETTO META', seoTitle:'Titolo SEO', metaDesc:'Meta descrizione', h1:'H1', slug:'Slug', opening:'PASSAGGIO DI APERTURA (prime 40-60 parole)', blueprint:'BLUEPRINT DELLA PAGINA (scrivi in questo ordine)', purpose:'Scopo', cover:'Copri', hook:'Gancio di citazione', words:'parole', ilt:'OBIETTIVI DI LINK INTERNI', top10:'GAP TOP 10', aio:'AI OVERVIEW', compTable:'TABELLA CONCORRENTI', has:'Ha', gap:'Gap', add:'Aggiungi', structure:'STRUTTURA', mustH2:'H2 OBBLIGATORI', entities:'ENTITÀ DA COPRIRE', faq:'DOMANDE FAQ', plan:'PIANO D\'AZIONE' }
   };
   var _PL = _PL_ALL[(b && b.language ? String(b.language).slice(0,2).toLowerCase() : 'en')] || _PL_ALL.en;
   // Richer HTML-side headings (with descriptive suffixes) per language.
   var _PLH_ALL = {
     en: { metaPkgH:'Meta package \u2014 paste-ready', openingH:'Opening passage \u2014 first 40-60 words, citeable', blueprintH:'Page blueprint \u2014 write in this order', iltH:'Internal link targets', compTableH:'Competitor Table', domain:'Domain', mustH2H:'Must-have H2s', entitiesH:'Entities to cover', structureH:'Structure', metaDescH:'Meta desc' },
-    nl: { metaPkgH:'Meta-pakket \u2014 kant-en-klaar', openingH:'Openingspassage \u2014 eerste 40-60 woorden, citeerbaar', blueprintH:'Pagina-blueprint \u2014 schrijf in deze volgorde', iltH:'Interne link-doelen', compTableH:'Concurrenten-tabel', domain:'Domein', mustH2H:'Verplichte H2\\'s', entitiesH:'Entiteiten om te dekken', structureH:'Structuur', metaDescH:'Meta-omschrijving' },
+    nl: { metaPkgH:'Meta-pakket \u2014 kant-en-klaar', openingH:'Openingspassage \u2014 eerste 40-60 woorden, citeerbaar', blueprintH:'Pagina-blueprint \u2014 schrijf in deze volgorde', iltH:'Interne link-doelen', compTableH:'Concurrenten-tabel', domain:'Domein', mustH2H:'Verplichte H2\'s', entitiesH:'Entiteiten om te dekken', structureH:'Structuur', metaDescH:'Meta-omschrijving' },
     es: { metaPkgH:'Paquete meta \u2014 listo para pegar', openingH:'Pasaje de apertura \u2014 primeras 40-60 palabras, citable', blueprintH:'Plano de p\u00e1gina \u2014 escribe en este orden', iltH:'Objetivos de enlace interno', compTableH:'Tabla de competidores', domain:'Dominio', mustH2H:'H2 imprescindibles', entitiesH:'Entidades a cubrir', structureH:'Estructura', metaDescH:'Meta descripci\u00f3n' },
     de: { metaPkgH:'Meta-Paket \u2014 einf\u00fcgefertig', openingH:'Er\u00f6ffnungsabsatz \u2014 erste 40-60 W\u00f6rter, zitierf\u00e4hig', blueprintH:'Seiten-Blueprint \u2014 in dieser Reihenfolge schreiben', iltH:'Interne Linkziele', compTableH:'Konkurrenz-Tabelle', domain:'Domain', mustH2H:'Pflicht-H2s', entitiesH:'Abzudeckende Entit\u00e4ten', structureH:'Struktur', metaDescH:'Meta-Beschreibung' },
-    fr: { metaPkgH:'Pack m\u00e9ta \u2014 pr\u00eat \u00e0 coller', openingH:'Passage d\\'ouverture \u2014 40-60 premiers mots, citable', blueprintH:'Plan de page \u2014 \u00e9crire dans cet ordre', iltH:'Cibles de liens internes', compTableH:'Tableau des concurrents', domain:'Domaine', mustH2H:'H2 indispensables', entitiesH:'Entit\u00e9s \u00e0 couvrir', structureH:'Structure', metaDescH:'M\u00e9ta-description' },
+    fr: { metaPkgH:'Pack m\u00e9ta \u2014 pr\u00eat \u00e0 coller', openingH:'Passage d\'ouverture \u2014 40-60 premiers mots, citable', blueprintH:'Plan de page \u2014 \u00e9crire dans cet ordre', iltH:'Cibles de liens internes', compTableH:'Tableau des concurrents', domain:'Domaine', mustH2H:'H2 indispensables', entitiesH:'Entit\u00e9s \u00e0 couvrir', structureH:'Structure', metaDescH:'M\u00e9ta-description' },
     pt: { metaPkgH:'Pacote meta \u2014 pronto para colar', openingH:'Passagem de abertura \u2014 primeiras 40-60 palavras, cit\u00e1vel', blueprintH:'Plano da p\u00e1gina \u2014 escreva nesta ordem', iltH:'Alvos de link interno', compTableH:'Tabela de concorrentes', domain:'Dom\u00ednio', mustH2H:'H2 obrigat\u00f3rios', entitiesH:'Entidades a cobrir', structureH:'Estrutura', metaDescH:'Meta descri\u00e7\u00e3o' },
     it: { metaPkgH:'Pacchetto meta \u2014 pronto da incollare', openingH:'Passaggio di apertura \u2014 prime 40-60 parole, citabile', blueprintH:'Blueprint della pagina \u2014 scrivi in questo ordine', iltH:'Obiettivi di link interni', compTableH:'Tabella concorrenti', domain:'Dominio', mustH2H:'H2 obbligatori', entitiesH:'Entit\u00e0 da coprire', structureH:'Struttura', metaDescH:'Meta descrizione' }
   };
@@ -33202,7 +33202,7 @@ async function markDone(pageId, btn, currentDone) {
       var _isProvenPage = _pSlug && typeof _provenList !== 'undefined' && _provenList.indexOf(_pSlug) > -1;
       var _gapDone = _gapAnalysis && _gapAnalysis.families && _gapAnalysis.families.length;
       if (_isProvenPage && !_gapDone) {
-        var _ok = confirm('This page has PROVEN cannibalization conflicts. Scanning now will miss the Impression Gap sections (Sort this out for me hasn\\'t run yet) \\u2014 you\\'d likely need to scan this page again later.\\n\\nUse \\ud83d\\ude80 Do everything in the Cannibalization panel instead \\u2014 it runs Sort first, then scans, so this page only needs one scan.\\n\\nScan anyway right now?');
+        var _ok = confirm('This page has PROVEN cannibalization conflicts. Scanning now will miss the Impression Gap sections (Sort this out for me hasn\'t run yet) \\u2014 you\'d likely need to scan this page again later.\\n\\nUse \\ud83d\\ude80 Do everything in the Cannibalization panel instead \\u2014 it runs Sort first, then scans, so this page only needs one scan.\\n\\nScan anyway right now?');
         if (!_ok) return;
       }
     }
@@ -38228,7 +38228,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 var _isPaused = !!c.emails_paused;
                 emailPauseBtn.textContent = _isPaused ? '\\ud83d\\udd15 Emails paused' : '\\ud83d\\udce7 Emails on';
                 emailPauseBtn.title = _isPaused
-                  ? 'This client\\'s automated emails (reminders, brief-ready) are currently silenced. Click to turn them back on.'
+                  ? 'This client\'s automated emails (reminders, brief-ready) are currently silenced. Click to turn them back on.'
                   : 'Click to temporarily silence ALL automated emails for this client \\u2014 useful while manually testing/scanning. Scans and briefs still work as normal.';
                 emailPauseBtn.style.cssText = 'font-size:10px;padding:3px 8px;border-radius:6px;' + (_isPaused ? 'background:#7c2d12;border:1px solid #ea580c;color:#fed7aa;' : 'background:#0d1117;border:1px solid #374151;color:#9ca3af;');
                 emailPauseBtn.onclick = (function(id, btn){ return function(){
