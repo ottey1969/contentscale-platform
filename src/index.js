@@ -30805,7 +30805,7 @@ function _renderIntentBar(si) {
     var opts = ['informational','commercial','transactional','navigational'];
     var pills = opts.map(function(o){
       var on = (o === si.primary);
-      return '<button onclick="_pwbRegenWithIntent(\''+o+'\')" style="cursor:pointer;border:1px solid '+(on?'#3b82f6':'#334155')+';background:'+(on?'#1d4ed8':'#0b1220')+';color:#e2e8f0;border-radius:6px;padding:5px 11px;font-size:11.5px;font-weight:600;">'+cap(o)+'</button>';
+      return '<button data-intent="'+o+'" onclick="_pwbRegenWithIntent(this.getAttribute(&quot;data-intent&quot;))" style="cursor:pointer;border:1px solid '+(on?'#3b82f6':'#334155')+';background:'+(on?'#1d4ed8':'#0b1220')+';color:#e2e8f0;border-radius:6px;padding:5px 11px;font-size:11.5px;font-weight:600;">'+cap(o)+'</button>';
     }).join(' ');
     head += '<div style="margin-top:10px;padding-top:10px;border-top:1px solid #1e293b;">'
       + '<div style="color:#cbd5e1;margin-bottom:7px;font-size:11.5px;">The SERP for this keyword is mixed, so the intent is uncertain. This brief was written for <strong>'+esc(cap(si.primary))+'</strong>. If you know the audience wants something else, pick it and the brief regenerates:</div>'
