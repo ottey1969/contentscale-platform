@@ -1,5 +1,61 @@
 console.log('=== CONTENTSCALE BOOT ' + new Date().toISOString() + ' v2026-07-08-possible-prioritized-shortcut | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON | possibleThreshold=20impr | shortcutPrioritized=v2 | gscAutoFetchRemoved=true | linkCheckActive=true | wholeSiteWipeGuard=true | gscAutoFetchRestored=true | reminderOffFix=true | claudeRemoved=true | bingWebmaster=true | competitorPanel=true | zeroResultFix=true | pagesRefreshFix=true | recheckButton=true | provenScanStrip=true | provenScanState=true | scanAllProven=true | doEverythingBtn=true | panelOrderFix=true | workflowGuide=true | preScanGuard=true | scanAllGuard=true | earlyGuard=true | emptyStateTeaser=true | provenScopeFix=true | numberedButtons=true | clearerButtons=true | scanAnimFix=true | promptClaudeCleanup=true | bonusTip=true | realProvenContext=true | competitorContext=true | unifiedBrief=true | diagnosticFirst=true | fullCompetitorBreakdown=true | serpSpyV3=true | transparencyBlock=true | emailsPausedToggle=true | competitorDedup=true | provenScanDebug=true | serializedScans=true | claudeCleanupV2=true | mergeClaudeStrip=true | visualTransparency=true | aboveFoldPriority=true | competitorComparisonTable=true | redGreenTracking=true | aioExplicitState=true | perpCopilotState=true | realMergePromptFixed=true | briefContextDebug=true | forceRescanBypass=true | gscPosFallback=true | cannibalDedup=true | gscAccessGated=true | gapConfirmShown=true | noPlaceholders=true | rowNumContrast=true | codeCannibalDedup=true | provenDebugRemoved=true | broaderCannibalDedup=true | competitorGapFallback=true | competitorPrevSnapFallback=true | hubSpokeDedup=true | compGapRegexBroadened=true | gapFixLabelFallback=true | geminiProForBriefs=true | timeoutBudgetFixed=true | perAttemptTimeout45s=true | revertToFlashLite=true | tokenLimitDoubled=true | urlNormFix=true | impactFieldChecked=true | broaderHubPattern=true | cannibalContextRemovedFromGSC=true | scanStateDerivedFromDB=true | boardBriefRestyled=true | liveWallBriefModal=true | modalScopeFix=true | cardTransparency=true | CLAUDE-FIX-2307=true | CLAUDE-FIX-2307B-specquote=true | CLAUDE-FIX-2307C-pwboard=true | CLAUDE-FIX-2307D-typefilter=true | CLAUDE-FIX-2307E-scanneraio=true | CLAUDE-FIX-2307F-urlstrip=true | CLAUDE-FIX-2307G-aiobeforeScan=true | CLAUDE-FIX-2307H-aioInPrompt=true | CLAUDE-FIX-2307I-escHtml=true | CLAUDE-FIX-2307J-escAlias-noStale=true | CLAUDE-FIX-2407A-perpCitedConsistency=true | CLAUDE-FIX-2407B-perpCacheBug=true | CLAUDE-FIX-2407C-domainVsPageNuance=true | CLAUDE-FIX-2407D-wallModalNoReshuffle=true | CLAUDE-FIX-2407E-buildBriefSafetyNet=true | CLAUDE-FIX-2407F-modalFullText=true | CLAUDE-FIX-2407G-aioPasteModal=true | CLAUDE-FIX-2407H-aioDefinitionView=true | CLAUDE-FIX-2407I-aioBlueprintMining=true | CLAUDE-FIX-2407J-aioReferences=true | CLAUDE-FIX-2407K-aioCitationGap=true | CLAUDE-FIX-2407L-compGapTableAllModals=true | CLAUDE-FIX-2407M-honestAioManualOnly=true | CLAUDE-FIX-2407N-regexEscapeInTemplate=true | CLAUDE-FIX-2507A-jsonRepair-mergeTokens4096=true | CLAUDE-FIX-2507B-cardButtonsWorkflowOrder=true | CLAUDE-FIX-2507C-cardButtonsPillColors=true | CLAUDE-FIX-2507D-aioReloadFull-limit8000=true | CLAUDE-FIX-2507E-briefModalTransparency=true | CLAUDE-FIX-2507F-aioGapTable4col=true | CLAUDE-FIX-2507G-htmlScanTickCycle=true | CLAUDE-FIX-2507H-briefViewedPersisted=true | CLAUDE-FIX-2507I-fixCardRenderVarInExpr=true | CLAUDE-FIX-2507J-briefsUnified-manualAioGap=true | CLAUDE-FIX-2507K-gscCompTableInTracker=true | CLAUDE-FIX-2507L-trackerSplitSections=true | CLAUDE-FIX-2507M-copyBriefClarity=true | CLAUDE-FIX-2507N-aioRefsFromManualPaste=true | CLAUDE-FIX-2507O-removeSseEventSource=true | CLAUDE-FIX-2507P-ticksPersistUntilDoneOrNewHtml=true | CLAUDE-FIX-2507Q-aioRefsStoredAtSave=true | CLAUDE-FIX-2507R-aioGapTableAlways=true | CLAUDE-FIX-2507S-aioGscContextSeparated=true | CLAUDE-FIX-2507T-aioCodeFallbackFixed-refsFromManualSave=true | CLAUDE-FIX-2507U-mergeSafetyNet-cardSummaryParity=true | CLAUDE-FIX-2507V-sharedAioRenderFn-authTable=true | CLAUDE-FIX-2507W-viewLastBriefDelegates-oneSystem=true | CLAUDE-FIX-2507X-sharedBriefBody-fullUnification=true | CLAUDE-FIX-2507Y-aioTop5Table-definitionLabel=true | CLAUDE-FIX-2507Z-noRefsActionableMsg=true | CLAUDE-FIX-2508A-manualPasteWinsOverStaleSnapshot=true | CLAUDE-FIX-2508B-merge2Hardened-diagLog=true | CLAUDE-FIX-2508C-noStoreHeaders-freshClientJs=true | CLAUDE-FIX-2508D-saveEchoDiagnostic=true | CLAUDE-FIX-2508E-separateSourcesField=true | CLAUDE-FIX-2508F-diagSourcesField=true | CLAUDE-FIX-2508G-acceptSourceNames=true | CLAUDE-FIX-2508H-namesFromMainPaste-headingFilter=true | CLAUDE-FIX-2508I-cloroAioFetch=true | CLAUDE-FIX-2508J-namesFallback-autoSplit=true | CLAUDE-FIX-2508K-competitorGapAioFallback=true | CLAUDE-FIX-2508L-aioFallbackNoGscLeak-honestLabel=true | CLAUDE-FIX-2508M-gscRootDomainFallback=true | CLAUDE-FIX-2508N-sitemapLinks250-gscLiveFilter=true | CLAUDE-FIX-2508O-leadQueueCollapsedDefault=true | CLAUDE-FIX-2508P-leadQueueToggleRealFns=true | CLAUDE-FIX-2508Q-leadQueueHeaderWrap=true | CLAUDE-FIX-2508R-scanSelectedButton=true | CLAUDE-FIX-2508S-shiftClickRange=true | CLAUDE-FIX-2508T-shiftClickCorrectClass-inTemplate=true | CLAUDE-FIX-2508U-brandHeadshotHubFields=true | CLAUDE-FIX-2508V-briefModeSelector=true | CLAUDE-FIX-2508W-intentSnapshot-ownerNote=true | CLAUDE-FIX-2508X-modeBtnQuoteFix=true | CLAUDE-FIX-2508Y-perpApostropheFix=true | CLAUDE-FIX-2508Z-sitemapRegexFix=true | CLAUDE-FIX-2508ZA-pageInSitemapRegexFix=true | CLAUDE-FIX-2508ZB-missingEntities=true | CLAUDE-FIX-2508ZC-briefSpacing=true | CLAUDE-FIX-2508ZD-pasteCodeBlocks=true | CLAUDE-FIX-2508ZE-fmtActionRegexFix=true | CLAUDE-FIX-2508ZF-ticksOnlyClearOnDone=true | CLAUDE-FIX-2508ZG-paa5-pwbWider-aioFallbackMsg=true | CLAUDE-FIX-2508ZH-numberedItemsOnOwnLines=true | CLAUDE-FIX-2508ZI-prewriteBuildFields-aioListNotUglyTable=true | CLAUDE-FIX-2508ZJ-cleanAioDefinitionText=true | CLAUDE-FIX-2508ZK-slugRegexCrashFix-sectionSplit=true | CLAUDE-FIX-2508ZL-tvModalFmtAction=true | CLAUDE-FIX-3007A-tourAioScanSelected-mobileFriendly=true | CLAUDE-FIX-3007B-htmlLangWhitelistNonLatin=true | CLAUDE-FIX-3007C-clientBriefLanguageSelector=true | CLAUDE-FIX-3007D-briefLanguageTourStep=true | CLAUDE-FIX-3007E-prewriteLangListFull=true | CLAUDE-FIX-3007F-prewriteAutoAioFetch=true | CLAUDE-FIX-3007G-serpRegionListFull=true | CLAUDE-FIX-3007H-prewriteMobilePolish=true | CLAUDE-FIX-3007I-groupedComboDropdowns=true | CLAUDE-FIX-3007J-comboSyntaxFix=true | CLAUDE-FIX-3007K-multiLangBadges=true | CLAUDE-FIX-3007L-headerReportCTA=true | CLAUDE-FIX-3007M-tvViewReportCTA=true | CLAUDE-FIX-3007N-tvTopBarCTA=true | CLAUDE-FIX-3007O-realPaaInBrief=true | CLAUDE-FIX-0208-briefLangLeaks-item1AndTemplateLabels=true | CLAUDE-FIX-0208B-prewriteLabelsTranslated=true | CLAUDE-FIX-0208C-readyPasteMarkerAndCiteableLang=true | CLAUDE-FIX-0308-alignmentItemLang=true | CLAUDE-FIX-0308B-copyBriefCompTableParity=true | CLAUDE-FIX-0308C-cannibalStopwordMatch=true | CLAUDE-FIX-0308D-hardcodedCiteItemsLocalized=true | CLAUDE-FIX-0308E-cannibalSlugFallback=true | CLAUDE-FIX-1208-honestScanCount=true | CLAUDE-FIX-2108A-aioCitedTextPlusSources=true | CLAUDE-FIX-2108B-aioSourceTableCaseInsensitive=true | CLAUDE-FIX-2108C-aioSourceRetryFallback=true | CLAUDE-FIX-2108D-graafScoreInBrief=true | CLAUDE-FIX-2108E-graafRecsDedupPrioritized=true | CLAUDE-FIX-2108F-eliteRecsDetailsNotDisplayNone=true | CLAUDE-FIX-2108G-graafScoreInTextExport=true | CLAUDE-FIX-2108H-competitorTableDedupTextExport=true | CLAUDE-FIX-2108I-textExportSectionParity=true | CLAUDE-FIX-2108J-tableRegexEscapeFix=true | CLAUDE-FIX-2108K-scoreDefinedInClientScope=true | CLAUDE-FIX-2108L-clientBriefUsesDataNotP=true | CLAUDE-FIX-2108M-prewriteNoFabrication=true | CLAUDE-FIX-2108N-outputVoiceNoHype=true ===');
 
+
+// ═══ GLOBAL SEARCH INTENT HELPERS (CLAUDE-FIX-2608-intentEngine) ═══
+// ═══ SEARCH INTENT DETECTION (CLAUDE-FIX-2608-intentEngine) ═══════════════
+// Intent uit de ECHTE SERP afgeleid (Google's eigen oordeel), niet uit
+// losse keyword-woordjes. Stuurt de brief -> betere ranking + AI-citatie.
+function detectSearchIntent(kw, org, paaArr, aiOv, comps) {
+  const kwl = (kw || '').toLowerCase();
+  const serpText = (org || []).map(o => ((o.title||'')+' '+(o.snippet||'')).toLowerCase()).join(' ');
+  const score = { informational: 0, commercial: 0, transactional: 0, navigational: 0 };
+  const evidence = [];
+  const gW = ['how to','what is','guide','tutorial','meaning','definition','explained','tips','examples','ideas','wat is','hoe ','gids','uitleg','qué es','cómo','guía'];
+  const cW = ['best','top ','review','vs ','versus','compare','comparison','alternatives','cheapest','beste','vergelijk','mejor','mejores','comparativa'];
+  const tW = ['buy','price','pricing','cost','hire','quote','order','for sale','near me','discount','deal','kopen','prijs','inhuren','offerte','comprar','precio','contratar'];
+  const gH = gW.filter(w => serpText.includes(w)).length;
+  const cH = cW.filter(w => serpText.includes(w)).length;
+  const tH = tW.filter(w => serpText.includes(w)).length;
+  if (gH) { score.informational += gH*3; evidence.push(gH+' informational signal(s) in SERP'); }
+  if (cH) { score.commercial += cH*3; evidence.push(cH+' commercial signal(s) in SERP'); }
+  if (tH) { score.transactional += tH*3; evidence.push(tH+' transactional signal(s) in SERP'); }
+  if (aiOv) { score.informational += 2; evidence.push('AI Overview / answer box present'); }
+  if ((paaArr||[]).length >= 3) { score.informational += 2; evidence.push((paaArr.length)+' People Also Ask questions'); }
+  const faqCount = (comps||[]).filter(c => c.has_faq).length;
+  if (faqCount >= 2) { score.informational += 2; evidence.push(faqCount+' top competitors use FAQ structure'); }
+  if (gW.some(w => kwl.includes(w))) score.informational += 1;
+  if (cW.some(w => kwl.includes(w))) score.commercial += 1;
+  if (tW.some(w => kwl.includes(w))) score.transactional += 1;
+  const fw = (org||[]).slice(0,8).map(o => (o.title||'').toLowerCase().split(/[\s|\u2014-]/)[0]).filter(Boolean);
+  const bc = {}; fw.forEach(w => { bc[w] = (bc[w]||0)+1; });
+  const tb = Object.entries(bc).sort((a,b)=>b[1]-a[1])[0];
+  if (tb && tb[1] >= 4) { score.navigational += 4; evidence.push('One brand dominates the SERP ("'+tb[0]+'")'); }
+  const ranked = Object.entries(score).sort((a,b)=>b[1]-a[1]);
+  const primary = ranked[0][1] > 0 ? ranked[0][0] : 'informational';
+  const secondary = ranked[1][1] > 0 ? ranked[1][0] : null;
+  const total = ranked.reduce((s,[,v])=>s+v,0) || 1;
+  const share = ranked[0][1]/total;
+  let confidence;
+  if (ranked[0][1] === 0) confidence = 'low';
+  else if (share >= 0.6 && (ranked[0][1]-ranked[1][1]) >= 3) confidence = 'high';
+  else if (share >= 0.45) confidence = 'medium';
+  else confidence = 'low';
+  const kwSug = tW.some(w=>kwl.includes(w)) ? 'transactional' : cW.some(w=>kwl.includes(w)) ? 'commercial' : gW.some(w=>kwl.includes(w)) ? 'informational' : null;
+  const conflict = (kwSug && kwSug !== primary) ? ('Keyword suggests '+kwSug+', but the SERP shows '+primary+' \u2014 following the SERP.') : null;
+  return { primary, secondary, confidence, scores: score, evidence, conflict, auto: true };
+}
+function intentDirectives(intent) {
+  const m = {
+    informational: { contentType:'in-depth guide / explainer', structure:'Open with a direct 40-60 word definition (citeable by AI). Then build depth: how it works, examples, common questions. Answer PAA questions as H2/H3s.', cta:'Soft CTA \u2014 invite to read a related resource or try a free tool. Do NOT hard-sell.', schema:['Article','FAQPage'], citeable:'Lead each section with a short, quotable answer (the sentence an AI would lift).' },
+    commercial: { contentType:'comparison / best-of / buyer guide', structure:'Open with a one-line verdict. Then criteria, a comparison table, pros/cons per option, and a clear recommendation. Cover "X vs Y" and "best X" angles.', cta:'Medium CTA \u2014 free demo, free scan, or see pricing.', schema:['Article','FAQPage','ItemList'], citeable:'Include a comparison table and a named top pick \u2014 AI answers cite these directly.' },
+    transactional: { contentType:'service / offer / product page', structure:'Open with the offer and who it is for. Then proof (results, cases), scope/pricing, and a strong repeated action. Keep it tight \u2014 buyers scan.', cta:'Hard CTA \u2014 contact, request a quote, hire, buy. Repeat 2-3x.', schema:['Service','Offer','FAQPage'], citeable:'State the concrete offer and any hard numbers up front (price band, turnaround, guarantee).' },
+    navigational: { contentType:'brand / destination page', structure:'Get the user to what they searched for fast. Clear brand framing, direct links to the specific thing (login, product, contact).', cta:'Direct \u2014 the exact action they came for.', schema:['Organization','WebSite'], citeable:'State clearly who/what this is in the first sentence.' }
+  };
+  return m[intent] || m.informational;
+}
+// ═══ END SEARCH INTENT DETECTION ═════════════════════════════════════════
+// ═══ END GLOBAL SEARCH INTENT HELPERS ═══
+
 // Repair common LLM-JSON defects (raw newlines/tabs inside strings, trailing commas)
 function _repairJsonG(str){
   let out='', inStr=false, esc=false;
@@ -17869,11 +17925,28 @@ app.post('/api/content/pipeline', verifyEngineAccess, async (req, res) => {
       competitor_avg_words: avgWords
     };
 
+
+// (search-intent helpers moved to global scope — see top-level detectSearchIntent)
+
     // ═══ STAGE 2: BRIEF ══════════════════════════════════════════════════════
     console.log(`[pipeline] Stage 2/5: BRIEF — generating content brief`);
     let brief = null;
+    // ── Detect search intent from the real SERP (CLAUDE-FIX-2608-intentEngine) ──
+    const intentResult = detectSearchIntent(keyword, organic, paa, aiOverview, competitors);
+    const intentDir = intentDirectives(intentResult.primary);
+    pipeline.stages.research.search_intent = intentResult;
+    console.log(`[pipeline] Search intent: ${intentResult.primary}${intentResult.secondary ? ' (+ '+intentResult.secondary+')' : ''} | confidence: ${intentResult.confidence}${intentResult.conflict ? ' | '+intentResult.conflict : ''}`);
     if (geminiKey) {
       const briefPrompt = `Create a professional content brief for the keyword "${keyword}". Base it on this research data:
+
+SEARCH INTENT (detected from the live SERP — this MUST shape the whole brief):
+- Primary intent: ${intentResult.primary}${intentResult.secondary ? ' | Secondary: '+intentResult.secondary : ''} (confidence: ${intentResult.confidence})
+- Content type to write: ${intentDir.contentType}
+- Required structure: ${intentDir.structure}
+- CTA style: ${intentDir.cta}
+- Citation approach: ${intentDir.citeable}
+${intentResult.conflict ? '- NOTE: '+intentResult.conflict : ''}
+Match this intent exactly. A page that misreads intent will not rank no matter how well written.
 
 COMPETITORS: ${competitors.length} pages analyzed, avg ${avgWords} words
 TOP H2 HEADINGS USED: ${[...new Set(competitors.flatMap(c => c.h2_count ? ['Example H2'] : []))].join(', ')}
@@ -17890,10 +17963,11 @@ Generate JSON:
   "topics_to_cover": ["topic 1", "topic 2", "topic 3"],
   "paa_to_answer": ["${paa[0]?.question || 'Question 1'}"],
   "statistics_to_find": ["relevant statistic 1", "relevant statistic 2"],
-  "schema_types": ["Article", "FAQPage"],
+  "schema_types": ${JSON.stringify(intentDir.schema)},
   "voice_search_answer": "30-50 word natural language answer",
   "internal_linking": ["suggested internal page to link"],
-  "cta": "Call-to-action for the end"
+  "cta": "Call-to-action matching a ${intentResult.primary} intent (${intentDir.cta})",
+  "search_intent": {"primary": "${intentResult.primary}", "secondary": ${intentResult.secondary ? '"'+intentResult.secondary+'"' : 'null'}, "confidence": "${intentResult.confidence}"}
 }`;
       try {
         const gemResult = await callGeminiWithFallback(geminiKey, {
@@ -30672,14 +30746,17 @@ async function generatePrewriteBrief() {
   result.innerHTML = '';
 
   try {
-    var data = await api('/prewrite-brief', 'POST', { keyword: kw, workingTitle: title, language: lang, region: region, manualAioText: aioText });
+    var _pwbBody = { keyword: kw, workingTitle: title, language: lang, region: region, manualAioText: aioText };
+    if (arguments.length && arguments[0] && arguments[0].intentOverride) _pwbBody.intentOverride = arguments[0].intentOverride;
+    var data = await api('/prewrite-brief', 'POST', _pwbBody);
     btn.disabled = false; btn.textContent = 'Generate brief';
     if (!data || !data.success || !data.brief) {
       stat.textContent = '\u274c ' + ((data && data.error) || 'Could not generate a brief. Try again.');
       return;
     }
+    _lastPwbInput = { keyword: kw, workingTitle: title, language: lang, region: region, manualAioText: aioText };
     stat.textContent = '\u2713 Brief ready \u00b7 ' + (data.competitors_scraped || 0) + ' competitors analysed \u00b7 region: ' + (data.region || 'us') + (data.briefs_allowed ? ' \u00b7 ' + data.briefs_used + '/' + data.briefs_allowed + ' briefs used' : '');
-    result.innerHTML = renderPrewriteBrief(data.brief);
+    result.innerHTML = _renderIntentBar(data.search_intent) + renderPrewriteBrief(data.brief);
     loadRecentPrewriteBriefs();
   } catch (e) {
     btn.disabled = false; btn.textContent = 'Generate brief';
@@ -30699,6 +30776,61 @@ async function generatePrewriteBrief() {
 }
 
 var _lastPrewriteBriefText = '';
+var _lastPwbInput = null;
+// ── Intent bar (CLAUDE-FIX-2608-intentEngine) ──────────────────────────────
+// Always shows which intent the brief was written for. When the SERP was
+// ambiguous (confidence low) and no override was applied yet, it offers a
+// one-click re-generate against a different intent. At high/medium confidence
+// it is a passive label only — the tool trusts the SERP, no decision needed.
+function _renderIntentBar(si) {
+  if (!si || !si.primary) return '';
+  var esc = function(s){ return (s==null?'':String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); };
+  var cap = function(s){ return s ? s.charAt(0).toUpperCase()+s.slice(1) : s; };
+  var confColor = si.confidence === 'high' ? '#16a34a' : (si.confidence === 'medium' ? '#d97706' : '#dc2626');
+  var head = '<div style="background:#0f172a;border-radius:10px;padding:12px 14px;margin:0 0 14px;color:#e2e8f0;font-size:12.5px;line-height:1.6;">'
+    + '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">'
+    + '<span style="font-weight:700;letter-spacing:.03em;">SEARCH INTENT</span>'
+    + '<span style="background:#1e293b;border-radius:6px;padding:2px 9px;font-weight:700;">' + esc(cap(si.primary)) + '</span>'
+    + (si.overridden ? '<span style="background:#7c3aed;border-radius:6px;padding:2px 8px;font-size:11px;">set manually</span>' : '<span style="color:#94a3b8;font-size:11px;">auto-detected from the live SERP</span>')
+    + '<span style="margin-left:auto;color:' + confColor + ';font-weight:700;font-size:11px;">confidence: ' + esc(si.confidence) + '</span>'
+    + '</div>';
+  // Always-on explainer: makes clear the feature is built in and how it decides.
+  head += '<div style="margin-top:8px;padding-top:8px;border-top:1px solid #1e293b;color:#94a3b8;font-size:11px;line-height:1.6;">'
+    + 'This brief\u2019s search intent is detected <strong style="color:#cbd5e1;">automatically from what Google actually ranks</strong> for this keyword \u2014 not guessed from the words in the keyword. The brief\u2019s structure, CTA and schema are built to match it, so the page targets what searchers really want. '
+    + 'When Google\u2019s results are mixed and the signal is unclear, the confidence drops to <strong style="color:#cbd5e1;">low</strong> and you\u2019ll be asked to pick the intent yourself \u2014 otherwise the SERP-detected intent is used automatically.'
+    + '</div>';
+  if (si.conflict) head += '<div style="margin-top:6px;color:#fbbf24;font-size:11.5px;">\u26a0 ' + esc(si.conflict) + '</div>';
+  // Only when the SERP was genuinely ambiguous do we ask the human to decide.
+  if (si.needs_confirmation) {
+    var opts = ['informational','commercial','transactional','navigational'];
+    var pills = opts.map(function(o){
+      var on = (o === si.primary);
+      return '<button onclick="_pwbRegenWithIntent(\''+o+'\')" style="cursor:pointer;border:1px solid '+(on?'#3b82f6':'#334155')+';background:'+(on?'#1d4ed8':'#0b1220')+';color:#e2e8f0;border-radius:6px;padding:5px 11px;font-size:11.5px;font-weight:600;">'+cap(o)+'</button>';
+    }).join(' ');
+    head += '<div style="margin-top:10px;padding-top:10px;border-top:1px solid #1e293b;">'
+      + '<div style="color:#cbd5e1;margin-bottom:7px;font-size:11.5px;">The SERP for this keyword is mixed, so the intent is uncertain. This brief was written for <strong>'+esc(cap(si.primary))+'</strong>. If you know the audience wants something else, pick it and the brief regenerates:</div>'
+      + '<div style="display:flex;gap:6px;flex-wrap:wrap;">' + pills + '</div>'
+      + '</div>';
+  }
+  head += '</div>';
+  return head;
+}
+// Regenerate the brief for a chosen intent (only reachable from the low-confidence bar).
+async function _pwbRegenWithIntent(intent) {
+  if (!_lastPwbInput) return;
+  var stat = document.getElementById('pwbStatus');
+  var result = document.getElementById('pwbResult');
+  if (stat) stat.textContent = 'Rebuilding the brief for ' + intent + ' intent\u2026';
+  if (result) result.innerHTML = '';
+  try {
+    var body = Object.assign({}, _lastPwbInput, { intentOverride: intent });
+    var data = await api('/prewrite-brief', 'POST', body);
+    if (!data || !data.success || !data.brief) { if (stat) stat.textContent = '\u274c ' + ((data && data.error) || 'Could not regenerate.'); return; }
+    if (stat) stat.textContent = '\u2713 Brief rebuilt for ' + intent + ' intent \u00b7 ' + (data.competitors_scraped||0) + ' competitors';
+    if (result) result.innerHTML = _renderIntentBar(data.search_intent) + renderPrewriteBrief(data.brief);
+    loadRecentPrewriteBriefs();
+  } catch(e) { if (stat) stat.textContent = '\u274c ' + e.message; }
+}
 function renderPrewriteBrief(b) {
   var esc = function(s) { return (s == null ? '' : String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); };
   // ── Pre-Write section labels per language (lek 2 — Pre-Write). Falls back to English. ──
@@ -40596,7 +40728,7 @@ app.post('/api/tracker-client/:token/prewrite-brief', async (req, res) => {
     if (cr.rows[0].status === 'disabled' || cr.rows[0].status === 'paused') return res.status(403).json({ success: false, error: 'This tracker is ' + cr.rows[0].status + '. Contact Ottmar to reactivate.' });
     const client = cr.rows[0];
 
-    const { keyword, workingTitle, language, region, manualAioText } = req.body || {};
+    const { keyword, workingTitle, language, region, manualAioText, intentOverride } = req.body || {};
     if (!keyword) return res.status(400).json({ success: false, error: 'keyword required' });
     if (!process.env.GEMINI_API_KEY) return res.status(500).json({ success: false, error: 'GEMINI_API_KEY not set' });
 
@@ -40747,6 +40879,16 @@ app.post('/api/tracker-client/:token/prewrite-brief', async (req, res) => {
       return `RANK ${e.rank}: ${e.domain}\n  Title: "${e.title || ''}"\n  Snippet: "${(e.snippet || '')}"\n  Word count: ${sc.wordCount || '?'}\n  Schema detected: ${schema.length ? schema.join(', ') : 'none'}\n  Body excerpt: ${body || '(not captured)'}`;
     }).join('\n\n');
 
+    // ── Search intent: detect from the real SERP, allow an owner override (CLAUDE-FIX-2608-intentEngine) ──
+    const _aioForIntent = aioManualText ? { answer: aioManualText } : null;
+    const _autoIntent = detectSearchIntent(keyword, serpUrls, peopleAlsoAsk, _aioForIntent, top5);
+    const _validIntents = ['informational','commercial','transactional','navigational'];
+    const _chosenIntent = (intentOverride && _validIntents.includes(String(intentOverride).toLowerCase()))
+      ? String(intentOverride).toLowerCase() : _autoIntent.primary;
+    const _intentWasOverridden = _chosenIntent !== _autoIntent.primary;
+    const _intentDir = intentDirectives(_chosenIntent);
+    console.log(`[prewrite-brief] intent: auto=${_autoIntent.primary} (conf ${_autoIntent.confidence})${_intentWasOverridden ? ' | OVERRIDDEN to '+_chosenIntent : ''}${_autoIntent.conflict ? ' | '+_autoIntent.conflict : ''}`);
+
     const prompt = `You are an elite SEO and AEO strategist. There is NO existing page for this keyword yet — you are specifying what a brand-new page must contain to outrank and out-cite everything currently ranking, from the very first draft. Never frame anything as a "fix" — there is nothing to fix, only something to build correctly the first time. Every claim must be traceable to the SERP data below; never invent a domain, URL, snippet, statistic or schema type not present in the input.
 
 KEYWORD: "${keyword}"
@@ -40769,6 +40911,9 @@ ${sitemapBlock}
 ${brandBlock}
 
 MANDATORY PROCESSING ORDER:
+DETECTED SEARCH INTENT (from the live SERP — follow this, do not re-guess it): ${_chosenIntent}${_autoIntent.secondary ? ' (secondary: '+_autoIntent.secondary+')' : ''} [confidence: ${_autoIntent.confidence}${_intentWasOverridden ? '; manually set by strategist' : ''}].${_autoIntent.conflict ? ' NOTE: '+_autoIntent.conflict : ''}
+Write for this intent: content type = ${_intentDir.contentType}; structure = ${_intentDir.structure}; CTA style = ${_intentDir.cta}; citation approach = ${_intentDir.citeable}. A page that misreads intent will not rank however well written.
+
 STEP 1 — Analyse the SERP: what pattern do the top results share (format, depth, schema, freshness)?
 STEP 2 — INTENT DECOMPOSITION: list the 5-7 real sub-questions a searcher typing "${keyword}" actually wants answered.
 STEP 3 — GAP ACROSS THE WHOLE TOP 10: what does NONE of the current top 10 cover well — the opening this new page can own?
@@ -40828,6 +40973,18 @@ Return ONLY valid JSON, no markdown, no preamble.
     // Expose the chosen brief language to the client-side renderer so its section labels
     // (META PACKAGE, PAGE BLUEPRINT, COMPETITOR TABLE, ...) render in that language too (lek 2 — Pre-Write).
     brief.language = (language || 'en').toLowerCase().slice(0,5);
+    // Intent snapshot: what the SERP said, what was used, and whether a human overrode it.
+    brief.search_intent = {
+      primary: _chosenIntent,
+      auto_detected: _autoIntent.primary,
+      secondary: _autoIntent.secondary,
+      confidence: _autoIntent.confidence,
+      overridden: _intentWasOverridden,
+      conflict: _autoIntent.conflict || null,
+      evidence: _autoIntent.evidence,
+      // UI shows the change-intent control ONLY when confidence is low and no override yet.
+      needs_confirmation: (_autoIntent.confidence === 'low' && !_intentWasOverridden)
+    };
 
     // ── Freshness: stamped from the server clock, never from the model ──────────
     // Models routinely write stale years into "last updated" fields. The writer needs
@@ -40856,7 +41013,7 @@ Return ONLY valid JSON, no markdown, no preamble.
     } catch (e) { console.warn('[prewrite-brief] Could not save brief for recall:', e.message); }
 
     console.log(`[prewrite-brief] generated for "${keyword}" | client=${client.name || client.id} | gl=${glParam} | lang=${language || 'en'} | brief ${briefsUsed + 1}/${briefsAllowed}`);
-    res.json({ success: true, brief, brief_id: savedBriefId, competitors_scraped: top5.length, region: glParam, briefs_used: briefsUsed + 1, briefs_allowed: briefsAllowed });
+    res.json({ success: true, brief, brief_id: savedBriefId, competitors_scraped: top5.length, region: glParam, briefs_used: briefsUsed + 1, briefs_allowed: briefsAllowed, search_intent: brief.search_intent });
   } catch (e) {
     console.error('[prewrite-brief] error:', e.message);
     res.status(502).json({ success: false, error: e.message });
