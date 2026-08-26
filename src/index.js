@@ -16639,10 +16639,10 @@ fetch(RAILWAY+'/api/client-progress',{headers:{'x-access-token':token}})
     var pct=total>0?Math.round((done/total)*100):0;
     document.getElementById('progressBar').style.width=pct+'%';
     document.getElementById('progressLabel').innerHTML=
-      '<strong>'+done+' van '+total+'</strong> pagina\'s afgerond'+(busy?' &nbsp;·&nbsp; <strong>'+busy+'</strong> bezig':'');
-    document.getElementById('clientSub').textContent=total+' pagina\'s in dit project';
+      '<strong>'+done+' van '+total+'</strong> pagina\\'s afgerond'+(busy?' &nbsp;·&nbsp; <strong>'+busy+'</strong> bezig':'');
+    document.getElementById('clientSub').textContent=total+' pagina\\'s in dit project';
     if(!pages.length){
-      document.getElementById('pageList').innerHTML='<div class="empty">Nog geen pagina\'s toegevoegd.<br>Kom later terug voor updates.</div>';
+      document.getElementById('pageList').innerHTML='<div class="empty">Nog geen pagina\\'s toegevoegd.<br>Kom later terug voor updates.</div>';
       return;
     }
     var icons={done:'✅',busy:'🔄',planned:'⏳'};
@@ -27682,7 +27682,7 @@ function getActionSteps(p, rec){
     {sev:'med',title:'Add structured data for rich results',time:'30 min',
      desc:'FAQPage and LocalBusiness schema can increase CTR by 20-30% via rich results. Open PULSE+NEXUS → Step 8 for the exact JSON-LD to paste into your &lt;head&gt;.'},
     {sev:'low',title:'Build 3-5 internal links to this page',time:'20 min',
-     desc:'Internal links signal authority and help Google understand the page\'s importance. Open PULSE+NEXUS → Step 6 for exact source pages and anchor text to use.'},
+     desc:'Internal links signal authority and help Google understand the page\\'s importance. Open PULSE+NEXUS → Step 6 for exact source pages and anchor text to use.'},
   ];
   if(type==='rewrite') return [
     {sev:'high',title:'Run full audit BEFORE rewriting',time:'30 min',
@@ -28472,7 +28472,7 @@ function addDomain(){
 
 function removeDomain(domainId){
   var dom=domains.find(function(d){return d.id===domainId;});
-  if(!confirm('Verwijder domein '+dom.name+' en alle '+dom.pages.length+' pagina\'s?')) return;
+  if(!confirm('Verwijder domein '+dom.name+' en alle '+dom.pages.length+' pagina\\'s?')) return;
   domains=domains.filter(function(d){return d.id!==domainId;});
   save(); render(); updateDomainSelect(); toast('Verwijderd');
 }
@@ -28568,7 +28568,7 @@ function processGSCUpdate(raw){
   });
 
   save(); render();
-  toast('✅ '+updated+' pagina\'s bijgewerkt');
+  toast('✅ '+updated+' pagina\\'s bijgewerkt');
   setTimeout(function(){trackerSyncToServer(true);},1000);
 }
 
@@ -28582,7 +28582,7 @@ function checkWorkflowImport(){
     if(!available.length) return;
     var banner=document.getElementById('importBanner');
     banner.style.display='flex';
-    document.getElementById('importCount').textContent=available.length+' pagina\'s';
+    document.getElementById('importCount').textContent=available.length+' pagina\\'s';
   }catch(e){}
 }
 
@@ -28606,7 +28606,7 @@ function pollTrackerQueue(){
       });
       localStorage.setItem('cs_wf_pages',JSON.stringify(wf));
       checkWorkflowImport();
-      toast('✅ '+newPages.length+' herschreven pagina\'s klaar voor Pulse+Nexus import');
+      toast('✅ '+newPages.length+' herschreven pagina\\'s klaar voor Pulse+Nexus import');
     }).catch(function(){});
   }catch(e){}
 }
@@ -28620,7 +28620,7 @@ function importFromWorkflow(){
     var wfPages=JSON.parse(wf);
     var allUrls=domains.flatMap(function(d){return d.pages.map(function(p){return p.url;});});
     var newPages=wfPages.filter(function(p){return p.url&&!allUrls.includes(p.url);});
-    if(!newPages.length){ toast('Geen nieuwe pagina\'s'); return; }
+    if(!newPages.length){ toast('Geen nieuwe pagina\\'s'); return; }
     // Group by domain
     var domainMap={};
     newPages.forEach(function(p){
@@ -28645,7 +28645,7 @@ function importFromWorkflow(){
     save(); render(); updateDomainSelect();
     document.getElementById('importBanner').style.display='none';
     setTimeout(function(){trackerSyncToServer(true);},500);
-    toast('✅ '+added+' pagina\'s geïmporteerd in '+Object.keys(domainMap).length+' domein(en)');
+    toast('✅ '+added+' pagina\\'s geïmporteerd in '+Object.keys(domainMap).length+' domein(en)');
   }catch(e){ toast('⚠ Import mislukt: '+e.message); }
 }
 
@@ -28675,7 +28675,7 @@ function renderMeasDash(){
     return '<div class="'+cls+'">'
       +'<div class="md-left">'
       +'<div class="md-name" style="display:flex;align-items:center;gap:8px;"><span style="width:8px;height:8px;border-radius:50%;background:'+color+';flex-shrink:0;display:inline-block;"></span>'+dom.name+'</div>'
-      +'<div class="md-meta">'+dom.pages.length+' pagina\'s · start: '+dom.baseDate+(spiralCount>0?' · <span style="color:var(--red);">'+spiralCount+' spiraal</span>':'')+'</div>'
+      +'<div class="md-meta">'+dom.pages.length+' pagina\\'s · start: '+dom.baseDate+(spiralCount>0?' · <span style="color:var(--red);">'+spiralCount+' spiraal</span>':'')+'</div>'
       +'<div class="md-next '+(info.overdue?'overdue':info.due?'due':info.date&&daysUntil<=7?'due':'future')+'" style="color:'+statusColor+';">'+statusText+(info.date?' ('+info.date+')':'')+'</div>'
       +'</div>'
       +'<button class="btn btn-muted" style="font-size:8px;" onclick="scrollToDomain(\\''+dom.id+'\\')">↓ Naar domein</button>'
@@ -28704,7 +28704,7 @@ function renderGSummary(){
   var avg=changes.length?Math.round(changes.reduce(function(a,b){return a+b;},0)/changes.length*10)/10:null;
   document.getElementById('gSummary').innerHTML=
     '<div class="gs-card"><div class="gs-n" style="color:var(--blue)">'+domains.length+'</div><div class="gs-l">Domeinen</div></div>'
-   +'<div class="gs-card"><div class="gs-n" style="color:var(--blue)">'+total+'</div><div class="gs-l">Pagina\'s</div></div>'
+   +'<div class="gs-card"><div class="gs-n" style="color:var(--blue)">'+total+'</div><div class="gs-l">Pagina\\'s</div></div>'
    +'<div class="gs-card"><div class="gs-n" style="color:var(--green)">'+improving+'</div><div class="gs-l">Stijgend</div></div>'
    +'<div class="gs-card"><div class="gs-n" style="color:var(--gold)">'+stagnant+'</div><div class="gs-l">Stabiel</div></div>'
    +'<div class="gs-card"><div class="gs-n" style="color:var(--orange)">'+declining+'</div><div class="gs-l">Dalend</div></div>'
@@ -28725,7 +28725,7 @@ function render(){
 
     var pagesHtml='';
     if(!dom.pages.length){
-      pagesHtml='<div style="padding:18px;font-family:\'IBM Plex Mono\\',monospace;font-size:11px;color:var(--dim);text-align:center;">Nog geen pagina\'s — voeg toe via het formulier hierboven.</div>';
+      pagesHtml='<div style="padding:18px;font-family:\'IBM Plex Mono\\',monospace;font-size:11px;color:var(--dim);text-align:center;">Nog geen pagina\\'s — voeg toe via het formulier hierboven.</div>';
     } else {
       // Sort: spiral first, then declining, then rest
       var sorted=dom.pages.slice().sort(function(a,b){
@@ -28744,7 +28744,7 @@ function render(){
       +'<div class="domain-header" onclick="toggleDomain(\\'db-'+dom.id+'\\')">'
       +'<span class="domain-color" style="background:'+color+';"></span>'
       +'<span class="domain-name">'+dom.name+'</span>'
-      +'<span class="domain-meta">'+dom.pages.length+' pagina\'s · start: '+dom.baseDate+(spiralCount>0?' · <span style="color:var(--red);font-weight:700;">'+spiralCount+' 🚨</span>':'')+'</span>'
+      +'<span class="domain-meta">'+dom.pages.length+' pagina\\'s · start: '+dom.baseDate+(spiralCount>0?' · <span style="color:var(--red);font-weight:700;">'+spiralCount+' 🚨</span>':'')+'</span>'
       +'<span style="font-family:\'IBM Plex Mono\\',monospace;font-size:9px;margin-left:auto;">'+nextInfo+'</span>'
       +'<span style="font-family:\'IBM Plex Mono\\',monospace;font-size:14px;color:var(--dim);margin-left:8px;" id="chev-'+dom.id+'">▾</span>'
       +'</div>'
@@ -28807,7 +28807,7 @@ function processGSCForDomain(raw, domainId){
     updated++;
   });
   save(); render();
-  toast('✅ '+updated+' pagina\'s bijgewerkt voor '+dom.name);
+  toast('✅ '+updated+' pagina\\'s bijgewerkt voor '+dom.name);
   setTimeout(function(){trackerSyncToServer(true);},500);
 }
 
@@ -28998,10 +28998,10 @@ function exportCSV(){
 function exportClientReport(){
   if(!domains.length){ toast('⚠ Geen data'); return; }
   var css='body{font-family:Arial,sans-serif;max-width:980px;margin:40px auto;color:#1f2937;padding:0 20px;line-height:1.6;}h1{color:#7c3aed;font-size:24px;border-bottom:3px solid #7c3aed;padding-bottom:8px;margin-bottom:4px;}.dm{margin-bottom:28px;border:1px solid #e5e7eb;border-radius:10px;overflow:hidden;}.dm-head{padding:14px 18px;background:#f9fafb;border-bottom:1px solid #e5e7eb;display:flex;align-items:center;gap:10px;}.dm-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}.dm-name{font-size:16px;font-weight:700;}.pc{border-bottom:1px solid #e5e7eb;padding:12px 18px;}.pc:last-child{border-bottom:none;}.pc-url{font-size:11px;color:#2563eb;font-family:monospace;word-break:break-all;}.tl{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;margin-top:8px;}.tl-c{text-align:center;background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;padding:6px 3px;}.tl-c.filled{background:#f0fdf4;border-color:#86efac;}.tl-c.down{background:#fef2f2;border-color:#fca5a5;}.tl-wk{font-size:8px;color:#9ca3af;font-family:monospace;}.tl-p{font-size:16px;font-weight:900;color:#374151;}.tl-p.good{color:#16a34a;}.tl-p.warn{color:#b45309;}.tl-p.bad{color:#dc2626;}.up{color:#16a34a;}.dn{color:#dc2626;}.spiral{background:#fee2e2;border-left:4px solid #dc2626;}footer{margin-top:40px;padding-top:16px;border-top:1px solid #e5e7eb;color:#9ca3af;font-size:11px;text-align:center;}';
-  var body='<h1>SEO Voortgang Rapport</h1><p style="color:#6b7280;font-size:13px;margin-bottom:24px;">'+new Date().toLocaleDateString('nl-NL',{day:'numeric',month:'long',year:'numeric'})+' · '+domains.length+' domeinen · '+domains.reduce(function(t,d){return t+d.pages.length;},0)+' pagina\'s</p>';
+  var body='<h1>SEO Voortgang Rapport</h1><p style="color:#6b7280;font-size:13px;margin-bottom:24px;">'+new Date().toLocaleDateString('nl-NL',{day:'numeric',month:'long',year:'numeric'})+' · '+domains.length+' domeinen · '+domains.reduce(function(t,d){return t+d.pages.length;},0)+' pagina\\'s</p>';
   domains.forEach(function(dom,di){
     var color=DOMAIN_COLORS[dom.colorIdx%DOMAIN_COLORS.length];
-    body+='<div class="dm"><div class="dm-head"><span class="dm-dot" style="background:'+color+';"></span><span class="dm-name">'+dom.name+'</span><span style="font-size:12px;color:#6b7280;margin-left:auto;">'+dom.pages.length+' pagina\'s · start: '+dom.baseDate+'</span></div>';
+    body+='<div class="dm"><div class="dm-head"><span class="dm-dot" style="background:'+color+';"></span><span class="dm-name">'+dom.name+'</span><span style="font-size:12px;color:#6b7280;margin-left:auto;">'+dom.pages.length+' pagina\\'s · start: '+dom.baseDate+'</span></div>';
     dom.pages.forEach(function(page){
       var status=getSpiralStatus(page);
       var base=page.checkpoints.w0;
@@ -38228,7 +38228,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 var _isPaused = !!c.emails_paused;
                 emailPauseBtn.textContent = _isPaused ? '\\ud83d\\udd15 Emails paused' : '\\ud83d\\udce7 Emails on';
                 emailPauseBtn.title = _isPaused
-                  ? 'This client\'s automated emails (reminders, brief-ready) are currently silenced. Click to turn them back on.'
+                  ? 'This client\\'s automated emails (reminders, brief-ready) are currently silenced. Click to turn them back on.'
                   : 'Click to temporarily silence ALL automated emails for this client \\u2014 useful while manually testing/scanning. Scans and briefs still work as normal.';
                 emailPauseBtn.style.cssText = 'font-size:10px;padding:3px 8px;border-radius:6px;' + (_isPaused ? 'background:#7c2d12;border:1px solid #ea580c;color:#fed7aa;' : 'background:#0d1117;border:1px solid #374151;color:#9ca3af;');
                 emailPauseBtn.onclick = (function(id, btn){ return function(){
