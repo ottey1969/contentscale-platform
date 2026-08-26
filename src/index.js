@@ -33193,7 +33193,7 @@ async function markDone(pageId, btn, currentDone) {
       return;
     }
     // Guard against the exact "scan 3 times" scenario: this page has PROVEN cannibalization issues
-    // AND the gap analysis hasn't run yet AND this call did NOT come from _provenScanAll (which
+    // AND the gap analysis hasn\\'t run yet AND this call did NOT come from _provenScanAll (which
     // already guarantees Sort ran first). Scanning now would miss the gap-family sections, requiring
     // a second scan later to pick them up \u2014 so ask first instead of silently doing the wasteful thing.
     if (!_skipGapWarning) {
@@ -33202,7 +33202,7 @@ async function markDone(pageId, btn, currentDone) {
       var _isProvenPage = _pSlug && typeof _provenList !== 'undefined' && _provenList.indexOf(_pSlug) > -1;
       var _gapDone = _gapAnalysis && _gapAnalysis.families && _gapAnalysis.families.length;
       if (_isProvenPage && !_gapDone) {
-        var _ok = confirm('This page has PROVEN cannibalization conflicts. Scanning now will miss the Impression Gap sections (Sort this out for me hasn\'t run yet) \\u2014 you\'d likely need to scan this page again later.\\n\\nUse \\ud83d\\ude80 Do everything in the Cannibalization panel instead \\u2014 it runs Sort first, then scans, so this page only needs one scan.\\n\\nScan anyway right now?');
+        var _ok = confirm('This page has PROVEN cannibalization conflicts. Scanning now will miss the Impression Gap sections (Sort this out for me hasn\\'t run yet) \\u2014 you\\'d likely need to scan this page again later.\\n\\nUse \\ud83d\\ude80 Do everything in the Cannibalization panel instead \\u2014 it runs Sort first, then scans, so this page only needs one scan.\\n\\nScan anyway right now?');
         if (!_ok) return;
       }
     }
@@ -33243,7 +33243,7 @@ async function markDone(pageId, btn, currentDone) {
 
   // Bulk-trigger checkPage() for every unique PROVEN page, one at a time with a short gap between
   // each so the server (and Gemini) aren't hit with N simultaneous scans at once. If the Impression
-  // Gap AI analysis hasn't run yet, do THAT first automatically — so every scan below captures both
+  // Gap AI analysis hasn\\'t run yet, do THAT first automatically — so every scan below captures both
   // the cannibalization fix AND the gap-family sections in one brief, no second scan needed.
   async function _provenScanAll(btnEl) {
     if (btnEl) { btnEl.disabled = true; }
