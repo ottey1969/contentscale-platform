@@ -29995,7 +29995,7 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
 
 <script>
 var TOKEN = '__TOKEN__';
-// ── Ranking history modal + SVG graph (click a page's position number) ───────
+// -- Ranking history modal + SVG graph (click a page position number) --
 function csPosClose(){ var o=document.getElementById('csPosOv'); if(o) o.style.display='none'; }
 function _csEscH(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function _csTier(p){ return !p?'#6b7280':p<=3?'#4ade80':p<=10?'#a3e635':p<=20?'#fbbf24':'#f87171'; }
