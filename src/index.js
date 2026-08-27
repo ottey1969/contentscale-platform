@@ -53,6 +53,18 @@ function intentDirectives(intent) {
   };
   return m[intent] || m.informational;
 }
+// Maps the detected intent to a human "micro-moment" (Google's 4 states of mind).
+// The intent type drives the technique (schema, structure); the moment drives the
+// human framing writers and clients understand. Keyword is dead, the moment is not.
+function intentMoment(intent) {
+  const m = {
+    informational: { moment:'WANT-TO-KNOW', label:'Research moment', mindset:'The searcher is researching \u2014 they want to understand, not buy yet. Answer the question clearly and become the source the AI quotes.' },
+    commercial:    { moment:'WANT-TO-BUY',  label:'Deciding moment', mindset:'The searcher is comparing before deciding. Help them choose: criteria, a comparison, a clear recommendation.' },
+    transactional: { moment:'WANT-TO-BUY',  label:'Ready-to-act moment', mindset:'The searcher is ready to act \u2014 hire, buy, request. Make the offer and the next step obvious.' },
+    navigational:  { moment:'WANT-TO-GO',   label:'Destination moment', mindset:'The searcher wants a specific place or brand. Get them there fast with no friction.' }
+  };
+  return m[intent] || m.informational;
+}
 // ═══ END SEARCH INTENT DETECTION ═════════════════════════════════════════
 // ═══ END GLOBAL SEARCH INTENT HELPERS ═══
 
@@ -30791,12 +30803,20 @@ function _renderIntentBar(si) {
     + '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">'
     + '<span style="font-weight:700;letter-spacing:.03em;">SEARCH INTENT</span>'
     + '<span style="background:#1e293b;border-radius:6px;padding:2px 9px;font-weight:700;">' + esc(cap(si.primary)) + '</span>'
+    + (si.moment ? '<span style="background:#0e7490;border-radius:6px;padding:2px 9px;font-weight:700;font-size:11px;" title="The situation beneath the keyword (Google\u2019s micro-moments)">\ud83c\udfaf ' + esc(si.moment) + '</span>' : '')
     + (si.overridden ? '<span style="background:#7c3aed;border-radius:6px;padding:2px 8px;font-size:11px;">set manually</span>' : '<span style="color:#94a3b8;font-size:11px;">auto-detected from the live SERP</span>')
     + '<span style="margin-left:auto;color:' + confColor + ';font-weight:700;font-size:11px;">confidence: ' + esc(si.confidence) + '</span>'
     + '</div>';
+  // Moment framing: the human "situation beneath the keyword" (Google's 4 states of mind).
+  if (si.moment_mindset) {
+    head += '<div style="margin-top:8px;padding-top:8px;border-top:1px solid #1e293b;color:#e2e8f0;font-size:11.5px;line-height:1.6;">'
+      + '<strong style="color:#22d3ee;">' + esc(si.moment) + (si.moment_label ? ' \u00b7 ' + esc(si.moment_label) : '') + ':</strong> '
+      + esc(si.moment_mindset)
+      + '</div>';
+  }
   // Always-on explainer: makes clear the feature is built in and how it decides.
   head += '<div style="margin-top:8px;padding-top:8px;border-top:1px solid #1e293b;color:#94a3b8;font-size:11px;line-height:1.6;">'
-    + 'This brief\u2019s search intent is detected <strong style="color:#cbd5e1;">automatically from what Google actually ranks</strong> for this keyword \u2014 not guessed from the words in the keyword. The brief\u2019s structure, CTA and schema are built to match it, so the page targets what searchers really want. '
+    + 'Search intent is detected <strong style="color:#cbd5e1;">automatically from what Google actually ranks</strong> for this keyword \u2014 not guessed from the words in it \u2014 then translated into the <strong style="color:#cbd5e1;">moment</strong> the searcher is in. The brief\u2019s structure, CTA and schema are built to match, so the page serves the situation beneath the keyword, not just the word. '
     + 'When Google\u2019s results are mixed and the signal is unclear, the confidence drops to <strong style="color:#cbd5e1;">low</strong> and you\u2019ll be asked to pick the intent yourself \u2014 otherwise the SERP-detected intent is used automatically.'
     + '</div>';
   if (si.conflict) head += '<div style="margin-top:6px;color:#fbbf24;font-size:11.5px;">\u26a0 ' + esc(si.conflict) + '</div>';
@@ -35055,6 +35075,28 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
   }
 
 </script>
+<!-- Start of Tawk.to Script (support chat — client reaches Ottmar directly) -->
+<script type="text/javascript">
+   var Tawk_API=Tawk_API||{}, Tawk_LoadStart=new Date();
+   (function(){
+     var s1=document.createElement("script"),s0=document.getElementsByTagName("script")[0];
+     s1.async=true;
+     s1.src='https://embed.tawk.to/68cac7f84318b419244f3308/default';
+     s1.charset='UTF-8';
+     s1.setAttribute('crossorigin','*');
+     s0.parentNode.insertBefore(s1,s0);
+   })();
+</script>
+<!-- End of Tawk.to Script -->
+<!-- Floating Headshot -->
+<div style="position:fixed;bottom:90px;right:20px;z-index:9997;">
+   <img
+      alt="Ottmar Francisca — ContentScale, GRAAF Framework creator" src="https://raw.githubusercontent.com/ottey1969/contentscale-platform/main/public/blog/images/ottmar-francisca.jpg"
+      width="52" height="52"
+      style="width:52px;height:52px;border-radius:50%;object-fit:cover;border:2px solid #7e22ce;box-shadow:0 4px 16px rgba(0,0,0,0.5);"
+      onerror="this.style.display='none'">
+</div>
+<script src="https://app.contentscale.site/badge-loader.js?v=5"></script><script src="https://app.contentscale.site/consent-widget.js?v=1"></script>
 </body>
 </html>`;
 
@@ -40887,6 +40929,7 @@ app.post('/api/tracker-client/:token/prewrite-brief', async (req, res) => {
       ? String(intentOverride).toLowerCase() : _autoIntent.primary;
     const _intentWasOverridden = _chosenIntent !== _autoIntent.primary;
     const _intentDir = intentDirectives(_chosenIntent);
+    const _intentMom = intentMoment(_chosenIntent);
     console.log(`[prewrite-brief] intent: auto=${_autoIntent.primary} (conf ${_autoIntent.confidence})${_intentWasOverridden ? ' | OVERRIDDEN to '+_chosenIntent : ''}${_autoIntent.conflict ? ' | '+_autoIntent.conflict : ''}`);
 
     const prompt = `You are an elite SEO and AEO strategist. There is NO existing page for this keyword yet — you are specifying what a brand-new page must contain to outrank and out-cite everything currently ranking, from the very first draft. Never frame anything as a "fix" — there is nothing to fix, only something to build correctly the first time. Every claim must be traceable to the SERP data below; never invent a domain, URL, snippet, statistic or schema type not present in the input.
@@ -40913,6 +40956,7 @@ ${brandBlock}
 MANDATORY PROCESSING ORDER:
 DETECTED SEARCH INTENT (from the live SERP — follow this, do not re-guess it): ${_chosenIntent}${_autoIntent.secondary ? ' (secondary: '+_autoIntent.secondary+')' : ''} [confidence: ${_autoIntent.confidence}${_intentWasOverridden ? '; manually set by strategist' : ''}].${_autoIntent.conflict ? ' NOTE: '+_autoIntent.conflict : ''}
 Write for this intent: content type = ${_intentDir.contentType}; structure = ${_intentDir.structure}; CTA style = ${_intentDir.cta}; citation approach = ${_intentDir.citeable}. A page that misreads intent will not rank however well written.
+SEARCHER'S MOMENT (the situation beneath the keyword): ${_intentMom.moment} \u2014 ${_intentMom.mindset} Write to serve this moment, not just the keyword.
 
 STEP 1 — Analyse the SERP: what pattern do the top results share (format, depth, schema, freshness)?
 STEP 2 — INTENT DECOMPOSITION: list the 5-7 real sub-questions a searcher typing "${keyword}" actually wants answered.
@@ -40982,6 +41026,9 @@ Return ONLY valid JSON, no markdown, no preamble.
       overridden: _intentWasOverridden,
       conflict: _autoIntent.conflict || null,
       evidence: _autoIntent.evidence,
+      moment: _intentMom.moment,
+      moment_label: _intentMom.label,
+      moment_mindset: _intentMom.mindset,
       // UI shows the change-intent control ONLY when confidence is low and no override yet.
       needs_confirmation: (_autoIntent.confidence === 'low' && !_intentWasOverridden)
     };
