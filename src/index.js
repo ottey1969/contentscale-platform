@@ -29789,6 +29789,7 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
       <button onclick="hideModal('prewriteBriefModal')" style="background:none;border:none;color:#94a3b8;cursor:pointer;font-size:1.2rem;">&#x2715;</button>
     </div>
     <div style="font-size:11px;color:#6b7280;margin-bottom:16px;line-height:1.5;">No page yet? See what it needs to beat the current top 10 before you write a single word.</div>
+    <div style="font-size:11px;color:#94a3b8;background:#0f172a;border:1px solid #1e293b;border-radius:8px;padding:9px 11px;margin-bottom:16px;line-height:1.6;">&#127919; This brief automatically detects the <strong style="color:#22d3ee;">search intent and the moment</strong> behind your keyword &mdash; from what Google actually ranks, not the words in the keyword &mdash; and builds the structure, CTA and schema to match. You will see the detected moment above your brief once it is generated.</div>
     <div style="margin-bottom:12px;">
       <label style="font-size:11px;color:#9ca3af;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.06em;">Keyword <span style="color:#f87171;">*</span></label>
       <input id="pwbKeyword" type="text" class="cs-input" placeholder="e.g. free ai citation tracker">
