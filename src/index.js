@@ -29652,6 +29652,18 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
   </div>
 
   <!-- Pages -->
+  <div style="margin:0 0 16px;border:1px solid #0e7490;border-radius:10px;background:linear-gradient(135deg,#0c1a1f,#0a1418);padding:13px 16px;">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:7px;">
+      <span style="font-size:15px;">&#127919;</span>
+      <span style="font-size:13px;font-weight:800;color:#22d3ee;letter-spacing:.02em;">Intent &amp; moment &mdash; how this tracker gets you ahead</span>
+    </div>
+    <div style="font-size:12px;color:#cbd5e1;line-height:1.65;">
+      Every brief reads the <strong style="color:#e2e8f0;">search intent and the moment</strong> behind each keyword &mdash; from what Google actually ranks and cites, not the words in the keyword. For a page you already have, it names the <strong style="color:#fbbf24;">mismatch</strong> between that moment and what your page does today (e.g. the searcher wants to <em>know</em>, but the page opens with a pitch) &mdash; so you fix the exact gap that keeps competitors ahead in both Google and AI answers.
+    </div>
+    <div style="font-size:12px;color:#94a3b8;line-height:1.65;margin-top:8px;padding-top:8px;border-top:1px solid #0e749033;">
+      Writing a <strong style="color:#c4b5fd;">new</strong> page instead? Use <strong style="color:#e2e8f0;">Pre-Write Brief</strong> above &mdash; it reads the same intent and moment from the live top 10, then hands you the structure, H2s, entities and word count to beat them before you write a single word.
+    </div>
+  </div>
   <details id="brandCtxPanel" style="margin:0 0 16px;border:1px solid #1f2937;border-radius:10px;background:#0d1117;overflow:hidden;">
     <summary style="cursor:pointer;padding:13px 16px;font-size:13px;font-weight:700;color:#a78bfa;list-style:none;display:flex;align-items:center;gap:8px;">
       <i class="fas fa-id-card-clip" style="color:#a78bfa;"></i> Brand &amp; author info — help the AI use real facts (optional)
