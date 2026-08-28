@@ -43416,6 +43416,8 @@ GOAL: Rank #1 for "${kw}" and capture the maximum clicks from ${gscImpr || 'the 
             // parsed — and ONLY when no Intent Snapshot is present. If it fails, the engine net below fills in.
             try {
               var _hasISnow = snapshot.recommendations.some(function(r){ return String(r&&r.system||'').toLowerCase().indexOf('intent snapshot') >= 0; });
+              var _existingIS = snapshot.recommendations.find(function(r){ return String(r&&r.system||'').toLowerCase().indexOf('intent snapshot') >= 0; });
+              if (_existingIS) console.log('[INTENT-DIAG] existing IS fields: moment=' + JSON.stringify(_existingIS.moment) + ' the_question=' + JSON.stringify(String(_existingIS.the_question||'').slice(0,80)) + ' content_mismatch=' + JSON.stringify(String(_existingIS.content_mismatch||'').slice(0,80)) + ' engineDerived=' + !!_existingIS._engine_derived);
               console.log('[INTENT-DIAG] hasIntentAlready=' + _hasISnow + ' promptReady=' + (typeof _intentPrompt === 'string') + ' kw="' + (kw||'') + '"');
               if (!_hasISnow && typeof _intentPrompt === 'string') {
                 var _intentResp = await Promise.race([ callGeminiWithFallback(geminiKey, {
