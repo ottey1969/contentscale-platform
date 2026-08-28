@@ -44125,8 +44125,19 @@ MERGE RULES:
       if (brief2 && Array.isArray(brief2.items)) {
         try {
           var _hasIS2 = brief2.items.some(function(r){ return String(r&&r.system||'').toLowerCase().indexOf('intent snapshot') >= 0; });
+          var _is2existing = brief2.items.find(function(r){ return String(r&&r.system||'').toLowerCase().indexOf('intent snapshot') >= 0; });
+          console.log('[INTENT-DIAG brief2] hasIS2=' + _hasIS2 + (_is2existing ? ' engineDerived=' + !!_is2existing._engine_derived + ' q=' + JSON.stringify(String(_is2existing.the_question||'').slice(0,60)) : ''));
+          var _preIS = (Array.isArray(recsToUse) ? recsToUse : []).find(function(r){ return String(r&&r.system||'').toLowerCase().indexOf('intent snapshot') >= 0; });
+          console.log('[INTENT-DIAG brief2] recsToUse has intent=' + !!_preIS + (_preIS ? ' engineDerived=' + !!_preIS._engine_derived : ''));
+          // If brief2 already has an Intent Snapshot but it's the ENGINE version while recsToUse has a
+          // richer GEMINI version (engineDerived falsy), swap in the Gemini one — Gemini always wins.
+          if (_hasIS2 && _is2existing && _is2existing._engine_derived && _preIS && !_preIS._engine_derived) {
+            brief2.items = brief2.items.map(function(r){ return (r === _is2existing) ? _preIS : r; });
+            console.log('[INTENT-DIAG brief2] ✓ swapped engine snapshot for richer Gemini snapshot');
+            _hasIS2 = true;
+          }
           if (!_hasIS2) {
-            var _fromPre = (Array.isArray(recsToUse) ? recsToUse : []).find(function(r){ return String(r&&r.system||'').toLowerCase().indexOf('intent snapshot') >= 0; });
+            var _fromPre = _preIS || null;
             var _fromOld = null;
             try { var _ob = typeof page.brief_content === 'string' ? JSON.parse(page.brief_content) : page.brief_content; _fromOld = (_ob && Array.isArray(_ob.items)) ? _ob.items.find(function(r){ return String(r&&r.system||'').toLowerCase().indexOf('intent snapshot') >= 0; }) : null; } catch(_e){}
             var _isnap = _fromPre || _fromOld || null;
