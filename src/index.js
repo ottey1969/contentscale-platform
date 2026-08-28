@@ -43416,24 +43416,31 @@ GOAL: Rank #1 for "${kw}" and capture the maximum clicks from ${gscImpr || 'the 
             // parsed — and ONLY when no Intent Snapshot is present. If it fails, the engine net below fills in.
             try {
               var _hasISnow = snapshot.recommendations.some(function(r){ return String(r&&r.system||'').toLowerCase().indexOf('intent snapshot') >= 0; });
+              console.log('[INTENT-DIAG] hasIntentAlready=' + _hasISnow + ' promptReady=' + (typeof _intentPrompt === 'string') + ' kw="' + (kw||'') + '"');
               if (!_hasISnow && typeof _intentPrompt === 'string') {
                 var _intentResp = await Promise.race([ callGeminiWithFallback(geminiKey, {
                   contents: [{ role: 'user', parts: [{ text: _intentPrompt + _langDirective }] }],
                   generationConfig: { temperature: 0.3, maxOutputTokens: 1024, responseMimeType: 'application/json' }
-                }, GEMINI_MODEL_BRIEF, null, 1), _briefTimeout() ]).catch(function(){ return { ok:false }; });
+                }, GEMINI_MODEL_BRIEF, null, 1), _briefTimeout() ]).catch(function(e){ console.log('[INTENT-DIAG] call threw:', e && e.message); return { ok:false }; });
+                console.log('[INTENT-DIAG] respOk=' + (_intentResp && _intentResp.ok) + ' status=' + (_intentResp && _intentResp.status) + (_intentResp && _intentResp.errorMessage ? ' err=' + _intentResp.errorMessage : ''));
                 if (_intentResp && _intentResp.ok) {
                   var _iTxt = _intentResp.data && _intentResp.data.candidates && _intentResp.data.candidates[0] && _intentResp.data.candidates[0].content && _intentResp.data.candidates[0].content.parts && _intentResp.data.candidates[0].content.parts[0] && _intentResp.data.candidates[0].content.parts[0].text;
+                  console.log('[INTENT-DIAG] textLen=' + (_iTxt ? String(_iTxt).length : 0) + ' preview=' + (_iTxt ? JSON.stringify(String(_iTxt).slice(0,160)) : 'NONE'));
                   if (_iTxt) {
                     _iTxt = String(_iTxt).replace(/^```json\n?/i,'').replace(/```\s*$/,'').trim();
-                    var _iObj = null; try { _iObj = JSON.parse(_iTxt); } catch(e) { try { _iObj = JSON.parse(_repairJsonG(_iTxt)); } catch(e2) { _iObj = null; } }
+                    var _iObj = null; try { _iObj = JSON.parse(_iTxt); } catch(e) { try { _iObj = JSON.parse(_repairJsonG(_iTxt)); } catch(e2) { _iObj = null; console.log('[INTENT-DIAG] JSON parse FAILED:', e2 && e2.message); } }
+                    if (_iObj) console.log('[INTENT-DIAG] parsed OK — moment=' + _iObj.moment + ' intent_type=' + _iObj.intent_type + ' hasQuestion=' + !!_iObj.the_question);
                     if (_iObj && (_iObj.moment || _iObj.intent_type) && _iObj.the_question) {
                       _iObj.system = 'Intent Snapshot';
                       snapshot.recommendations.unshift(_iObj);
+                      console.log('[INTENT-DIAG] ✓ Gemini intent snapshot ACCEPTED and prepended');
+                    } else {
+                      console.log('[INTENT-DIAG] ✗ parsed object rejected (missing moment/intent_type or the_question)');
                     }
                   }
                 }
               }
-            } catch(_iErr) { console.warn('[tracker] dedicated intent call skipped:', _iErr && _iErr.message); }
+            } catch(_iErr) { console.warn('[INTENT-DIAG] dedicated intent call skipped:', _iErr && _iErr.message); }
             // ── SAFETY NET: Gemini (esp. Flash-Lite) frequently omits the Intent Snapshot despite the
             //    prompt asking for it as object #1. When it's missing, build one from our own SERP-driven
             //    intent engine so the moment + mismatch header ALWAYS appears. Engine-derived, never faked.
