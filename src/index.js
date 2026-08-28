@@ -43416,33 +43416,25 @@ GOAL: Rank #1 for "${kw}" and capture the maximum clicks from ${gscImpr || 'the 
             // parsed — and ONLY when no Intent Snapshot is present. If it fails, the engine net below fills in.
             try {
               var _hasISnow = snapshot.recommendations.some(function(r){ return String(r&&r.system||'').toLowerCase().indexOf('intent snapshot') >= 0; });
-              var _existingIS = snapshot.recommendations.find(function(r){ return String(r&&r.system||'').toLowerCase().indexOf('intent snapshot') >= 0; });
-              if (_existingIS) console.log('[INTENT-DIAG] existing IS fields: moment=' + JSON.stringify(_existingIS.moment) + ' the_question=' + JSON.stringify(String(_existingIS.the_question||'').slice(0,80)) + ' content_mismatch=' + JSON.stringify(String(_existingIS.content_mismatch||'').slice(0,80)) + ' engineDerived=' + !!_existingIS._engine_derived);
-              console.log('[INTENT-DIAG] hasIntentAlready=' + _hasISnow + ' promptReady=' + (typeof _intentPrompt === 'string') + ' kw="' + (kw||'') + '"');
               if (!_hasISnow && typeof _intentPrompt === 'string') {
                 var _intentResp = await Promise.race([ callGeminiWithFallback(geminiKey, {
                   contents: [{ role: 'user', parts: [{ text: _intentPrompt + _langDirective }] }],
                   generationConfig: { temperature: 0.3, maxOutputTokens: 1024, responseMimeType: 'application/json' }
-                }, GEMINI_MODEL_BRIEF, null, 1), _briefTimeout() ]).catch(function(e){ console.log('[INTENT-DIAG] call threw:', e && e.message); return { ok:false }; });
-                console.log('[INTENT-DIAG] respOk=' + (_intentResp && _intentResp.ok) + ' status=' + (_intentResp && _intentResp.status) + (_intentResp && _intentResp.errorMessage ? ' err=' + _intentResp.errorMessage : ''));
+                }, GEMINI_MODEL_BRIEF, null, 1), _briefTimeout() ]).catch(function(){ return { ok:false }; });
                 if (_intentResp && _intentResp.ok) {
                   var _iTxt = _intentResp.data && _intentResp.data.candidates && _intentResp.data.candidates[0] && _intentResp.data.candidates[0].content && _intentResp.data.candidates[0].content.parts && _intentResp.data.candidates[0].content.parts[0] && _intentResp.data.candidates[0].content.parts[0].text;
-                  console.log('[INTENT-DIAG] textLen=' + (_iTxt ? String(_iTxt).length : 0) + ' preview=' + (_iTxt ? JSON.stringify(String(_iTxt).slice(0,160)) : 'NONE'));
                   if (_iTxt) {
                     _iTxt = String(_iTxt).replace(/^```json\n?/i,'').replace(/```\s*$/,'').trim();
-                    var _iObj = null; try { _iObj = JSON.parse(_iTxt); } catch(e) { try { _iObj = JSON.parse(_repairJsonG(_iTxt)); } catch(e2) { _iObj = null; console.log('[INTENT-DIAG] JSON parse FAILED:', e2 && e2.message); } }
-                    if (_iObj) console.log('[INTENT-DIAG] parsed OK — moment=' + _iObj.moment + ' intent_type=' + _iObj.intent_type + ' hasQuestion=' + !!_iObj.the_question);
+                    var _iObj = null; try { _iObj = JSON.parse(_iTxt); } catch(e) { try { _iObj = JSON.parse(_repairJsonG(_iTxt)); } catch(e2) { _iObj = null; } }
                     if (_iObj && (_iObj.moment || _iObj.intent_type) && _iObj.the_question) {
                       _iObj.system = 'Intent Snapshot';
                       snapshot.recommendations.unshift(_iObj);
-                      console.log('[INTENT-DIAG] ✓ Gemini intent snapshot ACCEPTED and prepended');
                     } else {
-                      console.log('[INTENT-DIAG] ✗ parsed object rejected (missing moment/intent_type or the_question)');
                     }
                   }
                 }
               }
-            } catch(_iErr) { console.warn('[INTENT-DIAG] dedicated intent call skipped:', _iErr && _iErr.message); }
+            } catch(_iErr) { console.warn('[tracker] dedicated intent call skipped:', _iErr && _iErr.message); }
             // ── SAFETY NET: Gemini (esp. Flash-Lite) frequently omits the Intent Snapshot despite the
             //    prompt asking for it as object #1. When it's missing, build one from our own SERP-driven
             //    intent engine so the moment + mismatch header ALWAYS appears. Engine-derived, never faked.
@@ -43819,7 +43811,6 @@ If no unanchored claims found, return empty array: []`;
     var _cleaned = Array.isArray(_q.recommendations) ? _q.recommendations : [];
     var _cleanedHasFrames = _cleaned.some(function(r){ var s=String(r&&r.system||'').toLowerCase(); return s.indexOf('intent snapshot')>=0 || s.indexOf('missing entities')>=0 || s==='paa'; });
     snapshot.recommendations = (_preHookFrames.length && !_cleanedHasFrames) ? _preHookFrames.concat(_cleaned) : _cleaned;
-    console.log('[INTENT-DIAG quality-hook] preHookFrames=' + _preHookFrames.length + ' cleanedHadFrames=' + _cleanedHasFrames + ' → restored=' + (_preHookFrames.length && !_cleanedHasFrames));
     snapshot.gsc_brief = _q.gscBrief;
     snapshot._quality_report = _q.report;
   } catch (e) { console.warn('[brief-quality] skipped:', e.message); }
@@ -44133,14 +44124,11 @@ MERGE RULES:
         try {
           var _hasIS2 = brief2.items.some(function(r){ return String(r&&r.system||'').toLowerCase().indexOf('intent snapshot') >= 0; });
           var _is2existing = brief2.items.find(function(r){ return String(r&&r.system||'').toLowerCase().indexOf('intent snapshot') >= 0; });
-          console.log('[INTENT-DIAG brief2] hasIS2=' + _hasIS2 + (_is2existing ? ' engineDerived=' + !!_is2existing._engine_derived + ' q=' + JSON.stringify(String(_is2existing.the_question||'').slice(0,60)) : ''));
           var _preIS = (Array.isArray(recsToUse) ? recsToUse : []).find(function(r){ return String(r&&r.system||'').toLowerCase().indexOf('intent snapshot') >= 0; });
-          console.log('[INTENT-DIAG brief2] recsToUse has intent=' + !!_preIS + (_preIS ? ' engineDerived=' + !!_preIS._engine_derived : ''));
           // If brief2 already has an Intent Snapshot but it's the ENGINE version while recsToUse has a
           // richer GEMINI version (engineDerived falsy), swap in the Gemini one — Gemini always wins.
           if (_hasIS2 && _is2existing && _is2existing._engine_derived && _preIS && !_preIS._engine_derived) {
             brief2.items = brief2.items.map(function(r){ return (r === _is2existing) ? _preIS : r; });
-            console.log('[INTENT-DIAG brief2] ✓ swapped engine snapshot for richer Gemini snapshot');
             _hasIS2 = true;
           }
           if (!_hasIS2) {
