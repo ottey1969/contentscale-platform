@@ -1,4 +1,4 @@
-console.log('=== CONTENTSCALE BOOT ' + new Date().toISOString() + ' v2026-07-08-possible-prioritized-shortcut | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON | possibleThreshold=20impr | shortcutPrioritized=v2 | gscAutoFetchRemoved=true | linkCheckActive=true | wholeSiteWipeGuard=true | gscAutoFetchRestored=true | reminderOffFix=true | claudeRemoved=true | bingWebmaster=true | competitorPanel=true | zeroResultFix=true | pagesRefreshFix=true | recheckButton=true | provenScanStrip=true | provenScanState=true | scanAllProven=true | doEverythingBtn=true | panelOrderFix=true | workflowGuide=true | preScanGuard=true | scanAllGuard=true | earlyGuard=true | emptyStateTeaser=true | provenScopeFix=true | numberedButtons=true | clearerButtons=true | scanAnimFix=true | promptClaudeCleanup=true | bonusTip=true | realProvenContext=true | competitorContext=true | unifiedBrief=true | diagnosticFirst=true | fullCompetitorBreakdown=true | serpSpyV3=true | transparencyBlock=true | emailsPausedToggle=true | competitorDedup=true | provenScanDebug=true | serializedScans=true | claudeCleanupV2=true | mergeClaudeStrip=true | visualTransparency=true | aboveFoldPriority=true | competitorComparisonTable=true | redGreenTracking=true | aioExplicitState=true | perpCopilotState=true | realMergePromptFixed=true | briefContextDebug=true | forceRescanBypass=true | gscPosFallback=true | cannibalDedup=true | gscAccessGated=true | gapConfirmShown=true | noPlaceholders=true | rowNumContrast=true | codeCannibalDedup=true | provenDebugRemoved=true | broaderCannibalDedup=true | competitorGapFallback=true | competitorPrevSnapFallback=true | hubSpokeDedup=true | compGapRegexBroadened=true | gapFixLabelFallback=true | geminiProForBriefs=true | timeoutBudgetFixed=true | perAttemptTimeout45s=true | revertToFlashLite=true | tokenLimitDoubled=true | urlNormFix=true | impactFieldChecked=true | broaderHubPattern=true | cannibalContextRemovedFromGSC=true | scanStateDerivedFromDB=true | boardBriefRestyled=true | liveWallBriefModal=true | modalScopeFix=true | cardTransparency=true | CLAUDE-FIX-2307=true | CLAUDE-FIX-2307B-specquote=true | CLAUDE-FIX-2307C-pwboard=true | CLAUDE-FIX-2307D-typefilter=true | CLAUDE-FIX-2307E-scanneraio=true | CLAUDE-FIX-2307F-urlstrip=true | CLAUDE-FIX-2307G-aiobeforeScan=true | CLAUDE-FIX-2307H-aioInPrompt=true | CLAUDE-FIX-2307I-escHtml=true | CLAUDE-FIX-2307J-escAlias-noStale=true | CLAUDE-FIX-2407A-perpCitedConsistency=true | CLAUDE-FIX-2407B-perpCacheBug=true | CLAUDE-FIX-2407C-domainVsPageNuance=true | CLAUDE-FIX-2407D-wallModalNoReshuffle=true | CLAUDE-FIX-2407E-buildBriefSafetyNet=true | CLAUDE-FIX-2407F-modalFullText=true | CLAUDE-FIX-2407G-aioPasteModal=true | CLAUDE-FIX-2407H-aioDefinitionView=true | CLAUDE-FIX-2407I-aioBlueprintMining=true | CLAUDE-FIX-2407J-aioReferences=true | CLAUDE-FIX-2407K-aioCitationGap=true | CLAUDE-FIX-2407L-compGapTableAllModals=true | CLAUDE-FIX-2407M-honestAioManualOnly=true | CLAUDE-FIX-2407N-regexEscapeInTemplate=true | CLAUDE-FIX-2507A-jsonRepair-mergeTokens4096=true | CLAUDE-FIX-2507B-cardButtonsWorkflowOrder=true | CLAUDE-FIX-2507C-cardButtonsPillColors=true | CLAUDE-FIX-2507D-aioReloadFull-limit8000=true | CLAUDE-FIX-2507E-briefModalTransparency=true | CLAUDE-FIX-2507F-aioGapTable4col=true | CLAUDE-FIX-2507G-htmlScanTickCycle=true | CLAUDE-FIX-2507H-briefViewedPersisted=true | CLAUDE-FIX-2507I-fixCardRenderVarInExpr=true | CLAUDE-FIX-2507J-briefsUnified-manualAioGap=true | CLAUDE-FIX-2507K-gscCompTableInTracker=true | CLAUDE-FIX-2507L-trackerSplitSections=true | CLAUDE-FIX-2507M-copyBriefClarity=true | CLAUDE-FIX-2507N-aioRefsFromManualPaste=true | CLAUDE-FIX-2507O-removeSseEventSource=true | CLAUDE-FIX-2507P-ticksPersistUntilDoneOrNewHtml=true | CLAUDE-FIX-2507Q-aioRefsStoredAtSave=true | CLAUDE-FIX-2507R-aioGapTableAlways=true | CLAUDE-FIX-2507S-aioGscContextSeparated=true | CLAUDE-FIX-2507T-aioCodeFallbackFixed-refsFromManualSave=true | CLAUDE-FIX-2507U-mergeSafetyNet-cardSummaryParity=true | CLAUDE-FIX-2507V-sharedAioRenderFn-authTable=true | CLAUDE-FIX-2507W-viewLastBriefDelegates-oneSystem=true | CLAUDE-FIX-2507X-sharedBriefBody-fullUnification=true | CLAUDE-FIX-2507Y-aioTop5Table-definitionLabel=true | CLAUDE-FIX-2507Z-noRefsActionableMsg=true | CLAUDE-FIX-2508A-manualPasteWinsOverStaleSnapshot=true | CLAUDE-FIX-2508B-merge2Hardened-diagLog=true | CLAUDE-FIX-2508C-noStoreHeaders-freshClientJs=true | CLAUDE-FIX-2508D-saveEchoDiagnostic=true | CLAUDE-FIX-2508E-separateSourcesField=true | CLAUDE-FIX-2508F-diagSourcesField=true | CLAUDE-FIX-2508G-acceptSourceNames=true | CLAUDE-FIX-2508H-namesFromMainPaste-headingFilter=true | CLAUDE-FIX-2508I-cloroAioFetch=true | CLAUDE-FIX-2508J-namesFallback-autoSplit=true | CLAUDE-FIX-2508K-competitorGapAioFallback=true | CLAUDE-FIX-2508L-aioFallbackNoGscLeak-honestLabel=true | CLAUDE-FIX-2508M-gscRootDomainFallback=true | CLAUDE-FIX-2508N-sitemapLinks250-gscLiveFilter=true | CLAUDE-FIX-2508O-leadQueueCollapsedDefault=true | CLAUDE-FIX-2508P-leadQueueToggleRealFns=true | CLAUDE-FIX-2508Q-leadQueueHeaderWrap=true | CLAUDE-FIX-2508R-scanSelectedButton=true | CLAUDE-FIX-2508S-shiftClickRange=true | CLAUDE-FIX-2508T-shiftClickCorrectClass-inTemplate=true | CLAUDE-FIX-2508U-brandHeadshotHubFields=true | CLAUDE-FIX-2508V-briefModeSelector=true | CLAUDE-FIX-2508W-intentSnapshot-ownerNote=true | CLAUDE-FIX-2508X-modeBtnQuoteFix=true | CLAUDE-FIX-2508Y-perpApostropheFix=true | CLAUDE-FIX-2508Z-sitemapRegexFix=true | CLAUDE-FIX-2508ZA-pageInSitemapRegexFix=true | CLAUDE-FIX-2508ZB-missingEntities=true | CLAUDE-FIX-2508ZC-briefSpacing=true | CLAUDE-FIX-2508ZD-pasteCodeBlocks=true | CLAUDE-FIX-2508ZE-fmtActionRegexFix=true | CLAUDE-FIX-2508ZF-ticksOnlyClearOnDone=true | CLAUDE-FIX-2508ZG-paa5-pwbWider-aioFallbackMsg=true | CLAUDE-FIX-2508ZH-numberedItemsOnOwnLines=true | CLAUDE-FIX-2508ZI-prewriteBuildFields-aioListNotUglyTable=true | CLAUDE-FIX-2508ZJ-cleanAioDefinitionText=true | CLAUDE-FIX-2508ZK-slugRegexCrashFix-sectionSplit=true | CLAUDE-FIX-2508ZL-tvModalFmtAction=true | CLAUDE-FIX-3007A-tourAioScanSelected-mobileFriendly=true | CLAUDE-FIX-3007B-htmlLangWhitelistNonLatin=true | CLAUDE-FIX-3007C-clientBriefLanguageSelector=true | CLAUDE-FIX-3007D-briefLanguageTourStep=true | CLAUDE-FIX-3007E-prewriteLangListFull=true | CLAUDE-FIX-3007F-prewriteAutoAioFetch=true | CLAUDE-FIX-3007G-serpRegionListFull=true | CLAUDE-FIX-3007H-prewriteMobilePolish=true | CLAUDE-FIX-3007I-groupedComboDropdowns=true | CLAUDE-FIX-3007J-comboSyntaxFix=true | CLAUDE-FIX-3007K-multiLangBadges=true | CLAUDE-FIX-3007L-headerReportCTA=true | CLAUDE-FIX-3007M-tvViewReportCTA=true | CLAUDE-FIX-3007N-tvTopBarCTA=true | CLAUDE-FIX-3007O-realPaaInBrief=true | CLAUDE-FIX-0208-briefLangLeaks-item1AndTemplateLabels=true | CLAUDE-FIX-0208B-prewriteLabelsTranslated=true | CLAUDE-FIX-0208C-readyPasteMarkerAndCiteableLang=true | CLAUDE-FIX-0308-alignmentItemLang=true | CLAUDE-FIX-0308B-copyBriefCompTableParity=true | CLAUDE-FIX-0308C-cannibalStopwordMatch=true | CLAUDE-FIX-0308D-hardcodedCiteItemsLocalized=true | CLAUDE-FIX-0308E-cannibalSlugFallback=true | CLAUDE-FIX-1208-honestScanCount=true | CLAUDE-FIX-2108A-aioCitedTextPlusSources=true | CLAUDE-FIX-2108B-aioSourceTableCaseInsensitive=true | CLAUDE-FIX-2108C-aioSourceRetryFallback=true | CLAUDE-FIX-2108D-graafScoreInBrief=true | CLAUDE-FIX-2108E-graafRecsDedupPrioritized=true | CLAUDE-FIX-2108F-eliteRecsDetailsNotDisplayNone=true | CLAUDE-FIX-2108G-graafScoreInTextExport=true | CLAUDE-FIX-2108H-competitorTableDedupTextExport=true | CLAUDE-FIX-2108I-textExportSectionParity=true | CLAUDE-FIX-2108J-tableRegexEscapeFix=true | CLAUDE-FIX-2108K-scoreDefinedInClientScope=true | CLAUDE-FIX-2108L-clientBriefUsesDataNotP=true | CLAUDE-FIX-2108M-prewriteNoFabrication=true | CLAUDE-FIX-2108N-outputVoiceNoHype=true | CLAUDE-FIX-2608-intentEngine=true | CLAUDE-FIX-2608B-existingBriefMoment-mismatch=true | CLAUDE-FIX-2608C-momentInTextExport=true | CLAUDE-FIX-2608D-gscHeaderClarity=true | CLAUDE-FIX-2608E-mergePreservesIntentSnapshot=true | CLAUDE-FIX-2608F-sliceKeepsFramingObjects=true | CLAUDE-FIX-2608G-intentSnapshotEngineFallback=true | CLAUDE-FIX-2608H-instantBriefAlsoHasIntent=true | CLAUDE-FIX-2608I-brief2FinalSaveGuaranteesIntent=true | CLAUDE-FIX-2608J-copyBriefShowsIntent=true | CLAUDE-FIX-2608K-buildBriefPrefersFramingSource=true | CLAUDE-FIX-2608L-geminiIntentEnforced-specificFallback=true | CLAUDE-FIX-2608M-promptRestructuredForGemini=true | CLAUDE-FIX-2608N-dedicatedSerialIntentCall-protectsBriefCall=true | CLAUDE-FIX-2608O-qualityHookPreservesIntent=true | CLAUDE-FIX-2608P-graafShortcut-recsIsolatedFromCitations=true | CLAUDE-FIX-2608Q-caseStudyStrictHeadingsOnly=true | CLAUDE-FIX-2608R-graafShortcutUsesPuppeteerScan-matchesExternal=true | CLAUDE-FIX-2608S-multilingualDetection-faqBioTldrCaseStudyTocAllLangs=true | CLAUDE-FIX-2608T-arabicNumeralsAndSchemaAuthor=true | CLAUDE-FIX-2608U-scanScrollsAndWaitsForJsRender-correctRoute=true | CLAUDE-FIX-2608V-faqDetectsToggleAccordions-authorBioNoKeywordGate=true | CLAUDE-FIX-2608W-quoteRecSaysResearchable=true | CLAUDE-FIX-2608X-faqDetectsQuestionMarkBeforeToggleSymbol=true | CLAUDE-FIX-2608Y-fixedActualApiScanRoute-9107-faqBioMultilingualToggle=true | CLAUDE-FIX-2608Z-recursiveSchemaDetection-findsNestedFAQPage=true | CLAUDE-FIX-2608ZA-realApiScanRoute-9410-faqUsesSchemaAndToggle=true | CLAUDE-FIX-2608ZB-graafShortcutReliableAutoRefresh=true ===');
+console.log('=== CONTENTSCALE BOOT ' + new Date().toISOString() + ' v2026-07-08-possible-prioritized-shortcut | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON | possibleThreshold=20impr | shortcutPrioritized=v2 | gscAutoFetchRemoved=true | linkCheckActive=true | wholeSiteWipeGuard=true | gscAutoFetchRestored=true | reminderOffFix=true | claudeRemoved=true | bingWebmaster=true | competitorPanel=true | zeroResultFix=true | pagesRefreshFix=true | recheckButton=true | provenScanStrip=true | provenScanState=true | scanAllProven=true | doEverythingBtn=true | panelOrderFix=true | workflowGuide=true | preScanGuard=true | scanAllGuard=true | earlyGuard=true | emptyStateTeaser=true | provenScopeFix=true | numberedButtons=true | clearerButtons=true | scanAnimFix=true | promptClaudeCleanup=true | bonusTip=true | realProvenContext=true | competitorContext=true | unifiedBrief=true | diagnosticFirst=true | fullCompetitorBreakdown=true | serpSpyV3=true | transparencyBlock=true | emailsPausedToggle=true | competitorDedup=true | provenScanDebug=true | serializedScans=true | claudeCleanupV2=true | mergeClaudeStrip=true | visualTransparency=true | aboveFoldPriority=true | competitorComparisonTable=true | redGreenTracking=true | aioExplicitState=true | perpCopilotState=true | realMergePromptFixed=true | briefContextDebug=true | forceRescanBypass=true | gscPosFallback=true | cannibalDedup=true | gscAccessGated=true | gapConfirmShown=true | noPlaceholders=true | rowNumContrast=true | codeCannibalDedup=true | provenDebugRemoved=true | broaderCannibalDedup=true | competitorGapFallback=true | competitorPrevSnapFallback=true | hubSpokeDedup=true | compGapRegexBroadened=true | gapFixLabelFallback=true | geminiProForBriefs=true | timeoutBudgetFixed=true | perAttemptTimeout45s=true | revertToFlashLite=true | tokenLimitDoubled=true | urlNormFix=true | impactFieldChecked=true | broaderHubPattern=true | cannibalContextRemovedFromGSC=true | scanStateDerivedFromDB=true | boardBriefRestyled=true | liveWallBriefModal=true | modalScopeFix=true | cardTransparency=true | CLAUDE-FIX-2307=true | CLAUDE-FIX-2307B-specquote=true | CLAUDE-FIX-2307C-pwboard=true | CLAUDE-FIX-2307D-typefilter=true | CLAUDE-FIX-2307E-scanneraio=true | CLAUDE-FIX-2307F-urlstrip=true | CLAUDE-FIX-2307G-aiobeforeScan=true | CLAUDE-FIX-2307H-aioInPrompt=true | CLAUDE-FIX-2307I-escHtml=true | CLAUDE-FIX-2307J-escAlias-noStale=true | CLAUDE-FIX-2407A-perpCitedConsistency=true | CLAUDE-FIX-2407B-perpCacheBug=true | CLAUDE-FIX-2407C-domainVsPageNuance=true | CLAUDE-FIX-2407D-wallModalNoReshuffle=true | CLAUDE-FIX-2407E-buildBriefSafetyNet=true | CLAUDE-FIX-2407F-modalFullText=true | CLAUDE-FIX-2407G-aioPasteModal=true | CLAUDE-FIX-2407H-aioDefinitionView=true | CLAUDE-FIX-2407I-aioBlueprintMining=true | CLAUDE-FIX-2407J-aioReferences=true | CLAUDE-FIX-2407K-aioCitationGap=true | CLAUDE-FIX-2407L-compGapTableAllModals=true | CLAUDE-FIX-2407M-honestAioManualOnly=true | CLAUDE-FIX-2407N-regexEscapeInTemplate=true | CLAUDE-FIX-2507A-jsonRepair-mergeTokens4096=true | CLAUDE-FIX-2507B-cardButtonsWorkflowOrder=true | CLAUDE-FIX-2507C-cardButtonsPillColors=true | CLAUDE-FIX-2507D-aioReloadFull-limit8000=true | CLAUDE-FIX-2507E-briefModalTransparency=true | CLAUDE-FIX-2507F-aioGapTable4col=true | CLAUDE-FIX-2507G-htmlScanTickCycle=true | CLAUDE-FIX-2507H-briefViewedPersisted=true | CLAUDE-FIX-2507I-fixCardRenderVarInExpr=true | CLAUDE-FIX-2507J-briefsUnified-manualAioGap=true | CLAUDE-FIX-2507K-gscCompTableInTracker=true | CLAUDE-FIX-2507L-trackerSplitSections=true | CLAUDE-FIX-2507M-copyBriefClarity=true | CLAUDE-FIX-2507N-aioRefsFromManualPaste=true | CLAUDE-FIX-2507O-removeSseEventSource=true | CLAUDE-FIX-2507P-ticksPersistUntilDoneOrNewHtml=true | CLAUDE-FIX-2507Q-aioRefsStoredAtSave=true | CLAUDE-FIX-2507R-aioGapTableAlways=true | CLAUDE-FIX-2507S-aioGscContextSeparated=true | CLAUDE-FIX-2507T-aioCodeFallbackFixed-refsFromManualSave=true | CLAUDE-FIX-2507U-mergeSafetyNet-cardSummaryParity=true | CLAUDE-FIX-2507V-sharedAioRenderFn-authTable=true | CLAUDE-FIX-2507W-viewLastBriefDelegates-oneSystem=true | CLAUDE-FIX-2507X-sharedBriefBody-fullUnification=true | CLAUDE-FIX-2507Y-aioTop5Table-definitionLabel=true | CLAUDE-FIX-2507Z-noRefsActionableMsg=true | CLAUDE-FIX-2508A-manualPasteWinsOverStaleSnapshot=true | CLAUDE-FIX-2508B-merge2Hardened-diagLog=true | CLAUDE-FIX-2508C-noStoreHeaders-freshClientJs=true | CLAUDE-FIX-2508D-saveEchoDiagnostic=true | CLAUDE-FIX-2508E-separateSourcesField=true | CLAUDE-FIX-2508F-diagSourcesField=true | CLAUDE-FIX-2508G-acceptSourceNames=true | CLAUDE-FIX-2508H-namesFromMainPaste-headingFilter=true | CLAUDE-FIX-2508I-cloroAioFetch=true | CLAUDE-FIX-2508J-namesFallback-autoSplit=true | CLAUDE-FIX-2508K-competitorGapAioFallback=true | CLAUDE-FIX-2508L-aioFallbackNoGscLeak-honestLabel=true | CLAUDE-FIX-2508M-gscRootDomainFallback=true | CLAUDE-FIX-2508N-sitemapLinks250-gscLiveFilter=true | CLAUDE-FIX-2508O-leadQueueCollapsedDefault=true | CLAUDE-FIX-2508P-leadQueueToggleRealFns=true | CLAUDE-FIX-2508Q-leadQueueHeaderWrap=true | CLAUDE-FIX-2508R-scanSelectedButton=true | CLAUDE-FIX-2508S-shiftClickRange=true | CLAUDE-FIX-2508T-shiftClickCorrectClass-inTemplate=true | CLAUDE-FIX-2508U-brandHeadshotHubFields=true | CLAUDE-FIX-2508V-briefModeSelector=true | CLAUDE-FIX-2508W-intentSnapshot-ownerNote=true | CLAUDE-FIX-2508X-modeBtnQuoteFix=true | CLAUDE-FIX-2508Y-perpApostropheFix=true | CLAUDE-FIX-2508Z-sitemapRegexFix=true | CLAUDE-FIX-2508ZA-pageInSitemapRegexFix=true | CLAUDE-FIX-2508ZB-missingEntities=true | CLAUDE-FIX-2508ZC-briefSpacing=true | CLAUDE-FIX-2508ZD-pasteCodeBlocks=true | CLAUDE-FIX-2508ZE-fmtActionRegexFix=true | CLAUDE-FIX-2508ZF-ticksOnlyClearOnDone=true | CLAUDE-FIX-2508ZG-paa5-pwbWider-aioFallbackMsg=true | CLAUDE-FIX-2508ZH-numberedItemsOnOwnLines=true | CLAUDE-FIX-2508ZI-prewriteBuildFields-aioListNotUglyTable=true | CLAUDE-FIX-2508ZJ-cleanAioDefinitionText=true | CLAUDE-FIX-2508ZK-slugRegexCrashFix-sectionSplit=true | CLAUDE-FIX-2508ZL-tvModalFmtAction=true | CLAUDE-FIX-3007A-tourAioScanSelected-mobileFriendly=true | CLAUDE-FIX-3007B-htmlLangWhitelistNonLatin=true | CLAUDE-FIX-3007C-clientBriefLanguageSelector=true | CLAUDE-FIX-3007D-briefLanguageTourStep=true | CLAUDE-FIX-3007E-prewriteLangListFull=true | CLAUDE-FIX-3007F-prewriteAutoAioFetch=true | CLAUDE-FIX-3007G-serpRegionListFull=true | CLAUDE-FIX-3007H-prewriteMobilePolish=true | CLAUDE-FIX-3007I-groupedComboDropdowns=true | CLAUDE-FIX-3007J-comboSyntaxFix=true | CLAUDE-FIX-3007K-multiLangBadges=true | CLAUDE-FIX-3007L-headerReportCTA=true | CLAUDE-FIX-3007M-tvViewReportCTA=true | CLAUDE-FIX-3007N-tvTopBarCTA=true | CLAUDE-FIX-3007O-realPaaInBrief=true | CLAUDE-FIX-0208-briefLangLeaks-item1AndTemplateLabels=true | CLAUDE-FIX-0208B-prewriteLabelsTranslated=true | CLAUDE-FIX-0208C-readyPasteMarkerAndCiteableLang=true | CLAUDE-FIX-0308-alignmentItemLang=true | CLAUDE-FIX-0308B-copyBriefCompTableParity=true | CLAUDE-FIX-0308C-cannibalStopwordMatch=true | CLAUDE-FIX-0308D-hardcodedCiteItemsLocalized=true | CLAUDE-FIX-0308E-cannibalSlugFallback=true | CLAUDE-FIX-1208-honestScanCount=true | CLAUDE-FIX-2108A-aioCitedTextPlusSources=true | CLAUDE-FIX-2108B-aioSourceTableCaseInsensitive=true | CLAUDE-FIX-2108C-aioSourceRetryFallback=true | CLAUDE-FIX-2108D-graafScoreInBrief=true | CLAUDE-FIX-2108E-graafRecsDedupPrioritized=true | CLAUDE-FIX-2108F-eliteRecsDetailsNotDisplayNone=true | CLAUDE-FIX-2108G-graafScoreInTextExport=true | CLAUDE-FIX-2108H-competitorTableDedupTextExport=true | CLAUDE-FIX-2108I-textExportSectionParity=true | CLAUDE-FIX-2108J-tableRegexEscapeFix=true | CLAUDE-FIX-2108K-scoreDefinedInClientScope=true | CLAUDE-FIX-2108L-clientBriefUsesDataNotP=true | CLAUDE-FIX-2108M-prewriteNoFabrication=true | CLAUDE-FIX-2108N-outputVoiceNoHype=true | CLAUDE-FIX-2608-intentEngine=true | CLAUDE-FIX-2608B-existingBriefMoment-mismatch=true | CLAUDE-FIX-2608C-momentInTextExport=true | CLAUDE-FIX-2608D-gscHeaderClarity=true | CLAUDE-FIX-2608E-mergePreservesIntentSnapshot=true | CLAUDE-FIX-2608F-sliceKeepsFramingObjects=true | CLAUDE-FIX-2608G-intentSnapshotEngineFallback=true | CLAUDE-FIX-2608H-instantBriefAlsoHasIntent=true | CLAUDE-FIX-2608I-brief2FinalSaveGuaranteesIntent=true | CLAUDE-FIX-2608J-copyBriefShowsIntent=true | CLAUDE-FIX-2608K-buildBriefPrefersFramingSource=true | CLAUDE-FIX-2608L-geminiIntentEnforced-specificFallback=true | CLAUDE-FIX-2608M-promptRestructuredForGemini=true | CLAUDE-FIX-2608N-dedicatedSerialIntentCall-protectsBriefCall=true | CLAUDE-FIX-2608O-qualityHookPreservesIntent=true | CLAUDE-FIX-2608P-graafShortcut-recsIsolatedFromCitations=true | CLAUDE-FIX-2608Q-caseStudyStrictHeadingsOnly=true | CLAUDE-FIX-2608R-graafShortcutUsesPuppeteerScan-matchesExternal=true | CLAUDE-FIX-2608S-multilingualDetection-faqBioTldrCaseStudyTocAllLangs=true | CLAUDE-FIX-2608T-arabicNumeralsAndSchemaAuthor=true | CLAUDE-FIX-2608U-scanScrollsAndWaitsForJsRender-correctRoute=true | CLAUDE-FIX-2608V-faqDetectsToggleAccordions-authorBioNoKeywordGate=true | CLAUDE-FIX-2608W-quoteRecSaysResearchable=true | CLAUDE-FIX-2608X-faqDetectsQuestionMarkBeforeToggleSymbol=true | CLAUDE-FIX-2608Y-fixedActualApiScanRoute-9107-faqBioMultilingualToggle=true | CLAUDE-FIX-2608Z-recursiveSchemaDetection-findsNestedFAQPage=true | CLAUDE-FIX-2608ZA-realApiScanRoute-9410-faqUsesSchemaAndToggle=true | CLAUDE-FIX-2608ZB-graafShortcutReliableAutoRefresh=true | CLAUDE-FIX-2609A-siteAuditEndpoint=true | CLAUDE-FIX-2609B-auditPageVisible=true ===');
 
 
 // ═══ GLOBAL SEARCH INTENT HELPERS (CLAUDE-FIX-2608-intentEngine) ═══
@@ -9491,9 +9491,247 @@ recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', descriptio
                });
 
 
-               // Routes (root served above with cache-control + badge injection)
+               // ─────────────────────────────────────────────────────────────
+               //  SITE AUDIT — crawlt een hele site (sitemap → scan alle pagina's)
+               //  en aggregeert tot een overtuigend site-rapport. Hergebruikt de
+               //  bestaande scanOneUrlWithBrowser + fetchSitemapUrls. Intern tool.
+               //  POST /api/audit-site  { url, maxPages?, mode? }
+               // ─────────────────────────────────────────────────────────────
+               app.post('/api/audit-site', async (req, res) => {
+                 try {
+                   const { url, maxPages, mode } = req.body || {};
+                   if (!url) return res.status(400).json({ success: false, error: 'URL required' });
+                   const base = url.startsWith('http') ? url : 'https://' + url;
+                   const domain = new URL(base).hostname;
+                   const cap = Math.min(parseInt(maxPages) || 20, mode === 'full' ? 100 : 20);
 
-// ── 1. Serve the standalone lead-crawler page ─────────────────────────────────
+                   // 1) Pagina-inventaris — sitemap-waterval (je bestaande resolver)
+                   let urls = [];
+                   let source = 'XML-sitemap';
+                   try { urls = await fetchSitemapUrls(base); } catch(e) { urls = []; }
+                   if (!urls || urls.length < 3) {
+                     // vangnet: begin met alleen de homepage (deep-crawl kan later)
+                     urls = [base];
+                     source = 'Homepage (geen sitemap gevonden)';
+                   }
+                   // eerste indruk = gespreide steekproef; full = alles tot cap
+                   let picked;
+                   if (mode === 'full') {
+                     picked = urls.slice(0, cap);
+                   } else {
+                     const home = base.replace(/\/$/, '');
+                     const rest = urls.filter(u => u.replace(/\/$/, '') !== home);
+                     const step = Math.max(1, Math.floor(rest.length / Math.max(1, cap - 1)));
+                     picked = [base].concat(rest.filter((_, i) => i % step === 0).slice(0, cap - 1));
+                   }
+
+                   // 2) Scan elke pagina met de bestaande engine (gedeelde browser)
+                   let browser;
+                   try { browser = await getBrowser(); } catch(e) {}
+                   if (!browser) { browserInstance = null; try { browser = await getBrowser(); } catch(e) {} }
+                   if (!browser) return res.status(500).json({ success: false, error: 'Browser unavailable' });
+
+                   const pages = [];
+                   for (const u of picked) {
+                     try {
+                       const r = await scanOneUrlWithBrowser(u, browser);
+                       if (r && !r.skip) {
+                         const cs = r.content_stats || {};
+                         pages.push({
+                           url: u,
+                           score: r.score || 0,
+                           graaf: r.graafScore != null ? r.graafScore : (r.metrics && r.metrics.graaf) || 0,
+                           craft: r.craftScore != null ? r.craftScore : (r.metrics && r.metrics.craft) || 0,
+                           technical: r.technicalScore != null ? r.technicalScore : (r.metrics && r.metrics.technical) || 0,
+                           wordCount: cs.wordCount || cs.totalWordCount || 0,
+                           hasFAQ: !!cs.hasFAQContent,
+                           hasAuthor: !!cs.hasAuthorBio,
+                           hasSchema: !!(cs.schemaTypes && cs.schemaTypes.length) || !!cs.hasArticleSchema || !!cs.hasFAQPageSchema,
+                           stats: cs.statsFound || 0,
+                           images: cs.images || 0,
+                           imagesWithAlt: cs.imagesWithAlt || 0,
+                           internalLinks: cs.internalLinks || 0,
+                           hreflang: cs.hreflang || [],
+                           htmlLang: cs.htmlLang || '',
+                         });
+                       }
+                     } catch(e) { /* sla mislukte pagina over */ }
+                   }
+
+                   if (!pages.length) return res.status(422).json({ success: false, error: 'No pages could be scanned', inventory_source: source });
+
+                   // 3) Aggregeer → site-rapport
+                   const n = pages.length;
+                   const avg = k => Math.round(pages.reduce((s, p) => s + (p[k] || 0), 0) / n);
+                   const cnt = f => pages.filter(f).length;
+                   const withFaq = cnt(p => p.hasFAQ);
+                   const withStats = cnt(p => p.stats >= 5);
+                   const withAuthor = cnt(p => p.hasAuthor);
+                   const withSchema = cnt(p => p.hasSchema);
+                   const citeIndex = Math.round((withFaq/n)*25 + (withStats/n)*30 + (withAuthor/n)*20 + (withSchema/n)*25);
+
+                   // meertaligheid
+                   const langs = new Set();
+                   let hasHreflang = false;
+                   pages.forEach(p => {
+                     (p.hreflang||[]).forEach(l => { langs.add(String(l).slice(0,2)); hasHreflang = true; });
+                     if (p.htmlLang) langs.add(String(p.htmlLang).slice(0,2));
+                     const m = p.url.match(/\/(en|es|fr|de|nl|it|pt|ar)(\/|$)/);
+                     if (m) langs.add(m[1]);
+                   });
+
+                   // zwakste pagina's
+                   const weakest = [...pages].sort((a,b)=>a.score-b.score).slice(0,5)
+                     .map(p => ({ url: p.url, score: p.score }));
+
+                   const verdict = citeIndex >= 75
+                     ? ['Klaar om geciteerd te worden', 'De structuur is er; nu autoriteit en tijd.']
+                     : citeIndex >= 45
+                       ? ['Gedeeltelijk citeerbaar', 'Belangrijke signalen ontbreken; AI kiest nu eerder een concurrent.']
+                       : ['Niet citeerbaar', 'AI-zoekmachines kunnen deze site nauwelijks als bron gebruiken.'];
+
+                   res.json({
+                     success: true,
+                     client_url: base,
+                     domain,
+                     mode: mode || 'quick',
+                     inventory_source: source,
+                     total_pages_found: urls.length,
+                     pages_scanned: n,
+                     citeability: {
+                       cite_index: citeIndex,
+                       avg_graaf: avg('score'),
+                       pages_with_faq: withFaq,
+                       pages_with_stats: withStats,
+                       pages_with_author: withAuthor,
+                       pages_with_schema: withSchema,
+                       total_pages: n,
+                       verdict,
+                     },
+                     technical: {
+                       technical_score: avg('technical'),
+                       pages_with_schema: withSchema,
+                       avg_word_count: avg('wordCount'),
+                     },
+                     multilingual: {
+                       languages: [...langs].sort(),
+                       language_count: langs.size,
+                       has_hreflang: hasHreflang,
+                       is_international: langs.size >= 2,
+                       hreflang_gap: langs.size >= 2 && !hasHreflang,
+                     },
+                     weakest_pages: weakest,
+                     pages,
+                   });
+                 } catch (error) {
+                   console.error('❌ Audit-site error:', error.message);
+                   res.status(500).json({ success: false, error: 'Audit failed: ' + error.message });
+                 }
+               });
+
+
+               // ─────────────────────────────────────────────────────────────
+               //  /audit — zichtbare audit-pagina: URL invoeren → rapport + PDF
+               // ─────────────────────────────────────────────────────────────
+               app.get('/audit', (req, res) => {
+                 res.type('html').send(`<!doctype html><html lang="nl"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Site Audit — ContentScale</title>
+<style>
+  :root{--p:#4c1d95;--p2:#6d28d9;--ink:#1a1a2e;--bd:#e5e7eb;}
+  *{box-sizing:border-box;}
+  body{font-family:'Segoe UI',system-ui,sans-serif;margin:0;background:#f4f4f7;color:var(--ink);}
+  .wrap{max-width:900px;margin:0 auto;padding:24px;}
+  header{background:linear-gradient(135deg,#4c1d95,#6d28d9);color:#fff;padding:28px 32px;border-radius:14px;margin-bottom:20px;}
+  header h1{margin:0 0 4px;font-size:22px;}
+  header p{margin:0;opacity:.9;font-size:14px;}
+  .form{background:#fff;border:1px solid var(--bd);border-radius:12px;padding:20px;margin-bottom:20px;display:flex;flex-wrap:wrap;gap:12px;align-items:end;}
+  .field{flex:1;min-width:200px;}
+  label{display:block;font-size:12px;color:#666;margin-bottom:4px;font-weight:600;}
+  input,select{width:100%;padding:10px 12px;border:1.5px solid var(--bd);border-radius:8px;font-size:14px;}
+  button{background:var(--p2);color:#fff;border:none;border-radius:8px;padding:11px 22px;font-size:14px;font-weight:600;cursor:pointer;}
+  button:hover{background:var(--p);}
+  button:disabled{opacity:.5;cursor:wait;}
+  .status{margin:16px 0;padding:14px 18px;border-radius:10px;background:#faf5ff;border:1px solid #ddd6fe;color:#5b21b6;display:none;}
+  .results{display:none;}
+  .scorestrip{display:flex;flex-wrap:wrap;gap:10px;margin:16px 0;}
+  .sc{flex:1;min-width:120px;text-align:center;border:1px solid var(--bd);border-radius:10px;padding:16px 8px;background:#fff;}
+  .sc .n{font-size:30px;font-weight:800;line-height:1;}
+  .sc .l{font-size:11px;color:#666;margin-top:6px;}
+  .box{background:#fff;border:1px solid var(--bd);border-radius:12px;padding:20px;margin:14px 0;}
+  .box h2{margin:0 0 10px;font-size:16px;color:var(--p);}
+  .verdict{font-size:18px;font-weight:800;margin:8px 0;}
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  th{background:var(--p);color:#fff;text-align:left;padding:8px 10px;}
+  td{border-bottom:1px solid #eee;padding:7px 10px;}
+  .actions{margin:18px 0;display:flex;gap:12px;}
+  .pdfbtn{background:linear-gradient(135deg,#7e22ce,#be185d);}
+  @media print{.form,.actions,header .sub,.noprint{display:none!important;}body{background:#fff;}}
+</style></head><body><div class="wrap">
+<header><h1>🔍 Site Audit</h1><p class="sub">Voer een URL in — crawlt de site, scoort elke pagina, toont de AI-citeerbaarheid.</p></header>
+
+<div class="form noprint">
+  <div class="field"><label>Website-URL van de klant</label><input id="url" placeholder="https://klant.nl" value=""></div>
+  <div class="field" style="max-width:150px"><label>Modus</label><select id="mode"><option value="quick">Snel (20 pag.)</option><option value="full">Volledig</option></select></div>
+  <button id="run" onclick="runAudit()">Audit uitvoeren</button>
+</div>
+
+<div class="status" id="status"></div>
+
+<div class="results" id="results">
+  <div class="box">
+    <h2>Oordeel</h2>
+    <div class="verdict" id="verdict"></div>
+    <p id="verdict-sub" style="color:#555;margin:0;"></p>
+    <p id="meta" style="color:#888;font-size:13px;margin-top:8px;"></p>
+  </div>
+  <div class="box"><h2>Scores</h2><div class="scorestrip" id="scores"></div></div>
+  <div class="box"><h2>Zwakste pagina's</h2><table id="weakest"><thead><tr><th>Pagina</th><th>Score</th></tr></thead><tbody></tbody></table></div>
+  <div class="box" id="mlbox"><h2>Meertaligheid</h2><p id="ml"></p></div>
+  <div class="actions noprint">
+    <button class="pdfbtn" onclick="window.print()">📄 Download PDF (print)</button>
+  </div>
+</div>
+
+<script>
+async function runAudit(){
+  var url=document.getElementById('url').value.trim();
+  if(!url){alert('Voer een URL in');return;}
+  var mode=document.getElementById('mode').value;
+  var btn=document.getElementById('run'), st=document.getElementById('status');
+  btn.disabled=true; st.style.display='block';
+  st.textContent='⏳ Bezig met crawlen en scoren… dit kan 1–3 minuten duren voor een hele site.';
+  document.getElementById('results').style.display='none';
+  try{
+    var r=await fetch('/api/audit-site',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url:url,mode:mode})});
+    var d=await r.json();
+    if(!d.success){st.textContent='⚠ '+(d.error||'Audit mislukt');btn.disabled=false;return;}
+    render(d); st.style.display='none';
+  }catch(e){st.textContent='⚠ Fout: '+e.message;}
+  btn.disabled=false;
+}
+function render(d){
+  var c=d.citeability||{};
+  document.getElementById('verdict').textContent=(c.verdict&&c.verdict[0])||'';
+  document.getElementById('verdict').style.color=c.cite_index>=75?'#16a34a':c.cite_index>=45?'#d97706':'#dc2626';
+  document.getElementById('verdict-sub').textContent=(c.verdict&&c.verdict[1])||'';
+  document.getElementById('meta').textContent=d.domain+' · '+d.pages_scanned+' van '+d.total_pages_found+' pagina\\'s · inventaris via '+d.inventory_source;
+  var col=function(v){return v>=75?'#16a34a':v>=50?'#d97706':'#dc2626';};
+  var scores=[['AI-Citeerbaarheid',c.cite_index],['Gem. GRAAF',c.avg_graaf],['Technisch',(d.technical||{}).technical_score],['Met FAQ',c.pages_with_faq],['Met schema',c.pages_with_schema],['Met auteur',c.pages_with_author]];
+  document.getElementById('scores').innerHTML=scores.map(function(s){return '<div class="sc"><div class="n" style="color:'+col(s[1])+'">'+(s[1]||0)+'</div><div class="l">'+s[0]+'</div></div>';}).join('');
+  var wb=document.querySelector('#weakest tbody');
+  wb.innerHTML=(d.weakest_pages||[]).map(function(p){return '<tr><td>'+p.url+'</td><td style="font-weight:700;color:'+col(p.score)+'">'+p.score+'</td></tr>';}).join('');
+  var ml=d.multilingual||{};
+  document.getElementById('ml').innerHTML= ml.is_international
+    ? 'Talen: <strong>'+(ml.languages||[]).join(', ')+'</strong> · hreflang: '+(ml.has_hreflang?'aanwezig ✓':'<span style="color:#dc2626">ONTBREEKT — AI weet niet welke pagina voor welke markt is</span>')
+    : 'Eén taal gedetecteerd ('+((ml.languages||[]).join(', ')||'onbekend')+').';
+  document.getElementById('results').style.display='block';
+}
+</script>
+</div></body></html>`);
+               });
+
+
 // Reads lead-crawler.html from disk on every request, so future edits to that
 // file go live immediately after deploy — no more re-encoding a base64 snapshot
 // into this route. Tries a few common locations so it works whether the file
