@@ -1,4 +1,4 @@
-console.log('=== CONTENTSCALE BOOT ' + new Date().toISOString() + ' v2026-07-08-possible-prioritized-shortcut | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON | possibleThreshold=20impr | shortcutPrioritized=v2 | gscAutoFetchRemoved=true | linkCheckActive=true | wholeSiteWipeGuard=true | gscAutoFetchRestored=true | reminderOffFix=true | claudeRemoved=true | bingWebmaster=true | competitorPanel=true | zeroResultFix=true | pagesRefreshFix=true | recheckButton=true | provenScanStrip=true | provenScanState=true | scanAllProven=true | doEverythingBtn=true | panelOrderFix=true | workflowGuide=true | preScanGuard=true | scanAllGuard=true | earlyGuard=true | emptyStateTeaser=true | provenScopeFix=true | numberedButtons=true | clearerButtons=true | scanAnimFix=true | promptClaudeCleanup=true | bonusTip=true | realProvenContext=true | competitorContext=true | unifiedBrief=true | diagnosticFirst=true | fullCompetitorBreakdown=true | serpSpyV3=true | transparencyBlock=true | emailsPausedToggle=true | competitorDedup=true | provenScanDebug=true | serializedScans=true | claudeCleanupV2=true | mergeClaudeStrip=true | visualTransparency=true | aboveFoldPriority=true | competitorComparisonTable=true | redGreenTracking=true | aioExplicitState=true | perpCopilotState=true | realMergePromptFixed=true | briefContextDebug=true | forceRescanBypass=true | gscPosFallback=true | cannibalDedup=true | gscAccessGated=true | gapConfirmShown=true | noPlaceholders=true | rowNumContrast=true | codeCannibalDedup=true | provenDebugRemoved=true | broaderCannibalDedup=true | competitorGapFallback=true | competitorPrevSnapFallback=true | hubSpokeDedup=true | compGapRegexBroadened=true | gapFixLabelFallback=true | geminiProForBriefs=true | timeoutBudgetFixed=true | perAttemptTimeout45s=true | revertToFlashLite=true | tokenLimitDoubled=true | urlNormFix=true | impactFieldChecked=true | broaderHubPattern=true | cannibalContextRemovedFromGSC=true | scanStateDerivedFromDB=true | boardBriefRestyled=true | liveWallBriefModal=true | modalScopeFix=true | cardTransparency=true | CLAUDE-FIX-2307=true | CLAUDE-FIX-2307B-specquote=true | CLAUDE-FIX-2307C-pwboard=true | CLAUDE-FIX-2307D-typefilter=true | CLAUDE-FIX-2307E-scanneraio=true | CLAUDE-FIX-2307F-urlstrip=true | CLAUDE-FIX-2307G-aiobeforeScan=true | CLAUDE-FIX-2307H-aioInPrompt=true | CLAUDE-FIX-2307I-escHtml=true | CLAUDE-FIX-2307J-escAlias-noStale=true | CLAUDE-FIX-2407A-perpCitedConsistency=true | CLAUDE-FIX-2407B-perpCacheBug=true | CLAUDE-FIX-2407C-domainVsPageNuance=true | CLAUDE-FIX-2407D-wallModalNoReshuffle=true | CLAUDE-FIX-2407E-buildBriefSafetyNet=true | CLAUDE-FIX-2407F-modalFullText=true | CLAUDE-FIX-2407G-aioPasteModal=true | CLAUDE-FIX-2407H-aioDefinitionView=true | CLAUDE-FIX-2407I-aioBlueprintMining=true | CLAUDE-FIX-2407J-aioReferences=true | CLAUDE-FIX-2407K-aioCitationGap=true | CLAUDE-FIX-2407L-compGapTableAllModals=true | CLAUDE-FIX-2407M-honestAioManualOnly=true | CLAUDE-FIX-2407N-regexEscapeInTemplate=true | CLAUDE-FIX-2507A-jsonRepair-mergeTokens4096=true | CLAUDE-FIX-2507B-cardButtonsWorkflowOrder=true | CLAUDE-FIX-2507C-cardButtonsPillColors=true | CLAUDE-FIX-2507D-aioReloadFull-limit8000=true | CLAUDE-FIX-2507E-briefModalTransparency=true | CLAUDE-FIX-2507F-aioGapTable4col=true | CLAUDE-FIX-2507G-htmlScanTickCycle=true | CLAUDE-FIX-2507H-briefViewedPersisted=true | CLAUDE-FIX-2507I-fixCardRenderVarInExpr=true | CLAUDE-FIX-2507J-briefsUnified-manualAioGap=true | CLAUDE-FIX-2507K-gscCompTableInTracker=true | CLAUDE-FIX-2507L-trackerSplitSections=true | CLAUDE-FIX-2507M-copyBriefClarity=true | CLAUDE-FIX-2507N-aioRefsFromManualPaste=true | CLAUDE-FIX-2507O-removeSseEventSource=true | CLAUDE-FIX-2507P-ticksPersistUntilDoneOrNewHtml=true | CLAUDE-FIX-2507Q-aioRefsStoredAtSave=true | CLAUDE-FIX-2507R-aioGapTableAlways=true | CLAUDE-FIX-2507S-aioGscContextSeparated=true | CLAUDE-FIX-2507T-aioCodeFallbackFixed-refsFromManualSave=true | CLAUDE-FIX-2507U-mergeSafetyNet-cardSummaryParity=true | CLAUDE-FIX-2507V-sharedAioRenderFn-authTable=true | CLAUDE-FIX-2507W-viewLastBriefDelegates-oneSystem=true | CLAUDE-FIX-2507X-sharedBriefBody-fullUnification=true | CLAUDE-FIX-2507Y-aioTop5Table-definitionLabel=true | CLAUDE-FIX-2507Z-noRefsActionableMsg=true | CLAUDE-FIX-2508A-manualPasteWinsOverStaleSnapshot=true | CLAUDE-FIX-2508B-merge2Hardened-diagLog=true | CLAUDE-FIX-2508C-noStoreHeaders-freshClientJs=true | CLAUDE-FIX-2508D-saveEchoDiagnostic=true | CLAUDE-FIX-2508E-separateSourcesField=true | CLAUDE-FIX-2508F-diagSourcesField=true | CLAUDE-FIX-2508G-acceptSourceNames=true | CLAUDE-FIX-2508H-namesFromMainPaste-headingFilter=true | CLAUDE-FIX-2508I-cloroAioFetch=true | CLAUDE-FIX-2508J-namesFallback-autoSplit=true | CLAUDE-FIX-2508K-competitorGapAioFallback=true | CLAUDE-FIX-2508L-aioFallbackNoGscLeak-honestLabel=true | CLAUDE-FIX-2508M-gscRootDomainFallback=true | CLAUDE-FIX-2508N-sitemapLinks250-gscLiveFilter=true | CLAUDE-FIX-2508O-leadQueueCollapsedDefault=true | CLAUDE-FIX-2508P-leadQueueToggleRealFns=true | CLAUDE-FIX-2508Q-leadQueueHeaderWrap=true | CLAUDE-FIX-2508R-scanSelectedButton=true | CLAUDE-FIX-2508S-shiftClickRange=true | CLAUDE-FIX-2508T-shiftClickCorrectClass-inTemplate=true | CLAUDE-FIX-2508U-brandHeadshotHubFields=true | CLAUDE-FIX-2508V-briefModeSelector=true | CLAUDE-FIX-2508W-intentSnapshot-ownerNote=true | CLAUDE-FIX-2508X-modeBtnQuoteFix=true | CLAUDE-FIX-2508Y-perpApostropheFix=true | CLAUDE-FIX-2508Z-sitemapRegexFix=true | CLAUDE-FIX-2508ZA-pageInSitemapRegexFix=true | CLAUDE-FIX-2508ZB-missingEntities=true | CLAUDE-FIX-2508ZC-briefSpacing=true | CLAUDE-FIX-2508ZD-pasteCodeBlocks=true | CLAUDE-FIX-2508ZE-fmtActionRegexFix=true | CLAUDE-FIX-2508ZF-ticksOnlyClearOnDone=true | CLAUDE-FIX-2508ZG-paa5-pwbWider-aioFallbackMsg=true | CLAUDE-FIX-2508ZH-numberedItemsOnOwnLines=true | CLAUDE-FIX-2508ZI-prewriteBuildFields-aioListNotUglyTable=true | CLAUDE-FIX-2508ZJ-cleanAioDefinitionText=true | CLAUDE-FIX-2508ZK-slugRegexCrashFix-sectionSplit=true | CLAUDE-FIX-2508ZL-tvModalFmtAction=true | CLAUDE-FIX-3007A-tourAioScanSelected-mobileFriendly=true | CLAUDE-FIX-3007B-htmlLangWhitelistNonLatin=true | CLAUDE-FIX-3007C-clientBriefLanguageSelector=true | CLAUDE-FIX-3007D-briefLanguageTourStep=true | CLAUDE-FIX-3007E-prewriteLangListFull=true | CLAUDE-FIX-3007F-prewriteAutoAioFetch=true | CLAUDE-FIX-3007G-serpRegionListFull=true | CLAUDE-FIX-3007H-prewriteMobilePolish=true | CLAUDE-FIX-3007I-groupedComboDropdowns=true | CLAUDE-FIX-3007J-comboSyntaxFix=true | CLAUDE-FIX-3007K-multiLangBadges=true | CLAUDE-FIX-3007L-headerReportCTA=true | CLAUDE-FIX-3007M-tvViewReportCTA=true | CLAUDE-FIX-3007N-tvTopBarCTA=true | CLAUDE-FIX-3007O-realPaaInBrief=true | CLAUDE-FIX-0208-briefLangLeaks-item1AndTemplateLabels=true | CLAUDE-FIX-0208B-prewriteLabelsTranslated=true | CLAUDE-FIX-0208C-readyPasteMarkerAndCiteableLang=true | CLAUDE-FIX-0308-alignmentItemLang=true | CLAUDE-FIX-0308B-copyBriefCompTableParity=true | CLAUDE-FIX-0308C-cannibalStopwordMatch=true | CLAUDE-FIX-0308D-hardcodedCiteItemsLocalized=true | CLAUDE-FIX-0308E-cannibalSlugFallback=true | CLAUDE-FIX-1208-honestScanCount=true | CLAUDE-FIX-2108A-aioCitedTextPlusSources=true | CLAUDE-FIX-2108B-aioSourceTableCaseInsensitive=true | CLAUDE-FIX-2108C-aioSourceRetryFallback=true | CLAUDE-FIX-2108D-graafScoreInBrief=true | CLAUDE-FIX-2108E-graafRecsDedupPrioritized=true | CLAUDE-FIX-2108F-eliteRecsDetailsNotDisplayNone=true | CLAUDE-FIX-2108G-graafScoreInTextExport=true | CLAUDE-FIX-2108H-competitorTableDedupTextExport=true | CLAUDE-FIX-2108I-textExportSectionParity=true | CLAUDE-FIX-2108J-tableRegexEscapeFix=true | CLAUDE-FIX-2108K-scoreDefinedInClientScope=true | CLAUDE-FIX-2108L-clientBriefUsesDataNotP=true | CLAUDE-FIX-2108M-prewriteNoFabrication=true | CLAUDE-FIX-2108N-outputVoiceNoHype=true | CLAUDE-FIX-2608-intentEngine=true | CLAUDE-FIX-2608B-existingBriefMoment-mismatch=true | CLAUDE-FIX-2608C-momentInTextExport=true | CLAUDE-FIX-2608D-gscHeaderClarity=true | CLAUDE-FIX-2608E-mergePreservesIntentSnapshot=true | CLAUDE-FIX-2608F-sliceKeepsFramingObjects=true | CLAUDE-FIX-2608G-intentSnapshotEngineFallback=true | CLAUDE-FIX-2608H-instantBriefAlsoHasIntent=true | CLAUDE-FIX-2608I-brief2FinalSaveGuaranteesIntent=true | CLAUDE-FIX-2608J-copyBriefShowsIntent=true | CLAUDE-FIX-2608K-buildBriefPrefersFramingSource=true | CLAUDE-FIX-2608L-geminiIntentEnforced-specificFallback=true | CLAUDE-FIX-2608M-promptRestructuredForGemini=true | CLAUDE-FIX-2608N-dedicatedSerialIntentCall-protectsBriefCall=true | CLAUDE-FIX-2608O-qualityHookPreservesIntent=true | CLAUDE-FIX-2608P-graafShortcut-recsIsolatedFromCitations=true | CLAUDE-FIX-2608Q-caseStudyStrictHeadingsOnly=true | CLAUDE-FIX-2608R-graafShortcutUsesPuppeteerScan-matchesExternal=true | CLAUDE-FIX-2608S-multilingualDetection-faqBioTldrCaseStudyTocAllLangs=true | CLAUDE-FIX-2608T-arabicNumeralsAndSchemaAuthor=true | CLAUDE-FIX-2608U-scanScrollsAndWaitsForJsRender-correctRoute=true | CLAUDE-FIX-2608V-faqDetectsToggleAccordions-authorBioNoKeywordGate=true | CLAUDE-FIX-2608W-quoteRecSaysResearchable=true | CLAUDE-FIX-2608X-faqDetectsQuestionMarkBeforeToggleSymbol=true | CLAUDE-FIX-2608Y-fixedActualApiScanRoute-9107-faqBioMultilingualToggle=true | CLAUDE-FIX-2608Z-recursiveSchemaDetection-findsNestedFAQPage=true | CLAUDE-FIX-2608ZA-realApiScanRoute-9410-faqUsesSchemaAndToggle=true | CLAUDE-FIX-2608ZB-graafShortcutReliableAutoRefresh=true | CLAUDE-FIX-2609A-siteAuditEndpoint=true | CLAUDE-FIX-2609B-auditPageVisible=true | CLAUDE-FIX-2609C-auditCodeProtected=true | CLAUDE-FIX-2609P-multiBrandNamesForAcquisitions=true | CLAUDE-FIX-2609W-testMode1Page-clearerJobErrors=true ===');
+console.log('=== CONTENTSCALE BOOT ' + new Date().toISOString() + ' v2026-07-08-possible-prioritized-shortcut | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON | possibleThreshold=20impr | shortcutPrioritized=v2 | gscAutoFetchRemoved=true | linkCheckActive=true | wholeSiteWipeGuard=true | gscAutoFetchRestored=true | reminderOffFix=true | claudeRemoved=true | bingWebmaster=true | competitorPanel=true | zeroResultFix=true | pagesRefreshFix=true | recheckButton=true | provenScanStrip=true | provenScanState=true | scanAllProven=true | doEverythingBtn=true | panelOrderFix=true | workflowGuide=true | preScanGuard=true | scanAllGuard=true | earlyGuard=true | emptyStateTeaser=true | provenScopeFix=true | numberedButtons=true | clearerButtons=true | scanAnimFix=true | promptClaudeCleanup=true | bonusTip=true | realProvenContext=true | competitorContext=true | unifiedBrief=true | diagnosticFirst=true | fullCompetitorBreakdown=true | serpSpyV3=true | transparencyBlock=true | emailsPausedToggle=true | competitorDedup=true | provenScanDebug=true | serializedScans=true | claudeCleanupV2=true | mergeClaudeStrip=true | visualTransparency=true | aboveFoldPriority=true | competitorComparisonTable=true | redGreenTracking=true | aioExplicitState=true | perpCopilotState=true | realMergePromptFixed=true | briefContextDebug=true | forceRescanBypass=true | gscPosFallback=true | cannibalDedup=true | gscAccessGated=true | gapConfirmShown=true | noPlaceholders=true | rowNumContrast=true | codeCannibalDedup=true | provenDebugRemoved=true | broaderCannibalDedup=true | competitorGapFallback=true | competitorPrevSnapFallback=true | hubSpokeDedup=true | compGapRegexBroadened=true | gapFixLabelFallback=true | geminiProForBriefs=true | timeoutBudgetFixed=true | perAttemptTimeout45s=true | revertToFlashLite=true | tokenLimitDoubled=true | urlNormFix=true | impactFieldChecked=true | broaderHubPattern=true | cannibalContextRemovedFromGSC=true | scanStateDerivedFromDB=true | boardBriefRestyled=true | liveWallBriefModal=true | modalScopeFix=true | cardTransparency=true | CLAUDE-FIX-2307=true | CLAUDE-FIX-2307B-specquote=true | CLAUDE-FIX-2307C-pwboard=true | CLAUDE-FIX-2307D-typefilter=true | CLAUDE-FIX-2307E-scanneraio=true | CLAUDE-FIX-2307F-urlstrip=true | CLAUDE-FIX-2307G-aiobeforeScan=true | CLAUDE-FIX-2307H-aioInPrompt=true | CLAUDE-FIX-2307I-escHtml=true | CLAUDE-FIX-2307J-escAlias-noStale=true | CLAUDE-FIX-2407A-perpCitedConsistency=true | CLAUDE-FIX-2407B-perpCacheBug=true | CLAUDE-FIX-2407C-domainVsPageNuance=true | CLAUDE-FIX-2407D-wallModalNoReshuffle=true | CLAUDE-FIX-2407E-buildBriefSafetyNet=true | CLAUDE-FIX-2407F-modalFullText=true | CLAUDE-FIX-2407G-aioPasteModal=true | CLAUDE-FIX-2407H-aioDefinitionView=true | CLAUDE-FIX-2407I-aioBlueprintMining=true | CLAUDE-FIX-2407J-aioReferences=true | CLAUDE-FIX-2407K-aioCitationGap=true | CLAUDE-FIX-2407L-compGapTableAllModals=true | CLAUDE-FIX-2407M-honestAioManualOnly=true | CLAUDE-FIX-2407N-regexEscapeInTemplate=true | CLAUDE-FIX-2507A-jsonRepair-mergeTokens4096=true | CLAUDE-FIX-2507B-cardButtonsWorkflowOrder=true | CLAUDE-FIX-2507C-cardButtonsPillColors=true | CLAUDE-FIX-2507D-aioReloadFull-limit8000=true | CLAUDE-FIX-2507E-briefModalTransparency=true | CLAUDE-FIX-2507F-aioGapTable4col=true | CLAUDE-FIX-2507G-htmlScanTickCycle=true | CLAUDE-FIX-2507H-briefViewedPersisted=true | CLAUDE-FIX-2507I-fixCardRenderVarInExpr=true | CLAUDE-FIX-2507J-briefsUnified-manualAioGap=true | CLAUDE-FIX-2507K-gscCompTableInTracker=true | CLAUDE-FIX-2507L-trackerSplitSections=true | CLAUDE-FIX-2507M-copyBriefClarity=true | CLAUDE-FIX-2507N-aioRefsFromManualPaste=true | CLAUDE-FIX-2507O-removeSseEventSource=true | CLAUDE-FIX-2507P-ticksPersistUntilDoneOrNewHtml=true | CLAUDE-FIX-2507Q-aioRefsStoredAtSave=true | CLAUDE-FIX-2507R-aioGapTableAlways=true | CLAUDE-FIX-2507S-aioGscContextSeparated=true | CLAUDE-FIX-2507T-aioCodeFallbackFixed-refsFromManualSave=true | CLAUDE-FIX-2507U-mergeSafetyNet-cardSummaryParity=true | CLAUDE-FIX-2507V-sharedAioRenderFn-authTable=true | CLAUDE-FIX-2507W-viewLastBriefDelegates-oneSystem=true | CLAUDE-FIX-2507X-sharedBriefBody-fullUnification=true | CLAUDE-FIX-2507Y-aioTop5Table-definitionLabel=true | CLAUDE-FIX-2507Z-noRefsActionableMsg=true | CLAUDE-FIX-2508A-manualPasteWinsOverStaleSnapshot=true | CLAUDE-FIX-2508B-merge2Hardened-diagLog=true | CLAUDE-FIX-2508C-noStoreHeaders-freshClientJs=true | CLAUDE-FIX-2508D-saveEchoDiagnostic=true | CLAUDE-FIX-2508E-separateSourcesField=true | CLAUDE-FIX-2508F-diagSourcesField=true | CLAUDE-FIX-2508G-acceptSourceNames=true | CLAUDE-FIX-2508H-namesFromMainPaste-headingFilter=true | CLAUDE-FIX-2508I-cloroAioFetch=true | CLAUDE-FIX-2508J-namesFallback-autoSplit=true | CLAUDE-FIX-2508K-competitorGapAioFallback=true | CLAUDE-FIX-2508L-aioFallbackNoGscLeak-honestLabel=true | CLAUDE-FIX-2508M-gscRootDomainFallback=true | CLAUDE-FIX-2508N-sitemapLinks250-gscLiveFilter=true | CLAUDE-FIX-2508O-leadQueueCollapsedDefault=true | CLAUDE-FIX-2508P-leadQueueToggleRealFns=true | CLAUDE-FIX-2508Q-leadQueueHeaderWrap=true | CLAUDE-FIX-2508R-scanSelectedButton=true | CLAUDE-FIX-2508S-shiftClickRange=true | CLAUDE-FIX-2508T-shiftClickCorrectClass-inTemplate=true | CLAUDE-FIX-2508U-brandHeadshotHubFields=true | CLAUDE-FIX-2508V-briefModeSelector=true | CLAUDE-FIX-2508W-intentSnapshot-ownerNote=true | CLAUDE-FIX-2508X-modeBtnQuoteFix=true | CLAUDE-FIX-2508Y-perpApostropheFix=true | CLAUDE-FIX-2508Z-sitemapRegexFix=true | CLAUDE-FIX-2508ZA-pageInSitemapRegexFix=true | CLAUDE-FIX-2508ZB-missingEntities=true | CLAUDE-FIX-2508ZC-briefSpacing=true | CLAUDE-FIX-2508ZD-pasteCodeBlocks=true | CLAUDE-FIX-2508ZE-fmtActionRegexFix=true | CLAUDE-FIX-2508ZF-ticksOnlyClearOnDone=true | CLAUDE-FIX-2508ZG-paa5-pwbWider-aioFallbackMsg=true | CLAUDE-FIX-2508ZH-numberedItemsOnOwnLines=true | CLAUDE-FIX-2508ZI-prewriteBuildFields-aioListNotUglyTable=true | CLAUDE-FIX-2508ZJ-cleanAioDefinitionText=true | CLAUDE-FIX-2508ZK-slugRegexCrashFix-sectionSplit=true | CLAUDE-FIX-2508ZL-tvModalFmtAction=true | CLAUDE-FIX-3007A-tourAioScanSelected-mobileFriendly=true | CLAUDE-FIX-3007B-htmlLangWhitelistNonLatin=true | CLAUDE-FIX-3007C-clientBriefLanguageSelector=true | CLAUDE-FIX-3007D-briefLanguageTourStep=true | CLAUDE-FIX-3007E-prewriteLangListFull=true | CLAUDE-FIX-3007F-prewriteAutoAioFetch=true | CLAUDE-FIX-3007G-serpRegionListFull=true | CLAUDE-FIX-3007H-prewriteMobilePolish=true | CLAUDE-FIX-3007I-groupedComboDropdowns=true | CLAUDE-FIX-3007J-comboSyntaxFix=true | CLAUDE-FIX-3007K-multiLangBadges=true | CLAUDE-FIX-3007L-headerReportCTA=true | CLAUDE-FIX-3007M-tvViewReportCTA=true | CLAUDE-FIX-3007N-tvTopBarCTA=true | CLAUDE-FIX-3007O-realPaaInBrief=true | CLAUDE-FIX-0208-briefLangLeaks-item1AndTemplateLabels=true | CLAUDE-FIX-0208B-prewriteLabelsTranslated=true | CLAUDE-FIX-0208C-readyPasteMarkerAndCiteableLang=true | CLAUDE-FIX-0308-alignmentItemLang=true | CLAUDE-FIX-0308B-copyBriefCompTableParity=true | CLAUDE-FIX-0308C-cannibalStopwordMatch=true | CLAUDE-FIX-0308D-hardcodedCiteItemsLocalized=true | CLAUDE-FIX-0308E-cannibalSlugFallback=true | CLAUDE-FIX-1208-honestScanCount=true | CLAUDE-FIX-2108A-aioCitedTextPlusSources=true | CLAUDE-FIX-2108B-aioSourceTableCaseInsensitive=true | CLAUDE-FIX-2108C-aioSourceRetryFallback=true | CLAUDE-FIX-2108D-graafScoreInBrief=true | CLAUDE-FIX-2108E-graafRecsDedupPrioritized=true | CLAUDE-FIX-2108F-eliteRecsDetailsNotDisplayNone=true | CLAUDE-FIX-2108G-graafScoreInTextExport=true | CLAUDE-FIX-2108H-competitorTableDedupTextExport=true | CLAUDE-FIX-2108I-textExportSectionParity=true | CLAUDE-FIX-2108J-tableRegexEscapeFix=true | CLAUDE-FIX-2108K-scoreDefinedInClientScope=true | CLAUDE-FIX-2108L-clientBriefUsesDataNotP=true | CLAUDE-FIX-2108M-prewriteNoFabrication=true | CLAUDE-FIX-2108N-outputVoiceNoHype=true | CLAUDE-FIX-2608-intentEngine=true | CLAUDE-FIX-2608B-existingBriefMoment-mismatch=true | CLAUDE-FIX-2608C-momentInTextExport=true | CLAUDE-FIX-2608D-gscHeaderClarity=true | CLAUDE-FIX-2608E-mergePreservesIntentSnapshot=true | CLAUDE-FIX-2608F-sliceKeepsFramingObjects=true | CLAUDE-FIX-2608G-intentSnapshotEngineFallback=true | CLAUDE-FIX-2608H-instantBriefAlsoHasIntent=true | CLAUDE-FIX-2608I-brief2FinalSaveGuaranteesIntent=true | CLAUDE-FIX-2608J-copyBriefShowsIntent=true | CLAUDE-FIX-2608K-buildBriefPrefersFramingSource=true | CLAUDE-FIX-2608L-geminiIntentEnforced-specificFallback=true | CLAUDE-FIX-2608M-promptRestructuredForGemini=true | CLAUDE-FIX-2608N-dedicatedSerialIntentCall-protectsBriefCall=true | CLAUDE-FIX-2608O-qualityHookPreservesIntent=true | CLAUDE-FIX-2608P-graafShortcut-recsIsolatedFromCitations=true | CLAUDE-FIX-2608Q-caseStudyStrictHeadingsOnly=true | CLAUDE-FIX-2608R-graafShortcutUsesPuppeteerScan-matchesExternal=true | CLAUDE-FIX-2608S-multilingualDetection-faqBioTldrCaseStudyTocAllLangs=true | CLAUDE-FIX-2608T-arabicNumeralsAndSchemaAuthor=true | CLAUDE-FIX-2608U-scanScrollsAndWaitsForJsRender-correctRoute=true | CLAUDE-FIX-2608V-faqDetectsToggleAccordions-authorBioNoKeywordGate=true | CLAUDE-FIX-2608W-quoteRecSaysResearchable=true | CLAUDE-FIX-2608X-faqDetectsQuestionMarkBeforeToggleSymbol=true | CLAUDE-FIX-2608Y-fixedActualApiScanRoute-9107-faqBioMultilingualToggle=true | CLAUDE-FIX-2608Z-recursiveSchemaDetection-findsNestedFAQPage=true | CLAUDE-FIX-2608ZA-realApiScanRoute-9410-faqUsesSchemaAndToggle=true | CLAUDE-FIX-2608ZB-graafShortcutReliableAutoRefresh=true | CLAUDE-FIX-2609A-siteAuditEndpoint=true | CLAUDE-FIX-2609B-auditPageVisible=true | CLAUDE-FIX-2609C-auditCodeProtected=true | CLAUDE-FIX-2609P-multiBrandNamesForAcquisitions=true | CLAUDE-FIX-2609X-reportLanguageScoreExplainPdfHeader=true ===');
 
 
 // ═══ GLOBAL SEARCH INTENT HELPERS (CLAUDE-FIX-2608-intentEngine) ═══
@@ -9918,6 +9918,7 @@ recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', descriptio
   <div class="field" style="max-width:200px"><label>🔒 Toegangscode</label><input id="code" type="password" placeholder="geheime code"></div>
   <div class="field"><label>Website-URL van de klant</label><input id="url" placeholder="https://klant.nl" value=""></div>
   <div class="field" style="max-width:170px"><label>Modus</label><select id="mode"><option value="test">Test (1 pagina, snel)</option><option value="quick">Snel (20 pag.)</option><option value="full">Volledig</option></select></div>
+  <div class="field" style="max-width:150px"><label>Rapport-taal</label><select id="reportLang"><option value="nl">Nederlands</option><option value="es">Español</option><option value="en">English</option></select></div>
   <button id="run" onclick="runAudit()">Audit uitvoeren</button>
   <button id="resetBtn" onclick="resetAudit()" style="background:#fff;color:#dc2626;border:1.5px solid #dc2626;">Reset</button>
 </div>
@@ -9983,6 +9984,13 @@ recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', descriptio
 <div class="status" id="status"></div>
 
 <div class="results" id="results">
+  <div id="pdfHeader" style="border-bottom:3px solid #4c1d95;padding-bottom:14px;margin-bottom:20px;">
+    <div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px;">
+      <div style="font-size:22px;font-weight:800;color:#4c1d95;">ContentScale</div>
+      <div style="font-size:12px;color:#888;">AI Visibility &amp; Citeability Audit</div>
+    </div>
+    <div id="pdfMeta2" style="font-size:12px;color:#666;margin-top:4px;"></div>
+  </div>
   <div class="box" id="portalbox" style="display:none;background:#fff7ed;border:1px solid #fdba74;">
     <h2 style="color:#9a3412;border:none;">🔒 Besloten portaal gedetecteerd</h2>
     <p id="portal-msg" style="margin:0 0 8px;color:#7c2d12;"></p>
@@ -10120,6 +10128,19 @@ function pollAudit(jobId){
     }catch(e){ /* netwerkfout tijdens pollen — blijf proberen */ }
   }, 4000); // check elke 4 seconden
 }
+var RLANG={
+ nl:{verdict:'Oordeel',scores:'Scores',realcit:'Echte AI-citaties',engine:'AI-engine',mentioned:'Klant genoemd?',competitors:'Concurrenten wél genoemd',yes:'✓ Genoemd',no:'✗ NIET genoemd',weakest:'Zwakste paginas',ml:'Meertaligheid',opps:'Grootste kansen',page:'Pagina',score:'Score',position:'Positie',impressions:'Impressies',
+  explain:{ai:'Is de site klaar om door AI geciteerd te worden (0-100). Meet structuur: FAQ, schema, statistieken, auteur-signalen.',graaf:'Gemiddelde inhoudskwaliteit per pagina (0-100). Hoe volledig, gestructureerd en citeerbaar de content is.',tech:'Technische gezondheid (0-100): schema, canonical, meta-tags, titels.',faq:'Aantal paginas met een FAQ-sectie — de structuur die AI het vaakst overneemt.',schema:'Aantal paginas met gestructureerde data (schema.org) die AI helpt de content te begrijpen.',author:'Aantal paginas met auteur/E-E-A-T signalen die expertise aantonen.'},
+  ov:{title:'Wat betekenen deze scores?',intro:'Deze audit meet of AI-zoekmachines (ChatGPT, Google AI, Perplexity) uw site als bron kunnen en willen gebruiken. Hoe hoger, hoe groter de kans dat u geciteerd wordt in plaats van uw concurrent.'}},
+ es:{verdict:'Veredicto',scores:'Puntuaciones',realcit:'Citas reales de IA',engine:'Motor de IA',mentioned:'¿Cliente citado?',competitors:'Competidores sí citados',yes:'✓ Citado',no:'✗ NO citado',weakest:'Páginas más débiles',ml:'Multilingüe',opps:'Mayores oportunidades',page:'Página',score:'Puntuación',position:'Posición',impressions:'Impresiones',
+  explain:{ai:'¿Está el sitio listo para ser citado por la IA (0-100)? Mide la estructura: FAQ, schema, estadísticas, señales de autor.',graaf:'Calidad media del contenido por página (0-100). Qué tan completo, estructurado y citable es.',tech:'Salud técnica (0-100): schema, canonical, meta-etiquetas, títulos.',faq:'Número de páginas con sección de FAQ — la estructura que la IA usa con más frecuencia.',schema:'Número de páginas con datos estructurados (schema.org) que ayudan a la IA a entender el contenido.',author:'Número de páginas con señales de autor/E-E-A-T que demuestran experiencia.'},
+  ov:{title:'¿Qué significan estas puntuaciones?',intro:'Esta auditoría mide si los motores de IA (ChatGPT, Google AI, Perplexity) pueden y quieren usar su sitio como fuente. Cuanto más alto, mayor es la probabilidad de que le citen a usted en lugar de a su competidor.'}},
+ en:{verdict:'Verdict',scores:'Scores',realcit:'Real AI citations',engine:'AI engine',mentioned:'Client cited?',competitors:'Competitors cited instead',yes:'✓ Cited',no:'✗ NOT cited',weakest:'Weakest pages',ml:'Multilingual',opps:'Biggest opportunities',page:'Page',score:'Score',position:'Position',impressions:'Impressions',
+  explain:{ai:'Is the site ready to be cited by AI (0-100)? Measures structure: FAQ, schema, statistics, author signals.',graaf:'Average content quality per page (0-100). How complete, structured and citeable it is.',tech:'Technical health (0-100): schema, canonical, meta tags, titles.',faq:'Pages with an FAQ section — the structure AI lifts into answers most often.',schema:'Pages with structured data (schema.org) that helps AI understand the content.',author:'Pages with author/E-E-A-T signals that demonstrate expertise.'},
+  ov:{title:'What do these scores mean?',intro:'This audit measures whether AI search engines (ChatGPT, Google AI, Perplexity) can and will use your site as a source. The higher, the greater the chance you are cited instead of your competitor.'}}
+};
+function _rl(){ var s=(document.getElementById('reportLang')||{}).value||'nl'; return RLANG[s]||RLANG.nl; }
+
 function render(d){
   var pn=d.portal_notice;
   if(pn && pn.detected){
@@ -10134,9 +10155,30 @@ function render(d){
   document.getElementById('verdict').style.color=c.cite_index>=75?'#16a34a':c.cite_index>=45?'#d97706':'#dc2626';
   document.getElementById('verdict-sub').textContent=(c.verdict&&c.verdict[1])||'';
   document.getElementById('meta').textContent=d.domain+' · '+d.pages_scanned+' van '+d.total_pages_found+' pagina van de site · bron: '+d.inventory_source;
+  var _ph=document.getElementById('pdfMeta2'); if(_ph){ _ph.textContent=d.client_url||d.domain||''; }
+  var T=_rl();
   var col=function(v){return v>=75?'#16a34a':v>=50?'#d97706':'#dc2626';};
-  var scores=[['AI-Citeerbaarheid',c.cite_index],['Gem. GRAAF',c.avg_graaf],['Technisch',(d.technical||{}).technical_score],['Met FAQ',c.pages_with_faq],['Met schema',c.pages_with_schema],['Met auteur',c.pages_with_author]];
-  document.getElementById('scores').innerHTML=scores.map(function(s){return '<div class="sc"><div class="n" style="color:'+col(s[1])+'">'+(s[1]||0)+'</div><div class="l">'+s[0]+'</div></div>';}).join('');
+  var scores=[[T.explain?'AI':'AI',c.cite_index,T.explain.ai,({nl:'AI-Citeerbaarheid',es:'Citabilidad IA',en:'AI Citeability'})],
+              ['graaf',c.avg_graaf,T.explain.graaf,({nl:'GRAAF-kwaliteit',es:'Calidad GRAAF',en:'GRAAF quality'})],
+              ['tech',(d.technical||{}).technical_score,T.explain.tech,({nl:'Technisch',es:'Técnico',en:'Technical'})],
+              ['faq',c.pages_with_faq,T.explain.faq,({nl:'Met FAQ',es:'Con FAQ',en:'With FAQ'})],
+              ['schema',c.pages_with_schema,T.explain.schema,({nl:'Met schema',es:'Con schema',en:'With schema'})],
+              ['author',c.pages_with_author,T.explain.author,({nl:'Met auteur',es:'Con autor',en:'With author'})]];
+  var _langKey=(document.getElementById('reportLang')||{}).value||'nl';
+  document.getElementById('scores').innerHTML=scores.map(function(s){
+    var lbl=s[3][_langKey]||s[3].nl;
+    return '<div class="sc" title="'+(s[2]||'').replace(/"/g,'')+'"><div class="n" style="color:'+col(s[1])+'">'+(s[1]||0)+'</div><div class="l">'+lbl+'</div><div style="font-size:9px;color:#999;margin-top:4px;line-height:1.3">'+(s[2]||'')+'</div></div>';
+  }).join('');
+  // uitleg-blok bovenaan de scores
+  var scEl=document.getElementById('scores');
+  if(scEl && !document.getElementById('scoreExplain')){
+    var ex=document.createElement('div'); ex.id='scoreExplain';
+    ex.style.cssText='background:#faf5ff;border:1px solid #ddd6fe;border-radius:8px;padding:12px 16px;margin-bottom:12px;font-size:13px;color:#555;';
+    ex.innerHTML='<strong style="color:#5b21b6">'+T.ov.title+'</strong><br>'+T.ov.intro;
+    scEl.parentNode.insertBefore(ex, scEl);
+  } else if(document.getElementById('scoreExplain')){
+    document.getElementById('scoreExplain').innerHTML='<strong style="color:#5b21b6">'+T.ov.title+'</strong><br>'+T.ov.intro;
+  }
   var opp=d.opportunities||[];
   if(opp.length){
     var ob=document.querySelector('#opptbl tbody');
@@ -10148,8 +10190,8 @@ function render(d){
   if(mcKeys.length){
     var cb=document.querySelector('#citetbl tbody');
     cb.innerHTML=mcKeys.map(function(e){
-      var c=mc[e]; var cited=c.cited===true?'<span style="color:#16a34a;font-weight:700">✓ Genoemd</span>':(c.cited===false?'<span style="color:#dc2626;font-weight:700">✗ NIET genoemd</span>':'—');
-      return '<tr><td>'+e+'</td><td>'+cited+'</td><td>'+(c.competitors||'—')+'</td></tr>';
+      var cc=mc[e]; var cited=cc.cited===true?'<span style="color:#16a34a;font-weight:700">'+T.yes+'</span>':(cc.cited===false?'<span style="color:#dc2626;font-weight:700">'+T.no+'</span>':'—');
+      return '<tr><td>'+e+'</td><td>'+cited+'</td><td>'+(cc.competitors||'—')+'</td></tr>';
     }).join('');
     document.getElementById('citebox').style.display='block';
   }
@@ -17485,10 +17527,10 @@ fetch(RAILWAY+'/api/client-progress',{headers:{'x-access-token':token}})
     var pct=total>0?Math.round((done/total)*100):0;
     document.getElementById('progressBar').style.width=pct+'%';
     document.getElementById('progressLabel').innerHTML=
-      '<strong>'+done+' van '+total+'</strong> pagina\\'s afgerond'+(busy?' &nbsp;·&nbsp; <strong>'+busy+'</strong> bezig':'');
-    document.getElementById('clientSub').textContent=total+' pagina\\'s in dit project';
+      '<strong>'+done+' van '+total+'</strong> paginas afgerond'+(busy?' &nbsp;·&nbsp; <strong>'+busy+'</strong> bezig':'');
+    document.getElementById('clientSub').textContent=total+' paginas in dit project';
     if(!pages.length){
-      document.getElementById('pageList').innerHTML='<div class="empty">Nog geen pagina\\'s toegevoegd.<br>Kom later terug voor updates.</div>';
+      document.getElementById('pageList').innerHTML='<div class="empty">Nog geen paginas toegevoegd.<br>Kom later terug voor updates.</div>';
       return;
     }
     var icons={done:'✅',busy:'🔄',planned:'⏳'};
@@ -29318,7 +29360,7 @@ function addDomain(){
 
 function removeDomain(domainId){
   var dom=domains.find(function(d){return d.id===domainId;});
-  if(!confirm('Verwijder domein '+dom.name+' en alle '+dom.pages.length+' pagina\\'s?')) return;
+  if(!confirm('Verwijder domein '+dom.name+' en alle '+dom.pages.length+' paginas?')) return;
   domains=domains.filter(function(d){return d.id!==domainId;});
   save(); render(); updateDomainSelect(); toast('Verwijderd');
 }
@@ -29414,7 +29456,7 @@ function processGSCUpdate(raw){
   });
 
   save(); render();
-  toast('✅ '+updated+' pagina\\'s bijgewerkt');
+  toast('✅ '+updated+' paginas bijgewerkt');
   setTimeout(function(){trackerSyncToServer(true);},1000);
 }
 
@@ -29428,7 +29470,7 @@ function checkWorkflowImport(){
     if(!available.length) return;
     var banner=document.getElementById('importBanner');
     banner.style.display='flex';
-    document.getElementById('importCount').textContent=available.length+' pagina\\'s';
+    document.getElementById('importCount').textContent=available.length+' paginas';
   }catch(e){}
 }
 
@@ -29452,7 +29494,7 @@ function pollTrackerQueue(){
       });
       localStorage.setItem('cs_wf_pages',JSON.stringify(wf));
       checkWorkflowImport();
-      toast('✅ '+newPages.length+' herschreven pagina\\'s klaar voor Pulse+Nexus import');
+      toast('✅ '+newPages.length+' herschreven paginas klaar voor Pulse+Nexus import');
     }).catch(function(){});
   }catch(e){}
 }
@@ -29466,7 +29508,7 @@ function importFromWorkflow(){
     var wfPages=JSON.parse(wf);
     var allUrls=domains.flatMap(function(d){return d.pages.map(function(p){return p.url;});});
     var newPages=wfPages.filter(function(p){return p.url&&!allUrls.includes(p.url);});
-    if(!newPages.length){ toast('Geen nieuwe pagina\\'s'); return; }
+    if(!newPages.length){ toast('Geen nieuwe paginas'); return; }
     // Group by domain
     var domainMap={};
     newPages.forEach(function(p){
@@ -29491,7 +29533,7 @@ function importFromWorkflow(){
     save(); render(); updateDomainSelect();
     document.getElementById('importBanner').style.display='none';
     setTimeout(function(){trackerSyncToServer(true);},500);
-    toast('✅ '+added+' pagina\\'s geïmporteerd in '+Object.keys(domainMap).length+' domein(en)');
+    toast('✅ '+added+' paginas geïmporteerd in '+Object.keys(domainMap).length+' domein(en)');
   }catch(e){ toast('⚠ Import mislukt: '+e.message); }
 }
 
@@ -29521,7 +29563,7 @@ function renderMeasDash(){
     return '<div class="'+cls+'">'
       +'<div class="md-left">'
       +'<div class="md-name" style="display:flex;align-items:center;gap:8px;"><span style="width:8px;height:8px;border-radius:50%;background:'+color+';flex-shrink:0;display:inline-block;"></span>'+dom.name+'</div>'
-      +'<div class="md-meta">'+dom.pages.length+' pagina\\'s · start: '+dom.baseDate+(spiralCount>0?' · <span style="color:var(--red);">'+spiralCount+' spiraal</span>':'')+'</div>'
+      +'<div class="md-meta">'+dom.pages.length+' paginas · start: '+dom.baseDate+(spiralCount>0?' · <span style="color:var(--red);">'+spiralCount+' spiraal</span>':'')+'</div>'
       +'<div class="md-next '+(info.overdue?'overdue':info.due?'due':info.date&&daysUntil<=7?'due':'future')+'" style="color:'+statusColor+';">'+statusText+(info.date?' ('+info.date+')':'')+'</div>'
       +'</div>'
       +'<button class="btn btn-muted" style="font-size:8px;" onclick="scrollToDomain(\\''+dom.id+'\\')">↓ Naar domein</button>'
@@ -29571,7 +29613,7 @@ function render(){
 
     var pagesHtml='';
     if(!dom.pages.length){
-      pagesHtml='<div style="padding:18px;font-family:\'IBM Plex Mono\\',monospace;font-size:11px;color:var(--dim);text-align:center;">Nog geen pagina\\'s — voeg toe via het formulier hierboven.</div>';
+      pagesHtml='<div style="padding:18px;font-family:\'IBM Plex Mono\\',monospace;font-size:11px;color:var(--dim);text-align:center;">Nog geen paginas — voeg toe via het formulier hierboven.</div>';
     } else {
       // Sort: spiral first, then declining, then rest
       var sorted=dom.pages.slice().sort(function(a,b){
@@ -29590,7 +29632,7 @@ function render(){
       +'<div class="domain-header" onclick="toggleDomain(\\'db-'+dom.id+'\\')">'
       +'<span class="domain-color" style="background:'+color+';"></span>'
       +'<span class="domain-name">'+dom.name+'</span>'
-      +'<span class="domain-meta">'+dom.pages.length+' pagina\\'s · start: '+dom.baseDate+(spiralCount>0?' · <span style="color:var(--red);font-weight:700;">'+spiralCount+' 🚨</span>':'')+'</span>'
+      +'<span class="domain-meta">'+dom.pages.length+' paginas · start: '+dom.baseDate+(spiralCount>0?' · <span style="color:var(--red);font-weight:700;">'+spiralCount+' 🚨</span>':'')+'</span>'
       +'<span style="font-family:\'IBM Plex Mono\\',monospace;font-size:9px;margin-left:auto;">'+nextInfo+'</span>'
       +'<span style="font-family:\'IBM Plex Mono\\',monospace;font-size:14px;color:var(--dim);margin-left:8px;" id="chev-'+dom.id+'">▾</span>'
       +'</div>'
@@ -29653,7 +29695,7 @@ function processGSCForDomain(raw, domainId){
     updated++;
   });
   save(); render();
-  toast('✅ '+updated+' pagina\\'s bijgewerkt voor '+dom.name);
+  toast('✅ '+updated+' paginas bijgewerkt voor '+dom.name);
   setTimeout(function(){trackerSyncToServer(true);},500);
 }
 
@@ -29844,10 +29886,10 @@ function exportCSV(){
 function exportClientReport(){
   if(!domains.length){ toast('⚠ Geen data'); return; }
   var css='body{font-family:Arial,sans-serif;max-width:980px;margin:40px auto;color:#1f2937;padding:0 20px;line-height:1.6;}h1{color:#7c3aed;font-size:24px;border-bottom:3px solid #7c3aed;padding-bottom:8px;margin-bottom:4px;}.dm{margin-bottom:28px;border:1px solid #e5e7eb;border-radius:10px;overflow:hidden;}.dm-head{padding:14px 18px;background:#f9fafb;border-bottom:1px solid #e5e7eb;display:flex;align-items:center;gap:10px;}.dm-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}.dm-name{font-size:16px;font-weight:700;}.pc{border-bottom:1px solid #e5e7eb;padding:12px 18px;}.pc:last-child{border-bottom:none;}.pc-url{font-size:11px;color:#2563eb;font-family:monospace;word-break:break-all;}.tl{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;margin-top:8px;}.tl-c{text-align:center;background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;padding:6px 3px;}.tl-c.filled{background:#f0fdf4;border-color:#86efac;}.tl-c.down{background:#fef2f2;border-color:#fca5a5;}.tl-wk{font-size:8px;color:#9ca3af;font-family:monospace;}.tl-p{font-size:16px;font-weight:900;color:#374151;}.tl-p.good{color:#16a34a;}.tl-p.warn{color:#b45309;}.tl-p.bad{color:#dc2626;}.up{color:#16a34a;}.dn{color:#dc2626;}.spiral{background:#fee2e2;border-left:4px solid #dc2626;}footer{margin-top:40px;padding-top:16px;border-top:1px solid #e5e7eb;color:#9ca3af;font-size:11px;text-align:center;}';
-  var body='<h1>SEO Voortgang Rapport</h1><p style="color:#6b7280;font-size:13px;margin-bottom:24px;">'+new Date().toLocaleDateString('nl-NL',{day:'numeric',month:'long',year:'numeric'})+' · '+domains.length+' domeinen · '+domains.reduce(function(t,d){return t+d.pages.length;},0)+' pagina\\'s</p>';
+  var body='<h1>SEO Voortgang Rapport</h1><p style="color:#6b7280;font-size:13px;margin-bottom:24px;">'+new Date().toLocaleDateString('nl-NL',{day:'numeric',month:'long',year:'numeric'})+' · '+domains.length+' domeinen · '+domains.reduce(function(t,d){return t+d.pages.length;},0)+' paginas</p>';
   domains.forEach(function(dom,di){
     var color=DOMAIN_COLORS[dom.colorIdx%DOMAIN_COLORS.length];
-    body+='<div class="dm"><div class="dm-head"><span class="dm-dot" style="background:'+color+';"></span><span class="dm-name">'+dom.name+'</span><span style="font-size:12px;color:#6b7280;margin-left:auto;">'+dom.pages.length+' pagina\\'s · start: '+dom.baseDate+'</span></div>';
+    body+='<div class="dm"><div class="dm-head"><span class="dm-dot" style="background:'+color+';"></span><span class="dm-name">'+dom.name+'</span><span style="font-size:12px;color:#6b7280;margin-left:auto;">'+dom.pages.length+' paginas · start: '+dom.baseDate+'</span></div>';
     dom.pages.forEach(function(page){
       var status=getSpiralStatus(page);
       var base=page.checkpoints.w0;
