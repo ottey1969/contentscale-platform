@@ -101,6 +101,43 @@ function _repairJsonG(str){
     if(ch==='"'){inStr=true;out+=ch;continue;} out+=ch; }
   return out.replace(/,\s*([\]}])/g,'$1');
 }
+// ═══ AI SOURCE IMPORT NORMALIZER (5 PROVIDERS) ═══════════════════════════════
+// Normalizes source URLs from ChatGPT Search, Claude, Gemini/AIO, Perplexity and Copilot.
+// Never guesses a URL. ChatGPT primary citation URL is manual; +N URLs are optional.
+function _cleanAiSourceUrl(input) {
+  if (!input) return '';
+  var raw = String(input).trim().replace(/^<|>$/g, '').replace(/\\&/g, '&');
+  try {
+    var u = new URL(raw), drop = [];
+    u.searchParams.forEach(function(v,k){ var kl=String(k||'').toLowerCase(); if(kl.indexOf('utm_')===0 || ['gclid','fbclid','msclkid','mc_cid','mc_eid'].indexOf(kl)>=0) drop.push(k); });
+    drop.forEach(function(k){ u.searchParams.delete(k); }); u.hash='';
+    return u.toString().replace(/\?$/, '');
+  } catch(e) { return raw; }
+}
+function _normalizeAiImportedSources(engine, text) {
+  text=String(text||''); var work=text;
+  if(engine==='Copilot'){ var rm=work.match(/^##?\s*References\s*$/mi); if(rm && typeof rm.index==='number') work=work.slice(rm.index); }
+  var found=[], seen={};
+  function pushUrl(raw,label,role){
+    var u=_cleanAiSourceUrl(raw); if(!/^https?:\/\//i.test(u)) return;
+    try {
+      var x=new URL(u), host=x.hostname.toLowerCase();
+      if(engine==='Google AI Overviews'){
+        if(host.indexOf('gstatic.com')>=0 && x.pathname.indexOf('/images')>=0) return;
+        if(host==='support.google.com' && x.pathname.indexOf('/websearch')>=0) return;
+        if(host.indexOf('gstatic.com')>=0 && x.pathname.indexOf('/faviconV2')>=0){ var nested=x.searchParams.get('url'); if(nested) pushUrl(nested,label,'domain-fallback'); return; }
+      }
+    } catch(e) {}
+    var key=u.toLowerCase(); if(seen[key]) return; seen[key]=1;
+    found.push({url:u,label:String(label||'').replace(/^svg/i,'').replace(/svg$/i,'').trim(),role:role||'source'});
+  }
+  var md=/\[([^\]]+)\]\((https?:\/\/[^)\s]+)(?:\s+"[^"]*")?\)/g,m;
+  while((m=md.exec(work))!==null) pushUrl(m[2],m[1],/^\d+$/.test(m[1])?'citation':'source');
+  var bare=/https?:\/\/[^\s)\]"'<>,]+/gi;
+  while((m=bare.exec(work))!==null) pushUrl(m[0].replace(/[.,);:]+$/,''),'','source');
+  return found;
+}
+
 // CONTENTSCALE SERVER.JS — ELITE EDITION v4 (FIXED v3)
 // ✅ FIX v7: secondary_keywords + related_keywords auto in Analyse JSON + Execute prompt
 // ✅ FIX v7: analysis_data JSONB safe parse in execute-rewrite
@@ -9816,12 +9853,14 @@ recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', descriptio
                        const cited = _brands.some(b => b && lower.includes(b));
                        // eigen site als bron geciteerd? → zoek het eigen domein (bijv. ontime.es) in de tekst
                        const _domainBare = domain.replace(/^www\./, '');
-                       // extraheer ALLE bron-URLs die in het geplakte antwoord staan (wat Perplexity/AIO tonen)
-                       const _allUrls = text.match(/https?:\/\/[^\s"'<>)\]]+/gi) || [];
-                       // ook kale domeinen zoals "tdqiq.sa" of "fxnewstoday.ae" (Perplexity toont die soms zonder https)
+                       // Provider-aware source import for the 5 tested AI engines. URLs are cleaned
+                       // (tracking removed) but never invented. ChatGPT primary URL may be pasted manually; +N is optional.
+                       const _normalizedAiSources = _normalizeAiImportedSources(engine, text);
+                       const _allUrls = _normalizedAiSources.map(function(s){ return s.url; });
+                       // Perplexity can also expose bare domains without https.
                        const _bareDomains = text.match(/\b[a-z0-9-]+\.(sa|com|ae|net|org|io|co)\b(?:\/[^\s"'<>)\]]*)?/gi) || [];
                        const _sources = [...new Set([..._allUrls, ..._bareDomains].map(u => u.replace(/^https?:\/\//, '').replace(/\/$/, '').toLowerCase()))]
-                         .filter(u => u.length > 3 && !u.includes('schema.org'));
+                         .filter(u => u.length > 3 && !u.includes('schema.org') && !u.includes('gstatic.com/images') && !u.includes('support.google.com/websearch'));
                        // wordt het EIGEN domein ergens in het antwoord genoemd?
                        // Dit veld blijft voor compatibiliteit; citationTarget bepaalt de UI-status.
                        const _ownDomain = _domainBare.toLowerCase();
@@ -9885,7 +9924,7 @@ recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', descriptio
                        // hij bewijst niet dat ze de merkvermelding ondersteunen.
                        const _citedSources = _sources.filter(s => !s.includes(_ownDomain)).slice(0, 6).join(', ');
                        // toont deze engine bronnen? Perplexity/Copilot/AIO wel; ChatGPT/Claude meestal niet
-                       const _showsSources = ['Perplexity', 'Copilot', 'Google AI Overviews'].includes(engine);
+                       const _showsSources = ['Claude', 'Perplexity', 'Copilot', 'Google AI Overviews'].includes(engine) || (engine === 'ChatGPT' && _allUrls.length > 0);
                        // concurrenten: AUTOMATISCH bedrijfsnamen uit het lijst-patroon halen
                        // (werkt voor élke sector), aangevuld met bekende namen als vangnet.
                        const _compMap = new Map(); // lowercase → originele schrijfwijze
@@ -10059,7 +10098,7 @@ recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', descriptio
 2. Operadores logísticos en Murcia
 3. Logística refrigerada y transporte internacional
 4. Transporte de mercancía paletizada en el sur de España</div>
-          <p style="margin:10px 0 0;color:#888;"><strong>Stap 5:</strong> Kopieer elk antwoord en plak onderaan, met <code>=== ChatGPT ===</code> ervoor.</p>
+          <p style="margin:10px 0 4px;color:#888;"><strong>Stap 5:</strong> Kopieer elk antwoord en plak onderaan met de juiste engine-naam ervoor.</p>\n          <div style="background:#f8fafc;border:1px solid var(--bd);border-radius:6px;padding:9px 10px;font-size:11px;color:#666;line-height:1.6;"><strong>Bronnen per AI:</strong> ChatGPT: plak per citation-chip minimaal de <strong>eerste URL</strong> onder het antwoord; bronnen achter <code>+N</code> zijn optioneel. Claude: gewone copy/paste. Perplexity: plak bij voorkeur tekst uit de PDF inclusief de genummerde URL-lijst (answer-copy is fallback). Google AI Overview: gewone copy/paste inclusief citations. Copilot: kopieer antwoord + volledige References. Tracking zoals <code>utm_source=chatgpt.com</code> en <code>utm_source=copilot.com</code> wordt automatisch verwijderd.</div>
         </div>
       </details>
 
@@ -10068,7 +10107,7 @@ recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', descriptio
         <p style="font-size:11px;color:#888;margin:2px 0 4px;">Vul <strong>alle</strong> namen in waaronder de klant bekend is: het merk zelf, het moederbedrijf, overgenomen merken, handelsnamen. Bij een overname geldt: als de AI het moederbedrijf óf het merk noemt, telt dat als "genoemd". Bijv. bij Campillo Palmera (overgenomen door Ontime): <code>Campillo, Campillo Palmera, Ontime, campillopalmera</code>. Leeg = alleen de naam uit de URL.</p>
         <input id="brandNames" placeholder="Campillo, Campillo Palmera, Ontime, campillopalmera">
       </div>
-      <textarea id="aiAnswers" rows="8" style="width:100%;padding:10px;border:1.5px solid var(--bd);border-radius:8px;font-size:12px;font-family:monospace;" placeholder="Plak zo (begin elk blok met de engine-naam):&#10;&#10;=== ChatGPT ===&#10;[plak het ChatGPT-antwoord hier]&#10;&#10;=== Claude ===&#10;[plak het Claude-antwoord hier]&#10;&#10;=== Perplexity ===&#10;[plak het Perplexity-antwoord hier]&#10;&#10;=== Google AI Overviews ===&#10;[plak het AIO-antwoord hier]&#10;&#10;=== Copilot ===&#10;[plak het Copilot-antwoord hier]"></textarea>
+      <textarea id="aiAnswers" rows="8" style="width:100%;padding:10px;border:1.5px solid var(--bd);border-radius:8px;font-size:12px;font-family:monospace;" placeholder="Plak zo (begin elk blok met de engine-naam):&#10;&#10;=== ChatGPT ===&#10;[plak het ChatGPT-antwoord hier]&#10;[plak primary citation-URLs hieronder; +N optioneel]&#10;&#10;=== Claude ===&#10;[plak het Claude-antwoord hier]&#10;&#10;=== Perplexity ===&#10;[plak het Perplexity-antwoord hier]&#10;&#10;=== Google AI Overviews ===&#10;[plak het AIO-antwoord hier]&#10;&#10;=== Copilot ===&#10;[plak het Copilot-antwoord hier]"></textarea>
     </div>
   </details>
 </div>
