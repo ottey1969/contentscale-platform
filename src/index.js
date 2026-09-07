@@ -10049,7 +10049,17 @@ recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', descriptio
           <p style="margin:0 0 5px;"><strong>Step 3 — Find the 4 real customer searches.</strong> Ask one AI:</p>
           <div style="background:#eef2ff;border:1px solid #c7d2fe;border-radius:6px;padding:11px;font-family:monospace;font-size:12px;white-space:pre-wrap;">What 4 search queries would a potential customer use when asking an AI to find a company like [COMPANY] in [SECTOR / SERVICE]? Return only the 4 search queries, written naturally in the language customers use in that market.</div>
           <p style="margin:10px 0 5px;"><strong>Step 4 — Ask exactly the same 4 searches in every AI.</strong> Copy this prompt:</p>
-          <div style="background:#fff;border:1px solid var(--bd);border-radius:6px;padding:11px;font-family:monospace;font-size:12px;white-space:pre-wrap;">For each of the following customer searches, give me a complete list of the companies you would recommend. Include the company names and use web search / live sources where available:
+          <div style="background:#fff;border:1px solid var(--bd);border-radius:6px;padding:11px;font-family:monospace;font-size:12px;white-space:pre-wrap;">For each of the 4 customer searches below, search the web and list the companies you would recommend to a potential customer.
+
+Return ONLY the recommendation results. Do not explain your methodology, do not design an SEO/audit system, do not give general strategy, and do not ask follow-up questions.
+
+For each search query provide:
+- Company name
+- Official website, if known
+- One short reason for the recommendation
+- Keep web citations/sources attached to the relevant company or claim
+
+Use current live/web sources where available. Do not invent companies, URLs, rankings, or citations.
 
 1. [search query 1]
 2. [search query 2]
