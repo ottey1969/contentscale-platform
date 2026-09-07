@@ -9822,10 +9822,68 @@ recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', descriptio
                        const _bareDomains = text.match(/\b[a-z0-9-]+\.(sa|com|ae|net|org|io|co)\b(?:\/[^\s"'<>)\]]*)?/gi) || [];
                        const _sources = [...new Set([..._allUrls, ..._bareDomains].map(u => u.replace(/^https?:\/\//, '').replace(/\/$/, '').toLowerCase()))]
                          .filter(u => u.length > 3 && !u.includes('schema.org'));
-                       // wordt het EIGEN domein als bron geciteerd?
-                       const urlCited = _sources.some(s => s.includes(_domainBare.toLowerCase())) || lower.includes(_domainBare.toLowerCase());
-                       // welke bronnen kreeg de AI wél (de concurrent-bronnen/directories) — max 6 tonen
-                       const _citedSources = _sources.filter(s => !s.includes(_domainBare.toLowerCase())).slice(0, 6).join(', ');
+                       // wordt het EIGEN domein ergens in het antwoord genoemd?
+                       // Dit veld blijft voor compatibiliteit; citationTarget bepaalt de UI-status.
+                       const _ownDomain = _domainBare.toLowerCase();
+                       const urlCited = _sources.some(s => s.includes(_ownDomain)) || lower.includes(_ownDomain);
+
+                       // BRON-ATTRIBUTIE: een bron-URL ergens in het antwoord is GEEN bewijs dat
+                       // die bron de merkvermelding ondersteunt. Alleen expliciete koppelingen tellen:
+                       //   1) markdown/HTML-link waarbij de merknaam zelf de linktekst is;
+                       //   2) een bron-URL zeer dicht bij de merknaam, zonder een andere merknaam ertussen;
+                       //   3) een expliciete [1]-achtige citatiemarkering die naar een bron-URL verwijst.
+                       // Alles wat dit niet hard genoeg bewijst blijft UNKNOWN (veilig tegen false positives).
+                       let citationTarget = 'unknown'; // own | third-party | unknown
+                       const _attributedSources = [];
+                       const _normSource = function(u){ return String(u||'').replace(/^https?:\/\//i,'').replace(/\/$/,'').toLowerCase(); };
+                       const _brandPattern = _brands.map(b => b.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|');
+                       if (_brandPattern) {
+                         // 1) Markdown/HTML: [Brand](URL) of <a href="URL">Brand</a>
+                         const _mdRe = new RegExp('\\[(' + _brandPattern + ')\\]\\(\\s*(https?:\\/\\/[^\\s\"\')]+)', 'ig');
+                         let _m;
+                         while ((_m = _mdRe.exec(text))) _attributedSources.push(_normSource(_m[2]));
+                         const _htmlRe = new RegExp('<a[^>]+href=[\"\'](https?:\\/\\/[^\"\']+)[\"\'][^>]*>[^<]*(' + _brandPattern + ')[^<]*<\\/a>', 'ig');
+                         while ((_m = _htmlRe.exec(text))) _attributedSources.push(_normSource(_m[1]));
+
+                         // 2) [1] / [1,2] direct citation markers immediately after a brand mention.
+                         const _markerSources = {};
+                         const _markerRe = /\[(\d{1,3})\]\s*(?:[-–—:.)]\s*)?(https?:\/\/[^\s"'<>)\]]+)/gi;
+                         while ((_m = _markerRe.exec(text))) _markerSources[_m[1]] = _normSource(_m[2]);
+                         const _brandMarkerRe = new RegExp('(?:' + _brandPattern + ')\\s*\\[(\\d{1,3}(?:\\s*,\\s*\\d{1,3})*)\\]', 'ig');
+                         while ((_m = _brandMarkerRe.exec(text))) {
+                           _m[1].split(/\s*,\s*/).forEach(function(n){ if(_markerSources[n]) _attributedSources.push(_markerSources[n]); });
+                         }
+
+                         // 3) Tight inline proximity only. Do NOT scan 500 chars: that can cross
+                         // several companies in one AIO sentence and falsely assign capital.com to all of them.
+                         const _tightRe = new RegExp(String.raw`(?:${_brandPattern})[^\n.!?]{0,120}(https?://[^\s"'<>\]]+)`, 'ig');
+                         while ((_m = _tightRe.exec(text))) {
+                           const _between = _m[0];
+                           const _otherBrand = _brands.some(function(b){
+                             const lb = b.toLowerCase();
+                             const lo = _between.toLowerCase();
+                             const first = lo.indexOf(lb), last = lo.lastIndexOf(lb);
+                             return first >= 0 && last > first;
+                           });
+                           if (!_otherBrand) _attributedSources.push(_normSource(_m[1]));
+                         }
+                         const _tightReverseRe = new RegExp(String.raw`(https?://[^\s"'<>\]]+)[^\n.!?]{0,120}(?:${_brandPattern})`, 'ig');
+                         while ((_m = _tightReverseRe.exec(text))) {
+                           const _between = _m[0];
+                           const _otherBrand = _brands.some(function(b){
+                             const lb = b.toLowerCase(), lo = _between.toLowerCase();
+                             const first = lo.indexOf(lb), last = lo.lastIndexOf(lb);
+                             return first >= 0 && last > first;
+                           });
+                           if (!_otherBrand) _attributedSources.push(_normSource(_m[1]));
+                         }
+                       }
+                       if (_attributedSources.some(u => u.includes(_ownDomain))) citationTarget = 'own';
+                       else if (_attributedSources.length) citationTarget = 'third-party';
+
+                       // Deze lijst toont alleen welke bronnen in het antwoord voorkwamen;
+                       // hij bewijst niet dat ze de merkvermelding ondersteunen.
+                       const _citedSources = _sources.filter(s => !s.includes(_ownDomain)).slice(0, 6).join(', ');
                        // toont deze engine bronnen? Perplexity/Copilot/AIO wel; ChatGPT/Claude meestal niet
                        const _showsSources = ['Perplexity', 'Copilot', 'Google AI Overviews'].includes(engine);
                        // concurrenten: AUTOMATISCH bedrijfsnamen uit het lijst-patroon halen
@@ -9847,7 +9905,7 @@ recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', descriptio
                          const low = n.toLowerCase().replace(/\s+/g, ' ').trim();
                          if (!_brands.some(b => low.includes(b)) && !_compMap.has(low)) _compMap.set(low, n.trim());
                        });
-                       citations[engine] = { cited, urlCited, showsSources: _showsSources, citedSources: _citedSources, competitors: [..._compMap.values()].slice(0, 12).join(', ') };
+                       citations[engine] = { cited, urlCited, citationTarget, ownSiteCitation: citationTarget === 'own', showsSources: _showsSources, citedSources: _citedSources, competitors: [..._compMap.values()].slice(0, 12).join(', ') };
                      }
                    }
 
@@ -9922,7 +9980,15 @@ recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', descriptio
   button{background:var(--p2);color:#fff;border:none;border-radius:8px;padding:11px 22px;font-size:14px;font-weight:600;cursor:pointer;}
   button:hover{background:var(--p);}
   button:disabled{opacity:.5;cursor:wait;}
-  .status{margin:16px 0;padding:14px 18px;border-radius:10px;background:#faf5ff;border:1px solid #ddd6fe;color:#5b21b6;display:none;}
+  .status{margin:16px 0;padding:14px 18px;border-radius:10px;background:#faf5ff;border:1px solid #ddd6fe;color:#5b21b6;display:none;align-items:center;gap:10px;}
+  .status.on{display:flex;}
+  .audit-spinner{width:17px;height:17px;border:2px solid #ddd6fe;border-top-color:#6d28d9;border-radius:50%;display:inline-block;flex:0 0 auto;animation:auditSpin .8s linear infinite;}
+  .audit-pulse{animation:auditPulse 1.25s ease-in-out infinite;}
+  .audit-progress{height:3px;position:absolute;left:0;right:0;bottom:0;overflow:hidden;border-radius:0 0 10px 10px;background:#ede9fe;}
+  .audit-progress:after{content:"";display:block;width:35%;height:100%;background:#7c3aed;animation:auditProgress 1.4s ease-in-out infinite;}
+  @keyframes auditSpin{to{transform:rotate(360deg)}}
+  @keyframes auditPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.025)}}
+  @keyframes auditProgress{0%{transform:translateX(-120%)}100%{transform:translateX(390%)}}
   .results{display:none;}
   .scorestrip{display:flex;flex-wrap:wrap;gap:10px;margin:16px 0;}
   .sc{flex:1;min-width:120px;text-align:center;border:1px solid var(--bd);border-radius:10px;padding:16px 8px;background:#fff;}
@@ -10109,6 +10175,20 @@ function loadGscFile(input){
   reader.onload=function(e){ document.getElementById('gscUrls').value=e.target.result; };
   reader.readAsText(f);
 }
+function _setAuditRunning(message){
+  var st=document.getElementById('status');
+  if(!st) return;
+  st.classList.add('on');
+  st.innerHTML='<span class="audit-spinner" aria-hidden="true"></span><span class="audit-message"></span><div class="audit-progress" aria-hidden="true"></div>';
+  var msg=st.querySelector('.audit-message');
+  if(msg) msg.textContent=message||'Audit wordt uitgevoerd…';
+}
+function _setAuditFinished(message){
+  var st=document.getElementById('status');
+  if(!st) return;
+  st.classList.remove('on');
+  st.textContent=message||'';
+}
 async function runAudit(){
   var url=document.getElementById('url').value.trim();
   var code=document.getElementById('code').value.trim();
@@ -10120,18 +10200,18 @@ async function runAudit(){
   var brandNames=(document.getElementById('brandNames')||{}).value||'';
   var aiAnswers=(document.getElementById('aiAnswers')||{}).value||'';
   var btn=document.getElementById('run'), st=document.getElementById('status');
-  btn.disabled=true; st.style.display='block';
-  st.textContent='⏳ Audit gestart op de server… u kunt dit tabblad sluiten of weggaan; de audit loopt door.';
+  btn.disabled=true; btn.classList.add('audit-pulse');
+  _setAuditRunning('Audit gestart op de server… u kunt dit tabblad sluiten of weggaan; de audit loopt door.');
   document.getElementById('results').style.display='none';
   try{
     var r=await fetch('/api/audit-start',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url:url,mode:mode,code:code,sitemapUrl:sitemapUrl,gscRaw:gscRaw,brandNames:brandNames,aiAnswers:aiAnswers})});
     var d=await r.json();
-    if(r.status===401){st.textContent='🔒 Onjuiste toegangscode.';btn.disabled=false;return;}
-    if(!d.success||!d.jobId){st.textContent='⚠ '+(d.error||'Kon audit niet starten');btn.disabled=false;return;}
+    if(r.status===401){_setAuditFinished('🔒 Onjuiste toegangscode.');btn.disabled=false;btn.classList.remove('audit-pulse');return;}
+    if(!d.success||!d.jobId){_setAuditFinished('⚠ '+(d.error||'Kon audit niet starten'));btn.disabled=false;btn.classList.remove('audit-pulse');return;}
     // bewaar job-ID zodat we hem kunnen oppikken na verversen/weggaan
     try{ localStorage.setItem('cs_audit_job', d.jobId); }catch(e){}
     pollAudit(d.jobId);
-  }catch(e){st.textContent='⚠ Fout: '+e.message;btn.disabled=false;}
+  }catch(e){_setAuditFinished('⚠ Fout: '+e.message);btn.disabled=false;btn.classList.remove('audit-pulse');}
 }
 
 function pollAudit(jobId){
@@ -10143,15 +10223,16 @@ function pollAudit(jobId){
     try{
       var r=await fetch('/api/audit-status/'+jobId);
       var d=await r.json();
-      if(!d.success){ clearInterval(timer); st.textContent='⚠ '+(d.error||'Job verlopen'); btn.disabled=false; try{localStorage.removeItem('cs_audit_job');}catch(e){} return; }
-      if(d.status==='running'){ st.textContent='⏳ '+(d.progress||'Bezig…')+' (u kunt weggaan; het loopt door — '+tries+')'; return; }
+      if(!d.success){ clearInterval(timer); _setAuditFinished('⚠ '+(d.error||'Job verlopen')); btn.disabled=false; btn.classList.remove('audit-pulse'); try{localStorage.removeItem('cs_audit_job');}catch(e){} return; }
+      if(d.status==='running'){ _setAuditRunning((d.progress||'Bezig…')+' · live controle '+tries); return; }
       clearInterval(timer);
       btn.disabled=false;
+      btn.classList.remove('audit-pulse');
       if(d.status==='done'&&d.result){
         try{ localStorage.setItem('cs_audit_result', JSON.stringify(d.result)); localStorage.removeItem('cs_audit_job'); }catch(e){}
-        render(d.result); st.style.display='none';
+        render(d.result); _setAuditFinished('');
       } else {
-        st.textContent='⚠ '+(d.error||'Audit mislukt');
+        _setAuditFinished('⚠ '+(d.error||'Audit mislukt'));
         try{localStorage.removeItem('cs_audit_job');}catch(e){}
       }
     }catch(e){ /* netwerkfout tijdens pollen — blijf proberen */ }
@@ -10259,7 +10340,7 @@ function render(d){
     var citebox=document.getElementById('citebox');
     var h2=citebox.querySelector('h2'); if(h2) h2.textContent=T.realcit;
     var citeExpl=document.getElementById('citeExpl');
-    var explTxt=({nl:'"Naam genoemd" = de AI noemt het merk (weinig waarde: levert geen bezoeker op). "Eigen site geciteerd" = de AI linkt naar úw website als bron — dát levert clicks en klanten op. Wordt uw naam genoemd maar uw site niet geciteerd, dan krijgt een ander (concurrent of directory) de link.',es:'"Nombre mencionado" = la IA nombra la marca (poco valor: no genera visitas). "Su web citada" = la IA enlaza a SU sitio como fuente — eso genera clics y clientes. Si le nombran pero no citan su web, otro (competidor o directorio) recibe el enlace.',en:'"Name mentioned" = the AI names the brand (little value: no visitor). "Your site cited" = the AI links to YOUR website as a source — that brings clicks and customers. If you are named but your site is not cited, someone else (competitor or directory) gets the link.'})[_langKey];
+    var explTxt=({nl:'"Naam genoemd" = de AI noemt het merk. "Eigen URL geciteerd" = een bronverwijzing naar uw eigen website is expliciet aan de merkvermelding gekoppeld. "Via een ander" wordt alleen getoond bij een expliciete bronkoppeling; anders: "Niet vast te stellen".',es:'"Nombre mencionado" = la IA menciona la marca. "URL propia citada" = una referencia a su sitio está vinculada explícitamente a la mención. "A través de otro" solo se muestra con una relación explícita; de lo contrario: "No se puede determinar".',en:'"Name mentioned" = the AI names the brand. "Own URL cited" = a source reference to your site is explicitly linked to the brand mention. "Via another" is shown only when that relationship is explicit; otherwise: "Cannot be determined".'})[_langKey];
     if(!citeExpl){ citeExpl=document.createElement('p'); citeExpl.id='citeExpl'; citeExpl.style.cssText='font-size:12px;color:#666;margin:0 0 8px;'; if(h2) h2.parentNode.insertBefore(citeExpl, h2.nextSibling); }
     citeExpl.textContent=explTxt;
     var cb=document.querySelector('#citetbl tbody');
@@ -10267,10 +10348,14 @@ function render(d){
       var cc=mc[e];
       var ment=cc.cited===true?'<span style="color:#16a34a;font-weight:700">'+T.yes+'</span>':'<span style="color:#dc2626;font-weight:700">'+T.no+'</span>';
       var urlc;
-      if(!cc.showsSources){ urlc='<span style="color:#999">'+T.urlunknown+'</span>'; }
-      else if(cc.urlCited){ urlc='<span style="color:#16a34a;font-weight:700">'+T.urlyes+'</span>'; }
-      else { urlc='<span style="color:#dc2626;font-weight:700">'+T.urlno+'</span>'; }
-      // toon de echte bronnen die de AI citeerde (bewijs: niet uw site, maar directories)
+      if(cc.citationTarget==='own'){
+        urlc='<span style="color:#16a34a;font-weight:700">'+T.urlyes+'</span>';
+      } else if(cc.citationTarget==='third-party'){
+        urlc='<span style="color:#dc2626;font-weight:700">'+T.urlno+'</span>';
+      } else {
+        urlc='<span style="color:#999;font-weight:700">? Niet vast te stellen</span>';
+      }
+      // toon de bronnen die in het antwoord voorkwamen; dit is geen bron-attributiebewijs die de AI citeerde (bewijs: niet uw site, maar directories)
       if(cc.showsSources && cc.citedSources){ urlc += '<div style="font-size:10px;color:#888;margin-top:3px">'+({nl:'bronnen: ',es:'fuentes: ',en:'sources: '})[_langKey]+cc.citedSources+'</div>'; }
       return '<tr><td>'+e+'</td><td>'+ment+'</td><td>'+urlc+'</td><td>'+(cc.competitors||'—')+'</td></tr>';
     }).join('');
