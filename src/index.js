@@ -1,4 +1,4 @@
-console.log('=== CONTENTSCALE BOOT ' + new Date().toISOString() + ' v2026-07-08-possible-prioritized-shortcut | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON | possibleThreshold=20impr | shortcutPrioritized=v2 | gscAutoFetchRemoved=true | linkCheckActive=true | wholeSiteWipeGuard=true | gscAutoFetchRestored=true | reminderOffFix=true | claudeRemoved=true | bingWebmaster=true | competitorPanel=true | zeroResultFix=true | pagesRefreshFix=true | recheckButton=true | provenScanStrip=true | provenScanState=true | scanAllProven=true | doEverythingBtn=true | panelOrderFix=true | workflowGuide=true | preScanGuard=true | scanAllGuard=true | earlyGuard=true | emptyStateTeaser=true | provenScopeFix=true | numberedButtons=true | clearerButtons=true | scanAnimFix=true | promptClaudeCleanup=true | bonusTip=true | realProvenContext=true | competitorContext=true | unifiedBrief=true | diagnosticFirst=true | fullCompetitorBreakdown=true | serpSpyV3=true | transparencyBlock=true | emailsPausedToggle=true | competitorDedup=true | provenScanDebug=true | serializedScans=true | claudeCleanupV2=true | mergeClaudeStrip=true | visualTransparency=true | aboveFoldPriority=true | competitorComparisonTable=true | redGreenTracking=true | aioExplicitState=true | perpCopilotState=true | realMergePromptFixed=true | briefContextDebug=true | forceRescanBypass=true | gscPosFallback=true | cannibalDedup=true | gscAccessGated=true | gapConfirmShown=true | noPlaceholders=true | rowNumContrast=true | codeCannibalDedup=true | provenDebugRemoved=true | broaderCannibalDedup=true | competitorGapFallback=true | competitorPrevSnapFallback=true | hubSpokeDedup=true | compGapRegexBroadened=true | gapFixLabelFallback=true | geminiProForBriefs=true | timeoutBudgetFixed=true | perAttemptTimeout45s=true | revertToFlashLite=true | tokenLimitDoubled=true | urlNormFix=true | impactFieldChecked=true | broaderHubPattern=true | cannibalContextRemovedFromGSC=true | scanStateDerivedFromDB=true | boardBriefRestyled=true | liveWallBriefModal=true | modalScopeFix=true | cardTransparency=true | CLAUDE-FIX-2307=true | CLAUDE-FIX-2307B-specquote=true | CLAUDE-FIX-2307C-pwboard=true | CLAUDE-FIX-2307D-typefilter=true | CLAUDE-FIX-2307E-scanneraio=true | CLAUDE-FIX-2307F-urlstrip=true | CLAUDE-FIX-2307G-aiobeforeScan=true | CLAUDE-FIX-2307H-aioInPrompt=true | CLAUDE-FIX-2307I-escHtml=true | CLAUDE-FIX-2307J-escAlias-noStale=true | CLAUDE-FIX-2407A-perpCitedConsistency=true | CLAUDE-FIX-2407B-perpCacheBug=true | CLAUDE-FIX-2407C-domainVsPageNuance=true | CLAUDE-FIX-2407D-wallModalNoReshuffle=true | CLAUDE-FIX-2407E-buildBriefSafetyNet=true | CLAUDE-FIX-2407F-modalFullText=true | CLAUDE-FIX-2407G-aioPasteModal=true | CLAUDE-FIX-2407H-aioDefinitionView=true | CLAUDE-FIX-2407I-aioBlueprintMining=true | CLAUDE-FIX-2407J-aioReferences=true | CLAUDE-FIX-2407K-aioCitationGap=true | CLAUDE-FIX-2407L-compGapTableAllModals=true | CLAUDE-FIX-2407M-honestAioManualOnly=true | CLAUDE-FIX-2407N-regexEscapeInTemplate=true | CLAUDE-FIX-2507A-jsonRepair-mergeTokens4096=true | CLAUDE-FIX-2507B-cardButtonsWorkflowOrder=true | CLAUDE-FIX-2507C-cardButtonsPillColors=true | CLAUDE-FIX-2507D-aioReloadFull-limit8000=true | CLAUDE-FIX-2507E-briefModalTransparency=true | CLAUDE-FIX-2507F-aioGapTable4col=true | CLAUDE-FIX-2507G-htmlScanTickCycle=true | CLAUDE-FIX-2507H-briefViewedPersisted=true | CLAUDE-FIX-2507I-fixCardRenderVarInExpr=true | CLAUDE-FIX-2507J-briefsUnified-manualAioGap=true | CLAUDE-FIX-2507K-gscCompTableInTracker=true | CLAUDE-FIX-2507L-trackerSplitSections=true | CLAUDE-FIX-2507M-copyBriefClarity=true | CLAUDE-FIX-2507N-aioRefsFromManualPaste=true | CLAUDE-FIX-2507O-removeSseEventSource=true | CLAUDE-FIX-2507P-ticksPersistUntilDoneOrNewHtml=true | CLAUDE-FIX-2507Q-aioRefsStoredAtSave=true | CLAUDE-FIX-2507R-aioGapTableAlways=true | CLAUDE-FIX-2507S-aioGscContextSeparated=true | CLAUDE-FIX-2507T-aioCodeFallbackFixed-refsFromManualSave=true | CLAUDE-FIX-2507U-mergeSafetyNet-cardSummaryParity=true | CLAUDE-FIX-2507V-sharedAioRenderFn-authTable=true | CLAUDE-FIX-2507W-viewLastBriefDelegates-oneSystem=true | CLAUDE-FIX-2507X-sharedBriefBody-fullUnification=true | CLAUDE-FIX-2507Y-aioTop5Table-definitionLabel=true | CLAUDE-FIX-2507Z-noRefsActionableMsg=true | CLAUDE-FIX-2508A-manualPasteWinsOverStaleSnapshot=true | CLAUDE-FIX-2508B-merge2Hardened-diagLog=true | CLAUDE-FIX-2508C-noStoreHeaders-freshClientJs=true | CLAUDE-FIX-2508D-saveEchoDiagnostic=true | CLAUDE-FIX-2508E-separateSourcesField=true | CLAUDE-FIX-2508F-diagSourcesField=true | CLAUDE-FIX-2508G-acceptSourceNames=true | CLAUDE-FIX-2508H-namesFromMainPaste-headingFilter=true | CLAUDE-FIX-2508I-cloroAioFetch=true | CLAUDE-FIX-2508J-namesFallback-autoSplit=true | CLAUDE-FIX-2508K-competitorGapAioFallback=true | CLAUDE-FIX-2508L-aioFallbackNoGscLeak-honestLabel=true | CLAUDE-FIX-2508M-gscRootDomainFallback=true | CLAUDE-FIX-2508N-sitemapLinks250-gscLiveFilter=true | CLAUDE-FIX-2508O-leadQueueCollapsedDefault=true | CLAUDE-FIX-2508P-leadQueueToggleRealFns=true | CLAUDE-FIX-2508Q-leadQueueHeaderWrap=true | CLAUDE-FIX-2508R-scanSelectedButton=true | CLAUDE-FIX-2508S-shiftClickRange=true | CLAUDE-FIX-2508T-shiftClickCorrectClass-inTemplate=true | CLAUDE-FIX-2508U-brandHeadshotHubFields=true | CLAUDE-FIX-2508V-briefModeSelector=true | CLAUDE-FIX-2508W-intentSnapshot-ownerNote=true | CLAUDE-FIX-2508X-modeBtnQuoteFix=true | CLAUDE-FIX-2508Y-perpApostropheFix=true | CLAUDE-FIX-2508Z-sitemapRegexFix=true | CLAUDE-FIX-2508ZA-pageInSitemapRegexFix=true | CLAUDE-FIX-2508ZB-missingEntities=true | CLAUDE-FIX-2508ZC-briefSpacing=true | CLAUDE-FIX-2508ZD-pasteCodeBlocks=true | CLAUDE-FIX-2508ZE-fmtActionRegexFix=true | CLAUDE-FIX-2508ZF-ticksOnlyClearOnDone=true | CLAUDE-FIX-2508ZG-paa5-pwbWider-aioFallbackMsg=true | CLAUDE-FIX-2508ZH-numberedItemsOnOwnLines=true | CLAUDE-FIX-2508ZI-prewriteBuildFields-aioListNotUglyTable=true | CLAUDE-FIX-2508ZJ-cleanAioDefinitionText=true | CLAUDE-FIX-2508ZK-slugRegexCrashFix-sectionSplit=true | CLAUDE-FIX-2508ZL-tvModalFmtAction=true | CLAUDE-FIX-3007A-tourAioScanSelected-mobileFriendly=true | CLAUDE-FIX-3007B-htmlLangWhitelistNonLatin=true | CLAUDE-FIX-3007C-clientBriefLanguageSelector=true | CLAUDE-FIX-3007D-briefLanguageTourStep=true | CLAUDE-FIX-3007E-prewriteLangListFull=true | CLAUDE-FIX-3007F-prewriteAutoAioFetch=true | CLAUDE-FIX-3007G-serpRegionListFull=true | CLAUDE-FIX-3007H-prewriteMobilePolish=true | CLAUDE-FIX-3007I-groupedComboDropdowns=true | CLAUDE-FIX-3007J-comboSyntaxFix=true | CLAUDE-FIX-3007K-multiLangBadges=true | CLAUDE-FIX-3007L-headerReportCTA=true | CLAUDE-FIX-3007M-tvViewReportCTA=true | CLAUDE-FIX-3007N-tvTopBarCTA=true | CLAUDE-FIX-3007O-realPaaInBrief=true | CLAUDE-FIX-0208-briefLangLeaks-item1AndTemplateLabels=true | CLAUDE-FIX-0208B-prewriteLabelsTranslated=true | CLAUDE-FIX-0208C-readyPasteMarkerAndCiteableLang=true | CLAUDE-FIX-0308-alignmentItemLang=true | CLAUDE-FIX-0308B-copyBriefCompTableParity=true | CLAUDE-FIX-0308C-cannibalStopwordMatch=true | CLAUDE-FIX-0308D-hardcodedCiteItemsLocalized=true | CLAUDE-FIX-0308E-cannibalSlugFallback=true | CLAUDE-FIX-1208-honestScanCount=true | CLAUDE-FIX-2108A-aioCitedTextPlusSources=true | CLAUDE-FIX-2108B-aioSourceTableCaseInsensitive=true | CLAUDE-FIX-2108C-aioSourceRetryFallback=true | CLAUDE-FIX-2108D-graafScoreInBrief=true | CLAUDE-FIX-2108E-graafRecsDedupPrioritized=true | CLAUDE-FIX-2108F-eliteRecsDetailsNotDisplayNone=true | CLAUDE-FIX-2108G-graafScoreInTextExport=true | CLAUDE-FIX-2108H-competitorTableDedupTextExport=true | CLAUDE-FIX-2108I-textExportSectionParity=true | CLAUDE-FIX-2108J-tableRegexEscapeFix=true | CLAUDE-FIX-2108K-scoreDefinedInClientScope=true | CLAUDE-FIX-2108L-clientBriefUsesDataNotP=true | CLAUDE-FIX-2108M-prewriteNoFabrication=true | CLAUDE-FIX-2108N-outputVoiceNoHype=true | CLAUDE-FIX-2608-intentEngine=true | CLAUDE-FIX-2608B-existingBriefMoment-mismatch=true | CLAUDE-FIX-2608C-momentInTextExport=true | CLAUDE-FIX-2608D-gscHeaderClarity=true | CLAUDE-FIX-2608E-mergePreservesIntentSnapshot=true | CLAUDE-FIX-2608F-sliceKeepsFramingObjects=true | CLAUDE-FIX-2608G-intentSnapshotEngineFallback=true | CLAUDE-FIX-2608H-instantBriefAlsoHasIntent=true | CLAUDE-FIX-2608I-brief2FinalSaveGuaranteesIntent=true | CLAUDE-FIX-2608J-copyBriefShowsIntent=true | CLAUDE-FIX-2608K-buildBriefPrefersFramingSource=true | CLAUDE-FIX-2608L-geminiIntentEnforced-specificFallback=true | CLAUDE-FIX-2608M-promptRestructuredForGemini=true | CLAUDE-FIX-2608N-dedicatedSerialIntentCall-protectsBriefCall=true | CLAUDE-FIX-2608O-qualityHookPreservesIntent=true | CLAUDE-FIX-2608P-graafShortcut-recsIsolatedFromCitations=true | CLAUDE-FIX-2608Q-caseStudyStrictHeadingsOnly=true | CLAUDE-FIX-2608R-graafShortcutUsesPuppeteerScan-matchesExternal=true | CLAUDE-FIX-2608S-multilingualDetection-faqBioTldrCaseStudyTocAllLangs=true | CLAUDE-FIX-2608T-arabicNumeralsAndSchemaAuthor=true | CLAUDE-FIX-2608U-scanScrollsAndWaitsForJsRender-correctRoute=true | CLAUDE-FIX-2608V-faqDetectsToggleAccordions-authorBioNoKeywordGate=true | CLAUDE-FIX-2608W-quoteRecSaysResearchable=true | CLAUDE-FIX-2608X-faqDetectsQuestionMarkBeforeToggleSymbol=true | CLAUDE-FIX-2608Y-fixedActualApiScanRoute-9107-faqBioMultilingualToggle=true | CLAUDE-FIX-2608Z-recursiveSchemaDetection-findsNestedFAQPage=true | CLAUDE-FIX-2608ZA-realApiScanRoute-9410-faqUsesSchemaAndToggle=true | CLAUDE-FIX-2608ZB-graafShortcutReliableAutoRefresh=true | CLAUDE-FIX-2609A-siteAuditEndpoint=true | CLAUDE-FIX-2609B-auditPageVisible=true | CLAUDE-FIX-2609C-auditCodeProtected=true | CLAUDE-FIX-2609P-multiBrandNamesForAcquisitions=true | CLAUDE-FIX-2610G-proofBlockAllCentered=true | CLAUDE-FIX-2610I-extractsSourceUrls-aioInInstructions=true ===');
+console.log('=== CONTENTSCALE BOOT ' + new Date().toISOString() + ' v2026-07-08-possible-prioritized-shortcut | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON | possibleThreshold=20impr | shortcutPrioritized=v2 | gscAutoFetchRemoved=true | linkCheckActive=true | wholeSiteWipeGuard=true | gscAutoFetchRestored=true | reminderOffFix=true | claudeRemoved=true | bingWebmaster=true | competitorPanel=true | zeroResultFix=true | pagesRefreshFix=true | recheckButton=true | provenScanStrip=true | provenScanState=true | scanAllProven=true | doEverythingBtn=true | panelOrderFix=true | workflowGuide=true | preScanGuard=true | scanAllGuard=true | earlyGuard=true | emptyStateTeaser=true | provenScopeFix=true | numberedButtons=true | clearerButtons=true | scanAnimFix=true | promptClaudeCleanup=true | bonusTip=true | realProvenContext=true | competitorContext=true | unifiedBrief=true | diagnosticFirst=true | fullCompetitorBreakdown=true | serpSpyV3=true | transparencyBlock=true | emailsPausedToggle=true | competitorDedup=true | provenScanDebug=true | serializedScans=true | claudeCleanupV2=true | mergeClaudeStrip=true | visualTransparency=true | aboveFoldPriority=true | competitorComparisonTable=true | redGreenTracking=true | aioExplicitState=true | perpCopilotState=true | realMergePromptFixed=true | briefContextDebug=true | forceRescanBypass=true | gscPosFallback=true | cannibalDedup=true | gscAccessGated=true | gapConfirmShown=true | noPlaceholders=true | rowNumContrast=true | codeCannibalDedup=true | provenDebugRemoved=true | broaderCannibalDedup=true | competitorGapFallback=true | competitorPrevSnapFallback=true | hubSpokeDedup=true | compGapRegexBroadened=true | gapFixLabelFallback=true | geminiProForBriefs=true | timeoutBudgetFixed=true | perAttemptTimeout45s=true | revertToFlashLite=true | tokenLimitDoubled=true | urlNormFix=true | impactFieldChecked=true | broaderHubPattern=true | cannibalContextRemovedFromGSC=true | scanStateDerivedFromDB=true | boardBriefRestyled=true | liveWallBriefModal=true | modalScopeFix=true | cardTransparency=true | CLAUDE-FIX-2307=true | CLAUDE-FIX-2307B-specquote=true | CLAUDE-FIX-2307C-pwboard=true | CLAUDE-FIX-2307D-typefilter=true | CLAUDE-FIX-2307E-scanneraio=true | CLAUDE-FIX-2307F-urlstrip=true | CLAUDE-FIX-2307G-aiobeforeScan=true | CLAUDE-FIX-2307H-aioInPrompt=true | CLAUDE-FIX-2307I-escHtml=true | CLAUDE-FIX-2307J-escAlias-noStale=true | CLAUDE-FIX-2407A-perpCitedConsistency=true | CLAUDE-FIX-2407B-perpCacheBug=true | CLAUDE-FIX-2407C-domainVsPageNuance=true | CLAUDE-FIX-2407D-wallModalNoReshuffle=true | CLAUDE-FIX-2407E-buildBriefSafetyNet=true | CLAUDE-FIX-2407F-modalFullText=true | CLAUDE-FIX-2407G-aioPasteModal=true | CLAUDE-FIX-2407H-aioDefinitionView=true | CLAUDE-FIX-2407I-aioBlueprintMining=true | CLAUDE-FIX-2407J-aioReferences=true | CLAUDE-FIX-2407K-aioCitationGap=true | CLAUDE-FIX-2407L-compGapTableAllModals=true | CLAUDE-FIX-2407M-honestAioManualOnly=true | CLAUDE-FIX-2407N-regexEscapeInTemplate=true | CLAUDE-FIX-2507A-jsonRepair-mergeTokens4096=true | CLAUDE-FIX-2507B-cardButtonsWorkflowOrder=true | CLAUDE-FIX-2507C-cardButtonsPillColors=true | CLAUDE-FIX-2507D-aioReloadFull-limit8000=true | CLAUDE-FIX-2507E-briefModalTransparency=true | CLAUDE-FIX-2507F-aioGapTable4col=true | CLAUDE-FIX-2507G-htmlScanTickCycle=true | CLAUDE-FIX-2507H-briefViewedPersisted=true | CLAUDE-FIX-2507I-fixCardRenderVarInExpr=true | CLAUDE-FIX-2507J-briefsUnified-manualAioGap=true | CLAUDE-FIX-2507K-gscCompTableInTracker=true | CLAUDE-FIX-2507L-trackerSplitSections=true | CLAUDE-FIX-2507M-copyBriefClarity=true | CLAUDE-FIX-2507N-aioRefsFromManualPaste=true | CLAUDE-FIX-2507O-removeSseEventSource=true | CLAUDE-FIX-2507P-ticksPersistUntilDoneOrNewHtml=true | CLAUDE-FIX-2507Q-aioRefsStoredAtSave=true | CLAUDE-FIX-2507R-aioGapTableAlways=true | CLAUDE-FIX-2507S-aioGscContextSeparated=true | CLAUDE-FIX-2507T-aioCodeFallbackFixed-refsFromManualSave=true | CLAUDE-FIX-2507U-mergeSafetyNet-cardSummaryParity=true | CLAUDE-FIX-2507V-sharedAioRenderFn-authTable=true | CLAUDE-FIX-2507W-viewLastBriefDelegates-oneSystem=true | CLAUDE-FIX-2507X-sharedBriefBody-fullUnification=true | CLAUDE-FIX-2507Y-aioTop5Table-definitionLabel=true | CLAUDE-FIX-2507Z-noRefsActionableMsg=true | CLAUDE-FIX-2508A-manualPasteWinsOverStaleSnapshot=true | CLAUDE-FIX-2508B-merge2Hardened-diagLog=true | CLAUDE-FIX-2508C-noStoreHeaders-freshClientJs=true | CLAUDE-FIX-2508D-saveEchoDiagnostic=true | CLAUDE-FIX-2508E-separateSourcesField=true | CLAUDE-FIX-2508F-diagSourcesField=true | CLAUDE-FIX-2508G-acceptSourceNames=true | CLAUDE-FIX-2508H-namesFromMainPaste-headingFilter=true | CLAUDE-FIX-2508I-cloroAioFetch=true | CLAUDE-FIX-2508J-namesFallback-autoSplit=true | CLAUDE-FIX-2508K-competitorGapAioFallback=true | CLAUDE-FIX-2508L-aioFallbackNoGscLeak-honestLabel=true | CLAUDE-FIX-2508M-gscRootDomainFallback=true | CLAUDE-FIX-2508N-sitemapLinks250-gscLiveFilter=true | CLAUDE-FIX-2508O-leadQueueCollapsedDefault=true | CLAUDE-FIX-2508P-leadQueueToggleRealFns=true | CLAUDE-FIX-2508Q-leadQueueHeaderWrap=true | CLAUDE-FIX-2508R-scanSelectedButton=true | CLAUDE-FIX-2508S-shiftClickRange=true | CLAUDE-FIX-2508T-shiftClickCorrectClass-inTemplate=true | CLAUDE-FIX-2508U-brandHeadshotHubFields=true | CLAUDE-FIX-2508V-briefModeSelector=true | CLAUDE-FIX-2508W-intentSnapshot-ownerNote=true | CLAUDE-FIX-2508X-modeBtnQuoteFix=true | CLAUDE-FIX-2508Y-perpApostropheFix=true | CLAUDE-FIX-2508Z-sitemapRegexFix=true | CLAUDE-FIX-2508ZA-pageInSitemapRegexFix=true | CLAUDE-FIX-2508ZB-missingEntities=true | CLAUDE-FIX-2508ZC-briefSpacing=true | CLAUDE-FIX-2508ZD-pasteCodeBlocks=true | CLAUDE-FIX-2508ZE-fmtActionRegexFix=true | CLAUDE-FIX-2508ZF-ticksOnlyClearOnDone=true | CLAUDE-FIX-2508ZG-paa5-pwbWider-aioFallbackMsg=true | CLAUDE-FIX-2508ZH-numberedItemsOnOwnLines=true | CLAUDE-FIX-2508ZI-prewriteBuildFields-aioListNotUglyTable=true | CLAUDE-FIX-2508ZJ-cleanAioDefinitionText=true | CLAUDE-FIX-2508ZK-slugRegexCrashFix-sectionSplit=true | CLAUDE-FIX-2508ZL-tvModalFmtAction=true | CLAUDE-FIX-3007A-tourAioScanSelected-mobileFriendly=true | CLAUDE-FIX-3007B-htmlLangWhitelistNonLatin=true | CLAUDE-FIX-3007C-clientBriefLanguageSelector=true | CLAUDE-FIX-3007D-briefLanguageTourStep=true | CLAUDE-FIX-3007E-prewriteLangListFull=true | CLAUDE-FIX-3007F-prewriteAutoAioFetch=true | CLAUDE-FIX-3007G-serpRegionListFull=true | CLAUDE-FIX-3007H-prewriteMobilePolish=true | CLAUDE-FIX-3007I-groupedComboDropdowns=true | CLAUDE-FIX-3007J-comboSyntaxFix=true | CLAUDE-FIX-3007K-multiLangBadges=true | CLAUDE-FIX-3007L-headerReportCTA=true | CLAUDE-FIX-3007M-tvViewReportCTA=true | CLAUDE-FIX-3007N-tvTopBarCTA=true | CLAUDE-FIX-3007O-realPaaInBrief=true | CLAUDE-FIX-0208-briefLangLeaks-item1AndTemplateLabels=true | CLAUDE-FIX-0208B-prewriteLabelsTranslated=true | CLAUDE-FIX-0208C-readyPasteMarkerAndCiteableLang=true | CLAUDE-FIX-0308-alignmentItemLang=true | CLAUDE-FIX-0308B-copyBriefCompTableParity=true | CLAUDE-FIX-0308C-cannibalStopwordMatch=true | CLAUDE-FIX-0308D-hardcodedCiteItemsLocalized=true | CLAUDE-FIX-0308E-cannibalSlugFallback=true | CLAUDE-FIX-1208-honestScanCount=true | CLAUDE-FIX-2108A-aioCitedTextPlusSources=true | CLAUDE-FIX-2108B-aioSourceTableCaseInsensitive=true | CLAUDE-FIX-2108C-aioSourceRetryFallback=true | CLAUDE-FIX-2108D-graafScoreInBrief=true | CLAUDE-FIX-2108E-graafRecsDedupPrioritized=true | CLAUDE-FIX-2108F-eliteRecsDetailsNotDisplayNone=true | CLAUDE-FIX-2108G-graafScoreInTextExport=true | CLAUDE-FIX-2108H-competitorTableDedupTextExport=true | CLAUDE-FIX-2108I-textExportSectionParity=true | CLAUDE-FIX-2108J-tableRegexEscapeFix=true | CLAUDE-FIX-2108K-scoreDefinedInClientScope=true | CLAUDE-FIX-2108L-clientBriefUsesDataNotP=true | CLAUDE-FIX-2108M-prewriteNoFabrication=true | CLAUDE-FIX-2108N-outputVoiceNoHype=true | CLAUDE-FIX-2608-intentEngine=true | CLAUDE-FIX-2608B-existingBriefMoment-mismatch=true | CLAUDE-FIX-2608C-momentInTextExport=true | CLAUDE-FIX-2608D-gscHeaderClarity=true | CLAUDE-FIX-2608E-mergePreservesIntentSnapshot=true | CLAUDE-FIX-2608F-sliceKeepsFramingObjects=true | CLAUDE-FIX-2608G-intentSnapshotEngineFallback=true | CLAUDE-FIX-2608H-instantBriefAlsoHasIntent=true | CLAUDE-FIX-2608I-brief2FinalSaveGuaranteesIntent=true | CLAUDE-FIX-2608J-copyBriefShowsIntent=true | CLAUDE-FIX-2608K-buildBriefPrefersFramingSource=true | CLAUDE-FIX-2608L-geminiIntentEnforced-specificFallback=true | CLAUDE-FIX-2608M-promptRestructuredForGemini=true | CLAUDE-FIX-2608N-dedicatedSerialIntentCall-protectsBriefCall=true | CLAUDE-FIX-2608O-qualityHookPreservesIntent=true | CLAUDE-FIX-2608P-graafShortcut-recsIsolatedFromCitations=true | CLAUDE-FIX-2608Q-caseStudyStrictHeadingsOnly=true | CLAUDE-FIX-2608R-graafShortcutUsesPuppeteerScan-matchesExternal=true | CLAUDE-FIX-2608S-multilingualDetection-faqBioTldrCaseStudyTocAllLangs=true | CLAUDE-FIX-2608T-arabicNumeralsAndSchemaAuthor=true | CLAUDE-FIX-2608U-scanScrollsAndWaitsForJsRender-correctRoute=true | CLAUDE-FIX-2608V-faqDetectsToggleAccordions-authorBioNoKeywordGate=true | CLAUDE-FIX-2608W-quoteRecSaysResearchable=true | CLAUDE-FIX-2608X-faqDetectsQuestionMarkBeforeToggleSymbol=true | CLAUDE-FIX-2608Y-fixedActualApiScanRoute-9107-faqBioMultilingualToggle=true | CLAUDE-FIX-2608Z-recursiveSchemaDetection-findsNestedFAQPage=true | CLAUDE-FIX-2608ZA-realApiScanRoute-9410-faqUsesSchemaAndToggle=true | CLAUDE-FIX-2608ZB-graafShortcutReliableAutoRefresh=true | CLAUDE-FIX-2609A-siteAuditEndpoint=true | CLAUDE-FIX-2609B-auditPageVisible=true | CLAUDE-FIX-2609C-auditCodeProtected=true | CLAUDE-FIX-2609P-multiBrandNamesForAcquisitions=true | CLAUDE-FIX-2610G-proofBlockAllCentered=true | CLAUDE-FIX-2610I-extractsSourceUrls-aioInInstructions=true | AI-SOURCE-IMPORT-EN-PDF-CHATGPT-URLS=true ===');
 
 
 // ═══ GLOBAL SEARCH INTENT HELPERS (CLAUDE-FIX-2608-intentEngine) ═══
@@ -101,43 +101,6 @@ function _repairJsonG(str){
     if(ch==='"'){inStr=true;out+=ch;continue;} out+=ch; }
   return out.replace(/,\s*([\]}])/g,'$1');
 }
-// ═══ AI SOURCE IMPORT NORMALIZER (5 PROVIDERS) ═══════════════════════════════
-// Normalizes source URLs from ChatGPT Search, Claude, Gemini/AIO, Perplexity and Copilot.
-// Never guesses a URL. ChatGPT primary citation URL is manual; +N URLs are optional.
-function _cleanAiSourceUrl(input) {
-  if (!input) return '';
-  var raw = String(input).trim().replace(/^<|>$/g, '').replace(/\\&/g, '&');
-  try {
-    var u = new URL(raw), drop = [];
-    u.searchParams.forEach(function(v,k){ var kl=String(k||'').toLowerCase(); if(kl.indexOf('utm_')===0 || ['gclid','fbclid','msclkid','mc_cid','mc_eid'].indexOf(kl)>=0) drop.push(k); });
-    drop.forEach(function(k){ u.searchParams.delete(k); }); u.hash='';
-    return u.toString().replace(/\?$/, '');
-  } catch(e) { return raw; }
-}
-function _normalizeAiImportedSources(engine, text) {
-  text=String(text||''); var work=text;
-  if(engine==='Copilot'){ var rm=work.match(/^##?\s*References\s*$/mi); if(rm && typeof rm.index==='number') work=work.slice(rm.index); }
-  var found=[], seen={};
-  function pushUrl(raw,label,role){
-    var u=_cleanAiSourceUrl(raw); if(!/^https?:\/\//i.test(u)) return;
-    try {
-      var x=new URL(u), host=x.hostname.toLowerCase();
-      if(engine==='Google AI Overviews'){
-        if(host.indexOf('gstatic.com')>=0 && x.pathname.indexOf('/images')>=0) return;
-        if(host==='support.google.com' && x.pathname.indexOf('/websearch')>=0) return;
-        if(host.indexOf('gstatic.com')>=0 && x.pathname.indexOf('/faviconV2')>=0){ var nested=x.searchParams.get('url'); if(nested) pushUrl(nested,label,'domain-fallback'); return; }
-      }
-    } catch(e) {}
-    var key=u.toLowerCase(); if(seen[key]) return; seen[key]=1;
-    found.push({url:u,label:String(label||'').replace(/^svg/i,'').replace(/svg$/i,'').trim(),role:role||'source'});
-  }
-  var md=/\[([^\]]+)\]\((https?:\/\/[^)\s]+)(?:\s+"[^"]*")?\)/g,m;
-  while((m=md.exec(work))!==null) pushUrl(m[2],m[1],/^\d+$/.test(m[1])?'citation':'source');
-  var bare=/https?:\/\/[^\s)\]"'<>,]+/gi;
-  while((m=bare.exec(work))!==null) pushUrl(m[0].replace(/[.,);:]+$/,''),'','source');
-  return found;
-}
-
 // CONTENTSCALE SERVER.JS — ELITE EDITION v4 (FIXED v3)
 // ✅ FIX v7: secondary_keywords + related_keywords auto in Analyse JSON + Execute prompt
 // ✅ FIX v7: analysis_data JSONB safe parse in execute-rewrite
@@ -9853,14 +9816,12 @@ recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', descriptio
                        const cited = _brands.some(b => b && lower.includes(b));
                        // eigen site als bron geciteerd? → zoek het eigen domein (bijv. ontime.es) in de tekst
                        const _domainBare = domain.replace(/^www\./, '');
-                       // Provider-aware source import for the 5 tested AI engines. URLs are cleaned
-                       // (tracking removed) but never invented. ChatGPT primary URL may be pasted manually; +N is optional.
-                       const _normalizedAiSources = _normalizeAiImportedSources(engine, text);
-                       const _allUrls = _normalizedAiSources.map(function(s){ return s.url; });
-                       // Perplexity can also expose bare domains without https.
+                       // extraheer ALLE bron-URLs die in het geplakte antwoord staan (wat Perplexity/AIO tonen)
+                       const _allUrls = text.match(/https?:\/\/[^\s"'<>)\]]+/gi) || [];
+                       // ook kale domeinen zoals "tdqiq.sa" of "fxnewstoday.ae" (Perplexity toont die soms zonder https)
                        const _bareDomains = text.match(/\b[a-z0-9-]+\.(sa|com|ae|net|org|io|co)\b(?:\/[^\s"'<>)\]]*)?/gi) || [];
                        const _sources = [...new Set([..._allUrls, ..._bareDomains].map(u => u.replace(/^https?:\/\//, '').replace(/\/$/, '').toLowerCase()))]
-                         .filter(u => u.length > 3 && !u.includes('schema.org') && !u.includes('gstatic.com/images') && !u.includes('support.google.com/websearch'));
+                         .filter(u => u.length > 3 && !u.includes('schema.org'));
                        // wordt het EIGEN domein ergens in het antwoord genoemd?
                        // Dit veld blijft voor compatibiliteit; citationTarget bepaalt de UI-status.
                        const _ownDomain = _domainBare.toLowerCase();
@@ -9924,7 +9885,7 @@ recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', descriptio
                        // hij bewijst niet dat ze de merkvermelding ondersteunen.
                        const _citedSources = _sources.filter(s => !s.includes(_ownDomain)).slice(0, 6).join(', ');
                        // toont deze engine bronnen? Perplexity/Copilot/AIO wel; ChatGPT/Claude meestal niet
-                       const _showsSources = ['Claude', 'Perplexity', 'Copilot', 'Google AI Overviews'].includes(engine) || (engine === 'ChatGPT' && _allUrls.length > 0);
+                       const _showsSources = ['Perplexity', 'Copilot', 'Google AI Overviews'].includes(engine);
                        // concurrenten: AUTOMATISCH bedrijfsnamen uit het lijst-patroon halen
                        // (werkt voor élke sector), aangevuld met bekende namen als vangnet.
                        const _compMap = new Map(); // lowercase → originele schrijfwijze
@@ -10075,39 +10036,75 @@ recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', descriptio
       </div>
     </div>
     <div style="padding:4px 0 12px;">
-      <label style="font-weight:600;color:var(--p);">Echte AI-citaties — plak de AI-antwoorden, het tool analyseert automatisch</label>
-      <p style="font-size:12px;color:#888;margin:4px 0 8px;">Stel de klant-zoekvragen in elke AI (met websearch aan). Kopieer de antwoorden en plak ze hieronder — met de engine-naam ervoor. Het tool checkt of de klant genoemd wordt en welke concurrenten wél.</p>
+      <label style="font-weight:700;color:var(--p);font-size:15px;">Real AI citations — paste the AI answers and the tool analyses them automatically</label>
+      <p style="font-size:12px;color:#666;margin:5px 0 10px;line-height:1.5;">Ask the same 4 customer-search questions in each AI with web search enabled. Paste the answers below with the engine name above each block. The audit checks whether the client is mentioned, whether the client’s own website is cited, and which competitors receive citations instead.</p>
 
-      <details style="margin:8px 0 12px;background:#f8fafc;border:1px solid var(--bd);border-radius:8px;padding:8px 14px;">
-        <summary style="cursor:pointer;font-weight:600;color:var(--p);">📋 Welke vragen stel ik? (klik voor kant-en-klare prompts)</summary>
-        <div style="padding:10px 0;font-size:13px;color:#333;">
-          <p style="margin:0 0 8px;"><strong>Stap 1:</strong> Open ChatGPT (zet websearch aan 🌐), Claude, Perplexity, Copilot én Google (voor de AI Overview / AIO). Belangrijk: kopieer bij Perplexity en de AI Overview óók de <strong>bronnen/links</strong> mee — daaraan ziet het tool of úw site geciteerd wordt of alleen een directory.</p>
-          <p style="margin:0 0 4px;"><strong>Stap 2 — vind de merknamen.</strong> Vraag eerst aan één AI welke namen de klant heeft (belangrijk bij overnames):</p>
-          <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:6px;padding:10px;font-family:monospace;font-size:12px;white-space:pre-wrap;">Ik onderzoek het bedrijf [BEDRIJF] ([URL]). Onder welke namen is dit bedrijf bekend? Noem: de hoofdnaam, handelsnamen, en bedrijven die het heeft overgenomen of waarmee het gefuseerd is. Geef alleen de namen, komma-gescheiden.</div>
-          <p style="margin:6px 0 8px;color:#555;font-size:12px;">→ Zet die namen in het veld "Alle merk- en bedrijfsnamen" hieronder.</p>
-          <p style="margin:0 0 4px;"><strong>Stap 3 — vind de zoekvragen.</strong> Vraag aan één AI:</p>
-          <div style="background:#eef2ff;border:1px solid #c7d2fe;border-radius:6px;padding:10px;font-family:monospace;font-size:12px;white-space:pre-wrap;">Welke 4 zoekopdrachten zou een potentiële klant typen als hij via AI een bedrijf zoals [BEDRIJF] ([SECTOR/DIENST]) zoekt? Geef alleen de 4 zoekopdrachten, in de taal van hun markt.</div>
-          <p style="margin:10px 0 8px;"><strong>Stap 4 — stel die 4 vragen aan elke AI:</strong></p>
-          <div style="background:#fff;border:1px solid var(--bd);border-radius:6px;padding:10px;font-family:monospace;font-size:12px;white-space:pre-wrap;">Geef me voor elk van deze zoekopdrachten een volledige lijst van de bedrijven die je zou aanbevelen, met bedrijfsnamen:
-1. [zoekopdracht 1]
-2. [zoekopdracht 2]
-3. [zoekopdracht 3]
-4. [zoekopdracht 4]</div>
-          <p style="margin:10px 0 4px;"><strong>Voorbeeld (logistiek/koeltransport, Spanje):</strong></p>
-          <div style="background:#fff;border:1px solid var(--bd);border-radius:6px;padding:10px;font-family:monospace;font-size:12px;white-space:pre-wrap;">1. Mejores empresas de transporte frigorífico en España
-2. Operadores logísticos en Murcia
-3. Logística refrigerada y transporte internacional
-4. Transporte de mercancía paletizada en el sur de España</div>
-          <p style="margin:10px 0 4px;color:#888;"><strong>Stap 5:</strong> Kopieer elk antwoord en plak onderaan met de juiste engine-naam ervoor.</p>\n          <div style="background:#f8fafc;border:1px solid var(--bd);border-radius:6px;padding:9px 10px;font-size:11px;color:#666;line-height:1.6;"><strong>Bronnen per AI:</strong> ChatGPT: plak per citation-chip minimaal de <strong>eerste URL</strong> onder het antwoord; bronnen achter <code>+N</code> zijn optioneel. Claude: gewone copy/paste. Perplexity: plak bij voorkeur tekst uit de PDF inclusief de genummerde URL-lijst (answer-copy is fallback). Google AI Overview: gewone copy/paste inclusief citations. Copilot: kopieer antwoord + volledige References. Tracking zoals <code>utm_source=chatgpt.com</code> en <code>utm_source=copilot.com</code> wordt automatisch verwijderd.</div>
+      <details open style="margin:8px 0 12px;background:#f8fafc;border:1px solid var(--bd);border-radius:8px;padding:10px 14px;">
+        <summary style="cursor:pointer;font-weight:700;color:var(--p);font-size:14px;">📋 Which questions should I ask? — ready-to-copy prompts</summary>
+        <div style="padding:12px 0 2px;font-size:13px;color:#333;line-height:1.5;">
+          <p style="margin:0 0 8px;"><strong>Step 1 — Open all 5 AI engines.</strong> Use ChatGPT with web search, Claude, Perplexity, Copilot, and Google AI Overview / Gemini.</p>
+          <p style="margin:0 0 5px;"><strong>Step 2 — Find every brand name.</strong> Ask one AI:</p>
+          <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:6px;padding:11px;font-family:monospace;font-size:12px;white-space:pre-wrap;">I am researching [COMPANY] ([URL]). Under which names is this company known? Include the main brand, trading names, parent company, acquired brands, and companies it has merged with. Return names only, comma-separated.</div>
+          <p style="margin:6px 0 10px;color:#555;font-size:12px;">→ Paste those names into <strong>“All client brand & company names”</strong> below.</p>
+          <p style="margin:0 0 5px;"><strong>Step 3 — Find the 4 real customer searches.</strong> Ask one AI:</p>
+          <div style="background:#eef2ff;border:1px solid #c7d2fe;border-radius:6px;padding:11px;font-family:monospace;font-size:12px;white-space:pre-wrap;">What 4 search queries would a potential customer use when asking an AI to find a company like [COMPANY] in [SECTOR / SERVICE]? Return only the 4 search queries, written naturally in the language customers use in that market.</div>
+          <p style="margin:10px 0 5px;"><strong>Step 4 — Ask exactly the same 4 searches in every AI.</strong> Copy this prompt:</p>
+          <div style="background:#fff;border:1px solid var(--bd);border-radius:6px;padding:11px;font-family:monospace;font-size:12px;white-space:pre-wrap;">For each of the following customer searches, give me a complete list of the companies you would recommend. Include the company names and use web search / live sources where available:
+
+1. [search query 1]
+2. [search query 2]
+3. [search query 3]
+4. [search query 4]</div>
+          <p style="margin:10px 0 5px;"><strong>Step 5 — Import the answers and sources.</strong></p>
+          <div style="background:#fff;border:1px solid #ddd;border-radius:6px;padding:10px;font-size:12px;color:#555;line-height:1.55;">
+            <strong>Claude:</strong> normal copy/paste — source URLs are read automatically.<br>
+            <strong>Google AI Overview / Gemini:</strong> normal copy/paste including citations.<br>
+            <strong>Copilot:</strong> copy the answer <em>together with the full References section</em>.<br>
+            <strong>Perplexity:</strong> upload the exported PDF below (recommended). Normal answer paste is the fallback.<br>
+            <strong>ChatGPT Search:</strong> paste the answer, then paste the first URL from each citation chip in the Primary URLs box. Sources hidden behind <code>+1</code>, <code>+2</code>, etc. are optional.
+          </div>
         </div>
       </details>
 
       <div class="field" style="margin-bottom:8px;">
-        <label style="font-weight:normal;">Alle merk- en bedrijfsnamen van de klant (komma-gescheiden)</label>
-        <p style="font-size:11px;color:#888;margin:2px 0 4px;">Vul <strong>alle</strong> namen in waaronder de klant bekend is: het merk zelf, het moederbedrijf, overgenomen merken, handelsnamen. Bij een overname geldt: als de AI het moederbedrijf óf het merk noemt, telt dat als "genoemd". Bijv. bij Campillo Palmera (overgenomen door Ontime): <code>Campillo, Campillo Palmera, Ontime, campillopalmera</code>. Leeg = alleen de naam uit de URL.</p>
-        <input id="brandNames" placeholder="Campillo, Campillo Palmera, Ontime, campillopalmera">
+        <label style="font-weight:normal;">All client brand &amp; company names (comma-separated)</label>
+        <p style="font-size:11px;color:#888;margin:2px 0 4px;">Include every name under which the client may be mentioned: main brand, parent company, acquired brands and trading names. If any of these names appears, the client counts as mentioned. Leave empty to use the domain name automatically.</p>
+        <input id="brandNames" placeholder="Derayah, دراية, Derayah Financial, Derayah Global, Derayah Smart">
       </div>
-      <textarea id="aiAnswers" rows="8" style="width:100%;padding:10px;border:1.5px solid var(--bd);border-radius:8px;font-size:12px;font-family:monospace;" placeholder="Plak zo (begin elk blok met de engine-naam):&#10;&#10;=== ChatGPT ===&#10;[plak het ChatGPT-antwoord hier]&#10;[plak primary citation-URLs hieronder; +N optioneel]&#10;&#10;=== Claude ===&#10;[plak het Claude-antwoord hier]&#10;&#10;=== Perplexity ===&#10;[plak het Perplexity-antwoord hier]&#10;&#10;=== Google AI Overviews ===&#10;[plak het AIO-antwoord hier]&#10;&#10;=== Copilot ===&#10;[plak het Copilot-antwoord hier]"></textarea>
+      <textarea id="aiAnswers" rows="10" style="width:100%;padding:10px;border:1.5px solid var(--bd);border-radius:8px;font-size:12px;font-family:monospace;line-height:1.45;" placeholder="Paste each answer below with the engine heading:
+
+=== ChatGPT ===
+[paste ChatGPT answer]
+
+=== Claude ===
+[paste Claude answer]
+
+=== Perplexity ===
+[paste answer only if you are not using the PDF upload]
+
+=== Google AI Overviews ===
+[paste AIO / Gemini answer with citations]
+
+=== Copilot ===
+[paste Copilot answer + full References section]"></textarea>
+
+      <div style="margin-top:12px;padding:12px;background:#fafafa;border:1px solid var(--bd);border-radius:8px;">
+        <div style="font-weight:700;color:var(--p);margin-bottom:7px;">📄 Perplexity PDF — recommended</div>
+        <p style="font-size:11px;color:#666;margin:0 0 7px;line-height:1.45;">Export the Perplexity answer as PDF and upload it here. The PDF text, numbered citations and source URLs are extracted and added to the Perplexity answer automatically.</p>
+        <input type="file" id="perplexityPdf" accept="application/pdf,.pdf" style="font-size:12px;" onchange="loadPerplexityPdf(this)">
+        <div id="perplexityPdfStatus" style="font-size:11px;color:#666;margin-top:6px;"></div>
+      </div>
+
+      <div style="margin-top:10px;padding:12px;background:#fafafa;border:1px solid var(--bd);border-radius:8px;">
+        <div style="font-weight:700;color:var(--p);margin-bottom:7px;">🔗 ChatGPT Search citation URLs</div>
+        <p style="font-size:11px;color:#666;margin:0 0 8px;line-height:1.45;">Open each visible citation chip and paste its <strong>first / primary URL</strong>, one URL per line. If a chip says <code>+1</code>, <code>+2</code>, etc., those additional URLs are optional.</p>
+        <label style="font-size:12px;font-weight:600;">Primary URLs — one per citation chip</label>
+        <textarea id="chatgptPrimaryUrls" rows="3" style="width:100%;margin-top:3px;padding:8px;border:1px solid var(--bd);border-radius:6px;font-size:11px;font-family:monospace;" placeholder="https://brokerchooser.com/...
+https://argaam.com/..."></textarea>
+        <label style="font-size:12px;font-weight:600;display:block;margin-top:7px;">Additional URLs behind +N — optional</label>
+        <textarea id="chatgptExtraUrls" rows="2" style="width:100%;margin-top:3px;padding:8px;border:1px solid var(--bd);border-radius:6px;font-size:11px;font-family:monospace;" placeholder="Optional: second/third source URLs"></textarea>
+        <p style="font-size:10px;color:#888;margin:5px 0 0;">Tracking parameters such as <code>utm_source=chatgpt.com</code> are cleaned automatically by the citation importer.</p>
+      </div>
     </div>
   </details>
 </div>
@@ -10172,7 +10169,7 @@ recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', descriptio
 
 <script>
 // ── Gegevens bewaren in de browser (blijven na verversen/weggaan) ──
-var _AUDIT_FIELDS = ['url','mode','sitemapUrl','gscUrls','brandNames','aiAnswers'];
+var _AUDIT_FIELDS = ['url','mode','sitemapUrl','gscUrls','brandNames','aiAnswers','chatgptPrimaryUrls','chatgptExtraUrls'];
 function _saveState(){
   try {
     var s = {};
@@ -10214,6 +10211,54 @@ function loadGscFile(input){
   reader.onload=function(e){ document.getElementById('gscUrls').value=e.target.result; };
   reader.readAsText(f);
 }
+// Perplexity PDF importer — extracts the PDF client-side, then feeds the existing AI citation analyser.
+async function loadPerplexityPdf(input){
+  var f=input.files&&input.files[0], st=document.getElementById('perplexityPdfStatus');
+  if(!f)return;
+  if(st){st.style.color='#666';st.textContent='Reading Perplexity PDF…';}
+  try{
+    if(!window.pdfjsLib){
+      await new Promise(function(resolve,reject){
+        var sc=document.createElement('script');
+        sc.src='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+        sc.onload=resolve; sc.onerror=function(){reject(new Error('Could not load PDF reader'));};
+        document.head.appendChild(sc);
+      });
+    }
+    window.pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    var buf=await f.arrayBuffer();
+    var pdf=await window.pdfjsLib.getDocument({data:buf}).promise;
+    var pages=[];
+    for(var n=1;n<=pdf.numPages;n++){
+      var page=await pdf.getPage(n), tc=await page.getTextContent();
+      pages.push(tc.items.map(function(x){return x.str||'';}).join(' '));
+    }
+    var text=pages.join('\n');
+    if(!text.trim()) throw new Error('No readable text found in this PDF');
+    var box=document.getElementById('aiAnswers');
+    var current=box.value||'';
+    // Replace an existing Perplexity block; otherwise append one. Other AI blocks are untouched.
+    var re=/(^|\n)\s*(?:={2,}\s*)?perplexity\s*(?:={2,}|:)?\s*\n[\s\S]*?(?=\n\s*(?:={2,}\s*)?(?:chatgpt|gpt|claude|copilot|bing|google ai overviews?|google ai|aio|gemini)\s*(?:={2,}|:)?\s*\n|$)/i;
+    var block='\n=== Perplexity ===\n'+text.trim()+'\n';
+    box.value=re.test(current)?current.replace(re,block):current.replace(/\s*$/,'')+block;
+    _saveState();
+    if(st){st.style.color='#15803d';st.textContent='✓ PDF imported: '+pdf.numPages+' page'+(pdf.numPages===1?'':'s')+'. Perplexity citations and URLs were added to the AI answer input.';}
+  }catch(e){
+    if(st){st.style.color='#b91c1c';st.textContent='Could not read this PDF: '+e.message+'. Paste the Perplexity answer manually as fallback.';}
+  }
+}
+function _cleanCitationUrl(u){
+  try{var x=new URL(String(u||'').trim()); ['utm_source','utm_medium','utm_campaign','utm_content','utm_term'].forEach(function(k){x.searchParams.delete(k);}); return x.toString();}catch(e){return String(u||'').trim();}
+}
+function _mergeChatGptSources(answer, primaryRaw, extraRaw){
+  var urls=(String(primaryRaw||'')+'\n'+String(extraRaw||'')).split(/\r?\n/).map(function(x){return x.trim();}).filter(function(x){return /^https?:\/\//i.test(x);}).map(_cleanCitationUrl);
+  urls=urls.filter(function(x,i,a){return a.indexOf(x)===i;});
+  if(!urls.length)return answer;
+  var sourceText='\n\nChatGPT citation source URLs supplied by user:\n'+urls.join('\n')+'\n';
+  var re=/(^|\n)(\s*(?:={2,}\s*)?(?:chatgpt|gpt)\s*(?:={2,}|:)?\s*\n)([\s\S]*?)(?=\n\s*(?:={2,}\s*)?(?:claude|perplexity|copilot|bing|google ai overviews?|google ai|aio|gemini)\s*(?:={2,}|:)?\s*\n|$)/i;
+  if(re.test(answer)) return answer.replace(re,function(m,prefix,head,body){return prefix+head+body.replace(/\s*$/,'')+sourceText;});
+  return String(answer||'').replace(/\s*$/,'')+'\n\n=== ChatGPT ===\n'+sourceText.trim()+'\n';
+}
 function _setAuditRunning(message){
   var st=document.getElementById('status');
   if(!st) return;
@@ -10238,6 +10283,9 @@ async function runAudit(){
   var gscRaw=(document.getElementById('gscUrls')||{}).value||'';
   var brandNames=(document.getElementById('brandNames')||{}).value||'';
   var aiAnswers=(document.getElementById('aiAnswers')||{}).value||'';
+  var chatgptPrimaryUrls=(document.getElementById('chatgptPrimaryUrls')||{}).value||'';
+  var chatgptExtraUrls=(document.getElementById('chatgptExtraUrls')||{}).value||'';
+  aiAnswers=_mergeChatGptSources(aiAnswers,chatgptPrimaryUrls,chatgptExtraUrls);
   var btn=document.getElementById('run'), st=document.getElementById('status');
   btn.disabled=true; btn.classList.add('audit-pulse');
   _setAuditRunning('Audit gestart op de server… u kunt dit tabblad sluiten of weggaan; de audit loopt door.');
