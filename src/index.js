@@ -1,4 +1,4 @@
-console.log('=== CONTENTSCALE BOOT ' + new Date().toISOString() + ' v2026-07-08-possible-prioritized-shortcut | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON | possibleThreshold=20impr | shortcutPrioritized=v2 | gscAutoFetchRemoved=true | linkCheckActive=true | wholeSiteWipeGuard=true | gscAutoFetchRestored=true | reminderOffFix=true | claudeRemoved=true | bingWebmaster=true | competitorPanel=true | zeroResultFix=true | pagesRefreshFix=true | recheckButton=true | provenScanStrip=true | provenScanState=true | scanAllProven=true | doEverythingBtn=true | panelOrderFix=true | workflowGuide=true | preScanGuard=true | scanAllGuard=true | earlyGuard=true | emptyStateTeaser=true | provenScopeFix=true | numberedButtons=true | clearerButtons=true | scanAnimFix=true | promptClaudeCleanup=true | bonusTip=true | realProvenContext=true | competitorContext=true | unifiedBrief=true | diagnosticFirst=true | fullCompetitorBreakdown=true | serpSpyV3=true | transparencyBlock=true | emailsPausedToggle=true | competitorDedup=true | provenScanDebug=true | serializedScans=true | claudeCleanupV2=true | mergeClaudeStrip=true | visualTransparency=true | aboveFoldPriority=true | competitorComparisonTable=true | redGreenTracking=true | aioExplicitState=true | perpCopilotState=true | realMergePromptFixed=true | briefContextDebug=true | forceRescanBypass=true | gscPosFallback=true | cannibalDedup=true | gscAccessGated=true | gapConfirmShown=true | noPlaceholders=true | rowNumContrast=true | codeCannibalDedup=true | provenDebugRemoved=true | broaderCannibalDedup=true | competitorGapFallback=true | competitorPrevSnapFallback=true | hubSpokeDedup=true | compGapRegexBroadened=true | gapFixLabelFallback=true | geminiProForBriefs=true | timeoutBudgetFixed=true | perAttemptTimeout45s=true | revertToFlashLite=true | tokenLimitDoubled=true | urlNormFix=true | impactFieldChecked=true | broaderHubPattern=true | cannibalContextRemovedFromGSC=true | scanStateDerivedFromDB=true | boardBriefRestyled=true | liveWallBriefModal=true | modalScopeFix=true | cardTransparency=true | CLAUDE-FIX-2307=true | CLAUDE-FIX-2307B-specquote=true | CLAUDE-FIX-2307C-pwboard=true | CLAUDE-FIX-2307D-typefilter=true | CLAUDE-FIX-2307E-scanneraio=true | CLAUDE-FIX-2307F-urlstrip=true | CLAUDE-FIX-2307G-aiobeforeScan=true | CLAUDE-FIX-2307H-aioInPrompt=true | CLAUDE-FIX-2307I-escHtml=true | CLAUDE-FIX-2307J-escAlias-noStale=true | CLAUDE-FIX-2407A-perpCitedConsistency=true | CLAUDE-FIX-2407B-perpCacheBug=true | CLAUDE-FIX-2407C-domainVsPageNuance=true | CLAUDE-FIX-2407D-wallModalNoReshuffle=true | CLAUDE-FIX-2407E-buildBriefSafetyNet=true | CLAUDE-FIX-2407F-modalFullText=true | CLAUDE-FIX-2407G-aioPasteModal=true | CLAUDE-FIX-2407H-aioDefinitionView=true | CLAUDE-FIX-2407I-aioBlueprintMining=true | CLAUDE-FIX-2407J-aioReferences=true | CLAUDE-FIX-2407K-aioCitationGap=true | CLAUDE-FIX-2407L-compGapTableAllModals=true | CLAUDE-FIX-2407M-honestAioManualOnly=true | CLAUDE-FIX-2407N-regexEscapeInTemplate=true | CLAUDE-FIX-2507A-jsonRepair-mergeTokens4096=true | CLAUDE-FIX-2507B-cardButtonsWorkflowOrder=true | CLAUDE-FIX-2507C-cardButtonsPillColors=true | CLAUDE-FIX-2507D-aioReloadFull-limit8000=true | CLAUDE-FIX-2507E-briefModalTransparency=true | CLAUDE-FIX-2507F-aioGapTable4col=true | CLAUDE-FIX-2507G-htmlScanTickCycle=true | CLAUDE-FIX-2507H-briefViewedPersisted=true | CLAUDE-FIX-2507I-fixCardRenderVarInExpr=true | CLAUDE-FIX-2507J-briefsUnified-manualAioGap=true | CLAUDE-FIX-2507K-gscCompTableInTracker=true | CLAUDE-FIX-2507L-trackerSplitSections=true | CLAUDE-FIX-2507M-copyBriefClarity=true | CLAUDE-FIX-2507N-aioRefsFromManualPaste=true | CLAUDE-FIX-2507O-removeSseEventSource=true | CLAUDE-FIX-2507P-ticksPersistUntilDoneOrNewHtml=true | CLAUDE-FIX-2507Q-aioRefsStoredAtSave=true | CLAUDE-FIX-2507R-aioGapTableAlways=true | CLAUDE-FIX-2507S-aioGscContextSeparated=true | CLAUDE-FIX-2507T-aioCodeFallbackFixed-refsFromManualSave=true | CLAUDE-FIX-2507U-mergeSafetyNet-cardSummaryParity=true | CLAUDE-FIX-2507V-sharedAioRenderFn-authTable=true | CLAUDE-FIX-2507W-viewLastBriefDelegates-oneSystem=true | CLAUDE-FIX-2507X-sharedBriefBody-fullUnification=true | CLAUDE-FIX-2507Y-aioTop5Table-definitionLabel=true | CLAUDE-FIX-2507Z-noRefsActionableMsg=true | CLAUDE-FIX-2508A-manualPasteWinsOverStaleSnapshot=true | CLAUDE-FIX-2508B-merge2Hardened-diagLog=true | CLAUDE-FIX-2508C-noStoreHeaders-freshClientJs=true | CLAUDE-FIX-2508D-saveEchoDiagnostic=true | CLAUDE-FIX-2508E-separateSourcesField=true | CLAUDE-FIX-2508F-diagSourcesField=true | CLAUDE-FIX-2508G-acceptSourceNames=true | CLAUDE-FIX-2508H-namesFromMainPaste-headingFilter=true | CLAUDE-FIX-2508I-cloroAioFetch=true | CLAUDE-FIX-2508J-namesFallback-autoSplit=true | CLAUDE-FIX-2508K-competitorGapAioFallback=true | CLAUDE-FIX-2508L-aioFallbackNoGscLeak-honestLabel=true | CLAUDE-FIX-2508M-gscRootDomainFallback=true | CLAUDE-FIX-2508N-sitemapLinks250-gscLiveFilter=true | CLAUDE-FIX-2508O-leadQueueCollapsedDefault=true | CLAUDE-FIX-2508P-leadQueueToggleRealFns=true | CLAUDE-FIX-2508Q-leadQueueHeaderWrap=true | CLAUDE-FIX-2508R-scanSelectedButton=true | CLAUDE-FIX-2508S-shiftClickRange=true | CLAUDE-FIX-2508T-shiftClickCorrectClass-inTemplate=true | CLAUDE-FIX-2508U-brandHeadshotHubFields=true | CLAUDE-FIX-2508V-briefModeSelector=true | CLAUDE-FIX-2508W-intentSnapshot-ownerNote=true | CLAUDE-FIX-2508X-modeBtnQuoteFix=true | CLAUDE-FIX-2508Y-perpApostropheFix=true | CLAUDE-FIX-2508Z-sitemapRegexFix=true | CLAUDE-FIX-2508ZA-pageInSitemapRegexFix=true | CLAUDE-FIX-2508ZB-missingEntities=true | CLAUDE-FIX-2508ZC-briefSpacing=true | CLAUDE-FIX-2508ZD-pasteCodeBlocks=true | CLAUDE-FIX-2508ZE-fmtActionRegexFix=true | CLAUDE-FIX-2508ZF-ticksOnlyClearOnDone=true | CLAUDE-FIX-2508ZG-paa5-pwbWider-aioFallbackMsg=true | CLAUDE-FIX-2508ZH-numberedItemsOnOwnLines=true | CLAUDE-FIX-2508ZI-prewriteBuildFields-aioListNotUglyTable=true | CLAUDE-FIX-2508ZJ-cleanAioDefinitionText=true | CLAUDE-FIX-2508ZK-slugRegexCrashFix-sectionSplit=true | CLAUDE-FIX-2508ZL-tvModalFmtAction=true | CLAUDE-FIX-3007A-tourAioScanSelected-mobileFriendly=true | CLAUDE-FIX-3007B-htmlLangWhitelistNonLatin=true | CLAUDE-FIX-3007C-clientBriefLanguageSelector=true | CLAUDE-FIX-3007D-briefLanguageTourStep=true | CLAUDE-FIX-3007E-prewriteLangListFull=true | CLAUDE-FIX-3007F-prewriteAutoAioFetch=true | CLAUDE-FIX-3007G-serpRegionListFull=true | CLAUDE-FIX-3007H-prewriteMobilePolish=true | CLAUDE-FIX-3007I-groupedComboDropdowns=true | CLAUDE-FIX-3007J-comboSyntaxFix=true | CLAUDE-FIX-3007K-multiLangBadges=true | CLAUDE-FIX-3007L-headerReportCTA=true | CLAUDE-FIX-3007M-tvViewReportCTA=true | CLAUDE-FIX-3007N-tvTopBarCTA=true | CLAUDE-FIX-3007O-realPaaInBrief=true | CLAUDE-FIX-0208-briefLangLeaks-item1AndTemplateLabels=true | CLAUDE-FIX-0208B-prewriteLabelsTranslated=true | CLAUDE-FIX-0208C-readyPasteMarkerAndCiteableLang=true | CLAUDE-FIX-0308-alignmentItemLang=true | CLAUDE-FIX-0308B-copyBriefCompTableParity=true | CLAUDE-FIX-0308C-cannibalStopwordMatch=true | CLAUDE-FIX-0308D-hardcodedCiteItemsLocalized=true | CLAUDE-FIX-0308E-cannibalSlugFallback=true | CLAUDE-FIX-1208-honestScanCount=true | CLAUDE-FIX-2108A-aioCitedTextPlusSources=true | CLAUDE-FIX-2108B-aioSourceTableCaseInsensitive=true | CLAUDE-FIX-2108C-aioSourceRetryFallback=true | CLAUDE-FIX-2108D-graafScoreInBrief=true | CLAUDE-FIX-2108E-graafRecsDedupPrioritized=true | CLAUDE-FIX-2108F-eliteRecsDetailsNotDisplayNone=true | CLAUDE-FIX-2108G-graafScoreInTextExport=true | CLAUDE-FIX-2108H-competitorTableDedupTextExport=true | CLAUDE-FIX-2108I-textExportSectionParity=true | CLAUDE-FIX-2108J-tableRegexEscapeFix=true | CLAUDE-FIX-2108K-scoreDefinedInClientScope=true | CLAUDE-FIX-2108L-clientBriefUsesDataNotP=true | CLAUDE-FIX-2108M-prewriteNoFabrication=true | CLAUDE-FIX-2108N-outputVoiceNoHype=true | CLAUDE-FIX-2608-intentEngine=true | CLAUDE-FIX-2608B-existingBriefMoment-mismatch=true | CLAUDE-FIX-2608C-momentInTextExport=true | CLAUDE-FIX-2608D-gscHeaderClarity=true | CLAUDE-FIX-2608E-mergePreservesIntentSnapshot=true | CLAUDE-FIX-2608F-sliceKeepsFramingObjects=true | CLAUDE-FIX-2608G-intentSnapshotEngineFallback=true | CLAUDE-FIX-2608H-instantBriefAlsoHasIntent=true | CLAUDE-FIX-2608I-brief2FinalSaveGuaranteesIntent=true | CLAUDE-FIX-2608J-copyBriefShowsIntent=true | CLAUDE-FIX-2608K-buildBriefPrefersFramingSource=true | CLAUDE-FIX-2608L-geminiIntentEnforced-specificFallback=true | CLAUDE-FIX-2608M-promptRestructuredForGemini=true | CLAUDE-FIX-2608N-dedicatedSerialIntentCall-protectsBriefCall=true | CLAUDE-FIX-2608O-qualityHookPreservesIntent=true | CLAUDE-FIX-2608P-graafShortcut-recsIsolatedFromCitations=true | CLAUDE-FIX-2608Q-caseStudyStrictHeadingsOnly=true | CLAUDE-FIX-2608R-graafShortcutUsesPuppeteerScan-matchesExternal=true | CLAUDE-FIX-2608S-multilingualDetection-faqBioTldrCaseStudyTocAllLangs=true | CLAUDE-FIX-2608T-arabicNumeralsAndSchemaAuthor=true | CLAUDE-FIX-2608U-scanScrollsAndWaitsForJsRender-correctRoute=true | CLAUDE-FIX-2608V-faqDetectsToggleAccordions-authorBioNoKeywordGate=true | CLAUDE-FIX-2608W-quoteRecSaysResearchable=true | CLAUDE-FIX-2608X-faqDetectsQuestionMarkBeforeToggleSymbol=true | CLAUDE-FIX-2608Y-fixedActualApiScanRoute-9107-faqBioMultilingualToggle=true | CLAUDE-FIX-2608Z-recursiveSchemaDetection-findsNestedFAQPage=true | CLAUDE-FIX-2608ZA-realApiScanRoute-9410-faqUsesSchemaAndToggle=true | CLAUDE-FIX-2608ZB-graafShortcutReliableAutoRefresh=true | CLAUDE-FIX-2609A-siteAuditEndpoint=true | CLAUDE-FIX-2609B-auditPageVisible=true | CLAUDE-FIX-2609C-auditCodeProtected=true | CLAUDE-FIX-2609P-multiBrandNamesForAcquisitions=true | CLAUDE-FIX-2610G-proofBlockAllCentered=true | CLAUDE-FIX-2610I-extractsSourceUrls-aioInInstructions=true | AI-SOURCE-IMPORT-EN-PDF-CHATGPT-URLS=true | AUDIT-RESET-PERSISTENCE-0909=true | AGENCY-WHITELABEL-PERSONAL-PROOF-HIDDEN=true | AUDIT-EXTERNAL-JS-BROWSER-FIX-20260908=true | AUDIT-DRAFT-DB-FIX-20260908=true | AUDIT-DRAFT-STORAGE-FALLBACK-20260908=true | AUDIT-SHARE-SCHEMA-SELF-HEAL-20260908=true | AUDIT-SHARE-ADMIN-AUTH-PERSIST-20260908=true | AUDIT-PDF-NUL-SANITIZE-20260908=true | GRAAF-MAIN-CONTENT-SCOPE-20260908=true | GRAAF-RECS-EVIDENCE-PAGETYPE-20260908=true ===');
+console.log('=== CONTENTSCALE BOOT ' + new Date().toISOString() + ' v2026-07-08-possible-prioritized-shortcut | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON | possibleThreshold=20impr | shortcutPrioritized=v2 | gscAutoFetchRemoved=true | linkCheckActive=true | wholeSiteWipeGuard=true | gscAutoFetchRestored=true | reminderOffFix=true | claudeRemoved=true | bingWebmaster=true | competitorPanel=true | zeroResultFix=true | pagesRefreshFix=true | recheckButton=true | provenScanStrip=true | provenScanState=true | scanAllProven=true | doEverythingBtn=true | panelOrderFix=true | workflowGuide=true | preScanGuard=true | scanAllGuard=true | earlyGuard=true | emptyStateTeaser=true | provenScopeFix=true | numberedButtons=true | clearerButtons=true | scanAnimFix=true | promptClaudeCleanup=true | bonusTip=true | realProvenContext=true | competitorContext=true | unifiedBrief=true | diagnosticFirst=true | fullCompetitorBreakdown=true | serpSpyV3=true | transparencyBlock=true | emailsPausedToggle=true | competitorDedup=true | provenScanDebug=true | serializedScans=true | claudeCleanupV2=true | mergeClaudeStrip=true | visualTransparency=true | aboveFoldPriority=true | competitorComparisonTable=true | redGreenTracking=true | aioExplicitState=true | perpCopilotState=true | realMergePromptFixed=true | briefContextDebug=true | forceRescanBypass=true | gscPosFallback=true | cannibalDedup=true | gscAccessGated=true | gapConfirmShown=true | noPlaceholders=true | rowNumContrast=true | codeCannibalDedup=true | provenDebugRemoved=true | broaderCannibalDedup=true | competitorGapFallback=true | competitorPrevSnapFallback=true | hubSpokeDedup=true | compGapRegexBroadened=true | gapFixLabelFallback=true | geminiProForBriefs=true | timeoutBudgetFixed=true | perAttemptTimeout45s=true | revertToFlashLite=true | tokenLimitDoubled=true | urlNormFix=true | impactFieldChecked=true | broaderHubPattern=true | cannibalContextRemovedFromGSC=true | scanStateDerivedFromDB=true | boardBriefRestyled=true | liveWallBriefModal=true | modalScopeFix=true | cardTransparency=true | CLAUDE-FIX-2307=true | CLAUDE-FIX-2307B-specquote=true | CLAUDE-FIX-2307C-pwboard=true | CLAUDE-FIX-2307D-typefilter=true | CLAUDE-FIX-2307E-scanneraio=true | CLAUDE-FIX-2307F-urlstrip=true | CLAUDE-FIX-2307G-aiobeforeScan=true | CLAUDE-FIX-2307H-aioInPrompt=true | CLAUDE-FIX-2307I-escHtml=true | CLAUDE-FIX-2307J-escAlias-noStale=true | CLAUDE-FIX-2407A-perpCitedConsistency=true | CLAUDE-FIX-2407B-perpCacheBug=true | CLAUDE-FIX-2407C-domainVsPageNuance=true | CLAUDE-FIX-2407D-wallModalNoReshuffle=true | CLAUDE-FIX-2407E-buildBriefSafetyNet=true | CLAUDE-FIX-2407F-modalFullText=true | CLAUDE-FIX-2407G-aioPasteModal=true | CLAUDE-FIX-2407H-aioDefinitionView=true | CLAUDE-FIX-2407I-aioBlueprintMining=true | CLAUDE-FIX-2407J-aioReferences=true | CLAUDE-FIX-2407K-aioCitationGap=true | CLAUDE-FIX-2407L-compGapTableAllModals=true | CLAUDE-FIX-2407M-honestAioManualOnly=true | CLAUDE-FIX-2407N-regexEscapeInTemplate=true | CLAUDE-FIX-2507A-jsonRepair-mergeTokens4096=true | CLAUDE-FIX-2507B-cardButtonsWorkflowOrder=true | CLAUDE-FIX-2507C-cardButtonsPillColors=true | CLAUDE-FIX-2507D-aioReloadFull-limit8000=true | CLAUDE-FIX-2507E-briefModalTransparency=true | CLAUDE-FIX-2507F-aioGapTable4col=true | CLAUDE-FIX-2507G-htmlScanTickCycle=true | CLAUDE-FIX-2507H-briefViewedPersisted=true | CLAUDE-FIX-2507I-fixCardRenderVarInExpr=true | CLAUDE-FIX-2507J-briefsUnified-manualAioGap=true | CLAUDE-FIX-2507K-gscCompTableInTracker=true | CLAUDE-FIX-2507L-trackerSplitSections=true | CLAUDE-FIX-2507M-copyBriefClarity=true | CLAUDE-FIX-2507N-aioRefsFromManualPaste=true | CLAUDE-FIX-2507O-removeSseEventSource=true | CLAUDE-FIX-2507P-ticksPersistUntilDoneOrNewHtml=true | CLAUDE-FIX-2507Q-aioRefsStoredAtSave=true | CLAUDE-FIX-2507R-aioGapTableAlways=true | CLAUDE-FIX-2507S-aioGscContextSeparated=true | CLAUDE-FIX-2507T-aioCodeFallbackFixed-refsFromManualSave=true | CLAUDE-FIX-2507U-mergeSafetyNet-cardSummaryParity=true | CLAUDE-FIX-2507V-sharedAioRenderFn-authTable=true | CLAUDE-FIX-2507W-viewLastBriefDelegates-oneSystem=true | CLAUDE-FIX-2507X-sharedBriefBody-fullUnification=true | CLAUDE-FIX-2507Y-aioTop5Table-definitionLabel=true | CLAUDE-FIX-2507Z-noRefsActionableMsg=true | CLAUDE-FIX-2508A-manualPasteWinsOverStaleSnapshot=true | CLAUDE-FIX-2508B-merge2Hardened-diagLog=true | CLAUDE-FIX-2508C-noStoreHeaders-freshClientJs=true | CLAUDE-FIX-2508D-saveEchoDiagnostic=true | CLAUDE-FIX-2508E-separateSourcesField=true | CLAUDE-FIX-2508F-diagSourcesField=true | CLAUDE-FIX-2508G-acceptSourceNames=true | CLAUDE-FIX-2508H-namesFromMainPaste-headingFilter=true | CLAUDE-FIX-2508I-cloroAioFetch=true | CLAUDE-FIX-2508J-namesFallback-autoSplit=true | CLAUDE-FIX-2508K-competitorGapAioFallback=true | CLAUDE-FIX-2508L-aioFallbackNoGscLeak-honestLabel=true | CLAUDE-FIX-2508M-gscRootDomainFallback=true | CLAUDE-FIX-2508N-sitemapLinks250-gscLiveFilter=true | CLAUDE-FIX-2508O-leadQueueCollapsedDefault=true | CLAUDE-FIX-2508P-leadQueueToggleRealFns=true | CLAUDE-FIX-2508Q-leadQueueHeaderWrap=true | CLAUDE-FIX-2508R-scanSelectedButton=true | CLAUDE-FIX-2508S-shiftClickRange=true | CLAUDE-FIX-2508T-shiftClickCorrectClass-inTemplate=true | CLAUDE-FIX-2508U-brandHeadshotHubFields=true | CLAUDE-FIX-2508V-briefModeSelector=true | CLAUDE-FIX-2508W-intentSnapshot-ownerNote=true | CLAUDE-FIX-2508X-modeBtnQuoteFix=true | CLAUDE-FIX-2508Y-perpApostropheFix=true | CLAUDE-FIX-2508Z-sitemapRegexFix=true | CLAUDE-FIX-2508ZA-pageInSitemapRegexFix=true | CLAUDE-FIX-2508ZB-missingEntities=true | CLAUDE-FIX-2508ZC-briefSpacing=true | CLAUDE-FIX-2508ZD-pasteCodeBlocks=true | CLAUDE-FIX-2508ZE-fmtActionRegexFix=true | CLAUDE-FIX-2508ZF-ticksOnlyClearOnDone=true | CLAUDE-FIX-2508ZG-paa5-pwbWider-aioFallbackMsg=true | CLAUDE-FIX-2508ZH-numberedItemsOnOwnLines=true | CLAUDE-FIX-2508ZI-prewriteBuildFields-aioListNotUglyTable=true | CLAUDE-FIX-2508ZJ-cleanAioDefinitionText=true | CLAUDE-FIX-2508ZK-slugRegexCrashFix-sectionSplit=true | CLAUDE-FIX-2508ZL-tvModalFmtAction=true | CLAUDE-FIX-3007A-tourAioScanSelected-mobileFriendly=true | CLAUDE-FIX-3007B-htmlLangWhitelistNonLatin=true | CLAUDE-FIX-3007C-clientBriefLanguageSelector=true | CLAUDE-FIX-3007D-briefLanguageTourStep=true | CLAUDE-FIX-3007E-prewriteLangListFull=true | CLAUDE-FIX-3007F-prewriteAutoAioFetch=true | CLAUDE-FIX-3007G-serpRegionListFull=true | CLAUDE-FIX-3007H-prewriteMobilePolish=true | CLAUDE-FIX-3007I-groupedComboDropdowns=true | CLAUDE-FIX-3007J-comboSyntaxFix=true | CLAUDE-FIX-3007K-multiLangBadges=true | CLAUDE-FIX-3007L-headerReportCTA=true | CLAUDE-FIX-3007M-tvViewReportCTA=true | CLAUDE-FIX-3007N-tvTopBarCTA=true | CLAUDE-FIX-3007O-realPaaInBrief=true | CLAUDE-FIX-0208-briefLangLeaks-item1AndTemplateLabels=true | CLAUDE-FIX-0208B-prewriteLabelsTranslated=true | CLAUDE-FIX-0208C-readyPasteMarkerAndCiteableLang=true | CLAUDE-FIX-0308-alignmentItemLang=true | CLAUDE-FIX-0308B-copyBriefCompTableParity=true | CLAUDE-FIX-0308C-cannibalStopwordMatch=true | CLAUDE-FIX-0308D-hardcodedCiteItemsLocalized=true | CLAUDE-FIX-0308E-cannibalSlugFallback=true | CLAUDE-FIX-1208-honestScanCount=true | CLAUDE-FIX-2108A-aioCitedTextPlusSources=true | CLAUDE-FIX-2108B-aioSourceTableCaseInsensitive=true | CLAUDE-FIX-2108C-aioSourceRetryFallback=true | CLAUDE-FIX-2108D-graafScoreInBrief=true | CLAUDE-FIX-2108E-graafRecsDedupPrioritized=true | CLAUDE-FIX-2108F-eliteRecsDetailsNotDisplayNone=true | CLAUDE-FIX-2108G-graafScoreInTextExport=true | CLAUDE-FIX-2108H-competitorTableDedupTextExport=true | CLAUDE-FIX-2108I-textExportSectionParity=true | CLAUDE-FIX-2108J-tableRegexEscapeFix=true | CLAUDE-FIX-2108K-scoreDefinedInClientScope=true | CLAUDE-FIX-2108L-clientBriefUsesDataNotP=true | CLAUDE-FIX-2108M-prewriteNoFabrication=true | CLAUDE-FIX-2108N-outputVoiceNoHype=true | CLAUDE-FIX-2608-intentEngine=true | CLAUDE-FIX-2608B-existingBriefMoment-mismatch=true | CLAUDE-FIX-2608C-momentInTextExport=true | CLAUDE-FIX-2608D-gscHeaderClarity=true | CLAUDE-FIX-2608E-mergePreservesIntentSnapshot=true | CLAUDE-FIX-2608F-sliceKeepsFramingObjects=true | CLAUDE-FIX-2608G-intentSnapshotEngineFallback=true | CLAUDE-FIX-2608H-instantBriefAlsoHasIntent=true | CLAUDE-FIX-2608I-brief2FinalSaveGuaranteesIntent=true | CLAUDE-FIX-2608J-copyBriefShowsIntent=true | CLAUDE-FIX-2608K-buildBriefPrefersFramingSource=true | CLAUDE-FIX-2608L-geminiIntentEnforced-specificFallback=true | CLAUDE-FIX-2608M-promptRestructuredForGemini=true | CLAUDE-FIX-2608N-dedicatedSerialIntentCall-protectsBriefCall=true | CLAUDE-FIX-2608O-qualityHookPreservesIntent=true | CLAUDE-FIX-2608P-graafShortcut-recsIsolatedFromCitations=true | CLAUDE-FIX-2608Q-caseStudyStrictHeadingsOnly=true | CLAUDE-FIX-2608R-graafShortcutUsesPuppeteerScan-matchesExternal=true | CLAUDE-FIX-2608S-multilingualDetection-faqBioTldrCaseStudyTocAllLangs=true | CLAUDE-FIX-2608T-arabicNumeralsAndSchemaAuthor=true | CLAUDE-FIX-2608U-scanScrollsAndWaitsForJsRender-correctRoute=true | CLAUDE-FIX-2608V-faqDetectsToggleAccordions-authorBioNoKeywordGate=true | CLAUDE-FIX-2608W-quoteRecSaysResearchable=true | CLAUDE-FIX-2608X-faqDetectsQuestionMarkBeforeToggleSymbol=true | CLAUDE-FIX-2608Y-fixedActualApiScanRoute-9107-faqBioMultilingualToggle=true | CLAUDE-FIX-2608Z-recursiveSchemaDetection-findsNestedFAQPage=true | CLAUDE-FIX-2608ZA-realApiScanRoute-9410-faqUsesSchemaAndToggle=true | CLAUDE-FIX-2608ZB-graafShortcutReliableAutoRefresh=true | CLAUDE-FIX-2609A-siteAuditEndpoint=true | CLAUDE-FIX-2609B-auditPageVisible=true | CLAUDE-FIX-2609C-auditCodeProtected=true | CLAUDE-FIX-2609P-multiBrandNamesForAcquisitions=true | CLAUDE-FIX-2610G-proofBlockAllCentered=true | CLAUDE-FIX-2610I-extractsSourceUrls-aioInInstructions=true | AI-SOURCE-IMPORT-EN-PDF-CHATGPT-URLS=true | AUDIT-RESET-PERSISTENCE-0909=true | AGENCY-WHITELABEL-PERSONAL-PROOF-HIDDEN=true | AUDIT-EXTERNAL-JS-BROWSER-FIX-20260908=true | AUDIT-DRAFT-DB-FIX-20260908=true | AUDIT-DRAFT-STORAGE-FALLBACK-20260908=true | AUDIT-SHARE-SCHEMA-SELF-HEAL-20260908=true | AUDIT-SHARE-ADMIN-AUTH-PERSIST-20260908=true | AUDIT-PDF-NUL-SANITIZE-20260908=true | GRAAF-MAIN-CONTENT-SCOPE-20260908=true | GRAAF-RECS-EVIDENCE-PAGETYPE-20260908=true | GRAAF-FULL-RECS-SCORING-EVIDENCE-20260908=true ===');
 
 
 // ═══ GLOBAL SEARCH INTENT HELPERS (CLAUDE-FIX-2608-intentEngine) ═══
@@ -8737,295 +8737,252 @@ res.send(html);
 });
 function computeScore(scanUrl, analysis, extractedEmails) {
 extractedEmails = extractedEmails || [];
-// ── SCORING ──
-let graafScore = 0;
-if (analysis.wordCount >= 2500)      graafScore += 10;
-else if (analysis.wordCount >= 1500) graafScore += 7;
-else if (analysis.wordCount >= 1000) graafScore += 4;
-else if (analysis.wordCount >= 500)  graafScore += 2;
-if (analysis.statsFound >= 8)        graafScore += 8;
-else if (analysis.statsFound >= 5)   graafScore += 5;
-else if (analysis.statsFound >= 3)   graafScore += 3;
-if (analysis.expertQuoteCount >= 4)  graafScore += 8;
-else if (analysis.expertQuoteCount >= 2) graafScore += 5;
-else if (analysis.expertQuoteCount >= 1) graafScore += 2;
-if (analysis.caseStudyCount >= 2)    graafScore += 8;
-else if (analysis.caseStudyCount >= 1) graafScore += 4;
-if (analysis.hasDirectAnswer)        graafScore += 6;
-if (analysis.hasTLDR)               graafScore += 4;
-if (analysis.listItemCount >= 15)    graafScore += 6;
-else if (analysis.listItemCount >= 8) graafScore += 4;
-else if (analysis.listItemCount >= 3) graafScore += 2;
-graafScore = Math.min(50, graafScore);
-console.log('[GRAAF-DIAG] ' + (scanUrl||'') + ' → GRAAF=' + graafScore + '/50 | words=' + analysis.wordCount + ' stats=' + analysis.statsFound + ' quotes=' + analysis.expertQuoteCount + ' caseStudies=' + analysis.caseStudyCount + ' directAnswer=' + !!analysis.hasDirectAnswer + ' tldr=' + !!analysis.hasTLDR + ' listItems=' + analysis.listItemCount);
-let craftScore = 0;
-if (analysis.h1VisibleCount === 1 && !analysis.h1IsGeneric && !analysis.h1IsTooShort) craftScore += 8;
-else if (analysis.h1VisibleCount === 1) craftScore += 3;
-else if (analysis.h1VisibleCount > 1)   craftScore += 2;
-if (analysis.h2Count >= 5)          craftScore += 7;
-else if (analysis.h2Count >= 3)     craftScore += 5;
-else if (analysis.h2Count >= 1)     craftScore += 2;
-if (analysis.avgParagraphLength <= 60)       craftScore += 5;
-else if (analysis.avgParagraphLength <= 100) craftScore += 3;
-if (analysis.hasFAQContent)         craftScore += 5;
-if (analysis.hasTOC)                craftScore += 3;
-if (analysis.hasAuthorBio)          craftScore += 2;
-craftScore = Math.min(30, craftScore);
-let technicalScore = 0;
-if (analysis.metaTitleLength >= 50 && analysis.metaTitleLength <= 60) technicalScore += 3;
-else if (analysis.metaTitleLength > 0) technicalScore += 1;
-if (analysis.metaDescriptionLength >= 140 && analysis.metaDescriptionLength <= 165) technicalScore += 3;
-// meta description exists fallback removed — points reallocated to OG/Twitter
-if (analysis.hasArticleSchema)      technicalScore += 3; // was 4
-if (analysis.hasFAQPageSchema)      technicalScore += 3; // was 4
-if (analysis.hasCanonical)          technicalScore += 1; // was 2
-if (analysis.images > 0 && analysis.imagesWithAlt >= Math.min(5, analysis.images)) technicalScore += 1; // was 2
-else if (analysis.images > 0 && analysis.imagesWithAlt > 0) technicalScore += 1;
-if (analysis.hasMetaViewport)       technicalScore += 2;
-if (analysis.hasOpenGraph)          technicalScore += 2; // NEW
-if (analysis.hasTwitterCard)        technicalScore += 1; // NEW
-technicalScore = Math.min(20, technicalScore);
-const totalScore = Math.min(100, graafScore + craftScore + technicalScore);
-const quality = totalScore >= 95 ? 'elite' : totalScore >= 90 ? 'excellent' : totalScore >= 80 ? 'very good' : totalScore >= 70 ? 'good' : totalScore >= 60 ? 'average' : 'needs improvement';
-// ── RECOMMENDATIONS ──
-const recommendations = [];
-// Recommendation context: avoid article-only SEO advice on home/language-root pages.
+analysis = analysis || {};
+
+// GRAAF scoring is evidence-based and page-type aware. Numeric bands below are
+// rubric bands, not claims that Google requires a particular word/link count.
 let _graafPath = '/';
 try { _graafPath = new URL(scanUrl).pathname || '/'; } catch(e) { try { _graafPath = new URL(scanUrl, 'https://contentscale.local').pathname || '/'; } catch(_) {} }
 const _graafIsHomepage = /^\/(?:[a-z]{2}(?:-[a-z]{2})?)?\/?$/i.test(_graafPath);
-  // ── STRUCTURAL AUDIT (duplicate document parts — real parse bugs) ──
-  if ((analysis.headCount||0) > 1 || (analysis.doctypeCount||0) > 1 || (analysis.htmlTagCount||0) > 1 || (analysis.bodyCount||0) > 1) {
-    recommendations.push({ title: '\ud83d\udea8 Critical: Duplicate document structure', description: `Found ${analysis.headCount} <head>, ${analysis.doctypeCount} <!doctype>, ${analysis.htmlTagCount} <html>, ${analysis.bodyCount} <body> tags. A full HTML document was pasted INTO the page content — search engines see a nested, broken document.`, priority: 'high', action: 'Remove the second <head>/<!doctype>/<html>/<body> from the page body — keep only the content. A WordPress content-sanitizer filter can auto-strip this.', learning: 'Duplicate <head>/<body> confuses crawlers and can suppress indexing of the real content.', target: 'Exactly one <head> and one <body> per page' });
-  }
-  if ((analysis.footerCount||0) > 1) {
-    recommendations.push({ title: '\u26a0\ufe0f Duplicate footer in content', description: `Found ${analysis.footerCount} <footer> elements. The theme already renders the footer, so a pasted duplicate is sitting inside the body.`, priority: 'medium', action: 'Remove the duplicate <footer> block from the page content.', learning: 'A second footer inside content adds noise links and confuses page structure.', target: 'One footer (rendered by the theme)' });
-  }
-  if ((analysis.csNavCount||0) > 1) {
-    recommendations.push({ title: '\u26a0\ufe0f Duplicate navigation in content', description: `Found ${analysis.csNavCount} menu bars. The template already adds the menu, so a pasted copy is duplicated.`, priority: 'medium', action: 'Remove the leftover top-nav from the page content (the template adds it).', learning: 'Duplicate nav repeats internal links and dilutes structure.', target: 'One navigation bar (from the template)' });
-  }
-  if ((analysis.csBadgeCount||0) > 1) {
-    recommendations.push({ title: '\u26a0\ufe0f Duplicate scan badge', description: `Found ${analysis.csBadgeCount} scan badges. badge-loader already injects one, so a pasted copy is duplicated.`, priority: 'low', action: 'Remove the scan badge from the page content (the template adds it).', learning: 'Duplicate badges add redundant markup.', target: 'One badge (injected by the template)' });
-  }
+const _graafIsArticleLike = !!analysis.hasArticleSchema || /\/(?:blog|blogs|news|article|articles|guide|guides|insights|resources|learn|knowledge)(?:\/|$)/i.test(_graafPath);
+const _graafIsLongForm = _graafIsArticleLike || Number(analysis.wordCount || 0) >= 900;
 
-if (analysis.wordCount < 500) {
-recommendations.push({ title: '🚨 Critical: Content Is Too Thin', description: `Only ${analysis.wordCount} words found. This is well below what Google considers a substantive page.`, priority: 'high', action: 'Expand with deep explanations, examples, case studies, and FAQs. Aim for 2,500+ words.', learning: "Thin content (< 500 words) is the #1 trigger for Google Helpful Content penalties. Pages with 2,500+ words earn 3.7x more backlinks on average (Backlinko).", target: 'Minimum 1,500 words; ideal 2,500+' });
-} else if (analysis.wordCount < 1500) {
-recommendations.push({ title: '📝 Strengthen Relevant Content Depth', description: `${analysis.wordCount} words found in the main content. Review whether important user questions and decision-making information are covered clearly.`, priority: 'medium', action: "Expand only where it adds useful information — for example product explanations, eligibility, fees, process, risks, FAQs, comparisons, or supporting evidence relevant to this page.", learning: "Useful topical coverage gives search engines and AI systems more clear, retrievable passages without adding filler for word count alone.", target: 'Cover the page intent comprehensively; no fixed word-count target' });
-} else if (analysis.wordCount < 2500) {
-recommendations.push({ title: '📊 Content Length: Good But Not Elite', description: `${analysis.wordCount} words is solid. 400–800 more strategic words pushes you from Good to Elite tier.`, priority: 'low', action: "Add a case study with before/after metrics, an expert quote section, or a 'Key Takeaways' summary.", learning: "Long-form content earns 77% more backlinks than short content.", target: '2,500+ words for GRAAF Elite tier' });
+function _normScore(points, possible, target) {
+  if (!possible) return 0;
+  return Math.max(0, Math.min(target, Math.round((points / possible) * target)));
 }
-// ── HIDDEN CONTENT WARNING ──
-// Als een noemenswaardig deel van de tekst verborgen is (display:none/toggles),
-// telt de scanner het niet en geeft Google het minder gewicht. Adviserend, niet alarmerend.
-if (analysis.hiddenWordCount && analysis.hiddenWordPct >= 10) {
-recommendations.push({ title: '👁️ Content Hidden Behind Toggles', description: `${analysis.hiddenWordCount} words (${analysis.hiddenWordPct}% of your content) are hidden by default behind display:none, collapsed accordions, or FAQ toggles. Your visible word count is ${analysis.wordCount}; total including hidden is ${analysis.totalWordCount}.`, priority: 'medium', action: "Make key content — especially FAQ answers — visible by default. Keep the toggle to collapse, but render answers open on page load so search engines and this scanner count the full text.", learning: "Google does index toggle content, but gives it reduced weight compared to immediately visible text. Content-quality scanners that measure rendered text miss it entirely. Making it visible recovers both the ranking signal and the scored word count.", target: 'Under 10% of content hidden; FAQ answers visible by default' });
+
+// ── GRAAF / 50 ──
+let gPts = 0, gMax = 0;
+// Relevant depth: reward useful substance progressively; do not prescribe a universal target.
+gMax += 10;
+if ((analysis.wordCount||0) >= 1200) gPts += 10;
+else if ((analysis.wordCount||0) >= 750) gPts += 8;
+else if ((analysis.wordCount||0) >= 400) gPts += 6;
+else if ((analysis.wordCount||0) >= 200) gPts += 4;
+else if ((analysis.wordCount||0) >= 80) gPts += 2;
+// Accuracy/evidence.
+gMax += 9;
+if ((analysis.statsFound||0) >= 4) gPts += 9;
+else if ((analysis.statsFound||0) >= 2) gPts += 7;
+else if ((analysis.statsFound||0) >= 1) gPts += 4;
+// Authority/support: quotes are one signal, not a quota. Relevant external sourcing also counts.
+gMax += 8;
+if ((analysis.expertQuoteCount||0) >= 2) gPts += 8;
+else if ((analysis.expertQuoteCount||0) >= 1) gPts += 6;
+else if ((analysis.externalLinks||0) >= 2) gPts += 4;
+else if ((analysis.externalLinks||0) >= 1) gPts += 2;
+// First-party experience/proof.
+gMax += 8;
+if ((analysis.caseStudyCount||0) >= 2) gPts += 8;
+else if ((analysis.caseStudyCount||0) >= 1) gPts += 6;
+else if (_graafIsHomepage && analysis.hasOrganizationSchema) gPts += 3;
+// Answer/retrievability is mainly relevant to informational/long-form pages.
+if (_graafIsLongForm) {
+  gMax += 8;
+  if (analysis.hasDirectAnswer) gPts += 5;
+  if (analysis.hasTLDR) gPts += 3;
 }
-if (analysis.statsFound < 3) {
-recommendations.push({ title: '📈 Strengthen Evidence & Verifiable Data', description: `Only ${analysis.statsFound} measurable data point(s) found in the main content.`, priority: 'high', action: "Add relevant, verifiable first-party facts, product data, fees, market information, or authoritative third-party statistics where they support an important claim. Cite the source and date where appropriate.", learning: "Specific, attributable evidence strengthens the Accuracy pillar of GRAAF and gives readers and AI systems clearer support for factual claims.", target: 'Support important factual claims with relevant, attributable evidence; no arbitrary statistic quota' });
-} else if (analysis.statsFound < 8) {
-recommendations.push({ title: '📈 Strengthen Your Evidence Base', description: `Found ${analysis.statsFound} data points. Reaching 8+ unlocks the full GRAAF statistics score.`, priority: 'medium', action: "Add recent statistics (2023–2025) with full attribution.", learning: "Pages with 8+ cited statistics rank 47% higher for informational queries.", target: '8+ cited statistics with source and year' });
+// Scannable structure: reward natural structure, not a list-item quota.
+gMax += 7;
+if ((analysis.h2Count||0) >= 3) gPts += 4;
+else if ((analysis.h2Count||0) >= 1) gPts += 2;
+if ((analysis.listItemCount||0) >= 3) gPts += 3;
+else if ((analysis.listItemCount||0) >= 1) gPts += 1;
+let graafScore = _normScore(gPts, gMax, 50);
+
+// ── CRAFT / 30 ──
+let cPts = 0, cMax = 0;
+cMax += 9;
+if (analysis.h1VisibleCount === 1 && !analysis.h1IsGeneric) cPts += 9;
+else if (analysis.h1VisibleCount === 1) cPts += 6;
+else if ((analysis.h1VisibleCount||0) > 1) cPts += 4;
+cMax += 7;
+if ((analysis.h2Count||0) >= 3) cPts += 7;
+else if ((analysis.h2Count||0) >= 1) cPts += 5;
+// Paragraph readability only when paragraphs exist / metric is meaningful.
+if (Number.isFinite(Number(analysis.avgParagraphLength)) && Number(analysis.avgParagraphLength) > 0) {
+  cMax += 5;
+  if (analysis.avgParagraphLength <= 100) cPts += 5;
+  else if (analysis.avgParagraphLength <= 140) cPts += 3;
 }
-if (analysis.expertQuoteCount === 0) {
-recommendations.push({ title: '💬 Add Expert Quotes & Credibility Signals', description: 'No expert quotes, attributed testimonials, or blockquote credibility signals detected.', priority: 'high', action: `RESEARCH and add 3–5 quotes (unlike a case study, these need no results of your own — source them from recognised experts, studies or industry authorities). Format: "Quote text" — [Name, Title, Organization].`, learning: "Google's E-E-A-T rewards citing credible outside sources — and in the Princeton GEO study, citing sources raised AI-citation visibility by up to ~115%, especially for lower-ranked pages. These quotes can be researched, not invented.", target: '3–5 attributed expert quotes using blockquote + cite HTML' });
-} else if (analysis.expertQuoteCount < 3) {
-recommendations.push({ title: '💬 Strengthen Authoritative Support', description: `Found ${analysis.expertQuoteCount} credibility signal(s).`, priority: 'medium', action: "Add authoritative supporting sources where they materially strengthen financial, regulatory, market, or other important claims. Use quotes only when a quote genuinely adds value.", learning: "Clear source attribution helps readers and machines distinguish supported claims from unsupported assertions.", target: 'Use relevant authoritative sources where claims require support; no fixed quote quota' });
+// FAQ/TOC/author are conditional features, not universal requirements.
+if (analysis.hasFAQContent || _graafIsArticleLike) {
+  cMax += 4;
+  if (analysis.hasFAQContent) cPts += 4;
 }
-if (analysis.caseStudyCount === 0) {
-recommendations.push({ title: _graafIsHomepage ? '📊 Add First-Party Proof / Trust Evidence' : '📊 Add Real-World Proof', description: "No measurable real-world proof or case-study evidence detected.", priority: 'high', action: _graafIsHomepage ? "Add verifiable proof appropriate to this business — for example regulatory credentials, platform capabilities, product facts, customer evidence, or documented results where available." : "Add a relevant real-world example, case study, documented outcome, or other first-party proof where it supports the page intent.", learning: "First-party evidence can demonstrate experience and substantiate important claims when it is specific, relevant, and verifiable.", target: 'Add genuine proof appropriate to the page type; do not invent metrics or force a case-study format' });
-} else if (analysis.caseStudyCount < 2) {
-recommendations.push({ title: '📊 Add a Second Case Study', description: `Found ${analysis.caseStudyCount} case study section.`, priority: 'medium', action: "Add another real-world example with before/after metrics.", learning: "Two diverse case studies signal consistent, repeatable results.", target: '2 case studies with quantifiable results' });
+if (_graafIsLongForm) {
+  cMax += 3;
+  if (analysis.hasTOC) cPts += 3;
 }
-if (!_graafIsHomepage && !analysis.hasDirectAnswer) {
-recommendations.push({ title: '🎯 Add a Direct Answer Box', description: 'No concise direct answer detected in the first 150 words.', priority: 'high', action: "Write a 40–80 word paragraph immediately after your H1 that directly answers the main question.", learning: "Pages with a clear direct answer in the first 150 words are 4.5x more likely to appear in Google AI Overviews.", target: '40–80 word direct answer paragraph within first 150 words' });
+if (_graafIsArticleLike) {
+  cMax += 2;
+  if (analysis.hasAuthorBio) cPts += 2;
 }
-if (!_graafIsHomepage && !analysis.hasTLDR) {
-recommendations.push({ title: '📌 Add a TL;DR / Key Takeaways Section', description: "No 'Key Takeaways' or 'Quick Summary' section detected.", priority: 'medium', action: "Add a 'Key Takeaways' section near the top with 5 bullet points.", learning: "Bullet-formatted summaries are heavily favored by Google's AI for snippet extraction.", target: '5 bullet takeaways with specific stats near the top of the page' });
+let craftScore = _normScore(cPts, cMax, 30);
+
+// ── TECHNICAL / 20 ──
+let tPts = 0, tMax = 0;
+tMax += 3; if ((analysis.metaTitleLength||0) > 0) tPts += 3;
+tMax += 3; if ((analysis.metaDescriptionLength||0) > 0) tPts += 3;
+tMax += 3; if (analysis.hasCanonical) tPts += 3;
+tMax += 2; if (analysis.hasMetaViewport) tPts += 2;
+tMax += 3; if (analysis.hasSchema || analysis.hasArticleSchema || analysis.hasFAQPageSchema || analysis.hasOrganizationSchema) tPts += 3;
+if (_graafIsArticleLike) { tMax += 2; if (analysis.hasArticleSchema) tPts += 2; }
+if (analysis.hasFAQContent) { tMax += 2; if (analysis.hasFAQPageSchema) tPts += 2; }
+if ((analysis.images||0) > 0) {
+  tMax += 2;
+  const _altRatio = Math.min(1, (analysis.imagesWithAlt||0) / Math.max(1, analysis.images||0));
+  if (_altRatio >= .9) tPts += 2; else if (_altRatio > 0) tPts += 1;
 }
-if (analysis.listItemCount < 5) {
-recommendations.push({ title: '📋 Improve Scannability Where Useful', description: `Only ${analysis.listItemCount} list items found.`, priority: 'medium', action: "Use bullets or numbered steps where the content naturally contains parallel points, benefits, requirements, fees, features, or a process.", learning: "Lists can make genuinely list-like information easier to scan and extract, but they should follow the content structure rather than an arbitrary quota.", target: 'Use lists where they improve clarity; no fixed list-item target' });
-} else if (analysis.listItemCount < 15) {
-recommendations.push({ title: '📋 Add More Structured Lists', description: `${analysis.listItemCount} list items found.`, priority: 'low', action: "Look for sections with 3+ parallel ideas and convert them to bullet lists.", learning: "Structured lists signal scannable, user-friendly content.", target: '15+ list items' });
+// Social metadata is useful, but lower-weight than crawl/index/content signals.
+tMax += 1; if (analysis.hasOpenGraph) tPts += 1;
+tMax += 1; if (analysis.hasTwitterCard) tPts += 1;
+let technicalScore = _normScore(tPts, tMax, 20);
+
+const totalScore = Math.min(100, graafScore + craftScore + technicalScore);
+const quality = totalScore >= 90 ? 'excellent' : totalScore >= 80 ? 'very good' : totalScore >= 70 ? 'good' : totalScore >= 60 ? 'average' : 'needs improvement';
+console.log('[GRAAF-DIAG-V2] ' + (scanUrl||'') + ' → ' + totalScore + '/100 | G=' + graafScore + ' C=' + craftScore + ' T=' + technicalScore + ' | pageType=' + (_graafIsHomepage?'homepage':(_graafIsArticleLike?'article-like':'general')));
+
+// ── RECOMMENDATIONS ──
+const recommendations = [];
+const add = (r) => recommendations.push(r);
+
+// Structural integrity.
+if ((analysis.headCount||0) > 1 || (analysis.doctypeCount||0) > 1 || (analysis.htmlTagCount||0) > 1 || (analysis.bodyCount||0) > 1 || analysis.isNestedDocument) {
+  add({ title: '🚨 Critical: Duplicate / Nested Document Structure', description: `Found ${analysis.headCount||0} <head>, ${analysis.doctypeCount||0} <!doctype>, ${analysis.htmlTagCount||0} <html>, and ${analysis.bodyCount||0} <body> tags.`, priority: 'high', action: 'Keep one document wrapper only. If this content is inserted into a CMS template, paste the content fragment rather than a second full HTML document.', learning: 'Nested document wrappers can create conflicting metadata and an invalid or ambiguous document structure for browsers and crawlers.', target: 'One valid document structure per page' });
 }
+if ((analysis.footerCount||0) > 1) add({ title: '⚠️ Duplicate Footer in Content', description: `Found ${analysis.footerCount} <footer> elements.`, priority: 'medium', action: 'Remove any footer copied into the main content when the site template already supplies the site footer.', learning: 'Repeated sitewide elements add boilerplate and duplicate navigation signals inside the main content.', target: 'One intended site footer' });
+if ((analysis.csNavCount||0) > 1) add({ title: '⚠️ Duplicate Navigation in Content', description: `Found ${analysis.csNavCount} navigation/menu instances.`, priority: 'medium', action: 'Remove copied navigation from the main content when the template already renders the site navigation.', learning: 'Sitewide navigation should remain separate from contextual page content.', target: 'One intended primary navigation system' });
+if ((analysis.csBadgeCount||0) > 1) add({ title: '⚠️ Duplicate Scan Badge', description: `Found ${analysis.csBadgeCount} scan badges.`, priority: 'low', action: 'Remove any copied badge when the template or loader already injects it.', learning: 'Duplicate UI elements add redundant markup without improving page meaning.', target: 'One intended badge' });
+
+// Content depth/evidence.
+if ((analysis.wordCount||0) < 120) {
+  add({ title: '🚨 Very Limited Main Content', description: `Only ${analysis.wordCount||0} words were detected in the main content.`, priority: 'high', action: 'Check that the scanner reached the real main content. If the count is accurate, add the information users need to understand, evaluate, or act on this page — without padding for word count.', learning: 'A page with very little substantive content may not explain its purpose or topic sufficiently for users, search systems, or AI systems.', target: 'Enough relevant main content to satisfy the page intent; no universal word-count target' });
+} else if ((analysis.wordCount||0) < 700) {
+  add({ title: '📝 Review Relevant Content Depth', description: `${analysis.wordCount||0} words were detected in the main content.`, priority: 'medium', action: 'Review whether important user questions, differentiators, requirements, process, risks, fees, comparisons, or supporting evidence are missing. Expand only where useful.', learning: 'Coverage should be driven by page intent and information needs rather than a fixed word-count benchmark.', target: 'Comprehensive, useful coverage for this specific page intent' });
+}
+if (analysis.hiddenWordCount && analysis.hiddenWordPct >= 20) {
+  add({ title: '👁️ Review Important Content Hidden by Default', description: `${analysis.hiddenWordCount} words (${analysis.hiddenWordPct}% of detected text) are hidden or collapsed by default.`, priority: 'medium', action: 'Confirm that important information remains accessible and understandable when collapsed. Do not hide essential context merely to simplify the visual layout.', learning: 'Collapsed content can still be accessible to search systems, but important information should remain easy for users to discover and interact with.', target: 'Important content remains accessible, understandable, and intentionally collapsed only where useful' });
+}
+if ((analysis.statsFound||0) === 0) {
+  add({ title: '📈 Strengthen Evidence Where Claims Need Support', description: 'No measurable first-party facts, figures, or statistics were detected in the main content.', priority: 'medium', action: 'Where the page makes factual, financial, performance, market, or comparative claims, support them with relevant verifiable first-party data or authoritative sources. Do not add statistics just to meet a quota.', learning: 'Specific, attributable evidence strengthens the Accuracy pillar of GRAAF and makes important claims easier to verify.', target: 'Support material factual claims with relevant, attributable evidence' });
+} else if ((analysis.statsFound||0) < 3) {
+  add({ title: '📈 Review Evidence Coverage', description: `${analysis.statsFound} measurable data point(s) were detected in the main content.`, priority: 'low', action: 'Check whether other material factual claims would benefit from a source, date, product fact, fee, metric, or other verifiable evidence.', learning: 'Evidence is valuable when it substantiates an important claim; the appropriate amount depends on the page and topic.', target: 'Evidence aligned with the claims being made; no fixed statistic quota' });
+}
+if ((analysis.expertQuoteCount||0) === 0 && (analysis.externalLinks||0) === 0 && _graafIsLongForm) {
+  add({ title: '💬 Add Authoritative Support Where Appropriate', description: 'No attributed expert/source signals or external supporting links were detected.', priority: 'medium', action: 'For claims that depend on external authority, cite a relevant primary source, regulator, study, standard, or recognized industry authority. Quotes are optional and should be used only when they add value.', learning: 'Clear attribution helps readers and machines distinguish supported claims from unsupported assertions.', target: 'Relevant authoritative support for claims that require it; no quote quota' });
+}
+if ((analysis.caseStudyCount||0) === 0) {
+  add({ title: _graafIsHomepage ? '📊 Strengthen First-Party Proof / Trust Evidence' : '📊 Strengthen Real-World Proof', description: 'No measurable case-study or real-world outcome evidence was detected.', priority: _graafIsHomepage ? 'medium' : 'low', action: _graafIsHomepage ? 'Where appropriate, add verifiable trust evidence such as regulatory credentials, platform capabilities, product facts, customer evidence, or documented outcomes.' : 'If the page makes claims about outcomes or experience, support them with a relevant real example, documented result, or other first-party evidence.', learning: 'Specific first-party evidence can demonstrate experience and substantiate claims when it is relevant and verifiable.', target: 'Genuine proof appropriate to the page type; never invent metrics or force a case-study format' });
+}
+
+// Information architecture / readability.
 if (analysis.h1Count === 0) {
-recommendations.push({ title: '🚨 Critical: No H1 Heading Found', description: 'No H1 tag detected in the main content.', priority: 'high', action: "Add one clear, visible H1 near the top of the main content that accurately describes the page's primary topic.", learning: "A clear H1 helps search engines, AI systems, and users identify the page's primary topic and establishes the heading hierarchy for the main content.", target: 'One clear, visible H1 that accurately describes the page topic' });
+  add({ title: '🚨 Critical: No H1 Heading Found', description: 'No H1 tag was detected in the main content.', priority: 'high', action: 'Add one clear, visible H1 near the top of the main content that accurately describes the page’s primary topic or purpose.', learning: 'A clear H1 helps users, search engines, and AI systems identify the page’s primary topic and heading hierarchy.', target: 'A clear visible primary heading aligned with page intent' });
 } else if (analysis.h1IsHidden && analysis.h1VisibleCount === 0) {
-recommendations.push({ title: '🚨 Critical: H1 Is Hidden (display:none / visibility:hidden)', description: `An H1 exists in the HTML but is hidden with CSS.`, priority: 'high', action: "Remove the CSS hiding your H1. Make it visible.", learning: "Hidden H1s are sometimes used as an SEO trick. Google ignores hidden content for ranking signals.", target: '1 fully visible H1 containing primary keyword' });
-} else if (analysis.h1VisibleCount > 1) {
-recommendations.push({ title: '⚠️ Multiple H1 Tags Detected', description: `Found ${analysis.h1VisibleCount} visible H1 tags.`, priority: 'medium', action: "Keep only one H1. Demote the rest to H2 or H3.", learning: "Multiple H1s tell Google your page has multiple main topics.", target: 'Exactly 1 H1 tag per page' });
+  add({ title: '🚨 Primary H1 Is Hidden', description: 'An H1 exists in the HTML but is not visible in the rendered main content.', priority: 'high', action: 'Make the primary heading visible unless there is a legitimate accessibility or rendering reason not to.', learning: 'The primary page heading should be available to users and assistive technologies as part of the visible information hierarchy.', target: 'A visible, meaningful primary heading' });
+} else if ((analysis.h1VisibleCount||0) > 1) {
+  add({ title: '⚠️ Review Multiple H1 Headings', description: `Found ${analysis.h1VisibleCount} visible H1 headings.`, priority: 'low', action: 'Review whether each H1 represents a legitimate top-level section. If the page has one primary topic, use one clear primary H1 and structure subsections with H2/H3 headings.', learning: 'Multiple H1 elements are not inherently invalid, but a clear hierarchy makes the main topic and section structure easier to understand.', target: 'A logical heading hierarchy that clearly communicates the page structure' });
 } else if (analysis.h1IsGeneric) {
-recommendations.push({ title: '⚠️ H1 Is Too Generic — Add a Real Keyword', description: `Your H1 "${analysis.h1Text}" contains no specific keyword.`, priority: 'high', action: "Replace your H1 with a specific keyword phrase.", learning: "Generic H1s like 'Home' or 'Welcome' provide zero keyword signal to Google.", target: 'H1 with primary keyword + specific value in 30–70 characters' });
-} else if (analysis.h1IsTooShort) {
-recommendations.push({ title: '⚠️ H1 Too Short — Expand With Keywords', description: `Your H1 "${analysis.h1Text}" is only ${analysis.h1Length} characters.`, priority: 'medium', action: "Expand your H1 to 30–70 characters.", learning: "H1s under 10 characters provide minimal keyword signal.", target: 'H1 of 30–70 characters with primary keyword' });
+  add({ title: '⚠️ Make the H1 More Descriptive', description: `The detected H1 (“${analysis.h1Text||''}”) appears generic.`, priority: 'medium', action: 'Rewrite it so it clearly describes the page topic, offering, or user task in natural language.', learning: 'Descriptive headings provide more context than labels such as “Home” or “Welcome”.', target: 'A specific, natural-language H1 that describes the page purpose' });
 } else if (analysis.h1IsTooLong) {
-recommendations.push({ title: '📝 H1 Too Long — Trim for Clarity', description: `Your H1 is ${analysis.h1Length} characters.`, priority: 'low', action: "Trim your H1 to 70 characters or fewer.", learning: "H1s over 70 characters reduce keyword density.", target: 'H1 under 70 characters' });
+  add({ title: '📝 Review H1 Clarity', description: `The H1 is ${analysis.h1Length||0} characters long.`, priority: 'low', action: 'Shorten it only if the heading is difficult to scan or contains multiple ideas. Preserve the wording needed to describe the page accurately.', learning: 'Clarity and information hierarchy matter more than hitting a universal H1 character count.', target: 'A concise, descriptive H1 with no fixed character target' });
 }
-// ── DUPLICATE / NESTED-DOCUMENT WARNINGS ──
-// Deze verwarren Google over welke tag de juiste is. Vaak veroorzaakt door het
-// plakken van een volledig HTML-document waar een fragment hoort (bv. WordPress).
-if (analysis.isNestedDocument) {
-recommendations.push({ title: '🚨 Nested / Duplicate Document Detected', description: `The page contains more than one <html>, <body>, <head>, or <!doctype> — a nested or duplicated document structure. This usually happens when a full HTML document is pasted where only a content fragment belongs.`, priority: 'high', action: "Paste only the content fragment (headings, paragraphs, images, schema) — never a full <!doctype>/<html>/<head>/<body> wrapper. The site template already provides those.", learning: "A nested document gives Google two competing page structures, duplicate <head> metadata, and often duplicate titles — a strong signal of a broken or spammy page.", target: 'Exactly one document structure: no <html>/<body>/<head>/<!doctype> inside the content' });
+if ((analysis.h2Count||0) === 0 && (analysis.wordCount||0) >= 250) {
+  add({ title: '📑 Add Descriptive Section Headings', description: 'No H2 headings were detected in the main content.', priority: 'medium', action: 'Where the page contains distinct topics or steps, separate them with descriptive H2 headings.', learning: 'Section headings make longer content easier to scan and expose the page’s information hierarchy.', target: 'Use H2 headings where distinct content sections genuinely exist; no fixed heading count' });
+} else if ((analysis.h2Count||0) > 0 && (analysis.wordCount||0) >= 900 && (analysis.wordCount||0) / Math.max(1, analysis.h2Count||0) > 450) {
+  add({ title: '📑 Review Section Coverage', description: `${analysis.h2Count} H2 headings organize ${analysis.wordCount} words of main content.`, priority: 'low', action: 'Check whether any long section covers multiple distinct subtopics that would benefit from separate descriptive headings.', learning: 'Heading structure should follow real topic boundaries rather than an arbitrary heading quota.', target: 'Descriptive sections aligned with the actual information architecture' });
 }
-if (analysis.titleTagCount > 1) {
-recommendations.push({ title: '🚨 Duplicate <title> Tags', description: `Found ${analysis.titleTagCount} <title> tags. Google will pick one unpredictably and may show the wrong one in search results.`, priority: 'high', action: "Keep exactly one <title>. In WordPress, set the title in your SEO plugin (Rank Math/Yoast) and remove any <title> from the pasted content.", learning: "Multiple title tags split your title signal and let Google override your intended title with one of its choosing.", target: 'Exactly 1 <title> tag per page' });
+if ((analysis.avgParagraphLength||0) > 120) {
+  add({ title: '📱 Review Long Paragraphs', description: `Average paragraph length is ${Math.round(analysis.avgParagraphLength)} words.`, priority: 'low', action: 'Break up paragraphs where they combine multiple ideas or become difficult to scan, especially on smaller screens.', learning: 'Shorter, focused paragraphs can improve readability when they reflect natural idea boundaries.', target: 'Readable paragraphs organized by idea; no fixed word limit' });
 }
-if (analysis.metaDescCount > 1) {
-recommendations.push({ title: '⚠️ Duplicate Meta Descriptions', description: `Found ${analysis.metaDescCount} meta description tags. Only one should exist; conflicting descriptions confuse which snippet Google shows.`, priority: 'medium', action: "Keep one meta description — ideally set in your SEO plugin, not in the pasted content.", learning: "Duplicate meta descriptions are a common WordPress paste artifact and dilute your snippet control.", target: 'Exactly 1 meta description per page' });
+if ((analysis.listItemCount||0) === 0 && (analysis.wordCount||0) >= 500) {
+  add({ title: '📋 Consider Structured Lists Where Useful', description: 'No list items were detected in the main content.', priority: 'low', action: 'Use bullets or numbered steps only where the content naturally contains parallel points, benefits, requirements, fees, features, or a process.', learning: 'Lists improve clarity for genuinely list-like information, but should follow the content rather than an arbitrary quota.', target: 'Use lists where they improve comprehension; no fixed list-item target' });
 }
-if (analysis.canonicalCount > 1) {
-recommendations.push({ title: '🚨 Conflicting Canonical Tags', description: `Found ${analysis.canonicalCount} canonical tags. Multiple canonicals can point Google to different URLs, undermining indexing of this page.`, priority: 'high', action: "Keep exactly one rel=canonical pointing to this page's preferred URL. Let your SEO plugin manage it and remove any canonical from the pasted content.", learning: "When canonicals conflict, Google may ignore all of them and choose its own canonical — which can deindex your intended URL.", target: 'Exactly 1 canonical tag pointing to the preferred URL' });
+if (_graafIsArticleLike && !analysis.hasFAQContent) {
+  add({ title: '❓ Consider an FAQ Only if It Serves Search Intent', description: 'No FAQ section was detected on this article-like page.', priority: 'low', action: 'Add an FAQ only when there are recurring, material questions not already answered clearly in the body.', learning: 'FAQ sections are useful when they resolve genuine user questions; they are not a universal SEO requirement.', target: 'FAQ content only when supported by real user/search intent' });
 }
-if (analysis.hasDuplicateSchema) {
-recommendations.push({ title: '⚠️ Duplicate Schema Types', description: `The same schema type appears more than once: ${(analysis.duplicateSchemaTypes||[]).join(', ')}. Duplicate JSON-LD of the same @type can confuse how Google interprets your structured data.`, priority: 'medium', action: "Keep one block per schema type. If the site template already outputs Article or FAQPage schema, remove the duplicate from the pasted content.", learning: "Two FAQPage or two Article blocks force Google to reconcile competing structured data, which can suppress rich results.", target: 'One JSON-LD block per schema @type' });
+if (_graafIsLongForm && !analysis.hasTOC && (analysis.h2Count||0) >= 5) {
+  add({ title: '📑 Consider a Table of Contents for Long-Form Navigation', description: 'This long-form page has several sections but no Table of Contents.', priority: 'low', action: 'Consider anchor links to major sections if they would help readers navigate the page.', learning: 'A Table of Contents is a usability/navigation feature for long structured content, not a universal ranking requirement.', target: 'Use a TOC when it materially improves navigation' });
 }
-if (analysis.h2Count < 3) {
-recommendations.push({ title: '📑 Add More Section Headings (H2s)', description: `Only ${analysis.h2Count} H2 headings found.`, priority: 'medium', action: "Structure your content with 5+ H2 headings.", learning: "H2s are crawlability signals. Content with 5+ H2s ranks 23% higher for secondary keywords.", target: '5+ H2 headings with keyword-rich, descriptive text' });
+if (_graafIsArticleLike && !analysis.hasAuthorBio) {
+  add({ title: '✍️ Strengthen Author / Publisher Transparency', description: 'No author bio or clear author information was detected on this article-like page.', priority: 'medium', action: 'Identify the responsible author or publisher and provide relevant expertise or editorial context where it helps users assess the content.', learning: 'Transparent authorship can help users evaluate accountability and expertise, especially for consequential topics.', target: 'Clear authorship or publisher responsibility appropriate to the content' });
 }
-if (analysis.avgParagraphLength > 100) {
-recommendations.push({ title: '📱 Shorten Paragraphs for Mobile Readability', description: `Average paragraph length is ${Math.round(analysis.avgParagraphLength)} words.`, priority: 'medium', action: "Break paragraphs at 50–80 words maximum.", learning: "Paragraphs over 100 words increase mobile abandonment by 37%.", target: 'Average paragraph length 40–80 words' });
-}
-if (!analysis.hasFAQContent) {
-recommendations.push({ title: '❓ Add a FAQ Section', description: "No FAQ section detected.", priority: 'medium', action: "Add an FAQ section with 5–10 real questions your audience asks.", learning: "'People Also Ask' boxes now appear in 80% of Google searches.", target: "FAQ section titled 'Frequently Asked Questions' with 5–10 Q&A pairs" });
-}
-if (!_graafIsHomepage && !analysis.hasTOC) {
-recommendations.push({ title: '📑 Add a Table of Contents', description: 'No Table of Contents detected.', priority: 'low', action: "Add a 'Table of Contents' section after your intro with anchor links to each H2.", learning: "Pages with a TOC are more likely to receive sitelinks in Google search results.", target: 'Table of Contents with anchor links to all H2 sections' });
-}
-if (!_graafIsHomepage && !analysis.hasAuthorBio) {
-recommendations.push({ title: '✍️ Add an Author Bio', description: 'No author bio detected.', priority: 'medium', action: "Add a 200–250 word author bio with credentials, certifications, and achievements.", learning: "E-E-A-T's first 'E' is Experience. Google's quality raters look for evidence of real credentials.", target: '200–250 word author bio with credentials and measurable achievements' });
-}
-if (!_graafIsHomepage && !analysis.hasArticleSchema) {
-recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', description: "No Article, BlogPosting, or NewsArticle schema detected.", priority: 'high', action: "Add Article JSON-LD schema to your <head> with headline, author, datePublished, dateModified.", learning: "Article schema enables rich snippets and tells Google exactly what type of content this is.", target: 'Article or BlogPosting JSON-LD schema with author, datePublished, dateModified' });
-   }
-   if (analysis.hasFAQContent && !analysis.hasFAQPageSchema) {
-   recommendations.push({ title: '🛠️ Review FAQ Structured Data', description: 'FAQ content detected but no FAQPage schema found.', priority: 'medium', action: "If this is a genuine visible FAQ section and FAQPage markup is appropriate for the site and current search-engine guidelines, add matching JSON-LD for the visible questions and answers.", learning: "Structured data can help machines interpret the question-and-answer structure, but it does not itself guarantee enhanced search appearances or People Also Ask inclusion.", target: 'Structured data must accurately match visible FAQ content and applicable guidelines' });
-   } else if (!analysis.hasFAQContent && !analysis.hasFAQPageSchema) {
-   recommendations.push({ title: '🛠️ Add FAQ Section + FAQPage Schema', description: 'No FAQ section or FAQPage schema detected.', priority: 'medium', action: "1) Add a FAQ section. 2) Add FAQPage JSON-LD schema.", learning: "FAQPage schema is one of the highest-ROI schema types available.", target: 'FAQ section + FAQPage JSON-LD schema' });
-   }
-   if (!analysis.hasCanonical) {
-   recommendations.push({ title: '🔗 Add a Canonical Tag', description: 'No canonical tag detected.', priority: 'medium', action: `Add <link rel="canonical" href="..."> to your <head>.`, learning: "Canonical tags prevent duplicate content penalties.", target: 'Self-referencing canonical tag in <head>' });
-         }
-         if (analysis.metaTitleLength === 0) {
-         recommendations.push({ title: '🏷️ Critical: Missing Meta Title', description: 'No title tag found.', priority: 'high', action: "Add a <title> tag with 50–60 characters containing your primary keyword.", learning: "The title tag is Google's #1 on-page SEO signal.", target: '50–60 character title tag with primary keyword in first 30 characters' });
-            } else if (analysis.metaTitleLength < 40) {
-            recommendations.push({ title: '🏷️ Meta Title Too Short', description: `Title is ${analysis.metaTitleLength} characters.`, priority: 'low', action: "Expand to 50–60 characters.", learning: "Title tags of 50–60 characters maximize click-through rate.", target: '50–60 characters' });
-            } else if (analysis.metaTitleLength > 65) {
-            recommendations.push({ title: '🏷️ Meta Title Too Long — Will Be Truncated', description: `Title is ${analysis.metaTitleLength} characters.`, priority: 'low', action: "Trim to 50–60 characters.", learning: "Truncated titles appear incomplete in search results.", target: '50–60 characters' });
-            }
-            if (analysis.metaDescriptionLength === 0) {
-            recommendations.push({ title: '📝 Missing Meta Description', description: 'No meta description found.', priority: 'medium', action: "Add a <meta name=\"description\"> with 140–160 characters including a CTA.", learning: "Meta descriptions are your search result ad copy. Compelling descriptions increase clicks by 5–20%.", target: '140–160 character meta description with keyword + CTA' });
-            } else if (analysis.metaDescriptionLength < 100) {
-            recommendations.push({ title: '📝 Meta Description Too Short', description: `Description is ${analysis.metaDescriptionLength} characters.`, priority: 'low', action: "Expand to 140–160 characters.", learning: "Longer, compelling meta descriptions consistently outperform short ones.", target: '140–160 characters with keyword + CTA' });
-            } else if (analysis.metaDescriptionLength > 165) {
-            recommendations.push({ title: '📝 Meta Description Too Long', description: `Description is ${analysis.metaDescriptionLength} characters.`, priority: 'low', action: "Trim to 140–160 characters.", learning: "Truncated descriptions end mid-sentence in search results.", target: '140–160 characters' });
-            }
-            if (analysis.images === 0) {
-            recommendations.push({ title: '🖼️ Add Images to Your Content', description: 'No images detected.', priority: 'medium', action: "Add at least 3–5 images with descriptive alt text.", learning: "Content with images gets 94% more views.", target: '3–5 images with descriptive alt text on every image' });
-            } else if (analysis.imagesWithAlt < Math.min(analysis.images, 3)) {
-            recommendations.push({ title: '🖼️ Add Alt Text to Your Images', description: `${analysis.images} images found but only ${analysis.imagesWithAlt} have alt text.`, priority: 'medium', action: "Add descriptive alt text to every image.", learning: "Alt text serves three purposes: Google understanding, accessibility, and keyword signals.", target: 'Alt text on 100% of images' });
-            }
-            if (analysis.internalLinks < 5) {
-            recommendations.push({ title: '🔗 Strengthen Contextual Internal Linking', description: `Only ${analysis.internalLinks} contextual internal links were found in the main content.`, priority: 'medium', action: "Add relevant contextual links from body content to important supporting, product, or authority pages where they help the reader.", learning: "Contextual links expose topical relationships more clearly than sitewide navigation links and help discovery of related pages.", target: 'Relevant contextual links with descriptive anchor text; no fixed link-count target' });
-            } else if (analysis.internalLinks < 8) {
-            recommendations.push({ title: '🔗 Review Contextual Internal Linking', description: `${analysis.internalLinks} contextual internal links were found in the main content.`, priority: 'low', action: "Review unlinked topic mentions and add contextual links only where they improve navigation or topical connection.", learning: "Contextual links help readers and crawlers discover closely related pages without relying on sitewide navigation.", target: 'Relevant contextual links; no fixed count target' });
-            }
-            if (analysis.externalLinks === 0) {
-            recommendations.push({ title: '🌐 Add Authoritative External Links', description: 'No external links found.', priority: 'low', action: "Link out to 3–5 authoritative sources (.gov, .edu, industry pubs).", learning: "Linking out to authoritative sites signals research depth and quality.", target: '3–5 outbound links to authoritative sources' });
-            }
-            if (!analysis.hasOpenGraph) {
-            recommendations.push({ title: '📱 Add Open Graph Meta Tags', description: 'No Open Graph tags detected.', priority: 'low', action: "Add og:title, og:description, og:image (1200×630px), og:url to your <head>.", learning: "Open Graph tags control how your page appears when shared socially.", target: 'og:title, og:description, og:image (1200x630px), og:url' });
-               }
-               // ── NEAR-MISS: What to improve to reach 100/100 ───────────────────────────────
-               const nearMissRecs = [];
-               // Content depth: 2500+ gets max, but more is always better
-               if (analysis.wordCount >= 2500 && analysis.wordCount < 3500) {
-                 nearMissRecs.push({ title: '📈 Boost to Elite: Add 500–1,000 More Words', description: `You have ${analysis.wordCount} words (good). 500–1,000 more pushes toward maximum depth.`, priority: 'low', action: "Add a deeper case study, an expanded FAQ, or a comparison table.", learning: "Pages with 3,500+ words capture 2.3x more long-tail keywords.", target: '3,500+ words for maximum topical authority' });
-               }
-               // Stats: 8+ gets max, but 12+ is elite
-               if (analysis.statsFound >= 8 && analysis.statsFound < 12) {
-                 nearMissRecs.push({ title: '📈 Boost to Elite: Add 4+ More Statistics', description: `You have ${analysis.statsFound} data points. 12+ is the elite tier.`, priority: 'low', action: "Find 4 more recent 2024–2025 statistics from .gov, .edu, or industry research.", learning: "Pages with 12+ cited statistics earn 2.1x more featured snippets.", target: '12+ cited statistics for maximum evidence signal' });
-               }
-               // Expert quotes: 4+ gets max, but 6+ is elite
-               if (analysis.expertQuoteCount >= 4 && analysis.expertQuoteCount < 6) {
-                 nearMissRecs.push({ title: '💬 Boost to Elite: Add 2 More Expert Quotes', description: `You have ${analysis.expertQuoteCount} expert quotes. 6+ unlocks full E-E-A-T authority.`, priority: 'low', action: "Add 2 more quotes from recognized industry experts with full attribution.", learning: "6+ expert quotes signal comprehensive research depth.", target: '6+ attributed expert quotes' });
-               }
-               // Case studies: 2+ gets max, but 3+ is elite
-               if (analysis.caseStudyCount >= 2 && analysis.caseStudyCount < 3) {
-                 nearMissRecs.push({ title: '📊 Boost to Elite: Add a Third Case Study', description: `You have ${analysis.caseStudyCount} case studies. A third adds maximum credibility.`, priority: 'low', action: "Add one more real-world example with before/after metrics.", learning: "Three diverse case studies signal consistent, repeatable results across scenarios.", target: '3 case studies with quantifiable results' });
-               }
-               // H2s: 5+ gets max, but 8+ is ideal
-               if (analysis.h2Count >= 5 && analysis.h2Count < 8) {
-                 nearMissRecs.push({ title: '📑 Review Section Coverage', description: `You have ${analysis.h2Count} H2 headings in the main content.`, priority: 'low', action: "Add another H2 only if an important subtopic or user question is currently missing; do not split sections merely to increase the heading count.", learning: "Descriptive headings help expose the page's information hierarchy to readers, search engines, and AI systems.", target: 'Use as many descriptive H2 sections as the page intent genuinely requires' });
-               }
-               // Internal links: 8+ gets max points in computeScore but could be more
-               if (analysis.internalLinks >= 8 && analysis.internalLinks < 12) {
-                 nearMissRecs.push({ title: '🔗 Review Contextual Internal Linking', description: `${analysis.internalLinks} contextual internal links were found in the main content.`, priority: 'low', action: "Check whether important related product, supporting, and authority pages are linked naturally from relevant passages. Add links only where they help the reader continue the topic.", learning: "Contextual links expose topical relationships more clearly than sitewide navigation links and help discovery of related pages.", target: 'Relevant contextual links with descriptive anchor text; no fixed link-count target' });
-               }
-               // External links: any is good, 5+ is elite
-               if (analysis.externalLinks >= 3 && analysis.externalLinks < 5) {
-                 nearMissRecs.push({ title: '🌐 Boost to Elite: Add 2 More External Links', description: `You have ${analysis.externalLinks} external links. 5+ signals maximum research depth.`, priority: 'low', action: "Link to 2 more .gov, .edu, or industry publications.", learning: "5+ outbound links to authoritative sources signal comprehensive research.", target: '5+ external links to .gov, .edu, or recognized publications' });
-               }
-               // Images: alt text on all images gets points, but 8+ images is better
-               if (analysis.images >= 5 && analysis.images < 8) {
-                 nearMissRecs.push({ title: '🖼️ Boost to Elite: Add 3 More Images', description: `You have ${analysis.images} images. 8+ maximizes visual engagement.`, priority: 'low', action: "Add 3 more screenshots, infographics, or diagrams.", learning: "Pages with 8+ images get 2.1x more social shares.", target: '8+ images with descriptive alt text' });
-               }
-               // Twitter Card: gives +1, easy win
-               if (!analysis.hasTwitterCard) {
-                 nearMissRecs.push({ title: '🐦 Quick Win: Add Twitter Card Meta Tags', description: 'No Twitter Card tags detected. 2-minute fix for +1 point.', priority: 'low', action: "Add twitter:card, twitter:title, twitter:description, twitter:image to your <head>.", learning: "Twitter Card tags improve social sharing appearance.", target: 'twitter:card, twitter:title, twitter:description, twitter:image' });
-               }
-               // Canonical: gives +1, easy win
-               if (!analysis.hasCanonical) {
-                 nearMissRecs.push({ title: '🔗 Quick Win: Add Canonical Tag', description: 'No canonical tag. 1-minute fix for +1 point.', priority: 'low', action: `Add <link rel="canonical" href="${scanUrl}"> to your <head>.`, learning: "Canonical tags prevent duplicate content issues.", target: 'Self-referencing canonical tag' });
-               }
-               // Meta description: if exists but not 140-165, can improve
-               if (analysis.metaDescriptionLength > 0 && (analysis.metaDescriptionLength < 140 || analysis.metaDescriptionLength > 165)) {
-                 nearMissRecs.push({ title: '📝 Review Meta Description', description: `Your meta description is ${analysis.metaDescriptionLength} characters.`, priority: 'low', action: "Review whether it accurately summarizes the page and gives searchers a useful reason to click. Shorten or expand it only if important information is being lost or likely to truncate awkwardly.", learning: "Search engines may rewrite meta descriptions, so relevance and clarity matter more than hitting a universal character count.", target: 'A concise, accurate description aligned with page intent; no fixed character sweet spot' });
-               }
-               // Meta title: if exists but not 50-60, can improve
-               if (analysis.metaTitleLength > 0 && (analysis.metaTitleLength < 50 || analysis.metaTitleLength > 60)) {
-                 nearMissRecs.push({ title: '🏷️ Quick Win: Optimize Meta Title Length', description: `Your title is ${analysis.metaTitleLength} characters. 50–60 is optimal.`, priority: 'low', action: "Rewrite to 50–60 characters with primary keyword first.", learning: "Titles at 50–60 characters have the highest click-through rate.", target: '50–60 characters with primary keyword in first 30 characters' });
-               }
 
-               // Combine: regular recommendations first, then near-miss boosts
-               const allRecommendations = [...recommendations, ...nearMissRecs];
+// Structured data / metadata.
+if (analysis.titleTagCount > 1) add({ title: '🚨 Duplicate <title> Tags', description: `Found ${analysis.titleTagCount} <title> tags.`, priority: 'high', action: 'Keep one intended document title and remove duplicate title markup from pasted content or competing templates/plugins.', learning: 'Multiple title elements create ambiguous metadata and may cause search engines to select a different title representation.', target: 'One intended <title> element' });
+if (analysis.metaDescCount > 1) add({ title: '⚠️ Duplicate Meta Descriptions', description: `Found ${analysis.metaDescCount} meta description tags.`, priority: 'medium', action: 'Keep one intended meta description and remove duplicate markup from templates, plugins, or pasted content.', learning: 'Conflicting descriptions reduce control over the metadata supplied to search systems.', target: 'One intended meta description' });
+if (analysis.canonicalCount > 1) add({ title: '🚨 Conflicting Canonical Tags', description: `Found ${analysis.canonicalCount} canonical tags.`, priority: 'high', action: 'Keep one canonical declaration that points to the preferred URL and remove competing canonical markup.', learning: 'Conflicting canonical signals can make canonicalization less clear; search engines ultimately choose the canonical they consider most appropriate.', target: 'One consistent canonical declaration' });
+if (analysis.hasDuplicateSchema) add({ title: '⚠️ Review Repeated Structured Data Entities', description: `Repeated schema type(s) detected: ${(analysis.duplicateSchemaTypes||[]).join(', ')}.`, priority: 'low', action: 'Check whether repeated entities represent genuinely different items. Merge or remove only true duplicates or contradictory markup.', learning: 'Multiple items of the same @type can be valid; the problem is duplicate or conflicting entities, not the type count itself.', target: 'Structured data accurately represents the visible page entities without contradictions' });
+if (_graafIsArticleLike && !analysis.hasArticleSchema) add({ title: '🛠️ Review Article Structured Data', description: 'This appears to be article-like content, but no Article/BlogPosting/NewsArticle schema was detected.', priority: 'medium', action: 'If the page genuinely represents an article, consider matching Article-family JSON-LD with accurate headline, author/publisher, dates, and other supported properties.', learning: 'Relevant structured data can make the page type and entities easier for machines to interpret when it accurately matches visible content.', target: 'Use Article-family markup only when it accurately represents the page' });
+if (analysis.hasFAQContent && !analysis.hasFAQPageSchema) add({ title: '🛠️ Review FAQ Structured Data', description: 'Visible FAQ content was detected but no FAQPage schema was found.', priority: 'low', action: 'If FAQPage markup is appropriate under current search-engine guidelines, add JSON-LD that exactly matches the visible questions and answers.', learning: 'Structured data can describe question-and-answer structure, but it does not guarantee enhanced search appearances.', target: 'Any FAQ markup accurately matches visible FAQ content and applicable guidelines' });
+if (!analysis.hasCanonical) add({ title: '🔗 Review Canonical Declaration', description: 'No canonical tag was detected.', priority: 'medium', action: 'If this URL should be independently indexed, consider a self-referencing canonical; if another URL is preferred, point consistently to that canonical URL.', learning: 'Canonical markup is a signal that helps communicate the preferred URL among duplicate or near-duplicate variants; it is not a duplicate-content penalty switch.', target: 'A canonical strategy consistent with the intended indexable URL' });
+if ((analysis.metaTitleLength||0) === 0) {
+  add({ title: '🏷️ Missing Meta Title', description: 'No document title was detected.', priority: 'high', action: 'Add a concise, descriptive <title> that identifies the page and differentiates it from other pages on the site.', learning: 'The document title is an important source for search-result title generation and helps describe the page to users and systems.', target: 'A unique, descriptive title aligned with page intent' });
+} else if ((analysis.metaTitleLength||0) < 20 || (analysis.metaTitleLength||0) > 75) {
+  add({ title: '🏷️ Review Meta Title Clarity', description: `The title is ${analysis.metaTitleLength} characters long.`, priority: 'low', action: 'Review whether it communicates the page topic clearly and is likely to display usefully in search results. Rewrite for clarity rather than a fixed character quota.', learning: 'Search engines can truncate or rewrite titles depending on device, query, and context; usefulness and specificity matter more than a universal length.', target: 'A concise, unique, descriptive title with no fixed character sweet spot' });
+}
+if ((analysis.metaDescriptionLength||0) === 0) {
+  add({ title: '📝 Missing Meta Description', description: 'No meta description was detected.', priority: 'medium', action: 'Add a concise description that accurately summarizes the page and sets a useful expectation for searchers.', learning: 'Search engines may use or rewrite the supplied description; a relevant description gives them a useful candidate snippet.', target: 'A clear, accurate description aligned with the page intent' });
+} else if ((analysis.metaDescriptionLength||0) < 80 || (analysis.metaDescriptionLength||0) > 190) {
+  add({ title: '📝 Review Meta Description', description: `The meta description is ${analysis.metaDescriptionLength} characters long.`, priority: 'low', action: 'Review whether it summarizes the page clearly without omitting essential context or becoming unnecessarily verbose.', learning: 'Search engines may rewrite descriptions; relevance and clarity matter more than a universal character range.', target: 'A concise, accurate description with no fixed character sweet spot' });
+}
+if ((analysis.images||0) > 0 && (analysis.imagesWithAlt||0) < (analysis.images||0)) {
+  add({ title: '🖼️ Review Image Alternative Text', description: `${analysis.images} content image(s) were detected and ${analysis.imagesWithAlt||0} have non-empty alt text.`, priority: 'medium', action: 'Add descriptive alt text to informative images. Leave alt empty for purely decorative images so assistive technologies can ignore them.', learning: 'Alternative text primarily supports accessibility and can also help systems understand informative images.', target: 'Meaningful alt text for informative images; empty alt for decorative images' });
+}
+if ((analysis.internalLinks||0) < 2 && (analysis.wordCount||0) >= 250) {
+  add({ title: '🔗 Strengthen Contextual Internal Linking', description: `Only ${analysis.internalLinks||0} contextual internal link(s) were found in the main content.`, priority: 'medium', action: 'Link naturally to relevant supporting, product, policy, guide, or authority pages when those links help the reader continue the topic.', learning: 'Contextual links expose topical relationships and help users and crawlers discover closely related pages beyond sitewide navigation.', target: 'Relevant contextual links with descriptive anchor text; no fixed link-count target' });
+} else if ((analysis.internalLinks||0) >= 2 && (analysis.internalLinks||0) < 5 && (analysis.wordCount||0) >= 700) {
+  add({ title: '🔗 Review Contextual Internal Linking', description: `${analysis.internalLinks} contextual internal links were found in the main content.`, priority: 'low', action: 'Review whether important related pages are missing from naturally relevant passages. Add links only where they improve navigation or topical connection.', learning: 'The useful number of internal links depends on the page and content; relevance is more important than a quota.', target: 'Contextual links that help users continue relevant journeys' });
+}
+if ((analysis.externalLinks||0) === 0 && _graafIsLongForm) {
+  add({ title: '🌐 Review External Source Support', description: 'No external supporting links were detected.', priority: 'low', action: 'Where claims rely on external facts, regulations, research, or standards, link to the most relevant primary or authoritative source regardless of domain suffix.', learning: 'Source quality and relevance matter more than whether a URL ends in .gov, .edu, or another TLD.', target: 'External citations where they materially support claims; no fixed outbound-link count' });
+}
+if (!analysis.hasOpenGraph) add({ title: '📱 Add Open Graph Metadata', description: 'No Open Graph metadata was detected.', priority: 'low', action: 'Add suitable og:title, og:description, og:image, and og:url values if social/link-preview presentation matters for this page.', learning: 'Open Graph metadata primarily controls how many platforms generate link previews; it is not a core content-quality requirement.', target: 'Accurate Open Graph metadata for intentional sharing previews' });
+if (!analysis.hasTwitterCard) add({ title: '🐦 Consider X/Twitter Card Metadata', description: 'No Twitter Card metadata was detected.', priority: 'low', action: 'Add Twitter Card metadata if X/Twitter sharing is relevant to the site’s distribution strategy.', learning: 'Twitter Card metadata affects sharing presentation rather than core search ranking.', target: 'Accurate card metadata when the channel is relevant' });
 
-               const finalRecommendations = allRecommendations.length > 0 ? allRecommendations : [{
-               title: '🏆 Elite Content — Outstanding Work!',
-               description: 'Your page meets all GRAAF Framework, CRAFT, and Technical SEO requirements.',
-               priority: 'none',
-               action: 'Maintain this standard. Review content quarterly for freshness updates.',
-               learning: 'Consistent, high-quality content builds domain authority over time.',
-               target: 'Maintain Elite score; review and update quarterly'
-               }];
-               const result = {
-               success: true, url: scanUrl, score: totalScore, quality,
-               metrics: { graaf: graafScore, craft: craftScore, technical: technicalScore },
-               content_stats: {
-               wordCount: analysis.wordCount, wordCountContent: analysis.wordCount, wordCountTotal: analysis.wordCountTotal != null ? analysis.wordCountTotal : analysis.wordCount, emails_found: extractedEmails,
-               extractedEmail: extractedEmails[0] || null,
-               h1Count: analysis.h1Count, h1Content: analysis.h1Count, h1Total: analysis.h1Total != null ? analysis.h1Total : analysis.h1Count, h1Text: analysis.h1Text, h1Length: analysis.h1Length,
-               h1VisibleCount: analysis.h1VisibleCount, h1IsGeneric: analysis.h1IsGeneric,
-               h1IsTooShort: analysis.h1IsTooShort, h1IsTooLong: analysis.h1IsTooLong,
-               h2Count: analysis.h2Count, h2Content: analysis.h2Count, h2Total: analysis.h2Total != null ? analysis.h2Total : analysis.h2Count, h3Count: analysis.h3Count, h3Content: analysis.h3Count, h3Total: analysis.h3Total != null ? analysis.h3Total : analysis.h3Count,
-               listItemCount: analysis.listItemCount,
-               avgParagraphLength: Math.round(analysis.avgParagraphLength),
-               metaTitleLength: analysis.metaTitleLength, metaDescriptionLength: analysis.metaDescriptionLength,
-               hasMetaViewport: analysis.hasMetaViewport, hasCanonical: analysis.hasCanonical,
-               hasSchema: analysis.hasSchema != null ? analysis.hasSchema : !!(analysis.hasArticleSchema || analysis.hasFAQPageSchema || analysis.hasOrganizationSchema), hasArticleSchema: analysis.hasArticleSchema, hasFAQPageSchema: analysis.hasFAQPageSchema,
-               hasOrganizationSchema: analysis.hasOrganizationSchema,
-               hasOpenGraph: analysis.hasOpenGraph, hasTwitterCard: analysis.hasTwitterCard,
-               hasDirectAnswer: analysis.hasDirectAnswer, hasTLDR: analysis.hasTLDR,
-               hasTOC: analysis.hasTOC, hasAuthorBio: analysis.hasAuthorBio,
-               hasFAQContent: analysis.hasFAQContent,
-               images: analysis.images, imagesWithAlt: analysis.imagesWithAlt,
-               internalLinks: analysis.internalLinks, internalLinksContent: analysis.internalLinksContent != null ? analysis.internalLinksContent : analysis.internalLinks, internalLinksTotal: analysis.internalLinksTotal != null ? analysis.internalLinksTotal : analysis.internalLinks, externalLinks: analysis.externalLinks,
-               expertQuoteCount: analysis.expertQuoteCount, caseStudyCount: analysis.caseStudyCount,
-               statsFound: analysis.statsFound
-               },
-               recommendations: { all: finalRecommendations, count: finalRecommendations.length },
-               timestamp: new Date().toISOString()
-               };
-               console.log(`✅ computeScore: ${scanUrl} → ${totalScore}/100`);
-               return result;
-               }
+// De-duplicate semantically overlapping recommendations before returning them.
+const _seenRec = new Set();
+const finalRecommendations = recommendations.filter((r) => {
+  const k = String(r.title||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').replace(/\b(critical|quick win|review|add|strengthen)\b/g,' ').replace(/\s+/g,' ').trim();
+  if (!k || _seenRec.has(k)) return false;
+  _seenRec.add(k);
+  return true;
+});
+if (!finalRecommendations.length) finalRecommendations.push({ title: '✅ Strong Foundation', description: 'No material gaps were triggered by the current deterministic checks.', priority: 'none', action: 'Validate the page against its actual search intent, competitors, accessibility needs, and current performance data before making changes.', learning: 'A scanner score is a diagnostic aid, not proof that a page should be changed.', target: 'Preserve what performs and improve only evidence-backed gaps' });
+
+const result = {
+  success: true, url: scanUrl, score: totalScore, quality,
+  metrics: { graaf: graafScore, craft: craftScore, technical: technicalScore },
+  content_stats: {
+    wordCount: analysis.wordCount, wordCountContent: analysis.wordCount, wordCountTotal: analysis.wordCountTotal != null ? analysis.wordCountTotal : analysis.wordCount, emails_found: extractedEmails,
+    extractedEmail: extractedEmails[0] || null,
+    h1Count: analysis.h1Count, h1Content: analysis.h1Count, h1Total: analysis.h1Total != null ? analysis.h1Total : analysis.h1Count, h1Text: analysis.h1Text, h1Length: analysis.h1Length,
+    h1VisibleCount: analysis.h1VisibleCount, h1IsGeneric: analysis.h1IsGeneric,
+    h1IsTooShort: analysis.h1IsTooShort, h1IsTooLong: analysis.h1IsTooLong,
+    h2Count: analysis.h2Count, h2Content: analysis.h2Count, h2Total: analysis.h2Total != null ? analysis.h2Total : analysis.h2Count, h3Count: analysis.h3Count, h3Content: analysis.h3Count, h3Total: analysis.h3Total != null ? analysis.h3Total : analysis.h3Count,
+    listItemCount: analysis.listItemCount,
+    avgParagraphLength: Math.round(analysis.avgParagraphLength||0),
+    metaTitleLength: analysis.metaTitleLength, metaDescriptionLength: analysis.metaDescriptionLength,
+    hasMetaViewport: analysis.hasMetaViewport, hasCanonical: analysis.hasCanonical,
+    hasSchema: analysis.hasSchema != null ? analysis.hasSchema : !!(analysis.hasArticleSchema || analysis.hasFAQPageSchema || analysis.hasOrganizationSchema), hasArticleSchema: analysis.hasArticleSchema, hasFAQPageSchema: analysis.hasFAQPageSchema,
+    hasOrganizationSchema: analysis.hasOrganizationSchema,
+    hasOpenGraph: analysis.hasOpenGraph, hasTwitterCard: analysis.hasTwitterCard,
+    hasDirectAnswer: analysis.hasDirectAnswer, hasTLDR: analysis.hasTLDR,
+    hasTOC: analysis.hasTOC, hasAuthorBio: analysis.hasAuthorBio,
+    hasFAQContent: analysis.hasFAQContent,
+    images: analysis.images, imagesWithAlt: analysis.imagesWithAlt,
+    internalLinks: analysis.internalLinks, internalLinksContent: analysis.internalLinksContent != null ? analysis.internalLinksContent : analysis.internalLinks, internalLinksTotal: analysis.internalLinksTotal != null ? analysis.internalLinksTotal : analysis.internalLinks, externalLinks: analysis.externalLinks,
+    expertQuoteCount: analysis.expertQuoteCount, caseStudyCount: analysis.caseStudyCount,
+    statsFound: analysis.statsFound
+  },
+  recommendations: { all: finalRecommendations, count: finalRecommendations.length },
+  timestamp: new Date().toISOString()
+};
+console.log(`✅ computeScore: ${scanUrl} → ${totalScore}/100`);
+return result;
+}
                // ============================================================
                // ============================================================
                // SERVER-SIDE BULK JOB QUEUE — ROBUST VERSION
