@@ -10544,10 +10544,38 @@ async function _initSharedAuditAccess(){
 // payload can never stop small fields such as the customer URL from persisting.
 var _AUDIT_FIELDS = ['url','mode','pageLang','reportLang','sitemapUrl','gscUrls','brandNames','aiAnswers','chatgptPrimaryUrls','chatgptExtraUrls'];
 var _AUDIT_FIELD_PREFIX = 'cs_audit_field_';
+var _AUDIT_COOKIE_PREFIX = 'cs_audit_';
+function _setAuditCookie(id, value){
+  try {
+    // Small-field fallback that survives a normal refresh even if localStorage is restricted.
+    // Keep cookies limited to modest values; large GSC/AI payloads remain in browser storage only.
+    var v = value == null ? '' : String(value);
+    if(v.length > 3500) return;
+    document.cookie = _AUDIT_COOKIE_PREFIX + encodeURIComponent(id) + '=' + encodeURIComponent(v) + '; Max-Age=2592000; Path=/; SameSite=Lax';
+  } catch(e){}
+}
+function _getAuditCookie(id){
+  try {
+    var name=_AUDIT_COOKIE_PREFIX + encodeURIComponent(id) + '=';
+    var parts=(document.cookie||'').split(';');
+    for(var i=0;i<parts.length;i++){
+      var c=parts[i].trim();
+      if(c.indexOf(name)===0) return decodeURIComponent(c.slice(name.length));
+    }
+  } catch(e){}
+  return null;
+}
+function _clearAuditCookie(id){
+  try { document.cookie = _AUDIT_COOKIE_PREFIX + encodeURIComponent(id) + '=; Max-Age=0; Path=/; SameSite=Lax'; } catch(e){}
+}
 function _saveAuditField(id){
   try {
     var el=document.getElementById(id);
-    if(el) localStorage.setItem(_AUDIT_FIELD_PREFIX + id, el.value == null ? '' : String(el.value));
+    if(!el) return;
+    var v=el.value == null ? '' : String(el.value);
+    try { localStorage.setItem(_AUDIT_FIELD_PREFIX + id, v); } catch(e){}
+    try { sessionStorage.setItem(_AUDIT_FIELD_PREFIX + id, v); } catch(e){}
+    _setAuditCookie(id, v);
   } catch(e){}
 }
 function _saveState(ev){
@@ -10570,9 +10598,14 @@ function _loadState(){
     try { s = JSON.parse(localStorage.getItem('cs_audit_state')||'{}') || {}; } catch(e) { s={}; }
     _AUDIT_FIELDS.forEach(function(id){
       var el=document.getElementById(id); if(!el) return;
-      var individual=null;
+      var individual=null, sessionValue=null, cookieValue=null;
       try { individual=localStorage.getItem(_AUDIT_FIELD_PREFIX + id); } catch(e){}
+      try { sessionValue=sessionStorage.getItem(_AUDIT_FIELD_PREFIX + id); } catch(e){}
+      cookieValue=_getAuditCookie(id);
+      // Prefer the durable per-field value, then same-tab backup, cookie fallback, then legacy aggregate.
       if(individual!==null) el.value=individual;
+      else if(sessionValue!==null) el.value=sessionValue;
+      else if(cookieValue!==null) el.value=cookieValue;
       else if(s[id]!=null) el.value=s[id];
     });
     // laatste resultaat terugzetten
@@ -10594,7 +10627,11 @@ function resetAudit(){
     localStorage.removeItem('cs_audit_state');
     localStorage.removeItem('cs_audit_result');
     localStorage.removeItem('cs_audit_job');
-    _AUDIT_FIELDS.forEach(function(id){ localStorage.removeItem(_AUDIT_FIELD_PREFIX + id); });
+    _AUDIT_FIELDS.forEach(function(id){
+      localStorage.removeItem(_AUDIT_FIELD_PREFIX + id);
+      try { sessionStorage.removeItem(_AUDIT_FIELD_PREFIX + id); } catch(e){}
+      _clearAuditCookie(id);
+    });
   }catch(e){}
   var results=document.getElementById('results'); if(results) results.style.display='none';
   var status=document.getElementById('status'); if(status){ status.style.display='none'; status.textContent=''; }
@@ -10616,8 +10653,14 @@ function _initAuditPersistence(){
 }
 if(document.readyState==='loading') window.addEventListener('DOMContentLoaded', _initAuditPersistence);
 else _initAuditPersistence();
+// Restore again on pageshow and shortly after boot. This protects against later UI initializers
+// that may render after DOMContentLoaded and accidentally replace values with template defaults.
+window.addEventListener('pageshow', function(){ _loadState(); });
+setTimeout(function(){ _loadState(); }, 50);
+setTimeout(function(){ _loadState(); }, 500);
 // Extra safety for navigation/reload: persist all audit fields before the page is hidden.
 window.addEventListener('pagehide', function(){ _saveState(); });
+window.addEventListener('beforeunload', function(){ _saveState(); });
 function loadGscFile(input){
   var f=input.files&&input.files[0]; if(!f)return;
   var reader=new FileReader();
