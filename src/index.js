@@ -6535,6 +6535,22 @@ app.patch('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
    recommendations TEXT,
    created_at TIMESTAMP DEFAULT NOW()
    )`).catch(() => {});
+   // Audit share links — passwordless public reports protected by long random tokens.
+   await client.query(`CREATE TABLE IF NOT EXISTS audit_shares (
+   id BIGSERIAL PRIMARY KEY,
+   token VARCHAR(96) UNIQUE NOT NULL,
+   domain VARCHAR(255) NOT NULL,
+   source_url TEXT,
+   audit_type VARCHAR(40) NOT NULL,
+   report_language VARCHAR(10) DEFAULT 'en',
+   pages_scanned INTEGER DEFAULT 0,
+   total_pages_found INTEGER DEFAULT 0,
+   report_html TEXT NOT NULL,
+   created_at TIMESTAMP DEFAULT NOW(),
+   last_opened_at TIMESTAMP,
+   revoked_at TIMESTAMP
+   )`).catch(() => {});
+   await client.query(`CREATE INDEX IF NOT EXISTS idx_audit_shares_domain_created ON audit_shares(domain, created_at DESC)`).catch(() => {});
    // Batch jobs
    await client.query(`CREATE TABLE IF NOT EXISTS batch_jobs (
    id VARCHAR(64) PRIMARY KEY,
@@ -9561,7 +9577,8 @@ recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', descriptio
                    if (_given !== _ADMIN) {
                      return res.status(401).json({ success: false, error: 'Unauthorized — invalid code' });
                    }
-                   const { url, maxPages, mode, sitemapUrl, gscRaw, brandNames, aiAnswers } = req.body || {};
+                   const { url, maxPages, mode, sitemapUrl, gscRaw, brandNames, aiAnswers, pageLanguage } = req.body || {};
+                   const _pageLanguage = ['auto','ar','en','nl','es'].includes(String(pageLanguage||'auto').toLowerCase()) ? String(pageLanguage||'auto').toLowerCase() : 'auto';
                    if (!url) return res.status(400).json({ success: false, error: 'URL required' });
                    const base = url.startsWith('http') ? url : 'https://' + url;
                    const domain = new URL(base).hostname;
@@ -9941,6 +9958,7 @@ recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', descriptio
                      },
                      multilingual: {
                        languages: [...langs].sort(),
+                       page_language_requested: _pageLanguage,
                        language_count: langs.size,
                        has_hreflang: hasHreflang,
                        is_international: langs.size >= 2,
@@ -9957,6 +9975,128 @@ recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', descriptio
                  }
                });
 
+
+               // ─────────────────────────────────────────────────────────────
+               //  AUDIT SHARE LINKS — public, read-only, no password
+               //  Security comes from a 256-bit random token; domain is only human-readable.
+               // ─────────────────────────────────────────────────────────────
+               function _auditShareAdminOk(req) {
+                 const expected = (process.env.LC_ADMIN_CODE || 'Utrecht160011.@').trim();
+                 const given = String((req.body && req.body.code) || req.headers['x-admin-key'] || '').trim();
+                 return given && given === expected;
+               }
+               function _auditShareDomain(raw) {
+                 try {
+                   const u = String(raw || '').trim();
+                   const x = new URL(/^https?:\/\//i.test(u) ? u : ('https://' + u));
+                   return x.hostname.replace(/^www\./i,'').toLowerCase();
+                 } catch(e) { return ''; }
+               }
+               function _sanitizeAuditShareHtml(html) {
+                 let out = String(html || '');
+                 // Keep the generated report markup/styles, remove executable content.
+                 out = out.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '');
+                 out = out.replace(/<iframe\b[^>]*>[\s\S]*?<\/iframe>/gi, '');
+                 out = out.replace(/<object\b[^>]*>[\s\S]*?<\/object>/gi, '');
+                 out = out.replace(/<embed\b[^>]*>/gi, '');
+                 out = out.replace(/\son[a-z]+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, '');
+                 out = out.replace(/javascript\s*:/gi, '');
+                 return out.slice(0, 2000000);
+               }
+               function _auditShareType(mode) {
+                 return mode === 'test' ? '1-page' : (mode === 'full' ? 'all-pages' : '20-pages');
+               }
+
+               app.post('/api/audit-share', async (req, res) => {
+                 if (!_auditShareAdminOk(req)) return res.status(401).json({success:false,error:'Unauthorized'});
+                 if (!pool) return res.status(503).json({success:false,error:'Database unavailable'});
+                 try {
+                   const b = req.body || {};
+                   const domain = _auditShareDomain(b.domain || b.sourceUrl);
+                   if (!domain) return res.status(400).json({success:false,error:'Valid domain required'});
+                   const html = _sanitizeAuditShareHtml(b.reportHtml);
+                   if (html.length < 100) return res.status(400).json({success:false,error:'Report HTML missing'});
+                   const token = crypto.randomBytes(32).toString('hex');
+                   const auditType = ['1-page','20-pages','all-pages'].includes(b.auditType) ? b.auditType : _auditShareType(b.mode);
+                   const lang = ['nl','en','es','ar'].includes(String(b.reportLanguage||'').toLowerCase()) ? String(b.reportLanguage).toLowerCase() : 'en';
+                   await pool.query(`INSERT INTO audit_shares
+                     (token,domain,source_url,audit_type,report_language,pages_scanned,total_pages_found,report_html)
+                     VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
+                     [token,domain,String(b.sourceUrl||''),auditType,lang,parseInt(b.pagesScanned)||0,parseInt(b.totalPagesFound)||0,html]);
+                   const sharePath = '/share/' + encodeURIComponent(domain) + '/' + token;
+                   res.json({success:true,token,domain,auditType,reportLanguage:lang,sharePath,shareUrl:req.protocol+'://'+req.get('host')+sharePath});
+                 } catch(e) { res.status(500).json({success:false,error:e.message}); }
+               });
+
+               app.post('/api/audit-share/update/:token', async (req, res) => {
+                 if (!_auditShareAdminOk(req)) return res.status(401).json({success:false,error:'Unauthorized'});
+                 if (!pool) return res.status(503).json({success:false,error:'Database unavailable'});
+                 try {
+                   const token = String(req.params.token||'');
+                   if (!/^[a-f0-9]{64}$/.test(token)) return res.status(400).json({success:false,error:'Invalid token'});
+                   const html = _sanitizeAuditShareHtml((req.body||{}).reportHtml);
+                   const lang = ['nl','en','es','ar'].includes(String((req.body||{}).reportLanguage||'').toLowerCase()) ? String(req.body.reportLanguage).toLowerCase() : 'en';
+                   const r = await pool.query(`UPDATE audit_shares SET report_html=$1, report_language=$2 WHERE token=$3 AND revoked_at IS NULL RETURNING domain,audit_type`,[html,lang,token]);
+                   if (!r.rows.length) return res.status(404).json({success:false,error:'Share link not found'});
+                   res.json({success:true});
+                 } catch(e) { res.status(500).json({success:false,error:e.message}); }
+               });
+
+               app.post('/api/audit-shares/list', async (req, res) => {
+                 if (!_auditShareAdminOk(req)) return res.status(401).json({success:false,error:'Unauthorized'});
+                 if (!pool) return res.status(503).json({success:false,error:'Database unavailable'});
+                 try {
+                   const domain = _auditShareDomain((req.body||{}).domain || (req.body||{}).sourceUrl);
+                   const params=[]; let where='WHERE revoked_at IS NULL';
+                   if (domain) { params.push(domain); where += ' AND domain=$1'; }
+                   const r = await pool.query(`SELECT token,domain,source_url,audit_type,report_language,pages_scanned,total_pages_found,created_at,last_opened_at FROM audit_shares ${where} ORDER BY created_at DESC LIMIT 50`,params);
+                   const base=req.protocol+'://'+req.get('host');
+                   res.json({success:true,shares:r.rows.map(x=>({...x,shareUrl:base+'/share/'+encodeURIComponent(x.domain)+'/'+x.token}))});
+                 } catch(e) { res.status(500).json({success:false,error:e.message}); }
+               });
+
+               app.post('/api/audit-share/:token/revoke', async (req, res) => {
+                 if (!_auditShareAdminOk(req)) return res.status(401).json({success:false,error:'Unauthorized'});
+                 if (!pool) return res.status(503).json({success:false,error:'Database unavailable'});
+                 try {
+                   const token=String(req.params.token||'');
+                   if (!/^[a-f0-9]{64}$/.test(token)) return res.status(400).json({success:false,error:'Invalid token'});
+                   await pool.query('UPDATE audit_shares SET revoked_at=NOW() WHERE token=$1',[token]);
+                   res.json({success:true});
+                 } catch(e) { res.status(500).json({success:false,error:e.message}); }
+               });
+
+               app.post('/api/audit-share/:token/delete', async (req, res) => {
+                 if (!_auditShareAdminOk(req)) return res.status(401).json({success:false,error:'Unauthorized'});
+                 if (!pool) return res.status(503).json({success:false,error:'Database unavailable'});
+                 try {
+                   const token=String(req.params.token||'');
+                   if (!/^[a-f0-9]{64}$/.test(token)) return res.status(400).json({success:false,error:'Invalid token'});
+                   const r=await pool.query('DELETE FROM audit_shares WHERE token=$1 RETURNING token',[token]);
+                   if (!r.rows.length) return res.status(404).json({success:false,error:'Share link not found'});
+                   res.json({success:true});
+                 } catch(e) { res.status(500).json({success:false,error:e.message}); }
+               });
+
+               app.get('/share/:domain/:token', async (req, res) => {
+                 if (!pool) return res.status(503).type('html').send('<h1>Service unavailable</h1>');
+                 try {
+                   const token=String(req.params.token||'');
+                   const pathDomain=_auditShareDomain(req.params.domain||'');
+                   if (!/^[a-f0-9]{64}$/.test(token)) return res.status(404).type('html').send('<h1>Report not found</h1>');
+                   const r=await pool.query('SELECT * FROM audit_shares WHERE token=$1 AND revoked_at IS NULL',[token]);
+                   if (!r.rows.length || !pathDomain || r.rows[0].domain.toLowerCase() !== pathDomain) return res.status(404).type('html').send('<h1>Report not found</h1>');
+                   const sh=r.rows[0];
+                   pool.query('UPDATE audit_shares SET last_opened_at=NOW() WHERE token=$1',[token]).catch(()=>{});
+                   const typeLabel=sh.audit_type==='1-page'?'1-Page Scan':(sh.audit_type==='20-pages'?'20-Page Audit':'All-Pages Audit');
+                   const rtl=sh.report_language==='ar';
+                   res.setHeader('Cache-Control','no-store');
+                   res.type('html').send(`<!doctype html><html lang="${sh.report_language||'en'}" dir="${rtl?'rtl':'ltr'}"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow,noarchive"><title>${sh.domain} — ${typeLabel} — ContentScale</title>
+<style>*{box-sizing:border-box}body{font-family:'Segoe UI',system-ui,sans-serif;margin:0;background:#f4f4f7;color:#1a1a2e}.sharewrap{max-width:900px;margin:0 auto;padding:24px}.sharebar{background:linear-gradient(135deg,#4c1d95,#6d28d9);color:#fff;border-radius:12px;padding:14px 18px;margin-bottom:18px;display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap}.sharebar strong{font-size:15px}.sharebar span{font-size:12px;opacity:.9}.box{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:20px;margin:14px 0}.box h2{margin:0 0 10px;font-size:16px;color:#4c1d95}.scorestrip{display:flex;flex-wrap:wrap;gap:10px;margin:16px 0}.sc{flex:1;min-width:120px;text-align:center;border:1px solid #e5e7eb;border-radius:10px;padding:16px 8px;background:#fff}.sc .n{font-size:30px;font-weight:800;line-height:1}.sc .l{font-size:11px;color:#666;margin-top:6px}table{width:100%;border-collapse:collapse;font-size:13px}th{background:#4c1d95;color:#fff;text-align:left;padding:8px 10px}td{border-bottom:1px solid #eee;padding:7px 10px}a{overflow-wrap:anywhere}@media print{.sharebar{display:none!important}body{background:#fff}.sharewrap{padding:0}}</style></head><body><div class="sharewrap"><div class="sharebar"><div><strong>ContentScale · ${typeLabel}</strong><br><span>${sh.domain}</span></div><span>Read-only shared report</span></div>${sh.report_html}</div></body></html>`);
+                 } catch(e) { res.status(500).type('html').send('<h1>Could not load report</h1>'); }
+               });
 
                // ─────────────────────────────────────────────────────────────
                //  /audit — zichtbare audit-pagina: URL invoeren → rapport + PDF
@@ -10010,7 +10150,8 @@ recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', descriptio
   <div class="field" style="max-width:200px"><label>🔒 Toegangscode</label><input id="code" type="password" placeholder="geheime code"></div>
   <div class="field"><label>Website-URL van de klant</label><input id="url" placeholder="https://klant.nl" value=""></div>
   <div class="field" style="max-width:170px"><label>Modus</label><select id="mode"><option value="test">Test (1 pagina, snel)</option><option value="quick">Snel (20 pag.)</option><option value="full">Volledig</option></select></div>
-  <div class="field" style="max-width:150px"><label>Rapport-taal</label><select id="reportLang" onchange="rerenderReport()"><option value="nl">Nederlands</option><option value="es">Español</option><option value="en">English</option></select></div>
+  <div class="field" style="max-width:150px"><label>Pagina-taal</label><select id="pageLang"><option value="auto">Auto-detect</option><option value="ar">العربية</option><option value="en">English</option><option value="nl">Nederlands</option><option value="es">Español</option></select></div>
+  <div class="field" style="max-width:150px"><label>Rapport-taal</label><select id="reportLang" onchange="rerenderReport()"><option value="nl">Nederlands</option><option value="ar">العربية</option><option value="es">Español</option><option value="en">English</option></select></div>
   <button id="run" onclick="runAudit()">Audit uitvoeren</button>
   <button id="resetBtn" onclick="resetAudit()" style="background:#fff;color:#dc2626;border:1.5px solid #dc2626;">Reset</button>
 </div>
@@ -10177,9 +10318,18 @@ https://argaam.com/..."></textarea>
   </div>
 </div>
 
+<div id="sharePanel" class="noprint" style="background:#fff;border:1px solid var(--bd);border-radius:12px;padding:18px 20px;margin:18px 0 32px;">
+  <div style="display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap;">
+    <div><div style="font-weight:800;color:var(--p);font-size:16px;">🔗 Saved share links</div><div style="font-size:12px;color:#666;margin-top:3px;">Passwordless, read-only reports. The real scanned domain is included in every link; the long random token keeps it private.</div></div>
+    <button type="button" onclick="loadAuditShares()" style="padding:8px 14px;background:#fff;color:var(--p);border:1px solid #c4b5fd;">Refresh links</button>
+  </div>
+  <div id="currentShare" style="display:none;margin-top:12px;padding:12px;background:#faf5ff;border:1px solid #ddd6fe;border-radius:8px;"></div>
+  <div id="shareList" style="margin-top:12px;font-size:13px;color:#666;">Run a scan to create its share link automatically.</div>
+</div>
+
 <script>
 // ── Gegevens bewaren in de browser (blijven na verversen/weggaan) ──
-var _AUDIT_FIELDS = ['url','mode','reportLang','sitemapUrl','gscUrls','brandNames','aiAnswers','chatgptPrimaryUrls','chatgptExtraUrls'];
+var _AUDIT_FIELDS = ['url','mode','pageLang','reportLang','sitemapUrl','gscUrls','brandNames','aiAnswers','chatgptPrimaryUrls','chatgptExtraUrls'];
 function _saveState(){
   try {
     var s = {};
@@ -10215,6 +10365,7 @@ function resetAudit(){
   var status=document.getElementById('status'); if(status){ status.style.display='none'; status.textContent=''; }
   // Return selects to their page defaults after clearing the audit.
   var mode=document.getElementById('mode'); if(mode) mode.value='test';
+  var plang=document.getElementById('pageLang'); if(plang) plang.value='auto';
   var lang=document.getElementById('reportLang'); if(lang) lang.value='nl';
 }
 // sla op bij elke wijziging + laad bij openen
@@ -10224,6 +10375,8 @@ window.addEventListener('DOMContentLoaded', function(){
     var el=document.getElementById(id);
     if(el){ el.addEventListener('input', _saveState); el.addEventListener('change', _saveState); }
   });
+  _renderShareList();
+  var _codeEl=document.getElementById('code'); if(_codeEl){_codeEl.addEventListener('change',loadAuditShares);}
 });
 function loadGscFile(input){
   var f=input.files&&input.files[0]; if(!f)return;
@@ -10293,12 +10446,100 @@ function _setAuditFinished(message){
   st.classList.remove('on');
   st.textContent=message||'';
 }
+function _auditTypeFromMode(mode){ return mode==='test'?'1-page':(mode==='full'?'all-pages':'20-pages'); }
+function _auditTypeLabel(t){ return t==='1-page'?'1-Page Scan':(t==='20-pages'?'20-Page Audit':'All-Pages Audit'); }
+function _shareDomain(raw){ try{ var u=String(raw||'').trim(); var x=new URL(/^https?:\/\//i.test(u)?u:'https://'+u); return x.hostname.replace(/^www\./i,'').toLowerCase(); }catch(e){ return ''; } }
+function _reportHtmlForShare(){
+  var el=document.getElementById('results'); if(!el)return '';
+  var clone=el.cloneNode(true); clone.style.display='block';
+  Array.from(clone.querySelectorAll('.noprint,.actions')).forEach(function(x){x.remove();});
+  return clone.innerHTML;
+}
+function _saveLocalShare(sh){
+  try{
+    var a=JSON.parse(localStorage.getItem('cs_audit_share_history')||'[]');
+    a=a.filter(function(x){return x.token!==sh.token;}); a.unshift(sh);
+    localStorage.setItem('cs_audit_share_history',JSON.stringify(a.slice(0,50)));
+    localStorage.setItem('cs_audit_current_share',JSON.stringify(sh));
+  }catch(e){}
+  _renderShareList();
+}
+function _renderShareList(serverShares){
+  var list=document.getElementById('shareList'); if(!list)return;
+  var a=serverShares;
+  if(!Array.isArray(a)){ try{a=JSON.parse(localStorage.getItem('cs_audit_share_history')||'[]');}catch(e){a=[];} }
+  if(!a.length){list.innerHTML='No saved share links yet. Run a scan and the link will be created here automatically.';return;}
+  list.innerHTML=a.map(function(sh){
+    var url=sh.shareUrl||sh.share_url||''; var created=sh.created_at||sh.createdAt||'';
+    var dt=created?new Date(created).toLocaleString():'';
+    return '<div style="border-top:1px solid #eee;padding:10px 0;display:flex;gap:10px;align-items:center;flex-wrap:wrap;">'
+      +'<div style="flex:1;min-width:250px;"><strong style="color:#111827">'+(sh.domain||'')+'</strong> · '+_auditTypeLabel(sh.auditType||sh.audit_type)+'<div style="font-size:11px;color:#888;margin-top:2px"><strong>Created:</strong> '+dt+'</div><div style="font-family:monospace;font-size:11px;color:#6b7280;word-break:break-all;margin-top:3px">'+url+'</div></div>'
+      +'<button type="button" data-url="'+encodeURIComponent(url)+'" onclick="copyShareLink(decodeURIComponent(this.dataset.url))" style="padding:7px 10px">Copy</button>'
+      +'<button type="button" data-url="'+encodeURIComponent(url)+'" onclick="window.open(decodeURIComponent(this.dataset.url))" style="padding:7px 10px;background:#fff;color:#4c1d95;border:1px solid #c4b5fd">Open</button>'
+      +'<button type="button" data-token="'+(sh.token||'')+'" onclick="revokeAuditShare(this.dataset.token)" style="padding:7px 10px;background:#fff;color:#b45309;border:1px solid #fcd34d">Revoke</button>'
+      +'<button type="button" data-token="'+(sh.token||'')+'" onclick="deleteAuditShare(this.dataset.token)" style="padding:7px 10px;background:#dc2626;color:#fff;border:1px solid #dc2626">Delete</button></div>';
+  }).join('');
+}
+function copyShareLink(url){ if(!url)return; navigator.clipboard.writeText(url).then(function(){alert('Share link copied');}).catch(function(){prompt('Copy this share link:',url);}); }
+async function createAuditShare(d){
+  try{
+    var code=(document.getElementById('code')||{}).value||''; if(!code||!d)return;
+    var domain=_shareDomain(d.domain||d.client_url||document.getElementById('url').value); if(!domain)return;
+    var mode=d.mode||(document.getElementById('mode')||{}).value||'test';
+    var reportLang=(document.getElementById('reportLang')||{}).value||'nl';
+    var r=await fetch('/api/audit-share',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:code,domain:domain,sourceUrl:d.client_url||document.getElementById('url').value,mode:mode,auditType:_auditTypeFromMode(mode),reportLanguage:reportLang,pagesScanned:d.pages_scanned||0,totalPagesFound:d.total_pages_found||0,reportHtml:_reportHtmlForShare()})});
+    var x=await r.json(); if(!x.success)return;
+    var sh={token:x.token,domain:x.domain,auditType:x.auditType,reportLanguage:x.reportLanguage,shareUrl:x.shareUrl,createdAt:new Date().toISOString()};
+    _saveLocalShare(sh);
+    var cur=document.getElementById('currentShare'); if(cur){var enc=encodeURIComponent(x.shareUrl);cur.style.display='block';cur.innerHTML='<strong>'+_auditTypeLabel(x.auditType)+' share ready:</strong><div style="font-family:monospace;font-size:11px;word-break:break-all;margin:6px 0">'+x.shareUrl+'</div><button type="button" data-url="'+enc+'" onclick="copyShareLink(decodeURIComponent(this.dataset.url))" style="padding:7px 10px">Copy link</button> <button type="button" data-url="'+enc+'" onclick="window.open(decodeURIComponent(this.dataset.url))" style="padding:7px 10px;background:#fff;color:#4c1d95;border:1px solid #c4b5fd">Open</button>'; }
+  }catch(e){ console.warn('Could not create audit share:',e.message); }
+}
+async function updateCurrentAuditShare(){
+  try{
+    var sh=JSON.parse(localStorage.getItem('cs_audit_current_share')||'null'); if(!sh||!sh.token)return;
+    var code=(document.getElementById('code')||{}).value||''; if(!code)return;
+    var lang=(document.getElementById('reportLang')||{}).value||'nl';
+    await fetch('/api/audit-share/update/'+sh.token,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:code,reportLanguage:lang,reportHtml:_reportHtmlForShare()})});
+  }catch(e){}
+}
+async function loadAuditShares(){
+  var code=(document.getElementById('code')||{}).value||'';
+  var domain=_shareDomain((document.getElementById('url')||{}).value||'');
+  if(!code){ _renderShareList(); return; }
+  try{ var r=await fetch('/api/audit-shares/list',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:code,domain:domain})}); var d=await r.json(); if(d.success){_renderShareList(d.shares);return;} }catch(e){}
+  _renderShareList();
+}
+async function revokeAuditShare(token){
+  if(!token||!confirm('Revoke this share link? It will stop working immediately.'))return;
+  var code=(document.getElementById('code')||{}).value||''; if(!code){alert('Enter the access code first.');return;}
+  try{var r=await fetch('/api/audit-share/'+token+'/revoke',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:code})});var d=await r.json();if(d.success){try{var a=JSON.parse(localStorage.getItem('cs_audit_share_history')||'[]').filter(function(x){return x.token!==token;});localStorage.setItem('cs_audit_share_history',JSON.stringify(a));var c=JSON.parse(localStorage.getItem('cs_audit_current_share')||'null');if(c&&c.token===token)localStorage.removeItem('cs_audit_current_share');}catch(e){}loadAuditShares();}}catch(e){}
+}
+
+async function deleteAuditShare(token){
+  if(!token||!confirm('Permanently delete this saved share report? This cannot be undone and the public link will stop working immediately.'))return;
+  var code=(document.getElementById('code')||{}).value||''; if(!code){alert('Enter the access code first.');return;}
+  try{
+    var r=await fetch('/api/audit-share/'+token+'/delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:code})});
+    var d=await r.json();
+    if(!d.success){alert(d.error||'Could not delete share report.');return;}
+    try{
+      var a=JSON.parse(localStorage.getItem('cs_audit_share_history')||'[]').filter(function(x){return x.token!==token;});
+      localStorage.setItem('cs_audit_share_history',JSON.stringify(a));
+      var c=JSON.parse(localStorage.getItem('cs_audit_current_share')||'null');
+      if(c&&c.token===token)localStorage.removeItem('cs_audit_current_share');
+    }catch(e){}
+    var cur=document.getElementById('currentShare'); if(cur)cur.style.display='none';
+    loadAuditShares();
+  }catch(e){alert('Could not delete share report.');}
+}
+
 async function runAudit(){
   var url=document.getElementById('url').value.trim();
   var code=document.getElementById('code').value.trim();
   if(!code){alert('Voer de toegangscode in');return;}
   if(!url){alert('Voer een URL in');return;}
   var mode=document.getElementById('mode').value;
+  var pageLanguage=(document.getElementById('pageLang')||{}).value||'auto';
   var sitemapUrl=(document.getElementById('sitemapUrl')||{}).value||'';
   var gscRaw=(document.getElementById('gscUrls')||{}).value||'';
   var brandNames=(document.getElementById('brandNames')||{}).value||'';
@@ -10311,7 +10552,7 @@ async function runAudit(){
   _setAuditRunning('Audit gestart op de server… u kunt dit tabblad sluiten of weggaan; de audit loopt door.');
   document.getElementById('results').style.display='none';
   try{
-    var r=await fetch('/api/audit-start',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url:url,mode:mode,code:code,sitemapUrl:sitemapUrl,gscRaw:gscRaw,brandNames:brandNames,aiAnswers:aiAnswers})});
+    var r=await fetch('/api/audit-start',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url:url,mode:mode,code:code,sitemapUrl:sitemapUrl,gscRaw:gscRaw,brandNames:brandNames,aiAnswers:aiAnswers,pageLanguage:pageLanguage})});
     var d=await r.json();
     if(r.status===401){_setAuditFinished('🔒 Onjuiste toegangscode.');btn.disabled=false;btn.classList.remove('audit-pulse');return;}
     if(!d.success||!d.jobId){_setAuditFinished('⚠ '+(d.error||'Kon audit niet starten'));btn.disabled=false;btn.classList.remove('audit-pulse');return;}
@@ -10338,6 +10579,8 @@ function pollAudit(jobId){
       if(d.status==='done'&&d.result){
         try{ localStorage.setItem('cs_audit_result', JSON.stringify(d.result)); localStorage.removeItem('cs_audit_job'); }catch(e){}
         render(d.result); _setAuditFinished('');
+        // Automatically create a persistent, passwordless share link for this completed scan.
+        setTimeout(function(){createAuditShare(d.result);},50);
       } else {
         _setAuditFinished('⚠ '+(d.error||'Audit mislukt'));
         try{localStorage.removeItem('cs_audit_job');}catch(e){}
@@ -10352,6 +10595,9 @@ var RLANG={
  es:{verdict:'Veredicto',scores:'Puntuaciones',realcit:'Citas reales de IA',engine:'Motor de IA',mentioned:'¿Nombre mencionado?',urlcited:'¿Su web citada?',whocited:'Quién recibe la cita',competitors:'Competidores mencionados',yes:'✓ Mencionado',no:'✗ No mencionado',urlyes:'✓ Sí — su propia URL',urlno:'✗ No — vía un tercero',urlunknown:'? No muestra fuente',weakest:'Páginas más débiles',ml:'Multilingüe',opps:'Mayores oportunidades',page:'Página',score:'Puntuación',position:'Posición',impressions:'Impresiones',
   explain:{ai:'¿Está el sitio listo para ser citado por la IA (0-100)? Mide la estructura: FAQ, schema, estadísticas, señales de autor.',graaf:'Calidad media del contenido por página (0-100). Qué tan completo, estructurado y citable es.',tech:'Salud técnica (0-100): schema, canonical, meta-etiquetas, títulos.',faq:'Número de páginas con sección de FAQ — la estructura que la IA usa con más frecuencia.',schema:'Número de páginas con datos estructurados (schema.org) que ayudan a la IA a entender el contenido.',author:'Número de páginas con señales de autor/E-E-A-T que demuestran experiencia.'},
   ov:{title:'¿Qué significan estas puntuaciones?',intro:'Esta auditoría mide si los motores de IA (ChatGPT, Google AI, Perplexity) pueden y quieren usar su sitio como fuente. Cuanto más alto, mayor es la probabilidad de que le citen a usted en lugar de a su competidor.'}},
+ ar:{verdict:'التقييم',scores:'الدرجات',realcit:'استشهادات الذكاء الاصطناعي الفعلية',engine:'محرك الذكاء الاصطناعي',mentioned:'هل ذُكر الاسم؟',urlcited:'هل تم الاستشهاد بموقعك؟',whocited:'من يحصل على الاستشهاد',competitors:'المنافسون المذكورون',yes:'✓ مذكور',no:'✗ غير مذكور',urlyes:'✓ نعم — رابط موقعك',urlno:'✗ لا — عبر طرف ثالث',urlunknown:'؟ لا يظهر مصدرًا',weakest:'أضعف الصفحات',ml:'تعدد اللغات',opps:'أكبر الفرص',page:'الصفحة',score:'الدرجة',position:'الترتيب',impressions:'مرات الظهور',
+  explain:{ai:'هل الموقع جاهز ليتم الاستشهاد به من قِبل الذكاء الاصطناعي (0-100)؟ يقيس البنية: الأسئلة الشائعة، Schema، الإحصاءات، وإشارات المؤلف.',graaf:'متوسط جودة المحتوى لكل صفحة (0-100): مدى اكتماله وتنظيمه وقابليته للاستشهاد.',tech:'الصحة التقنية (0-100): Schema، canonical، الوسوم الوصفية، والعناوين.',faq:'عدد الصفحات التي تحتوي على قسم أسئلة شائعة — وهي بنية تلتقطها أنظمة الذكاء الاصطناعي كثيرًا.',schema:'عدد الصفحات التي تحتوي على بيانات منظمة (schema.org) تساعد الذكاء الاصطناعي على فهم المحتوى.',author:'عدد الصفحات التي تحتوي على إشارات مؤلف/E-E-A-T تثبت الخبرة.'},
+  ov:{title:'ماذا تعني هذه الدرجات؟',intro:'يقيس هذا التدقيق ما إذا كانت محركات البحث بالذكاء الاصطناعي مثل ChatGPT وGoogle AI وPerplexity تستطيع استخدام موقعك كمصدر وترغب في ذلك. كلما ارتفعت الدرجة زادت فرصة الاستشهاد بك بدلًا من منافسك.'}},
  en:{verdict:'Verdict',scores:'Scores',realcit:'Real AI citations',engine:'AI engine',mentioned:'Name mentioned?',urlcited:'Your site cited?',whocited:'Who gets the citation',competitors:'Competitors mentioned',yes:'✓ Mentioned',no:'✗ Not mentioned',urlyes:'✓ Yes — your own URL',urlno:'✗ No — via a third party',urlunknown:'? Shows no source',weakest:'Weakest pages',ml:'Multilingual',opps:'Biggest opportunities',page:'Page',score:'Score',position:'Position',impressions:'Impressions',
   explain:{ai:'Is the site ready to be cited by AI (0-100)? Measures structure: FAQ, schema, statistics, author signals.',graaf:'Average content quality per page (0-100). How complete, structured and citeable it is.',tech:'Technical health (0-100): schema, canonical, meta tags, titles.',faq:'Pages with an FAQ section — the structure AI lifts into answers most often.',schema:'Pages with structured data (schema.org) that helps AI understand the content.',author:'Pages with author/E-E-A-T signals that demonstrate expertise.'},
   ov:{title:'What do these scores mean?',intro:'This audit measures whether AI search engines (ChatGPT, Google AI, Perplexity) can and will use your site as a source. The higher, the greater the chance you are cited instead of your competitor.'}}
@@ -10366,6 +10612,10 @@ var RTEXT={
   proofTitle:'Prueba: esto entrego de forma medible',proofText:'En mi propia plataforma llevé una página de 0,1% a 7,4% de clics en ~120 días — y de invisible a citada en Google AI Overviews, Perplexity y Copilot. Aplico ese mismo proceso medible a su sitio.',proofCited:'Ahora citado en',
   moreTitle:'Más datos = consejo más preciso',moreText:'Esta auditoría se basa en lo medible públicamente. Con acceso a Google Search Console veo qué páginas reciben tráfico real y dónde está la ganancia más rápida. Con una medición de citas en vivo mediante mi AI Citations Tracker muestro exactamente en qué búsquedas su competidor sí aparece y usted no.',
   talkTitle:'Hablemos',talkText:'Trabajo directamente — sin gestores de cuenta, sin intermediarios.',waLabel:'WhatsApp (respuesta más rápida)',emailLabel:'Correo',webLabel:'Web',pdfBtn:'📄 Descargar PDF (imprimir)',pagesOf:'página del sitio · fuente:'},
+ ar:{verdictTitle:'التقييم',mlTitle:'تعدد اللغات',mlOne:'تم اكتشاف لغة واحدة',mlLangs:'اللغات',mlHreflangOk:'hreflang موجود ✓',mlHreflangGap:'hreflang مفقود — لا يستطيع الذكاء الاصطناعي معرفة الصفحة المناسبة لكل سوق',
+  proofTitle:'الدليل: هذه هي النتائج التي أقدمها بشكل قابل للقياس',proofText:'على منصتي الخاصة رفعت معدل النقر لإحدى الصفحات من 0.1% إلى 7.4% خلال نحو 120 يومًا — ومن غير مرئية إلى مُستشهد بها في Google AI Overviews وPerplexity وCopilot. أطبق العملية القابلة للقياس نفسها على موقعك.',proofCited:'مستشهد به الآن في',
+  moreTitle:'بيانات أكثر = توصيات أدق',moreText:'يعتمد هذا التدقيق على ما يمكن قياسه علنًا. مع الوصول إلى Google Search Console أرى الصفحات التي تحصل على زيارات فعلية وأين توجد أسرع فرص التحسين. ومع القياس المباشر للاستشهادات عبر AI Citations Tracker أوضح بالضبط الاستعلامات التي يُذكر فيها منافسك بينما لا تُذكر أنت.',
+  talkTitle:'لنتحدث',talkText:'أعمل معك مباشرة — بلا مديري حسابات أو وسطاء.',waLabel:'واتساب (أسرع رد)',emailLabel:'البريد الإلكتروني',webLabel:'الموقع',pdfBtn:'📄 تنزيل PDF (طباعة)',pagesOf:'صفحة من الموقع · المصدر:'},
  en:{verdictTitle:'Verdict',mlTitle:'Multilingual',mlOne:'One language detected',mlLangs:'Languages',mlHreflangOk:'hreflang present ✓',mlHreflangGap:'hreflang MISSING — AI cannot tell which page serves which market',
   proofTitle:'Proof: this is what I deliver, measurably',proofText:'On my own platform I took a page from 0.1% to 7.4% click-through in ~120 days — and from invisible to cited in Google AI Overviews, Perplexity and Copilot. I apply that same measurable process to your site.',proofCited:'Now cited in',
   moreTitle:'More data = sharper advice',moreText:'This audit is based on what is publicly measurable. With Google Search Console access I see which pages get real traffic and where the fastest wins are. With a live citation check via my AI Citations Tracker I show exactly which searches your competitor is cited for and you are not.',
@@ -10375,6 +10625,7 @@ function _rt(){ var s=(document.getElementById('reportLang')||{}).value||'nl'; r
 var RLINKS={
  nl:{site:'https://nl.contentscale.site',caseStudy:'https://nl.contentscale.site/ai-citaties-case-study/',graaf:'https://nl.contentscale.site/graaf-framework/',tracker:'https://contentscale.site/free-ai-citations-tracker/',scan:'https://app.contentscale.site',caseLabel:'Case study',graafLabel:'GRAAF Framework',scanLabel:'GRAAF ContentScore scan'},
  es:{site:'https://es.contentscale.site',caseStudy:'https://es.contentscale.site/caso-de-estudio-citas-ia/',graaf:'https://es.contentscale.site/que-es-geo/',tracker:'https://contentscale.site/free-ai-citations-tracker/',scan:'https://app.contentscale.site',caseLabel:'Caso de estudio',graafLabel:'Framework GRAAF',scanLabel:'Escáner GRAAF ContentScore'},
+ ar:{site:'https://contentscale.site',caseStudy:'https://contentscale.site/case-study',graaf:'https://contentscale.site/graaf-framework/',tracker:'https://contentscale.site/free-ai-citations-tracker/',scan:'https://app.contentscale.site',caseLabel:'دراسة حالة',graafLabel:'إطار GRAAF',scanLabel:'فحص GRAAF ContentScore'},
  en:{site:'https://contentscale.site',caseStudy:'https://contentscale.site/case-study',graaf:'https://contentscale.site/graaf-framework/',tracker:'https://contentscale.site/free-ai-citations-tracker/',scan:'https://app.contentscale.site',caseLabel:'Case study',graafLabel:'GRAAF Framework',scanLabel:'GRAAF ContentScore scanner'}
 };
 function _rlink(){ var s=(document.getElementById('reportLang')||{}).value||'nl'; return RLINKS[s]||RLINKS.nl; }
@@ -10383,7 +10634,7 @@ function rerenderReport(){
   // taal gewijzigd → toon het bestaande rapport opnieuw in de nieuwe taal, ZONDER opnieuw te scannen
   try{
     var last=localStorage.getItem('cs_audit_result');
-    if(last){ render(JSON.parse(last)); }
+    if(last){ render(JSON.parse(last)); setTimeout(updateCurrentAuditShare,80); }
   }catch(e){}
 }
 function render(d){
@@ -10401,7 +10652,8 @@ function render(d){
   var _verdicts={
     nl:[['Niet citeerbaar','AI-zoekmachines kunnen deze site nauwelijks als bron gebruiken. Uw concurrenten worden genoemd, u niet.'],['Gedeeltelijk citeerbaar','Belangrijke signalen ontbreken; AI kiest nu eerder een concurrent.'],['Klaar om geciteerd te worden','De structuur is er; nu is het een kwestie van autoriteit en tijd.']],
     es:[['No citable','Los motores de IA apenas pueden usar este sitio como fuente. Sus competidores son citados, usted no.'],['Parcialmente citable','Faltan señales importantes; la IA elige ahora antes a un competidor.'],['Listo para ser citado','La estructura está; ahora es cuestión de autoridad y tiempo.']],
-    en:[['Not citeable','AI search engines can barely use this site as a source. Your competitors are cited, you are not.'],['Partially citeable','Important signals are missing; AI now favours a competitor.'],['Ready to be cited','The structure is there; now it is a matter of authority and time.']]
+    en:[['Not citeable','AI search engines can barely use this site as a source. Your competitors are cited, you are not.'],['Partially citeable','Important signals are missing; AI now favours a competitor.'],['Ready to be cited','The structure is there; now it is a matter of authority and time.']],
+    ar:[['غير قابل للاستشهاد حاليًا','محركات البحث بالذكاء الاصطناعي لا تستطيع استخدام هذا الموقع بسهولة كمصدر. يتم الاستشهاد بمنافسين بينما لا يتم الاستشهاد بك.'],['قابل للاستشهاد جزئيًا','هناك إشارات مهمة مفقودة؛ لذلك قد يختار الذكاء الاصطناعي منافسًا أولًا.'],['جاهز للاستشهاد','البنية الأساسية موجودة؛ والخطوة التالية هي تعزيز السلطة والظهور مع الوقت.']]
   };
   var _vset=(_verdicts[_lk2]||_verdicts.nl);
   var _v=_ci>=75?_vset[2]:(_ci>=45?_vset[1]:_vset[0]);
@@ -10412,13 +10664,14 @@ function render(d){
   var _ph=document.getElementById('pdfMeta2'); if(_ph){ _ph.textContent=d.client_url||d.domain||''; }
   var T=_rl();
   var col=function(v){return v>=75?'#16a34a':v>=50?'#d97706':'#dc2626';};
-  var scores=[[T.explain?'AI':'AI',c.cite_index,T.explain.ai,({nl:'AI-Citeerbaarheid',es:'Citabilidad IA',en:'AI Citeability'})],
-              ['graaf',c.avg_graaf,T.explain.graaf,({nl:'GRAAF-kwaliteit',es:'Calidad GRAAF',en:'GRAAF quality'})],
-              ['tech',(d.technical||{}).technical_score,T.explain.tech,({nl:'Technisch',es:'Técnico',en:'Technical'})],
-              ['faq',c.pages_with_faq,T.explain.faq,({nl:'Met FAQ',es:'Con FAQ',en:'With FAQ'})],
-              ['schema',c.pages_with_schema,T.explain.schema,({nl:'Met schema',es:'Con schema',en:'With schema'})],
-              ['author',c.pages_with_author,T.explain.author,({nl:'Met auteur',es:'Con autor',en:'With author'})]];
+  var scores=[[T.explain?'AI':'AI',c.cite_index,T.explain.ai,({nl:'AI-Citeerbaarheid',es:'Citabilidad IA',en:'AI Citeability',ar:'قابلية الاستشهاد بالذكاء الاصطناعي'})],
+              ['graaf',c.avg_graaf,T.explain.graaf,({nl:'GRAAF-kwaliteit',es:'Calidad GRAAF',en:'GRAAF quality',ar:'جودة GRAAF'})],
+              ['tech',(d.technical||{}).technical_score,T.explain.tech,({nl:'Technisch',es:'Técnico',en:'Technical',ar:'تقني'})],
+              ['faq',c.pages_with_faq,T.explain.faq,({nl:'Met FAQ',es:'Con FAQ',en:'With FAQ',ar:'مع أسئلة شائعة'})],
+              ['schema',c.pages_with_schema,T.explain.schema,({nl:'Met schema',es:'Con schema',en:'With schema',ar:'مع Schema'})],
+              ['author',c.pages_with_author,T.explain.author,({nl:'Met auteur',es:'Con autor',en:'With author',ar:'مع مؤلف'})]];
   var _langKey=(document.getElementById('reportLang')||{}).value||'nl';
+  var _resultsEl=document.getElementById('results'); if(_resultsEl) _resultsEl.dir=(_langKey==='ar'?'rtl':'ltr');
   document.getElementById('scores').innerHTML=scores.map(function(s){
     var lbl=s[3][_langKey]||s[3].nl;
     return '<div class="sc" title="'+(s[2]||'').replace(/"/g,'')+'"><div class="n" style="color:'+col(s[1])+'">'+(s[1]||0)+'</div><div class="l">'+lbl+'</div><div style="font-size:9px;color:#999;margin-top:4px;line-height:1.3">'+(s[2]||'')+'</div></div>';
@@ -10447,7 +10700,7 @@ function render(d){
     var citebox=document.getElementById('citebox');
     var h2=citebox.querySelector('h2'); if(h2) h2.textContent=T.realcit;
     var citeExpl=document.getElementById('citeExpl');
-    var explTxt=({nl:'"Naam genoemd" = de AI noemt het merk. "Eigen URL geciteerd" = een bronverwijzing naar uw eigen website is expliciet aan de merkvermelding gekoppeld. "Via een ander" wordt alleen getoond bij een expliciete bronkoppeling; anders: "Niet vast te stellen".',es:'"Nombre mencionado" = la IA menciona la marca. "URL propia citada" = una referencia a su sitio está vinculada explícitamente a la mención. "A través de otro" solo se muestra con una relación explícita; de lo contrario: "No se puede determinar".',en:'"Name mentioned" = the AI names the brand. "Own URL cited" = a source reference to your site is explicitly linked to the brand mention. "Via another" is shown only when that relationship is explicit; otherwise: "Cannot be determined".'})[_langKey];
+    var explTxt=({nl:'"Naam genoemd" = de AI noemt het merk. "Eigen URL geciteerd" = een bronverwijzing naar uw eigen website is expliciet aan de merkvermelding gekoppeld. "Via een ander" wordt alleen getoond bij een expliciete bronkoppeling; anders: "Niet vast te stellen".',es:'"Nombre mencionado" = la IA menciona la marca. "URL propia citada" = una referencia a su sitio está vinculada explícitamente a la mención. "A través de otro" solo se muestra con una relación explícita; de lo contrario: "No se puede determinar".',en:'"Name mentioned" = the AI names the brand. "Own URL cited" = a source reference to your site is explicitly linked to the brand mention. "Via another" is shown only when that relationship is explicit; otherwise: "Cannot be determined".',ar:'"ذُكر الاسم" يعني أن الذكاء الاصطناعي ذكر العلامة التجارية. "تم الاستشهاد بموقعك" يعني أن مرجعًا إلى موقعك مرتبط صراحة بذكر العلامة. ولا يظهر "عبر طرف ثالث" إلا عند وجود هذا الارتباط صراحة؛ وإلا تظهر الحالة: "لا يمكن التحديد".'})[_langKey];
     if(!citeExpl){ citeExpl=document.createElement('p'); citeExpl.id='citeExpl'; citeExpl.style.cssText='font-size:12px;color:#666;margin:0 0 8px;'; if(h2) h2.parentNode.insertBefore(citeExpl, h2.nextSibling); }
     citeExpl.textContent=explTxt;
     var cb=document.querySelector('#citetbl tbody');
@@ -10463,7 +10716,7 @@ function render(d){
         urlc='<span style="color:#999;font-weight:700">? Niet vast te stellen</span>';
       }
       // toon de bronnen die in het antwoord voorkwamen; dit is geen bron-attributiebewijs die de AI citeerde (bewijs: niet uw site, maar directories)
-      if(cc.showsSources && cc.citedSources){ urlc += '<div style="font-size:10px;color:#888;margin-top:3px">'+({nl:'bronnen: ',es:'fuentes: ',en:'sources: '})[_langKey]+cc.citedSources+'</div>'; }
+      if(cc.showsSources && cc.citedSources){ urlc += '<div style="font-size:10px;color:#888;margin-top:3px">'+({nl:'bronnen: ',es:'fuentes: ',en:'sources: ',ar:'المصادر: '})[_langKey]+cc.citedSources+'</div>'; }
       return '<tr><td>'+e+'</td><td>'+ment+'</td><td>'+urlc+'</td><td>'+(cc.competitors||'—')+'</td></tr>';
     }).join('');
     document.getElementById('citebox').style.display='block';
@@ -10503,11 +10756,11 @@ function render(d){
     : RT.mlOne+' ('+((ml.languages||[]).join(', ')||'?')+').';
   // meta-regel in de juiste taal — vertaal ook het bron-label
   var _srcMap={
-    'Handmatige sitemap':{es:'sitemap manual',en:'manual sitemap',nl:'handmatige sitemap'},
-    'XML-sitemap':{es:'sitemap XML',en:'XML sitemap',nl:'XML-sitemap'},
-    'Interne crawl vanaf homepage (geen sitemap/GSC)':{es:'rastreo interno desde la homepage',en:'internal crawl from homepage',nl:'interne crawl vanaf homepage'},
-    'Google Search Console (gekozen op kans: impressies × positie)':{es:'Google Search Console (por oportunidad)',en:'Google Search Console (by opportunity)',nl:'Google Search Console (op kans)'},
-    'Alleen homepage (site niet crawlbaar — mogelijk een besloten portaal of bot-blokkade)':{es:'solo homepage (sitio no rastreable)',en:'homepage only (site not crawlable)',nl:'alleen homepage'}
+    'Handmatige sitemap':{es:'sitemap manual',en:'manual sitemap',nl:'handmatige sitemap',ar:'خريطة موقع يدوية'},
+    'XML-sitemap':{es:'sitemap XML',en:'XML sitemap',nl:'XML-sitemap',ar:'خريطة موقع XML'},
+    'Interne crawl vanaf homepage (geen sitemap/GSC)':{es:'rastreo interno desde la homepage',en:'internal crawl from homepage',nl:'interne crawl vanaf homepage',ar:'زحف داخلي من الصفحة الرئيسية'},
+    'Google Search Console (gekozen op kans: impressies × positie)':{es:'Google Search Console (por oportunidad)',en:'Google Search Console (by opportunity)',nl:'Google Search Console (op kans)',ar:'Google Search Console (حسب الفرصة)'},
+    'Alleen homepage (site niet crawlbaar — mogelijk een besloten portaal of bot-blokkade)':{es:'solo homepage (sitio no rastreable)',en:'homepage only (site not crawlable)',nl:'alleen homepage',ar:'الصفحة الرئيسية فقط (الموقع غير قابل للزحف)'}
   };
   var _srcTxt=(_srcMap[d.inventory_source]&&_srcMap[d.inventory_source][_langKey])||d.inventory_source;
   document.getElementById('meta').textContent=d.domain+' · '+d.pages_scanned+' / '+d.total_pages_found+' '+RT.pagesOf+' '+_srcTxt;
