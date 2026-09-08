@@ -10284,6 +10284,18 @@ recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', descriptio
                    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
                  )`);
                }
+               async function _saveAuditDraftFallback(token, data){
+                 const key='audit_draft:'+token;
+                 const payload=JSON.stringify({data:data||{},createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()});
+                 await pool.query(`INSERT INTO app_settings(key,value,updated_at) VALUES($1,$2,NOW())
+                   ON CONFLICT(key) DO UPDATE SET value=EXCLUDED.value, updated_at=NOW()`, [key,payload]);
+                 return {created_at:new Date(),updated_at:new Date()};
+               }
+               async function _loadAuditDraftFallback(token){
+                 const r=await pool.query('SELECT value,updated_at FROM app_settings WHERE key=$1',['audit_draft:'+token]);
+                 if(!r.rows.length) return null;
+                 try { const v=JSON.parse(r.rows[0].value||'{}'); return {data:v.data||{},created_at:v.createdAt||r.rows[0].updated_at,updated_at:r.rows[0].updated_at}; } catch(e){ return null; }
+               }
                app.post('/api/audit-draft/save', async (req, res) => {
                  try {
                    if(!pool) return res.status(503).json({success:false,error:'Database unavailable'});
@@ -10291,25 +10303,19 @@ recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', descriptio
                    const data=(b.data && typeof b.data==='object' && !Array.isArray(b.data)) ? b.data : {};
                    let token=String(b.token||'').trim().toLowerCase();
                    if(!/^[a-f0-9]{64}$/.test(token)) token=require('crypto').randomBytes(32).toString('hex');
-                   let r;
+                   let row=null, storage='audit_drafts';
                    try {
-                     r=await pool.query(`INSERT INTO audit_drafts(token,data,created_at,updated_at)
+                     let r=await pool.query(`INSERT INTO audit_drafts(token,data,created_at,updated_at)
                        VALUES($1,$2::jsonb,NOW(),NOW())
                        ON CONFLICT(token) DO UPDATE SET data=EXCLUDED.data, updated_at=NOW()
                        RETURNING created_at,updated_at`, [token, JSON.stringify(data)]);
+                     row=r.rows[0]||null;
                    } catch(dbErr) {
-                     // If this deployment predates the audit_drafts migration, create it once and retry.
-                     if(dbErr && dbErr.code === '42P01') {
-                       await _ensureAuditDraftTable();
-                       r=await pool.query(`INSERT INTO audit_drafts(token,data,created_at,updated_at)
-                         VALUES($1,$2::jsonb,NOW(),NOW())
-                         ON CONFLICT(token) DO UPDATE SET data=EXCLUDED.data, updated_at=NOW()
-                         RETURNING created_at,updated_at`, [token, JSON.stringify(data)]);
-                     } else {
-                       throw dbErr;
-                     }
+                     console.warn('audit_drafts save failed, using app_settings fallback:', dbErr && dbErr.message);
+                     storage='app_settings';
+                     row=await _saveAuditDraftFallback(token,data);
                    }
-                   res.json({success:true,token,createdAt:r.rows[0]&&r.rows[0].created_at,updatedAt:r.rows[0]&&r.rows[0].updated_at});
+                   res.json({success:true,token,storage,createdAt:row&&row.created_at,updatedAt:row&&row.updated_at});
                  } catch(e) {
                    console.error('audit draft save', e && (e.stack || e.message) || e);
                    res.status(500).json({success:false,error:'Could not save audit draft',detail:(e&&e.message)||String(e),code:(e&&e.code)||null});
@@ -10319,18 +10325,24 @@ recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', descriptio
                  try {
                    const token=String(req.params.token||'').trim();
                    if(!/^[a-f0-9]{64}$/i.test(token)) return res.status(404).json({success:false,error:'Draft not found'});
-                   await _ensureAuditDraftTable();
-                   const r=await pool.query('SELECT data,created_at,updated_at FROM audit_drafts WHERE token=$1',[token]);
-                   if(!r.rows.length) return res.status(404).json({success:false,error:'Draft not found'});
-                   res.json({success:true,token,data:r.rows[0].data||{},createdAt:r.rows[0].created_at,updatedAt:r.rows[0].updated_at});
-                 } catch(e) { res.status(500).json({success:false,error:'Could not load audit draft'}); }
+                   try {
+                     const r=await pool.query('SELECT data,created_at,updated_at FROM audit_drafts WHERE token=$1',[token]);
+                     if(r.rows.length) return res.json({success:true,token,data:r.rows[0].data||{},createdAt:r.rows[0].created_at,updatedAt:r.rows[0].updated_at,storage:'audit_drafts'});
+                   } catch(dbErr) { console.warn('audit_drafts load failed, trying app_settings:', dbErr && dbErr.message); }
+                   const f=await _loadAuditDraftFallback(token);
+                   if(!f) return res.status(404).json({success:false,error:'Draft not found'});
+                   res.json({success:true,token,data:f.data||{},createdAt:f.created_at,updatedAt:f.updated_at,storage:'app_settings'});
+                 } catch(e) { res.status(500).json({success:false,error:'Could not load audit draft',detail:(e&&e.message)||String(e),code:(e&&e.code)||null}); }
                });
                app.delete('/api/audit-draft/:token', async (req, res) => {
                  try {
                    const token=String(req.params.token||'').trim();
-                   if(/^[a-f0-9]{64}$/i.test(token)) { await _ensureAuditDraftTable(); await pool.query('DELETE FROM audit_drafts WHERE token=$1',[token]); }
+                   if(/^[a-f0-9]{64}$/i.test(token)) {
+                     try { await pool.query('DELETE FROM audit_drafts WHERE token=$1',[token]); } catch(e) {}
+                     await pool.query('DELETE FROM app_settings WHERE key=$1',['audit_draft:'+token]).catch(()=>{});
+                   }
                    res.json({success:true});
-                 } catch(e) { res.status(500).json({success:false,error:'Could not delete audit draft'}); }
+                 } catch(e) { res.status(500).json({success:false,error:'Could not delete audit draft',detail:(e&&e.message)||String(e)}); }
                });
 
 
