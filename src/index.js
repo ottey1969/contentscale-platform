@@ -10878,16 +10878,6 @@ Important:
 [paste Copilot answer + full References section]"></textarea>
       <div id="aiCitationPasteStatus" style="font-size:11px;color:#666;margin-top:5px;"></div><div id="aiCitationUrlPreview" style="font-size:11px;color:#555;margin-top:6px;line-height:1.6;"></div>
 
-      <div style="margin-top:10px;padding:12px;background:#fafafa;border:1px solid var(--bd);border-radius:8px;">
-        <div style="font-weight:700;color:var(--p);margin-bottom:7px;">🔗 ChatGPT Search citation URLs</div>
-        <p style="font-size:11px;color:#666;margin:0 0 8px;line-height:1.45;">Open each visible citation chip and paste its <strong>first / primary URL</strong>, one URL per line. If a chip says <code>+1</code>, <code>+2</code>, etc., those additional URLs are optional.</p>
-        <label style="font-size:12px;font-weight:600;">Primary URLs — one per citation chip</label>
-        <textarea id="chatgptPrimaryUrls" rows="3" style="width:100%;margin-top:3px;padding:8px;border:1px solid var(--bd);border-radius:6px;font-size:11px;font-family:monospace;" placeholder="https://brokerchooser.com/...
-https://argaam.com/..."></textarea>
-        <label style="font-size:12px;font-weight:600;display:block;margin-top:7px;">Additional URLs behind +N — optional</label>
-        <textarea id="chatgptExtraUrls" rows="2" style="width:100%;margin-top:3px;padding:8px;border:1px solid var(--bd);border-radius:6px;font-size:11px;font-family:monospace;" placeholder="Optional: second/third source URLs"></textarea>
-        <p style="font-size:10px;color:#888;margin:5px 0 0;">Tracking parameters such as <code>utm_source=chatgpt.com</code> are cleaned automatically by the citation importer.</p>
-      </div>
     </div>
   </details>
 </div>
@@ -47648,3 +47638,5 @@ app.post('/boost/:id/engage', asyncHandler(async (req, res) => {
 console.log('AI-CITATION-DOMAIN-VS-EXACT-PAGE-20260908=true');
 
 // AI-CITATION-DIRECT-SUPPORT-PRIORITY-PAGES-PROMPT-20260908=true
+
+// AI-CITATION-CHATGPT-URL-UI-REMOVED-20260908=true
