@@ -10308,7 +10308,7 @@ recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', descriptio
 
 <div class="form noprint">
   <div class="field" id="adminCodeField" style="max-width:200px"><label>🔒 Toegangscode</label><input id="code" type="password" placeholder="geheime code"></div>
-  <div class="field"><label>Website-URL van de klant</label><input id="url" placeholder="https://klant.nl" value=""></div>
+  <div class="field"><label>Website-URL van de klant</label><input id="url" placeholder="https://klant.nl" value="" oninput="_saveState(event)" onchange="_saveState(event)"></div>
   <div class="field" style="max-width:170px"><label>Modus</label><select id="mode"><option value="test">Test (1 pagina, snel)</option><option value="quick">Snel (20 pag.)</option><option value="full">Volledig</option></select></div>
   <div class="field" style="max-width:150px"><label>Pagina-taal</label><select id="pageLang"><option value="auto">Auto-detect</option><option value="ar">العربية</option><option value="en">English</option><option value="nl">Nederlands</option><option value="es">Español</option></select></div>
   <div class="field" style="max-width:150px"><label>Rapport-taal</label><select id="reportLang" onchange="rerenderReport()"><option value="nl">Nederlands</option><option value="ar">العربية</option><option value="es">Español</option><option value="en">English</option></select></div>
@@ -10540,8 +10540,24 @@ async function _initSharedAuditAccess(){
   }
 }
 // ── Gegevens bewaren in de browser (blijven na verversen/weggaan) ──
+// Each field is also stored under its own key. This means a large pasted AI/GSC
+// payload can never stop small fields such as the customer URL from persisting.
 var _AUDIT_FIELDS = ['url','mode','pageLang','reportLang','sitemapUrl','gscUrls','brandNames','aiAnswers','chatgptPrimaryUrls','chatgptExtraUrls'];
-function _saveState(){
+var _AUDIT_FIELD_PREFIX = 'cs_audit_field_';
+function _saveAuditField(id){
+  try {
+    var el=document.getElementById(id);
+    if(el) localStorage.setItem(_AUDIT_FIELD_PREFIX + id, el.value == null ? '' : String(el.value));
+  } catch(e){}
+}
+function _saveState(ev){
+  // Persist the field being typed into FIRST, immediately on every keystroke/change.
+  // Then keep the legacy aggregate state as a best-effort compatibility snapshot.
+  try {
+    var t=ev && ev.target;
+    if(t && t.id && _AUDIT_FIELDS.indexOf(t.id)!==-1) _saveAuditField(t.id);
+    else _AUDIT_FIELDS.forEach(_saveAuditField);
+  } catch(e){}
   try {
     var s = {};
     _AUDIT_FIELDS.forEach(function(id){ var el=document.getElementById(id); if(el) s[id]=el.value; });
@@ -10550,8 +10566,15 @@ function _saveState(){
 }
 function _loadState(){
   try {
-    var s = JSON.parse(localStorage.getItem('cs_audit_state')||'{}');
-    _AUDIT_FIELDS.forEach(function(id){ var el=document.getElementById(id); if(el && s[id]!=null) el.value=s[id]; });
+    var s = {};
+    try { s = JSON.parse(localStorage.getItem('cs_audit_state')||'{}') || {}; } catch(e) { s={}; }
+    _AUDIT_FIELDS.forEach(function(id){
+      var el=document.getElementById(id); if(!el) return;
+      var individual=null;
+      try { individual=localStorage.getItem(_AUDIT_FIELD_PREFIX + id); } catch(e){}
+      if(individual!==null) el.value=individual;
+      else if(s[id]!=null) el.value=s[id];
+    });
     // laatste resultaat terugzetten
     var last = localStorage.getItem('cs_audit_result');
     if(last){ try{ render(JSON.parse(last)); }catch(e){} }
@@ -10571,6 +10594,7 @@ function resetAudit(){
     localStorage.removeItem('cs_audit_state');
     localStorage.removeItem('cs_audit_result');
     localStorage.removeItem('cs_audit_job');
+    _AUDIT_FIELDS.forEach(function(id){ localStorage.removeItem(_AUDIT_FIELD_PREFIX + id); });
   }catch(e){}
   var results=document.getElementById('results'); if(results) results.style.display='none';
   var status=document.getElementById('status'); if(status){ status.style.display='none'; status.textContent=''; }
@@ -10580,7 +10604,7 @@ function resetAudit(){
   var lang=document.getElementById('reportLang'); if(lang) lang.value='nl';
 }
 // sla op bij elke wijziging + laad bij openen
-window.addEventListener('DOMContentLoaded', function(){
+function _initAuditPersistence(){
   _loadState();
   _AUDIT_FIELDS.forEach(function(id){
     var el=document.getElementById(id);
@@ -10589,7 +10613,11 @@ window.addEventListener('DOMContentLoaded', function(){
   _renderShareList();
   _initSharedAuditAccess();
   var _codeEl=document.getElementById('code'); if(_codeEl){_codeEl.addEventListener('change',function(){loadAuditShares();loadAuditToolShares();});}
-});
+}
+if(document.readyState==='loading') window.addEventListener('DOMContentLoaded', _initAuditPersistence);
+else _initAuditPersistence();
+// Extra safety for navigation/reload: persist all audit fields before the page is hidden.
+window.addEventListener('pagehide', function(){ _saveState(); });
 function loadGscFile(input){
   var f=input.files&&input.files[0]; if(!f)return;
   var reader=new FileReader();
