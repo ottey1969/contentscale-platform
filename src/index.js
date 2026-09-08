@@ -1,4 +1,4 @@
-console.log('=== CONTENTSCALE BOOT ' + new Date().toISOString() + ' v2026-07-08-possible-prioritized-shortcut | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON | possibleThreshold=20impr | shortcutPrioritized=v2 | gscAutoFetchRemoved=true | linkCheckActive=true | wholeSiteWipeGuard=true | gscAutoFetchRestored=true | reminderOffFix=true | claudeRemoved=true | bingWebmaster=true | competitorPanel=true | zeroResultFix=true | pagesRefreshFix=true | recheckButton=true | provenScanStrip=true | provenScanState=true | scanAllProven=true | doEverythingBtn=true | panelOrderFix=true | workflowGuide=true | preScanGuard=true | scanAllGuard=true | earlyGuard=true | emptyStateTeaser=true | provenScopeFix=true | numberedButtons=true | clearerButtons=true | scanAnimFix=true | promptClaudeCleanup=true | bonusTip=true | realProvenContext=true | competitorContext=true | unifiedBrief=true | diagnosticFirst=true | fullCompetitorBreakdown=true | serpSpyV3=true | transparencyBlock=true | emailsPausedToggle=true | competitorDedup=true | provenScanDebug=true | serializedScans=true | claudeCleanupV2=true | mergeClaudeStrip=true | visualTransparency=true | aboveFoldPriority=true | competitorComparisonTable=true | redGreenTracking=true | aioExplicitState=true | perpCopilotState=true | realMergePromptFixed=true | briefContextDebug=true | forceRescanBypass=true | gscPosFallback=true | cannibalDedup=true | gscAccessGated=true | gapConfirmShown=true | noPlaceholders=true | rowNumContrast=true | codeCannibalDedup=true | provenDebugRemoved=true | broaderCannibalDedup=true | competitorGapFallback=true | competitorPrevSnapFallback=true | hubSpokeDedup=true | compGapRegexBroadened=true | gapFixLabelFallback=true | geminiProForBriefs=true | timeoutBudgetFixed=true | perAttemptTimeout45s=true | revertToFlashLite=true | tokenLimitDoubled=true | urlNormFix=true | impactFieldChecked=true | broaderHubPattern=true | cannibalContextRemovedFromGSC=true | scanStateDerivedFromDB=true | boardBriefRestyled=true | liveWallBriefModal=true | modalScopeFix=true | cardTransparency=true | CLAUDE-FIX-2307=true | CLAUDE-FIX-2307B-specquote=true | CLAUDE-FIX-2307C-pwboard=true | CLAUDE-FIX-2307D-typefilter=true | CLAUDE-FIX-2307E-scanneraio=true | CLAUDE-FIX-2307F-urlstrip=true | CLAUDE-FIX-2307G-aiobeforeScan=true | CLAUDE-FIX-2307H-aioInPrompt=true | CLAUDE-FIX-2307I-escHtml=true | CLAUDE-FIX-2307J-escAlias-noStale=true | CLAUDE-FIX-2407A-perpCitedConsistency=true | CLAUDE-FIX-2407B-perpCacheBug=true | CLAUDE-FIX-2407C-domainVsPageNuance=true | CLAUDE-FIX-2407D-wallModalNoReshuffle=true | CLAUDE-FIX-2407E-buildBriefSafetyNet=true | CLAUDE-FIX-2407F-modalFullText=true | CLAUDE-FIX-2407G-aioPasteModal=true | CLAUDE-FIX-2407H-aioDefinitionView=true | CLAUDE-FIX-2407I-aioBlueprintMining=true | CLAUDE-FIX-2407J-aioReferences=true | CLAUDE-FIX-2407K-aioCitationGap=true | CLAUDE-FIX-2407L-compGapTableAllModals=true | CLAUDE-FIX-2407M-honestAioManualOnly=true | CLAUDE-FIX-2407N-regexEscapeInTemplate=true | CLAUDE-FIX-2507A-jsonRepair-mergeTokens4096=true | CLAUDE-FIX-2507B-cardButtonsWorkflowOrder=true | CLAUDE-FIX-2507C-cardButtonsPillColors=true | CLAUDE-FIX-2507D-aioReloadFull-limit8000=true | CLAUDE-FIX-2507E-briefModalTransparency=true | CLAUDE-FIX-2507F-aioGapTable4col=true | CLAUDE-FIX-2507G-htmlScanTickCycle=true | CLAUDE-FIX-2507H-briefViewedPersisted=true | CLAUDE-FIX-2507I-fixCardRenderVarInExpr=true | CLAUDE-FIX-2507J-briefsUnified-manualAioGap=true | CLAUDE-FIX-2507K-gscCompTableInTracker=true | CLAUDE-FIX-2507L-trackerSplitSections=true | CLAUDE-FIX-2507M-copyBriefClarity=true | CLAUDE-FIX-2507N-aioRefsFromManualPaste=true | CLAUDE-FIX-2507O-removeSseEventSource=true | CLAUDE-FIX-2507P-ticksPersistUntilDoneOrNewHtml=true | CLAUDE-FIX-2507Q-aioRefsStoredAtSave=true | CLAUDE-FIX-2507R-aioGapTableAlways=true | CLAUDE-FIX-2507S-aioGscContextSeparated=true | CLAUDE-FIX-2507T-aioCodeFallbackFixed-refsFromManualSave=true | CLAUDE-FIX-2507U-mergeSafetyNet-cardSummaryParity=true | CLAUDE-FIX-2507V-sharedAioRenderFn-authTable=true | CLAUDE-FIX-2507W-viewLastBriefDelegates-oneSystem=true | CLAUDE-FIX-2507X-sharedBriefBody-fullUnification=true | CLAUDE-FIX-2507Y-aioTop5Table-definitionLabel=true | CLAUDE-FIX-2507Z-noRefsActionableMsg=true | CLAUDE-FIX-2508A-manualPasteWinsOverStaleSnapshot=true | CLAUDE-FIX-2508B-merge2Hardened-diagLog=true | CLAUDE-FIX-2508C-noStoreHeaders-freshClientJs=true | CLAUDE-FIX-2508D-saveEchoDiagnostic=true | CLAUDE-FIX-2508E-separateSourcesField=true | CLAUDE-FIX-2508F-diagSourcesField=true | CLAUDE-FIX-2508G-acceptSourceNames=true | CLAUDE-FIX-2508H-namesFromMainPaste-headingFilter=true | CLAUDE-FIX-2508I-cloroAioFetch=true | CLAUDE-FIX-2508J-namesFallback-autoSplit=true | CLAUDE-FIX-2508K-competitorGapAioFallback=true | CLAUDE-FIX-2508L-aioFallbackNoGscLeak-honestLabel=true | CLAUDE-FIX-2508M-gscRootDomainFallback=true | CLAUDE-FIX-2508N-sitemapLinks250-gscLiveFilter=true | CLAUDE-FIX-2508O-leadQueueCollapsedDefault=true | CLAUDE-FIX-2508P-leadQueueToggleRealFns=true | CLAUDE-FIX-2508Q-leadQueueHeaderWrap=true | CLAUDE-FIX-2508R-scanSelectedButton=true | CLAUDE-FIX-2508S-shiftClickRange=true | CLAUDE-FIX-2508T-shiftClickCorrectClass-inTemplate=true | CLAUDE-FIX-2508U-brandHeadshotHubFields=true | CLAUDE-FIX-2508V-briefModeSelector=true | CLAUDE-FIX-2508W-intentSnapshot-ownerNote=true | CLAUDE-FIX-2508X-modeBtnQuoteFix=true | CLAUDE-FIX-2508Y-perpApostropheFix=true | CLAUDE-FIX-2508Z-sitemapRegexFix=true | CLAUDE-FIX-2508ZA-pageInSitemapRegexFix=true | CLAUDE-FIX-2508ZB-missingEntities=true | CLAUDE-FIX-2508ZC-briefSpacing=true | CLAUDE-FIX-2508ZD-pasteCodeBlocks=true | CLAUDE-FIX-2508ZE-fmtActionRegexFix=true | CLAUDE-FIX-2508ZF-ticksOnlyClearOnDone=true | CLAUDE-FIX-2508ZG-paa5-pwbWider-aioFallbackMsg=true | CLAUDE-FIX-2508ZH-numberedItemsOnOwnLines=true | CLAUDE-FIX-2508ZI-prewriteBuildFields-aioListNotUglyTable=true | CLAUDE-FIX-2508ZJ-cleanAioDefinitionText=true | CLAUDE-FIX-2508ZK-slugRegexCrashFix-sectionSplit=true | CLAUDE-FIX-2508ZL-tvModalFmtAction=true | CLAUDE-FIX-3007A-tourAioScanSelected-mobileFriendly=true | CLAUDE-FIX-3007B-htmlLangWhitelistNonLatin=true | CLAUDE-FIX-3007C-clientBriefLanguageSelector=true | CLAUDE-FIX-3007D-briefLanguageTourStep=true | CLAUDE-FIX-3007E-prewriteLangListFull=true | CLAUDE-FIX-3007F-prewriteAutoAioFetch=true | CLAUDE-FIX-3007G-serpRegionListFull=true | CLAUDE-FIX-3007H-prewriteMobilePolish=true | CLAUDE-FIX-3007I-groupedComboDropdowns=true | CLAUDE-FIX-3007J-comboSyntaxFix=true | CLAUDE-FIX-3007K-multiLangBadges=true | CLAUDE-FIX-3007L-headerReportCTA=true | CLAUDE-FIX-3007M-tvViewReportCTA=true | CLAUDE-FIX-3007N-tvTopBarCTA=true | CLAUDE-FIX-3007O-realPaaInBrief=true | CLAUDE-FIX-0208-briefLangLeaks-item1AndTemplateLabels=true | CLAUDE-FIX-0208B-prewriteLabelsTranslated=true | CLAUDE-FIX-0208C-readyPasteMarkerAndCiteableLang=true | CLAUDE-FIX-0308-alignmentItemLang=true | CLAUDE-FIX-0308B-copyBriefCompTableParity=true | CLAUDE-FIX-0308C-cannibalStopwordMatch=true | CLAUDE-FIX-0308D-hardcodedCiteItemsLocalized=true | CLAUDE-FIX-0308E-cannibalSlugFallback=true | CLAUDE-FIX-1208-honestScanCount=true | CLAUDE-FIX-2108A-aioCitedTextPlusSources=true | CLAUDE-FIX-2108B-aioSourceTableCaseInsensitive=true | CLAUDE-FIX-2108C-aioSourceRetryFallback=true | CLAUDE-FIX-2108D-graafScoreInBrief=true | CLAUDE-FIX-2108E-graafRecsDedupPrioritized=true | CLAUDE-FIX-2108F-eliteRecsDetailsNotDisplayNone=true | CLAUDE-FIX-2108G-graafScoreInTextExport=true | CLAUDE-FIX-2108H-competitorTableDedupTextExport=true | CLAUDE-FIX-2108I-textExportSectionParity=true | CLAUDE-FIX-2108J-tableRegexEscapeFix=true | CLAUDE-FIX-2108K-scoreDefinedInClientScope=true | CLAUDE-FIX-2108L-clientBriefUsesDataNotP=true | CLAUDE-FIX-2108M-prewriteNoFabrication=true | CLAUDE-FIX-2108N-outputVoiceNoHype=true | CLAUDE-FIX-2608-intentEngine=true | CLAUDE-FIX-2608B-existingBriefMoment-mismatch=true | CLAUDE-FIX-2608C-momentInTextExport=true | CLAUDE-FIX-2608D-gscHeaderClarity=true | CLAUDE-FIX-2608E-mergePreservesIntentSnapshot=true | CLAUDE-FIX-2608F-sliceKeepsFramingObjects=true | CLAUDE-FIX-2608G-intentSnapshotEngineFallback=true | CLAUDE-FIX-2608H-instantBriefAlsoHasIntent=true | CLAUDE-FIX-2608I-brief2FinalSaveGuaranteesIntent=true | CLAUDE-FIX-2608J-copyBriefShowsIntent=true | CLAUDE-FIX-2608K-buildBriefPrefersFramingSource=true | CLAUDE-FIX-2608L-geminiIntentEnforced-specificFallback=true | CLAUDE-FIX-2608M-promptRestructuredForGemini=true | CLAUDE-FIX-2608N-dedicatedSerialIntentCall-protectsBriefCall=true | CLAUDE-FIX-2608O-qualityHookPreservesIntent=true | CLAUDE-FIX-2608P-graafShortcut-recsIsolatedFromCitations=true | CLAUDE-FIX-2608Q-caseStudyStrictHeadingsOnly=true | CLAUDE-FIX-2608R-graafShortcutUsesPuppeteerScan-matchesExternal=true | CLAUDE-FIX-2608S-multilingualDetection-faqBioTldrCaseStudyTocAllLangs=true | CLAUDE-FIX-2608T-arabicNumeralsAndSchemaAuthor=true | CLAUDE-FIX-2608U-scanScrollsAndWaitsForJsRender-correctRoute=true | CLAUDE-FIX-2608V-faqDetectsToggleAccordions-authorBioNoKeywordGate=true | CLAUDE-FIX-2608W-quoteRecSaysResearchable=true | CLAUDE-FIX-2608X-faqDetectsQuestionMarkBeforeToggleSymbol=true | CLAUDE-FIX-2608Y-fixedActualApiScanRoute-9107-faqBioMultilingualToggle=true | CLAUDE-FIX-2608Z-recursiveSchemaDetection-findsNestedFAQPage=true | CLAUDE-FIX-2608ZA-realApiScanRoute-9410-faqUsesSchemaAndToggle=true | CLAUDE-FIX-2608ZB-graafShortcutReliableAutoRefresh=true | CLAUDE-FIX-2609A-siteAuditEndpoint=true | CLAUDE-FIX-2609B-auditPageVisible=true | CLAUDE-FIX-2609C-auditCodeProtected=true | CLAUDE-FIX-2609P-multiBrandNamesForAcquisitions=true | CLAUDE-FIX-2610G-proofBlockAllCentered=true | CLAUDE-FIX-2610I-extractsSourceUrls-aioInInstructions=true | AI-SOURCE-IMPORT-EN-PDF-CHATGPT-URLS=true | AUDIT-RESET-PERSISTENCE-0909=true ===');
+console.log('=== CONTENTSCALE BOOT ' + new Date().toISOString() + ' v2026-07-08-possible-prioritized-shortcut | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON | possibleThreshold=20impr | shortcutPrioritized=v2 | gscAutoFetchRemoved=true | linkCheckActive=true | wholeSiteWipeGuard=true | gscAutoFetchRestored=true | reminderOffFix=true | claudeRemoved=true | bingWebmaster=true | competitorPanel=true | zeroResultFix=true | pagesRefreshFix=true | recheckButton=true | provenScanStrip=true | provenScanState=true | scanAllProven=true | doEverythingBtn=true | panelOrderFix=true | workflowGuide=true | preScanGuard=true | scanAllGuard=true | earlyGuard=true | emptyStateTeaser=true | provenScopeFix=true | numberedButtons=true | clearerButtons=true | scanAnimFix=true | promptClaudeCleanup=true | bonusTip=true | realProvenContext=true | competitorContext=true | unifiedBrief=true | diagnosticFirst=true | fullCompetitorBreakdown=true | serpSpyV3=true | transparencyBlock=true | emailsPausedToggle=true | competitorDedup=true | provenScanDebug=true | serializedScans=true | claudeCleanupV2=true | mergeClaudeStrip=true | visualTransparency=true | aboveFoldPriority=true | competitorComparisonTable=true | redGreenTracking=true | aioExplicitState=true | perpCopilotState=true | realMergePromptFixed=true | briefContextDebug=true | forceRescanBypass=true | gscPosFallback=true | cannibalDedup=true | gscAccessGated=true | gapConfirmShown=true | noPlaceholders=true | rowNumContrast=true | codeCannibalDedup=true | provenDebugRemoved=true | broaderCannibalDedup=true | competitorGapFallback=true | competitorPrevSnapFallback=true | hubSpokeDedup=true | compGapRegexBroadened=true | gapFixLabelFallback=true | geminiProForBriefs=true | timeoutBudgetFixed=true | perAttemptTimeout45s=true | revertToFlashLite=true | tokenLimitDoubled=true | urlNormFix=true | impactFieldChecked=true | broaderHubPattern=true | cannibalContextRemovedFromGSC=true | scanStateDerivedFromDB=true | boardBriefRestyled=true | liveWallBriefModal=true | modalScopeFix=true | cardTransparency=true | CLAUDE-FIX-2307=true | CLAUDE-FIX-2307B-specquote=true | CLAUDE-FIX-2307C-pwboard=true | CLAUDE-FIX-2307D-typefilter=true | CLAUDE-FIX-2307E-scanneraio=true | CLAUDE-FIX-2307F-urlstrip=true | CLAUDE-FIX-2307G-aiobeforeScan=true | CLAUDE-FIX-2307H-aioInPrompt=true | CLAUDE-FIX-2307I-escHtml=true | CLAUDE-FIX-2307J-escAlias-noStale=true | CLAUDE-FIX-2407A-perpCitedConsistency=true | CLAUDE-FIX-2407B-perpCacheBug=true | CLAUDE-FIX-2407C-domainVsPageNuance=true | CLAUDE-FIX-2407D-wallModalNoReshuffle=true | CLAUDE-FIX-2407E-buildBriefSafetyNet=true | CLAUDE-FIX-2407F-modalFullText=true | CLAUDE-FIX-2407G-aioPasteModal=true | CLAUDE-FIX-2407H-aioDefinitionView=true | CLAUDE-FIX-2407I-aioBlueprintMining=true | CLAUDE-FIX-2407J-aioReferences=true | CLAUDE-FIX-2407K-aioCitationGap=true | CLAUDE-FIX-2407L-compGapTableAllModals=true | CLAUDE-FIX-2407M-honestAioManualOnly=true | CLAUDE-FIX-2407N-regexEscapeInTemplate=true | CLAUDE-FIX-2507A-jsonRepair-mergeTokens4096=true | CLAUDE-FIX-2507B-cardButtonsWorkflowOrder=true | CLAUDE-FIX-2507C-cardButtonsPillColors=true | CLAUDE-FIX-2507D-aioReloadFull-limit8000=true | CLAUDE-FIX-2507E-briefModalTransparency=true | CLAUDE-FIX-2507F-aioGapTable4col=true | CLAUDE-FIX-2507G-htmlScanTickCycle=true | CLAUDE-FIX-2507H-briefViewedPersisted=true | CLAUDE-FIX-2507I-fixCardRenderVarInExpr=true | CLAUDE-FIX-2507J-briefsUnified-manualAioGap=true | CLAUDE-FIX-2507K-gscCompTableInTracker=true | CLAUDE-FIX-2507L-trackerSplitSections=true | CLAUDE-FIX-2507M-copyBriefClarity=true | CLAUDE-FIX-2507N-aioRefsFromManualPaste=true | CLAUDE-FIX-2507O-removeSseEventSource=true | CLAUDE-FIX-2507P-ticksPersistUntilDoneOrNewHtml=true | CLAUDE-FIX-2507Q-aioRefsStoredAtSave=true | CLAUDE-FIX-2507R-aioGapTableAlways=true | CLAUDE-FIX-2507S-aioGscContextSeparated=true | CLAUDE-FIX-2507T-aioCodeFallbackFixed-refsFromManualSave=true | CLAUDE-FIX-2507U-mergeSafetyNet-cardSummaryParity=true | CLAUDE-FIX-2507V-sharedAioRenderFn-authTable=true | CLAUDE-FIX-2507W-viewLastBriefDelegates-oneSystem=true | CLAUDE-FIX-2507X-sharedBriefBody-fullUnification=true | CLAUDE-FIX-2507Y-aioTop5Table-definitionLabel=true | CLAUDE-FIX-2507Z-noRefsActionableMsg=true | CLAUDE-FIX-2508A-manualPasteWinsOverStaleSnapshot=true | CLAUDE-FIX-2508B-merge2Hardened-diagLog=true | CLAUDE-FIX-2508C-noStoreHeaders-freshClientJs=true | CLAUDE-FIX-2508D-saveEchoDiagnostic=true | CLAUDE-FIX-2508E-separateSourcesField=true | CLAUDE-FIX-2508F-diagSourcesField=true | CLAUDE-FIX-2508G-acceptSourceNames=true | CLAUDE-FIX-2508H-namesFromMainPaste-headingFilter=true | CLAUDE-FIX-2508I-cloroAioFetch=true | CLAUDE-FIX-2508J-namesFallback-autoSplit=true | CLAUDE-FIX-2508K-competitorGapAioFallback=true | CLAUDE-FIX-2508L-aioFallbackNoGscLeak-honestLabel=true | CLAUDE-FIX-2508M-gscRootDomainFallback=true | CLAUDE-FIX-2508N-sitemapLinks250-gscLiveFilter=true | CLAUDE-FIX-2508O-leadQueueCollapsedDefault=true | CLAUDE-FIX-2508P-leadQueueToggleRealFns=true | CLAUDE-FIX-2508Q-leadQueueHeaderWrap=true | CLAUDE-FIX-2508R-scanSelectedButton=true | CLAUDE-FIX-2508S-shiftClickRange=true | CLAUDE-FIX-2508T-shiftClickCorrectClass-inTemplate=true | CLAUDE-FIX-2508U-brandHeadshotHubFields=true | CLAUDE-FIX-2508V-briefModeSelector=true | CLAUDE-FIX-2508W-intentSnapshot-ownerNote=true | CLAUDE-FIX-2508X-modeBtnQuoteFix=true | CLAUDE-FIX-2508Y-perpApostropheFix=true | CLAUDE-FIX-2508Z-sitemapRegexFix=true | CLAUDE-FIX-2508ZA-pageInSitemapRegexFix=true | CLAUDE-FIX-2508ZB-missingEntities=true | CLAUDE-FIX-2508ZC-briefSpacing=true | CLAUDE-FIX-2508ZD-pasteCodeBlocks=true | CLAUDE-FIX-2508ZE-fmtActionRegexFix=true | CLAUDE-FIX-2508ZF-ticksOnlyClearOnDone=true | CLAUDE-FIX-2508ZG-paa5-pwbWider-aioFallbackMsg=true | CLAUDE-FIX-2508ZH-numberedItemsOnOwnLines=true | CLAUDE-FIX-2508ZI-prewriteBuildFields-aioListNotUglyTable=true | CLAUDE-FIX-2508ZJ-cleanAioDefinitionText=true | CLAUDE-FIX-2508ZK-slugRegexCrashFix-sectionSplit=true | CLAUDE-FIX-2508ZL-tvModalFmtAction=true | CLAUDE-FIX-3007A-tourAioScanSelected-mobileFriendly=true | CLAUDE-FIX-3007B-htmlLangWhitelistNonLatin=true | CLAUDE-FIX-3007C-clientBriefLanguageSelector=true | CLAUDE-FIX-3007D-briefLanguageTourStep=true | CLAUDE-FIX-3007E-prewriteLangListFull=true | CLAUDE-FIX-3007F-prewriteAutoAioFetch=true | CLAUDE-FIX-3007G-serpRegionListFull=true | CLAUDE-FIX-3007H-prewriteMobilePolish=true | CLAUDE-FIX-3007I-groupedComboDropdowns=true | CLAUDE-FIX-3007J-comboSyntaxFix=true | CLAUDE-FIX-3007K-multiLangBadges=true | CLAUDE-FIX-3007L-headerReportCTA=true | CLAUDE-FIX-3007M-tvViewReportCTA=true | CLAUDE-FIX-3007N-tvTopBarCTA=true | CLAUDE-FIX-3007O-realPaaInBrief=true | CLAUDE-FIX-0208-briefLangLeaks-item1AndTemplateLabels=true | CLAUDE-FIX-0208B-prewriteLabelsTranslated=true | CLAUDE-FIX-0208C-readyPasteMarkerAndCiteableLang=true | CLAUDE-FIX-0308-alignmentItemLang=true | CLAUDE-FIX-0308B-copyBriefCompTableParity=true | CLAUDE-FIX-0308C-cannibalStopwordMatch=true | CLAUDE-FIX-0308D-hardcodedCiteItemsLocalized=true | CLAUDE-FIX-0308E-cannibalSlugFallback=true | CLAUDE-FIX-1208-honestScanCount=true | CLAUDE-FIX-2108A-aioCitedTextPlusSources=true | CLAUDE-FIX-2108B-aioSourceTableCaseInsensitive=true | CLAUDE-FIX-2108C-aioSourceRetryFallback=true | CLAUDE-FIX-2108D-graafScoreInBrief=true | CLAUDE-FIX-2108E-graafRecsDedupPrioritized=true | CLAUDE-FIX-2108F-eliteRecsDetailsNotDisplayNone=true | CLAUDE-FIX-2108G-graafScoreInTextExport=true | CLAUDE-FIX-2108H-competitorTableDedupTextExport=true | CLAUDE-FIX-2108I-textExportSectionParity=true | CLAUDE-FIX-2108J-tableRegexEscapeFix=true | CLAUDE-FIX-2108K-scoreDefinedInClientScope=true | CLAUDE-FIX-2108L-clientBriefUsesDataNotP=true | CLAUDE-FIX-2108M-prewriteNoFabrication=true | CLAUDE-FIX-2108N-outputVoiceNoHype=true | CLAUDE-FIX-2608-intentEngine=true | CLAUDE-FIX-2608B-existingBriefMoment-mismatch=true | CLAUDE-FIX-2608C-momentInTextExport=true | CLAUDE-FIX-2608D-gscHeaderClarity=true | CLAUDE-FIX-2608E-mergePreservesIntentSnapshot=true | CLAUDE-FIX-2608F-sliceKeepsFramingObjects=true | CLAUDE-FIX-2608G-intentSnapshotEngineFallback=true | CLAUDE-FIX-2608H-instantBriefAlsoHasIntent=true | CLAUDE-FIX-2608I-brief2FinalSaveGuaranteesIntent=true | CLAUDE-FIX-2608J-copyBriefShowsIntent=true | CLAUDE-FIX-2608K-buildBriefPrefersFramingSource=true | CLAUDE-FIX-2608L-geminiIntentEnforced-specificFallback=true | CLAUDE-FIX-2608M-promptRestructuredForGemini=true | CLAUDE-FIX-2608N-dedicatedSerialIntentCall-protectsBriefCall=true | CLAUDE-FIX-2608O-qualityHookPreservesIntent=true | CLAUDE-FIX-2608P-graafShortcut-recsIsolatedFromCitations=true | CLAUDE-FIX-2608Q-caseStudyStrictHeadingsOnly=true | CLAUDE-FIX-2608R-graafShortcutUsesPuppeteerScan-matchesExternal=true | CLAUDE-FIX-2608S-multilingualDetection-faqBioTldrCaseStudyTocAllLangs=true | CLAUDE-FIX-2608T-arabicNumeralsAndSchemaAuthor=true | CLAUDE-FIX-2608U-scanScrollsAndWaitsForJsRender-correctRoute=true | CLAUDE-FIX-2608V-faqDetectsToggleAccordions-authorBioNoKeywordGate=true | CLAUDE-FIX-2608W-quoteRecSaysResearchable=true | CLAUDE-FIX-2608X-faqDetectsQuestionMarkBeforeToggleSymbol=true | CLAUDE-FIX-2608Y-fixedActualApiScanRoute-9107-faqBioMultilingualToggle=true | CLAUDE-FIX-2608Z-recursiveSchemaDetection-findsNestedFAQPage=true | CLAUDE-FIX-2608ZA-realApiScanRoute-9410-faqUsesSchemaAndToggle=true | CLAUDE-FIX-2608ZB-graafShortcutReliableAutoRefresh=true | CLAUDE-FIX-2609A-siteAuditEndpoint=true | CLAUDE-FIX-2609B-auditPageVisible=true | CLAUDE-FIX-2609C-auditCodeProtected=true | CLAUDE-FIX-2609P-multiBrandNamesForAcquisitions=true | CLAUDE-FIX-2610G-proofBlockAllCentered=true | CLAUDE-FIX-2610I-extractsSourceUrls-aioInInstructions=true | AI-SOURCE-IMPORT-EN-PDF-CHATGPT-URLS=true | AUDIT-RESET-PERSISTENCE-0909=true | AGENCY-WHITELABEL-PERSONAL-PROOF-HIDDEN=true ===');
 
 
 // ═══ GLOBAL SEARCH INTENT HELPERS (CLAUDE-FIX-2608-intentEngine) ═══
@@ -6551,6 +6551,24 @@ app.patch('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
    revoked_at TIMESTAMP
    )`).catch(() => {});
    await client.query(`CREATE INDEX IF NOT EXISTS idx_audit_shares_domain_created ON audit_shares(domain, created_at DESC)`).catch(() => {});
+   // Saved audit editor state — lets an admin reopen the exact audit later and keep the same share URL.
+   await client.query(`ALTER TABLE audit_shares ADD COLUMN IF NOT EXISTS report_data JSONB`).catch(() => {});
+   await client.query(`ALTER TABLE audit_shares ADD COLUMN IF NOT EXISTS editor_state JSONB`).catch(() => {});
+   await client.query(`ALTER TABLE audit_shares ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW()`).catch(() => {});
+   // White-label ownership for reports created through a shared agency Audit link.
+   await client.query(`ALTER TABLE audit_shares ADD COLUMN IF NOT EXISTS share_brand VARCHAR(255) DEFAULT 'ContentScale'`).catch(() => {});
+   await client.query(`ALTER TABLE audit_shares ADD COLUMN IF NOT EXISTS owner_tool_token VARCHAR(96)`).catch(() => {});
+   // Shareable Audit tool access — passwordless agency/client access protected by a 256-bit token.
+   await client.query(`CREATE TABLE IF NOT EXISTS audit_tool_shares (
+   id BIGSERIAL PRIMARY KEY,
+   token VARCHAR(96) UNIQUE NOT NULL,
+   label VARCHAR(255),
+   access_type VARCHAR(40) NOT NULL DEFAULT '1-page',
+   created_at TIMESTAMP DEFAULT NOW(),
+   last_opened_at TIMESTAMP,
+   revoked_at TIMESTAMP
+   )`).catch(() => {});
+   await client.query(`CREATE INDEX IF NOT EXISTS idx_audit_tool_shares_created ON audit_tool_shares(created_at DESC)`).catch(() => {});
    // Batch jobs
    await client.query(`CREATE TABLE IF NOT EXISTS batch_jobs (
    id VARCHAR(64) PRIMARY KEY,
@@ -9520,11 +9538,30 @@ recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', descriptio
                // ruim oude jobs op (ouder dan 1 uur)
                function _cleanupJobs(){ const now=Date.now(); for(const k in _auditJobs){ if(now-_auditJobs[k].started > 3600000) delete _auditJobs[k]; } }
 
+               async function _auditToolAccess(req) {
+                 const _ADMIN = (process.env.LC_ADMIN_CODE || 'Utrecht160011.@').trim();
+                 const _given = String((req.body && req.body.code) || req.headers['x-admin-key'] || '').trim();
+                 if (_given && _given === _ADMIN) return { ok:true, role:'admin', accessType:'all-pages' };
+                 const token = String((req.body && req.body.agencyAccessToken) || req.headers['x-audit-access-token'] || '').trim().toLowerCase();
+                 if (!/^[a-f0-9]{64}$/.test(token) || !pool) return { ok:false };
+                 try {
+                   const r = await pool.query('SELECT token,label,access_type FROM audit_tool_shares WHERE token=$1 AND revoked_at IS NULL',[token]);
+                   if (!r.rows.length) return { ok:false };
+                   return { ok:true, role:'shared', token:r.rows[0].token, label:r.rows[0].label||'', accessType:r.rows[0].access_type||'1-page' };
+                 } catch(e) { return { ok:false }; }
+               }
+               function _auditToolModeAllowed(accessType, mode) {
+                 if (accessType === 'all-pages') return ['test','quick','full'].includes(mode);
+                 if (accessType === '20-pages') return ['test','quick'].includes(mode);
+                 return mode === 'test';
+               }
+
                // START een audit-job → geeft direct een job-ID terug, draait door op de server
                app.post('/api/audit-start', async (req, res) => {
-                 const _ADMIN = (process.env.LC_ADMIN_CODE || 'Utrecht160011.@').trim();
-                 const _given = (req.body && req.body.code || req.headers['x-admin-key'] || '').trim();
-                 if (_given !== _ADMIN) return res.status(401).json({ success: false, error: 'Unauthorized — invalid code' });
+                 const _access = await _auditToolAccess(req);
+                 if (!_access.ok) return res.status(401).json({ success: false, error: 'Unauthorized — invalid code or revoked share link' });
+                 const _requestedMode = String((req.body && req.body.mode) || 'test');
+                 if (!_auditToolModeAllowed(_access.accessType, _requestedMode)) return res.status(403).json({ success:false, error:'This shared Audit link does not allow that scan size.' });
                  _cleanupJobs();
                  const jobId = _newJobId();
                  _auditJobs[jobId] = { status: 'running', started: Date.now(), progress: 'Bezig met crawlen…', result: null, error: null };
@@ -9571,13 +9608,11 @@ recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', descriptio
 
                app.post('/api/audit-site', async (req, res) => {
                  try {
-                   // Beveiliging: alleen met de geheime code (dezelfde als je admin-code).
-                   const _ADMIN = (process.env.LC_ADMIN_CODE || 'Utrecht160011.@').trim();
-                   const _given = (req.body && req.body.code || req.headers['x-admin-key'] || '').trim();
-                   if (_given !== _ADMIN) {
-                     return res.status(401).json({ success: false, error: 'Unauthorized — invalid code' });
-                   }
+                   // Beveiliging: admin-code OF een actieve passwordless Audit-tool share token.
+                   const _access = await _auditToolAccess(req);
+                   if (!_access.ok) return res.status(401).json({ success:false, error:'Unauthorized — invalid code or revoked share link' });
                    const { url, maxPages, mode, sitemapUrl, gscRaw, brandNames, aiAnswers, pageLanguage } = req.body || {};
+                   if (!_auditToolModeAllowed(_access.accessType, String(mode||'test'))) return res.status(403).json({success:false,error:'This shared Audit link does not allow that scan size.'});
                    const _pageLanguage = ['auto','ar','en','nl','es'].includes(String(pageLanguage||'auto').toLowerCase()) ? String(pageLanguage||'auto').toLowerCase() : 'auto';
                    if (!url) return res.status(400).json({ success: false, error: 'URL required' });
                    const base = url.startsWith('http') ? url : 'https://' + url;
@@ -10006,60 +10041,121 @@ recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', descriptio
                function _auditShareType(mode) {
                  return mode === 'test' ? '1-page' : (mode === 'full' ? 'all-pages' : '20-pages');
                }
+               function _stripWhiteLabelPersonalBlocks(html) {
+                 let out=String(html||'');
+                 // The two report sections are sibling DIVs with no nested DIV in the contact box, while the proof box contains nested DIVs.
+                 // Parse by stable start ids and the next top-level report box marker rather than relying on client-side hiding.
+                 function cutById(src,id){
+                   const start=src.indexOf('<div class="box" id="'+id+'"');
+                   if(start<0)return src;
+                   const next=src.indexOf('\n  <div class="box"',start+20);
+                   if(next>=0)return src.slice(0,start)+src.slice(next);
+                   return src.slice(0,start);
+                 }
+                 out=cutById(out,'personalProofBox');
+                 out=cutById(out,'contactBox');
+                 return out;
+               }
+
+               async function _auditShareAuthContext(req) {
+                 if (_auditShareAdminOk(req)) return {kind:'admin',brand:'ContentScale',toolToken:null};
+                 const b=req.body||{};
+                 const tok=String(b.agencyAccessToken||req.headers['x-audit-access-token']||'').trim().toLowerCase();
+                 if (!/^[a-f0-9]{64}$/.test(tok) || !pool) return null;
+                 const r=await pool.query('SELECT label FROM audit_tool_shares WHERE token=$1 AND revoked_at IS NULL',[tok]);
+                 if (!r.rows.length) return null;
+                 return {kind:'agency',brand:String(r.rows[0].label||'').trim().slice(0,255)||'ContentScale',toolToken:tok};
+               }
+               async function _auditShareCanManage(req, reportToken) {
+                 const ctx=await _auditShareAuthContext(req); if(!ctx)return null;
+                 if(ctx.kind==='admin')return ctx;
+                 const r=await pool.query('SELECT token FROM audit_shares WHERE token=$1 AND owner_tool_token=$2',[reportToken,ctx.toolToken]);
+                 return r.rows.length?ctx:null;
+               }
+               function _auditShareEsc(v){return String(v||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 
                app.post('/api/audit-share', async (req, res) => {
-                 if (!_auditShareAdminOk(req)) return res.status(401).json({success:false,error:'Unauthorized'});
+                 const _shareAuth=await _auditShareAuthContext(req);
+                 if (!_shareAuth) return res.status(401).json({success:false,error:'Unauthorized'});
                  if (!pool) return res.status(503).json({success:false,error:'Database unavailable'});
                  try {
                    const b = req.body || {};
                    const domain = _auditShareDomain(b.domain || b.sourceUrl);
                    if (!domain) return res.status(400).json({success:false,error:'Valid domain required'});
-                   const html = _sanitizeAuditShareHtml(b.reportHtml);
+                   let html = _sanitizeAuditShareHtml(b.reportHtml);
+                   if (_shareAuth.kind==='agency') html = _stripWhiteLabelPersonalBlocks(html);
                    if (html.length < 100) return res.status(400).json({success:false,error:'Report HTML missing'});
                    const token = crypto.randomBytes(32).toString('hex');
                    const auditType = ['1-page','20-pages','all-pages'].includes(b.auditType) ? b.auditType : _auditShareType(b.mode);
                    const lang = ['nl','en','es','ar'].includes(String(b.reportLanguage||'').toLowerCase()) ? String(b.reportLanguage).toLowerCase() : 'en';
-                   await pool.query(`INSERT INTO audit_shares
-                     (token,domain,source_url,audit_type,report_language,pages_scanned,total_pages_found,report_html)
-                     VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
-                     [token,domain,String(b.sourceUrl||''),auditType,lang,parseInt(b.pagesScanned)||0,parseInt(b.totalPagesFound)||0,html]);
+                   const reportData = (b.reportData && typeof b.reportData === 'object') ? JSON.stringify(b.reportData) : null;
+                   const editorState = (b.editorState && typeof b.editorState === 'object') ? JSON.stringify(b.editorState) : null;
+                   const ins = await pool.query(`INSERT INTO audit_shares
+                     (token,domain,source_url,audit_type,report_language,pages_scanned,total_pages_found,report_html,report_data,editor_state,share_brand,owner_tool_token,updated_at)
+                     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9::jsonb,$10::jsonb,$11,$12,NOW()) RETURNING created_at,updated_at`,
+                     [token,domain,String(b.sourceUrl||''),auditType,lang,parseInt(b.pagesScanned)||0,parseInt(b.totalPagesFound)||0,html,reportData,editorState,_shareAuth.brand,_shareAuth.toolToken]);
                    const sharePath = '/share/' + encodeURIComponent(domain) + '/' + token;
-                   res.json({success:true,token,domain,auditType,reportLanguage:lang,sharePath,shareUrl:req.protocol+'://'+req.get('host')+sharePath});
+                   res.json({success:true,token,domain,auditType,reportLanguage:lang,shareBrand:_shareAuth.brand,createdAt:ins.rows[0]&&ins.rows[0].created_at,updatedAt:ins.rows[0]&&ins.rows[0].updated_at,sharePath,shareUrl:req.protocol+'://'+req.get('host')+sharePath});
                  } catch(e) { res.status(500).json({success:false,error:e.message}); }
                });
 
                app.post('/api/audit-share/update/:token', async (req, res) => {
-                 if (!_auditShareAdminOk(req)) return res.status(401).json({success:false,error:'Unauthorized'});
                  if (!pool) return res.status(503).json({success:false,error:'Database unavailable'});
                  try {
                    const token = String(req.params.token||'');
+                   const _shareAuth=await _auditShareCanManage(req,token);
+                   if (!_shareAuth) return res.status(401).json({success:false,error:'Unauthorized'});
                    if (!/^[a-f0-9]{64}$/.test(token)) return res.status(400).json({success:false,error:'Invalid token'});
-                   const html = _sanitizeAuditShareHtml((req.body||{}).reportHtml);
-                   const lang = ['nl','en','es','ar'].includes(String((req.body||{}).reportLanguage||'').toLowerCase()) ? String(req.body.reportLanguage).toLowerCase() : 'en';
-                   const r = await pool.query(`UPDATE audit_shares SET report_html=$1, report_language=$2 WHERE token=$3 AND revoked_at IS NULL RETURNING domain,audit_type`,[html,lang,token]);
+                   const body = req.body || {};
+                   let html = _sanitizeAuditShareHtml(body.reportHtml);
+                   if (_shareAuth.kind==='agency') html = _stripWhiteLabelPersonalBlocks(html);
+                   const lang = ['nl','en','es','ar'].includes(String(body.reportLanguage||'').toLowerCase()) ? String(body.reportLanguage).toLowerCase() : 'en';
+                   const reportData = (body.reportData && typeof body.reportData === 'object') ? JSON.stringify(body.reportData) : null;
+                   const editorState = (body.editorState && typeof body.editorState === 'object') ? JSON.stringify(body.editorState) : null;
+                   const r = await pool.query(`UPDATE audit_shares SET report_html=$1, report_language=$2,
+                     report_data=COALESCE($3::jsonb,report_data), editor_state=COALESCE($4::jsonb,editor_state), updated_at=NOW()
+                     WHERE token=$5 AND revoked_at IS NULL RETURNING domain,audit_type,updated_at`,[html,lang,reportData,editorState,token]);
                    if (!r.rows.length) return res.status(404).json({success:false,error:'Share link not found'});
-                   res.json({success:true});
+                   res.json({success:true,updatedAt:r.rows[0].updated_at});
                  } catch(e) { res.status(500).json({success:false,error:e.message}); }
                });
 
                app.post('/api/audit-shares/list', async (req, res) => {
-                 if (!_auditShareAdminOk(req)) return res.status(401).json({success:false,error:'Unauthorized'});
                  if (!pool) return res.status(503).json({success:false,error:'Database unavailable'});
                  try {
+                   const _shareAuth=await _auditShareAuthContext(req);
+                   if (!_shareAuth) return res.status(401).json({success:false,error:'Unauthorized'});
                    const domain = _auditShareDomain((req.body||{}).domain || (req.body||{}).sourceUrl);
                    const params=[]; let where='WHERE revoked_at IS NULL';
-                   if (domain) { params.push(domain); where += ' AND domain=$1'; }
-                   const r = await pool.query(`SELECT token,domain,source_url,audit_type,report_language,pages_scanned,total_pages_found,created_at,last_opened_at FROM audit_shares ${where} ORDER BY created_at DESC LIMIT 50`,params);
+                   if (_shareAuth.kind==='agency') { params.push(_shareAuth.toolToken); where += ' AND owner_tool_token=$'+params.length; }
+                   if (domain) { params.push(domain); where += ' AND domain=$'+params.length; }
+                   const r = await pool.query(`SELECT token,domain,source_url,audit_type,report_language,pages_scanned,total_pages_found,share_brand,created_at,updated_at,last_opened_at FROM audit_shares ${where} ORDER BY created_at DESC LIMIT 50`,params);
                    const base=req.protocol+'://'+req.get('host');
                    res.json({success:true,shares:r.rows.map(x=>({...x,shareUrl:base+'/share/'+encodeURIComponent(x.domain)+'/'+x.token}))});
                  } catch(e) { res.status(500).json({success:false,error:e.message}); }
                });
 
-               app.post('/api/audit-share/:token/revoke', async (req, res) => {
-                 if (!_auditShareAdminOk(req)) return res.status(401).json({success:false,error:'Unauthorized'});
+               app.post('/api/audit-share/:token/edit-data', async (req, res) => {
                  if (!pool) return res.status(503).json({success:false,error:'Database unavailable'});
                  try {
                    const token=String(req.params.token||'');
+                   const _shareAuth=await _auditShareCanManage(req,token);
+                   if (!_shareAuth) return res.status(401).json({success:false,error:'Unauthorized'});
+                   if (!/^[a-f0-9]{64}$/.test(token)) return res.status(400).json({success:false,error:'Invalid token'});
+                   const r=await pool.query(`SELECT token,domain,source_url,audit_type,report_language,pages_scanned,total_pages_found,
+                     report_data,editor_state,share_brand,created_at,updated_at,last_opened_at FROM audit_shares WHERE token=$1 AND revoked_at IS NULL`,[token]);
+                   if (!r.rows.length) return res.status(404).json({success:false,error:'Share link not found'});
+                   const x=r.rows[0], base=req.protocol+'://'+req.get('host');
+                   res.json({success:true,share:{...x,shareUrl:base+'/share/'+encodeURIComponent(x.domain)+'/'+x.token}});
+                 } catch(e) { res.status(500).json({success:false,error:e.message}); }
+               });
+
+               app.post('/api/audit-share/:token/revoke', async (req, res) => {
+                 if (!pool) return res.status(503).json({success:false,error:'Database unavailable'});
+                 try {
+                   const token=String(req.params.token||'');
+                   const _shareAuth=await _auditShareCanManage(req,token);
+                   if (!_shareAuth) return res.status(401).json({success:false,error:'Unauthorized'});
                    if (!/^[a-f0-9]{64}$/.test(token)) return res.status(400).json({success:false,error:'Invalid token'});
                    await pool.query('UPDATE audit_shares SET revoked_at=NOW() WHERE token=$1',[token]);
                    res.json({success:true});
@@ -10067,10 +10163,11 @@ recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', descriptio
                });
 
                app.post('/api/audit-share/:token/delete', async (req, res) => {
-                 if (!_auditShareAdminOk(req)) return res.status(401).json({success:false,error:'Unauthorized'});
                  if (!pool) return res.status(503).json({success:false,error:'Database unavailable'});
                  try {
                    const token=String(req.params.token||'');
+                   const _shareAuth=await _auditShareCanManage(req,token);
+                   if (!_shareAuth) return res.status(401).json({success:false,error:'Unauthorized'});
                    if (!/^[a-f0-9]{64}$/.test(token)) return res.status(400).json({success:false,error:'Invalid token'});
                    const r=await pool.query('DELETE FROM audit_shares WHERE token=$1 RETURNING token',[token]);
                    if (!r.rows.length) return res.status(404).json({success:false,error:'Share link not found'});
@@ -10090,12 +10187,75 @@ recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', descriptio
                    pool.query('UPDATE audit_shares SET last_opened_at=NOW() WHERE token=$1',[token]).catch(()=>{});
                    const typeLabel=sh.audit_type==='1-page'?'1-Page Scan':(sh.audit_type==='20-pages'?'20-Page Audit':'All-Pages Audit');
                    const rtl=sh.report_language==='ar';
+                   const shareBrand=_auditShareEsc(sh.share_brand||'ContentScale');
                    res.setHeader('Cache-Control','no-store');
                    res.type('html').send(`<!doctype html><html lang="${sh.report_language||'en'}" dir="${rtl?'rtl':'ltr'}"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="robots" content="noindex,nofollow,noarchive"><title>${sh.domain} — ${typeLabel} — ContentScale</title>
-<style>*{box-sizing:border-box}body{font-family:'Segoe UI',system-ui,sans-serif;margin:0;background:#f4f4f7;color:#1a1a2e}.sharewrap{max-width:900px;margin:0 auto;padding:24px}.sharebar{background:linear-gradient(135deg,#4c1d95,#6d28d9);color:#fff;border-radius:12px;padding:14px 18px;margin-bottom:18px;display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap}.sharebar strong{font-size:15px}.sharebar span{font-size:12px;opacity:.9}.box{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:20px;margin:14px 0}.box h2{margin:0 0 10px;font-size:16px;color:#4c1d95}.scorestrip{display:flex;flex-wrap:wrap;gap:10px;margin:16px 0}.sc{flex:1;min-width:120px;text-align:center;border:1px solid #e5e7eb;border-radius:10px;padding:16px 8px;background:#fff}.sc .n{font-size:30px;font-weight:800;line-height:1}.sc .l{font-size:11px;color:#666;margin-top:6px}table{width:100%;border-collapse:collapse;font-size:13px}th{background:#4c1d95;color:#fff;text-align:left;padding:8px 10px}td{border-bottom:1px solid #eee;padding:7px 10px}a{overflow-wrap:anywhere}@media print{.sharebar{display:none!important}body{background:#fff}.sharewrap{padding:0}}</style></head><body><div class="sharewrap"><div class="sharebar"><div><strong>ContentScale · ${typeLabel}</strong><br><span>${sh.domain}</span></div><span>Read-only shared report</span></div>${sh.report_html}</div></body></html>`);
+<meta name="robots" content="noindex,nofollow,noarchive"><title>${sh.domain} — ${typeLabel} — ${shareBrand}</title>
+<style>*{box-sizing:border-box}body{font-family:'Segoe UI',system-ui,sans-serif;margin:0;background:#f4f4f7;color:#1a1a2e}.sharewrap{max-width:900px;margin:0 auto;padding:24px}.sharebar{background:linear-gradient(135deg,#4c1d95,#6d28d9);color:#fff;border-radius:12px;padding:14px 18px;margin-bottom:18px;display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap}.sharebar strong{font-size:15px}.sharebar span{font-size:12px;opacity:.9}.box{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:20px;margin:14px 0}.box h2{margin:0 0 10px;font-size:16px;color:#4c1d95}.scorestrip{display:flex;flex-wrap:wrap;gap:10px;margin:16px 0}.sc{flex:1;min-width:120px;text-align:center;border:1px solid #e5e7eb;border-radius:10px;padding:16px 8px;background:#fff}.sc .n{font-size:30px;font-weight:800;line-height:1}.sc .l{font-size:11px;color:#666;margin-top:6px}table{width:100%;border-collapse:collapse;font-size:13px}th{background:#4c1d95;color:#fff;text-align:left;padding:8px 10px}td{border-bottom:1px solid #eee;padding:7px 10px}a{overflow-wrap:anywhere}@media print{.sharebar{display:none!important}body{background:#fff}.sharewrap{padding:0}}</style></head><body><div class="sharewrap"><div class="sharebar"><div><strong>${shareBrand} · ${typeLabel}</strong><br><span>${sh.domain}</span></div><span>Read-only shared report</span></div>${sh.report_html}</div></body></html>`);
                  } catch(e) { res.status(500).type('html').send('<h1>Could not load report</h1>'); }
+               });
+
+               // ─────────────────────────────────────────────────────────────
+               //  AUDIT TOOL SHARE LINKS — let an agency/client use this Audit page
+               //  without exposing the admin password. Revocation is immediate.
+               // ─────────────────────────────────────────────────────────────
+               app.post('/api/audit-tool-share', async (req,res) => {
+                 if (!_auditShareAdminOk(req)) return res.status(401).json({success:false,error:'Unauthorized'});
+                 if (!pool) return res.status(503).json({success:false,error:'Database unavailable'});
+                 try {
+                   const b=req.body||{};
+                   const label=String(b.label||'').trim().slice(0,255);
+                   const accessType=['1-page','20-pages','all-pages'].includes(String(b.accessType||'')) ? String(b.accessType) : '1-page';
+                   const token=crypto.randomBytes(32).toString('hex');
+                   const r=await pool.query('INSERT INTO audit_tool_shares (token,label,access_type) VALUES ($1,$2,$3) RETURNING created_at',[token,label,accessType]);
+                   const sharePath='/audit-access/'+token;
+                   res.json({success:true,token,label,accessType,createdAt:r.rows[0]&&r.rows[0].created_at,shareUrl:req.protocol+'://'+req.get('host')+sharePath});
+                 } catch(e) { res.status(500).json({success:false,error:e.message}); }
+               });
+
+               app.post('/api/audit-tool-shares/list', async (req,res) => {
+                 if (!_auditShareAdminOk(req)) return res.status(401).json({success:false,error:'Unauthorized'});
+                 if (!pool) return res.status(503).json({success:false,error:'Database unavailable'});
+                 try {
+                   const r=await pool.query('SELECT token,label,access_type,created_at,last_opened_at FROM audit_tool_shares WHERE revoked_at IS NULL ORDER BY created_at DESC LIMIT 100');
+                   const base=req.protocol+'://'+req.get('host');
+                   res.json({success:true,shares:r.rows.map(x=>({...x,shareUrl:base+'/audit-access/'+x.token}))});
+                 } catch(e) { res.status(500).json({success:false,error:e.message}); }
+               });
+
+               app.post('/api/audit-tool-share/:token/revoke', async (req,res) => {
+                 if (!_auditShareAdminOk(req)) return res.status(401).json({success:false,error:'Unauthorized'});
+                 if (!pool) return res.status(503).json({success:false,error:'Database unavailable'});
+                 try {
+                   const token=String(req.params.token||'').toLowerCase();
+                   if (!/^[a-f0-9]{64}$/.test(token)) return res.status(400).json({success:false,error:'Invalid token'});
+                   const r=await pool.query('UPDATE audit_tool_shares SET revoked_at=NOW() WHERE token=$1 AND revoked_at IS NULL RETURNING token',[token]);
+                   if (!r.rows.length) return res.status(404).json({success:false,error:'Share link not found or already revoked'});
+                   res.json({success:true});
+                 } catch(e) { res.status(500).json({success:false,error:e.message}); }
+               });
+
+               app.get('/api/audit-tool-access/:token', async (req,res) => {
+                 if (!pool) return res.status(503).json({success:false,error:'Database unavailable'});
+                 try {
+                   const token=String(req.params.token||'').toLowerCase();
+                   if (!/^[a-f0-9]{64}$/.test(token)) return res.status(404).json({success:false,error:'Invalid or revoked access link'});
+                   const r=await pool.query('SELECT label,access_type,created_at FROM audit_tool_shares WHERE token=$1 AND revoked_at IS NULL',[token]);
+                   if (!r.rows.length) return res.status(404).json({success:false,error:'Invalid or revoked access link'});
+                   res.json({success:true,label:r.rows[0].label||'',accessType:r.rows[0].access_type,createdAt:r.rows[0].created_at});
+                 } catch(e) { res.status(500).json({success:false,error:e.message}); }
+               });
+
+               app.get('/audit-access/:token', async (req,res) => {
+                 if (!pool) return res.status(503).type('html').send('<h1>Audit access is temporarily unavailable</h1>');
+                 try {
+                   const token=String(req.params.token||'').toLowerCase();
+                   if (!/^[a-f0-9]{64}$/.test(token)) return res.status(404).type('html').send('<h1>This Audit access link is invalid or revoked.</h1>');
+                   const r=await pool.query('UPDATE audit_tool_shares SET last_opened_at=NOW() WHERE token=$1 AND revoked_at IS NULL RETURNING token',[token]);
+                   if (!r.rows.length) return res.status(404).type('html').send('<h1>This Audit access link is invalid or revoked.</h1>');
+                   return res.redirect('/audit?access='+token);
+                 } catch(e) { return res.status(500).type('html').send('<h1>Could not open Audit access.</h1>'); }
                });
 
                // ─────────────────────────────────────────────────────────────
@@ -10144,10 +10304,10 @@ recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', descriptio
   .pdfbtn{background:linear-gradient(135deg,#7e22ce,#be185d);}
   @media print{.form,.actions,header .sub,.noprint{display:none!important;}body{background:#fff;}}
 </style></head><body><div class="wrap">
-<header><h1>🔍 Site Audit</h1><p class="sub">Voer een URL in — crawlt de site, scoort elke pagina, toont de AI-citeerbaarheid.</p></header>
+<header><h1 id="auditPageTitle">🔍 ContentScale Site Audit</h1><p class="sub">Voer een URL in — crawlt de site, scoort elke pagina, toont de AI-citeerbaarheid.</p></header>
 
 <div class="form noprint">
-  <div class="field" style="max-width:200px"><label>🔒 Toegangscode</label><input id="code" type="password" placeholder="geheime code"></div>
+  <div class="field" id="adminCodeField" style="max-width:200px"><label>🔒 Toegangscode</label><input id="code" type="password" placeholder="geheime code"></div>
   <div class="field"><label>Website-URL van de klant</label><input id="url" placeholder="https://klant.nl" value=""></div>
   <div class="field" style="max-width:170px"><label>Modus</label><select id="mode"><option value="test">Test (1 pagina, snel)</option><option value="quick">Snel (20 pag.)</option><option value="full">Volledig</option></select></div>
   <div class="field" style="max-width:150px"><label>Pagina-taal</label><select id="pageLang"><option value="auto">Auto-detect</option><option value="ar">العربية</option><option value="en">English</option><option value="nl">Nederlands</option><option value="es">Español</option></select></div>
@@ -10265,7 +10425,7 @@ https://argaam.com/..."></textarea>
 <div class="results" id="results">
   <div id="pdfHeader" style="border-bottom:3px solid #4c1d95;padding-bottom:14px;margin-bottom:20px;">
     <div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px;">
-      <div style="font-size:22px;font-weight:800;color:#4c1d95;">ContentScale</div>
+      <div id="pdfBrand" style="font-size:22px;font-weight:800;color:#4c1d95;">ContentScale</div>
       <div style="font-size:12px;color:#888;">AI Visibility &amp; Citeability Audit</div>
     </div>
     <div id="pdfMeta2" style="font-size:12px;color:#666;margin-top:4px;"></div>
@@ -10287,7 +10447,7 @@ https://argaam.com/..."></textarea>
   <div class="box"><h2 id="tWeakestTitle">Zwakste pagina's</h2><table id="weakest"><thead><tr><th id="tWeakPage">Pagina</th><th id="tWeakScore">Score</th></tr></thead><tbody></tbody></table></div>
   <div class="box" id="mlbox"><h2 id="tMlTitle">Meertaligheid</h2><p id="ml"></p></div>
 
-  <div class="box" style="background:linear-gradient(135deg,#5b21b6,#7c3aed);color:#fff;border:none;">
+  <div class="box" id="personalProofBox" style="background:linear-gradient(135deg,#5b21b6,#7c3aed);color:#fff;border:none;">
     <h2 id="tProofTitle" style="color:#fff;border:none;">Bewijs: dit lever ik meetbaar op</h2>
     <p id="tProofText" style="color:#ede9fe;">Op mijn eigen platform bracht ik een pagina in ~120 dagen van <strong>0,1% naar 7,4%</strong> doorklikratio — en van onzichtbaar naar geciteerd in Google AI Overviews, Perplexity én Copilot. Datzelfde meetbare proces pas ik op uw site toe.</p>
     <img src="https://contentscale.site/wp-content/uploads/2026/09/0.1-to-7.4-sept-1.png" alt="GSC bewijs: 0,1% naar 7,4% CTR" style="width:100%;max-width:600px;border-radius:8px;margin:12px auto;display:block;" onerror="this.style.display='none'">
@@ -10306,7 +10466,7 @@ https://argaam.com/..."></textarea>
     <p id="tMoreText" style="margin:0;color:#555;">Deze audit is gebaseerd op wat publiek meetbaar is. Met <strong>Google Search Console-toegang</strong> zie ik welke pagina's echt verkeer krijgen en waar de snelste winst zit. Met een <strong>live citatie-meting via mijn AI Citations Tracker</strong> toon ik exact voor welke zoekopdrachten uw concurrent nu wél genoemd wordt en u niet.</p>
   </div>
 
-  <div class="box" style="background:linear-gradient(135deg,#4c1d95,#6d28d9);color:#fff;border:none;">
+  <div class="box" id="contactBox" style="background:linear-gradient(135deg,#4c1d95,#6d28d9);color:#fff;border:none;">
     <h2 id="tTalkTitle" style="color:#fff;border:none;">Laten we praten</h2>
     <p id="tTalkText" style="color:#ede9fe;">Ik werk direct — geen accountmanagers, geen tussenpersonen.</p>
     <table style="color:#fff;"><tr><td style="color:#c4b5fd;border-bottom:1px solid rgba(255,255,255,.15);">WhatsApp (snelste reactie)</td><td style="border-bottom:1px solid rgba(255,255,255,.15);"><a href="https://wa.me/31628073996" style="color:#fff;font-weight:700;text-decoration:none;">+31 6 2807 3996</a></td></tr><tr><td style="color:#c4b5fd;border-bottom:1px solid rgba(255,255,255,.15);">E-mail</td><td style="border-bottom:1px solid rgba(255,255,255,.15);"><a href="mailto:info@contentscale.site" style="color:#fff;font-weight:700;text-decoration:none;">info@contentscale.site</a></td></tr><tr><td style="color:#c4b5fd;">Web</td><td><a href="https://contentscale.site" style="color:#fff;font-weight:700;text-decoration:none;">contentscale.site</a></td></tr></table>
@@ -10320,14 +10480,65 @@ https://argaam.com/..."></textarea>
 
 <div id="sharePanel" class="noprint" style="background:#fff;border:1px solid var(--bd);border-radius:12px;padding:18px 20px;margin:18px 0 32px;">
   <div style="display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap;">
-    <div><div style="font-weight:800;color:var(--p);font-size:16px;">🔗 Saved share links</div><div style="font-size:12px;color:#666;margin-top:3px;">Passwordless, read-only reports. The real scanned domain is included in every link; the long random token keeps it private.</div></div>
+    <div><div style="font-weight:800;color:var(--p);font-size:16px;">🔗 Saved share links</div><div style="font-size:12px;color:#666;margin-top:3px;">Passwordless, read-only reports. Agency access uses the agency name as the visible report brand; the real scanned domain stays in the link.</div></div>
     <button type="button" onclick="loadAuditShares()" style="padding:8px 14px;background:#fff;color:var(--p);border:1px solid #c4b5fd;">Refresh links</button>
   </div>
   <div id="currentShare" style="display:none;margin-top:12px;padding:12px;background:#faf5ff;border:1px solid #ddd6fe;border-radius:8px;"></div>
   <div id="shareList" style="margin-top:12px;font-size:13px;color:#666;">Run a scan to create its share link automatically.</div>
 </div>
 
+<div id="toolSharePanel" class="noprint" style="background:#fff;border:1px solid var(--bd);border-radius:12px;padding:18px 20px;margin:18px 0 32px;">
+  <div style="font-weight:800;color:var(--p);font-size:16px;">🤝 Share this Audit tool</div>
+  <div style="font-size:12px;color:#666;margin:3px 0 12px;line-height:1.5;">Create a long passwordless link for an agency or client. They can run only the scan size you allow. Revoke the link at any time.</div>
+  <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:end;">
+    <div class="field" style="min-width:220px"><label>Agency / client name</label><input id="toolShareLabel" placeholder="e.g. Saudi Agency"></div>
+    <div class="field" style="max-width:190px"><label>Allowed scan size</label><select id="toolShareAccess"><option value="1-page">1 Page</option><option value="20-pages">20 Pages</option><option value="all-pages">All Pages</option></select></div>
+    <button type="button" onclick="createAuditToolShare()">Create access link</button>
+    <button type="button" onclick="loadAuditToolShares()" style="background:#fff;color:var(--p);border:1px solid #c4b5fd;">Refresh</button>
+  </div>
+  <div id="toolShareCurrent" style="display:none;margin-top:12px;padding:12px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;"></div>
+  <div id="toolShareList" style="margin-top:12px;font-size:13px;color:#666;">No Audit access links loaded yet.</div>
+</div>
+
 <script>
+var _AUDIT_ACCESS_TOKEN=(new URLSearchParams(window.location.search)).get('access')||'';
+var _AUDIT_SHARED_ACCESS_TYPE='';
+var _AUDIT_SHARED_BRAND='ContentScale';
+async function _initSharedAuditAccess(){
+  if(!_AUDIT_ACCESS_TOKEN)return;
+  var codeField=document.getElementById('adminCodeField'); if(codeField)codeField.style.display='none';
+  var reportShares=document.getElementById('sharePanel'); if(reportShares)reportShares.style.display='block';
+  var toolShares=document.getElementById('toolSharePanel'); if(toolShares)toolShares.style.display='none';
+  try{
+    var r=await fetch('/api/audit-tool-access/'+encodeURIComponent(_AUDIT_ACCESS_TOKEN)); var d=await r.json();
+    if(!r.ok||!d.success)throw new Error(d.error||'Access link is invalid or revoked');
+    _AUDIT_SHARED_ACCESS_TYPE=d.accessType||'1-page';
+    _AUDIT_SHARED_BRAND=(d.label||'').trim()||'ContentScale';
+    var pageTitle=document.getElementById('auditPageTitle'); if(pageTitle)pageTitle.textContent='🔍 '+_AUDIT_SHARED_BRAND+' Site Audit';
+    var pdfBrand=document.getElementById('pdfBrand'); if(pdfBrand)pdfBrand.textContent=_AUDIT_SHARED_BRAND;
+    // White-label mode: keep ContentScale as the internal engine, but do not show Ottmar/ContentScale personal proof or contact details to the agency/prospect.
+    if(_AUDIT_SHARED_BRAND!=='ContentScale'){
+      var cb=document.getElementById('contactBox');if(cb)cb.style.display='none';
+      var pb=document.getElementById('personalProofBox');if(pb)pb.style.display='none';
+    }
+    document.title='Site Audit — '+_AUDIT_SHARED_BRAND;
+    var mode=document.getElementById('mode');
+    if(mode){
+      Array.from(mode.options).forEach(function(o){
+        if(_AUDIT_SHARED_ACCESS_TYPE==='1-page') o.disabled=(o.value!=='test');
+        else if(_AUDIT_SHARED_ACCESS_TYPE==='20-pages') o.disabled=(o.value==='full');
+        else o.disabled=false;
+      });
+      if(_AUDIT_SHARED_ACCESS_TYPE==='1-page')mode.value='test';
+      else if(_AUDIT_SHARED_ACCESS_TYPE==='20-pages'&&mode.value==='full')mode.value='quick';
+    }
+    var h=document.querySelector('header .sub');
+    if(h)h.textContent='Shared Audit access'+(d.label?' for '+d.label:'')+' · allowed: '+(_AUDIT_SHARED_ACCESS_TYPE==='1-page'?'1 Page':(_AUDIT_SHARED_ACCESS_TYPE==='20-pages'?'up to 20 Pages':'All Pages'));
+  }catch(e){
+    var run=document.getElementById('run'); if(run)run.disabled=true;
+    var st=document.getElementById('status'); if(st){st.style.display='block';st.textContent='🔒 '+e.message;}
+  }
+}
 // ── Gegevens bewaren in de browser (blijven na verversen/weggaan) ──
 var _AUDIT_FIELDS = ['url','mode','pageLang','reportLang','sitemapUrl','gscUrls','brandNames','aiAnswers','chatgptPrimaryUrls','chatgptExtraUrls'];
 function _saveState(){
@@ -10376,7 +10587,8 @@ window.addEventListener('DOMContentLoaded', function(){
     if(el){ el.addEventListener('input', _saveState); el.addEventListener('change', _saveState); }
   });
   _renderShareList();
-  var _codeEl=document.getElementById('code'); if(_codeEl){_codeEl.addEventListener('change',loadAuditShares);}
+  _initSharedAuditAccess();
+  var _codeEl=document.getElementById('code'); if(_codeEl){_codeEl.addEventListener('change',function(){loadAuditShares();loadAuditToolShares();});}
 });
 function loadGscFile(input){
   var f=input.files&&input.files[0]; if(!f)return;
@@ -10446,6 +10658,38 @@ function _setAuditFinished(message){
   st.classList.remove('on');
   st.textContent=message||'';
 }
+function _fmtAuditToolDate(v){ try{return v?new Date(v).toLocaleString():'';}catch(e){return String(v||'');} }
+function _auditToolAccessLabel(t){return t==='1-page'?'1 Page':(t==='20-pages'?'20 Pages':'All Pages');}
+async function createAuditToolShare(){
+  var code=(document.getElementById('code')||{}).value||'';
+  if(!code){alert('Enter your admin access code first.');return;}
+  var label=(document.getElementById('toolShareLabel')||{}).value||'';
+  var accessType=(document.getElementById('toolShareAccess')||{}).value||'1-page';
+  try{
+    var r=await fetch('/api/audit-tool-share',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:code,label:label,accessType:accessType})});
+    var d=await r.json(); if(!r.ok||!d.success)throw new Error(d.error||'Could not create access link');
+    var cur=document.getElementById('toolShareCurrent'); if(cur){var enc=encodeURIComponent(d.shareUrl);cur.style.display='block';cur.innerHTML='<strong>Audit access link ready — '+_auditToolAccessLabel(d.accessType)+'</strong><div style="font-family:monospace;font-size:11px;word-break:break-all;margin:6px 0">'+d.shareUrl+'</div><div style="font-size:11px;color:#64748b;margin-bottom:8px">Created: '+_fmtAuditToolDate(d.createdAt)+'</div><button type="button" data-url="'+enc+'" onclick="copyShareLink(decodeURIComponent(this.dataset.url))" style="padding:7px 10px">Copy</button> <button type="button" data-url="'+enc+'" onclick="window.open(decodeURIComponent(this.dataset.url))" style="padding:7px 10px;background:#fff;color:#4c1d95;border:1px solid #c4b5fd">Open</button>'; }
+    loadAuditToolShares();
+  }catch(e){alert(e.message);}
+}
+async function loadAuditToolShares(){
+  if(_AUDIT_ACCESS_TOKEN)return;
+  var code=(document.getElementById('code')||{}).value||'';
+  var box=document.getElementById('toolShareList'); if(!box)return;
+  if(!code){box.textContent='Enter your admin access code to load Audit access links.';return;}
+  try{
+    var r=await fetch('/api/audit-tool-shares/list',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:code,agencyAccessToken:_AUDIT_ACCESS_TOKEN})}); var d=await r.json();
+    if(!r.ok||!d.success)throw new Error(d.error||'Could not load links');
+    if(!d.shares.length){box.textContent='No active Audit access links.';return;}
+    box.innerHTML=d.shares.map(function(sh){var enc=encodeURIComponent(sh.shareUrl);return '<div style="padding:10px 0;border-top:1px solid #eee"><div><strong>'+(sh.label||'Unnamed agency/client')+'</strong> · '+_auditToolAccessLabel(sh.access_type)+'</div><div style="font-family:monospace;font-size:11px;word-break:break-all;margin:4px 0">'+sh.shareUrl+'</div><div style="font-size:11px;color:#64748b">Created: '+_fmtAuditToolDate(sh.created_at)+(sh.last_opened_at?' · Last opened: '+_fmtAuditToolDate(sh.last_opened_at):' · Not opened yet')+'</div><div style="margin-top:7px"><button type="button" data-url="'+enc+'" onclick="copyShareLink(decodeURIComponent(this.dataset.url))" style="padding:7px 10px">Copy</button> <button type="button" data-url="'+enc+'" onclick="window.open(decodeURIComponent(this.dataset.url))" style="padding:7px 10px;background:#fff;color:#4c1d95;border:1px solid #c4b5fd">Open</button> <button type="button" data-token="'+sh.token+'" onclick="revokeAuditToolShare(this.dataset.token)" style="padding:7px 10px;background:#fff;color:#b45309;border:1px solid #fcd34d">Revoke</button></div></div>';}).join('');
+  }catch(e){box.textContent='Could not load Audit access links: '+e.message;}
+}
+async function revokeAuditToolShare(token){
+  if(!confirm('Revoke this Audit access link? It will stop working immediately.'))return;
+  var code=(document.getElementById('code')||{}).value||'';
+  try{var r=await fetch('/api/audit-tool-share/'+encodeURIComponent(token)+'/revoke',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:code,agencyAccessToken:_AUDIT_ACCESS_TOKEN})});var d=await r.json();if(!r.ok||!d.success)throw new Error(d.error||'Could not revoke link');loadAuditToolShares();}catch(e){alert(e.message);}
+}
+
 function _auditTypeFromMode(mode){ return mode==='test'?'1-page':(mode==='full'?'all-pages':'20-pages'); }
 function _auditTypeLabel(t){ return t==='1-page'?'1-Page Scan':(t==='20-pages'?'20-Page Audit':'All-Pages Audit'); }
 function _shareDomain(raw){ try{ var u=String(raw||'').trim(); var x=new URL(/^https?:\/\//i.test(u)?u:'https://'+u); return x.hostname.replace(/^www\./i,'').toLowerCase(); }catch(e){ return ''; } }
@@ -10453,6 +10697,12 @@ function _reportHtmlForShare(){
   var el=document.getElementById('results'); if(!el)return '';
   var clone=el.cloneNode(true); clone.style.display='block';
   Array.from(clone.querySelectorAll('.noprint,.actions')).forEach(function(x){x.remove();});
+  // Agency/prospect reports are white-label: remove Ottmar's personal portfolio proof, image/results and personal contact block.
+  // ContentScale/admin reports keep these sections.
+  if(_AUDIT_ACCESS_TOKEN || _AUDIT_SHARED_BRAND!=='ContentScale'){
+    var pb=clone.querySelector('#personalProofBox'); if(pb)pb.remove();
+    var cb=clone.querySelector('#contactBox'); if(cb)cb.remove();
+  }
   return clone.innerHTML;
 }
 function _saveLocalShare(sh){
@@ -10470,10 +10720,11 @@ function _renderShareList(serverShares){
   if(!Array.isArray(a)){ try{a=JSON.parse(localStorage.getItem('cs_audit_share_history')||'[]');}catch(e){a=[];} }
   if(!a.length){list.innerHTML='No saved share links yet. Run a scan and the link will be created here automatically.';return;}
   list.innerHTML=a.map(function(sh){
-    var url=sh.shareUrl||sh.share_url||''; var created=sh.created_at||sh.createdAt||'';
-    var dt=created?new Date(created).toLocaleString():'';
+    var url=sh.shareUrl||sh.share_url||''; var created=sh.created_at||sh.createdAt||''; var updated=sh.updated_at||sh.updatedAt||'';
+    var dt=created?new Date(created).toLocaleString():''; var udt=updated?new Date(updated).toLocaleString():'';
     return '<div style="border-top:1px solid #eee;padding:10px 0;display:flex;gap:10px;align-items:center;flex-wrap:wrap;">'
-      +'<div style="flex:1;min-width:250px;"><strong style="color:#111827">'+(sh.domain||'')+'</strong> · '+_auditTypeLabel(sh.auditType||sh.audit_type)+'<div style="font-size:11px;color:#888;margin-top:2px"><strong>Created:</strong> '+dt+'</div><div style="font-family:monospace;font-size:11px;color:#6b7280;word-break:break-all;margin-top:3px">'+url+'</div></div>'
+      +'<div style="flex:1;min-width:250px;"><strong style="color:#111827">'+(sh.domain||'')+'</strong> · '+_auditTypeLabel(sh.auditType||sh.audit_type)+(sh.share_brand||sh.shareBrand?' · <span style="color:#6d28d9">'+(sh.share_brand||sh.shareBrand)+'</span>':'')+'<div style="font-size:11px;color:#888;margin-top:2px"><strong>Created:</strong> '+dt+(udt?' · <strong>Updated:</strong> '+udt:'')+'</div><div style="font-family:monospace;font-size:11px;color:#6b7280;word-break:break-all;margin-top:3px">'+url+'</div></div>'
+      +'<button type="button" data-token="'+(sh.token||'')+'" onclick="editAuditShare(this.dataset.token)" style="padding:7px 10px;background:#eef2ff;color:#3730a3;border:1px solid #c7d2fe">Edit</button>'
       +'<button type="button" data-url="'+encodeURIComponent(url)+'" onclick="copyShareLink(decodeURIComponent(this.dataset.url))" style="padding:7px 10px">Copy</button>'
       +'<button type="button" data-url="'+encodeURIComponent(url)+'" onclick="window.open(decodeURIComponent(this.dataset.url))" style="padding:7px 10px;background:#fff;color:#4c1d95;border:1px solid #c4b5fd">Open</button>'
       +'<button type="button" data-token="'+(sh.token||'')+'" onclick="revokeAuditShare(this.dataset.token)" style="padding:7px 10px;background:#fff;color:#b45309;border:1px solid #fcd34d">Revoke</button>'
@@ -10481,45 +10732,97 @@ function _renderShareList(serverShares){
   }).join('');
 }
 function copyShareLink(url){ if(!url)return; navigator.clipboard.writeText(url).then(function(){alert('Share link copied');}).catch(function(){prompt('Copy this share link:',url);}); }
+function _collectAuditEditorState(){
+  var s={};
+  try{ _AUDIT_FIELDS.forEach(function(id){var el=document.getElementById(id);if(el)s[id]=el.value;}); }catch(e){}
+  return s;
+}
+function _showEditingShare(sh){
+  var cur=document.getElementById('currentShare'); if(!cur||!sh)return;
+  var url=sh.shareUrl||sh.share_url||''; var enc=encodeURIComponent(url); var created=sh.created_at||sh.createdAt||'';
+  cur.style.display='block';
+  cur.innerHTML='<strong>Editing saved '+_auditTypeLabel(sh.audit_type||sh.auditType)+' — '+(sh.domain||'')+'</strong>'
+    +(created?'<div style="font-size:11px;color:#6b7280;margin-top:4px">Created: '+new Date(created).toLocaleString()+'</div>':'')
+    +'<div style="font-size:12px;color:#6b7280;margin:6px 0">You can review the saved audit now. Change fields if needed; rerun the audit when input changes must be recalculated. “Save changes” keeps the same public share URL.</div>'
+    +'<div style="font-family:monospace;font-size:11px;word-break:break-all;margin:6px 0">'+url+'</div>'
+    +'<button type="button" data-token="'+(sh.token||'')+'" onclick="saveEditedAuditShare(this.dataset.token)" style="padding:7px 10px;background:#4f46e5;color:#fff;border:1px solid #4f46e5">Save changes</button> '
+    +'<button type="button" data-url="'+enc+'" onclick="copyShareLink(decodeURIComponent(this.dataset.url))" style="padding:7px 10px">Copy link</button> '
+    +'<button type="button" data-url="'+enc+'" onclick="window.open(decodeURIComponent(this.dataset.url))" style="padding:7px 10px;background:#fff;color:#4c1d95;border:1px solid #c4b5fd">Open</button>';
+}
 async function createAuditShare(d){
   try{
-    var code=(document.getElementById('code')||{}).value||''; if(!code||!d)return;
+    var code=(document.getElementById('code')||{}).value||''; if((!code&&!_AUDIT_ACCESS_TOKEN)||!d)return;
     var domain=_shareDomain(d.domain||d.client_url||document.getElementById('url').value); if(!domain)return;
     var mode=d.mode||(document.getElementById('mode')||{}).value||'test';
     var reportLang=(document.getElementById('reportLang')||{}).value||'nl';
-    var r=await fetch('/api/audit-share',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:code,domain:domain,sourceUrl:d.client_url||document.getElementById('url').value,mode:mode,auditType:_auditTypeFromMode(mode),reportLanguage:reportLang,pagesScanned:d.pages_scanned||0,totalPagesFound:d.total_pages_found||0,reportHtml:_reportHtmlForShare()})});
+    var r=await fetch('/api/audit-share',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:code,agencyAccessToken:_AUDIT_ACCESS_TOKEN,domain:domain,sourceUrl:d.client_url||document.getElementById('url').value,mode:mode,auditType:_auditTypeFromMode(mode),reportLanguage:reportLang,pagesScanned:d.pages_scanned||0,totalPagesFound:d.total_pages_found||0,reportHtml:_reportHtmlForShare(),reportData:d,editorState:_collectAuditEditorState()})});
     var x=await r.json(); if(!x.success)return;
-    var sh={token:x.token,domain:x.domain,auditType:x.auditType,reportLanguage:x.reportLanguage,shareUrl:x.shareUrl,createdAt:new Date().toISOString()};
+    var sh={token:x.token,domain:x.domain,auditType:x.auditType,reportLanguage:x.reportLanguage,shareBrand:x.shareBrand||_AUDIT_SHARED_BRAND,shareUrl:x.shareUrl,createdAt:x.createdAt||new Date().toISOString(),updatedAt:x.updatedAt||x.createdAt||new Date().toISOString()};
     _saveLocalShare(sh);
-    var cur=document.getElementById('currentShare'); if(cur){var enc=encodeURIComponent(x.shareUrl);cur.style.display='block';cur.innerHTML='<strong>'+_auditTypeLabel(x.auditType)+' share ready:</strong><div style="font-family:monospace;font-size:11px;word-break:break-all;margin:6px 0">'+x.shareUrl+'</div><button type="button" data-url="'+enc+'" onclick="copyShareLink(decodeURIComponent(this.dataset.url))" style="padding:7px 10px">Copy link</button> <button type="button" data-url="'+enc+'" onclick="window.open(decodeURIComponent(this.dataset.url))" style="padding:7px 10px;background:#fff;color:#4c1d95;border:1px solid #c4b5fd">Open</button>'; }
+    var cur=document.getElementById('currentShare'); if(cur){var enc=encodeURIComponent(x.shareUrl);cur.style.display='block';cur.innerHTML='<strong>'+(x.shareBrand||_AUDIT_SHARED_BRAND)+' · '+_auditTypeLabel(x.auditType)+' share ready:</strong><div style="font-family:monospace;font-size:11px;word-break:break-all;margin:6px 0">'+x.shareUrl+'</div><button type="button" data-url="'+enc+'" onclick="copyShareLink(decodeURIComponent(this.dataset.url))" style="padding:7px 10px">Copy link</button> <button type="button" data-url="'+enc+'" onclick="window.open(decodeURIComponent(this.dataset.url))" style="padding:7px 10px;background:#fff;color:#4c1d95;border:1px solid #c4b5fd">Open</button>'; }
   }catch(e){ console.warn('Could not create audit share:',e.message); }
 }
 async function updateCurrentAuditShare(){
   try{
     var sh=JSON.parse(localStorage.getItem('cs_audit_current_share')||'null'); if(!sh||!sh.token)return;
-    var code=(document.getElementById('code')||{}).value||''; if(!code)return;
+    var code=(document.getElementById('code')||{}).value||''; if(!code&&!_AUDIT_ACCESS_TOKEN)return;
     var lang=(document.getElementById('reportLang')||{}).value||'nl';
-    await fetch('/api/audit-share/update/'+sh.token,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:code,reportLanguage:lang,reportHtml:_reportHtmlForShare()})});
+    var reportData=null; try{reportData=JSON.parse(localStorage.getItem('cs_audit_result')||'null');}catch(e){}
+    await fetch('/api/audit-share/update/'+sh.token,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:code,agencyAccessToken:_AUDIT_ACCESS_TOKEN,reportLanguage:lang,reportHtml:_reportHtmlForShare(),reportData:reportData,editorState:_collectAuditEditorState()})});
   }catch(e){}
 }
+async function editAuditShare(token){
+  if(!token)return;
+  var code=(document.getElementById('code')||{}).value||''; if(!code&&!_AUDIT_ACCESS_TOKEN){alert('Enter the access code first.');return;}
+  try{
+    var r=await fetch('/api/audit-share/'+token+'/edit-data',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:code,agencyAccessToken:_AUDIT_ACCESS_TOKEN})});
+    var d=await r.json(); if(!d.success||!d.share){alert(d.error||'Could not load saved audit.');return;}
+    var sh=d.share, st=sh.editor_state||{};
+    Object.keys(st).forEach(function(id){var el=document.getElementById(id);if(el&&st[id]!=null)el.value=st[id];});
+    try{localStorage.setItem('cs_audit_state',JSON.stringify(st));}catch(e){}
+    if(sh.report_data){
+      try{localStorage.setItem('cs_audit_result',JSON.stringify(sh.report_data));}catch(e){}
+      render(sh.report_data);
+    }
+    var local={token:sh.token,domain:sh.domain,auditType:sh.audit_type,reportLanguage:sh.report_language,shareUrl:sh.shareUrl,createdAt:sh.created_at,updatedAt:sh.updated_at};
+    try{localStorage.setItem('cs_audit_current_share',JSON.stringify(local));}catch(e){}
+    _showEditingShare(sh);
+    _saveState();
+    var target=document.getElementById('results'); if(target&&sh.report_data){target.style.display='block';target.scrollIntoView({behavior:'smooth',block:'start'});} else {window.scrollTo({top:0,behavior:'smooth'});}
+  }catch(e){alert('Could not load saved audit.');}
+}
+async function saveEditedAuditShare(token){
+  if(!token)return;
+  var code=(document.getElementById('code')||{}).value||''; if(!code&&!_AUDIT_ACCESS_TOKEN){alert('Enter the access code first.');return;}
+  var lang=(document.getElementById('reportLang')||{}).value||'nl'; var reportData=null;
+  try{reportData=JSON.parse(localStorage.getItem('cs_audit_result')||'null');}catch(e){}
+  try{
+    var r=await fetch('/api/audit-share/update/'+token,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:code,agencyAccessToken:_AUDIT_ACCESS_TOKEN,reportLanguage:lang,reportHtml:_reportHtmlForShare(),reportData:reportData,editorState:_collectAuditEditorState()})});
+    var d=await r.json(); if(!d.success){alert(d.error||'Could not save changes.');return;}
+    try{var c=JSON.parse(localStorage.getItem('cs_audit_current_share')||'null');if(c&&c.token===token){c.updatedAt=d.updatedAt||new Date().toISOString();localStorage.setItem('cs_audit_current_share',JSON.stringify(c));}}catch(e){}
+    alert('Saved. The same share link now contains the updated report view.');
+    loadAuditShares();
+  }catch(e){alert('Could not save changes.');}
+}
+
 async function loadAuditShares(){
   var code=(document.getElementById('code')||{}).value||'';
   var domain=_shareDomain((document.getElementById('url')||{}).value||'');
-  if(!code){ _renderShareList(); return; }
-  try{ var r=await fetch('/api/audit-shares/list',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:code,domain:domain})}); var d=await r.json(); if(d.success){_renderShareList(d.shares);return;} }catch(e){}
+  if(!code&&!_AUDIT_ACCESS_TOKEN){ _renderShareList(); return; }
+  try{ var r=await fetch('/api/audit-shares/list',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:code,agencyAccessToken:_AUDIT_ACCESS_TOKEN,domain:domain})}); var d=await r.json(); if(d.success){_renderShareList(d.shares);return;} }catch(e){}
   _renderShareList();
 }
 async function revokeAuditShare(token){
   if(!token||!confirm('Revoke this share link? It will stop working immediately.'))return;
-  var code=(document.getElementById('code')||{}).value||''; if(!code){alert('Enter the access code first.');return;}
-  try{var r=await fetch('/api/audit-share/'+token+'/revoke',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:code})});var d=await r.json();if(d.success){try{var a=JSON.parse(localStorage.getItem('cs_audit_share_history')||'[]').filter(function(x){return x.token!==token;});localStorage.setItem('cs_audit_share_history',JSON.stringify(a));var c=JSON.parse(localStorage.getItem('cs_audit_current_share')||'null');if(c&&c.token===token)localStorage.removeItem('cs_audit_current_share');}catch(e){}loadAuditShares();}}catch(e){}
+  var code=(document.getElementById('code')||{}).value||''; if(!code&&!_AUDIT_ACCESS_TOKEN){alert('Enter the access code first.');return;}
+  try{var r=await fetch('/api/audit-share/'+token+'/revoke',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:code,agencyAccessToken:_AUDIT_ACCESS_TOKEN})});var d=await r.json();if(d.success){try{var a=JSON.parse(localStorage.getItem('cs_audit_share_history')||'[]').filter(function(x){return x.token!==token;});localStorage.setItem('cs_audit_share_history',JSON.stringify(a));var c=JSON.parse(localStorage.getItem('cs_audit_current_share')||'null');if(c&&c.token===token)localStorage.removeItem('cs_audit_current_share');}catch(e){}loadAuditShares();}}catch(e){}
 }
 
 async function deleteAuditShare(token){
   if(!token||!confirm('Permanently delete this saved share report? This cannot be undone and the public link will stop working immediately.'))return;
-  var code=(document.getElementById('code')||{}).value||''; if(!code){alert('Enter the access code first.');return;}
+  var code=(document.getElementById('code')||{}).value||''; if(!code&&!_AUDIT_ACCESS_TOKEN){alert('Enter the access code first.');return;}
   try{
-    var r=await fetch('/api/audit-share/'+token+'/delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:code})});
+    var r=await fetch('/api/audit-share/'+token+'/delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:code,agencyAccessToken:_AUDIT_ACCESS_TOKEN})});
     var d=await r.json();
     if(!d.success){alert(d.error||'Could not delete share report.');return;}
     try{
@@ -10536,7 +10839,7 @@ async function deleteAuditShare(token){
 async function runAudit(){
   var url=document.getElementById('url').value.trim();
   var code=document.getElementById('code').value.trim();
-  if(!code){alert('Voer de toegangscode in');return;}
+  if(!code&&!_AUDIT_ACCESS_TOKEN){alert('Voer de toegangscode in');return;}
   if(!url){alert('Voer een URL in');return;}
   var mode=document.getElementById('mode').value;
   var pageLanguage=(document.getElementById('pageLang')||{}).value||'auto';
@@ -10552,7 +10855,7 @@ async function runAudit(){
   _setAuditRunning('Audit gestart op de server… u kunt dit tabblad sluiten of weggaan; de audit loopt door.');
   document.getElementById('results').style.display='none';
   try{
-    var r=await fetch('/api/audit-start',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url:url,mode:mode,code:code,sitemapUrl:sitemapUrl,gscRaw:gscRaw,brandNames:brandNames,aiAnswers:aiAnswers,pageLanguage:pageLanguage})});
+    var r=await fetch('/api/audit-start',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url:url,mode:mode,code:code,agencyAccessToken:_AUDIT_ACCESS_TOKEN,sitemapUrl:sitemapUrl,gscRaw:gscRaw,brandNames:brandNames,aiAnswers:aiAnswers,pageLanguage:pageLanguage})});
     var d=await r.json();
     if(r.status===401){_setAuditFinished('🔒 Onjuiste toegangscode.');btn.disabled=false;btn.classList.remove('audit-pulse');return;}
     if(!d.success||!d.jobId){_setAuditFinished('⚠ '+(d.error||'Kon audit niet starten'));btn.disabled=false;btn.classList.remove('audit-pulse');return;}
@@ -18192,7 +18495,7 @@ function doLogin(){
   fetch(RAILWAY+'/api/access/verify',{
     method:'POST',
     headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({code:code})
+    body:JSON.stringify({code:code,agencyAccessToken:_AUDIT_ACCESS_TOKEN})
   })
   .then(function(r){return r.json();})
   .then(function(d){
