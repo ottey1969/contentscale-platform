@@ -10261,53 +10261,7 @@ recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', descriptio
                // ─────────────────────────────────────────────────────────────
                //  /audit — zichtbare audit-pagina: URL invoeren → rapport + PDF
                // ─────────────────────────────────────────────────────────────
-               // === AUDIT DRAFT AUTOSAVE ===
-               // Server-side draft persistence so audit input survives refresh/navigation even when browser storage is unreliable.
-               // The long random draft token in the URL is the secret; no access code or personal data is stored in the URL.
-               async function _ensureAuditDraftTable(){
-                 await pool.query(`CREATE TABLE IF NOT EXISTS audit_drafts (
-                   token TEXT PRIMARY KEY,
-                   data JSONB NOT NULL DEFAULT '{}'::jsonb,
-                   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-                   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-                 )`);
-               }
-               app.post('/api/audit-draft/save', async (req, res) => {
-                 try {
-                   await _ensureAuditDraftTable();
-                   const b=req.body||{};
-                   const data=(b.data && typeof b.data==='object') ? b.data : {};
-                   let token=String(b.token||'').trim();
-                   if(!/^[a-f0-9]{64}$/i.test(token)) token=require('crypto').randomBytes(32).toString('hex');
-                   await pool.query(`INSERT INTO audit_drafts(token,data,created_at,updated_at)
-                     VALUES($1,$2::jsonb,NOW(),NOW())
-                     ON CONFLICT(token) DO UPDATE SET data=EXCLUDED.data, updated_at=NOW()`, [token, JSON.stringify(data)]);
-                   const r=await pool.query('SELECT created_at,updated_at FROM audit_drafts WHERE token=$1',[token]);
-                   res.json({success:true,token,createdAt:r.rows[0]&&r.rows[0].created_at,updatedAt:r.rows[0]&&r.rows[0].updated_at});
-                 } catch(e) { console.error('audit draft save',e); res.status(500).json({success:false,error:'Could not save audit draft'}); }
-               });
-               app.get('/api/audit-draft/:token', async (req, res) => {
-                 try {
-                   const token=String(req.params.token||'').trim();
-                   if(!/^[a-f0-9]{64}$/i.test(token)) return res.status(404).json({success:false,error:'Draft not found'});
-                   await _ensureAuditDraftTable();
-                   const r=await pool.query('SELECT data,created_at,updated_at FROM audit_drafts WHERE token=$1',[token]);
-                   if(!r.rows.length) return res.status(404).json({success:false,error:'Draft not found'});
-                   res.json({success:true,token,data:r.rows[0].data||{},createdAt:r.rows[0].created_at,updatedAt:r.rows[0].updated_at});
-                 } catch(e) { res.status(500).json({success:false,error:'Could not load audit draft'}); }
-               });
-               app.delete('/api/audit-draft/:token', async (req, res) => {
-                 try {
-                   const token=String(req.params.token||'').trim();
-                   if(/^[a-f0-9]{64}$/i.test(token)) { await _ensureAuditDraftTable(); await pool.query('DELETE FROM audit_drafts WHERE token=$1',[token]); }
-                   res.json({success:true});
-                 } catch(e) { res.status(500).json({success:false,error:'Could not delete audit draft'}); }
-               });
-
                app.get('/audit', (req, res) => {
-                 res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
-                 res.set('Pragma', 'no-cache');
-                 res.set('Expires', '0');
                  res.type('html').send(`<!doctype html><html lang="nl"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Site Audit — ContentScale</title>
@@ -10354,14 +10308,12 @@ recommendations.push({ title: '🛠️ Add Article Schema (JSON-LD)', descriptio
 
 <div class="form noprint">
   <div class="field" id="adminCodeField" style="max-width:200px"><label>🔒 Toegangscode</label><input id="code" type="password" placeholder="geheime code"></div>
-  <div class="field"><label>Website-URL van de klant</label><input id="url" placeholder="https://klant.nl" value="" oninput="_persistAuditUrlNow(this.value);_saveState(event)" onchange="_persistAuditUrlNow(this.value);_saveState(event)"></div>
+  <div class="field"><label>Website-URL van de klant</label><input id="url" placeholder="https://klant.nl" value="" oninput="_saveState(event)" onchange="_saveState(event)"></div>
   <div class="field" style="max-width:170px"><label>Modus</label><select id="mode"><option value="test">Test (1 pagina, snel)</option><option value="quick">Snel (20 pag.)</option><option value="full">Volledig</option></select></div>
   <div class="field" style="max-width:150px"><label>Pagina-taal</label><select id="pageLang"><option value="auto">Auto-detect</option><option value="ar">العربية</option><option value="en">English</option><option value="nl">Nederlands</option><option value="es">Español</option></select></div>
   <div class="field" style="max-width:150px"><label>Rapport-taal</label><select id="reportLang" onchange="rerenderReport()"><option value="nl">Nederlands</option><option value="ar">العربية</option><option value="es">Español</option><option value="en">English</option></select></div>
   <button id="run" onclick="runAudit()">Audit uitvoeren</button>
-  <button id="saveAuditBtn" onclick="saveAuditNow(true)" style="background:#fff;color:#4f46e5;border:1.5px solid #4f46e5;">Opslaan</button>
   <button id="resetBtn" onclick="resetAudit()" style="background:#fff;color:#dc2626;border:1.5px solid #dc2626;">Reset</button>
-  <span id="auditSaveStatus" style="font-size:12px;color:#64748b;min-width:110px"></span>
 </div>
 
 <div class="noprint" style="background:#fff;border:1px solid var(--bd);border-radius:12px;padding:8px 20px;margin-bottom:20px;">
@@ -10590,116 +10542,12 @@ async function _initSharedAuditAccess(){
 // ── Gegevens bewaren in de browser (blijven na verversen/weggaan) ──
 // Each field is also stored under its own key. This means a large pasted AI/GSC
 // payload can never stop small fields such as the customer URL from persisting.
-// Dedicated URL persistence. The URL is mirrored into the current address as ?auditUrl=...
-// using history.replaceState (no reload). This makes refresh deterministic even when browser
-// storage is blocked or cleared by privacy settings. Reset removes this parameter.
-function _persistAuditUrlNow(value){
-  var v = value == null ? '' : String(value);
-  try { localStorage.setItem('cs_audit_url', v); } catch(e){}
-  try { sessionStorage.setItem('cs_audit_url', v); } catch(e){}
-  try {
-    var u = new URL(window.location.href);
-    if(v) u.searchParams.set('auditUrl', v); else u.searchParams.delete('auditUrl');
-    window.history.replaceState(window.history.state || {}, '', u.pathname + u.search + u.hash);
-  } catch(e){}
-}
-var _AUDIT_DRAFT_TOKEN='';
-var _AUDIT_DRAFT_TIMER=null;
-var _AUDIT_DRAFT_LOADING=false;
-function _auditDraftTokenFromUrl(){
-  try { return (new URL(window.location.href)).searchParams.get('draft') || ''; } catch(e){ return ''; }
-}
-function _setAuditDraftToken(token){
-  _AUDIT_DRAFT_TOKEN=token||'';
-  try {
-    var u=new URL(window.location.href);
-    if(_AUDIT_DRAFT_TOKEN) u.searchParams.set('draft',_AUDIT_DRAFT_TOKEN); else u.searchParams.delete('draft');
-    window.history.replaceState(window.history.state||{},'',u.pathname+u.search+u.hash);
-  } catch(e){}
-}
-function _auditDraftData(){
-  var d={};
-  try { _AUDIT_FIELDS.forEach(function(id){var el=document.getElementById(id);if(el)d[id]=el.value;}); } catch(e){}
-  return d;
-}
-function _auditSaveStatus(text,isError){
-  var el=document.getElementById('auditSaveStatus'); if(!el)return;
-  el.textContent=text||''; el.style.color=isError?'#dc2626':'#64748b';
-}
-async function saveAuditNow(manual){
-  if(_AUDIT_DRAFT_LOADING) return;
-  try {
-    if(manual) _auditSaveStatus('Opslaan…');
-    var r=await fetch('/api/audit-draft/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:_AUDIT_DRAFT_TOKEN||_auditDraftTokenFromUrl(),data:_auditDraftData()})});
-    var x=await r.json(); if(!r.ok||!x.success) throw new Error(x.error||'Save failed');
-    _setAuditDraftToken(x.token);
-    var dt=x.updatedAt?new Date(x.updatedAt):new Date();
-    _auditSaveStatus('Opgeslagen '+dt.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit'}));
-  } catch(e) { _auditSaveStatus('Opslaan mislukt',true); }
-}
-function _queueAuditDraftSave(){
-  if(_AUDIT_DRAFT_LOADING) return;
-  clearTimeout(_AUDIT_DRAFT_TIMER);
-  _AUDIT_DRAFT_TIMER=setTimeout(function(){saveAuditNow(false);},700);
-}
-async function _loadAuditDraft(){
-  var token=_auditDraftTokenFromUrl(); if(!token) return;
-  _AUDIT_DRAFT_TOKEN=token; _AUDIT_DRAFT_LOADING=true;
-  try {
-    var r=await fetch('/api/audit-draft/'+encodeURIComponent(token),{cache:'no-store'});
-    var x=await r.json();
-    if(r.ok&&x.success&&x.data){
-      _AUDIT_FIELDS.forEach(function(id){var el=document.getElementById(id); if(el && x.data[id]!=null) el.value=x.data[id];});
-      // Mirror the server draft into local persistence too.
-      _saveState();
-      var dt=x.updatedAt?new Date(x.updatedAt):null;
-      _auditSaveStatus(dt?'Opgeslagen '+dt.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit'}):'Opgeslagen');
-    }
-  } catch(e) { _auditSaveStatus('Draft laden mislukt',true); }
-  _AUDIT_DRAFT_LOADING=false;
-}
-function _restoreAuditUrlNow(){
-  var el=document.getElementById('url'); if(!el) return;
-  var v='';
-  try { v=(new URL(window.location.href)).searchParams.get('auditUrl') || ''; } catch(e){}
-  if(!v) { try { v=localStorage.getItem('cs_audit_url') || ''; } catch(e){} }
-  if(!v) { try { v=sessionStorage.getItem('cs_audit_url') || ''; } catch(e){} }
-  if(v) el.value=v;
-}
 var _AUDIT_FIELDS = ['url','mode','pageLang','reportLang','sitemapUrl','gscUrls','brandNames','aiAnswers','chatgptPrimaryUrls','chatgptExtraUrls'];
 var _AUDIT_FIELD_PREFIX = 'cs_audit_field_';
-var _AUDIT_COOKIE_PREFIX = 'cs_audit_';
-function _setAuditCookie(id, value){
-  try {
-    // Small-field fallback that survives a normal refresh even if localStorage is restricted.
-    // Keep cookies limited to modest values; large GSC/AI payloads remain in browser storage only.
-    var v = value == null ? '' : String(value);
-    if(v.length > 3500) return;
-    document.cookie = _AUDIT_COOKIE_PREFIX + encodeURIComponent(id) + '=' + encodeURIComponent(v) + '; Max-Age=2592000; Path=/; SameSite=Lax';
-  } catch(e){}
-}
-function _getAuditCookie(id){
-  try {
-    var name=_AUDIT_COOKIE_PREFIX + encodeURIComponent(id) + '=';
-    var parts=(document.cookie||'').split(';');
-    for(var i=0;i<parts.length;i++){
-      var c=parts[i].trim();
-      if(c.indexOf(name)===0) return decodeURIComponent(c.slice(name.length));
-    }
-  } catch(e){}
-  return null;
-}
-function _clearAuditCookie(id){
-  try { document.cookie = _AUDIT_COOKIE_PREFIX + encodeURIComponent(id) + '=; Max-Age=0; Path=/; SameSite=Lax'; } catch(e){}
-}
 function _saveAuditField(id){
   try {
     var el=document.getElementById(id);
-    if(!el) return;
-    var v=el.value == null ? '' : String(el.value);
-    try { localStorage.setItem(_AUDIT_FIELD_PREFIX + id, v); } catch(e){}
-    try { sessionStorage.setItem(_AUDIT_FIELD_PREFIX + id, v); } catch(e){}
-    _setAuditCookie(id, v);
+    if(el) localStorage.setItem(_AUDIT_FIELD_PREFIX + id, el.value == null ? '' : String(el.value));
   } catch(e){}
 }
 function _saveState(ev){
@@ -10715,7 +10563,6 @@ function _saveState(ev){
     _AUDIT_FIELDS.forEach(function(id){ var el=document.getElementById(id); if(el) s[id]=el.value; });
     localStorage.setItem('cs_audit_state', JSON.stringify(s));
   } catch(e){}
-  _queueAuditDraftSave();
 }
 function _loadState(){
   try {
@@ -10723,18 +10570,11 @@ function _loadState(){
     try { s = JSON.parse(localStorage.getItem('cs_audit_state')||'{}') || {}; } catch(e) { s={}; }
     _AUDIT_FIELDS.forEach(function(id){
       var el=document.getElementById(id); if(!el) return;
-      var individual=null, sessionValue=null, cookieValue=null;
+      var individual=null;
       try { individual=localStorage.getItem(_AUDIT_FIELD_PREFIX + id); } catch(e){}
-      try { sessionValue=sessionStorage.getItem(_AUDIT_FIELD_PREFIX + id); } catch(e){}
-      cookieValue=_getAuditCookie(id);
-      // Prefer the durable per-field value, then same-tab backup, cookie fallback, then legacy aggregate.
       if(individual!==null) el.value=individual;
-      else if(sessionValue!==null) el.value=sessionValue;
-      else if(cookieValue!==null) el.value=cookieValue;
       else if(s[id]!=null) el.value=s[id];
     });
-    // URL in the address bar is the strongest refresh-safe source and wins over defaults.
-    _restoreAuditUrlNow();
     // laatste resultaat terugzetten
     var last = localStorage.getItem('cs_audit_result');
     if(last){ try{ render(JSON.parse(last)); }catch(e){} }
@@ -10751,21 +10591,10 @@ function resetAudit(){
   var pdfStatus=document.getElementById('perplexityPdfStatus'); if(pdfStatus) pdfStatus.textContent='';
   var code=document.getElementById('code'); if(code) code.value='';
   try{
-    var _oldDraft=_AUDIT_DRAFT_TOKEN||_auditDraftTokenFromUrl();
-    if(_oldDraft){ try{ fetch('/api/audit-draft/'+encodeURIComponent(_oldDraft),{method:'DELETE'}); }catch(e){} }
-    _AUDIT_DRAFT_TOKEN=''; clearTimeout(_AUDIT_DRAFT_TIMER); _auditSaveStatus('');
-    try { var _du=new URL(window.location.href); _du.searchParams.delete('draft'); window.history.replaceState(window.history.state||{},'',_du.pathname+_du.search+_du.hash); } catch(e){}
     localStorage.removeItem('cs_audit_state');
     localStorage.removeItem('cs_audit_result');
     localStorage.removeItem('cs_audit_job');
-    localStorage.removeItem('cs_audit_url');
-    try { sessionStorage.removeItem('cs_audit_url'); } catch(e){}
-    try { var _u=new URL(window.location.href); _u.searchParams.delete('auditUrl'); window.history.replaceState(window.history.state || {}, '', _u.pathname+_u.search+_u.hash); } catch(e){}
-    _AUDIT_FIELDS.forEach(function(id){
-      localStorage.removeItem(_AUDIT_FIELD_PREFIX + id);
-      try { sessionStorage.removeItem(_AUDIT_FIELD_PREFIX + id); } catch(e){}
-      _clearAuditCookie(id);
-    });
+    _AUDIT_FIELDS.forEach(function(id){ localStorage.removeItem(_AUDIT_FIELD_PREFIX + id); });
   }catch(e){}
   var results=document.getElementById('results'); if(results) results.style.display='none';
   var status=document.getElementById('status'); if(status){ status.style.display='none'; status.textContent=''; }
@@ -10777,7 +10606,6 @@ function resetAudit(){
 // sla op bij elke wijziging + laad bij openen
 function _initAuditPersistence(){
   _loadState();
-  _loadAuditDraft();
   _AUDIT_FIELDS.forEach(function(id){
     var el=document.getElementById(id);
     if(el){ el.addEventListener('input', _saveState); el.addEventListener('change', _saveState); }
@@ -10788,14 +10616,8 @@ function _initAuditPersistence(){
 }
 if(document.readyState==='loading') window.addEventListener('DOMContentLoaded', _initAuditPersistence);
 else _initAuditPersistence();
-// Restore again on pageshow and shortly after boot. This protects against later UI initializers
-// that may render after DOMContentLoaded and accidentally replace values with template defaults.
-window.addEventListener('pageshow', function(){ _loadState(); });
-setTimeout(function(){ _loadState(); }, 50);
-setTimeout(function(){ _loadState(); }, 500);
 // Extra safety for navigation/reload: persist all audit fields before the page is hidden.
 window.addEventListener('pagehide', function(){ _saveState(); });
-window.addEventListener('beforeunload', function(){ _saveState(); });
 function loadGscFile(input){
   var f=input.files&&input.files[0]; if(!f)return;
   var reader=new FileReader();
