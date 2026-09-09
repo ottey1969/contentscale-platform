@@ -33571,6 +33571,9 @@ async function saveBrandCtx() {
 document.addEventListener('DOMContentLoaded', function(){ loadBrandCtx(); try{ if(new URLSearchParams(window.location.search).get('openPrewrite')==='1'){ showPrewriteBriefModal(); var _u=new URL(window.location.href); _u.searchParams.delete('openPrewrite'); window.history.replaceState({}, '', _u.pathname+_u.search+_u.hash); } }catch(e){} });
 
 var _ctSearchQuery = '';
+// CONTENTSCALE-TRACKER-CLIENT-STATE-REFERENCE-FIX-20260909=true
+// Canonical /track/:token client state. renderPages/report controls read this after loadPages().
+var _client = {};
 var _mdFilter = 'all'; // 'all' | 'todo' | 'done' — filter on the user's own persistent checkmarks
   function setMdFilter(f) { _mdFilter = f; renderPages(); }
   function filterPages(q) { _ctSearchQuery = (q||'').toLowerCase().trim(); renderPages(); }
@@ -33581,6 +33584,7 @@ var _mdFilter = 'all'; // 'all' | 'todo' | 'done' — filter on the user's own p
     var data = await api('');
     if (!data || !data.success) throw new Error(data && data.error || 'Failed to load');
     _pages = data.pages || [];
+    _client = data.client || {};
     if (data.client && Array.isArray(data.client.sitemap_urls)) {
       window._csSitemapUrls = data.client.sitemap_urls.map(function(u){ try { var x=new URL(u); var pth=x.pathname; while(pth.length>1 && pth.charAt(pth.length-1)==='/') pth=pth.slice(0,-1); return (x.hostname.replace(/^www\./,'')+pth).toLowerCase(); } catch(e){ return String(u).toLowerCase(); } });
     }
