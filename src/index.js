@@ -46331,6 +46331,69 @@ If no unanchored claims found, return empty array: []`;
     snapshot._quality_report = _q.report;
   } catch (e) { console.warn('[brief-quality] skipped:', e.message); }
 
+  // CONTENTSCALE-CENTRAL-EVIDENCE-CLAIMS-ENFORCEMENT-20260909=true
+  // Final deterministic enforcement pass. Runs AFTER all LLM parsing/fallback/quality hooks,
+  // so no later brief transformation can re-introduce an evidence contradiction or silently
+  // transfer a competitor-only business claim into client copy.
+  try {
+    const _ecNorm = function(v){ return String(v||'').toLowerCase().replace(/<[^>]+>/g,' ').replace(/&[a-z0-9#]+;/gi,' ').replace(/[^a-z0-9]+/g,' ').replace(/\s+/g,' ').trim(); };
+    const _ecPage = _ecNorm(rawHtml || effectiveHtml || page.html_content || '');
+    const _ecVerified = (_verifiedClaims || []).map(_ecNorm).filter(Boolean);
+    const _ecBlocked = (_blockedClaims || []).map(function(x){ return { claim:_ecNorm(x.claim), status:x.status }; }).filter(function(x){ return x.claim; });
+    const _ecSupported = function(claim){
+      var n=_ecNorm(claim); if(!n) return false;
+      if(_ecPage.indexOf(n)>=0) return true;
+      return _ecVerified.some(function(v){ return v.indexOf(n)>=0 || n.indexOf(v)>=0; });
+    };
+    const _ecContradiction = function(txt){
+      if(!_googleAioAlreadyCited) return txt;
+      var t=String(txt||'');
+      // Observed citation evidence overrides generic ranking/visibility heuristics.
+      t=t.replace(/this page currently has no visibility or citations in (?:these )?ai[- ]generated summaries\.?/gi,
+        'This page already has verified Google AI Overview citation visibility; protect that win while expanding citation coverage to engines that are still missing.');
+      t=t.replace(/this page (?:currently )?(?:has|gets|shows) no (?:ai|aio|google ai overview) visibility(?: or citations)?[^.]*\.?/gi,
+        'This page already has verified Google AI Overview citation visibility.');
+      t=t.replace(/(?:google ai overview|aio)[^.]{0,80}(?:will not|won[’']t|cannot) cite[^.]*top ?10[^.]*\.?/gi,
+        'Google AI Overview already cites this page; top-10 organic ranking is not a prerequisite demonstrated by this evidence.');
+      return t;
+    };
+    const _ecRiskPatterns = [
+      /\b(?:licensed|insured|certified)\b[^.!?\n]{0,100}/gi,
+      /\b(?:same[- ]day|\d+\s*(?:-|to)\s*\d+\s*minute|\d+\s*minute|response time|dispatch)\b[^.!?\n]{0,120}/gi,
+      /\b(?:all\s+\d+\s+(?:counties|locations|states)|serv(?:e|es|ing)\s+all\s+\d+)\b[^.!?\n]{0,120}/gi,
+      /\b(?:\d+\+?\s+years?|over\s+\d+\s+years?)\b[^.!?\n]{0,100}/gi,
+      /\b(?:free estimates?|free assessments?|financing|warrant(?:y|ies)|guarantee(?:d|s)?|insurance (?:claim )?(?:help|assistance|coordination|documentation)|coordinate(?:s|d)? (?:directly )?with (?:your )?(?:homeowner(?:'s)? )?insurance)\b[^.!?\n]{0,140}/gi,
+      /\b(?:24\s*\/\s*7(?:\s*\/\s*365)?|around the clock)\b[^.!?\n]{0,100}/gi,
+      /\b(?:#1|best|top[- ]rated|leading)\b[^.!?\n]{0,100}/gi
+    ];
+    const _ecUnsupported = function(txt){
+      var text=String(txt||''), found=[];
+      _ecBlocked.forEach(function(b){ if(b.claim && _ecNorm(text).indexOf(b.claim)>=0 && !_ecSupported(b.claim)) found.push(b.claim); });
+      _ecRiskPatterns.forEach(function(rx){ rx.lastIndex=0; var m; while((m=rx.exec(text))){ var c=String(m[0]||'').trim(); if(c && !_ecSupported(c)) found.push(c); if(m.index===rx.lastIndex) rx.lastIndex++; } });
+      return Array.from(new Set(found)).slice(0,8);
+    };
+    const _ecEnforceItem = function(item){
+      if(!item || typeof item!=='object') return item;
+      ['title','action','expected_impact','trigger'].forEach(function(k){ if(typeof item[k]==='string') item[k]=_ecContradiction(item[k]); });
+      var combined=[item.title,item.action,item.trigger].filter(Boolean).join(' ');
+      var unsupported=_ecUnsupported(combined);
+      if(unsupported.length){
+        // Never publish competitor-derived/unverified client prose. Keep the strategic signal,
+        // but convert the action into an explicit verification task.
+        var original=String(item.action||'').replace(/──\s*READY-TO-PASTE[^\n]*──/gi,'').trim();
+        item.title = /^verify first/i.test(String(item.title||'')) ? item.title : 'VERIFY FIRST — ' + String(item.title||'Business fact opportunity');
+        item.action = 'Competitive/AI evidence suggests this may be a useful content opportunity, but the client-specific claim is not verified. Verify the actual business fact in Claims & Facts before publishing it. BLOCKED CLAIM SIGNALS: ' + unsupported.join(' | ') + (original ? '\n\nIntelligence context (not approved client copy): ' + original : '');
+        item.expected_impact = 'Prevents an unverified competitor or AI-source claim from becoming client copy. Once verified, regenerate the brief to receive paste-ready wording.';
+        item.requires_verification = true;
+        item.ready_to_paste = false;
+      }
+      return item;
+    };
+    if(Array.isArray(snapshot.recommendations)) snapshot.recommendations=snapshot.recommendations.map(_ecEnforceItem);
+    if(Array.isArray(snapshot.gsc_brief)) snapshot.gsc_brief=snapshot.gsc_brief.map(_ecEnforceItem);
+    snapshot._evidence_claims_enforced = true;
+  } catch(_ecErr) { console.warn('[evidence-claims-enforcement] skipped:', _ecErr && _ecErr.message); }
+
   // 6. Save snapshot
   // Content change detection: did hash change since last check?
   let contentChanged = false;
