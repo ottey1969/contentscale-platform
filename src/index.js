@@ -5189,11 +5189,15 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
       + (d.keyword?'<div class="bwm-kw">Keyword: '+_bwEscL(d.keyword)+'</div>':'')
       + '</div><button class="bwm-x" onclick="event.stopPropagation();_bwCloseModal()">&times;</button></div>';
     h += '<div class="bwm-body">';
+    var _tg=_briefEngineState(d,'google_aio'), _tch=_briefEngineState(d,'chatgpt'), _tpp=_briefEngineState(d,'perplexity'), _tcl=_briefEngineState(d,'claude'), _tco=_briefEngineState(d,'copilot');
+    function _et(st,label,color){ var v=st.exact?'Exact':(st.domain?'Domain':(st.cited?'Cited':(st.checked?'No':'?'))); return tile(v,label,st.cited?color:'#6b7280'); }
     h += '<div class="bwm-tiles">'
       + tile((pos&&pos!=='N/A')?('#'+pos):'-','Position',pc)
-      + tile(d.aio_cited?'Cited':'No','Google AIO',d.aio_cited?'#4ade80':'#6b7280')
-      + tile(d.perp_cited?'Cited':'No','Perplexity',d.perp_cited?'#a78bfa':'#6b7280')
-      + tile(d.bing_cited?'Cited':'No','Copilot',d.bing_cited?'#60a5fa':'#6b7280')
+      + _et(_tg,'Google AIO','#4ade80')
+      + _et(_tch,'ChatGPT','#34d399')
+      + _et(_tpp,'Perplexity','#a78bfa')
+      + _et(_tcl,'Claude','#f59e0b')
+      + _et(_tco,'Copilot','#60a5fa')
       + (d.score?tile(d.score,'GRAAF','#a78bfa'):'')
       + '</div>';
     // ── ONE SYSTEM: the entire brief body renders via the SAME shared
@@ -33879,6 +33883,34 @@ function _briefEngineState(o,engine){
   return {checked:false,cited:false,domain:false,exact:false,direct:false,recommended:false,method:'NOT CHECKED'};
 }
 function _briefStateText(st){ if(st.exact)return '✓ EXACT PAGE — '+st.method; if(st.domain)return '✓ DOMAIN — '+st.method; if(st.direct)return '✓ DIRECT — '+st.method; if(st.recommended)return '✓ RECOMMENDED — '+st.method; return st.checked?'✗ NOT CITED — '+(st.method==='VERIFIED'?'VERIFIED':'CHECKED'):'? NOT CHECKED'; }
+// CONTENTSCALE-5-ENGINE-TRANSPARENCY-20260909=true
+function _briefTransparencyLines(o){
+  o=o||{};
+  var out=[];
+  var names={google_aio:'Google AIO / Gemini',chatgpt:'ChatGPT Search',perplexity:'Perplexity',claude:'Claude',copilot:'Microsoft Copilot'};
+  ['google_aio','chatgpt','perplexity','claude','copilot'].forEach(function(engine){
+    var st=_briefEngineState(o,engine), label=names[engine], manual=!!(_briefManualMap(o)[engine] && !_briefBool(_briefManualMap(o)[engine].is_cleared));
+    if(manual){
+      if(st.exact) out.push('- '+label+': manual verification found the exact target page as a citation source.');
+      else if(st.domain) out.push('- '+label+': manual verification found the target domain as a citation source, but not the exact tracked page.');
+      else if(st.direct) out.push('- '+label+': manual verification found the brand directly cited/supported, but no verified citation to the target domain.');
+      else if(st.recommended) out.push('- '+label+': manual verification found the brand recommended, but no verified citation to the target domain.');
+      else out.push('- '+label+': manually checked; the target domain/page was not cited in the checked answer.');
+      if(engine==='google_aio' && !o.aio_text && !o.ai_google_overview_text) out.push('  Automated AIO detection did not independently capture an Overview during this scan. Manual VERIFIED evidence remains authoritative.');
+      if(engine==='perplexity') {
+        if(o.perp_excerpt||o.ai_perplexity_answer_excerpt) out.push('  Perplexity Sonar/API also captured an answer during automated monitoring; it does not override the manual verification.');
+        else out.push('  Automated Perplexity monitoring did not capture a usable answer excerpt during this scan; it does not override the manual verification.');
+      }
+      if(engine==='copilot') out.push('  Bing visibility is a separate supporting signal and is not proof of a Microsoft Copilot citation.');
+    } else {
+      if(engine==='google_aio') out.push('- '+label+': '+(st.checked?(st.cited?'automated signal detected; no manual verification is saved.':'automated check did not verify a citation; no manual verification is saved.'):'not checked.'));
+      else if(engine==='perplexity') out.push('- '+label+': '+(st.checked?(st.cited?'API VERIFIED citation signal; no manual verification is saved.':'automated/API check did not cite the target page; no manual verification is saved.'):'not checked.'));
+      else out.push('- '+label+': not manually checked.');
+    }
+  });
+  return out;
+}
+
 function _bwChips(bd){
   function chip(v,l,c){ return '<div class="bw-chip"><div class="v" style="color:'+c+';">'+v+'</div><div class="l">'+l+'</div></div>'; }
   var posC = !bd.position ? '#6b7280' : bd.position<=3?'#4ade80':bd.position<=10?'#a3e635':bd.position<=20?'#fbbf24':'#f87171';
@@ -34698,8 +34730,8 @@ function copyBrief(pageId) {
   lines.push('', '\ud83d\udd0d What We Actually Checked (transparency):');
   lines.push('- Query tested: "' + (p.keyword||p.gsc_keyword||'') + '"');
   if (p.last_checked) lines.push('- Checked: ' + new Date(p.last_checked).toLocaleString());
-  if (p.ai_google_overview_text) lines.push('- Google AI Overview currently shows: "' + _aioTxt.substring(0,200) + (_aioTxt.length>200?'...':'') + '"');
-  if (p.ai_perplexity_answer_excerpt) lines.push('- Perplexity actual answer excerpt: "' + p.ai_perplexity_answer_excerpt.substring(0,200) + (p.ai_perplexity_answer_excerpt.length>200?'...':'') + '"');
+  var _transObj={ai_manual_evidence:p.ai_manual_evidence||{},aio_cited:!!p.ai_google_overview_cited,perp_cited:!!p.ai_perplexity_cited,ai_google_overview_text:p.ai_google_overview_text||'',ai_perplexity_answer_excerpt:p.ai_perplexity_answer_excerpt||''};
+  _briefTransparencyLines(_transObj).forEach(function(x){ lines.push(x); });
   (function(){
     try {
       var _gc = typeof p.google_competitors === 'string' ? JSON.parse(p.google_competitors) : (p.google_competitors||[]);
@@ -34842,7 +34874,7 @@ function copyBrief(pageId) {
     lines.push((i+1) + '. [' + (s2.priority||'medium').toUpperCase() + '] ' + _stripTags(s2.claim||'Unverified claim'));
     if (s2.why) lines.push('   ISSUE: ' + _stripTags(s2.why));
     if (s2.sources && s2.sources.length) lines.push('   SUGGESTED SOURCES: ' + s2.sources.map(function(x){ return x.name||x.url; }).join(', '));
-  }); } else { lines.push('(no unverified claims)'); }
+  }); } else { var _vf=(recs||[]).filter(function(x){return /^verify first/i.test(String((x&&x.title)||''));}); lines.push(_vf.length ? ('VERIFY FIRST items remain: '+_vf.length+' — confirm before publishing.') : '(no unresolved VERIFY FIRST claims detected)'); }
 
   lines.push('', '=== INTERNAL LINKING ===');
   if (_link3.length) { _link3.forEach(function(r, i) {
@@ -36233,10 +36265,7 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
         lines.push('', '\ud83d\udd0d What We Actually Checked (transparency):');
         lines.push('- Query tested: "' + (data.keyword||'') + '"');
         if (data.last_checked) lines.push('- Checked: ' + new Date(data.last_checked).toLocaleString());
-        if (data.aio_text) lines.push('- Google AI Overview currently shows: "' + data.aio_text.substring(0,200) + (data.aio_text.length>200?'...':'') + '"');
-        else lines.push('- Google AI Overview: checked \u2014 not shown for this exact query right now.');
-        if (data.perp_excerpt) lines.push('- Perplexity actual answer excerpt: "' + data.perp_excerpt.substring(0,200) + (data.perp_excerpt.length>200?'...':'') + '"');
-        else lines.push('- Perplexity: checked \u2014 no answer excerpt captured for this query.');
+        _briefTransparencyLines(data).forEach(function(x){ lines.push(x); });
         (function(){
           try {
             var _gc = typeof data.google_competitors === 'string' ? JSON.parse(data.google_competitors) : (data.google_competitors||[]);
@@ -36363,7 +36392,7 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
             if (s.why) lines.push('   Issue: ' + s.why);
             if (s.sources && s.sources.length) lines.push('   Suggested sources: ' + s.sources.map(function(x){ return x.name || x.url; }).join(', '));
           });
-        } else { lines.push('(no unverified claims)'); }
+        } else { var _vf2=(allItems||[]).filter(function(x){return /^verify first/i.test(String((x&&x.title)||''));}); lines.push(_vf2.length ? ('VERIFY FIRST items remain: '+_vf2.length+' — confirm before publishing.') : '(no unresolved VERIFY FIRST claims detected)'); }
 
         lines.push('', '=== INTERNAL LINKING ===');
         if (_linkItems.length) {
@@ -45656,11 +45685,11 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
         // translate them here for the 7 supported label languages, English fallback otherwise). ──
         function _localizedCiteItems(lang, kw, pos){
           var T = {
-            en: { aioT:'Win Google AI Overview citation', aioA:'Add a direct, quotable 2-3 sentence definition answering "what is '+kw+'" within the first 100 words, right after the H1. AI Overviews quote concise, self-contained answers.', aioI:'Makes the page eligible for an AIO citation once it ranks in the top 10 and is recrawled.', perpT:'Win Perplexity citation', perpA:'Add an "About the Author" block with a named author, credentials and 1-2 verifiable stats. Perplexity favors clear E-E-A-T signals.', perpI:'Stronger author trust improves the chance of a Perplexity citation.', copT:'Win Microsoft Copilot citation', copA:'Add a 50-60 word summary paragraph near the top that directly matches the search query for "'+kw+'".', copI:'A concise top-of-page summary improves the chance of a Copilot citation (requires being indexed in Bing).', rankT:'Improve Google rank for "'+kw+'"', rankA:'Rewrite the <title> and H1 to lead with "'+kw+'" plus a clear benefit. Currently ranking #'+pos+'.', rankI:'Currently #'+pos+' — a sharper title/H1 improves the chance of moving toward the top 3 after recrawl.' },
+            en: { aioT:'Win Google AI Overview citation', aioA:'Add a direct, quotable 2-3 sentence definition answering "what is '+kw+'" within the first 100 words, right after the H1. AI Overviews quote concise, self-contained answers.', aioI:'Improves extractability and source clarity for AI Overview citations; top-10 is an organic objective, not a citation prerequisite.', perpT:'Win Perplexity citation', perpA:'Add an "About the Author" block with a named author, credentials and 1-2 verifiable stats. Perplexity favors clear E-E-A-T signals.', perpI:'Stronger author trust improves the chance of a Perplexity citation.', copT:'Win Microsoft Copilot citation', copA:'Add a 50-60 word summary paragraph near the top that directly matches the search query for "'+kw+'".', copI:'A concise top-of-page summary improves citation extractability. Bing visibility is a supporting Microsoft search signal, not proof or a prerequisite of a Copilot citation.', rankT:'Improve Google rank for "'+kw+'"', rankA:'Rewrite the <title> and H1 to lead with "'+kw+'" plus a clear benefit. Currently ranking #'+pos+'.', rankI:'Currently #'+pos+' — a sharper title/H1 improves the chance of moving toward the top 3 after recrawl.' },
             nl: { aioT:'Google AI Overview-citatie winnen', aioA:'Voeg een directe, citeerbare definitie van 2-3 zinnen toe die "wat is '+kw+'" beantwoordt, binnen de eerste 100 woorden, direct na de H1. AI Overviews citeren beknopte, op zichzelf staande antwoorden.', aioI:'Maakt de pagina in aanmerking voor een AIO-citatie zodra hij in de top 10 staat en opnieuw wordt gecrawld.', perpT:'Perplexity-citatie winnen', perpA:'Voeg een "Over de auteur"-blok toe met een genoemde auteur, kwalificaties en 1-2 verifieerbare cijfers. Perplexity geeft de voorkeur aan duidelijke E-E-A-T-signalen.', perpI:'Sterker auteursvertrouwen vergroot de kans op een Perplexity-citatie.', copT:'Microsoft Copilot-citatie winnen', copA:'Voeg bovenaan een samenvattende alinea van 50-60 woorden toe die direct aansluit op de zoekopdracht voor "'+kw+'".', copI:'Een beknopte samenvatting bovenaan vergroot de kans op een Copilot-citatie (vereist indexering in Bing).', rankT:'Google-positie verbeteren voor "'+kw+'"', rankA:'Herschrijf de <title> en H1 zodat ze beginnen met "'+kw+'" plus een duidelijk voordeel. Staat momenteel op #'+pos+'.', rankI:'Momenteel #'+pos+' — een scherpere title/H1 vergroot de kans om na een hercrawl richting de top 3 te bewegen.' },
             es: { aioT:'Ganar cita en Google AI Overview', aioA:'Añade una definición directa y citable de 2-3 frases que responda "qué es '+kw+'" dentro de las primeras 100 palabras, justo después del H1. Las AI Overviews citan respuestas concisas y autónomas.', aioI:'Hace que la página sea elegible para una cita de AIO una vez que esté en el top 10 y sea recrawleada.', perpT:'Ganar cita en Perplexity', perpA:'Añade un bloque "Sobre el autor" con un autor con nombre, credenciales y 1-2 datos verificables. Perplexity favorece señales E-E-A-T claras.', perpI:'Una mayor confianza en el autor mejora la probabilidad de una cita en Perplexity.', copT:'Ganar cita en Microsoft Copilot', copA:'Añade un párrafo resumen de 50-60 palabras cerca del principio que coincida directamente con la consulta de "'+kw+'".', copI:'Un resumen conciso al principio mejora la probabilidad de una cita en Copilot (requiere estar indexado en Bing).', rankT:'Mejorar la posición en Google para "'+kw+'"', rankA:'Reescribe el <title> y el H1 para empezar con "'+kw+'" y un beneficio claro. Actualmente en la posición #'+pos+'.', rankI:'Actualmente #'+pos+' — un title/H1 más nítido mejora la probabilidad de acercarse al top 3 tras el recrawl.' },
             de: { aioT:'Google AI Overview-Zitat gewinnen', aioA:'Füge eine direkte, zitierfähige 2-3-Satz-Definition hinzu, die "was ist '+kw+'" innerhalb der ersten 100 Wörter direkt nach der H1 beantwortet. AI Overviews zitieren prägnante, eigenständige Antworten.', aioI:'Macht die Seite für ein AIO-Zitat geeignet, sobald sie in den Top 10 rankt und neu gecrawlt wird.', perpT:'Perplexity-Zitat gewinnen', perpA:'Füge einen "Über den Autor"-Block mit genanntem Autor, Qualifikationen und 1-2 überprüfbaren Fakten hinzu. Perplexity bevorzugt klare E-E-A-T-Signale.', perpI:'Stärkeres Autorenvertrauen verbessert die Chance auf ein Perplexity-Zitat.', copT:'Microsoft Copilot-Zitat gewinnen', copA:'Füge oben einen 50-60-Wörter-Zusammenfassungsabsatz hinzu, der direkt zur Suchanfrage für "'+kw+'" passt.', copI:'Eine prägnante Zusammenfassung oben verbessert die Chance auf ein Copilot-Zitat (erfordert Bing-Indexierung).', rankT:'Google-Ranking verbessern für "'+kw+'"', rankA:'Schreibe <title> und H1 neu, sodass sie mit "'+kw+'" plus einem klaren Nutzen beginnen. Aktuell auf #'+pos+'.', rankI:'Aktuell #'+pos+' — ein schärferer Title/H1 verbessert die Chance, nach dem Recrawl Richtung Top 3 zu rücken.' },
-            fr: { aioT:'Obtenir une citation Google AI Overview', aioA:'Ajoutez une définition directe et citable de 2-3 phrases répondant à "qu’est-ce que '+kw+'" dans les 100 premiers mots, juste après le H1. Les AI Overviews citent des réponses concises et autonomes.', aioI:'Rend la page éligible à une citation AIO une fois qu’elle est dans le top 10 et recrawlée.', perpT:'Obtenir une citation Perplexity', perpA:'Ajoutez un bloc "À propos de l’auteur" avec un auteur nommé, des qualifications et 1-2 statistiques vérifiables. Perplexity privilégie des signaux E-E-A-T clairs.', perpI:'Une confiance accrue envers l’auteur améliore la probabilité d’une citation Perplexity.', copT:'Obtenir une citation Microsoft Copilot', copA:'Ajoutez un paragraphe de résumé de 50-60 mots près du début qui correspond directement à la requête pour "'+kw+'".', copI:'Un résumé concis en haut améliore la probabilité d’une citation Copilot (nécessite d’être indexé dans Bing).', rankT:'Améliorer le classement Google pour "'+kw+'"', rankA:'Réécrivez le <title> et le H1 pour commencer par "'+kw+'" plus un bénéfice clair. Actuellement classé #'+pos+'.', rankI:'Actuellement #'+pos+' — un title/H1 plus net améliore la probabilité de se rapprocher du top 3 après le recrawl.' },
+            fr: { aioT:'Obtenir une citation Google AI Overview', aioA:'Ajoutez une définition directe et citable de 2-3 phrases répondant à "qu’est-ce que '+kw+'" dans les 100 premiers mots, juste après le H1. Les AI Overviews citent des réponses concises et autonomes.', aioI:'Améliore l’extractibilité pour les citations AIO ; le top 10 est un objectif organique, pas une condition préalable à une citation.', perpT:'Obtenir une citation Perplexity', perpA:'Ajoutez un bloc "À propos de l’auteur" avec un auteur nommé, des qualifications et 1-2 statistiques vérifiables. Perplexity privilégie des signaux E-E-A-T clairs.', perpI:'Une confiance accrue envers l’auteur améliore la probabilité d’une citation Perplexity.', copT:'Obtenir une citation Microsoft Copilot', copA:'Ajoutez un paragraphe de résumé de 50-60 mots près du début qui correspond directement à la requête pour "'+kw+'".', copI:'Un résumé concis améliore l’extractibilité. La visibilité Bing est un signal de recherche complémentaire, pas une preuve ni une condition préalable d’une citation Copilot.', rankT:'Améliorer le classement Google pour "'+kw+'"', rankA:'Réécrivez le <title> et le H1 pour commencer par "'+kw+'" plus un bénéfice clair. Actuellement classé #'+pos+'.', rankI:'Actuellement #'+pos+' — un title/H1 plus net améliore la probabilité de se rapprocher du top 3 après le recrawl.' },
             pt: { aioT:'Conquistar citação no Google AI Overview', aioA:'Adicione uma definição direta e citável de 2-3 frases respondendo "o que é '+kw+'" nas primeiras 100 palavras, logo após o H1. As AI Overviews citam respostas concisas e autônomas.', aioI:'Torna a página elegível para uma citação de AIO assim que estiver no top 10 e for recrawleada.', perpT:'Conquistar citação no Perplexity', perpA:'Adicione um bloco "Sobre o autor" com um autor nomeado, credenciais e 1-2 estatísticas verificáveis. O Perplexity favorece sinais claros de E-E-A-T.', perpI:'Maior confiança no autor melhora a chance de uma citação no Perplexity.', copT:'Conquistar citação no Microsoft Copilot', copA:'Adicione um parágrafo de resumo de 50-60 palavras perto do topo que corresponda diretamente à consulta de "'+kw+'".', copI:'Um resumo conciso no topo melhora a chance de uma citação no Copilot (requer estar indexado no Bing).', rankT:'Melhorar a posição no Google para "'+kw+'"', rankA:'Reescreva o <title> e o H1 para começar com "'+kw+'" mais um benefício claro. Atualmente na posição #'+pos+'.', rankI:'Atualmente #'+pos+' — um title/H1 mais nítido melhora a chance de avançar para o top 3 após o recrawl.' },
             it: { aioT:'Ottenere una citazione in Google AI Overview', aioA:'Aggiungi una definizione diretta e citabile di 2-3 frasi che risponda a "cos’è '+kw+'" entro le prime 100 parole, subito dopo l’H1. Le AI Overview citano risposte concise e autonome.', aioI:'Rende la pagina idonea a una citazione AIO una volta che è nella top 10 e viene ri-scansionata.', perpT:'Ottenere una citazione in Perplexity', perpA:'Aggiungi un blocco "Informazioni sull’autore" con un autore con nome, credenziali e 1-2 statistiche verificabili. Perplexity predilige segnali E-E-A-T chiari.', perpI:'Una maggiore fiducia nell’autore migliora la probabilità di una citazione in Perplexity.', copT:'Ottenere una citazione in Microsoft Copilot', copA:'Aggiungi un paragrafo di riepilogo di 50-60 parole vicino all’inizio che corrisponda direttamente alla query per "'+kw+'".', copI:'Un riepilogo conciso in alto migliora la probabilità di una citazione in Copilot (richiede l’indicizzazione in Bing).', rankT:'Migliorare il posizionamento Google per "'+kw+'"', rankA:'Riscrivi il <title> e l’H1 per iniziare con "'+kw+'" più un beneficio chiaro. Attualmente in posizione #'+pos+'.', rankI:'Attualmente #'+pos+' — un title/H1 più nitido migliora la probabilità di avvicinarsi alla top 3 dopo il recrawl.' }
           };
@@ -45767,6 +45796,10 @@ VERIFIED — may be used as client facts in ready-to-paste copy:
 ${_verifiedClaims.length ? _verifiedClaims.map(x=>' - '+x).join('\n') : ' - (none recorded)'}
 BLOCKED — competitor/intelligence opportunities or rejected facts; NEVER state these as facts about the client unless the same fact is independently explicit in the supplied live page HTML:
 ${_blockedClaims.length ? _blockedClaims.map(x=>' - ['+x.status+'] '+x.claim).join('\n') : ' - (none recorded)'}
+
+
+CANONICAL 5-ENGINE EVIDENCE RULE (hard rule): Manual VERIFIED evidence is authoritative for Google AIO/Gemini, ChatGPT Search, Perplexity, Claude and Microsoft Copilot. Never contradict it with automated availability text. If manual evidence says EXACT PAGE, say the exact page is verified cited even when automation did not capture an answer in this scan; report the automation limitation separately. If Copilot is DOMAIN cited, do not call it NOT CITED merely because the exact page is absent. Bing visibility is supporting intelligence only, never Copilot citation proof and never a citation prerequisite. Perplexity manual evidence overrides Sonar/API for the current manual check; API data may be described separately as automated monitoring.
+CITATION STRATEGY RULE (hard rule): If an engine already cites the exact page, do not recommend "win/get the citation" as if it were absent. Recommend PROTECT/RETAIN the existing citation and EXPAND coverage to adjacent queries or engines. Never state or imply that top-10 organic ranking is required before any AI engine can cite a page.
 
 FACT TRANSFER RULE: A fact observed on a competitor is evidence about THE COMPETITOR, not about this client. Competitor response times, insurance coordination, licenses, certifications, years in business, free estimates/assessments, warranties, financing, service areas, staff/crew attributes, project counts, prices, guarantees, availability, and similar business claims MUST NOT be transferred into client copy merely because they appear in competitor snippets, AIO sources, Perplexity, or a comparison table. If such a competitor pattern is strategically useful but is not verified for the client, describe it only as a VERIFY-FIRST opportunity; do not put the claim into READY-TO-PASTE client prose.
 `;
@@ -45988,6 +46021,10 @@ WORDPRESS-SAFE OUTPUT — any HTML/copy inside an "action" is pasted into a Word
 - Meta changes belong ONLY in the Rank Math action; never emit <title> or <meta> tags in body HTML.
 - NEVER output a second <h1>; use <h2>/<h3> for new sections. For schema, ONLY FAQPage JSON-LD — never Article/Breadcrumb/WebPage/Person (Rank Math already emits those; a duplicate conflicts).
 - The Meta Title & Description go in Rank Math, not in the HTML body.
+
+
+CANONICAL 5-ENGINE EVIDENCE RULE (hard rule): Manual VERIFIED evidence is authoritative for Google AIO/Gemini, ChatGPT Search, Perplexity, Claude and Microsoft Copilot. Never contradict it with automated availability text. If manual evidence says EXACT PAGE, say the exact page is verified cited even when automation did not capture an answer in this scan; report the automation limitation separately. If Copilot is DOMAIN cited, do not call it NOT CITED merely because the exact page is absent. Bing visibility is supporting intelligence only, never Copilot citation proof and never a citation prerequisite. Perplexity manual evidence overrides Sonar/API for the current manual check; API data may be described separately as automated monitoring.
+CITATION STRATEGY RULE (hard rule): If an engine already cites the exact page, do not recommend "win/get the citation" as if it were absent. Recommend PROTECT/RETAIN the existing citation and EXPAND coverage to adjacent queries or engines. Never state or imply that top-10 organic ranking is required before any AI engine can cite a page.
 
 NO FABRICATION + NO COMPETITOR-TO-CLIENT FACT TRANSFER (hard rule): Competitor facts are opportunities, NEVER client facts. A factual business claim about this client may appear in ready-to-paste copy only when it is supported by the supplied live page HTML or a VERIFIED item in CLIENT CLAIMS & FACTS above. If a competitor mentions insurance coordination, response time, licensing, years, free estimates, service area, warranties, financing, or any similar business attribute that is not verified for this client, describe the gap as VERIFY FIRST or omit it from paste-ready prose. NEVER invent a statistic, figure, date, quote, name, organisation, award, or ranking, and NEVER add an unverifiable superiority claim ("#1", "best", "leading", "top-rated") in a title, description, or body unless it is already proven. The SEO Title and Meta Description especially must be truthful — no unverifiable "#1" or "best". If unsure, omit the claim.
 
@@ -48839,3 +48876,5 @@ console.log('AI-CITATION-DOMAIN-VS-EXACT-PAGE-20260908=true');
 // AUDIT-TABLE-ESCAPED-DOMAIN-DISPLAY-FIX-20260908=true
 
 // CONTENTSCALE-EMAIL-FIVE-ENGINE-CANONICAL-FOLLOWUP-20260909=true
+
+// CONTENTSCALE-5-ENGINE-TRANSPARENCY-TV-BRIEF-SAFETY-20260909=true
