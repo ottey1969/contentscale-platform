@@ -1570,7 +1570,8 @@ app.get('/api/tracker-client/:token', async (req, res) => {
     for (const [col, type] of _trackerMainGetColumns) {
       await pool.query('ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS ' + col + ' ' + type);
     }
-    await _ensureTrackerAiEvidenceSchema();
+    // CONTENTSCALE-TRACKER-MAIN-GET-AI-EVIDENCE-HELPER-NAME-FIX-20260909=true
+    await _trackerEnsureAiEvidenceSchema();
 
     // Ensure tracker_client_id column exists before querying
     const pagesR = await pool.query(
