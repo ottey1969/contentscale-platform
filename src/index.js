@@ -4490,7 +4490,7 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
 .ld-note.pub{color:#c4b5fd}
 .ld-ov{position:fixed;inset:0;background:rgba(2,2,8,.82);z-index:200;display:none;align-items:center;justify-content:center;padding:18px}
 .ld-ov.on{display:flex}
-.ld-modal{background:#0d1117;border:1px solid #1f2937;border-radius:16px;width:100%;max-width:760px;max-height:88vh;display:flex;flex-direction:column;overflow:hidden}
+.ld-modal{background:#0d1117;border:1px solid #1f2937;border-radius:16px;width:100%;max-width:1120px;max-height:92vh;display:flex;flex-direction:column;overflow:hidden}
 .ld-modal h3{font-size:15px;font-weight:800;color:#f1f5f9;padding:16px 20px;border-bottom:1px solid #1f2937}
 .ld-mbody{padding:16px 20px;overflow:auto}
 .ld-mfoot{padding:14px 20px;border-top:1px solid #1f2937;display:flex;gap:8px;justify-content:flex-end}
@@ -4533,6 +4533,7 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
   function setLdFilter(f){ _ldFilter=f; var bs=document.querySelectorAll('.ld-fbtn'); for(var i=0;i<bs.length;i++){ var on=bs[i].getAttribute('data-f')===f; bs[i].classList.toggle('on',on); bs[i].style.color=on?'#c4b5fd':'#6b7280'; bs[i].style.borderColor=on?'#7c3aed':'#374151'; } render(); }
   var NL=String.fromCharCode(10);
   var _briefs=[], _specs=[];
+  ${_SHARED_AIO_SECTION_JS}
   function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
   function cleanUrl(u){ return String(u||'').replace(/^https?:[/][/]/,'').replace(/^www[.]/,''); }
   function fmtTime(t){ try{ var d=t?new Date(t):null; return d?(d.toLocaleDateString('en-GB',{day:'2-digit',month:'short'})+' '+d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})):''; }catch(e){ return ''; } }
@@ -4580,7 +4581,7 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
         : '<div class="ld-url">'+esc(cleanUrl(d.url))+'</div>';
       var openLink=pw
         ? '<button class="ld-link" style="background:none;border:none;cursor:pointer;padding:0;" onclick="viewPWBrief('+id+')">View brief</button>'
-        : '<a class="ld-link" href="'+esc(d.url)+'" target="_blank" rel="noopener">Open page</a>';
+        : '<span style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><button class="ld-link" style="background:none;border:none;cursor:pointer;padding:0" onclick="viewLeadBrief('+id+')">View brief</button><button class="ld-link" style="background:none;border:none;cursor:pointer;padding:0;color:#a78bfa" onclick="copyLeadBrief('+id+',this)">Copy brief</button><a class="ld-link" href="'+esc(d.url)+'" target="_blank" rel="noopener">Open page</a></span>';
       var delFn=pw?'deletePWBrief('+id+')':'deleteLeadPage('+id+')';
       return '<div class="ld-card '+cls+'"'+pwStyle+'>'+titleLine+'<div class="ld-time">'+(pw?'Generated ':'Scanned ')+fmtTime(d.ts)+'</div>'+badge(st,d.brief_claimed_by)+' '+dlBadgeL(d)+ldScoreL(d)
         +'<div class="ld-assign"><span style="font-size:11px;color:#6b7280">Assign:</span><select class="ld-select" onchange="assign('+id+',this,'+pw+')">'+options(d.brief_claimed_by||'')+'</select></div>'
@@ -4590,6 +4591,16 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
   }
   function deleteLeadPage(pageId){ if(!confirm('Delete this page and its brief? This cannot be undone.')) return; fetch('/api/tracker-client/'+TOKEN+'/pages/'+pageId,{method:'DELETE'}).then(function(r){return r.json();}).then(function(r){ if(!r||!r.success){ alert((r&&r.error)||'Could not delete'); return; } load(); }).catch(function(){ alert('Could not delete'); }); }
   function deletePWBrief(id){ if(!confirm('Delete this Pre-Write Brief? This cannot be undone.')) return; fetch('/api/tracker-client/'+TOKEN+'/prewrite-briefs/'+id,{method:'DELETE'}).then(function(r){return r.json();}).then(function(r){ if(!r||!r.success){ alert((r&&r.error)||'Could not delete'); return; } load(); }).catch(function(){ alert('Could not delete'); }); }
+  function _leadBriefHtml(d){
+    var pos=d.position||d.pos||d.gsc_position; var pc=(!pos||pos==='N/A')?'#6b7280':pos<=3?'#4ade80':pos<=10?'#a3e635':pos<=20?'#fbbf24':'#f87171';
+    function tile(v,l,c){return '<div style="min-width:86px;flex:1;background:#090d16;border:1px solid #263041;border-radius:9px;padding:10px;text-align:center"><div style="font-size:16px;font-weight:900;color:'+c+'">'+v+'</div><div style="font-size:9px;color:#7c8799;text-transform:uppercase">'+l+'</div></div>';}
+    function et(st,label,c){var v=st.exact?'Exact':(st.domain?'Domain':(st.cited?'Cited':(st.checked?'No':'?')));return tile(v,label,st.cited?c:'#6b7280');}
+    var g=_briefEngineState(d,'google_aio'),ch=_briefEngineState(d,'chatgpt'),pp=_briefEngineState(d,'perplexity'),cl=_briefEngineState(d,'claude'),co=_briefEngineState(d,'copilot');
+    return '<div style="margin:-4px -4px 14px"><div style="font-size:11px;color:#8b5cf6;font-weight:800;margin-bottom:4px">🎯 Citation Brief</div><div style="font-size:12px;color:#94a3b8;word-break:break-all">'+esc(d.url||'')+'</div><div style="font-size:11px;color:#64748b;margin:3px 0 12px">Keyword: '+esc(d.keyword||'')+'</div><div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:14px">'+tile(pos?('#'+pos):'-','Position',pc)+et(g,'Google AIO','#4ade80')+et(ch,'ChatGPT','#34d399')+et(pp,'Perplexity','#a78bfa')+et(cl,'Claude','#f59e0b')+et(co,'Copilot','#60a5fa')+(d.score?tile(d.score,'GRAAF','#facc15'):'')+'</div>'+_renderBriefBodyHTML(d)+'</div>';
+  }
+  function viewLeadBrief(id){var d=_briefs.filter(function(x){return !x.is_prewrite&&String(x.page_id)===String(id);})[0];if(!d)return;var ov=_ldOv();document.getElementById('ldOvTitle').textContent='Citation Brief';document.getElementById('ldOvBody').innerHTML=_leadBriefHtml(d);document.getElementById('ldOvFoot').innerHTML='<button class="ld-btn" onclick="_ldClose()">Close</button><button class="ld-btn primary" id="ldCopyBriefBtn">Copy brief</button>';ov.classList.add('on');document.getElementById('ldCopyBriefBtn').onclick=function(){copyLeadBrief(id,this);};}
+  function _briefPlain(d){var lines=['AI Citation Brief — '+(d.url||''),'','Keyword: '+(d.keyword||''),''];var es=[['Google AIO / Gemini','google_aio'],['ChatGPT Search','chatgpt'],['Perplexity','perplexity'],['Claude','claude'],['Microsoft Copilot','copilot']];lines.push('AI Citation Results — 5 engines:');es.forEach(function(x){var st=_briefEngineState(d,x[1]);lines.push('- '+x[0]+': '+(st.exact?'✓ EXACT PAGE — VERIFIED':st.domain?'✓ DOMAIN — VERIFIED':st.cited?'✓ CITED — VERIFIED':st.checked?'✗ NOT CITED — VERIFIED':'? NOT CHECKED'));});lines.push('');(d.passages||d.recommendations||[]).forEach(function(p,i){lines.push((i+1)+'. '+(p.title||p.h2||''));lines.push(String(p.action||p.passage||p.body||p.text||''));if(p.impact)lines.push('Impact: '+p.impact);lines.push('');});return lines.join(NL);}
+  function copyLeadBrief(id,btn){var d=_briefs.filter(function(x){return !x.is_prewrite&&String(x.page_id)===String(id);})[0];if(!d)return;var txt=_briefPlain(d);var done=function(ok){if(!btn)return;var o=btn.getAttribute('data-o')||btn.textContent;btn.setAttribute('data-o',o);btn.textContent=ok?'Copied!':'Copy failed';setTimeout(function(){btn.textContent=o;},1300);};if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(txt).then(function(){done(true)},function(){done(false)});else done(false);}
   function viewPWBrief(id){ var ov=_ldOv(); document.getElementById('ldOvTitle').textContent='Pre-Write Brief'; document.getElementById('ldOvBody').innerHTML='<div class="ld-prev" id="ldPWPrev">Loading...</div>'; document.getElementById('ldOvFoot').innerHTML='<button class="ld-btn" onclick="_ldClose()">Close</button>'; ov.classList.add('on'); fetch('/api/tracker-client/'+TOKEN+'/prewrite-briefs/'+id).then(function(r){return r.json();}).then(function(d){ document.getElementById('ldPWPrev').textContent=(d&&d.brief)?JSON.stringify(d.brief,null,2):'(could not load brief)'; }).catch(function(){ document.getElementById('ldPWPrev').textContent='Could not load'; }); }
   var _ldName=(function(){ try{ return localStorage.getItem('cs_lead_name')||''; }catch(e){ return ''; } })();
   function _ldEnsureName(){ if(_ldName) return true; var n=prompt('Your name (so the specialist sees who approved):'); if(n&&n.trim()){ _ldName=n.trim(); try{ localStorage.setItem('cs_lead_name',_ldName); }catch(e){} return true; } return false; }
@@ -4669,7 +4680,7 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
 .bw-card.s-pub{border-color:rgba(124,58,237,.5)}
 .bd-ov{position:fixed;inset:0;background:rgba(2,2,8,.82);backdrop-filter:blur(4px);z-index:200;display:none;align-items:center;justify-content:center;padding:18px}
 .bd-ov.on{display:flex}
-.bd-modal{background:#0d1117;border:1px solid #1f2937;border-radius:16px;width:100%;max-width:760px;max-height:88vh;display:flex;flex-direction:column;overflow:hidden}
+.bd-modal{background:#0d1117;border:1px solid #1f2937;border-radius:16px;width:100%;max-width:1120px;max-height:92vh;display:flex;flex-direction:column;overflow:hidden}
 .bd-modal h3{font-size:15px;font-weight:800;color:#f1f5f9;padding:16px 20px;border-bottom:1px solid #1f2937}
 .bd-modal .bd-body{padding:16px 20px;overflow:auto}
 .bd-modal textarea{width:100%;min-height:300px;background:#06060f;border:1px solid #1f2937;border-radius:10px;color:#e5e7eb;font-family:monospace;font-size:12px;padding:12px;resize:vertical}
@@ -4714,6 +4725,7 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
   var TOKEN='${req.params.token}';
   var NL=String.fromCharCode(10);
   var _name='', _filter='open', _briefs=[];
+  ${_SHARED_AIO_SECTION_JS}
   try{ _name=localStorage.getItem('csBoardName')||''; }catch(e){}
   function saveName(v){ _name=(v||'').trim(); try{ localStorage.setItem('csBoardName',_name); }catch(e){} }
   function setFilter(f){ _filter=f; var bs=document.querySelectorAll('.bd-fbtn'); for(var i=0;i<bs.length;i++){ bs[i].classList.toggle('on', bs[i].getAttribute('data-f')===f); } render(); }
@@ -4830,10 +4842,18 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
         : '<div class="bw-url">'+esc(cleanUrl(d.url))+'</div>';
       var openLink=pw
         ? '<button class="bd-btn sec" onclick="viewPWDetail('+id+')" style="text-decoration:none">View brief</button>'
-        : '<a class="bd-btn sec" href="'+esc(d.url)+'" target="_blank" rel="noopener" style="text-decoration:none">Open page</a>';
+        : '<span style="display:flex;gap:7px;flex-wrap:wrap"><button class="bd-btn sec" onclick="viewBoardBrief('+id+')">View brief</button><button class="bd-btn sec" onclick="copyBrief('+id+',this)" style="border-color:#7c3aed;color:#c4b5fd">Copy brief</button><a class="bd-btn sec" href="'+esc(d.url)+'" target="_blank" rel="noopener" style="text-decoration:none">Open page</a></span>';
       return '<div class="bw-card '+cls+'" style="'+pwStyle+'"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:6px"><div style="min-width:0">'+titleLine+'<div class="bw-time">'+(pw?'Generated ':'Scanned ')+fmtTime(d.ts)+'</div></div><div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end;flex-shrink:0">'+badge(st,d.brief_claimed_by)+dlBadge(d)+'</div></div>'+rejBanner(d)+chips(d)+scoreLine(d)+transparency(d)+recs(d)+'<div class="bd-actions">'+actions(d)+openLink+'</div></div>';
     }).join('');
   }
+  function _boardBriefHtml(d){
+    var pos=d.position||d.pos||d.gsc_position; var pc=(!pos||pos==='N/A')?'#6b7280':pos<=3?'#4ade80':pos<=10?'#a3e635':pos<=20?'#fbbf24':'#f87171';
+    function tile(v,l,c){return '<div style="min-width:86px;flex:1;background:#090d16;border:1px solid #263041;border-radius:9px;padding:10px;text-align:center"><div style="font-size:16px;font-weight:900;color:'+c+'">'+v+'</div><div style="font-size:9px;color:#7c8799;text-transform:uppercase">'+l+'</div></div>';}
+    function et(st,label,c){var v=st.exact?'Exact':(st.domain?'Domain':(st.cited?'Cited':(st.checked?'No':'?')));return tile(v,label,st.cited?c:'#6b7280');}
+    var g=_briefEngineState(d,'google_aio'),ch=_briefEngineState(d,'chatgpt'),pp=_briefEngineState(d,'perplexity'),cl=_briefEngineState(d,'claude'),co=_briefEngineState(d,'copilot');
+    return '<div style="margin:-4px -4px 14px"><div style="font-size:11px;color:#8b5cf6;font-weight:800;margin-bottom:4px">🎯 Citation Brief</div><div style="font-size:12px;color:#94a3b8;word-break:break-all">'+esc(d.url||'')+'</div><div style="font-size:11px;color:#64748b;margin:3px 0 12px">Keyword: '+esc(d.keyword||'')+'</div><div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:14px">'+tile(pos?('#'+pos):'-','Position',pc)+et(g,'Google AIO','#4ade80')+et(ch,'ChatGPT','#34d399')+et(pp,'Perplexity','#a78bfa')+et(cl,'Claude','#f59e0b')+et(co,'Copilot','#60a5fa')+(d.score?tile(d.score,'GRAAF','#facc15'):'')+'</div>'+_renderBriefBodyHTML(d)+'</div>';
+  }
+  function viewBoardBrief(id){var d=_briefs.filter(function(x){return !x.is_prewrite&&String(x.page_id)===String(id);})[0];if(!d)return;var ov=_ensureOv();document.getElementById('bdOvTitle').textContent='Citation Brief';document.getElementById('bdOvBody').innerHTML=_boardBriefHtml(d);document.getElementById('bdOvFoot').innerHTML='<button class="bd-btn sec" onclick="closeOv()">Close</button><button class="bd-btn sec" id="bdCopyBriefNow" style="border-color:#7c3aed;color:#c4b5fd">Copy brief</button>';ov.classList.add('on');document.getElementById('bdCopyBriefNow').onclick=function(){copyBrief(id,this);};}
   function viewPWDetail(id){ var ov=_ensureOv(); document.getElementById('bdOvTitle').textContent='Pre-Write Brief'; document.getElementById('bdOvBody').innerHTML='<div class="bd-prev" id="bdPWPrev">Loading...</div>'; document.getElementById('bdOvFoot').innerHTML='<button class="bd-btn sec" onclick="closeOv()">Close</button>'; ov.classList.add('on'); fetch('/api/tracker-client/'+TOKEN+'/prewrite-briefs/'+id).then(function(r){return r.json();}).then(function(d){ document.getElementById('bdPWPrev').textContent=(d&&d.brief)?JSON.stringify(d.brief,null,2):'(could not load brief)'; }).catch(function(){ document.getElementById('bdPWPrev').textContent='Could not load'; }); }
   function ensureName(){ if(_name) return true; var n=prompt('Enter your name to see the work assigned to you:'); if(n&&n.trim()){ saveName(n); document.getElementById('bdName').value=_name; return true; } return false; }
   function post(id,action,body,pw){ return fetch('/api/tracker-client/'+TOKEN+'/'+(pw?'prewrite-brief':'brief')+'/'+id+'/'+action,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body||{})}).then(function(r){return r.json();}); }
@@ -4847,14 +4867,13 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
   function viewHtml(id,pw){ var ov=_ensureOv(); document.getElementById('bdOvTitle').textContent=pw?'Submitted content':'Submitted HTML'; document.getElementById('bdOvBody').innerHTML='<div class="bd-prev" id="bdPrev">Loading...</div>'; document.getElementById('bdOvFoot').innerHTML='<button class="bd-btn sec" onclick="closeOv()">Close</button><button class="bd-btn sec" id="bdCopyHtml">Copy</button>'; ov.classList.add('on'); fetch('/api/tracker-client/'+TOKEN+'/'+(pw?'prewrite-brief':'brief')+'/'+id+'/deliverable').then(function(r){return r.json();}).then(function(d){ var pv=document.getElementById('bdPrev'); pv.textContent=(d&&d.html)?d.html:'(nothing submitted yet)'; var cb=document.getElementById('bdCopyHtml'); if(cb) cb.onclick=function(){ navigator.clipboard.writeText((d&&d.html)||'').then(function(){ cb.textContent='Copied!'; setTimeout(function(){cb.textContent='Copy';},1500); }); }; }).catch(function(){ document.getElementById('bdPrev').textContent='Could not load'; }); }
   function publish(id,pw){ if(!confirm('Publish this brief? Do this once the page is live.')) return; post(id,'publish',{name:_name},pw).then(function(r){ if(!r.success) alert(r.error||'Could not publish'); load(); }); }
   function copyBrief(pageId, btn){
-    var d=_briefs.filter(function(x){return String(x.page_id)===String(pageId);})[0];
-    if(!d){ if(btn){ btn.textContent='Not found'; } return; }
-    var lines=[cleanUrl(d.url),''];
-    (d.passages||[]).forEach(function(p){ lines.push('- '+(p.title||p.h2||'')+': '+(p.action||p.passage||p.body||p.text||'')); });
-    var txt=lines.join(NL);
-    function feedback(ok){ if(!btn)return; var o=btn.getAttribute('data-orig')||btn.textContent; btn.setAttribute('data-orig',o); btn.textContent=ok?'Copied!':'Copy failed'; setTimeout(function(){ btn.textContent=o; },1500); }
-    function fallback(){ try{ var ta=document.createElement('textarea'); ta.value=txt; ta.style.position='fixed'; ta.style.top='-1000px'; ta.style.opacity='0'; document.body.appendChild(ta); ta.focus(); ta.select(); var ok=document.execCommand('copy'); document.body.removeChild(ta); feedback(ok); }catch(e){ feedback(false); } }
-    if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(txt).then(function(){feedback(true);},function(){fallback();}); } else { fallback(); }
+    var d=_briefs.filter(function(x){return !x.is_prewrite&&String(x.page_id)===String(pageId);})[0];
+    if(!d){if(btn)btn.textContent='Not found';return;}
+    var lines=['AI Citation Brief — '+(d.url||''),'','Keyword: '+(d.keyword||''),'','AI Citation Results — 5 engines:'];
+    [['Google AIO / Gemini','google_aio'],['ChatGPT Search','chatgpt'],['Perplexity','perplexity'],['Claude','claude'],['Microsoft Copilot','copilot']].forEach(function(x){var st=_briefEngineState(d,x[1]);lines.push('- '+x[0]+': '+(st.exact?'✓ EXACT PAGE — VERIFIED':st.domain?'✓ DOMAIN — VERIFIED':st.cited?'✓ CITED — VERIFIED':st.checked?'✗ NOT CITED — VERIFIED':'? NOT CHECKED'));});
+    lines.push(''); if(d.position||d.gsc_position)lines.push('Google Position: #'+(d.position||d.gsc_position)); if(d.score)lines.push('GRAAF Score: '+d.score+'/100'); lines.push('');
+    (d.passages||d.recommendations||[]).forEach(function(p,i){lines.push((i+1)+'. '+(p.title||p.h2||''));lines.push(String(p.action||p.passage||p.body||p.text||''));if(p.impact)lines.push('Impact: '+p.impact);lines.push('');});
+    var txt=lines.join(NL); function feedback(ok){if(!btn)return;var o=btn.getAttribute('data-orig')||btn.textContent;btn.setAttribute('data-orig',o);btn.textContent=ok?'Copied!':'Copy failed';setTimeout(function(){btn.textContent=o;},1500);} function fallback(){try{var ta=document.createElement('textarea');ta.value=txt;ta.style.position='fixed';ta.style.top='-1000px';document.body.appendChild(ta);ta.select();var ok=document.execCommand('copy');document.body.removeChild(ta);feedback(ok);}catch(e){feedback(false);}} if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(txt).then(function(){feedback(true)},fallback);else fallback();
   }
   function load(){ fetch('/api/tracker-client/'+TOKEN+'/latest-briefs').then(function(r){return r.json();}).then(function(d){ if(d&&d.briefs){ _briefs=d.briefs; render(); } }).catch(function(){}); }
   document.getElementById('bdName').value=_name;
@@ -46668,6 +46687,15 @@ If no unanchored claims found, return empty array: []`;
         'This page already has verified Google AI Overview citation visibility.');
       t=t.replace(/(?:google ai overview|aio)[^.]{0,100}(?:will not|won[’']t|cannot) cite[^.]*top ?10[^.]*\.?/gi,
         'Google AI Overview already cites this page; top-10 organic ranking is not a prerequisite demonstrated by this evidence.');
+      // Manual VERIFIED exact-page evidence is authoritative over the automated AIO detector.
+      t=t.replace(/google aio is not currently verified as citing the exact page\.?/gi,
+        'Google AIO is manually VERIFIED as citing the exact target page; the automated detector simply did not capture an Overview during this scan.');
+      t=t.replace(/this page currently has no visibility in (?:these )?ai engines\.?/gi,
+        'This page already has verified AI visibility; use the five-engine evidence state to protect existing wins and target the engines or exact-page gaps that remain.');
+      t=t.replace(/this page currently has no visibility in ai overviews or perplexity[^.]*\.?/gi,
+        'Google AIO is manually VERIFIED for the exact page, while Perplexity was manually checked and did not cite the target page in the checked answer.');
+      t=t.replace(/once (?:the page achieves|organic ranking reaches) (?:the )?top ?10/gi,
+        'while organic visibility improves');
       return t;
     };
     const _ecRiskPatterns = [
@@ -46693,7 +46721,19 @@ If no unanchored claims found, return empty array: []`;
     };
     const _ecEnforceItem = function(item){
       if(!item || typeof item!=='object') return item;
-      ['title','action','expected_impact','trigger'].forEach(function(k){ if(typeof item[k]==='string') item[k]=_ecSafety(_ecContradiction(item[k])); });
+      ['title','action','expected_impact','trigger'].forEach(function(k){ if(typeof item[k]==='string') {
+        item[k]=_ecSafety(_ecContradiction(item[k]));
+        // Bing can support Microsoft search visibility, but it is never proof of a Copilot citation
+        // and must never be described as a strict Copilot citation prerequisite.
+        item[k]=item[k].replace(/(?:submit this url to bing webmaster tools to ensure microsoft copilot indexes these updates\.?)/gi,
+          'Optionally submit the URL to Bing Webmaster Tools as a separate Microsoft search visibility step; verify Copilot citations only from actual Copilot References.');
+        item[k]=item[k].replace(/copilot relies heavily on[^.]*bing[^.]*\.?/gi,
+          'Bing index visibility is a supporting Microsoft search signal, not proof of or a strict prerequisite for a Copilot citation.');
+        item[k]=item[k].replace(/(?:requires?|strict prerequisite)[^.]{0,80}(?:indexed|indexing|bing)[^.]*\.?/gi,
+          'Bing indexing is a supporting search signal and is not treated as a strict prerequisite for a Copilot citation.');
+        item[k]=item[k].replace(/once the url is crawled and indexed in bing/gi,
+          'after the content is improved and an actual Copilot References check confirms the result');
+      } });
       var combined=[item.title,item.action,item.trigger].filter(Boolean).join(' ');
       var _dateMatches=combined.match(/last reviewed\s*:?\s*(?:[a-z]+\s+)?20\d{2}/gi)||[];
       var unsupported=_ecUnsupported(combined);
@@ -48878,3 +48918,7 @@ console.log('AI-CITATION-DOMAIN-VS-EXACT-PAGE-20260908=true');
 // CONTENTSCALE-EMAIL-FIVE-ENGINE-CANONICAL-FOLLOWUP-20260909=true
 
 // CONTENTSCALE-5-ENGINE-TRANSPARENCY-TV-BRIEF-SAFETY-20260909=true
+
+// CONTENTSCALE-LEAD-BOARD-SHARED-VISUAL-BRIEF-COPY-20260909=true
+
+// CONTENTSCALE-BRIEF-EVIDENCE-CONTRADICTION-BING-SAFETY-20260909=true
