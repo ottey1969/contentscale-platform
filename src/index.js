@@ -3256,15 +3256,47 @@ function _trackerParseManualEvidence(rawText,rawSources,pageUrl,aliases){
  const root=_trackerEvRoot(_trackerEvHost(pageUrl)),pn=_trackerEvNorm(pageUrl),own=urls.filter(u=>_trackerEvRoot(_trackerEvHost(u))===root), aa=(aliases||[]).map(x=>String(x||'').trim().toLowerCase()).filter(x=>x.length>2), has=l=>aa.some(a=>String(l||'').toLowerCase().includes(a)), names=a=>a.map(x=>x.split('|')[0].trim()).filter(Boolean);
  return {brand_recommended:sec.recommended.some(has),brand_direct_supported:sec.direct.some(has),domain_cited:own.length>0,exact_page_cited:own.some(u=>_trackerEvNorm(u)===pn),citation_urls:urls,recommended_companies:names(sec.recommended),directly_cited_companies:names(sec.direct),mentioned_companies:names(sec.mentioned),sections:sec};
 }
+// CONTENTSCALE-AI-EVIDENCE-500-HARDENING-20260909=true
+// Harden canonical manual AI-evidence saves against older partial schemas and PostgreSQL U+0000 paste failures.
+async function _trackerEnsureAiEvidenceSchema(){
+  await pool.query(`CREATE TABLE IF NOT EXISTS tracker_ai_evidence (
+    id SERIAL PRIMARY KEY,
+    page_id INTEGER REFERENCES tracker_pages(id) ON DELETE CASCADE,
+    tracker_client_id INTEGER REFERENCES tracker_clients(id) ON DELETE CASCADE,
+    engine VARCHAR(32) NOT NULL,
+    evidence_method VARCHAR(32) NOT NULL DEFAULT 'manual',
+    raw_text TEXT DEFAULT '', raw_sources TEXT DEFAULT '',
+    brand_recommended BOOLEAN DEFAULT FALSE, brand_direct_supported BOOLEAN DEFAULT FALSE,
+    domain_cited BOOLEAN DEFAULT FALSE, exact_page_cited BOOLEAN DEFAULT FALSE,
+    citation_urls JSONB DEFAULT '[]'::jsonb, recommended_companies JSONB DEFAULT '[]'::jsonb,
+    directly_cited_companies JSONB DEFAULT '[]'::jsonb, mentioned_companies JSONB DEFAULT '[]'::jsonb,
+    parsed_evidence JSONB DEFAULT '{}'::jsonb, verified_at TIMESTAMPTZ DEFAULT NOW(),
+    created_at TIMESTAMPTZ DEFAULT NOW(), updated_at TIMESTAMPTZ DEFAULT NOW()
+  )`).catch(()=>{});
+  const cols=[
+    ['tracker_client_id','INTEGER REFERENCES tracker_clients(id) ON DELETE CASCADE'],['engine','VARCHAR(32)'],['evidence_method',"VARCHAR(32) DEFAULT 'manual'"],
+    ['raw_text',"TEXT DEFAULT ''"],['raw_sources',"TEXT DEFAULT ''"],['brand_recommended','BOOLEAN DEFAULT FALSE'],['brand_direct_supported','BOOLEAN DEFAULT FALSE'],
+    ['domain_cited','BOOLEAN DEFAULT FALSE'],['exact_page_cited','BOOLEAN DEFAULT FALSE'],['citation_urls',"JSONB DEFAULT '[]'::jsonb"],['recommended_companies',"JSONB DEFAULT '[]'::jsonb"],
+    ['directly_cited_companies',"JSONB DEFAULT '[]'::jsonb"],['mentioned_companies',"JSONB DEFAULT '[]'::jsonb"],['parsed_evidence',"JSONB DEFAULT '{}'::jsonb"],
+    ['verified_at','TIMESTAMPTZ DEFAULT NOW()'],['created_at','TIMESTAMPTZ DEFAULT NOW()'],['updated_at','TIMESTAMPTZ DEFAULT NOW()']
+  ];
+  for(const c of cols) await pool.query('ALTER TABLE tracker_ai_evidence ADD COLUMN IF NOT EXISTS '+c[0]+' '+c[1]).catch(()=>{});
+  await pool.query('CREATE INDEX IF NOT EXISTS tracker_ai_evidence_page_idx ON tracker_ai_evidence(page_id)').catch(()=>{});
+}
+function _trackerStripPgNulString(v){return String(v==null?'':v).replace(/\u0000/g,'');}
 app.post('/api/tracker-client/:token/page/:pageId/ai-evidence/:engine',async(req,res)=>{try{
  const engine=String(req.params.engine||'').toLowerCase(),allowed=['google_aio','chatgpt','perplexity','claude','copilot'];if(!allowed.includes(engine))return res.status(400).json({success:false,error:'Unsupported AI engine'});
+ await _trackerEnsureAiEvidenceSchema();
  const cr=await pool.query('SELECT id,name,domain FROM tracker_clients WHERE (token=$1 OR lead_token=$1) AND (status IS NULL OR status != $2)',[req.params.token,'deleted']);if(!cr.rows.length)return res.status(404).json({success:false,error:'Not found'});
  const pg=await pool.query('SELECT id,url FROM tracker_pages WHERE id=$1 AND tracker_client_id=$2',[req.params.pageId,cr.rows[0].id]);if(!pg.rows.length)return res.status(404).json({success:false,error:'Page not found'});
- const text=String(req.body?.text||'').trim(),sources=String(req.body?.sources||'').trim();if(!text&&!sources){await pool.query("DELETE FROM tracker_ai_evidence WHERE page_id=$1 AND engine=$2 AND evidence_method='manual'",[pg.rows[0].id,engine]);return res.json({success:true,cleared:true});}
+ const text=_trackerStripPgNulString(req.body?.text).trim(),sources=_trackerStripPgNulString(req.body?.sources).trim();if(!text&&!sources){await pool.query("DELETE FROM tracker_ai_evidence WHERE page_id=$1 AND engine=$2 AND evidence_method='manual'",[pg.rows[0].id,engine]);return res.json({success:true,cleared:true});}
  const stem=String(cr.rows[0].domain||'').replace(/^www\./,'').split('.')[0].replace(/[-_]+/g,' '),ev=_trackerParseManualEvidence(text,sources,pg.rows[0].url,[cr.rows[0].name,cr.rows[0].domain,stem]);
- const q=`INSERT INTO tracker_ai_evidence(page_id,tracker_client_id,engine,evidence_method,raw_text,raw_sources,brand_recommended,brand_direct_supported,domain_cited,exact_page_cited,citation_urls,recommended_companies,directly_cited_companies,mentioned_companies,parsed_evidence,verified_at,updated_at) VALUES($1,$2,$3,'manual',$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,NOW(),NOW()) ON CONFLICT(page_id,engine,evidence_method) DO UPDATE SET raw_text=EXCLUDED.raw_text,raw_sources=EXCLUDED.raw_sources,brand_recommended=EXCLUDED.brand_recommended,brand_direct_supported=EXCLUDED.brand_direct_supported,domain_cited=EXCLUDED.domain_cited,exact_page_cited=EXCLUDED.exact_page_cited,citation_urls=EXCLUDED.citation_urls,recommended_companies=EXCLUDED.recommended_companies,directly_cited_companies=EXCLUDED.directly_cited_companies,mentioned_companies=EXCLUDED.mentioned_companies,parsed_evidence=EXCLUDED.parsed_evidence,verified_at=NOW(),updated_at=NOW() RETURNING *`;
- const rr=await pool.query(q,[pg.rows[0].id,cr.rows[0].id,engine,text,sources,ev.brand_recommended,ev.brand_direct_supported,ev.domain_cited,ev.exact_page_cited,JSON.stringify(ev.citation_urls),JSON.stringify(ev.recommended_companies),JSON.stringify(ev.directly_cited_companies),JSON.stringify(ev.mentioned_companies),JSON.stringify(ev)]);res.json({success:true,evidence:rr.rows[0]});
-}catch(e){console.error('[manual-ai-evidence]',e.message);res.status(500).json({success:false,error:e.message});}});
+ const vals=[pg.rows[0].id,cr.rows[0].id,engine,text,sources,ev.brand_recommended,ev.brand_direct_supported,ev.domain_cited,ev.exact_page_cited,JSON.stringify(ev.citation_urls),JSON.stringify(ev.recommended_companies),JSON.stringify(ev.directly_cited_companies),JSON.stringify(ev.mentioned_companies),JSON.stringify(ev)];
+ // Do not depend on a historical UNIQUE constraint: older deployments may already have the table without it.
+ let rr=await pool.query(`UPDATE tracker_ai_evidence SET tracker_client_id=$2,raw_text=$4,raw_sources=$5,brand_recommended=$6,brand_direct_supported=$7,domain_cited=$8,exact_page_cited=$9,citation_urls=$10,recommended_companies=$11,directly_cited_companies=$12,mentioned_companies=$13,parsed_evidence=$14,verified_at=NOW(),updated_at=NOW() WHERE id=(SELECT id FROM tracker_ai_evidence WHERE page_id=$1 AND engine=$3 AND evidence_method='manual' ORDER BY id DESC LIMIT 1) RETURNING *`,vals);
+ if(!rr.rows.length)rr=await pool.query(`INSERT INTO tracker_ai_evidence(page_id,tracker_client_id,engine,evidence_method,raw_text,raw_sources,brand_recommended,brand_direct_supported,domain_cited,exact_page_cited,citation_urls,recommended_companies,directly_cited_companies,mentioned_companies,parsed_evidence,verified_at,updated_at) VALUES($1,$2,$3,'manual',$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,NOW(),NOW()) RETURNING *`,vals);
+ res.json({success:true,evidence:rr.rows[0]});
+}catch(e){console.error('[manual-ai-evidence]',e.code||'',e.message);res.status(500).json({success:false,error:e.message,code:e.code||null});}});
 
 app.post('/api/tracker-client/:token/page/:pageId/aio-manual', async (req, res) => {
   try {
