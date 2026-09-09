@@ -3281,8 +3281,15 @@ function _trackerParseManualEvidence(rawText,rawSources,pageUrl,aliases){
  const text=String(rawText||'').split('https\\://').join('https://').split('\\.').join('.'), sources=String(rawSources||'').split('https\\://').join('https://').split('\\.').join('.'), all=text+'\n'+sources;
  const sec={recommended:[],direct:[],mentioned:[],sources:[]};let mode='';all.split(/\r?\n/).forEach(line=>{const t=line.trim();if(!t)return;const h=t.toUpperCase().replace(/[:#*]/g,'').trim();if(h==='RECOMMENDED COMPANIES'){mode='recommended';return;}if(h==='DIRECTLY CITED COMPANIES'){mode='direct';return;}if(h==='MENTIONED BUT NOT DIRECTLY CITED'){mode='mentioned';return;}if(h==='CITATION SOURCES'){mode='sources';return;}if(mode)sec[mode].push(t.replace(/^[-•*]\s*/,''));});
  const urls=[],seen=new Set(),re=/https?:\/\/[^\s)\]}>"'<,]+/gi;let m;while((m=re.exec(all))){const u=m[0].replace(/[.;:]+$/,''),z=_trackerEvNorm(u);if(z&&!seen.has(z)){seen.add(z);urls.push(u);}}
- const root=_trackerEvRoot(_trackerEvHost(pageUrl)),pn=_trackerEvNorm(pageUrl),own=urls.filter(u=>_trackerEvRoot(_trackerEvHost(u))===root), aa=(aliases||[]).map(x=>String(x||'').trim().toLowerCase()).filter(x=>x.length>2), has=l=>aa.some(a=>String(l||'').toLowerCase().includes(a)), names=a=>a.map(x=>x.split('|')[0].trim()).filter(Boolean);
- return {brand_recommended:sec.recommended.some(has),brand_direct_supported:sec.direct.some(has),domain_cited:own.length>0,exact_page_cited:own.some(u=>_trackerEvNorm(u)===pn),citation_urls:urls,recommended_companies:names(sec.recommended),directly_cited_companies:names(sec.direct),mentioned_companies:names(sec.mentioned),sections:sec};
+ const root=_trackerEvRoot(_trackerEvHost(pageUrl)),pn=_trackerEvNorm(pageUrl),own=urls.filter(u=>_trackerEvRoot(_trackerEvHost(u))===root), names=a=>a.map(x=>x.split('|')[0].trim()).filter(Boolean);
+ // CONTENTSCALE-TRACKER-BRAND-RECOMMENDED-NORMALIZED-MATCH-20260909=true
+ // Brand recommendation/direct-support are section facts only. Normalize punctuation, spaces,
+ // hyphens and domain stems so e.g. `perfectroofingteam` matches `Perfect Roofing Team`,
+ // without ever inferring recommendation from an own-domain citation.
+ const brandNorm=v=>String(v||'').toLowerCase().replace(/^https?:\/\//,'').replace(/^www\./,'').split('/')[0].replace(/\.(com|net|org|co|io|ai|site|biz|info)(\.[a-z]{2})?$/,'').replace(/[^a-z0-9]+/g,'');
+ const aa=[...new Set((aliases||[]).map(brandNorm).filter(x=>x.length>2))];
+ const companyMatch=line=>{const company=String(line||'').split('|')[0].trim(),n=brandNorm(company);return !!n&&aa.some(a=>n===a||((n.length>=6&&a.length>=6)&&(n.includes(a)||a.includes(n))));};
+ return {brand_recommended:sec.recommended.some(companyMatch),brand_direct_supported:sec.direct.some(companyMatch),domain_cited:own.length>0,exact_page_cited:own.some(u=>_trackerEvNorm(u)===pn),citation_urls:urls,recommended_companies:names(sec.recommended),directly_cited_companies:names(sec.direct),mentioned_companies:names(sec.mentioned),sections:sec};
 }
 // CONTENTSCALE-AI-EVIDENCE-500-HARDENING-20260909=true
 // Harden canonical manual AI-evidence saves against older partial schemas and PostgreSQL U+0000 paste failures.
