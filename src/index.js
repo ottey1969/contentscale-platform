@@ -1,4 +1,4 @@
-console.log('=== CONTENTSCALE BOOT ' + new Date().toISOString() + ' v2026-07-08-possible-prioritized-shortcut | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON | possibleThreshold=20impr | shortcutPrioritized=v2 | gscAutoFetchRemoved=true | linkCheckActive=true | wholeSiteWipeGuard=true | gscAutoFetchRestored=true | reminderOffFix=true | claudeRemoved=true | bingWebmaster=true | competitorPanel=true | zeroResultFix=true | pagesRefreshFix=true | recheckButton=true | provenScanStrip=true | provenScanState=true | scanAllProven=true | doEverythingBtn=true | panelOrderFix=true | workflowGuide=true | preScanGuard=true | scanAllGuard=true | earlyGuard=true | emptyStateTeaser=true | provenScopeFix=true | numberedButtons=true | clearerButtons=true | scanAnimFix=true | promptClaudeCleanup=true | bonusTip=true | realProvenContext=true | competitorContext=true | unifiedBrief=true | diagnosticFirst=true | fullCompetitorBreakdown=true | serpSpyV3=true | transparencyBlock=true | emailsPausedToggle=true | competitorDedup=true | provenScanDebug=true | serializedScans=true | claudeCleanupV2=true | mergeClaudeStrip=true | visualTransparency=true | aboveFoldPriority=true | competitorComparisonTable=true | redGreenTracking=true | aioExplicitState=true | perpCopilotState=true | realMergePromptFixed=true | briefContextDebug=true | forceRescanBypass=true | gscPosFallback=true | cannibalDedup=true | gscAccessGated=true | gapConfirmShown=true | noPlaceholders=true | rowNumContrast=true | codeCannibalDedup=true | provenDebugRemoved=true | broaderCannibalDedup=true | competitorGapFallback=true | competitorPrevSnapFallback=true | hubSpokeDedup=true | compGapRegexBroadened=true | gapFixLabelFallback=true | geminiProForBriefs=true | timeoutBudgetFixed=true | perAttemptTimeout45s=true | revertToFlashLite=true | tokenLimitDoubled=true | urlNormFix=true | impactFieldChecked=true | broaderHubPattern=true | cannibalContextRemovedFromGSC=true | scanStateDerivedFromDB=true | boardBriefRestyled=true | liveWallBriefModal=true | modalScopeFix=true | cardTransparency=true | CLAUDE-FIX-2307=true | CLAUDE-FIX-2307B-specquote=true | CLAUDE-FIX-2307C-pwboard=true | CLAUDE-FIX-2307D-typefilter=true | CLAUDE-FIX-2307E-scanneraio=true | CLAUDE-FIX-2307F-urlstrip=true | CLAUDE-FIX-2307G-aiobeforeScan=true | CLAUDE-FIX-2307H-aioInPrompt=true | CLAUDE-FIX-2307I-escHtml=true | CLAUDE-FIX-2307J-escAlias-noStale=true | CLAUDE-FIX-2407A-perpCitedConsistency=true | CLAUDE-FIX-2407B-perpCacheBug=true | CLAUDE-FIX-2407C-domainVsPageNuance=true | CLAUDE-FIX-2407D-wallModalNoReshuffle=true | CLAUDE-FIX-2407E-buildBriefSafetyNet=true | CLAUDE-FIX-2407F-modalFullText=true | CLAUDE-FIX-2407G-aioPasteModal=true | CLAUDE-FIX-2407H-aioDefinitionView=true | CLAUDE-FIX-2407I-aioBlueprintMining=true | CLAUDE-FIX-2407J-aioReferences=true | CLAUDE-FIX-2407K-aioCitationGap=true | CLAUDE-FIX-2407L-compGapTableAllModals=true | CLAUDE-FIX-2407M-honestAioManualOnly=true | CLAUDE-FIX-2407N-regexEscapeInTemplate=true | CLAUDE-FIX-2507A-jsonRepair-mergeTokens4096=true | CLAUDE-FIX-2507B-cardButtonsWorkflowOrder=true | CLAUDE-FIX-2507C-cardButtonsPillColors=true | CLAUDE-FIX-2507D-aioReloadFull-limit8000=true | CLAUDE-FIX-2507E-briefModalTransparency=true | CLAUDE-FIX-2507F-aioGapTable4col=true | CLAUDE-FIX-2507G-htmlScanTickCycle=true | CLAUDE-FIX-2507H-briefViewedPersisted=true | CLAUDE-FIX-2507I-fixCardRenderVarInExpr=true | CLAUDE-FIX-2507J-briefsUnified-manualAioGap=true | CLAUDE-FIX-2507K-gscCompTableInTracker=true | CLAUDE-FIX-2507L-trackerSplitSections=true | CLAUDE-FIX-2507M-copyBriefClarity=true | CLAUDE-FIX-2507N-aioRefsFromManualPaste=true | CLAUDE-FIX-2507O-removeSseEventSource=true | CLAUDE-FIX-2507P-ticksPersistUntilDoneOrNewHtml=true | CLAUDE-FIX-2507Q-aioRefsStoredAtSave=true | CLAUDE-FIX-2507R-aioGapTableAlways=true | CLAUDE-FIX-2507S-aioGscContextSeparated=true | CLAUDE-FIX-2507T-aioCodeFallbackFixed-refsFromManualSave=true | CLAUDE-FIX-2507U-mergeSafetyNet-cardSummaryParity=true | CLAUDE-FIX-2507V-sharedAioRenderFn-authTable=true | CLAUDE-FIX-2507W-viewLastBriefDelegates-oneSystem=true | CLAUDE-FIX-2507X-sharedBriefBody-fullUnification=true | CLAUDE-FIX-2507Y-aioTop5Table-definitionLabel=true | CLAUDE-FIX-2507Z-noRefsActionableMsg=true | CLAUDE-FIX-2508A-manualPasteWinsOverStaleSnapshot=true | CLAUDE-FIX-2508B-merge2Hardened-diagLog=true | CLAUDE-FIX-2508C-noStoreHeaders-freshClientJs=true | CLAUDE-FIX-2508D-saveEchoDiagnostic=true | CLAUDE-FIX-2508E-separateSourcesField=true | CLAUDE-FIX-2508F-diagSourcesField=true | CLAUDE-FIX-2508G-acceptSourceNames=true | CLAUDE-FIX-2508H-namesFromMainPaste-headingFilter=true | CLAUDE-FIX-2508I-cloroAioFetch=true | CLAUDE-FIX-2508J-namesFallback-autoSplit=true | CLAUDE-FIX-2508K-competitorGapAioFallback=true | CLAUDE-FIX-2508L-aioFallbackNoGscLeak-honestLabel=true | CLAUDE-FIX-2508M-gscRootDomainFallback=true | CLAUDE-FIX-2508N-sitemapLinks250-gscLiveFilter=true | CLAUDE-FIX-2508O-leadQueueCollapsedDefault=true | CLAUDE-FIX-2508P-leadQueueToggleRealFns=true | CLAUDE-FIX-2508Q-leadQueueHeaderWrap=true | CLAUDE-FIX-2508R-scanSelectedButton=true | CLAUDE-FIX-2508S-shiftClickRange=true | CLAUDE-FIX-2508T-shiftClickCorrectClass-inTemplate=true | CLAUDE-FIX-2508U-brandHeadshotHubFields=true | CLAUDE-FIX-2508V-briefModeSelector=true | CLAUDE-FIX-2508W-intentSnapshot-ownerNote=true | CLAUDE-FIX-2508X-modeBtnQuoteFix=true | CLAUDE-FIX-2508Y-perpApostropheFix=true | CLAUDE-FIX-2508Z-sitemapRegexFix=true | CLAUDE-FIX-2508ZA-pageInSitemapRegexFix=true | CLAUDE-FIX-2508ZB-missingEntities=true | CLAUDE-FIX-2508ZC-briefSpacing=true | CLAUDE-FIX-2508ZD-pasteCodeBlocks=true | CLAUDE-FIX-2508ZE-fmtActionRegexFix=true | CLAUDE-FIX-2508ZF-ticksOnlyClearOnDone=true | CLAUDE-FIX-2508ZG-paa5-pwbWider-aioFallbackMsg=true | CLAUDE-FIX-2508ZH-numberedItemsOnOwnLines=true | CLAUDE-FIX-2508ZI-prewriteBuildFields-aioListNotUglyTable=true | CLAUDE-FIX-2508ZJ-cleanAioDefinitionText=true | CLAUDE-FIX-2508ZK-slugRegexCrashFix-sectionSplit=true | CLAUDE-FIX-2508ZL-tvModalFmtAction=true | CLAUDE-FIX-3007A-tourAioScanSelected-mobileFriendly=true | CLAUDE-FIX-3007B-htmlLangWhitelistNonLatin=true | CLAUDE-FIX-3007C-clientBriefLanguageSelector=true | CLAUDE-FIX-3007D-briefLanguageTourStep=true | CLAUDE-FIX-3007E-prewriteLangListFull=true | CLAUDE-FIX-3007F-prewriteAutoAioFetch=true | CLAUDE-FIX-3007G-serpRegionListFull=true | CLAUDE-FIX-3007H-prewriteMobilePolish=true | CLAUDE-FIX-3007I-groupedComboDropdowns=true | CLAUDE-FIX-3007J-comboSyntaxFix=true | CLAUDE-FIX-3007K-multiLangBadges=true | CLAUDE-FIX-3007L-headerReportCTA=true | CLAUDE-FIX-3007M-tvViewReportCTA=true | CLAUDE-FIX-3007N-tvTopBarCTA=true | CLAUDE-FIX-3007O-realPaaInBrief=true | CLAUDE-FIX-0208-briefLangLeaks-item1AndTemplateLabels=true | CLAUDE-FIX-0208B-prewriteLabelsTranslated=true | CLAUDE-FIX-0208C-readyPasteMarkerAndCiteableLang=true | CLAUDE-FIX-0308-alignmentItemLang=true | CLAUDE-FIX-0308B-copyBriefCompTableParity=true | CLAUDE-FIX-0308C-cannibalStopwordMatch=true | CLAUDE-FIX-0308D-hardcodedCiteItemsLocalized=true | CLAUDE-FIX-0308E-cannibalSlugFallback=true | CLAUDE-FIX-1208-honestScanCount=true | CLAUDE-FIX-2108A-aioCitedTextPlusSources=true | CLAUDE-FIX-2108B-aioSourceTableCaseInsensitive=true | CLAUDE-FIX-2108C-aioSourceRetryFallback=true | CLAUDE-FIX-2108D-graafScoreInBrief=true | CLAUDE-FIX-2108E-graafRecsDedupPrioritized=true | CLAUDE-FIX-2108F-eliteRecsDetailsNotDisplayNone=true | CLAUDE-FIX-2108G-graafScoreInTextExport=true | CLAUDE-FIX-2108H-competitorTableDedupTextExport=true | CLAUDE-FIX-2108I-textExportSectionParity=true | CLAUDE-FIX-2108J-tableRegexEscapeFix=true | CLAUDE-FIX-2108K-scoreDefinedInClientScope=true | CLAUDE-FIX-2108L-clientBriefUsesDataNotP=true | CLAUDE-FIX-2108M-prewriteNoFabrication=true | CLAUDE-FIX-2108N-outputVoiceNoHype=true | CLAUDE-FIX-2608-intentEngine=true | CLAUDE-FIX-2608B-existingBriefMoment-mismatch=true | CLAUDE-FIX-2608C-momentInTextExport=true | CLAUDE-FIX-2608D-gscHeaderClarity=true | CLAUDE-FIX-2608E-mergePreservesIntentSnapshot=true | CLAUDE-FIX-2608F-sliceKeepsFramingObjects=true | CLAUDE-FIX-2608G-intentSnapshotEngineFallback=true | CLAUDE-FIX-2608H-instantBriefAlsoHasIntent=true | CLAUDE-FIX-2608I-brief2FinalSaveGuaranteesIntent=true | CLAUDE-FIX-2608J-copyBriefShowsIntent=true | CLAUDE-FIX-2608K-buildBriefPrefersFramingSource=true | CLAUDE-FIX-2608L-geminiIntentEnforced-specificFallback=true | CLAUDE-FIX-2608M-promptRestructuredForGemini=true | CLAUDE-FIX-2608N-dedicatedSerialIntentCall-protectsBriefCall=true | CLAUDE-FIX-2608O-qualityHookPreservesIntent=true | CLAUDE-FIX-2608P-graafShortcut-recsIsolatedFromCitations=true | CLAUDE-FIX-2608Q-caseStudyStrictHeadingsOnly=true | CLAUDE-FIX-2608R-graafShortcutUsesPuppeteerScan-matchesExternal=true | CLAUDE-FIX-2608S-multilingualDetection-faqBioTldrCaseStudyTocAllLangs=true | CLAUDE-FIX-2608T-arabicNumeralsAndSchemaAuthor=true | CLAUDE-FIX-2608U-scanScrollsAndWaitsForJsRender-correctRoute=true | CLAUDE-FIX-2608V-faqDetectsToggleAccordions-authorBioNoKeywordGate=true | CLAUDE-FIX-2608W-quoteRecSaysResearchable=true | CLAUDE-FIX-2608X-faqDetectsQuestionMarkBeforeToggleSymbol=true | CLAUDE-FIX-2608Y-fixedActualApiScanRoute-9107-faqBioMultilingualToggle=true | CLAUDE-FIX-2608Z-recursiveSchemaDetection-findsNestedFAQPage=true | CLAUDE-FIX-2608ZA-realApiScanRoute-9410-faqUsesSchemaAndToggle=true | CLAUDE-FIX-2608ZB-graafShortcutReliableAutoRefresh=true | CLAUDE-FIX-2609A-siteAuditEndpoint=true | CLAUDE-FIX-2609B-auditPageVisible=true | CLAUDE-FIX-2609C-auditCodeProtected=true | CLAUDE-FIX-2609P-multiBrandNamesForAcquisitions=true | CLAUDE-FIX-2610G-proofBlockAllCentered=true | CLAUDE-FIX-2610I-extractsSourceUrls-aioInInstructions=true | AI-SOURCE-IMPORT-EN-PDF-CHATGPT-URLS=true | AUDIT-RESET-PERSISTENCE-0909=true | AGENCY-WHITELABEL-PERSONAL-PROOF-HIDDEN=true | AUDIT-EXTERNAL-JS-BROWSER-FIX-20260908=true | AUDIT-DRAFT-DB-FIX-20260908=true | AUDIT-DRAFT-STORAGE-FALLBACK-20260908=true | AUDIT-SHARE-SCHEMA-SELF-HEAL-20260908=true | AUDIT-SHARE-ADMIN-AUTH-PERSIST-20260908=true | AUDIT-PDF-NUL-SANITIZE-20260908=true | GRAAF-MAIN-CONTENT-SCOPE-20260908=true | GRAAF-RECS-EVIDENCE-PAGETYPE-20260908=true | GRAAF-FULL-RECS-SCORING-EVIDENCE-20260908=true | CONTENTSCORE-METHODOLOGY-VERSIONING-20260908=true | CONTENTSCORE-V2-USER-VISIBLE-NOTICE-20260908=true | CONTENTSCORE-V2-MULTILINGUAL-NOTICE-20260908=true | CONTENTSCORE-V2-NOTICE-ABOVE-SCANNER-20260908=true | CONTENTSCORE-V2-NOTICE-AT-OFFICIAL-SCORE-COPY-20260908=true | AI-CITATION-RICH-PASTE-EVIDENCE-SEMANTICS-TOP5-20260908=true | AI-CITATION-PROMPT-URL-DETECTION-NO-PDF-20260908=true | AI-CITATION-PROMPT-RAW-URL-ALL5-20260908=true | AI-CITATION-PROMPT-STRICT-REAL-RESEARCH-HTTPS-20260908=true | AI-CITATION-ESCAPED-HTTPS-NORMALIZATION-20260908=true | AI-CITATION-DOMAIN-VS-EXACT-PAGE-20260908=true | AI-CITATION-DIRECT-SUPPORT-PRIORITY-PAGES-PROMPT-20260908=true | AI-CITATION-CHATGPT-URL-UI-REMOVED-20260908=true | BOOT-CONSOLIDATED-AUDIT-PROSPECT-TOOL-PRIVACY-20260909=true | CONTENTSCALE-CONTENT-GOVERNANCE-REPORT-CYCLE-20260909=true | CONTENTSCALE-CLIENT-LEVEL-CLAIMS-FACTS-20260909=true | CONTENTSCALE-AI-EVIDENCE-LAYER-20260909=true | CONTENTSCALE-AI-EVIDENCE-UI-5-ENGINE-VISIBILITY-20260909=true | CONTENTSCALE-COMPETITIVE-INTELLIGENCE-LAYER-20260909=true ===');
+console.log('=== CONTENTSCALE BOOT ' + new Date().toISOString() + ' v2026-07-08-possible-prioritized-shortcut | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON | possibleThreshold=20impr | shortcutPrioritized=v2 | gscAutoFetchRemoved=true | linkCheckActive=true | wholeSiteWipeGuard=true | gscAutoFetchRestored=true | reminderOffFix=true | claudeRemoved=true | bingWebmaster=true | competitorPanel=true | zeroResultFix=true | pagesRefreshFix=true | recheckButton=true | provenScanStrip=true | provenScanState=true | scanAllProven=true | doEverythingBtn=true | panelOrderFix=true | workflowGuide=true | preScanGuard=true | scanAllGuard=true | earlyGuard=true | emptyStateTeaser=true | provenScopeFix=true | numberedButtons=true | clearerButtons=true | scanAnimFix=true | promptClaudeCleanup=true | bonusTip=true | realProvenContext=true | competitorContext=true | unifiedBrief=true | diagnosticFirst=true | fullCompetitorBreakdown=true | serpSpyV3=true | transparencyBlock=true | emailsPausedToggle=true | competitorDedup=true | provenScanDebug=true | serializedScans=true | claudeCleanupV2=true | mergeClaudeStrip=true | visualTransparency=true | aboveFoldPriority=true | competitorComparisonTable=true | redGreenTracking=true | aioExplicitState=true | perpCopilotState=true | realMergePromptFixed=true | briefContextDebug=true | forceRescanBypass=true | gscPosFallback=true | cannibalDedup=true | gscAccessGated=true | gapConfirmShown=true | noPlaceholders=true | rowNumContrast=true | codeCannibalDedup=true | provenDebugRemoved=true | broaderCannibalDedup=true | competitorGapFallback=true | competitorPrevSnapFallback=true | hubSpokeDedup=true | compGapRegexBroadened=true | gapFixLabelFallback=true | geminiProForBriefs=true | timeoutBudgetFixed=true | perAttemptTimeout45s=true | revertToFlashLite=true | tokenLimitDoubled=true | urlNormFix=true | impactFieldChecked=true | broaderHubPattern=true | cannibalContextRemovedFromGSC=true | scanStateDerivedFromDB=true | boardBriefRestyled=true | liveWallBriefModal=true | modalScopeFix=true | cardTransparency=true | CLAUDE-FIX-2307=true | CLAUDE-FIX-2307B-specquote=true | CLAUDE-FIX-2307C-pwboard=true | CLAUDE-FIX-2307D-typefilter=true | CLAUDE-FIX-2307E-scanneraio=true | CLAUDE-FIX-2307F-urlstrip=true | CLAUDE-FIX-2307G-aiobeforeScan=true | CLAUDE-FIX-2307H-aioInPrompt=true | CLAUDE-FIX-2307I-escHtml=true | CLAUDE-FIX-2307J-escAlias-noStale=true | CLAUDE-FIX-2407A-perpCitedConsistency=true | CLAUDE-FIX-2407B-perpCacheBug=true | CLAUDE-FIX-2407C-domainVsPageNuance=true | CLAUDE-FIX-2407D-wallModalNoReshuffle=true | CLAUDE-FIX-2407E-buildBriefSafetyNet=true | CLAUDE-FIX-2407F-modalFullText=true | CLAUDE-FIX-2407G-aioPasteModal=true | CLAUDE-FIX-2407H-aioDefinitionView=true | CLAUDE-FIX-2407I-aioBlueprintMining=true | CLAUDE-FIX-2407J-aioReferences=true | CLAUDE-FIX-2407K-aioCitationGap=true | CLAUDE-FIX-2407L-compGapTableAllModals=true | CLAUDE-FIX-2407M-honestAioManualOnly=true | CLAUDE-FIX-2407N-regexEscapeInTemplate=true | CLAUDE-FIX-2507A-jsonRepair-mergeTokens4096=true | CLAUDE-FIX-2507B-cardButtonsWorkflowOrder=true | CLAUDE-FIX-2507C-cardButtonsPillColors=true | CLAUDE-FIX-2507D-aioReloadFull-limit8000=true | CLAUDE-FIX-2507E-briefModalTransparency=true | CLAUDE-FIX-2507F-aioGapTable4col=true | CLAUDE-FIX-2507G-htmlScanTickCycle=true | CLAUDE-FIX-2507H-briefViewedPersisted=true | CLAUDE-FIX-2507I-fixCardRenderVarInExpr=true | CLAUDE-FIX-2507J-briefsUnified-manualAioGap=true | CLAUDE-FIX-2507K-gscCompTableInTracker=true | CLAUDE-FIX-2507L-trackerSplitSections=true | CLAUDE-FIX-2507M-copyBriefClarity=true | CLAUDE-FIX-2507N-aioRefsFromManualPaste=true | CLAUDE-FIX-2507O-removeSseEventSource=true | CLAUDE-FIX-2507P-ticksPersistUntilDoneOrNewHtml=true | CLAUDE-FIX-2507Q-aioRefsStoredAtSave=true | CLAUDE-FIX-2507R-aioGapTableAlways=true | CLAUDE-FIX-2507S-aioGscContextSeparated=true | CLAUDE-FIX-2507T-aioCodeFallbackFixed-refsFromManualSave=true | CLAUDE-FIX-2507U-mergeSafetyNet-cardSummaryParity=true | CLAUDE-FIX-2507V-sharedAioRenderFn-authTable=true | CLAUDE-FIX-2507W-viewLastBriefDelegates-oneSystem=true | CLAUDE-FIX-2507X-sharedBriefBody-fullUnification=true | CLAUDE-FIX-2507Y-aioTop5Table-definitionLabel=true | CLAUDE-FIX-2507Z-noRefsActionableMsg=true | CLAUDE-FIX-2508A-manualPasteWinsOverStaleSnapshot=true | CLAUDE-FIX-2508B-merge2Hardened-diagLog=true | CLAUDE-FIX-2508C-noStoreHeaders-freshClientJs=true | CLAUDE-FIX-2508D-saveEchoDiagnostic=true | CLAUDE-FIX-2508E-separateSourcesField=true | CLAUDE-FIX-2508F-diagSourcesField=true | CLAUDE-FIX-2508G-acceptSourceNames=true | CLAUDE-FIX-2508H-namesFromMainPaste-headingFilter=true | CLAUDE-FIX-2508I-cloroAioFetch=true | CLAUDE-FIX-2508J-namesFallback-autoSplit=true | CLAUDE-FIX-2508K-competitorGapAioFallback=true | CLAUDE-FIX-2508L-aioFallbackNoGscLeak-honestLabel=true | CLAUDE-FIX-2508M-gscRootDomainFallback=true | CLAUDE-FIX-2508N-sitemapLinks250-gscLiveFilter=true | CLAUDE-FIX-2508O-leadQueueCollapsedDefault=true | CLAUDE-FIX-2508P-leadQueueToggleRealFns=true | CLAUDE-FIX-2508Q-leadQueueHeaderWrap=true | CLAUDE-FIX-2508R-scanSelectedButton=true | CLAUDE-FIX-2508S-shiftClickRange=true | CLAUDE-FIX-2508T-shiftClickCorrectClass-inTemplate=true | CLAUDE-FIX-2508U-brandHeadshotHubFields=true | CLAUDE-FIX-2508V-briefModeSelector=true | CLAUDE-FIX-2508W-intentSnapshot-ownerNote=true | CLAUDE-FIX-2508X-modeBtnQuoteFix=true | CLAUDE-FIX-2508Y-perpApostropheFix=true | CLAUDE-FIX-2508Z-sitemapRegexFix=true | CLAUDE-FIX-2508ZA-pageInSitemapRegexFix=true | CLAUDE-FIX-2508ZB-missingEntities=true | CLAUDE-FIX-2508ZC-briefSpacing=true | CLAUDE-FIX-2508ZD-pasteCodeBlocks=true | CLAUDE-FIX-2508ZE-fmtActionRegexFix=true | CLAUDE-FIX-2508ZF-ticksOnlyClearOnDone=true | CLAUDE-FIX-2508ZG-paa5-pwbWider-aioFallbackMsg=true | CLAUDE-FIX-2508ZH-numberedItemsOnOwnLines=true | CLAUDE-FIX-2508ZI-prewriteBuildFields-aioListNotUglyTable=true | CLAUDE-FIX-2508ZJ-cleanAioDefinitionText=true | CLAUDE-FIX-2508ZK-slugRegexCrashFix-sectionSplit=true | CLAUDE-FIX-2508ZL-tvModalFmtAction=true | CLAUDE-FIX-3007A-tourAioScanSelected-mobileFriendly=true | CLAUDE-FIX-3007B-htmlLangWhitelistNonLatin=true | CLAUDE-FIX-3007C-clientBriefLanguageSelector=true | CLAUDE-FIX-3007D-briefLanguageTourStep=true | CLAUDE-FIX-3007E-prewriteLangListFull=true | CLAUDE-FIX-3007F-prewriteAutoAioFetch=true | CLAUDE-FIX-3007G-serpRegionListFull=true | CLAUDE-FIX-3007H-prewriteMobilePolish=true | CLAUDE-FIX-3007I-groupedComboDropdowns=true | CLAUDE-FIX-3007J-comboSyntaxFix=true | CLAUDE-FIX-3007K-multiLangBadges=true | CLAUDE-FIX-3007L-headerReportCTA=true | CLAUDE-FIX-3007M-tvViewReportCTA=true | CLAUDE-FIX-3007N-tvTopBarCTA=true | CLAUDE-FIX-3007O-realPaaInBrief=true | CLAUDE-FIX-0208-briefLangLeaks-item1AndTemplateLabels=true | CLAUDE-FIX-0208B-prewriteLabelsTranslated=true | CLAUDE-FIX-0208C-readyPasteMarkerAndCiteableLang=true | CLAUDE-FIX-0308-alignmentItemLang=true | CLAUDE-FIX-0308B-copyBriefCompTableParity=true | CLAUDE-FIX-0308C-cannibalStopwordMatch=true | CLAUDE-FIX-0308D-hardcodedCiteItemsLocalized=true | CLAUDE-FIX-0308E-cannibalSlugFallback=true | CLAUDE-FIX-1208-honestScanCount=true | CLAUDE-FIX-2108A-aioCitedTextPlusSources=true | CLAUDE-FIX-2108B-aioSourceTableCaseInsensitive=true | CLAUDE-FIX-2108C-aioSourceRetryFallback=true | CLAUDE-FIX-2108D-graafScoreInBrief=true | CLAUDE-FIX-2108E-graafRecsDedupPrioritized=true | CLAUDE-FIX-2108F-eliteRecsDetailsNotDisplayNone=true | CLAUDE-FIX-2108G-graafScoreInTextExport=true | CLAUDE-FIX-2108H-competitorTableDedupTextExport=true | CLAUDE-FIX-2108I-textExportSectionParity=true | CLAUDE-FIX-2108J-tableRegexEscapeFix=true | CLAUDE-FIX-2108K-scoreDefinedInClientScope=true | CLAUDE-FIX-2108L-clientBriefUsesDataNotP=true | CLAUDE-FIX-2108M-prewriteNoFabrication=true | CLAUDE-FIX-2108N-outputVoiceNoHype=true | CLAUDE-FIX-2608-intentEngine=true | CLAUDE-FIX-2608B-existingBriefMoment-mismatch=true | CLAUDE-FIX-2608C-momentInTextExport=true | CLAUDE-FIX-2608D-gscHeaderClarity=true | CLAUDE-FIX-2608E-mergePreservesIntentSnapshot=true | CLAUDE-FIX-2608F-sliceKeepsFramingObjects=true | CLAUDE-FIX-2608G-intentSnapshotEngineFallback=true | CLAUDE-FIX-2608H-instantBriefAlsoHasIntent=true | CLAUDE-FIX-2608I-brief2FinalSaveGuaranteesIntent=true | CLAUDE-FIX-2608J-copyBriefShowsIntent=true | CLAUDE-FIX-2608K-buildBriefPrefersFramingSource=true | CLAUDE-FIX-2608L-geminiIntentEnforced-specificFallback=true | CLAUDE-FIX-2608M-promptRestructuredForGemini=true | CLAUDE-FIX-2608N-dedicatedSerialIntentCall-protectsBriefCall=true | CLAUDE-FIX-2608O-qualityHookPreservesIntent=true | CLAUDE-FIX-2608P-graafShortcut-recsIsolatedFromCitations=true | CLAUDE-FIX-2608Q-caseStudyStrictHeadingsOnly=true | CLAUDE-FIX-2608R-graafShortcutUsesPuppeteerScan-matchesExternal=true | CLAUDE-FIX-2608S-multilingualDetection-faqBioTldrCaseStudyTocAllLangs=true | CLAUDE-FIX-2608T-arabicNumeralsAndSchemaAuthor=true | CLAUDE-FIX-2608U-scanScrollsAndWaitsForJsRender-correctRoute=true | CLAUDE-FIX-2608V-faqDetectsToggleAccordions-authorBioNoKeywordGate=true | CLAUDE-FIX-2608W-quoteRecSaysResearchable=true | CLAUDE-FIX-2608X-faqDetectsQuestionMarkBeforeToggleSymbol=true | CLAUDE-FIX-2608Y-fixedActualApiScanRoute-9107-faqBioMultilingualToggle=true | CLAUDE-FIX-2608Z-recursiveSchemaDetection-findsNestedFAQPage=true | CLAUDE-FIX-2608ZA-realApiScanRoute-9410-faqUsesSchemaAndToggle=true | CLAUDE-FIX-2608ZB-graafShortcutReliableAutoRefresh=true | CLAUDE-FIX-2609A-siteAuditEndpoint=true | CLAUDE-FIX-2609B-auditPageVisible=true | CLAUDE-FIX-2609C-auditCodeProtected=true | CLAUDE-FIX-2609P-multiBrandNamesForAcquisitions=true | CLAUDE-FIX-2610G-proofBlockAllCentered=true | CLAUDE-FIX-2610I-extractsSourceUrls-aioInInstructions=true | AI-SOURCE-IMPORT-EN-PDF-CHATGPT-URLS=true | AUDIT-RESET-PERSISTENCE-0909=true | AGENCY-WHITELABEL-PERSONAL-PROOF-HIDDEN=true | AUDIT-EXTERNAL-JS-BROWSER-FIX-20260908=true | AUDIT-DRAFT-DB-FIX-20260908=true | AUDIT-DRAFT-STORAGE-FALLBACK-20260908=true | AUDIT-SHARE-SCHEMA-SELF-HEAL-20260908=true | AUDIT-SHARE-ADMIN-AUTH-PERSIST-20260908=true | AUDIT-PDF-NUL-SANITIZE-20260908=true | GRAAF-MAIN-CONTENT-SCOPE-20260908=true | GRAAF-RECS-EVIDENCE-PAGETYPE-20260908=true | GRAAF-FULL-RECS-SCORING-EVIDENCE-20260908=true | CONTENTSCORE-METHODOLOGY-VERSIONING-20260908=true | CONTENTSCORE-V2-USER-VISIBLE-NOTICE-20260908=true | CONTENTSCORE-V2-MULTILINGUAL-NOTICE-20260908=true | CONTENTSCORE-V2-NOTICE-ABOVE-SCANNER-20260908=true | CONTENTSCORE-V2-NOTICE-AT-OFFICIAL-SCORE-COPY-20260908=true | AI-CITATION-RICH-PASTE-EVIDENCE-SEMANTICS-TOP5-20260908=true | AI-CITATION-PROMPT-URL-DETECTION-NO-PDF-20260908=true | AI-CITATION-PROMPT-RAW-URL-ALL5-20260908=true | AI-CITATION-PROMPT-STRICT-REAL-RESEARCH-HTTPS-20260908=true | AI-CITATION-ESCAPED-HTTPS-NORMALIZATION-20260908=true | AI-CITATION-DOMAIN-VS-EXACT-PAGE-20260908=true | AI-CITATION-DIRECT-SUPPORT-PRIORITY-PAGES-PROMPT-20260908=true | AI-CITATION-CHATGPT-URL-UI-REMOVED-20260908=true | BOOT-CONSOLIDATED-AUDIT-PROSPECT-TOOL-PRIVACY-20260909=true | CONTENTSCALE-CONTENT-GOVERNANCE-REPORT-CYCLE-20260909=true | CONTENTSCALE-CLIENT-LEVEL-CLAIMS-FACTS-20260909=true | CONTENTSCALE-AI-EVIDENCE-LAYER-20260909=true | CONTENTSCALE-AI-EVIDENCE-UI-5-ENGINE-VISIBILITY-20260909=true | CONTENTSCALE-COMPETITIVE-INTELLIGENCE-LAYER-20260909=true | CONTENTSCALE-LIVE-HTML-FACT-LEDGER-SURGICAL-BRIEF-20260909=true ===');
 // CONTENTSCALE-CITATION-BRIEF-EVIDENCE-OVERRIDE-20260909=true
 
 
@@ -33658,6 +33658,7 @@ var _mdFilter = 'all'; // 'all' | 'todo' | 'done' — filter on the user's own p
         perp_excerpt: p.ai_perplexity_answer_excerpt || '',
         perp_text: p.ai_perplexity_text || '',
         last_checked: p.last_checked || null,
+        ai_manual_evidence: p.ai_manual_evidence || {},
         type: 'brief_ready'
       };
       _lastBriefData[p.id] = briefData;
@@ -33723,16 +33724,29 @@ function _bwTime(p){
   if (!t) return '';
   try { var d=new Date(t); return d.toLocaleDateString('en-GB',{day:'2-digit',month:'short'}) + ' ' + d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}); } catch(e){ return ''; }
 }
+// CONTENTSCALE-BRIEF-5-ENGINE-EVIDENCE-SYSTEM-20260909=true
+function _briefManualMap(o){ var a=o&&o.ai_manual_evidence; if(typeof a==='string'){try{a=JSON.parse(a);}catch(e){a={};}} return a||{}; }
+function _briefBool(v){return v===true||v===1||v==='1'||v==='true'||v==='t';}
+function _briefEngineState(o,engine){
+  var a=_briefManualMap(o), e=a[engine]||null, exact=e&&_briefBool(e.exact_page_cited), dom=e&&_briefBool(e.domain_cited);
+  if(e) return {checked:true,cited:!!exact,domain:!!dom,exact:!!exact,method:'VERIFIED'};
+  if(engine==='google_aio') return {checked:true,cited:!!o.aio_cited,domain:!!o.aio_cited,exact:!!o.aio_cited,method:o.aio_cited?'AUTO SIGNAL':'NOT CITED'};
+  if(engine==='perplexity') return {checked:true,cited:!!o.perp_cited,domain:!!o.perp_cited,exact:!!o.perp_cited,method:o.perp_cited?'API VERIFIED':'NOT CITED'};
+  return {checked:false,cited:false,domain:false,exact:false,method:'NOT CHECKED'};
+}
+function _briefStateText(st){ if(st.cited)return '\u2713 EXACT PAGE — '+st.method; if(st.domain)return '\u2713 DOMAIN — '+st.method; return st.checked?'\u2717 NOT CITED':'? NOT CHECKED'; }
 function _bwChips(bd){
   function chip(v,l,c){ return '<div class="bw-chip"><div class="v" style="color:'+c+';">'+v+'</div><div class="l">'+l+'</div></div>'; }
   var posC = !bd.position ? '#6b7280' : bd.position<=3?'#4ade80':bd.position<=10?'#a3e635':bd.position<=20?'#fbbf24':'#f87171';
+  var g=_briefEngineState(bd,'google_aio'),ch=_briefEngineState(bd,'chatgpt'),pp=_briefEngineState(bd,'perplexity'),cl=_briefEngineState(bd,'claude'),co=_briefEngineState(bd,'copilot');
   return '<div class="bw-chips">'
-    + chip(bd.position?('#'+bd.position):'\u2014','Position',posC)
-    + chip(bd.aio_cited?'YES':'NO','AIO',bd.aio_cited?'#4ade80':'#6b7280')
-    + chip(bd.perp_cited?'YES':'NO','Perplexity',bd.perp_cited?'#4ade80':'#6b7280')
-    + chip(bd.bing_cited?'YES':'NO','Copilot',bd.bing_cited?'#4ade80':'#6b7280')
-    + (bd.score ? chip(bd.score,'GRAAF','#a78bfa') : '')
-    + '</div>';
+    + chip(bd.position?('#'+bd.position):'—','Position',posC)
+    + chip(g.cited?'YES':(g.checked?'NO':'?'),'Google AIO',g.cited?'#4ade80':'#6b7280')
+    + chip(ch.cited?'YES':(ch.checked?'NO':'?'),'ChatGPT',ch.cited?'#4ade80':'#6b7280')
+    + chip(pp.cited?'YES':(pp.checked?'NO':'?'),'Perplexity',pp.cited?'#4ade80':'#6b7280')
+    + chip(cl.cited?'YES':(cl.checked?'NO':'?'),'Claude',cl.cited?'#4ade80':'#6b7280')
+    + chip(co.cited?'YES':(co.checked?'NO':'?'),'Copilot',co.cited?'#4ade80':'#6b7280')
+    + (bd.score ? chip(bd.score,'GRAAF','#a78bfa') : '') + '</div>';
 }
 function _bwRecs(bd, limit){
   var items = Array.isArray(bd.passages)?bd.passages:[];
@@ -34233,9 +34247,9 @@ function renderRecs(p) {
     // Read from flat page fields (API returns these with snapshot JOIN aliases)
     var snap = p.latest_snapshot || {};
     var pos = p.google_position || snap.google_position || p.gsc_position || null;
-    var aio = !!(p.ai_google_overview_cited || snap.ai_google_overview_cited);
-    var perp = !!(p.ai_perplexity_cited || snap.ai_perplexity_cited);
-    var cop = !!(p.ai_bing_cited || snap.ai_bing_cited);
+    var _bePage={ai_manual_evidence:p.ai_manual_evidence||{},aio_cited:!!(p.ai_google_overview_cited||snap.ai_google_overview_cited),perp_cited:!!(p.ai_perplexity_cited||snap.ai_perplexity_cited)};
+    var _stA=_briefEngineState(_bePage,'google_aio'), _stC=_briefEngineState(_bePage,'chatgpt'), _stP=_briefEngineState(_bePage,'perplexity'), _stCl=_briefEngineState(_bePage,'claude'), _stCo=_briefEngineState(_bePage,'copilot');
+    var aio=_stA.cited, perp=_stP.cited, cop=_stCo.cited;
     var score = p.graaf_score || snap.score || snap.graaf_score || p.last_graaf_score || null;
     var posColor = pos ? (pos<=3?'#22c55e':pos<=10?'#f59e0b':'#ef4444') : '#4b5563';
     var posBlink = pos ? ' style="animation:briefBlink 1.2s ease-in-out 4"' : '';
@@ -34257,9 +34271,12 @@ function renderRecs(p) {
     // Stat row - cited items blink
     html += '<div class="cb-inline-stats">';
     html += '<div class="cb-istat"' + posBlink + '><div class="cb-isv" style="color:' + posColor + (pos?';cursor:pointer':'') + '"' + (pos?(' onclick="csPosHist(' + pageId + ')" title="See ranking history"'):'') + '>' + (pos ? '#'+pos : '&#8212;') + '</div><div class="cb-isl">Position' + (pos?' &#128200;':'') + '</div></div>';
-    html += '<div class="cb-istat"' + (aio ? ' style="animation:briefBlink 1.2s ease-in-out 4"' : '') + '><div class="cb-isv" style="color:' + (aio?'#22c55e':'#374151') + '">' + (aio?'&#10003;':'&#8212;') + '</div><div class="cb-isl">Google AIO</div></div>';
-    html += '<div class="cb-istat"' + (perp ? ' style="animation:briefBlink 1.2s ease-in-out 4"' : '') + '><div class="cb-isv" style="color:' + (perp?'#818cf8':'#374151') + '">' + (perp?'&#10003;':'&#8212;') + '</div><div class="cb-isl">Perplexity</div></div>';
-    html += '<div class="cb-istat"' + (cop ? ' style="animation:briefBlink 1.2s ease-in-out 4"' : '') + '><div class="cb-isv" style="color:' + (cop?'#60a5fa':'#374151') + '">' + (cop?'&#10003;':'&#8212;') + '</div><div class="cb-isl">Copilot</div></div>';
+    function _istat(st,label,color){return '<div class="cb-istat"'+(st.cited?' style="animation:briefBlink 1.2s ease-in-out 4"':'')+' title="'+_bwEsc(_briefStateText(st))+'"><div class="cb-isv" style="color:'+(st.cited?color:'#374151')+'">'+(st.cited?'&#10003;':(st.checked?'&#8212;':'?'))+'</div><div class="cb-isl">'+label+'</div></div>';}
+    html += _istat(_stA,'Google AIO','#22c55e');
+    html += _istat(_stC,'ChatGPT','#10b981');
+    html += _istat(_stP,'Perplexity','#818cf8');
+    html += _istat(_stCl,'Claude','#f59e0b');
+    html += _istat(_stCo,'Copilot','#60a5fa');
     if (score) html += '<div class="cb-istat"><div class="cb-isv" style="color:#f59e0b">' + score + '</div><div class="cb-isl">GRAAF</div></div>';
     html += '</div>';
 
@@ -34555,10 +34572,9 @@ function copyBrief(pageId) {
       if (_pc && _pc.length) lines.push('- Perplexity: ' + _pc.length + ' cited source' + (_pc.length>1?'s':'') + ' found' + (p.ai_perplexity_cited ? ' (this page IS cited)' : ' (this page not among them yet)') + '');
     } catch(e) {}
   })();
-  lines.push('AI Citation Results:');
-  lines.push('- Google AIO: ' + (p.ai_google_overview_cited ? 'CITED' : 'Not cited'));
-  lines.push('- Perplexity: ' + (p.ai_perplexity_cited ? 'CITED' : 'Not cited'));
-  lines.push('- Copilot: ' + (p.ai_bing_cited ? 'CITED' : 'Not cited'));
+  lines.push('AI Citation Results — 5 engines:');
+  var _be={ai_manual_evidence:p.ai_manual_evidence||{},aio_cited:!!p.ai_google_overview_cited,perp_cited:!!p.ai_perplexity_cited};
+  [['google_aio','Google AIO / Gemini'],['chatgpt','ChatGPT Search'],['perplexity','Perplexity'],['claude','Claude'],['copilot','Microsoft Copilot']].forEach(function(x){lines.push('- '+x[1]+': '+_briefStateText(_briefEngineState(_be,x[0])));});
   if (pos) lines.push('- Google Position: #' + pos);
   if (score) lines.push('- GRAAF Score: ' + score + '/100');
   if (p.gsc_clicks != null || p.gsc_impressions != null || p.gsc_position != null) {
@@ -34661,7 +34677,7 @@ function copyBrief(pageId) {
     } catch(_ie) {}
   })();
 
-  lines.push('', '=== AIO BRIEF (AI citations: Google AI Overview, Perplexity, Copilot) ===');
+  lines.push('', '=== AI CITATION BRIEF — 5 ENGINES ===');
   if (_aio3.length) { _aio3.forEach(function(r, i) { _emitAction(i+1, r, r.system||r.sys||''); lines.push(''); }); }
   else { lines.push('(no citation actions)'); }
 
@@ -36009,9 +36025,7 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
     var posColor = pos ? (pos <= 3 ? '#4ade80' : pos <= 10 ? '#fbbf24' : '#f87171') : '#4b5563';
     statRow.innerHTML =
       '<div class="cb-stat" style="animation:soStatPop .4s ease both"><div class="v" style="color:' + posColor + ';' + ((pos&&data.page_id)?'cursor:pointer;':'') + '"' + ((pos&&data.page_id)?(' onclick="csPosHist(' + data.page_id + ')" title="See ranking history"'):'') + '>' + (pos ? '#' + pos : 'N/A') + '</div><div class="l">Position' + ((pos&&data.page_id)?' &#128200;':'') + '</div></div>' +
-      '<div class="cb-stat" style="animation:soStatPop .4s ease .06s both"><div class="v" style="color:' + (data.aio_cited ? '#4ade80' : '#4b5563') + ';">' + (data.aio_cited ? '\\u2713 Cited' : 'No') + '</div><div class="l">Google AIO</div></div>' +
-      '<div class="cb-stat" style="animation:soStatPop .4s ease .12s both"><div class="v" style="color:' + (data.perp_cited ? '#a78bfa' : '#4b5563') + ';">' + (data.perp_cited ? '\\u2713 Cited' : 'No') + '</div><div class="l">Perplexity</div></div>' +
-      '<div class="cb-stat" style="animation:soStatPop .4s ease .18s both"><div class="v" style="color:' + (data.bing_cited ? '#60a5fa' : '#4b5563') + ';">' + (data.bing_cited ? '\\u2713 Cited' : 'No') + '</div><div class="l">Copilot</div></div>' +
+      (function(){var z=[['google_aio','Google AIO','#4ade80'],['chatgpt','ChatGPT','#10b981'],['perplexity','Perplexity','#a78bfa'],['claude','Claude','#f59e0b'],['copilot','Copilot','#60a5fa']];return z.map(function(x){var st=_briefEngineState(data,x[0]);return '<div class="cb-stat" title="'+_bwEsc(_briefStateText(st))+'"><div class="v" style="color:'+(st.cited?x[2]:'#4b5563')+';">'+(st.cited?'\u2713 Cited':(st.checked?'No':'?'))+'</div><div class="l">'+x[1]+'</div></div>';}).join('');})() +
       (data.score ? '<div class="cb-stat" style="animation:soStatPop .4s ease .3s both"><div class="v" style="color:#fbbf24;">' + data.score + '</div><div class="l">GRAAF</div></div>' : '');
 
     // GSC section \\u2014 show if GSC is connected (even if values are 0)
@@ -36095,10 +36109,8 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
             if (_pc && _pc.length) lines.push('- Perplexity: ' + _pc.length + ' cited source' + (_pc.length>1?'s':'') + (data.ai_perplexity_cited ? ' (this page IS cited)' : ' found (this page not among them yet)'));
           } catch(e) {}
         })();
-        lines.push('AI Citation Results:');
-        lines.push('- Google AIO: ' + (data.aio_cited ? 'CITED' : 'Not cited'));
-        lines.push('- Perplexity: ' + (data.perp_cited ? 'CITED' : 'Not cited'));
-        lines.push('- Copilot: ' + (data.bing_cited ? 'CITED' : 'Not cited'));
+        lines.push('AI Citation Results — 5 engines:');
+        [['google_aio','Google AIO / Gemini'],['chatgpt','ChatGPT Search'],['perplexity','Perplexity'],['claude','Claude'],['copilot','Microsoft Copilot']].forEach(function(x){lines.push('- '+x[1]+': '+_briefStateText(_briefEngineState(data,x[0])));});
         if (data.position) lines.push('- Google Position: #' + data.position);
         if (data.score) lines.push('- GRAAF Score: ' + data.score + '/100');
         if (hasGsc) {
@@ -45077,8 +45089,18 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
       const kw = keyword;
 
       // HTML: raw first 5000 chars for structural analysis
-      const rawHtml = page.html_content || '';
-      const htmlExcerpt = rawHtml.substring(0, 8000);
+      // Use the HTML fetched for THIS scan. page.html_content can be an older stored copy.
+      // The brief must inspect the live page before deciding that a business fact is missing.
+      const rawHtml = effectiveHtml || page.html_content || '';
+      // Feed Gemini MAIN/BODY content rather than the first 8k of the document (which can be
+      // mostly <head>, menu and wrappers). Keep the full rawHtml for fact/evidence checks.
+      const _briefBodyHtml = (function(h){
+        var x=String(h||'');
+        var m=x.match(/<main\b[^>]*>([\s\S]*?)<\/main>/i) || x.match(/<article\b[^>]*>([\s\S]*?)<\/article>/i) || x.match(/<body\b[^>]*>([\s\S]*?)<\/body>/i);
+        x=m ? m[1] : x;
+        return x.replace(/<script\b[\s\S]*?<\/script>/gi,' ').replace(/<style\b[\s\S]*?<\/style>/gi,' ').replace(/<nav\b[\s\S]*?<\/nav>/gi,' ').replace(/<header\b[\s\S]*?<\/header>/gi,' ').replace(/<footer\b[\s\S]*?<\/footer>/gi,' ').replace(/<aside\b[\s\S]*?<\/aside>/gi,' ');
+      })(rawHtml);
+      const htmlExcerpt = _briefBodyHtml.substring(0, 12000);
       // ── Auto language: write the brief in the page's OWN language (from <html lang>, content fallback) ──
       // OVERRIDE: if the client explicitly set a brief_language (owner reads a different language than
       // the page content itself, e.g. an English page for a Spanish-speaking client), that wins.
@@ -45649,6 +45671,10 @@ INTERNAL LINKING:
 
 WORDPRESS-SAFE OUTPUT — every piece of HTML/copy you put inside an "action" is pasted into a WordPress Custom HTML block that sits behind LiteSpeed Cache. It MUST obey ALL of this:
 - Output CONTENT FRAGMENTS only. NEVER include a doctype, <html>, <head>, <body>, or <title> tag — those already exist on the page; a full document breaks the layout.
+- SURGICAL BODY EDITS ONLY: write only the body fragment that must be inserted/replaced. NEVER output menu, navigation, footer, page wrapper, theme container, duplicate header/hero, or surrounding template chrome. Preserve the existing page structure and images unless the action specifically changes that element.
+- BEFORE proposing a business fact or author change, inspect the supplied LIVE PAGE HTML and OWNER-PROVIDED CONTEXT. If the fact is already present there, treat it as supported and improve/rephrase it rather than blocking it as unverified.
+- AUTHOR: if the live page/owner context already identifies a company/team as the author, preserve that company/team author and do not introduce or restore a different personal author. Modify the existing author block in place; never add a duplicate author block.
+- RANK MATH META: body HTML must never contain title/meta tags. If SEO Title or Meta Description should change, give the exact values only in the Rank Math action.
 - NEVER use a <style> block or external CSS — LiteSpeed strips them. Put every style as an inline style="" attribute with literal hex colours (no CSS variables).
 - NEVER output a second <h1> — the page already has one. Use <h2>/<h3> for any new section.
 - For structured data, ONLY ever output FAQPage JSON-LD. NEVER output Article, BreadcrumbList, WebPage, or Person schema — Rank Math already emits those and a duplicate causes a schema conflict. If the only useful schema would be Article/Breadcrumb/WebPage, do not output a schema action at all.
@@ -45758,6 +45784,10 @@ REQUIRED ACTION TYPES (include all of these):
 
 WORDPRESS-SAFE OUTPUT — any HTML/copy inside an "action" is pasted into a WordPress Custom HTML block behind LiteSpeed Cache:
 - Fragments only: NEVER output a doctype, <html>, <head>, <body>, a <title> tag, a <style> block, or external CSS (LiteSpeed strips <style>). Style everything with inline style="" attributes and literal hex colours.
+- SURGICAL BODY EDITS ONLY: output only the body fragment being inserted/replaced — no menu, navigation, footer, theme wrapper, duplicate header/hero, or full-page template. Preserve existing page structure and images unless the action explicitly targets them.
+- Inspect the supplied LIVE PAGE HTML and OWNER-PROVIDED CONTEXT before declaring a client fact unverified. Facts already stated on the client's live page are usable first-party page evidence; competitor facts are not.
+- If the existing live author block uses the company/team as author, keep that author identity and MODIFY/REPLACE the existing author block rather than adding a second author or reintroducing an old personal author.
+- Meta changes belong ONLY in the Rank Math action; never emit <title> or <meta> tags in body HTML.
 - NEVER output a second <h1>; use <h2>/<h3> for new sections. For schema, ONLY FAQPage JSON-LD — never Article/Breadcrumb/WebPage/Person (Rank Math already emits those; a duplicate conflicts).
 - The Meta Title & Description go in Rank Math, not in the HTML body.
 
@@ -46331,59 +46361,102 @@ If no unanchored claims found, return empty array: []`;
     snapshot._quality_report = _q.report;
   } catch (e) { console.warn('[brief-quality] skipped:', e.message); }
 
-  // CONTENTSCALE-CENTRAL-EVIDENCE-CLAIMS-ENFORCEMENT-20260909=true
-  // Final deterministic enforcement pass. Runs AFTER all LLM parsing/fallback/quality hooks,
-  // so no later brief transformation can re-introduce an evidence contradiction or silently
-  // transfer a competitor-only business claim into client copy.
+  // CONTENTSCALE-CENTRAL-EVIDENCE-CLAIMS-ENFORCEMENT-V2-20260909=true
+  // Self-contained final enforcement pass. IMPORTANT: do not depend on prompt-local variables
+  // (rawHtml/_verifiedClaims/_brandContext) because those are block-scoped and previously caused
+  // this guard to silently skip at runtime. Read live HTML + Claims & Facts + Brand context here.
   try {
-    const _ecNorm = function(v){ return String(v||'').toLowerCase().replace(/<[^>]+>/g,' ').replace(/&[a-z0-9#]+;/gi,' ').replace(/[^a-z0-9]+/g,' ').replace(/\s+/g,' ').trim(); };
-    const _ecPage = _ecNorm(rawHtml || effectiveHtml || page.html_content || '');
-    const _ecVerified = (_verifiedClaims || []).map(_ecNorm).filter(Boolean);
-    const _ecBlocked = (_blockedClaims || []).map(function(x){ return { claim:_ecNorm(x.claim), status:x.status }; }).filter(function(x){ return x.claim; });
+    const _ecNorm = function(v){ return String(v||'').toLowerCase().replace(/<script\b[\s\S]*?<\/script>/gi,' ').replace(/<style\b[\s\S]*?<\/style>/gi,' ').replace(/<[^>]+>/g,' ').replace(/&[a-z0-9#]+;/gi,' ').replace(/[^a-z0-9]+/g,' ').replace(/\s+/g,' ').trim(); };
+    const _ecLiveHtml = String(effectiveHtml || page.html_content || '');
+    let _ecBrandContext = '';
+    let _ecClaimsRows = [];
+    try {
+      const _ecClient = await pool.query('SELECT brand_context FROM tracker_clients WHERE id=$1', [clientId]);
+      _ecBrandContext = String((_ecClient.rows[0] && _ecClient.rows[0].brand_context) || '');
+    } catch(_e) {}
+    try {
+      const _ecCf = await pool.query(`SELECT claim_text,status FROM tracker_claims_facts WHERE tracker_client_id=$1 AND page_id IS NULL ORDER BY updated_at DESC,id DESC LIMIT 300`, [clientId]);
+      _ecClaimsRows = _ecCf.rows || [];
+    } catch(_e) {}
+    const _ecVerified = _ecClaimsRows.filter(function(r){return String(r.status||'').toUpperCase()==='VERIFIED';}).map(function(r){return _ecNorm(r.claim_text);}).filter(Boolean);
+    const _ecBlocked = _ecClaimsRows.filter(function(r){return ['UNVERIFIED','FALSE','NOT_APPLICABLE'].includes(String(r.status||'').toUpperCase());}).map(function(r){return {claim:_ecNorm(r.claim_text),status:String(r.status||'').toUpperCase()};}).filter(function(r){return r.claim;});
+    // Owner context is explicit ground truth; live HTML is first-party page evidence. Competitor
+    // snippets are intentionally NOT included here.
+    const _ecGround = _ecNorm(_ecBrandContext + '\n' + _ecLiveHtml + '\n' + _ecVerified.join('\n'));
+
+    const _ecSignals = function(txt){
+      var n=_ecNorm(txt), a=[];
+      if(/\blicensed\b/.test(n)) a.push(['licensed',/\blicensed\b/]);
+      if(/\binsured\b/.test(n)) a.push(['insured',/\binsured\b/]);
+      if(/\bcertified\b/.test(n)) a.push(['certified',/\bcertified\b/]);
+      if(/24\s*7(?:\s*365)?|around the clock/.test(n)) a.push(['24/7',/(?:24\s*7(?:\s*365)?|around the clock)/]);
+      if(/same day/.test(n)) a.push(['same-day',/same day/]);
+      if(/\bdispatch\b/.test(n)) a.push(['dispatch',/\bdispatch\b/]);
+      if(/all\s+\d+\s+(?:new jersey\s+|nj\s+)?counties/.test(n)) a.push(['all-counties',/all\s+\d+\s+(?:new jersey\s+|nj\s+)?counties/]);
+      if(/\d+\s*\+?\s*years?|over\s+\d+\s+years?/.test(n)) a.push(['years',/(?:\d+\s*\+?\s*years?|over\s+\d+\s+years?)/]);
+      if(/free estimates?|free assessments?/.test(n)) a.push(['free-estimate',/free (?:estimates?|assessments?)/]);
+      if(/insurance (?:claim )?(?:help|assistance|coordination|documentation)|coordinate\w* (?:directly )?with .*insurance/.test(n)) a.push(['insurance-help',/(?:insurance (?:claim )?(?:help|assistance|coordination|documentation)|coordinate\w* (?:directly )?with .*insurance)/]);
+      if(/financing/.test(n)) a.push(['financing',/financing/]);
+      if(/warrant(?:y|ies)/.test(n)) a.push(['warranty',/warrant(?:y|ies)/]);
+      if(/\b(?:#1|best|top rated|leading)\b/.test(n)) a.push(['superlative',/\b(?:#1|best|top rated|leading)\b/]);
+      return a;
+    };
     const _ecSupported = function(claim){
       var n=_ecNorm(claim); if(!n) return false;
-      if(_ecPage.indexOf(n)>=0) return true;
-      return _ecVerified.some(function(v){ return v.indexOf(n)>=0 || n.indexOf(v)>=0; });
+      if(_ecGround.indexOf(n)>=0) return true;
+      var sig=_ecSignals(n);
+      if(sig.length){
+        // A generated sentence can combine several verified facts with new prose. Require every
+        // sensitive fact category in that sentence to be independently present in first-party evidence.
+        return sig.every(function(x){ return x[1].test(_ecGround); });
+      }
+      return _ecVerified.some(function(v){ return v && (v.indexOf(n)>=0 || n.indexOf(v)>=0); });
     };
     const _ecContradiction = function(txt){
       if(!_googleAioAlreadyCited) return txt;
       var t=String(txt||'');
-      // Observed citation evidence overrides generic ranking/visibility heuristics.
+      t=t.replace(/this page currently lacks visibility in (?:these )?ai summaries due to its low organic position\.?/gi,
+        'This page already has verified Google AI Overview citation visibility; protect that win while expanding coverage to engines that are still missing.');
       t=t.replace(/this page currently has no visibility or citations in (?:these )?ai[- ]generated summaries\.?/gi,
         'This page already has verified Google AI Overview citation visibility; protect that win while expanding citation coverage to engines that are still missing.');
-      t=t.replace(/this page (?:currently )?(?:has|gets|shows) no (?:ai|aio|google ai overview) visibility(?: or citations)?[^.]*\.?/gi,
+      t=t.replace(/this page[^.]{0,100}(?:lacks|has no)[^.]{0,80}(?:visibility|citations?)[^.]{0,100}(?:ai summaries|ai-generated summaries|ai overview|google ai overview)[^.]*\.?/gi,
+        'This page already has verified Google AI Overview citation visibility; protect that win while expanding citation coverage to engines that are still missing.');
+      t=t.replace(/this page (?:currently )?(?:has|gets|shows|lacks) no?\s*(?:ai|aio|google ai overview) visibility(?: or citations)?[^.]*\.?/gi,
         'This page already has verified Google AI Overview citation visibility.');
-      t=t.replace(/(?:google ai overview|aio)[^.]{0,80}(?:will not|won[’']t|cannot) cite[^.]*top ?10[^.]*\.?/gi,
+      t=t.replace(/(?:google ai overview|aio)[^.]{0,100}(?:will not|won[’']t|cannot) cite[^.]*top ?10[^.]*\.?/gi,
         'Google AI Overview already cites this page; top-10 organic ranking is not a prerequisite demonstrated by this evidence.');
       return t;
     };
     const _ecRiskPatterns = [
-      /\b(?:licensed|insured|certified)\b[^.!?\n]{0,100}/gi,
-      /\b(?:same[- ]day|\d+\s*(?:-|to)\s*\d+\s*minute|\d+\s*minute|response time|dispatch)\b[^.!?\n]{0,120}/gi,
-      /\b(?:all\s+\d+\s+(?:counties|locations|states)|serv(?:e|es|ing)\s+all\s+\d+)\b[^.!?\n]{0,120}/gi,
-      /\b(?:\d+\+?\s+years?|over\s+\d+\s+years?)\b[^.!?\n]{0,100}/gi,
-      /\b(?:free estimates?|free assessments?|financing|warrant(?:y|ies)|guarantee(?:d|s)?|insurance (?:claim )?(?:help|assistance|coordination|documentation)|coordinate(?:s|d)? (?:directly )?with (?:your )?(?:homeowner(?:'s)? )?insurance)\b[^.!?\n]{0,140}/gi,
-      /\b(?:24\s*\/\s*7(?:\s*\/\s*365)?|around the clock)\b[^.!?\n]{0,100}/gi,
-      /\b(?:#1|best|top[- ]rated|leading)\b[^.!?\n]{0,100}/gi
+      /\b(?:licensed|insured|certified)\b[^.!?\n]{0,120}/gi,
+      /\b(?:same[- ]day|\d+\s*(?:-|to)\s*\d+\s*minute|\d+\s*minute|response time|dispatch)\b[^.!?\n]{0,140}/gi,
+      /\b(?:all\s+\d+\s+(?:new jersey\s+|nj\s+)?counties|serv(?:e|es|ing)\s+all\s+\d+)\b[^.!?\n]{0,140}/gi,
+      /\b(?:\d+\+?\s+years?|over\s+\d+\s+years?)\b[^.!?\n]{0,120}/gi,
+      /\b(?:free estimates?|free assessments?|financing|warrant(?:y|ies)|guarantee(?:d|s)?|insurance (?:claim )?(?:help|assistance|coordination|documentation)|coordinate(?:s|d)? (?:directly )?with (?:your )?(?:homeowner(?:'s)? )?insurance)\b[^.!?\n]{0,160}/gi,
+      /\b(?:24\s*\/\s*7(?:\s*\/\s*365)?|around the clock)\b[^.!?\n]{0,120}/gi,
+      /\b(?:#1|best|top[- ]rated|leading)\b[^.!?\n]{0,120}/gi
     ];
     const _ecUnsupported = function(txt){
-      var text=String(txt||''), found=[];
-      _ecBlocked.forEach(function(b){ if(b.claim && _ecNorm(text).indexOf(b.claim)>=0 && !_ecSupported(b.claim)) found.push(b.claim); });
+      var text=String(txt||''), norm=_ecNorm(text), found=[];
+      _ecBlocked.forEach(function(b){ if(b.claim && norm.indexOf(b.claim)>=0 && !_ecSupported(b.claim)) found.push(b.claim); });
       _ecRiskPatterns.forEach(function(rx){ rx.lastIndex=0; var m; while((m=rx.exec(text))){ var c=String(m[0]||'').trim(); if(c && !_ecSupported(c)) found.push(c); if(m.index===rx.lastIndex) rx.lastIndex++; } });
       return Array.from(new Set(found)).slice(0,8);
     };
+    const _ecSafety = function(txt){
+      // Never instruct a homeowner to climb onto / tarp an active, wet or storm-damaged roof.
+      return String(txt||'').replace(/if safe,\s*apply a heavy-duty tarp over the exterior source\.?/gi,
+        'Do not climb onto a wet, storm-damaged, or structurally compromised roof. If it is safe to remain inside, contain interior water away from electrical hazards and contact a professional roofer.');
+    };
     const _ecEnforceItem = function(item){
       if(!item || typeof item!=='object') return item;
-      ['title','action','expected_impact','trigger'].forEach(function(k){ if(typeof item[k]==='string') item[k]=_ecContradiction(item[k]); });
+      ['title','action','expected_impact','trigger'].forEach(function(k){ if(typeof item[k]==='string') item[k]=_ecSafety(_ecContradiction(item[k])); });
       var combined=[item.title,item.action,item.trigger].filter(Boolean).join(' ');
       var unsupported=_ecUnsupported(combined);
       if(unsupported.length){
-        // Never publish competitor-derived/unverified client prose. Keep the strategic signal,
-        // but convert the action into an explicit verification task.
         var original=String(item.action||'').replace(/──\s*READY-TO-PASTE[^\n]*──/gi,'').trim();
         item.title = /^verify first/i.test(String(item.title||'')) ? item.title : 'VERIFY FIRST — ' + String(item.title||'Business fact opportunity');
-        item.action = 'Competitive/AI evidence suggests this may be a useful content opportunity, but the client-specific claim is not verified. Verify the actual business fact in Claims & Facts before publishing it. BLOCKED CLAIM SIGNALS: ' + unsupported.join(' | ') + (original ? '\n\nIntelligence context (not approved client copy): ' + original : '');
-        item.expected_impact = 'Prevents an unverified competitor or AI-source claim from becoming client copy. Once verified, regenerate the brief to receive paste-ready wording.';
+        item.action = 'Competitive/AI evidence suggests this may be a useful content opportunity, but the client-specific claim is not verified in the live page HTML, owner-provided Brand & author info, or VERIFIED Claims & Facts. Verify the actual business fact before publishing it. BLOCKED CLAIM SIGNALS: ' + unsupported.join(' | ') + (original ? '\n\nIntelligence context (not approved client copy): ' + original : '');
+        item.expected_impact = 'Prevents an unverified competitor or AI-source claim from becoming client copy. Once verified on the live page or in Claims & Facts, regenerate the brief for paste-ready wording.';
         item.requires_verification = true;
         item.ready_to_paste = false;
       }
@@ -46391,8 +46464,57 @@ If no unanchored claims found, return empty array: []`;
     };
     if(Array.isArray(snapshot.recommendations)) snapshot.recommendations=snapshot.recommendations.map(_ecEnforceItem);
     if(Array.isArray(snapshot.gsc_brief)) snapshot.gsc_brief=snapshot.gsc_brief.map(_ecEnforceItem);
+
+    // CONTENTSCALE-VERIFY-FIRST-OPPORTUNITY-SIGNALING-20260909=true
+    // Do not merely block unverified business claims: surface them as explicit verification
+    // opportunities when competitor/AI intelligence suggests they may matter. This is generic
+    // for every Tracker client and never turns competitor evidence into a client fact.
+    try {
+      var _vfCorpus = [];
+      (snapshot.recommendations||[]).forEach(function(it){ _vfCorpus.push([it&&it.title,it&&it.action,it&&it.trigger].filter(Boolean).join(' ')); });
+      (snapshot.gsc_brief||[]).forEach(function(it){ _vfCorpus.push([it&&it.title,it&&it.action,it&&it.trigger].filter(Boolean).join(' ')); });
+      var _vfText = _vfCorpus.join('\n');
+      var _vfDefs = [
+        {key:'response-time', label:'Specific emergency response / arrival time', rx:/(?:\b\d+\s*(?:-|to)\s*\d+\s*minutes?\b|\b\d+\s*minutes?\b|response time|arrival time|same[- ]day dispatch)/i, ask:'What response, arrival, or dispatch time can the business genuinely commit to?'},
+        {key:'free-estimates', label:'Free estimates / assessments', rx:/free (?:estimates?|assessments?)/i, ask:'Does the business actually provide free estimates or assessments, and under what conditions?'},
+        {key:'insurance-help', label:'Insurance claim assistance / coordination', rx:/(?:insurance (?:claim )?(?:help|assistance|coordination|documentation)|coordinate\w* (?:directly )?with .*insurance)/i, ask:'What insurance documentation or claim assistance does the business actually provide?'},
+        {key:'warranty', label:'Warranty / workmanship guarantee', rx:/warrant(?:y|ies)|workmanship guarantee/i, ask:'What warranty or workmanship guarantee is actually offered, including duration and scope?'},
+        {key:'financing', label:'Financing options', rx:/financing/i, ask:'Does the business offer financing, through whom, and under what verified terms?'},
+        {key:'experience', label:'Years of local experience', rx:/(?:\d+\+?\s+years?|over\s+\d+\s+years?)/i, ask:'How many years of relevant business or team experience can be substantiated?'},
+        {key:'credentials', label:'License / insurance / certification credentials', rx:/\b(?:licensed|insured|certified)\b/i, ask:'Which license, insurance, or certification credentials can be verified and safely published?'},
+        {key:'service-area', label:'Exact service-area coverage', rx:/(?:all\s+\d+\s+(?:new jersey\s+|nj\s+)?counties|statewide coverage)/i, ask:'What exact cities, counties, or statewide service area can the business verify?'},
+        {key:'availability', label:'24/7 or 24/7/365 availability', rx:/(?:24\s*\/?\s*7(?:\s*\/?\s*365)?|around the clock)/i, ask:'Is 24/7 or 24/7/365 availability an actual operating commitment that can be verified?'},
+        {key:'pricing', label:'Specific pricing / cost range', rx:/(?:\$\s*\d[\d,]*(?:\s*(?:-|to|–)\s*\$?\s*\d[\d,]*)?)/i, ask:'What pricing or cost range can be supported by first-party data or a reliable cited source?'}
+      ];
+      var _vfExisting = _ecNorm((snapshot.recommendations||[]).concat(snapshot.gsc_brief||[]).filter(function(x){return x&&x.requires_verification;}).map(function(x){return x.title+' '+x.action;}).join(' '));
+      var _vfAdded = [];
+      _vfDefs.forEach(function(d){
+        if(!d.rx.test(_vfText)) return;
+        // If this fact category is already supported by first-party evidence, it is not a verify-first opportunity.
+        var _vfProbe = '';
+        var _m = _vfText.match(d.rx); if(_m) _vfProbe=String(_m[0]||'');
+        if(_vfProbe && _ecSupported(_vfProbe)) return;
+        if(_vfExisting.indexOf(_ecNorm(d.label))>=0) return;
+        _vfAdded.push({
+          priority:'MEDIUM',
+          system:'Claims & Facts',
+          title:'VERIFY FIRST — '+d.label,
+          action:'Competitive/AI intelligence surfaced this as a potentially useful business fact, but it is not verified by the live HTML, Brand & author info, or VERIFIED Claims & Facts. '+d.ask+' Do not publish the claim until verified.',
+          expected_impact:'If verified, this fact can be used in a future surgical brief where it genuinely closes a search or AI citation gap. If false or not applicable, mark it accordingly so it is not recommended again.',
+          requires_verification:true,
+          ready_to_paste:false,
+          verification_key:d.key
+        });
+      });
+      if(_vfAdded.length){
+        snapshot.recommendations = (snapshot.recommendations||[]).concat(_vfAdded);
+        snapshot._verify_first_opportunities = _vfAdded.map(function(x){return x.verification_key;});
+      }
+    } catch(_vfErr) { console.warn('[verify-first-opportunities] skipped:', _vfErr && _vfErr.message); }
+
     snapshot._evidence_claims_enforced = true;
-  } catch(_ecErr) { console.warn('[evidence-claims-enforcement] skipped:', _ecErr && _ecErr.message); }
+    snapshot._evidence_claims_source = 'live_html+brand_context+verified_claims';
+  } catch(_ecErr) { console.warn('[evidence-claims-enforcement-v2] skipped:', _ecErr && _ecErr.message); }
 
   // 6. Save snapshot
   // Content change detection: did hash change since last check?
@@ -46602,6 +46724,8 @@ If no unanchored claims found, return empty array: []`;
   const kw2   = keyword || page.gsc_keyword || '';
   const domain2 = pageUrl.replace(/^https?:\/\//, '').split('/')[0];
   const recs2 = snapshot.recommendations;
+  let _briefManualEvidence2 = {};
+  try { const _ber=await pool.query("SELECT DISTINCT ON (engine) * FROM tracker_ai_evidence WHERE page_id=$1 AND evidence_method='manual' ORDER BY engine,id DESC",[page.id]); (_ber.rows||[]).forEach(function(r){_briefManualEvidence2[r.engine]=r;}); } catch(_e) {}
 
   // ── Generate Citation Brief ───────────────────────────────────────────────
   try {
@@ -46629,13 +46753,13 @@ If no unanchored claims found, return empty array: []`;
 
       let brief2 = null;
       if (isFirst2 || !recsToUse.length) {
-        brief2 = { items: recsToUse, position: pos2, aio: aio2, perp: perp2, bing_cited: bing2, brave_cited: brave2, score: score2,
+        brief2 = { items: recsToUse, position: pos2, aio: aio2, perp: perp2, bing_cited: bing2, brave_cited: brave2, ai_manual_evidence: _briefManualEvidence2, score: score2,
           gsc_clicks: page.gsc_clicks, gsc_impressions: page.gsc_impressions, gsc_position: page.gsc_position, gsc_keyword: page.gsc_keyword,
           gsc_brief: gscBriefItems };
       } else {
         try {
           const mergePrompt2 = `Merge these two AI citation briefs for ${pageUrl} (keyword: "${kw2}").
-Status: pos=${pos2||'unranked'}, AIO=${aio2}, Perplexity=${perp2}, Copilot=${bing2}, GRAAF=${score2||'?'}/100${gscCtx}
+Status: pos=${pos2||'unranked'}, Google AIO=${aio2}, ChatGPT=${!!(_briefManualEvidence2.chatgpt&&_briefManualEvidence2.chatgpt.exact_page_cited)}, Perplexity=${perp2}, Claude=${!!(_briefManualEvidence2.claude&&_briefManualEvidence2.claude.exact_page_cited)}, Copilot=${!!(_briefManualEvidence2.copilot&&_briefManualEvidence2.copilot.exact_page_cited)}, GRAAF=${score2||'?'}/100${gscCtx}
 Goal: rank #1 and be cited in all AI systems.
 PREVIOUS: ${JSON.stringify((existingBrief2?.items||[]).slice(0,3))}
 NEW (higher priority \u2014 generated today, may include fresh Cannibalization/Competitor Gap/Impression Gap findings from real tracker data): ${JSON.stringify(recsToUse.slice(0,7))}
@@ -46648,7 +46772,7 @@ MERGE RULES:
 5. ABOVE-THE-FOLD PRIORITY: when a fix could reasonably go in more than one place on the page, prefer the location closer to the H1/opening paragraph over one further down \u2014 AI extraction weights the first ~30% of a page far more heavily than the rest.
 6. If a NEW item has system "Competitor Gap" AND includes a "comparison_table" field, KEEP that field exactly as given \u2014 it is a structured per-competitor breakdown the owner reads as a lesson, do not summarize it away.
 
-7. AIO/GSC SEPARATION (strict): if an item's system is Google AIO, Perplexity, or Copilot, its "action" text must NEVER contain a "GOOGLE SEARCH \u2014 top results" organic-ranking breakdown \u2014 that belongs only to the separate GSC ranking brief. If a PREVIOUS item mixes organic SERP data into one of these systems, do not carry that text forward verbatim \u2014 rewrite it to reference AI-Overview-cited or Perplexity-cited sources instead, or drop the item if no such AI-citation-specific content is available.\n\nReturn ONLY JSON array (max 5 items): [{"title":"max 6 words","priority":"high"|"medium"|"low","system":"Google AIO|Perplexity|Copilot|Ranking|Cannibalization|Competitor Gap|Internal Link|Visibility","action":"exact 30+ word instruction","expected_impact":"ranking/AI impact","comparison_table (ONLY if carried over from a Competitor Gap NEW item, omit otherwise)":[{"competitor":"bare domain","what_they_do_well":"specific strength","our_gap":"what this page lacks","what_to_do":"concrete instruction"}]}]`;
+7. AIO/GSC SEPARATION (strict): if an item's system is Google AIO, ChatGPT Search, Perplexity, Claude, or Copilot, its "action" text must NEVER contain a "GOOGLE SEARCH \u2014 top results" organic-ranking breakdown \u2014 that belongs only to the separate GSC ranking brief. If a PREVIOUS item mixes organic SERP data into one of these systems, do not carry that text forward verbatim \u2014 rewrite it to reference AI-Overview-cited or Perplexity-cited sources instead, or drop the item if no such AI-citation-specific content is available.\n\nReturn ONLY JSON array (max 5 items): [{"title":"max 6 words","priority":"high"|"medium"|"low","system":"Google AIO|ChatGPT Search|Perplexity|Claude|Copilot|Ranking|Cannibalization|Competitor Gap|Internal Link|Visibility|Claims & Facts","action":"exact 30+ word instruction","expected_impact":"ranking/AI impact","comparison_table (ONLY if carried over from a Competitor Gap NEW item, omit otherwise)":[{"competitor":"bare domain","what_they_do_well":"specific strength","our_gap":"what this page lacks","what_to_do":"concrete instruction"}]}]`;
           const gResp2 = await callGeminiWithFallback(geminiKey, {
             contents: [{ parts: [{ text: mergePrompt2 }] }],
             generationConfig: { temperature: 0.3, maxOutputTokens: 8000 }
@@ -46666,13 +46790,13 @@ MERGE RULES:
               merged2 = (_lo > 0) ? JSON.parse(_mtxt.slice(0, _lo + 1) + ']') : null;
             }
             if (!merged2 || !merged2.length) throw new Error('no parseable merge items \u2014 gemini returned ' + gText2.length + ' chars: "' + gText2.slice(0, 160).replace(/\n/g, ' ') + '"');
-            brief2 = { items: merged2, position: pos2, aio: aio2, perp: perp2, bing_cited: bing2, brave_cited: brave2, score: score2,
+            brief2 = { items: merged2, position: pos2, aio: aio2, perp: perp2, bing_cited: bing2, brave_cited: brave2, ai_manual_evidence: _briefManualEvidence2, score: score2,
               gsc_clicks: page.gsc_clicks, gsc_impressions: page.gsc_impressions, gsc_position: page.gsc_position, gsc_keyword: page.gsc_keyword,
               gsc_brief: gscBriefItems, merged: true };
           }
         } catch(mergeErr2) {
           console.warn('[brief-merge2]', mergeErr2.message);
-          brief2 = { items: recsToUse, position: pos2, aio: aio2, perp: perp2, bing_cited: bing2, brave_cited: brave2, score: score2,
+          brief2 = { items: recsToUse, position: pos2, aio: aio2, perp: perp2, bing_cited: bing2, brave_cited: brave2, ai_manual_evidence: _briefManualEvidence2, score: score2,
             gsc_brief: gscBriefItems };
         }
       }
@@ -46746,6 +46870,7 @@ MERGE RULES:
           perp_cited: perp2,
           bing_cited: bing2,
           brave_cited: brave2,
+          ai_manual_evidence: _briefManualEvidence2,
           score: score2,
           domain: domain2,
           brief_content: brief2,
@@ -46784,7 +46909,8 @@ MERGE RULES:
                 + (_body ? '<div style="font-size:13px;color:#374151;line-height:1.6;">' + _esc(_body) + '</div>' : '')
                 + '</div>';
             }).join('');
-            const _statusBits = ['Position ' + _esc(pos2 || 'unranked'), 'AIO ' + (aio2?'\u2713':'\u2717'), 'Perplexity ' + (perp2?'\u2713':'\u2717'), 'Copilot ' + (bing2?'\u2713':'\u2717')];
+            const _em=function(e,auto){var r=_briefManualEvidence2[e];if(r)return r.exact_page_cited?'✓ VERIFIED':'✗ VERIFIED';return auto?'✓':'?';};
+            const _statusBits = ['Position ' + _esc(pos2 || 'unranked'), 'Google AIO ' + _em('google_aio',aio2), 'ChatGPT ' + _em('chatgpt',false), 'Perplexity ' + _em('perplexity',perp2), 'Claude ' + _em('claude',false), 'Copilot ' + _em('copilot',false)];
             if (score2) _statusBits.push('GRAAF ' + _esc(score2) + '/100');
             const _trackerUrl = 'https://app.contentscale.site/track/' + (_clientToken || '');
             const _viewUrl = 'https://app.contentscale.site/view/' + (_clientToken || '');
