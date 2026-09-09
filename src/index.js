@@ -33830,18 +33830,20 @@ function _bwTime(p){
   if (!t) return '';
   try { var d=new Date(t); return d.toLocaleDateString('en-GB',{day:'2-digit',month:'short'}) + ' ' + d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}); } catch(e){ return ''; }
 }
+// CONTENTSCALE-CANONICAL-5-ENGINE-CITATION-RENDER-STATE-FIX-20260909=true
 // CONTENTSCALE-BRIEF-5-ENGINE-EVIDENCE-SYSTEM-20260909=true
 function _briefManualMap(o){ var a=o&&o.ai_manual_evidence; if(typeof a==='string'){try{a=JSON.parse(a);}catch(e){a={};}} return a||{}; }
 function _briefBool(v){return v===true||v===1||v==='1'||v==='true'||v==='t';}
 function _briefEngineState(o,engine){
-  var a=_briefManualMap(o), e=a[engine]||null, exact=e&&_briefBool(e.exact_page_cited), dom=e&&_briefBool(e.domain_cited);
-  if(e&&_briefBool(e.is_cleared)) return {checked:false,cited:false,domain:false,exact:false,method:'NOT CHECKED'};
-  if(e) return {checked:true,cited:!!exact,domain:!!dom,exact:!!exact,method:'VERIFIED'};
-  if(engine==='google_aio') return {checked:true,cited:!!o.aio_cited,domain:!!o.aio_cited,exact:!!o.aio_cited,method:o.aio_cited?'AUTO SIGNAL':'NOT CITED'};
-  if(engine==='perplexity') return {checked:true,cited:!!o.perp_cited,domain:!!o.perp_cited,exact:!!o.perp_cited,method:o.perp_cited?'API VERIFIED':'NOT CITED'};
-  return {checked:false,cited:false,domain:false,exact:false,method:'NOT CHECKED'};
+  var a=_briefManualMap(o), e=a[engine]||null;
+  var exact=e&&_briefBool(e.exact_page_cited), dom=e&&_briefBool(e.domain_cited), direct=e&&_briefBool(e.brand_direct_supported), rec=e&&_briefBool(e.brand_recommended);
+  if(e&&_briefBool(e.is_cleared)) return {checked:false,cited:false,domain:false,exact:false,direct:false,recommended:false,method:'NOT CHECKED'};
+  if(e) return {checked:true,cited:!!(exact||dom),domain:!!dom,exact:!!exact,direct:!!direct,recommended:!!rec,method:'VERIFIED'};
+  if(engine==='google_aio') return {checked:true,cited:!!o.aio_cited,domain:!!o.aio_cited,exact:!!o.aio_cited,direct:false,recommended:false,method:o.aio_cited?'AUTO SIGNAL':'NOT CITED'};
+  if(engine==='perplexity') return {checked:true,cited:!!o.perp_cited,domain:!!o.perp_cited,exact:!!o.perp_cited,direct:false,recommended:false,method:o.perp_cited?'API VERIFIED':'NOT CITED'};
+  return {checked:false,cited:false,domain:false,exact:false,direct:false,recommended:false,method:'NOT CHECKED'};
 }
-function _briefStateText(st){ if(st.cited)return '\u2713 EXACT PAGE — '+st.method; if(st.domain)return '\u2713 DOMAIN — '+st.method; return st.checked?'\u2717 NOT CITED':'? NOT CHECKED'; }
+function _briefStateText(st){ if(st.exact)return '✓ EXACT PAGE — '+st.method; if(st.domain)return '✓ DOMAIN — '+st.method; if(st.direct)return '✓ DIRECT — '+st.method; if(st.recommended)return '✓ RECOMMENDED — '+st.method; return st.checked?'✗ NOT CITED — '+(st.method==='VERIFIED'?'VERIFIED':'CHECKED'):'? NOT CHECKED'; }
 function _bwChips(bd){
   function chip(v,l,c){ return '<div class="bw-chip"><div class="v" style="color:'+c+';">'+v+'</div><div class="l">'+l+'</div></div>'; }
   var posC = !bd.position ? '#6b7280' : bd.position<=3?'#4ade80':bd.position<=10?'#a3e635':bd.position<=20?'#fbbf24':'#f87171';
@@ -34159,17 +34161,7 @@ function renderPages() {
     }
     if (pos) badges += '<span class="cs-badge" title="LIVE Google position for your tracked keyword \\u201c' + (p.keyword||'') + '\\u201d \\u2014 measured at the last scan. Note: the GSC \\u201cpos\\u201d below is different: an average across ALL queries this page appears for (28 days), so it is usually worse than this number." style="color:' + posColor + ';background:#0d1117;border:1px solid ' + posColor + '44;">#' + pos + '</span> ';
     else badges += '<span class="cs-cs-badge grey">Not ranked</span> ';
-    // Only show "No AIO / No Perplexity / ..." once a real AI-citation check has actually run.
-    var aiChecked = (p.brief_check_count > 0)
-      || p.ai_google_overview_cited === true || p.ai_perplexity_cited === true
-      || p.ai_bing_cited === true;
-    if (aiChecked) {
-      badges += p.ai_google_overview_cited ? '<span class="cs-cs-badge green">&#10003; Google AIO</span> ' : '<span class="cs-cs-badge grey">No AIO</span> ';
-      badges += p.ai_perplexity_cited ? '<span class="cs-cs-badge purple" style="border:1px solid #7c3aed;">&#10003; Perplexity</span> ' : '<span class="cs-cs-badge grey">No Perplexity</span> ';
-      badges += p.ai_bing_cited ? '<span class="cs-cs-badge" style="background:#0c2340;color:#60a5fa;border:1px solid #1d4ed8;" title="Bing visibility / Copilot eligibility signal only — not verified Copilot citation evidence">&#10003; Bing signal</span> ' : '<span class="cs-cs-badge grey" title="No Bing visibility signal captured; verify Copilot manually in AI Evidence">No Bing signal</span> ';
-    } else {
-      badges += '<span class="cs-cs-badge grey" title="No AI citation check has run yet \u2014 scan this URL, Scan Selected, or Scan Priorities">AI citations: not checked yet</span> ';
-    }
+    // Legacy AIO / Perplexity / Bing row badges removed. Canonical five-engine manual evidence is the single citation truth; Bing remains supporting Intelligence only.
     if (score) badges += '<span class="cs-cs-badge yellow">' + score + '/100</span> ';
     if (p.fetch_reliable === false) badges += '<span class="cs-cs-badge" style="background:#2d1f00;color:#fbbf24;">! fetch issue</span> ';
 
@@ -34278,7 +34270,7 @@ function renderPages() {
       + '</div>'
       + '<div class="cs-url-line" style="font-size:12px;' + (isDone ? 'text-decoration:line-through;color:#4b5563;' : 'color:#e5e7eb;') + 'font-family:monospace;line-height:1.45;white-space:normal;overflow-wrap:anywhere;word-break:break-word;border-radius:4px;padding:3px 4px;margin:0 0 6px 0;width:100%;" title="' + rawUrl.replace(/"/g,'&quot;') + '">' + urlShort + '</div>'
       + '<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:4px;">' + badges + '</div>'
-      + (function(){ var ae=p.ai_manual_evidence; if(typeof ae==='string'){try{ae=JSON.parse(ae);}catch(e){ae={};}} ae=ae||{}; var vals=Object.keys(ae).map(function(k){return ae[k];}).filter(function(x){return _aiEvidenceIsVerified(x);}); if(!vals.length)return ''; var dom=vals.filter(function(x){return _aiEvBool(x.domain_cited);}).length, exact=vals.filter(function(x){return _aiEvBool(x.exact_page_cited);}).length; return '<div style="font-size:10px;color:#c4b5fd;margin:1px 0 5px;">Manual VERIFIED '+vals.length+'/5 &middot; DOMAIN CITED '+dom+'/5 &middot; EXACT PAGE CITED '+exact+'/5</div>'; })()
+      + (function(){ var ae=p.ai_manual_evidence; if(typeof ae==='string'){try{ae=JSON.parse(ae);}catch(e){ae={};}} ae=ae||{}; var keys=['google_aio','chatgpt','perplexity','claude','copilot']; var vals=keys.map(function(k){return ae[k];}).filter(function(x){return _aiEvidenceIsVerified(x);}); if(!vals.length)return '<div style="font-size:10px;color:#64748b;margin:1px 0 5px;">AI CHECKED 0/5</div>'; var cited=vals.filter(function(x){return _aiEvBool(x.domain_cited)||_aiEvBool(x.exact_page_cited);}).length, exact=vals.filter(function(x){return _aiEvBool(x.exact_page_cited);}).length; return '<div style="font-size:10px;color:#c4b5fd;margin:1px 0 5px;">AI CHECKED '+vals.length+'/5 &middot; CITED '+cited+'/5 &middot; EXACT '+exact+'/5</div>'; })()
       + (p.redirects_to ? (function(){
           var isDead404 = String(p.redirects_to).indexOf('(dead') === 0;
           var isCanon = String(p.redirects_to).indexOf('(canonical') === 0;
@@ -34318,7 +34310,7 @@ function renderPages() {
       + (p.treatment_target_url ? '<span style="font-size:9px;color:#fbbf24;">→ '+String(p.treatment_target_url).replace(/</g,'&lt;')+'</span>' : '')
       + '</div>'
       + '<div class="cs-card-actions" style="display:flex;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;align-items:flex-start;">' 
-      + '<button onclick="event.stopPropagation();openAiEvidence(' + p.id + ')" style="background:#0d1117;border:1px solid #8b5cf6;border-radius:7px;color:#c4b5fd;cursor:pointer;font-size:11px;padding:5px 12px;font-weight:700;" title="Open the five-engine manual evidence panel">&#129504; AI Evidence ' + (function(){var a=p.ai_manual_evidence;if(typeof a==="string"){try{a=JSON.parse(a);}catch(x){a={};}}return Object.keys(a||{}).filter(function(k){return ["google_aio","chatgpt","perplexity","claude","copilot"].indexOf(k)>-1 && !(a[k]&&(a[k].is_cleared===true||a[k].is_cleared==='true'||a[k].is_cleared===1||a[k].is_cleared==='1'));}).length;})() + '/5</button>'
+      + '<button onclick="event.stopPropagation();openAiEvidence(' + p.id + ')" style="background:#0d1117;border:1px solid #8b5cf6;border-radius:7px;color:#c4b5fd;cursor:pointer;font-size:11px;padding:5px 12px;font-weight:700;" title="Open the five-engine manual evidence panel. Count means manually checked, not cited.">&#129504; AI Checked ' + (function(){var a=p.ai_manual_evidence;if(typeof a==="string"){try{a=JSON.parse(a);}catch(x){a={};}}return ["google_aio","chatgpt","perplexity","claude","copilot"].filter(function(k){return a&&a[k]&&_aiEvidenceIsVerified(a[k]);}).length;})() + '/5</button>'
       + '<button onclick="event.stopPropagation();openCompetitiveIntelligence(' + p.id + ')" style="background:#0d1117;border:1px solid #0891b2;border-radius:7px;color:#67e8f9;cursor:pointer;font-size:11px;padding:5px 12px;font-weight:700;" title="Cross-engine competitors, sources, content opportunities and claims to verify">&#128269; Intelligence</button>'
       + ((explicitlyNeeds || p.fetch_reliable === false) ? '<button class="cs-html-btn cs-blink" onclick="openHtmlUpload(' + p.id + ')" style="background:#0d1117;border:1px solid #f59e0b;border-radius:7px;color:#fbbf24;cursor:pointer;font-size:11px;padding:5px 12px;font-weight:700;" title="Automatic live fetch was not reliable. Paste the published HTML manually to continue verification.">&#9888; Manual HTML required</button>' : '')
       + '<button data-check-btn="' + p.id + '" onclick="checkPage(' + p.id + ')" style="background:#0d1117;border:1px solid ' + (_scanDone ? '#22c55e' : '#2dd4bf') + ';border-radius:7px;color:' + (_scanDone ? '#4ade80' : '#5eead4') + ';cursor:pointer;font-size:11px;padding:5px 10px;font-weight:700;" title="' + (lastChecked ? (_scanDone ? 'Scanned this round \\u2014 click to rescan now' : 'Rescan this URL now') : 'Scan this URL now') + '">' + (lastChecked ? (_scanDone ? '\\u21bb \\u2713' : '\\u21bb Scan') : '\\u25b6 Scan') + '</button>'
