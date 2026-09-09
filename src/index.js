@@ -1248,6 +1248,7 @@ function _trackerBuildFiveEngineEmailState(manualEvidence, autoState) {
   ];
   return defs.map(function(def) {
     const key = def[0], label = def[1], r = manual[key] || null;
+    if (r && _trackerEmailBool(r.is_cleared)) return { key, label, value:'NOT CHECKED', method:'', cited:false, checked:false, color:'#94a3b8' };
     if (r) {
       if (_trackerEmailBool(r.exact_page_cited)) return { key, label, value:'EXACT PAGE', method:'VERIFIED', cited:true, checked:true, color:'#16a34a' };
       if (_trackerEmailBool(r.domain_cited)) return { key, label, value:'DOMAIN', method:'VERIFIED', cited:true, checked:true, color:'#16a34a' };
@@ -3309,6 +3310,7 @@ async function _trackerBuildDerivedIntelligence(clientId,pageId){
     let o=compMap.get(key);if(!o){o={name,engines:new Set(),recommended:new Set(),direct:new Set(),mentioned:new Set()};compMap.set(key,o);}o.engines.add(engine);o[kind].add(engine);
   }
   evidence.forEach(ev=>{
+    if(ev && (ev.is_cleared===true || ev.is_cleared==='true' || ev.is_cleared===1 || ev.is_cleared==='1')) return;
     const engine=ev.engine;perEngine[engine]={saved:true,brand_recommended:!!ev.brand_recommended,brand_direct_supported:!!ev.brand_direct_supported,domain_cited:!!ev.domain_cited,exact_page_cited:!!ev.exact_page_cited,verified_at:ev.verified_at};
     (_trackerIntelJson(ev.recommended_companies,[])||[]).forEach(n=>addComp(n,engine,'recommended'));
     (_trackerIntelJson(ev.directly_cited_companies,[])||[]).forEach(n=>addComp(n,engine,'direct'));
@@ -3350,7 +3352,9 @@ function _trackerEvRoot(h){h=String(h||'').toLowerCase().replace(/^www\./,'');co
 function _trackerParseManualEvidence(rawText,rawSources,pageUrl,aliases){
  const text=String(rawText||'').split('https\\://').join('https://').split('\\.').join('.'), sources=String(rawSources||'').split('https\\://').join('https://').split('\\.').join('.'), all=text+'\n'+sources;
  const sec={recommended:[],direct:[],mentioned:[],sources:[]};let mode='';all.split(/\r?\n/).forEach(line=>{const t=line.trim();if(!t)return;const h=t.toUpperCase().replace(/[:#*]/g,'').trim();if(h==='RECOMMENDED COMPANIES'){mode='recommended';return;}if(h==='DIRECTLY CITED COMPANIES'){mode='direct';return;}if(h==='MENTIONED BUT NOT DIRECTLY CITED'){mode='mentioned';return;}if(h==='CITATION SOURCES'){mode='sources';return;}if(mode)sec[mode].push(t.replace(/^[-•*]\s*/,''));});
- const urls=[],seen=new Set(),re=/https?:\/\/[^\s)\]}>"'<,]+/gi;let m;while((m=re.exec(all))){const u=m[0].replace(/[.;:]+$/,''),z=_trackerEvNorm(u);if(z&&!seen.has(z)){seen.add(z);urls.push(u);}}
+ const urls=[],seen=new Set(),re=/https?:\/\/[^\s)\]}>"'<,]+/gi;
+ const _noiseUrl=u=>{try{const x=new URL(String(u||''));const h=x.hostname.toLowerCase().replace(/^www\./,'');const q=x.pathname.toLowerCase();return (h==='google.com'&&(q==='/goto'||q.startsWith('/searchviewer')||q.startsWith('/search')))||h.endsWith('gstatic.com')||h.endsWith('googleusercontent.com')||h==='support.google.com'||h==='accounts.google.com'||h==='gemini.google.com';}catch(e){return false;}};
+ let m;while((m=re.exec(all))){const u=m[0].replace(/[.;:]+$/,'');if(_noiseUrl(u))continue;const z=_trackerEvNorm(u);if(z&&!seen.has(z)){seen.add(z);urls.push(u);}}
  const root=_trackerEvRoot(_trackerEvHost(pageUrl)),pn=_trackerEvNorm(pageUrl),own=urls.filter(u=>_trackerEvRoot(_trackerEvHost(u))===root), names=a=>a.map(x=>x.split('|')[0].trim()).filter(Boolean);
  // CONTENTSCALE-TRACKER-BRAND-RECOMMENDED-NORMALIZED-MATCH-20260909=true
  // Brand recommendation/direct-support are section facts only. Normalize punctuation, spaces,
@@ -3375,7 +3379,7 @@ async function _trackerEnsureAiEvidenceSchema(){
     domain_cited BOOLEAN DEFAULT FALSE, exact_page_cited BOOLEAN DEFAULT FALSE,
     citation_urls JSONB DEFAULT '[]'::jsonb, recommended_companies JSONB DEFAULT '[]'::jsonb,
     directly_cited_companies JSONB DEFAULT '[]'::jsonb, mentioned_companies JSONB DEFAULT '[]'::jsonb,
-    parsed_evidence JSONB DEFAULT '{}'::jsonb, verified_at TIMESTAMPTZ DEFAULT NOW(),
+    parsed_evidence JSONB DEFAULT '{}'::jsonb, is_cleared BOOLEAN DEFAULT FALSE, verified_at TIMESTAMPTZ DEFAULT NOW(),
     created_at TIMESTAMPTZ DEFAULT NOW(), updated_at TIMESTAMPTZ DEFAULT NOW()
   )`).catch(()=>{});
   const cols=[
@@ -3383,7 +3387,7 @@ async function _trackerEnsureAiEvidenceSchema(){
     ['raw_text',"TEXT DEFAULT ''"],['raw_sources',"TEXT DEFAULT ''"],['brand_recommended','BOOLEAN DEFAULT FALSE'],['brand_direct_supported','BOOLEAN DEFAULT FALSE'],
     ['domain_cited','BOOLEAN DEFAULT FALSE'],['exact_page_cited','BOOLEAN DEFAULT FALSE'],['citation_urls',"JSONB DEFAULT '[]'::jsonb"],['recommended_companies',"JSONB DEFAULT '[]'::jsonb"],
     ['directly_cited_companies',"JSONB DEFAULT '[]'::jsonb"],['mentioned_companies',"JSONB DEFAULT '[]'::jsonb"],['parsed_evidence',"JSONB DEFAULT '{}'::jsonb"],
-    ['verified_at','TIMESTAMPTZ DEFAULT NOW()'],['created_at','TIMESTAMPTZ DEFAULT NOW()'],['updated_at','TIMESTAMPTZ DEFAULT NOW()']
+    ['is_cleared','BOOLEAN DEFAULT FALSE'],['verified_at','TIMESTAMPTZ DEFAULT NOW()'],['created_at','TIMESTAMPTZ DEFAULT NOW()'],['updated_at','TIMESTAMPTZ DEFAULT NOW()']
   ];
   for(const c of cols) await pool.query('ALTER TABLE tracker_ai_evidence ADD COLUMN IF NOT EXISTS '+c[0]+' '+c[1]).catch(()=>{});
   await pool.query('CREATE INDEX IF NOT EXISTS tracker_ai_evidence_page_idx ON tracker_ai_evidence(page_id)').catch(()=>{});
@@ -3394,12 +3398,20 @@ app.post('/api/tracker-client/:token/page/:pageId/ai-evidence/:engine',async(req
  await _trackerEnsureAiEvidenceSchema();
  const cr=await pool.query('SELECT id,name,domain FROM tracker_clients WHERE (token=$1 OR lead_token=$1) AND (status IS NULL OR status != $2)',[req.params.token,'deleted']);if(!cr.rows.length)return res.status(404).json({success:false,error:'Not found'});
  const pg=await pool.query('SELECT id,url FROM tracker_pages WHERE id=$1 AND tracker_client_id=$2',[req.params.pageId,cr.rows[0].id]);if(!pg.rows.length)return res.status(404).json({success:false,error:'Page not found'});
- const text=_trackerStripPgNulString(req.body?.text).trim(),sources=_trackerStripPgNulString(req.body?.sources).trim();if(!text&&!sources){await pool.query("DELETE FROM tracker_ai_evidence WHERE page_id=$1 AND engine=$2 AND evidence_method='manual'",[pg.rows[0].id,engine]);return res.json({success:true,cleared:true});}
+ const text=_trackerStripPgNulString(req.body?.text).trim(),sources=_trackerStripPgNulString(req.body?.sources).trim();if(!text&&!sources){
+   // Explicit clear is a tombstone, not a delete. Otherwise legacy/AUTO evidence can immediately
+   // reappear and make a cleared engine look cited again. Cleared means NOT CHECKED until new
+   // manual evidence is saved.
+   let _clr=await pool.query(`UPDATE tracker_ai_evidence SET raw_text='',raw_sources='',brand_recommended=FALSE,brand_direct_supported=FALSE,domain_cited=FALSE,exact_page_cited=FALSE,citation_urls='[]'::jsonb,recommended_companies='[]'::jsonb,directly_cited_companies='[]'::jsonb,mentioned_companies='[]'::jsonb,parsed_evidence='{"cleared":true}'::jsonb,is_cleared=TRUE,verified_at=NOW(),updated_at=NOW() WHERE id=(SELECT id FROM tracker_ai_evidence WHERE page_id=$1 AND engine=$2 AND evidence_method='manual' ORDER BY id DESC LIMIT 1) RETURNING id`,[pg.rows[0].id,engine]);
+   if(!_clr.rows.length) await pool.query(`INSERT INTO tracker_ai_evidence(page_id,tracker_client_id,engine,evidence_method,raw_text,raw_sources,brand_recommended,brand_direct_supported,domain_cited,exact_page_cited,citation_urls,recommended_companies,directly_cited_companies,mentioned_companies,parsed_evidence,is_cleared,verified_at,updated_at) VALUES($1,$2,$3,'manual','','',FALSE,FALSE,FALSE,FALSE,'[]'::jsonb,'[]'::jsonb,'[]'::jsonb,'[]'::jsonb,'{"cleared":true}'::jsonb,TRUE,NOW(),NOW())`,[pg.rows[0].id,cr.rows[0].id,engine]);
+   if(engine==='google_aio') await pool.query('UPDATE tracker_pages SET aio_manual_text=NULL,aio_manual_refs=NULL WHERE id=$1',[pg.rows[0].id]).catch(()=>{});
+   return res.json({success:true,cleared:true});
+ }
  const stem=String(cr.rows[0].domain||'').replace(/^www\./,'').split('.')[0].replace(/[-_]+/g,' '),ev=_trackerParseManualEvidence(text,sources,pg.rows[0].url,[cr.rows[0].name,cr.rows[0].domain,stem]);
  const vals=[pg.rows[0].id,cr.rows[0].id,engine,text,sources,ev.brand_recommended,ev.brand_direct_supported,ev.domain_cited,ev.exact_page_cited,JSON.stringify(ev.citation_urls),JSON.stringify(ev.recommended_companies),JSON.stringify(ev.directly_cited_companies),JSON.stringify(ev.mentioned_companies),JSON.stringify(ev)];
  // Do not depend on a historical UNIQUE constraint: older deployments may already have the table without it.
- let rr=await pool.query(`UPDATE tracker_ai_evidence SET tracker_client_id=$2,raw_text=$4,raw_sources=$5,brand_recommended=$6,brand_direct_supported=$7,domain_cited=$8,exact_page_cited=$9,citation_urls=$10,recommended_companies=$11,directly_cited_companies=$12,mentioned_companies=$13,parsed_evidence=$14,verified_at=NOW(),updated_at=NOW() WHERE id=(SELECT id FROM tracker_ai_evidence WHERE page_id=$1 AND engine=$3 AND evidence_method='manual' ORDER BY id DESC LIMIT 1) RETURNING *`,vals);
- if(!rr.rows.length)rr=await pool.query(`INSERT INTO tracker_ai_evidence(page_id,tracker_client_id,engine,evidence_method,raw_text,raw_sources,brand_recommended,brand_direct_supported,domain_cited,exact_page_cited,citation_urls,recommended_companies,directly_cited_companies,mentioned_companies,parsed_evidence,verified_at,updated_at) VALUES($1,$2,$3,'manual',$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,NOW(),NOW()) RETURNING *`,vals);
+ let rr=await pool.query(`UPDATE tracker_ai_evidence SET tracker_client_id=$2,raw_text=$4,raw_sources=$5,brand_recommended=$6,brand_direct_supported=$7,domain_cited=$8,exact_page_cited=$9,citation_urls=$10,recommended_companies=$11,directly_cited_companies=$12,mentioned_companies=$13,parsed_evidence=$14,is_cleared=FALSE,verified_at=NOW(),updated_at=NOW() WHERE id=(SELECT id FROM tracker_ai_evidence WHERE page_id=$1 AND engine=$3 AND evidence_method='manual' ORDER BY id DESC LIMIT 1) RETURNING *`,vals);
+ if(!rr.rows.length)rr=await pool.query(`INSERT INTO tracker_ai_evidence(page_id,tracker_client_id,engine,evidence_method,raw_text,raw_sources,brand_recommended,brand_direct_supported,domain_cited,exact_page_cited,citation_urls,recommended_companies,directly_cited_companies,mentioned_companies,parsed_evidence,is_cleared,verified_at,updated_at) VALUES($1,$2,$3,'manual',$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,FALSE,NOW(),NOW()) RETURNING *`,vals);
  res.json({success:true,evidence:rr.rows[0]});
 }catch(e){console.error('[manual-ai-evidence]',e.code||'',e.message);res.status(500).json({success:false,error:e.message,code:e.code||null});}});
 
@@ -33811,6 +33823,7 @@ function _briefManualMap(o){ var a=o&&o.ai_manual_evidence; if(typeof a==='strin
 function _briefBool(v){return v===true||v===1||v==='1'||v==='true'||v==='t';}
 function _briefEngineState(o,engine){
   var a=_briefManualMap(o), e=a[engine]||null, exact=e&&_briefBool(e.exact_page_cited), dom=e&&_briefBool(e.domain_cited);
+  if(e&&_briefBool(e.is_cleared)) return {checked:false,cited:false,domain:false,exact:false,method:'NOT CHECKED'};
   if(e) return {checked:true,cited:!!exact,domain:!!dom,exact:!!exact,method:'VERIFIED'};
   if(engine==='google_aio') return {checked:true,cited:!!o.aio_cited,domain:!!o.aio_cited,exact:!!o.aio_cited,method:o.aio_cited?'AUTO SIGNAL':'NOT CITED'};
   if(engine==='perplexity') return {checked:true,cited:!!o.perp_cited,domain:!!o.perp_cited,exact:!!o.perp_cited,method:o.perp_cited?'API VERIFIED':'NOT CITED'};
@@ -34293,7 +34306,7 @@ function renderPages() {
       + (p.treatment_target_url ? '<span style="font-size:9px;color:#fbbf24;">→ '+String(p.treatment_target_url).replace(/</g,'&lt;')+'</span>' : '')
       + '</div>'
       + '<div class="cs-card-actions" style="display:flex;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;align-items:flex-start;">' 
-      + '<button onclick="event.stopPropagation();openAiEvidence(' + p.id + ')" style="background:#0d1117;border:1px solid #8b5cf6;border-radius:7px;color:#c4b5fd;cursor:pointer;font-size:11px;padding:5px 12px;font-weight:700;" title="Open the five-engine manual evidence panel">&#129504; AI Evidence ' + (function(){var a=p.ai_manual_evidence;if(typeof a==="string"){try{a=JSON.parse(a);}catch(x){a={};}}return Object.keys(a||{}).filter(function(k){return ["google_aio","chatgpt","perplexity","claude","copilot"].indexOf(k)>-1;}).length;})() + '/5</button>'
+      + '<button onclick="event.stopPropagation();openAiEvidence(' + p.id + ')" style="background:#0d1117;border:1px solid #8b5cf6;border-radius:7px;color:#c4b5fd;cursor:pointer;font-size:11px;padding:5px 12px;font-weight:700;" title="Open the five-engine manual evidence panel">&#129504; AI Evidence ' + (function(){var a=p.ai_manual_evidence;if(typeof a==="string"){try{a=JSON.parse(a);}catch(x){a={};}}return Object.keys(a||{}).filter(function(k){return ["google_aio","chatgpt","perplexity","claude","copilot"].indexOf(k)>-1 && !(a[k]&&(a[k].is_cleared===true||a[k].is_cleared==='true'||a[k].is_cleared===1||a[k].is_cleared==='1'));}).length;})() + '/5</button>'
       + '<button onclick="event.stopPropagation();openCompetitiveIntelligence(' + p.id + ')" style="background:#0d1117;border:1px solid #0891b2;border-radius:7px;color:#67e8f9;cursor:pointer;font-size:11px;padding:5px 12px;font-weight:700;" title="Cross-engine competitors, sources, content opportunities and claims to verify">&#128269; Intelligence</button>'
       + ((explicitlyNeeds || p.fetch_reliable === false) ? '<button class="cs-html-btn cs-blink" onclick="openHtmlUpload(' + p.id + ')" style="background:#0d1117;border:1px solid #f59e0b;border-radius:7px;color:#fbbf24;cursor:pointer;font-size:11px;padding:5px 12px;font-weight:700;" title="Automatic live fetch was not reliable. Paste the published HTML manually to continue verification.">&#9888; Manual HTML required</button>' : '')
       + '<button data-check-btn="' + p.id + '" onclick="checkPage(' + p.id + ')" style="background:#0d1117;border:1px solid ' + (_scanDone ? '#22c55e' : '#2dd4bf') + ';border-radius:7px;color:' + (_scanDone ? '#4ade80' : '#5eead4') + ';cursor:pointer;font-size:11px;padding:5px 10px;font-weight:700;" title="' + (lastChecked ? (_scanDone ? 'Scanned this round \\u2014 click to rescan now' : 'Rescan this URL now') : 'Scan this URL now') + '">' + (lastChecked ? (_scanDone ? '\\u21bb \\u2713' : '\\u21bb Scan') : '\\u25b6 Scan') + '</button>'
@@ -37249,7 +37262,7 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
   var _aiEvidenceEngines=[['google_aio','Google AIO'],['chatgpt','ChatGPT Search'],['perplexity','Perplexity'],['claude','Claude'],['copilot','Microsoft Copilot']];
   function _aiEvBool(v){return v===true||v==='t'||v==='true'||v===1;}
   function _aiEvidenceObj(p,e){var a=p&&p.ai_manual_evidence;if(typeof a==='string'){try{a=JSON.parse(a);}catch(x){a={};}}return(a&&a[e])||null;}
-  function _renderAiEvidenceFacts(ev){var el=document.getElementById('aiEvidenceFacts');if(!el)return;if(!ev){el.innerHTML='<span style="color:#6b7280;">No manual evidence saved for this engine.</span>';return;}var f=function(l,v){return '<span style="display:inline-block;margin:2px 5px 2px 0;padding:3px 7px;border-radius:5px;border:1px solid '+(v?'#166534':'#374151')+';color:'+(v?'#4ade80':'#6b7280')+';">'+(v?'✓ ':'✕ ')+l+'</span>';};el.innerHTML=f('Brand recommended',_aiEvBool(ev.brand_recommended))+f('Brand directly cited/supported',_aiEvBool(ev.brand_direct_supported))+f('DOMAIN CITED',_aiEvBool(ev.domain_cited))+f('EXACT PAGE CITED',_aiEvBool(ev.exact_page_cited));}
+  function _renderAiEvidenceFacts(ev){var el=document.getElementById('aiEvidenceFacts');if(!el)return;if(!ev||_aiEvBool(ev.is_cleared)){el.innerHTML='<span style="color:#6b7280;">No manual evidence saved for this engine.</span>';return;}var f=function(l,v){return '<span style="display:inline-block;margin:2px 5px 2px 0;padding:3px 7px;border-radius:5px;border:1px solid '+(v?'#166534':'#374151')+';color:'+(v?'#4ade80':'#6b7280')+';">'+(v?'✓ ':'✕ ')+l+'</span>';};el.innerHTML=f('Brand recommended',_aiEvBool(ev.brand_recommended))+f('Brand directly cited/supported',_aiEvBool(ev.brand_direct_supported))+f('DOMAIN CITED',_aiEvBool(ev.domain_cited))+f('EXACT PAGE CITED',_aiEvBool(ev.exact_page_cited));}
   function _selectAiEvidenceEngine(e){_aiEvidenceEngine=e;var p=(_pages||[]).find(function(x){return x.id==_aiEvidencePageId;})||{},ev=_aiEvidenceObj(p,e),tabs=document.getElementById('aiEvidenceEngineTabs');var _pc=0;_aiEvidenceEngines.forEach(function(x){if(_aiEvidenceObj(p,x[0]))_pc++;});var _pe=document.getElementById('aiEvidenceProgress');if(_pe){_pe.textContent=_pc+'/5 engines manually verified';_pe.style.color=_pc===5?'#4ade80':'#c4b5fd';}if(tabs)tabs.innerHTML=_aiEvidenceEngines.map(function(x){var saved=!!_aiEvidenceObj(p,x[0]);return '<button type="button" onclick="_selectAiEvidenceEngine(&quot;'+x[0]+'&quot;)" style="cursor:pointer;border-radius:6px;padding:5px 9px;font-size:10px;font-weight:700;background:'+(x[0]===e?'#312e81':'#0d1117')+';border:1px solid '+(saved?'#22c55e':(x[0]===e?'#8b5cf6':'#374151'))+';color:'+(saved?'#4ade80':'#cbd5e1')+';">'+x[1]+(saved?' ✓':'')+'</button>';}).join('');var ta=document.getElementById('aiEvidenceText'),sa=document.getElementById('aiEvidenceSources');if(ta)ta.value=ev&&ev.raw_text?ev.raw_text:'';if(sa)sa.value=ev&&ev.raw_sources?ev.raw_sources:'';var au=document.getElementById('aiEvidenceAutoStatus'),msg='AUTO: Not available — manual verification provides the evidence.';if(e==='perplexity')msg='AUTO: '+(p.ai_perplexity_cited?'✓ API VERIFIED — page cited':'Perplexity Sonar API is checked by Tracker')+'. Manual verification is optional / not required, but remains available.';else if(e==='copilot')msg='AUTO: Bing visibility / eligibility signal only'+(p.ai_bing_cited?' ✓':'')+'. This is NOT proof of a Copilot citation; paste Copilot References for VERIFIED evidence.';else if(e==='google_aio')msg='AUTO: Google AIO signal may be available. Manual actual answer/source evidence is the VERIFIED layer.';if(au)au.textContent=msg;_renderAiEvidenceFacts(ev);var st=document.getElementById('aiEvidenceStatus');if(st){st.textContent=ev&&ev.verified_at?'Manual VERIFIED: '+new Date(ev.verified_at).toLocaleString():'';st.style.color=ev?'#4ade80':'#6b7280';}}
   // CONTENTSCALE-CLIENT-LEVEL-CLAIMS-FACTS-BROWSER-QUOTE-FIX-20260909=true
   // CLIENT-LEVEL Claims & Facts. Do NOT attach ordinary business facts to individual page IDs.
@@ -44940,7 +44953,7 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
     try {
       await _trackerEnsureAiEvidenceSchema();
       const _pm = await pool.query(
-        `SELECT id, exact_page_cited, domain_cited, brand_recommended, brand_direct_supported, verified_at, updated_at
+        `SELECT id, exact_page_cited, domain_cited, brand_recommended, brand_direct_supported, is_cleared, verified_at, updated_at
          FROM tracker_ai_evidence
          WHERE page_id=$1 AND engine='perplexity' AND evidence_method='manual'
          ORDER BY COALESCE(updated_at,verified_at,created_at) DESC, id DESC LIMIT 1`,
@@ -44948,9 +44961,11 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
       );
       if (_pm.rows.length) {
         const _m = _pm.rows[0];
+        if (_m.is_cleared) { freshManualPerplexity = null; } else {
         const _manualAt = new Date(_m.updated_at || _m.verified_at || 0).getTime();
         const _prevAt = prevSnap && prevSnap.checked_at ? new Date(prevSnap.checked_at).getTime() : 0;
         if (_manualAt && (!prevSnap || _manualAt > _prevAt)) freshManualPerplexity = _m;
+        }
       }
     } catch (_pmErr) {
       console.warn('[tracker] manual Perplexity precedence lookup failed:', _pmErr.message);
@@ -45652,7 +45667,7 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
       let _manualChatgpt = null;
       try {
         const _me = await pool.query(
-          `SELECT DISTINCT ON (engine) engine, brand_recommended, brand_direct_supported, domain_cited, exact_page_cited, verified_at
+          `SELECT DISTINCT ON (engine) engine, brand_recommended, brand_direct_supported, domain_cited, exact_page_cited, is_cleared, verified_at
              FROM tracker_ai_evidence
             WHERE page_id=$1 AND evidence_method='manual' AND engine IN ('google_aio','chatgpt')
             ORDER BY engine, id DESC`,
@@ -45665,9 +45680,10 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
       } catch (_meErr) {
         console.warn('[tracker] manual evidence lookup for brief skipped:', _meErr && _meErr.message);
       }
-      const _googleAioExactVerified = !!(_manualGoogleAio && _manualGoogleAio.exact_page_cited);
-      const _googleAioAlreadyCited = _googleAioExactVerified || !!snapshot.ai_google_overview_cited;
-      const _chatgptExactVerified = !!(_manualChatgpt && _manualChatgpt.exact_page_cited);
+      const _googleAioManualCleared = !!(_manualGoogleAio && _manualGoogleAio.is_cleared);
+      const _googleAioExactVerified = !!(_manualGoogleAio && !_googleAioManualCleared && _manualGoogleAio.exact_page_cited);
+      const _googleAioAlreadyCited = _googleAioManualCleared ? false : (_googleAioExactVerified || !!snapshot.ai_google_overview_cited);
+      const _chatgptExactVerified = !!(_manualChatgpt && !_manualChatgpt.is_cleared && _manualChatgpt.exact_page_cited);
 
       // CONTENTSCALE-BRIEF-CLAIMS-FACTS-GATE-20260909=true
       // ── CLAIMS & FACTS SAFETY GATE ────────────────────────────────────────
@@ -46489,6 +46505,7 @@ If no unanchored claims found, return empty array: []`;
     snapshot._quality_report = _q.report;
   } catch (e) { console.warn('[brief-quality] skipped:', e.message); }
 
+  // CONTENTSCALE-CLEAR-TOMBSTONE-FACT-EVIDENCE-BRIEF-FIX-20260909=true
   // CONTENTSCALE-CENTRAL-EVIDENCE-CLAIMS-ENFORCEMENT-V2-20260909=true
   // Self-contained final enforcement pass. IMPORTANT: do not depend on prompt-local variables
   // (rawHtml/_verifiedClaims/_brandContext) because those are block-scoped and previously caused
@@ -46519,7 +46536,14 @@ If no unanchored claims found, return empty array: []`;
       if(/\bcertified\b/.test(n)) a.push(['certified',/\bcertified\b/]);
       if(/24\s*7(?:\s*365)?|around the clock/.test(n)) a.push(['24/7',/(?:24\s*7(?:\s*365)?|around the clock)/]);
       if(/same day/.test(n)) a.push(['same-day',/same day/]);
+      if(/immediate dispatch/.test(n)) a.push(['immediate-dispatch',/immediate dispatch/]);
+      if(/rapid dispatch/.test(n)) a.push(['rapid-dispatch',/rapid dispatch/]);
       if(/\bdispatch\b/.test(n)) a.push(['dispatch',/\bdispatch\b/]);
+      if(/live calls?|answers? live/.test(n)) a.push(['live-calls',/(?:live calls?|answers? live)/]);
+      if(/strategically stationed/.test(n)) a.push(['strategically-stationed',/strategically stationed/]);
+      if(/flat roof/.test(n)) a.push(['flat-roof',/flat roof/]);
+      if(/emergency tarp(?:ing)?|urgent tarp(?:ing)?|\btarping\b/.test(n)) a.push(['tarping',/(?:emergency tarp(?:ing)?|urgent tarp(?:ing)?|\btarping\b)/]);
+      if(/active leak (?:containment|mitigation)|stop active leaks?/.test(n)) a.push(['active-leak',/(?:active leak (?:containment|mitigation)|stop active leaks?)/]);
       if(/all\s+\d+\s+(?:new jersey\s+|nj\s+)?counties/.test(n)) a.push(['all-counties',/all\s+\d+\s+(?:new jersey\s+|nj\s+)?counties/]);
       if(/\d+\s*\+?\s*years?|over\s+\d+\s+years?/.test(n)) a.push(['years',/(?:\d+\s*\+?\s*years?|over\s+\d+\s+years?)/]);
       if(/free estimates?|free assessments?/.test(n)) a.push(['free-estimate',/free (?:estimates?|assessments?)/]);
@@ -46545,7 +46569,7 @@ If no unanchored claims found, return empty array: []`;
       var t=String(txt||'');
       t=t.replace(/this page currently lacks visibility in (?:these )?ai summaries due to its low organic position\.?/gi,
         'This page already has verified Google AI Overview citation visibility; protect that win while expanding coverage to engines that are still missing.');
-      t=t.replace(/this page currently has no visibility or citations in (?:these )?ai[- ]generated summaries\.?/gi,
+      t=t.replace(/(?:this|our) page currently has no visibility or citations in (?:these )?ai[- ]generated summaries\.?/gi,
         'This page already has verified Google AI Overview citation visibility; protect that win while expanding citation coverage to engines that are still missing.');
       t=t.replace(/this page[^.]{0,100}(?:lacks|has no)[^.]{0,80}(?:visibility|citations?)[^.]{0,100}(?:ai summaries|ai-generated summaries|ai overview|google ai overview)[^.]*\.?/gi,
         'This page already has verified Google AI Overview citation visibility; protect that win while expanding citation coverage to engines that are still missing.');
@@ -46557,7 +46581,8 @@ If no unanchored claims found, return empty array: []`;
     };
     const _ecRiskPatterns = [
       /\b(?:licensed|insured|certified)\b[^.!?\n]{0,120}/gi,
-      /\b(?:same[- ]day|\d+\s*(?:-|to)\s*\d+\s*minute|\d+\s*minute|response time|dispatch)\b[^.!?\n]{0,140}/gi,
+      /\b(?:same[- ]day|immediate dispatch|rapid dispatch|\d+\s*(?:-|to)\s*\d+\s*minute|\d+\s*minute|response time|dispatch|live calls?|answers? live|strategically stationed)\b[^.!?\n]{0,160}/gi,
+      /\b(?:flat roof|emergency tarping|urgent tarping|active leak containment|active leak mitigation|stop active leaks?)\b[^.!?\n]{0,160}/gi,
       /\b(?:all\s+\d+\s+(?:new jersey\s+|nj\s+)?counties|serv(?:e|es|ing)\s+all\s+\d+)\b[^.!?\n]{0,140}/gi,
       /\b(?:\d+\+?\s+years?|over\s+\d+\s+years?)\b[^.!?\n]{0,120}/gi,
       /\b(?:free estimates?|free assessments?|financing|warrant(?:y|ies)|guarantee(?:d|s)?|insurance (?:claim )?(?:help|assistance|coordination|documentation)|coordinate(?:s|d)? (?:directly )?with (?:your )?(?:homeowner(?:'s)? )?insurance)\b[^.!?\n]{0,160}/gi,
@@ -46579,7 +46604,10 @@ If no unanchored claims found, return empty array: []`;
       if(!item || typeof item!=='object') return item;
       ['title','action','expected_impact','trigger'].forEach(function(k){ if(typeof item[k]==='string') item[k]=_ecSafety(_ecContradiction(item[k])); });
       var combined=[item.title,item.action,item.trigger].filter(Boolean).join(' ');
+      var _dateMatches=combined.match(/last reviewed\s*:?\s*(?:[a-z]+\s+)?20\d{2}/gi)||[];
       var unsupported=_ecUnsupported(combined);
+      _dateMatches.forEach(function(d){ if(_ecGround.indexOf(_ecNorm(d))<0) unsupported.push(d); });
+      unsupported=Array.from(new Set(unsupported));
       if(unsupported.length){
         var original=String(item.action||'').replace(/──\s*READY-TO-PASTE[^\n]*──/gi,'').trim();
         item.title = /^verify first/i.test(String(item.title||'')) ? item.title : 'VERIFY FIRST — ' + String(item.title||'Business fact opportunity');
@@ -46637,6 +46665,7 @@ If no unanchored claims found, return empty array: []`;
       if(_vfAdded.length){
         snapshot.recommendations = (snapshot.recommendations||[]).concat(_vfAdded);
         snapshot._verify_first_opportunities = _vfAdded.map(function(x){return x.verification_key;});
+        snapshot.source_suggestions = (snapshot.source_suggestions||[]).concat(_vfAdded.map(function(x){return {priority:x.priority||'MEDIUM',claim:String(x.title||'').replace(/^VERIFY FIRST\s*[—-]\s*/i,''),why:'Client-specific fact is not verified in live HTML, Brand & author info, or VERIFIED Claims & Facts. Verify before publishing.',sources:[]};}));
       }
     } catch(_vfErr) { console.warn('[verify-first-opportunities] skipped:', _vfErr && _vfErr.message); }
 
