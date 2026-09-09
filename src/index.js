@@ -3355,11 +3355,46 @@ function _trackerEvNorm(raw){try{const u=new URL(String(raw||'').trim().replace(
 function _trackerEvHost(raw){try{return new URL(String(raw||'').trim().replace(/\\([.:/])/g,'$1')).hostname.toLowerCase().replace(/^www\./,'');}catch(e){return '';}}
 function _trackerEvRoot(h){h=String(h||'').toLowerCase().replace(/^www\./,'');const a=h.split('.').filter(Boolean);if(a.length<=2)return h;const multi=['co.uk','org.uk','gov.uk','ac.uk','com.au','net.au','org.au','co.nz','com.br','com.mx','com.sg','com.ph','com.sa','com.ar','co.za','co.in'];const t=a.slice(-2).join('.');return multi.includes(t)?a.slice(-3).join('.'):t;}
 // CONTENTSCALE-MANUAL-AI-EVIDENCE-REGEX-GI-RUNTIME-FIX-20260909=true
+// CONTENTSCALE-AIO-FLATTENED-CLIPBOARD-PARSER-FIX-20260909=true
 function _trackerParseManualEvidence(rawText,rawSources,pageUrl,aliases){
  const text=String(rawText||'').split('https\://').join('https://').split('\.').join('.'), sources=String(rawSources||'').split('https\://').join('https://').split('\.').join('.'), all=text+'\n'+sources;
- const sec={recommended:[],direct:[],mentioned:[],sources:[]};let mode='';
+ const sec={recommended:[],direct:[],mentioned:[],sources:[]};
  const _heading=t=>String(t||'').toUpperCase().replace(/[^A-Z0-9 ]+/g,' ').replace(/\s+/g,' ').trim();
- all.split(/\r?\n/).forEach(line=>{const t=line.trim();if(!t)return;const h=_heading(t);if(h==='RECOMMENDED COMPANIES'){mode='recommended';return;}if(h==='DIRECTLY CITED COMPANIES'){mode='direct';return;}if(h==='MENTIONED BUT NOT DIRECTLY CITED'){mode='mentioned';return;}if(h==='CITATION SOURCES'){mode='sources';return;}if(mode)sec[mode].push(t.replace(/^[-•*]+\s*/,''));});
+ const _splitSectionItems=chunk=>{
+   let c=String(chunk||'').trim();if(!c)return [];
+   // Some AI products flatten copied Markdown into one physical line. Turn bullet markers
+   // back into item boundaries without touching asterisks inside ordinary words/URLs.
+   c=c.replace(/\s+[•]\s+/g,'\n').replace(/\s+\*\s+(?=[A-Za-z0-9_[`])/g,'\n').replace(/\s+-\s+(?=(?:\*\*|[A-Za-z0-9_[`]))/g,'\n');
+   return c.split(/\r?\n/).map(x=>x.trim().replace(/^[-•*]+\s*/,''))
+     .map(x=>x.replace(/^#{1,6}\s*/,''))
+     .filter(Boolean);
+ };
+ // Parse by section positions, not line positions. This handles both normal multiline output
+ // and one-line clipboard pastes such as "RECOMMENDED COMPANIES * A * B DIRECTLY CITED...".
+ const _secDefs=[
+   ['recommended','RECOMMENDED COMPANIES'],
+   ['direct','DIRECTLY CITED COMPANIES'],
+   ['mentioned','MENTIONED BUT NOT DIRECTLY CITED'],
+   ['sources','CITATION SOURCES']
+ ];
+ const _upper=_heading(all);
+ // First try line-aware parsing (best fidelity for ordinary Markdown).
+ let mode='';
+ all.split(/\r?\n/).forEach(line=>{const t=line.trim();if(!t)return;const h=_heading(t);const hit=_secDefs.find(d=>h===d[1]);if(hit){mode=hit[0];return;}if(mode)sec[mode].push(t.replace(/^[-•*]+\s*/,''));});
+ // If line parsing missed sections (common after rich-copy flattening), fall back to a
+ // marker scanner over the original text. Markers may carry ## / emoji decoration.
+ if(!_secDefs.every(d=>sec[d[0]].length)){
+   const markerRe=/(?:^|[\s#>*•✅📌⚠️📚\-])(?:#{1,6}\s*)?(?:✅|📌|⚠️|📚)?\s*(RECOMMENDED COMPANIES|DIRECTLY CITED COMPANIES|MENTIONED BUT NOT DIRECTLY CITED|CITATION SOURCES)\b/gi;
+   const hits=[];let mm;while((mm=markerRe.exec(all))){
+     const label=String(mm[1]||'').toUpperCase();const def=_secDefs.find(d=>d[1]===label);if(def)hits.push({key:def[0],start:mm.index,end:markerRe.lastIndex});
+   }
+   // Prefer the last complete ordered quartet when explanatory prose mentions labels first.
+   let chosen=null;
+   for(let i=0;i<hits.length;i++){if(hits[i].key!=='recommended')continue;let seq=[hits[i]],pos=i+1;for(const want of ['direct','mentioned','sources']){while(pos<hits.length&&hits[pos].key!==want)pos++;if(pos>=hits.length){seq=null;break;}seq.push(hits[pos]);pos++;}if(seq)chosen=seq;}
+   if(chosen){
+     for(let i=0;i<chosen.length;i++){const h=chosen[i],next=chosen[i+1];const chunk=all.slice(h.end,next?next.start:all.length);sec[h.key]=_splitSectionItems(chunk);}
+   }
+ }
  const _noiseUrl=u=>{try{const x=new URL(String(u||''));const h=x.hostname.toLowerCase().replace(/^www\./,'');const q=x.pathname.toLowerCase();return (h==='google.com'&&(q==='/goto'||q.startsWith('/searchviewer')||q.startsWith('/search')))||h.endsWith('gstatic.com')||h.endsWith('googleusercontent.com')||h==='support.google.com'||h==='accounts.google.com'||h==='gemini.google.com';}catch(e){return false;}};
  const _extractUrls=str=>{const out=[],seen=new Set(),re=/https?:\/\/[^\s)\]}>":'<,]+/gi;let m;while((m=re.exec(String(str||'')))){const u=m[0].replace(/[.;:]+$/,'');if(_noiseUrl(u))continue;const z=_trackerEvNorm(u);if(z&&!seen.has(z)){seen.add(z);out.push(u);}}return out;};
  const citationText=sec.direct.join('\n')+'\n'+sec.sources.join('\n')+'\n'+sources;
