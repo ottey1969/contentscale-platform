@@ -1864,20 +1864,17 @@ app.post('/api/tracker-client/:token/pages/:pageId/html', async (req, res) => {
     const vals = ['manual'];
     if (html_content) { fields.push(`html_content=$${vals.length+1}`); vals.push(html_content.substring(0,500000)); }
     if (keyword) { fields.push(`keyword=$${vals.length+1}`); vals.push(keyword.trim()); }
-    // Has this page been scanned before? First HTML → scan now; later HTML → wait for the scheduled auto-check
-    const prevR = await pool.query('SELECT last_checked_at, brief_check_count, next_check_at FROM tracker_pages WHERE id=$1', [req.params.pageId]);
+    // Manual HTML is now a FALLBACK only. Once supplied, scan it immediately — never make the
+    // user press a second Rescan/Verify button. This also handles the first scan if live fetch failed.
+    const prevR = await pool.query('SELECT last_checked_at, brief_check_count, next_check_at, implementation_status FROM tracker_pages WHERE id=$1', [req.params.pageId]);
     const prev = prevR.rows[0] || {};
-    const wasScanned = !!prev.last_checked_at || (parseInt(prev.brief_check_count) || 0) > 0;
+    const wasImplementationFallback = prev.implementation_status === 'manual_html_required';
+    if (wasImplementationFallback) { fields.push(`implementation_status='verifying_manual'`); }
 
     vals.push(req.params.pageId);
     await pool.query(`UPDATE tracker_pages SET ${fields.join(',')} WHERE id=$${vals.length}`, vals);
-
-    if (!wasScanned) {
-      res.json({ success: true, scanning: true });
-      _triggerPageScan(parseInt(req.params.pageId), 1000);
-    } else {
-      res.json({ success: true, scanning: false, next_check_at: prev.next_check_at });
-    }
+    res.json({ success: true, scanning: true, manual_fallback: wasImplementationFallback });
+    _triggerPageScan(parseInt(req.params.pageId), 1000);
   } catch(e) {
     console.error('[html-patch]', e.message);
     res.status(500).json({ success: false, error: e.message });
@@ -2047,14 +2044,40 @@ app.post('/api/tracker-client/:token/reset-scans', async (req, res) => {
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
-// POST /api/tracker-client/:token/scan-all — scan all pages one by one
+// POST /api/tracker-client/:token/scan-all — legacy route name; UI sends priorities_only=true to scan only Active Priorities.
+// CONTENTSCALE-PRIORITY-SCAN-SERIAL-20260909=true
 app.post('/api/tracker-client/:token/scan-all', async (req, res) => {
   try {
     const cr = await pool.query('SELECT id FROM tracker_clients WHERE token=$1 OR lead_token=$1', [req.params.token]);
     if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
     const unscannedOnly = req.body && req.body.unscanned_only === true;
+    const prioritiesOnly = req.body && req.body.priorities_only === true;
     let pages;
-    if (unscannedOnly) {
+    if (prioritiesOnly) {
+      // Priority scan deliberately excludes user-checked pages, LOW DEMAND pages and pages with no GSC evidence.
+      // Discovery/import may contain 71/500 URLs; this route scans only the current actionable work queue.
+      pages = await pool.query(`
+        SELECT p.*,
+          CASE
+            WHEN p.gsc_position IS NOT NULL AND p.gsc_position <= 10 AND COALESCE(p.gsc_impressions,0) >= 100
+              AND (COALESCE(p.gsc_clicks,0)::numeric / GREATEST(COALESCE(p.gsc_impressions,0),1)) * 100 < 1 THEN 1
+            WHEN p.gsc_position IS NOT NULL AND p.gsc_position > 10 AND p.gsc_position <= 20 AND COALESCE(p.gsc_impressions,0) >= 100 THEN 2
+            WHEN COALESCE(p.gsc_impressions,0) >= 500 THEN 3
+            WHEN p.gsc_position IS NOT NULL AND p.gsc_position <= 10 AND COALESCE(p.gsc_impressions,0) > 0 AND COALESCE(p.gsc_impressions,0) < 50 THEN 5
+            ELSE 4
+          END AS priority_tier
+        FROM tracker_pages p
+        WHERE p.tracker_client_id=$1
+          AND (p.is_active=TRUE OR p.is_active IS NULL)
+          AND COALESCE(p.manual_done,FALSE)=FALSE
+          AND (p.gsc_impressions IS NOT NULL OR p.gsc_position IS NOT NULL OR p.gsc_clicks IS NOT NULL)
+          AND NOT (p.gsc_position IS NOT NULL AND p.gsc_position <= 10 AND COALESCE(p.gsc_impressions,0) > 0 AND COALESCE(p.gsc_impressions,0) < 50)
+        ORDER BY priority_tier ASC,
+          COALESCE(p.gsc_impressions,0) DESC,
+          COALESCE(p.gsc_clicks,0) ASC,
+          COALESCE(p.gsc_position,999) ASC
+      `, [cr.rows[0].id]);
+    } else if (unscannedOnly) {
       pages = await pool.query(`
         SELECT p.* FROM tracker_pages p
         LEFT JOIN tracker_snapshots s ON s.page_id = p.id
@@ -2066,7 +2089,7 @@ app.post('/api/tracker-client/:token/scan-all', async (req, res) => {
       pages = await pool.query('SELECT * FROM tracker_pages WHERE tracker_client_id=$1 AND (is_active=TRUE OR is_active IS NULL) ORDER BY created_at ASC', [cr.rows[0].id]);
     }
 
-    res.json({ success: true, queued: pages.rows.length, message: 'Scanning ' + pages.rows.length + ' ' + (unscannedOnly ? 'unscanned ' : '') + 'pages one by one (~' + Math.ceil(pages.rows.length * 3 / 60) + ' min)' });
+    res.json({ success: true, queued: pages.rows.length, message: 'Scanning ' + pages.rows.length + ' ' + (prioritiesOnly ? 'priority ' : (unscannedOnly ? 'unscanned ' : '')) + 'pages one by one (~' + Math.ceil(pages.rows.length * 3 / 60) + ' min)' });
 
     const checkKeys = {
       serpapiKey:    process.env.SERPAPI_KEY || process.env.SERPER_API_KEY,
@@ -2077,7 +2100,7 @@ app.post('/api/tracker-client/:token/scan-all', async (req, res) => {
     for (let i = 0; i < pages.rows.length; i++) {
       await new Promise(r => setTimeout(r, i === 0 ? 100 : 3000));
       console.log('[scan-all] scanning page', i+1, '/', pages.rows.length, pages.rows[i].url);
-      runTrackerCheck(pages.rows[i], process.env.GEMINI_API_KEY, checkKeys, true)
+      await runTrackerCheck(pages.rows[i], process.env.GEMINI_API_KEY, checkKeys, true)
         .catch(e => console.warn('[scan-all] page', pages.rows[i].id, e.message));
     }
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
@@ -2108,66 +2131,121 @@ app.post('/api/tracker-client/:token/scan-selected', async (req, res) => {
     for (let i = 0; i < pages.rows.length; i++) {
       await new Promise(r => setTimeout(r, i === 0 ? 100 : 3000));
       console.log('[scan-selected] scanning page', i+1, '/', pages.rows.length, pages.rows[i].url);
-      runTrackerCheck(pages.rows[i], process.env.GEMINI_API_KEY, checkKeys, true)
+      await runTrackerCheck(pages.rows[i], process.env.GEMINI_API_KEY, checkKeys, true)
         .catch(e => console.warn('[scan-selected] page', pages.rows[i].id, e.message));
     }
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
-// PATCH /api/tracker-client/:token/pages/:pageId/done — mark page done/undone
+// PATCH /api/tracker-client/:token/pages/:pageId/done — implementation lifecycle.
+// DONE means: "I published the recommended changes." ContentScale verifies the LIVE page automatically.
+// Reliable live HTML -> compare with last baseline -> only if changed run the post-implementation scan.
+// Unchanged HTML -> no paid/AI proof scan. Unreliable fetch -> manual HTML fallback only.
 app.patch('/api/tracker-client/:token/pages/:pageId/done', async (req, res) => {
   try {
-    const cr = await pool.query('SELECT id FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status != $2)', [req.params.token, 'deleted']);
+    const cr = await pool.query('SELECT * FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status != $2)', [req.params.token, 'deleted']);
     if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
-    const own = await pool.query('SELECT id FROM tracker_pages WHERE id=$1 AND tracker_client_id=$2', [req.params.pageId, cr.rows[0].id]);
+    const own = await pool.query('SELECT * FROM tracker_pages WHERE id=$1 AND tracker_client_id=$2', [req.params.pageId, cr.rows[0].id]);
     if (!own.rows.length) return res.status(403).json({ success: false, error: 'Not your page' });
+    const page = own.rows[0];
     const { is_done } = req.body;
-    if (is_done) {
-      // Done pressed — reset brief + flag that new HTML is needed
-      await pool.query(
-        `UPDATE tracker_pages SET is_done=TRUE, brief_done_at=NOW(), needs_html=TRUE WHERE id=$1`,
-        [req.params.pageId]
-      );
-      res.json({ success: true });
 
-      // Send reminder email + WhatsApp after done
-      setImmediate(async () => {
-        try {
-          const clientR = await pool.query('SELECT * FROM tracker_clients WHERE id=$1', [cr.rows[0].id]);
-          const pageR = await pool.query('SELECT url FROM tracker_pages WHERE id=$1', [req.params.pageId]);
-          const client = clientR.rows[0];
-          const pageUrl = pageR.rows[0]?.url || '';
-          const trackerUrl = (process.env.APP_URL || 'https://app.contentscale.site') + '/track/' + client.token;
+    // Self-healing lifecycle columns. Server timestamps are the audit trail.
+    await pool.query('ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS implementation_at TIMESTAMPTZ').catch(()=>{});
+    await pool.query('ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS implementation_verified_at TIMESTAMPTZ').catch(()=>{});
+    await pool.query('ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS implementation_status TEXT').catch(()=>{});
+    await pool.query('ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS implementation_before_graaf INTEGER').catch(()=>{});
 
-          // Email reminder
-          if (client.email) {
-            const subject = 'Action needed: paste your updated HTML — ' + (client.domain || pageUrl);
-            const htmlBody = '<h2 style="font-size:17px;font-weight:800;color:#0f172a;margin-bottom:10px;">Great — Done pressed! One more step.</h2>'
-              + '<p style="font-size:14px;color:#374151;line-height:1.7;margin-bottom:14px;">You marked your implementation as done. Now the system needs the <strong>updated HTML of your page</strong> to measure the improvements you just made and start the next Citation Brief cycle.</p>'
-              + '<div style="background:#fefce8;border:1px solid #fde047;border-radius:8px;padding:14px 16px;margin-bottom:16px;">'
-              + '<div style="font-size:12px;font-weight:700;color:#854d0e;margin-bottom:6px;">&#9888; Required: paste new HTML</div>'
-              + '<div style="font-size:13px;color:#854d0e;line-height:1.6;">1. Open <strong>' + pageUrl + '</strong> in Chrome<br>2. Right-click &rarr; View Page Source<br>3. Ctrl+A &rarr; Ctrl+C<br>4. Go to your tracker &rarr; click <strong>Paste new HTML</strong></div>'
-              + '</div>'
-              + '<a href="' + trackerUrl + '" style="display:inline-block;background:#7c3aed;color:white;text-decoration:none;padding:10px 22px;border-radius:6px;font-size:13px;font-weight:700;">View tracker &rarr;</a>'
-              + '<p style="font-size:11px;color:#94a3b8;margin-top:14px;">Without the new HTML, the system cannot measure your improvements or generate the next Citation Brief.</p>';
-            // Get telegram for done reminder
-            const doneClientR = await pool.query('SELECT telegram_chat_id FROM tracker_clients WHERE id=$1', [cr.rows[0].id]);
-            const doneTgId = doneClientR.rows[0]?.telegram_chat_id;
-            if (doneTgId) await sendTelegramNotification(doneTgId, '⚠️ <b>Action needed:</b> Paste your updated HTML in the tracker to continue your Citation Brief cycle.\n\n<a href="' + trackerUrl + '">Open tracker →</a>').catch(()=>{});
-            await sendTrackerEmail(cr.rows[0].id, subject, htmlBody, true);
-          }
-
-          // Telegram reminder
-          if (client.telegram_chat_id) {
-            await sendTelegramNotification(client.telegram_chat_id, '✅ <b>Done pressed!</b> Now paste the updated HTML in your tracker so the system can measure your improvements.\n\n<a href="' + trackerUrl + '">Open tracker →</a>');
-          }
-        } catch(e) { console.warn('[done-reminder]', e.message); }
-      });
-    } else {
-      // Undone — just clear is_done flag
-      await pool.query('UPDATE tracker_pages SET is_done=FALSE, needs_html=FALSE WHERE id=$1', [req.params.pageId]);
-      res.json({ success: true });
+    if (!is_done) {
+      await pool.query(`UPDATE tracker_pages SET is_done=FALSE, needs_html=FALSE, implementation_status='undone' WHERE id=$1`, [page.id]);
+      return res.json({ success: true, status: 'undone' });
     }
+
+    // Record exact declaration date/time immediately, but do not claim VERIFIED yet.
+    await pool.query(
+      `UPDATE tracker_pages SET is_done=TRUE, brief_done_at=NOW(), implementation_at=NOW(),
+       implementation_verified_at=NULL, implementation_status='verifying', needs_html=FALSE,
+       implementation_before_graaf=last_graaf_score WHERE id=$1`, [page.id]
+    );
+    res.json({ success: true, status: 'verifying', message: 'Implementation saved. Verifying the live page automatically.' });
+
+    setImmediate(async () => {
+      const client = cr.rows[0];
+      const trackerUrl = (process.env.APP_URL || 'https://app.contentscale.site') + '/track/' + client.token;
+      const fmtUtc = d => new Date(d || Date.now()).toISOString().replace('T',' ').replace(/:\d\d\.\d\d\dZ$/, ' UTC');
+      try {
+        // Compare the same compact SHA-256 format used by runTrackerCheck.
+        const liveResp = await fetch(page.url, { headers: { 'User-Agent': 'Mozilla/5.0 (compatible; ContentScale/1.0)' }, signal: AbortSignal.timeout(15000) });
+        if (!liveResp.ok) throw new Error('HTTP ' + liveResp.status);
+        const liveHtml = await liveResp.text();
+        const lower = liveHtml.toLowerCase();
+        const fetchReliable = liveHtml.length >= 500 && (lower.includes('</html>') || lower.includes('<body'));
+        if (!fetchReliable) throw new Error('Live fetch returned incomplete or suspicious HTML');
+
+        const crypto = require('crypto');
+        const liveHash = crypto.createHash('sha256').update(liveHtml).digest('hex').substring(0,16);
+        const previousHash = String(page.last_page_hash || '');
+
+        if (previousHash && liveHash === previousHash) {
+          // Nothing changed: do NOT spend scan/API credits and do NOT create fake proof.
+          await pool.query(`UPDATE tracker_pages SET is_done=FALSE, implementation_status='no_change', needs_html=FALSE WHERE id=$1`, [page.id]);
+          if (client.email) {
+            const subject = 'No live changes detected — ' + (client.domain || page.url);
+            const body = '<h2 style="font-size:17px;font-weight:800;color:#0f172a;">No implementation change detected</h2>'
+              + '<p style="font-size:14px;color:#374151;line-height:1.7;">You marked <strong>' + page.url + '</strong> as implemented, but the live page is identical to the last verified version.</p>'
+              + '<p style="font-size:13px;color:#374151;"><strong>Done clicked:</strong> ' + fmtUtc() + '</p>'
+              + '<div style="background:#fefce8;border:1px solid #fde047;border-radius:8px;padding:14px 16px;color:#854d0e;font-size:13px;">No post-implementation proof scan was started and no baseline was reset. Publish the changes first, then click <strong>Done</strong> again.</div>'
+              + '<p><a href="' + trackerUrl + '" style="display:inline-block;background:#7c3aed;color:#fff;text-decoration:none;padding:10px 20px;border-radius:6px;font-weight:700;">Open tracker →</a></p>';
+            await sendTrackerEmail(client.id, subject, body, true).catch(()=>{});
+          }
+          return;
+        }
+
+        // Changed: save fresh live HTML first so this exact implementation becomes the new content baseline.
+        await pool.query(`UPDATE tracker_pages SET html_content=$1, html_source='live_fresh', html_pasted_at=NOW(), last_page_hash=$2, fetch_reliable=TRUE, needs_html=FALSE WHERE id=$3`, [liveHtml, liveHash, page.id]);
+        const freshR = await pool.query('SELECT * FROM tracker_pages WHERE id=$1', [page.id]);
+        const freshPage = freshR.rows[0] || page;
+        const checkKeys = {
+          serpapiKey: process.env.SERPAPI_KEY || process.env.SERPER_API_KEY,
+          perplexityKey: process.env.PERPLEXITY_API_KEY,
+          braveKey: process.env.BRAVE_SEARCH_API_KEY,
+          youKey: process.env.YOU_API_KEY
+        };
+        await runTrackerCheck(freshPage, process.env.GEMINI_API_KEY, checkKeys, true);
+
+        const afterR = await pool.query('SELECT last_graaf_score, implementation_at, implementation_before_graaf FROM tracker_pages WHERE id=$1', [page.id]);
+        const after = afterR.rows[0] || {};
+        await pool.query(`UPDATE tracker_pages SET is_done=TRUE, implementation_verified_at=NOW(), implementation_status='verified', needs_html=FALSE WHERE id=$1`, [page.id]);
+        const verifiedR = await pool.query('SELECT implementation_at, implementation_verified_at, last_graaf_score, implementation_before_graaf FROM tracker_pages WHERE id=$1', [page.id]);
+        const v = verifiedR.rows[0] || after;
+        if (client.email) {
+          const beforeScore = v.implementation_before_graaf;
+          const afterScore = v.last_graaf_score;
+          const scoreLine = (beforeScore != null || afterScore != null) ? '<p style="font-size:13px;color:#374151;"><strong>GRAAF:</strong> ' + (beforeScore == null ? '—' : beforeScore) + ' → ' + (afterScore == null ? '—' : afterScore) + '</p>' : '';
+          const subject = 'Implementation verified — ' + (client.domain || page.url);
+          const body = '<h2 style="font-size:17px;font-weight:800;color:#0f172a;">Implementation verified</h2>'
+            + '<p style="font-size:14px;color:#374151;line-height:1.7;">ContentScale detected your published changes on <strong>' + page.url + '</strong> and completed the post-implementation verification scan.</p>'
+            + '<p style="font-size:13px;color:#374151;"><strong>Implementation:</strong> ' + fmtUtc(v.implementation_at) + '<br><strong>Verified:</strong> ' + fmtUtc(v.implementation_verified_at) + '</p>'
+            + scoreLine
+            + '<div style="background:#ecfdf5;border:1px solid #86efac;border-radius:8px;padding:14px 16px;color:#166534;font-size:13px;">The new proof snapshot is saved. ContentScale can now monitor Google and AI visibility against this implementation. No manual HTML is required.</div>'
+            + '<p><a href="' + trackerUrl + '" style="display:inline-block;background:#7c3aed;color:#fff;text-decoration:none;padding:10px 20px;border-radius:6px;font-weight:700;">View tracker →</a></p>';
+          await sendTrackerEmail(client.id, subject, body, true).catch(()=>{});
+        }
+      } catch(e) {
+        // Only here does Manual HTML become required.
+        await pool.query(`UPDATE tracker_pages SET is_done=FALSE, needs_html=TRUE, fetch_reliable=FALSE, implementation_status='manual_html_required' WHERE id=$1`, [page.id]).catch(()=>{});
+        if (client.email) {
+          const subject = 'Action required — live page could not be verified — ' + (client.domain || page.url);
+          const body = '<h2 style="font-size:17px;font-weight:800;color:#0f172a;">Manual HTML required</h2>'
+            + '<p style="font-size:14px;color:#374151;line-height:1.7;">ContentScale could not reliably retrieve the updated live page <strong>' + page.url + '</strong>.</p>'
+            + '<p style="font-size:13px;color:#374151;"><strong>Implementation declared:</strong> ' + fmtUtc() + '</p>'
+            + '<div style="background:#fff7ed;border:1px solid #fdba74;border-radius:8px;padding:14px 16px;color:#9a3412;font-size:13px;">Open your tracker and use <strong>Manual HTML required</strong>. This fallback appears only when the live fetch cannot be trusted.</div>'
+            + '<p><a href="' + trackerUrl + '" style="display:inline-block;background:#f59e0b;color:#111827;text-decoration:none;padding:10px 20px;border-radius:6px;font-weight:700;">Open tracker →</a></p>';
+          await sendTrackerEmail(client.id, subject, body, true).catch(()=>{});
+        }
+        console.warn('[done-auto-verify]', page.url, e.message);
+      }
+    });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
@@ -3474,10 +3552,25 @@ function _processScanQueue() {
       console.log('[tracker] _triggerPageScan:', pgId, pg.url);
       const keys = { serpapiKey: process.env.SERPAPI_KEY || process.env.SERPER_API_KEY, perplexityKey: process.env.PERPLEXITY_API_KEY, braveKey: process.env.BRAVE_SEARCH_API_KEY, youKey: process.env.YOU_API_KEY };
       setImmediate(async () => {
-        try { await Promise.race([
-          runTrackerCheck(pg, process.env.GEMINI_API_KEY, keys, true),
-          new Promise(function(_, rej){ setTimeout(function(){ rej(new Error('scan watchdog timeout (150s)')); }, 150000); })
-        ]); }
+        try {
+          await Promise.race([
+            runTrackerCheck(pg, process.env.GEMINI_API_KEY, keys, true),
+            new Promise(function(_, rej){ setTimeout(function(){ rej(new Error('scan watchdog timeout (150s)')); }, 150000); })
+          ]);
+          // If this scan was the manual-HTML fallback after Done, completing the scan completes verification.
+          if (pg.implementation_status === 'verifying_manual') {
+            await pool.query(`UPDATE tracker_pages SET is_done=TRUE, implementation_verified_at=NOW(), implementation_status='verified', needs_html=FALSE WHERE id=$1`, [pgId]).catch(()=>{});
+            try {
+              const _cr = await pool.query('SELECT c.*, p.url, p.implementation_at, p.implementation_verified_at, p.implementation_before_graaf, p.last_graaf_score FROM tracker_pages p JOIN tracker_clients c ON c.id=p.tracker_client_id WHERE p.id=$1', [pgId]);
+              const _x = _cr.rows[0];
+              if (_x && _x.email) {
+                const _fmt = d => new Date(d||Date.now()).toISOString().replace('T',' ').replace(/:\d\d\.\d\d\dZ$/, ' UTC');
+                const _body = '<h2 style="font-size:17px;font-weight:800;color:#0f172a;">Implementation verified</h2><p style="font-size:14px;color:#374151;line-height:1.7;">Your manual HTML fallback was accepted and the post-implementation scan completed for <strong>' + _x.url + '</strong>.</p><p style="font-size:13px;color:#374151;"><strong>Implementation:</strong> ' + _fmt(_x.implementation_at) + '<br><strong>Verified:</strong> ' + _fmt(_x.implementation_verified_at) + '<br><strong>GRAAF:</strong> ' + (_x.implementation_before_graaf==null?'—':_x.implementation_before_graaf) + ' → ' + (_x.last_graaf_score==null?'—':_x.last_graaf_score) + '</p><div style="background:#ecfdf5;border:1px solid #86efac;border-radius:8px;padding:14px 16px;color:#166534;font-size:13px;">The new proof snapshot is saved. No additional Rescan/Verify click is required.</div>';
+                await sendTrackerEmail(_x.id, 'Implementation verified — ' + (_x.domain || _x.url), _body, true).catch(()=>{});
+              }
+            } catch(_) {}
+          }
+        }
         catch(e) { console.warn('[trigger-scan]', e.message); }
         finally {
           const st = _trackerCheckStatus.get(pgId);
@@ -31518,8 +31611,8 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
         <div class="wl-step" style="animation-delay:0.45s">
           <div class="wl-step-num">4</div>
           <div class="wl-step-content">
-            <div class="wl-step-title">Implement & Re-scan</div>
-            <div class="wl-step-desc">Add the recommended changes, paste your updated HTML, and scan again. Track your progress over time.</div>
+            <div class="wl-step-title">Implement & Done</div>
+            <div class="wl-step-desc">Publish the recommended changes and press Done. ContentScale verifies the live page, runs GRAAF and creates the post-implementation proof automatically. Manual HTML appears only if live fetch fails.</div>
           </div>
         </div>
       </div>
@@ -31616,7 +31709,7 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
     <button class="cs-btn" onclick="loadPages()" style="margin-left:4px;" title="Refresh"><i class="fas fa-sync-alt"></i></button>
     <button id="tourBtn" class="cs-btn" onclick="startTour(true)" style="border-color:#7c3aed;color:#a78bfa;animation:tourPulse 2s ease-in-out infinite;" title="Step-by-step walkthrough of the tracker">? Tour</button>
     <style>@keyframes tourPulse{0%,100%{box-shadow:0 0 0 0 rgba(124,58,237,.55);}50%{box-shadow:0 0 0 7px rgba(124,58,237,0);}}@keyframes scanPulse{0%,100%{box-shadow:0 0 0 0 rgba(74,222,128,.55);}50%{box-shadow:0 0 0 7px rgba(74,222,128,0);}}</style>
-    <button id="scanAllBtn" class="cs-btn" onclick="scanAllPages()" style="border-color:#4ade80;color:#4ade80;font-weight:700;" title="Scan all pages one by one">&#x26a1; Scan All</button>
+    <button id="scanAllBtn" class="cs-btn" onclick="scanAllPages()" style="border-color:#4ade80;color:#4ade80;font-weight:700;" title="Scan only the current GSC-ranked Active Priorities, one by one. Checked and deferred pages are skipped.">&#x26a1; Scan Priorities</button>
     <button id="scanSelectedBtn" class="cs-btn" onclick="scanSelectedPages()" style="border-color:#60a5fa;color:#60a5fa;font-weight:700;" title="Tick the checkboxes on the pages you want, then scan only those">&#x2611; Scan Selected</button>
     <button class="cs-btn" onclick="mergePages()" style="border-color:#38bdf8;color:#38bdf8;" title="Merge duplicate URLs &#x2014; keep best">&#x2295; Merge</button>
     <button class="cs-btn" onclick="cleanPages()" style="border-color:#f59e0b;color:#f59e0b;" title="Remove junk (.jpg, /category/, feeds) &amp; pages not in sitemap/GSC &#x2014; keep only live content">&#x1f9f9; Clean</button>
@@ -32329,7 +32422,7 @@ function _setScanAllBtn(html, disabled, animate){
   b.style.animation = animate ? 'scanPulse 1.2s ease-in-out infinite' : 'none';
 }
 function scanAllPages() {
-  if (_scanAllActive) { toast('A full scan is already running \u2014 please wait for it to finish.', '#f59e0b'); return; }
+  if (_scanAllActive) { toast('A priority scan is already running \u2014 please wait for it to finish.', '#f59e0b'); return; }
   // Same "don't scan 3 times" guard as checkPage() \u2014 but broader. Early in the workflow there is NO
   // PROVEN yet (it only appears after GSC auto-fetch on paired pages), so checking _provenList alone
   // misses the most common case: someone hits Scan All before EVER touching Cannibalization or
@@ -32344,17 +32437,23 @@ function scanAllPages() {
     var _reason = _hasOpenPossible
       ? (_possRemaining.length + ' POSSIBLE page' + (_possRemaining.length>1?'s':'') + ' still need GSC auto-fetch, and ')
       : '';
-    var _proceedAnyway = confirm('The Cannibalization and Impression Gap panels above aren\\u2019t finished yet \\u2014 ' + _reason + '\\ud83e\\udd16 Sort this out for me hasn\\u2019t run. Scanning all pages now means some of them will need a second scan later once that work is done.\\n\\nFinish those panels first (GSC auto-fetch any POSSIBLE pages, then \\ud83e\\udd16 Sort this out for me, then \\ud83d\\ude80 Do everything) \\u2014 that way every page gets its complete brief in one pass.\\n\\nScan all anyway right now?');
+    var _proceedAnyway = confirm('The Cannibalization and Impression Gap panels above aren\\u2019t finished yet \\u2014 ' + _reason + '\\ud83e\\udd16 Sort this out for me hasn\\u2019t run. Scanning the priority queue now means some priority pages may need a second scan later once that work is done.\\n\\nFinish those panels first (GSC auto-fetch any POSSIBLE pages, then \\ud83e\\udd16 Sort this out for me, then \\ud83d\\ude80 Do everything) \\u2014 that way every page gets its complete brief in one pass.\\n\\nScan priorities anyway right now?');
     if (!_proceedAnyway) return;
   }
-  if (!confirm('Scan all tracked pages now? They run one by one and this can take a few minutes. You will see live progress on the button.')) return;
+  if (!confirm('Scan the current Active Priorities now? Checked, deferred and no-GSC pages are skipped. The priority URLs run one by one.')) return;
   _scanAllActive = true; _scanAllDone = 0; _scanAllTotal = 0; window._scanMode = 'all';
-  _setScanAllBtn('\u23f3 Starting scan\u2026', true, true);
-  api('/scan-all', 'POST').then(function(d){
+  _setScanAllBtn('<i class=\"fas fa-circle-notch fa-spin\"></i> Starting priorities\u2026', true, true);
+  api('/scan-all', 'POST', { priorities_only: true }).then(function(d){
     if (d && d.success) {
       _scanAllTotal = d.queued || 0;
-      toast('Scanning ' + _scanAllTotal + ' pages \u2014 watch the button and Live Activity.', '#4ade80');
-      _setScanAllBtn('\u23f3 Scanning 0/' + _scanAllTotal + '\u2026', true, true);
+      if (!_scanAllTotal) {
+        _scanAllActive = false;
+        _setScanAllBtn('\u26a1 Scan Priorities', false, false);
+        toast('No Active Priorities to scan. Refresh GSC or select URLs manually with Scan Selected.', '#f59e0b');
+        return;
+      }
+      toast('Scanning ' + _scanAllTotal + ' priority page' + (_scanAllTotal===1?'':'s') + ' \u2014 checked/deferred URLs are not included.', '#4ade80');
+      _setScanAllBtn('<i class=\"fas fa-circle-notch fa-spin\"></i> Priority 0/' + _scanAllTotal + '\u2026', true, true);
       // Safety fallback: if SSE misses events, stop the spinner after a generous timeout
       clearTimeout(window._scanAllFallback);
       window._scanAllFallback = setTimeout(_finishScanAll, Math.max(60000, _scanAllTotal * 20000));
@@ -32362,10 +32461,10 @@ function scanAllPages() {
       var iv = setInterval(function(){ n++; loadPages(); if (n >= 18 || !_scanAllActive) clearInterval(iv); }, 10000);
     } else {
       _scanAllActive = false;
-      _setScanAllBtn('\u26a1 Scan All', false, false);
+      _setScanAllBtn('\u26a1 Scan Priorities', false, false);
       toast((d && d.error) || 'Scan failed to start', '#f87171');
     }
-  }).catch(function(e){ _scanAllActive = false; _setScanAllBtn('\u26a1 Scan All', false, false); toast('Scan failed: ' + e.message, '#f87171'); });
+  }).catch(function(e){ _scanAllActive = false; _setScanAllBtn('\u26a1 Scan Priorities', false, false); toast('Scan failed: ' + e.message, '#f87171'); });
 }
 function _scanAllProgress(){
   if (!_scanAllActive) return;
@@ -32373,11 +32472,11 @@ function _scanAllProgress(){
   if (window._scanMode === 'selected') {
     if (_scanAllTotal && _scanAllDone >= _scanAllTotal) { _finishScanSelected(); return; }
     var sb = document.getElementById('scanSelectedBtn');
-    if (sb) sb.innerHTML = '\u23f3 Scanning ' + _scanAllDone + '/' + (_scanAllTotal||'?') + '\u2026';
+    if (sb) sb.innerHTML = '<i class=\"fas fa-circle-notch fa-spin\"></i> Scanning ' + _scanAllDone + '/' + (_scanAllTotal||'?') + '\u2026';
     return;
   }
   if (_scanAllTotal && _scanAllDone >= _scanAllTotal) { _finishScanAll(); return; }
-  _setScanAllBtn('\u23f3 Scanning ' + _scanAllDone + '/' + (_scanAllTotal||'?') + '\u2026', true, true);
+  _setScanAllBtn('<i class=\"fas fa-circle-notch fa-spin\"></i> Priority ' + _scanAllDone + '/' + (_scanAllTotal||'?') + '\u2026', true, true);
 }
 function _finishScanAll(){
   if (!_scanAllActive) return;
@@ -32385,8 +32484,8 @@ function _finishScanAll(){
   clearTimeout(window._scanAllFallback);
   loadPages();
   _setScanAllBtn('\u2713 Scan complete', true, false);
-  toast('All pages scanned \u2014 results updated below.', '#4ade80');
-  setTimeout(function(){ _setScanAllBtn('\u26a1 Scan All', false, false); }, 6000);
+  toast('Priority scan complete \u2014 results updated below.', '#4ade80');
+  setTimeout(function(){ _setScanAllBtn('\u26a1 Scan Priorities', false, false); }, 6000);
 }
 
 function scanSelectedPages() {
@@ -32396,12 +32495,12 @@ function scanSelectedPages() {
   if (!confirm('Scan ' + ids.length + ' selected page' + (ids.length>1?'s':'') + ' now? They run one by one \\u2014 watch the button for progress.')) return;
   var b = document.getElementById('scanSelectedBtn');
   _scanAllActive = true; _scanAllDone = 0; _scanAllTotal = 0; window._scanMode = 'selected';
-  if (b){ b.innerHTML = '\\u23f3 Starting\\u2026'; b.disabled = true; b.style.opacity='0.85'; }
+  if (b){ b.innerHTML = '<i class=\"fas fa-circle-notch fa-spin\"></i> Starting\u2026'; b.disabled = true; b.style.opacity='0.85'; }
   api('/scan-selected', 'POST', { page_ids: ids }).then(function(d){
     if (d && d.success) {
       _scanAllTotal = d.queued || 0;
       toast('Scanning ' + _scanAllTotal + ' selected page' + (_scanAllTotal>1?'s':'') + ' \\u2014 watch Live Activity.', '#60a5fa');
-      if (b) b.innerHTML = '\\u23f3 Scanning 0/' + _scanAllTotal + '\\u2026';
+      if (b) b.innerHTML = '<i class=\"fas fa-circle-notch fa-spin\"></i> Scanning 0/' + _scanAllTotal + '\u2026';
       clearTimeout(window._scanAllFallback);
       window._scanAllFallback = setTimeout(_finishScanSelected, Math.max(60000, _scanAllTotal * 20000));
       var n = 0;
@@ -33572,6 +33671,7 @@ function renderBriefWall(){
     + '</div>';
 }
 
+// CONTENTSCALE-PRIORITY-CYCLE-QUEUE-20260909=true
 function renderPages() {
   var el = document.getElementById('pagesList');
   var countEl = document.getElementById('pageCountLabel');
@@ -33609,19 +33709,19 @@ function renderPages() {
     var tier, tierLabel, tierColor, action;
     if (ps !== null && ps <= 10 && impr >= 100 && (clicks / Math.max(impr,1)) * 100 < 1) {
       tier = 1; tierLabel = '\\ud83c\\udfaf QUICK WIN'; tierColor = '#f97316';
-      action = 'Rewrite title/meta for the search intent + get cited in the AI Overview (Citation Brief). Google already ranks you \\u2014 only the click is missing.';
+      action = 'Priority signal: page 1 + demand + weak CTR. Open Intelligence/Brief first, then choose KEEP / OPTIMIZE / EXPAND / REWRITE.';
     } else if (ps !== null && ps > 10 && ps <= 20 && impr >= 100) {
       tier = 2; tierLabel = '\\u26a1 STRIKING DISTANCE'; tierColor = '#facc15';
-      action = 'Page 2 with real demand. Execute the Citation Brief + strengthen internal links to this page \\u2014 one push to page 1.';
+      action = 'Priority signal: page 2 + real demand. Review Intelligence/Brief and choose the safest treatment before changing content.';
     } else if (impr >= 500) {
       tier = 3; tierLabel = '\\ud83d\\udcc8 HIGH DEMAND'; tierColor = '#60a5fa';
-      action = 'Big search demand, weak position. Full content rebuild via the brief: depth, E-E-A-T, schema.';
+      action = 'Priority signal: high demand + weak position. Diagnose first; a rewrite is only one possible treatment.';
     } else if (ps !== null && ps <= 10 && impr > 0 && impr < 50) {
       tier = 5; tierLabel = '\\ud83d\\udd0d LOW DEMAND'; tierColor = '#6b7280';
       action = 'Ranks well but nobody searches it. Retarget to a query WITH volume (check GSC Queries) or merge into a stronger page.';
     } else {
       tier = 4; tierLabel = '\\ud83d\\udd28 BUILD'; tierColor = '#9ca3af';
-      action = 'Moderate demand, weak position. Work through the brief when tiers above are cleared.';
+      action = 'Lower active priority. Review after tiers 1-3; use Intelligence/Brief to decide the treatment.';
     }
     // Expected CTR at a good spot: pos 1-3 ~20%, 4-5 ~12%, 6-10 ~6%, page 2+ potential if pushed to top ~15%
     var expCtr = (ps !== null && ps <= 3) ? 0.20 : (ps !== null && ps <= 5) ? 0.12 : (ps !== null && ps <= 10) ? 0.06 : 0.15;
@@ -33629,10 +33729,27 @@ function renderPages() {
     _leadQueue.push({ p: p, tier: tier, tierLabel: tierLabel, tierColor: tierColor, action: action, missed: missed, impr: impr, clicks: clicks, ps: ps });
   });
   _leadQueue.sort(function(a,b){ if (a.tier !== b.tier) return a.tier - b.tier; return b.missed - a.missed; });
+  var _priorityQueue = _leadQueue.filter(function(q){ return q.tier < 5; });
+  var _deferredQueue = _leadQueue.filter(function(q){ return q.tier === 5; });
+  var _priorityById = {};
+  _leadQueue.forEach(function(q){ _priorityById[q.p.id] = q; });
+  var _priorityRankById = {};
+  _priorityQueue.forEach(function(q,i){ _priorityRankById[q.p.id] = i + 1; });
+  var _checkedCount = _pages.filter(_isMd).length;
+  var _noDataCount = _pages.filter(function(p){ return !_isMd(p) && !_priorityById[p.id]; }).length;
+  var opportunityCycleHtml = '<div id="opportunityCycle" style="background:linear-gradient(90deg,rgba(14,165,233,.08),rgba(124,58,237,.04));border:1px solid #1f2937;border-radius:8px;padding:10px 14px;margin-bottom:12px;display:flex;gap:10px 16px;align-items:center;flex-wrap:wrap;">'
+    + '<div style="min-width:220px;flex:1;"><div style="font-size:10px;font-weight:900;letter-spacing:.08em;color:#7dd3fc;text-transform:uppercase;margin-bottom:3px;">Opportunity cycle</div>'
+    + '<div style="font-size:11px;color:#9ca3af;line-height:1.5;">Discover everything. Prioritize from GSC. Scan only what matters. After a work cycle, import fresh GSC + sitemap data to recalculate #1, #2, #3.</div></div>'
+    + '<span style="font-size:11px;color:#4ade80;font-weight:800;">' + _priorityQueue.length + ' active priorities</span>'
+    + '<span style="font-size:11px;color:#60a5fa;font-weight:800;">' + _checkedCount + ' monitoring</span>'
+    + '<span style="font-size:11px;color:#6b7280;font-weight:800;">' + (_deferredQueue.length + _noDataCount) + ' deferred/no-data</span>'
+    + '<button onclick="gscAction()" style="font-size:10px;font-weight:800;padding:5px 10px;border-radius:5px;background:#1e3a8a;border:1px solid #3b82f6;color:#bfdbfe;cursor:pointer;">Refresh GSC</button>'
+    + '<button onclick="showImportModal(\\'sitemap\\')" style="font-size:10px;font-weight:800;padding:5px 10px;border-radius:5px;background:#082f49;border:1px solid #0284c7;color:#7dd3fc;cursor:pointer;">Refresh Sitemap</button>'
+    + '</div>';
 
   var leadQueueHtml = '';
-  if (_leadQueue.length) {
-    var rows = _leadQueue.map(function(q, i){
+  if (_priorityQueue.length) {
+    var rows = _priorityQueue.map(function(q, i){
       var path = ''; try { path = new URL(q.p.url).pathname; } catch(e) { path = q.p.url; }
       if (path === '/' || !path) path = '(homepage)';
       // Mobile fix: 5 non-shrinking elements (rank, tier, metrics, missed-badge) plus the page path
@@ -33656,8 +33773,8 @@ function renderPages() {
         + '</tr>';
     };
     var legendHtml = '<div id="leadQueueLegend" style="display:none;border-top:1px solid #1f2937;background:#0a0e14;padding:14px 16px;">'
-      + '<div style="font-size:11px;font-weight:800;color:#e5e7eb;margin-bottom:4px;letter-spacing:.04em;text-transform:uppercase;">How the Lead Queue ranks your pages</div>'
-      + '<div style="font-size:11px;color:#6b7280;line-height:1.7;margin-bottom:12px;">Every page is placed in a tier based on your live Google Search Console data. Within each tier, pages are ordered by <span style="color:#4ade80;font-weight:700;">+clicks/mo</span> \\u2014 the estimated clicks per month you are currently missing (search demand \\u00d7 the click-through rate a top position earns, minus the clicks you already get). Work from top to bottom: the highest entry is always your fastest route to new leads. When you finish a page, mark it with \\u25cb my check \\u2014 it leaves the queue and the next opportunity moves up.</div>'
+      + '<div style="font-size:11px;font-weight:800;color:#e5e7eb;margin-bottom:4px;letter-spacing:.04em;text-transform:uppercase;">How Active Priorities are ranked</div>'
+      + '<div style="font-size:11px;color:#6b7280;line-height:1.7;margin-bottom:12px;">GSC determines <strong>where to look first</strong>; it does not automatically decide what content treatment to use. Within each tier, pages are ordered by estimated missed clicks. Work #1, then #2, then #3. Open Intelligence/Brief before changing content; treatment remains KEEP / OPTIMIZE / EXPAND / REWRITE. When you finish your own work on a page, \\u25cb my check moves it into Completed / Monitoring.</div>'
       + '<table style="width:100%;border-collapse:collapse;background:#0d1117;border:1px solid #1f2937;border-radius:6px;overflow:hidden;">'
       + '<tr style="background:#111827;">'
       + '<th style="padding:7px 10px;font-size:9px;font-weight:800;color:#6b7280;text-transform:uppercase;letter-spacing:.06em;text-align:left;">Tier</th>'
@@ -33665,18 +33782,18 @@ function renderPages() {
       + '<th style="padding:7px 10px;font-size:9px;font-weight:800;color:#6b7280;text-transform:uppercase;letter-spacing:.06em;text-align:left;">What it means</th>'
       + '<th style="padding:7px 10px;font-size:9px;font-weight:800;color:#6b7280;text-transform:uppercase;letter-spacing:.06em;text-align:left;">Your action</th>'
       + '</tr>'
-      + legendRow('#f97316','1 \\u00b7 \\ud83c\\udfaf QUICK WIN','Position \\u226410 \\u00b7 \\u2265100 impressions \\u00b7 CTR &lt;1%','Google already shows you on page 1 for real search demand, but searchers are not clicking. The ranking work is done \\u2014 only the click is missing.','Rewrite the title &amp; meta description around the exact search intent, then follow the Citation Brief to get cited in the AI Overview. Fastest possible leads.')
-      + legendRow('#facc15','2 \\u00b7 \\u26a1 STRIKING DISTANCE','Position 11\\u201320 \\u00b7 \\u2265100 impressions','You are on page 2 for a query people actually search. One quality push moves you onto page 1, where the clicks are.','Execute the Citation Brief recommendations and add internal links from your strongest pages to this one.')
-      + legendRow('#60a5fa','3 \\u00b7 \\ud83d\\udcc8 HIGH DEMAND','\\u2265500 impressions \\u00b7 weak position','Large search demand exists, but your page is not competitive yet. Biggest long-term prize, more work required.','Full content rebuild via the brief: depth, E-E-A-T signals, schema markup, expert sourcing.')
-      + legendRow('#9ca3af','4 \\u00b7 \\ud83d\\udd28 BUILD','Moderate demand \\u00b7 weak position','Worth improving, but the return is smaller than the tiers above.','Work through the brief once tiers 1\\u20133 are cleared.')
-      + legendRow('#6b7280','5 \\u00b7 \\ud83d\\udd0d LOW DEMAND','Position \\u226410 \\u00b7 &lt;50 impressions','The position looks great, but almost nobody searches this query \\u2014 a good ranking with no demand produces zero leads.','Retarget the page to a related query with real volume (check GSC Queries), or merge it into a stronger page.')
+      + legendRow('#f97316','1 \\u00b7 \\ud83c\\udfaf QUICK WIN','Position \\u226410 \\u00b7 \\u2265100 impressions \\u00b7 CTR &lt;1%','Google already shows you on page 1 for real search demand, but searchers are not clicking. The ranking work is done \\u2014 only the click is missing.','Open Intelligence/Brief, verify the query×page evidence, then choose KEEP / OPTIMIZE / EXPAND / REWRITE.')
+      + legendRow('#facc15','2 \\u00b7 \\u26a1 STRIKING DISTANCE','Position 11\\u201320 \\u00b7 \\u2265100 impressions','You are on page 2 for a query people actually search. One quality push moves you onto page 1, where the clicks are.','Review Intelligence/Brief and make the smallest evidence-backed change that fits the page.')
+      + legendRow('#60a5fa','3 \\u00b7 \\ud83d\\udcc8 HIGH DEMAND','\\u2265500 impressions \\u00b7 weak position','Large search demand exists, but your page is not competitive yet. Biggest long-term prize, more work required.','Diagnose first. Expand or rewrite only when the page evidence justifies it; protect strong sections.')
+      + legendRow('#9ca3af','4 \\u00b7 \\ud83d\\udd28 BUILD','Moderate demand \\u00b7 weak position','Worth improving, but the return is smaller than the tiers above.','Keep in Active Priorities, but work tiers 1\\u20133 first.')
+      + legendRow('#6b7280','5 \\u00b7 \\ud83d\\udd0d LOW DEMAND','Position \\u226410 \\u00b7 &lt;50 impressions','The position looks great, but almost nobody searches this query \\u2014 a good ranking with no demand produces zero leads.','Deferred. Reconsider after fresh GSC data or when a stronger query\\u00d7page opportunity appears.')
       + '</table>'
       + '<div style="font-size:10px;color:#4b5563;margin-top:10px;line-height:1.6;">Formula: rule of thumb based on industry CTR curves \\u2014 position 1\\u20133 \\u2248 20% CTR, 4\\u20135 \\u2248 12%, 6\\u201310 \\u2248 6%. Estimates, not guarantees; refresh your GSC import regularly to keep the queue current.</div>'
       + '</div>';
     leadQueueHtml = '<div id="leadQueuePanel" style="background:#0d1117;border:1px solid #1f2937;border-radius:8px;margin-bottom:12px;overflow:hidden;">'
       + '<div style="display:flex;align-items:center;gap:8px 10px;flex-wrap:wrap;padding:10px 14px;background:linear-gradient(90deg,rgba(249,115,22,.08),transparent);">'
-      + '<span onclick="toggleLeadQueue()" style="cursor:pointer;font-size:11px;font-weight:800;letter-spacing:.06em;color:#f97316;text-transform:uppercase;"><span id="leadQueueArrow" style="display:inline-block;margin-right:5px;">▸</span>🎯 Lead Queue</span>'
-      + '<span style="font-size:11px;color:#6b7280;min-width:0;">' + _leadQueue.length + ' open \\u00b7 work top to bottom \\u00b7 check off with \\u25cb my check</span>'
+      + '<span onclick="toggleLeadQueue()" style="cursor:pointer;font-size:11px;font-weight:800;letter-spacing:.06em;color:#f97316;text-transform:uppercase;"><span id="leadQueueArrow" style="display:inline-block;margin-right:5px;">▸</span>🎯 Active Priorities</span>'
+      + '<span style="font-size:11px;color:#6b7280;min-width:0;">' + _priorityQueue.length + ' actionable \\u00b7 work #1 \\u2192 #2 \\u2192 #3 \\u00b7 my check moves work to Monitoring</span>'
       + '<span style="margin-left:auto;font-size:10px;color:#4b5563;">click row to jump \\u00b7 hover for the fix</span>'
       + '<button onclick="toggleLeadQueueLegend(event)" style="flex-shrink:0;cursor:pointer;font-size:10px;font-weight:700;padding:3px 10px;border-radius:5px;background:none;border:1px solid #374151;color:#9ca3af;" title="What do the tiers mean and how is the ranking calculated?">? How ranking works</button>'
       + '</div>'
@@ -33710,31 +33827,31 @@ function renderPages() {
 
   if (countEl) countEl.textContent = displayPages.length + (_ctSearchQuery || _mdFilter !== 'all' ? ' of '+_pages.length : '') + ' pages tracked';
 
-  // Sort: pages WITHOUT your checkmark first (open work on top), QUICK WINS on top of those
-  // (page-1 position + impressions but no clicks = fastest lead opportunity), then by OPPORTUNITY:
-  // highest GSC impressions first, then clicks desc, then position asc. Pages without GSC data sink.
-  var _isQw = function(p){
-    var i = p.gsc_impressions || 0, c = p.gsc_clicks || 0;
-    var ps = p.gsc_position ? parseFloat(p.gsc_position) : null;
-    var ctr = i > 0 ? (c / i) * 100 : null;
-    return ps !== null && ps <= 10 && i >= 100 && (ctr === null || ctr < 1);
+  // Page list follows the same work order as Active Priorities:
+  // 0 = active priority, 1 = completed/monitoring, 2 = deferred/no-data.
+  // This keeps completed work visible immediately under the priority queue instead of burying it under 71+ URLs.
+  var _pageGroup = function(p){
+    if (_isMd(p)) return 1;
+    var q = _priorityById[p.id];
+    return (q && q.tier < 5) ? 0 : 2;
   };
   var sorted = displayPages.slice().sort(function(a,b) {
-    var aMd = _isMd(a) ? 1 : 0, bMd = _isMd(b) ? 1 : 0;
-    if (aMd !== bMd) return aMd - bMd;
-    var aQw = _isQw(a) ? 0 : 1, bQw = _isQw(b) ? 0 : 1;
-    if (aQw !== bQw) return aQw - bQw;
-    var aImpr = a.gsc_impressions || 0;
-    var bImpr = b.gsc_impressions || 0;
-    if (bImpr !== aImpr) return bImpr - aImpr;
-    var aClicks = a.gsc_clicks || 0;
-    var bClicks = b.gsc_clicks || 0;
-    if (bClicks !== aClicks) return bClicks - aClicks;
-    var aPos = a.google_position || 999;
-    var bPos = b.google_position || 999;
-    return aPos - bPos;
+    var ga = _pageGroup(a), gb = _pageGroup(b);
+    if (ga !== gb) return ga - gb;
+    if (ga === 0) return (_priorityRankById[a.id]||9999) - (_priorityRankById[b.id]||9999);
+    if (ga === 1) {
+      var ad = a.manual_done_at ? new Date(a.manual_done_at).getTime() : 0;
+      var bd = b.manual_done_at ? new Date(b.manual_done_at).getTime() : 0;
+      return bd - ad;
+    }
+    var ai = a.gsc_impressions || 0, bi = b.gsc_impressions || 0;
+    if (bi !== ai) return bi - ai;
+    var ap = a.gsc_position ? parseFloat(a.gsc_position) : 999;
+    var bp = b.gsc_position ? parseFloat(b.gsc_position) : 999;
+    return ap - bp;
   });
-  el.innerHTML = leadQueueHtml + mdBarHtml + sorted.map(function(p, pageIdx) {
+  var _deferredOrdinal = 0;
+  el.innerHTML = opportunityCycleHtml + leadQueueHtml + mdBarHtml + sorted.map(function(p, pageIdx) {
     var pos = p.google_position;
     var score = p.graaf_score;
     // Populate brief cache so the View Brief button + popup work (full data when available)
@@ -33754,15 +33871,26 @@ function renderPages() {
     }
     var nextCheck = (nextCheckDate && p.check_frequency!=='0' && p.check_frequency!=='0days' && p.check_frequency!=='off') ? 'Next: ' + nextCheckDate.toLocaleDateString('en-GB',{day:'2-digit',month:'short'}) : '';
     var freqLabel = (function(f){ var m={'0':'off (no scan)','off':'off (no scan)','1day':'daily','3days':'every 3 days','7days':'every 7 days','weekly':'weekly','1week':'weekly','2weeks':'every 2 weeks','17days':'every 17 days','21days':'every 21 days','30days':'every 30 days','monthly':'monthly'}; if(m[f])return m[f]; var x=String(f||'').match(/^(\d+)\s*days?$/); return x?('every '+x[1]+' days'):'every 3 days'; })(p.check_frequency);
-// CONTENTSCALE-TRACKER-FULL-URL-VISIBLE-20260909=true
+// CONTENTSCALE-TRACKER-FULL-URL-VISIBLE-20260909=true | CONTENTSCALE-DONE-AUTO-VERIFY-GRAAF-EMAILS-20260909=true | CONTENTSCALE-TRACKER-LEGACY-ADD-AIO-UI-REMOVED-20260909=true
     // Clean URL - remove protocol, www, and fix anchor slugs (#section)
     var rawUrl = p.url || '';
     var urlClean = rawUrl.replace(/^https?:[/][/]/, '').replace(/^www[.]/, '');
     // Remove anchor fragments with weird chars like #audiencekeyword
     var urlShort = urlClean.replace(/#.*$/, '').replace(/[/]$/, '') || urlClean;
-    // Page number (1-based)
-    var pageNum = pageIdx + 1;
+    // Work-order label follows Active Priorities; checked pages become Monitoring; weak/no-data pages are Deferred.
+    var _grp = _pageGroup(p);
+    var _prevGrp = pageIdx > 0 ? _pageGroup(sorted[pageIdx-1]) : -1;
+    var _sectionPrefix = '';
+    if (_grp !== _prevGrp) {
+      if (_grp === 0) _sectionPrefix = '<div style="margin:14px 0 8px;padding:8px 12px;background:rgba(249,115,22,.06);border:1px solid #7c2d12;border-radius:7px;color:#fb923c;font-size:10px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;">Active Priorities \\u2014 work #1, then #2, then #3</div>';
+      else if (_grp === 1) _sectionPrefix = '<div style="margin:14px 0 8px;padding:8px 12px;background:rgba(74,222,128,.06);border:1px solid #166534;border-radius:7px;color:#4ade80;font-size:10px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;">Completed / Monitoring \\u2014 kept visible for proof & history</div>';
+      else _sectionPrefix = '<div style="margin:14px 0 8px;padding:8px 12px;background:rgba(107,114,128,.06);border:1px solid #374151;border-radius:7px;color:#9ca3af;font-size:10px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;">Deferred / Low Priority \\u2014 sorted by current GSC data; refresh GSC to reconsider</div>';
+    }
+    if (_grp === 2) _deferredOrdinal++;
+    var pageNumLabel = _grp === 0 ? ('#' + (_priorityRankById[p.id] || (pageIdx+1))) : (_grp === 1 ? '\\u2713' : ('D' + _deferredOrdinal));
     var isDone = p.is_done === true || p.is_done === 't' || p.is_done === 'true' || p.is_done === 1;
+    var implementationAt = p.implementation_at ? new Date(p.implementation_at).toLocaleString('en-GB',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '';
+    var implementationVerifiedAt = p.implementation_verified_at ? new Date(p.implementation_verified_at).toLocaleString('en-GB',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '';
 
     // Citation badges
     var badges = '';
@@ -33797,7 +33925,7 @@ function renderPages() {
       badges += p.ai_perplexity_cited ? '<span class="cs-cs-badge purple" style="border:1px solid #7c3aed;">&#10003; Perplexity</span> ' : '<span class="cs-cs-badge grey">No Perplexity</span> ';
       badges += p.ai_bing_cited ? '<span class="cs-cs-badge" style="background:#0c2340;color:#60a5fa;border:1px solid #1d4ed8;" title="Bing visibility / Copilot eligibility signal only — not verified Copilot citation evidence">&#10003; Bing signal</span> ' : '<span class="cs-cs-badge grey" title="No Bing visibility signal captured; verify Copilot manually in AI Evidence">No Bing signal</span> ';
     } else {
-      badges += '<span class="cs-cs-badge grey" title="No AI citation check has run yet \u2014 paste HTML or Scan All">AI citations: not checked yet</span> ';
+      badges += '<span class="cs-cs-badge grey" title="No AI citation check has run yet \u2014 scan this URL, Scan Selected, or Scan Priorities">AI citations: not checked yet</span> ';
     }
     if (score) badges += '<span class="cs-cs-badge yellow">' + score + '/100</span> ';
     if (p.fetch_reliable === false) badges += '<span class="cs-cs-badge" style="background:#2d1f00;color:#fbbf24;">! fetch issue</span> ';
@@ -33829,7 +33957,7 @@ function renderPages() {
     // GSC import alone is NOT a scan, so GSC-only pages also get the banner.
     var notScannedYet = !lastCheckedRaw && !(p.brief_check_count > 0) && !(p.graaf_score > 0);
     var pendingBanner = (notScannedYet && !isDone)
-      ? '<div style="display:flex;align-items:center;gap:8px;padding:6px 14px;background:rgba(96,165,250,.06);border-bottom:1px solid rgba(96,165,250,.15);font-size:11px;color:#60a5fa;"><span style="animation:blink 2s infinite;display:inline-block">&#9679;</span> First scan will start automatically after pasting HTML or clicking Scan All</div>'
+      ? '<div style="display:flex;align-items:center;gap:8px;padding:6px 14px;background:rgba(96,165,250,.06);border-bottom:1px solid rgba(96,165,250,.15);font-size:11px;color:#60a5fa;"><span style="animation:blink 2s infinite;display:inline-block">&#9679;</span> Not scanned yet \u2014 scan this URL, select it for Scan Selected, or use Scan Priorities</div>'
       : '';
 
     // Needs HTML banner
@@ -33885,16 +34013,16 @@ function renderPages() {
         + (_pushList.length > 5 ? '<div style="font-size:9px;color:#4b5563;margin-top:3px;">+ ' + (_pushList.length - 5) + ' more in your Queries CSV</div>' : '')
         + '</div>';
     }
-    return '<div class="cs-page-card' + (isDone ? ' done' : '') + '" data-page-id="' + p.id + '" style="position:relative;background:#0d1117;border:1px solid #1f2937;' + (_mdOn ? 'border-left:4px solid #16a34a;' : 'border-left:4px solid #374151;') + 'border-radius:10px;margin-bottom:12px;overflow:hidden;">'
+    return _sectionPrefix + '<div class="cs-page-card' + (isDone ? ' done' : '') + '" data-page-id="' + p.id + '" style="position:relative;background:#0d1117;border:1px solid #1f2937;' + (_mdOn ? 'border-left:4px solid #16a34a;' : 'border-left:4px solid #374151;') + 'border-radius:10px;margin-bottom:12px;overflow:hidden;">'
       + pendingBanner
       + needsHtmlBanner
-      + (isDone ? '<div style="display:flex;align-items:center;gap:6px;padding:5px 14px;background:rgba(74,222,128,.06);border-bottom:1px solid #166534;font-size:10px;color:#4ade80;letter-spacing:.06em;"><span>\\u2713</span> DONE &mdash; marked as implemented. Tracking continues.</div>' : '')
+      + (isDone ? '<div style="display:flex;align-items:center;gap:6px;padding:5px 14px;background:rgba(74,222,128,.06);border-bottom:1px solid #166534;font-size:10px;color:#4ade80;letter-spacing:.04em;"><span>\\u2713</span> IMPLEMENTED' + (implementationAt ? ' &middot; ' + implementationAt : '') + (implementationVerifiedAt ? ' &middot; VERIFIED ' + implementationVerifiedAt : ' &middot; verifying live page...') + '</div>' : '')
       + '<div style="padding:14px 16px;' + (isDone ? 'opacity:.6;' : '') + '">'
       + '<div class="cs-card-head" style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;">'
       + '<div style="display:flex;align-items:flex-start;gap:8px;flex:1;min-width:0;">'
       + '<input type="checkbox" class="page-select-cb" data-id="' + p.id + '" onclick="event.stopPropagation();bulkCbClick(event,this)" style="width:14px;height:14px;margin-top:3px;accent-color:#ef4444;cursor:pointer;flex-shrink:0;">'
       + '<div style="flex:1;min-width:0;">'
-      + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;"><span style="font-size:10px;font-weight:800;color:#d1d5db;background:#1f2937;border:1px solid #374151;border-radius:4px;padding:1px 7px;flex-shrink:0;">#' + pageNum + '</span>'
+      + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;"><span style="font-size:10px;font-weight:800;color:#d1d5db;background:#1f2937;border:1px solid #374151;border-radius:4px;padding:1px 7px;flex-shrink:0;">' + pageNumLabel + '</span>'
       + (function(){
           var md = p.manual_done === true || p.manual_done === 't' || p.manual_done === 'true' || p.manual_done === 1;
           var mdAt = (md && p.manual_done_at) ? new Date(p.manual_done_at).toLocaleDateString('en-GB',{day:'2-digit',month:'short'}) : '';
@@ -33941,9 +34069,8 @@ function renderPages() {
       + '<div class="cs-card-actions" style="display:flex;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;align-items:flex-start;">'
       + '<button onclick="event.stopPropagation();openAiEvidence(' + p.id + ')" style="background:#0d1117;border:1px solid #8b5cf6;border-radius:7px;color:#c4b5fd;cursor:pointer;font-size:11px;padding:5px 12px;font-weight:700;" title="Open the five-engine manual evidence panel">&#129504; AI Evidence ' + (function(){var a=p.ai_manual_evidence;if(typeof a==="string"){try{a=JSON.parse(a);}catch(x){a={};}}return Object.keys(a||{}).filter(function(k){return ["google_aio","chatgpt","perplexity","claude","copilot"].indexOf(k)>-1;}).length;})() + '/5</button>'
       + '<button onclick="event.stopPropagation();openCompetitiveIntelligence(' + p.id + ')" style="background:#0d1117;border:1px solid #0891b2;border-radius:7px;color:#67e8f9;cursor:pointer;font-size:11px;padding:5px 12px;font-weight:700;" title="Cross-engine competitors, sources, content opportunities and claims to verify">&#128269; Intelligence</button>'
-      + '<button class="cs-aio-btn" onclick="event.stopPropagation();openAioPaste(' + p.id + ')" style="background:#0d1117;border:1px solid ' + (p.aio_manual_text ? '#22c55e' : '#f59e0b') + ';border-radius:7px;color:' + (p.aio_manual_text ? '#4ade80' : '#fbbf24') + ';cursor:pointer;font-size:11px;padding:5px 12px;font-weight:600;" title="' + (p.aio_manual_text ? 'AI Overview saved \\u2014 click to edit' : 'Step 1 \\u2014 paste the Google AI Overview before scanning') + '">\\ud83d\\udd0d ' + (p.aio_manual_text ? 'AIO \\u2713' : 'Add AIO') + '</button>'
-      + '<button class="cs-html-btn' + (_htmlBlink ? ' cs-blink' : '') + '" onclick="openHtmlUpload(' + p.id + ')" style="background:#0d1117;border:1px solid ' + (_htmlDone ? '#22c55e' : (_htmlBlink ? '#f59e0b' : (htmlNeeded ? '#f59e0b' : '#38bdf8'))) + ';border-radius:7px;color:' + (_htmlDone ? '#4ade80' : (_htmlBlink ? '#fbbf24' : (htmlNeeded ? '#fbbf24' : '#7dd3fc'))) + ';cursor:pointer;font-size:11px;padding:5px 12px;font-weight:600;" title="' + (_htmlDone ? 'HTML scanned \\u2014 click to update' : (_htmlBlink ? 'HTML saved \\u2014 waiting for the scan to process it' : (htmlNeeded ? 'Step 2 \\u2014 paste HTML for the first scan' : 'Update HTML'))) + '">\\ud83d\\udccb ' + (_htmlDone ? 'HTML \\u2713' : (htmlNeeded ? 'Add HTML' : 'HTML')) + '</button>'
-      + (lastChecked ? '<button onclick="checkPage(' + p.id + ')" style="background:#0d1117;border:1px solid ' + (_scanDone ? '#22c55e' : '#2dd4bf') + ';border-radius:7px;color:' + (_scanDone ? '#4ade80' : '#5eead4') + ';cursor:pointer;font-size:13px;padding:5px 10px;font-weight:600;" title="' + (_scanDone ? 'Scanned this round \\u2014 click to rescan now' : 'Rescan now') + '">' + (_scanDone ? '\\u21bb \\u2713' : '\\u21bb') + '</button>' : '')
+      + ((explicitlyNeeds || p.fetch_reliable === false) ? '<button class="cs-html-btn cs-blink" onclick="openHtmlUpload(' + p.id + ')" style="background:#0d1117;border:1px solid #f59e0b;border-radius:7px;color:#fbbf24;cursor:pointer;font-size:11px;padding:5px 12px;font-weight:700;" title="Automatic live fetch was not reliable. Paste the published HTML manually to continue verification.">&#9888; Manual HTML required</button>' : '')
+      + '<button data-check-btn="' + p.id + '" onclick="checkPage(' + p.id + ')" style="background:#0d1117;border:1px solid ' + (_scanDone ? '#22c55e' : '#2dd4bf') + ';border-radius:7px;color:' + (_scanDone ? '#4ade80' : '#5eead4') + ';cursor:pointer;font-size:11px;padding:5px 10px;font-weight:700;" title="' + (lastChecked ? (_scanDone ? 'Scanned this round \\u2014 click to rescan now' : 'Rescan this URL now') : 'Scan this URL now') + '">' + (lastChecked ? (_scanDone ? '\\u21bb \\u2713' : '\\u21bb Scan') : '\\u25b6 Scan') + '</button>'
       + ((hasBrief || _lastBriefData[p.id]) ? '<button onclick="viewLastBrief(' + p.id + ')" style="background:#0d1117;border:1px solid #8b5cf6;border-radius:7px;color:#c4b5fd;cursor:pointer;font-size:11px;padding:5px 12px;font-weight:600;" title="View Citation Brief">\\ud83d\\udcc4 View Brief</button>' : '')
       + '<button onclick="csPosHist(' + p.id + ')" style="background:#0d1117;border:1px solid #64748b;border-radius:7px;color:#cbd5e1;cursor:pointer;font-size:13px;padding:5px 10px;font-weight:600;" title="Ranking history">\\ud83d\\udcc8</button>'
       + '<button onclick="deletePage(' + p.id + ')" style="background:#0d1117;border:1px solid #ef4444;border-radius:7px;color:#f87171;cursor:pointer;font-size:13px;padding:5px 10px;font-weight:600;" title="Delete page">\\ud83d\\uddd1</button>'
@@ -33961,7 +34088,7 @@ function renderPages() {
           + '</div>'
         : isDone
           ? '<div style="display:flex;align-items:center;gap:8px;padding:10px 16px;background:rgba(74,222,128,.06);border-top:1px solid #166534;font-size:12px;color:#4ade80;cursor:pointer;" onclick="markDone(' + p.id + ',this,true)">'
-            + '<span>\\u2713</span><span style="font-weight:700;">DONE \\u2014 marked as implemented</span>'
+            + '<span>\\u2713</span><span style="font-weight:700;">DONE \\u2014 implementation declared</span>'
             + '<span style="margin-left:auto;font-size:11px;color:#374151;">click to undo</span>'
             + '</div>'
           : ''
@@ -35193,16 +35320,14 @@ var _tourSteps = [
   { sel: '#sitemapBtn', title: '4 \\u00b7 Sitemap', text: 'Upload your sitemap so the tracker knows every page that exists on your site \\u2014 not just the tracked ones. That sharpens cannibalization detection (which page owns which intent) and stops \\u201cnew page\\u201d advice for pages you already have.' },
   { sel: '#briefLangSel', title: '4b \\u00b7 Brief language', text: 'Choose the language your briefs are written in. Leave it on \\ud83c\\udf10 Auto and each brief follows that page\\u2019s own language \\u2014 or pick a fixed language (16 to choose from, e.g. if your pages are English but you\\u2019d rather read the brief in Dutch). The change applies from the next scan; only the human-readable text is translated \\u2014 URLs, code and HTML stay as-is.' },
   { sel: '#impressionGap', title: '5 \\u00b7 Impression Gap', text: 'Real queries Google already shows your site for that none of your tracked pages target \\u2014 free traffic you are leaving on the table. Locked until you connect real search data (GSC import). Once connected it also powers Cannibalization detection and the Lead Queue below, so connect it early.' },
-  { sel: '#scanAllBtn', title: '6 \\u00b7 Scan All', text: 'Scans every tracked page one by one \\u2014 useful with many pages, and ideal for a lead or manager who assigns work to specialists: one click refreshes every brief so the whole team has up-to-date instructions.' },
+  { sel: '#scanAllBtn', title: '6 \\u00b7 Scan Priorities', text: 'Scans only the current GSC-ranked Active Priorities, one by one. Checked, deferred and no-data URLs are skipped, so importing 71 or 500 URLs does not mean paying to scan all of them.' },
   { sel: '#scanSelectedBtn', title: '6b \\u00b7 Scan Selected', text: 'Do not want to scan everything? Tick the checkbox on just the pages you want (shift-click to select a range), then click Scan Selected \\u2014 only those pages get re-scanned. Saves time and scan budget when you are working one page at a time.' },
   { sel: '.cs-live', title: '7 \\u00b7 Live Activity', text: 'Your window into what the tracker is doing right now: which page is being scanned, what just finished, what is queued. Auto-updates every 8 seconds \\u2014 no need to refresh.' },
   { sel: '#brandCtxPanel', title: '8 \\u00b7 Brand & author info', text: 'Store the real facts about your business here \\u2014 name, author, credentials, service area, anything the AI must respect. Every brief uses these facts instead of inventing details. Optional, but it makes the generated text noticeably more accurate.' },
   { sel: '.cs-page-card', title: '9 \\u00b7 Your tracked pages', text: 'Each card is one tracked page: its Google position, AI citation badges (AI Overview, Perplexity, Copilot), GSC clicks and impressions, and in the yellow block its pushable queries \\u2014 searches on page 2 that one good push moves to page 1.' },
-  { sel: '.cs-aio-btn', title: '9a \\u00b7 Add AIO \\u2014 paste your AI Overview', text: 'Automated tools cannot see the personalized Google AI Overview you get \\u2014 so paste it here. On the card, click \\u201cAdd AIO\\u201d, copy the AI Overview Google shows you for this query (including its source links), and paste it. This is step 1 \\u2014 do it before scanning, and the brief then shows exactly who Google cites and the precise passage to write to get cited yourself. The button turns green (AIO \\u2713) once saved.' },
   { sel: '#cannibalPanel', title: '10 \\u00b7 Cannibalization', text: 'Pages competing with each other for the same search. Click any row for exactly what to do \\u2014 and in most cases you do nothing by hand: the tracker feeds each conflict into the briefs of the affected pages on their next scan, as ready-made actions.' },
-  { sel: '#leadQueuePanel', title: '11 \\u00b7 Lead Queue', text: 'Every page ranked by the clicks you are missing per month \\u2014 your worklist. Work strictly top to bottom: row 1 is always the fastest route to new leads. Click a row to jump to that page; click \\u201c? How ranking works\\u201d for what each tier means.' },
-  { sel: '#myChecksBar', title: '12 \\u00b7 My checks', text: 'Your personal progress. The checkmarks are yours alone \\u2014 scans, HTML updates and restarts never reset them. Filter to \\u201cTo do\\u201d to see only open work; checked pages leave the Lead Queue so the next job rises to the top.' },
-  { sel: '.cs-html-btn', title: '13 \\u00b7 Add HTML \\u2014 the loop', text: 'This is the complete working loop: paste your page HTML here \\u2192 a scan starts automatically \\u2192 read the brief (View Brief) and implement its copy-paste actions on your page \\u2192 paste the NEW HTML here so the next scan verifies it \\u2192 mark the page \\u25cb my check. Done \\u2014 and the queue hands you the next one.' },
+  { sel: '#leadQueuePanel', title: '11 \\u00b7 Active Priorities', text: 'GSC ranks where to work first: #1, then #2, then #3. The queue determines priority, not the content treatment. Open Intelligence/Brief before choosing KEEP, OPTIMIZE, EXPAND or REWRITE.' },
+  { sel: '#myChecksBar', title: '12 \\u00b7 My checks', text: 'Your personal progress. A checked page moves into Completed / Monitoring directly below Active Priorities, where it stays visible for proof/history. Fresh GSC data can later reveal new opportunities.' },
   { sel: '#pagesList', title: '14 \\u00b7 Start tracking', text: 'When nothing is tracked yet this is where you begin: add URLs one by one, import from your sitemap, or paste from Google Search Console. The system then checks them automatically. Free plan: 1 page, 1 domain \\u2014 pick your most important page first.' },
   { sel: '#upsellPanel', title: '15 \\u00b7 Done-for-you', text: 'Do not want to run the loop yourself? Ottmar implements every Citation Brief for you \\u2014 done-for-you AI citation optimization, plus high-GRAAF citation-ready content. One WhatsApp message and he babysits your domain.' },
 ];
@@ -35309,11 +35434,11 @@ async function markDone(pageId, btn, currentDone) {
     var data = await api('/pages/' + pageId + '/done', 'PATCH', { is_done: newDone });
     if (data.success) {
       if (newDone) {
-        // Mark page as needing new HTML
         var p = (_pages||[]).find(function(x){ return x.id == pageId; });
-        if (p) p.needs_html = true;
-        toast('Done! Paste new HTML whenever you are ready for the next scan.', '#4ade80');
-        setTimeout(loadPages, 400);
+        if (p) { p.needs_html = false; p.implementation_status = 'verifying'; }
+        toast('Implementation saved — verifying the live page automatically…', '#4ade80');
+        setTimeout(loadPages, 1200);
+        setTimeout(loadPages, 7000);
       } else {
         toast('Unmarked', '#9ca3af');
         setTimeout(loadPages, 400);
@@ -39240,7 +39365,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
             const recsHtml = Array.isArray(_recs) && _recs.length ? renderTrackerRecommendations(_recs, p.id) : '';
 
             return '<div class="tr-card" style="border-left:3px solid '+borderColor+';position:relative;' + (isDone ? 'opacity:.65;' : '') + '">'
-                + (isDone ? '<div style="display:flex;align-items:center;gap:6px;padding:5px 14px;background:rgba(74,222,128,.06);border-bottom:1px solid #166534;font-size:10px;color:#4ade80;letter-spacing:.06em;"><span>v</span> DONE &mdash; marked as implemented. Tracking continues.</div>' : '')
+                + (isDone ? '<div style="display:flex;align-items:center;gap:6px;padding:5px 14px;background:rgba(74,222,128,.06);border-bottom:1px solid #166534;font-size:10px;color:#4ade80;letter-spacing:.06em;"><span>v</span> DONE &mdash; live verification runs automatically.</div>' : '')
                 + '<div style="position:absolute;top:' + (isDone ? '38' : '14') + 'px;left:14px;">'+checkboxHtml+'</div>'
                 + '<div style="padding-left:24px;">'
                 +'<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;">'
@@ -44317,22 +44442,30 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
     }
 
     if (!inherited) {
-      // GRAAF is removed from the tracker — it now runs manually on the Content
-      // Engine (app.contentscale.site). No fresh scan here, no headless browser,
-      // no Puppeteer. Carry forward the last known score so snapshots/history stay
-      // intact at zero compute.
+      // GRAAF is part of the normal Tracker pipeline again. Use the SAME rendered /api/scan
+      // engine as app.contentscale.site so baseline and post-implementation scores are comparable.
       try {
-        const _carryR = await pool.query(
-          `SELECT score, graaf_breakdown, graaf_recommendations FROM tracker_snapshots WHERE page_id=$1 ORDER BY checked_at DESC LIMIT 1`,
-          [pageId]
-        );
-        if (_carryR.rows[0]) {
-          graafScore = _carryR.rows[0].score;
-          graafBreakdown = _carryR.rows[0].graaf_breakdown;
-          graafRecs = _carryR.rows[0].graaf_recommendations;
-        }
-      } catch(e) { /* non-fatal */ }
-      _trSetStep(pageId, 'graaf_score', 'done', 'GRAAF skipped — run it manually on app.contentscale.site');
+        const _base = 'http://localhost:' + (process.env.PORT || 3000);
+        const _gr = await fetch(_base + '/api/scan', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url: page.url }), signal: AbortSignal.timeout(45000)
+        });
+        const _gj = await _gr.json();
+        if (_gr.ok && _gj && _gj.success !== false) {
+          graafScore = (_gj.score != null) ? _gj.score : null;
+          graafBreakdown = _gj.metrics || _gj.breakdown || null;
+          const _rr = _gj.recommendations;
+          graafRecs = Array.isArray(_rr) ? _rr : (_rr && Array.isArray(_rr.all) ? _rr.all : []);
+          _trSetStep(pageId, 'graaf_score', 'done', '🎯 GRAAF: ' + (graafScore == null ? '—' : graafScore + '/100') + ' (live rendered scan)');
+        } else throw new Error((_gj && _gj.error) || 'GRAAF scan failed');
+      } catch(e) {
+        // GRAAF failure must never destroy the rest of a Tracker scan; preserve the last known score.
+        try {
+          const _carryR = await pool.query(`SELECT score, graaf_breakdown, graaf_recommendations FROM tracker_snapshots WHERE page_id=$1 ORDER BY checked_at DESC LIMIT 1`, [pageId]);
+          if (_carryR.rows[0]) { graafScore=_carryR.rows[0].score; graafBreakdown=_carryR.rows[0].graaf_breakdown; graafRecs=_carryR.rows[0].graaf_recommendations; }
+        } catch(_) {}
+        _trSetStep(pageId, 'graaf_score', 'done', 'GRAAF live scan failed — last known score preserved');
+      }
     }
 
     snapshot.score = graafScore;
@@ -46952,15 +47085,15 @@ function startHtmlReminderScheduler() {
           continue;
         }
 
-        // REMINDER: needs_html=TRUE (Done pressed, HTML not pasted)
+        // REMINDER: needs_html=TRUE only when automatic live verification could not reliably fetch the page
         if (p.needs_html && !clientsSentTo.has(clientKey)) {
           clientsSentTo.add(clientKey);
-          const subject = 'Reminder: paste your updated HTML — ' + p.domain;
-          const htmlBody = '<h2 style="font-size:17px;font-weight:800;color:#0f172a;margin-bottom:10px;">Your tracker is waiting for new HTML</h2>'
-            + '<p style="font-size:14px;color:#374151;line-height:1.7;margin-bottom:14px;">You pressed Done — great! The system now needs the <strong>updated HTML</strong> of <strong>' + p.url + '</strong> to measure your improvements and generate the next Citation Brief.</p>'
+          const subject = 'Manual HTML still required — ' + p.domain;
+          const htmlBody = '<h2 style="font-size:17px;font-weight:800;color:#0f172a;margin-bottom:10px;">ContentScale still needs manual HTML</h2>'
+            + '<p style="font-size:14px;color:#374151;line-height:1.7;margin-bottom:14px;">ContentScale could not reliably fetch <strong>' + p.url + '</strong>. Automatic verification is paused only for this page until you provide the published HTML manually.</p>'
             + '<div style="background:#fefce8;border:1px solid #fde047;border-radius:8px;padding:14px 16px;margin-bottom:16px;font-size:13px;color:#854d0e;">'
             + '1. Open <strong>' + p.url + '</strong> in Chrome &rarr; Right-click &rarr; View Page Source<br>'
-            + '2. Ctrl+A &rarr; Ctrl+C &rarr; Go to tracker &rarr; click <strong>Paste new HTML</strong>'
+            + '2. Ctrl+A &rarr; Ctrl+C &rarr; Go to tracker &rarr; click <strong>Manual HTML required</strong>'
             + '</div>'
             + '<a href="' + trackerUrl + '" style="display:inline-block;background:#7c3aed;color:white;text-decoration:none;padding:10px 22px;border-radius:6px;font-size:13px;font-weight:700;">View tracker &rarr;</a>';
           await notifyClient(p.tracker_client_id, subject, htmlBody, subject + '\n\n<a href="' + trackerUrl + '">View tracker →</a>', true).catch(()=>{});
@@ -47034,48 +47167,21 @@ function startTrackerScheduler() {
             continue;
           }
 
-          // ── HTML freshness check: detect changes, notify, but DON'T auto-scan ──
+          // ── HTML freshness check ────────────────────────────────────────────
+          // Live HTML is the default source. A content change is NOT a reason to pause and ask for
+          // manual HTML: runTrackerCheck will fetch/store/analyse it automatically. Manual HTML is
+          // reserved for unreliable fetches. SHA-256/16 matches runTrackerCheck's stored hash format.
           if (page.last_page_hash) {
             try {
-              const liveResp = await fetch(page.url, { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(10000) });
+              const liveResp = await fetch(page.url, { headers: { 'User-Agent': 'Mozilla/5.0 (compatible; ContentScale/1.0)' }, signal: AbortSignal.timeout(10000) });
               if (liveResp.ok) {
                 const liveHtml = await liveResp.text();
                 const crypto = require('crypto');
-                const liveHashMd5 = crypto.createHash('md5').update(liveHtml).digest('hex');
-
-                if (liveHashMd5 !== page.last_page_hash) {
-                  console.log('[tracker-scheduler] HTML change detected for', page.url, '— marking needs_html=true');
-                  // Mark as needing fresh HTML — DON'T auto-fetch and scan
-                  await pool.query('UPDATE tracker_pages SET needs_html=TRUE, next_check_at = NOW() + INTERVAL \'72 hours\' WHERE id=$1', [page.id]).catch(()=>{});
-                  // Notify user ONCE (max once per 24h)
-                  const clientR2 = await pool.query('SELECT * FROM tracker_clients WHERE id=$1', [page.tracker_client_id]);
-                  const client2 = clientR2.rows[0];
-                  if (client2) {
-                    const lastNotify = page.html_mismatch_notified_at;
-                    const oneDayAgo = new Date(Date.now() - 86400000);
-                    if (!lastNotify || new Date(lastNotify) < oneDayAgo) {
-                      await pool.query('UPDATE tracker_pages SET html_mismatch_notified_at = NOW() WHERE id=$1', [page.id]).catch(()=>{});
-                      const trackerUrl2 = (process.env.APP_URL || 'https://app.contentscale.site') + '/track/' + client2.token;
-                      if (client2.email) {
-                        await sendTrackerEmail(page.tracker_client_id,
-                          'Your page changed — paste new HTML for next scan — ' + client2.domain,
-                          '<p style="font-size:14px;color:#374151;line-height:1.7;margin-bottom:14px;">Your page <strong>' + page.url + '</strong> has changed online. To get an accurate scan, please paste your updated page HTML into the tracker.</p><p style="font-size:13px;color:#6b7280;line-height:1.6;margin-bottom:14px;">The orange <strong>HTML</strong> button on your page card is now blinking — click it to paste your fresh HTML.</p>'
-                          + '<a href="' + trackerUrl2 + '" style="display:inline-block;background:#f59e0b;color:#0a0a12;text-decoration:none;padding:10px 22px;border-radius:6px;font-size:13px;font-weight:700;">Paste New HTML →</a>'
-                        , true).catch(()=>{});
-                      }
-                      if (client2.telegram_chat_id) {
-                        await sendTelegramNotification(client2.telegram_chat_id, '🔄 <b>' + page.url + '</b> changed online. Paste fresh HTML in your tracker for the next scan.').catch(()=>{});
-                      }
-                    }
-                  }
-                  continue; // SKIP scan — wait for user to provide new HTML
-                } else {
-                  console.log('[tracker-scheduler] HTML unchanged for', page.url, '— proceeding with scan');
-                }
+                const liveHash = crypto.createHash('sha256').update(liveHtml).digest('hex').substring(0,16);
+                if (liveHash !== String(page.last_page_hash || '')) console.log('[tracker-scheduler] HTML change detected for', page.url, '— automatic live scan will process it');
+                else console.log('[tracker-scheduler] HTML unchanged for', page.url, '— monitoring scan continues');
               }
-            } catch(hashErr) {
-              console.warn('[tracker-scheduler] Hash check failed for', page.url, ':', hashErr.message);
-            }
+            } catch(hashErr) { console.warn('[tracker-scheduler] Freshness check failed for', page.url, ':', hashErr.message); }
           }
         }
 
