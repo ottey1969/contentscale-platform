@@ -1547,6 +1547,31 @@ app.get('/api/tracker-client/:token', async (req, res) => {
     if (cr.rows[0].status === 'disabled' || cr.rows[0].status === 'paused') return res.status(403).json({ success: false, disabled: true, error: 'This tracker is ' + cr.rows[0].status + '. Contact Ottmar to reactivate.' });
     const client = cr.rows[0];
 
+    // CONTENTSCALE-TRACKER-MAIN-GET-SCHEMA-SELF-HEAL-20260909=true
+    // The canonical tracker GET selects lifecycle fields added by later patches.
+    // Heal them BEFORE the SELECT so an existing Railway database cannot 500 simply
+    // because no page has used the Done/brief route yet after deployment.
+    const _trackerMainGetColumns = [
+      ['implementation_at','TIMESTAMPTZ'],
+      ['implementation_verified_at','TIMESTAMPTZ'],
+      ['implementation_status','TEXT'],
+      ['implementation_before_graaf','INTEGER'],
+      ['treatment','TEXT'],
+      ['treatment_target_url','TEXT'],
+      ['treatment_updated_at','TIMESTAMPTZ'],
+      ['last_graaf_score','INTEGER'],
+      ['brief_mode','VARCHAR(1)'],
+      ['redirects_to','TEXT'],
+      ['gsc_autofetch_checked_at','TIMESTAMPTZ'],
+      ['aio_manual_text','TEXT'],
+      ['aio_manual_refs','JSONB'],
+      ['brief_viewed_at','TIMESTAMPTZ']
+    ];
+    for (const [col, type] of _trackerMainGetColumns) {
+      await pool.query('ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS ' + col + ' ' + type);
+    }
+    await _ensureTrackerAiEvidenceSchema();
+
     // Ensure tracker_client_id column exists before querying
     const pagesR = await pool.query(
       `SELECT p.id, p.url, p.keyword, p.gsc_keyword, p.created_at, p.next_check_at, p.last_checked_at,
@@ -6642,6 +6667,10 @@ app.patch('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
    await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS treatment TEXT`).catch(()=>{});
    await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS treatment_target_url TEXT`).catch(()=>{});
    await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS treatment_updated_at TIMESTAMPTZ`).catch(()=>{});
+   await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS implementation_at TIMESTAMPTZ`).catch(()=>{});
+   await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS implementation_verified_at TIMESTAMPTZ`).catch(()=>{});
+   await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS implementation_status TEXT`).catch(()=>{});
+   await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS implementation_before_graaf INTEGER`).catch(()=>{});
    await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS report_cadence TEXT DEFAULT 'monthly'`).catch(()=>{});
    // Drop global unique index - same URL can be tracked by multiple clients
    await client.query(`DROP INDEX IF EXISTS tracker_pages_null_engine_url_idx`).catch(()=>{});
