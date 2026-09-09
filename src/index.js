@@ -45519,6 +45519,38 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
       const _googleAioAlreadyCited = _googleAioExactVerified || !!snapshot.ai_google_overview_cited;
       const _chatgptExactVerified = !!(_manualChatgpt && _manualChatgpt.exact_page_cited);
 
+      // CONTENTSCALE-BRIEF-CLAIMS-FACTS-GATE-20260909=true
+      // ── CLAIMS & FACTS SAFETY GATE ────────────────────────────────────────
+      // Competitive Intelligence may reveal useful competitor claims, but those claims are
+      // opportunities only. They must never silently become facts about this client. Pull the
+      // client's central Claims & Facts register into BOTH brief prompts so ready-to-paste copy
+      // can use VERIFIED facts, while UNVERIFIED/FALSE facts remain blocked.
+      let _claimsFactsRows = [];
+      try {
+        const _cf = await pool.query(
+          `SELECT claim_text,status,source_type,source_engine,source_context,notes
+             FROM tracker_claims_facts
+            WHERE tracker_client_id=$1 AND page_id IS NULL
+            ORDER BY CASE status WHEN 'VERIFIED' THEN 1 WHEN 'UNVERIFIED' THEN 2 WHEN 'FALSE' THEN 3 ELSE 4 END, updated_at DESC, id DESC
+            LIMIT 200`,
+          [clientId]
+        );
+        _claimsFactsRows = _cf.rows || [];
+      } catch (_cfErr) {
+        console.warn('[tracker] claims/facts lookup for brief skipped:', _cfErr && _cfErr.message);
+      }
+      const _verifiedClaims = _claimsFactsRows.filter(r => String(r.status||'').toUpperCase() === 'VERIFIED').map(r => String(r.claim_text||'').trim()).filter(Boolean);
+      const _blockedClaims = _claimsFactsRows.filter(r => ['UNVERIFIED','FALSE','NOT_APPLICABLE'].includes(String(r.status||'').toUpperCase())).map(r => ({claim:String(r.claim_text||'').trim(),status:String(r.status||'').toUpperCase()})).filter(r => r.claim);
+      const _claimsFactsContext = `
+CLIENT CLAIMS & FACTS REGISTER (hard evidence gate):
+VERIFIED — may be used as client facts in ready-to-paste copy:
+${_verifiedClaims.length ? _verifiedClaims.map(x=>' - '+x).join('\n') : ' - (none recorded)'}
+BLOCKED — competitor/intelligence opportunities or rejected facts; NEVER state these as facts about the client unless the same fact is independently explicit in the supplied live page HTML:
+${_blockedClaims.length ? _blockedClaims.map(x=>' - ['+x.status+'] '+x.claim).join('\n') : ' - (none recorded)'}
+
+FACT TRANSFER RULE: A fact observed on a competitor is evidence about THE COMPETITOR, not about this client. Competitor response times, insurance coordination, licenses, certifications, years in business, free estimates/assessments, warranties, financing, service areas, staff/crew attributes, project counts, prices, guarantees, availability, and similar business claims MUST NOT be transferred into client copy merely because they appear in competitor snippets, AIO sources, Perplexity, or a comparison table. If such a competitor pattern is strategically useful but is not verified for the client, describe it only as a VERIFY-FIRST opportunity; do not put the claim into READY-TO-PASTE client prose.
+`;
+
       const citationPrompt = `You are an AI Citation Strategist. Your job is to create an actionable Citation Brief for a single web page.
 
 CURRENT DATE: Today is ${_briefToday} — treat ${_briefYear} as the current year. For any freshness, recency, or "last updated" recommendation, use ${_briefYear}; NEVER describe an earlier year as "current", "latest", or "this year", and never suggest adding a date that is not ${_briefYear}. If the page content shows an older year (e.g. ${_briefYear - 1} or earlier) anywhere — a heading (H1/H2/H3), title tag, meta description, intro, "last updated", or any "current/latest" claim — explicitly flag it as stale and give the exact replacement text using ${_briefYear} (e.g. rewrite an H1 like "... ${_briefYear - 1}" to "... ${_briefYear}").
@@ -45527,6 +45559,7 @@ A Citation Brief tells the content owner EXACTLY what to change so that Google A
 
 ${_cannibalContext}${_gapContext}${_aioOnlyContext}
 
+${_claimsFactsContext}
 AIO BRIEF SCOPE (strict): this is the AI-citation brief — every action must be about earning a citation in Google AI Overview, Perplexity, or Microsoft Copilot. Do NOT include a Google organic "top 5 search results" ranking breakdown here — that belongs in the separate GSC ranking brief, not this one. If you reference competitors, reference the DOMAINS GOOGLE CURRENTLY CITES IN THIS AI OVERVIEW list above (if present) — never the organic SERP.
 
 INPUT DATA:
@@ -45624,7 +45657,7 @@ TOOL/APP SAFETY (decide this first): if the page is a functional tool, calculato
 
 CANNIBALISATION: if one of the sitemap candidate URLs above clearly already targets the SAME keyword/intent as "${kw}", do NOT suggest linking to it. Instead output ONE action (system "Cannibalisation", priority "medium") that names the conflicting URL and recommends differentiating the two pages' intent or canonicalising, so two of the owner's own pages stop competing for the same query.
 
-NO FABRICATION (hard rule, overrides everything): NEVER invent a statistic, percentage, figure, date, quote, name, job title, organisation, award, certification, or ranking, and NEVER add an unverifiable superiority claim such as "#1", "best", "top-rated", or "leading" unless it is already proven on the page. If a number or quote would strengthen a passage but you cannot verify it from the page content or cite a real, named source with a real URL, DO NOT use a placeholder or bracket — rewrite the sentence so it reads naturally WITHOUT that specific detail (e.g. instead of "with [X] years of experience" write "with years of hands-on experience"; instead of a fake response time, write "fast, same-day dispatch" if that is supported by the page, or omit the claim). Every sentence delivered must be finished, real prose the owner can paste as-is — never a fill-in-the-blank. A fabricated fact is a failed brief; so is a bracketed placeholder.
+NO FABRICATION + NO COMPETITOR-TO-CLIENT FACT TRANSFER (hard rule, overrides everything): Competitor facts are opportunities, NEVER client facts. Before writing any factual business claim about the client, it must be supported by (a) the supplied live page HTML or (b) a VERIFIED item in CLIENT CLAIMS & FACTS above. Anything seen only in competitor/AIO/Perplexity evidence must remain a VERIFY-FIRST opportunity and MUST NOT appear as a client assertion in ready-to-paste copy. NEVER invent a statistic, percentage, figure, date, quote, name, job title, organisation, award, certification, or ranking, and NEVER add an unverifiable superiority claim such as "#1", "best", "top-rated", or "leading" unless it is already proven on the page. If a number or quote would strengthen a passage but you cannot verify it from the page content or cite a real, named source with a real URL, DO NOT use a placeholder or bracket — rewrite the sentence so it reads naturally WITHOUT that specific detail (e.g. instead of "with [X] years of experience" write "with years of hands-on experience"; instead of a fake response time, write "fast, same-day dispatch" if that is supported by the page, or omit the claim). Every sentence delivered must be finished, real prose the owner can paste as-is — never a fill-in-the-blank. A fabricated fact is a failed brief; so is a bracketed placeholder.
 
 AIO COMPETITOR GAP TABLE SOURCE (if you include a Competitor Gap item): its comparison_table rows must come from the "DOMAINS GOOGLE CURRENTLY CITES IN THIS AI OVERVIEW" list above, if present — these are the actual AIO sources, and this is an AI-citation brief, not a ranking brief. If that list is empty, either omit the Competitor Gap item entirely or write it around the Perplexity-cited sources list above. Never populate this table from organic Google search results — that data belongs only in the separate GSC Brief.
 
@@ -45665,10 +45698,12 @@ INPUT DATA:
 - Internal-link candidates — REAL URLs from this site's sitemap (if you suggest an internal link, the target MUST be copied verbatim from this list; NEVER invent or guess a URL):
 ${_otherPagesList || '(none available — do NOT output any internal-link action)'}
 
+${_claimsFactsContext}
 DATA SCOPE — READ THIS FIRST:
 - The GSC Clicks, Impressions, CTR and Average position above are PAGE-LEVEL AGGREGATES across ALL queries this page appears for — they are NOT specific to "${kw}". This page's single highest-volume query is "${page.gsc_keyword || kw}".
 - A low aggregate CTR is normally diluted by many lower-ranked, non-target queries. Do NOT treat a low page-level CTR as proof of a title/description mismatch for "${kw}".
 - If "Live Google position" is 1-3 for "${kw}", the page already ranks well for it — do NOT prescribe a title overhaul for that keyword.
+- AI EVIDENCE OVERRIDE: Google AIO for this page/query is ${_googleAioAlreadyCited ? 'CITED' : 'NOT VERIFIED AS CITED'}. If it is CITED, NEVER say the page lacks AI/AIO visibility because of low organic ranking. Organic position and AI citation are separate observed signals; preserve the citation win while addressing ranking gaps.
 - ALIGNMENT CHECK (important): compare the page CONTENT (HTML above) to the target keyword "${kw}". If the content is clearly about a DIFFERENT topic than the keyword — e.g. the content is written for a specific service but the keyword is the brand name (or vice-versa) — then the REAL issue is page↔keyword alignment/positioning, not a CTR tweak. In that case recommend aligning the page to its actual top query "${page.gsc_keyword || kw}", or moving "${kw}" to the page that should own it. Do NOT prescribe a blind title overhaul. IMPORTANT: write this alignment recommendation (its title, action and impact) in the SAME LANGUAGE as the rest of the brief \u2014 never default to English for this item.
 
 GSC INTERPRETATION RULES (apply only AFTER the DATA SCOPE check, and only when the metrics plausibly reflect "${kw}" itself, not aggregate dilution):
@@ -45726,7 +45761,7 @@ WORDPRESS-SAFE OUTPUT — any HTML/copy inside an "action" is pasted into a Word
 - NEVER output a second <h1>; use <h2>/<h3> for new sections. For schema, ONLY FAQPage JSON-LD — never Article/Breadcrumb/WebPage/Person (Rank Math already emits those; a duplicate conflicts).
 - The Meta Title & Description go in Rank Math, not in the HTML body.
 
-NO FABRICATION (hard rule): NEVER invent a statistic, figure, date, quote, name, organisation, award, or ranking, and NEVER add an unverifiable superiority claim ("#1", "best", "leading", "top-rated") in a title, description, or body unless it is already proven. The SEO Title and Meta Description especially must be truthful — no unverifiable "#1" or "best". If unsure, omit the claim.
+NO FABRICATION + NO COMPETITOR-TO-CLIENT FACT TRANSFER (hard rule): Competitor facts are opportunities, NEVER client facts. A factual business claim about this client may appear in ready-to-paste copy only when it is supported by the supplied live page HTML or a VERIFIED item in CLIENT CLAIMS & FACTS above. If a competitor mentions insurance coordination, response time, licensing, years, free estimates, service area, warranties, financing, or any similar business attribute that is not verified for this client, describe the gap as VERIFY FIRST or omit it from paste-ready prose. NEVER invent a statistic, figure, date, quote, name, organisation, award, or ranking, and NEVER add an unverifiable superiority claim ("#1", "best", "leading", "top-rated") in a title, description, or body unless it is already proven. The SEO Title and Meta Description especially must be truthful — no unverifiable "#1" or "best". If unsure, omit the claim.
 
 TOOL/APP SAFETY: if the page is a functional tool/app/calculator rather than an article, restrict content actions to INSERTS that add sections above/below the tool; never rewrite its structure, IDs, or scripts.
 
