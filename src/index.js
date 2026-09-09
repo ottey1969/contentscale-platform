@@ -33754,6 +33754,7 @@ function renderPages() {
     }
     var nextCheck = (nextCheckDate && p.check_frequency!=='0' && p.check_frequency!=='0days' && p.check_frequency!=='off') ? 'Next: ' + nextCheckDate.toLocaleDateString('en-GB',{day:'2-digit',month:'short'}) : '';
     var freqLabel = (function(f){ var m={'0':'off (no scan)','off':'off (no scan)','1day':'daily','3days':'every 3 days','7days':'every 7 days','weekly':'weekly','1week':'weekly','2weeks':'every 2 weeks','17days':'every 17 days','21days':'every 21 days','30days':'every 30 days','monthly':'monthly'}; if(m[f])return m[f]; var x=String(f||'').match(/^(\d+)\s*days?$/); return x?('every '+x[1]+' days'):'every 3 days'; })(p.check_frequency);
+// CONTENTSCALE-TRACKER-FULL-URL-VISIBLE-20260909=true
     // Clean URL - remove protocol, www, and fix anchor slugs (#section)
     var rawUrl = p.url || '';
     var urlClean = rawUrl.replace(/^https?:[/][/]/, '').replace(/^www[.]/, '');
@@ -33903,7 +33904,8 @@ function renderPages() {
             + (md ? 'background:rgba(74,222,128,.15);border:1px solid #16a34a;color:#4ade80;' : 'background:none;border:1px dashed #374151;color:#4b5563;')
             + '">' + (md ? '\\u2713 MY CHECK' + (mdAt ? ' \\u00b7 ' + mdAt : '') : '\\u25cb my check') + '</button>';
         })()
-      + '<div class="cs-url-line" style="font-size:12px;' + (isDone ? 'text-decoration:line-through;color:#4b5563;' : 'color:#e5e7eb;') + 'font-family:monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;border-radius:4px;padding:1px 4px;margin-left:-4px;" title="' + rawUrl + '">' + urlShort + '</div></div>'
+      + '</div>'
+      + '<div class="cs-url-line" style="font-size:12px;' + (isDone ? 'text-decoration:line-through;color:#4b5563;' : 'color:#e5e7eb;') + 'font-family:monospace;line-height:1.45;white-space:normal;overflow-wrap:anywhere;word-break:break-word;border-radius:4px;padding:3px 4px;margin:0 0 6px 0;width:100%;" title="' + rawUrl.replace(/"/g,'&quot;') + '">' + urlShort + '</div>'
       + '<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:4px;">' + badges + '</div>'
       + (function(){ var ae=p.ai_manual_evidence; if(typeof ae==='string'){try{ae=JSON.parse(ae);}catch(e){ae={};}} ae=ae||{}; var vals=Object.keys(ae).map(function(k){return ae[k];}); if(!vals.length)return ''; var dom=vals.filter(function(x){return _aiEvBool(x.domain_cited);}).length, exact=vals.filter(function(x){return _aiEvBool(x.exact_page_cited);}).length; return '<div style="font-size:10px;color:#c4b5fd;margin:1px 0 5px;">Manual VERIFIED '+vals.length+'/5 &middot; DOMAIN CITED '+dom+'/5 &middot; EXACT PAGE CITED '+exact+'/5</div>'; })()
       + (p.redirects_to ? (function(){
