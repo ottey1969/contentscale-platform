@@ -2723,7 +2723,7 @@ app.get('/api/tracker-client/:token/latest-briefs', async (req, res) => {
       `SELECT p.id, p.url, p.keyword, p.gsc_keyword, p.gsc_ctr, p.aio_manual_text, p.aio_manual_refs, p.brief_content, p.gsc_clicks, p.gsc_impressions, p.gsc_position,
               p.brief_status, p.brief_claimed_by, p.brief_claimed_at, p.brief_started_at,
               p.brief_done_at, p.brief_submitted_at, p.brief_approved_at, p.brief_approved_by, p.brief_published_at,
-              p.brief_deadline, p.brief_assigned_at, p.brief_rejected_at, p.brief_reject_reason, p.priority,
+              p.brief_deadline, p.brief_assigned_at, p.brief_rejected_at, p.brief_reject_reason, p.priority, p.treatment, p.treatment_target_url, p.manual_done,
               p.brief_before_score, p.brief_after_score, p.brief_after_at,
               (p.specialist_html IS NOT NULL AND p.specialist_html != '') AS has_deliverable,
               COALESCE((SELECT jsonb_object_agg(x.engine, to_jsonb(x)) FROM (SELECT DISTINCT ON (engine) e.* FROM tracker_ai_evidence e WHERE e.page_id=p.id AND e.evidence_method='manual' ORDER BY engine, COALESCE(updated_at,verified_at,created_at) DESC NULLS LAST, id DESC) x), '{}'::jsonb) AS ai_manual_evidence,
@@ -2739,6 +2739,33 @@ app.get('/api/tracker-client/:token/latest-briefs', async (req, res) => {
       [cr.rows[0].id]
     );
     function _arr(v) { if (Array.isArray(v)) return v; if (!v) return []; try { var x = typeof v === 'string' ? JSON.parse(v) : v; return Array.isArray(x) ? x : (Array.isArray(x.items) ? x.items : []); } catch(e) { return []; } }
+    // Canonical Tracker priority: compute from ALL active tracker pages with the exact same
+    // tier + missed-click rules used by Active Priorities in /track/:token. Lead and Board
+    // must never invent a second assignment priority.
+    const _prioRows = await pool.query(`SELECT id,gsc_impressions,gsc_clicks,gsc_position,treatment,manual_done FROM tracker_pages WHERE tracker_client_id=$1 AND (is_active IS NULL OR is_active=TRUE)`, [cr.rows[0].id]);
+    const _prioQueue = [];
+    _prioRows.rows.forEach(function(pp){
+      const md = pp.manual_done===true || pp.manual_done==='t' || pp.manual_done==='true' || pp.manual_done===1;
+      if (md) return;
+      const tr=String(pp.treatment||'').toUpperCase();
+      if (tr==='MERGE'||tr==='REDIRECT'||tr==='REMOVE_NOINDEX') return;
+      const impr=Number(pp.gsc_impressions||0), clicks=Number(pp.gsc_clicks||0);
+      const ps=(pp.gsc_position!=null && pp.gsc_position!=='')?parseFloat(pp.gsc_position):null;
+      if (!impr && ps===null) return;
+      let tier;
+      if(ps!==null&&ps<=10&&impr>=100&&(clicks/Math.max(impr,1))*100<1) tier=1;
+      else if(ps!==null&&ps>10&&ps<=20&&impr>=100) tier=2;
+      else if(impr>=500) tier=3;
+      else if(ps!==null&&ps<=10&&impr>0&&impr<50) tier=5;
+      else tier=4;
+      const expCtr=(ps!==null&&ps<=3)?.20:(ps!==null&&ps<=5)?.12:(ps!==null&&ps<=10)?.06:.15;
+      const missed=Math.max(0,Math.round(impr*expCtr-clicks));
+      _prioQueue.push({id:String(pp.id),tier,missed});
+    });
+    _prioQueue.sort(function(a,b){return a.tier!==b.tier?a.tier-b.tier:b.missed-a.missed;});
+    const _canonicalPriority={}; let _rank=0;
+    _prioQueue.forEach(function(q){ if(q.tier<5) _canonicalPriority[q.id]=++_rank; });
+
     const briefs = r.rows.map(function(p) {
       let bc = {};
       try { bc = typeof p.brief_content === 'string' ? JSON.parse(p.brief_content) : (p.brief_content || {}); } catch(e) { bc = {}; }
@@ -2801,6 +2828,9 @@ app.get('/api/tracker-client/:token/latest-briefs', async (req, res) => {
         brief_rejected_at: p.brief_rejected_at || null,
         brief_reject_reason: p.brief_reject_reason || null,
         priority: p.priority || 'medium',
+        canonical_priority_rank: _canonicalPriority[String(p.id)] || null,
+        treatment: p.treatment || '',
+        treatment_target_url: p.treatment_target_url || '',
         has_deliverable: !!p.has_deliverable,
         ts: p.checked_at || p.brief_started_at || null,
         ts: p.checked_at ? new Date(p.checked_at).toISOString() : ''
@@ -4571,7 +4601,7 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
     if(!_briefs.length){ grid.innerHTML='<div class="ld-empty">No briefs yet &mdash; add &amp; scan pages in your scanner, or generate a Pre-Write Brief; they appear here to assign.</div>'; return; }
     var filtered=_briefs.filter(function(d){ if(_ldFilter==='pages') return !d.is_prewrite; if(_ldFilter==='prewrite') return !!d.is_prewrite; return true; });
     if(!filtered.length){ grid.innerHTML='<div class="ld-empty">'+(_ldFilter==='prewrite'?'No Pre-Write Briefs yet.':'No scanned pages yet.')+'</div>'; return; }
-    var list=filtered.slice().sort(function(a,b){ var da=_dlValL(a),db=_dlValL(b); if(da!==db)return da-db; var pa=_prioRankL[(a.priority||'medium').toLowerCase()]; if(pa==null)pa=1; var pb=_prioRankL[(b.priority||'medium').toLowerCase()]; if(pb==null)pb=1; if(pa!==pb)return pa-pb; var ta=a.ts?new Date(a.ts).getTime():0, tb=b.ts?new Date(b.ts).getTime():0; return ta-tb; });
+    var list=filtered.slice().sort(function(a,b){ var ra=a.canonical_priority_rank==null?999999:Number(a.canonical_priority_rank), rb=b.canonical_priority_rank==null?999999:Number(b.canonical_priority_rank); if(ra!==rb)return ra-rb; var da=_dlValL(a),db=_dlValL(b); if(da!==db)return da-db; var ta=a.ts?new Date(a.ts).getTime():0, tb=b.ts?new Date(b.ts).getTime():0; return ta-tb; });
     grid.innerHTML=list.map(function(d){
       var st=d.brief_status||'open'; var cls=st==='published'?'s-pub':st==='approved'?'s-appr':st==='submitted'?'s-subm':st==='done'?'s-done':st==='in_progress'?'s-progress':'';
       var pw=!!d.is_prewrite; var id=pw?d.pw_id:d.page_id;
@@ -4584,7 +4614,7 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
         : '<span style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><button class="ld-link" style="background:none;border:none;cursor:pointer;padding:0" onclick="viewLeadBrief('+id+')">View brief</button><button class="ld-link" style="background:none;border:none;cursor:pointer;padding:0;color:#a78bfa" onclick="copyLeadBrief('+id+',this)">Copy brief</button><a class="ld-link" href="'+esc(d.url)+'" target="_blank" rel="noopener">Open page</a></span>';
       var delFn=pw?'deletePWBrief('+id+')':'deleteLeadPage('+id+')';
       return '<div class="ld-card '+cls+'"'+pwStyle+'>'+titleLine+'<div class="ld-time">'+(pw?'Generated ':'Scanned ')+fmtTime(d.ts)+'</div>'+badge(st,d.brief_claimed_by)+' '+dlBadgeL(d)+ldScoreL(d)
-        +'<div class="ld-assign"><span style="font-size:11px;color:#6b7280">Assign:</span><select class="ld-select" onchange="assign('+id+',this,'+pw+')">'+options(d.brief_claimed_by||'')+'</select></div>'
+        +(pw?'':'<div style="display:flex;gap:7px;flex-wrap:wrap;margin:9px 0">'+(d.canonical_priority_rank?'<span class="ld-badge" style="background:rgba(249,115,22,.12);color:#fb923c">Tracker Priority #'+d.canonical_priority_rank+'</span>':'<span class="ld-badge done">Not in Active Priorities</span>')+(d.treatment?'<span class="ld-badge" style="background:rgba(124,58,237,.14);color:#c4b5fd">Treatment: '+esc(d.treatment)+'</span>':'<span class="ld-badge done">Treatment: decide after Brief</span>')+'</div>')+'<div class="ld-assign"><span style="font-size:11px;color:#6b7280">Assign:</span><select class="ld-select" onchange="assign('+id+',this,'+pw+')">'+options(d.brief_claimed_by||'')+'</select></div>'
         +ldActions(d)+rejNoteL(d)
         +'<div style="margin-top:10px;display:flex;justify-content:space-between;align-items:center">'+openLink+'<button onclick="'+delFn+'" style="background:none;border:1px solid #374151;border-radius:6px;color:#f87171;font-size:11px;padding:4px 9px;cursor:pointer;">Delete</button></div></div>';
     }).join('');
@@ -4596,7 +4626,7 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
     function tile(v,l,c){return '<div style="min-width:86px;flex:1;background:#090d16;border:1px solid #263041;border-radius:9px;padding:10px;text-align:center"><div style="font-size:16px;font-weight:900;color:'+c+'">'+v+'</div><div style="font-size:9px;color:#7c8799;text-transform:uppercase">'+l+'</div></div>';}
     function et(st,label,c){var v=st.exact?'Exact':(st.domain?'Domain':(st.cited?'Cited':(st.checked?'No':'?')));return tile(v,label,st.cited?c:'#6b7280');}
     var g=_briefEngineState(d,'google_aio'),ch=_briefEngineState(d,'chatgpt'),pp=_briefEngineState(d,'perplexity'),cl=_briefEngineState(d,'claude'),co=_briefEngineState(d,'copilot');
-    return '<div style="margin:-4px -4px 14px"><div style="font-size:11px;color:#8b5cf6;font-weight:800;margin-bottom:4px">🎯 Citation Brief</div><div style="font-size:12px;color:#94a3b8;word-break:break-all">'+esc(d.url||'')+'</div><div style="font-size:11px;color:#64748b;margin:3px 0 12px">Keyword: '+esc(d.keyword||'')+'</div><div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:14px">'+tile(pos?('#'+pos):'-','Position',pc)+et(g,'Google AIO','#4ade80')+et(ch,'ChatGPT','#34d399')+et(pp,'Perplexity','#a78bfa')+et(cl,'Claude','#f59e0b')+et(co,'Copilot','#60a5fa')+(d.score?tile(d.score,'GRAAF','#facc15'):'')+'</div>'+_renderBriefBodyHTML(d)+'</div>';
+    return '<div style="margin:-4px -4px 14px"><div style="font-size:11px;color:#8b5cf6;font-weight:800;margin-bottom:4px">🎯 Citation Brief</div>'+(d.canonical_priority_rank?'<div style="font-size:11px;color:#fb923c;font-weight:800;margin-bottom:4px">Tracker Priority #'+d.canonical_priority_rank+'</div>':'')+(d.treatment?'<div style="font-size:11px;color:#c4b5fd;font-weight:800;margin-bottom:6px">Treatment: '+esc(d.treatment)+(d.treatment_target_url?' → '+esc(d.treatment_target_url):'')+'</div>':'<div style="font-size:11px;color:#6b7280;margin-bottom:6px">Treatment: decide after reviewing this Brief</div>')+'+(d.canonical_priority_rank?'<div style="font-size:11px;color:#fb923c;font-weight:800;margin-bottom:4px">Tracker Priority #'+d.canonical_priority_rank+'</div>':'')+(d.treatment?'<div style="font-size:11px;color:#c4b5fd;font-weight:800;margin-bottom:6px">Treatment: '+esc(d.treatment)+(d.treatment_target_url?' → '+esc(d.treatment_target_url):'')+'</div>':'<div style="font-size:11px;color:#6b7280;margin-bottom:6px">Treatment: decide after reviewing this Brief</div>')+<div style="font-size:12px;color:#94a3b8;word-break:break-all">'+esc(d.url||'')+'</div><div style="font-size:11px;color:#64748b;margin:3px 0 12px">Keyword: '+esc(d.keyword||'')+'</div><div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:14px">'+tile(pos?('#'+pos):'-','Position',pc)+et(g,'Google AIO','#4ade80')+et(ch,'ChatGPT','#34d399')+et(pp,'Perplexity','#a78bfa')+et(cl,'Claude','#f59e0b')+et(co,'Copilot','#60a5fa')+(d.score?tile(d.score,'GRAAF','#facc15'):'')+'</div>'+_renderBriefBodyHTML(d)+'</div>';
   }
   function viewLeadBrief(id){var d=_briefs.filter(function(x){return !x.is_prewrite&&String(x.page_id)===String(id);})[0];if(!d)return;var ov=_ldOv();document.getElementById('ldOvTitle').textContent='Citation Brief';document.getElementById('ldOvBody').innerHTML=_leadBriefHtml(d);document.getElementById('ldOvFoot').innerHTML='<button class="ld-btn" onclick="_ldClose()">Close</button><button class="ld-btn primary" id="ldCopyBriefBtn">Copy brief</button>';ov.classList.add('on');document.getElementById('ldCopyBriefBtn').onclick=function(){copyLeadBrief(id,this);};}
   function _briefPlain(d){var lines=['AI Citation Brief — '+(d.url||''),'','Keyword: '+(d.keyword||''),''];var es=[['Google AIO / Gemini','google_aio'],['ChatGPT Search','chatgpt'],['Perplexity','perplexity'],['Claude','claude'],['Microsoft Copilot','copilot']];lines.push('AI Citation Results — 5 engines:');es.forEach(function(x){var st=_briefEngineState(d,x[1]);lines.push('- '+x[0]+': '+(st.exact?'✓ EXACT PAGE — VERIFIED':st.domain?'✓ DOMAIN — VERIFIED':st.cited?'✓ CITED — VERIFIED':st.checked?'✗ NOT CITED — VERIFIED':'? NOT CHECKED'));});lines.push('');(d.passages||d.recommendations||[]).forEach(function(p,i){lines.push((i+1)+'. '+(p.title||p.h2||''));lines.push(String(p.action||p.passage||p.body||p.text||''));if(p.impact)lines.push('Impact: '+p.impact);lines.push('');});return lines.join(NL);}
@@ -4825,11 +4855,12 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
       return (d.brief_status||'open')===_filter;
     });
     list.sort(function(a,b){
-      var da=_dlVal(a), db=_dlVal(b);
-      if(da!==db) return da-db;
-      var pa=_prioRank[(a.priority||'medium').toLowerCase()]; if(pa==null)pa=1;
-      var pb=_prioRank[(b.priority||'medium').toLowerCase()]; if(pb==null)pb=1;
-      if(pa!==pb) return pa-pb;
+      // Same canonical rank as Tracker Active Priorities. Deadline is operational metadata,
+      // not a second content-priority system.
+      var ra=a.canonical_priority_rank==null?999999:Number(a.canonical_priority_rank);
+      var rb=b.canonical_priority_rank==null?999999:Number(b.canonical_priority_rank);
+      if(ra!==rb) return ra-rb;
+      var da=_dlVal(a), db=_dlVal(b); if(da!==db) return da-db;
       return (a.position||a.gsc_position||999)-(b.position||b.gsc_position||999);
     });
     if(!list.length){ grid.innerHTML='<div class="bd-empty">'+(_filter==='mine'?'No work assigned to you yet. The lead assigns briefs from the Lead Panel — assigned work shows here, most urgent first.':(_filter!=='all'?'No briefs in this status.':'No briefs yet - they appear here after a scan.'))+'</div>'; return; }
@@ -4843,7 +4874,7 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
       var openLink=pw
         ? '<button class="bd-btn sec" onclick="viewPWDetail('+id+')" style="text-decoration:none">View brief</button>'
         : '<span style="display:flex;gap:7px;flex-wrap:wrap"><button class="bd-btn sec" onclick="viewBoardBrief('+id+')">View brief</button><button class="bd-btn sec" onclick="copyBrief('+id+',this)" style="border-color:#7c3aed;color:#c4b5fd">Copy brief</button><a class="bd-btn sec" href="'+esc(d.url)+'" target="_blank" rel="noopener" style="text-decoration:none">Open page</a></span>';
-      return '<div class="bw-card '+cls+'" style="'+pwStyle+'"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:6px"><div style="min-width:0">'+titleLine+'<div class="bw-time">'+(pw?'Generated ':'Scanned ')+fmtTime(d.ts)+'</div></div><div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end;flex-shrink:0">'+badge(st,d.brief_claimed_by)+dlBadge(d)+'</div></div>'+rejBanner(d)+chips(d)+scoreLine(d)+transparency(d)+recs(d)+'<div class="bd-actions">'+actions(d)+openLink+'</div></div>';
+      return '<div class="bw-card '+cls+'" style="'+pwStyle+'"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:6px"><div style="min-width:0">'+titleLine+'<div class="bw-time">'+(pw?'Generated ':'Scanned ')+fmtTime(d.ts)+'</div></div><div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end;flex-shrink:0">'+badge(st,d.brief_claimed_by)+dlBadge(d)+'</div></div>'+(pw?'':'<div style="display:flex;gap:7px;flex-wrap:wrap;margin:7px 0 10px">'+(d.canonical_priority_rank?'<span class="bd-badge" style="background:rgba(249,115,22,.12);color:#fb923c">Tracker Priority #'+d.canonical_priority_rank+'</span>':'<span class="bd-badge">Not in Active Priorities</span>')+(d.treatment?'<span class="bd-badge" style="background:rgba(124,58,237,.14);color:#c4b5fd">Treatment: '+esc(d.treatment)+'</span>':'<span class="bd-badge">Treatment: decide after Brief</span>')+'</div>')+rejBanner(d)+chips(d)+scoreLine(d)+transparency(d)+recs(d)+'<div class="bd-actions">'+actions(d)+openLink+'</div></div>';
     }).join('');
   }
   function _boardBriefHtml(d){
@@ -5230,6 +5261,13 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
     o.classList.add('on');
   }
   window._bwOpen = _bwOpen;
+  // Robust TV interaction: delegated click avoids inline-handler/CSP/scope failures after cards rerender.
+  document.addEventListener('click', function(ev){
+    var card=ev.target&&ev.target.closest?ev.target.closest('.bw-card[data-bwkey]'):null;
+    if(!card) return;
+    ev.preventDefault(); ev.stopPropagation();
+    _bwOpen(card.getAttribute('data-bwkey'));
+  });
 
   function _bwEscL(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
   ${_SHARED_AIO_SECTION_JS}
@@ -5336,7 +5374,7 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
       + '</div>';
     var pk = d.page_id || d.url || d.domain || '';
     var foot = '<div class="bwc-more">&#128070; Click to see the complete brief</div>';
-    return '<div class="bw-card" data-bwkey="'+_bwEscL(String(pk))+'" onclick="_bwOpen(this.dataset.bwkey)" title="Click to open the full brief">'+head+_bwChipsL(d)+_bwTransL(d)+_bwRecsL(d, isFeature?5:1)+foot+'</div>';
+    return '<div class="bw-card" data-bwkey="'+_bwEscL(String(pk))+'" title="Click to open the full brief">'+head+_bwChipsL(d)+_bwTransL(d)+_bwRecsL(d, isFeature?5:1)+foot+'</div>';
   }
   var _wallDirty = false;
   function renderLiveWall(){
@@ -34033,10 +34071,10 @@ function renderPages() {
     var tier, tierLabel, tierColor, action;
     if (ps !== null && ps <= 10 && impr >= 100 && (clicks / Math.max(impr,1)) * 100 < 1) {
       tier = 1; tierLabel = '\\ud83c\\udfaf QUICK WIN'; tierColor = '#f97316';
-      action = 'Priority signal: page 1 + demand + weak CTR. Open Intelligence/Brief first, then choose KEEP / OPTIMIZE / EXPAND / REWRITE.';
+      action = 'Priority signal: page 1 + demand + weak CTR. Open Intelligence, scan/build the Brief, then choose the Treatment.';
     } else if (ps !== null && ps > 10 && ps <= 20 && impr >= 100) {
       tier = 2; tierLabel = '\\u26a1 STRIKING DISTANCE'; tierColor = '#facc15';
-      action = 'Priority signal: page 2 + real demand. Review Intelligence/Brief and choose the safest treatment before changing content.';
+      action = 'Priority signal: page 2 + real demand. Review Intelligence, scan/build the Brief, then choose the safest Treatment before changing content.';
     } else if (impr >= 500) {
       tier = 3; tierLabel = '\\ud83d\\udcc8 HIGH DEMAND'; tierColor = '#60a5fa';
       action = 'Priority signal: high demand + weak position. Diagnose first; a rewrite is only one possible treatment.';
@@ -34045,7 +34083,7 @@ function renderPages() {
       action = 'Ranks well but nobody searches it. Retarget to a query WITH volume (check GSC Queries) or merge into a stronger page.';
     } else {
       tier = 4; tierLabel = '\\ud83d\\udd28 BUILD'; tierColor = '#9ca3af';
-      action = 'Lower active priority. Review after tiers 1-3; use Intelligence/Brief to decide the treatment.';
+      action = 'Lower active priority. Review after tiers 1-3; use Intelligence + the completed Brief to decide Treatment.';
     }
     // Expected CTR at a good spot: pos 1-3 ~20%, 4-5 ~12%, 6-10 ~6%, page 2+ potential if pushed to top ~15%
     var expCtr = (ps !== null && ps <= 3) ? 0.20 : (ps !== null && ps <= 5) ? 0.12 : (ps !== null && ps <= 10) ? 0.06 : 0.15;
@@ -34100,7 +34138,7 @@ function renderPages() {
     };
     var legendHtml = '<div id="leadQueueLegend" style="display:none;border-top:1px solid #1f2937;background:#0a0e14;padding:14px 16px;">'
       + '<div style="font-size:11px;font-weight:800;color:#e5e7eb;margin-bottom:4px;letter-spacing:.04em;text-transform:uppercase;">How Active Priorities are ranked</div>'
-      + '<div style="font-size:11px;color:#6b7280;line-height:1.7;margin-bottom:12px;">GSC determines <strong>where to look first</strong>; it does not automatically decide what content treatment to use. Within each tier, pages are ordered by estimated missed clicks. Work #1, then #2, then #3. Open Intelligence/Brief before changing content; treatment remains KEEP / OPTIMIZE / EXPAND / REWRITE. When you finish your own work on a page, \\u25cb my check moves it into Completed / Monitoring.</div>'
+      + '<div style="font-size:11px;color:#6b7280;line-height:1.7;margin-bottom:12px;">GSC determines <strong>where to look first</strong>; it does not automatically decide what content treatment to use. Within each tier, pages are ordered by estimated missed clicks. Work #1, then #2, then #3. Open Intelligence, then run the scan/build the Brief. Choose Treatment only after you have reviewed the Brief. When you finish your own work on a page, \\u25cb my check moves it into Completed / Monitoring.</div>'
       + '<table style="width:100%;border-collapse:collapse;background:#0d1117;border:1px solid #1f2937;border-radius:6px;overflow:hidden;">'
       + '<tr style="background:#111827;">'
       + '<th style="padding:7px 10px;font-size:9px;font-weight:800;color:#6b7280;text-transform:uppercase;letter-spacing:.06em;text-align:left;">Tier</th>'
@@ -34389,8 +34427,8 @@ function renderPages() {
       + '</div>'
       + '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:7px;padding-top:7px;border-top:1px solid #172033;">'
       + '<span style="font-size:9px;font-weight:800;color:#64748b;text-transform:uppercase;letter-spacing:.06em;">Treatment</span>'
-      + '<select onclick="event.stopPropagation()" onchange="setPageTreatment(' + p.id + ',this.value)" style="font-size:10px;padding:4px 6px;border-radius:5px;background:#0a0e14;border:1px solid #374151;color:#cbd5e1;">'
-      + '<option value=""' + (!p.treatment?' selected':'') + '>Decide after Intelligence</option>'
+      + '<select onclick="event.stopPropagation()" onchange="setPageTreatment(' + p.id + ',this.value)" ' + (!hasBrief?'disabled title="Scan/build and review the Brief before choosing Treatment" ':'') + 'style="font-size:10px;padding:4px 6px;border-radius:5px;background:#0a0e14;border:1px solid #374151;color:#cbd5e1;">'
+      + '<option value=""' + (!p.treatment?' selected':'') + '>Choose after Brief</option>'
       + ['KEEP','OPTIMIZE','EXPAND','REWRITE','MERGE','REDIRECT','REMOVE_NOINDEX','MONITOR'].map(function(t){return '<option value="'+t+'"'+(String(p.treatment||'').toUpperCase()===t?' selected':'')+'>'+t.replace('_',' / ')+'</option>';}).join('')
       + '</select>'
       + (p.treatment_target_url ? '<span style="font-size:9px;color:#fbbf24;">→ '+String(p.treatment_target_url).replace(/</g,'&lt;')+'</span>' : '')
@@ -48922,3 +48960,5 @@ console.log('AI-CITATION-DOMAIN-VS-EXACT-PAGE-20260908=true');
 // CONTENTSCALE-LEAD-BOARD-SHARED-VISUAL-BRIEF-COPY-20260909=true
 
 // CONTENTSCALE-BRIEF-EVIDENCE-CONTRADICTION-BING-SAFETY-20260909=true
+
+// CONTENTSCALE-CANONICAL-WORKFLOW-PRIORITY-INTELLIGENCE-BRIEF-TREATMENT-LEAD-BOARD-TV-20260909=true
