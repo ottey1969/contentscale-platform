@@ -1,4 +1,4 @@
-console.log('=== CONTENTSCALE BOOT ' + new Date().toISOString() + ' v2026-07-08-possible-prioritized-shortcut | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON | possibleThreshold=20impr | shortcutPrioritized=v2 | gscAutoFetchRemoved=true | linkCheckActive=true | wholeSiteWipeGuard=true | gscAutoFetchRestored=true | reminderOffFix=true | claudeRemoved=true | bingWebmaster=true | competitorPanel=true | zeroResultFix=true | pagesRefreshFix=true | recheckButton=true | provenScanStrip=true | provenScanState=true | scanAllProven=true | doEverythingBtn=true | panelOrderFix=true | workflowGuide=true | preScanGuard=true | scanAllGuard=true | earlyGuard=true | emptyStateTeaser=true | provenScopeFix=true | numberedButtons=true | clearerButtons=true | scanAnimFix=true | promptClaudeCleanup=true | bonusTip=true | realProvenContext=true | competitorContext=true | unifiedBrief=true | diagnosticFirst=true | fullCompetitorBreakdown=true | serpSpyV3=true | transparencyBlock=true | emailsPausedToggle=true | competitorDedup=true | provenScanDebug=true | serializedScans=true | claudeCleanupV2=true | mergeClaudeStrip=true | visualTransparency=true | aboveFoldPriority=true | competitorComparisonTable=true | redGreenTracking=true | aioExplicitState=true | perpCopilotState=true | realMergePromptFixed=true | briefContextDebug=true | forceRescanBypass=true | gscPosFallback=true | cannibalDedup=true | gscAccessGated=true | gapConfirmShown=true | noPlaceholders=true | rowNumContrast=true | codeCannibalDedup=true | provenDebugRemoved=true | broaderCannibalDedup=true | competitorGapFallback=true | competitorPrevSnapFallback=true | hubSpokeDedup=true | compGapRegexBroadened=true | gapFixLabelFallback=true | geminiProForBriefs=true | timeoutBudgetFixed=true | perAttemptTimeout45s=true | revertToFlashLite=true | tokenLimitDoubled=true | urlNormFix=true | impactFieldChecked=true | broaderHubPattern=true | cannibalContextRemovedFromGSC=true | scanStateDerivedFromDB=true | boardBriefRestyled=true | liveWallBriefModal=true | modalScopeFix=true | cardTransparency=true | CLAUDE-FIX-2307=true | CLAUDE-FIX-2307B-specquote=true | CLAUDE-FIX-2307C-pwboard=true | CLAUDE-FIX-2307D-typefilter=true | CLAUDE-FIX-2307E-scanneraio=true | CLAUDE-FIX-2307F-urlstrip=true | CLAUDE-FIX-2307G-aiobeforeScan=true | CLAUDE-FIX-2307H-aioInPrompt=true | CLAUDE-FIX-2307I-escHtml=true | CLAUDE-FIX-2307J-escAlias-noStale=true | CLAUDE-FIX-2407A-perpCitedConsistency=true | CLAUDE-FIX-2407B-perpCacheBug=true | CLAUDE-FIX-2407C-domainVsPageNuance=true | CLAUDE-FIX-2407D-wallModalNoReshuffle=true | CLAUDE-FIX-2407E-buildBriefSafetyNet=true | CLAUDE-FIX-2407F-modalFullText=true | CLAUDE-FIX-2407G-aioPasteModal=true | CLAUDE-FIX-2407H-aioDefinitionView=true | CLAUDE-FIX-2407I-aioBlueprintMining=true | CLAUDE-FIX-2407J-aioReferences=true | CLAUDE-FIX-2407K-aioCitationGap=true | CLAUDE-FIX-2407L-compGapTableAllModals=true | CLAUDE-FIX-2407M-honestAioManualOnly=true | CLAUDE-FIX-2407N-regexEscapeInTemplate=true | CLAUDE-FIX-2507A-jsonRepair-mergeTokens4096=true | CLAUDE-FIX-2507B-cardButtonsWorkflowOrder=true | CLAUDE-FIX-2507C-cardButtonsPillColors=true | CLAUDE-FIX-2507D-aioReloadFull-limit8000=true | CLAUDE-FIX-2507E-briefModalTransparency=true | CLAUDE-FIX-2507F-aioGapTable4col=true | CLAUDE-FIX-2507G-htmlScanTickCycle=true | CLAUDE-FIX-2507H-briefViewedPersisted=true | CLAUDE-FIX-2507I-fixCardRenderVarInExpr=true | CLAUDE-FIX-2507J-briefsUnified-manualAioGap=true | CLAUDE-FIX-2507K-gscCompTableInTracker=true | CLAUDE-FIX-2507L-trackerSplitSections=true | CLAUDE-FIX-2507M-copyBriefClarity=true | CLAUDE-FIX-2507N-aioRefsFromManualPaste=true | CLAUDE-FIX-2507O-removeSseEventSource=true | CLAUDE-FIX-2507P-ticksPersistUntilDoneOrNewHtml=true | CLAUDE-FIX-2507Q-aioRefsStoredAtSave=true | CLAUDE-FIX-2507R-aioGapTableAlways=true | CLAUDE-FIX-2507S-aioGscContextSeparated=true | CLAUDE-FIX-2507T-aioCodeFallbackFixed-refsFromManualSave=true | CLAUDE-FIX-2507U-mergeSafetyNet-cardSummaryParity=true | CLAUDE-FIX-2507V-sharedAioRenderFn-authTable=true | CLAUDE-FIX-2507W-viewLastBriefDelegates-oneSystem=true | CLAUDE-FIX-2507X-sharedBriefBody-fullUnification=true | CLAUDE-FIX-2507Y-aioTop5Table-definitionLabel=true | CLAUDE-FIX-2507Z-noRefsActionableMsg=true | CLAUDE-FIX-2508A-manualPasteWinsOverStaleSnapshot=true | CLAUDE-FIX-2508B-merge2Hardened-diagLog=true | CLAUDE-FIX-2508C-noStoreHeaders-freshClientJs=true | CLAUDE-FIX-2508D-saveEchoDiagnostic=true | CLAUDE-FIX-2508E-separateSourcesField=true | CLAUDE-FIX-2508F-diagSourcesField=true | CLAUDE-FIX-2508G-acceptSourceNames=true | CLAUDE-FIX-2508H-namesFromMainPaste-headingFilter=true | CLAUDE-FIX-2508I-cloroAioFetch=true | CLAUDE-FIX-2508J-namesFallback-autoSplit=true | CLAUDE-FIX-2508K-competitorGapAioFallback=true | CLAUDE-FIX-2508L-aioFallbackNoGscLeak-honestLabel=true | CLAUDE-FIX-2508M-gscRootDomainFallback=true | CLAUDE-FIX-2508N-sitemapLinks250-gscLiveFilter=true | CLAUDE-FIX-2508O-leadQueueCollapsedDefault=true | CLAUDE-FIX-2508P-leadQueueToggleRealFns=true | CLAUDE-FIX-2508Q-leadQueueHeaderWrap=true | CLAUDE-FIX-2508R-scanSelectedButton=true | CLAUDE-FIX-2508S-shiftClickRange=true | CLAUDE-FIX-2508T-shiftClickCorrectClass-inTemplate=true | CLAUDE-FIX-2508U-brandHeadshotHubFields=true | CLAUDE-FIX-2508V-briefModeSelector=true | CLAUDE-FIX-2508W-intentSnapshot-ownerNote=true | CLAUDE-FIX-2508X-modeBtnQuoteFix=true | CLAUDE-FIX-2508Y-perpApostropheFix=true | CLAUDE-FIX-2508Z-sitemapRegexFix=true | CLAUDE-FIX-2508ZA-pageInSitemapRegexFix=true | CLAUDE-FIX-2508ZB-missingEntities=true | CLAUDE-FIX-2508ZC-briefSpacing=true | CLAUDE-FIX-2508ZD-pasteCodeBlocks=true | CLAUDE-FIX-2508ZE-fmtActionRegexFix=true | CLAUDE-FIX-2508ZF-ticksOnlyClearOnDone=true | CLAUDE-FIX-2508ZG-paa5-pwbWider-aioFallbackMsg=true | CLAUDE-FIX-2508ZH-numberedItemsOnOwnLines=true | CLAUDE-FIX-2508ZI-prewriteBuildFields-aioListNotUglyTable=true | CLAUDE-FIX-2508ZJ-cleanAioDefinitionText=true | CLAUDE-FIX-2508ZK-slugRegexCrashFix-sectionSplit=true | CLAUDE-FIX-2508ZL-tvModalFmtAction=true | CLAUDE-FIX-3007A-tourAioScanSelected-mobileFriendly=true | CLAUDE-FIX-3007B-htmlLangWhitelistNonLatin=true | CLAUDE-FIX-3007C-clientBriefLanguageSelector=true | CLAUDE-FIX-3007D-briefLanguageTourStep=true | CLAUDE-FIX-3007E-prewriteLangListFull=true | CLAUDE-FIX-3007F-prewriteAutoAioFetch=true | CLAUDE-FIX-3007G-serpRegionListFull=true | CLAUDE-FIX-3007H-prewriteMobilePolish=true | CLAUDE-FIX-3007I-groupedComboDropdowns=true | CLAUDE-FIX-3007J-comboSyntaxFix=true | CLAUDE-FIX-3007K-multiLangBadges=true | CLAUDE-FIX-3007L-headerReportCTA=true | CLAUDE-FIX-3007M-tvViewReportCTA=true | CLAUDE-FIX-3007N-tvTopBarCTA=true | CLAUDE-FIX-3007O-realPaaInBrief=true | CLAUDE-FIX-0208-briefLangLeaks-item1AndTemplateLabels=true | CLAUDE-FIX-0208B-prewriteLabelsTranslated=true | CLAUDE-FIX-0208C-readyPasteMarkerAndCiteableLang=true | CLAUDE-FIX-0308-alignmentItemLang=true | CLAUDE-FIX-0308B-copyBriefCompTableParity=true | CLAUDE-FIX-0308C-cannibalStopwordMatch=true | CLAUDE-FIX-0308D-hardcodedCiteItemsLocalized=true | CLAUDE-FIX-0308E-cannibalSlugFallback=true | CLAUDE-FIX-1208-honestScanCount=true | CLAUDE-FIX-2108A-aioCitedTextPlusSources=true | CLAUDE-FIX-2108B-aioSourceTableCaseInsensitive=true | CLAUDE-FIX-2108C-aioSourceRetryFallback=true | CLAUDE-FIX-2108D-graafScoreInBrief=true | CLAUDE-FIX-2108E-graafRecsDedupPrioritized=true | CLAUDE-FIX-2108F-eliteRecsDetailsNotDisplayNone=true | CLAUDE-FIX-2108G-graafScoreInTextExport=true | CLAUDE-FIX-2108H-competitorTableDedupTextExport=true | CLAUDE-FIX-2108I-textExportSectionParity=true | CLAUDE-FIX-2108J-tableRegexEscapeFix=true | CLAUDE-FIX-2108K-scoreDefinedInClientScope=true | CLAUDE-FIX-2108L-clientBriefUsesDataNotP=true | CLAUDE-FIX-2108M-prewriteNoFabrication=true | CLAUDE-FIX-2108N-outputVoiceNoHype=true | CLAUDE-FIX-2608-intentEngine=true | CLAUDE-FIX-2608B-existingBriefMoment-mismatch=true | CLAUDE-FIX-2608C-momentInTextExport=true | CLAUDE-FIX-2608D-gscHeaderClarity=true | CLAUDE-FIX-2608E-mergePreservesIntentSnapshot=true | CLAUDE-FIX-2608F-sliceKeepsFramingObjects=true | CLAUDE-FIX-2608G-intentSnapshotEngineFallback=true | CLAUDE-FIX-2608H-instantBriefAlsoHasIntent=true | CLAUDE-FIX-2608I-brief2FinalSaveGuaranteesIntent=true | CLAUDE-FIX-2608J-copyBriefShowsIntent=true | CLAUDE-FIX-2608K-buildBriefPrefersFramingSource=true | CLAUDE-FIX-2608L-geminiIntentEnforced-specificFallback=true | CLAUDE-FIX-2608M-promptRestructuredForGemini=true | CLAUDE-FIX-2608N-dedicatedSerialIntentCall-protectsBriefCall=true | CLAUDE-FIX-2608O-qualityHookPreservesIntent=true | CLAUDE-FIX-2608P-graafShortcut-recsIsolatedFromCitations=true | CLAUDE-FIX-2608Q-caseStudyStrictHeadingsOnly=true | CLAUDE-FIX-2608R-graafShortcutUsesPuppeteerScan-matchesExternal=true | CLAUDE-FIX-2608S-multilingualDetection-faqBioTldrCaseStudyTocAllLangs=true | CLAUDE-FIX-2608T-arabicNumeralsAndSchemaAuthor=true | CLAUDE-FIX-2608U-scanScrollsAndWaitsForJsRender-correctRoute=true | CLAUDE-FIX-2608V-faqDetectsToggleAccordions-authorBioNoKeywordGate=true | CLAUDE-FIX-2608W-quoteRecSaysResearchable=true | CLAUDE-FIX-2608X-faqDetectsQuestionMarkBeforeToggleSymbol=true | CLAUDE-FIX-2608Y-fixedActualApiScanRoute-9107-faqBioMultilingualToggle=true | CLAUDE-FIX-2608Z-recursiveSchemaDetection-findsNestedFAQPage=true | CLAUDE-FIX-2608ZA-realApiScanRoute-9410-faqUsesSchemaAndToggle=true | CLAUDE-FIX-2608ZB-graafShortcutReliableAutoRefresh=true | CLAUDE-FIX-2609A-siteAuditEndpoint=true | CLAUDE-FIX-2609B-auditPageVisible=true | CLAUDE-FIX-2609C-auditCodeProtected=true | CLAUDE-FIX-2609P-multiBrandNamesForAcquisitions=true | CLAUDE-FIX-2610G-proofBlockAllCentered=true | CLAUDE-FIX-2610I-extractsSourceUrls-aioInInstructions=true | AI-SOURCE-IMPORT-EN-PDF-CHATGPT-URLS=true | AUDIT-RESET-PERSISTENCE-0909=true | AGENCY-WHITELABEL-PERSONAL-PROOF-HIDDEN=true | AUDIT-EXTERNAL-JS-BROWSER-FIX-20260908=true | AUDIT-DRAFT-DB-FIX-20260908=true | AUDIT-DRAFT-STORAGE-FALLBACK-20260908=true | AUDIT-SHARE-SCHEMA-SELF-HEAL-20260908=true | AUDIT-SHARE-ADMIN-AUTH-PERSIST-20260908=true | AUDIT-PDF-NUL-SANITIZE-20260908=true | GRAAF-MAIN-CONTENT-SCOPE-20260908=true | GRAAF-RECS-EVIDENCE-PAGETYPE-20260908=true | GRAAF-FULL-RECS-SCORING-EVIDENCE-20260908=true | CONTENTSCORE-METHODOLOGY-VERSIONING-20260908=true | CONTENTSCORE-V2-USER-VISIBLE-NOTICE-20260908=true | CONTENTSCORE-V2-MULTILINGUAL-NOTICE-20260908=true | CONTENTSCORE-V2-NOTICE-ABOVE-SCANNER-20260908=true | CONTENTSCORE-V2-NOTICE-AT-OFFICIAL-SCORE-COPY-20260908=true | AI-CITATION-RICH-PASTE-EVIDENCE-SEMANTICS-TOP5-20260908=true | AI-CITATION-PROMPT-URL-DETECTION-NO-PDF-20260908=true | AI-CITATION-PROMPT-RAW-URL-ALL5-20260908=true | AI-CITATION-PROMPT-STRICT-REAL-RESEARCH-HTTPS-20260908=true | AI-CITATION-ESCAPED-HTTPS-NORMALIZATION-20260908=true | AI-CITATION-DOMAIN-VS-EXACT-PAGE-20260908=true | AI-CITATION-DIRECT-SUPPORT-PRIORITY-PAGES-PROMPT-20260908=true | AI-CITATION-CHATGPT-URL-UI-REMOVED-20260908=true | BOOT-CONSOLIDATED-AUDIT-PROSPECT-TOOL-PRIVACY-20260909=true | CONTENTSCALE-CONTENT-GOVERNANCE-REPORT-CYCLE-20260909=true | CONTENTSCALE-CLIENT-LEVEL-CLAIMS-FACTS-20260909=true | CONTENTSCALE-AI-EVIDENCE-LAYER-20260909=true | CONTENTSCALE-AI-EVIDENCE-UI-5-ENGINE-VISIBILITY-20260909=true | CONTENTSCALE-COMPETITIVE-INTELLIGENCE-LAYER-20260909=true | CONTENTSCALE-LIVE-HTML-FACT-LEDGER-SURGICAL-BRIEF-20260909=true ===');
+console.log('=== CONTENTSCALE BOOT ' + new Date().toISOString() + ' v2026-07-08-possible-prioritized-shortcut | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON | possibleThreshold=20impr | shortcutPrioritized=v2 | gscAutoFetchRemoved=true | linkCheckActive=true | wholeSiteWipeGuard=true | gscAutoFetchRestored=true | reminderOffFix=true | claudeRemoved=true | bingWebmaster=true | competitorPanel=true | zeroResultFix=true | pagesRefreshFix=true | recheckButton=true | provenScanStrip=true | provenScanState=true | scanAllProven=true | doEverythingBtn=true | panelOrderFix=true | workflowGuide=true | preScanGuard=true | scanAllGuard=true | earlyGuard=true | emptyStateTeaser=true | provenScopeFix=true | numberedButtons=true | clearerButtons=true | scanAnimFix=true | promptClaudeCleanup=true | bonusTip=true | realProvenContext=true | competitorContext=true | unifiedBrief=true | diagnosticFirst=true | fullCompetitorBreakdown=true | serpSpyV3=true | transparencyBlock=true | emailsPausedToggle=true | competitorDedup=true | provenScanDebug=true | serializedScans=true | claudeCleanupV2=true | mergeClaudeStrip=true | visualTransparency=true | aboveFoldPriority=true | competitorComparisonTable=true | redGreenTracking=true | aioExplicitState=true | perpCopilotState=true | realMergePromptFixed=true | briefContextDebug=true | forceRescanBypass=true | gscPosFallback=true | cannibalDedup=true | gscAccessGated=true | gapConfirmShown=true | noPlaceholders=true | rowNumContrast=true | codeCannibalDedup=true | provenDebugRemoved=true | broaderCannibalDedup=true | competitorGapFallback=true | competitorPrevSnapFallback=true | hubSpokeDedup=true | compGapRegexBroadened=true | gapFixLabelFallback=true | geminiProForBriefs=true | timeoutBudgetFixed=true | perAttemptTimeout45s=true | revertToFlashLite=true | tokenLimitDoubled=true | urlNormFix=true | impactFieldChecked=true | broaderHubPattern=true | cannibalContextRemovedFromGSC=true | scanStateDerivedFromDB=true | boardBriefRestyled=true | liveWallBriefModal=true | modalScopeFix=true | cardTransparency=true | CLAUDE-FIX-2307=true | CLAUDE-FIX-2307B-specquote=true | CLAUDE-FIX-2307C-pwboard=true | CLAUDE-FIX-2307D-typefilter=true | CLAUDE-FIX-2307E-scanneraio=true | CLAUDE-FIX-2307F-urlstrip=true | CLAUDE-FIX-2307G-aiobeforeScan=true | CLAUDE-FIX-2307H-aioInPrompt=true | CLAUDE-FIX-2307I-escHtml=true | CLAUDE-FIX-2307J-escAlias-noStale=true | CLAUDE-FIX-2407A-perpCitedConsistency=true | CLAUDE-FIX-2407B-perpCacheBug=true | CLAUDE-FIX-2407C-domainVsPageNuance=true | CLAUDE-FIX-2407D-wallModalNoReshuffle=true | CLAUDE-FIX-2407E-buildBriefSafetyNet=true | CLAUDE-FIX-2407F-modalFullText=true | CLAUDE-FIX-2407G-aioPasteModal=true | CLAUDE-FIX-2407H-aioDefinitionView=true | CLAUDE-FIX-2407I-aioBlueprintMining=true | CLAUDE-FIX-2407J-aioReferences=true | CLAUDE-FIX-2407K-aioCitationGap=true | CLAUDE-FIX-2407L-compGapTableAllModals=true | CLAUDE-FIX-2407M-honestAioManualOnly=true | CLAUDE-FIX-2407N-regexEscapeInTemplate=true | CLAUDE-FIX-2507A-jsonRepair-mergeTokens4096=true | CLAUDE-FIX-2507B-cardButtonsWorkflowOrder=true | CLAUDE-FIX-2507C-cardButtonsPillColors=true | CLAUDE-FIX-2507D-aioReloadFull-limit8000=true | CLAUDE-FIX-2507E-briefModalTransparency=true | CLAUDE-FIX-2507F-aioGapTable4col=true | CLAUDE-FIX-2507G-htmlScanTickCycle=true | CLAUDE-FIX-2507H-briefViewedPersisted=true | CLAUDE-FIX-2507I-fixCardRenderVarInExpr=true | CLAUDE-FIX-2507J-briefsUnified-manualAioGap=true | CLAUDE-FIX-2507K-gscCompTableInTracker=true | CLAUDE-FIX-2507L-trackerSplitSections=true | CLAUDE-FIX-2507M-copyBriefClarity=true | CLAUDE-FIX-2507N-aioRefsFromManualPaste=true | CLAUDE-FIX-2507O-removeSseEventSource=true | CLAUDE-FIX-2507P-ticksPersistUntilDoneOrNewHtml=true | CLAUDE-FIX-2507Q-aioRefsStoredAtSave=true | CLAUDE-FIX-2507R-aioGapTableAlways=true | CLAUDE-FIX-2507S-aioGscContextSeparated=true | CLAUDE-FIX-2507T-aioCodeFallbackFixed-refsFromManualSave=true | CLAUDE-FIX-2507U-mergeSafetyNet-cardSummaryParity=true | CLAUDE-FIX-2507V-sharedAioRenderFn-authTable=true | CLAUDE-FIX-2507W-viewLastBriefDelegates-oneSystem=true | CLAUDE-FIX-2507X-sharedBriefBody-fullUnification=true | CLAUDE-FIX-2507Y-aioTop5Table-definitionLabel=true | CLAUDE-FIX-2507Z-noRefsActionableMsg=true | CLAUDE-FIX-2508A-manualPasteWinsOverStaleSnapshot=true | CLAUDE-FIX-2508B-merge2Hardened-diagLog=true | CLAUDE-FIX-2508C-noStoreHeaders-freshClientJs=true | CLAUDE-FIX-2508D-saveEchoDiagnostic=true | CLAUDE-FIX-2508E-separateSourcesField=true | CLAUDE-FIX-2508F-diagSourcesField=true | CLAUDE-FIX-2508G-acceptSourceNames=true | CLAUDE-FIX-2508H-namesFromMainPaste-headingFilter=true | CLAUDE-FIX-2508I-cloroAioFetch=true | CLAUDE-FIX-2508J-namesFallback-autoSplit=true | CLAUDE-FIX-2508K-competitorGapAioFallback=true | CLAUDE-FIX-2508L-aioFallbackNoGscLeak-honestLabel=true | CLAUDE-FIX-2508M-gscRootDomainFallback=true | CLAUDE-FIX-2508N-sitemapLinks250-gscLiveFilter=true | CLAUDE-FIX-2508O-leadQueueCollapsedDefault=true | CLAUDE-FIX-2508P-leadQueueToggleRealFns=true | CLAUDE-FIX-2508Q-leadQueueHeaderWrap=true | CLAUDE-FIX-2508R-scanSelectedButton=true | CLAUDE-FIX-2508S-shiftClickRange=true | CLAUDE-FIX-2508T-shiftClickCorrectClass-inTemplate=true | CLAUDE-FIX-2508U-brandHeadshotHubFields=true | CLAUDE-FIX-2508V-briefModeSelector=true | CLAUDE-FIX-2508W-intentSnapshot-ownerNote=true | CLAUDE-FIX-2508X-modeBtnQuoteFix=true | CLAUDE-FIX-2508Y-perpApostropheFix=true | CLAUDE-FIX-2508Z-sitemapRegexFix=true | CLAUDE-FIX-2508ZA-pageInSitemapRegexFix=true | CLAUDE-FIX-2508ZB-missingEntities=true | CLAUDE-FIX-2508ZC-briefSpacing=true | CLAUDE-FIX-2508ZD-pasteCodeBlocks=true | CLAUDE-FIX-2508ZE-fmtActionRegexFix=true | CLAUDE-FIX-2508ZF-ticksOnlyClearOnDone=true | CLAUDE-FIX-2508ZG-paa5-pwbWider-aioFallbackMsg=true | CLAUDE-FIX-2508ZH-numberedItemsOnOwnLines=true | CLAUDE-FIX-2508ZI-prewriteBuildFields-aioListNotUglyTable=true | CLAUDE-FIX-2508ZJ-cleanAioDefinitionText=true | CLAUDE-FIX-2508ZK-slugRegexCrashFix-sectionSplit=true | CLAUDE-FIX-2508ZL-tvModalFmtAction=true | CLAUDE-FIX-3007A-tourAioScanSelected-mobileFriendly=true | CLAUDE-FIX-3007B-htmlLangWhitelistNonLatin=true | CLAUDE-FIX-3007C-clientBriefLanguageSelector=true | CLAUDE-FIX-3007D-briefLanguageTourStep=true | CLAUDE-FIX-3007E-prewriteLangListFull=true | CLAUDE-FIX-3007F-prewriteAutoAioFetch=true | CLAUDE-FIX-3007G-serpRegionListFull=true | CLAUDE-FIX-3007H-prewriteMobilePolish=true | CLAUDE-FIX-3007I-groupedComboDropdowns=true | CLAUDE-FIX-3007J-comboSyntaxFix=true | CLAUDE-FIX-3007K-multiLangBadges=true | CLAUDE-FIX-3007L-headerReportCTA=true | CLAUDE-FIX-3007M-tvViewReportCTA=true | CLAUDE-FIX-3007N-tvTopBarCTA=true | CLAUDE-FIX-3007O-realPaaInBrief=true | CLAUDE-FIX-0208-briefLangLeaks-item1AndTemplateLabels=true | CLAUDE-FIX-0208B-prewriteLabelsTranslated=true | CLAUDE-FIX-0208C-readyPasteMarkerAndCiteableLang=true | CLAUDE-FIX-0308-alignmentItemLang=true | CLAUDE-FIX-0308B-copyBriefCompTableParity=true | CLAUDE-FIX-0308C-cannibalStopwordMatch=true | CLAUDE-FIX-0308D-hardcodedCiteItemsLocalized=true | CLAUDE-FIX-0308E-cannibalSlugFallback=true | CLAUDE-FIX-1208-honestScanCount=true | CLAUDE-FIX-2108A-aioCitedTextPlusSources=true | CLAUDE-FIX-2108B-aioSourceTableCaseInsensitive=true | CLAUDE-FIX-2108C-aioSourceRetryFallback=true | CLAUDE-FIX-2108D-graafScoreInBrief=true | CLAUDE-FIX-2108E-graafRecsDedupPrioritized=true | CLAUDE-FIX-2108F-eliteRecsDetailsNotDisplayNone=true | CLAUDE-FIX-2108G-graafScoreInTextExport=true | CLAUDE-FIX-2108H-competitorTableDedupTextExport=true | CLAUDE-FIX-2108I-textExportSectionParity=true | CLAUDE-FIX-2108J-tableRegexEscapeFix=true | CLAUDE-FIX-2108K-scoreDefinedInClientScope=true | CLAUDE-FIX-2108L-clientBriefUsesDataNotP=true | CLAUDE-FIX-2108M-prewriteNoFabrication=true | CLAUDE-FIX-2108N-outputVoiceNoHype=true | CLAUDE-FIX-2608-intentEngine=true | CLAUDE-FIX-2608B-existingBriefMoment-mismatch=true | CLAUDE-FIX-2608C-momentInTextExport=true | CLAUDE-FIX-2608D-gscHeaderClarity=true | CLAUDE-FIX-2608E-mergePreservesIntentSnapshot=true | CLAUDE-FIX-2608F-sliceKeepsFramingObjects=true | CLAUDE-FIX-2608G-intentSnapshotEngineFallback=true | CLAUDE-FIX-2608H-instantBriefAlsoHasIntent=true | CLAUDE-FIX-2608I-brief2FinalSaveGuaranteesIntent=true | CLAUDE-FIX-2608J-copyBriefShowsIntent=true | CLAUDE-FIX-2608K-buildBriefPrefersFramingSource=true | CLAUDE-FIX-2608L-geminiIntentEnforced-specificFallback=true | CLAUDE-FIX-2608M-promptRestructuredForGemini=true | CLAUDE-FIX-2608N-dedicatedSerialIntentCall-protectsBriefCall=true | CLAUDE-FIX-2608O-qualityHookPreservesIntent=true | CLAUDE-FIX-2608P-graafShortcut-recsIsolatedFromCitations=true | CLAUDE-FIX-2608Q-caseStudyStrictHeadingsOnly=true | CLAUDE-FIX-2608R-graafShortcutUsesPuppeteerScan-matchesExternal=true | CLAUDE-FIX-2608S-multilingualDetection-faqBioTldrCaseStudyTocAllLangs=true | CLAUDE-FIX-2608T-arabicNumeralsAndSchemaAuthor=true | CLAUDE-FIX-2608U-scanScrollsAndWaitsForJsRender-correctRoute=true | CLAUDE-FIX-2608V-faqDetectsToggleAccordions-authorBioNoKeywordGate=true | CLAUDE-FIX-2608W-quoteRecSaysResearchable=true | CLAUDE-FIX-2608X-faqDetectsQuestionMarkBeforeToggleSymbol=true | CLAUDE-FIX-2608Y-fixedActualApiScanRoute-9107-faqBioMultilingualToggle=true | CLAUDE-FIX-2608Z-recursiveSchemaDetection-findsNestedFAQPage=true | CLAUDE-FIX-2608ZA-realApiScanRoute-9410-faqUsesSchemaAndToggle=true | CLAUDE-FIX-2608ZB-graafShortcutReliableAutoRefresh=true | CLAUDE-FIX-2609A-siteAuditEndpoint=true | CLAUDE-FIX-2609B-auditPageVisible=true | CLAUDE-FIX-2609C-auditCodeProtected=true | CLAUDE-FIX-2609P-multiBrandNamesForAcquisitions=true | CLAUDE-FIX-2610G-proofBlockAllCentered=true | CLAUDE-FIX-2610I-extractsSourceUrls-aioInInstructions=true | AI-SOURCE-IMPORT-EN-PDF-CHATGPT-URLS=true | AUDIT-RESET-PERSISTENCE-0909=true | AGENCY-WHITELABEL-PERSONAL-PROOF-HIDDEN=true | AUDIT-EXTERNAL-JS-BROWSER-FIX-20260908=true | AUDIT-DRAFT-DB-FIX-20260908=true | AUDIT-DRAFT-STORAGE-FALLBACK-20260908=true | AUDIT-SHARE-SCHEMA-SELF-HEAL-20260908=true | AUDIT-SHARE-ADMIN-AUTH-PERSIST-20260908=true | AUDIT-PDF-NUL-SANITIZE-20260908=true | GRAAF-MAIN-CONTENT-SCOPE-20260908=true | GRAAF-RECS-EVIDENCE-PAGETYPE-20260908=true | GRAAF-FULL-RECS-SCORING-EVIDENCE-20260908=true | CONTENTSCORE-METHODOLOGY-VERSIONING-20260908=true | CONTENTSCORE-V2-USER-VISIBLE-NOTICE-20260908=true | CONTENTSCORE-V2-MULTILINGUAL-NOTICE-20260908=true | CONTENTSCORE-V2-NOTICE-ABOVE-SCANNER-20260908=true | CONTENTSCORE-V2-NOTICE-AT-OFFICIAL-SCORE-COPY-20260908=true | AI-CITATION-RICH-PASTE-EVIDENCE-SEMANTICS-TOP5-20260908=true | AI-CITATION-PROMPT-URL-DETECTION-NO-PDF-20260908=true | AI-CITATION-PROMPT-RAW-URL-ALL5-20260908=true | AI-CITATION-PROMPT-STRICT-REAL-RESEARCH-HTTPS-20260908=true | AI-CITATION-ESCAPED-HTTPS-NORMALIZATION-20260908=true | AI-CITATION-DOMAIN-VS-EXACT-PAGE-20260908=true | AI-CITATION-DIRECT-SUPPORT-PRIORITY-PAGES-PROMPT-20260908=true | AI-CITATION-CHATGPT-URL-UI-REMOVED-20260908=true | BOOT-CONSOLIDATED-AUDIT-PROSPECT-TOOL-PRIVACY-20260909=true | CONTENTSCALE-CONTENT-GOVERNANCE-REPORT-CYCLE-20260909=true | CONTENTSCALE-CLIENT-LEVEL-CLAIMS-FACTS-20260909=true | CONTENTSCALE-AI-EVIDENCE-LAYER-20260909=true | CONTENTSCALE-AI-EVIDENCE-UI-5-ENGINE-VISIBILITY-20260909=true | CONTENTSCALE-COMPETITIVE-INTELLIGENCE-LAYER-20260909=true | CONTENTSCALE-LIVE-HTML-FACT-LEDGER-SURGICAL-BRIEF-20260909=true | CONTENTSCALE-TRACKER-ROW-NUMBERS-SEARCH-EVIDENCE-20260909=true ===');
 // CONTENTSCALE-CITATION-BRIEF-EVIDENCE-OVERRIDE-20260909=true
 
 
@@ -1229,6 +1229,73 @@ app.get('/unsubscribe/:token', async (req, res) => {
 });
 
 // ── Tracker client email notifications ────────────────────────────────────────
+// ── Canonical five-engine email status helpers ───────────────────────────────
+// Email, Tracker UI and Citation Brief must tell the same truth. Manual VERIFIED
+// evidence wins. Perplexity may use API VERIFIED fallback. Bing visibility is
+// deliberately NOT treated as Microsoft Copilot citation evidence.
+function _trackerEmailBool(v) {
+  return v === true || v === 1 || v === '1' || String(v || '').toLowerCase() === 'true';
+}
+function _trackerBuildFiveEngineEmailState(manualEvidence, autoState) {
+  const manual = manualEvidence || {};
+  const auto = autoState || {};
+  const defs = [
+    ['google_aio','Google AIO / Gemini'],
+    ['chatgpt','ChatGPT Search'],
+    ['perplexity','Perplexity'],
+    ['claude','Claude'],
+    ['copilot','Microsoft Copilot']
+  ];
+  return defs.map(function(def) {
+    const key = def[0], label = def[1], r = manual[key] || null;
+    if (r) {
+      if (_trackerEmailBool(r.exact_page_cited)) return { key, label, value:'EXACT PAGE', method:'VERIFIED', cited:true, checked:true, color:'#16a34a' };
+      if (_trackerEmailBool(r.domain_cited)) return { key, label, value:'DOMAIN', method:'VERIFIED', cited:true, checked:true, color:'#16a34a' };
+      if (_trackerEmailBool(r.brand_direct_supported)) return { key, label, value:'DIRECT', method:'VERIFIED', cited:false, checked:true, color:'#2563eb' };
+      if (_trackerEmailBool(r.brand_recommended)) return { key, label, value:'RECOMMENDED', method:'VERIFIED', cited:false, checked:true, color:'#7c3aed' };
+      return { key, label, value:'NOT CITED', method:'VERIFIED', cited:false, checked:true, color:'#94a3b8' };
+    }
+    if (key === 'perplexity' && auto.perplexity_cited) return { key, label, value:'CITED', method:'API VERIFIED', cited:true, checked:true, color:'#16a34a' };
+    if (key === 'google_aio' && auto.google_aio_cited) return { key, label, value:'CITED', method:'CHECKED', cited:true, checked:true, color:'#16a34a' };
+    if (key === 'google_aio' && auto.google_aio_checked) return { key, label, value:'NOT CITED', method:'CHECKED', cited:false, checked:true, color:'#94a3b8' };
+    if (key === 'perplexity' && auto.perplexity_checked) return { key, label, value:'NOT CITED', method:'CHECKED', cited:false, checked:true, color:'#94a3b8' };
+    return { key, label, value:'NOT CHECKED', method:'', cited:false, checked:false, color:'#94a3b8' };
+  });
+}
+async function _trackerLoadFiveEngineEmailState(pageId, autoState) {
+  const manual = {};
+  try {
+    await _trackerEnsureAiEvidenceSchema();
+    const r = await pool.query("SELECT DISTINCT ON (engine) * FROM tracker_ai_evidence WHERE page_id=$1 AND evidence_method='manual' ORDER BY engine,id DESC", [pageId]);
+    (r.rows || []).forEach(function(row){ manual[row.engine] = row; });
+  } catch(e) { console.warn('[email-ai-state]', e.message); }
+  return _trackerBuildFiveEngineEmailState(manual, autoState || {});
+}
+function _trackerFiveEngineEmailBlock(states) {
+  states = Array.isArray(states) ? states : [];
+  const cited = states.filter(function(x){ return x.cited; }).length;
+  function cell(x, width) {
+    return '<td width="' + width + '%" valign="top" style="padding:4px;">'
+      + '<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:9px;padding:11px 5px;text-align:center;min-height:53px;">'
+      + '<div style="font-size:13px;font-weight:900;color:' + x.color + ';line-height:1.2;">' + x.value + '</div>'
+      + '<div style="font-size:8px;color:#64748b;text-transform:uppercase;letter-spacing:.04em;margin-top:4px;line-height:1.25;">' + x.label + '</div>'
+      + (x.method ? '<div style="font-size:8px;color:#94a3b8;margin-top:3px;">' + x.method + '</div>' : '')
+      + '</div></td>';
+  }
+  const a = states.slice(0,3), b = states.slice(3,5);
+  return '<div style="margin-bottom:14px;">'
+    + '<div style="font-size:10px;font-weight:800;color:#7c3aed;text-transform:uppercase;letter-spacing:.08em;margin:0 0 6px 4px;">AI citation coverage — ' + cited + '/5</div>'
+    + '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:separate;"><tr>' + a.map(function(x){return cell(x,33.33);}).join('') + '</tr></table>'
+    + '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:separate;"><tr>' + b.map(function(x){return cell(x,50);}).join('') + '</tr></table>'
+    + '</div>';
+}
+function _trackerFiveEngineText(states) {
+  return (states || []).map(function(x){
+    const icon = x.cited ? '✅' : (x.checked ? '❌' : '❔');
+    return icon + ' ' + x.label + ': ' + x.value + (x.method ? ' — ' + x.method : '');
+  }).join('\n');
+}
+
 // ── notifyClient — sends email + Telegram for every tracker notification ─────
 async function notifyClient(clientId, subject, htmlBody, telegramText, hideViewBtn) {
   // Always send email
@@ -1519,6 +1586,7 @@ app.post('/api/tracker-client/register', async (req, res) => {
         + '2. Your first check runs automatically in ~1 minute<br>'
         + '3. Paste your page HTML for a full GRAAF score<br>'
         + '4. Your Citation Brief arrives by email</p>'
+        + '<div style="background:#eef2ff;border:1px solid #c7d2fe;border-radius:8px;padding:12px 14px;margin-bottom:14px;font-size:12px;color:#3730a3;line-height:1.6;"><strong>Five AI systems:</strong> Google AIO / Gemini, ChatGPT Search, Perplexity, Claude and Microsoft Copilot.</div>'
         + (isDealify ? '<p style="font-size:13px;color:#6b7280;margin-bottom:14px;">&#127881; Dealify activation: <strong>' + dealifyCodesCount + ' code' + (dealifyCodesCount>1?'s':'') + '</strong> &rarr; <strong>' + maxPages + ' pages</strong> tracked.</p>' : '')
         + '<p style="font-size:13px;color:#374151;line-height:1.7;">Questions? WhatsApp Ottmar directly: <a href="https://wa.me/31628073996" style="color:#7c3aed;">wa.me/31628073996</a></p>';
 
@@ -2653,6 +2721,7 @@ app.get('/api/tracker-client/:token/latest-briefs', async (req, res) => {
               p.brief_deadline, p.brief_assigned_at, p.brief_rejected_at, p.brief_reject_reason, p.priority,
               p.brief_before_score, p.brief_after_score, p.brief_after_at,
               (p.specialist_html IS NOT NULL AND p.specialist_html != '') AS has_deliverable,
+              COALESCE((SELECT jsonb_object_agg(e.engine, to_jsonb(e)) FROM tracker_ai_evidence e WHERE e.page_id=p.id AND e.evidence_method='manual'), '{}'::jsonb) AS ai_manual_evidence,
               s.checked_at, s.google_position, s.ai_google_overview_cited, s.ai_perplexity_cited, s.ai_bing_cited, s.ai_bing_text, s.ai_brave_cited,
               s.score, s.recommendations, s.gsc_brief, s.source_suggestions,
               s.google_competitors, s.ai_perplexity_competitors, s.ai_google_overview_text, s.ai_perplexity_text, s.ai_google_overview_found, s.ai_google_overview_references, s.ai_perplexity_answer_excerpt
@@ -2684,6 +2753,7 @@ app.get('/api/tracker-client/:token/latest-briefs', async (req, res) => {
         perp_cited: p.ai_perplexity_cited != null ? !!p.ai_perplexity_cited : false,
         bing_cited: p.ai_bing_cited != null ? !!p.ai_bing_cited : false,
         brave_cited: p.ai_brave_cited != null ? !!p.ai_brave_cited : false,
+        ai_manual_evidence: p.ai_manual_evidence || {},
         score: bc.score != null ? bc.score : p.score,
         passages: items,
         gsc_brief: gscB,
@@ -5396,7 +5466,7 @@ app.get('/view/:token', async (req, res) => {
   .grp{font-size:8px;text-transform:uppercase;letter-spacing:.06em;font-weight:800;margin:8px 0 0}
   .rec{border-left:3px solid #7c3aed;padding:2px 0 2px 12px;margin:10px 0}
   .rt{font-size:13px;font-weight:800;color:#f1f5f9}
-  .rb{font-size:12px;color:#9ca3af;line-height:1.55;margin-top:4px;display:none}
+  .rb{font-size:12px;color:#475569;line-height:1.55;margin-top:4px;display:none}
   .card.open .rb{display:block}
   .extra{display:none}
   .card.open .extra{display:block}
@@ -5952,7 +6022,7 @@ app.post('/api/admin/tracker-clients/:id/email-last-brief', verifyAdmin, async (
     const client = cr.rows[0];
     if (!client.email) return res.status(400).json({ success: false, error: 'Client has no email address on file' });
     const pr = await pool.query(
-      `SELECT url, brief_content FROM tracker_pages
+      `SELECT id, url, keyword, gsc_keyword, last_graaf_score, brief_content FROM tracker_pages
        WHERE tracker_client_id=$1 AND brief_content IS NOT NULL AND (is_active=TRUE OR is_active IS NULL)
        ORDER BY brief_started_at DESC NULLS LAST, id DESC LIMIT 1`,
       [client.id]
@@ -5973,8 +6043,19 @@ app.post('/api/admin/tracker-clients/:id/email-last-brief', verifyAdmin, async (
         + (w ? '<div style="font-size:12px;color:#7c3aed;font-style:italic;margin-top:6px;line-height:1.5;">' + _esc(w) + '</div>' : '')
         + '</div>';
     }).join('');
+    const _rs = await pool.query('SELECT * FROM tracker_snapshots WHERE page_id=$1 ORDER BY checked_at DESC LIMIT 1', [page.id]).catch(()=>({rows:[]}));
+    const _snap = _rs.rows[0] || {};
+    const _resendAi = await _trackerLoadFiveEngineEmailState(page.id, {
+      google_aio_cited: !!_snap.ai_google_overview_cited, google_aio_checked: !!_rs.rows.length,
+      perplexity_cited: !!_snap.ai_perplexity_cited, perplexity_checked: !!_rs.rows.length
+    });
+    const _resendPos = _snap.google_position || '';
+    const _resendScore = _snap.score || page.last_graaf_score || '';
     const html = '<div style="font-size:13px;color:#64748b;margin-bottom:6px;">AI Citation Brief</div>'
-      + '<div style="font-size:16px;font-weight:800;color:#0f172a;margin-bottom:16px;word-break:break-all;">' + _esc(page.url) + '</div>'
+      + '<div style="font-size:16px;font-weight:800;color:#0f172a;margin-bottom:8px;word-break:break-all;">' + _esc(page.url) + '</div>'
+      + ((page.keyword||page.gsc_keyword) ? '<div style="font-size:12px;color:#64748b;margin-bottom:14px;">Keyword: <strong style="color:#1e293b;">' + _esc(page.keyword||page.gsc_keyword) + '</strong></div>' : '')
+      + _trackerFiveEngineEmailBlock(_resendAi)
+      + '<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px 14px;margin-bottom:18px;font-size:12px;color:#475569;"><strong>Search:</strong> Google position ' + (_resendPos ? '#'+Math.round(_resendPos) : 'N/A') + (_resendScore ? ' &nbsp;&middot;&nbsp; <strong>Content:</strong> GRAAF ' + _esc(_resendScore) + '/100' : '') + '</div>'
       + recHtml;
     await notifyClient(client.id, 'Your AI Citation Brief — ' + client.domain, html, '\u{1F3AF} Your AI Citation Brief for ' + page.url);
     res.json({ success: true, message: 'Brief emailed to ' + client.email });
@@ -6015,6 +6096,7 @@ app.post('/api/admin/tracker-clients/create-own', verifyAdmin, async (req, res) 
           + emailLinkBlock(token, _roToken)
           + '<p style="font-size:14px;color:#374151;line-height:1.7;margin-bottom:14px;"><strong>What happens next:</strong><br>'
           + '1. Add your pages and keywords<br>2. First scan runs in ~1 minute<br>3. Paste your page HTML for GRAAF score<br>4. Citation Brief arrives by email</p>'
+          + '<div style="background:#eef2ff;border:1px solid #c7d2fe;border-radius:8px;padding:12px 14px;margin-bottom:14px;font-size:12px;color:#3730a3;line-height:1.6;"><strong>Five AI systems:</strong> Google AIO / Gemini, ChatGPT Search, Perplexity, Claude and Microsoft Copilot.</div>'
           + '<p style="font-size:13px;color:#374151;">Questions? WhatsApp Ottmar: <a href="https://wa.me/31628073996" style="color:#7c3aed;">wa.me/31628073996</a></p>';
         await sendTrackerEmail(clientId, 'Your AI Citations Tracker is ready — ' + cleanDomain, welcomeHtml).catch(()=>{});
       }
@@ -33943,6 +34025,7 @@ function renderPages() {
       + '">' + label + '</button>';
   };
   var mdBarHtml = '<div id="myChecksBar" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:#0d1117;border:1px solid #1f2937;border-radius:8px;padding:8px 14px;margin-bottom:12px;">'
+    + '<div style="display:flex;align-items:center;gap:7px;min-width:260px;flex:1;"><span style="font-size:12px;color:#6b7280;">&#128269;</span><input id="trackerPageSearch" type="search" value="'+String(_ctSearchQuery||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;')+'" oninput="filterPages(this.value)" placeholder="Search URL or keyword..." style="width:100%;background:#0a0e14;border:1px solid #374151;border-radius:6px;color:#e5e7eb;padding:6px 9px;font-size:11px;outline:none;"></div>'
     + '<span style="font-size:10px;font-weight:800;letter-spacing:.06em;color:#4ade80;text-transform:uppercase;flex-shrink:0;">My checks</span>'
     + '<span style="font-size:12px;font-weight:800;color:' + (_mdDone === _mdTotal && _mdTotal > 0 ? '#4ade80' : '#e5e7eb') + ';flex-shrink:0;">' + _mdDone + ' / ' + _mdTotal + '</span>'
     + '<div style="flex:1;min-width:80px;height:6px;background:#1f2937;border-radius:3px;overflow:hidden;"><div style="width:' + _mdPct + '%;height:100%;background:linear-gradient(90deg,#16a34a,#4ade80);border-radius:3px;"></div></div>'
@@ -34020,7 +34103,9 @@ function renderPages() {
       else if (_grp === 2) _sectionPrefix = '<div style="margin:14px 0 8px;padding:8px 12px;background:rgba(248,113,113,.06);border:1px solid #7f1d1d;border-radius:7px;color:#fca5a5;font-size:10px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;">Decommission / Consolidate \\u2014 MERGE, REDIRECT or REMOVE / NOINDEX decisions</div>';
       else _sectionPrefix = '<div style="margin:14px 0 8px;padding:8px 12px;background:rgba(107,114,128,.06);border:1px solid #374151;border-radius:7px;color:#9ca3af;font-size:10px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;">Deferred / Low Priority \\u2014 sorted by current GSC data; refresh GSC to reconsider</div>';
     }
-    var pageNumLabel = _grp === 0 ? ('#' + (_priorityRankById[p.id] || (pageIdx+1))) : (_grp === 1 ? '\\u2713' : (_grp === 2 ? ('R' + (++_decommissionOrdinal)) : ('D' + (++_deferredOrdinal))));
+    // CONTENTSCALE-TRACKER-ROW-NUMBERS-SEARCH-EVIDENCE-20260909=true
+    if (_grp === 2) ++_decommissionOrdinal; else if (_grp === 3) ++_deferredOrdinal;
+    var pageNumLabel = '#' + (pageIdx + 1);
     var isDone = p.is_done === true || p.is_done === 't' || p.is_done === 'true' || p.is_done === 1;
     var implementationAt = p.implementation_at ? new Date(p.implementation_at).toLocaleString('en-GB',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '';
     var implementationVerifiedAt = p.implementation_verified_at ? new Date(p.implementation_verified_at).toLocaleString('en-GB',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '';
@@ -34434,6 +34519,7 @@ function _buildBriefData(p) {
     perp_cited: !!p.ai_perplexity_cited,
     bing_cited: !!p.ai_bing_cited,
     brave_cited: !!p.ai_brave_cited,
+    ai_manual_evidence: p.ai_manual_evidence || {},
     score: p.graaf_score || p.last_graaf_score || null,
     graaf_recs: (function(){ try { var _b = typeof p.brief_content === 'string' ? JSON.parse(p.brief_content) : p.brief_content; return (_b && Array.isArray(_b.graaf_recs)) ? _b.graaf_recs : []; } catch(e){ return []; } })(),
     graaf_score: (function(){ try { var _b = typeof p.brief_content === 'string' ? JSON.parse(p.brief_content) : p.brief_content; return (_b && _b.graaf_score != null) ? _b.graaf_score : null; } catch(e){ return null; } })(),
@@ -37205,7 +37291,7 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
   function addIntelClaimToFacts(pageId,idx){var d=window._currentIntelData||{},c=(d.claims||[])[idx];if(!c)return;api('/claims-facts/from-intelligence','POST',{claim_text:c.claim,engines:c.engines||[]}).then(function(r){toast((r&&r.message)||'Added to Claims & Facts','#f59e0b');if(typeof loadClientClaimsSummary==='function')loadClientClaimsSummary();openCompetitiveIntelligence(pageId);}).catch(function(e){toast('Could not add claim: '+e.message,'#f87171');});}
   window.openCompetitiveIntelligence=openCompetitiveIntelligence;window.addIntelClaimToFacts=addIntelClaimToFacts;
   function openAiEvidence(id){_aiEvidencePageId=id;var p=(_pages||[]).find(function(x){return x.id==id;})||{},m=document.getElementById('aiEvidenceModal');if(!m){toast('AI Evidence panel not available','#f87171');return;}var c=document.getElementById('aiEvidenceContext');if(c)c.textContent=(p.keyword||p.gsc_keyword||'No target query')+' · '+(p.url||'');m.classList.add('show');m.style.display='flex';_selectAiEvidenceEngine(_aiEvidenceEngine);}
-  function saveAiEvidence(){var id=_aiEvidencePageId;if(!id)return;var text=(document.getElementById('aiEvidenceText')||{}).value||'',sources=(document.getElementById('aiEvidenceSources')||{}).value||'',st=document.getElementById('aiEvidenceStatus');if(st){st.textContent='Saving...';st.style.color='#f59e0b';}fetch('/api/tracker-client/'+TOKEN+'/page/'+id+'/ai-evidence/'+_aiEvidenceEngine,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:text,sources:sources})}).then(function(r){return r.json();}).then(function(d){if(!d.success)throw new Error(d.error||'Save failed');var p=(_pages||[]).find(function(x){return x.id==id;});if(p){if(!p.ai_manual_evidence||typeof p.ai_manual_evidence!=='object')p.ai_manual_evidence={};if(d.cleared)delete p.ai_manual_evidence[_aiEvidenceEngine];else p.ai_manual_evidence[_aiEvidenceEngine]=d.evidence;}_selectAiEvidenceEngine(_aiEvidenceEngine);renderPages();if(st){st.textContent=d.cleared?'Cleared':'Manual evidence VERIFIED and saved';st.style.color='#4ade80';}}).catch(function(e){if(st){st.textContent=e.message;st.style.color='#f87171';}});}
+  function saveAiEvidence(){var id=_aiEvidencePageId;if(!id)return;var text=(document.getElementById('aiEvidenceText')||{}).value||'',sources=(document.getElementById('aiEvidenceSources')||{}).value||'',st=document.getElementById('aiEvidenceStatus');if(st){st.textContent='Saving...';st.style.color='#f59e0b';}fetch('/api/tracker-client/'+TOKEN+'/page/'+id+'/ai-evidence/'+_aiEvidenceEngine,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:text,sources:sources})}).then(function(r){return r.json();}).then(function(d){if(!d.success)throw new Error(d.error||'Save failed');var p=(_pages||[]).find(function(x){return x.id==id;});if(p){if(!p.ai_manual_evidence||typeof p.ai_manual_evidence!=='object')p.ai_manual_evidence={};if(d.cleared)delete p.ai_manual_evidence[_aiEvidenceEngine];else p.ai_manual_evidence[_aiEvidenceEngine]=d.evidence;}try{delete _lastBriefData[id];}catch(x){}_selectAiEvidenceEngine(_aiEvidenceEngine);if(typeof loadPages==='function'){loadPages();}else{renderPages();}if(st){st.textContent=d.cleared?'Cleared':'Manual evidence VERIFIED and saved';st.style.color='#4ade80';}}).catch(function(e){if(st){st.textContent=e.message;st.style.color='#f87171';}});}
   function clearAiEvidence(){var a=document.getElementById('aiEvidenceText'),b=document.getElementById('aiEvidenceSources');if(a)a.value='';if(b)b.value='';saveAiEvidence();}
   window.openAiEvidence=openAiEvidence;window.saveAiEvidence=saveAiEvidence;window.clearAiEvidence=clearAiEvidence;window._selectAiEvidenceEngine=_selectAiEvidenceEngine;
 
@@ -42585,13 +42671,19 @@ app.post('/api/tracker/pages/:id/check', verifyEngineAccess, async (req, res) =>
             const score = curr.score;
             const pageUrl = curr.url || page.url || '';
             const kw = curr.keyword || curr.gsc_keyword || page.keyword || page.gsc_keyword || domainFin;
+            const emailAiStates = await _trackerLoadFiveEngineEmailState(page.id, {
+              google_aio_cited: !!aio,
+              google_aio_checked: true,
+              perplexity_cited: !!perp,
+              perplexity_checked: true
+            });
 
             let subject;
             if (isFirst) subject = 'Your first scan is complete — ' + domainFin;
             else if (aioGained) subject = 'You are now cited in Google AI Overview — ' + domainFin;
             else if (aioLost) subject = 'Citation lost in Google AI Overview — ' + domainFin;
             else if (perpGained) subject = 'New citation in Perplexity — ' + domainFin;
-            else if (bingGained) subject = 'New citation in Copilot/Bing — ' + domainFin;
+            else if (bingGained) subject = 'Bing visibility signal improved — ' + domainFin;
             else if (posChanged) { const diff = Math.round(prev.google_position - curr.google_position); subject = (diff > 0 ? 'Position up ' + diff + ' places' : 'Position down ' + Math.abs(diff) + ' places') + ' — ' + domainFin; }
             else subject = 'Tracker update — ' + domainFin;
 
@@ -42608,7 +42700,7 @@ app.post('/api/tracker/pages/:id/check', verifyEngineAccess, async (req, res) =>
               if (aioGained) changes.push('<span style="color:#16a34a;">New citation</span> in Google AI Overview');
               if (aioLost) changes.push('<span style="color:#ef4444;">Lost citation</span> in Google AI Overview');
               if (perpGained) changes.push('<span style="color:#16a34a;">New citation</span> in Perplexity');
-              if (bingGained) changes.push('<span style="color:#16a34a;">New citation</span> in Copilot/Bing');
+              if (bingGained) changes.push('<span style="color:#2563eb;">Visibility signal improved</span> in Bing (not Copilot citation evidence)');
               if (scoreChanged) { const diff = curr.score - prev.score; changes.push('GRAAF score ' + (diff > 0 ? '<span style="color:#16a34a;">+' + diff + '</span>' : '<span style="color:#ef4444;">' + diff + '</span>') + ' (' + curr.score + '/100)'); }
               if (changes.length) changeSummary = '<div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:12px 16px;margin-bottom:14px;"><div style="font-size:10px;color:#0369a1;font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;">What changed</div>' + changes.map(function(c){ return '<div style="font-size:13px;color:#1e293b;margin-bottom:3px;">' + c + '</div>'; }).join('') + '</div>';
             }
@@ -42624,11 +42716,10 @@ app.post('/api/tracker/pages/:id/check', verifyEngineAccess, async (req, res) =>
               + (isMerged ? '<div style="background:#fef3c7;border:1px solid #fde68a;border-radius:8px;padding:12px 16px;margin-bottom:14px;font-size:13px;color:#92400e;"><strong>Note:</strong> You did not press Done on your last brief, so we merged it with today\'s new findings into one updated brief. We will keep merging every day until you press Done after finishing implementation. <strong>Press Done as soon as you have implemented everything</strong> — the Citation Brief will then reset and restart fresh for the next round.</div>' : '')
               + '<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px 16px;margin-bottom:14px;"><div style="font-size:9px;color:#94a3b8;text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px;">Page</div><div style="font-size:12px;color:#7c3aed;font-family:monospace;word-break:break-all;margin-bottom:4px;">' + pageUrl + '</div>' + (kw ? '<div style="font-size:11px;color:#64748b;">Keyword: <strong style="color:#1e293b;">' + kw + '</strong></div>' : '') + '</div>'
               + changeSummary
+              + _trackerFiveEngineEmailBlock(emailAiStates)
+              + '<div style="font-size:10px;font-weight:800;color:#0369a1;text-transform:uppercase;letter-spacing:.08em;margin:0 0 6px 4px;">Search & content — separate from AI citations</div>'
               + '<table width="100%" style="border-spacing:4px;border-collapse:separate;margin-bottom:14px;"><tr>'
-              + statCellE('Position', posVal, posColor)
-              + statCellE('Google AIO', aio ? 'Cited' : 'No', aio ? '#16a34a' : '#94a3b8')
-              + statCellE('Perplexity', perp ? 'Cited' : 'No', perp ? '#7c3aed' : '#94a3b8')
-              + statCellE('Copilot', bing ? 'Cited' : 'No', bing ? '#2563eb' : '#94a3b8')
+              + statCellE('Google position', posVal, posColor)
               + statCellE('GRAAF', score ? score + '/100' : 'N/A', score >= 70 ? '#16a34a' : score >= 50 ? '#f59e0b' : '#ef4444')
               + '</tr></table>'
               + (aio ? '<div style="background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:12px 16px;margin-bottom:12px;font-size:13px;color:#166534;"><strong>Cited in Google AI Overview</strong> for &ldquo;' + kw + '&rdquo;.</div>' : (!isFirst && !aioLost ? '' : '<div style="background:#fefce8;border:1px solid #fde047;border-radius:8px;padding:12px 16px;margin-bottom:12px;font-size:13px;color:#854d0e;"><strong>Not yet cited</strong> in Google AI Overview. Use the Citation Brief below.</div>'))
@@ -42666,8 +42757,7 @@ app.post('/api/tracker/pages/:id/check', verifyEngineAccess, async (req, res) =>
             // Send email + Telegram
             const tgText = '📋 <b>Citation Brief ready</b> for ' + (kw ? '<b>' + kw + '</b>' : pageUrl) + '\n\n'
               + (pos ? '📍 Position: #' + pos + '\n' : '')
-              + (aio ? '✅ Google AIO: Cited\n' : '❌ Google AIO: Not cited\n')
-              + (perp ? '✅ Perplexity: Cited\n' : '❌ Perplexity: Not cited\n')
+              + _trackerFiveEngineText(emailAiStates) + '\n'
               + (score ? '📊 GRAAF: ' + score + '/100\n' : '')
               + '\n<a href="' + clientTrackUrl + '">View Citation Brief →</a>';
             await notifyClient(page.tracker_client_id, subject, bodyHtml, tgText);
@@ -42705,10 +42795,12 @@ app.post('/api/tracker/pages/:id/check', verifyEngineAccess, async (req, res) =>
                   try {
                     const gemKey = process.env.GEMINI_API_KEY || '';
                     if (gemKey) {
+                      const _mergeAiStates = emailAiStates || await _trackerLoadFiveEngineEmailState(page.id, { google_aio_cited:!!aio, google_aio_checked:true, perplexity_cited:!!perp, perplexity_checked:true });
+                      const _mergeAiStatusText = _trackerFiveEngineText(_mergeAiStates).replace(/\n/g, '; ');
                       const mergePrompt = 'You are upgrading a Citation Brief. Merge old + new actions into the best 5 for this page.\n\n' +
                         'PAGE: ' + pageUrl + '\n' +
                         'KEYWORD: "' + kw + '"\n' +
-                        'STATUS: pos=' + (pos||'unranked') + ', AIO=' + (aio?'YES':'NO') + ', Perplexity=' + (perp?'YES':'NO') + ', Copilot=' + (bing?'YES':'NO') + ', GRAAF=' + (score||'?') + '/100\n' +
+                        'STATUS: pos=' + (pos||'unranked') + '; ' + _mergeAiStatusText + '; GRAAF=' + (score||'?') + '/100\n' +
                         (gscContext ? gscContext + '\n' : '') +
                         '\nPREVIOUS BRIEF (keep if still relevant):\n' + JSON.stringify((existingBrief?.items||[]).slice(0,3)) + '\n' +
                         '\nNEW BRIEF (higher priority \u2014 generated today, includes fresh Cannibalization/Competitor Gap/Impression Gap findings from the tracker):\n' + JSON.stringify(recs.slice(0,5)) + '\n\n' +
@@ -44830,14 +44922,40 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
     // OPTIMISATION: skip Perplexity every other scan to save API costs
     // Only run on even scan counts (0, 2, 4...) or if never run before
     const prevSnapR = await pool.query(
-      `SELECT ai_perplexity_cited, ai_bing_cited, ai_brave_cited, google_position, ai_google_overview_cited
+      `SELECT checked_at, ai_perplexity_cited, ai_bing_cited, ai_brave_cited, google_position, ai_google_overview_cited
        FROM tracker_snapshots WHERE page_id=$1 ORDER BY checked_at DESC LIMIT 2`,
       [pageId]
     );
     const prevSnap = prevSnapR.rows[0] || null;
     const prevPrevSnap = prevSnapR.rows[1] || null;
     const scanCount = page.brief_check_count || 0;
-    const runPerplexity = !prevSnap || scanCount % 2 === 0; // every other scan
+
+    // CONTENTSCALE-PERPLEXITY-MANUAL-WINS-SKIP-SAME-CYCLE-API-20260909=true
+    // Manual consumer-UI evidence is the strongest evidence. If it was saved after the
+    // previous tracker snapshot (or before the first scan), this scan is the verification
+    // cycle for that manual evidence: do NOT spend a Sonar API call as well. A later
+    // monitoring scan may use Sonar again because the latest snapshot will then be newer
+    // than the manual verification. Historical manual evidence is never overwritten.
+    let freshManualPerplexity = null;
+    try {
+      await _trackerEnsureAiEvidenceSchema();
+      const _pm = await pool.query(
+        `SELECT id, exact_page_cited, domain_cited, brand_recommended, brand_direct_supported, verified_at, updated_at
+         FROM tracker_ai_evidence
+         WHERE page_id=$1 AND engine='perplexity' AND evidence_method='manual'
+         ORDER BY COALESCE(updated_at,verified_at,created_at) DESC, id DESC LIMIT 1`,
+        [pageId]
+      );
+      if (_pm.rows.length) {
+        const _m = _pm.rows[0];
+        const _manualAt = new Date(_m.updated_at || _m.verified_at || 0).getTime();
+        const _prevAt = prevSnap && prevSnap.checked_at ? new Date(prevSnap.checked_at).getTime() : 0;
+        if (_manualAt && (!prevSnap || _manualAt > _prevAt)) freshManualPerplexity = _m;
+      }
+    } catch (_pmErr) {
+      console.warn('[tracker] manual Perplexity precedence lookup failed:', _pmErr.message);
+    }
+    const runPerplexity = !freshManualPerplexity && (!prevSnap || scanCount % 2 === 0); // every other scan unless fresh manual evidence already covers this cycle
 
     // OPTIMISATION: skip Gemini brief if results unchanged vs previous scan
     resultsChanged = !prevSnap ||
@@ -44847,9 +44965,19 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
 
     await Promise.all([
     (async function(){
-    _trSetStep(pageId, 'perplexity', 'running', keyword ? (runPerplexity ? 'Asking Perplexity Sonar: ' + keyword : 'Skipped (using cached result)') : 'Skipped (no keyword)');
+    _trSetStep(pageId, 'perplexity', 'running', keyword ? (freshManualPerplexity ? 'Manual VERIFIED evidence saved — skipping Sonar API this cycle' : (runPerplexity ? 'Asking Perplexity Sonar: ' + keyword : 'Skipped (using cached result)')) : 'Skipped (no keyword)');
     if (!keyword) {
       _trSetStep(pageId, 'perplexity', 'done', 'Skipped — set a keyword to enable');
+    } else
+    if (freshManualPerplexity) {
+      // Deliberately do not copy manual evidence into API snapshot fields: that would falsely
+      // relabel MANUAL VERIFIED as API VERIFIED. The five-engine merge reads manual evidence
+      // directly and gives it precedence. Sonar becomes eligible again on a later monitor scan.
+      snapshot.ai_perplexity_found = false;
+      snapshot.ai_perplexity_cited = false;
+      snapshot.ai_perplexity_text = null;
+      _trSetStep(pageId, 'perplexity', 'done', '✓ Manual VERIFIED used — Sonar API not called');
+      console.log('[tracker] Perplexity Sonar skipped: fresh manual VERIFIED evidence covers this scan cycle');
     } else
     if (!runPerplexity && prevSnap) {
       // Use previous Perplexity result — no API call
@@ -46909,15 +47037,17 @@ MERGE RULES:
                 + (_body ? '<div style="font-size:13px;color:#374151;line-height:1.6;">' + _esc(_body) + '</div>' : '')
                 + '</div>';
             }).join('');
-            const _em=function(e,auto){var r=_briefManualEvidence2[e];if(r)return r.exact_page_cited?'✓ VERIFIED':'✗ VERIFIED';return auto?'✓':'?';};
-            const _statusBits = ['Position ' + _esc(pos2 || 'unranked'), 'Google AIO ' + _em('google_aio',aio2), 'ChatGPT ' + _em('chatgpt',false), 'Perplexity ' + _em('perplexity',perp2), 'Claude ' + _em('claude',false), 'Copilot ' + _em('copilot',false)];
-            if (score2) _statusBits.push('GRAAF ' + _esc(score2) + '/100');
+            const _freshAiStates = _trackerBuildFiveEngineEmailState(_briefManualEvidence2, {
+              google_aio_cited: !!aio2, google_aio_checked: true,
+              perplexity_cited: !!perp2, perplexity_checked: true
+            });
             const _trackerUrl = 'https://app.contentscale.site/track/' + (_clientToken || '');
             const _viewUrl = 'https://app.contentscale.site/view/' + (_clientToken || '');
             const _briefHtml =
               '<div style="font-size:13px;color:#64748b;margin-bottom:6px;">AI Citation Brief \u2014 fresh scan</div>'
               + '<div style="font-size:16px;font-weight:800;color:#0f172a;margin-bottom:4px;word-break:break-all;">' + _esc(pageUrl) + '</div>'
-              + '<div style="font-size:12px;color:#64748b;margin-bottom:20px;">' + _statusBits.join(' \u00b7 ') + '</div>'
+              + _trackerFiveEngineEmailBlock(_freshAiStates)
+              + '<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px 14px;margin-bottom:20px;font-size:12px;color:#475569;"><strong>Search:</strong> Google position ' + _esc(pos2 || 'unranked') + (score2 ? ' &nbsp;&middot;&nbsp; <strong>Content:</strong> GRAAF ' + _esc(score2) + '/100' : '') + '</div>'
               + _recHtml
               + (_moreCount > 0 ? '<div style="font-size:13px;color:#7c3aed;font-weight:700;margin:4px 0 8px;">+ ' + _moreCount + ' more recommendation' + (_moreCount>1?'s':'') + ' in your tracker</div>' : '')
               + '<div style="text-align:center;margin-top:22px;">'
@@ -47358,7 +47488,7 @@ function startPausedFollowupScheduler() {
             recs.slice(0,3).forEach(function(r) {
               const pri = (r.priority||'').toLowerCase();
               const color = pri==='high'?'#dc2626':pri==='medium'||pri==='med'?'#d97706':'#16a34a';
-              recsHtml += '<div style="border-left:3px solid ' + color + ';padding:6px 10px;margin-bottom:7px;background:#0d1117;border-radius:0 5px 5px 0;">'
+              recsHtml += '<div style="border-left:3px solid ' + color + ';padding:6px 10px;margin-bottom:7px;background:#ffffff;border-radius:0 5px 5px 0;">'
                 + '<div style="font-size:11px;font-weight:700;color:' + color + ';margin-bottom:3px;">' + (r.title||'') + '</div>'
                 + '<div style="font-size:12px;color:#9ca3af;line-height:1.55;">' + (r.action||'') + '</div>'
                 + '</div>';
@@ -47369,7 +47499,7 @@ function startPausedFollowupScheduler() {
           await notifyClient(c.id,
             'Your tracker is paused — here\'s what you missed for ' + c.domain,
             '<h2 style="font-size:17px;font-weight:800;color:#0f172a;margin-bottom:10px;">Your tracker has been paused for 3 days</h2>'
-            + '<p style="font-size:14px;color:#374151;line-height:1.7;margin-bottom:14px;">Your domain <strong>' + c.domain + '</strong> is no longer being monitored for AI citations. Here\'s what was in your last Citation Brief before it paused:</p>'
+            + '<p style="font-size:14px;color:#374151;line-height:1.7;margin-bottom:14px;">Your domain <strong>' + c.domain + '</strong> is no longer being monitored across Google AIO / Gemini, ChatGPT Search, Perplexity, Claude and Microsoft Copilot. Here\'s what was in your last Citation Brief before it paused:</p>'
             + recsHtml
             + '<p style="font-size:14px;color:#374151;line-height:1.7;margin-bottom:16px;">To reactivate, contact Ottmar directly:</p>'
             + '<a href="' + ottmarWa + '" style="display:inline-block;background:#16a34a;color:white;text-decoration:none;padding:10px 22px;border-radius:6px;font-size:13px;font-weight:700;">WhatsApp Ottmar to reactivate &rarr;</a>'
@@ -48624,3 +48754,5 @@ console.log('AI-CITATION-DOMAIN-VS-EXACT-PAGE-20260908=true');
 
 // AUDIT-TABLE-CLAUDE-7COL-FULL-RECOMMENDATIONS-20260908=true
 // AUDIT-TABLE-ESCAPED-DOMAIN-DISPLAY-FIX-20260908=true
+
+// CONTENTSCALE-EMAIL-FIVE-ENGINE-CANONICAL-FOLLOWUP-20260909=true
