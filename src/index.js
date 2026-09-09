@@ -1539,6 +1539,31 @@ app.post('/api/tracker-client/register', async (req, res) => {
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
+
+// ╔══════════════════════════════════════════════════════════════════════════════╗
+// ║ CANONICAL TRACKER ROUTE CONTRACT — DO NOT GUESS / DO NOT BUILD ELSEWHERE  ║
+// ╠══════════════════════════════════════════════════════════════════════════════╣
+// ║ ACTIVE CUSTOMER TRACKER UI (/track/:token) uses ONLY this route family:    ║
+// ║     /api/tracker-client/:token/...                                         ║
+// ║                                                                            ║
+// ║ Browser proof: the client-side api() helper below prefixes every request   ║
+// ║ with /api/tracker-client/ + TOKEN.                                         ║
+// ║                                                                            ║
+// ║ Primary manual single-scan path:                                           ║
+// ║ POST /api/tracker-client/:token/check/:pageId -> runTrackerCheck(...)      ║
+// ║                                                                            ║
+// ║ IMPORTANT FOR FUTURE LLMs / DEVELOPERS:                                   ║
+// ║ - Do NOT assume /api/tracker/pages/:id/... powers the customer Tracker.    ║
+// ║ - Before adding Tracker UI/features, trace the browser api() call to this   ║
+// ║   /api/tracker-client/:token route family.                                 ║
+// ║ - runTrackerCheck() is SHARED by multiple workflows; change it carefully.  ║
+// ║ - New customer-facing Tracker endpoints belong here unless the browser     ║
+// ║   caller is deliberately changed and tested.                              ║
+// ║                                                                            ║
+// ║ Route contract verified against this file: 2026-09-09.                    ║
+// ╚══════════════════════════════════════════════════════════════════════════════╝
+// CONTENTSCALE-CANONICAL-TRACKER-ROUTE-20260909=true
+
 // GET /api/tracker-client/:token — get client data + pages
 app.get('/api/tracker-client/:token', async (req, res) => {
   try {
@@ -33061,6 +33086,10 @@ function hideModal(id) {
   el.style.display = '';
 }
 
+// CANONICAL CUSTOMER TRACKER API GATEWAY.
+// Every api(...) call in /track/:token resolves to /api/tracker-client/:token/...
+// Future LLMs: trace from HERE before choosing or creating a Tracker server route.
+// Do not silently redirect customer Tracker work to /api/tracker/pages/:id/...
 async function api(path, method, body) {
   var base = window.location.origin.indexOf('app.contentscale.site') > -1
     ? '' : 'https://app.contentscale.site';
@@ -43755,6 +43784,9 @@ function detectContentLanguage(html) {
 // ── Core check function ───────────────────────────────────────────────────────
 // Real APIs: Google CSE · Perplexity Sonar · You.com · Bing (optional)
 
+// SHARED TRACKER SCAN ENGINE — NOT A ROUTE.
+// Canonical customer single-scan entry is POST /api/tracker-client/:token/check/:pageId.
+// This function is also called by other scan workflows/schedulers, so edits here have broad impact.
 async function runTrackerCheck(page, geminiKey, keys, forceRescan = false) {
   keys = keys || {};
   const _sk  = keys.serpapiKey    || process.env.SERPAPI_KEY || process.env.SERPER_API_KEY || '';
