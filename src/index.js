@@ -31591,7 +31591,7 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
       <h3 style="font-size:15px;font-weight:800;color:#f1f5f9;">&#x1f3af; Pre-Write Brief</h3>
       <button onclick="hideModal('prewriteBriefModal')" style="background:none;border:none;color:#94a3b8;cursor:pointer;font-size:1.2rem;">&#x2715;</button>
     </div>
-    <div style="font-size:11px;color:#6b7280;margin-bottom:16px;line-height:1.5;">No page yet? See what it needs to beat the current top 10 before you write a single word.</div>
+    <div style="font-size:11px;color:#6b7280;margin-bottom:16px;line-height:1.5;">Check whether this topic needs a new page or should expand an existing page, then build the exact content plan.</div>
     <div style="font-size:11px;color:#94a3b8;background:#0f172a;border:1px solid #1e293b;border-radius:8px;padding:9px 11px;margin-bottom:16px;line-height:1.6;">&#127919; This brief automatically detects the <strong style="color:#22d3ee;">search intent and the moment</strong> behind your keyword &mdash; from what Google actually ranks, not the words in the keyword &mdash; and builds the structure, CTA and schema to match. You will see the detected moment above your brief once it is generated.</div>
     <div style="margin-bottom:12px;">
       <label style="font-size:11px;color:#9ca3af;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.06em;">Keyword <span style="color:#f87171;">*</span></label>
@@ -31629,7 +31629,7 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
       <textarea id="pwbAioText" class="cs-input" style="min-height:70px;resize:vertical;font-family:inherit;" placeholder="Paste the AI Overview text from Google here — or use Auto-fetch above (paid). Leave empty if there's no AIO or you didn't check."></textarea>
     </div>
     <div style="display:flex;gap:8px;">
-      <button class="cs-btn primary" onclick="generatePrewriteBrief()" id="pwbGenerateBtn" style="flex:1;">Generate brief</button>
+      <button class="cs-btn primary" onclick="generatePrewriteBrief()" id="pwbGenerateBtn" style="flex:1;">Analyse &amp; create Pre-Write Brief</button>
       <button class="cs-btn" onclick="hideModal('prewriteBriefModal')">Cancel</button>
     </div>
     <div id="pwbStatus" style="font-size:11px;color:#9ca3af;margin-top:10px;"></div>
@@ -32612,7 +32612,7 @@ async function generatePrewriteBrief() {
     var _pwbBody = { keyword: kw, workingTitle: title, language: lang, region: region, manualAioText: aioText };
     if (arguments.length && arguments[0] && arguments[0].intentOverride) _pwbBody.intentOverride = arguments[0].intentOverride;
     var data = await api('/prewrite-brief', 'POST', _pwbBody);
-    btn.disabled = false; btn.textContent = 'Generate brief';
+    btn.disabled = false; btn.textContent = 'Analyse & create Pre-Write Brief';
     if (!data || !data.success || !data.brief) {
       stat.textContent = '\u274c ' + ((data && data.error) || 'Could not generate a brief. Try again.');
       return;
@@ -32622,7 +32622,7 @@ async function generatePrewriteBrief() {
     result.innerHTML = _renderIntentBar(data.search_intent) + renderPrewriteBrief(data.brief);
     loadRecentPrewriteBriefs();
   } catch (e) {
-    btn.disabled = false; btn.textContent = 'Generate brief';
+    btn.disabled = false; btn.textContent = 'Analyse & create Pre-Write Brief';
     if (/separate service/i.test(e.message)) {
       stat.textContent = '';
       result.innerHTML = '<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:16px 18px;font-size:12.5px;color:#92400e;line-height:1.7;">'
@@ -33735,10 +33735,9 @@ function renderPages() {
       + '</div>'
       + '</div>'
       + '</div>'
-      + '<div style="width:100%;font-size:9px;color:#64748b;text-align:right;margin:1px 0 5px;letter-spacing:.02em;">1 AIO \u2192 2 HTML \u2192 3 Scan/Intelligence \u2192 4 Citation Brief \u2192 Implement \u2192 Done/Verify</div>'
       + '<div class="cs-card-actions" style="display:flex;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;align-items:flex-start;">'
-      + '<button class="cs-aio-btn" onclick="event.stopPropagation();openAioPaste(' + p.id + ')" style="background:#0d1117;border:1px solid ' + (p.aio_manual_text ? '#22c55e' : '#f59e0b') + ';border-radius:7px;color:' + (p.aio_manual_text ? '#4ade80' : '#fbbf24') + ';cursor:pointer;font-size:11px;padding:5px 12px;font-weight:600;" title="' + (p.aio_manual_text ? 'AI Overview saved \\u2014 click to edit' : 'Step 1 \\u2014 paste the Google AI Overview before scanning') + '">\\ud83d\\udd0d ' + (p.aio_manual_text ? 'AIO \\u2713' : 'Add AIO') + '</button>'
-      + '<button class="cs-html-btn' + (_htmlBlink ? ' cs-blink' : '') + '" onclick="openHtmlUpload(' + p.id + ')" style="background:#0d1117;border:1px solid ' + (_htmlDone ? '#22c55e' : (_htmlBlink ? '#f59e0b' : (htmlNeeded ? '#f59e0b' : '#38bdf8'))) + ';border-radius:7px;color:' + (_htmlDone ? '#4ade80' : (_htmlBlink ? '#fbbf24' : (htmlNeeded ? '#fbbf24' : '#7dd3fc'))) + ';cursor:pointer;font-size:11px;padding:5px 12px;font-weight:600;" title="' + (_htmlDone ? 'HTML scanned \\u2014 click to update' : (_htmlBlink ? 'HTML saved \\u2014 waiting for the scan to process it' : (htmlNeeded ? 'Step 2 \\u2014 paste HTML for the first scan' : 'Update HTML'))) + '">\\ud83d\\udccb ' + (_htmlDone ? 'HTML \\u2713' : (htmlNeeded ? 'Add HTML' : 'HTML')) + '</button>'
+      + '<button class="cs-ai-check-btn" onclick="event.stopPropagation();checkPage(' + p.id + ')" style="background:#0d1117;border:1px solid ' + (aiChecked ? '#22c55e' : '#7c3aed') + ';border-radius:7px;color:' + (aiChecked ? '#4ade80' : '#c4b5fd') + ';cursor:pointer;font-size:11px;padding:5px 12px;font-weight:700;white-space:nowrap;" title="' + (aiChecked ? 'All five AI citation checks completed at the last scan. Click to check again.' : 'Run the five AI citation checks') + '">\\ud83e\\udde0 AI Checked ' + (aiChecked ? '5/5' : '0/5') + '</button>'
+      + '<button class="cs-html-btn' + (_htmlBlink ? ' cs-blink' : '') + '" onclick="openHtmlUpload(' + p.id + ')" style="background:#0d1117;border:1px solid #0891b2;border-radius:7px;color:#67e8f9;cursor:pointer;font-size:11px;padding:5px 12px;font-weight:700;white-space:nowrap;" title="Paste or update the page HTML used by Intelligence, then run the analysis">\\ud83d\\udd0d Intelligence</button>'
       + (lastChecked ? '<button onclick="checkPage(' + p.id + ')" style="background:#0d1117;border:1px solid ' + (_scanDone ? '#22c55e' : '#2dd4bf') + ';border-radius:7px;color:' + (_scanDone ? '#4ade80' : '#5eead4') + ';cursor:pointer;font-size:13px;padding:5px 10px;font-weight:600;" title="' + (_scanDone ? 'Scanned this round \\u2014 click to rescan now' : 'Rescan now') + '">' + (_scanDone ? '\\u21bb \\u2713' : '\\u21bb') + '</button>' : '')
       + ((hasBrief || _lastBriefData[p.id]) ? '<button onclick="viewLastBrief(' + p.id + ')" style="background:#0d1117;border:1px solid #8b5cf6;border-radius:7px;color:#c4b5fd;cursor:pointer;font-size:11px;padding:5px 12px;font-weight:600;" title="View Citation Brief">\\ud83d\\udcc4 View Brief</button>' : '')
       + '<button onclick="csPosHist(' + p.id + ')" style="background:#0d1117;border:1px solid #64748b;border-radius:7px;color:#cbd5e1;cursor:pointer;font-size:13px;padding:5px 10px;font-weight:600;" title="Ranking history">\\ud83d\\udcc8</button>'
@@ -34994,11 +34993,11 @@ var _tourSteps = [
   { sel: '.cs-live', title: '7 \\u00b7 Live Activity', text: 'Your window into what the tracker is doing right now: which page is being scanned, what just finished, what is queued. Auto-updates every 8 seconds \\u2014 no need to refresh.' },
   { sel: '#brandCtxPanel', title: '8 \\u00b7 Brand & author info', text: 'Store the real facts about your business here \\u2014 name, author, credentials, service area, anything the AI must respect. Every brief uses these facts instead of inventing details. Optional, but it makes the generated text noticeably more accurate.' },
   { sel: '.cs-page-card', title: '9 \\u00b7 Your tracked pages', text: 'Each card is one tracked page: its Google position, AI citation badges (AI Overview, Perplexity, Copilot), GSC clicks and impressions, and in the yellow block its pushable queries \\u2014 searches on page 2 that one good push moves to page 1.' },
-  { sel: '.cs-aio-btn', title: '9a \\u00b7 Add AIO \\u2014 paste your AI Overview', text: 'Automated tools cannot see the personalized Google AI Overview you get \\u2014 so paste it here. On the card, click \\u201cAdd AIO\\u201d, copy the AI Overview Google shows you for this query (including its source links), and paste it. This is step 1 \\u2014 do it before scanning, and the brief then shows exactly who Google cites and the precise passage to write to get cited yourself. The button turns green (AIO \\u2713) once saved.' },
+  { sel: '.cs-ai-check-btn', title: '9a \\u00b7 AI Checked \\u2014 five-model citation check', text: 'Shows whether the five AI citation checks completed in the latest round. Click it to run a fresh check. Green 5/5 means the round completed; it does not mean all five systems cited the page.' },
   { sel: '#cannibalPanel', title: '10 \\u00b7 Cannibalization', text: 'Pages competing with each other for the same search. Click any row for exactly what to do \\u2014 and in most cases you do nothing by hand: the tracker feeds each conflict into the briefs of the affected pages on their next scan, as ready-made actions.' },
   { sel: '#leadQueuePanel', title: '11 \\u00b7 Lead Queue', text: 'Every page ranked by the clicks you are missing per month \\u2014 your worklist. Work strictly top to bottom: row 1 is always the fastest route to new leads. Click a row to jump to that page; click \\u201c? How ranking works\\u201d for what each tier means.' },
   { sel: '#myChecksBar', title: '12 \\u00b7 My checks', text: 'Your personal progress. The checkmarks are yours alone \\u2014 scans, HTML updates and restarts never reset them. Filter to \\u201cTo do\\u201d to see only open work; checked pages leave the Lead Queue so the next job rises to the top.' },
-  { sel: '.cs-html-btn', title: '13 \\u00b7 Add HTML \\u2014 the loop', text: 'This is the complete working loop: paste your page HTML here \\u2192 a scan starts automatically \\u2192 read the brief (View Brief) and implement its copy-paste actions on your page \\u2192 paste the NEW HTML here so the next scan verifies it \\u2192 mark the page \\u25cb my check. Done \\u2014 and the queue hands you the next one.' },
+  { sel: '.cs-html-btn', title: '13 \\u00b7 Intelligence \\u2014 analyse the current page', text: 'Open Intelligence to paste or update the page HTML used for the analysis. Then run the AI check, open View Brief, implement the recommendations and verify the new version in the next round.' },
   { sel: '#pagesList', title: '14 \\u00b7 Start tracking', text: 'When nothing is tracked yet this is where you begin: add URLs one by one, import from your sitemap, or paste from Google Search Console. The system then checks them automatically. Free plan: 1 page, 1 domain \\u2014 pick your most important page first.' },
   { sel: '#upsellPanel', title: '15 \\u00b7 Done-for-you', text: 'Do not want to run the loop yourself? Ottmar implements every Citation Brief for you \\u2014 done-for-you AI citation optimization, plus high-GRAAF citation-ready content. One WhatsApp message and he babysits your domain.' },
 ];
