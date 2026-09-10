@@ -1,11 +1,13 @@
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-10-CANONICAL-v4';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-10-CANONICAL-v6';
 const CONTENTSCALE_BUILD_CHANGES = [
   'professional-guided-tour',
   'prewrite-create-expand-publish-tracker-baseline',
   'visual-copy-brief-no-raw-json',
   'central-claims-facts-safety',
   'five-engine-evidence-and-intelligence',
-  'unified-visible-gsc-tier-1-to-5'
+  'unified-visible-gsc-tier-1-to-5',
+  'free-exactly-one-page-paid-from-two',
+  'gsc-auto-enable-all-valid-plans'
 ];
 console.log('[ContentScale] BUILD=' + CONTENTSCALE_BUILD_ID + ' BOOT=' + new Date().toISOString());
 console.log('[ContentScale] CHANGES=' + CONTENTSCALE_BUILD_CHANGES.join(','));
@@ -1562,12 +1564,12 @@ app.post('/api/tracker-client/register', async (req, res) => {
 
     const token = generateClientToken();
     await pool.query(
-      `INSERT INTO tracker_clients (token, domain, name, email, whatsapp, max_pages, registered_ip, dealify_codes) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
+      `INSERT INTO tracker_clients (token, domain, name, email, whatsapp, max_pages, registered_ip, dealify_codes, gsc_enabled) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,TRUE)`,
       [token, cleanDomain, name||null, email||null, whatsapp||null, maxPages, clientIp||null, isDealify ? dealify_code : null]
     ).catch(async () => {
       // Fallback if dealify_codes column doesn't exist yet
       await pool.query(
-        `INSERT INTO tracker_clients (token, domain, name, email, whatsapp, max_pages, registered_ip) VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+        `INSERT INTO tracker_clients (token, domain, name, email, whatsapp, max_pages, registered_ip, gsc_enabled) VALUES ($1,$2,$3,$4,$5,$6,$7,TRUE)`,
         [token, cleanDomain, name||null, email||null, whatsapp||null, maxPages, clientIp||null]
       );
     });
@@ -1678,7 +1680,7 @@ app.get('/api/tracker-client/:token', async (req, res) => {
        ) s ON true
        WHERE p.tracker_client_id = $1 AND (p.is_active = TRUE OR p.is_active IS NULL)
        ORDER BY p.created_at DESC LIMIT $2`,
-      [client.id, client.max_pages || 3]
+      [client.id, client.max_pages || 1]
     );
 
     const _evStem=String(client.domain||'').replace(/^www\./,'').split('.')[0].replace(/[-_]+/g,' ');
@@ -1690,7 +1692,7 @@ app.get('/api/tracker-client/:token', async (req, res) => {
       client: {
         domain: client.domain,
         name: client.name,
-        max_pages: client.max_pages || 3,
+        max_pages: client.max_pages || 1,
         created_at: client.created_at,
         report_cadence: client.report_cadence || 'monthly',
         telegram_linked: !!client.telegram_chat_id,
@@ -4036,7 +4038,7 @@ app.post('/api/tracker-client/:token/import-gsc-pages', async (req, res) => {
     // Existing pages are ALWAYS refreshed (no limit). The page limit applies only to NEW inserts.
     const _cntR = await pool.query(`SELECT COUNT(*) FROM tracker_pages WHERE tracker_client_id=$1 AND (is_active=TRUE OR is_active IS NULL)`, [clientId]);
     let _liveCount = parseInt(_cntR.rows[0].count) || 0;
-    const _maxPages = cr.rows[0].max_pages || 3;
+    const _maxPages = cr.rows[0].max_pages || 1;
 
     // Preload existing tracked pages + build a normalized-URL index so a re-import
     // recognises the SAME pages regardless of http/https, www, or trailing slash.
@@ -5691,7 +5693,7 @@ app.get('/track/:token', async (req, res) => {
             .join('')
         : ''
       )
-      .replace(/__MAX_PAGES__/g, String(client.max_pages || 3))
+      .replace(/__MAX_PAGES__/g, String(client.max_pages || 1))
       .replace(/__CLIENT_NAME__/g, (client.name || client.domain || '').replace(/[`'\\]/g, ''))
       .replace(/__GSC_ENABLED__/g, client.gsc_enabled ? 'true' : 'false')
       .replace(/__GSC_AUTOFETCH__/g, _gscServiceAccount ? 'true' : 'false')
@@ -6236,10 +6238,12 @@ app.post('/api/admin/tracker-clients/create-own', verifyAdmin, async (req, res) 
 
     const token = generateClientToken();
     const maxPg = parseInt(max_pages) || 10;
-    // Plan rule: free = 3 pages -> GSC off; any paid tier (>3 pages) -> GSC on automatically.
+    // Final plan rule: free is exactly 1 page; 2+ pages are paid. GSC is ON for both,
+    // so every account can use evidence-based classification and see the full product loop.
+    const autoGsc = maxPg >= 1;
     await pool.query(
       `INSERT INTO tracker_clients (token, domain, name, email, max_pages, status, gsc_enabled) VALUES ($1,$2,$3,$4,$5,'active',$6)`,
-      [token, cleanDomain, name||null, email||null, maxPg, maxPg > 3]
+      [token, cleanDomain, name||null, email||null, maxPg, autoGsc]
     );
 
     const trackUrl = (process.env.APP_URL || 'https://app.contentscale.site') + '/track/' + token;
@@ -6608,7 +6612,7 @@ app.post('/api/admin/tracker-clients/merge-duplicates', verifyAdmin, async (req,
         if (!keep.email && dup.email) updates.push(`email='${dup.email.replace(/'/g,"''")}'`);
         if (!keep.whatsapp && dup.whatsapp) updates.push(`whatsapp='${dup.whatsapp.replace(/'/g,"''")}'`);
         if (!keep.name && dup.name) updates.push(`name='${dup.name.replace(/'/g,"''")}'`);
-        const newMax = Math.max(keep.max_pages || 3, dup.max_pages || 3);
+        const newMax = Math.max(keep.max_pages || 1, dup.max_pages || 1);
         updates.push(`max_pages=${newMax}`);
         if (updates.length) await pool.query(`UPDATE tracker_clients SET ${updates.join(',')} WHERE id=$1`, [keepId]);
         // Mark duplicate as deleted
@@ -6710,7 +6714,7 @@ app.patch('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
     if (req.body.extra_domains !== undefined) {
       updates.push(`extra_domains=$${i++}`);
       vals.push(req.body.extra_domains || '');
-      // Auto-calculate max_pages: 3 per domain (1 primary + extra domains)
+      // Auto-calculate max_pages: 1 free page per domain unless a paid/Dealify limit is already higher.
       // Only auto-update if max_pages not explicitly set in this request
       if (max_pages === undefined) {
         const extraList = (req.body.extra_domains || '').split(',').map(d => d.trim()).filter(Boolean);
@@ -6720,7 +6724,7 @@ app.patch('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
         if (curR.rows.length) {
           const cur = curR.rows[0];
           const dealifyBonus = cur.dealify_codes ? (cur.dealify_codes.split(',').filter(c => c.trim()).length * 10) : 0;
-          const basePages = dealifyBonus > 0 ? dealifyBonus : 3; // Dealify clients get 10/code, free clients get 3
+          const basePages = dealifyBonus > 0 ? dealifyBonus : 1; // Dealify clients get 10/code; free gets exactly 1
           // Never LOWER a manually raised limit — auto-calc may only raise (fixes: admin sets 100, a later
           // extra_domains save silently reset it to domains×base)
           const newMax = Math.max(domainCount * basePages, cur.max_pages || 0);
@@ -6733,9 +6737,11 @@ app.patch('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
     if (req.body.gsc_enabled !== undefined) { updates.push(`gsc_enabled=$${i++}`); vals.push(!!req.body.gsc_enabled); }
     if (req.body.demo_readonly !== undefined) { updates.push(`demo_readonly=$${i++}`); vals.push(!!req.body.demo_readonly); }
     else if (max_pages !== undefined) {
-      // Plan changed without an explicit GSC choice -> follow the plan rule automatically (free ≤3 off, paid >3 on)
-      updates.push(`gsc_enabled=$${i++}`); vals.push(parseInt(max_pages) > 3);
-      console.log('[admin] gsc_enabled auto-set to', parseInt(max_pages) > 3, 'from max_pages', max_pages);
+      // Plan changed without an explicit GSC choice: GSC stays ON for free (1) and paid (2+) accounts.
+      const _mp = parseInt(max_pages);
+      const _autoGsc = _mp >= 1;
+      updates.push(`gsc_enabled=$${i++}`); vals.push(_autoGsc);
+      console.log('[admin] gsc_enabled auto-set to', _autoGsc, 'from max_pages', max_pages, '(rule: all valid plans = ON)');
     }
     if (req.body.cc_emails !== undefined) { updates.push(`cc_emails=$${i++}`); vals.push(req.body.cc_emails || ''); }
     if (req.body.lead_name !== undefined) { updates.push(`lead_name=$${i++}`); vals.push(req.body.lead_name || ''); }
@@ -6964,12 +6970,13 @@ app.patch('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
     status VARCHAR(20) DEFAULT 'active',
     last_notified_at TIMESTAMPTZ,
     notify_frequency INTEGER DEFAULT 7,
-    max_pages INTEGER DEFAULT 3,
+    max_pages INTEGER DEFAULT 1,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
   )`).catch(()=>{});
-  await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS max_pages INTEGER DEFAULT 3`).catch(()=>{});
-  await client.query(`UPDATE tracker_clients SET max_pages=3 WHERE max_pages IS NULL`).catch(()=>{});
+  await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS max_pages INTEGER DEFAULT 1`).catch(()=>{});
+  await client.query(`ALTER TABLE tracker_clients ALTER COLUMN max_pages SET DEFAULT 1`).catch(()=>{});
+  await client.query(`UPDATE tracker_clients SET max_pages=1 WHERE max_pages IS NULL`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS registered_ip VARCHAR(45)`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS cc_emails TEXT`).catch(()=>{});
   // Pre-Write Brief — free tier gets exactly 1 lifetime brief, tracked here.
@@ -7070,7 +7077,8 @@ app.patch('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
   } catch(e) {}
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS paused_at TIMESTAMPTZ`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS dealify_codes VARCHAR(500)`).catch(()=>{});
-  await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS gsc_enabled BOOLEAN DEFAULT FALSE`).catch(()=>{});
+  await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS gsc_enabled BOOLEAN DEFAULT TRUE`).catch(()=>{});
+  await client.query(`ALTER TABLE tracker_clients ALTER COLUMN gsc_enabled SET DEFAULT TRUE`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS demo_readonly BOOLEAN DEFAULT FALSE`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS readonly_token TEXT`).catch(()=>{});
   console.log('[boot-stamp] before ro_token index');
@@ -7090,16 +7098,32 @@ app.patch('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
   // since the "already exported" check only looked at whether any query row got this page_id.
   await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS gsc_autofetch_checked_at TIMESTAMPTZ`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS redirect_checked_at TIMESTAMPTZ`).catch(()=>{});
-  // One-time sync of gsc_enabled with the plan rule (free ≤3 pages off, paid >3 on).
+  // One-time v2 sync: enable GSC for existing focused 1-page trackers. Do not rewrite other plans.
   // Guarded by a migration flag so it runs exactly ONCE — manual per-client overrides made afterwards survive every deploy.
   await client.query(`CREATE TABLE IF NOT EXISTS migration_flags (key TEXT PRIMARY KEY, applied_at TIMESTAMPTZ DEFAULT NOW())`).catch(()=>{});
   try {
     const _gsync = await client.query(`INSERT INTO migration_flags (key) VALUES ('gsc_plan_auto_sync_v1') ON CONFLICT (key) DO NOTHING RETURNING key`);
     if (_gsync.rows && _gsync.rows.length) {
-      const _gr = await client.query(`UPDATE tracker_clients SET gsc_enabled = (COALESCE(max_pages, 3) > 3) WHERE (status IS NULL OR status != 'deleted')`);
-      console.log('[migrate] gsc_enabled synced to plan rule for', _gr.rowCount, 'clients (one-time)');
+      const _gr = await client.query(`UPDATE tracker_clients SET gsc_enabled = (COALESCE(max_pages, 1) >= 1) WHERE (status IS NULL OR status != 'deleted')`);
+      console.log('[migrate] gsc_enabled synced to all-valid-plans rule for', _gr.rowCount, 'clients (one-time)');
     }
   } catch(e) { console.warn('[migrate] gsc sync', e.message); }
+  try {
+    const _gsync2 = await client.query(`INSERT INTO migration_flags (key) VALUES ('gsc_one_page_auto_enable_v2') ON CONFLICT (key) DO NOTHING RETURNING key`);
+    if (_gsync2.rows && _gsync2.rows.length) {
+      const _gr2 = await client.query(`UPDATE tracker_clients SET gsc_enabled=TRUE WHERE COALESCE(max_pages,0)=1 AND (status IS NULL OR status != 'deleted') AND gsc_enabled IS NOT TRUE`);
+      console.log('[migrate] one-page GSC auto-enabled for', _gr2.rowCount, 'existing clients (v2)');
+    }
+  } catch(e) { console.warn('[migrate] one-page GSC sync', e.message); }
+  // Final v3 plan sync: free=1 page, paid=2+ pages, and GSC is available on every valid plan.
+  // Existing numeric limits are preserved because 2-3 page accounts are now paid accounts.
+  try {
+    const _gsync3 = await client.query(`INSERT INTO migration_flags (key) VALUES ('gsc_all_plans_auto_enable_v3') ON CONFLICT (key) DO NOTHING RETURNING key`);
+    if (_gsync3.rows && _gsync3.rows.length) {
+      const _gr3 = await client.query(`UPDATE tracker_clients SET gsc_enabled=TRUE WHERE COALESCE(max_pages,1)>=1 AND (status IS NULL OR status != 'deleted')`);
+      console.log('[migrate] GSC auto-enabled for all valid free/paid plans:', _gr3.rowCount, 'clients (v3)');
+    }
+  } catch(e) { console.warn('[migrate] all-plan GSC sync', e.message); }
   // Fix invalid check_frequency values in DB
   await client.query(`
     UPDATE tracker_pages SET check_frequency='3days'
@@ -32183,6 +32207,12 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
     </a>
   </div>
 
+  <div style="text-align:center;padding:14px 10px 4px;font-size:11px;color:#64748b;line-height:1.7;">
+    <strong style="color:#94a3b8;">1 page free</strong> &middot; No credit card &middot;
+    <a href="https://contentscale.site/free-ai-citations-tracker/#dealify" target="_blank" rel="noopener" style="color:#a78bfa;text-decoration:none;font-weight:700;">Upgrade for more pages</a> &middot;
+    <a href="https://contentscale.site/privacy" target="_blank" rel="noopener" style="color:#94a3b8;text-decoration:none;">Privacy</a>
+  </div>
+
 </div>
 
 <!-- Cinematic Scan Overlay -->
@@ -40751,8 +40781,8 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 var withEmail = _tcClients.filter(function(c){ return c.email; }).length;
                 var withWa = _tcClients.filter(function(c){ return c.whatsapp; }).length;
                 var dealifyCount = _tcClients.filter(function(c){ return !!c.dealify_codes; }).length;
-                var freeCount = _tcClients.filter(function(c){ return !c.dealify_codes && (c.max_pages||3) <= 3; }).length;
-                var ownCount = _tcClients.filter(function(c){ return !c.dealify_codes && (c.max_pages||3) > 3; }).length;
+                var freeCount = _tcClients.filter(function(c){ return !c.dealify_codes && (c.max_pages||1) === 1; }).length;
+                var ownCount = _tcClients.filter(function(c){ return !c.dealify_codes && (c.max_pages||1) > 1; }).length;
                 var s = function(id, v){ var e = document.getElementById(id); if(e) e.textContent = v; };
                 s('tcStatTotal', _tcClients.length);
                 s('tcStatActive', active);
@@ -40806,8 +40836,8 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     || (c.email||'').toLowerCase().indexOf(q) > -1;
                 var matchType = _tcTypeFilter === 'all' ? true
                     : _tcTypeFilter === 'dealify' ? !!c.dealify_codes
-                    : _tcTypeFilter === 'own' ? (!c.dealify_codes && (c.max_pages||3) > 3)
-                    : _tcTypeFilter === 'free' ? (!c.dealify_codes && (c.max_pages||3) <= 3)
+                    : _tcTypeFilter === 'own' ? (!c.dealify_codes && (c.max_pages||1) > 1)
+                    : _tcTypeFilter === 'free' ? (!c.dealify_codes && (c.max_pages||1) === 1)
                     : true;
                 return matchQ && matchType;
             });
@@ -40853,10 +40883,10 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 maxWrap.style.cssText = 'display:flex;flex-direction:column;gap:3px;align-items:center;';
                 var maxInput = document.createElement('input');
                 maxInput.type = 'number';
-                maxInput.value = c.max_pages || 3;
+                maxInput.value = c.max_pages || 1;
                 maxInput.min = 1; maxInput.max = 500;
                 maxInput.style.cssText = 'width:54px;background:#0d1117;border:1px solid #374151;border-radius:4px;padding:3px 6px;color:#e5e7eb;font-size:12px;text-align:center;';
-                maxInput.onchange = (function(id){ return function(){ updateTcClient(id, {max_pages: parseInt(this.value)||3}); }; })(c.id);
+                maxInput.onchange = (function(id){ return function(){ updateTcClient(id, {max_pages: parseInt(this.value)||1}); }; })(c.id);
                 var presets = document.createElement('div');
                 presets.style.cssText = 'display:flex;gap:2px;';
                 [10,25,50,100].forEach(function(n) {
@@ -40975,7 +41005,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 var gscBtn = document.createElement('button');
                 gscBtn.className = 'tr-btn';
                 gscBtn.textContent = c.gsc_enabled ? 'GSC \u2713' : 'GSC off';
-                gscBtn.title = c.gsc_enabled ? 'GSC enabled (automatic on paid plans — click to override off)' : 'GSC off (automatic on free plan — click to override on)';
+                gscBtn.title = c.gsc_enabled ? 'GSC enabled automatically for free and paid plans — click to override off' : 'GSC disabled by admin override — click to enable';
                 gscBtn.style.cssText = 'font-size:10px;padding:3px 8px;border-color:' + (c.gsc_enabled ? '#4ade80' : '#374151') + ';color:' + (c.gsc_enabled ? '#4ade80' : '#6b7280') + ';';
                 gscBtn.onclick = (function(id, current){ return function(){
                     var newVal = !current;
@@ -41302,7 +41332,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
 
                 // Client type badge
                 var isDealify = !!c.dealify_codes;
-                var isOwnClient = !isDealify && (c.max_pages || 3) > 3;
+                var isOwnClient = !isDealify && (c.max_pages || 1) > 1;
                 var clientTypeBadge, clientTypeColor;
                 if (isDealify) {
                     var codeCount = c.dealify_codes.split(',').filter(function(x){ return x.trim(); }).length;
@@ -41330,7 +41360,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     + '<td style="padding:8px 10px;text-align:center;"><span style="font-size:11px;font-weight:700;color:' + clientTypeColor + ';">' + clientTypeBadge + '</span></td>'
                     + '<td style="padding:8px 10px;text-align:center;color:#a78bfa;">' + (c.page_count||0) + '</td>'
                     + '<td style="padding:8px 10px;text-align:center;"><span style="font-size:11px;font-weight:700;color:' + freqColor + ';">' + freqDisplay + '</span></td>'
-                    + '<td style="padding:6px 10px;text-align:center;color:#9ca3af;font-weight:700;">' + (c.max_pages||3) + '</td>'
+                    + '<td style="padding:6px 10px;text-align:center;color:#9ca3af;font-weight:700;">' + (c.max_pages||1) + '</td>'
                     + '<td style="padding:8px 10px;text-align:center;"><span style="font-size:10px;font-weight:700;color:' + statusColor + ';">' + statusLabel + '</span>'
                     + (isPaused ? '<div style="font-size:9px;color:#6b7280;margin-top:2px;">auto-paused</div>' : '')
                     + '</td>'
