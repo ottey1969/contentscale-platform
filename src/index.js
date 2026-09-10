@@ -1,4 +1,4 @@
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-10-CANONICAL-v19';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-10-CANONICAL-v22';
 const CONTENTSCALE_BUILD_CHANGES = [
   'professional-guided-tour',
   'prewrite-create-expand-publish-tracker-baseline',
@@ -2297,7 +2297,10 @@ app.get('/api/tracker-client/:token/pages/:pageId/case-study',async(req,res)=>{t
     FROM tracker_case_study_content_versions WHERE case_study_id=$1 ORDER BY captured_at ASC,id ASC LIMIT 500`,[cs.id]);
   const snap=await pool.query(`SELECT id,checked_at,google_position,google_clicks,google_impressions,score,ai_google_overview_cited,ai_perplexity_cited,ai_bing_cited,ai_brave_cited,scanner_version,scoring_version
     FROM tracker_snapshots WHERE page_id=$1 ORDER BY checked_at ASC,id ASC LIMIT 500`,[req.params.pageId]).catch(()=>({rows:[]}));
-  res.json({success:true,case_study:cs,events:ev.rows,content_versions:versions.rows,snapshots:snap.rows,history_protected:true});
+  const aiEvidence=await pool.query(`SELECT id,engine,revision_cycle,evidence_method,brand_recommended,brand_local_result,brand_direct_supported,domain_cited,exact_page_cited,citation_urls,verified_at,updated_at,is_cleared
+    FROM tracker_ai_evidence WHERE tracker_client_id=$1 AND page_id=$2 AND evidence_method='manual'
+    ORDER BY revision_cycle ASC,COALESCE(updated_at,verified_at,created_at) ASC NULLS LAST,id ASC`,[cr.rows[0].id,req.params.pageId]).catch(()=>({rows:[]}));
+  res.json({success:true,case_study:cs,events:ev.rows,content_versions:versions.rows,snapshots:snap.rows,ai_evidence:aiEvidence.rows,history_protected:true});
 }catch(e){console.error('[case-study-get]',e.message);res.status(500).json({success:false,error:e.message});}});
 
 // PATCH /api/tracker-client/:token/pages/:pageId/frequency
@@ -3807,7 +3810,23 @@ function _trackerParseManualEvidence(rawText,rawSources,pageUrl,aliases){
  const verifiedDirect=sec.direct.filter(x=>!legacyMaps.includes(x)&&!/\bNOT VERIFIED\b/i.test(x)&&_extractUrls(x).length>0);
  const safeRawSources=sources.split(/\r?\n/).filter(x=>!/\bNOT VERIFIED\b/i.test(x)&&!/(?:google\.[^\s/]+\/maps|maps\.app\.goo\.gl|google\s+maps\s+results)/i.test(x)).join('\n');
  const citationText=verifiedDirect.join('\n')+'\n'+sec.recommended.filter(x=>!/\bNOT VERIFIED\b/i.test(x)).join('\n')+'\n'+sec.sources.filter(x=>!/\bNOT VERIFIED\b/i.test(x)&&!_isMapsUrl((_extractUrls(x)[0]||''))).join('\n')+'\n'+safeRawSources;
- const urls=_extractUrls(citationText);
+ // Some engines put citations inline as Markdown/HTML links without our requested section
+ // headings. Those are still verifiable source links and must not disappear merely because
+ // the model changed its formatting. A bare brand mention remains insufficient, and links
+ // found only inside MENTIONED BUT NOT DIRECTLY CITED remain excluded.
+ const _linkedUrls=[];
+ const _linkedSeen=new Set();
+ const _pushLinked=u=>{if(!u||_noiseUrl(u))return;const z=_trackerEvNorm(u);if(z&&!_linkedSeen.has(z)){_linkedSeen.add(z);_linkedUrls.push(u);}};
+ let _lm;
+ const _mdLinkRe=/\[[^\]]+\]\((https?:\/\/[^\s)]+)\)/gi;
+ while((_lm=_mdLinkRe.exec(all)))_pushLinked(_lm[1]);
+ const _htmlLinkRe=/<a\b[^>]*\bhref=["'](https?:\/\/[^"']+)["'][^>]*>/gi;
+ while((_lm=_htmlLinkRe.exec(all)))_pushLinked(_lm[1]);
+ const _mentionedUrlNorm=new Set(_extractUrls(sec.mentioned.join('\n')).map(_trackerEvNorm));
+ const _sectionUrls=_extractUrls(citationText);
+ const _sectionNorm=new Set(_sectionUrls.map(_trackerEvNorm));
+ const urls=_sectionUrls.slice();
+ _linkedUrls.forEach(u=>{const z=_trackerEvNorm(u);if(!_sectionNorm.has(z)&&!_mentionedUrlNorm.has(z)){_sectionNorm.add(z);urls.push(u);}});
  const root=_trackerEvRoot(_trackerEvHost(pageUrl)),pn=_trackerEvNorm(pageUrl),own=urls.filter(u=>_trackerEvRoot(_trackerEvHost(u))===root), names=a=>a.map(x=>{
    let n=String(x||'').split('|')[0].trim().replace(/^\d+[.)]\s*/,'').replace(/^\*+|\*+$/g,'').split(/\s+[—–]\s+/)[0].trim();
    if(!n||/^https?:\/\//i.test(n)||/^\[?https?:/i.test(n)||/^\(?none\)?[.]?$/i.test(n)||/^[-:| ]+$/.test(n)||/[:.!?]$/.test(n)||n.split(/\s+/).length>12||n.length>120)return '';
@@ -7573,7 +7592,7 @@ Insurance documentation: provides estimates and relevant contractor/insurance do
 Experience/certifications: no manufacturer certifications. Do not claim GAF, Owens Corning or CertainTeed certification.
 Warranty stated by manager: 5 years for repairs and 15 years for new roofs; final copy must match the written warranty terms.
 Financing: not offered.
-Pricing: do not publish an unsupported emergency price range.`;
+Pricing: the owner/manager confirms an indicative emergency-roofing range of $250 to $5,800+. This is not a fixed quote or promise. Final pricing is determined on site after the damage, materials, accessibility, safety conditions and required work are assessed, and is presented before approved work begins. Price matching is available.`;
   await client.query(`UPDATE tracker_clients
      SET brand_context=CASE WHEN COALESCE(trim(brand_context),'')='' THEN $1 ELSE brand_context||E'\n\n'||$1 END
      WHERE (lower(COALESCE(domain,'')) LIKE '%perfectroofingteam.com%' OR lower(COALESCE(name,''))='perfect roofing team')
@@ -7587,7 +7606,8 @@ Pricing: do not publish an unsupported emergency price range.`;
     'The manager of Perfect Roofing Team has 15 years of roofing experience.',
     'Perfect Roofing Team NJ home-improvement contractor registration number is 13VH13554900.',
     'Perfect Roofing Team phone is (862) 238-6353, email is info@perfectroofingteam.com, and address is 380 Garibaldi Ave, Lodi, NJ 07644.',
-    'Perfect Roofing Team is insured; proof is available privately to clients on request and policy details are not for public display.'
+    'Perfect Roofing Team is insured; proof is available privately to clients on request and policy details are not for public display.',
+    'Perfect Roofing Team emergency roofing work has an owner-confirmed indicative range of $250 to $5,800+; it is not a fixed quote, and final pricing is determined on site after assessment and presented before approved work begins. Price matching is available.'
   ];
   for(const _prtClaim of _prtClaims){
     await client.query(`INSERT INTO tracker_claims_facts(page_id,tracker_client_id,claim_text,source_type,source_engine,source_context,status,notes,verified_at)
@@ -32936,7 +32956,7 @@ function openCaseStudy(pageId){
   api('/pages/'+pageId+'/case-study','GET').then(function(d){
     if(!d||!d.success)throw new Error((d&&d.error)||'Could not load case study');
     var cs=d.case_study||{},b=cs.baseline_data||{};if(typeof b==='string'){try{b=JSON.parse(b);}catch(e){b={};}}
-    var ai=b.ai_evidence||{},events=d.events||[],versions=d.content_versions||[],snaps=d.snapshots||[],evidenceCorrected=events.some(function(e){return e.event_type==='evidence_classification_corrected';});
+    var ai=b.ai_evidence||{},events=d.events||[],versions=d.content_versions||[],snaps=d.snapshots||[],aiRows=d.ai_evidence||[],evidenceCorrected=events.some(function(e){return e.event_type==='evidence_classification_corrected';});
     var latest=snaps.length?snaps[snaps.length-1]:{};
     function metric(label,value,color){return '<div style="background:#0b1220;border:1px solid #1e3a8a;border-radius:8px;padding:10px;min-width:115px;flex:1;"><div style="font-size:20px;font-weight:900;color:'+(color||'#e5e7eb')+'">'+_csEscH(value==null?'—':value)+'</div><div style="font-size:9px;color:#64748b;text-transform:uppercase;letter-spacing:.06em;">'+_csEscH(label)+'</div></div>';}
     function utcStamp(v){try{return new Date(v).toISOString().replace('T',' ').replace(/\.\d{3}Z$/,' UTC');}catch(e){return String(v||'');}}
@@ -32959,6 +32979,13 @@ function openCaseStudy(pageId){
     }
     var timeline=events.map(function(e){var x=e.event_data||{};if(typeof x==='string'){try{x=JSON.parse(x);}catch(z){x={};}}var type=String(e.event_type||'');return '<div style="display:grid;grid-template-columns:154px 165px minmax(0,1fr);gap:10px;padding:10px 0;border-top:1px solid #172033;font-size:11px;align-items:start;"><span style="color:#94a3b8;font-family:ui-monospace,monospace;">'+_csEscH(utcStamp(e.event_at))+'</span><b style="color:#7dd3fc;">'+_csEscH(type.replace(/_/g,' '))+'</b><span style="color:#94a3b8;line-height:1.5;">'+_csEscH(eventSummary(type,x))+'</span></div>';}).join('');
     var versionList=versions.map(function(v){var vd=v.version_data||{};if(typeof vd==='string'){try{vd=JSON.parse(vd);}catch(e){vd={};}}var vt=String(v.version_type||'').replace(/_r\d+$/,'').replace(/_/g,' ');return '<div style="display:grid;grid-template-columns:160px 190px 1fr;gap:8px;padding:8px 0;border-top:1px solid #172033;font-size:11px;"><span style="color:#94a3b8;">'+_csEscH(utcStamp(v.captured_at))+'</span><b style="color:#86efac;">'+_csEscH(vt)+(vd.revision_cycle?' · revision '+_csEscH(vd.revision_cycle):'')+'</b><span style="color:#64748b;">SHA-256 '+_csEscH(String(v.content_hash||'').slice(0,16))+'… · '+_csEscH(String(v.html_bytes||0))+' bytes · immutable</span></div>';}).join('');
+    var engineOrder=['google_aio','chatgpt','perplexity','claude','copilot'],engineNames={google_aio:'Google AIO',chatgpt:'ChatGPT',perplexity:'Perplexity',claude:'Claude',copilot:'Microsoft Copilot'};
+    var latestByEngine={};aiRows.forEach(function(r){if(!r||r.is_cleared===true||r.is_cleared==='true')return;var old=latestByEngine[r.engine];var rt=Date.parse(r.updated_at||r.verified_at||0)||0,ot=old?(Date.parse(old.updated_at||old.verified_at||0)||0):-1;if(!old||Number(r.revision_cycle||1)>Number(old.revision_cycle||1)||(Number(r.revision_cycle||1)===Number(old.revision_cycle||1)&&rt>=ot))latestByEngine[r.engine]=r;});
+    var currentRevision=Math.max(1,versions.reduce(function(m,v){var vd=v.version_data||{};if(typeof vd==='string'){try{vd=JSON.parse(vd);}catch(e){vd={};}}return Math.max(m,Number(vd.revision_cycle||1));},1));
+    var currentCount=engineOrder.filter(function(k){var r=latestByEngine[k];return r&&Number(r.revision_cycle||1)===currentRevision;}).length;
+    function yesNo(v){return v===true||v==='true'||v==='t'||v===1||v==='1';}
+    function evidenceCell(v){return '<span style="font-weight:900;color:'+(yesNo(v)?'#4ade80':'#f87171')+'">'+(yesNo(v)?'YES':'NO')+'</span>';}
+    var engineTable='<div style="overflow-x:auto;border:1px solid #1e3a8a;border-radius:9px;"><table style="width:100%;border-collapse:collapse;min-width:700px;font-size:10px;"><thead><tr style="background:#0b1220;color:#94a3b8;text-align:left;"><th style="padding:8px;">ENGINE</th><th style="padding:8px;">REVISION</th><th style="padding:8px;">RECOMMENDED</th><th style="padding:8px;">LOCAL / MAPS</th><th style="padding:8px;">DOMAIN CITED</th><th style="padding:8px;">EXACT PAGE</th><th style="padding:8px;">VERIFIED</th></tr></thead><tbody>'+engineOrder.map(function(k){var r=latestByEngine[k],isCurrent=r&&Number(r.revision_cycle||1)===currentRevision;if(!r)return '<tr style="border-top:1px solid #172033;"><td style="padding:8px;color:#e5e7eb;font-weight:800;">'+engineNames[k]+'</td><td colspan="6" style="padding:8px;color:#fbbf24;">NOT CHECKED — manual evidence required</td></tr>';return '<tr style="border-top:1px solid #172033;opacity:'+(isCurrent?'1':'.58')+';"><td style="padding:8px;color:#e5e7eb;font-weight:800;">'+engineNames[k]+'</td><td style="padding:8px;color:'+(isCurrent?'#7dd3fc':'#94a3b8')+';">'+(isCurrent?'CURRENT · R':'PRIOR · R')+_csEscH(r.revision_cycle||1)+'</td><td style="padding:8px;">'+evidenceCell(r.brand_recommended)+'</td><td style="padding:8px;">'+evidenceCell(r.brand_local_result)+'</td><td style="padding:8px;">'+evidenceCell(r.domain_cited)+'</td><td style="padding:8px;">'+evidenceCell(r.exact_page_cited)+'</td><td style="padding:8px;color:#94a3b8;white-space:nowrap;">'+_csEscH(utcStamp(r.updated_at||r.verified_at))+'</td></tr>';}).join('')+'</tbody></table></div><div style="font-size:10px;color:'+(currentCount===5?'#4ade80':'#fbbf24')+';margin-top:7px;font-weight:800;">Revision '+currentRevision+': '+currentCount+'/5 manually checked'+(currentCount===5?' · complete':' · recheck all five engines after publication')+'. Prior revisions are comparison evidence only.</div>';
     box.innerHTML='<div style="display:flex;justify-content:space-between;gap:14px;align-items:flex-start;"><div><div style="font-size:10px;font-weight:900;color:#38bdf8;letter-spacing:.08em;">CASE STUDY ACTIVE · HISTORY PROTECTED</div><h2 style="margin:5px 0 3px;font-size:19px;">Perfect Roofing Team LLC</h2><div style="font-size:10px;color:#64748b;">Also observed as: Perfect Roofing Team LLC - Roofing Contractor NJ</div><div style="font-size:11px;color:#94a3b8;word-break:break-all;">'+_csEscH(cs.canonical_url||'')+'</div><div style="font-size:11px;color:#c4b5fd;margin-top:3px;">Query: '+_csEscH(cs.primary_query||'')+'</div></div><button onclick="document.getElementById(\\'caseStudyOv\\').style.display=\\'none\\'" style="background:none;border:1px solid #374151;color:#94a3b8;border-radius:6px;padding:5px 9px;cursor:pointer;">Close</button></div>'
       +'<div style="padding:9px 11px;background:#052e16;border:1px solid #166534;border-radius:7px;color:#86efac;font-size:11px;margin:14px 0;">Baseline locked. Reset, reload and page archiving cannot overwrite this record.</div>'
       +'<div style="font-size:10px;font-weight:900;color:#94a3b8;letter-spacing:.08em;margin:16px 0 6px;">LOCKED BASELINE · '+_csEscH(utcStamp(cs.baseline_at))+'</div>'
@@ -32966,6 +32993,7 @@ function openCaseStudy(pageId){
       +(latest&&latest.checked_at?'<div style="font-size:10px;font-weight:900;color:#94a3b8;letter-spacing:.08em;margin:16px 0 6px;">LATEST VERIFIED SNAPSHOT · '+_csEscH(utcStamp(latest.checked_at))+'</div><div style="display:flex;gap:7px;flex-wrap:wrap;">'+metric('Google position',latest.google_position==null?'—':latest.google_position,_csTier(latest.google_position))+metric('GSC clicks',latest.google_clicks==null?'—':latest.google_clicks,'#4ade80')+metric('GSC impressions',latest.google_impressions==null?'—':Number(latest.google_impressions).toLocaleString(),'#60a5fa')+metric('GRAAF',latest.score==null?'—':latest.score+'/100',latest.score>=b.graaf_score?'#4ade80':'#fbbf24')+metric('Google AIO',latest.ai_google_overview_cited==null?'NOT CHECKED':(latest.ai_google_overview_cited===true||latest.ai_google_overview_cited==='t'?'CITED':'NOT CITED'),latest.ai_google_overview_cited==null?'#94a3b8':(latest.ai_google_overview_cited===true||latest.ai_google_overview_cited==='t'?'#4ade80':'#f87171'))+'</div>':'')
       +(evidenceCorrected?'<div style="margin-top:12px;padding:10px;background:#451a03;border:1px solid #92400e;border-radius:7px;color:#fbbf24;font-size:11px;line-height:1.55;"><b>Evidence correction:</b> the immutable baseline retains the original classification for audit integrity. It is superseded by the correction event: recommended and Local/Maps visible, but website and exact page not cited.</div>':'')
       +'<div style="margin-top:14px;padding:10px;background:#111827;border-left:3px solid #f59e0b;border-radius:6px;color:#fbbf24;font-size:11px;line-height:1.55;"><b>Current guardrail:</b> '+_csEscH(evidenceCorrected?'Preserve the historical baseline, but do not claim an exact-page AIO citation until a verifiable source URL supports it. Measure recommendation, Local/Maps visibility, domain citation and exact-page citation separately.':(b.treatment_guardrail||'Preserve proven wins and measure incremental changes.'))+'</div>'
+      +'<h3 style="font-size:13px;color:#e5e7eb;margin:18px 0 7px;">Five-engine AI evidence</h3>'+engineTable
       +'<h3 style="font-size:13px;color:#e5e7eb;margin:18px 0 5px;">Immutable HTML versions</h3>'+(versionList||'<div style="color:#fbbf24;font-size:11px;">No pre-publication HTML saved yet. Use “1 · Save current live” before publishing.</div>')
       +'<h3 style="font-size:13px;color:#e5e7eb;margin:18px 0 5px;">Proof timeline</h3>'+(timeline||'<div style="color:#64748b;font-size:11px;">No events yet.</div>')
       +'<div style="font-size:10px;color:#64748b;margin-top:14px;">'+snaps.length+' dated Tracker snapshot(s) linked · '+events.length+' protected event(s) · '+versions.length+' immutable HTML version(s)</div>';
@@ -46019,7 +46047,11 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
         speakable: /speakable/i.test(rawHtml),
         steps: /<ol[\s>]|class=["'][^"']*(step|voice-list)/i.test(rawHtml),
         micro: /in short:|quick answer:|tl;?dr|key takeaway/i.test(rawHtml),
-        outbound: /href=["']https?:\/\/(developers\.google|static\.googleusercontent|moz\.com|searchengineland|schema\.org)/i.test(rawHtml)
+        outbound: /href=["']https?:\/\/(developers\.google|static\.googleusercontent|moz\.com|searchengineland|schema\.org)/i.test(rawHtml),
+        comparison: /how\s+contentscale\s+compares\s+to\s+brandwell|brandwell\s*\([^)]*content\s+at\s+scale[^)]*\)[\s\S]{0,2500}<table/i.test(rawHtml),
+        craftLink: /href=["'][^"']*\/craft-framework\/?["']/i.test(rawHtml),
+        scoreLink: /href=["'][^"']*\/(?:seo-)?contentscore\/?["']/i.test(rawHtml),
+        checkerLink: /href=["'][^"']*\/best-ai-content-quality-checkers\/?["']/i.test(rawHtml)
       };
       let _alreadyOnPage = '';
       if (_onPage.def) _alreadyOnPage += '\n- A quotable definition / direct-answer block is ALREADY on the page -> do NOT add another definition; MODIFY the existing one only if it is weak.';
@@ -46033,6 +46065,10 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
       if (_onPage.steps) _alreadyOnPage += '\n- Numbered / step lists are ALREADY present -> do NOT recommend adding a step list.';
       if (_onPage.micro) _alreadyOnPage += '\n- Quotable micro-answers ("In short" / "Quick Answer" / TL;DR / key takeaways) are ALREADY present under headings -> do NOT recommend adding micro-answers; MODIFY an existing one only if it is genuinely weak.';
       if (_onPage.outbound) _alreadyOnPage += '\n- Outbound authoritative-source links are ALREADY present -> do NOT recommend adding generic external links.';
+      if (_onPage.comparison) _alreadyOnPage += '\n- A ContentScale-versus-BrandWell comparison section/table is ALREADY present -> do NOT add another comparison table; MODIFY the existing comparison only when current evidence shows a concrete factual gap.';
+      if (_onPage.craftLink) _alreadyOnPage += '\n- The Craft Framework page is ALREADY internally linked -> do NOT recommend adding that link again.';
+      if (_onPage.scoreLink) _alreadyOnPage += '\n- The ContentScore page is ALREADY internally linked -> do NOT recommend adding that link again.';
+      if (_onPage.checkerLink) _alreadyOnPage += '\n- The AI content quality checkers page is ALREADY internally linked -> do NOT recommend adding that link again.';
 
       // ── Extract the ACTUAL current text of key blocks so the brief rewrites them IN PLACE (merge/change), never duplicates ──
       const _stripTags = function(s){ return (s||'').replace(/<[^>]+>/g,' ').replace(/&[a-z#0-9]+;/gi,' ').replace(/\s+/g,' ').trim(); };
@@ -46431,8 +46467,13 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
         snapshot.ai_google_overview_text = null;
         snapshot.ai_google_overview_references = [];
       }
-      const _googleAioExactVerified = !!(_manualGoogleAio && !_googleAioManualCleared && _manualGoogleAio.exact_page_cited);
-      const _googleAioAlreadyCited = _googleAioManualCleared ? false : (_googleAioExactVerified || !!snapshot.ai_google_overview_cited);
+      const _googleAioManualChecked = !!(_manualGoogleAio && !_googleAioManualCleared);
+      const _googleAioExactVerified = !!(_googleAioManualChecked && _manualGoogleAio.exact_page_cited);
+      // A current manual check is authoritative in BOTH directions. Previously only a manual
+      // YES overrode the legacy snapshot; a manual NO accidentally allowed stale automatic
+      // citation state to reappear inside Search Intent and the GSC Brief.
+      const _googleAioAlreadyCited = _googleAioManualChecked ? _googleAioExactVerified : (_googleAioManualCleared ? false : !!snapshot.ai_google_overview_cited);
+      if(_googleAioManualChecked && !_googleAioExactVerified) snapshot.ai_google_overview_cited=false;
       const _chatgptExactVerified = !!(_manualChatgpt && !_manualChatgpt.is_cleared && _manualChatgpt.exact_page_cited);
 
       // CONTENTSCALE-BRIEF-CLAIMS-FACTS-GATE-20260909=true
@@ -47323,7 +47364,20 @@ If no unanchored claims found, return empty array: []`;
       return _ecVerified.some(function(v){ return v && (v.indexOf(n)>=0 || n.indexOf(v)>=0); });
     };
     const _ecContradiction = function(txt){
-      if(!_googleAioAlreadyCited) return txt;
+      if(!_googleAioAlreadyCited) {
+        var n=String(txt||'');
+        // Hard inverse guard: when the current manual Google AIO check is NOT CITED, generated
+        // prose may not resurrect an older/automatic citation or infer citation from rank #1.
+        n=n.replace(/(?:this|the|target|our) page is already cited in google ai overviews?[^.]*\.?/gi,
+          'The current manual Google AIO check did not cite the target website or exact page.');
+        n=n.replace(/(?:this|the|target|our) page (?:already |currently )?(?:is|was|gets|got) cited(?: by| in)? google aio[^.]*\.?/gi,
+          'The current manual Google AIO check did not cite the target website or exact page.');
+        n=n.replace(/(?:while|although) (?:this|the|target|our) page ranks? #?1(?:\.0)? and is cited/gi,
+          'Although the page ranks #1 in the checked organic result, the current manual AI checks did not establish a Google AIO citation');
+        n=n.replace(/(?:this|the|target|our) page ranks? #?1(?:\.0)? and is cited/gi,
+          'The page ranks #1 in the checked organic result, but the current manual AI checks did not establish a Google AIO citation');
+        return n;
+      }
       var t=String(txt||'');
       t=t.replace(/this page currently lacks visibility in (?:these )?ai summaries due to its low organic position\.?/gi,
         'This page already has verified Google AI Overview citation visibility; protect that win while expanding coverage to engines that are still missing.');
@@ -47369,7 +47423,7 @@ If no unanchored claims found, return empty array: []`;
     };
     const _ecEnforceItem = function(item){
       if(!item || typeof item!=='object') return item;
-      ['title','action','expected_impact','trigger'].forEach(function(k){ if(typeof item[k]==='string') {
+      ['title','action','expected_impact','trigger','the_question','resolves_now','content_mismatch','what_wins','passage','description'].forEach(function(k){ if(typeof item[k]==='string') {
         item[k]=_ecSafety(_ecContradiction(item[k]));
         // Bing can support Microsoft search visibility, but it is never proof of a Copilot citation
         // and must never be described as a strict Copilot citation prerequisite.
@@ -47713,7 +47767,7 @@ MERGE RULES:
 1. Drop actions for systems now showing YES above (already cited/ranked).
 2. Max 5 items total, HIGH priority first.
 3. ALWAYS KEEP any NEW item with system "Cannibalization", "Competitor Gap", or "Internal Link" \u2014 these are evidence-based findings from real tracker data (shared search queries, live SERP competitors), never generic suggestions, and must never be dropped in favor of an older, less specific action.
-4. If ANY item in PREVIOUS has a system that is NOT one of: Google AIO, Perplexity, Copilot, Ranking, Cannibalization, Competitor Gap, Internal Link, Visibility (for example "Claude", "Brave", or "Claude/Brave") \u2014 DISCARD it completely, never carry it into the merged output under any label. Claude citation checking does not exist in this system.
+4. Keep only supported systems: Google AIO, ChatGPT Search, Perplexity, Claude, Copilot, Ranking, Cannibalization, Competitor Gap, Internal Link, Visibility, and Claims & Facts. Discard obsolete Brave items. All five current manual engine checks remain separate evidence.
 5. ABOVE-THE-FOLD PRIORITY: when a fix could reasonably go in more than one place on the page, prefer the location closer to the H1/opening paragraph over one further down \u2014 AI extraction weights the first ~30% of a page far more heavily than the rest.
 6. If a NEW item has system "Competitor Gap" AND includes a "comparison_table" field, KEEP that field exactly as given \u2014 it is a structured per-competitor breakdown the owner reads as a lesson, do not summarize it away.
 
