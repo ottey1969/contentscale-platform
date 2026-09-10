@@ -32047,7 +32047,7 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
       <option value="hi">Brief: &#x939;&#x93f;&#x928;&#x94d;&#x926;&#x940;</option>
     </select>
     <button class="cs-btn" onclick="loadPages()" style="margin-left:4px;" title="Refresh"><i class="fas fa-sync-alt"></i></button>
-    <button id="tourBtn" class="cs-btn" onclick="startTour(true)" style="border-color:#7c3aed;color:#a78bfa;animation:tourPulse 2s ease-in-out infinite;" title="Step-by-step walkthrough of the tracker">? Tour</button>
+    <button id="tourBtn" class="cs-btn" onclick="startTour(true)" style="border-color:#7c3aed;color:#c4b5fd;animation:tourPulse 2s ease-in-out infinite;font-weight:700;" title="Open the complete ContentScale workflow tour">&#10024; Guided Tour</button>
     <style>@keyframes tourPulse{0%,100%{box-shadow:0 0 0 0 rgba(124,58,237,.55);}50%{box-shadow:0 0 0 7px rgba(124,58,237,0);}}@keyframes scanPulse{0%,100%{box-shadow:0 0 0 0 rgba(74,222,128,.55);}50%{box-shadow:0 0 0 7px rgba(74,222,128,0);}}</style>
     <button id="scanAllBtn" class="cs-btn" onclick="scanAllPages()" style="border-color:#4ade80;color:#4ade80;font-weight:700;" title="Scan only the current GSC-ranked Active Priorities, one by one. Checked and deferred pages are skipped.">&#x26a1; Scan Priorities</button>
     <button id="scanSelectedBtn" class="cs-btn" onclick="scanSelectedPages()" style="border-color:#60a5fa;color:#60a5fa;font-weight:700;" title="Tick the checkboxes on the pages you want, then scan only those">&#x2611; Scan Selected</button>
@@ -34422,7 +34422,7 @@ function renderPages() {
         + (_pushList.length > 5 ? '<div style="font-size:9px;color:#4b5563;margin-top:3px;">+ ' + (_pushList.length - 5) + ' more in your Queries CSV</div>' : '')
         + '</div>';
     }
-    return _sectionPrefix + '<div class="cs-page-card' + (isDone ? ' done' : '') + '" data-page-id="' + p.id + '" style="position:relative;background:#0d1117;border:1px solid #1f2937;' + (_mdOn ? 'border-left:4px solid #16a34a;' : 'border-left:4px solid #374151;') + 'border-radius:10px;margin-bottom:12px;overflow:hidden;">'
+    return _sectionPrefix + '<div class="cs-page-card' + (isDone ? ' done' : '') + '" data-page-id="' + p.id + '" data-tour="page-card" style="position:relative;background:#0d1117;border:1px solid #1f2937;' + (_mdOn ? 'border-left:4px solid #16a34a;' : 'border-left:4px solid #374151;') + 'border-radius:10px;margin-bottom:12px;overflow:hidden;">'
       + pendingBanner
       + needsHtmlBanner
       + (isDone ? '<div style="display:flex;align-items:center;gap:6px;padding:5px 14px;background:rgba(74,222,128,.06);border-bottom:1px solid #166534;font-size:10px;color:#4ade80;letter-spacing:.04em;"><span>\\u2713</span> IMPLEMENTED' + (implementationAt ? ' &middot; ' + implementationAt : '') + (implementationVerifiedAt ? ' &middot; VERIFIED ' + implementationVerifiedAt : ' &middot; verifying live page...') + '</div>' : '')
@@ -34435,7 +34435,7 @@ function renderPages() {
       + (function(){
           var md = p.manual_done === true || p.manual_done === 't' || p.manual_done === 'true' || p.manual_done === 1;
           var mdAt = (md && p.manual_done_at) ? new Date(p.manual_done_at).toLocaleDateString('en-GB',{day:'2-digit',month:'short'}) : '';
-          return '<button class="cs-mycheck-btn" onclick="toggleManualDone(' + p.id + ',' + (md ? 'true' : 'false') + ')" '
+          return '<button class="cs-mycheck-btn" data-tour="my-check" onclick="toggleManualDone(' + p.id + ',' + (md ? 'true' : 'false') + ')" '
             + 'title="' + (md ? 'Your own checkmark — set ' + mdAt + '. Stays until YOU click it off. Scans and HTML never reset this.' : 'Your own checkmark — mark this page as handled by you. Nothing resets it except you.') + '" '
             + 'style="flex-shrink:0;cursor:pointer;font-size:10px;font-weight:800;border-radius:4px;padding:1px 8px;letter-spacing:.04em;'
             + (md ? 'background:rgba(74,222,128,.15);border:1px solid #16a34a;color:#4ade80;' : 'background:none;border:1px dashed #374151;color:#4b5563;')
@@ -34477,25 +34477,25 @@ function renderPages() {
       + '</div>'
       + '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:7px;padding-top:7px;border-top:1px solid #172033;">'
       + '<span style="font-size:9px;font-weight:800;color:#64748b;text-transform:uppercase;letter-spacing:.06em;">Treatment</span>'
-      + '<select onclick="event.stopPropagation()" onchange="setPageTreatment(' + p.id + ',this.value)" ' + (!hasBrief?'disabled title="Scan/build and review the Brief before choosing Treatment" ':'') + 'style="font-size:10px;padding:4px 6px;border-radius:5px;background:#0a0e14;border:1px solid #374151;color:#cbd5e1;">'
+      + '<select data-tour="treatment" onclick="event.stopPropagation()" onchange="setPageTreatment(' + p.id + ',this.value)" ' + (!hasBrief?'disabled title="Scan/build and review the Brief before choosing Treatment" ':'') + 'style="font-size:10px;padding:4px 6px;border-radius:5px;background:#0a0e14;border:1px solid #374151;color:#cbd5e1;">'
       + '<option value=""' + (!p.treatment?' selected':'') + '>Choose after Brief</option>'
       + ['KEEP','OPTIMIZE','EXPAND','REWRITE','MERGE','REDIRECT','REMOVE_NOINDEX','MONITOR'].map(function(t){return '<option value="'+t+'"'+(String(p.treatment||'').toUpperCase()===t?' selected':'')+'>'+t.replace('_',' / ')+'</option>';}).join('')
       + '</select>'
       + (p.treatment_target_url ? '<span style="font-size:9px;color:#fbbf24;">→ '+String(p.treatment_target_url).replace(/</g,'&lt;')+'</span>' : '')
       + '</div>'
       + '<div class="cs-card-actions" style="display:flex;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;align-items:flex-start;">' 
-      + '<button onclick="event.stopPropagation();openAiEvidence(' + p.id + ')" style="background:#0d1117;border:1px solid #8b5cf6;border-radius:7px;color:#c4b5fd;cursor:pointer;font-size:11px;padding:5px 12px;font-weight:700;" title="Open the five-engine manual evidence panel. Count means manually checked, not cited.">&#129504; AI Checked ' + (function(){var a=p.ai_manual_evidence;if(typeof a==="string"){try{a=JSON.parse(a);}catch(x){a={};}}return ["google_aio","chatgpt","perplexity","claude","copilot"].filter(function(k){return a&&a[k]&&_aiEvidenceIsVerified(a[k]);}).length;})() + '/5</button>'
-      + '<button onclick="event.stopPropagation();openCompetitiveIntelligence(' + p.id + ')" style="background:#0d1117;border:1px solid #0891b2;border-radius:7px;color:#67e8f9;cursor:pointer;font-size:11px;padding:5px 12px;font-weight:700;" title="Cross-engine competitors, sources, content opportunities and claims to verify">&#128269; Intelligence</button>'
+      + '<button data-tour="ai-evidence" onclick="event.stopPropagation();openAiEvidence(' + p.id + ')" style="background:#0d1117;border:1px solid #8b5cf6;border-radius:7px;color:#c4b5fd;cursor:pointer;font-size:11px;padding:5px 12px;font-weight:700;" title="Open the five-engine manual evidence panel. Count means manually checked, not cited.">&#129504; AI Checked ' + (function(){var a=p.ai_manual_evidence;if(typeof a==="string"){try{a=JSON.parse(a);}catch(x){a={};}}return ["google_aio","chatgpt","perplexity","claude","copilot"].filter(function(k){return a&&a[k]&&_aiEvidenceIsVerified(a[k]);}).length;})() + '/5</button>'
+      + '<button data-tour="intelligence" onclick="event.stopPropagation();openCompetitiveIntelligence(' + p.id + ')" style="background:#0d1117;border:1px solid #0891b2;border-radius:7px;color:#67e8f9;cursor:pointer;font-size:11px;padding:5px 12px;font-weight:700;" title="Cross-engine competitors, sources, content opportunities and claims to verify">&#128269; Intelligence</button>'
       + ((explicitlyNeeds || p.fetch_reliable === false) ? '<button class="cs-html-btn cs-blink" onclick="openHtmlUpload(' + p.id + ')" style="background:#0d1117;border:1px solid #f59e0b;border-radius:7px;color:#fbbf24;cursor:pointer;font-size:11px;padding:5px 12px;font-weight:700;" title="Automatic live fetch was not reliable. Paste the published HTML manually to continue verification.">&#9888; Manual HTML required</button>' : '')
-      + '<button data-check-btn="' + p.id + '" onclick="checkPage(' + p.id + ')" style="background:#0d1117;border:1px solid ' + (_scanDone ? '#22c55e' : '#2dd4bf') + ';border-radius:7px;color:' + (_scanDone ? '#4ade80' : '#5eead4') + ';cursor:pointer;font-size:11px;padding:5px 10px;font-weight:700;" title="' + (lastChecked ? (_scanDone ? 'Scanned this round \\u2014 click to rescan now' : 'Rescan this URL now') : 'Scan this URL now') + '">' + (lastChecked ? (_scanDone ? '\\u21bb \\u2713' : '\\u21bb Scan') : '\\u25b6 Scan') + '</button>'
-      + ((hasBrief || _lastBriefData[p.id]) ? '<button onclick="viewLastBrief(' + p.id + ')" style="background:#0d1117;border:1px solid #8b5cf6;border-radius:7px;color:#c4b5fd;cursor:pointer;font-size:11px;padding:5px 12px;font-weight:600;" title="View Citation Brief">\\ud83d\\udcc4 View Brief</button>' : '')
-      + '<button onclick="csPosHist(' + p.id + ')" style="background:#0d1117;border:1px solid #64748b;border-radius:7px;color:#cbd5e1;cursor:pointer;font-size:13px;padding:5px 10px;font-weight:600;" title="Ranking history">\\ud83d\\udcc8</button>'
+      + '<button data-tour="scan" data-check-btn="' + p.id + '" onclick="checkPage(' + p.id + ')" style="background:#0d1117;border:1px solid ' + (_scanDone ? '#22c55e' : '#2dd4bf') + ';border-radius:7px;color:' + (_scanDone ? '#4ade80' : '#5eead4') + ';cursor:pointer;font-size:11px;padding:5px 10px;font-weight:700;" title="' + (lastChecked ? (_scanDone ? 'Scanned this round \\u2014 click to rescan now' : 'Rescan this URL now') : 'Scan this URL now') + '">' + (lastChecked ? (_scanDone ? '\\u21bb \\u2713' : '\\u21bb Scan') : '\\u25b6 Scan') + '</button>'
+      + ((hasBrief || _lastBriefData[p.id]) ? '<button data-tour="view-brief" onclick="viewLastBrief(' + p.id + ')" style="background:#0d1117;border:1px solid #8b5cf6;border-radius:7px;color:#c4b5fd;cursor:pointer;font-size:11px;padding:5px 12px;font-weight:600;" title="View Citation Brief">\\ud83d\\udcc4 View Brief</button>' : '')
+      + '<button data-tour="history" onclick="csPosHist(' + p.id + ')" style="background:#0d1117;border:1px solid #64748b;border-radius:7px;color:#cbd5e1;cursor:pointer;font-size:13px;padding:5px 10px;font-weight:600;" title="Ranking history">\\ud83d\\udcc8</button>'
       + '<button onclick="deletePage(' + p.id + ')" style="background:#0d1117;border:1px solid #ef4444;border-radius:7px;color:#f87171;cursor:pointer;font-size:13px;padding:5px 10px;font-weight:600;" title="Delete page">\\ud83d\\uddd1</button>'
       + '</div>'
       + '</div>'
       + recsHtml
       + ((!isDone && hasBrief && !(!!p.html_pasted_at && !!lastCheckedRaw && new Date(p.html_pasted_at) > new Date(lastCheckedRaw)))
-        ? '<div onclick="markDone(' + p.id + ',this,false)" style="cursor:pointer;display:flex;align-items:center;gap:10px;padding:12px 16px;background:linear-gradient(90deg,rgba(74,222,128,.08),rgba(74,222,128,.02));border-top:1px solid #1f2937;animation:donePulse 2s ease-in-out infinite;">'
+        ? '<div data-tour="done-verify" onclick="markDone(' + p.id + ',this,false)" style="cursor:pointer;display:flex;align-items:center;gap:10px;padding:12px 16px;background:linear-gradient(90deg,rgba(74,222,128,.08),rgba(74,222,128,.02));border-top:1px solid #1f2937;animation:donePulse 2s ease-in-out infinite;">'
           + '<span style="font-size:1.3rem;flex-shrink:0;">\\u2705</span>'
           + '<div style="flex:1;">'
           + '<div style="font-size:12px;font-weight:800;color:#4ade80;margin-bottom:2px;">MARK AS DONE \\u2014 I implemented the recommendations</div>'
@@ -35731,95 +35731,80 @@ function renderCannibal() {
     + '</div></div>';
 }
 
-// ── GUIDED TOUR — spotlight walkthrough. Auto-starts once for new visitors (dismiss = never again),
-// restartable any time via the "? Tour" toolbar button. Steps with a missing target are skipped.
+// ── PROFESSIONAL PRODUCT TOUR ──────────────────────────────────────────────
+// One canonical tour: opportunity planning, existing-page treatment and proof.
+// Missing/data-dependent controls are skipped without breaking numbering.
 var _tourSteps = [
-  { sel: '#addUrlBtn', title: '1 \\u00b7 Add URL', text: 'Add pages one at a time by pasting a URL. On the free plan this is your way in \\u2014 add your most important pages and the tracker starts watching them immediately.' },
-  { sel: '#prewriteBriefBtn', title: '2 \\u00b7 Pre-Write Brief \\u2014 no page yet', text: 'No URL yet? Type a keyword instead. This runs a live SERP gap analysis and returns exactly what a brand-new page needs to out-rank and out-cite the current top 10 \\u2014 structure, entities, FAQs, citation-ready passages \\u2014 before you write a single word. Any language, any region. 1 free brief per account, then \\u20ac249 for a 20-brief bundle.' },
-  { sel: '#gscBtn', title: '3 \\u00b7 GSC import (paid plans)', text: 'The power source. Import your Google Search Console data \\u2014 the Pages CSV and the Queries CSV \\u2014 and the tracker builds your Lead Queue, pushable queries, impression gaps and conflict detection from real search data. Available on paid plans; on the free plan this button stays off.' },
-  { sel: '#sitemapBtn', title: '4 \\u00b7 Sitemap', text: 'Upload your sitemap so the tracker knows every page that exists on your site \\u2014 not just the tracked ones. That sharpens cannibalization detection (which page owns which intent) and stops \\u201cnew page\\u201d advice for pages you already have.' },
-  { sel: '#briefLangSel', title: '4b \\u00b7 Brief language', text: 'Choose the language your briefs are written in. Leave it on \\ud83c\\udf10 Auto and each brief follows that page\\u2019s own language \\u2014 or pick a fixed language (16 to choose from, e.g. if your pages are English but you\\u2019d rather read the brief in Dutch). The change applies from the next scan; only the human-readable text is translated \\u2014 URLs, code and HTML stay as-is.' },
-  { sel: '#impressionGap', title: '5 \\u00b7 Impression Gap', text: 'Real queries Google already shows your site for that none of your tracked pages target \\u2014 free traffic you are leaving on the table. Locked until you connect real search data (GSC import). Once connected it also powers Cannibalization detection and the Lead Queue below, so connect it early.' },
-  { sel: '#scanAllBtn', title: '6 \\u00b7 Scan Priorities', text: 'Scans only the current GSC-ranked Active Priorities, one by one. Checked, deferred and no-data URLs are skipped, so importing 71 or 500 URLs does not mean paying to scan all of them.' },
-  { sel: '#scanSelectedBtn', title: '6b \\u00b7 Scan Selected', text: 'Do not want to scan everything? Tick the checkbox on just the pages you want (shift-click to select a range), then click Scan Selected \\u2014 only those pages get re-scanned. Saves time and scan budget when you are working one page at a time.' },
-  { sel: '.cs-live', title: '7 \\u00b7 Live Activity', text: 'Your window into what the tracker is doing right now: which page is being scanned, what just finished, what is queued. Auto-updates every 8 seconds \\u2014 no need to refresh.' },
-  { sel: '#brandCtxPanel', title: '8 \\u00b7 Brand & author info', text: 'Store the real facts about your business here \\u2014 name, author, credentials, service area, anything the AI must respect. Every brief uses these facts instead of inventing details. Optional, but it makes the generated text noticeably more accurate.' },
-  { sel: '.cs-page-card', title: '9 \\u00b7 Your tracked pages', text: 'Each card is one tracked page: its Google position, AI citation badges (AI Overview, Perplexity, Copilot), GSC clicks and impressions, and in the yellow block its pushable queries \\u2014 searches on page 2 that one good push moves to page 1.' },
-  { sel: '#cannibalPanel', title: '10 \\u00b7 Cannibalization', text: 'Pages competing with each other for the same search. Click any row for exactly what to do \\u2014 and in most cases you do nothing by hand: the tracker feeds each conflict into the briefs of the affected pages on their next scan, as ready-made actions.' },
-  { sel: '#leadQueuePanel', title: '11 \\u00b7 Active Priorities', text: 'GSC ranks where to work first: #1, then #2, then #3. The queue determines priority, not the content treatment. Open Intelligence/Brief before choosing KEEP, OPTIMIZE, EXPAND or REWRITE.' },
-  { sel: '#myChecksBar', title: '12 \\u00b7 My checks', text: 'Your personal progress. A checked page moves into Completed / Monitoring directly below Active Priorities, where it stays visible for proof/history. Fresh GSC data can later reveal new opportunities.' },
-  { sel: '#pagesList', title: '14 \\u00b7 Start tracking', text: 'When nothing is tracked yet this is where you begin: add URLs one by one, import from your sitemap, or paste from Google Search Console. The system then checks them automatically. Free plan: 1 page, 1 domain \\u2014 pick your most important page first.' },
-  { sel: '#upsellPanel', title: '15 \\u00b7 Done-for-you', text: 'Do not want to run the loop yourself? Ottmar implements every Citation Brief for you \\u2014 done-for-you AI citation optimization, plus high-GRAAF citation-ready content. One WhatsApp message and he babysits your domain.' },
+  {sel:'#statsRow',phase:'OVERVIEW',title:'Visibility at a glance',text:'Start with the outcome: tracked pages, exact-page citation evidence across five AI engines, and remaining capacity. A mention is not counted as a citation unless the evidence supports it.'},
+  {sel:'#addUrlBtn',phase:'SETUP',title:'Track an existing page',text:'Use Add URL for a page that already exists. Existing pages follow the diagnostic workflow: Priority, Intelligence, Scan & Brief, Treatment, Implement, Done/Verify, then Proof & History.'},
+  {sel:'#prewriteBriefBtn',phase:'NEW PAGE',title:'Plan before you create',text:'Pre-Write is for a keyword opportunity, not an existing-page diagnosis. It checks the live SERP and sitemap first, then decides CREATE_NEW_PAGE or EXPAND_EXISTING_PAGE before producing the implementation plan.'},
+  {sel:'#gscBtn',phase:'DATA',title:'Connect real search demand',text:'Google Search Console supplies queries, impressions, positions and clicks. Those signals power Active Priorities, pushable queries, impression gaps and evidence-based cannibalization checks.'},
+  {sel:'#sitemapBtn',phase:'DATA',title:'Protect the site architecture',text:'Import the sitemap so ContentScale knows which URLs already exist. This is essential for CREATE versus EXPAND decisions and prevents accidental duplicate pages.'},
+  {sel:'#briefLangSel',phase:'SETUP',title:'Choose the brief language',text:'Auto follows the page language. A fixed choice writes the human-readable brief in that language while preserving URLs, HTML and code.'},
+  {sel:'#brandCtxPanel',phase:'FACT SAFETY',title:'Control what AI may claim',text:'Store real brand and author context here. Open Claims & Facts to verify business claims centrally: VERIFIED is safe to use; UNVERIFIED, FALSE and NOT APPLICABLE remain blocked from paste-ready copy.'},
+  {sel:'#impressionGap',phase:'OPPORTUNITY',title:'Find uncovered demand',text:'Impression Gap surfaces queries Google already associates with the site but no tracked page properly owns. Review the opportunity, then use Pre-Write to decide CREATE or EXPAND.'},
+  {sel:'#leadQueuePanel',phase:'PRIORITY',title:'Work in the right order',text:'Active Priorities tells you where to investigate first. Priority is not Treatment: always inspect Intelligence and the Citation Brief before choosing what to change.'},
+  {sel:'#scanAllBtn',phase:'EXECUTION',title:'Scan current priorities',text:'Scan Priorities processes only the current GSC-ranked active opportunities. Completed, deferred and ineligible pages are skipped to protect time and scan budget.'},
+  {sel:'#scanSelectedBtn',phase:'EXECUTION',title:'Control the scan scope',text:'Select exact page cards, including shift-click ranges, and scan only those pages when you are working surgically.'},
+  {sel:'[data-tour="page-card"]',phase:'EXISTING PAGE',title:'One card, one decision cycle',text:'The card combines URL ownership, search signals, citation evidence, recommendations and implementation state. Work through its controls from evidence to treatment, never by button colour alone.'},
+  {sel:'[data-tour="ai-evidence"]',phase:'EVIDENCE',title:'Verify five AI engines',text:'AI Checked opens the manual evidence workspace for Google AIO, ChatGPT, Perplexity, Claude and Copilot. Checked, cited and exact-page cited are separate states.'},
+  {sel:'[data-tour="intelligence"]',phase:'INTELLIGENCE',title:'See who wins and why',text:'Intelligence compares competitors, cited sources, recurring content opportunities and claims across engines. Competitor claims remain research until explicitly verified in Claims & Facts.'},
+  {sel:'[data-tour="scan"]',phase:'DIAGNOSIS',title:'Build the Citation Brief',text:'Scan reads the current live page, ranking context and evidence, then creates or refreshes the Citation Brief. If automatic HTML is unreliable, the card asks for manual published HTML.'},
+  {sel:'[data-tour="view-brief"]',phase:'BRIEF',title:'Review the implementation plan',text:'View Brief shows the readable diagnosis and concrete content moves. This is the plan for improving an existing URL; it is intentionally different from a Pre-Write Brief.'},
+  {sel:'[data-tour="treatment"]',phase:'DECISION',title:'Choose Treatment after the Brief',text:'Treatment unlocks after a Brief exists. Choose KEEP, OPTIMIZE, EXPAND, REWRITE, MERGE, REDIRECT, REMOVE / NOINDEX or MONITOR based on the evidence.'},
+  {sel:'[data-tour="done-verify"]',phase:'IMPLEMENT',title:'Declare the implementation',text:'Use Done only after the recommendations are live. ContentScale then verifies the published page; Done is the hand-off from implementation to measurement, not the end of the workflow.'},
+  {sel:'[data-tour="history"]',phase:'PROOF',title:'Baseline, change and history',text:'History preserves positions, citation evidence and meaningful changes over time. A newly published Pre-Write page enters Tracker and its first completed scan becomes the baseline.'},
+  {sel:'[data-tour="my-check"]',phase:'WORKFLOW',title:'Your personal work marker',text:'My Check moves a handled page into Completed / Monitoring without deleting its evidence. Only you switch this marker off; scans do not silently reset it.'},
+  {sel:'#cannibalPanel',phase:'GOVERNANCE',title:'Resolve real URL conflicts',text:'Cannibalization distinguishes proven, likely, possible and structural overlap. Review the evidence before merging: a hub-and-spoke relationship is not automatically a conflict.'},
+  {sel:'.cs-live',phase:'MONITORING',title:'Follow live activity',text:'Live Activity shows the active page, queue and completed work and refreshes automatically. Use it to monitor scans without manually refreshing the Tracker.'}
 ];
-var _tourIdx = -1;
-function _tourEls() {
-  var box = document.getElementById('tourSpot'), tip = document.getElementById('tourTip');
-  if (!box) {
-    box = document.createElement('div'); box.id = 'tourSpot';
-    box.style.cssText = 'position:absolute;z-index:9998;border:2px solid #7c3aed;border-radius:10px;box-shadow:0 0 0 9999px rgba(0,0,0,.68);pointer-events:none;transition:all .25s ease;';
-    document.body.appendChild(box);
-    tip = document.createElement('div'); tip.id = 'tourTip';
-    tip.style.cssText = 'position:absolute;z-index:9999;max-width:340px;background:#0d1117;border:1px solid #7c3aed;border-radius:10px;padding:14px 16px;box-shadow:0 8px 32px rgba(0,0,0,.6);font-family:inherit;';
-    document.body.appendChild(tip);
+var _tourIdx=-1,_tourRunSteps=[],_tourTarget=null,_tourPositionTimer=null;
+function _tourEsc(v){return String(v||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function _tourEls(){
+  var box=document.getElementById('tourSpot'),tip=document.getElementById('tourTip');
+  if(!box){
+    box=document.createElement('div');box.id='tourSpot';box.setAttribute('aria-hidden','true');
+    box.style.cssText='position:absolute;z-index:10020;border:2px solid #8b5cf6;border-radius:12px;box-shadow:0 0 0 9999px rgba(2,6,23,.78),0 0 28px rgba(139,92,246,.38);pointer-events:none;transition:left .22s ease,top .22s ease,width .22s ease,height .22s ease;';document.body.appendChild(box);
+    tip=document.createElement('div');tip.id='tourTip';tip.setAttribute('role','dialog');tip.setAttribute('aria-modal','true');tip.setAttribute('aria-label','ContentScale product tour');
+    tip.style.cssText='position:absolute;z-index:10021;width:min(390px,calc(100vw - 24px));background:linear-gradient(145deg,#111827,#0b1020);border:1px solid #7c3aed;border-radius:14px;padding:0;overflow:hidden;box-shadow:0 24px 70px rgba(0,0,0,.72);font-family:inherit;color:#e5e7eb;';document.body.appendChild(tip);
   }
-  return { box: box, tip: document.getElementById('tourTip') };
+  return {box:box,tip:tip};
 }
-function _tourVisibleSteps() {
-  return _tourSteps.filter(function(s){ var el = document.querySelector(s.sel); return el && el.offsetParent !== null; });
+function _tourBuildSteps(){return _tourSteps.filter(function(s){var e=document.querySelector(s.sel);return e&&e.offsetParent!==null&&e.getBoundingClientRect().width>0&&e.getBoundingClientRect().height>0;});}
+function startTour(manual){
+  endTour(false);_tourRunSteps=_tourBuildSteps();
+  if(!_tourRunSteps.length){if(manual)toast('The tour is not available on this view.','#9ca3af');return;}
+  _tourIdx=0;document.body.style.setProperty('scroll-behavior','smooth');_tourShow();
 }
-function startTour(manual) {
-  var steps = _tourVisibleSteps();
-  if (!steps.length) { if (manual) toast('Nothing to tour yet \\u2014 add pages first', '#9ca3af'); return; }
-  _tourIdx = 0;
-  _tourShow();
+function _tourPlace(){
+  if(_tourIdx<0||!_tourTarget)return;var ui=_tourEls(),r=_tourTarget.getBoundingClientRect(),sx=window.scrollX||window.pageXOffset,sy=window.scrollY||window.pageYOffset,pad=7;
+  ui.box.style.left=(r.left+sx-pad)+'px';ui.box.style.top=(r.top+sy-pad)+'px';ui.box.style.width=(r.width+pad*2)+'px';ui.box.style.height=(r.height+pad*2)+'px';ui.box.style.display='block';
+  var tw=Math.min(390,window.innerWidth-24),left=Math.max(sx+12,Math.min(r.left+sx,sx+window.innerWidth-tw-12));ui.tip.style.left=left+'px';
+  var below=r.bottom+sy+14,above=r.top+sy-ui.tip.offsetHeight-14;ui.tip.style.top=((r.bottom+ui.tip.offsetHeight+26>window.innerHeight&&above>sy+8)?above:below)+'px';
 }
-function _tourShow() {
-  var steps = _tourVisibleSteps();
-  if (_tourIdx < 0 || _tourIdx >= steps.length) { endTour(); return; }
-  var s = steps[_tourIdx];
-  var el = document.querySelector(s.sel);
-  if (!el) { _tourIdx++; _tourShow(); return; }
-  el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  var ui = _tourEls();
-  setTimeout(function(){
-    var r = el.getBoundingClientRect();
-    var sx = window.scrollX || window.pageXOffset, sy = window.scrollY || window.pageYOffset;
-    ui.box.style.left = (r.left + sx - 6) + 'px';
-    ui.box.style.top = (r.top + sy - 6) + 'px';
-    ui.box.style.width = (r.width + 12) + 'px';
-    ui.box.style.height = (r.height + 12) + 'px';
-    ui.box.style.display = 'block';
-    var tip = ui.tip;
-    tip.innerHTML = '<div style="font-size:10px;font-weight:800;letter-spacing:.06em;color:#a78bfa;text-transform:uppercase;margin-bottom:4px;">Step ' + (_tourIdx+1) + ' of ' + _tourVisibleSteps().length + '</div>'
-      + '<div style="font-size:13px;font-weight:800;color:#f1f5f9;margin-bottom:6px;">' + s.title + '</div>'
-      + '<div style="font-size:12px;color:#9ca3af;line-height:1.65;margin-bottom:12px;">' + s.text + '</div>'
-      + '<div style="display:flex;gap:8px;align-items:center;">'
-      + (_tourIdx > 0 ? '<button onclick="tourNav(-1)" style="cursor:pointer;font-size:11px;font-weight:700;padding:6px 12px;border-radius:6px;background:none;border:1px solid #374151;color:#9ca3af;">\\u2190 Back</button>' : '')
-      + '<button onclick="tourNav(1)" style="cursor:pointer;font-size:11px;font-weight:800;padding:6px 16px;border-radius:6px;background:#7c3aed;border:1px solid #8b5cf6;color:#fff;">' + (_tourIdx === _tourVisibleSteps().length - 1 ? 'Finish \\u2713' : 'Next \\u2192') + '</button>'
-      + '<button onclick="endTour()" style="cursor:pointer;font-size:11px;padding:6px 10px;border-radius:6px;background:none;border:none;color:#4b5563;margin-left:auto;">Skip tour \\u2715</button>'
-      + '</div>';
-    tip.style.display = 'block';
-    var tipW = Math.min(340, window.innerWidth - 24);
-    var below = r.bottom + sy + 14;
-    var left = Math.max(12 + sx, Math.min(r.left + sx, sx + window.innerWidth - tipW - 12));
-    // place below the target; if that falls off-screen, place above
-    if (r.bottom + 220 > window.innerHeight && r.top > 240) { tip.style.top = ''; tip.style.top = (r.top + sy - tip.offsetHeight - 14) + 'px'; }
-    else tip.style.top = below + 'px';
-    tip.style.left = left + 'px';
-  }, 350);
+function _tourShow(){
+  if(_tourIdx<0||_tourIdx>=_tourRunSteps.length){endTour(true);return;}var s=_tourRunSteps[_tourIdx],el=document.querySelector(s.sel);
+  if(!el||el.offsetParent===null){_tourRunSteps.splice(_tourIdx,1);_tourShow();return;}_tourTarget=el;el.scrollIntoView({behavior:'smooth',block:'center',inline:'nearest'});
+  var ui=_tourEls(),pct=Math.round(((_tourIdx+1)/_tourRunSteps.length)*100),last=_tourIdx===_tourRunSteps.length-1;
+  ui.tip.innerHTML='<div style="height:3px;background:#1f2937;"><div style="height:100%;width:'+pct+'%;background:linear-gradient(90deg,#7c3aed,#22d3ee);transition:width .25s;"></div></div>'
+    +'<div style="padding:16px 17px 15px;">'
+    +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;"><span style="font-size:9px;font-weight:900;letter-spacing:.12em;color:#67e8f9;background:rgba(8,145,178,.12);border:1px solid rgba(8,145,178,.3);border-radius:999px;padding:3px 8px;">'+_tourEsc(s.phase)+'</span><span style="margin-left:auto;font-size:10px;color:#64748b;font-weight:700;">'+(_tourIdx+1)+' / '+_tourRunSteps.length+'</span><button type="button" onclick="endTour(false)" aria-label="Close tour" style="border:0;background:none;color:#64748b;cursor:pointer;font-size:17px;line-height:1;padding:0 0 1px 5px;">&times;</button></div>'
+    +'<div style="font-size:16px;font-weight:850;color:#f8fafc;line-height:1.3;margin-bottom:7px;">'+_tourEsc(s.title)+'</div>'
+    +'<div style="font-size:12px;color:#aeb8c8;line-height:1.65;margin-bottom:15px;">'+_tourEsc(s.text)+'</div>'
+    +'<div style="display:flex;align-items:center;gap:8px;">'+(_tourIdx?'<button type="button" onclick="tourNav(-1)" style="cursor:pointer;font-size:11px;font-weight:750;padding:7px 12px;border-radius:7px;background:#111827;border:1px solid #374151;color:#cbd5e1;">&larr; Back</button>':'')
+    +'<button type="button" onclick="tourNav(1)" style="cursor:pointer;font-size:11px;font-weight:850;padding:7px 16px;border-radius:7px;background:linear-gradient(90deg,#7c3aed,#6d28d9);border:1px solid #8b5cf6;color:#fff;">'+(last?'Finish tour &#10003;':'Next &rarr;')+'</button>'
+    +'<span style="margin-left:auto;font-size:9px;color:#475569;">Arrow keys &middot; Esc</span></div></div>';
+  ui.tip.style.display='block';clearTimeout(_tourPositionTimer);_tourPositionTimer=setTimeout(_tourPlace,320);
 }
-function tourNav(d) { _tourIdx += d; _tourShow(); }
-function endTour() {
-  _tourIdx = -1;
-  var b = document.getElementById('tourSpot'), t = document.getElementById('tourTip');
-  if (b) b.style.display = 'none';
-  if (t) t.style.display = 'none';
-  try { localStorage.setItem('cs_tour_done', '1'); } catch(e) {}
+function tourNav(d){_tourIdx+=d;_tourShow();}
+function endTour(completed){
+  var wasActive=_tourIdx>=0;_tourIdx=-1;_tourTarget=null;clearTimeout(_tourPositionTimer);document.body.style.removeProperty('scroll-behavior');
+  var b=document.getElementById('tourSpot'),t=document.getElementById('tourTip');if(b)b.style.display='none';if(t)t.style.display='none';
+  if(wasActive){try{localStorage.setItem('cs_tour_done','1');}catch(e){}if(completed)toast('Tour complete \\u2014 reopen it anytime from the toolbar.','#4ade80');}
 }
-function _tourMaybeAutoStart() {
-  try { if (localStorage.getItem('cs_tour_done')) return; } catch(e) {}
-  setTimeout(function(){ if (_tourIdx === -1) startTour(false); }, 1200);
-}
+function _tourMaybeAutoStart(){try{if(localStorage.getItem('cs_tour_done'))return;}catch(e){}setTimeout(function(){if(_tourIdx===-1)startTour(false);},1400);}
+document.addEventListener('keydown',function(e){if(_tourIdx<0)return;if(e.key==='Escape')endTour(false);else if(e.key==='ArrowRight'){e.preventDefault();tourNav(1);}else if(e.key==='ArrowLeft'&&_tourIdx>0){e.preventDefault();tourNav(-1);}});
+window.addEventListener('resize',function(){if(_tourIdx>=0)_tourPlace();});
 
 async function removeRedirectedPage(pageId, addUrl) {
   var msg = addUrl ? 'Swap this dead URL for its destination (' + addUrl + ')?' : 'Remove this redirected (dead) URL from the tracker?';
