@@ -1,4 +1,4 @@
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-10-CANONICAL-v17';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-10-CANONICAL-v18';
 const CONTENTSCALE_BUILD_CHANGES = [
   'professional-guided-tour',
   'prewrite-create-expand-publish-tracker-baseline',
@@ -1764,6 +1764,20 @@ async function _ensurePerfectRoofingCaseStudy(client,page){
   await pool.query(`INSERT INTO tracker_case_study_events(case_study_id,tracker_page_id,event_type,source,event_data)
     SELECT $1,$2,'evidence_classification_corrected','tracker_v17',$3::jsonb
     WHERE NOT EXISTS(SELECT 1 FROM tracker_case_study_events WHERE case_study_id=$1 AND event_type='evidence_classification_corrected')`,[cs.id,page.id,JSON.stringify(correction)]);
+  const evidenceRows=await pool.query("SELECT DISTINCT ON (engine) * FROM tracker_ai_evidence WHERE tracker_client_id=$1 AND page_id=$2 AND evidence_method='manual' ORDER BY engine,COALESCE(updated_at,verified_at,created_at) DESC NULLS LAST,id DESC",[client.id,page.id]).catch(()=>({rows:[]}));
+  const aliases=[client.name,client.domain,'Perfect Roofing Team LLC','Perfect Roofing Team LLC - Roofing Contractor NJ','Perfect Roofing Team'];
+  const engines={};
+  for(const row of evidenceRows.rows||[]){
+    if(row.is_cleared===true||row.is_cleared==='t')continue;
+    const parsed=_trackerParseManualEvidence(row.raw_text||'',row.raw_sources||'',page.url,aliases);
+    engines[row.engine]={checked:true,brand_recommended:parsed.brand_recommended,brand_local_result:parsed.brand_local_result,brand_direct_supported:parsed.brand_direct_supported,domain_cited:parsed.domain_cited,exact_page_cited:parsed.exact_page_cited,verified_at:row.verified_at};
+  }
+  if(Object.keys(engines).length){
+    const vals=Object.values(engines),reconciliation={canonical_business_name:'Perfect Roofing Team LLC',observed_aliases:['Perfect Roofing Team LLC - Roofing Contractor NJ','Perfect Roofing Team'],engines,summary:{checked:vals.length,recommended:vals.filter(x=>x.brand_recommended).length,local_maps:vals.filter(x=>x.brand_local_result).length,domain_cited:vals.filter(x=>x.domain_cited).length,exact_page_cited:vals.filter(x=>x.exact_page_cited).length},raw_evidence_preserved:true};
+    await pool.query(`INSERT INTO tracker_case_study_events(case_study_id,tracker_page_id,event_type,source,event_data)
+      SELECT $1,$2,'five_engine_evidence_reconciled','tracker_v18',$3::jsonb
+      WHERE NOT EXISTS(SELECT 1 FROM tracker_case_study_events WHERE case_study_id=$1 AND event_type='five_engine_evidence_reconciled')`,[cs.id,page.id,JSON.stringify(reconciliation)]);
+  }
   return cs;
 }
 async function _caseStudyEventForPage(clientId,pageId,eventType,data,contentHash){
@@ -3722,10 +3736,19 @@ function _trackerParseManualEvidence(rawText,rawSources,pageUrl,aliases){
    ['mentioned','MENTIONED BUT NOT DIRECTLY CITED'],
    ['sources','CITATION SOURCES']
  ];
+ const _sectionKey=h=>{
+   h=_heading(h);
+   if(h==='RECOMMENDED COMPANIES'||h==='A AANBEVOLEN BEDRIJVEN'||h==='AANBEVOLEN BEDRIJVEN')return 'recommended';
+   if(h==='LOCAL MAPS RESULTS'||h==='C ANDERE LOKALE BEDRIJVEN DIE DE BUSINESS SEARCH VOND'||h==='ANDERE LOKALE BEDRIJVEN DIE DE BUSINESS SEARCH VOND')return 'local';
+   if(h==='DIRECTLY CITED COMPANIES'||h==='B DIRECT GEVERIFIEERD DIRECT GENOEMD IN DE ZOEKRESULTATEN'||h==='DIRECT GEVERIFIEERD DIRECT GENOEMD IN DE ZOEKRESULTATEN')return 'direct';
+   if(h==='MENTIONED BUT NOT DIRECTLY CITED'||h==='GENOEMD MAAR NIET DIRECT GECITEERD')return 'mentioned';
+   if(h==='CITATION SOURCES'||h==='CITATIEBRONNEN')return 'sources';
+   return '';
+ };
  const _upper=_heading(all);
  // First try line-aware parsing (best fidelity for ordinary Markdown).
  let mode='';
- all.split(/\r?\n/).forEach(line=>{const t=line.trim();if(!t)return;const h=_heading(t);const hit=_secDefs.find(d=>h===d[1]);if(hit){mode=hit[0];return;}if(mode)sec[mode].push(t.replace(/^[-•*]+\s*/,''));});
+ all.split(/\r?\n/).forEach(line=>{const t=line.trim();if(!t)return;const hit=_sectionKey(t);if(hit){mode=hit;return;}if(mode)sec[mode].push(t.replace(/^[-•*]+\s*/,''));});
  // If line parsing missed sections (common after rich-copy flattening), fall back to a
  // marker scanner over the original text. Markers may carry ## / emoji decoration.
  if(!_secDefs.every(d=>sec[d[0]].length)){
@@ -3747,14 +3770,20 @@ function _trackerParseManualEvidence(rawText,rawSources,pageUrl,aliases){
  const legacyMaps=sec.direct.filter(x=>/(?:google\.[^\s/]+\/maps|maps\.app\.goo\.gl|google\s+maps\s+results)/i.test(x));
  const localLines=sec.local.concat(legacyMaps);
  const verifiedDirect=sec.direct.filter(x=>!legacyMaps.includes(x)&&!/\bNOT VERIFIED\b/i.test(x)&&_extractUrls(x).length>0);
- const citationText=verifiedDirect.join('\n')+'\n'+sec.sources.filter(x=>!/\bNOT VERIFIED\b/i.test(x)&&!_isMapsUrl((_extractUrls(x)[0]||''))).join('\n')+'\n'+sources;
+ const safeRawSources=sources.split(/\r?\n/).filter(x=>!/\bNOT VERIFIED\b/i.test(x)&&!/(?:google\.[^\s/]+\/maps|maps\.app\.goo\.gl|google\s+maps\s+results)/i.test(x)).join('\n');
+ const citationText=verifiedDirect.join('\n')+'\n'+sec.recommended.filter(x=>!/\bNOT VERIFIED\b/i.test(x)).join('\n')+'\n'+sec.sources.filter(x=>!/\bNOT VERIFIED\b/i.test(x)&&!_isMapsUrl((_extractUrls(x)[0]||''))).join('\n')+'\n'+safeRawSources;
  const urls=_extractUrls(citationText);
- const root=_trackerEvRoot(_trackerEvHost(pageUrl)),pn=_trackerEvNorm(pageUrl),own=urls.filter(u=>_trackerEvRoot(_trackerEvHost(u))===root), names=a=>a.map(x=>x.split('|')[0].trim().replace(/^\*+|\*+$/g,'')).filter(Boolean);
+ const root=_trackerEvRoot(_trackerEvHost(pageUrl)),pn=_trackerEvNorm(pageUrl),own=urls.filter(u=>_trackerEvRoot(_trackerEvHost(u))===root), names=a=>a.map(x=>{
+   let n=String(x||'').split('|')[0].trim().replace(/^\d+[.)]\s*/,'').replace(/^\*+|\*+$/g,'').split(/\s+[—–]\s+/)[0].trim();
+   if(!n||/^https?:\/\//i.test(n)||/^\[?https?:/i.test(n)||/^\(?none\)?[.]?$/i.test(n)||/^[-:| ]+$/.test(n)||/[:.!?]$/.test(n)||n.split(/\s+/).length>12||n.length>120)return '';
+   return n;
+ }).filter(Boolean);
  const brandNorm=v=>String(v||'').toLowerCase().replace(/^https?:\/\//,'').replace(/^www\./,'').split('/')[0].replace(/\.(com|net|org|co|io|ai|site|biz|info)(\.[a-z]{2})?$/,'').replace(/[^a-z0-9]+/g,'');
  const aa=[...new Set((aliases||[]).map(brandNorm).filter(x=>x.length>2))];
  const companyMatch=line=>{const company=String(line||'').split('|')[0].replace(/^[-•*#\s]+|[*#\s]+$/g,'').trim(),n=brandNorm(company);return !!n&&aa.some(a=>n===a||((n.length>=6&&a.length>=6)&&(n.includes(a)||a.includes(n))));};
  const mapsUrls=[];localLines.forEach(x=>{const re=/https?:\/\/[^\s)\]}>\":'<,]+/gi;let m;while((m=re.exec(x)))if(_isMapsUrl(m[0]))mapsUrls.push(m[0]);});
- return {brand_recommended:sec.recommended.some(companyMatch),brand_local_result:localLines.some(companyMatch),brand_direct_supported:verifiedDirect.some(companyMatch),domain_cited:own.length>0,exact_page_cited:own.some(u=>_trackerEvNorm(u)===pn),citation_urls:urls,local_result_urls:[...new Set(mapsUrls)],recommended_companies:names(sec.recommended),local_result_companies:names(localLines),directly_cited_companies:names(verifiedDirect),mentioned_companies:names(sec.mentioned),sections:{...sec,local:localLines,direct:verifiedDirect}};
+ const brandRecommended=sec.recommended.some(companyMatch);
+ return {brand_recommended:brandRecommended,brand_local_result:localLines.some(companyMatch),brand_direct_supported:verifiedDirect.some(companyMatch)||(brandRecommended&&own.length>0),domain_cited:own.length>0,exact_page_cited:own.some(u=>_trackerEvNorm(u)===pn),citation_urls:urls,local_result_urls:[...new Set(mapsUrls)],recommended_companies:names(sec.recommended),local_result_companies:names(localLines),directly_cited_companies:names(verifiedDirect),mentioned_companies:names(sec.mentioned),sections:{...sec,local:localLines,direct:verifiedDirect}};
 }
 function _trackerReparseManualEvidenceMap(map,pageUrl,aliases){
  const out={}; if(!map||typeof map!=='object')return out;
@@ -32871,6 +32900,7 @@ function openCaseStudy(pageId){
     function eventSummary(type,x){
       if(type==='baseline_frozen')return 'Original measurement locked exactly as recorded: position #'+b.google_position+', '+b.gsc_clicks+' clicks, '+Number(b.gsc_impressions||0).toLocaleString()+' impressions, GRAAF '+b.graaf_score+'/100 and an AIO citation classification later corrected in the audit trail.';
       if(type==='evidence_classification_corrected')return 'Evidence corrected without changing history: Perfect Roofing Team LLC was recommended and visible in Google Maps/local results, but neither its website nor the tracked page was directly cited.';
+      if(type==='five_engine_evidence_reconciled'){var s=x.summary||{};return 'Complete five-engine evidence preserved: '+(s.checked||0)+'/5 checked, '+(s.recommended||0)+'/5 recommended, '+(s.domain_cited||0)+'/5 domain cited and '+(s.exact_page_cited||0)+'/5 exact page cited. Open the saved engine evidence for the underlying answers and URLs.';}
       if(type==='scan_state_reset')return 'Operational scan state restarted; baseline, snapshots and evidence were preserved.';
       if(type==='pre_publication_checkpoint')return 'Complete live HTML preserved before publication, with timestamp and SHA-256 proof.';
       if(type==='implementation_reopened')return 'Premature implementation state reopened; the audit history was retained.';
