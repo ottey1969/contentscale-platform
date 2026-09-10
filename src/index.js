@@ -1,4 +1,4 @@
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-10-CANONICAL-v22';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-10-CANONICAL-v24';
 const CONTENTSCALE_BUILD_CHANGES = [
   'professional-guided-tour',
   'prewrite-create-expand-publish-tracker-baseline',
@@ -3754,7 +3754,7 @@ function _trackerEvRoot(h){h=String(h||'').toLowerCase().replace(/^www\./,'');co
 // CONTENTSCALE-AIO-FLATTENED-CLIPBOARD-PARSER-FIX-20260909=true
 function _trackerParseManualEvidence(rawText,rawSources,pageUrl,aliases){
  const text=String(rawText||'').split('https\://').join('https://').split('\.').join('.'), sources=String(rawSources||'').split('https\://').join('https://').split('\.').join('.'), all=text+'\n'+sources;
- const sec={recommended:[],local:[],direct:[],mentioned:[],sources:[]};
+ const sec={recommended:[],local:[],direct:[],domain:[],exact:[],mentioned:[],sources:[]};
  const _heading=t=>String(t||'').toUpperCase().replace(/[^A-Z0-9 ]+/g,' ').replace(/\s+/g,' ').trim();
  const _splitSectionItems=chunk=>{
    const hadLineBreak=/[\r\n]/.test(String(chunk||''));let c=String(chunk||'').trim();if(!c)return [];
@@ -3771,6 +3771,8 @@ function _trackerParseManualEvidence(rawText,rawSources,pageUrl,aliases){
    ['recommended','RECOMMENDED COMPANIES'],
    ['local','LOCAL / MAPS RESULTS'],
    ['direct','DIRECTLY CITED COMPANIES'],
+   ['domain','DOMAIN CITED'],
+   ['exact','EXACT PAGE CITED'],
    ['mentioned','MENTIONED BUT NOT DIRECTLY CITED'],
    ['sources','CITATION SOURCES']
  ];
@@ -3779,6 +3781,8 @@ function _trackerParseManualEvidence(rawText,rawSources,pageUrl,aliases){
    if(h==='RECOMMENDED COMPANIES'||h==='A AANBEVOLEN BEDRIJVEN'||h==='AANBEVOLEN BEDRIJVEN')return 'recommended';
    if(h==='LOCAL MAPS RESULTS'||h==='C ANDERE LOKALE BEDRIJVEN DIE DE BUSINESS SEARCH VOND'||h==='ANDERE LOKALE BEDRIJVEN DIE DE BUSINESS SEARCH VOND')return 'local';
    if(h==='DIRECTLY CITED COMPANIES'||h==='B DIRECT GEVERIFIEERD DIRECT GENOEMD IN DE ZOEKRESULTATEN'||h==='DIRECT GEVERIFIEERD DIRECT GENOEMD IN DE ZOEKRESULTATEN')return 'direct';
+   if(h==='DOMAIN CITED'||h==='DOMEIN GECITEERD')return 'domain';
+   if(h==='EXACT PAGE CITED'||h==='EXACTE PAGINA GECITEERD')return 'exact';
    if(h==='MENTIONED BUT NOT DIRECTLY CITED'||h==='GENOEMD MAAR NIET DIRECT GECITEERD')return 'mentioned';
    if(h==='CITATION SOURCES'||h==='CITATIEBRONNEN')return 'sources';
    return '';
@@ -3790,13 +3794,13 @@ function _trackerParseManualEvidence(rawText,rawSources,pageUrl,aliases){
  // If line parsing missed sections (common after rich-copy flattening), fall back to a
  // marker scanner over the original text. Markers may carry ## / emoji decoration.
  if(!_secDefs.every(d=>sec[d[0]].length)){
-   const markerRe=/(?:^|[\s#>*•✅📌⚠️📚\-])(?:#{1,6}\s*)?(?:✅|📌|⚠️|📚)?\s*(RECOMMENDED COMPANIES|LOCAL\s*\/\s*MAPS RESULTS|DIRECTLY CITED COMPANIES|MENTIONED BUT NOT DIRECTLY CITED|CITATION SOURCES)\b/gi;
+   const markerRe=/(?:^|[\s#>*•✅📌⚠️📚\-])(?:#{1,6}\s*)?(?:✅|📌|⚠️|📚)?\s*(RECOMMENDED COMPANIES|LOCAL\s*\/\s*MAPS RESULTS|DIRECTLY CITED COMPANIES|DOMAIN CITED|EXACT PAGE CITED|MENTIONED BUT NOT DIRECTLY CITED|CITATION SOURCES)\b/gi;
    const hits=[];let mm;while((mm=markerRe.exec(all))){
      const label=String(mm[1]||'').toUpperCase();const def=_secDefs.find(d=>d[1]===label);if(def)hits.push({key:def[0],start:mm.index,end:markerRe.lastIndex});
    }
    // Prefer the last complete ordered sequence. LOCAL / MAPS RESULTS is optional for older saved answers.
    let chosen=null;
-   for(let i=0;i<hits.length;i++){if(hits[i].key!=='recommended')continue;let seq=[hits[i]],pos=i+1;if(hits[pos]&&hits[pos].key==='local'){seq.push(hits[pos]);pos++;}for(const want of ['direct','mentioned','sources']){while(pos<hits.length&&hits[pos].key!==want)pos++;if(pos>=hits.length){seq=null;break;}seq.push(hits[pos]);pos++;}if(seq)chosen=seq;}
+   for(let i=0;i<hits.length;i++){if(hits[i].key!=='recommended')continue;let seq=[hits[i]],pos=i+1;if(hits[pos]&&hits[pos].key==='local'){seq.push(hits[pos]);pos++;}for(const want of ['direct']){while(pos<hits.length&&hits[pos].key!==want)pos++;if(pos>=hits.length){seq=null;break;}seq.push(hits[pos]);pos++;}if(seq){if(hits[pos]&&hits[pos].key==='domain'){seq.push(hits[pos]);pos++;}if(hits[pos]&&hits[pos].key==='exact'){seq.push(hits[pos]);pos++;}for(const want of ['mentioned','sources']){while(pos<hits.length&&hits[pos].key!==want)pos++;if(pos>=hits.length){seq=null;break;}seq.push(hits[pos]);pos++;}}if(seq)chosen=seq;}
    if(chosen){
      for(let i=0;i<chosen.length;i++){const h=chosen[i],next=chosen[i+1];const chunk=all.slice(h.end,next?next.start:all.length);sec[h.key]=_splitSectionItems(chunk);}
    }
@@ -3809,7 +3813,10 @@ function _trackerParseManualEvidence(rawText,rawSources,pageUrl,aliases){
  const localLines=sec.local.concat(legacyMaps);
  const verifiedDirect=sec.direct.filter(x=>!legacyMaps.includes(x)&&!/\bNOT VERIFIED\b/i.test(x)&&_extractUrls(x).length>0);
  const safeRawSources=sources.split(/\r?\n/).filter(x=>!/\bNOT VERIFIED\b/i.test(x)&&!/(?:google\.[^\s/]+\/maps|maps\.app\.goo\.gl|google\s+maps\s+results)/i.test(x)).join('\n');
- const citationText=verifiedDirect.join('\n')+'\n'+sec.recommended.filter(x=>!/\bNOT VERIFIED\b/i.test(x)).join('\n')+'\n'+sec.sources.filter(x=>!/\bNOT VERIFIED\b/i.test(x)&&!_isMapsUrl((_extractUrls(x)[0]||''))).join('\n')+'\n'+safeRawSources;
+ // A clickable URL in RECOMMENDED identifies the company; it is not citation proof.
+ // Citation proof comes from DIRECTLY CITED, CITATION SOURCES, the source field,
+ // or an unsectioned inline source link that is not explicitly marked mentioned-only.
+ const citationText=verifiedDirect.join('\n')+'\n'+sec.domain.join('\n')+'\n'+sec.exact.join('\n')+'\n'+sec.sources.filter(x=>!/\bNOT VERIFIED\b/i.test(x)&&!_isMapsUrl((_extractUrls(x)[0]||''))).join('\n')+'\n'+safeRawSources;
  // Some engines put citations inline as Markdown/HTML links without our requested section
  // headings. Those are still verifiable source links and must not disappear merely because
  // the model changed its formatting. A bare brand mention remains insufficient, and links
@@ -3822,11 +3829,16 @@ function _trackerParseManualEvidence(rawText,rawSources,pageUrl,aliases){
  while((_lm=_mdLinkRe.exec(all)))_pushLinked(_lm[1]);
  const _htmlLinkRe=/<a\b[^>]*\bhref=["'](https?:\/\/[^"']+)["'][^>]*>/gi;
  while((_lm=_htmlLinkRe.exec(all)))_pushLinked(_lm[1]);
+ // Rich-text pastes can lose Markdown wrappers and leave a source-results list as
+ // one bare URL per line. Treat only line-leading URLs as evidence candidates;
+ // ordinary URLs embedded in prose remain insufficient on their own.
+ all.split(/\r?\n/).forEach(line=>{const m=String(line||'').trim().match(/^[-*•]?\s*(https?:\/\/[^\s)\]}>"'<,]+)/i);if(m&&!/\bNOT VERIFIED\b/i.test(line))_pushLinked(m[1].replace(/[.;:]+$/,''));});
  const _mentionedUrlNorm=new Set(_extractUrls(sec.mentioned.join('\n')).map(_trackerEvNorm));
+ const _recommendedUrlNorm=new Set(_extractUrls(sec.recommended.join('\n')).map(_trackerEvNorm));
  const _sectionUrls=_extractUrls(citationText);
  const _sectionNorm=new Set(_sectionUrls.map(_trackerEvNorm));
  const urls=_sectionUrls.slice();
- _linkedUrls.forEach(u=>{const z=_trackerEvNorm(u);if(!_sectionNorm.has(z)&&!_mentionedUrlNorm.has(z)){_sectionNorm.add(z);urls.push(u);}});
+ _linkedUrls.forEach(u=>{const z=_trackerEvNorm(u);if(!_sectionNorm.has(z)&&!_mentionedUrlNorm.has(z)&&!_recommendedUrlNorm.has(z)){_sectionNorm.add(z);urls.push(u);}});
  const root=_trackerEvRoot(_trackerEvHost(pageUrl)),pn=_trackerEvNorm(pageUrl),own=urls.filter(u=>_trackerEvRoot(_trackerEvHost(u))===root), names=a=>a.map(x=>{
    let n=String(x||'').split('|')[0].trim().replace(/^\d+[.)]\s*/,'').replace(/^\*+|\*+$/g,'').split(/\s+[—–]\s+/)[0].trim();
    if(!n||/^https?:\/\//i.test(n)||/^\[?https?:/i.test(n)||/^\(?none\)?[.]?$/i.test(n)||/^[-:| ]+$/.test(n)||/[:.!?]$/.test(n)||n.split(/\s+/).length>12||n.length>120)return '';
@@ -3837,7 +3849,15 @@ function _trackerParseManualEvidence(rawText,rawSources,pageUrl,aliases){
  const companyMatch=line=>{const company=String(line||'').split('|')[0].replace(/^[-•*#\s]+|[*#\s]+$/g,'').trim(),n=brandNorm(company);return !!n&&aa.some(a=>n===a||((n.length>=6&&a.length>=6)&&(n.includes(a)||a.includes(n))));};
  const mapsUrls=[];localLines.forEach(x=>{const re=/https?:\/\/[^\s)\]}>\":'<,]+/gi;let m;while((m=re.exec(x)))if(_isMapsUrl(m[0]))mapsUrls.push(m[0]);});
  const brandRecommended=sec.recommended.some(companyMatch);
- return {brand_recommended:brandRecommended,brand_local_result:localLines.some(companyMatch),brand_direct_supported:verifiedDirect.some(companyMatch)||(brandRecommended&&own.length>0),domain_cited:own.length>0,exact_page_cited:own.some(u=>_trackerEvNorm(u)===pn),citation_urls:urls,local_result_urls:[...new Set(mapsUrls)],recommended_companies:names(sec.recommended),local_result_companies:names(localLines),directly_cited_companies:names(verifiedDirect),mentioned_companies:names(sec.mentioned),sections:{...sec,local:localLines,direct:verifiedDirect}};
+ // Explicit field verdicts are authoritative. This supports pasted audit summaries such as
+ // "Website domain cited: No" even when the explanatory paragraph contains a clickable URL.
+ const _explicitBool=labels=>{for(const label of labels){const re=new RegExp('(?:^|\\n)\\s*[-*•]*\\s*(?:\\*\\*)?'+label+'(?:\\*\\*)?\\s*[:=-]\\s*(?:\\*\\*)?\\s*(yes|no|ja|nee|true|false)(?:\\*\\*)?','i');const m=all.match(re);if(m)return /^(yes|ja|true)$/i.test(m[1]);}return null;};
+ const _xRec=_explicitBool(['brand\\s+recommended','merk\\s+aanbevolen']);
+ const _xLocal=_explicitBool(['brand\\s+(?:local|maps)\\s+result','local\\s*\\/\\s*maps\\s+result']);
+ const _xSupported=_explicitBool(['(?:brand\\s+)?directly\\s+supported\\s+by\\s+a\\s+cited\\s+source','supported\\s+by\\s+cited\\s+source']);
+ const _xDomain=_explicitBool(['website\\s+domain\\s+cited','domain\\s+cited','domein\\s+geciteerd']);
+ const _xExact=_explicitBool(['exact\\s+page\\s+cited','exacte\\s+pagina\\s+geciteerd']);
+ return {brand_recommended:_xRec===null?brandRecommended:_xRec,brand_local_result:_xLocal===null?localLines.some(companyMatch):_xLocal,brand_direct_supported:_xSupported===null?verifiedDirect.some(companyMatch):_xSupported,domain_cited:_xDomain===null?own.length>0:_xDomain,exact_page_cited:_xExact===null?own.some(u=>_trackerEvNorm(u)===pn):_xExact,citation_urls:urls,local_result_urls:[...new Set(mapsUrls)],recommended_companies:names(sec.recommended),local_result_companies:names(localLines),directly_cited_companies:names(verifiedDirect),mentioned_companies:names(sec.mentioned),sections:{...sec,local:localLines,direct:verifiedDirect}};
 }
 function _trackerReparseManualEvidenceMap(map,pageUrl,aliases,revisionCycle){
  const out={}; if(!map||typeof map!=='object')return out;
