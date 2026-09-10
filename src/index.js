@@ -1,4 +1,4 @@
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-10-CANONICAL-v13';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-10-CANONICAL-v14';
 const CONTENTSCALE_BUILD_CHANGES = [
   'professional-guided-tour',
   'prewrite-create-expand-publish-tracker-baseline',
@@ -24,6 +24,8 @@ const CONTENTSCALE_BUILD_CHANGES = [
   ,'case-study-publish-action-always-visible-after-checkpoint'
   ,'publication-compared-to-prepublication-hash'
   ,'case-study-proof-times-explicit-utc'
+  ,'case-study-publish-button-independent-of-brief-state'
+  ,'publish-verification-button-next-to-checkpoint'
 ];
 console.log('[ContentScale] BUILD=' + CONTENTSCALE_BUILD_ID + ' BOOT=' + new Date().toISOString());
 console.log('[ContentScale] CHANGES=' + CONTENTSCALE_BUILD_CHANGES.join(','));
@@ -34864,12 +34866,13 @@ function renderPages() {
       + ((hasBrief || _lastBriefData[p.id]) ? '<button data-tour="view-brief" onclick="viewLastBrief(' + p.id + ')" style="background:#0d1117;border:1px solid #8b5cf6;border-radius:7px;color:#c4b5fd;cursor:pointer;font-size:11px;padding:5px 12px;font-weight:600;" title="View Citation Brief">\\ud83d\\udcc4 View Brief</button>' : '')
       + '<button data-tour="history" onclick="csPosHist(' + p.id + ')" style="background:#0d1117;border:1px solid #64748b;border-radius:7px;color:#cbd5e1;cursor:pointer;font-size:13px;padding:5px 10px;font-weight:600;" title="Ranking history">\\ud83d\\udcc8</button>'
       + (p.case_study_active ? '<button onclick="event.stopPropagation();savePrePublicationCheckpoint(' + p.id + ')" style="background:'+(p.prepublication_checkpoint_saved?'#052e16':'#422006')+';border:1px solid '+(p.prepublication_checkpoint_saved?'#16a34a':'#f59e0b')+';border-radius:7px;color:'+(p.prepublication_checkpoint_saved?'#86efac':'#fde68a')+';cursor:pointer;font-size:10px;padding:5px 10px;font-weight:800;" title="'+(p.prepublication_checkpoint_saved?'The complete pre-publication HTML and hash are protected':'Use this before publishing the reviewed HTML')+'">'+(p.prepublication_checkpoint_saved?'\\u2713 Pre-publish saved':'1 \\u00b7 Save current live')+'</button>' : '')
+      + (p.case_study_active && p.prepublication_checkpoint_saved && !isDone ? '<button onclick="event.stopPropagation();markDone(' + p.id + ',this,false)" style="background:#052e16;border:1px solid #22c55e;border-radius:7px;color:#bbf7d0;cursor:pointer;font-size:10px;padding:5px 11px;font-weight:900;box-shadow:0 0 0 1px rgba(34,197,94,.12);" title="The reviewed HTML is live. Capture it, compare it with the protected pre-publication version and verify the implementation.">2 \\u00b7 Verify published live</button>' : '')
       + (p.case_study_active ? '<button onclick="openCaseStudy(' + p.id + ')" style="background:#082f49;border:1px solid #0284c7;border-radius:7px;color:#7dd3fc;cursor:pointer;font-size:11px;padding:5px 10px;font-weight:800;" title="Open protected baseline and proof history">Proof &amp; History</button>' : '')
       + '<button onclick="deletePage(' + p.id + ')" style="background:#0d1117;border:1px solid #ef4444;border-radius:7px;color:#f87171;cursor:pointer;font-size:13px;padding:5px 10px;font-weight:600;" title="Delete page">\\ud83d\\uddd1</button>'
       + '</div>'
       + '</div>'
       + recsHtml
-      + ((!isDone && hasBrief && ((p.case_study_active && p.prepublication_checkpoint_saved) || !(!!p.html_pasted_at && !!lastCheckedRaw && new Date(p.html_pasted_at) > new Date(lastCheckedRaw))))
+      + ((!isDone && !p.case_study_active && hasBrief && !(!!p.html_pasted_at && !!lastCheckedRaw && new Date(p.html_pasted_at) > new Date(lastCheckedRaw)))
         ? '<div data-tour="done-verify" onclick="markDone(' + p.id + ',this,false)" style="cursor:pointer;display:flex;align-items:center;gap:10px;padding:12px 16px;background:linear-gradient(90deg,rgba(74,222,128,.08),rgba(74,222,128,.02));border-top:1px solid #1f2937;animation:donePulse 2s ease-in-out infinite;">'
           + '<span style="font-size:1.3rem;flex-shrink:0;">\\u2705</span>'
           + '<div style="flex:1;">'
@@ -36245,6 +36248,7 @@ async function toggleManualDone(pageId, current) {
 
 async function markDone(pageId, btn, currentDone) {
   var newDone = !currentDone;
+  if (newDone && btn && btn.tagName === 'BUTTON') { btn.disabled = true; btn.textContent = 'Verifying live…'; btn.style.opacity = '.7'; }
   try {
     var data = await api('/pages/' + pageId + '/done', 'PATCH', { is_done: newDone });
     if (data.success) {
@@ -36258,8 +36262,8 @@ async function markDone(pageId, btn, currentDone) {
         toast('Unmarked', '#9ca3af');
         setTimeout(loadPages, 400);
       }
-    } else { toast(data.error || 'Failed', '#f87171'); }
-  } catch(e) { toast('Error: ' + e.message, '#f87171'); }
+    } else { if(btn&&btn.tagName==='BUTTON'){btn.disabled=false;btn.textContent='2 · Verify published live';btn.style.opacity='1';} toast(data.error || 'Failed', '#f87171'); }
+  } catch(e) { if(btn&&btn.tagName==='BUTTON'){btn.disabled=false;btn.textContent='2 · Verify published live';btn.style.opacity='1';} toast('Error: ' + e.message, '#f87171'); }
 }
 
 async function savePrePublicationCheckpoint(pageId) {
