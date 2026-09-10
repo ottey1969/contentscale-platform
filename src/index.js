@@ -1,4 +1,4 @@
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-10-CANONICAL-v7';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-10-CANONICAL-v8';
 const CONTENTSCALE_BUILD_CHANGES = [
   'professional-guided-tour',
   'prewrite-create-expand-publish-tracker-baseline',
@@ -8,7 +8,8 @@ const CONTENTSCALE_BUILD_CHANGES = [
   'unified-visible-gsc-tier-1-to-5',
   'free-exactly-one-page-paid-from-two',
   'gsc-auto-enable-all-valid-plans',
-  'legacy-boot-noise-removed'
+  'legacy-boot-noise-removed',
+  'tracker-work-search-repositioned'
 ];
 console.log('[ContentScale] BUILD=' + CONTENTSCALE_BUILD_ID + ' BOOT=' + new Date().toISOString());
 console.log('[ContentScale] CHANGES=' + CONTENTSCALE_BUILD_CHANGES.join(','));
@@ -32088,8 +32089,6 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
     <button class="cs-btn" onclick="resetAllScans()" style="border-color:#a78bfa;color:#a78bfa;" title="Tick pages to reset only those &#x2014; or none to reset all. Clears scores, citations &amp; dates; keeps URLs &amp; keywords.">&#x21bb; Reset</button>
     <button id="bulkDeleteBtn" class="cs-btn" style="border-color:#ef4444;color:#ef4444;display:none;" onclick="bulkDeleteSelected()">&#x1f5d1; Delete selected</button>
     <button class="cs-btn" onclick="openTelegramSetup()" style="border-color:#2AABEE;color:#2AABEE;background:rgba(42,171,238,.08);font-weight:700;animation:tgPulse 2s ease-in-out infinite;" title="Install Telegram, then connect &#x2014; get notified after every scan"><i class="fab fa-telegram"></i> Install Telegram</button>
-    <input id="ctSearch" type="text" class="cs-input" placeholder="Search..." oninput="filterPages(this.value)" style="width:160px;padding:5px 10px;font-size:11px;margin-left:auto;">
-    <span style="font-size:11px;color:#6b7280;" id="pageCountLabel"></span>
   </div>
 
   <!-- Live feed -->
@@ -32188,10 +32187,16 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
     <div id="briefWall"></div>
   </div>
 
-  <div class="cs-section">Your tracked pages <span id="pageCountLabel2" style="color:#cbd5e1;"></span></div>
+  <div class="cs-section">Your tracked pages</div>
   <div id="gscSetupBanner"></div>
   <div id="impressionGap" style="width:100%;"></div>
   <div id="cannibalPanel" style="width:100%;"></div>
+  <div id="trackerWorkSearch" style="position:sticky;top:8px;z-index:120;display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:10px 0 12px;padding:10px 12px;background:rgba(13,17,23,.96);backdrop-filter:blur(10px);border:1px solid #334155;border-radius:9px;box-shadow:0 8px 24px rgba(0,0,0,.28);">
+    <span style="font-size:10px;font-weight:900;color:#94a3b8;letter-spacing:.08em;text-transform:uppercase;white-space:nowrap;">&#128269; Search tracked pages</span>
+    <input id="ctSearch" type="search" class="cs-input" placeholder="URL or keyword..." aria-label="Search tracked pages by URL or keyword" oninput="filterPages(this.value)" style="flex:1;min-width:190px;max-width:420px;padding:7px 10px;font-size:12px;">
+    <span style="font-size:11px;color:#94a3b8;white-space:nowrap;" id="pageCountLabel"></span>
+    <button type="button" onclick="var s=document.getElementById('ctSearch');if(s){s.value='';filterPages('');s.focus();}" title="Clear search" style="background:none;border:1px solid #374151;border-radius:6px;color:#64748b;cursor:pointer;font-size:11px;padding:5px 9px;">Clear</button>
+  </div>
   <div id="pagesList" style="width:100%;"></div>
 
   <!-- Upsell -->
@@ -35780,6 +35785,7 @@ var _tourSteps = [
   {sel:'#briefLangSel',phase:'SETUP',title:'Choose the brief language',text:'Auto follows the page language. A fixed choice writes the human-readable brief in that language while preserving URLs, HTML and code.'},
   {sel:'#brandCtxPanel',phase:'FACT SAFETY',title:'Control what AI may claim',text:'Store real brand and author context here. Open Claims & Facts to verify business claims centrally: VERIFIED is safe to use; UNVERIFIED, FALSE and NOT APPLICABLE remain blocked from paste-ready copy.'},
   {sel:'#impressionGap',phase:'OPPORTUNITY',title:'Find uncovered demand',text:'Impression Gap surfaces queries Google already associates with the site but no tracked page properly owns. Review the opportunity, then use Pre-Write to decide CREATE or EXPAND.'},
+  {sel:'#trackerWorkSearch',phase:'WORKSPACE',title:'Search where the work lives',text:'Filter tracked pages by URL or keyword here, directly above Active Priorities and the page cards. The counter shows how many pages match; Clear restores the full worklist.'},
   {sel:'#leadQueuePanel',phase:'PRIORITY',title:'Work in the right order',text:'Active Priorities tells you where to investigate first. Priority is not Treatment: always inspect Intelligence and the Citation Brief before choosing what to change.'},
   {sel:'#scanAllBtn',phase:'EXECUTION',title:'Scan current priorities',text:'Scan Priorities processes only the current GSC-ranked active opportunities. Completed, deferred and ineligible pages are skipped to protect time and scan budget.'},
   {sel:'#scanSelectedBtn',phase:'EXECUTION',title:'Control the scan scope',text:'Select exact page cards, including shift-click ranges, and scan only those pages when you are working surgically.'},
