@@ -1,3 +1,15 @@
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-10-CANONICAL-v4';
+const CONTENTSCALE_BUILD_CHANGES = [
+  'professional-guided-tour',
+  'prewrite-create-expand-publish-tracker-baseline',
+  'visual-copy-brief-no-raw-json',
+  'central-claims-facts-safety',
+  'five-engine-evidence-and-intelligence',
+  'unified-visible-gsc-tier-1-to-5'
+];
+console.log('[ContentScale] BUILD=' + CONTENTSCALE_BUILD_ID + ' BOOT=' + new Date().toISOString());
+console.log('[ContentScale] CHANGES=' + CONTENTSCALE_BUILD_CHANGES.join(','));
+console.log('[ContentScale] TIER_SOURCE=GSC position+impressions+clicks; no GSC evidence => UNCLASSIFIED');
 console.log('=== CONTENTSCALE BOOT ' + new Date().toISOString() + ' v2026-07-08-possible-prioritized-shortcut | bulkWorker=' + (process.env.ENABLE_BULK_WORKER==='1'?'ON':'OFF') + ' | claudeFallback=' + (process.env.ALLOW_CLAUDE_FALLBACK==='1'?'ON':'OFF') + ' | perplexityFallback=' + (process.env.ALLOW_PERPLEXITY_FALLBACK==='1'?'ON':'OFF') + ' | trackerScheduler=' + (process.env.ENABLE_TRACKER_SCHEDULER==='1'?'ON':'OFF') + ' | circuitBreaker=ON | possibleThreshold=20impr | shortcutPrioritized=v2 | gscAutoFetchRemoved=true | linkCheckActive=true | wholeSiteWipeGuard=true | gscAutoFetchRestored=true | reminderOffFix=true | claudeRemoved=true | bingWebmaster=true | competitorPanel=true | zeroResultFix=true | pagesRefreshFix=true | recheckButton=true | provenScanStrip=true | provenScanState=true | scanAllProven=true | doEverythingBtn=true | panelOrderFix=true | workflowGuide=true | preScanGuard=true | scanAllGuard=true | earlyGuard=true | emptyStateTeaser=true | provenScopeFix=true | numberedButtons=true | clearerButtons=true | scanAnimFix=true | promptClaudeCleanup=true | bonusTip=true | realProvenContext=true | competitorContext=true | unifiedBrief=true | diagnosticFirst=true | fullCompetitorBreakdown=true | serpSpyV3=true | transparencyBlock=true | emailsPausedToggle=true | competitorDedup=true | provenScanDebug=true | serializedScans=true | claudeCleanupV2=true | mergeClaudeStrip=true | visualTransparency=true | aboveFoldPriority=true | competitorComparisonTable=true | redGreenTracking=true | aioExplicitState=true | perpCopilotState=true | realMergePromptFixed=true | briefContextDebug=true | forceRescanBypass=true | gscPosFallback=true | cannibalDedup=true | gscAccessGated=true | gapConfirmShown=true | noPlaceholders=true | rowNumContrast=true | codeCannibalDedup=true | provenDebugRemoved=true | broaderCannibalDedup=true | competitorGapFallback=true | competitorPrevSnapFallback=true | hubSpokeDedup=true | compGapRegexBroadened=true | gapFixLabelFallback=true | geminiProForBriefs=true | timeoutBudgetFixed=true | perAttemptTimeout45s=true | revertToFlashLite=true | tokenLimitDoubled=true | urlNormFix=true | impactFieldChecked=true | broaderHubPattern=true | cannibalContextRemovedFromGSC=true | scanStateDerivedFromDB=true | boardBriefRestyled=true | liveWallBriefModal=true | modalScopeFix=true | cardTransparency=true | CLAUDE-FIX-2307=true | CLAUDE-FIX-2307B-specquote=true | CLAUDE-FIX-2307C-pwboard=true | CLAUDE-FIX-2307D-typefilter=true | CLAUDE-FIX-2307E-scanneraio=true | CLAUDE-FIX-2307F-urlstrip=true | CLAUDE-FIX-2307G-aiobeforeScan=true | CLAUDE-FIX-2307H-aioInPrompt=true | CLAUDE-FIX-2307I-escHtml=true | CLAUDE-FIX-2307J-escAlias-noStale=true | CLAUDE-FIX-2407A-perpCitedConsistency=true | CLAUDE-FIX-2407B-perpCacheBug=true | CLAUDE-FIX-2407C-domainVsPageNuance=true | CLAUDE-FIX-2407D-wallModalNoReshuffle=true | CLAUDE-FIX-2407E-buildBriefSafetyNet=true | CLAUDE-FIX-2407F-modalFullText=true | CLAUDE-FIX-2407G-aioPasteModal=true | CLAUDE-FIX-2407H-aioDefinitionView=true | CLAUDE-FIX-2407I-aioBlueprintMining=true | CLAUDE-FIX-2407J-aioReferences=true | CLAUDE-FIX-2407K-aioCitationGap=true | CLAUDE-FIX-2407L-compGapTableAllModals=true | CLAUDE-FIX-2407M-honestAioManualOnly=true | CLAUDE-FIX-2407N-regexEscapeInTemplate=true | CLAUDE-FIX-2507A-jsonRepair-mergeTokens4096=true | CLAUDE-FIX-2507B-cardButtonsWorkflowOrder=true | CLAUDE-FIX-2507C-cardButtonsPillColors=true | CLAUDE-FIX-2507D-aioReloadFull-limit8000=true | CLAUDE-FIX-2507E-briefModalTransparency=true | CLAUDE-FIX-2507F-aioGapTable4col=true | CLAUDE-FIX-2507G-htmlScanTickCycle=true | CLAUDE-FIX-2507H-briefViewedPersisted=true | CLAUDE-FIX-2507I-fixCardRenderVarInExpr=true | CLAUDE-FIX-2507J-briefsUnified-manualAioGap=true | CLAUDE-FIX-2507K-gscCompTableInTracker=true | CLAUDE-FIX-2507L-trackerSplitSections=true | CLAUDE-FIX-2507M-copyBriefClarity=true | CLAUDE-FIX-2507N-aioRefsFromManualPaste=true | CLAUDE-FIX-2507O-removeSseEventSource=true | CLAUDE-FIX-2507P-ticksPersistUntilDoneOrNewHtml=true | CLAUDE-FIX-2507Q-aioRefsStoredAtSave=true | CLAUDE-FIX-2507R-aioGapTableAlways=true | CLAUDE-FIX-2507S-aioGscContextSeparated=true | CLAUDE-FIX-2507T-aioCodeFallbackFixed-refsFromManualSave=true | CLAUDE-FIX-2507U-mergeSafetyNet-cardSummaryParity=true | CLAUDE-FIX-2507V-sharedAioRenderFn-authTable=true | CLAUDE-FIX-2507W-viewLastBriefDelegates-oneSystem=true | CLAUDE-FIX-2507X-sharedBriefBody-fullUnification=true | CLAUDE-FIX-2507Y-aioTop5Table-definitionLabel=true | CLAUDE-FIX-2507Z-noRefsActionableMsg=true | CLAUDE-FIX-2508A-manualPasteWinsOverStaleSnapshot=true | CLAUDE-FIX-2508B-merge2Hardened-diagLog=true | CLAUDE-FIX-2508C-noStoreHeaders-freshClientJs=true | CLAUDE-FIX-2508D-saveEchoDiagnostic=true | CLAUDE-FIX-2508E-separateSourcesField=true | CLAUDE-FIX-2508F-diagSourcesField=true | CLAUDE-FIX-2508G-acceptSourceNames=true | CLAUDE-FIX-2508H-namesFromMainPaste-headingFilter=true | CLAUDE-FIX-2508I-cloroAioFetch=true | CLAUDE-FIX-2508J-namesFallback-autoSplit=true | CLAUDE-FIX-2508K-competitorGapAioFallback=true | CLAUDE-FIX-2508L-aioFallbackNoGscLeak-honestLabel=true | CLAUDE-FIX-2508M-gscRootDomainFallback=true | CLAUDE-FIX-2508N-sitemapLinks250-gscLiveFilter=true | CLAUDE-FIX-2508O-leadQueueCollapsedDefault=true | CLAUDE-FIX-2508P-leadQueueToggleRealFns=true | CLAUDE-FIX-2508Q-leadQueueHeaderWrap=true | CLAUDE-FIX-2508R-scanSelectedButton=true | CLAUDE-FIX-2508S-shiftClickRange=true | CLAUDE-FIX-2508T-shiftClickCorrectClass-inTemplate=true | CLAUDE-FIX-2508U-brandHeadshotHubFields=true | CLAUDE-FIX-2508V-briefModeSelector=true | CLAUDE-FIX-2508W-intentSnapshot-ownerNote=true | CLAUDE-FIX-2508X-modeBtnQuoteFix=true | CLAUDE-FIX-2508Y-perpApostropheFix=true | CLAUDE-FIX-2508Z-sitemapRegexFix=true | CLAUDE-FIX-2508ZA-pageInSitemapRegexFix=true | CLAUDE-FIX-2508ZB-missingEntities=true | CLAUDE-FIX-2508ZC-briefSpacing=true | CLAUDE-FIX-2508ZD-pasteCodeBlocks=true | CLAUDE-FIX-2508ZE-fmtActionRegexFix=true | CLAUDE-FIX-2508ZF-ticksOnlyClearOnDone=true | CLAUDE-FIX-2508ZG-paa5-pwbWider-aioFallbackMsg=true | CLAUDE-FIX-2508ZH-numberedItemsOnOwnLines=true | CLAUDE-FIX-2508ZI-prewriteBuildFields-aioListNotUglyTable=true | CLAUDE-FIX-2508ZJ-cleanAioDefinitionText=true | CLAUDE-FIX-2508ZK-slugRegexCrashFix-sectionSplit=true | CLAUDE-FIX-2508ZL-tvModalFmtAction=true | CLAUDE-FIX-3007A-tourAioScanSelected-mobileFriendly=true | CLAUDE-FIX-3007B-htmlLangWhitelistNonLatin=true | CLAUDE-FIX-3007C-clientBriefLanguageSelector=true | CLAUDE-FIX-3007D-briefLanguageTourStep=true | CLAUDE-FIX-3007E-prewriteLangListFull=true | CLAUDE-FIX-3007F-prewriteAutoAioFetch=true | CLAUDE-FIX-3007G-serpRegionListFull=true | CLAUDE-FIX-3007H-prewriteMobilePolish=true | CLAUDE-FIX-3007I-groupedComboDropdowns=true | CLAUDE-FIX-3007J-comboSyntaxFix=true | CLAUDE-FIX-3007K-multiLangBadges=true | CLAUDE-FIX-3007L-headerReportCTA=true | CLAUDE-FIX-3007M-tvViewReportCTA=true | CLAUDE-FIX-3007N-tvTopBarCTA=true | CLAUDE-FIX-3007O-realPaaInBrief=true | CLAUDE-FIX-0208-briefLangLeaks-item1AndTemplateLabels=true | CLAUDE-FIX-0208B-prewriteLabelsTranslated=true | CLAUDE-FIX-0208C-readyPasteMarkerAndCiteableLang=true | CLAUDE-FIX-0308-alignmentItemLang=true | CLAUDE-FIX-0308B-copyBriefCompTableParity=true | CLAUDE-FIX-0308C-cannibalStopwordMatch=true | CLAUDE-FIX-0308D-hardcodedCiteItemsLocalized=true | CLAUDE-FIX-0308E-cannibalSlugFallback=true | CLAUDE-FIX-1208-honestScanCount=true | CLAUDE-FIX-2108A-aioCitedTextPlusSources=true | CLAUDE-FIX-2108B-aioSourceTableCaseInsensitive=true | CLAUDE-FIX-2108C-aioSourceRetryFallback=true | CLAUDE-FIX-2108D-graafScoreInBrief=true | CLAUDE-FIX-2108E-graafRecsDedupPrioritized=true | CLAUDE-FIX-2108F-eliteRecsDetailsNotDisplayNone=true | CLAUDE-FIX-2108G-graafScoreInTextExport=true | CLAUDE-FIX-2108H-competitorTableDedupTextExport=true | CLAUDE-FIX-2108I-textExportSectionParity=true | CLAUDE-FIX-2108J-tableRegexEscapeFix=true | CLAUDE-FIX-2108K-scoreDefinedInClientScope=true | CLAUDE-FIX-2108L-clientBriefUsesDataNotP=true | CLAUDE-FIX-2108M-prewriteNoFabrication=true | CLAUDE-FIX-2108N-outputVoiceNoHype=true | CLAUDE-FIX-2608-intentEngine=true | CLAUDE-FIX-2608B-existingBriefMoment-mismatch=true | CLAUDE-FIX-2608C-momentInTextExport=true | CLAUDE-FIX-2608D-gscHeaderClarity=true | CLAUDE-FIX-2608E-mergePreservesIntentSnapshot=true | CLAUDE-FIX-2608F-sliceKeepsFramingObjects=true | CLAUDE-FIX-2608G-intentSnapshotEngineFallback=true | CLAUDE-FIX-2608H-instantBriefAlsoHasIntent=true | CLAUDE-FIX-2608I-brief2FinalSaveGuaranteesIntent=true | CLAUDE-FIX-2608J-copyBriefShowsIntent=true | CLAUDE-FIX-2608K-buildBriefPrefersFramingSource=true | CLAUDE-FIX-2608L-geminiIntentEnforced-specificFallback=true | CLAUDE-FIX-2608M-promptRestructuredForGemini=true | CLAUDE-FIX-2608N-dedicatedSerialIntentCall-protectsBriefCall=true | CLAUDE-FIX-2608O-qualityHookPreservesIntent=true | CLAUDE-FIX-2608P-graafShortcut-recsIsolatedFromCitations=true | CLAUDE-FIX-2608Q-caseStudyStrictHeadingsOnly=true | CLAUDE-FIX-2608R-graafShortcutUsesPuppeteerScan-matchesExternal=true | CLAUDE-FIX-2608S-multilingualDetection-faqBioTldrCaseStudyTocAllLangs=true | CLAUDE-FIX-2608T-arabicNumeralsAndSchemaAuthor=true | CLAUDE-FIX-2608U-scanScrollsAndWaitsForJsRender-correctRoute=true | CLAUDE-FIX-2608V-faqDetectsToggleAccordions-authorBioNoKeywordGate=true | CLAUDE-FIX-2608W-quoteRecSaysResearchable=true | CLAUDE-FIX-2608X-faqDetectsQuestionMarkBeforeToggleSymbol=true | CLAUDE-FIX-2608Y-fixedActualApiScanRoute-9107-faqBioMultilingualToggle=true | CLAUDE-FIX-2608Z-recursiveSchemaDetection-findsNestedFAQPage=true | CLAUDE-FIX-2608ZA-realApiScanRoute-9410-faqUsesSchemaAndToggle=true | CLAUDE-FIX-2608ZB-graafShortcutReliableAutoRefresh=true | CLAUDE-FIX-2609A-siteAuditEndpoint=true | CLAUDE-FIX-2609B-auditPageVisible=true | CLAUDE-FIX-2609C-auditCodeProtected=true | CLAUDE-FIX-2609P-multiBrandNamesForAcquisitions=true | CLAUDE-FIX-2610G-proofBlockAllCentered=true | CLAUDE-FIX-2610I-extractsSourceUrls-aioInInstructions=true | AI-SOURCE-IMPORT-EN-PDF-CHATGPT-URLS=true | AUDIT-RESET-PERSISTENCE-0909=true | AGENCY-WHITELABEL-PERSONAL-PROOF-HIDDEN=true | AUDIT-EXTERNAL-JS-BROWSER-FIX-20260908=true | AUDIT-DRAFT-DB-FIX-20260908=true | AUDIT-DRAFT-STORAGE-FALLBACK-20260908=true | AUDIT-SHARE-SCHEMA-SELF-HEAL-20260908=true | AUDIT-SHARE-ADMIN-AUTH-PERSIST-20260908=true | AUDIT-PDF-NUL-SANITIZE-20260908=true | GRAAF-MAIN-CONTENT-SCOPE-20260908=true | GRAAF-RECS-EVIDENCE-PAGETYPE-20260908=true | GRAAF-FULL-RECS-SCORING-EVIDENCE-20260908=true | CONTENTSCORE-METHODOLOGY-VERSIONING-20260908=true | CONTENTSCORE-V2-USER-VISIBLE-NOTICE-20260908=true | CONTENTSCORE-V2-MULTILINGUAL-NOTICE-20260908=true | CONTENTSCORE-V2-NOTICE-ABOVE-SCANNER-20260908=true | CONTENTSCORE-V2-NOTICE-AT-OFFICIAL-SCORE-COPY-20260908=true | AI-CITATION-RICH-PASTE-EVIDENCE-SEMANTICS-TOP5-20260908=true | AI-CITATION-PROMPT-URL-DETECTION-NO-PDF-20260908=true | AI-CITATION-PROMPT-RAW-URL-ALL5-20260908=true | AI-CITATION-PROMPT-STRICT-REAL-RESEARCH-HTTPS-20260908=true | AI-CITATION-ESCAPED-HTTPS-NORMALIZATION-20260908=true | AI-CITATION-DOMAIN-VS-EXACT-PAGE-20260908=true | AI-CITATION-DIRECT-SUPPORT-PRIORITY-PAGES-PROMPT-20260908=true | AI-CITATION-CHATGPT-URL-UI-REMOVED-20260908=true | BOOT-CONSOLIDATED-AUDIT-PROSPECT-TOOL-PRIVACY-20260909=true | CONTENTSCALE-CONTENT-GOVERNANCE-REPORT-CYCLE-20260909=true | CONTENTSCALE-CLIENT-LEVEL-CLAIMS-FACTS-20260909=true | CONTENTSCALE-AI-EVIDENCE-LAYER-20260909=true | CONTENTSCALE-AI-EVIDENCE-UI-5-ENGINE-VISIBILITY-20260909=true | CONTENTSCALE-COMPETITIVE-INTELLIGENCE-LAYER-20260909=true | CONTENTSCALE-LIVE-HTML-FACT-LEDGER-SURGICAL-BRIEF-20260909=true | CONTENTSCALE-TRACKER-ROW-NUMBERS-SEARCH-EVIDENCE-20260909=true ===');
 // CONTENTSCALE-CITATION-BRIEF-EVIDENCE-OVERRIDE-20260909=true
 
@@ -34082,6 +34094,23 @@ function renderBriefWall(){
 }
 
 // CONTENTSCALE-PRIORITY-CYCLE-QUEUE-20260909=true
+// One priority classifier for BOTH the work queue and every page card. A page keeps
+// its evidence-based tier when it moves to Completed / Monitoring; only its queue
+// membership changes. Missing GSC evidence is labelled honestly, never forced into a tier.
+function _classifyTrackerPriority(p) {
+  var hasImpr = p.gsc_impressions !== null && p.gsc_impressions !== undefined && p.gsc_impressions !== '';
+  var hasPos = p.gsc_position !== null && p.gsc_position !== undefined && p.gsc_position !== '' && !isNaN(parseFloat(p.gsc_position));
+  if (!hasImpr && !hasPos) return null;
+  var impr = Math.max(0, Number(p.gsc_impressions || 0));
+  var clicks = Math.max(0, Number(p.gsc_clicks || 0));
+  var ps = hasPos ? parseFloat(p.gsc_position) : null;
+  var ctr = impr > 0 ? (clicks / impr) * 100 : null;
+  if (ps !== null && ps <= 10 && impr >= 100 && ctr < 1) return {tier:1,label:'\\ud83c\\udfaf QUICK WIN',color:'#f97316',criteria:'Page 1 + at least 100 impressions + CTR below 1%',action:'Priority signal: page 1 + demand + weak CTR. Open Intelligence, scan/build the Brief, then choose the Treatment.'};
+  if (ps !== null && ps > 10 && ps <= 20 && impr >= 100) return {tier:2,label:'\\u26a1 STRIKING DISTANCE',color:'#facc15',criteria:'Position 11-20 + at least 100 impressions',action:'Priority signal: page 2 + real demand. Review Intelligence, scan/build the Brief, then choose the safest Treatment before changing content.'};
+  if (impr >= 500) return {tier:3,label:'\\ud83d\\udcc8 HIGH DEMAND',color:'#60a5fa',criteria:'At least 500 impressions + weak position',action:'Priority signal: high demand + weak position. Diagnose first; a rewrite is only one possible treatment.'};
+  if (ps !== null && ps <= 10 && impr > 0 && impr < 50) return {tier:5,label:'\\ud83d\\udd0d LOW DEMAND',color:'#6b7280',criteria:'Page 1 + fewer than 50 impressions',action:'Ranks well but demand is low. Reconsider the target query or merge only when the evidence supports it.'};
+  return {tier:4,label:'\\ud83d\\udd28 BUILD',color:'#9ca3af',criteria:'Moderate demand or a position outside the faster-win thresholds',action:'Lower active priority. Review after tiers 1-3; use Intelligence + the completed Brief to decide Treatment.'};
+}
 function renderPages() {
   var el = document.getElementById('pagesList');
   var countEl = document.getElementById('pageCountLabel');
@@ -34114,31 +34143,15 @@ function renderPages() {
     if (_isMd(p)) return; // done by you -> out of the queue
     var _treat = String(p.treatment||'').toUpperCase();
     if (_treat==='MERGE'||_treat==='REDIRECT'||_treat==='REMOVE_NOINDEX') return; // governance queue, not optimization priority
-    var impr = p.gsc_impressions || 0;
-    var clicks = p.gsc_clicks || 0;
-    var ps = p.gsc_position ? parseFloat(p.gsc_position) : null;
-    if (!impr && ps === null) return; // no GSC data -> nothing to rank on
-    var tier, tierLabel, tierColor, action;
-    if (ps !== null && ps <= 10 && impr >= 100 && (clicks / Math.max(impr,1)) * 100 < 1) {
-      tier = 1; tierLabel = '\\ud83c\\udfaf QUICK WIN'; tierColor = '#f97316';
-      action = 'Priority signal: page 1 + demand + weak CTR. Open Intelligence, scan/build the Brief, then choose the Treatment.';
-    } else if (ps !== null && ps > 10 && ps <= 20 && impr >= 100) {
-      tier = 2; tierLabel = '\\u26a1 STRIKING DISTANCE'; tierColor = '#facc15';
-      action = 'Priority signal: page 2 + real demand. Review Intelligence, scan/build the Brief, then choose the safest Treatment before changing content.';
-    } else if (impr >= 500) {
-      tier = 3; tierLabel = '\\ud83d\\udcc8 HIGH DEMAND'; tierColor = '#60a5fa';
-      action = 'Priority signal: high demand + weak position. Diagnose first; a rewrite is only one possible treatment.';
-    } else if (ps !== null && ps <= 10 && impr > 0 && impr < 50) {
-      tier = 5; tierLabel = '\\ud83d\\udd0d LOW DEMAND'; tierColor = '#6b7280';
-      action = 'Ranks well but nobody searches it. Retarget to a query WITH volume (check GSC Queries) or merge into a stronger page.';
-    } else {
-      tier = 4; tierLabel = '\\ud83d\\udd28 BUILD'; tierColor = '#9ca3af';
-      action = 'Lower active priority. Review after tiers 1-3; use Intelligence + the completed Brief to decide Treatment.';
-    }
+    var impr = Number(p.gsc_impressions || 0);
+    var clicks = Number(p.gsc_clicks || 0);
+    var cls = _classifyTrackerPriority(p);
+    if (!cls) return; // no GSC evidence -> visible in Deferred / No Data, but not ranked in the work queue
+    var ps = p.gsc_position !== null && p.gsc_position !== undefined && p.gsc_position !== '' ? parseFloat(p.gsc_position) : null;
     // Expected CTR at a good spot: pos 1-3 ~20%, 4-5 ~12%, 6-10 ~6%, page 2+ potential if pushed to top ~15%
     var expCtr = (ps !== null && ps <= 3) ? 0.20 : (ps !== null && ps <= 5) ? 0.12 : (ps !== null && ps <= 10) ? 0.06 : 0.15;
     var missed = Math.max(0, Math.round(impr * expCtr - clicks));
-    _leadQueue.push({ p: p, tier: tier, tierLabel: tierLabel, tierColor: tierColor, action: action, missed: missed, impr: impr, clicks: clicks, ps: ps });
+    _leadQueue.push({ p: p, tier: cls.tier, tierLabel: cls.label, tierColor: cls.color, action: cls.action, missed: missed, impr: impr, clicks: clicks, ps: ps });
   });
   _leadQueue.sort(function(a,b){ if (a.tier !== b.tier) return a.tier - b.tier; return b.missed - a.missed; });
   var _priorityQueue = _leadQueue.filter(function(q){ return q.tier < 5; });
@@ -34149,12 +34162,15 @@ function renderPages() {
   _priorityQueue.forEach(function(q,i){ _priorityRankById[q.p.id] = i + 1; });
   var _checkedCount = _pages.filter(_isMd).length;
   var _noDataCount = _pages.filter(function(p){ return !_isMd(p) && !_priorityById[p.id]; }).length;
+  var _classifiedCount = _pages.filter(function(p){ return !!_classifyTrackerPriority(p); }).length;
+  var _unclassifiedCount = _pages.length - _classifiedCount;
   var opportunityCycleHtml = '<div id="opportunityCycle" style="background:linear-gradient(90deg,rgba(14,165,233,.08),rgba(124,58,237,.04));border:1px solid #1f2937;border-radius:8px;padding:10px 14px;margin-bottom:12px;display:flex;gap:10px 16px;align-items:center;flex-wrap:wrap;">'
     + '<div style="min-width:220px;flex:1;"><div style="font-size:10px;font-weight:900;letter-spacing:.08em;color:#7dd3fc;text-transform:uppercase;margin-bottom:3px;">Opportunity cycle</div>'
     + '<div style="font-size:11px;color:#9ca3af;line-height:1.5;">Discover everything. Prioritize from GSC. Scan only what matters. After a work cycle, import fresh GSC + sitemap data to recalculate #1, #2, #3.</div></div>'
     + '<span style="font-size:11px;color:#4ade80;font-weight:800;">' + _priorityQueue.length + ' active priorities</span>'
     + '<span style="font-size:11px;color:#60a5fa;font-weight:800;">' + _checkedCount + ' monitoring</span>'
     + '<span style="font-size:11px;color:#6b7280;font-weight:800;">' + (_deferredQueue.length + _noDataCount) + ' deferred/no-data</span>'
+    + '<span title="Tier 1-5 requires GSC position and/or impression evidence" style="font-size:11px;color:' + (_unclassifiedCount?'#fbbf24':'#4ade80') + ';font-weight:800;">GSC tiers: ' + _classifiedCount + '/' + _pages.length + ' classified' + (_unclassifiedCount?' \\u00b7 '+_unclassifiedCount+' need GSC data':'') + '</span>'
     + '<button onclick="gscAction()" style="font-size:10px;font-weight:800;padding:5px 10px;border-radius:5px;background:#1e3a8a;border:1px solid #3b82f6;color:#bfdbfe;cursor:pointer;">Refresh GSC</button>'
     + '<button onclick="showImportModal(\\'sitemap\\')" style="font-size:10px;font-weight:800;padding:5px 10px;border-radius:5px;background:#082f49;border:1px solid #0284c7;color:#7dd3fc;cursor:pointer;">Refresh Sitemap</button>'
     + '<select id="reportCadence" onchange="saveReportCadence(this.value)" title="Client management report cadence" style="font-size:10px;padding:5px 8px;border-radius:5px;background:#0d1117;border:1px solid #374151;color:#cbd5e1;"><option value="monthly"' + ((_client&&_client.report_cadence||'monthly')==='monthly'?' selected':'') + '>Monthly report</option><option value="2weekly"' + ((_client&&_client.report_cadence)==='2weekly'?' selected':'') + '>2-weekly report</option><option value="off"' + ((_client&&_client.report_cadence)==='off'?' selected':'') + '>Reports off</option></select>'
@@ -34188,6 +34204,7 @@ function renderPages() {
     };
     var legendHtml = '<div id="leadQueueLegend" style="display:none;border-top:1px solid #1f2937;background:#0a0e14;padding:14px 16px;">'
       + '<div style="font-size:11px;font-weight:800;color:#e5e7eb;margin-bottom:4px;letter-spacing:.04em;text-transform:uppercase;">How Active Priorities are ranked</div>'
+      + '<div style="font-size:11px;font-weight:800;color:' + (GSC_ENABLED?'#4ade80':'#fbbf24') + ';border:1px solid ' + (GSC_ENABLED?'#166534':'#92400e') + ';background:' + (GSC_ENABLED?'rgba(22,101,52,.12)':'rgba(146,64,14,.12)') + ';border-radius:6px;padding:7px 10px;margin:8px 0;">' + (GSC_ENABLED?'GSC connected \\u2014 Tier 1-5 uses the latest imported position, impressions and clicks.':'GSC required \\u2014 without imported position/impression evidence pages remain UNCLASSIFIED; ContentScale will not guess a tier.') + '</div>'
       + '<div style="font-size:11px;color:#6b7280;line-height:1.7;margin-bottom:12px;">GSC determines <strong>where to look first</strong>; it does not automatically decide what content treatment to use. Within each tier, pages are ordered by estimated missed clicks. Work #1, then #2, then #3. Open Intelligence, then run the scan/build the Brief. Choose Treatment only after you have reviewed the Brief. When you finish your own work on a page, \\u25cb my check moves it into Completed / Monitoring.</div>'
       + '<table style="width:100%;border-collapse:collapse;background:#0d1117;border:1px solid #1f2937;border-radius:6px;overflow:hidden;">'
       + '<tr style="background:#111827;">'
@@ -34313,25 +34330,19 @@ function renderPages() {
 
     // Citation badges
     var badges = '';
-    // QUICK WIN: GSC says page 1 (pos <= 10) with real demand (impressions) but (almost) no clicks.
-    // Google already ranks it — only the click is missing. Fix title/meta + get into the AI Overview = fastest leads.
-    var _qwImpr = p.gsc_impressions || 0;
-    var _qwClicks = p.gsc_clicks || 0;
-    var _qwPos = p.gsc_position ? parseFloat(p.gsc_position) : null;
-    var _qwCtr = _qwImpr > 0 ? (_qwClicks / _qwImpr) * 100 : null;
-    var isQuickWin = _qwPos !== null && _qwPos <= 10 && _qwImpr >= 100 && (_qwCtr === null || _qwCtr < 1);
-    // LOW DEMAND: good position but (almost) nobody searches it. Position averages over impressions,
-    // so pos 2.2 on ~0 impressions is statistically meaningless. Not a CTR problem — a keyword problem.
-    var isLowDemand = !isQuickWin && _qwPos !== null && _qwPos <= 10 && _qwImpr > 0 && _qwImpr < 50;
-    if (isQuickWin) {
-      badges += '<span class="cs-cs-badge" style="background:linear-gradient(90deg,#7c2d12,#9a3412);color:#fed7aa;border:1px solid #f97316;font-weight:800;animation:donePulse 2.5s ease-in-out infinite;" '
-        + 'title="Page 1 (pos ' + _qwPos.toFixed(1) + ') with ' + Math.round(_qwImpr).toLocaleString() + ' impressions but only ' + _qwClicks + ' clicks. Google already ranks you \\u2014 the click is missing. Fix: rewrite title/meta for the search intent + follow the Citation Brief to get cited in the AI Overview.">'
-        + '\\ud83c\\udfaf QUICK WIN \\u2014 page 1, no clicks</span> ';
-    }
-    if (isLowDemand) {
-      badges += '<span class="cs-cs-badge" style="background:#0c1a2e;color:#93c5fd;border:1px solid #1d4ed8;font-weight:700;" '
-        + 'title="Ranks pos ' + _qwPos.toFixed(1) + ' but only ' + Math.round(_qwImpr) + ' impressions \\u2014 almost nobody searches this keyword. The position looks good but brings zero leads. Fix: check GSC Queries for related terms WITH volume and retarget/expand the page \\u2014 or merge it into a stronger page.">'
-        + '\\ud83d\\udd0d LOW DEMAND \\u2014 ranks well, nobody searches</span> ';
+    // Every card gets the SAME evidence-based classification used by Active Priorities.
+    // Completed/Monitoring pages retain their tier so the reason they entered the cycle stays visible.
+    var _cardClass = _classifyTrackerPriority(p);
+    if (_cardClass) {
+      var _cardImpr = Math.max(0, Number(p.gsc_impressions || 0));
+      var _cardClicks = Math.max(0, Number(p.gsc_clicks || 0));
+      var _cardPos = p.gsc_position !== null && p.gsc_position !== undefined && p.gsc_position !== '' ? parseFloat(p.gsc_position) : null;
+      var _cardCtr = _cardImpr > 0 ? ((_cardClicks / _cardImpr) * 100).toFixed(1) + '%' : '\\u2014';
+      badges += '<span class="cs-cs-badge" style="background:rgba(15,23,42,.92);color:' + _cardClass.color + ';border:1px solid ' + _cardClass.color + ';font-weight:800;' + (_cardClass.tier===1?'animation:donePulse 2.5s ease-in-out infinite;':'') + '" '
+        + 'title="Tier ' + _cardClass.tier + ': ' + _cardClass.criteria + '. GSC: ' + (_cardPos===null?'no position':('position '+_cardPos.toFixed(1))) + ', ' + Math.round(_cardImpr).toLocaleString() + ' impressions, ' + _cardClicks + ' clicks, CTR ' + _cardCtr + '. ' + _cardClass.action.replace(/"/g,'&quot;') + '">'
+        + _cardClass.tier + ' \\u00b7 ' + _cardClass.label + '</span> ';
+    } else {
+      badges += '<span class="cs-cs-badge" style="background:#111827;color:#94a3b8;border:1px dashed #475569;font-weight:700;" title="This page has no usable GSC position or impression evidence. Import or refresh GSC before assigning a priority tier.">UNCLASSIFIED \\u2014 GSC DATA REQUIRED</span> ';
     }
     if (pos) badges += '<span class="cs-badge" title="LIVE Google position for your tracked keyword \\u201c' + (p.keyword||'') + '\\u201d \\u2014 measured at the last scan. Note: the GSC \\u201cpos\\u201d below is different: an average across ALL queries this page appears for (28 days), so it is usually worse than this number." style="color:' + posColor + ';background:#0d1117;border:1px solid ' + posColor + '44;">#' + pos + '</span> ';
     else badges += '<span class="cs-cs-badge grey">Not ranked</span> ';
