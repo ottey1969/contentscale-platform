@@ -1,4 +1,4 @@
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-10-CANONICAL-v11';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-10-CANONICAL-v12';
 const CONTENTSCALE_BUILD_CHANGES = [
   'professional-guided-tour',
   'prewrite-create-expand-publish-tracker-baseline',
@@ -18,6 +18,9 @@ const CONTENTSCALE_BUILD_CHANGES = [
   ,'immutable-perfect-roofing-case-study-baseline'
   ,'case-study-event-history-and-archive-protection'
   ,'case-study-active-tracker-ui'
+  ,'immutable-pre-publication-html-checkpoint'
+  ,'publication-html-version-and-hash-history'
+  ,'case-study-done-blocked-until-checkpoint'
 ];
 console.log('[ContentScale] BUILD=' + CONTENTSCALE_BUILD_ID + ' BOOT=' + new Date().toISOString());
 console.log('[ContentScale] CHANGES=' + CONTENTSCALE_BUILD_CHANGES.join(','));
@@ -1665,6 +1668,20 @@ async function _ensureCaseStudySchema(){
     content_hash TEXT
   )`);
   await pool.query('CREATE INDEX IF NOT EXISTS tracker_case_study_events_case_idx ON tracker_case_study_events(case_study_id,event_at,id)');
+  await pool.query(`CREATE TABLE IF NOT EXISTS tracker_case_study_content_versions (
+    id BIGSERIAL PRIMARY KEY,
+    case_study_id INTEGER NOT NULL,
+    tracker_page_id INTEGER,
+    version_type VARCHAR(64) NOT NULL,
+    captured_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    source VARCHAR(48) NOT NULL DEFAULT 'tracker_live_fetch',
+    canonical_url TEXT NOT NULL,
+    content_hash TEXT NOT NULL,
+    html_content TEXT NOT NULL,
+    version_data JSONB NOT NULL DEFAULT '{}'::jsonb,
+    UNIQUE(case_study_id,version_type,content_hash)
+  )`);
+  await pool.query('CREATE INDEX IF NOT EXISTS tracker_case_study_content_versions_case_idx ON tracker_case_study_content_versions(case_study_id,captured_at,id)');
   await pool.query(`CREATE OR REPLACE FUNCTION contentscale_protect_case_study_baseline() RETURNS trigger AS $$
     BEGIN
       IF OLD.baseline_locked AND (NEW.baseline_at IS DISTINCT FROM OLD.baseline_at OR NEW.baseline_data IS DISTINCT FROM OLD.baseline_data OR NEW.canonical_url IS DISTINCT FROM OLD.canonical_url) THEN
@@ -1676,6 +1693,14 @@ async function _ensureCaseStudySchema(){
   await pool.query('DROP TRIGGER IF EXISTS tracker_case_study_baseline_lock ON tracker_case_studies');
   await pool.query(`CREATE TRIGGER tracker_case_study_baseline_lock BEFORE UPDATE ON tracker_case_studies
     FOR EACH ROW EXECUTE FUNCTION contentscale_protect_case_study_baseline()`);
+  await pool.query(`CREATE OR REPLACE FUNCTION contentscale_protect_case_study_content_version() RETURNS trigger AS $$
+    BEGIN
+      RAISE EXCEPTION 'Case-study content versions are immutable';
+    END;
+  $$ LANGUAGE plpgsql`);
+  await pool.query('DROP TRIGGER IF EXISTS tracker_case_study_content_version_lock ON tracker_case_study_content_versions');
+  await pool.query(`CREATE TRIGGER tracker_case_study_content_version_lock BEFORE UPDATE OR DELETE ON tracker_case_study_content_versions
+    FOR EACH ROW EXECUTE FUNCTION contentscale_protect_case_study_content_version()`);
   _caseStudySchemaReady=true;
 }
 function _caseStudyNormUrl(raw){try{const u=new URL(String(raw||''));return 'https://'+u.hostname.toLowerCase().replace(/^www\./,'')+(u.pathname.replace(/\/+$/,'')||'/');}catch(e){return String(raw||'').trim().toLowerCase().replace(/^http:\/\//,'https://').replace(/^https:\/\/www\./,'https://').replace(/\/+$/,'');}}
@@ -1718,6 +1743,22 @@ async function _caseStudyEventForClient(clientId,eventType,data){
   const rows=await pool.query("SELECT id,tracker_page_id FROM tracker_case_studies WHERE tracker_client_id=$1 AND status='active'",[clientId]);
   for(const cs of rows.rows)await pool.query(`INSERT INTO tracker_case_study_events(case_study_id,tracker_page_id,event_type,source,event_data)
     VALUES($1,$2,$3,'tracker',$4::jsonb)`,[cs.id,cs.tracker_page_id,eventType,JSON.stringify(data||{})]);
+}
+async function _caseStudyStoreContentVersion(clientId,pageId,versionType,canonicalUrl,html,source,versionData){
+  await _ensureCaseStudySchema();
+  const csR=await pool.query("SELECT id FROM tracker_case_studies WHERE tracker_client_id=$1 AND tracker_page_id=$2 AND status='active' ORDER BY id LIMIT 1",[clientId,pageId]);
+  if(!csR.rows.length)return null;
+  const crypto=require('crypto');
+  const contentHash=crypto.createHash('sha256').update(String(html||'')).digest('hex');
+  const ins=await pool.query(`INSERT INTO tracker_case_study_content_versions
+    (case_study_id,tracker_page_id,version_type,source,canonical_url,content_hash,html_content,version_data)
+    VALUES($1,$2,$3,$4,$5,$6,$7,$8::jsonb)
+    ON CONFLICT(case_study_id,version_type,content_hash) DO NOTHING
+    RETURNING id,captured_at,content_hash,version_type`,[csR.rows[0].id,pageId,versionType,source||'tracker_live_fetch',_caseStudyNormUrl(canonicalUrl),contentHash,String(html||''),JSON.stringify(versionData||{})]);
+  if(ins.rows.length)return Object.assign({created:true},ins.rows[0]);
+  const existing=await pool.query(`SELECT id,captured_at,content_hash,version_type FROM tracker_case_study_content_versions
+    WHERE case_study_id=$1 AND version_type=$2 AND content_hash=$3 ORDER BY id LIMIT 1`,[csR.rows[0].id,versionType,contentHash]);
+  return existing.rows.length?Object.assign({created:false},existing.rows[0]):null;
 }
 
 // GET /api/tracker-client/:token — get client data + pages
@@ -1789,11 +1830,20 @@ app.get('/api/tracker-client/:token', async (req, res) => {
     for(const _p of pagesR.rows)await _ensurePerfectRoofingCaseStudy(client,_p);
     const _csr=await pool.query(`SELECT id,tracker_page_id,canonical_url,status,baseline_at,baseline_data,started_at
       FROM tracker_case_studies WHERE tracker_client_id=$1 AND status='active'`,[client.id]);
+    const _csIds=_csr.rows.map(x=>x.id);
+    const _csvr=_csIds.length?await pool.query(`SELECT DISTINCT ON (case_study_id,version_type)
+      case_study_id,version_type,captured_at,content_hash
+      FROM tracker_case_study_content_versions WHERE case_study_id=ANY($1::int[])
+      ORDER BY case_study_id,version_type,captured_at DESC,id DESC`,[_csIds]):{rows:[]};
+    const _csvByCase=new Map();
+    _csvr.rows.forEach(function(x){if(!_csvByCase.has(x.case_study_id))_csvByCase.set(x.case_study_id,{});_csvByCase.get(x.case_study_id)[x.version_type]=x;});
     const _csByUrl=new Map(_csr.rows.map(x=>[_caseStudyNormUrl(x.canonical_url),x]));
     pagesR.rows.forEach(function(_p){
       const _cs=_csByUrl.get(_caseStudyNormUrl(_p.url));
       _p.case_study_active=!!_cs;
       _p.case_study=_cs||null;
+      _p.case_study_versions=_cs?(_csvByCase.get(_cs.id)||{}):{};
+      _p.prepublication_checkpoint_saved=!!(_p.case_study_versions&&_p.case_study_versions.pre_publication);
     });
 
     res.json({
@@ -2131,6 +2181,27 @@ app.get('/api/tracker-client/:token/pages/:pageId', async (req, res) => {
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
+// Capture the currently live page BEFORE a new publication. The full HTML and SHA-256 hash
+// are append-only case-study evidence; this never changes tracker baseline fields.
+app.post('/api/tracker-client/:token/pages/:pageId/case-study/pre-publication',async(req,res)=>{try{
+  const cr=await pool.query("SELECT id FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status!='deleted')",[req.params.token]);
+  if(!cr.rows.length)return res.status(404).json({success:false,error:'Tracker not found'});
+  const pr=await pool.query('SELECT id,url FROM tracker_pages WHERE id=$1 AND tracker_client_id=$2',[req.params.pageId,cr.rows[0].id]);
+  if(!pr.rows.length)return res.status(404).json({success:false,error:'Page not found'});
+  await _ensureCaseStudySchema();
+  const csR=await pool.query("SELECT id FROM tracker_case_studies WHERE tracker_client_id=$1 AND tracker_page_id=$2 AND status='active' ORDER BY id LIMIT 1",[cr.rows[0].id,pr.rows[0].id]);
+  if(!csR.rows.length)return res.status(404).json({success:false,error:'No active case study for this page'});
+  const liveResp=await fetch(pr.rows[0].url,{headers:{'User-Agent':'Mozilla/5.0 (compatible; ContentScale/1.0)'},signal:AbortSignal.timeout(15000)});
+  if(!liveResp.ok)return res.status(502).json({success:false,error:'Live page returned HTTP '+liveResp.status});
+  const liveHtml=await liveResp.text();
+  const lower=liveHtml.toLowerCase();
+  if(liveHtml.length<500||(!lower.includes('</html>')&&!lower.includes('<body')))return res.status(502).json({success:false,error:'Live fetch returned incomplete or suspicious HTML'});
+  const v=await _caseStudyStoreContentVersion(cr.rows[0].id,pr.rows[0].id,'pre_publication',pr.rows[0].url,liveHtml,'tracker_live_fetch',{purpose:'current_live_html_before_contentscale_publication'});
+  if(!v)return res.status(500).json({success:false,error:'Checkpoint could not be stored'});
+  if(v.created)await _caseStudyEventForPage(cr.rows[0].id,pr.rows[0].id,'pre_publication_checkpoint',{url:pr.rows[0].url,version_id:v.id,captured_at:v.captured_at,full_html_preserved:true},v.content_hash).catch(()=>{});
+  res.json({success:true,created:!!v.created,checkpoint:{id:v.id,captured_at:v.captured_at,content_hash:v.content_hash},message:v.created?'Current live HTML saved. You may now publish the reviewed version.':'This exact live HTML was already saved.'});
+}catch(e){console.error('[case-study-pre-publication]',e.message);res.status(500).json({success:false,error:e.message});}});
+
 // Read-only case-study proof/history. There is intentionally no delete or baseline-edit route.
 app.get('/api/tracker-client/:token/pages/:pageId/case-study',async(req,res)=>{try{
   const cr=await pool.query("SELECT id FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status!='deleted')",[req.params.token]);
@@ -2140,9 +2211,11 @@ app.get('/api/tracker-client/:token/pages/:pageId/case-study',async(req,res)=>{t
   if(!csR.rows.length)return res.status(404).json({success:false,error:'No active case study for this page'});
   const cs=csR.rows[0];
   const ev=await pool.query(`SELECT id,event_type,event_at,source,event_data,content_hash FROM tracker_case_study_events WHERE case_study_id=$1 ORDER BY event_at ASC,id ASC LIMIT 500`,[cs.id]);
+  const versions=await pool.query(`SELECT id,version_type,captured_at,source,canonical_url,content_hash,octet_length(html_content) AS html_bytes,version_data
+    FROM tracker_case_study_content_versions WHERE case_study_id=$1 ORDER BY captured_at ASC,id ASC LIMIT 500`,[cs.id]);
   const snap=await pool.query(`SELECT id,checked_at,google_position,google_clicks,google_impressions,score,ai_google_overview_cited,ai_perplexity_cited,ai_bing_cited,ai_brave_cited,scanner_version,scoring_version
     FROM tracker_snapshots WHERE page_id=$1 ORDER BY checked_at ASC,id ASC LIMIT 500`,[req.params.pageId]).catch(()=>({rows:[]}));
-  res.json({success:true,case_study:cs,events:ev.rows,snapshots:snap.rows,history_protected:true});
+  res.json({success:true,case_study:cs,events:ev.rows,content_versions:versions.rows,snapshots:snap.rows,history_protected:true});
 }catch(e){console.error('[case-study-get]',e.message);res.status(500).json({success:false,error:e.message});}});
 
 // PATCH /api/tracker-client/:token/pages/:pageId/frequency
@@ -2406,6 +2479,15 @@ app.patch('/api/tracker-client/:token/pages/:pageId/done', async (req, res) => {
       return res.json({ success: true, status: 'undone' });
     }
 
+    // A protected case study must have the currently-live HTML saved before publication.
+    // If the user publishes first, the true pre-publication state can no longer be reconstructed.
+    await _ensureCaseStudySchema();
+    const activeCaseStudy=await pool.query("SELECT id FROM tracker_case_studies WHERE tracker_client_id=$1 AND tracker_page_id=$2 AND status='active' ORDER BY id LIMIT 1",[cr.rows[0].id,page.id]);
+    if(activeCaseStudy.rows.length){
+      const pre=await pool.query("SELECT id,captured_at,content_hash FROM tracker_case_study_content_versions WHERE case_study_id=$1 AND version_type='pre_publication' ORDER BY captured_at DESC,id DESC LIMIT 1",[activeCaseStudy.rows[0].id]);
+      if(!pre.rows.length)return res.status(409).json({success:false,checkpoint_required:true,error:'Save the pre-publication checkpoint before publishing. The historical baseline will remain locked.'});
+    }
+
     // Record exact declaration date/time immediately, but do not claim VERIFIED yet.
     await pool.query(
       `UPDATE tracker_pages SET is_done=TRUE, brief_done_at=NOW(), implementation_at=NOW(),
@@ -2448,7 +2530,12 @@ app.patch('/api/tracker-client/:token/pages/:pageId/done', async (req, res) => {
           return;
         }
 
-        // Changed: save fresh live HTML first so this exact implementation becomes the new content baseline.
+        // Preserve the complete published HTML independently before any operational page field
+        // is updated. Content versions are immutable and survive Tracker resets/archiving.
+        const publishedVersion=await _caseStudyStoreContentVersion(client.id,page.id,'published_implementation',page.url,liveHtml,'tracker_live_verification',{declared_at:new Date().toISOString(),previous_tracker_hash:previousHash||null});
+        if(publishedVersion&&publishedVersion.created)await _caseStudyEventForPage(client.id,page.id,'published_html_captured',{url:page.url,version_id:publishedVersion.id,captured_at:publishedVersion.captured_at,full_html_preserved:true},publishedVersion.content_hash).catch(()=>{});
+
+        // Changed: update the operational comparison copy. This is not the locked case-study baseline.
         await pool.query(`UPDATE tracker_pages SET html_content=$1, html_source='live_fresh', html_pasted_at=NOW(), last_page_hash=$2, fetch_reliable=TRUE, needs_html=FALSE WHERE id=$3`, [liveHtml, liveHash, page.id]);
         const freshR = await pool.query('SELECT * FROM tracker_pages WHERE id=$1', [page.id]);
         const freshPage = freshR.rows[0] || page;
@@ -32715,15 +32802,17 @@ function openCaseStudy(pageId){
   api('/pages/'+pageId+'/case-study','GET').then(function(d){
     if(!d||!d.success)throw new Error((d&&d.error)||'Could not load case study');
     var cs=d.case_study||{},b=cs.baseline_data||{};if(typeof b==='string'){try{b=JSON.parse(b);}catch(e){b={};}}
-    var ai=b.ai_evidence||{},events=d.events||[],snaps=d.snapshots||[];
+    var ai=b.ai_evidence||{},events=d.events||[],versions=d.content_versions||[],snaps=d.snapshots||[];
     function metric(label,value,color){return '<div style="background:#0b1220;border:1px solid #1e3a8a;border-radius:8px;padding:10px;min-width:115px;flex:1;"><div style="font-size:20px;font-weight:900;color:'+(color||'#e5e7eb')+'">'+_csEscH(value==null?'—':value)+'</div><div style="font-size:9px;color:#64748b;text-transform:uppercase;letter-spacing:.06em;">'+_csEscH(label)+'</div></div>';}
     var timeline=events.map(function(e){var x=e.event_data||{};if(typeof x==='string'){try{x=JSON.parse(x);}catch(z){x={};}}return '<div style="display:grid;grid-template-columns:135px 170px 1fr;gap:8px;padding:8px 0;border-top:1px solid #172033;font-size:11px;"><span style="color:#94a3b8;">'+_csEscH(new Date(e.event_at).toLocaleString('en-GB'))+'</span><b style="color:#7dd3fc;">'+_csEscH(String(e.event_type||'').replace(/_/g,' '))+'</b><span style="color:#64748b;">'+_csEscH(Object.keys(x).map(function(k){return k+': '+x[k];}).join(' · '))+'</span></div>';}).join('');
+    var versionList=versions.map(function(v){return '<div style="display:grid;grid-template-columns:135px 170px 1fr;gap:8px;padding:8px 0;border-top:1px solid #172033;font-size:11px;"><span style="color:#94a3b8;">'+_csEscH(new Date(v.captured_at).toLocaleString('en-GB'))+'</span><b style="color:#86efac;">'+_csEscH(String(v.version_type||'').replace(/_/g,' '))+'</b><span style="color:#64748b;">SHA-256 '+_csEscH(String(v.content_hash||'').slice(0,16))+'… · '+_csEscH(String(v.html_bytes||0))+' bytes · immutable</span></div>';}).join('');
     box.innerHTML='<div style="display:flex;justify-content:space-between;gap:14px;align-items:flex-start;"><div><div style="font-size:10px;font-weight:900;color:#38bdf8;letter-spacing:.08em;">CASE STUDY ACTIVE · HISTORY PROTECTED</div><h2 style="margin:5px 0 3px;font-size:19px;">Perfect Roofing Team</h2><div style="font-size:11px;color:#94a3b8;word-break:break-all;">'+_csEscH(cs.canonical_url||'')+'</div><div style="font-size:11px;color:#c4b5fd;margin-top:3px;">Query: '+_csEscH(cs.primary_query||'')+'</div></div><button onclick="document.getElementById(\\'caseStudyOv\\').style.display=\\'none\\'" style="background:none;border:1px solid #374151;color:#94a3b8;border-radius:6px;padding:5px 9px;cursor:pointer;">Close</button></div>'
       +'<div style="padding:9px 11px;background:#052e16;border:1px solid #166534;border-radius:7px;color:#86efac;font-size:11px;margin:14px 0;">Baseline locked. Reset, reload and page archiving cannot overwrite this record.</div>'
       +'<div style="display:flex;gap:7px;flex-wrap:wrap;">'+metric('Google position',b.google_position,'#fbbf24')+metric('GSC clicks',b.gsc_clicks,'#4ade80')+metric('GSC impressions',Number(b.gsc_impressions||0).toLocaleString(),'#60a5fa')+metric('GRAAF',b.graaf_score?b.graaf_score+'/100':'—','#facc15')+metric('Google AIO',ai.google_aio&&ai.google_aio.exact_page_cited?'EXACT CITED':'—','#4ade80')+'</div>'
       +'<div style="margin-top:14px;padding:10px;background:#111827;border-left:3px solid #f59e0b;border-radius:6px;color:#fbbf24;font-size:11px;line-height:1.55;"><b>Change guardrail:</b> '+_csEscH(b.treatment_guardrail||'Preserve proven wins and measure incremental changes.')+'</div>'
+      +'<h3 style="font-size:13px;color:#e5e7eb;margin:18px 0 5px;">Immutable HTML versions</h3>'+(versionList||'<div style="color:#fbbf24;font-size:11px;">No pre-publication HTML saved yet. Use “1 · Save current live” before publishing.</div>')
       +'<h3 style="font-size:13px;color:#e5e7eb;margin:18px 0 5px;">Proof timeline</h3>'+(timeline||'<div style="color:#64748b;font-size:11px;">No events yet.</div>')
-      +'<div style="font-size:10px;color:#64748b;margin-top:14px;">'+snaps.length+' dated Tracker snapshot(s) linked · '+events.length+' protected event(s)</div>';
+      +'<div style="font-size:10px;color:#64748b;margin-top:14px;">'+snaps.length+' dated Tracker snapshot(s) linked · '+events.length+' protected event(s) · '+versions.length+' immutable HTML version(s)</div>';
   }).catch(function(e){box.innerHTML='<div style="color:#f87171;">'+_csEscH(e.message)+'</div>';});
 }
 function csPosHist(pageId){
@@ -34748,6 +34837,7 @@ function renderPages() {
       + '<button data-tour="scan" data-check-btn="' + p.id + '" onclick="checkPage(' + p.id + ')" style="background:#0d1117;border:1px solid ' + (_scanDone ? '#22c55e' : '#2dd4bf') + ';border-radius:7px;color:' + (_scanDone ? '#4ade80' : '#5eead4') + ';cursor:pointer;font-size:11px;padding:5px 10px;font-weight:700;" title="' + (lastChecked ? (_scanDone ? 'Scanned this round \\u2014 click to rescan now' : 'Rescan this URL now') : 'Scan this URL now') + '">' + (lastChecked ? (_scanDone ? '\\u21bb \\u2713' : '\\u21bb Scan') : '\\u25b6 Scan') + '</button>'
       + ((hasBrief || _lastBriefData[p.id]) ? '<button data-tour="view-brief" onclick="viewLastBrief(' + p.id + ')" style="background:#0d1117;border:1px solid #8b5cf6;border-radius:7px;color:#c4b5fd;cursor:pointer;font-size:11px;padding:5px 12px;font-weight:600;" title="View Citation Brief">\\ud83d\\udcc4 View Brief</button>' : '')
       + '<button data-tour="history" onclick="csPosHist(' + p.id + ')" style="background:#0d1117;border:1px solid #64748b;border-radius:7px;color:#cbd5e1;cursor:pointer;font-size:13px;padding:5px 10px;font-weight:600;" title="Ranking history">\\ud83d\\udcc8</button>'
+      + (p.case_study_active ? '<button onclick="event.stopPropagation();savePrePublicationCheckpoint(' + p.id + ')" style="background:'+(p.prepublication_checkpoint_saved?'#052e16':'#422006')+';border:1px solid '+(p.prepublication_checkpoint_saved?'#16a34a':'#f59e0b')+';border-radius:7px;color:'+(p.prepublication_checkpoint_saved?'#86efac':'#fde68a')+';cursor:pointer;font-size:10px;padding:5px 10px;font-weight:800;" title="'+(p.prepublication_checkpoint_saved?'The complete pre-publication HTML and hash are protected':'Use this before publishing the reviewed HTML')+'">'+(p.prepublication_checkpoint_saved?'\\u2713 Pre-publish saved':'1 \\u00b7 Save current live')+'</button>' : '')
       + (p.case_study_active ? '<button onclick="openCaseStudy(' + p.id + ')" style="background:#082f49;border:1px solid #0284c7;border-radius:7px;color:#7dd3fc;cursor:pointer;font-size:11px;padding:5px 10px;font-weight:800;" title="Open protected baseline and proof history">Proof &amp; History</button>' : '')
       + '<button onclick="deletePage(' + p.id + ')" style="background:#0d1117;border:1px solid #ef4444;border-radius:7px;color:#f87171;cursor:pointer;font-size:13px;padding:5px 10px;font-weight:600;" title="Delete page">\\ud83d\\uddd1</button>'
       + '</div>'
@@ -34757,8 +34847,8 @@ function renderPages() {
         ? '<div data-tour="done-verify" onclick="markDone(' + p.id + ',this,false)" style="cursor:pointer;display:flex;align-items:center;gap:10px;padding:12px 16px;background:linear-gradient(90deg,rgba(74,222,128,.08),rgba(74,222,128,.02));border-top:1px solid #1f2937;animation:donePulse 2s ease-in-out infinite;">'
           + '<span style="font-size:1.3rem;flex-shrink:0;">\\u2705</span>'
           + '<div style="flex:1;">'
-          + '<div style="font-size:12px;font-weight:800;color:#4ade80;margin-bottom:2px;">MARK AS DONE \\u2014 I implemented the recommendations</div>'
-          + '<div style="font-size:11px;color:#6b7280;">Press when you have added all recommended content to your page</div>'
+          + '<div style="font-size:12px;font-weight:800;color:#4ade80;margin-bottom:2px;">2 \\u00b7 MARK AS PUBLISHED \\u2014 verify the live implementation</div>'
+          + '<div style="font-size:11px;color:#6b7280;">First save the current live checkpoint, then publish the reviewed HTML, then press here</div>'
           + '</div>'
           + '<span style="font-size:11px;font-weight:700;color:#4ade80;background:rgba(74,222,128,.12);border:1px solid #4ade80;border-radius:5px;padding:4px 10px;flex-shrink:0;white-space:nowrap;">Done \\u2192</span>'
           + '</div>'
@@ -36144,6 +36234,24 @@ async function markDone(pageId, btn, currentDone) {
       }
     } else { toast(data.error || 'Failed', '#f87171'); }
   } catch(e) { toast('Error: ' + e.message, '#f87171'); }
+}
+
+async function savePrePublicationCheckpoint(pageId) {
+  var p = (_pages||[]).find(function(x){ return x.id == pageId; });
+  if (p && p.prepublication_checkpoint_saved) {
+    toast('Pre-publication checkpoint is already protected in Proof & History.', '#38bdf8');
+    openCaseStudy(pageId);
+    return;
+  }
+  if (!confirm('Do this BEFORE publishing the reviewed HTML. ContentScale will save the complete page that is live right now, including its SHA-256 hash, as an immutable checkpoint. Continue?')) return;
+  try {
+    toast('Saving the currently live HTML before publication…', '#60a5fa');
+    var d = await api('/pages/' + pageId + '/case-study/pre-publication', 'POST', {});
+    if (!d || !d.success) { toast((d && d.error) || 'Checkpoint could not be saved', '#f87171'); return; }
+    if (p) p.prepublication_checkpoint_saved = true;
+    toast(d.created ? 'Pre-publication HTML protected. You may now publish.' : 'This exact pre-publication HTML was already protected.', '#4ade80');
+    setTimeout(loadPages, 500);
+  } catch(e) { toast('Checkpoint failed: ' + e.message, '#f87171'); }
 }
 
 // Track active checks per page
