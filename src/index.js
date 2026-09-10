@@ -1,4 +1,4 @@
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-10-CANONICAL-v12';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-10-CANONICAL-v13';
 const CONTENTSCALE_BUILD_CHANGES = [
   'professional-guided-tour',
   'prewrite-create-expand-publish-tracker-baseline',
@@ -21,6 +21,9 @@ const CONTENTSCALE_BUILD_CHANGES = [
   ,'immutable-pre-publication-html-checkpoint'
   ,'publication-html-version-and-hash-history'
   ,'case-study-done-blocked-until-checkpoint'
+  ,'case-study-publish-action-always-visible-after-checkpoint'
+  ,'publication-compared-to-prepublication-hash'
+  ,'case-study-proof-times-explicit-utc'
 ];
 console.log('[ContentScale] BUILD=' + CONTENTSCALE_BUILD_ID + ' BOOT=' + new Date().toISOString());
 console.log('[ContentScale] CHANGES=' + CONTENTSCALE_BUILD_CHANGES.join(','));
@@ -1704,6 +1707,20 @@ async function _ensureCaseStudySchema(){
   _caseStudySchemaReady=true;
 }
 function _caseStudyNormUrl(raw){try{const u=new URL(String(raw||''));return 'https://'+u.hostname.toLowerCase().replace(/^www\./,'')+(u.pathname.replace(/\/+$/,'')||'/');}catch(e){return String(raw||'').trim().toLowerCase().replace(/^http:\/\//,'https://').replace(/^https:\/\/www\./,'https://').replace(/\/+$/,'');}}
+function _caseStudyStableContentHash(raw){
+  const crypto=require('crypto');
+  let html=String(raw||'');
+  const main=html.match(/<main\b[^>]*>([\s\S]*?)<\/main>/i);
+  const article=html.match(/<article\b[^>]*>([\s\S]*?)<\/article>/i);
+  html=(article&&article[1])||(main&&main[1])||html;
+  html=html.replace(/<(script|style|noscript|svg)\b[^>]*>[\s\S]*?<\/\1>/gi,' ')
+    .replace(/<!--([\s\S]*?)-->/g,' ')
+    .replace(/<[^>]+>/g,' ')
+    .replace(/&nbsp;|&#160;/gi,' ')
+    .replace(/\s+/g,' ')
+    .trim();
+  return crypto.createHash('sha256').update(html).digest('hex');
+}
 async function _ensurePerfectRoofingCaseStudy(client,page){
   await _ensureCaseStudySchema();
   const canonical=_caseStudyNormUrl(page&&page.url);
@@ -2196,7 +2213,8 @@ app.post('/api/tracker-client/:token/pages/:pageId/case-study/pre-publication',a
   const liveHtml=await liveResp.text();
   const lower=liveHtml.toLowerCase();
   if(liveHtml.length<500||(!lower.includes('</html>')&&!lower.includes('<body')))return res.status(502).json({success:false,error:'Live fetch returned incomplete or suspicious HTML'});
-  const v=await _caseStudyStoreContentVersion(cr.rows[0].id,pr.rows[0].id,'pre_publication',pr.rows[0].url,liveHtml,'tracker_live_fetch',{purpose:'current_live_html_before_contentscale_publication'});
+  const stableContentHash=_caseStudyStableContentHash(liveHtml);
+  const v=await _caseStudyStoreContentVersion(cr.rows[0].id,pr.rows[0].id,'pre_publication',pr.rows[0].url,liveHtml,'tracker_live_fetch',{purpose:'current_live_html_before_contentscale_publication',stable_content_hash:stableContentHash});
   if(!v)return res.status(500).json({success:false,error:'Checkpoint could not be stored'});
   if(v.created)await _caseStudyEventForPage(cr.rows[0].id,pr.rows[0].id,'pre_publication_checkpoint',{url:pr.rows[0].url,version_id:v.id,captured_at:v.captured_at,full_html_preserved:true},v.content_hash).catch(()=>{});
   res.json({success:true,created:!!v.created,checkpoint:{id:v.id,captured_at:v.captured_at,content_hash:v.content_hash},message:v.created?'Current live HTML saved. You may now publish the reviewed version.':'This exact live HTML was already saved.'});
@@ -2482,10 +2500,13 @@ app.patch('/api/tracker-client/:token/pages/:pageId/done', async (req, res) => {
     // A protected case study must have the currently-live HTML saved before publication.
     // If the user publishes first, the true pre-publication state can no longer be reconstructed.
     await _ensureCaseStudySchema();
+    let prepublicationHashFull=null,prepublicationStableHash=null;
     const activeCaseStudy=await pool.query("SELECT id FROM tracker_case_studies WHERE tracker_client_id=$1 AND tracker_page_id=$2 AND status='active' ORDER BY id LIMIT 1",[cr.rows[0].id,page.id]);
     if(activeCaseStudy.rows.length){
-      const pre=await pool.query("SELECT id,captured_at,content_hash FROM tracker_case_study_content_versions WHERE case_study_id=$1 AND version_type='pre_publication' ORDER BY captured_at DESC,id DESC LIMIT 1",[activeCaseStudy.rows[0].id]);
+      const pre=await pool.query("SELECT id,captured_at,content_hash,html_content FROM tracker_case_study_content_versions WHERE case_study_id=$1 AND version_type='pre_publication' ORDER BY captured_at DESC,id DESC LIMIT 1",[activeCaseStudy.rows[0].id]);
       if(!pre.rows.length)return res.status(409).json({success:false,checkpoint_required:true,error:'Save the pre-publication checkpoint before publishing. The historical baseline will remain locked.'});
+      prepublicationHashFull=String(pre.rows[0].content_hash||'');
+      prepublicationStableHash=_caseStudyStableContentHash(pre.rows[0].html_content||'');
     }
 
     // Record exact declaration date/time immediately, but do not claim VERIFIED yet.
@@ -2511,13 +2532,16 @@ app.patch('/api/tracker-client/:token/pages/:pageId/done', async (req, res) => {
         if (!fetchReliable) throw new Error('Live fetch returned incomplete or suspicious HTML');
 
         const crypto = require('crypto');
-        const liveHash = crypto.createHash('sha256').update(liveHtml).digest('hex').substring(0,16);
+        const liveHashFull = crypto.createHash('sha256').update(liveHtml).digest('hex');
+        const liveHash = liveHashFull.substring(0,16);
+        const liveStableHash = _caseStudyStableContentHash(liveHtml);
         const previousHash = String(page.last_page_hash || '');
+        const comparisonHash = prepublicationStableHash || prepublicationHashFull || previousHash;
 
-        if (previousHash && liveHash === previousHash) {
+        if (comparisonHash && (liveStableHash === comparisonHash || liveHashFull === comparisonHash || liveHash === comparisonHash)) {
           // Nothing changed: do NOT spend scan/API credits and do NOT create fake proof.
           await pool.query(`UPDATE tracker_pages SET is_done=FALSE, implementation_status='no_change', needs_html=FALSE WHERE id=$1`, [page.id]);
-          await _caseStudyEventForPage(client.id,page.id,'implementation_no_change',{url:page.url,verification:'live_html_hash_unchanged'},liveHash).catch(()=>{});
+          await _caseStudyEventForPage(client.id,page.id,'implementation_no_change',{url:page.url,verification:prepublicationHashFull?'stable_live_content_equals_prepublication_checkpoint':'live_html_equals_previous_tracker_hash',stable_content_hash:liveStableHash},liveHashFull).catch(()=>{});
           if (client.email) {
             const subject = 'No live changes detected — ' + (client.domain || page.url);
             const body = '<h2 style="font-size:17px;font-weight:800;color:#0f172a;">No implementation change detected</h2>'
@@ -2532,7 +2556,7 @@ app.patch('/api/tracker-client/:token/pages/:pageId/done', async (req, res) => {
 
         // Preserve the complete published HTML independently before any operational page field
         // is updated. Content versions are immutable and survive Tracker resets/archiving.
-        const publishedVersion=await _caseStudyStoreContentVersion(client.id,page.id,'published_implementation',page.url,liveHtml,'tracker_live_verification',{declared_at:new Date().toISOString(),previous_tracker_hash:previousHash||null});
+        const publishedVersion=await _caseStudyStoreContentVersion(client.id,page.id,'published_implementation',page.url,liveHtml,'tracker_live_verification',{declared_at:new Date().toISOString(),previous_tracker_hash:previousHash||null,stable_content_hash:liveStableHash,compared_with_prepublication_stable_hash:prepublicationStableHash||null});
         if(publishedVersion&&publishedVersion.created)await _caseStudyEventForPage(client.id,page.id,'published_html_captured',{url:page.url,version_id:publishedVersion.id,captured_at:publishedVersion.captured_at,full_html_preserved:true},publishedVersion.content_hash).catch(()=>{});
 
         // Changed: update the operational comparison copy. This is not the locked case-study baseline.
@@ -32804,8 +32828,10 @@ function openCaseStudy(pageId){
     var cs=d.case_study||{},b=cs.baseline_data||{};if(typeof b==='string'){try{b=JSON.parse(b);}catch(e){b={};}}
     var ai=b.ai_evidence||{},events=d.events||[],versions=d.content_versions||[],snaps=d.snapshots||[];
     function metric(label,value,color){return '<div style="background:#0b1220;border:1px solid #1e3a8a;border-radius:8px;padding:10px;min-width:115px;flex:1;"><div style="font-size:20px;font-weight:900;color:'+(color||'#e5e7eb')+'">'+_csEscH(value==null?'—':value)+'</div><div style="font-size:9px;color:#64748b;text-transform:uppercase;letter-spacing:.06em;">'+_csEscH(label)+'</div></div>';}
-    var timeline=events.map(function(e){var x=e.event_data||{};if(typeof x==='string'){try{x=JSON.parse(x);}catch(z){x={};}}return '<div style="display:grid;grid-template-columns:135px 170px 1fr;gap:8px;padding:8px 0;border-top:1px solid #172033;font-size:11px;"><span style="color:#94a3b8;">'+_csEscH(new Date(e.event_at).toLocaleString('en-GB'))+'</span><b style="color:#7dd3fc;">'+_csEscH(String(e.event_type||'').replace(/_/g,' '))+'</b><span style="color:#64748b;">'+_csEscH(Object.keys(x).map(function(k){return k+': '+x[k];}).join(' · '))+'</span></div>';}).join('');
-    var versionList=versions.map(function(v){return '<div style="display:grid;grid-template-columns:135px 170px 1fr;gap:8px;padding:8px 0;border-top:1px solid #172033;font-size:11px;"><span style="color:#94a3b8;">'+_csEscH(new Date(v.captured_at).toLocaleString('en-GB'))+'</span><b style="color:#86efac;">'+_csEscH(String(v.version_type||'').replace(/_/g,' '))+'</b><span style="color:#64748b;">SHA-256 '+_csEscH(String(v.content_hash||'').slice(0,16))+'… · '+_csEscH(String(v.html_bytes||0))+' bytes · immutable</span></div>';}).join('');
+    function utcStamp(v){try{return new Date(v).toISOString().replace('T',' ').replace(/\.\d{3}Z$/,' UTC');}catch(e){return String(v||'');}}
+    function eventValue(v){if(v&&typeof v==='object'){try{return JSON.stringify(v);}catch(e){return '[structured data]';}}return String(v==null?'':v);}
+    var timeline=events.map(function(e){var x=e.event_data||{};if(typeof x==='string'){try{x=JSON.parse(x);}catch(z){x={};}}return '<div style="display:grid;grid-template-columns:160px 170px 1fr;gap:8px;padding:8px 0;border-top:1px solid #172033;font-size:11px;"><span style="color:#94a3b8;">'+_csEscH(utcStamp(e.event_at))+'</span><b style="color:#7dd3fc;">'+_csEscH(String(e.event_type||'').replace(/_/g,' '))+'</b><span style="color:#64748b;">'+_csEscH(Object.keys(x).map(function(k){return k+': '+eventValue(x[k]);}).join(' · '))+'</span></div>';}).join('');
+    var versionList=versions.map(function(v){return '<div style="display:grid;grid-template-columns:160px 170px 1fr;gap:8px;padding:8px 0;border-top:1px solid #172033;font-size:11px;"><span style="color:#94a3b8;">'+_csEscH(utcStamp(v.captured_at))+'</span><b style="color:#86efac;">'+_csEscH(String(v.version_type||'').replace(/_/g,' '))+'</b><span style="color:#64748b;">SHA-256 '+_csEscH(String(v.content_hash||'').slice(0,16))+'… · '+_csEscH(String(v.html_bytes||0))+' bytes · immutable</span></div>';}).join('');
     box.innerHTML='<div style="display:flex;justify-content:space-between;gap:14px;align-items:flex-start;"><div><div style="font-size:10px;font-weight:900;color:#38bdf8;letter-spacing:.08em;">CASE STUDY ACTIVE · HISTORY PROTECTED</div><h2 style="margin:5px 0 3px;font-size:19px;">Perfect Roofing Team</h2><div style="font-size:11px;color:#94a3b8;word-break:break-all;">'+_csEscH(cs.canonical_url||'')+'</div><div style="font-size:11px;color:#c4b5fd;margin-top:3px;">Query: '+_csEscH(cs.primary_query||'')+'</div></div><button onclick="document.getElementById(\\'caseStudyOv\\').style.display=\\'none\\'" style="background:none;border:1px solid #374151;color:#94a3b8;border-radius:6px;padding:5px 9px;cursor:pointer;">Close</button></div>'
       +'<div style="padding:9px 11px;background:#052e16;border:1px solid #166534;border-radius:7px;color:#86efac;font-size:11px;margin:14px 0;">Baseline locked. Reset, reload and page archiving cannot overwrite this record.</div>'
       +'<div style="display:flex;gap:7px;flex-wrap:wrap;">'+metric('Google position',b.google_position,'#fbbf24')+metric('GSC clicks',b.gsc_clicks,'#4ade80')+metric('GSC impressions',Number(b.gsc_impressions||0).toLocaleString(),'#60a5fa')+metric('GRAAF',b.graaf_score?b.graaf_score+'/100':'—','#facc15')+metric('Google AIO',ai.google_aio&&ai.google_aio.exact_page_cited?'EXACT CITED':'—','#4ade80')+'</div>'
@@ -34843,7 +34869,7 @@ function renderPages() {
       + '</div>'
       + '</div>'
       + recsHtml
-      + ((!isDone && hasBrief && !(!!p.html_pasted_at && !!lastCheckedRaw && new Date(p.html_pasted_at) > new Date(lastCheckedRaw)))
+      + ((!isDone && hasBrief && ((p.case_study_active && p.prepublication_checkpoint_saved) || !(!!p.html_pasted_at && !!lastCheckedRaw && new Date(p.html_pasted_at) > new Date(lastCheckedRaw))))
         ? '<div data-tour="done-verify" onclick="markDone(' + p.id + ',this,false)" style="cursor:pointer;display:flex;align-items:center;gap:10px;padding:12px 16px;background:linear-gradient(90deg,rgba(74,222,128,.08),rgba(74,222,128,.02));border-top:1px solid #1f2937;animation:donePulse 2s ease-in-out infinite;">'
           + '<span style="font-size:1.3rem;flex-shrink:0;">\\u2705</span>'
           + '<div style="flex:1;">'
