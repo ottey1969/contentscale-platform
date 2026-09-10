@@ -1,4 +1,4 @@
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-10-CANONICAL-v18';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-10-CANONICAL-v19';
 const CONTENTSCALE_BUILD_CHANGES = [
   'professional-guided-tour',
   'prewrite-create-expand-publish-tracker-baseline',
@@ -1837,6 +1837,7 @@ app.get('/api/tracker-client/:token', async (req, res) => {
       ['aio_manual_text','TEXT'],
       ['aio_manual_refs','JSONB'],
       ['brief_viewed_at','TIMESTAMPTZ']
+      ,['revision_cycle','INTEGER NOT NULL DEFAULT 1']
     ];
     for (const [col, type] of _trackerMainGetColumns) {
       await pool.query('ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS ' + col + ' ' + type);
@@ -1850,7 +1851,7 @@ app.get('/api/tracker-client/:token', async (req, res) => {
               p.is_done, p.manual_done, p.manual_done_at, p.fetch_reliable, p.check_frequency, p.gsc_clicks, p.gsc_impressions, p.gsc_position,
               p.treatment, p.treatment_target_url, p.treatment_updated_at, p.implementation_at, p.implementation_verified_at, p.implementation_status, p.implementation_before_graaf,
               p.ranking_brief, p.needs_html, p.brief_started_at, p.brief_content, p.brief_check_count,
-              p.html_pasted_at, p.html_source, p.last_graaf_score, p.brief_mode,
+              p.html_pasted_at, p.html_source, p.last_graaf_score, p.brief_mode, p.revision_cycle,
               (p.html_content IS NOT NULL AND p.html_content != '') as has_html_content,
               p.redirects_to,
               p.gsc_autofetch_checked_at, p.aio_manual_text, p.aio_manual_refs, p.brief_viewed_at,
@@ -1872,7 +1873,7 @@ app.get('/api/tracker-client/:token', async (req, res) => {
 
     const _evStem=String(client.domain||'').replace(/^www\./,'').split('.')[0].replace(/[-_]+/g,' ');
     const _evAliases=[client.name,client.domain,_evStem];
-    pagesR.rows.forEach(function(_p){ _p.ai_manual_evidence=_trackerReparseManualEvidenceMap(_p.ai_manual_evidence||{},_p.url,_evAliases); });
+    pagesR.rows.forEach(function(_p){ _p.ai_manual_evidence=_trackerReparseManualEvidenceMap(_p.ai_manual_evidence||{},_p.url,_evAliases,_p.revision_cycle); });
 
     // Activate and attach the real Perfect Roofing case study without changing its frozen baseline.
     await _ensureCaseStudySchema();
@@ -1881,7 +1882,7 @@ app.get('/api/tracker-client/:token', async (req, res) => {
       FROM tracker_case_studies WHERE tracker_client_id=$1 AND status='active'`,[client.id]);
     const _csIds=_csr.rows.map(x=>x.id);
     const _csvr=_csIds.length?await pool.query(`SELECT DISTINCT ON (case_study_id,version_type)
-      case_study_id,version_type,captured_at,content_hash
+      case_study_id,version_type,captured_at,content_hash,version_data
       FROM tracker_case_study_content_versions WHERE case_study_id=ANY($1::int[])
       ORDER BY case_study_id,version_type,captured_at DESC,id DESC`,[_csIds]):{rows:[]};
     const _csvByCase=new Map();
@@ -1892,7 +1893,9 @@ app.get('/api/tracker-client/:token', async (req, res) => {
       _p.case_study_active=!!_cs;
       _p.case_study=_cs||null;
       _p.case_study_versions=_cs?(_csvByCase.get(_cs.id)||{}):{};
-      _p.prepublication_checkpoint_saved=!!(_p.case_study_versions&&_p.case_study_versions.pre_publication);
+      const _cycle=Number(_p.revision_cycle||1),_preKey=_cycle>1?'pre_publication_r'+_cycle:'pre_publication';
+      const _pre=_p.case_study_versions&&_p.case_study_versions[_preKey],_vd=_pre&&_pre.version_data||{};
+      _p.prepublication_checkpoint_saved=!!(_pre&&Number(_vd.revision_cycle||1)===Number(_p.revision_cycle||1));
     });
 
     res.json({
@@ -2175,9 +2178,10 @@ app.post('/api/tracker-client/:token/pages/:pageId/html', async (req, res) => {
   try {
     const cr = await pool.query('SELECT id FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status != $2)', [req.params.token, 'deleted']);
     if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
-    const own = await pool.query('SELECT id FROM tracker_pages WHERE id=$1 AND tracker_client_id=$2', [req.params.pageId, cr.rows[0].id]);
+    await pool.query('ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS revision_cycle INTEGER NOT NULL DEFAULT 1').catch(()=>{});
+    const own = await pool.query('SELECT id,url,revision_cycle FROM tracker_pages WHERE id=$1 AND tracker_client_id=$2', [req.params.pageId, cr.rows[0].id]);
     if (!own.rows.length) return res.status(403).json({ success: false, error: 'Not your page' });
-    const { html_content, keyword } = req.body;
+    const { html_content, keyword, revision_mode } = req.body;
 
     // Ensure columns exist
     await pool.query('ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS html_pasted_at TIMESTAMPTZ').catch(()=>{});
@@ -2198,7 +2202,13 @@ app.post('/api/tracker-client/:token/pages/:pageId/html', async (req, res) => {
 
     vals.push(req.params.pageId);
     await pool.query(`UPDATE tracker_pages SET ${fields.join(',')} WHERE id=$${vals.length}`, vals);
-    res.json({ success: true, scanning: true, manual_fallback: wasImplementationFallback });
+    let candidateVersion=null;
+    if(html_content&&revision_mode){
+      const _cycle=Number(own.rows[0].revision_cycle||1),_candidateType=_cycle>1?'revision_candidate_r'+_cycle:'revision_candidate';
+      candidateVersion=await _caseStudyStoreContentVersion(cr.rows[0].id,own.rows[0].id,_candidateType,own.rows[0].url,html_content,'manual_revision_upload',{revision_cycle:_cycle,purpose:'improved_html_before_publication'}).catch(()=>null);
+      if(candidateVersion&&candidateVersion.created)await _caseStudyEventForPage(cr.rows[0].id,own.rows[0].id,'revision_candidate_uploaded',{revision_cycle:Number(own.rows[0].revision_cycle||1),version_id:candidateVersion.id,full_html_preserved:true},candidateVersion.content_hash).catch(()=>{});
+    }
+    res.json({ success: true, scanning: true, manual_fallback: wasImplementationFallback, revision_cycle:Number(own.rows[0].revision_cycle||1), candidate_preserved:!!candidateVersion });
     _triggerPageScan(parseInt(req.params.pageId), 1000);
   } catch(e) {
     console.error('[html-patch]', e.message);
@@ -2230,25 +2240,47 @@ app.get('/api/tracker-client/:token/pages/:pageId', async (req, res) => {
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
+// Start a subsequent improvement cycle without deleting any earlier baseline, event or HTML version.
+app.post('/api/tracker-client/:token/pages/:pageId/case-study/new-revision',async(req,res)=>{try{
+  const cr=await pool.query("SELECT id FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status!='deleted')",[req.params.token]);
+  if(!cr.rows.length)return res.status(404).json({success:false,error:'Tracker not found'});
+  await pool.query('ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS revision_cycle INTEGER NOT NULL DEFAULT 1').catch(()=>{});
+  await _trackerEnsureAiEvidenceSchema();
+  const current=await pool.query('SELECT id,url,revision_cycle,is_done FROM tracker_pages WHERE id=$1 AND tracker_client_id=$2',[req.params.pageId,cr.rows[0].id]);
+  if(!current.rows.length)return res.status(404).json({success:false,error:'Page not found'});
+  const previousCycle=Number(current.rows[0].revision_cycle||1);
+  const prior=await pool.query(`SELECT DISTINCT ON (engine) engine,brand_recommended,brand_local_result,domain_cited,exact_page_cited,verified_at FROM tracker_ai_evidence WHERE tracker_client_id=$1 AND page_id=$2 AND evidence_method='manual' AND revision_cycle=$3 AND is_cleared=FALSE ORDER BY engine,COALESCE(updated_at,verified_at,created_at) DESC NULLS LAST,id DESC`,[cr.rows[0].id,current.rows[0].id,previousCycle]).catch(()=>({rows:[]}));
+  if(prior.rows.length<5)return res.status(409).json({success:false,ai_recheck_required:true,error:'Complete the manual 5/5 AI-engine check for the current revision before starting another HTML revision.'});
+  const pr=await pool.query(`UPDATE tracker_pages SET revision_cycle=COALESCE(revision_cycle,1)+1,is_done=FALSE,implementation_status='revision_draft',implementation_at=NULL,implementation_verified_at=NULL,needs_html=FALSE WHERE id=$1 AND tracker_client_id=$2 RETURNING id,url,revision_cycle`,[req.params.pageId,cr.rows[0].id]);
+  const cycle=Number(pr.rows[0].revision_cycle||previousCycle+1);
+  const priorSummary={checked:prior.rows.length,recommended:prior.rows.filter(x=>x.brand_recommended).length,local_maps:prior.rows.filter(x=>x.brand_local_result).length,domain_cited:prior.rows.filter(x=>x.domain_cited).length,exact_page_cited:prior.rows.filter(x=>x.exact_page_cited).length,engines:prior.rows};
+  await _caseStudyEventForPage(cr.rows[0].id,pr.rows[0].id,'revision_started',{url:pr.rows[0].url,revision_cycle:cycle,previous_revision_cycle:previousCycle,previous_ai_evidence:priorSummary,history_preserved:true,next_steps:['upload_improved_html','review_scan_and_brief','save_current_live_checkpoint','publish','verify_live','manually_recheck_all_five_ai_engines']}).catch(()=>{});
+  res.json({success:true,revision_cycle:cycle,message:'Revision '+cycle+' started. Earlier baseline, HTML versions and proof remain protected.'});
+}catch(e){console.error('[case-study-new-revision]',e.message);res.status(500).json({success:false,error:e.message});}});
+
 // Capture the currently live page BEFORE a new publication. The full HTML and SHA-256 hash
 // are append-only case-study evidence; this never changes tracker baseline fields.
 app.post('/api/tracker-client/:token/pages/:pageId/case-study/pre-publication',async(req,res)=>{try{
   const cr=await pool.query("SELECT id FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status!='deleted')",[req.params.token]);
   if(!cr.rows.length)return res.status(404).json({success:false,error:'Tracker not found'});
-  const pr=await pool.query('SELECT id,url FROM tracker_pages WHERE id=$1 AND tracker_client_id=$2',[req.params.pageId,cr.rows[0].id]);
+  await pool.query('ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS revision_cycle INTEGER NOT NULL DEFAULT 1').catch(()=>{});
+  const pr=await pool.query('SELECT id,url,revision_cycle FROM tracker_pages WHERE id=$1 AND tracker_client_id=$2',[req.params.pageId,cr.rows[0].id]);
   if(!pr.rows.length)return res.status(404).json({success:false,error:'Page not found'});
   await _ensureCaseStudySchema();
   const csR=await pool.query("SELECT id FROM tracker_case_studies WHERE tracker_client_id=$1 AND tracker_page_id=$2 AND status='active' ORDER BY id LIMIT 1",[cr.rows[0].id,pr.rows[0].id]);
   if(!csR.rows.length)return res.status(404).json({success:false,error:'No active case study for this page'});
+  const cycle=Number(pr.rows[0].revision_cycle||1);
+  if(cycle>1){const candidate=await pool.query("SELECT id FROM tracker_case_study_content_versions WHERE case_study_id=$1 AND version_type=$2 ORDER BY id DESC LIMIT 1",[csR.rows[0].id,'revision_candidate_r'+cycle]);if(!candidate.rows.length)return res.status(409).json({success:false,error:'Upload and scan the improved HTML for this revision before saving the live pre-publication checkpoint.'});}
   const liveResp=await fetch(pr.rows[0].url,{headers:{'User-Agent':'Mozilla/5.0 (compatible; ContentScale/1.0)'},signal:AbortSignal.timeout(15000)});
   if(!liveResp.ok)return res.status(502).json({success:false,error:'Live page returned HTTP '+liveResp.status});
   const liveHtml=await liveResp.text();
   const lower=liveHtml.toLowerCase();
   if(liveHtml.length<500||(!lower.includes('</html>')&&!lower.includes('<body')))return res.status(502).json({success:false,error:'Live fetch returned incomplete or suspicious HTML'});
   const stableContentHash=_caseStudyStableContentHash(liveHtml);
-  const v=await _caseStudyStoreContentVersion(cr.rows[0].id,pr.rows[0].id,'pre_publication',pr.rows[0].url,liveHtml,'tracker_live_fetch',{purpose:'current_live_html_before_contentscale_publication',stable_content_hash:stableContentHash});
+  const preType=cycle>1?'pre_publication_r'+cycle:'pre_publication';
+  const v=await _caseStudyStoreContentVersion(cr.rows[0].id,pr.rows[0].id,preType,pr.rows[0].url,liveHtml,'tracker_live_fetch',{purpose:'current_live_html_before_contentscale_publication',stable_content_hash:stableContentHash,revision_cycle:cycle});
   if(!v)return res.status(500).json({success:false,error:'Checkpoint could not be stored'});
-  if(v.created)await _caseStudyEventForPage(cr.rows[0].id,pr.rows[0].id,'pre_publication_checkpoint',{url:pr.rows[0].url,version_id:v.id,captured_at:v.captured_at,full_html_preserved:true},v.content_hash).catch(()=>{});
+  if(v.created)await _caseStudyEventForPage(cr.rows[0].id,pr.rows[0].id,'pre_publication_checkpoint',{url:pr.rows[0].url,version_id:v.id,captured_at:v.captured_at,full_html_preserved:true,revision_cycle:cycle},v.content_hash).catch(()=>{});
   res.json({success:true,created:!!v.created,checkpoint:{id:v.id,captured_at:v.captured_at,content_hash:v.content_hash},message:v.created?'Current live HTML saved. You may now publish the reviewed version.':'This exact live HTML was already saved.'});
 }catch(e){console.error('[case-study-pre-publication]',e.message);res.status(500).json({success:false,error:e.message});}});
 
@@ -2512,6 +2544,7 @@ app.patch('/api/tracker-client/:token/pages/:pageId/done', async (req, res) => {
   try {
     const cr = await pool.query('SELECT * FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status != $2)', [req.params.token, 'deleted']);
     if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
+    await pool.query('ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS revision_cycle INTEGER NOT NULL DEFAULT 1').catch(()=>{});
     const own = await pool.query('SELECT * FROM tracker_pages WHERE id=$1 AND tracker_client_id=$2', [req.params.pageId, cr.rows[0].id]);
     if (!own.rows.length) return res.status(403).json({ success: false, error: 'Not your page' });
     const page = own.rows[0];
@@ -2535,7 +2568,8 @@ app.patch('/api/tracker-client/:token/pages/:pageId/done', async (req, res) => {
     let prepublicationHashFull=null,prepublicationStableHash=null;
     const activeCaseStudy=await pool.query("SELECT id FROM tracker_case_studies WHERE tracker_client_id=$1 AND tracker_page_id=$2 AND status='active' ORDER BY id LIMIT 1",[cr.rows[0].id,page.id]);
     if(activeCaseStudy.rows.length){
-      const pre=await pool.query("SELECT id,captured_at,content_hash,html_content FROM tracker_case_study_content_versions WHERE case_study_id=$1 AND version_type='pre_publication' ORDER BY captured_at DESC,id DESC LIMIT 1",[activeCaseStudy.rows[0].id]);
+      const cycle=Number(page.revision_cycle||1),preType=cycle>1?'pre_publication_r'+cycle:'pre_publication';
+      const pre=await pool.query("SELECT id,captured_at,content_hash,html_content FROM tracker_case_study_content_versions WHERE case_study_id=$1 AND version_type=$2 ORDER BY captured_at DESC,id DESC LIMIT 1",[activeCaseStudy.rows[0].id,preType]);
       if(!pre.rows.length)return res.status(409).json({success:false,checkpoint_required:true,error:'Save the pre-publication checkpoint before publishing. The historical baseline will remain locked.'});
       prepublicationHashFull=String(pre.rows[0].content_hash||'');
       prepublicationStableHash=_caseStudyStableContentHash(pre.rows[0].html_content||'');
@@ -2588,7 +2622,8 @@ app.patch('/api/tracker-client/:token/pages/:pageId/done', async (req, res) => {
 
         // Preserve the complete published HTML independently before any operational page field
         // is updated. Content versions are immutable and survive Tracker resets/archiving.
-        const publishedVersion=await _caseStudyStoreContentVersion(client.id,page.id,'published_implementation',page.url,liveHtml,'tracker_live_verification',{declared_at:new Date().toISOString(),previous_tracker_hash:previousHash||null,stable_content_hash:liveStableHash,compared_with_prepublication_stable_hash:prepublicationStableHash||null});
+        const cycle=Number(page.revision_cycle||1),publishedType=cycle>1?'published_implementation_r'+cycle:'published_implementation';
+        const publishedVersion=await _caseStudyStoreContentVersion(client.id,page.id,publishedType,page.url,liveHtml,'tracker_live_verification',{declared_at:new Date().toISOString(),previous_tracker_hash:previousHash||null,stable_content_hash:liveStableHash,compared_with_prepublication_stable_hash:prepublicationStableHash||null,revision_cycle:cycle});
         if(publishedVersion&&publishedVersion.created)await _caseStudyEventForPage(client.id,page.id,'published_html_captured',{url:page.url,version_id:publishedVersion.id,captured_at:publishedVersion.captured_at,full_html_preserved:true},publishedVersion.content_hash).catch(()=>{});
 
         // Changed: update the operational comparison copy. This is not the locked case-study baseline.
@@ -3010,7 +3045,7 @@ app.get('/api/tracker-client/:token/latest-briefs', async (req, res) => {
     const cr = await pool.query('SELECT id,name,domain FROM tracker_clients WHERE (token=$1 OR board_token=$1 OR lead_token=$1) AND (status IS NULL OR status != $2)', [req.params.token, 'deleted']);
     if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
     const r = await pool.query(
-      `SELECT p.id, p.url, p.keyword, p.gsc_keyword, p.gsc_ctr, p.aio_manual_text, p.aio_manual_refs, p.brief_content, p.gsc_clicks, p.gsc_impressions, p.gsc_position,
+      `SELECT p.id, p.url, p.keyword, p.gsc_keyword, p.gsc_ctr, p.aio_manual_text, p.aio_manual_refs, p.brief_content, p.gsc_clicks, p.gsc_impressions, p.gsc_position, p.revision_cycle,
               p.brief_status, p.brief_claimed_by, p.brief_claimed_at, p.brief_started_at,
               p.brief_done_at, p.brief_submitted_at, p.brief_approved_at, p.brief_approved_by, p.brief_published_at,
               p.brief_deadline, p.brief_assigned_at, p.brief_rejected_at, p.brief_reject_reason, p.priority, p.treatment, p.treatment_target_url, p.manual_done,
@@ -3067,7 +3102,7 @@ app.get('/api/tracker-client/:token/latest-briefs', async (req, res) => {
       let srcB = Array.isArray(bc.source_suggestions) ? bc.source_suggestions : [];
       if (!srcB.length) srcB = _arr(p.source_suggestions);
       const _lbStem=String(cr.rows[0].domain||'').replace(/^www\./,'').split('.')[0].replace(/[-_]+/g,' ');
-      p.ai_manual_evidence=_trackerReparseManualEvidenceMap(p.ai_manual_evidence||{},p.url,[cr.rows[0].name,cr.rows[0].domain,_lbStem]);
+      p.ai_manual_evidence=_trackerReparseManualEvidenceMap(p.ai_manual_evidence||{},p.url,[cr.rows[0].name,cr.rows[0].domain,_lbStem],p.revision_cycle);
       return {
         type: 'brief_ready',
         url: p.url,
@@ -3785,9 +3820,9 @@ function _trackerParseManualEvidence(rawText,rawSources,pageUrl,aliases){
  const brandRecommended=sec.recommended.some(companyMatch);
  return {brand_recommended:brandRecommended,brand_local_result:localLines.some(companyMatch),brand_direct_supported:verifiedDirect.some(companyMatch)||(brandRecommended&&own.length>0),domain_cited:own.length>0,exact_page_cited:own.some(u=>_trackerEvNorm(u)===pn),citation_urls:urls,local_result_urls:[...new Set(mapsUrls)],recommended_companies:names(sec.recommended),local_result_companies:names(localLines),directly_cited_companies:names(verifiedDirect),mentioned_companies:names(sec.mentioned),sections:{...sec,local:localLines,direct:verifiedDirect}};
 }
-function _trackerReparseManualEvidenceMap(map,pageUrl,aliases){
+function _trackerReparseManualEvidenceMap(map,pageUrl,aliases,revisionCycle){
  const out={}; if(!map||typeof map!=='object')return out;
- for(const [engine,row0] of Object.entries(map)){const row=row0&&typeof row0==='object'?{...row0}:row0;if(!row||row.is_cleared===true||row.is_cleared==='true'||row.is_cleared===1||row.is_cleared==='1'){out[engine]=row;continue;}const parsed=_trackerParseManualEvidence(row.raw_text||'',row.raw_sources||'',pageUrl,aliases);out[engine]={...row,...parsed,parsed_evidence:parsed};}
+ for(const [engine,row0] of Object.entries(map)){const row=row0&&typeof row0==='object'?{...row0}:row0;if(!row||row.is_cleared===true||row.is_cleared==='true'||row.is_cleared===1||row.is_cleared==='1'){out[engine]=row;continue;}const parsed=_trackerParseManualEvidence(row.raw_text||'',row.raw_sources||'',pageUrl,aliases);out[engine]={...row,...parsed,parsed_evidence:parsed,is_current_revision:revisionCycle==null?true:Number(row.revision_cycle||1)===Number(revisionCycle||1)};}
  return out;
 }
 // CONTENTSCALE-MANUAL-EVIDENCE-CANONICAL-PARSER-STATE-FIX-20260909=true
@@ -3806,6 +3841,7 @@ async function _trackerEnsureAiEvidenceSchema(){
     citation_urls JSONB DEFAULT '[]'::jsonb, recommended_companies JSONB DEFAULT '[]'::jsonb, local_result_companies JSONB DEFAULT '[]'::jsonb, local_result_urls JSONB DEFAULT '[]'::jsonb,
     directly_cited_companies JSONB DEFAULT '[]'::jsonb, mentioned_companies JSONB DEFAULT '[]'::jsonb,
     parsed_evidence JSONB DEFAULT '{}'::jsonb, is_cleared BOOLEAN DEFAULT FALSE, verified_at TIMESTAMPTZ DEFAULT NOW(),
+    revision_cycle INTEGER NOT NULL DEFAULT 1,
     created_at TIMESTAMPTZ DEFAULT NOW(), updated_at TIMESTAMPTZ DEFAULT NOW()
   )`).catch(()=>{});
   const cols=[
@@ -3813,7 +3849,7 @@ async function _trackerEnsureAiEvidenceSchema(){
     ['raw_text',"TEXT DEFAULT ''"],['raw_sources',"TEXT DEFAULT ''"],['brand_recommended','BOOLEAN DEFAULT FALSE'],['brand_local_result','BOOLEAN DEFAULT FALSE'],['brand_direct_supported','BOOLEAN DEFAULT FALSE'],
     ['domain_cited','BOOLEAN DEFAULT FALSE'],['exact_page_cited','BOOLEAN DEFAULT FALSE'],['citation_urls',"JSONB DEFAULT '[]'::jsonb"],['recommended_companies',"JSONB DEFAULT '[]'::jsonb"],['local_result_companies',"JSONB DEFAULT '[]'::jsonb"],['local_result_urls',"JSONB DEFAULT '[]'::jsonb"],
     ['directly_cited_companies',"JSONB DEFAULT '[]'::jsonb"],['mentioned_companies',"JSONB DEFAULT '[]'::jsonb"],['parsed_evidence',"JSONB DEFAULT '{}'::jsonb"],
-    ['is_cleared','BOOLEAN DEFAULT FALSE'],['verified_at','TIMESTAMPTZ DEFAULT NOW()'],['created_at','TIMESTAMPTZ DEFAULT NOW()'],['updated_at','TIMESTAMPTZ DEFAULT NOW()']
+    ['is_cleared','BOOLEAN DEFAULT FALSE'],['revision_cycle','INTEGER NOT NULL DEFAULT 1'],['verified_at','TIMESTAMPTZ DEFAULT NOW()'],['created_at','TIMESTAMPTZ DEFAULT NOW()'],['updated_at','TIMESTAMPTZ DEFAULT NOW()']
   ];
   for(const c of cols) await pool.query('ALTER TABLE tracker_ai_evidence ADD COLUMN IF NOT EXISTS '+c[0]+' '+c[1]).catch(()=>{});
   await pool.query('CREATE INDEX IF NOT EXISTS tracker_ai_evidence_page_idx ON tracker_ai_evidence(page_id)').catch(()=>{});
@@ -3823,14 +3859,16 @@ app.post('/api/tracker-client/:token/page/:pageId/ai-evidence/:engine',async(req
  const engine=String(req.params.engine||'').toLowerCase(),allowed=['google_aio','chatgpt','perplexity','claude','copilot'];if(!allowed.includes(engine))return res.status(400).json({success:false,error:'Unsupported AI engine'});
  await _trackerEnsureAiEvidenceSchema();
  const cr=await pool.query('SELECT id,name,domain FROM tracker_clients WHERE (token=$1 OR lead_token=$1) AND (status IS NULL OR status != $2)',[req.params.token,'deleted']);if(!cr.rows.length)return res.status(404).json({success:false,error:'Not found'});
- const pg=await pool.query('SELECT id,url FROM tracker_pages WHERE id=$1 AND tracker_client_id=$2',[req.params.pageId,cr.rows[0].id]);if(!pg.rows.length)return res.status(404).json({success:false,error:'Page not found'});
+ await pool.query('ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS revision_cycle INTEGER NOT NULL DEFAULT 1').catch(()=>{});
+ const pg=await pool.query('SELECT id,url,revision_cycle,is_done FROM tracker_pages WHERE id=$1 AND tracker_client_id=$2',[req.params.pageId,cr.rows[0].id]);if(!pg.rows.length)return res.status(404).json({success:false,error:'Page not found'});
+ const revisionCycle=Number(pg.rows[0].revision_cycle||1);
  const text=_trackerStripPgNulString(req.body?.text).trim(),sources=_trackerStripPgNulString(req.body?.sources).trim();
  const _explicitClear=!!(req.body&&req.body.clear===true);
  if(_explicitClear||(!text&&!sources)){
    // Explicit clear is a persisted tombstone, not a delete. The dedicated clear:true flag avoids
    // browser/UI races where an old textarea value can accidentally re-save a supposedly cleared row.
-   let _clr=await pool.query(`UPDATE tracker_ai_evidence SET raw_text='',raw_sources='',brand_recommended=FALSE,brand_local_result=FALSE,brand_direct_supported=FALSE,domain_cited=FALSE,exact_page_cited=FALSE,citation_urls='[]'::jsonb,recommended_companies='[]'::jsonb,local_result_companies='[]'::jsonb,local_result_urls='[]'::jsonb,directly_cited_companies='[]'::jsonb,mentioned_companies='[]'::jsonb,parsed_evidence='{"cleared":true}'::jsonb,is_cleared=TRUE,verified_at=NOW(),updated_at=NOW() WHERE id=(SELECT id FROM tracker_ai_evidence WHERE page_id=$1 AND engine=$2 AND evidence_method='manual' ORDER BY id DESC LIMIT 1) RETURNING *`,[pg.rows[0].id,engine]);
-   if(!_clr.rows.length) _clr=await pool.query(`INSERT INTO tracker_ai_evidence(page_id,tracker_client_id,engine,evidence_method,raw_text,raw_sources,brand_recommended,brand_direct_supported,domain_cited,exact_page_cited,citation_urls,recommended_companies,directly_cited_companies,mentioned_companies,parsed_evidence,is_cleared,verified_at,updated_at) VALUES($1,$2,$3,'manual','','',FALSE,FALSE,FALSE,FALSE,'[]'::jsonb,'[]'::jsonb,'[]'::jsonb,'[]'::jsonb,'{"cleared":true}'::jsonb,TRUE,NOW(),NOW()) RETURNING *`,[pg.rows[0].id,cr.rows[0].id,engine]);
+   let _clr=await pool.query(`UPDATE tracker_ai_evidence SET raw_text='',raw_sources='',brand_recommended=FALSE,brand_local_result=FALSE,brand_direct_supported=FALSE,domain_cited=FALSE,exact_page_cited=FALSE,citation_urls='[]'::jsonb,recommended_companies='[]'::jsonb,local_result_companies='[]'::jsonb,local_result_urls='[]'::jsonb,directly_cited_companies='[]'::jsonb,mentioned_companies='[]'::jsonb,parsed_evidence='{"cleared":true}'::jsonb,is_cleared=TRUE,verified_at=NOW(),updated_at=NOW() WHERE id=(SELECT id FROM tracker_ai_evidence WHERE page_id=$1 AND engine=$2 AND evidence_method='manual' AND revision_cycle=$3 ORDER BY id DESC LIMIT 1) RETURNING *`,[pg.rows[0].id,engine,revisionCycle]);
+   if(!_clr.rows.length) _clr=await pool.query(`INSERT INTO tracker_ai_evidence(page_id,tracker_client_id,engine,evidence_method,raw_text,raw_sources,brand_recommended,brand_direct_supported,domain_cited,exact_page_cited,citation_urls,recommended_companies,directly_cited_companies,mentioned_companies,parsed_evidence,is_cleared,revision_cycle,verified_at,updated_at) VALUES($1,$2,$3,'manual','','',FALSE,FALSE,FALSE,FALSE,'[]'::jsonb,'[]'::jsonb,'[]'::jsonb,'[]'::jsonb,'{"cleared":true}'::jsonb,TRUE,$4,NOW(),NOW()) RETURNING *`,[pg.rows[0].id,cr.rows[0].id,engine,revisionCycle]);
    if(engine==='google_aio') await pool.query('UPDATE tracker_pages SET aio_manual_text=NULL,aio_manual_refs=NULL WHERE id=$1',[pg.rows[0].id]).catch(()=>{});
    await _caseStudyEventForPage(cr.rows[0].id,pg.rows[0].id,'ai_evidence_cleared',{engine:engine,evidence:_clr.rows[0]||null}).catch(()=>{});
    return res.json({success:true,cleared:true,evidence:_clr.rows[0]||{engine:engine,evidence_method:'manual',raw_text:'',raw_sources:'',is_cleared:true}});
@@ -3838,11 +3876,17 @@ app.post('/api/tracker-client/:token/page/:pageId/ai-evidence/:engine',async(req
  const stem=String(cr.rows[0].domain||'').replace(/^www\./,'').split('.')[0].replace(/[-_]+/g,' '),_brandAliases=[cr.rows[0].name,cr.rows[0].domain,stem];
  if(/perfectroofingteam\.com$/i.test(String(cr.rows[0].domain||'')))_brandAliases.push('Perfect Roofing Team LLC','Perfect Roofing Team LLC - Roofing Contractor NJ');
  const ev=_trackerParseManualEvidence(text,sources,pg.rows[0].url,_brandAliases);
- const vals=[pg.rows[0].id,cr.rows[0].id,engine,text,sources,ev.brand_recommended,ev.brand_local_result,ev.brand_direct_supported,ev.domain_cited,ev.exact_page_cited,JSON.stringify(ev.citation_urls),JSON.stringify(ev.recommended_companies),JSON.stringify(ev.local_result_companies),JSON.stringify(ev.local_result_urls),JSON.stringify(ev.directly_cited_companies),JSON.stringify(ev.mentioned_companies),JSON.stringify(ev)];
+ const vals=[pg.rows[0].id,cr.rows[0].id,engine,text,sources,ev.brand_recommended,ev.brand_local_result,ev.brand_direct_supported,ev.domain_cited,ev.exact_page_cited,JSON.stringify(ev.citation_urls),JSON.stringify(ev.recommended_companies),JSON.stringify(ev.local_result_companies),JSON.stringify(ev.local_result_urls),JSON.stringify(ev.directly_cited_companies),JSON.stringify(ev.mentioned_companies),JSON.stringify(ev),revisionCycle];
  // Do not depend on a historical UNIQUE constraint: older deployments may already have the table without it.
- let rr=await pool.query(`UPDATE tracker_ai_evidence SET tracker_client_id=$2,raw_text=$4,raw_sources=$5,brand_recommended=$6,brand_local_result=$7,brand_direct_supported=$8,domain_cited=$9,exact_page_cited=$10,citation_urls=$11,recommended_companies=$12,local_result_companies=$13,local_result_urls=$14,directly_cited_companies=$15,mentioned_companies=$16,parsed_evidence=$17,is_cleared=FALSE,verified_at=NOW(),updated_at=NOW() WHERE id=(SELECT id FROM tracker_ai_evidence WHERE page_id=$1 AND engine=$3 AND evidence_method='manual' ORDER BY id DESC LIMIT 1) RETURNING *`,vals);
- if(!rr.rows.length)rr=await pool.query(`INSERT INTO tracker_ai_evidence(page_id,tracker_client_id,engine,evidence_method,raw_text,raw_sources,brand_recommended,brand_local_result,brand_direct_supported,domain_cited,exact_page_cited,citation_urls,recommended_companies,local_result_companies,local_result_urls,directly_cited_companies,mentioned_companies,parsed_evidence,is_cleared,verified_at,updated_at) VALUES($1,$2,$3,'manual',$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,FALSE,NOW(),NOW()) RETURNING *`,vals);
+ let rr=await pool.query(`UPDATE tracker_ai_evidence SET tracker_client_id=$2,raw_text=$4,raw_sources=$5,brand_recommended=$6,brand_local_result=$7,brand_direct_supported=$8,domain_cited=$9,exact_page_cited=$10,citation_urls=$11,recommended_companies=$12,local_result_companies=$13,local_result_urls=$14,directly_cited_companies=$15,mentioned_companies=$16,parsed_evidence=$17,is_cleared=FALSE,verified_at=NOW(),updated_at=NOW() WHERE id=(SELECT id FROM tracker_ai_evidence WHERE page_id=$1 AND engine=$3 AND evidence_method='manual' AND revision_cycle=$18 ORDER BY id DESC LIMIT 1) RETURNING *`,vals);
+ if(!rr.rows.length)rr=await pool.query(`INSERT INTO tracker_ai_evidence(page_id,tracker_client_id,engine,evidence_method,raw_text,raw_sources,brand_recommended,brand_local_result,brand_direct_supported,domain_cited,exact_page_cited,citation_urls,recommended_companies,local_result_companies,local_result_urls,directly_cited_companies,mentioned_companies,parsed_evidence,is_cleared,revision_cycle,verified_at,updated_at) VALUES($1,$2,$3,'manual',$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,FALSE,$18,NOW(),NOW()) RETURNING *`,vals);
  await _caseStudyEventForPage(cr.rows[0].id,pg.rows[0].id,'ai_evidence_saved',{engine:engine,evidence:rr.rows[0]}).catch(()=>{});
+ const cycleEvidence=await pool.query(`SELECT DISTINCT ON (engine) engine,brand_recommended,brand_local_result,domain_cited,exact_page_cited,verified_at FROM tracker_ai_evidence WHERE tracker_client_id=$1 AND page_id=$2 AND evidence_method='manual' AND revision_cycle=$3 AND is_cleared=FALSE ORDER BY engine,COALESCE(updated_at,verified_at,created_at) DESC NULLS LAST,id DESC`,[cr.rows[0].id,pg.rows[0].id,revisionCycle]).catch(()=>({rows:[]}));
+ if(cycleEvidence.rows.length===5&&(pg.rows[0].is_done===true||pg.rows[0].is_done==='t')){
+   const summary={revision_cycle:revisionCycle,checked:5,recommended:cycleEvidence.rows.filter(x=>x.brand_recommended).length,local_maps:cycleEvidence.rows.filter(x=>x.brand_local_result).length,domain_cited:cycleEvidence.rows.filter(x=>x.domain_cited).length,exact_page_cited:cycleEvidence.rows.filter(x=>x.exact_page_cited).length,engines:cycleEvidence.rows};
+   const cs=await pool.query("SELECT id FROM tracker_case_studies WHERE tracker_client_id=$1 AND tracker_page_id=$2 AND status='active' ORDER BY id LIMIT 1",[cr.rows[0].id,pg.rows[0].id]).catch(()=>({rows:[]}));
+   if(cs.rows.length)await pool.query(`INSERT INTO tracker_case_study_events(case_study_id,tracker_page_id,event_type,source,event_data) SELECT $1,$2,'post_publication_ai_evidence_complete','manual_five_engine_check',$3::jsonb WHERE NOT EXISTS(SELECT 1 FROM tracker_case_study_events WHERE case_study_id=$1 AND event_type='post_publication_ai_evidence_complete' AND (event_data->>'revision_cycle')::int=$4)`,[cs.rows[0].id,pg.rows[0].id,JSON.stringify(summary),revisionCycle]).catch(()=>{});
+ }
  res.json({success:true,evidence:rr.rows[0]});
 }catch(e){console.error('[manual-ai-evidence]',e.code||'',e.message);res.status(500).json({success:false,error:e.message,code:e.code||null});}});
 
@@ -32767,15 +32811,15 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
 <div class="cs-modal" id="htmlUploadModal">
   <div class="cs-modal-box" onclick="event.stopPropagation()" style="max-width:580px;">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
-      <h3 style="font-size:15px;font-weight:800;color:#f1f5f9;">Paste page HTML</h3>
+      <h3 id="htmlUploadTitle" style="font-size:15px;font-weight:800;color:#f1f5f9;">Paste page HTML</h3>
       <button onclick="hideModal('htmlUploadModal')" style="background:none;border:none;color:#94a3b8;cursor:pointer;font-size:1.2rem;">&#x2715;</button>
     </div>
-    <p style="font-size:12px;color:#6b7280;margin-bottom:12px;">Open your page in Chrome, right-click &rarr; View Page Source, select all (Ctrl+A), copy (Ctrl+C) and paste below.</p>
+    <p id="htmlUploadHelp" style="font-size:12px;color:#6b7280;margin-bottom:12px;">Open your page in Chrome, right-click &rarr; View Page Source, select all (Ctrl+A), copy (Ctrl+C) and paste below.</p>
     <input type="text" id="htmlUploadKeyword" placeholder="Keyword (optional)" class="cs-input" style="margin-bottom:10px;width:100%;">
     <textarea id="htmlUploadContent" placeholder="Paste full page HTML here..." class="cs-input" rows="8" style="width:100%;font-family:monospace;font-size:11px;resize:vertical;"></textarea>
     <div style="display:flex;gap:8px;margin-top:12px;justify-content:flex-end;">
       <button onclick="hideModal('htmlUploadModal')" class="cs-btn" style="border-color:#374151;color:#6b7280;">Cancel</button>
-      <button onclick="submitHtmlUpload()" class="cs-btn" style="border-color:#7c3aed;color:#a78bfa;font-weight:600;">Save HTML</button>
+      <button id="htmlUploadSaveBtn" onclick="submitHtmlUpload()" class="cs-btn" style="border-color:#7c3aed;color:#a78bfa;font-weight:600;">Save HTML</button>
     </div>
   </div>
 </div>
@@ -32901,6 +32945,9 @@ function openCaseStudy(pageId){
       if(type==='baseline_frozen')return 'Original measurement locked exactly as recorded: position #'+b.google_position+', '+b.gsc_clicks+' clicks, '+Number(b.gsc_impressions||0).toLocaleString()+' impressions, GRAAF '+b.graaf_score+'/100 and an AIO citation classification later corrected in the audit trail.';
       if(type==='evidence_classification_corrected')return 'Evidence corrected without changing history: Perfect Roofing Team LLC was recommended and visible in Google Maps/local results, but neither its website nor the tracked page was directly cited.';
       if(type==='five_engine_evidence_reconciled'){var s=x.summary||{};return 'Complete five-engine evidence preserved: '+(s.checked||0)+'/5 checked, '+(s.recommended||0)+'/5 recommended, '+(s.domain_cited||0)+'/5 domain cited and '+(s.exact_page_cited||0)+'/5 exact page cited. Open the saved engine evidence for the underlying answers and URLs.';}
+      if(type==='revision_started')return 'Revision '+(x.revision_cycle||'')+' opened. Earlier baselines, publications and AI evidence remain protected.';
+      if(type==='revision_candidate_uploaded')return 'Improved HTML for revision '+(x.revision_cycle||'')+' preserved before publication and sent for a fresh scan/brief.';
+      if(type==='post_publication_ai_evidence_complete')return 'Required manual five-engine recheck completed for revision '+(x.revision_cycle||'')+': '+(x.recommended||0)+'/5 recommended, '+(x.domain_cited||0)+'/5 domain cited and '+(x.exact_page_cited||0)+'/5 exact page cited.';
       if(type==='scan_state_reset')return 'Operational scan state restarted; baseline, snapshots and evidence were preserved.';
       if(type==='pre_publication_checkpoint')return 'Complete live HTML preserved before publication, with timestamp and SHA-256 proof.';
       if(type==='implementation_reopened')return 'Premature implementation state reopened; the audit history was retained.';
@@ -32911,7 +32958,7 @@ function openCaseStudy(pageId){
       return Object.keys(x).map(function(k){return k+': '+eventValue(x[k]);}).join(' · ');
     }
     var timeline=events.map(function(e){var x=e.event_data||{};if(typeof x==='string'){try{x=JSON.parse(x);}catch(z){x={};}}var type=String(e.event_type||'');return '<div style="display:grid;grid-template-columns:154px 165px minmax(0,1fr);gap:10px;padding:10px 0;border-top:1px solid #172033;font-size:11px;align-items:start;"><span style="color:#94a3b8;font-family:ui-monospace,monospace;">'+_csEscH(utcStamp(e.event_at))+'</span><b style="color:#7dd3fc;">'+_csEscH(type.replace(/_/g,' '))+'</b><span style="color:#94a3b8;line-height:1.5;">'+_csEscH(eventSummary(type,x))+'</span></div>';}).join('');
-    var versionList=versions.map(function(v){return '<div style="display:grid;grid-template-columns:160px 170px 1fr;gap:8px;padding:8px 0;border-top:1px solid #172033;font-size:11px;"><span style="color:#94a3b8;">'+_csEscH(utcStamp(v.captured_at))+'</span><b style="color:#86efac;">'+_csEscH(String(v.version_type||'').replace(/_/g,' '))+'</b><span style="color:#64748b;">SHA-256 '+_csEscH(String(v.content_hash||'').slice(0,16))+'… · '+_csEscH(String(v.html_bytes||0))+' bytes · immutable</span></div>';}).join('');
+    var versionList=versions.map(function(v){var vd=v.version_data||{};if(typeof vd==='string'){try{vd=JSON.parse(vd);}catch(e){vd={};}}var vt=String(v.version_type||'').replace(/_r\d+$/,'').replace(/_/g,' ');return '<div style="display:grid;grid-template-columns:160px 190px 1fr;gap:8px;padding:8px 0;border-top:1px solid #172033;font-size:11px;"><span style="color:#94a3b8;">'+_csEscH(utcStamp(v.captured_at))+'</span><b style="color:#86efac;">'+_csEscH(vt)+(vd.revision_cycle?' · revision '+_csEscH(vd.revision_cycle):'')+'</b><span style="color:#64748b;">SHA-256 '+_csEscH(String(v.content_hash||'').slice(0,16))+'… · '+_csEscH(String(v.html_bytes||0))+' bytes · immutable</span></div>';}).join('');
     box.innerHTML='<div style="display:flex;justify-content:space-between;gap:14px;align-items:flex-start;"><div><div style="font-size:10px;font-weight:900;color:#38bdf8;letter-spacing:.08em;">CASE STUDY ACTIVE · HISTORY PROTECTED</div><h2 style="margin:5px 0 3px;font-size:19px;">Perfect Roofing Team LLC</h2><div style="font-size:10px;color:#64748b;">Also observed as: Perfect Roofing Team LLC - Roofing Contractor NJ</div><div style="font-size:11px;color:#94a3b8;word-break:break-all;">'+_csEscH(cs.canonical_url||'')+'</div><div style="font-size:11px;color:#c4b5fd;margin-top:3px;">Query: '+_csEscH(cs.primary_query||'')+'</div></div><button onclick="document.getElementById(\\'caseStudyOv\\').style.display=\\'none\\'" style="background:none;border:1px solid #374151;color:#94a3b8;border-radius:6px;padding:5px 9px;cursor:pointer;">Close</button></div>'
       +'<div style="padding:9px 11px;background:#052e16;border:1px solid #166534;border-radius:7px;color:#86efac;font-size:11px;margin:14px 0;">Baseline locked. Reset, reload and page archiving cannot overwrite this record.</div>'
       +'<div style="font-size:10px;font-weight:900;color:#94a3b8;letter-spacing:.08em;margin:16px 0 6px;">LOCKED BASELINE · '+_csEscH(utcStamp(cs.baseline_at))+'</div>'
@@ -34438,6 +34485,7 @@ function _briefManualMap(o){ var a=o&&o.ai_manual_evidence; if(typeof a==='strin
 function _briefBool(v){return v===true||v===1||v==='1'||v==='true'||v==='t';}
 function _briefEngineState(o,engine){
   var a=_briefManualMap(o), e=a[engine]||null;
+  if(e&&e.is_current_revision===false)return {checked:false,cited:false,domain:false,exact:false,direct:false,recommended:false,local:false,method:'RECHECK REQUIRED'};
   var exact=e&&_briefBool(e.exact_page_cited), dom=e&&_briefBool(e.domain_cited), direct=e&&_briefBool(e.brand_direct_supported), rec=e&&_briefBool(e.brand_recommended), local=e&&_briefBool(e.brand_local_result);
   if(e&&_briefBool(e.is_cleared)) return {checked:false,cited:false,domain:false,exact:false,direct:false,recommended:false,local:false,method:'NOT CHECKED'};
   if(e) return {checked:true,cited:!!(exact||dom),domain:!!dom,exact:!!exact,direct:!!direct,recommended:!!rec,local:!!local,method:'VERIFIED'};
@@ -34949,9 +34997,12 @@ function renderPages() {
       + '<button data-tour="scan" data-check-btn="' + p.id + '" onclick="checkPage(' + p.id + ')" style="background:#0d1117;border:1px solid ' + (_scanDone ? '#22c55e' : '#2dd4bf') + ';border-radius:7px;color:' + (_scanDone ? '#4ade80' : '#5eead4') + ';cursor:pointer;font-size:11px;padding:5px 10px;font-weight:700;" title="' + (lastChecked ? (_scanDone ? 'Scanned this round \\u2014 click to rescan now' : 'Rescan this URL now') : 'Scan this URL now') + '">' + (lastChecked ? (_scanDone ? '\\u21bb \\u2713' : '\\u21bb Scan') : '\\u25b6 Scan') + '</button>'
       + ((hasBrief || _lastBriefData[p.id]) ? '<button data-tour="view-brief" onclick="viewLastBrief(' + p.id + ')" style="background:#0d1117;border:1px solid #8b5cf6;border-radius:7px;color:#c4b5fd;cursor:pointer;font-size:11px;padding:5px 12px;font-weight:600;" title="View Citation Brief">\\ud83d\\udcc4 View Brief</button>' : '')
       + '<button data-tour="history" onclick="csPosHist(' + p.id + ')" style="background:#0d1117;border:1px solid #64748b;border-radius:7px;color:#cbd5e1;cursor:pointer;font-size:13px;padding:5px 10px;font-weight:600;" title="Ranking history">\\ud83d\\udcc8</button>'
+      + (p.case_study_active && isDone ? '<button data-tour="new-revision" onclick="event.stopPropagation();openNewHtmlRevision(' + p.id + ')" style="background:#172554;border:1px solid #3b82f6;border-radius:7px;color:#bfdbfe;cursor:pointer;font-size:10px;padding:5px 10px;font-weight:900;" title="Start another improvement cycle without overwriting the baseline or previous versions">+ New HTML revision</button>' : '')
+      + (p.case_study_active && !isDone && Number(p.revision_cycle||1)>1 ? '<button onclick="event.stopPropagation();openHtmlUpload(' + p.id + ',true)" style="background:#172554;border:1px solid #3b82f6;border-radius:7px;color:#bfdbfe;cursor:pointer;font-size:10px;padding:5px 10px;font-weight:800;" title="Update the candidate HTML for revision '+Number(p.revision_cycle||1)+'">Edit revision HTML</button>' : '')
       + (p.case_study_active ? '<button onclick="event.stopPropagation();savePrePublicationCheckpoint(' + p.id + ')" style="background:'+(p.prepublication_checkpoint_saved?'#052e16':'#422006')+';border:1px solid '+(p.prepublication_checkpoint_saved?'#16a34a':'#f59e0b')+';border-radius:7px;color:'+(p.prepublication_checkpoint_saved?'#86efac':'#fde68a')+';cursor:pointer;font-size:10px;padding:5px 10px;font-weight:800;" title="'+(p.prepublication_checkpoint_saved?'The complete pre-publication HTML and hash are protected':'Use this before publishing the reviewed HTML')+'">'+(p.prepublication_checkpoint_saved?'\\u2713 Pre-publish saved':'1 \\u00b7 Save current live')+'</button>' : '')
       + (p.case_study_active && p.prepublication_checkpoint_saved && !isDone ? '<button onclick="event.stopPropagation();markDone(' + p.id + ',this,false)" style="background:#052e16;border:1px solid #22c55e;border-radius:7px;color:#bbf7d0;cursor:pointer;font-size:10px;padding:5px 11px;font-weight:900;box-shadow:0 0 0 1px rgba(34,197,94,.12);" title="The reviewed HTML is live. Capture it, compare it with the protected pre-publication version and verify the implementation.">2 \\u00b7 Verify published live</button>' : '')
       + (p.case_study_active ? '<button onclick="openCaseStudy(' + p.id + ')" style="background:#082f49;border:1px solid #0284c7;border-radius:7px;color:#7dd3fc;cursor:pointer;font-size:11px;padding:5px 10px;font-weight:800;" title="Open protected baseline and proof history">Proof &amp; History</button>' : '')
+      + (p.case_study_active && isDone ? (function(){var ae=p.ai_manual_evidence;if(typeof ae==='string'){try{ae=JSON.parse(ae);}catch(e){ae={};}}var n=['google_aio','chatgpt','perplexity','claude','copilot'].filter(function(k){return ae&&_aiEvidenceIsVerified(ae[k]);}).length;return '<button data-tour="ai-recheck" onclick="event.stopPropagation();openAiEvidence('+p.id+')" style="background:'+(n===5?'#052e16':'#451a03')+';border:1px solid '+(n===5?'#16a34a':'#f59e0b')+';border-radius:7px;color:'+(n===5?'#86efac':'#fde68a')+';cursor:pointer;font-size:10px;padding:5px 10px;font-weight:900;" title="A fresh manual five-engine check is required after every published revision">'+(n===5?'\\u2713 AI rechecked 5/5':'3 \\u00b7 Recheck AI '+n+'/5')+'</button>';})() : '')
       + '<button onclick="deletePage(' + p.id + ')" style="background:#0d1117;border:1px solid #ef4444;border-radius:7px;color:#f87171;cursor:pointer;font-size:13px;padding:5px 10px;font-weight:600;" title="Delete page">\\ud83d\\uddd1</button>'
       + '</div>'
       + '</div>'
@@ -36215,6 +36266,8 @@ var _tourSteps = [
   {sel:'[data-tour="view-brief"]',phase:'BRIEF',title:'Review the implementation plan',text:'View Brief shows the readable diagnosis and concrete content moves. This is the plan for improving an existing URL; it is intentionally different from a Pre-Write Brief.'},
   {sel:'[data-tour="treatment"]',phase:'DECISION',title:'Choose Treatment after the Brief',text:'Treatment unlocks after a Brief exists. Choose KEEP, OPTIMIZE, EXPAND, REWRITE, MERGE, REDIRECT, REMOVE / NOINDEX or MONITOR based on the evidence.'},
   {sel:'[data-tour="done-verify"]',phase:'IMPLEMENT',title:'Declare the implementation',text:'Use Done only after the recommendations are live. ContentScale then verifies the published page; Done is the hand-off from implementation to measurement, not the end of the workflow.'},
+  {sel:'[data-tour="new-revision"]',phase:'ITERATE',title:'Start another HTML revision',text:'A verified page can enter a new improvement cycle. Upload and scan the improved HTML while the original baseline, earlier publications and proof remain immutable.'},
+  {sel:'[data-tour="ai-recheck"]',phase:'AI PROOF',title:'Manually recheck all five LLMs',text:'After every publication, manually run the same query in Google AIO, ChatGPT, Perplexity, Claude and Copilot. The new cycle is complete only at 5/5; earlier engine answers remain preserved as the comparison point.'},
   {sel:'[data-tour="history"]',phase:'PROOF',title:'Baseline, change and history',text:'History preserves positions, citation evidence and meaningful changes over time. A newly published Pre-Write page enters Tracker and its first completed scan becomes the baseline.'},
   {sel:'[data-tour="my-check"]',phase:'WORKFLOW',title:'Your personal work marker',text:'My Check moves a handled page into Completed / Monitoring without deleting its evidence. Only you switch this marker off; scans do not silently reset it.'},
   {sel:'#cannibalPanel',phase:'GOVERNANCE',title:'Resolve real URL conflicts',text:'Cannibalization distinguishes proven, likely, possible and structural overlap. Review the evidence before merging: a hub-and-spoke relationship is not automatically a conflict.'},
@@ -37876,12 +37929,13 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
   }
 
   // \\u2500\\u2500 HTML upload \\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500\\u2500
-  var _htmlUploadPageId = null;
+  var _htmlUploadPageId = null, _htmlUploadRevisionMode = false;
   function closeHtmlUpload() {
     hideModal('htmlUploadModal');
   }
-  function openHtmlUpload(pageId) {
+  function openHtmlUpload(pageId,revisionMode) {
     _htmlUploadPageId = pageId;
+    _htmlUploadRevisionMode=revisionMode===true;
     // Force-close any lingering overlays so nothing covers/intercepts the modal
     var _cb = document.getElementById('cbOverlay'); if (_cb) _cb.style.display = 'none';
     var _so = document.getElementById('soOverlay'); if (_so) { _so.classList.remove('show'); _so.style.display = ''; }
@@ -37891,12 +37945,26 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
     if (!mEl) { toast('HTML upload panel not available', '#f87171'); return; }
     var kEl = document.getElementById('htmlUploadKeyword');
     var cEl = document.getElementById('htmlUploadContent');
+    var tEl=document.getElementById('htmlUploadTitle'),hEl=document.getElementById('htmlUploadHelp'),sEl=document.getElementById('htmlUploadSaveBtn');
+    if(tEl)tEl.textContent=_htmlUploadRevisionMode?'Upload improved HTML — revision '+String(page.revision_cycle||''):'Paste page HTML';
+    if(hEl)hEl.textContent=_htmlUploadRevisionMode?'Paste the complete improved HTML. It will be preserved as an immutable revision candidate and scanned before you publish it. Earlier versions and evidence remain unchanged.':'Open your page in Chrome, right-click → View Page Source, select all, copy and paste below.';
+    if(sEl)sEl.textContent=_htmlUploadRevisionMode?'Save & scan revision':'Save HTML';
     if (kEl) kEl.value = page.keyword || page.gsc_keyword || '';
     if (cEl) cEl.value = '';
     mEl.classList.add('show');
     mEl.style.display = 'flex';
     setTimeout(function(){ if (cEl) cEl.focus(); }, 100);
   }
+  async function openNewHtmlRevision(pageId){
+    if(!confirm('Start a new HTML improvement cycle? The existing baseline, published HTML, five-engine evidence and proof history will remain protected.'))return;
+    try{
+      var d=await api('/pages/'+pageId+'/case-study/new-revision','POST',{});
+      if(!d||!d.success)throw new Error((d&&d.error)||'Could not start revision');
+      var p=(_pages||[]).find(function(x){return x.id==pageId;});if(p){p.revision_cycle=d.revision_cycle;p.prepublication_checkpoint_saved=false;p.is_done=false;p.implementation_status='revision_draft';if(p.ai_manual_evidence&&typeof p.ai_manual_evidence==='object')Object.keys(p.ai_manual_evidence).forEach(function(k){if(p.ai_manual_evidence[k])p.ai_manual_evidence[k].is_current_revision=false;});}
+      openHtmlUpload(pageId,true);toast('Revision '+d.revision_cycle+' started — upload the improved HTML. Previous 5-engine evidence is preserved.','#38bdf8');
+    }catch(e){toast('Could not start revision: '+e.message,'#f87171');}
+  }
+  window.openNewHtmlRevision=openNewHtmlRevision;
 
   // CONTENTSCALE-MANUAL-EVIDENCE-CLEAR-PRECEDENCE-FIX-20260909=true
   // CANONICAL five-engine manual evidence UI — /api/tracker-client/:token/... only.
@@ -37904,8 +37972,8 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
   var _aiEvidenceEngines=[['google_aio','Google AIO'],['chatgpt','ChatGPT Search'],['perplexity','Perplexity'],['claude','Claude'],['copilot','Microsoft Copilot']];
   function _aiEvBool(v){return v===true||v==='t'||v==='true'||v===1;}
   function _aiEvidenceObj(p,e){var a=p&&p.ai_manual_evidence;if(typeof a==='string'){try{a=JSON.parse(a);}catch(x){a={};}}return(a&&a[e])||null;}
-  function _aiEvidenceIsVerified(ev){if(!ev||_aiEvBool(ev.is_cleared))return false;return !!(String(ev.raw_text||'').trim()||String(ev.raw_sources||'').trim());}
-  function _renderAiEvidenceFacts(ev){var el=document.getElementById('aiEvidenceFacts');if(!el)return;if(!ev||_aiEvBool(ev.is_cleared)){el.innerHTML='<span style="color:#6b7280;">No manual evidence saved for this engine.</span>';return;}var f=function(l,v){return '<span style="display:inline-block;margin:2px 5px 2px 0;padding:3px 7px;border-radius:5px;border:1px solid '+(v?'#166534':'#374151')+';color:'+(v?'#4ade80':'#6b7280')+';">'+(v?'✓ ':'✕ ')+l+'</span>';};el.innerHTML=f('Brand recommended',_aiEvBool(ev.brand_recommended))+f('Local / Maps result',_aiEvBool(ev.brand_local_result))+f('Supported by cited source',_aiEvBool(ev.brand_direct_supported))+f('WEBSITE DOMAIN CITED',_aiEvBool(ev.domain_cited))+f('EXACT PAGE CITED',_aiEvBool(ev.exact_page_cited))+'<div style="margin-top:5px;color:#94a3b8;">Recommendation or Maps visibility does not mean the website was cited.</div>';}
+  function _aiEvidenceIsVerified(ev){if(!ev||_aiEvBool(ev.is_cleared)||ev.is_current_revision===false)return false;return !!(String(ev.raw_text||'').trim()||String(ev.raw_sources||'').trim());}
+  function _renderAiEvidenceFacts(ev){var el=document.getElementById('aiEvidenceFacts');if(!el)return;if(!ev||_aiEvBool(ev.is_cleared)){el.innerHTML='<span style="color:#6b7280;">No manual evidence saved for this engine.</span>';return;}var f=function(l,v){return '<span style="display:inline-block;margin:2px 5px 2px 0;padding:3px 7px;border-radius:5px;border:1px solid '+(v?'#166534':'#374151')+';color:'+(v?'#4ade80':'#6b7280')+';">'+(v?'✓ ':'✕ ')+l+'</span>';};el.innerHTML=(ev.is_current_revision===false?'<div style="padding:6px 8px;margin-bottom:6px;background:#451a03;border:1px solid #92400e;border-radius:6px;color:#fde68a;">Previous-revision evidence — preserved for comparison. Run this engine again and save the fresh answer for the current revision.</div>':'')+f('Brand recommended',_aiEvBool(ev.brand_recommended))+f('Local / Maps result',_aiEvBool(ev.brand_local_result))+f('Supported by cited source',_aiEvBool(ev.brand_direct_supported))+f('WEBSITE DOMAIN CITED',_aiEvBool(ev.domain_cited))+f('EXACT PAGE CITED',_aiEvBool(ev.exact_page_cited))+'<div style="margin-top:5px;color:#94a3b8;">Recommendation or Maps visibility does not mean the website was cited.</div>';}
   function _selectAiEvidenceEngine(e){_aiEvidenceEngine=e;var p=(_pages||[]).find(function(x){return x.id==_aiEvidencePageId;})||{},ev=_aiEvidenceObj(p,e),tabs=document.getElementById('aiEvidenceEngineTabs');var _pc=0;_aiEvidenceEngines.forEach(function(x){if(_aiEvidenceIsVerified(_aiEvidenceObj(p,x[0])))_pc++;});var _pe=document.getElementById('aiEvidenceProgress');if(_pe){_pe.textContent=_pc+'/5 engines manually checked';_pe.style.color=_pc===5?'#4ade80':'#c4b5fd';}if(tabs)tabs.innerHTML=_aiEvidenceEngines.map(function(x){var _ev=_aiEvidenceObj(p,x[0]),saved=_aiEvidenceIsVerified(_ev),tag='';if(saved){tag=_aiEvBool(_ev.exact_page_cited)?' · EXACT':_aiEvBool(_ev.domain_cited)?' · DOMAIN':_aiEvBool(_ev.brand_direct_supported)?' · SOURCE':_aiEvBool(_ev.brand_recommended)?' · RECOMMENDED':_aiEvBool(_ev.brand_local_result)?' · LOCAL':' · CHECKED';}return '<button type="button" onclick="_selectAiEvidenceEngine(&quot;'+x[0]+'&quot;)" style="cursor:pointer;border-radius:6px;padding:5px 9px;font-size:10px;font-weight:700;background:'+(x[0]===e?'#312e81':'#0d1117')+';border:1px solid '+(saved?'#22c55e':(x[0]===e?'#8b5cf6':'#374151'))+';color:'+(saved?'#4ade80':'#cbd5e1')+';">'+x[1]+tag+'</button>';}).join('');var ta=document.getElementById('aiEvidenceText'),sa=document.getElementById('aiEvidenceSources');if(ta)ta.value=ev&&ev.raw_text?ev.raw_text:'';if(sa)sa.value=ev&&ev.raw_sources?ev.raw_sources:'';var au=document.getElementById('aiEvidenceAutoStatus'),msg='AUTO: Not available — manual verification provides the evidence.';if(e==='perplexity')msg='AUTO: '+(p.ai_perplexity_cited?'✓ API VERIFIED — page cited':'Perplexity Sonar API is checked by Tracker')+'. Manual verification is optional / not required, but remains available.';else if(e==='copilot')msg='AUTO: Bing visibility / eligibility signal only'+(p.ai_bing_cited?' ✓':'')+'. This is NOT proof of a Copilot citation; paste Copilot References for VERIFIED evidence.';else if(e==='google_aio')msg='AUTO: Google AIO signal may be available. Manual actual answer/source evidence is the VERIFIED layer.';if(au)au.textContent=msg;_renderAiEvidenceFacts(ev);var st=document.getElementById('aiEvidenceStatus');if(st){st.textContent=_aiEvidenceIsVerified(ev)&&ev.verified_at?'Manual VERIFIED: '+new Date(ev.verified_at).toLocaleString():(_aiEvBool(ev&&ev.is_cleared)?'Cleared — NOT CHECKED':'');st.style.color=_aiEvidenceIsVerified(ev)?'#4ade80':'#6b7280';}}
   // CONTENTSCALE-CLIENT-LEVEL-CLAIMS-FACTS-BROWSER-QUOTE-FIX-20260909=true
   // CLIENT-LEVEL Claims & Facts. Do NOT attach ordinary business facts to individual page IDs.
@@ -38264,15 +38332,17 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
     var payload = {};
     if (html) payload.html_content = html;
     if (kw) payload.keyword = kw;
+    if (_htmlUploadRevisionMode) payload.revision_mode = true;
     try {
       var r = await api('/pages/' + pageId + '/html', 'POST', payload);
       if (r.success) {
         closeHtmlUpload();
+        var wasRevision=_htmlUploadRevisionMode;_htmlUploadRevisionMode=false;
         try { delete _briefViewed[pageId]; } catch(e){}  // new HTML = new round; ticks reset
         var p = (_pages || []).find(function(x) { return x.id == pageId; });
         if (p) p.needs_html = false;
         if (r.scanning) {
-          toast('HTML saved. Scanning now...', '#4ade80');
+          toast(wasRevision?'Improved HTML preserved as a new revision and scanning now...':'HTML saved. Scanning now...', '#4ade80');
           loadPages();
           setTimeout(function() { runScanAnimation(p ? p.url : '', function() { pollAndShowBrief(pageId, 60, 5000); }); }, 300);
         } else {
