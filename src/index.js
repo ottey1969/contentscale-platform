@@ -1,4 +1,4 @@
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-10-CANONICAL-v14';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-10-CANONICAL-v15';
 const CONTENTSCALE_BUILD_CHANGES = [
   'professional-guided-tour',
   'prewrite-create-expand-publish-tracker-baseline',
@@ -26,6 +26,9 @@ const CONTENTSCALE_BUILD_CHANGES = [
   ,'case-study-proof-times-explicit-utc'
   ,'case-study-publish-button-independent-of-brief-state'
   ,'publish-verification-button-next-to-checkpoint'
+  ,'compact-active-case-study-card-layout'
+  ,'professional-baseline-versus-current-proof-view'
+  ,'verified-case-study-remains-active-not-crossed-out'
 ];
 console.log('[ContentScale] BUILD=' + CONTENTSCALE_BUILD_ID + ' BOOT=' + new Date().toISOString());
 console.log('[ContentScale] CHANGES=' + CONTENTSCALE_BUILD_CHANGES.join(','));
@@ -32829,14 +32832,28 @@ function openCaseStudy(pageId){
     if(!d||!d.success)throw new Error((d&&d.error)||'Could not load case study');
     var cs=d.case_study||{},b=cs.baseline_data||{};if(typeof b==='string'){try{b=JSON.parse(b);}catch(e){b={};}}
     var ai=b.ai_evidence||{},events=d.events||[],versions=d.content_versions||[],snaps=d.snapshots||[];
+    var latest=snaps.length?snaps[snaps.length-1]:{};
     function metric(label,value,color){return '<div style="background:#0b1220;border:1px solid #1e3a8a;border-radius:8px;padding:10px;min-width:115px;flex:1;"><div style="font-size:20px;font-weight:900;color:'+(color||'#e5e7eb')+'">'+_csEscH(value==null?'—':value)+'</div><div style="font-size:9px;color:#64748b;text-transform:uppercase;letter-spacing:.06em;">'+_csEscH(label)+'</div></div>';}
     function utcStamp(v){try{return new Date(v).toISOString().replace('T',' ').replace(/\.\d{3}Z$/,' UTC');}catch(e){return String(v||'');}}
     function eventValue(v){if(v&&typeof v==='object'){try{return JSON.stringify(v);}catch(e){return '[structured data]';}}return String(v==null?'':v);}
-    var timeline=events.map(function(e){var x=e.event_data||{};if(typeof x==='string'){try{x=JSON.parse(x);}catch(z){x={};}}return '<div style="display:grid;grid-template-columns:160px 170px 1fr;gap:8px;padding:8px 0;border-top:1px solid #172033;font-size:11px;"><span style="color:#94a3b8;">'+_csEscH(utcStamp(e.event_at))+'</span><b style="color:#7dd3fc;">'+_csEscH(String(e.event_type||'').replace(/_/g,' '))+'</b><span style="color:#64748b;">'+_csEscH(Object.keys(x).map(function(k){return k+': '+eventValue(x[k]);}).join(' · '))+'</span></div>';}).join('');
+    function eventSummary(type,x){
+      if(type==='baseline_frozen')return 'Original measurement locked: position #'+b.google_position+', '+b.gsc_clicks+' clicks, '+Number(b.gsc_impressions||0).toLocaleString()+' impressions, GRAAF '+b.graaf_score+'/100 and Google AIO exact-page citation.';
+      if(type==='scan_state_reset')return 'Operational scan state restarted; baseline, snapshots and evidence were preserved.';
+      if(type==='pre_publication_checkpoint')return 'Complete live HTML preserved before publication, with timestamp and SHA-256 proof.';
+      if(type==='implementation_reopened')return 'Premature implementation state reopened; the audit history was retained.';
+      if(type==='implementation_declared')return 'Reviewed page declared live; automated comparison and verification started.';
+      if(type==='published_html_captured')return 'Complete published HTML captured as a second immutable version.';
+      if(type==='implementation_verified')return 'Published implementation verified and a post-publication Tracker snapshot saved.';
+      if(type==='implementation_no_change')return 'No material content difference detected versus the protected pre-publication version.';
+      return Object.keys(x).map(function(k){return k+': '+eventValue(x[k]);}).join(' · ');
+    }
+    var timeline=events.map(function(e){var x=e.event_data||{};if(typeof x==='string'){try{x=JSON.parse(x);}catch(z){x={};}}var type=String(e.event_type||'');return '<div style="display:grid;grid-template-columns:154px 165px minmax(0,1fr);gap:10px;padding:10px 0;border-top:1px solid #172033;font-size:11px;align-items:start;"><span style="color:#94a3b8;font-family:ui-monospace,monospace;">'+_csEscH(utcStamp(e.event_at))+'</span><b style="color:#7dd3fc;">'+_csEscH(type.replace(/_/g,' '))+'</b><span style="color:#94a3b8;line-height:1.5;">'+_csEscH(eventSummary(type,x))+'</span></div>';}).join('');
     var versionList=versions.map(function(v){return '<div style="display:grid;grid-template-columns:160px 170px 1fr;gap:8px;padding:8px 0;border-top:1px solid #172033;font-size:11px;"><span style="color:#94a3b8;">'+_csEscH(utcStamp(v.captured_at))+'</span><b style="color:#86efac;">'+_csEscH(String(v.version_type||'').replace(/_/g,' '))+'</b><span style="color:#64748b;">SHA-256 '+_csEscH(String(v.content_hash||'').slice(0,16))+'… · '+_csEscH(String(v.html_bytes||0))+' bytes · immutable</span></div>';}).join('');
     box.innerHTML='<div style="display:flex;justify-content:space-between;gap:14px;align-items:flex-start;"><div><div style="font-size:10px;font-weight:900;color:#38bdf8;letter-spacing:.08em;">CASE STUDY ACTIVE · HISTORY PROTECTED</div><h2 style="margin:5px 0 3px;font-size:19px;">Perfect Roofing Team</h2><div style="font-size:11px;color:#94a3b8;word-break:break-all;">'+_csEscH(cs.canonical_url||'')+'</div><div style="font-size:11px;color:#c4b5fd;margin-top:3px;">Query: '+_csEscH(cs.primary_query||'')+'</div></div><button onclick="document.getElementById(\\'caseStudyOv\\').style.display=\\'none\\'" style="background:none;border:1px solid #374151;color:#94a3b8;border-radius:6px;padding:5px 9px;cursor:pointer;">Close</button></div>'
       +'<div style="padding:9px 11px;background:#052e16;border:1px solid #166534;border-radius:7px;color:#86efac;font-size:11px;margin:14px 0;">Baseline locked. Reset, reload and page archiving cannot overwrite this record.</div>'
+      +'<div style="font-size:10px;font-weight:900;color:#94a3b8;letter-spacing:.08em;margin:16px 0 6px;">LOCKED BASELINE · '+_csEscH(utcStamp(cs.baseline_at))+'</div>'
       +'<div style="display:flex;gap:7px;flex-wrap:wrap;">'+metric('Google position',b.google_position,'#fbbf24')+metric('GSC clicks',b.gsc_clicks,'#4ade80')+metric('GSC impressions',Number(b.gsc_impressions||0).toLocaleString(),'#60a5fa')+metric('GRAAF',b.graaf_score?b.graaf_score+'/100':'—','#facc15')+metric('Google AIO',ai.google_aio&&ai.google_aio.exact_page_cited?'EXACT CITED':'—','#4ade80')+'</div>'
+      +(latest&&latest.checked_at?'<div style="font-size:10px;font-weight:900;color:#94a3b8;letter-spacing:.08em;margin:16px 0 6px;">LATEST VERIFIED SNAPSHOT · '+_csEscH(utcStamp(latest.checked_at))+'</div><div style="display:flex;gap:7px;flex-wrap:wrap;">'+metric('Google position',latest.google_position==null?'—':latest.google_position,_csTier(latest.google_position))+metric('GSC clicks',latest.google_clicks==null?'—':latest.google_clicks,'#4ade80')+metric('GSC impressions',latest.google_impressions==null?'—':Number(latest.google_impressions).toLocaleString(),'#60a5fa')+metric('GRAAF',latest.score==null?'—':latest.score+'/100',latest.score>=b.graaf_score?'#4ade80':'#fbbf24')+metric('Google AIO',latest.ai_google_overview_cited==null?'NOT CHECKED':(latest.ai_google_overview_cited===true||latest.ai_google_overview_cited==='t'?'CITED':'NOT CITED'),latest.ai_google_overview_cited==null?'#94a3b8':(latest.ai_google_overview_cited===true||latest.ai_google_overview_cited==='t'?'#4ade80':'#f87171'))+'</div>':'')
       +'<div style="margin-top:14px;padding:10px;background:#111827;border-left:3px solid #f59e0b;border-radius:6px;color:#fbbf24;font-size:11px;line-height:1.55;"><b>Change guardrail:</b> '+_csEscH(b.treatment_guardrail||'Preserve proven wins and measure incremental changes.')+'</div>'
       +'<h3 style="font-size:13px;color:#e5e7eb;margin:18px 0 5px;">Immutable HTML versions</h3>'+(versionList||'<div style="color:#fbbf24;font-size:11px;">No pre-publication HTML saved yet. Use “1 · Save current live” before publishing.</div>')
       +'<h3 style="font-size:13px;color:#e5e7eb;margin:18px 0 5px;">Proof timeline</h3>'+(timeline||'<div style="color:#64748b;font-size:11px;">No events yet.</div>')
@@ -34688,8 +34705,11 @@ function renderPages() {
     if (_grp === 2) ++_decommissionOrdinal; else if (_grp === 3) ++_deferredOrdinal;
     var pageNumLabel = '#' + (pageIdx + 1);
     var isDone = p.is_done === true || p.is_done === 't' || p.is_done === 'true' || p.is_done === 1;
-    var implementationAt = p.implementation_at ? new Date(p.implementation_at).toLocaleString('en-GB',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '';
-    var implementationVerifiedAt = p.implementation_verified_at ? new Date(p.implementation_verified_at).toLocaleString('en-GB',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '';
+    var isCaseStudy = p.case_study_active === true || p.case_study_active === 't' || p.case_study_active === 'true' || p.case_study_active === 1;
+    var muteCompletedCard = isDone && !isCaseStudy;
+    function _trackerUtc(v){try{return new Date(v).toISOString().replace('T',' ').replace(/\.\d{3}Z$/,' UTC');}catch(e){return '';}}
+    var implementationAt = p.implementation_at ? _trackerUtc(p.implementation_at) : '';
+    var implementationVerifiedAt = p.implementation_verified_at ? _trackerUtc(p.implementation_verified_at) : '';
 
     // Citation badges
     var badges = '';
@@ -34797,13 +34817,13 @@ function renderPages() {
         + (_pushList.length > 5 ? '<div style="font-size:9px;color:#4b5563;margin-top:3px;">+ ' + (_pushList.length - 5) + ' more in your Queries CSV</div>' : '')
         + '</div>';
     }
-    return _sectionPrefix + '<div class="cs-page-card' + (isDone ? ' done' : '') + '" data-page-id="' + p.id + '" data-tour="page-card" style="position:relative;background:#0d1117;border:1px solid #1f2937;' + (_mdOn ? 'border-left:4px solid #16a34a;' : 'border-left:4px solid #374151;') + 'border-radius:10px;margin-bottom:12px;overflow:hidden;">'
+    return _sectionPrefix + '<div class="cs-page-card' + (muteCompletedCard ? ' done' : '') + '" data-page-id="' + p.id + '" data-tour="page-card" style="position:relative;background:#0d1117;border:1px solid #1f2937;' + (_mdOn ? 'border-left:4px solid #16a34a;' : 'border-left:4px solid #374151;') + 'border-radius:10px;margin-bottom:12px;overflow:hidden;">'
       + pendingBanner
       + needsHtmlBanner
       + (isDone ? '<div style="display:flex;align-items:center;gap:6px;padding:5px 14px;background:rgba(74,222,128,.06);border-bottom:1px solid #166534;font-size:10px;color:#4ade80;letter-spacing:.04em;"><span>\\u2713</span> IMPLEMENTED' + (implementationAt ? ' &middot; ' + implementationAt : '') + (implementationVerifiedAt ? ' &middot; VERIFIED ' + implementationVerifiedAt : ' &middot; verifying live page...') + '</div>' : '')
-      + '<div style="padding:14px 16px;' + (isDone ? 'opacity:.6;' : '') + '">'
+      + '<div style="padding:14px 16px;' + (muteCompletedCard ? 'opacity:.6;' : '') + '">'
       + '<div class="cs-card-head" style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;">'
-      + '<div style="display:flex;align-items:flex-start;gap:8px;flex:1;min-width:0;">'
+      + '<div style="display:flex;align-items:flex-start;gap:8px;flex:1 1 350px;min-width:280px;max-width:520px;">'
       + '<input type="checkbox" class="page-select-cb" data-id="' + p.id + '" onclick="event.stopPropagation();bulkCbClick(event,this)" style="width:14px;height:14px;margin-top:3px;accent-color:#ef4444;cursor:pointer;flex-shrink:0;">'
       + '<div style="flex:1;min-width:0;">'
       + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;"><span style="font-size:10px;font-weight:800;color:#d1d5db;background:#1f2937;border:1px solid #374151;border-radius:4px;padding:1px 7px;flex-shrink:0;">' + pageNumLabel + '</span>'
@@ -34817,7 +34837,7 @@ function renderPages() {
             + '">' + (md ? '\\u2713 MY CHECK' + (mdAt ? ' \\u00b7 ' + mdAt : '') : '\\u25cb my check') + '</button>';
         })()
       + '</div>'
-      + '<div class="cs-url-line" style="font-size:12px;' + (isDone ? 'text-decoration:line-through;color:#4b5563;' : 'color:#e5e7eb;') + 'font-family:monospace;line-height:1.45;white-space:normal;overflow-wrap:anywhere;word-break:break-word;border-radius:4px;padding:3px 4px;margin:0 0 6px 0;width:100%;" title="' + rawUrl.replace(/"/g,'&quot;') + '">' + urlShort + '</div>'
+      + '<div class="cs-url-line" style="font-size:12px;' + (muteCompletedCard ? 'text-decoration:line-through;color:#4b5563;' : 'color:#e5e7eb;') + 'font-family:monospace;line-height:1.45;white-space:normal;overflow-wrap:anywhere;word-break:break-word;border-radius:4px;padding:3px 4px;margin:0 0 6px 0;width:100%;" title="' + rawUrl.replace(/"/g,'&quot;') + '">' + urlShort + '</div>'
       + '<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:4px;">' + badges + '</div>'
       + (function(){ var ae=p.ai_manual_evidence; if(typeof ae==='string'){try{ae=JSON.parse(ae);}catch(e){ae={};}} ae=ae||{}; var keys=['google_aio','chatgpt','perplexity','claude','copilot']; var vals=keys.map(function(k){return ae[k];}).filter(function(x){return _aiEvidenceIsVerified(x);}); if(!vals.length)return '<div style="font-size:10px;color:#64748b;margin:1px 0 5px;">AI CHECKED 0/5</div>'; var cited=vals.filter(function(x){return _aiEvBool(x.domain_cited)||_aiEvBool(x.exact_page_cited);}).length, exact=vals.filter(function(x){return _aiEvBool(x.exact_page_cited);}).length; return '<div style="font-size:10px;color:#c4b5fd;margin:1px 0 5px;">AI CHECKED '+vals.length+'/5 &middot; CITED '+cited+'/5 &middot; EXACT '+exact+'/5</div>'; })()
       + (p.redirects_to ? (function(){
@@ -34858,7 +34878,7 @@ function renderPages() {
       + '</select>'
       + (p.treatment_target_url ? '<span style="font-size:9px;color:#fbbf24;">→ '+String(p.treatment_target_url).replace(/</g,'&lt;')+'</span>' : '')
       + '</div>'
-      + '<div class="cs-card-actions" style="display:flex;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;align-items:flex-start;">' 
+      + '<div class="cs-card-actions" style="display:flex;gap:6px;flex:1 1 520px;min-width:320px;max-width:760px;flex-wrap:wrap;justify-content:flex-end;align-items:flex-start;">' 
       + '<button data-tour="ai-evidence" onclick="event.stopPropagation();openAiEvidence(' + p.id + ')" style="background:#0d1117;border:1px solid #8b5cf6;border-radius:7px;color:#c4b5fd;cursor:pointer;font-size:11px;padding:5px 12px;font-weight:700;" title="Open the five-engine manual evidence panel. Count means manually checked, not cited.">&#129504; AI Checked ' + (function(){var a=p.ai_manual_evidence;if(typeof a==="string"){try{a=JSON.parse(a);}catch(x){a={};}}return ["google_aio","chatgpt","perplexity","claude","copilot"].filter(function(k){return a&&a[k]&&_aiEvidenceIsVerified(a[k]);}).length;})() + '/5</button>'
       + '<button data-tour="intelligence" onclick="event.stopPropagation();openCompetitiveIntelligence(' + p.id + ')" style="background:#0d1117;border:1px solid #0891b2;border-radius:7px;color:#67e8f9;cursor:pointer;font-size:11px;padding:5px 12px;font-weight:700;" title="Cross-engine competitors, sources, content opportunities and claims to verify">&#128269; Intelligence</button>'
       + ((explicitlyNeeds || p.fetch_reliable === false) ? '<button class="cs-html-btn cs-blink" onclick="openHtmlUpload(' + p.id + ')" style="background:#0d1117;border:1px solid #f59e0b;border-radius:7px;color:#fbbf24;cursor:pointer;font-size:11px;padding:5px 12px;font-weight:700;" title="Automatic live fetch was not reliable. Paste the published HTML manually to continue verification.">&#9888; Manual HTML required</button>' : '')
@@ -34882,10 +34902,9 @@ function renderPages() {
           + '<span style="font-size:11px;font-weight:700;color:#4ade80;background:rgba(74,222,128,.12);border:1px solid #4ade80;border-radius:5px;padding:4px 10px;flex-shrink:0;white-space:nowrap;">Done \\u2192</span>'
           + '</div>'
         : isDone
-          ? '<div style="display:flex;align-items:center;gap:8px;padding:10px 16px;background:rgba(74,222,128,.06);border-top:1px solid #166534;font-size:12px;color:#4ade80;cursor:pointer;" onclick="markDone(' + p.id + ',this,true)">'
-            + '<span>\\u2713</span><span style="font-weight:700;">DONE \\u2014 implementation declared</span>'
-            + '<span style="margin-left:auto;font-size:11px;color:#374151;">click to undo</span>'
-            + '</div>'
+          ? (isCaseStudy
+            ? '<div style="display:flex;align-items:center;gap:8px;padding:10px 16px;background:linear-gradient(90deg,rgba(14,165,233,.09),rgba(34,197,94,.04));border-top:1px solid #075985;font-size:12px;color:#7dd3fc;"><span>\\u2713</span><span style="font-weight:800;">VERIFIED IMPLEMENTATION \\u2014 active monitoring continues</span><span style="margin-left:auto;font-size:10px;color:#64748b;">Baseline and publication history protected</span></div>'
+            : '<div style="display:flex;align-items:center;gap:8px;padding:10px 16px;background:rgba(74,222,128,.06);border-top:1px solid #166534;font-size:12px;color:#4ade80;cursor:pointer;" onclick="markDone(' + p.id + ',this,true)"><span>\\u2713</span><span style="font-weight:700;">DONE \\u2014 implementation declared</span><span style="margin-left:auto;font-size:11px;color:#374151;">click to undo</span></div>')
           : ''
         )
       + '</div></div>'; // closes the inner padding div AND the outer cs-page-card div — one missing close nested every card into the previous one (the "funnel")
