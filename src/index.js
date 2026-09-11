@@ -1,4 +1,4 @@
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-11-CANONICAL-v61';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-11-CANONICAL-v62';
 const CONTENTSCALE_BUILD_CHANGES = [
   'professional-guided-tour',
   'prewrite-create-expand-publish-tracker-baseline',
@@ -94,6 +94,11 @@ const CONTENTSCALE_BUILD_CHANGES = [
   ,'generic-start-case-study-for-any-tracked-site'
   ,'case-study-start-locks-current-scan-html-gsc-and-five-engine-state'
   ,'audit-recommendation-cards-readable-on-light-surfaces'
+  ,'tracker-monitoring-explicit-opt-in-per-page'
+  ,'tracker-selected-pages-bulk-monitoring-controls'
+  ,'case-study-start-monitoring-and-email-reminder-settings'
+  ,'five-engine-manual-recheck-email-reminders'
+  ,'existing-tracker-email-is-single-reminder-destination'
 ];
 console.log('[ContentScale] BUILD=' + CONTENTSCALE_BUILD_ID + ' BOOT=' + new Date().toISOString());
 console.log('[ContentScale] CHANGES=' + CONTENTSCALE_BUILD_CHANGES.join(','));
@@ -1910,16 +1915,28 @@ app.post('/api/tracker-client/:token/pages/:pageId/case-study/start',async(req,r
   if(liveHtml.length<500)return res.status(409).json({success:false,html_required:true,error:'The current page HTML could not be captured reliably. Rescan the page or paste its HTML, then start the case study again.'});
   const query=String((req.body&&req.body.primary_query)||page.keyword||page.gsc_keyword||'').trim().slice(0,500);
   if(!query)return res.status(400).json({success:false,error:'Add the primary query before starting the case study.'});
+  const monitoringEnabled=!!(req.body&&req.body.monitoring_enabled);
+  const allowedFreq=['1day','3days','7days','2weeks','21days','30days'];
+  const requestedFreq=String((req.body&&req.body.check_frequency)||'7days');
+  const frequency=monitoringEnabled&&allowedFreq.includes(requestedFreq)?requestedFreq:'0';
+  const freqDays=frequency==='0'?0:(frequency==='2weeks'?14:parseInt(frequency,10));
+  const emailReminders=(req.body&&req.body.email_reminders)!==false;
+  const requestedAiDays=parseInt((req.body&&req.body.ai_reminder_days)||14,10);
+  const aiReminderDays=[7,14,28].includes(requestedAiDays)?requestedAiDays:14;
   const er=await pool.query("SELECT DISTINCT ON (engine) engine,brand_recommended,brand_local_result,brand_direct_supported,domain_cited,exact_page_cited,verified_at,updated_at FROM tracker_ai_evidence WHERE tracker_client_id=$1 AND page_id=$2 AND evidence_method='manual' AND COALESCE(is_cleared,FALSE)=FALSE ORDER BY engine,COALESCE(updated_at,verified_at,created_at) DESC NULLS LAST,id DESC",[client.id,page.id]).catch(()=>({rows:[]}));
   const engines={};for(const e of er.rows)engines[e.engine]={brand_recommended:e.brand_recommended,brand_local_result:e.brand_local_result,brand_direct_supported:e.brand_direct_supported,domain_cited:e.domain_cited,exact_page_cited:e.exact_page_cited,verified_at:e.updated_at||e.verified_at};
   const baselineAt=new Date();
   const baseline={schema_version:2,source:'ContentScale case-study start',metric_snapshot_at:snap.checked_at||page.last_checked_at,html_captured_at:baselineAt.toISOString(),primary_query:query,google_position:snap.google_position==null?null:Number(snap.google_position),gsc_clicks:page.gsc_clicks==null?null:Number(page.gsc_clicks),gsc_impressions:page.gsc_impressions==null?null:Number(page.gsc_impressions),gsc_position:page.gsc_position==null?null:Number(page.gsc_position),graaf_score:snap.score==null?(page.last_graaf_score==null?null:Number(page.last_graaf_score)):Number(snap.score),ai_evidence:engines,html_source:htmlSource,treatment_guardrail:'Preserve verified strengths; implement documented changes; compare only against this locked baseline.'};
   const ins=await pool.query(`INSERT INTO tracker_case_studies (tracker_client_id,tracker_page_id,client_name,domain,canonical_url,primary_query,status,baseline_at,baseline_data,baseline_locked) VALUES($1,$2,$3,$4,$5,$6,'active',$7,$8::jsonb,TRUE) RETURNING *`,[client.id,page.id,client.name||client.domain,client.domain,_caseStudyNormUrl(page.url),query,baselineAt,JSON.stringify(baseline)]);
   const cs=ins.rows[0];
+  await pool.query(`UPDATE tracker_pages SET check_frequency=$1,email_reminders=$2,ai_reminder_days=$3,
+    next_check_at=CASE WHEN $4::int>0 THEN NOW()+($4::text||' days')::interval ELSE NULL END,
+    next_ai_reminder_at=CASE WHEN $2::boolean THEN NOW()+($3::text||' days')::interval ELSE NULL END
+    WHERE id=$5 AND tracker_client_id=$6`,[frequency,emailReminders,aiReminderDays,freqDays,page.id,client.id]);
   await pool.query(`INSERT INTO tracker_case_study_events(case_study_id,tracker_page_id,event_type,event_at,source,event_data) SELECT $1,$2,'baseline_frozen',$3,'tracker_case_study_start',$4::jsonb WHERE NOT EXISTS(SELECT 1 FROM tracker_case_study_events WHERE case_study_id=$1 AND event_type='baseline_frozen')`,[cs.id,page.id,baselineAt,JSON.stringify(baseline)]);
   const version=await _caseStudyStoreContentVersion(client.id,page.id,'baseline_html',page.url,liveHtml,htmlSource,{purpose:'immutable_html_at_case_study_start',metric_snapshot_at:baseline.metric_snapshot_at,stable_content_hash:_caseStudyStableContentHash(liveHtml),revision_cycle:Number(page.revision_cycle||1)});
   await _caseStudyEventForPage(client.id,page.id,'case_study_started',{url:page.url,primary_query:query,baseline_locked:true,html_version_id:version&&version.id,five_engine_checks:Object.keys(engines).length}).catch(()=>{});
-  res.json({success:true,case_study:cs,html_captured:true,five_engine_checks:Object.keys(engines).length,message:'Case study started. Current metrics, evidence and HTML are now protected as the baseline.'});
+  res.json({success:true,case_study:cs,html_captured:true,five_engine_checks:Object.keys(engines).length,monitoring_enabled:monitoringEnabled,check_frequency:frequency,email_reminders:emailReminders,ai_reminder_days:aiReminderDays,message:'Case study started. Current metrics, evidence and HTML are protected as the baseline. '+(monitoringEnabled?'Automatic monitoring is on for this page only.':'Automatic monitoring remains off; manual scans still send their result email.')});
 }catch(e){console.error('[case-study-start]',e.message);res.status(500).json({success:false,error:e.message});}});
 
 // GET /api/tracker-client/:token — get client data + pages
@@ -1950,6 +1967,10 @@ app.get('/api/tracker-client/:token', async (req, res) => {
       ['aio_manual_refs','JSONB'],
       ['brief_viewed_at','TIMESTAMPTZ']
       ,['revision_cycle','INTEGER NOT NULL DEFAULT 1']
+      ,['email_reminders','BOOLEAN NOT NULL DEFAULT TRUE']
+      ,['ai_reminder_days','INTEGER NOT NULL DEFAULT 14']
+      ,['next_ai_reminder_at','TIMESTAMPTZ']
+      ,['last_ai_reminder_sent_at','TIMESTAMPTZ']
     ];
     for (const [col, type] of _trackerMainGetColumns) {
       await pool.query('ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS ' + col + ' ' + type);
@@ -1960,7 +1981,7 @@ app.get('/api/tracker-client/:token', async (req, res) => {
     // Ensure tracker_client_id column exists before querying
     const pagesR = await pool.query(
       `SELECT p.id, p.url, p.keyword, p.gsc_keyword, p.created_at, p.next_check_at, p.last_checked_at,
-              p.is_done, p.manual_done, p.manual_done_at, p.fetch_reliable, p.check_frequency, p.gsc_clicks, p.gsc_impressions, p.gsc_position,
+              p.is_done, p.manual_done, p.manual_done_at, p.fetch_reliable, p.check_frequency, p.email_reminders, p.ai_reminder_days, p.next_ai_reminder_at, p.last_ai_reminder_sent_at, p.gsc_clicks, p.gsc_impressions, p.gsc_position,
               p.treatment, p.treatment_target_url, p.treatment_updated_at, p.implementation_at, p.implementation_verified_at, p.implementation_status, p.implementation_before_graaf,
               p.ranking_brief, p.needs_html, p.brief_started_at, p.brief_content, p.brief_check_count,
               p.html_pasted_at, p.html_source, p.last_graaf_score, p.brief_mode, p.revision_cycle,
@@ -2434,12 +2455,33 @@ app.patch('/api/tracker-client/:token/pages/:pageId/frequency', async (req, res)
     const cr = await pool.query('SELECT id FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status != $2)', [req.params.token, 'deleted']);
     if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
     const { frequency } = req.body;
-    const allowed = ['1day','3days','7days','17days','21days','30days','weekly','1week','2weeks','monthly'];
+    const allowed = ['0','off','1day','3days','7days','17days','21days','30days','weekly','1week','2weeks','monthly'];
     if (!allowed.includes(frequency)) return res.status(400).json({ success: false, error: 'Invalid frequency' });
-    await pool.query('UPDATE tracker_pages SET check_frequency=$1 WHERE id=$2 AND tracker_client_id=$3', [frequency, req.params.pageId, cr.rows[0].id]);
-    res.json({ success: true });
+    const days={'1day':1,'3days':3,'7days':7,weekly:7,'1week':7,'2weeks':14,'17days':17,'21days':21,'30days':30,monthly:30}[frequency]||0;
+    await pool.query(`UPDATE tracker_pages SET check_frequency=$1,next_check_at=CASE WHEN $2::int>0 THEN COALESCE(last_checked_at,NOW())+($2::text||' days')::interval ELSE NULL END WHERE id=$3 AND tracker_client_id=$4`, [days?frequency:'0',days,req.params.pageId,cr.rows[0].id]);
+    res.json({ success: true, frequency:days?frequency:'0', monitoring_enabled:days>0 });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
+
+// Explicit opt-in monitoring for selected pages only. The existing Tracker client email
+// remains the sole destination for scan and manual five-engine reminder messages.
+app.patch('/api/tracker-client/:token/pages/monitoring-selected',async(req,res)=>{try{
+  const cr=await pool.query("SELECT id,email FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status!='deleted')",[req.params.token]);
+  if(!cr.rows.length)return res.status(404).json({success:false,error:'Tracker not found'});
+  const ids=Array.isArray(req.body&&req.body.page_ids)?req.body.page_ids.map(Number).filter(Number.isInteger).slice(0,500):[];
+  if(!ids.length)return res.status(400).json({success:false,error:'Select at least one page'});
+  const enabled=!!(req.body&&req.body.enabled);
+  const allowed=['1day','3days','7days','2weeks','21days','30days'];
+  const frequency=enabled&&allowed.includes(String(req.body.frequency||''))?String(req.body.frequency):'0';
+  const days={'1day':1,'3days':3,'7days':7,'2weeks':14,'21days':21,'30days':30}[frequency]||0;
+  const emailReminders=(req.body&&req.body.email_reminders)!==false;
+  const aiDays=[7,14,28].includes(Number(req.body&&req.body.ai_reminder_days))?Number(req.body.ai_reminder_days):14;
+  const ur=await pool.query(`UPDATE tracker_pages SET check_frequency=$1,email_reminders=$2,ai_reminder_days=$3,
+    next_check_at=CASE WHEN $4::int>0 THEN COALESCE(last_checked_at,NOW())+($4::text||' days')::interval ELSE NULL END,
+    next_ai_reminder_at=CASE WHEN $2::boolean AND $4::int>0 THEN NOW()+($3::text||' days')::interval ELSE NULL END
+    WHERE tracker_client_id=$5 AND id=ANY($6::int[]) AND (is_active=TRUE OR is_active IS NULL) RETURNING id`,[frequency,emailReminders,aiDays,days,cr.rows[0].id,ids]);
+  res.json({success:true,updated:ur.rowCount,monitoring_enabled:days>0,frequency,email_reminders:emailReminders,email_destination:cr.rows[0].email||null,ai_reminder_days:aiDays});
+}catch(e){res.status(500).json({success:false,error:e.message});}});
 
 // POST /api/tracker-client/:token/brief-language — client-set brief language (self-service).
 // Mirrors the admin route but scoped to the caller's own token. 'auto' = detect from page.
@@ -2627,6 +2669,7 @@ app.post('/api/tracker-client/:token/scan-all', async (req, res) => {
     for (let i = 0; i < pages.rows.length; i++) {
       await new Promise(r => setTimeout(r, i === 0 ? 100 : 3000));
       console.log('[scan-all] scanning page', i+1, '/', pages.rows.length, pages.rows[i].url);
+      pages.rows[i]._manual_requested = true;
       await runTrackerCheck(pages.rows[i], process.env.GEMINI_API_KEY, checkKeys, true)
         .catch(e => console.warn('[scan-all] page', pages.rows[i].id, e.message));
     }
@@ -2658,6 +2701,7 @@ app.post('/api/tracker-client/:token/scan-selected', async (req, res) => {
     for (let i = 0; i < pages.rows.length; i++) {
       await new Promise(r => setTimeout(r, i === 0 ? 100 : 3000));
       console.log('[scan-selected] scanning page', i+1, '/', pages.rows.length, pages.rows[i].url);
+      pages.rows[i]._manual_requested = true;
       await runTrackerCheck(pages.rows[i], process.env.GEMINI_API_KEY, checkKeys, true)
         .catch(e => console.warn('[scan-selected] page', pages.rows[i].id, e.message));
     }
@@ -4381,6 +4425,9 @@ function _processScanQueue() {
     .then(function(r) {
       if (!r.rows.length) { _scanRunning = false; setTimeout(_processScanQueue, 500); return; }
       const pg = r.rows[0];
+      // Queue scans are explicitly requested by a person (single, selected, HTML fallback).
+      // Their completion email is independent of automatic monitoring being Off.
+      pg._manual_requested = true;
       const pgId = pg.id;
       const ex = _trackerCheckStatus.get(pgId);
       if (ex && ex.running) { _scanRunning = false; setTimeout(_processScanQueue, 500); return; }
@@ -4502,7 +4549,7 @@ app.post('/api/tracker-client/:token/pages', async (req, res) => {
     try {
       pr = await pool.query(
         `INSERT INTO tracker_pages (tracker_client_id, url, keyword, gsc_clicks, gsc_impressions, gsc_position, gsc_ctr, gsc_keyword, check_frequency, next_check_at, is_active)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'3days',NULL,TRUE)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'0',NULL,TRUE)
          RETURNING id`,
         [client.id, url, keyword||null, gsc_clicks||null, gsc_impressions||null, gsc_position||null, gsc_ctr||null, gsc_keyword||null]
       );
@@ -4511,7 +4558,7 @@ app.post('/api/tracker-client/:token/pages', async (req, res) => {
       try {
         pr = await pool.query(
           `INSERT INTO tracker_pages (tracker_client_id, url, keyword, check_frequency, next_check_at, is_active)
-           VALUES ($1,$2,$3,'3days',NULL,TRUE)
+           VALUES ($1,$2,$3,'0',NULL,TRUE)
            RETURNING id`,
           [client.id, url, keyword||null]
         );
@@ -4989,6 +5036,7 @@ app.post('/api/tracker-client/:token/check/:pageId', async (req, res) => {
     const own = await pool.query('SELECT * FROM tracker_pages WHERE id=$1 AND tracker_client_id=$2', [req.params.pageId, cr.rows[0].id]);
     if (!own.rows.length) return res.status(403).json({ success: false, error: 'Not your page' });
     const page = own.rows[0];
+    page._manual_requested = true;
     const pageId = page.id;
 
     // Block if already running
@@ -7477,8 +7525,8 @@ app.patch('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
      title TEXT,
      keyword VARCHAR(500),
      html_content TEXT,
-     check_frequency VARCHAR(20) DEFAULT '3days',
-     next_check_at TIMESTAMPTZ DEFAULT NOW(),
+     check_frequency VARCHAR(20) DEFAULT '0',
+     next_check_at TIMESTAMPTZ DEFAULT NULL,
      last_checked_at TIMESTAMPTZ,
      is_active BOOLEAN DEFAULT TRUE,
      gsc_connected BOOLEAN DEFAULT FALSE,
@@ -7488,6 +7536,12 @@ app.patch('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
    // Migration: add engine_code_id to existing tracker_pages if missing
    await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS engine_code_id INTEGER REFERENCES engine_access_codes(id) ON DELETE SET NULL`).catch(()=>{});
    await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS tracker_client_id INTEGER REFERENCES tracker_clients(id) ON DELETE SET NULL`).catch(()=>{});
+   await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS email_reminders BOOLEAN NOT NULL DEFAULT TRUE`).catch(()=>{});
+   await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS ai_reminder_days INTEGER NOT NULL DEFAULT 14`).catch(()=>{});
+   await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS next_ai_reminder_at TIMESTAMPTZ`).catch(()=>{});
+   await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS last_ai_reminder_sent_at TIMESTAMPTZ`).catch(()=>{});
+   await client.query(`ALTER TABLE tracker_pages ALTER COLUMN check_frequency SET DEFAULT '0'`).catch(()=>{});
+   await client.query(`ALTER TABLE tracker_pages ALTER COLUMN next_check_at DROP DEFAULT`).catch(()=>{});
    await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE`).catch(()=>{});
    await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS treatment TEXT`).catch(()=>{});
    await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS treatment_target_url TEXT`).catch(()=>{});
@@ -7689,12 +7743,25 @@ app.patch('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
       console.log('[migrate] GSC auto-enabled for all valid free/paid plans:', _gr3.rowCount, 'clients (v3)');
     }
   } catch(e) { console.warn('[migrate] all-plan GSC sync', e.message); }
-  // Fix invalid check_frequency values in DB
+  // Fix invalid check_frequency values in DB. Client pages fail safe to Off.
   await client.query(`
-    UPDATE tracker_pages SET check_frequency='3days'
+    UPDATE tracker_pages SET check_frequency=CASE WHEN tracker_client_id IS NOT NULL THEN '0' ELSE '3days' END,
+                             next_check_at=CASE WHEN tracker_client_id IS NOT NULL THEN NULL ELSE next_check_at END
     WHERE check_frequency IS NULL
        OR check_frequency NOT IN ('0','1day','3days','7days','17days','21days','30days','weekly','1week','2weeks','monthly')
   `).catch(()=>{});
+  // One-time opt-in migration. Existing non-case-study client pages are Off until selected.
+  try {
+    const _done=await client.query(`SELECT 1 FROM migration_flags WHERE key='tracker_client_monitoring_explicit_optin_v1'`);
+    if(!_done.rows.length){
+      const _hasCs=!!((await client.query(`SELECT to_regclass('public.tracker_case_studies') AS t`)).rows[0]||{}).t;
+      const _offSql=`UPDATE tracker_pages p SET check_frequency='0',next_check_at=NULL
+        WHERE p.tracker_client_id IS NOT NULL AND (p.is_active=TRUE OR p.is_active IS NULL)`+(_hasCs?` AND NOT EXISTS(SELECT 1 FROM tracker_case_studies cs WHERE cs.tracker_page_id=p.id AND cs.status='active')`:``);
+      const _offr=await client.query(_offSql);
+      await client.query(`INSERT INTO migration_flags (key) VALUES ('tracker_client_monitoring_explicit_optin_v1') ON CONFLICT (key) DO NOTHING`);
+      console.log('[migrate] explicit monitoring opt-in:',_offr.rowCount,'non-case-study client pages set to Off');
+    }
+  } catch(e) { console.warn('[migrate] tracker monitoring opt-in',e.message); }
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS telegram_chat_id VARCHAR(64)`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS email_unsubscribed BOOLEAN DEFAULT FALSE`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS unsubscribe_token VARCHAR(64)`).catch(()=>{});
@@ -12789,7 +12856,7 @@ window.csAuditClientLoaded=function(){
   ['run','reportLang','saveAuditBtn','resetBtn'].forEach(function(id){var el=document.getElementById(id);if(el)el.disabled=false;});
 };
 </script>
-<script src="/audit-client.js?v=20260911-canonical-v61" onload="window.csAuditClientLoaded()" onerror="window.csAuditStatus('Audit engine could not load. Refresh the page to retry.')"></script>
+<script src="/audit-client.js?v=20260911-canonical-v62" onload="window.csAuditClientLoaded()" onerror="window.csAuditStatus('Audit engine could not load. Refresh the page to retry.')"></script>
 </div></body></html>`;
                  if (_isSharedToolAccess) _auditHtml = _stripWhiteLabelPersonalBlocks(_auditHtml);
                  res.type('html').send(_auditHtml);
@@ -33098,8 +33165,11 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
     <button class="cs-btn" onclick="cleanPages()" style="border-color:#f59e0b;color:#f59e0b;" title="Remove junk (.jpg, /category/, feeds) &amp; pages not in sitemap/GSC &#x2014; keep only live content">&#x1f9f9; Clean</button>
     <button class="cs-btn" onclick="resetAllScans()" style="border-color:#a78bfa;color:#a78bfa;" title="Tick pages to reset only those &#x2014; or none to reset all. Clears scores, citations &amp; dates; keeps URLs &amp; keywords.">&#x21bb; Reset</button>
     <button id="bulkDeleteBtn" class="cs-btn" style="border-color:#ef4444;color:#ef4444;display:none;" onclick="bulkDeleteSelected()">&#x1f5d1; Delete selected</button>
+    <button id="monitorSelectedBtn" class="cs-btn" style="border-color:#22c55e;color:#86efac;display:none;" onclick="configureSelectedMonitoring(true)">Monitor selected</button>
+    <button id="monitorOffSelectedBtn" class="cs-btn" style="border-color:#64748b;color:#cbd5e1;display:none;" onclick="configureSelectedMonitoring(false)">Set selected Off</button>
     <button class="cs-btn" onclick="openTelegramSetup()" style="border-color:#2AABEE;color:#2AABEE;background:rgba(42,171,238,.08);font-weight:700;animation:tgPulse 2s ease-in-out infinite;" title="Install Telegram, then connect &#x2014; get notified after every scan"><i class="fab fa-telegram"></i> Install Telegram</button>
   </div>
+  <div id="monitoringSummary" style="margin:-4px 0 14px;padding:11px 14px;border:1px solid #24405a;border-radius:9px;background:#071521;color:#b8c7da;font-size:11px;line-height:1.6;">Monitoring is explicit opt-in. Loading page status...</div>
 
   <!-- Live feed -->
   <div class="cs-live">
@@ -33528,8 +33598,11 @@ function startCaseStudy(pageId){
   var pg=(_pages||[]).find(function(x){return Number(x.id)===Number(pageId);})||{};
   var q=prompt('Primary query for this case study:',pg.keyword||pg.gsc_keyword||'');if(q===null)return;q=String(q||'').trim();
   if(!q){alert('Add the primary query first.');return;}
-  if(!confirm('Start a protected case study now? The current scan, GSC values, five-engine evidence and page HTML will become the locked baseline.'))return;
-  api('/pages/'+pageId+'/case-study/start','POST',{primary_query:q}).then(function(d){
+  var monitoring=confirm('Turn automatic monitoring ON for this case-study page?\n\nOK = weekly monitoring\nCancel = monitoring stays Off; manual scans still email their result.');
+  var frequency='7days',aiDays=14;
+  if(monitoring){var f=prompt('Scan every how many days? Choose 1, 3, 7, 14, 21 or 30.','7');if(f===null)return;var fm={'1':'1day','3':'3days','7':'7days','14':'2weeks','21':'21days','30':'30days'};frequency=fm[String(f).trim()];if(!frequency){alert('Choose 1, 3, 7, 14, 21 or 30.');return;}var a=prompt('Remind you by email to manually recheck the five AI engines after 7, 14 or 28 days.','14');if(a===null)return;aiDays=parseInt(a,10);if([7,14,28].indexOf(aiDays)<0){alert('Choose 7, 14 or 28.');return;}}
+  if(!confirm('Start the protected case study now?\n\nThe current HTML, GRAAF result, GSC values and available five-engine evidence become the locked baseline.\nAutomatic monitoring: '+(monitoring?'ON':'OFF')+'\nEmail destination: the existing Tracker client email.'))return;
+  api('/pages/'+pageId+'/case-study/start','POST',{primary_query:q,monitoring_enabled:monitoring,check_frequency:frequency,email_reminders:monitoring,ai_reminder_days:aiDays}).then(function(d){
     alert((d&&d.message)||'Case study started.');load();
   }).catch(function(e){alert(e.message||'Could not start case study');});
 }
@@ -33832,6 +33905,28 @@ function updateBulkBar() {
     btn.style.display = n > 0 ? '' : 'none';
     btn.innerHTML = '&#x1f5d1; Delete selected' + (n > 0 ? ' (' + n + ')' : '');
   }
+  ['monitorSelectedBtn','monitorOffSelectedBtn'].forEach(function(id){var b=document.getElementById(id);if(b)b.style.display=n>0?'':'none';});
+}
+function configureSelectedMonitoring(enabled){
+  var ids=_ctSelectedIds();if(!ids.length){toast('Select one or more pages first','#f87171');return;}
+  if(!enabled){
+    if(!confirm('Set automatic monitoring Off for '+ids.length+' selected page(s)? Manual scans will still work and will still email the result.'))return;
+    return api('/pages/monitoring-selected','PATCH',{page_ids:ids,enabled:false,email_reminders:false}).then(function(d){toast((d.updated||0)+' page(s) set to Off','#94a3b8');loadPages();}).catch(function(e){toast(e.message,'#f87171');});
+  }
+  var f=prompt('Automatic scan interval for the selected pages:\n1 = daily\n3 = every 3 days\n7 = weekly\n14 = every 2 weeks\n21 = every 3 weeks\n30 = monthly','7');
+  if(f===null)return;var fm={'1':'1day','3':'3days','7':'7days','14':'2weeks','21':'21days','30':'30days'},frequency=fm[String(f).trim()];
+  if(!frequency){alert('Choose 1, 3, 7, 14, 21 or 30 days.');return;}
+  var a=prompt('Email reminder to manually recheck all five AI engines after how many days?\nChoose 7, 14 or 28.','14');if(a===null)return;a=parseInt(a,10);if([7,14,28].indexOf(a)<0){alert('Choose 7, 14 or 28 days.');return;}
+  if(!confirm('Enable monitoring for '+ids.length+' selected page(s)?\n\nScan interval: '+f+' day(s)\nFive-engine email reminder: '+a+' day(s)\nEmails go to the Tracker client email already on file.'))return;
+  api('/pages/monitoring-selected','PATCH',{page_ids:ids,enabled:true,frequency:frequency,email_reminders:true,ai_reminder_days:a}).then(function(d){toast((d.updated||0)+' selected page(s) are now monitored','#4ade80');loadPages();}).catch(function(e){toast(e.message,'#f87171');});
+}
+function configurePageMonitoring(pageId){
+  document.querySelectorAll('.page-select-cb').forEach(function(cb){cb.checked=Number(cb.dataset.id)===Number(pageId);});
+  updateBulkBar();configureSelectedMonitoring(true);
+}
+function switchPageMonitoringOff(pageId){
+  document.querySelectorAll('.page-select-cb').forEach(function(cb){cb.checked=Number(cb.dataset.id)===Number(pageId);});
+  updateBulkBar();configureSelectedMonitoring(false);
 }
 function bulkDeleteSelected() {
   var ids = _ctSelectedIds();
@@ -35094,6 +35189,12 @@ function renderStats(data) {
   pageLabel += ')';
   document.getElementById('pageCountLabel').textContent = pageLabel;
 
+  var monitored=pages.filter(function(p){return ['0','0days','off',''].indexOf(String(p.check_frequency||'0'))<0;});
+  var nextDates=monitored.map(function(p){return p.next_check_at?new Date(p.next_check_at):null;}).filter(function(d){return d&&!isNaN(d.getTime());}).sort(function(a,b){return a-b;});
+  var perMonth=monitored.reduce(function(sum,p){var m={1day:1,3days:3,7days:7,weekly:7,1week:7,2weeks:14,17days:17,21days:21,30days:30,monthly:30};var d=m[p.check_frequency]||30;return sum+Math.ceil(30/d);},0);
+  var ms=document.getElementById('monitoringSummary');
+  if(ms)ms.innerHTML='<strong style="color:#7dd3fc">'+pages.length+' pages total</strong> &middot; <strong style="color:#86efac">'+monitored.length+' monitored</strong> &middot; '+(pages.length-monitored.length)+' Off &middot; Next automatic scan: <strong style="color:#e2e8f0">'+(nextDates.length?nextDates[0].toLocaleString('en-GB',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}):'none')+'</strong> &middot; Estimated automatic scans/month: <strong style="color:#fbbf24">'+perMonth+'</strong><br><span style="color:#94a3b8">Only pages you explicitly enable are scheduled. Manual scans work while Off and still send their result to the existing Tracker client email.</span>';
+
 }
 
 // ── Live Brief Wall ── newest brief in the middle, rotates to side cards, click to open full brief
@@ -35620,6 +35721,9 @@ function renderPages() {
       + '<button data-tour="intelligence" onclick="event.stopPropagation();openCompetitiveIntelligence(' + p.id + ')" style="background:#0d1117;border:1px solid #0891b2;border-radius:7px;color:#67e8f9;cursor:pointer;font-size:11px;padding:5px 12px;font-weight:700;" title="Cross-engine competitors, sources, content opportunities and claims to verify">&#128269; Intelligence</button>'
       + ((explicitlyNeeds || p.fetch_reliable === false) ? '<button class="cs-html-btn cs-blink" onclick="openHtmlUpload(' + p.id + ')" style="background:#0d1117;border:1px solid #f59e0b;border-radius:7px;color:#fbbf24;cursor:pointer;font-size:11px;padding:5px 12px;font-weight:700;" title="Automatic live fetch was not reliable. Paste the published HTML manually to continue verification.">&#9888; Manual HTML required</button>' : '')
       + '<button data-tour="scan" data-check-btn="' + p.id + '" onclick="checkPage(' + p.id + ')" style="background:#0d1117;border:1px solid ' + (_scanDone ? '#22c55e' : '#2dd4bf') + ';border-radius:7px;color:' + (_scanDone ? '#4ade80' : '#5eead4') + ';cursor:pointer;font-size:11px;padding:5px 10px;font-weight:700;" title="' + (lastChecked ? (_scanDone ? 'Scanned this round \\u2014 click to rescan now' : 'Rescan this URL now') : 'Scan this URL now') + '">' + (lastChecked ? (_scanDone ? '\\u21bb \\u2713' : '\\u21bb Scan') : '\\u25b6 Scan') + '</button>'
+      + ((p.check_frequency==='0'||p.check_frequency==='0days'||p.check_frequency==='off'||!p.check_frequency)
+        ? '<button onclick="event.stopPropagation();configurePageMonitoring('+p.id+')" style="background:#111827;border:1px solid #64748b;border-radius:7px;color:#cbd5e1;cursor:pointer;font-size:10px;padding:5px 10px;font-weight:800;" title="No scheduled scans. Manual scans still email results.">Monitoring: Off</button>'
+        : '<button onclick="event.stopPropagation();switchPageMonitoringOff('+p.id+')" style="background:#052e16;border:1px solid #22c55e;border-radius:7px;color:#86efac;cursor:pointer;font-size:10px;padding:5px 10px;font-weight:800;" title="Scheduled '+freqLabel+'. Click to turn Off.">Monitoring: '+freqLabel+'</button>')
       + ((hasBrief || _lastBriefData[p.id]) ? '<button data-tour="view-brief" onclick="viewLastBrief(' + p.id + ')" style="background:#0d1117;border:1px solid #8b5cf6;border-radius:7px;color:#c4b5fd;cursor:pointer;font-size:11px;padding:5px 12px;font-weight:600;" title="View Citation Brief">\\ud83d\\udcc4 View Brief</button>' : '')
       + '<button data-tour="history" onclick="csPosHist(' + p.id + ')" style="background:#0d1117;border:1px solid #64748b;border-radius:7px;color:#cbd5e1;cursor:pointer;font-size:13px;padding:5px 10px;font-weight:600;" title="Ranking history">\\ud83d\\udcc8</button>'
       + (!p.case_study_active && lastCheckedRaw ? '<button onclick="event.stopPropagation();startCaseStudy(' + p.id + ')" style="background:#082f49;border:1px solid #0ea5e9;border-radius:7px;color:#7dd3fc;cursor:pointer;font-size:10px;padding:5px 10px;font-weight:900;" title="Lock the current scan, GSC values, five-engine evidence and HTML as the baseline">Start case study</button>' : '')
@@ -48767,7 +48871,7 @@ MERGE RULES:
         // ── Email the brief to the client (previously briefs went ONLY to the live wall, never email) ──
         try {
           const _items = Array.isArray(brief2.items) ? brief2.items : [];
-          if (_items.length && !snapshot._unchanged) {
+          if ((_items.length && !snapshot._unchanged) || page._manual_requested) {
             const _esc = s => String(s==null?'':s).replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
             const _top = _items.slice(0, 3);
             const _gscCount = Array.isArray(snapshot.gsc_brief) ? snapshot.gsc_brief.length : 0;
@@ -48793,7 +48897,7 @@ MERGE RULES:
               + '<div style="font-size:16px;font-weight:800;color:#0f172a;margin-bottom:4px;word-break:break-all;">' + _esc(pageUrl) + '</div>'
               + _trackerFiveEngineEmailBlock(_freshAiStates)
               + '<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px 14px;margin-bottom:20px;font-size:12px;color:#475569;"><strong>Search:</strong> Google position ' + _esc(pos2 || 'unranked') + (score2 ? ' &nbsp;&middot;&nbsp; <strong>Content:</strong> GRAAF ' + _esc(score2) + '/100' : '') + '</div>'
-              + _recHtml
+              + (_recHtml || '<div style="background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:12px 16px;margin-bottom:14px;color:#166534;font-size:13px;"><strong>Manual scan completed.</strong> No new material recommendations were produced in this scan.</div>')
               + (_moreCount > 0 ? '<div style="font-size:13px;color:#7c3aed;font-weight:700;margin:4px 0 8px;">+ ' + _moreCount + ' more recommendation' + (_moreCount>1?'s':'') + ' in your tracker</div>' : '')
               + '<div style="text-align:center;margin-top:22px;">'
               + '<a href="' + _trackerUrl + '" style="display:inline-block;background:#7c3aed;color:#fff;text-decoration:none;font-weight:800;padding:12px 28px;border-radius:10px;margin:4px;">View tracker &rarr;</a>'
@@ -49424,11 +49528,41 @@ function startHtmlReminderScheduler() {
 
 startHtmlReminderScheduler();
 
+// Manual five-engine evidence cannot be truthfully automated. Send one consolidated
+// reminder to the Tracker client's existing email when selected monitored pages are due.
+function startAiEvidenceReminderScheduler(){
+  setTimeout(async function runAiEvidenceReminders(){
+    try{
+      if(pool){
+        const due=await pool.query(`SELECT p.id,p.url,p.keyword,p.gsc_keyword,p.ai_reminder_days,p.tracker_client_id,c.domain,c.token
+          FROM tracker_pages p JOIN tracker_clients c ON c.id=p.tracker_client_id
+          WHERE (p.is_active=TRUE OR p.is_active IS NULL) AND c.status='active'
+          AND p.email_reminders=TRUE AND p.check_frequency NOT IN ('0','0days','off')
+          AND p.next_ai_reminder_at IS NOT NULL AND p.next_ai_reminder_at<=NOW()
+          ORDER BY p.tracker_client_id,p.next_ai_reminder_at LIMIT 100`);
+        const groups=new Map();for(const p of due.rows){if(!groups.has(p.tracker_client_id))groups.set(p.tracker_client_id,[]);groups.get(p.tracker_client_id).push(p);}
+        for(const [clientId,pages] of groups){
+          const first=pages[0],trackerUrl=(process.env.APP_URL||'https://app.contentscale.site')+'/track/'+first.token;
+          const rows=pages.map(p=>'<li style="margin:6px 0"><strong>'+(String(p.keyword||p.gsc_keyword||'Page').replace(/[<>&]/g,''))+'</strong><br><span style="color:#64748b;word-break:break-all">'+String(p.url||'').replace(/[<>&]/g,'')+'</span></li>').join('');
+          const body='<h2 style="color:#0f172a">Time to recheck the five AI engines</h2><p style="color:#374151;line-height:1.65">These selected monitored pages are due for a new manual evidence check in Google AIO/Gemini, ChatGPT Search, Perplexity, Claude and Microsoft Copilot. This is a reminder, not a claim that an engine has changed.</p><ul>'+rows+'</ul><p><a href="'+trackerUrl+'" style="display:inline-block;background:#2563eb;color:#fff;text-decoration:none;padding:11px 18px;border-radius:8px;font-weight:800">Open Tracker and record 5/5 evidence</a></p>';
+          await notifyClient(clientId,'Five-engine evidence recheck due — '+(first.domain||'ContentScale'),body,'Five-engine evidence recheck due\n'+trackerUrl,true).catch(e=>console.warn('[ai-reminder-email]',e.message));
+          const ids=pages.map(p=>p.id);await pool.query(`UPDATE tracker_pages SET last_ai_reminder_sent_at=NOW(),next_ai_reminder_at=NOW()+(ai_reminder_days::text||' days')::interval WHERE id=ANY($1::int[])`,[ids]);
+        }
+      }
+    }catch(e){console.warn('[ai-reminder]',e.message);}
+    setTimeout(runAiEvidenceReminders,24*60*60*1000);
+  },9*60*1000);
+  console.log('[ai-reminder] selected-page five-engine email reminder scheduler started');
+}
+startAiEvidenceReminderScheduler();
+
 let _trackerSchedulerTimer = null;
 function startTrackerScheduler() {
   if(_trackerSchedulerTimer) return;
   _trackerSchedulerTimer = setInterval(async () => {
-    if (process.env.ENABLE_TRACKER_SCHEDULER !== '1') return;  // SAFETY: auto SERP/Serper scanning OFF unless explicitly enabled (prevents silent Serper credit drain)
+    // Safe by default because pages themselves are explicit opt-in. Set the environment value
+    // to 0 only when every scheduled scan must be paused platform-wide.
+    if (process.env.ENABLE_TRACKER_SCHEDULER === '0') return;
     if(!pool) return;
     try {
       // Pick pages from BOTH engine tracker (engine_code_id) AND client tracker (tracker_client_id)
@@ -49501,7 +49635,7 @@ function startTrackerScheduler() {
     } catch(e) { console.warn('[tracker-scheduler]', e.message); }
   }, (parseInt(process.env.TRACKER_SCHEDULER_MIN, 10) || 30) * 60 * 1000);
   const _schedMin = parseInt(process.env.TRACKER_SCHEDULER_MIN, 10) || 30;
-  console.log('[tracker-scheduler] '+(process.env.ENABLE_TRACKER_SCHEDULER==='1'?('ENABLED (every '+_schedMin+'min)'):'DISABLED (set ENABLE_TRACKER_SCHEDULER=1 to turn on auto-scans)'));
+  console.log('[tracker-scheduler] '+(process.env.ENABLE_TRACKER_SCHEDULER==='0'?'DISABLED by environment':('ENABLED for explicitly opted-in pages (checks every '+_schedMin+'min)')));
   console.log('[tracker-keys] SERPAPI_KEY:', !!process.env.SERPAPI_KEY, '| SERPER_API_KEY:', !!process.env.SERPER_API_KEY, '| GEMINI:', !!process.env.GEMINI_API_KEY, '| PERPLEXITY:', !!process.env.PERPLEXITY_API_KEY);
 }
 
