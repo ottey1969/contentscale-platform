@@ -1,4 +1,4 @@
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-11-CANONICAL-v38';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-11-CANONICAL-v39';
 const CONTENTSCALE_BUILD_CHANGES = [
   'professional-guided-tour',
   'prewrite-create-expand-publish-tracker-baseline',
@@ -38,6 +38,8 @@ const CONTENTSCALE_BUILD_CHANGES = [
   ,'intelligence-decision-layer-engine-gaps-and-trends'
   ,'intelligence-clickable-citation-sources-and-evidence-excerpts'
   ,'intelligence-evidence-backed-treatment-recommendation'
+  ,'copy-brief-framing-items-not-duplicated-as-actions'
+  ,'copy-brief-ready-to-paste-divider-cleanup'
 ];
 console.log('[ContentScale] BUILD=' + CONTENTSCALE_BUILD_ID + ' BOOT=' + new Date().toISOString());
 console.log('[ContentScale] CHANGES=' + CONTENTSCALE_BUILD_CHANGES.join(','));
@@ -35545,10 +35547,11 @@ function _copyBriefAuthoritative(pageId) {
     if (fixIdx>=0){
       var after = t.slice(fixIdx+fixLen);
       // trim leading separators/dashes/colons/spaces
-      var _seps = [':','-',String.fromCharCode(8212),' ',String.fromCharCode(10),String.fromCharCode(9)];
+      var _seps = [':','-',String.fromCharCode(8212),String.fromCharCode(9472),' ',String.fromCharCode(10),String.fromCharCode(9)];
       while (after.length && _seps.indexOf(after.charAt(0))>=0) after = after.slice(1);
       out.write = after.trim();
       t = t.slice(0, fixIdx).trim();
+      if (/^[\s\u2500\u2014\-:]+$/.test(t)) t = '';
       up = t.toUpperCase();
     }
     // YOUR GAP / AI OVERVIEW / GOOGLE SEARCH context markers -> context
@@ -35592,7 +35595,8 @@ function _copyBriefAuthoritative(pageId) {
   var _compGapish = function(x){ var t=((x.system||x.sys||'')+' '+(x.title||'')).toLowerCase(); return /competitor|content gap/.test(t) || (Array.isArray(x.comparison_table)&&x.comparison_table.length); };
 
   var _isInt3 = function(x){ var s=(x.system||x.sys||'').toLowerCase(); return s.indexOf('internal')>=0; };
-  var _aio3 = (Array.isArray(recs)?recs:[]).filter(function(x){ return !_isInt3(x); });
+  var _isFrame3 = function(x){ var s=String(x&&(x.system||x.sys)||'').toLowerCase(); return s.indexOf('intent snapshot')>=0 || s==='missing entities' || s==='paa' || s.indexOf('people also')>=0; };
+  var _aio3 = (Array.isArray(recs)?recs:[]).filter(function(x){ return !_isInt3(x) && !_isFrame3(x); });
   var _link3 = (Array.isArray(recs)?recs:[]).filter(_isInt3);
   var _gsc3raw = (Array.isArray(d.gsc_brief)&&d.gsc_brief.length)?d.gsc_brief:(Array.isArray(p.gsc_brief)?p.gsc_brief:[]);
   var _src3 = (Array.isArray(d.source_suggestions)&&d.source_suggestions.length)?d.source_suggestions:(Array.isArray(p.source_suggestions)?p.source_suggestions:[]);
