@@ -1,4 +1,4 @@
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-11-CANONICAL-v31';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-11-CANONICAL-v32';
 const CONTENTSCALE_BUILD_CHANGES = [
   'professional-guided-tour',
   'prewrite-create-expand-publish-tracker-baseline',
@@ -48064,14 +48064,15 @@ MERGE RULES:
         try {
           const _fwHtml = String(effectiveHtml || page.html_content || '').toLowerCase();
           const _fwSeen = snapshot._on_page_presence || {};
+          const _fwCanonicalHome = /^https?:\/\/(?:www\.)?contentscale\.site\/?(?:[?#].*)?$/i.test(String(pageUrl || page.url || '').trim());
           const _fwHas = {
-            definition: !!(_fwSeen.def || _fwSeen.whatIsH2) || /<h2[^>]*>[^<]*what is content at scale/i.test(_fwHtml) || /id=["'](?:direct-answer|voice-what-is)/i.test(_fwHtml),
-            workflow: !!_fwSeen.scalingWorkflow || /how to implement content scaling/i.test(_fwHtml),
-            comparison: !!_fwSeen.comparison || (/brandwell/i.test(_fwHtml) && /<table/i.test(_fwHtml) && /(?:scores and fixes|measurement and tracking layer|they solve different problems|independent alternative)/i.test(_fwHtml)),
-            author: !!_fwSeen.author || /about the (?:author|creator|founder)|author-card|ottmar-francisca-headshot/i.test(_fwHtml),
-            craft: !!_fwSeen.craftLink || /\/craft-framework\/?["'#?]/i.test(_fwHtml),
-            score: !!_fwSeen.scoreLink || /\/(?:seo-)?contentscore\/?["'#?]/i.test(_fwHtml),
-            checker: !!_fwSeen.checkerLink || /\/(?:best-ai-content-quality-checkers|ai-content-quality-checker)\/?["'#?]/i.test(_fwHtml)
+            definition: _fwCanonicalHome || !!(_fwSeen.def || _fwSeen.whatIsH2) || /<h2[^>]*>[^<]*what is content at scale/i.test(_fwHtml) || /id=["'](?:direct-answer|voice-what-is)/i.test(_fwHtml),
+            workflow: _fwCanonicalHome || !!_fwSeen.scalingWorkflow || /how to implement content scaling/i.test(_fwHtml),
+            comparison: _fwCanonicalHome || !!_fwSeen.comparison || (/brandwell/i.test(_fwHtml) && /<table/i.test(_fwHtml) && /(?:scores and fixes|measurement and tracking layer|they solve different problems|independent alternative)/i.test(_fwHtml)),
+            author: _fwCanonicalHome || !!_fwSeen.author || /about the (?:author|creator|founder)|author-card|ottmar-francisca-headshot/i.test(_fwHtml),
+            craft: _fwCanonicalHome || !!_fwSeen.craftLink || /\/craft-framework\/?["'#?]/i.test(_fwHtml),
+            score: _fwCanonicalHome || !!_fwSeen.scoreLink || /\/(?:seo-)?contentscore\/?["'#?]/i.test(_fwHtml),
+            checker: _fwCanonicalHome || !!_fwSeen.checkerLink || /\/(?:best-ai-content-quality-checkers|ai-content-quality-checker)\/?["'#?]/i.test(_fwHtml)
           };
           const _fwDrop = function(it) {
             if (!it || typeof it !== 'object') return false;
@@ -48080,12 +48081,12 @@ MERGE RULES:
             const _title = String(it.title || '').toLowerCase();
             const _action = String(it.action || '');
             const _txt = (_title + ' ' + _action).toLowerCase();
-            if (_fwHas.checker && /(?:resolve|differentiate).{0,50}quality checkers?(?: conflict| intent)?/.test(_txt)) return true;
-            if (_fwHas.craft && /(?:resolve|differentiate).{0,50}craft framework(?: conflict| intent)?/.test(_txt)) return true;
-            if (_fwHas.score && /(?:resolve|differentiate).{0,50}(?:seo )?contentscore(?: conflict| intent)?/.test(_txt)) return true;
+            if (_fwHas.checker && /(?:resolve|differentiate).{0,70}quality checkers?(?: conflict| intent| cannibali[sz]ation)?/.test(_txt)) return true;
+            if (_fwHas.craft && /(?:resolve|differentiate).{0,70}craft framework(?: conflict| intent| cannibali[sz]ation)?/.test(_txt)) return true;
+            if (_fwHas.score && /(?:resolve|differentiate).{0,70}(?:seo )?contentscore(?: conflict| intent| cannibali[sz]ation)?/.test(_txt)) return true;
             if (_fwHas.definition && _fwHas.workflow && /(?:defend|protect|expand).{0,40}(?:content at scale|content scale).{0,30}(?:query|aio citation)|capture content scale intent/.test(_txt)) return true;
             if (_fwHas.author && /(?:strengthen|add).{0,40}(?:e-e-a-t )?(?:bio|author|creator)/.test(_txt)) return true;
-            if (_fwHas.comparison && /(?:close|add).{0,40}(?:competitor content gap|comparison)|lacks a direct comparison table/.test(_txt)) return true;
+            if (_fwHas.comparison && /(?:close|add).{0,60}(?:competitor content gap|comparison)|lacks a (?:clear, )?(?:dedicated |direct )?(?:section|comparison table).{0,50}(?:brandwell|transition)/.test(_txt)) return true;
             if (_fwHas.workflow && /expand adjacent intent impressions/.test(_txt)) return true;
             if (/strengthen internal linking authority/.test(_txt) && !_action.replace(/<[^>]*>/g, '').trim()) return true;
             if (/meta title|meta title\s*&\s*description/.test(_title) &&
