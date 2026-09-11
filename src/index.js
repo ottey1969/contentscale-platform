@@ -1,4 +1,4 @@
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-11-CANONICAL-v34';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-11-CANONICAL-v35';
 const CONTENTSCALE_BUILD_CHANGES = [
   'professional-guided-tour',
   'prewrite-create-expand-publish-tracker-baseline',
@@ -35426,11 +35426,32 @@ function clearAioManual(pageId) {
   saveAioManual(pageId);
 }
 
-function copyBrief(pageId) {
+async function copyBrief(pageId) {
   if (_checkAnimations && _checkAnimations[pageId]) {
     toast('Please wait for the newest brief to finish loading', '#f59e0b');
     return;
   }
+  // Clipboard export is a critical boundary: never trust tab/session state here. Fetch the
+  // authoritative final brief and prove it was generated after the newest tracker snapshot.
+  try {
+    var _fresh = await api('/pages/' + pageId);
+    if (!_fresh || !_fresh.success || !_fresh.page) throw new Error('Latest brief could not be loaded');
+    var _fp = _fresh.page;
+    var _finalMs = _fp.brief_generated_at ? new Date(_fp.brief_generated_at).getTime() : 0;
+    var _snapshotMs = _fp.last_checked ? new Date(_fp.last_checked).getTime() : 0;
+    if (!_finalMs || (_snapshotMs && _finalMs < _snapshotMs - 2000)) {
+      toast('Final brief is still saving \u2014 please click Copy again in a moment', '#f59e0b');
+      return;
+    }
+    openBriefFromPoll(_fp);
+  } catch(_copyFreshErr) {
+    toast(_copyFreshErr.message || 'Latest brief could not be loaded', '#f87171');
+    return;
+  }
+  _copyBriefAuthoritative(pageId);
+}
+
+function _copyBriefAuthoritative(pageId) {
   var p = (_pages||[]).find(function(x){ return x.id == pageId; });
   if (!p) return;
   var d = _lastBriefData[pageId] || {};
