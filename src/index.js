@@ -1,4 +1,4 @@
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-11-CANONICAL-v62';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-11-CANONICAL-v63';
 const CONTENTSCALE_BUILD_CHANGES = [
   'professional-guided-tour',
   'prewrite-create-expand-publish-tracker-baseline',
@@ -99,6 +99,7 @@ const CONTENTSCALE_BUILD_CHANGES = [
   ,'case-study-start-monitoring-and-email-reminder-settings'
   ,'five-engine-manual-recheck-email-reminders'
   ,'existing-tracker-email-is-single-reminder-destination'
+  ,'tracker-monitoring-dialog-newlines-browser-safe'
 ];
 console.log('[ContentScale] BUILD=' + CONTENTSCALE_BUILD_ID + ' BOOT=' + new Date().toISOString());
 console.log('[ContentScale] CHANGES=' + CONTENTSCALE_BUILD_CHANGES.join(','));
@@ -12856,7 +12857,7 @@ window.csAuditClientLoaded=function(){
   ['run','reportLang','saveAuditBtn','resetBtn'].forEach(function(id){var el=document.getElementById(id);if(el)el.disabled=false;});
 };
 </script>
-<script src="/audit-client.js?v=20260911-canonical-v62" onload="window.csAuditClientLoaded()" onerror="window.csAuditStatus('Audit engine could not load. Refresh the page to retry.')"></script>
+<script src="/audit-client.js?v=20260911-canonical-v63" onload="window.csAuditClientLoaded()" onerror="window.csAuditStatus('Audit engine could not load. Refresh the page to retry.')"></script>
 </div></body></html>`;
                  if (_isSharedToolAccess) _auditHtml = _stripWhiteLabelPersonalBlocks(_auditHtml);
                  res.type('html').send(_auditHtml);
@@ -33598,10 +33599,10 @@ function startCaseStudy(pageId){
   var pg=(_pages||[]).find(function(x){return Number(x.id)===Number(pageId);})||{};
   var q=prompt('Primary query for this case study:',pg.keyword||pg.gsc_keyword||'');if(q===null)return;q=String(q||'').trim();
   if(!q){alert('Add the primary query first.');return;}
-  var monitoring=confirm('Turn automatic monitoring ON for this case-study page?\n\nOK = weekly monitoring\nCancel = monitoring stays Off; manual scans still email their result.');
+  var monitoring=confirm('Turn automatic monitoring ON for this case-study page?\\n\\nOK = weekly monitoring\\nCancel = monitoring stays Off; manual scans still email their result.');
   var frequency='7days',aiDays=14;
   if(monitoring){var f=prompt('Scan every how many days? Choose 1, 3, 7, 14, 21 or 30.','7');if(f===null)return;var fm={'1':'1day','3':'3days','7':'7days','14':'2weeks','21':'21days','30':'30days'};frequency=fm[String(f).trim()];if(!frequency){alert('Choose 1, 3, 7, 14, 21 or 30.');return;}var a=prompt('Remind you by email to manually recheck the five AI engines after 7, 14 or 28 days.','14');if(a===null)return;aiDays=parseInt(a,10);if([7,14,28].indexOf(aiDays)<0){alert('Choose 7, 14 or 28.');return;}}
-  if(!confirm('Start the protected case study now?\n\nThe current HTML, GRAAF result, GSC values and available five-engine evidence become the locked baseline.\nAutomatic monitoring: '+(monitoring?'ON':'OFF')+'\nEmail destination: the existing Tracker client email.'))return;
+  if(!confirm('Start the protected case study now?\\n\\nThe current HTML, GRAAF result, GSC values and available five-engine evidence become the locked baseline.\\nAutomatic monitoring: '+(monitoring?'ON':'OFF')+'\\nEmail destination: the existing Tracker client email.'))return;
   api('/pages/'+pageId+'/case-study/start','POST',{primary_query:q,monitoring_enabled:monitoring,check_frequency:frequency,email_reminders:monitoring,ai_reminder_days:aiDays}).then(function(d){
     alert((d&&d.message)||'Case study started.');load();
   }).catch(function(e){alert(e.message||'Could not start case study');});
@@ -33913,11 +33914,11 @@ function configureSelectedMonitoring(enabled){
     if(!confirm('Set automatic monitoring Off for '+ids.length+' selected page(s)? Manual scans will still work and will still email the result.'))return;
     return api('/pages/monitoring-selected','PATCH',{page_ids:ids,enabled:false,email_reminders:false}).then(function(d){toast((d.updated||0)+' page(s) set to Off','#94a3b8');loadPages();}).catch(function(e){toast(e.message,'#f87171');});
   }
-  var f=prompt('Automatic scan interval for the selected pages:\n1 = daily\n3 = every 3 days\n7 = weekly\n14 = every 2 weeks\n21 = every 3 weeks\n30 = monthly','7');
+  var f=prompt('Automatic scan interval for the selected pages:\\n1 = daily\\n3 = every 3 days\\n7 = weekly\\n14 = every 2 weeks\\n21 = every 3 weeks\\n30 = monthly','7');
   if(f===null)return;var fm={'1':'1day','3':'3days','7':'7days','14':'2weeks','21':'21days','30':'30days'},frequency=fm[String(f).trim()];
   if(!frequency){alert('Choose 1, 3, 7, 14, 21 or 30 days.');return;}
-  var a=prompt('Email reminder to manually recheck all five AI engines after how many days?\nChoose 7, 14 or 28.','14');if(a===null)return;a=parseInt(a,10);if([7,14,28].indexOf(a)<0){alert('Choose 7, 14 or 28 days.');return;}
-  if(!confirm('Enable monitoring for '+ids.length+' selected page(s)?\n\nScan interval: '+f+' day(s)\nFive-engine email reminder: '+a+' day(s)\nEmails go to the Tracker client email already on file.'))return;
+  var a=prompt('Email reminder to manually recheck all five AI engines after how many days?\\nChoose 7, 14 or 28.','14');if(a===null)return;a=parseInt(a,10);if([7,14,28].indexOf(a)<0){alert('Choose 7, 14 or 28 days.');return;}
+  if(!confirm('Enable monitoring for '+ids.length+' selected page(s)?\\n\\nScan interval: '+f+' day(s)\\nFive-engine email reminder: '+a+' day(s)\\nEmails go to the Tracker client email already on file.'))return;
   api('/pages/monitoring-selected','PATCH',{page_ids:ids,enabled:true,frequency:frequency,email_reminders:true,ai_reminder_days:a}).then(function(d){toast((d.updated||0)+' selected page(s) are now monitored','#4ade80');loadPages();}).catch(function(e){toast(e.message,'#f87171');});
 }
 function configurePageMonitoring(pageId){
