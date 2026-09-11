@@ -1,4 +1,4 @@
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-11-CANONICAL-v43';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-11-CANONICAL-v44';
 const CONTENTSCALE_BUILD_CHANGES = [
   'professional-guided-tour',
   'prewrite-create-expand-publish-tracker-baseline',
@@ -48,6 +48,8 @@ const CONTENTSCALE_BUILD_CHANGES = [
   ,'audit-controls-active-while-client-initializes'
   ,'shared-audit-white-label-balanced-div-removal'
   ,'shared-audit-client-scripts-no-longer-truncated'
+  ,'audit-professional-visual-system'
+  ,'audit-animated-scan-status-and-responsive-controls'
 ];
 console.log('[ContentScale] BUILD=' + CONTENTSCALE_BUILD_ID + ' BOOT=' + new Date().toISOString());
 console.log('[ContentScale] CHANGES=' + CONTENTSCALE_BUILD_CHANGES.join(','));
@@ -12076,22 +12078,36 @@ return result;
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Site Audit — ContentScale</title>
 <style>
-  :root{--p:#4c1d95;--p2:#6d28d9;--ink:#1a1a2e;--bd:#e5e7eb;}
+  :root{--p:#5b21b6;--p2:#7c3aed;--p3:#a78bfa;--ink:#161329;--muted:#64748b;--bd:#e6e2ef;--green:#10b981;--surface:rgba(255,255,255,.94);--shadow:0 20px 55px rgba(49,28,91,.10);}
   *{box-sizing:border-box;}
-  body{font-family:'Segoe UI',system-ui,sans-serif;margin:0;background:#f4f4f7;color:var(--ink);}
-  .wrap{max-width:900px;margin:0 auto;padding:24px;}
-  header{background:linear-gradient(135deg,#4c1d95,#6d28d9);color:#fff;padding:28px 32px;border-radius:14px;margin-bottom:20px;}
-  header h1{margin:0 0 4px;font-size:22px;}
-  header p{margin:0;opacity:.9;font-size:14px;}
-  .form{background:#fff;border:1px solid var(--bd);border-radius:12px;padding:20px;margin-bottom:20px;display:flex;flex-wrap:wrap;gap:12px;align-items:end;}
+  html{scroll-behavior:smooth;}
+  body{font-family:Inter,'Segoe UI',system-ui,-apple-system,sans-serif;margin:0;background:linear-gradient(145deg,#f7f5fb 0%,#f2f5fb 45%,#f7f8fb 100%);color:var(--ink);min-height:100vh;}
+  body:before,body:after{content:"";position:fixed;border-radius:999px;filter:blur(2px);pointer-events:none;z-index:0;}
+  body:before{width:420px;height:420px;top:-210px;right:-100px;background:radial-gradient(circle,rgba(124,58,237,.15),rgba(124,58,237,0) 70%);animation:auditFloat 9s ease-in-out infinite;}
+  body:after{width:360px;height:360px;left:-160px;bottom:-180px;background:radial-gradient(circle,rgba(16,185,129,.11),rgba(16,185,129,0) 70%);animation:auditFloat 11s ease-in-out infinite reverse;}
+  .wrap{max-width:1120px;margin:0 auto;padding:32px 24px 64px;position:relative;z-index:1;}
+  header{position:relative;overflow:hidden;background:linear-gradient(125deg,#351267 0%,#5b21b6 52%,#7c3aed 100%);color:#fff;padding:34px 38px;border-radius:22px;margin-bottom:22px;box-shadow:0 24px 55px rgba(76,29,149,.22);}
+  header:after{content:"";position:absolute;width:260px;height:260px;border:1px solid rgba(255,255,255,.13);border-radius:50%;right:-60px;top:-135px;box-shadow:0 0 0 34px rgba(255,255,255,.035),0 0 0 68px rgba(255,255,255,.025);}
+  header h1{position:relative;z-index:1;margin:0 0 7px;font-size:clamp(24px,4vw,34px);letter-spacing:-.03em;}
+  header p{position:relative;z-index:1;margin:0;opacity:.88;font-size:14px;max-width:680px;line-height:1.65;}
+  .audit-kicker{position:relative;z-index:1;display:inline-flex;align-items:center;gap:8px;margin-bottom:13px;padding:5px 10px;border:1px solid rgba(255,255,255,.22);border-radius:999px;background:rgba(255,255,255,.08);font-size:10px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;}
+  .audit-kicker-dot{width:7px;height:7px;border-radius:50%;background:#4ade80;box-shadow:0 0 0 5px rgba(74,222,128,.12);animation:auditDot 1.8s ease-in-out infinite;}
+  .audit-capabilities{position:relative;z-index:1;display:flex;gap:8px;flex-wrap:wrap;margin-top:17px;}
+  .audit-capabilities span{padding:5px 9px;border-radius:7px;background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.13);font-size:11px;color:#f5f3ff;}
+  .form{background:var(--surface);border:1px solid rgba(124,58,237,.13);border-radius:18px;padding:22px;margin-bottom:20px;display:grid;grid-template-columns:minmax(180px,.8fr) minmax(280px,1.6fr) minmax(160px,.7fr);gap:16px;align-items:end;box-shadow:var(--shadow);backdrop-filter:blur(12px);}
   .field{flex:1;min-width:200px;}
-  label{display:block;font-size:12px;color:#666;margin-bottom:4px;font-weight:600;}
-  input,select{width:100%;padding:10px 12px;border:1.5px solid var(--bd);border-radius:8px;font-size:14px;}
-  button{background:var(--p2);color:#fff;border:none;border-radius:8px;padding:11px 22px;font-size:14px;font-weight:600;cursor:pointer;}
-  button:hover{background:var(--p);}
+  label{display:block;font-size:11px;color:#514b63;margin-bottom:7px;font-weight:750;letter-spacing:.015em;}
+  input,select,textarea{width:100%;padding:12px 13px;border:1.5px solid var(--bd);border-radius:10px;font-size:14px;background:#fff;color:var(--ink);outline:none;transition:border-color .18s,box-shadow .18s,transform .18s;}
+  input:focus,select:focus,textarea:focus{border-color:var(--p3)!important;box-shadow:0 0 0 4px rgba(124,58,237,.10);}
+  button{position:relative;overflow:hidden;background:linear-gradient(135deg,var(--p2),var(--p));color:#fff;border:none;border-radius:10px;padding:12px 20px;min-height:44px;font-size:13px;font-weight:750;cursor:pointer;box-shadow:0 8px 20px rgba(91,33,182,.18);transition:transform .18s,box-shadow .18s,filter .18s;}
+  button:before{content:"";position:absolute;inset:0;background:linear-gradient(105deg,transparent 30%,rgba(255,255,255,.22) 50%,transparent 70%);transform:translateX(-140%);transition:transform .55s;}
+  button:hover{transform:translateY(-2px);box-shadow:0 12px 24px rgba(91,33,182,.25);filter:saturate(1.08);}
+  button:hover:before{transform:translateX(140%);}
+  button:active{transform:translateY(0);}
   button:disabled{opacity:.5;cursor:wait;}
-  .status{margin:16px 0;padding:14px 18px;border-radius:10px;background:#faf5ff;border:1px solid #ddd6fe;color:#5b21b6;display:none;align-items:center;gap:10px;}
-  .status.on{display:flex;}
+  #run{min-width:150px;background:linear-gradient(135deg,#7c3aed,#4c1d95);}
+  .status{position:relative;overflow:hidden;margin:18px 0;padding:16px 18px;border-radius:13px;background:linear-gradient(100deg,#faf5ff,#f5f3ff);border:1px solid #ddd6fe;color:#5b21b6;display:none;align-items:center;gap:10px;box-shadow:0 10px 25px rgba(91,33,182,.08);}
+  .status.on{display:flex;animation:auditReveal .28s ease-out both;}
   .audit-spinner{width:17px;height:17px;border:2px solid #ddd6fe;border-top-color:#6d28d9;border-radius:50%;display:inline-block;flex:0 0 auto;animation:auditSpin .8s linear infinite;}
   .audit-pulse{animation:auditPulse 1.25s ease-in-out infinite;}
   .audit-progress{height:3px;position:absolute;left:0;right:0;bottom:0;overflow:hidden;border-radius:0 0 10px 10px;background:#ede9fe;}
@@ -12099,22 +12115,36 @@ return result;
   @keyframes auditSpin{to{transform:rotate(360deg)}}
   @keyframes auditPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.025)}}
   @keyframes auditProgress{0%{transform:translateX(-120%)}100%{transform:translateX(390%)}}
+  @keyframes auditFloat{0%,100%{transform:translate3d(0,0,0)}50%{transform:translate3d(0,18px,0)}}
+  @keyframes auditDot{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.55;transform:scale(.72)}}
+  @keyframes auditReveal{from{opacity:0;transform:translateY(-7px)}to{opacity:1;transform:translateY(0)}}
   .results{display:none;}
   .scorestrip{display:flex;flex-wrap:wrap;gap:10px;margin:16px 0;}
-  .sc{flex:1;min-width:120px;text-align:center;border:1px solid var(--bd);border-radius:10px;padding:16px 8px;background:#fff;}
+  .sc{flex:1;min-width:120px;text-align:center;border:1px solid var(--bd);border-radius:13px;padding:18px 10px;background:linear-gradient(180deg,#fff,#fcfbff);box-shadow:0 8px 22px rgba(30,20,55,.05);transition:transform .18s,border-color .18s;}
+  .sc:hover{transform:translateY(-2px);border-color:#c4b5fd;}
   .sc .n{font-size:30px;font-weight:800;line-height:1;}
   .sc .l{font-size:11px;color:#666;margin-top:6px;}
-  .box{background:#fff;border:1px solid var(--bd);border-radius:12px;padding:20px;margin:14px 0;}
+  .box{background:var(--surface);border:1px solid var(--bd);border-radius:16px;padding:22px;margin:16px 0;box-shadow:0 12px 32px rgba(30,20,55,.055);}
   .box h2{margin:0 0 10px;font-size:16px;color:var(--p);}
   .verdict{font-size:18px;font-weight:800;margin:8px 0;}
   table{width:100%;border-collapse:collapse;font-size:13px;}
-  th{background:var(--p);color:#fff;text-align:left;padding:8px 10px;}
-  td{border-bottom:1px solid #eee;padding:7px 10px;}
+  th{background:linear-gradient(135deg,#4c1d95,#6d28d9);color:#fff;text-align:left;padding:10px 12px;}
+  td{border-bottom:1px solid #eee;padding:9px 12px;}
   .actions{margin:18px 0;display:flex;gap:12px;}
   .pdfbtn{background:linear-gradient(135deg,#7e22ce,#be185d);}
-  @media print{.form,.actions,header .sub,.noprint{display:none!important;}body{background:#fff;}}
+  details{transition:background .18s,border-color .18s;}
+  summary{outline:none;}
+  @media(max-width:900px){.form{grid-template-columns:1fr 1fr}.form button{width:100%}}
+  @media(max-width:640px){.wrap{padding:16px 12px 40px}header{padding:26px 22px;border-radius:16px}.form{grid-template-columns:1fr;padding:16px}.field{min-width:0!important}.audit-capabilities{gap:6px}}
+  @media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+  @media print{.form,.actions,header .sub,.noprint{display:none!important;}body{background:#fff;}body:before,body:after{display:none!important;}}
 </style></head><body><div class="wrap">
-<header><h1 id="auditPageTitle">🔍 ContentScale Site Audit</h1><p class="sub">Voer een URL in — crawlt de site, scoort elke pagina, toont de AI-citeerbaarheid.</p></header>
+<header>
+  <div class="audit-kicker"><span class="audit-kicker-dot"></span> Live website intelligence</div>
+  <h1 id="auditPageTitle">ContentScale Site Audit</h1>
+  <p class="sub">Scan technische kwaliteit, contentstructuur, zoekkansen en AI-citeerbaarheid in één professioneel rapport.</p>
+  <div class="audit-capabilities"><span>Technical SEO</span><span>Content quality</span><span>AI visibility</span><span>Action plan</span></div>
+</header>
 
 <div class="form noprint">
   <div class="field" id="adminCodeField" style="max-width:200px"><label>🔒 Toegangscode</label><input id="code" type="password" placeholder="geheime code"></div>
