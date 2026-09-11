@@ -1,4 +1,4 @@
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-11-CANONICAL-v33';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-11-CANONICAL-v34';
 const CONTENTSCALE_BUILD_CHANGES = [
   'professional-guided-tour',
   'prewrite-create-expand-publish-tracker-baseline',
@@ -34455,8 +34455,10 @@ var _mdFilter = 'all'; // 'all' | 'todo' | 'done' — filter on the user's own p
       if (p.is_done) return;
       var sessionKey = 'cb_shown_' + p.id + '_' + (p.brief_started_at || '');
       try {
-        if (sessionStorage.getItem(sessionKey)) return; // already shown
-        sessionStorage.setItem(sessionKey, '1');
+        // This key may suppress an automatic modal, but it must NEVER suppress refreshing
+        // _lastBriefData. brief_started_at is intentionally stable across rescans, so returning
+        // here left Copy Brief permanently bound to the first brief opened in this browser tab.
+        if (!sessionStorage.getItem(sessionKey)) sessionStorage.setItem(sessionKey, '1');
       } catch(e) {}
       // Show TV Brief for this page
       var brief = typeof p.brief_content === 'string' ? JSON.parse(p.brief_content) : p.brief_content;
