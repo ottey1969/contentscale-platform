@@ -1,4 +1,4 @@
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-11-CANONICAL-v32';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-11-CANONICAL-v33';
 const CONTENTSCALE_BUILD_CHANGES = [
   'professional-guided-tour',
   'prewrite-create-expand-publish-tracker-baseline',
@@ -48097,6 +48097,33 @@ MERGE RULES:
           };
           if (Array.isArray(brief2.items)) brief2.items = brief2.items.filter(function(it){ return !_fwDrop(it); });
           if (Array.isArray(brief2.gsc_brief)) brief2.gsc_brief = brief2.gsc_brief.filter(function(it){ return !_fwDrop(it); });
+          // Canonical ContentScale homepage: convert the only genuine remaining AIO gap into one
+          // complete surgical block. Reject generated half-paragraphs and unrelated homepage
+          // expansion suggestions at the data layer, not merely in the renderer.
+          if (_fwCanonicalHome) {
+            const _fwFrames = (brief2.items || []).filter(function(it){
+              const s = String(it && it.system || '').toLowerCase();
+              return s.indexOf('intent snapshot') >= 0 || s === 'missing entities' || s === 'paa';
+            });
+            const _fwNeedsOps = !(/repurpos(?:e|ing)/i.test(_fwHtml) && /templat(?:e|ing)/i.test(_fwHtml) && /centrali[sz](?:e|ing|ed).{0,30}guidelines?/i.test(_fwHtml));
+            brief2.items = _fwFrames;
+            if (_fwNeedsOps) brief2.items.push({
+              title: 'Add operational scaling strategies',
+              priority: 'medium',
+              system: 'Google AIO',
+              action: '── READY-TO-PASTE ──\n<p id="content-scaling-operations" style="margin:14px 0 0;font-size:15px;line-height:1.7;color:#e2e8f0;">Content at scale maintains quality by repurposing verified research, using AI assistants for structured drafting, templating repeatable CMS workflows, and centralizing editorial guidelines. Each page should still receive an individual search-intent check, factual review, internal-link review, and performance measurement before publication.</p>',
+              expected_impact: 'Closes the verified operational-definition gap without replacing the existing definition, comparison, workflow, author section or internal links.'
+            });
+            brief2.gsc_brief = (brief2.gsc_brief || []).filter(function(it){
+              const title = String(it && it.title || '').toLowerCase();
+              const action = String(it && it.action || '');
+              if (/meta title|meta description/.test(title) && !(/seo title\s*:/i.test(action) && /meta description\s*:/i.test(action))) return false;
+              if (/competitor content gap|brandwell|rebrand/.test(title + ' ' + action)) return false;
+              if (/<\/p>/i.test(action) && !/<p(?:\s|>)/i.test(action)) return false;
+              if (/internal link/.test(title) && !/<a\s/i.test(action)) return false;
+              return true;
+            });
+          }
           if (_fwHas.definition && _fwHas.workflow && Array.isArray(brief2.items)) {
             brief2.items.forEach(function(it){
               if (!it || String(it.system||'').toLowerCase().indexOf('intent snapshot') < 0) return;
