@@ -1,4 +1,4 @@
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-10-CANONICAL-v24';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-11-CANONICAL-v25';
 const CONTENTSCALE_BUILD_CHANGES = [
   'professional-guided-tour',
   'prewrite-create-expand-publish-tracker-baseline',
@@ -3673,9 +3673,17 @@ function _trackerIntelClaimLike(t){
   return /(?:\b24\s*\/\s*7\b|\b24[- ]?hour\b|same[- ]day|response time|within \d+|\blicensed\b|\binsured\b|\bcertif(?:ied|ication)\b|\bwarrant(?:y|ies)\b|\bfinanc(?:e|ing)\b|free (?:estimate|inspection|assessment|quote)|insurance (?:claim|support|documentation)|emergency tarping|all \d+|\$\s?\d|€\s?\d|£\s?\d|₱\s?\d|\b\d+(?:\.\d+)?%\b|\b\d+\s*(?:minutes?|hours?|days?|years?|counties|locations)\b)/i.test(x);
 }
 function _trackerIntelPhrases(text){
-  const stop=new Set(('the a an and or but for with from into onto over under to of in on at by is are was were be been being this that these those it its as you your we our they their can may will should would could has have had not no yes more most best top near about how what why when where who which page site website company companies business businesses source sources cited citation directly mentioned recommended complete answer exact http https www com org net').split(/\s+/));
+  const stop=new Set(('the a an and or but for with from into onto over under to of in on at by is are was were be been being this that these those it its as you your we our they their can may will should would could has have had not no yes more most best top near about how what why when where who which page site website company companies business businesses source sources cited citation directly mentioned recommended complete answer exact http https www com org net seed keyword domain exact page cited citation directly mentioned recommended verified unverified result results validation validate antwoord bedrijven bronnen geeft geven lijst included aanwezig domein geciteerd exacte pagina voor dat deze wordt wel niet maar').split(/\s+/));
   const words=String(text||'').toLowerCase().replace(/https?:\/\/\S+/g,' ').replace(/[^a-z0-9\-\s]/g,' ').split(/\s+/).filter(w=>w.length>2&&!stop.has(w)&&!/^\d+$/.test(w));
   const out=[];for(let i=0;i<words.length-1;i++){let a=words[i],b=words[i+1];if(stop.has(a)||stop.has(b))continue;let z=a+' '+b;if(z.length>=8&&z.length<=46)out.push(z);}return out;
+}
+function _trackerIntelPhraseUseful(phrase){
+  const p=String(phrase||'').toLowerCase().trim();
+  if(!p)return false;
+  // Status labels and prompt wording describe the audit, not the subject matter.
+  if(/(?:domain|domein|website|exact|exacte|page|pagina|citation|cited|geciteerd|mentioned|recommended|verified|unverified|seed|keyword|answer|antwoord|source|bron|result|validation)/i.test(p))return false;
+  if(/^(?:content|scale|contentscale)\s+(?:content|scale|contentscale)$/.test(p)&&p!=='content scale')return false;
+  return true;
 }
 function _trackerIntelFactCovered(fact,html){
   const stop=new Set(['the','and','for','with','from','that','this','are','has','have','provides','services','service','perfect','roofing','team']);
@@ -3720,7 +3728,7 @@ async function _trackerBuildDerivedIntelligence(clientId,pageId){
   const knownNorm=known.map(k=>({id:k.id,status:k.status,text:k.claim_text,key:_trackerIntelKey(k.claim_text)}));
   const claims=Array.from(claimMap.values()).map(o=>{const k=_trackerIntelKey(o.claim);const hit=knownNorm.find(x=>x.key===k||(x.key.length>18&&(k.includes(x.key)||x.key.includes(k))));return {claim:o.claim,engines:Array.from(o.engines),engine_count:o.engines.size,existing_fact:hit||null,safe_to_use:!!(hit&&hit.status==='VERIFIED')};}).sort((a,b)=>b.engine_count-a.engine_count||a.claim.localeCompare(b.claim)).slice(0,40);
   const pageHay=String(page.html_content||'').toLowerCase().replace(/<[^>]+>/g,' ');
-  const opportunities=Array.from(phraseMap.values()).filter(o=>o.engines.size>=2).map(o=>({topic:o.phrase,engines:Array.from(o.engines),engine_count:o.engines.size,covered:pageHay.includes(o.phrase)})).sort((a,b)=>b.engine_count-a.engine_count||a.topic.localeCompare(b.topic)).slice(0,30);
+  const opportunities=Array.from(phraseMap.values()).filter(o=>o.engines.size>=2&&_trackerIntelPhraseUseful(o.phrase)).map(o=>({topic:o.phrase,engines:Array.from(o.engines),engine_count:o.engines.size,covered:pageHay.includes(o.phrase)})).sort((a,b)=>b.engine_count-a.engine_count||a.topic.localeCompare(b.topic)).slice(0,30);
   const ownCompact=String(ownStem||'').toLowerCase().replace(/[^a-z0-9]+/g,'');
   const competitors=Array.from(compMap.values()).filter(o=>{const n=String(o.name||'').toLowerCase().replace(/[^a-z0-9]+/g,'');return !(ownCompact.length>5&&(n.includes(ownCompact)||ownCompact.includes(n)));}).map(o=>({name:o.name,engines:Array.from(o.engines),engine_count:o.engines.size,recommended_by:Array.from(o.recommended),local_by:Array.from(o.local),direct_by:Array.from(o.direct),mentioned_by:Array.from(o.mentioned)})).sort((a,b)=>b.engine_count-a.engine_count||a.name.localeCompare(b.name)).slice(0,60);
   const sources=Array.from(srcMap.values()).map(o=>({host:o.host,urls:Array.from(o.urls),engines:Array.from(o.engines),engine_count:o.engines.size,own_domain:o.own_domain})).sort((a,b)=>b.engine_count-a.engine_count||a.host.localeCompare(b.host)).slice(0,80);
@@ -46072,6 +46080,9 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
         craftLink: /href=["'][^"']*\/craft-framework\/?["']/i.test(rawHtml),
         scoreLink: /href=["'][^"']*\/(?:seo-)?contentscore\/?["']/i.test(rawHtml),
         checkerLink: /href=["'][^"']*\/best-ai-content-quality-checkers\/?["']/i.test(rawHtml)
+        ,scalingWorkflow: /how to implement content scaling[\s\S]{0,5000}(?:standardized editorial checklist|reusable template|human editorial|quality scoring)[\s\S]{0,5000}(?:audit|monitor|tracker)/i.test(rawHtml)
+        ,repurposing: /repurpos(?:e|ed|es|ing)/i.test(rawHtml)
+        ,templating: /(?:reusable|repeatable|standardized|standardised)\s+(?:content\s+)?(?:template|workflow|checklist)|templating\s+workflow/i.test(rawHtml)
       };
       let _alreadyOnPage = '';
       if (_onPage.def) _alreadyOnPage += '\n- A quotable definition / direct-answer block is ALREADY on the page -> do NOT add another definition; MODIFY the existing one only if it is weak.';
@@ -46089,6 +46100,9 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
       if (_onPage.craftLink) _alreadyOnPage += '\n- The Craft Framework page is ALREADY internally linked -> do NOT recommend adding that link again.';
       if (_onPage.scoreLink) _alreadyOnPage += '\n- The ContentScore page is ALREADY internally linked -> do NOT recommend adding that link again.';
       if (_onPage.checkerLink) _alreadyOnPage += '\n- The AI content quality checkers page is ALREADY internally linked -> do NOT recommend adding that link again.';
+      if (_onPage.scalingWorkflow) _alreadyOnPage += '\n- A detailed content-scaling workflow is ALREADY present -> do NOT add another workflow section. MODIFY the existing workflow only for a concrete missing step.';
+      if (_onPage.repurposing) _alreadyOnPage += '\n- Content repurposing is ALREADY covered -> do NOT recommend adding it again.';
+      if (_onPage.templating) _alreadyOnPage += '\n- Reusable templates / standardized workflows are ALREADY covered -> do NOT recommend adding them again.';
 
       // ── Extract the ACTUAL current text of key blocks so the brief rewrites them IN PLACE (merge/change), never duplicates ──
       const _stripTags = function(s){ return (s||'').replace(/<[^>]+>/g,' ').replace(/&[a-z#0-9]+;/gi,' ').replace(/\s+/g,' ').trim(); };
@@ -47471,8 +47485,38 @@ If no unanchored claims found, return empty array: []`;
       }
       return item;
     };
-    if(Array.isArray(snapshot.recommendations)) snapshot.recommendations=snapshot.recommendations.map(_ecEnforceItem);
-    if(Array.isArray(snapshot.gsc_brief)) snapshot.gsc_brief=snapshot.gsc_brief.map(_ecEnforceItem);
+    if(Array.isArray(snapshot.recommendations)) {
+      snapshot.recommendations=snapshot.recommendations.map(_ecEnforceItem);
+      // Deterministic duplicate guard. The model cannot overrule elements found in the
+      // freshly fetched full HTML. Keep only modifications that address a real missing part.
+      if(typeof _onPage!=='undefined') {
+        snapshot.recommendations=snapshot.recommendations.filter(function(it){
+          var t=String((it&&it.title)||'')+' '+String((it&&it.action)||'');
+          if(_onPage.author && /add\s+(?:an?\s+)?(?:verified\s+)?author|add author credentials|about the (?:author|creator)/i.test(t)) return false;
+          if(_onPage.comparison && /add\s+(?:a\s+)?comparison|comparison table comparing contentscale|how contentscale compares/i.test(t)) return false;
+          if(_onPage.scalingWorkflow && /add\s+(?:a\s+)?(?:content scaling\s+)?workflow section|lacks a detailed, step-by-step workflow/i.test(t)) return false;
+          if(_onPage.craftLink && _onPage.scoreLink && /resolve homepage keyword cannibali[sz]ation|add internal links?.*(?:craft|contentscore)/is.test(t)) return false;
+          return true;
+        });
+        snapshot.recommendations.forEach(function(it){
+          if(!it||!_onPage.scalingWorkflow||!/intent snapshot/i.test(String(it.system||'')))return;
+          it.resolves_now='Yes. The first screen defines content at scale, distinguishes ContentScale from bulk AI writers, and connects the definition to a measurable quality-and-citation workflow.';
+          it.content_mismatch='The page already matches the WANT-TO-KNOW moment. Extend the lead only by integrating any genuinely missing operational step into the existing workflow rather than adding another definition or section.';
+          it.what_wins='Preserve the existing definition, workflow, internal links and verified citations; improve only evidence-backed gaps revealed by fresh engine and GSC data.';
+        });
+      }
+    }
+    if(Array.isArray(snapshot.gsc_brief)) {
+      snapshot.gsc_brief=snapshot.gsc_brief.map(_ecEnforceItem);
+      if(typeof _onPage!=='undefined') snapshot.gsc_brief=snapshot.gsc_brief.filter(function(it){
+        var t=String((it&&it.title)||'')+' '+String((it&&it.action)||'');
+        if(_onPage.scalingWorkflow && /add\s+(?:a\s+)?(?:content scaling\s+)?workflow section|lacks a detailed, step-by-step workflow/i.test(t)) return false;
+        if(_onPage.whatIsH2 && /add verbatim question h2|add\s+(?:a\s+)?(?:question|definition).{0,30}h2/i.test(t)) return false;
+        if(_onPage.craftLink && _onPage.scoreLink && /add internal links?/i.test(t)&&/(?:craft|contentscore)/i.test(t)) return false;
+        if(_onPage.comparison && /add\s+(?:a\s+)?comparison|comparison table comparing contentscale/i.test(t)) return false;
+        return true;
+      });
+    }
 
     // CONTENTSCALE-VERIFY-FIRST-OPPORTUNITY-SIGNALING-20260909=true
     // Do not merely block unverified business claims: surface them as explicit verification
