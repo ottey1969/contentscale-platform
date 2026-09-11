@@ -1,4 +1,4 @@
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-11-CANONICAL-v29';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-11-CANONICAL-v30';
 const CONTENTSCALE_BUILD_CHANGES = [
   'professional-guided-tour',
   'prewrite-create-expand-publish-tracker-baseline',
@@ -4908,6 +4908,20 @@ app.post('/api/tracker-client/:token/check/:pageId', async (req, res) => {
     console.error('[client-check]', e.message);
     res.status(500).json({ success: false, error: e.message });
   }
+});
+
+// Exact client-side scan status. The overlay must follow backend completion,
+// not a fixed animation duration or the early last_checked_at checkpoint.
+app.get('/api/tracker-client/:token/check-status/:pageId', async (req, res) => {
+  try {
+    const cr = await pool.query('SELECT id FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status != $2)', [req.params.token, 'deleted']);
+    if (!cr.rows.length) return res.status(404).json({ success:false, error:'Not found' });
+    const own = await pool.query('SELECT id FROM tracker_pages WHERE id=$1 AND tracker_client_id=$2', [req.params.pageId, cr.rows[0].id]);
+    if (!own.rows.length) return res.status(403).json({ success:false, error:'Not your page' });
+    const state = _trackerCheckStatus.get(parseInt(req.params.pageId,10));
+    if (!state) return res.json({ success:true, running:false, steps:[], startedAt:null, finishedAt:null });
+    return res.json({ success:true, running:!!state.running, steps:state.steps||[], startedAt:state.startedAt||null, finishedAt:state.finishedAt||null });
+  } catch(e) { return res.status(500).json({ success:false, error:e.message }); }
 });
 
 
@@ -36484,6 +36498,10 @@ async function savePrePublicationCheckpoint(pageId) {
   var _checkAnimations = {};
 
   async function checkPage(pageId, _skipGapWarning, _fast, _waitForFull) {
+    if (_checkAnimations[pageId]) {
+      toast('This page is already being scanned. Please wait for the current brief.', '#f59e0b');
+      return;
+    }
     if (_briefIsOpen) {
       toast('Finish the current brief first \\u2014 then scan this page', '#f59e0b');
       return;
@@ -36516,21 +36534,28 @@ async function savePrePublicationCheckpoint(pageId) {
     // next page's scan while the previous page's animation+poll was still running in the background,
     // all fighting over the same shared overlay \u2014 which is exactly what caused the "stuck on last
     // page" symptom: several overlapping polls all trying to control one DOM element at once.
-    var _fullDonePromise = _waitForFull ? new Promise(function(resolve){
-      runScanAnimation(p ? p.url : '', function() {
-        pollAndShowBrief(pageId, 15, 4000, resolve);
-      }, _fast);
-    }) : null;
-    if (!_waitForFull) {
-      runScanAnimation(p ? p.url : '', function() {
-        pollAndShowBrief(pageId, 15, 4000);
-      }, _fast);
-    }
+    var _scanStartedAt = Date.now();
+    var _fullResolve = null;
+    var _fullDonePromise = _waitForFull ? new Promise(function(resolve){ _fullResolve = resolve; }) : null;
+    _checkAnimations[pageId] = true;
+    // Animation is presentation only. Do not wait for its fixed timeline before polling
+    // the real backend result; the brief may already be finished much earlier.
+    runScanAnimation(p ? p.url : '', function(){}, _fast);
     try {
       var data = await api('/check/' + pageId, 'POST');
-      if (!data.success) toast(data.error || 'Check failed', '#f87171');
+      if (!data.success) {
+        delete _checkAnimations[pageId];
+        hideScanOverlay();
+        toast(data.error || 'Check failed', '#f87171');
+        if (_fullResolve) _fullResolve();
+      } else {
+        pollAndShowBrief(pageId, 30, 2000, function(){ delete _checkAnimations[pageId]; if (_fullResolve) _fullResolve(); }, _scanStartedAt);
+      }
     } catch(e) {
+      delete _checkAnimations[pageId];
+      hideScanOverlay();
       toast('Error: ' + e.message, '#f87171');
+      if (_fullResolve) _fullResolve();
     } finally {
       if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-sync-alt"></i>'; }
     }
@@ -38325,7 +38350,7 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
   (function(){ var _soc = document.getElementById('soClose'); if (_soc) _soc.addEventListener('click', function(){ hideScanOverlay(); if (typeof loadPages === 'function') loadPages(); }); })();
 
   // Poll for server results \\u2014 brief opens as soon as data is ready
-  function pollAndShowBrief(pageId, maxPolls, intervalMs, onDone) {
+  function pollAndShowBrief(pageId, maxPolls, intervalMs, onDone, scanStartedAt) {
     var pollCount = 0;
     var timer = setInterval(function() {
       pollCount++;
@@ -38339,15 +38364,16 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
         }).catch(function() { hideScanOverlay(); toast('Connection issue', '#f87171'); if (onDone) onDone(); });
         return;
       }
-      api('/pages/' + pageId).then(function(d2) {
-        if (d2.success && d2.page && d2.page.last_checked_at) {
-          var t = new Date(d2.page.last_checked_at).getTime();
-          if (Date.now() - t < 300000) {
-            clearInterval(timer);
-            openBriefFromPoll(d2.page);
-            if (onDone) onDone();
-          }
-        }
+      api('/check-status/' + pageId).then(function(st) {
+        var finished = st && !st.running && st.finishedAt;
+        var finishedMs = finished ? new Date(st.finishedAt).getTime() : 0;
+        if (!finished || (scanStartedAt && finishedMs < scanStartedAt - 2000)) return;
+        clearInterval(timer);
+        api('/pages/' + pageId).then(function(d2) {
+          if (d2.success && d2.page) openBriefFromPoll(d2.page);
+          else { hideScanOverlay(); loadPages(); }
+          if (onDone) onDone();
+        }).catch(function(){ hideScanOverlay(); loadPages(); if(onDone)onDone(); });
       }).catch(function(){});
     }, intervalMs);
   }
@@ -47373,6 +47399,7 @@ If no unanchored claims found, return empty array: []`;
     const _ecLiveHtml = String(effectiveHtml || page.html_content || '');
     let _ecBrandContext = '';
     let _ecClaimsRows = [];
+    let _ecCopilotCheckedNoExact = false;
     try {
       const _ecClient = await pool.query('SELECT brand_context FROM tracker_clients WHERE id=$1', [page.tracker_client_id]);
       _ecBrandContext = String((_ecClient.rows[0] && _ecClient.rows[0].brand_context) || '');
@@ -47380,6 +47407,10 @@ If no unanchored claims found, return empty array: []`;
     try {
       const _ecCf = await pool.query(`SELECT claim_text,status FROM tracker_claims_facts WHERE tracker_client_id=$1 AND page_id IS NULL ORDER BY updated_at DESC,id DESC LIMIT 300`, [page.tracker_client_id]);
       _ecClaimsRows = _ecCf.rows || [];
+    } catch(_e) {}
+    try {
+      const _ecEv = await pool.query(`SELECT exact_page_cited,is_cleared FROM tracker_ai_evidence WHERE page_id=$1 AND evidence_method='manual' AND engine='copilot' ORDER BY id DESC LIMIT 1`, [page.id]);
+      if (_ecEv.rows.length && !_ecEv.rows[0].is_cleared) _ecCopilotCheckedNoExact = !_briefBool(_ecEv.rows[0].exact_page_cited);
     } catch(_e) {}
     const _ecVerified = _ecClaimsRows.filter(function(r){return String(r.status||'').toUpperCase()==='VERIFIED';}).map(function(r){return _ecNorm(r.claim_text);}).filter(Boolean);
     const _ecBlocked = _ecClaimsRows.filter(function(r){return ['UNVERIFIED','FALSE','NOT_APPLICABLE'].includes(String(r.status||'').toUpperCase());}).map(function(r){return {claim:_ecNorm(r.claim_text),status:String(r.status||'').toUpperCase()};}).filter(function(r){return r.claim;});
@@ -47455,14 +47486,14 @@ If no unanchored claims found, return empty array: []`;
         'This page already has verified AI visibility; use the five-engine evidence state to protect existing wins and target the engines or exact-page gaps that remain.');
       t=t.replace(/this page currently has no visibility in ai overviews or perplexity[^.]*\.?/gi,
         'Google AIO is manually VERIFIED for the exact page, while Perplexity was manually checked and did not cite the target page in the checked answer.');
-      if(_manualEngineExact && _manualEngineExact.perplexity){
+      if(snapshot.ai_perplexity_cited){
         t=t.replace(/(?:this|the|our|target) page (?:is )?not among (?:the|them|those|perplexity)[^.]*\.?/gi,
           'Perplexity is manually VERIFIED as citing the exact target page.');
         t=t.replace(/(?:this|the|our|target) page[^.]{0,120}(?:lacks|has no|without)[^.]{0,100}(?:perplexity|citation coverage)[^.]*\.?/gi,
           'Perplexity is manually VERIFIED as citing the exact target page; preserve that evidence while improving only genuine content gaps.');
         t=t.replace(/lacks citation coverage in perplexity/gi,'already has a manually verified exact-page citation in Perplexity');
       }
-      if(_manualCopilot && !_manualCopilot.is_cleared && !_manualEngineExact.copilot){
+      if(_ecCopilotCheckedNoExact){
         t=t.replace(/(?:existing|current|verified) citations? in perplexity and copilot/gi,
           'the existing verified Perplexity citation while working toward a first verified Copilot citation');
         t=t.replace(/(?:copilot|microsoft copilot) (?:already |currently )?(?:cites|cited|is citing) (?:this|the|our|target) page/gi,
