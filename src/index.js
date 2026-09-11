@@ -1,4 +1,4 @@
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-11-CANONICAL-v66';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-11-CANONICAL-v68';
 const CONTENTSCALE_BUILD_CHANGES = [
   'professional-guided-tour',
   'prewrite-create-expand-publish-tracker-baseline',
@@ -111,6 +111,10 @@ const CONTENTSCALE_BUILD_CHANGES = [
   ,'case-study-day-fourteen-five-engine-refresh-email'
   ,'case-study-day-thirty-protected-comparison-report'
   ,'case-study-day-thirty-print-pdf-and-share-link'
+  ,'case-study-milestones-manual-workflow-clarified'
+  ,'case-study-day-thirty-report-only-no-follow-up-action'
+  ,'case-study-start-keeps-automatic-monitoring-off'
+  ,'case-study-email-cycle-separated-from-page-monitoring'
 ];
 console.log('[ContentScale] BUILD=' + CONTENTSCALE_BUILD_ID + ' BOOT=' + new Date().toISOString());
 console.log('[ContentScale] CHANGES=' + CONTENTSCALE_BUILD_CHANGES.join(','));
@@ -33657,11 +33661,8 @@ function startCaseStudy(pageId){
   var pg=(_pages||[]).find(function(x){return Number(x.id)===Number(pageId);})||{};
   var q=prompt('Primary query for this case study:',pg.keyword||pg.gsc_keyword||'');if(q===null)return;q=String(q||'').trim();
   if(!q){alert('Add the primary query first.');return;}
-  var monitoring=confirm('Turn automatic monitoring ON for this case-study page?\\n\\nOK = weekly monitoring\\nCancel = monitoring stays Off; manual scans still email their result.');
-  var frequency='7days',aiDays=14;
-  if(monitoring){var f=prompt('Scan every how many days? Choose 1, 3, 7, 14, 21 or 30.','7');if(f===null)return;var fm={'1':'1day','3':'3days','7':'7days','14':'2weeks','21':'21days','30':'30days'};frequency=fm[String(f).trim()];if(!frequency){alert('Choose 1, 3, 7, 14, 21 or 30.');return;}var a=prompt('Remind you by email to manually recheck the five AI engines after 7, 14 or 28 days.','14');if(a===null)return;aiDays=parseInt(a,10);if([7,14,28].indexOf(aiDays)<0){alert('Choose 7, 14 or 28.');return;}}
-  if(!confirm('Start the protected case study now?\\n\\nThe current HTML, GRAAF result, GSC values and available five-engine evidence become the locked baseline.\\nAutomatic monitoring: '+(monitoring?'ON':'OFF')+'\\nEmail destination: the existing Tracker client email.'))return;
-  api('/pages/'+pageId+'/case-study/start','POST',{primary_query:q,monitoring_enabled:monitoring,check_frequency:frequency,email_reminders:monitoring,ai_reminder_days:aiDays}).then(function(d){
+  if(!confirm('Start the protected case study now?\\n\\nThe current HTML, GRAAF result, GSC values and available five-engine evidence become the locked baseline.\\n\\nDay 7 and Day 14: email instructions for a MANUAL GSC, page and evidence review.\\nDay 30: report only — open, print or share.\\n\\nAutomatic page monitoring remains OFF and is a separate optional setting.\\nEmails go to the existing Tracker client email.'))return;
+  api('/pages/'+pageId+'/case-study/start','POST',{primary_query:q,monitoring_enabled:false,check_frequency:'0',email_reminders:false,ai_reminder_days:14}).then(function(d){
     alert((d&&d.message)||'Case study started.');load();
   }).catch(function(e){alert(e.message||'Could not start case study');});
 }
@@ -33976,7 +33977,7 @@ function configureSelectedMonitoring(enabled){
   if(f===null)return;if(String(f).trim()==='0')return configureSelectedMonitoring(false);var fm={'1':'1day','3':'3days','7':'7days','14':'2weeks','21':'21days','30':'30days'},frequency=fm[String(f).trim()];
   if(!frequency){alert('Choose 0, 1, 3, 7, 14, 21 or 30 days.');return;}
   var a=prompt('Email reminder to manually recheck all five AI engines after how many days?\\nChoose 7, 14 or 28.','14');if(a===null)return;a=parseInt(a,10);if([7,14,28].indexOf(a)<0){alert('Choose 7, 14 or 28 days.');return;}
-  if(!confirm('Enable monitoring for '+ids.length+' selected page(s)?\\n\\nScan interval: '+f+' day(s)\\nFive-engine email reminder: '+a+' day(s)\\nEmails go to the Tracker client email already on file.'))return;
+  if(!confirm('Enable OPTIONAL automatic page monitoring for '+ids.length+' selected page(s)?\\n\\nAutomatic page scan interval: '+f+' day(s)\\nSeparate five-engine reminder: '+a+' day(s)\\n\\nThis is not the manual Day 7 / Day 14 case-study workflow.\\nEmails go to the Tracker client email already on file.'))return;
   api('/pages/monitoring-selected','PATCH',{page_ids:ids,enabled:true,frequency:frequency,email_reminders:true,ai_reminder_days:a}).then(function(d){toast((d.updated||0)+' selected page(s) are now monitored','#4ade80');loadPages();}).catch(function(e){toast(e.message,'#f87171');});
 }
 function configurePageMonitoring(pageId){
@@ -49628,7 +49629,7 @@ function startCaseStudyMilestoneScheduler(){
         for(const row of rr.rows){
           const age=Math.floor((Date.now()-new Date(row.baseline_at).getTime())/86400000),trackerUrl=(process.env.APP_URL||'https://app.contentscale.site')+'/track/'+row.token;
           const seen=await pool.query(`SELECT event_type FROM tracker_case_study_events WHERE case_study_id=$1 AND event_type=ANY($2::text[])`,[row.id,['cycle_day_7','cycle_day_14','cycle_day_30_report']]);
-          const have=new Set(seen.rows.map(x=>x.event_type));let type='',subject='',body='',eventData={age_days:age,url:row.url,primary_query:row.primary_query};
+          const have=new Set(seen.rows.map(x=>x.event_type));let type='',subject='',body='',actionUrl=trackerUrl,eventData={age_days:age,url:row.url,primary_query:row.primary_query};
           if(age>=30&&!have.has('cycle_day_30_report')){
             type='cycle_day_30_report';const b=typeof row.baseline_data==='string'?JSON.parse(row.baseline_data):row.baseline_data||{};
             const snap=(await pool.query(`SELECT checked_at,google_position,score FROM tracker_snapshots WHERE page_id=$1 ORDER BY checked_at DESC,id DESC LIMIT 1`,[row.tracker_page_id])).rows[0]||{};
@@ -49636,13 +49637,13 @@ function startCaseStudyMilestoneScheduler(){
             let reportToken=row.report_token;if(!reportToken){reportToken=crypto.randomBytes(24).toString('hex');await pool.query(`UPDATE tracker_case_studies SET report_token=$1 WHERE id=$2`,[reportToken,row.id]);}
             eventData={milestone_day:30,generated_at:new Date().toISOString(),baseline:{at:row.baseline_at,gsc_clicks:b.gsc_clicks??null,gsc_impressions:b.gsc_impressions??null,gsc_position:b.gsc_position??null,google_position:b.google_position??null,graaf_score:b.graaf_score??null,ai_evidence:b.ai_evidence||{}},current:{at:snap.checked_at||new Date().toISOString(),gsc_clicks:row.gsc_clicks??null,gsc_impressions:row.gsc_impressions??null,gsc_position:row.gsc_position??null,google_position:snap.google_position??null,graaf_score:snap.score??row.last_graaf_score??null,ai_evidence:ev},report_token:reportToken};
             const reportUrl=(process.env.APP_URL||'https://app.contentscale.site')+'/case-study-report/'+reportToken;
-            subject='Your 30-day case-study report is ready — '+(row.tracker_domain||row.domain);body='<h2>30-day proof checkpoint</h2><p>The protected baseline has been compared with the latest saved GSC, ranking, GRAAF and five-engine evidence.</p><p><a href="'+reportUrl+'" style="display:inline-block;background:#2563eb;color:#fff;text-decoration:none;padding:11px 18px;border-radius:8px;font-weight:800">Open, print or save the 30-day report</a></p><p><a href="'+trackerUrl+'">Continue in Tracker</a></p>';
+            actionUrl=reportUrl;subject='Your 30-day case-study report is ready — '+(row.tracker_domain||row.domain);body='<h2>Day 30: report only</h2><p>The protected baseline has been compared with the latest evidence already saved in ContentScale.</p><p>No new GSC import, page scan, AI-engine check, HTML change or live verification is requested at this milestone.</p><p><a href="'+reportUrl+'" style="display:inline-block;background:#2563eb;color:#fff;text-decoration:none;padding:11px 18px;border-radius:8px;font-weight:800">Open report to print, save as PDF or share</a></p>';
           }else if(age>=14&&age<30&&!have.has('cycle_day_14')){
-            type='cycle_day_14';subject='Day 14 — refresh GSC and all five AI engines';body='<h2>Day 14: create a new evidence snapshot</h2><ol><li>Export and import fresh GSC Pages and Queries.</li><li>Run the same saved query again in Google AIO/Gemini, ChatGPT Search, Perplexity, Claude and Microsoft Copilot.</li><li>Open AI Checked and save the new 5/5 results, including citation URLs.</li><li>Scan only this case-study page.</li><li>Change HTML only when the comparison reveals a supported gap. After publishing, click Verify published live.</li></ol><p>Old evidence remains protected in the case-study history.</p><p><a href="'+trackerUrl+'">Open Tracker</a></p>';
+            type='cycle_day_14';subject='Day 14 — manual GSC, five-engine and page review';body='<h2>Day 14: complete the workflow manually</h2><p>ContentScale does not perform these actions automatically.</p><ol><li>Manually export fresh GSC Pages and Queries and import both into ContentScale.</li><li>Manually rerun the saved query in Google AIO/Gemini, ChatGPT Search, Perplexity, Claude and Microsoft Copilot.</li><li>Open AI Checked and save the refreshed 5/5 evidence, including citation URLs.</li><li>Manually scan only this case-study page.</li><li>Review the new comparison and change the HTML only when necessary and evidence-backed.</li><li>Publish the change and then click Verify published live. If no HTML change is needed, do not republish.</li></ol><p>Old evidence remains protected in the case-study history.</p><p><a href="'+trackerUrl+'">Open Tracker and start the manual review</a></p>';
           }else if(age>=7&&age<14&&!have.has('cycle_day_7')){
-            type='cycle_day_7';subject='Day 7 — refresh GSC Pages and Queries';body='<h2>Day 7: refresh search evidence first</h2><ol><li>Export fresh Pages and Queries from Google Search Console.</li><li>Import both into ContentScale.</li><li>Scan only this case-study page.</li><li>Review new queries, lost queries, impressions, clicks, CTR and position.</li><li>Change the HTML only if the new data or Brief shows an evidence-backed need.</li><li>After publishing, click Verify published live so ContentScale captures and compares the new HTML.</li></ol><p><a href="'+trackerUrl+'">Open Tracker</a></p>';
+            type='cycle_day_7';subject='Day 7 — manual GSC and page review';body='<h2>Day 7: complete the workflow manually</h2><p>ContentScale does not perform these actions automatically.</p><ol><li>Manually export fresh GSC Pages and Queries and import both into ContentScale.</li><li>Manually scan only this case-study page.</li><li>Review new and lost queries, impressions, clicks, CTR, position and the updated Brief.</li><li>Change the HTML only when necessary and evidence-backed.</li><li>Publish the change and then click Verify published live so ContentScale captures and compares the new HTML. If no HTML change is needed, do not republish.</li></ol><p><a href="'+trackerUrl+'">Open Tracker and start the manual review</a></p>';
           }
-          if(type){await pool.query(`INSERT INTO tracker_case_study_events(case_study_id,tracker_page_id,event_type,source,event_data) VALUES($1,$2,$3,'case_study_cycle',$4::jsonb)`,[row.id,row.tracker_page_id,type,JSON.stringify(eventData)]);await notifyClient(row.tracker_client_id,subject,body,subject+'\n'+trackerUrl,true).catch(e=>console.warn('[case-cycle-email]',e.message));}
+          if(type){await pool.query(`INSERT INTO tracker_case_study_events(case_study_id,tracker_page_id,event_type,source,event_data) VALUES($1,$2,$3,'case_study_cycle',$4::jsonb)`,[row.id,row.tracker_page_id,type,JSON.stringify(eventData)]);await notifyClient(row.tracker_client_id,subject,body,subject+'\n'+actionUrl,true).catch(e=>console.warn('[case-cycle-email]',e.message));}
         }
       }
     }catch(e){console.warn('[case-cycle]',e.message);}
