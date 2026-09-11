@@ -1,4 +1,4 @@
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-11-CANONICAL-v59';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-11-CANONICAL-v60';
 const CONTENTSCALE_BUILD_CHANGES = [
   'professional-guided-tour',
   'prewrite-create-expand-publish-tracker-baseline',
@@ -89,6 +89,8 @@ const CONTENTSCALE_BUILD_CHANGES = [
   ,'audit-process-tawk-chat-founder-headshot-and-consent'
   ,'audit-tool-professional-dark-evidence-interface'
   ,'audit-results-and-sharing-panels-dark-visual-system'
+  ,'light-document-surfaces-for-urls-sources-and-long-text'
+  ,'saved-audit-links-and-citation-columns-high-contrast'
 ];
 console.log('[ContentScale] BUILD=' + CONTENTSCALE_BUILD_ID + ' BOOT=' + new Date().toISOString());
 console.log('[ContentScale] CHANGES=' + CONTENTSCALE_BUILD_CHANGES.join(','));
@@ -12465,6 +12467,20 @@ return result;
   #sharePanel [style*="color:#666"],#toolSharePanel [style*="color:#666"]{color:#9fb0c4!important;}
   #currentShare,#toolShareCurrent{background:#081b2b!important;border-color:#27506f!important;color:#dbeafe!important;}
   #shareList,#toolShareList{color:#9fb0c4!important;}
+  /* Long-form data stays on a light document surface for reliable contrast. */
+  .form input,#auditEvidenceInputs input,#auditEvidenceInputs textarea{background:#f8fafc!important;color:#0f172a!important;border-color:#cbd5e1!important;}
+  .form input::placeholder,#auditEvidenceInputs input::placeholder,#auditEvidenceInputs textarea::placeholder{color:#64748b!important;}
+  #citetbl tbody td:nth-child(6){background:#dcfce7!important;color:#064e3b!important;vertical-align:top;}
+  #citetbl tbody td:nth-child(7){background:#f8fafc!important;color:#0f172a!important;vertical-align:top;overflow-wrap:anywhere;word-break:break-word;line-height:1.55;}
+  #citetbl tbody td:nth-child(6) *,#citetbl tbody td:nth-child(7) *{color:inherit!important;}
+  #prioritypages>section>div:first-child{background:#f8fafc!important;color:#0f172a!important;padding:10px 12px;border-radius:9px;border:1px solid #dbe3ed;}
+  #prioritypages>section>div:first-child a{color:#1d4ed8!important;text-decoration:underline!important;text-underline-offset:2px;}
+  #prioritypages [style*="background:#f5f3ff"]{background:#f5f3ff!important;color:#4c1d95!important;border-color:#ddd6fe!important;}
+  #prioritypages [style*="background:#f5f3ff"] *{color:inherit!important;}
+  #shareList>div,#toolShareList>div{background:#f8fafc!important;color:#243247!important;border:1px solid #dbe3ed!important;border-radius:11px;padding:13px!important;margin:9px 0!important;}
+  #shareList>div strong,#toolShareList>div strong{color:#0f172a!important;}
+  #shareList>div a,#toolShareList>div a{color:#1d4ed8!important;text-decoration:underline;}
+  #shareList>div [style*="color:#475569"],#shareList>div [style*="color:#374151"],#shareList>div [style*="color:#6b7280"],#shareList>div [style*="color:#888"],#toolShareList>div [style*="color:#64748b"]{color:#475569!important;}
   @media print{.box,.sc,#results section{background:#fff!important;color:#111827!important;box-shadow:none!important}.box h2{color:#4c1d95!important}td{color:#111827!important}}
 </style></head><body><div class="wrap">
 <header>
@@ -12725,7 +12741,7 @@ window.csAuditClientLoaded=function(){
   ['run','reportLang','saveAuditBtn','resetBtn'].forEach(function(id){var el=document.getElementById(id);if(el)el.disabled=false;});
 };
 </script>
-<script src="/audit-client.js?v=20260911-canonical-v59" onload="window.csAuditClientLoaded()" onerror="window.csAuditStatus('Audit engine could not load. Refresh the page to retry.')"></script>
+<script src="/audit-client.js?v=20260911-canonical-v60" onload="window.csAuditClientLoaded()" onerror="window.csAuditStatus('Audit engine could not load. Refresh the page to retry.')"></script>
 </div></body></html>`;
                  if (_isSharedToolAccess) _auditHtml = _stripWhiteLabelPersonalBlocks(_auditHtml);
                  res.type('html').send(_auditHtml);
