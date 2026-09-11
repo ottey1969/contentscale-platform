@@ -1,4 +1,4 @@
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-11-CANONICAL-v30';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-11-CANONICAL-v31';
 const CONTENTSCALE_BUILD_CHANGES = [
   'professional-guided-tour',
   'prewrite-create-expand-publish-tracker-baseline',
@@ -2236,7 +2236,20 @@ app.get('/api/tracker-client/:token/pages/:pageId', async (req, res) => {
       WHERE p.id=$1 AND p.tracker_client_id=$2`,
       [req.params.pageId, cr.rows[0].id]);
     if (!r.rows.length) return res.status(404).json({ success: false, error: 'Page not found' });
-    res.json({ success: true, page: r.rows[0] });
+    // The final saved brief is authoritative. A tracker snapshot can finish slightly before
+    // the final merge/HTML guard is persisted, so never make the browser reconstruct a brief
+    // from a newer snapshot plus an older cached brief.
+    const outPage = r.rows[0];
+    let finalBrief = null;
+    try { finalBrief = typeof outPage.brief_content === 'string' ? JSON.parse(outPage.brief_content) : outPage.brief_content; } catch(e) {}
+    if (finalBrief && typeof finalBrief === 'object') {
+      outPage.recommendations = Array.isArray(finalBrief.items) ? finalBrief.items : [];
+      outPage.gsc_brief = Array.isArray(finalBrief.gsc_brief) ? finalBrief.gsc_brief : [];
+      outPage.ai_manual_evidence = finalBrief.ai_manual_evidence || outPage.ai_manual_evidence || {};
+      outPage.brief_generated_at = finalBrief.generated_at || null;
+      outPage.brief_build_id = finalBrief.build_id || null;
+    }
+    res.json({ success: true, page: outPage });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
@@ -34487,6 +34500,8 @@ var _mdFilter = 'all'; // 'all' | 'todo' | 'done' — filter on the user's own p
         perp_excerpt: p.ai_perplexity_answer_excerpt || '',
         perp_text: p.ai_perplexity_text || '',
         last_checked: p.last_checked || null,
+        generated_at: brief.generated_at || p.last_checked || null,
+        build_id: brief.build_id || null,
         ai_manual_evidence: p.ai_manual_evidence || {},
         type: 'brief_ready'
       };
@@ -35410,6 +35425,10 @@ function clearAioManual(pageId) {
 }
 
 function copyBrief(pageId) {
+  if (_checkAnimations && _checkAnimations[pageId]) {
+    toast('Please wait for the newest brief to finish loading', '#f59e0b');
+    return;
+  }
   var p = (_pages||[]).find(function(x){ return x.id == pageId; });
   if (!p) return;
   var d = _lastBriefData[pageId] || {};
@@ -35422,7 +35441,8 @@ function copyBrief(pageId) {
   if (p.keyword || p.gsc_keyword) lines.push('Keyword: ' + (p.keyword||p.gsc_keyword));
   lines.push('', '\ud83d\udd0d What We Actually Checked (transparency):');
   lines.push('- Query tested: "' + (p.keyword||p.gsc_keyword||'') + '"');
-  if (p.last_checked) lines.push('- Checked: ' + new Date(p.last_checked).toLocaleString());
+  var _briefCheckedAt = d.generated_at || d.last_checked || p.brief_generated_at || p.last_checked || null;
+  if (_briefCheckedAt) lines.push('- Checked: ' + new Date(_briefCheckedAt).toLocaleString());
   var _transObj={ai_manual_evidence:p.ai_manual_evidence||{},aio_cited:!!p.ai_google_overview_cited,perp_cited:!!p.ai_perplexity_cited,ai_google_overview_text:p.ai_google_overview_text||'',ai_perplexity_answer_excerpt:p.ai_perplexity_answer_excerpt||''};
   _briefTransparencyLines(_transObj).forEach(function(x){ lines.push(x); });
   (function(){
@@ -38358,8 +38378,8 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
         clearInterval(timer);
         // Timeout \u2014 open brief with whatever data we have
         api('/pages/' + pageId).then(function(d2) {
-          if (d2.success && d2.page) { openBriefFromPoll(d2.page); }
-          else { hideScanOverlay(); loadPages(); toast('Scan complete \u2014 brief ready', '#4ade80'); }
+          if (d2.success && d2.page && _isFinalBriefForScan(d2.page, scanStartedAt)) { openBriefFromPoll(d2.page); }
+          else { hideScanOverlay(); loadPages(); toast('Scan finished, but the final brief is still saving \u2014 Copy remains locked', '#f59e0b'); }
           if (onDone) onDone();
         }).catch(function() { hideScanOverlay(); toast('Connection issue', '#f87171'); if (onDone) onDone(); });
         return;
@@ -38368,22 +38388,43 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
         var finished = st && !st.running && st.finishedAt;
         var finishedMs = finished ? new Date(st.finishedAt).getTime() : 0;
         if (!finished || (scanStartedAt && finishedMs < scanStartedAt - 2000)) return;
-        clearInterval(timer);
         api('/pages/' + pageId).then(function(d2) {
-          if (d2.success && d2.page) openBriefFromPoll(d2.page);
-          else { hideScanOverlay(); loadPages(); }
+          // A finished snapshot is not enough: wait until the final merged/guarded brief from
+          // this same scan has its own completion marker. This prevents stale Copy Brief exports.
+          if (!d2.success || !d2.page || !_isFinalBriefForScan(d2.page, scanStartedAt)) return;
+          clearInterval(timer);
+          openBriefFromPoll(d2.page);
           if (onDone) onDone();
-        }).catch(function(){ hideScanOverlay(); loadPages(); if(onDone)onDone(); });
+        }).catch(function(){});
       }).catch(function(){});
     }, intervalMs);
   }
 
+  function _isFinalBriefForScan(pageData, scanStartedAt) {
+    if (!pageData) return false;
+    var at = pageData.brief_generated_at;
+    if (!at && pageData.brief_content) {
+      try { var b = typeof pageData.brief_content === 'string' ? JSON.parse(pageData.brief_content) : pageData.brief_content; at = b && b.generated_at; } catch(e) {}
+    }
+    var ms = at ? new Date(at).getTime() : 0;
+    return !!ms && (!scanStartedAt || ms >= scanStartedAt - 2000);
+  }
+
   function openBriefFromPoll(pageData) {
     hideScanOverlay();
-    loadPages();
     // Don't open overlay \\u2014 inline brief already shows the data
     // User can click "\\ud83d\\udcc4 Brief" button to view overlay if needed
     var snap = pageData || {};
+    var finalBrief = {};
+    try { finalBrief = typeof snap.brief_content === 'string' ? JSON.parse(snap.brief_content) : (snap.brief_content || {}); } catch(e) { finalBrief = {}; }
+    var finalItems = Array.isArray(finalBrief.items) ? finalBrief.items : (Array.isArray(snap.recommendations) ? snap.recommendations : []);
+    var finalGsc = Array.isArray(finalBrief.gsc_brief) ? finalBrief.gsc_brief : (Array.isArray(snap.gsc_brief) ? snap.gsc_brief : []);
+    var finalEvidence = finalBrief.ai_manual_evidence || snap.ai_manual_evidence || {};
+    var _pageIndex = (_pages||[]).findIndex(function(x){ return x.id == (snap.id || pageData.page_id); });
+    if (_pageIndex >= 0) _pages[_pageIndex] = Object.assign({}, _pages[_pageIndex], snap, {
+      recommendations: finalItems, gsc_brief: finalGsc, ai_manual_evidence: finalEvidence,
+      brief_generated_at: finalBrief.generated_at || snap.brief_generated_at || null
+    });
     // Store data for button click
     _lastBriefData[snap.id || pageData.page_id] = {
       page_id: snap.id || pageData.page_id,
@@ -38396,8 +38437,8 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
       bing_cited: !!(snap.ai_bing_cited),
       brave_cited: !!(snap.ai_brave_cited),
       score: snap.score || snap.graaf_score || snap.last_graaf_score || null,
-      passages: Array.isArray(snap.recommendations) ? snap.recommendations : [],
-      gsc_brief: Array.isArray(snap.gsc_brief) ? snap.gsc_brief : [],
+      passages: finalItems,
+      gsc_brief: finalGsc,
       source_suggestions: Array.isArray(snap.source_suggestions) ? snap.source_suggestions : [],
       discovered_sources: Array.isArray(snap.discovered_sources) ? snap.discovered_sources : [],
       author_trust_score: snap.author_trust_score || 0,
@@ -38406,9 +38447,13 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
       gsc_impressions: snap.gsc_impressions != null ? snap.gsc_impressions : null,
       gsc_position: snap.gsc_position != null ? snap.gsc_position : null,
       gsc_keyword: snap.gsc_keyword || null,
+      generated_at: finalBrief.generated_at || snap.brief_generated_at || null,
+      build_id: finalBrief.build_id || snap.brief_build_id || null,
+      ai_manual_evidence: finalEvidence,
       _gsc_enabled: GSC_ENABLED || (snap.gsc_clicks != null) || (snap.gsc_impressions != null) || (snap.gsc_position != null),
       type: 'brief_ready'
     };
+    loadPages();
     return; // EXIT \\u2014 no overlay, inline brief shows data
   }
 
@@ -48064,6 +48109,10 @@ MERGE RULES:
       }
 
       if (brief2) {
+        // Completion marker for the FINAL merge/HTML-guard payload. The client only unlocks
+        // Copy Brief when this marker belongs to the scan it just started.
+        brief2.generated_at = new Date().toISOString();
+        brief2.build_id = CONTENTSCALE_BUILD_ID;
         await pool.query(
           'UPDATE tracker_pages SET brief_content=$1, brief_started_at=COALESCE(brief_started_at,NOW()) WHERE id=$2',
           [JSON.stringify(brief2), page.id]
