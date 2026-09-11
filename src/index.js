@@ -1,4 +1,4 @@
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-11-CANONICAL-v42';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-11-CANONICAL-v43';
 const CONTENTSCALE_BUILD_CHANGES = [
   'professional-guided-tour',
   'prewrite-create-expand-publish-tracker-baseline',
@@ -46,6 +46,8 @@ const CONTENTSCALE_BUILD_CHANGES = [
   ,'audit-all-controls-wait-for-validated-client'
   ,'audit-safe-dispatch-no-inline-reference-errors'
   ,'audit-controls-active-while-client-initializes'
+  ,'shared-audit-white-label-balanced-div-removal'
+  ,'shared-audit-client-scripts-no-longer-truncated'
 ];
 console.log('[ContentScale] BUILD=' + CONTENTSCALE_BUILD_ID + ' BOOT=' + new Date().toISOString());
 console.log('[ContentScale] CHANGES=' + CONTENTSCALE_BUILD_CHANGES.join(','));
@@ -11664,14 +11666,24 @@ return result;
                }
                function _stripWhiteLabelPersonalBlocks(html) {
                  let out=String(html||'');
-                 // The two report sections are sibling DIVs with no nested DIV in the contact box, while the proof box contains nested DIVs.
-                 // Parse by stable start ids and the next top-level report box marker rather than relying on client-side hiding.
+                 // CONTENTSCALE-AUDIT-HANDOFF-V43: remove exactly the matching DIV by nesting depth.
+                 // The old implementation searched for a following report box and, for the last box,
+                 // returned src.slice(0,start). That truncated the dispatcher and /audit-client.js from
+                 // every shared ?access= page, making all audit functions undefined.
                  function cutById(src,id){
                    const start=src.indexOf('<div class="box" id="'+id+'"');
                    if(start<0)return src;
-                   const next=src.indexOf('\n  <div class="box"',start+20);
-                   if(next>=0)return src.slice(0,start)+src.slice(next);
-                   return src.slice(0,start);
+                   const tag=/<\/?div\b[^>]*>/gi;
+                   tag.lastIndex=start;
+                   let depth=0, match=null;
+                   while((match=tag.exec(src))){
+                     if(/^<div\b/i.test(match[0])) depth++;
+                     else depth--;
+                     if(depth===0) return src.slice(0,start)+src.slice(tag.lastIndex);
+                   }
+                   // Fail closed for privacy but preserve document scripts whenever malformed markup
+                   // prevents a balanced match: hide the block client-side rather than truncate HTML.
+                   return src.replace('<div class="box" id="'+id+'"','<div class="box" id="'+id+'" style="display:none"');
                  }
                  out=cutById(out,'personalProofBox');
                  out=cutById(out,'contactBox');
