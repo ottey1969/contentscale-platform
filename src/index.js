@@ -1,4 +1,4 @@
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-11-CANONICAL-v58';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-11-CANONICAL-v59';
 const CONTENTSCALE_BUILD_CHANGES = [
   'professional-guided-tour',
   'prewrite-create-expand-publish-tracker-baseline',
@@ -87,6 +87,8 @@ const CONTENTSCALE_BUILD_CHANGES = [
   ,'gsc-evidence-layer-explained-in-all-process-languages'
   ,'audit-process-cta-explains-separate-personal-access-link'
   ,'audit-process-tawk-chat-founder-headshot-and-consent'
+  ,'audit-tool-professional-dark-evidence-interface'
+  ,'audit-results-and-sharing-panels-dark-visual-system'
 ];
 console.log('[ContentScale] BUILD=' + CONTENTSCALE_BUILD_ID + ' BOOT=' + new Date().toISOString());
 console.log('[ContentScale] CHANGES=' + CONTENTSCALE_BUILD_CHANGES.join(','));
@@ -12422,6 +12424,48 @@ return result;
   @media(max-width:640px){.wrap{padding:16px 12px 40px}header{padding:26px 22px;border-radius:16px}.form{grid-template-columns:1fr;padding:16px}.field{min-width:0!important}.audit-capabilities{gap:6px}}
   @media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
   @media print{.form,.actions,header .sub,.noprint{display:none!important;}body{background:#fff;}body:before,body:after{display:none!important;}}
+
+  /* CONTENTSCALE AUDIT DARK SYSTEM V59 — presentation only; audit logic is unchanged. */
+  :root{--p:#7dd3fc;--p2:#2563eb;--p3:#60a5fa;--ink:#f8fafc;--muted:#94a3b8;--bd:#23344a;--green:#34d399;--surface:#0b1623;--shadow:0 20px 55px rgba(0,0,0,.28);}
+  body{background:radial-gradient(circle at 92% 2%,rgba(37,99,235,.19),transparent 31%),radial-gradient(circle at 4% 86%,rgba(14,165,233,.10),transparent 29%),#05070d;color:var(--ink);}
+  body:before{background:radial-gradient(circle,rgba(59,130,246,.13),rgba(59,130,246,0) 70%);}
+  body:after{background:radial-gradient(circle,rgba(34,211,238,.08),rgba(34,211,238,0) 70%);}
+  .wrap{max-width:1180px;}
+  header{background:radial-gradient(circle at 94% 8%,rgba(59,130,246,.30),transparent 33%),linear-gradient(145deg,#0b1220,#101a2e);border:1px solid #263854;box-shadow:0 28px 70px rgba(0,0,0,.38);}
+  header:after{border-color:rgba(125,211,252,.16);box-shadow:0 0 0 34px rgba(96,165,250,.035),0 0 0 68px rgba(96,165,250,.025);}
+  .audit-kicker{border-color:#26466b;background:#0c2947;color:#7dd3fc;}
+  .audit-capabilities span{background:#0b1e33;border-color:#28405e;color:#dbeafe;}
+  .form,#auditEvidenceInputs,#sharePanel,#toolSharePanel{background:linear-gradient(145deg,#0c1725,#09111c)!important;border:1px solid #25364d!important;box-shadow:var(--shadow)!important;color:#e5edf8!important;}
+  .form{border-radius:20px;padding:24px;}
+  label{color:#b8c7da;}
+  input,select,textarea{background:#07111d!important;border-color:#2a3b52!important;color:#eef6ff!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.025);}
+  input::placeholder,textarea::placeholder{color:#64748b;}
+  input:focus,select:focus,textarea:focus{border-color:#60a5fa!important;box-shadow:0 0 0 4px rgba(59,130,246,.16)!important;}
+  select option{background:#08121f;color:#f8fafc;}
+  button{background:linear-gradient(135deg,#3b82f6,#1d4ed8);box-shadow:0 10px 24px rgba(37,99,235,.24);}
+  button:hover{box-shadow:0 14px 30px rgba(37,99,235,.34);}
+  #run{background:linear-gradient(135deg,#38bdf8,#2563eb);color:#03111f;}
+  #saveAuditBtn{background:#0b1c2e!important;color:#93c5fd!important;border-color:#3b82f6!important;}
+  #resetBtn{background:#1d1018!important;color:#fda4af!important;border-color:#be123c!important;}
+  #auditAccessScope{background:#071521!important;border-color:#24405a!important;color:#b8c7da!important;}
+  #clientAccessShortcut{background:#0b1e33!important;border-color:#29476b!important;}
+  #clientAccessShortcut span{color:#bae6fd!important;}
+  #forceFreshWrap{color:#94a3b8!important;}
+  .status{background:linear-gradient(100deg,#081a2c,#0b2440);border-color:#285783;color:#7dd3fc;box-shadow:0 12px 30px rgba(0,0,0,.24);}
+  .audit-progress{background:#17263a;}.audit-progress:after{background:linear-gradient(90deg,#38bdf8,#60a5fa);}
+  .box,.sc{background:linear-gradient(160deg,#0d1927,#09131f)!important;border-color:#25364b!important;box-shadow:0 14px 34px rgba(0,0,0,.23);}
+  .box h2{color:#7dd3fc;}.sc .l{color:#9fb0c4;}
+  #results{color:#e5edf8;}
+  #results section,#results details,#results [style*="background:#fff"],#results [style*="background: #fff"],#results [style*="background:#f8fafc"],#results [style*="background:#faf5ff"]{background:#0b1623!important;border-color:#263a52!important;box-shadow:none!important;}
+  #results [style*="color:#1f2937"],#results [style*="color:#333"],#results [style*="color:#555"],#results [style*="color:#666"],#results [style*="color:#4b5563"],#results [style*="color:#64748b"]{color:#c3d0df!important;}
+  #results [style*="color:#4c1d95"],#results [style*="color:#5b21b6"],#results [style*="color:#6d28d9"]{color:#7dd3fc!important;}
+  table{border-radius:11px;overflow:hidden;}th{background:linear-gradient(135deg,#12365d,#1d4ed8);}td{border-bottom-color:#23344a;color:#dce7f4;}
+  details{border-color:#26384f!important;color:#dce7f4;}summary{color:#93c5fd!important;}
+  #sharePanel>div:first-child>div>div:first-child,#toolSharePanel>div:first-child{color:#7dd3fc!important;}
+  #sharePanel [style*="color:#666"],#toolSharePanel [style*="color:#666"]{color:#9fb0c4!important;}
+  #currentShare,#toolShareCurrent{background:#081b2b!important;border-color:#27506f!important;color:#dbeafe!important;}
+  #shareList,#toolShareList{color:#9fb0c4!important;}
+  @media print{.box,.sc,#results section{background:#fff!important;color:#111827!important;box-shadow:none!important}.box h2{color:#4c1d95!important}td{color:#111827!important}}
 </style></head><body><div class="wrap">
 <header>
   <div class="audit-kicker"><span class="audit-kicker-dot"></span> Live website intelligence</div>
@@ -12445,7 +12489,7 @@ return result;
   <div id="clientAccessShortcut" style="flex-basis:100%;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;background:#f5f3ff;border:1px solid #ddd6fe;border-radius:9px;padding:9px 11px;"><span style="font-size:11px;color:#4c1d95"><strong>Need a link for a client without admin access?</strong> Create a separate passwordless 1-page, 20-page or All-Pages Audit-tool link.</span><button type="button" onclick="document.getElementById('toolSharePanel').scrollIntoView({behavior:'smooth',block:'start'})" style="padding:7px 10px">Create client access link</button></div>
 </div>
 
-<div class="noprint" style="background:#fff;border:1px solid var(--bd);border-radius:12px;padding:8px 20px;margin-bottom:20px;">
+<div id="auditEvidenceInputs" class="noprint" style="background:#fff;border:1px solid var(--bd);border-radius:12px;padding:8px 20px;margin-bottom:20px;">
   <details>
     <summary style="cursor:pointer;font-weight:600;color:var(--p);padding:8px 0;">⚙️ Meer gegevens (optioneel — maakt het rapport sterker)</summary>
     <div style="padding:12px 0;display:flex;flex-wrap:wrap;gap:16px;">
@@ -12681,7 +12725,7 @@ window.csAuditClientLoaded=function(){
   ['run','reportLang','saveAuditBtn','resetBtn'].forEach(function(id){var el=document.getElementById(id);if(el)el.disabled=false;});
 };
 </script>
-<script src="/audit-client.js?v=20260911-canonical-v58" onload="window.csAuditClientLoaded()" onerror="window.csAuditStatus('Audit engine could not load. Refresh the page to retry.')"></script>
+<script src="/audit-client.js?v=20260911-canonical-v59" onload="window.csAuditClientLoaded()" onerror="window.csAuditStatus('Audit engine could not load. Refresh the page to retry.')"></script>
 </div></body></html>`;
                  if (_isSharedToolAccess) _auditHtml = _stripWhiteLabelPersonalBlocks(_auditHtml);
                  res.type('html').send(_auditHtml);
