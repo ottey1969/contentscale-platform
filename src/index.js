@@ -1,4 +1,4 @@
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-11-CANONICAL-v35';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-11-CANONICAL-v38';
 const CONTENTSCALE_BUILD_CHANGES = [
   'professional-guided-tour',
   'prewrite-create-expand-publish-tracker-baseline',
@@ -29,10 +29,32 @@ const CONTENTSCALE_BUILD_CHANGES = [
   ,'compact-active-case-study-card-layout'
   ,'professional-baseline-versus-current-proof-view'
   ,'verified-case-study-remains-active-not-crossed-out'
+  ,'final-brief-generated-at-and-build-marker'
+  ,'copy-brief-blocked-until-current-scan-final'
+  ,'brief-session-cache-refresh-on-every-load'
+  ,'modal-and-inline-copy-use-one-authoritative-route'
+  ,'open-modal-replaced-by-final-marked-brief'
+  ,'contentscale-homepage-surgical-final-guard'
+  ,'intelligence-decision-layer-engine-gaps-and-trends'
+  ,'intelligence-clickable-citation-sources-and-evidence-excerpts'
+  ,'intelligence-evidence-backed-treatment-recommendation'
 ];
 console.log('[ContentScale] BUILD=' + CONTENTSCALE_BUILD_ID + ' BOOT=' + new Date().toISOString());
 console.log('[ContentScale] CHANGES=' + CONTENTSCALE_BUILD_CHANGES.join(','));
 console.log('[ContentScale] TIER_SOURCE=GSC position+impressions+clicks; no GSC evidence => UNCLASSIFIED');
+// CONTENTSCALE-AI-HANDOFF-V37 — DO NOT REMOVE OR BYPASS
+// Other AI/code maintainers: Tracker emits an early brief_ready while analysis is still running.
+// That early payload is UI progress only and MUST NOT be copied, exported, or treated as final.
+// The only authoritative brief is tracker_pages.brief_content with both generated_at and build_id.
+// Both inline Copy and modal Copy MUST go through copyBrief(), which fetches /pages/:pageId and
+// proves brief_generated_at >= the latest snapshot.checked_at. Never restore direct textarea copy.
+// loadPages() MUST refresh _lastBriefData on every call; brief_started_at is stable across rescans
+// and therefore MUST NOT be used as a cache freshness key. A final marked SSE payload MUST replace
+// an already-open modal. The ContentScale homepage final guard intentionally returns only genuine,
+// complete, surgical gaps and removes already-implemented or malformed generated recommendations.
+// CONTENTSCALE-INTELLIGENCE-HANDOFF-V38 — Intelligence is the diagnostic/decision layer.
+// It must explain cross-engine evidence, source URLs, changes and Treatment. It must not duplicate
+// paste-ready Citation Brief copy and must never promote competitor statements into client facts.
 // CONTENTSCALE-CITATION-BRIEF-EVIDENCE-OVERRIDE-20260909=true
 
 
@@ -3707,7 +3729,7 @@ function _trackerIntelFactCovered(fact,html){
   return hits>=Math.min(3,Math.max(1,Math.ceil(tokens.length*.65)));
 }
 async function _trackerBuildDerivedIntelligence(clientId,pageId){
-  const pr=await pool.query('SELECT id,url,keyword,gsc_keyword,html_content FROM tracker_pages WHERE id=$1 AND tracker_client_id=$2',[pageId,clientId]);
+  const pr=await pool.query('SELECT id,url,keyword,gsc_keyword,html_content,gsc_position,gsc_impressions,gsc_clicks FROM tracker_pages WHERE id=$1 AND tracker_client_id=$2',[pageId,clientId]);
   if(!pr.rows.length)return null;
   const page=pr.rows[0];
   const er=await pool.query("SELECT * FROM tracker_ai_evidence WHERE page_id=$1 AND tracker_client_id=$2 AND evidence_method='manual' ORDER BY engine",[pageId,clientId]);
@@ -3719,7 +3741,7 @@ async function _trackerBuildDerivedIntelligence(clientId,pageId){
   const compMap=new Map(), srcMap=new Map(), claimMap=new Map(), phraseMap=new Map();
   const engines=['google_aio','chatgpt','perplexity','claude','copilot'];
   const perEngine={};
-  engines.forEach(e=>perEngine[e]={saved:false,brand_recommended:false,brand_local_result:false,brand_direct_supported:false,domain_cited:false,exact_page_cited:false});
+  engines.forEach(e=>perEngine[e]={saved:false,brand_recommended:false,brand_local_result:false,brand_direct_supported:false,domain_cited:false,exact_page_cited:false,citation_urls:[],answer_excerpt:''});
   function addComp(name,engine,kind){
     name=String(name||'').replace(/^[-•*]\s*/,'').trim(); if(!name)return;
     const key=_trackerIntelKey(name); if(!key||key.length<2)return;
@@ -3728,7 +3750,10 @@ async function _trackerBuildDerivedIntelligence(clientId,pageId){
   evidence.forEach(ev=>{
     if(ev && (ev.is_cleared===true || ev.is_cleared==='true' || ev.is_cleared===1 || ev.is_cleared==='1')) return;
     const parsed=_trackerParseManualEvidence(ev.raw_text||'',ev.raw_sources||'',page.url,[ownRoot,ownStem]);
-    const engine=ev.engine;perEngine[engine]={saved:true,brand_recommended:!!parsed.brand_recommended,brand_local_result:!!parsed.brand_local_result,brand_direct_supported:!!parsed.brand_direct_supported,domain_cited:!!parsed.domain_cited,exact_page_cited:!!parsed.exact_page_cited,verified_at:ev.verified_at};
+    const engine=ev.engine;
+    const _evUrls=(_trackerIntelJson(ev.citation_urls,[])||[]).filter(Boolean);
+    const _evRaw=String(ev.raw_text||'').replace(/\s+/g,' ').trim();
+    perEngine[engine]={saved:true,brand_recommended:!!parsed.brand_recommended,brand_local_result:!!parsed.brand_local_result,brand_direct_supported:!!parsed.brand_direct_supported,domain_cited:!!parsed.domain_cited,exact_page_cited:!!parsed.exact_page_cited,citation_urls:_evUrls.slice(0,20),answer_excerpt:_evRaw.slice(0,700),verified_at:ev.verified_at};
     (parsed.recommended_companies||[]).forEach(n=>addComp(n,engine,'recommended'));
     (parsed.local_result_companies||_trackerIntelJson(ev.local_result_companies,[])||[]).forEach(n=>addComp(n,engine,'local'));
     (parsed.directly_cited_companies||[]).forEach(n=>addComp(n,engine,'direct'));
@@ -3747,13 +3772,28 @@ async function _trackerBuildDerivedIntelligence(clientId,pageId){
   const sources=Array.from(srcMap.values()).map(o=>({host:o.host,urls:Array.from(o.urls),engines:Array.from(o.engines),engine_count:o.engines.size,own_domain:o.own_domain})).sort((a,b)=>b.engine_count-a.engine_count||a.host.localeCompare(b.host)).slice(0,80);
   const vals=Object.values(perEngine),saved=vals.filter(x=>x.saved).length;
   const exactCount=vals.filter(x=>x.exact_page_cited).length;
+  let scanTrend={available:false};
+  try {
+    const sr=await pool.query('SELECT checked_at,google_position,score,ai_google_overview_cited,ai_perplexity_cited FROM tracker_snapshots WHERE page_id=$1 ORDER BY checked_at DESC LIMIT 2',[pageId]);
+    if(sr.rows.length){
+      const cur=sr.rows[0],prev=sr.rows[1]||null;
+      scanTrend={available:!!prev,current:{checked_at:cur.checked_at,position:cur.google_position,score:cur.score},previous:prev?{checked_at:prev.checked_at,position:prev.google_position,score:prev.score}:null,position_delta:(prev&&cur.google_position!=null&&prev.google_position!=null)?Number(prev.google_position)-Number(cur.google_position):null,score_delta:(prev&&cur.score!=null&&prev.score!=null)?Number(cur.score)-Number(prev.score):null};
+    }
+  }catch(_trendErr){}
+  const engineGaps=engines.filter(e=>!perEngine[e].exact_page_cited).map(e=>({engine:e,saved:perEngine[e].saved,recommended:perEngine[e].brand_recommended,local:perEngine[e].brand_local_result,domain_cited:perEngine[e].domain_cited,source_count:(perEngine[e].citation_urls||[]).length}));
+  let treatment={code:'MONITOR',reason:'Insufficient verified evidence to prescribe a content change.',next_step:'Complete the five manual engine checks, then reassess.'};
+  if(saved===5&&exactCount===5)treatment={code:'KEEP',reason:'All five manually checked engines cite the exact page.',next_step:'Preserve the cited passages and monitor for citation loss; do not rewrite.'};
+  else if(exactCount>=3)treatment={code:'OPTIMIZE',reason:exactCount+'/5 engines cite the exact page; the page already has strong cross-engine proof.',next_step:'Make one surgical change aimed only at '+engineGaps.map(g=>g.engine).join(', ')+', while preserving cited passages.'};
+  else if(Number(page.gsc_position)>10&&Number(page.gsc_position)<=20&&Number(page.gsc_impressions)>=100)treatment={code:'EXPAND',reason:'The page is within striking distance in Google but lacks broad exact-page AI citations.',next_step:'Expand only the repeated cross-engine gaps that are absent from the live HTML.'};
+  else if(saved===5)treatment={code:'OPTIMIZE',reason:'All engines were checked but fewer than three cite the exact page.',next_step:'Strengthen the opening answer and first-party evidence around the highest-frequency missing topic.'};
   const winningActions=[];
   known.filter(x=>x.status==='VERIFIED').forEach(x=>{
     if(!_trackerIntelFactCovered(x.claim_text,page.html_content))winningActions.push({type:'verified_fact_gap',title:x.claim_text,action:'Add this VERIFIED business fact where it directly answers the search intent, then support it with concrete process, scope or first-party proof.'});
   });
-  if(exactCount<5)winningActions.push({type:'citation_gap',title:'Earn exact-page citations in '+(5-exactCount)+' unchecked/not-citing engine(s)',action:'Make the opening answer explicit, cover the decision criteria surfaced across engines, and attach each material business claim to VERIFIED first-party evidence.'});
+  const _intelEngineNames={google_aio:'Google AIO',chatgpt:'ChatGPT',perplexity:'Perplexity',claude:'Claude',copilot:'Microsoft Copilot'};
+  engineGaps.forEach(g=>winningActions.push({type:'engine_gap',engine:g.engine,title:(_intelEngineNames[g.engine]||g.engine)+' exact-page gap',action:g.recommended&&!g.domain_cited?'The brand is recommended but the website is not cited. Compare the sources this engine actually links to, then add only the missing first-party proof or direct answer.':g.domain_cited?'The domain is cited but not this exact page. Strengthen page-level relevance and the direct answer for this seed query without rewriting proven sections.':g.saved?'This engine was checked but did not cite the exact page. Use its saved source URLs and recurring topics below to identify one evidence-backed gap.':'Save a manual answer for this engine before changing content; no engine-specific conclusion is yet supported.'}));
   if(!sources.some(x=>x.own_domain))winningActions.push({type:'source_gap',title:'Make this page the primary source',action:'Publish original business facts, named service details, project evidence and clear entity/contact information so engines have a stronger first-party source than competitor summaries.'});
-  return {page:{id:page.id,url:page.url,keyword:page.keyword||page.gsc_keyword||''},summary:{manual_verified:saved,ai_visibility:vals.filter(x=>x.brand_recommended||x.brand_local_result||x.brand_direct_supported||x.domain_cited).length,local_visibility:vals.filter(x=>x.brand_local_result).length,domain_cited:vals.filter(x=>x.domain_cited).length,exact_page_cited:exactCount,competitors:competitors.length,sources:sources.length,content_opportunities:opportunities.filter(x=>!x.covered).length,claims_to_verify:claims.filter(x=>!x.safe_to_use).length},engines:perEngine,competitors,sources,content_opportunities:opportunities,claims,winning_actions:winningActions.slice(0,12)};
+  return {page:{id:page.id,url:page.url,keyword:page.keyword||page.gsc_keyword||''},summary:{manual_verified:saved,ai_visibility:vals.filter(x=>x.brand_recommended||x.brand_local_result||x.brand_direct_supported||x.domain_cited).length,local_visibility:vals.filter(x=>x.brand_local_result).length,domain_cited:vals.filter(x=>x.domain_cited).length,exact_page_cited:exactCount,competitors:competitors.length,sources:sources.length,content_opportunities:opportunities.filter(x=>!x.covered).length,claims_to_verify:claims.filter(x=>!x.safe_to_use).length},engines:perEngine,engine_gaps:engineGaps,scan_trend:scanTrend,treatment,competitors,sources,content_opportunities:opportunities,claims,winning_actions:winningActions.slice(0,12)};
 }
 app.get('/api/tracker-client/:token/page/:pageId/intelligence',async(req,res)=>{try{
   const cr=await pool.query('SELECT id FROM tracker_clients WHERE (token=$1 OR lead_token=$1) AND (status IS NULL OR status != $2)',[req.params.token,'deleted']);if(!cr.rows.length)return res.status(404).json({success:false,error:'Not found'});
@@ -36766,7 +36806,14 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
                 if (ev.page_id) _lastBriefData[ev.page_id] = ev;
                 showNotification('Citation Brief ready for ' + (ev.url||''), 'brief', '#7c3aed');
                 var inlineBriefHasData = !!(ev.passages && ev.passages.length);
-                if (!inlineBriefHasData) showCitationBrief(ev);
+                var _evBrief = ev.brief_content || {};
+                if (typeof _evBrief === 'string') { try { _evBrief = JSON.parse(_evBrief); } catch(e) { _evBrief = {}; } }
+                var _evIsFinal = !!(_evBrief && _evBrief.generated_at);
+                // An early brief_ready can open the modal while the final merge is still running.
+                // When the final marked payload arrives for that same page, replace the visible
+                // modal and its copy textarea instead of ignoring it as "already open".
+                if (_briefIsOpen && _currentBriefPageId === ev.page_id && _evIsFinal) showBriefResult(ev);
+                else if (!inlineBriefHasData) showCitationBrief(ev);
                 // Live Brief Wall: drop the new brief straight into the middle
                 if (ev.page_id) {
                   for (var _wi=0; _wi<(_pages||[]).length; _wi++) {
@@ -37367,11 +37414,10 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
   }
 
   function copyBriefToClipboard() {
-    var text = document.getElementById('cbCopyText') ? document.getElementById('cbCopyText').value : '';
-    if (!text) return;
-    if (navigator.clipboard) {
-      navigator.clipboard.writeText(text).then(function() { toast('Brief copied to clipboard', '#4ade80'); }).catch(function() { fallbackCopy(text); });
-    } else { fallbackCopy(text); }
+    // Use the same authoritative server-validated path as the inline Copy button. Never copy
+    // the modal textarea directly: it may have been rendered from an early brief_ready event.
+    if (_currentBriefPageId) return copyBrief(_currentBriefPageId);
+    toast('No current brief selected', '#f87171');
   }
 
   function fallbackCopy(text) {
@@ -38130,6 +38176,11 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
     var body=document.getElementById('competitiveIntelBody');if(!body)return;var s=d.summary||{},html='';
     html+='<div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:12px;">'+_intelMetric('Manual evidence',(s.manual_verified||0)+'/5')+_intelMetric('AI visibility',(s.ai_visibility||0)+'/5')+_intelMetric('Local / Maps',(s.local_visibility||0)+'/5','entity visibility')+_intelMetric('Website cited',(s.domain_cited||0)+'/5')+_intelMetric('Exact page cited',(s.exact_page_cited||0)+'/5')+_intelMetric('Competitors',s.competitors||0)+_intelMetric('Content gaps',s.content_opportunities||0)+_intelMetric('Claims to verify',s.claims_to_verify||0)+'</div>';
     html+='<div style="padding:8px 10px;background:#111827;border:1px solid #374151;border-radius:7px;margin-bottom:12px;color:#cbd5e1;"><b style="color:#f8fafc;">Read-only evidence:</b> this panel can contain competitors, source titles, URLs, queries and AI statements. Nothing here can be added directly as a client fact. Add only client-owned facts manually in Brand & author info → Claims & Facts, together with business evidence.</div>';
+    var tr=d.treatment||{},tc=tr.code==='KEEP'?'#4ade80':(tr.code==='OPTIMIZE'?'#fbbf24':(tr.code==='EXPAND'?'#38bdf8':'#94a3b8'));
+    html+='<div style="background:#09111f;border:1px solid '+tc+';border-left:4px solid '+tc+';border-radius:8px;padding:11px 13px;margin-bottom:12px;"><div style="display:flex;gap:9px;align-items:center;"><span style="font-size:15px;font-weight:900;color:'+tc+';">'+_intelEsc(tr.code||'MONITOR')+'</span><span style="font-size:11px;color:#e2e8f0;font-weight:700;">Recommended treatment</span></div><div style="font-size:10px;color:#cbd5e1;line-height:1.5;margin-top:5px;">'+_intelEsc(tr.reason||'')+'</div><div style="font-size:10px;color:'+tc+';line-height:1.5;margin-top:4px;">Next: '+_intelEsc(tr.next_step||'')+'</div></div>';
+    var trend=d.scan_trend||{};if(trend.current){var pd=trend.position_delta,sd=trend.score_delta;html+='<div style="background:#0b1220;border:1px solid #1f2937;border-radius:8px;padding:9px 11px;margin-bottom:12px;"><b style="color:#f1f5f9;">Change since previous scan</b><span style="color:#94a3b8;margin-left:8px;">'+(trend.available?('Position '+(pd==null?'—':(pd>0?'↑ '+pd:pd<0?'↓ '+Math.abs(pd):'unchanged'))+' · GRAAF '+(sd==null?'—':(sd>0?'+'+sd:sd))):'First comparable snapshot not available yet')+'</span></div>';}
+    html+='<h4 style="color:#67e8f9;margin:12px 0 6px;">Five-engine evidence — what each engine actually proves</h4><div style="display:grid;gap:6px;margin-bottom:12px;">';
+    ['google_aio','chatgpt','perplexity','claude','copilot'].forEach(function(e){var x=(d.engines||{})[e]||{},state=x.exact_page_cited?'EXACT PAGE':(x.domain_cited?'DOMAIN CITED':(x.brand_recommended?'RECOMMENDED':(x.saved?'NOT CITED':'NOT CHECKED'))),col=x.exact_page_cited?'#4ade80':(x.domain_cited?'#60a5fa':(x.brand_recommended?'#fbbf24':'#94a3b8'));html+='<details style="background:#0b1220;border:1px solid #1f2937;border-radius:7px;padding:7px 9px;"><summary style="cursor:pointer;display:flex;gap:8px;align-items:center;list-style:none;"><b style="color:#e2e8f0;min-width:110px;">'+_intelEsc(_intelEngineLabel(e))+'</b><span style="color:'+col+';font-weight:800;font-size:10px;">'+state+'</span><span style="margin-left:auto;color:#64748b;font-size:9px;">'+((x.citation_urls||[]).length)+' source URL(s)</span></summary>'+(x.answer_excerpt?'<div style="font-size:10px;color:#94a3b8;line-height:1.5;margin-top:7px;border-top:1px solid #1f2937;padding-top:7px;">'+_intelEsc(x.answer_excerpt)+'</div>':'')+'</details>';});html+='</div>';
     var wins=d.winning_actions||[];html+='<h4 style="color:#4ade80;margin:12px 0 6px;">How to outperform the cited competitors</h4>';
     if(!wins.length)html+='<div style="color:#64748b;margin-bottom:10px;">Add VERIFIED business facts and complete more engine checks to generate a fact-safe winning plan.</div>';else{html+='<div style="display:grid;gap:6px;margin-bottom:12px;">';wins.forEach(function(w,i){html+='<div style="background:#07150e;border:1px solid #166534;border-radius:7px;padding:8px 10px;"><div style="font-size:11px;font-weight:850;color:#86efac;">'+(i+1)+'. '+_intelEsc(w.title)+'</div><div style="font-size:10px;color:#a7f3d0;margin-top:3px;line-height:1.5;">'+_intelEsc(w.action)+'</div></div>';});html+='</div>';}
     var comps=d.competitors||[];html+='<h4 style="color:#67e8f9;margin:12px 0 6px;">Competitor frequency</h4>';
@@ -38137,7 +38188,7 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
     var opp=d.content_opportunities||[];html+='<h4 style="color:#67e8f9;margin:16px 0 6px;">Cross-engine content signals</h4>';
     if(!opp.length)html+='<div style="color:#64748b;">No repeated cross-engine topics yet.</div>';else{html+='<div style="display:flex;gap:6px;flex-wrap:wrap;">';opp.slice(0,24).forEach(function(o){html+='<span style="border:1px solid '+(o.covered?'#166534':'#92400e')+';background:'+(o.covered?'#052e16':'#451a03')+';color:'+(o.covered?'#86efac':'#fbbf24')+';padding:5px 7px;border-radius:999px;" title="'+_intelEsc((o.engines||[]).map(_intelEngineLabel).join(', '))+'">'+_intelEsc(o.topic)+' · '+o.engine_count+'/5 '+(o.covered?'✓ covered':'gap')+'</span>';});html+='</div>';}
     var src=d.sources||[];html+='<h4 style="color:#67e8f9;margin:16px 0 6px;">AI citation sources</h4>';
-    if(!src.length)html+='<div style="color:#64748b;">No source URLs parsed yet.</div>';else{html+='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:6px;">';src.slice(0,30).forEach(function(x){html+='<div style="background:#0b1220;border:1px solid '+(x.own_domain?'#7c3aed':'#1f2937')+';border-radius:7px;padding:7px 9px;"><div style="color:#e2e8f0;font-weight:700;">'+_intelEsc(x.host)+(x.own_domain?' <span style="color:#c4b5fd;">OWN DOMAIN</span>':'')+'</div><div style="color:#64748b;font-size:9px;">'+_intelEsc((x.engines||[]).map(_intelEngineLabel).join(', '))+'</div></div>';});html+='</div>';}
+    if(!src.length)html+='<div style="color:#64748b;">No source URLs parsed yet.</div>';else{html+='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:6px;">';src.slice(0,30).forEach(function(x){var u=(x.urls||[])[0]||'';html+='<div style="background:#0b1220;border:1px solid '+(x.own_domain?'#7c3aed':'#1f2937')+';border-radius:7px;padding:7px 9px;"><div style="color:#e2e8f0;font-weight:700;">'+(u?'<a href="'+_intelEsc(u)+'" target="_blank" rel="noopener" style="color:#93c5fd;text-decoration:underline;">'+_intelEsc(x.host)+'</a>':_intelEsc(x.host))+(x.own_domain?' <span style="color:#c4b5fd;">OWN DOMAIN</span>':'')+'</div><div style="color:#64748b;font-size:9px;">'+_intelEsc((x.engines||[]).map(_intelEngineLabel).join(', '))+' · '+_intelEsc((x.urls||[]).length)+' URL(s)</div></div>';});html+='</div>';}
     var claims=d.claims||[];html+='<h4 style="color:#67e8f9;margin:16px 0 6px;">Claims requiring business verification</h4>';
     if(!claims.length)html+='<div style="color:#64748b;">No claim-like statements detected in the saved evidence.</div>';else{claims.slice(0,30).forEach(function(c){var st=c.existing_fact&&c.existing_fact.status?c.existing_fact.status:'EVIDENCE ONLY',safe=!!c.safe_to_use;html+='<div style="display:flex;gap:8px;align-items:flex-start;background:#0b1220;border:1px solid '+(safe?'#166534':'#334155')+';border-radius:7px;padding:8px 9px;margin-bottom:5px;"><div style="flex:1;"><div style="color:#e2e8f0;">'+_intelEsc(c.claim)+'</div><div style="color:#64748b;font-size:9px;margin-top:3px;">Observed: '+_intelEsc((c.engines||[]).map(_intelEngineLabel).join(', '))+' · '+_intelEsc(st)+(safe?' · VERIFIED CLIENT FACT':' · READ-ONLY, NOT A CLIENT FACT')+'</div></div></div>';});}
     window._currentIntelData=d;window._currentIntelPageId=pageId;body.innerHTML=html;
