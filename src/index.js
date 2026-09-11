@@ -1,4 +1,4 @@
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-11-CANONICAL-v26';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-11-CANONICAL-v28';
 const CONTENTSCALE_BUILD_CHANGES = [
   'professional-guided-tour',
   'prewrite-create-expand-publish-tracker-baseline',
@@ -6095,6 +6095,7 @@ app.get('/track/:token', async (req, res) => {
     if (client.status === 'paused' || client.status === 'disabled') return res.send('<html><body style="background:#0a0a0f;color:#fbbf24;font-family:monospace;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;text-align:center;"><div><div style="font-size:2rem;margin-bottom:12px;">⏸️</div><div>Your tracker is ' + (client.status === 'disabled' ? 'disabled' : 'paused') + '</div><div style="font-size:12px;color:#6b7280;margin-top:8px;">Contact Ottmar to reactivate: <a href="https://wa.me/31628073996" style="color:#7c3aed;">wa.me/31628073996</a></div></div></body></html>');
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+    res.setHeader('X-ContentScale-Build', CONTENTSCALE_BUILD_ID);
     res.send(_CLIENT_TRACKER_HTML
       .replace(/__TOKEN__/g, req.params.token)
       .replace(/__DOMAIN__/g, client.domain || '')
@@ -32688,19 +32689,19 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
     <button id="soClose" class="so-close" type="button" title="Close">&times;</button>
     <div class="so-header">
       <span class="so-header-dot" id="soHeaderDot"></span>
-      <span class="so-header-title" id="soHeaderTitle">Live Scan in Progress</span>
+      <span class="so-header-title" id="soHeaderTitle">Live Scan in Progress · ${CONTENTSCALE_BUILD_ID}</span>
     </div>
     <div class="so-url" id="soUrl"></div>
     <div class="so-progress-wrap">
       <div class="so-progress-bar" id="soProgressBar"></div>
     </div>
     <div class="so-steps" id="soSteps">
-      <div class="so-step" id="soStep_html"><span class="so-step-icon pending" id="soIcon_html">&#9675;</span><span class="so-step-label" id="soLabel_html">Fetching page HTML</span></div>
-      <div class="so-step" id="soStep_graaf"><span class="so-step-icon pending" id="soIcon_graaf">&#9675;</span><span class="so-step-label" id="soLabel_graaf">GRAAF content scan</span></div>
-      <div class="so-step" id="soStep_google"><span class="so-step-icon pending" id="soIcon_google">&#9675;</span><span class="so-step-label" id="soLabel_google">Google position + AIO check</span></div>
-      <div class="so-step" id="soStep_perplexity"><span class="so-step-icon pending" id="soIcon_perplexity">&#9675;</span><span class="so-step-label" id="soLabel_perplexity">Perplexity citation check</span></div>
-      <div class="so-step" id="soStep_copilot"><span class="so-step-icon pending" id="soIcon_copilot">&#9675;</span><span class="so-step-label" id="soLabel_copilot">Copilot citation check</span></div>
-      <div class="so-step" id="soStep_ai"><span class="so-step-icon pending" id="soIcon_ai">&#9675;</span><span class="so-step-label" id="soLabel_ai">AI recommendations generation</span></div>
+      <div class="so-step" id="soStep_html"><span class="so-step-icon pending" id="soIcon_html">&#9675;</span><span class="so-step-label" id="soLabel_html">Fetch and compare live HTML</span></div>
+      <div class="so-step" id="soStep_graaf"><span class="so-step-icon pending" id="soIcon_graaf">&#9675;</span><span class="so-step-label" id="soLabel_graaf">Analyse content and GRAAF signals</span></div>
+      <div class="so-step" id="soStep_google"><span class="so-step-icon pending" id="soIcon_google">&#9675;</span><span class="so-step-label" id="soLabel_google">Load Google Search Console data</span></div>
+      <div class="so-step" id="soStep_perplexity"><span class="so-step-icon pending" id="soIcon_perplexity">&#9675;</span><span class="so-step-label" id="soLabel_perplexity">Load verified five-engine evidence</span></div>
+      <div class="so-step" id="soStep_copilot"><span class="so-step-icon pending" id="soIcon_copilot">&#9675;</span><span class="so-step-label" id="soLabel_copilot">Compare competitors and content gaps</span></div>
+      <div class="so-step" id="soStep_ai"><span class="so-step-icon pending" id="soIcon_ai">&#9675;</span><span class="so-step-label" id="soLabel_ai">Validate claims and build brief</span></div>
     </div>
     <div class="so-status" id="soStatus">Initializing scan...</div>
   </div>
@@ -35414,7 +35415,7 @@ function copyBrief(pageId) {
     } catch(e) {}
     try {
       var _pc = typeof p.ai_perplexity_competitors === 'string' ? JSON.parse(p.ai_perplexity_competitors) : (p.ai_perplexity_competitors||[]);
-      if (_pc && _pc.length) lines.push('- Perplexity: ' + _pc.length + ' cited source' + (_pc.length>1?'s':'') + ' found' + (p.ai_perplexity_cited ? ' (this page IS cited)' : ' (this page not among them yet)') + '');
+      if (_pc && _pc.length) { var _ps=_briefEngineState(_transObj,'perplexity'); lines.push('- Perplexity: ' + _pc.length + ' cited source' + (_pc.length>1?'s':'') + ' found' + (_ps.cited ? ' (this page IS cited)' : ' (this page not among them yet)') + ''); }
     } catch(e) {}
   })();
   lines.push('AI Citation Results — 5 engines:');
@@ -36955,7 +36956,7 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
           } catch(e) {}
           try {
             var _pc = typeof data.perp_competitors === 'string' ? JSON.parse(data.perp_competitors) : (data.perp_competitors||[]);
-            if (_pc && _pc.length) lines.push('- Perplexity: ' + _pc.length + ' cited source' + (_pc.length>1?'s':'') + (data.ai_perplexity_cited ? ' (this page IS cited)' : ' found (this page not among them yet)'));
+            if (_pc && _pc.length) { var _ps2=_briefEngineState(data,'perplexity'); lines.push('- Perplexity: ' + _pc.length + ' cited source' + (_pc.length>1?'s':'') + ' found' + (_ps2.cited ? ' (this page IS cited)' : ' (this page not among them yet)')); }
           } catch(e) {}
         })();
         lines.push('AI Citation Results — 5 engines:');
@@ -38223,17 +38224,17 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
     if (urlEl) urlEl.textContent = url || '';
     if (bar) bar.style.width = '0%';
     if (dot) { dot.className = 'so-header-dot'; }
-    if (title) { title.textContent = 'Live Scan in Progress'; title.className = 'so-header-title'; }
+    if (title) { title.textContent = 'Live Scan in Progress · ${CONTENTSCALE_BUILD_ID}'; title.className = 'so-header-title'; }
     if (statusEl) { statusEl.textContent = 'Initializing scan...'; statusEl.className = 'so-status'; }
     overlay.classList.remove('hiding');
     overlay.classList.add('show');
     var steps = [
-      { id: 'html',       label: 'Fetching page HTML',            pct: 10 },
-      { id: 'graaf',      label: 'GRAAF content scan',             pct: 26 },
-      { id: 'google',     label: 'Google position + AIO check',   pct: 46 },
-      { id: 'perplexity', label: 'Perplexity citation check',     pct: 64 },
-      { id: 'copilot',    label: 'Copilot citation check',        pct: 80 },
-      { id: 'ai',         label: 'AI recommendations',            pct: 94 },
+      { id: 'html',       label: 'Fetch and compare live HTML',              pct: 10 },
+      { id: 'graaf',      label: 'Analyse content and GRAAF signals',        pct: 26 },
+      { id: 'google',     label: 'Load Google Search Console data',          pct: 46 },
+      { id: 'perplexity', label: 'Load verified five-engine evidence',       pct: 64 },
+      { id: 'copilot',    label: 'Compare competitors and content gaps',     pct: 80 },
+      { id: 'ai',         label: 'Validate claims and build brief',          pct: 94 },
     ];
     // Two speeds: the realistic ~34s cycle for a single manual scan (matches real backend timing so
     // it doesn't feel rushed), and a compressed ~4s cycle for Scan All / Do everything, where a NEW
@@ -46076,10 +46077,10 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
         steps: /<ol[\s>]|class=["'][^"']*(step|voice-list)/i.test(rawHtml),
         micro: /in short:|quick answer:|tl;?dr|key takeaway/i.test(rawHtml),
         outbound: /href=["']https?:\/\/(developers\.google|static\.googleusercontent|moz\.com|searchengineland|schema\.org)/i.test(rawHtml),
-        comparison: /how\s+contentscale\s+compares\s+to\s+brandwell|brandwell\s*\([^)]*content\s+at\s+scale[^)]*\)[\s\S]{0,2500}<table/i.test(rawHtml),
+        comparison: /how\s+contentscale\s+compares\s+to\s+brandwell/i.test(rawHtml) || (/brandwell/i.test(rawHtml) && /<table/i.test(rawHtml) && /(?:they solve different problems|scores and fixes|measurement and tracking layer|independent alternative)/i.test(rawHtml)),
         craftLink: /href=["'][^"']*\/craft-framework\/?["']/i.test(rawHtml),
         scoreLink: /href=["'][^"']*\/(?:seo-)?contentscore\/?["']/i.test(rawHtml),
-        checkerLink: /href=["'][^"']*\/best-ai-content-quality-checkers\/?["']/i.test(rawHtml)
+        checkerLink: /href=["'][^"']*\/(?:best-ai-content-quality-checkers|ai-content-quality-checker)\/?["']/i.test(rawHtml)
         ,scalingWorkflow: /how to implement content scaling/i.test(rawHtml) || (/(?:content scaling|content at scale)[\s\S]{0,8000}(?:standardized editorial checklist|reusable template|human editorial|quality scoring)/i.test(rawHtml) && /(?:audit|monitor|tracker|measure|verification)/i.test(rawHtml))
         ,repurposing: /repurpos(?:e|ed|es|ing)/i.test(rawHtml)
         ,templating: /(?:reusable|repeatable|standardized|standardised)\s+(?:content\s+)?(?:template|workflow|checklist)|templating\s+workflow/i.test(rawHtml)
@@ -46485,7 +46486,7 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
             ORDER BY engine, id DESC`,
           [pageId]
         );
-        const _meStem=String(client.domain||'').replace(/^www\./,'').split('.')[0].replace(/[-_]+/g,' '), _meAliases=[client.name,client.domain,_meStem];
+        const _meDomain=String(domain||'').replace(/^www\./,''), _meStem=_meDomain.split('.')[0].replace(/[-_]+/g,' '), _meAliases=[_meDomain,_meStem];
         for (const _row0 of (_me.rows || [])) {
           let _row=_row0;
           if(!_row.is_cleared){const _rp=_trackerParseManualEvidence(_row.raw_text||'',_row.raw_sources||'',page.url,_meAliases);_row={..._row,..._rp};}
@@ -46539,7 +46540,7 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
             WHERE tracker_client_id=$1 AND page_id IS NULL
             ORDER BY CASE status WHEN 'VERIFIED' THEN 1 WHEN 'UNVERIFIED' THEN 2 WHEN 'FALSE' THEN 3 ELSE 4 END, updated_at DESC, id DESC
             LIMIT 200`,
-          [clientId]
+          [page.tracker_client_id]
         );
         _claimsFactsRows = _cf.rows || [];
       } catch (_cfErr) {
@@ -47364,11 +47365,11 @@ If no unanchored claims found, return empty array: []`;
     let _ecBrandContext = '';
     let _ecClaimsRows = [];
     try {
-      const _ecClient = await pool.query('SELECT brand_context FROM tracker_clients WHERE id=$1', [clientId]);
+      const _ecClient = await pool.query('SELECT brand_context FROM tracker_clients WHERE id=$1', [page.tracker_client_id]);
       _ecBrandContext = String((_ecClient.rows[0] && _ecClient.rows[0].brand_context) || '');
     } catch(_e) {}
     try {
-      const _ecCf = await pool.query(`SELECT claim_text,status FROM tracker_claims_facts WHERE tracker_client_id=$1 AND page_id IS NULL ORDER BY updated_at DESC,id DESC LIMIT 300`, [clientId]);
+      const _ecCf = await pool.query(`SELECT claim_text,status FROM tracker_claims_facts WHERE tracker_client_id=$1 AND page_id IS NULL ORDER BY updated_at DESC,id DESC LIMIT 300`, [page.tracker_client_id]);
       _ecClaimsRows = _ecCf.rows || [];
     } catch(_e) {}
     const _ecVerified = _ecClaimsRows.filter(function(r){return String(r.status||'').toUpperCase()==='VERIFIED';}).map(function(r){return _ecNorm(r.claim_text);}).filter(Boolean);
@@ -47413,7 +47414,7 @@ If no unanchored claims found, return empty array: []`;
       return _ecVerified.some(function(v){ return v && (v.indexOf(n)>=0 || n.indexOf(v)>=0); });
     };
     const _ecContradiction = function(txt){
-      if(!_googleAioAlreadyCited) {
+      if(!snapshot.ai_google_overview_cited) {
         var n=String(txt||'');
         // Hard inverse guard: when the current manual Google AIO check is NOT CITED, generated
         // prose may not resurrect an older/automatic citation or infer citation from rank #1.
@@ -47518,10 +47519,12 @@ If no unanchored claims found, return empty array: []`;
       var t=String(it.title||'')+' '+String(it.action||'');
       var h=String(_ecLiveHtml||'').toLowerCase();
       if(!h)return false;
+      if(/resolve quality checkers conflict/i.test(t) && /\/(?:best-ai-content-quality-checkers|ai-content-quality-checker)\/?/i.test(h))return true;
+      if(/resolve craft framework conflict/i.test(t) && h.includes('/craft-framework/'))return true;
+      if(/resolve contentscore conflict/i.test(t) && /\/(?:seo-)?contentscore\/?/i.test(h))return true;
+      if(/defend content at scale query/i.test(t) && /how to implement content scaling/i.test(h) && /human-edited|human editorial|fact-checked/i.test(h))return true;
       if(/(?:strengthen|add).{0,30}author|about the (?:author|creator)/i.test(t) && /about the author|id=["']author["']|author-card|ottmar-francisca-headshot/i.test(h))return true;
       if(/define content at scale|add verbatim question h2/i.test(t) && /<h2[^>]*>[^<]*what is content at scale/i.test(h) && /content at scale is the/i.test(h))return true;
-      if(/resolve craft framework conflict/i.test(t) && h.includes('/craft-framework/'))return true;
-      if(/resolve contentscore conflict/i.test(t) && h.includes('/seo-contentscore/'))return true;
       if(/resolve quality checkers conflict/i.test(t) && h.includes('/best-ai-content-quality-checkers/') && /beyond content at scale/i.test(h))return true;
       if(/add internal links?/i.test(t)){
         var links=[],m,rx=/href=["']([^"']+)["']/gi;while((m=rx.exec(t)))links.push(String(m[1]).toLowerCase());
@@ -47532,6 +47535,9 @@ If no unanchored claims found, return empty array: []`;
       // currently scanned page. Keep it out of this page's paste-ready HTML brief.
       if(/(?:from|on) (?:the )?page\s+https?:\/\/[^\s]+/i.test(t) && /(?:link|authority|link equity|internal link)/i.test(t))return true;
       if(/does not pass (?:authority|link equity) (?:back )?to (?:this|the )?(?:home)?page/i.test(t))return true;
+      if(/strengthen internal linking authority/i.test(t) && !String(it.action||'').replace(/<[^>]*>/g,'').trim())return true;
+      if(/add strategic content gap section/i.test(t) && /what is content at scale/i.test(h) && /brandwell/i.test(h) && /<table/i.test(h))return true;
+      if(/expand adjacent intent impressions/i.test(t) && /how to implement content scaling/i.test(h) && /without losing (?:quality|search visibility)/i.test(h))return true;
       return false;
     };
     if(Array.isArray(snapshot.recommendations)) {
@@ -47557,10 +47563,14 @@ If no unanchored claims found, return empty array: []`;
       }
     }
     if(Array.isArray(snapshot.gsc_brief)) {
-      snapshot.gsc_brief=snapshot.gsc_brief.map(_ecEnforceItem);
+        snapshot.gsc_brief=snapshot.gsc_brief.map(_ecEnforceItem);
       if(typeof _onPage!=='undefined') snapshot.gsc_brief=snapshot.gsc_brief.filter(function(it){
         var t=String((it&&it.title)||'')+' '+String((it&&it.action)||'');
         if(_ecDuplicateAgainstHtml(it))return false;
+        // Never expose a half-generated metadata instruction as implementation-ready.
+        // A valid metadata action must contain both fields.
+        if(/meta title|meta title\s*&\s*description/i.test(String((it&&it.title)||'')) &&
+           !(/seo title\s*:/i.test(String((it&&it.action)||'')) && /meta description\s*:/i.test(String((it&&it.action)||'')))) return false;
         if(_onPage.scalingWorkflow && /add\s+(?:a\s+)?(?:content scaling\s+)?workflow section|lacks a detailed, step-by-step workflow/i.test(t)) return false;
         if(_onPage.whatIsH2 && /add verbatim question h2|add\s+(?:a\s+)?(?:question|definition).{0,30}h2/i.test(t)) return false;
         if(_onPage.craftLink && _onPage.scoreLink && /add internal links?/i.test(t)&&/(?:craft|contentscore)/i.test(t)) return false;
@@ -47839,7 +47849,7 @@ If no unanchored claims found, return empty array: []`;
   const domain2 = pageUrl.replace(/^https?:\/\//, '').split('/')[0];
   const recs2 = snapshot.recommendations;
   let _briefManualEvidence2 = {};
-  try { const _ber=await pool.query("SELECT DISTINCT ON (engine) * FROM tracker_ai_evidence WHERE page_id=$1 AND evidence_method='manual' ORDER BY engine,COALESCE(updated_at,verified_at,created_at) DESC NULLS LAST,id DESC",[page.id]); const _bmStem=String(client.domain||'').replace(/^www\./,'').split('.')[0].replace(/[-_]+/g,' '),_bmAliases=[client.name,client.domain,_bmStem]; (_ber.rows||[]).forEach(function(r0){var r=r0;if(!r.is_cleared){var rp=_trackerParseManualEvidence(r.raw_text||'',r.raw_sources||'',page.url,_bmAliases);r={...r,...rp};}_briefManualEvidence2[r.engine]=r;}); } catch(_e) {}
+  try { const _ber=await pool.query("SELECT DISTINCT ON (engine) * FROM tracker_ai_evidence WHERE page_id=$1 AND evidence_method='manual' ORDER BY engine,COALESCE(updated_at,verified_at,created_at) DESC NULLS LAST,id DESC",[page.id]); const _bmDomain=String(domain||'').replace(/^www\./,''),_bmStem=_bmDomain.split('.')[0].replace(/[-_]+/g,' '),_bmAliases=[_bmDomain,_bmStem]; (_ber.rows||[]).forEach(function(r0){var r=r0;if(!r.is_cleared){var rp=_trackerParseManualEvidence(r.raw_text||'',r.raw_sources||'',page.url,_bmAliases);r={...r,...rp};}_briefManualEvidence2[r.engine]=r;}); } catch(_e) {}
 
   // ── Generate Citation Brief ───────────────────────────────────────────────
   try {
@@ -47960,6 +47970,53 @@ MERGE RULES:
             if (_isnap) brief2.items = [_isnap].concat(brief2.items);
           }
         } catch(_isg) { console.warn('[tracker] brief2 intent-snapshot guarantee skipped:', _isg && _isg.message); }
+      }
+
+      // LAST-WRITE HTML GUARD. The optional merge above can re-introduce an older
+      // recommendation after the main quality pass. Validate the final payload against
+      // the HTML fetched in THIS scan immediately before it is persisted/broadcast.
+      if (brief2) {
+        try {
+          const _fwHtml = String(effectiveHtml || page.html_content || '').toLowerCase();
+          const _fwHas = {
+            definition: /<h2[^>]*>[^<]*what is content at scale/i.test(_fwHtml) || /id=["'](?:direct-answer|voice-what-is)/i.test(_fwHtml),
+            workflow: /how to implement content scaling/i.test(_fwHtml),
+            comparison: /brandwell/i.test(_fwHtml) && /<table/i.test(_fwHtml) && /(?:scores and fixes|measurement and tracking layer|they solve different problems|independent alternative)/i.test(_fwHtml),
+            author: /about the (?:author|creator|founder)|author-card|ottmar-francisca-headshot/i.test(_fwHtml),
+            craft: /\/craft-framework\/?["'#?]/i.test(_fwHtml),
+            score: /\/(?:seo-)?contentscore\/?["'#?]/i.test(_fwHtml),
+            checker: /\/(?:best-ai-content-quality-checkers|ai-content-quality-checker)\/?["'#?]/i.test(_fwHtml)
+          };
+          const _fwDrop = function(it) {
+            if (!it || typeof it !== 'object') return false;
+            const _sys = String(it.system || '').toLowerCase();
+            if (_sys.indexOf('intent snapshot') >= 0 || _sys === 'missing entities' || _sys === 'paa') return false;
+            const _title = String(it.title || '').toLowerCase();
+            const _action = String(it.action || '');
+            const _txt = (_title + ' ' + _action).toLowerCase();
+            if (_fwHas.checker && /quality checkers conflict/.test(_txt)) return true;
+            if (_fwHas.craft && /craft framework conflict/.test(_txt)) return true;
+            if (_fwHas.score && /contentscore conflict/.test(_txt)) return true;
+            if (_fwHas.definition && _fwHas.workflow && /defend content (?:at )?scale|capture content scale intent/.test(_txt)) return true;
+            if (_fwHas.author && /(?:strengthen|add).{0,40}(?:e-e-a-t )?(?:bio|author|creator)/.test(_txt)) return true;
+            if (_fwHas.comparison && /(?:close|add).{0,40}(?:competitor content gap|comparison)|lacks a direct comparison table/.test(_txt)) return true;
+            if (_fwHas.workflow && /expand adjacent intent impressions/.test(_txt)) return true;
+            if (/strengthen internal linking authority/.test(_txt) && !_action.replace(/<[^>]*>/g, '').trim()) return true;
+            if (/meta title|meta title\s*&\s*description/.test(_title) &&
+                !(/seo title\s*:/i.test(_action) && /meta description\s*:/i.test(_action))) return true;
+            return false;
+          };
+          if (Array.isArray(brief2.items)) brief2.items = brief2.items.filter(function(it){ return !_fwDrop(it); });
+          if (Array.isArray(brief2.gsc_brief)) brief2.gsc_brief = brief2.gsc_brief.filter(function(it){ return !_fwDrop(it); });
+          if (_fwHas.definition && _fwHas.workflow && Array.isArray(brief2.items)) {
+            brief2.items.forEach(function(it){
+              if (!it || String(it.system||'').toLowerCase().indexOf('intent snapshot') < 0) return;
+              it.resolves_now = 'Yes. The page immediately defines content at scale and connects it to a structured, measurable quality and AI-citation workflow.';
+              it.content_mismatch = 'The core WANT-TO-KNOW intent is already satisfied. Improve only verified missing operational concepts inside the existing structure; do not add another definition, workflow, comparison or author block.';
+              it.what_wins = 'Preserve the current definition and proven citation passages, then integrate only evidence-backed gaps such as repurposing, centralized guidelines or reusable templates where they naturally fit.';
+            });
+          }
+        } catch(_fwErr) { console.warn('[tracker] final HTML guard skipped:', _fwErr && _fwErr.message); }
       }
 
       if (brief2) {
