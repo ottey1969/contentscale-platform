@@ -1,4 +1,4 @@
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-11-CANONICAL-v63';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-11-CANONICAL-v64';
 const CONTENTSCALE_BUILD_CHANGES = [
   'professional-guided-tour',
   'prewrite-create-expand-publish-tracker-baseline',
@@ -100,6 +100,7 @@ const CONTENTSCALE_BUILD_CHANGES = [
   ,'five-engine-manual-recheck-email-reminders'
   ,'existing-tracker-email-is-single-reminder-destination'
   ,'tracker-monitoring-dialog-newlines-browser-safe'
+  ,'tracker-monitoring-frequency-map-browser-safe'
 ];
 console.log('[ContentScale] BUILD=' + CONTENTSCALE_BUILD_ID + ' BOOT=' + new Date().toISOString());
 console.log('[ContentScale] CHANGES=' + CONTENTSCALE_BUILD_CHANGES.join(','));
@@ -12857,7 +12858,7 @@ window.csAuditClientLoaded=function(){
   ['run','reportLang','saveAuditBtn','resetBtn'].forEach(function(id){var el=document.getElementById(id);if(el)el.disabled=false;});
 };
 </script>
-<script src="/audit-client.js?v=20260911-canonical-v63" onload="window.csAuditClientLoaded()" onerror="window.csAuditStatus('Audit engine could not load. Refresh the page to retry.')"></script>
+<script src="/audit-client.js?v=20260911-canonical-v64" onload="window.csAuditClientLoaded()" onerror="window.csAuditStatus('Audit engine could not load. Refresh the page to retry.')"></script>
 </div></body></html>`;
                  if (_isSharedToolAccess) _auditHtml = _stripWhiteLabelPersonalBlocks(_auditHtml);
                  res.type('html').send(_auditHtml);
@@ -35192,7 +35193,7 @@ function renderStats(data) {
 
   var monitored=pages.filter(function(p){return ['0','0days','off',''].indexOf(String(p.check_frequency||'0'))<0;});
   var nextDates=monitored.map(function(p){return p.next_check_at?new Date(p.next_check_at):null;}).filter(function(d){return d&&!isNaN(d.getTime());}).sort(function(a,b){return a-b;});
-  var perMonth=monitored.reduce(function(sum,p){var m={1day:1,3days:3,7days:7,weekly:7,1week:7,2weeks:14,17days:17,21days:21,30days:30,monthly:30};var d=m[p.check_frequency]||30;return sum+Math.ceil(30/d);},0);
+  var perMonth=monitored.reduce(function(sum,p){var m={'1day':1,'3days':3,'7days':7,weekly:7,'1week':7,'2weeks':14,'17days':17,'21days':21,'30days':30,monthly:30};var d=m[p.check_frequency]||30;return sum+Math.ceil(30/d);},0);
   var ms=document.getElementById('monitoringSummary');
   if(ms)ms.innerHTML='<strong style="color:#7dd3fc">'+pages.length+' pages total</strong> &middot; <strong style="color:#86efac">'+monitored.length+' monitored</strong> &middot; '+(pages.length-monitored.length)+' Off &middot; Next automatic scan: <strong style="color:#e2e8f0">'+(nextDates.length?nextDates[0].toLocaleString('en-GB',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}):'none')+'</strong> &middot; Estimated automatic scans/month: <strong style="color:#fbbf24">'+perMonth+'</strong><br><span style="color:#94a3b8">Only pages you explicitly enable are scheduled. Manual scans work while Off and still send their result to the existing Tracker client email.</span>';
 
