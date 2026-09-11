@@ -1,4 +1,4 @@
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-11-CANONICAL-v60';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-11-CANONICAL-v61';
 const CONTENTSCALE_BUILD_CHANGES = [
   'professional-guided-tour',
   'prewrite-create-expand-publish-tracker-baseline',
@@ -91,6 +91,9 @@ const CONTENTSCALE_BUILD_CHANGES = [
   ,'audit-results-and-sharing-panels-dark-visual-system'
   ,'light-document-surfaces-for-urls-sources-and-long-text'
   ,'saved-audit-links-and-citation-columns-high-contrast'
+  ,'generic-start-case-study-for-any-tracked-site'
+  ,'case-study-start-locks-current-scan-html-gsc-and-five-engine-state'
+  ,'audit-recommendation-cards-readable-on-light-surfaces'
 ];
 console.log('[ContentScale] BUILD=' + CONTENTSCALE_BUILD_ID + ' BOOT=' + new Date().toISOString());
 console.log('[ContentScale] CHANGES=' + CONTENTSCALE_BUILD_CHANGES.join(','));
@@ -1884,6 +1887,40 @@ async function _caseStudyStoreContentVersion(clientId,pageId,versionType,canonic
     WHERE case_study_id=$1 AND version_type=$2 AND content_hash=$3 ORDER BY id LIMIT 1`,[csR.rows[0].id,versionType,contentHash]);
   return existing.rows.length?Object.assign({created:false},existing.rows[0]):null;
 }
+
+// Start a protected case study for any tracked page. A completed Tracker scan is required;
+// its current metrics and evidence become an immutable baseline and are never backfilled.
+app.post('/api/tracker-client/:token/pages/:pageId/case-study/start',async(req,res)=>{try{
+  await _ensureCaseStudySchema();
+  const cr=await pool.query("SELECT * FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status<>'deleted')",[req.params.token]);
+  if(!cr.rows.length)return res.status(404).json({success:false,error:'Tracker not found'});
+  const pr=await pool.query('SELECT * FROM tracker_pages WHERE id=$1 AND tracker_client_id=$2',[req.params.pageId,cr.rows[0].id]);
+  if(!pr.rows.length)return res.status(403).json({success:false,error:'This page does not belong to this Tracker'});
+  const page=pr.rows[0],client=cr.rows[0];
+  const existing=await pool.query("SELECT * FROM tracker_case_studies WHERE tracker_client_id=$1 AND canonical_url=$2 ORDER BY id DESC LIMIT 1",[client.id,_caseStudyNormUrl(page.url)]);
+  if(existing.rows.length){
+    if(existing.rows[0].status==='active')return res.json({success:true,already_active:true,case_study:existing.rows[0]});
+    return res.status(409).json({success:false,protected_history:true,error:'This page already has protected case-study history. Its original baseline cannot be replaced. Continue that history or start a new revision cycle.'});
+  }
+  const sr=await pool.query('SELECT * FROM tracker_snapshots WHERE page_id=$1 ORDER BY checked_at DESC,id DESC LIMIT 1',[page.id]);
+  if(!sr.rows.length||!page.last_checked_at)return res.status(409).json({success:false,scan_required:true,error:'Scan this page first. The first real Tracker result is required before a case-study baseline can be locked.'});
+  const snap=sr.rows[0];
+  let liveHtml='',htmlSource='live_at_case_study_start';
+  try{const lr=await fetch(page.url,{headers:{'User-Agent':'Mozilla/5.0 (compatible; ContentScale/1.0)'},signal:AbortSignal.timeout(15000)});if(!lr.ok)throw new Error('HTTP '+lr.status);liveHtml=await lr.text();const low=liveHtml.toLowerCase();if(liveHtml.length<500||(!low.includes('<body')&&!low.includes('</html>')))throw new Error('Incomplete HTML');}catch(e){liveHtml=String(page.html_content||'');htmlSource='last_verified_tracker_html';}
+  if(liveHtml.length<500)return res.status(409).json({success:false,html_required:true,error:'The current page HTML could not be captured reliably. Rescan the page or paste its HTML, then start the case study again.'});
+  const query=String((req.body&&req.body.primary_query)||page.keyword||page.gsc_keyword||'').trim().slice(0,500);
+  if(!query)return res.status(400).json({success:false,error:'Add the primary query before starting the case study.'});
+  const er=await pool.query("SELECT DISTINCT ON (engine) engine,brand_recommended,brand_local_result,brand_direct_supported,domain_cited,exact_page_cited,verified_at,updated_at FROM tracker_ai_evidence WHERE tracker_client_id=$1 AND page_id=$2 AND evidence_method='manual' AND COALESCE(is_cleared,FALSE)=FALSE ORDER BY engine,COALESCE(updated_at,verified_at,created_at) DESC NULLS LAST,id DESC",[client.id,page.id]).catch(()=>({rows:[]}));
+  const engines={};for(const e of er.rows)engines[e.engine]={brand_recommended:e.brand_recommended,brand_local_result:e.brand_local_result,brand_direct_supported:e.brand_direct_supported,domain_cited:e.domain_cited,exact_page_cited:e.exact_page_cited,verified_at:e.updated_at||e.verified_at};
+  const baselineAt=new Date();
+  const baseline={schema_version:2,source:'ContentScale case-study start',metric_snapshot_at:snap.checked_at||page.last_checked_at,html_captured_at:baselineAt.toISOString(),primary_query:query,google_position:snap.google_position==null?null:Number(snap.google_position),gsc_clicks:page.gsc_clicks==null?null:Number(page.gsc_clicks),gsc_impressions:page.gsc_impressions==null?null:Number(page.gsc_impressions),gsc_position:page.gsc_position==null?null:Number(page.gsc_position),graaf_score:snap.score==null?(page.last_graaf_score==null?null:Number(page.last_graaf_score)):Number(snap.score),ai_evidence:engines,html_source:htmlSource,treatment_guardrail:'Preserve verified strengths; implement documented changes; compare only against this locked baseline.'};
+  const ins=await pool.query(`INSERT INTO tracker_case_studies (tracker_client_id,tracker_page_id,client_name,domain,canonical_url,primary_query,status,baseline_at,baseline_data,baseline_locked) VALUES($1,$2,$3,$4,$5,$6,'active',$7,$8::jsonb,TRUE) RETURNING *`,[client.id,page.id,client.name||client.domain,client.domain,_caseStudyNormUrl(page.url),query,baselineAt,JSON.stringify(baseline)]);
+  const cs=ins.rows[0];
+  await pool.query(`INSERT INTO tracker_case_study_events(case_study_id,tracker_page_id,event_type,event_at,source,event_data) SELECT $1,$2,'baseline_frozen',$3,'tracker_case_study_start',$4::jsonb WHERE NOT EXISTS(SELECT 1 FROM tracker_case_study_events WHERE case_study_id=$1 AND event_type='baseline_frozen')`,[cs.id,page.id,baselineAt,JSON.stringify(baseline)]);
+  const version=await _caseStudyStoreContentVersion(client.id,page.id,'baseline_html',page.url,liveHtml,htmlSource,{purpose:'immutable_html_at_case_study_start',metric_snapshot_at:baseline.metric_snapshot_at,stable_content_hash:_caseStudyStableContentHash(liveHtml),revision_cycle:Number(page.revision_cycle||1)});
+  await _caseStudyEventForPage(client.id,page.id,'case_study_started',{url:page.url,primary_query:query,baseline_locked:true,html_version_id:version&&version.id,five_engine_checks:Object.keys(engines).length}).catch(()=>{});
+  res.json({success:true,case_study:cs,html_captured:true,five_engine_checks:Object.keys(engines).length,message:'Case study started. Current metrics, evidence and HTML are now protected as the baseline.'});
+}catch(e){console.error('[case-study-start]',e.message);res.status(500).json({success:false,error:e.message});}});
 
 // GET /api/tracker-client/:token — get client data + pages
 app.get('/api/tracker-client/:token', async (req, res) => {
@@ -12477,6 +12514,17 @@ return result;
   #prioritypages>section>div:first-child a{color:#1d4ed8!important;text-decoration:underline!important;text-underline-offset:2px;}
   #prioritypages [style*="background:#f5f3ff"]{background:#f5f3ff!important;color:#4c1d95!important;border-color:#ddd6fe!important;}
   #prioritypages [style*="background:#f5f3ff"] *{color:inherit!important;}
+  /* Recommendation cards intentionally stay light: restore readable document colours
+     after the general dark-report colour overrides above. */
+  #prioritypages article[style*="background:#fff7f7"]{background:#fff7f7!important;color:#1f2937!important;}
+  #prioritypages article[style*="background:#fffbeb"]{background:#fffbeb!important;color:#1f2937!important;}
+  #prioritypages article[style*="background:#f0fdf4"]{background:#f0fdf4!important;color:#1f2937!important;}
+  #prioritypages article[style*="background:#fff7f7"] [style*="color:#4b5563"],
+  #prioritypages article[style*="background:#fffbeb"] [style*="color:#4b5563"],
+  #prioritypages article[style*="background:#f0fdf4"] [style*="color:#4b5563"]{color:#374151!important;}
+  #prioritypages article[style*="background:#fff7f7"] [style*="color:#1f2937"],
+  #prioritypages article[style*="background:#fffbeb"] [style*="color:#1f2937"],
+  #prioritypages article[style*="background:#f0fdf4"] [style*="color:#1f2937"]{color:#111827!important;}
   #shareList>div,#toolShareList>div{background:#f8fafc!important;color:#243247!important;border:1px solid #dbe3ed!important;border-radius:11px;padding:13px!important;margin:9px 0!important;}
   #shareList>div strong,#toolShareList>div strong{color:#0f172a!important;}
   #shareList>div a,#toolShareList>div a{color:#1d4ed8!important;text-decoration:underline;}
@@ -12741,7 +12789,7 @@ window.csAuditClientLoaded=function(){
   ['run','reportLang','saveAuditBtn','resetBtn'].forEach(function(id){var el=document.getElementById(id);if(el)el.disabled=false;});
 };
 </script>
-<script src="/audit-client.js?v=20260911-canonical-v60" onload="window.csAuditClientLoaded()" onerror="window.csAuditStatus('Audit engine could not load. Refresh the page to retry.')"></script>
+<script src="/audit-client.js?v=20260911-canonical-v61" onload="window.csAuditClientLoaded()" onerror="window.csAuditStatus('Audit engine could not load. Refresh the page to retry.')"></script>
 </div></body></html>`;
                  if (_isSharedToolAccess) _auditHtml = _stripWhiteLabelPersonalBlocks(_auditHtml);
                  res.type('html').send(_auditHtml);
@@ -33476,6 +33524,15 @@ function _csEscH(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/
 function _csTier(p){ return !p?'#6b7280':p<=3?'#4ade80':p<=10?'#a3e635':p<=20?'#fbbf24':'#f87171'; }
 function _csNum(p){ return (Math.round(p*10)/10); }
 function _csDateH(t){ try{ var d=new Date(t); return d.toLocaleDateString('en-GB',{day:'2-digit',month:'short'}); }catch(e){ return ''; } }
+function startCaseStudy(pageId){
+  var pg=(_pages||[]).find(function(x){return Number(x.id)===Number(pageId);})||{};
+  var q=prompt('Primary query for this case study:',pg.keyword||pg.gsc_keyword||'');if(q===null)return;q=String(q||'').trim();
+  if(!q){alert('Add the primary query first.');return;}
+  if(!confirm('Start a protected case study now? The current scan, GSC values, five-engine evidence and page HTML will become the locked baseline.'))return;
+  api('/pages/'+pageId+'/case-study/start','POST',{primary_query:q}).then(function(d){
+    alert((d&&d.message)||'Case study started.');load();
+  }).catch(function(e){alert(e.message||'Could not start case study');});
+}
 function openCaseStudy(pageId){
   var ov=document.getElementById('caseStudyOv');
   if(!ov){
@@ -33489,12 +33546,16 @@ function openCaseStudy(pageId){
     if(!d||!d.success)throw new Error((d&&d.error)||'Could not load case study');
     var cs=d.case_study||{},b=cs.baseline_data||{};if(typeof b==='string'){try{b=JSON.parse(b);}catch(e){b={};}}
     var ai=b.ai_evidence||{},events=d.events||[],versions=d.content_versions||[],snaps=d.snapshots||[],aiRows=d.ai_evidence||[],evidenceCorrected=events.some(function(e){return e.event_type==='evidence_classification_corrected';});
+    var caseName=cs.client_name||cs.domain||'Tracked website';
+    var isPerfectRoofing=/perfectroofingteam\.com/i.test(String(cs.domain||cs.canonical_url||''));
+    var baselineAio=ai.google_aio||{};
+    var baselineAioText=evidenceCorrected?'RECOMMENDED + LOCAL':(baselineAio.exact_page_cited===true?'EXACT PAGE CITED':(baselineAio.domain_cited===true?'DOMAIN CITED':(baselineAio.brand_recommended===true?'RECOMMENDED':(Object.keys(baselineAio).length?'NOT CITED':'NOT CHECKED'))));
     var latest=snaps.length?snaps[snaps.length-1]:{};
     function metric(label,value,color){return '<div style="background:#0b1220;border:1px solid #1e3a8a;border-radius:8px;padding:10px;min-width:115px;flex:1;"><div style="font-size:20px;font-weight:900;color:'+(color||'#e5e7eb')+'">'+_csEscH(value==null?'—':value)+'</div><div style="font-size:9px;color:#64748b;text-transform:uppercase;letter-spacing:.06em;">'+_csEscH(label)+'</div></div>';}
     function utcStamp(v){try{return new Date(v).toISOString().replace('T',' ').replace(/\.\d{3}Z$/,' UTC');}catch(e){return String(v||'');}}
     function eventValue(v){if(v&&typeof v==='object'){try{return JSON.stringify(v);}catch(e){return '[structured data]';}}return String(v==null?'':v);}
     function eventSummary(type,x){
-      if(type==='baseline_frozen')return 'Original measurement locked exactly as recorded: position #'+b.google_position+', '+b.gsc_clicks+' clicks, '+Number(b.gsc_impressions||0).toLocaleString()+' impressions, GRAAF '+b.graaf_score+'/100 and an AIO citation classification later corrected in the audit trail.';
+      if(type==='baseline_frozen')return 'Original measurement locked exactly as recorded: position '+(b.google_position==null?'not available':'#'+b.google_position)+', '+(b.gsc_clicks==null?'GSC clicks not supplied':b.gsc_clicks+' clicks')+', '+(b.gsc_impressions==null?'GSC impressions not supplied':Number(b.gsc_impressions).toLocaleString()+' impressions')+', GRAAF '+(b.graaf_score==null?'not available':b.graaf_score+'/100')+(evidenceCorrected?' · later evidence correction preserved in this audit trail':'')+'.';
       if(type==='evidence_classification_corrected')return 'Evidence corrected without changing history: Perfect Roofing Team LLC was recommended and visible in Google Maps/local results, but neither its website nor the tracked page was directly cited.';
       if(type==='five_engine_evidence_reconciled'){var s=x.summary||{};return 'Complete five-engine evidence preserved: '+(s.checked||0)+'/5 checked, '+(s.recommended||0)+'/5 recommended, '+(s.domain_cited||0)+'/5 domain cited and '+(s.exact_page_cited||0)+'/5 exact page cited. Open the saved engine evidence for the underlying answers and URLs.';}
       if(type==='revision_started')return 'Revision '+(x.revision_cycle||'')+' opened. Earlier baselines, publications and AI evidence remain protected.';
@@ -33518,10 +33579,10 @@ function openCaseStudy(pageId){
     function yesNo(v){return v===true||v==='true'||v==='t'||v===1||v==='1';}
     function evidenceCell(v){return '<span style="font-weight:900;color:'+(yesNo(v)?'#4ade80':'#f87171')+'">'+(yesNo(v)?'YES':'NO')+'</span>';}
     var engineTable='<div style="overflow-x:auto;border:1px solid #1e3a8a;border-radius:9px;"><table style="width:100%;border-collapse:collapse;min-width:700px;font-size:10px;"><thead><tr style="background:#0b1220;color:#94a3b8;text-align:left;"><th style="padding:8px;">ENGINE</th><th style="padding:8px;">REVISION</th><th style="padding:8px;">RECOMMENDED</th><th style="padding:8px;">LOCAL / MAPS</th><th style="padding:8px;">DOMAIN CITED</th><th style="padding:8px;">EXACT PAGE</th><th style="padding:8px;">VERIFIED</th></tr></thead><tbody>'+engineOrder.map(function(k){var r=latestByEngine[k],isCurrent=r&&Number(r.revision_cycle||1)===currentRevision;if(!r)return '<tr style="border-top:1px solid #172033;"><td style="padding:8px;color:#e5e7eb;font-weight:800;">'+engineNames[k]+'</td><td colspan="6" style="padding:8px;color:#fbbf24;">NOT CHECKED — manual evidence required</td></tr>';return '<tr style="border-top:1px solid #172033;opacity:'+(isCurrent?'1':'.58')+';"><td style="padding:8px;color:#e5e7eb;font-weight:800;">'+engineNames[k]+'</td><td style="padding:8px;color:'+(isCurrent?'#7dd3fc':'#94a3b8')+';">'+(isCurrent?'CURRENT · R':'PRIOR · R')+_csEscH(r.revision_cycle||1)+'</td><td style="padding:8px;">'+evidenceCell(r.brand_recommended)+'</td><td style="padding:8px;">'+evidenceCell(r.brand_local_result)+'</td><td style="padding:8px;">'+evidenceCell(r.domain_cited)+'</td><td style="padding:8px;">'+evidenceCell(r.exact_page_cited)+'</td><td style="padding:8px;color:#94a3b8;white-space:nowrap;">'+_csEscH(utcStamp(r.updated_at||r.verified_at))+'</td></tr>';}).join('')+'</tbody></table></div><div style="font-size:10px;color:'+(currentCount===5?'#4ade80':'#fbbf24')+';margin-top:7px;font-weight:800;">Revision '+currentRevision+': '+currentCount+'/5 manually checked'+(currentCount===5?' · complete':' · recheck all five engines after publication')+'. Prior revisions are comparison evidence only.</div>';
-    box.innerHTML='<div style="display:flex;justify-content:space-between;gap:14px;align-items:flex-start;"><div><div style="font-size:10px;font-weight:900;color:#38bdf8;letter-spacing:.08em;">CASE STUDY ACTIVE · HISTORY PROTECTED</div><h2 style="margin:5px 0 3px;font-size:19px;">Perfect Roofing Team LLC</h2><div style="font-size:10px;color:#64748b;">Also observed as: Perfect Roofing Team LLC - Roofing Contractor NJ</div><div style="font-size:11px;color:#94a3b8;word-break:break-all;">'+_csEscH(cs.canonical_url||'')+'</div><div style="font-size:11px;color:#c4b5fd;margin-top:3px;">Query: '+_csEscH(cs.primary_query||'')+'</div></div><button onclick="document.getElementById(\\'caseStudyOv\\').style.display=\\'none\\'" style="background:none;border:1px solid #374151;color:#94a3b8;border-radius:6px;padding:5px 9px;cursor:pointer;">Close</button></div>'
+    box.innerHTML='<div style="display:flex;justify-content:space-between;gap:14px;align-items:flex-start;"><div><div style="font-size:10px;font-weight:900;color:#38bdf8;letter-spacing:.08em;">CASE STUDY ACTIVE · HISTORY PROTECTED</div><h2 style="margin:5px 0 3px;font-size:19px;">'+_csEscH(caseName)+'</h2>'+(isPerfectRoofing?'<div style="font-size:10px;color:#64748b;">Also observed as: Perfect Roofing Team LLC - Roofing Contractor NJ</div>':'')+'<div style="font-size:11px;color:#94a3b8;word-break:break-all;">'+_csEscH(cs.canonical_url||'')+'</div><div style="font-size:11px;color:#c4b5fd;margin-top:3px;">Query: '+_csEscH(cs.primary_query||'')+'</div></div><button onclick="document.getElementById(\\'caseStudyOv\\').style.display=\\'none\\'" style="background:none;border:1px solid #374151;color:#94a3b8;border-radius:6px;padding:5px 9px;cursor:pointer;">Close</button></div>'
       +'<div style="padding:9px 11px;background:#052e16;border:1px solid #166534;border-radius:7px;color:#86efac;font-size:11px;margin:14px 0;">Baseline locked. Reset, reload and page archiving cannot overwrite this record.</div>'
       +'<div style="font-size:10px;font-weight:900;color:#94a3b8;letter-spacing:.08em;margin:16px 0 6px;">LOCKED BASELINE · '+_csEscH(utcStamp(cs.baseline_at))+'</div>'
-      +'<div style="display:flex;gap:7px;flex-wrap:wrap;">'+metric('Google position',b.google_position,'#fbbf24')+metric('GSC clicks',b.gsc_clicks,'#4ade80')+metric('GSC impressions',Number(b.gsc_impressions||0).toLocaleString(),'#60a5fa')+metric('GRAAF',b.graaf_score?b.graaf_score+'/100':'—','#facc15')+metric('AIO evidence',evidenceCorrected?'RECOMMENDED + LOCAL':'RECORDED CITED',evidenceCorrected?'#fbbf24':'#4ade80')+'</div>'
+      +'<div style="display:flex;gap:7px;flex-wrap:wrap;">'+metric('Google position',b.google_position,'#fbbf24')+metric('GSC clicks',b.gsc_clicks,'#4ade80')+metric('GSC impressions',b.gsc_impressions==null?'—':Number(b.gsc_impressions).toLocaleString(),'#60a5fa')+metric('GRAAF',b.graaf_score==null?'—':b.graaf_score+'/100','#facc15')+metric('AIO evidence',baselineAioText,baselineAioText.indexOf('CITED')>=0?'#4ade80':'#fbbf24')+'</div>'
       +(latest&&latest.checked_at?'<div style="font-size:10px;font-weight:900;color:#94a3b8;letter-spacing:.08em;margin:16px 0 6px;">LATEST VERIFIED SNAPSHOT · '+_csEscH(utcStamp(latest.checked_at))+'</div><div style="display:flex;gap:7px;flex-wrap:wrap;">'+metric('Google position',latest.google_position==null?'—':latest.google_position,_csTier(latest.google_position))+metric('GSC clicks',latest.google_clicks==null?'—':latest.google_clicks,'#4ade80')+metric('GSC impressions',latest.google_impressions==null?'—':Number(latest.google_impressions).toLocaleString(),'#60a5fa')+metric('GRAAF',latest.score==null?'—':latest.score+'/100',latest.score>=b.graaf_score?'#4ade80':'#fbbf24')+metric('Google AIO',latest.ai_google_overview_cited==null?'NOT CHECKED':(latest.ai_google_overview_cited===true||latest.ai_google_overview_cited==='t'?'CITED':'NOT CITED'),latest.ai_google_overview_cited==null?'#94a3b8':(latest.ai_google_overview_cited===true||latest.ai_google_overview_cited==='t'?'#4ade80':'#f87171'))+'</div>':'')
       +(evidenceCorrected?'<div style="margin-top:12px;padding:10px;background:#451a03;border:1px solid #92400e;border-radius:7px;color:#fbbf24;font-size:11px;line-height:1.55;"><b>Evidence correction:</b> the immutable baseline retains the original classification for audit integrity. It is superseded by the correction event: recommended and Local/Maps visible, but website and exact page not cited.</div>':'')
       +'<div style="margin-top:14px;padding:10px;background:#111827;border-left:3px solid #f59e0b;border-radius:6px;color:#fbbf24;font-size:11px;line-height:1.55;"><b>Current guardrail:</b> '+_csEscH(evidenceCorrected?'Preserve the historical baseline, but do not claim an exact-page AIO citation until a verifiable source URL supports it. Measure recommendation, Local/Maps visibility, domain citation and exact-page citation separately.':(b.treatment_guardrail||'Preserve proven wins and measure incremental changes.'))+'</div>'
@@ -35561,6 +35622,7 @@ function renderPages() {
       + '<button data-tour="scan" data-check-btn="' + p.id + '" onclick="checkPage(' + p.id + ')" style="background:#0d1117;border:1px solid ' + (_scanDone ? '#22c55e' : '#2dd4bf') + ';border-radius:7px;color:' + (_scanDone ? '#4ade80' : '#5eead4') + ';cursor:pointer;font-size:11px;padding:5px 10px;font-weight:700;" title="' + (lastChecked ? (_scanDone ? 'Scanned this round \\u2014 click to rescan now' : 'Rescan this URL now') : 'Scan this URL now') + '">' + (lastChecked ? (_scanDone ? '\\u21bb \\u2713' : '\\u21bb Scan') : '\\u25b6 Scan') + '</button>'
       + ((hasBrief || _lastBriefData[p.id]) ? '<button data-tour="view-brief" onclick="viewLastBrief(' + p.id + ')" style="background:#0d1117;border:1px solid #8b5cf6;border-radius:7px;color:#c4b5fd;cursor:pointer;font-size:11px;padding:5px 12px;font-weight:600;" title="View Citation Brief">\\ud83d\\udcc4 View Brief</button>' : '')
       + '<button data-tour="history" onclick="csPosHist(' + p.id + ')" style="background:#0d1117;border:1px solid #64748b;border-radius:7px;color:#cbd5e1;cursor:pointer;font-size:13px;padding:5px 10px;font-weight:600;" title="Ranking history">\\ud83d\\udcc8</button>'
+      + (!p.case_study_active && lastCheckedRaw ? '<button onclick="event.stopPropagation();startCaseStudy(' + p.id + ')" style="background:#082f49;border:1px solid #0ea5e9;border-radius:7px;color:#7dd3fc;cursor:pointer;font-size:10px;padding:5px 10px;font-weight:900;" title="Lock the current scan, GSC values, five-engine evidence and HTML as the baseline">Start case study</button>' : '')
       + (p.case_study_active && isDone ? '<button data-tour="new-revision" onclick="event.stopPropagation();openNewHtmlRevision(' + p.id + ')" style="background:#172554;border:1px solid #3b82f6;border-radius:7px;color:#bfdbfe;cursor:pointer;font-size:10px;padding:5px 10px;font-weight:900;" title="Start another improvement cycle without overwriting the baseline or previous versions">+ New HTML revision</button>' : '')
       + (p.case_study_active && !isDone && Number(p.revision_cycle||1)>1 ? '<button onclick="event.stopPropagation();openHtmlUpload(' + p.id + ',true)" style="background:#172554;border:1px solid #3b82f6;border-radius:7px;color:#bfdbfe;cursor:pointer;font-size:10px;padding:5px 10px;font-weight:800;" title="Update the candidate HTML for revision '+Number(p.revision_cycle||1)+'">Edit revision HTML</button>' : '')
       + (p.case_study_active ? '<button onclick="event.stopPropagation();savePrePublicationCheckpoint(' + p.id + ')" style="background:'+(p.prepublication_checkpoint_saved?'#052e16':'#422006')+';border:1px solid '+(p.prepublication_checkpoint_saved?'#16a34a':'#f59e0b')+';border-radius:7px;color:'+(p.prepublication_checkpoint_saved?'#86efac':'#fde68a')+';cursor:pointer;font-size:10px;padding:5px 10px;font-weight:800;" title="'+(p.prepublication_checkpoint_saved?'The complete pre-publication HTML and hash are protected':'Use this before publishing the reviewed HTML')+'">'+(p.prepublication_checkpoint_saved?'\\u2713 Pre-publish saved':'1 \\u00b7 Save current live')+'</button>' : '')
