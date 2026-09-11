@@ -1,4 +1,4 @@
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-11-CANONICAL-v64';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-11-CANONICAL-v65';
 const CONTENTSCALE_BUILD_CHANGES = [
   'professional-guided-tour',
   'prewrite-create-expand-publish-tracker-baseline',
@@ -101,6 +101,9 @@ const CONTENTSCALE_BUILD_CHANGES = [
   ,'existing-tracker-email-is-single-reminder-destination'
   ,'tracker-monitoring-dialog-newlines-browser-safe'
   ,'tracker-monitoring-frequency-map-browser-safe'
+  ,'perfect-roofing-existing-daily-case-study-monitoring-restored'
+  ,'legacy-ai-intelligence-claims-removed-from-client-fact-ledger'
+  ,'claims-facts-manual-client-facts-only'
 ];
 console.log('[ContentScale] BUILD=' + CONTENTSCALE_BUILD_ID + ' BOOT=' + new Date().toISOString());
 console.log('[ContentScale] CHANGES=' + CONTENTSCALE_BUILD_CHANGES.join(','));
@@ -2015,6 +2018,23 @@ app.get('/api/tracker-client/:token', async (req, res) => {
     for(const _p of pagesR.rows)await _ensurePerfectRoofingCaseStudy(client,_p);
     const _csr=await pool.query(`SELECT id,tracker_page_id,canonical_url,status,baseline_at,baseline_data,started_at
       FROM tracker_case_studies WHERE tracker_client_id=$1 AND status='active'`,[client.id]);
+    // The v62 explicit-opt-in migration ran before the legacy Perfect Roofing case study could
+    // be attached on first load. Restore only its previously daily monitored emergency page;
+    // never enable the other discovered/imported pages.
+    try{
+      if(/perfectroofingteam\.com/i.test(String(client.domain||''))){
+        const _mr=await pool.query(`SELECT 1 FROM migration_flags WHERE key='perfect_roofing_daily_case_study_monitor_restore_v1'`);
+        if(!_mr.rows.length){
+          const _restored=await pool.query(`UPDATE tracker_pages p SET check_frequency='1day',next_check_at=COALESCE(p.last_checked_at,NOW())+INTERVAL '1 day',email_reminders=TRUE,ai_reminder_days=14,next_ai_reminder_at=NOW()+INTERVAL '14 days'
+            WHERE p.tracker_client_id=$1 AND lower(p.url) LIKE '%24-hour-emergency-roof-repair-nj%' AND EXISTS(SELECT 1 FROM tracker_case_studies cs WHERE cs.tracker_page_id=p.id AND cs.status='active') RETURNING p.id`,[client.id]);
+          if(_restored.rows.length){
+            const _rid=new Set(_restored.rows.map(x=>Number(x.id)));pagesR.rows.forEach(p=>{if(_rid.has(Number(p.id))){p.check_frequency='1day';p.next_check_at=new Date(Date.now()+86400000);p.email_reminders=true;p.ai_reminder_days=14;p.next_ai_reminder_at=new Date(Date.now()+14*86400000);}});
+          }
+          await pool.query(`INSERT INTO migration_flags(key) VALUES('perfect_roofing_daily_case_study_monitor_restore_v1') ON CONFLICT(key) DO NOTHING`);
+          console.log('[migrate] restored daily monitoring for',_restored.rowCount,'Perfect Roofing emergency case-study page');
+        }
+      }
+    }catch(e){console.warn('[migrate] Perfect Roofing monitoring restore',e.message);}
     const _csIds=_csr.rows.map(x=>x.id);
     const _csvr=_csIds.length?await pool.query(`SELECT DISTINCT ON (case_study_id,version_type)
       case_study_id,version_type,captured_at,content_hash,version_data
@@ -3770,6 +3790,7 @@ app.post('/api/tracker-client/:token/claims-facts',async(req,res)=>{try{
   const own=await _trackerClaimsClient(req,res);if(!own)return;
   const claim=String(req.body?.claim_text||'').trim();if(!claim)return res.status(400).json({success:false,error:'Claim is required'});
   const sourceType=String(req.body?.source_type||'manual').trim().slice(0,32),engine=String(req.body?.source_engine||'').trim().toLowerCase().slice(0,32),ctx=String(req.body?.source_context||'').trim(),notes=String(req.body?.notes||'').trim();
+  if(['ai_intelligence','competitive_intelligence','competitor','ai_source'].includes(sourceType.toLowerCase()))return res.status(403).json({success:false,error:'AI and competitor observations belong in read-only Intelligence, not in the client Claims & Facts ledger. Add only a client-owned fact with business evidence.'});
   const rr=await pool.query(`INSERT INTO tracker_claims_facts(page_id,tracker_client_id,claim_text,source_type,source_engine,source_context,status,notes)
     VALUES(NULL,$1,$2,$3,$4,$5,'UNVERIFIED',$6) RETURNING *,FALSE AS safe_to_use`,[own.clientId,claim,sourceType,engine,ctx,notes]);
   await _caseStudyEventForClient(own.clientId,'claim_created',{claim:rr.rows[0]}).catch(()=>{});
@@ -3802,6 +3823,7 @@ app.post('/api/tracker-client/:token/page/:pageId/claims-facts',async(req,res)=>
   const own=await _trackerClaimsPage(req,res);if(!own)return;
   const claim=String(req.body?.claim_text||'').trim();if(!claim)return res.status(400).json({success:false,error:'Claim is required'});
   const sourceType=String(req.body?.source_type||'manual').trim().slice(0,32),engine=String(req.body?.source_engine||'').trim().toLowerCase().slice(0,32),ctx=String(req.body?.source_context||'').trim(),notes=String(req.body?.notes||'').trim();
+  if(['ai_intelligence','competitive_intelligence','competitor','ai_source'].includes(sourceType.toLowerCase()))return res.status(403).json({success:false,error:'AI and competitor observations stay in read-only Intelligence and cannot be stored as client facts.'});
   // Deliberately force NEW claims to UNVERIFIED. Verification must be an explicit second action.
   const rr=await pool.query(`INSERT INTO tracker_claims_facts(page_id,tracker_client_id,claim_text,source_type,source_engine,source_context,status,notes)
     VALUES($1,$2,$3,$4,$5,$6,'UNVERIFIED',$7) RETURNING *,FALSE AS safe_to_use`,[own.pageId,own.clientId,claim,sourceType,engine,ctx,notes]);
@@ -7826,6 +7848,17 @@ app.patch('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
     updated_at TIMESTAMPTZ DEFAULT NOW()
   )`).catch(()=>{});
   await client.query(`CREATE INDEX IF NOT EXISTS tracker_claims_facts_page_idx ON tracker_claims_facts(page_id)`).catch(()=>{});
+  // Remove legacy rows that were copied from AI/competitor Intelligence into the client fact
+  // ledger. Preserve anything the owner explicitly VERIFIED; all other intelligence remains
+  // available in the read-only Intelligence panel and should not masquerade as a business fact.
+  try {
+    const _cfCleanDone=await client.query(`SELECT 1 FROM migration_flags WHERE key='claims_facts_remove_unverified_ai_intelligence_v1'`);
+    if(!_cfCleanDone.rows.length){
+      const _cfRemoved=await client.query(`DELETE FROM tracker_claims_facts WHERE status<>'VERIFIED' AND lower(COALESCE(source_type,'')) IN ('ai_intelligence','competitive_intelligence','competitor','ai_source') RETURNING id`);
+      await client.query(`INSERT INTO migration_flags(key) VALUES('claims_facts_remove_unverified_ai_intelligence_v1') ON CONFLICT(key) DO NOTHING`);
+      console.log('[migrate] removed',_cfRemoved.rowCount,'legacy unverified AI-intelligence rows from Claims & Facts');
+    }
+  } catch(e) { console.warn('[migrate] claims/facts intelligence cleanup',e.message); }
 
   // CONTENTSCALE-PERFECT-ROOFING-OWNER-VERIFIED-FACTS-20260910=true
   // Idempotent one-client seed requested by the account owner. Existing author text is preserved.
@@ -12858,7 +12891,7 @@ window.csAuditClientLoaded=function(){
   ['run','reportLang','saveAuditBtn','resetBtn'].forEach(function(id){var el=document.getElementById(id);if(el)el.disabled=false;});
 };
 </script>
-<script src="/audit-client.js?v=20260911-canonical-v64" onload="window.csAuditClientLoaded()" onerror="window.csAuditStatus('Audit engine could not load. Refresh the page to retry.')"></script>
+<script src="/audit-client.js?v=20260911-canonical-v65" onload="window.csAuditClientLoaded()" onerror="window.csAuditStatus('Audit engine could not load. Refresh the page to retry.')"></script>
 </div></body></html>`;
                  if (_isSharedToolAccess) _auditHtml = _stripWhiteLabelPersonalBlocks(_auditHtml);
                  res.type('html').send(_auditHtml);
