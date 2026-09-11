@@ -1,4 +1,4 @@
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-11-CANONICAL-v68';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-11-CANONICAL-v70';
 const CONTENTSCALE_BUILD_CHANGES = [
   'professional-guided-tour',
   'prewrite-create-expand-publish-tracker-baseline',
@@ -115,6 +115,10 @@ const CONTENTSCALE_BUILD_CHANGES = [
   ,'case-study-day-thirty-report-only-no-follow-up-action'
   ,'case-study-start-keeps-automatic-monitoring-off'
   ,'case-study-email-cycle-separated-from-page-monitoring'
+  ,'admin-client-scan-frequency-control-removed'
+  ,'admin-client-monitoring-read-only-summary'
+  ,'admin-client-monitoring-per-page-editor'
+  ,'admin-client-monitoring-all-off-safety-action'
 ];
 console.log('[ContentScale] BUILD=' + CONTENTSCALE_BUILD_ID + ' BOOT=' + new Date().toISOString());
 console.log('[ContentScale] CHANGES=' + CONTENTSCALE_BUILD_CHANGES.join(','));
@@ -6608,13 +6612,25 @@ app.get('/api/admin/tracker-clients', verifyAdmin, async (req, res) => {
     const includeDeleted = req.query.include_deleted === '1';
     const r = await pool.query(`
       SELECT c.*, COUNT(p.id) as page_count,
-        (SELECT p2.check_frequency FROM tracker_pages p2 WHERE p2.tracker_client_id = c.id AND p2.is_active = TRUE AND p2.check_frequency IS NOT NULL ORDER BY p2.created_at DESC LIMIT 1) as scan_frequency
+        COUNT(p.id) FILTER (WHERE COALESCE(p.check_frequency,'0') NOT IN ('0','0days','off','')) AS monitored_page_count,
+        STRING_AGG(DISTINCT p.check_frequency, ', ' ORDER BY p.check_frequency)
+          FILTER (WHERE COALESCE(p.check_frequency,'0') NOT IN ('0','0days','off','')) AS monitoring_frequencies
       FROM tracker_clients c
       LEFT JOIN tracker_pages p ON p.tracker_client_id = c.id AND p.is_active = TRUE
       ${includeDeleted ? '' : "WHERE c.status != 'deleted'"}
       GROUP BY c.id ORDER BY c.created_at DESC`);
     res.json({ success: true, clients: r.rows });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// Admin monitoring detail: observe and safely edit the client's per-page choices.
+app.get('/api/admin/tracker-clients/:id/monitoring', verifyAdmin, async (req, res) => {
+  try {
+    const cr = await pool.query("SELECT id,name,domain FROM tracker_clients WHERE id=$1 AND status!='deleted'", [req.params.id]);
+    if (!cr.rows.length) return res.status(404).json({ success:false, error:'Tracker client not found' });
+    const pr = await pool.query("SELECT id,url,title,check_frequency,next_check_at,last_checked_at FROM tracker_pages WHERE tracker_client_id=$1 AND (is_active=TRUE OR is_active IS NULL) ORDER BY CASE WHEN COALESCE(check_frequency,'0') IN ('0','0days','off','') THEN 1 ELSE 0 END,url", [req.params.id]);
+    res.json({ success:true, client:cr.rows[0], pages:pr.rows });
+  } catch(e) { res.status(500).json({ success:false, error:e.message }); }
 });
 
 // POST /api/admin/tracker-clients/:id/restore — restore deleted tracker
@@ -42234,6 +42250,55 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
             renderTrackerClients(filtered);
         }
 
+        function closeTcMonitoring(){
+            var ov=document.getElementById('tcMonitoringOv');if(ov)ov.remove();
+        }
+        function tcMonitoringEsc(s){
+            return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+        }
+        async function openTcMonitoring(clientId, clientLabel){
+            closeTcMonitoring();
+            var ov=document.createElement('div');ov.id='tcMonitoringOv';
+            ov.style.cssText='position:fixed;inset:0;background:rgba(2,6,23,.84);z-index:100000;display:flex;align-items:center;justify-content:center;padding:18px;';
+            ov.onclick=function(e){if(e.target===ov)closeTcMonitoring();};
+            ov.innerHTML='<div style="width:min(900px,96vw);max-height:88vh;overflow:auto;background:#0b1220;border:1px solid #334155;border-radius:16px;padding:20px;box-shadow:0 24px 80px rgba(0,0,0,.65);">'
+              +'<div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:14px;"><div><div style="font-size:18px;font-weight:900;color:#f8fafc;">Page monitoring</div><div style="font-size:12px;color:#94a3b8;margin-top:4px;">'+tcMonitoringEsc(clientLabel||'Tracker client')+' · edit each page separately</div></div><button onclick="closeTcMonitoring()" class="tr-btn">Close</button></div>'
+              +'<div style="font-size:12px;color:#cbd5e1;background:#111827;border:1px solid #1f2937;border-radius:9px;padding:10px 12px;margin-bottom:14px;">These controls affect optional automatic page monitoring only. They do not cancel the protected Day 7, Day 14 and Day 30 case-study emails.</div>'
+              +'<div id="tcMonitoringRows" style="color:#93c5fd;padding:20px;text-align:center;">Loading pages...</div>'
+              +'<div style="display:flex;justify-content:flex-end;margin-top:15px;padding-top:14px;border-top:1px solid #1f2937;"><button id="tcMonitoringAllOff" onclick="turnAllTcMonitoringOff('+Number(clientId)+')" class="tr-btn danger">Turn all monitoring Off</button></div></div>';
+            document.body.appendChild(ov);
+            try{
+              var d=await apiCall('/api/admin/tracker-clients/'+clientId+'/monitoring');
+              var rows=document.getElementById('tcMonitoringRows');if(!rows)return;
+              if(!d.pages||!d.pages.length){rows.innerHTML='<div style="color:#6b7280;">No active pages.</div>';return;}
+              var labels={'0':'Off','0days':'Off','off':'Off','1day':'Daily','3days':'Every 3 days','7days':'Every 7 days','17days':'Every 17 days','21days':'Every 21 days','30days':'Every 30 days','weekly':'Weekly','1week':'Weekly','2weeks':'Every 14 days','monthly':'Monthly'};
+              var opts=[['0','Off'],['1day','Daily'],['3days','Every 3 days'],['7days','Every 7 days'],['2weeks','Every 14 days'],['21days','Every 21 days'],['30days','Every 30 days']];
+              rows.style.cssText='display:flex;flex-direction:column;gap:8px;text-align:left;';
+              rows.innerHTML=d.pages.map(function(p){
+                var current=String(p.check_frequency||'0');
+                var options=opts.map(function(o){return '<option value="'+o[0]+'"'+(current===o[0]?' selected':'')+'>'+o[1]+'</option>';}).join('');
+                if(!opts.some(function(o){return o[0]===current;}))options+='<option value="'+tcMonitoringEsc(current)+'" selected>'+tcMonitoringEsc(labels[current]||current)+'</option>';
+                return '<div style="display:grid;grid-template-columns:minmax(0,1fr) 170px;gap:12px;align-items:center;background:#0f172a;border:1px solid #1f2937;border-radius:10px;padding:10px 12px;"><div style="min-width:0;"><div style="font-size:12px;font-weight:700;color:#e2e8f0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+tcMonitoringEsc(p.title||p.url)+'</div><div title="'+tcMonitoringEsc(p.url)+'" style="font-size:10px;color:#64748b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:3px;">'+tcMonitoringEsc(p.url)+'</div></div><select onchange="updateTcMonitoringPage('+Number(clientId)+','+Number(p.id)+',this)" style="background:#07111f;border:1px solid #6366f1;border-radius:7px;color:#c7d2fe;padding:7px;font-size:11px;">'+options+'</select></div>';
+              }).join('');
+            }catch(e){var rows=document.getElementById('tcMonitoringRows');if(rows)rows.innerHTML='<div style="color:#f87171;">'+tcMonitoringEsc(e.message||'Could not load monitoring')+'</div>';}
+        }
+        async function updateTcMonitoringPage(clientId,pageId,sel){
+            sel.disabled=true;
+            try{
+              var d=await fetch('/api/admin/tracker-pages/'+pageId+'/frequency',{method:'PATCH',headers:{'Content-Type':'application/json','x-admin-key':currentAdminId},body:JSON.stringify({frequency:sel.value})}).then(function(r){return r.json();});
+              if(!d.success)throw new Error(d.error||'Could not update monitoring');
+              sel.style.borderColor='#4ade80';setTimeout(function(){openTcMonitoring(clientId,'Tracker client');loadTrackerClients();},500);
+            }catch(e){sel.disabled=false;alert(e.message||'Could not update monitoring');}
+        }
+        async function turnAllTcMonitoringOff(clientId){
+            if(!confirm('Turn automatic monitoring Off for every active page of this client?\\n\\nCase-study Day 7, Day 14 and Day 30 emails remain active.'))return;
+            try{
+              var d=await fetch('/api/admin/tracker-clients/'+clientId+'/frequency',{method:'PATCH',headers:{'Content-Type':'application/json','x-admin-key':currentAdminId},body:JSON.stringify({frequency:'0'})}).then(function(r){return r.json();});
+              if(!d.success)throw new Error(d.error||'Could not stop monitoring');
+              closeTcMonitoring();loadTrackerClients();alert('All optional page monitoring is Off. Case-study milestone emails were not changed.');
+            }catch(e){alert(e.message||'Could not stop monitoring');}
+        }
+
         function renderTrackerClients(clients) {
             var el = document.getElementById('tcList');
             if (!el) return;
@@ -42249,7 +42314,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 + '<th style="padding:8px 10px;text-align:left;font-size:10px;color:#6b7280;text-transform:uppercase;">Domain + Share URL</th>'
                 + '<th style="padding:8px 10px;text-align:center;font-size:10px;color:#6b7280;text-transform:uppercase;">Type</th>'
                 + '<th style="padding:8px 10px;text-align:center;font-size:10px;color:#6b7280;text-transform:uppercase;">Pages</th>'
-                + '<th style="padding:8px 10px;text-align:center;font-size:10px;color:#6b7280;text-transform:uppercase;">Scan freq</th>'
+                + '<th title="Client-selected page monitoring; manage safely per page from Admin" style="padding:8px 10px;text-align:center;font-size:10px;color:#6b7280;text-transform:uppercase;">Monitoring</th>'
                 + '<th style="padding:8px 10px;text-align:center;font-size:10px;color:#6b7280;text-transform:uppercase;">Max</th>'
                 + '<th style="padding:8px 10px;text-align:center;font-size:10px;color:#6b7280;text-transform:uppercase;">Status</th>'
                 + '<th style="padding:8px 10px;text-align:left;font-size:10px;color:#6b7280;text-transform:uppercase;">Registered</th>'
@@ -42356,33 +42421,6 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     row.appendChild(lab); row.appendChild(a); row.appendChild(cp);
                     return row;
                 }
-
-                // ── Frequency selector ──
-                var freqSelect = document.createElement('select');
-                freqSelect.className = 'tr-btn';
-                freqSelect.title = 'Change auto-check frequency for all pages of this client';
-                freqSelect.style.cssText = 'font-size:10px;padding:3px 6px;border-color:#818cf8;color:#818cf8;background:#0d1117;cursor:pointer;border-radius:4px;border:1px solid #818cf8;';
-                [['0','\u2298 Off'],['3days','3 days'],['7days','7 days'],['17days','17 days'],['21days','21 days'],['30days','30 days'],['weekly','Weekly'],['monthly','Monthly']].forEach(function(opt) {
-                    var o = document.createElement('option');
-                    o.value = opt[0];
-                    o.textContent = opt[1];
-                    if (c.scan_frequency === opt[0]) o.selected = true;
-                    freqSelect.appendChild(o);
-                });
-                freqSelect.onchange = (function(id){ return function() {
-                    var freq = this.value;
-                    // Update all pages for this client
-                    fetch('/api/admin/tracker-clients/' + id + '/frequency', {
-                        method: 'PATCH',
-                        headers: {'Content-Type':'application/json', 'x-admin-key': currentAdminId},
-                        body: JSON.stringify({frequency: freq})
-                    }).then(function(r){ return r.json(); }).then(function(d){
-                        if (d.success) alert('Frequency updated to ' + freq);
-                        else alert(d.error || 'Failed');
-                        setTimeout(loadTrackerClients, 400);
-                    });
-                }; })(c.id);
-                togglesRow.appendChild(freqSelect);
 
                 var toggleBtn = document.createElement('button');
                 toggleBtn.className = 'tr-btn' + (isActive ? '' : ' green');
@@ -42651,7 +42689,16 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 delBtn.style.cssText = 'font-size:10px;padding:3px 8px;';
                 delBtn.onclick = (function(id){ return function(){ deleteTcClient(id); }; })(c.id);
 
+                var monitoringBtn = document.createElement('button');
+                var monitoringBtnCount = parseInt(c.monitored_page_count||0,10);
+                monitoringBtn.className = 'tr-btn';
+                monitoringBtn.textContent = monitoringBtnCount ? ('Monitoring (' + monitoringBtnCount + ')') : 'Monitoring: Off';
+                monitoringBtn.title = 'View and change optional automatic monitoring per page';
+                monitoringBtn.style.cssText = 'font-size:10px;padding:3px 8px;border-color:' + (monitoringBtnCount ? '#4ade80' : '#64748b') + ';color:' + (monitoringBtnCount ? '#4ade80' : '#94a3b8') + ';';
+                monitoringBtn.onclick = (function(id,label){ return function(){ openTcMonitoring(id,label); }; })(c.id,(c.name||c.domain||'Tracker client'));
+
                 btnRow.appendChild(toggleBtn);
+                btnRow.appendChild(monitoringBtn);
                 btnRow.appendChild(domainsBtn);
                 btnRow.appendChild(ipBtn);
                 btnRow.appendChild(regenBtn);
@@ -42736,10 +42783,14 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     clientTypeColor = '#6b7280';
                 }
 
-                // Scan frequency from pages
-                var freqMap = { '3days': '3 days', 'weekly': 'Weekly', '1week': 'Weekly', 'monthly': 'Monthly', '1day': 'Daily' };
-                var freqDisplay = c.scan_frequency ? (freqMap[c.scan_frequency] || c.scan_frequency) : '—';
-                var freqColor = c.scan_frequency === '3days' ? '#4ade80' : c.scan_frequency === 'weekly' || c.scan_frequency === '1week' ? '#60a5fa' : c.scan_frequency === 'monthly' ? '#a78bfa' : '#6b7280';
+                // Monitoring summary. Clients choose monitoring per page in their Tracker;
+                // Admin can inspect/edit per page or safely switch every page Off.
+                var freqMap = { '1day':'daily','3days':'3 days','7days':'7 days','weekly':'weekly','1week':'weekly','2weeks':'14 days','17days':'17 days','21days':'21 days','30days':'30 days','monthly':'monthly' };
+                var monitoredCount = parseInt(c.monitored_page_count||0,10);
+                var freqValues = String(c.monitoring_frequencies||'').split(',').map(function(x){return x.trim();}).filter(Boolean);
+                var freqLabels = freqValues.map(function(x){return freqMap[x]||x;});
+                var freqDisplay = monitoredCount ? (monitoredCount+' page'+(monitoredCount===1?'':'s')+' · '+freqLabels.join(', ')) : 'Off';
+                var freqColor = monitoredCount ? '#4ade80' : '#6b7280';
 
                 tr.innerHTML =
                     '<td style="padding:8px 10px;"><div style="color:#9ca3af;">' + (c.name||'-') + '</div>'
@@ -42749,7 +42800,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                     + '<td class="tc-url-cell" style="padding:8px 10px;max-width:240px;"></td>'
                     + '<td style="padding:8px 10px;text-align:center;"><span style="font-size:11px;font-weight:700;color:' + clientTypeColor + ';">' + clientTypeBadge + '</span></td>'
                     + '<td style="padding:8px 10px;text-align:center;color:#a78bfa;">' + (c.page_count||0) + '</td>'
-                    + '<td style="padding:8px 10px;text-align:center;"><span style="font-size:11px;font-weight:700;color:' + freqColor + ';">' + freqDisplay + '</span></td>'
+                    + '<td title="Set per page; use the Monitoring button to inspect or change it" style="padding:8px 10px;text-align:center;"><span style="font-size:11px;font-weight:700;color:' + freqColor + ';">' + freqDisplay + '</span></td>'
                     + '<td style="padding:6px 10px;text-align:center;color:#9ca3af;font-weight:700;">' + (c.max_pages||1) + '</td>'
                     + '<td style="padding:8px 10px;text-align:center;"><span style="font-size:10px;font-weight:700;color:' + statusColor + ';">' + statusLabel + '</span>'
                     + (isPaused ? '<div style="font-size:9px;color:#6b7280;margin-top:2px;">auto-paused</div>' : '')
@@ -49516,16 +49567,22 @@ function startHtmlReminderScheduler() {
         if (briefAgeDays >= cfg.pauseAfter) {
           console.log('[html-reminder] Auto-pausing client', p.tracker_client_id, '— brief age:', briefAgeDays, 'days');
           await pool.query(`UPDATE tracker_clients SET status='paused', paused_at=NOW() WHERE id=$1`, [p.tracker_client_id]).catch(()=>{});
+          const stoppedMonitoring = await pool.query(`UPDATE tracker_pages SET check_frequency='0',next_check_at=NULL,email_reminders=FALSE,next_ai_reminder_at=NULL
+            WHERE tracker_client_id=$1 AND COALESCE(check_frequency,'0') NOT IN('0','0days','off','') RETURNING id`,[p.tracker_client_id]).catch(()=>({rowCount:0}));
 
           if (!clientsSentTo.has(clientKey)) {
             clientsSentTo.add(clientKey);
             const subject = 'Your ContentScale tracker has been paused — ' + p.domain;
             const htmlBody = '<h2 style="font-size:17px;font-weight:800;color:#dc2626;margin-bottom:10px;">Your tracker has been automatically paused</h2>'
               + '<p style="font-size:14px;color:#374151;line-height:1.7;margin-bottom:14px;">Your Citation Brief for <strong>' + p.url + '</strong> has been active for <strong>' + briefAgeDays + ' days</strong> without being marked as done.</p>'
+              + (stoppedMonitoring.rowCount ? '<p style="font-size:14px;color:#374151;line-height:1.7;margin-bottom:14px;">Optional automatic monitoring was switched Off for <strong>' + stoppedMonitoring.rowCount + ' page(s)</strong>. Your protected history and case-study milestone emails remain saved.</p>' : '')
               + '<p style="font-size:14px;color:#374151;line-height:1.7;margin-bottom:14px;">To reactivate your tracker, contact Ottmar directly.</p>'
               + '<a href="https://wa.me/31628073996?text=Hi+Ottmar,+I+want+to+reactivate+my+tracker+for+' + encodeURIComponent(p.domain) + '" style="display:inline-block;background:#16a34a;color:white;text-decoration:none;padding:10px 22px;border-radius:6px;font-size:13px;font-weight:700;">WhatsApp Ottmar to reactivate &rarr;</a>'
               + '<p style="font-size:11px;color:#94a3b8;margin-top:12px;">Or let Ottmar implement everything for you — high-GRAAF, citation-ready content.</p>';
             await notifyClient(p.tracker_client_id, subject, htmlBody, subject + '\n\n<a href="' + trackerUrl + '">View tracker →</a>').catch(()=>{});
+            await notifyOttmar('Tracker automatically paused — ' + p.domain,
+              '<p><strong>' + p.domain + '</strong> was automatically paused after ' + briefAgeDays + ' days.</p><p>' + (stoppedMonitoring.rowCount ? stoppedMonitoring.rowCount + ' monitored page(s) were set to Off.' : 'Monitoring was already Off; no monitoring settings were changed.') + '</p>',
+              p.domain + ' was automatically paused. ' + (stoppedMonitoring.rowCount ? stoppedMonitoring.rowCount + ' monitored page(s) were set to Off.' : 'Monitoring was already Off.')).catch(()=>{});
 
             if (p.telegram_chat_id) {
             await sendTelegramNotification(p.telegram_chat_id, '⏸️ Your ContentScale tracker for ').catch(()=>{});
