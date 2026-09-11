@@ -1,4 +1,4 @@
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-11-CANONICAL-v40';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-11-CANONICAL-v41';
 const CONTENTSCALE_BUILD_CHANGES = [
   'professional-guided-tour',
   'prewrite-create-expand-publish-tracker-baseline',
@@ -43,6 +43,8 @@ const CONTENTSCALE_BUILD_CHANGES = [
   ,'audit-client-current-build-cache-buster'
   ,'audit-run-button-safe-loader-status'
   ,'tracker-regex-free-divider-validation'
+  ,'audit-all-controls-wait-for-validated-client'
+  ,'audit-safe-dispatch-no-inline-reference-errors'
 ];
 console.log('[ContentScale] BUILD=' + CONTENTSCALE_BUILD_ID + ' BOOT=' + new Date().toISOString());
 console.log('[ContentScale] CHANGES=' + CONTENTSCALE_BUILD_CHANGES.join(','));
@@ -12106,10 +12108,10 @@ return result;
   <div class="field"><label>Website-URL van de klant</label><input id="url" placeholder="https://klant.nl" value="" oninput="_persistAuditUrlNow(this.value);_saveState(event)" onchange="_persistAuditUrlNow(this.value);_saveState(event)"></div>
   <div class="field" style="max-width:170px"><label>Modus</label><select id="mode"><option value="test">Test (1 pagina, snel)</option><option value="quick">Snel (20 pag.)</option><option value="full">Volledig</option></select></div>
   <div class="field" style="max-width:150px"><label>Pagina-taal</label><select id="pageLang"><option value="auto">Auto-detect</option><option value="ar">العربية</option><option value="en">English</option><option value="nl">Nederlands</option><option value="es">Español</option></select></div>
-  <div class="field" style="max-width:150px"><label>Rapport-taal</label><select id="reportLang" onchange="rerenderReport()"><option value="nl">Nederlands</option><option value="ar">العربية</option><option value="es">Español</option><option value="en">English</option></select></div>
-  <button id="run" onclick="if(typeof window.runAudit==='function'){window.runAudit();}else{this.disabled=true;var s=document.getElementById('status');if(s){s.style.display='block';s.textContent='Audit engine is still loading. Refresh once; if this remains visible, the audit script was blocked.';}}">Audit uitvoeren</button>
-  <button id="saveAuditBtn" onclick="saveAuditNow(true)" style="background:#fff;color:#4f46e5;border:1.5px solid #4f46e5;">Opslaan</button>
-  <button id="resetBtn" onclick="resetAudit()" style="background:#fff;color:#dc2626;border:1.5px solid #dc2626;">Reset</button>
+  <div class="field" style="max-width:150px"><label>Rapport-taal</label><select id="reportLang" disabled onchange="window.csAuditCall('rerenderReport')"><option value="nl">Nederlands</option><option value="ar">العربية</option><option value="es">Español</option><option value="en">English</option></select></div>
+  <button id="run" disabled onclick="window.csAuditCall('runAudit')">Audit uitvoeren</button>
+  <button id="saveAuditBtn" disabled onclick="window.csAuditCall('saveAuditNow',[true])" style="background:#fff;color:#4f46e5;border:1.5px solid #4f46e5;">Opslaan</button>
+  <button id="resetBtn" disabled onclick="window.csAuditCall('resetAudit')" style="background:#fff;color:#dc2626;border:1.5px solid #dc2626;">Reset</button>
   <span id="auditSaveStatus" style="font-size:12px;color:#64748b;min-width:110px"></span>
 </div>
 
@@ -12313,7 +12315,27 @@ STRICT RULES:
   <div id="toolShareList" style="margin-top:12px;font-size:13px;color:#666;">No Audit access links loaded yet.</div>
 </div>
 
-<script src="/audit-client.js?v=20260911-canonical-v40" onerror="var b=document.getElementById('run');if(b)b.disabled=true;var s=document.getElementById('status');if(s){s.style.display='block';s.textContent='Audit engine could not load. Refresh the page to retry.';}"></script>
+<!-- CONTENTSCALE-AUDIT-HANDOFF-V41: every inline audit control must use csAuditCall.
+     Controls remain disabled until the external client has loaded AND its public functions exist. -->
+<script>
+window.csAuditReady=false;
+window.csAuditStatus=function(message){
+  var s=document.getElementById('status');
+  if(s){s.style.display='block';s.classList.add('on');s.textContent=message;}
+};
+window.csAuditCall=function(name,args){
+  if(window.csAuditReady && typeof window[name]==='function') return window[name].apply(window,args||[]);
+  window.csAuditStatus('Audit engine is still loading. Wait a moment and try again.');
+};
+window.csAuditClientLoaded=function(){
+  var required=['runAudit','rerenderReport','saveAuditNow','resetAudit'];
+  var missing=required.filter(function(name){return typeof window[name]!=='function';});
+  if(missing.length){window.csAuditStatus('Audit engine loaded incompletely. Refresh the page to retry.');return;}
+  window.csAuditReady=true;
+  ['run','reportLang','saveAuditBtn','resetBtn'].forEach(function(id){var el=document.getElementById(id);if(el)el.disabled=false;});
+};
+</script>
+<script src="/audit-client.js?v=20260911-canonical-v41" onload="window.csAuditClientLoaded()" onerror="window.csAuditStatus('Audit engine could not load. Refresh the page to retry.')"></script>
 </div></body></html>`;
                  if (_isSharedToolAccess) _auditHtml = _stripWhiteLabelPersonalBlocks(_auditHtml);
                  res.type('html').send(_auditHtml);
