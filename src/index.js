@@ -1,4 +1,4 @@
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-11-CANONICAL-v39';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-11-CANONICAL-v40';
 const CONTENTSCALE_BUILD_CHANGES = [
   'professional-guided-tour',
   'prewrite-create-expand-publish-tracker-baseline',
@@ -40,6 +40,9 @@ const CONTENTSCALE_BUILD_CHANGES = [
   ,'intelligence-evidence-backed-treatment-recommendation'
   ,'copy-brief-framing-items-not-duplicated-as-actions'
   ,'copy-brief-ready-to-paste-divider-cleanup'
+  ,'audit-client-current-build-cache-buster'
+  ,'audit-run-button-safe-loader-status'
+  ,'tracker-regex-free-divider-validation'
 ];
 console.log('[ContentScale] BUILD=' + CONTENTSCALE_BUILD_ID + ' BOOT=' + new Date().toISOString());
 console.log('[ContentScale] CHANGES=' + CONTENTSCALE_BUILD_CHANGES.join(','));
@@ -12104,7 +12107,7 @@ return result;
   <div class="field" style="max-width:170px"><label>Modus</label><select id="mode"><option value="test">Test (1 pagina, snel)</option><option value="quick">Snel (20 pag.)</option><option value="full">Volledig</option></select></div>
   <div class="field" style="max-width:150px"><label>Pagina-taal</label><select id="pageLang"><option value="auto">Auto-detect</option><option value="ar">العربية</option><option value="en">English</option><option value="nl">Nederlands</option><option value="es">Español</option></select></div>
   <div class="field" style="max-width:150px"><label>Rapport-taal</label><select id="reportLang" onchange="rerenderReport()"><option value="nl">Nederlands</option><option value="ar">العربية</option><option value="es">Español</option><option value="en">English</option></select></div>
-  <button id="run" onclick="runAudit()">Audit uitvoeren</button>
+  <button id="run" onclick="if(typeof window.runAudit==='function'){window.runAudit();}else{this.disabled=true;var s=document.getElementById('status');if(s){s.style.display='block';s.textContent='Audit engine is still loading. Refresh once; if this remains visible, the audit script was blocked.';}}">Audit uitvoeren</button>
   <button id="saveAuditBtn" onclick="saveAuditNow(true)" style="background:#fff;color:#4f46e5;border:1.5px solid #4f46e5;">Opslaan</button>
   <button id="resetBtn" onclick="resetAudit()" style="background:#fff;color:#dc2626;border:1.5px solid #dc2626;">Reset</button>
   <span id="auditSaveStatus" style="font-size:12px;color:#64748b;min-width:110px"></span>
@@ -12310,7 +12313,7 @@ STRICT RULES:
   <div id="toolShareList" style="margin-top:12px;font-size:13px;color:#666;">No Audit access links loaded yet.</div>
 </div>
 
-<script src="/audit-client.js?v=20260909-prospectprivacy1"></script>
+<script src="/audit-client.js?v=20260911-canonical-v40" onerror="var b=document.getElementById('run');if(b)b.disabled=true;var s=document.getElementById('status');if(s){s.style.display='block';s.textContent='Audit engine could not load. Refresh the page to retry.';}"></script>
 </div></body></html>`;
                  if (_isSharedToolAccess) _auditHtml = _stripWhiteLabelPersonalBlocks(_auditHtml);
                  res.type('html').send(_auditHtml);
@@ -35551,7 +35554,17 @@ function _copyBriefAuthoritative(pageId) {
       while (after.length && _seps.indexOf(after.charAt(0))>=0) after = after.slice(1);
       out.write = after.trim();
       t = t.slice(0, fixIdx).trim();
-      if (/^[\s\u2500\u2014\-:]+$/.test(t)) t = '';
+      // CONTENTSCALE-TRACKER-HANDOFF-V40: this code is emitted inside an HTML template.
+      // Never restore a regex with backslash escapes here: the outer template consumes them and
+      // the browser receives an invalid character class. Check separator-only text character by
+      // character so Copy Brief cannot crash the complete tracker script.
+      if (t) {
+        var _onlySeps = true;
+        for (var _tsi=0; _tsi<t.length; _tsi++) {
+          if (_seps.indexOf(t.charAt(_tsi)) < 0) { _onlySeps = false; break; }
+        }
+        if (_onlySeps) t = '';
+      }
       up = t.toUpperCase();
     }
     // YOUR GAP / AI OVERVIEW / GOOGLE SEARCH context markers -> context
