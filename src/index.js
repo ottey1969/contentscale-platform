@@ -1,4 +1,4 @@
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-11-CANONICAL-v28';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-11-CANONICAL-v29';
 const CONTENTSCALE_BUILD_CHANGES = [
   'professional-guided-tour',
   'prewrite-create-expand-publish-tracker-baseline',
@@ -32696,11 +32696,14 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
       <div class="so-progress-bar" id="soProgressBar"></div>
     </div>
     <div class="so-steps" id="soSteps">
-      <div class="so-step" id="soStep_html"><span class="so-step-icon pending" id="soIcon_html">&#9675;</span><span class="so-step-label" id="soLabel_html">Fetch and compare live HTML</span></div>
-      <div class="so-step" id="soStep_graaf"><span class="so-step-icon pending" id="soIcon_graaf">&#9675;</span><span class="so-step-label" id="soLabel_graaf">Analyse content and GRAAF signals</span></div>
-      <div class="so-step" id="soStep_google"><span class="so-step-icon pending" id="soIcon_google">&#9675;</span><span class="so-step-label" id="soLabel_google">Load Google Search Console data</span></div>
-      <div class="so-step" id="soStep_perplexity"><span class="so-step-icon pending" id="soIcon_perplexity">&#9675;</span><span class="so-step-label" id="soLabel_perplexity">Load verified five-engine evidence</span></div>
-      <div class="so-step" id="soStep_copilot"><span class="so-step-icon pending" id="soIcon_copilot">&#9675;</span><span class="so-step-label" id="soLabel_copilot">Compare competitors and content gaps</span></div>
+      <div class="so-step" id="soStep_html"><span class="so-step-icon pending" id="soIcon_html">&#9675;</span><span class="so-step-label" id="soLabel_html">Live HTML and GRAAF analysis</span></div>
+      <div class="so-step" id="soStep_google"><span class="so-step-icon pending" id="soIcon_google">&#9675;</span><span class="so-step-label" id="soLabel_google">Google Search Console data</span></div>
+      <div class="so-step" id="soStep_aio"><span class="so-step-icon pending" id="soIcon_aio">&#9675;</span><span class="so-step-label" id="soLabel_aio">Google AIO / Gemini evidence</span></div>
+      <div class="so-step" id="soStep_chatgpt"><span class="so-step-icon pending" id="soIcon_chatgpt">&#9675;</span><span class="so-step-label" id="soLabel_chatgpt">ChatGPT Search evidence</span></div>
+      <div class="so-step" id="soStep_perplexity"><span class="so-step-icon pending" id="soIcon_perplexity">&#9675;</span><span class="so-step-label" id="soLabel_perplexity">Perplexity evidence</span></div>
+      <div class="so-step" id="soStep_claude"><span class="so-step-icon pending" id="soIcon_claude">&#9675;</span><span class="so-step-label" id="soLabel_claude">Claude evidence</span></div>
+      <div class="so-step" id="soStep_copilot"><span class="so-step-icon pending" id="soIcon_copilot">&#9675;</span><span class="so-step-label" id="soLabel_copilot">Microsoft Copilot evidence</span></div>
+      <div class="so-step" id="soStep_intelligence"><span class="so-step-icon pending" id="soIcon_intelligence">&#9675;</span><span class="so-step-label" id="soLabel_intelligence">Competitive Intelligence and gaps</span></div>
       <div class="so-step" id="soStep_ai"><span class="so-step-icon pending" id="soIcon_ai">&#9675;</span><span class="so-step-label" id="soLabel_ai">Validate claims and build brief</span></div>
     </div>
     <div class="so-status" id="soStatus">Initializing scan...</div>
@@ -38212,7 +38215,7 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
     // 'brave' removed \u2014 the Claude/Brave citation check no longer exists server-side (Brave Search
     // was never actually Claude; that step was removed entirely). Keeping it here left a phantom
     // status line ("Claude / Brave citation check...") with no matching row, which is what showed up.
-    var stepIds = ['html','graaf','google','perplexity','copilot','ai'];
+    var stepIds = ['html','google','aio','chatgpt','perplexity','claude','copilot','intelligence','ai'];
     stepIds.forEach(function(sid) {
       var step = document.getElementById('soStep_' + sid);
       var icon = document.getElementById('soIcon_' + sid);
@@ -38229,12 +38232,15 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
     overlay.classList.remove('hiding');
     overlay.classList.add('show');
     var steps = [
-      { id: 'html',       label: 'Fetch and compare live HTML',              pct: 10 },
-      { id: 'graaf',      label: 'Analyse content and GRAAF signals',        pct: 26 },
-      { id: 'google',     label: 'Load Google Search Console data',          pct: 46 },
-      { id: 'perplexity', label: 'Load verified five-engine evidence',       pct: 64 },
-      { id: 'copilot',    label: 'Compare competitors and content gaps',     pct: 80 },
-      { id: 'ai',         label: 'Validate claims and build brief',          pct: 94 },
+      { id: 'html',         label: 'Live HTML and GRAAF analysis',            pct: 10 },
+      { id: 'google',       label: 'Google Search Console data',              pct: 22 },
+      { id: 'aio',          label: 'Load Google AIO / Gemini evidence',       pct: 32 },
+      { id: 'chatgpt',      label: 'Load ChatGPT Search evidence',            pct: 42 },
+      { id: 'perplexity',   label: 'Load Perplexity evidence',                pct: 52 },
+      { id: 'claude',       label: 'Load Claude evidence',                    pct: 62 },
+      { id: 'copilot',      label: 'Load Microsoft Copilot evidence',         pct: 72 },
+      { id: 'intelligence', label: 'Competitive Intelligence and gaps',       pct: 84 },
+      { id: 'ai',           label: 'Validate claims and build brief',         pct: 95 },
     ];
     // Two speeds: the realistic ~34s cycle for a single manual scan (matches real backend timing so
     // it doesn't feel rushed), and a compressed ~4s cycle for Scan All / Do everything, where a NEW
@@ -38242,12 +38248,12 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
     // SAME overlay mid-cycle, making the whole thing look broken and chaotic (exactly what was seen).
     var timings, durations, totalMs;
     if (fast) {
-      timings   = [0, 250, 900, 1700, 2500, 3300];
-      durations = [200, 600, 700, 700, 700, 700];
+      timings   = [0, 350, 750, 1150, 1550, 1950, 2350, 2750, 3300];
+      durations = [300, 350, 350, 350, 350, 350, 350, 500, 700];
       totalMs = 4200;
     } else {
-      timings   = [0, 1500, 5000, 10000, 16000, 22000];
-      durations = [1200, 3000, 4000, 4500, 4500, 5000];
+      timings   = [0, 1800, 5000, 8000, 11000, 14000, 17000, 21000, 26000];
+      durations = [1500, 2800, 2600, 2600, 2600, 2600, 2600, 4500, 7000];
       totalMs = 34000;
     }
     steps.forEach(function(s, idx) {
@@ -46085,6 +46091,9 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
         ,repurposing: /repurpos(?:e|ed|es|ing)/i.test(rawHtml)
         ,templating: /(?:reusable|repeatable|standardized|standardised)\s+(?:content\s+)?(?:template|workflow|checklist)|templating\s+workflow/i.test(rawHtml)
       };
+      // Preserve deterministic HTML presence beyond this prompt block. The final brief
+      // merge runs later and must not lose the facts already detected in the same scan.
+      snapshot._on_page_presence = Object.assign({}, _onPage);
       let _alreadyOnPage = '';
       if (_onPage.def) _alreadyOnPage += '\n- A quotable definition / direct-answer block is ALREADY on the page -> do NOT add another definition; MODIFY the existing one only if it is weak.';
       if (_onPage.whatIsH2) _alreadyOnPage += '\n- A "What is ..." H2 is ALREADY present -> do NOT add another one.';
@@ -47978,14 +47987,15 @@ MERGE RULES:
       if (brief2) {
         try {
           const _fwHtml = String(effectiveHtml || page.html_content || '').toLowerCase();
+          const _fwSeen = snapshot._on_page_presence || {};
           const _fwHas = {
-            definition: /<h2[^>]*>[^<]*what is content at scale/i.test(_fwHtml) || /id=["'](?:direct-answer|voice-what-is)/i.test(_fwHtml),
-            workflow: /how to implement content scaling/i.test(_fwHtml),
-            comparison: /brandwell/i.test(_fwHtml) && /<table/i.test(_fwHtml) && /(?:scores and fixes|measurement and tracking layer|they solve different problems|independent alternative)/i.test(_fwHtml),
-            author: /about the (?:author|creator|founder)|author-card|ottmar-francisca-headshot/i.test(_fwHtml),
-            craft: /\/craft-framework\/?["'#?]/i.test(_fwHtml),
-            score: /\/(?:seo-)?contentscore\/?["'#?]/i.test(_fwHtml),
-            checker: /\/(?:best-ai-content-quality-checkers|ai-content-quality-checker)\/?["'#?]/i.test(_fwHtml)
+            definition: !!(_fwSeen.def || _fwSeen.whatIsH2) || /<h2[^>]*>[^<]*what is content at scale/i.test(_fwHtml) || /id=["'](?:direct-answer|voice-what-is)/i.test(_fwHtml),
+            workflow: !!_fwSeen.scalingWorkflow || /how to implement content scaling/i.test(_fwHtml),
+            comparison: !!_fwSeen.comparison || (/brandwell/i.test(_fwHtml) && /<table/i.test(_fwHtml) && /(?:scores and fixes|measurement and tracking layer|they solve different problems|independent alternative)/i.test(_fwHtml)),
+            author: !!_fwSeen.author || /about the (?:author|creator|founder)|author-card|ottmar-francisca-headshot/i.test(_fwHtml),
+            craft: !!_fwSeen.craftLink || /\/craft-framework\/?["'#?]/i.test(_fwHtml),
+            score: !!_fwSeen.scoreLink || /\/(?:seo-)?contentscore\/?["'#?]/i.test(_fwHtml),
+            checker: !!_fwSeen.checkerLink || /\/(?:best-ai-content-quality-checkers|ai-content-quality-checker)\/?["'#?]/i.test(_fwHtml)
           };
           const _fwDrop = function(it) {
             if (!it || typeof it !== 'object') return false;
@@ -47994,16 +48004,18 @@ MERGE RULES:
             const _title = String(it.title || '').toLowerCase();
             const _action = String(it.action || '');
             const _txt = (_title + ' ' + _action).toLowerCase();
-            if (_fwHas.checker && /quality checkers conflict/.test(_txt)) return true;
-            if (_fwHas.craft && /craft framework conflict/.test(_txt)) return true;
-            if (_fwHas.score && /contentscore conflict/.test(_txt)) return true;
-            if (_fwHas.definition && _fwHas.workflow && /defend content (?:at )?scale|capture content scale intent/.test(_txt)) return true;
+            if (_fwHas.checker && /(?:resolve|differentiate).{0,50}quality checkers?(?: conflict| intent)?/.test(_txt)) return true;
+            if (_fwHas.craft && /(?:resolve|differentiate).{0,50}craft framework(?: conflict| intent)?/.test(_txt)) return true;
+            if (_fwHas.score && /(?:resolve|differentiate).{0,50}(?:seo )?contentscore(?: conflict| intent)?/.test(_txt)) return true;
+            if (_fwHas.definition && _fwHas.workflow && /(?:defend|protect|expand).{0,40}(?:content at scale|content scale).{0,30}(?:query|aio citation)|capture content scale intent/.test(_txt)) return true;
             if (_fwHas.author && /(?:strengthen|add).{0,40}(?:e-e-a-t )?(?:bio|author|creator)/.test(_txt)) return true;
             if (_fwHas.comparison && /(?:close|add).{0,40}(?:competitor content gap|comparison)|lacks a direct comparison table/.test(_txt)) return true;
             if (_fwHas.workflow && /expand adjacent intent impressions/.test(_txt)) return true;
             if (/strengthen internal linking authority/.test(_txt) && !_action.replace(/<[^>]*>/g, '').trim()) return true;
             if (/meta title|meta title\s*&\s*description/.test(_title) &&
                 !(/seo title\s*:/i.test(_action) && /meta description\s*:/i.test(_action))) return true;
+            // Broken HTML fragments are never implementation-ready recommendations.
+            if (/<\/p>/i.test(_action) && !/<p(?:\s|>)/i.test(_action)) return true;
             return false;
           };
           if (Array.isArray(brief2.items)) brief2.items = brief2.items.filter(function(it){ return !_fwDrop(it); });
@@ -48016,6 +48028,7 @@ MERGE RULES:
               it.what_wins = 'Preserve the current definition and proven citation passages, then integrate only evidence-backed gaps such as repurposing, centralized guidelines or reusable templates where they naturally fit.';
             });
           }
+          console.log('[tracker] final HTML guard', page.id, JSON.stringify(_fwHas), 'items=' + (brief2.items||[]).length, 'gsc=' + (brief2.gsc_brief||[]).length);
         } catch(_fwErr) { console.warn('[tracker] final HTML guard skipped:', _fwErr && _fwErr.message); }
       }
 
