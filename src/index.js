@@ -1,4 +1,4 @@
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-11-CANONICAL-v25';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-11-CANONICAL-v26';
 const CONTENTSCALE_BUILD_CHANGES = [
   'professional-guided-tour',
   'prewrite-create-expand-publish-tracker-baseline',
@@ -46080,7 +46080,7 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
         craftLink: /href=["'][^"']*\/craft-framework\/?["']/i.test(rawHtml),
         scoreLink: /href=["'][^"']*\/(?:seo-)?contentscore\/?["']/i.test(rawHtml),
         checkerLink: /href=["'][^"']*\/best-ai-content-quality-checkers\/?["']/i.test(rawHtml)
-        ,scalingWorkflow: /how to implement content scaling[\s\S]{0,5000}(?:standardized editorial checklist|reusable template|human editorial|quality scoring)[\s\S]{0,5000}(?:audit|monitor|tracker)/i.test(rawHtml)
+        ,scalingWorkflow: /how to implement content scaling/i.test(rawHtml) || (/(?:content scaling|content at scale)[\s\S]{0,8000}(?:standardized editorial checklist|reusable template|human editorial|quality scoring)/i.test(rawHtml) && /(?:audit|monitor|tracker|measure|verification)/i.test(rawHtml))
         ,repurposing: /repurpos(?:e|ed|es|ing)/i.test(rawHtml)
         ,templating: /(?:reusable|repeatable|standardized|standardised)\s+(?:content\s+)?(?:template|workflow|checklist)|templating\s+workflow/i.test(rawHtml)
       };
@@ -46474,11 +46474,14 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
       // already cited at #41 is proof that top-10 is NOT a prerequisite for that specific page/query.
       let _manualGoogleAio = null;
       let _manualChatgpt = null;
+      let _manualPerplexity = null;
+      let _manualClaude = null;
+      let _manualCopilot = null;
       try {
         const _me = await pool.query(
           `SELECT DISTINCT ON (engine) engine, raw_text, raw_sources, brand_recommended, brand_direct_supported, domain_cited, exact_page_cited, is_cleared, verified_at
              FROM tracker_ai_evidence
-            WHERE page_id=$1 AND evidence_method='manual' AND engine IN ('google_aio','chatgpt')
+            WHERE page_id=$1 AND evidence_method='manual' AND engine IN ('google_aio','chatgpt','perplexity','claude','copilot')
             ORDER BY engine, id DESC`,
           [pageId]
         );
@@ -46488,6 +46491,9 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
           if(!_row.is_cleared){const _rp=_trackerParseManualEvidence(_row.raw_text||'',_row.raw_sources||'',page.url,_meAliases);_row={..._row,..._rp};}
           if (_row.engine === 'google_aio') _manualGoogleAio = _row;
           if (_row.engine === 'chatgpt') _manualChatgpt = _row;
+          if (_row.engine === 'perplexity') _manualPerplexity = _row;
+          if (_row.engine === 'claude') _manualClaude = _row;
+          if (_row.engine === 'copilot') _manualCopilot = _row;
         }
       } catch (_meErr) {
         console.warn('[tracker] manual evidence lookup for brief skipped:', _meErr && _meErr.message);
@@ -46503,6 +46509,15 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
       }
       const _googleAioManualChecked = !!(_manualGoogleAio && !_googleAioManualCleared);
       const _googleAioExactVerified = !!(_googleAioManualChecked && _manualGoogleAio.exact_page_cited);
+      const _manualEngineExact = {
+        google_aio: !!(_manualGoogleAio && !_manualGoogleAio.is_cleared && _manualGoogleAio.exact_page_cited),
+        chatgpt: !!(_manualChatgpt && !_manualChatgpt.is_cleared && _manualChatgpt.exact_page_cited),
+        perplexity: !!(_manualPerplexity && !_manualPerplexity.is_cleared && _manualPerplexity.exact_page_cited),
+        claude: !!(_manualClaude && !_manualClaude.is_cleared && _manualClaude.exact_page_cited),
+        copilot: !!(_manualCopilot && !_manualCopilot.is_cleared && _manualCopilot.exact_page_cited)
+      };
+      // Manual evidence is authoritative over automated monitoring for the same engine.
+      if(_manualPerplexity && !_manualPerplexity.is_cleared) snapshot.ai_perplexity_cited=_manualEngineExact.perplexity;
       // A current manual check is authoritative in BOTH directions. Previously only a manual
       // YES overrode the legacy snapshot; a manual NO accidentally allowed stale automatic
       // citation state to reappear inside Search Intent and the GSC Brief.
@@ -47430,6 +47445,19 @@ If no unanchored claims found, return empty array: []`;
         'This page already has verified AI visibility; use the five-engine evidence state to protect existing wins and target the engines or exact-page gaps that remain.');
       t=t.replace(/this page currently has no visibility in ai overviews or perplexity[^.]*\.?/gi,
         'Google AIO is manually VERIFIED for the exact page, while Perplexity was manually checked and did not cite the target page in the checked answer.');
+      if(_manualEngineExact && _manualEngineExact.perplexity){
+        t=t.replace(/(?:this|the|our|target) page (?:is )?not among (?:the|them|those|perplexity)[^.]*\.?/gi,
+          'Perplexity is manually VERIFIED as citing the exact target page.');
+        t=t.replace(/(?:this|the|our|target) page[^.]{0,120}(?:lacks|has no|without)[^.]{0,100}(?:perplexity|citation coverage)[^.]*\.?/gi,
+          'Perplexity is manually VERIFIED as citing the exact target page; preserve that evidence while improving only genuine content gaps.');
+        t=t.replace(/lacks citation coverage in perplexity/gi,'already has a manually verified exact-page citation in Perplexity');
+      }
+      if(_manualCopilot && !_manualCopilot.is_cleared && !_manualEngineExact.copilot){
+        t=t.replace(/(?:existing|current|verified) citations? in perplexity and copilot/gi,
+          'the existing verified Perplexity citation while working toward a first verified Copilot citation');
+        t=t.replace(/(?:copilot|microsoft copilot) (?:already |currently )?(?:cites|cited|is citing) (?:this|the|our|target) page/gi,
+          'Copilot does not have a verified citation to the target page in the current manual check');
+      }
       t=t.replace(/once (?:the page achieves|organic ranking reaches) (?:the )?top ?10/gi,
         'while organic visibility improves');
       return t;
@@ -47485,6 +47513,27 @@ If no unanchored claims found, return empty array: []`;
       }
       return item;
     };
+    const _ecDuplicateAgainstHtml=function(it){
+      if(!it||typeof it!=='object')return false;
+      var t=String(it.title||'')+' '+String(it.action||'');
+      var h=String(_ecLiveHtml||'').toLowerCase();
+      if(!h)return false;
+      if(/(?:strengthen|add).{0,30}author|about the (?:author|creator)/i.test(t) && /about the author|id=["']author["']|author-card|ottmar-francisca-headshot/i.test(h))return true;
+      if(/define content at scale|add verbatim question h2/i.test(t) && /<h2[^>]*>[^<]*what is content at scale/i.test(h) && /content at scale is the/i.test(h))return true;
+      if(/resolve craft framework conflict/i.test(t) && h.includes('/craft-framework/'))return true;
+      if(/resolve contentscore conflict/i.test(t) && h.includes('/seo-contentscore/'))return true;
+      if(/resolve quality checkers conflict/i.test(t) && h.includes('/best-ai-content-quality-checkers/') && /beyond content at scale/i.test(h))return true;
+      if(/add internal links?/i.test(t)){
+        var links=[],m,rx=/href=["']([^"']+)["']/gi;while((m=rx.exec(t)))links.push(String(m[1]).toLowerCase());
+        if(links.length&&links.every(function(u){return h.includes(u);})){return true;}
+      }
+      if(/add.{0,40}(?:content scaling )?workflow|lacks a detailed, step-by-step workflow/i.test(t) && /how to implement content scaling/i.test(h))return true;
+      // A recommendation to edit a different source page is not a change to the
+      // currently scanned page. Keep it out of this page's paste-ready HTML brief.
+      if(/(?:from|on) (?:the )?page\s+https?:\/\/[^\s]+/i.test(t) && /(?:link|authority|link equity|internal link)/i.test(t))return true;
+      if(/does not pass (?:authority|link equity) (?:back )?to (?:this|the )?(?:home)?page/i.test(t))return true;
+      return false;
+    };
     if(Array.isArray(snapshot.recommendations)) {
       snapshot.recommendations=snapshot.recommendations.map(_ecEnforceItem);
       // Deterministic duplicate guard. The model cannot overrule elements found in the
@@ -47492,6 +47541,7 @@ If no unanchored claims found, return empty array: []`;
       if(typeof _onPage!=='undefined') {
         snapshot.recommendations=snapshot.recommendations.filter(function(it){
           var t=String((it&&it.title)||'')+' '+String((it&&it.action)||'');
+          if(_ecDuplicateAgainstHtml(it))return false;
           if(_onPage.author && /add\s+(?:an?\s+)?(?:verified\s+)?author|add author credentials|about the (?:author|creator)/i.test(t)) return false;
           if(_onPage.comparison && /add\s+(?:a\s+)?comparison|comparison table comparing contentscale|how contentscale compares/i.test(t)) return false;
           if(_onPage.scalingWorkflow && /add\s+(?:a\s+)?(?:content scaling\s+)?workflow section|lacks a detailed, step-by-step workflow/i.test(t)) return false;
@@ -47510,6 +47560,7 @@ If no unanchored claims found, return empty array: []`;
       snapshot.gsc_brief=snapshot.gsc_brief.map(_ecEnforceItem);
       if(typeof _onPage!=='undefined') snapshot.gsc_brief=snapshot.gsc_brief.filter(function(it){
         var t=String((it&&it.title)||'')+' '+String((it&&it.action)||'');
+        if(_ecDuplicateAgainstHtml(it))return false;
         if(_onPage.scalingWorkflow && /add\s+(?:a\s+)?(?:content scaling\s+)?workflow section|lacks a detailed, step-by-step workflow/i.test(t)) return false;
         if(_onPage.whatIsH2 && /add verbatim question h2|add\s+(?:a\s+)?(?:question|definition).{0,30}h2/i.test(t)) return false;
         if(_onPage.craftLink && _onPage.scoreLink && /add internal links?/i.test(t)&&/(?:craft|contentscore)/i.test(t)) return false;
