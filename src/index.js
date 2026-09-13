@@ -1,4 +1,4 @@
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-11-CANONICAL-v72';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-13-CANONICAL-v73';
 const CONTENTSCALE_BUILD_CHANGES = [
   'professional-guided-tour',
   'prewrite-create-expand-publish-tracker-baseline',
@@ -1260,7 +1260,7 @@ const _contentScoreV2UserNotice = String.raw`
     };
   }
 })();
-<\/script>
+</script>
 `;
 
 // Place the methodology update directly beside the scanner's existing
