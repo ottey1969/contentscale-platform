@@ -1,4 +1,4 @@
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-13-CANONICAL-v87';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-13-CANONICAL-v88';
 const CONTENTSCALE_BUILD_CHANGES = [
   'professional-guided-tour',
   'prewrite-create-expand-publish-tracker-baseline',
@@ -11576,7 +11576,11 @@ return result;
                        if(_jobRef)_jobRef.scanController=_pageController;
                        const sr = await fetch(_scanBase + (_manualSource?'/api/scan/paste':'/api/scan'), {
                          method: 'POST', headers: { 'Content-Type': 'application/json' },
-                         body: JSON.stringify(_manualSource?{html:sourceHtml,url:u}:{url:u}),
+                         // Pasted-source scoring must match the standalone Paste HTML scanner.
+                         // Its optional URL field is a report label and must not silently change
+                         // link classification or the GRAAF score. The audited URL is attached to
+                         // the Audit page record separately below.
+                         body: JSON.stringify(_manualSource?{html:sourceHtml}:{url:u}),
                          signal: AbortSignal.any ? AbortSignal.any([_pageController.signal,AbortSignal.timeout(90000)]) : _pageController.signal
                        });
                        const r = await sr.json();
@@ -13202,7 +13206,7 @@ window.csAuditClientLoaded=function(){
   ['run','reportLang','saveAuditBtn','resetBtn'].forEach(function(id){var el=document.getElementById(id);if(el)el.disabled=false;});
 };
 </script>
-<script src="/audit-client.js?v=20260913-canonical-v87" onload="window.csAuditClientLoaded()" onerror="window.csAuditStatus('Audit engine could not load. Refresh the page to retry.')"></script>
+<script src="/audit-client.js?v=20260913-canonical-v88" onload="window.csAuditClientLoaded()" onerror="window.csAuditStatus('Audit engine could not load. Refresh the page to retry.')"></script>
 </div></body></html>`;
                  if (_isSharedToolAccess) _auditHtml = _stripWhiteLabelPersonalBlocks(_auditHtml);
                  res.type('html').send(_auditHtml);
