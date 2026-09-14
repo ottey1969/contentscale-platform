@@ -1,4 +1,4 @@
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-14-CANONICAL-v104';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-14-CANONICAL-v105';
 const CONTENTSCALE_BUILD_CHANGES = [
   'professional-guided-tour',
   'prewrite-create-expand-publish-tracker-baseline',
@@ -13370,7 +13370,7 @@ window.csAuditClientLoaded=function(){
   ['run','reportLang','saveAuditBtn','resetBtn'].forEach(function(id){var el=document.getElementById(id);if(el)el.disabled=false;});
 };
 </script>
-<script src="/audit-client.js?v=20260914-canonical-v104" onload="window.csAuditClientLoaded()" onerror="window.csAuditStatus('Audit engine could not load. Refresh the page to retry.')"></script>
+<script src="/audit-client.js?v=20260914-canonical-v105" onload="window.csAuditClientLoaded()" onerror="window.csAuditStatus('Audit engine could not load. Refresh the page to retry.')"></script>
 </div></body></html>`;
                  if (_isSharedToolAccess) _auditHtml = _stripWhiteLabelPersonalBlocks(_auditHtml);
                  res.type('html').send(_auditHtml);
@@ -33429,6 +33429,8 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
 .wl-footer{padding:0 24px 24px;text-align:center}
 .wl-btn{background:linear-gradient(135deg,#7c3aed,#6d28d9);color:#fff;border:none;border-radius:10px;padding:14px 32px;font-size:14px;font-weight:700;cursor:pointer;transition:all .2s;box-shadow:0 4px 20px rgba(124,58,237,.3);font-family:Verdana,sans-serif}
 .wl-btn:hover{transform:translateY(-2px);box-shadow:0 6px 30px rgba(124,58,237,.4)}
+.wl-chat-btn{display:block;margin:10px auto 0;background:transparent;color:#7dd3fc;border:1px solid #155e75;border-radius:9px;padding:10px 18px;font-size:12px;font-weight:800;cursor:pointer;font-family:Verdana,sans-serif;transition:all .2s}
+.wl-chat-btn:hover{background:#082f49;border-color:#38bdf8;color:#e0f2fe}
 .wl-hint{font-size:10px;color:#4b5563;margin-top:10px}
 @media(max-width:480px){.wl-card{max-width:100%}.wl-features{grid-template-columns:1fr}.wl-title{font-size:18px}}
 
@@ -33591,6 +33593,7 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
     </div>
     <div class="wl-footer">
       <button class="wl-btn" onclick="closeWelcome()">Get Started <span style="margin-left:6px">&#x2192;</span></button>
+      <button type="button" class="wl-chat-btn" onclick="openOttmarChat()">Need guidance? Ask Ottmar</button>
       <div class="wl-hint">Press ESC or click outside to dismiss</div>
     </div>
   </div>
@@ -34785,6 +34788,22 @@ function closeWelcome() {
     setTimeout(function() { el.style.display = 'none'; el.style.opacity = '1'; }, 300);
   }
   try { localStorage.setItem('cs_welcome_seen', '1'); } catch(e) {}
+}
+function openOttmarChat() {
+  closeWelcome();
+  var attempts = 0;
+  function openWhenReady() {
+    attempts++;
+    try {
+      if (window.Tawk_API && typeof window.Tawk_API.maximize === 'function') {
+        window.Tawk_API.maximize();
+        return;
+      }
+    } catch(e) {}
+    if (attempts < 25) return setTimeout(openWhenReady, 200);
+    toast('The chat could not open. Please use the chat button at the bottom right.', '#fbbf24');
+  }
+  openWhenReady();
 }
 // Show welcome on first visit (after pages load)
 function maybeShowWelcome() {
