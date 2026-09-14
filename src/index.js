@@ -1,4 +1,4 @@
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-14-CANONICAL-v89';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-14-CANONICAL-v91';
 const CONTENTSCALE_BUILD_CHANGES = [
   'professional-guided-tour',
   'prewrite-create-expand-publish-tracker-baseline',
@@ -6719,10 +6719,10 @@ app.get('/api/admin/tracker-readiness', verifyAdmin, async (req,res)=>{
       COUNT(DISTINCT c.id) FILTER(WHERE c.status='active')::int AS active_clients,
       COUNT(p.id) FILTER(WHERE c.status='active' AND (p.is_active=TRUE OR p.is_active IS NULL))::int AS active_pages,
       COUNT(p.id) FILTER(WHERE c.status='active' AND (p.is_active=TRUE OR p.is_active IS NULL) AND COALESCE(p.check_frequency,'0') NOT IN('0','0days','off',''))::int AS monitored_pages,
-      COUNT(p.id) FILTER(WHERE c.status='active' AND COALESCE(p.monitoring_waiting_input,FALSE))::int AS waiting_pages,
-      COUNT(p.id) FILTER(WHERE c.status='active' AND COALESCE(p.monitoring_waiting_input,FALSE) AND p.monitoring_request_at IS NULL)::int AS invalid_waiting_without_request,
-      COUNT(p.id) FILTER(WHERE c.status='active' AND COALESCE(p.check_frequency,'0') NOT IN('0','0days','off','') AND NOT COALESCE(p.monitoring_waiting_input,FALSE) AND p.next_check_at IS NULL)::int AS monitored_without_next_date,
-      COUNT(p.id) FILTER(WHERE c.status='active' AND COALESCE(p.check_frequency,'0') NOT IN('0','0days','off','') AND COALESCE(NULLIF(c.email,''),'')='')::int AS monitored_without_email
+      COUNT(p.id) FILTER(WHERE c.status='active' AND (p.is_active=TRUE OR p.is_active IS NULL) AND COALESCE(p.monitoring_waiting_input,FALSE))::int AS waiting_pages,
+      COUNT(p.id) FILTER(WHERE c.status='active' AND (p.is_active=TRUE OR p.is_active IS NULL) AND COALESCE(p.monitoring_waiting_input,FALSE) AND p.monitoring_request_at IS NULL)::int AS invalid_waiting_without_request,
+      COUNT(p.id) FILTER(WHERE c.status='active' AND (p.is_active=TRUE OR p.is_active IS NULL) AND COALESCE(p.check_frequency,'0') NOT IN('0','0days','off','') AND NOT COALESCE(p.monitoring_waiting_input,FALSE) AND p.next_check_at IS NULL)::int AS monitored_without_next_date,
+      COUNT(p.id) FILTER(WHERE c.status='active' AND (p.is_active=TRUE OR p.is_active IS NULL) AND COALESCE(p.check_frequency,'0') NOT IN('0','0days','off','') AND COALESCE(NULLIF(c.email,''),'')='')::int AS monitored_without_email
       FROM tracker_clients c LEFT JOIN tracker_pages p ON p.tracker_client_id=c.id`);
     const cs=await pool.query(`SELECT COUNT(*)::int AS active_case_studies,
       COUNT(*) FILTER(WHERE status='active' AND (baseline_locked IS DISTINCT FROM TRUE OR baseline_data IS NULL))::int AS invalid_case_study_baselines
@@ -13244,7 +13244,7 @@ window.csAuditClientLoaded=function(){
   ['run','reportLang','saveAuditBtn','resetBtn'].forEach(function(id){var el=document.getElementById(id);if(el)el.disabled=false;});
 };
 </script>
-<script src="/audit-client.js?v=20260914-canonical-v89" onload="window.csAuditClientLoaded()" onerror="window.csAuditStatus('Audit engine could not load. Refresh the page to retry.')"></script>
+<script src="/audit-client.js?v=20260914-canonical-v91" onload="window.csAuditClientLoaded()" onerror="window.csAuditStatus('Audit engine could not load. Refresh the page to retry.')"></script>
 </div></body></html>`;
                  if (_isSharedToolAccess) _auditHtml = _stripWhiteLabelPersonalBlocks(_auditHtml);
                  res.type('html').send(_auditHtml);
@@ -33042,6 +33042,8 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
 .cs-page-card.cited { border-left-color:#16a34a; background:#0a1a0f; }
 .cs-page-card.cited:hover { background:#0d2214; }
 .cs-page-card.done { opacity:.85; filter:grayscale(.12); }
+.cs-monitor-action-row{display:grid;grid-template-columns:minmax(180px,1fr) minmax(230px,1.6fr) auto;gap:10px;align-items:center;}
+@media(max-width:720px){.cs-monitor-action-row{grid-template-columns:1fr;}.cs-monitor-action-row button{width:100%;}}
 /* Small action buttons inside page cards */
 .btn { display:inline-flex; align-items:center; gap:4px; padding:5px 10px; border-radius:5px; font-size:11px; font-weight:600; cursor:pointer; border:1px solid #374151; background:#111827; color:#9ca3af; transition:all .15s; white-space:nowrap; font-family:Verdana,sans-serif; }
 .btn:hover { border-color:#6b7280; color:#e5e7eb; background:#1f2937; }
@@ -33558,6 +33560,7 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
     <button class="cs-btn" onclick="openTelegramSetup()" style="border-color:#2AABEE;color:#2AABEE;background:rgba(42,171,238,.08);font-weight:700;animation:tgPulse 2s ease-in-out infinite;" title="Install Telegram, then connect &#x2014; get notified after every scan"><i class="fab fa-telegram"></i> Install Telegram</button>
   </div>
   <div id="monitoringSummary" style="margin:-4px 0 14px;padding:11px 14px;border:1px solid #24405a;border-radius:9px;background:#071521;color:#b8c7da;font-size:11px;line-height:1.6;">Monitoring is explicit opt-in. Loading page status...</div>
+  <div id="monitoringActionList" style="margin:-6px 0 14px;"></div>
 
   <!-- Live feed -->
   <div class="cs-live">
@@ -35578,6 +35581,45 @@ function renderStats(data) {
   var perMonth=monitored.reduce(function(sum,p){var m={'1day':1,'3days':3,'7days':7,weekly:7,'1week':7,'2weeks':14,'17days':17,'21days':21,'30days':30,monthly:30};var d=m[p.check_frequency]||30;return sum+Math.ceil(30/d);},0);
   var ms=document.getElementById('monitoringSummary');
   if(ms)ms.innerHTML='<strong style="color:#7dd3fc">'+pages.length+' pages total</strong> &middot; <strong style="color:#86efac">'+monitored.length+' monitored</strong> &middot; '+(pages.length-monitored.length)+' Off &middot; Next data request: <strong style="color:#e2e8f0">'+(nextDates.length?nextDates[0].toLocaleString('en-GB',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}):'none')+'</strong> &middot; Estimated guided reviews/month: <strong style="color:#fbbf24">'+perMonth+'</strong><br><span style="color:#94a3b8">On the due day ContentScale emails once and waits for fresh GSC Pages, GSC Queries and 5/5 AI evidence. It never runs a blind scheduled scan.</span>';
+
+  // Client-visible workflow overview: show exactly which pages need attention.
+  // Off pages remain out of this list unless they belong to an active case study.
+  var actionBox=document.getElementById('monitoringActionList');
+  if(actionBox){
+    var actionPages=pages.filter(function(p){
+      var isMonitored=['0','0days','off',''].indexOf(String(p.check_frequency||'0'))<0;
+      return isMonitored||b(p.monitoring_waiting_input)||b(p.case_study_active);
+    });
+    if(!actionPages.length){
+      actionBox.innerHTML='<div style="padding:10px 14px;border:1px dashed #334155;border-radius:9px;color:#64748b;font-size:11px;">No monitored or active case-study pages. Turn on Monitoring for the pages that should enter the guided data-request workflow.</div>';
+    }else{
+      var rows=actionPages.map(function(p){
+        var waiting=b(p.monitoring_waiting_input), isCase=b(p.case_study_active);
+        var isMonitored=['0','0days','off',''].indexOf(String(p.check_frequency||'0'))<0;
+        var reqMs=Date.parse(p.monitoring_request_at||0)||0, missing=[];
+        if(waiting){
+          if((Date.parse(p.monitoring_gsc_pages_at||0)||0)<reqMs)missing.push('GSC Pages');
+          if((Date.parse(p.monitoring_gsc_queries_at||0)||0)<reqMs)missing.push('GSC Queries');
+          if(p.monitoring_require_ai!==false&&p.monitoring_require_ai!=='f'){
+            var ev=p.ai_manual_evidence;if(typeof ev==='string'){try{ev=JSON.parse(ev);}catch(x){ev={};}}ev=ev||{};
+            var verified=['google_aio','chatgpt','perplexity','claude','copilot'].filter(function(k){var x=ev[k];return x&&_aiEvidenceIsVerified(x)&&(Date.parse(x.updated_at||x.verified_at||0)||0)>=reqMs;}).length;
+            if(verified<5)missing.push('AI engines '+verified+'/5');
+          }
+        }
+        var ready=waiting&&!missing.length;
+        var status=ready?'READY — press Check now':waiting?'WAITING FOR DATA — '+missing.join(', '):isCase&&!isMonitored?'CASE STUDY ACTIVE — Monitoring Off':'MONITORING '+String(p.check_frequency||'');
+        if(!waiting&&isMonitored&&p.next_check_at){try{status+=' — next '+new Date(p.next_check_at).toLocaleString('en-GB',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});}catch(x){}}
+        var color=ready?'#86efac':waiting?'#fbbf24':isCase?'#7dd3fc':'#c4b5fd';
+        var label=_csEscH(p.title||p.keyword||String(p.url||'').replace(/^https?:[/][/]/,'').split('/')[0]||('Page '+p.id));
+        var url=_csEscH(p.url||'').replace(/"/g,'&quot;');
+        return '<div class="cs-monitor-action-row" style="padding:10px 12px;border:1px solid #243449;border-radius:8px;background:#0b1624;margin-top:7px;">'
+          +'<div style="min-width:0;"><strong style="display:block;color:#e2e8f0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+label+'</strong><a href="'+url+'" target="_blank" rel="noopener" style="display:block;color:#60a5fa;font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+_csEscH(p.url||'')+'</a></div>'
+          +'<div style="color:'+color+';font-size:10px;font-weight:800;line-height:1.45;">'+_csEscH(status)+'</div>'
+          +'<button type="button" onclick="var c=document.querySelector(\'.cs-page-card[data-page-id=&quot;'+Number(p.id)+'&quot;]\');if(c)c.scrollIntoView({behavior:\'smooth\',block:\'center\'});" style="border:1px solid #3b82f6;background:#10264a;color:#bfdbfe;border-radius:6px;padding:6px 9px;cursor:pointer;font-size:10px;font-weight:800;white-space:nowrap;">Open page</button></div>';
+      }).join('');
+      actionBox.innerHTML='<div style="padding:11px 13px;border:1px solid #1d4ed8;border-radius:9px;background:#081426;color:#cbd5e1;font-size:11px;"><div style="font-weight:900;color:#93c5fd;letter-spacing:.06em;">TRACKER ACTION PAGES · '+actionPages.length+'</div>'+rows+'</div>';
+    }
+  }
 
 }
 
