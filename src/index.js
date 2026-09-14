@@ -1,4 +1,4 @@
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-14-CANONICAL-v100';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-14-CANONICAL-v101';
 const CONTENTSCALE_BUILD_CHANGES = [
   'professional-guided-tour',
   'prewrite-create-expand-publish-tracker-baseline',
@@ -4008,6 +4008,13 @@ async function _trackerBuildDerivedIntelligence(clientId,pageId){
   const pr=await pool.query('SELECT id,url,keyword,gsc_keyword,html_content,gsc_position,gsc_impressions,gsc_clicks,last_graaf_score FROM tracker_pages WHERE id=$1 AND tracker_client_id=$2',[pageId,clientId]);
   if(!pr.rows.length)return null;
   const page=pr.rows[0];
+  let gapFamilies=[];
+  try{
+    const gc=await pool.query('SELECT gap_analysis FROM tracker_clients WHERE id=$1',[clientId]);
+    let ga=gc.rows[0]&&gc.rows[0].gap_analysis;
+    if(typeof ga==='string')ga=JSON.parse(ga||'{}');
+    if(ga&&Array.isArray(ga.families))gapFamilies=ga.families;
+  }catch(_gapLoadErr){}
   const er=await pool.query("SELECT * FROM tracker_ai_evidence WHERE page_id=$1 AND tracker_client_id=$2 AND evidence_method='manual' ORDER BY engine",[pageId,clientId]);
   const evidence=er.rows||[];
   const cr=await pool.query("SELECT id,claim_text,status FROM tracker_claims_facts WHERE tracker_client_id=$1 AND page_id IS NULL",[clientId]);
@@ -4052,8 +4059,26 @@ async function _trackerBuildDerivedIntelligence(clientId,pageId){
       FROM tracker_gsc_queries WHERE tracker_client_id=$1 AND page_id=$2
       AND impressions>=20 ORDER BY impressions DESC,position ASC NULLS LAST LIMIT 30`,[clientId,pageId]);
     const seed=_trackerIntelKey(page.keyword||page.gsc_keyword||'');
-    growthQueries=gq.rows.filter(q=>_trackerIntelKey(q.query)!==seed&&Number(q.position||0)>10).slice(0,12).map(q=>({query:q.query,clicks:Number(q.clicks||0),impressions:Number(q.impressions||0),position:q.position==null?null:Number(q.position),decision:'Validate search intent; assign this query to an existing matching page or create one dedicated spoke. Do not force it into the current page.'}));
+    growthQueries=gq.rows.filter(q=>_trackerIntelKey(q.query)!==seed&&Number(q.position||0)>10).slice(0,12).map(q=>{
+      const qk=_trackerIntelKey(q.query);
+      const family=gapFamilies.find(f=>(f.queries||[]).some(x=>_trackerIntelKey(x)===qk))||null;
+      const verdict=String((family&&family.verdict)||'REVIEW').toUpperCase();
+      const decision=verdict==='NEW_PAGE'?'CREATE_SPOKE':verdict==='SECTION'?'EXPAND_EXISTING':verdict==='TRACK_EXISTING'?'ASSIGN_EXISTING':verdict==='IGNORE'?'DEFER':'REVIEW';
+      const instruction=decision==='CREATE_SPOKE'?'Create a separate spoke proposal; do not add this intent to the current page.':decision==='EXPAND_EXISTING'?'Expand the existing owner page named by the intent analysis.':decision==='ASSIGN_EXISTING'?'Use and track the existing sitemap page; do not create a duplicate.':decision==='DEFER'?'No content action: this is brand, competitor or irrelevant demand.':'Run GSC Gap Analysis before deciding whether this needs a spoke.';
+      return {query:q.query,clicks:Number(q.clicks||0),impressions:Number(q.impressions||0),position:q.position==null?null:Number(q.position),decision:instruction,spoke_decision:decision,family:family?String(family.name||''):'',target:family?String(family.target||''):'',reason:family?String(family.reason||''):'No saved intent-family decision yet.',supporting_queries:family&&Array.isArray(family.queries)?family.queries.slice(0,8):[q.query]};
+    });
   }catch(_growthErr){}
+  const spokeRecommendations=[];
+  const seenSpokes=new Set();
+  growthQueries.forEach(q=>{
+    const key=(q.family||q.query).toLowerCase();if(seenSpokes.has(key))return;seenSpokes.add(key);
+    const related=growthQueries.filter(x=>(x.family||x.query).toLowerCase()===key);
+    const impressions=related.reduce((n,x)=>n+Number(x.impressions||0),0);
+    const best=related.slice().sort((a,b)=>Number(b.impressions||0)-Number(a.impressions||0))[0]||q;
+    const decision=best.spoke_decision||'REVIEW';
+    const slug=decision==='CREATE_SPOKE'?String(best.target||best.query).replace(/^https?:\/\/[^/]+/i,'').replace(/^\/+|\/+$/g,'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,''):'';
+    spokeRecommendations.push({decision,family:best.family||best.query,primary_query:best.query,supporting_queries:Array.from(new Set(related.reduce((a,x)=>a.concat(x.supporting_queries||[x.query]),[]))).slice(0,8),impressions,target:best.target||'',suggested_slug:slug,working_title:(best.family||best.query).replace(/\b\w/g,c=>c.toUpperCase()),evidence:impressions+' GSC impressions across '+related.length+' measured query signal(s); saved intent-family verdict: '+decision+'.',why:best.reason||'Search demand needs one clearly assigned owner page.',action:best.decision,cannibalization_status:decision==='CREATE_SPOKE'?'Checked against tracked and sitemap pages by Gap Analysis; final SERP overlap check occurs in Prewrite.':decision==='REVIEW'?'Not cleared until Gap Analysis assigns the intent.':'No new URL should be created.',proposal_only:true});
+  });
   const vals=Object.values(perEngine),saved=vals.filter(x=>x.saved).length;
   const exactCount=vals.filter(x=>x.exact_page_cited).length;
   let scanTrend={available:false};
@@ -4078,7 +4103,7 @@ async function _trackerBuildDerivedIntelligence(clientId,pageId){
   const _intelEngineNames={google_aio:'Google AIO',chatgpt:'ChatGPT',perplexity:'Perplexity',claude:'Claude',copilot:'Microsoft Copilot'};
   engineGaps.forEach(g=>winningActions.push({type:'engine_gap',engine:g.engine,title:(_intelEngineNames[g.engine]||g.engine)+' exact-page gap',action:g.recommended&&!g.domain_cited?'The brand is recommended but the website is not cited. Compare the sources this engine actually links to, then add only the missing first-party proof or direct answer.':g.domain_cited?'The domain is cited but not this exact page. Strengthen page-level relevance and the direct answer for this seed query without rewriting proven sections.':g.saved?'This engine was checked but did not cite the exact page. Use its saved source URLs and recurring topics below to identify one evidence-backed gap.':'Save a manual answer for this engine before changing content; no engine-specific conclusion is yet supported.'}));
   if(!sources.some(x=>x.own_domain))winningActions.push({type:'source_gap',title:'Make this page the primary source',action:'Publish original business facts, named service details, project evidence and clear entity/contact information so engines have a stronger first-party source than competitor summaries.'});
-  return {page:{id:page.id,url:page.url,keyword:page.keyword||page.gsc_keyword||''},summary:{manual_verified:saved,ai_visibility:vals.filter(x=>x.brand_recommended||x.brand_local_result||x.brand_direct_supported||x.domain_cited).length,local_visibility:vals.filter(x=>x.brand_local_result).length,domain_cited:vals.filter(x=>x.domain_cited).length,exact_page_cited:exactCount,competitors:competitors.length,sources:sources.length,content_opportunities:opportunities.filter(x=>!x.covered).length,claims_to_verify:claims.filter(x=>!x.safe_to_use).length,growth_queries:growthQueries.length},engines:perEngine,engine_gaps:engineGaps,scan_trend:scanTrend,treatment,competitors,sources,content_opportunities:opportunities,claims,growth_queries:growthQueries,winning_actions:winningActions.slice(0,12)};
+  return {page:{id:page.id,url:page.url,keyword:page.keyword||page.gsc_keyword||''},summary:{manual_verified:saved,ai_visibility:vals.filter(x=>x.brand_recommended||x.brand_local_result||x.brand_direct_supported||x.domain_cited).length,local_visibility:vals.filter(x=>x.brand_local_result).length,domain_cited:vals.filter(x=>x.domain_cited).length,exact_page_cited:exactCount,competitors:competitors.length,sources:sources.length,content_opportunities:opportunities.filter(x=>!x.covered).length,claims_to_verify:claims.filter(x=>!x.safe_to_use).length,growth_queries:growthQueries.length,spoke_recommendations:spokeRecommendations.filter(x=>x.decision==='CREATE_SPOKE').length},engines:perEngine,engine_gaps:engineGaps,scan_trend:scanTrend,treatment,competitors,sources,content_opportunities:opportunities,claims,growth_queries:growthQueries,spoke_recommendations:spokeRecommendations,winning_actions:winningActions.slice(0,12)};
 }
 app.get('/api/tracker-client/:token/page/:pageId/intelligence',async(req,res)=>{try{
   const cr=await pool.query('SELECT id FROM tracker_clients WHERE (token=$1 OR lead_token=$1) AND (status IS NULL OR status != $2)',[req.params.token,'deleted']);if(!cr.rows.length)return res.status(404).json({success:false,error:'Not found'});
@@ -13312,7 +13337,7 @@ window.csAuditClientLoaded=function(){
   ['run','reportLang','saveAuditBtn','resetBtn'].forEach(function(id){var el=document.getElementById(id);if(el)el.disabled=false;});
 };
 </script>
-<script src="/audit-client.js?v=20260914-canonical-v100" onload="window.csAuditClientLoaded()" onerror="window.csAuditStatus('Audit engine could not load. Refresh the page to retry.')"></script>
+<script src="/audit-client.js?v=20260914-canonical-v101" onload="window.csAuditClientLoaded()" onerror="window.csAuditStatus('Audit engine could not load. Refresh the page to retry.')"></script>
 </div></body></html>`;
                  if (_isSharedToolAccess) _auditHtml = _stripWhiteLabelPersonalBlocks(_auditHtml);
                  res.type('html').send(_auditHtml);
@@ -34746,6 +34771,18 @@ function showPrewriteBriefModal() {
   document.getElementById('prewriteBriefModal').classList.add('show');
   loadRecentPrewriteBriefs();
 }
+var _pwbRecommendationContext = null;
+function openSpokePrewrite(index) {
+  var d=window._currentIntelData||{},r=(d.spoke_recommendations||[])[Number(index)];
+  if(!r)return;
+  _pwbRecommendationContext=r;
+  showPrewriteBriefModal();
+  document.getElementById('pwbKeyword').value=r.primary_query||'';
+  document.getElementById('pwbTitle').value=r.working_title||'';
+  var st=document.getElementById('pwbStatus');
+  if(st)st.textContent='Spoke proposal loaded — review it, then generate the full Prewrite Brief. No credit is used until you click Generate.';
+}
+window.openSpokePrewrite=openSpokePrewrite;
 
 async function loadRecentPrewriteBriefs() {
   var wrap = document.getElementById('pwbRecentWrap');
@@ -34940,7 +34977,7 @@ async function generatePrewriteBrief() {
   result.innerHTML = '';
 
   try {
-    var _pwbBody = { keyword: kw, workingTitle: title, language: lang, region: region, manualAioText: aioText };
+    var _pwbBody = { keyword: kw, workingTitle: title, language: lang, region: region, manualAioText: aioText, recommendationContext:_pwbRecommendationContext };
     if (arguments.length && arguments[0] && arguments[0].intentOverride) _pwbBody.intentOverride = arguments[0].intentOverride;
     var data = await api('/prewrite-brief', 'POST', _pwbBody);
     btn.disabled = false; btn.textContent = 'Analyse & create Pre-Write Brief';
@@ -34949,6 +34986,7 @@ async function generatePrewriteBrief() {
       return;
     }
     _lastPwbInput = { keyword: kw, workingTitle: title, language: lang, region: region, manualAioText: aioText };
+    _pwbRecommendationContext = null;
     stat.textContent = '\u2713 Brief ready \u00b7 ' + (data.competitors_scraped || 0) + ' competitors analysed \u00b7 region: ' + (data.region || 'us') + (data.briefs_allowed ? ' \u00b7 ' + data.briefs_used + '/' + data.briefs_allowed + ' briefs used' : '');
     result.innerHTML = _renderIntentBar(data.search_intent) + renderPrewriteBrief(data.brief);
     loadRecentPrewriteBriefs();
@@ -35211,6 +35249,11 @@ function renderPrewriteBrief(b) {
       + '<div style="font-size:11px;color:#cbd5e1;"><strong>Cannibalization risk:</strong> '+esc(_cd.cannibalization_risk||'insufficient_data')+'</div>'
       + (_cd.closest_existing_url && _cd.closest_existing_url!=='none' ? '<div style="font-size:11px;color:#93c5fd;word-break:break-all;"><strong>Closest existing URL:</strong> '+esc(_cd.closest_existing_url)+'</div>' : '')
       + (_cd.reason ? '<div style="font-size:11px;color:#9ca3af;margin-top:5px;line-height:1.55;">'+esc(_cd.reason)+'</div>' : '')+'</div>';
+  }
+  if(b.hub_spoke_plan){
+    var _hp=b.hub_spoke_plan;
+    html+='<div style="margin-bottom:12px;background:#071521;border:1px solid #0e7490;border-radius:10px;padding:12px 14px;"><div style="font-size:10px;font-weight:800;letter-spacing:.08em;color:#67e8f9;margin-bottom:7px;">HUB / SPOKE IMPLEMENTATION</div>'
+      +'<div style="font-size:11px;color:#e2e8f0;line-height:1.65;"><b>Role:</b> '+esc(_hp.role||'')+'<br><b>Hub:</b> '+esc(_hp.hub_url||'none')+'<br><b>Spoke:</b> '+esc(_hp.spoke_url_or_slug||'')+'<br><b>Hub → spoke:</b> '+esc(_hp.hub_to_spoke_anchor||'')+' — '+esc(_hp.hub_to_spoke_placement||'')+'<br><b>Spoke → hub:</b> '+esc(_hp.spoke_to_hub_anchor||'')+' — '+esc(_hp.spoke_to_hub_placement||'')+'<br><b>Complete when:</b> <span style="color:#86efac;">'+esc(_hp.complete_when||'')+'</span></div></div>';
   }
   if (b.fact_safety) {
     var _fs=b.fact_safety||{}, _vf=Array.isArray(_fs.verified_business_facts)?_fs.verified_business_facts:[], _v1=Array.isArray(_fs.verify_first)?_fs.verify_first:[], _bl=Array.isArray(_fs.blocked_claims)?_fs.blocked_claims:[];
@@ -37714,12 +37757,19 @@ function openCycleReport(){
       return '<div class="sec"><h3>Competitive Evidence Gap Map — '+_csEscH(x.cs.primary_query||p.keyword||p.gsc_keyword||p.url)+'</h3><div class="muted" style="word-break:break-all">'+_csEscH(p.url||'')+'</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:14px"><div><h4>Organic pages currently compared</h4><ol>'+orgList+'</ol><h4>Companies found in saved AI evidence</h4><p>'+(aiNames.length?_csEscH(aiNames.slice(0,20).join(', ')):'No competitor names proven in the saved five-engine evidence.')+'</p></div><div><h4>Exact AI source URLs saved</h4>'+aiProof+'</div></div>'+gapBody+'<p class="muted"><b>Decision rule:</b> implement only gaps supported by retrieved competitor pages or saved AI evidence. Verify business claims, credentials, response times, locations and results before publishing them.</p></div>';
     }).join('');
   }else caseHtml='<div class="sec"><h2>Case Study Portfolio</h2><p class="muted">No active case studies in this Tracker.</p></div>';
+  var executionHtml='';
+  var _families=(_gapAnalysis&&Array.isArray(_gapAnalysis.families))?_gapAnalysis.families:[];
+  if(_families.length){
+    var _order={NEW_PAGE:1,SECTION:2,TRACK_EXISTING:3,IGNORE:4};
+    var _ef=_families.slice().sort(function(a,b){return (_order[String(a.verdict||'')]||9)-(_order[String(b.verdict||'')]||9)||Number(b.total_impressions||0)-Number(a.total_impressions||0);});
+    executionHtml='<div class="sec"><h2>Tracker Execution Plan</h2><p class="muted">One client-wide plan from current GSC query demand plus real tracked and sitemap URLs. These are proposals; a new URL is only approved after the Prewrite cannibalization gate.</p><div style="overflow-x:auto"><table><thead><tr><th>Decision</th><th>Intent / primary opportunity</th><th>GSC evidence</th><th>Where</th><th>What to do</th><th>Complete when</th></tr></thead><tbody>'+_ef.map(function(f){var v=String(f.verdict||'REVIEW'),qs=Array.isArray(f.queries)?f.queries:[],done=v==='NEW_PAGE'?'Prewrite approves a distinct intent; spoke is published, linked both ways and measured in GSC.':v==='SECTION'?'Named existing page contains the missing section and is rescanned.':v==='TRACK_EXISTING'?'Existing sitemap URL is tracked, verified and assigned as intent owner.':'No page change; query is documented as excluded.';return '<tr><td><span class="tag '+(v==='NEW_PAGE'?'good':v==='IGNORE'?'neutral':'warn')+'">'+_csEscH(v.replace('_',' '))+'</span></td><td><b>'+_csEscH(f.name||qs[0]||'—')+'</b><br><span class="muted">'+_csEscH(qs.slice(0,5).join(' · '))+'</span></td><td>'+Number(f.total_impressions||0).toLocaleString()+' impressions</td><td style="word-break:break-all">'+_csEscH(f.target||'New URL pending Prewrite')+'</td><td>'+_csEscH(f.action||f.reason||'Review')+'</td><td>'+_csEscH(done)+'</td></tr>';}).join('')+'</tbody></table></div></div>';
+  }else executionHtml='<div class="sec"><h2>Tracker Execution Plan</h2><div class="warnbox" style="padding:12px 14px;background:#422006;border:1px solid #a16207;border-radius:8px;color:#fde68a"><b>Plan waiting for data.</b> Add or refresh the sitemap and GSC Pages + Queries, then run Gap Analysis. No spoke or rewrite decision is invented without those inputs.</div></div>';
   var tr=Object.keys(treatments).sort().map(function(k){return '<span style="display:inline-block;margin:3px 5px 3px 0;padding:3px 7px;border:1px solid #374151;border-radius:4px;color:#cbd5e1;font-size:10px;">'+k.replace('_',' / ')+' '+treatments[k]+'</span>';}).join('')||'<span style="color:#6b7280">No treatment decisions saved yet.</span>';
   var w=window.open('','_blank','width=900,height=760'); if(!w)return toast('Allow popups to open the report','#f59e0b');
   w.document.write('<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><title>ContentScale Client Report</title><style>@page{size:landscape;margin:10mm}*{box-sizing:border-box}body{font-family:Arial,sans-serif;background:#0a0e14;color:#e5e7eb;padding:32px;margin:auto;max-width:1300px}h1{margin:0 0 6px}.muted{color:#94a3b8}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:22px 0}.k{background:#111827;border:1px solid #263244;border-radius:8px;padding:14px}.n{font-size:24px;font-weight:800}.sec{margin-top:22px;padding-top:16px;border-top:1px solid #263244}button{padding:8px 14px}table{width:100%;border-collapse:collapse;min-width:980px;background:#111827}th,td{padding:9px;border:1px solid #263244;text-align:left;font-size:11px;vertical-align:top}th{background:#172554;color:#bfdbfe}.tag{display:inline-block;padding:3px 7px;border-radius:999px;font-size:9px;font-weight:800;white-space:nowrap}.good{background:#052e16;color:#86efac}.bad{background:#450a0a;color:#fca5a5}.warn{background:#422006;color:#fde68a}.neutral{background:#1f2937;color:#cbd5e1}@media(max-width:700px){body{padding:16px}.grid{grid-template-columns:1fr 1fr}}@media print{button{display:none}body{background:#fff;color:#111;max-width:none;padding:0}.k,table{background:#fff}.muted{color:#555}.sec{break-inside:auto}table{min-width:0}th,td{font-size:8px;padding:5px;overflow-wrap:anywhere}a{color:#111;text-decoration:none}}</style></head><body>'+ 
     '<h1>ContentScale Client Report</h1><div class="muted">'+new Date().toLocaleString()+' · '+((_client&&_client.domain)||'')+'</div><button onclick="print()" style="margin-top:12px">Print / Save PDF</button>'+
     '<div class="grid"><div class="k"><div class="n">'+active+'</div><div class="muted">Active opportunities</div></div><div class="k"><div class="n">'+monitoring+'</div><div class="muted">Completed / monitoring</div></div><div class="k"><div class="n">'+decomm+'</div><div class="muted">Consolidate / remove</div></div><div class="k"><div class="n">'+clicks.toLocaleString()+'</div><div class="muted">GSC clicks in current import</div></div><div class="k"><div class="n">'+impr.toLocaleString()+'</div><div class="muted">GSC impressions</div></div><div class="k"><div class="n">'+cannProven+'</div><div class="muted">Proven cannibalization conflicts</div><div style="font-size:10px;color:#94a3b8;margin-top:4px">'+cannLikely+' likely · '+cannPossible+' possible/unconfirmed</div></div></div>'+ 
-    caseHtml+
+    executionHtml+caseHtml+
     '<div class="sec"><h3>Content governance</h3>'+tr+'<p class="muted">Stale tracked pages (&gt;30 days since scan): '+stale+' · Deferred/no-data: '+deferred+'</p></div>'+
     '<div class="sec"><h3>Next cycle</h3><p>Refresh GSC and sitemap data, recalculate Active Priorities, then work #1 → #2 → #3. Priority decides where to look; Intelligence/Brief decides KEEP / OPTIMIZE / EXPAND / REWRITE / MERGE / REDIRECT / REMOVE / MONITOR.</p></div></body></html>'); w.document.close();
 }
@@ -39387,6 +39437,11 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
     var _gapHeadline=_gapRows.length?(_gq.length?'Primary growth gap: existing query demand is not yet assigned to strong dedicated owner pages.':'Verified competitive gaps requiring a focused action.'):'No verified page gap is currently proven. Preserve this page and look for new GSC query/spoke opportunities instead of rewriting it.';
     html+='<section style="background:linear-gradient(135deg,#211506,#101827);border:1px solid #b45309;border-radius:9px;padding:12px 13px;margin-bottom:12px;"><div style="font-size:10px;font-weight:900;letter-spacing:.07em;color:#fbbf24;text-transform:uppercase;">Competitive gap — presentation summary</div><div style="font-size:12px;font-weight:800;color:#f8fafc;line-height:1.5;margin:5px 0 9px;">'+_intelEsc(_gapHeadline)+'</div>';
     if(_gapRows.length){html+='<div style="overflow:auto;"><table style="width:100%;min-width:860px;border-collapse:collapse;background:#0b1220;"><thead><tr>'+['Exact gap','Evidence: what/where','Why it matters','Required action','Complete when'].map(function(h){return '<th style="text-align:left;padding:7px;border-bottom:1px solid #92400e;color:#fcd34d;font-size:9px;text-transform:uppercase;">'+h+'</th>';}).join('')+'</tr></thead><tbody>'+_gapRows.slice(0,18).map(function(g){return '<tr><td style="padding:7px;border-bottom:1px solid #1f2937;color:#f8fafc;font-weight:750;vertical-align:top;">'+_intelEsc(g.gap)+'</td><td style="padding:7px;border-bottom:1px solid #1f2937;color:#93c5fd;vertical-align:top;">'+_intelEsc(g.evidence)+'</td><td style="padding:7px;border-bottom:1px solid #1f2937;color:#fca5a5;vertical-align:top;">'+_intelEsc(g.impact)+'</td><td style="padding:7px;border-bottom:1px solid #1f2937;color:#e2e8f0;vertical-align:top;">'+_intelEsc(g.action)+'</td><td style="padding:7px;border-bottom:1px solid #1f2937;color:#86efac;vertical-align:top;">'+_intelEsc(g.done)+'</td></tr>';}).join('')+'</tbody></table></div>';}
+    html+='</section>';
+    var _spokes=d.spoke_recommendations||[];
+    html+='<section style="background:#071521;border:1px solid #0e7490;border-radius:9px;padding:12px 13px;margin-bottom:12px;"><div style="font-size:10px;font-weight:900;letter-spacing:.07em;color:#67e8f9;text-transform:uppercase;">Automatic spoke decisions</div><div style="font-size:10px;color:#bae6fd;line-height:1.5;margin:4px 0 9px;">Based on saved GSC intent families and real tracked/sitemap URLs. A recommendation is free; only generating its full Prewrite Brief uses a brief credit.</div>';
+    if(!_spokes.length)html+='<div style="color:#64748b;">No classified spoke opportunity for this page yet. Import current GSC Queries and run Gap Analysis first.</div>';
+    _spokes.forEach(function(r,i){var create=r.decision==='CREATE_SPOKE',col=create?'#4ade80':(r.decision==='REVIEW'?'#fbbf24':'#60a5fa');html+='<div style="background:#0b1220;border:1px solid '+col+';border-radius:8px;padding:9px 10px;margin-bottom:7px;"><div style="display:flex;gap:8px;align-items:flex-start;flex-wrap:wrap;"><div style="flex:1;min-width:240px;"><div style="color:'+col+';font-weight:900;font-size:11px;">'+_intelEsc(r.decision)+'</div><div style="color:#f8fafc;font-weight:800;margin-top:2px;">'+_intelEsc(r.family)+'</div><div style="color:#93c5fd;font-size:10px;margin-top:4px;">Primary query: '+_intelEsc(r.primary_query)+' · '+_intelEsc(r.impressions)+' impressions</div><div style="color:#cbd5e1;font-size:10px;line-height:1.5;margin-top:4px;"><b>Why:</b> '+_intelEsc(r.why)+'<br><b>Where:</b> '+_intelEsc(r.target||(r.suggested_slug?'/'+r.suggested_slug+'/':'new URL pending Prewrite validation'))+'<br><b>Action:</b> '+_intelEsc(r.action)+'<br><b>Overlap safety:</b> '+_intelEsc(r.cannibalization_status)+'</div></div>'+(create?'<button class="cs-btn primary" onclick="openSpokePrewrite('+i+')" style="font-size:10px;white-space:nowrap;">Create Prewrite Brief</button>':'')+'</div></div>';});
     html+='</section>';
     var trend=d.scan_trend||{};if(trend.current){var pd=trend.position_delta,sd=trend.score_delta;html+='<div style="background:#0b1220;border:1px solid #1f2937;border-radius:8px;padding:9px 11px;margin-bottom:12px;"><b style="color:#f1f5f9;">Change since previous scan</b><span style="color:#94a3b8;margin-left:8px;">'+(trend.available?('Position '+(pd==null?'—':(pd>0?'↑ '+pd:pd<0?'↓ '+Math.abs(pd):'unchanged'))+' · GRAAF '+(sd==null?'—':(sd>0?'+'+sd:sd))):'First comparable snapshot not available yet')+'</span></div>';}
     html+='<h4 style="color:#67e8f9;margin:12px 0 6px;">Five-engine evidence — what each engine actually proves</h4><div style="display:grid;gap:6px;margin-bottom:12px;">';
@@ -45549,7 +45604,7 @@ app.post('/api/tracker-client/:token/prewrite-brief', async (req, res) => {
     if (cr.rows[0].status === 'disabled' || cr.rows[0].status === 'paused') return res.status(403).json({ success: false, error: 'This tracker is ' + cr.rows[0].status + '. Contact Ottmar to reactivate.' });
     const client = cr.rows[0];
 
-    const { keyword, workingTitle, language, region, manualAioText, intentOverride } = req.body || {};
+    const { keyword, workingTitle, language, region, manualAioText, intentOverride, recommendationContext } = req.body || {};
     if (!keyword) return res.status(400).json({ success: false, error: 'keyword required' });
     if (!process.env.GEMINI_API_KEY) return res.status(500).json({ success: false, error: 'GEMINI_API_KEY not set' });
 
@@ -45718,6 +45773,11 @@ app.post('/api/tracker-client/:token/prewrite-brief', async (req, res) => {
     const _pwbVerifyFirst = _pwbClaims.filter(x => String(x.status||'').toUpperCase()==='UNVERIFIED').map(x => x.claim_text).filter(Boolean);
     const _pwbBlocked = _pwbClaims.filter(x => ['FALSE','NOT_APPLICABLE'].includes(String(x.status||'').toUpperCase())).map(x => x.claim_text).filter(Boolean);
     const claimsBlock = `CLAIMS & FACTS — CANONICAL SAFETY LEDGER:\nVERIFIED BUSINESS FACTS — may be used in proposed copy:\n${_pwbVerified.length ? _pwbVerified.map(x=>'- '+x).join('\\n') : '- none verified'}\nVERIFY FIRST — opportunities only; NEVER state these as facts or put them in paste-ready copy:\n${_pwbVerifyFirst.length ? _pwbVerifyFirst.map(x=>'- '+x).join('\\n') : '- none'}\nBLOCKED / FALSE / NOT APPLICABLE — NEVER use:\n${_pwbBlocked.length ? _pwbBlocked.map(x=>'- '+x).join('\\n') : '- none'}\nCompetitor claims are competitor intelligence, never client facts. If a useful claim is not VERIFIED above or explicitly present in owner-provided BRAND & AUTHOR FACTS, label it VERIFY FIRST and do not place it in ready-to-paste passages.`;
+    const _rc=(recommendationContext&&typeof recommendationContext==='object')?recommendationContext:null;
+    const _recSafe=_rc?{
+      decision:String(_rc.decision||'REVIEW').slice(0,30),family:String(_rc.family||'').slice(0,160),primary_query:String(_rc.primary_query||keyword).slice(0,200),supporting_queries:(Array.isArray(_rc.supporting_queries)?_rc.supporting_queries:[]).map(x=>String(x).slice(0,200)).slice(0,8),impressions:Math.max(0,Number(_rc.impressions||0)),target:String(_rc.target||'').slice(0,500),suggested_slug:String(_rc.suggested_slug||'').slice(0,160),evidence:String(_rc.evidence||'').slice(0,700),why:String(_rc.why||'').slice(0,500)
+    }:null;
+    const recommendationBlock=_recSafe?'TRACKER SPOKE PROPOSAL — treat this as a proposal to VERIFY, not as permission to publish:\n'+JSON.stringify(_recSafe)+'\nUse its GSC queries and impressions as demand evidence. Re-run the cannibalization decision against the live SERP and sitemap. If cleared, include a hub_spoke_plan with hub_url, spoke_url_or_slug, hub_to_spoke_anchor, spoke_to_hub_anchor, placements, and completion criteria. If not cleared, explicitly change the decision to EXPAND_EXISTING_PAGE.':'';
 
     const prompt = `You are an elite SEO and AEO strategist. A strategist requested a possible NEW page for this keyword. FIRST decide whether a new URL should actually be created or whether an existing client URL should be expanded instead. Do not create a new page when the sitemap shows a materially overlapping existing URL and doing so would create cannibalization. If CREATE is justified, specify what the brand-new page must contain to outrank and out-cite current results from the first draft. Every claim must be traceable to the inputs below; never invent a domain, URL, snippet, statistic, schema type or business fact.
 
@@ -45742,6 +45802,8 @@ ${brandBlock}
 
 ${claimsBlock}
 
+${recommendationBlock}
+
 MANDATORY PROCESSING ORDER:
 DETECTED SEARCH INTENT (from the live SERP — follow this, do not re-guess it): ${_chosenIntent}${_autoIntent.secondary ? ' (secondary: '+_autoIntent.secondary+')' : ''} [confidence: ${_autoIntent.confidence}${_intentWasOverridden ? '; manually set by strategist' : ''}].${_autoIntent.conflict ? ' NOTE: '+_autoIntent.conflict : ''}
 Write for this intent: content type = ${_intentDir.contentType}; structure = ${_intentDir.structure}; CTA style = ${_intentDir.cta}; citation approach = ${_intentDir.citeable}. A page that misreads intent will not rank however well written.
@@ -45753,7 +45815,7 @@ STEP 2 — INTENT DECOMPOSITION: list the 5-7 real sub-questions a searcher typi
 STEP 3 — GAP ACROSS THE WHOLE TOP 10: what does NONE of the current top 10 cover well — the opening this new page can own?
 STEP 4 — For EACH of the top 5 competitors, state ONE concrete thing they do well and ONE concrete gap — grounded only in their scraped content above.
 STEP 5 — Specify the exact structure, entities, and schema the new page needs to beat rank 1 on day one.
-STEP 6 — BUILD THE PAGE (this makes the brief usable, not just diagnostic): produce (a) meta_package — a rank-ready title tag (<=60 chars, keyword near front), meta description (<=155 chars), on-page H1, url slug; (b) opening_passage — the literal first 40-60 words as a self-contained quotable direct answer that Google AI Overview and Perplexity can lift verbatim; (c) page_blueprint — the full H2 outline IN READING ORDER from intro to conclusion, each H2 with its purpose, a target word count, the exact sub-questions/entities it must cover, and a one-sentence citation_hook where it can earn a citation; (d) paa_questions — EXACTLY 5 People-Also-Ask questions each with a paste-ready 40-60 word answer; (e) internal_link_targets — internal links whose link_to is a URL copied VERBATIM from the CLIENT SITEMAP list above; pick pages genuinely related to this topic and write natural anchor text for each. If no sitemap was provided, output an empty array — never guess or invent a slug. The page_blueprint must collectively answer every sub-question from STEP 2 and place every must-cover entity. Do not pad the outline — every section must be justified by intent or competitor analysis.
+STEP 6 — BUILD THE PAGE (this makes the brief usable, not just diagnostic): produce (a) meta_package — a rank-ready title tag (<=60 chars, keyword near front), meta description (<=155 chars), on-page H1, url slug; (b) opening_passage — the literal first 40-60 words as a self-contained quotable direct answer that Google AI Overview and Perplexity can lift verbatim; (c) page_blueprint — the full H2 outline IN READING ORDER from intro to conclusion, each H2 with its purpose, a target word count, the exact sub-questions/entities it must cover, and a one-sentence citation_hook where it can earn a citation; (d) paa_questions — EXACTLY 5 People-Also-Ask questions each with a paste-ready 40-60 word answer; (e) internal_link_targets — internal links whose link_to is a URL copied VERBATIM from the CLIENT SITEMAP list above; pick pages genuinely related to this topic and write natural anchor text for each. If this is a cleared spoke, specify BOTH directions: hub to spoke and spoke back to hub, with anchor and exact placement. If no sitemap was provided, output an empty array — never guess or invent a slug. The page_blueprint must collectively answer every sub-question from STEP 2 and place every must-cover entity. Do not pad the outline — every section must be justified by intent or competitor analysis.
 
 STEP 7 — MAKE IT CITEABLE, NOT JUST RANKABLE: AI systems cite pages that answer one question directly, name their entities, show evidence and stay balanced. Also produce: (f) ai_answer — the single question this page must own, the 4-7 real sub-questions under it, a 40-60 word direct_answer written to be lifted verbatim, why_it_matters, who_is_it_for, and 3-5 key_takeaways; (g) quick_facts — a label/value list of the hard facts a reader or model needs at a glance, using labels that fit THIS topic; only facts verifiable from the data above, and an empty array rather than an invented one; (h) entity_strategy — primary, secondary and supporting entities PLUS explicit subject-relation-object relationships between them, so a model can reconstruct the topic graph; (i) evidence — official_sources (only sources visible in the data), statistics with their source, experience_to_include (describe what first-hand experience the writer must add — an instruction, never fabricated experience) and trust_signals; (j) balance — limitations, who_should_not_use_it and the comparisons the page should draw, because a page that only praises is trusted and cited less; (k) use_cases — audience/scenario/benefit for 2-4 distinct reader types; (l) conclusion — recap, recommendation, outlook. Do NOT output any dates, freshness block or self-assessment score: those are added by the system after you respond.
 
@@ -45793,6 +45855,10 @@ Return ONLY valid JSON, no markdown, no preamble.
     brief.fact_safety.verify_first = Array.from(new Set([].concat(brief.fact_safety.verify_first || [], _pwbVerifyFirst)));
     brief.fact_safety.blocked_claims = Array.from(new Set([].concat(brief.fact_safety.blocked_claims || [], _pwbBlocked)));
     brief.fact_safety.rule = 'Only VERIFIED Claims & Facts or owner-provided brand facts may be asserted as client facts. Competitor facts are research only.';
+    if(_recSafe){
+      brief.spoke_recommendation=_recSafe;
+      if(!brief.hub_spoke_plan)brief.hub_spoke_plan={role:String((brief.content_decision&&brief.content_decision.recommended_treatment)||'').toUpperCase()==='EXPAND_EXISTING_PAGE'?'existing_page_expansion':'new_spoke',hub_url:(brief.content_decision&&brief.content_decision.closest_existing_url)||'none',spoke_url_or_slug:(brief.meta_package&&brief.meta_package.url_slug)||_recSafe.suggested_slug||'insufficient_data',hub_to_spoke_anchor:_recSafe.primary_query||keyword,hub_to_spoke_placement:'Add on the closest relevant hub section after the spoke is published.',spoke_to_hub_anchor:'Use the hub page topic as a natural anchor.',spoke_to_hub_placement:'Add in the opening context or next-step section of the spoke.',complete_when:'Both links resolve, the intended URL is indexed, and its own GSC Pages + Queries data is measured.'};
+    }
     if (!brief.content_decision || !['CREATE_NEW_PAGE','EXPAND_EXISTING_PAGE'].includes(String(brief.content_decision.recommended_treatment||'').toUpperCase())) {
       brief.content_decision = { recommended_treatment:'CREATE_NEW_PAGE', cannibalization_risk:'insufficient_data', closest_existing_url:'none', reason:'No reliable overlap decision was returned; strategist review required before implementation.' };
     }
