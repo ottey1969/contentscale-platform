@@ -1,4 +1,4 @@
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-14-CANONICAL-v103';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-14-CANONICAL-v104';
 const CONTENTSCALE_BUILD_CHANGES = [
   'professional-guided-tour',
   'prewrite-create-expand-publish-tracker-baseline',
@@ -2035,6 +2035,7 @@ app.get('/api/tracker-client/:token', async (req, res) => {
               p.ranking_brief, p.needs_html, p.brief_started_at, p.brief_content, p.brief_check_count,
               p.html_pasted_at, p.html_source, p.last_graaf_score, p.brief_mode, p.revision_cycle,
               (p.html_content IS NOT NULL AND p.html_content != '') as has_html_content,
+              EXISTS(SELECT 1 FROM tracker_gsc_queries q WHERE q.tracker_client_id=p.tracker_client_id AND q.page_id=p.id) as has_gsc_queries,
               p.redirects_to,
               p.gsc_autofetch_checked_at, p.aio_manual_text, p.aio_manual_refs, p.brief_viewed_at,
               s.google_position, s.ai_google_overview_cited, s.ai_google_overview_text, s.ai_google_overview_found, s.ai_perplexity_cited,
@@ -2055,7 +2056,19 @@ app.get('/api/tracker-client/:token', async (req, res) => {
 
     const _evStem=String(client.domain||'').replace(/^www\./,'').split('.')[0].replace(/[-_]+/g,' ');
     const _evAliases=[client.name,client.domain,_evStem];
-    pagesR.rows.forEach(function(_p){ _p.ai_manual_evidence=_trackerReparseManualEvidenceMap(_p.ai_manual_evidence||{},_p.url,_evAliases,_p.revision_cycle); });
+    pagesR.rows.forEach(function(_p){
+      _p.ai_manual_evidence=_trackerReparseManualEvidenceMap(_p.ai_manual_evidence||{},_p.url,_evAliases,_p.revision_cycle);
+      const _aiN=['google_aio','chatgpt','perplexity','claude','copilot'].filter(k=>{const x=_p.ai_manual_evidence&&_p.ai_manual_evidence[k];return x&&!(x.is_cleared===true||x.is_cleared==='true'||x.is_cleared===1||x.is_cleared==='1');}).length;
+      const _hasGsc=[_p.gsc_clicks,_p.gsc_impressions,_p.gsc_position].some(v=>v!==null&&v!==undefined);
+      const _missing=[];
+      if(!_hasGsc)_missing.push('GSC Pages for this URL');
+      if(!_p.has_gsc_queries)_missing.push('GSC Queries assigned to this URL');
+      if(_aiN<5)_missing.push('AI checks '+_aiN+'/5');
+      if(!_p.last_checked&&!_p.last_checked_at)_missing.push('completed page scan');
+      if(!_p.has_html_content)_missing.push('captured page HTML');
+      if(!String(client.email||'').trim())_missing.push('Tracker client email');
+      _p.case_study_readiness={ready:_missing.length===0,missing:_missing,ai_checked:_aiN,gsc_pages:_hasGsc,gsc_queries:!!_p.has_gsc_queries,scan:!!(_p.last_checked||_p.last_checked_at),html:!!_p.has_html_content,email:!!String(client.email||'').trim()};
+    });
 
     // Activate and attach the real Perfect Roofing case study without changing its frozen baseline.
     await _ensureCaseStudySchema();
@@ -13357,7 +13370,7 @@ window.csAuditClientLoaded=function(){
   ['run','reportLang','saveAuditBtn','resetBtn'].forEach(function(id){var el=document.getElementById(id);if(el)el.disabled=false;});
 };
 </script>
-<script src="/audit-client.js?v=20260914-canonical-v103" onload="window.csAuditClientLoaded()" onerror="window.csAuditStatus('Audit engine could not load. Refresh the page to retry.')"></script>
+<script src="/audit-client.js?v=20260914-canonical-v104" onload="window.csAuditClientLoaded()" onerror="window.csAuditStatus('Audit engine could not load. Refresh the page to retry.')"></script>
 </div></body></html>`;
                  if (_isSharedToolAccess) _auditHtml = _stripWhiteLabelPersonalBlocks(_auditHtml);
                  res.type('html').send(_auditHtml);
@@ -33543,37 +33556,37 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
         <div class="wl-step" style="animation-delay:0s">
           <div class="wl-step-num">1</div>
           <div class="wl-step-content">
-            <div class="wl-step-title">Paste Your Page HTML</div>
-            <div class="wl-step-desc">Copy your page source and paste it here. The system needs your actual HTML to analyze what AI systems see.</div>
+            <div class="wl-step-title">1. Add Sitemap + GSC</div>
+            <div class="wl-step-desc">For a new client, add the sitemap and import both GSC Pages and Queries. This identifies real URLs, demand and current performance.</div>
           </div>
         </div>
         <div class="wl-step" style="animation-delay:0.15s">
           <div class="wl-step-num">2</div>
           <div class="wl-step-content">
-            <div class="wl-step-title">Run the Scan</div>
-            <div class="wl-step-desc">The system checks Google AI Overview, Perplexity & Microsoft Copilot to see if you are cited.</div>
+            <div class="wl-step-title">2. Run Gap Analysis</div>
+            <div class="wl-step-desc">Use Sort this out for me once the data is present. Start with priority #1 and follow KEEP, OPTIMIZE, EXPAND, ASSIGN or CREATE SPOKE.</div>
           </div>
         </div>
         <div class="wl-step" style="animation-delay:0.3s">
           <div class="wl-step-num">3</div>
           <div class="wl-step-content">
-            <div class="wl-step-title">Get Your Citation Brief</div>
-            <div class="wl-step-desc">Receive specific, copy-paste ready actions to get cited in all AI systems. Each action tells you exactly what to add.</div>
+            <div class="wl-step-title">3. Complete the Baseline</div>
+            <div class="wl-step-desc">For the chosen page, add GSC Queries for that URL, check all five AI systems and run one page scan. The card shows when a case study is READY.</div>
           </div>
         </div>
         <div class="wl-step" style="animation-delay:0.45s">
           <div class="wl-step-num">4</div>
           <div class="wl-step-content">
-            <div class="wl-step-title">Implement & Done</div>
-            <div class="wl-step-desc">Publish the recommended changes and press Done. ContentScale verifies the live page, runs GRAAF and creates the post-implementation proof automatically. Manual HTML appears only if live fetch fails.</div>
+            <div class="wl-step-title">4. Use the Right Brief</div>
+            <div class="wl-step-desc">OPTIMIZE or EXPAND uses the Tracker Brief. Only CREATE SPOKE uses Prewrite. Save the live checkpoint, publish, verify and follow the 7/14/30/60/90-day cycle.</div>
           </div>
         </div>
       </div>
       <div class="wl-features">
-        <div class="wl-feature"><span class="wl-feat-icon">&#x26a1;</span> Scans 4 AI systems simultaneously</div>
-        <div class="wl-feature"><span class="wl-feat-icon">&#x1f4ca;</span> GSC integration for ranking data</div>
-        <div class="wl-feature"><span class="wl-feat-icon">&#x1f514;</span> Telegram alerts when cited</div>
-        <div class="wl-feature"><span class="wl-feat-icon">&#x1f30d;</span> Multi-language & global support</div>
+        <div class="wl-feature"><span class="wl-feat-icon">&#x26a1;</span> Five AI systems, saved manually as evidence</div>
+        <div class="wl-feature"><span class="wl-feat-icon">&#x1f4ca;</span> GSC Pages + Queries drive priorities</div>
+        <div class="wl-feature"><span class="wl-feat-icon">&#x1f512;</span> Case studies start only with a complete baseline</div>
+        <div class="wl-feature"><span class="wl-feat-icon">&#x1f30d;</span> Multi-language and global SERP support</div>
       </div>
     </div>
     <div class="wl-footer">
@@ -34795,6 +34808,12 @@ var _pwbRecommendationContext = null;
 function openSpokePrewrite(index) {
   var d=window._currentIntelData||{},r=(d.spoke_recommendations||[])[Number(index)];
   if(!r)return;
+  if(r.decision==='OPTIMIZE'||r.decision==='EXPAND_EXISTING'){
+    hideModal('competitiveIntelModal');
+    var pid=window._currentIntelPageId,p=(_pages||[]).find(function(x){return Number(x.id)===Number(pid);})||{};
+    if(p.brief_content||_lastBriefData[pid])viewLastBrief(pid);else{toast('Build the Tracker Brief with one page scan.','#38bdf8');checkPage(pid);}
+    return;
+  }
   _pwbRecommendationContext=r;
   showPrewriteBriefModal();
   document.getElementById('pwbKeyword').value=r.primary_query||'';
@@ -36136,6 +36155,8 @@ function renderPages() {
     var pageNumLabel = '#' + (pageIdx + 1);
     var isDone = p.is_done === true || p.is_done === 't' || p.is_done === 'true' || p.is_done === 1;
     var isCaseStudy = p.case_study_active === true || p.case_study_active === 't' || p.case_study_active === 'true' || p.case_study_active === 1;
+    var _csr=p.case_study_readiness||{},_csReady=!!_csr.ready,_csMissing=Array.isArray(_csr.missing)?_csr.missing:[];
+    var _caseReadyHtml=!isCaseStudy?'<div style="margin:8px 0 0;padding:9px 11px;border:1px solid '+(_csReady?'#16a34a':'#92400e')+';background:'+(_csReady?'#052e16':'#1c1407')+';border-radius:7px;font-size:10px;line-height:1.6;"><b style="color:'+(_csReady?'#86efac':'#fbbf24')+';">'+(_csReady?'READY — Start case study':'CASE STUDY WAITING FOR BASELINE')+'</b><div style="color:#cbd5e1;margin-top:3px;">'+(_csReady?'All required baseline evidence is present. Start before changing the live page.':('Complete first: '+_csMissing.join(' · ')))+'</div><div style="display:flex;gap:8px;flex-wrap:wrap;color:#94a3b8;margin-top:4px;"><span>'+(_csr.gsc_pages?'✓':'✕')+' GSC Pages</span><span>'+(_csr.gsc_queries?'✓':'✕')+' GSC Queries for URL</span><span>'+((Number(_csr.ai_checked)||0)===5?'✓':'✕')+' AI '+(Number(_csr.ai_checked)||0)+'/5</span><span>'+(_csr.scan?'✓':'✕')+' Page scan</span><span>'+(_csr.html?'✓':'✕')+' HTML</span><span>'+(_csr.email?'✓':'✕')+' Client email</span></div></div>':'';
     var muteCompletedCard = isDone && !isCaseStudy;
     function _trackerUtc(v){try{return new Date(v).toISOString().replace('T',' ').replace(/\.\d{3}Z$/,' UTC');}catch(e){return '';}}
     var implementationAt = p.implementation_at ? _trackerUtc(p.implementation_at) : '';
@@ -36336,7 +36357,7 @@ function renderPages() {
         : '<button onclick="event.stopPropagation();configurePageMonitoring('+p.id+')" style="background:#052e16;border:1px solid #22c55e;border-radius:7px;color:#86efac;cursor:pointer;font-size:10px;padding:5px 10px;font-weight:800;" title="Guided data review '+freqLabel+'. ContentScale waits for input before the manual scan.">Monitoring: '+freqLabel+'</button>'))
       + ((hasBrief || _lastBriefData[p.id]) ? '<button data-tour="view-brief" onclick="viewLastBrief(' + p.id + ')" style="background:#0d1117;border:1px solid #8b5cf6;border-radius:7px;color:#c4b5fd;cursor:pointer;font-size:11px;padding:5px 12px;font-weight:600;" title="View Citation Brief">\\ud83d\\udcc4 View Brief</button>' : '')
       + '<button data-tour="history" onclick="csPosHist(' + p.id + ')" style="background:#0d1117;border:1px solid #64748b;border-radius:7px;color:#cbd5e1;cursor:pointer;font-size:13px;padding:5px 10px;font-weight:600;" title="Ranking history">\\ud83d\\udcc8</button>'
-      + (!p.case_study_active && lastCheckedRaw ? '<button onclick="event.stopPropagation();startCaseStudy(' + p.id + ')" style="background:#082f49;border:1px solid #0ea5e9;border-radius:7px;color:#7dd3fc;cursor:pointer;font-size:10px;padding:5px 10px;font-weight:900;" title="Lock the current scan, GSC values, five-engine evidence and HTML as the baseline">Start case study</button>' : '')
+      + (!p.case_study_active ? (_csReady?'<button onclick="event.stopPropagation();startCaseStudy(' + p.id + ')" style="background:#052e16;border:1px solid #22c55e;border-radius:7px;color:#86efac;cursor:pointer;font-size:10px;padding:5px 10px;font-weight:900;" title="All baseline evidence is complete. Lock it before changing the live page.">READY — Start case study</button>':'<button disabled style="background:#1c1407;border:1px solid #92400e;border-radius:7px;color:#fbbf24;cursor:not-allowed;font-size:10px;padding:5px 10px;font-weight:900;" title="Complete: '+String(_csMissing.join(' · ')).replace(/"/g,'&quot;')+'">Case study waiting for baseline</button>') : '')
       + (p.case_study_active && isDone ? '<button data-tour="new-revision" onclick="event.stopPropagation();openNewHtmlRevision(' + p.id + ')" style="background:#172554;border:1px solid #3b82f6;border-radius:7px;color:#bfdbfe;cursor:pointer;font-size:10px;padding:5px 10px;font-weight:900;" title="Start another improvement cycle without overwriting the baseline or previous versions">+ New HTML revision</button>' : '')
       + (p.case_study_active && !isDone && Number(p.revision_cycle||1)>1 ? '<button onclick="event.stopPropagation();openHtmlUpload(' + p.id + ',true)" style="background:#172554;border:1px solid #3b82f6;border-radius:7px;color:#bfdbfe;cursor:pointer;font-size:10px;padding:5px 10px;font-weight:800;" title="Update the candidate HTML for revision '+Number(p.revision_cycle||1)+'">Edit revision HTML</button>' : '')
       + (p.case_study_active ? '<button onclick="event.stopPropagation();savePrePublicationCheckpoint(' + p.id + ')" style="background:'+(p.prepublication_checkpoint_saved?'#052e16':'#422006')+';border:1px solid '+(p.prepublication_checkpoint_saved?'#16a34a':'#f59e0b')+';border-radius:7px;color:'+(p.prepublication_checkpoint_saved?'#86efac':'#fde68a')+';cursor:pointer;font-size:10px;padding:5px 10px;font-weight:800;" title="'+(p.prepublication_checkpoint_saved?'The complete pre-publication HTML and hash are protected':'Use this before publishing the reviewed HTML')+'">'+(p.prepublication_checkpoint_saved?'\\u2713 Pre-publish saved':'1 \\u00b7 Save current live')+'</button>' : '')
@@ -36345,6 +36366,7 @@ function renderPages() {
       + (p.case_study_active && isDone ? (function(){var ae=p.ai_manual_evidence;if(typeof ae==='string'){try{ae=JSON.parse(ae);}catch(e){ae={};}}var n=['google_aio','chatgpt','perplexity','claude','copilot'].filter(function(k){return ae&&_aiEvidenceIsVerified(ae[k]);}).length;return '<button data-tour="ai-recheck" onclick="event.stopPropagation();openAiEvidence('+p.id+')" style="background:'+(n===5?'#052e16':'#451a03')+';border:1px solid '+(n===5?'#16a34a':'#f59e0b')+';border-radius:7px;color:'+(n===5?'#86efac':'#fde68a')+';cursor:pointer;font-size:10px;padding:5px 10px;font-weight:900;" title="A fresh manual five-engine check is required after every published revision">'+(n===5?'\\u2713 AI rechecked 5/5':'3 \\u00b7 Recheck AI '+n+'/5')+'</button>';})() : '')
       + '<button onclick="deletePage(' + p.id + ')" style="background:#0d1117;border:1px solid #ef4444;border-radius:7px;color:#f87171;cursor:pointer;font-size:13px;padding:5px 10px;font-weight:600;" title="Delete page">\\ud83d\\uddd1</button>'
       + '</div>'
+      + _caseReadyHtml
       + '</div>'
       + recsHtml
       + ((!isDone && !p.case_study_active && hasBrief && !(!!p.html_pasted_at && !!lastCheckedRaw && new Date(p.html_pasted_at) > new Date(lastCheckedRaw)))
@@ -39492,6 +39514,7 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
     var claims=d.claims||[];html+='<h4 style="color:#67e8f9;margin:16px 0 6px;">Claims found in AI evidence requiring verification</h4>';
     if(!claims.length)html+='<div style="color:#64748b;">No claim-like statements detected in the saved evidence.</div>';else{claims.slice(0,30).forEach(function(c){var st=c.existing_fact&&c.existing_fact.status?c.existing_fact.status:'EVIDENCE ONLY',safe=!!c.safe_to_use;html+='<div style="display:flex;gap:8px;align-items:flex-start;background:#0b1220;border:1px solid '+(safe?'#166534':'#334155')+';border-radius:7px;padding:8px 9px;margin-bottom:5px;"><div style="flex:1;"><div style="color:#e2e8f0;">'+_intelEsc(c.claim)+'</div><div style="color:#64748b;font-size:9px;margin-top:3px;">Observed: '+_intelEsc((c.engines||[]).map(_intelEngineLabel).join(', '))+' · '+_intelEsc(st)+(safe?' · VERIFIED CLIENT FACT':' · READ-ONLY, NOT A CLIENT FACT')+'</div></div></div>';});}
     window._currentIntelData=d;window._currentIntelPageId=pageId;body.innerHTML=html;
+    Array.from(body.querySelectorAll('button')).forEach(function(b){if(b.textContent==='Create optimization Prewrite')b.textContent='Open Tracker Brief';if(b.textContent==='Create expansion Prewrite')b.textContent='Open Tracker Brief';});
   }
   function saveOwnerQuestion(i){var d=window._currentIntelData||{},q=(d.owner_questions||[])[Number(i)],a=document.getElementById('ownerAnswer'+i),e=document.getElementById('ownerEvidence'+i);if(!q||!a||!a.value.trim()){toast('Enter the owner’s factual answer first.','#f87171');return;}fetch('/api/tracker-client/'+TOKEN+'/claims-facts',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({claim_text:a.value.trim(),source_type:'owner_questionnaire',source_context:q.category+': '+q.question+' | Evidence: '+((e&&e.value.trim())||'not supplied')})}).then(function(r){return r.json();}).then(function(x){if(!x.success)throw new Error(x.error||'Save failed');toast('Saved UNVERIFIED — check the evidence in Claims & Facts before verifying.','#fbbf24');a.value='';if(e)e.value='';}).catch(function(err){toast(err.message,'#f87171');});}
   window.saveOwnerQuestion=saveOwnerQuestion;
