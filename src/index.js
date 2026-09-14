@@ -1,4 +1,4 @@
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-14-CANONICAL-v95';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-14-CANONICAL-v97';
 const CONTENTSCALE_BUILD_CHANGES = [
   'professional-guided-tour',
   'prewrite-create-expand-publish-tracker-baseline',
@@ -2557,6 +2557,28 @@ async function _ensureMonitoringGateSchema(){
   ];
   for(const c of cols)await pool.query('ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS '+c[0]+' '+c[1]).catch(()=>{});
 }
+
+// Normal page/HTML scans may run at any time. Page-specific GSC measurements are
+// protected case-study evidence and only belong to the official day-7/day-14 gates.
+async function _caseStudyGscInputAllowed(clientId,pageId){
+  if(!pageId)return {allowed:true,case_study:false,gate:null};
+  await _ensureCaseStudySchema();
+  await _ensureMonitoringGateSchema();
+  const r=await pool.query(`SELECT p.monitoring_waiting_input,p.monitoring_gate_label
+    FROM tracker_case_studies cs
+    JOIN tracker_pages p ON p.id=cs.tracker_page_id AND p.tracker_client_id=cs.tracker_client_id
+    WHERE cs.tracker_client_id=$1 AND cs.tracker_page_id=$2 AND cs.status='active' LIMIT 1`,[clientId,pageId]);
+  if(!r.rows.length)return {allowed:true,case_study:false,gate:null};
+  const row=r.rows[0];
+  const waiting=row.monitoring_waiting_input===true||row.monitoring_waiting_input==='t';
+  const gate=String(row.monitoring_gate_label||'');
+  return {allowed:waiting&&(gate==='case_day_7'||gate==='case_day_14'),case_study:true,gate:gate||null};
+}
+
+function _caseStudyGscLockedResponse(res,state){
+  return res.status(409).json({success:false,case_study_locked:true,gate:state&&state.gate||null,
+    error:'GSC data for this active case study is locked until the official day 7 or day 14 request appears in the Tracker. The submitted data was not saved and cannot affect the report.'});
+}
 app.patch('/api/tracker-client/:token/pages/monitoring-selected',async(req,res)=>{try{
   await _ensureMonitoringGateSchema();
   const cr=await pool.query("SELECT id,email FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status!='deleted')",[req.params.token]);
@@ -2974,6 +2996,10 @@ app.post('/api/tracker-client/:token/gsc-queries', async (req, res) => {
       const own = await pool.query('SELECT id FROM tracker_pages WHERE id=$1 AND tracker_client_id=$2', [req.body.page_id, clientId]);
       if (own.rows.length) pageId = own.rows[0].id;
     }
+    if(pageId){
+      const gate=await _caseStudyGscInputAllowed(clientId,pageId);
+      if(!gate.allowed)return _caseStudyGscLockedResponse(res,gate);
+    }
     if (pageId) await pool.query('DELETE FROM tracker_gsc_queries WHERE tracker_client_id=$1 AND page_id=$2', [clientId, pageId]);
     else await pool.query('DELETE FROM tracker_gsc_queries WHERE tracker_client_id=$1 AND page_id IS NULL', [clientId]);
     let saved = 0, failed = 0;
@@ -2991,7 +3017,9 @@ app.post('/api/tracker-client/:token/gsc-queries', async (req, res) => {
     if (failed > 0) console.warn('[gsc-queries] ' + failed + ' of ' + queries.length + ' rows failed to save for client ' + clientId);
     await _ensureMonitoringGateSchema();
     if(pageId) await pool.query('UPDATE tracker_pages SET monitoring_gsc_queries_at=NOW() WHERE id=$1 AND tracker_client_id=$2',[pageId,clientId]);
-    else await pool.query('UPDATE tracker_pages SET monitoring_gsc_queries_at=NOW() WHERE tracker_client_id=$1 AND monitoring_waiting_input=TRUE',[clientId]);
+    else await pool.query(`UPDATE tracker_pages p SET monitoring_gsc_queries_at=NOW()
+      WHERE p.tracker_client_id=$1 AND p.monitoring_waiting_input=TRUE
+      AND NOT EXISTS(SELECT 1 FROM tracker_case_studies cs WHERE cs.tracker_client_id=p.tracker_client_id AND cs.tracker_page_id=p.id AND cs.status='active')`,[clientId]);
     res.json({ success: true, saved, failed, total: queries.length, page_id: pageId });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
@@ -3135,6 +3163,8 @@ app.post('/api/tracker-client/:token/gsc-autofetch-page', async (req, res) => {
     const pr = await pool.query('SELECT id, url FROM tracker_pages WHERE id=$1 AND tracker_client_id=$2', [pageId, cr.rows[0].id]);
     if (!pr.rows.length) return res.status(404).json({ success: false, error: 'Page not found' });
     const pageUrl = pr.rows[0].url;
+    const gate=await _caseStudyGscInputAllowed(cr.rows[0].id,pageId);
+    if(!gate.allowed)return _caseStudyGscLockedResponse(res,gate);
 
     const accessToken = await _gscGetAccessToken();
     const siteFmt = await _gscFindSiteFormat(accessToken, pageUrl);
@@ -4707,10 +4737,16 @@ app.post('/api/tracker-client/:token/refresh-gsc', async (req, res) => {
       [cr.rows[0].id]
     );
 
-    res.json({ success: true, queued: pages.rows.length, message: 'Refreshing GSC data for ' + pages.rows.length + ' pages' });
+    const eligible=[];
+    const locked=[];
+    for(const page of pages.rows){
+      const gate=await _caseStudyGscInputAllowed(cr.rows[0].id,page.id);
+      if(gate.allowed)eligible.push(page);else locked.push({id:page.id,url:page.url,reason:'case_study_waiting_for_day_7_or_14'});
+    }
+    res.json({ success: true, queued: eligible.length, excluded: locked.length, excluded_pages: locked, message: 'Refreshing GSC data for ' + eligible.length + ' eligible pages' + (locked.length?' · '+locked.length+' active case-study page(s) excluded until the official request':'') });
 
     // Background: fetch GSC data for each page
-    for (const page of pages.rows) {
+    for (const page of eligible) {
       try {
         const gscResp = await fetch((process.env.APP_URL || 'https://app.contentscale.site') + '/api/gsc/auto-fill', {
           method: 'POST',
@@ -4785,7 +4821,9 @@ app.post('/api/tracker-client/:token/import-gsc-pages', async (req, res) => {
     let refreshed = 0;   // existing pages recognised + refreshed on their own spot
     let newAdded = 0;    // brand-new pages added
     let skipped = 0;
+    let caseStudyLocked = 0;
     let failed = 0;      // per-page DB errors — MUST be surfaced, never swallowed
+    const touchedPageIds = [];
     const results = [];
     const warnings = [];
     
@@ -4794,6 +4832,14 @@ app.post('/api/tracker-client/:token/import-gsc-pages', async (req, res) => {
         // Recognise existing tracked page by normalized URL → refresh on its own spot (never duplicate, never counts against the limit)
         const _matchId = _normMap.get(_normTrackUrl(p.url));
         if (_matchId) {
+          const gate=await _caseStudyGscInputAllowed(clientId,_matchId);
+          if(!gate.allowed){
+            skipped++;
+            caseStudyLocked++;
+            warnings.push({url:p.url,issue:'Active case-study GSC is locked until the official day 7 or day 14 request. Data was not saved.'});
+            results.push({url:p.url,id:_matchId,status:'case_study_locked',gate:gate.gate||null});
+            continue;
+          }
           try {
             await pool.query(
               `UPDATE tracker_pages SET gsc_clicks=$3, gsc_impressions=$4, gsc_position=$5, gsc_keyword=COALESCE($6, gsc_keyword), keyword=COALESCE(keyword, $6), priority=COALESCE($7, priority) WHERE id=$1 AND tracker_client_id=$2`,
@@ -4801,6 +4847,7 @@ app.post('/api/tracker-client/:token/import-gsc-pages', async (req, res) => {
             );
             imported++;
             refreshed++;
+            touchedPageIds.push(_matchId);
             results.push({ url: p.url, id: _matchId, status: 'refreshed' });
           } catch(e) {
             console.warn('[import-gsc] update', p.url, e.message);
@@ -4840,6 +4887,7 @@ app.post('/api/tracker-client/:token/import-gsc-pages', async (req, res) => {
           [clientId, p.url, p.keyword||null, p.intent||null, p.keyword||null, p.clicks||0, p.impressions||0, p.position||null, p.priority||'medium']
         );
         if (_insR.rows[0]) _normMap.set(_normTrackUrl(p.url), _insR.rows[0].id); // prevent duplicate inserts within this same batch
+        if (_insR.rows[0]) touchedPageIds.push(_insR.rows[0].id);
         _liveCount++;
         imported++;
         newAdded++;
@@ -4851,18 +4899,19 @@ app.post('/api/tracker-client/:token/import-gsc-pages', async (req, res) => {
       }
     }
 
-    if(imported>0){await _ensureMonitoringGateSchema();await pool.query('UPDATE tracker_pages SET monitoring_gsc_pages_at=NOW() WHERE tracker_client_id=$1 AND monitoring_waiting_input=TRUE',[clientId]).catch(()=>{});}
+    if(touchedPageIds.length){await _ensureMonitoringGateSchema();await pool.query('UPDATE tracker_pages SET monitoring_gsc_pages_at=NOW() WHERE tracker_client_id=$1 AND id=ANY($2::int[]) AND monitoring_waiting_input=TRUE',[clientId,touchedPageIds]).catch(()=>{});}
     res.json({ 
       success: failed < pages.length, // only "success" if at least something landed
       imported, 
       refreshed,
       new_added: newAdded,
       skipped,
+      case_study_locked: caseStudyLocked,
       failed,
       total: pages.length, 
       results,
       warnings: warnings.length > 0 ? warnings : undefined,
-      message: `Updated ${refreshed} existing` + (newAdded > 0 ? ` + added ${newAdded} new` : '') + (skipped > 0 ? ` · ${skipped} skipped (no free slot / not selected)` : '') + (failed > 0 ? ` · ${failed} FAILED — check server logs` : '')
+      message: `Updated ${refreshed} existing` + (newAdded > 0 ? ` + added ${newAdded} new` : '') + (caseStudyLocked > 0 ? ` · ${caseStudyLocked} active case-study page(s) locked until day 7/day 14` : '') + ((skipped-caseStudyLocked) > 0 ? ` · ${skipped-caseStudyLocked} skipped (no free slot / not selected)` : '') + (failed > 0 ? ` · ${failed} FAILED — check server logs` : '')
     });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
@@ -13254,7 +13303,7 @@ window.csAuditClientLoaded=function(){
   ['run','reportLang','saveAuditBtn','resetBtn'].forEach(function(id){var el=document.getElementById(id);if(el)el.disabled=false;});
 };
 </script>
-<script src="/audit-client.js?v=20260914-canonical-v95" onload="window.csAuditClientLoaded()" onerror="window.csAuditStatus('Audit engine could not load. Refresh the page to retry.')"></script>
+<script src="/audit-client.js?v=20260914-canonical-v97" onload="window.csAuditClientLoaded()" onerror="window.csAuditStatus('Audit engine could not load. Refresh the page to retry.')"></script>
 </div></body></html>`;
                  if (_isSharedToolAccess) _auditHtml = _stripWhiteLabelPersonalBlocks(_auditHtml);
                  res.type('html').send(_auditHtml);
@@ -37582,7 +37631,9 @@ function openCycleReport(){
     var md=p.manual_done===true||p.manual_done==='t'||p.manual_done===1;
     if(md) monitoring++; else if(['MERGE','REDIRECT','REMOVE_NOINDEX'].indexOf(t)>=0) decomm++; else if(Number(p.gsc_impressions||0)>=50) active++; else deferred++;
   });
-  var cann=typeof _cannibalIssues!=='undefined'?_cannibalIssues.filter(function(x){return x.level!=='STRUCTURE';}).length:0;
+  var cannProven=typeof _cannibalIssues!=='undefined'?_cannibalIssues.filter(function(x){return x.level==='PROVEN';}).length:0;
+  var cannLikely=typeof _cannibalIssues!=='undefined'?_cannibalIssues.filter(function(x){return x.level==='LIKELY';}).length:0;
+  var cannPossible=typeof _cannibalIssues!=='undefined'?_cannibalIssues.filter(function(x){return x.level==='POSSIBLE';}).length:0;
   var stale=(_pages||[]).filter(function(p){var d=p.last_checked||p.last_checked_at; return d && (Date.now()-new Date(d).getTime())>30*86400000;}).length;
   function n(v){return v===null||v===undefined||v===''?null:Number(v);}
   function delta(now,base,inverse){now=n(now);base=n(base);if(now===null||base===null)return null;var d=now-base;return inverse?-d:d;}
@@ -37612,7 +37663,8 @@ function openCycleReport(){
     caseHtml='<div class="sec"><h2>Case Study Portfolio</h2><p class="muted">Ranked only from saved evidence against each protected baseline. Missing measurements are never treated as failure.</p><div style="overflow-x:auto"><table><thead><tr><th>#</th><th>Page / query</th><th>Day</th><th>Evidence</th><th>GSC clicks</th><th>Impressions</th><th>Position improvement</th><th>GRAAF</th><th>Exact-page AI</th><th>Verdict</th></tr></thead><tbody>'+caseRows.map(function(x,i){
       var evidence=x.age<7?'Baseline protected · GSC review due day 7':((x.scanFresh?'Scan ✓':'Scan missing')+' · '+(x.gscFresh?'GSC ✓':'GSC missing')+' · '+(x.age<14?'AI refresh due day 14':('AI '+x.freshAi+'/5')));
       var vc=x.verdict==='STRONG PROGRESS'?'good':x.verdict==='POSITIVE'?'good':x.verdict==='DECLINING'?'bad':x.verdict==='INSUFFICIENT EVIDENCE'?'warn':'neutral';
-      return '<tr><td>'+(i+1)+'</td><td><b>'+_csEscH(String(x.p.url||'').replace(/^https?:[/][/]/,''))+'</b><br><span class="muted">'+_csEscH(x.cs.primary_query||x.p.keyword||x.p.gsc_keyword||'—')+'</span></td><td>'+x.age+'</td><td>'+evidence+'</td><td>'+fmt(x.dClicks)+'</td><td>'+fmt(x.dImpr)+'</td><td>'+fmt(x.dPos)+'</td><td>'+fmt(x.dGraaf)+'</td><td>'+x.exactBase+' → '+(x.freshAi===5?x.exactNow:'—')+'</td><td><span class="tag '+vc+'">'+x.verdict+'</span></td></tr>';
+      var showDelta=x.age>=7&&x.scanFresh&&x.gscFresh;
+      return '<tr><td>'+(i+1)+'</td><td><b>'+_csEscH(String(x.p.url||'').replace(/^https?:[/][/]/,''))+'</b><br><span class="muted">'+_csEscH(x.cs.primary_query||x.p.keyword||x.p.gsc_keyword||'—')+'</span></td><td>'+x.age+'</td><td>'+evidence+'</td><td>'+(showDelta?fmt(x.dClicks):'—')+'</td><td>'+(showDelta?fmt(x.dImpr):'—')+'</td><td>'+(showDelta?fmt(x.dPos):'—')+'</td><td>'+(showDelta?fmt(x.dGraaf):'—')+'</td><td>'+x.exactBase+' → '+(x.age>=14&&x.freshAi===5?x.exactNow:'—')+'</td><td><span class="tag '+vc+'">'+x.verdict+'</span></td></tr>';
     }).join('')+'</tbody></table></div><p class="muted">Position improvement is positive when the average position number decreases. AI comparison becomes publishable only after a fresh 5/5 manual check.</p></div>';
     caseHtml+=caseRows.map(function(x){
       function arr(v){if(Array.isArray(v))return v;if(typeof v==='string'){try{var z=JSON.parse(v);return Array.isArray(z)?z:[];}catch(e){}}return [];}
@@ -37630,9 +37682,9 @@ function openCycleReport(){
   }else caseHtml='<div class="sec"><h2>Case Study Portfolio</h2><p class="muted">No active case studies in this Tracker.</p></div>';
   var tr=Object.keys(treatments).sort().map(function(k){return '<span style="display:inline-block;margin:3px 5px 3px 0;padding:3px 7px;border:1px solid #374151;border-radius:4px;color:#cbd5e1;font-size:10px;">'+k.replace('_',' / ')+' '+treatments[k]+'</span>';}).join('')||'<span style="color:#6b7280">No treatment decisions saved yet.</span>';
   var w=window.open('','_blank','width=900,height=760'); if(!w)return toast('Allow popups to open the report','#f59e0b');
-  w.document.write('<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><title>ContentScale Client Report</title><style>*{box-sizing:border-box}body{font-family:Arial,sans-serif;background:#0a0e14;color:#e5e7eb;padding:32px;margin:auto;max-width:1300px}h1{margin:0 0 6px}.muted{color:#94a3b8}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:22px 0}.k{background:#111827;border:1px solid #263244;border-radius:8px;padding:14px}.n{font-size:24px;font-weight:800}.sec{margin-top:22px;padding-top:16px;border-top:1px solid #263244}button{padding:8px 14px}table{width:100%;border-collapse:collapse;min-width:980px;background:#111827}th,td{padding:9px;border:1px solid #263244;text-align:left;font-size:11px;vertical-align:top}th{background:#172554;color:#bfdbfe}.tag{display:inline-block;padding:3px 7px;border-radius:999px;font-size:9px;font-weight:800;white-space:nowrap}.good{background:#052e16;color:#86efac}.bad{background:#450a0a;color:#fca5a5}.warn{background:#422006;color:#fde68a}.neutral{background:#1f2937;color:#cbd5e1}@media(max-width:700px){body{padding:16px}.grid{grid-template-columns:1fr 1fr}}@media print{button{display:none}body{background:#fff;color:#111;max-width:none;padding:10px}.k,table{background:#fff}.muted{color:#555}.sec{break-inside:avoid}}</style></head><body>'+ 
+  w.document.write('<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><title>ContentScale Client Report</title><style>@page{size:landscape;margin:10mm}*{box-sizing:border-box}body{font-family:Arial,sans-serif;background:#0a0e14;color:#e5e7eb;padding:32px;margin:auto;max-width:1300px}h1{margin:0 0 6px}.muted{color:#94a3b8}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:22px 0}.k{background:#111827;border:1px solid #263244;border-radius:8px;padding:14px}.n{font-size:24px;font-weight:800}.sec{margin-top:22px;padding-top:16px;border-top:1px solid #263244}button{padding:8px 14px}table{width:100%;border-collapse:collapse;min-width:980px;background:#111827}th,td{padding:9px;border:1px solid #263244;text-align:left;font-size:11px;vertical-align:top}th{background:#172554;color:#bfdbfe}.tag{display:inline-block;padding:3px 7px;border-radius:999px;font-size:9px;font-weight:800;white-space:nowrap}.good{background:#052e16;color:#86efac}.bad{background:#450a0a;color:#fca5a5}.warn{background:#422006;color:#fde68a}.neutral{background:#1f2937;color:#cbd5e1}@media(max-width:700px){body{padding:16px}.grid{grid-template-columns:1fr 1fr}}@media print{button{display:none}body{background:#fff;color:#111;max-width:none;padding:0}.k,table{background:#fff}.muted{color:#555}.sec{break-inside:auto}table{min-width:0}th,td{font-size:8px;padding:5px;overflow-wrap:anywhere}a{color:#111;text-decoration:none}}</style></head><body>'+ 
     '<h1>ContentScale Client Report</h1><div class="muted">'+new Date().toLocaleString()+' · '+((_client&&_client.domain)||'')+'</div><button onclick="print()" style="margin-top:12px">Print / Save PDF</button>'+
-    '<div class="grid"><div class="k"><div class="n">'+active+'</div><div class="muted">Active opportunities</div></div><div class="k"><div class="n">'+monitoring+'</div><div class="muted">Completed / monitoring</div></div><div class="k"><div class="n">'+decomm+'</div><div class="muted">Consolidate / remove</div></div><div class="k"><div class="n">'+clicks.toLocaleString()+'</div><div class="muted">GSC clicks in current import</div></div><div class="k"><div class="n">'+impr.toLocaleString()+'</div><div class="muted">GSC impressions</div></div><div class="k"><div class="n">'+cann+'</div><div class="muted">Open cannibalization issues</div></div></div>'+ 
+    '<div class="grid"><div class="k"><div class="n">'+active+'</div><div class="muted">Active opportunities</div></div><div class="k"><div class="n">'+monitoring+'</div><div class="muted">Completed / monitoring</div></div><div class="k"><div class="n">'+decomm+'</div><div class="muted">Consolidate / remove</div></div><div class="k"><div class="n">'+clicks.toLocaleString()+'</div><div class="muted">GSC clicks in current import</div></div><div class="k"><div class="n">'+impr.toLocaleString()+'</div><div class="muted">GSC impressions</div></div><div class="k"><div class="n">'+cannProven+'</div><div class="muted">Proven cannibalization conflicts</div><div style="font-size:10px;color:#94a3b8;margin-top:4px">'+cannLikely+' likely · '+cannPossible+' possible/unconfirmed</div></div></div>'+ 
     caseHtml+
     '<div class="sec"><h3>Content governance</h3>'+tr+'<p class="muted">Stale tracked pages (&gt;30 days since scan): '+stale+' · Deferred/no-data: '+deferred+'</p></div>'+
     '<div class="sec"><h3>Next cycle</h3><p>Refresh GSC and sitemap data, recalculate Active Priorities, then work #1 → #2 → #3. Priority decides where to look; Intelligence/Brief decides KEEP / OPTIMIZE / EXPAND / REWRITE / MERGE / REDIRECT / REMOVE / MONITOR.</p></div></body></html>'); w.document.close();
