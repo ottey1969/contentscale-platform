@@ -1,4 +1,4 @@
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-14-CANONICAL-v97';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-14-CANONICAL-v98';
 const CONTENTSCALE_BUILD_CHANGES = [
   'professional-guided-tour',
   'prewrite-create-expand-publish-tracker-baseline',
@@ -12802,7 +12802,7 @@ return result;
                  res.set('Cache-Control','public, max-age=300');
                  res.type('html').send(`<!doctype html><html lang="${lang}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,follow"><title>${copy.title}</title><style>*{box-sizing:border-box}body{margin:0;background:#05070d;color:#eef2ff;font:15px/1.65 Inter,Segoe UI,system-ui,sans-serif}.wrap{max-width:1060px;margin:auto;padding:28px 20px 48px}.hero{padding:34px;border:1px solid #263148;border-radius:24px;background:radial-gradient(circle at 92% 0,#263a65 0,transparent 32%),linear-gradient(145deg,#0b1220,#070b12);box-shadow:0 25px 70px #0008}.top{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;flex-wrap:wrap}.brand{display:flex;gap:14px;align-items:center}.logo{width:48px;height:48px;border-radius:14px;background:#73baff;color:#07111f;display:grid;place-items:center;font-size:22px;font-weight:900}.eyebrow{font-size:11px;color:#7dd3fc;font-weight:800;letter-spacing:.08em;text-transform:uppercase}.langs a{color:#bae6fd;text-decoration:none;border:1px solid #334155;padding:7px 10px;border-radius:9px;margin-left:5px}.langs a.on{background:#2563eb;color:#fff}.hero h1{font-size:clamp(26px,5vw,42px);line-height:1.1;margin:0}.sub{color:#b8c4d8;margin:5px 0 0}.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:28px}article,.panel{background:#0b1623;border:1px solid #1e3043;border-radius:16px;padding:18px}article .n{display:grid;place-items:center;width:28px;height:28px;border-radius:50%;background:#7dd3fc;color:#082032}article h2{font-size:15px;margin:12px 0 5px}article p,.panel p{color:#c6d1df;font-size:13px;margin:0}.answer{font-size:18px;max-width:820px;margin:26px 0 0}.cols{display:grid;grid-template-columns:1.15fr .85fr;gap:16px;margin-top:16px}.panel h2{font-size:19px;margin:0 0 8px}.panel h3{font-size:15px;color:#7dd3fc;margin:18px 0 6px}.evidence{background:#2b240c;border-color:#655315}.evidence h2{color:#fde68a}ul{margin:8px 0 0;padding-left:20px;color:#dbeafe}.cta{margin-top:16px;background:linear-gradient(135deg,#1d4ed8,#6d28d9);border:0}.cta h2{font-size:23px}.foot{font-size:11px;color:#64748b;margin-top:18px;text-align:center}@media(max-width:800px){.grid{grid-template-columns:repeat(2,1fr)}.cols{grid-template-columns:1fr}}@media(max-width:480px){.wrap{padding:12px}.hero{padding:20px}.grid{grid-template-columns:1fr}.langs a{display:inline-block;margin:4px 0 0 4px}}</style></head><body><main class="wrap"><section class="hero"><div class="top"><div class="brand"><div class="logo">CS</div><div><div class="eyebrow">${copy.badge}</div><h1>${copy.title}</h1><p class="sub">${copy.sub}</p></div></div><nav class="langs"><a class="${lang==='nl'?'on':''}" href="/audit-process/nl">NL</a><a class="${lang==='en-gb'?'on':''}" href="/audit-process/en-gb">EN-UK</a><a class="${lang==='en-us'?'on':''}" href="/audit-process/en-us">EN-US</a><a class="${lang==='es'?'on':''}" href="/audit-process/es">ES</a></nav></div><div class="grid">${cards}</div><p class="answer">${copy.direct}</p></section><section class="cols"><div class="panel"><h2>1 → 20</h2><h3>1</h3><p>${copy.one}</p><h3>20</h3><p>${copy.twenty}</p><h3>${copy.cycle}</h3><p>${copy.cycleText}</p></div><div><section class="panel evidence"><h2>${copy.boundary}</h2><p>${copy.boundaryText}</p></section><section class="panel" style="margin-top:16px"><h2>${copy.deliver}</h2><ul>${items}</ul></section></div></section><section class="panel" style="margin-top:16px;border-color:#155e75;background:linear-gradient(135deg,#082f49,#0b1623)"><div class="eyebrow">GSC</div><h2>${gscCopy.title}</h2><p>${gscCopy.text}</p></section><section class="panel cta"><h2>${copy.cta}</h2><p>${copy.ctaText}</p><button type="button" onclick="if(window.Tawk_API&&Tawk_API.maximize)Tawk_API.maximize();" style="margin-top:14px;padding:11px 15px;border:0;border-radius:10px;background:#fff;color:#4c1d95;font-weight:850;cursor:pointer">${chatLabel}</button></section><div class="foot">ContentScale · ${copy.badge}</div></main>
 <div style="position:fixed;bottom:90px;right:20px;z-index:9997"><img alt="Ottmar Francisca — Founder ContentScale and GRAAF Framework creator" src="https://raw.githubusercontent.com/ottey1969/contentscale-platform/main/public/blog/images/ottmar-francisca.jpg" width="52" height="52" style="width:52px;height:52px;border-radius:50%;object-fit:cover;border:2px solid #7e22ce;box-shadow:0 4px 16px rgba(0,0,0,.5)" onerror="this.style.display='none'"></div>
-<script type="text/javascript">var Tawk_API=Tawk_API||{},Tawk_LoadStart=new Date();(function(){var s1=document.createElement("script"),s0=document.getElementsByTagName("script")[0];s1.async=true;s1.src='https://embed.tawk.to/68cac7f84318b419244f3308/default';s1.charset='UTF-8';s1.setAttribute('crossorigin','*');s0.parentNode.insertBefore(s1,s0);})();</script>
+<script type="text/javascript">(function(w,d){if(w.__csTawkLoading||d.querySelector('script[data-cs-tawk]'))return;w.__csTawkLoading=true;w.Tawk_API=w.Tawk_API&&typeof w.Tawk_API==='object'?w.Tawk_API:{};w.Tawk_LoadStart=new Date();var s=d.createElement('script');s.async=true;s.src='https://embed.tawk.to/68cac7f84318b419244f3308/default';s.charset='UTF-8';s.crossOrigin='anonymous';s.setAttribute('data-cs-tawk','1');s.onerror=function(){w.__csTawkLoading=false;s.remove();};(d.head||d.documentElement).appendChild(s);})(window,document);</script>
 <script src="https://app.contentscale.site/badge-loader.js?v=5"></script><script src="https://app.contentscale.site/consent-widget.js?v=1"></script></body></html>`);
                });
 
@@ -13303,7 +13303,7 @@ window.csAuditClientLoaded=function(){
   ['run','reportLang','saveAuditBtn','resetBtn'].forEach(function(id){var el=document.getElementById(id);if(el)el.disabled=false;});
 };
 </script>
-<script src="/audit-client.js?v=20260914-canonical-v97" onload="window.csAuditClientLoaded()" onerror="window.csAuditStatus('Audit engine could not load. Refresh the page to retry.')"></script>
+<script src="/audit-client.js?v=20260914-canonical-v98" onload="window.csAuditClientLoaded()" onerror="window.csAuditStatus('Audit engine could not load. Refresh the page to retry.')"></script>
 </div></body></html>`;
                  if (_isSharedToolAccess) _auditHtml = _stripWhiteLabelPersonalBlocks(_auditHtml);
                  res.type('html').send(_auditHtml);
@@ -39736,15 +39736,20 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
 </script>
 <!-- Start of Tawk.to Script (support chat — client reaches Ottmar directly) -->
 <script type="text/javascript">
-   var Tawk_API=Tawk_API||{}, Tawk_LoadStart=new Date();
-   (function(){
-     var s1=document.createElement("script"),s0=document.getElementsByTagName("script")[0];
-     s1.async=true;
-     s1.src='https://embed.tawk.to/68cac7f84318b419244f3308/default';
-     s1.charset='UTF-8';
-     s1.setAttribute('crossorigin','*');
-     s0.parentNode.insertBefore(s1,s0);
-   })();
+   (function(w,d){
+     if(w.__csTawkLoading||d.querySelector('script[data-cs-tawk]'))return;
+     w.__csTawkLoading=true;
+     w.Tawk_API=w.Tawk_API&&typeof w.Tawk_API==='object'?w.Tawk_API:{};
+     w.Tawk_LoadStart=new Date();
+     var s=d.createElement('script');
+     s.async=true;
+     s.src='https://embed.tawk.to/68cac7f84318b419244f3308/default';
+     s.charset='UTF-8';
+     s.crossOrigin='anonymous';
+     s.setAttribute('data-cs-tawk','1');
+     s.onerror=function(){w.__csTawkLoading=false;s.remove();};
+     (d.head||d.documentElement).appendChild(s);
+   })(window,document);
 </script>
 <!-- End of Tawk.to Script -->
 <!-- Floating Headshot -->
