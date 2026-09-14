@@ -1,4 +1,4 @@
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-14-CANONICAL-v98';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-14-CANONICAL-v99';
 const CONTENTSCALE_BUILD_CHANGES = [
   'professional-guided-tour',
   'prewrite-create-expand-publish-tracker-baseline',
@@ -13303,7 +13303,7 @@ window.csAuditClientLoaded=function(){
   ['run','reportLang','saveAuditBtn','resetBtn'].forEach(function(id){var el=document.getElementById(id);if(el)el.disabled=false;});
 };
 </script>
-<script src="/audit-client.js?v=20260914-canonical-v98" onload="window.csAuditClientLoaded()" onerror="window.csAuditStatus('Audit engine could not load. Refresh the page to retry.')"></script>
+<script src="/audit-client.js?v=20260914-canonical-v99" onload="window.csAuditClientLoaded()" onerror="window.csAuditStatus('Audit engine could not load. Refresh the page to retry.')"></script>
 </div></body></html>`;
                  if (_isSharedToolAccess) _auditHtml = _stripWhiteLabelPersonalBlocks(_auditHtml);
                  res.type('html').send(_auditHtml);
@@ -36011,7 +36011,29 @@ function renderPages() {
       d.setDate(d.getDate() + freqDays);
       nextCheckDate = d;
     }
-    var nextCheck = (nextCheckDate && p.check_frequency!=='0' && p.check_frequency!=='0days' && p.check_frequency!=='off') ? 'Next: ' + nextCheckDate.toLocaleDateString('en-GB',{day:'2-digit',month:'short'}) : '';
+    var _monitoringOn = ['0','0days','off',''].indexOf(String(p.check_frequency||'0')) < 0;
+    var nextCheck = '';
+    var nextEvidence = '';
+    var _caseStarted = p.case_study && (p.case_study.baseline_at || p.case_study.started_at);
+    if (p.monitoring_waiting_input) {
+      var _gateName = String(p.monitoring_gate_label||'');
+      nextCheck = _gateName==='case_day_7' ? 'Next scan: paused — waiting for day 7 GSC data'
+        : _gateName==='case_day_14' ? 'Next scan: waiting for day 14 GSC + 5 AI engines'
+        : 'Next scan: paused — waiting for required data';
+    } else if (nextCheckDate && _monitoringOn) {
+      nextCheck = 'Next scan: ' + nextCheckDate.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
+    } else {
+      nextCheck = 'Next scan: not scheduled (Monitoring Off)';
+    }
+    if (p.case_study_active && _caseStarted && !p.monitoring_waiting_input) {
+      var _csBaseDate = new Date(_caseStarted);
+      if (!isNaN(_csBaseDate.getTime())) {
+        var _day7 = new Date(_csBaseDate.getTime()+7*86400000);
+        var _day14 = new Date(_csBaseDate.getTime()+14*86400000);
+        var _officialNext = Date.now() < _day7.getTime() ? _day7 : (Date.now() < _day14.getTime() ? _day14 : null);
+        if (_officialNext) nextEvidence = 'Next evidence request: ' + _officialNext.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
+      }
+    }
     var freqLabel = (function(f){ var m={'0':'off (no scan)','off':'off (no scan)','1day':'daily','3days':'every 3 days','7days':'every 7 days','weekly':'weekly','1week':'weekly','2weeks':'every 2 weeks','17days':'every 17 days','21days':'every 21 days','30days':'every 30 days','monthly':'monthly'}; if(m[f])return m[f]; var x=String(f||'').match(/^(\d+)\s*days?$/); return x?('every '+x[1]+' days'):'every 3 days'; })(p.check_frequency);
 // CONTENTSCALE-TRACKER-FULL-URL-VISIBLE-20260909=true | CONTENTSCALE-DONE-AUTO-VERIFY-GRAAF-EMAILS-20260909=true | CONTENTSCALE-TRACKER-LEGACY-ADD-AIO-UI-REMOVED-20260909=true
     // Clean URL - remove protocol, www, and fix anchor slugs (#section)
@@ -36208,7 +36230,8 @@ function renderPages() {
       + '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:4px;">'
       + (kw ? '<span style="font-size:10px;color:#4b5563;">kw: <span style="color:#a78bfa;">' + kw + '</span></span><button onclick="editKeyword(' + p.id + ',this)" style="font-size:9px;background:none;border:none;color:#374151;cursor:pointer;text-decoration:underline;">edit</button>'
             : '<button onclick="editKeyword(' + p.id + ',this)" style="font-size:9px;background:none;border:none;color:#4b5563;cursor:pointer;">+keyword</button>')
-      + (lastChecked ? '<span style="font-size:10px;color:#6b7280;">Checked: ' + lastChecked + (nextCheck ? ' &middot; ' + nextCheck : '') + '</span>' : '<span style="font-size:10px;color:#4b5563;">' + freqLabel + ' auto-check</span>')
+      + (lastChecked ? '<span style="font-size:10px;color:#6b7280;">Checked: ' + lastChecked + ' &middot; ' + nextCheck + '</span>' : '<span style="font-size:10px;color:#4b5563;">Not checked yet &middot; ' + nextCheck + '</span>')
+      + (nextEvidence ? '<span style="font-size:10px;color:#38bdf8;">' + nextEvidence + '</span>' : '')
       + ((!!p.html_pasted_at && !!lastCheckedRaw && new Date(p.html_pasted_at) > new Date(lastCheckedRaw)) ? '<span style="font-size:10px;color:#38bdf8;font-weight:600;">&#128221; New HTML saved &mdash; fresh brief on next check</span>' : '')
       + '</div>'
       + '</div>'
