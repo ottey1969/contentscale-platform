@@ -1,4 +1,4 @@
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-14-CANONICAL-v105';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-14-CANONICAL-v106';
 const CONTENTSCALE_BUILD_CHANGES = [
   'professional-guided-tour',
   'prewrite-create-expand-publish-tracker-baseline',
@@ -13370,7 +13370,7 @@ window.csAuditClientLoaded=function(){
   ['run','reportLang','saveAuditBtn','resetBtn'].forEach(function(id){var el=document.getElementById(id);if(el)el.disabled=false;});
 };
 </script>
-<script src="/audit-client.js?v=20260914-canonical-v105" onload="window.csAuditClientLoaded()" onerror="window.csAuditStatus('Audit engine could not load. Refresh the page to retry.')"></script>
+<script src="/audit-client.js?v=20260914-canonical-v106" onload="window.csAuditClientLoaded()" onerror="window.csAuditStatus('Audit engine could not load. Refresh the page to retry.')"></script>
 </div></body></html>`;
                  if (_isSharedToolAccess) _auditHtml = _stripWhiteLabelPersonalBlocks(_auditHtml);
                  res.type('html').send(_auditHtml);
@@ -37087,6 +37087,29 @@ var _provenList = [];
 var _slugToPageId = {};
 var _gapDone = [];
 var _linkChecks = [];
+// Live state for the current PROVEN multi-page run. Historical snapshots must never be
+// presented as if the newly requested batch has already completed.
+var _provenBulkRun = null;
+function _updateProvenBulkUi(){
+  var run=_provenBulkRun;if(!run)return;
+  var total=run.ids.length,complete=run.completed,failed=run.failed;
+  var box=document.getElementById('provenScanProgress');
+  if(box){
+    box.style.display='block';
+    var pct=total?Math.round(((complete+failed)/total)*100):0;
+    box.innerHTML='<div style="display:flex;justify-content:space-between;gap:10px;font-weight:800;color:#e0f2fe;"><span><i class="fas fa-circle-notch fa-spin"></i> '+(run.finished?'Batch finished':'Batch scan running')+'</span><span>'+complete+'/'+total+' completed'+(failed?' · '+failed+' failed':'')+'</span></div><div style="height:7px;background:#111827;border-radius:99px;overflow:hidden;margin-top:6px;"><div style="height:100%;width:'+pct+'%;background:linear-gradient(90deg,#7c3aed,#22c55e);transition:width .3s;"></div></div><div style="margin-top:5px;color:#94a3b8;">'+(run.current?'Now: '+run.current:(run.finished?'Every requested page has returned a result.':'Preparing first page…'))+'</div>';
+  }
+  var main=document.getElementById('provenScanAllBtn');
+  if(main){main.disabled=!run.finished;main.innerHTML=(run.finished?'\u2713 ':'<i class="fas fa-circle-notch fa-spin"></i> ')+(run.finished?(complete+'/'+total+' completed'):(complete+'/'+total+' completed · scanning page '+Math.min(complete+failed+1,total)+'/'+total));}
+  Object.keys(run.states||{}).forEach(function(pid){
+    var b=document.querySelector('[data-proven-scan="'+pid+'"]');if(!b)return;
+    var st=run.states[pid];b.disabled=(st==='waiting'||st==='scanning');
+    if(st==='waiting'){b.innerHTML='\u23f3 Waiting';b.style.background='#312e81';b.style.color='#c7d2fe';}
+    else if(st==='scanning'){b.innerHTML='<i class="fas fa-circle-notch fa-spin"></i> Scanning';b.style.background='#1e3a8a';b.style.color='#bfdbfe';}
+    else if(st==='completed'){b.innerHTML='\u2713 Completed';b.style.background='#166534';b.style.color='#bbf7d0';}
+    else if(st==='failed'){b.innerHTML='\u2715 Failed';b.style.background='#7f1d1d';b.style.color='#fecaca';}
+  });
+}
 function _linkStatusFor(hubSlug, spokeSlug) {
   for (var i = 0; i < _linkChecks.length; i++) {
     var c = _linkChecks[i];
@@ -37602,10 +37625,11 @@ function renderCannibal() {
           var _bd = _allScanned ? '#16a34a' : '#ef4444';
           var _fg = _allScanned ? '#bbf7d0' : '#fecaca';
           var _dot = _allScanned ? '#4ade80' : '#f87171';
-          var _label = _allScanned ? ('\\u2713 All ' + _provenList.length + ' pages scanned') : ('\\ud83d\\ude80 Do everything: sort + scan all ' + _provenList.length + ' pages');
-          return '<button onclick="_provenScanAll(this)" title="This is the one to press \\u2014 runs Sort this out for me first if needed, then scans every page below in order. One click for the whole cycle." style="cursor:pointer;font-size:10px;font-weight:800;padding:5px 14px;border-radius:5px;background:' + _bg + ';border:2px solid ' + _bd + ';color:' + _fg + ';display:inline-flex;align-items:center;gap:6px;box-shadow:0 0 0 2px ' + (_allScanned?'rgba(74,222,128,.15)':'rgba(239,68,68,.15)') + ';"><span style="background:#0d1117;color:' + _dot + ';border-radius:50%;width:17px;height:17px;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:900;flex-shrink:0;">2</span>' + _label + (_allScanned ? '' : ' <span style="opacity:.85;font-weight:900;">\\u2190 press this</span>') + '</button>';
+          var _label = _allScanned ? ('\\u21bb Re-scan all ' + _provenList.length + ' pages') : ('\\ud83d\\ude80 Do everything: sort + scan all ' + _provenList.length + ' pages');
+          return '<button id="provenScanAllBtn" onclick="_provenScanAll(this)" title="Runs Sort this out for me first if needed, then scans every page below in order. Existing briefs are previous results, not completion of this new run." style="cursor:pointer;font-size:10px;font-weight:800;padding:5px 14px;border-radius:5px;background:' + _bg + ';border:2px solid ' + _bd + ';color:' + _fg + ';display:inline-flex;align-items:center;gap:6px;box-shadow:0 0 0 2px ' + (_allScanned?'rgba(74,222,128,.15)':'rgba(239,68,68,.15)') + ';"><span style="background:#0d1117;color:' + _dot + ';border-radius:50%;width:17px;height:17px;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:900;flex-shrink:0;">2</span>' + _label + (_allScanned ? '' : ' <span style="opacity:.85;font-weight:900;">\\u2190 press this</span>') + '</button>';
         })()
       + '</div>'
+      + '<div id="provenScanProgress" style="display:none;margin-top:8px;padding:9px 11px;border:1px solid #2563eb;background:#07162f;border-radius:7px;color:#bfdbfe;"></div>'
       + '<div style="margin-top:6px;display:flex;flex-direction:column;gap:3px;">'
       + _provenList.slice(0, 15).map(function(s){
           var pid = _slugToPageId[s];
@@ -37613,7 +37637,7 @@ function renderCannibal() {
           var label = s + ' <span style="color:' + (isScanned?'#4ade80':'#f87171') + ';">(' + _provenPageStats[s].rows + ' row' + (_provenPageStats[s].rows>1?'s':'') + ')</span>';
           var btn = pid
             ? (isScanned
-                ? ('<button onclick="checkPage(' + pid + ')" data-proven-scan="' + pid + '" title="Already scanned this session \u2014 click to scan again" style="flex-shrink:0;cursor:pointer;font-size:9px;font-weight:800;padding:2px 8px;border-radius:4px;background:#166534;border:1px solid #16a34a;color:#bbf7d0;margin-right:8px;">\u2713 Scanned</button>')
+                ? ('<button onclick="checkPage(' + pid + ')" data-proven-scan="' + pid + '" title="A previous result exists \u2014 click to run a new scan" style="flex-shrink:0;cursor:pointer;font-size:9px;font-weight:800;padding:2px 8px;border-radius:4px;background:#164e63;border:1px solid #0891b2;color:#cffafe;margin-right:8px;">\u21bb Previous scan</button>')
                 : ('<button onclick="checkPage(' + pid + ')" data-proven-scan="' + pid + '" style="flex-shrink:0;cursor:pointer;font-size:9px;font-weight:800;padding:2px 8px;border-radius:4px;background:#7f1d1d;border:1px solid #b91c1c;color:#fecaca;margin-right:8px;">\ud83d\udd0d Scan</button>'))
             : '';
           return '<div style="display:flex;align-items:center;font-family:monospace;">' + btn + '<span>' + label + '</span></div>';
@@ -37660,6 +37684,7 @@ function renderCannibal() {
     + '<div id="cannBody2" style="display:none;">' + rows
     + '<div style="font-size:10px;color:#4b5563;padding:8px 14px;line-height:1.6;">PROVEN = same query in two per-page CSV exports (Google shows both) \\u2014 fix required. LIKELY = near-identical tracked keywords \\u2014 differentiate or merge. POSSIBLE = a site-wide query fits two pages equally \\u2014 confirm with a per-page export. STRUCTURE = generic hub vs specific spoke \\u2014 usually correct; run the checklist in the row instead of merging.</div>'
     + '</div></div>';
+  _updateProvenBulkUi();
 }
 
 // ── PROFESSIONAL PRODUCT TOUR ──────────────────────────────────────────────
@@ -37668,29 +37693,30 @@ function renderCannibal() {
 var _tourSteps = [
   {sel:'#statsRow',phase:'OVERVIEW',title:'Visibility at a glance',text:'Start with the outcome: tracked pages, exact-page citation evidence across five AI engines, and remaining capacity. A mention is not counted as a citation unless the evidence supports it.'},
   {sel:'#addUrlBtn',phase:'SETUP',title:'Track an existing page',text:'Use Add URL for a page that already exists. Existing pages follow the diagnostic workflow: Priority, Intelligence, Scan & Brief, Treatment, Implement, Done/Verify, then Proof & History.'},
-  {sel:'#prewriteBriefBtn',phase:'IMPLEMENTATION',title:'Plan before you change or create',text:'Prewrite converts a classified opportunity into OPTIMIZE_EXISTING_PAGE, EXPAND_EXISTING_PAGE or CREATE_NEW_PAGE after checking the live SERP, sitemap and overlap.'},
+  {sel:'#prewriteBriefBtn',phase:'NEW CONTENT',title:'Prewrite is only for a new spoke',text:'Use Prewrite only after Gap Analysis returns CREATE SPOKE. For OPTIMIZE or EXPAND on an existing URL, scan that page and use its Tracker Brief instead.'},
   {sel:'#gscBtn',phase:'DATA',title:'Connect real search demand',text:'Google Search Console supplies queries, impressions, positions and clicks. Those signals power Active Priorities, pushable queries, impression gaps and evidence-based cannibalization checks.'},
   {sel:'#sitemapBtn',phase:'DATA',title:'Protect the site architecture',text:'Import the sitemap so ContentScale knows which URLs already exist. This is essential for CREATE versus EXPAND decisions and prevents accidental duplicate pages.'},
   {sel:'#briefLangSel',phase:'SETUP',title:'Choose the brief language',text:'Auto follows the page language. A fixed choice writes the human-readable brief in that language while preserving URLs, HTML and code.'},
   {sel:'#brandCtxPanel',phase:'FACT SAFETY',title:'Control what AI may claim',text:'Store real brand and author context here. Open Claims & Facts to verify business claims centrally: VERIFIED is safe to use; UNVERIFIED, FALSE and NOT APPLICABLE remain blocked from paste-ready copy.'},
-  {sel:'#impressionGap',phase:'OPPORTUNITY',title:'Find uncovered demand',text:'Impression Gap surfaces queries Google already associates with the site but no tracked page properly owns. Review the opportunity, then use Pre-Write to decide CREATE or EXPAND.'},
+  {sel:'#impressionGap',phase:'OPPORTUNITY',title:'Run Gap Analysis before writing',text:'Impression Gap groups real GSC demand and assigns KEEP, OPTIMIZE, EXPAND, ASSIGN or CREATE SPOKE. Only CREATE SPOKE continues to Prewrite; existing-page decisions continue through Scan and Tracker Brief.'},
   {sel:'#trackerWorkSearch',phase:'WORKSPACE',title:'Search where the work lives',text:'Filter tracked pages by URL or keyword here, directly above Active Priorities and the page cards. The counter shows how many pages match; Clear restores the full worklist.'},
   {sel:'#leadQueuePanel',phase:'PRIORITY',title:'Work in the right order',text:'Active Priorities tells you where to investigate first. Priority is not Treatment: always inspect Intelligence and the Citation Brief before choosing what to change.'},
-  {sel:'#scanAllBtn',phase:'EXECUTION',title:'Scan current priorities',text:'Scan Priorities processes only the current GSC-ranked active opportunities. Completed, deferred and ineligible pages are skipped to protect time and scan budget.'},
+  {sel:'#scanAllBtn',phase:'EXECUTION',title:'Scan current priorities',text:'Scan Priorities processes only current GSC-ranked active opportunities. During every one-page or multi-page run, use the visible Waiting, Scanning, Completed and Failed states; completion is never inferred from an older brief.'},
   {sel:'#scanSelectedBtn',phase:'EXECUTION',title:'Control the scan scope',text:'Select exact page cards, including shift-click ranges, and scan only those pages when you are working surgically.'},
-  {sel:'[data-tour="page-card"]',phase:'EXISTING PAGE',title:'One card, one decision cycle',text:'The card combines URL ownership, search signals, citation evidence, recommendations and implementation state. Work through its controls from evidence to treatment, never by button colour alone.'},
+  {sel:'[data-tour="page-card"]',phase:'EXISTING PAGE',title:'One card, one decision cycle',text:'For a selected URL: complete its evidence, open Intelligence, scan it, review the Tracker Brief, choose Treatment, implement, verify live and preserve Proof & History.'},
   {sel:'[data-tour="ai-evidence"]',phase:'EVIDENCE',title:'Verify five AI engines',text:'AI Checked opens the manual evidence workspace for Google AIO, ChatGPT, Perplexity, Claude and Copilot. Checked, cited and exact-page cited are separate states.'},
-  {sel:'[data-tour="intelligence"]',phase:'INTELLIGENCE',title:'See who wins and why',text:'Intelligence compares competitors, cited sources, recurring content opportunities and claims across engines. Competitor claims remain research until explicitly verified in Claims & Facts.'},
+  {sel:'[data-tour="intelligence"]',phase:'INTELLIGENCE',title:'See the decision and exact gap',text:'Intelligence starts with what to do next, then shows who wins, what they have, what this page lacks, why it matters, where to change it and when the action is complete. Competitor claims remain research until verified.'},
   {sel:'[data-tour="scan"]',phase:'DIAGNOSIS',title:'Build the Citation Brief',text:'Scan reads the current live page, ranking context and evidence, then creates or refreshes the Citation Brief. If automatic HTML is unreliable, the card asks for manual published HTML.'},
   {sel:'[data-tour="view-brief"]',phase:'BRIEF',title:'Review the implementation plan',text:'View Brief shows the readable diagnosis and concrete content moves. This is the plan for improving an existing URL; it is intentionally different from a Pre-Write Brief.'},
+  {sel:'button[title^="Complete:"],button[title^="All baseline"]',phase:'CASE STUDY',title:'Lock a complete baseline first',text:'Start case study is available only after GSC Pages, page-specific GSC Queries, all five AI checks, a completed scan, stored HTML and the client email are present. Missing evidence is shown on the card.'},
   {sel:'[data-tour="treatment"]',phase:'DECISION',title:'Choose Treatment after the Brief',text:'Treatment unlocks after a Brief exists. Choose KEEP, OPTIMIZE, EXPAND, REWRITE, MERGE, REDIRECT, REMOVE / NOINDEX or MONITOR based on the evidence.'},
   {sel:'[data-tour="done-verify"]',phase:'IMPLEMENT',title:'Declare the implementation',text:'Use Done only after the recommendations are live. ContentScale then verifies the published page; Done is the hand-off from implementation to measurement, not the end of the workflow.'},
   {sel:'[data-tour="new-revision"]',phase:'ITERATE',title:'Start another HTML revision',text:'A verified page can enter a new improvement cycle. Upload and scan the improved HTML while the original baseline, earlier publications and proof remain immutable.'},
   {sel:'[data-tour="ai-recheck"]',phase:'AI PROOF',title:'Manually recheck all five LLMs',text:'After every publication, manually run the same query in Google AIO, ChatGPT, Perplexity, Claude and Copilot. The new cycle is complete only at 5/5; earlier engine answers remain preserved as the comparison point.'},
   {sel:'[data-tour="history"]',phase:'PROOF',title:'Baseline, change and history',text:'History preserves positions, citation evidence and meaningful changes over time. A newly published Pre-Write page enters Tracker and its first completed scan becomes the baseline.'},
   {sel:'[data-tour="my-check"]',phase:'WORKFLOW',title:'Your personal work marker',text:'My Check moves a handled page into Completed / Monitoring without deleting its evidence. Only you switch this marker off; scans do not silently reset it.'},
-  {sel:'#cannibalPanel',phase:'GOVERNANCE',title:'Resolve real URL conflicts',text:'Cannibalization distinguishes proven, likely, possible and structural overlap. Review the evidence before merging: a hub-and-spoke relationship is not automatically a conflict.'},
-  {sel:'.cs-live',phase:'MONITORING',title:'Follow live activity',text:'Live Activity shows the active page, queue and completed work and refreshes automatically. Use it to monitor scans without manually refreshing the Tracker.'}
+  {sel:'#cannibalPanel',phase:'GOVERNANCE',title:'Resolve real URL conflicts',text:'Cannibalization distinguishes proven, likely, possible and structural overlap. A batch scan now shows Waiting, Scanning, Completed or Failed per URL plus real total progress; an existing brief is labelled Previous scan.'},
+  {sel:'.cs-live',phase:'MONITORING',title:'Wait for evidence before the next scan',text:'Monitoring schedules the next evidence request; it does not invent GSC or AI data. When input is missing, the Tracker shows Waiting for data and pauses until you add it and press Check now. Live Activity shows the active scan and completed work.'}
 ];
 var _tourIdx=-1,_tourRunSteps=[],_tourTarget=null,_tourPositionTimer=null;
 function _tourEsc(v){return String(v||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
@@ -37928,6 +37954,15 @@ async function savePrePublicationCheckpoint(pageId) {
     }
     var btn = document.querySelector('[data-check-btn="' + pageId + '"]');
     if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i>'; }
+    var _provenBtn = !_waitForFull ? document.querySelector('[data-proven-scan="' + pageId + '"]') : null;
+    var _singleBefore = String((p&&(p.last_checked||p.last_checked_at))||'');
+    if (_provenBtn) { _provenBtn.disabled=true;_provenBtn.innerHTML='<i class="fas fa-circle-notch fa-spin"></i> Scanning';_provenBtn.style.background='#1e3a8a';_provenBtn.style.color='#bfdbfe'; }
+    function _finishSingleProven(ok){
+      if(!_provenBtn)return;
+      if(!ok){_provenBtn.disabled=false;_provenBtn.innerHTML='\u2715 Failed · retry';_provenBtn.style.background='#7f1d1d';_provenBtn.style.color='#fecaca';return;}
+      _provenBtn.innerHTML='\u23f3 Verifying result';
+      Promise.resolve(loadPages()).then(function(){var q=(_pages||[]).find(function(x){return String(x.id)===String(pageId);});var after=String((q&&(q.last_checked||q.last_checked_at))||'');var fresh=!!(after&&after!==_singleBefore);_provenBtn.disabled=false;_provenBtn.innerHTML=fresh?'\u2713 Completed':'\u2715 No new result · retry';_provenBtn.style.background=fresh?'#166534':'#7f1d1d';_provenBtn.style.color=fresh?'#bbf7d0':'#fecaca';}).catch(function(){_finishSingleProven(false);});
+    }
     // _waitForFull: when true, this function's returned promise only resolves once the ENTIRE
     // scan+poll cycle actually finishes (brief opened or timeout reached) \u2014 not just once the scan
     // was successfully STARTED. Without this, bulk callers (like _provenScanAll) would fire off the
@@ -37947,14 +37982,16 @@ async function savePrePublicationCheckpoint(pageId) {
         delete _checkAnimations[pageId];
         hideScanOverlay();
         toast(data.error || 'Check failed', '#f87171');
+        _finishSingleProven(false);
         if (_fullResolve) _fullResolve();
       } else {
-        pollAndShowBrief(pageId, 30, 2000, function(){ delete _checkAnimations[pageId]; if (_fullResolve) _fullResolve(); }, _scanStartedAt);
+        pollAndShowBrief(pageId, 30, 2000, function(){ delete _checkAnimations[pageId]; _finishSingleProven(true); if (_fullResolve) _fullResolve(); }, _scanStartedAt);
       }
     } catch(e) {
       delete _checkAnimations[pageId];
       hideScanOverlay();
       toast('Error: ' + e.message, '#f87171');
+      _finishSingleProven(false);
       if (_fullResolve) _fullResolve();
     } finally {
       if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-sync-alt"></i>'; }
@@ -37978,33 +38015,43 @@ async function savePrePublicationCheckpoint(pageId) {
     // Map each page id back to its slug so we can verify the scan actually landed (DERIVED from DB).
     var idToSlug = {};
     (_provenList||[]).forEach(function(sl){ var pid = _slugToPageId[sl]; if (pid) idToSlug[String(pid)] = sl; });
+    var _states={};pageIds.forEach(function(pid){_states[String(pid)]='waiting';});
+    _provenBulkRun={ids:pageIds.slice(),states:_states,completed:0,failed:0,current:'',finished:false};
+    _updateProvenBulkUi();
     var _okCount = 0, _failSlugs = [];
     for (var i = 0; i < pageIds.length; i++) {
-      if (btnEl) btnEl.textContent = '\u23f3 Scanning ' + (i+1) + '/' + pageIds.length + '\u2026';
+      var _pid=pageIds[i],_sl=idToSlug[String(_pid)];
+      var _beforePage=(_pages||[]).find(function(x){return String(x.id)===String(_pid);});
+      var _beforeChecked=String((_beforePage&&(_beforePage.last_checked||_beforePage.last_checked_at))||'');
+      _provenBulkRun.states[String(_pid)]='scanning';_provenBulkRun.current=_sl||('Page '+(i+1));_updateProvenBulkUi();
       // _waitForFull=true: this now genuinely waits for the ENTIRE scan+poll cycle to finish (brief
       // opened or its own timeout reached) before moving to the next page \u2014 no more overlapping
       // polls fighting over the shared overlay, no more "stuck on the last page" symptom. A tiny
       // buffer between pages is still polite to the server, but the real serialization now comes
       // from actually awaiting completion, not from a fixed guess at animation timing.
       var _scanErr = false;
-      try { await checkPage(pageIds[i], true, true, true); } catch(e) { _scanErr = true; }
+      try { await checkPage(_pid, true, true, true); } catch(e) { _scanErr = true; }
       // CLAUDE-FIX-1208-honestScanCount: don't trust the loop finishing \u2014 verify each page
       // actually landed a snapshot+brief in the DB (via _isSlugScanned, the same derived source the
       // green badges use). A silently-failed scan (network, timeout, server error) must NOT be
       // counted as scanned. This is why the button used to say "All 15 scanned" after only 3 ran.
       // Make sure _pages reflects the just-finished scan before we read the derived status.
       if (!_scanErr) { try { await Promise.resolve(loadPages()); } catch(e) {} }
-      var _sl = idToSlug[String(pageIds[i])];
-      if (!_scanErr && _sl && _isSlugScanned(_sl)) { _okCount++; }
-      else if (_sl) { _failSlugs.push(_sl); }
+      var _afterPage=(_pages||[]).find(function(x){return String(x.id)===String(_pid);});
+      var _afterChecked=String((_afterPage&&(_afterPage.last_checked||_afterPage.last_checked_at))||'');
+      var _freshResult=!!(!_scanErr&&_sl&&_isSlugScanned(_sl)&&_afterChecked&&_afterChecked!==_beforeChecked);
+      if (_freshResult) { _okCount++;_provenBulkRun.completed++;_provenBulkRun.states[String(_pid)]='completed'; }
+      else if (_sl) { _failSlugs.push(_sl);_provenBulkRun.failed++;_provenBulkRun.states[String(_pid)]='failed'; }
+      _provenBulkRun.current='';_updateProvenBulkUi();
       if (i < pageIds.length - 1) await new Promise(function(r){ setTimeout(r, 500); });
     }
+    _provenBulkRun.finished=true;_provenBulkRun.current='';_updateProvenBulkUi();
     // Report the TRUE outcome. Only claim "all scanned" when every page really landed.
     if (_okCount === pageIds.length && pageIds.length > 0) {
-      if (btnEl) { btnEl.textContent = '\u2713 All ' + pageIds.length + ' pages scanned'; }
+      var _finalBtn=document.getElementById('provenScanAllBtn');if(_finalBtn){_finalBtn.textContent='\u2713 '+pageIds.length+'/'+pageIds.length+' completed';_finalBtn.disabled=false;}
       toast('All ' + pageIds.length + ' PROVEN pages scanned \u2014 briefs are ready', '#4ade80');
     } else {
-      if (btnEl) { btnEl.textContent = '\u2713 ' + _okCount + '/' + pageIds.length + ' pages scanned'; btnEl.disabled = false; }
+      var _retryBtn=document.getElementById('provenScanAllBtn');if(_retryBtn){_retryBtn.textContent='\u21bb Retry batch · '+_okCount+'/'+pageIds.length+' completed';_retryBtn.disabled=false;}
       toast(_okCount + ' of ' + pageIds.length + ' pages scanned \u2014 ' + _failSlugs.length + ' did not complete, click to retry', '#f59e0b');
     }
   }
