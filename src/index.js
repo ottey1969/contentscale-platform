@@ -1,4 +1,4 @@
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-13-CANONICAL-v88';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-14-CANONICAL-v89';
 const CONTENTSCALE_BUILD_CHANGES = [
   'professional-guided-tour',
   'prewrite-create-expand-publish-tracker-baseline',
@@ -1954,10 +1954,21 @@ app.post('/api/tracker-client/:token/pages/:pageId/case-study/start',async(req,r
   const emailReminders=(req.body&&req.body.email_reminders)!==false;
   const requestedAiDays=parseInt((req.body&&req.body.ai_reminder_days)||14,10);
   const aiReminderDays=[7,14,28].includes(requestedAiDays)?requestedAiDays:14;
-  const er=await pool.query("SELECT DISTINCT ON (engine) engine,brand_recommended,brand_local_result,brand_direct_supported,domain_cited,exact_page_cited,verified_at,updated_at FROM tracker_ai_evidence WHERE tracker_client_id=$1 AND page_id=$2 AND evidence_method='manual' AND COALESCE(is_cleared,FALSE)=FALSE ORDER BY engine,COALESCE(updated_at,verified_at,created_at) DESC NULLS LAST,id DESC",[client.id,page.id]).catch(()=>({rows:[]}));
-  const engines={};for(const e of er.rows)engines[e.engine]={brand_recommended:e.brand_recommended,brand_local_result:e.brand_local_result,brand_direct_supported:e.brand_direct_supported,domain_cited:e.domain_cited,exact_page_cited:e.exact_page_cited,verified_at:e.updated_at||e.verified_at};
+  const er=await pool.query("SELECT DISTINCT ON (engine) engine,raw_text,raw_sources,brand_recommended,brand_local_result,brand_direct_supported,domain_cited,exact_page_cited,citation_urls,recommended_companies,local_result_companies,directly_cited_companies,mentioned_companies,parsed_evidence,revision_cycle,verified_at,updated_at FROM tracker_ai_evidence WHERE tracker_client_id=$1 AND page_id=$2 AND evidence_method='manual' AND COALESCE(is_cleared,FALSE)=FALSE ORDER BY engine,COALESCE(updated_at,verified_at,created_at) DESC NULLS LAST,id DESC",[client.id,page.id]).catch(()=>({rows:[]}));
+  const engines={};for(const e of er.rows)engines[e.engine]={raw_text:e.raw_text||'',raw_sources:e.raw_sources||'',brand_recommended:e.brand_recommended,brand_local_result:e.brand_local_result,brand_direct_supported:e.brand_direct_supported,domain_cited:e.domain_cited,exact_page_cited:e.exact_page_cited,citation_urls:e.citation_urls||[],recommended_companies:e.recommended_companies||[],local_result_companies:e.local_result_companies||[],directly_cited_companies:e.directly_cited_companies||[],mentioned_companies:e.mentioned_companies||[],parsed_evidence:e.parsed_evidence||{},revision_cycle:Number(e.revision_cycle||1),verified_at:e.updated_at||e.verified_at};
+  const requiredEngines=['google_aio','chatgpt','perplexity','claude','copilot'];
+  const engineKeys=new Set(er.rows.map(x=>String(x.engine||'')));
+  const queryEvidence=await pool.query('SELECT query,clicks,impressions,position,imported_at FROM tracker_gsc_queries WHERE tracker_client_id=$1 AND page_id=$2 ORDER BY impressions DESC,query LIMIT 500',[client.id,page.id]).catch(()=>({rows:[]}));
+  const hasGscPage=[page.gsc_clicks,page.gsc_impressions,page.gsc_position].some(v=>v!==null&&v!==undefined);
+  const baselineMissing=[];
+  if(!String(client.email||'').trim())baselineMissing.push('Tracker client email');
+  if(!hasGscPage)baselineMissing.push('GSC Pages data for this URL');
+  if(!queryEvidence.rows.length)baselineMissing.push('GSC Queries data for this URL');
+  const missingEngines=requiredEngines.filter(x=>!engineKeys.has(x));
+  if(missingEngines.length)baselineMissing.push('AI evidence: '+missingEngines.join(', '));
+  if(baselineMissing.length)return res.status(409).json({success:false,baseline_not_ready:true,error:'Case-study baseline is not ready. Add: '+baselineMissing.join('; '),missing:baselineMissing,ai_checked:requiredEngines.length-missingEngines.length,ai_required:requiredEngines.length});
   const baselineAt=new Date();
-  const baseline={schema_version:2,source:'ContentScale case-study start',metric_snapshot_at:snap.checked_at||page.last_checked_at,html_captured_at:baselineAt.toISOString(),primary_query:query,google_position:snap.google_position==null?null:Number(snap.google_position),gsc_clicks:page.gsc_clicks==null?null:Number(page.gsc_clicks),gsc_impressions:page.gsc_impressions==null?null:Number(page.gsc_impressions),gsc_position:page.gsc_position==null?null:Number(page.gsc_position),graaf_score:snap.score==null?(page.last_graaf_score==null?null:Number(page.last_graaf_score)):Number(snap.score),ai_evidence:engines,html_source:htmlSource,treatment_guardrail:'Preserve verified strengths; implement documented changes; compare only against this locked baseline.'};
+  const baseline={schema_version:3,source:'ContentScale case-study start',metric_snapshot_at:snap.checked_at||page.last_checked_at,html_captured_at:baselineAt.toISOString(),primary_query:query,google_position:snap.google_position==null?null:Number(snap.google_position),gsc_clicks:page.gsc_clicks==null?null:Number(page.gsc_clicks),gsc_impressions:page.gsc_impressions==null?null:Number(page.gsc_impressions),gsc_position:page.gsc_position==null?null:Number(page.gsc_position),gsc_queries:queryEvidence.rows,graaf_score:snap.score==null?(page.last_graaf_score==null?null:Number(page.last_graaf_score)):Number(snap.score),ai_evidence:engines,html_source:htmlSource,treatment_guardrail:'Preserve verified strengths; implement documented changes; compare only against this locked baseline.'};
   const ins=await pool.query(`INSERT INTO tracker_case_studies (tracker_client_id,tracker_page_id,client_name,domain,canonical_url,primary_query,status,baseline_at,baseline_data,baseline_locked) VALUES($1,$2,$3,$4,$5,$6,'active',$7,$8::jsonb,TRUE) RETURNING *`,[client.id,page.id,client.name||client.domain,client.domain,_caseStudyNormUrl(page.url),query,baselineAt,JSON.stringify(baseline)]);
   const cs=ins.rows[0];
   await pool.query(`UPDATE tracker_pages SET check_frequency=$1,email_reminders=$2,ai_reminder_days=$3,
@@ -1967,7 +1978,7 @@ app.post('/api/tracker-client/:token/pages/:pageId/case-study/start',async(req,r
   await pool.query(`INSERT INTO tracker_case_study_events(case_study_id,tracker_page_id,event_type,event_at,source,event_data) SELECT $1,$2,'baseline_frozen',$3,'tracker_case_study_start',$4::jsonb WHERE NOT EXISTS(SELECT 1 FROM tracker_case_study_events WHERE case_study_id=$1 AND event_type='baseline_frozen')`,[cs.id,page.id,baselineAt,JSON.stringify(baseline)]);
   const version=await _caseStudyStoreContentVersion(client.id,page.id,'baseline_html',page.url,liveHtml,htmlSource,{purpose:'immutable_html_at_case_study_start',metric_snapshot_at:baseline.metric_snapshot_at,stable_content_hash:_caseStudyStableContentHash(liveHtml),revision_cycle:Number(page.revision_cycle||1)});
   await _caseStudyEventForPage(client.id,page.id,'case_study_started',{url:page.url,primary_query:query,baseline_locked:true,html_version_id:version&&version.id,five_engine_checks:Object.keys(engines).length}).catch(()=>{});
-  res.json({success:true,case_study:cs,html_captured:true,five_engine_checks:Object.keys(engines).length,monitoring_enabled:monitoringEnabled,check_frequency:frequency,email_reminders:emailReminders,ai_reminder_days:aiReminderDays,message:'Case study started. Current metrics, evidence and HTML are protected as the baseline. '+(monitoringEnabled?'Automatic monitoring is on for this page only.':'Automatic monitoring remains off; manual scans still send their result email.')});
+  res.json({success:true,case_study:cs,html_captured:true,five_engine_checks:Object.keys(engines).length,monitoring_enabled:monitoringEnabled,check_frequency:frequency,email_reminders:emailReminders,ai_reminder_days:aiReminderDays,message:'Case study started. The complete GSC Pages + Queries, 5/5 AI evidence, current metrics and HTML are protected as the baseline. '+(monitoringEnabled?'Guided monitoring is on for this page only.':'Optional page monitoring remains off; protected case-study milestone reminders remain active.')});
 }catch(e){console.error('[case-study-start]',e.message);res.status(500).json({success:false,error:e.message});}});
 
 // GET /api/tracker-client/:token — get client data + pages
@@ -6675,6 +6686,7 @@ app.get('/api/admin/tracker-clients', verifyAdmin, async (req, res) => {
     const r = await pool.query(`
       SELECT c.*, COUNT(p.id) as page_count,
         COUNT(p.id) FILTER (WHERE COALESCE(p.check_frequency,'0') NOT IN ('0','0days','off','')) AS monitored_page_count,
+        COALESCE(SUM(CASE p.check_frequency WHEN '1day' THEN 30 WHEN '3days' THEN 10 WHEN '7days' THEN 5 WHEN 'weekly' THEN 5 WHEN '1week' THEN 5 WHEN '2weeks' THEN 3 WHEN '17days' THEN 2 WHEN '21days' THEN 2 WHEN '30days' THEN 1 WHEN 'monthly' THEN 1 ELSE 0 END),0)::int AS guided_reviews_month,
         STRING_AGG(DISTINCT p.check_frequency, ', ' ORDER BY p.check_frequency)
           FILTER (WHERE COALESCE(p.check_frequency,'0') NOT IN ('0','0days','off','')) AS monitoring_frequencies
       FROM tracker_clients c
@@ -6694,6 +6706,32 @@ app.get('/api/admin/tracker-clients/:id/monitoring', verifyAdmin, async (req, re
     const pr = await pool.query("SELECT id,url,title,check_frequency,next_check_at,last_checked_at,monitoring_waiting_input,monitoring_gate_label FROM tracker_pages WHERE tracker_client_id=$1 AND (is_active=TRUE OR is_active IS NULL) ORDER BY CASE WHEN COALESCE(check_frequency,'0') IN ('0','0days','off','') THEN 1 ELSE 0 END,url", [req.params.id]);
     res.json({ success:true, client:cr.rows[0], pages:pr.rows });
   } catch(e) { res.status(500).json({ success:false, error:e.message }); }
+});
+
+// Admin readiness proof: verifies the durable workflow state without exposing secrets.
+app.get('/api/admin/tracker-readiness', verifyAdmin, async (req,res)=>{
+  try{
+    await _ensureCaseStudySchema();await _ensureMonitoringGateSchema();await _trackerEnsureAiEvidenceSchema();
+    const required=['monitoring_waiting_input','monitoring_request_at','monitoring_require_ai','monitoring_gate_label','monitoring_gsc_pages_at','monitoring_gsc_queries_at','check_frequency','next_check_at'];
+    const cols=await pool.query("SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name='tracker_pages' AND column_name=ANY($1::text[])",[required]);
+    const present=new Set(cols.rows.map(x=>x.column_name)),missingColumns=required.filter(x=>!present.has(x));
+    const q=await pool.query(`SELECT
+      COUNT(DISTINCT c.id) FILTER(WHERE c.status='active')::int AS active_clients,
+      COUNT(p.id) FILTER(WHERE c.status='active' AND (p.is_active=TRUE OR p.is_active IS NULL))::int AS active_pages,
+      COUNT(p.id) FILTER(WHERE c.status='active' AND (p.is_active=TRUE OR p.is_active IS NULL) AND COALESCE(p.check_frequency,'0') NOT IN('0','0days','off',''))::int AS monitored_pages,
+      COUNT(p.id) FILTER(WHERE c.status='active' AND COALESCE(p.monitoring_waiting_input,FALSE))::int AS waiting_pages,
+      COUNT(p.id) FILTER(WHERE c.status='active' AND COALESCE(p.monitoring_waiting_input,FALSE) AND p.monitoring_request_at IS NULL)::int AS invalid_waiting_without_request,
+      COUNT(p.id) FILTER(WHERE c.status='active' AND COALESCE(p.check_frequency,'0') NOT IN('0','0days','off','') AND NOT COALESCE(p.monitoring_waiting_input,FALSE) AND p.next_check_at IS NULL)::int AS monitored_without_next_date,
+      COUNT(p.id) FILTER(WHERE c.status='active' AND COALESCE(p.check_frequency,'0') NOT IN('0','0days','off','') AND COALESCE(NULLIF(c.email,''),'')='')::int AS monitored_without_email
+      FROM tracker_clients c LEFT JOIN tracker_pages p ON p.tracker_client_id=c.id`);
+    const cs=await pool.query(`SELECT COUNT(*)::int AS active_case_studies,
+      COUNT(*) FILTER(WHERE status='active' AND (baseline_locked IS DISTINCT FROM TRUE OR baseline_data IS NULL))::int AS invalid_case_study_baselines
+      FROM tracker_case_studies`);
+    const state={...(q.rows[0]||{}),...(cs.rows[0]||{})};
+    const services={email_configured:!!process.env.BREVO_API_KEY,gsc_service_account_configured:!!_gscServiceAccount,gemini_configured:!!process.env.GEMINI_API_KEY,search_position_provider_configured:!!(process.env.SERPAPI_KEY||process.env.SERPER_API_KEY),perplexity_configured:!!process.env.PERPLEXITY_API_KEY,scheduler_enabled:process.env.ENABLE_TRACKER_SCHEDULER!=='0'};
+    const blockers=[];if(missingColumns.length)blockers.push('Missing tracker columns: '+missingColumns.join(', '));if(!services.email_configured)blockers.push('BREVO_API_KEY is not configured');if(!services.scheduler_enabled)blockers.push('Tracker scheduler is disabled');if(Number(state.invalid_waiting_without_request||0))blockers.push(state.invalid_waiting_without_request+' waiting page(s) have no request timestamp');if(Number(state.monitored_without_next_date||0))blockers.push(state.monitored_without_next_date+' monitored page(s) have no next request date');if(Number(state.monitored_without_email||0))blockers.push(state.monitored_without_email+' monitored page(s) belong to clients without email');if(Number(state.invalid_case_study_baselines||0))blockers.push(state.invalid_case_study_baselines+' active case study baseline(s) are incomplete');
+    res.json({success:true,ready:blockers.length===0,checked_at:new Date().toISOString(),workflow:{guided_monitoring:true,blind_client_scans:false,case_study_baseline_requires_gsc_and_five_ai:true,waiting_gate_blocks_scans:true,paused_data_auto_deleted:false},services,state,missing_columns:missingColumns,blockers});
+  }catch(e){res.status(500).json({success:false,ready:false,error:e.message});}
 });
 
 // POST /api/admin/tracker-clients/:id/restore — restore deleted tracker
@@ -13206,7 +13244,7 @@ window.csAuditClientLoaded=function(){
   ['run','reportLang','saveAuditBtn','resetBtn'].forEach(function(id){var el=document.getElementById(id);if(el)el.disabled=false;});
 };
 </script>
-<script src="/audit-client.js?v=20260913-canonical-v88" onload="window.csAuditClientLoaded()" onerror="window.csAuditStatus('Audit engine could not load. Refresh the page to retry.')"></script>
+<script src="/audit-client.js?v=20260914-canonical-v89" onload="window.csAuditClientLoaded()" onerror="window.csAuditStatus('Audit engine could not load. Refresh the page to retry.')"></script>
 </div></body></html>`;
                  if (_isSharedToolAccess) _auditHtml = _stripWhiteLabelPersonalBlocks(_auditHtml);
                  res.type('html').send(_auditHtml);
@@ -33948,7 +33986,7 @@ function startCaseStudy(pageId){
   var pg=(_pages||[]).find(function(x){return Number(x.id)===Number(pageId);})||{};
   var q=prompt('Primary query for this case study:',pg.keyword||pg.gsc_keyword||'');if(q===null)return;q=String(q||'').trim();
   if(!q){alert('Add the primary query first.');return;}
-  if(!confirm('Start the protected case study now?\\n\\nThe current HTML, GRAAF result, GSC values and available five-engine evidence become the locked baseline.\\n\\nDay 7 and Day 14: email instructions for a MANUAL GSC, page and evidence review.\\nDay 30: report only — open, print or share.\\n\\nAutomatic page monitoring remains OFF and is a separate optional setting.\\nEmails go to the existing Tracker client email.'))return;
+  if(!confirm('Start the protected case study now?\\n\\nRequired baseline: completed page scan, captured HTML, GSC Pages + Queries, all 5 AI engines and the existing Tracker client email. Missing evidence blocks the start instead of being guessed.\\n\\nDay 7 and Day 14: email instructions for a MANUAL GSC, page and evidence review.\\nDay 30: report only — open, print or share.\\n\\nOptional page monitoring remains OFF and is a separate setting.\\nCase-study reminders go to the existing Tracker client email.'))return;
   api('/pages/'+pageId+'/case-study/start','POST',{primary_query:q,monitoring_enabled:false,check_frequency:'0',email_reminders:false,ai_reminder_days:14}).then(function(d){
     alert((d&&d.message)||'Case study started.');load();
   }).catch(function(e){alert(e.message||'Could not start case study');});
@@ -40296,13 +40334,14 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                             <button onclick="_showDeleted=!_showDeleted;this.style.background=_showDeleted?'rgba(239,68,68,.15)':'';loadTrackerClients();" class="tr-btn" style="border-color:#ef4444;color:#ef4444;" title="Show deleted trackers">&#128465; Deleted</button>
                         </div>
                     </div>
+                    <div id="tcReadiness" style="margin-bottom:14px;padding:12px 14px;background:#0b1220;border:1px solid #334155;border-radius:10px;color:#94a3b8;font-size:11px;line-height:1.6;">Checking Tracker readiness…</div>
                     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:20px;">
                         <div class="tr-stat"><div class="val" id="tcStatTotal">0</div><div class="lbl">Total clients</div></div>
                         <div class="tr-stat"><div class="val" id="tcStatActive" style="color:#4ade80;">0</div><div class="lbl">Active</div></div>
                         <div class="tr-stat"><div class="val" id="tcStatPages" style="color:#a78bfa;">0</div><div class="lbl">Total pages</div></div>
                         <div class="tr-stat"><div class="val" id="tcStatWithEmail" style="color:#38bdf8;">0</div><div class="lbl">With email</div></div>
                         <div class="tr-stat"><div class="val" id="tcStatWithWa" style="color:#4ade80;">0</div><div class="lbl">With WhatsApp</div></div>
-                        <div class="tr-stat"><div class="val" id="tcStatScansDay" style="color:#f59e0b;" title="Estimated SERP scans per day = active tracked pages ÷ 3-day interval. Watch this against your daily SERP budget.">0</div><div class="lbl">Scans/day (est)</div></div>
+                        <div class="tr-stat"><div class="val" id="tcStatScansDay" style="color:#f59e0b;" title="Estimated guided data-review requests per month for explicitly monitored pages. Client pages are not blindly auto-scanned.">0</div><div class="lbl">Guided reviews/mo</div></div>
                     </div>
                     <div id="tcList"></div>
                 </div>
@@ -42458,6 +42497,19 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
 
         var _showDeleted = false;
 
+        async function loadTrackerReadiness(){
+            var el=document.getElementById('tcReadiness');if(!el)return;
+            try{
+                var d=await apiCall('/api/admin/tracker-readiness');
+                var st=d.state||{},sv=d.services||{},ok=!!d.ready;
+                var facts=(st.monitored_pages||0)+' monitored · '+(st.waiting_pages||0)+' waiting for data · '+(st.active_case_studies||0)+' active case studies';
+                var services='Email '+(sv.email_configured?'✓':'✗')+' · Scheduler '+(sv.scheduler_enabled?'✓':'✗')+' · GSC API '+(sv.gsc_service_account_configured?'✓':'manual import available')+' · Gemini '+(sv.gemini_configured?'✓':'✗');
+                var blockers=(d.blockers||[]);
+                el.style.borderColor=ok?'#166534':'#92400e';el.style.background=ok?'#071a12':'#211606';
+                el.innerHTML='<strong style="color:'+(ok?'#4ade80':'#fbbf24')+'">'+(ok?'TRACKER WORKFLOW READY':'TRACKER ACTION REQUIRED')+'</strong> · '+facts+'<br><span style="color:#cbd5e1">'+services+'</span>'+(blockers.length?'<br><span style="color:#fca5a5">'+blockers.map(tcMonitoringEsc).join(' · ')+'</span>':'<br><span style="color:#86efac">Schema, waiting gates, reminder scheduler and protected baselines passed the readiness check.</span>');
+            }catch(e){el.style.borderColor='#991b1b';el.innerHTML='<strong style="color:#f87171">READINESS CHECK FAILED</strong> · '+tcMonitoringEsc(e.message||'Unknown error');}
+        }
+
         async function loadTrackerClients() {
             var el = document.getElementById('tcList');
             if (!el) return;
@@ -42481,10 +42533,12 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 s('tcStatWithEmail', withEmail);
                 s('tcStatWithWa', withWa);
                 var activePages = _tcClients.filter(function(c){ return c.status === 'active'; }).reduce(function(a,c){ return a + parseInt(c.page_count||0); }, 0);
-                s('tcStatScansDay', Math.ceil(activePages / 3));
+                var guidedMonth=_tcClients.filter(function(c){return c.status==='active';}).reduce(function(a,c){return a+parseInt(c.guided_reviews_month||0);},0);
+                s('tcStatScansDay', guidedMonth);
                 // Type breakdown in title attributes
                 var totalEl = document.getElementById('tcStatTotal');
                 if (totalEl) totalEl.title = 'Free: ' + freeCount + ' · Own: ' + ownCount + ' · Dealify: ' + dealifyCount;
+                loadTrackerReadiness();
             } catch(e) {
                 el.innerHTML = '<div style="color:#f87171;padding:20px;">Error: ' + e.message + '</div>';
             }
@@ -49705,6 +49759,9 @@ function startPausedFollowupScheduler() {
     if (!pool) { setTimeout(runPausedFollowup, 24 * 60 * 60 * 1000); return; }
     try {
       console.log('[paused-followup] Checking paused accounts...');
+      await pool.query('ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS paused_day3_email_at TIMESTAMPTZ').catch(()=>{});
+      await pool.query('ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS paused_day7_email_at TIMESTAMPTZ').catch(()=>{});
+      await pool.query('ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS paused_day30_email_at TIMESTAMPTZ').catch(()=>{});
 
       const clients = await pool.query(`
         SELECT c.*, p.url as page_url, p.brief_content, p.brief_done_at
@@ -49725,7 +49782,7 @@ function startPausedFollowupScheduler() {
         const ottmarWa = 'https://wa.me/31628073996?text=Hi+Ottmar,+I+want+to+reactivate+my+tracker+for+' + encodeURIComponent(c.domain || '');
 
         // DAY 3 — "here's what you missed"
-        if (pausedDays >= 3 && pausedDays < 4) {
+        if (pausedDays >= 3 && !c.paused_day3_email_at) {
           const recs = c.brief_content ? (function(){ try { const b = typeof c.brief_content === 'string' ? JSON.parse(c.brief_content) : c.brief_content; return b.items || []; } catch(e){ return []; } })() : [];
           let recsHtml = '';
           if (recs.length) {
@@ -49750,6 +49807,7 @@ function startPausedFollowupScheduler() {
             + '<p style="font-size:14px;color:#374151;line-height:1.7;margin-bottom:16px;">To reactivate, contact Ottmar directly:</p>'
             + '<a href="' + ottmarWa + '" style="display:inline-block;background:#16a34a;color:white;text-decoration:none;padding:10px 22px;border-radius:6px;font-size:13px;font-weight:700;">WhatsApp Ottmar to reactivate &rarr;</a>'
           ).catch(()=>{});
+          await pool.query('UPDATE tracker_clients SET paused_day3_email_at=NOW() WHERE id=$1 AND paused_day3_email_at IS NULL',[c.id]).catch(()=>{});
 
           if (c.telegram_chat_id) {
             await sendTelegramNotification(c.telegram_chat_id, '📋 Your ContentScale tracker for ').catch(()=>{});
@@ -49758,7 +49816,7 @@ function startPausedFollowupScheduler() {
         }
 
         // DAY 7 — "Ottmar can do it for you"
-        if (pausedDays >= 7 && pausedDays < 8) {
+        if (pausedDays >= 7 && !c.paused_day7_email_at) {
           await notifyClient(c.id,
             'Let Ottmar implement your Citation Brief for ' + c.domain,
             '<h2 style="font-size:17px;font-weight:800;color:#0f172a;margin-bottom:10px;">Your tracker has been paused for a week</h2>'
@@ -49768,8 +49826,9 @@ function startPausedFollowupScheduler() {
             + '<div style="font-size:13px;color:#166534;line-height:1.7;margin-bottom:12px;">Ottmar implements every Citation Brief for you. Plus high-GRAAF, citation-ready content.</div>'
             + '<a href="' + ottmarWa + '" style="display:inline-block;background:#16a34a;color:white;text-decoration:none;padding:10px 22px;border-radius:6px;font-size:13px;font-weight:700;">WhatsApp Ottmar &rarr;</a>'
             + '</div>'
-            + '<p style="font-size:12px;color:#94a3b8;">Your tracker will be deleted in 23 days if not reactivated.</p>'
+            + '<p style="font-size:12px;color:#94a3b8;">Your tracker remains paused. Its saved pages, evidence and protected case-study history are retained.</p>'
           ).catch(()=>{});
+          await pool.query('UPDATE tracker_clients SET paused_day7_email_at=NOW() WHERE id=$1 AND paused_day7_email_at IS NULL',[c.id]).catch(()=>{});
 
           if (c.telegram_chat_id) {
             await sendTelegramNotification(c.telegram_chat_id, '💡 Your tracker for ').catch(()=>{});
@@ -49777,21 +49836,17 @@ function startPausedFollowupScheduler() {
           console.log('[paused-followup] Day 7 email sent to', c.email);
         }
 
-        // DAY 30 — delete account + final email
-        if (pausedDays >= 30) {
-          // Final email before deletion
+        // DAY 30 — final inactivity notice. Never delete evidence automatically.
+        if (pausedDays >= 30 && !c.paused_day30_email_at) {
           await notifyClient(c.id,
-            'Your ContentScale tracker has been deleted — ' + c.domain,
-            '<h2 style="font-size:17px;font-weight:800;color:#dc2626;margin-bottom:10px;">Your tracker data has been deleted</h2>'
-            + '<p style="font-size:14px;color:#374151;line-height:1.7;margin-bottom:14px;">Your tracker for <strong>' + c.domain + '</strong> has been automatically deleted after 30 days of inactivity.</p>'
-            + '<p style="font-size:14px;color:#374151;line-height:1.7;margin-bottom:16px;">If you want to start fresh, contact Ottmar to set up a new tracker:</p>'
-            + '<a href="' + ottmarWa + '" style="display:inline-block;background:#7c3aed;color:white;text-decoration:none;padding:10px 22px;border-radius:6px;font-size:13px;font-weight:700;">Start fresh with Ottmar &rarr;</a>'
+            'Your ContentScale tracker remains safely paused — ' + c.domain,
+            '<h2 style="font-size:17px;font-weight:800;color:#d97706;margin-bottom:10px;">Your tracker remains paused</h2>'
+            + '<p style="font-size:14px;color:#374151;line-height:1.7;margin-bottom:14px;">No scans or data requests are running for <strong>' + c.domain + '</strong>. Your saved pages, evidence and case-study history have not been deleted.</p>'
+            + '<p style="font-size:14px;color:#374151;line-height:1.7;margin-bottom:16px;">Contact Ottmar when you want to reactivate the workflow:</p>'
+            + '<a href="' + ottmarWa + '" style="display:inline-block;background:#7c3aed;color:white;text-decoration:none;padding:10px 22px;border-radius:6px;font-size:13px;font-weight:700;">Reactivate with Ottmar &rarr;</a>'
           ).catch(()=>{});
-
-          // Delete pages + client
-          await pool.query('UPDATE tracker_pages SET is_active=FALSE WHERE tracker_client_id=$1', [c.id]).catch(()=>{});
-          await pool.query('UPDATE tracker_clients SET status=$1 WHERE id=$2', ['deleted', c.id]).catch(()=>{});
-          console.log('[paused-followup] Day 30 — deleted account', c.id, c.domain);
+          await pool.query('UPDATE tracker_clients SET paused_day30_email_at=NOW() WHERE id=$1 AND paused_day30_email_at IS NULL',[c.id]).catch(()=>{});
+          console.log('[paused-followup] Day 30 — retained paused account', c.id, c.domain);
         }
 
         await new Promise(r => setTimeout(r, 2000));
@@ -50019,9 +50074,12 @@ async function _requestDueClientMonitoringInput(){
     ORDER BY p.tracker_client_id,p.next_check_at LIMIT 100`);
   const groups=new Map();for(const p of due.rows){if(!groups.has(p.tracker_client_id))groups.set(p.tracker_client_id,[]);groups.get(p.tracker_client_id).push(p);}
   for(const [clientId,pages] of groups){
-    const ids=pages.map(p=>p.id),first=pages[0],trackerUrl=(process.env.APP_URL||'https://app.contentscale.site')+'/track/'+first.token;
-    await pool.query(`UPDATE tracker_pages SET monitoring_waiting_input=TRUE,monitoring_request_at=NOW(),monitoring_reminder_sent_at=NOW(),monitoring_require_ai=TRUE,monitoring_gate_label='regular_monitoring',next_check_at=NULL WHERE id=ANY($1::int[])`,[ids]);
-    const list=pages.map(p=>'<li style="margin:7px 0"><strong>'+String(p.keyword||p.gsc_keyword||'Page').replace(/[<>&]/g,'')+'</strong><br><span style="color:#64748b;word-break:break-all">'+String(p.url||'').replace(/[<>&]/g,'')+'</span></li>').join('');
+    const candidateIds=pages.map(p=>p.id);
+    const claimed=await pool.query(`UPDATE tracker_pages SET monitoring_waiting_input=TRUE,monitoring_request_at=NOW(),monitoring_reminder_sent_at=NOW(),monitoring_require_ai=TRUE,monitoring_gate_label='regular_monitoring',next_check_at=NULL WHERE id=ANY($1::int[]) AND COALESCE(monitoring_waiting_input,FALSE)=FALSE AND next_check_at<=NOW() RETURNING id`,[candidateIds]);
+    const claimedIds=new Set(claimed.rows.map(x=>Number(x.id))),claimedPages=pages.filter(p=>claimedIds.has(Number(p.id)));
+    if(!claimedPages.length)continue;
+    const first=claimedPages[0],trackerUrl=(process.env.APP_URL||'https://app.contentscale.site')+'/track/'+first.token;
+    const list=claimedPages.map(p=>'<li style="margin:7px 0"><strong>'+String(p.keyword||p.gsc_keyword||'Page').replace(/[<>&]/g,'')+'</strong><br><span style="color:#64748b;word-break:break-all">'+String(p.url||'').replace(/[<>&]/g,'')+'</span></li>').join('');
     const body='<h2>Monitoring is waiting for fresh data</h2><p>ContentScale has stopped before scanning these pages. First import fresh GSC Pages and Queries and record a new manual 5/5 check for Google AIO/Gemini, ChatGPT Search, Perplexity, Claude and Microsoft Copilot.</p><ul>'+list+'</ul><p>When the required input is complete, press <strong>Check now</strong>. The next monitoring interval starts from that completed manual scan.</p><p><a href="'+trackerUrl+'">Open Tracker</a></p>';
     await notifyClient(clientId,'Monitoring input due — '+(first.domain||'ContentScale'),body,'Monitoring input due\n'+trackerUrl,true).catch(e=>console.warn('[monitoring-input-email]',e.message));
   }
