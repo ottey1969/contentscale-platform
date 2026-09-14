@@ -1,4 +1,4 @@
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-14-CANONICAL-v92';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-14-CANONICAL-v93';
 const CONTENTSCALE_BUILD_CHANGES = [
   'professional-guided-tour',
   'prewrite-create-expand-publish-tracker-baseline',
@@ -2531,6 +2531,9 @@ app.patch('/api/tracker-client/:token/pages/:pageId/frequency', async (req, res)
   try {
     const cr = await pool.query('SELECT id FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status != $2)', [req.params.token, 'deleted']);
     if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
+    await _ensureCaseStudySchema();
+    const lockedCase=await pool.query("SELECT 1 FROM tracker_case_studies WHERE tracker_client_id=$1 AND tracker_page_id=$2 AND status='active' LIMIT 1",[cr.rows[0].id,req.params.pageId]);
+    if(lockedCase.rows.length)return res.status(409).json({success:false,case_study_locked:true,error:'Monitoring is locked to the choice saved when this case study started. The protected day 7, day 14 and day 30 cycle remains active.'});
     const { frequency } = req.body;
     const allowed = ['0','off','1day','3days','7days','17days','21days','30days','weekly','1week','2weeks','monthly'];
     if (!allowed.includes(frequency)) return res.status(400).json({ success: false, error: 'Invalid frequency' });
@@ -2577,8 +2580,9 @@ app.patch('/api/tracker-client/:token/pages/monitoring-selected',async(req,res)=
     monitoring_request_at=CASE WHEN monitoring_gate_label LIKE 'case_day_%' THEN monitoring_request_at ELSE NULL END,
     monitoring_reminder_sent_at=CASE WHEN monitoring_gate_label LIKE 'case_day_%' THEN monitoring_reminder_sent_at ELSE NULL END,
     monitoring_gate_label=CASE WHEN monitoring_gate_label LIKE 'case_day_%' THEN monitoring_gate_label ELSE NULL END
-    WHERE tracker_client_id=$5 AND id=ANY($6::int[]) AND (is_active=TRUE OR is_active IS NULL) RETURNING id`,[frequency,emailReminders,aiDays,days,cr.rows[0].id,ids]);
-  res.json({success:true,updated:ur.rowCount,monitoring_enabled:days>0,frequency,email_reminders:emailReminders,email_destination:cr.rows[0].email||null,ai_reminder_days:aiDays});
+    WHERE tracker_client_id=$5 AND id=ANY($6::int[]) AND (is_active=TRUE OR is_active IS NULL)
+      AND NOT EXISTS(SELECT 1 FROM tracker_case_studies cs WHERE cs.tracker_page_id=tracker_pages.id AND cs.tracker_client_id=tracker_pages.tracker_client_id AND cs.status='active') RETURNING id`,[frequency,emailReminders,aiDays,days,cr.rows[0].id,ids]);
+  res.json({success:true,updated:ur.rowCount,locked_case_studies:ids.length-ur.rowCount,monitoring_enabled:days>0,frequency,email_reminders:emailReminders,email_destination:cr.rows[0].email||null,ai_reminder_days:aiDays});
 }catch(e){console.error('[monitoring-selected]',e.message);res.status(500).json({success:false,error:'Monitoring settings could not be saved: '+e.message});}});
 
 // POST /api/tracker-client/:token/brief-language — client-set brief language (self-service).
@@ -7415,6 +7419,7 @@ app.post('/api/admin/tracker-clients/merge-duplicates', verifyAdmin, async (req,
 // PATCH /api/admin/tracker-clients/:id/frequency — change frequency for all client pages
 app.patch('/api/admin/tracker-clients/:id/frequency', verifyAdmin, async (req, res) => {
   try {
+    await _ensureCaseStudySchema();
     const { frequency } = req.body;
     const allowed = ['0','0days','off','1day','3days','7days','17days','21days','30days','weekly','1week','2weeks','monthly'];
     if (!allowed.includes(frequency)) return res.status(400).json({ success: false, error: 'Invalid frequency' });
@@ -7427,7 +7432,8 @@ app.patch('/api/admin/tracker-clients/:id/frequency', verifyAdmin, async (req, r
            monitoring_request_at=CASE WHEN monitoring_gate_label LIKE 'case_day_%' THEN monitoring_request_at ELSE NULL END,
            monitoring_reminder_sent_at=CASE WHEN monitoring_gate_label LIKE 'case_day_%' THEN monitoring_reminder_sent_at ELSE NULL END,
            monitoring_gate_label=CASE WHEN monitoring_gate_label LIKE 'case_day_%' THEN monitoring_gate_label ELSE NULL END
-           WHERE tracker_client_id=$1 AND (is_active=TRUE OR is_active IS NULL)`,
+           WHERE tracker_client_id=$1 AND (is_active=TRUE OR is_active IS NULL)
+             AND NOT EXISTS(SELECT 1 FROM tracker_case_studies cs WHERE cs.tracker_page_id=tracker_pages.id AND cs.status='active')`,
         [req.params.id]
       );
       return res.json({ success: true, frequency: '0', days: 0 });
@@ -7438,7 +7444,8 @@ app.patch('/api/admin/tracker-clients/:id/frequency', verifyAdmin, async (req, r
       `UPDATE tracker_pages
          SET check_frequency=$1,
              next_check_at = COALESCE(last_checked_at, NOW()) + INTERVAL '${_d} days'
-       WHERE tracker_client_id=$2 AND (is_active=TRUE OR is_active IS NULL)`,
+       WHERE tracker_client_id=$2 AND (is_active=TRUE OR is_active IS NULL)
+         AND NOT EXISTS(SELECT 1 FROM tracker_case_studies cs WHERE cs.tracker_page_id=tracker_pages.id AND cs.status='active')`,
       [frequency, req.params.id]
     );
     res.json({ success: true, frequency, days: _d });
@@ -7448,6 +7455,9 @@ app.patch('/api/admin/tracker-clients/:id/frequency', verifyAdmin, async (req, r
 // PATCH /api/admin/tracker-pages/:pageId/frequency — set scan interval for ONE page (3/7/17/21/30 days)
 app.patch('/api/admin/tracker-pages/:pageId/frequency', verifyAdmin, async (req, res) => {
   try {
+    await _ensureCaseStudySchema();
+    const lockedCase=await pool.query("SELECT 1 FROM tracker_case_studies WHERE tracker_page_id=$1 AND status='active' LIMIT 1",[req.params.pageId]);
+    if(lockedCase.rows.length)return res.status(409).json({success:false,case_study_locked:true,error:'This active case study keeps the monitoring choice saved at its protected baseline.'});
     const { frequency } = req.body;
     const allowed = ['0','0days','off','1day','3days','7days','17days','21days','30days','weekly','1week','2weeks','monthly'];
     if (!allowed.includes(frequency)) return res.status(400).json({ success: false, error: 'Invalid frequency' });
@@ -13244,7 +13254,7 @@ window.csAuditClientLoaded=function(){
   ['run','reportLang','saveAuditBtn','resetBtn'].forEach(function(id){var el=document.getElementById(id);if(el)el.disabled=false;});
 };
 </script>
-<script src="/audit-client.js?v=20260914-canonical-v92" onload="window.csAuditClientLoaded()" onerror="window.csAuditStatus('Audit engine could not load. Refresh the page to retry.')"></script>
+<script src="/audit-client.js?v=20260914-canonical-v93" onload="window.csAuditClientLoaded()" onerror="window.csAuditStatus('Audit engine could not load. Refresh the page to retry.')"></script>
 </div></body></html>`;
                  if (_isSharedToolAccess) _auditHtml = _stripWhiteLabelPersonalBlocks(_auditHtml);
                  res.type('html').send(_auditHtml);
@@ -34299,13 +34309,13 @@ function configureSelectedMonitoring(enabled){
   var ids=_ctSelectedIds();if(!ids.length){toast('Select one or more pages first','#f87171');return;}
   if(!enabled){
     if(!confirm('Set automatic monitoring Off for '+ids.length+' selected page(s)? Manual scans will still work and will still email the result.'))return;
-    return api('/pages/monitoring-selected','PATCH',{page_ids:ids,enabled:false,email_reminders:false}).then(function(d){toast((d.updated||0)+' page(s) set to Off','#94a3b8');loadPages();}).catch(function(e){toast(e.message,'#f87171');});
+    return api('/pages/monitoring-selected','PATCH',{page_ids:ids,enabled:false,email_reminders:false}).then(function(d){toast((d.updated||0)+' page(s) set to Off'+(d.locked_case_studies?' · '+d.locked_case_studies+' active case study locked':''),'#94a3b8');loadPages();}).catch(function(e){toast(e.message,'#f87171');});
   }
   var f=prompt('Automatic scan interval for the selected pages:\\n0 = Off\\n1 = daily\\n3 = every 3 days\\n7 = weekly\\n14 = every 2 weeks\\n21 = every 3 weeks\\n30 = monthly','7');
   if(f===null)return;if(String(f).trim()==='0')return configureSelectedMonitoring(false);var fm={'1':'1day','3':'3days','7':'7days','14':'2weeks','21':'21days','30':'30days'},frequency=fm[String(f).trim()];
   if(!frequency){alert('Choose 0, 1, 3, 7, 14, 21 or 30 days.');return;}
   if(!confirm('Enable guided monitoring for '+ids.length+' selected page(s)?\\n\\nReview interval: '+f+' day(s)\\nOn the due day ContentScale emails once, marks the page Waiting for data, and does NOT scan.\\nYou first provide fresh GSC Pages + Queries and new 5/5 AI evidence. The manual page scan is then unlocked.\\n\\nEmails go to the Tracker client email already on file.'))return;
-  api('/pages/monitoring-selected','PATCH',{page_ids:ids,enabled:true,frequency:frequency,email_reminders:true,ai_reminder_days:14}).then(function(d){toast((d.updated||0)+' selected page(s) use guided monitoring','#4ade80');loadPages();}).catch(function(e){toast(e.message,'#f87171');});
+  api('/pages/monitoring-selected','PATCH',{page_ids:ids,enabled:true,frequency:frequency,email_reminders:true,ai_reminder_days:14}).then(function(d){toast((d.updated||0)+' page(s) updated'+(d.locked_case_studies?' · '+d.locked_case_studies+' active case study locked':''),'#4ade80');loadPages();}).catch(function(e){toast(e.message,'#f87171');});
 }
 function configurePageMonitoring(pageId){
   document.querySelectorAll('.page-select-cb').forEach(function(cb){cb.checked=Number(cb.dataset.id)===Number(pageId);});
@@ -35607,7 +35617,7 @@ function renderStats(data) {
           }
         }
         var ready=waiting&&!missing.length;
-        var status=ready?'READY — press Check now':waiting?'WAITING FOR DATA — '+missing.join(', '):isCase&&!isMonitored?'CASE STUDY ACTIVE — Monitoring Off':'MONITORING '+String(p.check_frequency||'');
+        var status=ready?'READY — press Scan':waiting?'WAITING FOR DATA — '+missing.join(', '):isCase&&!isMonitored?'CASE STUDY CYCLE ACTIVE — optional monitoring was locked Off at the baseline':isCase?'CASE STUDY CYCLE ACTIVE — monitoring locked '+String(p.check_frequency||''):'MONITORING '+String(p.check_frequency||'');
         if(!waiting&&isMonitored&&p.next_check_at){try{status+=' — next '+new Date(p.next_check_at).toLocaleString('en-GB',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});}catch(x){}}
         var color=ready?'#86efac':waiting?'#fbbf24':isCase?'#7dd3fc':'#c4b5fd';
         var label=_csEscH(p.title||p.keyword||String(p.url||'').replace(/^https?:[/][/]/,'').split('/')[0]||('Page '+p.id));
@@ -36044,7 +36054,7 @@ function renderPages() {
         var wn=['google_aio','chatgpt','perplexity','claude','copilot'].filter(function(k){var x=wa[k];return x&&_aiEvidenceIsVerified(x)&&(Date.parse(x.updated_at||x.verified_at||0)||0)>=reqMs;}).length;
         if(wn<5)missingParts.push('AI engines '+wn+'/5');
       }
-      waitingBanner='<div style="padding:9px 14px;background:#2a1f05;border-bottom:1px solid #a16207;color:#fde68a;font-size:11px;font-weight:700;line-height:1.55;"><span style="color:#fbbf24;">WAITING FOR DATA</span> \u2014 '+(missingParts.length?('still needed: '+missingParts.join(', ')): 'input complete; press Check now to continue')+'. No scheduled scan runs while this page is waiting.</div>';
+      waitingBanner='<div style="padding:9px 14px;background:#2a1f05;border-bottom:1px solid #a16207;color:#fde68a;font-size:11px;font-weight:700;line-height:1.55;"><span style="color:#fbbf24;">WAITING FOR DATA</span> \u2014 '+(missingParts.length?('still needed: '+missingParts.join(', ')): 'input complete; press Scan to continue')+'. No scheduled scan runs while this page is waiting.</div>';
     }
 
     // Needs HTML banner
@@ -36167,9 +36177,11 @@ function renderPages() {
       + '<button data-tour="intelligence" onclick="event.stopPropagation();openCompetitiveIntelligence(' + p.id + ')" style="background:#0d1117;border:1px solid #0891b2;border-radius:7px;color:#67e8f9;cursor:pointer;font-size:11px;padding:5px 12px;font-weight:700;" title="Cross-engine competitors, sources, content opportunities and claims to verify">&#128269; Intelligence</button>'
       + ((explicitlyNeeds || p.fetch_reliable === false) ? '<button class="cs-html-btn cs-blink" onclick="openHtmlUpload(' + p.id + ')" style="background:#0d1117;border:1px solid #f59e0b;border-radius:7px;color:#fbbf24;cursor:pointer;font-size:11px;padding:5px 12px;font-weight:700;" title="Automatic live fetch was not reliable. Paste the published HTML manually to continue verification.">&#9888; Manual HTML required</button>' : '')
       + '<button data-tour="scan" data-check-btn="' + p.id + '" onclick="checkPage(' + p.id + ')" style="background:#0d1117;border:1px solid ' + (_scanDone ? '#22c55e' : '#2dd4bf') + ';border-radius:7px;color:' + (_scanDone ? '#4ade80' : '#5eead4') + ';cursor:pointer;font-size:11px;padding:5px 10px;font-weight:700;" title="' + (lastChecked ? (_scanDone ? 'Scanned this round \\u2014 click to rescan now' : 'Rescan this URL now') : 'Scan this URL now') + '">' + (lastChecked ? (_scanDone ? '\\u21bb \\u2713' : '\\u21bb Scan') : '\\u25b6 Scan') + '</button>'
-      + ((p.check_frequency==='0'||p.check_frequency==='0days'||p.check_frequency==='off'||!p.check_frequency)
+      + (p.case_study_active
+        ? '<button disabled style="background:#082f49;border:1px solid #0ea5e9;border-radius:7px;color:#7dd3fc;cursor:not-allowed;font-size:10px;padding:5px 10px;font-weight:800;opacity:.9;" title="Locked to the monitoring choice saved with the protected baseline. Case-study day 7, day 14 and day 30 reminders remain active.">Case-study cycle: '+((p.check_frequency==='0'||p.check_frequency==='0days'||p.check_frequency==='off'||!p.check_frequency)?'active · monitoring locked Off':freqLabel+' · locked')+'</button>'
+        : ((p.check_frequency==='0'||p.check_frequency==='0days'||p.check_frequency==='off'||!p.check_frequency)
         ? '<button onclick="event.stopPropagation();configurePageMonitoring('+p.id+')" style="background:#111827;border:1px solid #64748b;border-radius:7px;color:#cbd5e1;cursor:pointer;font-size:10px;padding:5px 10px;font-weight:800;" title="No guided review schedule. Manual scans still work.">Monitoring: Off</button>'
-        : '<button onclick="event.stopPropagation();configurePageMonitoring('+p.id+')" style="background:#052e16;border:1px solid #22c55e;border-radius:7px;color:#86efac;cursor:pointer;font-size:10px;padding:5px 10px;font-weight:800;" title="Guided data review '+freqLabel+'. ContentScale waits for input before the manual scan.">Monitoring: '+freqLabel+'</button>')
+        : '<button onclick="event.stopPropagation();configurePageMonitoring('+p.id+')" style="background:#052e16;border:1px solid #22c55e;border-radius:7px;color:#86efac;cursor:pointer;font-size:10px;padding:5px 10px;font-weight:800;" title="Guided data review '+freqLabel+'. ContentScale waits for input before the manual scan.">Monitoring: '+freqLabel+'</button>'))
       + ((hasBrief || _lastBriefData[p.id]) ? '<button data-tour="view-brief" onclick="viewLastBrief(' + p.id + ')" style="background:#0d1117;border:1px solid #8b5cf6;border-radius:7px;color:#c4b5fd;cursor:pointer;font-size:11px;padding:5px 12px;font-weight:600;" title="View Citation Brief">\\ud83d\\udcc4 View Brief</button>' : '')
       + '<button data-tour="history" onclick="csPosHist(' + p.id + ')" style="background:#0d1117;border:1px solid #64748b;border-radius:7px;color:#cbd5e1;cursor:pointer;font-size:13px;padding:5px 10px;font-weight:600;" title="Ranking history">\\ud83d\\udcc8</button>'
       + (!p.case_study_active && lastCheckedRaw ? '<button onclick="event.stopPropagation();startCaseStudy(' + p.id + ')" style="background:#082f49;border:1px solid #0ea5e9;border-radius:7px;color:#7dd3fc;cursor:pointer;font-size:10px;padding:5px 10px;font-weight:900;" title="Lock the current scan, GSC values, five-engine evidence and HTML as the baseline">Start case study</button>' : '')
