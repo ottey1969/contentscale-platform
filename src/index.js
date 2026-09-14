@@ -1,4 +1,4 @@
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-14-CANONICAL-v107';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-14-CANONICAL-v108';
 const CONTENTSCALE_BUILD_CHANGES = [
   'public-prospect-quick-scan-separated-from-audit-and-tracker',
   'source-aware-links-leadcrawler-linkedin-facebook-contact-email-standalone',
@@ -1074,7 +1074,7 @@ app.use(function(req, res, next) {
     res.setHeader('Access-Control-Allow-Origin', origin);
   }
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-admin-key, x-user-id, x-anthropic-key, x-gemini-key, anthropic-version');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-admin-key, x-admin-code, x-user-id, x-anthropic-key, x-gemini-key, anthropic-version');
   res.setHeader('Access-Control-Allow-Credentials', 'true');
   if (req.method === 'OPTIONS') return res.sendStatus(204);
   next();
@@ -13394,7 +13394,7 @@ window.csAuditClientLoaded=function(){
   ['run','reportLang','saveAuditBtn','resetBtn'].forEach(function(id){var el=document.getElementById(id);if(el)el.disabled=false;});
 };
 </script>
-<script src="/audit-client.js?v=20260914-canonical-v107" onload="window.csAuditClientLoaded()" onerror="window.csAuditStatus('Audit engine could not load. Refresh the page to retry.')"></script>
+<script src="/audit-client.js?v=20260914-canonical-v108" onload="window.csAuditClientLoaded()" onerror="window.csAuditStatus('Audit engine could not load. Refresh the page to retry.')"></script>
 </div></body></html>`;
                  if (_isSharedToolAccess) _auditHtml = _stripWhiteLabelPersonalBlocks(_auditHtml);
                  res.type('html').send(_auditHtml);
@@ -15521,7 +15521,7 @@ app.post('/api/admin/verify', async (req, res) => {
 
 // Admin only — the crawler surface and anything touching all clients.
 async function requireAdmin(req, res, next) {
-  const { role } = await resolveRole(req.headers['x-admin-code'] || '');
+  const { role } = await resolveRole(req.headers['x-admin-code'] || req.headers['x-admin-key'] || (req.body && req.body.code) || '');
   if (role !== 'admin') {
     return res.status(401).json({ error: 'Unauthorized — admin code required' });
   }
@@ -15531,7 +15531,7 @@ async function requireAdmin(req, res, next) {
 
 // Admin OR a client (scoped). Sets req.role / req.clientId for the route to use.
 async function requireAuth(req, res, next) {
-  const { role, clientId } = await resolveRole(req.headers['x-admin-code'] || '');
+  const { role, clientId } = await resolveRole(req.headers['x-admin-code'] || req.headers['x-admin-key'] || (req.body && req.body.code) || '');
   if (!role) {
     return res.status(401).json({ error: 'Unauthorized — access code required' });
   }
