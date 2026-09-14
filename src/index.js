@@ -1,4 +1,4 @@
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-14-CANONICAL-v91';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-14-CANONICAL-v92';
 const CONTENTSCALE_BUILD_CHANGES = [
   'professional-guided-tour',
   'prewrite-create-expand-publish-tracker-baseline',
@@ -13244,7 +13244,7 @@ window.csAuditClientLoaded=function(){
   ['run','reportLang','saveAuditBtn','resetBtn'].forEach(function(id){var el=document.getElementById(id);if(el)el.disabled=false;});
 };
 </script>
-<script src="/audit-client.js?v=20260914-canonical-v91" onload="window.csAuditClientLoaded()" onerror="window.csAuditStatus('Audit engine could not load. Refresh the page to retry.')"></script>
+<script src="/audit-client.js?v=20260914-canonical-v92" onload="window.csAuditClientLoaded()" onerror="window.csAuditStatus('Audit engine could not load. Refresh the page to retry.')"></script>
 </div></body></html>`;
                  if (_isSharedToolAccess) _auditHtml = _stripWhiteLabelPersonalBlocks(_auditHtml);
                  res.type('html').send(_auditHtml);
@@ -35615,12 +35615,17 @@ function renderStats(data) {
         return '<div class="cs-monitor-action-row" style="padding:10px 12px;border:1px solid #243449;border-radius:8px;background:#0b1624;margin-top:7px;">'
           +'<div style="min-width:0;"><strong style="display:block;color:#e2e8f0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+label+'</strong><a href="'+url+'" target="_blank" rel="noopener" style="display:block;color:#60a5fa;font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+_csEscH(p.url||'')+'</a></div>'
           +'<div style="color:'+color+';font-size:10px;font-weight:800;line-height:1.45;">'+_csEscH(status)+'</div>'
-          +'<button type="button" onclick="var c=document.querySelector(\'.cs-page-card[data-page-id=&quot;'+Number(p.id)+'&quot;]\');if(c)c.scrollIntoView({behavior:\'smooth\',block:\'center\'});" style="border:1px solid #3b82f6;background:#10264a;color:#bfdbfe;border-radius:6px;padding:6px 9px;cursor:pointer;font-size:10px;font-weight:800;white-space:nowrap;">Open page</button></div>';
+          +'<button type="button" onclick="jumpToTrackerPage('+Number(p.id)+')" style="border:1px solid #3b82f6;background:#10264a;color:#bfdbfe;border-radius:6px;padding:6px 9px;cursor:pointer;font-size:10px;font-weight:800;white-space:nowrap;">Open page</button></div>';
       }).join('');
       actionBox.innerHTML='<div style="padding:11px 13px;border:1px solid #1d4ed8;border-radius:9px;background:#081426;color:#cbd5e1;font-size:11px;"><div style="font-weight:900;color:#93c5fd;letter-spacing:.06em;">TRACKER ACTION PAGES · '+actionPages.length+'</div>'+rows+'</div>';
     }
   }
 
+}
+
+function jumpToTrackerPage(pageId){
+  var card=document.querySelector('.cs-page-card[data-page-id="'+Number(pageId)+'"]');
+  if(card)card.scrollIntoView({behavior:'smooth',block:'center'});
 }
 
 // ── Live Brief Wall ── newest brief in the middle, rotates to side cards, click to open full brief
