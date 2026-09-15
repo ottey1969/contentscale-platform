@@ -1,4 +1,4 @@
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-15-CANONICAL-v124';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-15-CANONICAL-v125';
 const CONTENTSCALE_BUILD_CHANGES = [
   'bulk-import-105-private-leadcrawler-companies-without-scanning',
   'csv-tsv-paste-company-import-with-domain-deduplication',
@@ -4239,6 +4239,27 @@ function _trackerParseManualEvidence(rawText,rawSources,pageUrl,aliases){
  const _isMapsUrl=u=>{try{const x=new URL(String(u||''));const h=x.hostname.toLowerCase().replace(/^www\./,'');return h==='maps.app.goo.gl'||((h==='google.com'||h.endsWith('.google.com'))&&x.pathname.toLowerCase().startsWith('/maps'));}catch(e){return false;}};
  const _noiseUrl=u=>{try{const x=new URL(String(u||''));const h=x.hostname.toLowerCase().replace(/^www\./,'');const q=x.pathname.toLowerCase();return _isMapsUrl(u)||(h==='google.com'&&(q==='/goto'||q.startsWith('/searchviewer')||q.startsWith('/search')))||h.endsWith('gstatic.com')||h.endsWith('googleusercontent.com')||h==='support.google.com'||h==='accounts.google.com'||h==='gemini.google.com';}catch(e){return false;}};
  const _extractUrls=str=>{const out=[],seen=new Set(),re=/https?:\/\/[^\s)\]}>":'<,]+/gi;let m;while((m=re.exec(String(str||'')))){const u=m[0].replace(/[.;:]+$/,'');if(_noiseUrl(u))continue;const z=_trackerEvNorm(u);if(z&&!seen.has(z)){seen.add(z);out.push(u);}}return out;};
+ // Quick Scan Prompt 2 compatibility. Tracker accepts the same manually pasted
+ // per-engine answer with QUESTION 1..4 company blocks and a final summary.
+ // "Official website" identifies the company but is never citation proof by itself.
+ const _quickBlocks=[];
+ const _quickClean=String(text||'').replace(/\*\*/g,'');
+ const _quickCompanyRe=/(?:^|\n)\s*(?:[-*•]\s*)?Company\s*:\s*([^\n]+)\n([\s\S]*?)(?=(?:\n\s*(?:[-*•]\s*)?Company\s*:)|(?:\n\s*(?:#{1,6}\s*)?FINAL CROSS-QUESTION SUMMARY\b)|$)/gi;
+ let _qb;
+ while((_qb=_quickCompanyRe.exec(_quickClean))){
+   const block=String(_qb[2]||''),company=String(_qb[1]||'').trim().replace(/^[-*•]+\s*/,'');
+   const field=label=>{const m=block.match(new RegExp('(?:^|\\n)\\s*(?:[-*•]\\s*)?'+label+'\\s*:\\s*([^\\n]*)','i'));return m?String(m[1]||'').trim():'';};
+   const recommended=/^(?:yes|ja|true)\b/i.test(field('Recommended'));
+   const officialLine=field('Official\\s+website');
+   const officialUrls=_extractUrls(officialLine);
+   const exactLine=field('Exact\\s+cited\\s+page');
+   const proofBlock=block.replace(/(?:^|\n)\s*(?:[-*•]\s*)?Official\s+website\s*:[^\n]*/ig,'\n');
+   const citationUrls=_extractUrls(proofBlock).filter(u=>!_isMapsUrl(u));
+   const mapsUrls=_extractUrls(proofBlock).filter(_isMapsUrl);
+   _quickBlocks.push({company,recommended,officialUrls,citationUrls,mapsUrls,exactLine,block});
+ }
+ const _quickCitationUrls=[];const _quickCitationNorm=new Set();const _quickOfficialNorm=new Set();
+ _quickBlocks.forEach(b=>{b.officialUrls.forEach(u=>{const n=_trackerEvNorm(u);if(n)_quickOfficialNorm.add(n);});b.citationUrls.forEach(u=>{const n=_trackerEvNorm(u);if(n&&!_quickCitationNorm.has(n)){_quickCitationNorm.add(n);_quickCitationUrls.push(u);}});});
  // A generic Google Maps result proves local/entity visibility, never a website citation.
  const legacyMaps=sec.direct.filter(x=>/(?:google\.[^\s/]+\/maps|maps\.app\.goo\.gl|google\s+maps\s+results)/i.test(x));
  const localLines=sec.local.concat(legacyMaps);
@@ -4247,7 +4268,7 @@ function _trackerParseManualEvidence(rawText,rawSources,pageUrl,aliases){
  // A clickable URL in RECOMMENDED identifies the company; it is not citation proof.
  // Citation proof comes from DIRECTLY CITED, CITATION SOURCES, the source field,
  // or an unsectioned inline source link that is not explicitly marked mentioned-only.
- const citationText=verifiedDirect.join('\n')+'\n'+sec.domain.join('\n')+'\n'+sec.exact.join('\n')+'\n'+sec.sources.filter(x=>!/\bNOT VERIFIED\b/i.test(x)&&!_isMapsUrl((_extractUrls(x)[0]||''))).join('\n')+'\n'+safeRawSources;
+ const citationText=verifiedDirect.join('\n')+'\n'+sec.domain.join('\n')+'\n'+sec.exact.join('\n')+'\n'+sec.sources.filter(x=>!/\bNOT VERIFIED\b/i.test(x)&&!_isMapsUrl((_extractUrls(x)[0]||''))).join('\n')+'\n'+safeRawSources+'\n'+_quickCitationUrls.join('\n');
  // Some engines put citations inline as Markdown/HTML links without our requested section
  // headings. Those are still verifiable source links and must not disappear merely because
  // the model changed its formatting. A bare brand mention remains insufficient, and links
@@ -4269,7 +4290,7 @@ function _trackerParseManualEvidence(rawText,rawSources,pageUrl,aliases){
  const _sectionUrls=_extractUrls(citationText);
  const _sectionNorm=new Set(_sectionUrls.map(_trackerEvNorm));
  const urls=_sectionUrls.slice();
- _linkedUrls.forEach(u=>{const z=_trackerEvNorm(u);if(!_sectionNorm.has(z)&&!_mentionedUrlNorm.has(z)&&!_recommendedUrlNorm.has(z)){_sectionNorm.add(z);urls.push(u);}});
+ _linkedUrls.forEach(u=>{const z=_trackerEvNorm(u);if(_quickOfficialNorm.has(z)&&!_quickCitationNorm.has(z))return;if(!_sectionNorm.has(z)&&!_mentionedUrlNorm.has(z)&&!_recommendedUrlNorm.has(z)){_sectionNorm.add(z);urls.push(u);}});
  const root=_trackerEvRoot(_trackerEvHost(pageUrl)),pn=_trackerEvNorm(pageUrl),own=urls.filter(u=>_trackerEvRoot(_trackerEvHost(u))===root), names=a=>a.map(x=>{
    let n=String(x||'').split('|')[0].trim().replace(/^\d+[.)]\s*/,'').replace(/^\*+|\*+$/g,'').split(/\s+[—–]\s+/)[0].trim();
    if(!n||/^https?:\/\//i.test(n)||/^\[?https?:/i.test(n)||/^\(?none\)?[.]?$/i.test(n)||/^[-:| ]+$/.test(n)||/[:.!?]$/.test(n)||n.split(/\s+/).length>12||n.length>120)return '';
@@ -4278,7 +4299,13 @@ function _trackerParseManualEvidence(rawText,rawSources,pageUrl,aliases){
  const brandNorm=v=>String(v||'').toLowerCase().replace(/^https?:\/\//,'').replace(/^www\./,'').split('/')[0].replace(/\.(com|net|org|co|io|ai|site|biz|info)(\.[a-z]{2})?$/,'').replace(/[^a-z0-9]+/g,'');
  const aa=[...new Set((aliases||[]).map(brandNorm).filter(x=>x.length>2))];
  const companyMatch=line=>{const company=String(line||'').split('|')[0].replace(/^[-•*#\s]+|[*#\s]+$/g,'').trim(),n=brandNorm(company);return !!n&&aa.some(a=>n===a||((n.length>=6&&a.length>=6)&&(n.includes(a)||a.includes(n))));};
+ const _quickTarget=_quickBlocks.filter(b=>companyMatch(b.company));
+ const _quickRecommendedNames=_quickBlocks.filter(b=>b.recommended).map(b=>b.company);
+ const _quickDirectNames=_quickBlocks.filter(b=>b.citationUrls.length>0).map(b=>b.company);
+ const _quickMentionedNames=_quickBlocks.map(b=>b.company);
+ const _uniqueNames=a=>[...new Set(a.map(x=>String(x||'').trim()).filter(Boolean))];
  const mapsUrls=[];localLines.forEach(x=>{const re=/https?:\/\/[^\s)\]}>\":'<,]+/gi;let m;while((m=re.exec(x)))if(_isMapsUrl(m[0]))mapsUrls.push(m[0]);});
+ _quickBlocks.forEach(b=>b.mapsUrls.forEach(u=>mapsUrls.push(u)));
  const brandRecommended=sec.recommended.some(companyMatch);
  // Explicit field verdicts are authoritative. This supports pasted audit summaries such as
  // "Website domain cited: No" even when the explanatory paragraph contains a clickable URL.
@@ -4288,7 +4315,7 @@ function _trackerParseManualEvidence(rawText,rawSources,pageUrl,aliases){
  const _xSupported=_explicitBool(['(?:brand\\s+)?directly\\s+supported\\s+by\\s+a\\s+cited\\s+source','supported\\s+by\\s+cited\\s+source']);
  const _xDomain=_explicitBool(['website\\s+domain\\s+cited','domain\\s+cited','domein\\s+geciteerd']);
  const _xExact=_explicitBool(['exact\\s+page\\s+cited','exacte\\s+pagina\\s+geciteerd']);
- return {brand_recommended:_xRec===null?brandRecommended:_xRec,brand_local_result:_xLocal===null?localLines.some(companyMatch):_xLocal,brand_direct_supported:_xSupported===null?verifiedDirect.some(companyMatch):_xSupported,domain_cited:_xDomain===null?own.length>0:_xDomain,exact_page_cited:_xExact===null?own.some(u=>_trackerEvNorm(u)===pn):_xExact,citation_urls:urls,local_result_urls:[...new Set(mapsUrls)],recommended_companies:names(sec.recommended),local_result_companies:names(localLines),directly_cited_companies:names(verifiedDirect),mentioned_companies:names(sec.mentioned),sections:{...sec,local:localLines,direct:verifiedDirect}};
+ return {brand_recommended:_xRec===null?(brandRecommended||_quickTarget.some(b=>b.recommended)):_xRec,brand_local_result:_xLocal===null?(localLines.some(companyMatch)||_quickTarget.some(b=>b.mapsUrls.length>0)):_xLocal,brand_direct_supported:_xSupported===null?(verifiedDirect.some(companyMatch)||_quickTarget.some(b=>b.citationUrls.length>0)):_xSupported,domain_cited:_xDomain===null?own.length>0:_xDomain,exact_page_cited:_xExact===null?own.some(u=>_trackerEvNorm(u)===pn):_xExact,citation_urls:urls,local_result_urls:[...new Set(mapsUrls)],recommended_companies:_uniqueNames(names(sec.recommended).concat(_quickRecommendedNames)),local_result_companies:_uniqueNames(names(localLines).concat(_quickBlocks.filter(b=>b.mapsUrls.length>0).map(b=>b.company))),directly_cited_companies:_uniqueNames(names(verifiedDirect).concat(_quickDirectNames)),mentioned_companies:_uniqueNames(names(sec.mentioned).concat(_quickMentionedNames)),sections:{...sec,local:localLines,direct:verifiedDirect,quick_scan_prompt_2:_quickBlocks.map(b=>({company:b.company,recommended:b.recommended,citation_urls:b.citationUrls,maps_urls:b.mapsUrls}))},input_format:_quickBlocks.length?'quick_scan_prompt_2':'canonical_sections'};
 }
 function _trackerReparseManualEvidenceMap(map,pageUrl,aliases,revisionCycle){
  const out={}; if(!map||typeof map!=='object')return out;
@@ -12082,6 +12109,11 @@ return result;
                        let engine = null;
                        for (const k in _engineNames) { if (key.includes(k)) { engine = _engineNames[k]; break; } }
                        if (!engine || !text.trim()) continue;
+                       // CONTENTSCALE-AUDIT-QUICK-SCAN-PROMPT-2-COMPATIBILITY-20260915=true
+                       // Audit accepts the exact same QUESTION 1..4 / Company-field answer used by
+                       // Quick Scan and Tracker. The legacy five-section format remains supported.
+                       const _prompt2Evidence = _trackerParseManualEvidence(text, '', base, _brands);
+                       const _isPrompt2Answer = _prompt2Evidence.input_format === 'quick_scan_prompt_2';
                        const lower = text.toLowerCase();
                        // CONTENTSCALE-AI-EVIDENCE-SEMANTICS-20260908
                        // Brand evidence must be literal in the visible answer text, never inferred from a URL/domain.
@@ -12327,23 +12359,38 @@ return result;
                          return String(src||'').replace(/\\+([.:/?#=&_%+~-])/g,'$1');
                        });
                        const _citedSourceList = _displaySourceList;
+                       const _prompt2Rows = ((_prompt2Evidence.sections||{}).quick_scan_prompt_2||[]);
+                       const _auditNameMatches = function(n){
+                         const lo=String(n||'').toLowerCase().replace(/[^\p{L}\p{N}]+/gu,' ').trim();
+                         return !!lo && _brands.some(function(b){
+                           const lb=String(b||'').toLowerCase().replace(/[^\p{L}\p{N}]+/gu,' ').trim();
+                           return !!lb && (lo===lb || lo.includes(lb) || lb.includes(lo));
+                         });
+                       };
+                       const _prompt2MentionedCompanies = _prompt2Rows.map(function(r){return r.company;}).filter(Boolean);
+                       const _prompt2MentionedOwn = _prompt2MentionedCompanies.filter(_auditNameMatches);
+                       const _prompt2Recommended = (_prompt2Evidence.recommended_companies||[]).slice(0,40);
+                       const _prompt2RecommendedOwn = _prompt2Recommended.filter(_auditNameMatches).slice(0,6);
+                       const _prompt2Competitors = _prompt2Recommended.filter(function(n){return !_auditNameMatches(n);}).slice(0,12);
+                       const _prompt2Sources = (_prompt2Evidence.citation_urls||[]).slice();
                        citations[engine] = {
-                         cited,
-                         brandMentioned: cited,
-                         brandRecommended,
-                         brandDirectlySupported,
-                         mentionedBrands: _literalBrandHits,
-                         recommendedOwn: _recommendedOwn.slice(0,6),
-                         recommendedBrands: _recommended.slice(0,40),
-                         urlCited,
-                         citationTarget,
-                         ownSiteCitation: citationTarget === 'own' || _sources.some(_sameOwnSiteSource),
-                         exactAuditedPageCitation,
+                         cited: _isPrompt2Answer ? _prompt2MentionedOwn.length > 0 : cited,
+                         brandMentioned: _isPrompt2Answer ? _prompt2MentionedOwn.length > 0 : cited,
+                         brandRecommended: _isPrompt2Answer ? _prompt2Evidence.brand_recommended : brandRecommended,
+                         brandDirectlySupported: _isPrompt2Answer ? _prompt2Evidence.brand_direct_supported : brandDirectlySupported,
+                         mentionedBrands: _isPrompt2Answer ? _prompt2MentionedOwn : _literalBrandHits,
+                         recommendedOwn: _isPrompt2Answer ? _prompt2RecommendedOwn : _recommendedOwn.slice(0,6),
+                         recommendedBrands: _isPrompt2Answer ? _prompt2Recommended : _recommended.slice(0,40),
+                         urlCited: _isPrompt2Answer ? _prompt2Evidence.domain_cited : urlCited,
+                         citationTarget: _isPrompt2Answer ? (_prompt2Evidence.domain_cited ? 'own' : (_prompt2Evidence.brand_direct_supported ? 'third-party' : 'unknown')) : citationTarget,
+                         ownSiteCitation: _isPrompt2Answer ? _prompt2Evidence.domain_cited : (citationTarget === 'own' || _sources.some(_sameOwnSiteSource)),
+                         exactAuditedPageCitation: _isPrompt2Answer ? _prompt2Evidence.exact_page_cited : exactAuditedPageCitation,
                          ownRootDomain: _ownRootDomain,
-                         showsSources: _showsSources || _sources.length > 0,
-                         citedSources: _citedSourceList.join(', '),
-                         citedSourceList: _citedSourceList,
-                         competitors: _competitors.slice(0,12).join(', ')
+                         showsSources: _isPrompt2Answer ? _prompt2Sources.length > 0 : (_showsSources || _sources.length > 0),
+                         citedSources: (_isPrompt2Answer ? _prompt2Sources : _citedSourceList).join(', '),
+                         citedSourceList: _isPrompt2Answer ? _prompt2Sources : _citedSourceList,
+                         competitors: (_isPrompt2Answer ? _prompt2Competitors : _competitors.slice(0,12)).join(', '),
+                         inputFormat: _isPrompt2Answer ? 'quick_scan_prompt_2' : 'legacy_five_sections'
                        };
                      }
                    }
@@ -13178,7 +13225,7 @@ return result;
     </details>
     <div style="padding:4px 0 12px;">
       <label style="font-weight:700;color:var(--p);font-size:15px;">AI recommendation and citation evidence — paste answers from all five systems for automatic analysis</label>
-      <p style="font-size:12px;color:#666;margin:5px 0 10px;line-height:1.5;">Ask the same 4 customer-search questions in each AI with web search enabled. Paste the answers below with the engine name above each block. The audit checks whether the client is mentioned, whether the client’s own website is cited, and which competitors receive citations instead.</p>
+      <p style="font-size:12px;color:#666;margin:5px 0 10px;line-height:1.5;">Use the same Prompt 2 format as Quick Scan in every AI. Paste each complete Prompt 2 answer below with the engine name above its block. The audit checks recommendations, real supporting citations, the client domain, the exact audited page and competitors.</p>
 
       <details open style="margin:8px 0 12px;background:#f8fafc;border:1px solid var(--bd);border-radius:8px;padding:10px 14px;">
         <summary style="cursor:pointer;font-weight:700;color:var(--p);font-size:14px;">📋 Which questions should I ask? — ready-to-copy prompts</summary>
@@ -13189,49 +13236,30 @@ return result;
           <p style="margin:6px 0 10px;color:#555;font-size:12px;">→ Paste those names into <strong>“All client brand & company names”</strong> below.</p>
           <p style="margin:0 0 5px;"><strong>Step 3 — Find the 4 real customer searches.</strong> Ask one AI:</p>
           <div style="background:#eef2ff;border:1px solid #c7d2fe;border-radius:6px;padding:11px;font-family:monospace;font-size:12px;white-space:pre-wrap;">What 4 search queries would a potential customer use when asking an AI to find a company like [COMPANY] in [SECTOR / SERVICE]? Return only the 4 search queries, written naturally in the language customers use in that market.</div>
-          <p style="margin:10px 0 5px;"><strong>Step 4 — Ask exactly the same 4 searches in every AI.</strong> Copy this prompt:</p>
+          <p style="margin:10px 0 5px;"><strong>Step 4 — Run the same Prompt 2 in every AI.</strong> Copy this prompt:</p>
           <div style="background:#fff;border:1px solid var(--bd);border-radius:6px;padding:11px;font-family:monospace;font-size:12px;white-space:pre-wrap;">REAL RESEARCH ONLY — NO DUMMY ANSWERS, NO FAKE COMPANIES, NO FAKE CITATIONS, AND NO INVENTED URLS.
 
-Answer all 4 customer searches below using current web research. Recommend companies only when you would genuinely recommend them to a potential customer. Keep real citations/references attached to the company or claim they support.
+Answer the four customer search questions below as four separate and independent research tasks. Use current live web research for each question. Recommend companies only when you would genuinely recommend them to a potential customer.
 
-After answering all 4 searches, finish with these EXACT five sections and EXACT line formats. Do not use Markdown tables for these five sections.
+INSTRUCTIONS:
+- Run this in a completely new chat with live web search enabled.
+- Treat each question independently; do not carry companies from one answer into another unless the research supports them again.
+- Keep every real citation/reference attached to the company or claim it supports.
+- The Official website field identifies the company only. It is NOT citation proof by itself.
+- Do not infer, reconstruct, shorten or invent citations or URLs. Use NOT VERIFIED when necessary.
+- Return four sections labelled QUESTION 1 through QUESTION 4.
+- For every company mentioned in a question, use exactly these fields:
 
-RECOMMENDED COMPANIES
-- Company Name
-- Company Name
+Company:
+Recommended: Yes/No
+Why recommended:
+Official website:
+Exact cited page:
+Supporting source URLs:
 
-LOCAL / MAPS RESULTS
-- Company Name | Exact Google Maps place URL
-- Company Name | NOT VERIFIED
-
-DIRECTLY CITED COMPANIES
-- Company Name | Exact Source Title | https://example.com/exact-page
-- Company Name | Exact Source Title | https://example.com/exact-page
-
-MENTIONED BUT NOT DIRECTLY CITED
-- Company Name | NOT VERIFIED
-
-CITATION SOURCES
-- Exact Source Title | https://example.com/exact-page
-- Exact Source Title | https://example.com/exact-page
-
-STRICT RULES:
-- Put ONE company or source per line in the five final sections.
-- Do NOT put multiple companies on one line.
-- Do NOT use Markdown tables in the five final sections.
-- RECOMMENDED COMPANIES contains only companies you explicitly recommended, not companies merely mentioned.
-- LOCAL / MAPS RESULTS contains companies shown in a local pack or Google Maps result. A generic Google Maps search/results URL is NOT a direct citation. Use an exact place/profile URL when available; otherwise use NOT VERIFIED.
-- DIRECTLY CITED COMPANIES contains only companies for which an actual citation/reference supports that company or a claim about it.
-- MENTIONED BUT NOT DIRECTLY CITED contains named companies without direct supporting citation. Do NOT invent a URL for them.
-- CITATION SOURCES contains every source actually cited.
-- Every ACTUAL citation URL must be repeated as a complete raw URL beginning with https://, even if the answer already contains a clickable/hidden hyperlink.
-- Do not output escaped URLs such as https\://www\.example\.com. Output https://www.example.com.
-- A company being mentioned or recommended is NOT automatically a citation.
-- A company appearing in Google Maps/local results is entity visibility, not proof that its website or a specific page was cited.
-- Do not infer, reconstruct, shorten, or invent citations or URLs.
-- If a citation cannot be verified, use NOT VERIFIED.
-- Use exactly this final format in ChatGPT, Perplexity, Gemini / Google AI, Claude, and Microsoft Copilot.
-- Do not explain SEO methodology or ask follow-up questions.
+- Every real citation URL must be a complete raw URL beginning with https://.
+- End with FINAL CROSS-QUESTION SUMMARY showing recommendation frequency and cited-domain frequency per company.
+- Do not use Markdown tables and do not ask follow-up questions.
 
 1. [search query 1]
 2. [search query 2]
@@ -39869,9 +39897,9 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
   window.saveOwnerQuestion=saveOwnerQuestion;
   window.openCompetitiveIntelligence=openCompetitiveIntelligence;
   function copyAiEvidenceTestPrompt(btn){var p=(_pages||[]).find(function(x){return x.id==_aiEvidencePageId;})||{},query=p.keyword||p.gsc_keyword||'',engine=(_aiEvidenceEngines.find(function(x){return x[0]===_aiEvidenceEngine})||[])[1]||_aiEvidenceEngine;if(!query){toast('Add a target keyword/query to this page first.','#f87171');return;}var prompt=['Open a completely new search session and answer this customer query using fresh web research:','"'+query+'"','','Rules:','- Treat this as an independent customer request.','- Ignore all earlier chats, company profiles, brands, frameworks and recommendations.','- Recommend only companies that your fresh research independently supports.','- Do not analyze or favor a target website supplied in another conversation.','- Preserve every visible source/reference as a complete clickable https:// URL.','- A brand mention is not automatically a recommendation or citation.','- Return the natural customer-facing answer first, followed by a SOURCES section containing the exact cited URLs.','- Do not explain these instructions.'].join(String.fromCharCode(10));navigator.clipboard.writeText(prompt).then(function(){if(btn){var old=btn.textContent;btn.textContent='Copied for '+engine+' ✓';setTimeout(function(){btn.textContent=old},1600)}toast('Unbiased '+engine+' test prompt copied. Open a new chat.','#4ade80')}).catch(function(){toast('Copy failed — allow clipboard access.','#f87171')});}
-  function openAiEvidence(id){_aiEvidencePageId=id;var p=(_pages||[]).find(function(x){return x.id==id;})||{},m=document.getElementById('aiEvidenceModal');if(!m){toast('AI Evidence panel not available','#f87171');return;}var c=document.getElementById('aiEvidenceContext');if(c)c.textContent=(p.keyword||p.gsc_keyword||'No target query')+' · '+(p.url||'');m.classList.add('show');m.style.display='flex';_selectAiEvidenceEngine(_aiEvidenceEngine);}
+  function openAiEvidence(id){_aiEvidencePageId=id;var p=(_pages||[]).find(function(x){return x.id==id;})||{},m=document.getElementById('aiEvidenceModal');if(!m){toast('AI Evidence panel not available','#f87171');return;}var c=document.getElementById('aiEvidenceContext');if(c)c.textContent=(p.keyword||p.gsc_keyword||'No target query')+' · '+(p.url||'');var info=m.querySelector('.cs-modal-box > div:nth-child(4)');if(info)info.innerHTML='<b style="color:#f1f5f9;">Same format as Quick Scan:</b> select one AI tab, paste that system’s complete Prompt 2 answer (QUESTION 1–4 plus FINAL CROSS-QUESTION SUMMARY), then save. Repeat for all five AI systems. The Official website field identifies the company but never counts as citation proof by itself.';var ta=document.getElementById('aiEvidenceText');if(ta)ta.placeholder='Paste the complete Quick Scan Prompt 2 answer from the selected AI system, including QUESTION 1–4 and all real source URLs...';var oldPromptBtn=m.querySelector('button[onclick^="copyAiEvidenceTestPrompt"]');if(oldPromptBtn){oldPromptBtn.style.display='none';var hint=oldPromptBtn.previousElementSibling;if(hint)hint.textContent='Run Prompt 2 from Quick Scan in a fresh chat, then paste the full answer here.';}m.classList.add('show');m.style.display='flex';_selectAiEvidenceEngine(_aiEvidenceEngine);}
   function _postAiEvidence(id,payload){return fetch('/api/tracker-client/'+TOKEN+'/page/'+id+'/ai-evidence/'+_aiEvidenceEngine,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)}).then(function(r){return r.json();});}
-  function _applyAiEvidenceResponse(id,d,st){if(!d.success)throw new Error(d.error||'Save failed');var p=(_pages||[]).find(function(x){return x.id==id;});if(p){if(!p.ai_manual_evidence||typeof p.ai_manual_evidence!=='object')p.ai_manual_evidence={};p.ai_manual_evidence[_aiEvidenceEngine]=d.evidence||(d.cleared?{engine:_aiEvidenceEngine,evidence_method:'manual',raw_text:'',raw_sources:'',is_cleared:true}:null);}try{delete _lastBriefData[id];}catch(x){}_selectAiEvidenceEngine(_aiEvidenceEngine);if(typeof loadPages==='function')loadPages();else renderPages();if(st){st.textContent=d.cleared?'Cleared — NOT CHECKED':'Manual evidence VERIFIED and saved';st.style.color=d.cleared?'#94a3b8':'#4ade80';}return d;}
+  function _applyAiEvidenceResponse(id,d,st){if(!d.success)throw new Error(d.error||'Save failed');var p=(_pages||[]).find(function(x){return x.id==id;});if(p){if(!p.ai_manual_evidence||typeof p.ai_manual_evidence!=='object')p.ai_manual_evidence={};p.ai_manual_evidence[_aiEvidenceEngine]=d.evidence||(d.cleared?{engine:_aiEvidenceEngine,evidence_method:'manual',raw_text:'',raw_sources:'',is_cleared:true}:null);}try{delete _lastBriefData[id];}catch(x){}_selectAiEvidenceEngine(_aiEvidenceEngine);if(typeof loadPages==='function')loadPages();else renderPages();if(st){var isPrompt2=d.evidence&&d.evidence.input_format==='quick_scan_prompt_2';st.textContent=d.cleared?'Cleared — NOT CHECKED':(isPrompt2?'Prompt 2 VERIFIED and saved':'Manual evidence VERIFIED and saved');st.style.color=d.cleared?'#94a3b8':'#4ade80';}return d;}
   function saveAiEvidence(){var id=_aiEvidencePageId;if(!id)return;var text=(document.getElementById('aiEvidenceText')||{}).value||'',sources=(document.getElementById('aiEvidenceSources')||{}).value||'',st=document.getElementById('aiEvidenceStatus');if(st){st.textContent='Saving...';st.style.color='#f59e0b';}_postAiEvidence(id,{text:text,sources:sources}).then(function(d){return _applyAiEvidenceResponse(id,d,st);}).catch(function(e){if(st){st.textContent=e.message;st.style.color='#f87171';}});}
   function clearAiEvidence(){var id=_aiEvidencePageId;if(!id)return;var a=document.getElementById('aiEvidenceText'),b=document.getElementById('aiEvidenceSources'),st=document.getElementById('aiEvidenceStatus');if(a)a.value='';if(b)b.value='';if(st){st.textContent='Clearing...';st.style.color='#f59e0b';}_postAiEvidence(id,{clear:true,text:'',sources:''}).then(function(d){return _applyAiEvidenceResponse(id,d,st);}).catch(function(e){if(st){st.textContent=e.message;st.style.color='#f87171';}});}
   window.openAiEvidence=openAiEvidence;window.saveAiEvidence=saveAiEvidence;window.clearAiEvidence=clearAiEvidence;window.copyAiEvidenceTestPrompt=copyAiEvidenceTestPrompt;window._selectAiEvidenceEngine=_selectAiEvidenceEngine;
