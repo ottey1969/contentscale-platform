@@ -1,5 +1,8 @@
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-15-CANONICAL-v123';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-15-CANONICAL-v124';
 const CONTENTSCALE_BUILD_CHANGES = [
+  'bulk-import-105-private-leadcrawler-companies-without-scanning',
+  'csv-tsv-paste-company-import-with-domain-deduplication',
+  'bulk-import-personal-links-no-owner-notification-storm',
   'public-prospect-quick-scan-separated-from-audit-and-tracker',
   'source-aware-links-leadcrawler-linkedin-facebook-contact-email-standalone',
   'manual-five-engine-prospect-evidence',
@@ -15595,6 +15598,38 @@ app.post('/api/prospect-quick-scan/admin/create',requireAdmin,async(req,res)=>{
   const u=new URL(url),token=require('crypto').randomBytes(32).toString('hex'),source=['lead_crawler','linkedin','facebook','contact_form','email','standalone'].includes(String(req.body.source))?String(req.body.source):'standalone';
   try{await pool.query(`INSERT INTO prospect_quick_scans(token,business_name,url,domain,source,campaign,contact_email,language) VALUES($1,$2,$3,$4,$5,$6,$7,$8)`,[token,String(req.body.business_name||'').slice(0,200),url,u.hostname.replace(/^www\./,''),source,String(req.body.campaign||'').slice(0,200),String(req.body.contact_email||'').slice(0,254),_pqsLanguage(req.body.language)]);res.json({success:true,token,share_url:req.protocol+'://'+req.get('host')+'/quick-scan/'+token});}catch(e){res.status(500).json({success:false,error:e.message});}
 });
+
+// Bulk-create private Lead Crawler records and personal links. This intentionally
+// does not call /run and does not notify the owner once per imported company.
+app.post('/api/prospect-quick-scan/admin/import',requireAdmin,async(req,res)=>{
+  if(!await _ensureProspectQuickScanTable())return res.status(503).json({success:false,error:'DB unavailable'});
+  const companies=Array.isArray(req.body&&req.body.companies)?req.body.companies:[];
+  if(!companies.length)return res.status(400).json({success:false,error:'No companies received'});
+  if(companies.length>1000)return res.status(400).json({success:false,error:'Maximum 1,000 companies per import'});
+  const defaultCampaign=String((req.body&&req.body.campaign)||('Lead Crawler import '+new Date().toISOString().slice(0,10))).trim().slice(0,200);
+  const defaultLanguage=_pqsLanguage((req.body&&req.body.language)||'auto');
+  const client=await pool.connect();let inserted=0,existing=0,invalid=0;const items=[],errors=[];
+  try{
+    await client.query('BEGIN');
+    for(let i=0;i<companies.length;i++){
+      const row=companies[i]||{},url=_pqsCleanUrl(row.url||row.website||row.domain||row.business_url);
+      if(!url){invalid++;if(errors.length<10)errors.push({row:i+1,error:'Valid website missing'});continue;}
+      const domain=new URL(url).hostname.toLowerCase().replace(/^www\./,''),name=String(row.business_name||row.company_name||row.company||row.name||domain).trim().slice(0,200),email=String(row.contact_email||row.email||'').trim().slice(0,254),campaign=String(row.campaign||defaultCampaign).trim().slice(0,200),language=_pqsLanguage(row.language||defaultLanguage);
+      const found=await client.query(`SELECT token,business_name,url,domain,status FROM prospect_quick_scans WHERE lower(domain)=lower($1) AND revoked_at IS NULL ORDER BY created_at DESC LIMIT 1`,[domain]);
+      if(found.rows.length){
+        const old=found.rows[0];
+        await client.query(`UPDATE prospect_quick_scans SET business_name=CASE WHEN COALESCE(business_name,'')='' THEN $1 ELSE business_name END,contact_email=CASE WHEN COALESCE(contact_email,'')='' THEN $2 ELSE contact_email END,campaign=CASE WHEN COALESCE(campaign,'')='' THEN $3 ELSE campaign END,updated_at=NOW() WHERE token=$4`,[name,email,campaign,old.token]);
+        existing++;items.push({row:i+1,token:old.token,business_name:old.business_name||name,domain:old.domain||domain,status:old.status,created:false,share_url:req.protocol+'://'+req.get('host')+'/quick-scan/'+old.token});continue;
+      }
+      const token=require('crypto').randomBytes(32).toString('hex');
+      await client.query(`INSERT INTO prospect_quick_scans(token,business_name,url,domain,source,campaign,contact_email,language,status) VALUES($1,$2,$3,$4,'lead_crawler',$5,$6,$7,'created')`,[token,name,url,domain,campaign,email,language]);
+      inserted++;items.push({row:i+1,token,business_name:name,domain,status:'created',created:true,share_url:req.protocol+'://'+req.get('host')+'/quick-scan/'+token});
+    }
+    await client.query('COMMIT');
+    res.json({success:true,received:companies.length,inserted,existing,invalid,scans_started:0,notifications_sent:0,campaign:defaultCampaign,items,errors});
+  }catch(e){await client.query('ROLLBACK').catch(()=>{});res.status(500).json({success:false,error:e.message});}
+  finally{client.release();}
+});
 app.get('/api/prospect-quick-scan/admin/list',requireAdmin,async(req,res)=>{if(!await _ensureProspectQuickScanTable())return res.status(503).json({success:false});try{const q=await pool.query(`SELECT * FROM prospect_quick_scans WHERE revoked_at IS NULL ORDER BY created_at DESC LIMIT 200`);res.json({success:true,items:q.rows.map(r=>({..._pqsPublicRow(r),contact_email:r.contact_email||'',campaign:r.campaign||'',opened_count:Number(r.opened_count||0),first_opened_at:r.first_opened_at,last_opened_at:r.last_opened_at,follow_up_status:r.follow_up_status||'not_contacted',share_url:req.protocol+'://'+req.get('host')+'/quick-scan/'+r.token}))});}catch(e){res.status(500).json({success:false,error:e.message});}});
 app.patch('/api/prospect-quick-scan/admin/:token/ai',requireAdmin,async(req,res)=>{
   if(!await _ensureProspectQuickScanTable())return res.status(503).json({success:false});const engine=String((req.body||{}).engine||'');if(!['google_aio','chatgpt','perplexity','claude','copilot'].includes(engine))return res.status(400).json({success:false,error:'Invalid engine'});
@@ -15722,6 +15757,20 @@ function _pqsAdminScaleTools(){return `<script>(function(){
   document.addEventListener('click',function(e){var b=e.target.closest('button,.btn');if(!b)return;b.classList.remove('pqsAlive');void b.offsetWidth;b.classList.add('pqsAlive');setTimeout(function(){b.classList.remove('pqsAlive')},800)},true);
   if(list)new MutationObserver(decorate).observe(list,{childList:true,subtree:true});decorate();
 })();<\/script>`}
+function _pqsAdminBulkImportTools(){return `<script>(function(){
+  var list=document.getElementById('list'),prospectPanel=list&&list.closest('.p');if(!prospectPanel||document.getElementById('pqsBulkImport'))return;
+  var style=document.createElement('style');style.textContent='.pqsBulkGrid{display:grid;grid-template-columns:1fr 260px;gap:12px}.pqsBulkArea{width:100%;min-height:145px;resize:vertical}.pqsBulkSide{display:flex;flex-direction:column;gap:8px}.pqsBulkStatus{min-height:24px;margin-top:10px;padding:9px;border-radius:8px;background:#07101d;color:#93c5fd}.pqsBulkStatus.ok{color:#4ade80;border:1px solid #166534}.pqsBulkStatus.bad{color:#fca5a5;border:1px solid #991b1b}.pqsBulkPreview{font-size:11px;color:#94a3b8;margin-top:7px;white-space:pre-wrap}@media(max-width:760px){.pqsBulkGrid{grid-template-columns:1fr}}';document.head.appendChild(style);
+  var box=document.createElement('section');box.className='p';box.id='pqsBulkImport';box.innerHTML='<h2>Import private Lead Crawler companies</h2><p class="meta">Paste or upload up to 1,000 companies. Your 105 companies receive private records and personal links. <b>No scan starts</b> and no import notification emails are sent.</p><div class="pqsBulkGrid"><div><textarea id="pqsBulkText" class="pqsBulkArea" placeholder="company,website,email&#10;Company A,https://company-a.com,info@company-a.com"></textarea><div id="pqsBulkPreview" class="pqsBulkPreview">No rows read yet.</div></div><div class="pqsBulkSide"><input id="pqsBulkFile" type="file" accept=".csv,.tsv,.txt"><input id="pqsBulkCampaign" placeholder="Campaign name (optional)"><select id="pqsBulkLanguage"><option value="auto">Website language (auto)</option><option value="en">English</option><option value="nl">Dutch</option><option value="es">Spanish</option></select><button class="btn" id="pqsBulkRun">Import companies</button><button class="btn" id="pqsBulkTemplate" type="button">Download CSV template</button><button class="btn" id="pqsBulkLinks" type="button" style="display:none">Download personal links</button></div></div><div id="pqsBulkStatus" class="pqsBulkStatus">Import only prepares records and links; prospects are not scanned in advance.</div>';
+  prospectPanel.parentNode.insertBefore(box,prospectPanel);var parsed=[],lastItems=[],$=function(id){return document.getElementById(id)};
+  function parse(text){text=String(text||'').replace(/^\uFEFF/,'').trim();if(!text)return[];var first=(text.split(/\r?\n/)[0]||''),counts={',':(first.match(/,/g)||[]).length,';':(first.match(/;/g)||[]).length,'\t':(first.match(/\t/g)||[]).length},delim=Object.keys(counts).sort(function(a,b){return counts[b]-counts[a]})[0],rows=[],row=[],cell='',quoted=false;for(var i=0;i<text.length;i++){var ch=text[i];if(ch==='"'){if(quoted&&text[i+1]==='"'){cell+='"';i++}else quoted=!quoted}else if(ch===delim&&!quoted){row.push(cell.trim());cell=''}else if((ch==='\n'||ch==='\r')&&!quoted){if(ch==='\r'&&text[i+1]==='\n')i++;row.push(cell.trim());if(row.some(Boolean))rows.push(row);row=[];cell=''}else cell+=ch}row.push(cell.trim());if(row.some(Boolean))rows.push(row);if(!rows.length)return[];var aliases={business_name:['company','company_name','business','business_name','bedrijf','bedrijfsnaam','naam','name'],url:['website','url','domain','business_url','site','web'],contact_email:['email','e-mail','mail','contact_email'],campaign:['campaign','campagne'],language:['language','lang','taal']},head=rows[0].map(function(v){return String(v).toLowerCase().trim()}),map={},hasHeader=false;Object.keys(aliases).forEach(function(k){var n=head.findIndex(function(h){return aliases[k].indexOf(h)>=0});if(n>=0){map[k]=n;hasHeader=true}});if(!hasHeader)map={business_name:0,url:1,contact_email:2};return rows.slice(hasHeader?1:0).map(function(r){var o={};Object.keys(map).forEach(function(k){o[k]=r[map[k]]||''});return o}).filter(function(o){return o.business_name||o.url||o.contact_email}).slice(0,1000)}
+  function preview(){parsed=parse($('pqsBulkText').value);$('pqsBulkPreview').textContent=parsed.length?parsed.length+' companies recognized. Example: '+(parsed[0].business_name||'(no name)')+' · '+(parsed[0].url||'(no website)'):'No valid rows recognized yet.'}
+  function download(name,text){var a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type:'text/csv;charset=utf-8'}));a.download=name;document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(a.href);a.remove()},500)}
+  function csv(v){v=String(v==null?'':v);return /[",\n\r]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v}
+  $('pqsBulkText').oninput=preview;$('pqsBulkFile').onchange=function(){var f=this.files&&this.files[0];if(!f)return;var r=new FileReader();r.onload=function(){$('pqsBulkText').value=String(r.result||'');preview();$('pqsBulkStatus').className='pqsBulkStatus';$('pqsBulkStatus').textContent=f.name+' loaded ✓'};r.onerror=function(){$('pqsBulkStatus').className='pqsBulkStatus bad';$('pqsBulkStatus').textContent='Could not read file'};r.readAsText(f)};
+  $('pqsBulkTemplate').onclick=function(){var b=this,old=b.textContent;b.textContent='Preparing…';download('contentscale-leadcrawler-import-template.csv','company,website,email\nExample Company,https://example.com,info@example.com\n');b.textContent='Downloaded ✓';setTimeout(function(){b.textContent=old},1400)};
+  $('pqsBulkRun').onclick=async function(){preview();var b=this,status=$('pqsBulkStatus');if(!parsed.length){status.className='pqsBulkStatus bad';status.textContent='No valid companies found.';return}b.disabled=true;b.textContent='Importing '+parsed.length+'…';status.className='pqsBulkStatus';status.textContent='Creating private records and personal links. No scans are running…';try{var d=await api('/api/prospect-quick-scan/admin/import',{method:'POST',body:JSON.stringify({companies:parsed,campaign:$('pqsBulkCampaign').value,language:$('pqsBulkLanguage').value})});lastItems=d.items||[];status.className='pqsBulkStatus ok';status.textContent='Imported ✓ '+d.inserted+' new · '+d.existing+' already present · '+d.invalid+' invalid · 0 scans started · 0 import emails sent.';b.textContent='Import completed ✓';$('pqsBulkLinks').style.display=lastItems.length?'block':'none';if(typeof load==='function')load();setTimeout(function(){b.textContent='Import companies';b.disabled=false},1800)}catch(e){status.className='pqsBulkStatus bad';status.textContent=e.message||'Import failed';b.textContent='Retry import';b.disabled=false}};
+  $('pqsBulkLinks').onclick=function(){var b=this,lines=['company,domain,status,personal_quick_scan_link'];lastItems.forEach(function(x){lines.push([x.business_name,x.domain,x.status,x.share_url].map(csv).join(','))});download('contentscale-personal-quick-scan-links.csv',lines.join('\n'));var old=b.textContent;b.textContent='Links downloaded ✓';setTimeout(function(){b.textContent=old},1400)};
+})();<\/script>`}
 app.get('/quick-scan/admin',(req,res)=>{const h=_pqsFixRenderedAdminHtml(_pqsAdminHtml());const pre=`<script>(function(){
   var q=new URLSearchParams(location.search),u=q.get('url'),s=q.get('source'),n=q.get('name');
   if(u&&document.getElementById('url'))document.getElementById('url').value=u;
@@ -15734,7 +15783,7 @@ app.get('/quick-scan/admin',(req,res)=>{const h=_pqsFixRenderedAdminHtml(_pqsAdm
   function enhance(){document.querySelectorAll('#list .card').forEach(function(c){if(c.querySelector('[data-copy-outreach]'))return;var a=Array.from(c.querySelectorAll('a')).find(function(x){return /\\/quick-scan\\/[a-f0-9]{64}/.test(x.href)});if(!a)return;var name=(c.querySelector('b')||{}).textContent||'your website';var b=document.createElement('button');b.className='btn';b.dataset.copyOutreach='1';b.textContent='Copy outreach message';b.onclick=function(){var msg='I took a quick look at '+name+' and prepared a free one-page visibility scan. It shows the strongest opportunities in plain language, without requiring a login: '+a.href+' If you need guidance, ask Ottmar through the chat.';navigator.clipboard.writeText(msg);b.textContent='Copied ✓';setTimeout(function(){b.textContent='Copy outreach message'},1500)};(c.querySelector('.row')||c).appendChild(b)})}
   enhance();new MutationObserver(enhance).observe(document.body,{childList:true,subtree:true});
   if(q.get('autocreate')==='1'&&u){var autoKey='pqs_autocreate_'+u+'_'+(n||'');var tries=0,timer=setInterval(function(){tries++;var ready=document.getElementById('app')&&document.getElementById('app').style.display!=='none'&&typeof createLink==='function';if(ready){clearInterval(timer);if(!sessionStorage.getItem(autoKey)){sessionStorage.setItem(autoKey,'1');var box=document.getElementById('created');if(box)box.innerHTML='<p class="warn">Preparing the private lead link… No page scan is running.</p>';createLink()}}else if(tries>120)clearInterval(timer)},250)}
-})()<\/script>`;res.type('html').send(h.replace('</body>',_pqsFixTwoPromptScript(_pqsAdminTwoPromptTools())+_pqsAdminScaleTools()+pre+'</body>'))});
+})()<\/script>`;res.type('html').send(h.replace('</body>',_pqsFixTwoPromptScript(_pqsAdminTwoPromptTools())+_pqsAdminScaleTools()+_pqsAdminBulkImportTools()+pre+'</body>'))});
 app.get('/quick-scan/start',(req,res)=>{
   const source=['linkedin','facebook','contact_form','email','standalone'].includes(String(req.query.source||''))?String(req.query.source):'standalone';
   const campaign=String(req.query.campaign||'').slice(0,200);
