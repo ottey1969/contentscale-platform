@@ -5356,7 +5356,20 @@ app.post('/api/tracker-client/:token/check/:pageId', async (req, res) => {
         aiCount=Number(ar.rows[0]&&ar.rows[0].n||0);
       }
       const missing=[];if(!pagesReady)missing.push('fresh GSC Pages');if(!queriesReady)missing.push('fresh GSC Queries');if(page.monitoring_require_ai!==false&&aiCount<5)missing.push((5-aiCount)+' remaining AI-engine check(s)');
-      if(missing.length)return res.status(409).json({success:false,waiting_for_data:true,error:'Waiting for data: '+missing.join(', '),missing,ai_checked:aiCount});
+      if(missing.length){
+        const _iso=t=>t?new Date(t).toISOString():null;
+        const gate_state={
+          request_at:_iso(page.monitoring_request_at),
+          gsc_pages_at:_iso(page.monitoring_gsc_pages_at),
+          gsc_queries_at:_iso(page.monitoring_gsc_queries_at),
+          pages_fresh:!!pagesReady,           // pages upload stamped AFTER the monitoring request
+          queries_fresh:!!queriesReady,       // queries upload stamped AFTER the monitoring request
+          ai_checked:aiCount,
+          ai_required:page.monitoring_require_ai===false?0:5
+        };
+        console.log('[monitoring-gate] page',page.id,'blocked:',missing.join(', '),JSON.stringify(gate_state));
+        return res.status(200).json({success:false,waiting_for_data:true,error:'Waiting for data: '+missing.join(', '),missing,ai_checked:aiCount,gate_state});
+      }
       page._completed_monitoring_gate=page.monitoring_gate_label||'monitoring';
       await pool.query("UPDATE tracker_pages SET monitoring_waiting_input=FALSE,monitoring_gate_label=NULL,monitoring_reminder_sent_at=NULL WHERE id=$1",[page.id]);
     }
@@ -38311,7 +38324,14 @@ async function savePrePublicationCheckpoint(pageId) {
       if (!data.success) {
         delete _checkAnimations[pageId];
         hideScanOverlay();
-        toast(data.error || 'Check failed', '#f87171');
+        // Monitoring gate (soft, HTTP 200): the check is blocked until fresh GSC Pages/Queries
+        // and the 5/5 AI-engine checks exist. Amber notice with the exact outstanding items,
+        // not a red failure.
+        if (data.waiting_for_data) {
+          toast(data.error || 'Waiting for required data', '#f59e0b');
+        } else {
+          toast(data.error || 'Check failed', '#f87171');
+        }
         _finishSingleProven(false);
         if (_fullResolve) _fullResolve();
       } else {
