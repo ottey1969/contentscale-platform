@@ -35874,7 +35874,9 @@ async function api(path, method, body) {
   var r = await fetch(base + '/api/tracker-client/' + TOKEN + path, opts);
   if (!r.ok) {
     var err = await r.json().catch(function(){ return { error: 'HTTP ' + r.status }; });
-    throw new Error(err.error || 'HTTP ' + r.status);
+    var _e = new Error(err.error || 'HTTP ' + r.status);
+    _e.status = r.status; _e.payload = err;
+    throw _e;
   }
   return r.json();
 }
@@ -38318,7 +38320,14 @@ async function savePrePublicationCheckpoint(pageId) {
     } catch(e) {
       delete _checkAnimations[pageId];
       hideScanOverlay();
-      toast('Error: ' + e.message, '#f87171');
+      // A 409 "waiting_for_data" is the monitoring gate, not a failure: the page still
+      // needs fresh GSC Pages/Queries and/or the remaining 5/5 AI-engine checks. Show it
+      // as an amber notice with the exact outstanding items, not a red error.
+      if (e && e.payload && e.payload.waiting_for_data) {
+        toast(e.message, '#f59e0b');
+      } else {
+        toast('Error: ' + e.message, '#f87171');
+      }
       _finishSingleProven(false);
       if (_fullResolve) _fullResolve();
     } finally {
