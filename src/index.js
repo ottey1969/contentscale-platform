@@ -4356,6 +4356,25 @@ async function _trackerEnsureAiEvidenceSchema(){
     ['is_cleared','BOOLEAN DEFAULT FALSE'],['revision_cycle','INTEGER NOT NULL DEFAULT 1'],['verified_at','TIMESTAMPTZ DEFAULT NOW()'],['created_at','TIMESTAMPTZ DEFAULT NOW()'],['updated_at','TIMESTAMPTZ DEFAULT NOW()']
   ];
   for(const c of cols) await pool.query('ALTER TABLE tracker_ai_evidence ADD COLUMN IF NOT EXISTS '+c[0]+' '+c[1]).catch(()=>{});
+  // The original schema (see the CREATE TABLE in the DB-init path) shipped a
+  // UNIQUE(page_id,engine,evidence_method). The current design keeps ONE ROW PER
+  // revision_cycle, so that stale constraint throws a 23505 unique-violation 500 the
+  // moment a second revision cycle saves manual evidence for an engine already saved once.
+  // Drop it (idempotent) and replace it with the revision-aware unique key.
+  await pool.query('ALTER TABLE tracker_ai_evidence DROP CONSTRAINT IF EXISTS tracker_ai_evidence_page_id_engine_evidence_method_key').catch(()=>{});
+  await pool.query(`DO $$
+    DECLARE c text;
+    BEGIN
+      FOR c IN
+        SELECT con.conname FROM pg_constraint con
+        WHERE con.conrelid='tracker_ai_evidence'::regclass AND con.contype='u'
+          AND (SELECT array_agg(a.attname::text ORDER BY a.attname)
+                 FROM unnest(con.conkey) k JOIN pg_attribute a
+                   ON a.attrelid=con.conrelid AND a.attnum=k)
+              = ARRAY['engine','evidence_method','page_id']
+      LOOP EXECUTE 'ALTER TABLE tracker_ai_evidence DROP CONSTRAINT '||quote_ident(c); END LOOP;
+    END $$;`).catch(()=>{});
+  await pool.query('CREATE UNIQUE INDEX IF NOT EXISTS tracker_ai_evidence_page_engine_method_cycle_uidx ON tracker_ai_evidence(page_id,engine,evidence_method,revision_cycle)').catch(()=>{});
   await pool.query('CREATE INDEX IF NOT EXISTS tracker_ai_evidence_page_idx ON tracker_ai_evidence(page_id)').catch(()=>{});
 }
 function _trackerStripPgNulString(v){return String(v==null?'':v).replace(/\u0000/g,'');}
@@ -4392,7 +4411,7 @@ app.post('/api/tracker-client/:token/page/:pageId/ai-evidence/:engine',async(req
    if(cs.rows.length)await pool.query(`INSERT INTO tracker_case_study_events(case_study_id,tracker_page_id,event_type,source,event_data) SELECT $1,$2,'post_publication_ai_evidence_complete','manual_five_engine_check',$3::jsonb WHERE NOT EXISTS(SELECT 1 FROM tracker_case_study_events WHERE case_study_id=$1 AND event_type='post_publication_ai_evidence_complete' AND (event_data->>'revision_cycle')::int=$4)`,[cs.rows[0].id,pg.rows[0].id,JSON.stringify(summary),revisionCycle]).catch(()=>{});
  }
  res.json({success:true,evidence:rr.rows[0]});
-}catch(e){console.error('[manual-ai-evidence]',e.code||'',e.message);res.status(500).json({success:false,error:e.message,code:e.code||null});}});
+}catch(e){console.error('[manual-ai-evidence]',e.code||'',e.message,'| detail:',e.detail||'','| constraint:',e.constraint||'','| column:',e.column||'','| table:',e.table||'');res.status(500).json({success:false,error:e.message,code:e.code||null,detail:e.detail||null,constraint:e.constraint||null,column:e.column||null,table:e.table||null});}});
 
 app.post('/api/tracker-client/:token/page/:pageId/aio-manual', async (req, res) => {
   try {
@@ -8157,19 +8176,23 @@ app.patch('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
   // CONTENTSCALE-AI-EVIDENCE-LAYER-20260909=true
   // CANONICAL CUSTOMER TRACKER: manual evidence is separate from snapshots so automatic scans never overwrite it.
   // Keep BRAND RECOMMENDED, DIRECT SUPPORT, DOMAIN CITED and EXACT PAGE CITED as four separate facts.
+  // Must stay identical to _trackerEnsureAiEvidenceSchema(): one row PER revision_cycle,
+  // so the unique key MUST include revision_cycle. Do NOT reintroduce a
+  // UNIQUE(page_id,engine,evidence_method) here — it caused a 23505 500 on the second cycle.
   await client.query(`CREATE TABLE IF NOT EXISTS tracker_ai_evidence (
     id SERIAL PRIMARY KEY, page_id INTEGER REFERENCES tracker_pages(id) ON DELETE CASCADE,
     tracker_client_id INTEGER REFERENCES tracker_clients(id) ON DELETE CASCADE,
     engine VARCHAR(32) NOT NULL, evidence_method VARCHAR(32) NOT NULL DEFAULT 'manual',
     raw_text TEXT DEFAULT '', raw_sources TEXT DEFAULT '',
-    brand_recommended BOOLEAN DEFAULT FALSE, brand_direct_supported BOOLEAN DEFAULT FALSE,
+    brand_recommended BOOLEAN DEFAULT FALSE, brand_local_result BOOLEAN DEFAULT FALSE, brand_direct_supported BOOLEAN DEFAULT FALSE,
     domain_cited BOOLEAN DEFAULT FALSE, exact_page_cited BOOLEAN DEFAULT FALSE,
-    citation_urls JSONB DEFAULT '[]'::jsonb, recommended_companies JSONB DEFAULT '[]'::jsonb,
+    citation_urls JSONB DEFAULT '[]'::jsonb, recommended_companies JSONB DEFAULT '[]'::jsonb, local_result_companies JSONB DEFAULT '[]'::jsonb, local_result_urls JSONB DEFAULT '[]'::jsonb,
     directly_cited_companies JSONB DEFAULT '[]'::jsonb, mentioned_companies JSONB DEFAULT '[]'::jsonb,
-    parsed_evidence JSONB DEFAULT '{}'::jsonb, verified_at TIMESTAMPTZ DEFAULT NOW(),
-    created_at TIMESTAMPTZ DEFAULT NOW(), updated_at TIMESTAMPTZ DEFAULT NOW(),
-    UNIQUE(page_id, engine, evidence_method)
+    parsed_evidence JSONB DEFAULT '{}'::jsonb, is_cleared BOOLEAN DEFAULT FALSE, verified_at TIMESTAMPTZ DEFAULT NOW(),
+    revision_cycle INTEGER NOT NULL DEFAULT 1,
+    created_at TIMESTAMPTZ DEFAULT NOW(), updated_at TIMESTAMPTZ DEFAULT NOW()
   )`).catch(()=>{});
+  await client.query('CREATE UNIQUE INDEX IF NOT EXISTS tracker_ai_evidence_page_engine_method_cycle_uidx ON tracker_ai_evidence(page_id,engine,evidence_method,revision_cycle)').catch(()=>{});
   await client.query(`CREATE INDEX IF NOT EXISTS tracker_ai_evidence_page_idx ON tracker_ai_evidence(page_id)`).catch(()=>{});
 
   // CONTENTSCALE-CLAIMS-FACTS-GATE-20260909=true
