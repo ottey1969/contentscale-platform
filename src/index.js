@@ -3064,9 +3064,20 @@ app.post('/api/tracker-client/:token/gsc-queries', async (req, res) => {
     if (failed > 0) console.warn('[gsc-queries] ' + failed + ' of ' + queries.length + ' rows failed to save for client ' + clientId);
     await _ensureMonitoringGateSchema();
     if(pageId) await pool.query('UPDATE tracker_pages SET monitoring_gsc_queries_at=NOW() WHERE id=$1 AND tracker_client_id=$2',[pageId,clientId]);
-    else await pool.query(`UPDATE tracker_pages p SET monitoring_gsc_queries_at=NOW()
-      WHERE p.tracker_client_id=$1 AND p.monitoring_waiting_input=TRUE
-      AND NOT EXISTS(SELECT 1 FROM tracker_case_studies cs WHERE cs.tracker_client_id=p.tracker_client_id AND cs.tracker_page_id=p.id AND cs.status='active')`,[clientId]);
+    else {
+      // Non-case-study waiting pages: a site-wide import is enough to mark queries fresh.
+      await pool.query(`UPDATE tracker_pages p SET monitoring_gsc_queries_at=NOW()
+        WHERE p.tracker_client_id=$1 AND p.monitoring_waiting_input=TRUE
+        AND NOT EXISTS(SELECT 1 FROM tracker_case_studies cs WHERE cs.tracker_client_id=p.tracker_client_id AND cs.tracker_page_id=p.id AND cs.status='active')`,[clientId]);
+      // Case-study waiting pages are protected from a bulk site-wide dump, BUT if the page already
+      // has its OWN scoped query rows, that IS per-page evidence — stamp it so the gate can clear
+      // without forcing a manual per-page re-submit. Without this, case_day_* pages get stuck on
+      // "fresh GSC Queries" forever even though their queries exist.
+      await pool.query(`UPDATE tracker_pages p SET monitoring_gsc_queries_at=NOW()
+        WHERE p.tracker_client_id=$1 AND p.monitoring_waiting_input=TRUE
+        AND EXISTS(SELECT 1 FROM tracker_case_studies cs WHERE cs.tracker_client_id=p.tracker_client_id AND cs.tracker_page_id=p.id AND cs.status='active')
+        AND EXISTS(SELECT 1 FROM tracker_gsc_queries q WHERE q.tracker_client_id=p.tracker_client_id AND q.page_id=p.id)`,[clientId]);
+    }
     res.json({ success: true, saved, failed, total: queries.length, page_id: pageId });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
