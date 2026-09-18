@@ -34076,7 +34076,7 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
       <option value="ru">Brief: &#x420;&#x443;&#x441;&#x441;&#x43a;&#x438;&#x439;</option>
       <option value="hi">Brief: &#x939;&#x93f;&#x928;&#x94d;&#x926;&#x940;</option>
     </select>
-    <button class="cs-btn" onclick="loadPages()" style="margin-left:4px;" title="Refresh"><i class="fas fa-sync-alt"></i></button>
+    <button class="cs-btn" onclick="loadPages()" style="margin-left:4px;border-color:#38bdf8;color:#7dd3fc;font-weight:700;" title="Reload the list and re-rank priorities from current GSC data">&#x21bb; Refresh list</button>
     <button id="tourBtn" class="cs-btn" onclick="startTour(true)" style="border-color:#7c3aed;color:#c4b5fd;animation:tourPulse 2s ease-in-out infinite;font-weight:700;" title="Open the complete ContentScale workflow tour">&#10024; Guided Tour</button>
     <style>@keyframes tourPulse{0%,100%{box-shadow:0 0 0 0 rgba(124,58,237,.55);}50%{box-shadow:0 0 0 7px rgba(124,58,237,0);}}@keyframes scanPulse{0%,100%{box-shadow:0 0 0 0 rgba(74,222,128,.55);}50%{box-shadow:0 0 0 7px rgba(74,222,128,0);}}</style>
     <button id="scanAllBtn" class="cs-btn" onclick="scanAllPages()" style="border-color:#4ade80;color:#4ade80;font-weight:700;" title="Scan only the current GSC-ranked Active Priorities, one by one. Checked and deferred pages are skipped.">&#x26a1; Scan Priorities</button>
