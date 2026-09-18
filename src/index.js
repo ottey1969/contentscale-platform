@@ -38299,8 +38299,23 @@ async function toggleManualDone(pageId, current) {
     if (data && data.success) {
       var p = (_pages||[]).find(function(x){ return x.id == pageId; });
       if (p) { p.manual_done = next; p.manual_done_at = next ? new Date().toISOString() : null; }
-      toast(next ? 'Checked \\u2014 this stays until you uncheck it yourself.' : 'Check removed.', next ? '#4ade80' : '#9ca3af');
-      setTimeout(loadPages, 300);
+      toast(next ? 'Checked \\u2014 stays until you uncheck it. It keeps its place; sorts on next refresh.' : 'Check removed.', next ? '#4ade80' : '#9ca3af');
+      // Update ONLY this row's button in place — do NOT reload/re-sort, so the URL and its date
+      // stay exactly where they are and don't drop out of sight. The list re-sorts on next refresh.
+      try {
+        var btn = document.querySelector('.cs-mycheck-btn[onclick*="toggleManualDone(' + pageId + ',"]');
+        if (btn) {
+          btn.setAttribute('onclick', 'toggleManualDone(' + pageId + ',' + (next ? 'true' : 'false') + ')');
+          if (next) {
+            var mdAt = new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'short'});
+            btn.style.background = 'rgba(74,222,128,.15)'; btn.style.border = '1px solid #16a34a'; btn.style.color = '#4ade80';
+            btn.innerHTML = '\\u2713 MY CHECK \\u00b7 ' + mdAt;
+          } else {
+            btn.style.background = 'none'; btn.style.border = '1px dashed #374151'; btn.style.color = '#4b5563';
+            btn.innerHTML = '\\u25cb my check';
+          }
+        }
+      } catch(e) {}
     } else {
       toast((data && data.error) || 'Could not save check', '#f87171');
     }
