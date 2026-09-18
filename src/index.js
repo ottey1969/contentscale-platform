@@ -2015,6 +2015,55 @@ app.post('/api/tracker-client/:token/pages/:pageId/case-study/start',async(req,r
   res.json({success:true,case_study:cs,html_captured:true,five_engine_checks:Object.keys(engines).length,monitoring_enabled:monitoringEnabled,check_frequency:frequency,email_reminders:emailReminders,ai_reminder_days:aiReminderDays,message:'Case study started. The complete GSC Pages + Queries, 5/5 AI evidence, current metrics and HTML are protected as the baseline. '+(monitoringEnabled?'Guided monitoring is on for this page only.':'Optional page monitoring remains off; protected case-study milestone reminders remain active.')});
 }catch(e){console.error('[case-study-start]',e.message);res.status(500).json({success:false,error:e.message});}});
 
+// POST /pages/:pageId/baseline-gsc — per-URL baseline prep for a CASE STUDY (not monitoring).
+// Couples the client's existing GSC Queries to THIS url so the case-study baseline checklist can
+// see them, reports GSC freshness, and returns the current readiness. It deliberately does NOT
+// stamp the monitoring gate (monitoring stays site-wide) and NEVER touches a locked baseline.
+app.post('/api/tracker-client/:token/pages/:pageId/baseline-gsc',async(req,res)=>{try{
+  await _ensureCaseStudySchema();
+  const cr=await pool.query("SELECT * FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status<>'deleted')",[req.params.token]);
+  if(!cr.rows.length)return res.status(404).json({success:false,error:'Tracker not found'});
+  const client=cr.rows[0];
+  const pr=await pool.query('SELECT * FROM tracker_pages WHERE id=$1 AND tracker_client_id=$2',[req.params.pageId,client.id]);
+  if(!pr.rows.length)return res.status(403).json({success:false,error:'This page does not belong to this Tracker'});
+  const page=pr.rows[0];
+  // Protect any existing baseline: if a case study for this URL already exists, its baseline is locked.
+  const existing=await pool.query("SELECT id,status,baseline_locked FROM tracker_case_studies WHERE tracker_client_id=$1 AND canonical_url=$2 ORDER BY id DESC LIMIT 1",[client.id,_caseStudyNormUrl(page.url)]).catch(()=>({rows:[]}));
+  if(existing.rows.length&&(existing.rows[0].status==='active'||existing.rows[0].baseline_locked))
+    return res.status(409).json({success:false,baseline_locked:true,error:'A locked case-study baseline already exists for this URL. It cannot be overwritten. Use a new revision cycle instead.'});
+  // Couple queries to THIS url: prefer rows already scoped to the page; otherwise copy the site-wide rows.
+  const scoped=await pool.query('SELECT query,clicks,impressions,position FROM tracker_gsc_queries WHERE tracker_client_id=$1 AND page_id=$2',[client.id,page.id]).catch(()=>({rows:[]}));
+  let coupled=scoped.rows.length;
+  if(!scoped.rows.length){
+    const site=await pool.query('SELECT query,clicks,impressions,position FROM tracker_gsc_queries WHERE tracker_client_id=$1 AND page_id IS NULL',[client.id]).catch(()=>({rows:[]}));
+    for(const q of site.rows){
+      await pool.query('INSERT INTO tracker_gsc_queries (tracker_client_id,page_id,query,clicks,impressions,position,imported_at) VALUES($1,$2,$3,$4,$5,$6,NOW())',[client.id,page.id,q.query,q.clicks||0,q.impressions||0,q.position==null?null:q.position]).catch(()=>{});
+    }
+    coupled=site.rows.length;
+  }
+  // Freshness: newest imported_at among this URL's query rows (7-day rule).
+  const fr=await pool.query('SELECT MAX(imported_at) AS newest FROM tracker_gsc_queries WHERE tracker_client_id=$1 AND page_id=$2',[client.id,page.id]).catch(()=>({rows:[{newest:null}]}));
+  const newest=fr.rows[0]&&fr.rows[0].newest?new Date(fr.rows[0].newest):null;
+  const ageDays=newest?Math.floor((Date.now()-newest.getTime())/86400000):null;
+  const gsc_fresh=ageDays!=null&&ageDays<=7;
+  // Readiness recompute (mirrors GET /:token and case-study/start requirements).
+  const hasGscPage=[page.gsc_clicks,page.gsc_impressions,page.gsc_position].some(v=>v!==null&&v!==undefined);
+  const hasQueries=coupled>0;
+  const eng=await pool.query("SELECT DISTINCT engine FROM tracker_ai_evidence WHERE tracker_client_id=$1 AND page_id=$2 AND evidence_method='manual' AND COALESCE(is_cleared,FALSE)=FALSE",[client.id,page.id]).catch(()=>({rows:[]}));
+  const engineKeys=new Set(eng.rows.map(x=>String(x.engine||'')));
+  const aiChecked=['google_aio','chatgpt','perplexity','claude','copilot'].filter(x=>engineKeys.has(x)).length;
+  const missing=[];
+  if(!String(client.email||'').trim())missing.push('Client email');
+  if(!hasGscPage)missing.push('GSC Pages data for this URL');
+  if(!hasQueries)missing.push('GSC Queries data for this URL');
+  if(aiChecked<5)missing.push((5-aiChecked)+' AI-engine check(s)');
+  if(!(page.last_checked||page.last_checked_at))missing.push('Page scan');
+  if(!page.html_content&&!page.has_html_content)missing.push('HTML');
+  const ready=missing.length===0;
+  console.log('[baseline-gsc] page',page.id,'coupled',coupled,'queries · fresh',gsc_fresh,'· ready',ready);
+  return res.json({success:true,coupled_queries:coupled,gsc_fresh,gsc_age_days:ageDays,gsc_last_imported:newest?newest.toISOString():null,gsc_pages:hasGscPage,ai_checked:aiChecked,ai_required:5,ready,missing,note:gsc_fresh?'Baseline GSC is fresh and coupled to this URL.':(ageDays==null?'No GSC query data found — import GSC Queries first.':'Baseline GSC coupled, but it is '+ageDays+' days old — refresh GSC before locking the baseline for an accurate before/after.')});
+}catch(e){console.error('[baseline-gsc]',e.message);res.status(500).json({success:false,error:e.message});}});
+
 // GET /api/tracker-client/:token — get client data + pages
 app.get('/api/tracker-client/:token', async (req, res) => {
   try {
@@ -34915,6 +34964,28 @@ function _finishScanAll(){
   setTimeout(function(){ _setScanAllBtn('\u26a1 Scan Priorities', false, false); }, 6000);
 }
 
+async function setBaselineGsc(pageId, ev) {
+  if (ev && ev.stopPropagation) ev.stopPropagation();
+  var btn = ev && ev.currentTarget;
+  if (btn) { btn.disabled = true; btn.textContent = 'Coupling…'; }
+  try {
+    var d = await api('/pages/' + pageId + '/baseline-gsc', 'POST');
+    if (!d || !d.success) { toast((d && d.error) || 'Could not set baseline GSC', '#f87171'); return; }
+    if (d.ready) {
+      toast('Baseline ready — ' + d.coupled_queries + ' queries coupled' + (d.gsc_fresh ? ' (fresh)' : (d.gsc_age_days != null ? ' (' + d.gsc_age_days + 'd old — consider refreshing GSC)' : '')) + '. You can start the case study.', '#4ade80');
+    } else {
+      toast('Coupled ' + d.coupled_queries + ' queries. Still missing: ' + (d.missing || []).join(', '), '#f59e0b');
+    }
+    if (typeof loadPages === 'function') loadPages();
+  } catch (e) {
+    // api() throws on non-2xx; surface the payload (e.g. a locked baseline) as an amber notice
+    var msg = (e && e.payload && e.payload.error) || (e && e.message) || 'Error';
+    toast(msg, e && e.payload && e.payload.baseline_locked ? '#f59e0b' : '#f87171');
+  } finally {
+    if (btn) { btn.disabled = false; btn.innerHTML = '\\u2b07 Set baseline GSC (this URL)'; }
+  }
+}
+
 function scanSelectedPages() {
   if (_scanAllActive) { toast('A scan is already running \\u2014 please wait for it to finish.', '#f59e0b'); return; }
   var ids = _ctSelectedIds();
@@ -36529,7 +36600,7 @@ function renderPages() {
     var isDone = p.is_done === true || p.is_done === 't' || p.is_done === 'true' || p.is_done === 1;
     var isCaseStudy = p.case_study_active === true || p.case_study_active === 't' || p.case_study_active === 'true' || p.case_study_active === 1;
     var _csr=p.case_study_readiness||{},_csReady=!!_csr.ready,_csMissing=Array.isArray(_csr.missing)?_csr.missing:[];
-    var _caseReadyHtml=!isCaseStudy?'<div style="margin:8px 0 0;padding:9px 11px;border:1px solid '+(_csReady?'#16a34a':'#92400e')+';background:'+(_csReady?'#052e16':'#1c1407')+';border-radius:7px;font-size:10px;line-height:1.6;"><b style="color:'+(_csReady?'#86efac':'#fbbf24')+';">'+(_csReady?'READY — Start case study':'CASE STUDY WAITING FOR BASELINE')+'</b><div style="color:#cbd5e1;margin-top:3px;">'+(_csReady?'All required baseline evidence is present. Start before changing the live page.':('Complete first: '+_csMissing.join(' · ')))+'</div><div style="display:flex;gap:8px;flex-wrap:wrap;color:#94a3b8;margin-top:4px;"><span>'+(_csr.gsc_pages?'✓':'✕')+' GSC Pages</span><span>'+(_csr.gsc_queries?'✓':'✕')+' GSC Queries for URL</span><span>'+((Number(_csr.ai_checked)||0)===5?'✓':'✕')+' AI '+(Number(_csr.ai_checked)||0)+'/5</span><span>'+(_csr.scan?'✓':'✕')+' Page scan</span><span>'+(_csr.html?'✓':'✕')+' HTML</span><span>'+(_csr.email?'✓':'✕')+' Client email</span></div></div>':'';
+    var _caseReadyHtml=!isCaseStudy?'<div style="margin:8px 0 0;padding:9px 11px;border:1px solid '+(_csReady?'#16a34a':'#92400e')+';background:'+(_csReady?'#052e16':'#1c1407')+';border-radius:7px;font-size:10px;line-height:1.6;"><b style="color:'+(_csReady?'#86efac':'#fbbf24')+';">'+(_csReady?'READY — Start case study':'CASE STUDY WAITING FOR BASELINE')+'</b><div style="color:#cbd5e1;margin-top:3px;">'+(_csReady?'All required baseline evidence is present. Start before changing the live page.':('Complete first: '+_csMissing.join(' · ')))+'</div><div style="display:flex;gap:8px;flex-wrap:wrap;color:#94a3b8;margin-top:4px;"><span>'+(_csr.gsc_pages?'✓':'✕')+' GSC Pages</span><span>'+(_csr.gsc_queries?'✓':'✕')+' GSC Queries for URL</span><span>'+((Number(_csr.ai_checked)||0)===5?'✓':'✕')+' AI '+(Number(_csr.ai_checked)||0)+'/5</span><span>'+(_csr.scan?'✓':'✕')+' Page scan</span><span>'+(_csr.html?'✓':'✕')+' HTML</span><span>'+(_csr.email?'✓':'✕')+' Client email</span></div>'+(_csReady?'':'<button onclick="setBaselineGsc('+p.id+',event)" style="margin-top:8px;font-size:10px;font-weight:800;padding:5px 11px;border-radius:6px;background:#0a2540;border:1px solid #2563eb;color:#93c5fd;cursor:pointer;">&#x2b07; Set baseline GSC (this URL)</button><span style="font-size:9px;color:#64748b;margin-left:8px;">couples GSC Queries to this URL &mdash; does not affect monitoring</span>')+'</div>':'';
     var muteCompletedCard = isDone && !isCaseStudy;
     function _trackerUtc(v){try{return new Date(v).toISOString().replace('T',' ').replace(/\.\d{3}Z$/,' UTC');}catch(e){return '';}}
     var implementationAt = p.implementation_at ? _trackerUtc(p.implementation_at) : '';
