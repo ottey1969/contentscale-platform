@@ -5136,72 +5136,221 @@ app.get('/api/tracker-client/:token/gsc-pages', async (req, res) => {
 });
 
 // GET /api/tracker-client/:token/pages/check-cannibalization — detect duplicate keywords OR intent overlap
+/* ============================================================================
+ * CANNIBALIZATION ANALYSIS — shared helper (Phase 1)
+ * ----------------------------------------------------------------------------
+ * HANDOVER NOTES (read this if you are taking over this feature):
+ *
+ * PROBLEM THIS SOLVES:
+ *   Multiple pages on the same site can compete for the same Google queries
+ *   ("keyword cannibalization"). That splits clicks/impressions and dilutes
+ *   ranking, so the site loses traffic. The OLD detector below only grouped by
+ *   exact keyword/intent, never picked a winner, gave no advice, and its output
+ *   never reached the editor's brief. This helper fixes all three.
+ *
+ * WHAT THIS HELPER DOES (deterministic — no AI needed):
+ *   1. Groups the client's pages into overlap groups that share GSC query terms
+ *      (falls back to shared keyword/intent when GSC queries are thin).
+ *   2. Within each group, ranks pages by GSC strength (impressions first, then
+ *      better/lower average position) to pick the WINNER (the page to KEEP).
+ *   3. Emits a recommendation per group: KEEP the winner, 301 the weaker
+ *      page(s) -> winner, OR "keep separate" when the pages are legitimately
+ *      different intent (see SEPARATE_INTENT_HINTS) so we never wrongly merge
+ *      e.g. /residential-roofing/ with /commercial-roofing/.
+ *
+ * WHY DETERMINISTIC + AI, NOT AI-ONLY:
+ *   The requirement is: the advice must ALWAYS reach the editor in the brief,
+ *   even if the external AI returns nothing. So the server computes a baseline
+ *   recommendation here; the AI may later ENRICH it (nuanced keep-separate
+ *   calls), but this server output is the safety net that always lands in the
+ *   brief (see the "=== CANNIBALIZATION BRIEF ===" section in the brief builder).
+ *
+ * WHAT THIS HELPER DOES *NOT* DO (by design, Phase 1):
+ *   It does NOT execute anything. No 301s are written, no menu/links changed.
+ *   Execution stays with the human (paste into Rank Math). Phase 2 (a WordPress
+ *   REST-API connection with dry-run + approval + rollback) can later act on the
+ *   exact same recommendation object this helper returns.
+ *
+ * INPUT:  clientId (number)
+ * OUTPUT: { groups: [ {
+ *            basis: 'gsc_queries' | 'keyword' | 'intent',
+ *            shared: <the shared query/keyword/intent string>,
+ *            pages: [ { id, url, keyword, clicks, impressions, position } ],
+ *            keep:   { id, url },            // winner to KEEP
+ *            redirect: [ { id, url } ],      // losers to 301 -> keep.url  (empty if keep_separate)
+ *            recommendation: 'consolidate' | 'keep_separate',
+ *            reason: <human-readable why>
+ *          } ], total: <number of groups> }
+ *
+ * REUSED BY:
+ *   - GET /pages/check-cannibalization      (the detector endpoint, below)
+ *   - the brief builder's "=== CANNIBALIZATION BRIEF ===" section (~line 39013)
+ * ==========================================================================*/
+
+// Intent/topic pairs that LOOK like duplicates but must stay separate (never 301
+// one onto the other). Extend this list as new legitimate pairs are found.
+const CANNIBAL_SEPARATE_INTENT_HINTS = [
+  ['residential', 'commercial'],   // residential vs commercial roofing are distinct buyers
+  ['repair', 'replacement'],       // fixing vs replacing are different decisions
+  ['inspection', 'repair'],        // assessing vs fixing are different services
+];
+
+// Normalize a query/keyword to a comparable token set (lowercase, de-stopword-ish).
+function _cannibalNorm(s) {
+  return String(s || '').toLowerCase().replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+// Decide if two pages are a legitimate keep-separate pair (so we DON'T merge them).
+function _cannibalIsSeparate(a, b) {
+  const ta = _cannibalNorm(a.keyword + ' ' + a.url);
+  const tb = _cannibalNorm(b.keyword + ' ' + b.url);
+  return CANNIBAL_SEPARATE_INTENT_HINTS.some(function (pair) {
+    // one page clearly matches side A, the other clearly matches side B
+    return (ta.includes(pair[0]) && tb.includes(pair[1])) ||
+           (ta.includes(pair[1]) && tb.includes(pair[0]));
+  });
+}
+
+// Rank pages so the strongest (the one to KEEP) is first: most impressions wins;
+// tie-break on better (numerically lower) average position.
+function _cannibalRank(pages) {
+  return pages.slice().sort(function (x, y) {
+    const ix = Number(x.impressions || 0), iy = Number(y.impressions || 0);
+    if (iy !== ix) return iy - ix;                       // more impressions first
+    const px = Number(x.position || 999), py = Number(y.position || 999);
+    return px - py;                                       // then better position
+  });
+}
+
+// Core analysis. Returns the recommendation object described in the header above.
+async function analyzeCannibalization(clientId) {
+  // Pull pages + their GSC metrics. tracker_gsc_queries holds the per-URL query
+  // rows (page_id != null) we couple during baseline prep; we use them to find
+  // pages that share the SAME query term = true cannibalization signal.
+  const pagesR = await pool.query(
+    `SELECT id, url, keyword, COALESCE(intent,'unknown') AS intent,
+            gsc_clicks, gsc_impressions, gsc_position
+       FROM tracker_pages
+      WHERE tracker_client_id=$1 AND (is_active=TRUE OR is_active IS NULL)`,
+    [clientId]
+  );
+  const byId = {};
+  pagesR.rows.forEach(function (p) { byId[p.id] = p; });
+
+  // Map each normalized GSC query -> set of page_ids that rank for it.
+  const queriesR = await pool.query(
+    `SELECT page_id, query FROM tracker_gsc_queries
+      WHERE tracker_client_id=$1 AND page_id IS NOT NULL`,
+    [clientId]
+  ).catch(function () { return { rows: [] }; });
+
+  const byQuery = {};
+  queriesR.rows.forEach(function (q) {
+    const key = _cannibalNorm(q.query);
+    if (!key) return;
+    if (!byQuery[key]) byQuery[key] = new Set();
+    if (byId[q.page_id]) byQuery[key].add(q.page_id);
+  });
+
+  // Build overlap groups. Primary basis = shared GSC query. If no GSC query rows
+  // exist at all, fall back to shared exact keyword so the feature still works
+  // on sites that haven't imported per-URL queries yet.
+  const groups = [];
+  const seenPairs = new Set(); // de-dupe identical page-sets across queries
+
+  function pushGroup(basis, shared, pageIds) {
+    const pages = Array.from(pageIds).map(function (id) {
+      const p = byId[id]; if (!p) return null;
+      return { id: p.id, url: p.url, keyword: p.keyword,
+               clicks: p.gsc_clicks, impressions: p.gsc_impressions, position: p.gsc_position };
+    }).filter(Boolean);
+    if (pages.length < 2) return;
+
+    // Stable signature so we don't emit the same page-set twice (many queries can
+    // map to the same pair of pages).
+    const sig = pages.map(function (p) { return p.id; }).sort(function (a, b) { return a - b; }).join(',');
+    if (seenPairs.has(sig)) return;
+    seenPairs.add(sig);
+
+    const ranked = _cannibalRank(pages);
+    const keep = ranked[0];
+    const losers = ranked.slice(1);
+
+    // Keep-separate check: if ANY loser is a legitimate different-intent page vs
+    // the winner, we do NOT recommend a 301 for the group — we flag keep_separate
+    // so the editor differentiates the pages instead of merging them.
+    const anySeparate = losers.some(function (l) { return _cannibalIsSeparate(keep, l); });
+
+    groups.push({
+      basis: basis,
+      shared: shared,
+      pages: ranked,
+      keep: { id: keep.id, url: keep.url },
+      redirect: anySeparate ? [] : losers.map(function (l) { return { id: l.id, url: l.url }; }),
+      recommendation: anySeparate ? 'keep_separate' : 'consolidate',
+      reason: anySeparate
+        ? 'Pages target legitimately different intent (e.g. residential vs commercial) — differentiate content and cross-link instead of merging.'
+        : ('Keep ' + keep.url + ' (strongest: ' + (keep.impressions || 0) + ' impr, pos ' +
+           (keep.position != null ? Number(keep.position).toFixed(1) : 'n/a') + '); 301 the weaker page(s) into it to consolidate ranking signals.')
+    });
+  }
+
+  const queryKeys = Object.keys(byQuery);
+  if (queryKeys.length) {
+    queryKeys.forEach(function (qk) {
+      if (byQuery[qk].size > 1) pushGroup('gsc_queries', qk, byQuery[qk]);
+    });
+  } else {
+    // Fallback: group by exact keyword when no per-URL GSC queries are available.
+    const byKeyword = {};
+    pagesR.rows.forEach(function (p) {
+      const k = _cannibalNorm(p.keyword);
+      if (!k) return;
+      if (!byKeyword[k]) byKeyword[k] = new Set();
+      byKeyword[k].add(p.id);
+    });
+    Object.keys(byKeyword).forEach(function (k) {
+      if (byKeyword[k].size > 1) pushGroup('keyword', k, byKeyword[k]);
+    });
+  }
+
+  return { groups: groups, total: groups.length };
+}
+
+// GET /api/tracker-client/:token/pages/check-cannibalization
+// Detector endpoint. Now backed by analyzeCannibalization() (shared with the
+// brief builder). Returns both the RICH groups (winner + 301 advice) and a
+// legacy `cannibalization_issues` array so any existing UI keeps working.
 app.get('/api/tracker-client/:token/pages/check-cannibalization', async (req, res) => {
   try {
     const cr = await pool.query('SELECT id FROM tracker_clients WHERE token=$1', [req.params.token]);
     if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Client not found' });
-    
-    // Get all pages with keyword + intent
-    const allPages = await pool.query(`
-      SELECT id, url, keyword, COALESCE(intent, 'unknown') as intent
-      FROM tracker_pages
-      WHERE tracker_client_id=$1 AND (is_active=TRUE OR is_active IS NULL)
-      ORDER BY created_at ASC
-    `, [cr.rows[0].id]);
-    
-    // Detect cannibalization: same intent OR same keyword
-    const issues = [];
-    const intents = {};
-    const keywords = {};
-    
-    for (const p of allPages.rows) {
-      const intent = (p.intent || 'unknown').toLowerCase().trim();
-      const keyword = (p.keyword || '').toLowerCase().trim();
-      
-      // Group by intent
-      if (!intents[intent]) intents[intent] = [];
-      intents[intent].push({ id: p.id, url: p.url, keyword: p.keyword });
-      
-      // Group by keyword
-      if (keyword) {
-        if (!keywords[keyword]) keywords[keyword] = [];
-        keywords[keyword].push({ id: p.id, url: p.url, intent: p.intent });
-      }
-    }
-    
-    // Find intent overlaps (multiple pages with same intent)
-    for (const [intent, pages] of Object.entries(intents)) {
-      if (pages.length > 1 && intent !== 'unknown') {
-        issues.push({
-          type: 'intent_overlap',
-          intent,
-          count: pages.length,
-          pages: pages.map(p => ({ id: p.id, url: p.url, keyword: p.keyword })),
-          severity: 'high'
-        });
-      }
-    }
-    
-    // Find keyword duplicates
-    for (const [keyword, pages] of Object.entries(keywords)) {
-      if (pages.length > 1) {
-        issues.push({
-          type: 'keyword_duplicate',
-          keyword,
-          count: pages.length,
-          pages: pages.map(p => ({ id: p.id, url: p.url, intent: p.intent })),
-          severity: 'high'
-        });
-      }
-    }
-    
-    res.json({ 
-      success: true, 
-      cannibalization_issues: issues, 
-      total_issues: issues.length,
-      message: issues.length > 0 ? 'Cannibalization detected!' : 'No cannibalization detected'
+
+    const analysis = await analyzeCannibalization(cr.rows[0].id);
+
+    // Back-compat shape for older callers that expect cannibalization_issues[].
+    const legacyIssues = analysis.groups.map(function (g) {
+      return {
+        type: g.basis === 'gsc_queries' ? 'query_overlap' : 'keyword_duplicate',
+        shared: g.shared,
+        count: g.pages.length,
+        pages: g.pages.map(function (p) { return { id: p.id, url: p.url, keyword: p.keyword }; }),
+        recommendation: g.recommendation,   // 'consolidate' | 'keep_separate'
+        keep: g.keep,
+        redirect: g.redirect,
+        reason: g.reason,
+        severity: 'high'
+      };
     });
-  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+
+    res.json({
+      success: true,
+      cannibalization: analysis,             // rich (winner + 301 advice)
+      cannibalization_issues: legacyIssues,  // legacy shape
+      total_issues: legacyIssues.length,
+      message: legacyIssues.length > 0 ? 'Cannibalization detected!' : 'No cannibalization detected'
+    });
+  } catch (e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
 // GET /api/tracker-client/:token/pages/check-stale — detect old pages (no scan in X days)
@@ -36042,13 +36191,52 @@ var _mdFilter = 'all'; // 'all' | 'todo' | 'done' — filter on the user's own p
   function setMdFilter(f) { _mdFilter = f; renderPages(); }
   function filterPages(q) { _ctSearchQuery = (q||'').toLowerCase().trim(); renderPages(); }
 
-  async function loadPages() {
+  /* ============================================================================
+ * loadCannibalizationCache() (Phase 1)
+ * ----------------------------------------------------------------------------
+ * HANDOVER NOTES (for the next AI/dev):
+ *   Populates window._cannibalCache = { <pageId>: [group, group, ...] } from the
+ *   server's GET /pages/check-cannibalization (backed by analyzeCannibalization()).
+ *   Each detected overlap group involves 2+ pages; we bucket the SAME group under
+ *   every page id it involves, so each page's brief can show "who it competes with".
+ *
+ *   Called once from loadPages() (fire-and-forget: a failure must never block the
+ *   page list). The copied brief's "=== CANNIBALIZATION BRIEF ===" section reads
+ *   this cache; if it's still null, the brief prints a "run the scan" prompt so the
+ *   editor is never left in the dark.
+ *
+ *   Cheap + read-only. Safe to call on every loadPages(); it just refreshes advice.
+ * ==========================================================================*/
+async function loadCannibalizationCache() {
+  try {
+    if (typeof TOKEN === 'undefined' || !TOKEN) return;
+    var res = await api('/pages/check-cannibalization');
+    var groups = (res && res.cannibalization && res.cannibalization.groups) ? res.cannibalization.groups : [];
+    var cache = {};
+    groups.forEach(function (g) {
+      (g.pages || []).forEach(function (pg) {
+        if (!cache[pg.id]) cache[pg.id] = [];
+        cache[pg.id].push(g);
+      });
+    });
+    window._cannibalCache = cache;   // read by _copyBriefAuthoritative()'s cannibalization section
+  } catch (e) {
+    // Leave window._cannibalCache undefined on failure — the brief then shows the
+    // "run the scan" prompt instead of silently hiding the topic.
+  }
+}
+
+async function loadPages() {
   var el = document.getElementById('pagesList');
   try {
     var data = await api('');
     if (!data || !data.success) throw new Error(data && data.error || 'Failed to load');
     _pages = data.pages || [];
     _client = data.client || {};
+    // Phase 1: refresh the cannibalization advice cache in the background so each
+    // page's copied brief can show its "=== CANNIBALIZATION BRIEF ===" section.
+    // Fire-and-forget — a failure here must never block the page list.
+    loadCannibalizationCache();
     if (data.client && Array.isArray(data.client.sitemap_urls)) {
       window._csSitemapUrls = data.client.sitemap_urls.map(function(u){ try { var x=new URL(u); var pth=x.pathname; while(pth.length>1 && pth.charAt(pth.length-1)==='/') pth=pth.slice(0,-1); return (x.hostname.replace(/^www\./,'')+pth).toLowerCase(); } catch(e){ return String(u).toLowerCase(); } });
     }
@@ -37343,6 +37531,63 @@ function _copyBriefAuthoritative(pageId) {
     if (parts.what) lines.push('   ' + parts.what);
     if (parts.write) { lines.push('   WRITE (copy-paste):'); parts.write.split(String.fromCharCode(10)).forEach(function(ln){ if(ln.trim()) lines.push('     ' + ln.trim()); }); }
   }); } else { lines.push('(no internal link suggestions)'); }
+
+  /* ==========================================================================
+   * === CANNIBALIZATION BRIEF === (Phase 1)
+   * --------------------------------------------------------------------------
+   * HANDOVER NOTES (for the next AI/dev):
+   *   This block adds the cannibalization advice to the copied brief so the
+   *   EDITOR always sees it — even when the external AI didn't act on it.
+   *
+   *   DATA SOURCE: window._cannibalCache[pageId], an array of "group" objects
+   *   shaped exactly like analyzeCannibalization() returns server-side (see the
+   *   big header comment on that helper near the check-cannibalization endpoint).
+   *   The cache is populated by loadCannibalizationCache() (added to loadPages)
+   *   which calls GET /pages/check-cannibalization once and buckets each group
+   *   under every page id it involves.
+   *
+   *   FAIL-SAFE: if the cache isn't loaded yet we DON'T hide the topic — we print
+   *   a one-line prompt telling the editor to run the scan. Silence would defeat
+   *   the whole point ("if the AI doesn't get it, the editor must know").
+   *
+   *   PHASE 2 HOOK: the same group objects carry keep{} / redirect[] — a future
+   *   WordPress-connector can turn "301 X -> keep.url" into real redirects after
+   *   human approval. Do NOT auto-execute here; Phase 1 is advice-only.
+   * ========================================================================*/
+  (function _cannibalBriefSection() {
+    lines.push('', '=== CANNIBALIZATION BRIEF ===');
+    var cache = (typeof window !== 'undefined' && window._cannibalCache) ? window._cannibalCache : null;
+    var groups = (cache && cache[pageId]) ? cache[pageId] : null;
+    if (!cache) {
+      lines.push('(cannibalization not scanned yet — run "Check cannibalization" to populate this section)');
+      return;
+    }
+    if (!groups || !groups.length) {
+      lines.push('(no cannibalization detected — this URL does not share queries with other pages)');
+      return;
+    }
+    groups.forEach(function (g, i) {
+      var others = (g.pages || []).filter(function (pg) { return pg.id != pageId; });
+      var head = (g.recommendation === 'keep_separate')
+        ? '[MEDIUM] Shares the "' + g.shared + '" query with other page(s) — KEEP SEPARATE'
+        : '[HIGH] Competes for the "' + g.shared + '" query with ' + others.length + ' other page(s)';
+      lines.push((i + 1) + '. ' + head);
+      // List every page in the group with its GSC strength so the editor can sanity-check the winner.
+      (g.pages || []).forEach(function (pg) {
+        var tag = (g.keep && pg.id === g.keep.id) ? ' [KEEP — strongest]' : (g.recommendation === 'consolidate' ? ' [301 -> ' + (g.keep ? g.keep.url : '') + ']' : '');
+        lines.push('   - ' + pg.url + ' (' + (pg.impressions || 0) + ' impr, pos ' + (pg.position != null ? Number(pg.position).toFixed(1) : 'n/a') + ')' + tag);
+      });
+      lines.push('   Recommendation: ' + (g.recommendation === 'keep_separate' ? 'KEEP SEPARATE' : 'CONSOLIDATE'));
+      if (g.reason) lines.push('   Why: ' + g.reason);
+      // Action-for-editor line: the concrete next step (paste 301s in Rank Math, or differentiate).
+      if (g.recommendation === 'consolidate' && g.redirect && g.redirect.length) {
+        lines.push('   Action for editor: 301 ' + g.redirect.map(function (r) { return r.url; }).join(', ') + '  ->  ' + (g.keep ? g.keep.url : '') + ' ; then repoint internal links to the kept URL.');
+      } else {
+        lines.push('   Action for editor: keep both pages; sharpen each page to its own intent and cross-link them (do NOT 301).');
+      }
+    });
+  })();
+
   lines.push('', '---', 'Generated by ContentScale AI Citations Tracker');
   var text = lines.join(_n);
   if (navigator.clipboard) {
