@@ -5227,6 +5227,62 @@ function _cannibalRank(pages) {
   });
 }
 
+/* ----------------------------------------------------------------------------
+ * BRAND-QUERY FILTER (Phase 1 improvement A)
+ * A site's own brand name legitimately surfaces many pages ("perfect roofing
+ * team" shows the home, faqs, county pages...). That is NOT cannibalization —
+ * you never 301 fourteen pages onto one. We derive brand tokens from the client
+ * domain + name and skip any query that is essentially just the brand.
+ * derived e.g. from "perfectroofingteam.com" -> ["perfect","roofing","team"].
+ * A query is treated as brand-only when, after removing brand tokens, almost
+ * nothing meaningful is left (<2 remaining content words).
+ * -------------------------------------------------------------------------- */
+function _cannibalBrandTokens(client) {
+  const src = _cannibalNorm((client && (client.name || '')) + ' ' +
+    String((client && client.domain) || '').replace(/^https?:\/\//, '').replace(/^www\./, '').split('.')[0].replace(/[^a-z0-9]/g, ' '));
+  const stop = new Set(['the', 'and', 'llc', 'inc', 'co', 'company', 'nj', 'new', 'jersey']);
+  return new Set(src.split(' ').filter(function (t) { return t && t.length > 2 && !stop.has(t); }));
+}
+function _cannibalIsBrandQuery(queryNorm, brandTokens) {
+  if (!brandTokens || !brandTokens.size) return false;
+  const words = queryNorm.split(' ').filter(Boolean);
+  if (!words.length) return false;
+  const nonBrand = words.filter(function (w) { return !brandTokens.has(w); });
+  // Mostly brand words AND little content left -> it's a brand/navigational query.
+  const brandHits = words.length - nonBrand.length;
+  return brandHits >= 1 && nonBrand.length < 2;
+}
+
+/* ----------------------------------------------------------------------------
+ * RELEVANCE-BASED WINNER (Phase 1 improvement A)
+ * "Most impressions" alone picks the wrong winner: for the query
+ * "24 hour emergency roof repair nj" it wrongly kept /wind-damage.../ (more
+ * impressions) over /24-hour-emergency-roof-repair-nj/ (the obvious match).
+ * We score each page for a query by how well its URL slug + keyword MATCH the
+ * query words; the best-matching page wins, and impressions/position only break
+ * ties among equally-relevant pages. This is still a heuristic — the external AI
+ * (improvement B) gives the final verdict — but it produces far saner defaults.
+ * -------------------------------------------------------------------------- */
+function _cannibalRelevance(page, queryNorm) {
+  const words = queryNorm.split(' ').filter(function (w) { return w.length > 2; });
+  if (!words.length) return 0;
+  const hay = _cannibalNorm((page.url || '').replace(/^https?:\/\/[^/]+/, '').replace(/[^a-z0-9]+/g, ' ') + ' ' + (page.keyword || ''));
+  let hits = 0;
+  words.forEach(function (w) { if (hay.indexOf(w) >= 0) hits++; });
+  return hits / words.length;  // 0..1 share of query words found in slug+keyword
+}
+// Rank by relevance to the shared query first, then impressions, then position.
+function _cannibalRankByRelevance(pages, queryNorm) {
+  return pages.slice().sort(function (x, y) {
+    const rx = _cannibalRelevance(x, queryNorm), ry = _cannibalRelevance(y, queryNorm);
+    if (Math.abs(ry - rx) > 0.001) return ry - rx;       // best query match first
+    const ix = Number(x.impressions || 0), iy = Number(y.impressions || 0);
+    if (iy !== ix) return iy - ix;                       // then more impressions
+    const px = Number(x.position || 999), py = Number(y.position || 999);
+    return px - py;                                       // then better position
+  });
+}
+
 // Core analysis. Returns the recommendation object described in the header above.
 async function analyzeCannibalization(clientId) {
   // Pull pages + their GSC metrics. tracker_gsc_queries holds the per-URL query
@@ -5242,6 +5298,18 @@ async function analyzeCannibalization(clientId) {
   const byId = {};
   pagesR.rows.forEach(function (p) { byId[p.id] = p; });
 
+  // Brand tokens for the brand-query filter (improvement A). We need the client's
+  // name/domain to recognise brand/navigational queries that are not real
+  // cannibalization. Failure here is non-fatal: no tokens => no brand filtering.
+  let brandTokens = new Set();
+  try {
+    const clR = await pool.query('SELECT name, domain, url FROM tracker_clients WHERE id=$1', [clientId]);
+    if (clR.rows.length) brandTokens = _cannibalBrandTokens({
+      name: clR.rows[0].name,
+      domain: clR.rows[0].domain || clR.rows[0].url
+    });
+  } catch (e) { /* keep brandTokens empty */ }
+
   // Map each normalized GSC query -> set of page_ids that rank for it.
   const queriesR = await pool.query(
     `SELECT page_id, query FROM tracker_gsc_queries
@@ -5253,6 +5321,9 @@ async function analyzeCannibalization(clientId) {
   queriesR.rows.forEach(function (q) {
     const key = _cannibalNorm(q.query);
     if (!key) return;
+    // Skip brand/navigational queries ("perfect roofing team" etc.) — these
+    // legitimately surface many pages and are NOT cannibalization.
+    if (_cannibalIsBrandQuery(key, brandTokens)) return;
     if (!byQuery[key]) byQuery[key] = new Set();
     if (byId[q.page_id]) byQuery[key].add(q.page_id);
   });
@@ -5277,7 +5348,11 @@ async function analyzeCannibalization(clientId) {
     if (seenPairs.has(sig)) return;
     seenPairs.add(sig);
 
-    const ranked = _cannibalRank(pages);
+    // Winner = page whose slug/keyword best MATCHES the shared query (relevance),
+    // with impressions/position as tie-breakers. This fixes cases like
+    // "24 hour emergency roof repair nj" wrongly keeping /wind-damage.../ over
+    // /24-hour-emergency-roof-repair-nj/ just because it had more impressions.
+    const ranked = _cannibalRankByRelevance(pages, shared);
     const keep = ranked[0];
     const losers = ranked.slice(1);
 
@@ -5355,6 +5430,100 @@ app.get('/api/tracker-client/:token/pages/check-cannibalization', async (req, re
       total_issues: legacyIssues.length,
       message: legacyIssues.length > 0 ? 'Cannibalization detected!' : 'No cannibalization detected'
     });
+  } catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+/* ============================================================================
+ * GET /api/tracker-client/:token/pages/cannibalization-verdict (Phase 1, improvement B)
+ * ----------------------------------------------------------------------------
+ * HANDOVER NOTES (for the next AI/dev):
+ *   Improvement A made the deterministic groups saner (brand filter + relevance
+ *   winner). This endpoint adds the "AI looks at it before you act" layer the
+ *   owner asked for: it sends the deterministic groups to the external AI and
+ *   asks for a FINAL VERDICT per group — is this real cannibalization, which URL
+ *   should truly be kept, 301 vs keep-separate, and why — in plain language the
+ *   editor can trust.
+ *
+ *   FLOW:
+ *     1. analyzeCannibalization() -> deterministic groups (the evidence).
+ *     2. We hand those groups to callClaudeForWrite() (the existing AI helper).
+ *     3. The AI returns JSON verdicts we merge back onto each group as `ai`.
+ *
+ *   SAFETY / FAIL-OPEN:
+ *     - If there is no AI key or the AI call fails, we DO NOT error. We return the
+ *       deterministic groups unchanged (ai:null) so the brief still shows advice.
+ *       The whole point is the editor always gets *something*.
+ *     - This endpoint NEVER executes anything (no 301s). Advice only. Execution is
+ *       Phase 2 (WordPress connector with dry-run + approval + rollback).
+ *
+ *   KEY: uses the same ANTHROPIC_API_KEY / x-claude-key convention as the rest of
+ *   the app (see callClaudeForWrite). Model pinned to the app default.
+ * ==========================================================================*/
+app.get('/api/tracker-client/:token/pages/cannibalization-verdict', async (req, res) => {
+  try {
+    const cr = await pool.query('SELECT id FROM tracker_clients WHERE token=$1', [req.params.token]);
+    if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Client not found' });
+
+    const analysis = await analyzeCannibalization(cr.rows[0].id);
+    if (!analysis.groups.length) {
+      return res.json({ success: true, cannibalization: analysis, ai_applied: false, message: 'No cannibalization detected' });
+    }
+
+    // Compact evidence for the AI: only what it needs to judge (URLs + GSC stats).
+    const evidence = analysis.groups.map(function (g, i) {
+      return {
+        i: i,
+        query: g.shared,
+        heuristic_recommendation: g.recommendation,
+        heuristic_keep: g.keep ? g.keep.url : null,
+        pages: g.pages.map(function (p) {
+          return { url: p.url, impressions: Number(p.impressions || 0), position: p.position != null ? Number(p.position) : null };
+        })
+      };
+    });
+
+    const claudeKey = req.headers['x-claude-key'] || process.env.ANTHROPIC_API_KEY;
+    // FAIL-OPEN: no key -> return deterministic result so the editor still gets advice.
+    if (!claudeKey) {
+      return res.json({ success: true, cannibalization: analysis, ai_applied: false, note: 'No AI key configured — returning deterministic advice only.' });
+    }
+
+    const systemPrompt =
+      'You are an SEO expert judging keyword cannibalization. For each group you get a shared Google query and the pages that rank for it with impressions and average position. ' +
+      'Decide: (a) is_cannibalization (true only if these pages genuinely compete for the SAME intent; false for brand/navigational queries or pages that legitimately serve different intents such as residential vs commercial, repair vs replacement, or different counties/cities); ' +
+      '(b) keep_url (the single URL that should rank for this query — the best intent match, not merely the most impressions); ' +
+      '(c) action ("consolidate" = 301 the others into keep_url, or "keep_separate" = differentiate and cross-link); (d) reason (one short sentence for the editor). ' +
+      'Return ONLY a JSON array, one object per group in the same order, like: ' +
+      '[{"i":0,"is_cannibalization":true,"keep_url":"...","action":"consolidate","reason":"..."}]. No prose, no markdown.';
+    const userPrompt = 'Groups:\n' + JSON.stringify(evidence);
+
+    let verdicts = null;
+    try {
+      const raw = await callClaudeForWrite(systemPrompt, userPrompt, 2000, claudeKey);
+      // Be liberal in parsing: strip any accidental code fences, grab the JSON array.
+      const cleaned = String(raw || '').replace(/```json|```/g, '').trim();
+      const start = cleaned.indexOf('['), end = cleaned.lastIndexOf(']');
+      verdicts = (start >= 0 && end > start) ? JSON.parse(cleaned.slice(start, end + 1)) : null;
+    } catch (e) {
+      // FAIL-OPEN: AI error -> keep deterministic advice.
+      return res.json({ success: true, cannibalization: analysis, ai_applied: false, note: 'AI verdict failed (' + e.message + ') — returning deterministic advice.' });
+    }
+
+    // Merge AI verdicts back onto the groups (matched by index i).
+    if (Array.isArray(verdicts)) {
+      verdicts.forEach(function (v) {
+        const g = analysis.groups[v && v.i];
+        if (!g) return;
+        g.ai = {
+          is_cannibalization: v.is_cannibalization !== false,
+          keep_url: v.keep_url || (g.keep ? g.keep.url : null),
+          action: v.action || g.recommendation,
+          reason: v.reason || g.reason
+        };
+      });
+    }
+
+    res.json({ success: true, cannibalization: analysis, ai_applied: Array.isArray(verdicts) });
   } catch (e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
