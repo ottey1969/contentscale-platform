@@ -2512,7 +2512,12 @@ app.post('/api/tracker-client/:token/pages/:pageId/html', async (req, res) => {
 });
 
 // GET /api/tracker-client/:token/pages/:pageId — get single page with latest snapshot
-app.get('/api/tracker-client/:token/pages/:pageId', async (req, res) => {
+app.get('/api/tracker-client/:token/pages/:pageId', async (req, res, next) => {
+  // Guard: :pageId is a numeric id. Non-numeric segments (e.g. "check-cannibalization",
+  // "check-stale") are SEPARATE routes registered later in the file; without this
+  // pass-through Express would match them here and Postgres would throw
+  // "invalid input syntax for type integer". next() lets the real route handle them.
+  if (!/^\d+$/.test(String(req.params.pageId || ''))) return next();
   try {
     const cr = await pool.query('SELECT id FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status != $2)', [req.params.token, 'deleted']);
     if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
