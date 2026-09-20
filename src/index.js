@@ -5303,10 +5303,10 @@ async function analyzeCannibalization(clientId) {
   // cannibalization. Failure here is non-fatal: no tokens => no brand filtering.
   let brandTokens = new Set();
   try {
-    const clR = await pool.query('SELECT name, domain, url FROM tracker_clients WHERE id=$1', [clientId]);
+    const clR = await pool.query('SELECT name, domain FROM tracker_clients WHERE id=$1', [clientId]);
     if (clR.rows.length) brandTokens = _cannibalBrandTokens({
       name: clR.rows[0].name,
-      domain: clR.rows[0].domain || clR.rows[0].url
+      domain: clR.rows[0].domain
     });
   } catch (e) { /* keep brandTokens empty */ }
 
