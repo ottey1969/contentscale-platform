@@ -5228,7 +5228,7 @@ async function analyzeCannibalization(clientId) {
   // rows (page_id != null) we couple during baseline prep; we use them to find
   // pages that share the SAME query term = true cannibalization signal.
   const pagesR = await pool.query(
-    `SELECT id, url, keyword, COALESCE(intent,'unknown') AS intent,
+    `SELECT id, url, keyword,
             gsc_clicks, gsc_impressions, gsc_position
        FROM tracker_pages
       WHERE tracker_client_id=$1 AND (is_active=TRUE OR is_active IS NULL)`,
