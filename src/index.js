@@ -36617,6 +36617,40 @@ function renderStats(data) {
     }
   }
 
+  /* --------------------------------------------------------------------------
+   * BRAND-NAME MISMATCH WARNING (handover: for the next AI/dev)
+   * The signup form historically asked "Your name" (a person's name), so many
+   * clients have client.name set to a person/label (e.g. "Valmir PRT") instead of
+   * the public business name. That weakens brand detection (cannibalization filter,
+   * brand signals). This banner nudges the operator to fix it. It's advice-only —
+   * it changes nothing. Root fix is the signup form label/placeholder (landing page).
+   * Safe: guards every DOM access; injects one dismissible banner before #pagesList.
+   * ------------------------------------------------------------------------ */
+  try {
+    var _cl = data.client || {};
+    var _nm = String(_cl.name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+    var _dm = String(_cl.domain || '').toLowerCase().replace(/^https?:\/\//, '').replace(/^www\./, '').split('.')[0].replace(/[^a-z0-9]/g, '');
+    // Mismatch = we have both, and neither is a substring of the other (name doesn't relate to domain).
+    var _mismatch = _nm && _dm && _dm.length >= 4 && _nm.indexOf(_dm) < 0 && _dm.indexOf(_nm) < 0;
+    var _host = document.getElementById('pagesList');
+    var _existing = document.getElementById('csBrandWarn');
+    if (_mismatch && _host && !window._csBrandWarnDismissed) {
+      if (!_existing) {
+        _existing = document.createElement('div');
+        _existing.id = 'csBrandWarn';
+        _existing.style.cssText = 'margin:0 0 12px;padding:10px 14px;border:1px solid #f59e0b;background:#fffbeb;border-radius:8px;color:#92400e;font-size:12px;line-height:1.6;';
+        _host.parentNode.insertBefore(_existing, _host);
+      }
+      _existing.innerHTML =
+        '<strong>\\u26a0\\ufe0f Check your business name.</strong> Your tracker name is "<b>' + _csEscH(_cl.name || '') +
+        '</b>", which doesn\\u2019t match your domain <b>' + _csEscH(_cl.domain || '') + '</b>. ' +
+        'For accurate brand detection (cannibalization filter, brand signals), set it to your public business name exactly as it appears online. ' +
+        '<a href="#" onclick="window._csBrandWarnDismissed=true;var e=document.getElementById(\\'csBrandWarn\\');if(e)e.remove();return false;" style="color:#b45309;font-weight:700;">Dismiss</a>';
+    } else if (!_mismatch && _existing) {
+      _existing.remove();
+    }
+  } catch (e) { /* warning is non-critical */ }
+
 }
 
 function jumpToTrackerPage(pageId){
