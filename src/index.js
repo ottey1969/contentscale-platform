@@ -5243,7 +5243,33 @@ function _cannibalBrandTokens(client) {
   const stop = new Set(['the', 'and', 'llc', 'inc', 'co', 'company', 'nj', 'new', 'jersey']);
   return new Set(src.split(' ').filter(function (t) { return t && t.length > 2 && !stop.has(t); }));
 }
-function _cannibalIsBrandQuery(queryNorm, brandTokens) {
+// The concatenated brand string (spaces removed) so we can catch spaced brand
+// queries like "perfect roofing team" against a one-word domain "perfectroofingteam".
+function _cannibalBrandConcat(client) {
+  return _cannibalNorm((client && (client.name || '')) + ' ' +
+    String((client && client.domain) || '').replace(/^https?:\/\//, '').replace(/^www\./, '').split('.')[0])
+    .replace(/[^a-z0-9]/g, '');
+}
+function _cannibalIsBrandQuery(queryNorm, brandTokens, brandConcat) {
+  // (b) spaceless-substring: "perfect roofing team" -> "perfectroofingteam" which
+  // is (contained in) the brand concat -> brand/navigational. Catches spaced brand
+  // queries even when only the domain (one word) is known.
+  if (brandConcat && brandConcat.length >= 6) {
+    const q = queryNorm.replace(/[^a-z0-9]/g, '');
+    if (q.length >= 6 && (brandConcat.indexOf(q) >= 0 || q.indexOf(brandConcat) >= 0)) return true;
+
+    // (c) per-word-in-concat: when the brand name field is unhelpful (e.g. an
+    // internal label like "Valmir PRT") the word tokens don't match. So also treat
+    // a query as brand when MOST of its words are themselves substrings of the
+    // concatenated domain block. "perfect roofing llc" -> perfect+roofing are both
+    // inside "perfectroofingteam" (only "llc" is not) -> brand/navigational.
+    const words = queryNorm.split(' ').filter(function (w) { return w.length > 2; });
+    if (words.length) {
+      const inBrand = words.filter(function (w) { return brandConcat.indexOf(w) >= 0; }).length;
+      // brand if 2+ words are brand-substrings and at most one word is "extra"
+      if (inBrand >= 2 && (words.length - inBrand) <= 1) return true;
+    }
+  }
   if (!brandTokens || !brandTokens.size) return false;
   const words = queryNorm.split(' ').filter(Boolean);
   if (!words.length) return false;
@@ -5302,13 +5328,24 @@ async function analyzeCannibalization(clientId) {
   // name/domain to recognise brand/navigational queries that are not real
   // cannibalization. Failure here is non-fatal: no tokens => no brand filtering.
   let brandTokens = new Set();
+  let brandConcat = '';
   try {
     const clR = await pool.query('SELECT name, domain FROM tracker_clients WHERE id=$1', [clientId]);
-    if (clR.rows.length) brandTokens = _cannibalBrandTokens({
-      name: clR.rows[0].name,
-      domain: clR.rows[0].domain
-    });
+    if (clR.rows.length) {
+      brandTokens = _cannibalBrandTokens({ name: clR.rows[0].name, domain: clR.rows[0].domain });
+      brandConcat = _cannibalBrandConcat({ name: clR.rows[0].name, domain: clR.rows[0].domain });
+    }
   } catch (e) { /* keep brandTokens empty */ }
+  // ROBUST FALLBACK: if the client name/domain fields are empty, derive brand
+  // tokens from the pages' OWN domain (every page URL carries it). This makes the
+  // brand filter work regardless of whether the client record is filled in.
+  if ((!brandTokens.size || !brandConcat) && pagesR.rows.length) {
+    try {
+      const host = new URL(pagesR.rows[0].url).hostname; // e.g. perfectroofingteam.com
+      if (!brandTokens.size) brandTokens = _cannibalBrandTokens({ name: '', domain: host });
+      if (!brandConcat) brandConcat = _cannibalBrandConcat({ name: '', domain: host });
+    } catch (e) { /* ignore */ }
+  }
 
   // Map each normalized GSC query -> set of page_ids that rank for it.
   const queriesR = await pool.query(
@@ -5323,7 +5360,7 @@ async function analyzeCannibalization(clientId) {
     if (!key) return;
     // Skip brand/navigational queries ("perfect roofing team" etc.) — these
     // legitimately surface many pages and are NOT cannibalization.
-    if (_cannibalIsBrandQuery(key, brandTokens)) return;
+    if (_cannibalIsBrandQuery(key, brandTokens, brandConcat)) return;
     if (!byQuery[key]) byQuery[key] = new Set();
     if (byId[q.page_id]) byQuery[key].add(q.page_id);
   });
