@@ -1,4 +1,4 @@
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-20-CANONICAL-v133';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-20-CANONICAL-v134';
 const CONTENTSCALE_BUILD_CHANGES = [
   'leadcrawler-rendered-regex-syntax-fix',
   'quick-scan-five-ai-bulk-save-and-engine-normalization',
@@ -81,6 +81,9 @@ const CONTENTSCALE_BUILD_CHANGES = [
   ,'twenty-page-cross-page-site-intelligence'
   ,'deterministic-link-graph-and-orphan-detection'
   ,'cannibalisation-and-content-treatment-per-url'
+  ,'cannibalization-query-level-evidence-and-safe-owner-selection'
+  ,'admin-edit-public-business-brand-name'
+  ,'public-registration-requires-real-business-brand-name'
   ,'site-architecture-and-internal-link-action-plan'
   ,'ninety-day-implementation-roadmap'
   ,'audit-evidence-methodology-transparency'
@@ -1671,6 +1674,10 @@ app.post('/api/tracker-client/register', async (req, res) => {
   try {
     const { domain, name, email, whatsapp, dealify_code } = req.body;
     if (!domain) return res.status(400).json({ success: false, error: 'Domain required' });
+    const publicBrandName = String(name || '').replace(/\s+/g, ' ').trim().slice(0, 200);
+    if (publicBrandName.length < 2 || /https?:\/\/|@/.test(publicBrandName)) {
+      return res.status(400).json({ success: false, error: 'Public business / brand name required — enter the real name shown on the website, not a person, URL or internal client label.' });
+    }
 
     // Get client IP
     const clientIp = (req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0].trim();
@@ -1735,12 +1742,12 @@ app.post('/api/tracker-client/register', async (req, res) => {
     const token = generateClientToken();
     await pool.query(
       `INSERT INTO tracker_clients (token, domain, name, email, whatsapp, max_pages, registered_ip, dealify_codes, gsc_enabled) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,TRUE)`,
-      [token, cleanDomain, name||null, email||null, whatsapp||null, maxPages, clientIp||null, isDealify ? dealify_code : null]
+      [token, cleanDomain, publicBrandName, email||null, whatsapp||null, maxPages, clientIp||null, isDealify ? dealify_code : null]
     ).catch(async () => {
       // Fallback if dealify_codes column doesn't exist yet
       await pool.query(
         `INSERT INTO tracker_clients (token, domain, name, email, whatsapp, max_pages, registered_ip, gsc_enabled) VALUES ($1,$2,$3,$4,$5,$6,$7,TRUE)`,
-        [token, cleanDomain, name||null, email||null, whatsapp||null, maxPages, clientIp||null]
+        [token, cleanDomain, publicBrandName, email||null, whatsapp||null, maxPages, clientIp||null]
       );
     });
 
@@ -1754,7 +1761,7 @@ app.post('/api/tracker-client/register', async (req, res) => {
     if (email) {
       const liveUrl = trackUrl + '/live';
       const welcomeHtml = '<h2 style="font-size:17px;font-weight:800;color:#0f172a;margin-bottom:10px;">Your AI Citations Tracker is ready</h2>'
-        + '<p style="font-size:14px;color:#374151;line-height:1.7;margin-bottom:14px;">Hi ' + (name || 'there') + ',<br><br>Your tracker for <strong>' + cleanDomain + '</strong> is set up. You have two links — they do different things:</p>'
+        + '<p style="font-size:14px;color:#374151;line-height:1.7;margin-bottom:14px;">Hi ' + publicBrandName + ',<br><br>Your tracker for <strong>' + cleanDomain + '</strong> is set up. You have two links — they do different things:</p>'
         + '<div style="background:#f5f3ff;border:2px solid #c4b5fd;border-radius:8px;padding:16px;margin-bottom:14px;">'
         + '<div style="font-size:12px;font-weight:800;color:#6d28d9;text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px;">&#128278; Bookmark this — your working scanner</div>'
         + '<div style="font-size:13px;color:#374151;line-height:1.6;margin-bottom:10px;">This is where you <strong>add pages, keywords, and paste HTML</strong>. Save it as a bookmark — it is your private link, do not share it.</div>'
@@ -5186,8 +5193,8 @@ app.get('/api/tracker-client/:token/gsc-pages', async (req, res) => {
  *            shared: <the shared query/keyword/intent string>,
  *            pages: [ { id, url, keyword, clicks, impressions, position } ],
  *            keep:   { id, url },            // winner to KEEP
- *            redirect: [ { id, url } ],      // losers to 301 -> keep.url  (empty if keep_separate)
- *            recommendation: 'consolidate' | 'keep_separate',
+ *            redirect: [ { id, url } ],      // possible losers; never executed automatically
+ *            recommendation: 'differentiate' | 'consolidate_candidate' | 'keep_separate',
  *            reason: <human-readable why>
  *          } ], total: <number of groups> }
  *
@@ -5250,27 +5257,28 @@ function _cannibalBrandTokens(client) {
 // The concatenated brand string (spaces removed) so we can catch spaced brand
 // queries like "perfect roofing team" against a one-word domain "perfectroofingteam".
 function _cannibalBrandConcat(client) {
-  return _cannibalNorm((client && (client.name || '')) + ' ' +
-    String((client && client.domain) || '').replace(/^https?:\/\//, '').replace(/^www\./, '').split('.')[0])
-    .replace(/[^a-z0-9]/g, '');
+  const domainStem = String((client && client.domain) || '').replace(/^https?:\/\//, '').replace(/^www\./, '').split('.')[0].replace(/[^a-z0-9]/gi, '').toLowerCase();
+  return domainStem || _cannibalNorm(client && client.name || '').replace(/[^a-z0-9]/g, '');
 }
 function _cannibalIsBrandQuery(queryNorm, brandTokens, brandConcat) {
-  // (b) spaceless-substring: "perfect roofing team" -> "perfectroofingteam" which
-  // is (contained in) the brand concat -> brand/navigational. Catches spaced brand
-  // queries even when only the domain (one word) is known.
+  // A short generic term must never become "brand" merely because it occurs inside
+  // the domain (e.g. "roofing" inside perfectroofingteam.com). Only an exact/full
+  // domain-brand match, or a query that contains that full brand, qualifies here.
   if (brandConcat && brandConcat.length >= 6) {
     const q = queryNorm.replace(/[^a-z0-9]/g, '');
-    if (q.length >= 6 && (brandConcat.indexOf(q) >= 0 || q.indexOf(brandConcat) >= 0)) return true;
+    if (q === brandConcat || (q.length > brandConcat.length && q.indexOf(brandConcat) >= 0)) return true;
 
     // (c) per-word-in-concat: when the brand name field is unhelpful (e.g. an
     // internal label like "Valmir PRT") the word tokens don't match. So also treat
     // a query as brand when MOST of its words are themselves substrings of the
     // concatenated domain block. "perfect roofing llc" -> perfect+roofing are both
     // inside "perfectroofingteam" (only "llc" is not) -> brand/navigational.
-    const words = queryNorm.split(' ').filter(function (w) { return w.length > 2; });
+    const joiners = new Set(['the', 'and', 'for', 'with', 'from', 'inc', 'llc', 'ltd', 'company', 'services', 'service']);
+    const words = queryNorm.split(' ').filter(function (w) { return w.length > 2 && !joiners.has(w); });
     if (words.length) {
       const inBrand = words.filter(function (w) { return brandConcat.indexOf(w) >= 0; }).length;
-      // brand if 2+ words are brand-substrings and at most one word is "extra"
+      // Brand/service variants such as "perfect roofing and siding" remain
+      // navigational, but a generic query with only one matching word does not.
       if (inBrand >= 2 && (words.length - inBrand) <= 1) return true;
     }
   }
@@ -5280,7 +5288,7 @@ function _cannibalIsBrandQuery(queryNorm, brandTokens, brandConcat) {
   const nonBrand = words.filter(function (w) { return !brandTokens.has(w); });
   // Mostly brand words AND little content left -> it's a brand/navigational query.
   const brandHits = words.length - nonBrand.length;
-  return brandHits >= 1 && nonBrand.length < 2;
+  return brandHits >= 2 && nonBrand.length < 2;
 }
 
 /* ----------------------------------------------------------------------------
@@ -5301,15 +5309,16 @@ function _cannibalRelevance(page, queryNorm) {
   words.forEach(function (w) { if (hay.indexOf(w) >= 0) hits++; });
   return hits / words.length;  // 0..1 share of query words found in slug+keyword
 }
-// Rank by relevance to the shared query first, then impressions, then position.
+// Rank by relevance to the shared query first, then that query's position,
+// clicks and impressions. Page-level totals are only a fallback.
 function _cannibalRankByRelevance(pages, queryNorm) {
   return pages.slice().sort(function (x, y) {
     const rx = _cannibalRelevance(x, queryNorm), ry = _cannibalRelevance(y, queryNorm);
     if (Math.abs(ry - rx) > 0.001) return ry - rx;       // best query match first
-    const ix = Number(x.impressions || 0), iy = Number(y.impressions || 0);
-    if (iy !== ix) return iy - ix;                       // then more impressions
     const px = Number(x.position || 999), py = Number(y.position || 999);
-    return px - py;                                       // then better position
+    if (px !== py) return px - py;                       // then better query position
+    const cx=Number(x.clicks||0),cy=Number(y.clicks||0);if(cy!==cx)return cy-cx;
+    return Number(y.impressions||0)-Number(x.impressions||0);
   });
 }
 
@@ -5351,9 +5360,10 @@ async function analyzeCannibalization(clientId) {
     } catch (e) { /* ignore */ }
   }
 
-  // Map each normalized GSC query -> set of page_ids that rank for it.
+  // Map each normalized GSC query -> per-page QUERY metrics. Page totals are not
+  // valid evidence for choosing the owner of one query.
   const queriesR = await pool.query(
-    `SELECT page_id, query FROM tracker_gsc_queries
+    `SELECT page_id, query, clicks, impressions, position, imported_at FROM tracker_gsc_queries
       WHERE tracker_client_id=$1 AND page_id IS NOT NULL`,
     [clientId]
   ).catch(function () { return { rows: [] }; });
@@ -5365,29 +5375,25 @@ async function analyzeCannibalization(clientId) {
     // Skip brand/navigational queries ("perfect roofing team" etc.) — these
     // legitimately surface many pages and are NOT cannibalization.
     if (_cannibalIsBrandQuery(key, brandTokens, brandConcat)) return;
-    if (!byQuery[key]) byQuery[key] = new Set();
-    if (byId[q.page_id]) byQuery[key].add(q.page_id);
+    if (!byId[q.page_id]) return;
+    if (!byQuery[key]) byQuery[key] = {};
+    const old=byQuery[key][q.page_id],fresh=!old||new Date(q.imported_at||0)>=new Date(old.imported_at||0);
+    if(fresh)byQuery[key][q.page_id]={page_id:q.page_id,clicks:Number(q.clicks||0),impressions:Number(q.impressions||0),position:q.position==null?null:Number(q.position),imported_at:q.imported_at||null};
   });
 
   // Build overlap groups. Primary basis = shared GSC query. If no GSC query rows
   // exist at all, fall back to shared exact keyword so the feature still works
   // on sites that haven't imported per-URL queries yet.
   const groups = [];
-  const seenPairs = new Set(); // de-dupe identical page-sets across queries
-
-  function pushGroup(basis, shared, pageIds) {
-    const pages = Array.from(pageIds).map(function (id) {
-      const p = byId[id]; if (!p) return null;
+  function pushGroup(basis, shared, pageEntries) {
+    const pages = pageEntries.map(function (entry) {
+      const id=entry.page_id||entry.id||entry,p = byId[id]; if (!p) return null;
       return { id: p.id, url: p.url, keyword: p.keyword,
-               clicks: p.gsc_clicks, impressions: p.gsc_impressions, position: p.gsc_position };
+               clicks: entry.clicks==null?Number(p.gsc_clicks||0):Number(entry.clicks||0),
+               impressions: entry.impressions==null?Number(p.gsc_impressions||0):Number(entry.impressions||0),
+               position: entry.position==null?(p.gsc_position==null?null:Number(p.gsc_position)):Number(entry.position) };
     }).filter(Boolean);
     if (pages.length < 2) return;
-
-    // Stable signature so we don't emit the same page-set twice (many queries can
-    // map to the same pair of pages).
-    const sig = pages.map(function (p) { return p.id; }).sort(function (a, b) { return a - b; }).join(',');
-    if (seenPairs.has(sig)) return;
-    seenPairs.add(sig);
 
     // Winner = page whose slug/keyword best MATCHES the shared query (relevance),
     // with impressions/position as tie-breakers. This fixes cases like
@@ -5397,29 +5403,36 @@ async function analyzeCannibalization(clientId) {
     const keep = ranked[0];
     const losers = ranked.slice(1);
 
-    // Keep-separate check: if ANY loser is a legitimate different-intent page vs
-    // the winner, we do NOT recommend a 301 for the group — we flag keep_separate
-    // so the editor differentiates the pages instead of merging them.
+    // A shared query proves overlap, not that a 301 is safe. Only exact duplicate
+    // target keywords become a consolidation candidate. Distinct intents stay
+    // separate; all other overlaps require differentiation and internal linking.
     const anySeparate = losers.some(function (l) { return _cannibalIsSeparate(keep, l); });
+    const keywordKeys=pages.map(function(p){return _cannibalNorm(p.keyword)}).filter(Boolean);
+    const exactDuplicate=keywordKeys.length===pages.length&&new Set(keywordKeys).size===1;
+    const recommendation=anySeparate?'keep_separate':(exactDuplicate?'consolidate_candidate':'differentiate');
+    const totalImpressions=pages.reduce(function(n,p){return n+Number(p.impressions||0)},0);
 
     groups.push({
       basis: basis,
       shared: shared,
       pages: ranked,
       keep: { id: keep.id, url: keep.url },
-      redirect: anySeparate ? [] : losers.map(function (l) { return { id: l.id, url: l.url }; }),
-      recommendation: anySeparate ? 'keep_separate' : 'consolidate',
+      redirect: exactDuplicate&&!anySeparate ? losers.map(function (l) { return { id: l.id, url: l.url }; }) : [],
+      recommendation: recommendation,
+      confidence: exactDuplicate||anySeparate?'high':'medium',
+      total_impressions: totalImpressions,
       reason: anySeparate
         ? 'Pages target legitimately different intent (e.g. residential vs commercial) — differentiate content and cross-link instead of merging.'
-        : ('Keep ' + keep.url + ' (strongest: ' + (keep.impressions || 0) + ' impr, pos ' +
-           (keep.position != null ? Number(keep.position).toFixed(1) : 'n/a') + '); 301 the weaker page(s) into it to consolidate ranking signals.')
+        : exactDuplicate
+        ? ('Exact duplicate target keyword. Candidate owner: '+keep.url+' based on query relevance and query-level GSC position. Preview and approve any 301; never execute automatically.')
+        : ('Both URLs rank for this query. Keep '+keep.url+' as the provisional owner based on query relevance and query-level GSC evidence; differentiate the other page(s) and cross-link. Do not 301 without an intent review.')
     });
   }
 
   const queryKeys = Object.keys(byQuery);
   if (queryKeys.length) {
     queryKeys.forEach(function (qk) {
-      if (byQuery[qk].size > 1) pushGroup('gsc_queries', qk, byQuery[qk]);
+      const entries=Object.values(byQuery[qk]);if(entries.length>1)pushGroup('gsc_queries',qk,entries);
     });
   } else {
     // Fallback: group by exact keyword when no per-URL GSC queries are available.
@@ -5431,11 +5444,12 @@ async function analyzeCannibalization(clientId) {
       byKeyword[k].add(p.id);
     });
     Object.keys(byKeyword).forEach(function (k) {
-      if (byKeyword[k].size > 1) pushGroup('keyword', k, byKeyword[k]);
+      if (byKeyword[k].size > 1) pushGroup('keyword', k,Array.from(byKeyword[k]));
     });
   }
-
-  return { groups: groups, total: groups.length };
+  groups.sort(function(a,b){return Number(b.total_impressions||0)-Number(a.total_impressions||0)});
+  const total=groups.length,maxGroups=100;
+  return { groups: groups.slice(0,maxGroups), total: total, truncated:Math.max(0,total-maxGroups),evidence:'query_level_gsc' };
 }
 
 // GET /api/tracker-client/:token/pages/check-cannibalization
@@ -5456,11 +5470,14 @@ app.get('/api/tracker-client/:token/pages/check-cannibalization', async (req, re
         shared: g.shared,
         count: g.pages.length,
         pages: g.pages.map(function (p) { return { id: p.id, url: p.url, keyword: p.keyword }; }),
-        recommendation: g.recommendation,   // 'consolidate' | 'keep_separate'
+        recommendation: g.recommendation,   // 'differentiate' | 'consolidate_candidate' | 'keep_separate'
         keep: g.keep,
         redirect: g.redirect,
         reason: g.reason,
-        severity: 'high'
+        confidence: g.confidence,
+        total_impressions: g.total_impressions,
+        evidence: analysis.evidence,
+        severity: g.recommendation === 'consolidate_candidate' ? 'high' : 'medium'
       };
     });
 
@@ -5533,9 +5550,10 @@ app.get('/api/tracker-client/:token/pages/cannibalization-verdict', async (req, 
       'You are an SEO expert judging keyword cannibalization. For each group you get a shared Google query and the pages that rank for it with impressions and average position. ' +
       'Decide: (a) is_cannibalization (true only if these pages genuinely compete for the SAME intent; false for brand/navigational queries or pages that legitimately serve different intents such as residential vs commercial, repair vs replacement, or different counties/cities); ' +
       '(b) keep_url (the single URL that should rank for this query — the best intent match, not merely the most impressions); ' +
-      '(c) action ("consolidate" = 301 the others into keep_url, or "keep_separate" = differentiate and cross-link); (d) reason (one short sentence for the editor). ' +
+      '(c) action ("consolidate_candidate" only for verified same-intent duplicates that still require human approval before any 301; "differentiate" for competing sections/pages that should remain live; or "keep_separate" for legitimately different intent); (d) reason (one short sentence for the editor). ' +
+      'Never recommend automatic execution. Shared-query evidence alone is not enough for a redirect. ' +
       'Return ONLY a JSON array, one object per group in the same order, like: ' +
-      '[{"i":0,"is_cannibalization":true,"keep_url":"...","action":"consolidate","reason":"..."}]. No prose, no markdown.';
+      '[{"i":0,"is_cannibalization":true,"keep_url":"...","action":"differentiate","reason":"..."}]. No prose, no markdown.';
     const userPrompt = 'Groups:\n' + JSON.stringify(evidence);
 
     let verdicts = null;
@@ -8148,6 +8166,11 @@ app.patch('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
   try {
     const { max_pages, status, reset_ip } = req.body;
     const updates = []; const vals = []; let i = 1;
+    if (req.body.name !== undefined) {
+      const publicBrandName = String(req.body.name || '').replace(/\s+/g, ' ').trim().slice(0, 200);
+      if (publicBrandName.length < 2 || /https?:\/\/|@/.test(publicBrandName)) return res.status(400).json({ success: false, error: 'Enter the public business / brand name shown on the website.' });
+      updates.push(`name=$${i++}`); vals.push(publicBrandName);
+    }
     if (max_pages !== undefined) { updates.push(`max_pages=$${i++}`); vals.push(max_pages); }
     if (req.body.prewrite_briefs_paid !== undefined) { updates.push(`prewrite_briefs_paid=$${i++}`); vals.push(parseInt(req.body.prewrite_briefs_paid) || 0); }
     if (req.body.extra_domains !== undefined) {
@@ -37899,20 +37922,24 @@ function _copyBriefAuthoritative(pageId) {
     }
     groups.forEach(function (g, i) {
       var others = (g.pages || []).filter(function (pg) { return pg.id != pageId; });
-      var head = (g.recommendation === 'keep_separate')
+      var head = g.recommendation === 'keep_separate'
         ? '[MEDIUM] Shares the "' + g.shared + '" query with other page(s) — KEEP SEPARATE'
-        : '[HIGH] Competes for the "' + g.shared + '" query with ' + others.length + ' other page(s)';
+        : g.recommendation === 'consolidate_candidate'
+        ? '[HIGH] Exact target overlap for "' + g.shared + '" — CONSOLIDATION CANDIDATE (approval required)'
+        : '[MEDIUM] Competes for the "' + g.shared + '" query with ' + others.length + ' other page(s) — DIFFERENTIATE';
       lines.push((i + 1) + '. ' + head);
       // List every page in the group with its GSC strength so the editor can sanity-check the winner.
       (g.pages || []).forEach(function (pg) {
-        var tag = (g.keep && pg.id === g.keep.id) ? ' [KEEP — strongest]' : (g.recommendation === 'consolidate' ? ' [301 -> ' + (g.keep ? g.keep.url : '') + ']' : '');
+        var tag = (g.keep && pg.id === g.keep.id) ? ' [PROVISIONAL OWNER]' : (g.recommendation === 'consolidate_candidate' ? ' [301 CANDIDATE -> ' + (g.keep ? g.keep.url : '') + ']' : '');
         lines.push('   - ' + pg.url + ' (' + (pg.impressions || 0) + ' impr, pos ' + (pg.position != null ? Number(pg.position).toFixed(1) : 'n/a') + ')' + tag);
       });
-      lines.push('   Recommendation: ' + (g.recommendation === 'keep_separate' ? 'KEEP SEPARATE' : 'CONSOLIDATE'));
+      lines.push('   Recommendation: ' + String(g.recommendation || 'differentiate').replace(/_/g, ' ').toUpperCase());
       if (g.reason) lines.push('   Why: ' + g.reason);
-      // Action-for-editor line: the concrete next step (paste 301s in Rank Math, or differentiate).
-      if (g.recommendation === 'consolidate' && g.redirect && g.redirect.length) {
-        lines.push('   Action for editor: 301 ' + g.redirect.map(function (r) { return r.url; }).join(', ') + '  ->  ' + (g.keep ? g.keep.url : '') + ' ; then repoint internal links to the kept URL.');
+      // Action-for-editor line. A redirect is always a candidate until intent was reviewed and a human approved it.
+      if (g.recommendation === 'consolidate_candidate' && g.redirect && g.redirect.length) {
+        lines.push('   Action for editor: review intent and content first. If the pages are true duplicates and you approve the change, 301 ' + g.redirect.map(function (r) { return r.url; }).join(', ') + '  ->  ' + (g.keep ? g.keep.url : '') + ' ; then repoint internal links and verify the live redirect. Do not execute automatically.');
+      } else if (g.recommendation === 'differentiate') {
+        lines.push('   Action for editor: keep both URLs live; remove or rewrite the competing section on the non-owner page, sharpen its distinct intent, and link to the provisional owner. Do not 301 automatically.');
       } else {
         lines.push('   Action for editor: keep both pages; sharpen each page to its own intent and cross-link them (do NOT 301).');
       }
@@ -38405,6 +38432,26 @@ function _computePushables() {
 // POSSIBLE: a site-wide query matches two pages almost equally (ambiguous ownership).
 var _cannibalIssues = [];
 var _cannibalTruncated = 0;
+function _trackerCannibalIsBrandQuery(query) {
+  var qn = _gapNorm(query || '');
+  if (!qn) return false;
+  var flat = qn.replace(/[^a-z0-9]/g, '');
+  var rawDomain = String(typeof DOMAIN !== 'undefined' ? DOMAIN : '').replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0];
+  var domainStem = rawDomain.split('.')[0].replace(/[^a-z0-9]/gi, '').toLowerCase();
+  // Never classify a generic substring such as "roofing" as branded merely
+  // because it appears inside perfectroofingteam.com.
+  if (domainStem.length >= 6 && (flat === domainStem || (flat.length > domainStem.length && flat.indexOf(domainStem) >= 0))) return true;
+  var stop = {the:1,and:1,for:1,with:1,from:1,inc:1,llc:1,ltd:1,bv:1,company:1,services:1,service:1};
+  var words = qn.split(' ').filter(function(w){ return w.length > 2 && !stop[w]; });
+  if (domainStem.length >= 6 && words.length) {
+    var inDomain = words.filter(function(w){ return domainStem.indexOf(w) >= 0; }).length;
+    if (inDomain >= 2 && (words.length - inDomain) <= 1) return true;
+  }
+  var name = _gapNorm((typeof _client !== 'undefined' && _client && _client.name) || '');
+  var tokens = name.split(' ').filter(function(w){ return w.length > 2 && !stop[w]; });
+  var hits = words.filter(function(w){ return tokens.indexOf(w) >= 0; }).length;
+  return hits >= 2 && (words.length - hits) < 2;
+}
 function _computeCannibal() {
   _cannibalIssues = [];
   // Skip pages that are known 301 redirects — a dead URL is not a competing page (removes false conflicts)
@@ -38420,13 +38467,24 @@ function _computeCannibal() {
     if (!k) return;
     if (!byQuery[k]) byQuery[k] = {};
     var ps = g.position ? parseFloat(g.position) : null;
-    if (!byQuery[k][g.page_id] || (ps !== null && ps < byQuery[k][g.page_id].pos)) byQuery[k][g.page_id] = { pos: ps, impr: g.impressions||0 };
+    if (!byQuery[k][g.page_id] || (ps !== null && ps < byQuery[k][g.page_id].pos)) byQuery[k][g.page_id] = { pos: ps, impr: g.impressions||0, clicks: g.clicks||0 };
   });
   Object.keys(byQuery).forEach(function(q){
+    if (_trackerCannibalIsBrandQuery(q)) return;
     var ids = Object.keys(byQuery[q]);
     if (ids.length < 2) return;
-    var involved = ids.map(function(id){ return { slug: slugOf(pById[id]), pos: byQuery[q][id].pos, impr: byQuery[q][id].impr, id: id }; });
-    involved.sort(function(a,b){ return (a.pos===null?99:a.pos) - (b.pos===null?99:b.pos); });
+    var qWords = q.split(' ').filter(function(w){ return w.length > 2; });
+    var involved = ids.map(function(id){
+      var p = pById[id], text = _gapNorm((p.keyword||p.gsc_keyword||'') + ' ' + slugOf(p).replace(/[-_/]/g,' '));
+      var hits = qWords.filter(function(w){ return text.indexOf(w) >= 0; }).length;
+      return { slug: slugOf(p), pos: byQuery[q][id].pos, impr: byQuery[q][id].impr, clicks: byQuery[q][id].clicks, relevance: qWords.length ? hits/qWords.length : 0, id: id };
+    });
+    involved.sort(function(a,b){
+      if (Math.abs(b.relevance-a.relevance) > 0.001) return b.relevance-a.relevance;
+      var ap=a.pos===null?99:a.pos,bp=b.pos===null?99:b.pos;if(ap!==bp)return ap-bp;
+      if ((b.clicks||0)!==(a.clicks||0)) return (b.clicks||0)-(a.clicks||0);
+      return (b.impr||0)-(a.impr||0);
+    });
     _cannibalIssues.push({ level: 'PROVEN', color: '#f87171', key: q, pages: involved,
       advice: 'SCAN BOTH PAGES \\u2014 the fix will be written into their briefs, nothing to upload (this is already proven by your own per-page exports). Owner = ' + involved[0].slug + ' (best position). The brief of the other page will tell you to remove/rewrite its competing section and link to ' + involved[0].slug + ' with this query as anchor text.' });
   });
@@ -38436,7 +38494,7 @@ function _computeCannibal() {
   for (var i = 0; i < pages.length; i++) {
     for (var j = i + 1; j < pages.length; j++) {
       var a = kwOf(pages[i]), b = kwOf(pages[j]);
-      if (!a || !b) continue;
+      if (!a || !b || _trackerCannibalIsBrandQuery(a) || _trackerCannibalIsBrandQuery(b)) continue;
       var wa = a.split(' ').filter(function(w){ return w.length >= 2; });
       var wb = b.split(' ').filter(function(w){ return w.length >= 2; });
       if (!wa.length || !wb.length) continue;
@@ -38469,11 +38527,6 @@ function _computeCannibal() {
   }
 
   // LEVEL 3 — POSSIBLE: site-wide query matching two pages almost equally
-  var brand3 = _gapNorm(DOMAIN).replace(/ (com|net|org|site|nl)$/,'').replace(/[^a-z0-9]/g,'');
-  var isBranded3 = function(q) {
-    var flat = _gapNorm(q).replace(/ /g,'');
-    return flat.length > 3 && (flat.indexOf(brand3) > -1 || brand3.indexOf(flat) > -1);
-  };
   var pageText = pages.map(function(p){
     var t = [];
     if (p.keyword) t.push(_gapNorm(p.keyword));
@@ -38485,7 +38538,7 @@ function _computeCannibal() {
   (_gapQueries||[]).forEach(function(g){
     if (g.page_id) return;
     if ((g.impressions||0) < 20) return; // consistent with Impression Gap threshold
-    if (isBranded3(g.query)) return; // branded queries belong to the homepage by definition — not a conflict
+    if (_trackerCannibalIsBrandQuery(g.query)) return; // branded queries belong to the homepage by definition — not a conflict
     var qn = _gapNorm(g.query); if (!qn || seen[qn]) return;
     var qWords = qn.split(' ').filter(function(w){ return w.length > 2; });
     if (!qWords.length) return;
@@ -44063,7 +44116,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
             table.style.cssText = 'width:100%;border-collapse:collapse;font-size:12px;';
             var thead = document.createElement('thead');
             thead.innerHTML = '<tr style="border-bottom:1px solid #1f2937;">'
-                + '<th style="padding:8px 10px;text-align:left;font-size:10px;color:#6b7280;text-transform:uppercase;">Contact</th>'
+                + '<th title="Public business / brand name used for reports and brand-query filtering" style="padding:8px 10px;text-align:left;font-size:10px;color:#6b7280;text-transform:uppercase;">Business / brand</th>'
                 + '<th style="padding:8px 10px;text-align:left;font-size:10px;color:#6b7280;text-transform:uppercase;">Domain + Share URL</th>'
                 + '<th style="padding:8px 10px;text-align:center;font-size:10px;color:#6b7280;text-transform:uppercase;">Type</th>'
                 + '<th style="padding:8px 10px;text-align:center;font-size:10px;color:#6b7280;text-transform:uppercase;">Pages</th>'
@@ -44423,6 +44476,19 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                         }).catch(function(e){ alert('Error: ' + e.message); });
                 }; })(c.id, c.domain);
 
+                var nameBtn = document.createElement('button');
+                nameBtn.className = 'tr-btn';
+                nameBtn.textContent = 'Edit brand name';
+                nameBtn.title = 'Change the public business / brand name used for reports and brand-query filtering. Historical case-study snapshots are not changed.';
+                nameBtn.style.cssText = 'font-size:10px;padding:3px 8px;border-color:#f59e0b;color:#fbbf24;';
+                nameBtn.onclick = (function(id, current, domain){ return function(){
+                    var next = prompt('Public business / brand name for ' + domain + ':\\n\\nUse the real name shown on the website — not a contact person or internal label.', current || '');
+                    if (next === null) return;
+                    next = next.replace(/\\s+/g, ' ').trim();
+                    if (next.length < 2 || /https?:\\/\\/|@/.test(next)) { alert('Enter the real public business / brand name.'); return; }
+                    updateTcClient(id, {name: next});
+                }; })(c.id, c.name || '', c.domain || 'this tracker');
+
                 var copyBtn = document.createElement('button');
                 copyBtn.className = 'tr-btn';
                 copyBtn.textContent = 'Copy link';
@@ -44450,6 +44516,7 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 monitoringBtn.style.cssText = 'font-size:10px;padding:3px 8px;border-color:' + (monitoringBtnCount ? '#4ade80' : '#64748b') + ';color:' + (monitoringBtnCount ? '#4ade80' : '#94a3b8') + ';';
                 monitoringBtn.onclick = (function(id,label){ return function(){ openTcMonitoring(id,label); }; })(c.id,(c.name||c.domain||'Tracker client'));
 
+                btnRow.appendChild(nameBtn);
                 btnRow.appendChild(toggleBtn);
                 btnRow.appendChild(monitoringBtn);
                 btnRow.appendChild(domainsBtn);
