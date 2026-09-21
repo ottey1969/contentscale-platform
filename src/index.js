@@ -1,6 +1,9 @@
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-21-CANONICAL-v142';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-21-CANONICAL-v143';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 const CONTENTSCALE_BUILD_CHANGES = [
+  'tracker-cannibalization-page-evidence-provenance-repair',
+  'tracker-cannibalization-shared-central-engine-for-briefs',
+  'tracker-cannibalization-intent-family-deduplication',
   'quick-scan-ai-citation-headline-nl-en-es',
   'quick-scan-bulk-delete-prospect-token-binding-fix',
   'quick-scan-token-link-fallback-for-legacy-cards',
@@ -2021,7 +2024,7 @@ app.post('/api/tracker-client/:token/pages/:pageId/case-study/start',async(req,r
   const engines={};for(const e of er.rows)engines[e.engine]={raw_text:e.raw_text||'',raw_sources:e.raw_sources||'',brand_recommended:e.brand_recommended,brand_local_result:e.brand_local_result,brand_direct_supported:e.brand_direct_supported,domain_cited:e.domain_cited,exact_page_cited:e.exact_page_cited,citation_urls:e.citation_urls||[],recommended_companies:e.recommended_companies||[],local_result_companies:e.local_result_companies||[],directly_cited_companies:e.directly_cited_companies||[],mentioned_companies:e.mentioned_companies||[],parsed_evidence:e.parsed_evidence||{},revision_cycle:Number(e.revision_cycle||1),verified_at:e.updated_at||e.verified_at};
   const requiredEngines=['google_aio','chatgpt','perplexity','claude','copilot'];
   const engineKeys=new Set(er.rows.map(x=>String(x.engine||'')));
-  const queryEvidence=await pool.query('SELECT query,clicks,impressions,position,imported_at FROM tracker_gsc_queries WHERE tracker_client_id=$1 AND page_id=$2 ORDER BY impressions DESC,query LIMIT 500',[client.id,page.id]).catch(()=>({rows:[]}));
+  const queryEvidence=await pool.query("SELECT query,clicks,impressions,position,imported_at FROM tracker_gsc_queries WHERE tracker_client_id=$1 AND page_id=$2 AND evidence_scope='page_verified' ORDER BY impressions DESC,query LIMIT 500",[client.id,page.id]).catch(()=>({rows:[]}));
   const hasGscPage=[page.gsc_clicks,page.gsc_impressions,page.gsc_position].some(v=>v!==null&&v!==undefined);
   const baselineMissing=[];
   if(!String(client.email||'').trim())baselineMissing.push('Tracker client email');
@@ -2045,9 +2048,10 @@ app.post('/api/tracker-client/:token/pages/:pageId/case-study/start',async(req,r
 }catch(e){console.error('[case-study-start]',e.message);res.status(500).json({success:false,error:e.message});}});
 
 // POST /pages/:pageId/baseline-gsc — per-URL baseline prep for a CASE STUDY (not monitoring).
-// Couples the client's existing GSC Queries to THIS url so the case-study baseline checklist can
-// see them, reports GSC freshness, and returns the current readiness. It deliberately does NOT
-// stamp the monitoring gate (monitoring stays site-wide) and NEVER touches a locked baseline.
+// Reads verified queries already scoped to THIS exact URL and, when GSC is connected,
+// fetches them through an exact-page API filter. It never re-labels site-wide queries as
+// page evidence. It deliberately does NOT stamp the monitoring gate (monitoring stays
+// site-wide) and NEVER touches a locked baseline.
 app.post('/api/tracker-client/:token/pages/:pageId/baseline-gsc',async(req,res)=>{try{
   await _ensureCaseStudySchema();
   const cr=await pool.query("SELECT * FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status<>'deleted')",[req.params.token]);
@@ -2060,18 +2064,25 @@ app.post('/api/tracker-client/:token/pages/:pageId/baseline-gsc',async(req,res)=
   const existing=await pool.query("SELECT id,status,baseline_locked FROM tracker_case_studies WHERE tracker_client_id=$1 AND canonical_url=$2 ORDER BY id DESC LIMIT 1",[client.id,_caseStudyNormUrl(page.url)]).catch(()=>({rows:[]}));
   if(existing.rows.length&&(existing.rows[0].status==='active'||existing.rows[0].baseline_locked))
     return res.status(409).json({success:false,baseline_locked:true,error:'A locked case-study baseline already exists for this URL. It cannot be overwritten. Use a new revision cycle instead.'});
-  // Couple queries to THIS url: prefer rows already scoped to the page; otherwise copy the site-wide rows.
-  const scoped=await pool.query('SELECT query,clicks,impressions,position FROM tracker_gsc_queries WHERE tracker_client_id=$1 AND page_id=$2',[client.id,page.id]).catch(()=>({rows:[]}));
-  let coupled=scoped.rows.length;
-  if(!scoped.rows.length){
-    const site=await pool.query('SELECT query,clicks,impressions,position FROM tracker_gsc_queries WHERE tracker_client_id=$1 AND page_id IS NULL',[client.id]).catch(()=>({rows:[]}));
-    for(const q of site.rows){
-      await pool.query('INSERT INTO tracker_gsc_queries (tracker_client_id,page_id,query,clicks,impressions,position,imported_at) VALUES($1,$2,$3,$4,$5,$6,NOW())',[client.id,page.id,q.query,q.clicks||0,q.impressions||0,q.position==null?null:q.position]).catch(()=>{});
-    }
-    coupled=site.rows.length;
+  /* CONTENTSCALE-AI-HANDOFF-V143 — NEVER RESTORE THE OLD COPY FALLBACK.
+   * The former code copied every site-wide query into this page and then the
+   * cannibalization panel treated those copies as page proof. That created 75
+   * false Perfect Roofing Team conflicts, including identical metrics on FAQs,
+   * snow-removal and new-roof pages. Baseline prep now accepts ONLY verified
+   * per-page evidence. When GSC is connected it fetches that evidence itself.
+   */
+  let scoped=await pool.query("SELECT query,clicks,impressions,position FROM tracker_gsc_queries WHERE tracker_client_id=$1 AND page_id=$2 AND evidence_scope='page_verified'",[client.id,page.id]).catch(()=>({rows:[]}));
+  let fetched=false,fetchNote=null;
+  if(!scoped.rows.length&&_gscServiceAccount){
+    try{
+      const fetchedResult=await _gscFetchVerifiedPageQueries(client.id,page.id,page.url);
+      fetched=!!fetchedResult.property_found;fetchNote=fetchedResult.reason||null;
+      scoped=await pool.query("SELECT query,clicks,impressions,position FROM tracker_gsc_queries WHERE tracker_client_id=$1 AND page_id=$2 AND evidence_scope='page_verified'",[client.id,page.id]).catch(()=>({rows:[]}));
+    }catch(e){fetchNote=String(e.message||e).slice(0,300);}
   }
+  const coupled=scoped.rows.length;
   // Freshness: newest imported_at among this URL's query rows (7-day rule).
-  const fr=await pool.query('SELECT MAX(imported_at) AS newest FROM tracker_gsc_queries WHERE tracker_client_id=$1 AND page_id=$2',[client.id,page.id]).catch(()=>({rows:[{newest:null}]}));
+  const fr=await pool.query("SELECT MAX(imported_at) AS newest FROM tracker_gsc_queries WHERE tracker_client_id=$1 AND page_id=$2 AND evidence_scope='page_verified'",[client.id,page.id]).catch(()=>({rows:[{newest:null}]}));
   const newest=fr.rows[0]&&fr.rows[0].newest?new Date(fr.rows[0].newest):null;
   const ageDays=newest?Math.floor((Date.now()-newest.getTime())/86400000):null;
   const gsc_fresh=ageDays!=null&&ageDays<=7;
@@ -2090,7 +2101,7 @@ app.post('/api/tracker-client/:token/pages/:pageId/baseline-gsc',async(req,res)=
   if(!page.html_content&&!page.has_html_content)missing.push('HTML');
   const ready=missing.length===0;
   console.log('[baseline-gsc] page',page.id,'coupled',coupled,'queries · fresh',gsc_fresh,'· ready',ready);
-  return res.json({success:true,coupled_queries:coupled,gsc_fresh,gsc_age_days:ageDays,gsc_last_imported:newest?newest.toISOString():null,gsc_pages:hasGscPage,ai_checked:aiChecked,ai_required:5,ready,missing,note:gsc_fresh?'Baseline GSC is fresh and coupled to this URL.':(ageDays==null?'No GSC query data found — import GSC Queries first.':'Baseline GSC coupled, but it is '+ageDays+' days old — refresh GSC before locking the baseline for an accurate before/after.')});
+  return res.json({success:true,coupled_queries:coupled,gsc_fresh,gsc_age_days:ageDays,gsc_last_imported:newest?newest.toISOString():null,gsc_pages:hasGscPage,ai_checked:aiChecked,ai_required:5,ready,missing,evidence_scope:coupled?'page_verified':'missing',auto_fetched:fetched,fetch_note:fetchNote,note:gsc_fresh?'Verified per-page GSC evidence is fresh for this URL.':(ageDays==null?'No verified per-page GSC query data found — connect GSC or import that page’s Queries export.':'Verified per-page GSC evidence is '+ageDays+' days old — refresh GSC before locking the baseline.')});
 }catch(e){console.error('[baseline-gsc]',e.message);res.status(500).json({success:false,error:e.message});}});
 
 // GET /api/tracker-client/:token — get client data + pages
@@ -2147,7 +2158,7 @@ app.get('/api/tracker-client/:token', async (req, res) => {
               p.ranking_brief, p.needs_html, p.brief_started_at, p.brief_content, p.brief_check_count,
               p.html_pasted_at, p.html_source, p.last_graaf_score, p.brief_mode, p.revision_cycle,
               (p.html_content IS NOT NULL AND p.html_content != '') as has_html_content,
-              EXISTS(SELECT 1 FROM tracker_gsc_queries q WHERE q.tracker_client_id=p.tracker_client_id AND q.page_id=p.id) as has_gsc_queries,
+              EXISTS(SELECT 1 FROM tracker_gsc_queries q WHERE q.tracker_client_id=p.tracker_client_id AND q.page_id=p.id AND q.evidence_scope='page_verified') as has_gsc_queries,
               p.redirects_to,
               p.gsc_autofetch_checked_at, p.aio_manual_text, p.aio_manual_refs, p.brief_viewed_at,
               s.google_position, s.ai_google_overview_cited, s.ai_google_overview_text, s.ai_google_overview_found, s.ai_perplexity_cited,
@@ -2414,7 +2425,7 @@ app.post('/api/tracker-client/:token/sitemap-links', async (req, res) => {
     try {
       const norm = (u) => { try { const x = new URL(u); return (x.hostname.replace(/^www\./,'') + x.pathname.replace(/\/+$/,'')).toLowerCase(); } catch(e) { return String(u||'').toLowerCase(); } };
       // Pages Google actually shows (any GSC row with impressions) — these are "live"
-      const gscR = await pool.query('SELECT DISTINCT p.url FROM tracker_pages p JOIN tracker_gsc_queries q ON q.page_id = p.id WHERE p.tracker_client_id=$1 AND q.impressions > 0', [client.id]).catch(()=>({rows:[]}));
+      const gscR = await pool.query("SELECT DISTINCT p.url FROM tracker_pages p JOIN tracker_gsc_queries q ON q.page_id = p.id WHERE p.tracker_client_id=$1 AND q.impressions > 0 AND q.evidence_scope='page_verified'", [client.id]).catch(()=>({rows:[]}));
       const liveSet = new Set(gscR.rows.map(r => norm(r.url)));
       const trackedSet = new Set(trackedPages.map(p => norm(p.url)));
       if (liveSet.size || trackedSet.size) {
@@ -3121,10 +3132,10 @@ app.post('/api/tracker-client/:token/gsc-queries', async (req, res) => {
     const clientId = cr.rows[0].id;
     const queries = Array.isArray(req.body.queries) ? req.body.queries.slice(0, 500) : [];
     if (!queries.length) return res.json({ success: true, saved: 0 });
-    let pageId = null;
+    let pageId = null, pageUrl = null;
     if (req.body.page_id) {
-      const own = await pool.query('SELECT id FROM tracker_pages WHERE id=$1 AND tracker_client_id=$2', [req.body.page_id, clientId]);
-      if (own.rows.length) pageId = own.rows[0].id;
+      const own = await pool.query('SELECT id,url FROM tracker_pages WHERE id=$1 AND tracker_client_id=$2', [req.body.page_id, clientId]);
+      if (own.rows.length) { pageId = own.rows[0].id; pageUrl = own.rows[0].url; }
     }
     if(pageId){
       const gate=await _caseStudyGscInputAllowed(clientId,pageId);
@@ -3138,8 +3149,8 @@ app.post('/api/tracker-client/:token/gsc-queries', async (req, res) => {
       if (!text) continue;
       try {
         await pool.query(
-          'INSERT INTO tracker_gsc_queries (tracker_client_id, page_id, query, clicks, impressions, position) VALUES ($1,$2,$3,$4,$5,$6)',
-          [clientId, pageId, text, Math.round(q.clicks || 0), Math.round(q.impressions || 0), q.position || null]
+          'INSERT INTO tracker_gsc_queries (tracker_client_id,page_id,query,clicks,impressions,position,evidence_scope,evidence_source,source_page_url) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)',
+          [clientId,pageId,text,Math.round(q.clicks||0),Math.round(q.impressions||0),q.position||null,pageId?'page_verified':'sitewide',pageId?'page_csv':'sitewide_csv',pageId?pageUrl:null]
         );
         saved++;
       } catch(e) { failed++; console.error('[gsc-queries] insert failed:', text.slice(0,60), e.message); }
@@ -3159,7 +3170,7 @@ app.post('/api/tracker-client/:token/gsc-queries', async (req, res) => {
       await pool.query(`UPDATE tracker_pages p SET monitoring_gsc_queries_at=NOW()
         WHERE p.tracker_client_id=$1 AND p.monitoring_waiting_input=TRUE
         AND EXISTS(SELECT 1 FROM tracker_case_studies cs WHERE cs.tracker_client_id=p.tracker_client_id AND cs.tracker_page_id=p.id AND cs.status='active')
-        AND EXISTS(SELECT 1 FROM tracker_gsc_queries q WHERE q.tracker_client_id=p.tracker_client_id AND q.page_id=p.id)`,[clientId]);
+        AND EXISTS(SELECT 1 FROM tracker_gsc_queries q WHERE q.tracker_client_id=p.tracker_client_id AND q.page_id=p.id AND q.evidence_scope='page_verified')`,[clientId]);
     }
     res.json({ success: true, saved, failed, total: queries.length, page_id: pageId });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
@@ -3170,7 +3181,7 @@ app.get('/api/tracker-client/:token/gsc-queries', async (req, res) => {
   try {
     const cr = await pool.query('SELECT id, sitemap_urls, gap_analysis, gap_analysis_at, gap_done_queries FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status != $2)', [req.params.token, 'deleted']);
     if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
-    const r = await pool.query('SELECT query, clicks, impressions, position, page_id, imported_at FROM tracker_gsc_queries WHERE tracker_client_id=$1 ORDER BY impressions DESC LIMIT 500', [cr.rows[0].id]);
+    const r = await pool.query('SELECT query,clicks,impressions,position,page_id,imported_at,evidence_scope,evidence_source,source_page_url FROM tracker_gsc_queries WHERE tracker_client_id=$1 ORDER BY impressions DESC LIMIT 1000', [cr.rows[0].id]);
     let sitemapSlugs = [];
     try {
       const sm = JSON.parse(cr.rows[0].sitemap_urls || '[]');
@@ -3289,6 +3300,42 @@ app.get('/api/tracker-client/:token/gsc-autofetch-status', async (req, res) => {
   res.json({ success: true, available: true, service_account_email: _gscServiceAccount.client_email || null });
 });
 
+/* CONTENTSCALE-AI-HANDOFF-V143 — VERIFIED PER-PAGE GSC WRITER
+ * This is the ONLY automatic writer that may create `page_verified` query rows.
+ * It sends an exact page filter to Search Console, waits for a successful reply,
+ * then replaces only earlier verified rows inside one transaction. It NEVER
+ * copies the site-wide query set. Legacy rows stay preserved but quarantined.
+ * Both baseline preparation and the Tracker button must reuse this helper.
+ */
+async function _gscFetchVerifiedPageQueries(clientId,pageId,pageUrl){
+  if(!_gscServiceAccount)return{available:false,reason:'not_configured',saved:0,total:0};
+  const accessToken=await _gscGetAccessToken();
+  const siteFmt=await _gscFindSiteFormat(accessToken,pageUrl);
+  if(!siteFmt)return{available:true,property_found:false,reason:'property_not_found',saved:0,total:0};
+  const endDate=new Date().toISOString().split('T')[0];
+  const startDate=new Date(Date.now()-90*24*60*60*1000).toISOString().split('T')[0];
+  const rows=await _gscQueryRows(accessToken,siteFmt,pageUrl,['query'],startDate,endDate,500);
+  const db=await pool.connect();let saved=0,failed=0;
+  try{
+    await db.query('BEGIN');
+    await db.query("DELETE FROM tracker_gsc_queries WHERE tracker_client_id=$1 AND page_id=$2 AND evidence_scope='page_verified'",[clientId,pageId]);
+    for(const r of rows){
+      const text=String(r.keys&&r.keys[0]||'').trim().substring(0,300);if(!text)continue;
+      try{
+        await db.query(`INSERT INTO tracker_gsc_queries
+          (tracker_client_id,page_id,query,clicks,impressions,position,evidence_scope,evidence_source,source_page_url,imported_at)
+          VALUES($1,$2,$3,$4,$5,$6,'page_verified','gsc_api',$7,NOW())`,
+          [clientId,pageId,text,Math.round(r.clicks||0),Math.round(r.impressions||0),r.position==null?null:r.position,pageUrl]);
+        saved++;
+      }catch(e){failed++;}
+    }
+    await db.query('COMMIT');
+  }catch(e){await db.query('ROLLBACK').catch(()=>{});throw e;}finally{db.release();}
+  await _ensureMonitoringGateSchema();
+  await pool.query('UPDATE tracker_pages SET gsc_autofetch_checked_at=NOW(),monitoring_gsc_pages_at=NOW(),monitoring_gsc_queries_at=NOW() WHERE id=$1 AND tracker_client_id=$2',[pageId,clientId]).catch(()=>{});
+  return{available:true,property_found:true,saved,failed,total:rows.length,page_url:pageUrl,site_format:siteFmt};
+}
+
 // POST /api/tracker-client/:token/gsc-autofetch-page — pulls the FULL query breakdown for ONE
 // specific page directly from the Search Console API via the Service Account (same data a manual
 // GSC → Pages → click page → Queries → Export gives), and saves it with page_id set — exactly
@@ -3307,34 +3354,12 @@ app.post('/api/tracker-client/:token/gsc-autofetch-page', async (req, res) => {
     const gate=await _caseStudyGscInputAllowed(cr.rows[0].id,pageId);
     if(!gate.allowed)return _caseStudyGscLockedResponse(res,gate);
 
-    const accessToken = await _gscGetAccessToken();
-    const siteFmt = await _gscFindSiteFormat(accessToken, pageUrl);
-    if (!siteFmt) {
+    const result=await _gscFetchVerifiedPageQueries(cr.rows[0].id,pageId,pageUrl);
+    if (!result.property_found) {
       return res.status(404).json({ success: false, error: 'This Search Console property has not granted access to ' + (_gscServiceAccount.client_email || 'the service account') + ' yet. Add it as a user in GSC → Settings → Users and permissions → Add user (Restricted is enough) — or use manual CSV import instead.', code: 'GSC_PROPERTY_NOT_FOUND', service_account_email: _gscServiceAccount.client_email || null });
     }
-    const endDate = new Date().toISOString().split('T')[0];
-    const startDate = new Date(Date.now() - 90*24*60*60*1000).toISOString().split('T')[0];
-    const rows = await _gscQueryRows(accessToken, siteFmt, pageUrl, ['query'], startDate, endDate, 500);
-
-    await pool.query('DELETE FROM tracker_gsc_queries WHERE tracker_client_id=$1 AND page_id=$2', [cr.rows[0].id, pageId]);
-    let saved = 0, failed = 0;
-    for (const r of rows) {
-      const text = String(r.keys?.[0] || '').trim().substring(0, 300);
-      if (!text) continue;
-      try {
-        await pool.query(
-          'INSERT INTO tracker_gsc_queries (tracker_client_id, page_id, query, clicks, impressions, position) VALUES ($1,$2,$3,$4,$5,$6)',
-          [cr.rows[0].id, pageId, text, Math.round(r.clicks||0), Math.round(r.impressions||0), r.position||null]
-        );
-        saved++;
-      } catch(e) { failed++; }
-    }
-    console.log(`[gsc-autofetch] ${pageUrl} => ${saved} queries saved, ${failed} failed (site format: ${siteFmt})`);
-    // Mark this page as checked EVEN when GSC had zero data — otherwise a low-traffic page
-    // (genuinely nothing to fetch) stays stuck showing "left" forever with no way to dismiss it.
-    await _ensureMonitoringGateSchema();
-    await pool.query('UPDATE tracker_pages SET gsc_autofetch_checked_at=NOW(),monitoring_gsc_pages_at=NOW(),monitoring_gsc_queries_at=NOW() WHERE id=$1', [pageId]).catch(()=>{});
-    res.json({ success: true, saved, failed, total: rows.length, page_url: pageUrl });
+    console.log(`[gsc-autofetch] ${pageUrl} => ${result.saved} verified queries saved, ${result.failed||0} failed (site format: ${result.site_format})`);
+    res.json({ success:true,saved:result.saved,failed:result.failed||0,total:result.total,page_url:pageUrl,evidence_scope:'page_verified',evidence_source:'gsc_api' });
   } catch(e) {
     console.error('[gsc-autofetch] error:', e.message);
     res.status(502).json({ success: false, error: 'GSC API error: ' + e.message + ' — use manual CSV import instead.' });
@@ -4204,8 +4229,10 @@ async function _trackerBuildDerivedIntelligence(clientId,pageId){
   const sources=Array.from(srcMap.values()).map(o=>({host:o.host,urls:Array.from(o.urls),engines:Array.from(o.engines),engine_count:o.engines.size,own_domain:o.own_domain})).sort((a,b)=>b.engine_count-a.engine_count||a.host.localeCompare(b.host)).slice(0,80);
   let growthQueries=[];
   try{
+    /* CONTENTSCALE-AI-HANDOFF-V143: growth-query advice is page-specific too.
+       Legacy copied rows must not leak back into briefs through this side path. */
     const gq=await pool.query(`SELECT query,clicks,impressions,position
-      FROM tracker_gsc_queries WHERE tracker_client_id=$1 AND page_id=$2
+      FROM tracker_gsc_queries WHERE tracker_client_id=$1 AND page_id=$2 AND evidence_scope='page_verified'
       AND impressions>=20 ORDER BY impressions DESC,position ASC NULLS LAST LIMIT 30`,[clientId,pageId]);
     const seed=_trackerIntelKey(page.keyword||page.gsc_keyword||'');
     growthQueries=gq.rows.filter(q=>_trackerIntelKey(q.query)!==seed&&Number(q.position||0)>10).slice(0,12).map(q=>{
@@ -5176,34 +5203,32 @@ app.get('/api/tracker-client/:token/gsc-pages', async (req, res) => {
  * HANDOVER NOTES (read this if you are taking over this feature):
  *
  * PROBLEM THIS SOLVES:
- *   Multiple pages on the same site can compete for the same Google queries
- *   ("keyword cannibalization"). That splits clicks/impressions and dilutes
- *   ranking, so the site loses traffic. The OLD detector below only grouped by
- *   exact keyword/intent, never picked a winner, gave no advice, and its output
- *   never reached the editor's brief. This helper fixes all three.
+ *   Multiple pages can appear for the same Google query, but overlap is not
+ *   automatically harmful cannibalization. The earlier implementation created
+ *   false evidence by copying site-wide query rows to individual pages. This
+ *   engine accepts verified per-page evidence only, groups query variants and
+ *   sends the same conservative result to both Tracker and Citation Brief.
  *
  * WHAT THIS HELPER DOES (deterministic — no AI needed):
- *   1. Groups the client's pages into overlap groups that share GSC query terms
- *      (falls back to shared keyword/intent when GSC queries are thin).
- *   2. Within each group, ranks pages by GSC strength (impressions first, then
- *      better/lower average position) to pick the WINNER (the page to KEEP).
- *   3. Emits a recommendation per group: KEEP the winner, 301 the weaker
- *      page(s) -> winner, OR "keep separate" when the pages are legitimately
- *      different intent (see SEPARATE_INTENT_HINTS) so we never wrongly merge
- *      e.g. /residential-roofing/ with /commercial-roofing/.
+ *   1. Groups verified per-page GSC query overlap and clusters close variants
+ *      with the same page set into one intent family.
+ *   2. Ranks a provisional owner by query-to-page relevance, then query-level
+ *      position/clicks/impressions. Site-wide or page-total metrics are not
+ *      accepted as page ownership proof.
+ *   3. Emits either keep_separate, differentiate, or consolidate_candidate.
+ *      The last value is a review candidate only; no redirect is executed.
+ *   4. Keeps keyword-only similarity visible as LIKELY, never verified.
  *
- * WHY DETERMINISTIC + AI, NOT AI-ONLY:
- *   The requirement is: the advice must ALWAYS reach the editor in the brief,
- *   even if the external AI returns nothing. So the server computes a baseline
- *   recommendation here; the AI may later ENRICH it (nuanced keep-separate
- *   calls), but this server output is the safety net that always lands in the
- *   brief (see the "=== CANNIBALIZATION BRIEF ===" section in the brief builder).
+ * WHY ONE CENTRAL DETERMINISTIC ENGINE:
+ *   Tracker and Citation Brief must never disagree. Do not recreate a raw SQL
+ *   self-join inside another route. Add filters or classifications here and let
+ *   every consumer reuse analyzeCannibalization(). External AI may explain the
+ *   evidence, but may not silently upgrade LIKELY evidence to verified.
  *
  * WHAT THIS HELPER DOES *NOT* DO (by design, Phase 1):
- *   It does NOT execute anything. No 301s are written, no menu/links changed.
- *   Execution stays with the human (paste into Rank Math). Phase 2 (a WordPress
- *   REST-API connection with dry-run + approval + rollback) can later act on the
- *   exact same recommendation object this helper returns.
+ *   It does NOT execute anything. No 301s, canonicals, deletions or content
+ *   changes are written. Any future WordPress integration must use dry-run,
+ *   explicit approval and rollback, and must not act on overlap alone.
  *
  * INPUT:  clientId (number)
  * OUTPUT: { groups: [ {
@@ -5340,16 +5365,41 @@ function _cannibalRankByRelevance(pages, queryNorm) {
   });
 }
 
+function _cannibalTokenSimilarity(a,b){
+  const aa=new Set(_cannibalNorm(a).split(' ').filter(x=>x.length>2)),bb=new Set(_cannibalNorm(b).split(' ').filter(x=>x.length>2));
+  if(!aa.size||!bb.size)return 0;let hit=0;aa.forEach(x=>{if(bb.has(x))hit++;});
+  return hit/(aa.size+bb.size-hit);
+}
+function _cannibalClusterGroups(groups){
+  // CONTENTSCALE-AI-HANDOFF-V143: Query variants with the same competing page
+  // set are one intent family, not dozens of separate "conflicts". Preserve all
+  // raw query variants as evidence while showing one actionable family.
+  const out=[];
+  groups.slice().sort((a,b)=>Number(b.total_impressions||0)-Number(a.total_impressions||0)).forEach(g=>{
+    const ids=g.pages.map(p=>String(p.id)).sort().join(',');
+    const target=out.find(x=>x._page_key===ids&&_cannibalTokenSimilarity(x.shared,g.shared)>=0.5);
+    if(!target){g._page_key=ids;g.shared_queries=[g.shared];out.push(g);return;}
+    if(!target.shared_queries.includes(g.shared))target.shared_queries.push(g.shared);
+    target.total_impressions=Number(target.total_impressions||0)+Number(g.total_impressions||0);
+    target.query_variants=target.shared_queries.length;
+  });
+  return out.map(g=>{delete g._page_key;g.intent_family=g.shared;g.query_variants=(g.shared_queries||[g.shared]).length;return g;});
+}
+
 // Core analysis. Returns the recommendation object described in the header above.
 async function analyzeCannibalization(clientId) {
-  // Pull pages + their GSC metrics. tracker_gsc_queries holds the per-URL query
-  // rows (page_id != null) we couple during baseline prep; we use them to find
-  // pages that share the SAME query term = true cannibalization signal.
+  /* CONTENTSCALE-AI-HANDOFF-V143 — DETECTOR SEMANTICS
+   * A shared verified page query proves URL overlap only. It does NOT by itself
+   * prove harmful cannibalization and must not trigger an automatic redirect,
+   * canonical or deletion. The detector therefore returns evidence level plus
+   * a provisional recommendation; the owner still reviews search intent.
+   * Only `evidence_scope='page_verified'` may create a verified-overlap group.
+   */
   const pagesR = await pool.query(
-    `SELECT id, url, keyword,
+    `SELECT id,url,keyword,gsc_keyword,
             gsc_clicks, gsc_impressions, gsc_position
        FROM tracker_pages
-      WHERE tracker_client_id=$1 AND (is_active=TRUE OR is_active IS NULL)`,
+      WHERE tracker_client_id=$1 AND (is_active=TRUE OR is_active IS NULL) AND redirects_to IS NULL`,
     [clientId]
   );
   const byId = {};
@@ -5381,8 +5431,8 @@ async function analyzeCannibalization(clientId) {
   // Map each normalized GSC query -> per-page QUERY metrics. Page totals are not
   // valid evidence for choosing the owner of one query.
   const queriesR = await pool.query(
-    `SELECT page_id, query, clicks, impressions, position, imported_at FROM tracker_gsc_queries
-      WHERE tracker_client_id=$1 AND page_id IS NOT NULL`,
+    `SELECT page_id,query,clicks,impressions,position,imported_at,evidence_scope,evidence_source FROM tracker_gsc_queries
+      WHERE tracker_client_id=$1 AND page_id IS NOT NULL AND evidence_scope='page_verified'`,
     [clientId]
   ).catch(function () { return { rows: [] }; });
 
@@ -5406,7 +5456,7 @@ async function analyzeCannibalization(clientId) {
   function pushGroup(basis, shared, pageEntries) {
     const pages = pageEntries.map(function (entry) {
       const id=entry.page_id||entry.id||entry,p = byId[id]; if (!p) return null;
-      return { id: p.id, url: p.url, keyword: p.keyword,
+      return { id:p.id,url:p.url,keyword:p.keyword||p.gsc_keyword||'',
                clicks: entry.clicks==null?Number(p.gsc_clicks||0):Number(entry.clicks||0),
                impressions: entry.impressions==null?Number(p.gsc_impressions||0):Number(entry.impressions||0),
                position: entry.position==null?(p.gsc_position==null?null:Number(p.gsc_position)):Number(entry.position) };
@@ -5437,6 +5487,7 @@ async function analyzeCannibalization(clientId) {
       keep: { id: keep.id, url: keep.url },
       redirect: exactDuplicate&&!anySeparate ? losers.map(function (l) { return { id: l.id, url: l.url }; }) : [],
       recommendation: recommendation,
+      evidence_level:basis==='gsc_queries'?'PROVEN_OVERLAP':'LIKELY',
       confidence: exactDuplicate||anySeparate?'high':'medium',
       total_impressions: totalImpressions,
       reason: anySeparate
@@ -5454,20 +5505,24 @@ async function analyzeCannibalization(clientId) {
     });
   } else {
     // Fallback: group by exact keyword when no per-URL GSC queries are available.
-    const byKeyword = {};
-    pagesR.rows.forEach(function (p) {
-      const k = _cannibalNorm(p.keyword);
-      if (!k) return;
-      if (!byKeyword[k]) byKeyword[k] = new Set();
-      byKeyword[k].add(p.id);
-    });
-    Object.keys(byKeyword).forEach(function (k) {
-      if (byKeyword[k].size > 1) pushGroup('keyword', k,Array.from(byKeyword[k]));
-    });
+    // handled by the partial-evidence keyword fallback below
   }
-  groups.sort(function(a,b){return Number(b.total_impressions||0)-Number(a.total_impressions||0)});
-  const total=groups.length,maxGroups=100;
-  return { groups: groups.slice(0,maxGroups), total: total, truncated:Math.max(0,total-maxGroups),evidence:'query_level_gsc' };
+  // Partial-evidence fallback: a site may have verified GSC rows for only some
+  // pages. Near-identical target keywords on the remaining pages stay visible
+  // as LIKELY, never as proven. Do not wait until the entire query table is empty.
+  const provenPairs=new Set();
+  groups.forEach(g=>{const ids=g.pages.map(p=>Number(p.id)).sort((a,b)=>a-b);for(let i=0;i<ids.length;i++)for(let j=i+1;j<ids.length;j++)provenPairs.add(ids[i]+':'+ids[j]);});
+  for(let i=0;i<pagesR.rows.length;i++)for(let j=i+1;j<pagesR.rows.length;j++){
+    const a=pagesR.rows[i],b=pagesR.rows[j],pair=[Number(a.id),Number(b.id)].sort((x,y)=>x-y).join(':');
+    if(provenPairs.has(pair))continue;
+    const ak=_cannibalNorm(a.keyword||a.gsc_keyword),bk=_cannibalNorm(b.keyword||b.gsc_keyword);
+    if(!ak||!bk||_cannibalIsBrandQuery(ak,brandTokens,brandConcat)||_cannibalIsBrandQuery(bk,brandTokens,brandConcat))continue;
+    if(_cannibalTokenSimilarity(ak,bk)>=0.7)pushGroup('keyword',ak+' ↔ '+bk,[a.id,b.id]);
+  }
+  const clustered=_cannibalClusterGroups(groups);
+  clustered.sort(function(a,b){return Number(b.total_impressions||0)-Number(a.total_impressions||0)});
+  const total=clustered.length,maxGroups=100;
+  return {groups:clustered.slice(0,maxGroups),total,truncated:Math.max(0,total-maxGroups),evidence:'verified_page_gsc',legacy_rows_excluded:true};
 }
 
 // GET /api/tracker-client/:token/pages/check-cannibalization
@@ -5484,7 +5539,7 @@ app.get('/api/tracker-client/:token/pages/check-cannibalization', async (req, re
     // Back-compat shape for older callers that expect cannibalization_issues[].
     const legacyIssues = analysis.groups.map(function (g) {
       return {
-        type: g.basis === 'gsc_queries' ? 'query_overlap' : 'keyword_duplicate',
+        type:g.basis==='gsc_queries'?'verified_query_overlap':'keyword_similarity',
         shared: g.shared,
         count: g.pages.length,
         pages: g.pages.map(function (p) { return { id: p.id, url: p.url, keyword: p.keyword }; }),
@@ -5495,7 +5550,9 @@ app.get('/api/tracker-client/:token/pages/check-cannibalization', async (req, re
         confidence: g.confidence,
         total_impressions: g.total_impressions,
         evidence: analysis.evidence,
-        severity: g.recommendation === 'consolidate_candidate' ? 'high' : 'medium'
+        evidence_level:g.evidence_level,
+        shared_queries:g.shared_queries||[g.shared],
+        severity:g.recommendation==='consolidate_candidate'?'high':(g.evidence_level==='PROVEN_OVERLAP'?'medium':'low')
       };
     });
 
@@ -5504,7 +5561,7 @@ app.get('/api/tracker-client/:token/pages/check-cannibalization', async (req, re
       cannibalization: analysis,             // rich (winner + 301 advice)
       cannibalization_issues: legacyIssues,  // legacy shape
       total_issues: legacyIssues.length,
-      message: legacyIssues.length > 0 ? 'Cannibalization detected!' : 'No cannibalization detected'
+      message:legacyIssues.length>0?'Overlap signals found — review intent before acting.':'No overlap signals detected'
     });
   } catch (e) { res.status(500).json({ success: false, error: e.message }); }
 });
@@ -5513,12 +5570,10 @@ app.get('/api/tracker-client/:token/pages/check-cannibalization', async (req, re
  * GET /api/tracker-client/:token/pages/cannibalization-verdict (Phase 1, improvement B)
  * ----------------------------------------------------------------------------
  * HANDOVER NOTES (for the next AI/dev):
- *   Improvement A made the deterministic groups saner (brand filter + relevance
- *   winner). This endpoint adds the "AI looks at it before you act" layer the
- *   owner asked for: it sends the deterministic groups to the external AI and
- *   asks for a FINAL VERDICT per group — is this real cannibalization, which URL
- *   should truly be kept, 301 vs keep-separate, and why — in plain language the
- *   editor can trust.
+ *   Optional explanation layer over the central evidence engine. AI may classify
+ *   intent and explain a review, but it is not an evidence source: it may never
+ *   turn LIKELY into verified or authorize a redirect. Keep URL choices are
+ *   constrained to URLs already present in the verified group.
  *
  *   FLOW:
  *     1. analyzeCannibalization() -> deterministic groups (the evidence).
@@ -5542,7 +5597,7 @@ app.get('/api/tracker-client/:token/pages/cannibalization-verdict', async (req, 
 
     const analysis = await analyzeCannibalization(cr.rows[0].id);
     if (!analysis.groups.length) {
-      return res.json({ success: true, cannibalization: analysis, ai_applied: false, message: 'No cannibalization detected' });
+      return res.json({ success: true, cannibalization: analysis, ai_applied: false, message: 'No overlap signals detected' });
     }
 
     // Compact evidence for the AI: only what it needs to judge (URLs + GSC stats).
@@ -5591,10 +5646,12 @@ app.get('/api/tracker-client/:token/pages/cannibalization-verdict', async (req, 
       verdicts.forEach(function (v) {
         const g = analysis.groups[v && v.i];
         if (!g) return;
+        const allowedUrls=new Set((g.pages||[]).map(function(p){return p.url;}));
+        const allowedActions=new Set(['consolidate_candidate','differentiate','keep_separate']);
         g.ai = {
-          is_cannibalization: v.is_cannibalization !== false,
-          keep_url: v.keep_url || (g.keep ? g.keep.url : null),
-          action: v.action || g.recommendation,
+          is_cannibalization: v.is_cannibalization === true,
+          keep_url: allowedUrls.has(v.keep_url) ? v.keep_url : (g.keep ? g.keep.url : null),
+          action: allowedActions.has(v.action) ? v.action : g.recommendation,
           reason: v.reason || g.reason
         };
       });
@@ -8541,6 +8598,16 @@ app.patch('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
   )`).catch(()=>{});
   await client.query(`CREATE INDEX IF NOT EXISTS tracker_gsc_queries_client_idx ON tracker_gsc_queries(tracker_client_id)`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_gsc_queries ADD COLUMN IF NOT EXISTS page_id INTEGER`).catch(()=>{});
+  // CONTENTSCALE-AI-HANDOFF-V143 — CANNIBALIZATION EVIDENCE CONTRACT
+  // NEVER infer page ownership by copying a site-wide query row and assigning page_id.
+  // `page_verified` is reserved for a real per-page GSC API response or a per-page
+  // GSC CSV selected by the owner. Existing rows deliberately become
+  // `legacy_unverified`; they remain preserved for history/baselines but MUST NOT
+  // be used to claim verified overlap or generate a cannibalization brief.
+  await client.query(`ALTER TABLE tracker_gsc_queries ADD COLUMN IF NOT EXISTS evidence_scope VARCHAR(32) DEFAULT 'legacy_unverified'`).catch(()=>{});
+  await client.query(`ALTER TABLE tracker_gsc_queries ADD COLUMN IF NOT EXISTS evidence_source VARCHAR(64)`).catch(()=>{});
+  await client.query(`ALTER TABLE tracker_gsc_queries ADD COLUMN IF NOT EXISTS source_page_url TEXT`).catch(()=>{});
+  await client.query(`CREATE INDEX IF NOT EXISTS tracker_gsc_queries_verified_page_idx ON tracker_gsc_queries(tracker_client_id,page_id) WHERE evidence_scope='page_verified'`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS lead_name TEXT`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS lead_email TEXT`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS live_wall_enabled BOOLEAN DEFAULT TRUE`).catch(()=>{});
@@ -35642,14 +35709,14 @@ function _finishScanAll(){
 async function setBaselineGsc(pageId, ev) {
   if (ev && ev.stopPropagation) ev.stopPropagation();
   var btn = ev && ev.currentTarget;
-  if (btn) { btn.disabled = true; btn.textContent = 'Coupling…'; }
+  if (btn) { btn.disabled = true; btn.textContent = 'Fetching page GSC…'; }
   try {
     var d = await api('/pages/' + pageId + '/baseline-gsc', 'POST');
     if (!d || !d.success) { toast((d && d.error) || 'Could not set baseline GSC', '#f87171'); return; }
     if (d.ready) {
-      toast('Baseline ready — ' + d.coupled_queries + ' queries coupled' + (d.gsc_fresh ? ' (fresh)' : (d.gsc_age_days != null ? ' (' + d.gsc_age_days + 'd old — consider refreshing GSC)' : '')) + '. You can start the case study.', '#4ade80');
+      toast('Baseline ready — ' + d.coupled_queries + ' verified page queries' + (d.gsc_fresh ? ' (fresh)' : (d.gsc_age_days != null ? ' (' + d.gsc_age_days + 'd old — consider refreshing GSC)' : '')) + '. You can start the case study.', '#4ade80');
     } else {
-      toast('Coupled ' + d.coupled_queries + ' queries. Still missing: ' + (d.missing || []).join(', '), '#f59e0b');
+      toast('Found ' + d.coupled_queries + ' verified page queries. Still missing: ' + (d.missing || []).join(', '), '#f59e0b');
     }
     if (typeof loadPages === 'function') loadPages();
   } catch (e) {
@@ -35657,7 +35724,7 @@ async function setBaselineGsc(pageId, ev) {
     var msg = (e && e.payload && e.payload.error) || (e && e.message) || 'Error';
     toast(msg, e && e.payload && e.payload.baseline_locked ? '#f59e0b' : '#f87171');
   } finally {
-    if (btn) { btn.disabled = false; btn.innerHTML = '\\u2b07 Set baseline GSC (this URL)'; }
+    if (btn) { btn.disabled = false; btn.innerHTML = '\\u2b07 Fetch baseline GSC for this URL'; }
   }
 }
 
@@ -37350,7 +37417,7 @@ function renderPages() {
     var isDone = p.is_done === true || p.is_done === 't' || p.is_done === 'true' || p.is_done === 1;
     var isCaseStudy = p.case_study_active === true || p.case_study_active === 't' || p.case_study_active === 'true' || p.case_study_active === 1;
     var _csr=p.case_study_readiness||{},_csReady=!!_csr.ready,_csMissing=Array.isArray(_csr.missing)?_csr.missing:[];
-    var _caseReadyHtml=!isCaseStudy?'<div style="margin:8px 0 0;padding:9px 11px;border:1px solid '+(_csReady?'#16a34a':'#92400e')+';background:'+(_csReady?'#052e16':'#1c1407')+';border-radius:7px;font-size:10px;line-height:1.6;"><b style="color:'+(_csReady?'#86efac':'#fbbf24')+';">'+(_csReady?'READY — Start case study':'CASE STUDY WAITING FOR BASELINE')+'</b><div style="color:#cbd5e1;margin-top:3px;">'+(_csReady?'All required baseline evidence is present. Start before changing the live page.':('Complete first: '+_csMissing.join(' · ')))+'</div><div style="display:flex;gap:8px;flex-wrap:wrap;color:#94a3b8;margin-top:4px;"><span>'+(_csr.gsc_pages?'✓':'✕')+' GSC Pages</span><span>'+(_csr.gsc_queries?'✓':'✕')+' GSC Queries for URL</span><span>'+((Number(_csr.ai_checked)||0)===5?'✓':'✕')+' AI '+(Number(_csr.ai_checked)||0)+'/5</span><span>'+(_csr.scan?'✓':'✕')+' Page scan</span><span>'+(_csr.html?'✓':'✕')+' HTML</span><span>'+(_csr.email?'✓':'✕')+' Client email</span></div>'+(_csReady?'':'<button onclick="setBaselineGsc('+p.id+',event)" style="margin-top:8px;font-size:10px;font-weight:800;padding:5px 11px;border-radius:6px;background:#0a2540;border:1px solid #2563eb;color:#93c5fd;cursor:pointer;">&#x2b07; Set baseline GSC (this URL)</button><span style="font-size:9px;color:#64748b;margin-left:8px;">couples GSC Queries to this URL &mdash; does not affect monitoring</span>')+'</div>':'';
+    var _caseReadyHtml=!isCaseStudy?'<div style="margin:8px 0 0;padding:9px 11px;border:1px solid '+(_csReady?'#16a34a':'#92400e')+';background:'+(_csReady?'#052e16':'#1c1407')+';border-radius:7px;font-size:10px;line-height:1.6;"><b style="color:'+(_csReady?'#86efac':'#fbbf24')+';">'+(_csReady?'READY — Start case study':'CASE STUDY WAITING FOR BASELINE')+'</b><div style="color:#cbd5e1;margin-top:3px;">'+(_csReady?'All required baseline evidence is present. Start before changing the live page.':('Complete first: '+_csMissing.join(' · ')))+'</div><div style="display:flex;gap:8px;flex-wrap:wrap;color:#94a3b8;margin-top:4px;"><span>'+(_csr.gsc_pages?'✓':'✕')+' GSC Pages</span><span>'+(_csr.gsc_queries?'✓':'✕')+' GSC Queries for URL</span><span>'+((Number(_csr.ai_checked)||0)===5?'✓':'✕')+' AI '+(Number(_csr.ai_checked)||0)+'/5</span><span>'+(_csr.scan?'✓':'✕')+' Page scan</span><span>'+(_csr.html?'✓':'✕')+' HTML</span><span>'+(_csr.email?'✓':'✕')+' Client email</span></div>'+(_csReady?'':'<button onclick="setBaselineGsc('+p.id+',event)" style="margin-top:8px;font-size:10px;font-weight:800;padding:5px 11px;border-radius:6px;background:#0a2540;border:1px solid #2563eb;color:#93c5fd;cursor:pointer;">&#x2b07; Fetch baseline GSC for this URL</button><span style="font-size:9px;color:#64748b;margin-left:8px;">fetches verified per-page GSC evidence &mdash; never copies site-wide queries</span>')+'</div>':'';
     var muteCompletedCard = isDone && !isCaseStudy;
     function _trackerUtc(v){try{return new Date(v).toISOString().replace('T',' ').replace(/\.\d{3}Z$/,' UTC');}catch(e){return '';}}
     var implementationAt = p.implementation_at ? _trackerUtc(p.implementation_at) : '';
@@ -38430,6 +38497,10 @@ async function loadImpressionGap() {
     _gapDone = (d && d.gap_done) || [];
   } catch(e) { console.error('[loadImpressionGap] fetch failed:', e.message); _gapQueries = []; }
   try {
+    var cc=await api('/pages/check-cannibalization','GET');
+    _centralCannibal=(cc&&cc.cannibalization)||null;
+  } catch(e) { console.error('[loadImpressionGap] central cannibalization failed:',e.message); _centralCannibal=null; }
+  try {
     var lc = await api('/link-check', 'GET');
     _linkChecks = (lc && lc.checks) || [];
   } catch(e) { console.error('[loadImpressionGap] link-check failed:', e.message); _linkChecks = []; }
@@ -38637,12 +38708,14 @@ function _computePushables() {
   Object.keys(_pushByPage).forEach(function(k){ _pushByPage[k].sort(function(a,b){ return b.impr - a.impr; }); });
 }
 
-// ── CANNIBALIZATION — pages competing for the same query/keyword. Three evidence levels:
-// PROVEN: the same query appears in TWO pages' per-page Queries CSV exports (Google shows both).
+// ── CANNIBALIZATION — possible page overlap. Three evidence levels:
+// Internal PROVEN = VERIFIED OVERLAP: the same query appears in TWO pages'
+// verified page-scoped GSC results. That proves overlap, not harmful competition.
 // LIKELY: two tracked pages target (near-)identical keywords.
 // POSSIBLE: a site-wide query matches two pages almost equally (ambiguous ownership).
 var _cannibalIssues = [];
 var _cannibalTruncated = 0;
+var _centralCannibal = null;
 function _trackerCannibalIsBrandQuery(query) {
   var qn = _gapNorm(query || '');
   if (!qn) return false;
@@ -38670,10 +38743,11 @@ function _computeCannibal() {
   if (pages.length < 2) { renderCannibal(); return; }
   var pById = {}; pages.forEach(function(p){ pById[p.id] = p; });
 
-  // LEVEL 1 — PROVEN: same normalized query under 2+ different page_ids (per-page CSV evidence)
+  // LEVEL 1 — VERIFIED OVERLAP (internal key PROVEN for backwards compatibility).
   var byQuery = {};
   (_gapQueries||[]).forEach(function(g){
     if (!g.page_id || !pById[g.page_id]) return;
+    if (g.evidence_scope !== 'page_verified') return; // legacy/site-wide copies are never page proof
     var k = _gapNorm(g.query);
     if (!k) return;
     if (!byQuery[k]) byQuery[k] = {};
@@ -38697,7 +38771,7 @@ function _computeCannibal() {
       return (b.impr||0)-(a.impr||0);
     });
     _cannibalIssues.push({ level: 'PROVEN', color: '#f87171', key: q, pages: involved,
-      advice: 'SCAN BOTH PAGES \\u2014 the fix will be written into their briefs, nothing to upload (this is already proven by your own per-page exports). Owner = ' + involved[0].slug + ' (best position). The brief of the other page will tell you to remove/rewrite its competing section and link to ' + involved[0].slug + ' with this query as anchor text.' });
+      advice: 'VERIFIED QUERY OVERLAP \\u2014 page-scoped GSC evidence shows both URLs for this query. This does not by itself prove harmful cannibalization. Scan both pages, compare intent, and differentiate/cross-link only when both should remain. Consolidation requires a verified same-intent duplicate and explicit approval.' });
   });
 
   // LEVEL 2 — LIKELY: tracked keywords that are (near-)identical between pages
@@ -38732,7 +38806,7 @@ function _computeCannibal() {
       } else if (jac >= 0.7) {
         _cannibalIssues.push({ level: 'LIKELY', color: '#fb923c', key: (pages[i].keyword||pages[i].gsc_keyword) + '  \\u2194  ' + (pages[j].keyword||pages[j].gsc_keyword),
           pages: [{ slug: slugOf(pages[i]) }, { slug: slugOf(pages[j]) }],
-          advice: 'SCAN BOTH PAGES \\u2014 the briefs will contain the fix (a new title/H1 for one of them + an internal link), copy-paste ready. Background: these two pages target near-identical keywords and compete with each other. If they truly serve the same purpose, merging (301 the weaker into the stronger) is the alternative; the briefs use the positions to say which one is stronger.' });
+          advice: 'LIKELY KEYWORD OVERLAP only \\u2014 fetch or import page-scoped GSC Queries for both URLs before changing titles, content, canonicals or redirects. Similar target keywords are not proof that Google treats the pages as competing owners.' });
       }
     }
   }
@@ -38761,9 +38835,29 @@ function _computeCannibal() {
       seen[qn] = 1;
       _cannibalIssues.push({ level: 'POSSIBLE', color: '#facc15', key: g.query, impr: g.impressions||0,
         pages: [{ slug: scored[0].pt.slug }, { slug: scored[1].pt.slug }],
-        advice: 'ADD THE STANDALONE GSC QUERIES OF ' + scored[0].pt.slug + ' AND ' + scored[1].pt.slug + ' TO THE TRACKER. Why? The site-wide CSV cannot tell WHICH page Google actually shows for \\u201c' + g.query + '\\u201d \\u2014 only the per-page export can. How: GSC \\u2192 Performance \\u2192 Pages \\u2192 click the page \\u2192 Queries tab \\u2192 Export \\u2192 import here with Query ownership set to that page (one import per page). Then: query shows up for BOTH pages \\u2192 row turns PROVEN and the briefs contain the fix. Only ONE \\u2192 no conflict, ignore this row. Until then: change nothing on your pages. (' + (g.impressions||0).toLocaleString() + ' impressions at stake.)' });
+        advice: 'ADD THE STANDALONE GSC QUERIES OF ' + scored[0].pt.slug + ' AND ' + scored[1].pt.slug + ' TO THE TRACKER. Why? The site-wide CSV cannot tell WHICH page Google actually shows for \\u201c' + g.query + '\\u201d \\u2014 only the per-page export can. How: GSC \\u2192 Performance \\u2192 Pages \\u2192 click the page \\u2192 Queries tab \\u2192 Export \\u2192 import here with Query ownership set to that page (one import per page). Then: query shows up for BOTH pages \\u2192 row becomes VERIFIED OVERLAP and the briefs review the intent. Only ONE \\u2192 no overlap, ignore this row. Until then: change nothing on your pages. (' + (g.impressions||0).toLocaleString() + ' impressions at stake.)' });
     }
   });
+
+  /* CONTENTSCALE-AI-HANDOFF-V143 — CENTRAL ENGINE OWNS RED/ORANGE ROWS.
+   * Keep the local POSSIBLE and STRUCTURE helpers because they are explicitly
+   * unconfirmed guidance. Replace local PROVEN/LIKELY rows with the server's
+   * clustered, provenance-filtered result so the panel and Citation Brief can
+   * no longer disagree about which query evidence is allowed.
+   */
+  if(_centralCannibal&&Array.isArray(_centralCannibal.groups)){
+    _cannibalIssues=_cannibalIssues.filter(function(c){return c.level!=='PROVEN'&&c.level!=='LIKELY';});
+    _centralCannibal.groups.forEach(function(g){
+      var proven=g.evidence_level==='PROVEN_OVERLAP',owner=g.keep&&g.keep.url?g.keep.url:'not assigned';
+      _cannibalIssues.push({
+        level:proven?'PROVEN':'LIKELY',color:proven?'#f87171':'#fb923c',key:(g.intent_family||g.shared)+(g.query_variants>1?' · '+g.query_variants+' query variants':''),
+        pages:(g.pages||[]).map(function(p){return{slug:(function(){try{return new URL(p.url).pathname||'/';}catch(e){return p.url;}})(),pos:p.position,impr:p.impressions,clicks:p.clicks,id:p.id};}),
+        advice:proven
+          ? 'VERIFIED QUERY OVERLAP — real per-page GSC evidence shows these URLs for the same query family. This proves overlap, not automatically harmful cannibalization. Provisional owner: '+owner+'. Review whether the intent is truly the same; differentiate and cross-link when both pages should remain. Consider consolidation only for verified same-intent duplicates and never automatically.'
+          : 'LIKELY OVERLAP — these pages target near-identical keywords but do not yet share verified per-page GSC evidence. Fetch/import each page’s Queries data before changing content, canonicals or redirects.'
+      });
+    });
+  }
 
   var order = { PROVEN: 0, LIKELY: 1, POSSIBLE: 2, STRUCTURE: 3 };
   _cannibalIssues.sort(function(a,b){
@@ -38787,8 +38881,8 @@ function toggleCannAdvice(i) {
   if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
 }
 var _cannMeaning = {
-  PROVEN: 'Google is showing BOTH of these pages for this exact search (proof from their own per-page exports). They steal each other\\u2019s ranking power \\u2014 this one needs fixing.',
-  LIKELY: 'Two of your pages target almost the same keyword. They probably compete with each other in Google.',
+  PROVEN: 'Verified per-page GSC evidence shows both URLs for the same query family. That proves overlap, not automatically harmful cannibalization; review intent before changing either page.',
+  LIKELY: 'Two pages target almost the same keyword, but page-specific GSC evidence does not yet prove that Google shows both. Verify first.',
   POSSIBLE: 'One search term fits two of your pages equally well, so it is UNCLEAR which page owns it. Nothing is broken yet \\u2014 first verify, then act.',
   STRUCTURE: 'A general page and a more specific page (hub + spoke). This is usually the CORRECT setup, not a problem \\u2014 just run the quick check.'
 };
@@ -38830,6 +38924,7 @@ function renderCannibal() {
   var _exportedSlugs = {};
   (_gapQueries||[]).forEach(function(g){
     if (!g.page_id) return;
+    if (g.evidence_scope !== 'page_verified') return;
     var pg = (_pages||[]).find(function(p){ return p.id === g.page_id; });
     if (pg) _exportedSlugs[slugOf(pg)] = 1;
   });
@@ -38861,7 +38956,9 @@ function renderCannibal() {
       + '</div>'
     : '';
 
-  // PROVEN strip: same idea as the POSSIBLE shortcut — the fix lives in each page's brief, which is
+  // VERIFIED-OVERLAP strip: internal level "PROVEN" is retained for backwards-compatible
+  // control flow, but the UI must never call overlap alone proven harmful cannibalization.
+  // Same idea as the POSSIBLE shortcut — the review lives in each page's brief, which is
   // only generated by SCANNING that page. Rather than making the owner hunt for each URL in a list
   // of 57 tracked pages, collect the unique pages behind every PROVEN row and put a Scan button
   // right here, ordered by how many conflicts a scan of that one page would resolve.
@@ -38878,7 +38975,7 @@ function renderCannibal() {
   var _gapNotRunYet = !(_gapAnalysis && _gapAnalysis.families && _gapAnalysis.families.length);
   var provenStrip = (_provenList.length && _provenCount)
     ? '<div style="padding:8px 14px;border-bottom:1px solid #1f2937;background:rgba(248,113,113,.06);font-size:11px;color:#fca5a5;line-height:1.7;">'
-      + '\ud83d\udd34 ' + _provenCount + ' PROVEN rows touch <b>' + _provenList.length + ' unique pages</b>. Scan a page to generate its brief with the exact fix \u2014 no need to search for it below:'
+      + '\ud83d\udd34 ' + _provenCount + ' VERIFIED OVERLAP families touch <b>' + _provenList.length + ' unique pages</b>. Scan a page to generate its evidence-based review \u2014 no need to search for it below:'
       + (_gapNotRunYet ? '<div style="margin-top:4px;color:#fbbf24;">\u26a0\ufe0f If you use the individual Scan buttons below, run \ud83e\udd16 <b>Sort this out for me</b> first (Impression Gap panel above) so each brief captures the gap-family sections too. <b>Scan all</b> does this for you automatically.</div>' : '')
       + '<div style="margin-top:8px;display:flex;justify-content:flex-end;">'
       + (function(){
@@ -38909,8 +39006,8 @@ function renderCannibal() {
       + '</div>'
     : '';
   var legendStrip = '<div style="display:flex;gap:14px;flex-wrap:wrap;padding:7px 14px;border-bottom:1px solid #1f2937;background:#0a0e14;">'
-    + '<span style="font-size:10px;color:#9ca3af;"><b style="color:#f87171;">PROVEN</b> \\u2192 scan both pages, fix comes in the briefs</span>'
-    + '<span style="font-size:10px;color:#9ca3af;"><b style="color:#fb923c;">LIKELY</b> \\u2192 scan both pages, briefs differentiate them</span>'
+    + '<span style="font-size:10px;color:#9ca3af;"><b style="color:#f87171;">VERIFIED OVERLAP</b> \\u2192 same query family on both URLs; review intent before acting</span>'
+    + '<span style="font-size:10px;color:#9ca3af;"><b style="color:#fb923c;">LIKELY</b> \\u2192 similar tracked keywords; fetch page evidence before changing URLs</span>'
     + '<span style="font-size:10px;color:#9ca3af;"><b style="color:#facc15;">POSSIBLE</b> \\u2192 upload BOTH pages\\u2019 Queries CSV first, then see</span>'
     + '<span style="font-size:10px;color:#9ca3af;"><b style="color:#60a5fa;">STRUCTURE</b> \\u2192 check ONE link: general page \\u2192 specific page</span>'
     + '</div>'
@@ -38919,7 +39016,7 @@ function renderCannibal() {
     return '<div onclick="toggleCannAdvice(' + i + ')" style="padding:8px 12px;border-bottom:1px solid #1f2937;cursor:pointer;">'
       + '<div style="display:flex;align-items:flex-start;gap:10px;">'
       + '<span style="font-size:12px;font-weight:800;color:#4b5563;width:22px;flex-shrink:0;text-align:right;">' + (i+1) + '</span>'
-      + '<span style="font-size:9px;font-weight:800;color:' + c.color + ';border:1px solid ' + c.color + '55;border-radius:4px;padding:2px 7px;flex-shrink:0;white-space:nowrap;">' + c.level + '</span>'
+      + '<span style="font-size:9px;font-weight:800;color:' + c.color + ';border:1px solid ' + c.color + '55;border-radius:4px;padding:2px 7px;flex-shrink:0;white-space:nowrap;">' + (c.level === 'PROVEN' ? 'VERIFIED OVERLAP' : c.level) + '</span>'
       + (c.autoLink === 'found' ? '<span style="font-size:9px;font-weight:800;color:#4ade80;flex-shrink:0;white-space:nowrap;" title="Auto-verified against the stored HTML: the link exists. Re-checked on every HTML paste.">\\u2713 LINK OK</span>' : '')
       + (c.autoLink === 'missing' ? '<span style="font-size:9px;font-weight:800;color:#f87171;flex-shrink:0;white-space:nowrap;" title="Auto-checked against the stored HTML: the link is missing. Click the row for the exact fix.">\\u2717 LINK MISSING</span>' : '')
       + '<div style="flex:1;min-width:0;">'
@@ -38944,7 +39041,7 @@ function renderCannibal() {
     + provenStrip
     + shortcutStrip
     + '<div id="cannBody2" style="display:none;">' + rows
-    + '<div style="font-size:10px;color:#4b5563;padding:8px 14px;line-height:1.6;">PROVEN = same query in two per-page CSV exports (Google shows both) \\u2014 fix required. LIKELY = near-identical tracked keywords \\u2014 differentiate or merge. POSSIBLE = a site-wide query fits two pages equally \\u2014 confirm with a per-page export. STRUCTURE = generic hub vs specific spoke \\u2014 usually correct; run the checklist in the row instead of merging.</div>'
+    + '<div style="font-size:10px;color:#4b5563;padding:8px 14px;line-height:1.6;">VERIFIED OVERLAP = real page-scoped GSC data shows both URLs for the same query family; review search intent before changing content, canonicals or redirects. LIKELY = similar tracked keywords without verified page evidence. POSSIBLE = a site-wide query fits two pages equally \\u2014 confirm with page-scoped data. STRUCTURE = generic hub vs specific spoke \\u2014 usually correct; run the checklist instead of merging automatically.</div>'
     + '</div></div>';
   _updateProvenBulkUi();
 }
@@ -38977,7 +39074,7 @@ var _tourSteps = [
   {sel:'[data-tour="ai-recheck"]',phase:'AI PROOF',title:'Manually recheck all five LLMs',text:'After every publication, manually run the same query in Google AIO, ChatGPT, Perplexity, Claude and Copilot. The new cycle is complete only at 5/5; earlier engine answers remain preserved as the comparison point.'},
   {sel:'[data-tour="history"]',phase:'PROOF',title:'Baseline, change and history',text:'History preserves positions, citation evidence and meaningful changes over time. A newly published Pre-Write page enters Tracker and its first completed scan becomes the baseline.'},
   {sel:'[data-tour="my-check"]',phase:'WORKFLOW',title:'Your personal work marker',text:'My Check moves a handled page into Completed / Monitoring without deleting its evidence. Only you switch this marker off; scans do not silently reset it.'},
-  {sel:'#cannibalPanel',phase:'GOVERNANCE',title:'Resolve real URL conflicts',text:'Cannibalization distinguishes proven, likely, possible and structural overlap. A batch scan now shows Waiting, Scanning, Completed or Failed per URL plus real total progress; an existing brief is labelled Previous scan.'},
+  {sel:'#cannibalPanel',phase:'GOVERNANCE',title:'Review URL overlap safely',text:'The panel distinguishes verified, likely, possible and structural overlap. Verified overlap still requires an intent review before content, canonical or redirect changes. A batch scan shows Waiting, Scanning, Completed or Failed per URL.'},
   {sel:'.cs-live',phase:'MONITORING',title:'Wait for evidence before the next scan',text:'Monitoring schedules the next evidence request; it does not invent GSC or AI data. When input is missing, the Tracker shows Waiting for data and pauses until you add it and press Check now. Live Activity shows the active scan and completed work.'}
 ];
 var _tourIdx=-1,_tourRunSteps=[],_tourTarget=null,_tourPositionTimer=null;
@@ -39123,7 +39220,7 @@ function openCycleReport(){
   var w=window.open('','_blank','width=900,height=760'); if(!w)return toast('Allow popups to open the report','#f59e0b');
   w.document.write('<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><title>ContentScale Client Report</title><style>@page{size:landscape;margin:10mm}*{box-sizing:border-box}body{font-family:Arial,sans-serif;background:#0a0e14;color:#e5e7eb;padding:32px;margin:auto;max-width:1300px}h1{margin:0 0 6px}.muted{color:#94a3b8}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:22px 0}.k{background:#111827;border:1px solid #263244;border-radius:8px;padding:14px}.n{font-size:24px;font-weight:800}.sec{margin-top:22px;padding-top:16px;border-top:1px solid #263244}button{padding:8px 14px}table{width:100%;border-collapse:collapse;min-width:980px;background:#111827}th,td{padding:9px;border:1px solid #263244;text-align:left;font-size:11px;vertical-align:top}th{background:#172554;color:#bfdbfe}.tag{display:inline-block;padding:3px 7px;border-radius:999px;font-size:9px;font-weight:800;white-space:nowrap}.good{background:#052e16;color:#86efac}.bad{background:#450a0a;color:#fca5a5}.warn{background:#422006;color:#fde68a}.neutral{background:#1f2937;color:#cbd5e1}@media(max-width:700px){body{padding:16px}.grid{grid-template-columns:1fr 1fr}}@media print{button{display:none}body{background:#fff;color:#111;max-width:none;padding:0}.k,table{background:#fff}.muted{color:#555}.sec{break-inside:auto}table{min-width:0}th,td{font-size:8px;padding:5px;overflow-wrap:anywhere}a{color:#111;text-decoration:none}}</style></head><body>'+ 
     '<h1>ContentScale Client Report</h1><div class="muted">'+new Date().toLocaleString()+' · '+((_client&&_client.domain)||'')+'</div><button onclick="print()" style="margin-top:12px">Print / Save PDF</button>'+
-    '<div class="grid"><div class="k"><div class="n">'+active+'</div><div class="muted">Active opportunities</div></div><div class="k"><div class="n">'+monitoring+'</div><div class="muted">Completed / monitoring</div></div><div class="k"><div class="n">'+decomm+'</div><div class="muted">Consolidate / remove</div></div><div class="k"><div class="n">'+clicks.toLocaleString()+'</div><div class="muted">GSC clicks in current import</div></div><div class="k"><div class="n">'+impr.toLocaleString()+'</div><div class="muted">GSC impressions</div></div><div class="k"><div class="n">'+cannProven+'</div><div class="muted">Proven cannibalization conflicts</div><div style="font-size:10px;color:#94a3b8;margin-top:4px">'+cannLikely+' likely · '+cannPossible+' possible/unconfirmed</div></div></div>'+ 
+    '<div class="grid"><div class="k"><div class="n">'+active+'</div><div class="muted">Active opportunities</div></div><div class="k"><div class="n">'+monitoring+'</div><div class="muted">Completed / monitoring</div></div><div class="k"><div class="n">'+decomm+'</div><div class="muted">Consolidate / remove</div></div><div class="k"><div class="n">'+clicks.toLocaleString()+'</div><div class="muted">GSC clicks in current import</div></div><div class="k"><div class="n">'+impr.toLocaleString()+'</div><div class="muted">GSC impressions</div></div><div class="k"><div class="n">'+cannProven+'</div><div class="muted">Verified query-overlap families</div><div style="font-size:10px;color:#94a3b8;margin-top:4px">'+cannLikely+' likely · '+cannPossible+' possible/unconfirmed</div></div></div>'+ 
     executionHtml+caseHtml+
     '<div class="sec"><h3>Content governance</h3>'+tr+'<p class="muted">Stale tracked pages (&gt;30 days since scan): '+stale+' · Deferred/no-data: '+deferred+'</p></div>'+
     '<div class="sec"><h3>Next cycle</h3><p>Refresh GSC and sitemap data, recalculate Active Priorities, then work #1 → #2 → #3. Priority decides where to look; Intelligence/Brief decides KEEP / OPTIMIZE / EXPAND / REWRITE / MERGE / REDIRECT / REMOVE / MONITOR.</p></div></body></html>'); w.document.close();
@@ -39209,7 +39306,7 @@ async function savePrePublicationCheckpoint(pageId) {
       toast('Finish the current brief first \\u2014 then scan this page', '#f59e0b');
       return;
     }
-    // Guard against the exact "scan 3 times" scenario: this page has PROVEN cannibalization issues
+    // Guard against the exact "scan 3 times" scenario: this page has VERIFIED query-overlap signals
     // AND the gap analysis hasn\\'t run yet AND this call did NOT come from _provenScanAll (which
     // already guarantees Sort ran first). Scanning now would miss the gap-family sections, requiring
     // a second scan later to pick them up \u2014 so ask first instead of silently doing the wasteful thing.
@@ -39219,7 +39316,7 @@ async function savePrePublicationCheckpoint(pageId) {
       var _isProvenPage = _pSlug && typeof _provenList !== 'undefined' && _provenList.indexOf(_pSlug) > -1;
       var _gapDone = _gapAnalysis && _gapAnalysis.families && _gapAnalysis.families.length;
       if (_isProvenPage && !_gapDone) {
-        var _ok = confirm('This page has PROVEN cannibalization conflicts. Scanning now will miss the Impression Gap sections (Sort this out for me hasn\\'t run yet) \\u2014 you\\'d likely need to scan this page again later.\\n\\nUse \\ud83d\\ude80 Do everything in the Cannibalization panel instead \\u2014 it runs Sort first, then scans, so this page only needs one scan.\\n\\nScan anyway right now?');
+        var _ok = confirm('This page has VERIFIED query-overlap signals that still require an intent review. Scanning now will miss the Impression Gap sections (Sort this out for me hasn\\'t run yet) \\u2014 you\\'d likely need to scan this page again later.\\n\\nUse \\ud83d\\ude80 Do everything in the Cannibalization panel instead \\u2014 it runs Sort first, then scans, so this page only needs one scan.\\n\\nScan anyway right now?');
         if (!_ok) return;
       }
     }
@@ -39340,7 +39437,7 @@ async function savePrePublicationCheckpoint(pageId) {
     // Report the TRUE outcome. Only claim "all scanned" when every page really landed.
     if (_okCount === pageIds.length && pageIds.length > 0) {
       var _finalBtn=document.getElementById('provenScanAllBtn');if(_finalBtn){_finalBtn.textContent='\u2713 '+pageIds.length+'/'+pageIds.length+' completed';_finalBtn.disabled=false;}
-      toast('All ' + pageIds.length + ' PROVEN pages scanned \u2014 briefs are ready', '#4ade80');
+      toast('All ' + pageIds.length + ' verified-overlap pages scanned \u2014 briefs are ready', '#4ade80');
     } else {
       var _retryBtn=document.getElementById('provenScanAllBtn');if(_retryBtn){_retryBtn.textContent='\u21bb Retry batch · '+_okCount+'/'+pageIds.length+' completed';_retryBtn.disabled=false;}
       toast(_okCount + ' of ' + pageIds.length + ' pages scanned \u2014 ' + _failSlugs.length + ' did not complete, click to retry', '#f59e0b');
@@ -39377,7 +39474,7 @@ function _renderGscSetupBanner() {
     + '<div style="font-size:10px;font-weight:800;letter-spacing:.05em;color:#60a5fa;text-transform:uppercase;margin-bottom:8px;">How this tracker works \u2014 do these in order</div>'
     + _step1
     + '<div style="margin-bottom:8px;"><b style="color:#93c5fd;">Step 2 \u2014 Sort this out for me:</b> click it in the Impression Gap panel below \u2014 groups your queries into intent families with one clear verdict each.</div>'
-    + '<div><b style="color:#93c5fd;">Step 3 \u2014 Scan:</b> in the Cannibalization panel, use \ud83d\ude80 <b>Do everything</b> on any PROVEN group \u2014 it runs Step 2 first if you skipped it, then scans every affected page so the brief has the full fix.</div>'
+    + '<div><b style="color:#93c5fd;">Step 3 \u2014 Scan:</b> in the Cannibalization panel, use \ud83d\ude80 <b>Do everything</b> on any VERIFIED OVERLAP group \u2014 it runs Step 2 first if you skipped it, then scans every affected page so the brief can compare intent and recommend a safe next step.</div>'
     + '</div>';
 }
 // Show welcome on first visit (or force with ?welcome=1)
@@ -49268,35 +49365,28 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
             // ── Cannibalization context for THIS page vs its siblings (same rules as the tracker panel) ──
             try {
               const _conf = [];
-              // REAL EVIDENCE FIRST: same query text owned by BOTH this page AND another page's per-page
-              // GSC data — this is the exact PROVEN definition used in the tracker's Cannibalization panel.
-              // The keyword-text heuristic below only catches BROAD hub/spoke relationships from the single
-              // manually-set keyword field; it has no way to see that two pages share an ACTUAL search query
-              // unless their target keywords happen to overlap in text — which is why a page like "24 hour
-              // emergency roof repair nj" got NO cannibalization context against "wind damage roof repair nj"
-              // despite both pages sharing dozens of PROVEN queries (their keyword text alone doesn't overlap).
+              // Verified overlap and likely duplicate evidence comes from the central engine below.
+              // The remaining local keyword comparison is limited to broad hub/spoke structure;
+              // it must never promote an unverified similarity into a proven conflict.
+              /* CONTENTSCALE-AI-HANDOFF-V143 — ONE CENTRAL CANNIBALIZATION ENGINE.
+               * Do not restore a raw self-join here. It bypassed brand, redirect,
+               * evidence-provenance and intent-family filters, so hidden false
+               * positives reappeared in Citation Briefs. The brief now consumes
+               * exactly the same clustered groups as the visible Tracker panel.
+               */
               try {
-                const _provenR = await pool.query(
-                  `SELECT q1.query, q1.impressions, p2.url AS other_url, p2.keyword AS other_keyword
-                   FROM tracker_gsc_queries q1
-                   JOIN tracker_gsc_queries q2 ON LOWER(TRIM(q1.query)) = LOWER(TRIM(q2.query))
-                     AND q2.page_id IS NOT NULL AND q2.page_id <> q1.page_id AND q2.tracker_client_id = q1.tracker_client_id
-                   JOIN tracker_pages p2 ON p2.id = q2.page_id
-                   WHERE q1.page_id = $1 AND q1.tracker_client_id = $2
-                   ORDER BY q1.impressions DESC NULLS LAST LIMIT 12`,
-                  [page.id, page.tracker_client_id]
-                );
-                if (_provenR.rows.length) {
-                  const _byUrl = {};
-                  _provenR.rows.forEach(function(r){
-                    if (!_byUrl[r.other_url]) _byUrl[r.other_url] = { kw: r.other_keyword, queries: [] };
-                    _byUrl[r.other_url].queries.push(r.query);
-                  });
-                  Object.keys(_byUrl).slice(0, 3).forEach(function(u){
-                    const _b = _byUrl[u];
-                    _conf.push('PROVEN CONFLICT with ' + u + (_b.kw ? ' (keyword: "' + _b.kw + '")' : '') + '. Both pages already share ' + _b.queries.length + ' identical search quer' + (_b.queries.length===1?'y':'ies') + ' in real GSC data: "' + _b.queries.slice(0,5).join('", "') + '". Required actions in this brief: (a) an internal-link action FROM this page TO ' + u + ' with an anchor naming its distinct angle; (b) differentiate THIS page\'s intent from ' + u + ' with an exact new title/H1/opening-paragraph proposal so Google stops treating them as duplicates.');
-                  });
-                }
+                const _central=await analyzeCannibalization(page.tracker_client_id);
+                (_central.groups||[]).filter(function(g){return(g.pages||[]).some(function(p){return Number(p.id)===Number(page.id);});}).slice(0,4).forEach(function(g){
+                  const others=(g.pages||[]).filter(function(p){return Number(p.id)!==Number(page.id);});
+                  if(!others.length)return;
+                  const variants=(g.shared_queries||[g.shared]).slice(0,5).join('", "');
+                  const owner=g.keep&&g.keep.url?g.keep.url:'not assigned';
+                  if(g.evidence_level==='PROVEN_OVERLAP'){
+                    _conf.push('VERIFIED QUERY OVERLAP with '+others.map(function(p){return p.url;}).join(', ')+'. Real page-scoped GSC evidence shows the shared query family "'+variants+'". This proves overlap, not automatically harmful cannibalization. Provisional owner: '+owner+'. Required action: first state whether the pages serve the same intent. If they do, differentiate the non-owner section/title and add a contextual internal link to the owner. If intent is legitimately separate, preserve both pages and clarify that distinction. Never prescribe an automatic redirect.');
+                  }else{
+                    _conf.push('LIKELY KEYWORD OVERLAP with '+others.map(function(p){return p.url;}).join(', ')+'. The target keywords are similar, but verified page-scoped GSC evidence is missing. Do not prescribe content removal, canonical changes or redirects; request/fetch per-page GSC evidence first.');
+                  }
+                });
               } catch(e) {}
               const _cnorm = function(s){ return String(s||'').toLowerCase().replace(/[^a-z0-9 ]/g,' ').replace(/ +/g,' ').trim(); };
               const _myKw = _cnorm(page.keyword || page.gsc_keyword || keyword || '');
@@ -49332,8 +49422,6 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
                     const _spokeKw = _iAmHub ? (r.keyword || r.gsc_keyword) : (page.keyword || page.gsc_keyword);
                     if (_iAmHub) _conf.push('THIS PAGE IS THE HUB. Spoke: ' + r.url + ' (keyword: "' + _spokeKw + '"). Required actions in this brief: (a) an internal-link action adding a link FROM this page TO ' + r.url + ' with EXACT anchor text "' + _spokeKw + '"; (b) if this page has its own content section targeting "' + _spokeKw + '", an action to cut or rewrite that section so this page does not compete with its spoke.');
                     else _conf.push('THIS PAGE IS A SPOKE of hub ' + r.url + '. Required action in this brief: strengthen what makes this page UNIQUE for "' + (page.keyword || page.gsc_keyword) + '" (specific local details, projects, place names) so it cannot be mistaken for the generic hub content.');
-                  } else if (_jac >= 0.7) {
-                    _conf.push('DUPLICATE-KEYWORD CONFLICT with ' + r.url + ' (keyword: "' + (r.keyword || r.gsc_keyword) + '"). Required action in this brief: differentiate the intent of this page (e.g. service vs cost vs location) with an exact new title/H1 proposal, and add an internal link to ' + r.url + ' with its keyword as anchor text.');
                   }
                 });
               }
