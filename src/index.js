@@ -1,6 +1,7 @@
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-21-CANONICAL-v146';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-21-CANONICAL-v147';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 const CONTENTSCALE_BUILD_CHANGES = [
+  'leadcrawler-custom-business-types-one-per-line-clarity',
   'leadcrawler-custom-business-types-and-contact-form-discovery',
   'tracker-cannibalization-page-evidence-provenance-repair',
   'tracker-cannibalization-shared-central-engine-for-briefs',
