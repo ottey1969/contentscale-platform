@@ -1,7 +1,8 @@
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-21-CANONICAL-v148';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-21-CANONICAL-v149';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 const CONTENTSCALE_BUILD_CHANGES = [
   'tracker-prompt2-evidence-reasoning-target-claims-other-page-citations',
+  'tracker-brief-graaf-integrated-guidance',
   'leadcrawler-custom-business-types-one-per-line-clarity',
   'leadcrawler-custom-business-types-and-contact-form-discovery',
   'tracker-cannibalization-page-evidence-provenance-repair',
@@ -35332,7 +35333,7 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
           <div style="font-size:11px;font-weight:700;color:#7c3aed;margin-bottom:6px;">&#x1f4cb; Copy Brief</div>
           <textarea id="cbCopyText" readonly style="width:100%;height:120px;background:#0a0a12;border:1px solid #1f2937;border-radius:8px;padding:10px;font-size:11px;color:#9ca3af;font-family:monospace;resize:vertical;"></textarea>
           <div style="background:rgba(96,165,250,.08);border:1px solid #3b82f6;border-radius:8px;padding:8px 10px;margin-top:10px;font-size:10.5px;color:#bfdbfe;line-height:1.6;">
-            <b style="color:#93c5fd;">\u2728 Bonus:</b> for a deeper content audit, scan this URL or its HTML in the GRAAF SEO Content Score tool separately. Copy its recommendations into an external AI (or apply them by hand) and fold them into your content <b>before</b> pasting the finished HTML back into the tracker.
+            <b style="color:#93c5fd;">\u2713 GRAAF included:</b> the live page scan, GRAAF ContentScore and its prioritized recommendations are already integrated into this Citation Brief and the visual brief. Apply them as one controlled plan. No separate GRAAF tool or external-AI round trip is required. After publication, use the normal Tracker verification flow to capture the new score and evidence.
           </div>
           <button onclick="copyBriefToClipboard()" class="cs-btn" style="margin-top:8px;border-color:#7c3aed;color:#7c3aed;font-size:11px;">Copy to Clipboard</button>
         </div>
