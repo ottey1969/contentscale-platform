@@ -1,4 +1,5 @@
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-21-CANONICAL-v140';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-21-CANONICAL-v141';
+const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 const CONTENTSCALE_BUILD_CHANGES = [
   'quick-scan-bulk-delete-prospect-token-binding-fix',
   'quick-scan-token-link-fallback-for-legacy-cards',
@@ -168,7 +169,7 @@ const CONTENTSCALE_BUILD_CHANGES = [
   ,'audit-invalid-response-explicit-not-page-level-audit'
   ,'audit-page-language-french-and-japanese'
 ];
-console.log('[ContentScale] BUILD=' + CONTENTSCALE_BUILD_ID + ' BOOT=' + new Date().toISOString());
+console.log('[ContentScale] BUILD=' + CONTENTSCALE_BUILD_ID + ' BOOT=' + CONTENTSCALE_BOOT_AT);
 console.log('[ContentScale] CHANGES=' + CONTENTSCALE_BUILD_CHANGES.join(','));
 console.log('[ContentScale] TIER_SOURCE=GSC position+impressions+clicks; no GSC evidence => UNCLASSIFIED');
 // CONTENTSCALE-AI-HANDOFF-V37 — DO NOT REMOVE OR BYPASS
@@ -14573,7 +14574,9 @@ leaderboardApproved = parseInt(lbApproved.rows[0].count) || 0;
 freelancerTotal = parseInt(flAll.rows[0].count) || 0;
 } catch (e) {}
 }
-res.json({ status: 'running', database: db, puppeteer: browserInstance ? 'ready' : 'not started', version: 'elite-v4-fixed-v3', email: process.env.BREVO_API_KEY ? 'brevo' : 'not configured', counts: { leaderboardTotal, leaderboardApproved, freelancerTotal } });
+res.setHeader('Cache-Control','no-store, no-cache, must-revalidate');
+res.setHeader('X-ContentScale-Build',CONTENTSCALE_BUILD_ID);
+res.json({ status: 'running', build: CONTENTSCALE_BUILD_ID, boot: CONTENTSCALE_BOOT_AT, database: db, puppeteer: browserInstance ? 'ready' : 'not started', version: 'elite-v4-fixed-v3', email: process.env.BREVO_API_KEY ? 'brevo' : 'not configured', counts: { leaderboardTotal, leaderboardApproved, freelancerTotal } });
 });
 app.use((err, req, res, next) => {
 console.error('Server Error:', err.message);
