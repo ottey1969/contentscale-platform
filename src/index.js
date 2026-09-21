@@ -1,10 +1,11 @@
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-21-CANONICAL-v144';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-21-CANONICAL-v145';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 const CONTENTSCALE_BUILD_CHANGES = [
   'tracker-cannibalization-page-evidence-provenance-repair',
   'tracker-cannibalization-shared-central-engine-for-briefs',
   'tracker-cannibalization-intent-family-deduplication',
   'quick-scan-outreach-daily-warmup-counter',
+  'tracker-workflow-step-two-badge-repair',
   'quick-scan-ai-citation-headline-nl-en-es',
   'quick-scan-bulk-delete-prospect-token-binding-fix',
   'quick-scan-token-link-fallback-for-legacy-cards',
@@ -38649,7 +38650,9 @@ function renderImpressionGap() {
         var _bd = _sortDone ? '#16a34a' : '#ef4444';
         var _fg = _sortDone ? '#bbf7d0' : '#fecaca';
         var _label = _sortDone ? '\\u2713 Sorted' : '\\ud83e\\udd16 Sort this out for me';
-        return '<button id="gapAiBtn" onclick="event.stopPropagation();runGapAnalysis()" style="flex-shrink:0;cursor:pointer;font-size:10px;font-weight:800;padding:4px 12px;border-radius:6px;background:' + _bg + ';border:1px solid ' + _bd + ';color:' + _fg + ';display:inline-flex;align-items:center;gap:6px;" title="Optional \\u2014 Do everything (below, in Cannibalization) runs this automatically if you skip it. Let AI group these queries into intent families and give one clear verdict per family: add a section (and where), new page (which slug), track an existing page, or ignore (competitor brands, junk). One Gemini call, result is saved."><span style="background:#0d1117;color:' + (_sortDone?'#4ade80':'#f87171') + ';border-radius:50%;width:16px;height:16px;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:900;flex-shrink:0;">1</span>' + _label + ' <span style="opacity:.7;font-weight:600;">(optional)</span></button>';
+        // CONTENTSCALE-AI-HANDOFF-V145: this is workflow STEP 2. Do not change
+        // the badge back to 1; Step 1 is GSC retrieval and Step 3 is page scan.
+        return '<button id="gapAiBtn" onclick="event.stopPropagation();runGapAnalysis()" style="flex-shrink:0;cursor:pointer;font-size:10px;font-weight:800;padding:4px 12px;border-radius:6px;background:' + _bg + ';border:1px solid ' + _bd + ';color:' + _fg + ';display:inline-flex;align-items:center;gap:6px;" title="Optional \\u2014 Do everything (below, in Cannibalization) runs this automatically if you skip it. Let AI group these queries into intent families and give one clear verdict per family: add a section (and where), new page (which slug), track an existing page, or ignore (competitor brands, junk). One Gemini call, result is saved."><span style="background:#0d1117;color:' + (_sortDone?'#4ade80':'#f87171') + ';border-radius:50%;width:16px;height:16px;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:900;flex-shrink:0;">2</span>' + _label + ' <span style="opacity:.7;font-weight:600;">(optional)</span></button>';
       })()
     + '</div>'
     + '<div id="impGapBody" style="display:none;">'
@@ -38996,7 +38999,9 @@ function renderCannibal() {
           var _fg = _allScanned ? '#bbf7d0' : '#fecaca';
           var _dot = _allScanned ? '#4ade80' : '#f87171';
           var _label = _allScanned ? ('\\u21bb Re-scan all ' + _provenList.length + ' pages') : ('\\ud83d\\ude80 Do everything: sort + scan all ' + _provenList.length + ' pages');
-          return '<button id="provenScanAllBtn" onclick="_provenScanAll(this)" title="Runs Sort this out for me first if needed, then scans every page below in order. Existing briefs are previous results, not completion of this new run." style="cursor:pointer;font-size:10px;font-weight:800;padding:5px 14px;border-radius:5px;background:' + _bg + ';border:2px solid ' + _bd + ';color:' + _fg + ';display:inline-flex;align-items:center;gap:6px;box-shadow:0 0 0 2px ' + (_allScanned?'rgba(74,222,128,.15)':'rgba(239,68,68,.15)') + ';"><span style="background:#0d1117;color:' + _dot + ';border-radius:50%;width:17px;height:17px;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:900;flex-shrink:0;">2</span>' + _label + (_allScanned ? '' : ' <span style="opacity:.85;font-weight:900;">\\u2190 press this</span>') + '</button>';
+          // CONTENTSCALE-AI-HANDOFF-V145: bulk scan is workflow STEP 3. It may
+          // run Step 2 automatically, but its own badge must remain 3.
+          return '<button id="provenScanAllBtn" onclick="_provenScanAll(this)" title="Runs Sort this out for me first if needed, then scans every page below in order. Existing briefs are previous results, not completion of this new run." style="cursor:pointer;font-size:10px;font-weight:800;padding:5px 14px;border-radius:5px;background:' + _bg + ';border:2px solid ' + _bd + ';color:' + _fg + ';display:inline-flex;align-items:center;gap:6px;box-shadow:0 0 0 2px ' + (_allScanned?'rgba(74,222,128,.15)':'rgba(239,68,68,.15)') + ';"><span style="background:#0d1117;color:' + _dot + ';border-radius:50%;width:17px;height:17px;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:900;flex-shrink:0;">3</span>' + _label + (_allScanned ? '' : ' <span style="opacity:.85;font-weight:900;">\\u2190 press this</span>') + '</button>';
         })()
       + '</div>'
       + '<div id="provenScanProgress" style="display:none;margin-top:8px;padding:9px 11px;border:1px solid #2563eb;background:#07162f;border-radius:7px;color:#bfdbfe;"></div>'
