@@ -1,6 +1,7 @@
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-21-CANONICAL-v145';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-21-CANONICAL-v146';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 const CONTENTSCALE_BUILD_CHANGES = [
+  'leadcrawler-custom-business-types-and-contact-form-discovery',
   'tracker-cannibalization-page-evidence-provenance-repair',
   'tracker-cannibalization-shared-central-engine-for-briefs',
   'tracker-cannibalization-intent-family-deduplication',
@@ -16204,6 +16205,49 @@ async function _pqsFindPublicEmail(rawUrl){
   const hrefRe=/href\s*=\s*["']([^"'#]+)["']/gi;let m;while((m=hrefRe.exec(home.html))&&candidates.length<5)add(m[1]);['/contact','/contact-us','/over-ons','/about'].forEach(x=>{if(candidates.length<5)add(x)});
   const pages=await Promise.all(candidates.slice(0,4).map(_pqsFetchPublicEmailPage));for(const page of pages){if(!page)continue;const found=_pqsPublicEmails(page.html,host);if(found.length)return{email:found[0],source:page.url,language}}return{email:'',source:home.url,language}
 }
+function _lcContactFormOnPage(page){
+  if(!page||!page.html)return false;
+  const clean=String(page.html).replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi,' ').replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi,' ');
+  const forms=clean.match(/<form\b[^>]*>[\s\S]*?<\/form>/gi)||[];
+  return forms.some(form=>{
+    let score=/(?:contact|contacto|kontakt|offerte|quote|estimate|afspraak|booking|appointment)/i.test(String(page.url||''))?3:0;
+    if(/<textarea\b/i.test(form))score+=2;
+    if(/<input\b[^>]*type\s*=\s*["']?email/i.test(form))score+=2;
+    if(/<input\b[^>]*(?:name|id|placeholder)\s*=\s*["'][^"']*(?:name|naam|nombre)/i.test(form))score+=1;
+    if(/<input\b[^>]*(?:name|id|placeholder)\s*=\s*["'][^"']*(?:phone|tel|telefoon|telefono)/i.test(form))score+=1;
+    if(/(?:message|bericht|mensaje|contact|vraag|inquiry|enquiry|request|solicitud)/i.test(form))score+=2;
+    if(/(?:type\s*=\s*["']?submit|<button\b)/i.test(form))score+=1;
+    return score>=4;
+  });
+}
+async function _lcFindPublicContact(rawUrl){
+  let start;try{start=new URL(_pqsLeadHomepage(rawUrl));if(!/^https?:$/.test(start.protocol))return null}catch(e){return null}
+  const home=await _pqsFetchPublicEmailPage(start.href);
+  if(!home)return{website:start.href,email:'',email_source:'',contact_form_url:'',checked:true};
+  const host=new URL(home.url).hostname.toLowerCase().replace(/^www\./,''),pages=[home],candidates=[];
+  function add(v){try{const u=new URL(_pqsDecodePublicHtml(v),home.url),h=u.hostname.toLowerCase().replace(/^www\./,'');if(!/^https?:$/.test(u.protocol)||h!==host||!/(?:contact|contact-us|contacteer|contacto|kontakt|over-ons|about|impressum|offerte|quote|estimate|afspraak|booking|appointment|solicitud|klantenservice)/i.test(u.pathname)||candidates.includes(u.href))return;candidates.push(u.href)}catch(e){}}
+  const hrefRe=/href\s*=\s*["']([^"'#]+)["']/gi;let m;while((m=hrefRe.exec(home.html))&&candidates.length<6)add(m[1]);
+  ['/contact','/contact-us','/contacto','/offerte','/quote','/afspraak'].forEach(add);
+  const fetched=await Promise.all(candidates.slice(0,5).map(_pqsFetchPublicEmailPage));fetched.forEach(p=>{if(p&&!pages.some(x=>x.url===p.url))pages.push(p)});
+  let email='',emailSource='',contactFormUrl='';
+  for(const page of pages){
+    if(!email){const found=_pqsPublicEmails(page.html,host);if(found.length){email=found[0];emailSource=page.url}}
+    if(!contactFormUrl&&_lcContactFormOnPage(page))contactFormUrl=page.url;
+  }
+  return{website:start.href,email,email_source:emailSource,contact_form_url:contactFormUrl,checked:true};
+}
+app.post('/api/lead-crawler/contact-discovery',requireAdmin,async(req,res)=>{
+  const websites=Array.from(new Set((Array.isArray(req.body&&req.body.websites)?req.body.websites:[]).map(v=>String(v||'').trim()).filter(Boolean))).slice(0,20);
+  if(!websites.length)return res.status(400).json({success:false,error:'No websites supplied'});
+  try{
+    const results=[];
+    for(let i=0;i<websites.length;i+=5){
+      const part=await Promise.all(websites.slice(i,i+5).map(async website=>{try{return await _lcFindPublicContact(website)}catch(e){return{website,email:'',email_source:'',contact_form_url:'',checked:true,error:String(e.message||e)}}}));
+      results.push(...part);
+    }
+    res.json({success:true,results});
+  }catch(e){res.status(500).json({success:false,error:e.message});}
+});
 async function _pqsMaybeSendCompletion(token){
   try{
     const claimed=await pool.query(`UPDATE prospect_quick_scans SET completion_email_sent_at=NOW(),completion_email_error=NULL,updated_at=NOW()
