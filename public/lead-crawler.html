@@ -80,8 +80,15 @@
          .search-panel{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:32px;margin-bottom:32px;position:relative;overflow:hidden;box-shadow:0 20px 40px rgba(0,0,0,0.4);}
          .search-panel::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--red),var(--gold),var(--green));}
          .panel-title{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.25em;text-transform:uppercase;color:var(--sub);margin-bottom:20px;display:block;}
-         .form-row{display:grid;grid-template-columns:1fr 1fr auto auto;gap:16px;align-items:end;margin-bottom:24px;}
-         @media(max-width:768px){.form-row{grid-template-columns:1fr 1fr;}}
+         .form-row{display:grid;grid-template-columns:1fr 1fr auto auto;gap:16px;align-items:end;margin-bottom:18px;}
+         .scope-row{display:grid;grid-template-columns:minmax(220px,.75fr) minmax(300px,1.25fr);gap:16px;margin-bottom:24px;align-items:start;}
+         .scope-field label{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:var(--sub);display:block;margin-bottom:8px;}
+         .scope-field select,.scope-field textarea{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:12px 14px;font-family:'DM Sans',sans-serif;font-size:14px;color:var(--ink);outline:none;transition:all .2s;}
+         .scope-field textarea{min-height:92px;resize:vertical;line-height:1.45;}
+         .scope-field select:focus,.scope-field textarea:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(251,191,36,.1);}
+         .scope-help{font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted);line-height:1.55;margin-top:7px;}
+         @media(max-width:768px){.form-row,.scope-row{grid-template-columns:1fr 1fr;}}
+         @media(max-width:560px){.search-panel{padding:22px 16px}.form-row,.scope-row{grid-template-columns:1fr}.crawl-btn,.stop-btn,#importBtn{width:100%}}
          .field label{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:var(--sub);display:block;margin-bottom:8px;}
          .field input{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:14px 16px;font-family:'DM Sans',sans-serif;font-size:15px;color:var(--ink);outline:none;transition:all .2s;}
          .field input:focus{border-color:var(--gold);background:rgba(255,255,255,0.02);box-shadow:0 0 0 3px rgba(251,191,36,0.1);}
@@ -1084,8 +1091,8 @@
               if(!h || !t || !b) return;
               if(admin){
                 h.innerHTML = 'AI VOICE<br>AGENTS &amp; LEAD CRAWLER <span class="pro-tag">PRO</span>';
-                t.textContent = "Enter any city + country. 37 niches searched sequentially. Every lead bucketed by content desperation — with a pitch angle ready to copy.";
-                b.innerHTML = '<div class="hb g">✓ 37 Niche Searches</div>'
+                t.textContent = "Enter any city + country. Use 37 proven presets or add any business type. Every lead is bucketed by content opportunity — with a pitch angle ready to copy.";
+                b.innerHTML = '<div class="hb g">✓ 37 Presets + Any Niche</div>'
                             + '<div class="hb g">✓ 200–500 Leads / Run</div>'
                             + '<div class="hb y">✓ Pitch Angle Per Lead</div>'
                             + '<div class="hb p">✓ 6 Smart Buckets</div>';
@@ -1325,7 +1332,7 @@
             <div style="height:3px;background:linear-gradient(90deg,var(--red),var(--gold),var(--green));border-radius:2px;margin:28px 0;opacity:0.7;"></div>
 
 
-            <div class="panel-title">Target Location — Searches 37 Niches Sequentially</div>
+            <div class="panel-title" id="searchPanelTitle">Target Location — Choose Presets or Any Business Type</div>
             <input type="hidden" id="apiKey" value="">
             <div class="form-row">
                <div class="field"><label>City</label><input type="text" id="city" placeholder="e.g. Amsterdam" /></div>
@@ -1335,7 +1342,23 @@
                <button type="button" id="importBtn" onclick="triggerImport()" style="background:var(--surface);color:var(--muted);border:1px solid var(--border);font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:.08em;text-transform:uppercase;padding:0 20px;border-radius:6px;cursor:pointer;height:52px;">&#8593; Import</button>
                <input type="file" id="importFile" accept=".json,application/json" style="display:none;" onchange="importJSON(event)">
             </div>
-            <div class="wave-label">37 Industry Searches — Live Status</div>
+            <div class="scope-row">
+               <div class="scope-field">
+                  <label for="industryMode">Search scope</label>
+                  <select id="industryMode" onchange="industryPlanChanged()">
+                     <option value="presets">37 proven presets</option>
+                     <option value="custom">Only my business types</option>
+                     <option value="combined">37 presets + my business types</option>
+                  </select>
+                  <div class="scope-help">Use custom mode to search any niche without running all 37 presets.</div>
+               </div>
+               <div class="scope-field">
+                  <label for="customIndustries">Custom business types</label>
+                  <textarea id="customIndustries" oninput="customIndustriesChanged()" placeholder="One per line or comma, e.g.\nSolar panel installers\nPet groomers\nFurniture stores"></textarea>
+                  <div class="scope-help">Maximum 25 per run. Each business type is one separate grounded search.</div>
+               </div>
+            </div>
+            <div class="wave-label" id="waveLabel">37 Business-Type Searches — Live Status</div>
             <div class="waves" id="waves"></div>
          </div>
          <div class="err-log" id="errLog" style="display:none;"></div>
@@ -1371,7 +1394,7 @@
                   </div>
                   <div class="prog-stat">
                      <div class="prog-statNum purple" id="progPct">0 / 37</div>
-                     <div class="prog-statLabel">Industries</div>
+                     <div class="prog-statLabel">Business types</div>
                   </div>
                   <div class="prog-stat">
                      <div class="prog-statNum dim" id="progErrCount">0</div>
@@ -1422,6 +1445,7 @@
                <button class="tbtn" onclick="triggerImport()">↑ Import JSON</button>
                <button class="tbtn" onclick="copyAll()">⧉ Copy All URLs</button>
                <button class="tbtn" id="resolveBtn" onclick="sitemapResolutionActive=false;resolveSitemapsPhase2()" style="border-color:rgba(96,165,250,.35);color:var(--blue);">⟳ Resolve Sitemaps</button>
+               <button class="tbtn" id="contactBtn" onclick="discoverContactForms(false)" style="border-color:rgba(167,139,250,.35);color:var(--purple);">📝 Find Contact Forms</button>
                <button class="tbtn" id="verifyPhoneBtn" onclick="verifyPhoneTypes()" style="border-color:rgba(74,222,128,.35);color:var(--green);">📱 Verify Mobile/Landline</button>
                <div class="tb-sep"></div>
                <span class="tbl">Select:</span>
@@ -1455,7 +1479,7 @@
          <div class="empty-state" id="emptyState">
             <div class="ebig">FIND<br>LEADS</div>
             <p>Enter any city + country and hit <strong>FIND LEADS</strong>.<br>
-               37 niche searches fire one by one — no rate limits — results stream in live.<br><br>
+               Choose the 37 proven presets, your own business types, or both. Searches run one by one and results stream in live.<br><br>
                <strong style="color:var(--gold)">Focus on the 🔥 5–30 page buckets.</strong><br>
                Real businesses, almost no web content — the easiest content writing pitch ever.
             </p>
@@ -1497,7 +1521,7 @@
       </div>
       <div class="toast" id="toast"></div>
       <script>
-         const INDUSTRIES=[
+         const PRESET_INDUSTRIES=[
          // ── ⚖️ Legal & Finance ──────────────────────────────────────────
          {id:'law',         label:'Law Firms',             q:'law firms solicitors lawyers attorneys',           value:'💰💰💰', vol:'🟢'},
          {id:'accounting',  label:'Accountants',           q:'accountants bookkeepers financial admin firms',    value:'💰💰💰', vol:'🟢'},
@@ -1544,6 +1568,50 @@
          {id:'logistics',   label:'Logistics / Transport',  q:'logistics transport courier freight delivery',     value:'💰💰',  vol:'🟡'},
          {id:'photography', label:'Photography / Video',    q:'photographers videographers creative studios film',value:'💰',   vol:'🟡'},
          ];
+         let INDUSTRIES=PRESET_INDUSTRIES.slice();
+         function customIndustryId(label){
+           let hash=0;
+           for(let i=0;i<label.length;i++) hash=((hash<<5)-hash+label.charCodeAt(i))|0;
+           const slug=label.toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,36)||'business';
+           return 'custom-'+slug+'-'+Math.abs(hash).toString(36);
+         }
+         function readCustomIndustries(){
+           const raw=(document.getElementById('customIndustries')?.value||'');
+           const seen=new Set();
+           return raw.split(/[\n,;]+/).map(v=>v.trim().replace(/\s+/g,' ')).filter(v=>{
+             const key=v.toLowerCase();
+             if(!v||seen.has(key)) return false;
+             seen.add(key);return true;
+           }).slice(0,25).map(label=>({id:customIndustryId(label),label,q:label,value:'Custom',vol:'🟣',custom:true}));
+         }
+         function buildIndustryPlan(){
+           const mode=document.getElementById('industryMode')?.value||'presets';
+           const custom=readCustomIndustries();
+           if(mode==='custom') return custom;
+           if(mode==='combined'){
+             const presetTerms=new Set(PRESET_INDUSTRIES.flatMap(i=>[i.label.toLowerCase(),i.q.toLowerCase()]));
+             return PRESET_INDUSTRIES.concat(custom.filter(i=>!presetTerms.has(i.label.toLowerCase())));
+           }
+           return PRESET_INDUSTRIES.slice();
+         }
+         function updateIndustryPlanUI(){
+           const plan=buildIndustryPlan();
+           const total=plan.length;
+           const label=document.getElementById('waveLabel');
+           if(label) label.textContent=total+' Business-Type Search'+(total===1?'':'es')+' — Live Status';
+           const pct=document.getElementById('progPct');
+           if(pct&&!document.getElementById('crawlBtn')?.disabled) pct.textContent='0 / '+total;
+         }
+         function industryPlanChanged(){
+           INDUSTRIES=buildIndustryPlan();
+           initWaves();updateIndustryPlanUI();
+         }
+         function customIndustriesChanged(){
+           const input=document.getElementById('customIndustries');
+           const mode=document.getElementById('industryMode');
+           if(input&&input.value.trim()&&mode&&mode.value==='presets') mode.value='custom';
+           industryPlanChanged();
+         }
          const PITCH={
          ghost:    'Your site has almost no content — I help businesses like yours get written up from scratch and start showing up on Google.',
          skeleton: "You're running a real business but your website says almost nothing. Let me write the pages that actually close clients for you.",
@@ -1670,6 +1738,9 @@
          city,country,
          leads:allLeads,
          completed:[...completedIndustries],
+         industryPlan:INDUSTRIES,
+         industryMode:document.getElementById('industryMode')?.value||'presets',
+         customIndustries:document.getElementById('customIndustries')?.value||'',
          savedAt:Date.now()
          }));
          }catch(e){}
@@ -1700,8 +1771,12 @@
          function resumeSession(){
          const s=loadSession();
          if(!s||!s.leads||!s.leads.length)return;
+         if(Array.isArray(s.industryPlan)&&s.industryPlan.length) INDUSTRIES=s.industryPlan;
+         if(document.getElementById('industryMode')) document.getElementById('industryMode').value=s.industryMode||'presets';
+         if(document.getElementById('customIndustries')) document.getElementById('customIndustries').value=s.customIndustries||'';
          allLeads=s.leads;
          completedIndustries=new Set(s.completed||[]);
+         initWaves();updateIndustryPlanUI();
          document.getElementById('resumeBanner').style.display='none';
          document.getElementById('emptyState').style.display='none';
          renderAll();
@@ -1710,6 +1785,9 @@
          function lcInit(){
          const s=loadSession();
          if(!s||!s.leads||!s.leads.length)return;
+         if(Array.isArray(s.industryPlan)&&s.industryPlan.length) INDUSTRIES=s.industryPlan;
+         if(document.getElementById('industryMode')) document.getElementById('industryMode').value=s.industryMode||'presets';
+         if(document.getElementById('customIndustries')) document.getElementById('customIndustries').value=s.customIndustries||'';
          const age=Math.round((Date.now()-s.savedAt)/60000);
          const ageStr=age<60?age+'m ago':Math.round(age/60)+'h ago';
          const done=(s.completed||[]).length;
@@ -1718,9 +1796,10 @@
          banner.style.display='flex';
          document.getElementById('resumeText').innerHTML=
          '<strong>'+s.leads.length+' leads</strong> saved for <strong>'+s.city+', '+s.country+'</strong> — '+
-         done+'/'+INDUSTRIES.length+' industries done'+(remaining>0?' ('+remaining+' can still run)':' (complete)')+' — saved '+ageStr;
+         done+'/'+INDUSTRIES.length+' business types done'+(remaining>0?' ('+remaining+' can still run)':' (complete)')+' — saved '+ageStr;
          document.getElementById('city').value=s.city;
          document.getElementById('country').value=s.country;
+         initWaves();updateIndustryPlanUI();
          }
          lcInit();
          // ── WAVES ─────────────────────────────────────────────────────────────────
@@ -1805,7 +1884,9 @@ Search queries to use:
 For each business found, verify their website exists and estimate page count.
 
 Return ONLY a raw JSON array — no markdown, no code fences, no explanation:
-[{"name":"Business Name","website":"https://site.com","phone":"+123456789","email":"info@site.com","estimated_pages":12,"opportunity":"Missing blog and services pages","pitch_angle":"Your website needs a content engine.","industry_id":"${ind.id}"}]`;
+[{"name":"Business Name","website":"https://site.com","phone":"+123456789","email":"info@site.com","contact_form_url":"https://site.com/contact","estimated_pages":12,"opportunity":"Missing blog and services pages","pitch_angle":"Your website needs a content engine.","industry_id":"${ind.id}"}]
+
+Use a real contact_form_url only when you found a page with a contact or quote form. Otherwise return an empty string.`;
 
              try {
                  const API_BASE = 'https://app.contentscale.site';
@@ -1849,14 +1930,18 @@ Return ONLY a raw JSON array — no markdown, no code fences, no explanation:
          const city=document.getElementById('city').value.trim();
          const country=document.getElementById('country').value.trim();
          if(!city||!country){toast('Enter a city and country first');return;}
+         INDUSTRIES=buildIndustryPlan();
+         if(!INDUSTRIES.length){toast('Add at least one custom business type first');return;}
+         initWaves();updateIndustryPlanUI();
          const existingSession=loadSession();
          const isSameTarget=existingSession&&
          existingSession.city.toLowerCase().trim()===city.toLowerCase().trim()&&
          existingSession.country.toLowerCase().trim()===country.toLowerCase().trim();
          if(isSameTarget&&existingSession.leads&&existingSession.leads.length){
          allLeads=existingSession.leads;
-         completedIndustries=new Set(existingSession.completed||[]);
-         toast('Resuming — '+completedIndustries.size+' industries already done, skipping duplicates');
+         const activeIds=new Set(INDUSTRIES.map(i=>i.id));
+         completedIndustries=new Set((existingSession.completed||[]).filter(id=>activeIds.has(id)));
+         toast('Resuming — '+completedIndustries.size+' business types already done, skipping duplicates');
          } else {
          allLeads=[];completedIndustries=new Set();
          }
@@ -1975,6 +2060,7 @@ Return ONLY a raw JSON array — no markdown, no code fences, no explanation:
          renderAll();
          setTimeout(()=>resolveSitemapsPhase2(), 800);
          setTimeout(()=>verifyPhoneTypes(), 1600);
+         setTimeout(()=>discoverContactForms(true), 2400);
          } else document.getElementById('emptyState').style.display='block';
          }
          // ── PHASE 2: SITEMAP RESOLUTION ─────────────
@@ -2002,6 +2088,7 @@ Return ONLY a raw JSON array — no markdown, no code fences, no explanation:
          lead.sitemap_source = r.sitemap_source || 'verified';
          lead.phone = lead.phone || r.phone || '';
          lead.email = lead.email || r.email || '';
+         lead.contact_form_url = lead.contact_form_url || r.contact_form_url || '';
          updateLeadCard(lead);
          resolved++;
          }
@@ -2014,6 +2101,46 @@ Return ONLY a raw JSON array — no markdown, no code fences, no explanation:
          saveSession(document.getElementById('city').value, document.getElementById('country').value);
          updateResolveBtn(false, 0);
          toast('✓ Sitemaps resolved for ' + resolved + ' leads');
+         }
+         // ── PHASE 2B: DIRECT CONTACT-PAGE / FORM DISCOVERY ───────────────────────
+         // Uses the server to inspect the public homepage and likely contact pages.
+         // A form is recorded only when real form fields are present; guessed URLs
+         // are never displayed as confirmed contact forms.
+         let contactDiscoveryActive=false;
+         async function discoverContactForms(silent){
+           if(contactDiscoveryActive)return;
+           const targets=allLeads.filter(l=>l.website&&!l.contact_checked);
+           if(!targets.length){if(!silent)toast('✓ All contact forms already checked');return;}
+           contactDiscoveryActive=true;updateContactBtn(true,targets.length);
+           let checked=0,forms=0,emails=0;
+           try{
+             for(let i=0;i<targets.length;i+=15){
+               const batch=targets.slice(i,i+15);
+               const resp=await fetch('/api/lead-crawler/contact-discovery',{
+                 method:'POST',headers:adminHeaders({'Content-Type':'application/json'}),
+                 body:JSON.stringify({websites:batch.map(l=>l.website)})
+               });
+               if(!resp.ok)throw new Error('Contact discovery HTTP '+resp.status);
+               const data=await resp.json();
+               (data.results||[]).forEach((r,idx)=>{
+                 const lead=batch[idx];r=r||{};if(!lead)return;
+                 lead.contact_checked=true;
+                 if(r.contact_form_url&&!lead.contact_form_url){lead.contact_form_url=r.contact_form_url;forms++;}
+                 if(r.email&&!lead.email){lead.email=r.email;lead.email_source=r.email_source||'';emails++;}
+                 updateLeadCard(lead);checked++;
+               });
+               updateContactBtn(true,Math.max(0,targets.length-checked));
+               saveSession(document.getElementById('city').value,document.getElementById('country').value);
+             }
+             document.getElementById('results').innerHTML='';renderAll();
+             if(!silent||forms||emails)toast('✓ Checked '+checked+' sites — '+forms+' forms, '+emails+' new emails');
+           }catch(e){console.warn('[contact-discovery]',e);if(!silent)toast('Contact check stopped: '+e.message);}
+           finally{contactDiscoveryActive=false;updateContactBtn(false,0);saveSession(document.getElementById('city').value,document.getElementById('country').value);}
+         }
+         function updateContactBtn(active,remaining){
+           const btn=document.getElementById('contactBtn');if(!btn)return;
+           btn.disabled=active;btn.style.opacity=active?'.6':'1';
+           btn.textContent=active?'📝 Checking forms... ('+remaining+' left)':'📝 Find Contact Forms';
          }
          // ── PHASE 3: MOBILE/LANDLINE VERIFICATION (Twilio Lookup) ──────────────────
          let phoneVerificationActive = false;
@@ -2066,17 +2193,17 @@ Return ONLY a raw JSON array — no markdown, no code fences, no explanation:
          const domains = leads.map(l => l.website).join('\n');
          const prompt = [
          'For each domain below, find the real sitemap URL by checking robots.txt.',
-         'Also grab phone and email from the homepage/contact page if easy to find.',
+         'Also grab phone, email and a real contact-form page from the homepage/contact page if easy to find.',
          '',
          'Domains:',
          domains,
          '',
          'Return ONLY this JSON array — no markdown, no explanation:',
-         '[{"website":"https://domain.com","sitemap":"https://domain.com/sitemap_index.xml","sitemap_source":"robots.txt","phone":"+1 555 000","email":"info@domain.com"}]',
+         '[{"website":"https://domain.com","sitemap":"https://domain.com/sitemap_index.xml","sitemap_source":"robots.txt","phone":"+1 555 000","email":"info@domain.com","contact_form_url":"https://domain.com/contact"}]',
          '',
          'Rules:',
          '- sitemap_source: "robots.txt" if from robots.txt, "verified" if confirmed live, "fallback" if guessed',
-         '- phone and email: real values or "" if not found',
+         '- phone, email and contact_form_url: real values or "" if not found',
          '- Return ONLY the raw JSON array'
          ].join('\n');
          const API_BASE = 'https://app.contentscale.site';
@@ -2109,7 +2236,7 @@ Return ONLY a raw JSON array — no markdown, no code fences, no explanation:
          srow.setAttribute('onclick','event.stopPropagation();window.open(\''+url+'\',\'_blank\',\'noopener\')');
          srow.innerHTML=`<span style="font-family:'IBM Plex Mono',monospace;font-size:8.5px;color:var(--blue);flex:1;word-break:break-all;">${url}</span><span style="font-family:'IBM Plex Mono',monospace;font-size:7px;letter-spacing:.06em;text-transform:uppercase;padding:1px 4px;border-radius:2px;flex-shrink:0;${srcStyle}">${srcLabel}</span><button class="cpy" data-url="${url}" onclick="event.stopPropagation();cpyBtn(this)" title="Copy URL">⧉</button>`;
          }
-         if(lead.phone || lead.email){
+         if(lead.phone || lead.email || lead.contact_form_url || lead.contact_checked){
          let contactRow = card.querySelector('.contact-row');
          if(!contactRow){
          contactRow = document.createElement('div');
@@ -2120,7 +2247,8 @@ Return ONLY a raw JSON array — no markdown, no code fences, no explanation:
          contactRow.innerHTML =
          (lead.phone ? `<a href="tel:${lead.phone}" onclick="event.stopPropagation()" style="display:flex;align-items:center;gap:4px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--green);background:rgba(74,222,128,.08);border:1px solid rgba(74,222,128,.2);border-radius:3px;padding:3px 8px;text-decoration:none;">📞 ${lead.phone}</a>` : '') +
          (lead.phoneBadge ? `<span style="display:flex;align-items:center;font-family:'IBM Plex Mono',monospace;font-size:9px;color:${lead.aiCallAllowed?'var(--muted)':'var(--gold)'};background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:3px;padding:3px 8px;">${lead.phoneBadge}</span>` : '') +
-         (lead.email ? `<a href="mailto:${lead.email}" onclick="event.stopPropagation()" style="display:flex;align-items:center;gap:4px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--gold);background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.2);border-radius:3px;padding:3px 8px;text-decoration:none;">✉ ${lead.email}</a>` : '');
+         (lead.email ? `<a href="mailto:${lead.email}" onclick="event.stopPropagation()" style="display:flex;align-items:center;gap:4px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--gold);background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.2);border-radius:3px;padding:3px 8px;text-decoration:none;">✉ ${lead.email}</a>` : '') +
+         (lead.contact_form_url ? `<a href="${lead.contact_form_url}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="display:flex;align-items:center;gap:4px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--purple);background:rgba(167,139,250,.08);border:1px solid rgba(167,139,250,.25);border-radius:3px;padding:3px 8px;text-decoration:none;">📝 Contact form</a>` : (lead.contact_checked?`<span style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted);padding:3px 5px;">No form found</span>`:''));
          const btn = document.getElementById('callbtn-'+id);
          if(btn && lead.aiCallAllowed===false) btn.classList.add('mobile-warn');
          }
@@ -2175,13 +2303,14 @@ Return ONLY a raw JSON array — no markdown, no code fences, no explanation:
          rlInterval = setInterval(tick, 1000);
          }
          function updateProg(done,found){
-         const pct=Math.round(done/INDUSTRIES.length*100);
+         const total=INDUSTRIES.length||1;
+         const pct=Math.round(done/total*100);
          document.getElementById('progFill').style.width=pct+'%';
          const _pl=document.getElementById('progPctLabel');if(_pl)_pl.textContent=pct+'%';
          const _el=document.getElementById('progErrCount');if(_el)_el.textContent=errors.length;
          document.getElementById('progPct').textContent=done+' / '+INDUSTRIES.length;
          document.getElementById('progMsg').textContent=done<INDUSTRIES.length
-         ?'Searching '+done+'/'+INDUSTRIES.length+' industries (sequential — ~'+Math.round((INDUSTRIES.length-done)*12)+' seconds left)...'
+         ?'Searching '+done+'/'+INDUSTRIES.length+' business types (sequential — ~'+Math.round((INDUSTRIES.length-done)*12)+' seconds left)...'
          :'✓ All searches complete — rendering results';
          document.getElementById('bigCount').textContent=found;
          }
@@ -2273,10 +2402,11 @@ Return ONLY a raw JSON array — no markdown, no code fences, no explanation:
          <div class="cn">${l.name||'Unknown'}</div>
          <div class="ct">${l.type||''}</div>
          <div class="pitch-banner">${pitch}</div>
-         ${(l.phone||l.email)?`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;">
+         ${(l.phone||l.email||l.contact_form_url||l.contact_checked)?`<div class="contact-row" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;">
          ${l.phone?`<a href="tel:${l.phone}" onclick="event.stopPropagation()" style="display:flex;align-items:center;gap:4px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--green);background:rgba(74,222,128,.08);border:1px solid rgba(74,222,128,.2);border-radius:3px;padding:3px 8px;text-decoration:none;" title="Call">📞 ${l.phone}</a>`:''}
          ${l.phoneBadge?`<span id="phonebadge-${id}" style="display:flex;align-items:center;font-family:'IBM Plex Mono',monospace;font-size:9px;color:${l.aiCallAllowed?'var(--muted)':'var(--gold)'};background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:3px;padding:3px 8px;" title="${l.aiCallAllowed?'AI calling allowed':'Mobile number — AI auto-calling not allowed, manual only'}">${l.phoneBadge}</span>`:''}
          ${l.email?`<a href="mailto:${l.email}" onclick="event.stopPropagation()" style="display:flex;align-items:center;gap:4px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--gold);background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.2);border-radius:3px;padding:3px 8px;text-decoration:none;" title="Send email">✉ ${l.email}</a>`:''}
+         ${l.contact_form_url?`<a href="${l.contact_form_url}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="display:flex;align-items:center;gap:4px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--purple);background:rgba(167,139,250,.08);border:1px solid rgba(167,139,250,.25);border-radius:3px;padding:3px 8px;text-decoration:none;" title="Open verified contact form">📝 Contact form</a>`:(l.contact_checked?`<span style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted);padding:3px 5px;">No form found</span>`:'')}
          </div>`:''}
          <div class="srow" onclick="event.stopPropagation();window.open('${url}','_blank','noopener')" style="cursor:pointer" title="Open in new tab">
          <span style="font-family:'IBM Plex Mono',monospace;font-size:8.5px;color:var(--blue);flex:1;word-break:break-all;">${url}</span>
@@ -2337,8 +2467,8 @@ Return ONLY a raw JSON array — no markdown, no code fences, no explanation:
          function getSelLeads(){return allLeads.filter(l=>selected.has(makeId(l)));}
          function copySelUrls(){const s=getSelLeads();navigator.clipboard.writeText(s.map(l=>l.sitemap||(l.website+'/sitemap.xml')).join('\n')).then(()=>toast('Copied '+s.length+' URLs'));}
          function toCSV(leads){
-         const h=['Name','Type','Website','Phone','Email','Sitemap','Est Pages','Bucket','Content Score','Pitch Angle','Opportunity','Tags'];
-         const rows=leads.map(l=>[`"${(l.name||'').replace(/"/g,"'")}"`,`"${(l.type||'').replace(/"/g,"'")}"`,`"${l.website||''}"`,`"${l.phone||''}"`,`"${l.email||''}"`,`"${l.sitemap||''}"`,l.estimated_pages||0,`"${getBucket(l.estimated_pages)}"`,l.content_score||0,`"${(l.pitch_angle||'').replace(/"/g,"'")}"`,`"${(l.opportunity||'').replace(/"/g,"'")}"`,`"${(l.tags||[]).join('; ')}"`]);
+         const h=['Name','Type','Website','Phone','Email','Contact Form','Sitemap','Est Pages','Bucket','Content Score','Pitch Angle','Opportunity','Tags'];
+         const rows=leads.map(l=>[`"${(l.name||'').replace(/"/g,"'")}"`,`"${(l.type||'').replace(/"/g,"'")}"`,`"${l.website||''}"`,`"${l.phone||''}"`,`"${l.email||''}"`,`"${l.contact_form_url||''}"`,`"${l.sitemap||''}"`,l.estimated_pages||0,`"${getBucket(l.estimated_pages)}"`,l.content_score||0,`"${(l.pitch_angle||'').replace(/"/g,"'")}"`,`"${(l.opportunity||'').replace(/"/g,"'")}"`,`"${(l.tags||[]).join('; ')}"`]);
          return[h.join(','),...rows.map(r=>r.join(','))].join('\n');
          }
          function dl(content,name,type){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([content],{type}));a.download=name;a.click();}
@@ -2346,7 +2476,9 @@ Return ONLY a raw JSON array — no markdown, no code fences, no explanation:
          function exportJSON(){
            var bundle={_type:'contentscale-leadcrawler',version:1,exportedAt:Date.now(),
              city:document.getElementById('city').value,country:document.getElementById('country').value,
-             leads:allLeads,completed:[...completedIndustries],outcomes:{}};
+             leads:allLeads,completed:[...completedIndustries],industryPlan:INDUSTRIES,
+             industryMode:document.getElementById('industryMode')?.value||'presets',
+             customIndustries:document.getElementById('customIndustries')?.value||'',outcomes:{}};
            try{bundle.outcomes=JSON.parse(localStorage.getItem('lc_callsheet_outcomes')||'{}');}catch(e){}
            dl(JSON.stringify(bundle,null,2),'leadcrawler-'+(document.getElementById('city').value||'export')+'-'+Date.now()+'.json','application/json');
            toast('Exported '+allLeads.length+' leads + call outcomes');
@@ -2363,6 +2495,10 @@ Return ONLY a raw JSON array — no markdown, no code fences, no explanation:
              allLeads=allLeads.concat(added);
              if(!Array.isArray(data)){
                (data.completed||[]).forEach(function(c){completedIndustries.add(c);});
+               if(Array.isArray(data.industryPlan)&&data.industryPlan.length)INDUSTRIES=data.industryPlan;
+               if(data.industryMode&&document.getElementById('industryMode'))document.getElementById('industryMode').value=data.industryMode;
+               if(data.customIndustries&&document.getElementById('customIndustries'))document.getElementById('customIndustries').value=data.customIndustries;
+               initWaves();updateIndustryPlanUI();
                if(data.city && !document.getElementById('city').value)document.getElementById('city').value=data.city;
                if(data.country && !document.getElementById('country').value)document.getElementById('country').value=data.country;
                if(data.outcomes){
