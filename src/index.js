@@ -1,6 +1,7 @@
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-22-CANONICAL-v156';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-22-CANONICAL-v157';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 const CONTENTSCALE_BUILD_CHANGES = [
+  'Contact Intelligence: schema-initialisatie is geserialiseerd met één procesbelofte en PostgreSQL advisory lock om pg_type-races te voorkomen.',
   'Contact Intelligence: bronfilters, LinkedIn CSV-mapping, persistente verificatiewachtrij, CSV-export, import-checkpoints en suppressie-audit.',
   'Contact Intelligence: PostgreSQL-import gebruikt één JSONB-parameter per batch in plaats van tienduizenden losse parameters.',
   'Contact Intelligence: stream grote username/bio/follower/email-CSV-bestanden naar een aparte staginglaag met deduplicatie, score, menselijke verificatie en gecontroleerde promotie naar Lead Crawler.',
@@ -16293,8 +16294,12 @@ const _ciUpload=multer({
   limits:{files:1,fileSize:8*1024*1024*1024},
   fileFilter:function(req,file,cb){const name=String(file.originalname||'').toLowerCase();cb(null,/\.(csv|txt)$/.test(name)||/csv|text|octet-stream/i.test(String(file.mimetype||'')))}
 });
-let _ciTablesReady=false,_ciImportQueue=Promise.resolve();
-async function _ensureContactIntelligenceTables(){
+let _ciTablesReady=false,_ciTablesPromise=null,_ciImportQueue=Promise.resolve();
+async function _ensureContactIntelligenceTablesInit(){
+  if(_ciTablesReady)return true;
+  const schemaLockId=73156022,guard=await pool.connect();
+  try{
+  await guard.query(`SELECT pg_advisory_lock($1::bigint)`,[schemaLockId]);
   if(_ciTablesReady)return true;
   await _ensureProspectQuickScanTable();
   await pool.query(`CREATE TABLE IF NOT EXISTS contact_intelligence_imports(
@@ -16348,6 +16353,14 @@ async function _ensureContactIntelligenceTables(){
   await pool.query(`UPDATE contact_intelligence SET country=location WHERE country IS NULL AND COALESCE(location,'')<>''`);
   await pool.query(`ALTER TABLE prospect_quick_scans ADD COLUMN IF NOT EXISTS contact_intelligence_id BIGINT`);
   _ciTablesReady=true;_ciStartWorkers();return true;
+  }finally{
+    await guard.query(`SELECT pg_advisory_unlock($1::bigint)`,[schemaLockId]).catch(()=>{});guard.release();
+  }
+}
+async function _ensureContactIntelligenceTables(){
+  if(_ciTablesReady)return true;
+  if(!_ciTablesPromise)_ciTablesPromise=_ensureContactIntelligenceTablesInit().catch(e=>{_ciTablesPromise=null;throw e});
+  return _ciTablesPromise;
 }
 const _CI_FREE_EMAILS=new Set(['gmail.com','googlemail.com','hotmail.com','outlook.com','live.com','msn.com','yahoo.com','ymail.com','icloud.com','me.com','aol.com','proton.me','protonmail.com','gmx.com','mail.com']);
 function _ciPlain(v,max){return String(v==null?'':v).replace(/\u0000/g,'').trim().slice(0,max||20000)}
