@@ -266,7 +266,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-23-CANONICAL-v182';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-23-CANONICAL-v184';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 const CONTENTSCALE_BUILD_CHANGES = [
   'Contact Intelligence: schema-initialisatie is geserialiseerd met één procesbelofte en PostgreSQL advisory lock om pg_type-races te voorkomen.',
@@ -291,6 +291,7 @@ const CONTENTSCALE_BUILD_CHANGES = [
   'wordpress-sitewide-quick-scan-form-cors',
   'quick-scan-prospect-selection-and-bulk-delete',
   'quick-scan-search-and-page-aware-selection',
+  'quick-scan-automatic-commercial-page-selector',
   'quick-scan-consistent-prospect-card-layout',
   'quick-scan-failed-without-result-is-deletable',
   'public-quick-scan-one-page-per-business-30-day-limit',
@@ -13610,6 +13611,58 @@ return result;
                  opp.push({id:'OPP-EXT-004',category:'site_access',title:'Unlock the page-level opportunity layer',action:'Once direct HTML is available, run the existing 20-page GRAAF, architecture, internal-link and cannibalisation analysis.',why:'The website returned a security response, so ContentScale intentionally withheld page-level scores.',priority:'medium',status:'needs-access',source:'scan-validation'});
                  return {schema_version:'1.2',report_type:'first_contact_opportunity',report_mode:'prospect',generated_at:new Date().toISOString(),analysis_mode:'external-evidence',origin:body.origin||'standalone',confidence_model:{verified:'Directly verified evidence.',observed:'Directly observed from public search evidence.',possible_opportunity:'A useful evidence-led signal requiring validation before being stated as fact.',needs_access:'Cannot be responsibly verified without direct site/client access.'},company:{name:String(body.business_name||domain||'Prospect'),domain:domain,url:rawUrl},summary:{pages_discovered:null,pages_analyzed:null,average_graaf:null,technical_score:null,orphan_pages:null,internal_link_opportunities:null,cannibalization_groups:null,ai_engines_checked:0,ai_engines_verified:0,exact_page_citations:0,domain_citations:0},executive_summary:{strongest_observed_signals:opp.slice(0,3),report_scope:'Digital Search Opportunity Report: direct crawling was blocked, so ContentScale researched public search visibility and competitive signals without inventing page-level findings.',access_note:'Direct HTML was unavailable. GRAAF, ContentScore, technical findings, orphan pages, internal links and cannibalisation are therefore not scored or claimed in this report.'},website_structure:{inventory_source:'public search evidence only',total_pages_found:null,page_types:{},orphan_pages:[],internal_link_plan:[],status:'needs-access'},page_analysis:[],graaf:{average_score:null,weakest_pages:[],priority_pages:[],status:'needs-access'},architecture_and_intent:{content_gaps:topics,cannibalization:[],internal_link_plan:[],status:'possible-opportunity'},schema_and_entities:{pages_with_schema:null,multilingual:{},entity_evidence:[],status:'needs-access'},ai_visibility:{engines:[],checked:0,verified:0,status:'needs-access'},opportunities:opp,external_evidence:{queries_run:(queries||[]).length,queries:queries||[],search_results:results,own_results:own,competitor_results:competitors,topic_signals:topics,own_domain_results:own.length,other_domain_results:external.length,status:'observed'},access_requirements:[{item:'Direct website access',status:'needs-access',reason:'Required for page-level GRAAF, ContentScore, technical, architecture and internal-link evidence.'},{item:'Google Search Console',status:'needs-access',reason:'Required for verified query, click, impression and position evidence.'},{item:'Five-engine manual AI verification',status:'needs-access',reason:'Required before AI recommendation/citation claims are called verified.'}],roadmap:[{phase:'Days 1–7',actions:['Validate the observed public-search topics and commercial priorities.','Select the highest-value existing or planned landing pages for direct analysis.'],status:'possible-opportunity'},{phase:'Days 8–30',actions:['Run the 20-page GRAAF and architecture analysis once direct HTML is available.','Compare confirmed priority queries against the observed competitive search landscape.'],status:'needs-access'},{phase:'Days 31–90',actions:['Validate performance assumptions with Google Search Console.','Complete the five-engine manual AI evidence cycle and move verified opportunities into Tracker.'],status:'needs-access'}],source_trace:{audit_mode:'external-evidence',pages:own.map(function(x){return x.url;}),blocked_scan:{error:failedAudit&&failedAudit.error||'Direct scan blocked',detail:failedAudit&&failedAudit.detail||'',http_status:failedAudit&&failedAudit.http_status||null},search_queries:queries||[]},tracker_promotion:{eligible:false,required_before_promotion:['Direct page-level audit','Complete/verify five-engine manual evidence','Connect or verify Google Search Console','Lock baseline']}};
                }
+               // v183 — automatic blocked-site HTML acquisition -> SAME existing /api/scan/paste GRAAF engine.
+               // This is deliberately not a second scoring engine. Apify is only an acquisition fallback;
+               // the HTML is scored by the exact pasted-HTML route already used by ContentScale.
+               async function _opportunityAcquireHtmlViaApify(rawUrl){
+                 const token=String(process.env.APIFY_TOKEN||'').trim();
+                 if(!token||!rawUrl)return null;
+                 try{
+                   const start=await fetch('https://api.apify.com/v2/acts/apify~web-scraper/runs?token='+encodeURIComponent(token),{
+                     method:'POST',headers:{'Content-Type':'application/json'},
+                     body:JSON.stringify({startUrls:[{url:rawUrl}],maxRequestsPerCrawl:1,maxRequestRetries:2,pageFunction:"async function pageFunction(context) { return { url: context.request.url, html: document.documentElement.outerHTML, title: document.title }; }",proxyConfiguration:{useApifyProxy:true}})
+                   });
+                   if(!start.ok)throw new Error('Apify start HTTP '+start.status);
+                   const sj=await start.json();const runId=sj&&sj.data&&sj.data.id;if(!runId)throw new Error('Apify run id missing');
+                   let state='RUNNING',datasetId=null;
+                   for(let i=0;i<18;i++){
+                     await new Promise(function(resolve){setTimeout(resolve,2500);});
+                     const rr=await fetch('https://api.apify.com/v2/actor-runs/'+encodeURIComponent(runId)+'?token='+encodeURIComponent(token));
+                     if(!rr.ok)continue;const rj=await rr.json();const d=rj&&rj.data||{};state=String(d.status||'');datasetId=d.defaultDatasetId||datasetId;
+                     if(['SUCCEEDED','FAILED','ABORTED','TIMED-OUT'].includes(state))break;
+                   }
+                   if(state!=='SUCCEEDED'||!datasetId)return null;
+                   const dr=await fetch('https://api.apify.com/v2/datasets/'+encodeURIComponent(datasetId)+'/items?token='+encodeURIComponent(token)+'&clean=true&format=json&limit=1');
+                   if(!dr.ok)return null;const items=await dr.json();const html=items&&items[0]&&String(items[0].html||'');
+                   if(html.length<500||!/\<(html|body|main|article)\b/i.test(html))return null;
+                   if(/<title[^>]*>\s*(?:403|forbidden|access denied|just a moment)/i.test(html))return null;
+                   return {html:html,method:'apify-web-scraper',run_id:runId};
+                 }catch(e){console.warn('[opportunity-report] v183 Apify HTML fallback:',e.message);return null;}
+               }
+               async function _opportunityScoreAcquiredHtml(rawUrl,html){
+                 try{
+                   const base='http://127.0.0.1:'+(process.env.PORT||3000);
+                   const r=await fetch(base+'/api/scan/paste',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url:rawUrl,html:html})});
+                   const j=await r.json().catch(function(){return null;});
+                   if(!r.ok||!j||j.success===false||!Number.isFinite(Number(j.score)))return null;
+                   return j;
+                 }catch(e){console.warn('[opportunity-report] v183 internal GRAAF paste score:',e.message);return null;}
+               }
+               function _opportunityMergeAutomaticGraaf(report,rawUrl,scored,acquisition){
+                 if(!report||!scored)return report;
+                 const score=Number(scored.score);const recs=Array.isArray(scored.recommendations)?scored.recommendations:[];
+                 report.analysis_mode='external-evidence+automatic-graaf';
+                 report.summary=report.summary||{};report.summary.pages_analyzed=1;report.summary.average_graaf=score;
+                 report.graaf={average_score:score,weakest_pages:[{url:rawUrl,score:score}],priority_pages:[{url:rawUrl,score:score,recommendations:recs}],page_recommendations:[{url:rawUrl,title:String(scored.title||''),content_score:score,recommendations:recs.map(function(x){return x&&typeof x==='object'?Object.assign({},x):{title:String(x||'')};})}],status:'observed'};
+                 report.page_analysis=[{url:rawUrl,title:String(scored.title||''),page_type:'homepage',graaf:score,craft:Number(scored.craft_score||0)||null,technical:Number(scored.technical_score||0)||null,word_count:Number(scored.wordCount||scored.word_count||0)||null,schema:null,orphan:null,status:'observed'}];
+                 const graafOpp=recs.map(function(r,i){return {id:'OPP-GRAAF-'+String(i+1).padStart(3,'0'),category:String(r.category||r.type||'graaf'),title:String(r.title||r.name||r.recommendation||'GRAAF recommendation'),action:String(r.action||r.description||r.recommendation||''),why:String(r.why||r.reason||''),priority:String(r.priority||'medium').toLowerCase(),status:'observed',source:'automatic-html-graaf',url:rawUrl};});
+                 report.opportunities=graafOpp.concat(Array.isArray(report.opportunities)?report.opportunities:[]);
+                 report.executive_summary=report.executive_summary||{};report.executive_summary.access_note='The primary crawler was blocked, but ContentScale automatically acquired valid first-party HTML through its fallback acquisition layer and ran the existing GRAAF pasted-HTML engine. Search-performance and AI claims still require their own evidence.';
+                 report.source_trace=report.source_trace||{};report.source_trace.automatic_html_fallback={success:true,method:acquisition&&acquisition.method||'fallback',graaf_engine:'existing /api/scan/paste',content_score:score,recommendation_count:recs.length};
+                 report.access_requirements=(report.access_requirements||[]).filter(function(x){return String(x.item||'')!=='Direct website access';});
+                 return report;
+               }
+
                async function _generateExternalProspectFallback(body, failedAudit){
                  const rawUrl=String(body.url||'').trim();let domain='';try{domain=new URL(/^https?:\/\//i.test(rawUrl)?rawUrl:'https://'+rawUrl).hostname.replace(/^www\./,'');}catch(e){domain=rawUrl.replace(/^https?:\/\//i,'').split('/')[0];}
                  const business=String(body.business_name||'').trim(),brand=business||domain.replace(/\.[a-z]{2,}$/i,'').replace(/[-_]/g,' ');
@@ -13647,9 +13700,18 @@ return result;
                    if(fallbackReason)payload.quick_scan_failure=fallbackReason;
                    const securityBlocked=reportMode==='prospect' && /security|anti-bot|403|forbidden/i.test(String(payload.error||'')+' '+String(payload.detail||'')+' '+String(payload.quick_scan_failure||''));
                    if(securityBlocked){
-                     const report=await _generateExternalProspectFallback(body,payload);
-                     auditModeUsed='external-evidence';
-                     report.analysis_fallback=true;report.analysis_fallback_reason='Direct website analysis blocked by site security; no page-level score was produced.';
+                     let report=await _generateExternalProspectFallback(body,payload);
+                     // Automatic recovery: if the normal ContentScale crawler is blocked, try an independent
+                     // acquisition route and feed ONLY valid HTML into the existing pasted-HTML GRAAF engine.
+                     // Failure is non-fatal: the evidence-only report remains truthful and usable.
+                     const _rawProspectUrl=/^https?:\/\//i.test(String(body.url||''))?String(body.url):'https://'+String(body.url||'');
+                     const _acquired=await _opportunityAcquireHtmlViaApify(_rawProspectUrl);
+                     if(_acquired&&_acquired.html){
+                       const _scored=await _opportunityScoreAcquiredHtml(_rawProspectUrl,_acquired.html);
+                       if(_scored){report=_opportunityMergeAutomaticGraaf(report,_rawProspectUrl,_scored,_acquired);console.log('[opportunity-report] v183 automatic GRAAF recovered:',_rawProspectUrl,'score='+_scored.score,'recs='+(Array.isArray(_scored.recommendations)?_scored.recommendations.length:0));}
+                     }
+                     auditModeUsed=report.analysis_mode||'external-evidence';
+                     report.analysis_fallback=true;report.analysis_fallback_reason=report.graaf&&report.graaf.average_score!=null?'Primary crawler blocked; automatic HTML fallback recovered the page and GRAAF scored it.':'Direct website analysis blocked by site security; no page-level score was produced.';
                      report.origin=body.origin||'standalone';
                      if(body.quick_scan_token)report.quick_scan_token=String(body.quick_scan_token);
                      let share=null,save_warning=null;
@@ -16819,7 +16881,9 @@ function _ensureProspectQuickScanTable(){
   ALTER TABLE prospect_quick_scans ADD COLUMN IF NOT EXISTS outreach_attempts INTEGER DEFAULT 0;
   ALTER TABLE prospect_quick_scans ADD COLUMN IF NOT EXISTS email_lookup_status VARCHAR(24);
   ALTER TABLE prospect_quick_scans ADD COLUMN IF NOT EXISTS email_lookup_checked_at TIMESTAMPTZ;
-  ALTER TABLE prospect_quick_scans ADD COLUMN IF NOT EXISTS email_lookup_source TEXT;`).then(()=>true).catch(e=>{console.error('[quick-scan] table:',e.message);_pqsTableReady=null;return false;});
+  ALTER TABLE prospect_quick_scans ADD COLUMN IF NOT EXISTS email_lookup_source TEXT;
+  ALTER TABLE prospect_quick_scans ADD COLUMN IF NOT EXISTS page_selection_mode VARCHAR(24) DEFAULT 'auto';
+  ALTER TABLE prospect_quick_scans ADD COLUMN IF NOT EXISTS page_selection JSONB;`).then(()=>true).catch(e=>{console.error('[quick-scan] table:',e.message);_pqsTableReady=null;return false;});
   return _pqsTableReady;
 }
 function _pqsCleanUrl(raw){
@@ -16840,7 +16904,7 @@ function _pqsNormalizeAiEvidence(raw){
 }
 function _pqsPublicRow(r){
   const ai=_pqsNormalizeAiEvidence(r&&r.ai_evidence),checked=_PQS_ENGINES.filter(k=>ai[k]&&ai[k].checked).length;
-  return {token:r.token,business_name:r.business_name||'',url:r.url,domain:r.domain||'',source:r.source||'standalone',language:r.language||'auto',status:r.status,scan_result:r.scan_result||null,scan_error:r.scan_error||'',sitemap_count:r.sitemap_count,sitemap_url:r.sitemap_url||'',ai_evidence:ai,ai_checked:checked,ai_revision:Number(r.ai_revision||0),visitor_email:r.visitor_email||'',updates_opt_in:!!r.updates_opt_in,completion_email_sent_at:r.completion_email_sent_at||null,created_at:r.created_at,first_opened_at:r.first_opened_at,last_opened_at:r.last_opened_at,scan_started_at:r.scan_started_at,scan_completed_at:r.scan_completed_at,updated_at:r.updated_at};
+  return {token:r.token,business_name:r.business_name||'',url:r.url,domain:r.domain||'',source:r.source||'standalone',language:r.language||'auto',status:r.status,scan_result:r.scan_result||null,scan_error:r.scan_error||'',sitemap_count:r.sitemap_count,sitemap_url:r.sitemap_url||'',ai_evidence:ai,ai_checked:checked,ai_revision:Number(r.ai_revision||0),visitor_email:r.visitor_email||'',updates_opt_in:!!r.updates_opt_in,completion_email_sent_at:r.completion_email_sent_at||null,page_selection_mode:r.page_selection_mode||'auto',page_selection:r.page_selection||null,created_at:r.created_at,first_opened_at:r.first_opened_at,last_opened_at:r.last_opened_at,scan_started_at:r.scan_started_at,scan_completed_at:r.scan_completed_at,updated_at:r.updated_at};
 }
 function _pqsLanguage(raw){const v=String(raw||'auto').trim().toLowerCase().slice(0,8);return /^(auto|[a-z]{2,3}(-[a-z]{2,4})?)$/.test(v)?v:'auto';}
 async function _pqsNotifyOwner(row,event){
@@ -17453,6 +17517,34 @@ function _pqsSameBusinessDomain(chosenHost,originalHost){
   const sharedHosts=new Set(['wixsite.com','wordpress.com','blogspot.com','github.io','webflow.io','weebly.com','notion.site','godaddysites.com','squarespace.com']);
   return sharedHosts.has(root)?chosen===original:!!root&&_pqsRootDomain(chosen)===root;
 }
+// CONTENTSCALE v184 — lightweight commercial page selector for the one-page Quick Scan.
+// Discovery does NOT score pages with GRAAF. It only chooses the most useful first-party page;
+// the selected page is then sent once to the existing /api/scan GRAAF engine.
+function _pqsSelectorText(html){return String(html||'').replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi,' ').replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi,' ').replace(/<svg\b[^>]*>[\s\S]*?<\/svg>/gi,' ').replace(/<[^>]+>/g,' ').replace(/&nbsp;|&#160;/gi,' ').replace(/&[a-z0-9#]+;/gi,' ').replace(/\s+/g,' ').trim()}
+function _pqsSelectorMeta(html,tag){const m=String(html||'').match(new RegExp('<'+tag+'\\b[^>]*>([\\s\\S]*?)<\\/'+tag+'>','i'));return m?_pqsSelectorText(m[1]).slice(0,240):''}
+function _pqsSelectorTitle(html){const m=String(html||'').match(/<title\b[^>]*>([\s\S]*?)<\/title>/i);return m?_pqsSelectorText(m[1]).slice(0,240):''}
+function _pqsSelectorScore(page,homeUrl){
+  const html=String(page&&page.html||''),text=_pqsSelectorText(html),words=text?text.split(/\s+/).filter(Boolean).length:0,title=_pqsSelectorTitle(html),h1=_pqsSelectorMeta(html,'h1');let u;try{u=new URL(page.url)}catch(e){return null}let home;try{home=new URL(homeUrl)}catch(e){home=u}
+  const path=(u.pathname||'/').toLowerCase(),hay=(path+' '+title+' '+h1).toLowerCase();
+  if(/\.(?:jpg|jpeg|png|gif|webp|svg|pdf|zip|xml|json)$/i.test(path)||/(?:privacy|cookie|terms|legal|disclaimer|login|signin|signup|cart|checkout|account|search|tag|author|feed)(?:\/|$)/i.test(path))return null;
+  let commercial=0;if(/(?:service|services|solution|solutions|product|products|property|properties|development|developments|project|projects|software|platform|consult|repair|roof|clinic|treatment|course|pricing|industry|industries|location|locations)/i.test(hay))commercial+=30;if(/(?:about|company|team|contact|news|blog|career)/i.test(hay))commercial-=12;
+  let depth=words>=1200?20:words>=800?18:words>=500?15:words>=300?11:words>=180?6:0;
+  let specificity=(title.length>=20?8:3)+(h1.length>=12?8:2)+(path!=='/'?8:0);
+  let structure=Math.min(12,((html.match(/<h[2-3]\b/gi)||[]).length*2)+((html.match(/<p\b/gi)||[]).length>=5?4:0));
+  let importance=path==='/'?12:Math.max(3,12-Math.max(0,path.split('/').filter(Boolean).length-1)*3);
+  let thinPenalty=words<120?-28:words<200?-12:0;
+  const score=Math.max(0,Math.min(100,commercial+depth+specificity+structure+importance+thinPenalty));
+  return{url:u.href,score,words,title,h1,commercial_relevance:commercial,content_depth:depth,reason:(commercial>=30?'commercial topic · ':'')+(words>=500?'substantial content · ':'')+(path==='/'?'homepage':'specific landing page')};
+}
+async function _pqsSelectBestScanPage(rawUrl){
+  const cleaned=_pqsCleanUrl(rawUrl);if(!cleaned)return null;let base;try{base=new URL(cleaned)}catch(e){return null}const origin=base.origin,host=base.hostname.toLowerCase().replace(/^www\./,''),homeUrl=origin+'/';
+  const home=await _pqsFetchPublicEmailPage(homeUrl);if(!home)return{selected_url:cleaned,mode:'auto_fallback',reason:'Homepage discovery was blocked; keeping submitted page.',candidates:[]};
+  const urls=[],seen=new Set();function add(v){try{const u=new URL(v,home.url);u.hash='';['utm_source','utm_medium','utm_campaign','utm_term','utm_content','gclid','fbclid'].forEach(k=>u.searchParams.delete(k));const h=u.hostname.toLowerCase().replace(/^www\./,'');if(h!==host||!/^https?:$/.test(u.protocol))return;const key=u.origin+u.pathname.replace(/\/+$/,'')+(u.search||'');if(seen.has(key))return;seen.add(key);urls.push(u.href)}catch(e){}}
+  add(cleaned);add(home.url);let m,re=/href\s*=\s*["']([^"'#]+)["']/gi;while((m=re.exec(home.html))&&urls.length<60)add(m[1]);
+  const rankedUrls=urls.map(x=>{let u=new URL(x),p=u.pathname.toLowerCase(),hint=p+' '+decodeURIComponent(p);let pre=0;if(/(?:service|solution|product|property|development|project|software|platform|consult|repair|clinic|treatment|pricing|industry|location)/i.test(hint))pre+=30;if(p==='/'||p==='')pre+=12;if(/(?:privacy|cookie|terms|legal|login|cart|checkout|blog|news|career|contact)(?:\/|$)/i.test(p))pre-=30;pre-=Math.max(0,p.split('/').filter(Boolean).length-2)*5;return{x,pre}}).sort((a,b)=>b.pre-a.pre).slice(0,14).map(x=>x.x);
+  const fetched=await Promise.all(rankedUrls.map(x=>x===home.url?Promise.resolve(home):_pqsFetchPublicEmailPage(x))),scores=fetched.filter(Boolean).map(x=>_pqsSelectorScore(x,homeUrl)).filter(Boolean).sort((a,b)=>b.score-a.score);
+  const selected=scores[0];return selected?{selected_url:selected.url,mode:'auto',reason:'Selected for commercial relevance, topic specificity and sufficient page content.',selected,candidates:scores.slice(0,8)}:{selected_url:cleaned,mode:'auto_fallback',reason:'No stronger first-party content page could be validated.',candidates:[]};
+}
 function _pqsSelectablePage(rawUrl){
   const cleaned=_pqsCleanUrl(rawUrl);if(!cleaned)return null;
   try{const u=new URL(cleaned);if(u.username||u.password)return null;if(u.port&&!((u.protocol==='https:'&&u.port==='443')||(u.protocol==='http:'&&u.port==='80')))return null;['utm_source','utm_medium','utm_campaign','utm_term','utm_content','gclid','fbclid'].forEach(k=>u.searchParams.delete(k));return u.toString();}catch(e){return null;}
@@ -17471,7 +17563,8 @@ app.post('/api/prospect-quick-scan/:token/setup',_pqsPublicLimit,async(req,res)=
     const chosenHost=new URL(page).hostname,originalHost=String(row.domain||new URL(row.url).hostname);
     if(!_pqsSameBusinessDomain(chosenHost,originalHost))return res.status(400).json({success:false,error:'Choose a page on the same business domain'});
     const opt=!!(req.body||{}).updates_opt_in;
-    const updated=await pool.query(`UPDATE prospect_quick_scans SET url=$1,visitor_email=$2,updates_opt_in=$3,updates_opted_in_at=CASE WHEN $3 THEN COALESCE(updates_opted_in_at,NOW()) ELSE NULL END,updated_at=NOW() WHERE token=$4 AND revoked_at IS NULL AND scan_started_at IS NULL AND scan_completed_at IS NULL RETURNING *`,[page,email,opt,req.params.token]);
+    const selectionMode=page!==String(row.url||'')?'manual':String(row.page_selection_mode||'auto');
+    const updated=await pool.query(`UPDATE prospect_quick_scans SET url=$1,visitor_email=$2,updates_opt_in=$3,updates_opted_in_at=CASE WHEN $3 THEN COALESCE(updates_opted_in_at,NOW()) ELSE NULL END,page_selection_mode=$5,updated_at=NOW() WHERE token=$4 AND revoked_at IS NULL AND scan_started_at IS NULL AND scan_completed_at IS NULL RETURNING *`,[page,email,opt,req.params.token,selectionMode]);
     if(!updated.rows.length)return res.status(409).json({success:false,error:'The page was locked while the scan was starting'});
     res.json({success:true,item:_pqsPublicRow(updated.rows[0])});
   }catch(e){res.status(500).json({success:false,error:e.message});}
@@ -17490,6 +17583,11 @@ app.post('/api/prospect-quick-scan/:token/run',_pqsPublicLimit,async(req,res)=>{
     if(row.status==='scanning')return res.status(409).json({success:false,error:'This page is already being scanned'});
     await pool.query(`UPDATE prospect_quick_scans SET status='scanning',scan_error=NULL,scan_started_at=NOW(),updated_at=NOW() WHERE token=$1`,[row.token]);
     _pqsNotifyOwner(row,'started');
+    // If the visitor deliberately supplied another same-domain page, respect it. Otherwise discover
+    // a commercially useful page automatically instead of assuming the homepage is the best sample.
+    if(String(row.page_selection_mode||'auto')!=='manual'){
+      try{const choice=await _pqsSelectBestScanPage(row.url);if(choice&&choice.selected_url){row.url=choice.selected_url;row.page_selection=choice;row.page_selection_mode=choice.mode||'auto';await pool.query(`UPDATE prospect_quick_scans SET url=$1,page_selection_mode=$2,page_selection=$3::jsonb,updated_at=NOW() WHERE token=$4`,[row.url,row.page_selection_mode,JSON.stringify(choice),row.token]);}}catch(e){console.warn('[quick-scan] automatic page selection:',e.message)}
+    }
     const rr=await fetch('http://127.0.0.1:'+PORT+'/api/scan',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url:row.url})});
     const d=await rr.json().catch(()=>({success:false,error:'Scanner returned no valid result'}));
     if(!rr.ok||d.success===false||typeof d.score!=='number'){
