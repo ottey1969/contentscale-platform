@@ -253,7 +253,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-22-CANONICAL-v170';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-22-CANONICAL-v171';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 const CONTENTSCALE_BUILD_CHANGES = [
   'Contact Intelligence: schema-initialisatie is geserialiseerd met één procesbelofte en PostgreSQL advisory lock om pg_type-races te voorkomen.',
@@ -12154,8 +12154,11 @@ return result;
                const _scanHeaders = response ? response.headers() : {};
                const _scanFinalUrl = page.url() || scanUrl;
                const _scanRedirectChain = response && response.request ? response.request().redirectChain().map(function(rq){ return rq.url(); }).concat([_scanFinalUrl]) : [scanUrl,_scanFinalUrl].filter(function(v,i,a){return v&&a.indexOf(v)===i;});
-               // Reject 404s and server errors — do not score missing pages
-               if (response && response.status() >= 400) {
+               // Do not reject HTTP 403 before inspecting the rendered document.
+               // Some sites return 403 to the browser navigation request but still render the real
+               // first-party page in Chromium. We validate that rendered document below before scoring.
+               // All other 4xx/5xx responses remain invalid and are never content-scored.
+               if (response && response.status() >= 400 && response.status() !== 403) {
                  await page.close();
                  return res.status(422).json({ success: false, error: 'SCAN RESPONSE INVALID — HTTP ' + response.status(), step:'invalid_response', requested_url:scanUrl, final_url:_scanFinalUrl, http_status:_scanStatus, redirect_chain:_scanRedirectChain, detail:'The requested page was not content-audited or scored.' });
                }
@@ -12192,6 +12195,14 @@ return result;
                  await page.close().catch(()=>{});
                  return res.status(422).json({success:false,error:'SCAN RESPONSE INVALID — security or anti-bot page received',step:'invalid_response',requested_url:scanUrl,final_url:_scanFinalUrl,http_status:_scanStatus,redirect_chain:_scanRedirectChain,document_title:_scanDocumentProof.title,robots_meta:_scanDocumentProof.robots_meta,x_robots_tag:String(_scanHeaders['x-robots-tag']||''),detail:'A security response was fetched instead of the intended webpage. No ContentScore, noindex decision or page-level recommendations were produced.'});
                }
+               // A 403 is accepted only when Chromium rendered a substantive, non-security document.
+               // This preserves the anti-bot guard while allowing real pages that use a misleading
+               // navigation status. Sparse/blank 403 documents remain invalid.
+               if (_scanStatus === 403 && (!_scanDocumentProof.body_chars || _scanDocumentProof.body_chars < 500)) {
+                 await page.close().catch(()=>{});
+                 return res.status(422).json({success:false,error:'SCAN RESPONSE INVALID — HTTP 403',step:'invalid_response',requested_url:scanUrl,final_url:_scanFinalUrl,http_status:_scanStatus,redirect_chain:_scanRedirectChain,document_title:_scanDocumentProof.title,detail:'HTTP 403 did not render enough verified page content to audit safely.'});
+               }
+               if (_scanStatus === 403) console.log('[scan] HTTP 403 navigation accepted after rendered-document validation:', _scanFinalUrl, '('+_scanDocumentProof.body_chars+' body chars)');
                var analysis;
                try {
                analysis = await page.evaluate((scanUrlParam) => {
