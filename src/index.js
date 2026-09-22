@@ -253,7 +253,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-22-CANONICAL-v175';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-22-CANONICAL-v176';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 const CONTENTSCALE_BUILD_CHANGES = [
   'Contact Intelligence: schema-initialisatie is geserialiseerd met één procesbelofte en PostgreSQL advisory lock om pg_type-races te voorkomen.',
@@ -12127,6 +12127,46 @@ return result;
                res.json({ success: true });
                });
                // ============================================
+               // v176: use the proven lightweight Puppeteer fetch profile as a recovery source
+               // when the primary scanner receives a WAF/security document. This does NOT bypass
+               // validation: recovered HTML must independently look like a substantive first-party page.
+               async function _scanFetchHtmlRecovery(fetchUrl) {
+                 let recoveryPage = null;
+                 try {
+                   let recoveryBrowser = await getBrowser();
+                   if (!recoveryBrowser) { browserInstance = null; recoveryBrowser = await getBrowser(); }
+                   if (!recoveryBrowser) return { ok:false, error:'browser_unavailable' };
+                   recoveryPage = await recoveryBrowser.newPage();
+                   await recoveryPage.setViewport({ width:1440, height:900 });
+                   await recoveryPage.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+                   await recoveryPage.setRequestInterception(true);
+                   recoveryPage.on('request', function(rq){
+                     const type=rq.resourceType();
+                     if(['image','media','font','stylesheet'].includes(type)) rq.abort();
+                     else rq.continue();
+                   });
+                   const rr=await recoveryPage.goto(fetchUrl,{waitUntil:'domcontentloaded',timeout:20000});
+                   await new Promise(function(resolve){setTimeout(resolve,1500);});
+                   const proof=await recoveryPage.evaluate(function(){
+                     const title=(document.title||'').trim();
+                     const body=((document.body&&document.body.innerText)||'').replace(/\s+/g,' ').trim();
+                     const links=Array.from(document.querySelectorAll('a[href]'));
+                     let sameOriginLinks=0;
+                     try { sameOriginLinks=links.filter(function(a){try{return new URL(a.href,location.href).origin===location.origin;}catch(e){return false;}}).length; } catch(e) {}
+                     const headingCount=document.querySelectorAll('h1,h2,h3').length;
+                     const contentBlocks=document.querySelectorAll('main,article,section').length;
+                     const titleSecurity=/attention required|just a moment|verify you are human|access denied|403\s*[-–—:]?\s*forbidden|sorry, you have been blocked/i.test(title);
+                     const legitimate=body.length>=1000 && sameOriginLinks>=3 && (headingCount>=2 || contentBlocks>=2) && !titleSecurity;
+                     return {title:title,body_chars:body.length,same_origin_links:sameOriginLinks,heading_count:headingCount,content_blocks:contentBlocks,legitimate_document:legitimate,html:legitimate?document.documentElement.outerHTML:''};
+                   });
+                   return {ok:!!(proof&&proof.legitimate_document&&proof.html&&proof.html.length>=1500),html:proof&&proof.html||'',proof:proof,status:rr?rr.status():0,final_url:recoveryPage.url()||fetchUrl};
+                 } catch(e) {
+                   return {ok:false,error:e.message};
+                 } finally {
+                   if(recoveryPage){try{await recoveryPage.close();}catch(e){}}
+                 }
+               }
+
                app.post('/api/scan', async (req, res) => {
                const { url } = req.body;
                if (!url) return res.status(400).json({ success: false, error: 'URL required' });
@@ -12240,6 +12280,7 @@ return result;
                  const securityReason=titleSecurityMatch?('security-title:'+titleSecurityMatch[0]):looksLikeSecurityPage?('challenge-structure:'+(challengeMatch?challengeMatch[0]:(weakMatch?weakMatch[0]:'unknown'))):'';
                  return {title:title,body_chars:body.length,robots_meta:robotsMeta,canonical:canonical,html_lang:htmlLang,looks_like_security_page:looksLikeSecurityPage,security_reason:securityReason,security_excerpt:looksLikeSecurityPage?body.slice(0,320):'',same_origin_links:sameOriginLinks,heading_count:headingCount,content_blocks:contentBlocks,forms:forms,legitimate_document:legitimateDocument};
                });
+               let _scanRecoveredByFetchHtml = false;
                if(_scanDocumentProof.looks_like_security_page){
                  console.warn('[scan] rendered security document rejected:', _scanFinalUrl, '| reason=', _scanDocumentProof.security_reason||'unknown', '| body_chars=', _scanDocumentProof.body_chars, '| same_origin_links=', _scanDocumentProof.same_origin_links, '| headings=', _scanDocumentProof.heading_count, '| blocks=', _scanDocumentProof.content_blocks, '| title=', _scanDocumentProof.title);
                  // Some WAFs return the real first-party DOM at DOMContentLoaded and replace it a few
@@ -12256,18 +12297,37 @@ return result;
                      return res.status(422).json({success:false,error:'SCAN RESPONSE INVALID — security or anti-bot page received',step:'invalid_response',requested_url:scanUrl,final_url:_scanFinalUrl,http_status:_scanStatus,detail:'A late security response replaced a legitimate page, but the validated early document could not be restored safely.',security_reason:_scanDocumentProof.security_reason||null});
                    }
                  } else {
-                   await page.close().catch(()=>{});
-                   return res.status(422).json({success:false,error:'SCAN RESPONSE INVALID — security or anti-bot page received',step:'invalid_response',requested_url:scanUrl,final_url:_scanFinalUrl,http_status:_scanStatus,redirect_chain:_scanRedirectChain,document_title:_scanDocumentProof.title,robots_meta:_scanDocumentProof.robots_meta,x_robots_tag:String(_scanHeaders['x-robots-tag']||''),detail:'A security response was fetched instead of the intended webpage. No ContentScore, noindex decision or page-level recommendations were produced.',security_reason:_scanDocumentProof.security_reason||null,document_proof:{body_chars:_scanDocumentProof.body_chars,same_origin_links:_scanDocumentProof.same_origin_links,heading_count:_scanDocumentProof.heading_count,content_blocks:_scanDocumentProof.content_blocks,legitimate_document:_scanDocumentProof.legitimate_document,early_snapshot_legitimate:!!(_scanEarlySnapshot&&_scanEarlySnapshot.legitimate_document)}});
+                   // v176: the primary scan got a real security document. Retry with the already-proven
+                   // lightweight Puppeteer profile used by /api/fetch-html. Only independently validated
+                   // first-party HTML is allowed back into the scoring pipeline.
+                   console.warn('[scan] v176 primary document blocked — trying validated fetch-html recovery:', scanUrl);
+                   const _recovery = await _scanFetchHtmlRecovery(scanUrl);
+                   if (_recovery && _recovery.ok) {
+                     console.log('[scan] v176 fetch-html recovery accepted:', scanUrl, '| body_chars=',_recovery.proof.body_chars,'| links=',_recovery.proof.same_origin_links,'| headings=',_recovery.proof.heading_count,'| recovery_http=',_recovery.status);
+                     try {
+                       await page.setContent(_recovery.html,{waitUntil:'domcontentloaded',timeout:10000});
+                       _scanRecoveredByFetchHtml = true;
+                     console.log('[scan] v176 recovered HTML injected into existing scoring pipeline:', scanUrl);
+                     } catch(e) {
+                       await page.close().catch(()=>{});
+                       return res.status(422).json({success:false,error:'SCAN RECOVERY FAILED — validated HTML could not be loaded for scoring',step:'recovery_set_content',requested_url:scanUrl,final_url:_scanFinalUrl,http_status:_scanStatus,detail:e.message});
+                     }
+                   } else {
+                     console.warn('[scan] v176 fetch-html recovery rejected:', scanUrl, '| reason=',(_recovery&&_recovery.error)||'recovered document did not pass structural validation','| proof=',_recovery&&_recovery.proof||null);
+                     await page.close().catch(()=>{});
+                     return res.status(422).json({success:false,error:'SCAN RESPONSE INVALID — security or anti-bot page received',step:'invalid_response',requested_url:scanUrl,final_url:_scanFinalUrl,http_status:_scanStatus,redirect_chain:_scanRedirectChain,document_title:_scanDocumentProof.title,robots_meta:_scanDocumentProof.robots_meta,x_robots_tag:String(_scanHeaders['x-robots-tag']||''),detail:'Primary scan received a security response and the independent fetch-html recovery did not produce a structurally valid first-party page. No ContentScore was produced.',security_reason:_scanDocumentProof.security_reason||null,document_proof:{body_chars:_scanDocumentProof.body_chars,same_origin_links:_scanDocumentProof.same_origin_links,heading_count:_scanDocumentProof.heading_count,content_blocks:_scanDocumentProof.content_blocks,legitimate_document:_scanDocumentProof.legitimate_document,early_snapshot_legitimate:!!(_scanEarlySnapshot&&_scanEarlySnapshot.legitimate_document)},recovery_proof:_recovery&&_recovery.proof||null,recovery_error:_recovery&&_recovery.error||null});
+                   }
                  }
                }
                // A 403 is accepted only when Chromium rendered a substantive, non-security document.
                // This preserves the anti-bot guard while allowing real pages that use a misleading
                // navigation status. Sparse/blank 403 documents remain invalid.
-               if (_scanStatus === 403 && (!_scanDocumentProof.body_chars || _scanDocumentProof.body_chars < 500)) {
+               if (_scanStatus === 403 && !_scanRecoveredByFetchHtml && (!_scanDocumentProof.body_chars || _scanDocumentProof.body_chars < 500)) {
                  await page.close().catch(()=>{});
                  return res.status(422).json({success:false,error:'SCAN RESPONSE INVALID — HTTP 403',step:'invalid_response',requested_url:scanUrl,final_url:_scanFinalUrl,http_status:_scanStatus,redirect_chain:_scanRedirectChain,document_title:_scanDocumentProof.title,detail:'HTTP 403 did not render enough verified page content to audit safely.'});
                }
-               if (_scanStatus === 403) console.log('[scan] HTTP 403 navigation accepted after rendered-document validation:', _scanFinalUrl, '('+_scanDocumentProof.body_chars+' body chars)');
+               if (_scanStatus === 403 && !_scanRecoveredByFetchHtml) console.log('[scan] HTTP 403 navigation accepted after rendered-document validation:', _scanFinalUrl, '('+_scanDocumentProof.body_chars+' body chars)');
+               if (_scanRecoveredByFetchHtml) console.log('[scan] v176 scoring recovered first-party HTML; original navigation status retained as evidence:', _scanStatus);
                var analysis;
                try {
                analysis = await page.evaluate((scanUrlParam) => {
