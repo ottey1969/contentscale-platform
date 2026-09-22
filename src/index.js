@@ -1,4 +1,4 @@
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-22-CANONICAL-v165';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-22-CANONICAL-v166';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 const CONTENTSCALE_BUILD_CHANGES = [
   'Contact Intelligence: schema-initialisatie is geserialiseerd met één procesbelofte en PostgreSQL advisory lock om pg_type-races te voorkomen.',
@@ -16369,6 +16369,12 @@ async function _ensureContactIntelligenceTablesInit(){
   await pool.query(`UPDATE contact_intelligence_verification_jobs
     SET total_limit=LEAST(total::int,GREATEST(processed::int,100)),total=LEAST(total,GREATEST(processed,100)),updated_at=NOW()
     WHERE total_limit IS NULL AND status IN ('queued','processing','paused')`);
+  // CONTENTSCALE-AI-HANDOFF-V166 — COMPLETE, DO NOT RESUME, A FINISHED JOB
+  // v165 could finish every row and then pause only because one placeholder was inferred as both
+  // BIGINT (total) and INTEGER (total_limit). The work itself is already safely stored.
+  await pool.query(`UPDATE contact_intelligence_verification_jobs SET status='completed',error=NULL,
+    completed_at=COALESCE(completed_at,NOW()),updated_at=NOW()
+    WHERE status='paused' AND processed>=COALESCE(total_limit::bigint,total,0)`);
   await pool.query(`CREATE INDEX IF NOT EXISTS ci_status_score_idx ON contact_intelligence(status,business_score DESC,id DESC)`);
   await pool.query(`CREATE INDEX IF NOT EXISTS ci_classification_idx ON contact_intelligence(classification,id DESC)`);
   await pool.query(`CREATE INDEX IF NOT EXISTS ci_email_domain_idx ON contact_intelligence(email_domain)`);
@@ -16554,13 +16560,13 @@ async function _ciVerificationTick(){
   if(_ciVerifyBusy||!_ciTablesReady)return;_ciVerifyBusy=true;let nextDelay=null,currentJobId=null;
   try{
     const jq=await pool.query(`SELECT * FROM contact_intelligence_verification_jobs WHERE status IN ('queued','processing') ORDER BY created_at LIMIT 1`);if(!jq.rows.length)return;const job=jq.rows[0];currentJobId=job.id;
-    const totalLimit=Math.max(1,Math.min(500,Number(job.total_limit||job.total||100)));if(Number(job.processed||0)>=totalLimit){await pool.query(`UPDATE contact_intelligence_verification_jobs SET status='completed',total=$1,total_limit=$1,completed_at=NOW(),updated_at=NOW() WHERE id=$2`,[totalLimit,job.id]);nextDelay=250;return}
+    const totalLimit=Math.max(1,Math.min(500,Number(job.total_limit||job.total||100)));if(Number(job.processed||0)>=totalLimit){await pool.query(`UPDATE contact_intelligence_verification_jobs SET status='completed',total=$1::bigint,total_limit=$1::integer,error=NULL,completed_at=NOW(),updated_at=NOW() WHERE id=$2`,[totalLimit,job.id]);nextDelay=250;return}
     const f=_ciBuildFilter(job.filters||{},{eligible:true,defaultStatus:'all',afterId:Number(job.last_contact_id||0)}),limit=Math.min(5,totalLimit-Number(job.processed||0));f.params.push(limit);const rows=await pool.query(`SELECT * FROM contact_intelligence WHERE ${f.where.join(' AND ')} ORDER BY id ASC LIMIT $${f.params.length}`,f.params);
     if(!rows.rows.length){await pool.query(`UPDATE contact_intelligence_verification_jobs SET status='completed',completed_at=NOW(),updated_at=NOW() WHERE id=$1`,[job.id]);nextDelay=250;return}
     const reservation=await _ciReserveVerificationSlots(rows.rows,job.daily_limit||500,'background');if(!reservation.granted){const now=new Date(),nextUtc=Date.UTC(now.getUTCFullYear(),now.getUTCMonth(),now.getUTCDate()+1,0,0,5);nextDelay=Math.max(60000,nextUtc-Date.now());return}rows.rows=rows.rows.slice(0,reservation.granted);
     await pool.query(`UPDATE contact_intelligence_verification_jobs SET status='processing',started_at=COALESCE(started_at,NOW()),error=NULL,updated_at=NOW() WHERE id=$1`,[job.id]);
     for(const row of rows.rows)await pool.query(`INSERT INTO contact_intelligence_verification_queue(contact_id,job_id,status,attempts,started_at,updated_at) VALUES($1,$2,'processing',1,NOW(),NOW()) ON CONFLICT(contact_id) DO UPDATE SET job_id=EXCLUDED.job_id,status='processing',attempts=contact_intelligence_verification_queue.attempts+1,started_at=NOW(),updated_at=NOW()`,[row.id,job.id]);
-    const results=await _ciVerifyRowsSafely(rows.rows,5);let verified=0,review=0;for(const x of results){if(x.ok){verified++;await pool.query(`UPDATE contact_intelligence SET status='domain_verified',website_url=$1,website_verified_at=NOW(),updated_at=NOW() WHERE id=$2`,[x.url,x.id])}else{review++;await pool.query(`UPDATE contact_intelligence SET status='needs_review',reason=concat_ws('; ',NULLIF(reason,''),$1::text),updated_at=NOW() WHERE id=$2`,[x.error,x.id])}await pool.query(`UPDATE contact_intelligence_verification_queue SET status='completed',last_error=$1,completed_at=NOW(),updated_at=NOW() WHERE contact_id=$2`,[x.ok?null:x.error,x.id])}
+    const results=await _ciVerifyRowsSafely(rows.rows,5);let verified=0,review=0;for(const x of results){if(x.ok){verified++;await pool.query(`UPDATE contact_intelligence SET status='domain_verified',website_url=$1,website_verified_at=NOW(),updated_at=NOW() WHERE id=$2`,[x.url,x.id])}else{review++;await pool.query(`UPDATE contact_intelligence SET status='needs_review',reason=concat_ws('; ',NULLIF(reason,''),$1::text),updated_at=NOW() WHERE id=$2`,[x.error,x.id])}await pool.query(`UPDATE contact_intelligence_verification_queue SET status='completed',last_error=$1::text,completed_at=NOW(),updated_at=NOW() WHERE contact_id=$2`,[x.ok?null:x.error,x.id])}
     const last=rows.rows[rows.rows.length-1].id;await pool.query(`UPDATE contact_intelligence_verification_jobs SET processed=processed+$1,verified=verified+$2,needs_review=needs_review+$3,last_contact_id=$4,updated_at=NOW() WHERE id=$5`,[results.length,verified,review,last,job.id]);nextDelay=1000;
   }catch(e){console.warn('[contact-intelligence] verification worker:',e.message);if(currentJobId)await pool.query(`UPDATE contact_intelligence_verification_jobs SET status='paused',error=$1::text,updated_at=NOW() WHERE id=$2`,[_ciSafeError(e),currentJobId]).catch(x=>console.warn('[contact-intelligence] could not pause failed verification job:',x.message));nextDelay=null}finally{_ciVerifyBusy=false;if(nextDelay!=null)_ciScheduleVerification(nextDelay)}
 }
