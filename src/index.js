@@ -266,7 +266,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-23-CANONICAL-v187';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-23-CANONICAL-v189';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 const CONTENTSCALE_BUILD_CHANGES = [
   'Contact Intelligence: schema-initialisatie is geserialiseerd met één procesbelofte en PostgreSQL advisory lock om pg_type-races te voorkomen.',
@@ -4226,18 +4226,16 @@ app.post('/api/tracker-client/:token/brief/:pageId/score-work', async (req, res)
     const pg0 = pr0.rows[0] || {};
     const pageUrl = pg0.url || 'internal';
 
-    // AFTER — score the improved HTML with the real GRAAF engine (identical to a live scan)
+    // AFTER — explicit HTML fallback through the SAME /api/scan/paste contract as app.contentscale.site.
+    // It remains labelled HTML fallback because rendered/live checks can differ from a URL scan.
     let after = null;
-    try { const a = graafScanHtml(html, pageUrl); after = (a && a.score != null) ? a.score : null; } catch(e) {}
+    try { const a = await _canonicalContentScoreScan({html:html,url:pageUrl},{timeoutMs:45000}); after = a.score; } catch(e) {}
     if (after == null) return res.status(400).json({ success: false, error: 'Could not score the HTML — make sure it is valid page HTML' });
 
-    // BEFORE — captured ONCE from the live URL (the page as it is now, before the improvements)
+    // BEFORE — captured ONCE through the canonical LIVE /api/scan route.
     let before = (pg0.brief_before_score != null) ? pg0.brief_before_score : null;
     if (before == null && /^https?:\/\//i.test(pageUrl)) {
-      try {
-        const lr = await fetch(pageUrl, { headers: { 'User-Agent': 'ContentScaleBot/1.0' }, signal: AbortSignal.timeout(12000) });
-        if (lr.ok) { const lh = await lr.text(); const lb = graafScanHtml(lh, pageUrl); if (lb && lb.score != null) before = lb.score; }
-      } catch(e) {}
+      try { const lb = await _canonicalContentScoreScan({url:pageUrl},{timeoutMs:90000}); before = lb.score; } catch(e) {}
     }
 
     await pool.query(
@@ -4273,14 +4271,7 @@ app.post('/api/tracker-client/:token/brief/:pageId/graaf-recs', async (req, res)
     // Shift+Shift+G shortcut, so it stays rare.
     let scan = null;
     try {
-      const _base = 'http://localhost:' + (process.env.PORT || 3000);
-      const sr = await fetch(_base + '/api/scan', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: pageUrl }), signal: AbortSignal.timeout(45000)
-      });
-      const sj = await sr.json();
-      if (sr.ok && sj && sj.success !== false) scan = sj;
-      else return res.status(400).json({ success: false, error: (sj && sj.error) || 'Scan failed' });
+      scan = await _canonicalContentScoreScan({url:pageUrl},{timeoutMs:90000});
     } catch(e) { return res.status(400).json({ success: false, error: 'Could not scan the live page: ' + e.message }); }
     // computeScore returns recommendations as { all: [...], count } OR (older) a flat array — handle both.
     var _recsRaw = scan && scan.recommendations;
@@ -11113,6 +11104,43 @@ app.post('/api/fetch-html', async (req, res) => {
 // Scans pasted HTML directly — no URL fetch, no Puppeteer needed.
 // POST body: { html: "...", url: "https://example.com" (optional label) }
 // ============================================================
+
+// ── CANONICAL CONTENTSCORE GATEWAY v189 ─────────────────────────────────────
+// All internal products must enter GRAAF/CRAFT/Technical through the same two
+// public scanner contracts used by app.contentscale.site:
+//   URL  -> /api/scan       (canonical live/rendered scan)
+//   HTML -> /api/scan/paste (explicit fallback; not silently equivalent to URL)
+async function _canonicalContentScoreScan(input, opts) {
+  opts = opts || {};
+  const base = 'http://127.0.0.1:' + (process.env.PORT || 3000);
+  const html = typeof input?.html === 'string' ? input.html.trim() : '';
+  const url = String(input?.url || '').trim();
+  const mode = html ? 'html_fallback' : 'live_url';
+  const endpoint = html ? '/api/scan/paste' : '/api/scan';
+  const payload = html ? { html: html, ...(url ? {url:url} : {}) } : { url:url };
+  const timeoutMs = Number(opts.timeoutMs || (html ? 45000 : 90000));
+  const r = await fetch(base + endpoint, {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify(payload),
+    signal:AbortSignal.timeout(timeoutMs)
+  });
+  const j = await r.json().catch(()=>({success:false,error:'Scanner returned no valid JSON'}));
+  if(!r.ok || !j || j.success===false || !Number.isFinite(Number(j.score))){
+    const e = new Error((j&&j.error) || ('ContentScore scan failed (HTTP '+r.status+')'));
+    e.status = r.status; e.scan = j; e.scan_mode = mode; throw e;
+  }
+  const rr=j.recommendations;
+  const recs=Array.isArray(rr)?rr:(rr&&Array.isArray(rr.all)?rr.all:[]);
+  return Object.assign({},j,{
+    canonical_scanner:true,
+    canonical_route:endpoint,
+    scan_mode:mode,
+    recommendation_list:recs,
+    recommendation_count:recs.length
+  });
+}
+
 app.post('/api/scan/paste', async (req, res) => {
   const { html, url: labelUrl } = req.body;
   if (!html || html.length < 100) {
@@ -12824,16 +12852,9 @@ return result;
                      try {
                        const _pageController=new AbortController();
                        if(_jobRef)_jobRef.scanController=_pageController;
-                       const sr = await fetch(_scanBase + (_manualSource?'/api/scan/paste':'/api/scan'), {
-                         method: 'POST', headers: { 'Content-Type': 'application/json' },
-                         // Pasted-source scoring must match the standalone Paste HTML scanner.
-                         // Its optional URL field is a report label and must not silently change
-                         // link classification or the GRAAF score. The audited URL is attached to
-                         // the Audit page record separately below.
-                         body: JSON.stringify(_manualSource?{html:sourceHtml}:{url:u}),
-                         signal: AbortSignal.any ? AbortSignal.any([_pageController.signal,AbortSignal.timeout(90000)]) : _pageController.signal
-                       });
-                       const r = await sr.json();
+                       // Canonical ContentScore entry: live URL uses /api/scan; explicit supplied HTML
+                       // uses /api/scan/paste. Both are the same contracts as app.contentscale.site.
+                       const r = await _canonicalContentScoreScan(_manualSource?{html:sourceHtml}:{url:u},{timeoutMs:90000});
                        if (r && r.success !== false && (r.score != null)) {
                          const cs = r.content_stats || {};
                          const met = r.metrics || {};
@@ -13565,7 +13586,24 @@ return result;
                  const graafRecCount=graafPages.reduce(function(n,p){return n+((p.recommendations||[]).length);},0);
                  function graafPriority(rec){var p=String(rec&&rec.priority||'').toLowerCase();if(p==='high')return 'HIGH PRIORITY';if(p==='medium')return 'MEDIUM PRIORITY';if(p==='low')return 'QUICK WIN';return p?String(rec.priority).toUpperCase():'';}
                  function graafRecHtml(rec,i){var why=rec&&((rec.learning!=null&&rec.learning!=='')?rec.learning:rec.why);return '<div class="graaf-rec"><div class="graaf-rec-title"><b>'+esc((i+1)+'. '+(rec.title||rec.name||'GRAAF recommendation'))+'</b>'+(graafPriority(rec)?'<span class="graaf-priority">'+esc(graafPriority(rec))+'</span>':'')+'</div>'+(rec.description?'<p>'+esc(rec.description)+'</p>':'')+(rec.action?'<div class="graaf-detail"><strong>ACTION:</strong> '+esc(rec.action)+'</div>':'')+(why?'<div class="graaf-detail"><strong>WHY:</strong> '+esc(why)+'</div>':'')+(rec.target?'<div class="graaf-detail"><strong>TARGET:</strong> '+esc(rec.target)+'</div>':'')+'</div>';}
-                 const graafFullHtml=graafPages.length?'<section class="box graaf-full"><h2>GRAAF ContentScore &amp; Recommendations</h2><p class="muted">Complete deterministic GRAAF output — '+esc(graafRecCount)+' recommendation'+(graafRecCount===1?'':'s')+'. Nothing in this section is summarised or rewritten.</p>'+graafPages.map(function(p,i){var score=p.content_score==null?'—':p.content_score;var inner=(p.recommendations||[]).map(graafRecHtml).join('');return '<details class="graaf-page" '+(i===0?'open':'')+'><summary><span><b>'+esc(p.title||p.url)+'</b><small>'+esc(p.url)+'</small></span><strong class="graaf-score">'+esc(score)+'/100</strong><span class="graaf-count">'+esc((p.recommendations||[]).length)+' recommendations</span></summary><div class="graaf-page-body">'+inner+'</div></details>';}).join('')+'</section>':'';
+                 function graafOriginalScanHtml(p){
+                   var c=p.component_scores||{},st=p.content_stats||{},score=p.content_score==null?'—':p.content_score;
+                   var cards='<div class="graaf-components">'
+                     +'<div class="graaf-component"><b>GRAAF</b><strong>'+esc(c.graaf==null?'—':c.graaf)+'</strong><small>/ 50</small></div>'
+                     +'<div class="graaf-component craft"><b>CRAFT</b><strong>'+esc(c.craft==null?'—':c.craft)+'</strong><small>/ 30</small></div>'
+                     +'<div class="graaf-component technical"><b>TECHNICAL</b><strong>'+esc(c.technical==null?'—':c.technical)+'</strong><small>/ 20</small></div></div>';
+                   var signals='<div class="graaf-signals">'
+                     +'<span><b>'+esc(st.wordCount==null?'—':st.wordCount)+'</b> words</span>'
+                     +'<span><b>'+esc(st.h1Count==null?'—':st.h1Count)+'</b> H1</span>'
+                     +'<span><b>'+esc(st.h2Count==null?'—':st.h2Count)+'</b> H2 headings</span>'
+                     +'<span><b>'+esc(st.images==null?'—':st.images)+'</b> images</span>'
+                     +'<span><b>'+esc(st.internalLinks==null?'—':st.internalLinks)+'</b> internal links</span>'
+                     +'<span><b>'+(st.hasSchema===true?'✓':(st.hasSchema===false?'✕':'—'))+'</b> schema</span>'
+                     +'<span><b>'+(st.hasCanonical===true?'✓':(st.hasCanonical===false?'✕':'—'))+'</b> canonical</span></div>';
+                   var inner=(p.recommendations||[]).map(graafRecHtml).join('');
+                   return '<details class="graaf-page" open><summary><span><b>'+esc(p.title||p.url)+'</b><small>'+esc(p.url)+'</small></span><strong class="graaf-score">'+esc(score)+'/100</strong><span class="graaf-count">'+esc((p.recommendations||[]).length)+' recommendations</span></summary><div class="graaf-page-body"><div class="graaf-total"><strong>'+esc(score)+'</strong><span>ContentScore / 100</span></div>'+cards+signals+'<h3 class="graaf-rec-heading">Exact GRAAF ContentScore recommendations</h3>'+inner+'</div></details>';
+                 }
+                 const graafFullHtml=graafPages.length?'<section class="box graaf-full"><h2>Original GRAAF ContentScore Scan</h2><p class="muted">This section comes directly from the existing ContentScale scan engine. GRAAF, CRAFT and Technical are kept as separate score components. All '+esc(graafRecCount)+' original recommendations are shown without summarising or rewriting.</p>'+graafPages.map(graafOriginalScanHtml).join('')+'</section>':'';
                  const metricHtml=external?'<div class="grid"><div class="metric"><b>'+esc(ev.queries_run||0)+'</b>Search queries researched</div><div class="metric"><b>'+esc(ev.own_domain_results||0)+'</b>Own-domain results observed</div><div class="metric"><b>'+esc(ev.other_domain_results||0)+'</b>External results observed</div><div class="metric"><b>'+esc(competitors.length)+'</b>Competitive domains observed</div></div>':'<div class="grid"><div class="metric"><b>'+esc(s.pages_discovered)+'</b>Pages discovered</div><div class="metric"><b>'+esc(s.pages_analyzed)+'</b>Pages analysed</div><div class="metric"><b>'+esc(s.average_graaf)+'</b>Average GRAAF</div><div class="metric"><b>'+esc(s.orphan_pages)+'</b>Orphan pages</div><div class="metric"><b>'+esc(s.ai_engines_verified)+'/5</b>AI verified</div></div>';
                  const externalSections=external?'<section class="box"><h2>Current Search Presence</h2><p class="muted">Public search-index evidence observed for this company. This is not a substitute for a page-level audit.</p>'+(ownRows?'<table><thead><tr><th>Observed result</th><th>URL</th></tr></thead><tbody>'+ownRows+'</tbody></table>':'<p>No own-domain organic result was returned by the research queries.</p>')+'</section><section class="box"><h2>Competitive Visibility</h2><p class="muted">Domains below appeared in the researched search results. Appearance is evidence of visibility for that query, not proof that the company is a direct business competitor.</p>'+(compRows?'<table><thead><tr><th>Domain</th><th>Result</th><th>Query</th><th>Position</th></tr></thead><tbody>'+compRows+'</tbody></table>':'<p>No external competitive domains were observed in the returned results.</p>')+'</section><section class="box"><h2>Content & Search Opportunities</h2>'+(topicHtml||'<p class="muted">No safe topic signal could be extracted from the available public evidence.</p>')+'</section><section class="box"><h2>Research Evidence</h2>'+(evidenceRows?'<table><thead><tr><th>Research query</th><th>Observed result</th><th>Source domain</th></tr></thead><tbody>'+evidenceRows+'</tbody></table>':'<p>No organic results were returned. Direct audit remains pending.</p>')+'</section>':'';
                  return '<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+esc(r.company&&r.company.name||'ContentScale Opportunity Report')+'</title><style>*{box-sizing:border-box}body{margin:0;background:#07111f;color:#e6eef8;font:14px/1.55 Inter,system-ui,sans-serif}.wrap{max-width:1120px;margin:auto;padding:28px}.hero,.box{background:#0d1b2d;border:1px solid #263d55;border-radius:14px;padding:22px;margin-bottom:16px}.hero{background:linear-gradient(135deg,#0d1b2d,#102b42)}h1{margin:0 0 5px;font-size:28px}h2{font-size:17px;margin:0 0 12px;color:#76d7ff}.muted{color:#9fb1c5}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}.metric{background:#102238;border:1px solid #29435d;border-radius:10px;padding:15px}.metric b{display:block;font-size:25px}.opp,.signal{border:1px solid #29435d;border-radius:10px;padding:14px;margin:8px 0;background:#102238}.opp span,.opp small,.signal span{display:block;color:#aebfd1}.opp small{margin-top:5px;font-size:11px}.badge{display:inline-block!important;margin-left:8px;padding:2px 7px;border:1px solid #3b82f6;border-radius:999px;color:#93c5fd!important;font-size:10px;text-transform:uppercase}table{width:100%;border-collapse:collapse;font-size:12px}th,td{padding:8px;border-bottom:1px solid #263d55;text-align:left;vertical-align:top}th{color:#76d7ff}a{color:#7dd3fc}pre{white-space:pre-wrap;overflow:auto;background:#081321;padding:14px;border-radius:10px;font-size:11px}.phase{padding:12px 0;border-bottom:1px solid #263d55}.graaf-page{border:1px solid #29435d;border-radius:12px;margin:12px 0;background:#0a1727;overflow:hidden}.graaf-page>summary{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:14px;align-items:center;cursor:pointer;padding:16px;list-style:none}.graaf-page>summary::-webkit-details-marker{display:none}.graaf-page>summary small{display:block;color:#9fb1c5;font-weight:400;margin-top:3px;overflow-wrap:anywhere}.graaf-score{font-size:20px;color:#76d7ff}.graaf-count{color:#9fb1c5;font-size:12px}.graaf-page-body{padding:0 16px 16px}.graaf-rec{border-top:1px solid #263d55;padding:16px 0}.graaf-rec:first-child{border-top:0}.graaf-rec-title{display:flex;gap:8px;align-items:flex-start;flex-wrap:wrap}.graaf-priority{font-size:10px;padding:2px 7px;border:1px solid #52677e;border-radius:999px;color:#c8d5e3}.graaf-rec p{margin:7px 0;color:#dbe7f4}.graaf-detail{margin-top:7px;color:#aebfd1}.graaf-detail strong{color:#e6eef8}@media(max-width:700px){.graaf-page>summary{grid-template-columns:1fr auto}.graaf-count{grid-column:1/-1}.wrap{padding:12px}table{display:block;overflow:auto}}@media print{body{background:#fff;color:#111}.hero,.box{background:#fff;border-color:#ddd}.muted,.opp span,.opp small,.signal span{color:#444}}</style></head><body><main class="wrap"><section class="hero"><div class="muted">ContentScale · '+(external?'Digital Search Opportunity Report':esc(r.report_type))+'</div><h1>'+esc(r.company&&r.company.name||'Opportunity Report')+'</h1><div class="muted">'+esc(r.company&&r.company.url||'')+' · Generated '+esc(r.generated_at)+'</div><p>'+esc(e.report_scope||'')+'</p></section><section class="box"><h2>Executive Opportunity Summary</h2>'+metricHtml+'</section><section class="box"><h2>Priority Opportunities</h2>'+opp+'</section>'+externalSections+(!external?'<section class="box"><h2>Page Analysis</h2><table><thead><tr><th>Page</th><th>Type</th><th>GRAAF</th><th>Technical</th><th>Orphan</th></tr></thead><tbody>'+pages+'</tbody></table></section><section class="box"><h2>AI Visibility</h2><table><thead><tr><th>Engine</th><th>Checked</th><th>Recommended</th><th>Domain cited</th><th>Exact page</th><th>Status</th></tr></thead><tbody>'+ai+'</tbody></table></section>':'')+graafFullHtml+'<section class="box"><h2>90-Day Opportunity Plan</h2>'+road+'</section><section class="box"><h2>Evidence & Limitations</h2><p>'+esc(e.access_note||'Evidence is labelled according to verification level.')+'</p><ul>'+access+'</ul><details><summary>Technical evidence record (admin/debug)</summary><pre>'+esc(_opportunityJson(r))+'</pre></details></section></main></body></html>';
@@ -13637,20 +13675,50 @@ return result;
                }
                async function _opportunityScoreAcquiredHtml(rawUrl,html){
                  try{
-                   const base='http://127.0.0.1:'+(process.env.PORT||3000);
-                   const r=await fetch(base+'/api/scan/paste',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url:rawUrl,html:html})});
-                   const j=await r.json().catch(function(){return null;});
-                   if(!r.ok||!j||j.success===false||!Number.isFinite(Number(j.score)))return null;
-                   return j;
+                   const j=await _canonicalContentScoreScan({url:rawUrl,html:html},{timeoutMs:45000});
+                   if(!j||j.success===false||!Number.isFinite(Number(j.score)))return null;
+                   // Preserve the ORIGINAL /api/scan/paste response. computeScore returns
+                   // recommendations as { all: [...], count: n }, not as a flat array.
+                   // Normalise only for report consumption; do not rewrite recommendation text.
+                   const originalRecommendations=(j.recommendations&&Array.isArray(j.recommendations.all))
+                     ? j.recommendations.all
+                     : (Array.isArray(j.recommendations)?j.recommendations:[]);
+                   return Object.assign({},j,{
+                     original_scan_response:j,
+                     recommendation_list:originalRecommendations,
+                     recommendation_count:Number(j.recommendations&&j.recommendations.count)||originalRecommendations.length
+                   });
                  }catch(e){console.warn('[opportunity-report] v183 internal GRAAF paste score:',e.message);return null;}
                }
                function _opportunityMergeAutomaticGraaf(report,rawUrl,scored,acquisition){
                  if(!report||!scored)return report;
-                 const score=Number(scored.score);const recs=Array.isArray(scored.recommendations)?scored.recommendations:[];
+                 const score=Number(scored.score);
+                 const recs=Array.isArray(scored.recommendation_list)?scored.recommendation_list:
+                   ((scored.recommendations&&Array.isArray(scored.recommendations.all))?scored.recommendations.all:
+                   (Array.isArray(scored.recommendations)?scored.recommendations:[]));
+                 const metrics=scored.metrics&&typeof scored.metrics==='object'?scored.metrics:{};
+                 const stats=scored.content_stats&&typeof scored.content_stats==='object'?scored.content_stats:{};
+                 const graafComponent=Number.isFinite(Number(metrics.graaf))?Number(metrics.graaf):null;
+                 const craftComponent=Number.isFinite(Number(metrics.craft))?Number(metrics.craft):null;
+                 const technicalComponent=Number.isFinite(Number(metrics.technical))?Number(metrics.technical):null;
                  report.analysis_mode='external-evidence+automatic-graaf';
-                 report.summary=report.summary||{};report.summary.pages_analyzed=1;report.summary.average_graaf=score;
-                 report.graaf={average_score:score,weakest_pages:[{url:rawUrl,score:score}],priority_pages:[{url:rawUrl,score:score,recommendations:recs}],page_recommendations:[{url:rawUrl,title:String(scored.title||''),content_score:score,recommendations:recs.map(function(x){return x&&typeof x==='object'?Object.assign({},x):{title:String(x||'')};})}],status:'observed'};
-                 report.page_analysis=[{url:rawUrl,title:String(scored.title||''),page_type:'homepage',graaf:score,craft:Number(scored.craft_score||0)||null,technical:Number(scored.technical_score||0)||null,word_count:Number(scored.wordCount||scored.word_count||0)||null,schema:null,orphan:null,status:'observed'}];
+                 report.summary=report.summary||{};report.summary.pages_analyzed=1;report.summary.average_graaf=score;report.summary.technical_score=technicalComponent;
+                 // Preserve the three ORIGINAL ContentScore components separately.
+                 report.graaf={
+                   average_score:score,
+                   component_scores:{graaf:graafComponent,craft:craftComponent,technical:technicalComponent},
+                   content_stats:Object.assign({},stats),
+                   weakest_pages:[{url:rawUrl,score:score}],
+                   priority_pages:[{url:rawUrl,score:score,recommendations:recs}],
+                   page_recommendations:[{
+                     url:rawUrl,title:String(scored.title||rawUrl),content_score:score,
+                     component_scores:{graaf:graafComponent,craft:craftComponent,technical:technicalComponent},
+                     content_stats:Object.assign({},stats),
+                     recommendations:recs.map(function(x){return x&&typeof x==='object'?Object.assign({},x):{title:String(x||'')};})
+                   }],
+                   status:'observed'
+                 };
+                 report.page_analysis=[{url:rawUrl,title:String(scored.title||rawUrl),page_type:'analysed page',graaf:graafComponent,craft:craftComponent,technical:technicalComponent,content_score:score,word_count:Number(stats.wordCount||0)||null,schema:stats.hasSchema==null?null:!!stats.hasSchema,orphan:null,status:'observed'}];
                  const graafOpp=recs.map(function(r,i){return {id:'OPP-GRAAF-'+String(i+1).padStart(3,'0'),category:String(r.category||r.type||'graaf'),title:String(r.title||r.name||r.recommendation||'GRAAF recommendation'),action:String(r.action||r.description||r.recommendation||''),why:String(r.why||r.reason||''),priority:String(r.priority||'medium').toLowerCase(),status:'observed',source:'automatic-html-graaf',url:rawUrl};});
                  report.opportunities=graafOpp.concat((Array.isArray(report.opportunities)?report.opportunities:[]).filter(function(o){return String(o&&o.category||'')!=='site_access'&&!/unlock the page-level opportunity layer/i.test(String(o&&o.title||''));}));
                  if(Array.isArray(report.roadmap))report.roadmap=report.roadmap.map(function(ph){const x=Object.assign({},ph);x.actions=(Array.isArray(x.actions)?x.actions:[]).filter(function(a){return !/run the 20-page GRAAF|once direct HTML is available/i.test(String(a||''));});return x;});
@@ -13793,9 +13861,9 @@ return result;
                    if(!scored)return res.status(422).json({success:false,error:'The existing GRAAF pasted-HTML engine did not return a valid ContentScore.'});
                    report=_opportunityMergeAutomaticGraaf(report,rawUrl,scored,{method:'manual-html-admin',proof:proof});
                    report.analysis_fallback=true;report.analysis_fallback_reason='Primary website access was blocked; administrator-supplied first-party HTML was analysed by the existing GRAAF engine.';
-                   report.source_trace=report.source_trace||{};report.source_trace.manual_html_completion={completed_at:new Date().toISOString(),content_score:Number(scored.score),recommendation_count:Array.isArray(scored.recommendations)?scored.recommendations.length:0};
+                   report.source_trace=report.source_trace||{};report.source_trace.manual_html_completion={completed_at:new Date().toISOString(),content_score:Number(scored.score),recommendation_count:Array.isArray(scored.recommendation_list)?scored.recommendation_list.length:((scored.recommendations&&Array.isArray(scored.recommendations.all))?scored.recommendations.all.length:0)};
                    await pool.query('UPDATE opportunity_reports SET report_data=$2::jsonb WHERE token=$1',[token,JSON.stringify(report)]);
-                   res.json({success:true,token:token,score:Number(scored.score),recommendation_count:Array.isArray(scored.recommendations)?scored.recommendations.length:0,url:req.protocol+'://'+req.get('host')+'/opportunity-report/'+token});
+                   res.json({success:true,token:token,score:Number(scored.score),recommendation_count:Array.isArray(scored.recommendation_list)?scored.recommendation_list.length:((scored.recommendations&&Array.isArray(scored.recommendations.all))?scored.recommendations.all.length:0),url:req.protocol+'://'+req.get('host')+'/opportunity-report/'+token});
                  }catch(e){console.error('[opportunity-report] manual HTML completion failed:',e&&e.stack||e);res.status(500).json({success:false,error:e.message||'Could not update report'});}
                });
 
@@ -17614,10 +17682,11 @@ app.post('/api/prospect-quick-scan/:token/run',_pqsPublicLimit,async(req,res)=>{
     if(String(row.page_selection_mode||'auto')!=='manual'){
       try{const choice=await _pqsSelectBestScanPage(row.url);if(choice&&choice.selected_url){row.url=choice.selected_url;row.page_selection=choice;row.page_selection_mode=choice.mode||'auto';await pool.query(`UPDATE prospect_quick_scans SET url=$1,page_selection_mode=$2,page_selection=$3::jsonb,updated_at=NOW() WHERE token=$4`,[row.url,row.page_selection_mode,JSON.stringify(choice),row.token]);}}catch(e){console.warn('[quick-scan] automatic page selection:',e.message)}
     }
-    const rr=await fetch('http://127.0.0.1:'+PORT+'/api/scan',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url:row.url})});
-    const d=await rr.json().catch(()=>({success:false,error:'Scanner returned no valid result'}));
-    if(!rr.ok||d.success===false||typeof d.score!=='number'){
-      const err=String(d.error||'Scan failed').slice(0,1000);
+    let d;
+    try{d=await _canonicalContentScoreScan({url:row.url},{timeoutMs:90000});}
+    catch(scanErr){d=scanErr.scan||{success:false,error:scanErr.message};}
+    if(!d||d.success===false||typeof d.score!=='number'){
+      const err=String((d&&d.error)||'Scan failed').slice(0,1000);
       await pool.query(`UPDATE prospect_quick_scans SET status='failed',scan_error=$1,updated_at=NOW() WHERE token=$2`,[err,row.token]);
       return res.status(422).json({success:false,error:err});
     }
@@ -49983,13 +50052,8 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
       // GRAAF is part of the normal Tracker pipeline again. Use the SAME rendered /api/scan
       // engine as app.contentscale.site so baseline and post-implementation scores are comparable.
       try {
-        const _base = 'http://localhost:' + (process.env.PORT || 3000);
-        const _gr = await fetch(_base + '/api/scan', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ url: page.url }), signal: AbortSignal.timeout(45000)
-        });
-        const _gj = await _gr.json();
-        if (_gr.ok && _gj && _gj.success !== false) {
+        const _gj = await _canonicalContentScoreScan({url:page.url},{timeoutMs:90000});
+        if (_gj && _gj.success !== false) {
           graafScore = (_gj.score != null) ? _gj.score : null;
           graafBreakdown = _gj.metrics || _gj.breakdown || null;
           const _rr = _gj.recommendations;
