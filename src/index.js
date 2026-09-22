@@ -1,6 +1,7 @@
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-22-CANONICAL-v154';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-22-CANONICAL-v155';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 const CONTENTSCALE_BUILD_CHANGES = [
+  'Contact Intelligence: PostgreSQL-import gebruikt één JSONB-parameter per batch in plaats van tienduizenden losse parameters.',
   'Contact Intelligence: stream grote username/bio/follower/email-CSV-bestanden naar een aparte staginglaag met deduplicatie, score, menselijke verificatie en gecontroleerde promotie naar Lead Crawler.',
   'tracker-prompt2-evidence-reasoning-target-claims-other-page-citations',
   'tracker-brief-graaf-integrated-guidance',
@@ -16345,9 +16346,28 @@ async function* _ciCsvRows(filePath){
 }
 function _ciHeaderMap(row){const map={};row.forEach((v,i)=>{const k=String(v||'').toLowerCase().replace(/[^a-z0-9]/g,'');if(k==='username'||k==='user'||k==='handle')map.username=i;else if(k==='bio'||k==='biography'||k==='description')map.bio=i;else if(k==='followercount'||k==='followers'||k==='followerscount')map.followerCount=i;else if(k==='email'||k==='emailaddress')map.email=i});return map}
 async function _ciInsertBatch(rows,jobId){
-  if(!rows.length)return 0;const cols=['contact_key','source','username','bio','follower_count','email','email_domain','email_type','company_name','niche','location','phone','business_score','classification','status','reason','website_candidate','import_job_id'],values=[],params=[];
-  rows.forEach((r,ri)=>{const base=ri*cols.length;values.push('('+cols.map((c,ci)=>'$'+(base+ci+1)).join(',')+')');params.push(r.contact_key,r.source,r.username,r.bio,r.follower_count,r.email,r.email_domain,r.email_type,r.company_name,r.niche,r.location,r.phone,r.business_score,r.classification,r.status,r.reason,r.website_candidate,jobId)});
-  const q=await pool.query(`INSERT INTO contact_intelligence(${cols.join(',')}) VALUES ${values.join(',')} ON CONFLICT(contact_key) DO NOTHING RETURNING id`);return q.rowCount||0;
+  if(!rows.length)return 0;
+  const payload=rows.map(r=>({
+    contact_key:r.contact_key,source:r.source,username:r.username,bio:r.bio,
+    follower_count:r.follower_count,email:r.email,email_domain:r.email_domain,email_type:r.email_type,
+    company_name:r.company_name,niche:r.niche,location:r.location,phone:r.phone,
+    business_score:r.business_score,classification:r.classification,status:r.status,reason:r.reason,
+    website_candidate:r.website_candidate,import_job_id:jobId
+  }));
+  try{
+    const q=await pool.query(`INSERT INTO contact_intelligence(
+      contact_key,source,username,bio,follower_count,email,email_domain,email_type,company_name,
+      niche,location,phone,business_score,classification,status,reason,website_candidate,import_job_id)
+      SELECT x.contact_key,x.source,x.username,x.bio,x.follower_count,x.email,x.email_domain,x.email_type,
+        x.company_name,x.niche,x.location,x.phone,x.business_score,x.classification,x.status,x.reason,
+        x.website_candidate,x.import_job_id
+      FROM jsonb_to_recordset($1::jsonb) AS x(
+        contact_key TEXT,source TEXT,username TEXT,bio TEXT,follower_count BIGINT,email TEXT,email_domain TEXT,
+        email_type TEXT,company_name TEXT,niche TEXT,location TEXT,phone TEXT,business_score SMALLINT,
+        classification TEXT,status TEXT,reason TEXT,website_candidate TEXT,import_job_id UUID)
+      ON CONFLICT(contact_key) DO NOTHING RETURNING id`,[JSON.stringify(payload)]);
+    return q.rowCount||0;
+  }catch(e){throw new Error('Contact import batch failed ('+rows.length+' rows): '+String(e.message||e))}
 }
 async function _ciProcessImport(jobId,filePath){
   let processed=0,inserted=0,skipped=0,batch=[],header=null,map=null;
@@ -16358,7 +16378,7 @@ async function _ciProcessImport(jobId,filePath){
       processed++;const raw={username:row[map.username]||'',bio:row[map.bio]||'',followerCount:row[map.followerCount]||'',email:row[map.email]||''};
       if(!String(raw.username||'').trim()&&!String(raw.email||'').trim()){skipped++;continue}
       batch.push(_ciClassify(raw));
-      if(batch.length>=2000){const unique=Array.from(new Map(batch.map(x=>[x.contact_key,x])).values());const n=await _ciInsertBatch(unique,jobId);inserted+=n;skipped+=batch.length-unique.length;batch=[];await pool.query(`UPDATE contact_intelligence_imports SET processed_rows=$1,inserted_rows=$2,duplicate_rows=$3,skipped_rows=$4,updated_at=NOW() WHERE id=$5`,[processed,inserted,Math.max(0,processed-inserted-skipped),skipped,jobId])}
+      if(batch.length>=1000){const unique=Array.from(new Map(batch.map(x=>[x.contact_key,x])).values());const n=await _ciInsertBatch(unique,jobId);inserted+=n;skipped+=batch.length-unique.length;batch=[];await pool.query(`UPDATE contact_intelligence_imports SET processed_rows=$1,inserted_rows=$2,duplicate_rows=$3,skipped_rows=$4,updated_at=NOW() WHERE id=$5`,[processed,inserted,Math.max(0,processed-inserted-skipped),skipped,jobId])}
     }
     if(batch.length){const unique=Array.from(new Map(batch.map(x=>[x.contact_key,x])).values());const n=await _ciInsertBatch(unique,jobId);inserted+=n;skipped+=batch.length-unique.length}
     const duplicates=Math.max(0,processed-inserted-skipped);await pool.query(`UPDATE contact_intelligence_imports SET status='completed',processed_rows=$1,inserted_rows=$2,duplicate_rows=$3,skipped_rows=$4,completed_at=NOW(),updated_at=NOW() WHERE id=$5`,[processed,inserted,duplicates,skipped,jobId]);
