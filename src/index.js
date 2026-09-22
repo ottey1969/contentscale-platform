@@ -253,7 +253,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-22-CANONICAL-v173';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-22-CANONICAL-v174';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 const CONTENTSCALE_BUILD_CHANGES = [
   'Contact Intelligence: schema-initialisatie is geserialiseerd met één procesbelofte en PostgreSQL advisory lock om pg_type-races te voorkomen.',
@@ -12194,24 +12194,37 @@ return result;
                  const robotsMeta=Array.from(document.querySelectorAll('meta[name="robots"],meta[name="googlebot"]')).map(function(x){return {name:(x.getAttribute('name')||'').toLowerCase(),content:(x.getAttribute('content')||'').trim()};});
                  const canonical=(document.querySelector('link[rel="canonical"]')||{}).href||'';
                  const htmlLang=(document.documentElement&&document.documentElement.lang)||'';
-                 // Strong challenge markers can safely invalidate even a long rendered document.
-                 // Weak generic phrases such as "access denied" or "forbidden" may occur in legitimate
-                 // page copy, widgets or legal text, so they only invalidate a sparse document or the title.
-                 const strongSecurityPattern=/attention required|robot challenge|captcha|just a moment|verify you are human|checking your browser|sorry, you have been blocked|cloudflare ray id|enable javascript and cookies to continue|security service to protect itself/i;
+                 // v174: classify a rendered security page from document structure, not a phrase alone.
+                 // Legitimate sites can contain words such as captcha/forbidden/blocked in widgets, scripts,
+                 // privacy copy or embedded support tools. A long, navigable first-party document must not be
+                 // rejected merely because one such phrase exists in body text.
+                 const challengePattern=/attention required|robot challenge|captcha|just a moment|verify you are human|checking your browser|sorry, you have been blocked|cloudflare ray id|enable javascript and cookies to continue|security service to protect itself/i;
                  const weakSecurityPattern=/access denied|403\s*[-–—:]?\s*forbidden|\bforbidden\b|request blocked/i;
-                 const sample=title+' '+body.slice(0,5000);
-                 const strongMatch=sample.match(strongSecurityPattern);
-                 const weakTitleMatch=title.match(weakSecurityPattern);
-                 const weakBodyMatch=body.slice(0,1800).match(weakSecurityPattern);
-                 const statusTitleMatch=/^\s*(401|403|406|429)\b/.test(title);
-                 const looksLikeSecurityPage=!!strongMatch || !!weakTitleMatch || ((!!weakBodyMatch || statusTitleMatch) && body.length < 1200);
-                 const securityReason=strongMatch?('strong:'+strongMatch[0]):weakTitleMatch?('title:'+weakTitleMatch[0]):((weakBodyMatch&&body.length<1200)?('sparse:'+weakBodyMatch[0]):((statusTitleMatch&&body.length<1200)?'sparse-status-title':''));
-                 return {title:title,body_chars:body.length,robots_meta:robotsMeta,canonical:canonical,html_lang:htmlLang,looks_like_security_page:looksLikeSecurityPage,security_reason:securityReason,security_excerpt:looksLikeSecurityPage?body.slice(0,320):''};
+                 const titleSecurityPattern=/attention required|just a moment|verify you are human|access denied|403\s*[-–—:]?\s*forbidden|sorry, you have been blocked/i;
+                 const challengeMatch=(title+' '+body.slice(0,2500)).match(challengePattern);
+                 const weakMatch=(title+' '+body.slice(0,1200)).match(weakSecurityPattern);
+                 const titleSecurityMatch=title.match(titleSecurityPattern);
+                 const links=Array.from(document.querySelectorAll('a[href]'));
+                 let sameOriginLinks=0;
+                 try { sameOriginLinks=links.filter(function(a){try{return new URL(a.href,location.href).origin===location.origin;}catch(e){return false;}}).length; } catch(e) {}
+                 const headingCount=document.querySelectorAll('h1,h2,h3').length;
+                 const contentBlocks=document.querySelectorAll('main,article,section').length;
+                 const forms=document.querySelectorAll('form').length;
+                 const substantial=body.length>=1500;
+                 const navigable=sameOriginLinks>=3;
+                 const contentRich=headingCount>=2 || contentBlocks>=2;
+                 const legitimateDocument=substantial && navigable && contentRich && !titleSecurityMatch;
+                 const sparse=body.length<1200;
+                 // Challenge wording only blocks a rich document when the title itself is a challenge.
+                 // Otherwise require sparse/non-navigable structure, which is characteristic of block pages.
+                 const looksLikeSecurityPage=!!titleSecurityMatch || (!legitimateDocument && (!!challengeMatch || !!weakMatch) && (sparse || !navigable || !contentRich));
+                 const securityReason=titleSecurityMatch?('security-title:'+titleSecurityMatch[0]):looksLikeSecurityPage?('challenge-structure:'+(challengeMatch?challengeMatch[0]:(weakMatch?weakMatch[0]:'unknown'))):'';
+                 return {title:title,body_chars:body.length,robots_meta:robotsMeta,canonical:canonical,html_lang:htmlLang,looks_like_security_page:looksLikeSecurityPage,security_reason:securityReason,security_excerpt:looksLikeSecurityPage?body.slice(0,320):'',same_origin_links:sameOriginLinks,heading_count:headingCount,content_blocks:contentBlocks,forms:forms,legitimate_document:legitimateDocument};
                });
                if(_scanDocumentProof.looks_like_security_page){
-                 console.warn('[scan] rendered security document rejected:', _scanFinalUrl, '| reason=', _scanDocumentProof.security_reason||'unknown', '| body_chars=', _scanDocumentProof.body_chars, '| title=', _scanDocumentProof.title);
+                 console.warn('[scan] rendered security document rejected:', _scanFinalUrl, '| reason=', _scanDocumentProof.security_reason||'unknown', '| body_chars=', _scanDocumentProof.body_chars, '| same_origin_links=', _scanDocumentProof.same_origin_links, '| headings=', _scanDocumentProof.heading_count, '| blocks=', _scanDocumentProof.content_blocks, '| title=', _scanDocumentProof.title);
                  await page.close().catch(()=>{});
-                 return res.status(422).json({success:false,error:'SCAN RESPONSE INVALID — security or anti-bot page received',step:'invalid_response',requested_url:scanUrl,final_url:_scanFinalUrl,http_status:_scanStatus,redirect_chain:_scanRedirectChain,document_title:_scanDocumentProof.title,robots_meta:_scanDocumentProof.robots_meta,x_robots_tag:String(_scanHeaders['x-robots-tag']||''),detail:'A security response was fetched instead of the intended webpage. No ContentScore, noindex decision or page-level recommendations were produced.'});
+                 return res.status(422).json({success:false,error:'SCAN RESPONSE INVALID — security or anti-bot page received',step:'invalid_response',requested_url:scanUrl,final_url:_scanFinalUrl,http_status:_scanStatus,redirect_chain:_scanRedirectChain,document_title:_scanDocumentProof.title,robots_meta:_scanDocumentProof.robots_meta,x_robots_tag:String(_scanHeaders['x-robots-tag']||''),detail:'A security response was fetched instead of the intended webpage. No ContentScore, noindex decision or page-level recommendations were produced.',security_reason:_scanDocumentProof.security_reason||null,document_proof:{body_chars:_scanDocumentProof.body_chars,same_origin_links:_scanDocumentProof.same_origin_links,heading_count:_scanDocumentProof.heading_count,content_blocks:_scanDocumentProof.content_blocks,legitimate_document:_scanDocumentProof.legitimate_document}});
                }
                // A 403 is accepted only when Chromium rendered a substantive, non-security document.
                // This preserves the anti-bot guard while allowing real pages that use a misleading
