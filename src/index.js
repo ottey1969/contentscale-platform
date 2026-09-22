@@ -253,7 +253,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-22-CANONICAL-v169';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-22-CANONICAL-v170';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 const CONTENTSCALE_BUILD_CHANGES = [
   'Contact Intelligence: schema-initialisatie is geserialiseerd met één procesbelofte en PostgreSQL advisory lock om pg_type-races te voorkomen.',
@@ -13413,11 +13413,33 @@ return result;
                  const reportMode=String(body.report_mode||'prospect').toLowerCase()==='verified'?'verified':'prospect';
                  body.mode='quick'; // existing 20-page Audit intelligence layer; no second crawler/scoring engine
                  let audit=null,status=200;
-                 const internalReq={body,headers:{}};
-                 const internalRes={status:function(v){status=v;return this;},json:function(v){audit=v;return v;}};
-                 await _auditSiteHandler(internalReq,internalRes);
-                 if(status>=400||!audit||audit.success===false){const err=new Error((audit&&audit.error)||'Audit failed');err.status=status||500;err.payload=audit;throw err;}
-                 const report=buildOpportunityReport(audit,{report_mode:reportMode,business_name:body.business_name,domain:body.url,url:body.url,audit_mode:'quick'});
+                 const runExistingAudit=async function(runBody){
+                   audit=null;status=200;
+                   const internalReq={body:runBody,headers:{}};
+                   const internalRes={status:function(v){status=v;return this;},json:function(v){audit=v;return v;}};
+                   await _auditSiteHandler(internalReq,internalRes);
+                   return {audit:audit,status:status};
+                 };
+                 await runExistingAudit(body);
+                 // A sitemap can occasionally yield only blocked/invalid URLs while the homepage itself
+                 // is still scannable. For CEO outreach, retry the existing one-page Audit path before
+                 // failing the whole report. This is a fallback, not a second scanner.
+                 let auditModeUsed='quick',fallbackReason='';
+                 if((status===422||status===400)&&(!audit||audit.success===false||Number(audit.pages_scanned||0)===0)){
+                   fallbackReason=(audit&&((audit.error||'')+(audit.detail?' — '+audit.detail:'')))||'20-page scan returned no usable pages';
+                   const fallbackBody=Object.assign({},body,{mode:'test',maxPages:1,sitemapUrl:'',gscRaw:''});
+                   await runExistingAudit(fallbackBody);
+                   auditModeUsed='test';
+                 }
+                 if(status>=400||!audit||audit.success===false){
+                   const payload=Object.assign({},audit||{success:false,error:'Audit failed'});
+                   if(fallbackReason)payload.quick_scan_failure=fallbackReason;
+                   payload.report_hint='The site did not return usable page content to the existing ContentScale scanner. Check the URL and anti-bot/security response, then retry.';
+                   const err=new Error(payload.error||'Audit failed');err.status=status||500;err.payload=payload;throw err;
+                 }
+                 const report=buildOpportunityReport(audit,{report_mode:reportMode,business_name:body.business_name,domain:body.url,url:body.url,audit_mode:auditModeUsed});
+                 report.analysis_mode=auditModeUsed;
+                 if(fallbackReason){report.analysis_fallback=true;report.analysis_fallback_reason=fallbackReason;}
                  report.origin=body.origin||'standalone';
                  if(body.quick_scan_token)report.quick_scan_token=String(body.quick_scan_token);
                  let share=null;
@@ -17630,7 +17652,7 @@ function _pqsAdminBorderPolish(){return `<style>
 </style>`}
 function _pqsProspectReportAdminV169(){return `<style>#pqsReportPanel{border:2px solid #0ea5e9!important;background:linear-gradient(135deg,#071923,#0d1522)!important}#pqsReportPanel h2{color:#7dd3fc}.pqsReportHistory{display:grid;gap:7px;margin-top:10px}.pqsReportRow{border:1px solid #24445b;border-radius:9px;padding:9px;background:#07111d}.pqsReportBtn{background:#075985!important;border-color:#38bdf8!important}</style><script>(function(){
 function E(s){return String(s==null?'':s).replace(/[&<>\"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[c]})}
-function reportApi(path,opt){opt=opt||{};opt.headers=Object.assign({'Content-Type':'application/json','x-admin-code':window.KEY||localStorage.getItem('pqs_admin_code')||''},opt.headers||{});return fetch(path,opt).then(async function(r){var d=await r.json().catch(function(){return{}});if(!r.ok)throw Error(d.error||'Request failed');return d})}
+function reportApi(path,opt){opt=opt||{};opt.headers=Object.assign({'Content-Type':'application/json','x-admin-code':window.KEY||localStorage.getItem('pqs_admin_code')||''},opt.headers||{});return fetch(path,opt).then(async function(r){var d=await r.json().catch(function(){return{}});if(!r.ok){var msg=d.error||'Request failed';if(d.detail)msg+=' — '+d.detail;else if(d.report_hint)msg+=' — '+d.report_hint;if(d.invalid_response&&d.invalid_response.final_url)msg+=' ['+d.invalid_response.final_url+']';throw Error(msg)}return d})}
 function ensurePanel(){var app=document.getElementById('app');if(!app||document.getElementById('pqsReportPanel'))return;var p=document.createElement('div');p.className='p';p.id='pqsReportPanel';p.innerHTML='<h2>CEO Prospect Report — no Quick Scan required</h2><p class="meta">Use this for cold CEO outreach. Enter any company website and ContentScale runs the existing broader 20-page intelligence layer. Five manual AI checks and GSC are not required; unverified evidence stays Observed / Possible / Needs access.</p><div class="row"><input id="pqsReportName" placeholder="Business name"><input id="pqsReportUrl" style="min-width:320px" placeholder="https://company.com"><button class="btn pqsReportBtn" id="pqsReportGenerate">Generate CEO Prospect Report</button><button class="btn" id="pqsReportRefresh">Refresh reports</button></div><div id="pqsReportStatus" class="meta" style="margin-top:8px"></div><div id="pqsReportHistory" class="pqsReportHistory"></div>';var first=app.firstElementChild;app.insertBefore(p,first?first.nextSibling:null);p.querySelector('#pqsReportGenerate').onclick=generateStandalone;p.querySelector('#pqsReportRefresh').onclick=loadHistory;loadHistory()}
 async function generateStandalone(){var b=document.getElementById('pqsReportGenerate'),u=document.getElementById('pqsReportUrl'),n=document.getElementById('pqsReportName'),st=document.getElementById('pqsReportStatus');if(!u||!u.value.trim())return st.textContent='Enter a website URL.';b.disabled=true;b.textContent='Running broader analysis…';st.textContent='Analysing up to 20 relevant pages. This can take a while.';try{var d=await reportApi('/api/audit-opportunity-report',{method:'POST',body:JSON.stringify({code:window.KEY||localStorage.getItem('pqs_admin_code')||'',url:u.value.trim(),business_name:n.value.trim(),report_mode:'prospect',origin:'ceo_outreach'})});st.innerHTML=d.share?'<span class="good">Report ready.</span> <a class="link" target="_blank" href="'+E(d.share.url)+'">Open report</a>':'Report generated.';loadHistory()}catch(e){st.innerHTML='<span class="warn">'+E(e.message)+'</span>'}finally{b.disabled=false;b.textContent='Generate CEO Prospect Report'}}
 async function generateFromQuick(token,b){b.disabled=true;var old=b.textContent;b.textContent='Building report…';try{var d=await reportApi('/api/prospect-quick-scan/admin/'+token+'/prospect-report',{method:'POST',body:'{}'});if(d.share){b.textContent='Report ready ✓';window.open(d.share.url,'_blank','noopener');loadHistory()}else b.textContent='Generated ✓'}catch(e){b.disabled=false;b.textContent=old;alert(e.message)}}
