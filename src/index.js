@@ -253,7 +253,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-22-CANONICAL-v174';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-22-CANONICAL-v175';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 const CONTENTSCALE_BUILD_CHANGES = [
   'Contact Intelligence: schema-initialisatie is geserialiseerd met één procesbelofte en PostgreSQL advisory lock om pg_type-races te voorkomen.',
@@ -12161,6 +12161,25 @@ return result;
                const _scanHeaders = response ? response.headers() : {};
                const _scanFinalUrl = page.url() || scanUrl;
                const _scanRedirectChain = response && response.request ? response.request().redirectChain().map(function(rq){ return rq.url(); }).concat([_scanFinalUrl]) : [scanUrl,_scanFinalUrl].filter(function(v,i,a){return v&&a.indexOf(v)===i;});
+               // v175: preserve the first DOMContentLoaded document before late security/WAF scripts can
+               // replace a legitimate first-party page. This is NOT automatically trusted: the snapshot
+               // must independently pass the same structural legitimacy test before it can be restored.
+               let _scanEarlySnapshot = null;
+               try {
+                 _scanEarlySnapshot = await page.evaluate(function(){
+                   const title=(document.title||'').trim();
+                   const body=((document.body&&document.body.innerText)||'').replace(/\s+/g,' ').trim();
+                   const links=Array.from(document.querySelectorAll('a[href]'));
+                   let sameOriginLinks=0;
+                   try { sameOriginLinks=links.filter(function(a){try{return new URL(a.href,location.href).origin===location.origin;}catch(e){return false;}}).length; } catch(e) {}
+                   const headingCount=document.querySelectorAll('h1,h2,h3').length;
+                   const contentBlocks=document.querySelectorAll('main,article,section').length;
+                   const titleSecurity=/attention required|just a moment|verify you are human|access denied|403\s*[-–—:]?\s*forbidden|sorry, you have been blocked/i.test(title);
+                   const legitimate=body.length>=1500 && sameOriginLinks>=3 && (headingCount>=2 || contentBlocks>=2) && !titleSecurity;
+                   return {html:legitimate?document.documentElement.outerHTML:'',title:title,body_chars:body.length,same_origin_links:sameOriginLinks,heading_count:headingCount,content_blocks:contentBlocks,legitimate_document:legitimate};
+                 });
+                 if (_scanEarlySnapshot && _scanEarlySnapshot.legitimate_document) console.log('[scan] v175 legitimate early document preserved:', _scanFinalUrl, '| body_chars=',_scanEarlySnapshot.body_chars,'| links=',_scanEarlySnapshot.same_origin_links,'| headings=',_scanEarlySnapshot.heading_count,'| blocks=',_scanEarlySnapshot.content_blocks);
+               } catch(e) { _scanEarlySnapshot = null; }
                // Do not reject HTTP 403 before inspecting the rendered document.
                // Some sites return 403 to the browser navigation request but still render the real
                // first-party page in Chromium. We validate that rendered document below before scoring.
@@ -12223,8 +12242,23 @@ return result;
                });
                if(_scanDocumentProof.looks_like_security_page){
                  console.warn('[scan] rendered security document rejected:', _scanFinalUrl, '| reason=', _scanDocumentProof.security_reason||'unknown', '| body_chars=', _scanDocumentProof.body_chars, '| same_origin_links=', _scanDocumentProof.same_origin_links, '| headings=', _scanDocumentProof.heading_count, '| blocks=', _scanDocumentProof.content_blocks, '| title=', _scanDocumentProof.title);
-                 await page.close().catch(()=>{});
-                 return res.status(422).json({success:false,error:'SCAN RESPONSE INVALID — security or anti-bot page received',step:'invalid_response',requested_url:scanUrl,final_url:_scanFinalUrl,http_status:_scanStatus,redirect_chain:_scanRedirectChain,document_title:_scanDocumentProof.title,robots_meta:_scanDocumentProof.robots_meta,x_robots_tag:String(_scanHeaders['x-robots-tag']||''),detail:'A security response was fetched instead of the intended webpage. No ContentScore, noindex decision or page-level recommendations were produced.',security_reason:_scanDocumentProof.security_reason||null,document_proof:{body_chars:_scanDocumentProof.body_chars,same_origin_links:_scanDocumentProof.same_origin_links,heading_count:_scanDocumentProof.heading_count,content_blocks:_scanDocumentProof.content_blocks,legitimate_document:_scanDocumentProof.legitimate_document}});
+                 // Some WAFs return the real first-party DOM at DOMContentLoaded and replace it a few
+                 // seconds later with a challenge. If and only if the preserved early DOM was already a
+                 // structurally legitimate site document, restore that exact DOM and audit it. A challenge
+                 // page can never qualify as the preserved source because it fails the legitimacy test.
+                 if (_scanEarlySnapshot && _scanEarlySnapshot.legitimate_document && _scanEarlySnapshot.html && _scanEarlySnapshot.html.length>=1500) {
+                   console.warn('[scan] v175 late security replacement detected — restoring independently validated early first-party DOM:', _scanFinalUrl);
+                   try {
+                     await page.setContent(_scanEarlySnapshot.html,{waitUntil:'domcontentloaded',timeout:10000});
+                     console.log('[scan] v175 early DOM restored for scoring:', _scanFinalUrl);
+                   } catch(e) {
+                     await page.close().catch(()=>{});
+                     return res.status(422).json({success:false,error:'SCAN RESPONSE INVALID — security or anti-bot page received',step:'invalid_response',requested_url:scanUrl,final_url:_scanFinalUrl,http_status:_scanStatus,detail:'A late security response replaced a legitimate page, but the validated early document could not be restored safely.',security_reason:_scanDocumentProof.security_reason||null});
+                   }
+                 } else {
+                   await page.close().catch(()=>{});
+                   return res.status(422).json({success:false,error:'SCAN RESPONSE INVALID — security or anti-bot page received',step:'invalid_response',requested_url:scanUrl,final_url:_scanFinalUrl,http_status:_scanStatus,redirect_chain:_scanRedirectChain,document_title:_scanDocumentProof.title,robots_meta:_scanDocumentProof.robots_meta,x_robots_tag:String(_scanHeaders['x-robots-tag']||''),detail:'A security response was fetched instead of the intended webpage. No ContentScore, noindex decision or page-level recommendations were produced.',security_reason:_scanDocumentProof.security_reason||null,document_proof:{body_chars:_scanDocumentProof.body_chars,same_origin_links:_scanDocumentProof.same_origin_links,heading_count:_scanDocumentProof.heading_count,content_blocks:_scanDocumentProof.content_blocks,legitimate_document:_scanDocumentProof.legitimate_document,early_snapshot_legitimate:!!(_scanEarlySnapshot&&_scanEarlySnapshot.legitimate_document)}});
+                 }
                }
                // A 403 is accepted only when Chromium rendered a substantive, non-security document.
                // This preserves the anti-bot guard while allowing real pages that use a misleading
