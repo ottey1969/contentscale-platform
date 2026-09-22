@@ -1,4 +1,4 @@
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-22-CANONICAL-v152';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-22-CANONICAL-v153';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 const CONTENTSCALE_BUILD_CHANGES = [
   'tracker-prompt2-evidence-reasoning-target-claims-other-page-citations',
@@ -16816,6 +16816,28 @@ function _pqsLocalizeQuickScanHtml(html,language){
     .split('2. Scan this page').join('2. Analizar esta página');
   return out;
 }
+function _pqsAdminBorderPolish(){return `<style>
+  /* CONTENTSCALE-AI-HANDOFF-V153 — QUICK SCAN ADMIN VISUAL BOUNDARIES */
+  #app>.p:first-child{border:2px solid #2563eb!important;box-shadow:0 0 0 1px #2563eb24 inset,0 12px 32px #02061755;background:linear-gradient(135deg,#0d1728,#0b1421)!important}
+  #app>.p:first-child h2{color:#bfdbfe;margin-top:0}
+  #pqsCampaignBuilder{border:2px solid #7c3aed!important;box-shadow:0 0 0 1px #7c3aed24 inset,0 12px 32px #02061755;background:linear-gradient(135deg,#17112b,#0d1522)!important}
+  #pqsCampaignBuilder h2{color:#ddd6fe;margin-top:0}
+  #app>.p:first-child input,#app>.p:first-child select,#pqsCampaignBuilder input,#pqsCampaignBuilder select{border:1.5px solid #52657d!important;box-shadow:0 0 0 1px #02061766 inset}
+  #app>.p:first-child input:focus,#app>.p:first-child select:focus,#pqsCampaignBuilder input:focus,#pqsCampaignBuilder select:focus{outline:2px solid #22d3ee!important;outline-offset:2px;border-color:#67e8f9!important}
+  #pqsEmailQueue{border:2px solid #475569!important;box-shadow:0 14px 34px #02061755}
+  #eqList>details{overflow:hidden;border-width:2px!important;transition:border-color .18s ease,box-shadow .18s ease,background .18s ease}
+  #eqList>details:first-child{border-color:#16a34a!important;background:linear-gradient(135deg,#07170f,#09111d)!important;box-shadow:0 0 0 1px #16a34a20 inset}
+  #eqList>details:nth-child(2){border-color:#d97706!important;background:linear-gradient(135deg,#1a1105,#09111d)!important;box-shadow:0 0 0 1px #d9770624 inset}
+  #eqList>details:first-child>summary{color:#86efac!important;border-left:5px solid #22c55e}
+  #eqList>details:nth-child(2)>summary{color:#fcd34d!important;border-left:5px solid #f59e0b}
+  #eqList>details>summary{padding:15px 17px!important;background:#07101dcc;letter-spacing:.01em}
+  #eqList>details[open]>summary{border-bottom:1px solid #334155}
+  #eqList>details>summary:hover{background:#111c2dcc}
+  #eqList>details>summary:focus-visible{outline:2px solid #67e8f9;outline-offset:-3px}
+  #eqList>details>.queueBody{padding:14px!important;background:#050b13aa}
+  @media(max-width:760px){#app>.p:first-child,#pqsCampaignBuilder,#pqsEmailQueue{border-width:2px!important;box-shadow:none}#eqList>details>summary{padding:14px 13px!important}#eqList>details>.queueBody{padding:10px!important}}
+  @media(prefers-reduced-motion:reduce){#eqList>details{transition:none}}
+</style>`}
 app.get('/quick-scan/admin',(req,res)=>{const h=_pqsFixRenderedAdminHtml(_pqsAdminHtml());const pre=`<script>(function(){
   var q=new URLSearchParams(location.search),u=q.get('url'),s=q.get('source'),n=q.get('name');
   if(u&&document.getElementById('url'))document.getElementById('url').value=u;
@@ -16828,7 +16850,7 @@ app.get('/quick-scan/admin',(req,res)=>{const h=_pqsFixRenderedAdminHtml(_pqsAdm
   function enhance(){document.querySelectorAll('#list .card').forEach(function(c){if(c.querySelector('[data-copy-outreach]'))return;var a=Array.from(c.querySelectorAll('a')).find(function(x){return /\\/quick-scan\\/[a-f0-9]{64}/.test(x.href)});if(!a)return;var name=(c.querySelector('b')||{}).textContent||'your website';var b=document.createElement('button');b.className='btn';b.dataset.copyOutreach='1';b.textContent='Copy outreach message';b.onclick=function(){var msg='I took a quick look at '+name+' and prepared a free one-page visibility scan. It shows the strongest opportunities in plain language, without requiring a login: '+a.href+' If you need guidance, ask Ottmar through the chat.';navigator.clipboard.writeText(msg);b.textContent='Copied ✓';setTimeout(function(){b.textContent='Copy outreach message'},1500)};(c.querySelector('.row')||c).appendChild(b)})}
   enhance();new MutationObserver(enhance).observe(document.body,{childList:true,subtree:true});
   if(q.get('autocreate')==='1'&&u){var autoKey='pqs_autocreate_'+u+'_'+(n||'');var tries=0,timer=setInterval(function(){tries++;var ready=document.getElementById('app')&&document.getElementById('app').style.display!=='none'&&typeof createLink==='function';if(ready){clearInterval(timer);if(!sessionStorage.getItem(autoKey)){sessionStorage.setItem(autoKey,'1');var box=document.getElementById('created');if(box)box.innerHTML='<p class="warn">Preparing the private lead link… No page scan is running.</p>';createLink()}}else if(tries>120)clearInterval(timer)},250)}
-})()<\/script>`;res.type('html').send(h.replace('</body>',_pqsFixTwoPromptScript(_pqsAdminTwoPromptTools())+_pqsAdminScaleTools()+_pqsAdminBulkImportTools()+_pqsAdminV133Tools()+pre+'</body>'))});
+})()<\/script>`;res.type('html').send(h.replace('</body>',_pqsFixTwoPromptScript(_pqsAdminTwoPromptTools())+_pqsAdminScaleTools()+_pqsAdminBulkImportTools()+_pqsAdminV133Tools()+_pqsAdminBorderPolish()+pre+'</body>'))});
 app.get('/quick-scan/start',(req,res)=>{
   const source=['linkedin','facebook','contact_form','email','standalone'].includes(String(req.query.source||''))?String(req.query.source):'standalone';
   const campaign=String(req.query.campaign||'').slice(0,200);
