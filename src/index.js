@@ -1,3 +1,258 @@
+const { buildOpportunityReport, FIVE_ENGINES } = (() => {
+const FIVE_ENGINES = [
+  ['google_aio', 'Google AI Overviews / Gemini'],
+  ['chatgpt', 'ChatGPT Search'],
+  ['perplexity', 'Perplexity'],
+  ['claude', 'Claude'],
+  ['copilot', 'Microsoft Copilot']
+];
+
+const STATUS_ORDER = { verified: 0, observed: 1, 'possible-opportunity': 2, 'needs-access': 3 };
+
+function arr(v) { return Array.isArray(v) ? v : []; }
+function num(v, fallback = null) { const n = Number(v); return Number.isFinite(n) ? n : fallback; }
+function clean(v) { return String(v == null ? '' : v).trim(); }
+
+function evidenceStatus(item, fallback = 'observed') {
+  if (!item) return fallback;
+  if (item.status && STATUS_ORDER[item.status] != null) return item.status;
+  if (item.verified === true || item.evidence_scope === 'page_verified') return 'verified';
+  if (item.requires_access === true || item.needs_access === true) return 'needs-access';
+  if (item.possible === true || item.provisional === true) return 'possible-opportunity';
+  return fallback;
+}
+
+function opportunityFromRecommendation(r, index, source = 'audit') {
+  if (!r || typeof r !== 'object') return null;
+  const title = clean(r.title || r.name || r.recommendation || r.action);
+  if (!title) return null;
+  return {
+    id: `OPP-${String(index + 1).padStart(3, '0')}`,
+    category: clean(r.category || r.type || 'audit'),
+    title,
+    action: clean(r.action || r.description || r.recommendation),
+    why: clean(r.why || r.reason),
+    priority: clean(r.priority || 'medium').toLowerCase(),
+    status: evidenceStatus(r, 'observed'),
+    source
+  };
+}
+
+function normalizeAiEvidence(raw) {
+  const source = raw && typeof raw === 'object' ? raw : {};
+  return FIVE_ENGINES.map(([key, label]) => {
+    const e = source[key] || source[label] || null;
+    if (!e) return {
+      engine: key,
+      label,
+      checked: false,
+      verification_status: 'needs-access',
+      recommended: null,
+      mentioned: null,
+      domain_cited: null,
+      exact_page_cited: null,
+      other_page_cited: null,
+      citation_sources: [],
+      competitors: []
+    };
+    const verified = e.method === 'VERIFIED' || e.verification_status === 'verified' || e.verified === true || e.manual === true;
+    return {
+      engine: key,
+      label,
+      checked: true,
+      verification_status: verified ? 'verified' : (e.method || e.verification_status || 'observed'),
+      recommended: e.brandRecommended ?? e.recommended ?? null,
+      mentioned: e.brandMentioned ?? e.mentioned ?? null,
+      domain_cited: e.ownSiteCitation ?? e.domain_cited ?? e.urlCited ?? null,
+      exact_page_cited: e.exactAuditedPageCitation ?? e.exact_page_cited ?? null,
+      other_page_cited: e.other_page_cited ?? null,
+      citation_sources: arr(e.citedSourceList || e.citation_sources || e.sources),
+      competitors: arr(e.competitors ? String(e.competitors).split(',').map(clean).filter(Boolean) : e.competitor_names)
+    };
+  });
+}
+
+function buildOpportunityReport(audit, options = {}) {
+  const d = audit && audit.success === false ? {} : (audit || {});
+  const mode = options.report_mode === 'verified' ? 'verified' : 'prospect';
+  const pages = arr(d.pages);
+  const selected = pages.slice(0, Math.min(20, pages.length));
+  const site = d.site_intelligence || {};
+  const cite = d.citeability || {};
+  const technical = d.technical || {};
+  const multi = d.multilingual || {};
+  const starter = d.starter_intelligence || {};
+
+  const allRecs = [];
+  arr(d.top_recommendations).forEach(r => allRecs.push(r));
+  selected.forEach(p => arr(p.recommendations).forEach(r => allRecs.push(Object.assign({ url: p.url }, r))));
+  const opportunities = [];
+  const seen = new Set();
+  allRecs.forEach((r, i) => {
+    const o = opportunityFromRecommendation(r, i);
+    if (!o) return;
+    const k = `${o.title.toLowerCase()}|${clean(r.url || '')}`;
+    if (seen.has(k)) return;
+    seen.add(k);
+    if (opportunities.length < 20) opportunities.push(Object.assign(o, { url: clean(r.url) || null }));
+  });
+
+  const orphanPages = arr(site.orphan_pages || d.orphan_pages);
+  const linkPlan = arr(site.internal_link_plan || d.internal_link_plan || d.link_plan);
+  const cannibalization = arr(site.cannibalization || d.cannibalization || d.cannibalization_groups);
+
+  const aiEvidence = normalizeAiEvidence(d.manual_citations || d.ai_visibility || {});
+  const aiChecked = aiEvidence.filter(x => x.checked).length;
+  const aiVerified = aiEvidence.filter(x => x.verification_status === 'verified').length;
+
+  const accessRequirements = [];
+  if (mode === 'verified' && aiVerified < 5) {
+    accessRequirements.push({ item: 'Five-engine manual AI verification', status: 'needs-access', missing: 5 - aiVerified });
+  }
+  if (!d.gsc_evidence && !d.gscRaw && !d.gsc_connected) {
+    accessRequirements.push({ item: 'Google Search Console', status: 'needs-access', reason: 'Required to verify query ownership, clicks, impressions, positions and performance-based cannibalization.' });
+  }
+  if (mode === 'verified' && !d.competitor_evidence) {
+    accessRequirements.push({ item: 'Verified competitor/citation evidence', status: 'needs-access', reason: 'Do not present unverified competitor claims as fact.' });
+  }
+
+  const observed = [];
+  selected.slice(0, 15).forEach(p => {
+    if (!p || !p.url) return;
+    observed.push({
+      url: p.url,
+      title: p.title || '',
+      page_type: p.pageType || 'unknown',
+      graaf: num(p.graaf, num(p.score, 0)),
+      craft: num(p.craft, 0),
+      technical: num(p.technical, 0),
+      word_count: num(p.wordCount, 0),
+      schema: !!p.hasSchema,
+      orphan: !!p.orphan,
+      status: 'observed'
+    });
+  });
+
+  const gaps = arr(site.content_gaps || d.content_gaps).slice(0, 20).map((x, i) => {
+    if (typeof x === 'string') return { id: `GAP-${i + 1}`, finding: x, status: 'possible-opportunity' };
+    return Object.assign({ id: `GAP-${i + 1}`, status: evidenceStatus(x, 'possible-opportunity') }, x);
+  });
+
+  const summary = {
+    pages_discovered: num(d.total_pages_found, 0),
+    pages_analyzed: num(d.pages_scanned, pages.length),
+    average_graaf: num(cite.avg_graaf, 0),
+    technical_score: num(technical.technical_score, 0),
+    orphan_pages: orphanPages.length,
+    internal_link_opportunities: linkPlan.length,
+    cannibalization_groups: cannibalization.length,
+    ai_engines_checked: aiChecked,
+    ai_engines_verified: aiVerified,
+    exact_page_citations: num(cite.exact_page_citations, 0),
+    domain_citations: num(cite.own_domain_citations, 0)
+  };
+
+  const roadmap = [
+    {
+      phase: 'Days 1–7',
+      actions: opportunities.filter(x => ['high', 'critical'].includes(x.priority)).slice(0, 5).map(x => x.action || x.title),
+      status: 'observed'
+    },
+    {
+      phase: 'Days 8–30',
+      actions: linkPlan.slice(0, 8).map(x => x.reason || `Add contextual link from ${x.from?.url || x.from || 'source page'} to ${x.to?.url || x.to || 'target page'}`),
+      status: 'possible-opportunity'
+    },
+    {
+      phase: 'Days 31–90',
+      actions: [
+        'Validate search-performance assumptions with Google Search Console.',
+        'Complete the five-engine manual AI evidence cycle.',
+        'Promote verified pages and baseline data into the Tracker.'
+      ],
+      status: 'needs-access'
+    }
+  ];
+
+  return {
+    schema_version: '1.0',
+    report_type: mode === 'verified' ? 'verified_opportunity' : 'first_contact_opportunity',
+    report_mode: mode,
+    generated_at: new Date().toISOString(),
+    confidence_model: {
+      verified: 'Directly verified evidence or page-scoped evidence explicitly marked verified.',
+      observed: 'Directly observed from the audited website or existing audit output.',
+      possible_opportunity: 'A useful signal requiring further validation before being stated as a fact.',
+      needs_access: 'Cannot be responsibly verified without GSC, manual AI checks or other client evidence.'
+    },
+    company: {
+      name: clean(options.business_name || d.company_name || d.business_name || d.domain || d.client_url),
+      domain: clean(d.domain || options.domain || d.client_url),
+      url: clean(d.client_url || options.url || d.domain)
+    },
+    summary,
+    executive_summary: {
+      strongest_observed_signals: opportunities.slice(0, 3),
+      report_scope: mode === 'verified' ? 'Verified Opportunity Report: automatic audit plus verified evidence where available.' : 'Automatic Prospect Report: website evidence and opportunities without pretending unverified data is proven.',
+      access_note: accessRequirements.length ? 'Some conclusions require client access or manual verification.' : 'No additional access requirement was detected in the supplied evidence.'
+    },
+    website_structure: {
+      inventory_source: d.inventory_source || 'sitemap/crawl',
+      total_pages_found: summary.pages_discovered,
+      page_types: d.page_types || site.page_types || {},
+      orphan_pages: orphanPages,
+      internal_link_plan: linkPlan.slice(0, 20),
+      status: 'observed'
+    },
+    page_analysis: observed,
+    graaf: {
+      average_score: summary.average_graaf,
+      weakest_pages: arr(d.weakest_pages).slice(0, 10),
+      priority_pages: arr(d.priority_pages).slice(0, 20),
+      status: 'observed'
+    },
+    architecture_and_intent: {
+      content_gaps: gaps,
+      cannibalization: cannibalization.slice(0, 20).map(x => Object.assign({ status: evidenceStatus(x, 'possible-opportunity') }, x)),
+      internal_link_plan: linkPlan.slice(0, 20),
+      status: cannibalization.length ? 'possible-opportunity' : 'observed'
+    },
+    schema_and_entities: {
+      pages_with_schema: num(technical.pages_with_schema, 0),
+      multilingual: multi,
+      entity_evidence: arr(site.entities || d.entities),
+      status: 'observed'
+    },
+    ai_visibility: {
+      engines: aiEvidence,
+      checked: aiChecked,
+      verified: aiVerified,
+      status: aiVerified === 5 ? 'verified' : 'needs-access'
+    },
+    opportunities,
+    access_requirements: accessRequirements,
+    roadmap,
+    source_trace: {
+      audit_mode: d.mode || options.audit_mode || 'quick',
+      pages: selected.map(p => p.url).filter(Boolean),
+      starter_truth_note: starter.truth_note || null
+    },
+    tracker_promotion: {
+      eligible: mode === 'verified' && aiVerified === 5 && accessRequirements.every(x => x.item !== 'Google Search Console'),
+      required_before_promotion: [
+        'Complete/verify five-engine manual evidence',
+        'Connect or verify Google Search Console',
+        'Lock baseline',
+        'Create Tracker page monitoring scope'
+      ]
+    }
+  };
+}
+
+return { buildOpportunityReport, FIVE_ENGINES };
+
+})();
+
 const CONTENTSCALE_BUILD_ID = 'CS-2026-09-22-CANONICAL-v168';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 const CONTENTSCALE_BUILD_CHANGES = [
@@ -63,7 +318,10 @@ const CONTENTSCALE_BUILD_CHANGES = [
   'tracker-work-search-repositioned',
   'competitive-intelligence-read-only-no-add-to-claims',
   'case-study-snapshots-preserved-on-reset',
-  'gsc-one-click-wording-clarified'
+  'gsc-one-click-wording-clarified',
+  'first-contact-opportunity-report-orchestrator',
+  'prospect-vs-verified-report-modes',
+  'opportunity-report-shareable-json-evidence-layer'
   ,'competitive-intelligence-winning-actions'
   ,'perfect-roofing-verified-brand-facts-seed'
   ,'immutable-perfect-roofing-case-study-baseline'
@@ -13104,6 +13362,87 @@ return result;
                }
                app.post('/api/audit-site', _auditSiteHandler);
 
+
+
+               // ─────────────────────────────────────────────────────────────
+               //  FIRST CONTACT OPPORTUNITY REPORT
+               //  Orchestrates the existing Audit/GRAAF/site-intelligence/AI
+               //  outputs. It deliberately does not create a second analysis
+               //  engine. Prospect = observed/possible evidence; Verified =
+               //  same evidence plus explicit five-engine/GSC requirements.
+               // ─────────────────────────────────────────────────────────────
+               async function _ensureOpportunityReportTable(){
+                 if(!pool)return false;
+                 await pool.query(`CREATE TABLE IF NOT EXISTS opportunity_reports (
+                   id BIGSERIAL PRIMARY KEY,
+                   token VARCHAR(96) UNIQUE NOT NULL,
+                   domain VARCHAR(255) NOT NULL,
+                   source_url TEXT,
+                   report_mode VARCHAR(24) NOT NULL DEFAULT 'prospect',
+                   report_data JSONB NOT NULL,
+                   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                   last_opened_at TIMESTAMPTZ,
+                   view_count INTEGER NOT NULL DEFAULT 0,
+                   revoked_at TIMESTAMPTZ
+                 )`).catch(()=>{});
+                 await pool.query(`CREATE INDEX IF NOT EXISTS idx_opportunity_reports_domain_created ON opportunity_reports(domain,created_at DESC)`).catch(()=>{});
+                 return true;
+               }
+
+               function _opportunityHtmlEscape(v){
+                 return String(v==null?'':v).replace(/[&<>\"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[c]||c;});
+               }
+               function _opportunityJson(v){
+                 try{return JSON.stringify(v,null,2);}catch(e){return '{}';}
+               }
+               function _renderOpportunityReportHtml(report){
+                 const r=report||{},s=r.summary||{},e=r.executive_summary||{};
+                 const esc=_opportunityHtmlEscape;
+                 const opp=(r.opportunities||[]).slice(0,12).map(function(x){return '<div class="opp"><b>'+esc(x.title)+'</b><span>'+esc(x.action||x.why||'')+'</span><small>'+esc(String(x.priority||'medium').toUpperCase())+' · '+esc(x.status||'observed')+'</small></div>';}).join('') || '<p>No safe automatic opportunity was generated from the supplied evidence.</p>';
+                 const pages=(r.page_analysis||[]).slice(0,15).map(function(x){return '<tr><td>'+esc(x.title||x.url)+'</td><td>'+esc(x.page_type)+'</td><td>'+esc(x.graaf)+'</td><td>'+esc(x.technical)+'</td><td>'+esc(x.orphan?'Yes':'No')+'</td></tr>';}).join('');
+                 const ai=(r.ai_visibility&&r.ai_visibility.engines||[]).map(function(x){return '<tr><td>'+esc(x.label)+'</td><td>'+esc(x.checked?'Yes':'No')+'</td><td>'+esc(x.recommended==null?'—':x.recommended?'Yes':'No')+'</td><td>'+esc(x.domain_cited==null?'—':x.domain_cited?'Yes':'No')+'</td><td>'+esc(x.exact_page_cited==null?'—':x.exact_page_cited?'Yes':'No')+'</td><td>'+esc(x.verification_status)+'</td></tr>';}).join('');
+                 const access=(r.access_requirements||[]).map(function(x){return '<li><b>'+esc(x.item)+'</b> — '+esc(x.reason||('Missing: '+(x.missing||1)))+'</li>';}).join('') || '<li>No additional access requirement detected.</li>';
+                 const road=(r.roadmap||[]).map(function(x){return '<div class="phase"><b>'+esc(x.phase)+'</b><ul>'+((x.actions||[]).slice(0,8).map(function(a){return '<li>'+esc(a)+'</li>';}).join('')||'<li>Review evidence before adding actions.</li>')+'</ul></div>';}).join('');
+                 return '<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+esc(r.company&&r.company.name||'ContentScale Opportunity Report')+'</title><style>*{box-sizing:border-box}body{margin:0;background:#07111f;color:#e6eef8;font:14px/1.55 Inter,system-ui,sans-serif}.wrap{max-width:1120px;margin:auto;padding:28px}.hero,.box{background:#0d1b2d;border:1px solid #263d55;border-radius:14px;padding:22px;margin-bottom:16px}.hero{background:linear-gradient(135deg,#0d1b2d,#102b42)}h1{margin:0 0 5px;font-size:28px}h2{font-size:17px;margin:0 0 12px;color:#76d7ff}.muted{color:#9fb1c5}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}.metric{background:#102238;border:1px solid #29435d;border-radius:10px;padding:15px}.metric b{display:block;font-size:25px}.opp{border:1px solid #29435d;border-radius:10px;padding:14px;margin:8px 0;background:#102238}.opp span,.opp small{display:block;color:#aebfd1}.opp small{margin-top:5px;font-size:11px}table{width:100%;border-collapse:collapse;font-size:12px}th,td{padding:8px;border-bottom:1px solid #263d55;text-align:left;vertical-align:top}th{color:#76d7ff}pre{white-space:pre-wrap;overflow:auto;background:#081321;padding:14px;border-radius:10px;font-size:11px}.phase{padding:12px 0;border-bottom:1px solid #263d55}@media(max-width:700px){.wrap{padding:12px}table{display:block;overflow:auto}}@media print{body{background:#fff;color:#111}.hero,.box{background:#fff;border-color:#ddd}.muted,.opp span,.opp small{color:#444}}</style></head><body><main class="wrap"><section class="hero"><div class="muted">ContentScale · '+esc(r.report_type)+'</div><h1>'+esc(r.company&&r.company.name||'Opportunity Report')+'</h1><div class="muted">'+esc(r.company&&r.company.url||'')+' · Generated '+esc(r.generated_at)+'</div><p>'+esc(e.report_scope||'')+'</p></section><section class="box"><h2>Executive Summary</h2><div class="grid"><div class="metric"><b>'+esc(s.pages_discovered)+'</b>Pages discovered</div><div class="metric"><b>'+esc(s.pages_analyzed)+'</b>Pages analysed</div><div class="metric"><b>'+esc(s.average_graaf)+'</b>Average GRAAF</div><div class="metric"><b>'+esc(s.orphan_pages)+'</b>Orphan pages</div><div class="metric"><b>'+esc(s.ai_engines_verified)+'/5</b>AI verified</div></div></section><section class="box"><h2>Top Opportunities</h2>'+opp+'</section><section class="box"><h2>Page Analysis</h2><table><thead><tr><th>Page</th><th>Type</th><th>GRAAF</th><th>Technical</th><th>Orphan</th></tr></thead><tbody>'+pages+'</tbody></table></section><section class="box"><h2>AI Visibility</h2><table><thead><tr><th>Engine</th><th>Checked</th><th>Recommended</th><th>Domain cited</th><th>Exact page</th><th>Status</th></tr></thead><tbody>'+ai+'</tbody></table></section><section class="box"><h2>Access & Verification</h2><ul>'+access+'</ul></section><section class="box"><h2>90-Day Roadmap</h2>'+road+'</section><section class="box"><h2>Evidence Model</h2><p>Verified = directly verified evidence. Observed = directly observed from the audited site. Possible opportunity = signal requiring validation. Needs access = cannot responsibly be verified without additional evidence.</p><details><summary>Machine-readable report JSON</summary><pre>'+esc(_opportunityJson(r))+'</pre></details></section></main></body></html>';
+               }
+
+               app.post('/api/audit-opportunity-report', async (req,res)=>{
+                 try{
+                   const access=await _auditToolAccess(req);
+                   if(!access.ok)return res.status(401).json({success:false,error:'Unauthorized — invalid code or revoked share link'});
+                   const body=Object.assign({},req.body||{});
+                   const reportMode=String(body.report_mode||'prospect').toLowerCase()==='verified'?'verified':'prospect';
+                   // Opportunity reports always use the existing 20-page Audit intelligence layer.
+                   body.mode='quick';
+                   let audit=null,status=200;
+                   const internalReq={body,headers:{}};
+                   const internalRes={status:function(v){status=v;return this;},json:function(v){audit=v;return v;}};
+                   await _auditSiteHandler(internalReq,internalRes);
+                   if(status>=400||!audit||audit.success===false)return res.status(status||500).json(audit||{success:false,error:'Audit failed'});
+                   const report=buildOpportunityReport(audit,{report_mode:reportMode,business_name:body.business_name,domain:body.url,url:body.url,audit_mode:'quick'});
+                   let share=null;
+                   if(pool){
+                     await _ensureOpportunityReportTable();
+                     const token=crypto.randomBytes(32).toString('hex');
+                     const domain=String(report.company.domain||'').replace(/^https?:\/\//i,'').split('/')[0].toLowerCase();
+                     await pool.query('INSERT INTO opportunity_reports(token,domain,source_url,report_mode,report_data) VALUES($1,$2,$3,$4,$5::jsonb)',[token,domain,report.company.url,reportMode,JSON.stringify(report)]);
+                     share={token,url:req.protocol+'://'+req.get('host')+'/opportunity-report/'+token};
+                   }
+                   res.json({success:true,report,share});
+                 }catch(e){console.error('[opportunity-report] failed:',e);res.status(500).json({success:false,error:e.message});}
+               });
+
+               app.get('/opportunity-report/:token',async(req,res)=>{
+                 try{
+                   if(!pool)return res.status(503).send('Database unavailable');
+                   const token=String(req.params.token||'');
+                   if(!/^[a-f0-9]{64}$/.test(token))return res.status(404).send('Report not found');
+                   const r=await pool.query('UPDATE opportunity_reports SET last_opened_at=NOW(),view_count=view_count+1 WHERE token=$1 AND revoked_at IS NULL RETURNING report_data',[token]);
+                   if(!r.rows.length)return res.status(404).send('Report not found');
+                   const report=typeof r.rows[0].report_data==='string'?JSON.parse(r.rows[0].report_data):r.rows[0].report_data;
+                   res.type('html').send(_renderOpportunityReportHtml(report));
+                 }catch(e){res.status(500).send('Report could not be loaded');}
+               });
 
                // ─────────────────────────────────────────────────────────────
                //  AUDIT SHARE LINKS — public, read-only, no password
