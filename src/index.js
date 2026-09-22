@@ -1,4 +1,4 @@
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-22-CANONICAL-v160';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-22-CANONICAL-v161';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 const CONTENTSCALE_BUILD_CHANGES = [
   'Contact Intelligence: schema-initialisatie is geserialiseerd met één procesbelofte en PostgreSQL advisory lock om pg_type-races te voorkomen.',
@@ -16341,6 +16341,11 @@ async function _ensureContactIntelligenceTablesInit(){
   await pool.query(`CREATE TABLE IF NOT EXISTS contact_intelligence_verification_usage(
     id BIGSERIAL PRIMARY KEY,contact_id BIGINT REFERENCES contact_intelligence(id) ON DELETE SET NULL,
     source TEXT NOT NULL DEFAULT 'manual',created_at TIMESTAMPTZ DEFAULT NOW())`);
+  await pool.query(`CREATE TABLE IF NOT EXISTS contact_intelligence_daily_usage(
+    usage_day DATE PRIMARY KEY,used INTEGER NOT NULL DEFAULT 0 CHECK(used>=0 AND used<=500),updated_at TIMESTAMPTZ DEFAULT NOW())`);
+  await pool.query(`INSERT INTO contact_intelligence_daily_usage(usage_day,used)
+    SELECT CURRENT_DATE,LEAST(500,COUNT(*)::int) FROM contact_intelligence_verification_usage WHERE created_at>=date_trunc('day',NOW())
+    ON CONFLICT(usage_day) DO NOTHING`);
   await pool.query(`CREATE TABLE IF NOT EXISTS contact_intelligence_suppressions(
     id BIGSERIAL PRIMARY KEY,contact_id BIGINT,email TEXT,source TEXT,reason TEXT,actor TEXT DEFAULT 'admin',created_at TIMESTAMPTZ DEFAULT NOW())`);
   await pool.query(`ALTER TABLE contact_intelligence_verification_jobs ADD COLUMN IF NOT EXISTS last_contact_id BIGINT DEFAULT 0`);
@@ -16494,6 +16499,21 @@ async function _ciVerifyRowsSafely(rows,concurrency){
   }
   return results
 }
+// CONTENTSCALE-AI-HANDOFF-V161 — ATOMIC DAILY RESERVATION
+// Reserve website checks once per batch under a transaction lock. Verification-result persistence is
+// independent from this counter, so a counter/audit problem can never turn every result into a save error.
+async function _ciReserveVerificationSlots(requested,cap){
+  const wanted=Math.max(0,Math.min(20,Number(requested)||0)),dailyCap=Math.max(1,Math.min(500,Number(cap)||500));
+  if(!wanted)return{granted:0,used_before:0,used_after:0,cap:dailyCap};
+  const client=await pool.connect();
+  try{
+    await client.query('BEGIN');await client.query(`SELECT pg_advisory_xact_lock($1::bigint)`,[73156024]);
+    await client.query(`INSERT INTO contact_intelligence_daily_usage(usage_day,used) VALUES(CURRENT_DATE,0) ON CONFLICT(usage_day) DO NOTHING`);
+    const q=await client.query(`SELECT used FROM contact_intelligence_daily_usage WHERE usage_day=CURRENT_DATE FOR UPDATE`),before=Number(q.rows[0].used||0),granted=Math.max(0,Math.min(wanted,dailyCap-before,500-before));
+    if(granted)await client.query(`UPDATE contact_intelligence_daily_usage SET used=used+$1,updated_at=NOW() WHERE usage_day=CURRENT_DATE`,[granted]);
+    await client.query('COMMIT');return{granted,used_before:before,used_after:before+granted,cap:dailyCap}
+  }catch(e){await client.query('ROLLBACK').catch(()=>{});throw e}finally{client.release()}
+}
 let _ciWorkersStarted=false,_ciVerifyTimer=null,_ciVerifyBusy=false;
 // CONTENTSCALE-AI-HANDOFF-V159 — NEON COMPUTE SLEEP
 // Never poll PostgreSQL on a fixed interval while the queue is idle. A one-shot timer is scheduled only
@@ -16511,16 +16531,17 @@ function _ciStartWorkers(){
 async function _ciVerificationTick(){
   if(_ciVerifyBusy||!_ciTablesReady)return;_ciVerifyBusy=true;let nextDelay=null;
   try{
-    const jq=await pool.query(`SELECT * FROM contact_intelligence_verification_jobs WHERE status IN ('queued','processing') ORDER BY created_at LIMIT 1`);if(!jq.rows.length)return;const job=jq.rows[0],today=await pool.query(`SELECT COUNT(*)::int AS n FROM contact_intelligence_verification_usage WHERE created_at>=date_trunc('day',NOW())`),remaining=Math.max(0,Math.min(500,Number(job.daily_limit||500))-Number(today.rows[0].n||0));if(!remaining){const now=new Date(),nextUtc=Date.UTC(now.getUTCFullYear(),now.getUTCMonth(),now.getUTCDate()+1,0,0,5);nextDelay=Math.max(60000,nextUtc-Date.now());return}
-    const f=_ciBuildFilter(job.filters||{},{eligible:true,defaultStatus:'all',afterId:Number(job.last_contact_id||0)}),limit=Math.min(5,remaining);f.params.push(limit);const rows=await pool.query(`SELECT * FROM contact_intelligence WHERE ${f.where.join(' AND ')} ORDER BY id ASC LIMIT $${f.params.length}`,f.params);
+    const jq=await pool.query(`SELECT * FROM contact_intelligence_verification_jobs WHERE status IN ('queued','processing') ORDER BY created_at LIMIT 1`);if(!jq.rows.length)return;const job=jq.rows[0];
+    const f=_ciBuildFilter(job.filters||{},{eligible:true,defaultStatus:'all',afterId:Number(job.last_contact_id||0)}),limit=5;f.params.push(limit);const rows=await pool.query(`SELECT * FROM contact_intelligence WHERE ${f.where.join(' AND ')} ORDER BY id ASC LIMIT $${f.params.length}`,f.params);
     if(!rows.rows.length){await pool.query(`UPDATE contact_intelligence_verification_jobs SET status='completed',completed_at=NOW(),updated_at=NOW() WHERE id=$1`,[job.id]);nextDelay=250;return}
+    const reservation=await _ciReserveVerificationSlots(rows.rows.length,job.daily_limit||500);if(!reservation.granted){const now=new Date(),nextUtc=Date.UTC(now.getUTCFullYear(),now.getUTCMonth(),now.getUTCDate()+1,0,0,5);nextDelay=Math.max(60000,nextUtc-Date.now());return}rows.rows=rows.rows.slice(0,reservation.granted);
     await pool.query(`UPDATE contact_intelligence_verification_jobs SET status='processing',started_at=COALESCE(started_at,NOW()),error=NULL,updated_at=NOW() WHERE id=$1`,[job.id]);
     for(const row of rows.rows)await pool.query(`INSERT INTO contact_intelligence_verification_queue(contact_id,job_id,status,attempts,started_at,updated_at) VALUES($1,$2,'processing',1,NOW(),NOW()) ON CONFLICT(contact_id) DO UPDATE SET job_id=EXCLUDED.job_id,status='processing',attempts=contact_intelligence_verification_queue.attempts+1,started_at=NOW(),updated_at=NOW()`,[row.id,job.id]);
-    const results=await _ciVerifyRowsSafely(rows.rows,5);let verified=0,review=0;for(const x of results){if(x.ok){verified++;await pool.query(`UPDATE contact_intelligence SET status='domain_verified',website_url=$1,website_verified_at=NOW(),updated_at=NOW() WHERE id=$2`,[x.url,x.id])}else{review++;await pool.query(`UPDATE contact_intelligence SET status='needs_review',reason=concat_ws('; ',NULLIF(reason,''),$1),updated_at=NOW() WHERE id=$2`,[x.error,x.id])}await pool.query(`UPDATE contact_intelligence_verification_queue SET status='completed',last_error=$1,completed_at=NOW(),updated_at=NOW() WHERE contact_id=$2`,[x.ok?null:x.error,x.id]);await pool.query(`INSERT INTO contact_intelligence_verification_usage(contact_id,source) VALUES($1,'queue')`,[x.id])}
+    const results=await _ciVerifyRowsSafely(rows.rows,5);let verified=0,review=0;for(const x of results){if(x.ok){verified++;await pool.query(`UPDATE contact_intelligence SET status='domain_verified',website_url=$1,website_verified_at=NOW(),updated_at=NOW() WHERE id=$2`,[x.url,x.id])}else{review++;await pool.query(`UPDATE contact_intelligence SET status='needs_review',reason=concat_ws('; ',NULLIF(reason,''),$1),updated_at=NOW() WHERE id=$2`,[x.error,x.id])}await pool.query(`UPDATE contact_intelligence_verification_queue SET status='completed',last_error=$1,completed_at=NOW(),updated_at=NOW() WHERE contact_id=$2`,[x.ok?null:x.error,x.id])}
     const last=rows.rows[rows.rows.length-1].id;await pool.query(`UPDATE contact_intelligence_verification_jobs SET processed=processed+$1,verified=verified+$2,needs_review=needs_review+$3,last_contact_id=$4,updated_at=NOW() WHERE id=$5`,[results.length,verified,review,last,job.id]);nextDelay=1000;
   }catch(e){console.warn('[contact-intelligence] verification worker:',e.message);nextDelay=60000}finally{_ciVerifyBusy=false;if(nextDelay!=null)_ciScheduleVerification(nextDelay)}
 }
-app.get('/api/contact-intelligence/stats',requireAdmin,asyncHandler(async(req,res)=>{await _ensureContactIntelligenceTables();const q=await pool.query(`SELECT status,COUNT(*)::bigint AS count FROM contact_intelligence GROUP BY status`),j=await pool.query(`SELECT id,filename,file_size,status,processed_rows,inserted_rows,duplicate_rows,skipped_rows,error,source_type,resume_count,created_at,updated_at,completed_at,(file_path IS NOT NULL) AS resumable FROM contact_intelligence_imports ORDER BY created_at DESC LIMIT 5`),vj=await pool.query(`SELECT * FROM contact_intelligence_verification_jobs ORDER BY created_at DESC LIMIT 3`),usage=await pool.query(`SELECT COUNT(*)::int AS n FROM contact_intelligence_verification_usage WHERE created_at>=date_trunc('day',NOW())`),meta=await pool.query(`SELECT ARRAY(SELECT source FROM contact_intelligence WHERE source IS NOT NULL GROUP BY source ORDER BY source LIMIT 50) sources,ARRAY(SELECT niche FROM contact_intelligence WHERE niche IS NOT NULL GROUP BY niche ORDER BY niche LIMIT 50) niches,ARRAY(SELECT language FROM contact_intelligence WHERE language IS NOT NULL GROUP BY language ORDER BY language LIMIT 20) languages`);const counts={};q.rows.forEach(x=>counts[x.status]=Number(x.count||0));res.json({success:true,counts,jobs:j.rows,verification_jobs:vj.rows,verification_used_today:Number(usage.rows[0].n||0),verification_daily_cap:500,filters:meta.rows[0]||{}})}));
+app.get('/api/contact-intelligence/stats',requireAdmin,asyncHandler(async(req,res)=>{await _ensureContactIntelligenceTables();const q=await pool.query(`SELECT status,COUNT(*)::bigint AS count FROM contact_intelligence GROUP BY status`),j=await pool.query(`SELECT id,filename,file_size,status,processed_rows,inserted_rows,duplicate_rows,skipped_rows,error,source_type,resume_count,created_at,updated_at,completed_at,(file_path IS NOT NULL) AS resumable FROM contact_intelligence_imports ORDER BY created_at DESC LIMIT 5`),vj=await pool.query(`SELECT * FROM contact_intelligence_verification_jobs ORDER BY created_at DESC LIMIT 3`),usage=await pool.query(`SELECT used FROM contact_intelligence_daily_usage WHERE usage_day=CURRENT_DATE`),meta=await pool.query(`SELECT ARRAY(SELECT source FROM contact_intelligence WHERE source IS NOT NULL GROUP BY source ORDER BY source LIMIT 50) sources,ARRAY(SELECT niche FROM contact_intelligence WHERE niche IS NOT NULL GROUP BY niche ORDER BY niche LIMIT 50) niches,ARRAY(SELECT language FROM contact_intelligence WHERE language IS NOT NULL GROUP BY language ORDER BY language LIMIT 20) languages`);const counts={};q.rows.forEach(x=>counts[x.status]=Number(x.count||0));res.json({success:true,counts,jobs:j.rows,verification_jobs:vj.rows,verification_used_today:usage.rows.length?Number(usage.rows[0].used||0):0,verification_daily_cap:500,filters:meta.rows[0]||{}})}));
 app.get('/api/contact-intelligence/list',requireAdmin,asyncHandler(async(req,res)=>{
   await _ensureContactIntelligenceTables();const limit=Math.max(1,Math.min(100,Number(req.query.limit)||50)),after=Math.max(0,Number(req.query.after)||0),f=_ciBuildFilter(req.query,{defaultStatus:'qualified'});if(after){f.params.push(after);f.where.push('id<$'+f.params.length)}f.params.push(limit+1);const rows=await pool.query(`SELECT id,source,username,bio,follower_count,email,email_type,company_name,contact_name,source_url,linkedin_url,job_title,industry,niche,location,country,city,language,employee_count,phone,business_score,classification,status,reason,website_candidate,website_url,website_verified_at,promoted_token,suppression_reason,suppression_source,created_at FROM contact_intelligence WHERE ${f.where.join(' AND ')} ORDER BY id DESC LIMIT $${f.params.length}`,f.params),more=rows.rows.length>limit,items=rows.rows.slice(0,limit);res.json({success:true,items,next_after:more&&items.length?items[items.length-1].id:null})
 }));
@@ -16533,24 +16554,25 @@ app.post('/api/contact-intelligence/verify',requireAdmin,async(req,res)=>{
     await _ensureContactIntelligenceTables();phase='validating selection';
     const ids=Array.from(new Set((Array.isArray(req.body&&req.body.ids)?req.body.ids:[]).map(Number).filter(Number.isSafeInteger))).slice(0,20);
     if(!ids.length)return res.status(400).json({success:false,error:'Select up to 20 contacts'});
-    const usage=await pool.query(`SELECT COUNT(*)::int AS n FROM contact_intelligence_verification_usage WHERE created_at>=date_trunc('day',NOW())`),usedToday=Number(usage.rows[0].n||0),remainingToday=Math.max(0,500-usedToday);
-    if(!remainingToday)return res.status(429).json({success:false,error:'Daily website verification limit reached (500/500 UTC). Try again after 00:00 UTC.'});
-    const allowedIds=ids.slice(0,remainingToday),skippedDaily=ids.length-allowedIds.length;
     phase='loading contacts';
-    const q=await pool.query(`SELECT * FROM contact_intelligence WHERE id=ANY($1::bigint[]) AND status IN ('qualified','needs_review')`,[allowedIds]);
+    const q=await pool.query(`SELECT * FROM contact_intelligence WHERE id=ANY($1::bigint[]) AND status IN ('qualified','needs_review')`,[ids]);
     if(!q.rows.length)return res.status(409).json({success:false,error:'The selected contacts are no longer eligible for verification. Refresh the list and select them again.'});
+    phase='reserving daily capacity';
+    const reservation=await _ciReserveVerificationSlots(q.rows.length,500);
+    if(!reservation.granted)return res.status(429).json({success:false,error:'Daily website verification limit reached (500/500 UTC). Try again after 00:00 UTC.'});
+    const selectedRows=q.rows.slice(0,reservation.granted),skippedDaily=q.rows.length-selectedRows.length,skippedIneligible=ids.length-q.rows.length;
     phase='checking websites';
-    const results=await _ciVerifyRowsSafely(q.rows,10),stored=[];
+    const results=await _ciVerifyRowsSafely(selectedRows,10),stored=[];
     phase='saving results';
     for(const x of results){
       try{
         if(x.ok)await pool.query(`UPDATE contact_intelligence SET status='domain_verified',website_url=$1,website_verified_at=NOW(),updated_at=NOW() WHERE id=$2`,[x.url,x.id]);
         else await pool.query(`UPDATE contact_intelligence SET status='needs_review',reason=concat_ws('; ',NULLIF(reason,''),$1),updated_at=NOW() WHERE id=$2`,[x.error,x.id]);
-        await pool.query(`INSERT INTO contact_intelligence_verification_usage(contact_id,source) VALUES($1,'manual')`,[x.id]);stored.push(x)
+        stored.push(x)
       }catch(e){stored.push({...x,ok:false,error:'Result could not be saved: '+_ciSafeError(e),storage_error:true})}
     }
     const verified=stored.filter(x=>x.ok).length,needsReview=stored.length-verified,saveErrors=stored.filter(x=>x.storage_error).length;
-    res.status(saveErrors?207:200).json({success:true,verified,needs_review:needsReview,save_errors:saveErrors,skipped_daily:skippedDaily,used_today:usedToday+stored.length,daily_cap:500,results:stored,message:verified+' verified · '+needsReview+' need review · '+(usedToday+stored.length)+'/500 checks used today'+(skippedDaily?' · '+skippedDaily+' skipped by daily cap':'')+(saveErrors?' · '+saveErrors+' save errors':'')})
+    res.status(saveErrors?207:200).json({success:true,verified,needs_review:needsReview,save_errors:saveErrors,skipped_daily:skippedDaily,skipped_ineligible:skippedIneligible,used_today:reservation.used_after,daily_cap:500,results:stored,message:verified+' verified · '+needsReview+' need review · '+reservation.used_after+'/500 checks used today'+(skippedDaily?' · '+skippedDaily+' skipped by daily cap':'')+(skippedIneligible?' · '+skippedIneligible+' already handled/ineligible':'')+(saveErrors?' · '+saveErrors+' save errors':'')})
   }catch(e){
     console.error('[contact-intelligence] verify selected ('+phase+'):',e);
     res.status(500).json({success:false,error:'Website verification failed while '+phase+'. Refresh and retry; no email or scan was sent.',code:String(e&&e.code||''),detail:_ciSafeError(e)})
