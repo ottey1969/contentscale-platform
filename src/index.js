@@ -253,7 +253,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-22-CANONICAL-v172';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-22-CANONICAL-v173';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 const CONTENTSCALE_BUILD_CHANGES = [
   'Contact Intelligence: schema-initialisatie is geserialiseerd met één procesbelofte en PostgreSQL advisory lock om pg_type-races te voorkomen.',
@@ -12133,6 +12133,7 @@ return result;
                let scanUrl = url.startsWith('http') ? url : 'https://' + url;
                try {
                console.log(`🔍 Elite Scanning: ${scanUrl}`);
+               console.log('[scan] browser profile: full Chrome UA + navigation headers (v173)');
                let browser;
                try { browser = await getBrowser(); } catch(e) { console.error('[scan] Browser launch failed:', e.message); }
                               // One retry — force fresh browser if first attempt returns null
@@ -12145,7 +12146,13 @@ return result;
                try { page = await browser.newPage(); } catch(e) { return res.status(500).json({ success: false, error: 'Failed to create browser page: ' + e.message, step: 'newPage' }); }
                try {
                await page.setViewport({ width: 1920, height: 1080 });
-               await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36');
+               await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+               await page.setExtraHTTPHeaders({
+                 'Accept-Language':'en-US,en;q=0.9',
+                 'Accept':'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+                 'Cache-Control':'no-cache',
+                 'Pragma':'no-cache'
+               });
                } catch(e) { console.warn('[scan] Viewport/UA setup failed:', e.message); /* non-fatal */ }
                let response;
                try { response = await page.goto(scanUrl, { waitUntil: 'domcontentloaded', timeout: 15000 }); }
