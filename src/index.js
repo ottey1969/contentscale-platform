@@ -253,7 +253,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-22-CANONICAL-v168';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-22-CANONICAL-v169';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 const CONTENTSCALE_BUILD_CHANGES = [
   'Contact Intelligence: schema-initialisatie is geserialiseerd met één procesbelofte en PostgreSQL advisory lock om pg_type-races te voorkomen.',
@@ -320,6 +320,10 @@ const CONTENTSCALE_BUILD_CHANGES = [
   'case-study-snapshots-preserved-on-reset',
   'gsc-one-click-wording-clarified',
   'first-contact-opportunity-report-orchestrator',
+  'opportunity-report-admin-ui-and-history',
+  'quick-scan-automatic-prospect-report-no-five-ai-gate',
+  'audit-reserved-for-verified-opportunity-report',
+  'automatic-prospect-report-visible-from-audit-tool',
   'prospect-vs-verified-report-modes',
   'opportunity-report-shareable-json-evidence-layer'
   ,'competitive-intelligence-winning-actions'
@@ -13384,7 +13388,10 @@ return result;
                    last_opened_at TIMESTAMPTZ,
                    view_count INTEGER NOT NULL DEFAULT 0,
                    revoked_at TIMESTAMPTZ
-                 )`).catch(()=>{});
+                 );
+                 ALTER TABLE opportunity_reports ADD COLUMN IF NOT EXISTS source_type VARCHAR(32) DEFAULT 'audit';
+                 ALTER TABLE opportunity_reports ADD COLUMN IF NOT EXISTS source_token TEXT;
+                 CREATE INDEX IF NOT EXISTS opportunity_reports_source_idx ON opportunity_reports(source_type,source_token)`).catch(()=>{});
                  await pool.query(`CREATE INDEX IF NOT EXISTS idx_opportunity_reports_domain_created ON opportunity_reports(domain,created_at DESC)`).catch(()=>{});
                  return true;
                }
@@ -13411,8 +13418,9 @@ return result;
                    const access=await _auditToolAccess(req);
                    if(!access.ok)return res.status(401).json({success:false,error:'Unauthorized — invalid code or revoked share link'});
                    const body=Object.assign({},req.body||{});
-                   const reportMode=String(body.report_mode||'prospect').toLowerCase()==='verified'?'verified':'prospect';
-                   // Opportunity reports always use the existing 20-page Audit intelligence layer.
+                   const reportMode='verified';
+                   // Audit is reserved for the deeper Verified Opportunity Report.
+                   // Automatic Prospect Reports are generated from completed Quick Scans and do not require 5/5 AI evidence.
                    body.mode='quick';
                    let audit=null,status=200;
                    const internalReq={body,headers:{}};
@@ -13430,6 +13438,21 @@ return result;
                    }
                    res.json({success:true,report,share});
                  }catch(e){console.error('[opportunity-report] failed:',e);res.status(500).json({success:false,error:e.message});}
+               });
+
+               app.post('/api/opportunity-reports/list', async (req,res)=>{
+                 try{
+                   const access=await _auditToolAccess(req);
+                   if(!access.ok)return res.status(401).json({success:false,error:'Unauthorized'});
+                   if(!pool)return res.json({success:true,reports:[]});
+                   await _ensureOpportunityReportTable();
+                   const q=await pool.query(`SELECT token,domain,source_url,report_mode,created_at,last_opened_at,view_count
+                     FROM opportunity_reports WHERE revoked_at IS NULL ORDER BY created_at DESC LIMIT 25`);
+                   res.json({success:true,reports:q.rows.map(function(x){return {
+                     token:x.token,domain:x.domain,source_url:x.source_url,report_mode:x.report_mode,created_at:x.created_at,
+                     last_opened_at:x.last_opened_at,view_count:Number(x.view_count||0),url:req.protocol+'://'+req.get('host')+'/opportunity-report/'+x.token
+                   };})});
+                 }catch(e){console.error('[opportunity-reports/list] failed:',e);res.status(500).json({success:false,error:e.message});}
                });
 
                app.get('/opportunity-report/:token',async(req,res)=>{
@@ -14156,6 +14179,46 @@ return result;
   <label id="forceFreshWrap" style="flex-basis:100%;display:flex;align-items:center;gap:8px;font-size:11px;color:#475569;"><input id="forceFresh" type="checkbox" style="width:auto"> Force fresh rescan — ignore reusable page checkpoints from the last 24 hours</label>
   <div id="clientAccessShortcut" style="flex-basis:100%;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;background:#f5f3ff;border:1px solid #ddd6fe;border-radius:9px;padding:9px 11px;"><span style="font-size:11px;color:#4c1d95"><strong>Need a link for a client without admin access?</strong> Create a separate passwordless 1-page, 20-page or All-Pages Audit-tool link.</span><button type="button" onclick="document.getElementById('toolSharePanel').scrollIntoView({behavior:'smooth',block:'start'})" style="padding:7px 10px">Create client access link</button></div>
 </div>
+
+<div id="opportunityReportPanel" class="noprint" style="background:linear-gradient(145deg,#0c1725,#09111c);border:1px solid #25364d;border-radius:18px;padding:20px;margin-bottom:20px;box-shadow:var(--shadow);">
+  <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:14px;flex-wrap:wrap;">
+    <div><div style="font-size:10px;font-weight:900;letter-spacing:.13em;color:#7dd3fc;text-transform:uppercase;">v169 · VERIFIED REPORT LAYER</div><h2 style="margin:5px 0 4px;color:#f8fafc;font-size:19px;">Verified Opportunity Report</h2><div style="font-size:12px;color:#94a3b8;max-width:720px;line-height:1.55;">Audit is the deeper verification stage. Automatic Prospect Reports are created from Quick Scan and do not require five manual AI checks.</div></div>
+    <button type="button" onclick="csLoadOpportunityReports()" style="background:#0b1e33;border:1px solid #315170;box-shadow:none;">Refresh report history</button>
+  </div>
+  <div style="display:grid;grid-template-columns:minmax(220px,1fr) auto auto;gap:10px;align-items:end;margin-top:15px;">
+    <div><label>Business name (optional)</label><input id="opportunityBusinessName" placeholder="Client / prospect name"></div>
+    <button type="button" id="opportunityProspectBtn" onclick="csGenerateOpportunityReport('prospect')">Generate Verified Report</button>
+    <button type="button" id="opportunityVerifiedBtn" onclick="csGenerateOpportunityReport('verified')" style="background:linear-gradient(135deg,#0f766e,#047857);">Generate Verified Report</button>
+  </div>
+  <div id="opportunityReportStatus" style="display:none;margin-top:12px;padding:11px 13px;border-radius:10px;background:#07111d;border:1px solid #29476b;color:#cbd5e1;font-size:12px;"></div>
+  <div id="opportunityReportHistory" style="margin-top:12px;"></div>
+</div>
+<script>
+(function(){
+  function esc(v){return String(v==null?'':v).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]||c;});}
+  function status(msg,bad){var e=document.getElementById('opportunityReportStatus');if(!e)return;e.style.display='block';e.style.borderColor=bad?'#7f1d1d':'#29476b';e.style.color=bad?'#fecaca':'#cbd5e1';e.innerHTML=msg;}
+  window.csGenerateOpportunityReport=async function(mode){
+    var url=(document.getElementById('url').value||'').trim(),code=(document.getElementById('code').value||'').trim();
+    var name=(document.getElementById('opportunityBusinessName').value||'').trim();
+    if(!url)return status('Enter the customer website URL first.',true);
+    var b1=document.getElementById('opportunityProspectBtn'),b2=document.getElementById('opportunityVerifiedBtn');b1.disabled=b2.disabled=true;
+    status('Building '+(mode==='verified'?'Verified':'Automatic Prospect')+' Report from the existing 20-page intelligence…');
+    try{
+      var r=await fetch('/api/audit-opportunity-report',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:code,url:url,business_name:name,report_mode:mode})});
+      var d=await r.json();if(!r.ok||!d.success)throw new Error(d.error||'Report generation failed');
+      var link=d.share&&d.share.url?'<a href="'+esc(d.share.url)+'" target="_blank" style="color:#7dd3fc;font-weight:800;">Open shareable report ↗</a>':'Report generated, but no database share link was created.';
+      status('✓ Report completed. '+link);await window.csLoadOpportunityReports();
+    }catch(e){status('Report failed: '+esc(e.message),true);}finally{b1.disabled=b2.disabled=false;}
+  };
+  window.csLoadOpportunityReports=async function(){
+    var code=(document.getElementById('code').value||'').trim(),box=document.getElementById('opportunityReportHistory');if(!box)return;
+    try{var r=await fetch('/api/opportunity-reports/list',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:code})});var d=await r.json();if(!r.ok||!d.success)throw new Error(d.error||'Could not load report history');
+      if(!d.reports.length){box.innerHTML='<div style="color:#64748b;font-size:12px;">No Opportunity Reports created yet.</div>';return;}
+      box.innerHTML='<div style="font-size:11px;font-weight:900;color:#94a3b8;margin-bottom:7px;">RECENT OPPORTUNITY REPORTS</div>'+d.reports.map(function(x){return '<div style="display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:center;padding:10px 12px;margin:6px 0;background:#07111d;border:1px solid #22364d;border-radius:10px;"><div><b style="color:#e2e8f0;">'+esc(x.domain)+'</b><div style="font-size:11px;color:#64748b;">'+esc(String(x.report_mode||'prospect').toUpperCase())+' · '+esc(new Date(x.created_at).toLocaleString())+' · '+esc(x.view_count)+' views</div></div><a href="'+esc(x.url)+'" target="_blank" style="color:#7dd3fc;font-weight:800;text-decoration:none;">Open ↗</a><span style="font-size:10px;color:#64748b;">'+(x.last_opened_at?'Viewed':'Not opened')+'</span></div>';}).join('');
+    }catch(e){box.innerHTML='<div style="color:#fca5a5;font-size:12px;">'+esc(e.message)+'</div>';}
+  };
+})();
+</script>
 
 <div id="auditEvidenceInputs" class="noprint" style="background:#fff;border:1px solid var(--bd);border-radius:12px;padding:8px 20px;margin-bottom:20px;">
   <details>
@@ -17174,6 +17237,49 @@ app.post('/api/prospect-quick-scan/:token/setup',_pqsPublicLimit,async(req,res)=
   }catch(e){res.status(500).json({success:false,error:e.message});}
 });
 app.post('/api/prospect-quick-scan/:token/contact',_pqsPublicLimit,async(req,res)=>{if(!await _ensureProspectQuickScanTable())return res.status(503).json({success:false});const email=String((req.body||{}).email||'').trim().toLowerCase();if(!_pqsValidEmail(email))return res.status(400).json({success:false,error:'Enter a valid email address'});try{const opt=!!req.body.updates_opt_in,q=await pool.query(`UPDATE prospect_quick_scans SET visitor_email=$1,updates_opt_in=$2,updates_opted_in_at=CASE WHEN $2 THEN COALESCE(updates_opted_in_at,NOW()) ELSE NULL END,updated_at=NOW() WHERE token=$3 AND revoked_at IS NULL RETURNING *`,[email,opt,req.params.token]);if(!q.rows.length)return res.status(404).json({success:false,error:'Not found'});_pqsMaybeSendCompletion(req.params.token);res.json({success:true,item:_pqsPublicRow(q.rows[0])});}catch(e){res.status(500).json({success:false,error:e.message});}});
+
+// v169 — Automatic Prospect Report from an already completed Quick Scan.
+// No 5/5 AI gate: manual AI evidence is optional here and remains visibly unverified when absent.
+app.post('/api/prospect-quick-scan/admin/:token/prospect-report',requireAdmin,async(req,res)=>{
+  if(!await _ensureProspectQuickScanTable())return res.status(503).json({success:false,error:'Quick Scan unavailable'});
+  try{
+    const q=await pool.query('SELECT * FROM prospect_quick_scans WHERE token=$1 AND revoked_at IS NULL',[req.params.token]);
+    if(!q.rows.length)return res.status(404).json({success:false,error:'Quick Scan not found'});
+    const row=q.rows[0],scan=typeof row.scan_result==='string'?JSON.parse(row.scan_result):row.scan_result;
+    if(!row.scan_completed_at||!scan)return res.status(409).json({success:false,error:'Run the Quick Scan first. Five AI checks are NOT required.'});
+    const metrics=scan.metrics||{};
+    const recs=Array.isArray(scan.recommendations)?scan.recommendations:[];
+    const ai=row.ai_evidence&&typeof row.ai_evidence==='object'?row.ai_evidence:{};
+    const shaped={
+      success:true,mode:'prospect_quick_scan',company_name:row.business_name,domain:row.domain,client_url:row.url,
+      total_pages_found:Number(row.sitemap_count||0),pages_scanned:1,
+      pages:[{url:row.url,title:scan.title||row.business_name||row.domain,pageType:'submitted_page',graaf:Number(scan.score||0),craft:Number(metrics.craft||0),technical:Number(metrics.technical||0),wordCount:Number(metrics.word_count||scan.word_count||0),hasSchema:!!(metrics.schema||scan.hasSchema),recommendations:recs}],
+      top_recommendations:recs,
+      citeability:{avg_graaf:Number(scan.score||0)},
+      technical:{technical_score:Number(metrics.technical||0),pages_with_schema:(metrics.schema||scan.hasSchema)?1:0},
+      manual_citations:ai,
+      starter_intelligence:{truth_note:'Automatic Prospect Report is based on one completed Quick Scan page. Five-engine AI verification is optional and is not required to create this report.'}
+    };
+    const report=buildOpportunityReport(shaped,{report_mode:'prospect',business_name:row.business_name,domain:row.domain,url:row.url,audit_mode:'prospect_quick_scan'});
+    report.executive_summary.report_scope='Automatic Prospect Report from Quick Scan: one submitted page was audited. Manual five-engine AI verification is optional and not required.';
+    report.source_trace.quick_scan_token=row.token;
+    report.source_trace.quick_scan_completed_at=row.scan_completed_at;
+    report.source_trace.sitemap_urls_discovered=Number(row.sitemap_count||0);
+    report.ai_visibility.status=report.ai_visibility.verified===5?'verified':'optional-not-verified';
+    report.access_requirements=(report.access_requirements||[]).filter(x=>x.item!=='Five-engine manual AI verification');
+    await _ensureOpportunityReportTable();
+    const existing=await pool.query(`SELECT token FROM opportunity_reports WHERE source_type='quick_scan' AND source_token=$1 AND report_mode='prospect' AND revoked_at IS NULL ORDER BY created_at DESC LIMIT 1`,[row.token]);
+    let token=existing.rows[0]&&existing.rows[0].token;
+    if(token){
+      await pool.query(`UPDATE opportunity_reports SET domain=$1,source_url=$2,report_data=$3::jsonb,created_at=NOW() WHERE token=$4`,[row.domain,row.url,JSON.stringify(report),token]);
+    }else{
+      token=crypto.randomBytes(32).toString('hex');
+      await pool.query(`INSERT INTO opportunity_reports(token,domain,source_url,report_mode,report_data,source_type,source_token) VALUES($1,$2,$3,'prospect',$4::jsonb,'quick_scan',$5)`,[token,row.domain,row.url,JSON.stringify(report),row.token]);
+    }
+    res.json({success:true,report,share:{token,url:req.protocol+'://'+req.get('host')+'/opportunity-report/'+token},five_ai_required:false});
+  }catch(e){console.error('[quick-scan prospect-report]',e);res.status(500).json({success:false,error:e.message});}
+});
+
 app.get('/api/prospect-quick-scan/:token',async(req,res)=>{if(!await _ensureProspectQuickScanTable())return res.status(503).json({success:false});try{const q=await pool.query('SELECT * FROM prospect_quick_scans WHERE token=$1 AND revoked_at IS NULL',[req.params.token]);if(!q.rows.length)return res.status(404).json({success:false,error:'Quick Scan link not found'});res.json({success:true,item:_pqsPublicRow(q.rows[0])});}catch(e){res.status(500).json({success:false,error:e.message});}});
 app.post('/api/prospect-quick-scan/:token/run',_pqsPublicLimit,async(req,res)=>{
   if(!await _ensureProspectQuickScanTable())return res.status(503).json({success:false});
@@ -17621,7 +17727,7 @@ app.get('/quick-scan/start',(req,res)=>{
 });
 app.get('/quick-scan/:token',async(req,res)=>{if(!await _ensureProspectQuickScanTable())return res.status(503).send('Quick Scan unavailable');try{const q=await pool.query(`UPDATE prospect_quick_scans SET opened_count=opened_count+1,first_opened_at=COALESCE(first_opened_at,NOW()),last_opened_at=NOW(),follow_up_status=CASE WHEN follow_up_status='not_contacted' THEN 'opened' ELSE follow_up_status END,updated_at=NOW() WHERE token=$1 AND revoked_at IS NULL RETURNING *`,[req.params.token]);if(!q.rows.length)return res.status(404).send('Quick Scan link not found');if(Number(q.rows[0].opened_count||0)===1)_pqsNotifyOwner(q.rows[0],'opened');const row=q.rows[0],language=_pqsResolveLanguage(row.language,row.domain),localized=_pqsLocalizeQuickScanHtml(_pqsEnhancePublicHtml(_pqsPageHtml(req.params.token)),language);res.type('html').send(localized.replace('</body>',_pqsEntryLanguageScript(language)+'</body>'));}catch(e){res.status(500).send('Quick Scan unavailable')}});
 
-function _pqsAdminHtml(){return String.raw`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Prospect Quick Scans · Admin</title><style>*{box-sizing:border-box}body{margin:0;background:#070b13;color:#e5e7eb;font:13px/1.5 Inter,Arial,sans-serif}.w{max-width:1200px;margin:auto;padding:22px}.p{background:#0d1522;border:1px solid #27364c;border-radius:14px;padding:18px;margin-bottom:14px}input,select,textarea{background:#060b12;border:1px solid #374151;border-radius:8px;color:#e5e7eb;padding:10px}input{min-width:210px}.row{display:flex;gap:8px;flex-wrap:wrap}.btn{border:1px solid #7c3aed;background:#5b21b6;color:#fff;border-radius:8px;padding:9px 13px;font-weight:800;cursor:pointer}.card{border:1px solid #26364d;border-radius:12px;padding:14px;margin-top:10px}.meta{color:#94a3b8;font-size:11px}.eng{display:grid;grid-template-columns:150px repeat(5,110px) 1fr auto;gap:6px;align-items:center;margin-top:8px}.eng label{font-size:10px}.eng input[type=checkbox]{min-width:auto}.link{color:#67e8f9;word-break:break-all}.good{color:#4ade80}.warn{color:#fbbf24}@media(max-width:850px){.eng{grid-template-columns:1fr 1fr}.eng b{grid-column:1/-1}}</style></head><body><main class="w"><h1>Prospect Quick Scans</h1><p class="meta">Create links for Lead Crawler, LinkedIn, Facebook, contact forms, email or standalone outreach. Quick Scan remains separate from Audit and Tracker.</p><section id="login" class="p"><input id="code" type="password" placeholder="Admin access code"><button class="btn" onclick="unlock()">Open Admin</button><span id="loginMsg"></span></section><section id="app" style="display:none"><div class="p"><h2>Create personal scan link</h2><div class="row"><input id="name" placeholder="Business name"><input id="url" placeholder="https://company.com/page"><select id="source"><option value="standalone">Standalone</option><option value="lead_crawler">Lead Crawler</option><option value="linkedin">LinkedIn</option><option value="facebook">Facebook</option><option value="contact_form">Contact form</option><option value="email">Email</option></select><input id="campaign" placeholder="Campaign (optional)"><select id="language"><option value="en">English</option><option value="nl">Dutch</option><option value="es">Spanish</option></select><button class="btn" onclick="createLink()">Create Quick Scan</button></div><div id="created"></div></div><div class="p"><div class="row"><h2 style="margin:0">Prospects</h2><button class="btn" onclick="load()">Refresh</button></div><div id="list"></div></div></section></main><script>var KEY=localStorage.getItem('pqs_admin_code')||'';function esc(s){return String(s==null?'':s).replace(/[&<>\"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[c]})}async function api(path,opt){opt=opt||{};opt.headers=Object.assign({'Content-Type':'application/json','x-admin-code':KEY},opt.headers||{});var r=await fetch(path,opt),d=await r.json();if(!r.ok)throw Error(d.error||'Request failed');return d}async function unlock(){KEY=code.value;try{var r=await fetch('/api/admin/verify',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:KEY})}),d=await r.json();if(!d.ok)throw Error('Invalid code');localStorage.setItem('pqs_admin_code',KEY);login.style.display='none';app.style.display='block';load()}catch(e){loginMsg.textContent=e.message}}async function createLink(){try{var d=await api('/api/prospect-quick-scan/admin/create',{method:'POST',body:JSON.stringify({business_name:name.value,url:url.value,source:source.value,campaign:campaign.value,language:language.value})});created.innerHTML='<p class="good"><a class="link" target="_blank" href="'+esc(d.share_url)+'">'+esc(d.share_url)+'</a> <button class="btn" onclick="navigator.clipboard.writeText(\''+d.share_url+'\')">Copy</button></p>';load()}catch(e){created.innerHTML='<p class="warn">'+esc(e.message)+'</p>'}}var names={google_aio:'Google AIO / Gemini',chatgpt:'ChatGPT Search',perplexity:'Perplexity',claude:'Claude',copilot:'Microsoft Copilot'};function engine(token,k,x){x=x||{};return'<div class="eng"><b>'+names[k]+'</b>'+['recommended','directly_supported','local_maps','domain_cited','exact_page_cited'].map(function(f){return'<label><input type="checkbox" data-f="'+f+'" '+(x[f]?'checked':'')+'> '+f.replace(/_/g,' ')+'</label>'}).join('')+'<input data-f="sources" value="'+esc((x.sources||[]).join(', '))+'" placeholder="Source URLs"><button class="btn" onclick="saveAI(\''+token+'\',\''+k+'\',this)">Save</button></div>'}async function saveAI(token,k,b){var row=b.parentNode,o={engine:k};row.querySelectorAll('[data-f]').forEach(function(e){o[e.dataset.f]=e.type==='checkbox'?e.checked:e.value});b.disabled=true;b.textContent='Saving…';try{await api('/api/prospect-quick-scan/admin/'+token+'/ai',{method:'PATCH',body:JSON.stringify(o)});b.textContent='Saved ✓';setTimeout(load,500)}catch(e){b.disabled=false;b.textContent='Retry';alert(e.message)}}async function setStatus(t,s){await api('/api/prospect-quick-scan/admin/'+t+'/status',{method:'PATCH',body:JSON.stringify({status:s})});load()}async function load(){try{var d=await api('/api/prospect-quick-scan/admin/list');list.innerHTML=d.items.map(function(x){var ai=x.ai_evidence||{};return'<article class="card"><div class="row"><b>'+esc(x.business_name||x.domain)+'</b><span class="meta">'+esc(x.source)+' · '+esc(x.status)+' · opened '+x.opened_count+' · AI '+x.ai_checked+'/5</span><a class="link" target="_blank" href="'+esc(x.share_url)+'">Open</a><button class="btn" onclick="navigator.clipboard.writeText(\''+x.share_url+'\')">Copy link</button><select data-token="'+esc(x.token)+'" onchange="setStatus(this.dataset.token,this.value)">'+['not_contacted','contacted','opened','replied','won','closed'].map(function(s){return'<option '+(x.follow_up_status===s?'selected':'')+'>'+s+'</option>'}).join('')+'</select></div><div class="meta">'+esc(x.url)+' · '+new Date(x.created_at||x.updated_at).toLocaleString()+'</div>'+Object.keys(names).map(function(k){return engine(x.token,k,ai[k])}).join('')+'</article>'}).join('')||'<p class="meta">No Quick Scans yet.</p>'}catch(e){if(/Unauthorized/i.test(e.message)){login.style.display='block';app.style.display='none'}else list.textContent=e.message}}if(KEY){code.value=KEY;unlock()}</script></body></html>`}
+function _pqsAdminHtml(){return String.raw`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Prospect Quick Scans · Admin</title><style>*{box-sizing:border-box}body{margin:0;background:#070b13;color:#e5e7eb;font:13px/1.5 Inter,Arial,sans-serif}.w{max-width:1200px;margin:auto;padding:22px}.p{background:#0d1522;border:1px solid #27364c;border-radius:14px;padding:18px;margin-bottom:14px}input,select,textarea{background:#060b12;border:1px solid #374151;border-radius:8px;color:#e5e7eb;padding:10px}input{min-width:210px}.row{display:flex;gap:8px;flex-wrap:wrap}.btn{border:1px solid #7c3aed;background:#5b21b6;color:#fff;border-radius:8px;padding:9px 13px;font-weight:800;cursor:pointer}.card{border:1px solid #26364d;border-radius:12px;padding:14px;margin-top:10px}.meta{color:#94a3b8;font-size:11px}.eng{display:grid;grid-template-columns:150px repeat(5,110px) 1fr auto;gap:6px;align-items:center;margin-top:8px}.eng label{font-size:10px}.eng input[type=checkbox]{min-width:auto}.link{color:#67e8f9;word-break:break-all}.good{color:#4ade80}.warn{color:#fbbf24}@media(max-width:850px){.eng{grid-template-columns:1fr 1fr}.eng b{grid-column:1/-1}}</style></head><body><main class="w"><h1>Prospect Quick Scans</h1><p class="meta">Create links for Lead Crawler, LinkedIn, Facebook, contact forms, email or standalone outreach. Quick Scan remains separate from Audit and Tracker.</p><section id="login" class="p"><input id="code" type="password" placeholder="Admin access code"><button class="btn" onclick="unlock()">Open Admin</button><span id="loginMsg"></span></section><section id="app" style="display:none"><div class="p"><h2>Create personal scan link</h2><div class="row"><input id="name" placeholder="Business name"><input id="url" placeholder="https://company.com/page"><select id="source"><option value="standalone">Standalone</option><option value="lead_crawler">Lead Crawler</option><option value="linkedin">LinkedIn</option><option value="facebook">Facebook</option><option value="contact_form">Contact form</option><option value="email">Email</option></select><input id="campaign" placeholder="Campaign (optional)"><select id="language"><option value="en">English</option><option value="nl">Dutch</option><option value="es">Spanish</option></select><button class="btn" onclick="createLink()">Create Quick Scan</button></div><div id="created"></div></div><div class="p"><div class="row"><h2 style="margin:0">Prospects</h2><button class="btn" onclick="load()">Refresh</button></div><div id="list"></div></div></section></main><script>var KEY=localStorage.getItem('pqs_admin_code')||'';function esc(s){return String(s==null?'':s).replace(/[&<>\"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[c]})}async function api(path,opt){opt=opt||{};opt.headers=Object.assign({'Content-Type':'application/json','x-admin-code':KEY},opt.headers||{});var r=await fetch(path,opt),d=await r.json();if(!r.ok)throw Error(d.error||'Request failed');return d}async function unlock(){KEY=code.value;try{var r=await fetch('/api/admin/verify',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:KEY})}),d=await r.json();if(!d.ok)throw Error('Invalid code');localStorage.setItem('pqs_admin_code',KEY);login.style.display='none';app.style.display='block';load()}catch(e){loginMsg.textContent=e.message}}async function createLink(){try{var d=await api('/api/prospect-quick-scan/admin/create',{method:'POST',body:JSON.stringify({business_name:name.value,url:url.value,source:source.value,campaign:campaign.value,language:language.value})});created.innerHTML='<p class="good"><a class="link" target="_blank" href="'+esc(d.share_url)+'">'+esc(d.share_url)+'</a> <button class="btn" onclick="navigator.clipboard.writeText(\''+d.share_url+'\')">Copy</button></p>';load()}catch(e){created.innerHTML='<p class="warn">'+esc(e.message)+'</p>'}}var names={google_aio:'Google AIO / Gemini',chatgpt:'ChatGPT Search',perplexity:'Perplexity',claude:'Claude',copilot:'Microsoft Copilot'};function engine(token,k,x){x=x||{};return'<div class="eng"><b>'+names[k]+'</b>'+['recommended','directly_supported','local_maps','domain_cited','exact_page_cited'].map(function(f){return'<label><input type="checkbox" data-f="'+f+'" '+(x[f]?'checked':'')+'> '+f.replace(/_/g,' ')+'</label>'}).join('')+'<input data-f="sources" value="'+esc((x.sources||[]).join(', '))+'" placeholder="Source URLs"><button class="btn" onclick="saveAI(\''+token+'\',\''+k+'\',this)">Save</button></div>'}async function saveAI(token,k,b){var row=b.parentNode,o={engine:k};row.querySelectorAll('[data-f]').forEach(function(e){o[e.dataset.f]=e.type==='checkbox'?e.checked:e.value});b.disabled=true;b.textContent='Saving…';try{await api('/api/prospect-quick-scan/admin/'+token+'/ai',{method:'PATCH',body:JSON.stringify(o)});b.textContent='Saved ✓';setTimeout(load,500)}catch(e){b.disabled=false;b.textContent='Retry';alert(e.message)}}async function setStatus(t,s){await api('/api/prospect-quick-scan/admin/'+t+'/status',{method:'PATCH',body:JSON.stringify({status:s})});load()}async function makeProspectReport(t,b){b.disabled=true;var old=b.textContent;b.textContent='Building report…';try{var d=await api('/api/prospect-quick-scan/admin/'+t+'/prospect-report',{method:'POST'});b.textContent='Report ready ✓';window.open(d.share.url,'_blank');setTimeout(function(){b.disabled=false;b.textContent=old},1500)}catch(e){b.disabled=false;b.textContent=old;alert(e.message)}}async function load(){try{var d=await api('/api/prospect-quick-scan/admin/list');list.innerHTML=d.items.map(function(x){var ai=x.ai_evidence||{};return'<article class="card"><div class="row"><b>'+esc(x.business_name||x.domain)+'</b><span class="meta">'+esc(x.source)+' · '+esc(x.status)+' · opened '+x.opened_count+' · AI '+x.ai_checked+'/5</span><a class="link" target="_blank" href="'+esc(x.share_url)+'">Open</a><button class="btn" onclick="navigator.clipboard.writeText(\''+x.share_url+'\')">Copy link</button><button class="btn" ' + (!x.scan_completed_at?'disabled title="Run Quick Scan first"':'') + ' onclick="makeProspectReport(\''+x.token+'\',this)">Prospect Report</button><select data-token="'+esc(x.token)+'" onchange="setStatus(this.dataset.token,this.value)">'+['not_contacted','contacted','opened','replied','won','closed'].map(function(s){return'<option '+(x.follow_up_status===s?'selected':'')+'>'+s+'</option>'}).join('')+'</select></div><div class="meta">'+esc(x.url)+' · '+new Date(x.created_at||x.updated_at).toLocaleString()+'</div>'+Object.keys(names).map(function(k){return engine(x.token,k,ai[k])}).join('')+'</article>'}).join('')||'<p class="meta">No Quick Scans yet.</p>'}catch(e){if(/Unauthorized/i.test(e.message)){login.style.display='block';app.style.display='none'}else list.textContent=e.message}}if(KEY){code.value=KEY;unlock()}</script></body></html>`}
 function _injectProspectQuickScanIntoLeadCrawler(html){
   if(!html||html.includes('data-pqs-injected'))return html;
   const guard=String.raw`<script data-grounding-usage-guard>(function(){window.__csLeadCrawlerPayloads=window.__csLeadCrawlerPayloads||[];if(!window.__csLeadCrawlerFetchCaptured&&typeof window.fetch==='function'){window.__csLeadCrawlerFetchCaptured=true;var nativeFetch=window.fetch;window.fetch=function(){var args=arguments;return nativeFetch.apply(this,args).then(function(r){try{var requestUrl=String(args[0]&&args[0].url||args[0]||'');if(!/grounding-usage/i.test(requestUrl))r.clone().json().then(function(data){window.__csLeadCrawlerPayloads.push(data);if(window.__csLeadCrawlerPayloads.length>30)window.__csLeadCrawlerPayloads.shift()}).catch(function(){})}catch(e){}return r})}}if(typeof window.loadGroundingUsage!=='function')window.loadGroundingUsage=async function(){try{var model=(document.getElementById('geminiModel')||document.getElementById('modelSelect')||{}).value||'gemini-2.5-flash-lite';var r=await fetch('/api/gemini-proxy/grounding-usage?model='+encodeURIComponent(model),{cache:'no-store'}),d=await r.json();if(!r.ok)throw new Error(d.error||'Grounding usage unavailable');var text=d.groundedRequestsUsed+' / '+d.freeLimit+' '+d.limitUnit+' used · '+d.freeRemaining+' remaining';['groundingUsage','groundingUsageText','grounding-status','groundingStatus'].forEach(function(id){var e=document.getElementById(id);if(e)e.textContent=text});var bar=document.getElementById('groundingUsageBar')||document.getElementById('groundingBar');if(bar)bar.style.width=Math.max(0,Math.min(100,Number(d.pctUsed||0)))+'%';return d}catch(e){console.warn('[lead-crawler] grounding usage:',e.message);return null}}})();</script>`;
