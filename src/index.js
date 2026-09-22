@@ -253,7 +253,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-22-CANONICAL-v177';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-22-CANONICAL-v178';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 const CONTENTSCALE_BUILD_CHANGES = [
   'Contact Intelligence: schema-initialisatie is geserialiseerd met één procesbelofte en PostgreSQL advisory lock om pg_type-races te voorkomen.',
@@ -13566,7 +13566,7 @@ return result;
                    page_analysis:[],graaf:{average_score:null,weakest_pages:[],priority_pages:[],status:'needs-access'},
                    architecture_and_intent:{content_gaps:[],cannibalization:[],internal_link_plan:[],status:'needs-access'},
                    schema_and_entities:{pages_with_schema:null,multilingual:{},entity_evidence:[],status:'needs-access'},
-                   ai_visibility:{engines:normalizeAiEvidence({}),checked:0,verified:0,status:'needs-access'},
+                   ai_visibility:{engines:[],checked:0,verified:0,status:'needs-access'},
                    opportunities:opp,
                    external_evidence:{search_results:searchEvidence,own_domain_results:own.length,other_domain_results:external.length,status:'observed'},
                    access_requirements:[{item:'Direct website access',status:'needs-access',reason:'The prospect website returned a security/anti-bot response to the ContentScale scanner. Page-level scoring was intentionally not produced.'},{item:'Google Search Console',status:'needs-access',reason:'Required for verified query, click, impression and position evidence.'},{item:'Five-engine manual AI verification',status:'needs-access',reason:'Required before AI recommendation/citation claims are called verified.'}],
@@ -13584,8 +13584,16 @@ return result;
                  if(domain)queries.push('site:'+domain);
                  if(business)queries.push('"'+business+'"');
                  if(business&&domain)queries.push('"'+business+'" '+domain);
-                 const webResults=await doWebSearch(queries.slice(0,3));
-                 console.log('[opportunity-report] v177 external-evidence fallback:',domain,'results='+webResults.length);
+                 let webResults=[];
+                 try{
+                   if(typeof doWebSearch==='function') webResults=await doWebSearch(queries.slice(0,3));
+                   else console.error('[opportunity-report] v178 doWebSearch unavailable — creating access-limited prospect report');
+                 }catch(searchErr){
+                   console.error('[opportunity-report] v178 external search failed (non-fatal):',searchErr&&searchErr.stack||searchErr);
+                   webResults=[];
+                 }
+                 if(!Array.isArray(webResults))webResults=[];
+                 console.log('[opportunity-report] v178 external-evidence fallback:',domain,'results='+webResults.length);
                  return _opportunityExternalReport(body,failedAudit,webResults);
                }
 
@@ -13622,9 +13630,20 @@ return result;
                      report.analysis_fallback=true;report.analysis_fallback_reason='Direct website analysis blocked by site security; no page-level score was produced.';
                      report.origin=body.origin||'standalone';
                      if(body.quick_scan_token)report.quick_scan_token=String(body.quick_scan_token);
-                     let share=null;
-                     if(pool){await _ensureOpportunityReportTable();const token=crypto.randomBytes(32).toString('hex');const domain=String(report.company.domain||'').replace(/^https?:\/\//i,'').split('/')[0].toLowerCase();await pool.query('INSERT INTO opportunity_reports(token,domain,source_url,report_mode,report_data) VALUES($1,$2,$3,$4,$5::jsonb)',[token,domain,report.company.url,reportMode,JSON.stringify(report)]);share={token,url:req.protocol+'://'+req.get('host')+'/opportunity-report/'+token};}
-                     return {success:true,report:report,share:share,degraded:true};
+                     let share=null,save_warning=null;
+                     if(pool){
+                       try{
+                         await _ensureOpportunityReportTable();
+                         const token=crypto.randomBytes(32).toString('hex');
+                         const domain=String(report.company&&report.company.domain||'').replace(/^https?:\/\//i,'').split('/')[0].toLowerCase();
+                         await pool.query('INSERT INTO opportunity_reports(token,domain,source_url,report_mode,report_data) VALUES($1,$2,$3,$4,$5::jsonb)',[token,domain,report.company&&report.company.url||body.url||'',reportMode,JSON.stringify(report)]);
+                         share={token,url:req.protocol+'://'+req.get('host')+'/opportunity-report/'+token};
+                       }catch(saveErr){
+                         save_warning='Report generated but share-link persistence failed: '+String(saveErr&&saveErr.message||saveErr);
+                         console.error('[opportunity-report] v178 fallback save failed (report preserved):',saveErr&&saveErr.stack||saveErr);
+                       }
+                     }
+                     return {success:true,report:report,share:share,degraded:true,save_warning:save_warning};
                    }
                    payload.report_hint='The site did not return usable page content to the existing ContentScale scanner. Check the URL and anti-bot/security response, then retry.';
                    const err=new Error(payload.error||'Audit failed');err.status=status||500;err.payload=payload;throw err;
@@ -13652,7 +13671,13 @@ return result;
                    const body=Object.assign({},req.body||{});
                    body.origin=body.origin||'standalone';
                    res.json(await _generateProspectOpportunityReport(req,body));
-                 }catch(e){console.error('[opportunity-report] failed:',e);res.status(e.status||500).json(e.payload||{success:false,error:e.message});}
+                 }catch(e){
+                   console.error('[opportunity-report] v178 failed:',e&&e.stack||e);
+                   const out=e&&e.payload?Object.assign({},e.payload):{success:false,error:String(e&&e.message||e||'Unknown report error')};
+                   if(!out.success)out.success=false;
+                   if(!out.debug_stage)out.debug_stage='audit-opportunity-report';
+                   res.status(e&&e.status||500).json(out);
+                 }
                });
 
                app.post('/api/opportunity-reports/list',requireAdmin,async(req,res)=>{
