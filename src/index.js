@@ -266,7 +266,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-23-CANONICAL-v208';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-23-CANONICAL-v210';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 const CONTENTSCALE_BUILD_CHANGES = [
   'Contact Intelligence: schema-initialisatie is geserialiseerd met één procesbelofte en PostgreSQL advisory lock om pg_type-races te voorkomen.',
@@ -321,6 +321,9 @@ const CONTENTSCALE_BUILD_CHANGES = [
   'public-ceo-explicit-dom-binding',
   'ceo-domain-local-safe-parser',
   'public-ceo-button-spinner',
+  'ceo-internal-audit-capability-symbol',
+  'ceo-owner-email-context-aware-labels',
+  'real-quickscan-email-labels-preserved',
   'legacy-quick-scan-outreach-drafts-not-reused',
   'ceo-report-seven-day-suppression-aware-reminder',
   'quick-scan-second-touch-five-ai-diagnostic',
@@ -716,7 +719,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-09-23-CANONICAL-v208',
+  build: 'CS-2026-09-23-CANONICAL-v210',
   built_date: '2026-09-23',
   ceo_private: true,
   ceo_public: true,
@@ -12646,7 +12649,9 @@ return result;
                // ruim oude jobs op (ouder dan 1 uur)
                function _cleanupJobs(){ const now=Date.now(); for(const k in _auditJobs){ if(now-_auditJobs[k].started > 3600000) delete _auditJobs[k]; } }
 
+               const _INTERNAL_CEO_AUDIT = Symbol('contentScaleInternalCeoAudit');
                async function _auditToolAccess(req) {
+                 if (req && req[_INTERNAL_CEO_AUDIT] === true) return {ok:true,role:'internal-ceo',accessType:'all-pages'};
                  const _ADMIN = (process.env.LC_ADMIN_CODE || 'Utrecht160011.@').trim();
                  const _given = String((req.body && req.body.code) || req.headers['x-admin-key'] || '').trim();
                  if (_given && _given === _ADMIN) return { ok:true, role:'admin', accessType:'all-pages' };
@@ -13832,6 +13837,7 @@ return result;
                  const runExistingAudit=async function(runBody){
                    audit=null;status=200;
                    const internalReq={body:runBody,headers:{}};
+                   internalReq[_INTERNAL_CEO_AUDIT]=true;
                    const internalRes={status:function(v){status=v;return this;},json:function(v){audit=v;return v;}};
                    await _auditSiteHandler(internalReq,internalRes);
                    return {audit:audit,status:status};
@@ -15672,7 +15678,7 @@ async function startServer() {
   }
 
 console.log('════════════════════════════════════════════════════');
-console.log('CONTENTSCALE BUILD: CS-2026-09-23-CANONICAL-v208');
+console.log('CONTENTSCALE BUILD: CS-2026-09-23-CANONICAL-v210');
 console.log('CEO FUNNEL: Private + Public → SAME CEO engine');
 console.log('PUBLIC EMAIL DELIVERY: required');
 console.log('PRIVATE EMAIL DELIVERY: optional');
@@ -17446,10 +17452,14 @@ function _pqsLanguage(raw){const v=String(raw||'auto').trim().toLowerCase().slic
 async function _pqsNotifyOwner(row,event){
   try{
     const key=process.env.BREVO_API_KEY||'';if(!key)return;
+    const isCeo=String(row.source||'').startsWith('ceo_');
     const adminUrl='https://app.contentscale.site/quick-scan/admin?token='+encodeURIComponent(row.token);
-    const subject=event==='opened'?'Prospect opened Quick Scan: '+(row.domain||row.url):event==='started'?'Prospect started Quick Scan: '+(row.domain||row.url):'New Quick Scan input: '+(row.domain||row.url);
-    const html='<div style="font-family:Arial,sans-serif;line-height:1.6"><h2>'+subject.replace(/[<>&]/g,'')+'</h2><p><b>Business:</b> '+String(row.business_name||'—').replace(/[<>&]/g,'')+'<br><b>URL:</b> '+String(row.url||'').replace(/[<>&]/g,'')+'<br><b>Source:</b> '+String(row.source||'standalone').replace(/[<>&]/g,'')+'</p><p><a href="'+adminUrl+'">Open Quick Scan Admin</a></p></div>';
-    await fetch('https://api.brevo.com/v3/smtp/email',{method:'POST',headers:{'Content-Type':'application/json','api-key':key},body:JSON.stringify({to:[{email:process.env.QUICK_SCAN_NOTIFY_EMAIL||'info@contentscale.site'}],sender:{email:process.env.FROM_EMAIL||'info@contentscale.site',name:'ContentScale Quick Scan'},subject,htmlContent:html})});
+    const productName=isCeo?'CEO Report Scan':'Quick Scan';
+    const subject=event==='opened'?'Prospect opened '+productName+': '+(row.domain||row.url):event==='started'?'Prospect started '+productName+': '+(row.domain||row.url):'New '+productName+' input: '+(row.domain||row.url);
+    const sourceLabel=isCeo?(row.source==='ceo_public'?'CEO Report — Public':'CEO Report — Private'):(row.source||'standalone');
+    const adminLabel=isCeo?'Open CEO Report Admin':'Open Quick Scan Admin';
+    const html='<div style="font-family:Arial,sans-serif;line-height:1.6"><h2>'+subject.replace(/[<>&]/g,'')+'</h2><p><b>Business:</b> '+String(row.business_name||'—').replace(/[<>&]/g,'')+'<br><b>URL:</b> '+String(row.url||'').replace(/[<>&]/g,'')+'<br><b>Source:</b> '+String(sourceLabel).replace(/[<>&]/g,'')+'</p><p><a href="'+adminUrl+'">'+adminLabel+'</a></p></div>';
+    await fetch('https://api.brevo.com/v3/smtp/email',{method:'POST',headers:{'Content-Type':'application/json','api-key':key},body:JSON.stringify({to:[{email:process.env.QUICK_SCAN_NOTIFY_EMAIL||'info@contentscale.site'}],sender:{email:process.env.FROM_EMAIL||'info@contentscale.site',name:isCeo?'ContentScale CEO Report Scan':'ContentScale Quick Scan'},subject,htmlContent:html})});
   }catch(e){console.warn('[quick-scan] owner notification:',e.message);}
 }
 function _pqsValidEmail(v){return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(v||'').trim())}
@@ -18092,7 +18102,7 @@ setTimeout(()=>_pqsSendDueCeoFollowups().catch(()=>{}),90*1000);
 // action must target this CEO endpoint.
 app.post('/api/ceo-report/start',async(req,res)=>{
   let ceoEntry='unknown',ceoUrl='',lastStage='REQUEST';
-  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-23-CANONICAL-v208');
+  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-23-CANONICAL-v210');
   try{
     lastStage='DB_SETUP';
     console.log('[ceo-report] stage=DB_SETUP');
@@ -18184,10 +18194,10 @@ ContentScale`;
     return res.json({success:true,entry_mode:entry,token,selected_page:selected,ceo_report_token:reportToken,ceo_report_url:reportUrl,delivery_email:delivery,updates_opt_in:updatesOptIn});
   }catch(e){
     const msg=String((e&&e.message)||e||'CEO Prospect Report generation failed');
-    console.error('[ceo-report] FAILED build=CS-2026-09-23-CANONICAL-v208 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
+    console.error('[ceo-report] FAILED build=CS-2026-09-23-CANONICAL-v210 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
     console.error('[ceo-report] ERROR: '+msg);
     if(e&&e.stack)console.error(e.stack);
-    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-23-CANONICAL-v208'});
+    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-23-CANONICAL-v210'});
     try{res.end();}catch(_){}
   }
 });
@@ -18910,7 +18920,7 @@ const statusEl=document.getElementById('status');
 if(!goEl||!urlEl||!bizEl||!emailEl||!updatesEl||!statusEl){
   console.error('[ceo-public] form binding failed',{go:!!goEl,url:!!urlEl,biz:!!bizEl,email:!!emailEl,updates:!!updatesEl,status:!!statusEl});
 }else{
-  console.log('[ceo-public] form ready build=CS-2026-09-23-CANONICAL-v208');
+  console.log('[ceo-public] form ready build=CS-2026-09-23-CANONICAL-v210');
   goEl.addEventListener('click',async()=>{
     if(!urlEl.value.trim()){statusEl.innerHTML='<div class="status">Enter a website URL.</div>';urlEl.focus();return;}
     if(!emailEl.value.trim()||!emailEl.checkValidity()){statusEl.innerHTML='<div class="status">Enter a valid email address so we can send your private CEO Report when it is ready.</div>';emailEl.focus();return;}
@@ -18931,7 +18941,7 @@ if(!goEl||!urlEl||!bizEl||!emailEl||!updatesEl||!statusEl){
       clearInterval(ceoMsgTimer);
       console.error('[ceo-public] request failed',e);
       goEl.disabled=false;goEl.textContent='Create my CEO Prospect Report';
-      statusEl.innerHTML='<div class="status"><b>CEO Report failed</b><br>Stage: '+esc(e.stage||'UNKNOWN')+'<br>Error: '+esc(e.message||'Unknown error')+'<br><span class="small">Build: '+esc(e.build||'CS-2026-09-23-CANONICAL-v208')+'</span></div>';
+      statusEl.innerHTML='<div class="status"><b>CEO Report failed</b><br>Stage: '+esc(e.stage||'UNKNOWN')+'<br>Error: '+esc(e.message||'Unknown error')+'<br><span class="small">Build: '+esc(e.build||'CS-2026-09-23-CANONICAL-v210')+'</span></div>';
     }
   });
 }
