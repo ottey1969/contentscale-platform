@@ -266,7 +266,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-23-CANONICAL-v218';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-23-CANONICAL-v219';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 const CONTENTSCALE_BUILD_CHANGES = [
   'Contact Intelligence: schema-initialisatie is geserialiseerd met één procesbelofte en PostgreSQL advisory lock om pg_type-races te voorkomen.',
@@ -723,7 +723,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-09-23-CANONICAL-v218',
+  build: 'CS-2026-09-23-CANONICAL-v219',
   built_date: '2026-09-23',
   ceo_private: true,
   ceo_public: true,
@@ -15706,7 +15706,7 @@ async function startServer() {
   }
 
 console.log('════════════════════════════════════════════════════');
-console.log('CONTENTSCALE BUILD: CS-2026-09-23-CANONICAL-v218');
+console.log('CONTENTSCALE BUILD: CS-2026-09-23-CANONICAL-v219');
 console.log('CEO FUNNEL: Private + Public → SAME CEO engine');
 console.log('PUBLIC EMAIL DELIVERY: required');
 console.log('PRIVATE EMAIL DELIVERY: optional');
@@ -18145,7 +18145,7 @@ function _ceoMainWebsiteUrl(input){
 // action must target this CEO endpoint.
 app.post('/api/ceo-report/start',async(req,res)=>{
   let ceoEntry='unknown',ceoUrl='',lastStage='REQUEST';
-  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-23-CANONICAL-v218');
+  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-23-CANONICAL-v219');
   try{
     lastStage='DB_SETUP';
     console.log('[ceo-report] stage=DB_SETUP');
@@ -18184,7 +18184,7 @@ app.post('/api/ceo-report/start',async(req,res)=>{
     try{
       // IMPORTANT: this is the existing v184 smart commercial-page selector.
       // Public and Private CEO entries MUST use this exact same selector.
-      selection=await _pqsSelectBestScanPage(url);
+      selection=await _pqsSelectBestScanPage(url,req);
       if(selection&&selection.selected_url)selected=selection.selected_url;
     }catch(_e){console.warn('[ceo-report] smart page selection:',_e.message)}
     await pool.query(`UPDATE prospect_quick_scans SET ceo_report_page_url=$1,page_selection=$2::jsonb,updated_at=NOW() WHERE token=$3`,
@@ -18239,10 +18239,10 @@ ContentScale`;
     return res.json({success:true,entry_mode:entry,token,selected_page:selected,ceo_report_token:reportToken,ceo_report_url:reportUrl,delivery_email:delivery,updates_opt_in:updatesOptIn});
   }catch(e){
     const msg=String((e&&e.message)||e||'CEO Prospect Report generation failed');
-    console.error('[ceo-report] FAILED build=CS-2026-09-23-CANONICAL-v218 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
+    console.error('[ceo-report] FAILED build=CS-2026-09-23-CANONICAL-v219 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
     console.error('[ceo-report] ERROR: '+msg);
     if(e&&e.stack)console.error(e.stack);
-    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-23-CANONICAL-v218'});
+    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-23-CANONICAL-v219'});
     try{res.end();}catch(_){}
   }
 });
@@ -18372,6 +18372,7 @@ function _pqsSameBusinessDomain(chosenHost,originalHost){
   const sharedHosts=new Set(['wixsite.com','wordpress.com','blogspot.com','github.io','webflow.io','weebly.com','notion.site','godaddysites.com','squarespace.com']);
   return sharedHosts.has(root)?chosen===original:!!root&&_pqsRootDomain(chosen)===root;
 }
+// CONTENTSCALE v219 — multi-candidate weak commercial pre-screen selector
 // CONTENTSCALE v216 — weakest meaningful commercial page selector + thin-content explanation
 // CONTENTSCALE v214 — CEO opportunity selector + CRAFT table + scope-safe orphan + evidence-led roadmap
 // CONTENTSCALE v184 — lightweight commercial page selector for the one-page Quick Scan.
@@ -18405,19 +18406,95 @@ function _pqsSelectorScore(page,homeUrl){
   const thin=words<400;
   return{url:u.href,score,words,title,h1,commercial_relevance:commercial,thin_content_signal:thin,thin_signal:thinSignal,opportunity_signals:issueSignals,actionable_opportunity:actionable,informational:informational,reason:(commercial>=30?'commercially relevant · ':'')+(thin?('thin/limited coverage ('+words+' words) · '):'')+(issueSignals?'visible improvement signals · ':'')+(path==='/'?'homepage':'specific landing page')};
 }
-async function _pqsSelectBestScanPage(rawUrl){
-  const cleaned=_pqsCleanUrl(rawUrl);if(!cleaned)return null;let base;try{base=new URL(cleaned)}catch(e){return null}const origin=base.origin,host=base.hostname.toLowerCase().replace(/^www\./,''),homeUrl=origin+'/';
-  const home=await _pqsFetchPublicEmailPage(homeUrl);if(!home)return{selected_url:cleaned,mode:'auto_fallback',reason:'Homepage discovery was blocked; keeping submitted page.',candidates:[]};
-  const urls=[],seen=new Set();function add(v){try{const u=new URL(v,home.url);u.hash='';['utm_source','utm_medium','utm_campaign','utm_term','utm_content','gclid','fbclid'].forEach(k=>u.searchParams.delete(k));const h=u.hostname.toLowerCase().replace(/^www\./,'');if(h!==host||!/^https?:$/.test(u.protocol))return;const key=u.origin+u.pathname.replace(/\/+$/,'')+(u.search||'');if(seen.has(key))return;seen.add(key);urls.push(u.href)}catch(e){}}
-  add(cleaned);add(home.url);let m,re=/href\s*=\s*["']([^"'#]+)["']/gi;while((m=re.exec(home.html))&&urls.length<60)add(m[1]);
-  const rankedUrls=urls.map(x=>{let u=new URL(x),p=u.pathname.toLowerCase(),hint=p+' '+decodeURIComponent(p);let pre=0;if(/(?:service|solution|product|property|development|project|software|platform|consult|repair|clinic|treatment|pricing|industry|location)/i.test(hint))pre+=30;if(p==='/'||p==='')pre+=12;if(/(?:privacy|cookie|terms|legal|login|cart|checkout|blog|news|career|contact)(?:\/|$)/i.test(p))pre-=30;pre-=Math.max(0,p.split('/').filter(Boolean).length-2)*5;return{x,pre}}).sort((a,b)=>b.pre-a.pre).slice(0,14).map(x=>x.x);
-  const fetched=await Promise.all(rankedUrls.map(x=>x===home.url?Promise.resolve(home):_pqsFetchPublicEmailPage(x))),scores=fetched.filter(Boolean).map(x=>_pqsSelectorScore(x,homeUrl)).filter(Boolean).sort((a,b)=>b.score-a.score);
-  // v216 CEO first-touch: deliberately find the weakest MEANINGFUL commercial page.
-  // A thin deep service/product slug can outrank a stronger broad page because it demonstrates a concrete missed opportunity.
-  // Informational/blog pages remain fallback only; near-empty/error-like pages are not useful proof.
-  const opportunityPool=scores.filter(x=>x.commercial_relevance>=30&&!x.informational&&x.words>=40&&x.actionable_opportunity>=18);
-  const selected=opportunityPool[0]||scores.filter(x=>x.commercial_relevance>=30&&!x.informational&&x.words>=40)[0]||scores.filter(x=>!x.informational&&x.words>=80)[0]||scores[0];
-  return selected?{selected_url:selected.url,mode:'auto',strategy:'weakest_meaningful_commercial_page',reason:'Selected as a meaningful commercial page with strong improvement potential. Thin or limited content is treated as an opportunity when the page has a real business purpose; blog/informational pages are fallback only.',selected,candidates:scores.slice(0,8)}:{selected_url:cleaned,mode:'auto_fallback',reason:'No meaningful first-party commercial page could be validated.',candidates:[]};
+async function _pqsSelectBestScanPage(rawUrl,req){
+  const cleaned=_pqsCleanUrl(rawUrl);if(!cleaned)return null;
+  let base;try{base=new URL(cleaned)}catch(e){return null}
+  const origin=base.origin,homeUrl=origin+'/';
+
+  // v219 — real multi-candidate PRE-SCREEN before the one canonical CEO scan.
+  // Discovery may inspect sitemap/navigation/internal links, but it does NOT run GRAAF on all pages.
+  // We cheaply fetch a bounded shortlist, compare weakness + commercial relevance, then send only
+  // the selected winner to the canonical GRAAF/CRAFT/Technical scanner.
+  let discovery=null;
+  try{
+    if(typeof _audit20Discover==='function') discovery=await _audit20Discover(req||{},homeUrl,20);
+  }catch(e){console.warn('[ceo-selector] broad discovery:',e.message)}
+
+  const rawCandidates=[];
+  const seen=new Set();
+  function addCandidate(url,type,source,priority){
+    try{
+      const u=new URL(url,homeUrl);u.hash='';
+      if(!_audit20SameHost(u.href,homeUrl)||_audit20LooksUtility(u.href))return;
+      const key=u.origin+u.pathname.replace(/\/+$/,'')+(u.search||'');
+      if(seen.has(key))return;seen.add(key);
+      rawCandidates.push({url:u.href,type:type||_audit20Classify(u.href,''),source:source||'discovery',priority:Number(priority)||0});
+    }catch(e){}
+  }
+  if(discovery&&Array.isArray(discovery.candidates)){
+    // Commercial/business pages first. Informational pages remain fallback only.
+    const businessTypes=new Set(['service','product','category','location','homepage','proof','other']);
+    discovery.candidates.filter(x=>businessTypes.has(x.type)).forEach(x=>addCandidate(x.url,x.type,x.source,x.priority));
+    discovery.candidates.filter(x=>!businessTypes.has(x.type)).forEach(x=>addCandidate(x.url,x.type,x.source,x.priority));
+  }
+  addCandidate(cleaned,_audit20Classify(cleaned,''),'submitted',200);
+  addCandidate(homeUrl,'homepage','seed',190);
+
+  // If broad discovery was blocked, fall back to the homepage links rather than silently choosing the seed.
+  if(rawCandidates.length<3){
+    const home=await _pqsFetchPublicEmailPage(homeUrl);
+    if(home){
+      let m,re=/href\s*=\s*["']([^"'#]+)["']/gi;
+      while((m=re.exec(home.html))&&rawCandidates.length<40)addCandidate(m[1],null,'homepage_link',0);
+    }
+  }
+
+  // Do not punish deep slugs. A deep, thin service page is exactly the kind of missed opportunity
+  // the CEO first-touch report is intended to expose.
+  const typeRank={service:100,product:100,category:92,location:90,homepage:70,proof:62,other:58,supporting:30,informational:5};
+  rawCandidates.sort((a,b)=>(typeRank[b.type]||0)-(typeRank[a.type]||0)||(b.priority||0)-(a.priority||0));
+  const shortlist=rawCandidates.slice(0,18);
+
+  const fetched=await Promise.all(shortlist.map(async c=>{
+    try{
+      const page=await _pqsFetchPublicEmailPage(c.url);
+      if(!page)return null;
+      const scored=_pqsSelectorScore(page,homeUrl);
+      if(!scored)return null;
+      scored.type=c.type;scored.discovery_source=c.source;scored.discovery_priority=c.priority;
+      return scored;
+    }catch(e){return null}
+  }));
+  const scores=fetched.filter(Boolean);
+
+  // Rank by business meaning first, then weakness/actionability. Blogs cannot beat a viable
+  // commercial page merely because their score is lower. Thin content is a positive opportunity signal.
+  const commercial=scores.filter(x=>['service','product','category','location','homepage','proof','other'].includes(x.type)&&!x.informational&&x.words>=40);
+  const strongOpportunity=commercial.filter(x=>x.actionable_opportunity>=18);
+  const rank=(a,b)=>{
+    const ta=typeRank[a.type]||0,tb=typeRank[b.type]||0;
+    const oa=(a.actionable_opportunity||0)+(a.thin_signal||0)*0.35+(a.opportunity_signals||0)*0.45;
+    const ob=(b.actionable_opportunity||0)+(b.thin_signal||0)*0.35+(b.opportunity_signals||0)*0.45;
+    return (ob+tb*0.22)-(oa+ta*0.22) || (a.words-b.words);
+  };
+  strongOpportunity.sort(rank);commercial.sort(rank);scores.sort((a,b)=>b.score-a.score);
+  const selected=strongOpportunity[0]||commercial[0]||scores.filter(x=>!x.informational&&x.words>=40)[0]||scores[0];
+
+  const debugCandidates=scores.slice().sort(rank).slice(0,12).map(x=>({
+    url:x.url,type:x.type||'other',words:x.words,pre_screen_score:Math.round(x.score||0),
+    commercial_relevance:x.commercial_relevance,thin_content_signal:!!x.thin_content_signal,
+    thin_signal:x.thin_signal||0,improvement_signals:x.opportunity_signals||0,
+    actionable_opportunity:x.actionable_opportunity||0,informational:!!x.informational,
+    source:x.discovery_source||'discovery',reason:x.reason||''
+  }));
+
+  return selected?{
+    selected_url:selected.url,mode:'auto',strategy:'multi_candidate_weak_commercial_prescreen',
+    reason:'Multiple discovered pages were pre-screened. This commercially meaningful page showed the strongest improvement opportunity among the validated candidates. Thin content can increase opportunity when the page has a real business purpose; informational/blog pages are fallback only.',
+    selected:{url:selected.url,type:selected.type||'other',words:selected.words,score:selected.score,commercial_relevance:selected.commercial_relevance,thin_content_signal:!!selected.thin_content_signal,thin_signal:selected.thin_signal||0,opportunity_signals:selected.opportunity_signals||0,actionable_opportunity:selected.actionable_opportunity||0,reason:selected.reason||''},
+    discovery:{urls_discovered:discovery&&discovery.candidates_discovered||rawCandidates.length,eligible_pages:discovery&&discovery.eligible_pages||rawCandidates.length,sitemap:discovery&&discovery.sitemap||null,crawl:discovery&&discovery.crawl||null,shortlisted:shortlist.length,prescreened:scores.length},
+    candidates:debugCandidates
+  }:{selected_url:cleaned,mode:'auto_fallback',strategy:'multi_candidate_weak_commercial_prescreen',reason:'No meaningful first-party commercial page could be validated during pre-screening.',discovery:{urls_discovered:rawCandidates.length,shortlisted:shortlist.length,prescreened:scores.length},candidates:debugCandidates};
 }
 function _pqsSelectablePage(rawUrl){
   const cleaned=_pqsCleanUrl(rawUrl);if(!cleaned)return null;
@@ -18464,7 +18541,7 @@ app.post('/api/prospect-quick-scan/:token/run',_pqsPublicLimit,async(req,res)=>{
     // If the visitor deliberately supplied another same-domain page, respect it. Otherwise discover
     // a commercially useful page automatically instead of assuming the homepage is the best sample.
     if(String(row.page_selection_mode||'auto')!=='manual'){
-      try{const choice=await _pqsSelectBestScanPage(row.url);if(choice&&choice.selected_url){row.url=choice.selected_url;row.page_selection=choice;row.page_selection_mode=choice.mode||'auto';await pool.query(`UPDATE prospect_quick_scans SET url=$1,page_selection_mode=$2,page_selection=$3::jsonb,updated_at=NOW() WHERE token=$4`,[row.url,row.page_selection_mode,JSON.stringify(choice),row.token]);}}catch(e){console.warn('[quick-scan] automatic page selection:',e.message)}
+      try{const choice=await _pqsSelectBestScanPage(row.url,req);if(choice&&choice.selected_url){row.url=choice.selected_url;row.page_selection=choice;row.page_selection_mode=choice.mode||'auto';await pool.query(`UPDATE prospect_quick_scans SET url=$1,page_selection_mode=$2,page_selection=$3::jsonb,updated_at=NOW() WHERE token=$4`,[row.url,row.page_selection_mode,JSON.stringify(choice),row.token]);}}catch(e){console.warn('[quick-scan] automatic page selection:',e.message)}
     }
     let d;
     try{d=await _canonicalContentScoreScan({url:row.url},{timeoutMs:90000});}
@@ -18991,7 +19068,7 @@ if(domainHelpEl)domainHelpEl.textContent=CEO_COPY.help;
 if(!goEl||!urlEl||!bizEl||!emailEl||!updatesEl||!statusEl){
   console.error('[ceo-public] form binding failed',{go:!!goEl,url:!!urlEl,biz:!!bizEl,email:!!emailEl,updates:!!updatesEl,status:!!statusEl});
 }else{
-  console.log('[ceo-public] form ready build=CS-2026-09-23-CANONICAL-v218');
+  console.log('[ceo-public] form ready build=CS-2026-09-23-CANONICAL-v219');
   goEl.addEventListener('click',async()=>{
     if(!urlEl.value.trim()){statusEl.innerHTML='<div class="status">'+esc(CEO_COPY.missing)+'</div>';urlEl.focus();return;}
     if(!emailEl.value.trim()||!emailEl.checkValidity()){statusEl.innerHTML='<div class="status">Enter a valid email address so we can send your private CEO Report when it is ready.</div>';emailEl.focus();return;}
@@ -19012,7 +19089,7 @@ if(!goEl||!urlEl||!bizEl||!emailEl||!updatesEl||!statusEl){
       clearInterval(ceoMsgTimer);
       console.error('[ceo-public] request failed',e);
       goEl.disabled=false;goEl.textContent='Create my CEO Prospect Report';
-      statusEl.innerHTML='<div class="status"><b>CEO Report failed</b><br>Stage: '+esc(e.stage||'UNKNOWN')+'<br>Error: '+esc(e.message||'Unknown error')+'<br><span class="small">Build: '+esc(e.build||'CS-2026-09-23-CANONICAL-v218')+'</span></div>';
+      statusEl.innerHTML='<div class="status"><b>CEO Report failed</b><br>Stage: '+esc(e.stage||'UNKNOWN')+'<br>Error: '+esc(e.message||'Unknown error')+'<br><span class="small">Build: '+esc(e.build||'CS-2026-09-23-CANONICAL-v219')+'</span></div>';
     }
   });
 }
