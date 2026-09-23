@@ -266,7 +266,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-23-CANONICAL-v201';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-23-CANONICAL-v202';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 const CONTENTSCALE_BUILD_CHANGES = [
   'Contact Intelligence: schema-initialisatie is geserialiseerd met één procesbelofte en PostgreSQL advisory lock om pg_type-races te voorkomen.',
@@ -306,6 +306,8 @@ const CONTENTSCALE_BUILD_CHANGES = [
   'private-ceo-email-optional-never-blocks-generation',
   'ceo-functional-delivery-email',
   'updates-opt-in-separate-from-report-delivery',
+  'public-build-info-endpoint',
+  'railway-visible-build-identity',
   'legacy-quick-scan-outreach-drafts-not-reused',
   'ceo-report-seven-day-suppression-aware-reminder',
   'quick-scan-second-touch-five-ai-diagnostic',
@@ -693,7 +695,36 @@ const upload = multer({ storage: multer.memoryStorage() });
 const http   = require('http');
 const WebSocket = require('ws');
 const rewriterHelpers = require('./rewriter-helpers');
+
 const app = express();
+
+// ============================================================
+// DEPLOYMENT IDENTITY — keep this visible for Railway/admin checks.
+// Change BUILD_ID for every delivered canonical build.
+// ============================================================
+const CONTENTSCALE_BUILD_INFO = Object.freeze({
+  build: 'CS-2026-09-23-CANONICAL-v202',
+  built_date: '2026-09-23',
+  ceo_private: true,
+  ceo_public: true,
+  ceo_private_public_same_engine: true,
+  public_email_required: true,
+  public_updates_opt_in_separate: true,
+  private_email_optional: true,
+  quickscan_other_page_only: true,
+  two_page_overview: true,
+  audit20_interest: true,
+  audit20_discovery: true
+});
+
+// BUILD IDENTITY — intentionally public and DB-independent.
+// Use https://app.contentscale.site/api/build-info after every Railway deploy.
+app.get('/api/build-info',(req,res)=>{
+  res.set('Cache-Control','no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.json({success:true,...CONTENTSCALE_BUILD_INFO,server_time:new Date().toISOString()});
+});
+
+
 
 // ── API Response Cache — saves Serper + Gemini costs ─────────────────────────
 // Simple in-memory cache with TTL. Resets on restart (Railway deploy).
@@ -15618,6 +15649,15 @@ async function startServer() {
     } catch(e) { console.warn('[Settings] Table check:', e.message); }
   }
 
+console.log('════════════════════════════════════════════════════');
+console.log('CONTENTSCALE BUILD: CS-2026-09-23-CANONICAL-v202');
+console.log('CEO FUNNEL: Private + Public → SAME CEO engine');
+console.log('PUBLIC EMAIL DELIVERY: required');
+console.log('PRIVATE EMAIL DELIVERY: optional');
+console.log('QUICK SCAN: Other Page only, after CEO Report');
+console.log('20-PAGE AUDIT INTEREST: enabled');
+console.log('BUILD CHECK: /api/build-info');
+console.log('════════════════════════════════════════════════════');
 console.log('🚀 =====================================');
 console.log('🚀  CONTENTSCALE ELITE SERVER v4 (GEMINI AUTO-MODEL)');
 console.log('🚀  FIX: activated_until alias in users SELECT');
