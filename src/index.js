@@ -266,7 +266,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-23-CANONICAL-v204';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-23-CANONICAL-v205';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 const CONTENTSCALE_BUILD_CHANGES = [
   'Contact Intelligence: schema-initialisatie is geserialiseerd met één procesbelofte en PostgreSQL advisory lock om pg_type-races te voorkomen.',
@@ -314,6 +314,8 @@ const CONTENTSCALE_BUILD_CHANGES = [
   'neon-diagnostic-client-release-fix',
   'pg-client-sequential-stats-queries',
   'ceo-report-stage-diagnostics',
+  'ceo-stage-referenceerror-fixed',
+  'public-ceo-animated-progress',
   'legacy-quick-scan-outreach-drafts-not-reused',
   'ceo-report-seven-day-suppression-aware-reminder',
   'quick-scan-second-touch-five-ai-diagnostic',
@@ -709,7 +711,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-09-23-CANONICAL-v204',
+  build: 'CS-2026-09-23-CANONICAL-v205',
   built_date: '2026-09-23',
   ceo_private: true,
   ceo_public: true,
@@ -15665,7 +15667,7 @@ async function startServer() {
   }
 
 console.log('════════════════════════════════════════════════════');
-console.log('CONTENTSCALE BUILD: CS-2026-09-23-CANONICAL-v204');
+console.log('CONTENTSCALE BUILD: CS-2026-09-23-CANONICAL-v205');
 console.log('CEO FUNNEL: Private + Public → SAME CEO engine');
 console.log('PUBLIC EMAIL DELIVERY: required');
 console.log('PRIVATE EMAIL DELIVERY: optional');
@@ -18084,12 +18086,15 @@ setTimeout(()=>_pqsSendDueCeoFollowups().catch(()=>{}),90*1000);
 // Legacy /quick-scan/start may remain as a compatibility URL, but its first-touch
 // action must target this CEO endpoint.
 app.post('/api/ceo-report/start',async(req,res)=>{
-  if(!await _ensureProspectQuickScanTable())return res.status(503).json({success:false,error:'DB unavailable'});
+  let ceoEntry='unknown',ceoUrl='',lastStage='REQUEST';
+  if(!await _ensureProspectQuickScanTable())return res.status(503).json({success:false,error:'DB unavailable',stage:lastStage});
   try{
+    console.log('[ceo-report] stage=REQUEST');
     const body=req.body||{};
     const entry=String(body.entry_mode||'public').toLowerCase()==='private'?'private':'public';
     ceoEntry=entry;
     const url=String(body.url||body.website||'').trim();
+    ceoUrl=url;
     const business=String(body.business_name||body.company||'').trim();
     const email=String(body.contact_email||body.email||'').trim().toLowerCase();
     const updatesOptIn=body.updates_opt_in===true;
@@ -18099,7 +18104,7 @@ app.post('/api/ceo-report/start',async(req,res)=>{
     // One record anchors the whole funnel: CEO -> Other Page Quick Scan -> 2-page -> Audit.
     const token=crypto.randomBytes(32).toString('hex');
     const domain=_pqsDomain(url);
-    ceoStage='CREATE_PROSPECT'; console.log('[ceo-report] stage=CREATE_PROSPECT');
+    lastStage='CREATE_PROSPECT'; console.log('[ceo-report] stage=CREATE_PROSPECT');
     await pool.query(`INSERT INTO prospect_quick_scans
       (token,business_name,url,domain,source,campaign,contact_email,language,status,page_selection_mode,updates_opt_in,created_at,updated_at)
       VALUES($1,$2,$3,$4,$5,$6,$7,$8,'created','auto',$9,NOW(),NOW())`,
@@ -18110,7 +18115,7 @@ app.post('/api/ceo-report/start',async(req,res)=>{
     // SAME smart selector for public and private CEO reports.
     // If discovery cannot improve the URL safely, generator still uses the supplied URL.
     let selected=url,selection=null;
-    ceoStage='SELECT_PAGE'; console.log('[ceo-report] stage=SELECT_PAGE');
+    lastStage='SELECT_PAGE'; console.log('[ceo-report] stage=SELECT_PAGE');
     try{
       // IMPORTANT: this is the existing v184 smart commercial-page selector.
       // Public and Private CEO entries MUST use this exact same selector.
@@ -18120,7 +18125,7 @@ app.post('/api/ceo-report/start',async(req,res)=>{
     await pool.query(`UPDATE prospect_quick_scans SET ceo_report_page_url=$1,page_selection=$2::jsonb,updated_at=NOW() WHERE token=$3`,
       [selected,JSON.stringify(selection||{mode:'auto',selected_url:selected,entry_mode:entry}),token]);
 
-    ceoStage='GENERATE_CEO'; console.log(`[ceo-report] stage=GENERATE_CEO selected=${selected}`);
+    lastStage='GENERATE_CEO'; console.log(`[ceo-report] stage=GENERATE_CEO selected=${selected}`);
     const report=await _generateProspectOpportunityReport(req,{
       url:selected,
       business_name:business,
@@ -18130,7 +18135,7 @@ app.post('/api/ceo-report/start',async(req,res)=>{
     });
     const reportToken=String((report&&report.share&&report.share.token)||'');
     const reportUrl=String((report&&report.share&&report.share.url)||(reportToken?('/opportunity-report/'+reportToken):''));
-    ceoStage='SAVE_REPORT'; console.log('[ceo-report] stage=SAVE_REPORT');
+    lastStage='SAVE_REPORT'; console.log('[ceo-report] stage=SAVE_REPORT');
     await pool.query(`UPDATE prospect_quick_scans SET ceo_report_token=$1,ceo_report_url=$2,ceo_report_created_at=NOW(),updated_at=NOW() WHERE token=$3`,
       [reportToken,reportUrl,token]);
 
@@ -18138,7 +18143,7 @@ app.post('/api/ceo-report/start',async(req,res)=>{
     // consent for newsletters or broader updates; updates_opt_in is separate.
     let delivery={sent:false};
     if(email&&reportUrl){
-      ceoStage='SEND_EMAIL'; console.log(`[ceo-report] stage=SEND_EMAIL entry=${entry}`);
+      lastStage='SEND_EMAIL'; console.log(`[ceo-report] stage=SEND_EMAIL entry=${entry}`);
       try{
         const key=process.env.BREVO_API_KEY||'';
         if(!key)throw new Error('Brevo is not configured');
@@ -18163,12 +18168,12 @@ ContentScale`;
         await pool.query(`UPDATE prospect_quick_scans SET ceo_delivery_email_error=$1,updated_at=NOW() WHERE token=$2`,[String(mailErr.message||mailErr).slice(0,1000),token]).catch(()=>{});
       }
     }
-    ceoStage='COMPLETE'; console.log(`[ceo-report] stage=COMPLETE entry=${entry} token=${token}`);
+    lastStage='COMPLETE'; console.log(`[ceo-report] stage=COMPLETE entry=${entry} token=${token}`);
     return res.json({success:true,entry_mode:entry,token,selected_page:selected,ceo_report_token:reportToken,ceo_report_url:reportUrl,delivery_email:delivery,updates_opt_in:updatesOptIn});
   }catch(e){
     const msg=String(e&&e.message||e);
-    console.error(`[ceo-report] FAILED stage=${ceoStage} entry=${ceoEntry} url=${ceoUrl||'(unknown)'}`,e);
-    return res.status(500).json({success:false,error:msg,stage:ceoStage,build:'CS-2026-09-23-CANONICAL-v204'});
+    console.error(`[ceo-report] FAILED stage=${lastStage} entry=${ceoEntry} url=${ceoUrl||'(unknown)'}`,e);
+    return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-23-CANONICAL-v205'});
   }
 });
 
@@ -18868,10 +18873,23 @@ app.get('/quick-scan/start',(req,res)=>{
   const source=['linkedin','facebook','contact_form','email','standalone'].includes(String(req.query.source||''))?String(req.query.source):'standalone';
   const campaign=String(req.query.campaign||'').slice(0,200);
   const requestedLanguage=/^(nl|en|es)$/.test(String(req.query.language||'').toLowerCase())?String(req.query.language).toLowerCase():'auto';
-  const html=`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Free CEO Prospect Report · ContentScale</title><style>*{box-sizing:border-box}body{margin:0;background:#060914;color:#e5e7eb;font:14px/1.6 Inter,Segoe UI,Arial,sans-serif}.w{max-width:820px;margin:auto;padding:28px}.p{background:linear-gradient(145deg,#0d1726,#0a101b);border:1px solid #26364d;border-radius:18px;padding:28px;margin-top:20px}.brand{color:#67e8f9;font-weight:900;letter-spacing:.1em;font-size:11px}h1{font-size:clamp(28px,5vw,46px);line-height:1.1}.sub{color:#94a3b8}.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}.row input{background:#050a12;border:1px solid #334155;border-radius:10px;color:#e5e7eb;padding:14px;width:100%}.btn{margin-top:12px;border:0;border-radius:10px;padding:14px 18px;background:linear-gradient(90deg,#7c3aed,#2563eb);color:#fff;font-weight:900;cursor:pointer}.btn:disabled{opacity:.55}.status{margin-top:14px;padding:13px;border-radius:10px;background:#081426;border:1px solid #1d4ed8}.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:22px}.step{padding:14px;border:1px solid #26364d;border-radius:12px;background:#08101c}.step b{display:block;margin-bottom:5px}.small{font-size:12px;color:#94a3b8}@media(max-width:650px){.row,.steps{grid-template-columns:1fr}}</style></head><body><main class="w"><div class="brand">CONTENTSCALE · CEO PROSPECT REPORT</div><section class="p"><h1>Find an important SEO & AI-search opportunity on your website</h1><p class="sub">Enter your company and website. ContentScale automatically identifies a commercially relevant page and creates your private CEO Prospect Report. You do not need to choose a page yourself.</p><div class="steps"><div class="step"><b>1. Your website</b><span class="small">We discover relevant first-party pages.</span></div><div class="step"><b>2. Smart page selection</b><span class="small">ContentScale selects a commercially meaningful page.</span></div><div class="step"><b>3. CEO Report</b><span class="small">You receive a private report link. Quick Scan comes later.</span></div></div><div class="row" style="margin-top:20px"><input id="biz" placeholder="Business name"><input id="url" placeholder="https://company.com"></div><div class="row" style="margin-top:10px"><input id="email" type="email" required placeholder="Email address — required for report delivery"><div></div></div><label style="display:flex;gap:9px;align-items:flex-start;margin:12px 0;color:#cbd5e1"><input id="updates" type="checkbox" style="margin-top:5px"> <span>Keep me updated about this analysis and next steps. <span class="small">Optional — your email is still used to deliver the requested report.</span></span></label><button id="go" class="btn">Create my CEO Prospect Report</button><div id="status"></div><p class="small">This is the first step. If you want to continue after the CEO Report, the next diagnostic is Quick Scan — Other Page.</p></section></main><script>
+  const html=`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Free CEO Prospect Report · ContentScale</title><style>*{box-sizing:border-box}body{margin:0;background:#060914;color:#e5e7eb;font:14px/1.6 Inter,Segoe UI,Arial,sans-serif}.w{max-width:820px;margin:auto;padding:28px}.p{background:linear-gradient(145deg,#0d1726,#0a101b);border:1px solid #26364d;border-radius:18px;padding:28px;margin-top:20px}.brand{color:#67e8f9;font-weight:900;letter-spacing:.1em;font-size:11px}h1{font-size:clamp(28px,5vw,46px);line-height:1.1}.sub{color:#94a3b8}.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}.row input{background:#050a12;border:1px solid #334155;border-radius:10px;color:#e5e7eb;padding:14px;width:100%}.btn{margin-top:12px;border:0;border-radius:10px;padding:14px 18px;background:linear-gradient(90deg,#7c3aed,#2563eb);color:#fff;font-weight:900;cursor:pointer}.btn:disabled{opacity:.55}.status{margin-top:14px;padding:13px;border-radius:10px;background:#081426;border:1px solid #1d4ed8}.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:22px}.step{padding:14px;border:1px solid #26364d;border-radius:12px;background:#08101c}.step b{display:block;margin-bottom:5px}.small{font-size:12px;color:#94a3b8}@media(max-width:650px){.row,.steps{grid-template-columns:1fr}}
+.ceo-loader{margin-top:18px;padding:18px;border:1px solid #334155;border-radius:16px;background:#0f172a}
+.ceo-loader-head{display:flex;align-items:center;gap:12px;font-weight:800;color:#e2e8f0}
+.ceo-spinner{width:22px;height:22px;border:3px solid rgba(255,255,255,.22);border-top-color:#fff;border-radius:50%;animation:ceospin .8s linear infinite;flex:0 0 auto}
+.ceo-progress{height:7px;background:#1e293b;border-radius:999px;overflow:hidden;margin-top:14px}
+.ceo-progress>i{display:block;width:35%;height:100%;border-radius:999px;background:linear-gradient(90deg,#7c3aed,#2563eb);animation:ceopulse 1.5s ease-in-out infinite}
+.ceo-help{margin-top:12px;color:#94a3b8;font-size:13px;line-height:1.55}
+@keyframes ceospin{to{transform:rotate(360deg)}}@keyframes ceopulse{0%{transform:translateX(-100%)}100%{transform:translateX(300%)}}
+</style></head><body><main class="w"><div class="brand">CONTENTSCALE · CEO PROSPECT REPORT</div><section class="p"><h1>Find an important SEO & AI-search opportunity on your website</h1><p class="sub">Enter your company and website. ContentScale automatically identifies a commercially relevant page and creates your private CEO Prospect Report. You do not need to choose a page yourself.</p><div class="steps"><div class="step"><b>1. Your website</b><span class="small">We discover relevant first-party pages.</span></div><div class="step"><b>2. Smart page selection</b><span class="small">ContentScale selects a commercially meaningful page.</span></div><div class="step"><b>3. CEO Report</b><span class="small">You receive a private report link. Quick Scan comes later.</span></div></div><div class="row" style="margin-top:20px"><input id="biz" placeholder="Business name"><input id="url" placeholder="https://company.com"></div><div class="row" style="margin-top:10px"><input id="email" type="email" required placeholder="Email address — required for report delivery"><div></div></div><label style="display:flex;gap:9px;align-items:flex-start;margin:12px 0;color:#cbd5e1"><input id="updates" type="checkbox" style="margin-top:5px"> <span>Keep me updated about this analysis and next steps. <span class="small">Optional — your email is still used to deliver the requested report.</span></span></label><button id="go" class="btn">Create my CEO Prospect Report</button><div id="status"></div><p class="small">This is the first step. If you want to continue after the CEO Report, the next diagnostic is Quick Scan — Other Page.</p></section></main><script>
 const SOURCE=${JSON.stringify(source)},CAMPAIGN=${JSON.stringify(campaign)},LANG=${JSON.stringify(requestedLanguage)};
 function esc(x){return String(x||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
-go.onclick=async function(){if(!url.value.trim())return status.innerHTML='<div class="status">Enter a website URL.</div>';if(!email.value.trim()||!email.checkValidity())return status.innerHTML='<div class="status">Enter a valid email address so we can send your private CEO Report when it is ready.</div>';go.disabled=true;go.textContent='Finding the best page and building your report…';status.innerHTML='<div class="status">Analysing the website. ContentScale is selecting a commercially relevant page automatically. This can take a while.</div>';try{let r=await fetch('/api/ceo-report/start',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({entry_mode:'public',business_name:biz.value,url:url.value,contact_email:email.value,updates_opt_in:!!updates.checked,source:SOURCE,campaign:CAMPAIGN,language:LANG})});let d=await r.json();if(!r.ok||!d.success)throw Error(d.error||'Could not create report');if(!d.ceo_report_url)throw Error('CEO Report was created without a share URL');location.href=d.ceo_report_url}catch(e){go.disabled=false;go.textContent='Create my CEO Prospect Report';status.innerHTML='<div class="status">'+esc(e.message)+'</div>'}}
+go.onclick=async function(){if(!url.value.trim())return status.innerHTML='<div class="status">Enter a website URL.</div>';if(!email.value.trim()||!email.checkValidity())return status.innerHTML='<div class="status">Enter a valid email address so we can send your private CEO Report when it is ready.</div>';go.disabled=true;go.textContent='Building your CEO Report…';
+const ceoMsgs=['Analyzing your website…','Finding the strongest commercial page…','Checking search visibility and opportunities…','Building your CEO opportunity report…'];
+let ceoMsgIndex=0;
+status.innerHTML='<div class="ceo-loader"><div class="ceo-loader-head"><span class="ceo-spinner"></span><span id="ceoBusyMsg">'+ceoMsgs[0]+'</span></div><div class="ceo-progress"><i></i></div><div class="ceo-help">Keep this page open while ContentScale prepares your report.</div></div>';
+const ceoMsgTimer=setInterval(()=>{ceoMsgIndex=(ceoMsgIndex+1)%ceoMsgs.length;const el=document.getElementById('ceoBusyMsg');if(el)el.textContent=ceoMsgs[ceoMsgIndex];},3200);
+try{let r=await fetch('/api/ceo-report/start',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({entry_mode:'public',business_name:biz.value,url:url.value,contact_email:email.value,updates_opt_in:!!updates.checked,source:SOURCE,campaign:CAMPAIGN,language:LANG})});let d=await r.json();clearInterval(ceoMsgTimer);if(!r.ok||!d.success)throw Error(d.error||'Could not create report');if(!d.ceo_report_url)throw Error('CEO Report was created without a share URL');location.href=d.ceo_report_url}catch(e){clearInterval(ceoMsgTimer);go.disabled=false;go.textContent='Create my CEO Prospect Report';status.innerHTML='<div class="status">'+esc(e.message)+'</div>'}}
 </script></body></html>`;
   res.type('html').send(html);
 });
