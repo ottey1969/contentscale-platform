@@ -266,7 +266,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-23-CANONICAL-v205';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-23-CANONICAL-v206';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 const CONTENTSCALE_BUILD_CHANGES = [
   'Contact Intelligence: schema-initialisatie is geserialiseerd met één procesbelofte en PostgreSQL advisory lock om pg_type-races te voorkomen.',
@@ -316,6 +316,9 @@ const CONTENTSCALE_BUILD_CHANGES = [
   'ceo-report-stage-diagnostics',
   'ceo-stage-referenceerror-fixed',
   'public-ceo-animated-progress',
+  'ceo-db-setup-inside-try-catch',
+  'ceo-browser-stage-error-details',
+  'ceo-request-response-boundary-logging',
   'legacy-quick-scan-outreach-drafts-not-reused',
   'ceo-report-seven-day-suppression-aware-reminder',
   'quick-scan-second-touch-five-ai-diagnostic',
@@ -711,7 +714,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-09-23-CANONICAL-v205',
+  build: 'CS-2026-09-23-CANONICAL-v206',
   built_date: '2026-09-23',
   ceo_private: true,
   ceo_public: true,
@@ -15667,7 +15670,7 @@ async function startServer() {
   }
 
 console.log('════════════════════════════════════════════════════');
-console.log('CONTENTSCALE BUILD: CS-2026-09-23-CANONICAL-v205');
+console.log('CONTENTSCALE BUILD: CS-2026-09-23-CANONICAL-v206');
 console.log('CEO FUNNEL: Private + Public → SAME CEO engine');
 console.log('PUBLIC EMAIL DELIVERY: required');
 console.log('PRIVATE EMAIL DELIVERY: optional');
@@ -18085,10 +18088,20 @@ setTimeout(()=>_pqsSendDueCeoFollowups().catch(()=>{}),90*1000);
 // Both modes call the exact same generator. The mode only records provenance.
 // Legacy /quick-scan/start may remain as a compatibility URL, but its first-touch
 // action must target this CEO endpoint.
+app.use('/api/ceo-report/start',(req,res,next)=>{
+  const started=Date.now();
+  res.on('finish',()=>console.log(`[ceo-report] RESPONSE status=${res.statusCode} ms=${Date.now()-started} build=CS-2026-09-23-CANONICAL-v206`));
+  next();
+});
 app.post('/api/ceo-report/start',async(req,res)=>{
   let ceoEntry='unknown',ceoUrl='',lastStage='REQUEST';
-  if(!await _ensureProspectQuickScanTable())return res.status(503).json({success:false,error:'DB unavailable',stage:lastStage});
+  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-23-CANONICAL-v206');
   try{
+    lastStage='DB_SETUP';
+    console.log('[ceo-report] stage=DB_SETUP');
+    const tableReady=await _ensureProspectQuickScanTable();
+    if(!tableReady)throw new Error('Prospect Quick Scan database table is unavailable');
+    lastStage='REQUEST';
     console.log('[ceo-report] stage=REQUEST');
     const body=req.body||{};
     const entry=String(body.entry_mode||'public').toLowerCase()==='private'?'private':'public';
@@ -18171,9 +18184,11 @@ ContentScale`;
     lastStage='COMPLETE'; console.log(`[ceo-report] stage=COMPLETE entry=${entry} token=${token}`);
     return res.json({success:true,entry_mode:entry,token,selected_page:selected,ceo_report_token:reportToken,ceo_report_url:reportUrl,delivery_email:delivery,updates_opt_in:updatesOptIn});
   }catch(e){
-    const msg=String(e&&e.message||e);
-    console.error(`[ceo-report] FAILED stage=${lastStage} entry=${ceoEntry} url=${ceoUrl||'(unknown)'}`,e);
-    return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-23-CANONICAL-v205'});
+    const msg=String(e&&e.message||e||'Unknown CEO Report error');
+    console.error(`[ceo-report] FAILED stage=${lastStage} entry=${ceoEntry} url=${ceoUrl||'(unknown)'} build=CS-2026-09-23-CANONICAL-v206 error=${msg}`);
+    if(e&&e.stack)console.error('[ceo-report] STACK',e.stack);
+    if(res.headersSent)return;
+    return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-23-CANONICAL-v206'});
   }
 });
 
@@ -18889,7 +18904,7 @@ const ceoMsgs=['Analyzing your website…','Finding the strongest commercial pag
 let ceoMsgIndex=0;
 status.innerHTML='<div class="ceo-loader"><div class="ceo-loader-head"><span class="ceo-spinner"></span><span id="ceoBusyMsg">'+ceoMsgs[0]+'</span></div><div class="ceo-progress"><i></i></div><div class="ceo-help">Keep this page open while ContentScale prepares your report.</div></div>';
 const ceoMsgTimer=setInterval(()=>{ceoMsgIndex=(ceoMsgIndex+1)%ceoMsgs.length;const el=document.getElementById('ceoBusyMsg');if(el)el.textContent=ceoMsgs[ceoMsgIndex];},3200);
-try{let r=await fetch('/api/ceo-report/start',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({entry_mode:'public',business_name:biz.value,url:url.value,contact_email:email.value,updates_opt_in:!!updates.checked,source:SOURCE,campaign:CAMPAIGN,language:LANG})});let d=await r.json();clearInterval(ceoMsgTimer);if(!r.ok||!d.success)throw Error(d.error||'Could not create report');if(!d.ceo_report_url)throw Error('CEO Report was created without a share URL');location.href=d.ceo_report_url}catch(e){clearInterval(ceoMsgTimer);go.disabled=false;go.textContent='Create my CEO Prospect Report';status.innerHTML='<div class="status">'+esc(e.message)+'</div>'}}
+try{let r=await fetch('/api/ceo-report/start',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({entry_mode:'public',business_name:biz.value,url:url.value,contact_email:email.value,updates_opt_in:!!updates.checked,source:SOURCE,campaign:CAMPAIGN,language:LANG})});let d=await r.json().catch(()=>({success:false,error:'The server returned a non-JSON error response'}));clearInterval(ceoMsgTimer);if(!r.ok||!d.success){const detail=(d.stage?'Stage: '+d.stage+' · ':'')+(d.error||'Could not create report')+(d.build?' · '+d.build:'');throw Error(detail)}if(!d.ceo_report_url)throw Error('CEO Report was created without a share URL');location.href=d.ceo_report_url}catch(e){clearInterval(ceoMsgTimer);go.disabled=false;go.textContent='Create my CEO Prospect Report';status.innerHTML='<div class="status"><b>CEO Report failed.</b><br>'+esc(e.message)+'</div>'}}
 </script></body></html>`;
   res.type('html').send(html);
 });
