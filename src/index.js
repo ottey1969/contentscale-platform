@@ -266,7 +266,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-23-CANONICAL-v196';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-23-CANONICAL-v197';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 const CONTENTSCALE_BUILD_CHANGES = [
   'Contact Intelligence: schema-initialisatie is geserialiseerd met één procesbelofte en PostgreSQL advisory lock om pg_type-races te voorkomen.',
@@ -290,6 +290,8 @@ const CONTENTSCALE_BUILD_CHANGES = [
   'audit20-up-to-20-never-invent-urls',
   'audit20-reviewable-selection-endpoint',
   'prospect-send-quick-scan-other-page-second-touch',
+  'post-quickscan-two-page-opportunity-overview',
+  'prospect-prepare-20page-audit-discovery',
   'legacy-quick-scan-outreach-drafts-not-reused',
   'ceo-report-seven-day-suppression-aware-reminder',
   'quick-scan-second-touch-five-ai-diagnostic',
@@ -17186,6 +17188,61 @@ async function _audit20Discover(req,rawUrl,maxPages=20){
 // Admin/internal discovery endpoint for the upcoming 20-Page Audit Workspace.
 // This does NOT run the expensive audit yet. It gives Ottmar a reviewable,
 // explainable page set before canonical scanning begins.
+
+// ============================================================
+// TWO-PAGE OPPORTUNITY OVERVIEW — CEO PAGE A + QUICK SCAN PAGE B
+// ============================================================
+// Purpose: bridge a qualified Quick Scan prospect into the 20-Page Audit.
+// This is NOT a new scanner and does NOT merge evidence provenance.
+// Page A = evidence already delivered in CEO Prospect Report.
+// Page B = prospect-selected Quick Scan page; must differ from Page A.
+// Five-AI evidence belongs to Page B/Quick Scan and keeps its exact states.
+// Site-wide conclusions are deliberately limited until the 20-page Audit.
+function _pqsTwoPageOverview(row){
+  const scan=row.scan_result||{};
+  const ai=row.ai_evidence||{};
+  const ceoUrl=String(row.ceo_report_page_url||'').trim();
+  const quickUrl=String(row.url||'').trim();
+  const recRaw=scan.recommendations;
+  const recs=Array.isArray(recRaw)?recRaw:(recRaw&&Array.isArray(recRaw.all)?recRaw.all:[]);
+  const metrics=scan.metrics||{};
+  const score=scan.score??scan.content_score??scan.total_score??metrics.total??null;
+  const engines=_PQS_ENGINES.map(k=>{
+    const x=ai[k]||{};
+    return {engine:k,checked:!!x.checked,mentioned:!!x.mentioned,recommended:!!x.recommended,domain_cited:!!x.domain_cited,exact_page_cited:!!x.exact_page_cited,sources:Array.isArray(x.sources)?x.sources:[]};
+  });
+  return {
+    version:'two-page-opportunity-v1',
+    created_at:new Date().toISOString(),
+    business_name:row.business_name||'',
+    domain:row.domain||'',
+    page_a:{role:'CEO Prospect Report',url:ceoUrl,report_url:row.ceo_report_url||'',evidence_note:'First-contact evidence. Preserve original CEO report provenance.'},
+    page_b:{role:'Quick Scan — Other Page',url:quickUrl,content_score:score,components:{graaf:metrics.graaf??null,craft:metrics.craft??null,technical:metrics.technical??null},recommendation_count:recs.length,recommendations:recs,ai_engines:engines,ai_checked:engines.filter(x=>x.checked).length},
+    interpretation:{
+      pages_verified:ceoUrl&&quickUrl?2:quickUrl?1:0,
+      sitewide_claims_allowed:false,
+      note:'Two pages provide stronger directional evidence, but are not sufficient for site-wide conclusions. Use the 20-Page Audit for cross-page intelligence.'
+    },
+    next_step:{name:'20-Page Audit',max_pages:20,gsc_optional:true,description:'Discover and review up to 20 relevant pages, run canonical scans, then add cross-page intelligence. GSC can strengthen query/click/impression/position evidence but is not required.'}
+  };
+}
+
+app.post('/api/prospect-quick-scan/admin/:token/two-page-overview',requireAdmin,async(req,res)=>{
+  if(!await _ensureProspectQuickScanTable())return res.status(503).json({success:false,error:'DB unavailable'});
+  try{
+    const token=String(req.params.token||'');
+    const q=await pool.query(`SELECT * FROM prospect_quick_scans WHERE token=$1 AND revoked_at IS NULL LIMIT 1`,[token]);
+    if(!q.rows.length)return res.status(404).json({success:false,error:'Prospect not found'});
+    const row=q.rows[0];
+    if(row.status!=='completed')return res.status(409).json({success:false,error:'Quick Scan must be completed first'});
+    if(!row.ceo_report_url)return res.status(409).json({success:false,error:'CEO Prospect Report missing'});
+    if(!row.ceo_report_page_url)return res.status(409).json({success:false,error:'CEO report page provenance missing'});
+    const overview=_pqsTwoPageOverview(row);
+    await pool.query(`UPDATE prospect_quick_scans SET two_page_overview=$1::jsonb,two_page_overview_created_at=NOW(),updated_at=NOW() WHERE token=$2`,[JSON.stringify(overview),token]);
+    return res.json({success:true,overview});
+  }catch(e){return res.status(500).json({success:false,error:e.message||'Could not build two-page overview'});}
+});
+
 app.post('/api/audit-20/discover',async(req,res)=>{
   try{
     const url=String((req.body&&req.body.url)||'').trim();
@@ -17244,6 +17301,8 @@ function _ensureProspectQuickScanTable(){
   ALTER TABLE prospect_quick_scans ADD COLUMN IF NOT EXISTS ceo_report_url TEXT;
   ALTER TABLE prospect_quick_scans ADD COLUMN IF NOT EXISTS ceo_report_created_at TIMESTAMPTZ;
   ALTER TABLE prospect_quick_scans ADD COLUMN IF NOT EXISTS ceo_report_page_url TEXT;
+  ALTER TABLE prospect_quick_scans ADD COLUMN IF NOT EXISTS two_page_overview JSONB;
+  ALTER TABLE prospect_quick_scans ADD COLUMN IF NOT EXISTS two_page_overview_created_at TIMESTAMPTZ;
   ALTER TABLE prospect_quick_scans ADD COLUMN IF NOT EXISTS outreach_followup_due_at TIMESTAMPTZ;
   ALTER TABLE prospect_quick_scans ADD COLUMN IF NOT EXISTS outreach_followup_sent_at TIMESTAMPTZ;
   ALTER TABLE prospect_quick_scans ADD COLUMN IF NOT EXISTS outreach_followup_message_id TEXT;
@@ -17782,7 +17841,7 @@ async function _pqsOutreachTiming(){
   const row=q.rows[0]||{},now=new Date(),last=row.last_sent_at?new Date(row.last_sent_at):null,today=Number(row.sent_today||0),next=last?new Date(last.getTime()+24*60*60*1000):now,can=today>0||!last||now>=next;
   return{timezone:'Asia/Manila',server_now:now.toISOString(),last_sent_at:last?last.toISOString():null,last_yesterday_at:row.last_yesterday_at?new Date(row.last_yesterday_at).toISOString():null,sent_today:today,next_allowed_at:next.toISOString(),can_send_now:can,reason:can?'Sending window is open':'Wait until 24 hours after the previous successful send'}
 }
-app.get('/api/prospect-quick-scan/admin/list',requireAdmin,async(req,res)=>{if(!await _ensureProspectQuickScanTable())return res.status(503).json({success:false});try{const q=await pool.query(`SELECT * FROM prospect_quick_scans WHERE revoked_at IS NULL ORDER BY created_at DESC LIMIT 1000`),outreachSchedule=await _pqsOutreachTiming();res.json({success:true,outreach_schedule:outreachSchedule,items:q.rows.map(r=>({..._pqsPublicRow(r),contact_email:r.contact_email||'',campaign:r.campaign||'',opened_count:Number(r.opened_count||0),first_opened_at:r.first_opened_at,last_opened_at:r.last_opened_at,follow_up_status:r.follow_up_status||'not_contacted',outreach_email_status:r.outreach_email_status||'draft',outreach_subject:r.outreach_subject||'',outreach_body:r.outreach_body||'',outreach_approved_at:r.outreach_approved_at,outreach_sent_at:r.outreach_sent_at,outreach_error:r.outreach_error||'',outreach_attempts:Number(r.outreach_attempts||0),email_lookup_status:r.email_lookup_status||'',email_lookup_checked_at:r.email_lookup_checked_at||null,email_lookup_source:r.email_lookup_source||'',ceo_report_url:r.ceo_report_url||'',ceo_report_token:r.ceo_report_token||'',ceo_report_page_url:r.ceo_report_page_url||'',outreach_followup_due_at:r.outreach_followup_due_at||null,outreach_followup_sent_at:r.outreach_followup_sent_at||null,share_url:req.protocol+'://'+req.get('host')+'/quick-scan/'+r.token}))});}catch(e){res.status(500).json({success:false,error:e.message});}});
+app.get('/api/prospect-quick-scan/admin/list',requireAdmin,async(req,res)=>{if(!await _ensureProspectQuickScanTable())return res.status(503).json({success:false});try{const q=await pool.query(`SELECT * FROM prospect_quick_scans WHERE revoked_at IS NULL ORDER BY created_at DESC LIMIT 1000`),outreachSchedule=await _pqsOutreachTiming();res.json({success:true,outreach_schedule:outreachSchedule,items:q.rows.map(r=>({..._pqsPublicRow(r),contact_email:r.contact_email||'',campaign:r.campaign||'',opened_count:Number(r.opened_count||0),first_opened_at:r.first_opened_at,last_opened_at:r.last_opened_at,follow_up_status:r.follow_up_status||'not_contacted',outreach_email_status:r.outreach_email_status||'draft',outreach_subject:r.outreach_subject||'',outreach_body:r.outreach_body||'',outreach_approved_at:r.outreach_approved_at,outreach_sent_at:r.outreach_sent_at,outreach_error:r.outreach_error||'',outreach_attempts:Number(r.outreach_attempts||0),email_lookup_status:r.email_lookup_status||'',email_lookup_checked_at:r.email_lookup_checked_at||null,email_lookup_source:r.email_lookup_source||'',ceo_report_url:r.ceo_report_url||'',ceo_report_token:r.ceo_report_token||'',ceo_report_page_url:r.ceo_report_page_url||'',two_page_overview:r.two_page_overview||null,two_page_overview_created_at:r.two_page_overview_created_at||null,outreach_followup_due_at:r.outreach_followup_due_at||null,outreach_followup_sent_at:r.outreach_followup_sent_at||null,share_url:req.protocol+'://'+req.get('host')+'/quick-scan/'+r.token}))});}catch(e){res.status(500).json({success:false,error:e.message});}});
 app.post('/api/prospect-quick-scan/admin/email-enrich',requireAdmin,async(req,res)=>{
   if(!await _ensureProspectQuickScanTable())return res.status(503).json({success:false,error:'DB unavailable'});const limit=Math.max(1,Math.min(12,Number((req.body||{}).limit)||8)),retry=!!(req.body&&req.body.retry);
   try{
@@ -18309,6 +18368,33 @@ function _pqsAdminV133Tools(){return String.raw`<script>(function(){
         catch(e){qb.disabled=false;qb.textContent='Send Quick Scan — Other Page';alert(e.message)}
       };
       (x.card.querySelector('.row')||x.card).appendChild(qb);
+    }
+    if(prospect&&prospect.status==='completed'&&prospect.ceo_report_url&&!x.card.querySelector('[data-two-page-overview]')){
+      var ob=document.createElement('button');ob.className='btn';ob.dataset.twoPageOverview='1';
+      ob.textContent=prospect.two_page_overview?'Refresh 2-Page Overview':'Create 2-Page Overview';
+      ob.onclick=async function(){
+        ob.disabled=true;ob.textContent='Building…';
+        try{
+          var result=await api('/api/prospect-quick-scan/admin/'+x.token+'/two-page-overview',{method:'POST',body:JSON.stringify({})});
+          var ov=result.overview||{};
+          var b=ov.page_b||{},c=b.components||{};
+          alert('2-Page Overview ready.\n\nPage A: '+((ov.page_a||{}).url||'—')+'\nPage B: '+(b.url||'—')+'\nContentScore: '+(b.content_score==null?'—':b.content_score)+'/100\nGRAAF: '+(c.graaf==null?'—':c.graaf)+'/50 · CRAFT: '+(c.craft==null?'—':c.craft)+'/30 · Technical: '+(c.technical==null?'—':c.technical)+'/20\nAI checked: '+(b.ai_checked||0)+'/5\n\nNext: 20-Page Audit.');
+          ob.disabled=false;ob.textContent='Refresh 2-Page Overview';await loadQueue();
+        }catch(e){ob.disabled=false;ob.textContent='Create 2-Page Overview';alert(e.message)}
+      };
+      (x.card.querySelector('.row')||x.card).appendChild(ob);
+      var a20=document.createElement('button');a20.className='btn secondary';a20.textContent='Prepare 20-Page Audit';
+      a20.title='Discover up to 20 verified relevant pages. Sitemap is optional; navigation/internal crawl is the fallback.';
+      a20.onclick=async function(){
+        a20.disabled=true;a20.textContent='Discovering pages…';
+        try{
+          var d=await api('/api/audit-20/discover',{method:'POST',body:JSON.stringify({url:prospect.domain||prospect.url})});
+          var sm=d.sitemap||{},cr=d.crawl||{};
+          alert('20-Page Audit discovery ready.\n\nSitemap: '+(sm.found?'Found':'Not found — crawl fallback used')+'\nPages fetched: '+(cr.pages_fetched||0)+'\nCandidates: '+(d.candidates_discovered||0)+'\nEligible: '+(d.eligible_pages||0)+'\nSelected: '+(d.selected_count||0)+' of max 20\n\n'+(d.message||''));
+          a20.disabled=false;a20.textContent='Prepare 20-Page Audit';
+        }catch(e){a20.disabled=false;a20.textContent='Prepare 20-Page Audit';alert(e.message)}
+      };
+      (x.card.querySelector('.row')||x.card).appendChild(a20);
     }
   })}
   var list=$('list');if(list)new MutationObserver(function(){setTimeout(decorate,0)}).observe(list,{childList:true,subtree:true});decorate();var tries=0,timer=setInterval(function(){tries++;var app=$('app');if(KEY&&app&&app.style.display!=='none'){clearInterval(timer);loadQueue();refreshProspects()}else if(tries>600)clearInterval(timer)},500);
