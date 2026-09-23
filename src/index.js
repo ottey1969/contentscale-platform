@@ -266,7 +266,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-23-CANONICAL-v198';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-23-CANONICAL-v199';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 const CONTENTSCALE_BUILD_CHANGES = [
   'Contact Intelligence: schema-initialisatie is geserialiseerd met één procesbelofte en PostgreSQL advisory lock om pg_type-races te voorkomen.',
@@ -295,6 +295,9 @@ const CONTENTSCALE_BUILD_CHANGES = [
   'prospect-public-20page-audit-interest-cta',
   'audit20-interest-does-not-auto-start',
   'admin-prepare-audit-after-explicit-interest',
+  'ceo-report-always-step-one',
+  'ceo-report-private-public-same-engine',
+  'single-quickscan-other-page-after-ceo',
   'legacy-quick-scan-outreach-drafts-not-reused',
   'ceo-report-seven-day-suppression-aware-reminder',
   'quick-scan-second-touch-five-ai-diagnostic',
@@ -16971,6 +16974,15 @@ async function requireAuth(req, res, next) {
 //   the SAME business domain. Prospect may choose the page. Adds full
 //   ContentScore/recommendations and manual five-AI evidence.
 //
+// CANONICAL FUNNEL ENTRY RULE:
+//   CEO REPORT is ALWAYS step 1. There is no standalone first-touch Quick Scan.
+//   CEO Report has two entry modes only:
+//     PRIVATE = Ottmar/admin enters the company/site and can share the generated report.
+//     PUBLIC  = prospect enters the company/site from a shared LinkedIn/Facebook/web link.
+//   Both modes MUST call the SAME CEO report generator, SAME smart commercial-page
+//   selector and SAME report renderer. Entry mode is provenance only.
+//   After either CEO route, there is ONE Quick Scan — Other Page flow.
+//
 // PROSPECT HANDOFF:
 //   After the CEO Prospect Report exists, Ottmar can explicitly send:
 //   "Send Quick Scan — Other Page".
@@ -17979,6 +17991,60 @@ setTimeout(()=>_pqsSendDueCeoFollowups().catch(()=>{}),90*1000);
 // CEO cold outreach and this invitation are deliberately separate.
 // Server-side Quick Scan validation remains responsible for rejecting reuse
 // of ceo_report_page_url.
+
+// CEO REPORT — PUBLIC/PRIVATE CANONICAL ENTRY.
+// Both modes call the exact same generator. The mode only records provenance.
+// Legacy /quick-scan/start may remain as a compatibility URL, but its first-touch
+// action must target this CEO endpoint.
+app.post('/api/ceo-report/start',async(req,res)=>{
+  if(!await _ensureProspectQuickScanTable())return res.status(503).json({success:false,error:'DB unavailable'});
+  try{
+    const body=req.body||{};
+    const entry=String(body.entry_mode||'public').toLowerCase()==='private'?'private':'public';
+    const url=String(body.url||body.website||'').trim();
+    const business=String(body.business_name||body.company||'').trim();
+    const email=String(body.contact_email||body.email||'').trim().toLowerCase();
+    if(!url)return res.status(400).json({success:false,error:'Website URL is required'});
+    // One record anchors the whole funnel: CEO -> Other Page Quick Scan -> 2-page -> Audit.
+    const token=crypto.randomBytes(32).toString('hex');
+    const domain=_pqsDomain(url);
+    await pool.query(`INSERT INTO prospect_quick_scans
+      (token,business_name,url,domain,source,campaign,contact_email,language,status,page_selection_mode,created_at,updated_at)
+      VALUES($1,$2,$3,$4,$5,$6,$7,$8,'created','auto',NOW(),NOW())`,
+      [token,business,url,domain,entry==='private'?'ceo_private':'ceo_public',String(body.campaign||''),email,String(body.language||'auto')]);
+    const q=await pool.query(`SELECT * FROM prospect_quick_scans WHERE token=$1 LIMIT 1`,[token]);
+    const row=q.rows[0];
+
+    // SAME smart selector for public and private CEO reports.
+    // If discovery cannot improve the URL safely, generator still uses the supplied URL.
+    let selected=url,selection=null;
+    try{
+      if(typeof _pqsSmartSelectPage==='function'){
+        selection=await _pqsSmartSelectPage(url,{exclude:[]});
+        if(selection&&selection.url)selected=selection.url;
+      }else if(typeof _smartQuickScanSelectPage==='function'){
+        selection=await _smartQuickScanSelectPage(url,{exclude:[]});
+        if(selection&&selection.url)selected=selection.url;
+      }
+    }catch(_e){}
+    await pool.query(`UPDATE prospect_quick_scans SET ceo_report_page_url=$1,page_selection=$2::jsonb,updated_at=NOW() WHERE token=$3`,
+      [selected,JSON.stringify(selection||{mode:'auto',selected_url:selected,entry_mode:entry}),token]);
+
+    const report=await _generateProspectOpportunityReport(req,{
+      url:selected,
+      business_name:business,
+      report_mode:'prospect',
+      origin:entry==='private'?'ceo_private':'ceo_public',
+      quick_scan_token:token
+    });
+    const reportToken=String((report&&report.token)||'');
+    const reportUrl=String((report&&report.share_url)||(reportToken?('/opportunity-report/'+reportToken):''));
+    await pool.query(`UPDATE prospect_quick_scans SET ceo_report_token=$1,ceo_report_url=$2,ceo_report_created_at=NOW(),updated_at=NOW() WHERE token=$3`,
+      [reportToken,reportUrl,token]);
+    return res.json({success:true,entry_mode:entry,token,selected_page:selected,ceo_report_token:reportToken,ceo_report_url:reportUrl});
+  }catch(e){return res.status(500).json({success:false,error:e.message||'CEO Prospect Report generation failed'});}
+});
+
 app.post('/api/prospect-quick-scan/admin/:token/quickscan-invite',requireAdmin,async(req,res)=>{
   if(!await _ensureProspectQuickScanTable())return res.status(503).json({success:false,error:'DB unavailable'});
   if(!(req.body&&req.body.approved===true))return res.status(400).json({success:false,error:'Explicit approval is required'});
@@ -18673,7 +18739,7 @@ app.get('/quick-scan/start',(req,res)=>{
   const source=['linkedin','facebook','contact_form','email','standalone'].includes(String(req.query.source||''))?String(req.query.source):'standalone';
   const campaign=String(req.query.campaign||'').slice(0,200);
   const requestedLanguage=/^(nl|en|es)$/.test(String(req.query.language||'').toLowerCase())?String(req.query.language).toLowerCase():'auto';
-  const boot=`<script>(function(){var s=${JSON.stringify(source)},c=${JSON.stringify(campaign)},requested=${JSON.stringify(requestedLanguage)},browser=String(navigator.language||'en').toLowerCase().slice(0,2),language=requested==='auto'&&/^(nl|en|es)$/.test(browser)?browser:requested==='auto'?'en':requested,f=document.getElementById('newForm'),sel=document.getElementById('source');window.__pqsRequestedLanguage=language;if(window.pqsSetLanguage)window.pqsSetLanguage(language);if(sel){sel.value=s;sel.style.display='none'}if(f){var n=document.createElement('div');n.className='status';n.style.flexBasis='100%';n.innerHTML='<b>Private Quick Scan from '+String(s).replace('_',' ')+'</b><br>Enter one website page. Your result receives its own private, unguessable report link.'+(c?'<br><span class="muted">Campaign: '+c.replace(/[&<>\"]/g,'')+'</span>':'');f.insertBefore(n,f.firstChild)}window.createScan=async function(){var b=f&&f.querySelector('button'),em=document.getElementById('pqsStartEmail'),op=document.getElementById('pqsStartUpdates');if(!em||!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(em.value.trim()))return stat('Enter a valid email address so we can send the completed report.','#ef4444');if(b){b.disabled=true;b.textContent='Creating private report…'}try{var r=await fetch('/api/prospect-quick-scan/create',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({business_name:biz.value,url:url.value,source:s,campaign:c,language:language,visitor_email:em.value.trim(),updates_opt_in:!!(op&&op.checked)})}),d=await r.json();if(!d.success){if(b){b.disabled=false;b.textContent='Create my scan'}return stat(esc(d.error),'#ef4444')}location.href=d.share_url}catch(e){if(b){b.disabled=false;b.textContent='Try again'}stat(esc(e.message),'#ef4444')}}})();<\/script>`;
+  const boot=`<script>(function(){var s=${JSON.stringify(source)},c=${JSON.stringify(campaign)},requested=${JSON.stringify(requestedLanguage)},browser=String(navigator.language||'en').toLowerCase().slice(0,2),language=requested==='auto'&&/^(nl|en|es)$/.test(browser)?browser:requested==='auto'?'en':requested,f=document.getElementById('newForm'),sel=document.getElementById('source');window.__pqsRequestedLanguage=language;if(window.pqsSetLanguage)window.pqsSetLanguage(language);if(sel){sel.value=s;sel.style.display='none'}if(f){var n=document.createElement('div');n.className='status';n.style.flexBasis='100%';n.innerHTML='<b>Private CEO Prospect Report from '+String(s).replace('_',' ')+'</b><br>Enter one website page. Your result receives its own private, unguessable report link.'+(c?'<br><span class="muted">Campaign: '+c.replace(/[&<>\"]/g,'')+'</span>':'');f.insertBefore(n,f.firstChild)}window.createScan=async function(){var b=f&&f.querySelector('button'),em=document.getElementById('pqsStartEmail'),op=document.getElementById('pqsStartUpdates');if(!em||!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(em.value.trim()))return stat('Enter a valid email address so we can send the completed report.','#ef4444');if(b){b.disabled=true;b.textContent='Creating private report…'}try{var r=await fetch('/api/prospect-quick-scan/create',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({business_name:biz.value,url:url.value,source:s,campaign:c,language:language,visitor_email:em.value.trim(),updates_opt_in:!!(op&&op.checked)})}),d=await r.json();if(!d.success){if(b){b.disabled=false;b.textContent='Create my scan'}return stat(esc(d.error),'#ef4444')}location.href=d.share_url}catch(e){if(b){b.disabled=false;b.textContent='Try again'}stat(esc(e.message),'#ef4444')}}})();<\/script>`;
   const initialLanguage=requestedLanguage==='auto'?'en':requestedLanguage;
   const localized=_pqsLocalizeQuickScanHtml(_pqsEnhancePublicHtml(_pqsPageHtml('')),initialLanguage);
   res.type('html').send(localized.replace('</body>',_pqsEntryLanguageScript(requestedLanguage)+boot+'</body>'));
