@@ -266,7 +266,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-23-CANONICAL-v203';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-23-CANONICAL-v204';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 const CONTENTSCALE_BUILD_CHANGES = [
   'Contact Intelligence: schema-initialisatie is geserialiseerd met één procesbelofte en PostgreSQL advisory lock om pg_type-races te voorkomen.',
@@ -312,6 +312,8 @@ const CONTENTSCALE_BUILD_CHANGES = [
   'contact-intelligence-single-client-stats',
   'contact-intelligence-db-503-diagnostics',
   'neon-diagnostic-client-release-fix',
+  'pg-client-sequential-stats-queries',
+  'ceo-report-stage-diagnostics',
   'legacy-quick-scan-outreach-drafts-not-reused',
   'ceo-report-seven-day-suppression-aware-reminder',
   'quick-scan-second-touch-five-ai-diagnostic',
@@ -707,7 +709,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-09-23-CANONICAL-v203',
+  build: 'CS-2026-09-23-CANONICAL-v204',
   built_date: '2026-09-23',
   ceo_private: true,
   ceo_public: true,
@@ -15663,7 +15665,7 @@ async function startServer() {
   }
 
 console.log('════════════════════════════════════════════════════');
-console.log('CONTENTSCALE BUILD: CS-2026-09-23-CANONICAL-v203');
+console.log('CONTENTSCALE BUILD: CS-2026-09-23-CANONICAL-v204');
 console.log('CEO FUNNEL: Private + Public → SAME CEO engine');
 console.log('PUBLIC EMAIL DELIVERY: required');
 console.log('PRIVATE EMAIL DELIVERY: optional');
@@ -17795,15 +17797,13 @@ app.get('/api/contact-intelligence/stats',requireAdmin,async(req,res)=>{
   try{
     await _ensureContactIntelligenceTables();
     client=await pool.connect();
-    const [q,j,vj,usage,verifiedToday,quick,meta]=await Promise.all([
-      client.query(`SELECT status,COUNT(*)::bigint AS count FROM contact_intelligence GROUP BY status`),
-      client.query(`SELECT id,filename,file_size,status,processed_rows,inserted_rows,duplicate_rows,skipped_rows,error,source_type,resume_count,created_at,updated_at,completed_at,(file_path IS NOT NULL) AS resumable FROM contact_intelligence_imports ORDER BY created_at DESC LIMIT 5`),
-      client.query(`SELECT * FROM contact_intelligence_verification_jobs ORDER BY created_at DESC LIMIT 3`),
-      client.query(`SELECT used FROM contact_intelligence_daily_usage WHERE usage_day=CURRENT_DATE`),
-      client.query(`SELECT COUNT(*)::int AS n FROM contact_intelligence WHERE website_verified_at>=date_trunc('day',NOW())`),
-      client.query(`WITH b AS (SELECT (date_trunc('day',NOW() AT TIME ZONE 'Asia/Manila') AT TIME ZONE 'Asia/Manila') AS start_at) SELECT COUNT(*) FILTER(WHERE scan_started_at IS NOT NULL)::int AS started_total,COUNT(*) FILTER(WHERE scan_completed_at IS NOT NULL)::int AS completed_total,COUNT(*) FILTER(WHERE scan_started_at>=b.start_at)::int AS started_today,COUNT(*) FILTER(WHERE scan_completed_at>=b.start_at)::int AS completed_today FROM prospect_quick_scans CROSS JOIN b WHERE revoked_at IS NULL GROUP BY b.start_at`),
-      client.query(`SELECT ARRAY(SELECT source FROM contact_intelligence WHERE source IS NOT NULL GROUP BY source ORDER BY source LIMIT 50) sources,ARRAY(SELECT niche FROM contact_intelligence WHERE niche IS NOT NULL GROUP BY niche ORDER BY niche LIMIT 50) niches,ARRAY(SELECT language FROM contact_intelligence WHERE language IS NOT NULL GROUP BY language ORDER BY language LIMIT 20) languages`)
-    ]);
+    const q=await client.query(`SELECT status,COUNT(*)::bigint AS count FROM contact_intelligence GROUP BY status`);
+    const j=await client.query(`SELECT id,filename,file_size,status,processed_rows,inserted_rows,duplicate_rows,skipped_rows,error,source_type,resume_count,created_at,updated_at,completed_at,(file_path IS NOT NULL) AS resumable FROM contact_intelligence_imports ORDER BY created_at DESC LIMIT 5`);
+    const vj=await client.query(`SELECT * FROM contact_intelligence_verification_jobs ORDER BY created_at DESC LIMIT 3`);
+    const usage=await client.query(`SELECT used FROM contact_intelligence_daily_usage WHERE usage_day=CURRENT_DATE`);
+    const verifiedToday=await client.query(`SELECT COUNT(*)::int AS n FROM contact_intelligence WHERE website_verified_at>=date_trunc('day',NOW())`);
+    const quick=await client.query(`WITH b AS (SELECT (date_trunc('day',NOW() AT TIME ZONE 'Asia/Manila') AT TIME ZONE 'Asia/Manila') AS start_at) SELECT COUNT(*) FILTER(WHERE scan_started_at IS NOT NULL)::int AS started_total,COUNT(*) FILTER(WHERE scan_completed_at IS NOT NULL)::int AS completed_total,COUNT(*) FILTER(WHERE scan_started_at>=b.start_at)::int AS started_today,COUNT(*) FILTER(WHERE scan_completed_at>=b.start_at)::int AS completed_today FROM prospect_quick_scans CROSS JOIN b WHERE revoked_at IS NULL GROUP BY b.start_at`);
+    const meta=await client.query(`SELECT ARRAY(SELECT source FROM contact_intelligence WHERE source IS NOT NULL GROUP BY source ORDER BY source LIMIT 50) sources,ARRAY(SELECT niche FROM contact_intelligence WHERE niche IS NOT NULL GROUP BY niche ORDER BY niche LIMIT 50) niches,ARRAY(SELECT language FROM contact_intelligence WHERE language IS NOT NULL GROUP BY language ORDER BY language LIMIT 20) languages`);
     const counts={},qs=quick.rows[0]||{};q.rows.forEach(x=>counts[x.status]=Number(x.count||0));
     res.json({success:true,counts,jobs:j.rows,verification_jobs:vj.rows,verification_used_today:usage.rows.length?Number(usage.rows[0].used||0):0,verification_verified_today:Number(verifiedToday.rows[0].n||0),verification_daily_cap:500,quick_scans:{started_total:Number(qs.started_total||0),completed_total:Number(qs.completed_total||0),started_today:Number(qs.started_today||0),completed_today:Number(qs.completed_today||0),timezone:'Asia/Manila'},filters:meta.rows[0]||{},db_pool:{total:pool.totalCount,idle:pool.idleCount,waiting:pool.waitingCount}});
   }catch(e){
@@ -18088,6 +18088,7 @@ app.post('/api/ceo-report/start',async(req,res)=>{
   try{
     const body=req.body||{};
     const entry=String(body.entry_mode||'public').toLowerCase()==='private'?'private':'public';
+    ceoEntry=entry;
     const url=String(body.url||body.website||'').trim();
     const business=String(body.business_name||body.company||'').trim();
     const email=String(body.contact_email||body.email||'').trim().toLowerCase();
@@ -18098,6 +18099,7 @@ app.post('/api/ceo-report/start',async(req,res)=>{
     // One record anchors the whole funnel: CEO -> Other Page Quick Scan -> 2-page -> Audit.
     const token=crypto.randomBytes(32).toString('hex');
     const domain=_pqsDomain(url);
+    ceoStage='CREATE_PROSPECT'; console.log('[ceo-report] stage=CREATE_PROSPECT');
     await pool.query(`INSERT INTO prospect_quick_scans
       (token,business_name,url,domain,source,campaign,contact_email,language,status,page_selection_mode,updates_opt_in,created_at,updated_at)
       VALUES($1,$2,$3,$4,$5,$6,$7,$8,'created','auto',$9,NOW(),NOW())`,
@@ -18108,6 +18110,7 @@ app.post('/api/ceo-report/start',async(req,res)=>{
     // SAME smart selector for public and private CEO reports.
     // If discovery cannot improve the URL safely, generator still uses the supplied URL.
     let selected=url,selection=null;
+    ceoStage='SELECT_PAGE'; console.log('[ceo-report] stage=SELECT_PAGE');
     try{
       // IMPORTANT: this is the existing v184 smart commercial-page selector.
       // Public and Private CEO entries MUST use this exact same selector.
@@ -18117,6 +18120,7 @@ app.post('/api/ceo-report/start',async(req,res)=>{
     await pool.query(`UPDATE prospect_quick_scans SET ceo_report_page_url=$1,page_selection=$2::jsonb,updated_at=NOW() WHERE token=$3`,
       [selected,JSON.stringify(selection||{mode:'auto',selected_url:selected,entry_mode:entry}),token]);
 
+    ceoStage='GENERATE_CEO'; console.log(`[ceo-report] stage=GENERATE_CEO selected=${selected}`);
     const report=await _generateProspectOpportunityReport(req,{
       url:selected,
       business_name:business,
@@ -18126,6 +18130,7 @@ app.post('/api/ceo-report/start',async(req,res)=>{
     });
     const reportToken=String((report&&report.share&&report.share.token)||'');
     const reportUrl=String((report&&report.share&&report.share.url)||(reportToken?('/opportunity-report/'+reportToken):''));
+    ceoStage='SAVE_REPORT'; console.log('[ceo-report] stage=SAVE_REPORT');
     await pool.query(`UPDATE prospect_quick_scans SET ceo_report_token=$1,ceo_report_url=$2,ceo_report_created_at=NOW(),updated_at=NOW() WHERE token=$3`,
       [reportToken,reportUrl,token]);
 
@@ -18133,6 +18138,7 @@ app.post('/api/ceo-report/start',async(req,res)=>{
     // consent for newsletters or broader updates; updates_opt_in is separate.
     let delivery={sent:false};
     if(email&&reportUrl){
+      ceoStage='SEND_EMAIL'; console.log(`[ceo-report] stage=SEND_EMAIL entry=${entry}`);
       try{
         const key=process.env.BREVO_API_KEY||'';
         if(!key)throw new Error('Brevo is not configured');
@@ -18157,8 +18163,13 @@ ContentScale`;
         await pool.query(`UPDATE prospect_quick_scans SET ceo_delivery_email_error=$1,updated_at=NOW() WHERE token=$2`,[String(mailErr.message||mailErr).slice(0,1000),token]).catch(()=>{});
       }
     }
+    ceoStage='COMPLETE'; console.log(`[ceo-report] stage=COMPLETE entry=${entry} token=${token}`);
     return res.json({success:true,entry_mode:entry,token,selected_page:selected,ceo_report_token:reportToken,ceo_report_url:reportUrl,delivery_email:delivery,updates_opt_in:updatesOptIn});
-  }catch(e){return res.status(500).json({success:false,error:e.message||'CEO Prospect Report generation failed'});}
+  }catch(e){
+    const msg=String(e&&e.message||e);
+    console.error(`[ceo-report] FAILED stage=${ceoStage} entry=${ceoEntry} url=${ceoUrl||'(unknown)'}`,e);
+    return res.status(500).json({success:false,error:msg,stage:ceoStage,build:'CS-2026-09-23-CANONICAL-v204'});
+  }
 });
 
 app.post('/api/prospect-quick-scan/admin/:token/quickscan-invite',requireAdmin,async(req,res)=>{
