@@ -266,7 +266,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-23-CANONICAL-v206';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-23-CANONICAL-v207';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 const CONTENTSCALE_BUILD_CHANGES = [
   'Contact Intelligence: schema-initialisatie is geserialiseerd met één procesbelofte en PostgreSQL advisory lock om pg_type-races te voorkomen.',
@@ -316,9 +316,9 @@ const CONTENTSCALE_BUILD_CHANGES = [
   'ceo-report-stage-diagnostics',
   'ceo-stage-referenceerror-fixed',
   'public-ceo-animated-progress',
-  'ceo-db-setup-inside-try-catch',
-  'ceo-browser-stage-error-details',
-  'ceo-request-response-boundary-logging',
+  'ceo-db-setup-inside-diagnostics',
+  'public-ceo-visible-error-stage',
+  'public-ceo-explicit-dom-binding',
   'legacy-quick-scan-outreach-drafts-not-reused',
   'ceo-report-seven-day-suppression-aware-reminder',
   'quick-scan-second-touch-five-ai-diagnostic',
@@ -714,7 +714,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-09-23-CANONICAL-v206',
+  build: 'CS-2026-09-23-CANONICAL-v207',
   built_date: '2026-09-23',
   ceo_private: true,
   ceo_public: true,
@@ -15670,7 +15670,7 @@ async function startServer() {
   }
 
 console.log('════════════════════════════════════════════════════');
-console.log('CONTENTSCALE BUILD: CS-2026-09-23-CANONICAL-v206');
+console.log('CONTENTSCALE BUILD: CS-2026-09-23-CANONICAL-v207');
 console.log('CEO FUNNEL: Private + Public → SAME CEO engine');
 console.log('PUBLIC EMAIL DELIVERY: required');
 console.log('PRIVATE EMAIL DELIVERY: optional');
@@ -18088,14 +18088,9 @@ setTimeout(()=>_pqsSendDueCeoFollowups().catch(()=>{}),90*1000);
 // Both modes call the exact same generator. The mode only records provenance.
 // Legacy /quick-scan/start may remain as a compatibility URL, but its first-touch
 // action must target this CEO endpoint.
-app.use('/api/ceo-report/start',(req,res,next)=>{
-  const started=Date.now();
-  res.on('finish',()=>console.log(`[ceo-report] RESPONSE status=${res.statusCode} ms=${Date.now()-started} build=CS-2026-09-23-CANONICAL-v206`));
-  next();
-});
 app.post('/api/ceo-report/start',async(req,res)=>{
   let ceoEntry='unknown',ceoUrl='',lastStage='REQUEST';
-  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-23-CANONICAL-v206');
+  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-23-CANONICAL-v207');
   try{
     lastStage='DB_SETUP';
     console.log('[ceo-report] stage=DB_SETUP');
@@ -18184,11 +18179,12 @@ ContentScale`;
     lastStage='COMPLETE'; console.log(`[ceo-report] stage=COMPLETE entry=${entry} token=${token}`);
     return res.json({success:true,entry_mode:entry,token,selected_page:selected,ceo_report_token:reportToken,ceo_report_url:reportUrl,delivery_email:delivery,updates_opt_in:updatesOptIn});
   }catch(e){
-    const msg=String(e&&e.message||e||'Unknown CEO Report error');
-    console.error(`[ceo-report] FAILED stage=${lastStage} entry=${ceoEntry} url=${ceoUrl||'(unknown)'} build=CS-2026-09-23-CANONICAL-v206 error=${msg}`);
-    if(e&&e.stack)console.error('[ceo-report] STACK',e.stack);
-    if(res.headersSent)return;
-    return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-23-CANONICAL-v206'});
+    const msg=String((e&&e.message)||e||'CEO Prospect Report generation failed');
+    console.error('[ceo-report] FAILED build=CS-2026-09-23-CANONICAL-v207 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
+    console.error('[ceo-report] ERROR: '+msg);
+    if(e&&e.stack)console.error(e.stack);
+    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-23-CANONICAL-v207'});
+    try{res.end();}catch(_){}
   }
 });
 
@@ -18896,15 +18892,43 @@ app.get('/quick-scan/start',(req,res)=>{
 .ceo-progress>i{display:block;width:35%;height:100%;border-radius:999px;background:linear-gradient(90deg,#7c3aed,#2563eb);animation:ceopulse 1.5s ease-in-out infinite}
 .ceo-help{margin-top:12px;color:#94a3b8;font-size:13px;line-height:1.55}
 @keyframes ceospin{to{transform:rotate(360deg)}}@keyframes ceopulse{0%{transform:translateX(-100%)}100%{transform:translateX(300%)}}
-</style></head><body><main class="w"><div class="brand">CONTENTSCALE · CEO PROSPECT REPORT</div><section class="p"><h1>Find an important SEO & AI-search opportunity on your website</h1><p class="sub">Enter your company and website. ContentScale automatically identifies a commercially relevant page and creates your private CEO Prospect Report. You do not need to choose a page yourself.</p><div class="steps"><div class="step"><b>1. Your website</b><span class="small">We discover relevant first-party pages.</span></div><div class="step"><b>2. Smart page selection</b><span class="small">ContentScale selects a commercially meaningful page.</span></div><div class="step"><b>3. CEO Report</b><span class="small">You receive a private report link. Quick Scan comes later.</span></div></div><div class="row" style="margin-top:20px"><input id="biz" placeholder="Business name"><input id="url" placeholder="https://company.com"></div><div class="row" style="margin-top:10px"><input id="email" type="email" required placeholder="Email address — required for report delivery"><div></div></div><label style="display:flex;gap:9px;align-items:flex-start;margin:12px 0;color:#cbd5e1"><input id="updates" type="checkbox" style="margin-top:5px"> <span>Keep me updated about this analysis and next steps. <span class="small">Optional — your email is still used to deliver the requested report.</span></span></label><button id="go" class="btn">Create my CEO Prospect Report</button><div id="status"></div><p class="small">This is the first step. If you want to continue after the CEO Report, the next diagnostic is Quick Scan — Other Page.</p></section></main><script>
+</style></head><body><main class="w"><div class="brand">CONTENTSCALE · CEO PROSPECT REPORT</div><section class="p"><h1>Find an important SEO & AI-search opportunity on your website</h1><p class="sub">Enter your company and website. ContentScale automatically identifies a commercially relevant page and creates your private CEO Prospect Report. You do not need to choose a page yourself.</p><div class="steps"><div class="step"><b>1. Your website</b><span class="small">We discover relevant first-party pages.</span></div><div class="step"><b>2. Smart page selection</b><span class="small">ContentScale selects a commercially meaningful page.</span></div><div class="step"><b>3. CEO Report</b><span class="small">You receive a private report link. Quick Scan comes later.</span></div></div><div class="row" style="margin-top:20px"><input id="biz" placeholder="Business name"><input id="url" placeholder="https://company.com"></div><div class="row" style="margin-top:10px"><input id="email" type="email" required placeholder="Email address — required for report delivery"><div></div></div><label style="display:flex;gap:9px;align-items:flex-start;margin:12px 0;color:#cbd5e1"><input id="updates" type="checkbox" style="margin-top:5px"> <span>Keep me updated about this analysis and next steps. <span class="small">Optional — your email is still used to deliver the requested report.</span></span></label><button id="go" type="button" class="btn">Create my CEO Prospect Report</button><div id="status"></div><p class="small">This is the first step. If you want to continue after the CEO Report, the next diagnostic is Quick Scan — Other Page.</p></section></main><script>
 const SOURCE=${JSON.stringify(source)},CAMPAIGN=${JSON.stringify(campaign)},LANG=${JSON.stringify(requestedLanguage)};
 function esc(x){return String(x||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
-go.onclick=async function(){if(!url.value.trim())return status.innerHTML='<div class="status">Enter a website URL.</div>';if(!email.value.trim()||!email.checkValidity())return status.innerHTML='<div class="status">Enter a valid email address so we can send your private CEO Report when it is ready.</div>';go.disabled=true;go.textContent='Building your CEO Report…';
-const ceoMsgs=['Analyzing your website…','Finding the strongest commercial page…','Checking search visibility and opportunities…','Building your CEO opportunity report…'];
-let ceoMsgIndex=0;
-status.innerHTML='<div class="ceo-loader"><div class="ceo-loader-head"><span class="ceo-spinner"></span><span id="ceoBusyMsg">'+ceoMsgs[0]+'</span></div><div class="ceo-progress"><i></i></div><div class="ceo-help">Keep this page open while ContentScale prepares your report.</div></div>';
-const ceoMsgTimer=setInterval(()=>{ceoMsgIndex=(ceoMsgIndex+1)%ceoMsgs.length;const el=document.getElementById('ceoBusyMsg');if(el)el.textContent=ceoMsgs[ceoMsgIndex];},3200);
-try{let r=await fetch('/api/ceo-report/start',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({entry_mode:'public',business_name:biz.value,url:url.value,contact_email:email.value,updates_opt_in:!!updates.checked,source:SOURCE,campaign:CAMPAIGN,language:LANG})});let d=await r.json().catch(()=>({success:false,error:'The server returned a non-JSON error response'}));clearInterval(ceoMsgTimer);if(!r.ok||!d.success){const detail=(d.stage?'Stage: '+d.stage+' · ':'')+(d.error||'Could not create report')+(d.build?' · '+d.build:'');throw Error(detail)}if(!d.ceo_report_url)throw Error('CEO Report was created without a share URL');location.href=d.ceo_report_url}catch(e){clearInterval(ceoMsgTimer);go.disabled=false;go.textContent='Create my CEO Prospect Report';status.innerHTML='<div class="status"><b>CEO Report failed.</b><br>'+esc(e.message)+'</div>'}}
+const goEl=document.getElementById('go');
+const urlEl=document.getElementById('url');
+const bizEl=document.getElementById('biz');
+const emailEl=document.getElementById('email');
+const updatesEl=document.getElementById('updates');
+const statusEl=document.getElementById('status');
+if(!goEl||!urlEl||!bizEl||!emailEl||!updatesEl||!statusEl){
+  console.error('[ceo-public] form binding failed',{go:!!goEl,url:!!urlEl,biz:!!bizEl,email:!!emailEl,updates:!!updatesEl,status:!!statusEl});
+}else{
+  console.log('[ceo-public] form ready build=CS-2026-09-23-CANONICAL-v207');
+  goEl.addEventListener('click',async()=>{
+    if(!urlEl.value.trim()){statusEl.innerHTML='<div class="status">Enter a website URL.</div>';urlEl.focus();return;}
+    if(!emailEl.value.trim()||!emailEl.checkValidity()){statusEl.innerHTML='<div class="status">Enter a valid email address so we can send your private CEO Report when it is ready.</div>';emailEl.focus();return;}
+    goEl.disabled=true;goEl.textContent='Building your CEO Report…';
+    const ceoMsgs=['Analyzing your website…','Finding the strongest commercial page…','Checking search visibility and opportunities…','Building your CEO opportunity report…'];
+    let ceoMsgIndex=0;
+    statusEl.innerHTML='<div class="ceo-loader"><div class="ceo-loader-head"><span class="ceo-spinner"></span><span id="ceoBusyMsg">'+ceoMsgs[0]+'</span></div><div class="ceo-progress"><i></i></div><div class="ceo-help">Keep this page open while ContentScale prepares your report.</div></div>';
+    const ceoMsgTimer=setInterval(()=>{ceoMsgIndex=(ceoMsgIndex+1)%ceoMsgs.length;const el=document.getElementById('ceoBusyMsg');if(el)el.textContent=ceoMsgs[ceoMsgIndex];},3200);
+    try{
+      console.log('[ceo-public] submitting CEO request');
+      const r=await fetch('/api/ceo-report/start',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({entry_mode:'public',business_name:bizEl.value,url:urlEl.value,contact_email:emailEl.value,updates_opt_in:!!updatesEl.checked,source:SOURCE,campaign:CAMPAIGN,language:LANG})});
+      const d=await r.json().catch(()=>({}));
+      clearInterval(ceoMsgTimer);
+      if(!r.ok||!d.success){const err=new Error(d.error||('CEO Report request failed (HTTP '+r.status+')'));err.stage=d.stage||'UNKNOWN';err.build=d.build||'unknown';throw err;}
+      if(!d.ceo_report_url)throw new Error('CEO Report was created without a share URL');
+      location.href=d.ceo_report_url;
+    }catch(e){
+      clearInterval(ceoMsgTimer);
+      console.error('[ceo-public] request failed',e);
+      goEl.disabled=false;goEl.textContent='Create my CEO Prospect Report';
+      statusEl.innerHTML='<div class="status"><b>CEO Report failed</b><br>Stage: '+esc(e.stage||'UNKNOWN')+'<br>Error: '+esc(e.message||'Unknown error')+'<br><span class="small">Build: '+esc(e.build||'CS-2026-09-23-CANONICAL-v207')+'</span></div>';
+    }
+  });
+}
 </script></body></html>`;
   res.type('html').send(html);
 });
