@@ -266,7 +266,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-23-CANONICAL-v214';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-23-CANONICAL-v216';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 const CONTENTSCALE_BUILD_CHANGES = [
   'Contact Intelligence: schema-initialisatie is geserialiseerd met één procesbelofte en PostgreSQL advisory lock om pg_type-races te voorkomen.',
@@ -720,7 +720,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-09-23-CANONICAL-v214',
+  build: 'CS-2026-09-23-CANONICAL-v216',
   built_date: '2026-09-23',
   ceo_private: true,
   ceo_public: true,
@@ -13697,9 +13697,11 @@ return result;
                  }
                  const graafFullHtml=graafPages.length?'<section class="box graaf-full"><h2>Original GRAAF ContentScore Scan</h2><p class="muted">This section comes directly from the existing ContentScale scan engine. GRAAF, CRAFT and Technical are kept as separate score components. All '+esc(graafRecCount)+' original recommendations are shown without summarising or rewriting.</p>'+graafPages.map(graafOriginalScanHtml).join('')+'</section>':'';
                  const metricVal=function(v){return v==null||v===''?'N/A':v;};
-                 const metricHtml=external?'<div class="grid"><div class="metric"><b>'+esc(ev.queries_run||0)+'</b>Search queries researched</div><div class="metric"><b>'+esc(ev.own_domain_results||0)+'</b>Own-domain results observed</div><div class="metric"><b>'+esc(ev.other_domain_results||0)+'</b>External results observed</div><div class="metric"><b>'+esc(competitors.length)+'</b>Competitive domains observed</div></div>':'<div class="grid"><div class="metric"><b>'+esc(metricVal(s.pages_discovered))+'</b>Pages discovered</div><div class="metric"><b>'+esc(metricVal(s.pages_analyzed))+'</b>Pages analysed</div><div class="metric"><b>'+esc(metricVal(s.average_graaf))+'</b>Average ContentScore</div><div class="metric"><b>'+esc(s.pages_analyzed===1?'N/A':metricVal(s.orphan_pages))+'</b>'+(s.pages_analyzed===1?'Orphan status · broader link analysis required':'Orphan pages')+'</div><div class="metric"><b>'+esc(s.ai_engines_verified==null?'0/5':s.ai_engines_verified+'/5')+'</b>AI manually verified</div></div>';
+                 const metricHtml=external?'<div class="grid"><div class="metric"><b>'+esc(ev.queries_run||0)+'</b>Search queries researched</div><div class="metric"><b>'+esc(ev.own_domain_results||0)+'</b>Own-domain results observed</div><div class="metric"><b>'+esc(ev.other_domain_results||0)+'</b>External results observed</div><div class="metric"><b>'+esc(competitors.length)+'</b>Competitive domains observed</div></div>':'<div class="grid"><div class="metric"><b>'+esc(metricVal(s.pages_discovered))+'</b>Pages discovered</div><div class="metric"><b>'+esc(metricVal(s.pages_analyzed))+'</b>Pages analysed</div><div class="metric"><b>'+esc(metricVal(s.average_graaf))+(s.average_graaf==null?'':'/100')+'</b>Average ContentScore</div><div class="metric"><b>'+esc(s.pages_analyzed===1?'N/A':metricVal(s.orphan_pages))+'</b>'+(s.pages_analyzed===1?'Orphan status · broader link analysis required':'Orphan pages')+'</div><div class="metric"><b>'+esc(s.ai_engines_verified==null?'0/5':s.ai_engines_verified+'/5')+'</b>AI manually verified</div></div>';
+                 const ps=r.page_selection&&r.page_selection.selected?r.page_selection.selected:null;
+                 const selectionHtml=(!external&&ps)?'<section class="box"><h2>Why This Page Was Selected</h2><p><b>Commercially relevant with visible improvement potential.</b> ContentScale selected this page as a useful CEO opportunity example — not because it has the most content, but because it appears to have a real business purpose and meaningful weaknesses that can be improved.</p>'+(ps.thin_content_signal?'<div class="signal"><b>Thin / limited content detected</b><span>This commercial page contains approximately '+esc(ps.words)+' words. For a service or commercial topic, limited coverage can mean there is not enough depth to clearly explain relevance, expertise, customer questions and the subject itself to visitors, search engines and AI systems. More words alone do not improve rankings; the opportunity is to add useful topical depth, proof and intent-matching content.</span></div>':'')+'<div class="signal"><b>Why it matters</b><span>A commercially important page with limited or incomplete coverage may provide fewer clear signals about when and for which searches the page is relevant. The exact GRAAF recommendations below show the observed issues that can be acted on.</span></div><p class="muted">Selection evidence: '+esc(ps.reason||'commercial relevance and actionable improvement signals')+'. This report does not claim this is the worst page on the entire website; it is the strongest opportunity identified in the discovery scope.</p></section>':'';
                  const externalSections=external?'<section class="box"><h2>Current Search Presence</h2><p class="muted">Public search-index evidence observed for this company. This is not a substitute for a page-level audit.</p>'+(ownRows?'<table><thead><tr><th>Observed result</th><th>URL</th></tr></thead><tbody>'+ownRows+'</tbody></table>':'<p>No own-domain organic result was returned by the research queries.</p>')+'</section><section class="box"><h2>Competitive Visibility</h2><p class="muted">Domains below appeared in the researched search results. Appearance is evidence of visibility for that query, not proof that the company is a direct business competitor.</p>'+(compRows?'<table><thead><tr><th>Domain</th><th>Result</th><th>Query</th><th>Position</th></tr></thead><tbody>'+compRows+'</tbody></table>':'<p>No external competitive domains were observed in the returned results.</p>')+'</section><section class="box"><h2>Content & Search Opportunities</h2>'+(topicHtml||'<p class="muted">No safe topic signal could be extracted from the available public evidence.</p>')+'</section><section class="box"><h2>Research Evidence</h2>'+(evidenceRows?'<table><thead><tr><th>Research query</th><th>Observed result</th><th>Source domain</th></tr></thead><tbody>'+evidenceRows+'</tbody></table>':'<p>No organic results were returned. Direct audit remains pending.</p>')+'</section>':'';
-                 return '<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+esc(r.company&&r.company.name||'ContentScale Opportunity Report')+'</title><style>*{box-sizing:border-box}body{margin:0;background:#07111f;color:#e6eef8;font:14px/1.55 Inter,system-ui,sans-serif}.wrap{max-width:1120px;margin:auto;padding:28px}.hero,.box{background:#0d1b2d;border:1px solid #263d55;border-radius:14px;padding:22px;margin-bottom:16px}.hero{background:linear-gradient(135deg,#0d1b2d,#102b42)}h1{margin:0 0 5px;font-size:28px}h2{font-size:17px;margin:0 0 12px;color:#76d7ff}.muted{color:#9fb1c5}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}.metric{background:#102238;border:1px solid #29435d;border-radius:10px;padding:15px}.metric b{display:block;font-size:25px}.opp,.signal{border:1px solid #29435d;border-radius:10px;padding:14px;margin:8px 0;background:#102238}.opp span,.opp small,.signal span{display:block;color:#aebfd1}.opp small{margin-top:5px;font-size:11px}.badge{display:inline-block!important;margin-left:8px;padding:2px 7px;border:1px solid #3b82f6;border-radius:999px;color:#93c5fd!important;font-size:10px;text-transform:uppercase}table{width:100%;border-collapse:collapse;font-size:12px}th,td{padding:8px;border-bottom:1px solid #263d55;text-align:left;vertical-align:top}th{color:#76d7ff}a{color:#7dd3fc}pre{white-space:pre-wrap;overflow:auto;background:#081321;padding:14px;border-radius:10px;font-size:11px}.phase{padding:12px 0;border-bottom:1px solid #263d55}.graaf-page{border:1px solid #29435d;border-radius:12px;margin:12px 0;background:#0a1727;overflow:hidden}.graaf-page>summary{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:14px;align-items:center;cursor:pointer;padding:16px;list-style:none}.graaf-page>summary::-webkit-details-marker{display:none}.graaf-page>summary small{display:block;color:#9fb1c5;font-weight:400;margin-top:3px;overflow-wrap:anywhere}.graaf-score{font-size:20px;color:#76d7ff}.graaf-count{color:#9fb1c5;font-size:12px}.graaf-page-body{padding:0 16px 16px}.graaf-rec{border-top:1px solid #263d55;padding:16px 0}.graaf-rec:first-child{border-top:0}.graaf-rec-title{display:flex;gap:8px;align-items:flex-start;flex-wrap:wrap}.graaf-priority{font-size:10px;padding:2px 7px;border:1px solid #52677e;border-radius:999px;color:#c8d5e3}.graaf-rec p{margin:7px 0;color:#dbe7f4}.graaf-detail{margin-top:7px;color:#aebfd1}.graaf-detail strong{color:#e6eef8}@media(max-width:700px){.graaf-page>summary{grid-template-columns:1fr auto}.graaf-count{grid-column:1/-1}.wrap{padding:12px}table{display:block;overflow:auto}}@media print{body{background:#fff;color:#111}.hero,.box{background:#fff;border-color:#ddd}.muted,.opp span,.opp small,.signal span{color:#444}}</style></head><body><main class="wrap"><section class="hero"><div class="muted">ContentScale · '+(external?'Digital Search Opportunity Report':esc(r.report_type))+'</div><h1>'+esc(r.company&&r.company.name||'Opportunity Report')+'</h1><div class="muted">'+esc(r.company&&r.company.url||'')+' · Generated '+esc(r.generated_at)+'</div><p>'+esc(e.report_scope||'')+'</p></section><section class="box"><h2>Executive Opportunity Summary</h2>'+metricHtml+'</section>'+externalSections+(!external?'<section class="box"><h2>Page Analysis</h2><p class="muted">Page-level evidence from the scan. “N/A” means the item cannot be determined from this scan scope; for example, orphan status requires a broader site/link inventory.</p><table><thead><tr><th>Page</th><th>Type</th><th>GRAAF</th><th>CRAFT</th><th>Technical</th><th>Orphan</th></tr></thead><tbody>'+pages+'</tbody></table></section>':'')+'<section class="box"><h2>Priority Opportunities</h2>'+opp+'</section>'+graafFullHtml+(!external?'<section class="box"><h2>AI Search Visibility — Verification Required</h2><p class="muted">Your visibility in ChatGPT, Google AI Overviews / Gemini, Perplexity, Claude and Microsoft Copilot has not yet been verified. This is checked separately to determine whether your company is mentioned, recommended, your domain is cited, or an exact page is cited. Until an engine is manually checked, recommendation and citation fields remain unverified.</p><table><thead><tr><th>Engine</th><th>Checked</th><th>Recommended</th><th>Domain cited</th><th>Exact page</th><th>Status</th></tr></thead><tbody>'+ai+'</tbody></table></section>':'')+'<section class="box"><h2>90-Day Opportunity Plan</h2>'+road+'</section><section class="box"><h2>Evidence & Limitations</h2><p>'+esc(e.access_note||'Evidence is labelled according to verification level.')+'</p><ul>'+access+'</ul><details><summary>Technical evidence record (admin/debug)</summary><pre>'+esc(_opportunityJson(r))+'</pre></details></section></main></body></html>';
+                 return '<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+esc(r.company&&r.company.name||'ContentScale Opportunity Report')+'</title><style>*{box-sizing:border-box}body{margin:0;background:#07111f;color:#e6eef8;font:14px/1.55 Inter,system-ui,sans-serif}.wrap{max-width:1120px;margin:auto;padding:28px}.hero,.box{background:#0d1b2d;border:1px solid #263d55;border-radius:14px;padding:22px;margin-bottom:16px}.hero{background:linear-gradient(135deg,#0d1b2d,#102b42)}h1{margin:0 0 5px;font-size:28px}h2{font-size:17px;margin:0 0 12px;color:#76d7ff}.muted{color:#9fb1c5}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}.metric{background:#102238;border:1px solid #29435d;border-radius:10px;padding:15px}.metric b{display:block;font-size:25px}.opp,.signal{border:1px solid #29435d;border-radius:10px;padding:14px;margin:8px 0;background:#102238}.opp span,.opp small,.signal span{display:block;color:#aebfd1}.opp small{margin-top:5px;font-size:11px}.badge{display:inline-block!important;margin-left:8px;padding:2px 7px;border:1px solid #3b82f6;border-radius:999px;color:#93c5fd!important;font-size:10px;text-transform:uppercase}table{width:100%;border-collapse:collapse;font-size:12px}th,td{padding:8px;border-bottom:1px solid #263d55;text-align:left;vertical-align:top}th{color:#76d7ff}a{color:#7dd3fc}pre{white-space:pre-wrap;overflow:auto;background:#081321;padding:14px;border-radius:10px;font-size:11px}.phase{padding:12px 0;border-bottom:1px solid #263d55}.graaf-page{border:1px solid #29435d;border-radius:12px;margin:12px 0;background:#0a1727;overflow:hidden}.graaf-page>summary{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:14px;align-items:center;cursor:pointer;padding:16px;list-style:none}.graaf-page>summary::-webkit-details-marker{display:none}.graaf-page>summary small{display:block;color:#9fb1c5;font-weight:400;margin-top:3px;overflow-wrap:anywhere}.graaf-score{font-size:20px;color:#76d7ff}.graaf-count{color:#9fb1c5;font-size:12px}.graaf-page-body{padding:0 16px 16px}.graaf-rec{border-top:1px solid #263d55;padding:16px 0}.graaf-rec:first-child{border-top:0}.graaf-rec-title{display:flex;gap:8px;align-items:flex-start;flex-wrap:wrap}.graaf-priority{font-size:10px;padding:2px 7px;border:1px solid #52677e;border-radius:999px;color:#c8d5e3}.graaf-rec p{margin:7px 0;color:#dbe7f4}.graaf-detail{margin-top:7px;color:#aebfd1}.graaf-detail strong{color:#e6eef8}@media(max-width:700px){.graaf-page>summary{grid-template-columns:1fr auto}.graaf-count{grid-column:1/-1}.wrap{padding:12px}table{display:block;overflow:auto}}@media print{body{background:#fff;color:#111}.hero,.box{background:#fff;border-color:#ddd}.muted,.opp span,.opp small,.signal span{color:#444}}</style></head><body><main class="wrap"><section class="hero"><div class="muted">ContentScale · '+(external?'Digital Search Opportunity Report':esc(r.report_type))+'</div><h1>'+esc(r.company&&r.company.name||'Opportunity Report')+'</h1><div class="muted">'+esc(r.company&&r.company.url||'')+' · Generated '+esc(r.generated_at)+'</div><p>'+esc(e.report_scope||'')+'</p></section><section class="box"><h2>Executive Opportunity Summary</h2>'+metricHtml+'</section>'+selectionHtml+externalSections+(!external?'<section class="box"><h2>Page Analysis</h2><p class="muted">Page-level evidence from the scan. “N/A” means the item cannot be determined from this scan scope; for example, orphan status requires a broader site/link inventory.</p><table><thead><tr><th>Page</th><th>Type</th><th>GRAAF</th><th>CRAFT</th><th>Technical</th><th>Orphan</th></tr></thead><tbody>'+pages+'</tbody></table></section>':'')+'<section class="box"><h2>Priority Opportunities</h2>'+opp+'</section>'+graafFullHtml+(!external?'<section class="box"><h2>AI Search Visibility — Verification Required</h2><p class="muted">Your visibility in ChatGPT, Google AI Overviews / Gemini, Perplexity, Claude and Microsoft Copilot has not yet been verified. This is checked separately to determine whether your company is mentioned, recommended, your domain is cited, or an exact page is cited. Until an engine is manually checked, recommendation and citation fields remain unverified.</p><table><thead><tr><th>Engine</th><th>Checked</th><th>Recommended</th><th>Domain cited</th><th>Exact page</th><th>Status</th></tr></thead><tbody>'+ai+'</tbody></table></section>':'')+'<section class="box"><h2>90-Day Opportunity Plan</h2>'+road+'</section><section class="box"><h2>Evidence & Limitations</h2><p>'+esc(e.access_note||'Evidence is labelled according to verification level.')+'</p><ul>'+access+'</ul><details><summary>Technical evidence record (admin/debug)</summary><pre>'+esc(_opportunityJson(r))+'</pre></details></section></main></body></html>';
                }
 
                function _oppDomain(u){try{return new URL(u).hostname.replace(/^www\./,'').toLowerCase();}catch(e){return '';}}
@@ -13913,6 +13915,7 @@ return result;
                  }
                  const report=buildOpportunityReport(audit,{report_mode:reportMode,business_name:body.business_name,domain:body.url,url:body.url,audit_mode:auditModeUsed});
                  report.analysis_mode=auditModeUsed;
+                 if(body.page_selection)report.page_selection=body.page_selection;
                  if(fallbackReason){report.analysis_fallback=true;report.analysis_fallback_reason=fallbackReason;}
                  report.origin=body.origin||'standalone';
                  if(body.quick_scan_token)report.quick_scan_token=String(body.quick_scan_token);
@@ -15694,7 +15697,7 @@ async function startServer() {
   }
 
 console.log('════════════════════════════════════════════════════');
-console.log('CONTENTSCALE BUILD: CS-2026-09-23-CANONICAL-v214');
+console.log('CONTENTSCALE BUILD: CS-2026-09-23-CANONICAL-v216');
 console.log('CEO FUNNEL: Private + Public → SAME CEO engine');
 console.log('PUBLIC EMAIL DELIVERY: required');
 console.log('PRIVATE EMAIL DELIVERY: optional');
@@ -18112,13 +18115,28 @@ setTimeout(()=>_pqsSendDueCeoFollowups().catch(()=>{}),90*1000);
 // Server-side Quick Scan validation remains responsible for rejecting reuse
 // of ceo_report_page_url.
 
+// CEO public/private domain normalization. The prospect supplies the main website domain,
+// not a page or language subdomain. Common locale/www prefixes are collapsed to the
+// parent host before discovery so e.g. nl.contentscale.site scans contentscale.site.
+function _ceoMainWebsiteUrl(input){
+  const raw=String(input||'').trim();
+  const u=new URL(/^https?:\/\//i.test(raw)?raw:'https://'+raw);
+  let host=String(u.hostname||'').toLowerCase().replace(/\.$/,'');
+  host=host.replace(/^www\./,'');
+  const parts=host.split('.').filter(Boolean);
+  const localePrefixes=new Set(['nl','en','es']);
+  if(parts.length>=3 && localePrefixes.has(parts[0])) host=parts.slice(1).join('.');
+  if(!host || !host.includes('.')) throw new Error('Enter a valid main website domain');
+  return {domain:host,url:'https://'+host+'/'};
+}
+
 // CEO REPORT — PUBLIC/PRIVATE CANONICAL ENTRY.
 // Both modes call the exact same generator. The mode only records provenance.
 // Legacy /quick-scan/start may remain as a compatibility URL, but its first-touch
 // action must target this CEO endpoint.
 app.post('/api/ceo-report/start',async(req,res)=>{
   let ceoEntry='unknown',ceoUrl='',lastStage='REQUEST';
-  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-23-CANONICAL-v214');
+  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-23-CANONICAL-v216');
   try{
     lastStage='DB_SETUP';
     console.log('[ceo-report] stage=DB_SETUP');
@@ -18129,19 +18147,19 @@ app.post('/api/ceo-report/start',async(req,res)=>{
     const body=req.body||{};
     const entry=String(body.entry_mode||'public').toLowerCase()==='private'?'private':'public';
     ceoEntry=entry;
-    const url=String(body.url||body.website||'').trim();
+    const urlInput=String(body.url||body.website||'').trim();
+    if(!urlInput)return res.status(400).json({success:false,error:'Website domain is required'});
+    const normalizedWebsite=_ceoMainWebsiteUrl(urlInput);
+    const url=normalizedWebsite.url;
     ceoUrl=url;
     const business=String(body.business_name||body.company||'').trim();
     const email=String(body.contact_email||body.email||'').trim().toLowerCase();
     const updatesOptIn=body.updates_opt_in===true;
-    if(!url)return res.status(400).json({success:false,error:'Website URL is required'});
     if(entry==='public'&&!_pqsValidEmail(email))return res.status(400).json({success:false,error:'A valid email is required to deliver the public CEO Prospect Report'});
     if(entry==='private'&&email&&!_pqsValidEmail(email))return res.status(400).json({success:false,error:'Enter a valid email or leave it blank'});
     // One record anchors the whole funnel: CEO -> Other Page Quick Scan -> 2-page -> Audit.
     const token=crypto.randomBytes(32).toString('hex');
-    let domain='';
-    try{domain=new URL(/^https?:\/\//i.test(url)?url:'https://'+url).hostname.toLowerCase().replace(/^www\./,'');}
-    catch(_){throw new Error('Enter a valid website URL');}
+    const domain=normalizedWebsite.domain;
     lastStage='CREATE_PROSPECT'; console.log('[ceo-report] stage=CREATE_PROSPECT');
     await pool.query(`INSERT INTO prospect_quick_scans
       (token,business_name,url,domain,source,campaign,contact_email,language,status,page_selection_mode,updates_opt_in,created_at,updated_at)
@@ -18170,7 +18188,8 @@ app.post('/api/ceo-report/start',async(req,res)=>{
       report_mode:'prospect',
       origin:entry==='private'?'ceo_private':'ceo_public',
       quick_scan_token:token,
-      ceo_single_page:true
+      ceo_single_page:true,
+      page_selection:selection||null
     });
     const reportToken=String((report&&report.share&&report.share.token)||'');
     const reportUrl=String((report&&report.share&&report.share.url)||(reportToken?('/opportunity-report/'+reportToken):''));
@@ -18211,10 +18230,10 @@ ContentScale`;
     return res.json({success:true,entry_mode:entry,token,selected_page:selected,ceo_report_token:reportToken,ceo_report_url:reportUrl,delivery_email:delivery,updates_opt_in:updatesOptIn});
   }catch(e){
     const msg=String((e&&e.message)||e||'CEO Prospect Report generation failed');
-    console.error('[ceo-report] FAILED build=CS-2026-09-23-CANONICAL-v214 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
+    console.error('[ceo-report] FAILED build=CS-2026-09-23-CANONICAL-v216 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
     console.error('[ceo-report] ERROR: '+msg);
     if(e&&e.stack)console.error(e.stack);
-    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-23-CANONICAL-v214'});
+    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-23-CANONICAL-v216'});
     try{res.end();}catch(_){}
   }
 });
@@ -18344,6 +18363,7 @@ function _pqsSameBusinessDomain(chosenHost,originalHost){
   const sharedHosts=new Set(['wixsite.com','wordpress.com','blogspot.com','github.io','webflow.io','weebly.com','notion.site','godaddysites.com','squarespace.com']);
   return sharedHosts.has(root)?chosen===original:!!root&&_pqsRootDomain(chosen)===root;
 }
+// CONTENTSCALE v216 — weakest meaningful commercial page selector + thin-content explanation
 // CONTENTSCALE v214 — CEO opportunity selector + CRAFT table + scope-safe orphan + evidence-led roadmap
 // CONTENTSCALE v184 — lightweight commercial page selector for the one-page Quick Scan.
 // Discovery does NOT score pages with GRAAF. It only chooses the most useful first-party page;
@@ -18363,13 +18383,18 @@ function _pqsSelectorScore(page,homeUrl){
   const hasMetaDesc=/<meta\b[^>]*name=["']description["'][^>]*content=["'][^"']{20,}["']/i.test(html)||/<meta\b[^>]*content=["'][^"']{20,}["'][^>]*name=["']description["']/i.test(html);
   const hasSchema=/<script\b[^>]*type=["']application\/ld\+json["']/i.test(html);
   const hasCanonical=/<link\b[^>]*rel=["'][^"']*canonical[^"']*["']/i.test(html);
-  let issueSignals=0;if(!hasMetaDesc)issueSignals+=12;if(!hasSchema)issueSignals+=10;if(!hasCanonical)issueSignals+=6;if(h1Count!==1)issueSignals+=10;if(h2Count<2)issueSignals+=7;if(words>=300&&words<700)issueSignals+=8;
-  let depth=words>=700?24:words>=500?22:words>=350?18:words>=250?10:0;
+  let issueSignals=0;if(!hasMetaDesc)issueSignals+=12;if(!hasSchema)issueSignals+=10;if(!hasCanonical)issueSignals+=6;if(h1Count!==1)issueSignals+=10;if(h2Count<2)issueSignals+=7;
+  // v216: thin content is an OPPORTUNITY signal for a meaningful commercial page, not an exclusion.
+  // Word count alone is never treated as a ranking factor; it is used as evidence that a service/product topic may be underdeveloped.
+  let thinSignal=words<120?38:words<250?34:words<400?25:words<650?12:0;
   let specificity=(title.length>=20?8:3)+(h1.length>=12?8:2)+(path!=='/'?8:0);
-  let importance=path==='/'?8:Math.max(4,12-Math.max(0,path.split('/').filter(Boolean).length-1)*2);
-  let thinPenalty=words<250?-45:words<350?-12:0;
-  const score=Math.max(0,Math.min(120,commercial+depth+specificity+importance+issueSignals+thinPenalty));
-  return{url:u.href,score,words,title,h1,commercial_relevance:commercial,content_depth:depth,opportunity_signals:issueSignals,informational:informational,reason:(commercial>=30?'commercial topic · ':'')+(words>=350?'enough content · ':'')+(issueSignals?'visible improvement signals · ':'')+(path==='/'?'homepage':'specific landing page')};
+  const depthSegments=path.split('/').filter(Boolean).length;
+  let importance=path==='/'?6:Math.min(16,8+Math.max(0,depthSegments-1)*2); // deeper commercial slugs can be valuable missed opportunities
+  let viability=words>=80?8:words>=40?2:-25; // reject near-empty/error-like pages, but allow genuinely thin commercial pages
+  const actionable=issueSignals+thinSignal;
+  const score=Math.max(0,Math.min(160,commercial+specificity+importance+viability+actionable));
+  const thin=words<400;
+  return{url:u.href,score,words,title,h1,commercial_relevance:commercial,thin_content_signal:thin,thin_signal:thinSignal,opportunity_signals:issueSignals,actionable_opportunity:actionable,informational:informational,reason:(commercial>=30?'commercially relevant · ':'')+(thin?('thin/limited coverage ('+words+' words) · '):'')+(issueSignals?'visible improvement signals · ':'')+(path==='/'?'homepage':'specific landing page')};
 }
 async function _pqsSelectBestScanPage(rawUrl){
   const cleaned=_pqsCleanUrl(rawUrl);if(!cleaned)return null;let base;try{base=new URL(cleaned)}catch(e){return null}const origin=base.origin,host=base.hostname.toLowerCase().replace(/^www\./,''),homeUrl=origin+'/';
@@ -18378,8 +18403,12 @@ async function _pqsSelectBestScanPage(rawUrl){
   add(cleaned);add(home.url);let m,re=/href\s*=\s*["']([^"'#]+)["']/gi;while((m=re.exec(home.html))&&urls.length<60)add(m[1]);
   const rankedUrls=urls.map(x=>{let u=new URL(x),p=u.pathname.toLowerCase(),hint=p+' '+decodeURIComponent(p);let pre=0;if(/(?:service|solution|product|property|development|project|software|platform|consult|repair|clinic|treatment|pricing|industry|location)/i.test(hint))pre+=30;if(p==='/'||p==='')pre+=12;if(/(?:privacy|cookie|terms|legal|login|cart|checkout|blog|news|career|contact)(?:\/|$)/i.test(p))pre-=30;pre-=Math.max(0,p.split('/').filter(Boolean).length-2)*5;return{x,pre}}).sort((a,b)=>b.pre-a.pre).slice(0,14).map(x=>x.x);
   const fetched=await Promise.all(rankedUrls.map(x=>x===home.url?Promise.resolve(home):_pqsFetchPublicEmailPage(x))),scores=fetched.filter(Boolean).map(x=>_pqsSelectorScore(x,homeUrl)).filter(Boolean).sort((a,b)=>b.score-a.score);
-  const opportunityPool=scores.filter(x=>x.commercial_relevance>=30&&!x.informational&&x.words>=350);
-  const selected=opportunityPool[0]||scores.filter(x=>!x.informational&&x.words>=250)[0]||scores[0];return selected?{selected_url:selected.url,mode:'auto',reason:'Selected as a commercially important page with enough content and visible improvement potential; informational/blog pages are fallback only.',selected,candidates:scores.slice(0,8)}:{selected_url:cleaned,mode:'auto_fallback',reason:'No stronger first-party content page could be validated.',candidates:[]};
+  // v216 CEO first-touch: deliberately find the weakest MEANINGFUL commercial page.
+  // A thin deep service/product slug can outrank a stronger broad page because it demonstrates a concrete missed opportunity.
+  // Informational/blog pages remain fallback only; near-empty/error-like pages are not useful proof.
+  const opportunityPool=scores.filter(x=>x.commercial_relevance>=30&&!x.informational&&x.words>=40&&x.actionable_opportunity>=18);
+  const selected=opportunityPool[0]||scores.filter(x=>x.commercial_relevance>=30&&!x.informational&&x.words>=40)[0]||scores.filter(x=>!x.informational&&x.words>=80)[0]||scores[0];
+  return selected?{selected_url:selected.url,mode:'auto',strategy:'weakest_meaningful_commercial_page',reason:'Selected as a meaningful commercial page with strong improvement potential. Thin or limited content is treated as an opportunity when the page has a real business purpose; blog/informational pages are fallback only.',selected,candidates:scores.slice(0,8)}:{selected_url:cleaned,mode:'auto_fallback',reason:'No meaningful first-party commercial page could be validated.',candidates:[]};
 }
 function _pqsSelectablePage(rawUrl){
   const cleaned=_pqsCleanUrl(rawUrl);if(!cleaned)return null;
@@ -18957,7 +18986,7 @@ if(domainHelpEl)domainHelpEl.textContent=CEO_COPY.help;
 if(!goEl||!urlEl||!bizEl||!emailEl||!updatesEl||!statusEl){
   console.error('[ceo-public] form binding failed',{go:!!goEl,url:!!urlEl,biz:!!bizEl,email:!!emailEl,updates:!!updatesEl,status:!!statusEl});
 }else{
-  console.log('[ceo-public] form ready build=CS-2026-09-23-CANONICAL-v214');
+  console.log('[ceo-public] form ready build=CS-2026-09-23-CANONICAL-v216');
   goEl.addEventListener('click',async()=>{
     if(!urlEl.value.trim()){statusEl.innerHTML='<div class="status">'+esc(CEO_COPY.missing)+'</div>';urlEl.focus();return;}
     if(!emailEl.value.trim()||!emailEl.checkValidity()){statusEl.innerHTML='<div class="status">Enter a valid email address so we can send your private CEO Report when it is ready.</div>';emailEl.focus();return;}
@@ -18978,7 +19007,7 @@ if(!goEl||!urlEl||!bizEl||!emailEl||!updatesEl||!statusEl){
       clearInterval(ceoMsgTimer);
       console.error('[ceo-public] request failed',e);
       goEl.disabled=false;goEl.textContent='Create my CEO Prospect Report';
-      statusEl.innerHTML='<div class="status"><b>CEO Report failed</b><br>Stage: '+esc(e.stage||'UNKNOWN')+'<br>Error: '+esc(e.message||'Unknown error')+'<br><span class="small">Build: '+esc(e.build||'CS-2026-09-23-CANONICAL-v214')+'</span></div>';
+      statusEl.innerHTML='<div class="status"><b>CEO Report failed</b><br>Stage: '+esc(e.stage||'UNKNOWN')+'<br>Error: '+esc(e.message||'Unknown error')+'<br><span class="small">Build: '+esc(e.build||'CS-2026-09-23-CANONICAL-v216')+'</span></div>';
     }
   });
 }
