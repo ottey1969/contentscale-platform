@@ -266,7 +266,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-23-CANONICAL-v193';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-23-CANONICAL-v195';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 const CONTENTSCALE_BUILD_CHANGES = [
   'Contact Intelligence: schema-initialisatie is geserialiseerd met één procesbelofte en PostgreSQL advisory lock om pg_type-races te voorkomen.',
@@ -284,6 +284,11 @@ const CONTENTSCALE_BUILD_CHANGES = [
   'ceo-prospect-report-first-contact-outreach',
   'quick-scan-different-page-required-after-ceo-report',
   'lead-crawler-real-email-queue-ceo-template-replaced',
+  'outreach-placeholder-fail-closed-before-send',
+  'audit20-sitemap-optional-discovery',
+  'audit20-navigation-first-crawl-fallback',
+  'audit20-up-to-20-never-invent-urls',
+  'audit20-reviewable-selection-endpoint',
   'legacy-quick-scan-outreach-drafts-not-reused',
   'ceo-report-seven-day-suppression-aware-reminder',
   'quick-scan-second-touch-five-ai-diagnostic',
@@ -16947,6 +16952,243 @@ async function requireAuth(req, res, next) {
 }
 
 // ══════════════════════════════════════════════════════════════════════
+
+// ============================================================
+// CONTENTSCALE SALES + DELIVERY ARCHITECTURE — KEEP SYSTEMS SEPARATE
+// ============================================================
+// CEO PROSPECT REPORT:
+//   First-contact asset. One page/evidence view selected by ContentScale.
+//   Lead Crawler outreach links to this report; prospect runs nothing.
+//
+// QUICK SCAN:
+//   Second-step diagnostic. ONE DIFFERENT commercially important page on
+//   the SAME business domain. Prospect may choose the page. Adds full
+//   ContentScore/recommendations and manual five-AI evidence.
+//
+// POST-QUICK-SCAN OVERVIEW:
+//   Must combine the TWO distinct page findings already collected:
+//   (1) CEO Prospect Report page and (2) Quick Scan page.
+//   Preserve provenance; do not pretend they were one scan.
+//   This overview is the bridge/qualification step into the 20-page Audit.
+//
+// 20-PAGE AUDIT:
+//   Deeper site-wide intelligence, not "18 more Quick Scans".
+//   Automatically discover/select up to 20 commercially relevant pages,
+//   reuse the canonical scan engine per page, then add CROSS-PAGE analysis:
+//   architecture, topical/content gaps, cannibalization/query ownership,
+//   internal linking/orphans, priorities and 90-day roadmap.
+//   Optional GSC upgrades eligible claims with verified query/click/
+//   impression/position evidence.
+//
+// TRACKER:
+//   Comes AFTER audit/conversion. Baseline -> implementation -> GSC ->
+//   repeated five-AI checks -> before/after proof.
+//
+// CANONICAL SCORING:
+//   GRAAF /50 + CRAFT /30 + Technical /20 = ContentScore /100.
+//   Do not create a second scoring engine for CEO, Quick Scan, Audit or Tracker.
+//   URL/live scan and HTML fallback must retain method/provenance because
+//   they are not evidence-equivalent.
+//
+// EVIDENCE:
+//   Observed / Possible / Verified / Needs access.
+//   mentioned != recommended != domain_cited != exact_page_cited.
+//   Never invent rankings, traffic, revenue, GSC or AI visibility.
+// ============================================================
+
+
+// ============================================================
+// 20-PAGE AUDIT DISCOVERY — v195
+// ============================================================
+// Goal: discover UP TO 20 useful same-domain pages. A sitemap is helpful
+// but NEVER required. If no sitemap is discoverable, start from homepage
+// navigation/menu and continue through verified internal links.
+//
+// IMPORTANT:
+// - Do not invent URLs to reach 20.
+// - Fewer than 20 verified relevant pages is a valid result.
+// - "No sitemap found" is a discovery fact, not automatically an SEO defect.
+// - Discovery does NOT create a new scoring engine. Selected pages must later
+//   go through the canonical ContentScale scanner.
+// - Preserve discovery provenance so the Audit Workspace can explain WHY a
+//   page was found/selected: sitemap, navigation, footer, internal_link, seed.
+//
+// This helper is intentionally discovery-only. Cross-page intelligence,
+// canonical ContentScore, optional GSC evidence and Tracker remain separate.
+function _audit20NormalizeUrl(raw, origin){
+  try{
+    const u=new URL(raw,origin);
+    if(!/^https?:$/.test(u.protocol))return null;
+    u.hash='';
+    for(const k of [...u.searchParams.keys()]){
+      if(/^utm_/i.test(k)||['gclid','fbclid','msclkid'].includes(k.toLowerCase()))u.searchParams.delete(k);
+    }
+    return u.toString();
+  }catch(e){return null}
+}
+function _audit20SameHost(a,b){
+  try{
+    const A=new URL(a),B=new URL(b);
+    const clean=h=>h.toLowerCase().replace(/^www\./,'');
+    return clean(A.hostname)===clean(B.hostname);
+  }catch(e){return false}
+}
+function _audit20LooksUtility(url){
+  try{
+    const p=new URL(url).pathname.toLowerCase();
+    return /\/(privacy|privacy-policy|terms|terms-and-conditions|cookie|cookies|login|signin|signup|cart|checkout|account|wp-admin)(\/|$)/.test(p)
+      || /\.(pdf|jpg|jpeg|png|gif|webp|svg|xml|zip|docx?|xlsx?|pptx?)$/i.test(p);
+  }catch(e){return true}
+}
+function _audit20Classify(url, anchorText=''){
+  let p='';try{p=new URL(url).pathname.toLowerCase()}catch(e){}
+  const t=String(anchorText||'').toLowerCase();
+  if(p==='/'||p==='')return 'homepage';
+  if(/service|services|solution|solutions|consult|agency|seo|marketing|repair|roof|design|development/.test(p+' '+t))return 'service';
+  if(/product|products|shop|store|pricing|plan/.test(p+' '+t))return 'product';
+  if(/category|collection|industr|sector/.test(p+' '+t))return 'category';
+  if(/location|locations|area|areas|city/.test(p+' '+t))return 'location';
+  if(/case-study|case-studies|portfolio|work|project/.test(p+' '+t))return 'proof';
+  if(/blog|article|guide|resources|news|insight/.test(p+' '+t))return 'informational';
+  if(/about|contact|team/.test(p+' '+t))return 'supporting';
+  return 'other';
+}
+function _audit20Priority(type, source){
+  const typeScore={homepage:100,service:92,product:92,category:82,location:78,proof:72,other:60,informational:52,supporting:35}[type]||50;
+  const sourceScore={navigation:18,sitemap:12,internal_link:9,footer:4,seed:20}[source]||0;
+  return typeScore+sourceScore;
+}
+function _audit20ExtractLinks(html, baseUrl){
+  const out=[];
+  const text=String(html||'');
+  const navRanges=[];
+  for(const m of text.matchAll(/<(nav|header)\b[^>]*>([\s\S]*?)<\/\1>/gi))navRanges.push(m[0]);
+  const footerRanges=[...text.matchAll(/<footer\b[^>]*>([\s\S]*?)<\/footer>/gi)].map(m=>m[0]);
+  const parse=(block,source)=>{
+    for(const m of String(block||'').matchAll(/<a\b[^>]*href\s*=\s*["']([^"'#]+)["'][^>]*>([\s\S]*?)<\/a>/gi)){
+      const u=_audit20NormalizeUrl(m[1],baseUrl); if(!u||!_audit20SameHost(u,baseUrl)||_audit20LooksUtility(u))continue;
+      const label=String(m[2]||'').replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim();
+      out.push({url:u,source,anchor_text:label});
+    }
+  };
+  navRanges.forEach(x=>parse(x,'navigation'));
+  footerRanges.forEach(x=>parse(x,'footer'));
+  parse(text,'internal_link');
+  const rank={navigation:3,internal_link:2,footer:1};
+  const dedup=new Map();
+  for(const x of out){
+    const k=x.url.replace(/\/$/,'');
+    if(!dedup.has(k)||rank[x.source]>rank[dedup.get(k).source])dedup.set(k,x);
+  }
+  return [...dedup.values()];
+}
+async function _audit20FetchHtmlInternal(req,url){
+  // Reuse existing ContentScale fetch-html recovery path. This is page
+  // discovery only; a successful fetch here is NOT a ContentScore scan.
+  try{
+    if(typeof _opportunityAcquireHtmlInternal==='function'){
+      const r=await _opportunityAcquireHtmlInternal(req,url);
+      if(r&&r.html)return {ok:true,html:r.html,method:r.method||'content-scale-fetch'};
+    }
+  }catch(e){}
+  return {ok:false,html:'',method:'unavailable'};
+}
+async function _audit20Discover(req,rawUrl,maxPages=20){
+  const seed=_audit20NormalizeUrl(rawUrl,rawUrl);
+  if(!seed)throw new Error('Invalid website URL');
+  const origin=new URL(seed).origin;
+  const candidates=new Map();
+  const add=(url,source,anchor='')=>{
+    const u=_audit20NormalizeUrl(url,origin);
+    if(!u||!_audit20SameHost(u,origin)||_audit20LooksUtility(u))return;
+    const key=u.replace(/\/$/,'');
+    const type=_audit20Classify(u,anchor);
+    const item={url:u,source,type,anchor_text:anchor||'',priority:_audit20Priority(type,source)};
+    const prev=candidates.get(key);
+    if(!prev||item.priority>prev.priority)candidates.set(key,item);
+  };
+  add(origin+'/','seed','Homepage');
+
+  // Sitemap discovery: common locations. Failure never blocks crawl fallback.
+  let sitemapFound=false,sitemapUrl='',sitemapUrls=0;
+  for(const sm of [origin+'/sitemap.xml',origin+'/sitemap_index.xml']){
+    try{
+      const r=await fetch(sm,{headers:{'user-agent':'Mozilla/5.0 ContentScaleAudit/1.0'},redirect:'follow'});
+      if(!r.ok)continue;
+      const xml=await r.text();
+      const locs=[...xml.matchAll(/<loc>\s*([^<]+)\s*<\/loc>/gi)].map(m=>m[1].trim());
+      if(!locs.length)continue;
+      sitemapFound=true;sitemapUrl=sm;
+      // If index points to child XML files, fetch a bounded number.
+      const child=locs.filter(x=>/\.xml(?:\?|$)/i.test(x)).slice(0,8);
+      const pages=locs.filter(x=>!/\.xml(?:\?|$)/i.test(x));
+      pages.forEach(u=>{add(u,'sitemap');sitemapUrls++});
+      for(const childUrl of child){
+        try{
+          const cr=await fetch(childUrl,{headers:{'user-agent':'Mozilla/5.0 ContentScaleAudit/1.0'},redirect:'follow'});
+          if(!cr.ok)continue;
+          const cx=await cr.text();
+          for(const mm of cx.matchAll(/<loc>\s*([^<]+)\s*<\/loc>/gi)){add(mm[1].trim(),'sitemap');sitemapUrls++}
+        }catch(e){}
+      }
+      break;
+    }catch(e){}
+  }
+
+  // Crawl fallback/augmentation. Homepage navigation is the first strong
+  // structural signal; then verified same-domain internal links are followed.
+  const queue=[origin+'/']; const seen=new Set(); let fetched=0, navigationUrls=0, internalUrls=0;
+  while(queue.length&&fetched<35&&candidates.size<120){
+    const current=queue.shift(),key=current.replace(/\/$/,'');
+    if(seen.has(key))continue; seen.add(key);
+    const got=await _audit20FetchHtmlInternal(req,current);
+    if(!got.ok||!got.html)continue;
+    fetched++;
+    const links=_audit20ExtractLinks(got.html,current);
+    for(const x of links){
+      add(x.url,x.source,x.anchor_text);
+      if(x.source==='navigation')navigationUrls++; else if(x.source==='internal_link')internalUrls++;
+      const lk=x.url.replace(/\/$/,'');
+      if(!seen.has(lk)&&queue.length<80)queue.push(x.url);
+    }
+  }
+
+  const all=[...candidates.values()].sort((a,b)=>b.priority-a.priority||a.url.localeCompare(b.url));
+  const eligible=all.filter(x=>!_audit20LooksUtility(x.url));
+  const selected=eligible.slice(0,Math.max(1,Math.min(Number(maxPages)||20,20)));
+  return {
+    success:true,
+    domain:new URL(origin).hostname,
+    origin,
+    sitemap:{found:sitemapFound,url:sitemapUrl||null,urls_discovered:sitemapUrls},
+    crawl:{pages_fetched:fetched,navigation_links_seen:navigationUrls,internal_links_seen:internalUrls},
+    candidates_discovered:all.length,
+    eligible_pages:eligible.length,
+    selected_count:selected.length,
+    target_max:20,
+    incomplete:selected.length<20,
+    message:selected.length<20
+      ?`Only ${selected.length} suitable verified page(s) were discovered. ContentScale will not invent URLs to reach 20.`
+      :'20 suitable pages selected for audit.',
+    selected,
+    candidates:eligible.slice(0,60)
+  };
+}
+
+// Admin/internal discovery endpoint for the upcoming 20-Page Audit Workspace.
+// This does NOT run the expensive audit yet. It gives Ottmar a reviewable,
+// explainable page set before canonical scanning begins.
+app.post('/api/audit-20/discover',async(req,res)=>{
+  try{
+    const url=String((req.body&&req.body.url)||'').trim();
+    if(!url)return res.status(400).json({success:false,error:'Website URL required'});
+    const result=await _audit20Discover(req,url,20);
+    return res.json(result);
+  }catch(e){
+    return res.status(500).json({success:false,error:e.message||'20-page discovery failed'});
+  }
+});
+
 // PROSPECT QUICK SCAN — public sales qualification, separate from Audit/Tracker
 // One real GRAAF page scan + optional manual five-engine evidence from Ottmar.
 // Sources: Lead Crawler, LinkedIn, Facebook, contact form, email, standalone.
@@ -17586,6 +17828,19 @@ app.post('/api/prospect-quick-scan/admin/:token/email-send',requireAdmin,async(r
     if(!body.includes(ceoUrl))body+='\n\nCEO Prospect Report: '+ceoUrl;
     const unsub=(process.env.APP_URL||'https://app.contentscale.site')+'/unsubscribe?email='+encodeURIComponent(email);
     const html='<div style="font-family:Arial,sans-serif;line-height:1.65;color:#172033;max-width:640px">'+body.split(/\n{2,}/).map(p=>'<p>'+_pqsHtml(p).replace(/\n/g,'<br>')+'</p>').join('')+'<p style="font-size:12px;color:#64748b;border-top:1px solid #e2e8f0;padding-top:12px"><a href="'+unsub+'">Unsubscribe</a> from further ContentScale outreach.</p></div>';
+    // HARD SAFETY — NEVER SEND TEMPLATE PLACEHOLDERS TO A PROSPECT.
+    // CEO report generation/replacement must complete before email delivery.
+    // If a future refactor changes template handling, fail closed rather than
+    // exposing {ceo_report_link} or another unresolved template token.
+    const _pqsUnresolvedTemplateToken=/\{(?:ceo_report_link|quick_scan_link|company|website)\}/i;
+    if(_pqsUnresolvedTemplateToken.test(String(subject||''))||_pqsUnresolvedTemplateToken.test(String(body||''))){
+      return res.status(409).json({
+        success:false,
+        error:'EMAIL BLOCKED — unresolved outreach placeholder',
+        detail:'CEO Prospect Report link/template replacement did not complete. No email was sent.'
+      });
+    }
+
     const rr=await fetch('https://api.brevo.com/v3/smtp/email',{method:'POST',headers:{'Content-Type':'application/json','api-key':key},body:JSON.stringify({to:[{email,name:company}],sender:{email:process.env.FROM_EMAIL||'info@contentscale.site',name:process.env.SENDER_NAME||'Ottmar Francisca · ContentScale'},replyTo:{email:process.env.FROM_EMAIL||'info@contentscale.site',name:'Ottmar Francisca'},subject,htmlContent:html,textContent:body+'\n\nUnsubscribe: '+unsub})}),data=await rr.json().catch(()=>({}));
     if(!rr.ok)throw new Error(String(data.message||data.error||('Brevo '+rr.status)).slice(0,1000));
     await pool.query(`UPDATE prospect_quick_scans SET outreach_email_status='sent',outreach_subject=$1,outreach_body=$2,outreach_sent_at=NOW(),outreach_message_id=$3,outreach_followup_due_at=NOW()+INTERVAL '7 days',follow_up_status=CASE WHEN follow_up_status='not_contacted' THEN 'contacted' ELSE follow_up_status END,updated_at=NOW() WHERE token=$4`,[subject,body,String(data.messageId||data.message_id||''),token]);
