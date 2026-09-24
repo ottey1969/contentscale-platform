@@ -266,7 +266,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-24-CANONICAL-v243';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-24-CANONICAL-v244';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 const CONTENTSCALE_BUILD_CHANGES = [
   'Contact Intelligence: schema-initialisatie is geserialiseerd met één procesbelofte en PostgreSQL advisory lock om pg_type-races te voorkomen.',
@@ -727,7 +727,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-09-24-CANONICAL-v243',
+  build: 'CS-2026-09-24-CANONICAL-v244',
   built_date: '2026-09-23',
   ceo_private: true,
   ceo_public: true,
@@ -15972,7 +15972,7 @@ async function startServer() {
   }
 
 console.log('════════════════════════════════════════════════════');
-console.log('CONTENTSCALE BUILD: CS-2026-09-24-CANONICAL-v243');
+console.log('CONTENTSCALE BUILD: CS-2026-09-24-CANONICAL-v244');
 console.log('CEO FUNNEL: Private + Public → SAME CEO engine');
 console.log('PUBLIC EMAIL DELIVERY: required');
 console.log('PRIVATE EMAIL DELIVERY: optional');
@@ -18570,7 +18570,7 @@ function _ceoMainWebsiteUrl(input){
 // action must target this CEO endpoint.
 app.post('/api/ceo-report/start',async(req,res)=>{
   let ceoEntry='unknown',ceoUrl='',lastStage='REQUEST';
-  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-24-CANONICAL-v243');
+  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-24-CANONICAL-v244');
   try{
     lastStage='DB_SETUP';
     console.log('[ceo-report] stage=DB_SETUP');
@@ -18664,10 +18664,10 @@ ContentScale`;
     return res.json({success:true,entry_mode:entry,token,selected_page:selected,ceo_report_token:reportToken,ceo_report_url:reportUrl,delivery_email:delivery,updates_opt_in:updatesOptIn});
   }catch(e){
     const msg=String((e&&e.message)||e||'CEO Prospect Report generation failed');
-    console.error('[ceo-report] FAILED build=CS-2026-09-24-CANONICAL-v243 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
+    console.error('[ceo-report] FAILED build=CS-2026-09-24-CANONICAL-v244 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
     console.error('[ceo-report] ERROR: '+msg);
     if(e&&e.stack)console.error(e.stack);
-    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-24-CANONICAL-v243'});
+    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-24-CANONICAL-v244'});
     try{res.end();}catch(_){}
   }
 });
@@ -19210,7 +19210,7 @@ function _pqsAdminV133Tools(){return String.raw`<script>(function(){
   function valid(v){return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(v||''))}
   function lang(x){var v=String(x.language||'auto').toLowerCase(),d=String(x.domain||'').toLowerCase();if(v==='nl'||(v==='auto'&&/(^nl\.|\.nl$)/i.test(d)))return 'nl';if(v==='es'||(v==='auto'&&/(^es\.|\.es$)/i.test(d)))return 'es';return 'en'}
   function publicCeoUrl(l){return 'https://app.contentscale.site/quick-scan/start?source=lead-crawler&language='+encodeURIComponent(l||'en')}
-  function copyVariant(x){var seed=String(x.token||x.contact_email||x.domain||'contentscale'),h=0;for(var i=0;i<seed.length;i++)h=(h*31+seed.charCodeAt(i))>>>0;return h%6}
+  function copyVariant(x){var seed=String(x.token||x.contact_email||x.domain||'contentscale'),h=0;for(var i=0;i<seed.length;i++)h=(h*31+seed.charCodeAt(i))>>>0;return h%10}
   function copyPair(x){
     var name=x.business_name||x.domain||'your team',v=copyVariant(x),l=lang(x),u=publicCeoUrl(l);
     var packs={
@@ -19234,7 +19234,7 @@ function _pqsAdminV133Tools(){return String.raw`<script>(function(){
         'Mist jullie website mogelijk zichtbaarheid in AI search? Bekijk het gratis CEO Report:',
         'Ik kwam '+name+' tegen. Hier kun je snel Google + AI search kansen voor de website bekijken:',
         'Geen lange pitch — alleen een gratis CEO Report met mogelijke Google + AI search kansen:',
-        'Eén snelle websitecheck voor '+name+: Google + AI search kansen, kort voor een ondernemer samengevat:',
+        'Eén snelle websitecheck voor '+name+': Google + AI search kansen, kort voor een ondernemer samengevat:',
         'Google + AI search blijft veranderen. Bekijk welke kansen er mogelijk voor '+name+' liggen:' ]},
       es:{s:['Google + búsqueda IA — '+name,'Una revisión rápida Google + IA para '+name,name+' — ¿vale la pena verlo?','Oportunidades de búsqueda IA para '+name,'¿Puede '+name+' estar perdiendo visibilidad en IA?','Revisión rápida de visibilidad para '+name,name+' en Google + IA','Informe CEO gratis para '+name,'Una revisión rápida del sitio de '+name,'Oportunidad Google + IA — '+name],b:[
         'Google y la búsqueda con IA están cambiando cómo los clientes encuentran empresas. Vea dónde su web puede tener oportunidades:',
