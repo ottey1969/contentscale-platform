@@ -266,7 +266,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-24-CANONICAL-v233';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-24-CANONICAL-v234';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 const CONTENTSCALE_BUILD_CHANGES = [
   'Contact Intelligence: schema-initialisatie is geserialiseerd met één procesbelofte en PostgreSQL advisory lock om pg_type-races te voorkomen.',
@@ -727,7 +727,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-09-24-CANONICAL-v233',
+  build: 'CS-2026-09-24-CANONICAL-v234',
   built_date: '2026-09-23',
   ceo_private: true,
   ceo_public: true,
@@ -4447,7 +4447,7 @@ app.get('/api/tracker-client/:token/owner-questions',async(req,res)=>{try{
 }catch(e){console.error('[owner-questions-get]',e.message);res.status(500).json({success:false,error:e.message});}});
 app.post('/api/tracker-client/:token/owner-questions/refresh',async(req,res)=>{try{
   await _ensureTrackerOwnerQuestions();const own=await _trackerClaimsClient(req,res);if(!own)return;
-  const pp=await pool.query(`SELECT id,url,COALESCE(keyword,gsc_keyword,'') keyword FROM tracker_pages WHERE tracker_client_id=$1 AND COALESCE(status,'')<>'deleted' ORDER BY id`,[own.clientId]);
+  const pp=await pool.query(`SELECT id,url,COALESCE(keyword,gsc_keyword,'') keyword FROM tracker_pages WHERE tracker_client_id=$1 AND (is_active=TRUE OR is_active IS NULL) ORDER BY id`,[own.clientId]);
   let discovered=0,merged=0,pages_checked=0,intelligence_questions=0;
   for(const pg of pp.rows){let intel=null;try{intel=await _trackerBuildDerivedIntelligence(own.clientId,pg.id);}catch(e){console.warn('[owner-questions-page]',pg.id,e.message);}if(!intel)continue;pages_checked++;
     let candidates=(intel.owner_questions||[]).map(q=>({category:q.category||'Business fact',question:q.question,evidence_needed:q.evidence_needed||'Owner confirmation'}));
@@ -4517,7 +4517,7 @@ app.get('/api/tracker-client/:token/growth-questions',async(req,res)=>{try{
 }catch(e){console.error('[growth-questions-get]',e.message);res.status(500).json({success:false,error:e.message});}});
 app.post('/api/tracker-client/:token/growth-questions/refresh',async(req,res)=>{try{
   await _ensureTrackerGrowthQuestions();const own=await _trackerClaimsClient(req,res);if(!own)return;
-  const pp=await pool.query(`SELECT id,url,COALESCE(keyword,gsc_keyword,'') keyword,COALESCE(gsc_impressions,0) gsc_impressions,COALESCE(gsc_position,0) gsc_position FROM tracker_pages WHERE tracker_client_id=$1 AND COALESCE(status,'')<>'deleted' ORDER BY id`,[own.clientId]);
+  const pp=await pool.query(`SELECT id,url,COALESCE(keyword,gsc_keyword,'') keyword,COALESCE(gsc_impressions,0) gsc_impressions,COALESCE(gsc_position,0) gsc_position FROM tracker_pages WHERE tracker_client_id=$1 AND (is_active=TRUE OR is_active IS NULL) ORDER BY id`,[own.clientId]);
   let discovered=0,merged=0,kept=0,pages_checked=0,intelligence_questions=0,ai_gap_questions=0,gsc_questions=0;
   for(const pg of pp.rows){let intel=null;try{intel=await _trackerBuildDerivedIntelligence(own.clientId,pg.id);}catch(e){console.warn('[growth-questions-page]',pg.id,e.message);}if(!intel)continue;pages_checked++;
     const candidates=[];const topic=String(pg.keyword||'this service').trim()||'this service';
@@ -15848,7 +15848,7 @@ async function startServer() {
   }
 
 console.log('════════════════════════════════════════════════════');
-console.log('CONTENTSCALE BUILD: CS-2026-09-24-CANONICAL-v233');
+console.log('CONTENTSCALE BUILD: CS-2026-09-24-CANONICAL-v234');
 console.log('CEO FUNNEL: Private + Public → SAME CEO engine');
 console.log('PUBLIC EMAIL DELIVERY: required');
 console.log('PRIVATE EMAIL DELIVERY: optional');
@@ -18429,7 +18429,7 @@ function _ceoMainWebsiteUrl(input){
 // action must target this CEO endpoint.
 app.post('/api/ceo-report/start',async(req,res)=>{
   let ceoEntry='unknown',ceoUrl='',lastStage='REQUEST';
-  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-24-CANONICAL-v233');
+  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-24-CANONICAL-v234');
   try{
     lastStage='DB_SETUP';
     console.log('[ceo-report] stage=DB_SETUP');
@@ -18523,10 +18523,10 @@ ContentScale`;
     return res.json({success:true,entry_mode:entry,token,selected_page:selected,ceo_report_token:reportToken,ceo_report_url:reportUrl,delivery_email:delivery,updates_opt_in:updatesOptIn});
   }catch(e){
     const msg=String((e&&e.message)||e||'CEO Prospect Report generation failed');
-    console.error('[ceo-report] FAILED build=CS-2026-09-24-CANONICAL-v233 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
+    console.error('[ceo-report] FAILED build=CS-2026-09-24-CANONICAL-v234 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
     console.error('[ceo-report] ERROR: '+msg);
     if(e&&e.stack)console.error(e.stack);
-    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-24-CANONICAL-v233'});
+    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-24-CANONICAL-v234'});
     try{res.end();}catch(_){}
   }
 });
