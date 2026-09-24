@@ -266,7 +266,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-24-CANONICAL-v236';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-24-CANONICAL-v237';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 const CONTENTSCALE_BUILD_CHANGES = [
   'Contact Intelligence: schema-initialisatie is geserialiseerd met één procesbelofte en PostgreSQL advisory lock om pg_type-races te voorkomen.',
@@ -727,7 +727,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-09-24-CANONICAL-v236',
+  build: 'CS-2026-09-24-CANONICAL-v237',
   built_date: '2026-09-23',
   ceo_private: true,
   ceo_public: true,
@@ -15949,7 +15949,7 @@ async function startServer() {
   }
 
 console.log('════════════════════════════════════════════════════');
-console.log('CONTENTSCALE BUILD: CS-2026-09-24-CANONICAL-v236');
+console.log('CONTENTSCALE BUILD: CS-2026-09-24-CANONICAL-v237');
 console.log('CEO FUNNEL: Private + Public → SAME CEO engine');
 console.log('PUBLIC EMAIL DELIVERY: required');
 console.log('PRIVATE EMAIL DELIVERY: optional');
@@ -18530,7 +18530,7 @@ function _ceoMainWebsiteUrl(input){
 // action must target this CEO endpoint.
 app.post('/api/ceo-report/start',async(req,res)=>{
   let ceoEntry='unknown',ceoUrl='',lastStage='REQUEST';
-  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-24-CANONICAL-v236');
+  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-24-CANONICAL-v237');
   try{
     lastStage='DB_SETUP';
     console.log('[ceo-report] stage=DB_SETUP');
@@ -18624,10 +18624,10 @@ ContentScale`;
     return res.json({success:true,entry_mode:entry,token,selected_page:selected,ceo_report_token:reportToken,ceo_report_url:reportUrl,delivery_email:delivery,updates_opt_in:updatesOptIn});
   }catch(e){
     const msg=String((e&&e.message)||e||'CEO Prospect Report generation failed');
-    console.error('[ceo-report] FAILED build=CS-2026-09-24-CANONICAL-v236 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
+    console.error('[ceo-report] FAILED build=CS-2026-09-24-CANONICAL-v237 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
     console.error('[ceo-report] ERROR: '+msg);
     if(e&&e.stack)console.error(e.stack);
-    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-24-CANONICAL-v236'});
+    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-24-CANONICAL-v237'});
     try{res.end();}catch(_){}
   }
 });
@@ -19457,6 +19457,45 @@ function _pqsAdminBorderPolish(){return `<style>
   @media(max-width:760px){#app>.p:first-child,#pqsCampaignBuilder,#pqsEmailQueue{border-width:2px!important;box-shadow:none}#eqList>details>summary{padding:14px 13px!important}#eqList>details>.queueBody{padding:10px!important}}
   @media(prefers-reduced-motion:reduce){#eqList>details{transition:none}}
 </style>`}
+
+function _pqsAdminProfessionalAccordionV237(){return `<style>
+/* v237 Quick Scan Admin: compact, uniform accordion dashboard */
+#app{display:none}
+#app>.adminFold{margin:0 0 10px;border:2px solid #334155;border-radius:12px;background:#07101a;overflow:hidden}
+#app>.adminFold>summary{list-style:none;cursor:pointer;padding:11px 14px;font-size:15px;font-weight:900;letter-spacing:.035em;text-transform:uppercase;background:#08111d;color:#dbeafe;display:flex;align-items:center;gap:8px;user-select:none}
+#app>.adminFold>summary::-webkit-details-marker{display:none}
+#app>.adminFold>summary:before{content:'▸';font-size:14px;color:currentColor;transition:transform .15s ease}
+#app>.adminFold[open]>summary:before{transform:rotate(90deg)}
+#app>.adminFold>.adminFoldBody{padding:16px;border-top:1px solid #243247;background:#0b1420}
+#app>.adminFold[data-admin-rank="10"]{border-color:#f59e0b}#app>.adminFold[data-admin-rank="10"]>summary{color:#fcd34d;background:#1a1408}
+#app>.adminFold[data-admin-rank="20"]{border-color:#fb7185}#app>.adminFold[data-admin-rank="20"]>summary{color:#fda4af;background:#1b0b12}
+#app>.adminFold[data-admin-rank="30"]{border-color:#22d3ee}#app>.adminFold[data-admin-rank="30"]>summary{color:#67e8f9;background:#061923}
+#app>.adminFold[data-admin-rank="40"]{border-color:#a78bfa}#app>.adminFold[data-admin-rank="40"]>summary{color:#c4b5fd;background:#120d24}
+#app>.adminFold[data-admin-rank="50"]{border-color:#38bdf8}#app>.adminFold[data-admin-rank="50"]>summary{color:#7dd3fc;background:#071923}
+#app>.adminFold[data-admin-rank="60"]{border-color:#34d399}#app>.adminFold[data-admin-rank="60"]>summary{color:#6ee7b7;background:#071b16}
+#app>.adminFold[data-admin-rank="70"]{border-color:#60a5fa}#app>.adminFold[data-admin-rank="70"]>summary{color:#93c5fd;background:#081426}
+#app>.adminFold[data-admin-rank="80"]{border-color:#818cf8}#app>.adminFold[data-admin-rank="80"]>summary{color:#a5b4fc;background:#0d1024}
+#app>.adminFold[data-admin-rank="90"]{border-color:#64748b}#app>.adminFold[data-admin-rank="90"]>summary{color:#cbd5e1;background:#101722}
+#app>.adminFold .p{margin-bottom:0}
+@media(max-width:760px){#app>.adminFold>summary{padding:10px 11px;font-size:13px}#app>.adminFold>.adminFoldBody{padding:10px}}
+</style><script>(function(){
+var busy=false,timer=null;
+function info(el){var h=el.querySelector(':scope > h2');var txt=(h?h.textContent:'').trim();var low=txt.toLowerCase();var rank=90;
+ if(low.indexOf('prospect funnel & email activity')>=0)rank=10;
+ else if(low.indexOf('lead crawler email approval queue')>=0)rank=20;
+ else if(low==='prospects'||low.indexOf('prospects')===0)rank=30;
+ else if(low.indexOf('import private lead crawler companies')>=0)rank=40;
+ else if(low.indexOf('two-prompt ai visibility check')>=0)rank=50;
+ else if(low.indexOf('ceo prospect report')>=0)rank=60;
+ else if(low.indexOf('ceo report — private')>=0||low.indexOf('ceo report - private')>=0)rank=70;
+ else if(low.indexOf('ceo report — public')>=0||low.indexOf('ceo report - public')>=0)rank=80;
+ return {title:txt||'Additional admin tools',rank:rank,h:h};}
+function wrap(el){if(!el||el.classList.contains('adminFold')||el.dataset.adminFolded==='1')return null;var x=info(el);var d=document.createElement('details');d.className='adminFold';d.dataset.adminRank=String(x.rank);d.dataset.adminTitle=x.title;d.open=(x.rank===10);var sm=document.createElement('summary');sm.textContent=x.title;var body=document.createElement('div');body.className='adminFoldBody';if(x.h)x.h.remove();while(el.firstChild)body.appendChild(el.firstChild);d.appendChild(sm);d.appendChild(body);el.dataset.adminFolded='1';el.replaceWith(d);return d;}
+function organize(){if(busy)return;busy=true;try{var app=document.getElementById('app');if(!app)return;Array.from(app.children).forEach(function(el){if(el.classList&&el.classList.contains('p')&&!el.classList.contains('adminFold'))wrap(el)});var folds=Array.from(app.children).filter(function(el){return el.classList&&el.classList.contains('adminFold')});folds.sort(function(a,b){return Number(a.dataset.adminRank||90)-Number(b.dataset.adminRank||90)}).forEach(function(el){app.appendChild(el)});}finally{busy=false}}
+function later(){clearTimeout(timer);timer=setTimeout(organize,80)}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){organize();new MutationObserver(later).observe(document.getElementById('app'),{childList:true})});else{organize();var a=document.getElementById('app');if(a)new MutationObserver(later).observe(a,{childList:true})}
+})();<\/script>`}
+
 function _pqsProspectReportAdminV169(){return `<style>#pqsReportPanel{border:2px solid #0ea5e9!important;background:linear-gradient(135deg,#071923,#0d1522)!important}#pqsReportPanel h2{color:#7dd3fc}.pqsReportHistory{display:grid;gap:7px;margin-top:10px}.pqsReportRow{border:1px solid #24445b;border-radius:9px;padding:10px;background:#07111d;display:grid;grid-template-columns:28px minmax(0,1fr) auto;gap:8px 10px;align-items:center}.pqsReportRow .pqsReportCheck{grid-column:1;margin:0;justify-self:center}.pqsReportMain{grid-column:2;min-width:0}.pqsReportActions{grid-column:3;display:flex;gap:6px;align-items:center;justify-self:end}.pqsReportTools{display:grid!important;grid-template-columns:28px minmax(0,1fr) auto;gap:8px 10px;align-items:center;margin-top:12px}.pqsReportTools .pqsReportCheck{grid-column:1;margin:0;justify-self:center}.pqsReportSelectLabel{grid-column:2;display:flex;align-items:center;gap:6px}.pqsReportDeleteWrap{grid-column:3;display:flex;align-items:center;gap:8px;justify-self:end}.pqsReportBadge{display:inline-block;padding:2px 7px;border:1px solid #334155;border-radius:999px;font-size:11px;margin-left:6px;color:#cbd5e1}.pqsGraafBadge{border-color:#a78bfa;color:#ddd6fe}.pqsExternalBadge{border-color:#38bdf8;color:#bae6fd}@media(max-width:760px){.pqsReportRow{grid-template-columns:28px 1fr}.pqsReportActions{grid-column:2;justify-self:start}.pqsReportTools{grid-template-columns:28px 1fr}.pqsReportDeleteWrap{grid-column:2;justify-self:start}}.pqsReportRow.isSelected{border-color:#38bdf8;background:#082033}.pqsReportBtn{background:#075985!important;border-color:#38bdf8!important}.pqsReportTools{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:12px}.pqsReportCheck{width:18px;height:18px;vertical-align:middle;margin-right:8px;accent-color:#0ea5e9}.pqsDeleteBtn{background:#7f1d1d!important;border-color:#ef4444!important}.pqsDeleteBtn:disabled{opacity:.45;cursor:not-allowed}.pqsAnalyzing{display:inline-flex;align-items:center;gap:8px;color:#bae6fd;font-weight:700}.pqsAnalyzing:before{content:'';width:12px;height:12px;border:2px solid #38bdf8;border-top-color:transparent;border-radius:50%;animation:pqsSpin .8s linear infinite}.pqsDots:after{content:'';animation:pqsDots 1.4s steps(4,end) infinite}@keyframes pqsSpin{to{transform:rotate(360deg)}}@keyframes pqsDots{0%{content:''}25%{content:'.'}50%{content:'..'}75%,100%{content:'...'}}@media(prefers-reduced-motion:reduce){.pqsAnalyzing:before{animation:none}.pqsDots:after{animation:none;content:'...'}}.pqsHtmlRequiredBadge{border-color:#f59e0b;color:#fde68a;background:#78350f33}.pqsAddHtmlBtn{background:#78350f!important;border-color:#f59e0b!important;color:#fef3c7!important}.pqsHtmlEditor{grid-column:2/4;border:1px solid #92400e;border-radius:8px;padding:10px;background:#160d05;margin-top:2px}.pqsHtmlEditor textarea{width:100%;min-height:130px;box-sizing:border-box;margin:8px 0}.pqsHtmlEditorActions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}@media(max-width:760px){.pqsHtmlEditor{grid-column:2}} </style><script>(function(){
 function E(s){return String(s==null?'':s).replace(/[&<>\"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[c]})}
 function reportApi(path,opt){opt=opt||{};opt.headers=Object.assign({'Content-Type':'application/json','x-admin-code':window.KEY||localStorage.getItem('pqs_admin_code')||''},opt.headers||{});return fetch(path,opt).then(async function(r){var d=await r.json().catch(function(){return{}});if(!r.ok){var msg=d.error||'Request failed';if(d.detail)msg+=' — '+d.detail;else if(d.report_hint)msg+=' — '+d.report_hint;if(d.invalid_response&&d.invalid_response.final_url)msg+=' ['+d.invalid_response.final_url+']';throw Error(msg)}return d})}
@@ -19473,7 +19512,7 @@ async function deleteSelectedReports(){var tokens=selectedReportTokens(),btn=doc
 function addButtons(){document.querySelectorAll('#list article.card').forEach(function(card){if(card.querySelector('[data-prospect-report]'))return;var del=card.querySelector('[data-delete-scan]'),txt=card.textContent||'';if(/Not scanned yet/i.test(txt))return;var token='';var sel=card.querySelector('[data-token]');if(sel)token=sel.dataset.token||'';if(!token){var ai=card.querySelector('button[onclick*="saveAI"]');var oc=ai&&String(ai.getAttribute('onclick')||'');if(oc){var q1=oc.indexOf("'"),q2=q1>=0?oc.indexOf("'",q1+1):-1;if(q1>=0&&q2>q1)token=oc.slice(q1+1,q2)}}if(!token)return;var row=card.querySelector('.row')||card,b=document.createElement('button');b.className='btn pqsReportBtn';b.dataset.prospectReport='1';b.textContent='Create Prospect Report';b.title='Interest shown: run the broader site report now. 5/5 AI is optional.';b.onclick=function(){generateFromQuick(token,b)};row.appendChild(b)})}
 var mo=new MutationObserver(function(){ensurePanel();addButtons()});mo.observe(document.documentElement,{childList:true,subtree:true});setInterval(function(){ensurePanel();addButtons()},1200);document.addEventListener('click',function(e){if(e.target&&e.target.id==='pqsReportRefresh')loadHistory()});ensurePanel();addButtons();
 })();<\/script>`}
-app.get('/quick-scan/admin',(req,res)=>{const h=_pqsFixRenderedAdminHtml(_pqsAdminHtml());const pre=`<script>(function(){
+app.get('/quick-scan/admin',(req,res)=>{const h=_pqsFixRenderedAdminHtml(_pqsAdminHtml())+_pqsAdminProfessionalAccordionV237();const pre=`<script>(function(){
   var q=new URLSearchParams(location.search),u=q.get('url'),s=q.get('source'),n=q.get('name');
   if(u&&document.getElementById('url'))document.getElementById('url').value=u;
   if(n&&document.getElementById('name'))document.getElementById('name').value=n;
