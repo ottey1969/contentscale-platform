@@ -266,7 +266,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-24-CANONICAL-v240';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-24-CANONICAL-v241';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 const CONTENTSCALE_BUILD_CHANGES = [
   'Contact Intelligence: schema-initialisatie is geserialiseerd met één procesbelofte en PostgreSQL advisory lock om pg_type-races te voorkomen.',
@@ -727,7 +727,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-09-24-CANONICAL-v240',
+  build: 'CS-2026-09-24-CANONICAL-v241',
   built_date: '2026-09-23',
   ceo_private: true,
   ceo_public: true,
@@ -15949,7 +15949,7 @@ async function startServer() {
   }
 
 console.log('════════════════════════════════════════════════════');
-console.log('CONTENTSCALE BUILD: CS-2026-09-24-CANONICAL-v240');
+console.log('CONTENTSCALE BUILD: CS-2026-09-24-CANONICAL-v241');
 console.log('CEO FUNNEL: Private + Public → SAME CEO engine');
 console.log('PUBLIC EMAIL DELIVERY: required');
 console.log('PRIVATE EMAIL DELIVERY: optional');
@@ -17724,6 +17724,8 @@ function _ensureProspectQuickScanTable(){
   ALTER TABLE prospect_quick_scans ADD COLUMN IF NOT EXISTS outreach_error TEXT;
   ALTER TABLE prospect_quick_scans ADD COLUMN IF NOT EXISTS outreach_message_id TEXT;
   ALTER TABLE prospect_quick_scans ADD COLUMN IF NOT EXISTS outreach_attempts INTEGER DEFAULT 0;
+  ALTER TABLE prospect_quick_scans ADD COLUMN IF NOT EXISTS outreach_copy_variant INTEGER;
+  ALTER TABLE prospect_quick_scans ADD COLUMN IF NOT EXISTS outreach_copy_language VARCHAR(8);
   ALTER TABLE prospect_quick_scans ADD COLUMN IF NOT EXISTS email_lookup_status VARCHAR(24);
   ALTER TABLE prospect_quick_scans ADD COLUMN IF NOT EXISTS email_lookup_checked_at TIMESTAMPTZ;
   ALTER TABLE prospect_quick_scans ADD COLUMN IF NOT EXISTS email_lookup_source TEXT;
@@ -18319,7 +18321,7 @@ async function _pqsOutreachTiming(){
   const row=q.rows[0]||{},now=new Date(),last=row.last_sent_at?new Date(row.last_sent_at):null,today=Number(row.sent_today||0),next=last?new Date(last.getTime()+24*60*60*1000):now,can=today>0||!last||now>=next;
   return{timezone:'Asia/Manila',server_now:now.toISOString(),last_sent_at:last?last.toISOString():null,last_yesterday_at:row.last_yesterday_at?new Date(row.last_yesterday_at).toISOString():null,sent_today:today,next_allowed_at:next.toISOString(),can_send_now:can,reason:can?'Sending window is open':'Wait until 24 hours after the previous successful send'}
 }
-app.get('/api/prospect-quick-scan/admin/list',requireAdmin,async(req,res)=>{if(!await _ensureProspectQuickScanTable())return res.status(503).json({success:false});try{const q=await pool.query(`SELECT * FROM prospect_quick_scans WHERE revoked_at IS NULL ORDER BY created_at DESC LIMIT 1000`),outreachSchedule=await _pqsOutreachTiming();res.json({success:true,outreach_schedule:outreachSchedule,items:q.rows.map(r=>({..._pqsPublicRow(r),contact_email:r.contact_email||'',campaign:r.campaign||'',opened_count:Number(r.opened_count||0),first_opened_at:r.first_opened_at,last_opened_at:r.last_opened_at,follow_up_status:r.follow_up_status||'not_contacted',outreach_email_status:r.outreach_email_status||'draft',outreach_subject:r.outreach_subject||'',outreach_body:r.outreach_body||'',outreach_approved_at:r.outreach_approved_at,outreach_sent_at:r.outreach_sent_at,outreach_error:r.outreach_error||'',outreach_attempts:Number(r.outreach_attempts||0),email_lookup_status:r.email_lookup_status||'',email_lookup_checked_at:r.email_lookup_checked_at||null,email_lookup_source:r.email_lookup_source||'',ceo_report_url:r.ceo_report_url||'',ceo_report_token:r.ceo_report_token||'',ceo_report_page_url:r.ceo_report_page_url||'',two_page_overview:r.two_page_overview||null,two_page_overview_created_at:r.two_page_overview_created_at||null,quickscan_interested:!!r.quickscan_interested,quickscan_interested_at:r.quickscan_interested_at||null,audit20_interested:!!r.audit20_interested,audit20_interested_at:r.audit20_interested_at||null,audit20_interest_note:r.audit20_interest_note||'',gsc_status:r.gsc_status||'not_connected',gsc_requested_at:r.gsc_requested_at||null,gsc_connected_at:r.gsc_connected_at||null,audit20_status:r.audit20_status||'not_started',audit20_ready_at:r.audit20_ready_at||null,audit20_report_url:r.audit20_report_url||'',tracker_interested:!!r.tracker_interested,tracker_interested_at:r.tracker_interested_at||null,ceo_delivery_email_sent_at:r.ceo_delivery_email_sent_at||null,ceo_delivery_email_error:r.ceo_delivery_email_error||'',updates_opt_in:!!r.updates_opt_in,outreach_followup_due_at:r.outreach_followup_due_at||null,outreach_followup_sent_at:r.outreach_followup_sent_at||null,share_url:req.protocol+'://'+req.get('host')+'/quick-scan/'+r.token}))});}catch(e){res.status(500).json({success:false,error:e.message});}});
+app.get('/api/prospect-quick-scan/admin/list',requireAdmin,async(req,res)=>{if(!await _ensureProspectQuickScanTable())return res.status(503).json({success:false});try{const q=await pool.query(`SELECT * FROM prospect_quick_scans WHERE revoked_at IS NULL ORDER BY created_at DESC LIMIT 1000`),outreachSchedule=await _pqsOutreachTiming();res.json({success:true,outreach_schedule:outreachSchedule,items:q.rows.map(r=>({..._pqsPublicRow(r),contact_email:r.contact_email||'',campaign:r.campaign||'',opened_count:Number(r.opened_count||0),first_opened_at:r.first_opened_at,last_opened_at:r.last_opened_at,follow_up_status:r.follow_up_status||'not_contacted',outreach_email_status:r.outreach_email_status||'draft',outreach_subject:r.outreach_subject||'',outreach_body:r.outreach_body||'',outreach_approved_at:r.outreach_approved_at,outreach_sent_at:r.outreach_sent_at,outreach_error:r.outreach_error||'',outreach_attempts:Number(r.outreach_attempts||0),outreach_copy_variant:r.outreach_copy_variant?Number(r.outreach_copy_variant):null,outreach_copy_language:r.outreach_copy_language||'',email_lookup_status:r.email_lookup_status||'',email_lookup_checked_at:r.email_lookup_checked_at||null,email_lookup_source:r.email_lookup_source||'',ceo_report_url:r.ceo_report_url||'',ceo_report_token:r.ceo_report_token||'',ceo_report_page_url:r.ceo_report_page_url||'',two_page_overview:r.two_page_overview||null,two_page_overview_created_at:r.two_page_overview_created_at||null,quickscan_interested:!!r.quickscan_interested,quickscan_interested_at:r.quickscan_interested_at||null,audit20_interested:!!r.audit20_interested,audit20_interested_at:r.audit20_interested_at||null,audit20_interest_note:r.audit20_interest_note||'',gsc_status:r.gsc_status||'not_connected',gsc_requested_at:r.gsc_requested_at||null,gsc_connected_at:r.gsc_connected_at||null,audit20_status:r.audit20_status||'not_started',audit20_ready_at:r.audit20_ready_at||null,audit20_report_url:r.audit20_report_url||'',tracker_interested:!!r.tracker_interested,tracker_interested_at:r.tracker_interested_at||null,ceo_delivery_email_sent_at:r.ceo_delivery_email_sent_at||null,ceo_delivery_email_error:r.ceo_delivery_email_error||'',updates_opt_in:!!r.updates_opt_in,outreach_followup_due_at:r.outreach_followup_due_at||null,outreach_followup_sent_at:r.outreach_followup_sent_at||null,share_url:req.protocol+'://'+req.get('host')+'/quick-scan/'+r.token}))});}catch(e){res.status(500).json({success:false,error:e.message});}});
 app.post('/api/prospect-quick-scan/admin/email-enrich',requireAdmin,async(req,res)=>{
   if(!await _ensureProspectQuickScanTable())return res.status(503).json({success:false,error:'DB unavailable'});const limit=Math.max(1,Math.min(12,Number((req.body||{}).limit)||8)),retry=!!(req.body&&req.body.retry);
   try{
@@ -18384,44 +18386,59 @@ app.post('/api/prospect-quick-scan/admin/:token/email-prepare',requireAdmin,asyn
 // honest and lightweight; the prospect chooses to run the report after clicking.
 const _PQS_PUBLIC_CEO_URL='https://app.contentscale.site/quick-scan/start?source=lead-crawler';
 function _pqsPublicCeoUrl(language){return _PQS_PUBLIC_CEO_URL+'&language='+encodeURIComponent(_pqsResolveLanguage(language,''));}
-function _pqsStableVariant(seed,count=6){
+function _pqsStableVariant(seed,count=10){
+  // Deterministic rotation: leads are distributed across all 10 variants, while
+  // preview/retry for the same lead keeps the same copy for clean measurement.
   const h=crypto.createHash('sha256').update(String(seed||'contentscale')).digest();
-  return h[0]%count;
+  return h.readUInt16BE(0)%count;
 }
 function _pqsLeadCrawlerCopy(row){
-  const company=String(row.business_name||row.domain||'your team').trim();
+  const company=String(row.business_name||row.domain||'your business').trim();
   const locale=_pqsResolveLanguage(row.language,row.domain);
-  const v=_pqsStableVariant(row.token||row.contact_email||row.domain,6);
+  const v=_pqsStableVariant(row.token||row.contact_email||row.domain,10);
   const link=_pqsPublicCeoUrl(locale);
+  // v241: deliberately short first-contact copy. One angle (Google + AI search),
+  // one bait (free public CEO Report), no long product explanation or call request.
   const sets={
     en:[
-      [company+' — a quick website question','Hi '+company+' team,\n\nI came across your website and thought this might be useful. ContentScale can look across the site, select a commercially important page with room for improvement, and turn the findings into a short CEO Prospect Report.\n\nYou can run it here if you would like to see what it finds:\n\n'+link+'\n\nThere is nothing to install. If the report is useful, you can decide whether you want to take the next step.\n\nRegards,\nOttmar Francisca\nhttps://contentscale.site'],
-      ['A thought for '+company,'Hi '+company+' team,\n\nWhile looking at businesses in your space, I found '+company+'. I built a public ContentScale tool that checks a website for a high-priority page that may deserve more attention.\n\nIf you are curious, you can generate the CEO Prospect Report here:\n\n'+link+'\n\nIt is simply a first look. You can review the findings and leave it there if they are not relevant.\n\nRegards,\nOttmar Francisca\nhttps://contentscale.site'],
-      [company+' website — something you may find useful','Hello '+company+' team,\n\nI wanted to pass along a website analysis tool I have been working on. It explores the site and looks for a meaningful commercial page where the clearest improvement opportunity appears to be.\n\nHere is the public CEO Prospect Report:\n\n'+link+'\n\nYou choose whether to run it. Nothing is installed and there is no need to prepare anything first.\n\nRegards,\nOttmar Francisca\nhttps://contentscale.site'],
-      ['For the team at '+company,'Hi '+company+' team,\n\nI found your website during some prospect research and wanted to share something rather than send a long introduction. ContentScale can generate a short CEO-level review of one important page on a website.\n\nIf that sounds useful, the report starts here:\n\n'+link+'\n\nHave a look only if it is relevant to what you are working on.\n\nRegards,\nOttmar Francisca\nhttps://contentscale.site'],
-      ['Could this be useful for '+company+'?','Hello '+company+' team,\n\nA quick note because I came across your website. I am building ContentScale to identify practical website opportunities without asking a company to install software or connect accounts first.\n\nThe public CEO Prospect Report is here:\n\n'+link+'\n\nIt will inspect the website, choose one relevant page and show the findings. If there is nothing useful in it, no further step is needed.\n\nRegards,\nOttmar Francisca\nhttps://contentscale.site'],
-      ['Website review for '+company,'Hi '+company+' team,\n\nRather than guess what might matter on your website, I thought it would be more useful to let the analysis show it. ContentScale can select one commercially relevant page and create a concise CEO Prospect Report around the opportunities it actually finds.\n\nYou can start it here:\n\n'+link+'\n\nIt is optional and there is nothing to install.\n\nRegards,\nOttmar Francisca\nhttps://contentscale.site']
+      ['Google + AI search — '+company,`Hello ${company},\n\nGoogle + AI search is changing how customers find businesses. See where your website may have opportunities:\n\n${link}\n\nFree CEO Report — no signup or call required.\n\nBest,\nOttmar`],
+      ['A quick Google + AI check for '+company,`Hello ${company},\n\nWant to see how your website looks from a Google + AI search opportunity perspective?\n\n${link}\n\nYour free CEO Report takes the first look for you.\n\nBest,\nOttmar`],
+      [company+' — worth checking in AI search',`Hello ${company},\n\nAI search is changing visibility. Your website may have opportunities worth seeing.\n\n${link}\n\nRun the free CEO Report.\n\nBest,\nOttmar`],
+      ['Could '+company+' be missing search opportunities?',`Hello ${company},\n\nI thought this might be useful: a quick CEO-level look at possible Google + AI search opportunities on your website.\n\n${link}\n\nFree to run.\n\nBest,\nOttmar`],
+      ['How visible is '+company+' in the new search landscape?',`Hello ${company},\n\nGoogle is no longer the whole search journey. See what your website may be missing across Google + AI search:\n\n${link}\n\nFree CEO Report.\n\nBest,\nOttmar`],
+      [company+' website — one quick check',`Hello ${company},\n\nOne quick check can show where your website has room to improve for Google + AI search.\n\n${link}\n\nSee your free CEO Report.\n\nBest,\nOttmar`],
+      ['AI search opportunity for '+company,`Hello ${company},\n\nCustomers are increasingly finding answers through AI as well as Google. See the opportunities your website may have:\n\n${link}\n\nFree CEO Report.\n\nBest,\nOttmar`],
+      ['A 1-minute website opportunity check',`Hello ${company},\n\nCurious where your website could be stronger for Google + AI search?\n\n${link}\n\nStart the free CEO Report. No call required.\n\nBest,\nOttmar`],
+      [company+' — Google + AI visibility',`Hello ${company},\n\nYour website may be leaving Google + AI search opportunities on the table. This gives you a quick first look:\n\n${link}\n\nFree CEO Report.\n\nBest,\nOttmar`],
+      ['Something worth seeing for '+company,`Hello ${company},\n\nSearch is changing fast. I thought you might want to see where your website has opportunities in Google + AI search.\n\n${link}\n\nFree CEO Report — short and practical.\n\nBest,\nOttmar`]
     ],
     nl:[
-      [company+' — een korte vraag over jullie website','Hallo '+company+' team,\n\nIk kwam jullie website tegen en dacht dat dit misschien nuttig is. ContentScale kan de site bekijken, een commercieel belangrijke pagina met verbeterpotentieel selecteren en daarvan een kort CEO Prospect Report maken.\n\nAls jullie benieuwd zijn, kun je het rapport hier zelf starten:\n\n'+link+'\n\nEr hoeft niets geïnstalleerd te worden. Als de bevindingen nuttig zijn, bepalen jullie zelf of een volgende stap interessant is.\n\nMet vriendelijke groet,\nOttmar Francisca\nhttps://contentscale.site'],
-      ['Een gedachte voor '+company,'Hallo '+company+' team,\n\nTijdens mijn onderzoek naar bedrijven kwam ik '+company+' tegen. Ik heb een publieke ContentScale-tool gebouwd die een website onderzoekt en zoekt naar een belangrijke commerciële pagina waar duidelijke verbeterkansen liggen.\n\nAls je nieuwsgierig bent, kun je hier het CEO Prospect Report genereren:\n\n'+link+'\n\nHet is alleen een eerste analyse. Als de uitkomst niet relevant is, hoeft er verder niets mee te gebeuren.\n\nMet vriendelijke groet,\nOttmar Francisca\nhttps://contentscale.site'],
-      [company+' website — misschien interessant','Hallo '+company+' team,\n\nIk wilde iets delen waar ik aan werk. ContentScale onderzoekt een website en zoekt naar een betekenisvolle commerciële pagina waar de duidelijkste verbeterkans lijkt te zitten.\n\nHier kun je het publieke CEO Prospect Report starten:\n\n'+link+'\n\nJullie bepalen zelf of je het wilt uitvoeren. Er hoeft niets geïnstalleerd of gekoppeld te worden.\n\nMet vriendelijke groet,\nOttmar Francisca\nhttps://contentscale.site'],
-      ['Voor het team van '+company,'Hallo '+company+' team,\n\nIk vond jullie website tijdens prospectonderzoek en stuur liever iets concreets dan een lange introductie. ContentScale kan een korte CEO-analyse maken van één belangrijke pagina op de website.\n\nAls dat relevant klinkt, start het rapport hier:\n\n'+link+'\n\nBekijk het alleen als het aansluit bij waar jullie mee bezig zijn.\n\nMet vriendelijke groet,\nOttmar Francisca\nhttps://contentscale.site'],
-      ['Misschien nuttig voor '+company+'?','Hallo '+company+' team,\n\nEen kort bericht omdat ik jullie website tegenkwam. Ik bouw ContentScale om praktische websitekansen te vinden zonder dat een bedrijf eerst software hoeft te installeren of accounts hoeft te koppelen.\n\nHet publieke CEO Prospect Report staat hier:\n\n'+link+'\n\nDe analyse kiest zelf een relevante pagina en laat zien wat er daadwerkelijk wordt gevonden. Als er niets bruikbaars uitkomt, is er geen verdere stap nodig.\n\nMet vriendelijke groet,\nOttmar Francisca\nhttps://contentscale.site'],
-      ['Website-analyse voor '+company,'Hallo '+company+' team,\n\nIn plaats van vooraf te raden wat er op jullie website beter kan, laat ik liever de analyse bepalen waar een echte kans zit. ContentScale selecteert een commercieel relevante pagina en maakt daarvan een beknopt CEO Prospect Report.\n\nJe kunt het hier starten:\n\n'+link+'\n\nHet is vrijblijvend en er hoeft niets geïnstalleerd te worden.\n\nMet vriendelijke groet,\nOttmar Francisca\nhttps://contentscale.site']
+      ['Google + AI search — '+company,`Hallo ${company},\n\nGoogle + AI search verandert hoe klanten bedrijven vinden. Bekijk waar jullie website kansen kan hebben:\n\n${link}\n\nGratis CEO Report — geen registratie of gesprek nodig.\n\nGroet,\nOttmar`],
+      ['Een snelle Google + AI check voor '+company,`Hallo ${company},\n\nBenieuwd hoe jullie website ervoor staat vanuit Google + AI search kansen?\n\n${link}\n\nHet gratis CEO Report geeft de eerste analyse.\n\nGroet,\nOttmar`],
+      [company+' — interessant om in AI search te checken',`Hallo ${company},\n\nAI search verandert online zichtbaarheid. Jullie website kan kansen hebben die het bekijken waard zijn.\n\n${link}\n\nStart het gratis CEO Report.\n\nGroet,\nOttmar`],
+      ['Mist '+company+' kansen in search?',`Hallo ${company},\n\nMisschien interessant: een korte CEO-analyse van mogelijke Google + AI search kansen op jullie website.\n\n${link}\n\nGratis te gebruiken.\n\nGroet,\nOttmar`],
+      ['Hoe zichtbaar is '+company+' in het nieuwe zoeken?',`Hallo ${company},\n\nGoogle is niet meer de hele zoekreis. Bekijk wat jullie website mogelijk mist in Google + AI search:\n\n${link}\n\nGratis CEO Report.\n\nGroet,\nOttmar`],
+      [company+' website — één snelle check',`Hallo ${company},\n\nEén snelle check laat zien waar jullie website sterker kan worden voor Google + AI search.\n\n${link}\n\nBekijk het gratis CEO Report.\n\nGroet,\nOttmar`],
+      ['AI search kans voor '+company,`Hallo ${company},\n\nKlanten vinden antwoorden steeds vaker via AI én Google. Bekijk welke kansen jullie website mogelijk heeft:\n\n${link}\n\nGratis CEO Report.\n\nGroet,\nOttmar`],
+      ['Een websitecheck van 1 minuut',`Hallo ${company},\n\nBenieuwd waar jullie website sterker kan worden voor Google + AI search?\n\n${link}\n\nStart het gratis CEO Report. Geen gesprek nodig.\n\nGroet,\nOttmar`],
+      [company+' — Google + AI zichtbaarheid',`Hallo ${company},\n\nJullie website laat mogelijk kansen liggen in Google + AI search. Dit geeft een snelle eerste indruk:\n\n${link}\n\nGratis CEO Report.\n\nGroet,\nOttmar`],
+      ['Iets interessants voor '+company,`Hallo ${company},\n\nZoeken verandert snel. Daarom dacht ik dat je misschien wilt zien waar jullie website kansen heeft in Google + AI search.\n\n${link}\n\nGratis CEO Report — kort en praktisch.\n\nGroet,\nOttmar`]
+    ],
+    es:[
+      ['Google + búsqueda con IA — '+company,`Hola ${company},\n\nGoogle + la búsqueda con IA están cambiando cómo los clientes encuentran empresas. Vea dónde su web puede tener oportunidades:\n\n${link}\n\nCEO Report gratis — sin registro ni llamada.\n\nSaludos,\nOttmar`],
+      ['Una revisión rápida de Google + IA para '+company,`Hola ${company},\n\n¿Quiere ver su web desde la perspectiva de oportunidades en Google + búsqueda con IA?\n\n${link}\n\nEl CEO Report gratuito hace la primera revisión.\n\nSaludos,\nOttmar`],
+      [company+' — vale la pena revisar la búsqueda con IA',`Hola ${company},\n\nLa búsqueda con IA está cambiando la visibilidad online. Su web puede tener oportunidades que vale la pena ver.\n\n${link}\n\nGenere el CEO Report gratis.\n\nSaludos,\nOttmar`],
+      ['¿Está '+company+' perdiendo oportunidades de búsqueda?',`Hola ${company},\n\nQuizá le resulte útil: una revisión breve para dirección sobre posibles oportunidades en Google + búsqueda con IA.\n\n${link}\n\nGratis.\n\nSaludos,\nOttmar`],
+      ['¿Qué visibilidad tiene '+company+' en la nueva búsqueda?',`Hola ${company},\n\nGoogle ya no es todo el recorrido de búsqueda. Vea qué puede estar perdiendo su web en Google + IA:\n\n${link}\n\nCEO Report gratis.\n\nSaludos,\nOttmar`],
+      [company+' — una revisión rápida de la web',`Hola ${company},\n\nUna revisión rápida puede mostrar dónde su web puede mejorar para Google + búsqueda con IA.\n\n${link}\n\nVea el CEO Report gratis.\n\nSaludos,\nOttmar`],
+      ['Oportunidad de búsqueda con IA para '+company,`Hola ${company},\n\nLos clientes encuentran respuestas cada vez más a través de IA además de Google. Vea las oportunidades que puede tener su web:\n\n${link}\n\nCEO Report gratis.\n\nSaludos,\nOttmar`],
+      ['Una revisión web de 1 minuto',`Hola ${company},\n\n¿Quiere ver dónde su web podría ser más fuerte en Google + búsqueda con IA?\n\n${link}\n\nGenere el CEO Report gratis. Sin llamada.\n\nSaludos,\nOttmar`],
+      [company+' — visibilidad en Google + IA',`Hola ${company},\n\nSu web puede estar dejando oportunidades sin aprovechar en Google + búsqueda con IA. Aquí tiene una primera revisión:\n\n${link}\n\nCEO Report gratis.\n\nSaludos,\nOttmar`],
+      ['Algo que vale la pena ver para '+company,`Hola ${company},\n\nLa búsqueda está cambiando rápido. Quizá quiera ver dónde su web tiene oportunidades en Google + búsqueda con IA.\n\n${link}\n\nCEO Report gratis — breve y práctico.\n\nSaludos,\nOttmar`]
     ]
   };
-  sets.es=[
-    [company+' — una pregunta rápida sobre su web','Hola equipo de '+company+',\n\nEncontré su sitio web y pensé que esto podría resultar útil. ContentScale puede revisar el sitio, seleccionar una página comercial importante con margen de mejora y convertir los hallazgos en un breve CEO Prospect Report.\n\nSi tienen curiosidad, pueden iniciar el informe aquí:\n\n'+link+'\n\nNo hay que instalar nada. Si el informe resulta útil, ustedes deciden si quieren dar el siguiente paso.\n\nSaludos,\nOttmar Francisca\nhttps://contentscale.site'],
-    ['Una idea para '+company,'Hola equipo de '+company+',\n\nDurante mi investigación encontré '+company+'. He creado una herramienta pública de ContentScale que revisa un sitio web y busca una página comercial prioritaria que pueda merecer más atención.\n\nPueden generar el CEO Prospect Report aquí:\n\n'+link+'\n\nEs solo un primer análisis. Si el resultado no es relevante, no es necesario hacer nada más.\n\nSaludos,\nOttmar Francisca\nhttps://contentscale.site'],
-    [company+' — quizá les resulte útil','Hola equipo de '+company+',\n\nQuería compartir una herramienta de análisis web en la que estoy trabajando. ContentScale explora el sitio y busca una página comercial relevante donde parezca existir una oportunidad clara de mejora.\n\nPueden iniciar el CEO Prospect Report aquí:\n\n'+link+'\n\nUstedes deciden si quieren ejecutarlo. No hay que instalar ni conectar nada.\n\nSaludos,\nOttmar Francisca\nhttps://contentscale.site'],
-    ['Para el equipo de '+company,'Hola equipo de '+company+',\n\nEncontré su sitio durante una investigación y prefiero compartir algo concreto en lugar de enviar una larga presentación. ContentScale puede crear una breve revisión para dirección de una página importante del sitio.\n\nSi les parece relevante, el informe comienza aquí:\n\n'+link+'\n\nRevísenlo solo si encaja con lo que están trabajando.\n\nSaludos,\nOttmar Francisca\nhttps://contentscale.site'],
-    ['¿Podría ser útil para '+company+'?','Hola equipo de '+company+',\n\nUn mensaje breve porque encontré su sitio web. Estoy desarrollando ContentScale para identificar oportunidades prácticas sin pedir primero instalar software o conectar cuentas.\n\nEl CEO Prospect Report público está aquí:\n\n'+link+'\n\nAnaliza el sitio, elige una página relevante y muestra lo que encuentra. Si no aporta nada útil, no hace falta continuar.\n\nSaludos,\nOttmar Francisca\nhttps://contentscale.site'],
-    ['Revisión web para '+company,'Hola equipo de '+company+',\n\nEn lugar de adivinar de antemano qué podría mejorar en su web, prefiero dejar que el análisis identifique dónde existe una oportunidad real. ContentScale selecciona una página comercial relevante y crea un CEO Prospect Report conciso.\n\nPueden iniciarlo aquí:\n\n'+link+'\n\nEs opcional y no hay que instalar nada.\n\nSaludos,\nOttmar Francisca\nhttps://contentscale.site']
-  ];
-  const arr=locale==='nl'?sets.nl:locale==='es'?sets.es:sets.en;
-  const pair=arr[v];
-  return {subject:pair[0],body:pair[1],variant:v+1,url:link};
+  const pair=(sets[locale]||sets.en)[v];
+  return {subject:pair[0],body:pair[1],variant:v+1,language:locale,url:link};
 }
 app.post('/api/prospect-quick-scan/admin/:token/email-send',requireAdmin,async(req,res)=>{
   if(!await _ensureProspectQuickScanTable())return res.status(503).json({success:false,error:'DB unavailable'});
@@ -18467,7 +18484,7 @@ app.post('/api/prospect-quick-scan/admin/:token/email-send',requireAdmin,async(r
 
     const rr=await fetch('https://api.brevo.com/v3/smtp/email',{method:'POST',headers:{'Content-Type':'application/json','api-key':key},body:JSON.stringify({to:[{email,name:company}],sender:{email:process.env.FROM_EMAIL||'info@contentscale.site',name:process.env.SENDER_NAME||'Ottmar Francisca · ContentScale'},replyTo:{email:process.env.FROM_EMAIL||'info@contentscale.site',name:'Ottmar Francisca'},subject,htmlContent:html,textContent:body+'\n\nUnsubscribe: '+unsub})}),data=await rr.json().catch(()=>({}));
     if(!rr.ok)throw new Error(String(data.message||data.error||('Brevo '+rr.status)).slice(0,1000));
-    await pool.query(`UPDATE prospect_quick_scans SET outreach_email_status='sent',outreach_subject=$1,outreach_body=$2,outreach_sent_at=NOW(),outreach_message_id=$3,outreach_followup_due_at=NOW()+INTERVAL '7 days',follow_up_status=CASE WHEN follow_up_status='not_contacted' THEN 'contacted' ELSE follow_up_status END,updated_at=NOW() WHERE token=$4`,[subject,body,String(data.messageId||data.message_id||''),token]);
+    await pool.query(`UPDATE prospect_quick_scans SET outreach_email_status='sent',outreach_subject=$1,outreach_body=$2,outreach_sent_at=NOW(),outreach_message_id=$3,outreach_copy_variant=$4,outreach_copy_language=$5,outreach_followup_due_at=NOW()+INTERVAL '7 days',follow_up_status=CASE WHEN follow_up_status='not_contacted' THEN 'contacted' ELSE follow_up_status END,updated_at=NOW() WHERE token=$6`,[subject,body,String(data.messageId||data.message_id||''),publicCopy.variant,publicCopy.language,token]);
     res.json({success:true,status:'sent',sent_at:new Date().toISOString(),recipient:email,subject,public_ceo_url:ceoUrl,copy_variant:publicCopy.variant,follow_up_in_days:7});
   }catch(e){if(row)await pool.query(`UPDATE prospect_quick_scans SET outreach_email_status='failed',outreach_error=$1,updated_at=NOW() WHERE token=$2`,[String(e.message||e).slice(0,1000),token]).catch(()=>{});res.status(502).json({success:false,error:e.message||'Email send failed'});}
 });
@@ -18530,7 +18547,7 @@ function _ceoMainWebsiteUrl(input){
 // action must target this CEO endpoint.
 app.post('/api/ceo-report/start',async(req,res)=>{
   let ceoEntry='unknown',ceoUrl='',lastStage='REQUEST';
-  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-24-CANONICAL-v240');
+  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-24-CANONICAL-v241');
   try{
     lastStage='DB_SETUP';
     console.log('[ceo-report] stage=DB_SETUP');
@@ -18624,10 +18641,10 @@ ContentScale`;
     return res.json({success:true,entry_mode:entry,token,selected_page:selected,ceo_report_token:reportToken,ceo_report_url:reportUrl,delivery_email:delivery,updates_opt_in:updatesOptIn});
   }catch(e){
     const msg=String((e&&e.message)||e||'CEO Prospect Report generation failed');
-    console.error('[ceo-report] FAILED build=CS-2026-09-24-CANONICAL-v240 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
+    console.error('[ceo-report] FAILED build=CS-2026-09-24-CANONICAL-v241 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
     console.error('[ceo-report] ERROR: '+msg);
     if(e&&e.stack)console.error(e.stack);
-    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-24-CANONICAL-v240'});
+    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-24-CANONICAL-v241'});
     try{res.end();}catch(_){}
   }
 });
