@@ -266,7 +266,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-24-CANONICAL-v235';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-24-CANONICAL-v236';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 const CONTENTSCALE_BUILD_CHANGES = [
   'Contact Intelligence: schema-initialisatie is geserialiseerd met één procesbelofte en PostgreSQL advisory lock om pg_type-races te voorkomen.',
@@ -727,7 +727,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-09-24-CANONICAL-v235',
+  build: 'CS-2026-09-24-CANONICAL-v236',
   built_date: '2026-09-23',
   ceo_private: true,
   ceo_public: true,
@@ -4439,7 +4439,48 @@ async function _ensureTrackerOwnerQuestions(){
   )`);
   await pool.query('CREATE INDEX IF NOT EXISTS tracker_owner_questions_client_status_idx ON tracker_owner_questions(tracker_client_id,status,last_seen_at DESC)');
 }
-function _ownerQuestionFingerprint(q){return crypto.createHash('sha256').update(String(q.category||'').trim().toLowerCase()+'|'+String(q.question||'').trim().toLowerCase().replace(/\\s+/g,' ')).digest('hex');}
+function _ownerQuestionCanonical(q){
+  const cat=String(q.category||'Business fact').trim();
+  const text=String(q.question||'').trim();
+  const n=text.toLowerCase().replace(/[“”"']/g,'').replace(/[^a-z0-9]+/g,' ').trim();
+  // Owner Input is a company-wide interview queue. Canonicalise only questions that ask for the
+  // same underlying owner fact; service-specific factual questions remain separate.
+  if(/guarantee|warrant/.test(n))return {key:'guarantees',category:'Guarantees',question:'Which guarantees or warranties apply exactly, including limits and duration?'};
+  if(/real completed project|customer situation|project record|first party experience/.test(n))return {key:'first-party-project-proof',category:'First-party experience',question:'Which real completed projects or customer situations can we document across your services, including location, problem, solution and outcome?'};
+  if(/conditions make you recommend|decide which solution|less expensive option|more expensive option/.test(n))return {key:'decision-criteria',category:'Decision criteria',question:'What real conditions does your team use to decide which solution to recommend, including when you would advise a different or less expensive option?'};
+  if(/what exactly does the business deliver|explicitly not included|service scope/.test(n))return {key:'service-scope',category:'Service scope',question:'What exactly does the business deliver across its services, and what is explicitly not included?'};
+  if(/response time|how quickly|arrival time|dispatch time/.test(n))return {key:'response-time',category:'Response time',question:'What response or arrival times can you truthfully promise, and what factors can change them?'};
+  if(/material|system.*install|install.*system|shingle|epdm|tpo|modified bitumen/.test(n))return {key:'materials-systems',category:'Materials & systems',question:'Which roofing materials and systems do you actually install, repair or recommend, and when do you choose each one?'};
+  if(/insurance|claim/.test(n))return {key:'insurance-assistance',category:'Insurance assistance',question:'What exactly can your team help a customer with during an insurance-related roofing claim, and what do you not promise or handle?'};
+  if(/local experience|service area|which (cities|counties|areas)|locations do you/.test(n))return {key:'local-proof',category:'Local proof',question:'What real local experience, recurring roof problems or completed projects can we document for the locations you serve?'};
+  return {key:'specific:'+cat.toLowerCase()+'|'+n,category:cat,question:text};
+}
+function _ownerQuestionFingerprint(q){const c=_ownerQuestionCanonical(q);return crypto.createHash('sha256').update(c.key).digest('hex');}
+function _ownerQuestionIsUtilityPage(pg){
+  const u=String(pg.url||'').toLowerCase(), k=String(pg.keyword||'').toLowerCase().trim();
+  return /\/(about-us?|contact-us?|faqs?|privacy|terms|cookie|thank-you)(\/|$)/.test(u)||['about us','contact us','faqs','faq','perfectroofingteam'].includes(k);
+}
+async function _mergeOpenOwnerQuestions(clientId){
+  const rr=await pool.query(`SELECT * FROM tracker_owner_questions WHERE tracker_client_id=$1 AND status='OPEN' ORDER BY id`,[clientId]);
+  const groups=new Map();
+  for(const row of rr.rows||[]){const c=_ownerQuestionCanonical(row);const a=groups.get(c.key)||[];a.push({row,c});groups.set(c.key,a);}
+  let removed=0,groups_merged=0;
+  for(const items of groups.values()){
+    if(items.length<2)continue;groups_merged++;
+    const keep=items[0], ids=[], urls=[];let evidence='';
+    for(const it of items){
+      for(const x of (Array.isArray(it.row.page_ids)?it.row.page_ids:[]))if(!ids.some(y=>String(y)===String(x)))ids.push(x);
+      for(const x of (Array.isArray(it.row.page_urls)?it.row.page_urls:[]))if(!urls.includes(x))urls.push(x);
+      if(String(it.row.evidence_needed||'').length>evidence.length)evidence=String(it.row.evidence_needed||'');
+    }
+    const fp=crypto.createHash('sha256').update(keep.c.key).digest('hex');
+    // Delete duplicates first so the client's UNIQUE fingerprint constraint cannot collide.
+    const dup=items.slice(1).map(x=>Number(x.row.id));
+    if(dup.length){await pool.query(`DELETE FROM tracker_owner_questions WHERE tracker_client_id=$1 AND id = ANY($2::bigint[]) AND status='OPEN'`,[clientId,dup]);removed+=dup.length;}
+    await pool.query(`UPDATE tracker_owner_questions SET fingerprint=$1,category=$2,question=$3,evidence_needed=$4,page_ids=$5::jsonb,page_urls=$6::jsonb,merged_count=$7,strength=$8,last_seen_at=NOW() WHERE id=$9 AND tracker_client_id=$10 AND status='OPEN'`,[fp,keep.c.category,keep.c.question,evidence,JSON.stringify(ids),JSON.stringify(urls),Math.max(1,ids.length),Math.min(10,Math.max(1,ids.length)),keep.row.id,clientId]);
+  }
+  return {removed,groups_merged};
+}
 app.get('/api/tracker-client/:token/owner-questions',async(req,res)=>{try{
   await _ensureTrackerOwnerQuestions();const own=await _trackerClaimsClient(req,res);if(!own)return;
   const rr=await pool.query(`SELECT * FROM tracker_owner_questions WHERE tracker_client_id=$1 ORDER BY CASE status WHEN 'OPEN' THEN 1 WHEN 'ANSWERED_UNVERIFIED' THEN 2 ELSE 3 END,strength DESC,last_seen_at DESC,id`,[own.clientId]);
@@ -4452,22 +4493,22 @@ app.post('/api/tracker-client/:token/owner-questions/refresh',async(req,res)=>{t
   for(const pg of pp.rows){let intel=null;try{intel=await _trackerBuildDerivedIntelligence(own.clientId,pg.id);}catch(e){console.warn('[owner-questions-page]',pg.id,e.message);}if(!intel)continue;pages_checked++;
     let candidates=(intel.owner_questions||[]).map(q=>({category:q.category||'Business fact',question:q.question,evidence_needed:q.evidence_needed||'Owner confirmation'}));
     intelligence_questions+=candidates.length;
-    // A page can have zero generic owner_questions because global Claims & Facts already cover the broad
-    // categories. That must NOT mean there is nothing useful to ask. These two first-party questions are
-    // page-specific and are deliberately factual: they ask for real proof/process, never invented claims.
-    const topic=String(pg.keyword||'this service').trim()||'this service';
-    candidates.push({category:'First-party experience',question:'For “'+topic+'”, which real completed project or customer situation can we document with location, problem, solution and outcome?',evidence_needed:'Real project record, dated photo, review, invoice/work order or owner confirmation'});
-    candidates.push({category:'Decision criteria',question:'For “'+topic+'”, what real conditions make you recommend one solution instead of another, and what would make you advise a customer not to choose the more expensive option?',evidence_needed:'Owner/team operating criteria plus a real example if available'});
-    for(const q of candidates){if(!q.question)continue;const fp=_ownerQuestionFingerprint(q);const ex=await pool.query('SELECT id,status,page_ids FROM tracker_owner_questions WHERE tracker_client_id=$1 AND fingerprint=$2',[own.clientId,fp]);
+    // Do not manufacture service decision/project questions for utility/navigation pages such as About, FAQ or Contact.
+    if(!_ownerQuestionIsUtilityPage(pg)){
+      candidates.push({category:'First-party experience',question:'Which real completed projects or customer situations can we document across your services, including location, problem, solution and outcome?',evidence_needed:'Real project record, dated photo, review, invoice/work order or owner confirmation'});
+      candidates.push({category:'Decision criteria',question:'What real conditions does your team use to decide which solution to recommend, including when you would advise a different or less expensive option?',evidence_needed:'Owner/team operating criteria plus a real example if available'});
+    }
+    for(const raw of candidates){if(!raw.question)continue;const c=_ownerQuestionCanonical(raw);const q={...raw,category:c.category,question:c.question};const fp=_ownerQuestionFingerprint(q);const ex=await pool.query('SELECT id,status,page_ids FROM tracker_owner_questions WHERE tracker_client_id=$1 AND fingerprint=$2',[own.clientId,fp]);
       if(ex.rows.length){if(ex.rows[0].status==='OPEN'){
-        // Refresh is idempotent: repeated clicks do not artificially raise strength. Strength follows unique pages.
         await pool.query(`UPDATE tracker_owner_questions SET evidence_needed=CASE WHEN length(COALESCE($1,''))>length(COALESCE(evidence_needed,'')) THEN $1 ELSE evidence_needed END,page_ids=(SELECT jsonb_agg(DISTINCT x) FROM jsonb_array_elements(COALESCE(page_ids,'[]'::jsonb)||jsonb_build_array($2::int)) x),page_urls=(SELECT jsonb_agg(DISTINCT x) FROM jsonb_array_elements(COALESCE(page_urls,'[]'::jsonb)||jsonb_build_array($3::text)) x),last_seen_at=NOW() WHERE id=$4`,[q.evidence_needed||'',pg.id,pg.url,ex.rows[0].id]);
         await pool.query(`UPDATE tracker_owner_questions SET merged_count=GREATEST(1,jsonb_array_length(COALESCE(page_ids,'[]'::jsonb))),strength=LEAST(10,GREATEST(1,jsonb_array_length(COALESCE(page_ids,'[]'::jsonb)))) WHERE id=$1`,[ex.rows[0].id]);merged++;}}
-      else{await pool.query(`INSERT INTO tracker_owner_questions(tracker_client_id,fingerprint,category,question,evidence_needed,page_ids,page_urls) VALUES($1,$2,$3,$4,$5,jsonb_build_array($6::int),jsonb_build_array($7::text))`,[own.clientId,fp,q.category||'Business fact',q.question,q.evidence_needed||'',pg.id,pg.url]);discovered++;}
+      else{await pool.query(`INSERT INTO tracker_owner_questions(tracker_client_id,fingerprint,category,question,evidence_needed,page_ids,page_urls) VALUES($1,$2,$3,$4,$5,jsonb_build_array($6::int),jsonb_build_array($7::text)) ON CONFLICT (tracker_client_id,fingerprint) DO NOTHING`,[own.clientId,fp,q.category||'Business fact',q.question,q.evidence_needed||'',pg.id,pg.url]);discovered++;}
     }
   }
+  // v236 migration/cleanup: collapse the already-stored OPEN page-by-page variants too.
+  const cleanup=await _mergeOpenOwnerQuestions(own.clientId);
   const count=await pool.query(`SELECT count(*)::int open FROM tracker_owner_questions WHERE tracker_client_id=$1 AND status='OPEN'`,[own.clientId]);
-  res.json({success:true,discovered,merged,pages_checked,intelligence_questions,open:Number(count.rows[0]?.open||0),message:'Checked '+pages_checked+' tracked page(s). Owner questions now include existing Intelligence questions plus page-specific first-party proof and decision criteria. Open questions were preserved.'});
+  res.json({success:true,discovered,merged,pages_checked,intelligence_questions,semantic_groups_merged:cleanup.groups_merged,duplicates_removed:cleanup.removed,open:Number(count.rows[0]?.open||0),message:'Checked '+pages_checked+' tracked page(s). Owner Input was semantically consolidated across the company; utility pages no longer generate generic service questions. Specific factual questions are preserved.'});
 }catch(e){console.error('[owner-questions-refresh]',e.message);res.status(500).json({success:false,error:e.message});}});
 app.post('/api/tracker-client/:token/owner-questions/:id/answer',async(req,res)=>{try{
   await _ensureTrackerOwnerQuestions();const own=await _trackerClaimsClient(req,res);if(!own)return;const answer=String(req.body?.answer||'').trim(),evidence=String(req.body?.evidence||'').trim();if(!answer)return res.status(400).json({success:false,error:'Owner answer is required'});
@@ -4495,7 +4536,7 @@ async function _ensureTrackerGrowthQuestions(){
 }
 function _growthQNorm(v){return String(v||'').toLowerCase().replace(/https?:\/\/\S+/g,' ').replace(/[^a-z0-9 ]+/g,' ').replace(/\b(the|a|an|this|that|your|our|business|page|exact|genuinely|really)\b/g,' ').replace(/\s+/g,' ').trim();}
 function _growthQFingerprint(q){return crypto.createHash('sha256').update(String(q.category||'Growth').toLowerCase()+'|'+_growthQNorm(q.question)).digest('hex');}
-// v235: semantic owner-interview dedupe. Exact wording is not the identity anymore.
+// v236: semantic owner-interview dedupe. Exact wording is not the identity anymore.
 // Known recurring intents collapse across URLs; unknown questions only merge at a conservative token similarity.
 function _growthQTokens(v){const stop=new Set(['what','which','when','where','why','how','does','do','did','can','could','would','should','from','with','into','about','before','after','customer','customers','service','services','work','real','actual','add','tell','know','most','often','typically','usually','specific','page','pages','tracked','content','answer','question','experience','online','advice']);return _growthQNorm(v).split(' ').filter(x=>x.length>2&&!stop.has(x));}
 function _growthQIntent(q){const t=_growthQNorm((q.category||'')+' '+(q.question||''));
@@ -15908,7 +15949,7 @@ async function startServer() {
   }
 
 console.log('════════════════════════════════════════════════════');
-console.log('CONTENTSCALE BUILD: CS-2026-09-24-CANONICAL-v235');
+console.log('CONTENTSCALE BUILD: CS-2026-09-24-CANONICAL-v236');
 console.log('CEO FUNNEL: Private + Public → SAME CEO engine');
 console.log('PUBLIC EMAIL DELIVERY: required');
 console.log('PRIVATE EMAIL DELIVERY: optional');
@@ -18489,7 +18530,7 @@ function _ceoMainWebsiteUrl(input){
 // action must target this CEO endpoint.
 app.post('/api/ceo-report/start',async(req,res)=>{
   let ceoEntry='unknown',ceoUrl='',lastStage='REQUEST';
-  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-24-CANONICAL-v235');
+  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-24-CANONICAL-v236');
   try{
     lastStage='DB_SETUP';
     console.log('[ceo-report] stage=DB_SETUP');
@@ -18583,10 +18624,10 @@ ContentScale`;
     return res.json({success:true,entry_mode:entry,token,selected_page:selected,ceo_report_token:reportToken,ceo_report_url:reportUrl,delivery_email:delivery,updates_opt_in:updatesOptIn});
   }catch(e){
     const msg=String((e&&e.message)||e||'CEO Prospect Report generation failed');
-    console.error('[ceo-report] FAILED build=CS-2026-09-24-CANONICAL-v235 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
+    console.error('[ceo-report] FAILED build=CS-2026-09-24-CANONICAL-v236 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
     console.error('[ceo-report] ERROR: '+msg);
     if(e&&e.stack)console.error(e.stack);
-    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-24-CANONICAL-v235'});
+    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-24-CANONICAL-v236'});
     try{res.end();}catch(_){}
   }
 });
