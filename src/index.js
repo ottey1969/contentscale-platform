@@ -266,7 +266,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-24-CANONICAL-v229';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-24-CANONICAL-v231';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 const CONTENTSCALE_BUILD_CHANGES = [
   'Contact Intelligence: schema-initialisatie is geserialiseerd met één procesbelofte en PostgreSQL advisory lock om pg_type-races te voorkomen.',
@@ -727,7 +727,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-09-24-CANONICAL-v229',
+  build: 'CS-2026-09-24-CANONICAL-v231',
   built_date: '2026-09-23',
   ceo_private: true,
   ceo_public: true,
@@ -4424,6 +4424,107 @@ app.post('/api/tracker-client/:token/page/:pageId/brief-mode', async (req, res) 
     res.json({ success: true, mode });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
+
+// ── Owner Question Hub — persistent client-owned knowledge gaps ────────────────
+// Unanswered questions never disappear. Refresh only adds, merges, or strengthens them.
+async function _ensureTrackerOwnerQuestions(){
+  await pool.query(`CREATE TABLE IF NOT EXISTS tracker_owner_questions (
+    id BIGSERIAL PRIMARY KEY, tracker_client_id INTEGER NOT NULL,
+    fingerprint TEXT NOT NULL, category TEXT NOT NULL, question TEXT NOT NULL,
+    evidence_needed TEXT, status TEXT NOT NULL DEFAULT 'OPEN', answer TEXT, answer_evidence TEXT,
+    page_ids JSONB NOT NULL DEFAULT '[]'::jsonb, page_urls JSONB NOT NULL DEFAULT '[]'::jsonb,
+    merged_count INTEGER NOT NULL DEFAULT 1, strength INTEGER NOT NULL DEFAULT 1,
+    first_seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), last_seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), answered_at TIMESTAMPTZ,
+    UNIQUE(tracker_client_id,fingerprint)
+  )`);
+  await pool.query('CREATE INDEX IF NOT EXISTS tracker_owner_questions_client_status_idx ON tracker_owner_questions(tracker_client_id,status,last_seen_at DESC)');
+}
+function _ownerQuestionFingerprint(q){return crypto.createHash('sha256').update(String(q.category||'').trim().toLowerCase()+'|'+String(q.question||'').trim().toLowerCase().replace(/\\s+/g,' ')).digest('hex');}
+app.get('/api/tracker-client/:token/owner-questions',async(req,res)=>{try{
+  await _ensureTrackerOwnerQuestions();const own=await _trackerClaimsClient(req,res);if(!own)return;
+  const rr=await pool.query(`SELECT * FROM tracker_owner_questions WHERE tracker_client_id=$1 ORDER BY CASE status WHEN 'OPEN' THEN 1 WHEN 'ANSWERED_UNVERIFIED' THEN 2 ELSE 3 END,strength DESC,last_seen_at DESC,id`,[own.clientId]);
+  const rows=rr.rows||[];res.json({success:true,questions:rows,summary:{open:rows.filter(x=>x.status==='OPEN').length,answered_unverified:rows.filter(x=>x.status==='ANSWERED_UNVERIFIED').length,resolved:rows.filter(x=>x.status==='RESOLVED').length,total:rows.length}});
+}catch(e){console.error('[owner-questions-get]',e.message);res.status(500).json({success:false,error:e.message});}});
+app.post('/api/tracker-client/:token/owner-questions/refresh',async(req,res)=>{try{
+  await _ensureTrackerOwnerQuestions();const own=await _trackerClaimsClient(req,res);if(!own)return;
+  const pp=await pool.query(`SELECT id,url FROM tracker_pages WHERE tracker_client_id=$1 AND COALESCE(status,'')<>'deleted' ORDER BY id`,[own.clientId]);
+  let discovered=0,merged=0;for(const pg of pp.rows){let intel=null;try{intel=await _trackerBuildDerivedIntelligence(own.clientId,pg.id);}catch(e){}if(!intel)continue;
+    for(const q of (intel.owner_questions||[])){const fp=_ownerQuestionFingerprint(q);const ex=await pool.query('SELECT id,status,page_ids FROM tracker_owner_questions WHERE tracker_client_id=$1 AND fingerprint=$2',[own.clientId,fp]);
+      if(ex.rows.length){if(ex.rows[0].status==='OPEN'){await pool.query(`UPDATE tracker_owner_questions SET evidence_needed=CASE WHEN length(COALESCE($1,''))>length(COALESCE(evidence_needed,'')) THEN $1 ELSE evidence_needed END,page_ids=(SELECT jsonb_agg(DISTINCT x) FROM jsonb_array_elements(COALESCE(page_ids,'[]'::jsonb)||to_jsonb($2::int)) x),page_urls=(SELECT jsonb_agg(DISTINCT x) FROM jsonb_array_elements(COALESCE(page_urls,'[]'::jsonb)||to_jsonb($3::text)) x),merged_count=merged_count+1,strength=LEAST(10,strength+1),last_seen_at=NOW() WHERE id=$4`,[q.evidence_needed||'',pg.id,pg.url,ex.rows[0].id]);merged++;}}
+      else{await pool.query(`INSERT INTO tracker_owner_questions(tracker_client_id,fingerprint,category,question,evidence_needed,page_ids,page_urls) VALUES($1,$2,$3,$4,$5,jsonb_build_array($6::int),jsonb_build_array($7::text))`,[own.clientId,fp,q.category||'Business fact',q.question,q.evidence_needed||'',pg.id,pg.url]);discovered++;}
+    }
+  }
+  res.json({success:true,discovered,merged,message:'Questions refreshed. Open questions were preserved; repeated gaps were merged and strengthened.'});
+}catch(e){console.error('[owner-questions-refresh]',e.message);res.status(500).json({success:false,error:e.message});}});
+app.post('/api/tracker-client/:token/owner-questions/:id/answer',async(req,res)=>{try{
+  await _ensureTrackerOwnerQuestions();const own=await _trackerClaimsClient(req,res);if(!own)return;const answer=String(req.body?.answer||'').trim(),evidence=String(req.body?.evidence||'').trim();if(!answer)return res.status(400).json({success:false,error:'Owner answer is required'});
+  const qr=await pool.query(`UPDATE tracker_owner_questions SET answer=$1,answer_evidence=$2,status='ANSWERED_UNVERIFIED',answered_at=NOW(),last_seen_at=NOW() WHERE id=$3 AND tracker_client_id=$4 AND status='OPEN' RETURNING *`,[answer,evidence,req.params.id,own.clientId]);if(!qr.rows.length)return res.status(404).json({success:false,error:'Open question not found'});const q=qr.rows[0];
+  const cf=await pool.query(`INSERT INTO tracker_claims_facts(page_id,tracker_client_id,claim_text,source_type,source_context,status,notes) VALUES(NULL,$1,$2,'owner_questionnaire',$3,'UNVERIFIED',$4) RETURNING id`,[own.clientId,answer,q.category+': '+q.question,evidence?'Owner evidence: '+evidence:'Owner answered; evidence not supplied']);
+  res.json({success:true,question:q,claim_id:cf.rows[0].id,message:'Owner answer saved once and added to Claims & Facts as UNVERIFIED.'});
+}catch(e){console.error('[owner-questions-answer]',e.message);res.status(500).json({success:false,error:e.message});}});
+
+// ── Content Growth Questions — central interview queue across ALL Tracker pages ──
+// Separate from Owner Input Needed: this queue asks questions whose answers can create
+// stronger first-party content. It also imports every page-level Intelligence owner question.
+async function _ensureTrackerGrowthQuestions(){
+  await pool.query(`CREATE TABLE IF NOT EXISTS tracker_growth_questions (
+    id BIGSERIAL PRIMARY KEY, tracker_client_id INTEGER NOT NULL,
+    fingerprint TEXT NOT NULL, category TEXT NOT NULL, question TEXT NOT NULL,
+    why_asked TEXT, evidence_needed TEXT, status TEXT NOT NULL DEFAULT 'OPEN',
+    answer TEXT, answer_evidence TEXT, source_types JSONB NOT NULL DEFAULT '[]'::jsonb,
+    page_ids JSONB NOT NULL DEFAULT '[]'::jsonb, page_urls JSONB NOT NULL DEFAULT '[]'::jsonb,
+    page_keywords JSONB NOT NULL DEFAULT '[]'::jsonb, merged_count INTEGER NOT NULL DEFAULT 1,
+    strength INTEGER NOT NULL DEFAULT 1, first_seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    last_seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), answered_at TIMESTAMPTZ,
+    UNIQUE(tracker_client_id,fingerprint)
+  )`);
+  await pool.query('CREATE INDEX IF NOT EXISTS tracker_growth_questions_client_status_idx ON tracker_growth_questions(tracker_client_id,status,strength DESC,last_seen_at DESC)');
+}
+function _growthQNorm(v){return String(v||'').toLowerCase().replace(/https?:\/\/\S+/g,' ').replace(/[^a-z0-9 ]+/g,' ').replace(/\b(the|a|an|this|that|your|our|business|page|exact|genuinely|really)\b/g,' ').replace(/\s+/g,' ').trim();}
+function _growthQFingerprint(q){return crypto.createHash('sha256').update(String(q.category||'Growth').toLowerCase()+'|'+_growthQNorm(q.question)).digest('hex');}
+function _growthQImpact(row){const s=Number(row.strength||1), pc=Array.isArray(row.page_urls)?row.page_urls.length:0, sc=Array.isArray(row.source_types)?row.source_types.length:0;return (s>=6||pc>=4||sc>=3)?'HIGH':(s>=3||pc>=2||sc>=2)?'MEDIUM':'FOCUSED';}
+async function _upsertGrowthQuestion(clientId,pg,q){
+  const fp=_growthQFingerprint(q); const ex=await pool.query('SELECT id,status FROM tracker_growth_questions WHERE tracker_client_id=$1 AND fingerprint=$2',[clientId,fp]);
+  const src=String(q.source||'Intelligence');
+  if(ex.rows.length){if(ex.rows[0].status==='OPEN'){await pool.query(`UPDATE tracker_growth_questions SET
+    why_asked=CASE WHEN length(COALESCE($1,''))>length(COALESCE(why_asked,'')) THEN $1 ELSE why_asked END,
+    evidence_needed=CASE WHEN length(COALESCE($2,''))>length(COALESCE(evidence_needed,'')) THEN $2 ELSE evidence_needed END,
+    source_types=(SELECT jsonb_agg(DISTINCT x) FROM jsonb_array_elements(COALESCE(source_types,'[]'::jsonb)||jsonb_build_array($3::text)) x),
+    page_ids=(SELECT jsonb_agg(DISTINCT x) FROM jsonb_array_elements(COALESCE(page_ids,'[]'::jsonb)||jsonb_build_array($4::int)) x),
+    page_urls=(SELECT jsonb_agg(DISTINCT x) FROM jsonb_array_elements(COALESCE(page_urls,'[]'::jsonb)||jsonb_build_array($5::text)) x),
+    page_keywords=(SELECT jsonb_agg(DISTINCT x) FROM jsonb_array_elements(COALESCE(page_keywords,'[]'::jsonb)||jsonb_build_array($6::text)) x),
+    merged_count=merged_count+1,strength=LEAST(10,strength+1),last_seen_at=NOW() WHERE id=$7`,[q.why_asked||'',q.evidence_needed||'',src,pg.id,pg.url,pg.keyword||'',ex.rows[0].id]);return 'merged';}return 'kept';}
+  await pool.query(`INSERT INTO tracker_growth_questions(tracker_client_id,fingerprint,category,question,why_asked,evidence_needed,source_types,page_ids,page_urls,page_keywords)
+    VALUES($1,$2,$3,$4,$5,$6,jsonb_build_array($7::text),jsonb_build_array($8::int),jsonb_build_array($9::text),jsonb_build_array($10::text))`,[clientId,fp,q.category||'Content growth',q.question,q.why_asked||'',q.evidence_needed||'',src,pg.id,pg.url,pg.keyword||'']);return 'discovered';
+}
+app.get('/api/tracker-client/:token/growth-questions',async(req,res)=>{try{
+  await _ensureTrackerGrowthQuestions();const own=await _trackerClaimsClient(req,res);if(!own)return;
+  const rr=await pool.query(`SELECT * FROM tracker_growth_questions WHERE tracker_client_id=$1 ORDER BY CASE status WHEN 'OPEN' THEN 1 WHEN 'ANSWERED_UNVERIFIED' THEN 2 ELSE 3 END,strength DESC,last_seen_at DESC,id`,[own.clientId]);
+  const rows=(rr.rows||[]).map(x=>Object.assign(x,{impact:_growthQImpact(x)}));res.json({success:true,questions:rows,summary:{open:rows.filter(x=>x.status==='OPEN').length,answered:rows.filter(x=>x.status!=='OPEN').length,total:rows.length}});
+}catch(e){console.error('[growth-questions-get]',e.message);res.status(500).json({success:false,error:e.message});}});
+app.post('/api/tracker-client/:token/growth-questions/refresh',async(req,res)=>{try{
+  await _ensureTrackerGrowthQuestions();const own=await _trackerClaimsClient(req,res);if(!own)return;
+  const pp=await pool.query(`SELECT id,url,COALESCE(keyword,gsc_keyword,'') keyword FROM tracker_pages WHERE tracker_client_id=$1 AND COALESCE(status,'')<>'deleted' ORDER BY id`,[own.clientId]);
+  let discovered=0,merged=0,kept=0;
+  for(const pg of pp.rows){let intel=null;try{intel=await _trackerBuildDerivedIntelligence(own.clientId,pg.id);}catch(e){}if(!intel)continue;
+    const candidates=[];
+    // Every unanswered question shown inside page Intelligence is mirrored centrally.
+    for(const q of (intel.owner_questions||[])) candidates.push({category:q.category||'Intelligence',question:q.question,evidence_needed:q.evidence_needed||'Owner confirmation',why_asked:'This question is currently required by the Intelligence analysis for '+(pg.keyword||pg.url)+'. The answer can supply first-party detail that generic competitor or AI summaries cannot.',source:'Intelligence'});
+    // Cross-engine/content gaps become owner interview questions only when the answer can add first-party expertise.
+    const gaps=(intel.content_opportunities||[]).filter(x=>!x.covered).slice(0,3);
+    for(const g of gaps)candidates.push({category:'AI / content gap',question:'From your real work, what should a customer know about “'+String(g.topic||'this topic')+'” that generic online advice usually misses?',evidence_needed:'Owner experience, project example, documented process, photo/review or other first-party proof',why_asked:String(g.engine_count||1)+' AI engine(s) repeatedly surface this topic, but the tracked page does not clearly cover it. A specific owner answer can become differentiated content.',source:'AI gap'});
+    if((intel.competitors||[]).length)candidates.push({category:'Competitive differentiation',question:'For '+(pg.keyword||'this service')+', what do you do differently in the real job process that a customer would not learn from a typical competitor service page?',evidence_needed:'Specific process difference plus a real example or proof if available',why_asked:'Competitors are visible in the saved Intelligence evidence. This asks for defensible first-party differentiation instead of copying competitor claims.',source:'SERP / competitors'});
+    if((intel.growth_queries||[]).length){const qs=intel.growth_queries.slice(0,4).map(x=>x.query).filter(Boolean);if(qs.length)candidates.push({category:'GSC demand',question:'Customers are finding this page through “'+qs.join('”, “')+'”. What factual answer, example, limitation, price factor or decision criterion can you add from your own experience for these searches?',evidence_needed:'Owner answer tied to actual service experience; supporting project/process evidence preferred',why_asked:'These are measured Search Console queries with demand. The answer can help the existing page satisfy real search intent more completely.',source:'GSC'});}
+    for(const q of candidates){const r=await _upsertGrowthQuestion(own.clientId,pg,q);if(r==='discovered')discovered++;else if(r==='merged')merged++;else kept++;}
+  }
+  res.json({success:true,discovered,merged,kept,message:'Content Growth Questions refreshed. Open questions were preserved; Intelligence questions were centralized and repeated opportunities were strengthened.'});
+}catch(e){console.error('[growth-questions-refresh]',e.message);res.status(500).json({success:false,error:e.message});}});
+app.post('/api/tracker-client/:token/growth-questions/:id/answer',async(req,res)=>{try{
+  await _ensureTrackerGrowthQuestions();const own=await _trackerClaimsClient(req,res);if(!own)return;const answer=String(req.body?.answer||'').trim(),evidence=String(req.body?.evidence||'').trim();if(!answer)return res.status(400).json({success:false,error:'Owner answer is required'});
+  const qr=await pool.query(`UPDATE tracker_growth_questions SET answer=$1,answer_evidence=$2,status='ANSWERED_UNVERIFIED',answered_at=NOW(),last_seen_at=NOW() WHERE id=$3 AND tracker_client_id=$4 AND status='OPEN' RETURNING *`,[answer,evidence,req.params.id,own.clientId]);if(!qr.rows.length)return res.status(404).json({success:false,error:'Open growth question not found'});const q=qr.rows[0];
+  const cf=await pool.query(`INSERT INTO tracker_claims_facts(page_id,tracker_client_id,claim_text,source_type,source_context,status,notes) VALUES(NULL,$1,$2,'owner_growth_interview',$3,'UNVERIFIED',$4) RETURNING id`,[own.clientId,answer,'Content Growth Question — '+q.category+': '+q.question,evidence?'Owner evidence: '+evidence:'Owner answered; evidence not supplied']);
+  res.json({success:true,question:q,claim_id:cf.rows[0].id,message:'Growth answer saved centrally and added to Claims & Facts as UNVERIFIED.'});
+}catch(e){console.error('[growth-questions-answer]',e.message);res.status(500).json({success:false,error:e.message});}});
 
 // ── Claims & Facts gate — CANONICAL CUSTOMER TRACKER ROUTES ─────────────────
 // Every client-specific factual claim starts UNVERIFIED. Only VERIFIED is safe for content.
@@ -15723,7 +15824,7 @@ async function startServer() {
   }
 
 console.log('════════════════════════════════════════════════════');
-console.log('CONTENTSCALE BUILD: CS-2026-09-24-CANONICAL-v229');
+console.log('CONTENTSCALE BUILD: CS-2026-09-24-CANONICAL-v231');
 console.log('CEO FUNNEL: Private + Public → SAME CEO engine');
 console.log('PUBLIC EMAIL DELIVERY: required');
 console.log('PRIVATE EMAIL DELIVERY: optional');
@@ -18304,7 +18405,7 @@ function _ceoMainWebsiteUrl(input){
 // action must target this CEO endpoint.
 app.post('/api/ceo-report/start',async(req,res)=>{
   let ceoEntry='unknown',ceoUrl='',lastStage='REQUEST';
-  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-24-CANONICAL-v229');
+  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-24-CANONICAL-v231');
   try{
     lastStage='DB_SETUP';
     console.log('[ceo-report] stage=DB_SETUP');
@@ -18398,10 +18499,10 @@ ContentScale`;
     return res.json({success:true,entry_mode:entry,token,selected_page:selected,ceo_report_token:reportToken,ceo_report_url:reportUrl,delivery_email:delivery,updates_opt_in:updatesOptIn});
   }catch(e){
     const msg=String((e&&e.message)||e||'CEO Prospect Report generation failed');
-    console.error('[ceo-report] FAILED build=CS-2026-09-24-CANONICAL-v229 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
+    console.error('[ceo-report] FAILED build=CS-2026-09-24-CANONICAL-v231 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
     console.error('[ceo-report] ERROR: '+msg);
     if(e&&e.stack)console.error(e.stack);
-    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-24-CANONICAL-v229'});
+    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-24-CANONICAL-v231'});
     try{res.end();}catch(_){}
   }
 });
@@ -37547,6 +37648,8 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
     <button class="cs-btn" onclick="openTelegramSetup()" style="border-color:#2AABEE;color:#2AABEE;background:rgba(42,171,238,.08);font-weight:700;animation:tgPulse 2s ease-in-out infinite;" title="Install Telegram, then connect &#x2014; get notified after every scan"><i class="fab fa-telegram"></i> Install Telegram</button>
   </div>
   <div id="monitoringSummary" style="margin:-4px 0 14px;padding:11px 14px;border:1px solid #24405a;border-radius:9px;background:#071521;color:#b8c7da;font-size:11px;line-height:1.6;">Monitoring is explicit opt-in. Loading page status...</div>
+  <div id="ownerQuestionHub" style="margin:-6px 0 14px;"></div>
+  <div id="contentGrowthQuestionHub" style="margin:-6px 0 14px;"></div>
   <div id="monitoringActionList" style="margin:-6px 0 14px;"></div>
 
   <!-- Live feed -->
@@ -39680,6 +39783,19 @@ function renderStats(data) {
   var perMonth=monitored.reduce(function(sum,p){var m={'1day':1,'3days':3,'7days':7,weekly:7,'1week':7,'2weeks':14,'17days':17,'21days':21,'30days':30,monthly:30};var d=m[p.check_frequency]||30;return sum+Math.ceil(30/d);},0);
   var ms=document.getElementById('monitoringSummary');
   if(ms)ms.innerHTML='<strong style="color:#7dd3fc">'+pages.length+' pages total</strong> &middot; <strong style="color:#86efac">'+monitored.length+' monitored</strong> &middot; '+(pages.length-monitored.length)+' Off &middot; Next data request: <strong style="color:#e2e8f0">'+(nextDates.length?nextDates[0].toLocaleString('en-GB',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}):'none')+'</strong> &middot; Estimated guided reviews/month: <strong style="color:#fbbf24">'+perMonth+'</strong><br><span style="color:#94a3b8">On the due day ContentScale emails once and waits for fresh GSC Pages, GSC Queries and 5/5 AI evidence. It never runs a blind scheduled scan.</span>';
+
+  // Persistent Owner Question Hub: one client-level queue, merged across pages.
+  function _ownerQEsc(v){return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+  window.loadOwnerQuestionHub=function(){var box=document.getElementById('ownerQuestionHub');if(!box)return;fetch('/api/tracker-client/'+TOKEN+'/owner-questions').then(function(r){return r.json();}).then(function(d){if(!d.success)throw new Error(d.error||'Could not load owner questions');var q=(d.questions||[]).filter(function(x){return x.status==='OPEN';}),sum=d.summary||{};var rows=q.map(function(x){var urls=Array.isArray(x.page_urls)?x.page_urls:[];return '<div style="border-top:1px solid #78350f;padding:10px 0;"><div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start;"><div><b style="color:#fbbf24;font-size:10px;">'+_ownerQEsc(x.category)+'</b><div style="color:#f8fafc;font-size:12px;font-weight:800;margin-top:2px;">'+_ownerQEsc(x.question)+'</div><div style="color:#94a3b8;font-size:9px;margin-top:3px;">Needed proof: '+_ownerQEsc(x.evidence_needed||'Owner confirmation')+' · Seen across '+urls.length+' page(s) · Strength '+Number(x.strength||1)+'/10</div></div><span style="color:#f59e0b;font-size:9px;font-weight:900;white-space:nowrap;">OPEN</span></div><textarea id="oqA'+x.id+'" class="cs-input" rows="2" placeholder="Owner’s exact factual answer" style="width:100%;margin-top:7px;resize:vertical;"></textarea><input id="oqE'+x.id+'" class="cs-input" placeholder="Evidence / document / URL / who confirmed it" style="width:100%;margin-top:5px;"><button class="cs-btn" onclick="answerOwnerHubQuestion('+x.id+')" style="margin-top:6px;border-color:#d97706;color:#fbbf24;font-size:10px;">Save answer for verification</button></div>';}).join('');box.innerHTML='<details open style="border:2px solid #d97706;border-radius:10px;background:#120d05;padding:11px 13px;"><summary style="cursor:pointer;color:#fbbf24;font-weight:900;letter-spacing:.04em;">OWNER INPUT NEEDED · '+Number(sum.open||0)+' OPEN</summary><div style="color:#cbd5e1;font-size:10px;line-height:1.55;margin:8px 0;">These are missing first-party facts that can make the tracked content stronger than competitor summaries. Unanswered questions never disappear. Refresh only adds new gaps, merges duplicates, or strengthens questions seen across more pages.</div><button class="cs-btn" onclick="refreshOwnerQuestionHub(this)" style="border-color:#f59e0b;color:#fde68a;font-size:10px;">↻ Refresh questions from Tracker evidence</button><span style="margin-left:8px;color:#94a3b8;font-size:9px;">Answered facts move to Claims &amp; Facts as UNVERIFIED until evidence is approved.</span>'+ (rows||'<div style="color:#86efac;padding:10px 0;">No open owner questions. Refresh after new GSC, AI evidence or scans.</div>') +'</details>';}).catch(function(e){box.innerHTML='<div style="color:#f87171;font-size:10px;">Owner Question Hub: '+_ownerQEsc(e.message)+'</div>';});};
+  window.refreshOwnerQuestionHub=function(btn){var old=btn&&btn.textContent;if(btn){btn.disabled=true;btn.textContent='Refreshing…';}fetch('/api/tracker-client/'+TOKEN+'/owner-questions/refresh',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'}).then(function(r){return r.json();}).then(function(d){if(!d.success)throw new Error(d.error||'Refresh failed');toast(d.message||'Owner questions refreshed.','#4ade80');loadOwnerQuestionHub();}).catch(function(e){toast(e.message,'#f87171');}).finally(function(){if(btn){btn.disabled=false;btn.textContent=old;}});};
+  window.answerOwnerHubQuestion=function(id){var a=document.getElementById('oqA'+id),e=document.getElementById('oqE'+id),answer=a&&a.value.trim();if(!answer){toast('Enter the owner’s factual answer first.','#f87171');return;}fetch('/api/tracker-client/'+TOKEN+'/owner-questions/'+id+'/answer',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({answer:answer,evidence:e&&e.value.trim()||''})}).then(function(r){return r.json();}).then(function(d){if(!d.success)throw new Error(d.error||'Save failed');toast('Saved once — now waiting for verification in Claims & Facts.','#fbbf24');loadOwnerQuestionHub();}).catch(function(x){toast(x.message,'#f87171');});};
+  loadOwnerQuestionHub();
+
+  // Separate central card: strategic interview questions that can strengthen content across pages.
+  window.loadContentGrowthQuestionHub=function(){var box=document.getElementById('contentGrowthQuestionHub');if(!box)return;fetch('/api/tracker-client/'+TOKEN+'/growth-questions').then(function(r){return r.json();}).then(function(d){if(!d.success)throw new Error(d.error||'Could not load content growth questions');var q=(d.questions||[]).filter(function(x){return x.status==='OPEN';}),sum=d.summary||{};var rows=q.map(function(x){var urls=Array.isArray(x.page_urls)?x.page_urls:[], kws=Array.isArray(x.page_keywords)?x.page_keywords.filter(Boolean):[], src=Array.isArray(x.source_types)?x.source_types:[];var impact=String(x.impact||'FOCUSED'),ic=impact==='HIGH'?'#86efac':impact==='MEDIUM'?'#fbbf24':'#7dd3fc';return '<div style="border-top:1px solid #164e63;padding:12px 0;"><div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;"><div><div style="display:flex;gap:6px;flex-wrap:wrap;"><b style="color:#67e8f9;font-size:10px;">'+_ownerQEsc(x.category)+'</b><span style="color:'+ic+';font-size:9px;font-weight:900;">'+_ownerQEsc(impact)+' IMPACT</span></div><div style="color:#f8fafc;font-size:12px;font-weight:900;margin-top:4px;">'+_ownerQEsc(x.question)+'</div><div style="color:#cbd5e1;font-size:9px;line-height:1.5;margin-top:5px;"><b>WHY WE ASK:</b> '+_ownerQEsc(x.why_asked||'The answer can add useful first-party detail.')+'</div><div style="color:#94a3b8;font-size:9px;margin-top:4px;"><b>Sources:</b> '+_ownerQEsc(src.join(' · ')||'Tracker Intelligence')+' · <b>Can strengthen:</b> '+_ownerQEsc(kws.slice(0,5).join(' · ')||(urls.length+' tracked page(s)'))+' · <b>Used by:</b> '+urls.length+' page(s) · Strength '+Number(x.strength||1)+'/10</div></div><span style="color:#22d3ee;font-size:9px;font-weight:900;white-space:nowrap;">OWNER ANSWER NEEDED</span></div><textarea id="gqA'+x.id+'" class="cs-input" rows="3" placeholder="Owner’s factual answer — concrete examples, process, limits and proof are best" style="width:100%;margin-top:8px;resize:vertical;"></textarea><input id="gqE'+x.id+'" class="cs-input" placeholder="Evidence / project / photo / review / document / URL / who confirmed it" style="width:100%;margin-top:5px;"><button class="cs-btn" onclick="answerContentGrowthQuestion('+x.id+')" style="margin-top:6px;border-color:#0891b2;color:#67e8f9;font-size:10px;">Save answer for verification</button></div>';}).join('');box.innerHTML='<details open style="border:2px solid #0891b2;border-radius:10px;background:#06131a;padding:12px 14px;"><summary style="cursor:pointer;color:#67e8f9;font-weight:900;letter-spacing:.05em;">CONTENT GROWTH QUESTIONS · '+Number(sum.open||0)+' OPEN</summary><div style="color:#cbd5e1;font-size:10px;line-height:1.55;margin:8px 0;">One central owner interview queue for the whole Tracker. It includes the questions found inside every page’s Intelligence plus evidence-backed questions from AI gaps, competitors and measured GSC demand. The purpose is not to wait for rankings — it is to uncover real first-party expertise that can make the content stronger. Open questions never disappear; refresh can add, merge or strengthen them.</div><button class="cs-btn" onclick="refreshContentGrowthQuestions(this)" style="border-color:#06b6d4;color:#a5f3fc;font-size:10px;">↻ Refresh from ALL Tracker Intelligence</button><span style="margin-left:8px;color:#94a3b8;font-size:9px;">Answers are never auto-published. They first enter Claims &amp; Facts as UNVERIFIED.</span>'+ (rows||'<div style="color:#86efac;padding:10px 0;">No open growth questions. Refresh after new Intelligence, GSC or 5/5 AI evidence.</div>') +'</details>';}).catch(function(e){box.innerHTML='<div style="color:#f87171;font-size:10px;">Content Growth Questions: '+_ownerQEsc(e.message)+'</div>';});};
+  window.refreshContentGrowthQuestions=function(btn){var old=btn&&btn.textContent;if(btn){btn.disabled=true;btn.textContent='Refreshing ALL Intelligence…';}fetch('/api/tracker-client/'+TOKEN+'/growth-questions/refresh',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'}).then(function(r){return r.json();}).then(function(d){if(!d.success)throw new Error(d.error||'Refresh failed');toast(d.message||'Growth questions refreshed.','#22d3ee');loadContentGrowthQuestionHub();}).catch(function(e){toast(e.message,'#f87171');}).finally(function(){if(btn){btn.disabled=false;btn.textContent=old;}});};
+  window.answerContentGrowthQuestion=function(id){var a=document.getElementById('gqA'+id),e=document.getElementById('gqE'+id),answer=a&&a.value.trim();if(!answer){toast('Enter the owner’s factual answer first.','#f87171');return;}fetch('/api/tracker-client/'+TOKEN+'/growth-questions/'+id+'/answer',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({answer:answer,evidence:e&&e.value.trim()||''})}).then(function(r){return r.json();}).then(function(d){if(!d.success)throw new Error(d.error||'Save failed');toast('Growth answer saved — waiting for verification in Claims & Facts.','#22d3ee');loadContentGrowthQuestionHub();}).catch(function(x){toast(x.message,'#f87171');});};
+  loadContentGrowthQuestionHub();
 
   // Client-visible workflow overview: show exactly which pages need attention.
   // Off pages remain out of this list unless they belong to an active case study.
