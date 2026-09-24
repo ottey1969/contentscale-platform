@@ -266,7 +266,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-24-CANONICAL-v228';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-24-CANONICAL-v229';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 const CONTENTSCALE_BUILD_CHANGES = [
   'Contact Intelligence: schema-initialisatie is geserialiseerd met één procesbelofte en PostgreSQL advisory lock om pg_type-races te voorkomen.',
@@ -727,7 +727,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-09-24-CANONICAL-v228',
+  build: 'CS-2026-09-24-CANONICAL-v229',
   built_date: '2026-09-23',
   ceo_private: true,
   ceo_public: true,
@@ -2367,6 +2367,17 @@ async function _caseStudyStoreContentVersion(clientId,pageId,versionType,canonic
   return existing.rows.length?Object.assign({created:false},existing.rows[0]):null;
 }
 
+// v229: case-study URL pre-flight. Redirected/dead URLs must never enter a protected case-study cycle.
+function _caseStudyEmailEsc(v){return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function _caseStudyRedirectDestination(v){const x=String(v||'').trim();if(!x||x.startsWith('(dead'))return '';const cm=x.match(/^\(canonical\s*→\s*([^)]+)\)$/i);return cm?cm[1].trim():x;}
+async function _caseStudyUrlPreflight(client,page){
+ let flag=String(page.redirects_to||'').trim(),status=null,destination=_caseStudyRedirectDestination(flag),kind=flag.startsWith('(dead')?'dead':(flag?'redirect':'');
+ if(!flag){try{const r=await fetch(page.url,{redirect:'manual',headers:{'User-Agent':'Mozilla/5.0 (compatible; ContentScale/1.0)','Accept':'text/html,application/xhtml+xml'},signal:AbortSignal.timeout(15000)});status=r.status;if([301,302,303,307,308].includes(r.status)){const loc=r.headers.get('location');destination=loc?new URL(loc,page.url).toString():'';kind='redirect';flag=destination||('(redirect '+r.status+')');}else if(r.status===404||r.status===410){kind='dead';flag='(dead '+r.status+' — page not found)';}else return {ok:true,status:r.status};await pool.query('UPDATE tracker_pages SET redirects_to=$1,redirect_checked_at=NOW() WHERE id=$2 AND tracker_client_id=$3',[flag,page.id,client.id]).catch(()=>{});}catch(e){return {ok:true,check_unavailable:true,error:e.message};}}
+ let destinationTracked=false,destinationPage=null;if(destination){try{const all=await pool.query('SELECT id,url,keyword,gsc_keyword FROM tracker_pages WHERE tracker_client_id=$1 AND id<>$2 AND (is_active=TRUE OR is_active IS NULL)',[client.id,page.id]);const norm=u=>{try{const z=new URL(u);return (z.origin+z.pathname.replace(/\/+$/,'')).toLowerCase();}catch(e){return String(u||'').replace(/\/+$/,'').toLowerCase();}};destinationPage=all.rows.find(x=>norm(x.url)===norm(destination))||null;destinationTracked=!!destinationPage;}catch(e){}}
+ return {ok:false,kind,status,destination,destinationTracked,destinationPage,flag};
+}
+async function _caseStudySendRedirectNotice(client,page,pre){const app=(process.env.APP_URL||'https://app.contentscale.site'),trackerUrl=app+'/track/'+client.token+'?page='+page.id+'#page-'+page.id;const pageLabel=String(page.keyword||page.gsc_keyword||'Tracked page');const dest=pre.destination||'';const headline=pre.kind==='dead'?'Tracked page is no longer available':'Tracked page redirects to another URL';const detail=pre.kind==='dead'?'<p>The URL returned '+_caseStudyEmailEsc(pre.status||pre.flag||'a not-found response')+'. ContentScale stopped before starting a case study.</p>':'<p><strong>Original URL:</strong><br><a href="'+_caseStudyEmailEsc(page.url)+'">'+_caseStudyEmailEsc(page.url)+'</a></p><p><strong>Redirect destination:</strong><br><a href="'+_caseStudyEmailEsc(dest)+'">'+_caseStudyEmailEsc(dest)+'</a></p>';const tracked=pre.destinationTracked?'<p>The destination page is already tracked, so the redirected URL does not need a separate case study. No case-study baseline was created for the old URL.</p>':'<p>The case study was not started for the old URL. Review the destination in the Tracker and track that live page instead if appropriate.</p>';const body='<h2>'+headline+'</h2><p><strong>Page:</strong> '+_caseStudyEmailEsc(pageLabel)+'<br><strong>Keyword:</strong> '+_caseStudyEmailEsc(page.keyword||page.gsc_keyword||'—')+'</p>'+detail+tracked+'<p><a href="'+trackerUrl+'">Open this Tracker page</a></p>';await notifyClient(client.id,headline+' — '+(client.domain||'ContentScale'),body,headline+'\n'+page.url+(dest?'\n→ '+dest:'')+'\n'+trackerUrl,true).catch(e=>console.warn('[case-study-preflight-email]',e.message));}
+
 // Start a protected case study for any tracked page. A completed Tracker scan is required;
 // its current metrics and evidence become an immutable baseline and are never backfilled.
 app.post('/api/tracker-client/:token/pages/:pageId/case-study/start',async(req,res)=>{try{
@@ -2376,6 +2387,8 @@ app.post('/api/tracker-client/:token/pages/:pageId/case-study/start',async(req,r
   const pr=await pool.query('SELECT * FROM tracker_pages WHERE id=$1 AND tracker_client_id=$2',[req.params.pageId,cr.rows[0].id]);
   if(!pr.rows.length)return res.status(403).json({success:false,error:'This page does not belong to this Tracker'});
   const page=pr.rows[0],client=cr.rows[0];
+  const preflight=await _caseStudyUrlPreflight(client,page);
+  if(!preflight.ok){await _caseStudySendRedirectNotice(client,page,preflight);return res.status(409).json({success:false,url_preflight_failed:true,redirected:preflight.kind==='redirect',dead:preflight.kind==='dead',destination:preflight.destination||null,destination_already_tracked:preflight.destinationTracked,error:preflight.kind==='dead'?'This URL is no longer live. The case study was not started.':'This URL redirects'+(preflight.destination?' to '+preflight.destination:'')+'. The case study was not started.'+(preflight.destinationTracked?' The destination is already tracked.':' Track the live destination instead.')});}
   const existing=await pool.query("SELECT * FROM tracker_case_studies WHERE tracker_client_id=$1 AND canonical_url=$2 ORDER BY id DESC LIMIT 1",[client.id,_caseStudyNormUrl(page.url)]);
   if(existing.rows.length){
     if(existing.rows[0].status==='active')return res.json({success:true,already_active:true,case_study:existing.rows[0]});
@@ -15710,7 +15723,7 @@ async function startServer() {
   }
 
 console.log('════════════════════════════════════════════════════');
-console.log('CONTENTSCALE BUILD: CS-2026-09-24-CANONICAL-v228');
+console.log('CONTENTSCALE BUILD: CS-2026-09-24-CANONICAL-v229');
 console.log('CEO FUNNEL: Private + Public → SAME CEO engine');
 console.log('PUBLIC EMAIL DELIVERY: required');
 console.log('PRIVATE EMAIL DELIVERY: optional');
@@ -18291,7 +18304,7 @@ function _ceoMainWebsiteUrl(input){
 // action must target this CEO endpoint.
 app.post('/api/ceo-report/start',async(req,res)=>{
   let ceoEntry='unknown',ceoUrl='',lastStage='REQUEST';
-  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-24-CANONICAL-v228');
+  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-24-CANONICAL-v229');
   try{
     lastStage='DB_SETUP';
     console.log('[ceo-report] stage=DB_SETUP');
@@ -18385,10 +18398,10 @@ ContentScale`;
     return res.json({success:true,entry_mode:entry,token,selected_page:selected,ceo_report_token:reportToken,ceo_report_url:reportUrl,delivery_email:delivery,updates_opt_in:updatesOptIn});
   }catch(e){
     const msg=String((e&&e.message)||e||'CEO Prospect Report generation failed');
-    console.error('[ceo-report] FAILED build=CS-2026-09-24-CANONICAL-v228 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
+    console.error('[ceo-report] FAILED build=CS-2026-09-24-CANONICAL-v229 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
     console.error('[ceo-report] ERROR: '+msg);
     if(e&&e.stack)console.error(e.stack);
-    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-24-CANONICAL-v228'});
+    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-24-CANONICAL-v229'});
     try{res.end();}catch(_){}
   }
 });
@@ -37953,6 +37966,9 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
 
 <script>
 var TOKEN = '__TOKEN__';
+// v229 deep-link support for reminder emails.
+function _csFocusRequestedPage(){try{var q=new URLSearchParams(location.search),id=q.get('page');if(!id)return;var n=document.getElementById('page-'+id);if(!n)return;n.scrollIntoView({behavior:'smooth',block:'center'});n.style.boxShadow='0 0 0 2px #38bdf8,0 0 28px rgba(56,189,248,.28)';setTimeout(function(){n.style.boxShadow='';},4500);}catch(e){}}
+setTimeout(_csFocusRequestedPage,1400);
 // -- Ranking history modal + SVG graph (click a page position number) --
 function csPosClose(){ var o=document.getElementById('csPosOv'); if(o) o.style.display='none'; }
 function _csEscH(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
@@ -37963,7 +37979,7 @@ function startCaseStudy(pageId){
   var pg=(_pages||[]).find(function(x){return Number(x.id)===Number(pageId);})||{};
   var q=prompt('Primary query for this case study:',pg.keyword||pg.gsc_keyword||'');if(q===null)return;q=String(q||'').trim();
   if(!q){alert('Add the primary query first.');return;}
-  if(!confirm('Start the protected case study now?\\n\\nRequired baseline: completed page scan, captured HTML, GSC Pages + Queries, all 5 AI engines and the existing Tracker client email. Missing evidence blocks the start instead of being guessed.\\n\\nDay 7 and Day 14: email instructions for a MANUAL GSC, page and evidence review.\\nDay 30: report only — open, print or share.\\n\\nOptional page monitoring remains OFF and is a separate setting.\\nCase-study reminders go to the existing Tracker client email.'))return;
+  if(!confirm('Start the protected case study now?\\n\\nContentScale first verifies that this exact URL is still live and is not redirecting. A dead/redirected URL is stopped before the baseline is created and the client receives a URL-status notice.\\n\\nRequired baseline: completed page scan, captured HTML, GSC Pages + Queries, all 5 AI engines and the existing Tracker client email. Missing evidence blocks the start instead of being guessed.\\n\\nDay 7 and Day 14: email instructions for a MANUAL GSC, page and evidence review.\\nDay 30: report only — open, print or share.\\n\\nOptional page monitoring remains OFF and is a separate setting.\\nCase-study reminders go to the existing Tracker client email.'))return;
   api('/pages/'+pageId+'/case-study/start','POST',{primary_query:q,monitoring_enabled:false,check_frequency:'0',email_reminders:false,ai_reminder_days:14}).then(function(d){
     alert((d&&d.message)||'Case study started.');if(typeof loadPages==='function')loadPages();
   }).catch(function(e){alert(e.message||'Could not start case study');});
@@ -40245,7 +40261,7 @@ function renderPages() {
         + (_pushList.length > 5 ? '<div style="font-size:9px;color:#4b5563;margin-top:3px;">+ ' + (_pushList.length - 5) + ' more in your Queries CSV</div>' : '')
         + '</div>';
     }
-    return _sectionPrefix + '<div class="cs-page-card' + (muteCompletedCard ? ' done' : '') + '" data-page-id="' + p.id + '" data-tour="page-card" style="position:relative;background:#0d1117;border:1px solid #1f2937;' + (_mdOn ? 'border-left:4px solid #16a34a;' : 'border-left:4px solid #374151;') + 'border-radius:10px;margin-bottom:12px;overflow:hidden;">'
+    return _sectionPrefix + '<div id="page-' + p.id + '" class="cs-page-card' + (muteCompletedCard ? ' done' : '') + '" data-page-id="' + p.id + '" data-tour="page-card" style="position:relative;background:#0d1117;border:1px solid #1f2937;' + (_mdOn ? 'border-left:4px solid #16a34a;' : 'border-left:4px solid #374151;') + 'border-radius:10px;margin-bottom:12px;overflow:hidden;">'
       + waitingBanner
       + pendingBanner
       + needsHtmlBanner
@@ -54535,7 +54551,7 @@ function startCaseStudyMilestoneScheduler(){
           FROM tracker_case_studies cs JOIN tracker_pages p ON p.id=cs.tracker_page_id JOIN tracker_clients c ON c.id=cs.tracker_client_id
           WHERE cs.status='active' AND c.status='active' AND cs.baseline_at<=NOW()-INTERVAL '6 days' ORDER BY cs.baseline_at LIMIT 100`);
         for(const row of rr.rows){
-          const age=Math.floor((Date.now()-new Date(row.baseline_at).getTime())/86400000),trackerUrl=(process.env.APP_URL||'https://app.contentscale.site')+'/track/'+row.token;
+          const age=Math.floor((Date.now()-new Date(row.baseline_at).getTime())/86400000),trackerUrl=(process.env.APP_URL||'https://app.contentscale.site')+'/track/'+row.token+'?page='+row.tracker_page_id+'#page-'+row.tracker_page_id;
           const milestoneTypes=['case_day_7_reminder_before','case_day_7_reminder_due','case_day_7_reminder_after','case_day_7_completed','case_day_14_reminder_before','case_day_14_reminder_due','case_day_14_reminder_after','case_day_14_completed','cycle_day_30_report'];
           const seen=await pool.query(`SELECT event_type,event_at FROM tracker_case_study_events WHERE case_study_id=$1 AND event_type=ANY($2::text[]) ORDER BY event_at`,[row.id,milestoneTypes]);
           const have=new Set(seen.rows.map(x=>x.event_type)),eventAt={};seen.rows.forEach(x=>{eventAt[x.event_type]=x.event_at;});let type='',subject='',body='',actionUrl=trackerUrl,eventData={age_days:age,url:row.url,primary_query:row.primary_query};
@@ -54551,10 +54567,10 @@ function startCaseStudyMilestoneScheduler(){
             actionUrl=reportUrl;subject='Your 30-day case-study report is ready — '+(row.tracker_domain||row.domain);body='<h2>Day 30: report only</h2><p>The protected baseline has been compared with the latest evidence already saved in ContentScale.</p><p>No new GSC import, page scan, AI-engine check, HTML change or live verification is requested at this milestone.</p><p><a href="'+reportUrl+'" style="display:inline-block;background:#2563eb;color:#fff;text-decoration:none;padding:11px 18px;border-radius:8px;font-weight:800">Open report to print, save as PDF or share</a></p>';
           }else if(day7Done&&!day14Done&&day14Age>=6){
             const phase=day14Age===6?'before':day14Age===7?'due':'after';type='case_day_14_reminder_'+phase;
-            if(!have.has(type)){eventData.gate_label='case_day_14';eventData.require_ai=true;subject=(phase==='before'?'Tomorrow: ':phase==='due'?'Today: ':'Still waiting: ')+'case-study GSC + five-engine review';body='<h2>Case-study evidence checkpoint</h2><p>This is the '+(phase==='before'?'day-before':phase==='due'?'due-day':'day-after')+' reminder. The page remains <strong>Waiting for data</strong> and ContentScale will not scan it.</p><ol><li>Import fresh GSC Pages and Queries.</li><li>Record new evidence for all five AI engines.</li><li>When the Tracker shows the input is complete, manually scan this page.</li><li>Change HTML only if needed, publish, then Verify published live.</li></ol><p><a href="'+trackerUrl+'">Open Tracker</a></p>';}else type='';
+            if(!have.has(type)){eventData.gate_label='case_day_14';eventData.require_ai=true;subject=(phase==='before'?'Tomorrow: ':phase==='due'?'Today: ':'Still waiting: ')+'case-study GSC + five-engine review';body='<h2>Case-study evidence checkpoint</h2><p><strong>Page:</strong> '+_caseStudyEmailEsc(row.keyword||row.gsc_keyword||'Tracked page')+'<br><strong>URL:</strong> <a href="'+_caseStudyEmailEsc(row.url)+'">'+_caseStudyEmailEsc(row.url)+'</a><br><strong>Primary keyword:</strong> '+_caseStudyEmailEsc(row.primary_query||row.keyword||row.gsc_keyword||'—')+'</p><p>This is the '+(phase==='before'?'day-before':phase==='due'?'due-day':'day-after')+' reminder. The page remains <strong>Waiting for data</strong> and ContentScale will not scan it.</p><ol><li>Import fresh GSC Pages and Queries.</li><li>Record new evidence for all five AI engines.</li><li>When the Tracker shows the input is complete, manually scan this page.</li><li>Change HTML only if needed, publish, then Verify published live.</li></ol><p><a href="'+trackerUrl+'">Open Tracker</a></p>';}else type='';
           }else if(!day7Done&&age>=6){
             const phase=age===6?'before':age===7?'due':'after';type='case_day_7_reminder_'+phase;
-            if(!have.has(type)){eventData.gate_label='case_day_7';eventData.require_ai=false;subject=(phase==='before'?'Tomorrow: ':phase==='due'?'Today: ':'Still waiting: ')+'case-study GSC review';body='<h2>Case-study GSC checkpoint</h2><p>This is the '+(phase==='before'?'day-before':phase==='due'?'due-day':'day-after')+' reminder. The page remains <strong>Waiting for data</strong> and ContentScale will not scan it.</p><ol><li>Import fresh GSC Pages and Queries.</li><li>When the Tracker shows both are received, manually scan this page.</li><li>Change HTML only if needed, publish, then Verify published live.</li></ol><p><a href="'+trackerUrl+'">Open Tracker</a></p>';}else type='';
+            if(!have.has(type)){eventData.gate_label='case_day_7';eventData.require_ai=false;subject=(phase==='before'?'Tomorrow: ':phase==='due'?'Today: ':'Still waiting: ')+'case-study GSC review';body='<h2>Case-study GSC checkpoint</h2><p><strong>Page:</strong> '+_caseStudyEmailEsc(row.keyword||row.gsc_keyword||'Tracked page')+'<br><strong>URL:</strong> <a href="'+_caseStudyEmailEsc(row.url)+'">'+_caseStudyEmailEsc(row.url)+'</a><br><strong>Primary keyword:</strong> '+_caseStudyEmailEsc(row.primary_query||row.keyword||row.gsc_keyword||'—')+'</p><p>This is the '+(phase==='before'?'day-before':phase==='due'?'due-day':'day-after')+' reminder. The page remains <strong>Waiting for data</strong> and ContentScale will not scan it.</p><ol><li>Import fresh GSC Pages and Queries.</li><li>When the Tracker shows both are received, manually scan this page.</li><li>Change HTML only if needed, publish, then Verify published live.</li></ol><p><a href="'+trackerUrl+'">Open Tracker</a></p>';}else type='';
           }
           if(type){
             if(eventData.gate_label){await _ensureMonitoringGateSchema();await pool.query(`UPDATE tracker_pages SET monitoring_waiting_input=TRUE,monitoring_request_at=CASE WHEN monitoring_waiting_input=TRUE AND monitoring_gate_label=$2 THEN monitoring_request_at ELSE NOW() END,monitoring_reminder_sent_at=NOW(),monitoring_require_ai=$3,monitoring_gate_label=$2,next_check_at=NULL WHERE id=$1`,[row.tracker_page_id,eventData.gate_label,eventData.require_ai]);}
