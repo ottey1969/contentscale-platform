@@ -266,7 +266,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-24-CANONICAL-v245';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-24-CANONICAL-v246';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 const CONTENTSCALE_BUILD_CHANGES = [
   'Contact Intelligence: schema-initialisatie is geserialiseerd met één procesbelofte en PostgreSQL advisory lock om pg_type-races te voorkomen.',
@@ -727,7 +727,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-09-24-CANONICAL-v245',
+  build: 'CS-2026-09-24-CANONICAL-v246',
   built_date: '2026-09-23',
   ceo_private: true,
   ceo_public: true,
@@ -3686,8 +3686,20 @@ app.post('/api/tracker-client/:token/analyze-gaps', async (req, res) => {
 // one-click GSC auto-fetch: the service account's email must be added as a Search Console user on
 // THEIR property. Showing the exact email up front turns a support question into a self-serve step.
 app.get('/api/tracker-client/:token/gsc-autofetch-status', async (req, res) => {
-  if (!_gscServiceAccount) return res.json({ success: true, available: false });
-  res.json({ success: true, available: true, service_account_email: _gscServiceAccount.client_email || null });
+  try {
+    const cr = await pool.query("SELECT id, domain, gsc_enabled FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status != 'deleted')", [req.params.token]);
+    if (!cr.rows.length) return res.status(404).json({ success:false, error:'Tracker not found' });
+    const c = cr.rows[0];
+    if (!_gscServiceAccount) return res.json({ success:true, available:false, required:true, connected:false, reason:'server_not_configured' });
+    let connected=false, site_format=null, check_error=null;
+    try {
+      const accessToken=await _gscGetAccessToken();
+      const probeUrl=/^https?:\/\//i.test(String(c.domain||''))?String(c.domain):('https://'+String(c.domain||''));
+      site_format=await _gscFindSiteFormat(accessToken,probeUrl);
+      connected=!!site_format;
+    } catch(e) { check_error=e.message; }
+    res.json({ success:true, available:true, required:true, connected:connected, site_format:site_format, check_error:check_error, service_account_email:_gscServiceAccount.client_email||null });
+  } catch(e) { res.status(500).json({success:false,error:e.message}); }
 });
 
 /* CONTENTSCALE-AI-HANDOFF-V143 — VERIFIED PER-PAGE GSC WRITER
@@ -15984,7 +15996,7 @@ async function startServer() {
   }
 
 console.log('════════════════════════════════════════════════════');
-console.log('CONTENTSCALE BUILD: CS-2026-09-24-CANONICAL-v245');
+console.log('CONTENTSCALE BUILD: CS-2026-09-24-CANONICAL-v246');
 console.log('CEO FUNNEL: Private + Public → SAME CEO engine');
 console.log('PUBLIC EMAIL DELIVERY: required');
 console.log('PRIVATE EMAIL DELIVERY: optional');
@@ -18582,7 +18594,7 @@ function _ceoMainWebsiteUrl(input){
 // action must target this CEO endpoint.
 app.post('/api/ceo-report/start',async(req,res)=>{
   let ceoEntry='unknown',ceoUrl='',lastStage='REQUEST';
-  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-24-CANONICAL-v245');
+  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-24-CANONICAL-v246');
   try{
     lastStage='DB_SETUP';
     console.log('[ceo-report] stage=DB_SETUP');
@@ -18676,10 +18688,10 @@ ContentScale`;
     return res.json({success:true,entry_mode:entry,token,selected_page:selected,ceo_report_token:reportToken,ceo_report_url:reportUrl,delivery_email:delivery,updates_opt_in:updatesOptIn});
   }catch(e){
     const msg=String((e&&e.message)||e||'CEO Prospect Report generation failed');
-    console.error('[ceo-report] FAILED build=CS-2026-09-24-CANONICAL-v245 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
+    console.error('[ceo-report] FAILED build=CS-2026-09-24-CANONICAL-v246 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
     console.error('[ceo-report] ERROR: '+msg);
     if(e&&e.stack)console.error(e.stack);
-    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-24-CANONICAL-v245'});
+    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-24-CANONICAL-v246'});
     try{res.end();}catch(_){}
   }
 });
@@ -42569,10 +42581,26 @@ loadPages().then(function(){ try { loadImpressionGap(); } catch(e) {} try { _tou
 if (_gscAutoFetchAvailable) {
   api('/gsc-autofetch-status', 'GET').then(function(d){
     if (d && d.success && d.service_account_email) { _gscServiceAccountEmail = d.service_account_email; }
-    _renderGscSetupBanner();
-  }).catch(function(){ _renderGscSetupBanner(); });
+    _renderGscSetupBanner(d);
+    _renderGscRequiredGate(d);
+  }).catch(function(){ _renderGscSetupBanner(); _renderGscRequiredGate({required:true,connected:false}); });
 } else {
   _renderGscSetupBanner();
+  _renderGscRequiredGate({required:true,connected:false,available:false});
+}
+function _renderGscRequiredGate(d) {
+  var old=document.getElementById('csGscRequiredGate'); if(old) old.remove();
+  if(d && d.connected) return;
+  var gate=document.createElement('div'); gate.id='csGscRequiredGate';
+  gate.style.cssText='position:fixed;inset:0;background:rgba(3,7,18,.94);z-index:100000;display:flex;align-items:center;justify-content:center;padding:20px;';
+  var email=(d&&d.service_account_email)||_gscServiceAccountEmail||'';
+  var setup=email
+    ? '<ol style="margin:12px 0 16px;padding-left:20px;line-height:1.8;color:#dbeafe"><li>Open Google Search Console for this website.</li><li>Go to <b>Settings → Users and permissions → Add user</b>.</li><li>Add the ContentScale address below. <b>Restricted</b> access is enough.</li></ol><div style="background:#020617;border:1px solid #334155;border-radius:8px;padding:10px;word-break:break-all;color:#93c5fd;font-family:monospace">'+email.replace(/</g,'&lt;')+'</div><button id="csCopyGsc" style="margin-top:10px;padding:9px 14px;border-radius:7px;border:1px solid #3b82f6;background:#1d4ed8;color:white;font-weight:800;cursor:pointer">Copy GSC access address</button>'
+    : '<div style="padding:12px;background:#3f1d1d;border:1px solid #ef4444;border-radius:8px;color:#fecaca">ContentScale GSC auto-connect is not configured on the server yet. Tracker cannot start until GSC access is available.</div>';
+  gate.innerHTML='<div style="max-width:650px;width:100%;background:#0b1220;border:1px solid #2563eb;border-radius:16px;padding:24px;box-shadow:0 24px 80px #000"><div style="font-size:11px;font-weight:900;letter-spacing:.08em;color:#60a5fa;text-transform:uppercase">Required before Tracker can continue</div><h2 style="margin:8px 0;color:#f8fafc">Connect Google Search Console</h2><p style="color:#cbd5e1;line-height:1.65">GSC is mandatory in Tracker because ContentScale needs verified Google queries, impressions, clicks and positions for the baseline, checkpoints and before/after proof. Without that evidence the Tracker cannot make a reliable performance comparison.</p>'+setup+'<button id="csCheckGsc" style="margin-top:14px;padding:11px 16px;border-radius:8px;border:0;background:#16a34a;color:white;font-weight:900;cursor:pointer">✓ I added access — check connection</button><div id="csGscCheckMsg" style="margin-top:10px;color:#94a3b8;font-size:12px">Nothing else in Tracker needs to be configured first.</div></div>';
+  document.body.appendChild(gate);
+  var cp=document.getElementById('csCopyGsc'); if(cp) cp.onclick=function(){navigator.clipboard.writeText(email);cp.textContent='✓ Copied';};
+  var ck=document.getElementById('csCheckGsc'); if(ck) ck.onclick=async function(){var msg=document.getElementById('csGscCheckMsg');ck.disabled=true;ck.textContent='Checking…';try{var r=await api('/gsc-autofetch-status','GET');if(r&&r.connected){msg.style.color='#4ade80';msg.textContent='✓ GSC connected. Tracker is unlocked.';setTimeout(function(){location.reload()},500);}else{msg.style.color='#fbbf24';msg.textContent='Access is not visible yet. Check the property and user address, then try again.';ck.disabled=false;ck.textContent='Check connection again';}}catch(e){msg.style.color='#f87171';msg.textContent=e.message||'Connection check failed';ck.disabled=false;ck.textContent='Check connection again';}};
 }
 function _renderGscSetupBanner() {
   var host = document.getElementById('gscSetupBanner');
