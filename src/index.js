@@ -266,7 +266,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-25-CANONICAL-v249';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-25-CANONICAL-v250';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 const CONTENTSCALE_BUILD_CHANGES = [
   'Contact Intelligence: schema-initialisatie is geserialiseerd met één procesbelofte en PostgreSQL advisory lock om pg_type-races te voorkomen.',
@@ -727,7 +727,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-09-25-CANONICAL-v249',
+  build: 'CS-2026-09-25-CANONICAL-v250',
   built_date: '2026-09-23',
   ceo_private: true,
   ceo_public: true,
@@ -2797,12 +2797,24 @@ app.post('/api/tracker-client/:token/sitemap-links', async (req, res) => {
     if (!sitemapResp.ok) return res.status(400).json({ success: false, error: 'Could not fetch sitemap: ' + sitemapResp.status });
     const sitemapXml = await sitemapResp.text();
 
-    // Extract URLs from sitemap (raise cap to 250 — we filter by GSC activity next)
-    const urlMatches = sitemapXml.match(/<loc>(.*?)<\/loc>/g) || [];
-    const allSitemapPages = urlMatches
-      .map(m => m.replace(/<\/?loc>/g, '').trim())
-      .filter(u => u.startsWith('http'))
-      .slice(0, 250);
+    // Extract real page URLs. WordPress commonly returns a sitemap INDEX, so resolve child sitemaps first.
+    const _locs = (xml) => (String(xml||'').match(/<loc>(.*?)<\/loc>/g) || []).map(m => m.replace(/<\/?loc>/g, '').trim()).filter(u => /^https?:\/\//i.test(u));
+    let allSitemapPages = _locs(sitemapXml);
+    const childMaps = allSitemapPages.filter(u => /\.xml(?:\.gz)?(?:\?|$)/i.test(u));
+    if (childMaps.length) {
+      const pagesFound = [];
+      for (const child of childMaps.slice(0, 30)) {
+        try {
+          const rr = await fetch(child, { headers: {'User-Agent':'Mozilla/5.0'}, signal: AbortSignal.timeout(8000) });
+          if (!rr.ok) continue;
+          _locs(await rr.text()).forEach(u => { if (!/\.xml(?:\.gz)?(?:\?|$)/i.test(u)) pagesFound.push(u); });
+          if (pagesFound.length >= 250) break;
+        } catch(e) {}
+      }
+      allSitemapPages = pagesFound;
+    }
+    const _seenPages = new Set();
+    allSitemapPages = allSitemapPages.filter(u => { const k=u.replace(/\/+$/,'').toLowerCase(); if(_seenPages.has(k))return false; _seenPages.add(k); return true; }).slice(0,250);
 
     // Get tracked pages for this client
     const trackedR = await pool.query('SELECT url, keyword FROM tracker_pages WHERE tracker_client_id=$1 AND (is_active=TRUE OR is_active IS NULL)', [client.id]);
@@ -2870,8 +2882,20 @@ Return ONLY a JSON array:
       try { suggestions = JSON.parse(gText.replace(/```json|```/g, '').trim()); } catch(e) { suggestions = []; }
     }
 
+    // Deterministic fallback: internal suggestions must still work if Gemini is absent, times out or returns invalid JSON.
+    if (!Array.isArray(suggestions) || !suggestions.length) {
+      const words = (v) => String(v||'').toLowerCase().replace(/https?:\/\/[^/]+/g,' ').replace(/[^a-z0-9]+/g,' ').split(/\s+/).filter(w => w.length > 3 && !['https','www','html','page'].includes(w));
+      suggestions = [];
+      for (const from of trackedPages) {
+        const fw = new Set(words((from.keyword||'')+' '+from.url));
+        const ranked = sitemapPages.filter(u => u.replace(/\/+$/,'') !== String(from.url||'').replace(/\/+$/,''))
+          .map(u => { const uw=words(u); return {u,score:uw.reduce((n,w)=>n+(fw.has(w)?1:0),0)}; })
+          .filter(x => x.score>0).sort((a,b)=>b.score-a.score).slice(0,3);
+        ranked.forEach((x,i)=>suggestions.push({from_page:from.url,to_page:x.u,anchor_text:(from.keyword||words(x.u).slice(-3).join(' ')||'related information'),where_to_add:'Add where this related topic is naturally discussed in the body content.',priority:i===0?'high':'medium',reason:'Real sitemap URL with topical overlap to the tracked page.'}));
+      }
+    }
     const aiPrompt = buildLinkPrompt(trackedPages, sitemapPages);
-    res.json({ success: true, pages: sitemapPages, suggestions, ai_prompt: aiPrompt });
+    res.json({ success: true, pages: sitemapPages, suggestions, ai_prompt: aiPrompt, suggestion_source: geminiKey && suggestions.length ? 'ai_or_fallback' : 'deterministic_fallback' });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
@@ -15998,7 +16022,7 @@ async function startServer() {
   }
 
 console.log('════════════════════════════════════════════════════');
-console.log('CONTENTSCALE BUILD: CS-2026-09-25-CANONICAL-v249');
+console.log('CONTENTSCALE BUILD: CS-2026-09-25-CANONICAL-v250');
 console.log('CEO FUNNEL: Private + Public → SAME CEO engine');
 console.log('PUBLIC EMAIL DELIVERY: required');
 console.log('PRIVATE EMAIL DELIVERY: optional');
@@ -18622,7 +18646,7 @@ function _ceoMainWebsiteUrl(input){
 // action must target this CEO endpoint.
 app.post('/api/ceo-report/start',async(req,res)=>{
   let ceoEntry='unknown',ceoUrl='',lastStage='REQUEST';
-  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-25-CANONICAL-v249');
+  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-25-CANONICAL-v250');
   try{
     lastStage='DB_SETUP';
     console.log('[ceo-report] stage=DB_SETUP');
@@ -18716,10 +18740,10 @@ ContentScale`;
     return res.json({success:true,entry_mode:entry,token,selected_page:selected,ceo_report_token:reportToken,ceo_report_url:reportUrl,delivery_email:delivery,updates_opt_in:updatesOptIn});
   }catch(e){
     const msg=String((e&&e.message)||e||'CEO Prospect Report generation failed');
-    console.error('[ceo-report] FAILED build=CS-2026-09-25-CANONICAL-v249 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
+    console.error('[ceo-report] FAILED build=CS-2026-09-25-CANONICAL-v250 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
     console.error('[ceo-report] ERROR: '+msg);
     if(e&&e.stack)console.error(e.stack);
-    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-25-CANONICAL-v249'});
+    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-25-CANONICAL-v250'});
     try{res.end();}catch(_){}
   }
 });
@@ -19543,7 +19567,7 @@ function _pqsAdminContactIntelligenceV156(){return `<style>
   var selectionInfo=document.createElement('div');selectionInfo.id='ciSelectionInfo';selectionInfo.className='ciJob';selectionInfo.innerHTML='<b>Selected for manual verification:</b> 0 / 20';panel.querySelector('#ciUsage').before(selectionInfo);
   var manualResult=document.createElement('div');manualResult.id='ciManualResult';manualResult.className='ciJob';manualResult.innerHTML='<b>Last manual website verification:</b> no manual run saved in this browser.';try{var savedManual=localStorage.getItem('ci_last_manual_result_v168');if(savedManual)manualResult.innerHTML=savedManual}catch(e){}panel.querySelector('#ciUsage').before(manualResult);
   var listHelp=document.createElement('div');listHelp.className='ciHelp';listHelp.innerHTML='<b>Why companies remain visible:</b> this list always shows the records matching the active filter. After a qualified company is verified, it moves to Verified domains or Needs review, and the next still-qualified company takes its place.';panel.querySelector('#ciList').before(listHelp);var sectionToggle=document.createElement('button');sectionToggle.type='button';sectionToggle.className='ciSectionToggle';sectionToggle.innerHTML='<span id="ciSectionLabel">Show companies</span><span class="ciArrow">▼</span>';panel.querySelector('#ciList').before(sectionToggle);panel.classList.add('ciCompaniesClosed');sectionToggle.onclick=function(){panel.classList.toggle('ciCompaniesClosed');var closed=panel.classList.contains('ciCompaniesClosed');sectionToggle.querySelector('#ciSectionLabel').textContent=(closed?'Show':'Hide')+' companies ('+panel.querySelectorAll('#ciList .ciRow').length+')'};
-  var after=0,history=[],nextAfter=null,pageNo=1,jobTimer=null,latestStats=null,latestImport=null,latestVerify=null;
+  var after=0,history=[],nextAfter=null,pageNo=1,jobTimer=null,latestStats=null,latestImport=null,latestVerify=null,statsBusy=false;
   function n(v){return Number(v||0).toLocaleString()}function selected(){return Array.from(panel.querySelectorAll('[data-ci-id]:checked')).map(function(x){return Number(x.dataset.ciId)})}
   function updateSelection(){var count=selected().length,el=document.getElementById('ciSelectionInfo');if(!el)return;el.innerHTML='<b>Selected for manual verification:</b> '+n(count)+' / 20'+(count>20?' · <span style="color:#fca5a5">Clear some selections before verifying.</span>':'')}
   function filters(){return{status:document.getElementById('ciFilter').value,q:document.getElementById('ciSearch').value.trim(),source:document.getElementById('ciSource').value,niche:document.getElementById('ciNiche').value,country:document.getElementById('ciCountry').value.trim(),language:document.getElementById('ciLanguage').value,min_score:Number(document.getElementById('ciMinScore').value)||0}}
@@ -19553,7 +19577,7 @@ function _pqsAdminContactIntelligenceV156(){return `<style>
   function statusText(t){document.getElementById('ciImportStatus').textContent=t}
   function beginButton(btn,label){if(!btn)return null;var old=btn.textContent;btn.disabled=true;btn.classList.remove('ciDone','ciFailed');btn.classList.add('ciWorking');btn.textContent=label;return old}
   function endButton(btn,old,ok,successText,failText){if(!btn||old==null)return;btn.classList.remove('ciWorking');btn.classList.add(ok?'ciDone':'ciFailed');btn.textContent=ok?(successText||'✓ Completed'):(failText||'✕ Failed');setTimeout(function(){btn.classList.remove('ciDone','ciFailed');btn.textContent=old;btn.disabled=false},1400)}
-  async function stats(){try{var d=await api('/api/contact-intelligence/stats'),c=d.counts||{},total=Object.keys(c).reduce(function(s,k){return s+Number(c[k]||0)},0),cards=[['Total staged',total],['Qualified',c.qualified],['Verified domains',c.domain_verified],['Needs domain',c.needs_domain],['Likely personal',c.rejected_personal],['Promoted',c.promoted]];latestStats=d;document.getElementById('ciStats').innerHTML=cards.map(function(x){return'<div class="ciStat"><b>'+n(x[1])+'</b><span>'+esc(x[0])+'</span></div>'}).join('');var used=Number(d.verification_used_today||0),verified=Number(d.verification_verified_today||0),cap=Number(d.verification_daily_cap||500),remaining=Math.max(0,cap-used),qs=d.quick_scans||{},wait=used>=cap?' · <b style="color:#fbbf24">Daily capacity used. Queue waits until 00:00 UTC / 08:00 Philippines.</b>':'';document.getElementById('ciActivity').innerHTML='<b>Today:</b> '+n(used)+' website verification attempts · '+n(verified)+' domains successfully verified · '+n(qs.started_today)+' real Quick Scans started · '+n(qs.completed_today)+' real Quick Scans completed <span class="meta">(Philippines time)</span><br><span class="meta">All time: '+n(qs.started_total)+' Quick Scans started · '+n(qs.completed_total)+' completed. “Verified domains” is not a Quick Scan.</span>';document.getElementById('ciUsage').innerHTML='<b>Website verification attempts today: '+n(used)+' / '+n(cap)+'</b> · <b>'+n(remaining)+' attempts remaining today</b> · successfully verified today: '+n(verified)+' · resets at 00:00 UTC · maximum 20 per manual click'+wait;fill('ciSource',(d.filters||{}).sources,'sources');fill('ciNiche',(d.filters||{}).niches,'niches');latestImport=d.jobs&&d.jobs[0];var resume=document.getElementById('ciResume');resume.style.display=latestImport&&latestImport.status==='failed'&&latestImport.resumable?'inline-block':'none';if(latestImport&&!jobTimer)statusText('Latest import: '+latestImport.status+' · '+n(latestImport.processed_rows)+' processed · '+n(latestImport.inserted_rows)+' new · '+n(latestImport.duplicate_rows)+' duplicates · source '+(latestImport.source_type||'auto')+(latestImport.error?' · '+latestImport.error:''));latestVerify=d.verification_jobs&&d.verification_jobs[0];var v=latestVerify,active=v&&['queued','processing','paused'].indexOf(v.status)>=0,why=v&&active&&used>=cap?' · waiting for the daily reset':'';document.getElementById('ciVerifyJob').innerHTML=v?'<div class="ciJob"><b>Website queue: '+esc(v.status)+'</b> · '+n(v.processed)+' / '+n(v.total_limit||v.total)+' processed · '+n(v.verified)+' verified · '+n(v.needs_review)+' review'+why+(v.error?' · <span style="color:#fca5a5">'+esc(v.error)+'</span>':'')+(active?' <button class="btn" id="ciQueueState" style="margin-left:8px">'+(v.status==='paused'?'Resume queue':'Pause queue')+'</button> <button class="btn" id="ciQueueCancel" style="margin-left:6px;background:#7f1d1d;border-color:#ef4444">Cancel queue</button>':'')+'</div>':'';var qb=document.getElementById('ciQueueState'),cb=document.getElementById('ciQueueCancel');if(qb)qb.onclick=toggleQueue;if(cb)cb.onclick=cancelQueue}catch(e){statusText(e.message)}}
+  async function stats(){if(statsBusy||document.hidden)return;statsBusy=true;try{var d=await api('/api/contact-intelligence/stats'),c=d.counts||{},total=Object.keys(c).reduce(function(s,k){return s+Number(c[k]||0)},0),cards=[['Total staged',total],['Qualified',c.qualified],['Verified domains',c.domain_verified],['Needs domain',c.needs_domain],['Likely personal',c.rejected_personal],['Promoted',c.promoted]];latestStats=d;document.getElementById('ciStats').innerHTML=cards.map(function(x){return'<div class="ciStat"><b>'+n(x[1])+'</b><span>'+esc(x[0])+'</span></div>'}).join('');var used=Number(d.verification_used_today||0),verified=Number(d.verification_verified_today||0),cap=Number(d.verification_daily_cap||500),remaining=Math.max(0,cap-used),qs=d.quick_scans||{},wait=used>=cap?' · <b style="color:#fbbf24">Daily capacity used. Queue waits until 00:00 UTC / 08:00 Philippines.</b>':'';document.getElementById('ciActivity').innerHTML='<b>Today:</b> '+n(used)+' website verification attempts · '+n(verified)+' domains successfully verified · '+n(qs.started_today)+' real Quick Scans started · '+n(qs.completed_today)+' real Quick Scans completed <span class="meta">(Philippines time)</span><br><span class="meta">All time: '+n(qs.started_total)+' Quick Scans started · '+n(qs.completed_total)+' completed. “Verified domains” is not a Quick Scan.</span>';document.getElementById('ciUsage').innerHTML='<b>Website verification attempts today: '+n(used)+' / '+n(cap)+'</b> · <b>'+n(remaining)+' attempts remaining today</b> · successfully verified today: '+n(verified)+' · resets at 00:00 UTC · maximum 20 per manual click'+wait;fill('ciSource',(d.filters||{}).sources,'sources');fill('ciNiche',(d.filters||{}).niches,'niches');latestImport=d.jobs&&d.jobs[0];var resume=document.getElementById('ciResume');resume.style.display=latestImport&&latestImport.status==='failed'&&latestImport.resumable?'inline-block':'none';if(latestImport&&!jobTimer)statusText('Latest import: '+latestImport.status+' · '+n(latestImport.processed_rows)+' processed · '+n(latestImport.inserted_rows)+' new · '+n(latestImport.duplicate_rows)+' duplicates · source '+(latestImport.source_type||'auto')+(latestImport.error?' · '+latestImport.error:''));latestVerify=d.verification_jobs&&d.verification_jobs[0];var v=latestVerify,active=v&&['queued','processing','paused'].indexOf(v.status)>=0,why=v&&active&&used>=cap?' · waiting for the daily reset':'';document.getElementById('ciVerifyJob').innerHTML=v?'<div class="ciJob"><b>Website queue: '+esc(v.status)+'</b> · '+n(v.processed)+' / '+n(v.total_limit||v.total)+' processed · '+n(v.verified)+' verified · '+n(v.needs_review)+' review'+why+(v.error?' · <span style="color:#fca5a5">'+esc(v.error)+'</span>':'')+(active?' <button class="btn" id="ciQueueState" style="margin-left:8px">'+(v.status==='paused'?'Resume queue':'Pause queue')+'</button> <button class="btn" id="ciQueueCancel" style="margin-left:6px;background:#7f1d1d;border-color:#ef4444">Cancel queue</button>':'')+'</div>':'';var qb=document.getElementById('ciQueueState'),cb=document.getElementById('ciQueueCancel');if(qb)qb.onclick=toggleQueue;if(cb)cb.onclick=cancelQueue}catch(e){statusText(e.message)}finally{statsBusy=false}}
   async function toggleQueue(){if(!latestVerify)return;var btn=this,action=latestVerify.status==='paused'?'resume':'pause',old=beginButton(btn,action==='resume'?'Resuming…':'Pausing…');try{var d=await api('/api/contact-intelligence/verification-jobs/'+latestVerify.id+'/state',{method:'POST',body:JSON.stringify({action:action})});statusText(d.message);endButton(btn,old,true,action==='resume'?'✓ Resumed':'✓ Paused');setTimeout(stats,1500)}catch(e){statusText(e.message);endButton(btn,old,false)}}
   async function cancelQueue(){if(!latestVerify||!confirm('Cancel this website verification queue? Already completed checks remain saved. No email or scan is sent.'))return;var btn=this,old=beginButton(btn,'Cancelling…');try{var d=await api('/api/contact-intelligence/verification-jobs/'+latestVerify.id+'/state',{method:'POST',body:JSON.stringify({action:'cancel'})});statusText(d.message);endButton(btn,old,true,'✓ Queue cancelled');setTimeout(stats,1500)}catch(e){statusText(e.message);endButton(btn,old,false)}}
   function render(items){document.getElementById('ciList').innerHTML=items.map(function(x){var site=x.website_url||x.website_candidate||'',place=[x.city,x.country||x.location].filter(Boolean).join(', '),src=x.linkedin_url?'<a class="link" target="_blank" rel="noopener" href="'+esc(x.linkedin_url)+'">LinkedIn</a>':esc(x.source||'unknown'),name=esc(x.company_name||x.contact_name||x.username||'Unnamed');return'<article class="ciRow" data-status="'+esc(x.status)+'"><input type="checkbox" data-ci-id="'+x.id+'"><div class="ciIdentity"><b class="ciCompanyName">'+name+'</b><span class="meta ciSummaryMeta">'+src+' · @'+esc(x.username||'—')+' · '+n(x.follower_count)+' followers</span><div class="ciBio ciDetail">'+esc(String(x.bio||x.job_title||'').slice(0,180))+'</div></div><div class="ciContact"><b>'+esc(x.email||'No email')+'</b><span class="meta ciDetail">'+esc(x.email_type||'')+' · '+esc(x.niche||'other')+(place?' · '+esc(place):'')+' · '+esc(x.language||'unknown')+'</span></div><div class="ciScore">'+n(x.business_score)+'</div><div class="ciStatusCol"><span class="ciBadge">'+esc(x.status)+'</span><div class="ciBio ciDetail">'+esc(x.reason||'')+'</div></div><div class="ciSite ciDetail" data-site="'+esc(site)+'">'+esc(site||'No website candidate')+'</div></article>'}).join('')||'<p class="meta">No contacts match these filters.</p>';document.getElementById('ciPageMeta').textContent='Page '+pageNo+' · '+items.length+' shown';document.getElementById('ciPrev').disabled=!history.length;document.getElementById('ciNext').disabled=!nextAfter;var sl=document.getElementById('ciSectionLabel');if(sl)sl.textContent=(panel.classList.contains('ciCompaniesClosed')?'Show':'Hide')+' companies ('+items.length+')';updateSelection()}
@@ -19567,7 +19591,7 @@ function _pqsAdminContactIntelligenceV156(){return `<style>
   document.getElementById('ciVerifyFiltered').onclick=async function(){var btn=this,f=filters(),total=Number(document.getElementById('ciTotalLimit').value)||100,parts=['status: '+f.status,'minimum score: '+f.min_score],active=latestVerify&&['queued','processing','paused'].indexOf(latestVerify.status)>=0;if(active){var blockedOld=beginButton(btn,'Checking queue…');statusText('A website verification queue is already '+latestVerify.status+' ('+n(latestVerify.processed)+' / '+n(latestVerify.total_limit||latestVerify.total)+'). Finish or cancel it before starting another batch.');endButton(btn,blockedOld,false,null,'✕ Queue already active');return}if(f.q)parts.push('search: '+f.q);if(f.source!=='all')parts.push('source: '+f.source);if(f.niche!=='all')parts.push('niche: '+f.niche);if(f.country)parts.push('country: '+f.country);if(f.language!=='all')parts.push('language: '+f.language);if(!confirm('Queue the next '+total+' matching companies?\\n\\nFilters: '+parts.join(' · ')+'\\n\\nThe queue stops after '+total+'. This does not send email and does not start a Quick Scan.'))return;var old=beginButton(btn,'Adding '+total+' companies…'),ok=false;try{var d=await api('/api/contact-intelligence/verify-filtered',{method:'POST',body:JSON.stringify({filters:f,total_limit:total})});statusText(d.message);ok=true;await stats()}catch(e){statusText(e.message)}finally{endButton(btn,old,ok,'✓ Queue created')}};
   document.getElementById('ciPromote').onclick=function(){act('/api/contact-intelligence/promote',200,'Add the selected verified companies to Lead Crawler? No scan or email will start.',null,this)};document.getElementById('ciSuppress').onclick=function(){var reason=prompt('Suppression reason:','Not a suitable business prospect');if(reason===null)return;act('/api/contact-intelligence/suppress',500,'Suppress selected contacts and revoke unsent, unscanned records?',{reason:reason},this)};
   document.getElementById('ciExport').onclick=async function(){var btn=this,old=beginButton(btn,'Preparing CSV…'),ok=false,ids=selected(),body=ids.length?{ids:ids}:{filters:filters(),limit:10000};statusText(ids.length?'Preparing selected CSV…':'Preparing filtered CSV (maximum 10,000 rows)…');try{var r=await fetch('/api/contact-intelligence/export',{method:'POST',headers:{'Content-Type':'application/json','x-admin-code':KEY},body:JSON.stringify(body)});if(!r.ok){var e=await r.json();throw Error(e.error||'Export failed')}var blob=await r.blob(),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='contentscale-companies-'+new Date().toISOString().slice(0,10)+'.csv';document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(a.href)},1000);statusText('CSV export downloaded.');ok=true}catch(e){statusText(e.message)}finally{endButton(btn,old,ok,'✓ CSV downloaded')}};
-  document.getElementById('ciNext').onclick=function(){if(!nextAfter)return;history.push(after);after=nextAfter;pageNo++;list(false)};document.getElementById('ciPrev').onclick=function(){if(!history.length)return;after=history.pop();pageNo=Math.max(1,pageNo-1);list(false)};stats();list(true);setInterval(stats,30000);
+  document.getElementById('ciNext').onclick=function(){if(!nextAfter)return;history.push(after);after=nextAfter;pageNo++;list(false)};document.getElementById('ciPrev').onclick=function(){if(!history.length)return;after=history.pop();pageNo=Math.max(1,pageNo-1);list(false)};stats();list(true);setInterval(stats,60000);
 })();<\/script>`}
 function _pqsAdminBorderPolish(){return `<style>
   /* CONTENTSCALE-AI-HANDOFF-V153 — QUICK SCAN ADMIN VISUAL BOUNDARIES */
@@ -34839,6 +34863,16 @@ function renderPages(){
       +'<div class="cb-field" style="margin-bottom:12px;"><label>Notes / Next Steps</label><textarea oninput="updateField(\\''+p.id+'\\',\\'notes\\',this.value)">'+p.notes+'</textarea></div>'
 
 
+      // v250 Link Health — use the canonical scan, not a second scanner.
+      +(function(){
+          var lm=p.linkMetrics||null;
+          if(!lm) return '<div style="margin-bottom:12px;padding:11px 13px;background:rgba(148,163,184,.04);border:1px solid #334155;border-radius:7px;"><div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:5px;">🔗 Link Health</div><div style="font-size:10px;color:var(--dim);">Run <b>Scan Score</b> once. The same canonical scan will record contextual internal links and external links here before you finish the content.</div></div>';
+          var ic=Number(lm.internal||0), ec=Number(lm.external||0);
+          var ext=ec===0?'<span style="color:var(--gold);font-weight:800;">⚠ No external links detected</span> — review factual claims and add a relevant primary/authoritative source where it genuinely supports the content.':'<span style="color:var(--green);font-weight:800;">✓ '+ec+' external link'+(ec===1?'':'s')+' detected</span>';
+          var intr=ic===0?'<span style="color:var(--red);font-weight:800;">⚠ No contextual internal links detected</span>':'<span style="color:var(--green);font-weight:800;">✓ '+ic+' internal link'+(ic===1?'':'s')+' detected</span>';
+          return '<div style="margin-bottom:12px;padding:11px 13px;background:rgba(34,197,94,.035);border:1px solid rgba(34,197,94,.18);border-radius:7px;"><div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--green);margin-bottom:7px;">🔗 Link Health · canonical scan</div><div style="font-size:10px;line-height:1.7;">'+intr+'<br>'+ext+'</div><div style="font-size:9px;color:var(--dim);margin-top:5px;">External links are not a quota. Add them when they support facts, standards, regulations or research.</div></div>';
+        })()
+
       // Internal Link Suggestions (auto-computed from page list)
       + (function(){
           var kw = (p.keyword || '').toLowerCase();
@@ -34871,9 +34905,9 @@ function renderPages(){
               +'</div>';
           }).join('');
           return '<div style="margin-bottom:12px;padding:12px 14px;background:rgba(96,165,250,.04);border:1px solid rgba(96,165,250,.15);border-radius:7px;">'
-            +'<div style="font-family:\'IBM Plex Mono\\',monospace;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--blue);margin-bottom:8px;">🔗 Internal Link Opportunities <span style=\\"font-weight:400;text-transform:none;letter-spacing:0;font-size:8px;color:var(--dim);\\">— other pages to link FROM/TO</span></div>'
+            +'<div style="font-family:\'IBM Plex Mono\\',monospace;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--blue);margin-bottom:8px;">🔗 Internal Link Opportunities <span style=\\"font-weight:400;text-transform:none;letter-spacing:0;font-size:8px;color:var(--dim);\\">— relevant tracked pages to connect contextually</span></div>'
             +rows
-            +'<div style="font-size:10px;color:var(--dim);margin-top:5px;">Add contextual links between these pages using the suggested anchor text. Pre-filled automatically in PULSE+NEXUS ⑤.</div>'
+            +'<div style="font-size:10px;color:var(--dim);margin-top:5px;">Use these as relevance candidates. The sitemap analysis below can suggest exact FROM → TO placements using real URLs only.</div>'
             +'</div>';
         })()
 
@@ -35681,6 +35715,14 @@ async function scanOnePage(pageId) {
     });
     var d = await r.json();
     if (d.score) {
+      // v250: preserve canonical scanner link counts in Tracker so link health is visible before implementation.
+      if (d.content_stats) {
+        p.linkMetrics = {
+          internal: Number(d.content_stats.internalLinksContent != null ? d.content_stats.internalLinksContent : d.content_stats.internalLinks || 0),
+          external: Number(d.content_stats.externalLinks || 0),
+          checkedAt: d.timestamp || new Date().toISOString()
+        };
+      }
       if (!p.scoreBefore) {
         p.scoreBefore = d.score;
         toast('✅ Pre-scan: ' + d.score + '/100 — ' + p.url.split('/').pop());
@@ -56193,3 +56235,5 @@ console.log('AI-CITATION-DOMAIN-VS-EXACT-PAGE-20260908=true');
 // CONTENTSCALE-PREWRITE-CREATE-EXPAND-FACT-SAFETY-VISUAL-20260909=true
 
 // CONTENTSCALE-AI-HANDOFF-V247 — AUTO 7-DAY OUTREACH WARMUP + GSC CLARITY + LEAD IMPORT SESSION DISMISS
+
+// v250 — Quick Scan Contact Intelligence stats request guard; Tracker canonical link-health visibility; sitemap-index-aware internal-link suggestions with deterministic fallback.
