@@ -266,7 +266,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-24-CANONICAL-v241';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-24-CANONICAL-v242';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 const CONTENTSCALE_BUILD_CHANGES = [
   'Contact Intelligence: schema-initialisatie is geserialiseerd met één procesbelofte en PostgreSQL advisory lock om pg_type-races te voorkomen.',
@@ -727,7 +727,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-09-24-CANONICAL-v241',
+  build: 'CS-2026-09-24-CANONICAL-v242',
   built_date: '2026-09-23',
   ceo_private: true,
   ceo_public: true,
@@ -15949,7 +15949,7 @@ async function startServer() {
   }
 
 console.log('════════════════════════════════════════════════════');
-console.log('CONTENTSCALE BUILD: CS-2026-09-24-CANONICAL-v241');
+console.log('CONTENTSCALE BUILD: CS-2026-09-24-CANONICAL-v242');
 console.log('CEO FUNNEL: Private + Public → SAME CEO engine');
 console.log('PUBLIC EMAIL DELIVERY: required');
 console.log('PRIVATE EMAIL DELIVERY: optional');
@@ -18547,7 +18547,7 @@ function _ceoMainWebsiteUrl(input){
 // action must target this CEO endpoint.
 app.post('/api/ceo-report/start',async(req,res)=>{
   let ceoEntry='unknown',ceoUrl='',lastStage='REQUEST';
-  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-24-CANONICAL-v241');
+  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-24-CANONICAL-v242');
   try{
     lastStage='DB_SETUP';
     console.log('[ceo-report] stage=DB_SETUP');
@@ -18641,10 +18641,10 @@ ContentScale`;
     return res.json({success:true,entry_mode:entry,token,selected_page:selected,ceo_report_token:reportToken,ceo_report_url:reportUrl,delivery_email:delivery,updates_opt_in:updatesOptIn});
   }catch(e){
     const msg=String((e&&e.message)||e||'CEO Prospect Report generation failed');
-    console.error('[ceo-report] FAILED build=CS-2026-09-24-CANONICAL-v241 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
+    console.error('[ceo-report] FAILED build=CS-2026-09-24-CANONICAL-v242 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
     console.error('[ceo-report] ERROR: '+msg);
     if(e&&e.stack)console.error(e.stack);
-    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-24-CANONICAL-v241'});
+    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-24-CANONICAL-v242'});
     try{res.end();}catch(_){}
   }
 });
@@ -40495,7 +40495,14 @@ function renderPages() {
         var wn=['google_aio','chatgpt','perplexity','claude','copilot'].filter(function(k){var x=wa[k];return x&&_aiEvidenceIsVerified(x)&&(Date.parse(x.updated_at||x.verified_at||0)||0)>=reqMs;}).length;
         if(wn<5)missingParts.push('AI engines '+wn+'/5');
       }
-      waitingBanner='<div style="padding:9px 14px;background:#2a1f05;border-bottom:1px solid #a16207;color:#fde68a;font-size:11px;font-weight:700;line-height:1.55;"><span style="color:#fbbf24;">WAITING FOR DATA</span> \u2014 '+(missingParts.length?('still needed: '+missingParts.join(', ')): 'input complete; press Scan to continue')+'. No scheduled scan runs while this page is waiting.</div>';
+      var _waitNeedsGsc=missingParts.indexOf('GSC Pages')>=0||missingParts.indexOf('GSC Queries')>=0;
+      var _waitNeedsAi=missingParts.some(function(x){return String(x).indexOf('AI engines ')===0;});
+      var _waitActions='<div style="display:flex;gap:7px;flex-wrap:wrap;margin-top:7px;">'
+        +(_waitNeedsGsc?'<button type="button" onclick="event.stopPropagation();_gscAutoFetchPage('+p.id+',this)" style="font-size:10px;font-weight:900;padding:5px 10px;border-radius:6px;background:#0a2540;border:1px solid #2563eb;color:#bfdbfe;cursor:pointer;">&#x2b07; Fetch missing GSC data</button>':'')
+        +(_waitNeedsAi?'<button type="button" onclick="event.stopPropagation();openAiEvidence('+p.id+')" style="font-size:10px;font-weight:900;padding:5px 10px;border-radius:6px;background:#2e1065;border:1px solid #8b5cf6;color:#ddd6fe;cursor:pointer;">&#x1f9e0; Add / update AI checks</button>':'')
+        +(!missingParts.length?'<button type="button" onclick="event.stopPropagation();checkPage('+p.id+')" style="font-size:10px;font-weight:900;padding:5px 10px;border-radius:6px;background:#052e16;border:1px solid #22c55e;color:#bbf7d0;cursor:pointer;">&#x21bb; Scan current live page</button>':'')
+        +'</div>';
+      waitingBanner='<div style="padding:9px 14px;background:#2a1f05;border-bottom:1px solid #a16207;color:#fde68a;font-size:11px;font-weight:700;line-height:1.55;"><span style="color:#fbbf24;">WAITING FOR DATA</span> \u2014 '+(missingParts.length?('still needed: '+missingParts.join(', ')): 'input complete; scan the current live page to continue')+'. No scheduled scan runs while this page is waiting.'+_waitActions+'</div>';
     }
 
     // Needs HTML banner
@@ -40629,7 +40636,7 @@ function renderPages() {
       + (!p.case_study_active ? (_csReady?'<button onclick="event.stopPropagation();startCaseStudy(' + p.id + ')" style="background:#052e16;border:1px solid #22c55e;border-radius:7px;color:#86efac;cursor:pointer;font-size:10px;padding:5px 10px;font-weight:900;" title="All baseline evidence is complete. Lock it before changing the live page.">READY — Start case study</button>':'<button disabled style="background:#1c1407;border:1px solid #92400e;border-radius:7px;color:#fbbf24;cursor:not-allowed;font-size:10px;padding:5px 10px;font-weight:900;" title="Complete: '+String(_csMissing.join(' · ')).replace(/"/g,'&quot;')+'">Case study waiting for baseline</button>') : '')
       + (p.case_study_active && isDone ? '<button data-tour="new-revision" onclick="event.stopPropagation();openNewHtmlRevision(' + p.id + ')" style="background:#172554;border:1px solid #3b82f6;border-radius:7px;color:#bfdbfe;cursor:pointer;font-size:10px;padding:5px 10px;font-weight:900;" title="Start another improvement cycle without overwriting the baseline or previous versions">+ New HTML revision</button>' : '')
       + (p.case_study_active && !isDone && Number(p.revision_cycle||1)>1 ? '<button onclick="event.stopPropagation();openHtmlUpload(' + p.id + ',true)" style="background:#172554;border:1px solid #3b82f6;border-radius:7px;color:#bfdbfe;cursor:pointer;font-size:10px;padding:5px 10px;font-weight:800;" title="Update the candidate HTML for revision '+Number(p.revision_cycle||1)+'">Edit revision HTML</button>' : '')
-      + (p.case_study_active ? '<button onclick="event.stopPropagation();savePrePublicationCheckpoint(' + p.id + ')" style="background:'+(p.prepublication_checkpoint_saved?'#052e16':'#422006')+';border:1px solid '+(p.prepublication_checkpoint_saved?'#16a34a':'#f59e0b')+';border-radius:7px;color:'+(p.prepublication_checkpoint_saved?'#86efac':'#fde68a')+';cursor:pointer;font-size:10px;padding:5px 10px;font-weight:800;" title="'+(p.prepublication_checkpoint_saved?'The live version before publishing is protected (full HTML + SHA-256 hash). Your locked baseline is separate and unaffected.':'Click this right before you publish your improved page. It snapshots the current live HTML as immutable proof of the version you are about to overwrite. Not needed until you publish; your baseline was already locked at case-study start.')+'">'+(p.prepublication_checkpoint_saved?'\\u2713 Live version saved':'Save live version before publishing')+'</button>' : '')
+      + (p.case_study_active ? '<button onclick="event.stopPropagation();savePrePublicationCheckpoint(' + p.id + ')" style="background:'+(p.prepublication_checkpoint_saved?'#052e16':'#422006')+';border:1px solid '+(p.prepublication_checkpoint_saved?'#16a34a':'#f59e0b')+';border-radius:7px;color:'+(p.prepublication_checkpoint_saved?'#86efac':'#fde68a')+';cursor:pointer;font-size:10px;padding:5px 10px;font-weight:800;" title="'+(p.prepublication_checkpoint_saved?'The live version before publishing is protected (full HTML + SHA-256 hash). Your locked baseline is separate and unaffected.':'Step 1 before publishing changes: save the CURRENT live HTML as immutable proof. The protected case-study baseline remains separate and cannot be overwritten. After publishing, use Step 2 to scan/verify the new live version and compare it with this checkpoint.')+'">'+(p.prepublication_checkpoint_saved?'\\u2713 Live version saved':'1 · Save current live HTML')+'</button>' : '')
       + (p.case_study_active && p.prepublication_checkpoint_saved && !isDone ? '<button onclick="event.stopPropagation();markDone(' + p.id + ',this,false)" style="background:#052e16;border:1px solid #22c55e;border-radius:7px;color:#bbf7d0;cursor:pointer;font-size:10px;padding:5px 11px;font-weight:900;box-shadow:0 0 0 1px rgba(34,197,94,.12);" title="The reviewed HTML is live. Capture it, compare it with the protected pre-publication version and verify the implementation.">2 \\u00b7 Verify published live</button>' : '')
       + (p.case_study_active ? '<button onclick="openCaseStudy(' + p.id + ')" style="background:#082f49;border:1px solid #0284c7;border-radius:7px;color:#7dd3fc;cursor:pointer;font-size:11px;padding:5px 10px;font-weight:800;" title="Open protected baseline and proof history">Proof &amp; History</button>' : '')
       + (p.case_study_active && isDone ? (function(){var ae=p.ai_manual_evidence;if(typeof ae==='string'){try{ae=JSON.parse(ae);}catch(e){ae={};}}var n=['google_aio','chatgpt','perplexity','claude','copilot'].filter(function(k){return ae&&_aiEvidenceIsVerified(ae[k]);}).length;return '<button data-tour="ai-recheck" onclick="event.stopPropagation();openAiEvidence('+p.id+')" style="background:'+(n===5?'#052e16':'#451a03')+';border:1px solid '+(n===5?'#16a34a':'#f59e0b')+';border-radius:7px;color:'+(n===5?'#86efac':'#fde68a')+';cursor:pointer;font-size:10px;padding:5px 10px;font-weight:900;" title="A fresh manual five-engine check is required after every published revision">'+(n===5?'\\u2713 AI rechecked 5/5':'3 \\u00b7 Recheck AI '+n+'/5')+'</button>';})() : '')
