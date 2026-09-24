@@ -266,7 +266,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-24-CANONICAL-v247';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-24-CANONICAL-v248';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 const CONTENTSCALE_BUILD_CHANGES = [
   'Contact Intelligence: schema-initialisatie is geserialiseerd met één procesbelofte en PostgreSQL advisory lock om pg_type-races te voorkomen.',
@@ -727,7 +727,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-09-24-CANONICAL-v247',
+  build: 'CS-2026-09-24-CANONICAL-v248',
   built_date: '2026-09-23',
   ceo_private: true,
   ceo_public: true,
@@ -15998,7 +15998,7 @@ async function startServer() {
   }
 
 console.log('════════════════════════════════════════════════════');
-console.log('CONTENTSCALE BUILD: CS-2026-09-24-CANONICAL-v247');
+console.log('CONTENTSCALE BUILD: CS-2026-09-24-CANONICAL-v248');
 console.log('CEO FUNNEL: Private + Public → SAME CEO engine');
 console.log('PUBLIC EMAIL DELIVERY: required');
 console.log('PRIVATE EMAIL DELIVERY: optional');
@@ -18361,20 +18361,33 @@ app.post('/api/prospect-quick-scan/admin/import',requireAdmin,async(req,res)=>{
 // CONTENTSCALE-AI-HANDOFF-V163 — OUTREACH WINDOW (ASIA/MANILA)
 // A new daily sending session may start 24 hours after the previous successful send. Once today's first
 // message is sent, the remaining approved messages in that day's warm-up batch stay available.
+// CONTENTSCALE-AI-HANDOFF-V248 — PRESERVE EXISTING WARM-UP AGE FROM SEND HISTORY
 async function _pqsOutreachTiming(){
   const warmKey='lead_crawler_outreach';
   await pool.query(`INSERT INTO warmup_config(user_id,warmup_start_date,is_active)
     SELECT $1,COALESCE((SELECT MIN((outreach_sent_at AT TIME ZONE 'Asia/Manila')::date) FROM prospect_quick_scans WHERE outreach_sent_at>=NOW()-INTERVAL '6 days'),CURRENT_DATE),TRUE
     WHERE NOT EXISTS(SELECT 1 FROM warmup_config WHERE user_id=$1)`,[warmKey]).catch(()=>{});
-  const cfg=await pool.query(`SELECT warmup_start_date,is_active FROM warmup_config WHERE user_id=$1`,[warmKey]).catch(()=>({rows:[]}));
+  // v248: preserve the real warm-up age when this feature is deployed after sending already started.
+  // Only backdate the stored start date from actual successful sends; never move it forward on deploy/restart.
+  await pool.query(`UPDATE warmup_config w SET warmup_start_date = LEAST(
+      w.warmup_start_date,
+      COALESCE((SELECT MIN((p.outreach_sent_at AT TIME ZONE 'Asia/Manila')::date)
+                FROM prospect_quick_scans p
+                WHERE p.outreach_sent_at IS NOT NULL
+                  AND p.outreach_sent_at >= NOW()-INTERVAL '6 days'), w.warmup_start_date)
+    ) WHERE w.user_id=$1`,[warmKey]).catch(()=>{});
+  const cfg=await pool.query(`SELECT warmup_start_date,is_active,
+      GREATEST(1, ((NOW() AT TIME ZONE 'Asia/Manila')::date - warmup_start_date) + 1)::int AS warmup_day
+    FROM warmup_config WHERE user_id=$1`,[warmKey]).catch(()=>({rows:[]}));
   const q=await pool.query(`WITH b AS (SELECT (date_trunc('day',NOW() AT TIME ZONE 'Asia/Manila') AT TIME ZONE 'Asia/Manila') AS today_start)
     SELECT MAX(outreach_sent_at) AS last_sent_at,
       COUNT(*) FILTER(WHERE outreach_sent_at>=b.today_start)::int AS sent_today,
       COUNT(*) FILTER(WHERE outreach_sent_at>=b.today_start-INTERVAL '6 days')::int AS sent_cycle_window
     FROM prospect_quick_scans CROSS JOIN b WHERE outreach_sent_at IS NOT NULL GROUP BY b.today_start`);
   const row=q.rows[0]||{},now=new Date(),last=row.last_sent_at?new Date(row.last_sent_at):null;
-  const cfgRow=cfg.rows[0]||{},active=cfgRow.is_active!==false,startDate=cfgRow.warmup_start_date?new Date(cfgRow.warmup_start_date):now;
-  const dayNumber=Math.max(1,Math.floor((now-startDate)/86400000)+1),cycle=Math.min(6,Math.floor((dayNumber-1)/7)+1),dayInCycle=((dayNumber-1)%7)+1;
+  const cfgRow=cfg.rows[0]||{},active=cfgRow.is_active!==false;
+  // Use Manila calendar dates from PostgreSQL, not JS/UTC elapsed hours. This prevents day 3 showing as day 2/1 around timezone boundaries.
+  const dayNumber=Math.max(1,Number(cfgRow.warmup_day||1)),cycle=Math.min(6,Math.floor((dayNumber-1)/7)+1),dayInCycle=((dayNumber-1)%7)+1;
   const cap=active?calcWarmupCap(dayNumber):null,today=Number(row.sent_today||0),remaining=cap==null?null:Math.max(0,cap-today),complete=cap==null;
   const nextCycleDay=complete?null:(cycle*7+1),daysToIncrease=complete?null:Math.max(0,nextCycleDay-dayNumber);
   const nextCap=complete?null:calcWarmupCap(nextCycleDay);
@@ -18609,7 +18622,7 @@ function _ceoMainWebsiteUrl(input){
 // action must target this CEO endpoint.
 app.post('/api/ceo-report/start',async(req,res)=>{
   let ceoEntry='unknown',ceoUrl='',lastStage='REQUEST';
-  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-24-CANONICAL-v247');
+  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-24-CANONICAL-v248');
   try{
     lastStage='DB_SETUP';
     console.log('[ceo-report] stage=DB_SETUP');
@@ -18703,10 +18716,10 @@ ContentScale`;
     return res.json({success:true,entry_mode:entry,token,selected_page:selected,ceo_report_token:reportToken,ceo_report_url:reportUrl,delivery_email:delivery,updates_opt_in:updatesOptIn});
   }catch(e){
     const msg=String((e&&e.message)||e||'CEO Prospect Report generation failed');
-    console.error('[ceo-report] FAILED build=CS-2026-09-24-CANONICAL-v247 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
+    console.error('[ceo-report] FAILED build=CS-2026-09-24-CANONICAL-v248 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
     console.error('[ceo-report] ERROR: '+msg);
     if(e&&e.stack)console.error(e.stack);
-    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-24-CANONICAL-v247'});
+    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-24-CANONICAL-v248'});
     try{res.end();}catch(_){}
   }
 });
