@@ -266,7 +266,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-24-CANONICAL-v244';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-24-CANONICAL-v245';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 const CONTENTSCALE_BUILD_CHANGES = [
   'Contact Intelligence: schema-initialisatie is geserialiseerd met één procesbelofte en PostgreSQL advisory lock om pg_type-races te voorkomen.',
@@ -727,7 +727,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-09-24-CANONICAL-v244',
+  build: 'CS-2026-09-24-CANONICAL-v245',
   built_date: '2026-09-23',
   ceo_private: true,
   ceo_public: true,
@@ -7903,8 +7903,20 @@ app.use((req, res, next) => {
 app.use(express.static('public', { maxAge: '1y', etag: true }));
 // ── Favicon & manifest ──────────────────────────────────────────────────────
 app.get('/site.webmanifest', (req, res) => {
-res.setHeader('Content-Type', 'application/manifest+json');
-res.sendFile(path.join(__dirname, 'public', 'site.webmanifest'));
+  // v245: safe inline fallback. express.static serves public/site.webmanifest first when present;
+  // if the deployment has no public directory/file, never throw ENOENT or spam server logs.
+  res.setHeader('Content-Type', 'application/manifest+json; charset=utf-8');
+  res.setHeader('Cache-Control', 'public, max-age=86400');
+  return res.status(200).json({
+    name: 'ContentScale',
+    short_name: 'ContentScale',
+    start_url: '/',
+    scope: '/',
+    display: 'standalone',
+    background_color: '#07111f',
+    theme_color: '#07111f',
+    icons: []
+  });
 });
 
 // ── Blog HTML interceptor — BEFORE express.static ────────────────────────────
@@ -15972,7 +15984,7 @@ async function startServer() {
   }
 
 console.log('════════════════════════════════════════════════════');
-console.log('CONTENTSCALE BUILD: CS-2026-09-24-CANONICAL-v244');
+console.log('CONTENTSCALE BUILD: CS-2026-09-24-CANONICAL-v245');
 console.log('CEO FUNNEL: Private + Public → SAME CEO engine');
 console.log('PUBLIC EMAIL DELIVERY: required');
 console.log('PRIVATE EMAIL DELIVERY: optional');
@@ -18570,7 +18582,7 @@ function _ceoMainWebsiteUrl(input){
 // action must target this CEO endpoint.
 app.post('/api/ceo-report/start',async(req,res)=>{
   let ceoEntry='unknown',ceoUrl='',lastStage='REQUEST';
-  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-24-CANONICAL-v244');
+  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-24-CANONICAL-v245');
   try{
     lastStage='DB_SETUP';
     console.log('[ceo-report] stage=DB_SETUP');
@@ -18664,10 +18676,10 @@ ContentScale`;
     return res.json({success:true,entry_mode:entry,token,selected_page:selected,ceo_report_token:reportToken,ceo_report_url:reportUrl,delivery_email:delivery,updates_opt_in:updatesOptIn});
   }catch(e){
     const msg=String((e&&e.message)||e||'CEO Prospect Report generation failed');
-    console.error('[ceo-report] FAILED build=CS-2026-09-24-CANONICAL-v244 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
+    console.error('[ceo-report] FAILED build=CS-2026-09-24-CANONICAL-v245 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
     console.error('[ceo-report] ERROR: '+msg);
     if(e&&e.stack)console.error(e.stack);
-    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-24-CANONICAL-v244'});
+    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-24-CANONICAL-v245'});
     try{res.end();}catch(_){}
   }
 });
