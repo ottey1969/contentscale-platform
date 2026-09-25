@@ -266,7 +266,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-25-CANONICAL-v283';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-25-CANONICAL-v284';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 const CONTENTSCALE_BUILD_CHANGES = [
   'tracker-delta-brief-regression-lock',
@@ -492,7 +492,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-09-25-CANONICAL-v283',
+  build: 'CS-2026-09-25-CANONICAL-v284',
   built_date: '2026-09-25',
   ceo_private: true,
   ceo_public: true,
@@ -4293,6 +4293,7 @@ app.post('/api/tracker-client/:token/page/:pageId/brief-mode', async (req, res) 
 // v281 REGRESSION INVARIANT: AUTO_OWNER_OPEN_NEVER_VISIBLE=true; ONLY_EXPLICIT_MANUAL_OWNER_QUESTIONS_CAN_BE_OPEN=true; GROWTH_OPEN_REBUILT_FROM_FRESH_EVIDENCE=true; GROWTH_MAX_OPEN_FIVE=true; GSC_GROWTH_REQUIRES_MEANINGFUL_DEMAND_AND_UNCOVERED_TOPIC=true; NEXT_ACTION_HELPERS_SAME_CLIENT_SCOPE=true
 // v282 REGRESSION INVARIANT: NEXT_ACTION_HELPER_DEFINED_BEFORE_CLIENT_RENDER=true; LOCALIZED_SYNC_SELECTS_SOURCE_BY_REAL_VERIFIED_LEDGER=true; LOCALIZED_SYNC_NORMALIZES_VERIFIED_STATUS=true; LOCALIZED_SYNC_EXCLUDES_NL_ES_AS_SOURCE=true
 // v283 REGRESSION INVARIANT: LEGACY_BRIEF_ACTION_COUNT_DERIVED_DETERMINISTICALLY=true; NO_SUBJECTIVE_REVIEW_CURRENT_BRIEF_STATE=true; ANY_OPEN_BRIEF_ACTION_MEANS_UPDATE=true; ZERO_ACTIONS_MEANS_MONITOR=true
+// v284 REGRESSION INVARIANT: NEW_DELTA_ONLY_AFTER_ACTUAL_SCAN_EVALUATION=true; OLD_BRIEF_NEVER_CREATES_NEW_DELTA_BY_ITSELF=true; PRE_V284_PAGES_REQUIRE_ONE_FRESH_SCAN=true; BRIEF_EVALUATED_AT_SET_ONLY_BY_SCAN_BRIEF_PERSIST=true
 // ── Owner Question Hub — persistent client-owned knowledge gaps ────────────────
 // Unanswered questions never disappear. Refresh only adds, merges, or strengthens them.
 async function _ensureTrackerOwnerQuestions(){
@@ -9588,6 +9589,7 @@ app.patch('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
   // Brief merge system
   await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS brief_content JSONB`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS brief_started_at TIMESTAMPTZ`).catch(()=>{});
+  await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS brief_evaluated_at TIMESTAMPTZ`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS brief_done_at TIMESTAMPTZ`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS brief_status TEXT DEFAULT 'open'`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS brief_claimed_by TEXT`).catch(()=>{});
@@ -16354,7 +16356,7 @@ async function startServer() {
   }
 
 console.log('────────────────────────────────────────');
-console.log('[ContentScale] CS-2026-09-25-CANONICAL-v283');
+console.log('[ContentScale] CS-2026-09-25-CANONICAL-v284');
 console.log('[ContentScale] Build check: /api/build-info');
 console.log('[ContentScale] Base URL: ' + (process.env.BASE_URL || 'https://app.contentscale.site'));
 console.log('────────────────────────────────────────');
@@ -19163,7 +19165,7 @@ function _ceoMainWebsiteUrl(input){
 // action must target this CEO endpoint.
 app.post('/api/ceo-report/start',async(req,res)=>{
   let ceoEntry='unknown',ceoUrl='',lastStage='REQUEST';
-  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-25-CANONICAL-v283');
+  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-25-CANONICAL-v284');
   try{
     lastStage='DB_SETUP';
     console.log('[ceo-report] stage=DB_SETUP');
@@ -19257,10 +19259,10 @@ ContentScale`;
     return res.json({success:true,entry_mode:entry,token,selected_page:selected,ceo_report_token:reportToken,ceo_report_url:reportUrl,delivery_email:delivery,updates_opt_in:updatesOptIn});
   }catch(e){
     const msg=String((e&&e.message)||e||'CEO Prospect Report generation failed');
-    console.error('[ceo-report] FAILED build=CS-2026-09-25-CANONICAL-v283 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
+    console.error('[ceo-report] FAILED build=CS-2026-09-25-CANONICAL-v284 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
     console.error('[ceo-report] ERROR: '+msg);
     if(e&&e.stack)console.error(e.stack);
-    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-25-CANONICAL-v283'});
+    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-25-CANONICAL-v284'});
     try{res.end();}catch(_){}
   }
 });
@@ -40923,20 +40925,11 @@ function _trackerNextActionState(p,isDone,lastCheckedRaw,nextEvidence){
   function parse(v){if(!v)return null;if(typeof v==='object')return v;try{return JSON.parse(v)}catch(e){return null}}
   var brief=parse(p.brief_content)||{};
   var outstanding=brief.outstanding_actions!=null?Number(brief.outstanding_actions):null;
+  var evaluatedAt=p.brief_evaluated_at?new Date(p.brief_evaluated_at).getTime():0;
 
-  // v283: deterministic legacy migration.
-  // If an older Brief has no explicit outstanding_actions field, derive the count from the Brief itself.
-  // The owner never has to interpret whether an action is "real": if the Brief contains an implementation
-  // action, it counts and the page requires an update. Framing-only evidence blocks do not count.
-  if(outstanding==null){
-    var _frameOnly=function(x){
-      var sy=String(x&&x.system||'').toLowerCase();
-      return sy.indexOf('intent snapshot')>=0||sy.indexOf('missing entities')>=0||sy==='paa';
-    };
-    var _legacyItems=Array.isArray(brief.items)?brief.items.filter(function(x){return x&&!_frameOnly(x);}):[];
-    var _legacyGsc=Array.isArray(brief.gsc_brief)?brief.gsc_brief.filter(Boolean):[];
-    outstanding=_legacyItems.length+_legacyGsc.length;
-  }
+  // v284: a NEW DELTA may only be declared from a Brief that was evaluated by an ACTUAL scan.
+  // Old Brief contents are historical context only. We never infer "new work" from them before a fresh scan.
+  // Existing pages deployed before v284 therefore show SCAN REQUIRED once; after that scan, the result is deterministic.
   var complete=bool(brief.implementation_complete)||(outstanding===0);
   var waiting=bool(p.monitoring_waiting_input);
   var htmlAt=p.html_pasted_at?new Date(p.html_pasted_at).getTime():0;
@@ -40957,12 +40950,15 @@ function _trackerNextActionState(p,isDone,lastCheckedRaw,nextEvidence){
   if(freshHtml||!lastCheckedRaw){
     return {code:'SCAN',label:'SCAN REQUIRED',detail:freshHtml?'New HTML was added after the last scan. Scan the live page before deciding whether the Brief changes.':'This page has not been scanned yet. Run the scan to establish the current evidence-backed delta.',color:'#7dd3fc',border:'#0284c7',bg:'#082f49',button:'Scan now',buttonAction:'checkPage('+p.id+')'};
   }
+  if(!evaluatedAt){
+    return {code:'SCAN',label:'SCAN REQUIRED TO CHECK FOR NEW DELTA',detail:'This page has an older Brief, but it has not yet been evaluated by the current scan workflow. Run Scan now. Only the result of that scan may create a NEW DELTA or confirm NO NEW ACTION.',color:'#7dd3fc',border:'#0284c7',bg:'#082f49',button:'Scan now',buttonAction:'checkPage('+p.id+')'};
+  }
   if(outstanding!=null&&outstanding>0){
     if(isDone)return {code:'NEW_DELTA',label:'NEW DELTA FOUND · '+outstanding+' ACTION'+(outstanding===1?'':'S'),detail:evidence+' The Brief contains "+outstanding+" open action(s). Update the page from the Brief.',color:'#fde68a',border:'#f59e0b',bg:'#291b05',button:'Open updated Brief',buttonAction:'viewLastBrief('+p.id+')'};
     return {code:'IMPLEMENT',label:'IMPLEMENT BRIEF · '+outstanding+' OPEN ACTION'+(outstanding===1?'':'S'),detail:'The current Brief still contains evidence-backed work. Apply only those actions, publish, then verify the live version.',color:'#c4b5fd',border:'#8b5cf6',bg:'#17102b',button:'Open Brief',buttonAction:'viewLastBrief('+p.id+')'};
   }
   if(complete)return {code:'MONITOR',label:'NO NEW ACTION · CONTINUE MONITORING',detail:evidence+' No new actionable delta was found. Do not regenerate or rewrite the Brief. '+(nextEvidence||'Wait for the next scheduled evidence checkpoint.'),color:'#86efac',border:'#16a34a',bg:'#052e16',button:'',buttonAction:''};
-  if(p.brief_content)return {code:'UPDATE',label:'BRIEF UPDATE REQUIRED',detail:evidence+' This Brief contains content but has no explicit completion metadata. ContentScale treats it as update-required instead of asking you to judge it manually.',color:'#fde68a',border:'#f59e0b',bg:'#291b05',button:'Open Brief',buttonAction:'viewLastBrief('+p.id+')'};
+  if(p.brief_content)return {code:'SCAN',label:'SCAN REQUIRED TO EVALUATE BRIEF',detail:'An older Brief exists, but the current scan has not produced an explicit action count. Run Scan; do not update the page from historical Brief contents alone.',color:'#7dd3fc',border:'#0284c7',bg:'#082f49',button:'Scan now',buttonAction:'checkPage('+p.id+')'};
   return {code:'BRIEF',label:'BRIEF REQUIRED',detail:evidence+' No Brief exists for this scanned page yet.',color:'#93c5fd',border:'#2563eb',bg:'#0a2540',button:'',buttonAction:''};
 }
 function _trackerNextActionHtml(p,isDone,lastCheckedRaw,nextEvidence){
@@ -50629,7 +50625,7 @@ app.post('/api/tracker/pages/:id/check', verifyEngineAccess, async (req, res) =>
                   mergedBrief.aio_manual = true;
                 }
                 await pool.query(
-                  `UPDATE tracker_pages SET brief_content=$1, brief_started_at=COALESCE(brief_started_at, NOW()), brief_check_count=$2 WHERE id=$3`,
+                  `UPDATE tracker_pages SET brief_content=$1, brief_started_at=COALESCE(brief_started_at, NOW()), brief_evaluated_at=NOW(), brief_check_count=$2 WHERE id=$3`,
                   [JSON.stringify(mergedBrief), checkCount, page.id]
                 );
               }
@@ -54761,12 +54757,12 @@ If no unanchored claims found, return empty array: []`;
     } catch(e) {}
     if (_briefChanged) {
       await pool.query(
-        "UPDATE tracker_pages SET brief_content=$1, brief_started_at=COALESCE(brief_started_at, NOW()), brief_status='open', brief_claimed_by=NULL, brief_claimed_at=NULL WHERE id=$2",
+        "UPDATE tracker_pages SET brief_content=$1, brief_started_at=COALESCE(brief_started_at, NOW()), brief_evaluated_at=NOW(), brief_status='open', brief_claimed_by=NULL, brief_claimed_at=NULL WHERE id=$2",
         [JSON.stringify(_briefNow), page.id]
       );
     } else {
       await pool.query(
-        'UPDATE tracker_pages SET brief_content=$1, brief_started_at=COALESCE(brief_started_at, NOW()) WHERE id=$2',
+        'UPDATE tracker_pages SET brief_content=$1, brief_started_at=COALESCE(brief_started_at, NOW()), brief_evaluated_at=NOW() WHERE id=$2',
         [JSON.stringify(_briefNow), page.id]
       );
     }
