@@ -266,7 +266,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-25-CANONICAL-v286';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-25-CANONICAL-v287';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 const CONTENTSCALE_BUILD_CHANGES = [
   'tracker-delta-brief-regression-lock',
@@ -492,7 +492,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-09-25-CANONICAL-v286',
+  build: 'CS-2026-09-25-CANONICAL-v287',
   built_date: '2026-09-25',
   ceo_private: true,
   ceo_public: true,
@@ -2803,6 +2803,8 @@ app.get('/api/tracker-client/:token/pages/:pageId', async (req, res, next) => {
       outPage.ai_manual_evidence = finalBrief.ai_manual_evidence || outPage.ai_manual_evidence || {};
       outPage.brief_generated_at = finalBrief.generated_at || null;
       outPage.brief_build_id = finalBrief.build_id || null;
+      outPage.outstanding_actions = finalBrief.outstanding_actions != null ? Number(finalBrief.outstanding_actions) : null;
+      outPage.implementation_complete = finalBrief.implementation_complete === true;
     }
     res.json({ success: true, page: outPage });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
@@ -4297,6 +4299,7 @@ app.post('/api/tracker-client/:token/page/:pageId/brief-mode', async (req, res) 
 // v284 REGRESSION INVARIANT: NEW_DELTA_ONLY_AFTER_ACTUAL_SCAN_EVALUATION=true; OLD_BRIEF_NEVER_CREATES_NEW_DELTA_BY_ITSELF=true; PRE_V284_PAGES_REQUIRE_ONE_FRESH_SCAN=true; BRIEF_EVALUATED_AT_SET_ONLY_BY_SCAN_BRIEF_PERSIST=true
 // v285 REGRESSION INVARIANT: MAIN_TRACKER_GET_RETURNS_BRIEF_EVALUATED_AT=true; MAIN_GET_SELF_HEALS_BRIEF_EVALUATED_AT=true; POST_SCAN_NEXT_ACTION_CAN_ADVANCE_WITHOUT_SECOND_SCAN=true
 // v286 REGRESSION INVARIANT: NEXT_ACTION_GATES_MUTATING_CONTROLS=true; NO_ACTION_LOCKS_SCAN_AND_CONTENT_CHANGES=true; SCAN_REQUIRED_ONLY_SCAN_PATH_ACTIVE=true; NEW_DELTA_OR_IMPLEMENT_ENABLE_CONTENT_CHANGES=true; HISTORY_AND_VIEW_BRIEF_REMAIN_READ_ONLY_AVAILABLE=true
+// v287 REGRESSION INVARIANT: FINAL_BRIEF_WRITE_ALWAYS_HAS_OUTSTANDING_ACTIONS=true; FINAL_BRIEF_WRITE_ATOMICALLY_STAMPS_EVALUATED_AT=true; NO_POST_SCAN_FLASH_BACK_TO_SCAN_REQUIRED=true; FINAL_NEXT_ACTION_DERIVED_FROM_FINAL_SAVED_BRIEF=true
 // ── Owner Question Hub — persistent client-owned knowledge gaps ────────────────
 // Unanswered questions never disappear. Refresh only adds, merges, or strengthens them.
 async function _ensureTrackerOwnerQuestions(){
@@ -16359,7 +16362,7 @@ async function startServer() {
   }
 
 console.log('────────────────────────────────────────');
-console.log('[ContentScale] CS-2026-09-25-CANONICAL-v286');
+console.log('[ContentScale] CS-2026-09-25-CANONICAL-v287');
 console.log('[ContentScale] Build check: /api/build-info');
 console.log('[ContentScale] Base URL: ' + (process.env.BASE_URL || 'https://app.contentscale.site'));
 console.log('────────────────────────────────────────');
@@ -19168,7 +19171,7 @@ function _ceoMainWebsiteUrl(input){
 // action must target this CEO endpoint.
 app.post('/api/ceo-report/start',async(req,res)=>{
   let ceoEntry='unknown',ceoUrl='',lastStage='REQUEST';
-  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-25-CANONICAL-v286');
+  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-25-CANONICAL-v287');
   try{
     lastStage='DB_SETUP';
     console.log('[ceo-report] stage=DB_SETUP');
@@ -19262,10 +19265,10 @@ ContentScale`;
     return res.json({success:true,entry_mode:entry,token,selected_page:selected,ceo_report_token:reportToken,ceo_report_url:reportUrl,delivery_email:delivery,updates_opt_in:updatesOptIn});
   }catch(e){
     const msg=String((e&&e.message)||e||'CEO Prospect Report generation failed');
-    console.error('[ceo-report] FAILED build=CS-2026-09-25-CANONICAL-v286 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
+    console.error('[ceo-report] FAILED build=CS-2026-09-25-CANONICAL-v287 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
     console.error('[ceo-report] ERROR: '+msg);
     if(e&&e.stack)console.error(e.stack);
-    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-25-CANONICAL-v286'});
+    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-25-CANONICAL-v287'});
     try{res.end();}catch(_){}
   }
 });
@@ -55111,12 +55114,34 @@ MERGE RULES:
       }
 
       if (brief2) {
+        // v287: FINAL write is authoritative for NEXT ACTION.
+        // Earlier scan stages can briefly hold correct delta metadata, but the final brief2 merge
+        // previously overwrote brief_content without outstanding_actions / implementation_complete.
+        // That caused the orange result to flash and then fall back to SCAN REQUIRED.
+        var _finalFrameOnly=function(x){
+          var sy=String(x&&x.system||'').toLowerCase();
+          return sy.indexOf('intent snapshot')>=0||sy.indexOf('missing entities')>=0||sy==='paa';
+        };
+        var _finalOpenItems=(Array.isArray(brief2.items)?brief2.items:[]).filter(function(x){return x&&!_finalFrameOnly(x);});
+        var _finalOpenGsc=(Array.isArray(brief2.gsc_brief)?brief2.gsc_brief:[]).filter(Boolean);
+        brief2.outstanding_actions=_finalOpenItems.length+_finalOpenGsc.length;
+        brief2.implementation_complete=brief2.outstanding_actions===0;
+        brief2.growth_loop={
+          current_cycle_complete:brief2.implementation_complete,
+          page_perfect:false,
+          state:brief2.implementation_complete?'READY_FOR_FRESH_DISCOVERY':'IMPLEMENT_CURRENT_DELTA',
+          next_focus:brief2.implementation_complete
+            ? 'Wait for fresh GSC, SERP/competitor and 5-engine evidence before opening another content cycle.'
+            : 'Implement the current scan delta, publish, then verify the live page.',
+          recycle_completed_actions:false
+        };
+
         // Completion marker for the FINAL merge/HTML-guard payload. The client only unlocks
         // Copy Brief when this marker belongs to the scan it just started.
         brief2.generated_at = new Date().toISOString();
         brief2.build_id = CONTENTSCALE_BUILD_ID;
         await pool.query(
-          'UPDATE tracker_pages SET brief_content=$1, brief_started_at=COALESCE(brief_started_at,NOW()) WHERE id=$2',
+          'UPDATE tracker_pages SET brief_content=$1, brief_started_at=COALESCE(brief_started_at,NOW()), brief_evaluated_at=NOW() WHERE id=$2',
           [JSON.stringify(brief2), page.id]
         ).catch(e => console.warn('[brief-save2]', e.message));
         // Try to update brief_check_count separately — column may not exist yet
@@ -55151,6 +55176,8 @@ MERGE RULES:
           gsc_position: page.gsc_position,
           gsc_keyword: page.gsc_keyword,
           _gsc_enabled: (page.gsc_clicks != null) || (page.gsc_impressions != null) || (page.gsc_position != null),
+          outstanding_actions: brief2.outstanding_actions,
+          implementation_complete: brief2.implementation_complete,
           ts: new Date().toISOString()
         };
         _sseBroadcast(_briefPayload2);
