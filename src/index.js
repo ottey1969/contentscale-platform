@@ -266,7 +266,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-25-CANONICAL-v260';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-25-CANONICAL-v261';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 const CONTENTSCALE_BUILD_CHANGES = [
   'tracker-delta-brief-regression-lock',
@@ -492,7 +492,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-09-25-CANONICAL-v260',
+  build: 'CS-2026-09-25-CANONICAL-v261',
   built_date: '2026-09-25',
   ceo_private: true,
   ceo_public: true,
@@ -522,10 +522,13 @@ app.get('/api/build-info',(req,res)=>{
 app.get('/api/regression-contract',(req,res)=>{
   const src=fs.readFileSync(__filename,'utf8');
   const checks={
-    canonical_build:/CANONICAL-v260/.test(CONTENTSCALE_BUILD_INFO.build),
+    canonical_build:/CANONICAL-v261/.test(CONTENTSCALE_BUILD_INFO.build),
     ceo_first:CONTENTSCALE_BUILD_INFO.ceo_private&&CONTENTSCALE_BUILD_INFO.ceo_public&&CONTENTSCALE_BUILD_INFO.quickscan_other_page_only,
     audit20_discovery:!!CONTENTSCALE_BUILD_INFO.audit20_discovery,
     tracker_delta_guard:src.includes('V256 generic DELTA guard')&&src.includes('implementation_complete=_briefNow.outstanding_actions===0'),
+    verification_stays_outstanding:src.includes('V261: verification is work, not completion'),
+    completed_brief_is_growth_not_sleep:src.includes('CURRENT BRIEF COMPLETE')&&src.includes('outperform the current competition'),
+    competitor_step_duplicate_guard:src.includes('V261: competitor-gap wrappers'),
     tracker_prewrite_handoff:src.includes("mode:_treat.indexOf('REWRITE')>=0?'REWRITE_EXISTING'")&&src.includes('openPrewriteHandoff(pageId)'),
     tracker_auto_treatment:src.includes('_briefNow.recommended_treatment=_autoTreatment')&&src.includes("treatment_source='AUTO_BRIEF'"),
     tracker_manual_treatment_override:src.includes("treatment_source=$5")&&src.includes('resetPageTreatmentAuto(pageId)'),
@@ -15838,7 +15841,7 @@ async function startServer() {
   }
 
 console.log('────────────────────────────────────────');
-console.log('[ContentScale] CS-2026-09-25-CANONICAL-v260');
+console.log('[ContentScale] CS-2026-09-25-CANONICAL-v261');
 console.log('[ContentScale] Build check: /api/build-info');
 console.log('[ContentScale] Base URL: ' + (process.env.BASE_URL || 'https://app.contentscale.site'));
 console.log('────────────────────────────────────────');
@@ -18488,7 +18491,7 @@ function _ceoMainWebsiteUrl(input){
 // action must target this CEO endpoint.
 app.post('/api/ceo-report/start',async(req,res)=>{
   let ceoEntry='unknown',ceoUrl='',lastStage='REQUEST';
-  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-25-CANONICAL-v260');
+  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-25-CANONICAL-v261');
   try{
     lastStage='DB_SETUP';
     console.log('[ceo-report] stage=DB_SETUP');
@@ -18582,10 +18585,10 @@ ContentScale`;
     return res.json({success:true,entry_mode:entry,token,selected_page:selected,ceo_report_token:reportToken,ceo_report_url:reportUrl,delivery_email:delivery,updates_opt_in:updatesOptIn});
   }catch(e){
     const msg=String((e&&e.message)||e||'CEO Prospect Report generation failed');
-    console.error('[ceo-report] FAILED build=CS-2026-09-25-CANONICAL-v260 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
+    console.error('[ceo-report] FAILED build=CS-2026-09-25-CANONICAL-v261 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
     console.error('[ceo-report] ERROR: '+msg);
     if(e&&e.stack)console.error(e.stack);
-    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-25-CANONICAL-v260'});
+    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-25-CANONICAL-v261'});
     try{res.end();}catch(_){}
   }
 });
@@ -41118,7 +41121,7 @@ function _copyBriefAuthoritative(pageId) {
     if (p.gsc_position != null) lines.push('- Position: ' + parseFloat(p.gsc_position).toFixed(1));
   }
   if (d.implementation_complete === true) {
-    lines.push('', '=== IMPLEMENTATION STATUS ===', '✓ IMPLEMENTATION COMPLETE', '0 outstanding actions. All currently evidence-backed actions are present on the live page.');
+    lines.push('', '=== IMPLEMENTATION STATUS ===', '✓ CURRENT BRIEF COMPLETE', '0 outstanding actions in this cycle.', 'This does NOT mean the page is finished forever. It means the current evidence-backed delta has been fully applied.', 'NEXT FOCUS: outperform the current competition with genuinely new evidence from GSC, competitors and the 5 AI engines. Completed actions must never be recycled.');
   } else if (d.outstanding_actions != null) {
     lines.push('', '=== IMPLEMENTATION STATUS ===', '- Outstanding actions: ' + d.outstanding_actions);
   }
@@ -53713,6 +53716,12 @@ If no unanchored claims found, return empty array: []`;
           'Bing indexing is a supporting search signal and is not treated as a strict prerequisite for a Copilot citation.');
         item[k]=item[k].replace(/once the url is crawled and indexed in bing/gi,
           'after the content is improved and an actual Copilot References check confirms the result');
+        // V261 evidence hygiene: top-10 organic ranking can correlate with visibility but is not a
+        // prerequisite for an AI Overview citation. Never present correlation as an eligibility rule.
+        item[k]=item[k].replace(/(?:which is |as )?(?:a )?(?:strict )?prerequisite for (?:google )?(?:ai overview|aio) citations?/gi,
+          'which can support discoverability but is not a prerequisite for an AI Overview citation');
+        item[k]=item[k].replace(/(?:ai overview|google aio)[^.!?]{0,80}(?:pulls?|sources?) heavily from[^.!?]*[.!?]?/gi,
+          'The checked AI Overview sources should be treated as query-specific evidence, not as a general sourcing rule.');
       } });
       var combined=[item.title,item.action,item.trigger].filter(Boolean).join(' ');
       var _dateMatches=combined.match(/last reviewed\s*:?\s*(?:[a-z]+\s+)?20\d{2}/gi)||[];
@@ -53770,6 +53779,9 @@ If no unanchored claims found, return empty array: []`;
       var _isAdd=/\b(add|create|include|insert|build)\b/i.test(t) && !/\b(modify|replace|rewrite|improve|correct|optimi[sz]e)\b/i.test(t);
       if(_isAdd && /(?:faq|frequently asked questions|paa)/i.test(t) && (/<section[^>]+id=["']faq/i.test(h)||/faqpage/i.test(h)||/class=["'][^"']*faq/i.test(h)))return true;
       if(_isAdd && /(?:step[- ]by[- ]step|\bprocess\b|\bworkflow\b|\d+[- ]step)/i.test(t) && (/<ol[\s>]/i.test(h)||/(?:our|the) [a-z -]{0,40}(?:process|workflow)/i.test(_ht)))return true;
+      // V261: competitor-gap wrappers often hide an already implemented step guide inside a broader
+      // 'close competitor gap' action. Do not re-add it merely because the outer title differs.
+      if(/(?:add|create|include|integrate|structured).{0,120}(?:\d+[- ]step|critical steps|step[- ]by[- ]step|emergency (?:response )?guide)/i.test(t) && (/<ol[\s>]/i.test(h)||/id=["']process["']/i.test(h)||/(?:repair|emergency|response) process/i.test(_ht)))return true;
       if(_isAdd && /(?:direct answer|quick answer|answer block|above the fold answer)/i.test(t) && (/id=["']direct-answer/i.test(h)||/class=["'][^"']*direct-answer/i.test(h)))return true;
       if(_isAdd && /(?:external|outbound|authoritative source) link/i.test(t) && /href=["']https?:\/\//i.test(h))return true;
       if(_isAdd && /internal link/i.test(t) && /href=["'](?:\/|https?:\/\/[^"']+)/i.test(h) && _urls.length===0){
@@ -53956,8 +53968,11 @@ If no unanchored claims found, return empty array: []`;
     // say so in metadata instead of manufacturing a maintenance action. Framing/evidence may remain
     // visible, but the implementation to-do count is zero.
     var _frameOnly=function(x){var sy=String(x&&x.system||'').toLowerCase();return sy.indexOf('intent snapshot')>=0||sy.indexOf('missing entities')>=0||sy==='paa';};
-    var _openAI=(_briefNow.items||[]).filter(function(x){return !_frameOnly(x)&&!(x&&x.requires_verification);});
-    var _openGSC=(_briefNow.gsc_brief||[]).filter(function(x){return x&&!(x.requires_verification);});
+    // V261: verification is work, not completion. A VERIFY FIRST item remains outstanding
+    // until the owner marks the fact VERIFIED/FALSE/N/A and a fresh brief consumes that evidence.
+    // Otherwise the work brief could falsely reach zero while a blocked claim is unresolved.
+    var _openAI=(_briefNow.items||[]).filter(function(x){return !_frameOnly(x);});
+    var _openGSC=(_briefNow.gsc_brief||[]).filter(function(x){return !!x;});
     _briefNow.outstanding_actions=_openAI.length+_openGSC.length;
     _briefNow.implementation_complete=_briefNow.outstanding_actions===0;
     // v260 — Brief owns the default Treatment decision. The dropdown is no longer an empty
@@ -53969,7 +53984,7 @@ If no unanchored claims found, return empty array: []`;
     if (page.redirects_to && !String(page.redirects_to).startsWith('(canonical')) {
       _autoTreatment='REDIRECT'; _autoReason='The live URL resolves as a redirect; the tracked URL should not be treated as an editable content page.'; _autoNext='Review the detected destination and keep/track the final live URL. No redirect is executed by ContentScale.';
     } else if (_briefNow.implementation_complete) {
-      _autoTreatment='KEEP'; _autoReason='The current live page already contains every evidence-backed action in this Brief.'; _autoNext='Preserve the page and monitor GSC + AI evidence. Re-open content work only when new evidence creates a new delta.';
+      _autoTreatment='KEEP'; _autoReason='CURRENT CYCLE COMPLETE: the live page contains every action supported by the current evidence. This is not a stop signal.'; _autoNext='Keep improving from fresh competitor, GSC and 5-engine evidence. The next cycle must create only genuinely new opportunities that can make this page more useful, more specific, and more competitive — never recycle completed work.';
     } else if (/\b(rewrite|rebuild|replace (?:the )?page|new structure)\b/i.test(_actionText)) {
       _autoTreatment='REWRITE'; _autoReason='The current Brief contains a page-level rewrite/rebuild requirement rather than isolated edits.'; _autoNext='Continue in Pre-Write and rebuild the existing URL while preserving verified facts and proven strengths.';
     } else if (/\b(major expansion|expand existing|add (?:a )?(?:new )?(?:section|sections)|content gap)\b/i.test(_actionText) || _briefNow.outstanding_actions>=4) {
