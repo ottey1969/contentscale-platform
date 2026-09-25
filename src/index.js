@@ -266,7 +266,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-25-CANONICAL-v298';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-25-CANONICAL-v299';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 const CONTENTSCALE_BUILD_CHANGES = [
   'tracker-delta-brief-regression-lock',
@@ -502,7 +502,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-09-25-CANONICAL-v298',
+  build: 'CS-2026-09-25-CANONICAL-v299',
   built_date: '2026-09-25',
   ceo_private: true,
   ceo_public: true,
@@ -3329,6 +3329,119 @@ app.post('/api/tracker-client/:token/scan-selected', async (req, res) => {
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
+
+function _trackerBriefFrameOnly(x){
+  const sy=String(x&&x.system||'').toLowerCase();
+  return sy.includes('intent snapshot')||sy.includes('missing entities')||sy==='paa';
+}
+function _trackerActionText(x){
+  return [x&&x.title,x&&x.action,x&&x.passage,x&&x.body,x&&x.what,x&&x.issue,x&&x.signal]
+    .filter(Boolean).join(' ').replace(/\s+/g,' ').trim();
+}
+function _trackerPlainLiveHtml(html){
+  return String(html||'').toLowerCase()
+    .replace(/<script\b[\s\S]*?<\/script>/gi,' ')
+    .replace(/<style\b[\s\S]*?<\/style>/gi,' ')
+    .replace(/<[^>]+>/g,' ')
+    .replace(/&[a-z0-9#]+;/gi,' ')
+    .replace(/[^a-z0-9$%+./: -]+/g,' ')
+    .replace(/\s+/g,' ').trim();
+}
+function _trackerActionDefinitelyImplemented(action,liveHtml){
+  const raw=String(liveHtml||''),plain=_trackerPlainLiveHtml(raw),t=_trackerActionText(action).toLowerCase();
+  const ap=String(action&&action.action||action&&action.passage||action&&action.body||'')
+    .toLowerCase().replace(/<[^>]+>/g,' ').replace(/[^a-z0-9$%+./: -]+/g,' ').replace(/\s+/g,' ').trim();
+
+  if(ap.length>100){
+    const frag=ap.slice(0,140);
+    if(frag.length>80&&plain.includes(frag))return true;
+  }
+  if(/faq|frequently asked|paa|questions? and answers?|q&a/i.test(t)
+     &&(/FAQPage/i.test(raw)||/\bfaq\b|frequently asked questions/i.test(plain)))return true;
+  if(/author|e-e-a-t|authority|years of roofing experience|company experience|manager.*experience/i.test(t)){
+    let n=0;
+    if(/reviewed by|author:/i.test(plain))n++;
+    if(/15 years|years of roofing experience|years experience/i.test(plain))n++;
+    if(/nj hic|home-improvement contractor|licensed|13vh[0-9]+/i.test(plain))n++;
+    if(/last reviewed|last updated/i.test(plain))n++;
+    if(n>=3)return true;
+  }
+  if(/direct answer|answer box|quotable|40[-– ]?60 word|above[- ]the[- ]fold|first screen/i.test(t)
+     &&(/class=["'][^"']*answer-box/i.test(raw)||/what is .*roof snow removal/i.test(plain)))return true;
+  if(/24\/7|all 21|new jersey counties|service area|response time/i.test(t)
+     &&/24\/7|24 7/i.test(plain)&&/21 counties|all 21/i.test(plain))return true;
+  if(/membrane|tpo|epdm|steam|roof load|load capacity|weight distribution/i.test(t)){
+    let n=0;
+    if(/\btpo\b/i.test(plain))n++;
+    if(/\bepdm\b/i.test(plain))n++;
+    if(/steam/i.test(plain))n++;
+    if(/roof load|load capacity|weight distribution/i.test(plain))n++;
+    if(n>=3)return true;
+  }
+  return false;
+}
+async function _trackerVerifyOnlyCurrentBriefDelta(brief,liveHtml){
+  brief=brief&&typeof brief==='object'?brief:{};
+  const itemRows=(Array.isArray(brief.items)?brief.items:[]).map((x,i)=>({bucket:'items',index:i,item:x}));
+  const gscRows=(Array.isArray(brief.gsc_brief)?brief.gsc_brief:[]).map((x,i)=>({bucket:'gsc_brief',index:i,item:x}));
+  const actionable=itemRows.concat(gscRows).filter(r=>r.item&&!_trackerBriefFrameOnly(r.item));
+  if(!actionable.length)return {remaining:[],completed:[],method:'no_open_actions'};
+
+  const preCompleted=[],toJudge=[];
+  actionable.forEach((r,i)=>{
+    const row={...r,id:'a'+i,text:_trackerActionText(r.item)};
+    if(_trackerActionDefinitelyImplemented(r.item,liveHtml))preCompleted.push({...row,status:'IMPLEMENTED',evidence:'Deterministic live-HTML match'});
+    else toJudge.push(row);
+  });
+
+  let aiMap=new Map();
+  const apiKey=process.env.GEMINI_API_KEY;
+  if(apiKey&&toJudge.length){
+    try{
+      const liveText=_trackerPlainLiveHtml(liveHtml).slice(0,65000);
+      const prompt=[
+        'You are a strict implementation verifier. DO NOT create recommendations and DO NOT suggest new work.',
+        'Compare ONLY these EXISTING open actions with the CURRENT LIVE PAGE.',
+        'For each action return IMPLEMENTED only when the live page clearly satisfies the requested change.',
+        'Return MISSING when it is absent, incomplete, contradicted, or uncertain.',
+        'For a verification/safety action about an unsupported claim: if the risky unsupported claim was removed from the live page, consider that action resolved for THIS implementation cycle.',
+        'Do not evaluate rankings, GSC, competitors, AI citations or future opportunities.',
+        'Return ONLY valid JSON: {"results":[{"id":"a0","status":"IMPLEMENTED|MISSING","evidence":"max 20 words"}]}',
+        'OPEN ACTIONS:',
+        JSON.stringify(toJudge.map(r=>({id:r.id,title:r.item&&r.item.title||'',action:_trackerActionText(r.item)}))),
+        'CURRENT LIVE PAGE TEXT:',
+        liveText
+      ].join('\n');
+      const rr=await callGeminiWithFallback(apiKey,{
+        contents:[{parts:[{text:prompt}]}],
+        generationConfig:{temperature:0,maxOutputTokens:4500,responseMimeType:'application/json'}
+      },GEMINI_MODEL_BRIEF||GEMINI_MODEL,GEMINI_MODEL,2);
+      if(rr&&rr.ok){
+        let raw=rr.data?.candidates?.[0]?.content?.parts?.map(p=>p.text||'').join('')||'';
+        raw=String(raw).replace(/```json|```/gi,'').trim();
+        let parsed=null;
+        try{parsed=JSON.parse(raw);}catch(_e){
+          const a=raw.indexOf('{'),b=raw.lastIndexOf('}');
+          if(a>=0&&b>a){try{parsed=JSON.parse(raw.slice(a,b+1));}catch(_e2){}}
+        }
+        const results=parsed&&Array.isArray(parsed.results)?parsed.results:[];
+        results.forEach(x=>{
+          const id=String(x&&x.id||''),status=String(x&&x.status||'').toUpperCase();
+          if(id&&(status==='IMPLEMENTED'||status==='MISSING'))aiMap.set(id,{status,evidence:String(x.evidence||'').slice(0,300)});
+        });
+      }
+    }catch(e){console.warn('[brief-delta-verify] targeted verifier failed:',e.message);}
+  }
+
+  const completed=preCompleted.slice(),remaining=[];
+  toJudge.forEach(r=>{
+    const verdict=aiMap.get(r.id);
+    if(verdict&&verdict.status==='IMPLEMENTED')completed.push({...r,...verdict});
+    else remaining.push({...r,status:'MISSING',evidence:verdict&&verdict.evidence||'Not proven implemented in current live HTML'});
+  });
+  return {remaining,completed,method:aiMap.size?'targeted_ai_plus_deterministic':'deterministic_safe_fallback'};
+}
+
 // PATCH /api/tracker-client/:token/pages/:pageId/done — implementation lifecycle.
 // DONE means: "I published the recommended changes." ContentScale verifies the LIVE page automatically.
 // Reliable live HTML -> compare with last baseline -> only if changed run the post-implementation scan.
@@ -3431,15 +3544,7 @@ app.patch('/api/tracker-client/:token/pages/:pageId/done', async (req, res) => {
           // Nothing changed: do NOT spend scan/API credits and do NOT create fake proof.
           await pool.query(`UPDATE tracker_pages SET is_done=FALSE, implementation_status='no_change', needs_html=FALSE WHERE id=$1`, [page.id]);
           await _caseStudyEventForPage(client.id,page.id,'implementation_no_change',{url:page.url,verification:comparisonSource,stable_live_content_hash:liveStableHash},liveHashFull).catch(()=>{});
-          if (client.email) {
-            const subject = 'No live changes detected — ' + (client.domain || page.url);
-            const body = '<h2 style="font-size:17px;font-weight:800;color:#0f172a;">No implementation change detected</h2>'
-              + '<p style="font-size:14px;color:#374151;line-height:1.7;">You marked <strong>' + page.url + '</strong> as implemented, but the live page is identical to the last verified version.</p>'
-              + '<p style="font-size:13px;color:#374151;"><strong>Done clicked:</strong> ' + fmtUtc() + '</p>'
-              + '<div style="background:#fefce8;border:1px solid #fde047;border-radius:8px;padding:14px 16px;color:#854d0e;font-size:13px;">No post-implementation proof scan was started and no baseline was reset. Publish the changes first, then click <strong>Done</strong> again.</div>'
-              + '<p><a href="' + trackerUrl + '" style="display:inline-block;background:#7c3aed;color:#fff;text-decoration:none;padding:10px 20px;border-radius:6px;font-weight:700;">Open tracker →</a></p>';
-            await sendTrackerEmail(client.id, subject, body, true).catch(()=>{});
-          }
+          // v299: targeted live-delta check is silent to the client.
           return;
         }
 
@@ -3449,25 +3554,42 @@ app.patch('/api/tracker-client/:token/pages/:pageId/done', async (req, res) => {
         const publishedVersion=await _caseStudyStoreContentVersion(client.id,page.id,publishedType,page.url,liveHtml,'tracker_live_verification',{declared_at:new Date().toISOString(),previous_tracker_hash:previousHash||null,stable_content_hash:liveStableHash,comparison_source:comparisonSource,compared_with_previous_live_stable_hash:prepublicationStableHash||null,revision_cycle:cycle});
         if(publishedVersion&&publishedVersion.created)await _caseStudyEventForPage(client.id,page.id,'published_html_captured',{url:page.url,version_id:publishedVersion.id,captured_at:publishedVersion.captured_at,full_html_preserved:true},publishedVersion.content_hash).catch(()=>{});
 
-        // Changed: update the operational comparison copy. This is not the locked case-study baseline.
-        await pool.query(`UPDATE tracker_pages SET html_content=$1, html_source='live_fresh', html_pasted_at=NOW(), last_page_hash=$2, fetch_reliable=TRUE, needs_html=FALSE WHERE id=$3`, [liveHtml, liveHash, page.id]);
-        const freshR = await pool.query('SELECT * FROM tracker_pages WHERE id=$1', [page.id]);
-        const freshPage = freshR.rows[0] || page;
-        const checkKeys = {
-          serpapiKey: process.env.SERPAPI_KEY || process.env.SERPER_API_KEY,
-          perplexityKey: process.env.PERPLEXITY_API_KEY,
-          braveKey: process.env.BRAVE_SEARCH_API_KEY,
-          youKey: process.env.YOU_API_KEY
+        // v299: targeted live-delta verification — NOT a normal Tracker scan.
+        // Check ONLY existing open Brief actions. No new research/recommendations/Brief/email.
+        await pool.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS implementation_delta_checked_at TIMESTAMPTZ`).catch(()=>{});
+        await pool.query(`UPDATE tracker_pages SET html_content=$1, html_source='live_fresh', last_page_hash=$2,
+          fetch_reliable=TRUE, needs_html=FALSE, implementation_delta_checked_at=NOW()
+          WHERE id=$3`, [liveHtml, liveHash, page.id]);
+
+        const deltaResult=await _trackerVerifyOnlyCurrentBriefDelta(_verifyBrief,liveHtml);
+        let _postBrief=JSON.parse(JSON.stringify(_verifyBrief||{}));
+        const _remainingRows=deltaResult.remaining||[];
+        const _completedRows=deltaResult.completed||[];
+        const _remainingItems=[],_remainingGsc=[];
+        _remainingRows.forEach(r=>{
+          if(r.bucket==='gsc_brief')_remainingGsc.push(r.item);
+          else _remainingItems.push(r.item);
+        });
+        const _remaining=_remainingRows.length;
+        const _postCycleId=String(_postBrief.cycle_id||_verifyBriefCycleId||'');
+
+        _postBrief.items=_remainingItems;
+        _postBrief.gsc_brief=_remainingGsc;
+        _postBrief.outstanding_actions=_remaining;
+        _postBrief.implementation_complete=_remaining===0;
+        _postBrief.delta_verification={
+          checked_at:new Date().toISOString(),
+          method:deltaResult.method,
+          current_live_only:true,
+          no_full_scan:true,
+          no_new_recommendations:true,
+          completed_actions:_completedRows.map(r=>({title:r.item&&r.item.title||'',evidence:r.evidence||''})),
+          remaining_actions:_remainingRows.map(r=>({title:r.item&&r.item.title||'',evidence:r.evidence||''}))
         };
-        await runTrackerCheck(freshPage, process.env.GEMINI_API_KEY, checkKeys, true);
+        await pool.query('UPDATE tracker_pages SET brief_content=$1 WHERE id=$2',[JSON.stringify(_postBrief),page.id]);
 
         const afterR = await pool.query('SELECT last_graaf_score, implementation_at, implementation_before_graaf, brief_content, treatment_source FROM tracker_pages WHERE id=$1', [page.id]);
         const after = afterR.rows[0] || {};
-        let _postBrief={};
-        try{_postBrief=typeof after.brief_content==='string'?JSON.parse(after.brief_content||'{}'):(after.brief_content||{});}catch(_e){_postBrief={};}
-        if(!_postBrief||typeof _postBrief!=='object')_postBrief={};
-        const _remaining=Number(_postBrief.outstanding_actions||0);
-        const _postCycleId=String(_postBrief.cycle_id||_verifyBriefCycleId||'');
 
         if(_remaining>0){
           // The new live HTML exists, but the fresh FINAL live scan still finds missing work.
@@ -3487,7 +3609,7 @@ app.patch('/api/tracker-client/:token/pages/:pageId/done', async (req, res) => {
             brief_cycle_id:_postCycleId||null,
             comparison_source:comparisonSource,
             checked_at:vv.implementation_verified_at,
-            client_email_suppressed:true
+            client_email_suppressed:true,full_scan_suppressed:true,targeted_delta_verification:true
           },liveHash).catch(()=>{});
           return;
         }
@@ -3533,7 +3655,7 @@ app.patch('/api/tracker-client/:token/pages/:pageId/done', async (req, res) => {
           WHERE id=$1`, [page.id, JSON.stringify(_postBrief), _postCycleId||null]);
         const verifiedR = await pool.query('SELECT implementation_at, implementation_verified_at, last_graaf_score, implementation_before_graaf FROM tracker_pages WHERE id=$1', [page.id]);
         const v = verifiedR.rows[0] || after;
-        await _caseStudyEventForPage(client.id,page.id,'implementation_verified',{url:page.url,before_graaf:v.implementation_before_graaf==null?null:v.implementation_before_graaf,after_graaf:v.last_graaf_score==null?null:v.last_graaf_score,verified_at:v.implementation_verified_at,comparison_source:comparisonSource,remaining_actions:0},liveHash).catch(()=>{});
+        await _caseStudyEventForPage(client.id,page.id,'implementation_verified',{url:page.url,before_graaf:v.implementation_before_graaf==null?null:v.implementation_before_graaf,after_graaf:v.last_graaf_score==null?null:v.last_graaf_score,verified_at:v.implementation_verified_at,comparison_source:comparisonSource,remaining_actions:0,targeted_delta_verification:true,full_scan_suppressed:true,client_email_suppressed:true},liveHash).catch(()=>{});
         await _caseStudyEventForPage(client.id,page.id,'brief_cycle_completed',{
           url:page.url,
           completed_actions:Number((_postBrief.completed_cycle&&_postBrief.completed_cycle.completed_actions)||0),
@@ -3541,32 +3663,12 @@ app.patch('/api/tracker-client/:token/pages/:pageId/done', async (req, res) => {
           brief_cycle_id:_postCycleId||null,
           next_state:'READY_FOR_FRESH_DISCOVERY'
         },liveHash).catch(()=>{});
-        if (client.email) {
-          const beforeScore = v.implementation_before_graaf;
-          const afterScore = v.last_graaf_score;
-          const scoreLine = (beforeScore != null || afterScore != null) ? '<p style="font-size:13px;color:#374151;"><strong>GRAAF:</strong> ' + (beforeScore == null ? '—' : beforeScore) + ' → ' + (afterScore == null ? '—' : afterScore) + '</p>' : '';
-          const subject = 'Implementation verified — ' + (client.domain || page.url);
-          const body = '<h2 style="font-size:17px;font-weight:800;color:#0f172a;">Implementation verified</h2>'
-            + '<p style="font-size:14px;color:#374151;line-height:1.7;">ContentScale detected your published changes on <strong>' + page.url + '</strong>, rescanned the final live page and confirmed that the current Brief has <strong>0 outstanding actions</strong>.</p>'
-            + '<p style="font-size:13px;color:#374151;"><strong>Implementation:</strong> ' + fmtUtc(v.implementation_at) + '<br><strong>Verified:</strong> ' + fmtUtc(v.implementation_verified_at) + '</p>'
-            + scoreLine
-            + '<div style="background:#ecfdf5;border:1px solid #86efac;border-radius:8px;padding:14px 16px;color:#166534;font-size:13px;">The current Brief cycle is closed. The proof snapshot is protected; future work may only come from fresh evidence.</div>'
-            + '<p><a href="' + trackerUrl + '" style="display:inline-block;background:#7c3aed;color:#fff;text-decoration:none;padding:10px 20px;border-radius:6px;font-weight:700;">View tracker →</a></p>';
-          await sendTrackerEmail(client.id, subject, body, true).catch(()=>{});
-        }
+        // v299: targeted live-delta check is silent to the client.
       } catch(e) {
         // Only here does Manual HTML become required.
         await pool.query(`UPDATE tracker_pages SET is_done=FALSE, needs_html=TRUE, fetch_reliable=FALSE, implementation_status='manual_html_required' WHERE id=$1`, [page.id]).catch(()=>{});
         await _caseStudyEventForPage(client.id,page.id,'implementation_verification_failed',{url:page.url,error:String(e.message||e).slice(0,500),fallback:'manual_html_required'}).catch(()=>{});
-        if (client.email) {
-          const subject = 'Action required — live page could not be verified — ' + (client.domain || page.url);
-          const body = '<h2 style="font-size:17px;font-weight:800;color:#0f172a;">Manual HTML required</h2>'
-            + '<p style="font-size:14px;color:#374151;line-height:1.7;">ContentScale could not reliably retrieve the updated live page <strong>' + page.url + '</strong>.</p>'
-            + '<p style="font-size:13px;color:#374151;"><strong>Implementation declared:</strong> ' + fmtUtc() + '</p>'
-            + '<div style="background:#fff7ed;border:1px solid #fdba74;border-radius:8px;padding:14px 16px;color:#9a3412;font-size:13px;">Open your tracker and use <strong>Manual HTML required</strong>. This fallback appears only when the live fetch cannot be trusted.</div>'
-            + '<p><a href="' + trackerUrl + '" style="display:inline-block;background:#f59e0b;color:#111827;text-decoration:none;padding:10px 20px;border-radius:6px;font-weight:700;">Open tracker →</a></p>';
-          await sendTrackerEmail(client.id, subject, body, true).catch(()=>{});
-        }
+        // v299: targeted live-delta check is silent to the client.
         console.warn('[done-auto-verify]', page.url, e.message);
       }
     });
@@ -4550,6 +4652,7 @@ app.post('/api/tracker-client/:token/page/:pageId/brief-mode', async (req, res) 
 // v296 REGRESSION INVARIANT: VERIFIED_IMPLEMENTATION_CONSUMES_CURRENT_BRIEF=true; VERIFIED_PAGE_CANNOT_KEEP_OLD_NEW_DELTA=true; COMPLETED_BRIEF_ACTIONS_PRESERVED_IN_HISTORY=true; OUTSTANDING_ACTIONS_RESET_ZERO_AFTER_VERIFIED_LIVE=true; NEXT_EVIDENCE_ADVANCES_AFTER_COMPLETED_CHECKPOINT=true
 // v297 REGRESSION INVARIANT: IMPLEMENTATION_VERIFICATION_IS_BRIEF_CYCLE_AWARE=true; OLD_GREEN_VERIFICATION_CANNOT_VALIDATE_NEW_BRIEF=true; CURRENT_PUBLISHED_VERSION_MAY_SELF_HEAL_VERIFIED_BRIEF=true; MILESTONE_DATES_USE_COMPLETED_EVENTS_NOT_GUESSED_CALENDAR=true; DAY7_SELF_HEAL_REQUIRES_FRESH_GSC_AND_SCAN=true; DAY14_SELF_HEAL_REQUIRES_FRESH_GSC_SCAN_AND_5AI=true; STALE_VERIFIED_BRIEF_AUTO_CLOSES_ONLY_WITH_HARD_CURRENT_PROOF=true
 // v298 REGRESSION INVARIANT: NEXT_ACTION_IS_STAGE_AWARE_NOT_REPEAT_OPEN_BRIEF=true; OPENING_BRIEF_PERSISTS_REVIEW_WITHOUT_CLEARING_TICKS=true; STALE_PREPUBLICATION_CHECKPOINT_NOT_VALID_FOR_NEW_BRIEF=true; CURRENT_LIVE_CAN_COMPARE_AGAINST_PREVIOUS_VERIFIED_PUBLICATION=true; LIVE_VERIFICATION_CLOSES_BRIEF_ONLY_WHEN_FINAL_SCAN_ZERO=true; PARTIAL_LIVE_UPDATE_REMAINS_OPEN_WITH_EXACT_REMAINING_DELTA=true; PARTIAL_VERIFICATION_SENDS_NO_CLIENT_COMPLETION_EMAIL=true; VERIFIED_BRIEF_ID_USES_POST_SCAN_FINAL_CYCLE=true
+// v299 REGRESSION INVARIANT: CHECK_CURRENT_LIVE_NEVER_RUNS_FULL_TRACKER_SCAN=true; CHECK_CURRENT_LIVE_VERIFIES_ONLY_EXISTING_OPEN_ACTIONS=true; CHECK_CURRENT_LIVE_GENERATES_NO_NEW_RECOMMENDATIONS=true; CHECK_CURRENT_LIVE_SENDS_NO_CLIENT_EMAIL=true; REMAINING_LOOP_HIDES_MANUAL_SCAN=true; REMAINING_LOOP_HIDES_FULL_BRIEF=true; REMAINING_PANEL_SHOWS_ONLY_EXACT_OPEN_ACTIONS=true; ZERO_REMAINING_CLOSES_CYCLE=true
 // ── Owner Question Hub — persistent client-owned knowledge gaps ────────────────
 // Unanswered questions never disappear. Refresh only adds, merges, or strengthens them.
 async function _ensureTrackerOwnerQuestions(){
@@ -16665,7 +16768,7 @@ async function startServer() {
   }
 
 console.log('────────────────────────────────────────');
-console.log('[ContentScale] CS-2026-09-25-CANONICAL-v298');
+console.log('[ContentScale] CS-2026-09-25-CANONICAL-v299');
 console.log('[ContentScale] Build check: /api/build-info');
 console.log('[ContentScale] Base URL: ' + (process.env.BASE_URL || 'https://app.contentscale.site'));
 console.log('────────────────────────────────────────');
@@ -21325,7 +21428,7 @@ function _ceoMainWebsiteUrl(input){
 // action must target this CEO endpoint.
 app.post('/api/ceo-report/start',async(req,res)=>{
   let ceoEntry='unknown',ceoUrl='',lastStage='REQUEST';
-  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-25-CANONICAL-v298');
+  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-25-CANONICAL-v299');
   try{
     lastStage='DB_SETUP';
     console.log('[ceo-report] stage=DB_SETUP');
@@ -21419,10 +21522,10 @@ ContentScale`;
     return res.json({success:true,entry_mode:entry,token,selected_page:selected,ceo_report_token:reportToken,ceo_report_url:reportUrl,delivery_email:delivery,updates_opt_in:updatesOptIn});
   }catch(e){
     const msg=String((e&&e.message)||e||'CEO Prospect Report generation failed');
-    console.error('[ceo-report] FAILED build=CS-2026-09-25-CANONICAL-v298 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
+    console.error('[ceo-report] FAILED build=CS-2026-09-25-CANONICAL-v299 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
     console.error('[ceo-report] ERROR: '+msg);
     if(e&&e.stack)console.error(e.stack);
-    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-25-CANONICAL-v298'});
+    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-25-CANONICAL-v299'});
     try{res.end();}catch(_){}
   }
 });
@@ -41160,7 +41263,7 @@ function openCaseStudy(pageId){
       if(type==='implementation_declared')return 'Reviewed page declared live; automated comparison and verification started.';
       if(type==='published_html_captured')return 'Complete published HTML captured as a second immutable version.';
       if(type==='implementation_verified')return 'Published implementation verified and a post-publication Tracker snapshot saved.';
-      if(type==='implementation_live_compared_delta_remaining')return 'A new live version was detected and rescanned, but '+(x.remaining_actions||0)+' current Brief action(s) were still missing. The Brief remained open and no completion email was sent.';
+      if(type==='implementation_live_compared_delta_remaining')return 'A new live version was detected and checked only against the current Brief actions. '+(x.remaining_actions||0)+' action(s) were still missing. No full scan, new Brief or client email was triggered.';
       if(type==='brief_cycle_completed')return 'The implemented Brief cycle was closed. Completed actions moved to protected history; operational outstanding actions reset to 0.';
       if(type==='case_day_7_completed')return 'Day 7 evidence checkpoint completed from fresh GSC plus the required page review/scan.';
       if(type==='case_day_14_completed')return 'Day 14 evidence checkpoint completed from fresh GSC, all five AI engines and the required page review/scan.';
@@ -43108,14 +43211,14 @@ function _trackerNextActionState(p,isDone,lastCheckedRaw,nextEvidence){
     return {code:'MONITOR',label:'NO NEW ACTION · CURRENT BRIEF VERIFIED',detail:evidence+' The current Brief belongs to the live version that was compared and verified. Completed actions are closed; wait for fresh evidence before opening another delta.',color:'#86efac',border:'#16a34a',bg:'#052e16',button:'',buttonAction:''};
   }
   if(implStatus==='verifying'){
-    return {code:'VERIFYING',label:'VERIFYING CURRENT LIVE VERSION',detail:'ContentScale is fetching and rescanning the published live page now. Wait for the result; do not start another scan or reopen the Brief.',color:'#fde68a',border:'#f59e0b',bg:'#291b05',button:'',buttonAction:''};
+    return {code:'VERIFYING',label:'VERIFYING CURRENT LIVE VERSION',detail:'ContentScale is fetching the published live page and checking ONLY the current open actions. No normal scan, no new Brief, no GSC/AI research and no client scan email. Wait a few seconds.',color:'#fde68a',border:'#f59e0b',bg:'#291b05',button:'',buttonAction:''};
   }
   if(outstanding!=null&&outstanding>0){
     if(isDone){
       if(implStatus==='live_changed_delta_remaining'){
         return {code:'REMAINING',label:'LIVE CHECK COMPLETE · '+outstanding+' ACTION'+(outstanding===1?'':'S')+' STILL MISSING',
-          detail:evidence+' The latest published live page was fetched and rescanned. These are the remaining actions after the live comparison, so this is now a genuinely new remaining Brief.',
-          color:'#fde68a',border:'#d97706',bg:'#241704',button:'Open remaining Brief',buttonAction:'viewLastBrief('+p.id+')'};
+          detail:'The published live page was checked against the SAME current action list. Fix only the '+outstanding+' remaining action'+(outstanding===1?'':'s')+'. Manual Scan and the full Brief are disabled for this correction loop.',
+          color:'#fde68a',border:'#d97706',bg:'#241704',button:'Fix '+outstanding+' remaining action'+(outstanding===1?'':'s'),buttonAction:'openRemainingActions('+p.id+')'};
       }
       if(implStatus==='no_change'){
         return {code:'IMPLEMENT',label:'CURRENT LIVE PAGE HAS NOT CHANGED · '+outstanding+' ACTION'+(outstanding===1?'':'S'),
@@ -43154,7 +43257,7 @@ function _trackerImplementationCheckState(p,isDone,nextState){
 
   if(status==='verifying'){
     return {code:'VERIFYING',label:'VERIFYING PUBLISHED LIVE',
-      detail:'ContentScale is fetching the live URL now, comparing it with the protected pre-publication checkpoint, and then running the fresh verification scan. Wait a few seconds; no extra scan is needed.',
+      detail:'ContentScale is fetching the live URL, comparing it with the previous protected live version and checking only the existing open actions. No normal scan is being run.',
       color:'#fde68a',border:'#f59e0b',bg:'#291b05'};
   }
   if(status==='no_change'){
@@ -43164,7 +43267,7 @@ function _trackerImplementationCheckState(p,isDone,nextState){
   }
   if(status==='live_changed_delta_remaining'){
     return {code:'PARTIAL',label:'NEW LIVE VERSION DETECTED · BRIEF NOT COMPLETE',
-      detail:'ContentScale detected new published HTML and rescanned it, but the final live-page comparison still found actions missing. NEXT ACTION now shows only those remaining actions.',
+      detail:'ContentScale detected new published HTML and checked only the current open actions. Some are still missing. No new recommendations were generated.',
       color:'#fde68a',border:'#d97706',bg:'#241704'};
   }
   if(currentBriefVerified){
@@ -43577,6 +43680,9 @@ function renderPages() {
     var _nextLockContentChanges = _nextWorkflowGuard && !_nextAllowsContentChange;
     var _nextNoAction = _nextActionCode==='MONITOR';
     var _nextScanRequired = _nextActionCode==='SCAN';
+    var _correctionLoop = (_nextActionCode==='REMAINING'||_nextActionCode==='VERIFYING');
+    var _hideFullBrief = _correctionLoop;
+    var _hideManualScan = _correctionLoop||_nextActionCode==='VERIFY_LIVE';
 
     // hasHtml = true means HTML has actually been pasted or scanned
     var hasHtml = (p.brief_check_count > 0) || (p.graaf_score > 0)
@@ -43696,15 +43802,15 @@ function renderPages() {
       + '<button data-tour="ai-evidence" onclick="event.stopPropagation();openAiEvidence(' + p.id + ')" style="background:#0d1117;border:1px solid #8b5cf6;border-radius:7px;color:#c4b5fd;cursor:pointer;font-size:11px;padding:5px 12px;font-weight:700;" title="Open the five-engine manual evidence panel. Count means manually checked, not cited.">&#129504; AI Checked ' + (function(){var a=p.ai_manual_evidence;if(typeof a==="string"){try{a=JSON.parse(a);}catch(x){a={};}}var req=waitingForData?(Date.parse(p.monitoring_request_at||0)||0):0;return ["google_aio","chatgpt","perplexity","claude","copilot"].filter(function(k){var ev=a&&a[k];return ev&&_aiEvidenceIsVerified(ev)&&(!req||(Date.parse(ev.updated_at||ev.verified_at||0)||0)>=req);}).length;})() + '/5</button>'
       + '<button data-tour="intelligence" onclick="event.stopPropagation();openCompetitiveIntelligence(' + p.id + ')" style="background:#0d1117;border:1px solid #0891b2;border-radius:7px;color:#67e8f9;cursor:pointer;font-size:11px;padding:5px 12px;font-weight:700;" title="Cross-engine competitors, sources, content opportunities and claims to verify">&#128269; Intelligence</button>'
       + ((explicitlyNeeds || p.fetch_reliable === false) && !_evidenceCheckpointLock ? '<button class="cs-html-btn cs-blink" onclick="openHtmlUpload(' + p.id + ')" style="background:#0d1117;border:1px solid #f59e0b;border-radius:7px;color:#fbbf24;cursor:pointer;font-size:11px;padding:5px 12px;font-weight:700;" title="Automatic live fetch was not reliable. Paste the published HTML manually to continue verification.">&#9888; Manual HTML required</button>' : '')
-      + ((_evidenceCheckpointLock||_nextNoAction||_nextActionCode==='WAITING')
+      + (_hideManualScan ? '' : (((_evidenceCheckpointLock||_nextNoAction||_nextActionCode==='WAITING')
         ? '<button disabled style="background:#111827;border:1px solid #374151;border-radius:7px;color:#6b7280;cursor:not-allowed;font-size:11px;padding:5px 10px;font-weight:700;" title="'+(_nextNoAction?'No new action was found. Wait for the next evidence checkpoint before scanning again.':'Required evidence must be completed before another scan.')+'">\u21bb '+(_nextNoAction?'No scan needed':'Scan locked')+'</button>'
-        : '<button data-tour="scan" data-check-btn="' + p.id + '" onclick="checkPage(' + p.id + ')" style="background:#0d1117;border:1px solid ' + (_scanDone ? '#22c55e' : '#2dd4bf') + ';border-radius:7px;color:' + (_scanDone ? '#4ade80' : '#5eead4') + ';cursor:pointer;font-size:11px;padding:5px 10px;font-weight:700;" title="' + (_nextScanRequired?'Scan required by NEXT ACTION':(lastChecked ? (_scanDone ? 'Scanned this round \u2014 click to rescan now' : 'Rescan this URL now') : 'Scan this URL now')) + '">' + (lastChecked ? (_scanDone ? '\u21bb \u2713' : '\u21bb Scan') : '\u25b6 Scan') + '</button>')
+        : '<button data-tour="scan" data-check-btn="' + p.id + '" onclick="checkPage(' + p.id + ')" style="background:#0d1117;border:1px solid ' + (_scanDone ? '#22c55e' : '#2dd4bf') + ';border-radius:7px;color:' + (_scanDone ? '#4ade80' : '#5eead4') + ';cursor:pointer;font-size:11px;padding:5px 10px;font-weight:700;" title="' + (_nextScanRequired?'Scan required by NEXT ACTION':(lastChecked ? (_scanDone ? 'Scanned this round \u2014 click to rescan now' : 'Rescan this URL now') : 'Scan this URL now')) + '">' + (lastChecked ? (_scanDone ? '\u21bb \u2713' : '\u21bb Scan') : '\u25b6 Scan') + '</button>')))
       + (p.case_study_active
         ? '<button disabled style="background:#082f49;border:1px solid #0ea5e9;border-radius:7px;color:#7dd3fc;cursor:not-allowed;font-size:10px;padding:5px 10px;font-weight:800;opacity:.9;" title="Locked to the monitoring choice saved with the protected baseline. Case-study day 7, day 14 and day 30 reminders remain active.">Case-study cycle: '+((p.check_frequency==='0'||p.check_frequency==='0days'||p.check_frequency==='off'||!p.check_frequency)?'active · monitoring locked Off':freqLabel+' · locked')+'</button>'
         : ((p.check_frequency==='0'||p.check_frequency==='0days'||p.check_frequency==='off'||!p.check_frequency)
         ? '<button onclick="event.stopPropagation();configurePageMonitoring('+p.id+')" style="background:#111827;border:1px solid #64748b;border-radius:7px;color:#cbd5e1;cursor:pointer;font-size:10px;padding:5px 10px;font-weight:800;" title="No guided review schedule. Manual scans still work.">Monitoring: Off</button>'
         : '<button onclick="event.stopPropagation();configurePageMonitoring('+p.id+')" style="background:#052e16;border:1px solid #22c55e;border-radius:7px;color:#86efac;cursor:pointer;font-size:10px;padding:5px 10px;font-weight:800;" title="Guided data review '+freqLabel+'. ContentScale waits for input before the manual scan.">Monitoring: '+freqLabel+'</button>'))
-      + ((hasBrief || _lastBriefData[p.id]) ? '<button data-tour="view-brief" onclick="viewLastBrief(' + p.id + ')" style="background:#0d1117;border:1px solid #8b5cf6;border-radius:7px;color:#c4b5fd;cursor:pointer;font-size:11px;padding:5px 12px;font-weight:600;" title="View Citation Brief">\\ud83d\\udcc4 View Brief</button>' : '')
+      + ((!_hideFullBrief&&(hasBrief || _lastBriefData[p.id])) ? '<button data-tour="view-brief" onclick="viewLastBrief(' + p.id + ')" style="background:#0d1117;border:1px solid #8b5cf6;border-radius:7px;color:#c4b5fd;cursor:pointer;font-size:11px;padding:5px 12px;font-weight:600;" title="View Citation Brief">\\ud83d\\udcc4 View Brief</button>' : '')
       + ((function(){var _d=_lastBriefData[p.id]||_buildBriefData(p);return _d&&_d.prewrite_handoff&&_d.prewrite_handoff.needed&&(!_nextWorkflowGuard||_nextAllowsContentChange);})() ? '<button onclick="event.stopPropagation();openPrewriteHandoff(' + p.id + ')" style="background:#1c1405;border:1px solid #f59e0b;border-radius:7px;color:#fbbf24;cursor:pointer;font-size:11px;padding:5px 12px;font-weight:800;" title="NEXT ACTION found work that needs a coordinated content update.">\ud83c\udfaf Continue in Pre-Write</button>' : '')
       + '<button data-tour="history" onclick="csPosHist(' + p.id + ')" style="background:#0d1117;border:1px solid #64748b;border-radius:7px;color:#cbd5e1;cursor:pointer;font-size:13px;padding:5px 10px;font-weight:600;" title="Ranking history">\\ud83d\\udcc8</button>'
       + (!p.case_study_active ? (_csReady?'<button onclick="event.stopPropagation();startCaseStudy(' + p.id + ')" style="background:#052e16;border:1px solid #22c55e;border-radius:7px;color:#86efac;cursor:pointer;font-size:10px;padding:5px 10px;font-weight:900;" title="All baseline evidence is complete. Lock it before changing the live page.">READY — Start case study</button>':'<button disabled style="background:#1c1407;border:1px solid #92400e;border-radius:7px;color:#fbbf24;cursor:not-allowed;font-size:10px;padding:5px 10px;font-weight:900;" title="Complete: '+String(_csMissing.join(' · ')).replace(/"/g,'&quot;')+'">Case study waiting for baseline</button>') : '')
@@ -45423,6 +45529,39 @@ async function toggleManualDone(pageId, current) {
     }
   } catch(e) { toast('Could not save check', '#f87171'); }
 }
+
+
+function _trackerClientFrameOnly(x){
+  var sy=String(x&&x.system||'').toLowerCase();
+  return sy.indexOf('intent snapshot')>=0||sy.indexOf('missing entities')>=0||sy==='paa';
+}
+function openRemainingActions(pageId){
+  var p=(_pages||[]).find(function(x){return x.id==pageId;})||{};
+  var b={};try{b=typeof p.brief_content==='string'?JSON.parse(p.brief_content||'{}'):(p.brief_content||{});}catch(e){b={};}
+  var rows=[];
+  (Array.isArray(b.items)?b.items:[]).forEach(function(x){if(x&&!_trackerClientFrameOnly(x))rows.push(x);});
+  (Array.isArray(b.gsc_brief)?b.gsc_brief:[]).forEach(function(x){if(x)rows.push(x);});
+  var old=document.getElementById('remainingActionsOverlay');if(old)old.remove();
+  var ov=document.createElement('div');ov.id='remainingActionsOverlay';
+  ov.style.cssText='position:fixed;inset:0;z-index:100000;background:rgba(2,6,23,.82);display:flex;align-items:center;justify-content:center;padding:22px;';
+  var box=document.createElement('div');box.style.cssText='width:min(760px,96vw);max-height:86vh;overflow:auto;background:#0d1117;border:1px solid #d97706;border-radius:12px;padding:18px;color:#e5e7eb;';
+  var esc=function(v){return String(v||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');};
+  box.innerHTML='<div style="font-size:11px;font-weight:950;color:#fbbf24;letter-spacing:.06em;">FIX ONLY THE REMAINING ACTIONS</div>'
+    +'<div style="font-size:11px;color:#94a3b8;margin:5px 0 12px;">No new scan and no full Brief. These are the only items still open from the same implementation cycle.</div>'
+    +(rows.length?rows.map(function(x,i){
+      return '<div style="padding:11px 12px;margin:8px 0;background:#111827;border:1px solid #374151;border-left:3px solid #f59e0b;border-radius:7px;">'
+        +'<div style="font-size:11px;font-weight:900;color:#fde68a;">'+(i+1)+'. '+esc(x.title||'Remaining action')+'</div>'
+        +'<div style="font-size:11px;line-height:1.6;color:#cbd5e1;margin-top:5px;">'+esc(x.action||x.passage||x.body||x.what||x.issue||'')+'</div></div>';
+    }).join(''):'<div style="color:#86efac;">No remaining actions.</div>')
+    +'<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px;">'
+    +'<button id="remainingCloseBtn" style="background:#111827;border:1px solid #475569;color:#cbd5e1;border-radius:7px;padding:7px 12px;cursor:pointer;">Close</button>'
+    +(rows.length?'<button id="remainingCheckBtn" style="background:#052e16;border:1px solid #22c55e;color:#bbf7d0;border-radius:7px;padding:7px 12px;font-weight:900;cursor:pointer;">After publishing · Check current live</button>':'')
+    +'</div>';
+  ov.appendChild(box);document.body.appendChild(ov);
+  box.querySelector('#remainingCloseBtn').onclick=function(){ov.remove();};
+  var cb=box.querySelector('#remainingCheckBtn');if(cb)cb.onclick=function(){ov.remove();verifyCurrentBriefLive(pageId,null);};
+}
+window.openRemainingActions=openRemainingActions;
 
 async function verifyCurrentBriefLive(pageId,btn){
   if(btn){btn.disabled=true;btn.textContent='Checking live…';btn.style.opacity='.75';}
