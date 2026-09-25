@@ -266,7 +266,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-25-CANONICAL-v276';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-25-CANONICAL-v277';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 const CONTENTSCALE_BUILD_CHANGES = [
   'tracker-delta-brief-regression-lock',
@@ -492,7 +492,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-09-25-CANONICAL-v276',
+  build: 'CS-2026-09-25-CANONICAL-v277',
   built_date: '2026-09-25',
   ceo_private: true,
   ceo_public: true,
@@ -4286,6 +4286,7 @@ app.post('/api/tracker-client/:token/page/:pageId/brief-mode', async (req, res) 
 // v274 REGRESSION INVARIANT: AUTO_OWNER_QUESTIONS_DISABLED=true; MANUAL_COMPANY_QUESTIONS_ONLY=true; GROWTH_REQUIRES_CONCRETE_SOURCE_AND_SEMANTIC_GAP=true; ZERO_GROWTH_QUESTIONS_VALID=true; NO_DUMB_GENERIC_OWNER_PROMPTS=true
 // v275 REGRESSION INVARIANT: WARMUP_PROGRESS_MONOTONIC=true; WARMUP_RECOVERS_FROM_ALL_SUCCESSFUL_SEND_HISTORY=true; WARMUP_START_NEVER_MOVES_FORWARD=true; REBOOT_CANNOT_RESET_WARMUP_DAY=true
 // v276 REGRESSION INVARIANT: WARMUP_ADVANCES_BY_COMPLETED_DAILY_TARGETS_NOT_CALENDAR=true; STRAY_SENDS_DO_NOT_ADVANCE_DAY=true; LEGACY_INFLATED_PROGRESS_REPAIRED=true; REBOOT_CANNOT_RESET_OR_INFLATE_WARMUP=true
+// v277 REGRESSION INVARIANT: LOCALIZED_SYNC_INCLUDES_ALL_VERIFIED_FACTS_CLIENT_AND_PAGE_LEVEL=true; ORIGINAL_SCOPE_AND_SOURCE_PAGE_PRESERVED=true; NO_FALSE_EMPTY_CLIENT_LEVEL_SYNC=true
 // ── Owner Question Hub — persistent client-owned knowledge gaps ────────────────
 // Unanswered questions never disappear. Refresh only adds, merges, or strengthens them.
 async function _ensureTrackerOwnerQuestions(){
@@ -4632,12 +4633,16 @@ async function _syncAllContentScaleVerifiedFactsToLocalizedTrackers(opts={}){
     ORDER BY id LIMIT 1`);
   if(!src.rows.length)return {success:false,reason:'Main contentscale.site tracker not found',targets:[]};
   const sourceClient=src.rows[0];
-  const fr=await pool.query(`SELECT id,claim_text,source_type,source_context,notes,verified_at
-    FROM tracker_claims_facts
-    WHERE tracker_client_id=$1 AND page_id IS NULL AND status='VERIFIED'
-    ORDER BY id`,[sourceClient.id]);
+  // v277: the main ContentScale tracker stores many VERIFIED facts on individual pages.
+  // Sync ALL verified facts, not only page_id IS NULL. Preserve original scope/provenance in source_context.
+  const fr=await pool.query(`SELECT f.id,f.page_id,f.claim_text,f.source_type,f.source_context,f.notes,f.verified_at,
+      p.url AS source_page_url,p.keyword AS source_page_keyword
+    FROM tracker_claims_facts f
+    LEFT JOIN tracker_pages p ON p.id=f.page_id AND p.tracker_client_id=f.tracker_client_id
+    WHERE f.tracker_client_id=$1 AND f.status='VERIFIED'
+    ORDER BY f.id`,[sourceClient.id]);
   const sourceFacts=fr.rows||[];
-  if(!sourceFacts.length)return {success:false,reason:'No VERIFIED client-level facts found in main ContentScale tracker',source_client_id:sourceClient.id,targets:[]};
+  if(!sourceFacts.length)return {success:false,reason:'No VERIFIED facts found in main ContentScale tracker',source_client_id:sourceClient.id,targets:[]};
 
   const targets=await pool.query(`SELECT id,domain,name FROM tracker_clients
     WHERE lower(COALESCE(domain,''))=ANY($1::text[])
@@ -4659,10 +4664,16 @@ async function _syncAllContentScaleVerifiedFactsToLocalizedTrackers(opts={}){
       translated=await _translateVerifiedClaimsLiteral(needed,lang);
       for(const tr of translated){
         const sourceFact=sourceFacts.find(x=>Number(x.id)===Number(tr.source_id));
-        const sourceContext='source_claim_id:'+tr.source_id+' | source_tracker:contentscale.site | lang:'+lang;
+        const originalScope=sourceFact&&sourceFact.page_id?'page':'client';
+        const sourceContext='source_claim_id:'+tr.source_id
+          +' | source_tracker:contentscale.site'
+          +' | source_scope:'+originalScope
+          +(sourceFact&&sourceFact.page_id?' | source_page_id:'+sourceFact.page_id:'')
+          +(sourceFact&&sourceFact.source_page_url?' | source_page_url:'+sourceFact.source_page_url:'')
+          +' | lang:'+lang;
         const note=lang==='nl'
-          ? 'Letterlijke vertaling van een VERIFIED client-level fact uit de bestaande contentscale.site Tracker. Geen nieuwe feitelijke informatie toegevoegd.'
-          : 'Traducción fiel de un hecho VERIFIED a nivel de cliente del Tracker existente de contentscale.site. No se añadió información factual nueva.';
+          ? ('Letterlijke vertaling van een VERIFIED '+(originalScope==='page'?'pagina-':'client-')+'fact uit de bestaande contentscale.site Tracker. De oorspronkelijke scope en bronpagina zijn bewaard in Source Context; er is geen nieuwe feitelijke informatie toegevoegd.')
+          : ('Traducción fiel de un hecho VERIFIED '+(originalScope==='page'?'de página ':'a nivel de cliente ')+'del Tracker existente de contentscale.site. El alcance original y la página de origen se conservan en Source Context; no se añadió información factual nueva.');
         if(existingBySource.has(Number(tr.source_id))){
           if(force){
             await pool.query(`UPDATE tracker_claims_facts
@@ -4688,7 +4699,11 @@ async function _syncAllContentScaleVerifiedFactsToLocalizedTrackers(opts={}){
       verified_total_after:Number(count.rows[0]?.n||0)
     });
   }
-  return {success:true,source_tracker:'contentscale.site',source_client_id:sourceClient.id,source_verified_facts:sourceFacts.length,targets:results};
+  return {success:true,source_tracker:'contentscale.site',source_client_id:sourceClient.id,
+    source_verified_facts:sourceFacts.length,
+    source_client_level:sourceFacts.filter(x=>!x.page_id).length,
+    source_page_level:sourceFacts.filter(x=>!!x.page_id).length,
+    targets:results};
 }
 
 // Admin route: re-sync every VERIFIED main ContentScale client fact to NL + ES.
@@ -16256,7 +16271,7 @@ async function startServer() {
   }
 
 console.log('────────────────────────────────────────');
-console.log('[ContentScale] CS-2026-09-25-CANONICAL-v276');
+console.log('[ContentScale] CS-2026-09-25-CANONICAL-v277');
 console.log('[ContentScale] Build check: /api/build-info');
 console.log('[ContentScale] Base URL: ' + (process.env.BASE_URL || 'https://app.contentscale.site'));
 console.log('────────────────────────────────────────');
@@ -18981,7 +18996,7 @@ function _ceoMainWebsiteUrl(input){
 // action must target this CEO endpoint.
 app.post('/api/ceo-report/start',async(req,res)=>{
   let ceoEntry='unknown',ceoUrl='',lastStage='REQUEST';
-  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-25-CANONICAL-v276');
+  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-25-CANONICAL-v277');
   try{
     lastStage='DB_SETUP';
     console.log('[ceo-report] stage=DB_SETUP');
@@ -19075,10 +19090,10 @@ ContentScale`;
     return res.json({success:true,entry_mode:entry,token,selected_page:selected,ceo_report_token:reportToken,ceo_report_url:reportUrl,delivery_email:delivery,updates_opt_in:updatesOptIn});
   }catch(e){
     const msg=String((e&&e.message)||e||'CEO Prospect Report generation failed');
-    console.error('[ceo-report] FAILED build=CS-2026-09-25-CANONICAL-v276 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
+    console.error('[ceo-report] FAILED build=CS-2026-09-25-CANONICAL-v277 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
     console.error('[ceo-report] ERROR: '+msg);
     if(e&&e.stack)console.error(e.stack);
-    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-25-CANONICAL-v276'});
+    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-25-CANONICAL-v277'});
     try{res.end();}catch(_){}
   }
 });
