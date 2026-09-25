@@ -266,7 +266,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-25-CANONICAL-v292';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-25-CANONICAL-v293';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 const CONTENTSCALE_BUILD_CHANGES = [
   'tracker-delta-brief-regression-lock',
@@ -492,7 +492,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-09-25-CANONICAL-v292',
+  build: 'CS-2026-09-25-CANONICAL-v293',
   built_date: '2026-09-25',
   ceo_private: true,
   ceo_public: true,
@@ -4306,6 +4306,7 @@ app.post('/api/tracker-client/:token/page/:pageId/brief-mode', async (req, res) 
 // v290 REGRESSION INVARIANT: VERIFIED_TRANSLATION_BATCHED_AND_RECOVERABLE=true; INVALID_BATCH_JSON_FALLS_BACK_PER_FACT=true; LEAD_EMAILS_HAVE_20_EN_20_NL_20_ES=true; VARIANT_NUMBER_ALIGNED_ACROSS_LANGUAGES=true; NL_ES_LEADS_NEVER_RECEIVE_ENGLISH_TEMPLATE=true
 // v291 REGRESSION INVARIANT: LEAD_CRAWLER_HAS_70_VARIANTS_PER_LANGUAGE=true; TOTAL_STATIC_LEAD_EMAILS_210=true; LEAD_VARIANT_ROTATION_COUNT_70=true; VARIANTS_21_TO_70_ADDED_FROM_OWNER_SOURCE=true; NL_ES_TRANSLATIONS_STATIC_NOT_RUNTIME=true
 // v292 REGRESSION INVARIANT: EMAIL_AI_HEADER_SHOWS_CHECKED_5_OF_5_SEPARATE_FROM_CITED=true; EMAIL_RECOMMENDATION_COUNT_USES_FINAL_FILTERED_BRIEF=true; FINAL_FAQ_PAA_ALREADY_COVERED_FILTER_STRONGER=true; FINAL_AUTHORITY_ADD_ONLY_DUPLICATES_FILTERED=true; FINAL_DELTA_SEMANTIC_DEDUPE=true
+// v293 REGRESSION INVARIANT: OUTBOUND_QUEUE_USES_CANONICAL_SERVER_70_VARIANT_COPY=true; OLD_CLIENT_10_VARIANT_PACK_REMOVED=true; ADMIN_LIST_EXPOSES_GENERATED_OUTREACH_COPY=true; MISSING_CANONICAL_COPY_CANNOT_BE_SENT=true
 // ── Owner Question Hub — persistent client-owned knowledge gaps ────────────────
 // Unanswered questions never disappear. Refresh only adds, merges, or strengthens them.
 async function _ensureTrackerOwnerQuestions(){
@@ -16421,7 +16422,7 @@ async function startServer() {
   }
 
 console.log('────────────────────────────────────────');
-console.log('[ContentScale] CS-2026-09-25-CANONICAL-v292');
+console.log('[ContentScale] CS-2026-09-25-CANONICAL-v293');
 console.log('[ContentScale] Build check: /api/build-info');
 console.log('[ContentScale] Base URL: ' + (process.env.BASE_URL || 'https://app.contentscale.site'));
 console.log('────────────────────────────────────────');
@@ -18941,7 +18942,9 @@ app.get('/api/prospect-quick-scan/admin/deliverability',requireAdmin,async(req,r
   }catch(e){res.status(500).json({success:false,error:e.message});}
 });
 
-app.get('/api/prospect-quick-scan/admin/list',requireAdmin,async(req,res)=>{if(!await _ensureProspectQuickScanTable())return res.status(503).json({success:false});try{const q=await pool.query(`SELECT * FROM prospect_quick_scans WHERE revoked_at IS NULL ORDER BY created_at DESC LIMIT 1000`),outreachSchedule=await _pqsOutreachTiming();res.json({success:true,outreach_schedule:outreachSchedule,items:q.rows.map(r=>({..._pqsPublicRow(r),contact_email:r.contact_email||'',campaign:r.campaign||'',opened_count:Number(r.opened_count||0),first_opened_at:r.first_opened_at,last_opened_at:r.last_opened_at,follow_up_status:r.follow_up_status||'not_contacted',outreach_email_status:r.outreach_email_status||'draft',outreach_subject:r.outreach_subject||'',outreach_body:r.outreach_body||'',outreach_approved_at:r.outreach_approved_at,outreach_sent_at:r.outreach_sent_at,outreach_error:r.outreach_error||'',outreach_delivery_status:r.outreach_delivery_status||'unknown',outreach_delivery_event_at:r.outreach_delivery_event_at||null,outreach_delivery_reason:r.outreach_delivery_reason||'',outreach_attempts:Number(r.outreach_attempts||0),outreach_copy_variant:r.outreach_copy_variant?Number(r.outreach_copy_variant):null,outreach_copy_language:r.outreach_copy_language||'',email_lookup_status:r.email_lookup_status||'',email_lookup_checked_at:r.email_lookup_checked_at||null,email_lookup_source:r.email_lookup_source||'',ceo_report_url:r.ceo_report_url||'',ceo_report_token:r.ceo_report_token||'',ceo_report_page_url:r.ceo_report_page_url||'',two_page_overview:r.two_page_overview||null,two_page_overview_created_at:r.two_page_overview_created_at||null,quickscan_interested:!!r.quickscan_interested,quickscan_interested_at:r.quickscan_interested_at||null,audit20_interested:!!r.audit20_interested,audit20_interested_at:r.audit20_interested_at||null,audit20_interest_note:r.audit20_interest_note||'',gsc_status:r.gsc_status||'not_connected',gsc_requested_at:r.gsc_requested_at||null,gsc_connected_at:r.gsc_connected_at||null,audit20_status:r.audit20_status||'not_started',audit20_ready_at:r.audit20_ready_at||null,audit20_report_url:r.audit20_report_url||'',tracker_interested:!!r.tracker_interested,tracker_interested_at:r.tracker_interested_at||null,ceo_delivery_email_sent_at:r.ceo_delivery_email_sent_at||null,ceo_delivery_email_error:r.ceo_delivery_email_error||'',updates_opt_in:!!r.updates_opt_in,outreach_followup_due_at:r.outreach_followup_due_at||null,outreach_followup_sent_at:r.outreach_followup_sent_at||null,share_url:req.protocol+'://'+req.get('host')+'/quick-scan/'+r.token}))});}catch(e){res.status(500).json({success:false,error:e.message});}});
+app.get('/api/prospect-quick-scan/admin/list',requireAdmin,async(req,res)=>{if(!await _ensureProspectQuickScanTable())return res.status(503).json({success:false});try{const q=await pool.query(`SELECT * FROM prospect_quick_scans WHERE revoked_at IS NULL ORDER BY created_at DESC LIMIT 1000`),outreachSchedule=await _pqsOutreachTiming();res.json({success:true,outreach_schedule:outreachSchedule,items:q.rows.map(r=>({..._pqsPublicRow(r),contact_email:r.contact_email||'',campaign:r.campaign||'',opened_count:Number(r.opened_count||0),first_opened_at:r.first_opened_at,last_opened_at:r.last_opened_at,follow_up_status:r.follow_up_status||'not_contacted',outreach_email_status:r.outreach_email_status||'draft',outreach_subject:r.outreach_subject||'',outreach_body:r.outreach_body||'',outreach_approved_at:r.outreach_approved_at,outreach_sent_at:r.outreach_sent_at,outreach_error:r.outreach_error||'',outreach_delivery_status:r.outreach_delivery_status||'unknown',outreach_delivery_event_at:r.outreach_delivery_event_at||null,outreach_delivery_reason:r.outreach_delivery_reason||'',outreach_attempts:Number(r.outreach_attempts||0),outreach_copy_variant:r.outreach_copy_variant?Number(r.outreach_copy_variant):null,outreach_copy_language:r.outreach_copy_language||'',
+generated_outreach_copy:(r.source==='lead_crawler'?_pqsLeadCrawlerCopy(r):null),
+email_lookup_status:r.email_lookup_status||'',email_lookup_checked_at:r.email_lookup_checked_at||null,email_lookup_source:r.email_lookup_source||'',ceo_report_url:r.ceo_report_url||'',ceo_report_token:r.ceo_report_token||'',ceo_report_page_url:r.ceo_report_page_url||'',two_page_overview:r.two_page_overview||null,two_page_overview_created_at:r.two_page_overview_created_at||null,quickscan_interested:!!r.quickscan_interested,quickscan_interested_at:r.quickscan_interested_at||null,audit20_interested:!!r.audit20_interested,audit20_interested_at:r.audit20_interested_at||null,audit20_interest_note:r.audit20_interest_note||'',gsc_status:r.gsc_status||'not_connected',gsc_requested_at:r.gsc_requested_at||null,gsc_connected_at:r.gsc_connected_at||null,audit20_status:r.audit20_status||'not_started',audit20_ready_at:r.audit20_ready_at||null,audit20_report_url:r.audit20_report_url||'',tracker_interested:!!r.tracker_interested,tracker_interested_at:r.tracker_interested_at||null,ceo_delivery_email_sent_at:r.ceo_delivery_email_sent_at||null,ceo_delivery_email_error:r.ceo_delivery_email_error||'',updates_opt_in:!!r.updates_opt_in,outreach_followup_due_at:r.outreach_followup_due_at||null,outreach_followup_sent_at:r.outreach_followup_sent_at||null,share_url:req.protocol+'://'+req.get('host')+'/quick-scan/'+r.token}))});}catch(e){res.status(500).json({success:false,error:e.message});}});
 app.post('/api/prospect-quick-scan/admin/email-enrich',requireAdmin,async(req,res)=>{
   if(!await _ensureProspectQuickScanTable())return res.status(503).json({success:false,error:'DB unavailable'});const limit=Math.max(1,Math.min(12,Number((req.body||{}).limit)||8)),retry=!!(req.body&&req.body.retry);
   try{
@@ -21079,7 +21082,7 @@ function _ceoMainWebsiteUrl(input){
 // action must target this CEO endpoint.
 app.post('/api/ceo-report/start',async(req,res)=>{
   let ceoEntry='unknown',ceoUrl='',lastStage='REQUEST';
-  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-25-CANONICAL-v292');
+  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-25-CANONICAL-v293');
   try{
     lastStage='DB_SETUP';
     console.log('[ceo-report] stage=DB_SETUP');
@@ -21173,10 +21176,10 @@ ContentScale`;
     return res.json({success:true,entry_mode:entry,token,selected_page:selected,ceo_report_token:reportToken,ceo_report_url:reportUrl,delivery_email:delivery,updates_opt_in:updatesOptIn});
   }catch(e){
     const msg=String((e&&e.message)||e||'CEO Prospect Report generation failed');
-    console.error('[ceo-report] FAILED build=CS-2026-09-25-CANONICAL-v292 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
+    console.error('[ceo-report] FAILED build=CS-2026-09-25-CANONICAL-v293 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
     console.error('[ceo-report] ERROR: '+msg);
     if(e&&e.stack)console.error(e.stack);
-    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-25-CANONICAL-v292'});
+    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-25-CANONICAL-v293'});
     try{res.end();}catch(_){}
   }
 });
@@ -21719,60 +21722,37 @@ function _pqsAdminV133Tools(){return String.raw`<script>(function(){
   function valid(v){return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(v||''))}
   function lang(x){var v=String(x.language||'auto').toLowerCase(),d=String(x.domain||'').toLowerCase();if(v==='nl'||(v==='auto'&&/(^nl\.|\.nl$)/i.test(d)))return 'nl';if(v==='es'||(v==='auto'&&/(^es\.|\.es$)/i.test(d)))return 'es';return 'en'}
   function publicCeoUrl(l){return 'https://app.contentscale.site/quick-scan/start?source=lead-crawler&language='+encodeURIComponent(l||'en')}
-  function copyVariant(x){var seed=String(x.token||x.contact_email||x.domain||'contentscale'),h=0;for(var i=0;i<seed.length;i++)h=(h*31+seed.charCodeAt(i))>>>0;return h%10}
+  function copyVariant(x){
+    var g=x&&x.generated_outreach_copy;
+    if(g&&Number(g.variant)>=1)return Number(g.variant)-1;
+    if(Number(x&&x.outreach_copy_variant)>=1)return Number(x.outreach_copy_variant)-1;
+    var seed=String((x&&x.token)||(x&&x.contact_email)||(x&&x.domain)||'contentscale'),h=0;
+    for(var i=0;i<seed.length;i++)h=(h*31+seed.charCodeAt(i))>>>0;
+    return h%70;
+  }
   function copyPair(x){
-    var name=x.business_name||x.domain||'your team',v=copyVariant(x),l=lang(x),u=publicCeoUrl(l);
-    var packs={
-      en:{s:['Google + AI search — '+name,'A quick Google + AI check for '+name,name+' — worth a quick look?','AI search opportunity for '+name,'Could '+name+' be missing AI visibility?','A quick visibility check for '+name,name+' in Google + AI search','Free CEO Report for '+name,'One quick website check for '+name,'Google + AI opportunity — '+name],b:[
-        'Google + AI search is changing how customers find businesses. See where your website may have opportunities:',
-        'I found '+name+' and thought this may be useful. Check your website for Google + AI search opportunities:',
-        'A quick one: see where '+name+' may have opportunities in Google and AI search:',
-        'Want to see how your website looks from a Google + AI search opportunity angle? Start here:',
-        'Customers are increasingly finding businesses through Google and AI answers. Check your website here:',
-        'Could your website be missing visibility opportunities in AI search? See the free CEO Report:',
-        'I came across '+name+'. Here is a quick way to check Google + AI search opportunities for the website:',
-        'No long pitch — just a free CEO Report showing potential Google + AI search opportunities:',
-        'One quick website check for '+name+': Google + AI search opportunities, summarized for a business owner:',
-        'Google + AI search keeps changing. See what opportunities may exist for '+name+':' ]},
-      nl:{s:['Google + AI search — '+name,'Een snelle Google + AI check voor '+name,name+' — even bekijken?','AI search kansen voor '+name,'Mist '+name+' mogelijk AI-zichtbaarheid?','Snelle visibility check voor '+name,name+' in Google + AI search','Gratis CEO Report voor '+name,'Eén snelle websitecheck voor '+name,'Google + AI kans — '+name],b:[
-        'Google + AI search verandert hoe klanten bedrijven vinden. Bekijk waar jullie website mogelijk kansen laat liggen:',
-        'Ik kwam '+name+' tegen en dacht dat dit nuttig kon zijn. Check jullie website op Google + AI search kansen:',
-        'Heel kort: bekijk waar '+name+' mogelijk kansen heeft in Google en AI search:',
-        'Benieuwd hoe jullie website ervoor staat vanuit Google + AI search? Start hier:',
-        'Klanten vinden bedrijven steeds vaker via Google en AI-antwoorden. Check jullie website hier:',
-        'Mist jullie website mogelijk zichtbaarheid in AI search? Bekijk het gratis CEO Report:',
-        'Ik kwam '+name+' tegen. Hier kun je snel Google + AI search kansen voor de website bekijken:',
-        'Geen lange pitch — alleen een gratis CEO Report met mogelijke Google + AI search kansen:',
-        'Eén snelle websitecheck voor '+name+': Google + AI search kansen, kort voor een ondernemer samengevat:',
-        'Google + AI search blijft veranderen. Bekijk welke kansen er mogelijk voor '+name+' liggen:' ]},
-      es:{s:['Google + búsqueda IA — '+name,'Una revisión rápida Google + IA para '+name,name+' — ¿vale la pena verlo?','Oportunidades de búsqueda IA para '+name,'¿Puede '+name+' estar perdiendo visibilidad en IA?','Revisión rápida de visibilidad para '+name,name+' en Google + IA','Informe CEO gratis para '+name,'Una revisión rápida del sitio de '+name,'Oportunidad Google + IA — '+name],b:[
-        'Google y la búsqueda con IA están cambiando cómo los clientes encuentran empresas. Vea dónde su web puede tener oportunidades:',
-        'Encontré '+name+' y pensé que esto podría ser útil. Revise oportunidades en Google y búsqueda con IA:',
-        'Muy breve: vea dónde '+name+' puede tener oportunidades en Google y búsqueda con IA:',
-        '¿Quiere ver su web desde el ángulo de oportunidades en Google + IA? Empiece aquí:',
-        'Cada vez más clientes encuentran empresas mediante Google y respuestas de IA. Revise su web aquí:',
-        '¿Puede su web estar perdiendo oportunidades de visibilidad en búsqueda con IA? Vea el informe CEO gratis:',
-        'Encontré '+name+'. Aquí puede revisar rápidamente oportunidades de Google + IA para la web:',
-        'Sin presentación larga — solo un informe CEO gratis con posibles oportunidades en Google + IA:',
-        'Una revisión rápida de la web de '+name+': oportunidades en Google + IA resumidas para dirección:',
-        'Google y la búsqueda con IA siguen cambiando. Vea qué oportunidades puede haber para '+name+':' ]}
-    };
-    var p=packs[l]||packs.en;
-    var sign=l==='nl'?'Met vriendelijke groet,\nOttmar Francisca\nhttps://nl.contentscale.site':l==='es'?'Un saludo,\nOttmar Francisca\nhttps://es.contentscale.site':'Regards,\nOttmar Francisca\nhttps://contentscale.site';
-    var cta=l==='nl'?'Gratis CEO Report — geen installatie of afspraak nodig.':l==='es'?'Informe CEO gratis — sin instalación ni llamada.':'Free CEO Report — no install or call required.';
-    return [p.s[v%10],(l==='nl'?'Hallo ':l==='es'?'Hola ':'Hello ')+name+',\n\n'+p.b[v%10]+'\n\n'+u+'\n\n'+cta+'\n\n'+sign];
+    var g=x&&x.generated_outreach_copy;
+    if(g&&g.subject&&g.body)return [String(g.subject),String(g.body)];
+    // v293 safety fallback: never resurrect the obsolete 10-template queue.
+    // If canonical preview is unexpectedly missing, show a clear non-sendable diagnostic instead.
+    var l=lang(x),u=publicCeoUrl(l);
+    var subj=l==='nl'?'Outreach copy wordt geladen':l==='es'?'Cargando texto de outreach':'Loading outreach copy';
+    var body=l==='nl'
+      ? 'De actuele 70-variant outreach copy kon niet uit de server-preview worden geladen. Vernieuw de lijst voordat je verstuurt.\n\n'+u
+      : l==='es'
+      ? 'No se pudo cargar la versión actual de las 70 variantes desde el servidor. Actualice la lista antes de enviar.\n\n'+u
+      : 'The current 70-variant outreach copy could not be loaded from the server preview. Refresh the list before sending.\n\n'+u;
+    return [subj,body];
   }
   function subject(x){return copyPair(x)[0]}
   function body(x){return copyPair(x)[1]}
   function upgradeOutreachCopy(text,l,shareUrl){return String(text||'')}
-  // Legacy Quick Scan drafts are intentionally not reused for first contact.
-  var legacyOutreachBody=body;body=function(x){return legacyOutreachBody(x)};
   function filterProspectCards(){if(!qitems.length)return;var byToken={};qitems.forEach(function(x){byToken[x.token]=x});cards().forEach(function(c){var x=byToken[c.token];if(x&&x.source==='lead_crawler'&&!x.visitor_email&&!x.scan_started_at&&!x.scan_completed_at)c.card.remove()});refreshProspects()}
   function renderQueue(){
     qitems.forEach(function(x){if(x.outreach_email_status!=='sent')x.outreach_body=''});
     var q=$('eqSearch').value.trim().toLowerCase(),all=qitems.filter(function(x){return x.source==='lead_crawler'}),withEmail=all.filter(function(x){return valid(x.contact_email)}),withoutEmail=all.filter(function(x){return !valid(x.contact_email)}),matches=function(x){return !q||(String(x.business_name||'')+' '+String(x.contact_email||'')+' '+String(x.domain||'')).toLowerCase().indexOf(q)>=0},rows=withEmail.filter(function(x){return x.outreach_email_status!=='sent'&&matches(x)}),missing=withoutEmail.filter(matches);
     renderWarmup();$('eqStats').textContent=all.length+' imported Lead Crawler companies · '+withEmail.length+' with email · '+withoutEmail.length+' without email · '+rows.length+' waiting for approval. Untouched imports are intentionally not shown under Prospects.';
-    var blocked=qSchedule&&!qSchedule.can_send_now,sendHtml=rows.slice(0,100).map(function(x){return '<article class="card" data-email-token="'+esc(x.token)+'"><div class="row"><b>'+esc(x.business_name||x.domain)+'</b><span class="link">'+esc(x.contact_email)+'</span><span class="meta">Language: '+lang(x).toUpperCase()+'</span>'+('<span class="meta">Public CEO Report link · copy variant '+(copyVariant(x)+1)+'</span>')+'</div><input data-subject style="width:100%;margin-top:7px" value="'+esc(x.outreach_email_status==='sent'?(x.outreach_subject||subject(x)):subject(x))+'"><textarea data-body style="width:100%;min-height:130px;margin-top:7px">'+esc(x.outreach_email_status==='sent'?(x.outreach_body||body(x)):body(x))+'</textarea><button class="btn" data-send '+(blocked?'disabled':'')+'>'+(blocked?'Daily warm-up limit reached':'Approve & Send')+'</button><span data-send-status class="meta" style="margin-left:8px"></span></article>'}).join('')||'<p class="meta">No outreach emails are waiting for approval.</p>';
+    var blocked=qSchedule&&!qSchedule.can_send_now,sendHtml=rows.slice(0,100).map(function(x){return '<article class="card" data-email-token="'+esc(x.token)+'"><div class="row"><b>'+esc(x.business_name||x.domain)+'</b><span class="link">'+esc(x.contact_email)+'</span><span class="meta">Language: '+lang(x).toUpperCase()+'</span>'+('<span class="meta">Public CEO Report link · copy variant '+((x.generated_outreach_copy&&x.generated_outreach_copy.variant)||copyVariant(x)+1)+'</span>')+'</div><input data-subject style="width:100%;margin-top:7px" value="'+esc(x.outreach_email_status==='sent'?(x.outreach_subject||subject(x)):subject(x))+'"><textarea data-body style="width:100%;min-height:130px;margin-top:7px">'+esc(x.outreach_email_status==='sent'?(x.outreach_body||body(x)):body(x))+'</textarea><button class="btn" data-send '+((blocked||!(x.generated_outreach_copy&&x.generated_outreach_copy.subject&&x.generated_outreach_copy.body))?'disabled':'')+'>'+((!(x.generated_outreach_copy&&x.generated_outreach_copy.subject&&x.generated_outreach_copy.body))?'Refresh copy first':(blocked?'Daily warm-up limit reached':'Approve & Send'))+'</button><span data-send-status class="meta" style="margin-left:8px"></span></article>'}).join('')||'<p class="meta">No outreach emails are waiting for approval.</p>';
     var missingHtml=missing.slice(0,200).map(function(x){var state=x.email_lookup_status==='not_found'?'No public email found':x.email_lookup_status==='error'?'Lookup error':x.email_lookup_status==='manual'?'Added manually':'Not checked yet';return '<div class="missingEmailRow" data-missing-token="'+esc(x.token)+'"><div><b>'+esc(x.business_name||x.domain)+'</b><div class="meta">'+esc(state)+'</div></div><a class="link" target="_blank" rel="noopener" href="'+esc(x.url)+'">'+esc(x.domain||x.url)+'</a><input type="email" data-manual-email placeholder="Add a verified email manually"><button class="btn" data-save-email>Save email</button></div>'}).join('')||'<p class="meta">Every matching Lead Crawler company currently has an email address.</p>';
     $('eqList').innerHTML='<details><summary>Ready to approve & send ('+rows.length+')</summary><div class="queueBody">'+sendHtml+'</div></details><details><summary>Without public email ('+missing.length+')</summary><div class="queueBody">'+missingHtml+'</div></details>';
     Array.from(document.querySelectorAll('[data-email-token]')).forEach(function(c){c.querySelector('[data-send]').onclick=async function(){var b=this,st=c.querySelector('[data-send-status]'),token=c.dataset.emailToken;b.disabled=true;try{b.textContent='Sending…';st.textContent='Sending the approved email with the public CEO Report link…';await api('/api/prospect-quick-scan/admin/'+token+'/email-send',{method:'POST',body:JSON.stringify({approved:true,subject:c.querySelector('[data-subject]').value,body:c.querySelector('[data-body]').value})});b.textContent='Sent ✓';st.textContent='Email sent ✓';setTimeout(loadQueue,500)}catch(e){b.disabled=false;b.textContent='Retry email';st.textContent=e.message}}});
