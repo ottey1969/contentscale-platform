@@ -266,7 +266,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-25-CANONICAL-v288';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-25-CANONICAL-v291';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 const CONTENTSCALE_BUILD_CHANGES = [
   'tracker-delta-brief-regression-lock',
@@ -492,7 +492,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-09-25-CANONICAL-v288',
+  build: 'CS-2026-09-25-CANONICAL-v291',
   built_date: '2026-09-25',
   ceo_private: true,
   ceo_public: true,
@@ -4301,6 +4301,9 @@ app.post('/api/tracker-client/:token/page/:pageId/brief-mode', async (req, res) 
 // v286 REGRESSION INVARIANT: NEXT_ACTION_GATES_MUTATING_CONTROLS=true; NO_ACTION_LOCKS_SCAN_AND_CONTENT_CHANGES=true; SCAN_REQUIRED_ONLY_SCAN_PATH_ACTIVE=true; NEW_DELTA_OR_IMPLEMENT_ENABLE_CONTENT_CHANGES=true; HISTORY_AND_VIEW_BRIEF_REMAIN_READ_ONLY_AVAILABLE=true
 // v287 REGRESSION INVARIANT: FINAL_BRIEF_WRITE_ALWAYS_HAS_OUTSTANDING_ACTIONS=true; FINAL_BRIEF_WRITE_ATOMICALLY_STAMPS_EVALUATED_AT=true; NO_POST_SCAN_FLASH_BACK_TO_SCAN_REQUIRED=true; FINAL_NEXT_ACTION_DERIVED_FROM_FINAL_SAVED_BRIEF=true
 // v288 REGRESSION INVARIANT: FINAL_DELTA_FILTERS_AGAINST_CURRENT_LIVE_HTML=true; FINAL_MERGE_CANNOT_READD_ALREADY_IMPLEMENTED_WORK=true; CORRECTION_REPLACE_FIX_ACTIONS_ARE_PRESERVED=true; OUTSTANDING_ACTIONS_COUNT_AFTER_FINAL_DELTA_FILTER=true
+// v289 REGRESSION INVARIANT: LEAD_CRAWLER_HAS_20_DISTINCT_APPROVED_VARIANTS=true; LEAD_VARIANT_ROTATION_COUNT_20=true; SAME_LEAD_STABLE_VARIANT=true; OLD_10_VARIANT_COPY_REPLACED=true; APPROVED_WHATSAPP_SIGNATURE_NOT_DUPLICATED=true
+// v290 REGRESSION INVARIANT: VERIFIED_TRANSLATION_BATCHED_AND_RECOVERABLE=true; INVALID_BATCH_JSON_FALLS_BACK_PER_FACT=true; LEAD_EMAILS_HAVE_20_EN_20_NL_20_ES=true; VARIANT_NUMBER_ALIGNED_ACROSS_LANGUAGES=true; NL_ES_LEADS_NEVER_RECEIVE_ENGLISH_TEMPLATE=true
+// v291 REGRESSION INVARIANT: LEAD_CRAWLER_HAS_70_VARIANTS_PER_LANGUAGE=true; TOTAL_STATIC_LEAD_EMAILS_210=true; LEAD_VARIANT_ROTATION_COUNT_70=true; VARIANTS_21_TO_70_ADDED_FROM_OWNER_SOURCE=true; NL_ES_TRANSLATIONS_STATIC_NOT_RUNTIME=true
 // ── Owner Question Hub — persistent client-owned knowledge gaps ────────────────
 // Unanswered questions never disappear. Refresh only adds, merges, or strengthens them.
 async function _ensureTrackerOwnerQuestions(){
@@ -4642,38 +4645,91 @@ async function _translateVerifiedClaimsLiteral(claims,targetLang){
   if(!apiKey)throw new Error('GEMINI_API_KEY not configured; localized verified-fact sync skipped.');
   if(!Array.isArray(claims)||!claims.length)return [];
   const languageName=targetLang==='nl'?'Dutch':'Spanish';
-  const payload=claims.map(x=>({id:x.id,text:String(x.claim_text||'')}));
-  const prompt=[
-    'Translate VERIFIED company facts from English into '+languageName+'.',
-    'CRITICAL RULES:',
-    '- Translate literally and faithfully. Do not add, remove, soften, strengthen, infer or correct any fact.',
-    '- Preserve all numbers, currencies, product names, URLs, time periods, limitations, qualifiers and negative statements exactly in meaning.',
-    '- Keep ContentScale, GRAAF, CRAFT, Tracker, Quick Scan, Pre-Write Brief, AI Citations Tracker, Google Search Console and product/brand names unchanged unless normal grammar requires surrounding words.',
-    '- Return ONLY a valid JSON array. No markdown.',
-    '- Keep exactly one object for every input id and preserve the same id.',
-    'OUTPUT FORMAT: [{"id":123,"text":"translated fact"}]',
-    'INPUT JSON:',
-    JSON.stringify(payload)
-  ].join('\n');
-  const body={contents:[{parts:[{text:prompt}]}],generationConfig:{temperature:0,maxOutputTokens:12000,responseMimeType:'application/json'}};
-  const rr=await callGeminiWithFallback(apiKey,body,GEMINI_MODEL_BRIEF||GEMINI_MODEL,GEMINI_MODEL,2);
-  if(!rr||!rr.ok)throw new Error('Translation failed: '+String(rr?.errorMessage||rr?.status||'unknown error'));
-  const raw=rr.data?.candidates?.[0]?.content?.parts?.map(p=>p.text||'').join('')||'';
-  const cleaned=String(raw).replace(/```json|```/gi,'').trim();
-  let arr;
-  try{arr=JSON.parse(cleaned);}catch(e){
-    const a=cleaned.indexOf('['),b=cleaned.lastIndexOf(']');
-    if(a<0||b<=a)throw new Error('Translation returned invalid JSON');
-    arr=JSON.parse(cleaned.slice(a,b+1));
-  }
-  if(!Array.isArray(arr)||arr.length!==payload.length)throw new Error('Translation count mismatch: expected '+payload.length+', got '+(Array.isArray(arr)?arr.length:0));
-  const byId=new Map(arr.map(x=>[Number(x.id),String(x.text||'').trim()]));
-  for(const row of payload){
-    if(!byId.get(Number(row.id)))throw new Error('Missing translation for source claim '+row.id);
-  }
-  return payload.map(row=>({source_id:Number(row.id),claim_text:byId.get(Number(row.id))}));
-}
 
+  const _extractJsonArray=function(raw){
+    let cleaned=String(raw||'').replace(/```json|```/gi,'').trim();
+    if(!cleaned)return null;
+    try{
+      const j=JSON.parse(cleaned);
+      if(Array.isArray(j))return j;
+      if(j&&Array.isArray(j.items))return j.items;
+      if(j&&Array.isArray(j.translations))return j.translations;
+    }catch(_e){}
+    const a=cleaned.indexOf('['),b=cleaned.lastIndexOf(']');
+    if(a>=0&&b>a){
+      try{return JSON.parse(cleaned.slice(a,b+1));}catch(_e){}
+    }
+    return null;
+  };
+
+  const _translateOne=async function(row){
+    const prompt=[
+      'Translate this VERIFIED company fact from English into '+languageName+'.',
+      'Translate faithfully. Do not add, remove, correct, infer, soften or strengthen facts.',
+      'Preserve numbers, currencies, URLs, brands, product names, limitations, negatives and qualifiers exactly in meaning.',
+      'Return ONLY the translated fact as plain text. No quotes, no markdown, no explanation.',
+      'FACT:',
+      String(row.claim_text||'')
+    ].join('\n');
+    const rr=await callGeminiWithFallback(apiKey,{
+      contents:[{parts:[{text:prompt}]}],
+      generationConfig:{temperature:0,maxOutputTokens:2500}
+    },GEMINI_MODEL_BRIEF||GEMINI_MODEL,GEMINI_MODEL,2);
+    if(!rr||!rr.ok)throw new Error('Translation failed for source claim '+row.id+': '+String(rr?.errorMessage||rr?.status||'unknown error'));
+    let text=rr.data?.candidates?.[0]?.content?.parts?.map(p=>p.text||'').join('')||'';
+    text=String(text).replace(/^```(?:text)?/i,'').replace(/```$/,'').trim().replace(/^["']|["']$/g,'').trim();
+    if(!text)throw new Error('Empty translation for source claim '+row.id);
+    return {source_id:Number(row.id),claim_text:text};
+  };
+
+  const output=[];
+  const batchSize=8; // Small batches prevent truncated/invalid JSON on 40–50+ facts.
+  for(let i=0;i<claims.length;i+=batchSize){
+    const batch=claims.slice(i,i+batchSize);
+    const payload=batch.map(x=>({id:Number(x.id),text:String(x.claim_text||'')}));
+    const prompt=[
+      'Translate VERIFIED company facts from English into '+languageName+'.',
+      'CRITICAL RULES:',
+      '- Translate literally and faithfully. Do not add, remove, soften, strengthen, infer or correct any fact.',
+      '- Preserve all numbers, currencies, product names, URLs, time periods, limitations, qualifiers and negative statements exactly in meaning.',
+      '- Keep ContentScale, GRAAF, CRAFT, Tracker, Quick Scan, Pre-Write Brief, AI Citations Tracker, Google Search Console and product/brand names unchanged unless normal grammar requires surrounding words.',
+      '- Return ONLY a valid JSON array. No markdown.',
+      '- Keep exactly one object for every input id and preserve the same id.',
+      'OUTPUT FORMAT: [{"id":123,"text":"translated fact"}]',
+      'INPUT JSON:',
+      JSON.stringify(payload)
+    ].join('\n');
+
+    let parsed=null;
+    try{
+      const rr=await callGeminiWithFallback(apiKey,{
+        contents:[{parts:[{text:prompt}]}],
+        generationConfig:{temperature:0,maxOutputTokens:6000,responseMimeType:'application/json'}
+      },GEMINI_MODEL_BRIEF||GEMINI_MODEL,GEMINI_MODEL,2);
+      if(rr&&rr.ok){
+        const raw=rr.data?.candidates?.[0]?.content?.parts?.map(p=>p.text||'').join('')||'';
+        parsed=_extractJsonArray(raw);
+      }
+    }catch(_e){parsed=null;}
+
+    const byId=new Map();
+    if(Array.isArray(parsed)){
+      for(const x of parsed){
+        const id=Number(x&&x.id),text=String(x&&x.text||'').trim();
+        if(Number.isFinite(id)&&text)byId.set(id,text);
+      }
+    }
+
+    // Use successful batch translations and retry only missing/invalid rows individually.
+    for(const row of batch){
+      const id=Number(row.id),text=byId.get(id);
+      if(text)output.push({source_id:id,claim_text:text});
+      else output.push(await _translateOne(row));
+    }
+  }
+  if(output.length!==claims.length)throw new Error('Translation count mismatch after recovery: expected '+claims.length+', got '+output.length);
+  return output;
+}
 async function _syncAllContentScaleVerifiedFactsToLocalizedTrackers(opts={}){
   // v272: mirror ALL client-level VERIFIED facts from the existing English ContentScale tracker
   // into the already-existing NL and ES trackers, translated faithfully.
@@ -16363,7 +16419,7 @@ async function startServer() {
   }
 
 console.log('────────────────────────────────────────');
-console.log('[ContentScale] CS-2026-09-25-CANONICAL-v288');
+console.log('[ContentScale] CS-2026-09-25-CANONICAL-v291');
 console.log('[ContentScale] Build check: /api/build-info');
 console.log('[ContentScale] Base URL: ' + (process.env.BASE_URL || 'https://app.contentscale.site'));
 console.log('────────────────────────────────────────');
@@ -18948,8 +19004,8 @@ app.post('/api/prospect-quick-scan/admin/:token/email-prepare',requireAdmin,asyn
 // honest and lightweight; the prospect chooses to run the report after clicking.
 const _PQS_PUBLIC_CEO_URL='https://app.contentscale.site/quick-scan/start?source=lead-crawler';
 function _pqsPublicCeoUrl(language){return _PQS_PUBLIC_CEO_URL+'&language='+encodeURIComponent(_pqsResolveLanguage(language,''));}
-function _pqsStableVariant(seed,count=10){
-  // Deterministic rotation: leads are distributed across all 10 variants, while
+function _pqsStableVariant(seed,count=70){
+  // Deterministic rotation: leads are distributed across all 70 variants, while
   // preview/retry for the same lead keeps the same copy for clean measurement.
   const h=crypto.createHash('sha256').update(String(seed||'contentscale')).digest();
   return h.readUInt16BE(0)%count;
@@ -18957,49 +19013,1895 @@ function _pqsStableVariant(seed,count=10){
 function _pqsLeadCrawlerCopy(row){
   const company=String(row.business_name||row.domain||'your business').trim();
   const locale=_pqsResolveLanguage(row.language,row.domain);
-  const v=_pqsStableVariant(row.token||row.contact_email||row.domain,10);
+  const v=_pqsStableVariant(row.token||row.contact_email||row.domain,70);
   const link=_pqsPublicCeoUrl(locale);
-  // v241: deliberately short first-contact copy. One angle (Google + AI search),
-  // one bait (free public CEO Report), no long product explanation or call request.
-  const sets={
-    en:[
-      ['Google + AI search — '+company,`Hello ${company},\n\nGoogle + AI search is changing how customers find businesses. See where your website may have opportunities:\n\n${link}\n\nFree CEO Report — no signup or call required.\n\nBest,\nOttmar`],
-      ['A quick Google + AI check for '+company,`Hello ${company},\n\nWant to see how your website looks from a Google + AI search opportunity perspective?\n\n${link}\n\nYour free CEO Report takes the first look for you.\n\nBest,\nOttmar`],
-      [company+' — worth checking in AI search',`Hello ${company},\n\nAI search is changing visibility. Your website may have opportunities worth seeing.\n\n${link}\n\nRun the free CEO Report.\n\nBest,\nOttmar`],
-      ['Could '+company+' be missing search opportunities?',`Hello ${company},\n\nI thought this might be useful: a quick CEO-level look at possible Google + AI search opportunities on your website.\n\n${link}\n\nFree to run.\n\nBest,\nOttmar`],
-      ['How visible is '+company+' in the new search landscape?',`Hello ${company},\n\nGoogle is no longer the whole search journey. See what your website may be missing across Google + AI search:\n\n${link}\n\nFree CEO Report.\n\nBest,\nOttmar`],
-      [company+' website — one quick check',`Hello ${company},\n\nOne quick check can show where your website has room to improve for Google + AI search.\n\n${link}\n\nSee your free CEO Report.\n\nBest,\nOttmar`],
-      ['AI search opportunity for '+company,`Hello ${company},\n\nCustomers are increasingly finding answers through AI as well as Google. See the opportunities your website may have:\n\n${link}\n\nFree CEO Report.\n\nBest,\nOttmar`],
-      ['A 1-minute website opportunity check',`Hello ${company},\n\nCurious where your website could be stronger for Google + AI search?\n\n${link}\n\nStart the free CEO Report. No call required.\n\nBest,\nOttmar`],
-      [company+' — Google + AI visibility',`Hello ${company},\n\nYour website may be leaving Google + AI search opportunities on the table. This gives you a quick first look:\n\n${link}\n\nFree CEO Report.\n\nBest,\nOttmar`],
-      ['Something worth seeing for '+company,`Hello ${company},\n\nSearch is changing fast. I thought you might want to see where your website has opportunities in Google + AI search.\n\n${link}\n\nFree CEO Report — short and practical.\n\nBest,\nOttmar`]
-    ],
-    nl:[
-      ['Google + AI search — '+company,`Hallo ${company},\n\nGoogle + AI search verandert hoe klanten bedrijven vinden. Bekijk waar jullie website kansen kan hebben:\n\n${link}\n\nGratis CEO Report — geen registratie of gesprek nodig.\n\nGroet,\nOttmar`],
-      ['Een snelle Google + AI check voor '+company,`Hallo ${company},\n\nBenieuwd hoe jullie website ervoor staat vanuit Google + AI search kansen?\n\n${link}\n\nHet gratis CEO Report geeft de eerste analyse.\n\nGroet,\nOttmar`],
-      [company+' — interessant om in AI search te checken',`Hallo ${company},\n\nAI search verandert online zichtbaarheid. Jullie website kan kansen hebben die het bekijken waard zijn.\n\n${link}\n\nStart het gratis CEO Report.\n\nGroet,\nOttmar`],
-      ['Mist '+company+' kansen in search?',`Hallo ${company},\n\nMisschien interessant: een korte CEO-analyse van mogelijke Google + AI search kansen op jullie website.\n\n${link}\n\nGratis te gebruiken.\n\nGroet,\nOttmar`],
-      ['Hoe zichtbaar is '+company+' in het nieuwe zoeken?',`Hallo ${company},\n\nGoogle is niet meer de hele zoekreis. Bekijk wat jullie website mogelijk mist in Google + AI search:\n\n${link}\n\nGratis CEO Report.\n\nGroet,\nOttmar`],
-      [company+' website — één snelle check',`Hallo ${company},\n\nEén snelle check laat zien waar jullie website sterker kan worden voor Google + AI search.\n\n${link}\n\nBekijk het gratis CEO Report.\n\nGroet,\nOttmar`],
-      ['AI search kans voor '+company,`Hallo ${company},\n\nKlanten vinden antwoorden steeds vaker via AI én Google. Bekijk welke kansen jullie website mogelijk heeft:\n\n${link}\n\nGratis CEO Report.\n\nGroet,\nOttmar`],
-      ['Een websitecheck van 1 minuut',`Hallo ${company},\n\nBenieuwd waar jullie website sterker kan worden voor Google + AI search?\n\n${link}\n\nStart het gratis CEO Report. Geen gesprek nodig.\n\nGroet,\nOttmar`],
-      [company+' — Google + AI zichtbaarheid',`Hallo ${company},\n\nJullie website laat mogelijk kansen liggen in Google + AI search. Dit geeft een snelle eerste indruk:\n\n${link}\n\nGratis CEO Report.\n\nGroet,\nOttmar`],
-      ['Iets interessants voor '+company,`Hallo ${company},\n\nZoeken verandert snel. Daarom dacht ik dat je misschien wilt zien waar jullie website kansen heeft in Google + AI search.\n\n${link}\n\nGratis CEO Report — kort en praktisch.\n\nGroet,\nOttmar`]
-    ],
-    es:[
-      ['Google + búsqueda con IA — '+company,`Hola ${company},\n\nGoogle + la búsqueda con IA están cambiando cómo los clientes encuentran empresas. Vea dónde su web puede tener oportunidades:\n\n${link}\n\nCEO Report gratis — sin registro ni llamada.\n\nSaludos,\nOttmar`],
-      ['Una revisión rápida de Google + IA para '+company,`Hola ${company},\n\n¿Quiere ver su web desde la perspectiva de oportunidades en Google + búsqueda con IA?\n\n${link}\n\nEl CEO Report gratuito hace la primera revisión.\n\nSaludos,\nOttmar`],
-      [company+' — vale la pena revisar la búsqueda con IA',`Hola ${company},\n\nLa búsqueda con IA está cambiando la visibilidad online. Su web puede tener oportunidades que vale la pena ver.\n\n${link}\n\nGenere el CEO Report gratis.\n\nSaludos,\nOttmar`],
-      ['¿Está '+company+' perdiendo oportunidades de búsqueda?',`Hola ${company},\n\nQuizá le resulte útil: una revisión breve para dirección sobre posibles oportunidades en Google + búsqueda con IA.\n\n${link}\n\nGratis.\n\nSaludos,\nOttmar`],
-      ['¿Qué visibilidad tiene '+company+' en la nueva búsqueda?',`Hola ${company},\n\nGoogle ya no es todo el recorrido de búsqueda. Vea qué puede estar perdiendo su web en Google + IA:\n\n${link}\n\nCEO Report gratis.\n\nSaludos,\nOttmar`],
-      [company+' — una revisión rápida de la web',`Hola ${company},\n\nUna revisión rápida puede mostrar dónde su web puede mejorar para Google + búsqueda con IA.\n\n${link}\n\nVea el CEO Report gratis.\n\nSaludos,\nOttmar`],
-      ['Oportunidad de búsqueda con IA para '+company,`Hola ${company},\n\nLos clientes encuentran respuestas cada vez más a través de IA además de Google. Vea las oportunidades que puede tener su web:\n\n${link}\n\nCEO Report gratis.\n\nSaludos,\nOttmar`],
-      ['Una revisión web de 1 minuto',`Hola ${company},\n\n¿Quiere ver dónde su web podría ser más fuerte en Google + búsqueda con IA?\n\n${link}\n\nGenere el CEO Report gratis. Sin llamada.\n\nSaludos,\nOttmar`],
-      [company+' — visibilidad en Google + IA',`Hola ${company},\n\nSu web puede estar dejando oportunidades sin aprovechar en Google + búsqueda con IA. Aquí tiene una primera revisión:\n\n${link}\n\nCEO Report gratis.\n\nSaludos,\nOttmar`],
-      ['Algo que vale la pena ver para '+company,`Hola ${company},\n\nLa búsqueda está cambiando rápido. Quizá quiera ver dónde su web tiene oportunidades en Google + búsqueda con IA.\n\n${link}\n\nCEO Report gratis — breve y práctico.\n\nSaludos,\nOttmar`]
-    ]
-  };
-  const pair=(sets[locale]||sets.en)[v];
+
+  // v289: 70 materially different first-contact angles supplied by Ottmar.
+  // Keep deterministic rotation for clean measurement: one lead always keeps the same variant.
+  // The public Lead Crawler URL remains the current source of truth; do not send old contact_form URLs.
+  const en=[
+    ['Stop guessing with SEO',`Hey,\n\nMost SEO/AI-visibility work is pure guesswork.\nI changed that.\nI work with a system driven by real-time search, site, and AI-citation data — so every single change is targeted and measured with my SEPR (Competition) and an AI systems "Spy".\nUpdating existing or writing new content will be super strong and verifiable.\nSo, if your content specialist is unable to show you concrete, data-backed proof upfront of what they're actually doing, they are gambling with your budget.\nSee a part of my system at work (no login required):\n${link}\n\nBest,\nOttmar\n+31628073996 << WhatsApp in case you need more details.`],
+    ['Is your SEO based on data or guesses?',`Hey,\n\nAre you tired of content agencies guessing what works for SEO and AI search?\nI built a data-driven alternative. My system tracks real-time search, site metrics, and AI-citations using a custom SEPR and AI Spy, so every tweak is 100% measured.\nIf your current partner can't show you hard data before they touch your pages, they're just rolling the dice.\nTest my system live without logging in:\n${link}\n\nBest,\nOttmar\n+31628073996 << WhatsApp`],
+    ['Most SEO teams are flying blind',`Hey,\n\nMost people doing AI-visibility and SEO are flying blind.\nI work exclusively from real-time search, site, and AI-citation data. Using my SEPR and AI "Spy", every single optimization is calculated and verified.\nAsk your content specialist for concrete proof of their impact. If they hand you vague metrics, they're gambling with your money.\nSee how a verified system works (no login):\n${link}\n\nBest,\nOttmar\n+31628073996 << WhatsApp`],
+    ['Guesswork has no place in modern SEO',`Hey,\n\nGuesswork has no place in modern SEO and AI-visibility.\nThat’s why I replaced it with a system driven by live search, site performance, and AI-citation data (powered by my SEPR and AI Spy).\nCan your current content provider prove their ROI upfront, or are they just crossing their fingers? Stop the gambling.\nCheck out my system here (no login required):\n${link}\n\nBest,\nOttmar\n+31628073996 << WhatsApp`],
+    ['Data or hope?',`Hey,\n\nIs your SEO strategy built on data or hope?\nI use a system backed by real-time search, site data, and AI-citations, tracked via my own SEPR and AI Spy. Every change is targeted, measured, and verifiable.\nIf your specialist can't show hard proof of what they're doing, they're gambling with your budget.\nTest it instantly (no login):\n${link}\n\nBest,\nOttmar\n+31628073996 << WhatsApp`],
+    ['Quick question about your SEO reporting',`Hey,\n\nQuick question: does your current SEO or content specialist show you hard data, or do they just give you a monthly report full of excuses?\nI work differently. My system uses real-time search, site metrics, and AI-citation tracking (SEPR + AI Spy) so every update is mathematically measured.\nSee a live example of what data-driven content looks like (no login):\n${link}\n\nBest,\nOttmar\n+31628073996 << WhatsApp`],
+    ['What if your next content update was predictable?',`Hey,\n\nWhat if your next content update was 100% predictable instead of a guess?\nI replaced traditional SEO guesswork with live search, site, and AI-citation data. With my SEPR and AI Spy, every change is tracked and proven.\nIf your agency can't show you concrete proof upfront, they are gambling with your budget.\nTry my quick scan right now (no login needed):\n${link}\n\nBest,\nOttmar\n+31628073996 << WhatsApp`],
+    ['Paying for SEO without exact metrics?',`Hey,\n\nAre you tired of paying for SEO and AI-visibility without seeing exact metrics?\nI use a system driven entirely by real-time search, site data, and AI citations (via my SEPR and AI Spy). No guesswork, just targeted improvements.\nChallenge your content specialist: can they show you concrete, data-backed proof upfront? If not, they're gambling.\nSee my system in action (no login):\n${link}\n\nBest,\nOttmar\n+31628073996 << WhatsApp`],
+    ['Would you notice if your SEO agency disappeared?',`Hey,\n\nIf you removed your current SEO agency today, would your traffic instantly drop or would you notice no difference?\nI built ContentScale to eliminate that uncertainty. My system relies on real-time search, site, and AI-citation data through a custom SEPR and AI Spy.\nStop letting people gamble with your budget. See a transparent system work live (no login):\n${link}\n\nBest,\nOttmar\n+31628073996 << WhatsApp`],
+    ['Most AI-visibility advice is assumptions',`Hey,\n\nMost AI-visibility advice is built on assumptions.\nI changed the game by using real-time search, site data, and AI citations—tracked precisely with my SEPR and AI Spy.\nIf your content specialist can't prove their moves upfront with hard data, they are gambling with your money.\nExperience a transparent audit tool (no login required):\n${link}\n\nBest,\nOttmar\n+31628073996 << WhatsApp`],
+    ['Stop gambling on SEO guesswork',`Hey,\n\nStop gambling on SEO guesswork.\nI use live search, site, and AI-citation data (via my SEPR & AI Spy) to make every content update measurable and verifiable.\nIf your specialist can’t show you hard proof upfront, they're wasting your budget.\nTest my system live (no login):\n${link}\n\nBest,\nOttmar\n+31628073996 << WhatsApp`],
+    ['SEO should not be a guessing game',`Hey,\n\nSEO shouldn't be a guessing game.\nI work with a system driven by real-time search, site, and AI-citation data—measured precisely through an advanced SEPR and AI Spy.\nAsk your content writer for upfront data proof. If they don't have it, they're gambling with your business.\nSee the system work (no login):\n${link}\n\nBest,\nOttmar\n+31628073996 << WhatsApp`],
+    ['Data beats guesswork',`Hey,\n\nData beats guesswork every single time.\nMy system uses real-time search, site data, and AI-citations, tracked via my SEPR and AI Spy, making every content change fully verifiable.\nIs your current specialist gambling with your budget?\nSee for yourself instantly (no login):\n${link}\n\nBest,\nOttmar\n+31628073996 << WhatsApp`],
+    ['Most SEO advice is a shot in the dark',`Hey,\n\nMost SEO advice is a shot in the dark.\nI fixed that using real-time search, site, and AI-citation metrics backed by a custom SEPR and AI Spy. Every update is measured.\nIf your content team can't prove what they're doing upfront, they are gambling with your money.\nTry the quick scan (no login required):\n${link}\n\nBest,\nOttmar\n+31628073996 << WhatsApp`],
+    ['Want true AI visibility without guesswork?',`Hey,\n\nWant true AI-visibility without the guesswork?\nI built a system driven by live search, site data, and AI-citations, measured via my SEPR and AI Spy.\nIf your content specialist can't show you concrete, data-backed proof upfront, they're gambling with your budget.\nCheck my system live (no login):\n${link}\n\nBest,\nOttmar\n+31628073996 << WhatsApp`],
+    ['Traditional SEO relies on hypotheses',`Hey,\n\nTraditional SEO models rely on hypotheses and old data.\nI've shifted to a model driven by real-time search, site diagnostics, and AI-citation tracking through a proprietary SEPR and AI Spy.\nIf your current content partner cannot provide concrete, data-backed proof upfront, they are speculating with your corporate budget.\nEvaluate a live system demo here (no login required):\n${link}\n\nBest,\nOttmar\n+31628073996 << WhatsApp`],
+    ['Accountability in SEO is overdue',`Hey,\n\nAccountability in AI-visibility and SEO is long overdue.\nI work from actual real-time search, site, and AI-citation data — engineered so every modification is targeted and measured using my SEPR and AI Spy.\nStop working with specialists who gamble with your marketing spend without showing upfront proof.\nTest the platform yourself (no login):\n${link}\n\nBest,\nOttmar\n+31628073996 << WhatsApp`],
+    ['Precision beats speculation',`Hey,\n\nPrecision beats speculation in search optimization.\nMy framework utilizes live search metrics, site performance, and AI-citation analytics via an advanced SEPR and AI Spy setup.\nIf your content team fails to present hard evidence of their actions upfront, they are gambling with your resources.\nAccess the public diagnostic tool (no login):\n${link}\n\nBest,\nOttmar\n+31628073996 << WhatsApp`],
+    ['Modern search needs real-time data',`Hey,\n\nModern search engines require real-time data, not outdated SEO guesswork.\nI run a system powered by live search, site intelligence, and AI citations, monitored through my SEPR and AI Spy.\nAsk your specialist for verifiable proof. If they don't have it, they're gambling with your growth.\nSee how it works (no login):\n${link}\n\nBest,\nOttmar\n+31628073996 << WhatsApp`],
+    ['SEO and AI visibility should be measurable',`Hey,\n\nYour SEO and AI visibility should be entirely transparent and measurable.\nI use a data-first approach powered by live search, site feeds, and AI-citation tracking via my SEPR and AI Spy.\nIf your provider is unable to show you concrete proof upfront, they are gambling with your budget.\nTry a live test scan right now (no login required):\n${link}\n\nBest,\nOttmar\n+31628073996 << WhatsApp`],
+    ["SEO without live data is just guessing with your budget",`Hey,
+SEO without live data is just guessing with your budget.
+My system uses real-time search, site metrics, and AI-citations (via SEPR & AI Spy) to make every change 100% measurable.
+Test it instantly (no login required): ${link}
+Best,
+Ottmar
++31628073996 << WhatsApp`],
+    ["Is your content team guessing what ranks, or do they have real-time proof",`Hey,
+Is your content team guessing what ranks, or do they have real-time proof?
+I work exclusively from live search, site, and AI-citation data tracked via an advanced SEPR and AI Spy.
+See a live preview of the system (no login):
+${link}
+Best,
+Ottmar
++31628073996 << WhatsApp`],
+    ["Stop letting people gamble with your SEO results",`Hey,
+Stop letting people gamble with your SEO results.
+I built a data-first platform driven by real-time search, site data, and AI citations, backed by a custom SEPR and AI Spy.
+Run a quick test (no login needed):
+${link}
+Best,
+Ottmar
++31628073996 << WhatsApp`],
+    ["Real results come from real data, not SEO guesswork",`Hey,
+Real results come from real data, not SEO guesswork.
+My system measures every single optimization using live search, site, and AI-citation tracking (SEPR + AI Spy).
+Try the quick audit tool (no login):
+${link}
+Best,
+Ottmar
++31628073996 << WhatsApp`],
+    ["If your SEO strategy can't be measured in real time, it's just a gamble",`Hey,
+If your SEO strategy can't be measured in real time, it's just a gamble.
+I changed the rules with a system driven by live search, site performance, and AI citations via my SEPR and AI Spy.
+Check out the system live (no login):
+${link}
+Best,
+Ottmar
++31628073996 << WhatsApp`],
+    ["Most AI-visibility advice relies on assumptions",`Hey,
+Most AI-visibility advice relies on assumptions.
+I use real-time search, site, and AI-citation data to make every change verifiable through my SEPR and AI Spy.
+See a part of my system at work (no login):
+${link}
+Best,
+Ottmar
++31628073996 << WhatsApp`],
+    ["Does your content specialist show you hard metrics upfront? If not, they're gambling",`Hey,
+Does your content specialist show you hard metrics upfront? If not, they're gambling.
+I work with a system powered by live search, site metrics, and AI-citations, tracked via a dedicated SEPR and AI Spy.
+Experience it yourself (no login required):
+${link}
+Best,
+Ottmar
++31628073996 << WhatsApp`],
+    ["SEO guesswork costs companies thousands every month",`Hey,
+SEO guesswork costs companies thousands every month.
+I use real-time search, site, and AI-citation data to eliminate the risk, tracked precisely with my SEPR and AI Spy.
+Test my quick scan (no login):
+${link}
+Best,
+Ottmar
++31628073996 << WhatsApp`],
+    ["Want guaranteed visibility without the SEO smoke and mirrors",`Hey,
+Want guaranteed visibility without the SEO smoke and mirrors?
+My system relies on real-time search, site data, and AI citations through an automated SEPR and AI Spy.
+See how it works instantly (no login):
+${link}
+Best,
+Ottmar
++31628073996 << WhatsApp`],
+    ["Stop guessing what Google and AI search engines want",`Hey,
+Stop guessing what Google and AI search engines want.
+I built a system driven by live search, site, and AI-citation data, monitored via my SEPR and AI Spy.
+Try the open system scan (no login):
+${link}
+Best,
+Ottmar
++31628073996 << WhatsApp`],
+    ["Can your current SEO provider prove their impact with live data before touching your content",`Hey,
+Can your current SEO provider prove their impact with live data before touching your content?
+If not, they are gambling with your budget. I use a system driven by real-time search, site metrics, and AI-citations (SEPR + AI Spy).
+See a part of my system at work (no login):
+${link}
+Best,
+Ottmar
++31628073996 << WhatsApp`],
+    ["Ever wonder why most SEO reports look vague and confusing? Because it's mostly guesswork",`Hey,
+Ever wonder why most SEO reports look vague and confusing? Because it's mostly guesswork.
+I changed that using live search, site, and AI-citation data, measured via my SEPR and AI Spy. Every change is transparent.
+Test my system live (no login):
+${link}
+Best,
+Ottmar
++31628073996 << WhatsApp`],
+    ["What if you could track your AI search and SEO visibility with mathematical precision",`Hey,
+What if you could track your AI search and SEO visibility with mathematical precision?
+I work with a system driven by real-time search, site data, and AI citations, backed by a custom SEPR and AI Spy.
+Run a quick scan (no login required):
+${link}
+Best,
+Ottmar
++31628073996 << WhatsApp`],
+    ["Are you tired of agencies making promises without showing concrete data upfront",`Hey,
+Are you tired of agencies making promises without showing concrete data upfront?
+I run a system powered by live search, site metrics, and AI citations, tracked through my SEPR and AI Spy.
+See it in action instantly (no login):
+${link}
+Best,
+Ottmar
++31628073996 << WhatsApp`],
+    ["How confident are you that your content updates are actually driving traffic",`Hey,
+How confident are you that your content updates are actually driving traffic?
+I eliminated the guesswork by using real-time search, site, and AI-citation data via my SEPR and AI Spy.
+Check out the public quick scan (no login):
+${link}
+Best,
+Ottmar
++31628073996 << WhatsApp`],
+    ["Is your content specialist gambling with your money because they lack hard data",`Hey,
+Is your content specialist gambling with your money because they lack hard data?
+I work with a system driven entirely by real-time search, site data, and AI citations (SEPR + AI Spy). Every adjustment is measured.
+Test the platform yourself (no login):
+${link}
+Best,
+Ottmar
++31628073996 << WhatsApp`],
+    ["Why settle for guessing games when you can optimize with live data",`Hey,
+Why settle for guessing games when you can optimize with live data?
+My system tracks real-time search, site performance, and AI-citations using a custom SEPR and AI Spy.
+See a part of my system at work (no login):
+${link}
+Best,
+Ottmar
++31628073996 << WhatsApp`],
+    ["Do you know exactly why your competitors are ranking in AI search engines and you aren't",`Hey,
+Do you know exactly why your competitors are ranking in AI search engines and you aren't?
+I use a data-driven system (live search, site data, AI citations) backed by my SEPR and AI Spy to find the exact gaps.
+Try my quick scan (no login):
+${link}
+Best,
+Ottmar
++31628073996 << WhatsApp`],
+    ["What if your content strategy was backed by 100% verifiable metrics instead of gut feeling",`Hey,
+What if your content strategy was backed by 100% verifiable metrics instead of gut feeling?
+I built a system driven by real-time search, site, and AI-citation data, monitored via my SEPR and AI Spy.
+Experience it live (no login required):
+${link}
+Best,
+Ottmar
++31628073996 << WhatsApp`],
+    ["Are you getting clear, data-backed proof from your current SEO partner",`Hey,
+Are you getting clear, data-backed proof from your current SEO partner?
+If not, they are gambling with your budget. I work with a system driven by live search, site, and AI-citation data (SEPR & AI Spy).
+See the system work (no login):
+${link}
+Best,
+Ottmar
++31628073996 << WhatsApp`],
+    ["Corporate SEO budgets shouldn't be spent on trial and error",`Hey,
+Corporate SEO budgets shouldn't be spent on trial and error.
+I use a rigorous system driven by real-time search, site analytics, and AI-citations, tracked via a proprietary SEPR and AI Spy.
+If your specialist can't prove their moves upfront, they're gambling.
+Test the tool (no login):
+${link}
+Best,
+Ottmar
++31628073996 << WhatsApp`],
+    ["Modern search optimization requires live intelligence, not outdated SEO tactics",`Hey,
+Modern search optimization requires live intelligence, not outdated SEO tactics.
+My framework runs on real-time search, site data, and AI citations, monitored through an advanced SEPR and AI Spy setup.
+Stop gambling with unverified strategies.
+See it in action (no login):
+${link}
+Best,
+Ottmar
++31628073996 << WhatsApp`],
+    ["Precision and data integrity are missing from most SEO campaigns",`Hey,
+Precision and data integrity are missing from most SEO campaigns.
+I changed that by using live search, site performance, and AI-citation metrics backed by my SEPR and AI Spy.
+If your team can't show hard proof upfront, they are gambling with your resources.
+Try the quick scan (no login):
+${link}
+Best,
+Ottmar
++31628073996 << WhatsApp`],
+    ["Accountability in AI search visibility starts with real-time tracking",`Hey,
+Accountability in AI search visibility starts with real-time tracking.
+I work exclusively from actual search, site, and AI-citation data, ensuring every change is measured via my SEPR and AI Spy.
+Challenge your current provider for upfront proof, or test my system live (no login):
+${link}
+Best,
+Ottmar
++31628073996 << WhatsApp`],
+    ["Speculation has no place in high-performance digital marketing",`Hey,
+Speculation has no place in high-performance digital marketing.
+I built a system powered by live search intelligence, site diagnostics, and AI citations, tracked via a custom SEPR and AI Spy.
+Evaluate a live system demo (no login):
+${link}
+Best,
+Ottmar
++31628073996 << WhatsApp`],
+    ["Your marketing ROI shouldn't depend on your agency's guesswork",`Hey,
+Your marketing ROI shouldn't depend on your agency's guesswork.
+I use a system driven by real-time search, site, and AI-citation data — measured precisely through my SEPR and AI Spy.
+If your specialist can't show concrete proof upfront, they're gambling with your money.
+See the system work (no login):
+${link}
+Best,
+Ottmar
++31628073996 << WhatsApp`],
+    ["Real data beats traditional SEO assumptions every single time",`Hey,
+Real data beats traditional SEO assumptions every single time.
+My platform operates on live search, site metrics, and AI-citation tracking via an automated SEPR and AI Spy.
+Stop gambling. Experience a transparent audit tool (no login required):
+${link}
+Best,
+Ottmar
++31628073996 << WhatsApp`],
+    ["Transparent, data-backed optimization is the only way to win in AI search",`Hey,
+Transparent, data-backed optimization is the only way to win in AI search.
+I work with a system driven by real-time search, site data, and AI citations, monitored through my SEPR and AI Spy.
+Test my system live (no login):
+${link}
+Best,
+Ottmar
++31628073996 << WhatsApp`],
+    ["If your content strategy is built on hope rather than data, you're losing ground",`Hey,
+If your content strategy is built on hope rather than data, you're losing ground.
+I use live search, site, and AI-citation tracking (SEPR + AI Spy) to make every adjustment verifiable.
+Check out the live tool (no login):
+${link}
+Best,
+Ottmar
++31628073996 << WhatsApp`],
+    ["Eliminate uncertainty from your search and AI visibility campaigns",`Hey,
+Eliminate uncertainty from your search and AI visibility campaigns.
+My system uses real-time search, site metrics, and AI-citations, tracked via a specialized SEPR and AI Spy.
+See a part of my system at work (no login):
+${link}
+Best,
+Ottmar
++31628073996 << WhatsApp`],
+    ["Roulette belongs in a casino, not in your SEO and AI-visibility budget",`Hey,
+Roulette belongs in a casino, not in your SEO and AI-visibility budget.
+I work with a system driven by real-time search, site, and AI-citation data, measured via my SEPR and AI Spy.
+Test my system live (no login):
+${link}
+Best,
+Ottmar
++31628073996 << WhatsApp`],
+    ["Stop playing dice with your content rankings",`Hey,
+Stop playing dice with your content rankings.
+I built a system powered by live search, site data, and AI citations, tracked precisely through my SEPR and AI Spy.
+See a part of my system at work (no login):
+${link}
+Best,
+Ottmar
++31628073996 << WhatsApp`],
+    ["Is your content partner betting your money on outdated SEO guesswork",`Hey,
+Is your content partner betting your money on outdated SEO guesswork?
+I replaced guesswork with real-time search, site, and AI-citation data via my SEPR and AI Spy.
+Try the quick scan (no login required):
+${link}
+Best,
+Ottmar
++31628073996 << WhatsApp`],
+    ["Gambling on SEO is an expensive hobby for any business",`Hey,
+Gambling on SEO is an expensive hobby for any business.
+I use live search, site metrics, and AI-citations backed by my SEPR and AI Spy to ensure every change counts.
+Check it out live (no login):
+${link}
+Best,
+Ottmar
++31628073996 << WhatsApp`],
+    ["If your agency can't show you hard data before they start, they're gambling with your business",`Hey,
+If your agency can't show you hard data before they start, they're gambling with your business.
+I rely entirely on real-time search, site, and AI-citation data through my SEPR and AI Spy.
+See the system work (no login):
+${link}
+Best,
+Ottmar
++31628073996 << WhatsApp`],
+    ["SEO shouldn't feel like a gamble where you just hope for the best",`Hey,
+SEO shouldn't feel like a gamble where you just hope for the best.
+My system uses live search, site data, and AI citations, tracked via my SEPR and AI Spy for verifiable results.
+Test the tool (no login):
+${link}
+Best,
+Ottmar
++31628073996 << WhatsApp`],
+    ["Stop rolling the dice on organic traffic and AI search visibility",`Hey,
+Stop rolling the dice on organic traffic and AI search visibility.
+I work with a data-driven framework powered by live search, site metrics, and AI citations (SEPR + AI Spy).
+Experience it yourself (no login):
+${link}
+Best,
+Ottmar
++31628073996 << WhatsApp`],
+    ["Are you tired of your content team gambling with unproven tactics",`Hey,
+Are you tired of your content team gambling with unproven tactics?
+I changed that with a system driven by real-time search, site, and AI-citation data, monitored via my SEPR and AI Spy.
+Run a quick scan (no login):
+${link}
+Best,
+Ottmar
++31628073996 << WhatsApp`],
+    ["Don't let anyone gamble with your marketing budget using blind SEO methods",`Hey,
+Don't let anyone gamble with your marketing budget using blind SEO methods.
+I track everything using real-time search, site data, and AI-citations through my SEPR and AI Spy.
+See a part of my system at work (no login):
+${link}
+Best,
+Ottmar
++31628073996 << WhatsApp`],
+    ["Real data stops the gambling",`Hey,
+Real data stops the gambling.
+My system uses live search, site metrics, and AI-citations (via SEPR & AI Spy) so every optimization is completely transparent.
+Try the quick scan right now (no login):
+${link}
+Best,
+Ottmar
++31628073996 << WhatsApp`],
+    ["Want to see what a truly data-driven SEO and AI-visibility system looks like",`Hey,
+Want to see what a truly data-driven SEO and AI-visibility system looks like?
+I use live search, site data, and AI citations, tracked via my SEPR and AI Spy. No guesswork, just hard proof.
+Check it out instantly (no login):
+${link}
+Best,
+Ottmar
++31628073996 << WhatsApp`],
+    ["Take the guesswork out of your content strategy today",`Hey,
+Take the guesswork out of your content strategy today.
+My system runs on real-time search, site metrics, and AI-citation data, backed by a custom SEPR and AI Spy.
+Test my system live (no login):
+${link}
+Best,
+Ottmar
++31628073996 << WhatsApp`],
+    ["See for yourself how real-time data beats traditional SEO advice",`Hey,
+See for yourself how real-time data beats traditional SEO advice.
+I work with live search, site, and AI-citation metrics tracked through my SEPR and AI Spy.
+Open the public quick scan (no login required):
+${link}
+Best,
+Ottmar
++31628073996 << WhatsApp`],
+    ["Stop guessing and start measuring your AI search performance",`Hey,
+Stop guessing and start measuring your AI search performance.
+I use a system driven by real-time search, site data, and AI citations, monitored via my SEPR and AI Spy.
+See a part of my system at work (no login):
+${link}
+Best,
+Ottmar
++31628073996 << WhatsApp`],
+    ["Put your current SEO strategy to the test",`Hey,
+Put your current SEO strategy to the test.
+I built a system driven by live search, site performance, and AI-citations, tracked via my SEPR and AI Spy.
+Try the quick audit tool (no login):
+${link}
+Best,
+Ottmar
++31628073996 << WhatsApp`],
+    ["Discover what data-backed AI visibility can do for your business",`Hey,
+Discover what data-backed AI visibility can do for your business.
+My platform utilizes real-time search, site data, and AI citations through a dedicated SEPR and AI Spy.
+Experience it live (no login needed):
+${link}
+Best,
+Ottmar
++31628073996 << WhatsApp`],
+    ["Test a smarter, data-driven approach to search and AI visibility",`Hey,
+Test a smarter, data-driven approach to search and AI visibility.
+I work with live search, site metrics, and AI-citation tracking via my SEPR and AI Spy.
+See the system work instantly (no login):
+${link}
+Best,
+Ottmar
++31628073996 << WhatsApp`],
+    ["Experience true transparency in your content optimization",`Hey,
+Experience true transparency in your content optimization.
+I use a system driven by real-time search, site data, and AI citations, tracked precisely with my SEPR and AI Spy.
+Run a quick test (no login):
+${link}
+Best,
+Ottmar
++31628073996 << WhatsApp`],
+    ["See why top websites are moving away from SEO guesswork",`Hey,
+See why top websites are moving away from SEO guesswork.
+My system operates on live search, site diagnostics, and AI-citation data, monitored via my SEPR and AI Spy.
+Try my quick scan (no login required):
+${link}
+Best,
+Ottmar
++31628073996 << WhatsApp`],
+    ["Ready to base your content updates on real-time data instead of guesswork",`Hey,
+Ready to base your content updates on real-time data instead of guesswork?
+I work with a system driven by live search, site metrics, and AI-citations (SEPR + AI Spy).
+See a part of my system at work (no login):
+${link}
+Best,
+Ottmar
++31628073996 << WhatsApp`]
+  ];
+
+
+
+  const nl=[
+    ["Stop met gokken met SEO",`Hoi,
+
+Het meeste SEO- en AI-zichtbaarheidswerk is puur giswerk.
+Ik heb dat veranderd.
+Ik werk met een systeem dat wordt aangestuurd door realtime zoek-, site- en AI-citatiedata, zodat elke wijziging gericht en meetbaar is met mijn SEPR (concurrentie) en AI-systemen "Spy".
+Bestaande content aanpassen of nieuwe content schrijven wordt daardoor veel sterker en verifieerbaar.
+Als je contentspecialist vooraf geen concreet, data-onderbouwd bewijs kan tonen van wat er werkelijk gebeurt, wordt er met je budget gegokt.
+Bekijk een deel van mijn systeem live, zonder login:
+${link}
+
+Met vriendelijke groet,
+Ottmar Francisca
++31628073996 << WhatsApp als je meer details wilt.`],
+    ["Is je SEO gebaseerd op data of op gokken?",`Hoi,
+
+Ben je het zat dat contentbureaus gokken wat werkt voor SEO en AI search?
+Ik heb een data-gedreven alternatief gebouwd. Mijn systeem volgt realtime search, sitegegevens en AI-citaties via een eigen SEPR en AI Spy, zodat elke aanpassing meetbaar is.
+Als je huidige partner geen harde data kan tonen voordat ze pagina’s aanpassen, rollen ze feitelijk met de dobbelsteen.
+Test mijn systeem live zonder in te loggen:
+${link}
+
+Met vriendelijke groet,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["De meeste SEO-teams vliegen blind",`Hoi,
+
+Veel mensen die met AI-zichtbaarheid en SEO werken, vliegen blind.
+Ik werk uitsluitend vanuit realtime search-, site- en AI-citatiedata. Met mijn SEPR en AI Spy wordt elke optimalisatie berekend en gecontroleerd.
+Vraag je contentspecialist om concreet bewijs van de impact. Krijg je alleen vage metrics, dan wordt er met je budget gegokt.
+Bekijk hoe een verifieerbaar systeem werkt, zonder login:
+${link}
+
+Met vriendelijke groet,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["Geen ruimte voor giswerk in moderne SEO",`Hoi,
+
+Giswerk hoort niet thuis in moderne SEO en AI-zichtbaarheid.
+Daarom heb ik het vervangen door een systeem op basis van live search, siteprestaties en AI-citatiedata, aangedreven door mijn SEPR en AI Spy.
+Kan je huidige contentleverancier vooraf aantonen wat de verwachte impact is, of kruisen ze alleen hun vingers?
+Bekijk mijn systeem hier, zonder login:
+${link}
+
+Met vriendelijke groet,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["Data of hoop?",`Hoi,
+
+Is je SEO-strategie gebouwd op data of op hoop?
+Ik gebruik een systeem met realtime search-, site- en AI-citatiedata via mijn eigen SEPR en AI Spy. Elke wijziging is gericht, meetbaar en verifieerbaar.
+Als je specialist niet kan laten zien wat er concreet gebeurt, wordt er met je budget gegokt.
+Test het direct, zonder login:
+${link}
+
+Met vriendelijke groet,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["Snelle vraag over je SEO-rapportage",`Hoi,
+
+Snelle vraag: laat je huidige SEO- of contentspecialist harde data zien, of krijg je vooral een maandelijks rapport vol verklaringen?
+Ik werk anders. Mijn systeem gebruikt realtime search, sitegegevens en AI-citatietracking via SEPR + AI Spy, zodat elke update meetbaar is.
+Bekijk live hoe data-gedreven content eruitziet, zonder login:
+${link}
+
+Met vriendelijke groet,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["Wat als je volgende contentupdate voorspelbaar was?",`Hoi,
+
+Wat als je volgende contentupdate 100% voorspelbaar was in plaats van een gok?
+Ik heb traditioneel SEO-giswerk vervangen door live search-, site- en AI-citatiedata. Met mijn SEPR en AI Spy wordt elke wijziging gevolgd en bewezen.
+Als je bureau vooraf geen concreet bewijs kan tonen, wordt er met je budget gegokt.
+Probeer mijn quick scan nu, zonder login:
+${link}
+
+Met vriendelijke groet,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["Betaal je voor SEO zonder exacte metrics?",`Hoi,
+
+Ben je het zat om voor SEO en AI-zichtbaarheid te betalen zonder exacte metrics te zien?
+Ik gebruik een systeem dat volledig draait op realtime search-, site- en AI-citatiedata via mijn SEPR en AI Spy. Geen giswerk, alleen gerichte verbeteringen.
+Daag je contentspecialist uit: kunnen ze vooraf concreet, data-onderbouwd bewijs tonen? Zo niet, dan gokken ze.
+Bekijk mijn systeem live, zonder login:
+${link}
+
+Met vriendelijke groet,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["Zou je het merken als je SEO-bureau morgen verdween?",`Hoi,
+
+Als je vandaag je SEO-bureau zou stoppen, zou je verkeer direct dalen of zou je nauwelijks verschil merken?
+Ik heb ContentScale gebouwd om die onzekerheid weg te nemen. Mijn systeem werkt met realtime search-, site- en AI-citatiedata via een eigen SEPR en AI Spy.
+Laat niemand met je budget gokken. Bekijk een transparant systeem live, zonder login:
+${link}
+
+Met vriendelijke groet,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["Veel AI-zichtbaarheidsadvies is gebaseerd op aannames",`Hoi,
+
+Veel advies over AI-zichtbaarheid is gebaseerd op aannames.
+Ik gebruik realtime search-, site- en AI-citatiedata, nauwkeurig gevolgd met mijn SEPR en AI Spy.
+Als je contentspecialist zijn keuzes vooraf niet met harde data kan onderbouwen, wordt er met je geld gegokt.
+Bekijk een transparante audit live, zonder login:
+${link}
+
+Met vriendelijke groet,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["Stop met gokken op SEO",`Hoi,
+
+Stop met gokken op SEO-giswerk.
+Ik gebruik live search-, site- en AI-citatiedata via mijn SEPR & AI Spy om elke contentupdate meetbaar en verifieerbaar te maken.
+Als je specialist vooraf geen hard bewijs kan tonen, wordt je budget verspild.
+Test mijn systeem live, zonder login:
+${link}
+
+Met vriendelijke groet,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["SEO hoort geen gokspel te zijn",`Hoi,
+
+SEO hoort geen gokspel te zijn.
+Ik werk met een systeem op basis van realtime search-, site- en AI-citatiedata, nauwkeurig gemeten via een geavanceerde SEPR en AI Spy.
+Vraag je contentschrijver om vooraf data-bewijs. Hebben ze dat niet, dan gokken ze met je bedrijf.
+Bekijk het systeem live, zonder login:
+${link}
+
+Met vriendelijke groet,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["Data verslaat giswerk",`Hoi,
+
+Data verslaat giswerk elke keer.
+Mijn systeem gebruikt realtime search-, site- en AI-citatiedata via mijn SEPR en AI Spy, waardoor elke contentwijziging volledig verifieerbaar is.
+Gokt je huidige specialist met je budget?
+Bekijk het direct zelf, zonder login:
+${link}
+
+Met vriendelijke groet,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["Veel SEO-advies is een schot in het donker",`Hoi,
+
+Veel SEO-advies is een schot in het donker.
+Ik heb dat vervangen door realtime search-, site- en AI-citatiemetrics via een eigen SEPR en AI Spy. Elke update wordt gemeten.
+Als je contentteam vooraf niet kan aantonen wat ze doen, gokken ze met je geld.
+Probeer de quick scan, zonder login:
+${link}
+
+Met vriendelijke groet,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["Echte AI-zichtbaarheid zonder giswerk?",`Hoi,
+
+Wil je echte AI-zichtbaarheid zonder giswerk?
+Ik heb een systeem gebouwd op live search-, site- en AI-citatiedata, gemeten via mijn SEPR en AI Spy.
+Als je contentspecialist vooraf geen concreet, data-onderbouwd bewijs kan tonen, wordt er met je budget gegokt.
+Bekijk mijn systeem live, zonder login:
+${link}
+
+Met vriendelijke groet,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["Traditionele SEO werkt met hypotheses",`Hoi,
+
+Traditionele SEO-modellen werken vaak met hypotheses en oude data.
+Ik werk met realtime search, sitediagnostiek en AI-citatietracking via een eigen SEPR en AI Spy.
+Als je huidige contentpartner vooraf geen concreet, data-onderbouwd bewijs kan leveren, speculeren ze met je marketingbudget.
+Bekijk een live demo van het systeem, zonder login:
+${link}
+
+Met vriendelijke groet,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["Meer accountability in SEO is hard nodig",`Hoi,
+
+Accountability in AI-zichtbaarheid en SEO is hard nodig.
+Ik werk vanuit echte realtime search-, site- en AI-citatiedata, zodat elke wijziging gericht en meetbaar is via mijn SEPR en AI Spy.
+Werk niet met specialisten die met je marketingbudget gokken zonder vooraf bewijs te tonen.
+Test het platform zelf, zonder login:
+${link}
+
+Met vriendelijke groet,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["Precisie verslaat speculatie",`Hoi,
+
+Precisie verslaat speculatie in zoekoptimalisatie.
+Mijn framework gebruikt live searchmetrics, siteprestaties en AI-citatieanalyse via een geavanceerde SEPR en AI Spy.
+Als je contentteam vooraf geen hard bewijs van hun acties kan tonen, gokken ze met je middelen.
+Bekijk de publieke diagnosetool, zonder login:
+${link}
+
+Met vriendelijke groet,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["Modern zoeken vraagt om realtime data",`Hoi,
+
+Moderne zoekmachines vragen om realtime data, niet om verouderd SEO-giswerk.
+Ik gebruik een systeem op basis van live search, site-intelligence en AI-citaties, gevolgd via mijn SEPR en AI Spy.
+Vraag je specialist om verifieerbaar bewijs. Hebben ze dat niet, dan gokken ze met je groei.
+Bekijk hoe het werkt, zonder login:
+${link}
+
+Met vriendelijke groet,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["SEO en AI-zichtbaarheid moeten meetbaar zijn",`Hoi,
+
+Je SEO en AI-zichtbaarheid moeten volledig transparant en meetbaar zijn.
+Ik gebruik een data-first aanpak met live search, sitefeeds en AI-citatietracking via mijn SEPR en AI Spy.
+Als je leverancier vooraf geen concreet bewijs kan tonen, wordt er met je budget gegokt.
+Probeer nu een live testscan, zonder login:
+${link}
+
+Met vriendelijke groet,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["SEO zonder live data is gokken met je budget",`Hoi,
+
+SEO zonder live data is gewoon gokken met je budget.
+Mijn systeem gebruikt realtime search, sitemetrics en AI-citaties via SEPR & AI Spy om elke wijziging 100% meetbaar te maken.
+Test het direct, zonder login:
+${link}
+
+Met vriendelijke groet,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["Gokt je contentteam wat rankt?",`Hoi,
+
+Gokt je contentteam wat rankt, of hebben ze realtime bewijs?
+Ik werk uitsluitend met live search-, site- en AI-citatiedata, gevolgd via een geavanceerde SEPR en AI Spy.
+Bekijk een live preview van het systeem, zonder login:
+${link}
+
+Met vriendelijke groet,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["Stop met gokken met je SEO-resultaten",`Hoi,
+
+Laat niemand gokken met je SEO-resultaten.
+Ik bouwde een data-first platform op realtime search-, site- en AI-citatiedata, ondersteund door een eigen SEPR en AI Spy.
+Doe een snelle test, zonder login:
+${link}
+
+Met vriendelijke groet,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["Echte resultaten komen uit echte data",`Hoi,
+
+Echte resultaten komen uit echte data, niet uit SEO-giswerk.
+Mijn systeem meet iedere optimalisatie met live search-, site- en AI-citatietracking via SEPR + AI Spy.
+Probeer de snelle audittool, zonder login:
+${link}
+
+Met vriendelijke groet,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["Als SEO niet realtime meetbaar is, is het een gok",`Hoi,
+
+Als je SEO-strategie niet realtime meetbaar is, is het gewoon een gok.
+Ik heb dat veranderd met een systeem op live search, siteprestaties en AI-citaties via mijn SEPR en AI Spy.
+Bekijk het systeem live, zonder login:
+${link}
+
+Met vriendelijke groet,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["Veel AI-zichtbaarheidsadvies is gebaseerd op aannames",`Hoi,
+
+Veel advies over AI-zichtbaarheid is gebaseerd op aannames.
+Ik gebruik realtime search-, site- en AI-citatiedata om elke wijziging verifieerbaar te maken via mijn SEPR en AI Spy.
+Bekijk een deel van mijn systeem, zonder login:
+${link}
+
+Met vriendelijke groet,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["Toont je contentspecialist vooraf harde metrics?",`Hoi,
+
+Toont je contentspecialist vooraf harde metrics? Zo niet, dan wordt er gegokt.
+Ik werk met live search-, site- en AI-citatiedata, gevolgd via een eigen SEPR en AI Spy.
+Ervaar het zelf, zonder login:
+${link}
+
+Met vriendelijke groet,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["SEO-giswerk kost bedrijven elke maand geld",`Hoi,
+
+SEO-giswerk kost bedrijven iedere maand veel geld.
+Ik gebruik realtime search-, site- en AI-citatiedata om dat risico te verkleinen, nauwkeurig gevolgd met mijn SEPR en AI Spy.
+Test mijn quick scan, zonder login:
+${link}
+
+Met vriendelijke groet,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["Wil je gegarandeerde zichtbaarheid zonder SEO-rookgordijnen?",`Hoi,
+
+Wil je gegarandeerde zichtbaarheid zonder SEO-rookgordijnen?
+Mijn systeem werkt met realtime search-, site- en AI-citatiedata via een geautomatiseerde SEPR en AI Spy.
+Bekijk direct hoe het werkt, zonder login:
+${link}
+
+Met vriendelijke groet,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["Stop met raden wat Google en AI willen",`Hoi,
+
+Stop met raden wat Google en AI-zoekmachines willen.
+Ik bouwde een systeem op live search-, site- en AI-citatiedata, gemonitord via mijn SEPR en AI Spy.
+Probeer de open systeemscan, zonder login:
+${link}
+
+Met vriendelijke groet,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["Kan je SEO-provider impact vooraf bewijzen?",`Hoi,
+
+Kan je huidige SEO-provider met live data bewijzen wat de impact is vóórdat je content wordt aangepast?
+Zo niet, dan gokken ze met je budget. Ik gebruik realtime search-, site- en AI-citatiedata via SEPR + AI Spy.
+Bekijk een deel van mijn systeem, zonder login:
+${link}
+
+Met vriendelijke groet,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["Waarom zijn zoveel SEO-rapporten vaag?",`Hoi,
+
+Ooit afgevraagd waarom zoveel SEO-rapporten vaag en verwarrend zijn? Omdat het vaak giswerk is.
+Ik veranderde dat met live search-, site- en AI-citatiedata via mijn SEPR en AI Spy. Elke wijziging is transparant.
+Test mijn systeem live, zonder login:
+${link}
+
+Met vriendelijke groet,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["AI- en SEO-zichtbaarheid met wiskundige precisie",`Hoi,
+
+Wat als je AI-search- en SEO-zichtbaarheid met wiskundige precisie kon volgen?
+Ik werk met realtime search-, site- en AI-citatiedata, ondersteund door een eigen SEPR en AI Spy.
+Doe een quick scan, zonder login:
+${link}
+
+Met vriendelijke groet,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["Beloftes zonder concrete data?",`Hoi,
+
+Ben je het zat dat bureaus beloftes doen zonder vooraf concrete data te tonen?
+Ik werk met live search-, site- en AI-citatiedata, gevolgd via mijn SEPR en AI Spy.
+Bekijk het direct in actie, zonder login:
+${link}
+
+Met vriendelijke groet,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["Hoe zeker ben je dat contentupdates verkeer opleveren?",`Hoi,
+
+Hoe zeker ben je dat je contentupdates daadwerkelijk verkeer opleveren?
+Ik haal het giswerk eruit met realtime search-, site- en AI-citatiedata via mijn SEPR en AI Spy.
+Bekijk de publieke quick scan, zonder login:
+${link}
+
+Met vriendelijke groet,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["Gokt je contentspecialist met je geld?",`Hoi,
+
+Gokt je contentspecialist met je geld omdat harde data ontbreekt?
+Ik werk volledig vanuit realtime search-, site- en AI-citatiedata via SEPR + AI Spy. Elke aanpassing wordt gemeten.
+Test het platform zelf, zonder login:
+${link}
+
+Met vriendelijke groet,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["Waarom gokken als je met live data kunt optimaliseren?",`Hoi,
+
+Waarom genoegen nemen met gokken als je met live data kunt optimaliseren?
+Mijn systeem volgt realtime search, siteprestaties en AI-citaties via een eigen SEPR en AI Spy.
+Bekijk een deel van mijn systeem, zonder login:
+${link}
+
+Met vriendelijke groet,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["Weet je precies waarom concurrenten in AI search ranken?",`Hoi,
+
+Weet je precies waarom concurrenten in AI-zoekmachines ranken en jij niet?
+Ik gebruik een data-gedreven systeem met live search-, site- en AI-citatiedata, ondersteund door mijn SEPR en AI Spy, om de exacte gaten te vinden.
+Probeer mijn quick scan, zonder login:
+${link}
+
+Met vriendelijke groet,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["Wat als je contentstrategie volledig verifieerbaar was?",`Hoi,
+
+Wat als je contentstrategie op 100% verifieerbare metrics was gebaseerd in plaats van onderbuikgevoel?
+Ik bouwde een systeem op realtime search-, site- en AI-citatiedata, gemonitord via mijn SEPR en AI Spy.
+Ervaar het live, zonder login:
+${link}
+
+Met vriendelijke groet,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["Krijg je duidelijk data-bewijs van je SEO-partner?",`Hoi,
+
+Krijg je duidelijk, data-onderbouwd bewijs van je huidige SEO-partner?
+Zo niet, dan gokken ze met je budget. Ik werk met live search-, site- en AI-citatiedata via SEPR & AI Spy.
+Bekijk het systeem werken, zonder login:
+${link}
+
+Met vriendelijke groet,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["Bedrijfsbudgetten horen niet naar trial-and-error te gaan",`Hoi,
+
+Bedrijfsbudgetten voor SEO horen niet op te gaan aan trial-and-error.
+Ik gebruik een streng systeem op realtime search, siteanalytics en AI-citaties, gevolgd via een eigen SEPR en AI Spy.
+Als je specialist zijn keuzes vooraf niet kan bewijzen, wordt er gegokt.
+Test de tool, zonder login:
+${link}
+
+Met vriendelijke groet,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["Moderne zoekoptimalisatie vraagt live intelligence",`Hoi,
+
+Moderne zoekoptimalisatie vraagt om live intelligence, niet om verouderde SEO-tactieken.
+Mijn framework draait op realtime search-, site- en AI-citatiedata via een geavanceerde SEPR en AI Spy.
+Stop met gokken met niet-geverifieerde strategieën.
+Bekijk het live, zonder login:
+${link}
+
+Met vriendelijke groet,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["Precisie en data-integriteit ontbreken vaak in SEO",`Hoi,
+
+Precisie en data-integriteit ontbreken in veel SEO-campagnes.
+Ik veranderde dat met live search-, siteprestatie- en AI-citatiemetrics via mijn SEPR en AI Spy.
+Als je team vooraf geen hard bewijs kan tonen, gokken ze met je middelen.
+Probeer de quick scan, zonder login:
+${link}
+
+Met vriendelijke groet,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["Accountability in AI search begint met realtime tracking",`Hoi,
+
+Accountability in AI-search-zichtbaarheid begint met realtime tracking.
+Ik werk uitsluitend met echte search-, site- en AI-citatiedata en meet elke wijziging via mijn SEPR en AI Spy.
+Daag je huidige provider uit voor bewijs vooraf, of test mijn systeem live, zonder login:
+${link}
+
+Met vriendelijke groet,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["Speculatie hoort niet in high-performance marketing",`Hoi,
+
+Speculatie hoort niet thuis in high-performance digitale marketing.
+Ik bouwde een systeem op live search-intelligence, sitediagnostiek en AI-citaties via een eigen SEPR en AI Spy.
+Bekijk een live systeemdemo, zonder login:
+${link}
+
+Met vriendelijke groet,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["Je marketing-ROI mag niet afhangen van giswerk",`Hoi,
+
+Je marketing-ROI mag niet afhangen van giswerk van je bureau.
+Ik gebruik realtime search-, site- en AI-citatiedata, nauwkeurig gemeten via mijn SEPR en AI Spy.
+Als je specialist vooraf geen concreet bewijs kan tonen, gokken ze met je geld.
+Bekijk het systeem werken, zonder login:
+${link}
+
+Met vriendelijke groet,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["Echte data verslaat traditionele SEO-aannames",`Hoi,
+
+Echte data verslaat traditionele SEO-aannames iedere keer.
+Mijn platform draait op live search-, site- en AI-citatiedata via een geautomatiseerde SEPR en AI Spy.
+Stop met gokken. Bekijk een transparante audittool, zonder login:
+${link}
+
+Met vriendelijke groet,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["Transparante optimalisatie is hoe je wint in AI search",`Hoi,
+
+Transparante, data-onderbouwde optimalisatie is de enige manier om te winnen in AI search.
+Ik werk met realtime search-, site- en AI-citatiedata, gemonitord via mijn SEPR en AI Spy.
+Test mijn systeem live, zonder login:
+${link}
+
+Met vriendelijke groet,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["Hoop in plaats van data kost terrein",`Hoi,
+
+Als je contentstrategie op hoop in plaats van data is gebouwd, verlies je terrein.
+Ik gebruik live search-, site- en AI-citatietracking via SEPR + AI Spy om elke aanpassing verifieerbaar te maken.
+Bekijk de live tool, zonder login:
+${link}
+
+Met vriendelijke groet,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["Haal onzekerheid uit search en AI visibility",`Hoi,
+
+Haal onzekerheid uit je search- en AI-zichtbaarheidscampagnes.
+Mijn systeem gebruikt realtime search-, site- en AI-citatiedata via een gespecialiseerde SEPR en AI Spy.
+Bekijk een deel van mijn systeem, zonder login:
+${link}
+
+Met vriendelijke groet,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["Roulette hoort in een casino, niet in je SEO-budget",`Hoi,
+
+Roulette hoort in een casino, niet in je SEO- en AI-zichtbaarheidsbudget.
+Ik werk met realtime search-, site- en AI-citatiedata, gemeten via mijn SEPR en AI Spy.
+Test mijn systeem live, zonder login:
+${link}
+
+Met vriendelijke groet,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["Stop met dobbelen met je rankings",`Hoi,
+
+Stop met dobbelen met je contentrankings.
+Ik bouwde een systeem op live search-, site- en AI-citatiedata, nauwkeurig gevolgd via mijn SEPR en AI Spy.
+Bekijk een deel van mijn systeem, zonder login:
+${link}
+
+Met vriendelijke groet,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["Gokt je contentpartner met verouderd SEO-giswerk?",`Hoi,
+
+Zet je contentpartner jouw geld in op verouderd SEO-giswerk?
+Ik verving giswerk door realtime search-, site- en AI-citatiedata via mijn SEPR en AI Spy.
+Probeer de quick scan, zonder login:
+${link}
+
+Met vriendelijke groet,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["Gokken op SEO is een dure hobby",`Hoi,
+
+Gokken op SEO is een dure hobby voor elk bedrijf.
+Ik gebruik live search-, site- en AI-citatiedata via mijn SEPR en AI Spy om ervoor te zorgen dat elke wijziging telt.
+Bekijk het live, zonder login:
+${link}
+
+Met vriendelijke groet,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["Geen harde data vooraf? Dan wordt er gegokt",`Hoi,
+
+Als je bureau vooraf geen harde data kan tonen, gokken ze met je bedrijf.
+Ik werk volledig op realtime search-, site- en AI-citatiedata via mijn SEPR en AI Spy.
+Bekijk het systeem werken, zonder login:
+${link}
+
+Met vriendelijke groet,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["SEO hoort niet als een gok te voelen",`Hoi,
+
+SEO hoort niet te voelen als een gok waarbij je alleen maar hoopt op het beste.
+Mijn systeem gebruikt live search-, site- en AI-citatiedata via mijn SEPR en AI Spy voor verifieerbare resultaten.
+Test de tool, zonder login:
+${link}
+
+Met vriendelijke groet,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["Stop met dobbelen met organisch verkeer",`Hoi,
+
+Stop met dobbelen met organisch verkeer en AI-search-zichtbaarheid.
+Ik werk met een data-gedreven framework op live search-, site- en AI-citatiedata via SEPR + AI Spy.
+Ervaar het zelf, zonder login:
+${link}
+
+Met vriendelijke groet,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["Gokt je contentteam met onbewezen tactieken?",`Hoi,
+
+Ben je het zat dat je contentteam gokt met onbewezen tactieken?
+Ik veranderde dat met realtime search-, site- en AI-citatiedata, gemonitord via mijn SEPR en AI Spy.
+Doe een quick scan, zonder login:
+${link}
+
+Met vriendelijke groet,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["Laat niemand gokken met je marketingbudget",`Hoi,
+
+Laat niemand met je marketingbudget gokken via blinde SEO-methodes.
+Ik volg alles met realtime search-, site- en AI-citatiedata via mijn SEPR en AI Spy.
+Bekijk een deel van mijn systeem, zonder login:
+${link}
+
+Met vriendelijke groet,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["Echte data stopt het gokken",`Hoi,
+
+Echte data stopt het gokken.
+Mijn systeem gebruikt live search-, site- en AI-citatiedata via SEPR & AI Spy zodat elke optimalisatie volledig transparant is.
+Probeer de quick scan nu, zonder login:
+${link}
+
+Met vriendelijke groet,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["Wil je zien hoe echte data-gedreven SEO eruitziet?",`Hoi,
+
+Wil je zien hoe een echt data-gedreven SEO- en AI-zichtbaarheidssysteem eruitziet?
+Ik gebruik live search-, site- en AI-citatiedata via mijn SEPR en AI Spy. Geen giswerk, alleen hard bewijs.
+Bekijk het direct, zonder login:
+${link}
+
+Met vriendelijke groet,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["Haal vandaag het giswerk uit je contentstrategie",`Hoi,
+
+Haal vandaag het giswerk uit je contentstrategie.
+Mijn systeem draait op realtime search-, site- en AI-citatiedata, ondersteund door een eigen SEPR en AI Spy.
+Test mijn systeem live, zonder login:
+${link}
+
+Met vriendelijke groet,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["Zie zelf hoe realtime data SEO-advies verslaat",`Hoi,
+
+Zie zelf hoe realtime data traditioneel SEO-advies verslaat.
+Ik werk met live search-, site- en AI-citatiemetrics via mijn SEPR en AI Spy.
+Open de publieke quick scan, zonder login:
+${link}
+
+Met vriendelijke groet,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["Stop met raden en meet je AI-search-prestaties",`Hoi,
+
+Stop met raden en begin je AI-search-prestaties te meten.
+Ik gebruik een systeem op realtime search-, site- en AI-citatiedata, gemonitord via mijn SEPR en AI Spy.
+Bekijk een deel van mijn systeem, zonder login:
+${link}
+
+Met vriendelijke groet,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["Test je huidige SEO-strategie",`Hoi,
+
+Stel je huidige SEO-strategie op de proef.
+Ik bouwde een systeem op live search, siteprestaties en AI-citaties via mijn SEPR en AI Spy.
+Probeer de snelle audittool, zonder login:
+${link}
+
+Met vriendelijke groet,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["Ontdek wat data-gedreven AI-zichtbaarheid kan doen",`Hoi,
+
+Ontdek wat data-onderbouwde AI-zichtbaarheid voor je bedrijf kan doen.
+Mijn platform gebruikt realtime search-, site- en AI-citatiedata via een eigen SEPR en AI Spy.
+Ervaar het live, zonder login:
+${link}
+
+Met vriendelijke groet,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["Test een slimmere data-gedreven aanpak",`Hoi,
+
+Test een slimmere, data-gedreven aanpak voor search en AI-zichtbaarheid.
+Ik werk met live search-, site- en AI-citatietracking via mijn SEPR en AI Spy.
+Bekijk het systeem direct werken, zonder login:
+${link}
+
+Met vriendelijke groet,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["Ervaar echte transparantie in contentoptimalisatie",`Hoi,
+
+Ervaar echte transparantie in je contentoptimalisatie.
+Ik gebruik realtime search-, site- en AI-citatiedata, nauwkeurig gevolgd via mijn SEPR en AI Spy.
+Doe een snelle test, zonder login:
+${link}
+
+Met vriendelijke groet,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["Waarom topwebsites afstand nemen van SEO-giswerk",`Hoi,
+
+Bekijk waarom topwebsites afstand nemen van SEO-giswerk.
+Mijn systeem draait op live search, sitediagnostiek en AI-citatiedata via mijn SEPR en AI Spy.
+Probeer mijn quick scan, zonder login:
+${link}
+
+Met vriendelijke groet,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["Klaar voor contentupdates op realtime data?",`Hoi,
+
+Klaar om je contentupdates te baseren op realtime data in plaats van giswerk?
+Ik werk met live search-, site- en AI-citatiedata via SEPR + AI Spy.
+Bekijk een deel van mijn systeem, zonder login:
+${link}
+
+Met vriendelijke groet,
+Ottmar Francisca
++31628073996 << WhatsApp`]
+  ];
+
+  const es=[
+    ["Deja de adivinar con el SEO",`Hola,
+
+Gran parte del trabajo de SEO y visibilidad en IA es pura adivinanza.
+Yo lo cambié.
+Trabajo con un sistema basado en datos de búsqueda, sitio y citas de IA en tiempo real, para que cada cambio sea dirigido y medido con mi SEPR (competencia) y mi AI Spy.
+Actualizar contenido existente o crear contenido nuevo se vuelve mucho más sólido y verificable.
+Si tu especialista de contenido no puede mostrar pruebas concretas basadas en datos antes de actuar, está apostando con tu presupuesto.
+Mira una parte de mi sistema en funcionamiento, sin registro:
+${link}
+
+Un saludo,
+Ottmar Francisca
++31628073996 << WhatsApp si necesitas más detalles.`],
+    ["¿Tu SEO se basa en datos o en suposiciones?",`Hola,
+
+¿Cansado de que las agencias de contenido adivinen qué funciona para SEO y búsqueda con IA?
+Construí una alternativa basada en datos. Mi sistema sigue búsqueda en tiempo real, métricas del sitio y citas de IA con un SEPR propio y AI Spy, para que cada ajuste sea medible.
+Si tu proveedor actual no puede mostrar datos sólidos antes de tocar tus páginas, está tirando los dados.
+Prueba mi sistema en vivo sin iniciar sesión:
+${link}
+
+Un saludo,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["Muchos equipos SEO trabajan a ciegas",`Hola,
+
+Mucha gente que trabaja con visibilidad en IA y SEO va a ciegas.
+Yo trabajo exclusivamente con datos de búsqueda, sitio y citas de IA en tiempo real. Con mi SEPR y AI Spy, cada optimización se calcula y verifica.
+Pide a tu especialista pruebas concretas de su impacto. Si solo entrega métricas vagas, está apostando con tu dinero.
+Mira cómo funciona un sistema verificable, sin registro:
+${link}
+
+Un saludo,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["No hay lugar para adivinanzas en el SEO moderno",`Hola,
+
+Las adivinanzas no tienen lugar en el SEO moderno ni en la visibilidad en IA.
+Por eso las sustituí por un sistema basado en búsqueda en vivo, rendimiento del sitio y datos de citas de IA, impulsado por mi SEPR y AI Spy.
+¿Puede tu proveedor demostrar el impacto antes de actuar o solo cruza los dedos?
+Mira mi sistema aquí, sin registro:
+${link}
+
+Un saludo,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["¿Datos o esperanza?",`Hola,
+
+¿Tu estrategia SEO se basa en datos o en esperanza?
+Uso un sistema respaldado por búsqueda en tiempo real, datos del sitio y citas de IA, seguido con mi SEPR y AI Spy. Cada cambio es dirigido, medido y verificable.
+Si tu especialista no puede mostrar pruebas claras de lo que hace, está apostando con tu presupuesto.
+Pruébalo al instante, sin registro:
+${link}
+
+Un saludo,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["Pregunta rápida sobre tus informes SEO",`Hola,
+
+Pregunta rápida: ¿tu especialista SEO o de contenido te muestra datos sólidos o solo un informe mensual lleno de explicaciones?
+Yo trabajo de otra manera. Mi sistema usa búsqueda en tiempo real, métricas del sitio y seguimiento de citas de IA con SEPR + AI Spy para medir cada actualización.
+Mira un ejemplo en vivo de contenido basado en datos, sin registro:
+${link}
+
+Un saludo,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["¿Y si tu próxima actualización fuera predecible?",`Hola,
+
+¿Y si tu próxima actualización de contenido fuera 100% predecible en lugar de una apuesta?
+Sustituí las suposiciones SEO por datos de búsqueda, sitio y citas de IA en vivo. Con mi SEPR y AI Spy, cada cambio se sigue y se demuestra.
+Si tu agencia no puede mostrar pruebas concretas antes de actuar, está apostando con tu presupuesto.
+Prueba mi quick scan ahora, sin registro:
+${link}
+
+Un saludo,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["¿Pagas por SEO sin métricas exactas?",`Hola,
+
+¿Cansado de pagar por SEO y visibilidad en IA sin ver métricas exactas?
+Uso un sistema basado totalmente en datos de búsqueda, sitio y citas de IA en tiempo real con mi SEPR y AI Spy. Sin adivinanzas, solo mejoras dirigidas.
+Reta a tu especialista: ¿puede mostrar pruebas concretas basadas en datos antes de actuar? Si no, está apostando.
+Mira mi sistema en acción, sin registro:
+${link}
+
+Un saludo,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["¿Notarías si desapareciera tu agencia SEO?",`Hola,
+
+Si eliminaras hoy a tu agencia SEO, ¿caería tu tráfico inmediatamente o apenas notarías diferencia?
+Construí ContentScale para eliminar esa incertidumbre. Mi sistema se basa en búsqueda, sitio y citas de IA en tiempo real mediante un SEPR propio y AI Spy.
+No dejes que otros apuesten con tu presupuesto. Mira un sistema transparente en vivo, sin registro:
+${link}
+
+Un saludo,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["Muchos consejos de IA se basan en suposiciones",`Hola,
+
+Muchos consejos sobre visibilidad en IA se basan en suposiciones.
+Yo uso datos de búsqueda, sitio y citas de IA en tiempo real, seguidos con precisión por mi SEPR y AI Spy.
+Si tu especialista no puede justificar sus decisiones con datos antes de actuar, está apostando con tu dinero.
+Prueba una auditoría transparente, sin registro:
+${link}
+
+Un saludo,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["Deja de apostar con el SEO",`Hola,
+
+Deja de apostar con las adivinanzas SEO.
+Uso datos de búsqueda, sitio y citas de IA en vivo con mi SEPR & AI Spy para que cada actualización de contenido sea medible y verificable.
+Si tu especialista no puede mostrar pruebas sólidas antes de actuar, está desperdiciando tu presupuesto.
+Prueba mi sistema en vivo, sin registro:
+${link}
+
+Un saludo,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["El SEO no debería ser un juego de azar",`Hola,
+
+El SEO no debería ser un juego de azar.
+Trabajo con un sistema basado en datos de búsqueda, sitio y citas de IA en tiempo real, medido con un SEPR avanzado y AI Spy.
+Pide a tu redactor pruebas basadas en datos antes de actuar. Si no las tiene, está apostando con tu negocio.
+Mira el sistema en funcionamiento, sin registro:
+${link}
+
+Un saludo,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["Los datos vencen a las suposiciones",`Hola,
+
+Los datos vencen a las suposiciones cada vez.
+Mi sistema usa búsqueda en tiempo real, datos del sitio y citas de IA mediante mi SEPR y AI Spy, haciendo que cada cambio de contenido sea verificable.
+¿Tu especialista actual está apostando con tu presupuesto?
+Compruébalo tú mismo, sin registro:
+${link}
+
+Un saludo,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["Muchos consejos SEO son un tiro a ciegas",`Hola,
+
+Muchos consejos SEO son un tiro a ciegas.
+Yo lo sustituí por métricas de búsqueda, sitio y citas de IA en tiempo real con un SEPR propio y AI Spy. Cada actualización se mide.
+Si tu equipo de contenido no puede demostrar lo que hace antes de actuar, está apostando con tu dinero.
+Prueba el quick scan, sin registro:
+${link}
+
+Un saludo,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["¿Visibilidad real en IA sin adivinanzas?",`Hola,
+
+¿Quieres visibilidad real en IA sin adivinanzas?
+Construí un sistema basado en búsqueda en vivo, datos del sitio y citas de IA, medido con mi SEPR y AI Spy.
+Si tu especialista no puede mostrar pruebas concretas basadas en datos antes de actuar, está apostando con tu presupuesto.
+Mira mi sistema en vivo, sin registro:
+${link}
+
+Un saludo,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["El SEO tradicional funciona con hipótesis",`Hola,
+
+Los modelos SEO tradicionales dependen de hipótesis y datos antiguos.
+Yo trabajo con búsqueda en tiempo real, diagnóstico del sitio y seguimiento de citas de IA mediante un SEPR propio y AI Spy.
+Si tu proveedor de contenido no puede ofrecer pruebas concretas basadas en datos antes de actuar, está especulando con tu presupuesto corporativo.
+Evalúa una demo en vivo, sin registro:
+${link}
+
+Un saludo,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["La responsabilidad en SEO ya era necesaria",`Hola,
+
+La responsabilidad en visibilidad en IA y SEO ya era necesaria.
+Trabajo con datos reales de búsqueda, sitio y citas de IA en tiempo real para que cada modificación sea dirigida y medible con mi SEPR y AI Spy.
+No trabajes con especialistas que apuestan con tu inversión de marketing sin mostrar pruebas antes.
+Prueba la plataforma, sin registro:
+${link}
+
+Un saludo,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["La precisión vence a la especulación",`Hola,
+
+La precisión vence a la especulación en la optimización de búsqueda.
+Mi framework utiliza métricas de búsqueda en vivo, rendimiento del sitio y análisis de citas de IA mediante un SEPR avanzado y AI Spy.
+Si tu equipo de contenido no puede presentar evidencia sólida antes de actuar, está apostando con tus recursos.
+Accede a la herramienta pública de diagnóstico, sin registro:
+${link}
+
+Un saludo,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["La búsqueda moderna exige datos en tiempo real",`Hola,
+
+Los buscadores modernos requieren datos en tiempo real, no suposiciones SEO antiguas.
+Uso un sistema impulsado por búsqueda en vivo, inteligencia del sitio y citas de IA, seguido mediante mi SEPR y AI Spy.
+Pide a tu especialista pruebas verificables. Si no las tiene, está apostando con tu crecimiento.
+Mira cómo funciona, sin registro:
+${link}
+
+Un saludo,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["SEO y visibilidad en IA deben ser medibles",`Hola,
+
+Tu SEO y tu visibilidad en IA deberían ser totalmente transparentes y medibles.
+Uso un enfoque data-first con búsqueda en vivo, datos del sitio y seguimiento de citas de IA mediante mi SEPR y AI Spy.
+Si tu proveedor no puede mostrar pruebas concretas antes de actuar, está apostando con tu presupuesto.
+Prueba ahora un escaneo en vivo, sin registro:
+${link}
+
+Un saludo,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["SEO sin datos en vivo es apostar con tu presupuesto",`Hola,
+
+SEO sin datos en vivo es simplemente apostar con tu presupuesto.
+Mi sistema usa búsqueda en tiempo real, métricas del sitio y citas de IA mediante SEPR & AI Spy para hacer cada cambio 100% medible.
+Pruébalo al instante, sin registro:
+${link}
+
+Un saludo,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["¿Tu equipo adivina qué posiciona?",`Hola,
+
+¿Tu equipo de contenido adivina qué posiciona o tiene pruebas en tiempo real?
+Trabajo exclusivamente con datos de búsqueda, sitio y citas de IA en vivo, seguidos mediante un SEPR avanzado y AI Spy.
+Mira una vista previa en vivo del sistema, sin registro:
+${link}
+
+Un saludo,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["Deja de apostar con tus resultados SEO",`Hola,
+
+No dejes que otros apuesten con tus resultados SEO.
+Construí una plataforma data-first basada en búsqueda, sitio y citas de IA en tiempo real, respaldada por un SEPR propio y AI Spy.
+Haz una prueba rápida, sin registro:
+${link}
+
+Un saludo,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["Los resultados reales vienen de datos reales",`Hola,
+
+Los resultados reales vienen de datos reales, no de suposiciones SEO.
+Mi sistema mide cada optimización con búsqueda, sitio y seguimiento de citas de IA en vivo mediante SEPR + AI Spy.
+Prueba la herramienta de auditoría rápida, sin registro:
+${link}
+
+Un saludo,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["Si no se puede medir en tiempo real, es una apuesta",`Hola,
+
+Si tu estrategia SEO no puede medirse en tiempo real, es una apuesta.
+Cambié las reglas con un sistema basado en búsqueda en vivo, rendimiento del sitio y citas de IA mediante mi SEPR y AI Spy.
+Mira el sistema en vivo, sin registro:
+${link}
+
+Un saludo,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["Muchos consejos de visibilidad en IA se basan en suposiciones",`Hola,
+
+Muchos consejos de visibilidad en IA dependen de suposiciones.
+Uso datos de búsqueda, sitio y citas de IA en tiempo real para hacer cada cambio verificable mediante mi SEPR y AI Spy.
+Mira una parte de mi sistema, sin registro:
+${link}
+
+Un saludo,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["¿Tu especialista muestra métricas sólidas antes de actuar?",`Hola,
+
+¿Tu especialista de contenido muestra métricas sólidas antes de actuar? Si no, está apostando.
+Trabajo con búsqueda, sitio y citas de IA en vivo, seguidos mediante un SEPR dedicado y AI Spy.
+Pruébalo tú mismo, sin registro:
+${link}
+
+Un saludo,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["Las suposiciones SEO cuestan dinero cada mes",`Hola,
+
+Las suposiciones SEO cuestan a las empresas mucho dinero cada mes.
+Uso búsqueda, sitio y citas de IA en tiempo real para reducir ese riesgo, seguido con precisión por mi SEPR y AI Spy.
+Prueba mi quick scan, sin registro:
+${link}
+
+Un saludo,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["¿Quieres visibilidad garantizada sin humo SEO?",`Hola,
+
+¿Quieres visibilidad garantizada sin el humo y los espejos del SEO?
+Mi sistema se basa en búsqueda, sitio y citas de IA en tiempo real mediante un SEPR automatizado y AI Spy.
+Mira cómo funciona al instante, sin registro:
+${link}
+
+Un saludo,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["Deja de adivinar qué quieren Google y la IA",`Hola,
+
+Deja de adivinar qué quieren Google y los motores de búsqueda con IA.
+Construí un sistema basado en búsqueda, sitio y citas de IA en vivo, monitorizado con mi SEPR y AI Spy.
+Prueba el escaneo abierto del sistema, sin registro:
+${link}
+
+Un saludo,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["¿Puede tu proveedor demostrar impacto antes de tocar el contenido?",`Hola,
+
+¿Puede tu proveedor SEO demostrar su impacto con datos en vivo antes de tocar tu contenido?
+Si no, está apostando con tu presupuesto. Yo uso búsqueda, sitio y citas de IA en tiempo real mediante SEPR + AI Spy.
+Mira una parte de mi sistema, sin registro:
+${link}
+
+Un saludo,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["¿Por qué tantos informes SEO son vagos?",`Hola,
+
+¿Alguna vez te preguntaste por qué tantos informes SEO son vagos y confusos? Porque gran parte es suposición.
+Yo lo cambié con búsqueda, sitio y citas de IA en vivo, medidos mediante mi SEPR y AI Spy. Cada cambio es transparente.
+Prueba mi sistema en vivo, sin registro:
+${link}
+
+Un saludo,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["Visibilidad SEO e IA con precisión matemática",`Hola,
+
+¿Y si pudieras seguir tu visibilidad SEO y en búsqueda con IA con precisión matemática?
+Trabajo con búsqueda, sitio y citas de IA en tiempo real, respaldado por un SEPR propio y AI Spy.
+Haz un quick scan, sin registro:
+${link}
+
+Un saludo,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["¿Promesas sin datos concretos?",`Hola,
+
+¿Cansado de agencias que prometen sin mostrar datos concretos antes de actuar?
+Trabajo con búsqueda, sitio y citas de IA en vivo, seguidos mediante mi SEPR y AI Spy.
+Míralo en acción al instante, sin registro:
+${link}
+
+Un saludo,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["¿Qué tan seguro estás de que tus cambios generan tráfico?",`Hola,
+
+¿Qué tan seguro estás de que tus actualizaciones de contenido realmente generan tráfico?
+Eliminé las suposiciones usando búsqueda, sitio y citas de IA en tiempo real mediante mi SEPR y AI Spy.
+Mira el quick scan público, sin registro:
+${link}
+
+Un saludo,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["¿Tu especialista está apostando con tu dinero?",`Hola,
+
+¿Tu especialista de contenido está apostando con tu dinero porque no tiene datos sólidos?
+Trabajo totalmente con búsqueda, sitio y citas de IA en tiempo real mediante SEPR + AI Spy. Cada ajuste se mide.
+Prueba la plataforma tú mismo, sin registro:
+${link}
+
+Un saludo,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["¿Por qué adivinar si puedes optimizar con datos en vivo?",`Hola,
+
+¿Por qué conformarte con adivinanzas cuando puedes optimizar con datos en vivo?
+Mi sistema sigue búsqueda en tiempo real, rendimiento del sitio y citas de IA mediante un SEPR propio y AI Spy.
+Mira una parte de mi sistema, sin registro:
+${link}
+
+Un saludo,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["¿Sabes exactamente por qué tus competidores rankean en IA?",`Hola,
+
+¿Sabes exactamente por qué tus competidores posicionan en motores de búsqueda con IA y tú no?
+Uso un sistema data-driven con búsqueda, sitio y citas de IA en vivo, respaldado por mi SEPR y AI Spy, para encontrar las brechas exactas.
+Prueba mi quick scan, sin registro:
+${link}
+
+Un saludo,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["¿Y si tu estrategia fuera 100% verificable?",`Hola,
+
+¿Y si tu estrategia de contenido estuviera respaldada por métricas 100% verificables en lugar de intuición?
+Construí un sistema basado en búsqueda, sitio y citas de IA en tiempo real, monitorizado mediante mi SEPR y AI Spy.
+Pruébalo en vivo, sin registro:
+${link}
+
+Un saludo,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["¿Recibes pruebas claras basadas en datos?",`Hola,
+
+¿Recibes pruebas claras y basadas en datos de tu proveedor SEO actual?
+Si no, está apostando con tu presupuesto. Trabajo con búsqueda, sitio y citas de IA en vivo mediante SEPR & AI Spy.
+Mira el sistema en funcionamiento, sin registro:
+${link}
+
+Un saludo,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["Los presupuestos corporativos no deberían ir a prueba y error",`Hola,
+
+Los presupuestos corporativos de SEO no deberían gastarse en prueba y error.
+Uso un sistema riguroso basado en búsqueda en tiempo real, analítica del sitio y citas de IA, seguido mediante un SEPR propio y AI Spy.
+Si tu especialista no puede demostrar sus decisiones antes de actuar, está apostando.
+Prueba la herramienta, sin registro:
+${link}
+
+Un saludo,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["La optimización moderna exige inteligencia en vivo",`Hola,
+
+La optimización moderna de búsqueda exige inteligencia en vivo, no tácticas SEO antiguas.
+Mi framework funciona con búsqueda, sitio y citas de IA en tiempo real mediante un SEPR avanzado y AI Spy.
+Deja de apostar con estrategias no verificadas.
+Míralo en acción, sin registro:
+${link}
+
+Un saludo,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["A muchas campañas SEO les falta precisión e integridad de datos",`Hola,
+
+A muchas campañas SEO les faltan precisión e integridad de datos.
+Yo lo cambié con métricas de búsqueda, rendimiento del sitio y citas de IA en vivo mediante mi SEPR y AI Spy.
+Si tu equipo no puede mostrar pruebas sólidas antes de actuar, está apostando con tus recursos.
+Prueba el quick scan, sin registro:
+${link}
+
+Un saludo,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["La responsabilidad en IA empieza con seguimiento en tiempo real",`Hola,
+
+La responsabilidad en visibilidad de búsqueda con IA empieza con seguimiento en tiempo real.
+Trabajo exclusivamente con datos reales de búsqueda, sitio y citas de IA, midiendo cada cambio con mi SEPR y AI Spy.
+Exige pruebas a tu proveedor actual o prueba mi sistema en vivo, sin registro:
+${link}
+
+Un saludo,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["La especulación no pertenece al marketing de alto rendimiento",`Hola,
+
+La especulación no tiene lugar en el marketing digital de alto rendimiento.
+Construí un sistema basado en inteligencia de búsqueda en vivo, diagnóstico del sitio y citas de IA mediante un SEPR propio y AI Spy.
+Evalúa una demo del sistema en vivo, sin registro:
+${link}
+
+Un saludo,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["Tu ROI no debería depender de las suposiciones de una agencia",`Hola,
+
+Tu ROI de marketing no debería depender de las suposiciones de tu agencia.
+Uso búsqueda, sitio y citas de IA en tiempo real, medidas con precisión mediante mi SEPR y AI Spy.
+Si tu especialista no puede mostrar pruebas concretas antes de actuar, está apostando con tu dinero.
+Mira el sistema funcionar, sin registro:
+${link}
+
+Un saludo,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["Los datos reales vencen a las suposiciones SEO",`Hola,
+
+Los datos reales vencen a las suposiciones SEO tradicionales cada vez.
+Mi plataforma opera con búsqueda, sitio y citas de IA en vivo mediante un SEPR automatizado y AI Spy.
+Deja de apostar. Mira una herramienta de auditoría transparente, sin registro:
+${link}
+
+Un saludo,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["La optimización transparente es la forma de ganar en IA",`Hola,
+
+La optimización transparente y basada en datos es la única forma de ganar en búsqueda con IA.
+Trabajo con búsqueda, sitio y citas de IA en tiempo real, monitorizados mediante mi SEPR y AI Spy.
+Prueba mi sistema en vivo, sin registro:
+${link}
+
+Un saludo,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["La esperanza en lugar de datos te hace perder terreno",`Hola,
+
+Si tu estrategia de contenido se basa en esperanza en lugar de datos, estás perdiendo terreno.
+Uso búsqueda, sitio y citas de IA en vivo mediante SEPR + AI Spy para hacer cada ajuste verificable.
+Mira la herramienta en vivo, sin registro:
+${link}
+
+Un saludo,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["Elimina la incertidumbre de search y AI visibility",`Hola,
+
+Elimina la incertidumbre de tus campañas de búsqueda y visibilidad en IA.
+Mi sistema usa búsqueda, métricas del sitio y citas de IA en tiempo real mediante un SEPR especializado y AI Spy.
+Mira una parte de mi sistema, sin registro:
+${link}
+
+Un saludo,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["La ruleta pertenece al casino, no a tu presupuesto SEO",`Hola,
+
+La ruleta pertenece a un casino, no a tu presupuesto de SEO y visibilidad en IA.
+Trabajo con búsqueda, sitio y citas de IA en tiempo real, medidos mediante mi SEPR y AI Spy.
+Prueba mi sistema en vivo, sin registro:
+${link}
+
+Un saludo,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["Deja de tirar los dados con tus rankings",`Hola,
+
+Deja de tirar los dados con tus rankings de contenido.
+Construí un sistema basado en búsqueda, sitio y citas de IA en vivo, seguido con precisión mediante mi SEPR y AI Spy.
+Mira una parte de mi sistema, sin registro:
+${link}
+
+Un saludo,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["¿Tu proveedor apuesta con SEO anticuado?",`Hola,
+
+¿Tu proveedor de contenido apuesta tu dinero a suposiciones SEO anticuadas?
+Sustituí las suposiciones por búsqueda, sitio y citas de IA en tiempo real mediante mi SEPR y AI Spy.
+Prueba el quick scan, sin registro:
+${link}
+
+Un saludo,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["Apostar con SEO es un hobby caro",`Hola,
+
+Apostar con SEO es un hobby caro para cualquier empresa.
+Uso búsqueda, métricas del sitio y citas de IA en vivo mediante mi SEPR y AI Spy para asegurar que cada cambio cuente.
+Míralo en vivo, sin registro:
+${link}
+
+Un saludo,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["¿Sin datos sólidos antes de empezar? Entonces es una apuesta",`Hola,
+
+Si tu agencia no puede mostrar datos sólidos antes de empezar, está apostando con tu negocio.
+Dependo totalmente de búsqueda, sitio y citas de IA en tiempo real mediante mi SEPR y AI Spy.
+Mira el sistema funcionar, sin registro:
+${link}
+
+Un saludo,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["El SEO no debería sentirse como una apuesta",`Hola,
+
+El SEO no debería sentirse como una apuesta donde solo esperas lo mejor.
+Mi sistema usa búsqueda, sitio y citas de IA en vivo mediante mi SEPR y AI Spy para resultados verificables.
+Prueba la herramienta, sin registro:
+${link}
+
+Un saludo,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["Deja de tirar los dados con el tráfico orgánico",`Hola,
+
+Deja de tirar los dados con el tráfico orgánico y la visibilidad en búsqueda con IA.
+Trabajo con un framework data-driven basado en búsqueda, métricas del sitio y citas de IA en vivo mediante SEPR + AI Spy.
+Pruébalo tú mismo, sin registro:
+${link}
+
+Un saludo,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["¿Tu equipo apuesta con tácticas no probadas?",`Hola,
+
+¿Cansado de que tu equipo de contenido apueste con tácticas no probadas?
+Yo lo cambié con búsqueda, sitio y citas de IA en tiempo real, monitorizados mediante mi SEPR y AI Spy.
+Haz un quick scan, sin registro:
+${link}
+
+Un saludo,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["No dejes que nadie apueste con tu presupuesto de marketing",`Hola,
+
+No dejes que nadie apueste con tu presupuesto de marketing usando métodos SEO a ciegas.
+Sigo todo con búsqueda, sitio y citas de IA en tiempo real mediante mi SEPR y AI Spy.
+Mira una parte de mi sistema, sin registro:
+${link}
+
+Un saludo,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["Los datos reales detienen las apuestas",`Hola,
+
+Los datos reales detienen las apuestas.
+Mi sistema usa búsqueda, métricas del sitio y citas de IA en vivo mediante SEPR & AI Spy para que cada optimización sea totalmente transparente.
+Prueba el quick scan ahora, sin registro:
+${link}
+
+Un saludo,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["¿Quieres ver cómo es un sistema SEO realmente data-driven?",`Hola,
+
+¿Quieres ver cómo es un sistema de SEO y visibilidad en IA realmente basado en datos?
+Uso búsqueda, sitio y citas de IA en vivo mediante mi SEPR y AI Spy. Sin adivinanzas, solo pruebas sólidas.
+Míralo al instante, sin registro:
+${link}
+
+Un saludo,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["Elimina hoy las suposiciones de tu estrategia de contenido",`Hola,
+
+Elimina hoy las suposiciones de tu estrategia de contenido.
+Mi sistema funciona con búsqueda, métricas del sitio y citas de IA en tiempo real, respaldado por un SEPR propio y AI Spy.
+Prueba mi sistema en vivo, sin registro:
+${link}
+
+Un saludo,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["Comprueba cómo los datos en vivo vencen al SEO tradicional",`Hola,
+
+Comprueba por ti mismo cómo los datos en tiempo real vencen al consejo SEO tradicional.
+Trabajo con métricas de búsqueda, sitio y citas de IA en vivo mediante mi SEPR y AI Spy.
+Abre el quick scan público, sin registro:
+${link}
+
+Un saludo,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["Deja de adivinar y mide tu rendimiento en AI search",`Hola,
+
+Deja de adivinar y empieza a medir tu rendimiento en búsqueda con IA.
+Uso un sistema basado en búsqueda, sitio y citas de IA en tiempo real, monitorizado mediante mi SEPR y AI Spy.
+Mira una parte de mi sistema, sin registro:
+${link}
+
+Un saludo,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["Pon a prueba tu estrategia SEO actual",`Hola,
+
+Pon a prueba tu estrategia SEO actual.
+Construí un sistema basado en búsqueda en vivo, rendimiento del sitio y citas de IA, seguido mediante mi SEPR y AI Spy.
+Prueba la herramienta de auditoría rápida, sin registro:
+${link}
+
+Un saludo,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["Descubre qué puede hacer la visibilidad en IA basada en datos",`Hola,
+
+Descubre qué puede hacer por tu negocio una visibilidad en IA respaldada por datos.
+Mi plataforma usa búsqueda, sitio y citas de IA en tiempo real mediante un SEPR dedicado y AI Spy.
+Pruébalo en vivo, sin registro:
+${link}
+
+Un saludo,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["Prueba un enfoque más inteligente y data-driven",`Hola,
+
+Prueba un enfoque más inteligente y basado en datos para búsqueda y visibilidad en IA.
+Trabajo con búsqueda, métricas del sitio y seguimiento de citas de IA en vivo mediante mi SEPR y AI Spy.
+Mira el sistema funcionar al instante, sin registro:
+${link}
+
+Un saludo,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["Experimenta transparencia real en la optimización de contenido",`Hola,
+
+Experimenta transparencia real en tu optimización de contenido.
+Uso búsqueda, sitio y citas de IA en tiempo real, seguidos con precisión mediante mi SEPR y AI Spy.
+Haz una prueba rápida, sin registro:
+${link}
+
+Un saludo,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["Por qué los mejores sitios dejan atrás las suposiciones SEO",`Hola,
+
+Mira por qué los mejores sitios están dejando atrás las suposiciones SEO.
+Mi sistema funciona con búsqueda en vivo, diagnóstico del sitio y citas de IA, monitorizado mediante mi SEPR y AI Spy.
+Prueba mi quick scan, sin registro:
+${link}
+
+Un saludo,
+Ottmar Francisca
++31628073996 << WhatsApp`],
+    ["¿Listo para basar tus cambios en datos en tiempo real?",`Hola,
+
+¿Listo para basar tus actualizaciones de contenido en datos en tiempo real en lugar de suposiciones?
+Trabajo con búsqueda, métricas del sitio y citas de IA en vivo mediante SEPR + AI Spy.
+Mira una parte de mi sistema, sin registro:
+${link}
+
+Un saludo,
+Ottmar Francisca
++31628073996 << WhatsApp`]
+  ];
+  const sets={en,nl,es};
+  const pair=(sets[locale]||en)[v];
   return {subject:pair[0],body:pair[1],variant:v+1,language:locale,url:link};
 }
 function _pqsPlainSignature(locale){
@@ -19013,6 +20915,9 @@ function _pqsEnsurePlainSignature(body,locale){
   const sig=_pqsPlainSignature(locale);
   const urls=['https://nl.contentscale.site','https://es.contentscale.site','https://contentscale.site'];
   if(urls.some(u=>body.includes(u)))return body;
+  // v289: the approved 20-variant Lead Crawler copy already carries Ottmar + WhatsApp.
+  // Do not append a second signature block.
+  if(/\+31628073996/i.test(body)&&/\nOttmar(?: Francisca)?\b/i.test(body))return body;
   // v253: normalize the short template sign-off so the prospect sees one clean
   // plain-text identity block instead of "Best/Ottmar" followed by a second signature.
   body=body.replace(/\n\n(?:Best,|Regards,|Groet,|Met vriendelijke groet,|Saludos,|Un saludo,)\s*\nOttmar(?: Francisca)?\s*$/i,'');
@@ -19172,7 +21077,7 @@ function _ceoMainWebsiteUrl(input){
 // action must target this CEO endpoint.
 app.post('/api/ceo-report/start',async(req,res)=>{
   let ceoEntry='unknown',ceoUrl='',lastStage='REQUEST';
-  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-25-CANONICAL-v288');
+  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-25-CANONICAL-v291');
   try{
     lastStage='DB_SETUP';
     console.log('[ceo-report] stage=DB_SETUP');
@@ -19266,10 +21171,10 @@ ContentScale`;
     return res.json({success:true,entry_mode:entry,token,selected_page:selected,ceo_report_token:reportToken,ceo_report_url:reportUrl,delivery_email:delivery,updates_opt_in:updatesOptIn});
   }catch(e){
     const msg=String((e&&e.message)||e||'CEO Prospect Report generation failed');
-    console.error('[ceo-report] FAILED build=CS-2026-09-25-CANONICAL-v288 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
+    console.error('[ceo-report] FAILED build=CS-2026-09-25-CANONICAL-v291 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
     console.error('[ceo-report] ERROR: '+msg);
     if(e&&e.stack)console.error(e.stack);
-    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-25-CANONICAL-v288'});
+    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-25-CANONICAL-v291'});
     try{res.end();}catch(_){}
   }
 });
