@@ -266,254 +266,16 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-25-CANONICAL-v250';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-25-CANONICAL-v253';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 const CONTENTSCALE_BUILD_CHANGES = [
-  'Contact Intelligence: schema-initialisatie is geserialiseerd met één procesbelofte en PostgreSQL advisory lock om pg_type-races te voorkomen.',
-  'Contact Intelligence: bronfilters, LinkedIn CSV-mapping, persistente verificatiewachtrij, CSV-export, import-checkpoints en suppressie-audit.',
-  'Contact Intelligence: PostgreSQL-import gebruikt één JSONB-parameter per batch in plaats van tienduizenden losse parameters.',
-  'Contact Intelligence: stream grote username/bio/follower/email-CSV-bestanden naar een aparte staginglaag met deduplicatie, score, menselijke verificatie en gecontroleerde promotie naar Lead Crawler.',
-  'tracker-prompt2-evidence-reasoning-target-claims-other-page-citations',
-  'tracker-brief-graaf-integrated-guidance',
-  'leadcrawler-custom-business-types-one-per-line-clarity',
-  'leadcrawler-custom-business-types-and-contact-form-discovery',
-  'tracker-cannibalization-page-evidence-provenance-repair',
-  'tracker-cannibalization-shared-central-engine-for-briefs',
-  'tracker-cannibalization-intent-family-deduplication',
-  'quick-scan-outreach-daily-warmup-counter',
-  'ceo-prospect-report-first-contact-outreach',
-  'quick-scan-different-page-required-after-ceo-report',
-  'lead-crawler-real-email-queue-ceo-template-replaced',
-  'v222-lead-crawler-public-ceo-url-varied-human-copy',
-  'outreach-placeholder-fail-closed-before-send',
-  'audit20-sitemap-optional-discovery',
-  'audit20-navigation-first-crawl-fallback',
-  'audit20-up-to-20-never-invent-urls',
-  'audit20-reviewable-selection-endpoint',
-  'prospect-send-quick-scan-other-page-second-touch',
-  'post-quickscan-two-page-opportunity-overview',
-  'prospect-prepare-20page-audit-discovery',
-  'prospect-public-20page-audit-interest-cta',
-  'audit20-interest-does-not-auto-start',
-  'ceo-selector-real-html-page-gate',
-  'ceo-next-step-interest-cta',
-  'interest-confirmation-emails',
-  'admin-prepare-audit-after-explicit-interest',
-  'ceo-report-always-step-one',
-  'ceo-report-private-public-same-engine',
-  'single-quickscan-other-page-after-ceo',
-  'admin-ceo-private-panel-complete',
-  'admin-ceo-public-panel-complete',
-  'public-ceo-entry-runs-canonical-ceo-generator',
-  'ceo-smart-selector-pqs-select-best-scan-page',
-  'public-ceo-email-required-for-delivery',
-  'private-ceo-email-optional-never-blocks-generation',
-  'ceo-functional-delivery-email',
-  'updates-opt-in-separate-from-report-delivery',
-  'public-build-info-endpoint',
-  'railway-visible-build-identity',
-  'neon-bounded-configurable-pool',
-  'contact-intelligence-single-client-stats',
-  'contact-intelligence-db-503-diagnostics',
-  'neon-diagnostic-client-release-fix',
-  'pg-client-sequential-stats-queries',
-  'ceo-report-stage-diagnostics',
-  'ceo-stage-referenceerror-fixed',
-  'public-ceo-animated-progress',
-  'ceo-db-setup-inside-diagnostics',
-  'public-ceo-visible-error-stage',
-  'public-ceo-explicit-dom-binding',
-  'ceo-domain-local-safe-parser',
-  'public-ceo-button-spinner',
-  'ceo-internal-audit-capability-symbol',
-  'ceo-owner-email-context-aware-labels',
-    'prospect-funnel-us-english-only',
-    'outgoing-prospect-emails-us-english',
-    'ceo-report-us-spelling',
-  'ceo-domain-input-clear-public-private-i18n',
-  'real-quickscan-email-labels-preserved',
-  'legacy-quick-scan-outreach-drafts-not-reused',
-  'ceo-report-seven-day-suppression-aware-reminder',
-  'quick-scan-second-touch-five-ai-diagnostic',
-  'twenty-page-audit-cross-page-value-explained',
-  'tracker-workflow-step-two-badge-repair',
-  'quick-scan-ai-citation-headline-nl-en-es',
-  'quick-scan-bulk-delete-prospect-token-binding-fix',
-  'quick-scan-token-link-fallback-for-legacy-cards',
-  'leadcrawler-email-handoff-and-admin-visibility',
-  'quick-scan-public-email-enrichment-for-missing-leads',
-  'quick-scan-email-enrichment-batched-and-approval-only',
-  'wordpress-sitewide-quick-scan-form-cors',
-  'quick-scan-prospect-selection-and-bulk-delete',
-  'quick-scan-search-and-page-aware-selection',
-  'quick-scan-automatic-commercial-page-selector',
-  'quick-scan-consistent-prospect-card-layout',
-  'quick-scan-failed-without-result-is-deletable',
-  'public-quick-scan-one-page-per-business-30-day-limit',
-  'public-quick-scan-three-businesses-per-email-30-day-limit',
-  'public-quick-scan-completed-result-idempotency',
-  'public-source-attribution-hidden-and-campaign-controlled',
-  'tracker-client-brand-domain-regex-template-escaping-fix',
-  'leadcrawler-rendered-regex-syntax-fix',
-  'quick-scan-five-ai-bulk-save-and-engine-normalization',
-  'quick-scan-customer-completion-email-and-news-opt-in',
-  'quick-scan-persistent-open-details-and-unscanned-delete',
-  'quick-scan-graaf-recommendations-object-support',
-  'leadcrawler-grounding-usage-loader-fallback',
-  'audit-five-separate-prompt-two-answer-boxes',
-  'audit-prompt-two-instructions-fully-unified',
-  'leadcrawler-card-company-and-homepage-auto-recognition',
-  'leadcrawler-import-all-visible-companies',
-  'url-only-lead-import-with-automatic-name-fallback',
-  'bulk-import-105-private-leadcrawler-companies-without-scanning',
-  'csv-tsv-paste-company-import-with-domain-deduplication',
-  'bulk-import-personal-links-no-owner-notification-storm',
-  'public-prospect-quick-scan-separated-from-audit-and-tracker',
-  'source-aware-links-leadcrawler-linkedin-facebook-contact-email-standalone',
-  'manual-five-engine-prospect-evidence',
-  'live-ai-update-popup-sound-and-tawk-contact',
-  'lead-crawler-quick-scan-link-injection',
-  'quick-scan-admin-source-and-follow-up-dashboard',
-  'quick-scan-owner-email-notifications',
-  'professional-guided-tour',
-  'prewrite-create-expand-publish-tracker-baseline',
-  'visual-copy-brief-no-raw-json',
-  'central-claims-facts-safety',
-  'five-engine-evidence-and-intelligence',
-  'unified-visible-gsc-tier-1-to-5',
-  'free-exactly-one-page-paid-from-two',
-  'gsc-auto-enable-all-valid-plans',
-  'legacy-boot-noise-removed',
-  'tracker-work-search-repositioned',
-  'competitive-intelligence-read-only-no-add-to-claims',
-  'case-study-snapshots-preserved-on-reset',
-  'gsc-one-click-wording-clarified',
-  'first-contact-opportunity-report-orchestrator',
-  'prospect-vs-verified-report-modes',
-  'opportunity-report-shareable-json-evidence-layer',
-  'quick-scan-interest-to-prospect-report',
-  'standalone-ceo-prospect-report-generator'
-  ,'competitive-intelligence-winning-actions'
-  ,'perfect-roofing-verified-brand-facts-seed'
-  ,'immutable-perfect-roofing-case-study-baseline'
-  ,'case-study-event-history-and-archive-protection'
-  ,'case-study-active-tracker-ui'
-  ,'immutable-pre-publication-html-checkpoint'
-  ,'publication-html-version-and-hash-history'
-  ,'case-study-done-blocked-until-checkpoint'
-  ,'case-study-publish-action-always-visible-after-checkpoint'
-  ,'publication-compared-to-prepublication-hash'
-  ,'case-study-proof-times-explicit-utc'
-  ,'case-study-publish-button-independent-of-brief-state'
-  ,'publish-verification-button-next-to-checkpoint'
-  ,'compact-active-case-study-card-layout'
-  ,'professional-baseline-versus-current-proof-view'
-  ,'verified-case-study-remains-active-not-crossed-out'
-  ,'final-brief-generated-at-and-build-marker'
-  ,'copy-brief-blocked-until-current-scan-final'
-  ,'brief-session-cache-refresh-on-every-load'
-  ,'modal-and-inline-copy-use-one-authoritative-route'
-  ,'open-modal-replaced-by-final-marked-brief'
-  ,'contentscale-homepage-surgical-final-guard'
-  ,'intelligence-decision-layer-engine-gaps-and-trends'
-  ,'intelligence-clickable-citation-sources-and-evidence-excerpts'
-  ,'intelligence-evidence-backed-treatment-recommendation'
-  ,'copy-brief-framing-items-not-duplicated-as-actions'
-  ,'copy-brief-ready-to-paste-divider-cleanup'
-  ,'audit-client-current-build-cache-buster'
-  ,'audit-run-button-safe-loader-status'
-  ,'tracker-regex-free-divider-validation'
-  ,'audit-all-controls-wait-for-validated-client'
-  ,'audit-safe-dispatch-no-inline-reference-errors'
-  ,'audit-controls-active-while-client-initializes'
-  ,'shared-audit-white-label-balanced-div-removal'
-  ,'shared-audit-client-scripts-no-longer-truncated'
-  ,'audit-professional-visual-system'
-  ,'audit-animated-scan-status-and-responsive-controls'
-  ,'audit-separate-british-and-us-english-page-language'
-  ,'audit-separate-british-and-us-english-report-language'
-  ,'audit-all-graaf-recommendations-preserved'
-  ,'audit-recommendations-problem-action-why-target'
-  ,'audit-first-three-open-rest-collapsible'
-  ,'saved-audit-refresh-keeps-existing-token-and-url'
-  ,'saved-audit-explicit-refresh-same-link-action'
-  ,'twenty-page-cross-page-site-intelligence'
-  ,'deterministic-link-graph-and-orphan-detection'
-  ,'cannibalisation-and-content-treatment-per-url'
-  ,'cannibalization-query-level-evidence-and-safe-owner-selection'
-  ,'admin-edit-public-business-brand-name'
-  ,'public-registration-requires-real-business-brand-name'
-  ,'site-architecture-and-internal-link-action-plan'
-  ,'ninety-day-implementation-roadmap'
-  ,'audit-evidence-methodology-transparency'
-  ,'complete-dutch-english-spanish-site-intelligence-html'
-  ,'page-language-and-report-language-remain-independent'
-  ,'client-ready-one-page-html-in-shared-report'
-  ,'audit-job-server-side-cancellation'
-  ,'audit-progress-pages-versus-elapsed-time-clarified'
-  ,'audit-access-scope-and-saved-report-depth-visible'
-  ,'quick-mode-hard-capped-at-twenty-pages'
-  ,'audit-job-direct-in-process-execution-no-self-fetch'
-  ,'twenty-page-lightweight-html-linkgraph-fetch'
-  ,'browser-html-fallback-only-when-required'
-  ,'interrupted-audit-page-checkpoints'
-  ,'resume-only-unfinished-pages-within-thirty-minutes'
-  ,'audit-progress-shows-reused-versus-new-pages'
-  ,'neon-persistent-audit-page-checkpoints'
-  ,'force-fresh-rescan-explicit-owner-control'
-  ,'client-audit-tool-access-prominent-outside-admin-report-list'
-  ,'four-client-access-options-one-twenty-all-or-guided-cycle'
-  ,'full-client-cycle-one-page-to-twenty-then-stop'
-  ,'shareable-audit-process-explainer-nl-en-es'
-  ,'admin-audit-process-language-links'
-  ,'separate-british-and-us-english-process-share-pages'
-  ,'gsc-evidence-layer-explained-in-all-process-languages'
-  ,'audit-process-cta-explains-separate-personal-access-link'
-  ,'audit-process-tawk-chat-founder-headshot-and-consent'
-  ,'audit-tool-professional-dark-evidence-interface'
-  ,'audit-results-and-sharing-panels-dark-visual-system'
-  ,'light-document-surfaces-for-urls-sources-and-long-text'
-  ,'saved-audit-links-and-citation-columns-high-contrast'
-  ,'generic-start-case-study-for-any-tracked-site'
-  ,'case-study-start-locks-current-scan-html-gsc-and-five-engine-state'
-  ,'audit-recommendation-cards-readable-on-light-surfaces'
-  ,'tracker-monitoring-explicit-opt-in-per-page'
-  ,'tracker-selected-pages-bulk-monitoring-controls'
-  ,'case-study-start-monitoring-and-email-reminder-settings'
-  ,'five-engine-manual-recheck-email-reminders'
-  ,'existing-tracker-email-is-single-reminder-destination'
-  ,'tracker-monitoring-dialog-newlines-browser-safe'
-  ,'tracker-monitoring-frequency-map-browser-safe'
-  ,'perfect-roofing-existing-daily-case-study-monitoring-restored'
-  ,'legacy-ai-intelligence-claims-removed-from-client-fact-ledger'
-  ,'claims-facts-manual-client-facts-only'
-  ,'monitoring-selected-route-self-heals-schema'
-  ,'active-monitoring-button-opens-interval-editor'
-  ,'monitoring-zero-disables-selected-page'
-  ,'case-study-day-seven-action-email'
-  ,'case-study-day-fourteen-five-engine-refresh-email'
-  ,'case-study-day-thirty-protected-comparison-report'
-  ,'case-study-day-thirty-print-pdf-and-share-link'
-  ,'case-study-milestones-manual-workflow-clarified'
-  ,'case-study-day-thirty-report-only-no-follow-up-action'
-  ,'case-study-start-keeps-automatic-monitoring-off'
-  ,'case-study-email-cycle-separated-from-page-monitoring'
-  ,'admin-client-scan-frequency-control-removed'
-  ,'admin-client-monitoring-read-only-summary'
-  ,'admin-client-monitoring-per-page-editor'
-  ,'admin-client-monitoring-all-off-safety-action'
-  ,'monitoring-waits-for-fresh-gsc-and-five-engine-input'
-  ,'monitoring-due-day-single-email-no-blind-auto-scan'
-  ,'case-study-day-before-due-day-day-after-reminders'
-  ,'case-study-milestones-do-not-skip-missing-input'
-  ,'audit-cloudflare-and-security-pages-never-scored'
-  ,'audit-requested-versus-final-url-and-redirect-proof'
-  ,'audit-noindex-source-html-or-http-header'
-  ,'audit-invalid-response-explicit-not-page-level-audit'
-  ,'audit-page-language-french-and-japanese'
+  'lead-outreach-signature-preview-send-v253',
+  'railway-startup-log-output-compacted',
+  'build-change-list-limited-to-current-release'
 ];
 console.log('[ContentScale] BUILD=' + CONTENTSCALE_BUILD_ID + ' BOOT=' + CONTENTSCALE_BOOT_AT);
 console.log('[ContentScale] CHANGES=' + CONTENTSCALE_BUILD_CHANGES.join(','));
+console.log('[ContentScale] OUTREACH=plain-text signature=language-domain delivery-webhook=/api/webhooks/brevo-outreach');
 console.log('[ContentScale] TIER_SOURCE=GSC position+impressions+clicks; no GSC evidence => UNCLASSIFIED');
 // CONTENTSCALE-AI-HANDOFF-V37 — DO NOT REMOVE OR BYPASS
 // Other AI/code maintainers: Tracker emits an early brief_ready while analysis is still running.
@@ -727,8 +489,8 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-09-25-CANONICAL-v251',
-  built_date: '2026-09-23',
+  build: 'CS-2026-09-25-CANONICAL-v253',
+  built_date: '2026-09-25',
   ceo_private: true,
   ceo_public: true,
   ceo_private_public_same_engine: true,
@@ -16021,28 +15783,11 @@ async function startServer() {
     } catch(e) { console.warn('[Settings] Table check:', e.message); }
   }
 
-console.log('════════════════════════════════════════════════════');
-console.log('CONTENTSCALE BUILD: CS-2026-09-25-CANONICAL-v250');
-console.log('CEO FUNNEL: Private + Public → SAME CEO engine');
-console.log('PUBLIC EMAIL DELIVERY: required');
-console.log('PRIVATE EMAIL DELIVERY: optional');
-console.log('QUICK SCAN: Other Page only, after CEO Report');
-console.log('20-PAGE AUDIT INTEREST: enabled');
-console.log('BUILD CHECK: /api/build-info');
-console.log('════════════════════════════════════════════════════');
-console.log('🚀 =====================================');
-console.log('🚀  CONTENTSCALE ELITE SERVER v4 (GEMINI AUTO-MODEL)');
-console.log('🚀  FIX: activated_until alias in users SELECT');
-console.log('🚀  FIX: deactivate endpoint added');
-console.log('🚀  FIX: Instantly Bearer uses secret only');
-console.log('🚀  DB Migration: country VARCHAR(100)');
-console.log('🚀  scan_log.source column');
-console.log('🚀  DOCX: template type column');
-console.log('🚀  Bulk Delete Routes');
-console.log('🚀  34 Recommendation Checks');
-console.log('🚀  GRAAF 50 + CRAFT 30 + Technical 20');
-console.log(`🚀  BASE_URL: ${process.env.BASE_URL || 'https://app.contentscale.site (default)'}`);
-console.log('🚀 =====================================\n');
+console.log('────────────────────────────────────────');
+console.log('[ContentScale] CS-2026-09-25-CANONICAL-v253');
+console.log('[ContentScale] Build check: /api/build-info');
+console.log('[ContentScale] Base URL: ' + (process.env.BASE_URL || 'https://app.contentscale.site'));
+console.log('────────────────────────────────────────');
   // Run migration after a short delay to ensure tables are fully created
   setTimeout(function() { migrateTrackerPageProfiles(); }, 5000);
 const dbConnected = await waitForDatabase();
@@ -18553,7 +18298,9 @@ function _pqsEnsurePlainSignature(body,locale){
   const sig=_pqsPlainSignature(locale);
   const urls=['https://nl.contentscale.site','https://es.contentscale.site','https://contentscale.site'];
   if(urls.some(u=>body.includes(u)))return body;
-  // Keep existing copy intact; append a plain-text identity/footer only.
+  // v253: normalize the short template sign-off so the prospect sees one clean
+  // plain-text identity block instead of "Best/Ottmar" followed by a second signature.
+  body=body.replace(/\n\n(?:Best,|Regards,|Groet,|Met vriendelijke groet,|Saludos,|Un saludo,)\s*\nOttmar(?: Francisca)?\s*$/i,'');
   return body+'\n\n'+sig;
 }
 
@@ -18610,7 +18357,6 @@ app.post('/api/prospect-quick-scan/admin/:token/email-send',requireAdmin,async(r
     if(!body.includes(ceoUrl))body+='\n\nCEO Prospect Report: '+ceoUrl;
     body=_pqsEnsurePlainSignature(body,locale);
     const unsub=(process.env.APP_URL||'https://app.contentscale.site')+'/unsubscribe?email='+encodeURIComponent(email);
-    const html='<div style="font-family:Arial,sans-serif;line-height:1.65;color:#172033;max-width:640px">'+body.split(/\n{2,}/).map(p=>'<p>'+_pqsHtml(p).replace(/\n/g,'<br>')+'</p>').join('')+'<p style="font-size:12px;color:#64748b;border-top:1px solid #e2e8f0;padding-top:12px"><a href="'+unsub+'">Unsubscribe</a> from further ContentScale outreach.</p></div>';
     // HARD SAFETY — NEVER SEND TEMPLATE PLACEHOLDERS TO A PROSPECT.
     // CEO report generation/replacement must complete before email delivery.
     // If a future refactor changes template handling, fail closed rather than
@@ -18650,8 +18396,7 @@ async function _pqsSendDueCeoFollowups(){
       const subject=locale==='nl'?'Hebben jullie het rapport kunnen bekijken? — '+company:locale==='es'?'¿Han podido revisar el informe? — '+company:'Were you able to review the report? — '+company;
       const body=locale==='nl'?'Hallo '+company+' team,\n\nVorige week stuurde ik jullie de website-analyse die ik voor '+company+' had gemaakt.\n\nVoor het geval de e-mail tussendoor is verdwenen, hierbij nogmaals dezelfde link:\n\n'+link+'\n\nAls een van de bevindingen herkenbaar is, kan ik één belangrijke diensten- of productpagina verdiepend controleren en daarna de vijf AI-systemen handmatig verifiëren.\n\nAls het momenteel niet relevant is, is dat natuurlijk ook prima.\n\nMet vriendelijke groet,\nOttmar Francisca\nhttps://nl.contentscale.site':locale==='es'?'Hola, equipo de '+company+':\n\nLa semana pasada les envié el análisis del sitio web que preparé para '+company+'.\n\nPor si el mensaje se perdió, aquí tienen de nuevo el mismo enlace:\n\n'+link+'\n\nSi alguno de los hallazgos es relevante, puedo revisar una página importante con más detalle y verificar manualmente los cinco sistemas de IA.\n\nUn saludo,\nOttmar Francisca\nhttps://es.contentscale.site':'Hi '+company+' team,\n\nLast week I sent the website analysis I prepared for '+company+'.\n\nIn case the message got buried, here is the same link again:\n\n'+link+'\n\nIf any of the findings are relevant, I can examine one important page in more depth and then manually verify the five AI systems.\n\nRegards,\nOttmar Francisca\nhttps://contentscale.site';
       const unsub=(process.env.APP_URL||'https://app.contentscale.site')+'/unsubscribe?email='+encodeURIComponent(email);
-      const html='<div style="font-family:Arial,sans-serif;line-height:1.65;color:#172033;max-width:640px">'+body.split(/\n{2,}/).map(p=>'<p>'+_pqsHtml(p).replace(/\n/g,'<br>')+'</p>').join('')+'<p style="font-size:12px;color:#64748b;border-top:1px solid #e2e8f0;padding-top:12px"><a href="'+unsub+'">Unsubscribe</a> from further ContentScale outreach.</p></div>';
-      try{
+        try{
         const rr=await fetch('https://api.brevo.com/v3/smtp/email',{method:'POST',headers:{'Content-Type':'application/json','api-key':process.env.BREVO_API_KEY},body:JSON.stringify({to:[{email,name:company}],sender:{email:process.env.FROM_EMAIL||'info@contentscale.site',name:process.env.SENDER_NAME||'Ottmar Francisca · ContentScale'},replyTo:{email:process.env.FROM_EMAIL||'info@contentscale.site',name:'Ottmar Francisca'},subject,textContent:body+'\n\nUnsubscribe: '+unsub,tags:['contentscale-lead-outreach']})}),data=await rr.json().catch(()=>({}));
         if(!rr.ok)throw new Error(String(data.message||data.error||('Brevo '+rr.status)).slice(0,1000));
         await pool.query(`UPDATE prospect_quick_scans SET outreach_followup_sent_at=NOW(),outreach_followup_message_id=$1,outreach_followup_error=NULL,updated_at=NOW() WHERE token=$2`,[String(data.messageId||data.message_id||''),row.token]);
@@ -18689,7 +18434,7 @@ function _ceoMainWebsiteUrl(input){
 // action must target this CEO endpoint.
 app.post('/api/ceo-report/start',async(req,res)=>{
   let ceoEntry='unknown',ceoUrl='',lastStage='REQUEST';
-  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-25-CANONICAL-v250');
+  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-25-CANONICAL-v253');
   try{
     lastStage='DB_SETUP';
     console.log('[ceo-report] stage=DB_SETUP');
@@ -18783,10 +18528,10 @@ ContentScale`;
     return res.json({success:true,entry_mode:entry,token,selected_page:selected,ceo_report_token:reportToken,ceo_report_url:reportUrl,delivery_email:delivery,updates_opt_in:updatesOptIn});
   }catch(e){
     const msg=String((e&&e.message)||e||'CEO Prospect Report generation failed');
-    console.error('[ceo-report] FAILED build=CS-2026-09-25-CANONICAL-v250 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
+    console.error('[ceo-report] FAILED build=CS-2026-09-25-CANONICAL-v253 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
     console.error('[ceo-report] ERROR: '+msg);
     if(e&&e.stack)console.error(e.stack);
-    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-25-CANONICAL-v250'});
+    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-25-CANONICAL-v253'});
     try{res.end();}catch(_){}
   }
 });
@@ -19368,9 +19113,9 @@ function _pqsAdminV133Tools(){return String.raw`<script>(function(){
         'Google y la búsqueda con IA siguen cambiando. Vea qué oportunidades puede haber para '+name+':' ]}
     };
     var p=packs[l]||packs.en;
-    var sign=l==='nl'?'Met vriendelijke groet,':l==='es'?'Saludos,':'Best,';
+    var sign=l==='nl'?'Met vriendelijke groet,\nOttmar Francisca\nhttps://nl.contentscale.site':l==='es'?'Un saludo,\nOttmar Francisca\nhttps://es.contentscale.site':'Regards,\nOttmar Francisca\nhttps://contentscale.site';
     var cta=l==='nl'?'Gratis CEO Report — geen installatie of afspraak nodig.':l==='es'?'Informe CEO gratis — sin instalación ni llamada.':'Free CEO Report — no install or call required.';
-    return [p.s[v%10],(l==='nl'?'Hallo ':l==='es'?'Hola ':'Hello ')+name+',\n\n'+p.b[v%10]+'\n\n'+u+'\n\n'+cta+'\n\n'+sign+'\nOttmar Francisca'];
+    return [p.s[v%10],(l==='nl'?'Hallo ':l==='es'?'Hola ':'Hello ')+name+',\n\n'+p.b[v%10]+'\n\n'+u+'\n\n'+cta+'\n\n'+sign];
   }
   function subject(x){return copyPair(x)[0]}
   function body(x){return copyPair(x)[1]}
