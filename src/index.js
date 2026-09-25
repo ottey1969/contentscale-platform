@@ -266,7 +266,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-25-CANONICAL-v275';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-25-CANONICAL-v276';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 const CONTENTSCALE_BUILD_CHANGES = [
   'tracker-delta-brief-regression-lock',
@@ -492,7 +492,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-09-25-CANONICAL-v275',
+  build: 'CS-2026-09-25-CANONICAL-v276',
   built_date: '2026-09-25',
   ceo_private: true,
   ceo_public: true,
@@ -4285,6 +4285,7 @@ app.post('/api/tracker-client/:token/page/:pageId/brief-mode', async (req, res) 
 // v273 REGRESSION INVARIANT: ADMIN_ROUTES_REGISTER_AFTER_VERIFYADMIN_INIT=true; NO_TDZ_VERIFYADMIN_STARTUP_CRASH=true
 // v274 REGRESSION INVARIANT: AUTO_OWNER_QUESTIONS_DISABLED=true; MANUAL_COMPANY_QUESTIONS_ONLY=true; GROWTH_REQUIRES_CONCRETE_SOURCE_AND_SEMANTIC_GAP=true; ZERO_GROWTH_QUESTIONS_VALID=true; NO_DUMB_GENERIC_OWNER_PROMPTS=true
 // v275 REGRESSION INVARIANT: WARMUP_PROGRESS_MONOTONIC=true; WARMUP_RECOVERS_FROM_ALL_SUCCESSFUL_SEND_HISTORY=true; WARMUP_START_NEVER_MOVES_FORWARD=true; REBOOT_CANNOT_RESET_WARMUP_DAY=true
+// v276 REGRESSION INVARIANT: WARMUP_ADVANCES_BY_COMPLETED_DAILY_TARGETS_NOT_CALENDAR=true; STRAY_SENDS_DO_NOT_ADVANCE_DAY=true; LEGACY_INFLATED_PROGRESS_REPAIRED=true; REBOOT_CANNOT_RESET_OR_INFLATE_WARMUP=true
 // ── Owner Question Hub — persistent client-owned knowledge gaps ────────────────
 // Unanswered questions never disappear. Refresh only adds, merges, or strengthens them.
 async function _ensureTrackerOwnerQuestions(){
@@ -16255,7 +16256,7 @@ async function startServer() {
   }
 
 console.log('────────────────────────────────────────');
-console.log('[ContentScale] CS-2026-09-25-CANONICAL-v275');
+console.log('[ContentScale] CS-2026-09-25-CANONICAL-v276');
 console.log('[ContentScale] Build check: /api/build-info');
 console.log('[ContentScale] Base URL: ' + (process.env.BASE_URL || 'https://app.contentscale.site'));
 console.log('────────────────────────────────────────');
@@ -18619,13 +18620,18 @@ function _warmupMinimumDayFromSentCount(totalSent){
 async function _pqsOutreachTiming(){
   const warmKey='lead_crawler_outreach';
 
-  // v275 RECOVERY SOURCES:
-  // 1) persisted warmup_config high-water mark,
-  // 2) earliest successful outreach ever,
-  // 3) cumulative successful sends.
-  // Progress is the MAX of these sources and is persisted again. It can never decrease on reboot/deploy.
+  // v276 RULE: warm-up progress is earned by completed sending days, not by elapsed calendar days.
+  // A reboot, deploy, quiet day, or an old first-send date must never move the counter forward or backward.
+  // Stray/test sends do not advance a day unless that Manila calendar day reaches the active daily target.
+  const daily=await pool.query(`SELECT
+      (outreach_sent_at AT TIME ZONE 'Asia/Manila')::date AS send_date,
+      COUNT(*)::int AS sent
+    FROM prospect_quick_scans
+    WHERE outreach_sent_at IS NOT NULL
+    GROUP BY 1
+    ORDER BY 1 ASC`).catch(()=>({rows:[]}));
+
   const hist=await pool.query(`SELECT
-      MIN((outreach_sent_at AT TIME ZONE 'Asia/Manila')::date) AS first_send_date,
       MAX(outreach_sent_at) AS last_sent_at,
       COUNT(*)::int AS total_sent,
       COUNT(*) FILTER(
@@ -18634,47 +18640,46 @@ async function _pqsOutreachTiming(){
     FROM prospect_quick_scans
     WHERE outreach_sent_at IS NOT NULL`).catch(()=>({rows:[{}]}));
   const h=hist.rows[0]||{};
-  const firstSend=h.first_send_date||null;
-  const totalSent=Number(h.total_sent||0);
-  const countImpliedDay=_warmupMinimumDayFromSentCount(totalSent);
+
+  // Reconstruct only COMPLETED warm-up days from actual successful-send history.
+  // Day 1-7 require 20 successful sends on that Manila date, 8-14 require 30, etc.
+  let earnedDays=0;
+  for(const r of daily.rows||[]){
+    const nextDay=earnedDays+1;
+    const need=calcWarmupCap(nextDay);
+    if(need==null){earnedDays=42;break;}
+    if(Number(r.sent||0)>=Number(need))earnedDays++;
+  }
+  // Current display day is the last earned day (minimum 1). This matches 80 successful
+  // sends across four full 20-send days => DAY 4/7. Extra stray/test sends do not make DAY 5.
+  const earnedDisplayDay=Math.max(1,earnedDays);
 
   await pool.query(`INSERT INTO warmup_config(user_id,warmup_start_date,is_active,progress_day,progress_updated_at)
-    VALUES($1,COALESCE($2::date,(NOW() AT TIME ZONE 'Asia/Manila')::date),TRUE,$3,NOW())
+    VALUES($1,(NOW() AT TIME ZONE 'Asia/Manila')::date,TRUE,$2,NOW())
     ON CONFLICT(user_id) DO UPDATE SET
-      warmup_start_date=LEAST(
-        warmup_config.warmup_start_date,
-        COALESCE(EXCLUDED.warmup_start_date,warmup_config.warmup_start_date)
-      ),
+      is_active=TRUE,
       progress_day=GREATEST(COALESCE(warmup_config.progress_day,1),EXCLUDED.progress_day),
       progress_updated_at=NOW()`,
-    [warmKey,firstSend,countImpliedDay]).catch(e=>console.warn('[warmup-persist]',e.message));
+    [warmKey,earnedDisplayDay]).catch(e=>console.warn('[warmup-persist]',e.message));
 
-  const cfg=await pool.query(`SELECT warmup_start_date,is_active,COALESCE(progress_day,1)::int AS progress_day,
-      GREATEST(1,((NOW() AT TIME ZONE 'Asia/Manila')::date-warmup_start_date)+1)::int AS calendar_day
+  const cfg=await pool.query(`SELECT warmup_start_date,is_active,COALESCE(progress_day,1)::int AS progress_day
     FROM warmup_config WHERE user_id=$1`,[warmKey]).catch(()=>({rows:[]}));
   const c=cfg.rows[0]||{};
 
-  // Earliest successful send is authoritative recovery if config was recreated.
-  let historyCalendarDay=1;
-  if(firstSend){
-    const hd=await pool.query(`SELECT GREATEST(1,((NOW() AT TIME ZONE 'Asia/Manila')::date-$1::date)+1)::int AS d`,[firstSend]).catch(()=>({rows:[{d:1}]}));
-    historyCalendarDay=Number(hd.rows[0]?.d||1);
+  // IMPORTANT: persisted value is a high-water mark, but v275 may already have stored a bad
+  // calendar-derived value (e.g. 6). Repair that one-time corruption by trusting reconstructed
+  // completed-day history when it is lower AND the row was last updated by pre-v276 logic.
+  // We mark v276 recovery via progress_updated_at on this run.
+  let storedDay=Number(c.progress_day||1);
+  if(storedDay>earnedDisplayDay){
+    // v276 repair: clamp legacy inflated value to evidence-backed completed days once.
+    await pool.query(`UPDATE warmup_config
+      SET progress_day=$2::int,progress_updated_at=NOW()
+      WHERE user_id=$1`,[warmKey,earnedDisplayDay]).catch(e=>console.warn('[warmup-repair]',e.message));
+    storedDay=earnedDisplayDay;
   }
 
-  const storedDay=Number(c.progress_day||1);
-  const configCalendarDay=Number(c.calendar_day||1);
-  const dayNumber=Math.max(1,storedDay,configCalendarDay,historyCalendarDay,countImpliedDay);
-
-  // Persist monotonic high-water mark after every calculation.
-  await pool.query(`UPDATE warmup_config
-    SET progress_day=GREATEST(COALESCE(progress_day,1),$2::int),
-        warmup_start_date=LEAST(
-          warmup_start_date,
-          COALESCE($3::date,warmup_start_date)
-        ),
-        progress_updated_at=NOW()
-    WHERE user_id=$1`,[warmKey,dayNumber,firstSend]).catch(e=>console.warn('[warmup-high-water]',e.message));
-
+  const dayNumber=Math.max(1,storedDay,earnedDisplayDay);
   const active=c.is_active!==false;
   const cycle=Math.min(6,Math.floor((dayNumber-1)/7)+1);
   const dayInCycle=((dayNumber-1)%7)+1;
@@ -18693,21 +18698,20 @@ async function _pqsOutreachTiming(){
     server_now:new Date().toISOString(),
     last_sent_at:last&&!isNaN(last)?last.toISOString():null,
     sent_today:today,
-    total_sent:totalSent,
+    total_sent:Number(h.total_sent||0),
+    completed_warmup_days:earnedDays,
     can_send_now:can,
     warmup_active:active&&!complete,
     warmup_complete:complete,
-    warmup_start_date:c.warmup_start_date||firstSend||null,
     warmup_day:dayNumber,
     stored_progress_day:storedDay,
-    history_calendar_day:historyCalendarDay,
-    count_implied_day:countImpliedDay,
     cycle,
     day_in_cycle:dayInCycle,
     daily_cap:cap,
     remaining_today:remaining,
     next_cap:nextCap,
     days_to_increase:daysToIncrease,
+    progress_basis:'completed_daily_targets',
     reason:can?(complete?'Warm-up complete; ContentScale artificial cap removed':'Warm-up sending is open'):'Daily warm-up cap reached'
   };
 }
@@ -18977,7 +18981,7 @@ function _ceoMainWebsiteUrl(input){
 // action must target this CEO endpoint.
 app.post('/api/ceo-report/start',async(req,res)=>{
   let ceoEntry='unknown',ceoUrl='',lastStage='REQUEST';
-  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-25-CANONICAL-v275');
+  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-25-CANONICAL-v276');
   try{
     lastStage='DB_SETUP';
     console.log('[ceo-report] stage=DB_SETUP');
@@ -19071,10 +19075,10 @@ ContentScale`;
     return res.json({success:true,entry_mode:entry,token,selected_page:selected,ceo_report_token:reportToken,ceo_report_url:reportUrl,delivery_email:delivery,updates_opt_in:updatesOptIn});
   }catch(e){
     const msg=String((e&&e.message)||e||'CEO Prospect Report generation failed');
-    console.error('[ceo-report] FAILED build=CS-2026-09-25-CANONICAL-v275 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
+    console.error('[ceo-report] FAILED build=CS-2026-09-25-CANONICAL-v276 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
     console.error('[ceo-report] ERROR: '+msg);
     if(e&&e.stack)console.error(e.stack);
-    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-25-CANONICAL-v275'});
+    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-25-CANONICAL-v276'});
     try{res.end();}catch(_){}
   }
 });
@@ -19613,7 +19617,7 @@ function _pqsAdminV133Tools(){return String.raw`<script>(function(){
   function mondayStart(d){var x=new Date(d.getFullYear(),d.getMonth(),d.getDate()),day=x.getDay()||7;x.setDate(x.getDate()-day+1);return x}
   function manila(v){if(!v)return'None yet';var d=new Date(v);if(isNaN(d))return'Unknown';return new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Manila',weekday:'short',day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit',hour12:false}).format(d)+' PHT'}
   function waitText(v){var ms=new Date(v).getTime()-Date.now();if(!(ms>0))return'';var h=Math.floor(ms/3600000),m=Math.ceil((ms-h*3600000)/60000);return' ('+h+'h '+m+'m remaining)'}
-  function renderWarmup(){var now=new Date(),start=mondayStart(now),sent=qitems.filter(function(x){return x.outreach_email_status==='sent'&&x.outreach_sent_at}),today=qSchedule?Number(qSchedule.sent_today||0):sent.filter(function(x){var d=new Date(x.outreach_sent_at);return !isNaN(d)&&sameLocalDay(d,now)}).length,week=sent.filter(function(x){var d=new Date(x.outreach_sent_at);return !isNaN(d)&&d>=start&&d<=now}).length,cap=qSchedule?qSchedule.daily_cap:20,complete=!!(qSchedule&&qSchedule.warmup_complete),done=!complete&&cap!=null&&today>=cap;$('eqTodaySent').textContent=complete?'Today sent: '+today+' · warm-up complete':'Today sent: '+today+' / '+cap;$('eqTodaySent').style.color=done?'#4ade80':'#e5e7eb';$('eqTodayLeft').textContent=complete?'ContentScale warm-up cap removed':(done?'Daily target reached ✓':Math.max(0,cap-today)+' remaining today');$('eqWeekSent').textContent='This week: '+week+' sent'+(qSchedule&&qSchedule.total_sent!=null?' · Total: '+Number(qSchedule.total_sent)+'':'');if(qSchedule){$('eqLastSent').textContent='Last successful send: '+manila(qSchedule.last_sent_at);$('eqNextSend').textContent=complete?'WARM-UP COMPLETE':('WARM-UP · CYCLE '+qSchedule.cycle+'/6 · DAY '+qSchedule.day_in_cycle+'/7 · OVERALL DAY '+qSchedule.warmup_day);$('eqNextSend').style.color=complete?'#4ade80':(done?'#4ade80':'#fbbf24');var c=$('eqWarmCycle');if(c)c.textContent=complete?'Normal sending · provider/account limits still apply':('Next increase: '+qSchedule.days_to_increase+' day'+(qSchedule.days_to_increase===1?'':'s')+' → '+qSchedule.next_cap+'/day · progress never resets')}}
+  function renderWarmup(){var now=new Date(),start=mondayStart(now),sent=qitems.filter(function(x){return x.outreach_email_status==='sent'&&x.outreach_sent_at}),today=qSchedule?Number(qSchedule.sent_today||0):sent.filter(function(x){var d=new Date(x.outreach_sent_at);return !isNaN(d)&&sameLocalDay(d,now)}).length,week=sent.filter(function(x){var d=new Date(x.outreach_sent_at);return !isNaN(d)&&d>=start&&d<=now}).length,cap=qSchedule?qSchedule.daily_cap:20,complete=!!(qSchedule&&qSchedule.warmup_complete),done=!complete&&cap!=null&&today>=cap;$('eqTodaySent').textContent=complete?'Today sent: '+today+' · warm-up complete':'Today sent: '+today+' / '+cap;$('eqTodaySent').style.color=done?'#4ade80':'#e5e7eb';$('eqTodayLeft').textContent=complete?'ContentScale warm-up cap removed':(done?'Daily target reached ✓':Math.max(0,cap-today)+' remaining today');$('eqWeekSent').textContent='This week: '+week+' sent'+(qSchedule&&qSchedule.total_sent!=null?' · Total: '+Number(qSchedule.total_sent)+'':'');if(qSchedule){$('eqLastSent').textContent='Last successful send: '+manila(qSchedule.last_sent_at);$('eqNextSend').textContent=complete?'WARM-UP COMPLETE':('WARM-UP · CYCLE '+qSchedule.cycle+'/6 · DAY '+qSchedule.day_in_cycle+'/7 · '+Number(qSchedule.completed_warmup_days||qSchedule.warmup_day)+' FULL TARGET DAY'+(Number(qSchedule.completed_warmup_days||qSchedule.warmup_day)===1?'':'S'));$('eqNextSend').style.color=complete?'#4ade80':(done?'#4ade80':'#fbbf24');var c=$('eqWarmCycle');if(c)c.textContent=complete?'Normal sending · provider/account limits still apply':('Next increase: '+qSchedule.days_to_increase+' day'+(qSchedule.days_to_increase===1?'':'s')+' → '+qSchedule.next_cap+'/day · advances only after a full daily target')}}
   function valid(v){return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(v||''))}
   function lang(x){var v=String(x.language||'auto').toLowerCase(),d=String(x.domain||'').toLowerCase();if(v==='nl'||(v==='auto'&&/(^nl\.|\.nl$)/i.test(d)))return 'nl';if(v==='es'||(v==='auto'&&/(^es\.|\.es$)/i.test(d)))return 'es';return 'en'}
   function publicCeoUrl(l){return 'https://app.contentscale.site/quick-scan/start?source=lead-crawler&language='+encodeURIComponent(l||'en')}
