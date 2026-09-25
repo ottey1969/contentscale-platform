@@ -266,7 +266,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-25-CANONICAL-v273';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-25-CANONICAL-v274';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 const CONTENTSCALE_BUILD_CHANGES = [
   'tracker-delta-brief-regression-lock',
@@ -492,7 +492,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-09-25-CANONICAL-v273',
+  build: 'CS-2026-09-25-CANONICAL-v274',
   built_date: '2026-09-25',
   ceo_private: true,
   ceo_public: true,
@@ -4283,6 +4283,7 @@ app.post('/api/tracker-client/:token/page/:pageId/brief-mode', async (req, res) 
 // v271 REGRESSION INVARIANT: LOCALIZED_CONTENTSCALE_FACTS_SEED_EXISTING_TRACKERS_ONLY=true; NO_NEW_TRACKER_CREATED=true; NL_ES_FACTS_VERIFIED_AND_IDEMPOTENT=true
 // v272 REGRESSION INVARIANT: ALL_MAIN_CONTENTSCALE_VERIFIED_CLIENT_FACTS_SYNC_TO_EXISTING_NL_ES_TRACKERS=true; TRANSLATION_LITERAL_ZERO_TEMPERATURE=true; SOURCE_CLAIM_PROVENANCE_PRESERVED=true; NO_NEW_TRACKER_CREATED=true
 // v273 REGRESSION INVARIANT: ADMIN_ROUTES_REGISTER_AFTER_VERIFYADMIN_INIT=true; NO_TDZ_VERIFYADMIN_STARTUP_CRASH=true
+// v274 REGRESSION INVARIANT: AUTO_OWNER_QUESTIONS_DISABLED=true; MANUAL_COMPANY_QUESTIONS_ONLY=true; GROWTH_REQUIRES_CONCRETE_SOURCE_AND_SEMANTIC_GAP=true; ZERO_GROWTH_QUESTIONS_VALID=true; NO_DUMB_GENERIC_OWNER_PROMPTS=true
 // ── Owner Question Hub — persistent client-owned knowledge gaps ────────────────
 // Unanswered questions never disappear. Refresh only adds, merges, or strengthens them.
 async function _ensureTrackerOwnerQuestions(){
@@ -4340,60 +4341,31 @@ app.get('/api/tracker-client/:token/owner-questions',async(req,res)=>{try{
   const rows=rr.rows||[];res.json({success:true,questions:rows,summary:{open:rows.filter(x=>x.status==='OPEN').length,answered_unverified:rows.filter(x=>x.status==='ANSWERED_UNVERIFIED').length,resolved:rows.filter(x=>x.status==='RESOLVED').length,total:rows.length}});
 }catch(e){console.error('[owner-questions-get]',e.message);res.status(500).json({success:false,error:e.message});}});
 app.post('/api/tracker-client/:token/owner-questions/refresh',async(req,res)=>{try{
-  await _ensureTrackerOwnerQuestions();const own=await _trackerClaimsClient(req,res);if(!own)return;
-  const _ownerLegacyReset=await pool.query(`DELETE FROM tracker_owner_questions WHERE tracker_client_id=$1 AND status='OPEN' AND COALESCE(generator_version,'')<>'v268' RETURNING id`,[own.clientId]);
-  // v263 migration cleanup: remove only the two exact OPEN boilerplate questions that older builds injected.
-  // Answered/history rows are preserved. Real Intelligence-generated questions are untouched.
-  const _ownerDefaultCleanup=await pool.query(`DELETE FROM tracker_owner_questions
-    WHERE tracker_client_id=$1 AND status='OPEN' AND (
-      question = ANY($2::text[])
-      OR question='What exactly can your team help a customer with during an insurance-related roofing claim, and what do you not promise or handle?'
-      OR question='Which guarantees or warranties apply exactly, including limits and duration?'
-      OR question='What response or arrival times can you truthfully promise, and what factors can change them?'
-      OR question='Which roofing materials and systems do you actually install, repair or recommend, and when do you choose each one?'
-      OR question='What real local experience, recurring roof problems or completed projects can we document for the locations you serve?'
-      OR question ILIKE '%What does Perfect Roofing Team actually do for the customer%'
-      OR question ILIKE '%What response time can Perfect Roofing Team truthfully promise%'
-      OR question ILIKE '%Does Perfect Roofing Team actually offer a free inspection%'
-      OR question ILIKE '%Is this true for Perfect Roofing Team%'
-      OR question ILIKE '%Can Perfect Roofing Team actually promise this%'
-      OR question ILIKE '%Perfect Roofing Team’s real jobs or estimating rules%'
-      OR question ILIKE 'On your “%” page you discuss insurance claims/adjusters.%'
-      OR question ILIKE 'The “%” page contains a response/dispatch claim.%'
-      OR question ILIKE 'The “%” page mentions a warranty or guarantee.%'
-      OR question ILIKE 'The “%” page publishes or discusses pricing/costs.%'
-      OR question ILIKE 'Current Intelligence surfaced this price/statistic for “%”:%'
-      OR question ILIKE 'Current Intelligence surfaced this claim for “%”:%'
-      OR question ILIKE 'Current Intelligence surfaced this timing claim for “%”:%'
-      OR question ILIKE 'Current Intelligence surfaced this warranty claim for “%”:%'
-      OR question ILIKE 'What real local experience, recurring roof problems or completed projects can we document for the locations%'
-      OR question ILIKE 'Which licence%, insurance, certifications or manufacturer approvals can the business prove?'
-      OR question ILIKE 'Which license%, insurance, certifications or manufacturer approvals can the business prove?'
-      OR question ILIKE 'Which license%, insurance, or certification credentials can be verified and safely published?'
-    ) RETURNING id`,[
-      own.clientId,
-      ['Which real completed projects or customer situations can we document across your services, including location, problem, solution and outcome?',
-       'What real conditions does your team use to decide which solution to recommend, including when you would advise a different or less expensive option?']
-    ]);
-  const pp=await pool.query(`SELECT id,url,COALESCE(keyword,gsc_keyword,'') keyword FROM tracker_pages WHERE tracker_client_id=$1 AND (is_active=TRUE OR is_active IS NULL) ORDER BY id`,[own.clientId]);
-  let discovered=0,merged=0,pages_checked=0,intelligence_questions=0;
-  for(const pg of pp.rows){let intel=null;try{intel=await _trackerBuildDerivedIntelligence(own.clientId,pg.id);}catch(e){console.warn('[owner-questions-page]',pg.id,e.message);}if(!intel)continue;pages_checked++;
-    let candidates=(intel.owner_questions||[]).map(q=>({category:q.category||'Business fact',question:q.question,evidence_needed:q.evidence_needed||'Owner confirmation',trigger_type:q.trigger_type||'first_party_page_statement',trigger_text:q.trigger_text||''}));
-    intelligence_questions+=candidates.length;
-    // v263: Owner Input is evidence-driven only. Do NOT inject generic/default interview questions.
-    // Questions enter this queue only when page Intelligence actually identifies a missing first-party fact.
-    for(const raw of candidates){if(!raw.question)continue;const c=_ownerQuestionCanonical(raw);const q={...raw,category:c.category,question:c.question};const fp=_ownerQuestionFingerprint(q);const ex=await pool.query('SELECT id,status,page_ids FROM tracker_owner_questions WHERE tracker_client_id=$1 AND fingerprint=$2',[own.clientId,fp]);
-      if(ex.rows.length){if(ex.rows[0].status==='OPEN'){
-        await pool.query(`UPDATE tracker_owner_questions SET evidence_needed=CASE WHEN length(COALESCE($1,''))>length(COALESCE(evidence_needed,'')) THEN $1 ELSE evidence_needed END,page_ids=(SELECT jsonb_agg(DISTINCT x) FROM jsonb_array_elements(COALESCE(page_ids,'[]'::jsonb)||jsonb_build_array($2::int)) x),page_urls=(SELECT jsonb_agg(DISTINCT x) FROM jsonb_array_elements(COALESCE(page_urls,'[]'::jsonb)||jsonb_build_array($3::text)) x),last_seen_at=NOW(),trigger_type=$4,trigger_text=$5,generator_version='v268' WHERE id=$6`,[q.evidence_needed||'',pg.id,pg.url,q.trigger_type||'first_party_page_statement',q.trigger_text||'',ex.rows[0].id]);
-        await pool.query(`UPDATE tracker_owner_questions SET merged_count=GREATEST(1,jsonb_array_length(COALESCE(page_ids,'[]'::jsonb))),strength=LEAST(10,GREATEST(1,jsonb_array_length(COALESCE(page_ids,'[]'::jsonb)))) WHERE id=$1`,[ex.rows[0].id]);merged++;}}
-      else{await pool.query(`INSERT INTO tracker_owner_questions(tracker_client_id,fingerprint,category,question,evidence_needed,page_ids,page_urls,trigger_type,trigger_text,generator_version) VALUES($1,$2,$3,$4,$5,jsonb_build_array($6::int),jsonb_build_array($7::text),$8,$9,'v268') ON CONFLICT (tracker_client_id,fingerprint) DO NOTHING`,[own.clientId,fp,q.category||'Business fact',q.question,q.evidence_needed||'',pg.id,pg.url,q.trigger_type||'first_party_page_statement',q.trigger_text||'']);discovered++;}
-    }
-  }
-  // v236 migration/cleanup: collapse the already-stored OPEN page-by-page variants too.
-  const cleanup=await _mergeOpenOwnerQuestions(own.clientId);
-  const count=await pool.query(`SELECT count(*)::int open FROM tracker_owner_questions WHERE tracker_client_id=$1 AND status='OPEN'`,[own.clientId]);
-  res.json({success:true,discovered,merged,pages_checked,intelligence_questions,legacy_open_removed:_ownerLegacyReset.rowCount||0,standard_defaults_removed:_ownerDefaultCleanup.rowCount||0,semantic_groups_merged:cleanup.groups_merged,duplicates_removed:cleanup.removed,open:Number(count.rows[0]?.open||0),message:'Checked '+pages_checked+' tracked page(s). Owner Input now reads the tracked domain/page content and current Intelligence evidence. Generic legacy questions are removed; new questions must point to a claim or statement actually present on the client’s pages or to a concrete unverified Intelligence claim.'});
-}catch(e){console.error('[owner-questions-refresh]',e.message);res.status(500).json({success:false,error:e.message});}});
+  await _ensureTrackerOwnerQuestions();
+  const own=await _trackerClaimsClient(req,res);if(!own)return;
+
+  // v274: automatic Owner Questions are intentionally disabled.
+  // Remove only OPEN questions created by automatic generators; preserve answered/history/manual rows.
+  const cleaned=await pool.query(`DELETE FROM tracker_owner_questions
+    WHERE tracker_client_id=$1
+      AND status='OPEN'
+      AND (
+        COALESCE(generator_version,'')<>'' OR
+        COALESCE(trigger_type,'') IN ('first_party_page_statement','ai_gap','gsc_query','evidence','automatic','intelligence')
+      )
+    RETURNING id`,[own.clientId]);
+
+  const count=await pool.query(`SELECT COUNT(*)::int AS open FROM tracker_owner_questions
+    WHERE tracker_client_id=$1 AND status='OPEN'`,[own.clientId]);
+
+  res.json({
+    success:true,
+    automatic_owner_questions_enabled:false,
+    removed_automatic_open:cleaned.rowCount||0,
+    open:Number(count.rows[0]?.open||0),
+    message:'Automatic Owner Questions are disabled. Use Manual Company Questions or add facts directly to Claims & Facts. Answers remain UNVERIFIED until explicitly verified.'
+  });
+}catch(e){console.error('[owner-questions-refresh]',e);res.status(500).json({success:false,error:e.message});}});
 app.post('/api/tracker-client/:token/owner-questions/:id/answer',async(req,res)=>{try{
   await _ensureTrackerOwnerQuestions();const own=await _trackerClaimsClient(req,res);if(!own)return;const answer=String(req.body?.answer||'').trim(),evidence=String(req.body?.evidence||'').trim();if(!answer)return res.status(400).json({success:false,error:'Owner answer is required'});
   const qr=await pool.query(`UPDATE tracker_owner_questions SET answer=$1,answer_evidence=$2,status='ANSWERED_UNVERIFIED',answered_at=NOW(),last_seen_at=NOW() WHERE id=$3 AND tracker_client_id=$4 AND status='OPEN' RETURNING *`,[answer,evidence,req.params.id,own.clientId]);if(!qr.rows.length)return res.status(404).json({success:false,error:'Open question not found'});const q=qr.rows[0];
@@ -4402,7 +4374,7 @@ app.post('/api/tracker-client/:token/owner-questions/:id/answer',async(req,res)=
 }catch(e){console.error('[owner-questions-answer]',e.message);res.status(500).json({success:false,error:e.message});}});
 
 // ── Content Growth Questions — central interview queue across ALL Tracker pages ──
-// Separate from Owner Input Needed: this queue asks questions whose answers can create
+// Separate from Manual Company Questions: this queue asks questions whose answers can create
 // stronger first-party content. It also imports every page-level Intelligence owner question.
 async function _ensureTrackerGrowthQuestions(){
   await pool.query(`CREATE TABLE IF NOT EXISTS tracker_growth_questions (
@@ -4549,14 +4521,19 @@ app.post('/api/tracker-client/:token/growth-questions/refresh',async(req,res)=>{
     // Growth questions must be triggered by a concrete content opportunity, competitor evidence or measured GSC demand.
     intelligence_questions+=(intel.owner_questions||[]).length;
     // 1) Evidence-backed AI/content gaps.
-    const gaps=(intel.content_opportunities||[]).filter(x=>!x.covered).slice(0,3);
+    const gaps=(intel.content_opportunities||[]).filter(x=>!x.covered).slice(0,6);
     for(const g of gaps){
-      const gap=String(g.topic||'').trim(); if(!gap)continue; ai_gap_questions++;
-      candidates.push({category:'AI / content gap',question:'For the tracked page “'+topic+'”, '+String(g.engine_count||2)+' AI engines independently surface the related topic “'+gap+'”, while the page does not clearly cover it. Does your business have a concrete first-party fact, process, example, limitation or point of view that would genuinely improve this page on that exact topic?',evidence_needed:'A factual first-party answer tied specifically to “'+gap+'”; proof/example if available.',why_asked:String(g.engine_count||1)+' independent AI engine(s) surfaced the same page-related topic. This question is kept only because the topic is anchored to the tracked query/page.',source:'AI gap',trigger_type:'ai_gap',trigger_text:gap});
+      const gap=String(g.topic||'').trim(); if(!gap)continue;
+      if(_trackerGrowthTopicCoveredSemantically(gap,pg))continue;
+      const candidate={category:'AI / content gap',question:'For the tracked page “'+topic+'”, '+String(g.engine_count||2)+' AI engines independently surface the related topic “'+gap+'”, and the current live page does not appear to cover that topic meaningfully. Is there a concrete first-party fact, process, example, limitation or point of view that would materially improve this page on that exact topic?',evidence_needed:'A factual first-party answer tied specifically to “'+gap+'”; proof/example if available.',why_asked:String(g.engine_count||1)+' independent AI engine(s) surfaced the same page-related topic and the live page failed the semantic coverage check.',source:'AI gap',trigger_type:'ai_gap',trigger_text:gap};
+      if(!_trackerGrowthQuestionWorthAsking(candidate))continue;
+      ai_gap_questions++;
+      candidates.push(candidate);
     }
     for(const gq of (intel.growth_queries||[]).slice(0,3)){
       const query=String(gq.query||'').trim(); if(!query)continue; gsc_questions++;
-      candidates.push({category:'GSC demand',question:'Google Search Console shows that this exact tracked page receives impressions for “'+query+'”. What concrete first-party information could answer that search better than the page does today — and is that information true and supportable for your business?',evidence_needed:'Owner/team answer tied to the measured query; supporting evidence if it contains a factual business claim.',why_asked:'This is a page-verified GSC query with '+Number(gq.impressions||0)+' impressions and position '+(gq.position==null?'unknown':Number(gq.position).toFixed(1))+'.',source:'GSC',trigger_type:'gsc_query',trigger_text:query});
+      const candidate={category:'GSC demand',question:'Google Search Console shows that this exact tracked page receives impressions for “'+query+'”. What concrete first-party information could answer that search better than the page does today — and is that information true and supportable for your business?',evidence_needed:'Owner/team answer tied to the measured query; supporting evidence if it contains a factual business claim.',why_asked:'This is a page-verified GSC query with '+Number(gq.impressions||0)+' impressions and position '+(gq.position==null?'unknown':Number(gq.position).toFixed(1))+'.',source:'GSC',trigger_type:'gsc_query',trigger_text:query};
+      if(_trackerGrowthQuestionWorthAsking(candidate))candidates.push(candidate);
     }
     for(const q of candidates){
       // v263 cross-queue guard: never ask the owner the same underlying question in both hubs.
@@ -4895,6 +4872,62 @@ function _trackerIntelPhrases(text){
   const words=String(text||'').toLowerCase().replace(/https?:\/\/\S+/g,' ').replace(/[^a-z0-9\-\s]/g,' ').split(/\s+/).filter(w=>w.length>2&&!stop.has(w)&&!/^\d+$/.test(w));
   const out=[];for(let i=0;i<words.length-1;i++){let a=words[i],b=words[i+1];if(stop.has(a)||stop.has(b))continue;let z=a+' '+b;if(z.length>=8&&z.length<=46)out.push(z);}return out;
 }
+
+function _trackerGrowthTopicCoveredSemantically(topic,page){
+  const norm=x=>String(x||'').toLowerCase().replace(/https?:\/\/\S+/g,' ').replace(/[^a-z0-9]+/g,' ').replace(/\s+/g,' ').trim();
+  const stop=new Set('the and for with from this that your our page pages content contentscale website site service services company business what how why when where who which into about near best ai seo search overview'.split(' '));
+  const toks=x=>norm(x).split(/\s+/).filter(t=>t.length>2&&!stop.has(t));
+  const stem=t=>String(t||'').replace(/(?:ing|ed|es|s)$/,'');
+  const sim=(a,b)=>{a=stem(a);b=stem(b);if(!a||!b)return false;if(a===b)return true;return a.length>=5&&b.length>=5&&(a.includes(b)||b.includes(a));};
+
+  const tt=toks(topic);
+  if(!tt.length)return true;
+
+  const html=String(page&&page.html_content||'')
+    .replace(/<script[\s\S]*?<\/script>/gi,' ')
+    .replace(/<style[\s\S]*?<\/style>/gi,' ')
+    .replace(/<[^>]+>/g,' ');
+  const bodyToks=toks(html);
+  if(!bodyToks.length)return false;
+
+  // Strong lexical coverage: all meaningful topic tokens occur, allowing morphology/brand variants.
+  const coveredTokens=tt.filter(t=>bodyToks.some(h=>sim(t,h)));
+  if(coveredTokens.length===tt.length)return true;
+
+  // For 2-word topics, if both concepts appear near each other in normalized text, treat as covered.
+  const bodyNorm=' '+norm(html)+' ';
+  if(tt.length===2){
+    const a=tt[0],b=tt[1];
+    const ia=bodyNorm.indexOf(' '+a);
+    const ib=bodyNorm.indexOf(' '+b);
+    if(ia>=0&&ib>=0&&Math.abs(ia-ib)<500)return true;
+  }
+
+  // Compare against headings/keyword/slug too; an existing dedicated section is enough.
+  const identity=toks([page&&page.keyword,page&&page.gsc_keyword,page&&page.url].join(' '));
+  const overlap=tt.filter(t=>identity.some(i=>sim(t,i))).length;
+  if(overlap===tt.length)return true;
+
+  return false;
+}
+
+function _trackerGrowthQuestionWorthAsking(q){
+  const question=String(q&&q.question||'').trim();
+  const trigger=String(q&&q.trigger_text||'').trim();
+  if(!question||!trigger)return false;
+
+  // Reject noisy/meaningless trigger strings.
+  if(trigger.length<4)return false;
+  if(/^(?:brandwell contentscale|contentscale brandwell|scale contentscale|contentscale scale|content scale|scale content)$/i.test(trigger.trim()))return false;
+  if(/\b(?:utm|http|www|\.com|\.org|\.net|citation|source|result|answer|market size|startup idea)\b/i.test(trigger))return false;
+
+  // Require the question to name its concrete evidence source, not ask a generic interview question.
+  const src=String(q.source||'').toLowerCase();
+  if(!['ai gap','gsc'].includes(src))return false;
+
+  return true;
+}
+
 function _trackerIntelPhraseUseful(phrase,page){
   const p=String(phrase||'').toLowerCase().trim();
   if(!p)return false;
@@ -5075,7 +5108,7 @@ async function _trackerBuildDerivedIntelligence(clientId,pageId){
   const _ownerSentences=_trackerIntelSentences(_ownerPlain);
   const _knownText=known.filter(x=>x.status==='VERIFIED').map(x=>String(x.claim_text||'').toLowerCase()).join(' ');
   const _topic=String(page.keyword||page.gsc_keyword||'').trim() || (()=>{try{return new URL(page.url).pathname.replace(/[-_/]+/g,' ').trim();}catch(_){return 'this page';}})();
-  const ownerQuestions=[];
+  const ownerQuestions=[]; // v274: retained for compatibility only; automatic Owner Questions are not exposed or persisted.
   const _firstPartyStrength=(x)=>{
     const t=String(x||'').toLowerCase(); let score=0;
     if(/\b(we|our team|our company|our service|our services|our plans?|our pricing|our customers?|contact us|call us|book|request a|request an|get a quote|get an estimate)\b/.test(t))score+=2;
@@ -5100,7 +5133,7 @@ async function _trackerBuildDerivedIntelligence(clientId,pageId){
   if(['OPTIMIZE','EXPAND'].includes(treatment.code)&&!spokeRecommendations.some(x=>x.target===page.url&&['OPTIMIZE','EXPAND_EXISTING'].includes(x.decision))){
     spokeRecommendations.unshift({decision:treatment.code==='EXPAND'?'EXPAND_EXISTING':'OPTIMIZE',family:page.keyword||page.gsc_keyword||'Current page',primary_query:page.keyword||page.gsc_keyword||'',supporting_queries:[],impressions:Number(page.gsc_impressions||0),target:page.url,suggested_slug:'',working_title:page.keyword||page.gsc_keyword||'',evidence:'Page-level GSC and five-engine evidence produced the '+treatment.code+' treatment.',why:treatment.reason,action:treatment.next_step,cannibalization_status:'Existing URL retained; Prewrite must preserve proven content and verify scope against the live SERP.',proposal_only:true});
   }
-  return {page:{id:page.id,url:page.url,keyword:page.keyword||page.gsc_keyword||''},summary:{manual_verified:saved,ai_visibility:vals.filter(x=>x.brand_recommended||x.brand_local_result||x.brand_direct_supported||x.domain_cited).length,local_visibility:vals.filter(x=>x.brand_local_result).length,domain_cited:vals.filter(x=>x.domain_cited).length,exact_page_cited:exactCount,competitors:competitors.length,sources:sources.length,content_opportunities:opportunities.filter(x=>!x.covered).length,claims_to_verify:claims.filter(x=>!x.safe_to_use).length,growth_queries:growthQueries.length,spoke_recommendations:spokeRecommendations.filter(x=>x.decision==='CREATE_SPOKE').length,gap_analysis_available:gapFamilies.length>0},engines:perEngine,engine_gaps:engineGaps,scan_trend:scanTrend,treatment,competitors,sources,content_opportunities:opportunities,claims,growth_queries:growthQueries,spoke_recommendations:spokeRecommendations,owner_questions:ownerQuestions,winning_actions:winningActions.slice(0,12)};
+  return {page:{id:page.id,url:page.url,keyword:page.keyword||page.gsc_keyword||''},summary:{manual_verified:saved,ai_visibility:vals.filter(x=>x.brand_recommended||x.brand_local_result||x.brand_direct_supported||x.domain_cited).length,local_visibility:vals.filter(x=>x.brand_local_result).length,domain_cited:vals.filter(x=>x.domain_cited).length,exact_page_cited:exactCount,competitors:competitors.length,sources:sources.length,content_opportunities:opportunities.filter(x=>!x.covered).length,claims_to_verify:claims.filter(x=>!x.safe_to_use).length,growth_queries:growthQueries.length,spoke_recommendations:spokeRecommendations.filter(x=>x.decision==='CREATE_SPOKE').length,gap_analysis_available:gapFamilies.length>0},engines:perEngine,engine_gaps:engineGaps,scan_trend:scanTrend,treatment,competitors,sources,content_opportunities:opportunities,claims,growth_queries:growthQueries,spoke_recommendations:spokeRecommendations,owner_questions: [],winning_actions:winningActions.slice(0,12)};
 }
 app.get('/api/tracker-client/:token/page/:pageId/intelligence',async(req,res)=>{try{
   const cr=await pool.query('SELECT id FROM tracker_clients WHERE (token=$1 OR lead_token=$1) AND (status IS NULL OR status != $2)',[req.params.token,'deleted']);if(!cr.rows.length)return res.status(404).json({success:false,error:'Not found'});
@@ -16213,7 +16246,7 @@ async function startServer() {
   }
 
 console.log('────────────────────────────────────────');
-console.log('[ContentScale] CS-2026-09-25-CANONICAL-v273');
+console.log('[ContentScale] CS-2026-09-25-CANONICAL-v274');
 console.log('[ContentScale] Build check: /api/build-info');
 console.log('[ContentScale] Base URL: ' + (process.env.BASE_URL || 'https://app.contentscale.site'));
 console.log('────────────────────────────────────────');
@@ -18863,7 +18896,7 @@ function _ceoMainWebsiteUrl(input){
 // action must target this CEO endpoint.
 app.post('/api/ceo-report/start',async(req,res)=>{
   let ceoEntry='unknown',ceoUrl='',lastStage='REQUEST';
-  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-25-CANONICAL-v273');
+  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-25-CANONICAL-v274');
   try{
     lastStage='DB_SETUP';
     console.log('[ceo-report] stage=DB_SETUP');
@@ -18957,10 +18990,10 @@ ContentScale`;
     return res.json({success:true,entry_mode:entry,token,selected_page:selected,ceo_report_token:reportToken,ceo_report_url:reportUrl,delivery_email:delivery,updates_opt_in:updatesOptIn});
   }catch(e){
     const msg=String((e&&e.message)||e||'CEO Prospect Report generation failed');
-    console.error('[ceo-report] FAILED build=CS-2026-09-25-CANONICAL-v273 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
+    console.error('[ceo-report] FAILED build=CS-2026-09-25-CANONICAL-v274 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
     console.error('[ceo-report] ERROR: '+msg);
     if(e&&e.stack)console.error(e.stack);
-    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-25-CANONICAL-v273'});
+    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-25-CANONICAL-v274'});
     try{res.end();}catch(_){}
   }
 });
@@ -40390,13 +40423,13 @@ function renderStats(data) {
 
   // Persistent Owner Question Hub: one client-level queue, merged across pages.
   function _ownerQEsc(v){return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
-  window.loadOwnerQuestionHub=function(){var box=document.getElementById('ownerQuestionHub');if(!box)return;fetch('/api/tracker-client/'+TOKEN+'/owner-questions').then(function(r){return r.json();}).then(function(d){if(!d.success)throw new Error(d.error||'Could not load owner questions');var q=(d.questions||[]).filter(function(x){return x.status==='OPEN';}),sum=d.summary||{};var rows=q.map(function(x){var urls=Array.isArray(x.page_urls)?x.page_urls:[];return '<div style="border-top:1px solid #78350f;padding:10px 0;"><div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start;"><div><b style="color:#fbbf24;font-size:10px;">'+_ownerQEsc(x.category)+'</b><div style="color:#f8fafc;font-size:12px;font-weight:800;margin-top:2px;">'+_ownerQEsc(x.question)+'</div><div style="color:#94a3b8;font-size:9px;margin-top:3px;">Needed proof: '+_ownerQEsc(x.evidence_needed||'Owner confirmation')+' · Seen across '+urls.length+' page(s) · Strength '+Number(x.strength||1)+'/10</div></div><span style="color:#f59e0b;font-size:9px;font-weight:900;white-space:nowrap;">OPEN</span></div><textarea id="oqA'+x.id+'" class="cs-input" rows="2" placeholder="Owner’s exact factual answer" style="width:100%;margin-top:7px;resize:vertical;"></textarea><input id="oqE'+x.id+'" class="cs-input" placeholder="Evidence / document / URL / who confirmed it" style="width:100%;margin-top:5px;"><button class="cs-btn" onclick="answerOwnerHubQuestion('+x.id+')" style="margin-top:6px;border-color:#d97706;color:#fbbf24;font-size:10px;">Save answer for verification</button></div>';}).join('');box.innerHTML='<details style="border:2px solid #d97706;border-radius:10px;background:#120d05;padding:11px 13px;"><summary style="cursor:pointer;color:#fbbf24;font-weight:900;letter-spacing:.04em;">OWNER INPUT NEEDED · '+Number(sum.open||0)+' OPEN</summary><div style="color:#cbd5e1;font-size:10px;line-height:1.55;margin:8px 0;">Owner Input is rebuilt only from explicit first-party statements on the client’s own tracked pages. Every OPEN question stores its exact trigger statement and generator version. External AI/SERP/source text, generic editorial discussion and old standard questionnaires are excluded.</div><button class="cs-btn" onclick="refreshOwnerQuestionHub(this)" style="border-color:#f59e0b;color:#fde68a;font-size:10px;">↻ Refresh questions from Tracker evidence</button><span style="margin-left:8px;color:#94a3b8;font-size:9px;">Answered facts move to Claims &amp; Facts as UNVERIFIED until evidence is approved.</span>'+ (rows||'<div style="color:#86efac;padding:10px 0;">No open owner questions stored yet. Click Refresh to inspect ALL tracked pages and rebuild the central owner queue.</div>') +'</details>';}).catch(function(e){box.innerHTML='<div style="color:#f87171;font-size:10px;">Owner Question Hub: '+_ownerQEsc(e.message)+'</div>';});};
+  window.loadOwnerQuestionHub=function(){var box=document.getElementById('ownerQuestionHub');if(!box)return;fetch('/api/tracker-client/'+TOKEN+'/owner-questions').then(function(r){return r.json();}).then(function(d){if(!d.success)throw new Error(d.error||'Could not load owner questions');var q=(d.questions||[]).filter(function(x){return x.status==='OPEN';}),sum=d.summary||{};var rows=q.map(function(x){var urls=Array.isArray(x.page_urls)?x.page_urls:[];return '<div style="border-top:1px solid #78350f;padding:10px 0;"><div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start;"><div><b style="color:#fbbf24;font-size:10px;">'+_ownerQEsc(x.category)+'</b><div style="color:#f8fafc;font-size:12px;font-weight:800;margin-top:2px;">'+_ownerQEsc(x.question)+'</div><div style="color:#94a3b8;font-size:9px;margin-top:3px;">Needed proof: '+_ownerQEsc(x.evidence_needed||'Owner confirmation')+' · Seen across '+urls.length+' page(s) · Strength '+Number(x.strength||1)+'/10</div></div><span style="color:#f59e0b;font-size:9px;font-weight:900;white-space:nowrap;">OPEN</span></div><textarea id="oqA'+x.id+'" class="cs-input" rows="2" placeholder="Owner’s exact factual answer" style="width:100%;margin-top:7px;resize:vertical;"></textarea><input id="oqE'+x.id+'" class="cs-input" placeholder="Evidence / document / URL / who confirmed it" style="width:100%;margin-top:5px;"><button class="cs-btn" onclick="answerOwnerHubQuestion('+x.id+')" style="margin-top:6px;border-color:#d97706;color:#fbbf24;font-size:10px;">Save answer for verification</button></div>';}).join('');box.innerHTML='<details style="border:2px solid #d97706;border-radius:10px;background:#120d05;padding:11px 13px;"><summary style="cursor:pointer;color:#fbbf24;font-weight:900;letter-spacing:.04em;">MANUAL COMPANY QUESTIONS · '+Number(sum.open||0)+' OPEN</summary><div style="color:#cbd5e1;font-size:10px;line-height:1.55;margin:8px 0;">Manual Company Questions are intentionally not generated by AI. Add only questions you explicitly want the business owner to answer. Submitted answers go to Claims & Facts as UNVERIFIED until reviewed and marked VERIFIED.</div><button class="cs-btn" onclick="refreshOwnerQuestionHub(this)" style="border-color:#f59e0b;color:#fde68a;font-size:10px;">↻ Refresh questions from Tracker evidence</button><span style="margin-left:8px;color:#94a3b8;font-size:9px;">Answered facts move to Claims &amp; Facts as UNVERIFIED until evidence is approved.</span>'+ (rows||'<div style="color:#86efac;padding:10px 0;">No open owner questions stored yet. Click Refresh to inspect ALL tracked pages and rebuild the central owner queue.</div>') +'</details>';}).catch(function(e){box.innerHTML='<div style="color:#f87171;font-size:10px;">Owner Question Hub: '+_ownerQEsc(e.message)+'</div>';});};
   window.refreshOwnerQuestionHub=function(btn){var old=btn&&btn.textContent;if(btn){btn.disabled=true;btn.textContent='Refreshing…';}fetch('/api/tracker-client/'+TOKEN+'/owner-questions/refresh',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'}).then(function(r){return r.json();}).then(function(d){if(!d.success)throw new Error(d.error||'Refresh failed');toast((d.message||'Owner questions refreshed.')+' Open: '+Number(d.open||0)+'.','#4ade80');loadOwnerQuestionHub();}).catch(function(e){toast(e.message,'#f87171');}).finally(function(){if(btn){btn.disabled=false;btn.textContent=old;}});};
   window.answerOwnerHubQuestion=function(id){var a=document.getElementById('oqA'+id),e=document.getElementById('oqE'+id),answer=a&&a.value.trim();if(!answer){toast('Enter the owner’s factual answer first.','#f87171');return;}fetch('/api/tracker-client/'+TOKEN+'/owner-questions/'+id+'/answer',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({answer:answer,evidence:e&&e.value.trim()||''})}).then(function(r){return r.json();}).then(function(d){if(!d.success)throw new Error(d.error||'Save failed');toast('Saved once — now waiting for verification in Claims & Facts.','#fbbf24');loadOwnerQuestionHub();}).catch(function(x){toast(x.message,'#f87171');});};
   loadOwnerQuestionHub();
 
   // Separate central card: strategic interview questions that can strengthen content across pages.
-  window.loadContentGrowthQuestionHub=function(){var box=document.getElementById('contentGrowthQuestionHub');if(!box)return;fetch('/api/tracker-client/'+TOKEN+'/growth-questions').then(function(r){return r.json();}).then(function(d){if(!d.success)throw new Error(d.error||'Could not load content growth questions');var q=(d.questions||[]).filter(function(x){return x.status==='OPEN';}),sum=d.summary||{};var rows=q.map(function(x){var urls=Array.isArray(x.page_urls)?x.page_urls:[], kws=Array.isArray(x.page_keywords)?x.page_keywords.filter(Boolean):[], src=Array.isArray(x.source_types)?x.source_types:[];var impact=String(x.impact||'FOCUSED'),ic=impact==='HIGH'?'#86efac':impact==='MEDIUM'?'#fbbf24':'#7dd3fc';return '<div style="border-top:1px solid #164e63;padding:12px 0;"><div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;"><div><div style="display:flex;gap:6px;flex-wrap:wrap;"><b style="color:#67e8f9;font-size:10px;">'+_ownerQEsc(x.category)+'</b><span style="color:'+ic+';font-size:9px;font-weight:900;">'+_ownerQEsc(impact)+' IMPACT</span></div><div style="color:#f8fafc;font-size:12px;font-weight:900;margin-top:4px;">'+_ownerQEsc(x.question)+'</div><div style="color:#cbd5e1;font-size:9px;line-height:1.5;margin-top:5px;"><b>WHY WE ASK:</b> '+_ownerQEsc(x.why_asked||'The answer can add useful first-party detail.')+'</div><div style="color:#94a3b8;font-size:9px;margin-top:4px;"><b>Sources:</b> '+_ownerQEsc(src.join(' · ')||'Tracker Intelligence')+' · <b>Can strengthen:</b> '+_ownerQEsc(kws.slice(0,5).join(' · ')||(urls.length+' tracked page(s)'))+' · <b>Used by:</b> '+urls.length+' page(s) · Strength '+Number(x.strength||1)+'/10</div></div><span style="color:#22d3ee;font-size:9px;font-weight:900;white-space:nowrap;">OWNER ANSWER NEEDED</span></div><textarea id="gqA'+x.id+'" class="cs-input" rows="3" placeholder="Owner’s factual answer — concrete examples, process, limits and proof are best" style="width:100%;margin-top:8px;resize:vertical;"></textarea><input id="gqE'+x.id+'" class="cs-input" placeholder="Evidence / project / photo / review / document / URL / who confirmed it" style="width:100%;margin-top:5px;"><button class="cs-btn" onclick="answerContentGrowthQuestion('+x.id+')" style="margin-top:6px;border-color:#0891b2;color:#67e8f9;font-size:10px;">Save answer for verification</button></div>';}).join('');box.innerHTML='<details style="border:2px solid #0891b2;border-radius:10px;background:#06131a;padding:12px 14px;"><summary style="cursor:pointer;color:#67e8f9;font-weight:900;letter-spacing:.05em;">CONTENT GROWTH QUESTIONS · '+Number(sum.open||0)+' OPEN</summary><div style="color:#cbd5e1;font-size:10px;line-height:1.55;margin:8px 0;">One evidence-driven growth queue for the whole Tracker. It is separate from Owner Input: questions appear only when AI/content gaps, competitor evidence or measured GSC demand creates a concrete opportunity. Generic questions are not injected, and the same underlying question is never asked in both hubs.</div><button class="cs-btn" onclick="refreshContentGrowthQuestions(this)" style="border-color:#06b6d4;color:#a5f3fc;font-size:10px;">↻ Refresh from ALL Tracker Intelligence</button><span style="margin-left:8px;color:#94a3b8;font-size:9px;">Answers are never auto-published. They first enter Claims &amp; Facts as UNVERIFIED.</span>'+ (rows||'<div style="color:#86efac;padding:10px 0;">No open growth questions stored yet. Click Refresh to inspect ALL tracked pages — existing Intelligence questions and first-party growth opportunities will be centralized here.</div>') +'</details>';}).catch(function(e){box.innerHTML='<div style="color:#f87171;font-size:10px;">Content Growth Questions: '+_ownerQEsc(e.message)+'</div>';});};
+  window.loadContentGrowthQuestionHub=function(){var box=document.getElementById('contentGrowthQuestionHub');if(!box)return;fetch('/api/tracker-client/'+TOKEN+'/growth-questions').then(function(r){return r.json();}).then(function(d){if(!d.success)throw new Error(d.error||'Could not load content growth questions');var q=(d.questions||[]).filter(function(x){return x.status==='OPEN';}),sum=d.summary||{};var rows=q.map(function(x){var urls=Array.isArray(x.page_urls)?x.page_urls:[], kws=Array.isArray(x.page_keywords)?x.page_keywords.filter(Boolean):[], src=Array.isArray(x.source_types)?x.source_types:[];var impact=String(x.impact||'FOCUSED'),ic=impact==='HIGH'?'#86efac':impact==='MEDIUM'?'#fbbf24':'#7dd3fc';return '<div style="border-top:1px solid #164e63;padding:12px 0;"><div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;"><div><div style="display:flex;gap:6px;flex-wrap:wrap;"><b style="color:#67e8f9;font-size:10px;">'+_ownerQEsc(x.category)+'</b><span style="color:'+ic+';font-size:9px;font-weight:900;">'+_ownerQEsc(impact)+' IMPACT</span></div><div style="color:#f8fafc;font-size:12px;font-weight:900;margin-top:4px;">'+_ownerQEsc(x.question)+'</div><div style="color:#cbd5e1;font-size:9px;line-height:1.5;margin-top:5px;"><b>WHY WE ASK:</b> '+_ownerQEsc(x.why_asked||'The answer can add useful first-party detail.')+'</div><div style="color:#94a3b8;font-size:9px;margin-top:4px;"><b>Sources:</b> '+_ownerQEsc(src.join(' · ')||'Tracker Intelligence')+' · <b>Can strengthen:</b> '+_ownerQEsc(kws.slice(0,5).join(' · ')||(urls.length+' tracked page(s)'))+' · <b>Used by:</b> '+urls.length+' page(s) · Strength '+Number(x.strength||1)+'/10</div></div><span style="color:#22d3ee;font-size:9px;font-weight:900;white-space:nowrap;">OWNER ANSWER NEEDED</span></div><textarea id="gqA'+x.id+'" class="cs-input" rows="3" placeholder="Owner’s factual answer — concrete examples, process, limits and proof are best" style="width:100%;margin-top:8px;resize:vertical;"></textarea><input id="gqE'+x.id+'" class="cs-input" placeholder="Evidence / project / photo / review / document / URL / who confirmed it" style="width:100%;margin-top:5px;"><button class="cs-btn" onclick="answerContentGrowthQuestion('+x.id+')" style="margin-top:6px;border-color:#0891b2;color:#67e8f9;font-size:10px;">Save answer for verification</button></div>';}).join('');box.innerHTML='<details style="border:2px solid #0891b2;border-radius:10px;background:#06131a;padding:12px 14px;"><summary style="cursor:pointer;color:#67e8f9;font-weight:900;letter-spacing:.05em;">CONTENT GROWTH QUESTIONS · '+Number(sum.open||0)+' OPEN</summary><div style="color:#cbd5e1;font-size:10px;line-height:1.55;margin:8px 0;">Growth Questions are optional and quality-gated. A question appears only when there is a page-verified GSC query or a repeated AI topic that is relevant to the tracked page, not already covered semantically, and specific enough to produce genuinely useful first-party content. Zero questions is a valid result.</div><button class="cs-btn" onclick="refreshContentGrowthQuestions(this)" style="border-color:#06b6d4;color:#a5f3fc;font-size:10px;">↻ Refresh from ALL Tracker Intelligence</button><span style="margin-left:8px;color:#94a3b8;font-size:9px;">Answers are never auto-published. They first enter Claims &amp; Facts as UNVERIFIED.</span>'+ (rows||'<div style="color:#86efac;padding:10px 0;">No open growth questions stored yet. Click Refresh to inspect ALL tracked pages — existing Intelligence questions and first-party growth opportunities will be centralized here.</div>') +'</details>';}).catch(function(e){box.innerHTML='<div style="color:#f87171;font-size:10px;">Content Growth Questions: '+_ownerQEsc(e.message)+'</div>';});};
   window.refreshContentGrowthQuestions=function(btn){var old=btn&&btn.textContent;if(btn){btn.disabled=true;btn.textContent='Refreshing ALL Intelligence…';}fetch('/api/tracker-client/'+TOKEN+'/growth-questions/refresh',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'}).then(function(r){return r.json();}).then(function(d){if(!d.success)throw new Error(d.error||'Refresh failed');toast((d.message||'Growth questions refreshed.')+' Open: '+Number(d.open||0)+'.','#22d3ee');loadContentGrowthQuestionHub();}).catch(function(e){toast(e.message,'#f87171');}).finally(function(){if(btn){btn.disabled=false;btn.textContent=old;}});};
   window.answerContentGrowthQuestion=function(id){var a=document.getElementById('gqA'+id),e=document.getElementById('gqE'+id),answer=a&&a.value.trim();if(!answer){toast('Enter the owner’s factual answer first.','#f87171');return;}fetch('/api/tracker-client/'+TOKEN+'/growth-questions/'+id+'/answer',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({answer:answer,evidence:e&&e.value.trim()||''})}).then(function(r){return r.json();}).then(function(d){if(!d.success)throw new Error(d.error||'Save failed');toast('Growth answer saved — waiting for verification in Claims & Facts.','#22d3ee');loadContentGrowthQuestionHub();}).catch(function(x){toast(x.message,'#f87171');});};
   loadContentGrowthQuestionHub();
@@ -42582,7 +42615,7 @@ var _tourSteps = [
   {sel:'[data-tour="page-card"]',phase:'EXISTING PAGE',title:'One card, one decision cycle',text:'For a selected URL: complete its evidence, open Intelligence, scan it, review the Tracker Brief, choose Treatment, implement, verify live and preserve Proof & History.'},
   {sel:'[data-tour="ai-evidence"]',phase:'EVIDENCE',title:'Verify five AI engines',text:'AI Checked opens the manual evidence workspace for Google AIO, ChatGPT, Perplexity, Claude and Copilot. Checked, cited and exact-page cited are separate states.'},
   {sel:'[data-tour="intelligence"]',phase:'INTELLIGENCE',title:'See the decision and exact gap',text:'Intelligence starts with what to do next, then shows who wins, what they have, what this page lacks, why it matters, where to change it and when the action is complete. Page-level owner questions stay here for context and are also collected centrally so you never have to interview the owner URL by URL.'},
-  {sel:'#ownerQuestionHub',phase:'OWNER EVIDENCE',title:'Resolve missing facts once',text:'Owner Input Needed keeps factual questions that ContentScale cannot safely answer itself. Unanswered questions never disappear. Refresh may add evidence, merge duplicates or strengthen a recurring gap. Answers enter Claims & Facts as UNVERIFIED before they can be used as verified client claims.'},
+  {sel:'#ownerQuestionHub',phase:'OWNER EVIDENCE',title:'Resolve missing facts once',text:'Manual Company Questions keeps factual questions that ContentScale cannot safely answer itself. Unanswered questions never disappear. Refresh may add evidence, merge duplicates or strengthen a recurring gap. Answers enter Claims & Facts as UNVERIFIED before they can be used as verified client claims.'},
   {sel:'#contentGrowthQuestionHub',phase:'CONTENT GROWTH',title:'Turn every page gap into one owner interview',text:'Content Growth Questions combines useful questions from ALL page Intelligence with SERP/competitor gaps, GSC demand and five-engine AI evidence. Similar questions are merged across URLs. The goal is to uncover real processes, examples, project proof and expertise that competitors may not document. One verified owner answer can strengthen several relevant pages.'},
   {sel:'[data-tour="scan"]',phase:'DIAGNOSIS',title:'Build the Citation Brief',text:'Scan reads the current live page, ranking context and evidence, then creates or refreshes the Citation Brief. If automatic HTML is unreliable, the card asks for manual published HTML.'},
   {sel:'[data-tour="view-brief"]',phase:'BRIEF',title:'Review the implementation plan',text:'View Brief shows the readable diagnosis and concrete content moves. This is the plan for improving an existing URL; it is intentionally different from a Pre-Write Brief.'},
