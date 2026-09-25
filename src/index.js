@@ -266,7 +266,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-25-CANONICAL-v293';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-25-CANONICAL-v294';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 const CONTENTSCALE_BUILD_CHANGES = [
   'tracker-delta-brief-regression-lock',
@@ -321,6 +321,16 @@ function detectSearchIntent(kw, org, paaArr, aiOv, comps) {
   if (gW.some(w => kwl.includes(w))) score.informational += 1;
   if (cW.some(w => kwl.includes(w))) score.commercial += 1;
   if (tW.some(w => kwl.includes(w))) score.transactional += 1;
+
+  // v294: local service-intent heuristic. Queries that name a service + market/geo are usually
+  // action-oriented even when they do not literally contain "hire", "price" or "near me".
+  // Example: "roof snow removal nj 2026" is a service query, not merely a definition query.
+  const serviceW = ['repair','removal','roofing','contractor','service','services','emergency','installation','replacement','inspection','cleaning'];
+  const geoW = [' nj','new jersey',' near me',' county',' counties',' ny',' pa',' ca',' tx',' fl'];
+  const serviceHit = serviceW.some(w => kwl.includes(w));
+  const geoHit = geoW.some(w => kwl.includes(w)) || /\b[a-z]{2}\s+20\d{2}\b/.test(kwl);
+  if (serviceHit && geoHit) { score.transactional += 5; evidence.push('Local service + geography/year signal'); }
+
   const fw = (org||[]).slice(0,8).map(o => (o.title||'').toLowerCase().split(/[\s|\u2014-]/)[0]).filter(Boolean);
   const bc = {}; fw.forEach(w => { bc[w] = (bc[w]||0)+1; });
   const tb = Object.entries(bc).sort((a,b)=>b[1]-a[1])[0];
@@ -492,7 +502,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-09-25-CANONICAL-v293',
+  build: 'CS-2026-09-25-CANONICAL-v294',
   built_date: '2026-09-25',
   ceo_private: true,
   ceo_public: true,
@@ -4307,6 +4317,7 @@ app.post('/api/tracker-client/:token/page/:pageId/brief-mode', async (req, res) 
 // v291 REGRESSION INVARIANT: LEAD_CRAWLER_HAS_70_VARIANTS_PER_LANGUAGE=true; TOTAL_STATIC_LEAD_EMAILS_210=true; LEAD_VARIANT_ROTATION_COUNT_70=true; VARIANTS_21_TO_70_ADDED_FROM_OWNER_SOURCE=true; NL_ES_TRANSLATIONS_STATIC_NOT_RUNTIME=true
 // v292 REGRESSION INVARIANT: EMAIL_AI_HEADER_SHOWS_CHECKED_5_OF_5_SEPARATE_FROM_CITED=true; EMAIL_RECOMMENDATION_COUNT_USES_FINAL_FILTERED_BRIEF=true; FINAL_FAQ_PAA_ALREADY_COVERED_FILTER_STRONGER=true; FINAL_AUTHORITY_ADD_ONLY_DUPLICATES_FILTERED=true; FINAL_DELTA_SEMANTIC_DEDUPE=true
 // v293 REGRESSION INVARIANT: OUTBOUND_QUEUE_USES_CANONICAL_SERVER_70_VARIANT_COPY=true; OLD_CLIENT_10_VARIANT_PACK_REMOVED=true; ADMIN_LIST_EXPOSES_GENERATED_OUTREACH_COPY=true; MISSING_CANONICAL_COPY_CANNOT_BE_SENT=true
+// v294 REGRESSION INVARIANT: LOCAL_SERVICE_GEO_QUERY_GETS_TRANSACTIONAL_WEIGHT=true; DIRECT_ANSWER_ALREADY_PRESENT_IS_NOT_RECOMMENDED=true; UNRESOLVED_PRICING_BLOCKS_PUBLISHABLE_PRICE_ACTIONS=true; VERIFY_PRICING_TASK_MAY_REMAIN=true; FINAL_BRIEF_CARRIES_SOURCE_SUGGESTIONS=true
 // ── Owner Question Hub — persistent client-owned knowledge gaps ────────────────
 // Unanswered questions never disappear. Refresh only adds, merges, or strengthens them.
 async function _ensureTrackerOwnerQuestions(){
@@ -16422,7 +16433,7 @@ async function startServer() {
   }
 
 console.log('────────────────────────────────────────');
-console.log('[ContentScale] CS-2026-09-25-CANONICAL-v293');
+console.log('[ContentScale] CS-2026-09-25-CANONICAL-v294');
 console.log('[ContentScale] Build check: /api/build-info');
 console.log('[ContentScale] Base URL: ' + (process.env.BASE_URL || 'https://app.contentscale.site'));
 console.log('────────────────────────────────────────');
@@ -21082,7 +21093,7 @@ function _ceoMainWebsiteUrl(input){
 // action must target this CEO endpoint.
 app.post('/api/ceo-report/start',async(req,res)=>{
   let ceoEntry='unknown',ceoUrl='',lastStage='REQUEST';
-  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-25-CANONICAL-v293');
+  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-25-CANONICAL-v294');
   try{
     lastStage='DB_SETUP';
     console.log('[ceo-report] stage=DB_SETUP');
@@ -21176,10 +21187,10 @@ ContentScale`;
     return res.json({success:true,entry_mode:entry,token,selected_page:selected,ceo_report_token:reportToken,ceo_report_url:reportUrl,delivery_email:delivery,updates_opt_in:updatesOptIn});
   }catch(e){
     const msg=String((e&&e.message)||e||'CEO Prospect Report generation failed');
-    console.error('[ceo-report] FAILED build=CS-2026-09-25-CANONICAL-v293 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
+    console.error('[ceo-report] FAILED build=CS-2026-09-25-CANONICAL-v294 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
     console.error('[ceo-report] ERROR: '+msg);
     if(e&&e.stack)console.error(e.stack);
-    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-25-CANONICAL-v293'});
+    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-25-CANONICAL-v294'});
     try{res.end();}catch(_){}
   }
 });
@@ -56829,7 +56840,7 @@ If no unanchored claims found, return empty array: []`;
       if (isFirst2 || !recsToUse.length) {
         brief2 = { items: recsToUse, position: pos2, aio: aio2, perp: perp2, bing_cited: bing2, brave_cited: brave2, ai_manual_evidence: _briefManualEvidence2, score: score2,
           gsc_clicks: page.gsc_clicks, gsc_impressions: page.gsc_impressions, gsc_position: page.gsc_position, gsc_keyword: page.gsc_keyword,
-          gsc_brief: gscBriefItems };
+          gsc_brief: gscBriefItems, source_suggestions: Array.isArray(snapshot.source_suggestions)?snapshot.source_suggestions:[] };
       } else {
         try {
           const mergePrompt2 = `Merge these two AI citation briefs for ${pageUrl} (keyword: "${kw2}").
@@ -56866,12 +56877,12 @@ MERGE RULES:
             if (!merged2 || !merged2.length) throw new Error('no parseable merge items \u2014 gemini returned ' + gText2.length + ' chars: "' + gText2.slice(0, 160).replace(/\n/g, ' ') + '"');
             brief2 = { items: merged2, position: pos2, aio: aio2, perp: perp2, bing_cited: bing2, brave_cited: brave2, ai_manual_evidence: _briefManualEvidence2, score: score2,
               gsc_clicks: page.gsc_clicks, gsc_impressions: page.gsc_impressions, gsc_position: page.gsc_position, gsc_keyword: page.gsc_keyword,
-              gsc_brief: gscBriefItems, merged: true };
+              gsc_brief: gscBriefItems, source_suggestions: Array.isArray(snapshot.source_suggestions)?snapshot.source_suggestions:[], merged: true };
           }
         } catch(mergeErr2) {
           console.warn('[brief-merge2]', mergeErr2.message);
           brief2 = { items: recsToUse, position: pos2, aio: aio2, perp: perp2, bing_cited: bing2, brave_cited: brave2, ai_manual_evidence: _briefManualEvidence2, score: score2,
-            gsc_brief: gscBriefItems };
+            gsc_brief: gscBriefItems, source_suggestions: Array.isArray(snapshot.source_suggestions)?snapshot.source_suggestions:[] };
         }
       }
 
@@ -57039,6 +57050,16 @@ MERGE RULES:
             if(urls.every(function(u){return _finalHtmlLower.indexOf(String(u).replace(/[).,;:]+$/,'').toLowerCase())>=0;}))return true;
           }
 
+          // Direct-answer / above-the-fold answer already exists.
+          // Do not keep telling the owner to add a 40-60 word answer when the live page already
+          // has an answer-box directly below the H1.
+          if(addLike&&/(direct answer|answer box|quotable|40[-– ]?60 word|first screen|above[- ]the[- ]fold|lead with.*answer)/i.test(t)){
+            var _hasDirectBox=/class=["'][^"']*answer-box/i.test(_finalLiveHtml)
+              || /id=["'][^"']*(?:direct-answer|answer-box)/i.test(_finalLiveHtml)
+              || /<h1[\s\S]{0,1800}<strong>\s*what is /i.test(_finalLiveHtml);
+            if(_hasDirectBox)return true;
+          }
+
           // FAQ/PAA already exists. Check raw HTML BEFORE scripts are stripped (FAQPage schema),
           // visible FAQ headings, and semantic presence of the requested question set.
           if(addLike&&/(faq|frequently asked questions|paa|questions? and answers?|q&a|qa)/i.test(t)){
@@ -57115,6 +57136,28 @@ MERGE RULES:
         if(Array.isArray(brief2.items))brief2.items=brief2.items.filter(function(it){return !_finalAlreadyCovered(it);});
         if(Array.isArray(brief2.gsc_brief))brief2.gsc_brief=brief2.gsc_brief.filter(function(it){return !_finalAlreadyCovered(it);});
 
+        // v294 VERIFIED-FACT GATE.
+        // If the scan itself says pricing/cost is unresolved, no implementation action may publish
+        // a dollar range, county price table, "free estimate", price matching, surcharge, or other
+        // client-specific pricing claim. Keep the verification task; block the publishable content.
+        var _srcSug=Array.isArray(brief2.source_suggestions)?brief2.source_suggestions:
+          (Array.isArray(snapshot.source_suggestions)?snapshot.source_suggestions:[]);
+        var _pricingUnresolved=_srcSug.some(function(x){
+          var z=(String(x&&x.claim||'')+' '+String(x&&x.why||'')).toLowerCase();
+          return /pricing|price|cost range|cost estimate|specific pricing/.test(z);
+        });
+        var _unsafePricingAction=function(it){
+          if(!_pricingUnresolved||!it)return false;
+          var z=(String(it.title||'')+' '+String(it.action||it.passage||it.body||'')).toLowerCase();
+          var isVerify=/verify|confirm|needs? evidence|source needed|do not publish|unverified/.test(z);
+          if(isVerify)return false;
+          return /\$\s*\d|\bprice matching\b|\bfree estimate\b|\bfree phone\b|\bfree on-site\b|\bpricing table\b|\bcost breakdown\b|\bcounty[- ]level pricing\b|\bemergency surcharge\b/.test(z);
+        };
+        if(_pricingUnresolved){
+          brief2.items=(brief2.items||[]).filter(function(it){return !_unsafePricingAction(it);});
+          brief2.gsc_brief=(brief2.gsc_brief||[]).filter(function(it){return !_unsafePricingAction(it);});
+        }
+
         // Final semantic de-duplication: same requested change in different wording counts once.
         var _deltaSeen=new Set();
         var _deltaKey=function(it){
@@ -57135,7 +57178,8 @@ MERGE RULES:
           items_after:(brief2.items||[]).length,
           gsc_before:_beforeFinalGsc,
           gsc_after:(brief2.gsc_brief||[]).length,
-          corrections_preserved:true
+          corrections_preserved:true,
+          unresolved_pricing_gate:!!_pricingUnresolved
         };
 
         var _finalOpenItems=(Array.isArray(brief2.items)?brief2.items:[]).filter(function(x){return x&&!_finalFrameOnly(x);});
@@ -57183,7 +57227,7 @@ MERGE RULES:
           brief_content: brief2,
           passages: brief2.items || [],
           gsc_brief: brief2.gsc_brief || [],
-          source_suggestions: (snapshot.source_suggestions || []),
+          source_suggestions: (brief2.source_suggestions || snapshot.source_suggestions || []),
           author_trust_score: snapshot.author_trust_score || 0,
           author_trust_findings: (snapshot.author_trust_findings || []),
           discovered_sources: (snapshot.discovered_sources || []),
