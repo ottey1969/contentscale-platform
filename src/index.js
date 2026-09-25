@@ -266,7 +266,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-25-CANONICAL-v291';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-25-CANONICAL-v292';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 const CONTENTSCALE_BUILD_CHANGES = [
   'tracker-delta-brief-regression-lock',
@@ -492,7 +492,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-09-25-CANONICAL-v291',
+  build: 'CS-2026-09-25-CANONICAL-v292',
   built_date: '2026-09-25',
   ceo_private: true,
   ceo_public: true,
@@ -1635,8 +1635,8 @@ function _trackerBuildFiveEngineEmailState(manualEvidence, autoState) {
     if (r) {
       if (_trackerEmailBool(r.exact_page_cited)) return { key, label, value:'EXACT PAGE', method:'VERIFIED', cited:true, checked:true, color:'#16a34a' };
       if (_trackerEmailBool(r.domain_cited)) return { key, label, value:'DOMAIN', method:'VERIFIED', cited:true, checked:true, color:'#16a34a' };
-      if (_trackerEmailBool(r.brand_direct_supported)) return { key, label, value:'DIRECT', method:'VERIFIED', cited:false, checked:true, color:'#2563eb' };
-      if (_trackerEmailBool(r.brand_recommended)) return { key, label, value:'RECOMMENDED', method:'VERIFIED', cited:false, checked:true, color:'#7c3aed' };
+      if (_trackerEmailBool(r.brand_direct_supported) || _trackerEmailBool(r.directly_supported)) return { key, label, value:'DIRECT', method:'VERIFIED', cited:false, checked:true, color:'#2563eb' };
+      if (_trackerEmailBool(r.brand_recommended) || _trackerEmailBool(r.recommended)) return { key, label, value:'RECOMMENDED', method:'VERIFIED', cited:false, checked:true, color:'#7c3aed' };
       return { key, label, value:'NOT CITED', method:'VERIFIED', cited:false, checked:true, color:'#94a3b8' };
     }
     if (key === 'perplexity' && auto.perplexity_cited) return { key, label, value:'CITED', method:'API VERIFIED', cited:true, checked:true, color:'#16a34a' };
@@ -1658,6 +1658,7 @@ async function _trackerLoadFiveEngineEmailState(pageId, autoState) {
 function _trackerFiveEngineEmailBlock(states) {
   states = Array.isArray(states) ? states : [];
   const cited = states.filter(function(x){ return x.cited; }).length;
+  const checked = states.filter(function(x){ return x.checked; }).length;
   function cell(x, width) {
     return '<td width="' + width + '%" valign="top" style="padding:4px;">'
       + '<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:9px;padding:11px 5px;text-align:center;min-height:53px;">'
@@ -1668,7 +1669,7 @@ function _trackerFiveEngineEmailBlock(states) {
   }
   const a = states.slice(0,3), b = states.slice(3,5);
   return '<div style="margin-bottom:14px;">'
-    + '<div style="font-size:10px;font-weight:800;color:#7c3aed;text-transform:uppercase;letter-spacing:.08em;margin:0 0 6px 4px;">AI citation coverage — ' + cited + '/5</div>'
+    + '<div style="font-size:10px;font-weight:800;color:#7c3aed;text-transform:uppercase;letter-spacing:.08em;margin:0 0 6px 4px;">AI systems checked — ' + checked + '/5 <span style="color:#94a3b8;font-weight:700;">· exact/domain cited ' + cited + '/5</span></div>'
     + '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:separate;"><tr>' + a.map(function(x){return cell(x,33.33);}).join('') + '</tr></table>'
     + '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:separate;"><tr>' + b.map(function(x){return cell(x,50);}).join('') + '</tr></table>'
     + '</div>';
@@ -4304,6 +4305,7 @@ app.post('/api/tracker-client/:token/page/:pageId/brief-mode', async (req, res) 
 // v289 REGRESSION INVARIANT: LEAD_CRAWLER_HAS_20_DISTINCT_APPROVED_VARIANTS=true; LEAD_VARIANT_ROTATION_COUNT_20=true; SAME_LEAD_STABLE_VARIANT=true; OLD_10_VARIANT_COPY_REPLACED=true; APPROVED_WHATSAPP_SIGNATURE_NOT_DUPLICATED=true
 // v290 REGRESSION INVARIANT: VERIFIED_TRANSLATION_BATCHED_AND_RECOVERABLE=true; INVALID_BATCH_JSON_FALLS_BACK_PER_FACT=true; LEAD_EMAILS_HAVE_20_EN_20_NL_20_ES=true; VARIANT_NUMBER_ALIGNED_ACROSS_LANGUAGES=true; NL_ES_LEADS_NEVER_RECEIVE_ENGLISH_TEMPLATE=true
 // v291 REGRESSION INVARIANT: LEAD_CRAWLER_HAS_70_VARIANTS_PER_LANGUAGE=true; TOTAL_STATIC_LEAD_EMAILS_210=true; LEAD_VARIANT_ROTATION_COUNT_70=true; VARIANTS_21_TO_70_ADDED_FROM_OWNER_SOURCE=true; NL_ES_TRANSLATIONS_STATIC_NOT_RUNTIME=true
+// v292 REGRESSION INVARIANT: EMAIL_AI_HEADER_SHOWS_CHECKED_5_OF_5_SEPARATE_FROM_CITED=true; EMAIL_RECOMMENDATION_COUNT_USES_FINAL_FILTERED_BRIEF=true; FINAL_FAQ_PAA_ALREADY_COVERED_FILTER_STRONGER=true; FINAL_AUTHORITY_ADD_ONLY_DUPLICATES_FILTERED=true; FINAL_DELTA_SEMANTIC_DEDUPE=true
 // ── Owner Question Hub — persistent client-owned knowledge gaps ────────────────
 // Unanswered questions never disappear. Refresh only adds, merges, or strengthens them.
 async function _ensureTrackerOwnerQuestions(){
@@ -16419,7 +16421,7 @@ async function startServer() {
   }
 
 console.log('────────────────────────────────────────');
-console.log('[ContentScale] CS-2026-09-25-CANONICAL-v291');
+console.log('[ContentScale] CS-2026-09-25-CANONICAL-v292');
 console.log('[ContentScale] Build check: /api/build-info');
 console.log('[ContentScale] Base URL: ' + (process.env.BASE_URL || 'https://app.contentscale.site'));
 console.log('────────────────────────────────────────');
@@ -21077,7 +21079,7 @@ function _ceoMainWebsiteUrl(input){
 // action must target this CEO endpoint.
 app.post('/api/ceo-report/start',async(req,res)=>{
   let ceoEntry='unknown',ceoUrl='',lastStage='REQUEST';
-  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-25-CANONICAL-v291');
+  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-25-CANONICAL-v292');
   try{
     lastStage='DB_SETUP';
     console.log('[ceo-report] stage=DB_SETUP');
@@ -21171,10 +21173,10 @@ ContentScale`;
     return res.json({success:true,entry_mode:entry,token,selected_page:selected,ceo_report_token:reportToken,ceo_report_url:reportUrl,delivery_email:delivery,updates_opt_in:updatesOptIn});
   }catch(e){
     const msg=String((e&&e.message)||e||'CEO Prospect Report generation failed');
-    console.error('[ceo-report] FAILED build=CS-2026-09-25-CANONICAL-v291 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
+    console.error('[ceo-report] FAILED build=CS-2026-09-25-CANONICAL-v292 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
     console.error('[ceo-report] ERROR: '+msg);
     if(e&&e.stack)console.error(e.stack);
-    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-25-CANONICAL-v291'});
+    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-25-CANONICAL-v292'});
     try{res.end();}catch(_){}
   }
 });
@@ -57057,9 +57059,20 @@ MERGE RULES:
             if(urls.every(function(u){return _finalHtmlLower.indexOf(String(u).replace(/[).,;:]+$/,'').toLowerCase())>=0;}))return true;
           }
 
-          // FAQ/PAA already exists.
-          if(addLike&&/(faq|frequently asked questions|paa|questions? and answers?)/i.test(t)
-             &&(/faqpage/i.test(_finalLiveHtml)||/frequently asked questions/i.test(_finalHtmlText)))return true;
+          // FAQ/PAA already exists. Check raw HTML BEFORE scripts are stripped (FAQPage schema),
+          // visible FAQ headings, and semantic presence of the requested question set.
+          if(addLike&&/(faq|frequently asked questions|paa|questions? and answers?|q&a|qa)/i.test(t)){
+            var _hasFaqShell=/FAQPage/i.test(_finalLiveHtml)
+              || /<h[1-6][^>]*>[^<]*(?:faq|frequently asked|questions?)/i.test(_finalLiveHtml)
+              || /\bfaq\b|frequently asked questions|common questions/i.test(_finalHtmlText);
+            var _paaSignals=0;
+            if(/how much|cost|price|pricing/i.test(t) && /how much|cost|price|pricing|\$[0-9]/i.test(_finalHtmlText))_paaSignals++;
+            if(/insurance|homeowner/i.test(t) && /insurance|homeowner/i.test(_finalHtmlText))_paaSignals++;
+            if(/remove snow.*myself|do it myself|diy|professional safety/i.test(t) && /diy|do it yourself|professional|safety|danger/i.test(_finalHtmlText))_paaSignals++;
+            if(/signs.*too much snow|sagging|sticking doors|structural warning/i.test(t) && /sagging|sticking doors|structural|warning signs|too much snow/i.test(_finalHtmlText))_paaSignals++;
+            if(/ice dam|steam/i.test(t) && /ice dam|steam/i.test(_finalHtmlText))_paaSignals++;
+            if(_hasFaqShell && _paaSignals>=2)return true;
+          }
 
           // Commercial membrane / flat-roof protocol already exists.
           if(addLike&&/(membrane|tpo|epdm|commercial flat roof|commercial-specific|commercial roof snow)/i.test(t)){
@@ -57086,14 +57099,16 @@ MERGE RULES:
             if(/24\/7|24 7|24\/7\/365/i.test(_finalHtmlText)&&/all 21|21 new jersey counties|21 counties/i.test(_finalHtmlText))return true;
           }
 
-          // E-E-A-T/authority already present.
-          if(addLike&&/(author|e-e-a-t|authority|years of roofing experience|company experience)/i.test(t)){
+          // E-E-A-T/authority already present. Add-only authority actions are not delta when
+          // the live page already carries multiple first-party authority signals.
+          if(addLike&&/(author|e-e-a-t|authority|years of roofing experience|company experience|manager.*experience|trust)/i.test(t)){
             var as=0;
-            if(/written.*reviewed by/i.test(_finalHtmlText))as++;
-            if(/15 years/i.test(_finalHtmlText))as++;
-            if(/4\+ years|over 4 years|4 years/i.test(_finalHtmlText))as++;
-            if(/nj hic|home-improvement contractor|licensed/i.test(_finalHtmlText))as++;
-            if(/last reviewed/i.test(_finalHtmlText))as++;
+            if(/written.*reviewed by|reviewed by|author:/i.test(_finalHtmlText))as++;
+            if(/15 years|years of roofing experience|years experience/i.test(_finalHtmlText))as++;
+            if(/4\+ years|over 4 years|4 years|years serving/i.test(_finalHtmlText))as++;
+            if(/nj hic|13vh[0-9]+|home-improvement contractor|licensed/i.test(_finalHtmlText))as++;
+            if(/last reviewed|last updated|reviewed:/i.test(_finalHtmlText))as++;
+            if(/all 21|21 counties/i.test(_finalHtmlText))as++;
             if(as>=3)return true;
           }
 
@@ -57119,6 +57134,20 @@ MERGE RULES:
         var _beforeFinalGsc=Array.isArray(brief2.gsc_brief)?brief2.gsc_brief.length:0;
         if(Array.isArray(brief2.items))brief2.items=brief2.items.filter(function(it){return !_finalAlreadyCovered(it);});
         if(Array.isArray(brief2.gsc_brief))brief2.gsc_brief=brief2.gsc_brief.filter(function(it){return !_finalAlreadyCovered(it);});
+
+        // Final semantic de-duplication: same requested change in different wording counts once.
+        var _deltaSeen=new Set();
+        var _deltaKey=function(it){
+          var x=String((it&&it.title)||'')+' '+String((it&&it.action)||'');
+          return x.toLowerCase()
+            .replace(/\b(add|create|include|insert|integrate|implement|establish|incorporate|build|expand|correct|replace|update|fix|clarify)\b/g,' ')
+            .replace(/[^a-z0-9$%]+/g,' ')
+            .split(/\s+/).filter(function(w){return w.length>3;}).slice(0,18).sort().join(' ');
+        };
+        var _dedupe=function(arr){return (arr||[]).filter(function(it){var k=_deltaKey(it);if(!k)return true;if(_deltaSeen.has(k))return false;_deltaSeen.add(k);return true;});};
+        brief2.items=_dedupe(brief2.items);
+        brief2.gsc_brief=_dedupe(brief2.gsc_brief);
+
         brief2.delta_filter={
           live_html_checked:true,
           removed_already_covered:(_beforeFinalItems-(brief2.items||[]).length)+(_beforeFinalGsc-(brief2.gsc_brief||[]).length),
@@ -57198,7 +57227,7 @@ MERGE RULES:
           if ((_items.length && !snapshot._unchanged) || page._manual_requested) {
             const _esc = s => String(s==null?'':s).replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
             const _top = _items.slice(0, 3);
-            const _gscCount = Array.isArray(snapshot.gsc_brief) ? snapshot.gsc_brief.length : 0;
+            const _gscCount = Array.isArray(brief2.gsc_brief) ? brief2.gsc_brief.length : 0;
             const _moreCount = Math.max(0, _items.length - _top.length) + _gscCount;
             const _recHtml = _top.map(it => {
               const _title = it.title || it.h2 || it.heading || 'Recommendation';
