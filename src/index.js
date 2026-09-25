@@ -266,7 +266,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-25-CANONICAL-v270';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-25-CANONICAL-v272';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 const CONTENTSCALE_BUILD_CHANGES = [
   'tracker-delta-brief-regression-lock',
@@ -492,7 +492,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-09-25-CANONICAL-v270',
+  build: 'CS-2026-09-25-CANONICAL-v272',
   built_date: '2026-09-25',
   ceo_private: true,
   ceo_public: true,
@@ -4280,6 +4280,8 @@ app.post('/api/tracker-client/:token/page/:pageId/brief-mode', async (req, res) 
 // v268 REGRESSION INVARIANT: QUESTION_PROVENANCE_REQUIRED=true; PRE_V268_OPEN_QUESTIONS_REBUILT=true; OWNER_INPUT_FIRST_PARTY_ONLY=true; GROWTH_TRIGGERED_BY_PAGE_VERIFIED_GSC_OR_VALIDATED_AI_GAP=true; NO_GENERIC_QUESTION_CANONICALIZATION=true; NO_ROOFING_BIAS_IN_GENERIC_TRACKER=true
 // v269 REGRESSION INVARIANT: VERIFY_FIRST_DEFINITIONS_HAVE_NO_OWNER_ASK_TEXT=true; LEGACY_GENERIC_QUESTION_STRINGS_ALLOWED_ONLY_IN_CLEANUP_SQL=true
 // v270 REGRESSION INVARIANT: AI_GROWTH_GAP_REQUIRES_SEMANTIC_NOVELTY=true; SEED_BRAND_PERMUTATIONS_REJECTED=true; OPEN_GROWTH_REBUILT_UNDER_V270=true
+// v271 REGRESSION INVARIANT: LOCALIZED_CONTENTSCALE_FACTS_SEED_EXISTING_TRACKERS_ONLY=true; NO_NEW_TRACKER_CREATED=true; NL_ES_FACTS_VERIFIED_AND_IDEMPOTENT=true
+// v272 REGRESSION INVARIANT: ALL_MAIN_CONTENTSCALE_VERIFIED_CLIENT_FACTS_SYNC_TO_EXISTING_NL_ES_TRACKERS=true; TRANSLATION_LITERAL_ZERO_TEMPERATURE=true; SOURCE_CLAIM_PROVENANCE_PRESERVED=true; NO_NEW_TRACKER_CREATED=true
 // ── Owner Question Hub — persistent client-owned knowledge gaps ────────────────
 // Unanswered questions never disappear. Refresh only adds, merges, or strengthens them.
 async function _ensureTrackerOwnerQuestions(){
@@ -4579,6 +4581,221 @@ app.post('/api/tracker-client/:token/growth-questions/:id/answer',async(req,res)
   const cf=await pool.query(`INSERT INTO tracker_claims_facts(page_id,tracker_client_id,claim_text,source_type,source_context,status,notes) VALUES(NULL,$1,$2,'owner_growth_interview',$3,'UNVERIFIED',$4) RETURNING id`,[own.clientId,answer,'Content Growth Question — '+q.category+': '+q.question,evidence?'Owner evidence: '+evidence:'Owner answered; evidence not supplied']);
   res.json({success:true,question:q,claim_id:cf.rows[0].id,message:'Growth answer saved centrally and added to Claims & Facts as UNVERIFIED.'});
 }catch(e){console.error('[growth-questions-answer]',e.message);res.status(500).json({success:false,error:e.message});}});
+
+
+const CONTENTSCALE_LOCALIZED_VERIFIED_FACTS = {
+  'nl.contentscale.site': [
+    'GRAAF SEO ContentScore is altijd gratis, duurt ongeveer 30 seconden en vereist geen login of creditcard.',
+    'De gratis AI Citations Tracker is beschikbaar voor 1 pagina, zonder login of creditcard.',
+    'Voor meer dan 1 pagina kost volledige toegang tot de AI Citations Tracker €297 eenmalig voor 2 jaar; daarna kan de toegang worden verlengd.',
+    'Pre-Write Brief bevat 1 levenslange gratis brief per account; betaalde bundels beginnen bij €249 voor 20 briefs.',
+    'Otto, de AI-voice-agent, heeft maatwerk/setup-pricing op basis van de afgesproken scope en het verwachte belvolume.',
+    'Full Tracker + Quick Scan + Google Search Console + sitemap + cannibalization + implementatie + follow-up worden geprijsd op basis van de afgesproken scope; er is geen verplicht vast pakket.',
+    'ContentScale werkt zonder contracten; diensten kunnen op elk moment worden opgezegd.'
+  ],
+  'es.contentscale.site': [
+    'GRAAF SEO ContentScore es siempre gratuito, tarda aproximadamente 30 segundos y no requiere iniciar sesión ni tarjeta de crédito.',
+    'AI Citations Tracker es gratuito para 1 página, sin iniciar sesión ni tarjeta de crédito.',
+    'Para más de 1 página, el acceso completo a AI Citations Tracker cuesta €297 en un único pago por 2 años; después de esos 2 años el acceso puede renovarse.',
+    'Pre-Write Brief incluye 1 brief gratuito de por vida por cuenta; los paquetes de pago empiezan en €249 por 20 briefs.',
+    'Otto, el agente de voz con IA, tiene un precio de configuración personalizado según el alcance acordado y el volumen de llamadas previsto.',
+    'Full Tracker + Quick Scan + Google Search Console + sitemap + análisis de canibalización + implementación + seguimiento se cotizan según el alcance acordado; no existe un paquete fijo obligatorio.',
+    'ContentScale no exige contratos; los servicios se pueden cancelar en cualquier momento.'
+  ]
+};
+
+
+async function _translateVerifiedClaimsLiteral(claims,targetLang){
+  const apiKey=process.env.GEMINI_API_KEY;
+  if(!apiKey)throw new Error('GEMINI_API_KEY not configured; localized verified-fact sync skipped.');
+  if(!Array.isArray(claims)||!claims.length)return [];
+  const languageName=targetLang==='nl'?'Dutch':'Spanish';
+  const payload=claims.map(x=>({id:x.id,text:String(x.claim_text||'')}));
+  const prompt=[
+    'Translate VERIFIED company facts from English into '+languageName+'.',
+    'CRITICAL RULES:',
+    '- Translate literally and faithfully. Do not add, remove, soften, strengthen, infer or correct any fact.',
+    '- Preserve all numbers, currencies, product names, URLs, time periods, limitations, qualifiers and negative statements exactly in meaning.',
+    '- Keep ContentScale, GRAAF, CRAFT, Tracker, Quick Scan, Pre-Write Brief, AI Citations Tracker, Google Search Console and product/brand names unchanged unless normal grammar requires surrounding words.',
+    '- Return ONLY a valid JSON array. No markdown.',
+    '- Keep exactly one object for every input id and preserve the same id.',
+    'OUTPUT FORMAT: [{"id":123,"text":"translated fact"}]',
+    'INPUT JSON:',
+    JSON.stringify(payload)
+  ].join('\n');
+  const body={contents:[{parts:[{text:prompt}]}],generationConfig:{temperature:0,maxOutputTokens:12000,responseMimeType:'application/json'}};
+  const rr=await callGeminiWithFallback(apiKey,body,GEMINI_MODEL_BRIEF||GEMINI_MODEL,GEMINI_MODEL,2);
+  if(!rr||!rr.ok)throw new Error('Translation failed: '+String(rr?.errorMessage||rr?.status||'unknown error'));
+  const raw=rr.data?.candidates?.[0]?.content?.parts?.map(p=>p.text||'').join('')||'';
+  const cleaned=String(raw).replace(/```json|```/gi,'').trim();
+  let arr;
+  try{arr=JSON.parse(cleaned);}catch(e){
+    const a=cleaned.indexOf('['),b=cleaned.lastIndexOf(']');
+    if(a<0||b<=a)throw new Error('Translation returned invalid JSON');
+    arr=JSON.parse(cleaned.slice(a,b+1));
+  }
+  if(!Array.isArray(arr)||arr.length!==payload.length)throw new Error('Translation count mismatch: expected '+payload.length+', got '+(Array.isArray(arr)?arr.length:0));
+  const byId=new Map(arr.map(x=>[Number(x.id),String(x.text||'').trim()]));
+  for(const row of payload){
+    if(!byId.get(Number(row.id)))throw new Error('Missing translation for source claim '+row.id);
+  }
+  return payload.map(row=>({source_id:Number(row.id),claim_text:byId.get(Number(row.id))}));
+}
+
+async function _syncAllContentScaleVerifiedFactsToLocalizedTrackers(opts={}){
+  // v272: mirror ALL client-level VERIFIED facts from the existing English ContentScale tracker
+  // into the already-existing NL and ES trackers, translated faithfully.
+  // No tracker/client is created. Existing v271 localized pricing facts are preserved.
+  const force=opts&&opts.force===true;
+  const src=await pool.query(`SELECT id,domain,name FROM tracker_clients
+    WHERE lower(regexp_replace(COALESCE(domain,''),'^www\\.','','i'))='contentscale.site'
+    ORDER BY id LIMIT 1`);
+  if(!src.rows.length)return {success:false,reason:'Main contentscale.site tracker not found',targets:[]};
+  const sourceClient=src.rows[0];
+  const fr=await pool.query(`SELECT id,claim_text,source_type,source_context,notes,verified_at
+    FROM tracker_claims_facts
+    WHERE tracker_client_id=$1 AND page_id IS NULL AND status='VERIFIED'
+    ORDER BY id`,[sourceClient.id]);
+  const sourceFacts=fr.rows||[];
+  if(!sourceFacts.length)return {success:false,reason:'No VERIFIED client-level facts found in main ContentScale tracker',source_client_id:sourceClient.id,targets:[]};
+
+  const targets=await pool.query(`SELECT id,domain,name FROM tracker_clients
+    WHERE lower(COALESCE(domain,''))=ANY($1::text[])
+    ORDER BY id`,[['nl.contentscale.site','es.contentscale.site']]);
+  const results=[];
+  for(const target of targets.rows||[]){
+    const domain=String(target.domain||'').toLowerCase();
+    const lang=domain==='nl.contentscale.site'?'nl':'es';
+    const existing=await pool.query(`SELECT id,source_context FROM tracker_claims_facts
+      WHERE tracker_client_id=$1 AND page_id IS NULL AND source_type='translated_verified_from_main'`,[target.id]);
+    const existingBySource=new Map();
+    for(const row of existing.rows||[]){
+      const m=String(row.source_context||'').match(/source_claim_id:(\d+)/);
+      if(m)existingBySource.set(Number(m[1]),row.id);
+    }
+    const needed=force?sourceFacts:sourceFacts.filter(x=>!existingBySource.has(Number(x.id)));
+    let translated=[];
+    if(needed.length){
+      translated=await _translateVerifiedClaimsLiteral(needed,lang);
+      for(const tr of translated){
+        const sourceFact=sourceFacts.find(x=>Number(x.id)===Number(tr.source_id));
+        const sourceContext='source_claim_id:'+tr.source_id+' | source_tracker:contentscale.site | lang:'+lang;
+        const note=lang==='nl'
+          ? 'Letterlijke vertaling van een VERIFIED client-level fact uit de bestaande contentscale.site Tracker. Geen nieuwe feitelijke informatie toegevoegd.'
+          : 'Traducción fiel de un hecho VERIFIED a nivel de cliente del Tracker existente de contentscale.site. No se añadió información factual nueva.';
+        if(existingBySource.has(Number(tr.source_id))){
+          if(force){
+            await pool.query(`UPDATE tracker_claims_facts
+              SET claim_text=$1,status='VERIFIED',source_context=$2,notes=$3,verified_at=COALESCE(verified_at,NOW()),updated_at=NOW()
+              WHERE id=$4 AND tracker_client_id=$5`,[tr.claim_text,sourceContext,note,existingBySource.get(Number(tr.source_id)),target.id]);
+          }
+        }else{
+          await pool.query(`INSERT INTO tracker_claims_facts
+            (page_id,tracker_client_id,claim_text,source_type,source_context,status,notes,verified_at)
+            VALUES(NULL,$1,$2,'translated_verified_from_main',$3,'VERIFIED',$4,NOW())`,
+            [target.id,tr.claim_text,sourceContext,note]);
+        }
+      }
+    }
+    const count=await pool.query(`SELECT COUNT(*)::int AS n FROM tracker_claims_facts
+      WHERE tracker_client_id=$1 AND page_id IS NULL AND status='VERIFIED'`,[target.id]);
+    results.push({
+      domain,
+      tracker_client_id:target.id,
+      source_verified_facts:sourceFacts.length,
+      translated_now:translated.length,
+      already_synced:sourceFacts.length-needed.length,
+      verified_total_after:Number(count.rows[0]?.n||0)
+    });
+  }
+  return {success:true,source_tracker:'contentscale.site',source_client_id:sourceClient.id,source_verified_facts:sourceFacts.length,targets:results};
+}
+
+// Admin route: re-sync every VERIFIED main ContentScale client fact to NL + ES.
+// body {force:true} re-translates/updates previously synced translations.
+app.post('/api/admin/tracker/sync-contentscale-verified-facts-localized',verifyAdmin,async(req,res)=>{
+  try{
+    const result=await _syncAllContentScaleVerifiedFactsToLocalizedTrackers({force:req.body?.force===true});
+    res.json(result);
+  }catch(e){
+    console.error('[contentscale-verified-localized-sync]',e);
+    res.status(500).json({success:false,error:e.message});
+  }
+});
+
+async function _seedContentScaleLocalizedTrackerFacts(){
+  // v271: exact-domain, idempotent seed into the ALREADY EXISTING Tracker clients.
+  // These are verified public company facts reviewed by the owner. No new tracker/client is created.
+  try{
+    const domains=Object.keys(CONTENTSCALE_LOCALIZED_VERIFIED_FACTS);
+    const cr=await pool.query(`SELECT id,domain FROM tracker_clients
+      WHERE lower(domain)=ANY($1::text[]) AND (status IS NULL OR status<>'deleted')`,[domains]);
+    const result=[];
+    for(const client of cr.rows||[]){
+      const domain=String(client.domain||'').toLowerCase();
+      const facts=CONTENTSCALE_LOCALIZED_VERIFIED_FACTS[domain]||[];
+      let inserted=0,existing=0;
+      for(const claim of facts){
+        const ex=await pool.query(`SELECT id,status FROM tracker_claims_facts
+          WHERE tracker_client_id=$1 AND page_id IS NULL AND lower(trim(claim_text))=lower(trim($2))
+          ORDER BY id DESC LIMIT 1`,[client.id,claim]);
+        if(ex.rows.length){
+          // Keep the exact existing fact, but make sure this owner-approved public fact is VERIFIED.
+          await pool.query(`UPDATE tracker_claims_facts
+            SET status='VERIFIED',source_type='public_site_verified',
+                source_context=$1,notes=$2,verified_at=COALESCE(verified_at,NOW()),updated_at=NOW()
+            WHERE id=$3`,[
+              domain==='nl.contentscale.site'
+                ? 'Publiek geverifieerd op contentscale.site/services en contentscale.site/free-ai-citations-tracker'
+                : 'Verificado públicamente en contentscale.site/services y contentscale.site/free-ai-citations-tracker',
+              domain==='nl.contentscale.site'
+                ? 'Door eigenaar gecontroleerd; veilig voor hergebruik op relevante NL ContentScale-pagina’s.'
+                : 'Revisado por el propietario; seguro para reutilizar en páginas ES relevantes de ContentScale.',
+              ex.rows[0].id
+            ]);
+          existing++;
+          continue;
+        }
+        await pool.query(`INSERT INTO tracker_claims_facts
+          (page_id,tracker_client_id,claim_text,source_type,source_context,status,notes,verified_at)
+          VALUES(NULL,$1,$2,'public_site_verified',$3,'VERIFIED',$4,NOW())`,[
+            client.id,claim,
+            domain==='nl.contentscale.site'
+              ? 'Publiek geverifieerd op contentscale.site/services en contentscale.site/free-ai-citations-tracker'
+              : 'Verificado públicamente en contentscale.site/services y contentscale.site/free-ai-citations-tracker',
+            domain==='nl.contentscale.site'
+              ? 'Door eigenaar gecontroleerd; veilig voor hergebruik op relevante NL ContentScale-pagina’s.'
+              : 'Revisado por el propietario; seguro para reutilizar en páginas ES relevantes de ContentScale.'
+          ]);
+        inserted++;
+      }
+      result.push({domain,client_id:client.id,inserted,existing,total:facts.length});
+    }
+    return result;
+  }catch(e){
+    console.error('[contentscale-localized-facts-seed]',e.message);
+    return [];
+  }
+}
+
+// Admin-safe one-click re-run. This never creates trackers; it only updates the two existing localized ContentScale trackers.
+app.post('/api/admin/tracker/seed-contentscale-localized-facts', verifyAdmin, async(req,res)=>{
+  try{
+    const result=await _seedContentScaleLocalizedTrackerFacts();
+    res.json({success:true,result,message:'Localized ContentScale public facts added/updated in the existing NL and ES Tracker Claims & Facts ledgers.'});
+  }catch(e){res.status(500).json({success:false,error:e.message});}
+});
+
+
+// v271: after deployment, populate the existing localized ContentScale trackers automatically.
+// Safe to re-run on every boot because insertion is idempotent and restricted to exact domains.
+setTimeout(()=>{ _seedContentScaleLocalizedTrackerFacts().then(r=>{
+  if(r&&r.length)console.log('[contentscale-localized-facts-seed]',r);
+}).catch(()=>{}); }, 12000);
+setTimeout(()=>{ _syncAllContentScaleVerifiedFactsToLocalizedTrackers({force:false}).then(r=>{
+  if(r&&r.success)console.log('[contentscale-verified-localized-sync]',r);
+  else if(r)console.warn('[contentscale-verified-localized-sync]',r.reason||r);
+}).catch(e=>console.warn('[contentscale-verified-localized-sync]',e.message)); }, 22000);
 
 // ── Claims & Facts gate — CANONICAL CUSTOMER TRACKER ROUTES ─────────────────
 // Every client-specific factual claim starts UNVERIFIED. Only VERIFIED is safe for content.
@@ -15989,7 +16206,7 @@ async function startServer() {
   }
 
 console.log('────────────────────────────────────────');
-console.log('[ContentScale] CS-2026-09-25-CANONICAL-v270');
+console.log('[ContentScale] CS-2026-09-25-CANONICAL-v272');
 console.log('[ContentScale] Build check: /api/build-info');
 console.log('[ContentScale] Base URL: ' + (process.env.BASE_URL || 'https://app.contentscale.site'));
 console.log('────────────────────────────────────────');
@@ -18639,7 +18856,7 @@ function _ceoMainWebsiteUrl(input){
 // action must target this CEO endpoint.
 app.post('/api/ceo-report/start',async(req,res)=>{
   let ceoEntry='unknown',ceoUrl='',lastStage='REQUEST';
-  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-25-CANONICAL-v270');
+  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-25-CANONICAL-v272');
   try{
     lastStage='DB_SETUP';
     console.log('[ceo-report] stage=DB_SETUP');
@@ -18733,10 +18950,10 @@ ContentScale`;
     return res.json({success:true,entry_mode:entry,token,selected_page:selected,ceo_report_token:reportToken,ceo_report_url:reportUrl,delivery_email:delivery,updates_opt_in:updatesOptIn});
   }catch(e){
     const msg=String((e&&e.message)||e||'CEO Prospect Report generation failed');
-    console.error('[ceo-report] FAILED build=CS-2026-09-25-CANONICAL-v270 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
+    console.error('[ceo-report] FAILED build=CS-2026-09-25-CANONICAL-v272 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
     console.error('[ceo-report] ERROR: '+msg);
     if(e&&e.stack)console.error(e.stack);
-    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-25-CANONICAL-v270'});
+    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-25-CANONICAL-v272'});
     try{res.end();}catch(_){}
   }
 });
