@@ -266,7 +266,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-25-CANONICAL-v287';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-25-CANONICAL-v288';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 const CONTENTSCALE_BUILD_CHANGES = [
   'tracker-delta-brief-regression-lock',
@@ -492,7 +492,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-09-25-CANONICAL-v287',
+  build: 'CS-2026-09-25-CANONICAL-v288',
   built_date: '2026-09-25',
   ceo_private: true,
   ceo_public: true,
@@ -4300,6 +4300,7 @@ app.post('/api/tracker-client/:token/page/:pageId/brief-mode', async (req, res) 
 // v285 REGRESSION INVARIANT: MAIN_TRACKER_GET_RETURNS_BRIEF_EVALUATED_AT=true; MAIN_GET_SELF_HEALS_BRIEF_EVALUATED_AT=true; POST_SCAN_NEXT_ACTION_CAN_ADVANCE_WITHOUT_SECOND_SCAN=true
 // v286 REGRESSION INVARIANT: NEXT_ACTION_GATES_MUTATING_CONTROLS=true; NO_ACTION_LOCKS_SCAN_AND_CONTENT_CHANGES=true; SCAN_REQUIRED_ONLY_SCAN_PATH_ACTIVE=true; NEW_DELTA_OR_IMPLEMENT_ENABLE_CONTENT_CHANGES=true; HISTORY_AND_VIEW_BRIEF_REMAIN_READ_ONLY_AVAILABLE=true
 // v287 REGRESSION INVARIANT: FINAL_BRIEF_WRITE_ALWAYS_HAS_OUTSTANDING_ACTIONS=true; FINAL_BRIEF_WRITE_ATOMICALLY_STAMPS_EVALUATED_AT=true; NO_POST_SCAN_FLASH_BACK_TO_SCAN_REQUIRED=true; FINAL_NEXT_ACTION_DERIVED_FROM_FINAL_SAVED_BRIEF=true
+// v288 REGRESSION INVARIANT: FINAL_DELTA_FILTERS_AGAINST_CURRENT_LIVE_HTML=true; FINAL_MERGE_CANNOT_READD_ALREADY_IMPLEMENTED_WORK=true; CORRECTION_REPLACE_FIX_ACTIONS_ARE_PRESERVED=true; OUTSTANDING_ACTIONS_COUNT_AFTER_FINAL_DELTA_FILTER=true
 // ── Owner Question Hub — persistent client-owned knowledge gaps ────────────────
 // Unanswered questions never disappear. Refresh only adds, merges, or strengthens them.
 async function _ensureTrackerOwnerQuestions(){
@@ -16362,7 +16363,7 @@ async function startServer() {
   }
 
 console.log('────────────────────────────────────────');
-console.log('[ContentScale] CS-2026-09-25-CANONICAL-v287');
+console.log('[ContentScale] CS-2026-09-25-CANONICAL-v288');
 console.log('[ContentScale] Build check: /api/build-info');
 console.log('[ContentScale] Base URL: ' + (process.env.BASE_URL || 'https://app.contentscale.site'));
 console.log('────────────────────────────────────────');
@@ -19171,7 +19172,7 @@ function _ceoMainWebsiteUrl(input){
 // action must target this CEO endpoint.
 app.post('/api/ceo-report/start',async(req,res)=>{
   let ceoEntry='unknown',ceoUrl='',lastStage='REQUEST';
-  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-25-CANONICAL-v287');
+  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-25-CANONICAL-v288');
   try{
     lastStage='DB_SETUP';
     console.log('[ceo-report] stage=DB_SETUP');
@@ -19265,10 +19266,10 @@ ContentScale`;
     return res.json({success:true,entry_mode:entry,token,selected_page:selected,ceo_report_token:reportToken,ceo_report_url:reportUrl,delivery_email:delivery,updates_opt_in:updatesOptIn});
   }catch(e){
     const msg=String((e&&e.message)||e||'CEO Prospect Report generation failed');
-    console.error('[ceo-report] FAILED build=CS-2026-09-25-CANONICAL-v287 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
+    console.error('[ceo-report] FAILED build=CS-2026-09-25-CANONICAL-v288 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
     console.error('[ceo-report] ERROR: '+msg);
     if(e&&e.stack)console.error(e.stack);
-    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-25-CANONICAL-v287'});
+    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-25-CANONICAL-v288'});
     try{res.end();}catch(_){}
   }
 });
@@ -40960,7 +40961,7 @@ function _trackerNextActionState(p,isDone,lastCheckedRaw,nextEvidence){
     return {code:'SCAN',label:'SCAN REQUIRED TO CHECK FOR NEW DELTA',detail:'This page has an older Brief, but it has not yet been evaluated by the current scan workflow. Run Scan now. Only the result of that scan may create a NEW DELTA or confirm NO NEW ACTION.',color:'#7dd3fc',border:'#0284c7',bg:'#082f49',button:'Scan now',buttonAction:'checkPage('+p.id+')'};
   }
   if(outstanding!=null&&outstanding>0){
-    if(isDone)return {code:'NEW_DELTA',label:'NEW DELTA FOUND · '+outstanding+' ACTION'+(outstanding===1?'':'S'),detail:evidence+' This scan produced '+outstanding+' open action(s). Update the page from the current Brief.',color:'#fde68a',border:'#f59e0b',bg:'#291b05',button:'Open updated Brief',buttonAction:'viewLastBrief('+p.id+')'};
+    if(isDone)return {code:'NEW_DELTA',label:'NEW DELTA FOUND · '+outstanding+' ACTION'+(outstanding===1?'':'S'),detail:evidence+' This scan produced '+outstanding+' open action(s) after removing items already covered by the live page. Update only from the current Brief.',color:'#fde68a',border:'#f59e0b',bg:'#291b05',button:'Open updated Brief',buttonAction:'viewLastBrief('+p.id+')'};
     return {code:'IMPLEMENT',label:'IMPLEMENT BRIEF · '+outstanding+' OPEN ACTION'+(outstanding===1?'':'S'),detail:'The current Brief still contains evidence-backed work. Apply only those actions, publish, then verify the live version.',color:'#c4b5fd',border:'#8b5cf6',bg:'#17102b',button:'Open Brief',buttonAction:'viewLastBrief('+p.id+')'};
   }
   if(complete)return {code:'MONITOR',label:'NO NEW ACTION · CONTINUE MONITORING',detail:evidence+' No new actionable delta was found. Content-changing controls are locked to prevent accidental work. '+(nextEvidence||'Wait for the next scheduled evidence checkpoint.'),color:'#86efac',border:'#16a34a',bg:'#052e16',button:'',buttonAction:''};
@@ -55122,6 +55123,107 @@ MERGE RULES:
           var sy=String(x&&x.system||'').toLowerCase();
           return sy.indexOf('intent snapshot')>=0||sy.indexOf('missing entities')>=0||sy==='paa';
         };
+
+        // v288 FINAL DELTA GUARD: final merged Brief must not re-add work already present in live HTML.
+        var _finalLiveHtml=String(effectiveHtml||page.html_content||'');
+        var _finalHtmlLower=_finalLiveHtml.toLowerCase();
+        var _finalHtmlText=_finalHtmlLower
+          .replace(/<script[^>]*>[\s\S]*?<\/script>/gi,' ')
+          .replace(/<style[^>]*>[\s\S]*?<\/style>/gi,' ')
+          .replace(/<[^>]+>/g,' ')
+          .replace(/&[a-z0-9#]+;/gi,' ')
+          .replace(/[^a-z0-9$%+./: -]+/g,' ')
+          .replace(/\s+/g,' ')
+          .trim();
+
+        var _finalAlreadyCovered=function(it){
+          if(!it||typeof it!=='object'||!_finalLiveHtml)return false;
+          var title=String(it.title||'');
+          var action=String(it.action||it.body||it.passage||'');
+          var t=(title+' '+action).toLowerCase();
+
+          // Corrections and replacements are genuine delta even if the old text exists.
+          if(/\b(correct|replace|remove|rewrite|modify|fix|change|update|clarify|align)\b/i.test(t))return false;
+          var addLike=/\b(add|create|include|insert|integrate|implement|establish|incorporate|build|expand)\b/i.test(t);
+
+          // Exact destination URLs already linked.
+          var urls=String(t).match(/https?:\/\/[^\s"'<>]+/gi)||[];
+          if(urls.length&&/\b(add|insert|link|cross[- ]?link|internal link|external link)\b/i.test(t)){
+            if(urls.every(function(u){return _finalHtmlLower.indexOf(String(u).replace(/[).,;:]+$/,'').toLowerCase())>=0;}))return true;
+          }
+
+          // FAQ/PAA already exists.
+          if(addLike&&/(faq|frequently asked questions|paa|questions? and answers?)/i.test(t)
+             &&(/faqpage/i.test(_finalLiveHtml)||/frequently asked questions/i.test(_finalHtmlText)))return true;
+
+          // Commercial membrane / flat-roof protocol already exists.
+          if(addLike&&/(membrane|tpo|epdm|commercial flat roof|commercial-specific|commercial roof snow)/i.test(t)){
+            var ms=0;
+            if(/\btpo\b/i.test(_finalHtmlText))ms++;
+            if(/\bepdm\b/i.test(_finalHtmlText))ms++;
+            if(/commercial flat roof|commercial roofing/i.test(_finalHtmlText))ms++;
+            if(/membrane/i.test(_finalHtmlText))ms++;
+            if(/balanced stages|weight distribution|drains and scuppers/i.test(_finalHtmlText))ms++;
+            if(ms>=3)return true;
+          }
+
+          // Snow/ice technical entities: all requested concepts must already be present.
+          if(addLike&&/(unbalanced snow load|steam equipment|roof load|load limit|weight distribution)/i.test(t)){
+            var wu=/unbalanced snow load/i.test(t), ws=/steam equipment|steam removal|\bsteam\b/i.test(t), wl=/roof load|load limit|load capacity|weight distribution/i.test(t);
+            var hu=/unbalanced snow load|uneven snow drifting|localized overload/i.test(_finalHtmlText);
+            var hs=/steam equipment|steam removal|\bsteam\b/i.test(_finalHtmlText);
+            var hl=/roof load|load capacity|weight distribution|weight-distribution|calculate weight|designed to carry/i.test(_finalHtmlText);
+            if((!wu||hu)&&(!ws||hs)&&(!wl||hl))return true;
+          }
+
+          // Service area / response claims already on page.
+          if(addLike&&/(24\/7|response time|all 21|new jersey counties|service area)/i.test(t)){
+            if(/24\/7|24 7|24\/7\/365/i.test(_finalHtmlText)&&/all 21|21 new jersey counties|21 counties/i.test(_finalHtmlText))return true;
+          }
+
+          // E-E-A-T/authority already present.
+          if(addLike&&/(author|e-e-a-t|authority|years of roofing experience|company experience)/i.test(t)){
+            var as=0;
+            if(/written.*reviewed by/i.test(_finalHtmlText))as++;
+            if(/15 years/i.test(_finalHtmlText))as++;
+            if(/4\+ years|over 4 years|4 years/i.test(_finalHtmlText))as++;
+            if(/nj hic|home-improvement contractor|licensed/i.test(_finalHtmlText))as++;
+            if(/last reviewed/i.test(_finalHtmlText))as++;
+            if(as>=3)return true;
+          }
+
+          // Structural assessment / load capacity already present.
+          if(addLike&&/(structural assessment|load capacity|roof assessment|hidden damage)/i.test(t)){
+            var ss=0;
+            if(/structural assessment/i.test(_finalHtmlText))ss++;
+            if(/load capacity|roof load|weight distribution/i.test(_finalHtmlText))ss++;
+            if(/hidden damage/i.test(_finalHtmlText))ss++;
+            if(ss>=2)return true;
+          }
+
+          // Near-verbatim paste-ready fragment already present.
+          var ap=String(action||'').toLowerCase().replace(/<[^>]+>/g,' ').replace(/[^a-z0-9$%+./: -]+/g,' ').replace(/\s+/g,' ').trim();
+          if(ap.length>110){
+            var frag=ap.slice(0,125);
+            if(frag.length>75&&_finalHtmlText.indexOf(frag)>=0)return true;
+          }
+          return false;
+        };
+
+        var _beforeFinalItems=Array.isArray(brief2.items)?brief2.items.length:0;
+        var _beforeFinalGsc=Array.isArray(brief2.gsc_brief)?brief2.gsc_brief.length:0;
+        if(Array.isArray(brief2.items))brief2.items=brief2.items.filter(function(it){return !_finalAlreadyCovered(it);});
+        if(Array.isArray(brief2.gsc_brief))brief2.gsc_brief=brief2.gsc_brief.filter(function(it){return !_finalAlreadyCovered(it);});
+        brief2.delta_filter={
+          live_html_checked:true,
+          removed_already_covered:(_beforeFinalItems-(brief2.items||[]).length)+(_beforeFinalGsc-(brief2.gsc_brief||[]).length),
+          items_before:_beforeFinalItems,
+          items_after:(brief2.items||[]).length,
+          gsc_before:_beforeFinalGsc,
+          gsc_after:(brief2.gsc_brief||[]).length,
+          corrections_preserved:true
+        };
+
         var _finalOpenItems=(Array.isArray(brief2.items)?brief2.items:[]).filter(function(x){return x&&!_finalFrameOnly(x);});
         var _finalOpenGsc=(Array.isArray(brief2.gsc_brief)?brief2.gsc_brief:[]).filter(Boolean);
         brief2.outstanding_actions=_finalOpenItems.length+_finalOpenGsc.length;
@@ -55178,6 +55280,7 @@ MERGE RULES:
           _gsc_enabled: (page.gsc_clicks != null) || (page.gsc_impressions != null) || (page.gsc_position != null),
           outstanding_actions: brief2.outstanding_actions,
           implementation_complete: brief2.implementation_complete,
+          delta_filter: brief2.delta_filter || null,
           ts: new Date().toISOString()
         };
         _sseBroadcast(_briefPayload2);
