@@ -266,7 +266,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-25-CANONICAL-v280';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-25-CANONICAL-v281';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 const CONTENTSCALE_BUILD_CHANGES = [
   'tracker-delta-brief-regression-lock',
@@ -492,7 +492,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-09-25-CANONICAL-v280',
+  build: 'CS-2026-09-25-CANONICAL-v281',
   built_date: '2026-09-25',
   ceo_private: true,
   ceo_public: true,
@@ -4290,6 +4290,7 @@ app.post('/api/tracker-client/:token/page/:pageId/brief-mode', async (req, res) 
 // v278 REGRESSION INVARIANT: BREVO_WEBHOOK_EVENTS_PERSISTED=true; DELIVERABILITY_DASHBOARD_VISIBLE=true; DELIVERY_PENDING_WARNING_WHEN_NO_WEBHOOK_EVENTS=true; PER_PROSPECT_DELIVERY_REASON_VISIBLE=true
 // v279 REGRESSION INVARIANT: EVERY_TRACKER_PAGE_SHOWS_NEXT_ACTION=true; BRIEF_UPDATE_ONLY_WHEN_OUTSTANDING_DELTA_GT_ZERO=true; ZERO_DELTA_SHOWS_CONTINUE_MONITORING=true; NEW_HTML_SHOWS_SCAN_REQUIRED=true; WAITING_EVIDENCE_SHOWS_WAIT_STATE=true
 // v280 REGRESSION INVARIANT: VERIFYADMIN_ROUTES_OUTSIDE_MIDDLEWARE_BODY=true; VERIFYADMIN_FULL_INITIALIZATION_PRECEDES_ROUTE_REGISTRATION=true; NO_VERIFYADMIN_TDZ_ON_BOOT=true
+// v281 REGRESSION INVARIANT: AUTO_OWNER_OPEN_NEVER_VISIBLE=true; ONLY_EXPLICIT_MANUAL_OWNER_QUESTIONS_CAN_BE_OPEN=true; GROWTH_OPEN_REBUILT_FROM_FRESH_EVIDENCE=true; GROWTH_MAX_OPEN_FIVE=true; GSC_GROWTH_REQUIRES_MEANINGFUL_DEMAND_AND_UNCOVERED_TOPIC=true; NEXT_ACTION_HELPERS_SAME_CLIENT_SCOPE=true
 // ── Owner Question Hub — persistent client-owned knowledge gaps ────────────────
 // Unanswered questions never disappear. Refresh only adds, merges, or strengthens them.
 async function _ensureTrackerOwnerQuestions(){
@@ -4305,6 +4306,7 @@ async function _ensureTrackerOwnerQuestions(){
   await pool.query('ALTER TABLE tracker_owner_questions ADD COLUMN IF NOT EXISTS trigger_type TEXT').catch(()=>{});
   await pool.query('ALTER TABLE tracker_owner_questions ADD COLUMN IF NOT EXISTS trigger_text TEXT').catch(()=>{});
   await pool.query('ALTER TABLE tracker_owner_questions ADD COLUMN IF NOT EXISTS generator_version TEXT').catch(()=>{});
+  await pool.query("ALTER TABLE tracker_owner_questions ADD COLUMN IF NOT EXISTS question_origin TEXT NOT NULL DEFAULT 'legacy'").catch(()=>{});
   await pool.query('CREATE INDEX IF NOT EXISTS tracker_owner_questions_client_status_idx ON tracker_owner_questions(tracker_client_id,status,last_seen_at DESC)');
 }
 function _ownerQuestionCanonical(q){
@@ -4343,8 +4345,15 @@ async function _mergeOpenOwnerQuestions(clientId){
 }
 app.get('/api/tracker-client/:token/owner-questions',async(req,res)=>{try{
   await _ensureTrackerOwnerQuestions();const own=await _trackerClaimsClient(req,res);if(!own)return;
-  const rr=await pool.query(`SELECT * FROM tracker_owner_questions WHERE tracker_client_id=$1 ORDER BY CASE status WHEN 'OPEN' THEN 1 WHEN 'ANSWERED_UNVERIFIED' THEN 2 ELSE 3 END,strength DESC,last_seen_at DESC,id`,[own.clientId]);
-  const rows=rr.rows||[];res.json({success:true,questions:rows,summary:{open:rows.filter(x=>x.status==='OPEN').length,answered_unverified:rows.filter(x=>x.status==='ANSWERED_UNVERIFIED').length,resolved:rows.filter(x=>x.status==='RESOLVED').length,total:rows.length}});
+  // v281: OPEN Owner questions are visible only when deliberately created as manual questions.
+  // Legacy/automatic OPEN rows are archived from the live queue; answered/history remain preserved.
+  await pool.query(`UPDATE tracker_owner_questions SET status='ARCHIVED_AUTO',last_seen_at=NOW()
+    WHERE tracker_client_id=$1 AND status='OPEN' AND COALESCE(question_origin,'legacy')<>'manual'`,[own.clientId]).catch(()=>{});
+  const rr=await pool.query(`SELECT * FROM tracker_owner_questions
+    WHERE tracker_client_id=$1
+      AND (status<>'OPEN' OR question_origin='manual')
+    ORDER BY CASE status WHEN 'OPEN' THEN 1 WHEN 'ANSWERED_UNVERIFIED' THEN 2 ELSE 3 END,strength DESC,last_seen_at DESC,id`,[own.clientId]);
+  const rows=rr.rows||[];res.json({success:true,questions:rows,summary:{open:rows.filter(x=>x.status==='OPEN'&&x.question_origin==='manual').length,answered_unverified:rows.filter(x=>x.status==='ANSWERED_UNVERIFIED').length,resolved:rows.filter(x=>x.status==='RESOLVED').length,total:rows.length}});
 }catch(e){console.error('[owner-questions-get]',e.message);res.status(500).json({success:false,error:e.message});}});
 app.post('/api/tracker-client/:token/owner-questions/refresh',async(req,res)=>{try{
   await _ensureTrackerOwnerQuestions();
@@ -4352,13 +4361,9 @@ app.post('/api/tracker-client/:token/owner-questions/refresh',async(req,res)=>{t
 
   // v274: automatic Owner Questions are intentionally disabled.
   // Remove only OPEN questions created by automatic generators; preserve answered/history/manual rows.
-  const cleaned=await pool.query(`DELETE FROM tracker_owner_questions
-    WHERE tracker_client_id=$1
-      AND status='OPEN'
-      AND (
-        COALESCE(generator_version,'')<>'' OR
-        COALESCE(trigger_type,'') IN ('first_party_page_statement','ai_gap','gsc_query','evidence','automatic','intelligence')
-      )
+  const cleaned=await pool.query(`UPDATE tracker_owner_questions
+    SET status='ARCHIVED_AUTO',last_seen_at=NOW()
+    WHERE tracker_client_id=$1 AND status='OPEN' AND COALESCE(question_origin,'legacy')<>'manual'
     RETURNING id`,[own.clientId]);
 
   const count=await pool.query(`SELECT COUNT(*)::int AS open FROM tracker_owner_questions
@@ -4372,6 +4377,20 @@ app.post('/api/tracker-client/:token/owner-questions/refresh',async(req,res)=>{t
     message:'Automatic Owner Questions are disabled. Use Manual Company Questions or add facts directly to Claims & Facts. Answers remain UNVERIFIED until explicitly verified.'
   });
 }catch(e){console.error('[owner-questions-refresh]',e);res.status(500).json({success:false,error:e.message});}});
+
+app.post('/api/tracker-client/:token/owner-questions/manual',async(req,res)=>{try{
+  await _ensureTrackerOwnerQuestions();const own=await _trackerClaimsClient(req,res);if(!own)return;
+  const question=String(req.body?.question||'').trim(),category=String(req.body?.category||'Manual company question').trim(),evidence=String(req.body?.evidence_needed||'').trim();
+  if(!question)return res.status(400).json({success:false,error:'Question is required'});
+  const fp=crypto.createHash('sha256').update('manual|'+question.toLowerCase().replace(/\s+/g,' ').trim()).digest('hex');
+  const rr=await pool.query(`INSERT INTO tracker_owner_questions
+    (tracker_client_id,fingerprint,category,question,evidence_needed,status,question_origin,trigger_type,trigger_text,generator_version)
+    VALUES($1,$2,$3,$4,$5,'OPEN','manual','manual',$4,'manual-v281')
+    ON CONFLICT(tracker_client_id,fingerprint) DO UPDATE SET question_origin='manual',status='OPEN',last_seen_at=NOW()
+    RETURNING *`,[own.clientId,fp,category,question,evidence]);
+  res.json({success:true,question:rr.rows[0]});
+}catch(e){res.status(500).json({success:false,error:e.message});}});
+
 app.post('/api/tracker-client/:token/owner-questions/:id/answer',async(req,res)=>{try{
   await _ensureTrackerOwnerQuestions();const own=await _trackerClaimsClient(req,res);if(!own)return;const answer=String(req.body?.answer||'').trim(),evidence=String(req.body?.evidence||'').trim();if(!answer)return res.status(400).json({success:false,error:'Owner answer is required'});
   const qr=await pool.query(`UPDATE tracker_owner_questions SET answer=$1,answer_evidence=$2,status='ANSWERED_UNVERIFIED',answered_at=NOW(),last_seen_at=NOW() WHERE id=$3 AND tracker_client_id=$4 AND status='OPEN' RETURNING *`,[answer,evidence,req.params.id,own.clientId]);if(!qr.rows.length)return res.status(404).json({success:false,error:'Open question not found'});const q=qr.rows[0];
@@ -4463,12 +4482,17 @@ async function _upsertGrowthQuestion(clientId,pg,q){
     page_keywords=(SELECT jsonb_agg(DISTINCT x) FROM jsonb_array_elements(COALESCE(page_keywords,'[]'::jsonb)||jsonb_build_array($6::text)) x),
     last_seen_at=NOW(),trigger_type=$7,trigger_text=$8,generator_version='v270' WHERE id=$9`,[q.why_asked||'',q.evidence_needed||'',src,pg.id,pg.url,pg.keyword||'',q.trigger_type||'evidence',q.trigger_text||'',ex.rows[0].id]);return 'merged';}return 'kept';}
   await pool.query(`INSERT INTO tracker_growth_questions(tracker_client_id,fingerprint,category,question,why_asked,evidence_needed,source_types,page_ids,page_urls,page_keywords,trigger_type,trigger_text,generator_version)
-    VALUES($1,$2,$3,$4,$5,$6,jsonb_build_array($7::text),jsonb_build_array($8::int),jsonb_build_array($9::text),jsonb_build_array($10::text),$11,$12,'v270')`,[clientId,fp,q.category||'Content growth',q.question,q.why_asked||'',q.evidence_needed||'',src,pg.id,pg.url,pg.keyword||'',q.trigger_type||'evidence',q.trigger_text||'']);return 'discovered';
+    VALUES($1,$2,$3,$4,$5,$6,jsonb_build_array($7::text),jsonb_build_array($8::int),jsonb_build_array($9::text),jsonb_build_array($10::text),$11,$12,'v281')`,[clientId,fp,q.category||'Content growth',q.question,q.why_asked||'',q.evidence_needed||'',src,pg.id,pg.url,pg.keyword||'',q.trigger_type||'evidence',q.trigger_text||'']);return 'discovered';
 }
 app.get('/api/tracker-client/:token/growth-questions',async(req,res)=>{try{
   await _ensureTrackerGrowthQuestions();const own=await _trackerClaimsClient(req,res);if(!own)return;
-  const rr=await pool.query(`SELECT * FROM tracker_growth_questions WHERE tracker_client_id=$1 ORDER BY CASE status WHEN 'OPEN' THEN 1 WHEN 'ANSWERED_UNVERIFIED' THEN 2 ELSE 3 END,strength DESC,last_seen_at DESC,id`,[own.clientId]);
-  const rows=(rr.rows||[]).map(x=>Object.assign(x,{impact:_growthQImpact(x)}));res.json({success:true,questions:rows,summary:{open:rows.filter(x=>x.status==='OPEN').length,answered:rows.filter(x=>x.status!=='OPEN').length,total:rows.length}});
+  await pool.query(`UPDATE tracker_growth_questions SET status='ARCHIVED_STALE',last_seen_at=NOW()
+    WHERE tracker_client_id=$1 AND status='OPEN' AND COALESCE(generator_version,'')<>'v281'`,[own.clientId]).catch(()=>{});
+  const rr=await pool.query(`SELECT * FROM tracker_growth_questions
+    WHERE tracker_client_id=$1
+    ORDER BY CASE status WHEN 'OPEN' THEN 1 WHEN 'ANSWERED_UNVERIFIED' THEN 2 ELSE 3 END,strength DESC,last_seen_at DESC,id`,[own.clientId]);
+  const rows=(rr.rows||[]).map(x=>Object.assign(x,{impact:_growthQImpact(x)}));
+  res.json({success:true,questions:rows,summary:{open:rows.filter(x=>x.status==='OPEN'&&x.generator_version==='v281').length,answered:rows.filter(x=>x.status==='ANSWERED_UNVERIFIED').length,total:rows.length}});
 }catch(e){console.error('[growth-questions-get]',e.message);res.status(500).json({success:false,error:e.message});}});
 
 function _ownerIntentForGrowthOverlap(row){
@@ -4499,7 +4523,10 @@ async function _growthQuestionDuplicatesOwnerInput(clientId,q){
 
 app.post('/api/tracker-client/:token/growth-questions/refresh',async(req,res)=>{try{
   await _ensureTrackerGrowthQuestions();await _ensureTrackerOwnerQuestions();const own=await _trackerClaimsClient(req,res);if(!own)return;
-  const _growthLegacyReset=await pool.query(`DELETE FROM tracker_growth_questions WHERE tracker_client_id=$1 AND status='OPEN' AND COALESCE(generator_version,'')<>'v270' RETURNING id`,[own.clientId]);
+  // v281: OPEN Growth is ephemeral current-cycle discovery. Rebuild from fresh evidence every refresh.
+  // Answered/history rows stay untouched.
+  const _growthLegacyReset=await pool.query(`UPDATE tracker_growth_questions SET status='ARCHIVED_STALE',last_seen_at=NOW()
+    WHERE tracker_client_id=$1 AND status='OPEN' RETURNING id`,[own.clientId]);
   // v263 migration cleanup: old builds injected generic Growth prompts for every page.
   // Delete only OPEN rows matching those boilerplate patterns; answered/history rows remain intact.
   const _growthDefaultCleanup=await pool.query(`DELETE FROM tracker_growth_questions
@@ -4536,10 +4563,12 @@ app.post('/api/tracker-client/:token/growth-questions/refresh',async(req,res)=>{
       ai_gap_questions++;
       candidates.push(candidate);
     }
-    for(const gq of (intel.growth_queries||[]).slice(0,3)){
-      const query=String(gq.query||'').trim(); if(!query)continue; gsc_questions++;
-      const candidate={category:'GSC demand',question:'Google Search Console shows that this exact tracked page receives impressions for “'+query+'”. What concrete first-party information could answer that search better than the page does today — and is that information true and supportable for your business?',evidence_needed:'Owner/team answer tied to the measured query; supporting evidence if it contains a factual business claim.',why_asked:'This is a page-verified GSC query with '+Number(gq.impressions||0)+' impressions and position '+(gq.position==null?'unknown':Number(gq.position).toFixed(1))+'.',source:'GSC',trigger_type:'gsc_query',trigger_text:query};
-      if(_trackerGrowthQuestionWorthAsking(candidate))candidates.push(candidate);
+    for(const gq of (intel.growth_queries||[]).slice(0,1)){
+      const query=String(gq.query||'').trim(),impr=Number(gq.impressions||0),clicks=Number(gq.clicks||0); if(!query)continue;
+      if(impr<10&&clicks<1)continue;
+      if(_trackerGrowthTopicCoveredSemantically(query,pg))continue;
+      const candidate={category:'GSC demand',question:'Google Search Console shows that this exact tracked page receives meaningful demand for “'+query+'” ('+impr+' impressions'+(clicks?(', '+clicks+' clicks'):'')+'). The live page does not appear to answer that query clearly enough. What concrete first-party information could improve the answer — and is it true and supportable for your business?',evidence_needed:'A factual first-party answer tied to the measured query; supporting evidence if it contains a business claim.',why_asked:'Page-verified GSC demand: '+impr+' impressions, '+clicks+' clicks, position '+(gq.position==null?'unknown':Number(gq.position).toFixed(1))+'. The query also failed the semantic coverage check.',source:'GSC',trigger_type:'gsc_query',trigger_text:query};
+      if(_trackerGrowthQuestionWorthAsking(candidate)){gsc_questions++;candidates.push(candidate);}
     }
     for(const q of candidates){
       // v263 cross-queue guard: never ask the owner the same underlying question in both hubs.
@@ -4556,6 +4585,15 @@ app.post('/api/tracker-client/:token/growth-questions/refresh',async(req,res)=>{
   // Recalculate strength from UNIQUE pages + UNIQUE evidence-source types. Repeated Refresh clicks no longer
   // inflate strength. An unanswered question remains open and only gets stronger when evidence broadens.
   await pool.query(`UPDATE tracker_growth_questions SET merged_count=GREATEST(1,jsonb_array_length(COALESCE(page_ids,'[]'::jsonb))),strength=LEAST(10,GREATEST(1,jsonb_array_length(COALESCE(page_ids,'[]'::jsonb)))+GREATEST(0,jsonb_array_length(COALESCE(source_types,'[]'::jsonb))-1)) WHERE tracker_client_id=$1 AND status='OPEN'`,[own.clientId]);
+  // Keep only the five strongest current Growth questions visible. Quality beats volume.
+  await pool.query(`UPDATE tracker_growth_questions SET status='ARCHIVED_LOW_PRIORITY',last_seen_at=NOW()
+    WHERE id IN (
+      SELECT id FROM tracker_growth_questions
+      WHERE tracker_client_id=$1 AND status='OPEN'
+      ORDER BY strength DESC,last_seen_at DESC,id ASC
+      OFFSET 5
+    )`,[own.clientId]);
+
   const count=await pool.query(`SELECT count(*)::int open FROM tracker_growth_questions WHERE tracker_client_id=$1 AND status='OPEN'`,[own.clientId]);
   res.json({success:true,discovered,merged,kept,legacy_open_removed:_growthLegacyReset.rowCount||0,standard_defaults_removed:_growthDefaultCleanup.rowCount||0,cross_queue_removed,semantic_collapsed:Number(semanticMerge.collapsed||0),semantic_groups:Number(semanticMerge.groups||0),pages_checked,intelligence_questions,ai_gap_questions,gsc_questions,open:Number(count.rows[0]?.open||0),message:'Checked ALL '+pages_checked+' tracked page(s). Content Growth is evidence-driven only; generic defaults and questions already owned by Owner Input were removed. Same-meaning Growth questions remain semantically consolidated across relevant pages.'});
 }catch(e){console.error('[growth-questions-refresh]',e.message);res.status(500).json({success:false,error:e.message});}});
@@ -16278,7 +16316,7 @@ async function startServer() {
   }
 
 console.log('────────────────────────────────────────');
-console.log('[ContentScale] CS-2026-09-25-CANONICAL-v280');
+console.log('[ContentScale] CS-2026-09-25-CANONICAL-v281');
 console.log('[ContentScale] Build check: /api/build-info');
 console.log('[ContentScale] Base URL: ' + (process.env.BASE_URL || 'https://app.contentscale.site'));
 console.log('────────────────────────────────────────');
@@ -19087,7 +19125,7 @@ function _ceoMainWebsiteUrl(input){
 // action must target this CEO endpoint.
 app.post('/api/ceo-report/start',async(req,res)=>{
   let ceoEntry='unknown',ceoUrl='',lastStage='REQUEST';
-  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-25-CANONICAL-v280');
+  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-25-CANONICAL-v281');
   try{
     lastStage='DB_SETUP';
     console.log('[ceo-report] stage=DB_SETUP');
@@ -19181,10 +19219,10 @@ ContentScale`;
     return res.json({success:true,entry_mode:entry,token,selected_page:selected,ceo_report_token:reportToken,ceo_report_url:reportUrl,delivery_email:delivery,updates_opt_in:updatesOptIn});
   }catch(e){
     const msg=String((e&&e.message)||e||'CEO Prospect Report generation failed');
-    console.error('[ceo-report] FAILED build=CS-2026-09-25-CANONICAL-v280 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
+    console.error('[ceo-report] FAILED build=CS-2026-09-25-CANONICAL-v281 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
     console.error('[ceo-report] ERROR: '+msg);
     if(e&&e.stack)console.error(e.stack);
-    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-25-CANONICAL-v280'});
+    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-25-CANONICAL-v281'});
     try{res.end();}catch(_){}
   }
 });
@@ -35198,60 +35236,6 @@ function getSorted(){
 }
 
 
-function _trackerNextActionState(p,isDone,lastCheckedRaw,nextEvidence){
-  function bool(v){return v===true||v===1||v==='1'||v==='true'||v==='t';}
-  function parse(v){if(!v)return null;if(typeof v==='object')return v;try{return JSON.parse(v)}catch(e){return null}}
-  var brief=parse(p.brief_content)||{};
-  var outstanding=brief.outstanding_actions!=null?Number(brief.outstanding_actions):null;
-  var complete=bool(brief.implementation_complete)||(outstanding===0);
-  var waiting=bool(p.monitoring_waiting_input);
-  var htmlAt=p.html_pasted_at?new Date(p.html_pasted_at).getTime():0;
-  var scanAt=lastCheckedRaw?new Date(lastCheckedRaw).getTime():0;
-  var freshHtml=htmlAt>0&&(!scanAt||htmlAt>scanAt);
-  var ai=p.ai_manual_evidence;if(typeof ai==='string'){try{ai=JSON.parse(ai)}catch(e){ai={}}}
-  ai=ai||{};
-  var aiChecked=['google_aio','chatgpt','perplexity','claude','copilot'].filter(function(k){
-    var ev=ai[k];return ev&&_aiEvidenceIsVerified(ev);
-  }).length;
-  var hasGsc=(p.gsc_clicks!=null||p.gsc_impressions!=null||p.gsc_position!=null||!!p.gsc_keyword);
-  var evidence='Latest scan'+(hasGsc?' + GSC':'')+(aiChecked?(' + AI '+aiChecked+'/5'):'')+' reviewed.';
-
-  if(waiting){
-    var gate=String(p.monitoring_gate_label||'');
-    var waitMsg=gate.indexOf('case_day_')===0
-      ? 'Fresh evidence is still required before this checkpoint can be closed.'
-      : 'Required evidence is still missing. Complete the requested input before scanning again.';
-    return {code:'WAITING',label:'WAITING FOR EVIDENCE',detail:waitMsg,color:'#fbbf24',border:'#a16207',bg:'#2a1f05',button:'',buttonAction:''};
-  }
-  if(freshHtml){
-    return {code:'SCAN',label:'SCAN REQUIRED',detail:'New HTML was added after the last scan. Scan the live page before deciding whether the Brief changes.',color:'#7dd3fc',border:'#0284c7',bg:'#082f49',button:'Scan now',buttonAction:'checkPage('+p.id+')'};
-  }
-  if(!lastCheckedRaw){
-    return {code:'SCAN',label:'SCAN REQUIRED',detail:'This page has not been scanned yet. Run the scan to establish the current evidence-backed delta.',color:'#7dd3fc',border:'#0284c7',bg:'#082f49',button:'Scan now',buttonAction:'checkPage('+p.id+')'};
-  }
-  if(outstanding!=null&&outstanding>0){
-    if(isDone){
-      return {code:'NEW_DELTA',label:'NEW DELTA FOUND · '+outstanding+' ACTION'+(outstanding===1?'':'S'),detail:evidence+' The fresh evidence created new actionable work. Open the updated Brief; do not change the page outside those new actions.',color:'#fde68a',border:'#f59e0b',bg:'#291b05',button:'Open updated Brief',buttonAction:'viewLastBrief('+p.id+')'};
-    }
-    return {code:'IMPLEMENT',label:'IMPLEMENT BRIEF · '+outstanding+' OPEN ACTION'+(outstanding===1?'':'S'),detail:'The current Brief still contains evidence-backed work. Apply only those actions, publish, then verify the live version.',color:'#c4b5fd',border:'#8b5cf6',bg:'#17102b',button:'Open Brief',buttonAction:'viewLastBrief('+p.id+')'};
-  }
-  if(complete){
-    return {code:'MONITOR',label:'NO NEW ACTION · CONTINUE MONITORING',detail:evidence+' No new actionable delta was found. Do not regenerate or rewrite the Brief. '+(nextEvidence||'Wait for the next scheduled evidence checkpoint.'),color:'#86efac',border:'#16a34a',bg:'#052e16',button:'',buttonAction:''};
-  }
-  if(p.brief_content){
-    return {code:'REVIEW',label:'REVIEW CURRENT BRIEF',detail:evidence+' A Brief exists, but its action count is not yet explicit. Open it before making another content change.',color:'#c4b5fd',border:'#8b5cf6',bg:'#17102b',button:'Open Brief',buttonAction:'viewLastBrief('+p.id+')'};
-  }
-  return {code:'BRIEF',label:'BRIEF CHECK REQUIRED',detail:evidence+' The scan completed but no current Brief state is available yet. Refresh once; if still missing, open Intelligence before editing the page.',color:'#93c5fd',border:'#2563eb',bg:'#0a2540',button:'',buttonAction:''};
-}
-
-function _trackerNextActionHtml(p,isDone,lastCheckedRaw,nextEvidence){
-  var n=_trackerNextActionState(p,isDone,lastCheckedRaw,nextEvidence);
-  var btn=n.button?('<button onclick="event.stopPropagation();'+n.buttonAction+'" style="margin-left:auto;flex-shrink:0;background:#0d1117;border:1px solid '+n.border+';border-radius:7px;color:'+n.color+';cursor:pointer;font-size:10px;padding:6px 11px;font-weight:900;">'+n.button+'</button>'):'';
-  return '<div data-next-action="'+n.code+'" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:10px 14px 8px;padding:10px 12px;background:'+n.bg+';border:1px solid '+n.border+';border-radius:8px;">'
-    +'<div style="min-width:0;flex:1 1 520px;"><div style="font-size:11px;font-weight:950;letter-spacing:.04em;color:'+n.color+';">NEXT ACTION · '+n.label+'</div>'
-    +'<div style="margin-top:3px;font-size:10px;line-height:1.55;color:#cbd5e1;">'+String(n.detail||'').replace(/</g,'&lt;')+'</div></div>'+btn+'</div>';
-}
-
 function renderPages(){
   var fStatus=document.getElementById('fStatus').value;
   var fPri=document.getElementById('fPri').value;
@@ -40895,6 +40879,48 @@ function _classifyTrackerPriority(p) {
   if (ps !== null && ps <= 10 && impr > 0 && impr < 50) return {tier:5,label:'\\ud83d\\udd0d LOW DEMAND',color:'#6b7280',criteria:'Page 1 + fewer than 50 impressions',action:'Ranks well but demand is low. Reconsider the target query or merge only when the evidence supports it.'};
   return {tier:4,label:'\\ud83d\\udd28 BUILD',color:'#9ca3af',criteria:'Moderate demand or a position outside the faster-win thresholds',action:'Lower active priority. Review after tiers 1-3; use Intelligence + the completed Brief to decide Treatment.'};
 }
+
+function _trackerNextActionState(p,isDone,lastCheckedRaw,nextEvidence){
+  function bool(v){return v===true||v===1||v==='1'||v==='true'||v==='t';}
+  function parse(v){if(!v)return null;if(typeof v==='object')return v;try{return JSON.parse(v)}catch(e){return null}}
+  var brief=parse(p.brief_content)||{};
+  var outstanding=brief.outstanding_actions!=null?Number(brief.outstanding_actions):null;
+  var complete=bool(brief.implementation_complete)||(outstanding===0);
+  var waiting=bool(p.monitoring_waiting_input);
+  var htmlAt=p.html_pasted_at?new Date(p.html_pasted_at).getTime():0;
+  var scanAt=lastCheckedRaw?new Date(lastCheckedRaw).getTime():0;
+  var freshHtml=htmlAt>0&&(!scanAt||htmlAt>scanAt);
+  var ai=p.ai_manual_evidence;if(typeof ai==='string'){try{ai=JSON.parse(ai)}catch(e){ai={}}}
+  ai=ai||{};
+  var aiChecked=['google_aio','chatgpt','perplexity','claude','copilot'].filter(function(k){
+    var ev=ai[k];return ev&&_aiEvidenceIsVerified(ev);
+  }).length;
+  var hasGsc=(p.gsc_clicks!=null||p.gsc_impressions!=null||p.gsc_position!=null||!!p.gsc_keyword);
+  var evidence='Latest scan'+(hasGsc?' + GSC':'')+(aiChecked?(' + AI '+aiChecked+'/5'):'')+' reviewed.';
+  if(waiting){
+    var gate=String(p.monitoring_gate_label||'');
+    var waitMsg=gate.indexOf('case_day_')===0?'Fresh evidence is still required before this checkpoint can be closed.':'Required evidence is still missing. Complete the requested input before scanning again.';
+    return {code:'WAITING',label:'WAITING FOR EVIDENCE',detail:waitMsg,color:'#fbbf24',border:'#a16207',bg:'#2a1f05',button:'',buttonAction:''};
+  }
+  if(freshHtml||!lastCheckedRaw){
+    return {code:'SCAN',label:'SCAN REQUIRED',detail:freshHtml?'New HTML was added after the last scan. Scan the live page before deciding whether the Brief changes.':'This page has not been scanned yet. Run the scan to establish the current evidence-backed delta.',color:'#7dd3fc',border:'#0284c7',bg:'#082f49',button:'Scan now',buttonAction:'checkPage('+p.id+')'};
+  }
+  if(outstanding!=null&&outstanding>0){
+    if(isDone)return {code:'NEW_DELTA',label:'NEW DELTA FOUND · '+outstanding+' ACTION'+(outstanding===1?'':'S'),detail:evidence+' Fresh evidence created new actionable work. Open the updated Brief.',color:'#fde68a',border:'#f59e0b',bg:'#291b05',button:'Open updated Brief',buttonAction:'viewLastBrief('+p.id+')'};
+    return {code:'IMPLEMENT',label:'IMPLEMENT BRIEF · '+outstanding+' OPEN ACTION'+(outstanding===1?'':'S'),detail:'The current Brief still contains evidence-backed work. Apply only those actions, publish, then verify the live version.',color:'#c4b5fd',border:'#8b5cf6',bg:'#17102b',button:'Open Brief',buttonAction:'viewLastBrief('+p.id+')'};
+  }
+  if(complete)return {code:'MONITOR',label:'NO NEW ACTION · CONTINUE MONITORING',detail:evidence+' No new actionable delta was found. Do not regenerate or rewrite the Brief. '+(nextEvidence||'Wait for the next scheduled evidence checkpoint.'),color:'#86efac',border:'#16a34a',bg:'#052e16',button:'',buttonAction:''};
+  if(p.brief_content)return {code:'REVIEW',label:'REVIEW CURRENT BRIEF',detail:evidence+' A Brief exists, but its action count is not explicit yet. Open it before making another content change.',color:'#c4b5fd',border:'#8b5cf6',bg:'#17102b',button:'Open Brief',buttonAction:'viewLastBrief('+p.id+')'};
+  return {code:'BRIEF',label:'BRIEF CHECK REQUIRED',detail:evidence+' The scan completed but no current Brief state is available yet.',color:'#93c5fd',border:'#2563eb',bg:'#0a2540',button:'',buttonAction:''};
+}
+function _trackerNextActionHtml(p,isDone,lastCheckedRaw,nextEvidence){
+  var n=_trackerNextActionState(p,isDone,lastCheckedRaw,nextEvidence);
+  var btn=n.button?('<button onclick="event.stopPropagation();'+n.buttonAction+'" style="margin-left:auto;flex-shrink:0;background:#0d1117;border:1px solid '+n.border+';border-radius:7px;color:'+n.color+';cursor:pointer;font-size:10px;padding:6px 11px;font-weight:900;">'+n.button+'</button>'):'';
+  return '<div data-next-action="'+n.code+'" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:10px 14px 8px;padding:10px 12px;background:'+n.bg+';border:1px solid '+n.border+';border-radius:8px;">'
+    +'<div style="min-width:0;flex:1 1 520px;"><div style="font-size:11px;font-weight:950;letter-spacing:.04em;color:'+n.color+';">NEXT ACTION · '+n.label+'</div>'
+    +'<div style="margin-top:3px;font-size:10px;line-height:1.55;color:#cbd5e1;">'+String(n.detail||'').replace(/</g,'&lt;')+'</div></div>'+btn+'</div>';
+}
+
 function renderPages() {
   var el = document.getElementById('pagesList');
   var countEl = document.getElementById('pageCountLabel');
