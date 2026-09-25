@@ -266,7 +266,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-25-CANONICAL-v265';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-25-CANONICAL-v266';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 const CONTENTSCALE_BUILD_CHANGES = [
   'tracker-delta-brief-regression-lock',
@@ -492,7 +492,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-09-25-CANONICAL-v265',
+  build: 'CS-2026-09-25-CANONICAL-v266',
   built_date: '2026-09-25',
   ceo_private: true,
   ceo_public: true,
@@ -4274,7 +4274,8 @@ app.post('/api/tracker-client/:token/page/:pageId/brief-mode', async (req, res) 
 });
 
 // v265 REGRESSION INVARIANT: OWNER_QUESTIONS_FROM_LIVE_DOMAIN_AND_CONCRETE_EVIDENCE=true; NO_GENERIC_OWNER_QUESTIONNAIRE=true; CROSS_QUEUE_DUPLICATES=false
-// v265 REGRESSION INVARIANT: NO_CROSS_TENANT_BRAND_IN_OWNER_QUESTIONS=true; ACTION_PAGES_SHOW_FIRST_LAST_NEXT_SCAN=true
+// v266 REGRESSION INVARIANT: NO_CROSS_TENANT_BRAND_IN_OWNER_QUESTIONS=true; ACTION_PAGES_SHOW_FIRST_LAST_NEXT_SCAN=true
+// v266 REGRESSION INVARIANT: OWNER_INPUT_REQUIRES_FIRST_PARTY_SENTENCE_EVIDENCE=true; GENERIC_EDITORIAL_TERMS_DO_NOT_TRIGGER_OWNER_INPUT=true; GROWTH_NO_WEAK_GSC_OR_GENERIC_COMPETITOR_FALLBACK=true
 // ── Owner Question Hub — persistent client-owned knowledge gaps ────────────────
 // Unanswered questions never disappear. Refresh only adds, merges, or strengthens them.
 async function _ensureTrackerOwnerQuestions(){
@@ -4302,6 +4303,7 @@ function _ownerQuestionCanonical(q){
   if(/response time|how quickly|arrival time|dispatch time/.test(n))return {key:'response-time',category:'Response time',question:text};
   if(/material|system.*install|install.*system|shingle|epdm|tpo|modified bitumen/.test(n))return {key:'materials-systems',category:'Materials & systems',question:text};
   if(/insurance|claim/.test(n))return {key:'insurance-assistance',category:'Insurance assistance',question:text};
+  if(/pricing|price|estimate|quote|we charge|per square foot/.test(n))return {key:'pricing-policy',category:'Pricing evidence',question:text};
   if(/local experience|service area|which (cities|counties|areas)|locations do you/.test(n))return {key:'local-proof',category:'Local proof',question:text};
   return {key:'specific:'+cat.toLowerCase()+'|'+n,category:cat,question:text};
 }
@@ -4354,6 +4356,10 @@ app.post('/api/tracker-client/:token/owner-questions/refresh',async(req,res)=>{t
       OR question ILIKE '%Is this true for Perfect Roofing Team%'
       OR question ILIKE '%Can Perfect Roofing Team actually promise this%'
       OR question ILIKE '%Perfect Roofing Team’s real jobs or estimating rules%'
+      OR question ILIKE 'On your “%” page you discuss insurance claims/adjusters.%'
+      OR question ILIKE 'The “%” page contains a response/dispatch claim.%'
+      OR question ILIKE 'The “%” page mentions a warranty or guarantee.%'
+      OR question ILIKE 'The “%” page publishes or discusses pricing/costs.%'
     ) RETURNING id`,[
       own.clientId,
       ['Which real completed projects or customer situations can we document across your services, including location, problem, solution and outcome?',
@@ -4531,11 +4537,14 @@ app.post('/api/tracker-client/:token/growth-questions/refresh',async(req,res)=>{
     // 1) Evidence-backed AI/content gaps.
     const gaps=(intel.content_opportunities||[]).filter(x=>!x.covered).slice(0,4);
     for(const g of gaps){ai_gap_questions++;candidates.push({category:'AI / content gap',question:'From your real work, what should a customer know about “'+String(g.topic||'this topic')+'” that generic online advice usually misses?',evidence_needed:'Owner experience, project example, documented process, photo/review or other first-party proof',why_asked:String(g.engine_count||1)+' AI engine(s) repeatedly surface this topic, but the tracked page does not clearly cover it. A specific owner answer can become differentiated content.',source:'AI gap'});}
-    // 2) Competitor evidence. This asks for the owner’s own process; it never copies a competitor claim.
-    if((intel.competitors||[]).length)candidates.push({category:'Competitive differentiation',question:'For “'+topic+'”, what do you do differently in the real job process that a customer would not learn from a typical competitor service page?',evidence_needed:'Specific process difference plus a real example or proof if available',why_asked:'Competitors are visible in the saved Intelligence evidence. This asks for defensible first-party differentiation instead of copying competitor claims.',source:'SERP / competitors'});
+    // 2) Competitor evidence: no generic "what do you do differently?" question.
+    // Only ask when Intelligence has a concrete uncovered topic that competitors/evidence expose.
+    if((intel.competitors||[]).length && gaps.length){
+      const cg=String(gaps[0]?.topic||'').trim();
+      if(cg)candidates.push({category:'Competitive differentiation',question:'Competitor/evidence analysis for “'+topic+'” shows the uncovered topic “'+cg+'”. What specific first-party experience, process, limitation or proof can your company add about that exact topic?',evidence_needed:'First-party answer tied specifically to “'+cg+'”; project/process proof preferred',why_asked:'A concrete uncovered topic is present in the current Intelligence evidence. The answer can differentiate the page without inventing or copying competitor claims.',source:'SERP / competitors'});
+    }
     // 3) Measured GSC demand from page-verified rows.
     if((intel.growth_queries||[]).length){const qs=intel.growth_queries.slice(0,4).map(x=>x.query).filter(Boolean);if(qs.length){gsc_questions++;candidates.push({category:'GSC demand',question:'Customers are finding this page through “'+qs.join('”, “')+'”. What factual answer, example, limitation, price factor or decision criterion can you add from your own experience for these searches?',evidence_needed:'Owner answer tied to actual service experience; supporting project/process evidence preferred',why_asked:'These are measured Search Console queries with demand. The answer can help the existing page satisfy real search intent more completely.',source:'GSC'});}}
-    else if(Number(pg.gsc_impressions)>=20){gsc_questions++;candidates.push({category:'GSC demand',question:'This page already has '+Number(pg.gsc_impressions)+' measured Google impressions for “'+topic+'”. What customer question do you repeatedly hear before they choose this service, and what is your factual answer?',evidence_needed:'Real customer question plus the owner/team answer; call/email/job evidence preferred',why_asked:'The page has measured search visibility, but no usable page-verified growth-query question was available. This captures first-party purchase-intent information instead of leaving the queue empty.',source:'GSC'});}
     for(const q of candidates){
       // v263 cross-queue guard: never ask the owner the same underlying question in both hubs.
       if(await _growthQuestionDuplicatesOwnerInput(own.clientId,q)){kept++;continue;}
@@ -4800,6 +4809,25 @@ async function _trackerBuildDerivedIntelligence(clientId,pageId){
   const _intelEngineNames={google_aio:'Google AIO',chatgpt:'ChatGPT',perplexity:'Perplexity',claude:'Claude',copilot:'Microsoft Copilot'};
   engineGaps.forEach(g=>winningActions.push({type:'engine_gap',engine:g.engine,title:(_intelEngineNames[g.engine]||g.engine)+' exact-page gap',action:g.recommended&&!g.domain_cited?'The brand is recommended but the website is not cited. Compare the sources this engine actually links to, then add only the missing first-party proof or direct answer.':g.other_page_cited?'Another page on the same domain is cited, but not this tracked URL. Compare the cited page with this page, preserve what already works, and strengthen only the intent or evidence missing from the tracked URL.':g.domain_cited?'The domain is cited but not this exact page. Strengthen page-level relevance and the direct answer for this seed query without rewriting proven sections.':g.saved?'This engine was checked but did not cite the exact page. Use its saved source URLs and recurring topics below to identify one evidence-backed gap.':'Save a manual answer for this engine before changing content; no engine-specific conclusion is yet supported.'}));
   if(!sources.some(x=>x.own_domain))winningActions.push({type:'source_gap',title:'Make this page the primary source',action:'Publish original business facts, named service details, project evidence and clear entity/contact information so engines have a stronger first-party source than competitor summaries.'});
+
+  // v266 Owner-question evidence gate.
+  // A word somewhere in HTML is NOT enough. Owner Input is only for a first-party/business claim
+  // made by the tracked page itself. Educational/editorial discussion belongs to content analysis,
+  // not to an owner interview.
+  const _ownerEvidenceSentences=_trackerIntelSentences(String(page.html_content||'')
+    .replace(/<script[\s\S]*?<\/script>/gi,' ')
+    .replace(/<style[\s\S]*?<\/style>/gi,' ')
+    .replace(/<(nav|footer|header)[\s\S]*?<\/\1>/gi,' ')
+    .replace(/<[^>]+>/g,' ')
+    .replace(/\s+/g,' ').trim());
+  const _isFirstPartySentence=(x)=>{
+    const t=String(x||'').toLowerCase();
+    // Require a business/service assertion, not a generic article sentence.
+    const self=/\b(we|our|us|our team|our company|customers? can (?:call|contact|hire)|contact us|call us|book|request (?:a|an|your)|get (?:a|your)|we provide|we offer|we help|we handle|we work|we charge|our pricing|our warranty|our guarantee)\b/.test(t);
+    const commercial=/\b(service|customer|client|estimate|quote|inspection|repair|installation|consulting|audit|tracker|subscription|plan|pricing|warranty|guarantee|claim|adjuster|response|dispatch)\b/.test(t);
+    return self && commercial;
+  };
+  const _ownerEvidence=(rx)=>_ownerEvidenceSentences.filter(x=>rx.test(String(x||'').toLowerCase())&&_isFirstPartySentence(x)).slice(0,4);
   const _knownText=known.filter(x=>x.status==='VERIFIED').map(x=>String(x.claim_text||'').toLowerCase()).join(' ');
   const _liveText=String(page.html_content||'').replace(/<script[\s\S]*?<\/script>/gi,' ').replace(/<style[\s\S]*?<\/style>/gi,' ').replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim();
   const _liveLower=_liveText.toLowerCase();
@@ -4812,35 +4840,46 @@ async function _trackerBuildDerivedIntelligence(clientId,pageId){
   };
   // v264: Owner Input comes from what THIS DOMAIN/PAGE actually says or from a concrete
   // unverified claim surfaced by current Intelligence. No generic six-question questionnaire.
-  if(/\b(insurance|claim|adjuster)\b/.test(_liveLower) && !/\b(insurance assistance|insurance claim assistance|adjuster|claim documentation)\b/.test(_knownText)){
+  const _insuranceEvidence=_ownerEvidence(/\b(insurance|claim|adjuster)\b/);
+  if(_insuranceEvidence.length && !/\b(insurance assistance|insurance claim assistance|adjuster|claim documentation)\b/.test(_knownText)){
     _oqPush('Insurance assistance',
-      'On your “'+_topic+'” page you discuss insurance claims/adjusters. What does your team actually do for the customer — for example photos, estimates, paperwork or speaking with the adjuster — and what do you NOT promise (such as claim approval or payout)?',
-      'Owner confirmation plus, if available, a real claim-support workflow/document.','insurance-assistance');
+      'On your “'+_topic+'” page your company makes this insurance-related statement: “'+_insuranceEvidence[0].slice(0,220)+'”. What exactly does your team handle, and what do you explicitly NOT promise or handle?',
+      'Owner confirmation tied to this exact page statement; workflow/document if available.','insurance-assistance');
   }
-  if(/\b(2[- ]?hour|within \d+ (?:hour|hours|minutes)|rapid response|same[- ]day|response time|dispatch)\b/.test(_liveLower) && !/\b(response time|arrival time|dispatch time|2 hour|same day)\b/.test(_knownText)){
+  const _responseEvidence=_ownerEvidence(/\b(2[- ]?hour|within \d+ (?:hour|hours|minutes)|rapid response|same[- ]day|response time|dispatch)\b/);
+  if(_responseEvidence.length && !/\b(response time|arrival time|dispatch time|2 hour|same day)\b/.test(_knownText)){
     _oqPush('Response time',
-      'The “'+_topic+'” page contains a response/dispatch claim. What response time can your team truthfully promise for this service, in which service areas, and what conditions can change that timing?',
-      'Owner/operations confirmation; dispatch records if available.','response-time');
+      'On your “'+_topic+'” page your company makes this response/dispatch statement: “'+_responseEvidence[0].slice(0,220)+'”. What timing can you truthfully promise, where does it apply, and what conditions can change it?',
+      'Owner/operations confirmation tied to the quoted page statement; dispatch records if available.','response-time');
   }
-  if(/\b(warranty|guarantee|workmanship)\b/.test(_liveLower) && !/\b(warranty|guarantee|workmanship)\b/.test(_knownText)){
+  const _warrantyEvidence=_ownerEvidence(/\b(warranty|guarantee|workmanship)\b/);
+  if(_warrantyEvidence.length && !/\b(warranty|guarantee|workmanship)\b/.test(_knownText)){
     _oqPush('Guarantees',
-      'The “'+_topic+'” page mentions a warranty or guarantee. What exact warranty applies to this work — duration, what is covered, exclusions, and whether repair and replacement warranties differ?',
-      'Written warranty/terms or owner confirmation.','guarantees');
+      'On your “'+_topic+'” page your company makes this warranty/guarantee statement: “'+_warrantyEvidence[0].slice(0,220)+'”. What exact terms can we verify — duration, coverage and exclusions?',
+      'Written warranty/terms or owner confirmation tied to this exact statement.','guarantees');
   }
-  if(/\$[\d,]+|\b(per square foot|pricing|costs?|price range|estimate)\b/.test(_liveLower) && !/\b(pricing|price|cost|per square foot)\b/.test(_knownText)){
+  const _pricingEvidence=_ownerEvidence(/(\$[\d,]+|\b(per square foot|our pricing|we charge|our price|our cost|estimate|quote)\b)/);
+  if(_pricingEvidence.length && !/\b(pricing|price|cost|per square foot)\b/.test(_knownText)){
     _oqPush('Pricing evidence',
-      'The “'+_topic+'” page publishes or discusses pricing/costs. Which numbers come from your company’s real jobs or estimating rules, which are third-party market ranges, and which figures should we remove rather than present as company pricing?',
-      'Recent estimates/invoices, estimating rules, or the exact external source for market ranges.','pricing-evidence');
+      'On your “'+_topic+'” page your company makes this pricing/estimate statement: “'+_pricingEvidence[0].slice(0,220)+'”. Which part is your real company pricing/estimating policy, and what evidence supports it?',
+      'Recent estimate/invoice, written estimating rule, or owner confirmation tied to the quoted statement.','pricing-evidence');
   }
-  if(/\b(free inspection|free assessment)\b/.test(_liveLower) && /\bfree estimate\b/.test(_knownText) && !/\bfree inspection\b/.test(_knownText)){
+  const _freeInspectionEvidence=_ownerEvidence(/\b(free inspection|free assessment)\b/);
+  if(_freeInspectionEvidence.length && /\bfree estimate\b/.test(_knownText) && !/\bfree inspection\b/.test(_knownText)){
     _oqPush('Offer accuracy',
-      'The “'+_topic+'” page says “free inspection/assessment”, while the verified company fact is “free estimate”. Does your company actually offer a free inspection, or should every such reference be changed to free estimate?',
+      'On your “'+_topic+'” page your company says: “'+_freeInspectionEvidence[0].slice(0,220)+'”. Your verified company fact is “free estimate”. Is the quoted offer also true, or should it be changed to free estimate?',
       'Owner confirmation of the exact offer.','free-inspection-vs-estimate');
   }
   // Current AI/source claims that would materially improve this page but are not yet safe to publish.
   for(const c of claims.filter(x=>x.requires_business_verification).slice(0,8)){
     const ct=String(c.claim||'').trim(), cl=ct.toLowerCase();
     if(!ct)continue;
+    // v266: generic AI/competitor facts (market prices, industry warranties, insurance advice, etc.)
+    // are SOURCE verification work, not OWNER Input. Only route claims that are clearly attributed
+    // to this tracked business/company.
+    const _companyTokens=String(_company||'').toLowerCase().split(/[^a-z0-9]+/).filter(x=>x.length>=4);
+    const _aboutCompany=/(we|our|us|this company|the company)/.test(cl)||_companyTokens.some(t=>cl.includes(t));
+    if(!_aboutCompany)continue;
     if(/insurance|claim|adjuster/.test(cl)){
       _oqPush('Claim verification','Current Intelligence surfaced this claim for “'+_topic+'”: “'+ct+'”. Is this true for your company, and what first-party evidence can support it?','Owner confirmation plus first-party evidence.','claim-insurance');
     }else if(/response|hour|minute|dispatch|same day/.test(cl)){
@@ -15950,7 +15989,7 @@ async function startServer() {
   }
 
 console.log('────────────────────────────────────────');
-console.log('[ContentScale] CS-2026-09-25-CANONICAL-v265');
+console.log('[ContentScale] CS-2026-09-25-CANONICAL-v266');
 console.log('[ContentScale] Build check: /api/build-info');
 console.log('[ContentScale] Base URL: ' + (process.env.BASE_URL || 'https://app.contentscale.site'));
 console.log('────────────────────────────────────────');
@@ -18600,7 +18639,7 @@ function _ceoMainWebsiteUrl(input){
 // action must target this CEO endpoint.
 app.post('/api/ceo-report/start',async(req,res)=>{
   let ceoEntry='unknown',ceoUrl='',lastStage='REQUEST';
-  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-25-CANONICAL-v265');
+  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-25-CANONICAL-v266');
   try{
     lastStage='DB_SETUP';
     console.log('[ceo-report] stage=DB_SETUP');
@@ -18694,10 +18733,10 @@ ContentScale`;
     return res.json({success:true,entry_mode:entry,token,selected_page:selected,ceo_report_token:reportToken,ceo_report_url:reportUrl,delivery_email:delivery,updates_opt_in:updatesOptIn});
   }catch(e){
     const msg=String((e&&e.message)||e||'CEO Prospect Report generation failed');
-    console.error('[ceo-report] FAILED build=CS-2026-09-25-CANONICAL-v265 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
+    console.error('[ceo-report] FAILED build=CS-2026-09-25-CANONICAL-v266 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
     console.error('[ceo-report] ERROR: '+msg);
     if(e&&e.stack)console.error(e.stack);
-    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-25-CANONICAL-v265'});
+    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-25-CANONICAL-v266'});
     try{res.end();}catch(_){}
   }
 });
@@ -40127,7 +40166,7 @@ function renderStats(data) {
 
   // Persistent Owner Question Hub: one client-level queue, merged across pages.
   function _ownerQEsc(v){return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
-  window.loadOwnerQuestionHub=function(){var box=document.getElementById('ownerQuestionHub');if(!box)return;fetch('/api/tracker-client/'+TOKEN+'/owner-questions').then(function(r){return r.json();}).then(function(d){if(!d.success)throw new Error(d.error||'Could not load owner questions');var q=(d.questions||[]).filter(function(x){return x.status==='OPEN';}),sum=d.summary||{};var rows=q.map(function(x){var urls=Array.isArray(x.page_urls)?x.page_urls:[];return '<div style="border-top:1px solid #78350f;padding:10px 0;"><div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start;"><div><b style="color:#fbbf24;font-size:10px;">'+_ownerQEsc(x.category)+'</b><div style="color:#f8fafc;font-size:12px;font-weight:800;margin-top:2px;">'+_ownerQEsc(x.question)+'</div><div style="color:#94a3b8;font-size:9px;margin-top:3px;">Needed proof: '+_ownerQEsc(x.evidence_needed||'Owner confirmation')+' · Seen across '+urls.length+' page(s) · Strength '+Number(x.strength||1)+'/10</div></div><span style="color:#f59e0b;font-size:9px;font-weight:900;white-space:nowrap;">OPEN</span></div><textarea id="oqA'+x.id+'" class="cs-input" rows="2" placeholder="Owner’s exact factual answer" style="width:100%;margin-top:7px;resize:vertical;"></textarea><input id="oqE'+x.id+'" class="cs-input" placeholder="Evidence / document / URL / who confirmed it" style="width:100%;margin-top:5px;"><button class="cs-btn" onclick="answerOwnerHubQuestion('+x.id+')" style="margin-top:6px;border-color:#d97706;color:#fbbf24;font-size:10px;">Save answer for verification</button></div>';}).join('');box.innerHTML='<details style="border:2px solid #d97706;border-radius:10px;background:#120d05;padding:11px 13px;"><summary style="cursor:pointer;color:#fbbf24;font-weight:900;letter-spacing:.04em;">OWNER INPUT NEEDED · '+Number(sum.open||0)+' OPEN</summary><div style="color:#cbd5e1;font-size:10px;line-height:1.55;margin:8px 0;">These questions come from the client’s own tracked pages and current Intelligence evidence. Each question should explain what the page actually says or which concrete claim needs verification; no generic questionnaire is injected.</div><button class="cs-btn" onclick="refreshOwnerQuestionHub(this)" style="border-color:#f59e0b;color:#fde68a;font-size:10px;">↻ Refresh questions from Tracker evidence</button><span style="margin-left:8px;color:#94a3b8;font-size:9px;">Answered facts move to Claims &amp; Facts as UNVERIFIED until evidence is approved.</span>'+ (rows||'<div style="color:#86efac;padding:10px 0;">No open owner questions stored yet. Click Refresh to inspect ALL tracked pages and rebuild the central owner queue.</div>') +'</details>';}).catch(function(e){box.innerHTML='<div style="color:#f87171;font-size:10px;">Owner Question Hub: '+_ownerQEsc(e.message)+'</div>';});};
+  window.loadOwnerQuestionHub=function(){var box=document.getElementById('ownerQuestionHub');if(!box)return;fetch('/api/tracker-client/'+TOKEN+'/owner-questions').then(function(r){return r.json();}).then(function(d){if(!d.success)throw new Error(d.error||'Could not load owner questions');var q=(d.questions||[]).filter(function(x){return x.status==='OPEN';}),sum=d.summary||{};var rows=q.map(function(x){var urls=Array.isArray(x.page_urls)?x.page_urls:[];return '<div style="border-top:1px solid #78350f;padding:10px 0;"><div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start;"><div><b style="color:#fbbf24;font-size:10px;">'+_ownerQEsc(x.category)+'</b><div style="color:#f8fafc;font-size:12px;font-weight:800;margin-top:2px;">'+_ownerQEsc(x.question)+'</div><div style="color:#94a3b8;font-size:9px;margin-top:3px;">Needed proof: '+_ownerQEsc(x.evidence_needed||'Owner confirmation')+' · Seen across '+urls.length+' page(s) · Strength '+Number(x.strength||1)+'/10</div></div><span style="color:#f59e0b;font-size:9px;font-weight:900;white-space:nowrap;">OPEN</span></div><textarea id="oqA'+x.id+'" class="cs-input" rows="2" placeholder="Owner’s exact factual answer" style="width:100%;margin-top:7px;resize:vertical;"></textarea><input id="oqE'+x.id+'" class="cs-input" placeholder="Evidence / document / URL / who confirmed it" style="width:100%;margin-top:5px;"><button class="cs-btn" onclick="answerOwnerHubQuestion('+x.id+')" style="margin-top:6px;border-color:#d97706;color:#fbbf24;font-size:10px;">Save answer for verification</button></div>';}).join('');box.innerHTML='<details style="border:2px solid #d97706;border-radius:10px;background:#120d05;padding:11px 13px;"><summary style="cursor:pointer;color:#fbbf24;font-weight:900;letter-spacing:.04em;">OWNER INPUT NEEDED · '+Number(sum.open||0)+' OPEN</summary><div style="color:#cbd5e1;font-size:10px;line-height:1.55;margin:8px 0;">These questions come only from a concrete first-party statement on the client’s tracked pages or a company-attributed Intelligence claim. The triggering page statement is quoted in the question. Generic editorial mentions of pricing, insurance, warranties or response times do not create Owner Input.</div><button class="cs-btn" onclick="refreshOwnerQuestionHub(this)" style="border-color:#f59e0b;color:#fde68a;font-size:10px;">↻ Refresh questions from Tracker evidence</button><span style="margin-left:8px;color:#94a3b8;font-size:9px;">Answered facts move to Claims &amp; Facts as UNVERIFIED until evidence is approved.</span>'+ (rows||'<div style="color:#86efac;padding:10px 0;">No open owner questions stored yet. Click Refresh to inspect ALL tracked pages and rebuild the central owner queue.</div>') +'</details>';}).catch(function(e){box.innerHTML='<div style="color:#f87171;font-size:10px;">Owner Question Hub: '+_ownerQEsc(e.message)+'</div>';});};
   window.refreshOwnerQuestionHub=function(btn){var old=btn&&btn.textContent;if(btn){btn.disabled=true;btn.textContent='Refreshing…';}fetch('/api/tracker-client/'+TOKEN+'/owner-questions/refresh',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'}).then(function(r){return r.json();}).then(function(d){if(!d.success)throw new Error(d.error||'Refresh failed');toast((d.message||'Owner questions refreshed.')+' Open: '+Number(d.open||0)+'.','#4ade80');loadOwnerQuestionHub();}).catch(function(e){toast(e.message,'#f87171');}).finally(function(){if(btn){btn.disabled=false;btn.textContent=old;}});};
   window.answerOwnerHubQuestion=function(id){var a=document.getElementById('oqA'+id),e=document.getElementById('oqE'+id),answer=a&&a.value.trim();if(!answer){toast('Enter the owner’s factual answer first.','#f87171');return;}fetch('/api/tracker-client/'+TOKEN+'/owner-questions/'+id+'/answer',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({answer:answer,evidence:e&&e.value.trim()||''})}).then(function(r){return r.json();}).then(function(d){if(!d.success)throw new Error(d.error||'Save failed');toast('Saved once — now waiting for verification in Claims & Facts.','#fbbf24');loadOwnerQuestionHub();}).catch(function(x){toast(x.message,'#f87171');});};
   loadOwnerQuestionHub();
