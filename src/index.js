@@ -266,7 +266,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-25-CANONICAL-v264';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-25-CANONICAL-v265';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 const CONTENTSCALE_BUILD_CHANGES = [
   'tracker-delta-brief-regression-lock',
@@ -492,7 +492,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-09-25-CANONICAL-v264',
+  build: 'CS-2026-09-25-CANONICAL-v265',
   built_date: '2026-09-25',
   ceo_private: true,
   ceo_public: true,
@@ -2353,6 +2353,7 @@ app.get('/api/tracker-client/:token', async (req, res) => {
               s.google_position, s.ai_google_overview_cited, s.ai_google_overview_text, s.ai_google_overview_found, s.ai_perplexity_cited,
               s.ai_bing_cited, s.ai_bing_text, s.ai_brave_cited,
               s.score as graaf_score, s.checked_at as last_checked,
+              (SELECT MIN(fs.checked_at) FROM tracker_snapshots fs WHERE fs.page_id=p.id) AS first_scanned_at,
               s.recommendations, s.source_suggestions, s.discovered_sources,
               s.gsc_brief, s.author_trust_score, s.author_trust_findings,
               s.google_competitors, s.ai_perplexity_competitors, s.ai_perplexity_answer_excerpt, s.ai_perplexity_text, s.ai_google_overview_references,
@@ -4272,7 +4273,8 @@ app.post('/api/tracker-client/:token/page/:pageId/brief-mode', async (req, res) 
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
-// v264 REGRESSION INVARIANT: OWNER_QUESTIONS_FROM_LIVE_DOMAIN_AND_CONCRETE_EVIDENCE=true; NO_GENERIC_OWNER_QUESTIONNAIRE=true; CROSS_QUEUE_DUPLICATES=false
+// v265 REGRESSION INVARIANT: OWNER_QUESTIONS_FROM_LIVE_DOMAIN_AND_CONCRETE_EVIDENCE=true; NO_GENERIC_OWNER_QUESTIONNAIRE=true; CROSS_QUEUE_DUPLICATES=false
+// v265 REGRESSION INVARIANT: NO_CROSS_TENANT_BRAND_IN_OWNER_QUESTIONS=true; ACTION_PAGES_SHOW_FIRST_LAST_NEXT_SCAN=true
 // ── Owner Question Hub — persistent client-owned knowledge gaps ────────────────
 // Unanswered questions never disappear. Refresh only adds, merges, or strengthens them.
 async function _ensureTrackerOwnerQuestions(){
@@ -4346,6 +4348,12 @@ app.post('/api/tracker-client/:token/owner-questions/refresh',async(req,res)=>{t
       OR question='What response or arrival times can you truthfully promise, and what factors can change them?'
       OR question='Which roofing materials and systems do you actually install, repair or recommend, and when do you choose each one?'
       OR question='What real local experience, recurring roof problems or completed projects can we document for the locations you serve?'
+      OR question ILIKE '%What does Perfect Roofing Team actually do for the customer%'
+      OR question ILIKE '%What response time can Perfect Roofing Team truthfully promise%'
+      OR question ILIKE '%Does Perfect Roofing Team actually offer a free inspection%'
+      OR question ILIKE '%Is this true for Perfect Roofing Team%'
+      OR question ILIKE '%Can Perfect Roofing Team actually promise this%'
+      OR question ILIKE '%Perfect Roofing Team’s real jobs or estimating rules%'
     ) RETURNING id`,[
       own.clientId,
       ['Which real completed projects or customer situations can we document across your services, including location, problem, solution and outcome?',
@@ -4806,12 +4814,12 @@ async function _trackerBuildDerivedIntelligence(clientId,pageId){
   // unverified claim surfaced by current Intelligence. No generic six-question questionnaire.
   if(/\b(insurance|claim|adjuster)\b/.test(_liveLower) && !/\b(insurance assistance|insurance claim assistance|adjuster|claim documentation)\b/.test(_knownText)){
     _oqPush('Insurance assistance',
-      'On your “'+_topic+'” page you discuss insurance claims/adjusters. What does Perfect Roofing Team actually do for the customer — for example photos, estimates, paperwork or speaking with the adjuster — and what do you NOT promise (such as claim approval or payout)?',
+      'On your “'+_topic+'” page you discuss insurance claims/adjusters. What does your team actually do for the customer — for example photos, estimates, paperwork or speaking with the adjuster — and what do you NOT promise (such as claim approval or payout)?',
       'Owner confirmation plus, if available, a real claim-support workflow/document.','insurance-assistance');
   }
   if(/\b(2[- ]?hour|within \d+ (?:hour|hours|minutes)|rapid response|same[- ]day|response time|dispatch)\b/.test(_liveLower) && !/\b(response time|arrival time|dispatch time|2 hour|same day)\b/.test(_knownText)){
     _oqPush('Response time',
-      'The “'+_topic+'” page contains a response/dispatch claim. What response time can Perfect Roofing Team truthfully promise for this service, in which NJ areas, and what conditions can change that timing?',
+      'The “'+_topic+'” page contains a response/dispatch claim. What response time can your team truthfully promise for this service, in which service areas, and what conditions can change that timing?',
       'Owner/operations confirmation; dispatch records if available.','response-time');
   }
   if(/\b(warranty|guarantee|workmanship)\b/.test(_liveLower) && !/\b(warranty|guarantee|workmanship)\b/.test(_knownText)){
@@ -4821,12 +4829,12 @@ async function _trackerBuildDerivedIntelligence(clientId,pageId){
   }
   if(/\$[\d,]+|\b(per square foot|pricing|costs?|price range|estimate)\b/.test(_liveLower) && !/\b(pricing|price|cost|per square foot)\b/.test(_knownText)){
     _oqPush('Pricing evidence',
-      'The “'+_topic+'” page publishes or discusses pricing/costs. Which numbers come from Perfect Roofing Team’s real jobs or estimating rules, which are third-party market ranges, and which figures should we remove rather than present as company pricing?',
+      'The “'+_topic+'” page publishes or discusses pricing/costs. Which numbers come from your company’s real jobs or estimating rules, which are third-party market ranges, and which figures should we remove rather than present as company pricing?',
       'Recent estimates/invoices, estimating rules, or the exact external source for market ranges.','pricing-evidence');
   }
   if(/\b(free inspection|free assessment)\b/.test(_liveLower) && /\bfree estimate\b/.test(_knownText) && !/\bfree inspection\b/.test(_knownText)){
     _oqPush('Offer accuracy',
-      'The “'+_topic+'” page says “free inspection/assessment”, while the verified company fact is “free estimate”. Does Perfect Roofing Team actually offer a free inspection, or should every such reference be changed to free estimate?',
+      'The “'+_topic+'” page says “free inspection/assessment”, while the verified company fact is “free estimate”. Does your company actually offer a free inspection, or should every such reference be changed to free estimate?',
       'Owner confirmation of the exact offer.','free-inspection-vs-estimate');
   }
   // Current AI/source claims that would materially improve this page but are not yet safe to publish.
@@ -4834,9 +4842,9 @@ async function _trackerBuildDerivedIntelligence(clientId,pageId){
     const ct=String(c.claim||'').trim(), cl=ct.toLowerCase();
     if(!ct)continue;
     if(/insurance|claim|adjuster/.test(cl)){
-      _oqPush('Claim verification','Current Intelligence surfaced this claim for “'+_topic+'”: “'+ct+'”. Is this true for Perfect Roofing Team, and what first-party evidence can support it?','Owner confirmation plus first-party evidence.','claim-insurance');
+      _oqPush('Claim verification','Current Intelligence surfaced this claim for “'+_topic+'”: “'+ct+'”. Is this true for your company, and what first-party evidence can support it?','Owner confirmation plus first-party evidence.','claim-insurance');
     }else if(/response|hour|minute|dispatch|same day/.test(cl)){
-      _oqPush('Claim verification','Current Intelligence surfaced this timing claim for “'+_topic+'”: “'+ct+'”. Can Perfect Roofing Team actually promise this, and under what conditions?','Dispatch/operations evidence or owner confirmation.','claim-response');
+      _oqPush('Claim verification','Current Intelligence surfaced this timing claim for “'+_topic+'”: “'+ct+'”. Can your team actually promise this, and under what conditions?','Dispatch/operations evidence or owner confirmation.','claim-response');
     }else if(/warranty|guarantee/.test(cl)){
       _oqPush('Claim verification','Current Intelligence surfaced this warranty claim for “'+_topic+'”: “'+ct+'”. What exact written terms can we verify before using it?','Written warranty/terms.','claim-warranty');
     }else if(/\$|cost|price|percent|%/.test(cl)){
@@ -15942,7 +15950,7 @@ async function startServer() {
   }
 
 console.log('────────────────────────────────────────');
-console.log('[ContentScale] CS-2026-09-25-CANONICAL-v264');
+console.log('[ContentScale] CS-2026-09-25-CANONICAL-v265');
 console.log('[ContentScale] Build check: /api/build-info');
 console.log('[ContentScale] Base URL: ' + (process.env.BASE_URL || 'https://app.contentscale.site'));
 console.log('────────────────────────────────────────');
@@ -18592,7 +18600,7 @@ function _ceoMainWebsiteUrl(input){
 // action must target this CEO endpoint.
 app.post('/api/ceo-report/start',async(req,res)=>{
   let ceoEntry='unknown',ceoUrl='',lastStage='REQUEST';
-  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-25-CANONICAL-v264');
+  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-25-CANONICAL-v265');
   try{
     lastStage='DB_SETUP';
     console.log('[ceo-report] stage=DB_SETUP');
@@ -18686,10 +18694,10 @@ ContentScale`;
     return res.json({success:true,entry_mode:entry,token,selected_page:selected,ceo_report_token:reportToken,ceo_report_url:reportUrl,delivery_email:delivery,updates_opt_in:updatesOptIn});
   }catch(e){
     const msg=String((e&&e.message)||e||'CEO Prospect Report generation failed');
-    console.error('[ceo-report] FAILED build=CS-2026-09-25-CANONICAL-v264 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
+    console.error('[ceo-report] FAILED build=CS-2026-09-25-CANONICAL-v265 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
     console.error('[ceo-report] ERROR: '+msg);
     if(e&&e.stack)console.error(e.stack);
-    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-25-CANONICAL-v264'});
+    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-25-CANONICAL-v265'});
     try{res.end();}catch(_){}
   }
 });
@@ -40161,7 +40169,8 @@ function renderStats(data) {
         var label=_csEscH(p.title||p.keyword||String(p.url||'').replace(/^https?:[/][/]/,'').split('/')[0]||('Page '+p.id));
         var url=_csEscH(p.url||'').replace(/"/g,'&quot;');
         return '<div class="cs-monitor-action-row" style="padding:10px 12px;border:1px solid #243449;border-radius:8px;background:#0b1624;margin-top:7px;">'
-          +'<div style="min-width:0;"><strong style="display:block;color:#e2e8f0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+label+'</strong><a href="'+url+'" target="_blank" rel="noopener" style="display:block;color:#60a5fa;font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+_csEscH(p.url||'')+'</a></div>'
+          +'<div style="min-width:0;"><strong style="display:block;color:#e2e8f0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+label+'</strong><a href="'+url+'" target="_blank" rel="noopener" style="display:block;color:#60a5fa;font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+_csEscH(p.url||'')+'</a>'
+          +'<div style="margin-top:5px;color:#94a3b8;font-size:9px;line-height:1.5;">First scan: '+(function(){var d=p.first_scanned_at||(p.case_study&&p.case_study.baseline_at);if(!d)return '—';try{return new Date(d).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});}catch(x){return '—';}})()+' &nbsp;·&nbsp; Last scan: '+(function(){var d=p.last_checked_at||p.last_checked;if(!d)return '—';try{return new Date(d).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});}catch(x){return '—';}})()+' &nbsp;·&nbsp; Next scan: '+(function(){if(!isMonitored)return 'Off';if(!p.next_check_at)return waiting?'Waiting for evidence':'Not scheduled';try{return new Date(p.next_check_at).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});}catch(x){return '—';}})()+'</div></div>'
           +'<div style="color:'+color+';font-size:10px;font-weight:800;line-height:1.45;">'+_csEscH(status)+'</div>'
           +'<button type="button" onclick="jumpToTrackerPage('+Number(p.id)+')" style="border:1px solid #3b82f6;background:#10264a;color:#bfdbfe;border-radius:6px;padding:6px 9px;cursor:pointer;font-size:10px;font-weight:800;white-space:nowrap;">Open page</button></div>';
       }).join('');
