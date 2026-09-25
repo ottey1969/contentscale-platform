@@ -266,7 +266,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-25-CANONICAL-v278';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-25-CANONICAL-v279';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 const CONTENTSCALE_BUILD_CHANGES = [
   'tracker-delta-brief-regression-lock',
@@ -492,7 +492,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-09-25-CANONICAL-v278',
+  build: 'CS-2026-09-25-CANONICAL-v279',
   built_date: '2026-09-25',
   ceo_private: true,
   ceo_public: true,
@@ -4288,6 +4288,7 @@ app.post('/api/tracker-client/:token/page/:pageId/brief-mode', async (req, res) 
 // v276 REGRESSION INVARIANT: WARMUP_ADVANCES_BY_COMPLETED_DAILY_TARGETS_NOT_CALENDAR=true; STRAY_SENDS_DO_NOT_ADVANCE_DAY=true; LEGACY_INFLATED_PROGRESS_REPAIRED=true; REBOOT_CANNOT_RESET_OR_INFLATE_WARMUP=true
 // v277 REGRESSION INVARIANT: LOCALIZED_SYNC_INCLUDES_ALL_VERIFIED_FACTS_CLIENT_AND_PAGE_LEVEL=true; ORIGINAL_SCOPE_AND_SOURCE_PAGE_PRESERVED=true; NO_FALSE_EMPTY_CLIENT_LEVEL_SYNC=true
 // v278 REGRESSION INVARIANT: BREVO_WEBHOOK_EVENTS_PERSISTED=true; DELIVERABILITY_DASHBOARD_VISIBLE=true; DELIVERY_PENDING_WARNING_WHEN_NO_WEBHOOK_EVENTS=true; PER_PROSPECT_DELIVERY_REASON_VISIBLE=true
+// v279 REGRESSION INVARIANT: EVERY_TRACKER_PAGE_SHOWS_NEXT_ACTION=true; BRIEF_UPDATE_ONLY_WHEN_OUTSTANDING_DELTA_GT_ZERO=true; ZERO_DELTA_SHOWS_CONTINUE_MONITORING=true; NEW_HTML_SHOWS_SCAN_REQUIRED=true; WAITING_EVIDENCE_SHOWS_WAIT_STATE=true
 // ── Owner Question Hub — persistent client-owned knowledge gaps ────────────────
 // Unanswered questions never disappear. Refresh only adds, merges, or strengthens them.
 async function _ensureTrackerOwnerQuestions(){
@@ -16272,7 +16273,7 @@ async function startServer() {
   }
 
 console.log('────────────────────────────────────────');
-console.log('[ContentScale] CS-2026-09-25-CANONICAL-v278');
+console.log('[ContentScale] CS-2026-09-25-CANONICAL-v279');
 console.log('[ContentScale] Build check: /api/build-info');
 console.log('[ContentScale] Base URL: ' + (process.env.BASE_URL || 'https://app.contentscale.site'));
 console.log('────────────────────────────────────────');
@@ -19081,7 +19082,7 @@ function _ceoMainWebsiteUrl(input){
 // action must target this CEO endpoint.
 app.post('/api/ceo-report/start',async(req,res)=>{
   let ceoEntry='unknown',ceoUrl='',lastStage='REQUEST';
-  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-25-CANONICAL-v278');
+  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-25-CANONICAL-v279');
   try{
     lastStage='DB_SETUP';
     console.log('[ceo-report] stage=DB_SETUP');
@@ -19175,10 +19176,10 @@ ContentScale`;
     return res.json({success:true,entry_mode:entry,token,selected_page:selected,ceo_report_token:reportToken,ceo_report_url:reportUrl,delivery_email:delivery,updates_opt_in:updatesOptIn});
   }catch(e){
     const msg=String((e&&e.message)||e||'CEO Prospect Report generation failed');
-    console.error('[ceo-report] FAILED build=CS-2026-09-25-CANONICAL-v278 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
+    console.error('[ceo-report] FAILED build=CS-2026-09-25-CANONICAL-v279 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
     console.error('[ceo-report] ERROR: '+msg);
     if(e&&e.stack)console.error(e.stack);
-    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-25-CANONICAL-v278'});
+    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-25-CANONICAL-v279'});
     try{res.end();}catch(_){}
   }
 });
@@ -35191,6 +35192,61 @@ function getSorted(){
   return arr;
 }
 
+
+function _trackerNextActionState(p,isDone,lastCheckedRaw,nextEvidence){
+  function bool(v){return v===true||v===1||v==='1'||v==='true'||v==='t';}
+  function parse(v){if(!v)return null;if(typeof v==='object')return v;try{return JSON.parse(v)}catch(e){return null}}
+  var brief=parse(p.brief_content)||{};
+  var outstanding=brief.outstanding_actions!=null?Number(brief.outstanding_actions):null;
+  var complete=bool(brief.implementation_complete)||(outstanding===0);
+  var waiting=bool(p.monitoring_waiting_input);
+  var htmlAt=p.html_pasted_at?new Date(p.html_pasted_at).getTime():0;
+  var scanAt=lastCheckedRaw?new Date(lastCheckedRaw).getTime():0;
+  var freshHtml=htmlAt>0&&(!scanAt||htmlAt>scanAt);
+  var ai=p.ai_manual_evidence;if(typeof ai==='string'){try{ai=JSON.parse(ai)}catch(e){ai={}}}
+  ai=ai||{};
+  var aiChecked=['google_aio','chatgpt','perplexity','claude','copilot'].filter(function(k){
+    var ev=ai[k];return ev&&_aiEvidenceIsVerified(ev);
+  }).length;
+  var hasGsc=(p.gsc_clicks!=null||p.gsc_impressions!=null||p.gsc_position!=null||!!p.gsc_keyword);
+  var evidence='Latest scan'+(hasGsc?' + GSC':'')+(aiChecked?(' + AI '+aiChecked+'/5'):'')+' reviewed.';
+
+  if(waiting){
+    var gate=String(p.monitoring_gate_label||'');
+    var waitMsg=gate.indexOf('case_day_')===0
+      ? 'Fresh evidence is still required before this checkpoint can be closed.'
+      : 'Required evidence is still missing. Complete the requested input before scanning again.';
+    return {code:'WAITING',label:'WAITING FOR EVIDENCE',detail:waitMsg,color:'#fbbf24',border:'#a16207',bg:'#2a1f05',button:'',buttonAction:''};
+  }
+  if(freshHtml){
+    return {code:'SCAN',label:'SCAN REQUIRED',detail:'New HTML was added after the last scan. Scan the live page before deciding whether the Brief changes.',color:'#7dd3fc',border:'#0284c7',bg:'#082f49',button:'Scan now',buttonAction:'checkPage('+p.id+')'};
+  }
+  if(!lastCheckedRaw){
+    return {code:'SCAN',label:'SCAN REQUIRED',detail:'This page has not been scanned yet. Run the scan to establish the current evidence-backed delta.',color:'#7dd3fc',border:'#0284c7',bg:'#082f49',button:'Scan now',buttonAction:'checkPage('+p.id+')'};
+  }
+  if(outstanding!=null&&outstanding>0){
+    if(isDone){
+      return {code:'NEW_DELTA',label:'NEW DELTA FOUND · '+outstanding+' ACTION'+(outstanding===1?'':'S'),detail:evidence+' The fresh evidence created new actionable work. Open the updated Brief; do not change the page outside those new actions.',color:'#fde68a',border:'#f59e0b',bg:'#291b05',button:'Open updated Brief',buttonAction:'viewLastBrief('+p.id+')'};
+    }
+    return {code:'IMPLEMENT',label:'IMPLEMENT BRIEF · '+outstanding+' OPEN ACTION'+(outstanding===1?'':'S'),detail:'The current Brief still contains evidence-backed work. Apply only those actions, publish, then verify the live version.',color:'#c4b5fd',border:'#8b5cf6',bg:'#17102b',button:'Open Brief',buttonAction:'viewLastBrief('+p.id+')'};
+  }
+  if(complete){
+    return {code:'MONITOR',label:'NO NEW ACTION · CONTINUE MONITORING',detail:evidence+' No new actionable delta was found. Do not regenerate or rewrite the Brief. '+(nextEvidence||'Wait for the next scheduled evidence checkpoint.'),color:'#86efac',border:'#16a34a',bg:'#052e16',button:'',buttonAction:''};
+  }
+  if(p.brief_content){
+    return {code:'REVIEW',label:'REVIEW CURRENT BRIEF',detail:evidence+' A Brief exists, but its action count is not yet explicit. Open it before making another content change.',color:'#c4b5fd',border:'#8b5cf6',bg:'#17102b',button:'Open Brief',buttonAction:'viewLastBrief('+p.id+')'};
+  }
+  return {code:'BRIEF',label:'BRIEF CHECK REQUIRED',detail:evidence+' The scan completed but no current Brief state is available yet. Refresh once; if still missing, open Intelligence before editing the page.',color:'#93c5fd',border:'#2563eb',bg:'#0a2540',button:'',buttonAction:''};
+}
+
+function _trackerNextActionHtml(p,isDone,lastCheckedRaw,nextEvidence){
+  var n=_trackerNextActionState(p,isDone,lastCheckedRaw,nextEvidence);
+  var btn=n.button?('<button onclick="event.stopPropagation();'+n.buttonAction+'" style="margin-left:auto;flex-shrink:0;background:#0d1117;border:1px solid '+n.border+';border-radius:7px;color:'+n.color+';cursor:pointer;font-size:10px;padding:6px 11px;font-weight:900;">'+n.button+'</button>'):'';
+  return '<div data-next-action="'+n.code+'" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:10px 14px 8px;padding:10px 12px;background:'+n.bg+';border:1px solid '+n.border+';border-radius:8px;">'
+    +'<div style="min-width:0;flex:1 1 520px;"><div style="font-size:11px;font-weight:950;letter-spacing:.04em;color:'+n.color+';">NEXT ACTION · '+n.label+'</div>'
+    +'<div style="margin-top:3px;font-size:10px;line-height:1.55;color:#cbd5e1;">'+String(n.detail||'').replace(/</g,'&lt;')+'</div></div>'+btn+'</div>';
+}
+
 function renderPages(){
   var fStatus=document.getElementById('fStatus').value;
   var fPri=document.getElementById('fPri').value;
@@ -41301,6 +41357,7 @@ function renderPages() {
       + '</div>'
       + _caseReadyHtml
       + '</div>'
+      + _trackerNextActionHtml(p,isDone,lastCheckedRaw,nextEvidence)
       + recsHtml
       + ((!isDone && !p.case_study_active && hasBrief && !(!!p.html_pasted_at && !!lastCheckedRaw && new Date(p.html_pasted_at) > new Date(lastCheckedRaw)))
         ? '<div data-tour="done-verify" onclick="markDone(' + p.id + ',this,false)" style="cursor:pointer;display:flex;align-items:center;gap:10px;padding:12px 16px;background:linear-gradient(90deg,rgba(74,222,128,.08),rgba(74,222,128,.02));border-top:1px solid #1f2937;animation:donePulse 2s ease-in-out infinite;">'
@@ -41313,7 +41370,7 @@ function renderPages() {
           + '</div>'
         : isDone
           ? (isCaseStudy
-            ? '<div style="display:flex;align-items:center;gap:8px;padding:10px 16px;background:linear-gradient(90deg,rgba(14,165,233,.09),rgba(34,197,94,.04));border-top:1px solid #075985;font-size:12px;color:#7dd3fc;"><span>\\u2713</span><span style="font-weight:800;">VERIFIED IMPLEMENTATION \\u2014 active monitoring continues</span><span style="margin-left:auto;font-size:10px;color:#64748b;">Baseline and publication history protected</span></div>'
+            ? '<div style="display:flex;align-items:center;gap:8px;padding:10px 16px;background:linear-gradient(90deg,rgba(14,165,233,.09),rgba(34,197,94,.04));border-top:1px solid #075985;font-size:12px;color:#7dd3fc;"><span>\\u2713</span><span style="font-weight:800;">VERIFIED IMPLEMENTATION \\u2014 see NEXT ACTION above</span><span style="margin-left:auto;font-size:10px;color:#64748b;">Baseline and publication history protected</span></div>'
             : '<div style="display:flex;align-items:center;gap:8px;padding:10px 16px;background:rgba(74,222,128,.06);border-top:1px solid #166534;font-size:12px;color:#4ade80;cursor:pointer;" onclick="markDone(' + p.id + ',this,true)"><span>\\u2713</span><span style="font-weight:700;">DONE \\u2014 implementation declared</span><span style="margin-left:auto;font-size:11px;color:#374151;">click to undo</span></div>')
           : ''
         )
