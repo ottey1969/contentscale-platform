@@ -266,7 +266,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-25-CANONICAL-v254';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-25-CANONICAL-v255';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 const CONTENTSCALE_BUILD_CHANGES = [
   'lead-outreach-signature-preview-send-v253',
@@ -489,7 +489,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-09-25-CANONICAL-v254',
+  build: 'CS-2026-09-25-CANONICAL-v255',
   built_date: '2026-09-25',
   ceo_private: true,
   ceo_public: true,
@@ -15784,7 +15784,7 @@ async function startServer() {
   }
 
 console.log('────────────────────────────────────────');
-console.log('[ContentScale] CS-2026-09-25-CANONICAL-v254');
+console.log('[ContentScale] CS-2026-09-25-CANONICAL-v255');
 console.log('[ContentScale] Build check: /api/build-info');
 console.log('[ContentScale] Base URL: ' + (process.env.BASE_URL || 'https://app.contentscale.site'));
 console.log('────────────────────────────────────────');
@@ -18434,7 +18434,7 @@ function _ceoMainWebsiteUrl(input){
 // action must target this CEO endpoint.
 app.post('/api/ceo-report/start',async(req,res)=>{
   let ceoEntry='unknown',ceoUrl='',lastStage='REQUEST';
-  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-25-CANONICAL-v254');
+  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-25-CANONICAL-v255');
   try{
     lastStage='DB_SETUP';
     console.log('[ceo-report] stage=DB_SETUP');
@@ -18528,10 +18528,10 @@ ContentScale`;
     return res.json({success:true,entry_mode:entry,token,selected_page:selected,ceo_report_token:reportToken,ceo_report_url:reportUrl,delivery_email:delivery,updates_opt_in:updatesOptIn});
   }catch(e){
     const msg=String((e&&e.message)||e||'CEO Prospect Report generation failed');
-    console.error('[ceo-report] FAILED build=CS-2026-09-25-CANONICAL-v254 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
+    console.error('[ceo-report] FAILED build=CS-2026-09-25-CANONICAL-v255 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
     console.error('[ceo-report] ERROR: '+msg);
     if(e&&e.stack)console.error(e.stack);
-    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-25-CANONICAL-v254'});
+    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-25-CANONICAL-v255'});
     try{res.end();}catch(_){}
   }
 });
@@ -41966,7 +41966,17 @@ function renderCannibal() {
   var _possRemaining = _possList.filter(function(s){ return !_exportedSlugs[s]; });
   var _possDoneCount = _possList.length - _possRemaining.length;
   var _possCount = _cannibalIssues.filter(function(c){ return c.level === 'POSSIBLE'; }).length;
-  _slugToPageId = {}; (_pages||[]).forEach(function(p){ _slugToPageId[slugOf(p)] = p.id; });
+  _slugToPageId = {}; (_pages||[]).forEach(function(p){
+    var _displaySlug = slugOf(p);
+    _slugToPageId[_displaySlug] = p.id;
+    // Cannibalisation evidence stores the homepage as '/', while slugOf() renders it as '(homepage)'.
+    // Keep both keys so a newly surfaced homepage can never become an invisible UNRESOLVED row.
+    try {
+      var _rawPath = new URL(p.url).pathname || '/';
+      _slugToPageId[_rawPath] = p.id;
+      if (_rawPath === '/') _slugToPageId['(homepage)'] = p.id;
+    } catch(e) {}
+  });
   var shortcutStrip = (_possList.length && _possCount)
     ? '<div style="padding:8px 14px;border-bottom:1px solid #1f2937;background:rgba(250,204,21,.06);font-size:11px;color:#facc15;line-height:1.7;">'
       + '\u26a1 ' + _possCount + ' yellow POSSIBLE rows touch <b>' + _possList.length + ' unique pages</b>'
@@ -42030,8 +42040,10 @@ function renderCannibal() {
             html += '<div style="margin:3px 0 4px;color:#f87171;font-weight:900;font-size:10px;">NEW / ACTION REQUIRED (' + fresh.length + ')</div>';
             html += fresh.slice(0,15).map(function(s){
               var pid=_slugToPageId[s]; var rows=_provenPageStats[s].rows;
-              var btn=pid ? '<button onclick="checkPage(' + pid + ')" data-proven-scan="' + pid + '" style="flex-shrink:0;cursor:pointer;font-size:9px;font-weight:800;padding:2px 8px;border-radius:4px;background:#7f1d1d;border:1px solid #ef4444;color:#fecaca;margin-right:8px;">\ud83c\udd95 Scan this page</button>' : '<span style="color:#fbbf24;margin-right:8px;">UNRESOLVED</span>';
-              return '<div style="display:flex;align-items:center;font-family:monospace;background:rgba(239,68,68,.06);padding:3px 5px;border-radius:4px;">' + btn + '<span>' + s + ' <span style="color:#f87171;">(' + rows + ' overlap famil' + (rows===1?'y':'ies') + ')</span></span></div>';
+              var btn=pid ? '<button onclick="checkPage(' + pid + ')" data-proven-scan="' + pid + '" style="flex-shrink:0;cursor:pointer;font-size:9px;font-weight:800;padding:2px 8px;border-radius:4px;background:#7f1d1d;border:1px solid #ef4444;color:#fecaca;margin-right:8px;">\ud83c\udd95 Scan this page</button>' : '<span style="color:#fbbf24;margin-right:8px;">UNRESOLVED — URL not matched to a tracked page</span>';
+              var _trackedPage = pid ? (_pages||[]).find(function(x){ return String(x.id)===String(pid); }) : null;
+              var _visibleUrl = (_trackedPage && _trackedPage.url) ? _trackedPage.url : s;
+              return '<div style="display:flex;align-items:center;font-family:monospace;background:rgba(239,68,68,.06);padding:3px 5px;border-radius:4px;">' + btn + '<span style="overflow-wrap:anywhere;">' + _visibleUrl + ' <span style="color:#f87171;">(' + rows + ' overlap famil' + (rows===1?'y':'ies') + ')</span></span></div>';
             }).join('');
           }
           if (done.length) {
@@ -42446,6 +42458,15 @@ async function savePrePublicationCheckpoint(pageId) {
     if (btnEl) btnEl.textContent = '\u23f3 Queuing scans\u2026';
     var _bulkSlugs = (_provenList||[]).filter(function(s){ return !_isSlugScanned(s); });
     var pageIds = _bulkSlugs.map(function(s){ return _slugToPageId[s]; }).filter(Boolean);
+    // Never create a fake 0/0 batch. If a new overlap cannot be matched to a tracked page,
+    // keep it visible in NEW / ACTION REQUIRED and ask for resolution instead of offering Retry.
+    if (!pageIds.length) {
+      _provenBulkRun = null;
+      var _emptyBox=document.getElementById('provenScanProgress'); if(_emptyBox){_emptyBox.style.display='none';_emptyBox.innerHTML='';}
+      if (btnEl) { btnEl.disabled=true; btnEl.textContent='\u26a0 New page unresolved — see URL below'; }
+      toast('New overlap found, but no tracked page ID is available yet. The URL is shown under NEW / ACTION REQUIRED.', '#f59e0b');
+      return;
+    }
     // Map each page id back to its slug so we can verify the scan actually landed (DERIVED from DB).
     var idToSlug = {};
     _bulkSlugs.forEach(function(sl){ var pid = _slugToPageId[sl]; if (pid) idToSlug[String(pid)] = sl; });
