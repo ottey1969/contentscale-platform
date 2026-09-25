@@ -266,7 +266,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-25-CANONICAL-v284';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-25-CANONICAL-v286';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 const CONTENTSCALE_BUILD_CHANGES = [
   'tracker-delta-brief-regression-lock',
@@ -492,7 +492,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-09-25-CANONICAL-v284',
+  build: 'CS-2026-09-25-CANONICAL-v286',
   built_date: '2026-09-25',
   ceo_private: true,
   ceo_public: true,
@@ -2320,6 +2320,7 @@ app.get('/api/tracker-client/:token', async (req, res) => {
       ['aio_manual_text','TEXT'],
       ['aio_manual_refs','JSONB'],
       ['brief_viewed_at','TIMESTAMPTZ']
+      ,['brief_evaluated_at','TIMESTAMPTZ']
       ,['revision_cycle','INTEGER NOT NULL DEFAULT 1']
       ,['email_reminders','BOOLEAN NOT NULL DEFAULT TRUE']
       ,['ai_reminder_days','INTEGER NOT NULL DEFAULT 14']
@@ -2344,7 +2345,7 @@ app.get('/api/tracker-client/:token', async (req, res) => {
       `SELECT p.id, p.url, p.keyword, p.gsc_keyword, p.created_at, p.next_check_at, p.last_checked_at,
               p.is_done, p.manual_done, p.manual_done_at, p.fetch_reliable, p.check_frequency, p.email_reminders, p.ai_reminder_days, p.next_ai_reminder_at, p.last_ai_reminder_sent_at, p.monitoring_waiting_input,p.monitoring_request_at,p.monitoring_require_ai,p.monitoring_gate_label,p.monitoring_gsc_pages_at,p.monitoring_gsc_queries_at,p.gsc_clicks, p.gsc_impressions, p.gsc_position,
               p.treatment, p.treatment_target_url, p.treatment_updated_at, p.treatment_source, p.implementation_at, p.implementation_verified_at, p.implementation_status, p.implementation_before_graaf,
-              p.ranking_brief, p.needs_html, p.brief_started_at, p.brief_content, p.brief_check_count,
+              p.ranking_brief, p.needs_html, p.brief_started_at, p.brief_evaluated_at, p.brief_content, p.brief_check_count,
               p.html_pasted_at, p.html_source, p.last_graaf_score, p.brief_mode, p.revision_cycle,
               (p.html_content IS NOT NULL AND p.html_content != '') as has_html_content,
               EXISTS(SELECT 1 FROM tracker_gsc_queries q WHERE q.tracker_client_id=p.tracker_client_id AND q.page_id=p.id AND q.evidence_scope='page_verified') as has_gsc_queries,
@@ -4294,6 +4295,8 @@ app.post('/api/tracker-client/:token/page/:pageId/brief-mode', async (req, res) 
 // v282 REGRESSION INVARIANT: NEXT_ACTION_HELPER_DEFINED_BEFORE_CLIENT_RENDER=true; LOCALIZED_SYNC_SELECTS_SOURCE_BY_REAL_VERIFIED_LEDGER=true; LOCALIZED_SYNC_NORMALIZES_VERIFIED_STATUS=true; LOCALIZED_SYNC_EXCLUDES_NL_ES_AS_SOURCE=true
 // v283 REGRESSION INVARIANT: LEGACY_BRIEF_ACTION_COUNT_DERIVED_DETERMINISTICALLY=true; NO_SUBJECTIVE_REVIEW_CURRENT_BRIEF_STATE=true; ANY_OPEN_BRIEF_ACTION_MEANS_UPDATE=true; ZERO_ACTIONS_MEANS_MONITOR=true
 // v284 REGRESSION INVARIANT: NEW_DELTA_ONLY_AFTER_ACTUAL_SCAN_EVALUATION=true; OLD_BRIEF_NEVER_CREATES_NEW_DELTA_BY_ITSELF=true; PRE_V284_PAGES_REQUIRE_ONE_FRESH_SCAN=true; BRIEF_EVALUATED_AT_SET_ONLY_BY_SCAN_BRIEF_PERSIST=true
+// v285 REGRESSION INVARIANT: MAIN_TRACKER_GET_RETURNS_BRIEF_EVALUATED_AT=true; MAIN_GET_SELF_HEALS_BRIEF_EVALUATED_AT=true; POST_SCAN_NEXT_ACTION_CAN_ADVANCE_WITHOUT_SECOND_SCAN=true
+// v286 REGRESSION INVARIANT: NEXT_ACTION_GATES_MUTATING_CONTROLS=true; NO_ACTION_LOCKS_SCAN_AND_CONTENT_CHANGES=true; SCAN_REQUIRED_ONLY_SCAN_PATH_ACTIVE=true; NEW_DELTA_OR_IMPLEMENT_ENABLE_CONTENT_CHANGES=true; HISTORY_AND_VIEW_BRIEF_REMAIN_READ_ONLY_AVAILABLE=true
 // ── Owner Question Hub — persistent client-owned knowledge gaps ────────────────
 // Unanswered questions never disappear. Refresh only adds, merges, or strengthens them.
 async function _ensureTrackerOwnerQuestions(){
@@ -6750,7 +6753,7 @@ app.get('/api/tracker-client/:token/debug-pages', async (req, res) => {
     const cr = await pool.query('SELECT id FROM tracker_clients WHERE token=$1', [req.params.token]);
     if (!cr.rows.length) return res.status(404).json({ error: 'Not found' });
     const r = await pool.query(`
-      SELECT p.id, p.url, p.keyword, p.last_checked_at, p.brief_check_count,
+      SELECT p.id, p.url, p.keyword, p.last_checked_at, p.brief_check_count, p.brief_evaluated_at,
              p.gsc_clicks, p.gsc_impressions, p.gsc_position, p.gsc_keyword,
              s.checked_at as snap_checked_at, s.google_position as snap_pos,
              s.ai_google_overview_cited, s.ai_perplexity_cited,
@@ -16356,7 +16359,7 @@ async function startServer() {
   }
 
 console.log('────────────────────────────────────────');
-console.log('[ContentScale] CS-2026-09-25-CANONICAL-v284');
+console.log('[ContentScale] CS-2026-09-25-CANONICAL-v286');
 console.log('[ContentScale] Build check: /api/build-info');
 console.log('[ContentScale] Base URL: ' + (process.env.BASE_URL || 'https://app.contentscale.site'));
 console.log('────────────────────────────────────────');
@@ -19165,7 +19168,7 @@ function _ceoMainWebsiteUrl(input){
 // action must target this CEO endpoint.
 app.post('/api/ceo-report/start',async(req,res)=>{
   let ceoEntry='unknown',ceoUrl='',lastStage='REQUEST';
-  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-25-CANONICAL-v284');
+  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-25-CANONICAL-v286');
   try{
     lastStage='DB_SETUP';
     console.log('[ceo-report] stage=DB_SETUP');
@@ -19259,10 +19262,10 @@ ContentScale`;
     return res.json({success:true,entry_mode:entry,token,selected_page:selected,ceo_report_token:reportToken,ceo_report_url:reportUrl,delivery_email:delivery,updates_opt_in:updatesOptIn});
   }catch(e){
     const msg=String((e&&e.message)||e||'CEO Prospect Report generation failed');
-    console.error('[ceo-report] FAILED build=CS-2026-09-25-CANONICAL-v284 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
+    console.error('[ceo-report] FAILED build=CS-2026-09-25-CANONICAL-v286 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
     console.error('[ceo-report] ERROR: '+msg);
     if(e&&e.stack)console.error(e.stack);
-    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-25-CANONICAL-v284'});
+    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-25-CANONICAL-v286'});
     try{res.end();}catch(_){}
   }
 });
@@ -40954,10 +40957,10 @@ function _trackerNextActionState(p,isDone,lastCheckedRaw,nextEvidence){
     return {code:'SCAN',label:'SCAN REQUIRED TO CHECK FOR NEW DELTA',detail:'This page has an older Brief, but it has not yet been evaluated by the current scan workflow. Run Scan now. Only the result of that scan may create a NEW DELTA or confirm NO NEW ACTION.',color:'#7dd3fc',border:'#0284c7',bg:'#082f49',button:'Scan now',buttonAction:'checkPage('+p.id+')'};
   }
   if(outstanding!=null&&outstanding>0){
-    if(isDone)return {code:'NEW_DELTA',label:'NEW DELTA FOUND · '+outstanding+' ACTION'+(outstanding===1?'':'S'),detail:evidence+' The Brief contains "+outstanding+" open action(s). Update the page from the Brief.',color:'#fde68a',border:'#f59e0b',bg:'#291b05',button:'Open updated Brief',buttonAction:'viewLastBrief('+p.id+')'};
+    if(isDone)return {code:'NEW_DELTA',label:'NEW DELTA FOUND · '+outstanding+' ACTION'+(outstanding===1?'':'S'),detail:evidence+' This scan produced '+outstanding+' open action(s). Update the page from the current Brief.',color:'#fde68a',border:'#f59e0b',bg:'#291b05',button:'Open updated Brief',buttonAction:'viewLastBrief('+p.id+')'};
     return {code:'IMPLEMENT',label:'IMPLEMENT BRIEF · '+outstanding+' OPEN ACTION'+(outstanding===1?'':'S'),detail:'The current Brief still contains evidence-backed work. Apply only those actions, publish, then verify the live version.',color:'#c4b5fd',border:'#8b5cf6',bg:'#17102b',button:'Open Brief',buttonAction:'viewLastBrief('+p.id+')'};
   }
-  if(complete)return {code:'MONITOR',label:'NO NEW ACTION · CONTINUE MONITORING',detail:evidence+' No new actionable delta was found. Do not regenerate or rewrite the Brief. '+(nextEvidence||'Wait for the next scheduled evidence checkpoint.'),color:'#86efac',border:'#16a34a',bg:'#052e16',button:'',buttonAction:''};
+  if(complete)return {code:'MONITOR',label:'NO NEW ACTION · CONTINUE MONITORING',detail:evidence+' No new actionable delta was found. Content-changing controls are locked to prevent accidental work. '+(nextEvidence||'Wait for the next scheduled evidence checkpoint.'),color:'#86efac',border:'#16a34a',bg:'#052e16',button:'',buttonAction:''};
   if(p.brief_content)return {code:'SCAN',label:'SCAN REQUIRED TO EVALUATE BRIEF',detail:'An older Brief exists, but the current scan has not produced an explicit action count. Run Scan; do not update the page from historical Brief contents alone.',color:'#7dd3fc',border:'#0284c7',bg:'#082f49',button:'Scan now',buttonAction:'checkPage('+p.id+')'};
   return {code:'BRIEF',label:'BRIEF REQUIRED',detail:evidence+' No Brief exists for this scanned page yet.',color:'#93c5fd',border:'#2563eb',bg:'#0a2540',button:'',buttonAction:''};
 }
@@ -41298,6 +41301,18 @@ function renderPages() {
     var isFirstHtml = !p.brief_check_count || p.brief_check_count == 0;
     var hasBeenScanned = !!p.last_checked || !!p.google_position || p.ai_google_overview_cited !== undefined || p.ai_perplexity_cited !== undefined;
     var hasBrief = !!(p.brief_content) && !isDone;
+
+    // v286: NEXT ACTION is the single authority for which workflow controls may be used.
+    // On completed / active-case-study pages, content-changing controls are enabled ONLY
+    // when the current scan says NEW_DELTA or IMPLEMENT. NO ACTION means no accidental edits.
+    var _nextActionState = _trackerNextActionState(p,isDone,lastCheckedRaw,nextEvidence);
+    var _nextActionCode = String(_nextActionState&&_nextActionState.code||'');
+    var _nextAllowsContentChange = (_nextActionCode==='NEW_DELTA'||_nextActionCode==='IMPLEMENT');
+    var _nextWorkflowGuard = !!isDone || !!p.case_study_active;
+    var _nextLockContentChanges = _nextWorkflowGuard && !_nextAllowsContentChange;
+    var _nextNoAction = _nextActionCode==='MONITOR';
+    var _nextScanRequired = _nextActionCode==='SCAN';
+
     // hasHtml = true means HTML has actually been pasted or scanned
     var hasHtml = (p.brief_check_count > 0) || (p.graaf_score > 0)
       || !!p.html_pasted_at
@@ -41416,19 +41431,25 @@ function renderPages() {
       + '<button data-tour="ai-evidence" onclick="event.stopPropagation();openAiEvidence(' + p.id + ')" style="background:#0d1117;border:1px solid #8b5cf6;border-radius:7px;color:#c4b5fd;cursor:pointer;font-size:11px;padding:5px 12px;font-weight:700;" title="Open the five-engine manual evidence panel. Count means manually checked, not cited.">&#129504; AI Checked ' + (function(){var a=p.ai_manual_evidence;if(typeof a==="string"){try{a=JSON.parse(a);}catch(x){a={};}}var req=waitingForData?(Date.parse(p.monitoring_request_at||0)||0):0;return ["google_aio","chatgpt","perplexity","claude","copilot"].filter(function(k){var ev=a&&a[k];return ev&&_aiEvidenceIsVerified(ev)&&(!req||(Date.parse(ev.updated_at||ev.verified_at||0)||0)>=req);}).length;})() + '/5</button>'
       + '<button data-tour="intelligence" onclick="event.stopPropagation();openCompetitiveIntelligence(' + p.id + ')" style="background:#0d1117;border:1px solid #0891b2;border-radius:7px;color:#67e8f9;cursor:pointer;font-size:11px;padding:5px 12px;font-weight:700;" title="Cross-engine competitors, sources, content opportunities and claims to verify">&#128269; Intelligence</button>'
       + ((explicitlyNeeds || p.fetch_reliable === false) && !_evidenceCheckpointLock ? '<button class="cs-html-btn cs-blink" onclick="openHtmlUpload(' + p.id + ')" style="background:#0d1117;border:1px solid #f59e0b;border-radius:7px;color:#fbbf24;cursor:pointer;font-size:11px;padding:5px 12px;font-weight:700;" title="Automatic live fetch was not reliable. Paste the published HTML manually to continue verification.">&#9888; Manual HTML required</button>' : '')
-      + (_evidenceCheckpointLock?'<button disabled style="background:#111827;border:1px solid #374151;border-radius:7px;color:#6b7280;cursor:not-allowed;font-size:11px;padding:5px 10px;font-weight:700;" title="Evidence checkpoint only: add fresh GSC and AI evidence. No implementation scan is required.">\u21bb Scan locked</button>':'<button data-tour="scan" data-check-btn="' + p.id + '" onclick="checkPage(' + p.id + ')" style="background:#0d1117;border:1px solid ' + (_scanDone ? '#22c55e' : '#2dd4bf') + ';border-radius:7px;color:' + (_scanDone ? '#4ade80' : '#5eead4') + ';cursor:pointer;font-size:11px;padding:5px 10px;font-weight:700;" title="' + (lastChecked ? (_scanDone ? 'Scanned this round \u2014 click to rescan now' : 'Rescan this URL now') : 'Scan this URL now') + '">' + (lastChecked ? (_scanDone ? '\u21bb \u2713' : '\u21bb Scan') : '\u25b6 Scan') + '</button>')
+      + ((_evidenceCheckpointLock||_nextNoAction||_nextActionCode==='WAITING')
+        ? '<button disabled style="background:#111827;border:1px solid #374151;border-radius:7px;color:#6b7280;cursor:not-allowed;font-size:11px;padding:5px 10px;font-weight:700;" title="'+(_nextNoAction?'No new action was found. Wait for the next evidence checkpoint before scanning again.':'Required evidence must be completed before another scan.')+'">\u21bb '+(_nextNoAction?'No scan needed':'Scan locked')+'</button>'
+        : '<button data-tour="scan" data-check-btn="' + p.id + '" onclick="checkPage(' + p.id + ')" style="background:#0d1117;border:1px solid ' + (_scanDone ? '#22c55e' : '#2dd4bf') + ';border-radius:7px;color:' + (_scanDone ? '#4ade80' : '#5eead4') + ';cursor:pointer;font-size:11px;padding:5px 10px;font-weight:700;" title="' + (_nextScanRequired?'Scan required by NEXT ACTION':(lastChecked ? (_scanDone ? 'Scanned this round \u2014 click to rescan now' : 'Rescan this URL now') : 'Scan this URL now')) + '">' + (lastChecked ? (_scanDone ? '\u21bb \u2713' : '\u21bb Scan') : '\u25b6 Scan') + '</button>')
       + (p.case_study_active
         ? '<button disabled style="background:#082f49;border:1px solid #0ea5e9;border-radius:7px;color:#7dd3fc;cursor:not-allowed;font-size:10px;padding:5px 10px;font-weight:800;opacity:.9;" title="Locked to the monitoring choice saved with the protected baseline. Case-study day 7, day 14 and day 30 reminders remain active.">Case-study cycle: '+((p.check_frequency==='0'||p.check_frequency==='0days'||p.check_frequency==='off'||!p.check_frequency)?'active · monitoring locked Off':freqLabel+' · locked')+'</button>'
         : ((p.check_frequency==='0'||p.check_frequency==='0days'||p.check_frequency==='off'||!p.check_frequency)
         ? '<button onclick="event.stopPropagation();configurePageMonitoring('+p.id+')" style="background:#111827;border:1px solid #64748b;border-radius:7px;color:#cbd5e1;cursor:pointer;font-size:10px;padding:5px 10px;font-weight:800;" title="No guided review schedule. Manual scans still work.">Monitoring: Off</button>'
         : '<button onclick="event.stopPropagation();configurePageMonitoring('+p.id+')" style="background:#052e16;border:1px solid #22c55e;border-radius:7px;color:#86efac;cursor:pointer;font-size:10px;padding:5px 10px;font-weight:800;" title="Guided data review '+freqLabel+'. ContentScale waits for input before the manual scan.">Monitoring: '+freqLabel+'</button>'))
       + ((hasBrief || _lastBriefData[p.id]) ? '<button data-tour="view-brief" onclick="viewLastBrief(' + p.id + ')" style="background:#0d1117;border:1px solid #8b5cf6;border-radius:7px;color:#c4b5fd;cursor:pointer;font-size:11px;padding:5px 12px;font-weight:600;" title="View Citation Brief">\\ud83d\\udcc4 View Brief</button>' : '')
-      + ((function(){var _d=_lastBriefData[p.id]||_buildBriefData(p);return _d&&_d.prewrite_handoff&&_d.prewrite_handoff.needed;})() ? '<button onclick="event.stopPropagation();openPrewriteHandoff(' + p.id + ')" style="background:#1c1405;border:1px solid #f59e0b;border-radius:7px;color:#fbbf24;cursor:pointer;font-size:11px;padding:5px 12px;font-weight:800;" title="Tracker detected a coordinated content update. Continue with the existing Pre-Write engine.">\ud83c\udfaf Continue in Pre-Write</button>' : '')
+      + ((function(){var _d=_lastBriefData[p.id]||_buildBriefData(p);return _d&&_d.prewrite_handoff&&_d.prewrite_handoff.needed&&(!_nextWorkflowGuard||_nextAllowsContentChange);})() ? '<button onclick="event.stopPropagation();openPrewriteHandoff(' + p.id + ')" style="background:#1c1405;border:1px solid #f59e0b;border-radius:7px;color:#fbbf24;cursor:pointer;font-size:11px;padding:5px 12px;font-weight:800;" title="NEXT ACTION found work that needs a coordinated content update.">\ud83c\udfaf Continue in Pre-Write</button>' : '')
       + '<button data-tour="history" onclick="csPosHist(' + p.id + ')" style="background:#0d1117;border:1px solid #64748b;border-radius:7px;color:#cbd5e1;cursor:pointer;font-size:13px;padding:5px 10px;font-weight:600;" title="Ranking history">\\ud83d\\udcc8</button>'
       + (!p.case_study_active ? (_csReady?'<button onclick="event.stopPropagation();startCaseStudy(' + p.id + ')" style="background:#052e16;border:1px solid #22c55e;border-radius:7px;color:#86efac;cursor:pointer;font-size:10px;padding:5px 10px;font-weight:900;" title="All baseline evidence is complete. Lock it before changing the live page.">READY — Start case study</button>':'<button disabled style="background:#1c1407;border:1px solid #92400e;border-radius:7px;color:#fbbf24;cursor:not-allowed;font-size:10px;padding:5px 10px;font-weight:900;" title="Complete: '+String(_csMissing.join(' · ')).replace(/"/g,'&quot;')+'">Case study waiting for baseline</button>') : '')
-      + (p.case_study_active && isDone ? (_evidenceCheckpointLock?'<button disabled style="background:#111827;border:1px solid #374151;border-radius:7px;color:#6b7280;cursor:not-allowed;font-size:10px;padding:5px 10px;font-weight:900;" title="Locked during an evidence-only checkpoint. Finish GSC + AI evidence first.">+ New HTML revision locked</button>':'<button data-tour="new-revision" onclick="event.stopPropagation();openNewHtmlRevision(' + p.id + ')" style="background:#172554;border:1px solid #3b82f6;border-radius:7px;color:#bfdbfe;cursor:pointer;font-size:10px;padding:5px 10px;font-weight:900;" title="Start another improvement cycle without overwriting the baseline or previous versions">+ New HTML revision</button>') : '')
-      + (p.case_study_active && !isDone && Number(p.revision_cycle||1)>1 ? '<button onclick="event.stopPropagation();openHtmlUpload(' + p.id + ',true)" style="background:#172554;border:1px solid #3b82f6;border-radius:7px;color:#bfdbfe;cursor:pointer;font-size:10px;padding:5px 10px;font-weight:800;" title="Update the candidate HTML for revision '+Number(p.revision_cycle||1)+'">Edit revision HTML</button>' : '')
-      + (p.case_study_active ? (_evidenceCheckpointLock?'<button disabled style="background:#111827;border:1px solid #374151;border-radius:7px;color:#6b7280;cursor:not-allowed;font-size:10px;padding:5px 10px;font-weight:800;" title="Not needed for a day-7/day-14/day-30 evidence checkpoint. Protected implementation history stays unchanged.">Live HTML locked — not needed</button>':'<button onclick="event.stopPropagation();savePrePublicationCheckpoint(' + p.id + ')" style="background:'+(p.prepublication_checkpoint_saved?'#052e16':'#422006')+';border:1px solid '+(p.prepublication_checkpoint_saved?'#16a34a':'#f59e0b')+';border-radius:7px;color:'+(p.prepublication_checkpoint_saved?'#86efac':'#fde68a')+';cursor:pointer;font-size:10px;padding:5px 10px;font-weight:800;" title="'+(p.prepublication_checkpoint_saved?'The live version before publishing is protected (full HTML + SHA-256 hash). Your locked baseline is separate and unaffected.':'Step 1 before publishing changes: save the CURRENT live HTML as immutable proof. The protected case-study baseline remains separate and cannot be overwritten. After publishing, use Step 2 to scan/verify the new live version and compare it with this checkpoint.')+'">'+(p.prepublication_checkpoint_saved?'\u2713 Live version saved':'1 · Save current live HTML')+'</button>') : '')
+      + (p.case_study_active && isDone
+        ? ((_evidenceCheckpointLock||_nextLockContentChanges)
+          ? '<button disabled style="background:#111827;border:1px solid #374151;border-radius:7px;color:#6b7280;cursor:not-allowed;font-size:10px;padding:5px 10px;font-weight:900;" title="'+(_nextNoAction?'No new action was found. A new HTML revision is not needed.':(_nextScanRequired?'Run the required scan first.':'Content changes are locked until NEXT ACTION finds work.'))+'">+ New HTML revision locked</button>'
+          : '<button data-tour="new-revision" onclick="event.stopPropagation();openNewHtmlRevision(' + p.id + ')" style="background:#172554;border:1px solid #3b82f6;border-radius:7px;color:#bfdbfe;cursor:pointer;font-size:10px;padding:5px 10px;font-weight:900;" title="NEXT ACTION found open work. Start the next improvement cycle without overwriting history.">+ New HTML revision</button>')
+        : '')
+      + (p.case_study_active && !isDone && Number(p.revision_cycle||1)>1 && (!_nextWorkflowGuard||_nextAllowsContentChange) ? '<button onclick="event.stopPropagation();openHtmlUpload(' + p.id + ',true)" style="background:#172554;border:1px solid #3b82f6;border-radius:7px;color:#bfdbfe;cursor:pointer;font-size:10px;padding:5px 10px;font-weight:800;" title="Update the candidate HTML for revision '+Number(p.revision_cycle||1)+'">Edit revision HTML</button>' : '')
+      + (p.case_study_active ? ((_evidenceCheckpointLock||_nextLockContentChanges)?'<button disabled style="background:#111827;border:1px solid #374151;border-radius:7px;color:#6b7280;cursor:not-allowed;font-size:10px;padding:5px 10px;font-weight:800;" title="'+(_nextNoAction?'No new action was found. No publication checkpoint is needed.':'Content changes are locked until NEXT ACTION authorizes work.')+'">Live HTML locked — not needed</button>':'<button onclick="event.stopPropagation();savePrePublicationCheckpoint(' + p.id + ')" style="background:'+(p.prepublication_checkpoint_saved?'#052e16':'#422006')+';border:1px solid '+(p.prepublication_checkpoint_saved?'#16a34a':'#f59e0b')+';border-radius:7px;color:'+(p.prepublication_checkpoint_saved?'#86efac':'#fde68a')+';cursor:pointer;font-size:10px;padding:5px 10px;font-weight:800;" title="'+(p.prepublication_checkpoint_saved?'The live version before publishing is protected (full HTML + SHA-256 hash). Your locked baseline is separate and unaffected.':'Step 1 before publishing changes: save the CURRENT live HTML as immutable proof. The protected case-study baseline remains separate and cannot be overwritten. After publishing, use Step 2 to scan/verify the new live version and compare it with this checkpoint.')+'">'+(p.prepublication_checkpoint_saved?'\u2713 Live version saved':'1 · Save current live HTML')+'</button>') : '')
       + (p.case_study_active && p.prepublication_checkpoint_saved && !isDone && !_evidenceCheckpointLock ? '<button onclick="event.stopPropagation();markDone(' + p.id + ',this,false)" style="background:#052e16;border:1px solid #22c55e;border-radius:7px;color:#bbf7d0;cursor:pointer;font-size:10px;padding:5px 11px;font-weight:900;box-shadow:0 0 0 1px rgba(34,197,94,.12);" title="The reviewed HTML is live. Capture it, compare it with the protected pre-publication version and verify the implementation.">2 \\u00b7 Verify published live</button>' : '')
       + (p.case_study_active ? '<button onclick="openCaseStudy(' + p.id + ')" style="background:#082f49;border:1px solid #0284c7;border-radius:7px;color:#7dd3fc;cursor:pointer;font-size:11px;padding:5px 10px;font-weight:800;" title="Open protected baseline and proof history">Proof &amp; History</button>' : '')
       + (p.case_study_active && isDone ? (function(){var ae=p.ai_manual_evidence;if(typeof ae==='string'){try{ae=JSON.parse(ae);}catch(e){ae={};}}var n=['google_aio','chatgpt','perplexity','claude','copilot'].filter(function(k){return ae&&_aiEvidenceIsVerified(ae[k]);}).length;return '<button data-tour="ai-recheck" onclick="event.stopPropagation();openAiEvidence('+p.id+')" style="background:'+(n===5?'#052e16':'#451a03')+';border:1px solid '+(n===5?'#16a34a':'#f59e0b')+';border-radius:7px;color:'+(n===5?'#86efac':'#fde68a')+';cursor:pointer;font-size:10px;padding:5px 10px;font-weight:900;" title="A fresh manual five-engine check is required after every published revision">'+(n===5?'\\u2713 AI rechecked 5/5':'3 \\u00b7 Recheck AI '+n+'/5')+'</button>';})() : '')
