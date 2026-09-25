@@ -266,7 +266,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-25-CANONICAL-v269';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-25-CANONICAL-v270';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 const CONTENTSCALE_BUILD_CHANGES = [
   'tracker-delta-brief-regression-lock',
@@ -492,7 +492,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-09-25-CANONICAL-v269',
+  build: 'CS-2026-09-25-CANONICAL-v270',
   built_date: '2026-09-25',
   ceo_private: true,
   ceo_public: true,
@@ -4279,6 +4279,7 @@ app.post('/api/tracker-client/:token/page/:pageId/brief-mode', async (req, res) 
 // v267 REGRESSION INVARIANT: OWNER_INPUT_FIRST_PARTY_LIVE_PAGE_ONLY=true; EXTERNAL_AI_SERP_SOURCE_CLAIMS_NEVER_OWNER_INPUT=true; GROWTH_GENERIC_CANONICAL_QUESTIONS_DISABLED=true; SOURCE_VERIFY_FIRST_SEPARATE_FROM_OWNER=true
 // v268 REGRESSION INVARIANT: QUESTION_PROVENANCE_REQUIRED=true; PRE_V268_OPEN_QUESTIONS_REBUILT=true; OWNER_INPUT_FIRST_PARTY_ONLY=true; GROWTH_TRIGGERED_BY_PAGE_VERIFIED_GSC_OR_VALIDATED_AI_GAP=true; NO_GENERIC_QUESTION_CANONICALIZATION=true; NO_ROOFING_BIAS_IN_GENERIC_TRACKER=true
 // v269 REGRESSION INVARIANT: VERIFY_FIRST_DEFINITIONS_HAVE_NO_OWNER_ASK_TEXT=true; LEGACY_GENERIC_QUESTION_STRINGS_ALLOWED_ONLY_IN_CLEANUP_SQL=true
+// v270 REGRESSION INVARIANT: AI_GROWTH_GAP_REQUIRES_SEMANTIC_NOVELTY=true; SEED_BRAND_PERMUTATIONS_REJECTED=true; OPEN_GROWTH_REBUILT_UNDER_V270=true
 // ── Owner Question Hub — persistent client-owned knowledge gaps ────────────────
 // Unanswered questions never disappear. Refresh only adds, merges, or strengthens them.
 async function _ensureTrackerOwnerQuestions(){
@@ -4479,9 +4480,9 @@ async function _upsertGrowthQuestion(clientId,pg,q){
     page_ids=(SELECT jsonb_agg(DISTINCT x) FROM jsonb_array_elements(COALESCE(page_ids,'[]'::jsonb)||jsonb_build_array($4::int)) x),
     page_urls=(SELECT jsonb_agg(DISTINCT x) FROM jsonb_array_elements(COALESCE(page_urls,'[]'::jsonb)||jsonb_build_array($5::text)) x),
     page_keywords=(SELECT jsonb_agg(DISTINCT x) FROM jsonb_array_elements(COALESCE(page_keywords,'[]'::jsonb)||jsonb_build_array($6::text)) x),
-    last_seen_at=NOW(),trigger_type=$7,trigger_text=$8,generator_version='v268' WHERE id=$9`,[q.why_asked||'',q.evidence_needed||'',src,pg.id,pg.url,pg.keyword||'',q.trigger_type||'evidence',q.trigger_text||'',ex.rows[0].id]);return 'merged';}return 'kept';}
+    last_seen_at=NOW(),trigger_type=$7,trigger_text=$8,generator_version='v270' WHERE id=$9`,[q.why_asked||'',q.evidence_needed||'',src,pg.id,pg.url,pg.keyword||'',q.trigger_type||'evidence',q.trigger_text||'',ex.rows[0].id]);return 'merged';}return 'kept';}
   await pool.query(`INSERT INTO tracker_growth_questions(tracker_client_id,fingerprint,category,question,why_asked,evidence_needed,source_types,page_ids,page_urls,page_keywords,trigger_type,trigger_text,generator_version)
-    VALUES($1,$2,$3,$4,$5,$6,jsonb_build_array($7::text),jsonb_build_array($8::int),jsonb_build_array($9::text),jsonb_build_array($10::text),$11,$12,'v268')`,[clientId,fp,q.category||'Content growth',q.question,q.why_asked||'',q.evidence_needed||'',src,pg.id,pg.url,pg.keyword||'',q.trigger_type||'evidence',q.trigger_text||'']);return 'discovered';
+    VALUES($1,$2,$3,$4,$5,$6,jsonb_build_array($7::text),jsonb_build_array($8::int),jsonb_build_array($9::text),jsonb_build_array($10::text),$11,$12,'v270')`,[clientId,fp,q.category||'Content growth',q.question,q.why_asked||'',q.evidence_needed||'',src,pg.id,pg.url,pg.keyword||'',q.trigger_type||'evidence',q.trigger_text||'']);return 'discovered';
 }
 app.get('/api/tracker-client/:token/growth-questions',async(req,res)=>{try{
   await _ensureTrackerGrowthQuestions();const own=await _trackerClaimsClient(req,res);if(!own)return;
@@ -4517,7 +4518,7 @@ async function _growthQuestionDuplicatesOwnerInput(clientId,q){
 
 app.post('/api/tracker-client/:token/growth-questions/refresh',async(req,res)=>{try{
   await _ensureTrackerGrowthQuestions();await _ensureTrackerOwnerQuestions();const own=await _trackerClaimsClient(req,res);if(!own)return;
-  const _growthLegacyReset=await pool.query(`DELETE FROM tracker_growth_questions WHERE tracker_client_id=$1 AND status='OPEN' AND COALESCE(generator_version,'')<>'v268' RETURNING id`,[own.clientId]);
+  const _growthLegacyReset=await pool.query(`DELETE FROM tracker_growth_questions WHERE tracker_client_id=$1 AND status='OPEN' AND COALESCE(generator_version,'')<>'v270' RETURNING id`,[own.clientId]);
   // v263 migration cleanup: old builds injected generic Growth prompts for every page.
   // Delete only OPEN rows matching those boilerplate patterns; answered/history rows remain intact.
   const _growthDefaultCleanup=await pool.query(`DELETE FROM tracker_growth_questions
@@ -4548,7 +4549,7 @@ app.post('/api/tracker-client/:token/growth-questions/refresh',async(req,res)=>{
     const gaps=(intel.content_opportunities||[]).filter(x=>!x.covered).slice(0,3);
     for(const g of gaps){
       const gap=String(g.topic||'').trim(); if(!gap)continue; ai_gap_questions++;
-      candidates.push({category:'AI / content gap',question:'For the tracked page “'+topic+'”, multiple AI results repeatedly surface “'+gap+'”, while the page does not. What concrete first-party fact, process, example, limitation or point of view does your business genuinely have about that exact topic?',evidence_needed:'A factual first-party answer tied specifically to “'+gap+'”; proof/example if available.',why_asked:String(g.engine_count||1)+' independent AI engine(s) surfaced the same page-related topic. This question is kept only because the topic is anchored to the tracked query/page.',source:'AI gap',trigger_type:'ai_gap',trigger_text:gap});
+      candidates.push({category:'AI / content gap',question:'For the tracked page “'+topic+'”, '+String(g.engine_count||2)+' AI engines independently surface the related topic “'+gap+'”, while the page does not clearly cover it. Does your business have a concrete first-party fact, process, example, limitation or point of view that would genuinely improve this page on that exact topic?',evidence_needed:'A factual first-party answer tied specifically to “'+gap+'”; proof/example if available.',why_asked:String(g.engine_count||1)+' independent AI engine(s) surfaced the same page-related topic. This question is kept only because the topic is anchored to the tracked query/page.',source:'AI gap',trigger_type:'ai_gap',trigger_text:gap});
     }
     for(const gq of (intel.growth_queries||[]).slice(0,3)){
       const query=String(gq.query||'').trim(); if(!query)continue; gsc_questions++;
@@ -4693,12 +4694,45 @@ function _trackerIntelPhraseUseful(phrase,page){
   const p=String(phrase||'').toLowerCase().trim();
   if(!p)return false;
   if(/(?:domain|domein|website|exact|exacte|page|pagina|citation|cited|geciteerd|mentioned|recommended|verified|unverified|seed|keyword|answer|antwoord|source|bron|result|validation|startup idea|market size|utm|http|www|\.com|\.org|\.net)/i.test(p))return false;
-  const pt=p.replace(/[^a-z0-9]+/g,' ').split(/\s+/).filter(x=>x.length>2);
+
+  const stop=new Set('this that with from about page service services company content best near your our the and for into overview ai seo search'.split(' '));
+  const tokenize=x=>String(x||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').split(/\s+/).filter(t=>t.length>2&&!stop.has(t));
+  const stem=t=>String(t||'').replace(/(?:ing|ed|es|s)$/,'');
+  const similar=(a,b)=>{
+    a=stem(a);b=stem(b); if(!a||!b)return false;
+    if(a===b)return true;
+    if(a.length>=5&&b.length>=5&&(a.includes(b)||b.includes(a)))return true;
+    return false;
+  };
+
+  const pt=tokenize(p);
   if(pt.length<2||pt.length>4)return false;
-  const focus=(String(page&&page.keyword||'')+' '+String(page&&page.gsc_keyword||'')+' '+String(page&&page.url||'')).toLowerCase().replace(/[^a-z0-9]+/g,' ');
-  const stop=new Set('this that with from about page service services company content best near your our'.split(' '));
-  const ft=new Set(focus.split(/\s+/).filter(x=>x.length>2&&!stop.has(x)));
-  return pt.some(x=>ft.has(x));
+
+  // Build page identity/topic vocabulary from keyword, GSC keyword and domain/slug.
+  let host='',slug='';
+  try{const u=new URL(String(page&&page.url||''));host=u.hostname.replace(/^www\./,'').split('.')[0];slug=u.pathname;}catch(_){}
+  const identity=tokenize([page&&page.keyword,page&&page.gsc_keyword,host,slug].join(' '));
+
+  // v270: an AI "gap" must add semantic information.
+  // Reject brand/seed permutations such as "scale contentscale", "content scale",
+  // reversed tokens, concatenations, or morphology-only variants of the tracked topic.
+  const novel=pt.filter(t=>!identity.some(i=>similar(t,i)));
+  if(novel.length===0)return false;
+
+  // Reject phrases where the only novelty is another brand/domain-shaped token.
+  const looksBrand=t=>/^[a-z]{8,}$/.test(t)&&!/[0-9]/.test(t);
+  if(novel.length===1&&looksBrand(novel[0])&&identity.some(i=>similar(novel[0],i)))return false;
+
+  // Keep the phrase page-related: at least one token must still anchor to the page identity/topic.
+  const anchored=pt.some(t=>identity.some(i=>similar(t,i)));
+  if(!anchored)return false;
+
+  // Avoid degenerate repeated/near-duplicate token pairs.
+  const uniq=[];
+  for(const t of pt)if(!uniq.some(u=>similar(t,u)))uniq.push(t);
+  if(uniq.length<2)return false;
+
+  return true;
 }
 function _trackerIntelFactCovered(fact,html){
   const stop=new Set(['the','and','for','with','from','that','this','are','has','have','provides','services','service','perfect','roofing','team']);
@@ -4766,7 +4800,12 @@ async function _trackerBuildDerivedIntelligence(clientId,pageId){
   const knownNorm=known.map(k=>({id:k.id,status:k.status,text:k.claim_text,key:_trackerIntelKey(k.claim_text)}));
   const claims=Array.from(claimMap.values()).map(o=>{const k=_trackerIntelKey(o.claim);const hit=knownNorm.find(x=>x.key===k||(x.key.length>18&&(k.includes(x.key)||x.key.includes(k))));return {claim:o.claim,scope:o.scope||'unattributed',engines:Array.from(o.engines),engine_count:o.engines.size,existing_fact:hit||null,safe_to_use:!!(hit&&hit.status==='VERIFIED'),requires_business_verification:!(hit&&hit.status==='VERIFIED')};}).sort((a,b)=>b.engine_count-a.engine_count||a.claim.localeCompare(b.claim)).slice(0,40);
   const pageHay=String(page.html_content||'').toLowerCase().replace(/<[^>]+>/g,' ');
-  const opportunities=Array.from(phraseMap.values()).filter(o=>o.engines.size>=2&&_trackerIntelPhraseUseful(o.phrase,page)).map(o=>({topic:o.phrase,engines:Array.from(o.engines),engine_count:o.engines.size,covered:pageHay.includes(o.phrase)})).sort((a,b)=>b.engine_count-a.engine_count||a.topic.localeCompare(b.topic)).slice(0,30);
+  const _oppSeen=new Set();
+  const opportunities=Array.from(phraseMap.values())
+    .filter(o=>o.engines.size>=2&&_trackerIntelPhraseUseful(o.phrase,page))
+    .map(o=>({topic:o.phrase,engines:Array.from(o.engines),engine_count:o.engines.size,covered:pageHay.includes(o.phrase)}))
+    .filter(o=>{const k=String(o.topic||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim().split(/\s+/).sort().join(' ');if(!k||_oppSeen.has(k))return false;_oppSeen.add(k);return true;})
+    .sort((a,b)=>b.engine_count-a.engine_count||a.topic.localeCompare(b.topic)).slice(0,30);
   const ownCompact=String(ownStem||'').toLowerCase().replace(/[^a-z0-9]+/g,'');
   const competitors=Array.from(compMap.values()).filter(o=>{const n=String(o.name||'').toLowerCase().replace(/[^a-z0-9]+/g,'');return !(ownCompact.length>5&&(n.includes(ownCompact)||ownCompact.includes(n)));}).map(o=>({name:o.name,engines:Array.from(o.engines),engine_count:o.engines.size,recommended_by:Array.from(o.recommended),local_by:Array.from(o.local),direct_by:Array.from(o.direct),mentioned_by:Array.from(o.mentioned)})).sort((a,b)=>b.engine_count-a.engine_count||a.name.localeCompare(b.name)).slice(0,60);
   const sources=Array.from(srcMap.values()).map(o=>({host:o.host,urls:Array.from(o.urls),engines:Array.from(o.engines),engine_count:o.engines.size,own_domain:o.own_domain})).sort((a,b)=>b.engine_count-a.engine_count||a.host.localeCompare(b.host)).slice(0,80);
@@ -15950,7 +15989,7 @@ async function startServer() {
   }
 
 console.log('────────────────────────────────────────');
-console.log('[ContentScale] CS-2026-09-25-CANONICAL-v269');
+console.log('[ContentScale] CS-2026-09-25-CANONICAL-v270');
 console.log('[ContentScale] Build check: /api/build-info');
 console.log('[ContentScale] Base URL: ' + (process.env.BASE_URL || 'https://app.contentscale.site'));
 console.log('────────────────────────────────────────');
@@ -18600,7 +18639,7 @@ function _ceoMainWebsiteUrl(input){
 // action must target this CEO endpoint.
 app.post('/api/ceo-report/start',async(req,res)=>{
   let ceoEntry='unknown',ceoUrl='',lastStage='REQUEST';
-  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-25-CANONICAL-v269');
+  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-25-CANONICAL-v270');
   try{
     lastStage='DB_SETUP';
     console.log('[ceo-report] stage=DB_SETUP');
@@ -18694,10 +18733,10 @@ ContentScale`;
     return res.json({success:true,entry_mode:entry,token,selected_page:selected,ceo_report_token:reportToken,ceo_report_url:reportUrl,delivery_email:delivery,updates_opt_in:updatesOptIn});
   }catch(e){
     const msg=String((e&&e.message)||e||'CEO Prospect Report generation failed');
-    console.error('[ceo-report] FAILED build=CS-2026-09-25-CANONICAL-v269 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
+    console.error('[ceo-report] FAILED build=CS-2026-09-25-CANONICAL-v270 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
     console.error('[ceo-report] ERROR: '+msg);
     if(e&&e.stack)console.error(e.stack);
-    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-25-CANONICAL-v269'});
+    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-25-CANONICAL-v270'});
     try{res.end();}catch(_){}
   }
 });
