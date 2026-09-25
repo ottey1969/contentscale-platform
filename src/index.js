@@ -266,12 +266,15 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-25-CANONICAL-v258';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-25-CANONICAL-v260';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 const CONTENTSCALE_BUILD_CHANGES = [
   'tracker-delta-brief-regression-lock',
   'tracker-internal-external-link-presence-guard',
-  'prewrite-expand-existing-handoff'
+  'prewrite-expand-existing-handoff',
+  'v259-regression-contract',
+  'tracker-prewrite-visible-handoff',
+  'link-health-presence-vs-suggestions'
 ];
 console.log('[ContentScale] BUILD=' + CONTENTSCALE_BUILD_ID + ' BOOT=' + CONTENTSCALE_BOOT_AT);
 console.log('[ContentScale] CHANGES=' + CONTENTSCALE_BUILD_CHANGES.join(','));
@@ -489,7 +492,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-09-25-CANONICAL-v258',
+  build: 'CS-2026-09-25-CANONICAL-v260',
   built_date: '2026-09-25',
   ceo_private: true,
   ceo_public: true,
@@ -500,7 +503,13 @@ const CONTENTSCALE_BUILD_INFO = Object.freeze({
   quickscan_other_page_only: true,
   two_page_overview: true,
   audit20_interest: true,
-  audit20_discovery: true
+  audit20_discovery: true,
+  regression_contract: true,
+  tracker_delta_brief: true,
+  tracker_prewrite_visible_handoff: true,
+  tracker_auto_treatment_from_brief: true,
+  tracker_treatment_manual_override: true,
+  link_health_presence_separate_from_suggestions: true
 });
 
 // BUILD IDENTITY — intentionally public and DB-independent.
@@ -508,6 +517,28 @@ const CONTENTSCALE_BUILD_INFO = Object.freeze({
 app.get('/api/build-info',(req,res)=>{
   res.set('Cache-Control','no-store, no-cache, must-revalidate, proxy-revalidate');
   res.json({success:true,...CONTENTSCALE_BUILD_INFO,server_time:new Date().toISOString()});
+});
+
+app.get('/api/regression-contract',(req,res)=>{
+  const src=fs.readFileSync(__filename,'utf8');
+  const checks={
+    canonical_build:/CANONICAL-v260/.test(CONTENTSCALE_BUILD_INFO.build),
+    ceo_first:CONTENTSCALE_BUILD_INFO.ceo_private&&CONTENTSCALE_BUILD_INFO.ceo_public&&CONTENTSCALE_BUILD_INFO.quickscan_other_page_only,
+    audit20_discovery:!!CONTENTSCALE_BUILD_INFO.audit20_discovery,
+    tracker_delta_guard:src.includes('V256 generic DELTA guard')&&src.includes('implementation_complete=_briefNow.outstanding_actions===0'),
+    tracker_prewrite_handoff:src.includes("mode:_treat.indexOf('REWRITE')>=0?'REWRITE_EXISTING'")&&src.includes('openPrewriteHandoff(pageId)'),
+    tracker_auto_treatment:src.includes('_briefNow.recommended_treatment=_autoTreatment')&&src.includes("treatment_source='AUTO_BRIEF'"),
+    tracker_manual_treatment_override:src.includes("treatment_source=$5")&&src.includes('resetPageTreatmentAuto(pageId)'),
+    link_health_presence:src.includes('Link Health · presence')&&src.includes('Presence is not the same as a recommendation'),
+    evidence_checkpoint_no_html:src.includes('Evidence Checkpoint')&&src.includes('Live HTML locked — not needed'),
+    overlap_unscanned_only:src.includes('_unscanned'),
+    claims_facts_pg_cast:src.includes('$1::varchar')&&src.includes("$1::text='VERIFIED'"),
+    prewrite_engine_present:src.includes("api('/prewrite-brief', 'POST'")&&src.includes('OPTIMIZE_EXISTING_PAGE')&&src.includes('EXPAND_EXISTING_PAGE'),
+    outreach_plain_text:src.includes('textContent'),
+    delivery_webhook:src.includes('/api/webhooks/brevo-outreach')
+  };
+  const failed=Object.keys(checks).filter(k=>!checks[k]);
+  res.status(failed.length?500:200).json({success:failed.length===0,build:CONTENTSCALE_BUILD_INFO.build,checks,failed,note:'Contract/static regression guard. Live browser/database workflows still require runtime smoke tests after deployment.'});
 });
 
 
@@ -2276,6 +2307,7 @@ app.get('/api/tracker-client/:token', async (req, res) => {
       ['treatment','TEXT'],
       ['treatment_target_url','TEXT'],
       ['treatment_updated_at','TIMESTAMPTZ'],
+      ['treatment_source','TEXT'],
       ['last_graaf_score','INTEGER'],
       ['brief_mode','VARCHAR(1)'],
       ['redirects_to','TEXT'],
@@ -2306,7 +2338,7 @@ app.get('/api/tracker-client/:token', async (req, res) => {
     const pagesR = await pool.query(
       `SELECT p.id, p.url, p.keyword, p.gsc_keyword, p.created_at, p.next_check_at, p.last_checked_at,
               p.is_done, p.manual_done, p.manual_done_at, p.fetch_reliable, p.check_frequency, p.email_reminders, p.ai_reminder_days, p.next_ai_reminder_at, p.last_ai_reminder_sent_at, p.monitoring_waiting_input,p.monitoring_request_at,p.monitoring_require_ai,p.monitoring_gate_label,p.monitoring_gsc_pages_at,p.monitoring_gsc_queries_at,p.gsc_clicks, p.gsc_impressions, p.gsc_position,
-              p.treatment, p.treatment_target_url, p.treatment_updated_at, p.implementation_at, p.implementation_verified_at, p.implementation_status, p.implementation_before_graaf,
+              p.treatment, p.treatment_target_url, p.treatment_updated_at, p.treatment_source, p.implementation_at, p.implementation_verified_at, p.implementation_status, p.implementation_before_graaf,
               p.ranking_brief, p.needs_html, p.brief_started_at, p.brief_content, p.brief_check_count,
               p.html_pasted_at, p.html_source, p.last_graaf_score, p.brief_mode, p.revision_cycle,
               (p.html_content IS NOT NULL AND p.html_content != '') as has_html_content,
@@ -3647,8 +3679,20 @@ app.patch('/api/tracker-client/:token/pages/:pageId/treatment', async (req, res)
     await pool.query('ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS treatment TEXT').catch(()=>{});
     await pool.query('ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS treatment_target_url TEXT').catch(()=>{});
     await pool.query('ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS treatment_updated_at TIMESTAMPTZ').catch(()=>{});
-    const r = await pool.query(`UPDATE tracker_pages SET treatment=$1, treatment_target_url=$2, treatment_updated_at=NOW()
-      WHERE id=$3 AND tracker_client_id=$4 RETURNING treatment,treatment_target_url,treatment_updated_at`, [treatment||null,target,req.params.pageId,cr.rows[0].id]);
+    await pool.query('ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS treatment_source TEXT').catch(()=>{});
+    // v260: the Brief chooses Treatment automatically. A human change remains authoritative
+    // until explicitly reset to AUTO; automation never silently overwrites a manual decision.
+    const useAuto = !!(req.body && req.body.use_auto);
+    let finalTreatment = treatment || null, finalTarget = target;
+    let source = useAuto ? 'AUTO_BRIEF' : 'MANUAL';
+    if (useAuto) {
+      const br=await pool.query('SELECT brief_content FROM tracker_pages WHERE id=$1 AND tracker_client_id=$2',[req.params.pageId,cr.rows[0].id]);
+      let bj={}; try{bj=typeof br.rows[0].brief_content==='string'?JSON.parse(br.rows[0].brief_content):(br.rows[0].brief_content||{});}catch(_e){}
+      finalTreatment=String(bj.recommended_treatment||'').toUpperCase()||null;
+      finalTarget=bj.treatment_target_url||null;
+    }
+    const r = await pool.query(`UPDATE tracker_pages SET treatment=$1, treatment_target_url=$2, treatment_updated_at=NOW(), treatment_source=$5
+      WHERE id=$3 AND tracker_client_id=$4 RETURNING treatment,treatment_target_url,treatment_updated_at,treatment_source`, [finalTreatment,finalTarget,req.params.pageId,cr.rows[0].id,source]);
     if (!r.rows.length) return res.status(403).json({ success:false, error:'Not your page' });
     res.json({success:true, ...r.rows[0]});
   } catch(e) { res.status(500).json({success:false,error:e.message}); }
@@ -3714,7 +3758,7 @@ app.get('/api/tracker-client/:token/latest-briefs', async (req, res) => {
       `SELECT p.id, p.url, p.keyword, p.gsc_keyword, p.gsc_ctr, p.aio_manual_text, p.aio_manual_refs, p.brief_content, p.gsc_clicks, p.gsc_impressions, p.gsc_position, p.revision_cycle,
               p.brief_status, p.brief_claimed_by, p.brief_claimed_at, p.brief_started_at,
               p.brief_done_at, p.brief_submitted_at, p.brief_approved_at, p.brief_approved_by, p.brief_published_at,
-              p.brief_deadline, p.brief_assigned_at, p.brief_rejected_at, p.brief_reject_reason, p.priority, p.treatment, p.treatment_target_url, p.manual_done,
+              p.brief_deadline, p.brief_assigned_at, p.brief_rejected_at, p.brief_reject_reason, p.priority, p.treatment, p.treatment_target_url, p.treatment_source, p.manual_done,
               p.brief_before_score, p.brief_after_score, p.brief_after_at,
               (p.specialist_html IS NOT NULL AND p.specialist_html != '') AS has_deliverable,
               COALESCE((SELECT jsonb_object_agg(x.engine, to_jsonb(x)) FROM (SELECT DISTINCT ON (engine) e.* FROM tracker_ai_evidence e WHERE e.page_id=p.id AND e.evidence_method='manual' ORDER BY engine, COALESCE(updated_at,verified_at,created_at) DESC NULLS LAST, id DESC) x), '{}'::jsonb) AS ai_manual_evidence,
@@ -8943,6 +8987,7 @@ app.patch('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
    await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS treatment TEXT`).catch(()=>{});
    await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS treatment_target_url TEXT`).catch(()=>{});
    await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS treatment_updated_at TIMESTAMPTZ`).catch(()=>{});
+   await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS treatment_source TEXT`).catch(()=>{});
    await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS implementation_at TIMESTAMPTZ`).catch(()=>{});
    await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS implementation_verified_at TIMESTAMPTZ`).catch(()=>{});
    await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS implementation_status TEXT`).catch(()=>{});
@@ -15793,7 +15838,7 @@ async function startServer() {
   }
 
 console.log('────────────────────────────────────────');
-console.log('[ContentScale] CS-2026-09-25-CANONICAL-v258');
+console.log('[ContentScale] CS-2026-09-25-CANONICAL-v260');
 console.log('[ContentScale] Build check: /api/build-info');
 console.log('[ContentScale] Base URL: ' + (process.env.BASE_URL || 'https://app.contentscale.site'));
 console.log('────────────────────────────────────────');
@@ -18443,7 +18488,7 @@ function _ceoMainWebsiteUrl(input){
 // action must target this CEO endpoint.
 app.post('/api/ceo-report/start',async(req,res)=>{
   let ceoEntry='unknown',ceoUrl='',lastStage='REQUEST';
-  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-25-CANONICAL-v258');
+  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-25-CANONICAL-v260');
   try{
     lastStage='DB_SETUP';
     console.log('[ceo-report] stage=DB_SETUP');
@@ -18537,10 +18582,10 @@ ContentScale`;
     return res.json({success:true,entry_mode:entry,token,selected_page:selected,ceo_report_token:reportToken,ceo_report_url:reportUrl,delivery_email:delivery,updates_opt_in:updatesOptIn});
   }catch(e){
     const msg=String((e&&e.message)||e||'CEO Prospect Report generation failed');
-    console.error('[ceo-report] FAILED build=CS-2026-09-25-CANONICAL-v258 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
+    console.error('[ceo-report] FAILED build=CS-2026-09-25-CANONICAL-v260 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
     console.error('[ceo-report] ERROR: '+msg);
     if(e&&e.stack)console.error(e.stack);
-    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-25-CANONICAL-v258'});
+    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-25-CANONICAL-v260'});
     try{res.end();}catch(_){}
   }
 });
@@ -34663,11 +34708,11 @@ function renderPages(){
       // v250 Link Health — use the canonical scan, not a second scanner.
       +(function(){
           var lm=p.linkMetrics||null;
-          if(!lm) return '<div style="margin-bottom:12px;padding:11px 13px;background:rgba(148,163,184,.04);border:1px solid #334155;border-radius:7px;"><div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:5px;">🔗 Link Health</div><div style="font-size:10px;color:var(--dim);">Run <b>Scan Score</b> once. The same canonical scan will record contextual internal links and external links here before you finish the content.</div></div>';
+          if(!lm) return '<div style="margin-bottom:12px;padding:11px 13px;background:rgba(148,163,184,.04);border:1px solid #334155;border-radius:7px;"><div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:5px;">🔗 Link Health</div><div style="font-size:10px;color:var(--dim);">Run the <b>canonical Tracker scan</b> once. It records contextual internal-link presence and external-link presence here. Suggestions are evaluated separately.</div></div>';
           var ic=Number(lm.internal||0), ec=Number(lm.external||0);
           var ext=ec===0?'<span style="color:var(--gold);font-weight:800;">⚠ No external links detected</span> — review factual claims and add a relevant primary/authoritative source where it genuinely supports the content.':'<span style="color:var(--green);font-weight:800;">✓ '+ec+' external link'+(ec===1?'':'s')+' detected</span>';
           var intr=ic===0?'<span style="color:var(--red);font-weight:800;">⚠ No contextual internal links detected</span>':'<span style="color:var(--green);font-weight:800;">✓ '+ic+' internal link'+(ic===1?'':'s')+' detected</span>';
-          return '<div style="margin-bottom:12px;padding:11px 13px;background:rgba(34,197,94,.035);border:1px solid rgba(34,197,94,.18);border-radius:7px;"><div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--green);margin-bottom:7px;">🔗 Link Health · canonical scan</div><div style="font-size:10px;line-height:1.7;">'+intr+'<br>'+ext+'</div><div style="font-size:9px;color:var(--dim);margin-top:5px;">External links are not a quota. Add them when they support facts, standards, regulations or research.</div></div>';
+          return '<div style="margin-bottom:12px;padding:11px 13px;background:rgba(34,197,94,.035);border:1px solid rgba(34,197,94,.18);border-radius:7px;"><div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--green);margin-bottom:7px;">🔗 Link Health · presence</div><div style="font-size:10px;line-height:1.7;">'+intr+'<br>'+ext+'</div><div style="font-size:9px;color:var(--dim);margin-top:5px;">Presence is not the same as a recommendation. “No additional internal-link suggestions” means the current intelligence found no extra destination to add. External links are not a quota.</div></div>';
         })()
 
       // Internal Link Suggestions (auto-computed from page list)
@@ -39904,6 +39949,9 @@ async function loadPages() {
         generated_at: brief.generated_at || p.last_checked || null,
         build_id: brief.build_id || null,
         ai_manual_evidence: p.ai_manual_evidence || {},
+        outstanding_actions: brief.outstanding_actions != null ? Number(brief.outstanding_actions) : null,
+        implementation_complete: !!brief.implementation_complete,
+        prewrite_handoff: brief.prewrite_handoff || null,
         type: 'brief_ready'
       };
       _lastBriefData[p.id] = briefData;
@@ -40626,11 +40674,14 @@ function renderPages() {
       + '</div>'
       + '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:7px;padding-top:7px;border-top:1px solid #172033;">'
       + '<span style="font-size:9px;font-weight:800;color:#64748b;text-transform:uppercase;letter-spacing:.06em;">Treatment</span>'
-      + '<select data-tour="treatment" onclick="event.stopPropagation()" onchange="setPageTreatment(' + p.id + ',this.value)" ' + (!hasBrief?'disabled title="Scan/build and review the Brief before choosing Treatment" ':'') + 'style="font-size:10px;padding:4px 6px;border-radius:5px;background:#0a0e14;border:1px solid #374151;color:#cbd5e1;">'
-      + '<option value=""' + (!p.treatment?' selected':'') + '>Choose after Brief</option>'
+      + '<select data-tour="treatment" onclick="event.stopPropagation()" onchange="setPageTreatment(' + p.id + ',this.value)" ' + (!hasBrief?'disabled title="The Brief will choose Treatment automatically after the scan" ':'') + 'style="font-size:10px;padding:4px 6px;border-radius:5px;background:#0a0e14;border:1px solid '+(String(p.treatment_source||'').toUpperCase()==='MANUAL'?'#f59e0b':'#16a34a')+';color:#cbd5e1;">'
+      + '<option value=""' + (!p.treatment?' selected':'') + '>'+(hasBrief?'Brief decision pending':'Waiting for Brief')+'</option>'
       + ['KEEP','OPTIMIZE','EXPAND','REWRITE','MERGE','REDIRECT','REMOVE_NOINDEX','MONITOR'].map(function(t){return '<option value="'+t+'"'+(String(p.treatment||'').toUpperCase()===t?' selected':'')+'>'+t.replace('_',' / ')+'</option>';}).join('')
       + '</select>'
+      + (p.treatment ? '<span style="font-size:9px;font-weight:800;color:'+(String(p.treatment_source||'').toUpperCase()==='MANUAL'?'#fbbf24':'#4ade80')+';">'+(String(p.treatment_source||'').toUpperCase()==='MANUAL'?'MANUAL OVERRIDE':'AUTO FROM BRIEF')+'</span>' : '')
+      + (String(p.treatment_source||'').toUpperCase()==='MANUAL' ? '<button onclick="event.stopPropagation();resetPageTreatmentAuto('+p.id+')" style="font-size:9px;background:none;border:1px solid #374151;border-radius:4px;color:#94a3b8;cursor:pointer;padding:2px 6px;" title="Discard the manual override and use the current Brief recommendation again">↺ Use Brief</button>' : '')
       + (p.treatment_target_url ? '<span style="font-size:9px;color:#fbbf24;">→ '+String(p.treatment_target_url).replace(/</g,'&lt;')+'</span>' : '')
+      + (function(){try{var b=typeof p.brief_content==='string'?JSON.parse(p.brief_content):(p.brief_content||{});var r=b.treatment_reason||'',n=b.treatment_next_step||'';if(!r&&!n)return '';return '<div style="flex-basis:100%;font-size:10px;line-height:1.45;color:#94a3b8;padding:5px 8px;background:#0a0e14;border-left:2px solid '+(String(p.treatment_source||'').toUpperCase()==='MANUAL'?'#f59e0b':'#16a34a')+';border-radius:4px;"><b style="color:#cbd5e1;">'+(String(p.treatment_source||'').toUpperCase()==='MANUAL'?'Brief recommended '+String(b.recommended_treatment||'—')+', but you changed it to '+String(p.treatment||'—'):'Why '+String(p.treatment||b.recommended_treatment||'—'))+':</b> '+String(r).replace(/</g,'&lt;')+(n?' <b>Next:</b> '+String(n).replace(/</g,'&lt;'):'')+'</div>';}catch(e){return '';}})()
       + '</div>'
       + '<div class="cs-card-actions" style="display:flex;gap:6px;flex:1 1 520px;min-width:320px;max-width:760px;flex-wrap:wrap;justify-content:flex-end;align-items:flex-start;">' 
       + '<button data-tour="ai-evidence" onclick="event.stopPropagation();openAiEvidence(' + p.id + ')" style="background:#0d1117;border:1px solid #8b5cf6;border-radius:7px;color:#c4b5fd;cursor:pointer;font-size:11px;padding:5px 12px;font-weight:700;" title="Open the five-engine manual evidence panel. Count means manually checked, not cited.">&#129504; AI Checked ' + (function(){var a=p.ai_manual_evidence;if(typeof a==="string"){try{a=JSON.parse(a);}catch(x){a={};}}var req=waitingForData?(Date.parse(p.monitoring_request_at||0)||0):0;return ["google_aio","chatgpt","perplexity","claude","copilot"].filter(function(k){var ev=a&&a[k];return ev&&_aiEvidenceIsVerified(ev)&&(!req||(Date.parse(ev.updated_at||ev.verified_at||0)||0)>=req);}).length;})() + '/5</button>'
@@ -40643,6 +40694,7 @@ function renderPages() {
         ? '<button onclick="event.stopPropagation();configurePageMonitoring('+p.id+')" style="background:#111827;border:1px solid #64748b;border-radius:7px;color:#cbd5e1;cursor:pointer;font-size:10px;padding:5px 10px;font-weight:800;" title="No guided review schedule. Manual scans still work.">Monitoring: Off</button>'
         : '<button onclick="event.stopPropagation();configurePageMonitoring('+p.id+')" style="background:#052e16;border:1px solid #22c55e;border-radius:7px;color:#86efac;cursor:pointer;font-size:10px;padding:5px 10px;font-weight:800;" title="Guided data review '+freqLabel+'. ContentScale waits for input before the manual scan.">Monitoring: '+freqLabel+'</button>'))
       + ((hasBrief || _lastBriefData[p.id]) ? '<button data-tour="view-brief" onclick="viewLastBrief(' + p.id + ')" style="background:#0d1117;border:1px solid #8b5cf6;border-radius:7px;color:#c4b5fd;cursor:pointer;font-size:11px;padding:5px 12px;font-weight:600;" title="View Citation Brief">\\ud83d\\udcc4 View Brief</button>' : '')
+      + ((function(){var _d=_lastBriefData[p.id]||_buildBriefData(p);return _d&&_d.prewrite_handoff&&_d.prewrite_handoff.needed;})() ? '<button onclick="event.stopPropagation();openPrewriteHandoff(' + p.id + ')" style="background:#1c1405;border:1px solid #f59e0b;border-radius:7px;color:#fbbf24;cursor:pointer;font-size:11px;padding:5px 12px;font-weight:800;" title="Tracker detected a coordinated content update. Continue with the existing Pre-Write engine.">\ud83c\udfaf Continue in Pre-Write</button>' : '')
       + '<button data-tour="history" onclick="csPosHist(' + p.id + ')" style="background:#0d1117;border:1px solid #64748b;border-radius:7px;color:#cbd5e1;cursor:pointer;font-size:13px;padding:5px 10px;font-weight:600;" title="Ranking history">\\ud83d\\udcc8</button>'
       + (!p.case_study_active ? (_csReady?'<button onclick="event.stopPropagation();startCaseStudy(' + p.id + ')" style="background:#052e16;border:1px solid #22c55e;border-radius:7px;color:#86efac;cursor:pointer;font-size:10px;padding:5px 10px;font-weight:900;" title="All baseline evidence is complete. Lock it before changing the live page.">READY — Start case study</button>':'<button disabled style="background:#1c1407;border:1px solid #92400e;border-radius:7px;color:#fbbf24;cursor:not-allowed;font-size:10px;padding:5px 10px;font-weight:900;" title="Complete: '+String(_csMissing.join(' · ')).replace(/"/g,'&quot;')+'">Case study waiting for baseline</button>') : '')
       + (p.case_study_active && isDone ? (_evidenceCheckpointLock?'<button disabled style="background:#111827;border:1px solid #374151;border-radius:7px;color:#6b7280;cursor:not-allowed;font-size:10px;padding:5px 10px;font-weight:900;" title="Locked during an evidence-only checkpoint. Finish GSC + AI evidence first.">+ New HTML revision locked</button>':'<button data-tour="new-revision" onclick="event.stopPropagation();openNewHtmlRevision(' + p.id + ')" style="background:#172554;border:1px solid #3b82f6;border-radius:7px;color:#bfdbfe;cursor:pointer;font-size:10px;padding:5px 10px;font-weight:900;" title="Start another improvement cycle without overwriting the baseline or previous versions">+ New HTML revision</button>') : '')
@@ -40906,6 +40958,12 @@ function _buildBriefData(p) {
     aio_references: p.ai_google_overview_references || null,
     google_competitors: p.google_competitors || null,
     perp_competitors: p.ai_perplexity_competitors || null,
+    outstanding_actions: (function(){ try { var _b=typeof p.brief_content==='string'?JSON.parse(p.brief_content):p.brief_content; return _b&&_b.outstanding_actions!=null?Number(_b.outstanding_actions):null; } catch(e){ return null; } })(),
+    implementation_complete: (function(){ try { var _b=typeof p.brief_content==='string'?JSON.parse(p.brief_content):p.brief_content; return !!(_b&&_b.implementation_complete); } catch(e){ return false; } })(),
+    prewrite_handoff: (function(){ try { var _b=typeof p.brief_content==='string'?JSON.parse(p.brief_content):p.brief_content; return (_b&&_b.prewrite_handoff)||null; } catch(e){ return null; } })(),
+    recommended_treatment: (function(){ try { var _b=typeof p.brief_content==='string'?JSON.parse(p.brief_content):p.brief_content; return (_b&&_b.recommended_treatment)||p.treatment||null; } catch(e){ return p.treatment||null; } })(),
+    treatment_reason: (function(){ try { var _b=typeof p.brief_content==='string'?JSON.parse(p.brief_content):p.brief_content; return (_b&&_b.treatment_reason)||null; } catch(e){ return null; } })(),
+    treatment_next_step: (function(){ try { var _b=typeof p.brief_content==='string'?JSON.parse(p.brief_content):p.brief_content; return (_b&&_b.treatment_next_step)||null; } catch(e){ return null; } })(),
     last_checked: p.last_checked || null,
     type: 'brief_ready'
   };
@@ -41059,6 +41117,23 @@ function _copyBriefAuthoritative(pageId) {
     if (p.gsc_impressions != null) lines.push('- Impressions: ' + p.gsc_impressions);
     if (p.gsc_position != null) lines.push('- Position: ' + parseFloat(p.gsc_position).toFixed(1));
   }
+  if (d.implementation_complete === true) {
+    lines.push('', '=== IMPLEMENTATION STATUS ===', '✓ IMPLEMENTATION COMPLETE', '0 outstanding actions. All currently evidence-backed actions are present on the live page.');
+  } else if (d.outstanding_actions != null) {
+    lines.push('', '=== IMPLEMENTATION STATUS ===', '- Outstanding actions: ' + d.outstanding_actions);
+  }
+  if (d.prewrite_handoff && d.prewrite_handoff.needed) {
+    lines.push('- Writer handoff: ' + d.prewrite_handoff.mode + ' — continue in Pre-Write; do not force a coordinated update into surgical Tracker patches.');
+  }
+  if (d.recommended_treatment || p.treatment) {
+    lines.push('', '=== TREATMENT DECISION ===');
+    lines.push('- Brief recommendation: ' + (d.recommended_treatment || p.treatment));
+    if (d.treatment_reason) lines.push('- Why: ' + d.treatment_reason);
+    if (d.treatment_next_step) lines.push('- Next action: ' + d.treatment_next_step);
+    if (String(p.treatment_source||'').toUpperCase()==='MANUAL') lines.push('- Manual override active: ' + (p.treatment||'') + ' (the Brief recommendation remains recorded above)');
+    else lines.push('- Applied automatically to Tracker: ' + (p.treatment || d.recommended_treatment));
+  }
+
   // ── Helpers to make the external brief clear for BOTH a specialist and an AI ──
   // Strip stray HTML tags from prose fields (keep real copy-paste HTML only inside the WRITE block).
   var _stripTags = function(t){ return String(t||'').replace(/<[^>]+>/g, ' ').replace(/[ \\t]{2,}/g,' ').trim(); };
@@ -42213,9 +42288,17 @@ async function setPageTreatment(pageId, treatment) {
   try {
     var d=await api('/pages/'+pageId+'/treatment','PATCH',{treatment:treatment,target_url:target});
     if(!d.success) throw new Error(d.error||'Could not save treatment');
-    toast('Treatment saved: '+(treatment||'not decided'), '#4ade80');
+    toast('Manual treatment saved: '+(treatment||'not decided')+' — this overrides the Brief until you reset it.', '#4ade80');
     loadPages();
   } catch(e){ toast(e.message||'Could not save treatment','#f87171'); }
+}
+async function resetPageTreatmentAuto(pageId){
+  try{
+    var d=await api('/pages/'+pageId+'/treatment','PATCH',{use_auto:true});
+    if(!d.success)throw new Error(d.error||'Could not restore Brief treatment');
+    toast('Automatic Brief treatment restored: '+(d.treatment||'pending'),'#4ade80');
+    loadPages();
+  }catch(e){toast(e.message||'Could not restore Brief treatment','#f87171');}
 }
 async function saveReportCadence(v){
   try{var d=await api('/report-cadence','PATCH',{cadence:v}); if(!d.success)throw new Error(d.error||'Could not save'); toast(v==='off'?'Client reports turned off':(v==='2weekly'?'2-weekly client report selected':'Monthly client report selected'),'#4ade80');}catch(e){toast(e.message,'#f87171');}
@@ -44398,11 +44481,27 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
       generated_at: finalBrief.generated_at || snap.brief_generated_at || null,
       build_id: finalBrief.build_id || snap.brief_build_id || null,
       ai_manual_evidence: finalEvidence,
+      outstanding_actions: finalBrief.outstanding_actions != null ? Number(finalBrief.outstanding_actions) : null,
+      implementation_complete: !!finalBrief.implementation_complete,
+      prewrite_handoff: finalBrief.prewrite_handoff || null,
       _gsc_enabled: GSC_ENABLED || (snap.gsc_clicks != null) || (snap.gsc_impressions != null) || (snap.gsc_position != null),
       type: 'brief_ready'
     };
     loadPages();
     return; // EXIT \\u2014 no overlay, inline brief shows data
+  }
+
+  function openPrewriteHandoff(pageId) {
+    var p=(_pages||[]).find(function(x){return String(x.id)===String(pageId);});
+    if(!p)return;
+    var d=_lastBriefData[pageId]||_buildBriefData(p)||{};
+    var h=d.prewrite_handoff||null;
+    if(!h||!h.needed){toast('This page currently needs only surgical Tracker changes — Pre-Write is not required.','#38bdf8');return;}
+    _pwbRecommendationContext={source:'tracker_delta_handoff',page_id:p.id,target:p.url||'',keyword:p.keyword||p.gsc_keyword||'',decision:h.mode==='REWRITE_EXISTING'?'REWRITE_EXISTING':'EXPAND_EXISTING',action:h.reason||'Update the existing page from the current Tracker delta brief.',outstanding_actions:d.outstanding_actions,tracker_brief:(d.passages||[]).concat(d.gsc_brief||[]).slice(0,12)};
+    try{document.getElementById('pwbKeyword').value=p.keyword||p.gsc_keyword||'';}catch(e){}
+    try{document.getElementById('pwbTitle').value=p.title||'';}catch(e){}
+    showPrewriteBriefModal();
+    try{var st=document.getElementById('pwbStatus');if(st){st.textContent='Tracker handoff: '+h.mode+' · '+(d.outstanding_actions==null?'open actions':d.outstanding_actions+' outstanding action(s)')+'. Pre-Write will preserve the existing URL and use the Tracker delta as recommendation context.';st.style.color='#fbbf24';}}catch(e){}
   }
 
   async function submitHtmlUpload() {
@@ -53861,10 +53960,38 @@ If no unanchored claims found, return empty array: []`;
     var _openGSC=(_briefNow.gsc_brief||[]).filter(function(x){return x&&!(x.requires_verification);});
     _briefNow.outstanding_actions=_openAI.length+_openGSC.length;
     _briefNow.implementation_complete=_briefNow.outstanding_actions===0;
+    // v260 — Brief owns the default Treatment decision. The dropdown is no longer an empty
+    // human decision after the Brief: it is pre-filled from the evidence-backed delta and can
+    // still be overridden manually. Dangerous URL actions are never executed automatically.
+    var _allOpen=_openAI.concat(_openGSC);
+    var _actionText=_allOpen.map(function(x){return String(x&&x.title||'')+' '+String(x&&x.action||'');}).join(' ');
+    var _autoTreatment='OPTIMIZE', _autoReason='', _autoNext='';
+    if (page.redirects_to && !String(page.redirects_to).startsWith('(canonical')) {
+      _autoTreatment='REDIRECT'; _autoReason='The live URL resolves as a redirect; the tracked URL should not be treated as an editable content page.'; _autoNext='Review the detected destination and keep/track the final live URL. No redirect is executed by ContentScale.';
+    } else if (_briefNow.implementation_complete) {
+      _autoTreatment='KEEP'; _autoReason='The current live page already contains every evidence-backed action in this Brief.'; _autoNext='Preserve the page and monitor GSC + AI evidence. Re-open content work only when new evidence creates a new delta.';
+    } else if (/\b(rewrite|rebuild|replace (?:the )?page|new structure)\b/i.test(_actionText)) {
+      _autoTreatment='REWRITE'; _autoReason='The current Brief contains a page-level rewrite/rebuild requirement rather than isolated edits.'; _autoNext='Continue in Pre-Write and rebuild the existing URL while preserving verified facts and proven strengths.';
+    } else if (/\b(major expansion|expand existing|add (?:a )?(?:new )?(?:section|sections)|content gap)\b/i.test(_actionText) || _briefNow.outstanding_actions>=4) {
+      _autoTreatment='EXPAND'; _autoReason='The current delta requires several coordinated additions; patching them one-by-one would be less clear and less controlled.'; _autoNext='Continue in Pre-Write to update the existing page from the open Brief actions.';
+    } else {
+      _autoTreatment='OPTIMIZE'; _autoReason='The current Brief contains a limited set of surgical changes on an existing page.'; _autoNext='Apply only the outstanding actions; preserve content that already satisfies the Brief.';
+    }
+    _briefNow.recommended_treatment=_autoTreatment;
+    _briefNow.treatment_reason=_autoReason;
+    _briefNow.treatment_next_step=_autoNext;
+    _briefNow.treatment_source='AUTO_BRIEF';
+    // Manual override wins. Otherwise persist the Brief recommendation so the page card and
+    // dropdown immediately show what ContentScale decided and why.
+    var _manualTreatment=String(page.treatment_source||'').toUpperCase()==='MANUAL';
+    var _effectiveTreatment=_manualTreatment&&page.treatment?String(page.treatment).toUpperCase():_autoTreatment;
+    if (!_manualTreatment) {
+      try { await pool.query(`UPDATE tracker_pages SET treatment=$1,treatment_source='AUTO_BRIEF',treatment_updated_at=NOW() WHERE id=$2`,[_autoTreatment,page.id]); page.treatment=_autoTreatment; page.treatment_source='AUTO_BRIEF'; } catch(_te) { console.warn('[brief-auto-treatment]',_te.message); }
+    }
     // Connect Tracker -> Pre-Write decision layer. Small surgical deltas stay in Tracker. Larger
     // expansions/rewrites explicitly hand off to Pre-Write so it can update/rewrite content rather
     // than forcing a patch-style Citation Brief to do a writer's job.
-    var _treat=String(page.treatment||'').toUpperCase();
+    var _treat=String(_effectiveTreatment||'').toUpperCase();
     var _rewriteSignal=(_openAI.concat(_openGSC)).some(function(x){return /\b(rewrite|rebuild|major expansion|expand existing|replace (?:the )?(?:page|section)|new structure)\b/i.test(String(x&&x.title||'')+' '+String(x&&x.action||''));});
     var _needsWriter=_treat.indexOf('REWRITE')>=0||_treat.indexOf('EXPAND')>=0||_rewriteSignal||_briefNow.outstanding_actions>=4;
     _briefNow.prewrite_handoff={needed:!!_needsWriter,mode:_treat.indexOf('REWRITE')>=0?'REWRITE_EXISTING':(_needsWriter?'UPDATE_EXISTING':'SURGICAL_TRACKER'),reason:_needsWriter?'The current delta needs coordinated content work; use Pre-Write with this page/keyword context.':'The remaining work is surgical and stays in the Tracker Citation Brief.'};
