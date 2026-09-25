@@ -266,12 +266,12 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-25-CANONICAL-v255';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-25-CANONICAL-v256';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 const CONTENTSCALE_BUILD_CHANGES = [
-  'lead-outreach-signature-preview-send-v253',
-  'railway-startup-log-output-compacted',
-  'build-change-list-limited-to-current-release'
+  'tracker-delta-brief-regression-lock',
+  'tracker-internal-external-link-presence-guard',
+  'prewrite-expand-existing-handoff'
 ];
 console.log('[ContentScale] BUILD=' + CONTENTSCALE_BUILD_ID + ' BOOT=' + CONTENTSCALE_BOOT_AT);
 console.log('[ContentScale] CHANGES=' + CONTENTSCALE_BUILD_CHANGES.join(','));
@@ -489,7 +489,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-09-25-CANONICAL-v255',
+  build: 'CS-2026-09-25-CANONICAL-v256',
   built_date: '2026-09-25',
   ceo_private: true,
   ceo_public: true,
@@ -15784,7 +15784,7 @@ async function startServer() {
   }
 
 console.log('────────────────────────────────────────');
-console.log('[ContentScale] CS-2026-09-25-CANONICAL-v255');
+console.log('[ContentScale] CS-2026-09-25-CANONICAL-v256');
 console.log('[ContentScale] Build check: /api/build-info');
 console.log('[ContentScale] Base URL: ' + (process.env.BASE_URL || 'https://app.contentscale.site'));
 console.log('────────────────────────────────────────');
@@ -18434,7 +18434,7 @@ function _ceoMainWebsiteUrl(input){
 // action must target this CEO endpoint.
 app.post('/api/ceo-report/start',async(req,res)=>{
   let ceoEntry='unknown',ceoUrl='',lastStage='REQUEST';
-  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-25-CANONICAL-v255');
+  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-25-CANONICAL-v256');
   try{
     lastStage='DB_SETUP';
     console.log('[ceo-report] stage=DB_SETUP');
@@ -18528,10 +18528,10 @@ ContentScale`;
     return res.json({success:true,entry_mode:entry,token,selected_page:selected,ceo_report_token:reportToken,ceo_report_url:reportUrl,delivery_email:delivery,updates_opt_in:updatesOptIn});
   }catch(e){
     const msg=String((e&&e.message)||e||'CEO Prospect Report generation failed');
-    console.error('[ceo-report] FAILED build=CS-2026-09-25-CANONICAL-v255 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
+    console.error('[ceo-report] FAILED build=CS-2026-09-25-CANONICAL-v256 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
     console.error('[ceo-report] ERROR: '+msg);
     if(e&&e.stack)console.error(e.stack);
-    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-25-CANONICAL-v255'});
+    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-25-CANONICAL-v256'});
     try{res.end();}catch(_){}
   }
 });
@@ -38983,12 +38983,14 @@ var _pwbRecommendationContext = null;
 function openSpokePrewrite(index) {
   var d=window._currentIntelData||{},r=(d.spoke_recommendations||[])[Number(index)];
   if(!r)return;
-  if(r.decision==='OPTIMIZE'||r.decision==='EXPAND_EXISTING'){
+  if(r.decision==='OPTIMIZE'){
     hideModal('competitiveIntelModal');
     var pid=window._currentIntelPageId,p=(_pages||[]).find(function(x){return Number(x.id)===Number(pid);})||{};
     if(p.brief_content||_lastBriefData[pid])viewLastBrief(pid);else{toast('Build the Tracker Brief with one page scan.','#38bdf8');checkPage(pid);}
     return;
   }
+  // EXPAND_EXISTING is writer work, not a tiny Citation-Brief patch. Hand it to Pre-Write
+  // with the real Intelligence recommendation so the existing page can be updated coherently.
   _pwbRecommendationContext=r;
   showPrewriteBriefModal();
   document.getElementById('pwbKeyword').value=r.primary_query||'';
@@ -53643,6 +53645,33 @@ If no unanchored claims found, return empty array: []`;
       if(/strengthen internal linking authority/i.test(t) && !String(it.action||'').replace(/<[^>]*>/g,'').trim())return true;
       if(/add strategic content gap section/i.test(t) && /what is content at scale/i.test(h) && /brandwell/i.test(h) && /<table/i.test(h))return true;
       if(/expand adjacent intent impressions/i.test(t) && /how to implement content scaling/i.test(h) && /without losing (?:quality|search visibility)/i.test(h))return true;
+
+      // V256 generic DELTA guard — this is intentionally site-agnostic. A Tracker brief is a
+      // to-do list, never a history of things the live page already contains. Keep this code-level
+      // guard even if prompts/models change so a model regression cannot re-add completed work.
+      var _plain=function(x){return String(x||'').toLowerCase().replace(/&[a-z0-9#]+;/gi,' ').replace(/<[^>]+>/g,' ').replace(/[^a-z0-9\/.: -]+/g,' ').replace(/\s+/g,' ').trim();};
+      var _ht=_plain(h), _tt=_plain(t);
+      // Any concrete URL the action says to ADD is already implemented when that href exists.
+      var _urls=String(t||'').match(/https?:\/\/[^\s\"'<>]+/gi)||[];
+      if(_urls.length && /(?:add|insert|link|cross-link|cross link|internal link|external link)/i.test(t)){
+        var _all=_urls.every(function(u){var clean=String(u).replace(/[).,;:]+$/,'').toLowerCase();return h.indexOf('href=\"'+clean)>=0||h.indexOf("href='"+clean)>=0||h.indexOf(clean)>=0;});
+        if(_all)return true;
+      }
+      // Generic structural completion checks. These deliberately require the recommendation to ask
+      // for the structure; they do not suppress a genuine MODIFY/REPLACE instruction.
+      var _isAdd=/\b(add|create|include|insert|build)\b/i.test(t) && !/\b(modify|replace|rewrite|improve|correct|optimi[sz]e)\b/i.test(t);
+      if(_isAdd && /(?:faq|frequently asked questions|paa)/i.test(t) && (/<section[^>]+id=["']faq/i.test(h)||/faqpage/i.test(h)||/class=["'][^"']*faq/i.test(h)))return true;
+      if(_isAdd && /(?:step[- ]by[- ]step|\bprocess\b|\bworkflow\b|\d+[- ]step)/i.test(t) && (/<ol[\s>]/i.test(h)||/(?:our|the) [a-z -]{0,40}(?:process|workflow)/i.test(_ht)))return true;
+      if(_isAdd && /(?:direct answer|quick answer|answer block|above the fold answer)/i.test(t) && (/id=["']direct-answer/i.test(h)||/class=["'][^"']*direct-answer/i.test(h)))return true;
+      if(_isAdd && /(?:external|outbound|authoritative source) link/i.test(t) && /href=["']https?:\/\//i.test(h))return true;
+      if(_isAdd && /internal link/i.test(t) && /href=["'](?:\/|https?:\/\/[^"']+)/i.test(h) && _urls.length===0){
+        // Generic 'add internal links' is not actionable when links already exist; specific missing
+        // destinations are preserved because those include a URL and are checked above.
+        return true;
+      }
+      // If a long paste-ready fragment is already on the page, the action is complete regardless of title wording.
+      var _act=_plain(it.action||it.passage||'');
+      if(_act.length>100){var _frag=_act.slice(0,120);if(_frag.length>70&&_ht.indexOf(_frag)>=0)return true;}
       return false;
     };
     if(Array.isArray(snapshot.recommendations)) {
@@ -53815,6 +53844,21 @@ If no unanchored claims found, return empty array: []`;
       source_suggestions: Array.isArray(snapshot.source_suggestions) ? snapshot.source_suggestions : [],
       discovered_sources: Array.isArray(snapshot.discovered_sources) ? snapshot.discovered_sources : []
     };
+    // V256: the authoritative current brief is a DELTA. When all implementation actions are gone,
+    // say so in metadata instead of manufacturing a maintenance action. Framing/evidence may remain
+    // visible, but the implementation to-do count is zero.
+    var _frameOnly=function(x){var sy=String(x&&x.system||'').toLowerCase();return sy.indexOf('intent snapshot')>=0||sy.indexOf('missing entities')>=0||sy==='paa';};
+    var _openAI=(_briefNow.items||[]).filter(function(x){return !_frameOnly(x)&&!(x&&x.requires_verification);});
+    var _openGSC=(_briefNow.gsc_brief||[]).filter(function(x){return x&&!(x.requires_verification);});
+    _briefNow.outstanding_actions=_openAI.length+_openGSC.length;
+    _briefNow.implementation_complete=_briefNow.outstanding_actions===0;
+    // Connect Tracker -> Pre-Write decision layer. Small surgical deltas stay in Tracker. Larger
+    // expansions/rewrites explicitly hand off to Pre-Write so it can update/rewrite content rather
+    // than forcing a patch-style Citation Brief to do a writer's job.
+    var _treat=String(page.treatment||'').toUpperCase();
+    var _rewriteSignal=(_openAI.concat(_openGSC)).some(function(x){return /\b(rewrite|rebuild|major expansion|expand existing|replace (?:the )?(?:page|section)|new structure)\b/i.test(String(x&&x.title||'')+' '+String(x&&x.action||''));});
+    var _needsWriter=_treat.indexOf('REWRITE')>=0||_treat.indexOf('EXPAND')>=0||_rewriteSignal||_briefNow.outstanding_actions>=4;
+    _briefNow.prewrite_handoff={needed:!!_needsWriter,mode:_treat.indexOf('REWRITE')>=0?'REWRITE_EXISTING':(_needsWriter?'UPDATE_EXISTING':'SURGICAL_TRACKER'),reason:_needsWriter?'The current delta needs coordinated content work; use Pre-Write with this page/keyword context.':'The remaining work is surgical and stays in the Tracker Citation Brief.'};
     // Only reopen the board task if the brief actually CHANGED — keeps in-progress/done work on identical re-scans.
     let _briefChanged = true;
     try {
