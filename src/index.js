@@ -266,7 +266,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-25-CANONICAL-v272';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-25-CANONICAL-v273';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 const CONTENTSCALE_BUILD_CHANGES = [
   'tracker-delta-brief-regression-lock',
@@ -492,7 +492,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-09-25-CANONICAL-v272',
+  build: 'CS-2026-09-25-CANONICAL-v273',
   built_date: '2026-09-25',
   ceo_private: true,
   ceo_public: true,
@@ -4282,6 +4282,7 @@ app.post('/api/tracker-client/:token/page/:pageId/brief-mode', async (req, res) 
 // v270 REGRESSION INVARIANT: AI_GROWTH_GAP_REQUIRES_SEMANTIC_NOVELTY=true; SEED_BRAND_PERMUTATIONS_REJECTED=true; OPEN_GROWTH_REBUILT_UNDER_V270=true
 // v271 REGRESSION INVARIANT: LOCALIZED_CONTENTSCALE_FACTS_SEED_EXISTING_TRACKERS_ONLY=true; NO_NEW_TRACKER_CREATED=true; NL_ES_FACTS_VERIFIED_AND_IDEMPOTENT=true
 // v272 REGRESSION INVARIANT: ALL_MAIN_CONTENTSCALE_VERIFIED_CLIENT_FACTS_SYNC_TO_EXISTING_NL_ES_TRACKERS=true; TRANSLATION_LITERAL_ZERO_TEMPERATURE=true; SOURCE_CLAIM_PROVENANCE_PRESERVED=true; NO_NEW_TRACKER_CREATED=true
+// v273 REGRESSION INVARIANT: ADMIN_ROUTES_REGISTER_AFTER_VERIFYADMIN_INIT=true; NO_TDZ_VERIFYADMIN_STARTUP_CRASH=true
 // ── Owner Question Hub — persistent client-owned knowledge gaps ────────────────
 // Unanswered questions never disappear. Refresh only adds, merges, or strengthens them.
 async function _ensureTrackerOwnerQuestions(){
@@ -4713,15 +4714,7 @@ async function _syncAllContentScaleVerifiedFactsToLocalizedTrackers(opts={}){
 
 // Admin route: re-sync every VERIFIED main ContentScale client fact to NL + ES.
 // body {force:true} re-translates/updates previously synced translations.
-app.post('/api/admin/tracker/sync-contentscale-verified-facts-localized',verifyAdmin,async(req,res)=>{
-  try{
-    const result=await _syncAllContentScaleVerifiedFactsToLocalizedTrackers({force:req.body?.force===true});
-    res.json(result);
-  }catch(e){
-    console.error('[contentscale-verified-localized-sync]',e);
-    res.status(500).json({success:false,error:e.message});
-  }
-});
+
 
 async function _seedContentScaleLocalizedTrackerFacts(){
   // v271: exact-domain, idempotent seed into the ALREADY EXISTING Tracker clients.
@@ -4779,12 +4772,7 @@ async function _seedContentScaleLocalizedTrackerFacts(){
 }
 
 // Admin-safe one-click re-run. This never creates trackers; it only updates the two existing localized ContentScale trackers.
-app.post('/api/admin/tracker/seed-contentscale-localized-facts', verifyAdmin, async(req,res)=>{
-  try{
-    const result=await _seedContentScaleLocalizedTrackerFacts();
-    res.json({success:true,result,message:'Localized ContentScale public facts added/updated in the existing NL and ES Tracker Claims & Facts ledgers.'});
-  }catch(e){res.status(500).json({success:false,error:e.message});}
-});
+
 
 
 // v271: after deployment, populate the existing localized ContentScale trackers automatically.
@@ -8271,6 +8259,25 @@ const verifyEngineAccess = async (req, res, next) => {
 
    const verifyAdmin = async (req, res, next) => {
    const adminKey = req.headers['x-admin-key'];
+
+// v273: admin routes registered only after verifyAdmin initialization.
+app.post('/api/admin/tracker/sync-contentscale-verified-facts-localized',verifyAdmin,async(req,res)=>{
+  try{
+    const result=await _syncAllContentScaleVerifiedFactsToLocalizedTrackers({force:req.body?.force===true});
+    res.json(result);
+  }catch(e){
+    console.error('[contentscale-verified-localized-sync]',e);
+    res.status(500).json({success:false,error:e.message});
+  }
+});
+
+app.post('/api/admin/tracker/seed-contentscale-localized-facts', verifyAdmin, async(req,res)=>{
+  try{
+    const result=await _seedContentScaleLocalizedTrackerFacts();
+    res.json({success:true,result,message:'Localized ContentScale public facts added/updated in the existing NL and ES Tracker Claims & Facts ledgers.'});
+  }catch(e){res.status(500).json({success:false,error:e.message});}
+});
+
    if (!adminKey) return res.status(401).json({ success: false, error: 'Admin auth required' });
    if (!pool) return res.status(503).json({ success: false, error: 'DB unavailable' });
    try {
@@ -16206,7 +16213,7 @@ async function startServer() {
   }
 
 console.log('────────────────────────────────────────');
-console.log('[ContentScale] CS-2026-09-25-CANONICAL-v272');
+console.log('[ContentScale] CS-2026-09-25-CANONICAL-v273');
 console.log('[ContentScale] Build check: /api/build-info');
 console.log('[ContentScale] Base URL: ' + (process.env.BASE_URL || 'https://app.contentscale.site'));
 console.log('────────────────────────────────────────');
@@ -18856,7 +18863,7 @@ function _ceoMainWebsiteUrl(input){
 // action must target this CEO endpoint.
 app.post('/api/ceo-report/start',async(req,res)=>{
   let ceoEntry='unknown',ceoUrl='',lastStage='REQUEST';
-  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-25-CANONICAL-v272');
+  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-25-CANONICAL-v273');
   try{
     lastStage='DB_SETUP';
     console.log('[ceo-report] stage=DB_SETUP');
@@ -18950,10 +18957,10 @@ ContentScale`;
     return res.json({success:true,entry_mode:entry,token,selected_page:selected,ceo_report_token:reportToken,ceo_report_url:reportUrl,delivery_email:delivery,updates_opt_in:updatesOptIn});
   }catch(e){
     const msg=String((e&&e.message)||e||'CEO Prospect Report generation failed');
-    console.error('[ceo-report] FAILED build=CS-2026-09-25-CANONICAL-v272 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
+    console.error('[ceo-report] FAILED build=CS-2026-09-25-CANONICAL-v273 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
     console.error('[ceo-report] ERROR: '+msg);
     if(e&&e.stack)console.error(e.stack);
-    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-25-CANONICAL-v272'});
+    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-25-CANONICAL-v273'});
     try{res.end();}catch(_){}
   }
 });
