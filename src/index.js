@@ -266,7 +266,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-25-CANONICAL-v296';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-25-CANONICAL-v297';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 const CONTENTSCALE_BUILD_CHANGES = [
   'tracker-delta-brief-regression-lock',
@@ -502,7 +502,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-09-25-CANONICAL-v296',
+  build: 'CS-2026-09-25-CANONICAL-v297',
   built_date: '2026-09-25',
   ceo_private: true,
   ceo_public: true,
@@ -2318,6 +2318,7 @@ app.get('/api/tracker-client/:token', async (req, res) => {
     const _trackerMainGetColumns = [
       ['implementation_at','TIMESTAMPTZ'],
       ['implementation_verified_at','TIMESTAMPTZ'],
+      ['implementation_verified_brief_cycle_id','TEXT'],
       ['implementation_status','TEXT'],
       ['implementation_before_graaf','INTEGER'],
       ['treatment','TEXT'],
@@ -2355,7 +2356,7 @@ app.get('/api/tracker-client/:token', async (req, res) => {
     const pagesR = await pool.query(
       `SELECT p.id, p.url, p.keyword, p.gsc_keyword, p.created_at, p.next_check_at, p.last_checked_at,
               p.is_done, p.manual_done, p.manual_done_at, p.fetch_reliable, p.check_frequency, p.email_reminders, p.ai_reminder_days, p.next_ai_reminder_at, p.last_ai_reminder_sent_at, p.monitoring_waiting_input,p.monitoring_request_at,p.monitoring_require_ai,p.monitoring_gate_label,p.monitoring_gsc_pages_at,p.monitoring_gsc_queries_at,p.gsc_clicks, p.gsc_impressions, p.gsc_position,
-              p.treatment, p.treatment_target_url, p.treatment_updated_at, p.treatment_source, p.implementation_at, p.implementation_verified_at, p.implementation_status, p.implementation_before_graaf,
+              p.treatment, p.treatment_target_url, p.treatment_updated_at, p.treatment_source, p.implementation_at, p.implementation_verified_at, p.implementation_verified_brief_cycle_id, p.implementation_status, p.implementation_before_graaf,
               p.ranking_brief, p.needs_html, p.brief_started_at, p.brief_evaluated_at, p.brief_content, p.brief_check_count,
               p.html_pasted_at, p.html_source, p.last_graaf_score, p.brief_mode, p.revision_cycle,
               (p.html_content IS NOT NULL AND p.html_content != '') as has_html_content,
@@ -2424,16 +2425,134 @@ app.get('/api/tracker-client/:token', async (req, res) => {
       ORDER BY case_study_id,version_type,captured_at DESC,id DESC`,[_csIds]):{rows:[]};
     const _csvByCase=new Map();
     _csvr.rows.forEach(function(x){if(!_csvByCase.has(x.case_study_id))_csvByCase.set(x.case_study_id,{});_csvByCase.get(x.case_study_id)[x.version_type]=x;});
+
+    // v297: milestone truth comes from completed case-study EVENTS, not from a guessed calendar label.
+    const _csmr=_csIds.length?await pool.query(`SELECT DISTINCT ON(case_study_id,event_type)
+      case_study_id,event_type,event_at,event_data
+      FROM tracker_case_study_events
+      WHERE case_study_id=ANY($1::int[])
+        AND event_type=ANY($2::text[])
+      ORDER BY case_study_id,event_type,event_at DESC,id DESC`,[
+        _csIds,['case_day_7_completed','case_day_14_completed','cycle_day_30_report']
+      ]):{rows:[]};
+    const _csmByCase=new Map();
+    _csmr.rows.forEach(function(x){
+      if(!_csmByCase.has(x.case_study_id))_csmByCase.set(x.case_study_id,{});
+      _csmByCase.get(x.case_study_id)[x.event_type]=x.event_at;
+    });
+
     const _csByUrl=new Map(_csr.rows.map(x=>[_caseStudyNormUrl(x.canonical_url),x]));
     pagesR.rows.forEach(function(_p){
       const _cs=_csByUrl.get(_caseStudyNormUrl(_p.url));
       _p.case_study_active=!!_cs;
       _p.case_study=_cs||null;
       _p.case_study_versions=_cs?(_csvByCase.get(_cs.id)||{}):{};
+      _p.case_study_milestones=_cs?(_csmByCase.get(_cs.id)||{}):{};
       const _cycle=Number(_p.revision_cycle||1),_preKey=_cycle>1?'pre_publication_r'+_cycle:'pre_publication';
+      const _pubKey=_cycle>1?'published_implementation_r'+_cycle:'published_implementation';
+      const _candKey=_cycle>1?'revision_candidate_r'+_cycle:'revision_candidate';
       const _pre=_p.case_study_versions&&_p.case_study_versions[_preKey],_vd=_pre&&_pre.version_data||{};
+      const _pub=_p.case_study_versions&&_p.case_study_versions[_pubKey];
+      const _cand=_p.case_study_versions&&_p.case_study_versions[_candKey];
       _p.prepublication_checkpoint_saved=!!(_pre&&Number(_vd.revision_cycle||1)===Number(_p.revision_cycle||1));
+      _p.current_revision_published_at=_pub&&_pub.captured_at||null;
+      _p.current_revision_candidate_at=_cand&&_cand.captured_at||null;
     });
+
+
+    // v297 milestone self-heal for earlier builds that completed the work but did not write
+    // case_day_*_completed. This never guesses: it requires timestamped GSC + scan evidence,
+    // and Day 14 additionally requires all five timestamped manual AI checks.
+    const _utcDayStart=function(v){
+      const d=new Date(v); if(isNaN(d.getTime()))return 0;
+      return Date.UTC(d.getUTCFullYear(),d.getUTCMonth(),d.getUTCDate());
+    };
+    for(const _p of pagesR.rows){
+      const _cs=_p.case_study;
+      if(!_cs)continue;
+      const _ms=_p.case_study_milestones||{};
+      const _baseDay=_utcDayStart(_cs.baseline_at||_cs.started_at);
+      if(!_baseDay)continue;
+      const _scanAt=Date.parse(_p.last_checked||_p.last_checked_at||0)||0;
+      const _gp=Date.parse(_p.monitoring_gsc_pages_at||0)||0;
+      const _gq=Date.parse(_p.monitoring_gsc_queries_at||0)||0;
+
+      if(!_ms.case_day_7_completed){
+        const _due7=_baseDay+7*86400000;
+        if(Date.now()>=_due7 && _scanAt>=_due7 && _gp>=_due7 && _gq>=_due7){
+          const _doneAt=new Date(Math.max(_scanAt,_gp,_gq)).toISOString();
+          await _caseStudyEventForPage(client.id,_p.id,'case_day_7_completed',{
+            completed_at:_doneAt,evidence_only:false,manual_scan:true,self_healed:true,
+            gsc_pages_at:_p.monitoring_gsc_pages_at,gsc_queries_at:_p.monitoring_gsc_queries_at
+          }).catch(()=>{});
+          _ms.case_day_7_completed=_doneAt;
+          if(String(_p.monitoring_gate_label||'')==='case_day_7'){
+            await pool.query("UPDATE tracker_pages SET monitoring_waiting_input=FALSE,monitoring_gate_label=NULL,monitoring_reminder_sent_at=NULL WHERE id=$1",[_p.id]).catch(()=>{});
+            _p.monitoring_waiting_input=false;_p.monitoring_gate_label=null;
+          }
+        }
+      }
+
+      if(_ms.case_day_7_completed && !_ms.case_day_14_completed){
+        const _due14=_utcDayStart(_ms.case_day_7_completed)+7*86400000;
+        const _aiMap=_p.ai_manual_evidence||{};
+        const _freshAi=['google_aio','chatgpt','perplexity','claude','copilot'].filter(function(k){
+          const ev=_aiMap[k]; if(!ev||ev.is_cleared===true||ev.is_cleared==='true'||ev.is_current_revision===false)return false;
+          const at=Date.parse(ev.updated_at||ev.verified_at||ev.created_at||0)||0;
+          return at>=_due14;
+        }).length;
+        if(Date.now()>=_due14 && _scanAt>=_due14 && _gp>=_due14 && _gq>=_due14 && _freshAi===5){
+          const _doneAt=new Date(Math.max(_scanAt,_gp,_gq)).toISOString();
+          await _caseStudyEventForPage(client.id,_p.id,'case_day_14_completed',{
+            completed_at:_doneAt,evidence_only:false,manual_scan:true,self_healed:true,
+            gsc_pages_at:_p.monitoring_gsc_pages_at,gsc_queries_at:_p.monitoring_gsc_queries_at,ai_checked:5
+          }).catch(()=>{});
+          _ms.case_day_14_completed=_doneAt;
+          if(String(_p.monitoring_gate_label||'')==='case_day_14'){
+            await pool.query("UPDATE tracker_pages SET monitoring_waiting_input=FALSE,monitoring_gate_label=NULL,monitoring_reminder_sent_at=NULL WHERE id=$1",[_p.id]).catch(()=>{});
+            _p.monitoring_waiting_input=false;_p.monitoring_gate_label=null;
+          }
+        }
+      }
+      _p.case_study_milestones=_ms;
+    }
+
+    // Self-heal stale operational Briefs only when we have hard proof that THIS Brief/revision
+    // was verified after it was evaluated. Old verification never closes a newer Brief.
+    for(const _p of pagesR.rows){
+      let _b={};try{_b=typeof _p.brief_content==='string'?JSON.parse(_p.brief_content||'{}'):(_p.brief_content||{});}catch(_e){_b={};}
+      if(!_b||typeof _b!=='object')_b={};
+      const _out=Number(_b.outstanding_actions||0);
+      const _eval=Date.parse(_p.brief_evaluated_at||_b.generated_at||0)||0;
+      const _ver=Date.parse(_p.implementation_verified_at||0)||0;
+      const _pub=Date.parse(_p.current_revision_published_at||0)||0;
+      const _bid=String(_b.cycle_id||'');
+      const _vid=String(_p.implementation_verified_brief_cycle_id||'');
+      const _sameCycle=!!(_bid&&_vid&&_bid===_vid);
+      const _hardCurrentProof=String(_p.implementation_status||'').toLowerCase()==='verified'
+        && (_sameCycle || (_eval>0 && (_ver>=_eval || _pub>=_eval)));
+      if(_out>0 && _hardCurrentProof){
+        const _oldItems=Array.isArray(_b.items)?_b.items:[];
+        const _oldGsc=Array.isArray(_b.gsc_brief)?_b.gsc_brief:[];
+        _b.completed_cycle=_b.completed_cycle||{
+          closed_at:new Date(Math.max(_ver,_pub,Date.now())).toISOString(),
+          reason:'verified_current_brief_self_heal',
+          cycle_id:_bid||_vid||null,
+          completed_actions:_oldItems.length+_oldGsc.length,
+          prior_items:_oldItems,prior_gsc_brief:_oldGsc
+        };
+        _b.items=[];_b.gsc_brief=[];_b.outstanding_actions=0;_b.implementation_complete=true;
+        _b.growth_loop={current_cycle_complete:true,page_perfect:false,state:'READY_FOR_FRESH_DISCOVERY',
+          next_focus:'Wait for fresh evidence before opening a new delta.',recycle_completed_actions:false};
+        _p.brief_content=_b;
+        _p.treatment=String(_p.treatment_source||'').toUpperCase()==='MANUAL'?_p.treatment:'KEEP';
+        await pool.query(`UPDATE tracker_pages SET brief_content=$1,
+          treatment=CASE WHEN COALESCE(treatment_source,'')='MANUAL' THEN treatment ELSE 'KEEP' END,
+          treatment_source=CASE WHEN COALESCE(treatment_source,'')='MANUAL' THEN treatment_source ELSE 'AUTO_BRIEF' END,
+          treatment_updated_at=NOW()
+          WHERE id=$2`,[JSON.stringify(_b),_p.id]).catch(()=>{});
+      }
+    }
 
     res.json({
       success: true,
@@ -3214,10 +3333,22 @@ app.patch('/api/tracker-client/:token/pages/:pageId/done', async (req, res) => {
     const cr = await pool.query('SELECT * FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status != $2)', [req.params.token, 'deleted']);
     if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
     await pool.query('ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS revision_cycle INTEGER NOT NULL DEFAULT 1').catch(()=>{});
+    await pool.query('ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS implementation_verified_brief_cycle_id TEXT').catch(()=>{});
     const own = await pool.query('SELECT * FROM tracker_pages WHERE id=$1 AND tracker_client_id=$2', [req.params.pageId, cr.rows[0].id]);
     if (!own.rows.length) return res.status(403).json({ success: false, error: 'Not your page' });
     const page = own.rows[0];
     const { is_done } = req.body;
+
+    let _verifyBrief={};
+    try{_verifyBrief=typeof page.brief_content==='string'?JSON.parse(page.brief_content||'{}'):(page.brief_content||{});}catch(_e){_verifyBrief={};}
+    if(!_verifyBrief||typeof _verifyBrief!=='object')_verifyBrief={};
+    let _verifyBriefCycleId=String(_verifyBrief.cycle_id||'').trim();
+    if(is_done && !_verifyBriefCycleId){
+      _verifyBriefCycleId='brief-'+String(page.id)+'-legacy-'+Date.now().toString(36)+'-'+crypto.randomBytes(5).toString('hex');
+      _verifyBrief.cycle_id=_verifyBriefCycleId;
+      page.brief_content=JSON.stringify(_verifyBrief);
+      await pool.query('UPDATE tracker_pages SET brief_content=$1 WHERE id=$2',[page.brief_content,page.id]);
+    }
 
     // Self-healing lifecycle columns. Server timestamps are the audit trail.
     await pool.query('ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS implementation_at TIMESTAMPTZ').catch(()=>{});
@@ -3346,6 +3477,7 @@ app.patch('/api/tracker-client/:token/pages/:pageId/done', async (req, res) => {
         await pool.query(`UPDATE tracker_pages SET
           is_done=TRUE,
           implementation_verified_at=NOW(),
+          implementation_verified_brief_cycle_id=$3,
           implementation_status='verified',
           needs_html=FALSE,
           brief_content=$2,
@@ -3353,7 +3485,7 @@ app.patch('/api/tracker-client/:token/pages/:pageId/done', async (req, res) => {
           treatment=CASE WHEN COALESCE(treatment_source,'')='MANUAL' THEN treatment ELSE 'KEEP' END,
           treatment_source=CASE WHEN COALESCE(treatment_source,'')='MANUAL' THEN treatment_source ELSE 'AUTO_BRIEF' END,
           treatment_updated_at=NOW()
-          WHERE id=$1`, [page.id, JSON.stringify(_closedBrief)]);
+          WHERE id=$1`, [page.id, JSON.stringify(_closedBrief), _verifyBriefCycleId||String(_closedBrief.cycle_id||'')||null]);
         const verifiedR = await pool.query('SELECT implementation_at, implementation_verified_at, last_graaf_score, implementation_before_graaf FROM tracker_pages WHERE id=$1', [page.id]);
         const v = verifiedR.rows[0] || after;
         await _caseStudyEventForPage(client.id,page.id,'implementation_verified',{url:page.url,before_graaf:v.implementation_before_graaf==null?null:v.implementation_before_graaf,after_graaf:v.last_graaf_score==null?null:v.last_graaf_score,verified_at:v.implementation_verified_at},liveHash).catch(()=>{});
@@ -4370,6 +4502,7 @@ app.post('/api/tracker-client/:token/page/:pageId/brief-mode', async (req, res) 
 // v294 REGRESSION INVARIANT: LOCAL_SERVICE_GEO_QUERY_GETS_TRANSACTIONAL_WEIGHT=true; DIRECT_ANSWER_ALREADY_PRESENT_IS_NOT_RECOMMENDED=true; UNRESOLVED_PRICING_BLOCKS_PUBLISHABLE_PRICE_ACTIONS=true; VERIFY_PRICING_TASK_MAY_REMAIN=true; FINAL_BRIEF_CARRIES_SOURCE_SUGGESTIONS=true
 // v295 REGRESSION INVARIANT: TRACKER_ALWAYS_SHOWS_IMPLEMENTATION_COMPARISON_STATE=true; NEW_DELTA_EXPLICITLY_MEANS_LIVE_COMPARED_AND_ACTIONS_STILL_MISSING=true; VERIFYING_STATE_VISIBLE=true; NO_CHANGE_STATE_VISIBLE=true; VERIFIED_LIVE_ACCEPTANCE_VISIBLE=true; CANDIDATE_HTML_IS_NOT_CONFUSED_WITH_PUBLISHED_LIVE=true
 // v296 REGRESSION INVARIANT: VERIFIED_IMPLEMENTATION_CONSUMES_CURRENT_BRIEF=true; VERIFIED_PAGE_CANNOT_KEEP_OLD_NEW_DELTA=true; COMPLETED_BRIEF_ACTIONS_PRESERVED_IN_HISTORY=true; OUTSTANDING_ACTIONS_RESET_ZERO_AFTER_VERIFIED_LIVE=true; NEXT_EVIDENCE_ADVANCES_AFTER_COMPLETED_CHECKPOINT=true
+// v297 REGRESSION INVARIANT: IMPLEMENTATION_VERIFICATION_IS_BRIEF_CYCLE_AWARE=true; OLD_GREEN_VERIFICATION_CANNOT_VALIDATE_NEW_BRIEF=true; CURRENT_PUBLISHED_VERSION_MAY_SELF_HEAL_VERIFIED_BRIEF=true; MILESTONE_DATES_USE_COMPLETED_EVENTS_NOT_GUESSED_CALENDAR=true; DAY7_SELF_HEAL_REQUIRES_FRESH_GSC_AND_SCAN=true; DAY14_SELF_HEAL_REQUIRES_FRESH_GSC_SCAN_AND_5AI=true; STALE_VERIFIED_BRIEF_AUTO_CLOSES_ONLY_WITH_HARD_CURRENT_PROOF=true
 // ── Owner Question Hub — persistent client-owned knowledge gaps ────────────────
 // Unanswered questions never disappear. Refresh only adds, merges, or strengthens them.
 async function _ensureTrackerOwnerQuestions(){
@@ -16485,7 +16618,7 @@ async function startServer() {
   }
 
 console.log('────────────────────────────────────────');
-console.log('[ContentScale] CS-2026-09-25-CANONICAL-v296');
+console.log('[ContentScale] CS-2026-09-25-CANONICAL-v297');
 console.log('[ContentScale] Build check: /api/build-info');
 console.log('[ContentScale] Base URL: ' + (process.env.BASE_URL || 'https://app.contentscale.site'));
 console.log('────────────────────────────────────────');
@@ -21145,7 +21278,7 @@ function _ceoMainWebsiteUrl(input){
 // action must target this CEO endpoint.
 app.post('/api/ceo-report/start',async(req,res)=>{
   let ceoEntry='unknown',ceoUrl='',lastStage='REQUEST';
-  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-25-CANONICAL-v296');
+  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-25-CANONICAL-v297');
   try{
     lastStage='DB_SETUP';
     console.log('[ceo-report] stage=DB_SETUP');
@@ -21239,10 +21372,10 @@ ContentScale`;
     return res.json({success:true,entry_mode:entry,token,selected_page:selected,ceo_report_token:reportToken,ceo_report_url:reportUrl,delivery_email:delivery,updates_opt_in:updatesOptIn});
   }catch(e){
     const msg=String((e&&e.message)||e||'CEO Prospect Report generation failed');
-    console.error('[ceo-report] FAILED build=CS-2026-09-25-CANONICAL-v296 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
+    console.error('[ceo-report] FAILED build=CS-2026-09-25-CANONICAL-v297 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
     console.error('[ceo-report] ERROR: '+msg);
     if(e&&e.stack)console.error(e.stack);
-    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-25-CANONICAL-v296'});
+    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-25-CANONICAL-v297'});
     try{res.end();}catch(_){}
   }
 });
@@ -40981,6 +41114,8 @@ function openCaseStudy(pageId){
       if(type==='published_html_captured')return 'Complete published HTML captured as a second immutable version.';
       if(type==='implementation_verified')return 'Published implementation verified and a post-publication Tracker snapshot saved.';
       if(type==='brief_cycle_completed')return 'The implemented Brief cycle was closed. Completed actions moved to protected history; operational outstanding actions reset to 0.';
+      if(type==='case_day_7_completed')return 'Day 7 evidence checkpoint completed from fresh GSC plus the required page review/scan.';
+      if(type==='case_day_14_completed')return 'Day 14 evidence checkpoint completed from fresh GSC, all five AI engines and the required page review/scan.';
       if(type==='implementation_no_change')return 'No material content difference detected versus the protected pre-publication version.';
       return Object.keys(x).map(function(k){return k+': '+eventValue(x[k]);}).join(' · ');
     }
@@ -42884,6 +43019,13 @@ function _trackerNextActionState(p,isDone,lastCheckedRaw,nextEvidence){
   var brief=parse(p.brief_content)||{};
   var outstanding=brief.outstanding_actions!=null?Number(brief.outstanding_actions):null;
   var evaluatedAt=p.brief_evaluated_at?new Date(p.brief_evaluated_at).getTime():0;
+  var verifiedAt=p.implementation_verified_at?new Date(p.implementation_verified_at).getTime():0;
+  var publishedAt=p.current_revision_published_at?new Date(p.current_revision_published_at).getTime():0;
+  var briefCycleId=String(brief.cycle_id||'');
+  var verifiedBriefCycleId=String(p.implementation_verified_brief_cycle_id||'');
+  var sameVerifiedCycle=!!(briefCycleId&&verifiedBriefCycleId&&briefCycleId===verifiedBriefCycleId);
+  var currentBriefVerified=String(p.implementation_status||'').toLowerCase()==='verified'
+    && (sameVerifiedCycle || (evaluatedAt>0 && (verifiedAt>=evaluatedAt || publishedAt>=evaluatedAt)));
 
   // v284: a NEW DELTA may only be declared from a Brief that was evaluated by an ACTUAL scan.
   // Old Brief contents are historical context only. We never infer "new work" from them before a fresh scan.
@@ -42911,6 +43053,9 @@ function _trackerNextActionState(p,isDone,lastCheckedRaw,nextEvidence){
   if(!evaluatedAt){
     return {code:'SCAN',label:'SCAN REQUIRED TO CHECK FOR NEW DELTA',detail:'This page has an older Brief, but it has not yet been evaluated by the current scan workflow. Run Scan now. Only the result of that scan may create a NEW DELTA or confirm NO NEW ACTION.',color:'#7dd3fc',border:'#0284c7',bg:'#082f49',button:'Scan now',buttonAction:'checkPage('+p.id+')'};
   }
+  if(currentBriefVerified){
+    return {code:'MONITOR',label:'NO NEW ACTION · CURRENT BRIEF VERIFIED',detail:evidence+' The current Brief belongs to the live version that was compared and verified. Completed actions are closed; wait for fresh evidence before opening another delta.',color:'#86efac',border:'#16a34a',bg:'#052e16',button:'',buttonAction:''};
+  }
   if(outstanding!=null&&outstanding>0){
     if(isDone)return {code:'NEW_DELTA',label:'NEW DELTA FOUND · '+outstanding+' ACTION'+(outstanding===1?'':'S'),detail:evidence+' This scan produced '+outstanding+' open action(s) after removing items already covered by the live page. Update only from the current Brief.',color:'#fde68a',border:'#f59e0b',bg:'#291b05',button:'Open updated Brief',buttonAction:'viewLastBrief('+p.id+')'};
     return {code:'IMPLEMENT',label:'IMPLEMENT BRIEF · '+outstanding+' OPEN ACTION'+(outstanding===1?'':'S'),detail:'The current Brief still contains evidence-backed work. Apply only those actions, publish, then verify the live version.',color:'#c4b5fd',border:'#8b5cf6',bg:'#17102b',button:'Open Brief',buttonAction:'viewLastBrief('+p.id+')'};
@@ -42929,7 +43074,13 @@ function _trackerImplementationCheckState(p,isDone,nextState){
   var hasCandidate=!!p.html_pasted_at;
   var candidateAt=t(p.html_pasted_at);
   var verifiedAt=t(p.implementation_verified_at);
+  var evaluatedAt=t(p.brief_evaluated_at);
+  var publishedAt=t(p.current_revision_published_at);
   var checkpoint=!!p.prepublication_checkpoint_saved;
+  var _brief={};try{_brief=typeof p.brief_content==='string'?JSON.parse(p.brief_content||'{}'):(p.brief_content||{});}catch(e){_brief={};}
+  var _bid=String(_brief&&_brief.cycle_id||''),_vid=String(p.implementation_verified_brief_cycle_id||'');
+  var _sameCycle=!!(_bid&&_vid&&_bid===_vid);
+  var currentBriefVerified=status==='verified'&&(_sameCycle||(evaluatedAt>0&&(verifiedAt>=evaluatedAt||publishedAt>=evaluatedAt)));
 
   if(status==='verifying'){
     return {code:'VERIFYING',label:'VERIFYING PUBLISHED LIVE',
@@ -42941,10 +43092,15 @@ function _trackerImplementationCheckState(p,isDone,nextState){
       detail:'The fetched live page matched the protected pre-publication version. The new revision was not detected as published. Publish the new HTML first, then use “Verify published live” again.',
       color:'#fca5a5',border:'#ef4444',bg:'#2a0a0a'};
   }
-  if(status==='verified'&&verifiedAt){
-    return {code:'VERIFIED',label:'LIVE VERSION ACCEPTED & VERIFIED · BRIEF CLOSED',
-      detail:'The published live HTML was fetched, compared with the protected pre-publication version, a change was detected, and the verification scan completed. The implemented Brief cycle is now closed and will not remain as an orange NEW DELTA. Verified: '+new Date(p.implementation_verified_at).toLocaleString()+'.',
+  if(currentBriefVerified){
+    return {code:'VERIFIED',label:'CURRENT LIVE VERSION ACCEPTED & VERIFIED · BRIEF CLOSED',
+      detail:'This CURRENT Brief/revision was matched to a captured published version and verified after the Brief was evaluated. Its actions are closed. Verified: '+new Date(Math.max(verifiedAt,publishedAt)).toLocaleString()+'.',
       color:'#86efac',border:'#16a34a',bg:'#052e16'};
+  }
+  if(status==='verified'&&verifiedAt&&evaluatedAt>verifiedAt){
+    return {code:'OLD_VERIFICATION',label:'OLDER IMPLEMENTATION VERIFIED · CURRENT BRIEF NOT YET VERIFIED',
+      detail:'The green verification belongs to an older implementation ('+new Date(p.implementation_verified_at).toLocaleString()+'). The current Brief was evaluated later. Do not treat the old green status as acceptance of the current changes.',
+      color:'#fde68a',border:'#d97706',bg:'#241704'};
   }
 
   // If current scan still has delta, make explicit that the LIVE page was already compared
@@ -43206,23 +43362,21 @@ function renderPages() {
       nextCheck = 'Next scan: not scheduled (Monitoring Off)';
     }
     if (p.case_study_active && _caseStarted && !p.monitoring_waiting_input) {
-      var _csBaseDate = new Date(_caseStarted);
+      var _csBaseDate = new Date(_caseStarted),_ms=p.case_study_milestones||{};
       if (!isNaN(_csBaseDate.getTime())) {
         var _day7 = new Date(_csBaseDate.getTime()+7*86400000);
-        var _day14 = new Date(_csBaseDate.getTime()+14*86400000);
         var _day30 = new Date(_csBaseDate.getTime()+30*86400000);
-        var _evidenceDoneAt = Math.max(
-          p.implementation_verified_at ? new Date(p.implementation_verified_at).getTime() : 0,
-          lastCheckedRaw ? new Date(lastCheckedRaw).getTime() : 0,
-          p.brief_evaluated_at ? new Date(p.brief_evaluated_at).getTime() : 0
-        );
-        var _nowOrDone=Math.max(Date.now(),_evidenceDoneAt||0);
-        // A checkpoint is considered consumed when fresh scan/verification evidence is at or after it.
-        var _officialNext = _nowOrDone < _day7.getTime() ? _day7
-          : (_nowOrDone < _day14.getTime() ? _day14
-          : (_nowOrDone < _day30.getTime() ? _day30 : null));
-        if (_officialNext) nextEvidence = 'Next evidence request: ' + _officialNext.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
-        else nextEvidence = 'Evidence cycle complete — Day 30 reached';
+        var _officialNext=null;
+        if(_ms.cycle_day_30_report){
+          nextEvidence='Evidence cycle complete — Day 30 report saved';
+        }else if(_ms.case_day_14_completed){
+          _officialNext=_day30;
+        }else if(_ms.case_day_7_completed){
+          _officialNext=new Date(new Date(_ms.case_day_7_completed).getTime()+7*86400000);
+        }else{
+          _officialNext=_day7;
+        }
+        if(_officialNext)nextEvidence='Next evidence request: '+_officialNext.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
       }
     }
     var freqLabel = (function(f){ var m={'0':'off (no scan)','off':'off (no scan)','1day':'daily','3days':'every 3 days','7days':'every 7 days','weekly':'weekly','1week':'weekly','2weeks':'every 2 weeks','17days':'every 17 days','21days':'every 21 days','30days':'every 30 days','monthly':'monthly'}; if(m[f])return m[f]; var x=String(f||'').match(/^(\d+)\s*days?$/); return x?('every '+x[1]+' days'):'every 3 days'; })(p.check_frequency);
@@ -57334,6 +57488,7 @@ MERGE RULES:
         // Completion marker for the FINAL merge/HTML-guard payload. The client only unlocks
         // Copy Brief when this marker belongs to the scan it just started.
         brief2.generated_at = new Date().toISOString();
+        brief2.cycle_id = 'brief-'+String(page.id)+'-'+Date.now().toString(36)+'-'+crypto.randomBytes(5).toString('hex');
         brief2.build_id = CONTENTSCALE_BUILD_ID;
         await pool.query(
           'UPDATE tracker_pages SET brief_content=$1, brief_started_at=COALESCE(brief_started_at,NOW()), brief_evaluated_at=NOW() WHERE id=$2',
