@@ -266,7 +266,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-25-CANONICAL-v253';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-25-CANONICAL-v254';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 const CONTENTSCALE_BUILD_CHANGES = [
   'lead-outreach-signature-preview-send-v253',
@@ -489,7 +489,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-09-25-CANONICAL-v253',
+  build: 'CS-2026-09-25-CANONICAL-v254',
   built_date: '2026-09-25',
   ceo_private: true,
   ceo_public: true,
@@ -15784,7 +15784,7 @@ async function startServer() {
   }
 
 console.log('────────────────────────────────────────');
-console.log('[ContentScale] CS-2026-09-25-CANONICAL-v253');
+console.log('[ContentScale] CS-2026-09-25-CANONICAL-v254');
 console.log('[ContentScale] Build check: /api/build-info');
 console.log('[ContentScale] Base URL: ' + (process.env.BASE_URL || 'https://app.contentscale.site'));
 console.log('────────────────────────────────────────');
@@ -18434,7 +18434,7 @@ function _ceoMainWebsiteUrl(input){
 // action must target this CEO endpoint.
 app.post('/api/ceo-report/start',async(req,res)=>{
   let ceoEntry='unknown',ceoUrl='',lastStage='REQUEST';
-  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-25-CANONICAL-v253');
+  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-25-CANONICAL-v254');
   try{
     lastStage='DB_SETUP';
     console.log('[ceo-report] stage=DB_SETUP');
@@ -18528,10 +18528,10 @@ ContentScale`;
     return res.json({success:true,entry_mode:entry,token,selected_page:selected,ceo_report_token:reportToken,ceo_report_url:reportUrl,delivery_email:delivery,updates_opt_in:updatesOptIn});
   }catch(e){
     const msg=String((e&&e.message)||e||'CEO Prospect Report generation failed');
-    console.error('[ceo-report] FAILED build=CS-2026-09-25-CANONICAL-v253 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
+    console.error('[ceo-report] FAILED build=CS-2026-09-25-CANONICAL-v254 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
     console.error('[ceo-report] ERROR: '+msg);
     if(e&&e.stack)console.error(e.stack);
-    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-25-CANONICAL-v253'});
+    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-25-CANONICAL-v254'});
     try{res.end();}catch(_){}
   }
 });
@@ -42008,30 +42008,42 @@ function renderCannibal() {
       + (_gapNotRunYet ? '<div style="margin-top:4px;color:#fbbf24;">\u26a0\ufe0f If you use the individual Scan buttons below, run \ud83e\udd16 <b>Sort this out for me</b> first (Impression Gap panel above) so each brief captures the gap-family sections too. <b>Scan all</b> does this for you automatically.</div>' : '')
       + '<div style="margin-top:8px;display:flex;justify-content:flex-end;">'
       + (function(){
-          var _allScanned = _provenList.length > 0 && _provenList.every(function(s){ return _isSlugScanned(s); });
+          var _unscanned = _provenList.filter(function(s){ return !_isSlugScanned(s); });
+          var _scannedCount = _provenList.length - _unscanned.length;
+          var _allScanned = _provenList.length > 0 && _unscanned.length === 0;
           var _bg = _allScanned ? '#166534' : '#7f1d1d';
           var _bd = _allScanned ? '#16a34a' : '#ef4444';
           var _fg = _allScanned ? '#bbf7d0' : '#fecaca';
           var _dot = _allScanned ? '#4ade80' : '#f87171';
-          var _label = _allScanned ? ('\\u21bb Re-scan all ' + _provenList.length + ' pages') : ('\\ud83d\\ude80 Do everything: sort + scan all ' + _provenList.length + ' pages');
-          // CONTENTSCALE-AI-HANDOFF-V145: bulk scan is workflow STEP 3. It may
-          // run Step 2 automatically, but its own badge must remain 3.
-          return '<button id="provenScanAllBtn" onclick="_provenScanAll(this)" title="Runs Sort this out for me first if needed, then scans every page below in order. Existing briefs are previous results, not completion of this new run." style="cursor:pointer;font-size:10px;font-weight:800;padding:5px 14px;border-radius:5px;background:' + _bg + ';border:2px solid ' + _bd + ';color:' + _fg + ';display:inline-flex;align-items:center;gap:6px;box-shadow:0 0 0 2px ' + (_allScanned?'rgba(74,222,128,.15)':'rgba(239,68,68,.15)') + ';"><span style="background:#0d1117;color:' + _dot + ';border-radius:50%;width:17px;height:17px;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:900;flex-shrink:0;">3</span>' + _label + (_allScanned ? '' : ' <span style="opacity:.85;font-weight:900;">\\u2190 press this</span>') + '</button>';
+          var _label = _allScanned ? ('\u2713 All ' + _provenList.length + ' affected pages already scanned') : ('\ud83d\ude80 Scan new/unscanned only (' + _unscanned.length + ')');
+          var _summary = '<span style="margin-right:8px;color:#9ca3af;font-weight:700;">' + _provenList.length + ' affected \u00b7 <span style="color:#4ade80;">' + _scannedCount + ' scanned</span> \u00b7 <span style="color:#f87171;">' + _unscanned.length + ' new</span></span>';
+          return _summary + '<button id="provenScanAllBtn" onclick="_provenScanAll(this)" ' + (_allScanned ? 'disabled ' : '') + 'title="Scans only NEW / UNSCANNED affected pages. Existing evidence is preserved; use Previous scan only for an intentional rescan." style="cursor:' + (_allScanned?'default':'pointer') + ';font-size:10px;font-weight:800;padding:5px 14px;border-radius:5px;background:' + _bg + ';border:2px solid ' + _bd + ';color:' + _fg + ';display:inline-flex;align-items:center;gap:6px;box-shadow:0 0 0 2px ' + (_allScanned?'rgba(74,222,128,.15)':'rgba(239,68,68,.15)') + ';opacity:' + (_allScanned?'.8':'1') + ';"><span style="background:#0d1117;color:' + _dot + ';border-radius:50%;width:17px;height:17px;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:900;flex-shrink:0;">3</span>' + _label + '</button>';
         })()
       + '</div>'
       + '<div id="provenScanProgress" style="display:none;margin-top:8px;padding:9px 11px;border:1px solid #2563eb;background:#07162f;border-radius:7px;color:#bfdbfe;"></div>'
       + '<div style="margin-top:6px;display:flex;flex-direction:column;gap:3px;">'
-      + _provenList.slice(0, 15).map(function(s){
-          var pid = _slugToPageId[s];
-          var isScanned = _isSlugScanned(s);
-          var label = s + ' <span style="color:' + (isScanned?'#4ade80':'#f87171') + ';">(' + _provenPageStats[s].rows + ' row' + (_provenPageStats[s].rows>1?'s':'') + ')</span>';
-          var btn = pid
-            ? (isScanned
-                ? ('<button onclick="checkPage(' + pid + ')" data-proven-scan="' + pid + '" title="A previous result exists \u2014 click to run a new scan" style="flex-shrink:0;cursor:pointer;font-size:9px;font-weight:800;padding:2px 8px;border-radius:4px;background:#164e63;border:1px solid #0891b2;color:#cffafe;margin-right:8px;">\u21bb Previous scan</button>')
-                : ('<button onclick="checkPage(' + pid + ')" data-proven-scan="' + pid + '" style="flex-shrink:0;cursor:pointer;font-size:9px;font-weight:800;padding:2px 8px;border-radius:4px;background:#7f1d1d;border:1px solid #b91c1c;color:#fecaca;margin-right:8px;">\ud83d\udd0d Scan</button>'))
-            : '';
-          return '<div style="display:flex;align-items:center;font-family:monospace;">' + btn + '<span>' + label + '</span></div>';
-        }).join('')
+      + (function(){
+          var fresh = _provenList.filter(function(s){ return !_isSlugScanned(s); });
+          var done = _provenList.filter(function(s){ return _isSlugScanned(s); });
+          var html = '';
+          if (fresh.length) {
+            html += '<div style="margin:3px 0 4px;color:#f87171;font-weight:900;font-size:10px;">NEW / ACTION REQUIRED (' + fresh.length + ')</div>';
+            html += fresh.slice(0,15).map(function(s){
+              var pid=_slugToPageId[s]; var rows=_provenPageStats[s].rows;
+              var btn=pid ? '<button onclick="checkPage(' + pid + ')" data-proven-scan="' + pid + '" style="flex-shrink:0;cursor:pointer;font-size:9px;font-weight:800;padding:2px 8px;border-radius:4px;background:#7f1d1d;border:1px solid #ef4444;color:#fecaca;margin-right:8px;">\ud83c\udd95 Scan this page</button>' : '<span style="color:#fbbf24;margin-right:8px;">UNRESOLVED</span>';
+              return '<div style="display:flex;align-items:center;font-family:monospace;background:rgba(239,68,68,.06);padding:3px 5px;border-radius:4px;">' + btn + '<span>' + s + ' <span style="color:#f87171;">(' + rows + ' overlap famil' + (rows===1?'y':'ies') + ')</span></span></div>';
+            }).join('');
+          }
+          if (done.length) {
+            html += '<div style="margin:' + (fresh.length?'8px':'3px') + ' 0 4px;color:#4ade80;font-weight:900;font-size:10px;">ALREADY SCANNED (' + done.length + ')</div>';
+            html += done.slice(0,15).map(function(s){
+              var pid=_slugToPageId[s]; var rows=_provenPageStats[s].rows;
+              var btn=pid ? '<button onclick="checkPage(' + pid + ')" data-proven-scan="' + pid + '" title="Intentional manual rescan only" style="flex-shrink:0;cursor:pointer;font-size:9px;font-weight:800;padding:2px 8px;border-radius:4px;background:#164e63;border:1px solid #0891b2;color:#cffafe;margin-right:8px;">\u21bb Previous scan</button>' : '';
+              return '<div style="display:flex;align-items:center;font-family:monospace;">' + btn + '<span>\u2713 ' + s + ' <span style="color:#4ade80;">(' + rows + ' row' + (rows>1?'s':'') + ')</span></span></div>';
+            }).join('');
+          }
+          return html;
+        })()
       + (_provenList.length > 15 ? '<div style="color:#f87171;">+' + (_provenList.length-15) + ' more</div>' : '')
       + '</div>'
       + '</div>'
@@ -42432,10 +42444,11 @@ async function savePrePublicationCheckpoint(pageId) {
       try { await runGapAnalysis(); } catch(e) {}
     }
     if (btnEl) btnEl.textContent = '\u23f3 Queuing scans\u2026';
-    var pageIds = (_provenList||[]).map(function(s){ return _slugToPageId[s]; }).filter(Boolean);
+    var _bulkSlugs = (_provenList||[]).filter(function(s){ return !_isSlugScanned(s); });
+    var pageIds = _bulkSlugs.map(function(s){ return _slugToPageId[s]; }).filter(Boolean);
     // Map each page id back to its slug so we can verify the scan actually landed (DERIVED from DB).
     var idToSlug = {};
-    (_provenList||[]).forEach(function(sl){ var pid = _slugToPageId[sl]; if (pid) idToSlug[String(pid)] = sl; });
+    _bulkSlugs.forEach(function(sl){ var pid = _slugToPageId[sl]; if (pid) idToSlug[String(pid)] = sl; });
     var _states={};pageIds.forEach(function(pid){_states[String(pid)]='waiting';});
     _provenBulkRun={ids:pageIds.slice(),states:_states,completed:0,failed:0,current:'',finished:false};
     _updateProvenBulkUi();
