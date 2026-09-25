@@ -266,7 +266,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-25-CANONICAL-v299';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-25-CANONICAL-v300';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 const CONTENTSCALE_BUILD_CHANGES = [
   'tracker-delta-brief-regression-lock',
@@ -502,7 +502,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-09-25-CANONICAL-v299',
+  build: 'CS-2026-09-25-CANONICAL-v300',
   built_date: '2026-09-25',
   ceo_private: true,
   ceo_public: true,
@@ -3442,6 +3442,140 @@ async function _trackerVerifyOnlyCurrentBriefDelta(brief,liveHtml){
   return {remaining,completed,method:aiMap.size?'targeted_ai_plus_deterministic':'deterministic_safe_fallback'};
 }
 
+
+// v300 — resolve one remaining Brief action without reopening the full Brief.
+// Decisions:
+//   verify   = fetch current live page and verify ONLY this action
+//   override = owner/admin confirms complete despite verifier disagreement
+//   reject   = explicitly not applicable / intentionally not implemented
+app.post('/api/tracker-client/:token/pages/:pageId/brief-action/resolve', async (req,res)=>{
+  try{
+    const cr=await pool.query('SELECT * FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status != $2)',[req.params.token,'deleted']);
+    if(!cr.rows.length)return res.status(404).json({success:false,error:'Not found'});
+    const own=await pool.query('SELECT * FROM tracker_pages WHERE id=$1 AND tracker_client_id=$2',[req.params.pageId,cr.rows[0].id]);
+    if(!own.rows.length)return res.status(403).json({success:false,error:'Not your page'});
+    const page=own.rows[0];
+
+    let brief={};
+    try{brief=typeof page.brief_content==='string'?JSON.parse(page.brief_content||'{}'):(page.brief_content||{});}catch(_e){brief={};}
+    if(!brief||typeof brief!=='object')brief={};
+
+    const bucket=String(req.body&&req.body.bucket||'');
+    const index=Number(req.body&&req.body.index);
+    const decision=String(req.body&&req.body.decision||'').toLowerCase();
+    const reason=String(req.body&&req.body.reason||'').trim();
+    if(!['items','gsc_brief'].includes(bucket))return res.status(400).json({success:false,error:'Invalid action bucket'});
+    if(!Number.isInteger(index)||index<0)return res.status(400).json({success:false,error:'Invalid action index'});
+    if(!['verify','override','reject'].includes(decision))return res.status(400).json({success:false,error:'Invalid action decision'});
+
+    const arr=Array.isArray(brief[bucket])?brief[bucket]:[];
+    const action=arr[index];
+    if(!action)return res.status(404).json({success:false,error:'Action no longer exists. Refresh the page.'});
+    if(_trackerBriefFrameOnly(action))return res.status(400).json({success:false,error:'This is framing/context, not a resolvable implementation action.'});
+
+    let resolution=null;
+    if(decision==='verify'){
+      const liveResp=await fetch(page.url,{headers:{'User-Agent':'Mozilla/5.0 (compatible; ContentScale/1.0)'},signal:AbortSignal.timeout(15000)});
+      if(!liveResp.ok)return res.status(502).json({success:false,error:'Could not fetch current live page: HTTP '+liveResp.status});
+      const liveHtml=await liveResp.text();
+      const lower=liveHtml.toLowerCase();
+      if(liveHtml.length<500||(!lower.includes('</html>')&&!lower.includes('<body'))){
+        return res.status(502).json({success:false,error:'Current live page fetch was incomplete or unreliable. No action was changed.'});
+      }
+      const single={items:bucket==='items'?[action]:[],gsc_brief:bucket==='gsc_brief'?[action]:[]};
+      const vr=await _trackerVerifyOnlyCurrentBriefDelta(single,liveHtml);
+      if((vr.remaining||[]).length){
+        return res.status(409).json({
+          success:false,
+          verified:false,
+          error:'Not verified on the current live page.',
+          evidence:(vr.remaining[0]&&vr.remaining[0].evidence)||'The live page did not clearly satisfy this action.'
+        });
+      }
+      resolution={
+        decision:'AUTO_VERIFIED_LIVE',
+        reason:(vr.completed&&vr.completed[0]&&vr.completed[0].evidence)||'Verified against current live HTML',
+        resolved_at:new Date().toISOString()
+      };
+    }else{
+      if(!reason)return res.status(400).json({success:false,error:'Add a reason before using '+(decision==='override'?'Override':'Reject / N/A')+'.'});
+      resolution={
+        decision:decision==='override'?'MANUAL_OVERRIDE_COMPLETE':'REJECTED_NOT_APPLICABLE',
+        reason:reason.slice(0,1000),
+        resolved_at:new Date().toISOString()
+      };
+    }
+
+    const actionSnapshot=JSON.parse(JSON.stringify(action));
+    arr.splice(index,1);
+    brief[bucket]=arr;
+    brief.manual_resolutions=Array.isArray(brief.manual_resolutions)?brief.manual_resolutions:[];
+    brief.manual_resolutions.push({
+      bucket,
+      action:actionSnapshot,
+      title:String(action&&action.title||''),
+      cycle_id:String(brief.cycle_id||''),
+      ...resolution
+    });
+
+    const openItems=(Array.isArray(brief.items)?brief.items:[]).filter(x=>x&&!_trackerBriefFrameOnly(x));
+    const openGsc=(Array.isArray(brief.gsc_brief)?brief.gsc_brief:[]).filter(Boolean);
+    const remaining=openItems.length+openGsc.length;
+    brief.outstanding_actions=remaining;
+    brief.implementation_complete=remaining===0;
+
+    if(remaining===0){
+      brief.completed_cycle=brief.completed_cycle||{
+        closed_at:new Date().toISOString(),
+        reason:'all_remaining_actions_resolved',
+        cycle_id:String(brief.cycle_id||''),
+        completed_actions:(brief.manual_resolutions||[]).length
+      };
+      brief.growth_loop={
+        current_cycle_complete:true,
+        page_perfect:false,
+        state:'READY_FOR_FRESH_DISCOVERY',
+        next_focus:'Wait for fresh evidence before opening a new delta.',
+        recycle_completed_actions:false
+      };
+    }
+
+    await pool.query(`UPDATE tracker_pages SET
+      brief_content=$1,
+      implementation_status=$2,
+      treatment=CASE WHEN $3::boolean AND COALESCE(treatment_source,'')!='MANUAL' THEN 'KEEP' ELSE treatment END,
+      treatment_source=CASE WHEN $3::boolean AND COALESCE(treatment_source,'')!='MANUAL' THEN 'AUTO_BRIEF' ELSE treatment_source END,
+      treatment_updated_at=CASE WHEN $3::boolean THEN NOW() ELSE treatment_updated_at END
+      WHERE id=$4`,[
+        JSON.stringify(brief),
+        remaining===0?'manual_resolution_complete':'live_changed_delta_remaining',
+        remaining===0,
+        page.id
+      ]);
+
+    await _caseStudyEventForPage(cr.rows[0].id,page.id,'brief_action_resolved',{
+      bucket,
+      title:String(action&&action.title||''),
+      decision:resolution.decision,
+      reason:resolution.reason,
+      remaining_actions:remaining,
+      brief_cycle_id:String(brief.cycle_id||''),
+      full_scan_suppressed:true,
+      client_email_suppressed:true
+    },page.last_page_hash||null).catch(()=>{});
+
+    return res.json({
+      success:true,
+      decision:resolution.decision,
+      remaining_actions:remaining,
+      implementation_complete:remaining===0
+    });
+  }catch(e){
+    console.error('[brief-action-resolve]',e);
+    res.status(500).json({success:false,error:e.message});
+  }
+});
+
 // PATCH /api/tracker-client/:token/pages/:pageId/done — implementation lifecycle.
 // DONE means: "I published the recommended changes." ContentScale verifies the LIVE page automatically.
 // Reliable live HTML -> compare with last baseline -> only if changed run the post-implementation scan.
@@ -4653,6 +4787,7 @@ app.post('/api/tracker-client/:token/page/:pageId/brief-mode', async (req, res) 
 // v297 REGRESSION INVARIANT: IMPLEMENTATION_VERIFICATION_IS_BRIEF_CYCLE_AWARE=true; OLD_GREEN_VERIFICATION_CANNOT_VALIDATE_NEW_BRIEF=true; CURRENT_PUBLISHED_VERSION_MAY_SELF_HEAL_VERIFIED_BRIEF=true; MILESTONE_DATES_USE_COMPLETED_EVENTS_NOT_GUESSED_CALENDAR=true; DAY7_SELF_HEAL_REQUIRES_FRESH_GSC_AND_SCAN=true; DAY14_SELF_HEAL_REQUIRES_FRESH_GSC_SCAN_AND_5AI=true; STALE_VERIFIED_BRIEF_AUTO_CLOSES_ONLY_WITH_HARD_CURRENT_PROOF=true
 // v298 REGRESSION INVARIANT: NEXT_ACTION_IS_STAGE_AWARE_NOT_REPEAT_OPEN_BRIEF=true; OPENING_BRIEF_PERSISTS_REVIEW_WITHOUT_CLEARING_TICKS=true; STALE_PREPUBLICATION_CHECKPOINT_NOT_VALID_FOR_NEW_BRIEF=true; CURRENT_LIVE_CAN_COMPARE_AGAINST_PREVIOUS_VERIFIED_PUBLICATION=true; LIVE_VERIFICATION_CLOSES_BRIEF_ONLY_WHEN_FINAL_SCAN_ZERO=true; PARTIAL_LIVE_UPDATE_REMAINS_OPEN_WITH_EXACT_REMAINING_DELTA=true; PARTIAL_VERIFICATION_SENDS_NO_CLIENT_COMPLETION_EMAIL=true; VERIFIED_BRIEF_ID_USES_POST_SCAN_FINAL_CYCLE=true
 // v299 REGRESSION INVARIANT: CHECK_CURRENT_LIVE_NEVER_RUNS_FULL_TRACKER_SCAN=true; CHECK_CURRENT_LIVE_VERIFIES_ONLY_EXISTING_OPEN_ACTIONS=true; CHECK_CURRENT_LIVE_GENERATES_NO_NEW_RECOMMENDATIONS=true; CHECK_CURRENT_LIVE_SENDS_NO_CLIENT_EMAIL=true; REMAINING_LOOP_HIDES_MANUAL_SCAN=true; REMAINING_LOOP_HIDES_FULL_BRIEF=true; REMAINING_PANEL_SHOWS_ONLY_EXACT_OPEN_ACTIONS=true; ZERO_REMAINING_CLOSES_CYCLE=true
+// v300 REGRESSION INVARIANT: REMAINING_ACTIONS_HAVE_VERIFY_OVERRIDE_REJECT_BUTTONS=true; PER_ACTION_VERIFY_FETCHES_LIVE_AND_CHECKS_ONLY_SELECTED_ACTION=true; OVERRIDE_REQUIRES_REASON=true; REJECT_REQUIRES_REASON=true; MANUAL_RESOLUTIONS_PERSIST_IN_BRIEF_HISTORY=true; PER_ACTION_RESOLUTION_NEVER_RUNS_FULL_SCAN=true; PER_ACTION_RESOLUTION_SENDS_NO_CLIENT_EMAIL=true; ZERO_REMAINING_AFTER_MANUAL_RESOLUTION_CLOSES_CYCLE=true
 // ── Owner Question Hub — persistent client-owned knowledge gaps ────────────────
 // Unanswered questions never disappear. Refresh only adds, merges, or strengthens them.
 async function _ensureTrackerOwnerQuestions(){
@@ -16768,7 +16903,7 @@ async function startServer() {
   }
 
 console.log('────────────────────────────────────────');
-console.log('[ContentScale] CS-2026-09-25-CANONICAL-v299');
+console.log('[ContentScale] CS-2026-09-25-CANONICAL-v300');
 console.log('[ContentScale] Build check: /api/build-info');
 console.log('[ContentScale] Base URL: ' + (process.env.BASE_URL || 'https://app.contentscale.site'));
 console.log('────────────────────────────────────────');
@@ -21428,7 +21563,7 @@ function _ceoMainWebsiteUrl(input){
 // action must target this CEO endpoint.
 app.post('/api/ceo-report/start',async(req,res)=>{
   let ceoEntry='unknown',ceoUrl='',lastStage='REQUEST';
-  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-25-CANONICAL-v299');
+  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-25-CANONICAL-v300');
   try{
     lastStage='DB_SETUP';
     console.log('[ceo-report] stage=DB_SETUP');
@@ -21522,10 +21657,10 @@ ContentScale`;
     return res.json({success:true,entry_mode:entry,token,selected_page:selected,ceo_report_token:reportToken,ceo_report_url:reportUrl,delivery_email:delivery,updates_opt_in:updatesOptIn});
   }catch(e){
     const msg=String((e&&e.message)||e||'CEO Prospect Report generation failed');
-    console.error('[ceo-report] FAILED build=CS-2026-09-25-CANONICAL-v299 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
+    console.error('[ceo-report] FAILED build=CS-2026-09-25-CANONICAL-v300 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
     console.error('[ceo-report] ERROR: '+msg);
     if(e&&e.stack)console.error(e.stack);
-    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-25-CANONICAL-v299'});
+    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-25-CANONICAL-v300'});
     try{res.end();}catch(_){}
   }
 });
@@ -41264,6 +41399,7 @@ function openCaseStudy(pageId){
       if(type==='published_html_captured')return 'Complete published HTML captured as a second immutable version.';
       if(type==='implementation_verified')return 'Published implementation verified and a post-publication Tracker snapshot saved.';
       if(type==='implementation_live_compared_delta_remaining')return 'A new live version was detected and checked only against the current Brief actions. '+(x.remaining_actions||0)+' action(s) were still missing. No full scan, new Brief or client email was triggered.';
+      if(type==='brief_action_resolved')return 'Remaining action resolved as '+String(x.decision||'').replace(/_/g,' ')+': '+(x.title||'Untitled action')+'. Reason: '+(x.reason||'—')+'. '+(x.remaining_actions||0)+' action(s) remain.';
       if(type==='brief_cycle_completed')return 'The implemented Brief cycle was closed. Completed actions moved to protected history; operational outstanding actions reset to 0.';
       if(type==='case_day_7_completed')return 'Day 7 evidence checkpoint completed from fresh GSC plus the required page review/scan.';
       if(type==='case_day_14_completed')return 'Day 14 evidence checkpoint completed from fresh GSC, all five AI engines and the required page review/scan.';
@@ -43269,6 +43405,11 @@ function _trackerImplementationCheckState(p,isDone,nextState){
     return {code:'PARTIAL',label:'NEW LIVE VERSION DETECTED · BRIEF NOT COMPLETE',
       detail:'ContentScale detected new published HTML and checked only the current open actions. Some are still missing. No new recommendations were generated.',
       color:'#fde68a',border:'#d97706',bg:'#241704'};
+  }
+  if(status==='manual_resolution_complete'){
+    return {code:'MANUAL_COMPLETE',label:'REMAINING ACTIONS RESOLVED · CYCLE CLOSED',
+      detail:'All remaining actions were resolved individually. History preserves whether each item was live-verified, manually overridden, or rejected / not applicable. No full scan was run.',
+      color:'#86efac',border:'#16a34a',bg:'#052e16'};
   }
   if(currentBriefVerified){
     return {code:'VERIFIED',label:'CURRENT LIVE VERSION ACCEPTED & VERIFIED · BRIEF CLOSED',
@@ -45539,29 +45680,76 @@ function openRemainingActions(pageId){
   var p=(_pages||[]).find(function(x){return x.id==pageId;})||{};
   var b={};try{b=typeof p.brief_content==='string'?JSON.parse(p.brief_content||'{}'):(p.brief_content||{});}catch(e){b={};}
   var rows=[];
-  (Array.isArray(b.items)?b.items:[]).forEach(function(x){if(x&&!_trackerClientFrameOnly(x))rows.push(x);});
-  (Array.isArray(b.gsc_brief)?b.gsc_brief:[]).forEach(function(x){if(x)rows.push(x);});
+  (Array.isArray(b.items)?b.items:[]).forEach(function(x,i){if(x&&!_trackerClientFrameOnly(x))rows.push({bucket:'items',index:i,item:x});});
+  (Array.isArray(b.gsc_brief)?b.gsc_brief:[]).forEach(function(x,i){if(x)rows.push({bucket:'gsc_brief',index:i,item:x});});
+
   var old=document.getElementById('remainingActionsOverlay');if(old)old.remove();
   var ov=document.createElement('div');ov.id='remainingActionsOverlay';
   ov.style.cssText='position:fixed;inset:0;z-index:100000;background:rgba(2,6,23,.82);display:flex;align-items:center;justify-content:center;padding:22px;';
-  var box=document.createElement('div');box.style.cssText='width:min(760px,96vw);max-height:86vh;overflow:auto;background:#0d1117;border:1px solid #d97706;border-radius:12px;padding:18px;color:#e5e7eb;';
+  var box=document.createElement('div');box.style.cssText='width:min(860px,96vw);max-height:88vh;overflow:auto;background:#0d1117;border:1px solid #d97706;border-radius:12px;padding:18px;color:#e5e7eb;';
   var esc=function(v){return String(v||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');};
+
   box.innerHTML='<div style="font-size:11px;font-weight:950;color:#fbbf24;letter-spacing:.06em;">FIX ONLY THE REMAINING ACTIONS</div>'
-    +'<div style="font-size:11px;color:#94a3b8;margin:5px 0 12px;">No new scan and no full Brief. These are the only items still open from the same implementation cycle.</div>'
-    +(rows.length?rows.map(function(x,i){
-      return '<div style="padding:11px 12px;margin:8px 0;background:#111827;border:1px solid #374151;border-left:3px solid #f59e0b;border-radius:7px;">'
+    +'<div style="font-size:11px;color:#94a3b8;margin:5px 0 12px;">No new scan and no full Brief. Resolve each item individually: verify it on the live page, override it with a reason, or reject it as not applicable.</div>'
+    +(rows.length?rows.map(function(r,i){
+      var x=r.item||{};
+      return '<div style="padding:12px;margin:9px 0;background:#111827;border:1px solid #374151;border-left:3px solid #f59e0b;border-radius:8px;">'
         +'<div style="font-size:11px;font-weight:900;color:#fde68a;">'+(i+1)+'. '+esc(x.title||'Remaining action')+'</div>'
-        +'<div style="font-size:11px;line-height:1.6;color:#cbd5e1;margin-top:5px;">'+esc(x.action||x.passage||x.body||x.what||x.issue||'')+'</div></div>';
+        +'<div style="font-size:11px;line-height:1.6;color:#cbd5e1;margin-top:5px;">'+esc(x.action||x.passage||x.body||x.what||x.issue||'')+'</div>'
+        +'<div style="display:flex;gap:7px;flex-wrap:wrap;margin-top:10px;">'
+        +'<button onclick="resolveRemainingAction('+pageId+',&quot;'+r.bucket+'&quot;,'+r.index+',&quot;verify&quot;,this)" style="background:#052e16;border:1px solid #22c55e;color:#bbf7d0;border-radius:6px;padding:5px 9px;font-size:10px;font-weight:900;cursor:pointer;">✓ Done — verify live</button>'
+        +'<button onclick="resolveRemainingAction('+pageId+',&quot;'+r.bucket+'&quot;,'+r.index+',&quot;override&quot;,this)" style="background:#172554;border:1px solid #3b82f6;color:#bfdbfe;border-radius:6px;padding:5px 9px;font-size:10px;font-weight:900;cursor:pointer;">Override — mark complete</button>'
+        +'<button onclick="resolveRemainingAction('+pageId+',&quot;'+r.bucket+'&quot;,'+r.index+',&quot;reject&quot;,this)" style="background:#2a0a0a;border:1px solid #ef4444;color:#fca5a5;border-radius:6px;padding:5px 9px;font-size:10px;font-weight:900;cursor:pointer;">Reject / N/A</button>'
+        +'</div></div>';
     }).join(''):'<div style="color:#86efac;">No remaining actions.</div>')
-    +'<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px;">'
-    +'<button id="remainingCloseBtn" style="background:#111827;border:1px solid #475569;color:#cbd5e1;border-radius:7px;padding:7px 12px;cursor:pointer;">Close</button>'
-    +(rows.length?'<button id="remainingCheckBtn" style="background:#052e16;border:1px solid #22c55e;color:#bbf7d0;border-radius:7px;padding:7px 12px;font-weight:900;cursor:pointer;">After publishing · Check current live</button>':'')
-    +'</div>';
+    +'<div style="display:flex;justify-content:flex-end;margin-top:14px;"><button id="remainingCloseBtn" style="background:#111827;border:1px solid #475569;color:#cbd5e1;border-radius:7px;padding:7px 12px;cursor:pointer;">Close</button></div>';
+
   ov.appendChild(box);document.body.appendChild(ov);
   box.querySelector('#remainingCloseBtn').onclick=function(){ov.remove();};
-  var cb=box.querySelector('#remainingCheckBtn');if(cb)cb.onclick=function(){ov.remove();verifyCurrentBriefLive(pageId,null);};
+}
+
+async function resolveRemainingAction(pageId,bucket,index,decision,btn){
+  var reason='';
+  if(decision==='override'){
+    reason=prompt('Why should this action be marked complete despite automatic verification?\\n\\nThis reason will be saved permanently in Proof & History.','');
+    if(reason===null)return;
+    reason=String(reason||'').trim();
+    if(!reason){alert('A reason is required for Override.');return;}
+  }
+  if(decision==='reject'){
+    reason=prompt('Why is this action not applicable / intentionally rejected?\\n\\nThis reason will be saved permanently in Proof & History.','');
+    if(reason===null)return;
+    reason=String(reason||'').trim();
+    if(!reason){alert('A reason is required for Reject / N/A.');return;}
+  }
+
+  var oldText=btn&&btn.textContent;
+  if(btn){btn.disabled=true;btn.textContent=decision==='verify'?'Verifying live…':'Saving…';}
+  try{
+    var r=await fetch('/api/tracker-client/'+TOKEN+'/pages/'+pageId+'/brief-action/resolve',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({bucket:bucket,index:index,decision:decision,reason:reason})
+    });
+    var d=await r.json();
+    if(!r.ok||!d.success)throw new Error(d.error||'Could not resolve action');
+
+    var ov=document.getElementById('remainingActionsOverlay');if(ov)ov.remove();
+    toast(
+      d.remaining_actions===0
+        ? 'All remaining actions resolved — current cycle closed.'
+        : (decision==='verify'?'Action verified on live page.':decision==='override'?'Manual override saved.':'Action rejected / marked N/A.')+' '+d.remaining_actions+' remaining.',
+      '#4ade80'
+    );
+    await loadPages();
+    if(d.remaining_actions>0)setTimeout(function(){openRemainingActions(pageId);},250);
+  }catch(e){
+    if(btn){btn.disabled=false;btn.textContent=oldText||'Try again';}
+    alert(e.message||e);
+  }
 }
 window.openRemainingActions=openRemainingActions;
+window.resolveRemainingAction=resolveRemainingAction;
 
 async function verifyCurrentBriefLive(pageId,btn){
   if(btn){btn.disabled=true;btn.textContent='Checking live…';btn.style.opacity='.75';}
