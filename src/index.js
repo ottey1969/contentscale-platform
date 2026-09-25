@@ -266,7 +266,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-25-CANONICAL-v261';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-25-CANONICAL-v262';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 const CONTENTSCALE_BUILD_CHANGES = [
   'tracker-delta-brief-regression-lock',
@@ -492,7 +492,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-09-25-CANONICAL-v261',
+  build: 'CS-2026-09-25-CANONICAL-v262',
   built_date: '2026-09-25',
   ceo_private: true,
   ceo_public: true,
@@ -522,12 +522,14 @@ app.get('/api/build-info',(req,res)=>{
 app.get('/api/regression-contract',(req,res)=>{
   const src=fs.readFileSync(__filename,'utf8');
   const checks={
-    canonical_build:/CANONICAL-v261/.test(CONTENTSCALE_BUILD_INFO.build),
+    canonical_build:/CANONICAL-v262/.test(CONTENTSCALE_BUILD_INFO.build),
     ceo_first:CONTENTSCALE_BUILD_INFO.ceo_private&&CONTENTSCALE_BUILD_INFO.ceo_public&&CONTENTSCALE_BUILD_INFO.quickscan_other_page_only,
     audit20_discovery:!!CONTENTSCALE_BUILD_INFO.audit20_discovery,
     tracker_delta_guard:src.includes('V256 generic DELTA guard')&&src.includes('implementation_complete=_briefNow.outstanding_actions===0'),
     verification_stays_outstanding:src.includes('V261: verification is work, not completion'),
     completed_brief_is_growth_not_sleep:src.includes('CURRENT BRIEF COMPLETE')&&src.includes('outperform the current competition'),
+    zero_brief_allows_zero_actions:src.includes('DELTA Citation Brief with 0 to 5 actions')&&src.includes('DELTA GSC Brief with 0 to 5'),
+    growth_discovery_after_zero:src.includes('READY_FOR_FRESH_DISCOVERY')&&src.includes('page_perfect:false')&&src.includes('recycle_completed_actions:false'),
     competitor_step_duplicate_guard:src.includes('V261: competitor-gap wrappers'),
     tracker_prewrite_handoff:src.includes("mode:_treat.indexOf('REWRITE')>=0?'REWRITE_EXISTING'")&&src.includes('openPrewriteHandoff(pageId)'),
     tracker_auto_treatment:src.includes('_briefNow.recommended_treatment=_autoTreatment')&&src.includes("treatment_source='AUTO_BRIEF'"),
@@ -15841,7 +15843,7 @@ async function startServer() {
   }
 
 console.log('────────────────────────────────────────');
-console.log('[ContentScale] CS-2026-09-25-CANONICAL-v261');
+console.log('[ContentScale] CS-2026-09-25-CANONICAL-v262');
 console.log('[ContentScale] Build check: /api/build-info');
 console.log('[ContentScale] Base URL: ' + (process.env.BASE_URL || 'https://app.contentscale.site'));
 console.log('────────────────────────────────────────');
@@ -18491,7 +18493,7 @@ function _ceoMainWebsiteUrl(input){
 // action must target this CEO endpoint.
 app.post('/api/ceo-report/start',async(req,res)=>{
   let ceoEntry='unknown',ceoUrl='',lastStage='REQUEST';
-  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-25-CANONICAL-v261');
+  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-25-CANONICAL-v262');
   try{
     lastStage='DB_SETUP';
     console.log('[ceo-report] stage=DB_SETUP');
@@ -18585,10 +18587,10 @@ ContentScale`;
     return res.json({success:true,entry_mode:entry,token,selected_page:selected,ceo_report_token:reportToken,ceo_report_url:reportUrl,delivery_email:delivery,updates_opt_in:updatesOptIn});
   }catch(e){
     const msg=String((e&&e.message)||e||'CEO Prospect Report generation failed');
-    console.error('[ceo-report] FAILED build=CS-2026-09-25-CANONICAL-v261 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
+    console.error('[ceo-report] FAILED build=CS-2026-09-25-CANONICAL-v262 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
     console.error('[ceo-report] ERROR: '+msg);
     if(e&&e.stack)console.error(e.stack);
-    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-25-CANONICAL-v261'});
+    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-25-CANONICAL-v262'});
     try{res.end();}catch(_){}
   }
 });
@@ -52845,7 +52847,7 @@ SEARCH INTENT — THE FOUNDATION (do this FIRST, before writing any action): eve
 
 MISSING ENTITIES (derive from REAL data only): build the Missing Entities list ONLY from things that actually appear in the competitor snippets, the Google AI Overview text, or the Perplexity excerpt provided above but are absent from this page. These are concrete named things — a specific statistic ("146M SERP study"), a named concept ("query fan-out"), a comparison ("AI Overview vs Featured Snippets"), a tool, or a sub-topic. Never invent an entity that has no basis in the supplied data. If the supplied data shows no clear entity gaps, return an empty entities array — do not pad it.
 
-Analyze the input data and create a Citation Brief with exactly 5 actions. Each action must be:
+Analyze the input data and create a DELTA Citation Brief with 0 to 5 actions. ZERO actions is a valid and preferred result when the live page already satisfies every evidence-backed citation opportunity in this cycle. Never manufacture, recycle, or pad actions merely to fill a quota. The framing objects may still be returned, but implementation actions must contain ONLY genuinely unresolved changes. Each action must be:
 1. Specific to ONE citation system (or ranking)
 2. Copy-paste ready — give the EXACT sentence, paragraph, schema code, or HTML the user needs to add
 3. Prioritized: HIGH (blocks all citations), MEDIUM (improves 1-2 systems), LOW (incremental gain)
@@ -52891,7 +52893,7 @@ AIO COMPETITOR GAP TABLE SOURCE (if you include a Competitor Gap item): its comp
 
 OUTPUT FORMAT — return ONLY this JSON, no markdown, no explanation, no preamble.
 CRITICAL: the JSON array MUST begin with the "Intent Snapshot" object as element 0. An array that starts with an action object is INVALID and will be rejected. Do not skip it, do not merge it into an action. Fill its "the_question" and "content_mismatch" with SPECIFIC observations about THIS page and THIS keyword using the competitor titles and AI Overview text above — never a generic template like "what a searcher means when they look up X". The "the_question" must be the actual question phrased as a searcher would ask it; the "content_mismatch" must name what THIS page concretely does now (from its role as ${pageUrl}) versus what the moment needs, and must NOT be identical to "what_wins".
-The FIRST object is an intent snapshot (system "Intent Snapshot") — it has no action to paste; it frames the whole brief in plain language the business owner understands. It must name the searcher's MOMENT (WANT-TO-KNOW / WANT-TO-GO / WANT-TO-DO / WANT-TO-BUY) inferred from what the top-ranking pages actually serve, and the single sharpest MISMATCH between that moment and what this page does today. Every action below must serve that moment — for Google ranking AND for AI-Overview citation. A page that answers the wrong moment will not rank or get cited however well written. The SECOND object is a missing-entities list (system "Missing Entities") — the specific named things (concepts, tools, statistics, comparisons, sub-topics) that the cited competitors and the current AI Overview mention but THIS page does not. The THIRD object is a People-Also-Ask list (system "PAA") — exactly 5 real follow-up questions a searcher for "${kw}" also asks, each with a ready-to-paste 40-60 word answer for an FAQ. Then the 5 action objects.
+The FIRST object is an intent snapshot (system "Intent Snapshot") — it has no action to paste; it frames the whole brief in plain language the business owner understands. It must name the searcher's MOMENT (WANT-TO-KNOW / WANT-TO-GO / WANT-TO-DO / WANT-TO-BUY) inferred from what the top-ranking pages actually serve, and the single sharpest MISMATCH between that moment and what this page does today. Every action below must serve that moment — for Google ranking AND for AI-Overview citation. A page that answers the wrong moment will not rank or get cited however well written. The SECOND object is a missing-entities list (system "Missing Entities") — the specific named things (concepts, tools, statistics, comparisons, sub-topics) that the cited competitors and the current AI Overview mention but THIS page does not. The THIRD object is a People-Also-Ask list (system "PAA") — exactly 5 real follow-up questions a searcher for "${kw}" also asks, each with a ready-to-paste 40-60 word answer for an FAQ. Then 0 to 5 action objects. If there are no genuinely unresolved citation changes, stop after the framing objects; do not manufacture an action.
 [{"system":"Intent Snapshot","intent_type":"one of: Informational | Commercial | Transactional | Navigational","moment":"the searcher's micro-moment behind this keyword — one of: WANT-TO-KNOW (researching) | WANT-TO-GO (looking for a place/brand) | WANT-TO-DO (solving a problem) | WANT-TO-BUY (ready to decide) — pick the one that matches what the top-ranking pages actually serve, not the keyword words","the_question":"the exact question a searcher is really asking when they type this keyword, in one plain sentence","resolves_now":"one honest sentence: does the page answer that question in its first screen today — yes, partly, or no — and why","content_mismatch":"the single sharpest gap between the searcher's moment and what THIS page currently does — e.g. 'the searcher is in a WANT-TO-KNOW moment but the page opens with a sales pitch instead of a direct answer'. If the page already matches the moment, say so plainly and name the one thing that would extend the lead.","what_wins":"one plain-language sentence on what the page must do to become the answer AI models and searchers pick — tied to the moment above"},
 {"system":"Missing Entities","entities":[{"name":"the exact entity/concept/stat/comparison the page is missing (2-5 words)","why":"one short plain-language reason this entity helps AI models pick the page — what it signals"}],"owner_note":"ONE plain sentence telling the owner what an 'entity' is here and why filling these gaps makes AI models trust the page more — no jargon"},
 {"system":"PAA","owner_note":"ONE plain sentence: these are the real related questions people also ask — answering them on the page earns extra AI citations and featured snippets.","questions":[{"q":"a real People-Also-Ask style follow-up question for this keyword (natural phrasing, as a searcher types it) — provide EXACTLY 5","a":"a self-contained 40-60 word answer, ready to paste as an FAQ answer — factual, no placeholders, quotable by AI models"}]},
@@ -52952,13 +52954,13 @@ WHAT DRIVES RANK #1 IN 2025-2026:
 8. Outbound links to authoritative sources (signals trust)
 
 IMPRESSION GROWTH — the other lever (more queries surfaced, not just more clicks from current ones):
-Impressions grow when the page becomes eligible for MORE queries. Every directly answered question is a new query surface, and pages covering adjacent intents get shown for their long-tail variants. Therefore exactly ONE of your actions must be an impression-growth action:
+Impressions grow when the page becomes eligible for MORE queries. Every directly answered question is a new query surface, and pages covering adjacent intents get shown for their long-tail variants. When the evidence shows a genuinely missing adjacent intent, one action MAY be an impression-growth action:
 - ADD one new question-form H2 targeting an ADJACENT search intent of "${kw}" that the page does not answer yet (check the HTML above first — never duplicate an existing section), followed by a 40-60 word direct answer that opens by naming the subject.
 - Choose the intent the way a searcher would ask it (cost / how long / vs alternative / near me / is it worth it / requirements). If the page has FAQ schema, also extend it with this Q&A; if not, do not force schema into this action.
 - HONESTY RULE: you only have page-level aggregates and the single top query above — you do NOT have the full GSC query list. Never present an expansion query as "GSC data shows..."; frame it as an adjacent-intent expansion. If the owner imports their Queries CSV, real position 11-50 queries take priority over guessed intents — say so in the caveat.
 
 TASK:
-Analyze the GSC data and create a GSC Brief with 4-5 actions to reach rank #1 for "${kw}" (ALWAYS include the Meta Title & Description action AND exactly one IMPRESSION GROWTH action as defined above).
+Analyze the GSC data and create a DELTA GSC Brief with 0 to 5 genuinely unresolved actions that can improve visibility for "${kw}". ZERO actions is valid when the current live page already contains the evidence-backed changes supported by this cycle. Do not recycle completed actions. Include Meta Title & Description ONLY when the current metadata is actually weak/missing/misaligned, and include an IMPRESSION GROWTH action ONLY when the supplied query/competitor evidence reveals a genuinely missing adjacent intent or question. The objective is continuous improvement toward stronger competitive performance, not filling an action quota.
 
 Each action must include:
 1. The specific GSC signal that triggered this recommendation (e.g. "CTR of 2.7% at position 14 = title problem")
@@ -53975,6 +53977,17 @@ If no unanchored claims found, return empty array: []`;
     var _openGSC=(_briefNow.gsc_brief||[]).filter(function(x){return !!x;});
     _briefNow.outstanding_actions=_openAI.length+_openGSC.length;
     _briefNow.implementation_complete=_briefNow.outstanding_actions===0;
+    // V262 — zero closes the CURRENT implementation cycle, never the improvement program.
+    // Keep the work brief empty, preserve history, and arm a fresh Growth Discovery cycle for the
+    // next evidence checkpoint. New work may only be created from fresh GSC/SERP/competitor/5-engine
+    // evidence; completed actions must not be recycled simply because the page is below rank #1.
+    _briefNow.growth_loop={
+      current_cycle_complete:!!_briefNow.implementation_complete,
+      page_perfect:false,
+      state:_briefNow.implementation_complete?'READY_FOR_FRESH_DISCOVERY':'IMPLEMENT_CURRENT_DELTA',
+      next_focus:_briefNow.implementation_complete?'Re-evaluate fresh GSC, SERP/competitor and 5-engine evidence for genuinely new opportunities. A new opportunity may trigger OPTIMIZE, EXPAND or REWRITE/Pre-Write.':'Finish and verify the current delta before opening a new growth cycle.',
+      recycle_completed_actions:false
+    };
     // v260 — Brief owns the default Treatment decision. The dropdown is no longer an empty
     // human decision after the Brief: it is pre-filled from the evidence-backed delta and can
     // still be overridden manually. Dangerous URL actions are never executed automatically.
@@ -53984,7 +53997,7 @@ If no unanchored claims found, return empty array: []`;
     if (page.redirects_to && !String(page.redirects_to).startsWith('(canonical')) {
       _autoTreatment='REDIRECT'; _autoReason='The live URL resolves as a redirect; the tracked URL should not be treated as an editable content page.'; _autoNext='Review the detected destination and keep/track the final live URL. No redirect is executed by ContentScale.';
     } else if (_briefNow.implementation_complete) {
-      _autoTreatment='KEEP'; _autoReason='CURRENT CYCLE COMPLETE: the live page contains every action supported by the current evidence. This is not a stop signal.'; _autoNext='Keep improving from fresh competitor, GSC and 5-engine evidence. The next cycle must create only genuinely new opportunities that can make this page more useful, more specific, and more competitive — never recycle completed work.';
+      _autoTreatment='KEEP'; _autoReason='CURRENT CYCLE COMPLETE: the live page contains every action supported by the current evidence. KEEP closes this work cycle; it does not declare the page perfect.'; _autoNext='Run the next Growth Discovery from fresh competitor, GSC and 5-engine evidence. If new evidence shows that stronger/new content is needed to outrank competitors, create a NEW delta and automatically choose OPTIMIZE, EXPAND or REWRITE with Pre-Write as appropriate. Never recycle completed work.';
     } else if (/\b(rewrite|rebuild|replace (?:the )?page|new structure)\b/i.test(_actionText)) {
       _autoTreatment='REWRITE'; _autoReason='The current Brief contains a page-level rewrite/rebuild requirement rather than isolated edits.'; _autoNext='Continue in Pre-Write and rebuild the existing URL while preserving verified facts and proven strengths.';
     } else if (/\b(major expansion|expand existing|add (?:a )?(?:new )?(?:section|sections)|content gap)\b/i.test(_actionText) || _briefNow.outstanding_actions>=4) {
