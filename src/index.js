@@ -266,7 +266,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-25-CANONICAL-v274';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-25-CANONICAL-v275';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 const CONTENTSCALE_BUILD_CHANGES = [
   'tracker-delta-brief-regression-lock',
@@ -492,7 +492,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-09-25-CANONICAL-v274',
+  build: 'CS-2026-09-25-CANONICAL-v275',
   built_date: '2026-09-25',
   ceo_private: true,
   ceo_public: true,
@@ -4284,6 +4284,7 @@ app.post('/api/tracker-client/:token/page/:pageId/brief-mode', async (req, res) 
 // v272 REGRESSION INVARIANT: ALL_MAIN_CONTENTSCALE_VERIFIED_CLIENT_FACTS_SYNC_TO_EXISTING_NL_ES_TRACKERS=true; TRANSLATION_LITERAL_ZERO_TEMPERATURE=true; SOURCE_CLAIM_PROVENANCE_PRESERVED=true; NO_NEW_TRACKER_CREATED=true
 // v273 REGRESSION INVARIANT: ADMIN_ROUTES_REGISTER_AFTER_VERIFYADMIN_INIT=true; NO_TDZ_VERIFYADMIN_STARTUP_CRASH=true
 // v274 REGRESSION INVARIANT: AUTO_OWNER_QUESTIONS_DISABLED=true; MANUAL_COMPANY_QUESTIONS_ONLY=true; GROWTH_REQUIRES_CONCRETE_SOURCE_AND_SEMANTIC_GAP=true; ZERO_GROWTH_QUESTIONS_VALID=true; NO_DUMB_GENERIC_OWNER_PROMPTS=true
+// v275 REGRESSION INVARIANT: WARMUP_PROGRESS_MONOTONIC=true; WARMUP_RECOVERS_FROM_ALL_SUCCESSFUL_SEND_HISTORY=true; WARMUP_START_NEVER_MOVES_FORWARD=true; REBOOT_CANNOT_RESET_WARMUP_DAY=true
 // ── Owner Question Hub — persistent client-owned knowledge gaps ────────────────
 // Unanswered questions never disappear. Refresh only adds, merges, or strengthens them.
 async function _ensureTrackerOwnerQuestions(){
@@ -10179,6 +10180,9 @@ Pricing: the owner/manager confirms an indicative emergency-roofing range of $25
    // ══ is_active column migrations for ALL tables that need it ══════════════
    // Tables recovered from Neon archive may be missing these columns
    await client.query(`ALTER TABLE warmup_config ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE`).catch(()=>{});
+   await client.query(`ALTER TABLE warmup_config ADD COLUMN IF NOT EXISTS progress_day INTEGER NOT NULL DEFAULT 1`).catch(()=>{});
+   await client.query(`ALTER TABLE warmup_config ADD COLUMN IF NOT EXISTS progress_updated_at TIMESTAMPTZ`).catch(()=>{});
+
    await client.query(`ALTER TABLE access_codes ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE`).catch(()=>{});
    await client.query(`ALTER TABLE content_money_pages ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE`).catch(()=>{});
    await client.query(`ALTER TABLE campaign_clients ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE`).catch(()=>{});
@@ -10719,8 +10723,13 @@ Pricing: the owner/manager confirms an indicative emergency-roofing range of $25
    if (!userId || !pool) return res.json({ success: false });
    try {
    await pool.query(
-   `INSERT INTO warmup_config (user_id, warmup_start_date, is_active) VALUES ($1, CURRENT_DATE, TRUE)
-   ON CONFLICT (user_id) DO UPDATE SET warmup_start_date = CURRENT_DATE, is_active = TRUE`, [userId]
+   `INSERT INTO warmup_config (user_id, warmup_start_date, is_active, progress_day, progress_updated_at)
+   VALUES ($1, CURRENT_DATE, TRUE, 1, NOW())
+   ON CONFLICT (user_id) DO UPDATE SET
+     warmup_start_date = LEAST(warmup_config.warmup_start_date, EXCLUDED.warmup_start_date),
+     is_active = TRUE,
+     progress_day = GREATEST(COALESCE(warmup_config.progress_day,1),1),
+     progress_updated_at = NOW()`, [userId]
    );
    res.json({ success: true, dailyCap: 5 });
    } catch (e) { res.json({ success: false, error: e.message }); }
@@ -16246,7 +16255,7 @@ async function startServer() {
   }
 
 console.log('────────────────────────────────────────');
-console.log('[ContentScale] CS-2026-09-25-CANONICAL-v274');
+console.log('[ContentScale] CS-2026-09-25-CANONICAL-v275');
 console.log('[ContentScale] Build check: /api/build-info');
 console.log('[ContentScale] Base URL: ' + (process.env.BASE_URL || 'https://app.contentscale.site'));
 console.log('────────────────────────────────────────');
@@ -18595,40 +18604,112 @@ app.post('/api/prospect-quick-scan/admin/import',requireAdmin,async(req,res)=>{
 // CONTENTSCALE-AI-HANDOFF-V163 — OUTREACH WINDOW (ASIA/MANILA)
 // A new daily sending session may start 24 hours after the previous successful send. Once today's first
 // message is sent, the remaining approved messages in that day's warm-up batch stay available.
+
+function _warmupMinimumDayFromSentCount(totalSent){
+  // Minimum warm-up calendar day capable of producing totalSent successful messages
+  // under the configured 20/30/40/50/75/100 schedule.
+  let n=Math.max(0,Number(totalSent||0)),capacity=0;
+  for(let day=1;day<=42;day++){
+    capacity+=Number(calcWarmupCap(day)||0);
+    if(n<=capacity)return Math.max(1,day);
+  }
+  return n>capacity?43:1;
+}
 // CONTENTSCALE-AI-HANDOFF-V248 — PRESERVE EXISTING WARM-UP AGE FROM SEND HISTORY
 async function _pqsOutreachTiming(){
   const warmKey='lead_crawler_outreach';
-  await pool.query(`INSERT INTO warmup_config(user_id,warmup_start_date,is_active)
-    SELECT $1,COALESCE((SELECT MIN((outreach_sent_at AT TIME ZONE 'Asia/Manila')::date) FROM prospect_quick_scans WHERE outreach_sent_at>=NOW()-INTERVAL '6 days'),CURRENT_DATE),TRUE
-    WHERE NOT EXISTS(SELECT 1 FROM warmup_config WHERE user_id=$1)`,[warmKey]).catch(()=>{});
-  // v248: preserve the real warm-up age when this feature is deployed after sending already started.
-  // Only backdate the stored start date from actual successful sends; never move it forward on deploy/restart.
-  await pool.query(`UPDATE warmup_config w SET warmup_start_date = LEAST(
-      w.warmup_start_date,
-      COALESCE((SELECT MIN((p.outreach_sent_at AT TIME ZONE 'Asia/Manila')::date)
-                FROM prospect_quick_scans p
-                WHERE p.outreach_sent_at IS NOT NULL
-                  AND p.outreach_sent_at >= NOW()-INTERVAL '6 days'), w.warmup_start_date)
-    ) WHERE w.user_id=$1`,[warmKey]).catch(()=>{});
-  const cfg=await pool.query(`SELECT warmup_start_date,is_active,
-      GREATEST(1, ((NOW() AT TIME ZONE 'Asia/Manila')::date - warmup_start_date) + 1)::int AS warmup_day
+
+  // v275 RECOVERY SOURCES:
+  // 1) persisted warmup_config high-water mark,
+  // 2) earliest successful outreach ever,
+  // 3) cumulative successful sends.
+  // Progress is the MAX of these sources and is persisted again. It can never decrease on reboot/deploy.
+  const hist=await pool.query(`SELECT
+      MIN((outreach_sent_at AT TIME ZONE 'Asia/Manila')::date) AS first_send_date,
+      MAX(outreach_sent_at) AS last_sent_at,
+      COUNT(*)::int AS total_sent,
+      COUNT(*) FILTER(
+        WHERE (outreach_sent_at AT TIME ZONE 'Asia/Manila')::date=(NOW() AT TIME ZONE 'Asia/Manila')::date
+      )::int AS sent_today
+    FROM prospect_quick_scans
+    WHERE outreach_sent_at IS NOT NULL`).catch(()=>({rows:[{}]}));
+  const h=hist.rows[0]||{};
+  const firstSend=h.first_send_date||null;
+  const totalSent=Number(h.total_sent||0);
+  const countImpliedDay=_warmupMinimumDayFromSentCount(totalSent);
+
+  await pool.query(`INSERT INTO warmup_config(user_id,warmup_start_date,is_active,progress_day,progress_updated_at)
+    VALUES($1,COALESCE($2::date,(NOW() AT TIME ZONE 'Asia/Manila')::date),TRUE,$3,NOW())
+    ON CONFLICT(user_id) DO UPDATE SET
+      warmup_start_date=LEAST(
+        warmup_config.warmup_start_date,
+        COALESCE(EXCLUDED.warmup_start_date,warmup_config.warmup_start_date)
+      ),
+      progress_day=GREATEST(COALESCE(warmup_config.progress_day,1),EXCLUDED.progress_day),
+      progress_updated_at=NOW()`,
+    [warmKey,firstSend,countImpliedDay]).catch(e=>console.warn('[warmup-persist]',e.message));
+
+  const cfg=await pool.query(`SELECT warmup_start_date,is_active,COALESCE(progress_day,1)::int AS progress_day,
+      GREATEST(1,((NOW() AT TIME ZONE 'Asia/Manila')::date-warmup_start_date)+1)::int AS calendar_day
     FROM warmup_config WHERE user_id=$1`,[warmKey]).catch(()=>({rows:[]}));
-  const q=await pool.query(`WITH b AS (SELECT (date_trunc('day',NOW() AT TIME ZONE 'Asia/Manila') AT TIME ZONE 'Asia/Manila') AS today_start)
-    SELECT MAX(outreach_sent_at) AS last_sent_at,
-      COUNT(*) FILTER(WHERE outreach_sent_at>=b.today_start)::int AS sent_today,
-      COUNT(*) FILTER(WHERE outreach_sent_at>=b.today_start-INTERVAL '6 days')::int AS sent_cycle_window
-    FROM prospect_quick_scans CROSS JOIN b WHERE outreach_sent_at IS NOT NULL GROUP BY b.today_start`);
-  const row=q.rows[0]||{},now=new Date(),last=row.last_sent_at?new Date(row.last_sent_at):null;
-  const cfgRow=cfg.rows[0]||{},active=cfgRow.is_active!==false;
-  // Use Manila calendar dates from PostgreSQL, not JS/UTC elapsed hours. This prevents day 3 showing as day 2/1 around timezone boundaries.
-  const dayNumber=Math.max(1,Number(cfgRow.warmup_day||1)),cycle=Math.min(6,Math.floor((dayNumber-1)/7)+1),dayInCycle=((dayNumber-1)%7)+1;
-  const cap=active?calcWarmupCap(dayNumber):null,today=Number(row.sent_today||0),remaining=cap==null?null:Math.max(0,cap-today),complete=cap==null;
-  const nextCycleDay=complete?null:(cycle*7+1),daysToIncrease=complete?null:Math.max(0,nextCycleDay-dayNumber);
+  const c=cfg.rows[0]||{};
+
+  // Earliest successful send is authoritative recovery if config was recreated.
+  let historyCalendarDay=1;
+  if(firstSend){
+    const hd=await pool.query(`SELECT GREATEST(1,((NOW() AT TIME ZONE 'Asia/Manila')::date-$1::date)+1)::int AS d`,[firstSend]).catch(()=>({rows:[{d:1}]}));
+    historyCalendarDay=Number(hd.rows[0]?.d||1);
+  }
+
+  const storedDay=Number(c.progress_day||1);
+  const configCalendarDay=Number(c.calendar_day||1);
+  const dayNumber=Math.max(1,storedDay,configCalendarDay,historyCalendarDay,countImpliedDay);
+
+  // Persist monotonic high-water mark after every calculation.
+  await pool.query(`UPDATE warmup_config
+    SET progress_day=GREATEST(COALESCE(progress_day,1),$2::int),
+        warmup_start_date=LEAST(
+          warmup_start_date,
+          COALESCE($3::date,warmup_start_date)
+        ),
+        progress_updated_at=NOW()
+    WHERE user_id=$1`,[warmKey,dayNumber,firstSend]).catch(e=>console.warn('[warmup-high-water]',e.message));
+
+  const active=c.is_active!==false;
+  const cycle=Math.min(6,Math.floor((dayNumber-1)/7)+1);
+  const dayInCycle=((dayNumber-1)%7)+1;
+  const cap=active?calcWarmupCap(dayNumber):null;
+  const today=Number(h.sent_today||0);
+  const remaining=cap==null?null:Math.max(0,cap-today);
+  const complete=cap==null||dayNumber>42;
+  const nextCycleDay=complete?null:(cycle*7+1);
+  const daysToIncrease=complete?null:Math.max(0,nextCycleDay-dayNumber);
   const nextCap=complete?null:calcWarmupCap(nextCycleDay);
   const can=complete||today<cap;
-  return{timezone:'Asia/Manila',server_now:now.toISOString(),last_sent_at:last?last.toISOString():null,sent_today:today,can_send_now:can,
-    warmup_active:active&&!complete,warmup_complete:complete,warmup_start_date:cfgRow.warmup_start_date||null,warmup_day:dayNumber,cycle,day_in_cycle:dayInCycle,daily_cap:cap,remaining_today:remaining,next_cap:nextCap,days_to_increase:daysToIncrease,
-    reason:can?(complete?'Warm-up complete; ContentScale artificial cap removed':'Warm-up sending is open'):'Daily warm-up cap reached'};
+  const last=h.last_sent_at?new Date(h.last_sent_at):null;
+
+  return{
+    timezone:'Asia/Manila',
+    server_now:new Date().toISOString(),
+    last_sent_at:last&&!isNaN(last)?last.toISOString():null,
+    sent_today:today,
+    total_sent:totalSent,
+    can_send_now:can,
+    warmup_active:active&&!complete,
+    warmup_complete:complete,
+    warmup_start_date:c.warmup_start_date||firstSend||null,
+    warmup_day:dayNumber,
+    stored_progress_day:storedDay,
+    history_calendar_day:historyCalendarDay,
+    count_implied_day:countImpliedDay,
+    cycle,
+    day_in_cycle:dayInCycle,
+    daily_cap:cap,
+    remaining_today:remaining,
+    next_cap:nextCap,
+    days_to_increase:daysToIncrease,
+    reason:can?(complete?'Warm-up complete; ContentScale artificial cap removed':'Warm-up sending is open'):'Daily warm-up cap reached'
+  };
 }
 app.get('/api/prospect-quick-scan/admin/list',requireAdmin,async(req,res)=>{if(!await _ensureProspectQuickScanTable())return res.status(503).json({success:false});try{const q=await pool.query(`SELECT * FROM prospect_quick_scans WHERE revoked_at IS NULL ORDER BY created_at DESC LIMIT 1000`),outreachSchedule=await _pqsOutreachTiming();res.json({success:true,outreach_schedule:outreachSchedule,items:q.rows.map(r=>({..._pqsPublicRow(r),contact_email:r.contact_email||'',campaign:r.campaign||'',opened_count:Number(r.opened_count||0),first_opened_at:r.first_opened_at,last_opened_at:r.last_opened_at,follow_up_status:r.follow_up_status||'not_contacted',outreach_email_status:r.outreach_email_status||'draft',outreach_subject:r.outreach_subject||'',outreach_body:r.outreach_body||'',outreach_approved_at:r.outreach_approved_at,outreach_sent_at:r.outreach_sent_at,outreach_error:r.outreach_error||'',outreach_delivery_status:r.outreach_delivery_status||'unknown',outreach_delivery_event_at:r.outreach_delivery_event_at||null,outreach_delivery_reason:r.outreach_delivery_reason||'',outreach_attempts:Number(r.outreach_attempts||0),outreach_copy_variant:r.outreach_copy_variant?Number(r.outreach_copy_variant):null,outreach_copy_language:r.outreach_copy_language||'',email_lookup_status:r.email_lookup_status||'',email_lookup_checked_at:r.email_lookup_checked_at||null,email_lookup_source:r.email_lookup_source||'',ceo_report_url:r.ceo_report_url||'',ceo_report_token:r.ceo_report_token||'',ceo_report_page_url:r.ceo_report_page_url||'',two_page_overview:r.two_page_overview||null,two_page_overview_created_at:r.two_page_overview_created_at||null,quickscan_interested:!!r.quickscan_interested,quickscan_interested_at:r.quickscan_interested_at||null,audit20_interested:!!r.audit20_interested,audit20_interested_at:r.audit20_interested_at||null,audit20_interest_note:r.audit20_interest_note||'',gsc_status:r.gsc_status||'not_connected',gsc_requested_at:r.gsc_requested_at||null,gsc_connected_at:r.gsc_connected_at||null,audit20_status:r.audit20_status||'not_started',audit20_ready_at:r.audit20_ready_at||null,audit20_report_url:r.audit20_report_url||'',tracker_interested:!!r.tracker_interested,tracker_interested_at:r.tracker_interested_at||null,ceo_delivery_email_sent_at:r.ceo_delivery_email_sent_at||null,ceo_delivery_email_error:r.ceo_delivery_email_error||'',updates_opt_in:!!r.updates_opt_in,outreach_followup_due_at:r.outreach_followup_due_at||null,outreach_followup_sent_at:r.outreach_followup_sent_at||null,share_url:req.protocol+'://'+req.get('host')+'/quick-scan/'+r.token}))});}catch(e){res.status(500).json({success:false,error:e.message});}});
 app.post('/api/prospect-quick-scan/admin/email-enrich',requireAdmin,async(req,res)=>{
@@ -18896,7 +18977,7 @@ function _ceoMainWebsiteUrl(input){
 // action must target this CEO endpoint.
 app.post('/api/ceo-report/start',async(req,res)=>{
   let ceoEntry='unknown',ceoUrl='',lastStage='REQUEST';
-  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-25-CANONICAL-v274');
+  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-25-CANONICAL-v275');
   try{
     lastStage='DB_SETUP';
     console.log('[ceo-report] stage=DB_SETUP');
@@ -18990,10 +19071,10 @@ ContentScale`;
     return res.json({success:true,entry_mode:entry,token,selected_page:selected,ceo_report_token:reportToken,ceo_report_url:reportUrl,delivery_email:delivery,updates_opt_in:updatesOptIn});
   }catch(e){
     const msg=String((e&&e.message)||e||'CEO Prospect Report generation failed');
-    console.error('[ceo-report] FAILED build=CS-2026-09-25-CANONICAL-v274 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
+    console.error('[ceo-report] FAILED build=CS-2026-09-25-CANONICAL-v275 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
     console.error('[ceo-report] ERROR: '+msg);
     if(e&&e.stack)console.error(e.stack);
-    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-25-CANONICAL-v274'});
+    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-25-CANONICAL-v275'});
     try{res.end();}catch(_){}
   }
 });
@@ -19532,7 +19613,7 @@ function _pqsAdminV133Tools(){return String.raw`<script>(function(){
   function mondayStart(d){var x=new Date(d.getFullYear(),d.getMonth(),d.getDate()),day=x.getDay()||7;x.setDate(x.getDate()-day+1);return x}
   function manila(v){if(!v)return'None yet';var d=new Date(v);if(isNaN(d))return'Unknown';return new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Manila',weekday:'short',day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit',hour12:false}).format(d)+' PHT'}
   function waitText(v){var ms=new Date(v).getTime()-Date.now();if(!(ms>0))return'';var h=Math.floor(ms/3600000),m=Math.ceil((ms-h*3600000)/60000);return' ('+h+'h '+m+'m remaining)'}
-  function renderWarmup(){var now=new Date(),start=mondayStart(now),sent=qitems.filter(function(x){return x.outreach_email_status==='sent'&&x.outreach_sent_at}),today=qSchedule?Number(qSchedule.sent_today||0):sent.filter(function(x){var d=new Date(x.outreach_sent_at);return !isNaN(d)&&sameLocalDay(d,now)}).length,week=sent.filter(function(x){var d=new Date(x.outreach_sent_at);return !isNaN(d)&&d>=start&&d<=now}).length,cap=qSchedule?qSchedule.daily_cap:20,complete=!!(qSchedule&&qSchedule.warmup_complete),done=!complete&&cap!=null&&today>=cap;$('eqTodaySent').textContent=complete?'Today sent: '+today+' · warm-up complete':'Today sent: '+today+' / '+cap;$('eqTodaySent').style.color=done?'#4ade80':'#e5e7eb';$('eqTodayLeft').textContent=complete?'ContentScale warm-up cap removed':(done?'Daily target reached ✓':Math.max(0,cap-today)+' remaining today');$('eqWeekSent').textContent='This week: '+week+' sent';if(qSchedule){$('eqLastSent').textContent='Last successful send: '+manila(qSchedule.last_sent_at);$('eqNextSend').textContent=complete?'WARM-UP COMPLETE':('WARM-UP · CYCLE '+qSchedule.cycle+'/6 · DAY '+qSchedule.day_in_cycle+'/7');$('eqNextSend').style.color=complete?'#4ade80':(done?'#4ade80':'#fbbf24');var c=$('eqWarmCycle');if(c)c.textContent=complete?'Normal sending · provider/account limits still apply':('Next increase: '+qSchedule.days_to_increase+' day'+(qSchedule.days_to_increase===1?'':'s')+' → '+qSchedule.next_cap+'/day')}}
+  function renderWarmup(){var now=new Date(),start=mondayStart(now),sent=qitems.filter(function(x){return x.outreach_email_status==='sent'&&x.outreach_sent_at}),today=qSchedule?Number(qSchedule.sent_today||0):sent.filter(function(x){var d=new Date(x.outreach_sent_at);return !isNaN(d)&&sameLocalDay(d,now)}).length,week=sent.filter(function(x){var d=new Date(x.outreach_sent_at);return !isNaN(d)&&d>=start&&d<=now}).length,cap=qSchedule?qSchedule.daily_cap:20,complete=!!(qSchedule&&qSchedule.warmup_complete),done=!complete&&cap!=null&&today>=cap;$('eqTodaySent').textContent=complete?'Today sent: '+today+' · warm-up complete':'Today sent: '+today+' / '+cap;$('eqTodaySent').style.color=done?'#4ade80':'#e5e7eb';$('eqTodayLeft').textContent=complete?'ContentScale warm-up cap removed':(done?'Daily target reached ✓':Math.max(0,cap-today)+' remaining today');$('eqWeekSent').textContent='This week: '+week+' sent'+(qSchedule&&qSchedule.total_sent!=null?' · Total: '+Number(qSchedule.total_sent)+'':'');if(qSchedule){$('eqLastSent').textContent='Last successful send: '+manila(qSchedule.last_sent_at);$('eqNextSend').textContent=complete?'WARM-UP COMPLETE':('WARM-UP · CYCLE '+qSchedule.cycle+'/6 · DAY '+qSchedule.day_in_cycle+'/7 · OVERALL DAY '+qSchedule.warmup_day);$('eqNextSend').style.color=complete?'#4ade80':(done?'#4ade80':'#fbbf24');var c=$('eqWarmCycle');if(c)c.textContent=complete?'Normal sending · provider/account limits still apply':('Next increase: '+qSchedule.days_to_increase+' day'+(qSchedule.days_to_increase===1?'':'s')+' → '+qSchedule.next_cap+'/day · progress never resets')}}
   function valid(v){return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(v||''))}
   function lang(x){var v=String(x.language||'auto').toLowerCase(),d=String(x.domain||'').toLowerCase();if(v==='nl'||(v==='auto'&&/(^nl\.|\.nl$)/i.test(d)))return 'nl';if(v==='es'||(v==='auto'&&/(^es\.|\.es$)/i.test(d)))return 'es';return 'en'}
   function publicCeoUrl(l){return 'https://app.contentscale.site/quick-scan/start?source=lead-crawler&language='+encodeURIComponent(l||'en')}
