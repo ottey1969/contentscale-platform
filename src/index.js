@@ -266,7 +266,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-25-CANONICAL-v257';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-25-CANONICAL-v258';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 const CONTENTSCALE_BUILD_CHANGES = [
   'tracker-delta-brief-regression-lock',
@@ -489,7 +489,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-09-25-CANONICAL-v257',
+  build: 'CS-2026-09-25-CANONICAL-v258',
   built_date: '2026-09-25',
   ceo_private: true,
   ceo_public: true,
@@ -4490,7 +4490,7 @@ app.patch('/api/tracker-client/:token/claims-facts/:claimId',async(req,res)=>{tr
   const before=await pool.query('SELECT * FROM tracker_claims_facts WHERE id=$1 AND tracker_client_id=$2 AND page_id IS NULL',[req.params.claimId,own.clientId]);
   const st=String(req.body?.status||'').trim().toUpperCase(),allowed=['VERIFIED','UNVERIFIED','FALSE','NOT_APPLICABLE'];if(!allowed.includes(st))return res.status(400).json({success:false,error:'Invalid status'});
   const notes=String(req.body?.notes||'').trim();
-  const rr=await pool.query(`UPDATE tracker_claims_facts SET status=$1,notes=CASE WHEN $2<>'' THEN $2 ELSE notes END,verified_at=CASE WHEN $1='VERIFIED' THEN NOW() ELSE NULL END,updated_at=NOW()
+  const rr=await pool.query(`UPDATE tracker_claims_facts SET status=$1::varchar,notes=CASE WHEN $2::text<>'' THEN $2::text ELSE notes END,verified_at=CASE WHEN $1::text='VERIFIED' THEN NOW() ELSE NULL END,updated_at=NOW()
     WHERE id=$3 AND tracker_client_id=$4 AND page_id IS NULL RETURNING *,(status='VERIFIED') AS safe_to_use`,[st,notes,req.params.claimId,own.clientId]);
   if(!rr.rows.length)return res.status(404).json({success:false,error:'Claim not found'});await _caseStudyEventForClient(own.clientId,'claim_status_changed',{before:before.rows[0]||null,after:rr.rows[0]}).catch(()=>{});res.json({success:true,claim:rr.rows[0]});
 }catch(e){console.error('[client-claims-facts-update]',{message:e.message,code:e.code,detail:e.detail,constraint:e.constraint,claimId:req.params.claimId});res.status(500).json({success:false,error:'Claims & Facts update failed',code:e.code||'',detail:e.detail||e.message});}});
@@ -4522,7 +4522,7 @@ app.patch('/api/tracker-client/:token/page/:pageId/claims-facts/:claimId',async(
   const own=await _trackerClaimsPage(req,res);if(!own)return;
   const st=String(req.body?.status||'').trim().toUpperCase(),allowed=['VERIFIED','UNVERIFIED','FALSE','NOT_APPLICABLE'];if(!allowed.includes(st))return res.status(400).json({success:false,error:'Status must be VERIFIED, UNVERIFIED, FALSE or NOT_APPLICABLE'});
   const notes=String(req.body?.notes||'').trim();
-  const rr=await pool.query(`UPDATE tracker_claims_facts SET status=$1,notes=CASE WHEN $2<>'' THEN $2 ELSE notes END,verified_at=CASE WHEN $1='VERIFIED' THEN NOW() ELSE NULL END,updated_at=NOW()
+  const rr=await pool.query(`UPDATE tracker_claims_facts SET status=$1::varchar,notes=CASE WHEN $2::text<>'' THEN $2::text ELSE notes END,verified_at=CASE WHEN $1::text='VERIFIED' THEN NOW() ELSE NULL END,updated_at=NOW()
     WHERE id=$3 AND page_id=$4 RETURNING *, (status='VERIFIED') AS safe_to_use`,[st,notes,req.params.claimId,own.pageId]);
   if(!rr.rows.length)return res.status(404).json({success:false,error:'Claim not found'});res.json({success:true,claim:rr.rows[0]});
 }catch(e){console.error('[claims-facts-update]',e.message);res.status(500).json({success:false,error:e.message});}});
@@ -15793,7 +15793,7 @@ async function startServer() {
   }
 
 console.log('────────────────────────────────────────');
-console.log('[ContentScale] CS-2026-09-25-CANONICAL-v257');
+console.log('[ContentScale] CS-2026-09-25-CANONICAL-v258');
 console.log('[ContentScale] Build check: /api/build-info');
 console.log('[ContentScale] Base URL: ' + (process.env.BASE_URL || 'https://app.contentscale.site'));
 console.log('────────────────────────────────────────');
@@ -18443,7 +18443,7 @@ function _ceoMainWebsiteUrl(input){
 // action must target this CEO endpoint.
 app.post('/api/ceo-report/start',async(req,res)=>{
   let ceoEntry='unknown',ceoUrl='',lastStage='REQUEST';
-  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-25-CANONICAL-v257');
+  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-25-CANONICAL-v258');
   try{
     lastStage='DB_SETUP';
     console.log('[ceo-report] stage=DB_SETUP');
@@ -18537,10 +18537,10 @@ ContentScale`;
     return res.json({success:true,entry_mode:entry,token,selected_page:selected,ceo_report_token:reportToken,ceo_report_url:reportUrl,delivery_email:delivery,updates_opt_in:updatesOptIn});
   }catch(e){
     const msg=String((e&&e.message)||e||'CEO Prospect Report generation failed');
-    console.error('[ceo-report] FAILED build=CS-2026-09-25-CANONICAL-v257 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
+    console.error('[ceo-report] FAILED build=CS-2026-09-25-CANONICAL-v258 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
     console.error('[ceo-report] ERROR: '+msg);
     if(e&&e.stack)console.error(e.stack);
-    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-25-CANONICAL-v257'});
+    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-25-CANONICAL-v258'});
     try{res.end();}catch(_){}
   }
 });
