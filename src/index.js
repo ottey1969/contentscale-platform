@@ -266,7 +266,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-25-CANONICAL-v281';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-25-CANONICAL-v282';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 const CONTENTSCALE_BUILD_CHANGES = [
   'tracker-delta-brief-regression-lock',
@@ -492,7 +492,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-09-25-CANONICAL-v281',
+  build: 'CS-2026-09-25-CANONICAL-v282',
   built_date: '2026-09-25',
   ceo_private: true,
   ceo_public: true,
@@ -4291,6 +4291,7 @@ app.post('/api/tracker-client/:token/page/:pageId/brief-mode', async (req, res) 
 // v279 REGRESSION INVARIANT: EVERY_TRACKER_PAGE_SHOWS_NEXT_ACTION=true; BRIEF_UPDATE_ONLY_WHEN_OUTSTANDING_DELTA_GT_ZERO=true; ZERO_DELTA_SHOWS_CONTINUE_MONITORING=true; NEW_HTML_SHOWS_SCAN_REQUIRED=true; WAITING_EVIDENCE_SHOWS_WAIT_STATE=true
 // v280 REGRESSION INVARIANT: VERIFYADMIN_ROUTES_OUTSIDE_MIDDLEWARE_BODY=true; VERIFYADMIN_FULL_INITIALIZATION_PRECEDES_ROUTE_REGISTRATION=true; NO_VERIFYADMIN_TDZ_ON_BOOT=true
 // v281 REGRESSION INVARIANT: AUTO_OWNER_OPEN_NEVER_VISIBLE=true; ONLY_EXPLICIT_MANUAL_OWNER_QUESTIONS_CAN_BE_OPEN=true; GROWTH_OPEN_REBUILT_FROM_FRESH_EVIDENCE=true; GROWTH_MAX_OPEN_FIVE=true; GSC_GROWTH_REQUIRES_MEANINGFUL_DEMAND_AND_UNCOVERED_TOPIC=true; NEXT_ACTION_HELPERS_SAME_CLIENT_SCOPE=true
+// v282 REGRESSION INVARIANT: NEXT_ACTION_HELPER_DEFINED_BEFORE_CLIENT_RENDER=true; LOCALIZED_SYNC_SELECTS_SOURCE_BY_REAL_VERIFIED_LEDGER=true; LOCALIZED_SYNC_NORMALIZES_VERIFIED_STATUS=true; LOCALIZED_SYNC_EXCLUDES_NL_ES_AS_SOURCE=true
 // ── Owner Question Hub — persistent client-owned knowledge gaps ────────────────
 // Unanswered questions never disappear. Refresh only adds, merges, or strengthens them.
 async function _ensureTrackerOwnerQuestions(){
@@ -4669,21 +4670,55 @@ async function _syncAllContentScaleVerifiedFactsToLocalizedTrackers(opts={}){
   // into the already-existing NL and ES trackers, translated faithfully.
   // No tracker/client is created. Existing v271 localized pricing facts are preserved.
   const force=opts&&opts.force===true;
-  const src=await pool.query(`SELECT id,domain,name FROM tracker_clients
-    WHERE lower(regexp_replace(COALESCE(domain,''),'^www\\.','','i'))='contentscale.site'
-    ORDER BY id LIMIT 1`);
-  if(!src.rows.length)return {success:false,reason:'Main contentscale.site tracker not found',targets:[]};
-  const sourceClient=src.rows[0];
-  // v277: the main ContentScale tracker stores many VERIFIED facts on individual pages.
-  // Sync ALL verified facts, not only page_id IS NULL. Preserve original scope/provenance in source_context.
+  // v282: find the ACTUAL main ContentScale tracker by its real VERIFIED ledger, not by one exact
+  // domain-string assumption. Older rows may contain a full URL, www, a blank domain, or duplicate trackers.
+  // NL/ES localized trackers are excluded from source selection.
+  const srcCandidates=await pool.query(`SELECT c.id,c.domain,c.name,
+      COUNT(f.id) FILTER (WHERE upper(trim(COALESCE(f.status,'')))='VERIFIED')::int AS verified_count,
+      COUNT(f.id) FILTER (WHERE upper(trim(COALESCE(f.status,'')))='VERIFIED' AND f.page_id IS NULL)::int AS verified_client_level,
+      COUNT(f.id) FILTER (WHERE upper(trim(COALESCE(f.status,'')))='VERIFIED' AND f.page_id IS NOT NULL)::int AS verified_page_level
+    FROM tracker_clients c
+    LEFT JOIN tracker_claims_facts f ON f.tracker_client_id=c.id
+    WHERE
+      (
+        lower(COALESCE(c.name,'')) LIKE '%contentscale%'
+        OR lower(COALESCE(c.name,''))='content scale'
+        OR lower(COALESCE(c.domain,'')) LIKE '%contentscale.site%'
+        OR EXISTS (
+          SELECT 1 FROM tracker_pages p
+          WHERE p.tracker_client_id=c.id
+            AND lower(COALESCE(p.url,'')) ~ '^https?://(www\\.)?contentscale\\.site([/:?#]|$)'
+        )
+      )
+      AND lower(COALESCE(c.domain,'')) NOT LIKE '%nl.contentscale.site%'
+      AND lower(COALESCE(c.domain,'')) NOT LIKE '%es.contentscale.site%'
+    GROUP BY c.id,c.domain,c.name
+    ORDER BY verified_count DESC,c.id ASC`);
+
+  const sourceClient=(srcCandidates.rows||[]).find(x=>Number(x.verified_count||0)>0);
+  if(!sourceClient){
+    return {success:false,
+      reason:'No main ContentScale tracker with VERIFIED Claims & Facts could be identified',
+      candidates:(srcCandidates.rows||[]).map(x=>({id:x.id,domain:x.domain,name:x.name,verified_count:Number(x.verified_count||0)})),
+      targets:[]};
+  }
+
+  // Pull every VERIFIED fact from the selected real source tracker, both client-level and page-level.
+  // Status comparison is normalized so old rows with casing/whitespace differences are still found.
   const fr=await pool.query(`SELECT f.id,f.page_id,f.claim_text,f.source_type,f.source_context,f.notes,f.verified_at,
       p.url AS source_page_url,p.keyword AS source_page_keyword
     FROM tracker_claims_facts f
     LEFT JOIN tracker_pages p ON p.id=f.page_id AND p.tracker_client_id=f.tracker_client_id
-    WHERE f.tracker_client_id=$1 AND f.status='VERIFIED'
+    WHERE f.tracker_client_id=$1 AND upper(trim(COALESCE(f.status,'')))='VERIFIED'
     ORDER BY f.id`,[sourceClient.id]);
   const sourceFacts=fr.rows||[];
-  if(!sourceFacts.length)return {success:false,reason:'No VERIFIED facts found in main ContentScale tracker',source_client_id:sourceClient.id,targets:[]};
+  if(!sourceFacts.length){
+    return {success:false,
+      reason:'Selected ContentScale source tracker unexpectedly contains zero normalized VERIFIED facts',
+      source_client_id:sourceClient.id,source_domain:sourceClient.domain||null,source_name:sourceClient.name||null,
+      candidates:(srcCandidates.rows||[]).map(x=>({id:x.id,domain:x.domain,name:x.name,verified_count:Number(x.verified_count||0)})),
+      targets:[]};
+  }
 
   const targets=await pool.query(`SELECT id,domain,name FROM tracker_clients
     WHERE lower(COALESCE(domain,''))=ANY($1::text[])
@@ -4741,9 +4776,11 @@ async function _syncAllContentScaleVerifiedFactsToLocalizedTrackers(opts={}){
     });
   }
   return {success:true,source_tracker:'contentscale.site',source_client_id:sourceClient.id,
+    source_domain:sourceClient.domain||null,source_name:sourceClient.name||null,
     source_verified_facts:sourceFacts.length,
     source_client_level:sourceFacts.filter(x=>!x.page_id).length,
     source_page_level:sourceFacts.filter(x=>!!x.page_id).length,
+    source_candidates:(srcCandidates.rows||[]).map(x=>({id:x.id,domain:x.domain,name:x.name,verified_count:Number(x.verified_count||0),verified_client_level:Number(x.verified_client_level||0),verified_page_level:Number(x.verified_page_level||0)})),
     targets:results};
 }
 
@@ -16316,7 +16353,7 @@ async function startServer() {
   }
 
 console.log('────────────────────────────────────────');
-console.log('[ContentScale] CS-2026-09-25-CANONICAL-v281');
+console.log('[ContentScale] CS-2026-09-25-CANONICAL-v282');
 console.log('[ContentScale] Build check: /api/build-info');
 console.log('[ContentScale] Base URL: ' + (process.env.BASE_URL || 'https://app.contentscale.site'));
 console.log('────────────────────────────────────────');
@@ -19125,7 +19162,7 @@ function _ceoMainWebsiteUrl(input){
 // action must target this CEO endpoint.
 app.post('/api/ceo-report/start',async(req,res)=>{
   let ceoEntry='unknown',ceoUrl='',lastStage='REQUEST';
-  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-25-CANONICAL-v281');
+  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-25-CANONICAL-v282');
   try{
     lastStage='DB_SETUP';
     console.log('[ceo-report] stage=DB_SETUP');
@@ -19219,10 +19256,10 @@ ContentScale`;
     return res.json({success:true,entry_mode:entry,token,selected_page:selected,ceo_report_token:reportToken,ceo_report_url:reportUrl,delivery_email:delivery,updates_opt_in:updatesOptIn});
   }catch(e){
     const msg=String((e&&e.message)||e||'CEO Prospect Report generation failed');
-    console.error('[ceo-report] FAILED build=CS-2026-09-25-CANONICAL-v281 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
+    console.error('[ceo-report] FAILED build=CS-2026-09-25-CANONICAL-v282 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
     console.error('[ceo-report] ERROR: '+msg);
     if(e&&e.stack)console.error(e.stack);
-    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-25-CANONICAL-v281'});
+    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-25-CANONICAL-v282'});
     try{res.end();}catch(_){}
   }
 });
