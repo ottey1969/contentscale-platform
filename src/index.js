@@ -266,7 +266,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-25-CANONICAL-v300';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-26-CANONICAL-v301';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 const CONTENTSCALE_BUILD_CHANGES = [
   'tracker-delta-brief-regression-lock',
@@ -502,7 +502,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-09-25-CANONICAL-v300',
+  build: 'CS-2026-09-26-CANONICAL-v301',
   built_date: '2026-09-25',
   ceo_private: true,
   ceo_public: true,
@@ -3561,14 +3561,78 @@ app.post('/api/tracker-client/:token/pages/:pageId/brief-action/resolve', async 
       remaining_actions:remaining,
       brief_cycle_id:String(brief.cycle_id||''),
       full_scan_suppressed:true,
-      client_email_suppressed:true
+      client_email_suppressed:remaining!==0
     },page.last_page_hash||null).catch(()=>{});
+
+    // v301: when the LAST remaining action is resolved, send one completion email.
+    // This is intentionally NOT sent for every action. The "new/updated Brief" email is
+    // already sent when a fresh Brief delta is generated; this email closes that loop.
+    if(remaining===0){
+      try{
+        const client=cr.rows[0]||{};
+        const domain=String(client.domain||'').replace(/^https?:\/\//,'').replace(/\/$/,'');
+        const trackerUrl=(process.env.APP_URL||'https://app.contentscale.site')+'/track/'+client.token;
+        const esc=v=>String(v==null?'':v).replace(/[<>&]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
+        const cycleId=String(brief.cycle_id||'');
+        const cycleResolutions=(Array.isArray(brief.manual_resolutions)?brief.manual_resolutions:[])
+          .filter(x=>!cycleId||String(x&&x.cycle_id||'')===cycleId);
+        const autoCount=cycleResolutions.filter(x=>String(x&&x.decision||'')==='AUTO_VERIFIED_LIVE').length;
+        const overrideCount=cycleResolutions.filter(x=>String(x&&x.decision||'')==='MANUAL_OVERRIDE_COMPLETE').length;
+        const rejectedCount=cycleResolutions.filter(x=>String(x&&x.decision||'')==='REJECTED_NOT_APPLICABLE').length;
+        const resolvedCount=cycleResolutions.length;
+
+        const emailHtml=
+          '<div style="font-size:13px;color:#64748b;margin-bottom:6px;">ContentScale implementation update</div>'
+          +'<div style="font-size:18px;font-weight:900;color:#0f172a;margin-bottom:8px;">Implementation completed · Brief change resolved</div>'
+          +'<div style="font-size:13px;color:#374151;line-height:1.7;margin-bottom:16px;">'
+          +'ContentScale previously found a change in the current Brief for <strong>'+esc(page.url)+'</strong>. '
+          +'All remaining actions from that Brief cycle have now been resolved and the implementation cycle is closed.'
+          +'</div>'
+          +'<div style="background:#f0fdf4;border:1px solid #86efac;border-radius:9px;padding:12px 14px;margin-bottom:14px;">'
+          +'<div style="font-size:13px;font-weight:900;color:#166534;margin-bottom:5px;">✓ IMPLEMENTED · CURRENT BRIEF CYCLE CLOSED</div>'
+          +'<div style="font-size:12px;color:#166534;line-height:1.6;">'
+          +(resolvedCount?('<strong>'+resolvedCount+'</strong> resolved action'+(resolvedCount===1?'':'s')
+            +' · '+autoCount+' live-verified'
+            +(overrideCount?' · '+overrideCount+' manual override'+(overrideCount===1?'':'s'):'')
+            +(rejectedCount?' · '+rejectedCount+' rejected / N/A':'')
+          ):'All remaining actions are resolved.')
+          +'</div></div>'
+          +'<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:9px;padding:12px 14px;margin-bottom:16px;">'
+          +'<div style="font-size:12px;font-weight:800;color:#475569;margin-bottom:4px;">What happens next</div>'
+          +'<div style="font-size:12px;color:#64748b;line-height:1.6;">No extra scan was run to close these actions. '
+          +'ContentScale will continue monitoring. A future evidence cycle may generate a new Brief only when genuinely new evidence creates a new delta.</div>'
+          +'</div>'
+          +'<div style="text-align:center;margin-top:18px;">'
+          +'<a href="'+esc(trackerUrl)+'" style="display:inline-block;background:#0f172a;color:#fff;text-decoration:none;font-weight:800;padding:11px 24px;border-radius:9px;">View tracker →</a>'
+          +'</div>';
+
+        await sendTrackerEmail(
+          cr.rows[0].id,
+          'Implementation completed — Brief change resolved — '+(domain||page.url),
+          emailHtml,
+          true
+        );
+
+        await _caseStudyEventForPage(cr.rows[0].id,page.id,'implementation_completion_email_sent',{
+          url:page.url,
+          brief_cycle_id:cycleId||null,
+          resolved_actions:resolvedCount,
+          auto_verified:autoCount,
+          manual_overrides:overrideCount,
+          rejected_not_applicable:rejectedCount,
+          subject:'Implementation completed — Brief change resolved'
+        },page.last_page_hash||null).catch(()=>{});
+      }catch(emailErr){
+        console.warn('[implementation-completion-email]',emailErr.message);
+      }
+    }
 
     return res.json({
       success:true,
       decision:resolution.decision,
       remaining_actions:remaining,
-      implementation_complete:remaining===0
+      implementation_complete:remaining===0,
+      completion_email_triggered:remaining===0
     });
   }catch(e){
     console.error('[brief-action-resolve]',e);
@@ -4788,6 +4852,7 @@ app.post('/api/tracker-client/:token/page/:pageId/brief-mode', async (req, res) 
 // v298 REGRESSION INVARIANT: NEXT_ACTION_IS_STAGE_AWARE_NOT_REPEAT_OPEN_BRIEF=true; OPENING_BRIEF_PERSISTS_REVIEW_WITHOUT_CLEARING_TICKS=true; STALE_PREPUBLICATION_CHECKPOINT_NOT_VALID_FOR_NEW_BRIEF=true; CURRENT_LIVE_CAN_COMPARE_AGAINST_PREVIOUS_VERIFIED_PUBLICATION=true; LIVE_VERIFICATION_CLOSES_BRIEF_ONLY_WHEN_FINAL_SCAN_ZERO=true; PARTIAL_LIVE_UPDATE_REMAINS_OPEN_WITH_EXACT_REMAINING_DELTA=true; PARTIAL_VERIFICATION_SENDS_NO_CLIENT_COMPLETION_EMAIL=true; VERIFIED_BRIEF_ID_USES_POST_SCAN_FINAL_CYCLE=true
 // v299 REGRESSION INVARIANT: CHECK_CURRENT_LIVE_NEVER_RUNS_FULL_TRACKER_SCAN=true; CHECK_CURRENT_LIVE_VERIFIES_ONLY_EXISTING_OPEN_ACTIONS=true; CHECK_CURRENT_LIVE_GENERATES_NO_NEW_RECOMMENDATIONS=true; CHECK_CURRENT_LIVE_SENDS_NO_CLIENT_EMAIL=true; REMAINING_LOOP_HIDES_MANUAL_SCAN=true; REMAINING_LOOP_HIDES_FULL_BRIEF=true; REMAINING_PANEL_SHOWS_ONLY_EXACT_OPEN_ACTIONS=true; ZERO_REMAINING_CLOSES_CYCLE=true
 // v300 REGRESSION INVARIANT: REMAINING_ACTIONS_HAVE_VERIFY_OVERRIDE_REJECT_BUTTONS=true; PER_ACTION_VERIFY_FETCHES_LIVE_AND_CHECKS_ONLY_SELECTED_ACTION=true; OVERRIDE_REQUIRES_REASON=true; REJECT_REQUIRES_REASON=true; MANUAL_RESOLUTIONS_PERSIST_IN_BRIEF_HISTORY=true; PER_ACTION_RESOLUTION_NEVER_RUNS_FULL_SCAN=true; PER_ACTION_RESOLUTION_SENDS_NO_CLIENT_EMAIL=true; ZERO_REMAINING_AFTER_MANUAL_RESOLUTION_CLOSES_CYCLE=true
+// v301 REGRESSION INVARIANT: FINAL_REMAINING_ACTION_RESOLUTION_SENDS_ONE_IMPLEMENTATION_EMAIL=true; INTERMEDIATE_ACTION_RESOLUTION_SENDS_NO_EMAIL=true; COMPLETION_EMAIL_STATES_BRIEF_CHANGE_WAS_FOUND_AND_RESOLVED=true; COMPLETION_EMAIL_RUNS_NO_SCAN=true; NEW_BRIEF_DELTA_EMAIL_REMAINS_SEPARATE=true; PROOF_HISTORY_RECORDS_COMPLETION_EMAIL=true
 // ── Owner Question Hub — persistent client-owned knowledge gaps ────────────────
 // Unanswered questions never disappear. Refresh only adds, merges, or strengthens them.
 async function _ensureTrackerOwnerQuestions(){
@@ -16903,7 +16968,7 @@ async function startServer() {
   }
 
 console.log('────────────────────────────────────────');
-console.log('[ContentScale] CS-2026-09-25-CANONICAL-v300');
+console.log('[ContentScale] CS-2026-09-26-CANONICAL-v301');
 console.log('[ContentScale] Build check: /api/build-info');
 console.log('[ContentScale] Base URL: ' + (process.env.BASE_URL || 'https://app.contentscale.site'));
 console.log('────────────────────────────────────────');
@@ -21563,7 +21628,7 @@ function _ceoMainWebsiteUrl(input){
 // action must target this CEO endpoint.
 app.post('/api/ceo-report/start',async(req,res)=>{
   let ceoEntry='unknown',ceoUrl='',lastStage='REQUEST';
-  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-25-CANONICAL-v300');
+  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-26-CANONICAL-v301');
   try{
     lastStage='DB_SETUP';
     console.log('[ceo-report] stage=DB_SETUP');
@@ -21657,10 +21722,10 @@ ContentScale`;
     return res.json({success:true,entry_mode:entry,token,selected_page:selected,ceo_report_token:reportToken,ceo_report_url:reportUrl,delivery_email:delivery,updates_opt_in:updatesOptIn});
   }catch(e){
     const msg=String((e&&e.message)||e||'CEO Prospect Report generation failed');
-    console.error('[ceo-report] FAILED build=CS-2026-09-25-CANONICAL-v300 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
+    console.error('[ceo-report] FAILED build=CS-2026-09-26-CANONICAL-v301 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
     console.error('[ceo-report] ERROR: '+msg);
     if(e&&e.stack)console.error(e.stack);
-    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-25-CANONICAL-v300'});
+    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-26-CANONICAL-v301'});
     try{res.end();}catch(_){}
   }
 });
@@ -41400,6 +41465,7 @@ function openCaseStudy(pageId){
       if(type==='implementation_verified')return 'Published implementation verified and a post-publication Tracker snapshot saved.';
       if(type==='implementation_live_compared_delta_remaining')return 'A new live version was detected and checked only against the current Brief actions. '+(x.remaining_actions||0)+' action(s) were still missing. No full scan, new Brief or client email was triggered.';
       if(type==='brief_action_resolved')return 'Remaining action resolved as '+String(x.decision||'').replace(/_/g,' ')+': '+(x.title||'Untitled action')+'. Reason: '+(x.reason||'—')+'. '+(x.remaining_actions||0)+' action(s) remain.';
+      if(type==='implementation_completion_email_sent')return 'Completion email sent after the final remaining Brief action was resolved: '+(x.resolved_actions||0)+' action(s) closed in this cycle.';
       if(type==='brief_cycle_completed')return 'The implemented Brief cycle was closed. Completed actions moved to protected history; operational outstanding actions reset to 0.';
       if(type==='case_day_7_completed')return 'Day 7 evidence checkpoint completed from fresh GSC plus the required page review/scan.';
       if(type==='case_day_14_completed')return 'Day 14 evidence checkpoint completed from fresh GSC, all five AI engines and the required page review/scan.';
