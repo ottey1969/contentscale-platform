@@ -266,7 +266,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-26-CANONICAL-v305';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-26-CANONICAL-v306';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 const CONTENTSCALE_BUILD_CHANGES = [
   'tracker-delta-brief-regression-lock',
@@ -502,7 +502,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-09-26-CANONICAL-v305',
+  build: 'CS-2026-09-26-CANONICAL-v306',
   built_date: '2026-09-25',
   ceo_private: true,
   ceo_public: true,
@@ -4872,7 +4872,7 @@ app.post('/api/tracker-client/:token/page/:pageId/brief-mode', async (req, res) 
 // v300 REGRESSION INVARIANT: REMAINING_ACTIONS_HAVE_VERIFY_OVERRIDE_REJECT_BUTTONS=true; PER_ACTION_VERIFY_FETCHES_LIVE_AND_CHECKS_ONLY_SELECTED_ACTION=true; OVERRIDE_REQUIRES_REASON=true; REJECT_REQUIRES_REASON=true; MANUAL_RESOLUTIONS_PERSIST_IN_BRIEF_HISTORY=true; PER_ACTION_RESOLUTION_NEVER_RUNS_FULL_SCAN=true; PER_ACTION_RESOLUTION_SENDS_NO_CLIENT_EMAIL=true; ZERO_REMAINING_AFTER_MANUAL_RESOLUTION_CLOSES_CYCLE=true
 // v301 REGRESSION INVARIANT: FINAL_REMAINING_ACTION_RESOLUTION_SENDS_ONE_IMPLEMENTATION_EMAIL=true; INTERMEDIATE_ACTION_RESOLUTION_SENDS_NO_EMAIL=true; COMPLETION_EMAIL_STATES_BRIEF_CHANGE_WAS_FOUND_AND_RESOLVED=true; COMPLETION_EMAIL_RUNS_NO_SCAN=true; NEW_BRIEF_DELTA_EMAIL_REMAINS_SEPARATE=true; PROOF_HISTORY_RECORDS_COMPLETION_EMAIL=true
 // v302 REGRESSION INVARIANT: REVIEWED_BRIEF_PLUS_SAVED_PREPUBLICATION_CHECKPOINT_NEXT_ACTION_IS_CHECK_CURRENT_LIVE=true; VERIFY_LIVE_PENDING_NEVER_SHOWS_OPEN_BRIEF=true; VERIFY_LIVE_PENDING_HIDES_FULL_BRIEF_BUTTON=true; VERIFY_LIVE_PENDING_HIDES_MANUAL_SCAN=true; ORANGE_STATUS_SAYS_WAITING_FOR_LIVE_VERIFICATION=true; CHECK_CURRENT_LIVE_VERIFIES_ONLY_EXISTING_OPEN_ACTIONS=true
-// v305 REGRESSION INVARIANT: VERIFY_LIVE_PENDING_SHOWS_BRIEF_BUTTON=true; VERIFY_LIVE_PENDING_BRIEF_BUTTON_DISABLED_GREY=true; VERIFY_LIVE_PENDING_SHOWS_SCAN_BUTTON=true; VERIFY_LIVE_PENDING_SCAN_BUTTON_DISABLED_GREY=true; VERIFY_LIVE_PENDING_ONLY_ACTIVE_PRIMARY_ACTION_IS_CHECK_CURRENT_LIVE=true; VERIFY_LIVE_PENDING_IS_NOT_A_CONTENT_CHANGE_STATE=true; NO_FULL_SCAN_BEFORE_LIVE_VERIFICATION=true
+// v306 REGRESSION INVARIANT: VERIFY_LIVE_PENDING_SHOWS_BRIEF_BUTTON=true; VERIFY_LIVE_PENDING_BRIEF_BUTTON_DISABLED_GREY=true; VERIFY_LIVE_PENDING_SHOWS_SCAN_BUTTON=true; VERIFY_LIVE_PENDING_SCAN_BUTTON_DISABLED_GREY=true; VERIFY_LIVE_PENDING_ONLY_ACTIVE_PRIMARY_ACTION_IS_CHECK_CURRENT_LIVE=true; VERIFY_LIVE_PENDING_IS_NOT_A_CONTENT_CHANGE_STATE=true; NO_FULL_SCAN_BEFORE_LIVE_VERIFICATION=true
 // ── Owner Question Hub — persistent client-owned knowledge gaps ────────────────
 // Unanswered questions never disappear. Refresh only adds, merges, or strengthens them.
 async function _ensureTrackerOwnerQuestions(){
@@ -16995,7 +16995,7 @@ async function startServer() {
   }
 
 console.log('────────────────────────────────────────');
-console.log('[ContentScale] CS-2026-09-26-CANONICAL-v305');
+console.log('[ContentScale] CS-2026-09-26-CANONICAL-v306');
 console.log('[ContentScale] Build check: /api/build-info');
 console.log('[ContentScale] Base URL: ' + (process.env.BASE_URL || 'https://app.contentscale.site'));
 console.log('────────────────────────────────────────');
@@ -21668,7 +21668,7 @@ function _ceoMainWebsiteUrl(input){
 // action must target this CEO endpoint.
 app.post('/api/ceo-report/start',async(req,res)=>{
   let ceoEntry='unknown',ceoUrl='',lastStage='REQUEST';
-  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-26-CANONICAL-v305');
+  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-26-CANONICAL-v306');
   try{
     lastStage='DB_SETUP';
     console.log('[ceo-report] stage=DB_SETUP');
@@ -21762,10 +21762,10 @@ ContentScale`;
     return res.json({success:true,entry_mode:entry,token,selected_page:selected,ceo_report_token:reportToken,ceo_report_url:reportUrl,delivery_email:delivery,updates_opt_in:updatesOptIn});
   }catch(e){
     const msg=String((e&&e.message)||e||'CEO Prospect Report generation failed');
-    console.error('[ceo-report] FAILED build=CS-2026-09-26-CANONICAL-v305 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
+    console.error('[ceo-report] FAILED build=CS-2026-09-26-CANONICAL-v306 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
     console.error('[ceo-report] ERROR: '+msg);
     if(e&&e.stack)console.error(e.stack);
-    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-26-CANONICAL-v305'});
+    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-26-CANONICAL-v306'});
     try{res.end();}catch(_){}
   }
 });
@@ -22659,7 +22659,7 @@ function wrap(el){
  var x=info(el);
  /* Never create a meaningless 'Additional admin tools' shell. Titleless empty containers stay out of the dashboard. */
  if(!x.title){if(!(el.textContent||'').trim()&&!el.querySelector('input,button,select,textarea,a,table,.card'))el.style.display='none';return null;}
- var d=document.createElement('details');d.className='adminFold';d.dataset.adminRank=String(x.rank);d.dataset.adminTitle=x.title;d.dataset.adminGenerated='1';d.open=(x.rank===10);var sm=document.createElement('summary');sm.textContent=x.title;var body=document.createElement('div');body.className='adminFoldBody';el.dataset.adminFolded='1';el.parentNode.insertBefore(d,el);d.appendChild(sm);d.appendChild(body);body.appendChild(el);if(x.h)x.h.style.display='none';return d;}
+ var d=document.createElement('details');d.className='adminFold';d.dataset.adminRank=String(x.rank);d.dataset.adminTitle=x.title;d.dataset.adminGenerated='1';d.open=(x.rank===10||el.id==='pqsSavedCampaigns');var sm=document.createElement('summary');sm.textContent=x.title;var body=document.createElement('div');body.className='adminFoldBody';el.dataset.adminFolded='1';el.parentNode.insertBefore(d,el);d.appendChild(sm);d.appendChild(body);body.appendChild(el);if(x.h)x.h.style.display='none';return d;}
 function organize(){if(busy)return;busy=true;try{var app=document.getElementById('app');if(!app)return;Array.from(app.children).forEach(function(el){if(el.classList&&el.classList.contains('p')&&!el.classList.contains('adminFold')&&el.dataset.adminFolded!=='1')wrap(el)});var folds=Array.from(app.children).filter(function(el){return el.classList&&el.classList.contains('adminFold')&&el.dataset.adminGenerated==='1'});folds.sort(function(a,b){return Number(a.dataset.adminRank||90)-Number(b.dataset.adminRank||90)}).forEach(function(el){app.appendChild(el)});}finally{busy=false}}
 function later(){clearTimeout(timer);timer=setTimeout(organize,80)}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){organize();new MutationObserver(later).observe(document.getElementById('app'),{childList:true})});else{organize();var a=document.getElementById('app');if(a)new MutationObserver(later).observe(a,{childList:true})}
@@ -22726,7 +22726,7 @@ app.delete('/api/prospect-quick-scan/admin/campaign-links/:id',requireAdmin,asyn
 function _pqsCampaignPersistenceScript(){return `<script>(function(){
   function escapeHtml(v){return String(v||'').replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
   var panel=document.getElementById('pqsCampaignBuilder');if(!panel)return;
-  var saved=document.createElement('div');saved.id='pqsSavedCampaigns';saved.style.marginTop='15px';panel.appendChild(saved);
+  var saved=document.createElement('div');saved.id='pqsSavedCampaigns';saved.className='p';saved.innerHTML='<h2>Public links — active and hidden</h2><p class="meta">Open Admin to load public link activity.</p>';document.getElementById('app').appendChild(saved);
   async function refresh(){if(!KEY||!document.getElementById('app')||document.getElementById('app').style.display==='none')return;try{
     var d=await api('/api/prospect-quick-scan/admin/campaign-links');if(!d.success)return;
     var links=d.links||[],active=links.filter(function(x){return !x.hidden_at}),hidden=links.filter(function(x){return !!x.hidden_at});
@@ -22735,7 +22735,7 @@ function _pqsCampaignPersistenceScript(){return `<script>(function(){
       return '<div class="card" style="margin:7px 0;opacity:'+(x.hidden_at?'.72':'1')+'"><b>'+escapeHtml(x.source.replace('_',' '))+' · '+escapeHtml(x.language)+'</b>'+(x.campaign?' · '+escapeHtml(x.campaign):'')+(x.hidden_at?' · hidden from active list':'')+'<br><a class="link" target="_blank" rel="noopener" href="'+escapeHtml(x.url)+'">'+escapeHtml(x.url)+'</a> <button class="btn" type="button" data-url="'+escapeHtml(x.url)+'">Copy</button> <button class="btn" type="button" data-popup="'+escapeHtml(x.url)+'">Copy popup code</button> '+(x.hidden_at?'':'<button class="btn" type="button" data-hide="'+Number(x.id)+'">Hide from list</button>')+'<p class="meta">Entry visits: '+Number(x.open_count||0)+' · CEO requests: '+Number(x.submissions||0)+' · reports opened: '+Number(x.report_opened||0)+' · interested: '+Number(x.interested||0)+'</p>'+(people?'<details><summary>Who submitted and what happened</summary><ul>'+people+'</ul></details>':'')+'</div>'
     }
     var shared='https://app.contentscale.site/quick-scan/start?source=contact_form&language=en';
-    saved.innerHTML='<h3>Public campaign links and activity</h3><p class="meta">One shared link works for all recipients. Opens are anonymous visits; a person becomes identifiable after submitting the form. Hiding a link from Admin keeps it active.</p><p><b>Contact form · English:</b> <a class="link" href="'+escapeHtml(shared)+'" target="_blank" rel="noopener">'+escapeHtml(shared)+'</a> <button class="btn" type="button" data-popup="'+escapeHtml(shared)+'">Copy one popup code for this shared URL</button></p>'+active.map(card).join('')+'<details id="pqsHiddenPublic"><summary>Hidden public links — still active ('+hidden.length+')</summary><p class="meta">These shared URLs still work for everyone who received them.</p>'+hidden.map(card).join('')+'</details>';
+    saved.innerHTML='<h2>Public links — active and hidden</h2><h3>Public campaign links and activity</h3><p class="meta">One shared link works for all recipients. Opens are anonymous visits; a person becomes identifiable after submitting the form. Hiding a link from Admin keeps it active.</p><p><b>Contact form · English:</b> <a class="link" href="'+escapeHtml(shared)+'" target="_blank" rel="noopener">'+escapeHtml(shared)+'</a> <button class="btn" type="button" data-popup="'+escapeHtml(shared)+'">Copy one popup code for this shared URL</button></p>'+active.map(card).join('')+'<details id="pqsHiddenPublic" open><summary>Hidden public links — still active ('+hidden.length+')</summary><p class="meta">These shared URLs still work for everyone who received them.</p>'+hidden.map(card).join('')+'</details>';
   }catch(e){saved.textContent='Campaign activity could not be loaded: '+(e.message||e)}}
   saved.addEventListener('click',async function(e){var b=e.target.closest('button[data-url],button[data-popup],button[data-hide]');if(!b)return;if(b.dataset.url){navigator.clipboard.writeText(b.dataset.url).then(function(){b.textContent='Copied ✓'});return}if(b.dataset.popup){var u=b.dataset.popup,q=String.fromCharCode(39);var code='<a href="'+u+'" target="_blank" rel="noopener" onclick="var w=window.open(this.href,'+q+'ContentScaleReport'+q+','+q+'width=980,height=760,resizable=yes,scrollbars=yes'+q+');if(w){w.focus();return false}">Open ContentScale report</a>';navigator.clipboard.writeText(code).then(function(){b.textContent='Popup code copied ✓'});return}if(b.dataset.hide){try{await api('/api/prospect-quick-scan/admin/campaign-links/'+b.dataset.hide,{method:'DELETE'});await refresh()}catch(err){alert(err.message||err)}}});
   var createButton=panel.querySelector('button[onclick="makePublicCEO()"]')||document.getElementById('pqsMakeCampaign');
