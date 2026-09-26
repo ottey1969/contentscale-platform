@@ -266,7 +266,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-26-CANONICAL-v306';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-26-CANONICAL-v307';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 const CONTENTSCALE_BUILD_CHANGES = [
   'tracker-delta-brief-regression-lock',
@@ -502,7 +502,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-09-26-CANONICAL-v306',
+  build: 'CS-2026-09-26-CANONICAL-v307',
   built_date: '2026-09-25',
   ceo_private: true,
   ceo_public: true,
@@ -4872,7 +4872,7 @@ app.post('/api/tracker-client/:token/page/:pageId/brief-mode', async (req, res) 
 // v300 REGRESSION INVARIANT: REMAINING_ACTIONS_HAVE_VERIFY_OVERRIDE_REJECT_BUTTONS=true; PER_ACTION_VERIFY_FETCHES_LIVE_AND_CHECKS_ONLY_SELECTED_ACTION=true; OVERRIDE_REQUIRES_REASON=true; REJECT_REQUIRES_REASON=true; MANUAL_RESOLUTIONS_PERSIST_IN_BRIEF_HISTORY=true; PER_ACTION_RESOLUTION_NEVER_RUNS_FULL_SCAN=true; PER_ACTION_RESOLUTION_SENDS_NO_CLIENT_EMAIL=true; ZERO_REMAINING_AFTER_MANUAL_RESOLUTION_CLOSES_CYCLE=true
 // v301 REGRESSION INVARIANT: FINAL_REMAINING_ACTION_RESOLUTION_SENDS_ONE_IMPLEMENTATION_EMAIL=true; INTERMEDIATE_ACTION_RESOLUTION_SENDS_NO_EMAIL=true; COMPLETION_EMAIL_STATES_BRIEF_CHANGE_WAS_FOUND_AND_RESOLVED=true; COMPLETION_EMAIL_RUNS_NO_SCAN=true; NEW_BRIEF_DELTA_EMAIL_REMAINS_SEPARATE=true; PROOF_HISTORY_RECORDS_COMPLETION_EMAIL=true
 // v302 REGRESSION INVARIANT: REVIEWED_BRIEF_PLUS_SAVED_PREPUBLICATION_CHECKPOINT_NEXT_ACTION_IS_CHECK_CURRENT_LIVE=true; VERIFY_LIVE_PENDING_NEVER_SHOWS_OPEN_BRIEF=true; VERIFY_LIVE_PENDING_HIDES_FULL_BRIEF_BUTTON=true; VERIFY_LIVE_PENDING_HIDES_MANUAL_SCAN=true; ORANGE_STATUS_SAYS_WAITING_FOR_LIVE_VERIFICATION=true; CHECK_CURRENT_LIVE_VERIFIES_ONLY_EXISTING_OPEN_ACTIONS=true
-// v306 REGRESSION INVARIANT: VERIFY_LIVE_PENDING_SHOWS_BRIEF_BUTTON=true; VERIFY_LIVE_PENDING_BRIEF_BUTTON_DISABLED_GREY=true; VERIFY_LIVE_PENDING_SHOWS_SCAN_BUTTON=true; VERIFY_LIVE_PENDING_SCAN_BUTTON_DISABLED_GREY=true; VERIFY_LIVE_PENDING_ONLY_ACTIVE_PRIMARY_ACTION_IS_CHECK_CURRENT_LIVE=true; VERIFY_LIVE_PENDING_IS_NOT_A_CONTENT_CHANGE_STATE=true; NO_FULL_SCAN_BEFORE_LIVE_VERIFICATION=true
+// v307 REGRESSION INVARIANT: VERIFY_LIVE_PENDING_SHOWS_BRIEF_BUTTON=true; VERIFY_LIVE_PENDING_BRIEF_BUTTON_DISABLED_GREY=true; VERIFY_LIVE_PENDING_SHOWS_SCAN_BUTTON=true; VERIFY_LIVE_PENDING_SCAN_BUTTON_DISABLED_GREY=true; VERIFY_LIVE_PENDING_ONLY_ACTIVE_PRIMARY_ACTION_IS_CHECK_CURRENT_LIVE=true; VERIFY_LIVE_PENDING_IS_NOT_A_CONTENT_CHANGE_STATE=true; NO_FULL_SCAN_BEFORE_LIVE_VERIFICATION=true
 // ── Owner Question Hub — persistent client-owned knowledge gaps ────────────────
 // Unanswered questions never disappear. Refresh only adds, merges, or strengthens them.
 async function _ensureTrackerOwnerQuestions(){
@@ -16995,7 +16995,7 @@ async function startServer() {
   }
 
 console.log('────────────────────────────────────────');
-console.log('[ContentScale] CS-2026-09-26-CANONICAL-v306');
+console.log('[ContentScale] CS-2026-09-26-CANONICAL-v307');
 console.log('[ContentScale] Build check: /api/build-info');
 console.log('[ContentScale] Base URL: ' + (process.env.BASE_URL || 'https://app.contentscale.site'));
 console.log('────────────────────────────────────────');
@@ -21668,7 +21668,7 @@ function _ceoMainWebsiteUrl(input){
 // action must target this CEO endpoint.
 app.post('/api/ceo-report/start',async(req,res)=>{
   let ceoEntry='unknown',ceoUrl='',lastStage='REQUEST';
-  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-26-CANONICAL-v306');
+  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-26-CANONICAL-v307');
   try{
     lastStage='DB_SETUP';
     console.log('[ceo-report] stage=DB_SETUP');
@@ -21762,10 +21762,10 @@ ContentScale`;
     return res.json({success:true,entry_mode:entry,token,selected_page:selected,ceo_report_token:reportToken,ceo_report_url:reportUrl,delivery_email:delivery,updates_opt_in:updatesOptIn});
   }catch(e){
     const msg=String((e&&e.message)||e||'CEO Prospect Report generation failed');
-    console.error('[ceo-report] FAILED build=CS-2026-09-26-CANONICAL-v306 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
+    console.error('[ceo-report] FAILED build=CS-2026-09-26-CANONICAL-v307 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
     console.error('[ceo-report] ERROR: '+msg);
     if(e&&e.stack)console.error(e.stack);
-    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-26-CANONICAL-v306'});
+    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-26-CANONICAL-v307'});
     try{res.end();}catch(_){}
   }
 });
@@ -22794,7 +22794,7 @@ app.get('/quick-scan/start',(req,res)=>{
     .catch(e=>console.warn('[public-campaign-open]',e.message));
   const requestedLanguage=_pqsResolveLanguage(req.query.language,'');
   const C={
-    en:{html:'en',title:'Free CEO Prospect Report · ContentScale',h1:'Find an important SEO & AI-search opportunity on your website',sub:'Enter your company and website. ContentScale automatically identifies a commercially relevant page and creates your private CEO Prospect Report. You do not need to choose a page yourself.',s1:'1. Your website',s1d:'We discover relevant first-party pages to choose the right page; they are not all scanned.',s2:'2. Smart page selection',s2d:'ContentScale selects a commercially meaningful page.',s3:'3. CEO Report',s3d:'You receive a private report link. Quick Scan comes later.',biz:'Business name',domain:'Website domain, e.g. contentscale.site',help:'Enter your main website domain. ContentScale will automatically explore your website and select an important commercial page for the CEO Prospect Report.',email:'Email address — required for report delivery',updates:'Keep me updated about this analysis and next steps.',optional:'Optional — your email is still used to deliver the requested report.',button:'Create my CEO Prospect Report',foot:'This is the first step. If you want to continue after the CEO Report, the next diagnostic is Quick Scan — Other Page.',missing:'Enter your website domain.',badmail:'Enter a valid email address so we can send your private CEO Report when it is ready.',building:'Building your CEO Report…',msgs:['Analyzing your website…','Finding the strongest commercial page…','Checking search visibility and opportunities…','Building your CEO opportunity report…'],keep:'Keep this page open while ContentScale prepares your report.',failed:'CEO Report failed'},
+    en:{html:'en',title:'Get Your FREE CEO Report · ContentScale',h1:'Tired of SEO specialists gambling with your budget? Get your FREE CEO Report.',sub:'See what your content is doing well, what may be holding it back, and where to improve next. Enter your company and website to create your private Content Effectiveness Overview (CEO) Report.',s1:'1. Your website',s1d:'We discover relevant first-party pages to choose the right page; they are not all scanned.',s2:'2. Smart page selection',s2d:'ContentScale selects a commercially meaningful page.',s3:'3. CEO Report',s3d:'You receive a private report link. Quick Scan comes later.',biz:'Business name',domain:'Website domain, e.g. contentscale.site',help:'Enter your main website domain. ContentScale will automatically explore your website and select an important commercial page for the CEO Prospect Report.',email:'Email address — required for report delivery',updates:'Keep me updated about this analysis and next steps.',optional:'Optional — your email is still used to deliver the requested report.',button:'Get my FREE CEO Report',foot:'This is the first step. If you want to continue after the CEO Report, the next diagnostic is Quick Scan — Other Page.',missing:'Enter your website domain.',badmail:'Enter a valid email address so we can send your private CEO Report when it is ready.',building:'Building your CEO Report…',msgs:['Analyzing your website…','Finding the strongest commercial page…','Checking search visibility and opportunities…','Building your CEO opportunity report…'],keep:'Keep this page open while ContentScale prepares your report.',failed:'CEO Report failed'},
     nl:{html:'nl',title:'Gratis CEO Prospect Report · ContentScale',h1:'Vind een belangrijke SEO- en AI-zoekkans op je website',sub:'Vul je bedrijfsnaam en website in. ContentScale identificeert automatisch een commercieel relevante pagina en maakt je persoonlijke CEO Prospect Report. Je hoeft zelf geen pagina te kiezen.',s1:'1. Jouw website',s1d:'We ontdekken relevante pagina’s op je eigen website om de juiste pagina te kiezen; ze worden niet allemaal volledig gescand.',s2:'2. Slimme paginaselectie',s2d:'ContentScale selecteert een commercieel betekenisvolle pagina.',s3:'3. CEO Report',s3d:'Je ontvangt een persoonlijke rapportlink. De Quick Scan komt pas daarna.',biz:'Bedrijfsnaam',domain:'Website domein, bijvoorbeeld contentscale.site',help:'Vul het hoofddomein van je website in. ContentScale verkent automatisch de website en selecteert een belangrijke commerciële pagina voor het CEO Prospect Report.',email:'E-mailadres — nodig om het rapport te ontvangen',updates:'Houd mij op de hoogte van deze analyse en eventuele vervolgstappen.',optional:'Optioneel — je e-mailadres wordt sowieso gebruikt om het aangevraagde rapport te bezorgen.',button:'Maak mijn CEO Prospect Report',foot:'Dit is de eerste stap. Wil je na het CEO Report verdergaan, dan is de volgende diagnose Quick Scan — Other Page.',missing:'Vul je website domein in.',badmail:'Vul een geldig e-mailadres in zodat we je persoonlijke CEO Prospect Report kunnen sturen zodra het klaar is.',building:'Je CEO Report wordt gemaakt…',msgs:['Je website wordt geanalyseerd…','We zoeken de sterkste commerciële verbeterkans…','Zoekzichtbaarheid en kansen worden gecontroleerd…','Je CEO opportunity report wordt opgebouwd…'],keep:'Houd deze pagina open terwijl ContentScale je rapport voorbereidt.',failed:'CEO Report kon niet worden gemaakt'},
     es:{html:'es',title:'Informe CEO gratuito · ContentScale',h1:'Encuentra una oportunidad importante de SEO y búsqueda con IA en tu sitio web',sub:'Introduce tu empresa y sitio web. ContentScale identifica automáticamente una página comercial relevante y crea tu informe privado para CEO. No tienes que elegir una página.',s1:'1. Tu sitio web',s1d:'Descubrimos páginas propias relevantes para elegir la página adecuada; no se analizan todas por completo.',s2:'2. Selección inteligente',s2d:'ContentScale selecciona una página comercial significativa.',s3:'3. Informe CEO',s3d:'Recibes un enlace privado al informe. Quick Scan viene después.',biz:'Nombre de la empresa',domain:'Dominio del sitio web, p. ej. contentscale.site',help:'Introduce el dominio principal. ContentScale explorará automáticamente el sitio y seleccionará una página comercial importante para el informe CEO.',email:'Correo electrónico — necesario para recibir el informe',updates:'Mantenerme informado sobre este análisis y los próximos pasos.',optional:'Opcional — tu correo seguirá utilizándose para entregar el informe solicitado.',button:'Crear mi informe CEO',foot:'Este es el primer paso. Si quieres continuar después del informe CEO, el siguiente diagnóstico es Quick Scan — Other Page.',missing:'Introduce el dominio de tu sitio web.',badmail:'Introduce un correo válido para poder enviarte el informe CEO cuando esté listo.',building:'Creando tu informe CEO…',msgs:['Analizando tu sitio web…','Buscando la oportunidad comercial más clara…','Comprobando visibilidad y oportunidades…','Creando tu informe de oportunidades…'],keep:'Mantén esta página abierta mientras ContentScale prepara el informe.',failed:'No se pudo crear el informe CEO'}
   };
