@@ -266,7 +266,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-27-CANONICAL-v311';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-27-CANONICAL-v312';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 const CONTENTSCALE_BUILD_CHANGES = [
   'tracker-delta-brief-regression-lock',
@@ -502,7 +502,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-09-27-CANONICAL-v311',
+  build: 'CS-2026-09-27-CANONICAL-v312',
   built_date: '2026-09-25',
   ceo_private: true,
   ceo_public: true,
@@ -4872,7 +4872,7 @@ app.post('/api/tracker-client/:token/page/:pageId/brief-mode', async (req, res) 
 // v300 REGRESSION INVARIANT: REMAINING_ACTIONS_HAVE_VERIFY_OVERRIDE_REJECT_BUTTONS=true; PER_ACTION_VERIFY_FETCHES_LIVE_AND_CHECKS_ONLY_SELECTED_ACTION=true; OVERRIDE_REQUIRES_REASON=true; REJECT_REQUIRES_REASON=true; MANUAL_RESOLUTIONS_PERSIST_IN_BRIEF_HISTORY=true; PER_ACTION_RESOLUTION_NEVER_RUNS_FULL_SCAN=true; PER_ACTION_RESOLUTION_SENDS_NO_CLIENT_EMAIL=true; ZERO_REMAINING_AFTER_MANUAL_RESOLUTION_CLOSES_CYCLE=true
 // v301 REGRESSION INVARIANT: FINAL_REMAINING_ACTION_RESOLUTION_SENDS_ONE_IMPLEMENTATION_EMAIL=true; INTERMEDIATE_ACTION_RESOLUTION_SENDS_NO_EMAIL=true; COMPLETION_EMAIL_STATES_BRIEF_CHANGE_WAS_FOUND_AND_RESOLVED=true; COMPLETION_EMAIL_RUNS_NO_SCAN=true; NEW_BRIEF_DELTA_EMAIL_REMAINS_SEPARATE=true; PROOF_HISTORY_RECORDS_COMPLETION_EMAIL=true
 // v302 REGRESSION INVARIANT: REVIEWED_BRIEF_PLUS_SAVED_PREPUBLICATION_CHECKPOINT_NEXT_ACTION_IS_CHECK_CURRENT_LIVE=true; VERIFY_LIVE_PENDING_NEVER_SHOWS_OPEN_BRIEF=true; VERIFY_LIVE_PENDING_HIDES_FULL_BRIEF_BUTTON=true; VERIFY_LIVE_PENDING_HIDES_MANUAL_SCAN=true; ORANGE_STATUS_SAYS_WAITING_FOR_LIVE_VERIFICATION=true; CHECK_CURRENT_LIVE_VERIFIES_ONLY_EXISTING_OPEN_ACTIONS=true
-// v311 REGRESSION INVARIANT: VERIFY_LIVE_PENDING_SHOWS_BRIEF_BUTTON=true; VERIFY_LIVE_PENDING_BRIEF_BUTTON_DISABLED_GREY=true; VERIFY_LIVE_PENDING_SHOWS_SCAN_BUTTON=true; VERIFY_LIVE_PENDING_SCAN_BUTTON_DISABLED_GREY=true; VERIFY_LIVE_PENDING_ONLY_ACTIVE_PRIMARY_ACTION_IS_CHECK_CURRENT_LIVE=true; VERIFY_LIVE_PENDING_IS_NOT_A_CONTENT_CHANGE_STATE=true; NO_FULL_SCAN_BEFORE_LIVE_VERIFICATION=true
+// v312 REGRESSION INVARIANT: VERIFY_LIVE_PENDING_SHOWS_BRIEF_BUTTON=true; VERIFY_LIVE_PENDING_BRIEF_BUTTON_DISABLED_GREY=true; VERIFY_LIVE_PENDING_SHOWS_SCAN_BUTTON=true; VERIFY_LIVE_PENDING_SCAN_BUTTON_DISABLED_GREY=true; VERIFY_LIVE_PENDING_ONLY_ACTIVE_PRIMARY_ACTION_IS_CHECK_CURRENT_LIVE=true; VERIFY_LIVE_PENDING_IS_NOT_A_CONTENT_CHANGE_STATE=true; NO_FULL_SCAN_BEFORE_LIVE_VERIFICATION=true
 // ── Owner Question Hub — persistent client-owned knowledge gaps ────────────────
 // Unanswered questions never disappear. Refresh only adds, merges, or strengthens them.
 async function _ensureTrackerOwnerQuestions(){
@@ -16995,7 +16995,7 @@ async function startServer() {
   }
 
 console.log('────────────────────────────────────────');
-console.log('[ContentScale] CS-2026-09-27-CANONICAL-v311');
+console.log('[ContentScale] CS-2026-09-27-CANONICAL-v312');
 console.log('[ContentScale] Build check: /api/build-info');
 console.log('[ContentScale] Base URL: ' + (process.env.BASE_URL || 'https://app.contentscale.site'));
 console.log('────────────────────────────────────────');
@@ -21668,7 +21668,7 @@ function _ceoMainWebsiteUrl(input){
 // action must target this CEO endpoint.
 app.post('/api/ceo-report/start',async(req,res)=>{
   let ceoEntry='unknown',ceoUrl='',lastStage='REQUEST';
-  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-27-CANONICAL-v311');
+  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-27-CANONICAL-v312');
   try{
     lastStage='DB_SETUP';
     console.log('[ceo-report] stage=DB_SETUP');
@@ -21762,10 +21762,10 @@ ContentScale`;
     return res.json({success:true,entry_mode:entry,token,selected_page:selected,ceo_report_token:reportToken,ceo_report_url:reportUrl,delivery_email:delivery,updates_opt_in:updatesOptIn});
   }catch(e){
     const msg=String((e&&e.message)||e||'CEO Prospect Report generation failed');
-    console.error('[ceo-report] FAILED build=CS-2026-09-27-CANONICAL-v311 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
+    console.error('[ceo-report] FAILED build=CS-2026-09-27-CANONICAL-v312 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
     console.error('[ceo-report] ERROR: '+msg);
     if(e&&e.stack)console.error(e.stack);
-    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-27-CANONICAL-v311'});
+    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-27-CANONICAL-v312'});
     try{res.end();}catch(_){}
   }
 });
@@ -43226,6 +43226,18 @@ async function loadPages() {
   }
 }
 
+  window._trackerAttention=function(p){
+    var status=String(p.implementation_status||'').toLowerCase(),brief={};
+    try{brief=typeof p.brief_content==='string'?JSON.parse(p.brief_content||'{}'):(p.brief_content||{});}catch(e){brief={};}
+    var note='';
+    if(status==='no_change')note='LIVE CHANGE NOT DETECTED — publish the revised HTML, then check the current live page again. No new scan needed.';
+    else if(status==='live_changed_delta_remaining')note='BRIEF ACTIONS STILL MISSING — open the page, resolve the remaining actions, then check the published page again.';
+    else if(status==='verifying')note='LIVE VERIFICATION IN PROGRESS — wait for the result; do not start a new scan.';
+    var evidence=JSON.stringify({items:brief.items||[],gsc_brief:brief.gsc_brief||[]}).slice(0,120000);
+    var geoIssue=String(p.url||'').toLowerCase().indexOf('perfectroofingteam.com/new-roof')>=0&&evidence.toLowerCase().indexOf('richmond')>=0;
+    return {note:note,geoIssue:geoIssue};
+  };
+
 function renderStats(data) {
   var pages = data.pages || [];
   function mev(p,e){ var a=p&&p.ai_manual_evidence; if(typeof a==='string'){try{a=JSON.parse(a);}catch(x){a={};}} return (a&&a[e])||null; }
@@ -43290,19 +43302,20 @@ function renderStats(data) {
   window.answerContentGrowthQuestion=function(id){var a=document.getElementById('gqA'+id),e=document.getElementById('gqE'+id),answer=a&&a.value.trim();if(!answer){toast('Enter the owner’s factual answer first.','#f87171');return;}fetch('/api/tracker-client/'+TOKEN+'/growth-questions/'+id+'/answer',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({answer:answer,evidence:e&&e.value.trim()||''})}).then(function(r){return r.json();}).then(function(d){if(!d.success)throw new Error(d.error||'Save failed');toast('Growth answer saved — waiting for verification in Claims & Facts.','#22d3ee');loadContentGrowthQuestionHub();}).catch(function(x){toast(x.message,'#f87171');});};
   loadContentGrowthQuestionHub();
 
-  // Client-visible workflow overview: show exactly which pages need attention.
-  // Off pages remain out of this list unless they belong to an active case study.
+  // Client-visible workflow overview: implementation issues stay visible even
+  // when monitoring is Off. A case-study label must never hide a failed live check.
   var actionBox=document.getElementById('monitoringActionList');
   if(actionBox){
     var actionPages=pages.filter(function(p){
       var isMonitored=['0','0days','off',''].indexOf(String(p.check_frequency||'0'))<0;
-      return isMonitored||b(p.monitoring_waiting_input)||b(p.case_study_active);
+      var attention=window._trackerAttention(p);
+      return isMonitored||b(p.monitoring_waiting_input)||b(p.case_study_active)||!!attention.note||attention.geoIssue;
     });
     if(!actionPages.length){
       actionBox.innerHTML='<div style="padding:10px 14px;border:1px dashed #334155;border-radius:9px;color:#64748b;font-size:11px;">No monitored or active case-study pages. Turn on Monitoring for the pages that should enter the guided data-request workflow.</div>';
     }else{
       var rows=actionPages.map(function(p){
-        var waiting=b(p.monitoring_waiting_input), isCase=b(p.case_study_active);
+        var waiting=b(p.monitoring_waiting_input), isCase=b(p.case_study_active), attention=window._trackerAttention(p);
         var isMonitored=['0','0days','off',''].indexOf(String(p.check_frequency||'0'))<0;
         var reqMs=Date.parse(p.monitoring_request_at||0)||0, missing=[];
         if(waiting){
@@ -43315,15 +43328,15 @@ function renderStats(data) {
           }
         }
         var ready=waiting&&!missing.length;
-        var status=ready?'READY — press Scan':waiting?'WAITING FOR DATA — '+missing.join(', '):isCase&&!isMonitored?'CASE STUDY CYCLE ACTIVE — optional monitoring was locked Off at the baseline':isCase?'CASE STUDY CYCLE ACTIVE — monitoring locked '+String(p.check_frequency||''):'MONITORING '+String(p.check_frequency||'');
+        var status=attention.note?'⚠️ '+attention.note:attention.geoIssue?'⚠️ BRIEF EVIDENCE NEEDS REVIEW — Richmond, VA competitors appear in this NJ page Brief.':ready?'READY — press Scan':waiting?'WAITING FOR DATA — '+missing.join(', '):isCase&&!isMonitored?'CASE STUDY CYCLE ACTIVE — optional monitoring was locked Off at the baseline':isCase?'CASE STUDY CYCLE ACTIVE — monitoring locked '+String(p.check_frequency||''):'MONITORING '+String(p.check_frequency||'');
         if(!waiting&&isMonitored&&p.next_check_at){try{status+=' — next '+new Date(p.next_check_at).toLocaleString('en-GB',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});}catch(x){}}
-        var color=ready?'#86efac':waiting?'#fbbf24':isCase?'#7dd3fc':'#c4b5fd';
+        var color=attention.note||attention.geoIssue?'#fbbf24':ready?'#86efac':waiting?'#fbbf24':isCase?'#7dd3fc':'#c4b5fd';
         var label=_csEscH(p.title||p.keyword||String(p.url||'').replace(/^https?:[/][/]/,'').split('/')[0]||('Page '+p.id));
         var url=_csEscH(p.url||'').replace(/"/g,'&quot;');
         return '<div class="cs-monitor-action-row" style="padding:10px 12px;border:1px solid #243449;border-radius:8px;background:#0b1624;margin-top:7px;">'
           +'<div style="min-width:0;"><strong style="display:block;color:#e2e8f0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+label+'</strong><a href="'+url+'" target="_blank" rel="noopener" style="display:block;color:#60a5fa;font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+_csEscH(p.url||'')+'</a>'
           +'<div style="margin-top:5px;color:#94a3b8;font-size:9px;line-height:1.5;">First scan: '+(function(){var d=p.first_scanned_at||(p.case_study&&p.case_study.baseline_at);if(!d)return '—';try{return new Date(d).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});}catch(x){return '—';}})()+' &nbsp;·&nbsp; Last scan: '+(function(){var d=p.last_checked_at||p.last_checked;if(!d)return '—';try{return new Date(d).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});}catch(x){return '—';}})()+' &nbsp;·&nbsp; Next scan: '+(function(){if(!isMonitored)return 'Off';if(!p.next_check_at)return waiting?'Waiting for evidence':'Not scheduled';try{return new Date(p.next_check_at).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});}catch(x){return '—';}})()+'</div></div>'
-          +'<div style="color:'+color+';font-size:10px;font-weight:800;line-height:1.45;">'+_csEscH(status)+'</div>'
+          +'<div style="color:'+color+';font-size:10px;font-weight:800;line-height:1.45;">'+_csEscH(status)+(attention.geoIssue&&attention.note?'<div style="margin-top:4px;color:#fca5a5;">⚠️ Brief evidence needs review: Richmond, VA competitors appear in this NJ page Brief. Do not copy those competitor claims into client content.</div>':'')+'</div>'
           +'<button type="button" onclick="jumpToTrackerPage('+Number(p.id)+')" style="border:1px solid #3b82f6;background:#10264a;color:#bfdbfe;border-radius:6px;padding:6px 9px;cursor:pointer;font-size:10px;font-weight:800;white-space:nowrap;">Open page</button></div>';
       }).join('');
       actionBox.innerHTML='<div style="padding:11px 13px;border:1px solid #1d4ed8;border-radius:9px;background:#081426;color:#cbd5e1;font-size:11px;"><div style="font-weight:900;color:#93c5fd;letter-spacing:.06em;">TRACKER ACTION PAGES · '+actionPages.length+'</div>'+rows+'</div>';
@@ -43542,6 +43555,9 @@ function _trackerNextActionState(p,isDone,lastCheckedRaw,nextEvidence){
     var gate=String(p.monitoring_gate_label||'');
     var waitMsg=gate.indexOf('case_day_')===0?'Fresh evidence is still required before this checkpoint can be closed.':'Required evidence is still missing. Complete the requested input before scanning again.';
     return {code:'WAITING',label:'WAITING FOR EVIDENCE',detail:waitMsg,color:'#fbbf24',border:'#a16207',bg:'#2a1f05',button:'',buttonAction:''};
+  }
+  if(implStatus==='no_change'&&p.brief_content){
+    return {code:'PUBLISH_VERIFY',label:'LIVE CHANGE NOT DETECTED · IMPLEMENTATION STILL OPEN',detail:'The previous live check found no published change. Publish the revised page, then check the current live version again. Do not run a new scan to clear this issue.',color:'#fca5a5',border:'#ef4444',bg:'#2a0a0a',button:'Check current live',buttonAction:'verifyCurrentBriefLive('+p.id+',this)'};
   }
   if(freshHtml||!lastCheckedRaw){
     return {code:'SCAN',label:'SCAN REQUIRED',detail:freshHtml?'New HTML was added after the last scan. Scan the live page before deciding whether the Brief changes.':'This page has not been scanned yet. Run the scan to establish the current evidence-backed delta.',color:'#7dd3fc',border:'#0284c7',bg:'#082f49',button:'Scan now',buttonAction:'checkPage('+p.id+')'};
@@ -44084,6 +44100,8 @@ function renderPages() {
     var _scanDone = _scanSawHtml && !isDone;
 
     var _mdOn = p.manual_done === true || p.manual_done === 't' || p.manual_done === 'true' || p.manual_done === 1;
+    var _attention=window._trackerAttention?window._trackerAttention(p):{note:'',geoIssue:false};
+    var _attentionBanner=(_attention.note||_attention.geoIssue)?'<div role="alert" style="padding:9px 14px;background:#2a1708;border-bottom:1px solid #f59e0b;color:#fde68a;font-size:11px;font-weight:800;line-height:1.5;">⚠️ '+_csEscH(_attention.note||'Brief evidence needs review: Richmond, VA competitors appear in this NJ page Brief.')+(_attention.geoIssue&&_attention.note?'<br>⚠️ Richmond, VA competitors appear in this NJ page Brief. Review the evidence before using its copy.':'')+'</div>':'';
     // Pushable queries block — replaces the manual "GSC → Pages → Queries" digging.
     var _pushHtml = '';
     var _pushList = _pushByPage[p.id];
@@ -44104,6 +44122,7 @@ function renderPages() {
         + '</div>';
     }
     return _sectionPrefix + '<div id="page-' + p.id + '" class="cs-page-card' + (muteCompletedCard ? ' done' : '') + '" data-page-id="' + p.id + '" data-tour="page-card" style="position:relative;background:#0d1117;border:1px solid #1f2937;' + (_mdOn ? 'border-left:4px solid #16a34a;' : 'border-left:4px solid #374151;') + 'border-radius:10px;margin-bottom:12px;overflow:hidden;">'
+      + _attentionBanner
       + waitingBanner
       + pendingBanner
       + needsHtmlBanner
@@ -44114,6 +44133,7 @@ function renderPages() {
       + '<input type="checkbox" class="page-select-cb" data-id="' + p.id + '" onclick="event.stopPropagation();bulkCbClick(event,this)" style="width:14px;height:14px;margin-top:3px;accent-color:#ef4444;cursor:pointer;flex-shrink:0;">'
       + '<div style="flex:1;min-width:0;">'
       + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;"><span style="font-size:10px;font-weight:800;color:#d1d5db;background:#1f2937;border:1px solid #374151;border-radius:4px;padding:1px 7px;flex-shrink:0;">' + pageNumLabel + '</span>'
+      + (_attention.note||_attention.geoIssue?'<span title="Open issue — see warning on this page" style="font-size:14px;color:#fbbf24;font-weight:900;">⚠️</span>':'')
       + (function(){
           var md = p.manual_done === true || p.manual_done === 't' || p.manual_done === 'true' || p.manual_done === 1;
           var mdAt = (md && p.manual_done_at) ? new Date(p.manual_done_at).toLocaleDateString('en-GB',{day:'2-digit',month:'short'}) : '';
