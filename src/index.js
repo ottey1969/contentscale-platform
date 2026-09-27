@@ -266,7 +266,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-27-CANONICAL-v340';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-27-CANONICAL-v341';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 const CONTENTSCALE_BUILD_CHANGES = [
   'tracker-delta-brief-regression-lock',
@@ -279,7 +279,8 @@ const CONTENTSCALE_BUILD_CHANGES = [
   'admin-auth-safe-logging-v339',
   'verified-claims-output-firewall-v340',
   'live-page-self-proof-block-v340',
-  'lead-brief-renderer-repair-v340'
+  'lead-brief-renderer-repair-v340',
+  'persistent-action-wait-feedback-v341'
 ];
 console.log('[ContentScale] BUILD=' + CONTENTSCALE_BUILD_ID + ' BOOT=' + CONTENTSCALE_BOOT_AT);
 console.log('[ContentScale] CHANGES=' + CONTENTSCALE_BUILD_CHANGES.join(','));
@@ -507,7 +508,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-09-27-CANONICAL-v340',
+  build: 'CS-2026-09-27-CANONICAL-v341',
   built_date: '2026-09-27',
   ceo_private: true,
   ceo_public: true,
@@ -17094,7 +17095,7 @@ async function startServer() {
   }
 
 console.log('────────────────────────────────────────');
-console.log('[ContentScale] CS-2026-09-27-CANONICAL-v340');
+console.log('[ContentScale] CS-2026-09-27-CANONICAL-v341');
 console.log('[ContentScale] Build check: /api/build-info');
 console.log('[ContentScale] Base URL: ' + (process.env.BASE_URL || 'https://app.contentscale.site'));
 console.log('────────────────────────────────────────');
@@ -21758,7 +21759,7 @@ function _ceoMainWebsiteUrl(input){
 // action must target this CEO endpoint.
 app.post('/api/ceo-report/start',async(req,res)=>{
   let ceoEntry='unknown',ceoUrl='',lastStage='REQUEST';
-  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-27-CANONICAL-v340');
+  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-27-CANONICAL-v341');
   try{
     lastStage='DB_SETUP';
     console.log('[ceo-report] stage=DB_SETUP');
@@ -21852,10 +21853,10 @@ ContentScale`;
     return res.json({success:true,entry_mode:entry,token,selected_page:selected,ceo_report_token:reportToken,ceo_report_url:reportUrl,delivery_email:delivery,updates_opt_in:updatesOptIn});
   }catch(e){
     const msg=String((e&&e.message)||e||'CEO Prospect Report generation failed');
-    console.error('[ceo-report] FAILED build=CS-2026-09-27-CANONICAL-v340 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
+    console.error('[ceo-report] FAILED build=CS-2026-09-27-CANONICAL-v341 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
     console.error('[ceo-report] ERROR: '+msg);
     if(e&&e.stack)console.error(e.stack);
-    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-27-CANONICAL-v340'});
+    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-27-CANONICAL-v341'});
     try{res.end();}catch(_){}
   }
 });
@@ -42106,19 +42107,24 @@ function _finishScanAll(){
 async function setBaselineGsc(pageId, ev) {
   if (ev && ev.stopPropagation) ev.stopPropagation();
   var btn = ev && ev.currentTarget;
+  var waitKey='baseline-gsc-'+pageId;
+  csActionWaitStart(waitKey,'Fetching page-level GSC evidence…','Checking the exact tracked URL and saving its baseline evidence.');
   if (btn) { btn.disabled = true; btn.textContent = 'Fetching page GSC…'; }
   try {
     var d = await api('/pages/' + pageId + '/baseline-gsc', 'POST');
-    if (!d || !d.success) { toast((d && d.error) || 'Could not set baseline GSC', '#f87171'); return; }
+    if (!d || !d.success) { csActionWaitFinish(waitKey,false,(d&&d.error)||'Could not set baseline GSC.');toast((d && d.error) || 'Could not set baseline GSC', '#f87171'); return; }
     if (d.ready) {
+      csActionWaitFinish(waitKey,true,d.queries_checked_zero?'Exact-page GSC was checked; zero exposed queries were recorded.':'Baseline GSC and verified page queries were saved.');
       toast(d.queries_checked_zero?'Baseline ready — exact-page GSC checked; zero exposed queries recorded. You can start the case study.':'Baseline ready — ' + d.coupled_queries + ' verified page queries' + (d.gsc_fresh ? ' (fresh)' : (d.gsc_age_days != null ? ' (' + d.gsc_age_days + 'd old — consider refreshing GSC)' : '')) + '. You can start the case study.', '#4ade80');
     } else {
+      csActionWaitFinish(waitKey,false,'GSC checking finished, but required baseline fields are still missing: '+(d.missing||[]).join(', '));
       toast('Page GSC query check: ' + (d.queries_checked_zero?'zero exposed rows verified':d.coupled_queries+' verified rows') + '. Still missing: ' + (d.missing || []).join(', ') + (d.fetch_note?' ('+d.fetch_note+')':''), '#f59e0b');
     }
     if (typeof loadPages === 'function') loadPages();
   } catch (e) {
     // api() throws on non-2xx; surface the payload (e.g. a locked baseline) as an amber notice
     var msg = (e && e.payload && e.payload.error) || (e && e.message) || 'Error';
+    csActionWaitFinish(waitKey,false,msg);
     toast(msg, e && e.payload && e.payload.baseline_locked ? '#f59e0b' : '#f87171');
   } finally {
     if (btn) { btn.disabled = false; btn.innerHTML = '\\u2b07 Fetch baseline GSC for this URL'; }
@@ -42291,6 +42297,61 @@ function toast(msg, color) {
   el.style.display = 'block';
   clearTimeout(el._t);
   el._t = setTimeout(function(){ el.style.display='none'; }, 3500);
+}
+
+// CONTENTSCALE-PERSISTENT-ACTION-WAIT-V341=true
+// Long actions keep a visible state until the REAL backend state changes. A short toast or
+// button label is not enough because tracker cards can re-render while background work continues.
+var _csActionWaitStarted={};
+function csActionWaitStart(key,title,detail){
+  key=String(key||'tracker-action');
+  _csActionWaitStarted[key]=Date.now();
+  if(!document.getElementById('csActionWaitStyle')){
+    var st=document.createElement('style');st.id='csActionWaitStyle';
+    st.textContent='@keyframes csActionSpin{to{transform:rotate(360deg)}}@keyframes csActionGlow{0%,100%{box-shadow:0 12px 42px rgba(0,0,0,.55),0 0 0 1px rgba(56,189,248,.12)}50%{box-shadow:0 12px 42px rgba(0,0,0,.55),0 0 0 4px rgba(56,189,248,.18)}}';
+    document.head.appendChild(st);
+  }
+  var el=document.getElementById('csActionWait');
+  if(!el){el=document.createElement('div');el.id='csActionWait';el.setAttribute('role','status');el.setAttribute('aria-live','polite');document.body.appendChild(el);}
+  el.dataset.key=key;
+  el.style.cssText='position:fixed;left:50%;bottom:22px;transform:translateX(-50%);z-index:100005;width:min(620px,calc(100vw - 28px));display:flex;align-items:center;gap:12px;padding:13px 15px;background:#081524;border:1px solid #38bdf8;border-radius:11px;color:#e0f2fe;font:12px/1.45 Inter,Arial,sans-serif;animation:csActionGlow 1.6s ease-in-out infinite;';
+  el.innerHTML='<span data-wait-icon style="width:20px;height:20px;flex:0 0 20px;border:3px solid rgba(255,255,255,.18);border-top-color:#38bdf8;border-radius:50%;animation:csActionSpin .75s linear infinite"></span><span><strong data-wait-title style="display:block;color:#f8fafc;font-size:12px">'+_escHtml(title||'Working…')+'</strong><span data-wait-detail style="color:#bae6fd">'+_escHtml(detail||'Please wait. This message disappears when the action is finished.')+'</span></span>';
+}
+function csActionWaitUpdate(key,title,detail){
+  var el=document.getElementById('csActionWait');if(!el||el.dataset.key!==String(key))return;
+  var t=el.querySelector('[data-wait-title]'),d=el.querySelector('[data-wait-detail]');if(t&&title)t.textContent=title;if(d&&detail)d.textContent=detail;
+}
+function csActionWaitFinish(key,ok,message){
+  var el=document.getElementById('csActionWait');if(!el||el.dataset.key!==String(key))return;
+  var icon=el.querySelector('[data-wait-icon]'),t=el.querySelector('[data-wait-title]'),d=el.querySelector('[data-wait-detail]');
+  el.style.animation='none';el.style.borderColor=ok?'#22c55e':'#ef4444';el.style.background=ok?'#052e16':'#2a0a0a';
+  if(icon){icon.style.cssText='width:22px;flex:0 0 22px;color:'+(ok?'#86efac':'#fca5a5')+';font-size:19px;font-weight:950';icon.textContent=ok?'✓':'✕';}
+  if(t)t.textContent=ok?'Action completed':'Action stopped';if(d)d.textContent=message||(ok?'The result has been updated.':'The action could not be completed.');
+  clearTimeout(el._hide);el._hide=setTimeout(function(){if(el.parentNode)el.parentNode.removeChild(el);},ok?4500:7000);
+  delete _csActionWaitStarted[String(key)];
+}
+function csActionWaitPollPage(pageId,key){
+  var attempts=0;
+  async function tick(){
+    attempts++;
+    try{await loadPages();}catch(_e){}
+    var p=(_pages||[]).find(function(x){return Number(x.id)===Number(pageId);});
+    var status=String(p&&p.implementation_status||'').toLowerCase();
+    if(status==='verifying'){
+      var elapsed=Math.max(1,Math.round((Date.now()-(_csActionWaitStarted[key]||Date.now()))/1000));
+      csActionWaitUpdate(key,'Checking the published live page…','Still working · '+elapsed+' seconds · you can keep this page open.');
+      if(attempts<120)return setTimeout(tick,3000);
+      csActionWaitUpdate(key,'Verification is taking longer than expected','The backend is still marked as verifying. Keep the page open or refresh later; the action has not been marked complete.');
+      return;
+    }
+    if(status==='verified'||status==='live_same_checkpoint_actions_verified')return csActionWaitFinish(key,true,'Live verification completed and the tracker result is updated.');
+    if(status==='live_changed_delta_remaining'||status==='live_same_checkpoint_delta_remaining')return csActionWaitFinish(key,true,'Live check completed. Some Brief actions still need attention.');
+    if(status==='manual_html_required')return csActionWaitFinish(key,false,'The live page could not be read reliably. Manual HTML is required.');
+    if(status==='no_change')return csActionWaitFinish(key,false,'The check finished, but no published change was detected.');
+    if(attempts<4)return setTimeout(tick,1500);
+    csActionWaitFinish(key,false,'The tracker did not receive a final verification state. Refresh the page and check NEXT ACTION.');
+  }
+  setTimeout(tick,1200);
 }
 
 // In-app notification system \\u2014 shows a persistent notification badge
@@ -46150,13 +46211,16 @@ window.openRemainingActions=openRemainingActions;
 window.resolveRemainingAction=resolveRemainingAction;
 
 async function verifyCurrentBriefLive(pageId,btn){
-  if(btn){btn.disabled=true;btn.textContent='Checking live…';btn.style.opacity='.75';}
+  var waitKey='verify-live-'+pageId;
+  csActionWaitStart(waitKey,'Checking the published live page…','Fetching the URL and comparing it with the protected checkpoint. Please wait.');
+  if(btn){btn.disabled=true;btn.innerHTML='<i class="fas fa-circle-notch fa-spin"></i> Checking live…';btn.style.opacity='.75';}
   try{
     // Reuse the canonical live-comparison/verification route, but explicitly declare TRUE even
     // when an older implementation has is_done=true. This is verification of the CURRENT Brief.
     await markDone(pageId,btn,false);
   }catch(e){
     if(btn){btn.disabled=false;btn.textContent='Check current live';btn.style.opacity='1';}
+    csActionWaitFinish(waitKey,false,'Live verification failed: '+(e.message||e));
     toast('Live verification failed: '+(e.message||e),'#f87171');
   }
 }
@@ -46172,14 +46236,17 @@ async function markDone(pageId, btn, currentDone) {
         var p = (_pages||[]).find(function(x){ return x.id == pageId; });
         if (p) { p.needs_html = false; p.implementation_status = 'verifying'; }
         toast('Comparing published live HTML with the protected checkpoint — please wait…', '#4ade80');
+        csActionWaitUpdate('verify-live-'+pageId,'Published page fetched · verification continues…','The server is checking only the current Brief actions. Do not start another scan.');
+        csActionWaitPollPage(pageId,'verify-live-'+pageId);
         setTimeout(loadPages, 1200);
         setTimeout(loadPages, 7000);
       } else {
+        csActionWaitFinish('verify-live-'+pageId,true,'The implementation status was reopened.');
         toast('Unmarked', '#9ca3af');
         setTimeout(loadPages, 400);
       }
-    } else { if(btn&&btn.tagName==='BUTTON'){btn.disabled=false;btn.textContent='2 · Compare & verify live';btn.style.opacity='1';} toast(data.error || 'Failed', '#f87171'); }
-  } catch(e) { if(btn&&btn.tagName==='BUTTON'){btn.disabled=false;btn.textContent='2 · Compare & verify live';btn.style.opacity='1';} toast('Error: ' + e.message, '#f87171'); }
+    } else { if(btn&&btn.tagName==='BUTTON'){btn.disabled=false;btn.textContent='2 · Compare & verify live';btn.style.opacity='1';} csActionWaitFinish('verify-live-'+pageId,false,data.error||'Verification could not start.'); toast(data.error || 'Failed', '#f87171'); }
+  } catch(e) { if(btn&&btn.tagName==='BUTTON'){btn.disabled=false;btn.textContent='2 · Compare & verify live';btn.style.opacity='1';} csActionWaitFinish('verify-live-'+pageId,false,'Error: '+e.message); toast('Error: ' + e.message, '#f87171'); }
 }
 
 async function savePrePublicationCheckpoint(pageId) {
@@ -46190,14 +46257,19 @@ async function savePrePublicationCheckpoint(pageId) {
     return;
   }
   if (!confirm('Save the page currently live as an immutable checkpoint? If the revised HTML is already published, this cannot prove what was live before; it starts the next revision instead. Continue?')) return;
+  var waitKey='save-live-'+pageId,activeBtn=document.activeElement;
+  csActionWaitStart(waitKey,'Saving the current live page…','Fetching and preserving the complete HTML with timestamp and content hash.');
+  if(activeBtn&&activeBtn.tagName==='BUTTON'){activeBtn.disabled=true;activeBtn.dataset.oldText=activeBtn.textContent;activeBtn.innerHTML='<i class="fas fa-circle-notch fa-spin"></i> Saving live page…';}
   try {
     toast('Saving the currently live HTML before publication…', '#60a5fa');
     var d = await api('/pages/' + pageId + '/case-study/pre-publication', 'POST', {});
-    if (!d || !d.success) { toast((d && d.error) || 'Checkpoint could not be saved', '#f87171'); return; }
+    if (!d || !d.success) { csActionWaitFinish(waitKey,false,(d&&d.error)||'Checkpoint could not be saved.');toast((d && d.error) || 'Checkpoint could not be saved', '#f87171'); return; }
     if (p) p.prepublication_checkpoint_saved = true;
+    csActionWaitFinish(waitKey,true,d.created?'Live HTML, timestamp and hash were preserved.':'This exact live HTML was already preserved.');
     toast(d.created ? 'Pre-publication HTML protected. You may now publish.' : 'This exact pre-publication HTML was already protected.', '#4ade80');
     setTimeout(loadPages, 500);
-  } catch(e) { toast('Checkpoint failed: ' + e.message, '#f87171'); }
+  } catch(e) { csActionWaitFinish(waitKey,false,'Checkpoint failed: '+e.message);toast('Checkpoint failed: ' + e.message, '#f87171'); }
+  finally{if(activeBtn&&activeBtn.tagName==='BUTTON'&&document.body.contains(activeBtn)){activeBtn.disabled=false;activeBtn.textContent=activeBtn.dataset.oldText||'Save current live page';}}
 }
 
 // Track active checks per page
