@@ -266,7 +266,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-27-CANONICAL-v339';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-27-CANONICAL-v340';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 const CONTENTSCALE_BUILD_CHANGES = [
   'tracker-delta-brief-regression-lock',
@@ -276,7 +276,10 @@ const CONTENTSCALE_BUILD_CHANGES = [
   'tracker-prewrite-visible-handoff',
   'link-health-presence-vs-suggestions',
   'case-study-live-brief-verification-v339',
-  'admin-auth-safe-logging-v339'
+  'admin-auth-safe-logging-v339',
+  'verified-claims-output-firewall-v340',
+  'live-page-self-proof-block-v340',
+  'lead-brief-renderer-repair-v340'
 ];
 console.log('[ContentScale] BUILD=' + CONTENTSCALE_BUILD_ID + ' BOOT=' + CONTENTSCALE_BOOT_AT);
 console.log('[ContentScale] CHANGES=' + CONTENTSCALE_BUILD_CHANGES.join(','));
@@ -504,7 +507,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-09-27-CANONICAL-v339',
+  build: 'CS-2026-09-27-CANONICAL-v340',
   built_date: '2026-09-27',
   ceo_private: true,
   ceo_public: true,
@@ -3240,6 +3243,33 @@ app.post('/api/tracker-client/:token/reset-scans', async (req, res) => {
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
+// CONTENTSCALE-NORMAL-SCAN-SERVER-GATE-V340=true
+// The client greys out Scan from NEXT ACTION, but UI state is never the security/workflow
+// boundary. Bulk endpoints and direct API calls must obey the same protected workflow.
+function _trackerNormalScanGate(page){
+  const b=v=>v===true||v===1||v==='1'||v==='true'||v==='t';
+  if(!page)return {allowed:false,reason:'Page not found'};
+  if(b(page.monitoring_waiting_input))return {allowed:false,reason:'Waiting for fresh evidence'};
+  const impl=String(page.implementation_status||'').toLowerCase();
+  if(['verifying','live_changed_delta_remaining','live_same_checkpoint_delta_remaining','live_same_checkpoint_actions_verified'].includes(impl)){
+    return {allowed:false,reason:'Use the current live verification/correction action instead of a new scan'};
+  }
+  if(b(page.manual_done)||b(page.is_done))return {allowed:false,reason:'Completed pages use live verification or the next evidence checkpoint'};
+  if(b(page.case_study_active)&&page.brief_content){
+    if(!b(page.prepublication_checkpoint_saved)&&!b(page.checkpoint_recovery_available)){
+      return {allowed:false,reason:'Save the current live page before the next scan or publication'};
+    }
+    const checkpointAt=page.prepublication_checkpoint_at?new Date(page.prepublication_checkpoint_at).getTime():0;
+    const evaluatedAt=page.brief_evaluated_at?new Date(page.brief_evaluated_at).getTime():0;
+    // One scan is allowed immediately after the protected checkpoint when that checkpoint is
+    // newer than the evaluated Brief. After that, NEXT ACTION must drive live verification.
+    if(!checkpointAt||evaluatedAt>=checkpointAt){
+      return {allowed:false,reason:'The protected page already has a current Brief; use Check current live'};
+    }
+  }
+  return {allowed:true,reason:''};
+}
+
 // POST /api/tracker-client/:token/scan-all — legacy route name; UI sends priorities_only=true to scan only Active Priorities.
 // CONTENTSCALE-PRIORITY-SCAN-SERIAL-20260909=true
 app.post('/api/tracker-client/:token/scan-all', async (req, res) => {
@@ -3289,7 +3319,9 @@ app.post('/api/tracker-client/:token/scan-all', async (req, res) => {
       pages = await pool.query("SELECT * FROM tracker_pages WHERE tracker_client_id=$1 AND (is_active=TRUE OR is_active IS NULL) AND COALESCE(monitoring_waiting_input,FALSE)=FALSE AND NOT (COALESCE(case_study_active,FALSE) AND COALESCE(manual_done,FALSE)) ORDER BY created_at ASC", [cr.rows[0].id]);
     }
 
-    res.json({ success: true, queued: pages.rows.length, message: 'Scanning ' + pages.rows.length + ' ' + (prioritiesOnly ? 'priority ' : (unscannedOnly ? 'unscanned ' : '')) + 'pages one by one (~' + Math.ceil(pages.rows.length * 3 / 60) + ' min)' });
+    const blocked=pages.rows.filter(p=>!_trackerNormalScanGate(p).allowed);
+    pages.rows=pages.rows.filter(p=>_trackerNormalScanGate(p).allowed);
+    res.json({ success: true, queued: pages.rows.length, blocked:blocked.length, blocked_pages:blocked.slice(0,25).map(p=>({id:p.id,url:p.url,reason:_trackerNormalScanGate(p).reason})), message: 'Scanning ' + pages.rows.length + ' ' + (prioritiesOnly ? 'priority ' : (unscannedOnly ? 'unscanned ' : '')) + 'pages one by one; '+blocked.length+' workflow-locked page(s) skipped (~' + Math.ceil(pages.rows.length * 3 / 60) + ' min)' });
 
     const checkKeys = {
       serpapiKey:    process.env.SERPAPI_KEY || process.env.SERPER_API_KEY,
@@ -3321,8 +3353,11 @@ app.post('/api/tracker-client/:token/scan-selected', async (req, res) => {
       [cr.rows[0].id, ids]
     );
     if (!pages.rows.length) return res.status(400).json({ success: false, error: 'No matching pages' });
+    const blocked=pages.rows.filter(p=>!_trackerNormalScanGate(p).allowed);
+    pages.rows=pages.rows.filter(p=>_trackerNormalScanGate(p).allowed);
+    if(!pages.rows.length)return res.status(409).json({success:false,scan_locked:true,error:'The selected pages are workflow-locked. Follow each page\'s NEXT ACTION instead.',blocked_pages:blocked.map(p=>({id:p.id,url:p.url,reason:_trackerNormalScanGate(p).reason}))});
 
-    res.json({ success: true, queued: pages.rows.length, message: 'Scanning ' + pages.rows.length + ' selected page' + (pages.rows.length>1?'s':'') + ' one by one (~' + Math.ceil(pages.rows.length * 3 / 60) + ' min)' });
+    res.json({ success: true, queued: pages.rows.length, blocked:blocked.length, blocked_pages:blocked.map(p=>({id:p.id,url:p.url,reason:_trackerNormalScanGate(p).reason})), message: 'Scanning ' + pages.rows.length + ' selected page' + (pages.rows.length>1?'s':'') + '; '+blocked.length+' workflow-locked page(s) skipped (~' + Math.ceil(pages.rows.length * 3 / 60) + ' min)' });
 
     const checkKeys = {
       serpapiKey:    process.env.SERPAPI_KEY || process.env.SERPER_API_KEY,
@@ -7537,6 +7572,10 @@ app.post('/api/tracker-client/:token/check/:pageId', async (req, res) => {
     const own = await pool.query('SELECT * FROM tracker_pages WHERE id=$1 AND tracker_client_id=$2', [req.params.pageId, cr.rows[0].id]);
     if (!own.rows.length) return res.status(403).json({ success: false, error: 'Not your page' });
     const page = own.rows[0];
+    const normalScanGate=_trackerNormalScanGate(page);
+    if(!normalScanGate.allowed&&!page.monitoring_waiting_input){
+      return res.status(409).json({success:false,scan_locked:true,error:normalScanGate.reason,next_action_required:true});
+    }
     // A completed case-study page follows the protected proof/verification loop.
     // A GSC refresh or a missing legacy brief_evaluated_at is not permission to
     // run a normal scan and regenerate the Brief.
@@ -7810,12 +7849,25 @@ body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFo
   }
   function deleteLeadPage(pageId){ if(!confirm('Delete this page and its brief? This cannot be undone.')) return; fetch('/api/tracker-client/'+TOKEN+'/pages/'+pageId,{method:'DELETE'}).then(function(r){return r.json();}).then(function(r){ if(!r||!r.success){ alert((r&&r.error)||'Could not delete'); return; } load(); }).catch(function(){ alert('Could not delete'); }); }
   function deletePWBrief(id){ if(!confirm('Delete this Pre-Write Brief? This cannot be undone.')) return; fetch('/api/tracker-client/'+TOKEN+'/prewrite-briefs/'+id,{method:'DELETE'}).then(function(r){return r.json();}).then(function(r){ if(!r||!r.success){ alert((r&&r.error)||'Could not delete'); return; } load(); }).catch(function(){ alert('Could not delete'); }); }
+  /* V340: disabled malformed legacy renderer. It contained a duplicated concatenation and an
+     unquoted <div>, which made the generated lead-panel JavaScript fail in the browser.
   function _leadBriefHtml(d){
     var pos=d.position||d.pos||d.gsc_position; var pc=(!pos||pos==='N/A')?'#6b7280':pos<=3?'#4ade80':pos<=10?'#a3e635':pos<=20?'#fbbf24':'#f87171';
     function tile(v,l,c){return '<div style="min-width:86px;flex:1;background:#090d16;border:1px solid #263041;border-radius:9px;padding:10px;text-align:center"><div style="font-size:16px;font-weight:900;color:'+c+'">'+v+'</div><div style="font-size:9px;color:#7c8799;text-transform:uppercase">'+l+'</div></div>';}
     function et(st,label,c){var v=st.exact?'Exact':(st.domain?'Domain':(st.cited?'Cited':(st.checked?'No':'?')));return tile(v,label,st.cited?c:'#6b7280');}
     var g=_briefEngineState(d,'google_aio'),ch=_briefEngineState(d,'chatgpt'),pp=_briefEngineState(d,'perplexity'),cl=_briefEngineState(d,'claude'),co=_briefEngineState(d,'copilot');
     return '<div style="margin:-4px -4px 14px"><div style="font-size:11px;color:#8b5cf6;font-weight:800;margin-bottom:4px">🎯 Citation Brief</div>'+(d.canonical_priority_rank?'<div style="font-size:11px;color:#fb923c;font-weight:800;margin-bottom:4px">Tracker Priority #'+d.canonical_priority_rank+'</div>':'')+(d.treatment?'<div style="font-size:11px;color:#c4b5fd;font-weight:800;margin-bottom:6px">Treatment: '+esc(d.treatment)+(d.treatment_target_url?' → '+esc(d.treatment_target_url):'')+'</div>':'<div style="font-size:11px;color:#6b7280;margin-bottom:6px">Treatment: decide after reviewing this Brief</div>')+'+(d.canonical_priority_rank?'<div style="font-size:11px;color:#fb923c;font-weight:800;margin-bottom:4px">Tracker Priority #'+d.canonical_priority_rank+'</div>':'')+(d.treatment?'<div style="font-size:11px;color:#c4b5fd;font-weight:800;margin-bottom:6px">Treatment: '+esc(d.treatment)+(d.treatment_target_url?' → '+esc(d.treatment_target_url):'')+'</div>':'<div style="font-size:11px;color:#6b7280;margin-bottom:6px">Treatment: decide after reviewing this Brief</div>')+<div style="font-size:12px;color:#94a3b8;word-break:break-all">'+esc(d.url||'')+'</div><div style="font-size:11px;color:#64748b;margin:3px 0 12px">Keyword: '+esc(d.keyword||'')+'</div><div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:14px">'+tile(pos?('#'+pos):'-','Position',pc)+et(g,'Google AIO','#4ade80')+et(ch,'ChatGPT','#34d399')+et(pp,'Perplexity','#a78bfa')+et(cl,'Claude','#f59e0b')+et(co,'Copilot','#60a5fa')+(d.score?tile(d.score,'GRAAF','#facc15'):'')+'</div>'+_renderBriefBodyHTML(d)+'</div>';
+  }
+  */
+  function _leadBriefHtml(d){
+    var pos=d.position||d.pos||d.gsc_position;
+    var pc=(!pos||pos==='N/A')?'#6b7280':pos<=3?'#4ade80':pos<=10?'#a3e635':pos<=20?'#fbbf24':'#f87171';
+    function tile(v,l,c){return '<div style="min-width:86px;flex:1;background:#090d16;border:1px solid #263041;border-radius:9px;padding:10px;text-align:center"><div style="font-size:16px;font-weight:900;color:'+c+'">'+v+'</div><div style="font-size:9px;color:#7c8799;text-transform:uppercase">'+l+'</div></div>';}
+    function et(st,label,c){var v=st.exact?'Exact':(st.domain?'Domain':(st.cited?'Cited':(st.checked?'No':'?')));return tile(v,label,st.cited?c:'#6b7280');}
+    var g=_briefEngineState(d,'google_aio'),ch=_briefEngineState(d,'chatgpt'),pp=_briefEngineState(d,'perplexity'),cl=_briefEngineState(d,'claude'),co=_briefEngineState(d,'copilot');
+    var priority=d.canonical_priority_rank?'<div style="font-size:11px;color:#fb923c;font-weight:800;margin-bottom:4px">Tracker Priority #'+esc(d.canonical_priority_rank)+'</div>':'';
+    var treatment=d.treatment?'<div style="font-size:11px;color:#c4b5fd;font-weight:800;margin-bottom:6px">Treatment: '+esc(d.treatment)+(d.treatment_target_url?' → '+esc(d.treatment_target_url):'')+'</div>':'<div style="font-size:11px;color:#6b7280;margin-bottom:6px">Treatment: decide after reviewing this Brief</div>';
+    return '<div style="margin:-4px -4px 14px"><div style="font-size:11px;color:#8b5cf6;font-weight:800;margin-bottom:4px">🎯 Citation Brief</div>'+priority+treatment+'<div style="font-size:12px;color:#94a3b8;word-break:break-all">'+esc(d.url||'')+'</div><div style="font-size:11px;color:#64748b;margin:3px 0 12px">Keyword: '+esc(d.keyword||'')+'</div><div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:14px">'+tile(pos?('#'+pos):'-','Position',pc)+et(g,'Google AIO','#4ade80')+et(ch,'ChatGPT','#34d399')+et(pp,'Perplexity','#a78bfa')+et(cl,'Claude','#f59e0b')+et(co,'Copilot','#60a5fa')+(d.score?tile(d.score,'GRAAF','#facc15'):'')+'</div>'+_renderBriefBodyHTML(d)+'</div>';
   }
   function viewLeadBrief(id){var d=_briefs.filter(function(x){return !x.is_prewrite&&String(x.page_id)===String(id);})[0];if(!d)return;var ov=_ldOv();document.getElementById('ldOvTitle').textContent='Citation Brief';document.getElementById('ldOvBody').innerHTML=_leadBriefHtml(d);document.getElementById('ldOvFoot').innerHTML='<button class="ld-btn" onclick="_ldClose()">Close</button><button class="ld-btn primary" id="ldCopyBriefBtn">Copy brief</button>';ov.classList.add('on');document.getElementById('ldCopyBriefBtn').onclick=function(){copyLeadBrief(id,this);};}
   function _briefPlain(d){var lines=['AI Citation Brief — '+(d.url||''),'','Keyword: '+(d.keyword||''),''];var es=[['Google AIO / Gemini','google_aio'],['ChatGPT Search','chatgpt'],['Perplexity','perplexity'],['Claude','claude'],['Microsoft Copilot','copilot']];lines.push('AI Citation Results — 5 engines:');es.forEach(function(x){var st=_briefEngineState(d,x[1]);lines.push('- '+x[0]+': '+(st.exact?'✓ EXACT PAGE — VERIFIED':st.domain?'✓ DOMAIN — VERIFIED':st.cited?'✓ CITED — VERIFIED':st.checked?'✗ NOT CITED — VERIFIED':'? NOT CHECKED'));});lines.push('');(d.passages||d.recommendations||[]).forEach(function(p,i){lines.push((i+1)+'. '+(p.title||p.h2||''));lines.push(String(p.action||p.passage||p.body||p.text||''));if(p.impact)lines.push('Impact: '+p.impact);lines.push('');});return lines.join(NL);}
@@ -17042,7 +17094,7 @@ async function startServer() {
   }
 
 console.log('────────────────────────────────────────');
-console.log('[ContentScale] CS-2026-09-27-CANONICAL-v339');
+console.log('[ContentScale] CS-2026-09-27-CANONICAL-v340');
 console.log('[ContentScale] Build check: /api/build-info');
 console.log('[ContentScale] Base URL: ' + (process.env.BASE_URL || 'https://app.contentscale.site'));
 console.log('────────────────────────────────────────');
@@ -21706,7 +21758,7 @@ function _ceoMainWebsiteUrl(input){
 // action must target this CEO endpoint.
 app.post('/api/ceo-report/start',async(req,res)=>{
   let ceoEntry='unknown',ceoUrl='',lastStage='REQUEST';
-  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-27-CANONICAL-v339');
+  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-27-CANONICAL-v340');
   try{
     lastStage='DB_SETUP';
     console.log('[ceo-report] stage=DB_SETUP');
@@ -21800,10 +21852,10 @@ ContentScale`;
     return res.json({success:true,entry_mode:entry,token,selected_page:selected,ceo_report_token:reportToken,ceo_report_url:reportUrl,delivery_email:delivery,updates_opt_in:updatesOptIn});
   }catch(e){
     const msg=String((e&&e.message)||e||'CEO Prospect Report generation failed');
-    console.error('[ceo-report] FAILED build=CS-2026-09-27-CANONICAL-v339 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
+    console.error('[ceo-report] FAILED build=CS-2026-09-27-CANONICAL-v340 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
     console.error('[ceo-report] ERROR: '+msg);
     if(e&&e.stack)console.error(e.stack);
-    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-27-CANONICAL-v339'});
+    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-27-CANONICAL-v340'});
     try{res.end();}catch(_){}
   }
 });
@@ -42012,10 +42064,10 @@ function scanAllPages() {
       if (!_scanAllTotal) {
         _scanAllActive = false;
         _setScanAllBtn('\u26a1 Scan Priorities', false, false);
-        toast('No Active Priorities to scan. Refresh GSC or select URLs manually with Scan Selected.', '#f59e0b');
+        toast(d.blocked ? ('No scan started: '+d.blocked+' priority page'+(d.blocked===1?' is':'s are')+' locked by NEXT ACTION.') : 'No Active Priorities to scan. Refresh GSC or select URLs manually with Scan Selected.', '#f59e0b');
         return;
       }
-      toast('Scanning ' + _scanAllTotal + ' priority page' + (_scanAllTotal===1?'':'s') + ' \u2014 checked/deferred URLs are not included.', '#4ade80');
+      toast('Scanning ' + _scanAllTotal + ' priority page' + (_scanAllTotal===1?'':'s') + (d.blocked?(' · '+d.blocked+' NEXT ACTION-locked skipped'):'') + ' \u2014 checked/deferred URLs are not included.', '#4ade80');
       _setScanAllBtn('<i class=\"fas fa-circle-notch fa-spin\"></i> Priority 0/' + _scanAllTotal + '\u2026', true, true);
       // Safety fallback: if SSE misses events, stop the spinner after a generous timeout
       clearTimeout(window._scanAllFallback);
@@ -42086,7 +42138,7 @@ function scanSelectedPages() {
   api('/scan-selected', 'POST', { page_ids: ids }).then(function(d){
     if (d && d.success) {
       _scanAllTotal = d.queued || 0;
-      toast('Scanning ' + _scanAllTotal + ' selected page' + (_scanAllTotal>1?'s':'') + ' \\u2014 watch Live Activity.', '#60a5fa');
+      toast('Scanning ' + _scanAllTotal + ' selected page' + (_scanAllTotal>1?'s':'') + (d.blocked?(' · '+d.blocked+' locked by NEXT ACTION skipped'):'') + ' \\u2014 watch Live Activity.', '#60a5fa');
       if (b) b.innerHTML = '<i class=\"fas fa-circle-notch fa-spin\"></i> Scanning 0/' + _scanAllTotal + '\u2026';
       clearTimeout(window._scanAllFallback);
       window._scanAllFallback = setTimeout(_finishScanSelected, Math.max(60000, _scanAllTotal * 20000));
@@ -42097,7 +42149,7 @@ function scanSelectedPages() {
       if (b){ b.innerHTML = '\\u2611 Scan Selected'; b.disabled=false; b.style.opacity='1'; }
       toast((d && d.error) || 'Scan failed to start', '#f87171');
     }
-  }).catch(function(e){ _scanAllActive = false; if (b){ b.innerHTML='\\u2611 Scan Selected'; b.disabled=false; b.style.opacity='1'; } toast('Scan failed: ' + e.message, '#f87171'); });
+  }).catch(function(e){ _scanAllActive = false; if (b){ b.innerHTML='\\u2611 Scan Selected'; b.disabled=false; b.style.opacity='1'; } toast((e&&e.payload&&e.payload.scan_locked?'Scan not started: ':'Scan failed: ') + e.message, e&&e.payload&&e.payload.scan_locked?'#f59e0b':'#f87171'); });
 }
 function _finishScanSelected(){
   if (!_scanAllActive) return;
@@ -54296,6 +54348,68 @@ Return ONLY valid JSON, no markdown, no preamble.
     brief.fact_safety.verify_first = Array.from(new Set([].concat(brief.fact_safety.verify_first || [], _pwbVerifyFirst)));
     brief.fact_safety.blocked_claims = Array.from(new Set([].concat(brief.fact_safety.blocked_claims || [], _pwbBlocked)));
     brief.fact_safety.rule = 'Only VERIFIED Claims & Facts or owner-provided brand facts may be asserted as client facts. Competitor facts are research only.';
+
+    // CONTENTSCALE-VERIFIED-CLAIMS-OUTPUT-FIREWALL-V340=true
+    // Prompt instructions are not an enforcement boundary. Inspect every paste-ready field after
+    // generation and remove unsupported quantified/performance claims. Existing live-page copy is
+    // deliberately NOT proof: an old unsupported claim must not be able to verify itself.
+    const _pwbFactNorm = function(v){return String(v||'').toLowerCase().replace(/&[a-z0-9#]+;/gi,' ').replace(/[^a-z0-9%+.$]+/g,' ').replace(/\s+/g,' ').trim();};
+    const _pwbVerifiedNorm = _pwbVerified.map(_pwbFactNorm).filter(Boolean);
+    const _pwbMetricRisk = function(v){
+      const s=String(v||'');
+      return /(?:\b\d+(?:\.\d+)?\s*%|\b\d+(?:\.\d+)?\s*[x×](?=\s|$)|\b\d[\d,]*(?:\+|k\+?)?\s+(?:(?:monthly|manual|documented)\s+)?(?:clients?|customers?|websites?|sites?|projects?|recover(?:y|ies)|cases?|penalt(?:y|ies)|businesses?)\b|\b(?:success|recovery|improvement|conversion|traffic)\s+rate\b|\b(?:average|documented|guaranteed)\s+(?:recovery|result)[^.]{0,60}\b\d+\s+days?\b|\bwithin\s+\d+\s+days?\b|\b\d+\s*\+?\s*years?\b|\$\s*\d[\d,.]*)/i.test(s);
+    };
+    const _pwbMetricSupported = function(v){
+      const n=_pwbFactNorm(v); if(!n)return false;
+      return _pwbVerifiedNorm.some(function(f){
+        if(f.indexOf(n)>=0||n.indexOf(f)>=0)return true;
+        const a=n.split(' ').filter(function(x){return x.length>3;}), b=new Set(f.split(' '));
+        const overlap=a.filter(function(x){return b.has(x);}).length;
+        return overlap>=Math.min(5,Math.max(3,Math.ceil(a.length*.65)));
+      });
+    };
+    const _pwbRemoved=[];
+    const _pwbScrubString=function(v,path){
+      const original=String(v||''); if(!_pwbMetricRisk(original)||_pwbMetricSupported(original))return original;
+      const pieces=original.split(/(?<=[.!?])\s+|\n+/), kept=[];
+      pieces.forEach(function(piece){
+        if(_pwbMetricRisk(piece)&&!_pwbMetricSupported(piece))_pwbRemoved.push({path:path,claim:piece.trim()});
+        else if(piece.trim())kept.push(piece.trim());
+      });
+      return kept.join(' ').trim();
+    };
+    const _pwbWalk=function(value,path){
+      if(typeof value==='string')return _pwbScrubString(value,path);
+      if(Array.isArray(value))return value.map(function(x,i){return _pwbWalk(x,path+'['+i+']');});
+      if(value&&typeof value==='object')Object.keys(value).forEach(function(k){value[k]=_pwbWalk(value[k],path+'.'+k);});
+      return value;
+    };
+    [
+      ['meta_package',brief.meta_package],['opening_passage',brief.opening_passage],
+      ['ai_answer',brief.ai_answer],['quick_facts',brief.quick_facts],
+      ['paa_questions',brief.paa_questions],['citation_targets',brief.citation_targets],
+      ['page_blueprint',brief.page_blueprint],['conclusion',brief.conclusion]
+    ].forEach(function(pair){if(pair[1]!=null)brief[pair[0]]=_pwbWalk(pair[1],pair[0]);});
+    if(_pwbRemoved.length){
+      const removedClaims=Array.from(new Set(_pwbRemoved.map(function(x){return x.claim;}).filter(Boolean)));
+      brief.fact_safety.verify_first=Array.from(new Set(brief.fact_safety.verify_first.concat(removedClaims)));
+      brief.fact_safety.output_validation={passed:false,removed_count:removedClaims.length,removed_claims:removedClaims,rule:'Unsupported quantified/performance claims were removed from paste-ready fields. Verify them in Claims & Facts, then regenerate.'};
+    }else{
+      brief.fact_safety.output_validation={passed:true,removed_count:0,removed_claims:[],rule:'Every quantified/performance claim in paste-ready fields matched a VERIFIED Claims & Facts record, or no such claim was generated.'};
+    }
+    // Do not trust the model's own `verified_business_facts_used` declaration. Rebuild it from
+    // the final scrubbed paste-ready payload and the canonical VERIFIED ledger.
+    const _pwbPasteCorpus=_pwbFactNorm(JSON.stringify({meta_package:brief.meta_package,opening_passage:brief.opening_passage,ai_answer:brief.ai_answer,quick_facts:brief.quick_facts,paa_questions:brief.paa_questions,citation_targets:brief.citation_targets,page_blueprint:brief.page_blueprint,conclusion:brief.conclusion}));
+    brief.fact_safety.verified_business_facts_used=_pwbVerified.filter(function(claim){
+      const n=_pwbFactNorm(claim); if(!n)return false;
+      if(_pwbPasteCorpus.indexOf(n)>=0)return true;
+      const words=n.split(' ').filter(function(x){return x.length>3;});
+      const hits=words.filter(function(x){return _pwbPasteCorpus.indexOf(x)>=0;}).length;
+      return hits>=Math.min(5,Math.max(3,Math.ceil(words.length*.65)));
+    });
+    brief.fact_safety.verified_claims_loaded=_pwbVerified.length;
+    brief.fact_safety.verified_claims_used=brief.fact_safety.verified_business_facts_used.length;
+    brief.fact_safety.enforcement='server-verified-after-generation';
     if(_recSafe){
       brief.tracker_recommendation=_recSafe;
       if(_recSafe.decision==='CREATE_SPOKE'&&!brief.hub_spoke_plan)brief.hub_spoke_plan={role:'new_spoke',hub_url:(brief.content_decision&&brief.content_decision.closest_existing_url)||'none',spoke_url_or_slug:(brief.meta_package&&brief.meta_package.url_slug)||_recSafe.suggested_slug||'insufficient_data',hub_to_spoke_anchor:_recSafe.primary_query||keyword,hub_to_spoke_placement:'Add on the closest relevant hub section after the spoke is published.',spoke_to_hub_anchor:'Use the hub page topic as a natural anchor.',spoke_to_hub_placement:'Add in the opening context or next-step section of the spoke.',complete_when:'Both links resolve, the intended URL is indexed, and its own GSC Pages + Queries data is measured.'};
@@ -57303,9 +57417,14 @@ If no unanchored claims found, return empty array: []`;
     } catch(_e) {}
     const _ecVerified = _ecClaimsRows.filter(function(r){return String(r.status||'').toUpperCase()==='VERIFIED';}).map(function(r){return _ecNorm(r.claim_text);}).filter(Boolean);
     const _ecBlocked = _ecClaimsRows.filter(function(r){return ['UNVERIFIED','FALSE','NOT_APPLICABLE'].includes(String(r.status||'').toUpperCase());}).map(function(r){return {claim:_ecNorm(r.claim_text),status:String(r.status||'').toUpperCase()};}).filter(function(r){return r.claim;});
-    // Owner context is explicit ground truth; live HTML is first-party page evidence. Competitor
-    // snippets are intentionally NOT included here.
-    const _ecGround = _ecNorm(_ecBrandContext + '\n' + _ecLiveHtml + '\n' + _ecVerified.join('\n'));
+    // Existing live HTML proves that wording is present, not that a business/performance claim is
+    // true. Keep separate evidence grounds so an old unsupported claim cannot verify itself.
+    // Competitor snippets are intentionally never included.
+    const _ecObservedGround = _ecNorm(_ecBrandContext + '\n' + _ecLiveHtml + '\n' + _ecVerified.join('\n'));
+    const _ecVerifiedGround = _ecNorm(_ecVerified.join('\n'));
+    const _ecHighRiskMetric = function(v){
+      return /(?:\b\d+(?:\.\d+)?\s*%|\b\d+(?:\.\d+)?\s*[x×](?=\s|$)|\b\d[\d,]*(?:\+|k\+?)?\s+(?:(?:monthly|manual|documented)\s+)?(?:clients?|customers?|websites?|sites?|projects?|recover(?:y|ies)|cases?|penalt(?:y|ies)|businesses?)\b|\b(?:success|recovery|improvement|conversion|traffic)\s+rate\b|\b(?:average|documented|guaranteed)\s+(?:recovery|result)[^.]{0,60}\b\d+\s+days?\b|\bwithin\s+\d+\s+days?\b|\b\d+\s*\+?\s*years?\b|\$\s*\d[\d,.]*)/i.test(String(v||''));
+    };
 
     const _ecSignals = function(txt){
       var n=_ecNorm(txt), a=[];
@@ -57333,12 +57452,23 @@ If no unanchored claims found, return empty array: []`;
     };
     const _ecSupported = function(claim){
       var n=_ecNorm(claim); if(!n) return false;
-      if(_ecGround.indexOf(n)>=0) return true;
+      // Quantified/outcome claims require an explicit VERIFIED ledger record. Presence on the
+      // current page or in generated text is never sufficient evidence.
+      if(_ecHighRiskMetric(claim)){
+        if(_ecVerifiedGround.indexOf(n)>=0)return true;
+        return _ecVerified.some(function(v){
+          if(!v)return false;
+          var a=n.split(' ').filter(function(x){return x.length>3;}), b=new Set(v.split(' '));
+          var overlap=a.filter(function(x){return b.has(x);}).length;
+          return overlap>=Math.min(5,Math.max(3,Math.ceil(a.length*.65)));
+        });
+      }
+      if(_ecObservedGround.indexOf(n)>=0) return true;
       var sig=_ecSignals(n);
       if(sig.length){
         // A generated sentence can combine several verified facts with new prose. Require every
         // sensitive fact category in that sentence to be independently present in first-party evidence.
-        return sig.every(function(x){ return x[1].test(_ecGround); });
+        return sig.every(function(x){ return x[1].test(_ecObservedGround); });
       }
       return _ecVerified.some(function(v){ return v && (v.indexOf(n)>=0 || n.indexOf(v)>=0); });
     };
@@ -57401,6 +57531,12 @@ If no unanchored claims found, return empty array: []`;
       return t;
     };
     const _ecRiskPatterns = [
+      /\b\d+(?:\.\d+)?\s*%[^.!?\n]{0,140}/gi,
+      /\b\d+(?:\.\d+)?\s*[x×](?=\s|$)[^.!?\n]{0,140}/gi,
+      /\b\d[\d,]*(?:\+|k\+?)?\s+(?:(?:monthly|manual|documented)\s+)?(?:clients?|customers?|websites?|sites?|projects?|recover(?:y|ies)|cases?|penalt(?:y|ies)|businesses?)\b[^.!?\n]{0,140}/gi,
+      /\b(?:success|recovery|improvement|conversion|traffic)\s+rate\b[^.!?\n]{0,140}/gi,
+      /\b(?:average|documented|guaranteed)\s+(?:recovery|result)[^.!?\n]{0,100}\b\d+\s+days?\b[^.!?\n]{0,80}/gi,
+      /\bwithin\s+\d+\s+days?\b[^.!?\n]{0,120}/gi,
       /\b(?:licensed|insured|certified)\b[^.!?\n]{0,120}/gi,
       /\b(?:same[- ]day|immediate dispatch|rapid dispatch|\d+\s*(?:-|to)\s*\d+\s*minute|\d+\s*minute|response time|dispatch|live calls?|answers? live|strategically stationed)\b[^.!?\n]{0,160}/gi,
       /\b(?:flat roof|emergency tarping|urgent tarping|active leak containment|active leak mitigation|stop active leaks?)\b[^.!?\n]{0,160}/gi,
@@ -57445,7 +57581,7 @@ If no unanchored claims found, return empty array: []`;
       var combined=[item.title,item.action,item.trigger].filter(Boolean).join(' ');
       var _dateMatches=combined.match(/last reviewed\s*:?\s*(?:[a-z]+\s+)?20\d{2}/gi)||[];
       var unsupported=_ecUnsupported(combined);
-      _dateMatches.forEach(function(d){ if(_ecGround.indexOf(_ecNorm(d))<0) unsupported.push(d); });
+      _dateMatches.forEach(function(d){ if(_ecObservedGround.indexOf(_ecNorm(d))<0) unsupported.push(d); });
       unsupported=Array.from(new Set(unsupported));
       if(unsupported.length){
         var original=String(item.action||'').replace(/──\s*READY-TO-PASTE[^\n]*──/gi,'').trim();
@@ -57609,8 +57745,30 @@ If no unanchored claims found, return empty array: []`;
       }
     } catch(_vfErr) { console.warn('[verify-first-opportunities] skipped:', _vfErr && _vfErr.message); }
 
+    // V340 regression guard: inspect risky claims that are already present on the scanned page.
+    // Their presence proves only that they were published, not that they are true. Put every
+    // unsupported quantified/outcome claim into SOURCE BRIEF so it cannot silently disappear.
+    try{
+      var _liveText=String(_ecLiveHtml||'')
+        .replace(/<script\b[\s\S]*?<\/script>/gi,' ').replace(/<style\b[\s\S]*?<\/style>/gi,' ')
+        .replace(/<[^>]+>/g,'. ').replace(/&[a-z0-9#]+;/gi,' ').replace(/\s+/g,' ').trim();
+      var _liveMetricClaims=_liveText.split(/(?<=[.!?])\s+/).map(function(x){return x.trim();})
+        .filter(function(x){return x.length>=12&&x.length<=320&&_ecHighRiskMetric(x)&&!_ecSupported(x);})
+        .slice(0,12);
+      _liveMetricClaims=Array.from(new Set(_liveMetricClaims));
+      if(_liveMetricClaims.length){
+        snapshot.source_suggestions=snapshot.source_suggestions||[];
+        var _existingSourceClaims=_ecNorm(snapshot.source_suggestions.map(function(x){return x&&x.claim||'';}).join('\n'));
+        _liveMetricClaims.forEach(function(claim){
+          if(_existingSourceClaims.indexOf(_ecNorm(claim))>=0)return;
+          snapshot.source_suggestions.push({priority:'HIGH',claim:claim,why:'This quantified or outcome claim appears on the live page but has no matching VERIFIED Claims & Facts record. Page presence is not proof. Verify the named source/evidence or remove/qualify the claim.',sources:[],requires_verification:true,ready_to_paste:false});
+        });
+        snapshot._live_claims_requiring_verification=_liveMetricClaims;
+      }
+    }catch(_liveClaimErr){console.warn('[live-claim-verification-v340] skipped:',_liveClaimErr&&_liveClaimErr.message);}
+
     snapshot._evidence_claims_enforced = true;
-    snapshot._evidence_claims_source = 'live_html+brand_context+verified_claims';
+    snapshot._evidence_claims_source = 'verified_claims_required_for_metrics;live_html_is_observation_only';
   } catch(_ecErr) { console.warn('[evidence-claims-enforcement-v2] skipped:', _ecErr && _ecErr.message); }
 
   // 6. Save snapshot
