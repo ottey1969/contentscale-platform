@@ -266,7 +266,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-27-CANONICAL-v319';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-27-CANONICAL-v327';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 const CONTENTSCALE_BUILD_CHANGES = [
   'tracker-delta-brief-regression-lock',
@@ -502,7 +502,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-09-27-CANONICAL-v319',
+  build: 'CS-2026-09-27-CANONICAL-v327',
   built_date: '2026-09-25',
   ceo_private: true,
   ceo_public: true,
@@ -3493,7 +3493,12 @@ app.post('/api/tracker-client/:token/pages/:pageId/brief-action/resolve', async 
     if(_trackerBriefFrameOnly(action))return res.status(400).json({success:false,error:'This is framing/context, not a resolvable implementation action.'});
 
     let resolution=null;
-    if(decision==='verify'){
+    const keywordSettingAction=/target a real keyword/i.test(String(action.title||''))&&/contact us/i.test(_trackerActionText(action));
+    if(decision==='verify'&&keywordSettingAction){
+      const chosen=String(page.keyword||'').trim();
+      if(!chosen||/^contact\s+us$/i.test(chosen))return res.status(409).json({success:false,verified:false,error:'Choose a specific brand or local target keyword in the page card first. No scan was run.'});
+      resolution={decision:'AUTO_VERIFIED_SETTING',reason:'Tracker target keyword is '+chosen+' (changed from the generic contact us target). Current keyword setting verified; no new search scan or citation evidence claimed.',resolved_at:new Date().toISOString()};
+    }else if(decision==='verify'){
       const liveResp=await fetch(page.url,{headers:{'User-Agent':'Mozilla/5.0 (compatible; ContentScale/1.0)'},signal:AbortSignal.timeout(15000)});
       if(!liveResp.ok)return res.status(502).json({success:false,error:'Could not fetch current live page: HTTP '+liveResp.status});
       const liveHtml=await liveResp.text();
@@ -4293,7 +4298,14 @@ app.patch('/api/tracker-client/:token/pages/:pageId/keyword', async (req, res) =
     const own = await pool.query('SELECT id FROM tracker_pages WHERE id=$1 AND tracker_client_id=$2', [req.params.pageId, cr.rows[0].id]);
     if (!own.rows.length) return res.status(403).json({ success: false, error: 'Not your page' });
     const { keyword } = req.body;
-    await pool.query('UPDATE tracker_pages SET keyword=$1 WHERE id=$2', [keyword||null, req.params.pageId]);
+    const current=await pool.query('SELECT keyword,brief_content FROM tracker_pages WHERE id=$1',[req.params.pageId]);
+    const previous=String(current.rows[0]&&current.rows[0].keyword||'').trim();
+    let savedBrief={};try{savedBrief=typeof current.rows[0].brief_content==='string'?JSON.parse(current.rows[0].brief_content||'{}'):(current.rows[0].brief_content||{});}catch(_e){}
+    if(previous&&previous.toLowerCase()!==String(keyword||'').trim().toLowerCase()&&savedBrief&&Object.keys(savedBrief).length){
+      if(!savedBrief.source_keyword)savedBrief.source_keyword=previous;
+      savedBrief.keyword_changed_after_brief=true;
+    }
+    await pool.query('UPDATE tracker_pages SET keyword=$1,brief_content=$2 WHERE id=$3', [keyword||null,Object.keys(savedBrief).length?JSON.stringify(savedBrief):current.rows[0].brief_content,req.params.pageId]);
     res.json({ success: true });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
@@ -4392,7 +4404,7 @@ app.get('/api/tracker-client/:token/latest-briefs', async (req, res) => {
       return {
         type: 'brief_ready',
         url: p.url,
-        keyword: p.keyword || p.gsc_keyword || '',
+        keyword: bc.source_keyword || ((Array.isArray(bc.items)?bc.items:[]).some(x=>/target a real keyword/i.test(String(x.title||''))&&/contact us/i.test(String(x.action||''))&&String(p.keyword||'').toLowerCase()!=='contact us')?'[historical query not recorded; action refers to contact us]':(p.keyword||p.gsc_keyword||'')),
         position: bc.position != null ? bc.position : p.google_position,
         aio_cited: p.ai_google_overview_cited != null ? !!p.ai_google_overview_cited : false,
         perp_cited: p.ai_perplexity_cited != null ? !!p.ai_perplexity_cited : false,
@@ -4882,7 +4894,7 @@ app.post('/api/tracker-client/:token/page/:pageId/brief-mode', async (req, res) 
 // v300 REGRESSION INVARIANT: REMAINING_ACTIONS_HAVE_VERIFY_OVERRIDE_REJECT_BUTTONS=true; PER_ACTION_VERIFY_FETCHES_LIVE_AND_CHECKS_ONLY_SELECTED_ACTION=true; OVERRIDE_REQUIRES_REASON=true; REJECT_REQUIRES_REASON=true; MANUAL_RESOLUTIONS_PERSIST_IN_BRIEF_HISTORY=true; PER_ACTION_RESOLUTION_NEVER_RUNS_FULL_SCAN=true; PER_ACTION_RESOLUTION_SENDS_NO_CLIENT_EMAIL=true; ZERO_REMAINING_AFTER_MANUAL_RESOLUTION_CLOSES_CYCLE=true
 // v301 REGRESSION INVARIANT: FINAL_REMAINING_ACTION_RESOLUTION_SENDS_ONE_IMPLEMENTATION_EMAIL=true; INTERMEDIATE_ACTION_RESOLUTION_SENDS_NO_EMAIL=true; COMPLETION_EMAIL_STATES_BRIEF_CHANGE_WAS_FOUND_AND_RESOLVED=true; COMPLETION_EMAIL_RUNS_NO_SCAN=true; NEW_BRIEF_DELTA_EMAIL_REMAINS_SEPARATE=true; PROOF_HISTORY_RECORDS_COMPLETION_EMAIL=true
 // v302 REGRESSION INVARIANT: REVIEWED_BRIEF_PLUS_SAVED_PREPUBLICATION_CHECKPOINT_NEXT_ACTION_IS_CHECK_CURRENT_LIVE=true; VERIFY_LIVE_PENDING_NEVER_SHOWS_OPEN_BRIEF=true; VERIFY_LIVE_PENDING_HIDES_FULL_BRIEF_BUTTON=true; VERIFY_LIVE_PENDING_HIDES_MANUAL_SCAN=true; ORANGE_STATUS_SAYS_WAITING_FOR_LIVE_VERIFICATION=true; CHECK_CURRENT_LIVE_VERIFIES_ONLY_EXISTING_OPEN_ACTIONS=true
-// v319 REGRESSION INVARIANT: VERIFY_LIVE_PENDING_SHOWS_BRIEF_BUTTON=true; VERIFY_LIVE_PENDING_BRIEF_BUTTON_DISABLED_GREY=true; VERIFY_LIVE_PENDING_SHOWS_SCAN_BUTTON=true; VERIFY_LIVE_PENDING_SCAN_BUTTON_DISABLED_GREY=true; VERIFY_LIVE_PENDING_ONLY_ACTIVE_PRIMARY_ACTION_IS_CHECK_CURRENT_LIVE=true; VERIFY_LIVE_PENDING_IS_NOT_A_CONTENT_CHANGE_STATE=true; NO_FULL_SCAN_BEFORE_LIVE_VERIFICATION=true
+// v327 REGRESSION INVARIANT: VERIFY_LIVE_PENDING_SHOWS_BRIEF_BUTTON=true; VERIFY_LIVE_PENDING_BRIEF_BUTTON_DISABLED_GREY=true; VERIFY_LIVE_PENDING_SHOWS_SCAN_BUTTON=true; VERIFY_LIVE_PENDING_SCAN_BUTTON_DISABLED_GREY=true; VERIFY_LIVE_PENDING_ONLY_ACTIVE_PRIMARY_ACTION_IS_CHECK_CURRENT_LIVE=true; VERIFY_LIVE_PENDING_IS_NOT_A_CONTENT_CHANGE_STATE=true; NO_FULL_SCAN_BEFORE_LIVE_VERIFICATION=true
 // ── Owner Question Hub — persistent client-owned knowledge gaps ────────────────
 // Unanswered questions never disappear. Refresh only adds, merges, or strengthens them.
 async function _ensureTrackerOwnerQuestions(){
@@ -17005,7 +17017,7 @@ async function startServer() {
   }
 
 console.log('────────────────────────────────────────');
-console.log('[ContentScale] CS-2026-09-27-CANONICAL-v319');
+console.log('[ContentScale] CS-2026-09-27-CANONICAL-v327');
 console.log('[ContentScale] Build check: /api/build-info');
 console.log('[ContentScale] Base URL: ' + (process.env.BASE_URL || 'https://app.contentscale.site'));
 console.log('────────────────────────────────────────');
@@ -21678,7 +21690,7 @@ function _ceoMainWebsiteUrl(input){
 // action must target this CEO endpoint.
 app.post('/api/ceo-report/start',async(req,res)=>{
   let ceoEntry='unknown',ceoUrl='',lastStage='REQUEST';
-  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-27-CANONICAL-v319');
+  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-27-CANONICAL-v327');
   try{
     lastStage='DB_SETUP';
     console.log('[ceo-report] stage=DB_SETUP');
@@ -21772,10 +21784,10 @@ ContentScale`;
     return res.json({success:true,entry_mode:entry,token,selected_page:selected,ceo_report_token:reportToken,ceo_report_url:reportUrl,delivery_email:delivery,updates_opt_in:updatesOptIn});
   }catch(e){
     const msg=String((e&&e.message)||e||'CEO Prospect Report generation failed');
-    console.error('[ceo-report] FAILED build=CS-2026-09-27-CANONICAL-v319 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
+    console.error('[ceo-report] FAILED build=CS-2026-09-27-CANONICAL-v327 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
     console.error('[ceo-report] ERROR: '+msg);
     if(e&&e.stack)console.error(e.stack);
-    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-27-CANONICAL-v319'});
+    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-27-CANONICAL-v327'});
     try{res.end();}catch(_){}
   }
 });
@@ -44466,7 +44478,8 @@ function _buildBriefData(p) {
   return {
     page_id: p.id,
     url: p.url || '',
-    keyword: p.keyword || p.gsc_keyword || '',
+    keyword: (function(){var b={};try{b=typeof p.brief_content==='string'?JSON.parse(p.brief_content||'{}'):(p.brief_content||{});}catch(e){}var legacy=(Array.isArray(b.items)?b.items:[]).some(function(x){return /target a real keyword/i.test(String(x.title||''))&&/contact us/i.test(String(x.action||''))&&String(p.keyword||'').toLowerCase()!=='contact us';});return b.source_keyword||(legacy?'[historical query not recorded; action refers to contact us]':(p.keyword||p.gsc_keyword||''));})(),
+    current_tracker_keyword: p.keyword || '',
     domain: DOMAIN,
     position: p.google_position || p.gsc_position || null,
     aio_cited: !!p.ai_google_overview_cited,
@@ -45971,7 +45984,7 @@ function openRemainingActions(pageId){
         +'<div style="font-size:11px;font-weight:900;color:#fde68a;">'+(i+1)+'. '+esc(x.title||'Remaining action')+'</div>'
         +'<div style="font-size:11px;line-height:1.6;color:#cbd5e1;margin-top:5px;">'+esc(x.action||x.passage||x.body||x.what||x.issue||'')+'</div>'
         +'<div style="display:flex;gap:7px;flex-wrap:wrap;margin-top:10px;">'
-        +'<button onclick="resolveRemainingAction('+pageId+',&quot;'+r.bucket+'&quot;,'+r.index+',&quot;verify&quot;,this)" style="background:#052e16;border:1px solid #22c55e;color:#bbf7d0;border-radius:6px;padding:5px 9px;font-size:10px;font-weight:900;cursor:pointer;">✓ Done — verify live</button>'
+        +'<button onclick="resolveRemainingAction('+pageId+',&quot;'+r.bucket+'&quot;,'+r.index+',&quot;verify&quot;,this)" style="background:#052e16;border:1px solid #22c55e;color:#bbf7d0;border-radius:6px;padding:5px 9px;font-size:10px;font-weight:900;cursor:pointer;">'+(/target a real keyword/i.test(String(x.title||''))?'✓ Verify Tracker keyword':'✓ Done — verify live')+'</button>'
         +'<button onclick="resolveRemainingAction('+pageId+',&quot;'+r.bucket+'&quot;,'+r.index+',&quot;override&quot;,this)" style="background:#172554;border:1px solid #3b82f6;color:#bfdbfe;border-radius:6px;padding:5px 9px;font-size:10px;font-weight:900;cursor:pointer;">Override — mark complete</button>'
         +'<button onclick="resolveRemainingAction('+pageId+',&quot;'+r.bucket+'&quot;,'+r.index+',&quot;reject&quot;,this)" style="background:#2a0a0a;border:1px solid #ef4444;color:#fca5a5;border-radius:6px;padding:5px 9px;font-size:10px;font-weight:900;cursor:pointer;">Reject / N/A</button>'
         +'</div></div>';
@@ -46003,7 +46016,7 @@ async function resolveRemainingAction(pageId,bucket,index,decision,btn){
   }
 
   var oldText=btn&&btn.textContent;
-  if(btn){btn.disabled=true;btn.textContent=decision==='verify'?'Verifying live…':'Saving…';}
+  if(btn){btn.disabled=true;btn.textContent=decision==='verify'&&/target a real keyword/i.test(String(currentAction.title||''))?'Checking keyword…':decision==='verify'?'Verifying live…':'Saving…';}
   try{
     var r=await fetch('/api/tracker-client/'+TOKEN+'/pages/'+pageId+'/brief-action/resolve',{
       method:'POST',
@@ -46017,7 +46030,7 @@ async function resolveRemainingAction(pageId,bucket,index,decision,btn){
     toast(
       d.remaining_actions===0
         ? 'All remaining actions resolved — current cycle closed.'
-        : (decision==='verify'?'Action verified on live page.':decision==='override'?'Manual override saved.':'Action rejected / marked N/A.')+' '+d.remaining_actions+' remaining.',
+        : (decision==='verify'&&/target a real keyword/i.test(String(currentAction.title||''))?'Tracker keyword verified without a scan.':decision==='verify'?'Action verified on live page.':decision==='override'?'Manual override saved.':'Action rejected / marked N/A.')+' '+d.remaining_actions+' remaining.',
       '#4ade80'
     );
     await loadPages();
@@ -46476,7 +46489,8 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
     _currentBriefPageId = data.page_id || null;
     if (data.page_id) _lastBriefData[data.page_id] = data;
     document.getElementById('cbUrl').textContent = data.url || '';
-    document.getElementById('cbKw').textContent = data.keyword ? 'Keyword: ' + data.keyword : '';
+    var _oldContactAction=(data.passages||[]).some(function(x){return /target a real keyword/i.test(String(x.title||''))&&/contact us/i.test(String(x.action||''));});
+    document.getElementById('cbKw').textContent = data.current_tracker_keyword&&data.keyword!==data.current_tracker_keyword ? 'Historical Brief query: '+data.keyword+' · Current Tracker keyword: '+data.current_tracker_keyword+' · No new scan' : (data.keyword ? 'Keyword: ' + data.keyword : '');
     document.getElementById('cbSteps').style.display = '';
     document.getElementById('cbProgressBar').style.width = '0%';
     document.getElementById('cbResult').classList.remove('show');
