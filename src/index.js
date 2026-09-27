@@ -266,7 +266,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-27-CANONICAL-v336';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-27-CANONICAL-v339';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 const CONTENTSCALE_BUILD_CHANGES = [
   'tracker-delta-brief-regression-lock',
@@ -274,7 +274,9 @@ const CONTENTSCALE_BUILD_CHANGES = [
   'prewrite-expand-existing-handoff',
   'v259-regression-contract',
   'tracker-prewrite-visible-handoff',
-  'link-health-presence-vs-suggestions'
+  'link-health-presence-vs-suggestions',
+  'case-study-live-brief-verification-v339',
+  'admin-auth-safe-logging-v339'
 ];
 console.log('[ContentScale] BUILD=' + CONTENTSCALE_BUILD_ID + ' BOOT=' + CONTENTSCALE_BOOT_AT);
 console.log('[ContentScale] CHANGES=' + CONTENTSCALE_BUILD_CHANGES.join(','));
@@ -502,8 +504,8 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-09-27-CANONICAL-v336',
-  built_date: '2026-09-25',
+  build: 'CS-2026-09-27-CANONICAL-v339',
+  built_date: '2026-09-27',
   ceo_private: true,
   ceo_public: true,
   ceo_private_public_same_engine: true,
@@ -532,7 +534,7 @@ app.get('/api/build-info',(req,res)=>{
 app.get('/api/regression-contract',(req,res)=>{
   const src=fs.readFileSync(__filename,'utf8');
   const checks={
-    canonical_build:/CANONICAL-v262/.test(CONTENTSCALE_BUILD_INFO.build),
+    canonical_build:CONTENTSCALE_BUILD_INFO.build===CONTENTSCALE_BUILD_ID,
     ceo_first:CONTENTSCALE_BUILD_INFO.ceo_private&&CONTENTSCALE_BUILD_INFO.ceo_public&&CONTENTSCALE_BUILD_INFO.quickscan_other_page_only,
     audit20_discovery:!!CONTENTSCALE_BUILD_INFO.audit20_discovery,
     tracker_delta_guard:src.includes('V256 generic DELTA guard')&&src.includes('implementation_complete=_briefNow.outstanding_actions===0'),
@@ -16931,7 +16933,7 @@ freelancerTotal = parseInt(flAll.rows[0].count) || 0;
 }
 res.setHeader('Cache-Control','no-store, no-cache, must-revalidate');
 res.setHeader('X-ContentScale-Build',CONTENTSCALE_BUILD_ID);
-res.json({ status: 'running', build: CONTENTSCALE_BUILD_ID, boot: CONTENTSCALE_BOOT_AT, database: db, puppeteer: browserInstance ? 'ready' : 'not started', version: 'elite-v4-fixed-v3', email: process.env.BREVO_API_KEY ? 'brevo' : 'not configured', counts: { leaderboardTotal, leaderboardApproved, freelancerTotal } });
+res.json({ status: 'running', build: CONTENTSCALE_BUILD_ID, boot: CONTENTSCALE_BOOT_AT, database: db, puppeteer: browserInstance ? 'ready' : 'not started', version: CONTENTSCALE_BUILD_ID, email: process.env.BREVO_API_KEY ? 'brevo' : 'not configured', counts: { leaderboardTotal, leaderboardApproved, freelancerTotal } });
 });
 app.use((err, req, res, next) => {
 console.error('Server Error:', err.message);
@@ -17040,7 +17042,7 @@ async function startServer() {
   }
 
 console.log('────────────────────────────────────────');
-console.log('[ContentScale] CS-2026-09-27-CANONICAL-v336');
+console.log('[ContentScale] CS-2026-09-27-CANONICAL-v339');
 console.log('[ContentScale] Build check: /api/build-info');
 console.log('[ContentScale] Base URL: ' + (process.env.BASE_URL || 'https://app.contentscale.site'));
 console.log('────────────────────────────────────────');
@@ -21704,7 +21706,7 @@ function _ceoMainWebsiteUrl(input){
 // action must target this CEO endpoint.
 app.post('/api/ceo-report/start',async(req,res)=>{
   let ceoEntry='unknown',ceoUrl='',lastStage='REQUEST';
-  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-27-CANONICAL-v336');
+  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-27-CANONICAL-v339');
   try{
     lastStage='DB_SETUP';
     console.log('[ceo-report] stage=DB_SETUP');
@@ -21798,10 +21800,10 @@ ContentScale`;
     return res.json({success:true,entry_mode:entry,token,selected_page:selected,ceo_report_token:reportToken,ceo_report_url:reportUrl,delivery_email:delivery,updates_opt_in:updatesOptIn});
   }catch(e){
     const msg=String((e&&e.message)||e||'CEO Prospect Report generation failed');
-    console.error('[ceo-report] FAILED build=CS-2026-09-27-CANONICAL-v336 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
+    console.error('[ceo-report] FAILED build=CS-2026-09-27-CANONICAL-v339 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
     console.error('[ceo-report] ERROR: '+msg);
     if(e&&e.stack)console.error(e.stack);
-    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-27-CANONICAL-v336'});
+    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-27-CANONICAL-v339'});
     try{res.end();}catch(_){}
   }
 });
