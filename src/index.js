@@ -266,7 +266,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-27-CANONICAL-v330';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-27-CANONICAL-v333';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 const CONTENTSCALE_BUILD_CHANGES = [
   'tracker-delta-brief-regression-lock',
@@ -502,7 +502,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-09-27-CANONICAL-v330',
+  build: 'CS-2026-09-27-CANONICAL-v333',
   built_date: '2026-09-25',
   ceo_private: true,
   ceo_public: true,
@@ -3719,10 +3719,12 @@ app.patch('/api/tracker-client/:token/pages/:pageId/done', async (req, res) => {
       const briefAt=page.brief_evaluated_at?Date.parse(page.brief_evaluated_at):0;
       const preAt=pre.rows.length&&pre.rows[0].captured_at?Date.parse(pre.rows[0].captured_at):0;
 
-      // Prefer a checkpoint captured for THIS Brief. If the checkpoint predates the current Brief,
-      // it belongs to an older cycle and must not be used as proof for the current change.
+      // The protected live checkpoint belongs to this revision cycle. A scan of that
+      // same live URL after capture must not discard it: the user must scan the old
+      // live version before writing/publishing the replacement. The live comparison
+      // below still requires an actual change before implementation can be verified.
       let before=null;
-      if(pre.rows.length && (!briefAt || (preAt&&preAt>=briefAt))){
+      if(pre.rows.length){
         before=pre.rows[0];comparisonSource='current_prepublication_checkpoint';
       }else if(priorPublished.rows.length){
         // Recovery path for a real client who already published the new HTML: compare against the
@@ -4895,7 +4897,7 @@ app.post('/api/tracker-client/:token/page/:pageId/brief-mode', async (req, res) 
 // v300 REGRESSION INVARIANT: REMAINING_ACTIONS_HAVE_VERIFY_OVERRIDE_REJECT_BUTTONS=true; PER_ACTION_VERIFY_FETCHES_LIVE_AND_CHECKS_ONLY_SELECTED_ACTION=true; OVERRIDE_REQUIRES_REASON=true; REJECT_REQUIRES_REASON=true; MANUAL_RESOLUTIONS_PERSIST_IN_BRIEF_HISTORY=true; PER_ACTION_RESOLUTION_NEVER_RUNS_FULL_SCAN=true; PER_ACTION_RESOLUTION_SENDS_NO_CLIENT_EMAIL=true; ZERO_REMAINING_AFTER_MANUAL_RESOLUTION_CLOSES_CYCLE=true
 // v301 REGRESSION INVARIANT: FINAL_REMAINING_ACTION_RESOLUTION_SENDS_ONE_IMPLEMENTATION_EMAIL=true; INTERMEDIATE_ACTION_RESOLUTION_SENDS_NO_EMAIL=true; COMPLETION_EMAIL_STATES_BRIEF_CHANGE_WAS_FOUND_AND_RESOLVED=true; COMPLETION_EMAIL_RUNS_NO_SCAN=true; NEW_BRIEF_DELTA_EMAIL_REMAINS_SEPARATE=true; PROOF_HISTORY_RECORDS_COMPLETION_EMAIL=true
 // v302 REGRESSION INVARIANT: REVIEWED_BRIEF_PLUS_SAVED_PREPUBLICATION_CHECKPOINT_NEXT_ACTION_IS_CHECK_CURRENT_LIVE=true; VERIFY_LIVE_PENDING_NEVER_SHOWS_OPEN_BRIEF=true; VERIFY_LIVE_PENDING_HIDES_FULL_BRIEF_BUTTON=true; VERIFY_LIVE_PENDING_HIDES_MANUAL_SCAN=true; ORANGE_STATUS_SAYS_WAITING_FOR_LIVE_VERIFICATION=true; CHECK_CURRENT_LIVE_VERIFIES_ONLY_EXISTING_OPEN_ACTIONS=true
-// v330 REGRESSION INVARIANT: VERIFY_LIVE_PENDING_SHOWS_BRIEF_BUTTON=true; VERIFY_LIVE_PENDING_BRIEF_BUTTON_DISABLED_GREY=true; VERIFY_LIVE_PENDING_SHOWS_SCAN_BUTTON=true; VERIFY_LIVE_PENDING_SCAN_BUTTON_DISABLED_GREY=true; VERIFY_LIVE_PENDING_ONLY_ACTIVE_PRIMARY_ACTION_IS_CHECK_CURRENT_LIVE=true; VERIFY_LIVE_PENDING_IS_NOT_A_CONTENT_CHANGE_STATE=true; NO_FULL_SCAN_BEFORE_LIVE_VERIFICATION=true
+// v333 REGRESSION INVARIANT: VERIFY_LIVE_PENDING_SHOWS_BRIEF_BUTTON=true; VERIFY_LIVE_PENDING_BRIEF_BUTTON_DISABLED_GREY=true; VERIFY_LIVE_PENDING_SHOWS_SCAN_BUTTON=true; VERIFY_LIVE_PENDING_SCAN_BUTTON_DISABLED_GREY=true; VERIFY_LIVE_PENDING_ONLY_ACTIVE_PRIMARY_ACTION_IS_CHECK_CURRENT_LIVE=true; VERIFY_LIVE_PENDING_IS_NOT_A_CONTENT_CHANGE_STATE=true; NO_FULL_SCAN_BEFORE_LIVE_VERIFICATION=true
 // ── Owner Question Hub — persistent client-owned knowledge gaps ────────────────
 // Unanswered questions never disappear. Refresh only adds, merges, or strengthens them.
 async function _ensureTrackerOwnerQuestions(){
@@ -17018,7 +17020,7 @@ async function startServer() {
   }
 
 console.log('────────────────────────────────────────');
-console.log('[ContentScale] CS-2026-09-27-CANONICAL-v330');
+console.log('[ContentScale] CS-2026-09-27-CANONICAL-v333');
 console.log('[ContentScale] Build check: /api/build-info');
 console.log('[ContentScale] Base URL: ' + (process.env.BASE_URL || 'https://app.contentscale.site'));
 console.log('────────────────────────────────────────');
@@ -21691,7 +21693,7 @@ function _ceoMainWebsiteUrl(input){
 // action must target this CEO endpoint.
 app.post('/api/ceo-report/start',async(req,res)=>{
   let ceoEntry='unknown',ceoUrl='',lastStage='REQUEST';
-  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-27-CANONICAL-v330');
+  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-27-CANONICAL-v333');
   try{
     lastStage='DB_SETUP';
     console.log('[ceo-report] stage=DB_SETUP');
@@ -21785,10 +21787,10 @@ ContentScale`;
     return res.json({success:true,entry_mode:entry,token,selected_page:selected,ceo_report_token:reportToken,ceo_report_url:reportUrl,delivery_email:delivery,updates_opt_in:updatesOptIn});
   }catch(e){
     const msg=String((e&&e.message)||e||'CEO Prospect Report generation failed');
-    console.error('[ceo-report] FAILED build=CS-2026-09-27-CANONICAL-v330 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
+    console.error('[ceo-report] FAILED build=CS-2026-09-27-CANONICAL-v333 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
     console.error('[ceo-report] ERROR: '+msg);
     if(e&&e.stack)console.error(e.stack);
-    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-27-CANONICAL-v330'});
+    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-27-CANONICAL-v333'});
     try{res.end();}catch(_){}
   }
 });
@@ -43595,11 +43597,17 @@ function _trackerNextActionState(p,isDone,lastCheckedRaw,nextEvidence){
   if(implStatus==='no_change'&&p.brief_content){
     return {code:'PUBLISH_VERIFY',label:'LIVE CHANGE NOT DETECTED · IMPLEMENTATION STILL OPEN',detail:'The previous live check found no published change. Publish the revised page, then check the current live version again. Do not run a new scan to clear this issue.',color:'#fca5a5',border:'#ef4444',bg:'#2a0a0a',button:'Check current live',buttonAction:'verifyCurrentBriefLive('+p.id+',this)'};
   }
+  if(bool(p.case_study_active)&&!isDone&&bool(p.prepublication_checkpoint_saved)&&outstanding>0&&evaluatedAt>0&&p.current_revision_candidate_at&&implStatus!=='verifying'){
+    return {code:'VERIFY_LIVE_PENDING',label:'REVISED HTML SAVED · CHECK THE PUBLISHED PAGE',detail:'The previous live version and revised HTML are protected. After publishing the revision in WordPress, click Check current live. ContentScale fetches the URL and compares it with the protected version; saving in WordPress does not trigger this check automatically.',color:'#fde68a',border:'#f59e0b',bg:'#291b05',button:'Check current live',buttonAction:'verifyCurrentBriefLive('+p.id+',this)'};
+  }
   if(freshHtml||!lastCheckedRaw){
     return {code:'SCAN',label:'SCAN REQUIRED',detail:freshHtml?'New HTML was added after the last scan. Scan the live page before deciding whether the Brief changes.':'This page has not been scanned yet. Run the scan to establish the current evidence-backed delta.',color:'#7dd3fc',border:'#0284c7',bg:'#082f49',button:'Scan now',buttonAction:'checkPage('+p.id+')'};
   }
   if(bool(p.case_study_active)&&!isDone&&bool(p.prepublication_checkpoint_saved)&&Number(p.revision_cycle||1)===1&&evaluatedAt>=checkpointAt&&outstanding>0&&briefReviewed&&!p.current_revision_candidate_at&&!p.current_revision_published_at){
     return {code:'CASE_UPLOAD_HTML',label:'BRIEF REVIEWED · UPLOAD REVISED HTML',detail:'The current live page has been scanned and its Brief reviewed. Upload the complete revised HTML for the same URL; ContentScale preserves the candidate and scans it. Then publish and check the live URL.',color:'#a5f3fc',border:'#0891b2',bg:'#083344',button:'Upload revised HTML',buttonAction:'openHtmlUpload('+p.id+',true)'};
+  }
+  if(bool(p.case_study_active)&&!isDone&&bool(p.prepublication_checkpoint_saved)&&outstanding>0&&evaluatedAt>0&&!p.current_revision_candidate_at&&implStatus!=='verifying'){
+    return {code:'VERIFY_OR_UPLOAD',label:'BRIEF HAS '+outstanding+' OPEN ACTION'+(outstanding===1?'':'S')+' · CHECK WHAT IS LIVE',detail:'If you already published revised HTML in WordPress, click Check current live now. Otherwise review the Brief and upload the revised HTML before publishing. Saving on WordPress does not verify the live page automatically.',color:'#fde68a',border:'#f59e0b',bg:'#291b05',button:'Check current live',buttonAction:'verifyCurrentBriefLive('+p.id+',this)'};
   }
   if(currentBriefVerified){
     return {code:'MONITOR',label:'NO NEW ACTION · CURRENT BRIEF VERIFIED',detail:evidence+' The current Brief belongs to the live version that was compared and verified. Completed actions are closed; wait for fresh evidence before opening another delta.',color:'#86efac',border:'#16a34a',bg:'#052e16',button:'',buttonAction:''};
@@ -43724,7 +43732,7 @@ function _trackerImplementationCheckState(p,isDone,nextState){
         color:'#bfdbfe',border:'#3b82f6',bg:'#0b1f3a'};
     }
     return {code:'READY_VERIFY',label:'CHECKPOINT SAVED · WAITING FOR PUBLISHED LIVE',
-      detail:'The old live version is protected. Publish the new HTML on the website, then click “Verify published live”. ContentScale will fetch the URL and compare old live vs new live automatically.',
+      detail:'The old live version is protected. If the revised HTML is already published on the website, click “Check current live” in NEXT ACTION now. ContentScale then fetches the URL and compares old live with new live. WordPress publication alone does not start verification.',
       color:'#a5f3fc',border:'#0891b2',bg:'#083344'};
   }
 
@@ -44107,7 +44115,7 @@ function renderPages() {
     // when the current scan says NEW_DELTA or IMPLEMENT. NO ACTION means no accidental edits.
     var _nextActionState = _trackerNextActionState(p,isDone,lastCheckedRaw,nextEvidence);
     var _nextActionCode = String(_nextActionState&&_nextActionState.code||'');
-    var _nextAllowsContentChange = (_nextActionCode==='NEW_DELTA'||_nextActionCode==='IMPLEMENT'||_nextActionCode==='CASE_UPLOAD_HTML');
+    var _nextAllowsContentChange = (_nextActionCode==='NEW_DELTA'||_nextActionCode==='IMPLEMENT'||_nextActionCode==='CASE_UPLOAD_HTML'||_nextActionCode==='VERIFY_OR_UPLOAD'||_nextActionCode==='PUBLISH_VERIFY');
     var _nextWorkflowGuard = !!isDone || !!p.case_study_active;
     var _nextLockContentChanges = _nextWorkflowGuard && !_nextAllowsContentChange;
     var _nextNoAction = _nextActionCode==='MONITOR';
@@ -44263,6 +44271,7 @@ function renderPages() {
           : '<button data-tour="new-revision" onclick="event.stopPropagation();openNewHtmlRevision(' + p.id + ')" style="background:#172554;border:1px solid #3b82f6;border-radius:7px;color:#bfdbfe;cursor:pointer;font-size:10px;padding:5px 10px;font-weight:900;" title="NEXT ACTION found open work. Start the next improvement cycle without overwriting history.">+ New HTML revision</button>')
         : '')
       + (p.case_study_active && !isDone && Number(p.revision_cycle||1)>1 && (!_nextWorkflowGuard||_nextAllowsContentChange) ? '<button onclick="event.stopPropagation();openHtmlUpload(' + p.id + ',true)" style="background:#172554;border:1px solid #3b82f6;border-radius:7px;color:#bfdbfe;cursor:pointer;font-size:10px;padding:5px 10px;font-weight:800;" title="Update the candidate HTML for revision '+Number(p.revision_cycle||1)+'">Edit revision HTML</button>' : '')
+      + (p.case_study_active && !isDone && Number(p.revision_cycle||1)===1 && (_nextActionCode==='VERIFY_OR_UPLOAD'||_nextActionCode==='PUBLISH_VERIFY') && !p.current_revision_candidate_at ? '<button onclick="event.stopPropagation();openHtmlUpload(' + p.id + ',true)" style="background:#172554;border:1px solid #3b82f6;border-radius:7px;color:#bfdbfe;cursor:pointer;font-size:10px;padding:5px 10px;font-weight:800;" title="Optional: preserve the revised HTML as a candidate if it has not been uploaded yet.">Upload revised HTML</button>' : '')
       + (p.case_study_active ? ((_evidenceCheckpointLock||_nextLockContentChanges)?'<button disabled style="background:#111827;border:1px solid #374151;border-radius:7px;color:#6b7280;cursor:not-allowed;font-size:10px;padding:5px 10px;font-weight:800;" title="'+(_nextNoAction?'No new action was found. No publication checkpoint is needed.':'Content changes are locked until NEXT ACTION authorizes work.')+'">Live HTML locked — not needed</button>':'<button onclick="event.stopPropagation();savePrePublicationCheckpoint(' + p.id + ')" style="background:'+(p.prepublication_checkpoint_saved?'#052e16':'#422006')+';border:1px solid '+(p.prepublication_checkpoint_saved?'#16a34a':'#f59e0b')+';border-radius:7px;color:'+(p.prepublication_checkpoint_saved?'#86efac':'#fde68a')+';cursor:pointer;font-size:10px;padding:5px 10px;font-weight:800;" title="'+(p.prepublication_checkpoint_saved?'The live version before publishing is protected (full HTML + SHA-256 hash). Your locked baseline is separate and unaffected.':'Step 1 before publishing changes: save the CURRENT live HTML as immutable proof. The protected case-study baseline remains separate and cannot be overwritten. After publishing, use Step 2 to scan/verify the new live version and compare it with this checkpoint.')+'">'+(p.prepublication_checkpoint_saved?'\u2713 Live version saved':'1 · Save current live HTML')+'</button>') : '')
       + (p.case_study_active && p.prepublication_checkpoint_saved && !isDone && !_evidenceCheckpointLock && _nextActionCode==='VERIFY_LIVE_PENDING' ? '<button onclick="event.stopPropagation();verifyCurrentBriefLive(' + p.id + ',this)" style="background:#052e16;border:1px solid #22c55e;border-radius:7px;color:#bbf7d0;cursor:pointer;font-size:10px;padding:5px 11px;font-weight:900;box-shadow:0 0 0 1px rgba(34,197,94,.12);" title="Fetch the current live URL and verify only the existing open Brief actions. No normal scan and no new Brief.">Check current live</button>' : '')
       + (p.case_study_active ? '<button onclick="openCaseStudy(' + p.id + ')" style="background:#082f49;border:1px solid #0284c7;border-radius:7px;color:#7dd3fc;cursor:pointer;font-size:11px;padding:5px 10px;font-weight:800;" title="Open protected baseline and proof history">Proof &amp; History</button>' : '')
@@ -44491,6 +44500,24 @@ function _buildBriefData(p) {
   } catch(e) {}
   // Show a brief whenever there is one saved (brief_content) or recommendations exist
   if ((!Array.isArray(recs) || !recs.length) && !p.brief_content) return null;
+  // Reconcile old, already-saved Brief prose against the authoritative manual
+  // evidence before showing it. This only changes the display copy; history is kept.
+  var _ev=p.ai_manual_evidence||{};if(typeof _ev==='string'){try{_ev=JSON.parse(_ev)}catch(e){_ev={}}}
+  var _aioExact=!!(_ev.google_aio&&!_ev.google_aio.is_cleared&&_ev.google_aio.exact_page_cited);
+  var _perpExact=!!(_ev.perplexity&&!_ev.perplexity.is_cleared&&_ev.perplexity.exact_page_cited);
+  var _reconcile=function(items){return Array.isArray(items)?items.map(function(orig){
+    if(!orig||typeof orig!=='object')return orig;
+    var it=Object.assign({},orig);
+    ['action','trigger','expected_impact','our_gap'].forEach(function(k){if(typeof it[k]!=='string')return;
+      var v=it[k];
+      if(_aioExact)v=v.replace(/(?:the current manual google (?:aio|ai overview)(?: check)?|google (?:aio|ai overview)(?: check)?)[^.\n]{0,110}(?:did not cite|does not cite|not cited|no citation)[^.\n]*\.?/gi,'Google AIO manually verified an exact-page citation for the checked answer.');
+      if(_perpExact)v=v.replace(/perplexity[^.\n]{0,100}(?:did not cite|does not cite|not cited|no citation)[^.\n]*\.?/gi,'Perplexity manually verified an exact-page citation for the checked answer.');
+      it[k]=v;
+    });
+    if(Array.isArray(it.comparison_table)&&/\bai citations? tracker\b/i.test(String(p.keyword||p.gsc_keyword||'')))it.comparison_table=it.comparison_table.filter(function(r){return !/\b(?:scite\.ai|citely\.ai)\b/i.test(String(r&&r.competitor||''));});
+    return it;
+  }):items;};
+  recs=_reconcile(recs);gb=_reconcile(gb);
   return {
     page_id: p.id,
     url: p.url || '',
@@ -56995,7 +57022,7 @@ GOAL: Rank #1 for "${kw}" and capture the maximum clicks from ${gscImpr || 'the 
                 return {
                   competitor: h,
                   what_they_do_well: (g && g.what_they_do_well) || (r.title ? ('Cited by AI Overview for: "' + String(r.title).slice(0,80) + '"') : 'Cited by Google\\u2019s AI Overview as a source for this query.'),
-                  our_gap: (g && g.our_gap) || 'This page is not yet cited alongside this source for this query.',
+                  our_gap: (g && g.our_gap) || (snapshot.ai_google_overview_cited ? 'The checked answer already cites this exact page; compare the source coverage for a genuinely missing subtopic.' : 'This page was not cited alongside this source for the checked query.'),
                   what_to_do: (g && g.what_to_do) || 'Cover this source\\u2019s core point in a quotable 40\\u201360 word passage, in the first 30% of the page.'
                 };
               });
@@ -57320,6 +57347,12 @@ If no unanchored claims found, return empty array: []`;
         return n;
       }
       var t=String(txt||'');
+      // The current manual exact-page result outranks text invented by either brief model.
+      // Apply this to every action field, including the GSC competitor narrative.
+      t=t.replace(/the current manual google (?:aio|ai overview)(?: check)? did not cite (?:the )?(?:target )?(?:website|domain|page|exact page)[^.]*\.?/gi,
+        'The current manual Google AIO check VERIFIED an exact-page citation.');
+      t=t.replace(/(?:google (?:aio|ai overviews?)|aio)[^.\n]{0,100}(?:did not cite|does not cite|was not cited|is not cited|no citation)[^.\n]*\.?/gi,
+        'Google AIO manually VERIFIED an exact-page citation for the checked answer.');
       t=t.replace(/this page currently lacks visibility in (?:these )?ai summaries due to its low organic position\.?/gi,
         'This page already has verified Google AI Overview citation visibility; protect that win while expanding coverage to engines that are still missing.');
       t=t.replace(/(?:this|our) page currently has no visibility or citations in (?:these )?ai[- ]generated summaries\.?/gi,
@@ -57338,6 +57371,8 @@ If no unanchored claims found, return empty array: []`;
       t=t.replace(/this page currently has no visibility in ai overviews or perplexity[^.]*\.?/gi,
         'Google AIO is manually VERIFIED for the exact page, while Perplexity was manually checked and did not cite the target page in the checked answer.');
       if(snapshot.ai_perplexity_cited){
+        t=t.replace(/perplexity[^.\n]{0,100}(?:did not cite|does not cite|was not cited|is not cited|no citation)[^.\n]*\.?/gi,
+          'Perplexity manually VERIFIED an exact-page citation for the checked answer.');
         t=t.replace(/(?:this|the|our|target) page (?:is )?not among (?:the|them|those|perplexity)[^.]*\.?/gi,
           'Perplexity is manually VERIFIED as citing the exact target page.');
         t=t.replace(/(?:this|the|our|target) page[^.]{0,120}(?:lacks|has no|without)[^.]{0,100}(?:perplexity|citation coverage)[^.]*\.?/gi,
@@ -57491,6 +57526,15 @@ If no unanchored claims found, return empty array: []`;
     }
     if(Array.isArray(snapshot.gsc_brief)) {
         snapshot.gsc_brief=snapshot.gsc_brief.map(_ecEnforceItem);
+      // Academic reference databases may appear in organic results for the word
+      // "citation". They are not competitors for tracking citations to web pages.
+      if(/\bai citations? tracker\b/i.test(String(keyword||page.keyword||''))){
+        snapshot.gsc_brief.forEach(function(it){
+          if(!it)return;
+          if(Array.isArray(it.comparison_table))it.comparison_table=it.comparison_table.filter(function(row){return !/\b(?:scite\.ai|citely\.ai)\b/i.test(String(row&&row.competitor||''));});
+          if(typeof it.action==='string')it.action=it.action.split('\n').filter(function(line){return !/\b(?:scite\.ai|citely\.ai)\b/i.test(line);}).join('\n');
+        });
+      }
       if(typeof _onPage!=='undefined') snapshot.gsc_brief=snapshot.gsc_brief.filter(function(it){
         var t=String((it&&it.title)||'')+' '+String((it&&it.action)||'');
         if(_ecDuplicateAgainstHtml(it))return false;
