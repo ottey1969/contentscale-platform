@@ -266,7 +266,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-27-CANONICAL-v329';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-27-CANONICAL-v330';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 const CONTENTSCALE_BUILD_CHANGES = [
   'tracker-delta-brief-regression-lock',
@@ -502,7 +502,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-09-27-CANONICAL-v329',
+  build: 'CS-2026-09-27-CANONICAL-v330',
   built_date: '2026-09-25',
   ceo_private: true,
   ceo_public: true,
@@ -2458,9 +2458,10 @@ app.get('/api/tracker-client/:token', async (req, res) => {
       const _briefAt=_p.brief_evaluated_at?Date.parse(_p.brief_evaluated_at):0;
       _p.checkpoint_recovery_available=Object.keys(_p.case_study_versions||{}).some(function(k){return k.indexOf('published_implementation')===0;});
       _p.prepublication_checkpoint_at=_pre&&_pre.captured_at||null;
+      // A scan of the still-current live page may follow the checkpoint. It does not
+      // invalidate the protected pre-publication HTML; only a new revision cycle does.
       _p.prepublication_checkpoint_saved=!!(_pre
-        && Number(_vd.revision_cycle||1)===Number(_p.revision_cycle||1)
-        && (!_briefAt||(_preAt&&_preAt>=_briefAt)));
+        && Number(_vd.revision_cycle||1)===Number(_p.revision_cycle||1));
       _p.current_revision_published_at=_pub&&_pub.captured_at||null;
       _p.current_revision_candidate_at=_cand&&_cand.captured_at||null;
     });
@@ -4894,7 +4895,7 @@ app.post('/api/tracker-client/:token/page/:pageId/brief-mode', async (req, res) 
 // v300 REGRESSION INVARIANT: REMAINING_ACTIONS_HAVE_VERIFY_OVERRIDE_REJECT_BUTTONS=true; PER_ACTION_VERIFY_FETCHES_LIVE_AND_CHECKS_ONLY_SELECTED_ACTION=true; OVERRIDE_REQUIRES_REASON=true; REJECT_REQUIRES_REASON=true; MANUAL_RESOLUTIONS_PERSIST_IN_BRIEF_HISTORY=true; PER_ACTION_RESOLUTION_NEVER_RUNS_FULL_SCAN=true; PER_ACTION_RESOLUTION_SENDS_NO_CLIENT_EMAIL=true; ZERO_REMAINING_AFTER_MANUAL_RESOLUTION_CLOSES_CYCLE=true
 // v301 REGRESSION INVARIANT: FINAL_REMAINING_ACTION_RESOLUTION_SENDS_ONE_IMPLEMENTATION_EMAIL=true; INTERMEDIATE_ACTION_RESOLUTION_SENDS_NO_EMAIL=true; COMPLETION_EMAIL_STATES_BRIEF_CHANGE_WAS_FOUND_AND_RESOLVED=true; COMPLETION_EMAIL_RUNS_NO_SCAN=true; NEW_BRIEF_DELTA_EMAIL_REMAINS_SEPARATE=true; PROOF_HISTORY_RECORDS_COMPLETION_EMAIL=true
 // v302 REGRESSION INVARIANT: REVIEWED_BRIEF_PLUS_SAVED_PREPUBLICATION_CHECKPOINT_NEXT_ACTION_IS_CHECK_CURRENT_LIVE=true; VERIFY_LIVE_PENDING_NEVER_SHOWS_OPEN_BRIEF=true; VERIFY_LIVE_PENDING_HIDES_FULL_BRIEF_BUTTON=true; VERIFY_LIVE_PENDING_HIDES_MANUAL_SCAN=true; ORANGE_STATUS_SAYS_WAITING_FOR_LIVE_VERIFICATION=true; CHECK_CURRENT_LIVE_VERIFIES_ONLY_EXISTING_OPEN_ACTIONS=true
-// v329 REGRESSION INVARIANT: VERIFY_LIVE_PENDING_SHOWS_BRIEF_BUTTON=true; VERIFY_LIVE_PENDING_BRIEF_BUTTON_DISABLED_GREY=true; VERIFY_LIVE_PENDING_SHOWS_SCAN_BUTTON=true; VERIFY_LIVE_PENDING_SCAN_BUTTON_DISABLED_GREY=true; VERIFY_LIVE_PENDING_ONLY_ACTIVE_PRIMARY_ACTION_IS_CHECK_CURRENT_LIVE=true; VERIFY_LIVE_PENDING_IS_NOT_A_CONTENT_CHANGE_STATE=true; NO_FULL_SCAN_BEFORE_LIVE_VERIFICATION=true
+// v330 REGRESSION INVARIANT: VERIFY_LIVE_PENDING_SHOWS_BRIEF_BUTTON=true; VERIFY_LIVE_PENDING_BRIEF_BUTTON_DISABLED_GREY=true; VERIFY_LIVE_PENDING_SHOWS_SCAN_BUTTON=true; VERIFY_LIVE_PENDING_SCAN_BUTTON_DISABLED_GREY=true; VERIFY_LIVE_PENDING_ONLY_ACTIVE_PRIMARY_ACTION_IS_CHECK_CURRENT_LIVE=true; VERIFY_LIVE_PENDING_IS_NOT_A_CONTENT_CHANGE_STATE=true; NO_FULL_SCAN_BEFORE_LIVE_VERIFICATION=true
 // ── Owner Question Hub — persistent client-owned knowledge gaps ────────────────
 // Unanswered questions never disappear. Refresh only adds, merges, or strengthens them.
 async function _ensureTrackerOwnerQuestions(){
@@ -17017,7 +17018,7 @@ async function startServer() {
   }
 
 console.log('────────────────────────────────────────');
-console.log('[ContentScale] CS-2026-09-27-CANONICAL-v329');
+console.log('[ContentScale] CS-2026-09-27-CANONICAL-v330');
 console.log('[ContentScale] Build check: /api/build-info');
 console.log('[ContentScale] Base URL: ' + (process.env.BASE_URL || 'https://app.contentscale.site'));
 console.log('────────────────────────────────────────');
@@ -21690,7 +21691,7 @@ function _ceoMainWebsiteUrl(input){
 // action must target this CEO endpoint.
 app.post('/api/ceo-report/start',async(req,res)=>{
   let ceoEntry='unknown',ceoUrl='',lastStage='REQUEST';
-  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-27-CANONICAL-v329');
+  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-27-CANONICAL-v330');
   try{
     lastStage='DB_SETUP';
     console.log('[ceo-report] stage=DB_SETUP');
@@ -21784,10 +21785,10 @@ ContentScale`;
     return res.json({success:true,entry_mode:entry,token,selected_page:selected,ceo_report_token:reportToken,ceo_report_url:reportUrl,delivery_email:delivery,updates_opt_in:updatesOptIn});
   }catch(e){
     const msg=String((e&&e.message)||e||'CEO Prospect Report generation failed');
-    console.error('[ceo-report] FAILED build=CS-2026-09-27-CANONICAL-v329 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
+    console.error('[ceo-report] FAILED build=CS-2026-09-27-CANONICAL-v330 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
     console.error('[ceo-report] ERROR: '+msg);
     if(e&&e.stack)console.error(e.stack);
-    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-27-CANONICAL-v329'});
+    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-27-CANONICAL-v330'});
     try{res.end();}catch(_){}
   }
 });
@@ -43584,8 +43585,9 @@ function _trackerNextActionState(p,isDone,lastCheckedRaw,nextEvidence){
   if(bool(p.case_study_active)&&p.brief_content&&!bool(p.prepublication_checkpoint_saved)&&!bool(p.checkpoint_recovery_available)&&!currentBriefVerified){
     return {code:'SAVE_LIVE_FIRST',label:'ACTION NEEDED · SAVE THE CURRENT LIVE PAGE',detail:'The Tracker has no protected version to compare with the next publication. If the revised HTML is NOT live yet, save the current live page first, then publish the revised HTML and use Check current live. If it is already live, the earlier version cannot be proven retroactively; save the current page as the starting point for the next revision.',color:'#fde68a',border:'#f59e0b',bg:'#291b05',button:'1 · Save current live page',buttonAction:'savePrePublicationCheckpoint('+p.id+')'};
   }
-  if(bool(p.case_study_active)&&!isDone&&Number(p.revision_cycle||1)===1&&bool(p.prepublication_checkpoint_saved)&&!p.current_revision_candidate_at&&!p.current_revision_published_at&&!evaluatedAt){
-    return {code:'CASE_FIRST_CANDIDATE',label:'LIVE VERSION SAVED · UPLOAD YOUR FIRST PROPOSED HTML',detail:'The earlier live page is protected. Upload the complete proposed HTML for this same URL. Saving preserves it as the first revision candidate and starts its scan automatically. Review the resulting Brief before publishing.',color:'#a5f3fc',border:'#0891b2',bg:'#083344',button:'Upload proposed HTML',buttonAction:'openHtmlUpload('+p.id+',true)'};
+  var checkpointAt=p.prepublication_checkpoint_at?new Date(p.prepublication_checkpoint_at).getTime():0;
+  if(bool(p.case_study_active)&&!isDone&&Number(p.revision_cycle||1)===1&&bool(p.prepublication_checkpoint_saved)&&!p.current_revision_candidate_at&&!p.current_revision_published_at&&checkpointAt>0&&(!evaluatedAt||evaluatedAt<checkpointAt)){
+    return {code:'SCAN',label:'LIVE VERSION SAVED · SCAN THE CURRENT PAGE',detail:'The current live HTML is protected. Scan this same live URL now to establish a fresh Brief before preparing replacement HTML. Review the resulting actions, upload revised HTML, then check the published live page.',color:'#7dd3fc',border:'#0284c7',bg:'#082f49',button:'Scan current live',buttonAction:'checkPage('+p.id+')'};
   }
   if(implStatus==='live_changed_delta_remaining'&&outstanding>0)return {code:'REMAINING',label:'FIX ONLY '+outstanding+' REMAINING ACTION'+(outstanding===1?'':'S'),detail:'The published page was checked. Open only the remaining action list and resolve each item individually. The full Brief and Scan are locked for this correction loop.',color:'#fde68a',border:'#d97706',bg:'#241704',button:'Fix '+outstanding+' remaining action'+(outstanding===1?'':'s'),buttonAction:'openRemainingActions('+p.id+')'};
   if(implStatus==='live_same_checkpoint_delta_remaining')return {code:'REMAINING',label:'CURRENT LIVE PAGE CHECKED · BRIEF ACTIONS STILL OPEN',detail:'The live page was checked against the current Brief. The saved checkpoint matches it, so a before/after change cannot be proven. Resolve the remaining actions on the client page; no new scan is needed.',color:'#fde68a',border:'#d97706',bg:'#241704',button:'Fix remaining actions',buttonAction:'openRemainingActions('+p.id+')'};
@@ -43595,6 +43597,9 @@ function _trackerNextActionState(p,isDone,lastCheckedRaw,nextEvidence){
   }
   if(freshHtml||!lastCheckedRaw){
     return {code:'SCAN',label:'SCAN REQUIRED',detail:freshHtml?'New HTML was added after the last scan. Scan the live page before deciding whether the Brief changes.':'This page has not been scanned yet. Run the scan to establish the current evidence-backed delta.',color:'#7dd3fc',border:'#0284c7',bg:'#082f49',button:'Scan now',buttonAction:'checkPage('+p.id+')'};
+  }
+  if(bool(p.case_study_active)&&!isDone&&bool(p.prepublication_checkpoint_saved)&&Number(p.revision_cycle||1)===1&&evaluatedAt>=checkpointAt&&outstanding>0&&briefReviewed&&!p.current_revision_candidate_at&&!p.current_revision_published_at){
+    return {code:'CASE_UPLOAD_HTML',label:'BRIEF REVIEWED · UPLOAD REVISED HTML',detail:'The current live page has been scanned and its Brief reviewed. Upload the complete revised HTML for the same URL; ContentScale preserves the candidate and scans it. Then publish and check the live URL.',color:'#a5f3fc',border:'#0891b2',bg:'#083344',button:'Upload revised HTML',buttonAction:'openHtmlUpload('+p.id+',true)'};
   }
   if(currentBriefVerified){
     return {code:'MONITOR',label:'NO NEW ACTION · CURRENT BRIEF VERIFIED',detail:evidence+' The current Brief belongs to the live version that was compared and verified. Completed actions are closed; wait for fresh evidence before opening another delta.',color:'#86efac',border:'#16a34a',bg:'#052e16',button:'',buttonAction:''};
@@ -43663,8 +43668,11 @@ function _trackerImplementationCheckState(p,isDone,nextState){
   var _sameCycle=!!(_bid&&_vid&&_bid===_vid);
   var currentBriefVerified=status==='verified'&&(_sameCycle||(evaluatedAt>0&&(verifiedAt>=evaluatedAt||publishedAt>=evaluatedAt)));
 
-  if(nextState&&nextState.code==='CASE_FIRST_CANDIDATE'){
-    return {code:'AWAITING_FIRST_CANDIDATE',label:'LIVE VERSION SAVED · AWAITING PROPOSED HTML',detail:'Your original live page is protected. Upload the proposed HTML with the NEXT ACTION button; saving it starts the candidate scan automatically. Publish only after reviewing the new results.',color:'#a5f3fc',border:'#0891b2',bg:'#083344'};
+  if(nextState&&nextState.code==='SCAN'&&p.case_study_active&&p.prepublication_checkpoint_saved){
+    return {code:'AWAITING_BASELINE_SCAN',label:'LIVE VERSION SAVED · SCAN CURRENT PAGE',detail:'Your live page is protected. Scan it now to establish the actions before writing and uploading revised HTML.',color:'#7dd3fc',border:'#0284c7',bg:'#082f49'};
+  }
+  if(nextState&&nextState.code==='CASE_UPLOAD_HTML'){
+    return {code:'AWAITING_REVISED_HTML',label:'LIVE PAGE SCANNED · AWAITING REVISED HTML',detail:'The live page and current Brief are ready. Upload your revised HTML, then publish and verify the live URL.',color:'#a5f3fc',border:'#0891b2',bg:'#083344'};
   }
 
   if(status==='verifying'){
@@ -44099,7 +44107,7 @@ function renderPages() {
     // when the current scan says NEW_DELTA or IMPLEMENT. NO ACTION means no accidental edits.
     var _nextActionState = _trackerNextActionState(p,isDone,lastCheckedRaw,nextEvidence);
     var _nextActionCode = String(_nextActionState&&_nextActionState.code||'');
-    var _nextAllowsContentChange = (_nextActionCode==='NEW_DELTA'||_nextActionCode==='IMPLEMENT'||_nextActionCode==='CASE_FIRST_CANDIDATE');
+    var _nextAllowsContentChange = (_nextActionCode==='NEW_DELTA'||_nextActionCode==='IMPLEMENT'||_nextActionCode==='CASE_UPLOAD_HTML');
     var _nextWorkflowGuard = !!isDone || !!p.case_study_active;
     var _nextLockContentChanges = _nextWorkflowGuard && !_nextAllowsContentChange;
     var _nextNoAction = _nextActionCode==='MONITOR';
