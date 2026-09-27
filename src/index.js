@@ -266,7 +266,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-27-CANONICAL-v335';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-27-CANONICAL-v336';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 const CONTENTSCALE_BUILD_CHANGES = [
   'tracker-delta-brief-regression-lock',
@@ -502,7 +502,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-09-27-CANONICAL-v335',
+  build: 'CS-2026-09-27-CANONICAL-v336',
   built_date: '2026-09-25',
   ceo_private: true,
   ceo_public: true,
@@ -2225,15 +2225,18 @@ app.post('/api/tracker-client/:token/pages/:pageId/case-study/start',async(req,r
   const engineKeys=new Set(er.rows.map(x=>String(x.engine||'')));
   const queryEvidence=await pool.query("SELECT query,clicks,impressions,position,imported_at FROM tracker_gsc_queries WHERE tracker_client_id=$1 AND page_id=$2 AND evidence_scope='page_verified' ORDER BY impressions DESC,query LIMIT 500",[client.id,page.id]).catch(()=>({rows:[]}));
   const hasGscPage=[page.gsc_clicks,page.gsc_impressions,page.gsc_position].some(v=>v!==null&&v!==undefined);
+  // A successful exact-page GSC API response can legitimately contain no
+  // exposed query rows. Preserve that observed absence; never invent queries.
+  const verifiedZeroQueries=!queryEvidence.rows.length&&hasGscPage&&!!page.gsc_autofetch_checked_at;
   const baselineMissing=[];
   if(!String(client.email||'').trim())baselineMissing.push('Tracker client email');
   if(!hasGscPage)baselineMissing.push('GSC Pages data for this URL');
-  if(!queryEvidence.rows.length)baselineMissing.push('GSC Queries data for this URL');
+  if(!queryEvidence.rows.length&&!verifiedZeroQueries)baselineMissing.push('GSC Queries for this URL: import its page-filtered export or complete an exact-page GSC fetch');
   const missingEngines=requiredEngines.filter(x=>!engineKeys.has(x));
   if(missingEngines.length)baselineMissing.push('AI evidence: '+missingEngines.join(', '));
   if(baselineMissing.length)return res.status(409).json({success:false,baseline_not_ready:true,error:'Case-study baseline is not ready. Add: '+baselineMissing.join('; '),missing:baselineMissing,ai_checked:requiredEngines.length-missingEngines.length,ai_required:requiredEngines.length});
   const baselineAt=new Date();
-  const baseline={schema_version:3,source:'ContentScale case-study start',metric_snapshot_at:snap.checked_at||page.last_checked_at,html_captured_at:baselineAt.toISOString(),primary_query:query,google_position:snap.google_position==null?null:Number(snap.google_position),gsc_clicks:page.gsc_clicks==null?null:Number(page.gsc_clicks),gsc_impressions:page.gsc_impressions==null?null:Number(page.gsc_impressions),gsc_position:page.gsc_position==null?null:Number(page.gsc_position),gsc_queries:queryEvidence.rows,graaf_score:snap.score==null?(page.last_graaf_score==null?null:Number(page.last_graaf_score)):Number(snap.score),ai_evidence:engines,html_source:htmlSource,treatment_guardrail:'Preserve verified strengths; implement documented changes; compare only against this locked baseline.'};
+  const baseline={schema_version:3,source:'ContentScale case-study start',metric_snapshot_at:snap.checked_at||page.last_checked_at,html_captured_at:baselineAt.toISOString(),primary_query:query,google_position:snap.google_position==null?null:Number(snap.google_position),gsc_clicks:page.gsc_clicks==null?null:Number(page.gsc_clicks),gsc_impressions:page.gsc_impressions==null?null:Number(page.gsc_impressions),gsc_position:page.gsc_position==null?null:Number(page.gsc_position),gsc_queries:queryEvidence.rows,gsc_query_evidence_status:verifiedZeroQueries?'exact_page_fetch_zero_queries':'page_verified_queries',gsc_query_fetch_at:verifiedZeroQueries?page.gsc_autofetch_checked_at:null,graaf_score:snap.score==null?(page.last_graaf_score==null?null:Number(page.last_graaf_score)):Number(snap.score),ai_evidence:engines,html_source:htmlSource,treatment_guardrail:'Preserve verified strengths; implement documented changes; compare only against this locked baseline.'};
   const ins=await pool.query(`INSERT INTO tracker_case_studies (tracker_client_id,tracker_page_id,client_name,domain,canonical_url,primary_query,status,baseline_at,baseline_data,baseline_locked) VALUES($1,$2,$3,$4,$5,$6,'active',$7,$8::jsonb,TRUE) RETURNING *`,[client.id,page.id,client.name||client.domain,client.domain,_caseStudyNormUrl(page.url),query,baselineAt,JSON.stringify(baseline)]);
   const cs=ins.rows[0];
   await pool.query(`UPDATE tracker_pages SET check_frequency=$1,email_reminders=$2,ai_reminder_days=$3,
@@ -2243,7 +2246,7 @@ app.post('/api/tracker-client/:token/pages/:pageId/case-study/start',async(req,r
   await pool.query(`INSERT INTO tracker_case_study_events(case_study_id,tracker_page_id,event_type,event_at,source,event_data) SELECT $1,$2,'baseline_frozen',$3,'tracker_case_study_start',$4::jsonb WHERE NOT EXISTS(SELECT 1 FROM tracker_case_study_events WHERE case_study_id=$1 AND event_type='baseline_frozen')`,[cs.id,page.id,baselineAt,JSON.stringify(baseline)]);
   const version=await _caseStudyStoreContentVersion(client.id,page.id,'baseline_html',page.url,liveHtml,htmlSource,{purpose:'immutable_html_at_case_study_start',metric_snapshot_at:baseline.metric_snapshot_at,stable_content_hash:_caseStudyStableContentHash(liveHtml),revision_cycle:Number(page.revision_cycle||1)});
   await _caseStudyEventForPage(client.id,page.id,'case_study_started',{url:page.url,primary_query:query,baseline_locked:true,html_version_id:version&&version.id,five_engine_checks:Object.keys(engines).length}).catch(()=>{});
-  res.json({success:true,case_study:cs,html_captured:true,five_engine_checks:Object.keys(engines).length,monitoring_enabled:monitoringEnabled,check_frequency:frequency,email_reminders:emailReminders,ai_reminder_days:aiReminderDays,message:'Case study started. The complete GSC Pages + Queries, 5/5 AI evidence, current metrics and HTML are protected as the baseline. '+(monitoringEnabled?'Guided monitoring is on for this page only.':'Optional page monitoring remains off; protected case-study milestone reminders remain active.')});
+  res.json({success:true,case_study:cs,html_captured:true,five_engine_checks:Object.keys(engines).length,monitoring_enabled:monitoringEnabled,check_frequency:frequency,email_reminders:emailReminders,ai_reminder_days:aiReminderDays,message:'Case study started. GSC Pages, '+(verifiedZeroQueries?'a successful exact-page GSC query check with zero exposed queries':'verified page-level GSC Queries')+', 5/5 AI evidence, current metrics and HTML are protected as the baseline. '+(monitoringEnabled?'Guided monitoring is on for this page only.':'Optional page monitoring remains off; protected case-study milestone reminders remain active.')});
 }catch(e){console.error('[case-study-start]',e.message);res.status(500).json({success:false,error:e.message});}});
 
 // POST /pages/:pageId/baseline-gsc — per-URL baseline prep for a CASE STUDY (not monitoring).
@@ -2287,7 +2290,8 @@ app.post('/api/tracker-client/:token/pages/:pageId/baseline-gsc',async(req,res)=
   const gsc_fresh=ageDays!=null&&ageDays<=7;
   // Readiness recompute (mirrors GET /:token and case-study/start requirements).
   const hasGscPage=[page.gsc_clicks,page.gsc_impressions,page.gsc_position].some(v=>v!==null&&v!==undefined);
-  const hasQueries=coupled>0;
+  const verifiedZeroQueries=coupled===0&&hasGscPage&&(fetched||!!page.gsc_autofetch_checked_at);
+  const hasQueries=coupled>0||verifiedZeroQueries;
   const eng=await pool.query("SELECT DISTINCT engine FROM tracker_ai_evidence WHERE tracker_client_id=$1 AND page_id=$2 AND evidence_method='manual' AND COALESCE(is_cleared,FALSE)=FALSE",[client.id,page.id]).catch(()=>({rows:[]}));
   const engineKeys=new Set(eng.rows.map(x=>String(x.engine||'')));
   const aiChecked=['google_aio','chatgpt','perplexity','claude','copilot'].filter(x=>engineKeys.has(x)).length;
@@ -2300,7 +2304,7 @@ app.post('/api/tracker-client/:token/pages/:pageId/baseline-gsc',async(req,res)=
   if(!page.html_content&&!page.has_html_content)missing.push('HTML');
   const ready=missing.length===0;
   console.log('[baseline-gsc] page',page.id,'coupled',coupled,'queries · fresh',gsc_fresh,'· ready',ready);
-  return res.json({success:true,coupled_queries:coupled,gsc_fresh,gsc_age_days:ageDays,gsc_last_imported:newest?newest.toISOString():null,gsc_pages:hasGscPage,ai_checked:aiChecked,ai_required:5,ready,missing,evidence_scope:coupled?'page_verified':'missing',auto_fetched:fetched,fetch_note:fetchNote,note:gsc_fresh?'Verified per-page GSC evidence is fresh for this URL.':(ageDays==null?'No verified per-page GSC query data found — connect GSC or import that page’s Queries export.':'Verified per-page GSC evidence is '+ageDays+' days old — refresh GSC before locking the baseline.')});
+  return res.json({success:true,coupled_queries:coupled,queries_checked_zero:verifiedZeroQueries,gsc_fresh,gsc_age_days:ageDays,gsc_last_imported:newest?newest.toISOString():null,gsc_pages:hasGscPage,ai_checked:aiChecked,ai_required:5,ready,missing,evidence_scope:coupled?'page_verified':(verifiedZeroQueries?'exact_page_fetch_zero_queries':'missing'),auto_fetched:fetched,fetch_note:fetchNote,note:gsc_fresh?'Verified per-page GSC evidence is fresh for this URL.':(verifiedZeroQueries?'Exact-page GSC query fetch succeeded and returned zero exposed queries. The baseline records that limitation; no query rows are invented.':(ageDays==null?'No verified per-page GSC query data found — connect GSC or import that page’s Queries export.':'Verified per-page GSC evidence is '+ageDays+' days old — refresh GSC before locking the baseline.'))});
 }catch(e){console.error('[baseline-gsc]',e.message);res.status(500).json({success:false,error:e.message});}});
 
 // GET /api/tracker-client/:token — get client data + pages
@@ -2388,12 +2392,13 @@ app.get('/api/tracker-client/:token', async (req, res) => {
       const _hasGsc=[_p.gsc_clicks,_p.gsc_impressions,_p.gsc_position].some(v=>v!==null&&v!==undefined);
       const _missing=[];
       if(!_hasGsc)_missing.push('GSC Pages for this URL');
-      if(!_p.has_gsc_queries)_missing.push('GSC Queries assigned to this URL');
+      const _zeroQueriesVerified=!_p.has_gsc_queries&&_hasGsc&&!!_p.gsc_autofetch_checked_at;
+      if(!_p.has_gsc_queries&&!_zeroQueriesVerified)_missing.push('GSC Queries: exact-page fetch or page-filtered export needed');
       if(_aiN<5)_missing.push('AI checks '+_aiN+'/5');
       if(!_p.last_checked&&!_p.last_checked_at)_missing.push('completed page scan');
       if(!_p.has_html_content)_missing.push('captured page HTML');
       if(!String(client.email||'').trim())_missing.push('Tracker client email');
-      _p.case_study_readiness={ready:_missing.length===0,missing:_missing,ai_checked:_aiN,gsc_pages:_hasGsc,gsc_queries:!!_p.has_gsc_queries,scan:!!(_p.last_checked||_p.last_checked_at),html:!!_p.has_html_content,email:!!String(client.email||'').trim()};
+      _p.case_study_readiness={ready:_missing.length===0,missing:_missing,ai_checked:_aiN,gsc_pages:_hasGsc,gsc_queries:!!_p.has_gsc_queries||_zeroQueriesVerified,gsc_queries_zero_verified:_zeroQueriesVerified,scan:!!(_p.last_checked||_p.last_checked_at),html:!!_p.has_html_content,email:!!String(client.email||'').trim()};
     });
 
     // Activate and attach the real Perfect Roofing case study without changing its frozen baseline.
@@ -4898,7 +4903,7 @@ app.post('/api/tracker-client/:token/page/:pageId/brief-mode', async (req, res) 
 // v300 REGRESSION INVARIANT: REMAINING_ACTIONS_HAVE_VERIFY_OVERRIDE_REJECT_BUTTONS=true; PER_ACTION_VERIFY_FETCHES_LIVE_AND_CHECKS_ONLY_SELECTED_ACTION=true; OVERRIDE_REQUIRES_REASON=true; REJECT_REQUIRES_REASON=true; MANUAL_RESOLUTIONS_PERSIST_IN_BRIEF_HISTORY=true; PER_ACTION_RESOLUTION_NEVER_RUNS_FULL_SCAN=true; PER_ACTION_RESOLUTION_SENDS_NO_CLIENT_EMAIL=true; ZERO_REMAINING_AFTER_MANUAL_RESOLUTION_CLOSES_CYCLE=true
 // v301 REGRESSION INVARIANT: FINAL_REMAINING_ACTION_RESOLUTION_SENDS_ONE_IMPLEMENTATION_EMAIL=true; INTERMEDIATE_ACTION_RESOLUTION_SENDS_NO_EMAIL=true; COMPLETION_EMAIL_STATES_BRIEF_CHANGE_WAS_FOUND_AND_RESOLVED=true; COMPLETION_EMAIL_RUNS_NO_SCAN=true; NEW_BRIEF_DELTA_EMAIL_REMAINS_SEPARATE=true; PROOF_HISTORY_RECORDS_COMPLETION_EMAIL=true
 // v302 REGRESSION INVARIANT: REVIEWED_BRIEF_PLUS_SAVED_PREPUBLICATION_CHECKPOINT_NEXT_ACTION_IS_CHECK_CURRENT_LIVE=true; VERIFY_LIVE_PENDING_NEVER_SHOWS_OPEN_BRIEF=true; VERIFY_LIVE_PENDING_HIDES_FULL_BRIEF_BUTTON=true; VERIFY_LIVE_PENDING_HIDES_MANUAL_SCAN=true; ORANGE_STATUS_SAYS_WAITING_FOR_LIVE_VERIFICATION=true; CHECK_CURRENT_LIVE_VERIFIES_ONLY_EXISTING_OPEN_ACTIONS=true
-// v335 REGRESSION INVARIANT: VERIFY_LIVE_PENDING_SHOWS_BRIEF_BUTTON=true; VERIFY_LIVE_PENDING_BRIEF_BUTTON_DISABLED_GREY=true; VERIFY_LIVE_PENDING_SHOWS_SCAN_BUTTON=true; VERIFY_LIVE_PENDING_SCAN_BUTTON_DISABLED_GREY=true; VERIFY_LIVE_PENDING_ONLY_ACTIVE_PRIMARY_ACTION_IS_CHECK_CURRENT_LIVE=true; VERIFY_LIVE_PENDING_IS_NOT_A_CONTENT_CHANGE_STATE=true; NO_FULL_SCAN_BEFORE_LIVE_VERIFICATION=true
+// v336 REGRESSION INVARIANT: VERIFY_LIVE_PENDING_SHOWS_BRIEF_BUTTON=true; VERIFY_LIVE_PENDING_BRIEF_BUTTON_DISABLED_GREY=true; VERIFY_LIVE_PENDING_SHOWS_SCAN_BUTTON=true; VERIFY_LIVE_PENDING_SCAN_BUTTON_DISABLED_GREY=true; VERIFY_LIVE_PENDING_ONLY_ACTIVE_PRIMARY_ACTION_IS_CHECK_CURRENT_LIVE=true; VERIFY_LIVE_PENDING_IS_NOT_A_CONTENT_CHANGE_STATE=true; NO_FULL_SCAN_BEFORE_LIVE_VERIFICATION=true
 // ── Owner Question Hub — persistent client-owned knowledge gaps ────────────────
 // Unanswered questions never disappear. Refresh only adds, merges, or strengthens them.
 async function _ensureTrackerOwnerQuestions(){
@@ -17021,7 +17026,7 @@ async function startServer() {
   }
 
 console.log('────────────────────────────────────────');
-console.log('[ContentScale] CS-2026-09-27-CANONICAL-v335');
+console.log('[ContentScale] CS-2026-09-27-CANONICAL-v336');
 console.log('[ContentScale] Build check: /api/build-info');
 console.log('[ContentScale] Base URL: ' + (process.env.BASE_URL || 'https://app.contentscale.site'));
 console.log('────────────────────────────────────────');
@@ -21694,7 +21699,7 @@ function _ceoMainWebsiteUrl(input){
 // action must target this CEO endpoint.
 app.post('/api/ceo-report/start',async(req,res)=>{
   let ceoEntry='unknown',ceoUrl='',lastStage='REQUEST';
-  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-27-CANONICAL-v335');
+  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-27-CANONICAL-v336');
   try{
     lastStage='DB_SETUP';
     console.log('[ceo-report] stage=DB_SETUP');
@@ -21788,10 +21793,10 @@ ContentScale`;
     return res.json({success:true,entry_mode:entry,token,selected_page:selected,ceo_report_token:reportToken,ceo_report_url:reportUrl,delivery_email:delivery,updates_opt_in:updatesOptIn});
   }catch(e){
     const msg=String((e&&e.message)||e||'CEO Prospect Report generation failed');
-    console.error('[ceo-report] FAILED build=CS-2026-09-27-CANONICAL-v335 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
+    console.error('[ceo-report] FAILED build=CS-2026-09-27-CANONICAL-v336 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
     console.error('[ceo-report] ERROR: '+msg);
     if(e&&e.stack)console.error(e.stack);
-    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-27-CANONICAL-v335'});
+    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-27-CANONICAL-v336'});
     try{res.end();}catch(_){}
   }
 });
@@ -42047,9 +42052,9 @@ async function setBaselineGsc(pageId, ev) {
     var d = await api('/pages/' + pageId + '/baseline-gsc', 'POST');
     if (!d || !d.success) { toast((d && d.error) || 'Could not set baseline GSC', '#f87171'); return; }
     if (d.ready) {
-      toast('Baseline ready — ' + d.coupled_queries + ' verified page queries' + (d.gsc_fresh ? ' (fresh)' : (d.gsc_age_days != null ? ' (' + d.gsc_age_days + 'd old — consider refreshing GSC)' : '')) + '. You can start the case study.', '#4ade80');
+      toast(d.queries_checked_zero?'Baseline ready — exact-page GSC checked; zero exposed queries recorded. You can start the case study.':'Baseline ready — ' + d.coupled_queries + ' verified page queries' + (d.gsc_fresh ? ' (fresh)' : (d.gsc_age_days != null ? ' (' + d.gsc_age_days + 'd old — consider refreshing GSC)' : '')) + '. You can start the case study.', '#4ade80');
     } else {
-      toast('Found ' + d.coupled_queries + ' verified page queries. Still missing: ' + (d.missing || []).join(', '), '#f59e0b');
+      toast('Page GSC query check: ' + (d.queries_checked_zero?'zero exposed rows verified':d.coupled_queries+' verified rows') + '. Still missing: ' + (d.missing || []).join(', ') + (d.fetch_note?' ('+d.fetch_note+')':''), '#f59e0b');
     }
     if (typeof loadPages === 'function') loadPages();
   } catch (e) {
@@ -44015,7 +44020,7 @@ function renderPages() {
     var isDone = p.is_done === true || p.is_done === 't' || p.is_done === 'true' || p.is_done === 1;
     var isCaseStudy = p.case_study_active === true || p.case_study_active === 't' || p.case_study_active === 'true' || p.case_study_active === 1;
     var _csr=p.case_study_readiness||{},_csReady=!!_csr.ready,_csMissing=Array.isArray(_csr.missing)?_csr.missing:[];
-    var _caseReadyHtml=!isCaseStudy?'<div style="margin:8px 0 0;padding:9px 11px;border:1px solid '+(_csReady?'#16a34a':'#92400e')+';background:'+(_csReady?'#052e16':'#1c1407')+';border-radius:7px;font-size:10px;line-height:1.6;"><b style="color:'+(_csReady?'#86efac':'#fbbf24')+';">'+(_csReady?'READY — Start case study':'CASE STUDY WAITING FOR BASELINE')+'</b><div style="color:#cbd5e1;margin-top:3px;">'+(_csReady?'All required baseline evidence is present. Start before changing the live page.':('Complete first: '+_csMissing.join(' · ')))+'</div><div style="display:flex;gap:8px;flex-wrap:wrap;color:#94a3b8;margin-top:4px;"><span>'+(_csr.gsc_pages?'✓':'✕')+' GSC Pages</span><span>'+(_csr.gsc_queries?'✓':'✕')+' GSC Queries for URL</span><span>'+((Number(_csr.ai_checked)||0)===5?'✓':'✕')+' AI '+(Number(_csr.ai_checked)||0)+'/5</span><span>'+(_csr.scan?'✓':'✕')+' Page scan</span><span>'+(_csr.html?'✓':'✕')+' HTML</span><span>'+(_csr.email?'✓':'✕')+' Client email</span></div>'+(_csReady?'':'<button onclick="setBaselineGsc('+p.id+',event)" style="margin-top:8px;font-size:10px;font-weight:800;padding:5px 11px;border-radius:6px;background:#0a2540;border:1px solid #2563eb;color:#93c5fd;cursor:pointer;">&#x2b07; Fetch baseline GSC for this URL</button><span style="font-size:9px;color:#64748b;margin-left:8px;">fetches verified per-page GSC evidence &mdash; never copies site-wide queries</span>')+'</div>':'';
+    var _caseReadyHtml=!isCaseStudy?'<div style="margin:8px 0 0;padding:9px 11px;border:1px solid '+(_csReady?'#16a34a':'#92400e')+';background:'+(_csReady?'#052e16':'#1c1407')+';border-radius:7px;font-size:10px;line-height:1.6;"><b style="color:'+(_csReady?'#86efac':'#fbbf24')+';">'+(_csReady?'READY — Start case study':'CASE STUDY WAITING FOR BASELINE')+'</b><div style="color:#cbd5e1;margin-top:3px;">'+(_csReady?'All required baseline evidence is present. Start before changing the live page.':('Complete first: '+_csMissing.join(' · ')))+'</div><div style="display:flex;gap:8px;flex-wrap:wrap;color:#94a3b8;margin-top:4px;"><span>'+(_csr.gsc_pages?'✓':'✕')+' GSC Pages</span><span>'+(_csr.gsc_queries?'✓':'✕')+(_csr.gsc_queries_zero_verified?' GSC Queries checked · 0 shown':' GSC Queries for URL')+'</span><span>'+((Number(_csr.ai_checked)||0)===5?'✓':'✕')+' AI '+(Number(_csr.ai_checked)||0)+'/5</span><span>'+(_csr.scan?'✓':'✕')+' Page scan</span><span>'+(_csr.html?'✓':'✕')+' HTML</span><span>'+(_csr.email?'✓':'✕')+' Client email</span></div>'+(_csReady?'':'<button onclick="setBaselineGsc('+p.id+',event)" style="margin-top:8px;font-size:10px;font-weight:800;padding:5px 11px;border-radius:6px;background:#0a2540;border:1px solid #2563eb;color:#93c5fd;cursor:pointer;">&#x2b07; Fetch baseline GSC for this URL</button><span style="font-size:9px;color:#64748b;margin-left:8px;">fetches verified per-page GSC evidence &mdash; never copies site-wide queries</span>')+'</div>':'';
     var muteCompletedCard = isDone && !isCaseStudy;
     function _trackerUtc(v){try{return new Date(v).toISOString().replace('T',' ').replace(/\.\d{3}Z$/,' UTC');}catch(e){return '';}}
     var implementationAt = p.implementation_at ? _trackerUtc(p.implementation_at) : '';
