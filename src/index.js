@@ -266,7 +266,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-27-CANONICAL-v318';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-27-CANONICAL-v319';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 const CONTENTSCALE_BUILD_CHANGES = [
   'tracker-delta-brief-regression-lock',
@@ -502,7 +502,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-09-27-CANONICAL-v318',
+  build: 'CS-2026-09-27-CANONICAL-v319',
   built_date: '2026-09-25',
   ceo_private: true,
   ceo_public: true,
@@ -3758,10 +3758,19 @@ app.patch('/api/tracker-client/:token/pages/:pageId/done', async (req, res) => {
         const comparisonHash = prepublicationStableHash || prepublicationHashFull || previousHash;
 
         if (comparisonHash && (liveStableHash === comparisonHash || liveHashFull === comparisonHash || liveHash === comparisonHash)) {
-          // Nothing changed: do NOT spend scan/API credits and do NOT create fake proof.
-          await pool.query(`UPDATE tracker_pages SET is_done=FALSE, implementation_status='no_change', needs_html=FALSE WHERE id=$1`, [page.id]);
-          await _caseStudyEventForPage(client.id,page.id,'implementation_no_change',{url:page.url,verification:comparisonSource,stable_live_content_hash:liveStableHash},liveHashFull).catch(()=>{});
-          // v299: targeted live-delta check is silent to the client.
+          // The protected checkpoint may have been saved after publication. Identical hashes
+          // cannot establish a before/after change, but the CURRENT Brief actions can still
+          // be checked against the current live HTML without a full scan or false historical proof.
+          const liveActions=await _trackerVerifyOnlyCurrentBriefDelta(_verifyBrief,liveHtml);
+          const remaining=liveActions.remaining||[],completed=liveActions.completed||[];
+          const revisedBrief=JSON.parse(JSON.stringify(_verifyBrief||{}));
+          revisedBrief.items=remaining.filter(r=>r.bucket!=='gsc_brief').map(r=>r.item);
+          revisedBrief.gsc_brief=remaining.filter(r=>r.bucket==='gsc_brief').map(r=>r.item);
+          revisedBrief.outstanding_actions=remaining.length;
+          revisedBrief.implementation_complete=remaining.length===0;
+          revisedBrief.delta_verification={checked_at:new Date().toISOString(),method:liveActions.method,current_live_only:true,no_full_scan:true,prior_change_not_proven:true,completed_actions:completed.map(r=>({title:r.item&&r.item.title||'',evidence:r.evidence||''})),remaining_actions:remaining.map(r=>({title:r.item&&r.item.title||'',evidence:r.evidence||''}))};
+          await pool.query(`UPDATE tracker_pages SET brief_content=$1,is_done=$2,implementation_status=$3,implementation_verified_at=NOW(),needs_html=FALSE WHERE id=$4`,[JSON.stringify(revisedBrief),remaining.length===0,remaining.length?'live_same_checkpoint_delta_remaining':'live_same_checkpoint_actions_verified',page.id]);
+          await _caseStudyEventForPage(client.id,page.id,'current_live_actions_checked_no_prior_change',{url:page.url,comparison_source:comparisonSource,prior_change_not_proven:true,remaining_actions:remaining.length,completed_actions:completed.length},liveHashFull).catch(()=>{});
           return;
         }
 
@@ -4873,7 +4882,7 @@ app.post('/api/tracker-client/:token/page/:pageId/brief-mode', async (req, res) 
 // v300 REGRESSION INVARIANT: REMAINING_ACTIONS_HAVE_VERIFY_OVERRIDE_REJECT_BUTTONS=true; PER_ACTION_VERIFY_FETCHES_LIVE_AND_CHECKS_ONLY_SELECTED_ACTION=true; OVERRIDE_REQUIRES_REASON=true; REJECT_REQUIRES_REASON=true; MANUAL_RESOLUTIONS_PERSIST_IN_BRIEF_HISTORY=true; PER_ACTION_RESOLUTION_NEVER_RUNS_FULL_SCAN=true; PER_ACTION_RESOLUTION_SENDS_NO_CLIENT_EMAIL=true; ZERO_REMAINING_AFTER_MANUAL_RESOLUTION_CLOSES_CYCLE=true
 // v301 REGRESSION INVARIANT: FINAL_REMAINING_ACTION_RESOLUTION_SENDS_ONE_IMPLEMENTATION_EMAIL=true; INTERMEDIATE_ACTION_RESOLUTION_SENDS_NO_EMAIL=true; COMPLETION_EMAIL_STATES_BRIEF_CHANGE_WAS_FOUND_AND_RESOLVED=true; COMPLETION_EMAIL_RUNS_NO_SCAN=true; NEW_BRIEF_DELTA_EMAIL_REMAINS_SEPARATE=true; PROOF_HISTORY_RECORDS_COMPLETION_EMAIL=true
 // v302 REGRESSION INVARIANT: REVIEWED_BRIEF_PLUS_SAVED_PREPUBLICATION_CHECKPOINT_NEXT_ACTION_IS_CHECK_CURRENT_LIVE=true; VERIFY_LIVE_PENDING_NEVER_SHOWS_OPEN_BRIEF=true; VERIFY_LIVE_PENDING_HIDES_FULL_BRIEF_BUTTON=true; VERIFY_LIVE_PENDING_HIDES_MANUAL_SCAN=true; ORANGE_STATUS_SAYS_WAITING_FOR_LIVE_VERIFICATION=true; CHECK_CURRENT_LIVE_VERIFIES_ONLY_EXISTING_OPEN_ACTIONS=true
-// v318 REGRESSION INVARIANT: VERIFY_LIVE_PENDING_SHOWS_BRIEF_BUTTON=true; VERIFY_LIVE_PENDING_BRIEF_BUTTON_DISABLED_GREY=true; VERIFY_LIVE_PENDING_SHOWS_SCAN_BUTTON=true; VERIFY_LIVE_PENDING_SCAN_BUTTON_DISABLED_GREY=true; VERIFY_LIVE_PENDING_ONLY_ACTIVE_PRIMARY_ACTION_IS_CHECK_CURRENT_LIVE=true; VERIFY_LIVE_PENDING_IS_NOT_A_CONTENT_CHANGE_STATE=true; NO_FULL_SCAN_BEFORE_LIVE_VERIFICATION=true
+// v319 REGRESSION INVARIANT: VERIFY_LIVE_PENDING_SHOWS_BRIEF_BUTTON=true; VERIFY_LIVE_PENDING_BRIEF_BUTTON_DISABLED_GREY=true; VERIFY_LIVE_PENDING_SHOWS_SCAN_BUTTON=true; VERIFY_LIVE_PENDING_SCAN_BUTTON_DISABLED_GREY=true; VERIFY_LIVE_PENDING_ONLY_ACTIVE_PRIMARY_ACTION_IS_CHECK_CURRENT_LIVE=true; VERIFY_LIVE_PENDING_IS_NOT_A_CONTENT_CHANGE_STATE=true; NO_FULL_SCAN_BEFORE_LIVE_VERIFICATION=true
 // ── Owner Question Hub — persistent client-owned knowledge gaps ────────────────
 // Unanswered questions never disappear. Refresh only adds, merges, or strengthens them.
 async function _ensureTrackerOwnerQuestions(){
@@ -16996,7 +17005,7 @@ async function startServer() {
   }
 
 console.log('────────────────────────────────────────');
-console.log('[ContentScale] CS-2026-09-27-CANONICAL-v318');
+console.log('[ContentScale] CS-2026-09-27-CANONICAL-v319');
 console.log('[ContentScale] Build check: /api/build-info');
 console.log('[ContentScale] Base URL: ' + (process.env.BASE_URL || 'https://app.contentscale.site'));
 console.log('────────────────────────────────────────');
@@ -21669,7 +21678,7 @@ function _ceoMainWebsiteUrl(input){
 // action must target this CEO endpoint.
 app.post('/api/ceo-report/start',async(req,res)=>{
   let ceoEntry='unknown',ceoUrl='',lastStage='REQUEST';
-  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-27-CANONICAL-v318');
+  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-27-CANONICAL-v319');
   try{
     lastStage='DB_SETUP';
     console.log('[ceo-report] stage=DB_SETUP');
@@ -21763,10 +21772,10 @@ ContentScale`;
     return res.json({success:true,entry_mode:entry,token,selected_page:selected,ceo_report_token:reportToken,ceo_report_url:reportUrl,delivery_email:delivery,updates_opt_in:updatesOptIn});
   }catch(e){
     const msg=String((e&&e.message)||e||'CEO Prospect Report generation failed');
-    console.error('[ceo-report] FAILED build=CS-2026-09-27-CANONICAL-v318 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
+    console.error('[ceo-report] FAILED build=CS-2026-09-27-CANONICAL-v319 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
     console.error('[ceo-report] ERROR: '+msg);
     if(e&&e.stack)console.error(e.stack);
-    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-27-CANONICAL-v318'});
+    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-27-CANONICAL-v319'});
     try{res.end();}catch(_){}
   }
 });
@@ -43233,6 +43242,8 @@ async function loadPages() {
     var note='';
     if(status==='no_change')note='LIVE CHANGE NOT DETECTED — publish the revised HTML, then check the current live page again. No new scan needed.';
     else if(status==='live_changed_delta_remaining')note='BRIEF ACTIONS STILL MISSING — open the page, resolve the remaining actions, then check the published page again.';
+    else if(status==='live_same_checkpoint_delta_remaining')note='CURRENT LIVE PAGE CHECKED — Brief actions remain open; the saved checkpoint already matched this page.';
+    else if(status==='live_same_checkpoint_actions_verified')note='CURRENT LIVE ACTIONS VERIFIED — earlier before/after change cannot be proven from the saved checkpoint.';
     else if(status==='verifying')note='LIVE VERIFICATION IN PROGRESS — wait for the result; do not start a new scan.';
     var evidence=JSON.stringify({items:brief.items||[],gsc_brief:brief.gsc_brief||[]}).slice(0,120000);
     var geoIssue=String(p.url||'').toLowerCase().indexOf('perfectroofingteam.com/new-roof')>=0&&evidence.toLowerCase().indexOf('richmond')>=0;
@@ -43561,6 +43572,8 @@ function _trackerNextActionState(p,isDone,lastCheckedRaw,nextEvidence){
   if(bool(p.case_study_active)&&p.brief_content&&!bool(p.prepublication_checkpoint_saved)&&!bool(p.checkpoint_recovery_available)&&!currentBriefVerified){
     return {code:'SAVE_LIVE_FIRST',label:'ACTION NEEDED · SAVE THE CURRENT LIVE PAGE',detail:'The Tracker has no protected version to compare with the next publication. If the revised HTML is NOT live yet, save the current live page first, then publish the revised HTML and use Check current live. If it is already live, the earlier version cannot be proven retroactively; save the current page as the starting point for the next revision.',color:'#fde68a',border:'#f59e0b',bg:'#291b05',button:'1 · Save current live page',buttonAction:'savePrePublicationCheckpoint('+p.id+')'};
   }
+  if(implStatus==='live_same_checkpoint_delta_remaining')return {code:'REMAINING',label:'CURRENT LIVE PAGE CHECKED · BRIEF ACTIONS STILL OPEN',detail:'The live page was checked against the current Brief. The saved checkpoint matches it, so a before/after change cannot be proven. Resolve the remaining actions on the client page; no new scan is needed.',color:'#fde68a',border:'#d97706',bg:'#241704',button:'Fix remaining actions',buttonAction:'openRemainingActions('+p.id+')'};
+  if(implStatus==='live_same_checkpoint_actions_verified')return {code:'LIVE_ACTIONS',label:'CURRENT LIVE ACTIONS VERIFIED · EARLIER CHANGE UNPROVEN',detail:'The current live page satisfies the Brief actions. The saved checkpoint already matched this page, so the earlier publication date and before/after change cannot be proven. No new scan is needed.',color:'#86efac',border:'#16a34a',bg:'#052e16',button:'',buttonAction:''};
   if(implStatus==='no_change'&&p.brief_content){
     return {code:'PUBLISH_VERIFY',label:'LIVE CHANGE NOT DETECTED · IMPLEMENTATION STILL OPEN',detail:'The previous live check found no published change. Publish the revised page, then check the current live version again. Do not run a new scan to clear this issue.',color:'#fca5a5',border:'#ef4444',bg:'#2a0a0a',button:'Check current live',buttonAction:'verifyCurrentBriefLive('+p.id+',this)'};
   }
@@ -43639,6 +43652,8 @@ function _trackerImplementationCheckState(p,isDone,nextState){
       detail:'ContentScale is fetching the live URL, comparing it with the previous protected live version and checking only the existing open actions. No normal scan is being run.',
       color:'#fde68a',border:'#f59e0b',bg:'#291b05'};
   }
+  if(status==='live_same_checkpoint_delta_remaining')return {code:'PARTIAL',label:'CURRENT LIVE CHECKED · ACTIONS STILL OPEN',detail:'The current live page was checked. The protected checkpoint already matched it, so no earlier change can be proven. Resolve the remaining actions.',color:'#fde68a',border:'#d97706',bg:'#241704'};
+  if(status==='live_same_checkpoint_actions_verified')return {code:'LIVE_ACTIONS',label:'CURRENT LIVE ACTIONS VERIFIED · EARLIER CHANGE UNPROVEN',detail:'The current live page satisfies the Brief actions. The protected checkpoint already matched it, so no historical before/after change is claimed.',color:'#86efac',border:'#16a34a',bg:'#052e16'};
   if(status==='no_change'){
     return {code:'NO_CHANGE',label:'LIVE CHANGE NOT DETECTED',
       detail:'The fetched live page matched the previous verified live version. The new revision was not detected as published. Publish the new HTML first, then check the current live page again.',
