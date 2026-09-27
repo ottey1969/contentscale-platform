@@ -266,7 +266,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-27-CANONICAL-v334';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-27-CANONICAL-v335';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 const CONTENTSCALE_BUILD_CHANGES = [
   'tracker-delta-brief-regression-lock',
@@ -502,7 +502,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-09-27-CANONICAL-v334',
+  build: 'CS-2026-09-27-CANONICAL-v335',
   built_date: '2026-09-25',
   ceo_private: true,
   ceo_public: true,
@@ -2961,7 +2961,7 @@ app.post('/api/tracker-client/:token/pages/:pageId/case-study/new-revision',asyn
   const pr=await pool.query(`UPDATE tracker_pages SET revision_cycle=COALESCE(revision_cycle,1)+1,is_done=FALSE,implementation_status='revision_draft',implementation_at=NULL,implementation_verified_at=NULL,needs_html=FALSE WHERE id=$1 AND tracker_client_id=$2 RETURNING id,url,revision_cycle`,[req.params.pageId,cr.rows[0].id]);
   const cycle=Number(pr.rows[0].revision_cycle||previousCycle+1);
   const priorSummary={checked:prior.rows.length,recommended:prior.rows.filter(x=>x.brand_recommended).length,local_maps:prior.rows.filter(x=>x.brand_local_result).length,domain_cited:prior.rows.filter(x=>x.domain_cited).length,exact_page_cited:prior.rows.filter(x=>x.exact_page_cited).length,engines:prior.rows};
-  await _caseStudyEventForPage(cr.rows[0].id,pr.rows[0].id,'revision_started',{url:pr.rows[0].url,revision_cycle:cycle,previous_revision_cycle:previousCycle,previous_ai_evidence:priorSummary,history_preserved:true,next_steps:['upload_improved_html','review_scan_and_brief','save_current_live_checkpoint','publish','verify_live','manually_recheck_all_five_ai_engines']}).catch(()=>{});
+  await _caseStudyEventForPage(cr.rows[0].id,pr.rows[0].id,'revision_started',{url:pr.rows[0].url,revision_cycle:cycle,previous_revision_cycle:previousCycle,previous_ai_evidence:priorSummary,history_preserved:true,next_steps:['save_current_live_checkpoint','scan_current_live','review_brief','publish_in_wordpress','check_current_live','manually_recheck_all_five_ai_engines']}).catch(()=>{});
   res.json({success:true,revision_cycle:cycle,message:'Revision '+cycle+' started. Earlier baseline, HTML versions and proof remain protected.'});
 }catch(e){console.error('[case-study-new-revision]',e.message);res.status(500).json({success:false,error:e.message});}});
 
@@ -2977,7 +2977,8 @@ app.post('/api/tracker-client/:token/pages/:pageId/case-study/pre-publication',a
   const csR=await pool.query("SELECT id FROM tracker_case_studies WHERE tracker_client_id=$1 AND tracker_page_id=$2 AND status='active' ORDER BY id LIMIT 1",[cr.rows[0].id,pr.rows[0].id]);
   if(!csR.rows.length)return res.status(404).json({success:false,error:'No active case study for this page'});
   const cycle=Number(pr.rows[0].revision_cycle||1);
-  if(cycle>1){const candidate=await pool.query("SELECT id FROM tracker_case_study_content_versions WHERE case_study_id=$1 AND version_type=$2 ORDER BY id DESC LIMIT 1",[csR.rows[0].id,'revision_candidate_r'+cycle]);if(!candidate.rows.length)return res.status(409).json({success:false,error:'Upload and scan the improved HTML for this revision before saving the live pre-publication checkpoint.'});}
+  // Direct WordPress publication is valid: the Tracker fetches and preserves the
+  // old and new live versions itself. An uploaded candidate is optional evidence.
   const liveResp=await fetch(pr.rows[0].url,{headers:{'User-Agent':'Mozilla/5.0 (compatible; ContentScale/1.0)'},signal:AbortSignal.timeout(15000)});
   if(!liveResp.ok)return res.status(502).json({success:false,error:'Live page returned HTTP '+liveResp.status});
   const liveHtml=await liveResp.text();
@@ -4897,7 +4898,7 @@ app.post('/api/tracker-client/:token/page/:pageId/brief-mode', async (req, res) 
 // v300 REGRESSION INVARIANT: REMAINING_ACTIONS_HAVE_VERIFY_OVERRIDE_REJECT_BUTTONS=true; PER_ACTION_VERIFY_FETCHES_LIVE_AND_CHECKS_ONLY_SELECTED_ACTION=true; OVERRIDE_REQUIRES_REASON=true; REJECT_REQUIRES_REASON=true; MANUAL_RESOLUTIONS_PERSIST_IN_BRIEF_HISTORY=true; PER_ACTION_RESOLUTION_NEVER_RUNS_FULL_SCAN=true; PER_ACTION_RESOLUTION_SENDS_NO_CLIENT_EMAIL=true; ZERO_REMAINING_AFTER_MANUAL_RESOLUTION_CLOSES_CYCLE=true
 // v301 REGRESSION INVARIANT: FINAL_REMAINING_ACTION_RESOLUTION_SENDS_ONE_IMPLEMENTATION_EMAIL=true; INTERMEDIATE_ACTION_RESOLUTION_SENDS_NO_EMAIL=true; COMPLETION_EMAIL_STATES_BRIEF_CHANGE_WAS_FOUND_AND_RESOLVED=true; COMPLETION_EMAIL_RUNS_NO_SCAN=true; NEW_BRIEF_DELTA_EMAIL_REMAINS_SEPARATE=true; PROOF_HISTORY_RECORDS_COMPLETION_EMAIL=true
 // v302 REGRESSION INVARIANT: REVIEWED_BRIEF_PLUS_SAVED_PREPUBLICATION_CHECKPOINT_NEXT_ACTION_IS_CHECK_CURRENT_LIVE=true; VERIFY_LIVE_PENDING_NEVER_SHOWS_OPEN_BRIEF=true; VERIFY_LIVE_PENDING_HIDES_FULL_BRIEF_BUTTON=true; VERIFY_LIVE_PENDING_HIDES_MANUAL_SCAN=true; ORANGE_STATUS_SAYS_WAITING_FOR_LIVE_VERIFICATION=true; CHECK_CURRENT_LIVE_VERIFIES_ONLY_EXISTING_OPEN_ACTIONS=true
-// v334 REGRESSION INVARIANT: VERIFY_LIVE_PENDING_SHOWS_BRIEF_BUTTON=true; VERIFY_LIVE_PENDING_BRIEF_BUTTON_DISABLED_GREY=true; VERIFY_LIVE_PENDING_SHOWS_SCAN_BUTTON=true; VERIFY_LIVE_PENDING_SCAN_BUTTON_DISABLED_GREY=true; VERIFY_LIVE_PENDING_ONLY_ACTIVE_PRIMARY_ACTION_IS_CHECK_CURRENT_LIVE=true; VERIFY_LIVE_PENDING_IS_NOT_A_CONTENT_CHANGE_STATE=true; NO_FULL_SCAN_BEFORE_LIVE_VERIFICATION=true
+// v335 REGRESSION INVARIANT: VERIFY_LIVE_PENDING_SHOWS_BRIEF_BUTTON=true; VERIFY_LIVE_PENDING_BRIEF_BUTTON_DISABLED_GREY=true; VERIFY_LIVE_PENDING_SHOWS_SCAN_BUTTON=true; VERIFY_LIVE_PENDING_SCAN_BUTTON_DISABLED_GREY=true; VERIFY_LIVE_PENDING_ONLY_ACTIVE_PRIMARY_ACTION_IS_CHECK_CURRENT_LIVE=true; VERIFY_LIVE_PENDING_IS_NOT_A_CONTENT_CHANGE_STATE=true; NO_FULL_SCAN_BEFORE_LIVE_VERIFICATION=true
 // ── Owner Question Hub — persistent client-owned knowledge gaps ────────────────
 // Unanswered questions never disappear. Refresh only adds, merges, or strengthens them.
 async function _ensureTrackerOwnerQuestions(){
@@ -17020,7 +17021,7 @@ async function startServer() {
   }
 
 console.log('────────────────────────────────────────');
-console.log('[ContentScale] CS-2026-09-27-CANONICAL-v334');
+console.log('[ContentScale] CS-2026-09-27-CANONICAL-v335');
 console.log('[ContentScale] Build check: /api/build-info');
 console.log('[ContentScale] Base URL: ' + (process.env.BASE_URL || 'https://app.contentscale.site'));
 console.log('────────────────────────────────────────');
@@ -21693,7 +21694,7 @@ function _ceoMainWebsiteUrl(input){
 // action must target this CEO endpoint.
 app.post('/api/ceo-report/start',async(req,res)=>{
   let ceoEntry='unknown',ceoUrl='',lastStage='REQUEST';
-  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-27-CANONICAL-v334');
+  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-27-CANONICAL-v335');
   try{
     lastStage='DB_SETUP';
     console.log('[ceo-report] stage=DB_SETUP');
@@ -21787,10 +21788,10 @@ ContentScale`;
     return res.json({success:true,entry_mode:entry,token,selected_page:selected,ceo_report_token:reportToken,ceo_report_url:reportUrl,delivery_email:delivery,updates_opt_in:updatesOptIn});
   }catch(e){
     const msg=String((e&&e.message)||e||'CEO Prospect Report generation failed');
-    console.error('[ceo-report] FAILED build=CS-2026-09-27-CANONICAL-v334 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
+    console.error('[ceo-report] FAILED build=CS-2026-09-27-CANONICAL-v335 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
     console.error('[ceo-report] ERROR: '+msg);
     if(e&&e.stack)console.error(e.stack);
-    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-27-CANONICAL-v334'});
+    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-27-CANONICAL-v335'});
     try{res.end();}catch(_){}
   }
 });
@@ -43588,8 +43589,8 @@ function _trackerNextActionState(p,isDone,lastCheckedRaw,nextEvidence){
     return {code:'SAVE_LIVE_FIRST',label:'ACTION NEEDED · SAVE THE CURRENT LIVE PAGE',detail:'The Tracker has no protected version to compare with the next publication. If the revised HTML is NOT live yet, save the current live page first, then publish the revised HTML and use Check current live. If it is already live, the earlier version cannot be proven retroactively; save the current page as the starting point for the next revision.',color:'#fde68a',border:'#f59e0b',bg:'#291b05',button:'1 · Save current live page',buttonAction:'savePrePublicationCheckpoint('+p.id+')'};
   }
   var checkpointAt=p.prepublication_checkpoint_at?new Date(p.prepublication_checkpoint_at).getTime():0;
-  if(bool(p.case_study_active)&&!isDone&&Number(p.revision_cycle||1)===1&&bool(p.prepublication_checkpoint_saved)&&!p.current_revision_candidate_at&&!p.current_revision_published_at&&checkpointAt>0&&(!evaluatedAt||evaluatedAt<checkpointAt)){
-    return {code:'SCAN',label:'LIVE VERSION SAVED · SCAN THE CURRENT PAGE',detail:'The current live HTML is protected. Scan this same live URL now to establish a fresh Brief before preparing replacement HTML. Review the resulting actions, upload revised HTML, then check the published live page.',color:'#7dd3fc',border:'#0284c7',bg:'#082f49',button:'Scan current live',buttonAction:'checkPage('+p.id+')'};
+  if(bool(p.case_study_active)&&!isDone&&bool(p.prepublication_checkpoint_saved)&&!p.current_revision_published_at&&checkpointAt>0&&(!evaluatedAt||evaluatedAt<checkpointAt)){
+    return {code:'SCAN',label:'LIVE VERSION SAVED · SCAN THE CURRENT PAGE',detail:'The current live HTML is protected. Scan this same live URL to establish a fresh Brief. Review the actions, edit and publish the page in WordPress, then click Check current live.',color:'#7dd3fc',border:'#0284c7',bg:'#082f49',button:'Scan current live',buttonAction:'checkPage('+p.id+')'};
   }
   if(implStatus==='live_changed_delta_remaining'&&outstanding>0)return {code:'REMAINING',label:'FIX ONLY '+outstanding+' REMAINING ACTION'+(outstanding===1?'':'S'),detail:'The published page was checked. Open only the remaining action list and resolve each item individually. The full Brief and Scan are locked for this correction loop.',color:'#fde68a',border:'#d97706',bg:'#241704',button:'Fix '+outstanding+' remaining action'+(outstanding===1?'':'s'),buttonAction:'openRemainingActions('+p.id+')'};
   if(implStatus==='live_same_checkpoint_delta_remaining')return {code:'REMAINING',label:'CURRENT LIVE PAGE CHECKED · BRIEF ACTIONS STILL OPEN',detail:'The live page was checked against the current Brief. The saved checkpoint matches it, so a before/after change cannot be proven. Resolve the remaining actions on the client page; no new scan is needed.',color:'#fde68a',border:'#d97706',bg:'#241704',button:'Fix remaining actions',buttonAction:'openRemainingActions('+p.id+')'};
@@ -43597,17 +43598,11 @@ function _trackerNextActionState(p,isDone,lastCheckedRaw,nextEvidence){
   if(implStatus==='no_change'&&p.brief_content){
     return {code:'PUBLISH_VERIFY',label:'LIVE CHANGE NOT DETECTED · IMPLEMENTATION STILL OPEN',detail:'The previous live check found no published change. Publish the revised page, then check the current live version again. Do not run a new scan to clear this issue.',color:'#fca5a5',border:'#ef4444',bg:'#2a0a0a',button:'Check current live',buttonAction:'verifyCurrentBriefLive('+p.id+',this)'};
   }
-  if(bool(p.case_study_active)&&!isDone&&bool(p.prepublication_checkpoint_saved)&&outstanding>0&&evaluatedAt>0&&p.current_revision_candidate_at&&implStatus!=='verifying'){
-    return {code:'VERIFY_LIVE_PENDING',label:'REVISED HTML SAVED · CHECK THE PUBLISHED PAGE',detail:'The previous live version and revised HTML are protected. After publishing the revision in WordPress, click Check current live. ContentScale fetches the URL and compares it with the protected version; saving in WordPress does not trigger this check automatically.',color:'#fde68a',border:'#f59e0b',bg:'#291b05',button:'Check current live',buttonAction:'verifyCurrentBriefLive('+p.id+',this)'};
-  }
   if(freshHtml||!lastCheckedRaw){
     return {code:'SCAN',label:'SCAN REQUIRED',detail:freshHtml?'New HTML was added after the last scan. Scan the live page before deciding whether the Brief changes.':'This page has not been scanned yet. Run the scan to establish the current evidence-backed delta.',color:'#7dd3fc',border:'#0284c7',bg:'#082f49',button:'Scan now',buttonAction:'checkPage('+p.id+')'};
   }
-  if(bool(p.case_study_active)&&!isDone&&bool(p.prepublication_checkpoint_saved)&&Number(p.revision_cycle||1)===1&&evaluatedAt>=checkpointAt&&outstanding>0&&briefReviewed&&!p.current_revision_candidate_at&&!p.current_revision_published_at){
-    return {code:'CASE_UPLOAD_HTML',label:'BRIEF REVIEWED · UPLOAD REVISED HTML',detail:'The current live page has been scanned and its Brief reviewed. Upload the complete revised HTML for the same URL; ContentScale preserves the candidate and scans it. Then publish and check the live URL.',color:'#a5f3fc',border:'#0891b2',bg:'#083344',button:'Upload revised HTML',buttonAction:'openHtmlUpload('+p.id+',true)'};
-  }
-  if(bool(p.case_study_active)&&!isDone&&bool(p.prepublication_checkpoint_saved)&&outstanding>0&&evaluatedAt>0&&!p.current_revision_candidate_at&&implStatus!=='verifying'){
-    return {code:'VERIFY_OR_UPLOAD',label:'BRIEF HAS '+outstanding+' OPEN ACTION'+(outstanding===1?'':'S')+' · CHECK WHAT IS LIVE',detail:'If you already published revised HTML in WordPress, click Check current live now. Otherwise review the Brief and upload the revised HTML before publishing. Saving on WordPress does not verify the live page automatically.',color:'#fde68a',border:'#f59e0b',bg:'#291b05',button:'Check current live',buttonAction:'verifyCurrentBriefLive('+p.id+',this)'};
+  if(bool(p.case_study_active)&&!isDone&&bool(p.prepublication_checkpoint_saved)&&outstanding>0&&evaluatedAt>=checkpointAt&&implStatus!=='verifying'){
+    return {code:'CASE_PUBLISH_VERIFY',label:'PUBLISH IN WORDPRESS · CHECK CURRENT LIVE',detail:'Review the Brief, apply the relevant changes directly on your website and publish. Then click Check current live. ContentScale fetches the published URL and compares it with the protected live version. No HTML upload or new scan is required.',color:'#fde68a',border:'#f59e0b',bg:'#291b05',button:'Check current live',buttonAction:'verifyCurrentBriefLive('+p.id+',this)'};
   }
   if(currentBriefVerified){
     return {code:'MONITOR',label:'NO NEW ACTION · CURRENT BRIEF VERIFIED',detail:evidence+' The current Brief belongs to the live version that was compared and verified. Completed actions are closed; wait for fresh evidence before opening another delta.',color:'#86efac',border:'#16a34a',bg:'#052e16',button:'',buttonAction:''};
@@ -43679,8 +43674,8 @@ function _trackerImplementationCheckState(p,isDone,nextState){
   if(nextState&&nextState.code==='SCAN'&&p.case_study_active&&p.prepublication_checkpoint_saved){
     return {code:'AWAITING_BASELINE_SCAN',label:'LIVE VERSION SAVED · SCAN CURRENT PAGE',detail:'Your live page is protected. Scan it now to establish the actions before writing and uploading revised HTML.',color:'#7dd3fc',border:'#0284c7',bg:'#082f49'};
   }
-  if(nextState&&nextState.code==='CASE_UPLOAD_HTML'){
-    return {code:'AWAITING_REVISED_HTML',label:'LIVE PAGE SCANNED · AWAITING REVISED HTML',detail:'The live page and current Brief are ready. Upload your revised HTML, then publish and verify the live URL.',color:'#a5f3fc',border:'#0891b2',bg:'#083344'};
+  if(nextState&&nextState.code==='CASE_PUBLISH_VERIFY'){
+    return {code:'AWAITING_LIVE_PUBLICATION',label:'LIVE PAGE SCANNED · READY FOR LIVE COMPARISON',detail:'Review the current Brief, publish the changes directly in WordPress, then click Check current live. The Tracker fetches the URL and verifies the published version.',color:'#a5f3fc',border:'#0891b2',bg:'#083344'};
   }
 
   if(status==='verifying'){
@@ -44115,7 +44110,7 @@ function renderPages() {
     // when the current scan says NEW_DELTA or IMPLEMENT. NO ACTION means no accidental edits.
     var _nextActionState = _trackerNextActionState(p,isDone,lastCheckedRaw,nextEvidence);
     var _nextActionCode = String(_nextActionState&&_nextActionState.code||'');
-    var _nextAllowsContentChange = (_nextActionCode==='NEW_DELTA'||_nextActionCode==='IMPLEMENT'||_nextActionCode==='CASE_UPLOAD_HTML'||_nextActionCode==='VERIFY_OR_UPLOAD'||_nextActionCode==='PUBLISH_VERIFY');
+    var _nextAllowsContentChange = (_nextActionCode==='NEW_DELTA'||_nextActionCode==='IMPLEMENT');
     var _nextWorkflowGuard = !!isDone || !!p.case_study_active;
     var _nextLockContentChanges = _nextWorkflowGuard && !_nextAllowsContentChange;
     var _nextNoAction = _nextActionCode==='MONITOR';
@@ -44270,10 +44265,8 @@ function renderPages() {
           ? '<button disabled style="background:#111827;border:1px solid #374151;border-radius:7px;color:#6b7280;cursor:not-allowed;font-size:10px;padding:5px 10px;font-weight:900;" title="'+(_nextNoAction?'No new action was found. A new HTML revision is not needed.':(_nextScanRequired?'Run the required scan first.':'Content changes are locked until NEXT ACTION finds work.'))+'">+ New HTML revision locked</button>'
           : '<button data-tour="new-revision" onclick="event.stopPropagation();openNewHtmlRevision(' + p.id + ')" style="background:#172554;border:1px solid #3b82f6;border-radius:7px;color:#bfdbfe;cursor:pointer;font-size:10px;padding:5px 10px;font-weight:900;" title="NEXT ACTION found open work. Start the next improvement cycle without overwriting history.">+ New HTML revision</button>')
         : '')
-      + (p.case_study_active && !isDone && Number(p.revision_cycle||1)>1 && (!_nextWorkflowGuard||_nextAllowsContentChange) ? '<button onclick="event.stopPropagation();openHtmlUpload(' + p.id + ',true)" style="background:#172554;border:1px solid #3b82f6;border-radius:7px;color:#bfdbfe;cursor:pointer;font-size:10px;padding:5px 10px;font-weight:800;" title="Update the candidate HTML for revision '+Number(p.revision_cycle||1)+'">Edit revision HTML</button>' : '')
-      + (p.case_study_active && !isDone && Number(p.revision_cycle||1)===1 && (_nextActionCode==='VERIFY_OR_UPLOAD'||_nextActionCode==='PUBLISH_VERIFY') && !p.current_revision_candidate_at ? '<button onclick="event.stopPropagation();openHtmlUpload(' + p.id + ',true)" style="background:#172554;border:1px solid #3b82f6;border-radius:7px;color:#bfdbfe;cursor:pointer;font-size:10px;padding:5px 10px;font-weight:800;" title="Optional: preserve the revised HTML as a candidate if it has not been uploaded yet.">Upload revised HTML</button>' : '')
-      + (p.case_study_active ? ((_evidenceCheckpointLock||_nextLockContentChanges)?'<button disabled style="background:#111827;border:1px solid #374151;border-radius:7px;color:#6b7280;cursor:not-allowed;font-size:10px;padding:5px 10px;font-weight:800;" title="'+(_nextNoAction?'No new action was found. No publication checkpoint is needed.':'Content changes are locked until NEXT ACTION authorizes work.')+'">Live HTML locked — not needed</button>':'<button onclick="event.stopPropagation();savePrePublicationCheckpoint(' + p.id + ')" style="background:'+(p.prepublication_checkpoint_saved?'#052e16':'#422006')+';border:1px solid '+(p.prepublication_checkpoint_saved?'#16a34a':'#f59e0b')+';border-radius:7px;color:'+(p.prepublication_checkpoint_saved?'#86efac':'#fde68a')+';cursor:pointer;font-size:10px;padding:5px 10px;font-weight:800;" title="'+(p.prepublication_checkpoint_saved?'The live version before publishing is protected (full HTML + SHA-256 hash). Your locked baseline is separate and unaffected.':'Step 1 before publishing changes: save the CURRENT live HTML as immutable proof. The protected case-study baseline remains separate and cannot be overwritten. After publishing, use Step 2 to scan/verify the new live version and compare it with this checkpoint.')+'">'+(p.prepublication_checkpoint_saved?'\u2713 Live version saved':'1 · Save current live HTML')+'</button>') : '')
-      + (p.case_study_active && p.prepublication_checkpoint_saved && !isDone && !_evidenceCheckpointLock && _nextActionCode==='VERIFY_LIVE_PENDING' ? '<button onclick="event.stopPropagation();verifyCurrentBriefLive(' + p.id + ',this)" style="background:#052e16;border:1px solid #22c55e;border-radius:7px;color:#bbf7d0;cursor:pointer;font-size:10px;padding:5px 11px;font-weight:900;box-shadow:0 0 0 1px rgba(34,197,94,.12);" title="Fetch the current live URL and verify only the existing open Brief actions. No normal scan and no new Brief.">Check current live</button>' : '')
+      + (p.case_study_active ? (p.prepublication_checkpoint_saved?'<button disabled style="background:#052e16;border:1px solid #16a34a;border-radius:7px;color:#86efac;font-size:10px;padding:5px 10px;font-weight:800;" title="The earlier live HTML is preserved in Proof & History. Publish on the website and use Check current live.">\u2713 Live version saved</button>':((_evidenceCheckpointLock||_nextLockContentChanges)?'<button disabled style="background:#111827;border:1px solid #374151;border-radius:7px;color:#6b7280;cursor:not-allowed;font-size:10px;padding:5px 10px;font-weight:800;">Live HTML locked — not needed</button>':'<button onclick="event.stopPropagation();savePrePublicationCheckpoint(' + p.id + ')" style="background:#422006;border:1px solid #f59e0b;border-radius:7px;color:#fde68a;cursor:pointer;font-size:10px;padding:5px 10px;font-weight:800;">1 · Save current live HTML</button>')) : '')
+      + (p.case_study_active && p.prepublication_checkpoint_saved && !isDone && !_evidenceCheckpointLock && (_nextActionCode==='CASE_PUBLISH_VERIFY'||_nextActionCode==='VERIFY_LIVE_PENDING') ? '<button onclick="event.stopPropagation();verifyCurrentBriefLive(' + p.id + ',this)" style="background:#052e16;border:1px solid #22c55e;border-radius:7px;color:#bbf7d0;cursor:pointer;font-size:10px;padding:5px 11px;font-weight:900;box-shadow:0 0 0 1px rgba(34,197,94,.12);" title="Fetch the current live URL and verify only the existing open Brief actions. No normal scan and no new Brief.">Check current live</button>' : '')
       + (p.case_study_active ? '<button onclick="openCaseStudy(' + p.id + ')" style="background:#082f49;border:1px solid #0284c7;border-radius:7px;color:#7dd3fc;cursor:pointer;font-size:11px;padding:5px 10px;font-weight:800;" title="Open protected baseline and proof history">Proof &amp; History</button>' : '')
       + (p.case_study_active && isDone ? (function(){var ae=p.ai_manual_evidence;if(typeof ae==='string'){try{ae=JSON.parse(ae);}catch(e){ae={};}}var n=['google_aio','chatgpt','perplexity','claude','copilot'].filter(function(k){return ae&&_aiEvidenceIsVerified(ae[k]);}).length;return '<button data-tour="ai-recheck" onclick="event.stopPropagation();openAiEvidence('+p.id+')" style="background:'+(n===5?'#052e16':'#451a03')+';border:1px solid '+(n===5?'#16a34a':'#f59e0b')+';border-radius:7px;color:'+(n===5?'#86efac':'#fde68a')+';cursor:pointer;font-size:10px;padding:5px 10px;font-weight:900;" title="A fresh manual five-engine check is required after every published revision">'+(n===5?'\\u2713 AI rechecked 5/5':'3 \\u00b7 Recheck AI '+n+'/5')+'</button>';})() : '')
       + '<button onclick="deletePage(' + p.id + ')" style="background:#0d1117;border:1px solid #ef4444;border-radius:7px;color:#f87171;cursor:pointer;font-size:13px;padding:5px 10px;font-weight:600;" title="Delete page">\\ud83d\\uddd1</button>'
@@ -47763,7 +47756,7 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
       var d=await api('/pages/'+pageId+'/case-study/new-revision','POST',{});
       if(!d||!d.success)throw new Error((d&&d.error)||'Could not start revision');
       var p=(_pages||[]).find(function(x){return x.id==pageId;});if(p){p.revision_cycle=d.revision_cycle;p.prepublication_checkpoint_saved=false;p.is_done=false;p.implementation_status='revision_draft';if(p.ai_manual_evidence&&typeof p.ai_manual_evidence==='object')Object.keys(p.ai_manual_evidence).forEach(function(k){if(p.ai_manual_evidence[k])p.ai_manual_evidence[k].is_current_revision=false;});}
-      openHtmlUpload(pageId,true);toast('Revision '+d.revision_cycle+' started — upload the improved HTML. Previous 5-engine evidence is preserved.','#38bdf8');
+      toast('Revision '+d.revision_cycle+' started. Save the current live HTML, scan the current page, then publish changes in WordPress and use Check current live.','#38bdf8');loadPages();
     }catch(e){toast('Could not start revision: '+e.message,'#f87171');}
   }
   window.openNewHtmlRevision=openNewHtmlRevision;
