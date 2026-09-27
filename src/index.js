@@ -266,7 +266,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-27-CANONICAL-v312';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-27-CANONICAL-v318';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 const CONTENTSCALE_BUILD_CHANGES = [
   'tracker-delta-brief-regression-lock',
@@ -502,7 +502,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-09-27-CANONICAL-v312',
+  build: 'CS-2026-09-27-CANONICAL-v318',
   built_date: '2026-09-25',
   ceo_private: true,
   ceo_public: true,
@@ -2456,6 +2456,7 @@ app.get('/api/tracker-client/:token', async (req, res) => {
       const _cand=_p.case_study_versions&&_p.case_study_versions[_candKey];
       const _preAt=_pre&&_pre.captured_at?Date.parse(_pre.captured_at):0;
       const _briefAt=_p.brief_evaluated_at?Date.parse(_p.brief_evaluated_at):0;
+      _p.checkpoint_recovery_available=Object.keys(_p.case_study_versions||{}).some(function(k){return k.indexOf('published_implementation')===0;});
       _p.prepublication_checkpoint_at=_pre&&_pre.captured_at||null;
       _p.prepublication_checkpoint_saved=!!(_pre
         && Number(_vd.revision_cycle||1)===Number(_p.revision_cycle||1)
@@ -4872,7 +4873,7 @@ app.post('/api/tracker-client/:token/page/:pageId/brief-mode', async (req, res) 
 // v300 REGRESSION INVARIANT: REMAINING_ACTIONS_HAVE_VERIFY_OVERRIDE_REJECT_BUTTONS=true; PER_ACTION_VERIFY_FETCHES_LIVE_AND_CHECKS_ONLY_SELECTED_ACTION=true; OVERRIDE_REQUIRES_REASON=true; REJECT_REQUIRES_REASON=true; MANUAL_RESOLUTIONS_PERSIST_IN_BRIEF_HISTORY=true; PER_ACTION_RESOLUTION_NEVER_RUNS_FULL_SCAN=true; PER_ACTION_RESOLUTION_SENDS_NO_CLIENT_EMAIL=true; ZERO_REMAINING_AFTER_MANUAL_RESOLUTION_CLOSES_CYCLE=true
 // v301 REGRESSION INVARIANT: FINAL_REMAINING_ACTION_RESOLUTION_SENDS_ONE_IMPLEMENTATION_EMAIL=true; INTERMEDIATE_ACTION_RESOLUTION_SENDS_NO_EMAIL=true; COMPLETION_EMAIL_STATES_BRIEF_CHANGE_WAS_FOUND_AND_RESOLVED=true; COMPLETION_EMAIL_RUNS_NO_SCAN=true; NEW_BRIEF_DELTA_EMAIL_REMAINS_SEPARATE=true; PROOF_HISTORY_RECORDS_COMPLETION_EMAIL=true
 // v302 REGRESSION INVARIANT: REVIEWED_BRIEF_PLUS_SAVED_PREPUBLICATION_CHECKPOINT_NEXT_ACTION_IS_CHECK_CURRENT_LIVE=true; VERIFY_LIVE_PENDING_NEVER_SHOWS_OPEN_BRIEF=true; VERIFY_LIVE_PENDING_HIDES_FULL_BRIEF_BUTTON=true; VERIFY_LIVE_PENDING_HIDES_MANUAL_SCAN=true; ORANGE_STATUS_SAYS_WAITING_FOR_LIVE_VERIFICATION=true; CHECK_CURRENT_LIVE_VERIFIES_ONLY_EXISTING_OPEN_ACTIONS=true
-// v312 REGRESSION INVARIANT: VERIFY_LIVE_PENDING_SHOWS_BRIEF_BUTTON=true; VERIFY_LIVE_PENDING_BRIEF_BUTTON_DISABLED_GREY=true; VERIFY_LIVE_PENDING_SHOWS_SCAN_BUTTON=true; VERIFY_LIVE_PENDING_SCAN_BUTTON_DISABLED_GREY=true; VERIFY_LIVE_PENDING_ONLY_ACTIVE_PRIMARY_ACTION_IS_CHECK_CURRENT_LIVE=true; VERIFY_LIVE_PENDING_IS_NOT_A_CONTENT_CHANGE_STATE=true; NO_FULL_SCAN_BEFORE_LIVE_VERIFICATION=true
+// v318 REGRESSION INVARIANT: VERIFY_LIVE_PENDING_SHOWS_BRIEF_BUTTON=true; VERIFY_LIVE_PENDING_BRIEF_BUTTON_DISABLED_GREY=true; VERIFY_LIVE_PENDING_SHOWS_SCAN_BUTTON=true; VERIFY_LIVE_PENDING_SCAN_BUTTON_DISABLED_GREY=true; VERIFY_LIVE_PENDING_ONLY_ACTIVE_PRIMARY_ACTION_IS_CHECK_CURRENT_LIVE=true; VERIFY_LIVE_PENDING_IS_NOT_A_CONTENT_CHANGE_STATE=true; NO_FULL_SCAN_BEFORE_LIVE_VERIFICATION=true
 // ── Owner Question Hub — persistent client-owned knowledge gaps ────────────────
 // Unanswered questions never disappear. Refresh only adds, merges, or strengthens them.
 async function _ensureTrackerOwnerQuestions(){
@@ -16995,7 +16996,7 @@ async function startServer() {
   }
 
 console.log('────────────────────────────────────────');
-console.log('[ContentScale] CS-2026-09-27-CANONICAL-v312');
+console.log('[ContentScale] CS-2026-09-27-CANONICAL-v318');
 console.log('[ContentScale] Build check: /api/build-info');
 console.log('[ContentScale] Base URL: ' + (process.env.BASE_URL || 'https://app.contentscale.site'));
 console.log('────────────────────────────────────────');
@@ -21668,7 +21669,7 @@ function _ceoMainWebsiteUrl(input){
 // action must target this CEO endpoint.
 app.post('/api/ceo-report/start',async(req,res)=>{
   let ceoEntry='unknown',ceoUrl='',lastStage='REQUEST';
-  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-27-CANONICAL-v312');
+  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-27-CANONICAL-v318');
   try{
     lastStage='DB_SETUP';
     console.log('[ceo-report] stage=DB_SETUP');
@@ -21762,10 +21763,10 @@ ContentScale`;
     return res.json({success:true,entry_mode:entry,token,selected_page:selected,ceo_report_token:reportToken,ceo_report_url:reportUrl,delivery_email:delivery,updates_opt_in:updatesOptIn});
   }catch(e){
     const msg=String((e&&e.message)||e||'CEO Prospect Report generation failed');
-    console.error('[ceo-report] FAILED build=CS-2026-09-27-CANONICAL-v312 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
+    console.error('[ceo-report] FAILED build=CS-2026-09-27-CANONICAL-v318 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
     console.error('[ceo-report] ERROR: '+msg);
     if(e&&e.stack)console.error(e.stack);
-    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-27-CANONICAL-v312'});
+    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-27-CANONICAL-v318'});
     try{res.end();}catch(_){}
   }
 });
@@ -43328,9 +43329,10 @@ function renderStats(data) {
           }
         }
         var ready=waiting&&!missing.length;
-        var status=attention.note?'⚠️ '+attention.note:attention.geoIssue?'⚠️ BRIEF EVIDENCE NEEDS REVIEW — Richmond, VA competitors appear in this NJ page Brief.':ready?'READY — press Scan':waiting?'WAITING FOR DATA — '+missing.join(', '):isCase&&!isMonitored?'CASE STUDY CYCLE ACTIVE — optional monitoring was locked Off at the baseline':isCase?'CASE STUDY CYCLE ACTIVE — monitoring locked '+String(p.check_frequency||''):'MONITORING '+String(p.check_frequency||'');
+        var needsCheckpoint=!!p.case_study_active&&!!p.brief_content&&!p.prepublication_checkpoint_saved&&!p.checkpoint_recovery_available&&String(p.implementation_status||'')!=='verified';
+        var status=needsCheckpoint?'⚠️ ACTION NEEDED — save the current live page before publishing, then check the published version. If already published, use this as the next revision baseline.':attention.note?'⚠️ '+attention.note:attention.geoIssue?'⚠️ BRIEF EVIDENCE NEEDS REVIEW — Richmond, VA competitors appear in this NJ page Brief.':ready?'READY — press Scan':waiting?'WAITING FOR DATA — '+missing.join(', '):isCase&&!isMonitored?'CASE STUDY CYCLE ACTIVE — optional monitoring was locked Off at the baseline':isCase?'CASE STUDY CYCLE ACTIVE — monitoring locked '+String(p.check_frequency||''):'MONITORING '+String(p.check_frequency||'');
         if(!waiting&&isMonitored&&p.next_check_at){try{status+=' — next '+new Date(p.next_check_at).toLocaleString('en-GB',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});}catch(x){}}
-        var color=attention.note||attention.geoIssue?'#fbbf24':ready?'#86efac':waiting?'#fbbf24':isCase?'#7dd3fc':'#c4b5fd';
+        var color=needsCheckpoint||attention.note||attention.geoIssue?'#fbbf24':ready?'#86efac':waiting?'#fbbf24':isCase?'#7dd3fc':'#c4b5fd';
         var label=_csEscH(p.title||p.keyword||String(p.url||'').replace(/^https?:[/][/]/,'').split('/')[0]||('Page '+p.id));
         var url=_csEscH(p.url||'').replace(/"/g,'&quot;');
         return '<div class="cs-monitor-action-row" style="padding:10px 12px;border:1px solid #243449;border-radius:8px;background:#0b1624;margin-top:7px;">'
@@ -43555,6 +43557,9 @@ function _trackerNextActionState(p,isDone,lastCheckedRaw,nextEvidence){
     var gate=String(p.monitoring_gate_label||'');
     var waitMsg=gate.indexOf('case_day_')===0?'Fresh evidence is still required before this checkpoint can be closed.':'Required evidence is still missing. Complete the requested input before scanning again.';
     return {code:'WAITING',label:'WAITING FOR EVIDENCE',detail:waitMsg,color:'#fbbf24',border:'#a16207',bg:'#2a1f05',button:'',buttonAction:''};
+  }
+  if(bool(p.case_study_active)&&p.brief_content&&!bool(p.prepublication_checkpoint_saved)&&!bool(p.checkpoint_recovery_available)&&!currentBriefVerified){
+    return {code:'SAVE_LIVE_FIRST',label:'ACTION NEEDED · SAVE THE CURRENT LIVE PAGE',detail:'The Tracker has no protected version to compare with the next publication. If the revised HTML is NOT live yet, save the current live page first, then publish the revised HTML and use Check current live. If it is already live, the earlier version cannot be proven retroactively; save the current page as the starting point for the next revision.',color:'#fde68a',border:'#f59e0b',bg:'#291b05',button:'1 · Save current live page',buttonAction:'savePrePublicationCheckpoint('+p.id+')'};
   }
   if(implStatus==='no_change'&&p.brief_content){
     return {code:'PUBLISH_VERIFY',label:'LIVE CHANGE NOT DETECTED · IMPLEMENTATION STILL OPEN',detail:'The previous live check found no published change. Publish the revised page, then check the current live version again. Do not run a new scan to clear this issue.',color:'#fca5a5',border:'#ef4444',bg:'#2a0a0a',button:'Check current live',buttonAction:'verifyCurrentBriefLive('+p.id+',this)'};
@@ -46050,7 +46055,7 @@ async function savePrePublicationCheckpoint(pageId) {
     openCaseStudy(pageId);
     return;
   }
-  if (!confirm('Do this BEFORE publishing the reviewed HTML. ContentScale will save the complete page that is live right now, including its SHA-256 hash, as an immutable checkpoint. Continue?')) return;
+  if (!confirm('Save the page currently live as an immutable checkpoint? If the revised HTML is already published, this cannot prove what was live before; it starts the next revision instead. Continue?')) return;
   try {
     toast('Saving the currently live HTML before publication…', '#60a5fa');
     var d = await api('/pages/' + pageId + '/case-study/pre-publication', 'POST', {});
@@ -55421,7 +55426,11 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
     // Add SERPAPI_KEY to Railway env vars.
     _trSetStep(pageId, 'google', 'running', 'Searching Google via Serper: ' + (keyword || '(no keyword set)'));
     if(_sk && keyword) {
-      const skCacheKey = 'serper:tracker:' + keyword.toLowerCase().trim();
+      // The generic seed 'new roof' previously returned Richmond, VA competitors for this NJ page.
+      // Scope the SERP evidence to the page's actual New Jersey service market; keep the GSC keyword unchanged.
+      const _njNewRoof = /perfectroofingteam\.com\/new-roof\/?(?:[?#]|$)/i.test(String(page.url||''));
+      const _serperQuery = _njNewRoof && !/\b(new jersey|nj)\b/i.test(keyword) ? keyword + ' New Jersey' : keyword;
+      const skCacheKey = 'serper:tracker:' + _scanLocale + ':' + _serperQuery.toLowerCase().trim();
       const skCached = _cacheGet(skCacheKey);
       if (skCached) {
         // Use cached result
@@ -55429,11 +55438,11 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
         _trSetStep(pageId, 'google', 'done', '✅ Cached: pos #' + (skCached.google_position||'?') + (skCached.ai_google_overview_cited ? ' · AIO ✓' : ''));
       } else
       try {
-        _trSetStep(pageId, 'google', 'running', 'Searching Google (' + _scanLocale.toUpperCase() + '): ' + keyword);
+        _trSetStep(pageId, 'google', 'running', 'Searching Google (' + _scanLocale.toUpperCase() + '): ' + _serperQuery);
         const sResp = await fetch('https://google.serper.dev/search', {
           method: 'POST',
           headers: { 'X-API-KEY': _sk, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ q: keyword, num: 10, hl: _scanLang, gl: _scanLocale }),
+          body: JSON.stringify({ q: _serperQuery, num: 10, hl: _scanLang, gl: _scanLocale }),
           signal: AbortSignal.timeout(15000)
         });
         if(sResp.ok) {
@@ -55522,7 +55531,7 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
           // to the previous successful snapshot's competitor list if this run came back empty.
           // Self-contained query — does NOT rely on the STABILITY GUARD's block-scoped prevSnap
           // above, which is only reachable inside its own if-block and has no google_competitors.
-          if (!snapshot._competitors.length) {
+          if (!snapshot._competitors.length && !_njNewRoof) {
             try {
               const _prevCompR = await pool.query(
                 `SELECT google_competitors FROM tracker_snapshots WHERE page_id=$1 AND google_competitors IS NOT NULL ORDER BY checked_at DESC LIMIT 1`,
