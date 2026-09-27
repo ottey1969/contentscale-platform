@@ -266,7 +266,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-27-CANONICAL-v341';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-27-CANONICAL-v342';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 const CONTENTSCALE_BUILD_CHANGES = [
   'tracker-delta-brief-regression-lock',
@@ -280,7 +280,8 @@ const CONTENTSCALE_BUILD_CHANGES = [
   'verified-claims-output-firewall-v340',
   'live-page-self-proof-block-v340',
   'lead-brief-renderer-repair-v340',
-  'persistent-action-wait-feedback-v341'
+  'persistent-action-wait-feedback-v341',
+  'already-scanned-published-html-check-live-v342'
 ];
 console.log('[ContentScale] BUILD=' + CONTENTSCALE_BUILD_ID + ' BOOT=' + CONTENTSCALE_BOOT_AT);
 console.log('[ContentScale] CHANGES=' + CONTENTSCALE_BUILD_CHANGES.join(','));
@@ -508,7 +509,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-09-27-CANONICAL-v341',
+  build: 'CS-2026-09-27-CANONICAL-v342',
   built_date: '2026-09-27',
   ceo_private: true,
   ceo_public: true,
@@ -3262,8 +3263,16 @@ function _trackerNormalScanGate(page){
     }
     const checkpointAt=page.prepublication_checkpoint_at?new Date(page.prepublication_checkpoint_at).getTime():0;
     const evaluatedAt=page.brief_evaluated_at?new Date(page.brief_evaluated_at).getTime():0;
-    // One scan is allowed immediately after the protected checkpoint when that checkpoint is
-    // newer than the evaluated Brief. After that, NEXT ACTION must drive live verification.
+    let brief={};try{brief=typeof page.brief_content==='string'?JSON.parse(page.brief_content||'{}'):(page.brief_content||{});}catch(_e){brief={};}
+    const outstanding=brief&&brief.outstanding_actions!=null?Number(brief.outstanding_actions):null;
+    // A real evaluated Brief is not invalidated merely because the owner saved the immutable
+    // checkpoint AFTER that scan. That is the normal sequence: scan old live -> save old live ->
+    // publish replacement -> Check current live. Never start a second scan in that state.
+    if(evaluatedAt&&outstanding!=null){
+      return {allowed:false,reason:outstanding>0?'The page was already scanned and has a current Brief; use Check current live':'The current Brief has no open actions; no new scan is needed'};
+    }
+    // Legacy Briefs without an explicit action count may receive one scan after a newer protected
+    // checkpoint. Once the Brief was evaluated at/after that checkpoint, verification owns the flow.
     if(!checkpointAt||evaluatedAt>=checkpointAt){
       return {allowed:false,reason:'The protected page already has a current Brief; use Check current live'};
     }
@@ -17095,7 +17104,7 @@ async function startServer() {
   }
 
 console.log('────────────────────────────────────────');
-console.log('[ContentScale] CS-2026-09-27-CANONICAL-v341');
+console.log('[ContentScale] CS-2026-09-27-CANONICAL-v342');
 console.log('[ContentScale] Build check: /api/build-info');
 console.log('[ContentScale] Base URL: ' + (process.env.BASE_URL || 'https://app.contentscale.site'));
 console.log('────────────────────────────────────────');
@@ -21759,7 +21768,7 @@ function _ceoMainWebsiteUrl(input){
 // action must target this CEO endpoint.
 app.post('/api/ceo-report/start',async(req,res)=>{
   let ceoEntry='unknown',ceoUrl='',lastStage='REQUEST';
-  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-27-CANONICAL-v341');
+  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-27-CANONICAL-v342');
   try{
     lastStage='DB_SETUP';
     console.log('[ceo-report] stage=DB_SETUP');
@@ -21853,10 +21862,10 @@ ContentScale`;
     return res.json({success:true,entry_mode:entry,token,selected_page:selected,ceo_report_token:reportToken,ceo_report_url:reportUrl,delivery_email:delivery,updates_opt_in:updatesOptIn});
   }catch(e){
     const msg=String((e&&e.message)||e||'CEO Prospect Report generation failed');
-    console.error('[ceo-report] FAILED build=CS-2026-09-27-CANONICAL-v341 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
+    console.error('[ceo-report] FAILED build=CS-2026-09-27-CANONICAL-v342 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
     console.error('[ceo-report] ERROR: '+msg);
     if(e&&e.stack)console.error(e.stack);
-    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-27-CANONICAL-v341'});
+    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-27-CANONICAL-v342'});
     try{res.end();}catch(_){}
   }
 });
@@ -43715,7 +43724,11 @@ function _trackerNextActionState(p,isDone,lastCheckedRaw,nextEvidence){
   }
   var checkpointAt=p.prepublication_checkpoint_at?new Date(p.prepublication_checkpoint_at).getTime():0;
   if(bool(p.case_study_active)&&!isDone&&bool(p.prepublication_checkpoint_saved)&&!p.current_revision_published_at&&checkpointAt>0&&(!evaluatedAt||evaluatedAt<checkpointAt)){
-    return {code:'SCAN',label:'LIVE VERSION SAVED · SCAN THE CURRENT PAGE',detail:'The current live HTML is protected. Scan this same live URL to establish a fresh Brief. Review the actions, edit and publish the page in WordPress, then click Check current live.',color:'#7dd3fc',border:'#0284c7',bg:'#082f49',button:'Scan current live',buttonAction:'checkPage('+p.id+')'};
+    if(evaluatedAt&&p.brief_content&&outstanding!=null){
+      if(outstanding>0)return {code:'CASE_PUBLISH_VERIFY',label:'NEW HTML PUBLISHED · CHECK CURRENT LIVE',detail:'This page was already scanned and the earlier live HTML is protected. Do not scan again. Click Check current live to compare the published HTML with the checkpoint and verify only the existing Brief actions.',color:'#fde68a',border:'#f59e0b',bg:'#291b05',button:'Check current live',buttonAction:'verifyCurrentBriefLive('+p.id+',this)'};
+      return {code:'MONITOR',label:'NO NEW SCAN NEEDED',detail:'The existing evaluated Brief has no open actions. Keep the protected evidence and wait for a new evidence checkpoint.',color:'#86efac',border:'#16a34a',bg:'#052e16',button:'',buttonAction:''};
+    }
+    return {code:'SCAN',label:'LIVE VERSION SAVED · FIRST SCAN STILL REQUIRED',detail:'The live HTML is protected, but this revision has no evaluated Brief with an explicit action count yet. Run one scan to establish it before changing the page.',color:'#7dd3fc',border:'#0284c7',bg:'#082f49',button:'Scan current live',buttonAction:'checkPage('+p.id+')'};
   }
   if(implStatus==='live_changed_delta_remaining'&&outstanding>0)return {code:'REMAINING',label:'FIX ONLY '+outstanding+' REMAINING ACTION'+(outstanding===1?'':'S'),detail:'The published page was checked. Open only the remaining action list and resolve each item individually. The full Brief and Scan are locked for this correction loop.',color:'#fde68a',border:'#d97706',bg:'#241704',button:'Fix '+outstanding+' remaining action'+(outstanding===1?'':'s'),buttonAction:'openRemainingActions('+p.id+')'};
   if(implStatus==='live_same_checkpoint_delta_remaining')return {code:'REMAINING',label:'CURRENT LIVE PAGE CHECKED · BRIEF ACTIONS STILL OPEN',detail:'The live page was checked against the current Brief. The saved checkpoint matches it, so a before/after change cannot be proven. Resolve the remaining actions on the client page; no new scan is needed.',color:'#fde68a',border:'#d97706',bg:'#241704',button:'Fix remaining actions',buttonAction:'openRemainingActions('+p.id+')'};
